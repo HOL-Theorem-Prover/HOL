@@ -2,6 +2,7 @@ structure Preterm :> Preterm =
 struct
 
 open Feedback Lib GrammarSpecials;
+open optmonad
 
 val ERR = mk_HOL_ERR "Preterm"
 val ERRloc = mk_HOL_ERRloc "Preterm"
@@ -23,6 +24,7 @@ datatype tcheck_error =
          ConstrainFail of term * hol_type
        | AppFail of term * term
        | OvlNoType of string * hol_type
+       | MiscMonad
 
 val last_tcerror : (tcheck_error * locn.locn) option ref = ref NONE
 
@@ -78,13 +80,14 @@ end
 
 
 val op--> = Pretype.mk_fun_ty
-fun ptype_of (Var{Ty, ...}) = Ty
-  | ptype_of (Const{Ty, ...}) = Ty
-  | ptype_of (Comb{Rator, ...}) = Pretype.chase (ptype_of Rator)
-  | ptype_of (Abs{Bvar,Body,...}) = ptype_of Bvar --> ptype_of Body
-  | ptype_of (Constrained{Ty,...}) = Ty
-  | ptype_of (Antiq{Tm,...}) = Pretype.fromType (Term.type_of Tm)
-  | ptype_of (Overloaded {Ty,...}) = Ty
+fun ptype_of (Var{Ty, ...}) = return Ty
+  | ptype_of (Const{Ty, ...}) = return Ty
+  | ptype_of (Comb{Rator, ...}) = ptype_of Rator >- Pretype.chase
+  | ptype_of (Abs{Bvar,Body,...}) =
+      lift2 (fn ty1 => fn ty2 => ty1 --> ty2) (ptype_of Bvar) (ptype_of Body)
+  | ptype_of (Constrained{Ty,...}) = return Ty
+  | ptype_of (Antiq{Tm,...}) = return (Pretype.fromType (Term.type_of Tm))
+  | ptype_of (Overloaded {Ty,...}) = return Ty
   | ptype_of (Pattern{Ptm,...}) = ptype_of Ptm
 
 fun dest_ptvar pt =
@@ -125,7 +128,7 @@ fun term_to_preterm avds t = let
                        recurse bod >- (fn bod' =>
                        return (Abs{Body = bod', Bvar = v', Locn = bogus})))
 in
-  valOf (#2 (recurse t []))
+  valOf (#2 (recurse t (Pretype.Env.empty, [])))
 end
 
 
@@ -235,22 +238,17 @@ fun clean shr = let
   cl
  end
 
-local open Pretype
-in
-fun has_free_uvar (Tyop{Args,...})    = List.exists has_free_uvar Args
-  | has_free_uvar (UVar(ref(SOME t))) = has_free_uvar t
-  | has_free_uvar (UVar(ref NONE))    = true
-  | has_free_uvar (Vartype _)         = false
-end
+val has_free_uvar = Pretype.has_unbound_uvar
 
 fun tyVars ptm =  (* the pretype variables in a preterm *)
   case ptm of
     Var{Ty,...}             => Pretype.tyvars Ty
   | Const{Ty,...}           => Pretype.tyvars Ty
-  | Comb{Rator,Rand,...}    => Lib.union (tyVars Rator) (tyVars Rand)
-  | Abs{Bvar,Body,...}      => Lib.union (tyVars Bvar) (tyVars Body)
-  | Antiq{Tm,...}           => map Type.dest_vartype (Term.type_vars_in_term Tm)
-  | Constrained{Ptm,Ty,...} => Lib.union (tyVars Ptm) (Pretype.tyvars Ty)
+  | Comb{Rator,Rand,...}    => lift2 Lib.union (tyVars Rator) (tyVars Rand)
+  | Abs{Bvar,Body,...}      => lift2 Lib.union (tyVars Bvar) (tyVars Body)
+  | Antiq{Tm,...}           =>
+      return (map Type.dest_vartype (Term.type_vars_in_term Tm))
+  | Constrained{Ptm,Ty,...} => lift2 Lib.union (tyVars Ptm) (Pretype.tyvars Ty)
   | Pattern{Ptm,...}        => tyVars Ptm
   | Overloaded _            => raise Fail "Preterm.tyVars: applied to \
                                           \Overloaded";
@@ -268,22 +266,24 @@ val _ =
                      Globals.notify_on_tyvar_guess)
 
 fun to_term tm =
-    if !Globals.guessing_tyvars then let
+    if !Globals.guessing_tyvars then
+      let
         fun cleanup tm = let
           open optmonad
           infix >> >-
-          val clean = Pretype.clean o Pretype.remove_made_links
+          fun usedLift m (E,used) =
+            case m E of
+                (E', NONE) => ((E',used), NONE)
+              | (E', SOME result) => ((E',used), SOME result)
+          fun clean0 pty = lift Pretype.clean (Pretype.remove_made_links pty)
+          val clean = usedLift o clean0
         in
           case tm of
-            Var{Name,Ty,...} => Pretype.replace_null_links Ty >- (fn _ =>
-                                return (Term.mk_var(Name, clean Ty)))
-            (* in this Var case, and in the Const case below, have to use
-               "... >- (fn _ => ..." rather than the >> 'equivalent' because
-               the former ensures that the references in Ty get updated
-               before the call to clean occurs. *)
+            Var{Name,Ty,...} => lift (fn ty => Term.mk_var(Name, ty))
+                                     (Pretype.replace_null_links Ty >- clean)
           | Const{Name,Thy,Ty,...} =>
-                Pretype.replace_null_links Ty >- (fn _ =>
-                return (Term.mk_thy_const{Name=Name, Thy=Thy, Ty=clean Ty}))
+              lift (fn ty => Term.mk_thy_const{Name=Name,Thy=Thy,Ty=ty})
+                   (Pretype.replace_null_links Ty >- clean)
           | Comb{Rator, Rand,...} => let
               val (f, args) = strip_pcomb tm
               open Term
@@ -316,28 +316,45 @@ fun to_term tm =
                                          "applied to Overloaded"
           | Pattern{Ptm,...} => cleanup Ptm
         end
-        val V = tyVars tm
-        val (newV, result) = cleanup tm V
-        val guessed_vars = List.take(newV, length newV - length V)
-        val _ =
-            if not (null guessed_vars) andalso !Globals.notify_on_tyvar_guess
-               andalso !Globals.interactive
-            then Feedback.HOL_MESG (String.concat
-                                      ("inventing new type variable names: "
-                                       :: Lib.commafy (List.rev guessed_vars)))
-            else ()
+        fun addV m vars e =
+          case m (e,vars) of
+              ((e', _), NONE) => (e', NONE)
+            | ((e',v'), SOME r) => (e', SOME (r,v'))
+        val V = tyVars tm >-
+                (fn vs => lift (fn x => (vs,x)) (addV (cleanup tm) vs))
       in
-        valOf result
+        fn e =>
+           case V e of
+               (e', NONE) => (e', NONE)
+             | (e', SOME (vs0, (tm, vs))) =>
+               let
+                 val guessed_vars = List.take(vs, length vs - length vs0)
+                 val _ =
+                     if not (null guessed_vars) andalso
+                        !Globals.notify_on_tyvar_guess andalso
+                        !Globals.interactive
+                     then
+                       Feedback.HOL_MESG
+                         (String.concat
+                            ("inventing new type variable names: "
+                             :: Lib.commafy (List.rev guessed_vars)))
+                     else ()
+               in
+                 (e', SOME tm)
+               end
       end
-    else let
-        fun shr l ty =
-            if has_free_uvar ty then
+    else
+      let
+        fun smash m env = valOf (#2 (m env))
+        fun shr env l ty =
+            if smash (has_free_uvar ty) env then
               raise ERRloc "typecheck.to_term" l
                            "Unconstrained type variable (and Globals.\
                            \guessing_tyvars is false)"
-            else Pretype.clean (Pretype.remove_made_links ty)
+            else smash (lift Pretype.clean (Pretype.remove_made_links ty))
+                       env
       in
-        clean shr tm
+        (fn e => (e, SOME (clean (shr e) tm)))
       end
 
 
@@ -362,62 +379,77 @@ exception phase1_exn of locn.locn * string * hol_type
    as the result.  If there are more than one, this is passed on so that
    later phases can figure out which are possible given all the other
    overloaded sub-terms in the term. *)
+local
+  open errormonad
+  fun fromOpt om = errormonad.fromOpt om (MiscMonad, locn.Loc_Unknown)
+  infix >~
+  val op>~ = optmonad.>-
+in
+fun filterM PM l =
+  case l of
+      [] => return l
+    | h::t => PM h >- (fn b => if b then lift (cons h) (filterM PM t)
+                               else filterM PM t)
+
 fun remove_overloading_phase1 ptm =
   case ptm of
-    Comb{Rator, Rand, Locn} => Comb{Rator = remove_overloading_phase1 Rator,
-                                    Rand = remove_overloading_phase1 Rand,
-                                    Locn = Locn}
-  | Abs{Bvar, Body, Locn} => Abs{Bvar = remove_overloading_phase1 Bvar,
-                                 Body = remove_overloading_phase1 Body,
-                                 Locn = Locn}
+    Comb{Rator, Rand, Locn} =>
+      lift2 (fn t1 => fn t2 => Comb{Rator = t1, Rand = t2, Locn = Locn})
+            (remove_overloading_phase1 Rator)
+            (remove_overloading_phase1 Rand)
+  | Abs{Bvar, Body, Locn} =>
+      lift2 (fn t1 => fn t2 => Abs{Bvar = t1, Body = t2, Locn = Locn})
+            (remove_overloading_phase1 Bvar)
+            (remove_overloading_phase1 Body)
   | Constrained{Ptm, Ty, Locn} =>
-      Constrained{Ptm = remove_overloading_phase1 Ptm, Ty = Ty, Locn = Locn}
+      lift (fn t => Constrained{Ptm = t, Ty = Ty, Locn = Locn})
+           (remove_overloading_phase1 Ptm)
   | Overloaded{Name,Ty,Info,Locn} => let
       fun testfn t = let
         open Term
         val possty = type_of t
         val avds = map Type.dest_vartype (tmlist_tyvs (free_vars t))
         val pty0 = Pretype.fromType possty
-        val pty = Pretype.rename_typevars avds pty0
       in
-        Pretype.can_unify Ty pty
+        fromOpt (Pretype.rename_typevars avds pty0 >~ Pretype.can_unify Ty)
       end
-      val possible_ops = List.filter testfn (#actual_ops Info)
+      fun after_filter possible_ops =
+        case possible_ops of
+            [] => error (OvlNoType(Name,Pretype.toType Ty), Locn)
+          | [t] =>
+            let
+              open Term
+            in
+              if is_const t then
+                let
+                  val {Ty = ty,Name,Thy} = dest_thy_const t
+                  val ptyM = Pretype.rename_typevars [] (Pretype.fromType ty)
+                in
+                  fromOpt (ptyM >~ Pretype.unify Ty) >>
+                  return (Const{Name=Name, Thy=Thy, Ty=Ty, Locn=Locn})
+            end
+              else
+                let
+                  val avds = map Type.dest_vartype (tmlist_tyvs (free_vars t))
+                  val ptm = term_to_preterm avds t
+                  val ptyM = ptype_of ptm
+                in
+                  fromOpt (ptyM >~ (fn pty => Pretype.unify Ty pty)) >>
+                  return (Pattern{Ptm = ptm, Locn = Locn})
+                end
+            end
+          | _ =>
+            return
+              (Overloaded{Name=Name, Ty=Ty,
+                          Info=Overload.fupd_actual_ops (fn _ => possible_ops)
+                                                        Info,
+                          Locn=Locn})
     in
-      case possible_ops of
-        [] => let
-          val ty = Pretype.toType Ty
-        in
-          last_tcerror := SOME (OvlNoType(Name,ty), Locn);
-          raise phase1_exn(Locn,
-                           "No possible type for overloaded constant "^Name^
-                           "\n",
-                           Pretype.toType Ty)
-        end
-      | [t] => let
-          open Term
-        in
-          if is_const t then let
-              val {Ty = ty,Name,Thy} = dest_thy_const t
-              val pty = Pretype.rename_typevars [] (Pretype.fromType ty)
-              val _ = Pretype.unify pty Ty
-            in
-              Const{Name=Name, Thy=Thy, Ty=pty, Locn=Locn}
-            end
-          else let
-              val avds = map Type.dest_vartype (tmlist_tyvs (free_vars t))
-              val ptm = term_to_preterm avds t
-              val _ = Pretype.unify Ty (ptype_of ptm)
-            in
-              Pattern{Ptm = ptm, Locn = Locn}
-            end
-        end
-      | _ =>
-        Overloaded{Name=Name, Ty=Ty,
-                   Info=Overload.fupd_actual_ops (fn _ => possible_ops) Info,
-                   Locn=Locn}
-     end
-  | _ => ptm;
+      filterM testfn (#actual_ops Info) >- after_filter
+  end
+  | _ => return ptm
+
+end (* local *)
 
 
 fun remove_overloading ptm = let

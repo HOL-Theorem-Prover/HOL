@@ -24,4 +24,8 @@ val mmap : ('a -> ('b, 'c) optmonad) -> 'a list -> ('b, 'c list) optmonad
 val many : ('b, 'a) optmonad -> ('b, 'a list) optmonad
 val many1 : ('b, 'a) optmonad -> ('b, 'a list) optmonad
 
+val lift : ('a -> 'b) -> ('s,'a) optmonad -> ('s,'b) optmonad
+val lift2 : ('a -> 'b -> 'c) -> ('s,'a) optmonad -> ('s,'b) optmonad ->
+            ('s,'c)optmonad
+
 end

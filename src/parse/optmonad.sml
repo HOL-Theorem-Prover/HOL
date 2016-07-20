@@ -61,4 +61,9 @@ fun many p =
 fun many1 p =
   p >- (fn i => many p >- (fn rest => return (i::rest)))
 
+fun lift f a s =
+  case a s of
+      (a', SOME v) => (a', SOME (f v))
+    | (a', NONE) => (a', NONE)
+
 end

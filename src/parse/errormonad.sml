@@ -48,4 +48,17 @@ end
 
 fun repeat p env = ((p >> repeat p) ++ ok) env
 
+fun lift f m s0 =
+  case m s0 of
+      (s, Some x) => (s, Some (f x))
+    | (s, Error b) => (s, Error b)
+
+fun lift2 f m1 m2 =
+  m1 >- (fn x => m2 >- (fn y => return (f x y)))
+
+fun fromOpt optm errv s0 =
+  case optm s0 of
+      (s, SOME r) => (s, Some r)
+    | (s, NONE) => (s, Error errv)
+
 end
