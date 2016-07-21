@@ -51,4 +51,9 @@ fun fromOpt optm errv s0 =
       NONE => Error errv
     | SOME (s, r) => Some (s, r)
 
+fun toOpt errm s0 =
+  case errm s0 of
+      Error _ => NONE
+    | Some res => SOME res
+
 end

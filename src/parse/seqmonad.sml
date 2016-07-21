@@ -63,4 +63,10 @@ fun fromOpt optm s0 =
       NONE => fail s0
     | SOME (s, x) => return x s
 
+fun toError e seqm s0 =
+  case seq.cases (seqm s0) of
+      NONE => errormonad.Error e
+    | SOME ((s,v), rest) =>
+        errormonad.Some(s, (v, not (Option.isSome (seq.cases rest))))
+
 end (* struct *)

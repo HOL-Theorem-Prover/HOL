@@ -23,5 +23,6 @@ val lift2 : ('a -> 'b -> 'c) -> ('s,'a,'e) t -> ('s,'b,'e) t ->
             ('s,'c,'e) t
 
 val fromOpt : ('a,'b)optmonad.optmonad -> 'c -> ('a,'b,'c)t
+val toOpt : ('a,'b,'c)t -> ('a,'b)optmonad.optmonad
 
 end
