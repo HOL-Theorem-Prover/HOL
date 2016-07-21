@@ -8,6 +8,8 @@ structure Env : sig
   val lookup : t -> int -> pretype option
   val update : (int * pretype) -> t -> t
   val empty : t
+  val new : t -> t * int
+  val toList : t -> (int * pretype option) list
 end
 
 type 'a in_env = (Env.t,'a) optmonad.optmonad

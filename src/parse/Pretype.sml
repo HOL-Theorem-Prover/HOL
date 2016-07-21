@@ -13,7 +13,8 @@ struct
   fun lookup (d,c) i = Binarymap.peek(d,i)
   fun update (i,pty) (d,c) = (Binarymap.insert(d,i,pty), c)
   val empty : t = (Binarymap.mkDict Int.compare, 0)
-  fun new (d,c) = ((d,c+1), (c+1))
+  fun new (d,c) = ((d,c+1), c)
+  fun toList (d,c) = List.tabulate(c, fn i => (i, Binarymap.peek(d,i)))
 end
 
 type 'a in_env = (Env.t,'a) optmonad.optmonad
