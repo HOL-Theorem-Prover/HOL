@@ -1220,7 +1220,8 @@ fun pp_term (G : grammar) TyG backend = let
       case huvar Pretype.Env.empty of
           NONE => false
         | SOME (_, b) => b
-    end
+    end handle HOL_ERR _ => false
+             | Option => false
 
     fun pr_comb tm t1 t2 = let
       val add_l =
