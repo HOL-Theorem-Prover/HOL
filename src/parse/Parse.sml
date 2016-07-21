@@ -511,16 +511,28 @@ end
     parsing in context
    ---------------------------------------------------------------------- *)
 
+fun smashErrm m =
+  case m Pretype.Env.empty of
+      errormonad.Error e => raise Preterm.mkExn e
+    | errormonad.Some (_, result) => result
+
 fun parse_in_context FVs q =
-    TermParse.ctxt_preterm_to_term (SOME(term_to_string,type_to_string))
-                                   FVs
-                                   (Preterm q)
+  let
+    open errormonad
+    val m =
+        fromOpt (q |> Absyn |> absyn_to_preterm) Preterm.monad_error >-
+        TermParse.ctxt_preterm_to_term (SOME(term_to_string,type_to_string)) FVs
+  in
+    smashErrm m
+  end
 
-fun grammar_parse_in_context(tyg,tmg) =
-    TermParse.ctxt_term (SOME(term_to_string,type_to_string)) tmg tyg
+fun grammar_parse_in_context(tyg,tmg) ctxt q =
+    TermParse.ctxt_term (SOME(term_to_string,type_to_string)) tmg tyg ctxt q |>
+    smashErrm
 
-val parse_preterm_in_context =
-    TermParse.ctxt_preterm_to_term (SOME(term_to_string,type_to_string))
+fun parse_preterm_in_context ctxt =
+    smashErrm o
+    TermParse.ctxt_preterm_to_term (SOME(term_to_string,type_to_string)) ctxt
 
 
 (*---------------------------------------------------------------------------

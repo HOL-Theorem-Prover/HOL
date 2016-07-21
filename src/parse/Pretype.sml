@@ -65,8 +65,10 @@ fun r ref_equiv value =
                                     else r ref_equiv pty)
 
 fun bind i pty : unit in_env =
-  (i ref_occurs_in pty) >-
-  (fn b => if b then fail else update(i,pty))
+  case pty of
+      UVar j => if i = j then ok
+                else boundcase j (update(i,pty)) (bind i)
+    | _ => (i ref_occurs_in pty) >- (fn b => if b then fail else update(i,pty))
 
 fun unify t1 t2 =
   case (t1, t2) of

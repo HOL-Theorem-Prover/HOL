@@ -21,8 +21,9 @@ sig
   val term : pprinters -> grammar -> tygrammar -> term quotation -> term
 
   (* in contexts *)
-  val ctxt_preterm_to_term : pprinters -> term list -> preterm -> term
+  val ctxt_preterm_to_term : pprinters -> term list -> preterm ->
+                             term Preterm.errM
   val ctxt_term : pprinters -> grammar -> tygrammar -> term list ->
-                  term quotation -> term
+                  term quotation -> term Preterm.errM
 
 end

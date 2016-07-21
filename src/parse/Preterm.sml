@@ -31,6 +31,8 @@ datatype tcheck_error =
 
 type error = tcheck_error * locn.locn
 
+val monad_error = (MiscMonad, locn.Loc_Unknown)
+
 fun mkExn (tc, loc) =
   mk_HOL_ERRloc "Preterm" "type-analysis" loc
                 (case tc of
@@ -45,7 +47,7 @@ val last_tcerror : error option ref = ref NONE
 
 type 'a errM = (Pretype.Env.t,'a,tcheck_error * locn.locn) errormonad.t
 type 'a optM = (Pretype.Env.t,'a) optmonad.optmonad
-fun fromOptE optm = errormonad.fromOpt optm (MiscMonad, locn.Loc_Unknown)
+fun fromOptE optm = errormonad.fromOpt optm monad_error
 val fromOptS = seqmonad.fromOpt
 
 datatype preterm = Var   of {Name:string,  Ty:pretype, Locn:locn.locn}

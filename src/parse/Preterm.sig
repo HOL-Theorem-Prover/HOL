@@ -17,6 +17,7 @@ sig
 
   type error = tcheck_error * locn.locn
   val mkExn : error -> exn
+  val monad_error : error
 
   type 'a in_env = (Pretype.Env.t, 'a) optmonad.optmonad
   type 'a errM = (Pretype.Env.t,'a,error) errormonad.t

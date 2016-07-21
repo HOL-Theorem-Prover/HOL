@@ -395,9 +395,7 @@ in
     val ptm = give_types_to_fvs FVs [] ptm0
               handle UNCHANGED => ptm0
   in
-    case preterm_to_term pprinters ptm Pretype.Env.empty of
-        Some(_, t) => t
-      | Error e => raise Preterm.mkExn e
+    preterm_to_term pprinters ptm
   end
 
   fun ctxt_preterm_to_term pprinters FVs ptm =
@@ -407,12 +405,9 @@ in
   fun ctxt_term pprinters g tyg = let
     val ph1 = preterm g tyg
     open errormonad
-    fun resolveM (ptM : preterm Preterm.in_env) =
-      case ptM Pretype.Env.empty of
-          SOME(_, pt) => pt
-        | NONE => raise mk_HOL_ERR "TermParse" "ctxt_term" "Monad failure"
   in
-    fn fvs => fn q => q |> ph1 |> resolveM |> ctxt_preterm_to_term pprinters fvs
+    fn fvs => fn q => fromOpt (q |> ph1) Preterm.monad_error >-
+                      ctxt_preterm_to_term pprinters fvs
   end
 
 end
