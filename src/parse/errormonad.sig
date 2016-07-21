@@ -2,7 +2,7 @@ signature errormonad =
 sig
 
 datatype ('a,'b) fs = Some of 'a | Error of 'b
-type ('a, 'b, 'c) t = 'a -> ('a * ('b,'c) fs)
+type ('a, 'b, 'c) t = 'a -> ('a * 'b,'c) fs
 
 val fail : string -> ('a, 'b, string) t
 val error : 'c -> ('a,'b,'c) t

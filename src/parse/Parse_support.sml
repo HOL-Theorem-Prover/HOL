@@ -106,8 +106,8 @@ fun ptylift (m : 'a Pretype.in_env) (e : env) : 'a * env =
     val {scope,free,uscore_cnt,ptyE} = e
   in
     case m ptyE of
-      (e', NONE) => raise Fail "ptylift failed"
-    | (e', SOME a) => (a, {scope=scope,free=free,uscore_cnt=uscore_cnt,ptyE=e'})
+      NONE => raise Fail "ptylift failed"
+    | SOME (e', a) => (a, {scope=scope,free=free,uscore_cnt=uscore_cnt,ptyE=e'})
   end
 
 

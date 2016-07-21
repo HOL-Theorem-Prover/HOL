@@ -1,7 +1,7 @@
 signature optmonad =
 sig
 
-type ('a, 'b) optmonad = 'a -> ('a * 'b option)
+type ('a, 'b) optmonad = 'a -> ('a * 'b) option
 
 val fail : ('a, 'b) optmonad
 val return : 'b -> ('a, 'b) optmonad
@@ -27,5 +27,7 @@ val many1 : ('b, 'a) optmonad -> ('b, 'a list) optmonad
 val lift : ('a -> 'b) -> ('s,'a) optmonad -> ('s,'b) optmonad
 val lift2 : ('a -> 'b -> 'c) -> ('s,'a) optmonad -> ('s,'b) optmonad ->
             ('s,'c)optmonad
+
+val addState : 's -> ('s0 * 's, 'a) optmonad -> ('s0,'a) optmonad
 
 end

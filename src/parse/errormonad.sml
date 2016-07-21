@@ -2,38 +2,32 @@ structure errormonad :> errormonad =
 struct
 
 datatype ('a,'b) fs = Some of 'a | Error of 'b
-type ('a, 'b, 'c) t = 'a -> ('a * ('b,'c) fs)
+type ('s, 'a, 'error) t = 's -> ('s * 'a,'error) fs
 
-fun error e env = (env, Error e)
+fun error (e:'error) : ('s,'a,'error) t = fn env => Error e
 fun fail s = error s
 
-fun return x env = (env, Some x)
+fun return x env = Some (env, x)
 
-fun ok env = (env, Some ())
+fun ok e = return () e (* eta-expanded b/c of value restriction *)
 
 infix >- ++ >> >-> +++
 
-fun (m1 >- f) env = let
-  val (env0, res0) = m1 env
-in
-  case res0 of
-    Error e => (env0, Error e)
-  | Some res => f res env0
-end
+fun (m1 >- f) env0 =
+  case m1 env0 of
+      Some (env1, res1) => f res1 env1
+    | Error e => Error e (* pat and rhs have different types *)
 fun (m1 >> m2) = (m1 >- (fn _ => m2))
 
-fun (m1 ++ m2) env = let
-  val m1res as (env0, res) = m1 env
-in
-  case res of
-    Error _ => m2 env
-  | x => m1res
-end
+fun (m1 ++ m2) env =
+  case m1 env of
+      Error _ => m2 env
+    | x => x
 
 fun mmap f [] =  return []
-  | mmap f (x::xs) = let
+  | mmap (f:'a -> ('s,'b,'error) t) ((x:'a)::xs) = let
     in
-      f x >-            (fn x' =>
+      f x >-            (fn (x':'b) =>
       mmap f xs >-      (fn xs' =>
       return (x'::xs')))
     end
@@ -48,17 +42,13 @@ end
 
 fun repeat p env = ((p >> repeat p) ++ ok) env
 
-fun lift f m s0 =
-  case m s0 of
-      (s, Some x) => (s, Some (f x))
-    | (s, Error b) => (s, Error b)
-
+fun lift f m = m >- (fn a => return (f a))
 fun lift2 f m1 m2 =
   m1 >- (fn x => m2 >- (fn y => return (f x y)))
 
 fun fromOpt optm errv s0 =
   case optm s0 of
-      (s, SOME r) => (s, Some r)
-    | (s, NONE) => (s, Error errv)
+      NONE => Error errv
+    | SOME (s, r) => Some (s, r)
 
 end

@@ -54,4 +54,13 @@ in
 end
 
 fun repeat p env = ((p >> repeat p) ++ ok) env
-end
+
+fun lift f m = m >- (fn v => return (f v))
+fun lift2 f m1 m2 = m1 >- (fn x => m2 >- (fn y => return (f x y)))
+
+fun fromOpt optm s0 =
+  case optm s0 of
+      NONE => fail s0
+    | SOME (s, x) => return x s
+
+end (* struct *)

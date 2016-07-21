@@ -629,37 +629,37 @@ fun fupd_snd f (x,y) = (x, f y)
 fun fupd_vs0 f (PStack{in_vstruct,lookahead,stack}) =
   PStack{stack = stack, lookahead = lookahead, in_vstruct = f in_vstruct}
 
-fun invstructp (cs, p) = ((cs, p), Some (invstructp0 p))
+fun invstructp (cs, p) = Some ((cs, p), invstructp0 p)
 
-fun inc_paren (cs, p) = ((cs, fupd_vs0 (fupd_hd (fupd_snd (fn n => n + 1))) p),
-                         Some ())
-fun dec_paren (cs, p) = ((cs, fupd_vs0 (fupd_hd (fupd_snd (fn n => n - 1))) p),
-                         Some ())
+fun inc_paren (cs, p) =
+  Some ((cs, fupd_vs0 (fupd_hd (fupd_snd (fn n => n + 1))) p), ())
+fun dec_paren (cs, p) =
+  Some ((cs, fupd_vs0 (fupd_hd (fupd_snd (fn n => n - 1))) p), ())
 fun enter_binder (cs,p) =
-  ((cs, fupd_vs0 (fn rest => (VSRES_VS, 0)::rest) p), Some ())
+  Some ((cs, fupd_vs0 (fn rest => (VSRES_VS, 0)::rest) p), ())
 fun enter_restm (cs, p) =
-  ((cs, fupd_vs0 (fupd_hd (fupd_fst (K VSRES_RESTM))) p), Some ())
+  Some ((cs, fupd_vs0 (fupd_hd (fupd_fst (K VSRES_RESTM))) p), ())
 fun leave_restm (cs, p) =
-  ((cs, fupd_vs0 (fupd_hd (fupd_fst (K VSRES_VS))) p), Some ())
-fun leave_binder (cs, p) = ((cs, fupd_vs0 tl p), Some ())
+  Some ((cs, fupd_vs0 (fupd_hd (fupd_fst (K VSRES_VS))) p), ())
+fun leave_binder (cs, p) = Some ((cs, fupd_vs0 tl p), ())
 
 fun push_pstack p i = upd_stack p (i::pstack p)
 fun top_pstack p = hd (pstack p)
 fun pop_pstack p = upd_stack p (tl (pstack p))
 
-fun push t (cs, p) = ((cs, push_pstack p t), Some ())
+fun push t (cs, p) = Some ((cs, push_pstack p t), ())
 fun topterm (cs, p) =
-  ((cs, p), case List.find (is_terminal o #1) (pstack p) of
-              NONE => Error (noloc "No terminal in stack")
-            | SOME x => Some x)
+  case List.find (is_terminal o #1) (pstack p) of
+      NONE => Error (noloc "No terminal in stack")
+    | SOME x => Some((cs,p), x)
 fun pop (cs, p) =
-    ((cs, pop_pstack p), Some (top_pstack p))
-    handle Empty => ((cs, p), Error (noloc "pop: empty stack"))
-fun getstack (cs, p) = ((cs, p), Some (pstack p))
+    Some ((cs, pop_pstack p), top_pstack p)
+    handle Empty => Error (noloc "pop: empty stack")
+fun getstack (cs, p) = Some ((cs, p), pstack p)
 
 
-fun set_la tt (cs, p) = ((cs, upd_la p tt), Some ())
-fun current_la (cs, p) = ((cs, p), Some (pla p))
+fun set_la tt (cs, p) = Some ((cs, upd_la p tt), ())
+fun current_la (cs, p) = Some ((cs, p), pla p)
 
 fun findpos P [] = NONE
   | findpos P (x::xs) = if P x then SOME(0,x)
@@ -756,10 +756,10 @@ fun parse_term (G : grammar) typeparser = let
   in
     fn (qb, ps) =>
        case ttlex qb of
-         NONE => ((qb, ps), Error (noloc "Token-lexing failed"))
-       | SOME t => ((qb, ps), Some t)
+         NONE => Error (noloc "Token-lexing failed")
+       | SOME t => Some ((qb, ps), t)
   end
-  fun lifted_typeparser (qb, ps) = ((qb, ps), Some (typeparser qb))
+  fun lifted_typeparser (qb, ps) = Some ((qb, ps), typeparser qb)
 
 
   val keyword_table =

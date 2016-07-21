@@ -128,7 +128,7 @@ fun term_to_preterm avds t = let
                        recurse bod >- (fn bod' =>
                        return (Abs{Body = bod', Bvar = v', Locn = bogus})))
 in
-  valOf (#2 (recurse t (Pretype.Env.empty, [])))
+  #2 (valOf (recurse t (Pretype.Env.empty, [])))
 end
 
 
@@ -273,8 +273,8 @@ fun to_term tm =
           infix >> >-
           fun usedLift m (E,used) =
             case m E of
-                (E', NONE) => ((E',used), NONE)
-              | (E', SOME result) => ((E',used), SOME result)
+                NONE => NONE
+              | SOME (E', result) => SOME ((E',used), result)
           fun clean0 pty = lift Pretype.clean (Pretype.remove_made_links pty)
           val clean = usedLift o clean0
         in
@@ -318,15 +318,15 @@ fun to_term tm =
         end
         fun addV m vars e =
           case m (e,vars) of
-              ((e', _), NONE) => (e', NONE)
-            | ((e',v'), SOME r) => (e', SOME (r,v'))
+              NONE => NONE
+            | SOME ((e',v'), r) => SOME (e', (r,v'))
         val V = tyVars tm >-
                 (fn vs => lift (fn x => (vs,x)) (addV (cleanup tm) vs))
       in
         fn e =>
            case V e of
-               (e', NONE) => (e', NONE)
-             | (e', SOME (vs0, (tm, vs))) =>
+               NONE => NONE
+             | SOME (e', (vs0, (tm, vs))) =>
                let
                  val guessed_vars = List.take(vs, length vs - length vs0)
                  val _ =
@@ -340,12 +340,12 @@ fun to_term tm =
                              :: Lib.commafy (List.rev guessed_vars)))
                      else ()
                in
-                 (e', SOME tm)
+                 SOME (e', tm)
                end
       end
     else
       let
-        fun smash m env = valOf (#2 (m env))
+        fun smash m env = #2 (valOf (m env))
         fun shr env l ty =
             if smash (has_free_uvar ty) env then
               raise ERRloc "typecheck.to_term" l
@@ -354,7 +354,7 @@ fun to_term tm =
             else smash (lift Pretype.clean (Pretype.remove_made_links ty))
                        env
       in
-        (fn e => (e, SOME (clean (shr e) tm)))
+        (fn e => SOME (e, clean (shr e) tm))
       end
 
 

@@ -13,7 +13,7 @@ struct
   fun lookup (d,c) i = Binarymap.peek(d,i)
   fun update (i,pty) (d,c) = (Binarymap.insert(d,i,pty), c)
   val empty : t = (Binarymap.mkDict Int.compare, 0)
-  fun new (d,c) = ((d,c+1), SOME (c+1))
+  fun new (d,c) = ((d,c+1), (c+1))
 end
 
 type 'a in_env = (Env.t,'a) optmonad.optmonad
@@ -34,12 +34,12 @@ fun tyvars t =
 
 fun mk_fun_ty (dom,rng) = Tyop{Thy="min", Tyop="fun", Args = [dom,rng]}
 
-val new_uvar = lift UVar Env.new
+val new_uvar = lift UVar (SOME o Env.new)
 fun update arg E =
   let
     val E' = Env.update arg E
   in
-    (E', SOME ())
+    SOME (E', ())
   end
 
 infix ref_occurs_in
@@ -85,8 +85,8 @@ and unifyl [] [] = ok
 
 fun can_unify pty1 pty2 : bool in_env = fn e =>
   case unify pty1 pty2 e of
-      (_, NONE) => (e, SOME false)
-    | _ => (e, SOME true)
+      NONE => SOME (e, false)
+    | _ => SOME (e, true)
 
 fun apply_subst E pty =
   case pty of
@@ -108,9 +108,9 @@ local
   fun replace s (env as (E, alist)) =
     case Lib.assoc1 s alist of
         NONE => (case new_uvar E of
-                     (E', SOME pty) => ((E',(s,pty) :: alist), SOME pty)
-                   | _ => (env, NONE))
-      | SOME (_, pty) => (env, SOME pty)
+                     SOME (E', pty) => SOME ((E',(s,pty) :: alist), pty)
+                   | NONE => NONE)
+      | SOME (_, pty) => SOME (env, pty)
 in
 fun rename_tv avds ty =
   case ty of
@@ -122,8 +122,8 @@ fun rename_tv avds ty =
 
 fun rename_typevars avds ty : pretype in_env = fn e =>
   case rename_tv avds ty (e, []) of
-      ((e', _), SOME pty) => (e', SOME pty)
-    | _ => (e, NONE)
+      SOME ((e', _), pty) => SOME (e', pty)
+    | _ => NONE
 
 end
 
@@ -147,17 +147,17 @@ fun replace_null_links ty : (Env.t * string list, pretype) optmonad =
   case ty of
       UVar r => (fn (e,used) =>
                     case Env.lookup e r of
-                        SOME pty => replace_null_links0 pty (e,used)
+                        SOME pty => replace_null_links pty (e,used)
                       | NONE =>
                         let
                           val nm = tyvariant used "'a"
                           val res = Vartype nm
                         in
-                          ((Env.update (r,res) e, nm::used), SOME res)
+                          SOME ((Env.update (r,res) e, nm::used), res)
                         end)
     | Tyop {Args,Thy,Tyop=s} =>
         lift (fn args => Tyop{Tyop=s,Args=args,Thy=Thy})
-             (mmap replace_null_links0 Args)
+             (mmap replace_null_links Args)
     | Vartype _ => return ty
 
 fun clean ty =
@@ -170,12 +170,12 @@ fun clean ty =
 fun toTypeM ty : Type.hol_type in_env =
   remove_made_links ty >-
   (fn ty => tyvars ty >-
-  (fn vs => lift clean (replace_null_links ty vs)))
+  (fn vs => lift clean (addState vs (replace_null_links ty))))
 
 fun toType pty =
   case toTypeM pty Env.empty of
-      (_, NONE) => raise TCERR "toType" "monad failed"
-    | (_, SOME ty) => ty
+      NONE => raise TCERR "toType" "monad failed"
+    | SOME (_, ty) => ty
 
 fun chase (Tyop{Tyop = "fun", Thy = "min", Args = [_, ty]}) = return ty
   | chase (UVar i) = boundcase i fail chase
