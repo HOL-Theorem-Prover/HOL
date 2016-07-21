@@ -531,7 +531,6 @@ fun grammar_parse_in_context(tyg,tmg) ctxt q =
     smashErrm
 
 fun parse_preterm_in_context ctxt =
-    smashErrm o
     TermParse.ctxt_preterm_to_term (SOME(term_to_string,type_to_string)) ctxt
 
 

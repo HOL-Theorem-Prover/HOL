@@ -15,6 +15,7 @@ sig
 
   type 'a in_env = 'a Pretype.in_env
   type 'a errM = (Pretype.Env.t,'a,error) errormonad.t
+  val smash : ('s,'a,error) errormonad.t -> 's -> 'a
 
   datatype preterm =
     Var of   {Name : string, Ty : pretype, Locn : locn.locn}

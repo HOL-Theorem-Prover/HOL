@@ -26,6 +26,11 @@ val last_tcerror : error option ref = ref NONE
 type 'a errM = (Pretype.Env.t,'a,tcheck_error * locn.locn) errormonad.t
 val fromOptS = seqmonad.fromErr
 
+fun smash errM env =
+  case errM env of
+      Error e => raise mkExn e
+    | Some(_, v) => v
+
 datatype preterm = Var   of {Name:string,  Ty:pretype, Locn:locn.locn}
                  | Const of {Name:string,  Thy:string, Ty:pretype, Locn:locn.locn}
                  | Overloaded of overinfo
@@ -338,8 +343,6 @@ fun to_term (tm : preterm) : term in_env =
       end
     else
       let
-        fun smash m env = case m env of Some(_, r) => r
-                                      | Error e => raise mkExn e
         fun shr env l ty =
             if smash (has_free_uvar ty) env then
               raise ERRloc "typecheck.to_term" l
@@ -424,7 +427,6 @@ fun remove_overloading_phase1 ptm =
               else
                 let
                   val avds = map Type.dest_vartype (tmlist_tyvs (free_vars t))
-                  val ptm = term_to_preterm avds t
                 in
                   term_to_preterm avds t >- (fn ptm =>
                   ptype_of ptm >- (fn pty =>
@@ -468,7 +470,6 @@ fun remove_overloading ptm = let
             else
               let
                 val avds = map Type.dest_vartype (tmlist_tyvs (free_vars t))
-                val ptm = term_to_preterm avds t
               in
                 fromOptS (term_to_preterm avds t) >- (fn ptm =>
                 fromOptS (ptype_of ptm) >- (fn pty =>
@@ -563,12 +564,9 @@ local
   fun default_tmprinter x = "<term>"
   open errormonad
   infix ++?
-  fun smash ptm env =
-    case (overloading_resolution0 ptm >- (to_term o #1)) env of
-        Error e => raise mkExn e
-      | Some(_, res) => res
-  fun isAtom ptm env =
-    case is_atom ptm env of Error e => raise mkExn e | Some (_, r) => r
+  fun smashTm ptm =
+    smash (overloading_resolution0 ptm >- (to_term o #1))
+  fun isAtom ptm = smash (is_atom ptm)
 in
 fun TC printers = let
   val (ptm, pty) =
@@ -591,9 +589,9 @@ fun TC printers = let
      (fn unify_error => fn env =>
           let val tmp = !Globals.show_types
               val _   = Globals.show_types := true
-              val Rator' = smash Rator env
+              val Rator' = smashTm Rator env
                 handle e => (Globals.show_types := tmp; raise e)
-              val Rand'  = smash Rand env
+              val Rand'  = smashTm Rand env
                 handle e => (Globals.show_types := tmp; raise e)
               val message =
                   String.concat
@@ -628,7 +626,7 @@ fun TC printers = let
          (fn env =>
              let val tmp = !Globals.show_types
                  val _ = Globals.show_types := true
-                 val real_term = smash Ptm env
+                 val real_term = smashTm Ptm env
                    handle e => (Globals.show_types := tmp; raise e)
                  val real_type = Pretype.toType Ty
                    handle e => (Globals.show_types := tmp; raise e)
