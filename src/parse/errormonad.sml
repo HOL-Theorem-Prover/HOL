@@ -64,6 +64,6 @@ fun toOpt errm s0 =
 fun addState s m s0 =
   case m (s0,s) of
       Error e => Error e
-    | Some((s0',s'), result) => Some(s0,(s',result))
+    | Some((s0',s'), result) => Some(s0',(s',result))
 
 end
