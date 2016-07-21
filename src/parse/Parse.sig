@@ -57,7 +57,7 @@ signature Parse = sig
       string * int -> term_grammar.preterm_processor option
 
   val absyn_to_term    : term_grammar.grammar -> Absyn.absyn -> term
-  val absyn_to_preterm : Absyn.absyn -> Preterm.preterm
+  val absyn_to_preterm : Absyn.absyn -> Preterm.preterm Pretype.in_env
   val Absyn            : term frag list -> Absyn.absyn
   val Preterm          : term frag list -> Preterm.preterm
   val Term             : term frag list -> term

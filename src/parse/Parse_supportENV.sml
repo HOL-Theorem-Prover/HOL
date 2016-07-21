@@ -15,5 +15,7 @@ struct
       {scope = [], free = [], uscore_cnt = 0, ptyE = Pretype.Env.empty}
   fun frees (e:env) = #free e
 
+  fun fupd_ptyE f ({scope,free,uscore_cnt,ptyE}:env) : env =
+    {scope=scope, free=free, uscore_cnt=uscore_cnt, ptyE = f ptyE}
 
 end

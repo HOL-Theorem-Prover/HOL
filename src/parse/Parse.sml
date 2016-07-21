@@ -474,7 +474,10 @@ val print_thm = print o thm_to_string
 
 fun absyn_to_preterm a = TermParse.absyn_to_preterm (term_grammar()) a
 
-fun Preterm q = q |> Absyn |> absyn_to_preterm
+fun Preterm q =
+  case (q |> Absyn |> absyn_to_preterm) Pretype.Env.empty of
+      NONE => raise ERROR "Preterm" "Monad failure"
+    | SOME (_, pt) => pt
 
 val absyn_to_term =
     TermParse.absyn_to_term (SOME (term_to_string, type_to_string))

@@ -48,7 +48,12 @@ type binder_in_env = string -> bvar_in_env
  * Top level parse terms                                                     *
  *---------------------------------------------------------------------------*)
 
-fun make_preterm tm_in_e = fst(tm_in_e empty_env)
+fun make_preterm (tm_in_e : preterm_in_env) =
+  fn e => let
+    val (pt, env:env) = tm_in_e (fupd_ptyE (K e) empty_env)
+  in
+    SOME(#ptyE env, pt)
+  end
 
 (*---------------------------------------------------------------------------*
  *       Antiquotes                                                          *
@@ -130,7 +135,7 @@ fun make_binding_occ l s E = let
   val E'' = add_scope((s,ntv),E')
 in
   ((fn b => Abs{Bvar=Var{Name=s, Ty=ntv, Locn=l},Body=b,
-                Locn=locn.near (Preterm.locn b)}), E')
+                Locn=locn.near (Preterm.locn b)}), E'')
 end
 
 fun make_typed_binding l (v as (s,pty)) E = let

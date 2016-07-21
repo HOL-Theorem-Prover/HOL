@@ -15,8 +15,11 @@ sig
          | OvlFail
          | MiscMonad
 
+  type error = tcheck_error * locn.locn
+  val mkExn : error -> exn
+
   type 'a in_env = (Pretype.Env.t, 'a) optmonad.optmonad
-  type 'a errM = (Pretype.Env.t,'a,tcheck_error * locn.locn) errormonad.t
+  type 'a errM = (Pretype.Env.t,'a,error) errormonad.t
 
   datatype preterm =
     Var of   {Name : string, Ty : pretype, Locn : locn.locn}

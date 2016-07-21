@@ -29,7 +29,19 @@ datatype tcheck_error =
        | OvlFail
        | MiscMonad
 
-val last_tcerror : (tcheck_error * locn.locn) option ref = ref NONE
+type error = tcheck_error * locn.locn
+
+fun mkExn (tc, loc) =
+  mk_HOL_ERRloc "Preterm" "type-analysis" loc
+                (case tc of
+                     ConstrainFail (_,_,msg) => msg
+                   | AppFail (_,_,msg) => msg
+                   | OvlNoType(s,_) =>
+                     ("Couldn't infer type for overloaded name "^s)
+                   | OvlFail => "Overloading constraints were unsatisfiable"
+                   | MiscMonad => "A monad failed")
+
+val last_tcerror : error option ref = ref NONE
 
 type 'a errM = (Pretype.Env.t,'a,tcheck_error * locn.locn) errormonad.t
 type 'a optM = (Pretype.Env.t,'a) optmonad.optmonad
