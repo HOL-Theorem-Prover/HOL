@@ -147,6 +147,10 @@ val _ = tprint "Testing functional-pretype 1 (pattern)"
 val t = Parse.Term `x <> y ==> x <> y` handle HOL_ERR _ => die "FAILED"
 val _ = OK()
 
+val _ = tprint "Testing functional-pretype 2 (simple case)"
+val t = Parse.Term `case x of T => F` handle HOL_ERR _ => die "FAILED"
+val _ = OK()
+
 val _ = tprint "Testing parsing of case expressions with function type"
 val t = Parse.Term `(case T of T => (\x. x) | F => (~)) y`
 val _ = case Lib.total (find_term (same_const boolSyntax.bool_case)) t of

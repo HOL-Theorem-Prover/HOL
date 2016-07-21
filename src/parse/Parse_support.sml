@@ -526,15 +526,18 @@ end
    ---------------------------------------------------------------------- *)
 
 fun make_case_arrow oinfo loc tm1 tm2 (E : env) = let
-  val (ptm1, e1 : env) = tm1 empty_env
-  val (arr,_) = make_qconst loc ("bool", GrammarSpecials.case_arrow_special) E
+  val (ptm1, e1 : env) = tm1 (fupd_ptyE (K (#ptyE E)) empty_env)
+  val (arr, E') =
+      make_qconst loc
+                  ("bool", GrammarSpecials.case_arrow_special)
+                  (fupd_ptyE (K (#ptyE e1)) E)
   fun mk_bvar (bv as (n,ty)) E = ((fn t => t), add_scope(bv,E))
   val qs = map mk_bvar (#free e1)
-  val (ptm2, E') = bind_term loc qs tm2 E
+  val (ptm2, E'') = bind_term loc qs tm2 E'
 in
   (Preterm.Comb{Rator = Preterm.Comb{Locn=loc,Rator = arr, Rand = ptm1},
                 Rand = ptm2,
-                Locn = loc}, E')
+                Locn = loc}, E'')
 end
 
 
