@@ -1,7 +1,7 @@
 structure Pretype :> Pretype =
 struct
 
-open HolKernel optmonad Pretype_dtype;
+open HolKernel errormonad Pretype_dtype;
 infix >> >-;
 
 
@@ -17,7 +17,10 @@ struct
   fun toList (d,c) = List.tabulate(c, fn i => (i, Binarymap.peek(d,i)))
 end
 
-type 'a in_env = (Env.t,'a) optmonad.optmonad
+open typecheck_error
+type 'a in_env = (Env.t,'a,error) errormonad.t
+
+fun fail s = error (Misc s, locn.Loc_Unknown)
 
 fun boundcase i (n:'a in_env) (sf : pretype -> 'a in_env) : 'a in_env = fn e =>
   case Env.lookup e i of
@@ -35,12 +38,12 @@ fun tyvars t =
 
 fun mk_fun_ty (dom,rng) = Tyop{Thy="min", Tyop="fun", Args = [dom,rng]}
 
-val new_uvar = lift UVar (SOME o Env.new)
+val new_uvar = lift UVar (Some o Env.new)
 fun update arg E =
   let
     val E' = Env.update arg E
   in
-    SOME (E', ())
+    Some (E', ())
   end
 
 infix ref_occurs_in
@@ -69,7 +72,9 @@ fun bind i pty : unit in_env =
   case pty of
       UVar j => if i = j then ok
                 else boundcase j (update(i,pty)) (bind i)
-    | _ => (i ref_occurs_in pty) >- (fn b => if b then fail else update(i,pty))
+    | _ => (i ref_occurs_in pty) >-
+           (fn b => if b then fail "Circular binding in unification"
+                    else update(i,pty))
 
 fun unify t1 t2 =
   case (t1, t2) of
@@ -77,19 +82,26 @@ fun unify t1 t2 =
         boundcase r (bind r t2) (fn t1' => unify t1' t2)
     | (_, UVar r) => boundcase r (bind r t1) (fn t2' => unify t1 t2')
     | (Vartype v1, Vartype v2) => ok
-    | (Vartype _, Tyop _) => fail
-    | (Tyop _, Vartype _) => fail
+    | (Vartype v, Tyop {Thy,Tyop=s,...}) =>
+      fail ("Attempt to unify fixed variable type "^v^" with operator "^
+            Thy^"$"^s)
+    | (Tyop {Thy,Tyop=s,...}, Vartype v) =>
+      fail ("Attempt to unify fixed variable type "^v^" with operator "^
+            Thy^"$"^s)
     | (Tyop{Args=as1, Tyop=op1, Thy=thy1}, Tyop{Args=as2, Tyop=op2, Thy=thy2})=>
-        if thy1 <> thy2 orelse op1 <> op2 then fail else unifyl as1 as2
+        if thy1 <> thy2 orelse op1 <> op2 then
+          fail ("Attempt to unify different type operators: " ^
+                thy1 ^ "$" ^ op1^ " and " ^ thy2 ^ "$" ^ op2)
+        else unifyl as1 as2
 and unifyl [] [] = ok
-  | unifyl [] _ = fail
-  | unifyl _ [] = fail
+  | unifyl [] _ = fail "Same tyop with different # of arguments?"
+  | unifyl _ [] = fail "Same tyop with different # of arguments?"
   | unifyl (t1::t1s) (t2::t2s) = unify t1 t2 >> unifyl t1s t2s
 
 fun can_unify pty1 pty2 : bool in_env = fn e =>
   case unify pty1 pty2 e of
-      NONE => SOME (e, false)
-    | _ => SOME (e, true)
+      Error _ => Some (e, false)
+    | _ => Some (e, true)
 
 fun apply_subst E pty =
   case pty of
@@ -111,9 +123,9 @@ local
   fun replace s (env as (E, alist)) =
     case Lib.assoc1 s alist of
         NONE => (case new_uvar E of
-                     SOME (E', pty) => SOME ((E',(s,pty) :: alist), pty)
-                   | NONE => NONE)
-      | SOME (_, pty) => SOME (env, pty)
+                     Some (E', pty) => Some ((E',(s,pty) :: alist), pty)
+                   | Error e => Error e (* should never happen *))
+      | SOME (_, pty) => Some (env, pty)
 in
 fun rename_tv avds ty =
   case ty of
@@ -125,8 +137,8 @@ fun rename_tv avds ty =
 
 fun rename_typevars avds ty : pretype in_env = fn e =>
   case rename_tv avds ty (e, []) of
-      SOME ((e', _), pty) => SOME (e', pty)
-    | _ => NONE
+      Some ((e', _), pty) => Some (e', pty)
+    | Error e => Error e
 
 end
 
@@ -146,7 +158,7 @@ fun remove_made_links ty =
 
 val tyvariant = Lexis.gen_variant Lexis.tyvar_vary
 
-fun replace_null_links ty : (Env.t * string list, pretype) optmonad =
+fun replace_null_links ty : (Env.t * string list, pretype, error) t =
   case ty of
       UVar r => (fn (e,used) =>
                     case Env.lookup e r of
@@ -156,7 +168,7 @@ fun replace_null_links ty : (Env.t * string list, pretype) optmonad =
                           val nm = tyvariant used "'a"
                           val res = Vartype nm
                         in
-                          SOME ((Env.update (r,res) e, nm::used), res)
+                          Some ((Env.update (r,res) e, nm::used), res)
                         end)
     | Tyop {Args,Thy,Tyop=s} =>
         lift (fn args => Tyop{Tyop=s,Args=args,Thy=Thy})
@@ -177,12 +189,15 @@ fun toTypeM ty : Type.hol_type in_env =
 
 fun toType pty =
   case toTypeM pty Env.empty of
-      NONE => raise TCERR "toType" "monad failed"
-    | SOME (_, ty) => ty
+      Error e => raise mkExn e
+    | Some (_, ty) => ty
 
 fun chase (Tyop{Tyop = "fun", Thy = "min", Args = [_, ty]}) = return ty
-  | chase (UVar i) = boundcase i fail chase
-  | chase _ = fail
+  | chase (UVar i) =
+      boundcase i (fail ("chase: uvar "^Int.toString i^" unbound")) chase
+  | chase (Vartype s) = fail ("chase: can't chase variable type "^s)
+  | chase (Tyop{Tyop=s, Thy, ...}) =
+      fail ("chase: can't chase through "^Thy^"$"^s)
 
 
 datatype pp_pty_state = none | left | right | uvar
@@ -230,7 +245,7 @@ fun pp_pretype pps pty = let
               qid pps
             end
       end
-    | UVar r => PP.add_string pps (Int.toString r)
+    | UVar r => PP.add_string pps ("U("^Int.toString r^")")
   end
 in
   pp_pty pps none pty

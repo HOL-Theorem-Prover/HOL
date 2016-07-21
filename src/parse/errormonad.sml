@@ -11,7 +11,7 @@ fun return x env = Some (env, x)
 
 fun ok e = return () e (* eta-expanded b/c of value restriction *)
 
-infix >- ++ >> >-> +++
+infix >- ++ >> >-> +++ ++?
 
 fun (m1 >- f) env0 =
   case m1 env0 of
@@ -22,7 +22,12 @@ fun (m1 >> m2) = (m1 >- (fn _ => m2))
 fun (m1 ++ m2) env =
   case m1 env of
       Error _ => m2 env
-    | x => x
+    | Some x => Some x
+
+fun (m1 ++? fm2) env =
+  case m1 env of
+      Error e => fm2 e env
+    | Some x => Some x
 
 fun mmap f [] =  return []
   | mmap (f:'a -> ('s,'b,'error) t) ((x:'a)::xs) = let
@@ -55,5 +60,10 @@ fun toOpt errm s0 =
   case errm s0 of
       Error _ => NONE
     | Some res => SOME res
+
+fun addState s m s0 =
+  case m (s0,s) of
+      Error e => Error e
+    | Some((s0',s'), result) => Some(s0,(s',result))
 
 end

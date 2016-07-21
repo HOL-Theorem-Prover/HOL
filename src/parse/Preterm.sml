@@ -2,7 +2,7 @@ structure Preterm :> Preterm =
 struct
 
 open Feedback Lib GrammarSpecials;
-open optmonad
+open errormonad typecheck_error
 
 val ERR = mk_HOL_ERR "Preterm"
 val ERRloc = mk_HOL_ERRloc "Preterm"
@@ -15,40 +15,16 @@ type overinfo = {Name:string, Ty:pretype,
 fun tmlist_tyvs tlist =
   List.foldl (fn (t,acc) => Lib.union (Term.type_vars_in_term t) acc) [] tlist
 
-type 'a in_env = (Pretype.Env.t, 'a) optmonad.optmonad
+type 'a in_env = 'a Pretype.in_env
 
 val show_typecheck_errors = ref true
 val _ = register_btrace ("show_typecheck_errors", show_typecheck_errors)
 fun tcheck_say s = if !show_typecheck_errors then Lib.say s else ()
 
-
-datatype tcheck_error =
-         ConstrainFail of term * hol_type * string
-       | AppFail of term * term * string
-       | OvlNoType of string * hol_type
-       | OvlFail
-       | MiscMonad
-
-type error = tcheck_error * locn.locn
-
-val monad_error = (MiscMonad, locn.Loc_Unknown)
-
-fun mkExn (tc, loc) =
-  mk_HOL_ERRloc "Preterm" "type-analysis" loc
-                (case tc of
-                     ConstrainFail (_,_,msg) => msg
-                   | AppFail (_,_,msg) => msg
-                   | OvlNoType(s,_) =>
-                     ("Couldn't infer type for overloaded name "^s)
-                   | OvlFail => "Overloading constraints were unsatisfiable"
-                   | MiscMonad => "A monad failed")
-
 val last_tcerror : error option ref = ref NONE
 
 type 'a errM = (Pretype.Env.t,'a,tcheck_error * locn.locn) errormonad.t
-type 'a optM = (Pretype.Env.t,'a) optmonad.optmonad
-fun fromOptE optm = errormonad.fromOpt optm monad_error
-val fromOptS = seqmonad.fromOpt
+val fromOptS = seqmonad.fromErr
 
 datatype preterm = Var   of {Name:string,  Ty:pretype, Locn:locn.locn}
                  | Const of {Name:string,  Thy:string, Ty:pretype, Locn:locn.locn}
@@ -130,8 +106,6 @@ fun plist_mk_rbinop opn pts =
 
 val bogus = locn.Loc_None
 fun term_to_preterm avds t = let
-  open optmonad
-  infix >> >-
   fun gen ty = Pretype.rename_tv avds (Pretype.fromType ty)
   open HolKernel
   fun recurse t =
@@ -148,7 +122,7 @@ fun term_to_preterm avds t = let
                        recurse bod >- (fn bod' =>
                        return (Abs{Body = bod', Bvar = v', Locn = bogus})))
 in
-  #2 (valOf (recurse t (Pretype.Env.empty, [])))
+  lift #2 (addState [] (recurse t))
 end
 
 
@@ -285,16 +259,15 @@ val _ =
     register_btrace ("notify type variable guesses",
                      Globals.notify_on_tyvar_guess)
 
-fun to_term (tm : preterm) : term optM =
+fun to_term (tm : preterm) : term in_env =
     if !Globals.guessing_tyvars then
       let
         fun cleanup tm = let
-          open optmonad
           infix >> >-
           fun usedLift m (E,used) =
             case m E of
-                NONE => NONE
-              | SOME (E', result) => SOME ((E',used), result)
+                Error e => Error e
+              | Some (E', result) => Some ((E',used), result)
           fun clean0 pty = lift Pretype.clean (Pretype.remove_made_links pty)
           val clean = usedLift o clean0
         in
@@ -338,15 +311,15 @@ fun to_term (tm : preterm) : term optM =
         end
         fun addV m vars e =
           case m (e,vars) of
-              NONE => NONE
-            | SOME ((e',v'), r) => SOME (e', (r,v'))
+              Error e => Error e
+            | Some ((e',v'), r) => Some (e', (r,v'))
         val V = tyVars tm >-
                 (fn vs => lift (fn x => (vs,x)) (addV (cleanup tm) vs))
       in
         fn e =>
            case V e of
-               NONE => NONE
-             | SOME (e', (vs0, (tm, vs))) =>
+               Error e => Error e
+             | Some (e', (vs0, (tm, vs))) =>
                let
                  val guessed_vars = List.take(vs, length vs - length vs0)
                  val _ =
@@ -360,12 +333,13 @@ fun to_term (tm : preterm) : term optM =
                              :: Lib.commafy (List.rev guessed_vars)))
                      else ()
                in
-                 SOME (e', tm)
+                 Some (e', tm)
                end
       end
     else
       let
-        fun smash m env = #2 (valOf (m env))
+        fun smash m env = case m env of Some(_, r) => r
+                                      | Error e => raise mkExn e
         fun shr env l ty =
             if smash (has_free_uvar ty) env then
               raise ERRloc "typecheck.to_term" l
@@ -374,7 +348,7 @@ fun to_term (tm : preterm) : term optM =
             else smash (lift Pretype.clean (Pretype.remove_made_links ty))
                        env
       in
-        (fn e => SOME (e, clean (shr e) tm))
+        (fn e => Some (e, clean (shr e) tm))
       end
 
 
@@ -430,7 +404,7 @@ fun remove_overloading_phase1 ptm =
         val avds = map Type.dest_vartype (tmlist_tyvs (free_vars t))
         val pty0 = Pretype.fromType possty
       in
-        fromOptE (Pretype.rename_typevars avds pty0 >~ Pretype.can_unify Ty)
+        Pretype.rename_typevars avds pty0 >- Pretype.can_unify Ty
       end
       fun after_filter possible_ops =
         case possible_ops of
@@ -444,17 +418,18 @@ fun remove_overloading_phase1 ptm =
                   val {Ty = ty,Name,Thy} = dest_thy_const t
                   val ptyM = Pretype.rename_typevars [] (Pretype.fromType ty)
                 in
-                  fromOptE (ptyM >~ Pretype.unify Ty) >>
+                  ptyM >- Pretype.unify Ty >>
                   return (Const{Name=Name, Thy=Thy, Ty=Ty, Locn=Locn})
             end
               else
                 let
                   val avds = map Type.dest_vartype (tmlist_tyvs (free_vars t))
                   val ptm = term_to_preterm avds t
-                  val ptyM = ptype_of ptm
                 in
-                  fromOptE (ptyM >~ (fn pty => Pretype.unify Ty pty)) >>
-                  return (Pattern{Ptm = ptm, Locn = Locn})
+                  term_to_preterm avds t >- (fn ptm =>
+                  ptype_of ptm >- (fn pty =>
+                  Pretype.unify Ty pty >>
+                  return (Pattern{Ptm = ptm, Locn = Locn})))
                 end
             end
           | _ =>
@@ -495,8 +470,10 @@ fun remove_overloading ptm = let
                 val avds = map Type.dest_vartype (tmlist_tyvs (free_vars t))
                 val ptm = term_to_preterm avds t
               in
-                fromOptS (ptype_of ptm) >- unify Ty >>
-                return (Pattern{Ptm = ptm, Locn = Locn})
+                fromOptS (term_to_preterm avds t) >- (fn ptm =>
+                fromOptS (ptype_of ptm) >- (fn pty =>
+                unify Ty pty >>
+                return (Pattern{Ptm = ptm, Locn = Locn})))
               end
         in
           tryall try actual_ops
@@ -566,8 +543,7 @@ fun is_atom (Var _) = return true
   | is_atom (t as Comb{Rator,Rand,...}) =
     let
       fun isnum t0 =
-        lift Literal.is_numeral
-             (errormonad.toOpt (overloading_resolution0 t0) >- (to_term o #1))
+        lift Literal.is_numeral (overloading_resolution0 t0 >- (to_term o #1))
     in
       isnum t >-
       (fn b =>
@@ -586,11 +562,13 @@ local
   fun default_typrinter x = "<hol_type>"
   fun default_tmprinter x = "<term>"
   open errormonad
-  infix >~
-  val op >~ = optmonad.>-
+  infix ++?
   fun smash ptm env =
-    #2 (valOf ((toOpt (overloading_resolution0 ptm) >~ (to_term o #1)) env))
-  fun isAtom ptm env = #2 (valOf (is_atom ptm env))
+    case (overloading_resolution0 ptm >- (to_term o #1)) env of
+        Error e => raise mkExn e
+      | Some(_, res) => res
+  fun isAtom ptm env =
+    case is_atom ptm env of Error e => raise mkExn e | Some (_, r) => r
 in
 fun TC printers = let
   val (ptm, pty) =
@@ -606,11 +584,11 @@ fun TC printers = let
       | NONE => (default_tmprinter, default_typrinter)
   fun check(Comb{Rator, Rand, Locn}) =
     check Rator >> check Rand >>
-    fromOptE (ptype_of Rator) >- (fn rator_ty =>
-    fromOptE (ptype_of Rand) >- (fn rand_ty =>
-    fromOptE Pretype.new_uvar >- (fn range_var =>
-    (fromOptE (Pretype.unify rator_ty (rand_ty --> range_var)) ++
-     (fn env =>
+    ptype_of Rator >- (fn rator_ty =>
+    ptype_of Rand >- (fn rand_ty =>
+    Pretype.new_uvar >- (fn range_var =>
+    (Pretype.unify rator_ty (rand_ty --> range_var)) ++?
+     (fn unify_error => fn env =>
           let val tmp = !Globals.show_types
               val _   = Globals.show_types := true
               val Rator' = smash Rator env
@@ -636,16 +614,17 @@ fun TC printers = let
                        else ("which has type\n\n" ^
                              pty(Term.type_of Rand') ^ "\n\n"),
 
-                       "unification failure message: ???\n"]
+                       "unification failure message: " ^
+                       errorMsg (#1 unify_error) ^ "\n"]
           in
             Globals.show_types := tmp;
             tcheck_say message;
             Error (AppFail(Rator',Rand',message), locn Rand)
-          end)))))
+          end))))
     | check (Abs{Bvar, Body, Locn}) = (check Bvar >> check Body)
     | check (Constrained{Ptm,Ty,Locn}) =
-        check Ptm >> fromOptE (ptype_of Ptm) >- (fn ptyp =>
-        (fromOptE (Pretype.unify ptyp Ty) ++
+        check Ptm >> ptype_of Ptm >- (fn ptyp =>
+        (Pretype.unify ptyp Ty ++
          (fn env =>
              let val tmp = !Globals.show_types
                  val _ = Globals.show_types := true
@@ -863,7 +842,7 @@ fun typecheck pfns ptm0 =
   in
     lift remove_case_magic
          (TC pfns ptm0 >> overloading_resolution0 ptm0 >-
-          (fn (ptm,b) => fromOptE (to_term ptm))) >-
+          (fn (ptm,b) => to_term ptm)) >-
     (fn t => fn e => errormonad.Some(e, !post_process_term t))
   end
   handle phase1_exn(l,s,ty) =>

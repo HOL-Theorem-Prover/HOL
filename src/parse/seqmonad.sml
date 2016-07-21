@@ -69,4 +69,9 @@ fun toError e seqm s0 =
     | SOME ((s,v), rest) =>
         errormonad.Some(s, (v, not (Option.isSome (seq.cases rest))))
 
+fun fromErr em s0 =
+  case em s0 of
+      errormonad.Error e => fail s0
+    | errormonad.Some(s,x) => return x s
+
 end (* struct *)

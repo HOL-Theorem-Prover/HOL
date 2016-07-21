@@ -9,7 +9,7 @@ type absyn = Absyn.absyn
 type preterm = Preterm.preterm
 type 'a quotation = 'a Portable.frag list
 type pprinters = ((term -> string) * (hol_type -> string)) option
-type 'a in_env = (Pretype.Env.t, 'a) optmonad.optmonad
+type 'a in_env = 'a Pretype.in_env
 
 open HolKernel GrammarSpecials
 
@@ -324,9 +324,7 @@ val preterm_to_term = Preterm.typecheck
 fun absyn_to_term pprinters g a = let
   val oinfo = term_grammar.overload_info g
   open errormonad
-  val ptIE = absyn_to_preterm g a
-  val checked = fromOpt ptIE (Preterm.MiscMonad, locn.Loc_Unknown) >-
-                Preterm.typecheck pprinters
+  val checked = absyn_to_preterm g a >- Preterm.typecheck pprinters
 in
   case checked Pretype.Env.empty of
       Error e => raise Preterm.mkExn e
@@ -406,8 +404,7 @@ in
     val ph1 = preterm g tyg
     open errormonad
   in
-    fn fvs => fn q => fromOpt (q |> ph1) Preterm.monad_error >-
-                      ctxt_preterm_to_term pprinters fvs
+    fn fvs => fn q => ph1 q >- ctxt_preterm_to_term pprinters fvs
   end
 
 end

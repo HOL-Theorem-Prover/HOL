@@ -9,7 +9,7 @@ sig
   type preterm = Preterm.preterm
   type 'a quotation = 'a Portable.frag list
   type pprinters = ((term -> string) * (hol_type -> string)) option
-  type 'a in_env = (Pretype.Env.t, 'a) optmonad.optmonad
+  type 'a in_env = 'a Pretype.in_env
 
   (* standard transformations *)
   val absyn : grammar -> tygrammar -> term quotation -> absyn

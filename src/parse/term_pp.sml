@@ -1206,7 +1206,7 @@ fun pp_term (G : grammar) TyG backend = let
               (valOf (Overload.info_for_name overload_info print_name))
       end
       val base_ptyM = Pretype.rename_typevars [] (Pretype.fromType base_ty)
-      open optmonad
+      open errormonad
       fun foldthis (tm,acc) = let
         open Pretype
         val fn_ptyM = lift (fn ty => mk_fun_ty(fromType (type_of tm), ty))
@@ -1218,8 +1218,8 @@ fun pp_term (G : grammar) TyG backend = let
       val huvar = resultM >> base_ptyM >- Pretype.has_unbound_uvar
     in
       case huvar Pretype.Env.empty of
-          NONE => false
-        | SOME (_, b) => b
+          Error _ => false
+        | Some (_, b) => b
     end handle HOL_ERR _ => false
              | Option => false
 

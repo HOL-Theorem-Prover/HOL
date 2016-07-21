@@ -476,8 +476,8 @@ fun absyn_to_preterm a = TermParse.absyn_to_preterm (term_grammar()) a
 
 fun Preterm q =
   case (q |> Absyn |> absyn_to_preterm) Pretype.Env.empty of
-      NONE => raise ERROR "Preterm" "Monad failure"
-    | SOME (_, pt) => pt
+      errormonad.Error e => raise Preterm.mkExn e
+    | errormonad.Some (_, pt) => pt
 
 val absyn_to_term =
     TermParse.absyn_to_term (SOME (term_to_string, type_to_string))
@@ -520,7 +520,7 @@ fun parse_in_context FVs q =
   let
     open errormonad
     val m =
-        fromOpt (q |> Absyn |> absyn_to_preterm) Preterm.monad_error >-
+        (q |> Absyn |> absyn_to_preterm) >-
         TermParse.ctxt_preterm_to_term (SOME(term_to_string,type_to_string)) FVs
   in
     smashErrm m

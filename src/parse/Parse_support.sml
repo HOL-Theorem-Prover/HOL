@@ -52,7 +52,7 @@ fun make_preterm (tm_in_e : preterm_in_env) =
   fn e => let
     val (pt, env:env) = tm_in_e (fupd_ptyE (K e) empty_env)
   in
-    SOME(#ptyE env, pt)
+    errormonad.Some(#ptyE env, pt)
   end
 
 (*---------------------------------------------------------------------------*
@@ -108,11 +108,12 @@ end;
 
 fun ptylift (m : 'a Pretype.in_env) (e : env) : 'a * env =
   let
+    open errormonad
     val {scope,free,uscore_cnt,ptyE} = e
   in
     case m ptyE of
-      NONE => raise Fail "ptylift failed"
-    | SOME (e', a) => (a, {scope=scope,free=free,uscore_cnt=uscore_cnt,ptyE=e'})
+      Error e => raise typecheck_error.mkExn e
+    | Some (e', a) => (a, {scope=scope,free=free,uscore_cnt=uscore_cnt,ptyE=e'})
   end
 
 
@@ -211,10 +212,10 @@ fun gen_overloaded_const oinfo l s E =
                                                            acc)
                                  []
                                  fvs
+          val (ptm, E') =
+              ptylift (Preterm.term_to_preterm (map dest_vartype tyfvs) t) E
         in
-          (Preterm.Pattern{Ptm = Preterm.term_to_preterm
-                                  (map dest_vartype tyfvs) t,
-                           Locn = l}, E)
+          (Preterm.Pattern{Ptm = ptm, Locn = l}, E')
         end
   | otherwise => let
       val base_pretype0 = fromType (#base_type opinfo)

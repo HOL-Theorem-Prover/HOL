@@ -8,18 +8,12 @@ sig
                    Info : Overload.overloaded_op_info,
                    Locn : locn.locn}
 
-  datatype tcheck_error =
-           ConstrainFail of term * hol_type * string
-         | AppFail of term * term * string
-         | OvlNoType of string * hol_type
-         | OvlFail
-         | MiscMonad
-
-  type error = tcheck_error * locn.locn
+  datatype tcheck_error = datatype typecheck_error.tcheck_error
+  type error = typecheck_error.error
   val mkExn : error -> exn
-  val monad_error : error
 
-  type 'a in_env = (Pretype.Env.t, 'a) optmonad.optmonad
+
+  type 'a in_env = 'a Pretype.in_env
   type 'a errM = (Pretype.Env.t,'a,error) errormonad.t
 
   datatype preterm =
@@ -37,7 +31,7 @@ sig
      To check this has been done everywhere, uncomment this constructor. *)
 
   val locn : preterm -> locn.locn
-  val term_to_preterm : string list -> term -> preterm
+  val term_to_preterm : string list -> term -> preterm in_env
 
   val eq : preterm -> preterm -> bool
   val pdest_eq : preterm -> preterm * preterm

@@ -12,7 +12,8 @@ structure Env : sig
   val toList : t -> (int * pretype option) list
 end
 
-type 'a in_env = (Env.t,'a) optmonad.optmonad
+type error = typecheck_error.error
+type 'a in_env = (Env.t,'a,error) errormonad.t
 
 val tyvars : pretype -> string list in_env
 val new_uvar : pretype in_env
@@ -28,11 +29,11 @@ val apply_subst : Env.t -> pretype -> pretype
 
 val rename_typevars : string list -> pretype -> pretype in_env
 val rename_tv : string list -> pretype ->
-                (Env.t * (string * pretype) list, pretype) optmonad.optmonad
+                (Env.t * (string * pretype) list, pretype, error) errormonad.t
 val fromType : Type.hol_type -> pretype
 val remove_made_links : pretype -> pretype in_env
-val replace_null_links : pretype ->
-                         (Env.t * string list, pretype) optmonad.optmonad
+val replace_null_links :
+    pretype -> (Env.t * string list, pretype, error) errormonad.t
 val clean : pretype -> Type.hol_type
 val toTypeM : pretype -> Type.hol_type in_env
 val toType : pretype -> Type.hol_type
