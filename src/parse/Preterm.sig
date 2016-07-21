@@ -8,6 +8,16 @@ sig
                    Info : Overload.overloaded_op_info,
                    Locn : locn.locn}
 
+  datatype tcheck_error =
+           ConstrainFail of term * hol_type * string
+         | AppFail of term * term * string
+         | OvlNoType of string * hol_type
+         | OvlFail
+         | MiscMonad
+
+  type 'a in_env = (Pretype.Env.t, 'a) optmonad.optmonad
+  type 'a errM = (Pretype.Env.t,'a,tcheck_error * locn.locn) errormonad.t
+
   datatype preterm =
     Var of   {Name : string, Ty : pretype, Locn : locn.locn}
   | Const of {Name : string, Thy : string, Ty : pretype, Locn : locn.locn}
@@ -29,7 +39,7 @@ sig
   val pdest_eq : preterm -> preterm * preterm
   val lhs : preterm -> preterm
   val head_var : preterm -> preterm
-  val ptype_of : preterm -> pretype
+  val ptype_of : preterm -> pretype in_env
   val dest_ptvar : preterm -> (string * pretype * locn.locn)
   val plist_mk_rbinop : preterm -> preterm list -> preterm
   val strip_pcomb : preterm -> preterm * preterm list
@@ -47,20 +57,20 @@ sig
      report errors. *)
 
   val typecheck_phase1 :
-    ((term -> string) * (hol_type -> string)) option -> preterm -> unit
+    ((term -> string) * (hol_type -> string)) option -> preterm -> unit errM
 
   (* performs overloading resolution, possibly guessing overloads if
      this is both allowed by Globals.guessing_overloads and required by
      ambiguity in the term *)
 
-  val overloading_resolution : preterm -> preterm
+  val overloading_resolution : preterm -> (preterm * bool) errM
 
 
   (* converts a preterm into a term.  Will guess type variables for
      unassigned pretypes if Globals.guessing_tyvars is true.
      Will fail if the preterm contains any Overloaded constructors, or
      if the types attached to the leaves aren't valid for the kernel.  *)
-  val to_term : preterm -> term
+  val to_term : preterm -> term in_env
 
 
   (* deals with case expressions, which need to be properly typed and
@@ -72,12 +82,7 @@ sig
 
   (* essentially the composition of all four of the above *)
   val typecheck:
-    ((term -> string) * (hol_type -> string)) option -> preterm -> term
-
-  datatype tcheck_error =
-           ConstrainFail of term * hol_type
-         | AppFail of term * term
-         | OvlNoType of string * hol_type
+    ((term -> string) * (hol_type -> string)) option -> preterm -> term errM
 
   val last_tcerror : (tcheck_error * locn.locn) option ref
 
