@@ -1,3 +1,5 @@
+(* cut and paste this section manually *)
+
 val _ = quietdec := true;
 fun emacs_hol_mode_loaded () =
    ["HOL_Interactive", "Meta",
@@ -14,8 +16,16 @@ fun emacs_hol_mode_loaded () =
     Establish the basic environment and bring in the HOL kernel
    ---------------------------------------------------------------------- *)
 
+structure HOL_Interactive : sig val toggle_quietdec : unit -> bool end =
+struct
+  fun toggle_quietdec () = (Meta.quietdec := not (!Meta.quietdec) ;
+                            !Meta.quietdec)
+end;
+
+val _ = Meta.quietdec := false;
+
 load "PP";
-structure MosmlPP = PP
+structure MosmlPP = PP;
 
 
 val _ = app load
@@ -199,13 +209,6 @@ val _ = if FileSys.access ("Holmakefile", [FileSys.A_READ]) then let
                            ())
         else ()
 
-structure HOL_Interactive : sig val toggle_quietdec : unit -> bool end =
-struct
-  fun toggle_quietdec () = (Meta.quietdec := not (!Meta.quietdec) ;
-                            !Meta.quietdec)
-end;
-
-val _ = Meta.quietdec := false;
 
 (*---------------------------------------------------------------------------*
  * A version of "use" that filters quotations. The native MoscowML version   *
