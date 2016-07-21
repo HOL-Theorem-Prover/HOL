@@ -170,7 +170,7 @@ fun clean ty =
 fun toTypeM ty : Type.hol_type in_env =
   remove_made_links ty >-
   (fn ty => tyvars ty >-
-  (fn vs => lift clean (addState vs (replace_null_links ty))))
+  (fn vs => lift (clean o #2) (addState vs (replace_null_links ty))))
 
 fun toType pty =
   case toTypeM pty Env.empty of

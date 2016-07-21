@@ -28,6 +28,6 @@ val lift : ('a -> 'b) -> ('s,'a) optmonad -> ('s,'b) optmonad
 val lift2 : ('a -> 'b -> 'c) -> ('s,'a) optmonad -> ('s,'b) optmonad ->
             ('s,'c)optmonad
 
-val addState : 's -> ('s0 * 's, 'a) optmonad -> ('s0,'a) optmonad
+val addState : 's -> ('s0 * 's, 'a) optmonad -> ('s0,'s * 'a) optmonad
 
 end

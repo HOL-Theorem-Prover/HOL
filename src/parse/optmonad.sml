@@ -61,6 +61,6 @@ fun lift2 f m1 m2 = m1 >- (fn a => m2 >- (fn b => return (f a b)))
 fun addState s m s0 =
   case m (s0,s) of
       NONE => NONE
-    | SOME((s0',_), x) => SOME(s0',x)
+    | SOME((s0',s'), x) => SOME(s0',(s',x))
 
 end
