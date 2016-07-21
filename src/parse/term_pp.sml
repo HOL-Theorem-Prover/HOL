@@ -1215,9 +1215,8 @@ fun pp_term (G : grammar) TyG backend = let
         acc >- (fn ty1 => fn_ptyM >- (fn ty2 => unify ty1 ty2 >> chase ty1))
       end
       val resultM = List.foldl foldthis base_ptyM args
-      val huvar = resultM >> base_ptyM >- Pretype.has_unbound_uvar
     in
-      case huvar Pretype.Env.empty of
+      case (resultM >- Pretype.has_unbound_uvar) Pretype.Env.empty of
           Error _ => false
         | Some (_, b) => b
     end handle HOL_ERR _ => false
