@@ -18,6 +18,8 @@ val repeat : ('a, 'b, 'c) t -> ('a, unit, 'c) t
 val repeatn : int -> ('a, 'b, 'c) t -> ('a, unit, 'c) t
 
 val mmap : ('a -> ('b, 'c, 'd) t) -> 'a list -> ('b, 'c list, 'd) t
+val foldlM : ('e * 'acc -> ('s,'acc,'error)t) -> 'acc -> 'e list ->
+             ('s,'acc,'error)t
 
 val lift : ('a -> 'b) -> ('s,'a,'e) t -> ('s,'b,'e) t
 val lift2 : ('a -> 'b -> 'c) -> ('s,'a,'e) t -> ('s,'b,'e) t ->

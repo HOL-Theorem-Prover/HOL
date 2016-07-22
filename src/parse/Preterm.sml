@@ -503,6 +503,20 @@ end
 fun do_overloading_removal ptm =
   seqmonad.toError (OvlFail, locn.Loc_Unknown) (remove_overloading ptm)
 
+fun report_ovl_ambiguity b env =
+  (* b is true if multiple resolutions weren't possible *)
+  if not b andalso
+     (not (!Globals.guessing_overloads) orelse !Globals.notify_on_tyvar_guess)
+  then
+    if not (!Globals.guessing_overloads) then
+      error (OvlTooMany, locn.Loc_None) env
+    else if !Globals.interactive then
+      (Feedback.HOL_MESG "more than one resolution of overloading was possible";
+       ok env)
+    else
+      ok env
+  else ok env
+
 fun remove_elim_magics ptm =
   case ptm of
     Var _ => ptm
@@ -839,9 +853,10 @@ fun typecheck pfns ptm0 =
     open errormonad
   in
     lift remove_case_magic
-         (TC pfns ptm0 >> overloading_resolution0 ptm0 >-
-          (fn (ptm,b) => to_term ptm)) >-
-    (fn t => fn e => errormonad.Some(e, !post_process_term t))
+         (TC pfns ptm0 >>
+          overloading_resolution0 ptm0 >-                    (fn (ptm,b) =>
+          report_ovl_ambiguity b >> to_term ptm)) >-         (fn t =>
+         fn e => errormonad.Some(e, !post_process_term t))
   end
   handle phase1_exn(l,s,ty) =>
            case pfns of

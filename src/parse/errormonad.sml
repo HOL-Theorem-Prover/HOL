@@ -66,4 +66,9 @@ fun addState s m s0 =
       Error e => Error e
     | Some((s0',s'), result) => Some(s0',(s',result))
 
+fun foldlM f a list =
+  case list of
+      [] => return a
+    | h::t => f (h,a) >- (fn a' => foldlM f a' t)
+
 end

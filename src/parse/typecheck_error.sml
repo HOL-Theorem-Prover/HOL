@@ -4,6 +4,7 @@ struct
            ConstrainFail of Term.term * Type.hol_type * string
          | AppFail of Term.term * Term.term * string
          | OvlNoType of string * Type.hol_type
+         | OvlTooMany
          | OvlFail
          | Misc of string
 
@@ -15,6 +16,8 @@ struct
       | OvlNoType(s,_) =>
         ("Couldn't infer type for overloaded name "^s)
       | OvlFail => "Overloading constraints were unsatisfiable"
+      | OvlTooMany =>
+          "There was more than one resolution of overloaded constants"
       | Misc s => s
 
   local

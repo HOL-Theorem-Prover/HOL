@@ -1703,39 +1703,44 @@ end
 
 fun defn_absyn_to_term a = let
   val alist = Absyn.strip_conj a
-  val pts = map absyn_to_preterm alist
-  val _ = List.app
-            (Preterm.typecheck_phase1 (SOME (term_to_string, type_to_string)))
-            pts
+  open errormonad
+  val tycheck = Preterm.typecheck_phase1 (SOME (term_to_string, type_to_string))
+  val ptsM =
+      mmap
+        (fn a => absyn_to_preterm a >- (fn ptm => tycheck ptm >> return ptm))
+        alist
   fun foldthis (pv as Preterm.Var{Name,Ty,Locn}, env) =
-      let
-      in
-         if String.sub(Name,0) = #"_" then env
-         else
-           case Binarymap.peek(env,Name) of
-               NONE => Binarymap.insert(env,Name,pv)
-             | SOME pv' =>
-               let
-                 val pty' = Preterm.ptype_of pv'
-                 val _ =
-                     Pretype.unify Ty pty'
-                     handle HOL_ERR _ =>
-                            raise mk_HOL_ERR "Defn" "defn_absyn_to_term"
-                                  (unify_error pv pv')
-               in
-                 env
-               end
-      end
+    if String.sub(Name,0) = #"_" then return env
+    else
+      (case Binarymap.peek(env,Name) of
+           NONE => return (Binarymap.insert(env,Name,pv))
+         | SOME pv' =>
+             Preterm.ptype_of pv' >- (fn pty' => Pretype.unify Ty pty') >>
+             return env)
     | foldthis (_, env) = raise Fail "defn_absyn_to_term: can't happen"
-  val all_frees = op_U Preterm.eq (map ptdefn_freevars pts)
-  val _ = List.foldl foldthis (Binarymap.mkDict String.compare) all_frees
   open Preterm
+  fun construct_final_term pts =
+    let
+      val ptm = plist_mk_rbinop
+                  (Antiq {Tm=boolSyntax.conjunction,Locn=locn.Loc_None})
+                  pts
+    in
+      overloading_resolution ptm >- (fn (pt,b) =>
+      report_ovl_ambiguity b     >>
+      to_term pt                 >- (fn t =>
+      return (t |> remove_case_magic |> !post_process_term)))
+    end
+  val M =
+    ptsM >-
+    (fn pts =>
+      let
+        val all_frees = op_U Preterm.eq (map ptdefn_freevars pts)
+      in
+        foldlM foldthis (Binarymap.mkDict String.compare) all_frees >>
+        construct_final_term pts
+      end)
 in
-  plist_mk_rbinop (Antiq {Tm=boolSyntax.conjunction,Locn=locn.Loc_None}) pts
-                  |> overloading_resolution
-                  |> Preterm.to_term
-                  |> Preterm.remove_case_magic
-                  |> !Preterm.post_process_term
+  smash M Pretype.Env.empty
 end
 
 fun parse_absyn absyn0 = let

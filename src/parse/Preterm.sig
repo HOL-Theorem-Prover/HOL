@@ -63,6 +63,7 @@ sig
      ambiguity in the term *)
 
   val overloading_resolution : preterm -> (preterm * bool) errM
+  val report_ovl_ambiguity : bool -> unit errM
 
 
   (* converts a preterm into a term.  Will guess type variables for
