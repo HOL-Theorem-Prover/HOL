@@ -488,34 +488,42 @@ fun make_set_const oinfo l fname s E =
  * Warning: apt not to work if you want to "antiquote in" free variables that
  * will subsequently get bound in the set abstraction.
  *---------------------------------------------------------------------------*)
+fun update_ptyE (old:env) = fupd_ptyE (K (#ptyE old))
 
 fun make_set_abs oinfo l (tm1,tm2) (E as {scope=scope0,...}:env) = let
-  val (_,(e1:env)) = tm1 empty_env
-  val (_,(e2:env)) = tm2 empty_env
-  val (_,(e3:env)) = tm2 e1
+  val (_,(e1:env)) = tm1 (update_ptyE E empty_env)
+                     (* used to find names of free vars in tm1, but is also
+                        the basis for calculating the bound vars in the final
+                        preterm so we need its pty-env to be accurate *)
+  val (_,(e2:env)) = tm2 empty_env (* only used to get 2nd set of free vars *)
+  val (_,(e3:env)) = tm2 e1 (* link types and get complete set of free vars *)
   val tm1_fv_names = map fst (#free e1)
   val tm2_fv_names = map fst (#free e2)
   val fv_names = if null tm1_fv_names then tm2_fv_names else
                  if null tm2_fv_names then tm1_fv_names else
                  intersect tm1_fv_names tm2_fv_names
-  val init_fv = #free e3
+  val init_fv = #free e3 (* candidate bound names *)
 in
   case filter (fn (name,_) => mem name fv_names) init_fv of
     [] => raise ERRORloc "make_set_abs" l "no free variables in set abstraction"
-  | quants => let
+  | quants =>
+    let
+      open Preterm
       val quants' = map
                       (fn (bnd as (Name,Ty)) =>
                           fn E =>
-                             ((fn b => Preterm.Abs{Bvar=Preterm.Var{Name=Name,Ty=Ty,Locn=l(*ugh*)},
-                                                   Body=b, Locn=l}),
+                             ((fn b => Abs{Bvar=Var{Name=Name,Ty=Ty,Locn=l},
+                                           Body=b, Locn=l}),
                               add_scope(bnd,E)))
                       (rev quants) (* make_vstruct expects reverse occ. order *)
       fun comma E = gen_overloaded_const oinfo l "," E
     in
       list_make_comb l
                      [(make_set_const oinfo l "make_set_abs" "GSPEC"),
-                      (bind_term l [make_vstruct oinfo l quants' NONE]
-                                 (list_make_comb l [comma,tm1,tm2]))] E
+                      (bind_term l
+                                 [make_vstruct oinfo l quants' NONE]
+                                 (list_make_comb l [comma,tm1,tm2]))]
+                     (update_ptyE e3 E)
     end
 end
 
