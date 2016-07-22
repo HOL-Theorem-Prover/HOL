@@ -81,7 +81,9 @@ fun unify t1 t2 =
       (UVar r, _) =>
         boundcase r (bind r t2) (fn t1' => unify t1' t2)
     | (_, UVar r) => boundcase r (bind r t1) (fn t2' => unify t1 t2')
-    | (Vartype v1, Vartype v2) => ok
+    | (Vartype v1, Vartype v2) =>
+        if v1 = v2 then ok
+        else fail ("Attempt to unify fixed variable types "^v1^" and " ^ v2)
     | (Vartype v, Tyop {Thy,Tyop=s,...}) =>
       fail ("Attempt to unify fixed variable type "^v^" with operator "^
             Thy^"$"^s)
