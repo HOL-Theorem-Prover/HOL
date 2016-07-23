@@ -10,20 +10,7 @@ type 'a quotation = 'a Portable.quotation
 val ERR = mk_HOL_ERR "Absyn";
 val ERRloc = mk_HOL_ERRloc "Absyn";
 
-   datatype vstruct
-       = VAQ    of locn.locn * term
-       | VIDENT of locn.locn * string
-       | VPAIR  of locn.locn * vstruct * vstruct
-       | VTYPED of locn.locn * vstruct * pretype
-
-   datatype absyn
-       = AQ     of locn.locn * term
-       | IDENT  of locn.locn * string
-       | QIDENT of locn.locn * string * string
-       | APP    of locn.locn * absyn * absyn
-       | LAM    of locn.locn * vstruct * absyn
-       | TYPED  of locn.locn * absyn * pretype
-
+open Absyn_dtype
 
 (*---------------------------------------------------------------------------
         Useful absyn operations.
