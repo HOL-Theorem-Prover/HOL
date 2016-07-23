@@ -18,4 +18,7 @@ struct
   fun fupd_ptyE f ({scope,free,uscore_cnt,ptyE}:env) : env =
     {scope=scope, free=free, uscore_cnt=uscore_cnt, ptyE = f ptyE}
 
+  fun fupd_scope f ({scope,free,uscore_cnt,ptyE}:env) : env =
+    {scope=f scope, free=free, uscore_cnt=uscore_cnt, ptyE = ptyE}
+
 end
