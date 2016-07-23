@@ -43,11 +43,12 @@ fun asm_store_thm(x,cl,tac) =
 
 
 fun Term q = let
-    val pt = Parse.Absyn q
-    val pt' = add_ip pt
+    val a = Parse.Absyn q
+    val a' = add_ip a
     val prfns = SOME(term_to_string, type_to_string)
+    open Preterm errormonad
   in
-    Preterm.typecheck prfns (absyn_to_preterm pt')
+    smash (absyn_to_preterm a' >- typecheck prfns) Pretype.Env.empty
   end
 
 fun --q _ = Term q;
