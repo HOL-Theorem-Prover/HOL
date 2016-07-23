@@ -258,9 +258,9 @@ in
 end
 
 fun strip_supported_PMATCH tm = let
-  val (i, rows) = patternMatchesSyntax.dest_PMATCH tm 
+  val (i, rows) = patternMatchesSyntax.dest_PMATCH tm
   fun dest_r r = let
-     val (_, p, g, r) = patternMatchesSyntax.dest_PMATCH_ROW_ABS r 
+     val (_, p, g, r) = patternMatchesSyntax.dest_PMATCH_ROW_ABS r
   in (p, r, g) end
 in
   (i, List.map dest_r rows)
@@ -302,7 +302,7 @@ fun term_to_ML openthys side ppstrm =
      if combinSyntax.is_fail tm then pp_fail i tm else
      if oneSyntax.is_one tm  then pp_one tm else
      if TypeBase.is_record tm then pp_record i (TypeBase.dest_record tm) else
-     if is_supported_PMATCH tm then 
+     if is_supported_PMATCH tm then
         pp_case_with_guard i (strip_supported_PMATCH tm) else
      if TypeBase.is_case tm then pp_case i (TypeBase.strip_case tm) else
      if is_the_value tm then pp_itself tm else
@@ -499,7 +499,7 @@ fun term_to_ML openthys side ppstrm =
         ; end_block()
       end
   and pp_case i (a,cases) =
-    pp_case_with_guard i 
+    pp_case_with_guard i
       (a, List.map (fn (pat, rhs) => (pat, rhs, T)) cases)
   and pp_case_with_guard i (a,cases) =
       ( begin_block CONSISTENT 1
