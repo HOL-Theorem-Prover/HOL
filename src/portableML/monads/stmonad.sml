@@ -20,4 +20,21 @@ fun mmap f list =
   case list of
     [] => return []
   | (x::xs) => f x >- (fn x' => mmap f xs >- (fn xs' => return (x'::xs')))
-end
+
+
+fun lift f sf s0 =
+  let
+    val (s,a) = sf s0
+  in
+    (s, f a)
+  end
+
+fun lift2 f sf1 sf2 s0 =
+  let
+    val (s1,a) = sf1 s0
+    val (s2,b) = sf2 s1
+  in
+    (s2, f a b)
+  end
+
+end (* struct *)

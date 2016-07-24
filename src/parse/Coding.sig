@@ -1,7 +1,7 @@
 signature Coding =
 sig
 
-  type 'a reader = string -> string * 'a option
+  type 'a reader = (string,'a) optmonad.optmonad
   val getc : char reader
   val literal : string -> string reader
   val takeP : (char -> bool) -> string reader
@@ -22,7 +22,7 @@ sig
   structure StringData : sig
     val encode : string -> string
     val decode : string -> string option
-    val reader : string -> (string * string option)
+    val reader : string reader
 
     val encodel : string list -> string
     val decodel : string -> string list option
@@ -31,7 +31,7 @@ sig
   structure IntData : sig
     val encode : int -> string
     val decode : string -> int option
-    val reader : string -> (string * int option)
+    val reader : int reader
   end
 
   structure BoolData : sig

@@ -9,19 +9,21 @@ sig
   type preterm = Preterm.preterm
   type 'a quotation = 'a Portable.frag list
   type pprinters = ((term -> string) * (hol_type -> string)) option
+  type 'a in_env = 'a Pretype.in_env
 
   (* standard transformations *)
   val absyn : grammar -> tygrammar -> term quotation -> absyn
-  val preterm : grammar -> tygrammar -> term quotation -> preterm
-  val absyn_to_preterm : grammar -> absyn -> preterm
+  val preterm : grammar -> tygrammar -> term quotation -> preterm in_env
+  val absyn_to_preterm : grammar -> absyn -> preterm in_env
   val absyn_to_preterm_in_env : grammar -> absyn -> Parse_support.preterm_in_env
   val absyn_to_term : pprinters -> grammar -> absyn -> term
-  val preterm_to_term : pprinters -> preterm -> term
+  val preterm_to_term : pprinters -> preterm -> term Preterm.errM
   val term : pprinters -> grammar -> tygrammar -> term quotation -> term
 
   (* in contexts *)
-  val ctxt_preterm_to_term : pprinters -> term list -> preterm -> term
+  val ctxt_preterm_to_term : pprinters -> term list -> preterm ->
+                             term Preterm.errM
   val ctxt_term : pprinters -> grammar -> tygrammar -> term list ->
-                  term quotation -> term
+                  term quotation -> term Preterm.errM
 
 end

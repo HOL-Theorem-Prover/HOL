@@ -19,7 +19,7 @@ LVTermNetFunctor.ui LVTermNetFunctor.uo: LVTermNetFunctor.sml
 Overload.ui: Overload.sig LVTermNetFunctor.ui
 	$(HOLMOSMLC) $(protect $(SIGOBJ)/Overlay.ui) LVTermNetFunctor.ui -c $<
 
-Overload.uo: Overload.sml Overload.ui $(dprot $(SIGOBJ)/Lexis.ui) $(dprot $(SIGOBJ)/HOLset.ui) LVTermNetFunctor.ui stmonad.ui GrammarSpecials.ui
+Overload.uo: Overload.sml Overload.ui $(dprot $(SIGOBJ)/Lexis.ui) $(dprot $(SIGOBJ)/HOLset.ui) LVTermNetFunctor.ui $(dprot $(SIGOBJ)/stmonad.ui) GrammarSpecials.ui
 	$(HOLMOSMLC) $(protect $(SIGOBJ)/Overlay.ui) LVTermNetFunctor.ui -c $<
 
 selftest.exe: selftest.uo $(SELFTEST_DEPS)

@@ -30,5 +30,6 @@ AssembleDiskFiles.uo: AssembleDiskFiles.sml AssembleDiskFiles.ui \
 	$(HOLMOSMLC) -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) DiskFiles.grm.ui DiskFiles.lex.ui $<
 
 selftest.exe: selftest.uo simpfrag.uo $(dprot $(SIGOBJ)/term_pp.uo) \
-              $(dprot $(SIGOBJ)/testutils.uo)
+              $(dprot $(SIGOBJ)/testutils.uo) $(dprot $(SIGOBJ)/TermParse.uo) \
+              $(dprot $(SIGOBJ)/Preterm.uo) $(dprot $(SIGOBJ)/Parse_support.uo)
 	$(HOLMOSMLC) -o $@ $<

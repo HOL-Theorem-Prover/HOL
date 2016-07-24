@@ -6,14 +6,14 @@ infix >- >> ++ >->
 
 val || = op++
 
-type 'a reader = string -> string * 'a option
+type 'a reader = (string,'a) optmonad
 
-fun getc s = if s = "" then (s, NONE)
-             else (String.extract(s,1,NONE), SOME (String.sub(s,0)))
+fun getc s = if s = "" then NONE
+             else SOME (String.extract(s,1,NONE), String.sub(s,0))
 
 fun literal s1 s2 = if String.isPrefix s1 s2 then
-                      (String.extract(s2,size s1,NONE), SOME s1)
-                    else (s2, NONE)
+                      SOME (String.extract(s2,size s1,NONE), s1)
+                    else NONE
 
 fun takeP P s = let
   fun recurse i = if i >= size s then i
@@ -21,15 +21,15 @@ fun takeP P s = let
                   else i
   val p = recurse 0
 in
-  (String.extract(s,p,NONE), SOME (String.extract(s,0,SOME p)))
+  SOME (String.extract(s,p,NONE), String.extract(s,0,SOME p))
 end
 
-fun eof s = if s = "" then (s, SOME ()) else (s, NONE)
-fun chop i s = if i <= size s then (String.extract(s,i,NONE),
-                                    SOME (String.extract(s,0,SOME i)))
-               else (s,NONE)
+fun eof s = if s = "" then SOME (s, ()) else NONE
+fun chop i s = if i <= size s then
+                 SOME (String.extract(s,i,NONE), String.extract(s,0,SOME i))
+               else NONE
 
-fun lift df s = case df s of ("", SOME r) => SOME r
+fun lift df s = case df s of SOME ("", r) => SOME r
                            | _ => NONE
 
 infix >*

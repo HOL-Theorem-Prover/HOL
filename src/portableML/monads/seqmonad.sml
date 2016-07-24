@@ -54,4 +54,24 @@ in
 end
 
 fun repeat p env = ((p >> repeat p) ++ ok) env
-end
+
+fun lift f m = m >- (fn v => return (f v))
+fun lift2 f m1 m2 = m1 >- (fn x => m2 >- (fn y => return (f x y)))
+
+fun fromOpt optm s0 =
+  case optm s0 of
+      NONE => fail s0
+    | SOME (s, x) => return x s
+
+fun toError e seqm s0 =
+  case seq.cases (seqm s0) of
+      NONE => errormonad.Error e
+    | SOME ((s,v), rest) =>
+        errormonad.Some(s, (v, not (Option.isSome (seq.cases rest))))
+
+fun fromErr em s0 =
+  case em s0 of
+      errormonad.Error e => fail s0
+    | errormonad.Some(s,x) => return x s
+
+end (* struct *)

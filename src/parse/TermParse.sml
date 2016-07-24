@@ -9,6 +9,7 @@ type absyn = Absyn.absyn
 type preterm = Preterm.preterm
 type 'a quotation = 'a Portable.frag list
 type pprinters = ((term -> string) * (hol_type -> string)) option
+type 'a in_env = 'a Pretype.in_env
 
 open HolKernel GrammarSpecials
 
@@ -36,12 +37,12 @@ fun absyn_phase1 G ty = let
 in
 fn q => let
      open errormonad
-     val ((qb,p), fsres) = pt (new_buffer q, initial_pstack)
+     val result = pt (new_buffer q, initial_pstack)
          handle base_tokens.LEX_ERR (s,locn) =>
                 raise (ERRORloc "Absyn" locn ("Lexical error - "^s))
    in
-     case fsres of
-       Some () => let
+     case result of
+       Some ((qb,p), ()) => let
        in
          if is_final_pstack p then
            case current qb of
@@ -311,7 +312,8 @@ end;
 fun absyn_to_preterm g a =
   a |> absyn_to_preterm_in_env g |> Parse_support.make_preterm
 
-fun preterm g tyg q = q |> absyn g tyg |> absyn_to_preterm g
+fun preterm g tyg q : preterm Pretype.in_env =
+  q |> absyn g tyg |> absyn_to_preterm g
 
 (* ----------------------------------------------------------------------
     Targetting terms
@@ -321,9 +323,12 @@ val preterm_to_term = Preterm.typecheck
 
 fun absyn_to_term pprinters g a = let
   val oinfo = term_grammar.overload_info g
+  open errormonad
+  val checked = absyn_to_preterm g a >- Preterm.typecheck pprinters
 in
-  a |> absyn_to_preterm g
-    |> Preterm.typecheck pprinters
+  case checked Pretype.Env.empty of
+      Error e => raise Preterm.mkExn e
+    | Some(_, t) => t
 end
 
 fun term pprinters g tyg = let
@@ -384,6 +389,7 @@ local
   end
 in
   fun parse_preterm_in_context0 pprinters FVs ptm0 = let
+    open errormonad
     val ptm = give_types_to_fvs FVs [] ptm0
               handle UNCHANGED => ptm0
   in
@@ -396,8 +402,9 @@ in
 
   fun ctxt_term pprinters g tyg = let
     val ph1 = preterm g tyg
+    open errormonad
   in
-    fn fvs => fn q => q |> ph1 |> ctxt_preterm_to_term pprinters fvs
+    fn fvs => fn q => ph1 q >- ctxt_preterm_to_term pprinters fvs
   end
 
 end

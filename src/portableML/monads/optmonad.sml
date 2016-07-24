@@ -3,32 +3,26 @@
 structure optmonad :> optmonad =
 struct
 
-type ('a, 'b) optmonad = 'a -> ('a * 'b option)
+type ('a, 'b) optmonad = 'a -> ('a * 'b) option
 
-fun fail env = (env, NONE)
+fun fail env = NONE
 
-fun return x env = (env, SOME x)
+fun return x env = SOME (env, x)
 
-fun ok env = (env, SOME ())
+fun ok env = return () env
 
 infix >- ++ >> >-> +++
 
-fun (m1 >- f) env = let
-  val (env0, res0) = m1 env
-in
-  case res0 of
-    NONE => (env0, NONE)
-  | SOME res => f res env0
-end
+fun (m1 >- f) env0 =
+  case m1 env0 of
+      NONE => NONE
+    | SOME(env1, res1) => f res1 env1
 fun (m1 >> m2) = (m1 >- (fn _ => m2))
 
-fun (m1 ++ m2) env = let
-  val (env0, res) = m1 env
-in
-  case res of
-    NONE => m2 env
-  | x => (env0, res)
-end
+fun (m1 ++ m2) env0 =
+  case m1 env0 of
+      NONE => m2 env0
+    | x => x
 
 val op+++ = op++
 
@@ -60,5 +54,13 @@ fun many p =
 
 fun many1 p =
   p >- (fn i => many p >- (fn rest => return (i::rest)))
+
+fun lift f m = m >- (fn a => return (f a))
+fun lift2 f m1 m2 = m1 >- (fn a => m2 >- (fn b => return (f a b)))
+
+fun addState s m s0 =
+  case m (s0,s) of
+      NONE => NONE
+    | SOME((s0',s'), x) => SOME(s0',(s',x))
 
 end

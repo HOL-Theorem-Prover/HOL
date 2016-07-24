@@ -125,11 +125,8 @@ fun mk_ptlist pts =
     | h::t => Parse_support.list_make_comb noloc [cons_pt, h, mk_ptlist t]
 
 type env = Parse_supportENV.env
-fun push bvs ({scope,free,uscore_cnt} : env) : env =
-  {scope = bvs @ scope, free = free, uscore_cnt = uscore_cnt}
-
-fun popn n ({scope,free,uscore_cnt} : env) : env =
-  {scope = List.drop(scope,n), free = free, uscore_cnt = uscore_cnt}
+fun push bvs = fupd_scope (fn s => bvs @ s)
+fun popn n = fupd_scope (fn s => List.drop(s,n))
 
 fun ptlist_mk_comb [] = raise Fail "ptlist_mk_comb: empty list"
   | ptlist_mk_comb [t] = t
@@ -137,21 +134,23 @@ fun ptlist_mk_comb [] = raise Fail "ptlist_mk_comb: empty list"
     ptlist_mk_comb (Preterm.Comb{Locn = noloc, Rand = x, Rator = f} :: xs)
 
 val UNCURRY_pty = Pretype.fromType (type_of pairSyntax.uncurry_tm)
-fun mkUNCURRY () =
-  Preterm.Const {Locn = noloc, Name = "UNCURRY", Thy = "pair",
-                 Ty = Pretype.rename_typevars [] UNCURRY_pty}
+open Preterm errormonad
+val mkUNCURRY =
+    lift (fn pty => Const {Locn=noloc, Name="UNCURRY", Thy="pair", Ty=pty})
+         (Pretype.rename_typevars [] UNCURRY_pty)
 
 fun ptmkabs((vnm,vty),b) =
-  Preterm.Abs{Body = b,
-              Bvar = Preterm.Var{Locn=noloc,Name=vnm,Ty=vty},
-              Locn = noloc}
+  Abs{Body = b, Bvar = Preterm.Var{Locn=noloc,Name=vnm,Ty=vty}, Locn = noloc}
 fun ptmkcomb(f,x) = Preterm.Comb{Rator = f, Rand = x, Locn = noloc}
 fun tuplify vs body =
   case vs of
-      [] => body
-    | [x] => ptmkabs(x,body)
-    | [x,y] => ptmkcomb(mkUNCURRY(), ptmkabs(x,ptmkabs(y,body)))
-    | v::rest => ptmkcomb(mkUNCURRY(), ptmkabs(v, tuplify rest body))
+      [] => return body
+    | [x] => return (ptmkabs(x,body))
+    | [x,y] => lift (fn pt => ptmkcomb(pt, ptmkabs(x,ptmkabs(y,body))))
+                    mkUNCURRY
+    | v::rest => lift2 (fn body' => fn pt => ptmkcomb(pt, ptmkabs(v, body')))
+                       (tuplify rest body)
+                       mkUNCURRY
 
 val pty_to_string = PP.pp_to_string 70 Pretype.pp_pretype
 (*
@@ -166,24 +165,28 @@ fun extract_fvs ptm =
     open Preterm Pretype
     fun recurse tyopt acc ptm =
       case (ptm, tyopt) of
-          (Var{Name,Ty,...}, NONE) => (Name, Ty) :: acc
-        | (Var{Name,...}, SOME Ty) => (Name, Ty) :: acc
+          (Var{Name,Ty,...}, NONE) => return ((Name, Ty) :: acc)
+        | (Var{Name,...}, SOME Ty) => return ((Name, Ty) :: acc)
         | (Constrained {Ptm,Ty,...}, _) => recurse (SOME Ty) acc Ptm
         | (Comb{Rator = Comb{Rator = Const {Name = ",", Thy = "pair", ...},
                              Rand = arg1, ...},
                 Rand = arg2, ...}, _) =>
           (case tyopt of
                SOME (Tyop{Thy = "pair", Tyop = "prod", Args = [ty1,ty2]}) =>
-                 recurse (SOME ty1) (recurse (SOME ty2) acc arg2) arg1
-             | _ => recurse NONE (recurse NONE acc arg2) arg1)
+                 recurse (SOME ty2) acc arg2 >-
+                 (fn a => recurse (SOME ty1) a arg1)
+             | _ => recurse NONE acc arg2 >- (fn a => recurse NONE a arg1))
         | (Comb{Rator = arg1, Rand = arg2, ...}, _) =>
-            recurse NONE (recurse NONE acc arg2) arg1
+             recurse NONE acc arg2 >- (fn a => recurse NONE a arg1)
         | (Antiq{Tm,...}, _) =>
-            recurse (SOME (fromType (type_of Tm))) acc (term_to_preterm [] Tm)
-        | _ => acc
+            term_to_preterm [] Tm >-
+            (fn pt => recurse (SOME (fromType (type_of Tm))) acc pt)
+        | _ => return acc
   in
     recurse NONE [] ptm
   end
+
+fun update_ptyE (old:env) = fupd_ptyE (K (#ptyE old))
 
 fun mk_row recursor a E =
   case a of
@@ -211,15 +214,15 @@ fun mk_row recursor a E =
                 NONE => NONE
               | SOME a =>
                 let
-                  val (bv_ptm, _) = recursor a empty_env
+                  val (bv_ptm, E') = recursor a (update_ptyE E empty_env)
                 in
-                  SOME (extract_fvs bv_ptm)
+                  SOME (smash (extract_fvs bv_ptm) (#ptyE E'), E')
                 end
 
         val (patStartE,pop_count) =
             case bvsE of
-                NONE => (empty_env,0)
-              | SOME vs => (push vs E, length vs)
+                NONE => (update_ptyE E empty_env,0)
+              | SOME (vs,bv_env) => (push vs (update_ptyE bv_env E), length vs)
 
         val (pat_ptm, patfrees, patE0) =
             let
@@ -231,8 +234,8 @@ fun mk_row recursor a E =
             end
         val (allvars0, patE) =
             case bvsE of
-                NONE => (List.rev patfrees, E)
-              | SOME vs =>
+                NONE => (List.rev patfrees, update_ptyE patE0 E)
+              | SOME (vs, _) =>
                 (vs @ List.filter (fn(nm,_) => String.isPrefix "_" nm) patfrees,
                  patE0)
         val allvars = if null allvars0 then [("_", unit_pty)] else allvars0
@@ -252,12 +255,15 @@ fun mk_row recursor a E =
         in
           (pt, popn allpop_count E')
         end
-        val (prow_pt,_) = PMATCH_ROW_pt rhE
-        val tupled_args =
-            map (tuplify allvars) [pat_ptm, guard_ptm, rh_ptm]
+        val (prow_pt,penultE) = PMATCH_ROW_pt rhE
+        val tupled_argsM = mmap (tuplify allvars) [pat_ptm, guard_ptm, rh_ptm]
+        val (tupled_args, ptyE) =
+            case tupled_argsM (#ptyE penultE) of
+                Some(ptyE', pts) => (pts, ptyE')
+              | Error e => raise mkExn e
         (* val _ = envdiag "mk_row exit" rhE *)
       in
-        (ptlist_mk_comb (prow_pt :: tupled_args), rhE)
+        (ptlist_mk_comb (prow_pt :: tupled_args), fupd_ptyE (K ptyE) penultE)
       end
     | _ => raise mk_HOL_ERRloc "parsePMATCH" "pmatch_transform"
                  (locn_of_absyn a)

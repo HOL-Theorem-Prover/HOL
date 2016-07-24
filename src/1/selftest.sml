@@ -2,10 +2,9 @@ open HolKernel Parse boolTheory boolLib
 
 val _ = set_trace "Unicode" 0
 
-fun die s = (print (s ^ "\n"); OS.Process.exit OS.Process.failure)
-
 val tprint = testutils.tprint
 val OK = testutils.OK
+val die = testutils.die
 
 fun substtest (M, x, N, result) = let
 in
@@ -144,8 +143,22 @@ in
   OK()
 end
 
-val t = Parse.Term `(case T of T => (\x. x) | F => (~)) y`
+val _ = tprint "Testing functional-pretype 1 (pattern)"
+val t = Parse.Term `x <> y ==> x <> y` handle HOL_ERR _ => die "FAILED"
+val _ = OK()
+
+val _ = tprint "Testing functional-pretype 2 (simple case)"
+val t = Parse.Term `case x of T => F` handle HOL_ERR _ => die "FAILED"
+val _ = OK()
+
+val _ = tprint "Testing functional-pretype 3 (ignored constraint)"
+val quiet_parse = trace ("show_typecheck_errors", 0) Parse.Term
+val _ = case Lib.total quiet_parse `(\x.x) : 'a -> 'b` of
+            NONE => OK()
+          | SOME _ => die "FAILED!\n  (\\x.x):'a->'b checked"
+
 val _ = tprint "Testing parsing of case expressions with function type"
+val t = Parse.Term `(case T of T => (\x. x) | F => (~)) y`
 val _ = case Lib.total (find_term (same_const boolSyntax.bool_case)) t of
           NONE => die "FAILED"
         | SOME _ => OK()

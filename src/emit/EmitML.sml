@@ -258,9 +258,9 @@ in
 end
 
 fun strip_supported_PMATCH tm = let
-  val (i, rows) = patternMatchesSyntax.dest_PMATCH tm 
+  val (i, rows) = patternMatchesSyntax.dest_PMATCH tm
   fun dest_r r = let
-     val (_, p, g, r) = patternMatchesSyntax.dest_PMATCH_ROW_ABS r 
+     val (_, p, g, r) = patternMatchesSyntax.dest_PMATCH_ROW_ABS r
   in (p, r, g) end
 in
   (i, List.map dest_r rows)
@@ -302,7 +302,7 @@ fun term_to_ML openthys side ppstrm =
      if combinSyntax.is_fail tm then pp_fail i tm else
      if oneSyntax.is_one tm  then pp_one tm else
      if TypeBase.is_record tm then pp_record i (TypeBase.dest_record tm) else
-     if is_supported_PMATCH tm then 
+     if is_supported_PMATCH tm then
         pp_case_with_guard i (strip_supported_PMATCH tm) else
      if TypeBase.is_case tm then pp_case i (TypeBase.strip_case tm) else
      if is_the_value tm then pp_itself tm else
@@ -499,7 +499,7 @@ fun term_to_ML openthys side ppstrm =
         ; end_block()
       end
   and pp_case i (a,cases) =
-    pp_case_with_guard i 
+    pp_case_with_guard i
       (a, List.map (fn (pat, rhs) => (pat, rhs, T)) cases)
   and pp_case_with_guard i (a,cases) =
       ( begin_block CONSISTENT 1
@@ -929,17 +929,23 @@ fun gen_updates ty fields =
      fun mk_upd_const (fname,_) =
        let
          val rpty = Pretype.fromType ty
-         fun gv() = Pretype.UVar (ref NONE)
          val op -=> = Pretype.mk_fun_ty infix -=>
-         val upd_pty = gv() -=> (rpty -=> gv())
+         open errormonad
+         val upd_ptyM = lift2 (fn ty1 => fn ty2 => ty1 -=> (rpty -=> ty2))
+                              Pretype.new_uvar Pretype.new_uvar
          val ln = locn.Loc_None
          val qid = Absyn.QIDENT(ln, Thy, Tyop^"_"^fname^"_fupd")
-         val ptm0 = Parse.absyn_to_preterm qid
-         val ptm = Preterm.Constrained{Locn = ln, Ptm = ptm0, Ty = upd_pty}
-         val _ = with_flag (Globals.guessing_tyvars, true)
-                           (Preterm.typecheck_phase1 NONE) ptm
+         val ptm0_M = Parse.absyn_to_preterm qid
+         val ptm_M =
+             lift2 (fn ptm0 => fn upd_pty =>
+                       Preterm.Constrained{Locn = ln, Ptm = ptm0, Ty = upd_pty})
+                   ptm0_M upd_ptyM
+         val toTerm = ptm_M >- (fn pt =>
+                      Preterm.typecheck_phase1 NONE pt >> Preterm.to_term pt)
        in
-         Preterm.to_term ptm
+         with_flag (Globals.guessing_tyvars, true)
+                   (Preterm.smash toTerm)
+                   Pretype.Env.empty
        end
      val upds = map mk_upd_const fields
      val fns = map (fn upd_t => mk_var ("f", #1(dom_rng (type_of upd_t)))) upds

@@ -21,4 +21,14 @@ val tryall : ('a -> ('b, 'c) seqmonad) -> 'a list -> ('b, 'c) seqmonad
 val optional : ('a, 'b) seqmonad -> ('a, 'b option) seqmonad
 val mmap : ('a -> ('b, 'c) seqmonad) -> 'a list -> ('b, 'c list) seqmonad
 
+val lift : ('a -> 'b) -> ('s,'a) seqmonad -> ('s,'b) seqmonad
+val lift2 : ('a -> 'b -> 'c) -> ('s,'a) seqmonad -> ('s,'b) seqmonad ->
+            ('s,'c) seqmonad
+
+val fromOpt : ('s,'a) optmonad.optmonad -> ('s,'a) seqmonad
+val fromErr : ('s,'a,'e) errormonad.t -> ('s,'a) seqmonad
+
+(* boolean is true if this was a singleton sequence *)
+val toError : 'error -> ('s,'a) seqmonad -> ('s,'a * bool,'error) errormonad.t
+
 end

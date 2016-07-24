@@ -490,13 +490,19 @@ in
       | Term => let
           val term = if OptSet.has TermThm opts then
                        spec |> getThm |> concl |> rand |> do_tminsts pos opts
-                     else if OptSet.has Case opts
-                        then let
-                          val ptm0 = Parse.Preterm [QQ parse_start, QQ spec]
-                          val () = Preterm.typecheck_phase1 NONE ptm0
-                          val ptm = Preterm.overloading_resolution ptm0
+                     else if OptSet.has Case opts then
+                       let
+                         open Preterm errormonad
+                         val a = Absyn [QQ parse_start, QQ spec]
+                         val tm_M =
+                             absyn_to_preterm a >-                (fn ptm0 =>
+                             typecheck_phase1 NONE ptm0 >>
+                             overloading_resolution ptm0 >-       (fn (pt,b) =>
+                             report_ovl_ambiguity b >>
+                             to_term pt))
+                         val tm = smash tm_M Pretype.Env.empty
                         in
-                          Preterm.to_term ptm |> do_tminsts pos opts
+                          do_tminsts pos opts tm
                         end
                      else
                          Parse.Term [QQ parse_start, QQ spec]

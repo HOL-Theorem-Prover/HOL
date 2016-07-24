@@ -474,7 +474,10 @@ val print_thm = print o thm_to_string
 
 fun absyn_to_preterm a = TermParse.absyn_to_preterm (term_grammar()) a
 
-fun Preterm q = q |> Absyn |> absyn_to_preterm
+fun Preterm q =
+  case (q |> Absyn |> absyn_to_preterm) Pretype.Env.empty of
+      errormonad.Error e => raise Preterm.mkExn e
+    | errormonad.Some (_, pt) => pt
 
 val absyn_to_term =
     TermParse.absyn_to_term (SOME (term_to_string, type_to_string))
@@ -508,16 +511,27 @@ end
     parsing in context
    ---------------------------------------------------------------------- *)
 
+fun smashErrm m =
+  case m Pretype.Env.empty of
+      errormonad.Error e => raise Preterm.mkExn e
+    | errormonad.Some (_, result) => result
+
 fun parse_in_context FVs q =
-    TermParse.ctxt_preterm_to_term (SOME(term_to_string,type_to_string))
-                                   FVs
-                                   (Preterm q)
+  let
+    open errormonad
+    val m =
+        (q |> Absyn |> absyn_to_preterm) >-
+        TermParse.ctxt_preterm_to_term (SOME(term_to_string,type_to_string)) FVs
+  in
+    smashErrm m
+  end
 
-fun grammar_parse_in_context(tyg,tmg) =
-    TermParse.ctxt_term (SOME(term_to_string,type_to_string)) tmg tyg
+fun grammar_parse_in_context(tyg,tmg) ctxt q =
+    TermParse.ctxt_term (SOME(term_to_string,type_to_string)) tmg tyg ctxt q |>
+    smashErrm
 
-val parse_preterm_in_context =
-    TermParse.ctxt_preterm_to_term (SOME(term_to_string,type_to_string))
+fun parse_preterm_in_context ctxt =
+    TermParse.ctxt_preterm_to_term (SOME(term_to_string,type_to_string)) ctxt
 
 
 (*---------------------------------------------------------------------------

@@ -335,18 +335,22 @@ fun labrhs t = (* term is a possibly labelled equality *)
 
 fun (q by tac) (g as (asl,w)) = let
   val a = trace ("syntax_error", 0) Parse.Absyn q
+  open errormonad
   val (goal_pt, finisher) =
       case Lib.total Absyn.dest_eq a of
         SOME (Absyn.IDENT(_,"_"), r) =>
-        if not (null asl) andalso is_labeq (hd asl) then
-          (Parse.absyn_to_preterm
-             (Absyn.mk_eq(Absyn.mk_AQ (labrhs (hd asl)), r)),
-           POP_ASSUM o eqTRANS)
-        else
-          raise ERR "by" "Top assumption must be an equality"
+          if not (null asl) andalso is_labeq (hd asl) then
+            (Parse.absyn_to_preterm
+               (Absyn.mk_eq(Absyn.mk_AQ (labrhs (hd asl)), r)),
+             POP_ASSUM o eqTRANS)
+          else
+            raise ERR "by" "Top assumption must be an equality"
       | x => (Parse.absyn_to_preterm a, STRIP_ASSUME_TAC)
   val tm = trace ("show_typecheck_errors", 0)
-                 (Parse.parse_preterm_in_context (free_varsl (w::asl))) goal_pt
+                 (Preterm.smash
+                     (goal_pt >-
+                      Parse.parse_preterm_in_context (free_varsl (w::asl))))
+                 Pretype.Env.empty
 in
   SUBGOAL_THEN tm finisher THEN1 tac
 end (asl, w)
