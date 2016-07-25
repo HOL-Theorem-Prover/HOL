@@ -230,6 +230,33 @@ fun ppgoal ppstrm (asl,w) =
    let open Portable
        val {add_string, add_break,
             begin_block, end_block, add_newline, ...} = with_ppstream ppstrm
+       fun check_vars() =
+         let
+           val fvs = FVL (w::asl) empty_tmset
+           fun ty2s ty = String.extract(Parse.type_to_string ty, 1, NONE)
+           fun foldthis (v,acc) =
+             let
+               val nm = #1 (dest_var v)
+             in
+               case Binarymap.peek(acc, nm) of
+                   NONE => Binarymap.insert(acc, nm, [ty2s (type_of v)])
+                 | SOME vs => Binarymap.insert(acc, nm, ty2s (type_of v)::vs)
+             end
+           val m = HOLset.foldl foldthis (Binarymap.mkDict String.compare) fvs
+           fun foldthis (nm,vtys,msg) =
+             if length vtys > 1 then
+               ("  " ^ nm ^ " : " ^ String.concatWith ", " vtys) :: msg
+             else msg
+           val msg = Binarymap.foldl foldthis [] m
+         in
+           if null msg then ()
+           else
+             (add_newline();
+              add_string ("WARNING: goal contains variables of same name \
+                          \but different types");
+              add_newline();
+              app (fn s => (add_string s; add_newline())) msg)
+         end
        val pr = Parse.pp_term ppstrm
        fun max (a,b) = if a < b then a else b
        val length_asl = length asl;
@@ -313,6 +340,7 @@ fun ppgoal ppstrm (asl,w) =
         add_newline ();
         pr w;
         add_newline ());
+     check_vars();
      end_block ()
    end
    handle e => (Lib.say "\nError in attempting to print a goal!\n";  raise e);
