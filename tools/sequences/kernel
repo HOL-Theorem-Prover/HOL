@@ -24,4 +24,5 @@ src/proofman
 !tools/Holmake/tests/altquote1
 !tools/Holmake/tests/brokenstrings
 !tools/Holmake/tests/holdep
+[poly]!tools/Holmake/tests/cheatspotting
 !src/1/theory_tests

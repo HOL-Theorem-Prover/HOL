@@ -74,6 +74,7 @@ fun polish s = StringCvt.padRight #" " 16 (truncate 16 (polish0 s))
 
 val cheat_string = "Saved CHEAT _"
 val oracle_string = "Saved ORACLE thm _"
+val used_cheat_string = "(used CHEAT)"
 
 fun new {info,warn,genLogFile,keep_going} =
   let
@@ -116,8 +117,10 @@ fun new {info,warn,genLogFile,keep_going} =
           StartJob (_, tag) =>
           let
             val strm = TextIO.openOut (genLogFile{tag = tag})
-            val tb = tailbuffer.new {numlines = 10,
-                                     patterns = [cheat_string, oracle_string]}
+            val tb = tailbuffer.new {
+                  numlines = 10,
+                  patterns = [cheat_string, oracle_string, used_cheat_string]
+                }
           in
             monitor_map :=
               Binarymap.insert(!monitor_map, tag, ((strm, tb), MRunning #"|"));
@@ -169,7 +172,7 @@ fun new {info,warn,genLogFile,keep_going} =
                   val taginfo = taginfo tag
                 in
                   if st = W_EXITED then
-                    if seen cheat_string then
+                    if seen cheat_string orelse seen used_cheat_string then
                       taginfo boldyellow "CHEATED"
                     else
                       taginfo
