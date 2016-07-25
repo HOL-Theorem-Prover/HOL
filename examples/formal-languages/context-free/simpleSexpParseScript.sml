@@ -306,53 +306,6 @@ val peg_eval_list_digits = Q.store_thm("peg_eval_list_digits",
   \\ simp[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied]
   \\ simp[peg_eval_tok_SOME]);
 
-val peg_eval_number = Q.prove(
-  `∀n. peg_eval sexpPEG (toString n,sexpPEG.start) (SOME ("",SX_NUM n))`,
-  simp[pnt_def,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,
-       ignoreL_def, ignoreR_def, peg_eval_seq_SOME, peg_eval_rpt,
-       Once peg_eval_choicel_CONS,
-       PULL_EXISTS]
-  \\ srw_tac[boolSimps.DNF_ss][]
-  \\ disj1_tac
-  \\ part_match_exists_tac (hd o strip_conj) (concl peg_eval_list_num_to_dec_string_no_spaces)
-  \\ simp[peg_eval_list_num_to_dec_string_no_spaces]
-  \\ simp[peg_eval_tok_SOME,PULL_EXISTS]
-  \\ Cases_on`toString n`
-  >- (
-    pop_assum(mp_tac o Q.AP_TERM`LENGTH`)
-    \\ simp[num_to_dec_string_def,n2s_def,numposrepTheory.LENGTH_n2l] )
-  \\ simp[]
-  \\ assume_tac EVERY_isDigit_num_to_dec_string
-  \\ rfs[]
-  \\ imp_res_tac peg_eval_list_digits
-  \\ first_assum(part_match_exists_tac (hd o strip_conj) o concl)
-  \\ simp[]
-  \\ qexists_tac`[]`
-  \\ simp[peg_eval_list_tok_nil]
-  \\ simp[pairTheory.UNCURRY]
-  \\ simp[destSXCONS_def,destSXNUM_def]
-  \\ simp[rich_listTheory.FOLDL_MAP,pairTheory.UNCURRY,destSXNUM_def]
-  \\ qmatch_abbrev_tac`n = SND (FOLDL f a t) + _`
-  \\ `∀ls a . FST (FOLDL f a ls) = FST a * 10 ** (LENGTH ls)`
-  by ( Induct \\ simp[Abbr`f`,arithmeticTheory.EXP] )
-  \\ first_x_assum(qspecl_then[`t`,`a`]SUBST_ALL_TAC)
-  \\ `FST a = 1` by simp[Abbr`a`] \\ simp[]
-  \\ `∀ls a. EVERY isDigit ls ⇒
-        SND (FOLDL f a ls) = (10 ** LENGTH ls * SND a + (l2n 10 (MAP (combin$C $- 48 o ORD) (REVERSE ls))))`
-  by (
-    qunabbrev_tac`f` \\ rpt (pop_assum kall_tac)
-    \\ ho_match_mp_tac listTheory.SNOC_INDUCT
-    \\ rw[numposrepTheory.l2n_def,listTheory.FOLDL_SNOC,listTheory.EVERY_SNOC,listTheory.REVERSE_SNOC,arithmeticTheory.EXP]
-    \\ simp[isDigit_ORD_MOD_10] )
-  \\ first_x_assum(qspecl_then[`t`,`a`]mp_tac)
-  \\ simp[] \\ disch_then kall_tac
-  \\ simp[Abbr`a`]
-  \\ simp[GSYM s2n_def]
-  \\ fs[s2n_UNHEX_alt]
-  \\ imp_res_tac num_to_dec_string_eq_cons
-  \\ simp[GSYM num_from_dec_string_def]
-  \\ imp_res_tac isDigit_UNHEX_alt \\ fs[]);
-
 val peg_eval_list_chars = Q.store_thm("peg_eval_list_chars",
   `∀l1. EVERY isPrint l1 ⇒
     peg_eval_list sexpPEG (escape_string l1++[#"\""], nt (mkNT sxnt_strchar) I) ("\"",MAP (λc. SX_SYM [c]) l1)`,
