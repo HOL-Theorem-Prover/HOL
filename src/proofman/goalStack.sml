@@ -236,11 +236,11 @@ fun ppgoal ppstrm (asl,w) =
            fun ty2s ty = String.extract(Parse.type_to_string ty, 1, NONE)
            fun foldthis (v,acc) =
              let
-               val nm = #1 (dest_var v)
+               val (nm,ty_s) = (I ## ty2s) (dest_var v)
              in
                case Binarymap.peek(acc, nm) of
-                   NONE => Binarymap.insert(acc, nm, [ty2s (type_of v)])
-                 | SOME vs => Binarymap.insert(acc, nm, ty2s (type_of v)::vs)
+                   NONE => Binarymap.insert(acc, nm, [ty_s])
+                 | SOME vs => Binarymap.insert(acc, nm, ty_s::vs)
              end
            val m = HOLset.foldl foldthis (Binarymap.mkDict String.compare) fvs
            fun foldthis (nm,vtys,msg) =
