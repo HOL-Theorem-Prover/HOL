@@ -18,6 +18,7 @@ val print_fvs = ref false
 val print_goal_at_top = ref true;
 val reverse_assums = ref false;
 val print_number_assums = ref 1000000;
+val other_subgoals_pretty_limit = ref 100;
 
 val _ = register_trace ("Goalstack.howmany_printed_subgoals", show_nsubgoals,
                         10000);
@@ -29,6 +30,9 @@ val _ = register_btrace("Goalstack.print_goal_at_top", print_goal_at_top)
 val _ = register_btrace("Goalstack.print_assums_reversed", reverse_assums)
 val _ = register_trace ("Goalstack.howmany_printed_assums",
                         print_number_assums, 1000000)
+val _ = register_trace("Goalstack.other_subgoals_pretty_limit",
+                       other_subgoals_pretty_limit, 100000)
+
 
 fun say s = if !chatting then Lib.say s else ();
 
@@ -45,6 +49,9 @@ fun rotr lst =
   in (back::front)
   end
   handle HOL_ERR _ => raise ERR "rotr" "empty list"
+
+fun goal_size (asl,t) =
+  List.foldl (fn (a,acc) => term_size a + acc) (term_size t) asl
 
 
 (* GOALSTACKS *)
@@ -76,6 +83,14 @@ datatype gstk = GSTK of {prop  : proposition,
 
 
 fun depth(GSTK{stack,...}) = length stack;
+
+fun tac_result_size (tr : tac_result, acc) =
+  List.foldl (fn (g,acc) => goal_size g + acc) acc (#goals tr)
+
+fun gstk_size (GSTK{prop,stack,...}) =
+  case prop of
+      PROVED _ => 0
+    | POSED _ => List.foldl tac_result_size 0 stack
 
 fun is_initial(GSTK{prop=POSED g, stack=[], ...}) = true
   | is_initial _ = false;
@@ -323,23 +338,31 @@ fun pp_gstk ppstrm  =
            end
        | pr (GSTK{prop = POSED _, stack = ({goals,...}::_), ...}) =
            let val (ellipsis_action, goals_to_print) =
-               if length goals > !show_nsubgoals then
-               let val num_elided = length goals - !show_nsubgoals
-               in
-                 ((fn () =>
-                   (add_string ("..."^Int.toString num_elided ^ " subgoal"^
-                                (if num_elided = 1 then "" else "s") ^
-                                " elided...");
-                    add_newline(); add_newline())),
-                  rev (List.take (goals, !show_nsubgoals)))
-               end
-               else
-                 ((fn () => ()), rev goals)
+                 if length goals > !show_nsubgoals then
+                   let val num_elided = length goals - !show_nsubgoals
+                   in
+                     ((fn () =>
+                        (add_string ("..."^Int.toString num_elided ^ " subgoal"^
+                                     (if num_elided = 1 then "" else "s") ^
+                                     " elided...");
+                         add_newline(); add_newline())),
+                      rev (List.take (goals, !show_nsubgoals)))
+                   end
+                 else
+                   ((fn () => ()), rev goals)
+               val (pfx,lastg) = front_last goals_to_print
+               fun start() =
+                 (begin_block Portable.CONSISTENT 0;
+                  ellipsis_action();
+                  Portable.pr_list pr_goal (fn () => ()) add_newline pfx)
+               val size = List.foldl (fn (g,acc) => goal_size g + acc) 0 pfx
            in
-             begin_block Portable.CONSISTENT 0;
-             ellipsis_action();
-             Portable.pr_list
-               pr_goal (fn () => ()) add_newline goals_to_print;
+             if size > current_trace "Goalstack.other_subgoals_pretty_limit"
+             then
+               with_flag(Parse.current_backend, PPBackEnd.raw_terminal) start()
+             else start();
+             add_newline();
+             pr_goal lastg;
              if length goals > 1 andalso !show_stack_subgoal_count then
                (add_string ("\n" ^ Int.toString (length goals) ^ " subgoals");
                 add_newline())

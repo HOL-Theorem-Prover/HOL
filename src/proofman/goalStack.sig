@@ -21,6 +21,8 @@ sig
    val top_goal     : gstk -> goal
    val top_goals    : gstk -> goal list
    val depth        : gstk -> int
+   val goal_size    : goal -> int
+   val gstk_size    : gstk -> int
 
    val std_pp_goal  : ppstream -> goal -> unit
    val pp_goal      : ppstream -> goal -> unit
