@@ -24,7 +24,7 @@ fun tcheck_say s = if !show_typecheck_errors then Lib.say s else ()
 val last_tcerror : error option ref = ref NONE
 
 type 'a errM = (Pretype.Env.t,'a,tcheck_error * locn.locn) errormonad.t
-val fromOptS = seqmonad.fromErr
+type 'a seqM = (Pretype.Env.t,'a) seqmonad.seqmonad
 
 fun smash errM env =
   case errM env of
@@ -451,7 +451,7 @@ end (* local *)
 fun remove_overloading ptm = let
   open seqmonad Term
   infix >- >> ++
-  fun unify t1 t2 = fromOptS (Pretype.unify t1 t2)
+  fun unify t1 t2 = fromErr (Pretype.unify t1 t2)
 
   fun recurse ptm =
     case ptm of
@@ -464,15 +464,15 @@ fun remove_overloading ptm = let
                 val {Ty=ty,Name=nm,Thy=thy} = Term.dest_thy_const t
                 val pty0 = Pretype.fromType ty
               in
-                fromOptS (Pretype.rename_typevars [] pty0) >- unify Ty >>
+                fromErr (Pretype.rename_typevars [] pty0) >- unify Ty >>
                 return (Const{Name=nm, Ty=Ty, Thy=thy, Locn=Locn})
               end
             else
               let
                 val avds = map Type.dest_vartype (tmlist_tyvs (free_vars t))
               in
-                fromOptS (term_to_preterm avds t) >- (fn ptm =>
-                fromOptS (ptype_of ptm) >- (fn pty =>
+                fromErr (term_to_preterm avds t) >- (fn ptm =>
+                fromErr (ptype_of ptm) >- (fn pty =>
                 unify Ty pty >>
                 return (Pattern{Ptm = ptm, Locn = Locn})))
               end
@@ -497,7 +497,7 @@ fun remove_overloading ptm = let
           else ()
 *)
 in
-  recurse ptm
+  fromErr (remove_overloading_phase1 ptm) >- recurse
 end
 
 fun do_overloading_removal ptm =
@@ -545,6 +545,9 @@ fun overloading_resolution ptm =
     handle phase1_exn(l,s,ty) =>
            (tcheck_say (locn.toString l ^ ": " ^ s);
             raise ERRloc "overloading_resolution" l s)
+
+fun overloading_resolutionS ptm =
+  seqmonad.lift remove_elim_magics (remove_overloading ptm)
 
 (*---------------------------------------------------------------------------
  * Type inference for HOL terms. Looks ugly because of error messages, but is
@@ -868,6 +871,16 @@ fun typecheck pfns ptm0 =
                                   "Wanted it to have type:  ",
                                   typ ty, "\n"]);
               raise ERRloc "typecheck" l s)
+
+fun typecheckS ptm =
+  let
+    open seqmonad
+  in
+    lift (!post_process_term o remove_case_magic)
+         (fromErr (TC NONE ptm) >>
+          overloading_resolutionS ptm >-
+          (fn ptm' => fromErr (to_term ptm')))
+  end
 
 
 end; (* Preterm *)

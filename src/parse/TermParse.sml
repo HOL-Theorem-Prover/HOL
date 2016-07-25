@@ -337,6 +337,20 @@ in
   fn q => q |> ph1 |> absyn_to_term pprinters g
 end
 
+fun termS g tyg =
+  let
+    val ph1 = absyn g tyg
+  in
+    fn q =>
+       let
+         val a = ph1 q
+         open seqmonad Preterm
+         val M = fromErr (absyn_to_preterm g a) >- typecheckS
+       in
+         seq.map #2 (M Pretype.Env.empty)
+       end
+  end
+
 (* ----------------------------------------------------------------------
     Parsing in context
    ---------------------------------------------------------------------- *)
@@ -407,7 +421,22 @@ in
     fn fvs => fn q => ph1 q >- ctxt_preterm_to_term pprinters fvs
   end
 
-end
+  fun ctxt_termS g tyg =
+    let
+      val ph1 = preterm g tyg
+      open seqmonad
+    in
+      fn fvs => fn q =>
+         let
+           open seqmonad
+           fun givetypes pt = give_types_to_fvs fvs [] pt handle UNCHANGED => pt
+           val pt_S = lift givetypes (fromErr (ph1 q))
+         in
+           seq.map #2 ((pt_S >- Preterm.typecheckS) Pretype.Env.empty)
+         end
+    end
+
+end (* local *)
 
 
 end (* struct *)

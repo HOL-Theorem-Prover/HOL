@@ -15,6 +15,7 @@ sig
 
   type 'a in_env = 'a Pretype.in_env
   type 'a errM = (Pretype.Env.t,'a,error) errormonad.t
+  type 'a seqM = (Pretype.Env.t,'a) seqmonad.seqmonad
   val smash : ('s,'a,error) errormonad.t -> 's -> 'a
 
   datatype preterm =
@@ -63,6 +64,7 @@ sig
      ambiguity in the term *)
 
   val overloading_resolution : preterm -> (preterm * bool) errM
+  val overloading_resolutionS : preterm -> preterm seqM
   val report_ovl_ambiguity : bool -> unit errM
 
 
@@ -83,6 +85,7 @@ sig
   (* essentially the composition of all four of the above *)
   val typecheck:
     ((term -> string) * (hol_type -> string)) option -> preterm -> term errM
+  val typecheckS : preterm -> term seqM
 
   val last_tcerror : (tcheck_error * locn.locn) option ref
 

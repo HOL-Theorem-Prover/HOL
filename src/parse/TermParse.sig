@@ -19,11 +19,14 @@ sig
   val absyn_to_term : pprinters -> grammar -> absyn -> term
   val preterm_to_term : pprinters -> preterm -> term Preterm.errM
   val term : pprinters -> grammar -> tygrammar -> term quotation -> term
+  val termS : grammar -> tygrammar -> term quotation -> term seq.seq
 
   (* in contexts *)
   val ctxt_preterm_to_term : pprinters -> term list -> preterm ->
                              term Preterm.errM
   val ctxt_term : pprinters -> grammar -> tygrammar -> term list ->
                   term quotation -> term Preterm.errM
+  val ctxt_termS : grammar -> tygrammar -> term list -> term quotation ->
+                   term seq.seq
 
 end
