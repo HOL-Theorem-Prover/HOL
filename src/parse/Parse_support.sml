@@ -59,48 +59,40 @@ fun make_preterm (tm_in_e : preterm_in_env) =
  *       Antiquotes                                                          *
  *---------------------------------------------------------------------------*)
 
-fun make_aq l tm (e as {scope,free,...}:env) = let
-  open Term Preterm
-  fun from ltm (E as (lscope,scope,free)) =
-    case ltm of
-      VAR (v as (Name,Ty)) => let
-        val pty = Pretype.fromType Ty
-        val v' = {Name=Name, Ty=pty, Locn=l}
-      in
-        if mem v' lscope then (Var v', E)
-        else
-          case assoc1 Name scope of
-            SOME(_,ntv) => (Constrained{Ptm=Var{Name=Name,Ty=ntv,Locn=l},
-                                        Ty=pty, Locn=l}, E)
-          | NONE => let
+fun make_aq l tm (e:env) =
+  let
+    open errormonad
+    fun traverse localbvs t e =
+      case dest_term t of
+          VAR(nm, ty) =>
+          if HOLset.member(localbvs, t) then e
+          else
+            let
+              val pty = Pretype.fromType ty
             in
-              case assoc1 Name free of
-                NONE => (Var v', (lscope,scope, (Name,pty)::free))
-              | SOME(_,ntv) => (Constrained{Ptm=Var{Name=Name,Ty=ntv,Locn=l},
-                                            Ty=pty,Locn=l}, E)
+              case assoc1 nm (#scope e) of
+                  NONE =>
+                  (case assoc1 nm (#free e) of
+                       NONE => fupd_free (cons (nm,pty)) e
+                     | SOME (_, pty') =>
+                       case Pretype.unify pty pty' (#ptyE e) of
+                           Some(ptyE', ()) => fupd_ptyE (K ptyE') e
+                         | Error e => raise AQincompat{
+                                       nm = nm, aqty = ty, loc = l, fv = true,
+                                       unify_error = e })
+               | SOME (_, pty') =>
+                 (case Pretype.unify pty pty' (#ptyE e) of
+                      Some(ptyE', ()) => fupd_ptyE (K ptyE') e
+                    | Error e => raise AQincompat {
+                                  nm = nm, aqty = ty, loc = l, fv = false,
+                                  unify_error = e })
             end
-      end
-    | CONST{Name,Thy,Ty} => (Const{Name=Name,Thy=Thy,Ty=Pretype.fromType Ty,
-                                   Locn=l},E)
-    | COMB(Rator,Rand)   => let
-        val (ptm1,E1) = from (dest_term Rator) E
-        val (ptm2,E2) = from (dest_term Rand) E1
-      in
-        (Comb{Rator=ptm1, Rand=ptm2, Locn=l}, E2)
-      end
-    | LAMB(Bvar,Body) => let
-        val (s,ty) = dest_var Bvar
-        val v' = {Name=s, Ty = Pretype.fromType ty, Locn=l}
-        val (Body',(_,_,free')) = from (dest_term Body)
-                                       (v'::lscope, scope, free)
-      in
-        (Abs{Bvar=Var v', Body=Body', Locn=l}, (lscope,scope,free'))
-      end
-  val (ptm, (_,_,free)) = from (dest_term tm) ([],scope,free)
-in
-  (ptm, {scope=scope,free=free,uscore_cnt = #uscore_cnt e,ptyE = #ptyE e})
-end;
-
+        | CONST _ => e
+        | COMB(f,x) => traverse localbvs x (traverse localbvs f e)
+        | LAMB(bv, bod) => traverse (HOLset.add(localbvs,bv)) bod e
+  in
+    (Preterm.Antiq{Tm = tm, Locn = l}, traverse empty_tmset tm e)
+  end
 
 (*---------------------------------------------------------------------------*
  * Generating fresh constant instances                                       *

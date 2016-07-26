@@ -64,7 +64,13 @@ in
     | Comb{Rator,...} => head_var Rator
     | Abs _ => raise err "Head is an abstraction"
     | Constrained{Ptm,...} => head_var Ptm
-    | Antiq{Tm,...} => raise err "Head is an antiquote"
+    | Antiq{Tm,...} =>
+      let
+        val (nm,ty) = Term.dest_var Tm
+         handle HOL_ERR _ => raise err "Head is an antiquoted non-var"
+      in
+        Var{Name=nm,Ty=Pretype.fromType ty,Locn=locn.Loc_None}
+      end
     | Pattern _ => raise err "Head is a Pattern"
 end
 
