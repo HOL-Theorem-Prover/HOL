@@ -5,6 +5,9 @@ struct
   fun x |> f = f x
   fun K x y = x
 
+  fun assoc1 k [] = NONE
+    | assoc1 k ((p as (k',v))::rest) = if k = k' then SOME p else assoc1 k rest
+
   type pid = Posix.ProcEnv.pid
   val pidToWord  = Posix.Process.pidToWord
   type exit_status = Posix.Process.exit_status
@@ -97,6 +100,8 @@ struct
         EQUAL => String.compare(s1,s2)
       | x => x
   fun wjkey ({tag,pid,...} : 'a working_job) = (pid,tag)
+  fun wjk_member x [] = false
+    | wjk_member x (h::t) = jobkey_compare(x,h) = EQUAL orelse wjk_member x t
 
   type 'a worklist = {
     current_jobs : (jobkey, 'a working_job) Binarymap.dict,
@@ -104,6 +109,27 @@ struct
     worklimit : int,
     genjob : 'a -> 'a genjob_result
   }
+
+  fun inStreamInPoll (strm : TextIO.instream) =
+    let
+      val (rd as TextPrimIO.RD{ioDesc,...}, buf) =
+          TextIO.StreamIO.getReader(TextIO.getInstream strm)
+      val _ =
+          TextIO.setInstream (strm, TextIO.StreamIO.mkInstream(rd,buf))
+    in
+      case ioDesc of
+          NONE => raise Fail "Can't poll instream"
+        | SOME d => OS.IO.pollIn (valOf (OS.IO.pollDesc d))
+                    handle Option => raise Fail "Can't poll instream"
+    end
+
+  fun workjob_polls (wj : 'a working_job) =
+    [(inStreamInPoll (#out wj), (OUT, wj)),
+     (inStreamInPoll (#err wj), (ERR, wj))]
+
+  fun worklist_polls (wl : 'a worklist) =
+    Binarymap.foldl (fn (_, wj, acc) => workjob_polls wj @ acc) []
+                    (#current_jobs wl)
 
   fun new_worklist {worklimit : int,provider : 'a workprovider} : 'a worklist =
     {current_jobs = Binarymap.mkDict jobkey_compare,
@@ -267,60 +293,45 @@ struct
     let
       open Posix.Process
       val (cmds, wl1) = fill_workq monitorfn ([], wl0)
-      fun monitor msg (acc as (cmds, wl, actp)) =
+      fun monitor msg (acc as (cmds, wl)) =
         case monitorfn msg of
             NONE => acc
-          | SOME c => (c::cmds, wl, actp)
-      fun nothing wj (cmds, wl, actp) =
+          | SOME c => (c::cmds, wl)
+      fun nothing wj (cmds, wl) =
         let
           val msg =
               NothingSeen (wjkey wj, {delay = Time.-(Time.now(), #lastevent wj),
                                       total_elapsed = elapsed wj})
         in
-          monitor msg (cmds, addjob wj wl, actp)
+          monitor msg (cmds, addjob wj wl)
         end
-      fun exitstatus wj status (cs, wl, _) =
+      fun exitstatus wj status (cs, wl) =
         let
           val msg = Terminated (wjkey wj, status, elapsed wj)
           val newstate = #update wj (#current_state wl, status = W_EXITED)
         in
-          monitor msg (cs, updateWL wl (U #current_state newstate) $$, true)
+          monitor msg (cs, updateWL wl (U #current_state newstate) $$)
         end
-      fun eof wj chan (cmds, wl, _) =
+      fun eof wj chan (cmds, wl) =
         monitor (EOF (wjkey wj, chan, elapsed wj))
-                (cmds, addjob (markeof chan wj) wl, true)
-      fun caninput wj k chan (cmds, wl, _) =
-        let
-          val s = TextIO.inputN(wjstrm chan wj, k)
-          val msg = Output(wjkey wj, elapsed wj, chan, s)
-        in
-          monitor msg (cmds, addjob (touch wj) wl, true)
-        end
+                (cmds, addjob (markeof chan wj) wl)
       fun is_neweof wj chan =
         case chan of
             ERR => not (#erreof wj)
           | OUT => not (#outeof wj)
-      fun dowait (wj, acc) =
-        case waitpid_nh(W_CHILD (#pid wj), []) of
-            NONE => nothing wj acc
-          | SOME (_, status) => exitstatus wj status acc
-      fun checkchan wj chan acc k =
-        case TextIO.canInput(wjstrm chan wj, 80) of
-            NONE => k (wj, acc)
-          | SOME 0 => if is_neweof wj chan then eof wj chan acc
-                      else k (wj, acc)
-          | SOME k => caninput wj k chan acc
-      fun one_wjob (k, wj : 'a working_job, acc) =
-        checkchan wj OUT acc (fn (wj, acc) => checkchan wj ERR acc dowait)
+      fun dowait didio (k (* key *), wj, acc as (cmds,wl)) =
+        if wjk_member k didio then (cmds, addjob wj wl)
+        else
+          case waitpid_nh(W_CHILD (#pid wj), []) of
+              NONE => nothing wj acc
+            | SOME (_, status) => exitstatus wj status acc
 
-      fun workloop (cmds, wl, actp) =
+      fun workloop didio (cmds, wl) =
         let
           val empty_jobs = Binarymap.mkDict jobkey_compare
         in
-          Binarymap.foldl one_wjob
-                          (cmds,
-                           updateWL wl (U #current_jobs empty_jobs) $$,
-                           actp)
+          Binarymap.foldl (dowait didio)
+                          (cmds, updateWL wl (U #current_jobs empty_jobs) $$)
                           (#current_jobs wl)
         end
 
@@ -328,13 +339,37 @@ struct
         if Binarymap.numItems (#current_jobs wl) = 0 then #current_state wl
         else
           let
-            val (cmds', wl', activity) = workloop (cmds, wl, false)
-            val wl' = execute_cmds monitorfn cmds' wl'
+            val polls = worklist_polls wl
+            val active =
+                OS.IO.poll(map #1 polls, SOME (Time.fromMilliseconds 100))
+            fun foldthis (pi, (acc as (cmds, wl),didio)) =
+              let
+                val pd = OS.IO.infoToPollDesc pi
+              in
+                case assoc1 pd polls of
+                    NONE => raise Fail "Couldn't find poll-data in assoc1"
+                  | SOME (_, (chan, wj)) =>
+                    let
+                      val s = TextIO.input (wjstrm chan wj)
+                      val didio' = wjkey wj :: didio
+                    in
+                      if size s = 0 then
+                        if is_neweof wj chan then (eof wj chan acc, didio')
+                        else (acc,didio)
+                      else
+                        let
+                          val msg = Output(wjkey wj, elapsed wj, chan, s)
+                        in
+                          (monitor msg (cmds, addjob (touch wj) wl), didio')
+                        end
+                    end
+              end
+            val ((cmds, wl), didio) =
+                List.foldl foldthis ((cmds,wl), []) active
+            val (cmds, wl) = workloop didio (cmds, wl)
+            val wl = execute_cmds monitorfn cmds wl
           in
-            if not activity then
-              ignore (Posix.Process.sleep (Time.fromMilliseconds 100))
-            else ();
-            loop (fill_workq monitorfn ([], wl'))
+            loop (fill_workq monitorfn ([], wl))
           end
     in
       loop (cmds, wl1)
