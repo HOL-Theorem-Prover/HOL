@@ -85,7 +85,7 @@ val num_of_bits_bits_of_num = prove(
   \\ `n DIV 2 < n` by (fs [DIV_LT_X] \\ decide_tac)
   \\ res_tac \\ fs []
   \\ STRIP_ASSUME_TAC (Q.SPEC `n` (MATCH_MP DIVISION (DECIDE ``0<2:num``)))
-  \\ Q.PAT_ASSUM `n = kkk:num` (fn th => CONV_TAC
+  \\ Q.PAT_X_ASSUM `n = kkk:num` (fn th => CONV_TAC
        (RAND_CONV (ONCE_REWRITE_CONV [th])))
   \\ ASSUME_TAC MOD2
   \\ fs []);
@@ -194,7 +194,7 @@ val LAST_bits_of_num = prove(
   \\ Cases_on `n = 0` \\ fs [EVAL ``LENGTH (bits_of_num 0)``]
   \\ Cases_on `LENGTH (bits_of_num (n DIV 2))` \\ fs []
   \\ Cases_on `n = 1` \\ fs []
-  \\ Q.PAT_ASSUM `kk = 0:num` MP_TAC
+  \\ Q.PAT_X_ASSUM `kk = 0:num` MP_TAC
   \\ ONCE_REWRITE_TAC [bits_of_num_def]
   \\ `~(n < 2)` by decide_tac
   \\ fs [DIV_EQ_X]);
@@ -259,7 +259,7 @@ val int_bit_shift_left_lemma2 = prove(
   \\ Cases_on `bits_of_int i`
   \\ fs [LET_DEF,int_bit_int_of_bits]
   \\ `b < n + LENGTH q` by decide_tac \\ fs []
-  \\ qpat_assum `EL n xx` MP_TAC
+  \\ qpat_x_assum `EL _ _` MP_TAC
   \\ fs [rich_listTheory.EL_APPEND1,LENGTH_GENLIST]);
 
 val int_bit_shift_left = store_thm("int_bit_shift_left",

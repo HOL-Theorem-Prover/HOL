@@ -569,8 +569,8 @@ val gcdthm2 = store_thm(
            POP_ASSUM MP_TAC THEN
            ASM_SIMP_TAC bool_ss [INT_DIVIDES_LRMUL, INT_INJ]) THEN
       NTAC 2 (POP_ASSUM MP_TAC) THEN POP_ASSUM (K ALL_TAC) THEN
-      REPEAT (Q.PAT_ASSUM `y int_divides z` (K ALL_TAC)) THEN
-      Q.PAT_ASSUM `T` (K ALL_TAC) THEN
+      REPEAT (Q.PAT_X_ASSUM `y int_divides z` (K ALL_TAC)) THEN
+      Q.PAT_X_ASSUM `T` (K ALL_TAC) THEN
       REWRITE_TAC [INT_MUL_ASSOC, GSYM INT_RDISTRIB] THEN
       CONV_TAC (LAND_CONV (RHS_CONV (REWR_CONV (GSYM INT_MUL_LID)))) THEN
       ASM_SIMP_TAC bool_ss [INT_INJ, INT_EQ_RMUL] THEN
@@ -690,7 +690,7 @@ val gcd21_thm = store_thm(
   REPEAT STRIP_TAC THEN
   `1 = gcd a m` by PROVE_TAC [gcd1_thm] THEN
   `~(1n = 0)` by ASM_SIMP_TAC arith_ss []  THEN
-  Q.PAT_ASSUM `x = 1i` (ASSUME_TAC o SYM) THEN
+  Q.PAT_X_ASSUM `_ = 1i` (ASSUME_TAC o SYM) THEN
   Q.SPECL_THEN [`m`, `a`, `x`, `b`, `1`, `p`, `q`] MP_TAC gcdthm2 THEN
   REPEAT (FIRST_X_ASSUM (MP_TAC o SYM)) THEN
   ASM_SIMP_TAC bool_ss [INT_DIV_1, INT_DIVIDES_1]);
@@ -888,7 +888,7 @@ val cooper_lemma_1 = store_thm(
         PROVE_TAC [INT_DIVIDES_LSUB] THEN
     PROVE_TAC [],
     (* mn | dx + vmp + bnq /\ d | av - ub ==> m | ax + b *)
-    Q.PAT_ASSUM `&m * &n int_divides &d * x + v * &m * p + b * &n * q`
+    Q.PAT_X_ASSUM `&m * &n int_divides &d * x + v * &m * p + b * &n * q`
        ASSUME_TAC THEN
     `&m * &n int_divides &m * p * (&u * x + v) + &n * q * (&a * x + b)` by
        (POP_ASSUM MP_TAC THEN
@@ -927,8 +927,8 @@ val cooper_lemma_1 = store_thm(
        PROVE_TAC [INT_DIVIDES, INT_MUL_COMM] THEN
     `&a * &m * &n int_divides
          &d * k * &m * p + &d * (&a * x + b)` by
-       (Q.PAT_ASSUM `&a * &m * &n int_divides Y` MP_TAC THEN
-        Q.PAT_ASSUM `&d * k = X` SUBST1_TAC THEN
+       (Q.PAT_X_ASSUM `&a * &m * &n int_divides Y` MP_TAC THEN
+        Q.PAT_X_ASSUM `&d * k = X` SUBST1_TAC THEN
         SIMP_TAC (bool_ss ++ int_acnorm_ss)[]) THEN
     `&d * l * &m int_divides
          &d * k * &m * p + &d * (&a * x + b)` by
@@ -948,7 +948,7 @@ val cooper_lemma_1 = store_thm(
         PROVE_TAC [INT_DIVIDES_MUL, INT_MUL_COMM, INT_MUL_ASSOC] THEN
     PROVE_TAC [INT_DIVIDES_LADD],
     (* mn | dx + vmp + bnq /\ d | av - ub ==> n | ux + v *)
-    Q.PAT_ASSUM `&m * &n int_divides &d * x + v * &m * p + b * &n * q`
+    Q.PAT_X_ASSUM `&m * &n int_divides &d * x + v * &m * p + b * &n * q`
        ASSUME_TAC THEN
     `&m * &n int_divides &m * p * (&u * x + v) + &n * q * (&a * x + b)` by
        (POP_ASSUM MP_TAC THEN
@@ -988,8 +988,8 @@ val cooper_lemma_1 = store_thm(
        PROVE_TAC [INT_DIVIDES, INT_MUL_COMM] THEN
     `&u * &m * &n int_divides
          &d * k * &n * q + &d * (&u * x + v)` by
-       (Q.PAT_ASSUM `&u * &m * &n int_divides Y` MP_TAC THEN
-        Q.PAT_ASSUM `&d * k = X` SUBST1_TAC THEN
+       (Q.PAT_X_ASSUM `&u * &m * &n int_divides Y` MP_TAC THEN
+        Q.PAT_X_ASSUM `&d * k = X` SUBST1_TAC THEN
         SIMP_TAC (bool_ss ++ int_acnorm_ss)[]) THEN
     `&d * l * &n int_divides
          &d * k * &n * q + &d * (&u * x + v)` by

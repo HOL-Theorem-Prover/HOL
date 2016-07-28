@@ -868,8 +868,8 @@ val dark_shadow_FORALL = store_thm(
     Induct_on `uppers` THEN1 SRW_TAC [][] THEN
     ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, dark_shadow_def] THEN
     REVERSE (REPEAT STRIP_TAC) THEN1 PROVE_TAC [] THEN
-    Q.PAT_ASSUM `dark_shadow xs ys` (K ALL_TAC) THEN
-    Q.PAT_ASSUM `dark_shadow xs ys ==> Q` (K ALL_TAC) THEN
+    Q.PAT_X_ASSUM `dark_shadow xs ys` (K ALL_TAC) THEN
+    Q.PAT_X_ASSUM `dark_shadow xs ys ==> Q` (K ALL_TAC) THEN
     Induct_on `lowers` THEN1 SRW_TAC [][] THEN
     ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, dark_shadow_row_def] THEN
     SRW_TAC [][] THEN PROVE_TAC [],
