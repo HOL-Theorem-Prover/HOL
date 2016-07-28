@@ -202,7 +202,7 @@ val prime_divides_only_self = Q.store_thm
  `!m n. prime m /\ prime n /\ divides m n ==> (m=n)`,
  RW_TAC arith_ss [divides_def] THEN
  `m<>1` by METIS_TAC [NOT_PRIME_0,NOT_PRIME_1] THEN
- Q.PAT_ASSUM `prime (m*q)` MP_TAC THEN RW_TAC arith_ss [prime_def] THEN
+ Q.PAT_X_ASSUM `prime (m*q)` MP_TAC THEN RW_TAC arith_ss [prime_def] THEN
  METIS_TAC [divides_def,MULT_SYM]);
 
 

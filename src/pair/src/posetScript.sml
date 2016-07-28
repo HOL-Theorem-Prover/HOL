@@ -166,7 +166,7 @@ val complete_top = store_thm
    ++ Know `?s r. p = (s,r)` >> pair_cases_tac
    ++ STRIP_TAC
    ++ RW_TAC bool_ss [complete_def]
-   ++ Q.PAT_ASSUM `!p. X p` (MP_TAC o Q.SPEC `\x. T`)
+   ++ Q.PAT_X_ASSUM `!p. X p` (MP_TAC o Q.SPEC `\x. T`)
    ++ RW_TAC bool_ss [lub_def]
    ++ Q.EXISTS_TAC `x`
    ++ RW_TAC bool_ss [top_def]);
@@ -178,7 +178,7 @@ val complete_bottom = store_thm
    ++ Know `?s r. p = (s,r)` >> pair_cases_tac
    ++ STRIP_TAC
    ++ RW_TAC bool_ss [complete_def]
-   ++ Q.PAT_ASSUM `!p. X p` (MP_TAC o Q.SPEC `\x. T`)
+   ++ Q.PAT_X_ASSUM `!p. X p` (MP_TAC o Q.SPEC `\x. T`)
    ++ RW_TAC bool_ss [glb_def]
    ++ Q.EXISTS_TAC `x'`
    ++ RW_TAC bool_ss [bottom_def]);
@@ -212,12 +212,12 @@ val complete_pointwise = store_thm
     ++ CONJ_TAC >> METIS_TAC []
     ++ CONV_TAC (DEPTH_CONV UNPRIME_CONV)
     ++ RW_TAC bool_ss []
-    ++ Q.PAT_ASSUM `!y. t y ==> P y /\ Q y /\ R y` (MP_TAC o Q.SPEC `x`)
+    ++ Q.PAT_X_ASSUM `!y. t y ==> P y /\ Q y /\ R y` (MP_TAC o Q.SPEC `x`)
     ++ RW_TAC bool_ss []
     ++ POP_ASSUM MATCH_MP_TAC
     ++ CONJ_TAC >> METIS_TAC []
     ++ RW_TAC bool_ss []
-    ++ Q.PAT_ASSUM `!y. P y ==> !x. Q x y` (MP_TAC o Q.SPEC `f`)
+    ++ Q.PAT_X_ASSUM `!y. P y ==> !x. Q x y` (MP_TAC o Q.SPEC `f`)
     ++ MATCH_MP_TAC (PROVE [] ``(y ==> z) /\ x ==> ((x ==> y) ==> z)``)
     ++ CONJ_TAC >> METIS_TAC []
     ++ METIS_TAC [],
@@ -234,12 +234,12 @@ val complete_pointwise = store_thm
     ++ CONJ_TAC >> METIS_TAC []
     ++ CONV_TAC (DEPTH_CONV UNPRIME_CONV)
     ++ RW_TAC bool_ss []
-    ++ Q.PAT_ASSUM `!y. t y ==> P y /\ Q y /\ R y` (MP_TAC o Q.SPEC `x`)
+    ++ Q.PAT_X_ASSUM `!y. t y ==> P y /\ Q y /\ R y` (MP_TAC o Q.SPEC `x`)
     ++ RW_TAC bool_ss []
     ++ POP_ASSUM MATCH_MP_TAC
     ++ CONJ_TAC >> METIS_TAC []
     ++ RW_TAC bool_ss []
-    ++ Q.PAT_ASSUM `!y. P y ==> !x. Q x y` (MP_TAC o Q.SPEC `f'`)
+    ++ Q.PAT_X_ASSUM `!y. P y ==> !x. Q x y` (MP_TAC o Q.SPEC `f'`)
     ++ MATCH_MP_TAC (PROVE [] ``(y ==> z) /\ x ==> ((x ==> y) ==> z)``)
     ++ CONJ_TAC >> METIS_TAC []
     ++ METIS_TAC []]);
@@ -343,14 +343,14 @@ val knaster_tarski_lfp = store_thm
    ++ ASM_SIMP_TAC bool_ss [lfp_def]
    ++ MATCH_MP_TAC (PROVE [] ``(x ==> y) /\ x ==> x /\ y``)
    ++ REPEAT STRIP_TAC
-   >> (Q.PAT_ASSUM `glb X Y Z` MP_TAC ++ ASM_SIMP_TAC bool_ss [glb_def])
+   >> (Q.PAT_X_ASSUM `glb X Y Z` MP_TAC ++ ASM_SIMP_TAC bool_ss [glb_def])
    ++ MATCH_MP_TAC poset_antisym
    ++ Q.EXISTS_TAC `s`
    ++ Q.EXISTS_TAC `r`
    ++ ASM_SIMP_TAC bool_ss []
    ++ MATCH_MP_TAC (PROVE [] ``x /\ (x ==> y) ==> x /\ y``)
    ++ CONJ_TAC
-   << [Q.PAT_ASSUM `glb X Y Z` MP_TAC
+   << [Q.PAT_X_ASSUM `glb X Y Z` MP_TAC
        ++ ASM_SIMP_TAC bool_ss [glb_def]
        ++ DISCH_THEN (CONJUNCTS_THEN2 ASSUME_TAC MATCH_MP_TAC)
        ++ RW_TAC bool_ss []
@@ -358,12 +358,12 @@ val knaster_tarski_lfp = store_thm
        ++ Q.EXISTS_TAC `s`
        ++ METIS_TAC [monotonic_def],
        STRIP_TAC
-       ++ Q.PAT_ASSUM `glb X Y Z` MP_TAC
+       ++ Q.PAT_X_ASSUM `glb X Y Z` MP_TAC
        ++ ASM_SIMP_TAC bool_ss [glb_def]
        ++ DISCH_THEN MATCH_MP_TAC
        ++ Know `s (f (f k))` >> PROVE_TAC []
        ++ RW_TAC bool_ss []
-       ++ Q.PAT_ASSUM `monotonic X Y`
+       ++ Q.PAT_X_ASSUM `monotonic X Y`
           (MATCH_MP_TAC o REWRITE_RULE [monotonic_def])
        ++ PROVE_TAC []]);
 
@@ -387,14 +387,14 @@ val knaster_tarski_gfp = store_thm
    ++ ASM_SIMP_TAC bool_ss [gfp_def]
    ++ MATCH_MP_TAC (PROVE [] ``(x ==> y) /\ x ==> x /\ y``)
    ++ REPEAT STRIP_TAC
-   >> (Q.PAT_ASSUM `lub X Y Z` MP_TAC ++ ASM_SIMP_TAC bool_ss [lub_def])
+   >> (Q.PAT_X_ASSUM `lub X Y Z` MP_TAC ++ ASM_SIMP_TAC bool_ss [lub_def])
    ++ MATCH_MP_TAC poset_antisym
    ++ Q.EXISTS_TAC `s`
    ++ Q.EXISTS_TAC `r`
    ++ ASM_SIMP_TAC bool_ss []
    ++ MATCH_MP_TAC (PROVE [] ``y /\ (y ==> x) ==> x /\ y``)
    ++ CONJ_TAC
-   << [Q.PAT_ASSUM `lub X Y Z` MP_TAC
+   << [Q.PAT_X_ASSUM `lub X Y Z` MP_TAC
        ++ ASM_SIMP_TAC bool_ss [lub_def]
        ++ DISCH_THEN (CONJUNCTS_THEN2 ASSUME_TAC MATCH_MP_TAC)
        ++ RW_TAC bool_ss []
@@ -402,12 +402,12 @@ val knaster_tarski_gfp = store_thm
        ++ Q.EXISTS_TAC `s`
        ++ METIS_TAC [monotonic_def],
        STRIP_TAC
-       ++ Q.PAT_ASSUM `lub X Y Z` MP_TAC
+       ++ Q.PAT_X_ASSUM `lub X Y Z` MP_TAC
        ++ ASM_SIMP_TAC bool_ss [lub_def]
        ++ DISCH_THEN MATCH_MP_TAC
        ++ Know `s (f (f k))` >> PROVE_TAC []
        ++ RW_TAC bool_ss []
-       ++ Q.PAT_ASSUM `monotonic X Y`
+       ++ Q.PAT_X_ASSUM `monotonic X Y`
           (MATCH_MP_TAC o REWRITE_RULE [monotonic_def])
        ++ PROVE_TAC []]);
 
