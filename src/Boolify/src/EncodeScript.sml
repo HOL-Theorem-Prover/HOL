@@ -317,8 +317,8 @@ val wf_encode_blist = store_thm
    ++ REPEAT STRIP_TAC
    ++ Suff `h = h'`
    >> (RW_TAC std_ss [] ++ FULL_SIMP_TAC std_ss [biprefix_appends])
-   ++ Q.PAT_ASSUM `!y. P y` (K ALL_TAC)
-   ++ Q.PAT_ASSUM `!x. P x` MATCH_MP_TAC
+   ++ Q.PAT_X_ASSUM `!y. P y` (K ALL_TAC)
+   ++ Q.PAT_X_ASSUM `!x. P x` MATCH_MP_TAC
    ++ RW_TAC std_ss []
    ++ MATCH_MP_TAC biprefix_append
    ++ PROVE_TAC [biprefix_sym]);
@@ -378,12 +378,12 @@ val wf_encode_num = store_thm
    [Cases_on `n` >> RW_TAC std_ss [] ++
     Cases_on `n''` >> FULL_SIMP_TAC std_ss [EVEN] ++
     FULL_SIMP_TAC arith_ss [EVEN] ++
-    Q.PAT_ASSUM `EVEN n` MP_TAC ++
+    Q.PAT_X_ASSUM `EVEN n` MP_TAC ++
     RW_TAC std_ss [EVEN_EXISTS] ++
     Cases_on `n'` >> RW_TAC std_ss [] ++
     Cases_on `n` >> FULL_SIMP_TAC std_ss [EVEN] ++
     FULL_SIMP_TAC arith_ss [EVEN] ++
-    Q.PAT_ASSUM `EVEN n'` MP_TAC ++
+    Q.PAT_X_ASSUM `EVEN n'` MP_TAC ++
     RW_TAC std_ss [EVEN_EXISTS] ++
     POP_ASSUM MP_TAC ++
     POP_ASSUM_LIST (K ALL_TAC) ++
@@ -393,11 +393,11 @@ val wf_encode_num = store_thm
     RW_TAC arith_ss [MULT_DIV],
     Cases_on `n` >> RW_TAC std_ss [] ++
     FULL_SIMP_TAC arith_ss [EVEN] ++
-    Q.PAT_ASSUM `EVEN n''` MP_TAC ++
+    Q.PAT_X_ASSUM `EVEN n''` MP_TAC ++
     RW_TAC std_ss [EVEN_EXISTS] ++
     Cases_on `n'` >> RW_TAC std_ss [] ++
     FULL_SIMP_TAC arith_ss [EVEN] ++
-    Q.PAT_ASSUM `EVEN n` MP_TAC ++
+    Q.PAT_X_ASSUM `EVEN n` MP_TAC ++
     RW_TAC std_ss [EVEN_EXISTS] ++
     POP_ASSUM MP_TAC ++
     POP_ASSUM_LIST (K ALL_TAC) ++
@@ -451,7 +451,7 @@ val encode_bnum_inj = store_thm
       [encode_bnum_def, DECIDE ``!n. n < 1 = (n = 0)``, GSYM EXP2_LT]
    ++ RES_TAC
    ++ Know `x DIV 2 = y DIV 2` >> RES_TAC
-   ++ Q.PAT_ASSUM `EVEN x = Y` MP_TAC
+   ++ Q.PAT_X_ASSUM `EVEN x = Y` MP_TAC
    ++ POP_ASSUM_LIST (K ALL_TAC)
    ++ RW_TAC std_ss []
    ++ MP_TAC (MP (Q.SPEC `2` DIVISION) (DECIDE ``0 < 2``))
@@ -548,7 +548,7 @@ val tree_ind = store_thm
    ++ Suff `(!t. p t) /\ (!l : 'a tree list. EVERY p l)` >> PROVE_TAC []
    ++ HO_MATCH_MP_TAC tree_induction
    ++ RW_TAC std_ss [EVERY_DEF]
-   ++ Q.PAT_ASSUM `!x. Q x` MATCH_MP_TAC
+   ++ Q.PAT_X_ASSUM `!x. Q x` MATCH_MP_TAC
    ++ Induct_on `l`
    ++ RW_TAC std_ss [EVERY_DEF, MEM]
    ++ METIS_TAC []);
@@ -610,15 +610,15 @@ val wf_encode_tree = store_thm
    SIMP_TAC std_ss [encode_list_def, EVERY_DEF, biprefix_cons] ++
    REPEAT STRIP_TAC ++
    Know `h = h'` >>
-   (Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `h'`) ++
-    Q.PAT_ASSUM `!x. P x` (K ALL_TAC) ++
+   (Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `h'`) ++
+    Q.PAT_X_ASSUM `!x. P x` (K ALL_TAC) ++
     RW_TAC std_ss [MEM] ++
     MATCH_MP_TAC EQ_SYM ++
     POP_ASSUM MATCH_MP_TAC ++
     RW_TAC std_ss [] ++
     PROVE_TAC [biprefix_append]) ++
    RW_TAC std_ss [] ++
-   Q.PAT_ASSUM `!z. (!x. P x z) ==> Q z`
+   Q.PAT_X_ASSUM `!z. (!x. P x z) ==> Q z`
    (MATCH_MP_TAC o REWRITE_RULE [AND_IMP_INTRO]) ++
    PROVE_TAC [MEM, biprefix_appends]);
 

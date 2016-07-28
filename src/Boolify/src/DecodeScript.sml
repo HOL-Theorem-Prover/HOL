@@ -113,7 +113,7 @@ val dec2enc_some = store_thm
    RW_TAC std_ss [] ++
    EQ_TAC >>
    (RW_TAC std_ss [] ++
-    Q.PAT_ASSUM `X ==> Y` MATCH_MP_TAC ++
+    Q.PAT_X_ASSUM `X ==> Y` MATCH_MP_TAC ++
     FULL_SIMP_TAC std_ss [wf_decoder_def] ++
     PROVE_TAC [APPEND_NIL]) ++
    POP_ASSUM MP_TAC ++
@@ -143,7 +143,7 @@ val decode_dec2enc_append = store_thm
    MP_TAC (Q.SPECL [`p`, `d`, `x`] decode_dec2enc) ++
    RW_TAC std_ss [] ++
    FULL_SIMP_TAC std_ss [wf_decoder_def] ++
-   Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`) ++
+   Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`) ++
    RW_TAC std_ss [] ++
    RW_TAC std_ss [] ++
    RES_TAC ++
@@ -189,7 +189,7 @@ val enc2dec_dec2enc = store_thm
    [RW_TAC std_ss [enc2dec_none] ++
     STRIP_TAC ++
     RW_TAC std_ss [] ++
-    Q.PAT_ASSUM `X = Y` MP_TAC ++
+    Q.PAT_X_ASSUM `X = Y` MP_TAC ++
     PROVE_TAC [NOT_SOME_NONE, decode_dec2enc_append],
     Cases_on `x` ++
     ASM_SIMP_TAC std_ss [enc2dec_some] ++
@@ -322,14 +322,14 @@ val decode_prod = store_thm
     ++ RW_TAC std_ss []
     ++ Cases_on `x`
     ++ FULL_SIMP_TAC std_ss [lift_prod_def]
-    ++ Q.PAT_ASSUM `X = SOME Y` MP_TAC
+    ++ Q.PAT_X_ASSUM `X = SOME Y` MP_TAC
     ++ MP_TAC (Q.SPECL [`p1`, `d1`, `q'`] decode_dec2enc_append)
     ++ ASM_SIMP_TAC std_ss []
     ++ DISCH_THEN (K ALL_TAC)
     ++ PURE_REWRITE_TAC [GSYM DE_MORGAN_THM]
     ++ STRIP_TAC
     ++ RW_TAC std_ss []
-    ++ Q.PAT_ASSUM `X = Y` MP_TAC
+    ++ Q.PAT_X_ASSUM `X = Y` MP_TAC
     ++ RW_TAC std_ss [decode_prod_def, enc2dec_none]
     ++ PROVE_TAC [decode_dec2enc_append, NOT_SOME_NONE],
     Know `wf_decoder (lift_prod p1 p2) (decode_prod (lift_prod p1 p2) d1 d2)`
@@ -357,7 +357,7 @@ val decode_prod = store_thm
     ++ RW_TAC std_ss [GSYM APPEND_ASSOC]
     ++ Know `dec2enc d1 q = a` >> PROVE_TAC [APPEND_NIL, dec2enc_some]
     ++ RW_TAC std_ss [APPEND_11]
-    ++ Q.PAT_ASSUM `!x. P x` (K ALL_TAC)
+    ++ Q.PAT_X_ASSUM `!x. P x` (K ALL_TAC)
     ++ MP_TAC (Q.SPECL [`p2`, `d2`] (INST_TYPE [alpha |-> beta] wf_decoder_def))
     ++ ASM_SIMP_TAC std_ss []
     ++ DISCH_THEN (MP_TAC o Q.SPEC `q'`)
@@ -661,14 +661,14 @@ val decode_list = store_thm
     RW_TAC std_ss [encode_list_def, APPEND, GSYM APPEND_ASSOC, EVERY_DEF] ++
     STRIP_TAC ++
     RW_TAC std_ss [] ++
-    Q.PAT_ASSUM `X = SOME Y` MP_TAC ++
+    Q.PAT_X_ASSUM `X = SOME Y` MP_TAC ++
     MP_TAC (Q.SPECL [`p`, `d`, `h`] decode_dec2enc_append) ++
     ASM_SIMP_TAC std_ss [] ++
     DISCH_THEN (K ALL_TAC) ++
     PURE_REWRITE_TAC [GSYM DE_MORGAN_THM] ++
     STRIP_TAC ++
     RW_TAC std_ss [] ++
-    Q.PAT_ASSUM `X = Y` MP_TAC ++
+    Q.PAT_X_ASSUM `X = Y` MP_TAC ++
     RW_TAC std_ss [decode_list_def, enc2dec_none] ++
     PROVE_TAC [],
     Know `wf_decoder (EVERY p) (decode_list (EVERY p) d)` >>
@@ -691,7 +691,7 @@ val decode_list = store_thm
     RW_TAC std_ss [GSYM APPEND_ASSOC] ++
     Know `dec2enc d q = a` >> PROVE_TAC [APPEND_NIL, dec2enc_some] ++
     RW_TAC std_ss [APPEND_11] ++
-    Q.PAT_ASSUM `!x. P x` (K ALL_TAC) ++
+    Q.PAT_X_ASSUM `!x. P x` (K ALL_TAC) ++
     MP_TAC
     (Q.ISPECL [`EVERY (p : 'a -> bool)`, `decode_list (EVERY p) d`]
      wf_decoder_def) ++
@@ -700,8 +700,8 @@ val decode_list = store_thm
     RW_TAC std_ss [] ++
     RES_TAC ++
     RW_TAC std_ss [] ++
-    Q.PAT_ASSUM `!x. P x` (K ALL_TAC) ++
-    Q.PAT_ASSUM `X = Y` MP_TAC ++
+    Q.PAT_X_ASSUM `!x. P x` (K ALL_TAC) ++
+    Q.PAT_X_ASSUM `X = Y` MP_TAC ++
     ASM_SIMP_TAC std_ss [decode_list_def, enc2dec_some],
     Know `wf_decoder (EVERY p) (decode_list (EVERY p) d)` >>
     PROVE_TAC [wf_decode_list] ++
@@ -760,7 +760,7 @@ val encode_then_decode_blist = store_thm
    ++ Cases_on `l` >> FULL_SIMP_TAC std_ss [LENGTH, SUC_NOT]
    ++ FULL_SIMP_TAC std_ss [HD, TL, EVERY_DEF, LENGTH]
    ++ RW_TAC std_ss [dec2enc_enc2dec, APPEND_11]
-   ++ Q.PAT_ASSUM `!l. P l` MATCH_MP_TAC
+   ++ Q.PAT_X_ASSUM `!l. P l` MATCH_MP_TAC
    ++ RW_TAC std_ss [lift_blist_def]);
 
 val decode_blist = store_thm
@@ -788,14 +788,14 @@ val decode_blist = store_thm
        ++ Cases_on `x`
        ++ FULL_SIMP_TAC std_ss [LENGTH, SUC_NOT, EVERY_DEF]
        ++ RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `X = Y` MP_TAC
+       ++ Q.PAT_X_ASSUM `X = Y` MP_TAC
        ++ RW_TAC std_ss [encode_blist_def, GSYM APPEND_ASSOC, HD, TL]
        ++ PROVE_TAC [decode_dec2enc_append, NOT_SOME_NONE],
        STRIP_TAC
        ++ Cases_on `x`
        ++ FULL_SIMP_TAC std_ss [LENGTH, SUC_NOT, EVERY_DEF]
        ++ RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `X = SOME Y` MP_TAC
+       ++ Q.PAT_X_ASSUM `X = SOME Y` MP_TAC
        ++ RW_TAC std_ss [encode_blist_def, GSYM APPEND_ASSOC, HD, TL]
        ++ MP_TAC (Q.SPECL [`p`, `d`, `h`] decode_dec2enc_append)
        ++ ASM_REWRITE_TAC []
@@ -803,7 +803,7 @@ val decode_blist = store_thm
        ++ DISCH_THEN (fn th => RW_TAC std_ss [th])
        ++ STRIP_TAC
        ++ RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `X = Y` MP_TAC
+       ++ Q.PAT_X_ASSUM `X = Y` MP_TAC
        ++ MP_TAC
           (Q.SPECL [`LENGTH t'`, `p`, `dec2enc d`, `t'`, `t`]
            encode_then_decode_blist)
@@ -817,7 +817,7 @@ val decode_blist = store_thm
        ++ MATCH_MP_TAC (PROVE [] ``x /\ (x ==> y) ==> x /\ y``)
        ++ CONJ_TAC
        >> (CONJ_TAC >> PROVE_TAC [wf_decoder_def, APPEND_NIL]
-           ++ Q.PAT_ASSUM `X = Y` MP_TAC
+           ++ Q.PAT_X_ASSUM `X = Y` MP_TAC
            ++ RW_TAC std_ss [decode_blist_def, enc2dec_some, wf_encode_blist])
        ++ RW_TAC std_ss [encode_blist_def, GSYM APPEND_ASSOC, HD, TL]
        ++ Q.UNDISCH_TAC `d l = SOME (q,r)`
@@ -830,7 +830,7 @@ val decode_blist = store_thm
        ++ Know `dec2enc d q = a` >> PROVE_TAC [APPEND_NIL, dec2enc_some]
        ++ RW_TAC std_ss [APPEND_11]
        ++ POP_ASSUM (K ALL_TAC)
-       ++ Q.PAT_ASSUM `X = Y` MP_TAC
+       ++ Q.PAT_X_ASSUM `X = Y` MP_TAC
        ++ RW_TAC std_ss [decode_blist_def, enc2dec_some, wf_encode_blist]]);
 
 (*---------------------------------------------------------------------------
@@ -915,7 +915,7 @@ val decode_num = store_thm
     ++ STRIP_TAC
     ++ RW_TAC std_ss []) <<
    [PROVE_TAC [],
-    Q.PAT_ASSUM `X = Y` MP_TAC
+    Q.PAT_X_ASSUM `X = Y` MP_TAC
     ++ Know `encode_num = dec2enc (decode_num (K T))`
     >> (RW_TAC std_ss [decode_num_def]
         ++ MATCH_MP_TAC EQ_EXT
@@ -932,11 +932,11 @@ val decode_num = store_thm
     ++ STRIP_TAC
     ++ RW_TAC std_ss []
     ++ FULL_SIMP_TAC std_ss [EVEN_ODD, ODD_EXISTS]
-    ++ Q.PAT_ASSUM `~p X` MP_TAC
+    ++ Q.PAT_X_ASSUM `~p X` MP_TAC
     ++ RW_TAC arith_ss []
     ++ RW_TAC arith_ss [MULT_DIV, Q.SPECL [`2`, `m`] MULT_COMM, GSYM ADD1]
     ++ PROVE_TAC [MULT_COMM],
-    Q.PAT_ASSUM `X = Y` MP_TAC
+    Q.PAT_X_ASSUM `X = Y` MP_TAC
     ++ Know `encode_num = dec2enc (decode_num (K T))`
     >> (RW_TAC std_ss [decode_num_def]
         ++ MATCH_MP_TAC EQ_EXT
@@ -955,9 +955,9 @@ val decode_num = store_thm
     ++ RW_TAC std_ss []
     ++ Cases_on `x` >> RW_TAC std_ss []
     ++ FULL_SIMP_TAC std_ss [EVEN, EVEN_ODD, ODD_EXISTS]
-    ++ Q.PAT_ASSUM `~p X` MP_TAC
+    ++ Q.PAT_X_ASSUM `~p X` MP_TAC
     ++ RW_TAC arith_ss [ADD1]
-    ++ Q.PAT_ASSUM `p X` MP_TAC
+    ++ Q.PAT_X_ASSUM `p X` MP_TAC
     ++ RW_TAC arith_ss [MULT_DIV, Q.SPECL [`2`, `m`] MULT_COMM, ADD1]]);
 
 (*---------------------------------------------------------------------------
@@ -1047,10 +1047,10 @@ val decode_bnum = store_thm
            encode_bnum_def, APPEND])
    << [STRIP_TAC
        ++ RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `X = Y` MP_TAC
+       ++ Q.PAT_X_ASSUM `X = Y` MP_TAC
        ++ SIMP_TAC std_ss [dec_bnum_def, list_case_def]
        ++ REPEAT TOP_CASE_TAC
-       ++ Q.PAT_ASSUM `!x. P x`
+       ++ Q.PAT_X_ASSUM `!x. P x`
           (MP_TAC o
            Q.SPECL [`\x. x < 2 ** m`, `APPEND (encode_bnum m (x DIV 2)) t`])
        ++ RW_TAC std_ss [wf_pred_bnum_total, decode_bnum_def, enc2dec_none]
@@ -1058,7 +1058,7 @@ val decode_bnum = store_thm
        ++ Q.EXISTS_TAC `t`
        ++ RW_TAC std_ss [EXP2_LT]
        ++ FULL_SIMP_TAC std_ss [wf_pred_bnum_def],
-       Q.PAT_ASSUM `!x. P x`
+       Q.PAT_X_ASSUM `!x. P x`
           (MP_TAC o
            Q.SPECL [`\x. x < 2 ** m`, `APPEND (encode_bnum m (q DIV 2)) r`])
        ++ RW_TAC std_ss [wf_pred_bnum_total, decode_bnum_def, enc2dec_none]
@@ -1082,11 +1082,11 @@ val decode_bnum = store_thm
        ++ RW_TAC std_ss []
        ++ FULL_SIMP_TAC std_ss [APPEND_11]
        ++ RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `dec_bnum (SUC m) l = X` (MP_TAC o MATCH_MP dec_bnum_inj)
+       ++ Q.PAT_X_ASSUM `dec_bnum (SUC m) l = X` (MP_TAC o MATCH_MP dec_bnum_inj)
        ++ RW_TAC std_ss [encode_bnum_def, APPEND],
        STRIP_TAC
        ++ RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `X = Y` MP_TAC
+       ++ Q.PAT_X_ASSUM `X = Y` MP_TAC
        ++ SIMP_TAC std_ss [dec_bnum_def]
        ++ REPEAT TOP_CASE_TAC
        ++ REWRITE_TAC [GSYM DE_MORGAN_THM]
@@ -1094,7 +1094,7 @@ val decode_bnum = store_thm
        ++ RW_TAC std_ss []
        ++ Know `x < 2 ** SUC m` >> PROVE_TAC [wf_pred_bnum_def]
        ++ STRIP_TAC
-       ++ Q.PAT_ASSUM `p x` MP_TAC
+       ++ Q.PAT_X_ASSUM `p x` MP_TAC
        ++ MP_TAC (Q.SPEC `2` DIVISION)
        ++ SIMP_TAC arith_ss []
        ++ DISCH_THEN (MP_TAC o ONCE_REWRITE_RULE [MULT_COMM] o Q.SPEC `x`)
@@ -1107,7 +1107,7 @@ val decode_bnum = store_thm
        ++ FULL_SIMP_TAC std_ss [GSYM EXP2_LT]
        ++ Know `q' < 2 ** m` >> PROVE_TAC [dec_bnum_lt]
        ++ RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `X = Y` (MP_TAC o MATCH_MP dec_bnum_inj)
+       ++ Q.PAT_X_ASSUM `X = Y` (MP_TAC o MATCH_MP dec_bnum_inj)
        ++ PROVE_TAC [biprefix_append, biprefix_refl]]);
 
 (*---------------------------------------------------------------------------
@@ -1148,7 +1148,7 @@ val decode_tree = store_thm
    [RW_TAC std_ss [decode_tree_def, enc2dec_none] ++
     STRIP_TAC ++
     RW_TAC std_ss [] ++
-    Q.PAT_ASSUM `X = Y` MP_TAC ++
+    Q.PAT_X_ASSUM `X = Y` MP_TAC ++
     Cases_on `x` ++
     RW_TAC std_ss [encode_tree_def, GSYM APPEND_ASSOC] ++
     POP_ASSUM MP_TAC ++
@@ -1158,7 +1158,7 @@ val decode_tree = store_thm
     RW_TAC std_ss [decode_tree_def, enc2dec_none] ++
     STRIP_TAC ++
     RW_TAC std_ss [] ++
-    Q.PAT_ASSUM `X = SOME Y` MP_TAC ++
+    Q.PAT_X_ASSUM `X = SOME Y` MP_TAC ++
     POP_ASSUM MP_TAC ++
     Cases_on `x` ++
     RW_TAC std_ss [lift_tree_def, encode_tree_def, GSYM APPEND_ASSOC] ++
@@ -1169,7 +1169,7 @@ val decode_tree = store_thm
     STRIP_TAC ++
     RW_TAC std_ss [] ++
     POP_ASSUM (K ALL_TAC) ++
-    Q.PAT_ASSUM `X = Y` MP_TAC ++
+    Q.PAT_X_ASSUM `X = Y` MP_TAC ++
     POP_ASSUM MP_TAC ++
     POP_ASSUM (K ALL_TAC) ++
     CONV_TAC (DEPTH_CONV ETA_CONV) ++
@@ -1199,7 +1199,7 @@ val decode_tree = store_thm
      POP_ASSUM MP_TAC ++
      SIMP_TAC std_ss [decode_list_def] ++
      RW_TAC std_ss [enc2dec_some, wf_dec2enc, wf_encode_list, APPEND_11] ++
-     Q.PAT_ASSUM `X = Y` (K ALL_TAC) ++
+     Q.PAT_X_ASSUM `X = Y` (K ALL_TAC) ++
      Induct_on `q'` ++
      RW_TAC std_ss [EVERY_DEF, encode_list_def, APPEND_11] ++
      RW_TAC std_ss
