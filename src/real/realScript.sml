@@ -2563,7 +2563,7 @@ val REAL_LE_EPSILON = store_thm
          THEN1 RW_TAC boolSimps.bool_ss
                [REAL_NOT_LT, REAL_LE_SUB_RADD, REAL_ADD_LID])
    THEN STRIP_TAC
-   THEN Q.PAT_ASSUM `!e. P e` MP_TAC
+   THEN Q.PAT_X_ASSUM `!e. P e` MP_TAC
    THEN RW_TAC boolSimps.bool_ss []
    THEN (KNOW_TAC ``!a b c : real. ~(a <= b + c) = c < a - b``
          THEN1 (RW_TAC boolSimps.bool_ss [REAL_LT_SUB_LADD, REAL_NOT_LE]
@@ -2960,7 +2960,7 @@ val REAL_INF_LT = store_thm
    THEN (SUFF_TAC ``~(!x. p x ==> ~(x < z))`` THEN1 PROVE_TAC [])
    THEN REWRITE_TAC [GSYM real_lte]
    THEN STRIP_TAC
-   THEN Q.PAT_ASSUM `inf p < z` MP_TAC
+   THEN Q.PAT_X_ASSUM `inf p < z` MP_TAC
    THEN RW_TAC boolSimps.bool_ss [GSYM real_lte]
    THEN MATCH_MP_TAC REAL_IMP_LE_INF
    THEN PROVE_TAC []);
@@ -2993,7 +2993,7 @@ val SUP_EPSILON = store_thm
          THEN1 (RW_TAC boolSimps.bool_ss []
                 THEN Q.EXISTS_TAC `x'`
                 THEN RW_TAC boolSimps.bool_ss []
-                THEN Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x''`)
+                THEN Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x''`)
                 THEN RW_TAC boolSimps.bool_ss []
                 THEN MATCH_MP_TAC REAL_LE_TRANS
                 THEN Q.EXISTS_TAC `z - &n * e`
@@ -3056,8 +3056,8 @@ val REAL_LE_SUP = store_thm
                        THEN Q.EXISTS_TAC `x`
                        THEN RW_TAC boolSimps.bool_ss
                             [REAL_LT_SUB_RADD, REAL_LT_ADDR]))
-          THEN Q.PAT_ASSUM `0 < e` (K ALL_TAC)
-          THEN Q.PAT_ASSUM `x <= sup p` (K ALL_TAC)
+          THEN Q.PAT_X_ASSUM `0 < e` (K ALL_TAC)
+          THEN Q.PAT_X_ASSUM `x <= sup p` (K ALL_TAC)
           THEN Q.SPEC_TAC (`x - e`, `x`)
           THEN GEN_TAC
           THEN MP_TAC (Q.SPEC `p` REAL_SUP_LE)
@@ -3071,7 +3071,7 @@ val REAL_LE_SUP = store_thm
           THEN MATCH_MP_TAC REAL_LE_EPSILON
           THEN RW_TAC boolSimps.bool_ss [GSYM REAL_LE_SUB_RADD]
           THEN (SUFF_TAC ``(x:real) - e < sup p`` THEN1 PROVE_TAC [REAL_LT_LE])
-          THEN Q.PAT_ASSUM `!y. P y` (MP_TAC o Q.SPEC `x - e`)
+          THEN Q.PAT_X_ASSUM `!y. P y` (MP_TAC o Q.SPEC `x - e`)
           THEN (KNOW_TAC ``!a b : real. a <= a - b = ~(0 < b)``
                 THEN1 (RW_TAC boolSimps.bool_ss [real_lt, REAL_LE_SUB_LADD]
                        THEN PROVE_TAC [REAL_ADD_RID, REAL_LE_LADD]))
@@ -3102,7 +3102,7 @@ val REAL_INF_LE = store_thm
    THEN POP_ASSUM (K ALL_TAC)
    THEN EQ_TAC
    THEN RW_TAC boolSimps.bool_ss []
-   THEN Q.PAT_ASSUM `!a. (!b. P a b) ==> Q a` (MP_TAC o Q.SPEC `~y''`)
+   THEN Q.PAT_X_ASSUM `!a. (!b. P a b) ==> Q a` (MP_TAC o Q.SPEC `~y''`)
    THEN PROVE_TAC [REAL_NEGNEG, REAL_LE_NEG]);
 
 val REAL_SUP_CONST = store_thm
@@ -3692,7 +3692,7 @@ val NUM_FLOOR_EQNS = store_thm(
      [Q.EXISTS_TAC `n` THEN RW_TAC old_arith_ss [],
       Cases THEN FULL_SIMP_TAC old_arith_ss []
         THEN STRIP_TAC
-        THEN Q.PAT_ASSUM `$! M` (MP_TAC o Q.SPEC `n''`)
+        THEN Q.PAT_X_ASSUM `$! M` (MP_TAC o Q.SPEC `n''`)
         THEN RW_TAC old_arith_ss []],
     ASM_SIMP_TAC (srw_ss()) [real_gt, REAL_LT_LDIV_EQ] THEN
     CONJ_TAC THENL [
@@ -3762,7 +3762,7 @@ val NUM_CEILING_NUM_FLOOR = Q.store_thm("NUM_CEILING_NUM_FLOOR",
                |> SIMP_RULE (srw_ss()) [],
               REAL_LT_IMP_LE])
   THEN SRW_TAC [] []
-  THEN Q.PAT_ASSUM `x <> y` MP_TAC
+  THEN Q.PAT_X_ASSUM `x <> y` MP_TAC
   THEN SIMP_TAC std_ss [NUM_FLOOR_def]
   THEN numLib.LEAST_ELIM_TAC
   THEN CONJ_TAC
