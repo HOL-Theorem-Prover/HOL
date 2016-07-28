@@ -534,7 +534,7 @@ val QSORT_IND = fetch "-" "QSORT_IND";
  *           Properties of QSORT                                            *
  *---------------------------------------------------------------------------*)
 
-val QSORT_MEM_STABLE = Q.store_thm
+val QSORT_MEM = Q.store_thm
 ("QSORT_MEM",
  `!R L x. MEM x (QSORT R L) = MEM x L`,
 recInduct QSORT_IND
@@ -576,7 +576,7 @@ Q.store_thm
   THEN MATCH_MP_TAC SORTED_APPEND
   THEN POP_ASSUM (ASSUME_TAC o SYM)
   THEN IMP_RES_THEN (fn th => ASM_REWRITE_TAC [th]) SORTED_EQ
-  THEN RW_TAC list_ss [MEM_FILTER,MEM,QSORT_MEM_STABLE]
+  THEN RW_TAC list_ss [MEM_FILTER,MEM,QSORT_MEM]
   THEN ((RES_TAC THEN NO_TAC) ORELSE ALL_TAC)
   THEN Q.PAT_ASSUM `x = y` (MP_TAC o MATCH_MP
         (REWRITE_RULE[PROVE [] (Term `x/\y/\z ==> w = x ==> y/\z ==> w`)]
