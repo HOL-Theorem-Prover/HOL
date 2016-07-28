@@ -16,6 +16,7 @@ val >> : ('a, 'b, 'c) t * ('a, 'd, 'c) t -> ('a, 'd, 'c) t
 
 val repeat : ('a, 'b, 'c) t -> ('a, unit, 'c) t
 val repeatn : int -> ('a, 'b, 'c) t -> ('a, unit, 'c) t
+val with_flagM : ('a ref * 'a) -> ('s,'b,'c) t -> ('s,'b,'c) t
 
 val mmap : ('a -> ('b, 'c, 'd) t) -> 'a list -> ('b, 'c list, 'd) t
 val foldlM : ('e * 'acc -> ('s,'acc,'error)t) -> 'acc -> 'e list ->

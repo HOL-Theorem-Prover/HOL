@@ -71,4 +71,9 @@ fun foldlM f a list =
       [] => return a
     | h::t => f (h,a) >- (fn a' => foldlM f a' t)
 
+fun with_flagM (r,v) (m : ('a,'b,'c)t) : ('a,'b,'c)t = fn (s:'a) =>
+  Portable.with_flag (r,v) m s
+
+
+
 end
