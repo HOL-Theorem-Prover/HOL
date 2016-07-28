@@ -843,7 +843,7 @@ val mem_bf_flatten = store_thm(
       SRW_TAC [][bf_flatten_def] THEN
       Cases_on `x = a` THEN SRW_TAC [][] THEN
       Cases_on `i` THENL [
-        REPEAT (Q.PAT_ASSUM `EXISTS P l` (K ALL_TAC)) THEN
+        REPEAT (Q.PAT_X_ASSUM `EXISTS P l` (K ALL_TAC)) THEN
         FULL_SIMP_TAC (srw_ss()) [] THEN
         FULL_SIMP_TAC (srw_ss()) [mindepth_thm] THEN
         Cases_on `mindepth x t1` THENL [

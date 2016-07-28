@@ -1037,7 +1037,7 @@ val LTAKE_LAPPEND2 = Q.store_thm("LTAKE_LAPPEND2",
          OPTION_MAP (APPEND (THE(toList l1))) (LTAKE (n - THE(LLENGTH l1)) l2))`,
   rpt gen_tac >> strip_tac >>
   `LFINITE l1` by metis_tac[LFINITE] >>
-  qpat_assum`_ = _`mp_tac >>
+  qpat_x_assum`_ = _`mp_tac >>
   map_every qid_spec_tac[`l2`,`n`] >>
   pop_assum mp_tac >>
   qid_spec_tac`l1` >>
@@ -1437,7 +1437,7 @@ val LFILTER = new_specification
       SIMP_TAC (srw_ss()) [] THEN
       SRW_TAC [][] THEN
       `?h t. ll = h:::t` by METIS_TAC [llist_CASES, exists_thm] THENL [
-        Q.PAT_ASSUM `exists P ll` (K ALL_TAC) THEN
+        Q.PAT_X_ASSUM `exists P ll` (K ALL_TAC) THEN
         POP_ASSUM SUBST_ALL_TAC THEN
         FULL_SIMP_TAC (srw_ss()) [] THEN
         Q_TAC SUFF_TAC `n = 0` THEN1 SRW_TAC [][] THEN
@@ -2072,7 +2072,7 @@ Induct THEN
 SRW_TAC [] [] THEN
 Cases_on `j` THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
-REPEAT (Q.PAT_ASSUM `LNTH a b = c`
+REPEAT (Q.PAT_X_ASSUM `LNTH a b = c`
                     (MP_TAC o SIMP_RULE (srw_ss()) [Once LUNFOLD])) THEN
 SRW_TAC [] [] THEN
 Cases_on `linear_order_to_list_f lo` THEN
