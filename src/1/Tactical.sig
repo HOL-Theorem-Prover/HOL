@@ -85,6 +85,7 @@ sig
   val pop_assum      : thm_tactic -> tactic
   val PRED_ASSUM     : (term -> bool) -> thm_tactic -> tactic
   val PAT_ASSUM      : term -> thm_tactic -> tactic
+  val PAT_X_ASSUM    : term -> thm_tactic -> tactic
   val POP_ASSUM_LIST : (thm list -> tactic) -> tactic
   val SUBGOAL_THEN   : term -> thm_tactic -> tactic
   val USE_SG_THEN    : thm_tactic -> int -> int -> list_tactic

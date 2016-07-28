@@ -512,36 +512,6 @@ fun PRED_ASSUM pred thfun (asl, w) =
       SOME (ob, asl') => thfun (ASSUME ob) (asl', w)
     | NONE => raise ERR "PRED_ASSUM" "No suitable assumption found."
 
-(*---------------------------------------------------------------------------
- * Pop the first assumption matching (higher-order match) the given term
- * and give it to a function (tactic).
- *---------------------------------------------------------------------------*)
-
-local
-   fun match_with_constants constants pat ob =
-      let
-         val (tm_inst, ty_inst) = ho_match_term [] empty_tmset pat ob
-         val bound_vars = map #redex tm_inst
-      in
-         null (intersect constants bound_vars)
-      end
-      handle HOL_ERR _ => false
-in
-   fun PAT_ASSUM pat thfun (asl, w) =
-     case List.filter (can (ho_match_term [] empty_tmset pat)) asl of
-        [] => raise ERR "PAT_ASSUM" "No assumptions match the given pattern"
-      | [x] => let
-                  val (ob, asl') = Lib.pluck (Lib.equal x) asl
-               in
-                  thfun (ASSUME ob) (asl', w)
-               end
-      |  _ => let
-                 val fvars = free_varsl (w :: asl)
-                 val (ob, asl') = Lib.pluck (match_with_constants fvars pat) asl
-              in
-                 thfun (ASSUME ob) (asl', w)
-              end
-end
 
 (*-- Tactical quantifiers -- Apply a list of tactics in succession. -------*)
 
@@ -623,6 +593,24 @@ in
    val first_x_assum = FIRST_X_ASSUM
    val last_x_assum = LAST_X_ASSUM
 end
+
+(*---------------------------------------------------------------------------
+ * Pop the first assumption matching (higher-order match) the given term
+ * and give it to a function (tactic).
+ *---------------------------------------------------------------------------*)
+
+local
+   fun gen tcl pat thfun (g as (asl,w)) =
+     let
+       val fvs = FVL (w::asl) empty_tmset
+     in
+       tcl (thfun o assert (can (ho_match_term [] fvs pat) o concl))
+     end g
+in
+   val PAT_X_ASSUM = gen FIRST_X_ASSUM
+   val PAT_ASSUM = gen FIRST_ASSUM
+end
+
 
 local
 fun hdsym t = (t |> lhs |> strip_comb |> #1)

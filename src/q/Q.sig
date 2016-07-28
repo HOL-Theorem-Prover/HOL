@@ -39,6 +39,7 @@ sig
   val hdtm_x_assum           : tmquote -> thm_tactic -> tactic
   val UNDISCH_THEN           : tmquote -> thm_tactic -> tactic
   val PAT_ASSUM              : tmquote -> thm_tactic -> tactic
+  val PAT_X_ASSUM            : tmquote -> thm_tactic -> tactic
   val UNDISCH_TAC            : tmquote -> tactic
   val X_CHOOSE_TAC           : tmquote -> thm_tactic
   val X_CHOOSE_THEN          : tmquote -> thm_tactic -> thm_tactic

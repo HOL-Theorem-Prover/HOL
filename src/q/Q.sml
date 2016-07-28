@@ -209,10 +209,8 @@ let val ctxt = free_varsl (w::asl)
 in Tactic.UNDISCH_TAC asm g
 end;
 
-fun PAT_ASSUM q ttac (g as (asl,w)) =
- let val ctxt = free_varsl (w::asl)
- in Tactical.PAT_ASSUM (ptm_with_ctxtty' ctxt Type.bool q) ttac g
- end
+fun PAT_ASSUM q ttac = Q_TAC (fn t => Tactical.PAT_ASSUM t ttac) q
+fun PAT_X_ASSUM q ttac = Q_TAC (fn t => Tactical.PAT_X_ASSUM t ttac) q
 
 fun SUBGOAL_THEN q ttac (g as (asl,w)) = let
   val ctxt = free_varsl (w::asl)

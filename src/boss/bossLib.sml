@@ -206,6 +206,7 @@ val rfs = rfsrw_tac let_arith_list
   val qhdtm_assum = Q.hdtm_assum
   val qhdtm_x_assum = Q.hdtm_x_assum
   val qpat_assum : term quotation -> thm_tactic -> tactic = Q.PAT_ASSUM
+  val qpat_x_assum : term quotation -> thm_tactic -> tactic = Q.PAT_X_ASSUM
   val qpat_abbrev_tac : term quotation -> tactic = Q.PAT_ABBREV_TAC
   val qmatch_abbrev_tac : term quotation -> tactic = Q.MATCH_ABBREV_TAC
   val qho_match_abbrev_tac : term quotation -> tactic = Q.HO_MATCH_ABBREV_TAC
