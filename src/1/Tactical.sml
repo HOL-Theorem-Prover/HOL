@@ -743,4 +743,11 @@ fun parse_with_goal t (asms, g) =
 
 val Q_TAC = fn tac => fn g => W (tac o parse_with_goal g)
 
+fun QTY_TAC ty tac q (g as (asl,w)) =
+  let
+    val ctxt = free_varsl (w::asl)
+  in
+    tac (Parse.typed_parse_in_context ty ctxt q) g
+  end
+
 end (* Tactical *)

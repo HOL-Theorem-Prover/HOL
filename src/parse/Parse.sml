@@ -515,23 +515,40 @@ fun smashErrm m =
   case m Pretype.Env.empty of
       errormonad.Error e => raise Preterm.mkExn e
     | errormonad.Some (_, result) => result
+val stdprinters = SOME(term_to_string,type_to_string)
 
 fun parse_in_context FVs q =
   let
     open errormonad
     val m =
         (q |> Absyn |> absyn_to_preterm) >-
-        TermParse.ctxt_preterm_to_term (SOME(term_to_string,type_to_string)) FVs
+        TermParse.ctxt_preterm_to_term stdprinters FVs
+  in
+    smashErrm m
+  end
+
+fun typed_parse_in_context ty FVs q =
+  let
+    open errormonad
+    val a = Absyn.TYPED(locn.Loc_None, Absyn q, Pretype.fromType ty)
+    val m = absyn_to_preterm a >- TermParse.ctxt_preterm_to_term stdprinters FVs
   in
     smashErrm m
   end
 
 fun grammar_parse_in_context(tyg,tmg) ctxt q =
-    TermParse.ctxt_term (SOME(term_to_string,type_to_string)) tmg tyg ctxt q |>
-    smashErrm
+    TermParse.ctxt_term stdprinters tmg tyg ctxt q |> smashErrm
+
+fun grammar_typed_parse_in_context (tyg,tmg) ty ctxt q =
+  let
+    val a = Absyn.TYPED(locn.Loc_None, TermParse.absyn tmg tyg q,
+                        Pretype.fromType ty)
+  in
+    TermParse.absyn_to_term stdprinters tmg a
+  end
 
 fun parse_preterm_in_context ctxt =
-    TermParse.ctxt_preterm_to_term (SOME(term_to_string,type_to_string)) ctxt
+    TermParse.ctxt_preterm_to_term stdprinters ctxt
 
 
 (*---------------------------------------------------------------------------
