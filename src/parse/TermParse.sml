@@ -410,9 +410,9 @@ in
     preterm_to_term pprinters ptm
   end
 
-  fun ctxt_preterm_to_term pprinters FVs ptm =
-    Lib.with_flag (Globals.notify_on_tyvar_guess,false)
-                  (parse_preterm_in_context0 pprinters FVs) ptm
+  fun ctxt_preterm_to_term pprinters FVs ptm : term in_env =
+    errormonad.with_flagM (Globals.notify_on_tyvar_guess,false)
+                          (parse_preterm_in_context0 pprinters FVs ptm)
 
   fun ctxt_term pprinters g tyg = let
     val ph1 = preterm g tyg
