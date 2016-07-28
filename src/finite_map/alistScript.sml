@@ -387,7 +387,7 @@ rw[] >>
 qmatch_rename_tac `r1 = r2` >>
 qmatch_assum_rename_tac `(q,r1) = EL n1 afx` >>
 qmatch_assum_rename_tac `(q,r2) = EL n2 afy` >>
-rpt (qpat_assum `(X,Y) = EL N Z` (assume_tac o SYM)) >>
+rpt (qpat_x_assum `(X,Y) = EL N Z` (assume_tac o SYM)) >>
 `LENGTH afy = LENGTH afx` by rw[PERM_LENGTH] >> fs[] >>
 metis_tac[pairTheory.PAIR_EQ,pairTheory.FST])
 

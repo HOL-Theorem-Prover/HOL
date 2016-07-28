@@ -323,7 +323,7 @@ REWRITE_TAC [FUPDATE_DEF, FEMPTY_DEF]
   THEN Q.ID_SPEC_TAC `r`
   THEN HO_MATCH_MP_TAC strong_ind
   THEN ASM_REWRITE_TAC []
-  THEN Q.PAT_ASSUM `P x` (K ALL_TAC)
+  THEN Q.PAT_X_ASSUM `P x` (K ALL_TAC)
   THEN REPEAT STRIP_TAC THEN RES_TAC
   THEN IMP_RES_THEN SUBST_ALL_TAC is_fmap_REP_ABS
   THEN ASM_REWRITE_TAC[]);
@@ -1753,7 +1753,7 @@ val FUPDATE_LIST_SAME_KEYS_UNWIND = store_thm(
   `(kvl = []) \/ (?k' v' t. kvl = (k',v') :: t)` by
      PROVE_TAC [pair_CASES, listTheory.list_CASES] THEN
   POP_ASSUM SUBST_ALL_TAC THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-  Q.PAT_ASSUM `fm : 'a |-> 'b = fm1` MP_TAC THEN
+  Q.PAT_X_ASSUM `fm : 'a |-> 'b = fm1` MP_TAC THEN
   SIMP_TAC (srw_ss()) [GSYM FUPDATE_LIST_THM] THEN
   ASM_SIMP_TAC (srw_ss()) [FUPDATE_LIST_SAME_UPDATE]);
 
@@ -2132,7 +2132,7 @@ val MAP_KEYS_BIJ_LINV = Q.store_thm("MAP_KEYS_BIJ_LINV",
    (full_simp_tac(srw_ss())[MAP_KEYS_def] \\ qexists_tac `f y` \\ full_simp_tac(srw_ss())[]
     \\ imp_res_tac LINV_DEF \\ full_simp_tac(srw_ss())[]) \\ srw_tac[][]
   \\ `INJ (LINV f UNIV) (FDOM t) UNIV` by
-    (qpat_assum `INJ (LINV f UNIV) UNIV UNIV` mp_tac \\ simp [INJ_DEF])
+    (qpat_x_assum `INJ (LINV f UNIV) UNIV UNIV` mp_tac \\ simp [INJ_DEF])
   \\ imp_res_tac (MAP_KEYS_def |> SPEC_ALL |> CONJUNCT2 |> MP_CANON)
   \\ imp_res_tac LINV_DEF \\ full_simp_tac(srw_ss())[]);
 
@@ -2227,7 +2227,7 @@ val fmap_rel_FUPDATE_I = store_thm(
   ``fmap_rel R (f1 \\ k) (f2 \\ k) /\ R v1 v2 ==>
     fmap_rel R (f1 |+ (k,v1)) (f2 |+ (k,v2))``,
   SRW_TAC[][fmap_rel_def] THENL [
-    Q.PAT_ASSUM `FDOM X DELETE EE = FDOM Y DELETE FF` MP_TAC THEN
+    Q.PAT_X_ASSUM `FDOM X DELETE EE = FDOM Y DELETE FF` MP_TAC THEN
     SRW_TAC [][EXTENSION] THEN METIS_TAC [],
     SRW_TAC [][],
     FULL_SIMP_TAC (srw_ss()) [DOMSUB_FAPPLY_THM] THEN
@@ -2494,7 +2494,7 @@ rw[] >>
 ho_match_mp_tac FUPDATE_LIST_APPLY_HO_THM >>
 disj1_tac >>
 fs[EL_ALL_DISTINCT_EL_EQ,MEM_EL] >>
-qpat_assum `(k,v) = X` (assume_tac o SYM) >>
+qpat_x_assum `(k,v) = X` (assume_tac o SYM) >>
 qexists_tac `n` >> rw[EL_MAP] >>
 first_x_assum (qspecl_then [`n`,`m`] mp_tac) >>
 rw[EL_MAP] >> spose_not_then strip_assume_tac >>
