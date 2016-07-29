@@ -1018,11 +1018,11 @@ val stripped_equal = store_thm(
   ASM_SIMP_TAC (srw_ss()) [strip_label_thm] THEN
   REPEAT CONJ_TAC THENL [
     SRW_TAC [][strip_label_thm] THEN
-    Q.PAT_ASSUM `X = strip_label yy` (MP_TAC o SYM) THEN
+    Q.PAT_X_ASSUM `X = strip_label yy` (MP_TAC o SYM) THEN
     Q.SPEC_THEN `N'` FULL_STRUCT_CASES_TAC lterm_CASES THEN SRW_TAC [][] THEN
     FULL_SIMP_TAC (srw_ss()) [],
     SRW_TAC [][strip_label_thm] THEN
-    Q.PAT_ASSUM `X = strip_label yy` (MP_TAC o SYM) THEN
+    Q.PAT_X_ASSUM `X = strip_label yy` (MP_TAC o SYM) THEN
     `(∃s. N' = VAR s) ∨ (∃t1 t2. N' = t1 @@ t2) ∨ (∃v t. N' = LAM v t) ∨
      (∃n v t1 t2. N' = LAMi n v t1 t2)`
        by (Q.SPEC_THEN `N'` FULL_STRUCT_CASES_TAC lterm_CASES THEN
@@ -1035,18 +1035,18 @@ val stripped_equal = store_thm(
       Q.EXISTS_TAC `[]` THEN SRW_TAC [][]
     ],
     SRW_TAC [][strip_label_thm] THEN
-    Q.PAT_ASSUM `X = strip_label yy` (MP_TAC o SYM) THEN
+    Q.PAT_X_ASSUM `X = strip_label yy` (MP_TAC o SYM) THEN
     SRW_TAC [][strip_label_eq_lam] THEN
     SRW_TAC [][IMAGE_CONS_11] THEN PROVE_TAC [],
     MAP_EVERY Q.X_GEN_TAC [`v`, `n`, `t2`, `t1`] THEN
     SRW_TAC [][strip_label_thm] THEN
-    Q.PAT_ASSUM `X = strip_label yy` (MP_TAC o SYM) THEN
+    Q.PAT_X_ASSUM `X = strip_label yy` (MP_TAC o SYM) THEN
     SRW_TAC [][strip_label_eq_redex] THENL [
       Q.EXISTS_TAC `n` THEN SRW_TAC [][EXTENSION] THEN
       Q.EXISTS_TAC `[]` THEN SRW_TAC [][],
       Cases_on `n = n'` THENL [
         FULL_SIMP_TAC (srw_ss()) [] THENL [
-          Q.PAT_ASSUM `MM:lterm ≠ NN` MP_TAC THEN
+          Q.PAT_X_ASSUM `MM:lterm ≠ NN` MP_TAC THEN
           Q.MATCH_ABBREV_TAC `MM ≠ NN ==> GOAL` THEN
           Q.UNABBREV_TAC `GOAL` THEN markerLib.RM_ALL_ABBREVS_TAC THEN
           STRIP_TAC THEN
@@ -1056,7 +1056,7 @@ val stripped_equal = store_thm(
           Q.EXISTS_TAC `Lt::In::x` THEN
           SRW_TAC [][] THEN SRW_TAC [][],
 
-          Q.PAT_ASSUM `MM:lterm ≠ NN` MP_TAC THEN
+          Q.PAT_X_ASSUM `MM:lterm ≠ NN` MP_TAC THEN
           Q.MATCH_ABBREV_TAC `MM ≠ NN ==> GOAL` THEN
           Q.UNABBREV_TAC `GOAL` THEN markerLib.RM_ALL_ABBREVS_TAC THEN
           STRIP_TAC THEN
@@ -1395,7 +1395,7 @@ val position_maps_exist = store_thm(
 
       MAP_EVERY Q.X_GEN_TAC [`M'`, `pos`] THEN STRIP_TAC THEN
       RES_TAC THEN
-      REPEAT (Q.PAT_ASSUM `!r y. labelled_redn beta X r y ==> Q X r y`
+      REPEAT (Q.PAT_X_ASSUM `!r y. labelled_redn beta X r y ==> Q X r y`
                           (K ALL_TAC)) THEN
       ONCE_REWRITE_TAC [lrcc_cases] THEN
       SIMP_TAC (srw_ss() ++ DNF_ss) [] THEN
@@ -1437,7 +1437,7 @@ val position_maps_exist = store_thm(
       PROVE_TAC [],
 
       MAP_EVERY Q.X_GEN_TAC [`N'`,`pos`] THEN STRIP_TAC THEN RES_TAC THEN
-      REPEAT (Q.PAT_ASSUM `!r y. labelled_redn beta X r y ==> Q X r y`
+      REPEAT (Q.PAT_X_ASSUM `!r y. labelled_redn beta X r y ==> Q X r y`
                           (K ALL_TAC)) THEN
       ONCE_REWRITE_TAC [lrcc_cases] THEN SRW_TAC [][] THEN
       SRW_TAC [DNF_ss][] THEN CONV_TAC EXISTS_AND_REORDER_CONV THEN
@@ -1461,7 +1461,7 @@ val position_maps_exist = store_thm(
 
     MAP_EVERY Q.X_GEN_TAC [`bv`, `body`] THEN
     SRW_TAC [][labelled_redn_lam] THEN RES_TAC THEN
-    Q.PAT_ASSUM `!r y. labelled_redn beta X r y ==> Q X r y`
+    Q.PAT_X_ASSUM `!r y. labelled_redn beta X r y ==> Q X r y`
                 (K ALL_TAC) THEN
     Q.EXISTS_TAC `\p. IMAGE (CONS In) (f (TL p))` THEN
     SIMP_TAC (srw_ss())[strip_label_eq_lam, GSYM LEFT_FORALL_IMP_THM,
@@ -2118,10 +2118,10 @@ val weight_at_times_constant = store_thm(
                        DISJ_IMP_THM, GSYM LEFT_FORALL_IMP_THM,
                        FORALL_AND_THM, combinTheory.o_DEF] THEN
   REPEAT STRIP_TAC THENL [
-    Q.PAT_ASSUM `!w c p. p IN valid_posns t' ==> Q w p c`
+    Q.PAT_X_ASSUM `!w c p. p IN valid_posns t' ==> Q w p c`
                 (Q.SPECL_THEN [`\p. w (Rt::p)`, `c`, `[]`] MP_TAC) THEN
     SRW_TAC [][weight_at_thm] THEN
-    Q.PAT_ASSUM `!w c p. p IN valid_posns t ==> Q w p c`
+    Q.PAT_X_ASSUM `!w c p. p IN valid_posns t ==> Q w p c`
                 (Q.SPECL_THEN [`\p. w (Lt::p)`, `c`, `[]`] MP_TAC) THEN
     SRW_TAC [][weight_at_thm, arithmeticTheory.LEFT_ADD_DISTRIB],
     POP_ASSUM (Q.SPECL_THEN [`\p. w (In::p)`, `c`, `[]`] MP_TAC) THEN
@@ -3506,7 +3506,7 @@ val corollary11_2_22i = store_thm(
             DISCH_THEN (Q.SPEC_THEN `ps` STRIP_ASSUME_TAC o GSYM) THEN
             ASM_SIMP_TAC bool_ss []) THEN
     POP_ASSUM SUBST_ALL_TAC THEN
-    Q.PAT_ASSUM `last x = y` MP_TAC THEN
+    Q.PAT_X_ASSUM `last x = y` MP_TAC THEN
     ASM_SIMP_TAC (srw_ss()) [lift_path_strip_path_label] THEN
     DISCH_THEN (MP_TAC o Q.AP_TERM `n_posns 0`) THEN
     POP_ASSUM (ASSUME_TAC o
