@@ -57,7 +57,7 @@ val derives_TOK = store_thm(
   disch_then (CONJUNCTS_THEN2 (DISJ_CASES_THEN (qxchl [`l`] strip_assume_tac))
                               strip_assume_tac) >>
   rw[] >| [
-    qpat_assum `x = y` mp_tac >> simp[Once listTheory.APPEND_EQ_APPEND_MID] >>
+    qpat_x_assum `x = y` mp_tac >> simp[Once listTheory.APPEND_EQ_APPEND_MID] >>
     simp[APPEND_EQ_SING'] >> disch_then (qxchl [`l'`] strip_assume_tac) >>
     rw[] >> first_x_assum (qspecl_then [`p`, `l' ++ r ++ s0`, `t`] mp_tac),
     first_x_assum (qspecl_then [`p0 ++ r ++ l`, `s`, `t`] mp_tac)
@@ -137,7 +137,7 @@ val nullableML_nullable = store_thm(
   HO_MATCH_MP_TAC (theorem "nullableML_ind") >>
   simp[nullableML_def, nullable_CONS_NT] >>
   map_every qx_gen_tac [`sn`, `N`, `sf`] >> rpt strip_tac >>
-  qpat_assum `SS ≠ ∅` mp_tac >> simp[EXTENSION] >> metis_tac[]);
+  qpat_x_assum `SS ≠ ∅` mp_tac >> simp[EXTENSION] >> metis_tac[]);
 
 
 val ptree_NTs_def = tDefine "ptree_NTs" `
@@ -204,7 +204,7 @@ val rptfree_nullable_ptrees_possible = store_thm(
            ∀p. MEM p subs' ⇒
                  valid_ptree G p ∧ ptree_fringe p = [] ∧
                  ptree_rptfree p`
-    by (qpat_assum `MAP ptree_head subs ∈ G.rules ' N` (K ALL_TAC) >>
+    by (qpat_x_assum `MAP ptree_head subs ∈ G.rules ' N` (K ALL_TAC) >>
         Induct_on `subs` >- (rpt strip_tac >> qexists_tac `[]` >> simp[]) >>
         dsimp[] >> qx_gen_tac `h` >> rpt strip_tac >> fs[] >>
         qexists_tac `pt'::subs'` >> dsimp[]) >>
@@ -269,7 +269,7 @@ val derives_preserves_leading_toks = store_thm(
         suffices_by metis_tac[] >>
       ho_match_mp_tac relationTheory.RTC_INDUCT >> rw[] >>
       fs[grammarTheory.derive_def] >> rveq >>
-      qpat_assum `MAP TOK syms ++ rest = Y` mp_tac >>
+      qpat_x_assum `MAP TOK syms ++ rest = Y` mp_tac >>
       dsimp[listTheory.APPEND_EQ_APPEND, MAP_EQ_APPEND, MAP_EQ_CONS,
             listTheory.APPEND_EQ_SING] >> rw[] >>
       first_x_assum (qspec_then `syms` mp_tac) >>
@@ -324,7 +324,7 @@ val firstSet_NT = store_thm(
   Cases_on `Z1`
   >- (`nullableNT G N` by fs[nullable_def] >> fs[] >> metis_tac[]) >>
   fs[] >> rveq >>
-  qpat_assum `derives G [NT N] X`
+  qpat_x_assum `derives G [NT N] X`
     (mp_tac o ONCE_REWRITE_RULE [relationTheory.RTC_CASES1]) >>
   simp[] >> metis_tac[]);
 

@@ -157,7 +157,7 @@ val valid_ptree_derive = store_thm(
   ``∀pt. valid_ptree G pt ⇒ derives G [ptree_head pt] (ptree_fringe pt)``,
   ho_match_mp_tac ptree_ind >> rw[] >> fs[] >>
   match_mp_tac RTC1 >> qexists_tac `MAP ptree_head l` >> rw[] >>
-  qpat_assum `SS ∈ G.rules ' s` (K ALL_TAC) >> Induct_on `l` >> rw[] >>
+  qpat_x_assum `SS ∈ G.rules ' s` (K ALL_TAC) >> Induct_on `l` >> rw[] >>
   fs[DISJ_IMP_THM, FORALL_AND_THM] >>
   metis_tac [derives_paste_horizontally, APPEND]);
 
@@ -217,14 +217,14 @@ val fringe_element = store_thm(
   simp[Once FLAT_EQ_APPEND] >>
   disch_then
     (DISJ_CASES_THEN2 (qxchl [`fsp`, `fss`] strip_assume_tac) mp_tac) >| [
-    qpat_assum `p ++ [x] = FLAT fsp` mp_tac >>
+    qpat_x_assum `p ++ [x] = FLAT fsp` mp_tac >>
     simp[Once FLAT_EQ_APPEND] >>
     disch_then
     (DISJ_CASES_THEN2 (qxchl [`fsp1`, `fsp2`] strip_assume_tac) mp_tac) >| [
-      qpat_assum `[x] = FLAT fsp2` mp_tac >>
+      qpat_x_assum `[x] = FLAT fsp2` mp_tac >>
       simp[FLAT_EQ_SING] >>
       disch_then (qxchl [`nilps`, `nilss`] strip_assume_tac) >>
-      rw[] >> qpat_assum `MAP ptree_fringe ptl = XX` mp_tac >>
+      rw[] >> qpat_x_assum `MAP ptree_fringe ptl = XX` mp_tac >>
       qabbrev_tac `fp = fsp1 ++ nilps` >>
       qabbrev_tac `fs = nilss ++ fss` >>
       `fsp1 ++ (nilps ++ [[x]] ++ nilss) ++ fss = fp ++ [[x]] ++ fs`
@@ -265,10 +265,10 @@ val fringe_element = store_thm(
 
     disch_then (qxchl [`f1`, `f2`, `fpx`, `fs`] strip_assume_tac) >>
     `∃fp. fpx = fp ++ [x]`
-       by (qpat_assum `p ++ [x] = XX` mp_tac >>
+       by (qpat_x_assum `p ++ [x] = XX` mp_tac >>
            simp[APPEND_EQ_APPEND, APPEND_EQ_CONS, DISJ_IMP_THM] >>
            metis_tac[]) >>
-    qpat_assum `MAP ptree_fringe XX = YY` mp_tac >>
+    qpat_x_assum `MAP ptree_fringe XX = YY` mp_tac >>
     simp[MAP_EQ_APPEND] >>
     disch_then (fn th =>
       `∃pt1 pt2 ptx. ptl = pt1 ++ [ptx] ++ pt2 ∧
@@ -294,7 +294,7 @@ val derive_fringe = store_thm(
       >- rw[] >>
       rw[MAP_MAP_o, combinTheory.o_DEF] >>
       pop_assum (K ALL_TAC) >> Induct_on `sf` >> rw[]) >>
-  qpat_assum `derive G XX YY` mp_tac >>
+  qpat_x_assum `derive G XX YY` mp_tac >>
   simp[derive_def] >>
   disch_then (qxchl [`pfx`, `nt`, `rhs`, `sfx`] strip_assume_tac) >>
   qspecl_then [`Nd s l`, `pfx`, `NT nt`, `sfx`] mp_tac fringe_element >>
@@ -388,7 +388,7 @@ val derives_split_horizontally = store_thm(
   disch_then (CONJUNCTS_THEN2
                (qxchl [`pfx`, `N`, `r`, `sfx`] strip_assume_tac)
                strip_assume_tac) >> rw[] >>
-  qpat_assum `X = Y` mp_tac >> simp[listTheory.APPEND_EQ_APPEND_MID] >>
+  qpat_x_assum `X = Y` mp_tac >> simp[listTheory.APPEND_EQ_APPEND_MID] >>
   disch_then (DISJ_CASES_THEN (qxchl [`l`] strip_assume_tac)) >> rw[] >|[
     first_x_assum (qspecl_then [`pfx ++ r ++ l`, `s`] mp_tac),
     first_x_assum (qspecl_then [`p`, `l ++ r ++ sfx`] mp_tac)

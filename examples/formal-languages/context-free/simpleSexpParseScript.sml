@@ -182,7 +182,7 @@ val strip_dot_last_sizeleq = Q.store_thm("strip_dot_last_sizeleq",
 val strip_dot_last_sizelt = Q.store_thm("strip_dot_last_sizelt",
   `∀x ls last. strip_dot x  = (ls,SOME last) ∧ ¬NULL ls ⇒ sexp_size last < sexp_size x`,
   ho_match_mp_tac strip_dot_ind \\ rw[]
-  \\ qpat_assum`strip_dot x = _` mp_tac
+  \\ qpat_x_assum`strip_dot x = _` mp_tac
   \\ simp[Once strip_dot_def]
   \\ CASE_TAC \\ fs[]
   \\ TRY(pairarg_tac \\ fs[])
@@ -190,7 +190,7 @@ val strip_dot_last_sizelt = Q.store_thm("strip_dot_last_sizelt",
   \\ rw[sexp_size_def]
   \\ fs[]
   \\ TRY (spose_not_then strip_assume_tac \\ fs[] \\ rw[] \\ fs[] \\ NO_TAC)
-  \\ qpat_assum`strip_dot x = _` mp_tac
+  \\ qpat_x_assum`strip_dot x = _` mp_tac
   \\ simp[Once strip_dot_def]
   \\ CASE_TAC \\ fs[]
   \\ TRY(pairarg_tac \\ fs[])
@@ -199,7 +199,7 @@ val strip_dot_last_sizelt = Q.store_thm("strip_dot_last_sizelt",
 val strip_dot_MEM_sizelt = Q.store_thm("strip_dot_MEM_sizelt",
   `∀x ls n a. strip_dot x = (ls,n) ∧ MEM a ls ⇒ sexp_size a < sexp_size x`,
   ho_match_mp_tac strip_dot_ind \\ rw[]
-  \\ qpat_assum`strip_dot x = _` mp_tac
+  \\ qpat_x_assum`strip_dot x = _` mp_tac
   \\ simp[Once strip_dot_def]
   \\ CASE_TAC \\ fs[]
   \\ TRY(pairarg_tac \\ fs[])
@@ -210,7 +210,7 @@ val strip_dot_valid_sexp = Q.store_thm("strip_dot_valid_sexp",
   `∀x ls n. strip_dot x = (ls,n) ∧ valid_sexp x ⇒
     EVERY valid_sexp ls ∧ (case n of NONE => T | SOME last => valid_sexp last)`,
   ho_match_mp_tac strip_dot_ind \\ rw[]
-  \\ qpat_assum`strip_dot x = _` mp_tac
+  \\ qpat_x_assum`strip_dot x = _` mp_tac
   \\ simp[Once strip_dot_def]
   \\ CASE_TAC \\ fs[] \\ rw[] \\ rw[]
   \\ pairarg_tac \\ fs[] \\ rw[]);
@@ -417,7 +417,7 @@ val print_nt_def = tDefine"print_nt"`
   \\ TRY (
     Induct_on`str` \\ rw[listTheory.list_size_def] \\ fs[] \\ NO_TAC)
   \\ imp_res_tac dest_quote_sizelt \\ fs[sexp_size_def]
-  \\ qpat_assum`_ = strip_dot _`(assume_tac o SYM)
+  \\ qpat_x_assum`_ = strip_dot _`(assume_tac o SYM)
   \\ imp_res_tac strip_dot_last_sizelt
   \\ imp_res_tac strip_dot_MEM_sizelt
   \\ fs[quantHeuristicsTheory.LIST_LENGTH_2]);
@@ -547,7 +547,7 @@ val peg_eval_print_nt = Q.store_thm("peg_eval_print_nt",
     rw[print_nt_def,pnt_def,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,
        peg_eval_rpt,peg_eval_choicel_CONS,ignoreL_def,ignoreR_def,
        peg_eval_seq_NONE,peg_eval_seq_SOME,tokeq_def,peg_eval_tok_NONE,peg_eval_tok_SOME]
-    \\ qpat_assum`_ = SOME _`mp_tac
+    \\ qpat_x_assum`_ = SOME _`mp_tac
     \\ qid_spec_tac`str'`
     \\ Induct_on`str` \\ rw[] \\ fs[]
     >- (
@@ -638,7 +638,7 @@ val peg_eval_print_nt = Q.store_thm("peg_eval_print_nt",
       \\ fs[]
       \\ Cases_on`t` \\ fs[print_space_separated_def])
     \\ rw[peg_eval_seq_SOME]
-    \\ qpat_assum`strip_dot _ = _`mp_tac
+    \\ qpat_x_assum`strip_dot _ = _`mp_tac
     \\ simp[Once strip_dot_def]
     \\ CASE_TAC \\ fs[]
     \\ TRY (
@@ -675,8 +675,8 @@ val peg_eval_print_nt = Q.store_thm("peg_eval_print_nt",
     \\ qmatch_asmsub_rename_tac`EVERY _ (MAP _ ls)`
     \\ fsrw_tac[boolSimps.ETA_ss][]
     \\ qhdtm_x_assum`strip_dot`mp_tac
-    \\ qpat_assum`_ = SOME l2`mp_tac
-    \\ qpat_assum`∀x. SOME x = n ⇒ _`mp_tac
+    \\ qpat_x_assum`_ = SOME l2`mp_tac
+    \\ qpat_x_assum`∀x. SOME x = n ⇒ _`mp_tac
     \\ map_every qid_spec_tac[`n`,`s0`]
     \\ simp[Abbr`rst1`]
     \\ fsrw_tac[boolSimps.DNF_ss][]
@@ -890,8 +890,8 @@ val peg_eval_print_nt = Q.store_thm("peg_eval_print_nt",
     \\ fsrw_tac[boolSimps.ETA_ss][]
     \\ qhdtm_x_assum`strip_dot`mp_tac
     \\ qhdtm_x_assum`dest_quote`kall_tac
-    \\ qpat_assum`∀x. _`mp_tac
-    \\ qpat_assum`_ = SOME l2`mp_tac
+    \\ qpat_x_assum`∀x. _`mp_tac
+    \\ qpat_x_assum`_ = SOME l2`mp_tac
     \\ rw[pnt_def]
     \\ first_x_assum match_mp_tac
     \\ rw[stoppers_def] )
@@ -925,7 +925,7 @@ val print_nt_print_sexp = Q.store_thm("print_nt_print_sexp",
       \\ simp[Once escape_string_def] )
     \\ rpt strip_tac \\ fs[]
     \\ simp[Once escape_string_def]
-    \\ qpat_assum`_ = _`mp_tac
+    \\ qpat_x_assum`_ = _`mp_tac
     \\ simp[Once escape_string_def]
     \\ IF_CASES_TAC \\ fs[] \\ strip_tac \\ rpt var_eq_tac
     \\ IF_CASES_TAC \\ fs[] )
