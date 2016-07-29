@@ -449,7 +449,7 @@ Here it is in action:
 
 \begin{session}
 \begin{alltt}
->> e (qpat_assum `!t. out t = X t`
+>> e (qpat_x_assum `!t. out t = X t`
        (fn th => REWRITE_TAC [SPEC ``SUC t`` th]));
 \end{alltt}
 \end{session}
@@ -491,7 +491,7 @@ interactively:
                         MUX_def, REG_def] >>
      rpt strip_tac >| [
        metis_tac [],
-       qpat_assum `!t. out t = X t`
+       qpat_x_assum `!t. out t = X t`
                   (fn th => REWRITE_TAC [SPEC ``SUC t`` th]) >>
        rw[]
      ]);
