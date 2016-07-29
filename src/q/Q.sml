@@ -25,10 +25,7 @@ fun normalise_quotation frags =
 
 fun contextTerm ctxt q = Parse.parse_in_context ctxt (normalise_quotation q);
 
-fun ptm_with_ctxtty ctxt ty q =
- let val q' = QUOTE "(" :: (q @ [QUOTE "):", ANTIQUOTE(ty_antiq ty), QUOTE ""])
- in Parse.parse_in_context ctxt (normalise_quotation q')
-end
+fun ptm_with_ctxtty ctxt ty q = Parse.typed_parse_in_context ty ctxt q
 
 val TC_OFF = trace ("show_typecheck_errors", 0)
 fun ptm_with_ctxtty' ctxt ty = TC_OFF (ptm_with_ctxtty ctxt ty)
@@ -209,8 +206,8 @@ let val ctxt = free_varsl (w::asl)
 in Tactic.UNDISCH_TAC asm g
 end;
 
-fun PAT_ASSUM q ttac = Q_TAC (fn t => Tactical.PAT_ASSUM t ttac) q
-fun PAT_X_ASSUM q ttac = Q_TAC (fn t => Tactical.PAT_X_ASSUM t ttac) q
+fun PAT_ASSUM q ttac = QTY_TAC bool (fn t => Tactical.PAT_ASSUM t ttac) q
+fun PAT_X_ASSUM q ttac = QTY_TAC bool (fn t => Tactical.PAT_X_ASSUM t ttac) q
 
 fun SUBGOAL_THEN q ttac (g as (asl,w)) = let
   val ctxt = free_varsl (w::asl)
