@@ -75,7 +75,7 @@ val lem2 = Q.prove
   `divides x (GCODE (n + 1) (h::l))`
     by METIS_TAC [PRIME_FACTOR_DIVIDES,ZERO_LT_GCODE] THEN
   `prime x` by METIS_TAC [PRIME_FACTORS_def,ZERO_LT_GCODE] THEN
-  Q.PAT_ASSUM `divides a b` MP_TAC THEN RW_TAC arith_ss [GCODE_def] THEN
+  Q.PAT_X_ASSUM `divides a b` MP_TAC THEN RW_TAC arith_ss [GCODE_def] THEN
   `divides x (PRIMES (n + 1) ** (h + 1)) \/ divides x (GCODE (n + 2) l)`
     by METIS_TAC [P_EUCLIDES] THENL
   [`x = PRIMES(n+1)` by METIS_TAC [lem1,primePRIMES] THEN
@@ -196,7 +196,7 @@ val lem10 = Q.prove
   FULL_SIMP_TAC list_ss [GCODE_EQ_1],
   METIS_TAC [ZERO_LT_GCODE,DECIDE ``0 < x = x <> 0``],
   `?h t. nl = h::t` by METIS_TAC [listTheory.list_CASES,GCODE_EQ_1] THEN
-  Q.PAT_ASSUM `a <> b` (K ALL_TAC) THEN POP_ASSUM SUBST_ALL_TAC THEN
+  Q.PAT_X_ASSUM `a <> b` (K ALL_TAC) THEN POP_ASSUM SUBST_ALL_TAC THEN
   REPEAT CASE_TAC THENL
   [POP_ASSUM MP_TAC THEN RW_TAC arith_ss [GCODE_def] THEN
     `0 < GCODE (i+1) t` by METIS_TAC [ZERO_LT_GCODE] THEN
