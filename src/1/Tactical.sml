@@ -600,11 +600,33 @@ end
  *---------------------------------------------------------------------------*)
 
 local
+  fun can_match_with_constants constants pat ob =
+    let
+      val (tm_inst, _) = ho_match_term [] empty_tmset pat ob
+      val bound_vars = map #redex tm_inst
+    in
+      null (intersect constants bound_vars)
+    end handle HOL_ERR _ => false
+
+ (* you might think that one could simply pass the free variable set
+    to ho_match_term, and do without this bogus looking
+    can_match_with_constants function. Unfortunately, this doesn't
+    quite work because the match is higher-order, meaning that a
+    pattern like ``_ x``, where x is a "constant" will match something
+    like ``f y``, where y is of the right type, but manifestly not x.
+    This is because
+
+      ho_match_term [] (some set including x) ``_ x`` ``f y``
+
+    will return an instantiation where _ maps to (\x. y). This
+    respects the request not to bind x, but the intention is bypassed.
+ *)
+
    fun gen tcl pat thfun (g as (asl,w)) =
      let
-       val fvs = FVL (w::asl) empty_tmset
+       val fvs = free_varsl (w::asl)
      in
-       tcl (thfun o assert (can (ho_match_term [] fvs pat) o concl))
+       tcl (thfun o assert (can_match_with_constants fvs pat o concl))
      end g
 in
    val PAT_X_ASSUM = gen FIRST_X_ASSUM
