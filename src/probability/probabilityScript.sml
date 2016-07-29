@@ -328,7 +328,7 @@ val PROB_ZERO_UNION = store_thm
   ++ Know `prob p (t DIFF s) = 0`
   >> (ONCE_REWRITE_TAC [GSYM REAL_LE_ANTISYM]
       ++ REVERSE CONJ_TAC >> PROVE_TAC [PROB_POSITIVE]
-      ++ Q.PAT_ASSUM `prob p t = 0` (ONCE_REWRITE_TAC o wrap o SYM)
+      ++ Q.PAT_X_ASSUM `prob p t = 0` (ONCE_REWRITE_TAC o wrap o SYM)
       ++ MATCH_MP_TAC PROB_INCREASING
       ++ RW_TAC std_ss [DIFF_SUBSET])
   ++ STRIP_TAC
@@ -391,7 +391,7 @@ val EVENTS_COUNTABLE_INTER = store_thm
       ++ FULL_SIMP_TAC std_ss [IN_DIFF])
    ++ RW_TAC std_ss [] ++ POP_ASSUM (K ALL_TAC)
    ++ MATCH_MP_TAC EVENTS_COUNTABLE_UNION
-   ++ Q.PAT_ASSUM `c SUBSET events p` MP_TAC
+   ++ Q.PAT_X_ASSUM `c SUBSET events p` MP_TAC
    ++ RW_TAC std_ss [COUNTABLE_IMAGE, SUBSET_DEF, IN_IMAGE]
    ++ PROVE_TAC [EVENTS_COMPL]);
 
@@ -607,7 +607,7 @@ val PROB_REAL_SUM_IMAGE = store_thm
    >> METIS_TAC []
    ++ MATCH_MP_TAC FINITE_INDUCT
    ++ RW_TAC std_ss [REAL_SUM_IMAGE_THM, PROB_EMPTY, DELETE_NON_ELEMENT, IN_INSERT]
-   ++ Q.PAT_ASSUM `!p.
+   ++ Q.PAT_X_ASSUM `!p.
             prob_space p /\ s IN events p /\
             (!x. x IN s ==> {x} IN events p) ==>
             (prob p s = SIGMA (\x. prob p {x}) s)` (MP_TAC o GSYM o Q.SPEC `p`)
@@ -685,7 +685,7 @@ val PROB_REAL_SUM_IMAGE_FN = store_thm
 		    ++ METIS_TAC [SUBSET_DEF, MEASURABLE_SETS_SUBSET_SPACE, prob_space_def,
 				  events_def, p_space_def, IN_INTER])
        ++ RW_TAC std_ss [PROB_EMPTY])
-   ++ Q.PAT_ASSUM `!p f e.
+   ++ Q.PAT_X_ASSUM `!p f e.
             prob_space p /\ e IN events p /\
             (!x. x IN s ==> e INTER f x IN events p) /\
             (!x y. x IN s /\ y IN s /\ ~(x = y) ==> DISJOINT (f x) (f y)) /\
@@ -860,7 +860,7 @@ val distribution_prob_space = store_thm
 		  measure_space_def, m_space_def, measurable_sets_def, IN_MEASURABLE,
 		  SPACE, positive_def, PREIMAGE_EMPTY, INTER_EMPTY, PROB_EMPTY,
 		  PROB_POSITIVE, space_def, subsets_def, countably_additive_def]
-   >> (Q.PAT_ASSUM `!f.
+   >> (Q.PAT_X_ASSUM `!f.
             f IN (UNIV -> measurable_sets p) /\
             (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) /\
             BIGUNION (IMAGE f UNIV) IN measurable_sets p ==>
@@ -960,7 +960,7 @@ val distribution_lebesgue_thm2 = store_thm
    REPEAT STRIP_TAC
    ++ `prob_space (space s,subsets s,distribution p X)`
 	by RW_TAC std_ss [distribution_prob_space]
-   ++ Q.PAT_ASSUM `random_variable X p s` MP_TAC
+   ++ Q.PAT_X_ASSUM `random_variable X p s` MP_TAC
    ++ RW_TAC std_ss [random_variable_def,prob_space_def,distribution_def,events_def,IN_MEASURABLE,p_space_def,
       	     	     prob_def,subsets_def, space_def]
    ++ `measure p (PREIMAGE X A INTER m_space p) =
@@ -1037,7 +1037,7 @@ val finite_marginal_product_space_POW = store_thm
        ++ METIS_TAC [PROB_POSITIVE, SUBSET_DEF, IN_POW, IN_INTER, random_variable_def])
    ++ RW_TAC std_ss [additive_def, measure_def, measurable_sets_def]
    ++ MATCH_MP_TAC PROB_ADDITIVE
-   ++ Q.PAT_ASSUM `POW (p_space p) = events p` (MP_TAC o GSYM)
+   ++ Q.PAT_X_ASSUM `POW (p_space p) = events p` (MP_TAC o GSYM)
    ++ FULL_SIMP_TAC std_ss [IN_POW, SUBSET_DEF, IN_PREIMAGE, IN_CROSS, IN_DISJOINT, random_variable_def, IN_INTER]
    ++ RW_TAC std_ss [] >> METIS_TAC [SND]
    ++ RW_TAC std_ss [Once EXTENSION, IN_UNION, IN_PREIMAGE, IN_INTER]
@@ -1066,7 +1066,7 @@ val finite_marginal_product_space_POW2 = store_thm
        ++ METIS_TAC [PROB_POSITIVE, SUBSET_DEF, IN_POW, IN_INTER, random_variable_def])
    ++ RW_TAC std_ss [additive_def, measure_def, measurable_sets_def, joint_distribution_def]
    ++ MATCH_MP_TAC PROB_ADDITIVE
-   ++ Q.PAT_ASSUM `POW (p_space p) = events p` (MP_TAC o GSYM)
+   ++ Q.PAT_X_ASSUM `POW (p_space p) = events p` (MP_TAC o GSYM)
    ++ FULL_SIMP_TAC std_ss [IN_POW, SUBSET_DEF, IN_PREIMAGE, IN_CROSS, IN_DISJOINT, random_variable_def, IN_INTER]
    ++ RW_TAC std_ss [] >> METIS_TAC [SND]
    ++ RW_TAC std_ss [Once EXTENSION, IN_UNION, IN_PREIMAGE, IN_INTER]
@@ -1095,7 +1095,7 @@ val finite_marginal_product_space_POW3 = store_thm
        ++ METIS_TAC [PROB_POSITIVE, SUBSET_DEF, IN_POW, IN_INTER, random_variable_def])
    ++ RW_TAC std_ss [additive_def, measure_def, measurable_sets_def, joint_distribution3_def]
    ++ MATCH_MP_TAC PROB_ADDITIVE
-   ++ Q.PAT_ASSUM `POW (p_space p) = events p` (MP_TAC o GSYM)
+   ++ Q.PAT_X_ASSUM `POW (p_space p) = events p` (MP_TAC o GSYM)
    ++ FULL_SIMP_TAC std_ss [IN_POW, SUBSET_DEF, IN_PREIMAGE, IN_CROSS, IN_DISJOINT, random_variable_def, IN_INTER]
    ++ RW_TAC std_ss [] >> METIS_TAC [SND]
    ++ RW_TAC std_ss [Once EXTENSION, IN_UNION, IN_PREIMAGE, IN_INTER]
