@@ -35,7 +35,7 @@ fun ptm_with_ctxtty' ctxt ty = TC_OFF (ptm_with_ctxtty ctxt ty)
 
 
 fun ptm_with_ty q ty = ptm_with_ctxtty [] ty q;
-fun btm q = !Parse.post_process_term (ptm_with_ty q Type.bool);
+fun btm q = ptm_with_ty q Type.bool
 
 fun mk_term_rsubst ctxt = let
   (* rely on the fact that the ctxt will be the free variables of the term/thm
