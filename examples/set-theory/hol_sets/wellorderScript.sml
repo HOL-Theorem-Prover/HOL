@@ -635,7 +635,7 @@ val wo2wo_mono = store_thm(
   rpt strip_tac >>
   `x0 IN elsOf w1 /\ x IN elsOf w1` by metis_tac [WIN_elsOf] >>
   `y0 <> y` by metis_tac [WIN_REFL, wo2wo_11] >>
-  rpt (qpat_assum `wo2wo X Y Z = WW` mp_tac) >>
+  rpt (qpat_x_assum `wo2wo X Y Z = WW` mp_tac) >>
   ONCE_REWRITE_TAC [wo2wo_thm] >> rw[LET_THM] >>
   metis_tac [mono_woseg, wleast_SUBSET]);
 
@@ -1149,7 +1149,7 @@ val allsets_wellorderable = store_thm(
             >- (asm_simp_tac bool_ss [elsOf_def, SUBSET_DEF, destWO_mkWO] >>
                 simp_tac bool_ss [GSYM elsOf_def] >> qx_gen_tac `x` >>
                 disch_then (Q.X_CHOOSE_THEN `w` strip_assume_tac) >>
-                qpat_assum `w ∈ c`
+                qpat_x_assum `w ∈ c`
                   (fn th =>
                      first_x_assum
                        (fn imp => mp_tac (MATCH_MP imp (CONJ th th)) >>

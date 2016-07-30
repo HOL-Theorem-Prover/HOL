@@ -16,7 +16,7 @@ val _ = numLib.prefer_num();
 (* Functionality discussed with Matt Kaufmann                                *)
 (*---------------------------------------------------------------------------*)
 
-fun DISPOSE_TAC q = Q.PAT_ASSUM q (K ALL_TAC);
+fun DISPOSE_TAC q = Q.PAT_X_ASSUM q (K ALL_TAC);
 
 fun DROP_ASSUMS_TAC [] (asl,c) = REPEAT (WEAKEN_TAC (K true)) (asl,c)
   | DROP_ASSUMS_TAC nlist (asl,c) =
@@ -335,7 +335,7 @@ val stronger = Q.prove
       ?m. is_ord m /\ P m /\ rank m <= n /\
        !y. is_ord y /\ rank y <= n /\ oless y m ==> ~P y)`,
  RW_TAC std_ss [] THEN
- Q.PAT_ASSUM `$!M`
+ Q.PAT_X_ASSUM `$!M`
     (MP_TAC o Q.SPEC `\a. P a /\ is_ord a /\ rank a <= n` o Q.ID_SPEC) THEN
  DISCH_THEN (MP_TAC o Q.ID_SPEC) THEN RW_TAC std_ss [] THEN METIS_TAC []);
 
@@ -559,7 +559,7 @@ THENL
      by (POP_ASSUM STRIP_ASSUME_TAC THEN
          Q.ABBREV_TAC `Q = \x. Tails x /\ rank(x) <= n` THEN
          `?x. Q x /\ !x. Q x ==> is_ord(x) /\ rank(x) <= n` by METIS_TAC[] THEN
-         Q.PAT_ASSUM `!P:osyntax->bool. !x. A P x ==> B P x`
+         Q.PAT_X_ASSUM `!P:osyntax->bool. !x. A P x ==> B P x`
                (MP_TAC o BETA_RULE o Q.SPECL [`Q`, `x'`]) THEN
          Q.UNABBREV_TAC `Q` THEN ASM_REWRITE_TAC [] THEN BETA_TAC THEN
          REPEAT (POP_ASSUM (K ALL_TAC)) THEN METIS_TAC[])
@@ -587,7 +587,7 @@ THEN
 `?y. sj y /\ oless y (Plus alpha_1 k_1 t)` by METIS_TAC [] THEN
 `is_ord y /\ (y = Plus (expt y) (coeff y) (tail y))`
       by METIS_TAC [rank_positive,LESS_0] THEN POP_ASSUM SUBST_ALL_TAC THEN
- Q.PAT_ASSUM `oless a b` MP_TAC THEN
+ Q.PAT_X_ASSUM `oless _ _` MP_TAC THEN
  RW_TAC ord_ss [Once oless_cases] THENL
  [METIS_TAC [expt_def],
   METIS_TAC [expt_def,coeff_def],

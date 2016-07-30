@@ -475,7 +475,7 @@ val ord_mult_correct = store_thm(
       AP_THM_TAC >> AP_TERM_TAC >> simp[Once EQ_SYM_EQ] >>
       match_mp_tac (GEN_ALL add_disappears_kexp) >> simp[] >> conj_tac
       >- metis_tac [osyntax_EQ_0] >>
-      qpat_assum `oless MM NN` mp_tac >> simp[oless_modelled, is_ord_expt] >>
+      qpat_x_assum `oless MM NN` mp_tac >> simp[oless_modelled, is_ord_expt] >>
       simp[tail_dominated]) >>
   fs[] >> simp[Once ord_mult_def, ord_add_correct, ordMULT_LDISTRIB] >>
   AP_THM_TAC >> AP_TERM_TAC >> simp[ordMULT_ASSOC] >>
@@ -556,7 +556,7 @@ val mvjar_lemma5 = store_thm(
   first_x_assum (qspecl_then [`k1`, `b`] mp_tac) >> simp[] >>
   `cf1 k1 b + 1 = SUC (cf1 k1 b)` by decide_tac >> simp[padd_def] >>
   strip_tac >> Cases_on `b` >> simp[ord_add_def] >> fs[ord_less_def] >>
-  qpat_assum `oless XX YY` mp_tac >>
+  qpat_x_assum `oless XX YY` mp_tac >>
   simp[oless_modelled] >> rw[] >> metis_tac [ordlt_TRANS, ordlt_REFL]);
 
 val better_pmult_def = store_thm(
