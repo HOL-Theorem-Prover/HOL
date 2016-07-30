@@ -62,7 +62,7 @@ REVERSE (Cases_on `x IN FDOM s`) THEN1
   by METIS_TAC [walkstar_unchanged,DISJOINT_SYM] THEN
 Q_TAC SUFF_TAC `walkstar s (Var x) = walkstar s (s ' x)` THEN1
   METIS_TAC [collapse_FAPPLY_eq_walkstar] THEN
-Q.PAT_ASSUM `walkstar X Y = Z` (fn th => ALL_TAC) THEN
+Q.PAT_X_ASSUM `walkstar X Y = Z` (fn th => ALL_TAC) THEN
 SRW_TAC [][Once vwalk_def,FLOOKUP_DEF] THEN
 Cases_on `s ' x` THEN SRW_TAC [][]);
 

@@ -52,8 +52,8 @@ val vwalk_FDOM = Q.store_thm(
 REVERSE (Cases_on `v IN FDOM s`)
 THEN1 METIS_TAC [NOT_FDOM_vwalk] THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `v IN FDOM s` MP_TAC THEN
-Q.PAT_ASSUM `vwalk s v = t` MP_TAC THEN
+Q.PAT_X_ASSUM `v IN FDOM s` MP_TAC THEN
+Q.PAT_X_ASSUM `vwalk s v = t` MP_TAC THEN
 Q.ID_SPEC_TAC `v` THEN
 HO_MATCH_MP_TAC vwalk_ind THEN
 REPEAT (GEN_TAC ORELSE STRIP_TAC) THEN
@@ -157,7 +157,7 @@ Q.ABBREV_TAC `f2 = \n. FST (SND (f n))` THEN
 Q.ABBREV_TAC `f3 = \n. SND (SND (f n))` THEN
 `!n. SND (SND (f n)) = f3 n` by SRW_TAC [][Abbr`f3`] THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
-REPEAT (Q.PAT_ASSUM `Abbrev B` (K ALL_TAC)) THEN
+REPEAT (Q.PAT_X_ASSUM `Abbrev B` (K ALL_TAC)) THEN
 Q.ISPECL_THEN [`λx y. y:num set SUBSET x`,
                `λn. allvars (f1 n) (f2 n) (f3 n)`]
               MP_TAC
@@ -215,7 +215,7 @@ Q.ABBREV_TAC `z = MAX m m'` THEN
 FULL_SIMP_TAC bool_ss [WF_IFF_WELLFOUNDED,wellfounded_def] THEN
 POP_ASSUM (Q.SPEC_THEN `\n. f2 (z+n+1)` MP_TAC) THEN
 SRW_TAC [][] THEN
-Q.PAT_ASSUM `!n.z < n ==> measure X Y Z` (Q.SPEC_THEN `z+n+1` MP_TAC) THEN
+Q.PAT_X_ASSUM `!n.z < n ==> measure X Y Z` (Q.SPEC_THEN `z+n+1` MP_TAC) THEN
 SRW_TAC [ARITH_ss][ADD1]);
 
 val tunify_defn_q =`
@@ -293,14 +293,14 @@ SRW_TAC [][allvars_def] THEN1 (
     FULL_SIMP_TAC (srw_ss()) [] THEN met) THEN
   IMP_RES_TAC walk_IN_FRANGE THEN
   IMP_RES_TAC IN_FRANGE_rangevars THEN
-  Q.PAT_ASSUM `walk s t1 = X` ASSUME_TAC THEN
+  Q.PAT_X_ASSUM `walk s t1 = X` ASSUME_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [substvars_def] THEN met )
 THEN1 (
   Cases_on `walk s t2 = t2` THEN1 (
     FULL_SIMP_TAC (srw_ss()) [] THEN met) THEN
   IMP_RES_TAC walk_IN_FRANGE THEN
   IMP_RES_TAC IN_FRANGE_rangevars THEN
-  Q.PAT_ASSUM `walk s t2 = X` ASSUME_TAC THEN
+  Q.PAT_X_ASSUM `walk s t2 = X` ASSUME_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [substvars_def] THEN met ) THEN
 IMP_RES_TAC walk_to_var THEN SRW_TAC [][] THEN
 ASM_SIMP_TAC (srw_ss()) [substvars_def,rangevars_FUPDATE] THEN
@@ -311,13 +311,13 @@ CONJ_TAC THEN1 (
     FULL_SIMP_TAC (srw_ss()) [] THEN
     IMP_RES_TAC walk_IN_FRANGE THEN
     IMP_RES_TAC IN_FRANGE_rangevars THEN
-    Q.PAT_ASSUM `walk s t1 = X` ASSUME_TAC THEN
+    Q.PAT_X_ASSUM `walk s t1 = X` ASSUME_TAC THEN
     FULL_SIMP_TAC (srw_ss()) [] ) THEN
   FULL_SIMP_TAC (srw_ss()) []  THEN
   `u ∈ FDOM s` by METIS_TAC [NOT_FDOM_vwalk,term_11] THEN
   IMP_RES_TAC vwalk_IN_FRANGE THEN
   IMP_RES_TAC IN_FRANGE_rangevars THEN
-  Q.PAT_ASSUM `vwalk s u = X` ASSUME_TAC THEN
+  Q.PAT_X_ASSUM `vwalk s u = X` ASSUME_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [] ) THEN
 CONJ_TAC THEN1 met THEN
 Cases_on `walk s t2a = t2a` THEN
@@ -326,7 +326,7 @@ FULL_SIMP_TAC (srw_ss()) [] THEN1 (
   FULL_SIMP_TAC (srw_ss()) [] THEN1 met THEN
   IMP_RES_TAC walk_IN_FRANGE THEN
   IMP_RES_TAC IN_FRANGE_rangevars THEN
-  Q.PAT_ASSUM `walk s t2 = X` ASSUME_TAC THEN
+  Q.PAT_X_ASSUM `walk s t2 = X` ASSUME_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN met ) THEN
 IMP_RES_TAC walk_IN_FRANGE THEN
 IMP_RES_TAC IN_FRANGE_rangevars THEN met );
@@ -417,7 +417,7 @@ Cases_on `walk s t1 = t1` THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN1 met THEN
 IMP_RES_TAC walk_IN_FRANGE THEN
 IMP_RES_TAC IN_FRANGE_rangevars THEN
-Q.PAT_ASSUM `walk s t1 = X` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `walk s t1 = X` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN met);
 
 val walk_SUBMAP = Q.store_thm(

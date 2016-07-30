@@ -65,14 +65,14 @@ val wfs_no_cycles = Q.store_thm(
   SRW_TAC [] [wfs_def,WF_IFF_WELLFOUNDED,wellfounded_def] THEN
   SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
   `!n. (f n) IN FDOM s /\ f (SUC n) IN vars (s ' (f n))` by
-    (STRIP_TAC THEN Q.PAT_ASSUM `!n.vR s (f (SUC n)) (f n)` (Q.SPEC_THEN `n` MP_TAC)
+    (STRIP_TAC THEN Q.PAT_X_ASSUM `!n.vR s (f (SUC n)) (f n)` (Q.SPEC_THEN `n` MP_TAC)
      THEN FULL_SIMP_TAC (srw_ss()) [vR_def] THEN Cases_on `FLOOKUP s (f n)` THEN
-     Q.PAT_ASSUM `FLOOKUP s (f n) = Z` MP_TAC THEN SRW_TAC [] [FLOOKUP_DEF])
+     Q.PAT_X_ASSUM `FLOOKUP s (f n) = Z` MP_TAC THEN SRW_TAC [] [FLOOKUP_DEF])
   THEN
   `!n m. (vR s)^+ (f (SUC (n + m))) (f n)` by
     (REPEAT STRIP_TAC THEN Induct_on `m` THEN1
        (SRW_TAC [] [] THEN METIS_TAC [TC_SUBSET]) THEN
-     Q.PAT_ASSUM `!n. f n IN FDOM s /\ Z` (Q.SPEC_THEN `SUC (n + m)` MP_TAC)
+     Q.PAT_X_ASSUM `!n. f n IN FDOM s /\ Z` (Q.SPEC_THEN `SUC (n + m)` MP_TAC)
      THEN SRW_TAC [] [] THEN
      `(vR s) (f (SUC (SUC (n + m)))) (f (SUC (n + m)))` by METIS_TAC
      [vR_def,FLOOKUP_DEF] THEN METIS_TAC [TC_RULES,ADD_SUC])
@@ -762,7 +762,7 @@ GEN_TAC THEN INDUCT_THEN fmap_INDUCT STRIP_ASSUME_TAC THENL [
   SRW_TAC [][] THEN
   Induct_on `x'` THEN SRW_TAC [][] THEN
   SRW_TAC [][FLOOKUP_UPDATE] THEN
-  Q.PAT_ASSUM `!x.Z` (Q.SPEC_THEN `Var s` MP_TAC) THEN
+  Q.PAT_X_ASSUM `!x.Z` (Q.SPEC_THEN `Var s` MP_TAC) THEN
   SRW_TAC [][]
 ]);
 
@@ -791,7 +791,7 @@ val collapse_unify_eq_sunify = Q.store_thm(
 HO_MATCH_MP_TAC unify_ind THEN SRW_TAC [][] THEN
 `wfs sx` by METIS_TAC [unify_uP,uP_def] THEN
 Cases_on `walk s t1` THEN Cases_on `walk s t2` THEN
-Q.PAT_ASSUM `unify X Y Z = D` MP_TAC THEN
+Q.PAT_X_ASSUM `unify X Y Z = D` MP_TAC THEN
 SRW_TAC [][Once unify_def] THENL
 
 `∀t1 t2. (s ❜ t1 = s ❜ t2) ⇒ (t1 = t2)`,
