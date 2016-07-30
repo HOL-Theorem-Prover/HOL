@@ -1215,7 +1215,7 @@ Induct_on `l` THENL [
       ) THEN
       ASM_REWRITE_TAC[] THEN
       STRIP_TAC THEN
-      Q.PAT_ASSUM `!s n. P s n` MATCH_MP_TAC THEN
+      Q.PAT_X_ASSUM `!s n. P s n` MATCH_MP_TAC THEN
       ASM_SIMP_TAC list_ss [LIST_PF_SEM_THM] THEN
       METIS_TAC[]
    ) THEN
@@ -1471,7 +1471,7 @@ Induct_on `l` THENL [
    Cases_on `SF_POINTS_TO_LIST (h::l) = SF_POINTS_TO_LIST l` THEN1 (
          ASM_SIMP_TAC list_ss [] THEN
          REPEAT STRIP_TAC THEN
-         Q.PAT_ASSUM `!n m. P n m` (fn thm => MP_TAC (Q.ISPECL [`n:num`, `m:num`] thm)) THEN
+         Q.PAT_X_ASSUM `!n m. P n m` (fn thm => MP_TAC (Q.ISPECL [`n:num`, `m:num`] thm)) THEN
          ASM_SIMP_TAC std_ss [] THEN
          STRIP_TAC THEN
          Q.EXISTS_TAC `SUC n'` THEN
@@ -1498,7 +1498,7 @@ Induct_on `l` THENL [
 
 
       FULL_SIMP_TAC list_ss [] THEN
-      Q.PAT_ASSUM `!n m. P n m` (fn thm => MP_TAC (Q.ISPECL [`n'':num`, `n':num`] thm)) THEN
+      Q.PAT_X_ASSUM `!n m. P n m` (fn thm => MP_TAC (Q.ISPECL [`n'':num`, `n':num`] thm)) THEN
       ASM_SIMP_TAC list_ss [] THEN
       STRIP_TAC THEN
       Q.EXISTS_TAC `SUC n'''` THEN
@@ -1656,7 +1656,7 @@ Induct_on `l` THENL [
              (SF_POINTS_TO_LIST_COND_FILTER pfL t l)` THEN1 (
       ASM_SIMP_TAC list_ss [] THEN
       REPEAT STRIP_TAC THEN
-      Q.PAT_ASSUM `!pfL f n m. P n m` (fn thm => MP_TAC (Q.SPECL [`pfL`, `t`, `n:num`, `m:num`] thm)) THEN
+      Q.PAT_X_ASSUM `!pfL f n m. P n m` (fn thm => MP_TAC (Q.SPECL [`pfL`, `t`, `n:num`, `m:num`] thm)) THEN
       ASM_REWRITE_TAC [] THEN
       STRIP_TAC THEN
       Q.EXISTS_TAC `SUC n'` THEN
@@ -1682,7 +1682,7 @@ Induct_on `l` THENL [
       Q.EXISTS_TAC `n''` THEN
       ASM_SIMP_TAC list_ss [] THEN
 
-      Q.PAT_ASSUM `Y = x::Z` MP_TAC THEN
+      Q.PAT_X_ASSUM `Y = x::Z` MP_TAC THEN
       Cases_on `h'` THEN Cases_on `h` THEN (
          SIMP_TAC list_ss [SF_POINTS_TO_LIST_COND___PRED_def, SF_POINTS_TO_LIST_COND_FILTER_def,
             SF_POINTS_TO_LIST_COND_def, ds_spatial_formula_11, ds_spatial_formula_distinct]
@@ -1693,7 +1693,7 @@ Induct_on `l` THENL [
 
       SIMP_TAC std_ss [] THEN
       STRIP_TAC THEN
-      Q.PAT_ASSUM `!pfL f n m. P n m` (fn thm => MP_TAC (Q.SPECL [`pfL`, `t`, `n'':num`, `n':num`] thm)) THEN
+      Q.PAT_X_ASSUM `!pfL f n m. P n m` (fn thm => MP_TAC (Q.SPECL [`pfL`, `t`, `n'':num`, `n':num`] thm)) THEN
       ASM_SIMP_TAC list_ss [] THEN
       STRIP_TAC THEN
       Q.EXISTS_TAC `SUC n'''` THEN
@@ -1732,10 +1732,10 @@ Induct_on `l` THENL [
    SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM] THEN
    REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC list_ss [] THEN
-   Q.PAT_ASSUM `Y = LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', sfL')`
+   Q.PAT_X_ASSUM `Y = LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', sfL')`
       (fn thm => (ASSUME_TAC (GSYM thm))) THEN
    FULL_SIMP_TAC std_ss [MEM_EL] THEN
-   Q.PAT_ASSUM `Y = EL n sfL` (ASSUME_TAC o GSYM) THEN
+   Q.PAT_X_ASSUM `Y = EL n sfL` (ASSUME_TAC o GSYM) THEN
 
    `!pfL. LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
          LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',sfL')` by ALL_TAC THEN1 (
@@ -1916,7 +1916,7 @@ Induct_on `l` THENL [
    Cases_on `h` THEN
    SIMP_TAC list_ss [] THEN
    REPEAT STRIP_TAC THEN
-   Q.PAT_ASSUM `Y ==> (X = Z)` MP_TAC THEN
+   Q.PAT_X_ASSUM `Y ==> (X = Z)` MP_TAC THEN
    ASM_REWRITE_TAC[] THEN
    SIMP_TAC std_ss [Once EQ_SYM_EQ] THEN
    STRIP_TAC THEN
@@ -2018,7 +2018,7 @@ Induct_on `l` THENL [
    Cases_on `h` THEN
    SIMP_TAC list_ss [] THEN
    REPEAT STRIP_TAC THEN
-   Q.PAT_ASSUM `Y ==> (X = Z)` MP_TAC THEN
+   Q.PAT_X_ASSUM `Y ==> (X = Z)` MP_TAC THEN
    ASM_REWRITE_TAC[] THEN
    SIMP_TAC std_ss [Once EQ_SYM_EQ] THEN
    STRIP_TAC THEN
@@ -2173,10 +2173,10 @@ SIMP_TAC std_ss [HEAP_DISTINCT_def] THEN
 `(FILTER (\(e1,e2). ~DS_EXPRESSION_EQUAL s e1 e2)
                   (DELETE_ELEMENT n1 (DELETE_ELEMENT n2 c2))) =
                   (FILTER (\(e1,e2). ~DS_EXPRESSION_EQUAL s e1 e2) c2)` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `n1 < n2` MP_TAC THEN
-   REPEAT (Q.PAT_ASSUM `N < LENGTH c2` MP_TAC) THEN
-   REPEAT (Q.PAT_ASSUM `X = (e1,e2)` MP_TAC) THEN
-   Q.PAT_ASSUM `DS_EXPRESSION_EQUAL s e1 e2` MP_TAC THEN
+   Q.PAT_X_ASSUM `n1 < n2` MP_TAC THEN
+   REPEAT (Q.PAT_X_ASSUM `N < LENGTH c2` MP_TAC) THEN
+   REPEAT (Q.PAT_X_ASSUM `X = (e1,e2)` MP_TAC) THEN
+   Q.PAT_X_ASSUM `DS_EXPRESSION_EQUAL s e1 e2` MP_TAC THEN
    REPEAT (POP_ASSUM (K ALL_TAC)) THEN
    Q.SPEC_TAC (`n2`, `n2`) THEN
    Q.SPEC_TAC (`n1`, `n1`) THEN
@@ -2190,9 +2190,9 @@ SIMP_TAC std_ss [HEAP_DISTINCT_def] THEN
       Cases_on `n2` THEN1 FULL_SIMP_TAC list_ss [] THEN
       Cases_on `n1` THENL [
          FULL_SIMP_TAC list_ss [DELETE_ELEMENT_THM] THEN
-         Q.PAT_ASSUM `n < LENGTH c2` MP_TAC THEN
-         Q.PAT_ASSUM `X = (e1,e2)` MP_TAC THEN
-         Q.PAT_ASSUM `DS_EXPRESSION_EQUAL s e1 e2` MP_TAC THEN
+         Q.PAT_X_ASSUM `n < LENGTH c2` MP_TAC THEN
+         Q.PAT_X_ASSUM `X = (e1,e2)` MP_TAC THEN
+         Q.PAT_X_ASSUM `DS_EXPRESSION_EQUAL s e1 e2` MP_TAC THEN
          REPEAT (POP_ASSUM (K ALL_TAC)) THEN
          Q.SPEC_TAC (`n`, `n`) THEN
          REWRITE_TAC [AND_IMP_INTRO, GSYM CONJ_ASSOC] THEN
@@ -2707,7 +2707,7 @@ pred_setLib.SET_INDUCT_TAC THENL [
 
    Cases_on `e` THENL [
       GEN_TAC THEN
-      Q.PAT_ASSUM `!X. P X` (fn thm => ASSUME_TAC(Q.SPEC `GET_DSV_VALUE d INSERT X` thm)) THEN
+      Q.PAT_X_ASSUM `!X. P X` (fn thm => ASSUME_TAC(Q.SPEC `GET_DSV_VALUE d INSERT X` thm)) THEN
       STRIP_TAC THEN
       FULL_SIMP_TAC std_ss [FINITE_INSERT] THEN
       Q.EXISTS_TAC `s'` THEN
@@ -2725,7 +2725,7 @@ pred_setLib.SET_INDUCT_TAC THENL [
 
 
       GEN_TAC THEN
-      Q.PAT_ASSUM `!X. P X` (fn thm => ASSUME_TAC(Q.SPEC `X` thm)) THEN
+      Q.PAT_X_ASSUM `!X. P X` (fn thm => ASSUME_TAC(Q.SPEC `X` thm)) THEN
       STRIP_TAC THEN
       FULL_SIMP_TAC std_ss [] THEN
 
@@ -2856,4 +2856,3 @@ DB.find "SF_POINTS_TO_LIST_def"
 *)
 
 val _ = export_theory();
-
