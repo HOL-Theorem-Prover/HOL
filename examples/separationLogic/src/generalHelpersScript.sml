@@ -273,10 +273,10 @@ GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
    PROVE_TAC[],
 
    FULL_SIMP_TAC std_ss [MEM_EL] THEN
-   Q.PAT_ASSUM `!n1 n2. X n1 n2` (MP_TAC o Q.SPECL [`0`, `SUC n`]) THEN
+   Q.PAT_X_ASSUM `!n1 n2. X n1 n2` (MP_TAC o Q.SPECL [`0`, `SUC n`]) THEN
    ASM_SIMP_TAC list_ss [],
 
-   Q.PAT_ASSUM `!n1 n2. X n1 n2` (MP_TAC o Q.SPECL [`SUC n1`, `SUC n2`]) THEN
+   Q.PAT_X_ASSUM `!n1 n2. X n1 n2` (MP_TAC o Q.SPECL [`SUC n1`, `SUC n2`]) THEN
    ASM_SIMP_TAC list_ss []
 ]);
 
@@ -623,7 +623,7 @@ Induct_on `l` THENL [
    Cases_on `t` THEN
    SIMP_TAC list_ss [LIST_ZIP_REWRITE] THEN
    REPEAT STRIP_TAC THEN
-   Q.PAT_ASSUM `!t ts. X t ts` MATCH_MP_TAC THEN
+   Q.PAT_X_ASSUM `!t ts. X t ts` MATCH_MP_TAC THEN
    FULL_SIMP_TAC std_ss [EVERY_MEM, MEM_MAP, GSYM LEFT_FORALL_IMP_THM] THEN
    REPEAT STRIP_TAC THEN
    RES_TAC THEN
@@ -1299,7 +1299,7 @@ Tactical.REVERSE (
 `!L1 L2 x. MEM x (MAP FST L2) ==>
    ((f |++ L1 |++ (REVERSE L2)) ' x =  (f |++ (REVERSE L2)) ' x)` by ALL_TAC) THEN1 (
   REPEAT STRIP_TAC THEN
-  Q.PAT_ASSUM `!L1 L2. X` (MP_TAC o Q.SPECL [`L1`, `REVERSE L2`, `x`]) THEN
+  Q.PAT_X_ASSUM `!L1 L2. X` (MP_TAC o Q.SPECL [`L1`, `REVERSE L2`, `x`]) THEN
   ASM_SIMP_TAC std_ss [MAP_REVERSE, MEM_REVERSE, REVERSE_REVERSE]
 ) THEN
 
@@ -1339,7 +1339,7 @@ Induct_on `L` THEN (
    SIMP_TAC std_ss [FUPDATE_LIST_THM]
 ) THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `!f P. X f P` MATCH_MP_TAC THEN
+Q.PAT_X_ASSUM `!f P. X f P` MATCH_MP_TAC THEN
 Cases_on `h` THEN
 FULL_SIMP_TAC std_ss [listTheory.EVERY_DEF, FEVERY_STRENGTHEN_THM]);
 
@@ -1394,7 +1394,7 @@ Cases_on `q = k` THENL [
 ] THEN
 FULL_SIMP_TAC list_ss [FILTER_EQ_NIL] THEN
 `~(MEM k (MAP FST kvl))` by ALL_TAC THEN1 (
-      Q.PAT_ASSUM `EVERY X Y` MP_TAC THEN
+      Q.PAT_X_ASSUM `EVERY X Y` MP_TAC THEN
       REPEAT (POP_ASSUM (K ALL_TAC)) THEN
       Induct_on `kvl` THEN
       ASM_SIMP_TAC list_ss []
