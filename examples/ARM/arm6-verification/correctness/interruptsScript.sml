@@ -40,7 +40,7 @@ val EXISTS_LEAST_NOT_RESET = prove(
   `!t i. i IN STRM_ARM6 /\ IS_RESET i t ==>
      ?t2. IS_RESET i t2 /\ ~IS_RESET i (t2 + 1) /\ ~IS_RESET i (t2 + 2)`,
   RW_TAC bool_ss [IN_DEF,STRM_ARM6_def]
-    \\ PAT_ASSUM `!t. ?t2. t < t2 /\ (IS_BUSY i t2 ==> IS_ABSENT i t2)`
+    \\ PAT_X_ASSUM `!t. ?t2. t < t2 /\ (IS_BUSY i t2 ==> IS_ABSENT i t2)`
          (K ALL_TAC)
     \\ FIRST_X_ASSUM (SPEC_THEN `t`
          (STRIP_ASSUME_TAC o CONV_RULE numLib.EXISTS_LEAST_CONV))
@@ -221,7 +221,7 @@ val lem = prove(
        IS_RESET i (t - 1)`,
   RW_TAC bool_ss [IN_DEF,STRM_ARM6_def]
     \\ Cases_on `t` \\ FULL_SIMP_TAC arith_ss [ADD1]
-    \\ PAT_ASSUM `!t. IS_RESET i t ==> b` (SPEC_THEN `n + 1` IMP_RES_TAC)
+    \\ PAT_X_ASSUM `!t. IS_RESET i t ==> b` (SPEC_THEN `n + 1` IMP_RES_TAC)
     \\ FULL_SIMP_TAC arith_ss []);
 
 val lem2 = prove(
@@ -230,7 +230,7 @@ val lem2 = prove(
   REPEAT STRIP_TAC \\ IMP_RES_TAC lem
     \\ FULL_SIMP_TAC bool_ss [IN_DEF,STRM_ARM6_def]
     \\ Cases_on `t` \\ FULL_SIMP_TAC arith_ss [ADD1]
-    \\ PAT_ASSUM `!t. IS_RESET i t ==> b` (SPEC_THEN `n` IMP_RES_TAC)
+    \\ PAT_X_ASSUM `!t. IS_RESET i t ==> b` (SPEC_THEN `n` IMP_RES_TAC)
     \\ FULL_SIMP_TAC arith_ss []);
 
 val PREVIOUS_THREE_RESET = store_thm("PREVIOUS_THREE_RESET",
@@ -239,7 +239,7 @@ val PREVIOUS_THREE_RESET = store_thm("PREVIOUS_THREE_RESET",
   REPEAT STRIP_TAC \\ IMP_RES_TAC lem
     \\ FULL_SIMP_TAC bool_ss [IN_DEF,STRM_ARM6_def]
     \\ Cases_on `t` \\ FULL_SIMP_TAC arith_ss [ADD1]
-    \\ PAT_ASSUM `!t. IS_RESET i t ==> b`
+    \\ PAT_X_ASSUM `!t. IS_RESET i t ==> b`
          (fn th => IMP_RES_TAC (SPEC `n` th) \\ ASSUME_TAC th)
     \\ FULL_SIMP_TAC arith_ss []
     \\ POP_ASSUM (SPEC_THEN `n - 1` IMP_RES_TAC)
@@ -251,15 +251,15 @@ val LEAST_RESET_GT_TWO = store_thm("LEAST_RESET_GT_TWO",
         2 < (LEAST t. IS_RESET i t /\ ~IS_RESET i (t + 1) /\
                      ~IS_RESET i (t + 2))`,
   REPEAT STRIP_TAC \\ IMP_RES_TAC LEAST_NOT_RESET
-    \\ PAT_ASSUM `IS_RESET i t` (K ALL_TAC)
+    \\ PAT_X_ASSUM `IS_RESET i t` (K ALL_TAC)
     \\ IMP_RES_TAC PREVIOUS_THREE_RESET
-    \\ REPEAT (PAT_ASSUM `~a ==> b` (K ALL_TAC))
+    \\ REPEAT (PAT_X_ASSUM `~a ==> b` (K ALL_TAC))
     \\ ABBREV_TAC `l = LEAST t. IS_RESET i t /\ ~IS_RESET i (t + 1) /\
                                ~IS_RESET i (t + 2)`
     \\ Cases_on `(l = 0) \/ (l = 1) \/ (l = 2)`
     \\ FULL_SIMP_TAC arith_ss [IN_DEF,STRM_ARM6_def]
     \\ POP_ASSUM (fn th => FULL_SIMP_TAC arith_ss [th])
-    \\ PAT_ASSUM `!n. IS_RESET i t ==> b` IMP_RES_TAC
+    \\ PAT_X_ASSUM `!n. IS_RESET i t ==> b` IMP_RES_TAC
     \\ FULL_SIMP_TAC arith_ss []);
 
 (* ------------------------------------------------------------------------- *)
