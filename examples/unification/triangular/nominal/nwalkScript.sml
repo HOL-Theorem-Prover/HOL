@@ -75,7 +75,7 @@ val nvwalk_to_var = Q.store_thm(
      THEN METIS_TAC [permeq_refl]) THEN
   FIRST_X_ASSUM (Q.SPECL_THEN [`pw`,`w`] MP_TAC) THEN SRW_TAC [][] THEN
   `nvwalk s (pv ++ pw) w = Sus p2 u`
-  by (Q.PAT_ASSUM `nvwalk s pv v = X` MP_TAC THEN
+  by (Q.PAT_X_ASSUM `nvwalk s pv v = X` MP_TAC THEN
       SRW_TAC [] [Once nvwalk_def,nvwalk_case_thms]) THEN
 FIRST_X_ASSUM MATCH_MP_TAC THEN METIS_TAC [])
 
@@ -202,8 +202,8 @@ val nvwalk_FDOM = Q.store_thm(
 REVERSE (Cases_on `v IN FDOM s`)
 THEN1 METIS_TAC [NOT_FDOM_nvwalk] THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `v IN FDOM s` MP_TAC THEN
-Q.PAT_ASSUM `nvwalk s p v = t` MP_TAC THEN
+Q.PAT_X_ASSUM `v IN FDOM s` MP_TAC THEN
+Q.PAT_X_ASSUM `nvwalk s p v = t` MP_TAC THEN
 MAP_EVERY Q.ID_SPEC_TAC [`v`,`p`] THEN
 HO_MATCH_MP_TAC nvwalk_ind THEN
 REPEAT (GEN_TAC ORELSE STRIP_TAC) THEN
@@ -305,7 +305,7 @@ Cases_on `FLOOKUP sx v` THEN FULL_SIMP_TAC (srw_ss()) [] THEN1 (
   IMP_RES_TAC NOT_FDOM_nvwalk THEN
   `Sus p v = Sus pu u` by METIS_TAC [] THEN
   FULL_SIMP_TAC (srw_ss()) [] ) THEN
-Q.PAT_ASSUM `nvwalk s p v = Sus pu u` MP_TAC THEN
+Q.PAT_X_ASSUM `nvwalk s p v = Sus pu u` MP_TAC THEN
 Q.MATCH_ABBREV_TAC `X ⇒ Y` THEN
 Q.UNABBREV_TAC `X` THEN
 SRW_TAC [][Once nvwalk_def] THEN
@@ -318,7 +318,7 @@ FULL_SIMP_TAC (srw_ss()) [] THEN1 (
 IMP_RES_TAC FLOOKUP_SUBMAP THEN
 Cases_on `x'` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
 SRW_TAC [][] THEN
-Q.PAT_ASSUM `nvwalk s pi n = Sus pu u` MP_TAC THEN
+Q.PAT_X_ASSUM `nvwalk s pi n = Sus pu u` MP_TAC THEN
 SELECT_ELIM_TAC THEN SRW_TAC [][] THEN
 FIRST_X_ASSUM (Q.SPEC_THEN `x` MP_TAC) THEN
 SRW_TAC [][] THEN METIS_TAC [permeq_sym]);
