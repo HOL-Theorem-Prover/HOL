@@ -65,7 +65,6 @@ fun extract_info constset db =
     in {case_congs=congs, case_rewrites=rws}
     end;
 
-
 (*---------------------------------------------------------------------------
     Support for automatically building names to store definitions
     (and the consequences thereof) with in the current theory. Somewhat
@@ -782,6 +781,10 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
         context for the recursive call), and where !( ... ) denotes
         a universal prefix.
      *)
+     fun fSPEC_ALL th =
+       case Lib.total dest_forall (concl th) of
+           SOME (v,_) => fSPEC_ALL (SPEC v th)
+         | NONE => th
      fun simp_nested_ih nih =
       let val (lvs,tm) = strip_forall nih
           val (ants,Pa) = strip_imp_only tm
@@ -790,18 +793,18 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
           val V = op_union aconv lvs vs
           val has_context = (length ants = 2)
           val ng = list_mk_forall(V,list_mk_imp (front_last ants))
-          val th1 = SPEC_ALL (ASSUME ng)
+          val th1 = fSPEC_ALL (ASSUME ng)
           val th1a = if has_context then UNDISCH th1 else th1
-          val th2 = SPEC_ALL (ASSUME nih)
+          val th2 = fSPEC_ALL (ASSUME nih)
           val th2a = if has_context then UNDISCH th2 else th2
           val Rab = fst(dest_imp(concl th2a))
           val th3 = MP th2a th1a
           val th4 = if has_context
-                    then DISCH (fst(dest_imp(snd(strip_forall ng)))) th3
+                    then DISCH (fst(dest_imp(concl th1))) th3
                     else th3
           val th5 = GENL lvs th4
           val th6 = DISCH nih th5
-          val tha = SPEC_ALL(ASSUME (concl th5))
+          val tha = fSPEC_ALL(ASSUME (concl th5))
           val thb = if has_context then UNDISCH tha else tha
           val thc = DISCH Rab thb
           val thd = if has_context
