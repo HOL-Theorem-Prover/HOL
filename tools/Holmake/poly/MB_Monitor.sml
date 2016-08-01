@@ -95,7 +95,10 @@ fun new {info,warn,genLogFile,keep_going} =
               let
                 val s = case tailbuffer.last_line tb of NONE => "" | SOME s => s
               in
-                print (polish k ^ rtrunc 57 (": " ^ s))
+                print (polish k ^ rtrunc 57 (": " ^ s) ^
+                       (case stat of
+                            Stalling _ => statusString stat
+                          | _ => "   "))
               end
       end
     fun id (s:string) = s
