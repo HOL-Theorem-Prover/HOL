@@ -412,6 +412,16 @@ val OPTION_MAP2_cong = store_thm("OPTION_MAP2_cong",
   SRW_TAC [][]);
 val _ = DefnBase.export_cong "OPTION_MAP2_cong";
 
+val OPTION_MAP_CASE = store_thm("OPTION_MAP_CASE",
+  ``OPTION_MAP f (x:'a option) = option_CASE x NONE (SOME o f)``,
+  OPTION_CASES_TAC (--`x:'a option`--) THEN
+  REWRITE_TAC [combinTheory.o_THM, option_CLAUSES]) ;
+
+(* similarly have 
+``OPTION_JOIN f = option_CASE x NONE I`` ;
+``OPTION_BIND x f = option_CASE x NONE f`` ;
+*)
+
 (* ----------------------------------------------------------------------
     The Option Monad
 
