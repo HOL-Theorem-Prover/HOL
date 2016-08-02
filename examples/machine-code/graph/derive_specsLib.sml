@@ -238,7 +238,7 @@ end
 fun remove_arm_CONFIGURE th =
   if can (find_term (fn tm => tm = ``arm_CONFIG``)) (concl th) then let
     val var = ``var:bool``
-    val pat = ``arm_CONFIG (T,ARMv7_A,F,^var,mode)``
+    val pat = ``arm_CONFIG (VFPv3,ARMv7_A,F,^var,mode)``
     val m = match_term pat
     val n = subst (fst (m (find_term (can m) (concl th)))) var
     val th = DISCH (mk_neg n) th |> SIMP_RULE bool_ss []

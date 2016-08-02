@@ -19,7 +19,8 @@ fun init () =
       open arm
    in
       Architecture := ARMv7_A
-    ; Extensions := [Extension_VFP, Extension_Virtualization]
+    ; Extensions := [Extension_Virtualization]
+    ; VFPExtension := VFPv4
     ; CPSR := rec'PSR (Option.valOf (BitsN.fromHexString ("10", 32)))
    end
 
@@ -383,15 +384,14 @@ local
 in
    val examine = ref []
    fun test n =
-      let
-         val () = (init (); examine := [])
-      in
-        Lib.funpow n
+      ( init ()
+      ; examine := []
+      ; Lib.funpow n
           (fn () =>
              case test1 () of
                 SOME x => examine := Lib.insert x (!examine)
               | NONE => ()) ()
-      end
+      )
 end
 
 (test 100000; !examine)

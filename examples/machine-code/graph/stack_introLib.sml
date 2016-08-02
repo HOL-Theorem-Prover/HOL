@@ -26,7 +26,7 @@ fun STACK_MEMORY_INTRO_RULE th = let
   in th end handle HOL_ERR _ => th;
 
 (*
-  val () = arm_progLib.arm_config "vfp" "array"
+  val () = arm_progLib.arm_config "vfpv3" "array"
   val (f,_,_,_) = arm_decompLib.l3_arm_tools
   val ((th,_,_),_) = f "e59d900c"  (* ldr r9, [sp, #12] *)
   val ((th,_,_),_) = f "e58d2010"  (* str r2, [sp, #16] *)
