@@ -76,9 +76,14 @@ val cheat_string = "Saved CHEAT _"
 val oracle_string = "Saved ORACLE thm _"
 val used_cheat_string = "(used CHEAT)"
 
-fun new {info,warn,genLogFile,keep_going} =
+fun new {info,warn,genLogFile,keep_going,time_limit} =
   let
     val monitor_map = ref (Binarymap.mkDict String.compare)
+    val check_time =
+        case time_limit of
+            NONE => (fn (_,_,k) => k ())
+          | SOME t => (fn (delay,key,k) =>
+                          if Time.>(delay,t) then SOME(Kill key) else k())
     fun ttydisplay_map () =
       let
         val _ = print "\r"
@@ -146,25 +151,31 @@ fun new {info,warn,genLogFile,keep_going} =
                   display_map();
                   NONE
                 end)
-        | NothingSeen((_, tag), {delay,...}) =>
-          stdhandle tag
-            (fn (strm,stat) =>
-                let
-                  val stat' =
-                      case stat of
-                          MRunning c => if Time.>(delay, five_sec) then
-                                          Stalling(".", delay)
-                                        else MRunning c
-                        | Stalling (s, sofar) =>
-                          if Time.>(delay, Time.+(sofar, five_sec)) then
-                            Stalling(stallstr s, delay)
-                          else stat
-                in
-                  monitor_map :=
-                    Binarymap.insert(!monitor_map, tag, (strm, stat'));
-                  display_map();
-                  NONE
-                end)
+        | NothingSeen(jkey as (_, tag), {delay,...}) =>
+          let
+            fun after_check strm stat =
+              let
+                val stat' =
+                    case stat of
+                        MRunning c => if Time.>(delay, five_sec) then
+                                        Stalling(".", delay)
+                                      else MRunning c
+                      | Stalling (s, sofar) =>
+                        if Time.>(delay, Time.+(sofar, five_sec)) then
+                          Stalling(stallstr s, delay)
+                        else stat
+              in
+                monitor_map :=
+                  Binarymap.insert(!monitor_map, tag, (strm, stat'));
+                display_map();
+                NONE
+              end
+          in
+            stdhandle
+              tag
+              (fn (strm,stat) =>
+                  check_time (delay, jkey, (fn () => after_check strm stat)))
+          end
         | Terminated((_, tag), st, _) =>
           stdhandle tag
             (fn ((strm,tb),stat) =>

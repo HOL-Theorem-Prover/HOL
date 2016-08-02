@@ -48,8 +48,8 @@ fun graphbuild optinfo incinfo g =
         MB_Monitor.new {info = info,
                         warn = warn,
                         genLogFile = (fn {tag} => loggingdir ++ safetag tag),
-                        keep_going = keep_going}
-
+                        keep_going = keep_going,
+                        time_limit = NONE}
     fun genjob g =
       case find_runnable g of
           NONE => NoMoreJobs g
