@@ -78,7 +78,7 @@ fun set_holstate s =
              updateT t (U #holstate (SOME s)) $$))
 fun set_time_limit s =
   resfn (fn (wn, t : t) =>
-            case Int.fromString s of
+            case LargeInt.fromString s of
                 NONE => (wn ("Bad time string: \""^s^"\"; ignored"); t)
               | SOME i => updateT t
                                   (U #time_limit (SOME (Time.fromSeconds i)))
