@@ -506,7 +506,7 @@ Induct THEN RW_TAC std_ss [] THENL
   map IMP_RES_TAC [PSUB_dCON, PSUB_dVAR, PSUB_dBOUND, PSUB_dABS, PSUB_dAPP]
   THEN BasicProvers.NORM_TAC std_ss [CHOM]
   THEN IMP_RES_TAC (PROVE [] (Term `x ==> ~x ==> F`))
-  THEN Q.PAT_ASSUM `PSUB p q r = PSUB a b c` MP_TAC
+  THEN Q.PAT_X_ASSUM `PSUB p q r = PSUB a b c` MP_TAC
   THEN RW_TAC std_ss [CHOM,PSUB]
   THENL [AP_TERM_TAC THEN PROVE_TAC[PSUB_Lemma2, ONE], PROVE_TAC []]);
 
@@ -607,7 +607,7 @@ val lemma3 =
      z IN dFV ([x |-> dVAR y] t)`,
 measureInduct_on `dLGH t`
   THEN ONCE_REWRITE_TAC [dOK_cases] THEN RW_TAC std_ss [] THENL
-  [Q.PAT_ASSUM `x IN M` MP_TAC THEN RW_TAC std_ss [dFV, IN_SING]
+  [Q.PAT_X_ASSUM `_ IN _` MP_TAC THEN RW_TAC std_ss [dFV, IN_SING]
      THEN RW_TAC std_ss [dFV, IN_SING, NEQ_dVAR_dSUB],
    PROVE_TAC [dCON_dSUB, NOT_IN_EMPTY, dFV],
    `FINITE (dFV t' UNION {x;y;z})`
@@ -622,15 +622,15 @@ measureInduct_on `dLGH t`
            RW_TAC std_ss [dFV,IN_SING,GSYM NOT_EQ_NEW,IN_UNION,IN_INSERT],
            RW_TAC std_ss [dOK_dSUB,dOK_DEF]])
    THEN RW_TAC std_ss [dLAMBDA_dSUB,dFV_dLAMBDA, IN_DELETE] THENL
-    [Q.PAT_ASSUM `$! M` MP_TAC
+    [Q.PAT_X_ASSUM `$! M` MP_TAC
       THEN RW_TAC std_ss [GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO]
       THEN FIRST_ASSUM MATCH_MP_TAC THEN RW_TAC std_ss [] THENL
       [RW_TAC std_ss [dLGH_dSUB,dLGH_dLAMBDA_LESS],
        FIRST_ASSUM MATCH_MP_TAC THEN RW_TAC std_ss [dLGH_dLAMBDA_LESS]
-         THEN Q.PAT_ASSUM `x IN M` MP_TAC
+         THEN Q.PAT_X_ASSUM `_ IN _` MP_TAC
          THEN RW_TAC std_ss [dFV_dLAMBDA,IN_DELETE]],
      RW_TAC std_ss [NOT_EQ_NEW, IN_UNION,IN_INSERT]],
-   Q.PAT_ASSUM `z IN M` MP_TAC
+   Q.PAT_X_ASSUM `_ IN _` MP_TAC
     THEN ZAP_TAC (std_ss && [dFV, IN_UNION, dAPP_dSUB])
             [dLGH_dAPP_LESS_2,dLGH_dAPP_LESS_1]]);
 
@@ -668,4 +668,3 @@ Q.EXISTS_TAC
 val _ = export_theory();
 
 end; (* structure dBScript *)
-

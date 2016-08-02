@@ -225,7 +225,7 @@ val re_semirecursive1 = prove(
        by METIS_TAC [bnf_of_SOME, nstar_lameq] THEN
     `∃m. P @@ church m == cB T`
        by METIS_TAC [cfindleast_bnfE] THEN
-    Q.PAT_ASSUM `P @@ church m == cB T` MP_TAC THEN
+    Q.PAT_X_ASSUM `P @@ church m == cB T` MP_TAC THEN
     ASM_SIMP_TAC (bsrw_ss()) [listTheory.MEM_MAP, listTheory.MEM_FILTER,
                               MEM_GENLIST] THEN
     METIS_TAC [bnf_steps]
@@ -299,7 +299,7 @@ val recursive_re = store_thm(
        by (MATCH_MP_TAC cbnf_of_works1' THEN
            SRW_TAC [][Abbr`TT`]) THEN
     ASM_SIMP_TAC (bsrw_ss()) [Abbr`KK`, cforce_num_behaviour] THEN
-    Q.PAT_ASSUM `1 = force_num z` (SUBST_ALL_TAC o SYM) THEN
+    Q.PAT_X_ASSUM `1 = force_num z` (SUBST_ALL_TAC o SYM) THEN
     SIMP_TAC (bsrw_ss()) [bnf_bnf_of, ceqnat_behaviour,
                           cB_behaviour],
 
@@ -447,7 +447,7 @@ val re_UNION_I = store_thm(
     `cfindleast @@ P @@ I == r ∧ bnf r`
       by METIS_TAC [bnf_of_SOME, nstar_lameq] THEN
     `∃n. P @@ church n == cB T` by METIS_TAC [cfindleast_bnfE] THEN
-    Q.PAT_ASSUM `P @@ X == cB T` MP_TAC THEN
+    Q.PAT_X_ASSUM `P @@ X == cB T` MP_TAC THEN
     ASM_SIMP_TAC (bsrw_ss()) [] THEN
     METIS_TAC [bnf_steps]
   ]);
