@@ -42,14 +42,14 @@ fun graphbuild optinfo incinfo g =
   let
     val _ = OS.FileSys.mkDir loggingdir handle _ => ()
     val { build_command, mosml_build_command, warn, tgtfatal, diag,
-          keep_going, quiet, hmenv, jobs, info } = optinfo
+          keep_going, quiet, hmenv, jobs, info, time_limit } = optinfo
     val safetag = String.map (fn #"/" => #"-" | c => c)
     val monitor =
         MB_Monitor.new {info = info,
                         warn = warn,
                         genLogFile = (fn {tag} => loggingdir ++ safetag tag),
                         keep_going = keep_going,
-                        time_limit = NONE}
+                        time_limit = time_limit}
     fun genjob g =
       case find_runnable g of
           NONE => NoMoreJobs g

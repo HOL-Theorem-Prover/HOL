@@ -6,22 +6,25 @@ type t = {
   poly : string option,
   polymllibdir : string option,
   poly_not_hol : bool,
+  time_limit : Time.time option,
   core : HM_Core_Cline.t
 }
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate5 z
+  fun makeUpdateT z = makeUpdate6 z
 in
 fun updateT z = let
-  fun from core holstate poly polymllibdir poly_not_hol =
+  fun from core holstate poly polymllibdir poly_not_hol time_limit =
     {core = core, holstate = holstate, poly = poly,
-     polymllibdir = polymllibdir, poly_not_hol = poly_not_hol}
-  fun from' poly_not_hol polymllibdir poly holstate core =
+     polymllibdir = polymllibdir, poly_not_hol = poly_not_hol,
+     time_limit = time_limit}
+  fun from' time_limit poly_not_hol polymllibdir poly holstate core =
     {core = core, holstate = holstate, poly = poly,
-     polymllibdir = polymllibdir, poly_not_hol = poly_not_hol}
-  fun to f {core, holstate, poly, polymllibdir, poly_not_hol} =
-    f  core holstate poly polymllibdir poly_not_hol
+     polymllibdir = polymllibdir, poly_not_hol = poly_not_hol,
+     time_limit = time_limit}
+  fun to f {core, holstate, poly, polymllibdir, poly_not_hol, time_limit} =
+    f core holstate poly polymllibdir poly_not_hol time_limit
 in
   makeUpdateT (from, from', to)
 end z
@@ -35,7 +38,8 @@ val default_options = {
   holstate = NONE,
   poly = NONE,
   polymllibdir = NONE,
-  poly_not_hol = false
+  poly_not_hol = false,
+  time_limit = NONE
 }
 
 fun fupdcore f x =
@@ -72,6 +76,14 @@ fun set_holstate s =
                wn ("HOL state-file already set; ignoring earlier spec")
              else ();
              updateT t (U #holstate (SOME s)) $$))
+fun set_time_limit s =
+  resfn (fn (wn, t : t) =>
+            case Int.fromString s of
+                NONE => (wn ("Bad time string: \""^s^"\"; ignored"); t)
+              | SOME i => updateT t
+                                  (U #time_limit (SOME (Time.fromSeconds i)))
+                                  $$)
+
 val poly_option_descriptions = [
   {help = "specify HOL state", long = ["holstate"], short = "",
    desc = ReqArg (set_holstate, "holstate")},
@@ -83,7 +95,9 @@ val poly_option_descriptions = [
                     resfn (fn (wn,t) => updateT t (U #poly_not_hol true) $$))},
   {help = "specify Poly/ML lib directory", long = ["polymllibdir"],
    short = "",
-   desc = ReqArg (set_polymllibdir, "directory")}
+   desc = ReqArg (set_polymllibdir, "directory")},
+  {help = "set time limit (in seconds)", long = ["time_limit"], short = "t",
+   desc = ReqArg (set_time_limit, "delay")}
 ]
 
 fun mapd (d : core_t cline_result arg_descr) : t cline_result arg_descr =

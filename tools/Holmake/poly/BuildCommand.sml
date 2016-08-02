@@ -164,6 +164,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val quiet_flag = #quiet (#core optv)
   val cmdl_HOLSTATE = #holstate optv
   val jobs = #jobs (#core optv)
+  val time_limit = #time_limit optv
   val chatty = if jobs = 1 then #chatty outs else (fn _ => ())
   val info = if jobs = 1 then #info outs else (fn _ => ())
 
@@ -417,6 +418,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                     warn = warn, tgtfatal = tgtfatal,
                                     keep_going = keep_going, diag = diag,
                                     info = #info outs,
+                                    time_limit = time_limit,
                                     quiet = quiet_flag, hmenv = hmenv,
                                     jobs = jobs } ii g |> interpret_graph)
 in
