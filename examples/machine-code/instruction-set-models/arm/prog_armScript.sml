@@ -92,7 +92,7 @@ val SUBSET_arm2set = prove(
   \\ FULL_SIMP_TAC std_ss [arm2set'_def,arm2set_def,EXTENSION,SUBSET_DEF,IN_IMAGE,
        IN_UNION,GSPECIFICATION,IN_INSERT,NOT_IN_EMPTY,IN_UNIV,PUSH_IN_INTO_IF]
   \\ STRIP_TAC \\ ASM_REWRITE_TAC [] \\ EQ_TAC \\ REPEAT STRIP_TAC THEN1 METIS_TAC []
-  \\ PAT_ASSUM ``!x:'a. b:bool`` (IMP_RES_TAC) \\ FULL_SIMP_TAC std_ss [arm_el_11,arm_el_distinct]);
+  \\ PAT_X_ASSUM ``!x:'a. b:bool`` (IMP_RES_TAC) \\ FULL_SIMP_TAC std_ss [arm_el_11,arm_el_distinct]);
 
 val SPLIT_arm2set_EXISTS = prove(
   ``!s u v. SPLIT (arm2set s) (u,v) = ?y. (u = arm2set' y s) /\ (v = arm2set'' y s)``,
@@ -138,7 +138,7 @@ val arm2set''_11 = prove(
     `~((?x. aCPSR_Reg x IN arm2set'' y s) = (?x. aCPSR_Reg x IN arm2set'' y' s'))` by ALL_TAC,
     `~((?x. aUndef x IN arm2set'' y s) = (?x. aUndef x IN arm2set'' y' s'))` by ALL_TAC]
   \\ REPEAT (FULL_SIMP_TAC bool_ss [IN_arm2set] \\ METIS_TAC [])
-  \\ Q.PAT_ASSUM `arm2set'' y' s' = arm2set'' y s` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `arm2set'' _ _ = arm2set'' _ _` (K ALL_TAC)
   \\ FULL_SIMP_TAC bool_ss [IN_arm2set] \\ METIS_TAC []);
 
 val DELETE_arm2set = prove(``
@@ -226,7 +226,7 @@ val ARM_SPEC_SEMANTICS = store_thm("ARM_SPEC_SEMANTICS",
   SIMP_TAC std_ss [GSYM RUN_EQ_SPEC,RUN_def,ARM_MODEL_def,STAR_def,SEP_REFINE_def]
   \\ REPEAT STRIP_TAC \\ REVERSE EQ_TAC \\ REPEAT STRIP_TAC
   THEN1 (FULL_SIMP_TAC bool_ss [SPLIT_arm2set_EXISTS] \\ METIS_TAC [])
-  \\ Q.PAT_ASSUM `!s r. b` (STRIP_ASSUME_TAC o UNDISCH o SPEC_ALL o
+  \\ Q.PAT_X_ASSUM `!s r. b` (STRIP_ASSUME_TAC o UNDISCH o SPEC_ALL o
      (fn th => MATCH_MP th (UNDISCH lemma))  o Q.SPECL [`s`,`(\v. v = arm2set'' y s)`])
   \\ FULL_SIMP_TAC bool_ss [SPLIT_arm2set_EXISTS]
   \\ IMP_RES_TAC arm2set''_11 \\ Q.EXISTS_TAC `i` \\ METIS_TAC []);
@@ -370,7 +370,7 @@ val UPDATE_arm2set'' = store_thm("UPDATE_arm2set''",
   SIMP_TAC std_ss [arm2set_def,arm2set''_def,arm2set'_def,EXTENSION,IN_UNION,
     IN_IMAGE,IN_DIFF,IN_UNIV,NOT_IN_EMPTY,IN_INSERT,ARM_READ_WRITE,PUSH_IN_INTO_IF]
   \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM `xx = yy` (fn th => FULL_SIMP_TAC std_ss [th])
+  \\ Q.PAT_X_ASSUM `xx = yy` (fn th => FULL_SIMP_TAC std_ss [th])
   \\ FULL_SIMP_TAC std_ss [arm_el_distinct,arm_el_11]
   \\ IMP_RES_TAC (METIS_PROVE [] ``x IN s /\ ~(y IN s) ==> ~(x = y:'a)``)
   \\ ASM_SIMP_TAC std_ss [ARM_READ_WRITE,UNDEF_OF_UPDATES]
@@ -569,7 +569,7 @@ val aMEMORY_INSERT_LEMMA = prove(
                      aMEMORY_SET_def,IN_BIGUNION,GSPECIFICATION]
     \\ REWRITE_TAC [GSYM IMP_DISJ_THM] \\ REPEAT STRIP_TAC
     \\ CCONTR_TAC \\ FULL_SIMP_TAC std_ss []
-    \\ Q.PAT_ASSUM `!x. b` (K ALL_TAC)
+    \\ Q.PAT_X_ASSUM `!x. b` (K ALL_TAC)
     \\ `~(a = a')` by METIS_TAC []
     \\ NTAC 2 (FULL_SIMP_TAC bool_ss [aMEMORY_WORD_def,IN_INSERT,
          NOT_IN_EMPTY,arm_el_11,WORD_EQ_ADD_RCANCEL])

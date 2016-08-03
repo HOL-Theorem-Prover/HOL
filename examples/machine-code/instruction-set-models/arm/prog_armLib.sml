@@ -472,9 +472,9 @@ fun arm_prove_one_spec s th = let
     \\ FLIP_TAC \\ REWRITE_TAC [AND_IMP_INTRO, GSYM CONJ_ASSOC]
     \\ SIMP_TAC std_ss [] \\ FLIP_TAC \\ STRIP_TAC \\ STRIP_TAC
     THEN1 (SIMP_TAC std_ss [ALIGNED_def] \\ FLIP_TAC
-           \\ REPEAT (Q.PAT_ASSUM `xxx = ARM_READ_MEM x s` MP_TAC)
+           \\ REPEAT (Q.PAT_X_ASSUM `xxx = ARM_READ_MEM x s` MP_TAC)
            \\ SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
-           \\ REPEAT (Q.PAT_ASSUM `ARM_READ_REG x s = xxx` (fn th => ONCE_REWRITE_TAC [GSYM th] THEN MP_TAC th))
+           \\ REPEAT (Q.PAT_X_ASSUM `ARM_READ_REG x s = xxx` (fn th => ONCE_REWRITE_TAC [GSYM th] THEN MP_TAC th))
            \\ REPEAT STRIP_TAC \\ MATCH_MP_TAC th
            \\ FULL_SIMP_TAC std_ss [ALIGNED_def,ARM_READ_UNDEF_def,
                 markerTheory.Abbrev_def,CONTAINER_def,aligned4_thm,WORD_ADD_0]
