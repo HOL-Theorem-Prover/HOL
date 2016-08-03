@@ -1058,7 +1058,7 @@ val _ = g `!e. preserve_relation_mmu (write_e <|proc:=0|> e) (assert_mode 16w) (
 val _ = e(STRIP_TAC);
 val _ = e(ASSUME_TAC (SPECL [``(write_e <|proc := 0|> e):(unit M)``, ``(assert_mode 16w):(arm_state->bool)``, ``(assert_mode 16w):(arm_state->bool)``, ``empty_unt``, ``empty_sim``] (INST_TYPE [alpha |-> type_of(``()``)] fix_flags_lem)));
 val _ = e(NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []));
-val _ = e(PAT_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
+val _ = e(PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
 val _ = e(RW_TAC (srw_ss()) [write_e_def]);
 val _ = e(ASSUME_TAC (SPECL [``(λcpsr. write_cpsr <|proc := 0|> (cpsr with E := e)):(ARMpsr -> unit M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> type_of(``()``)] cpsr_simp_rel_ext_lem)));
 val _ = e(FULL_SIMP_TAC (srw_ss()) []);
@@ -1073,7 +1073,7 @@ val _ = g `!e. preserve_relation_mmu (write_ge <|proc:=0|> ge) (assert_mode 16w)
 val _ = e(STRIP_TAC);
 val _ = e(ASSUME_TAC (SPECL [``(write_ge <|proc := 0|> ge):(unit M)``, ``(assert_mode 16w):(arm_state->bool)``, ``(assert_mode 16w):(arm_state->bool)``, ``empty_unt``, ``empty_sim``] (INST_TYPE [alpha |-> type_of(``()``)] fix_flags_lem)));
 val _ = e(NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []));
-val _ = e(PAT_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
+val _ = e(PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
 val _ = e(RW_TAC (srw_ss()) [write_ge_def]);
 val _ = e(ASSUME_TAC (SPECL [``(λcpsr. write_cpsr <|proc := 0|> (cpsr with GE := ge)):(ARMpsr -> unit M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> type_of(``()``)] cpsr_simp_rel_ext_lem)));
 val _ = e(FULL_SIMP_TAC (srw_ss()) []);
@@ -1090,7 +1090,7 @@ val _ = g `!e. preserve_relation_mmu (write_isetstate <|proc:=0|> isetstate) (as
 val _ = e(STRIP_TAC);
 val _ = e(ASSUME_TAC (SPECL [``(write_isetstate <|proc := 0|> isetstate):(unit M)``, ``(assert_mode 16w):(arm_state->bool)``, ``(assert_mode 16w):(arm_state->bool)``, ``empty_unt``, ``empty_sim``] (INST_TYPE [alpha |-> type_of(``()``)] fix_flags_lem)));
 val _ = e(NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []));
-val _ = e(PAT_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
+val _ = e(PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
 val _ = e(RW_TAC (srw_ss()) [write_isetstate_def]);
 val _ = e(ASSUME_TAC (SPECL [``(λcpsr. write_cpsr <|proc := 0|> (cpsr with <|J := (isetstate:word2) ' 1; T := isetstate ' 0 |>)):(ARMpsr -> unit M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> type_of(``()``)] cpsr_simp_rel_ext_lem)));
 val _ = e(FULL_SIMP_TAC (srw_ss()) []);
@@ -1106,7 +1106,7 @@ val _ = g `!e. preserve_relation_mmu (write_flags<|proc:=0|> (n,z,c,v)) (assert_
 val _ = e(STRIP_TAC);
 val _ = e(ASSUME_TAC (SPECL [``(write_flags <|proc := 0|> (n,z,c,v)):(unit M)``, ``(assert_mode 16w):(arm_state->bool)``, ``(assert_mode 16w):(arm_state->bool)``, ``empty_unt``, ``empty_sim``] (INST_TYPE [alpha |-> type_of(``()``)] fix_flags_lem)));
 val _ = e(NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []));
-val _ = e(PAT_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
+val _ = e(PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
 val _ = e(RW_TAC (srw_ss()) [write_flags_def]);
 val _ = e(ASSUME_TAC (SPECL [``(λcpsr. write_cpsr <|proc := 0|> (cpsr with <|N := n; Z := z; C := c; V := v|>)):(ARMpsr -> unit M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> type_of(``()``)] cpsr_simp_rel_ext_lem)));
 val _ = e(FULL_SIMP_TAC (srw_ss()) []);
@@ -1142,7 +1142,7 @@ val _ = g `!e. preserve_relation_mmu (set_q <|proc:=0|>) (assert_mode 16w) (asse
 val _ = e(STRIP_TAC);
 val _ = e(ASSUME_TAC (SPECL [``(set_q <|proc := 0|> ):(unit M)``, ``(assert_mode 16w):(arm_state->bool)``, ``(assert_mode 16w):(arm_state->bool)``, ``empty_unt``, ``empty_sim``] (INST_TYPE [alpha |-> type_of(``()``)] fix_flags_lem)));
 val _ = e(NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []));
-val _ = e(PAT_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
+val _ = e(PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
 val _ = e(RW_TAC (srw_ss()) [set_q_def]);
 val _ = e(ASSUME_TAC (SPECL [``(λcpsr. write_cpsr <|proc := 0|> (cpsr with Q := T)):(ARMpsr -> unit M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> type_of(``()``)] cpsr_simp_rel_ext_lem)));
 val _ = e(FULL_SIMP_TAC (srw_ss()) []);
@@ -1157,7 +1157,7 @@ val set_q_thm = save_thm("set_q_thm", MATCH_MP extras_lem2 (SPEC_ALL set_q_empty
 val _ = g `preserve_relation_mmu (read_spsr <|proc:=0|>) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
 val _ = e(ASSUME_TAC (SPECL [``(read_spsr <|proc := 0|> ):(ARMpsr M)``, ``(assert_mode 16w):(arm_state->bool)``, ``(assert_mode 16w):(arm_state->bool)``, ``empty_unt``, ``empty_sim``] (INST_TYPE [alpha |-> Type `:ARMpsr`] fix_flags_lem)));
 val _ = e(NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []));
-val _ = e(PAT_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
+val _ = e(PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
 val _ = e(RW_TAC (srw_ss()) [read_spsr_def]);
 val _ = e(ASSUME_TAC (SPECL [``(λcpsr.
       bad_mode <|proc := 0|> cpsr.M >>=
@@ -1190,7 +1190,7 @@ val _ = e(ASSUME_TAC (SPECL [``(read_cpsr <|proc :=0|> >>=
           (increment_pc <|proc :=0|> Encoding_Thumb |||
           write_cpsr <|proc :=0|> (cpsr with IT := (something))) >>= (λ(u1,u2). return ()))):(unit M)``, ``(assert_mode 16w: arm_state -> bool)``,  ``(assert_mode 16w: arm_state -> bool)``, ``empty_unt``, ``empty_sim``](INST_TYPE [alpha |-> type_of (``()``)] fix_flags_lem)));
 val _ = e(NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []));
-val _ = e(PAT_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
+val _ = e(PAT_X_ASSUM ``X``  FORCE_REV_REWRITE_TAC);
 val _ = e(RW_TAC (srw_ss()) []);
 val _ = e(ASSUME_TAC (SPECL [``(\cpsr. (increment_pc <|proc := 0|> Encoding_Thumb
          ||| write_cpsr <|proc := 0|> (cpsr with IT := something)) >>=

@@ -540,7 +540,7 @@ val pmc_34_lem = store_thm(
        THEN IMP_RES_TAC mmu_requirements_simp
        THEN RES_TAC
        THEN FULL_SIMP_TAC (srw_ss()) [mmu_requirements_pure_def, aligned_word_readable_def]
-       THEN PAT_ASSUM ``!addr iw. X`` (fn th => ASSUME_TAC (SPECL [``s1.registers (0,RName_LRsvc) + 0xFFFFFFFEw``, ``F``] th)
+       THEN PAT_X_ASSUM ``!addr iw. X`` (fn th => ASSUME_TAC (SPECL [``s1.registers (0,RName_LRsvc) + 0xFFFFFFFEw``, ``F``] th)
                                           THEN ASSUME_TAC (SPECL [``s1.registers (0,RName_LRsvc) + 0xFFFFFFFCw``, ``F``] th))
        THEN UNDISCH_ALL_TAC
        THEN RW_TAC (srw_ss()) [negated_inequalities]

@@ -220,7 +220,7 @@ val untouched_permissions_lem = store_thm(
        THEN STRIP_TAC
        THEN Cases_on `permitted_byte addr F s1.coprocessors.state.cp15.C1 s1.coprocessors.state.cp15.C2 s1.coprocessors.state.cp15.C3 F s1.memory`
        THEN Cases_on `r`
-       THEN PAT_ASSUM (``!A1 A2 A3 A4 A5. (B ==> C)``) (fn th => (MP_TAC (SPECL [``addr:word32``, ``F``,``q:bool``, ``q':bool``, ``r':string``] th)))
+       THEN PAT_X_ASSUM (``!A1 A2 A3 A4 A5. (B ==> C)``) (fn th => (MP_TAC (SPECL [``addr:word32``, ``F``,``q:bool``, ``q':bool``, ``r':string``] th)))
        THEN RW_TAC (srw_ss()) [read_mem32_def]
        THEN `content_of_sd = content_of_sd'` by
             (UNABBREV_ALL_TAC
@@ -451,9 +451,9 @@ THEN IMP_RES_TAC untouched_trans
        THEN FULL_SIMP_TAC (srw_ss()) []
 THEN IMP_RES_TAC untouched_mmu_setup_lem
 THEN
-TRY (PAT_ASSUM ``!c g' s1'' s2''. X`` (fn th => ASSUME_TAC (SPECL [``a:'a``, ``g:bool[32]``, ``b:arm_state``, ``b':arm_state``] th)))
+TRY (PAT_X_ASSUM ``!c g' s1'' s2''. X`` (fn th => ASSUME_TAC (SPECL [``a:'a``, ``g:bool[32]``, ``b:arm_state``, ``b':arm_state``] th)))
 THEN
-(TRY (PAT_ASSUM `` ∀g st1 st2 st3. X`` (fn th => ASSUME_TAC (SPECL [ ``g:bool[32]``, ``s1:arm_state``, ``b:arm_state``, ``b'':arm_state``] th) THEN ASSUME_TAC (SPECL [ ``g:bool[32]``, ``s2:arm_state``, ``b':arm_state``, ``b''':arm_state``] th))))
+(TRY (PAT_X_ASSUM `` ∀g st1 st2 st3. X`` (fn th => ASSUME_TAC (SPECL [ ``g:bool[32]``, ``s1:arm_state``, ``b:arm_state``, ``b'':arm_state``] th) THEN ASSUME_TAC (SPECL [ ``g:bool[32]``, ``s2:arm_state``, ``b':arm_state``, ``b''':arm_state``] th))))
  THEN UNDISCH_ALL_TAC
        THEN RW_TAC (srw_ss()) []
        THEN FULL_SIMP_TAC (srw_ss()) []))
@@ -546,9 +546,9 @@ THEN IMP_RES_TAC untouched_trans
        THEN FULL_SIMP_TAC (srw_ss()) []
 THEN IMP_RES_TAC untouched_mmu_setup_lem
 THEN
-TRY (PAT_ASSUM ``!c g' s1'' s2''. X`` (fn th => ASSUME_TAC (SPECL [``a:'a``, ``g:bool[32]``, ``b:arm_state``, ``b':arm_state``] th)))
+TRY (PAT_X_ASSUM ``!c g' s1'' s2''. X`` (fn th => ASSUME_TAC (SPECL [``a:'a``, ``g:bool[32]``, ``b:arm_state``, ``b':arm_state``] th)))
 THEN
-(TRY (PAT_ASSUM `` ∀g st1 st2 st3. X`` (fn th => ASSUME_TAC (SPECL [ ``g:bool[32]``, ``s1:arm_state``, ``b:arm_state``, ``b'':arm_state``] th) THEN ASSUME_TAC (SPECL [ ``g:bool[32]``, ``s2:arm_state``, ``b':arm_state``, ``b''':arm_state``] th))))
+(TRY (PAT_X_ASSUM `` ∀g st1 st2 st3. X`` (fn th => ASSUME_TAC (SPECL [ ``g:bool[32]``, ``s1:arm_state``, ``b:arm_state``, ``b'':arm_state``] th) THEN ASSUME_TAC (SPECL [ ``g:bool[32]``, ``s2:arm_state``, ``b':arm_state``, ``b''':arm_state``] th))))
  THEN UNDISCH_ALL_TAC
        THEN RW_TAC (srw_ss()) []
        THEN FULL_SIMP_TAC (srw_ss()) [])),
@@ -618,7 +618,7 @@ THEN IMP_RES_TAC untouched_trans
        THEN FULL_SIMP_TAC (srw_ss()) []
 THEN IMP_RES_TAC untouched_mmu_setup_lem
 THEN
-TRY (PAT_ASSUM ``!c g' s1'' s2''. X`` (fn th => ASSUME_TAC (SPECL [``a:'a``, ``g:bool[32]``, ``b:arm_state``, ``b':arm_state``] th)))
+TRY (PAT_X_ASSUM ``!c g' s1'' s2''. X`` (fn th => ASSUME_TAC (SPECL [``a:'a``, ``g:bool[32]``, ``b:arm_state``, ``b':arm_state``] th)))
  THEN UNDISCH_ALL_TAC
        THEN RW_TAC (srw_ss()) []
        THEN FULL_SIMP_TAC (srw_ss()) [])),
@@ -754,7 +754,7 @@ val parT_preserves_relation_up_thm = store_thm("parT_preserves_relation_up_thm",
                                            THEN IMP_RES_TAC untouched_trans
                                            THEN FULL_SIMP_TAC (srw_ss()) []
                                            THEN IMP_RES_TAC untouched_mmu_setup_lem
-                                           THEN TRY (PAT_ASSUM ``!c g' s1'' s2''. X`` (fn th => ASSUME_TAC (SPECL [``a:'a``, ``g:bool[32]``, ``b:arm_state``, ``b':arm_state``] th)))
+                                           THEN TRY (PAT_X_ASSUM ``!c g' s1'' s2''. X`` (fn th => ASSUME_TAC (SPECL [``a:'a``, ``g:bool[32]``, ``b:arm_state``, ``b':arm_state``] th)))
                                            THEN UNDISCH_ALL_TAC
                                            THEN RW_TAC (srw_ss()) []
                                            THEN FULL_SIMP_TAC (srw_ss()) []))
@@ -802,7 +802,7 @@ val parT_preserves_relation_uu_thm = store_thm("parT_preserves_relation_uu_thm",
                                            THEN IMP_RES_TAC untouched_trans
                                            THEN FULL_SIMP_TAC (srw_ss()) []
                                            THEN IMP_RES_TAC untouched_mmu_setup_lem
-                                           THEN TRY (PAT_ASSUM ``!c g' s1'' s2''. X`` (fn th => ASSUME_TAC (SPECL [``a:'a``, ``g:bool[32]``, ``b:arm_state``, ``b':arm_state``] th)))
+                                           THEN TRY (PAT_X_ASSUM ``!c g' s1'' s2''. X`` (fn th => ASSUME_TAC (SPECL [``a:'a``, ``g:bool[32]``, ``b:arm_state``, ``b':arm_state``] th)))
                                            THEN UNDISCH_ALL_TAC
                                            THEN RW_TAC (srw_ss()) []
                                            THEN FULL_SIMP_TAC (srw_ss()) []))
@@ -822,7 +822,7 @@ val preserve_relation_comb_thm1 =
 	      comb a b c ==>
 	      preserve_relation_mmu  f d c uf uy``,
 	       RW_TAC (srw_ss()) [preserve_relation_mmu_def,comb_def]
-		      THEN PAT_ASSUM ``∀g s1 s2. X``
+		      THEN PAT_X_ASSUM ``∀g s1 s2. X``
 		      (fn thm => ASSUME_TAC (SPECL [``g:bool[32]``,
 						    ``s1:arm_state``, ``s2:arm_state``] thm))
     THEN RES_TAC
@@ -836,7 +836,7 @@ val preserve_relation_comb_v2_thm =
 	      comb a b c ==>
 	      preserve_relation_mmu  f d c uf uy``,
 	       RW_TAC (srw_ss()) [preserve_relation_mmu_def,comb_def]
-		      THEN PAT_ASSUM ``∀g s1 s2. X``
+		      THEN PAT_X_ASSUM ``∀g s1 s2. X``
 		      (fn thm => ASSUME_TAC (SPECL [``g:bool[32]``,
 						    ``s1:arm_state``, ``s2:arm_state``] thm))
     THEN RES_TAC
@@ -848,7 +848,7 @@ val preserve_relation_comb_abs_thm =
 	      ==>  comb a b c ==>
 	      preserve_relation_mmu_abs f d c uf uy``,
 	       RW_TAC (srw_ss()) [preserve_relation_mmu_abs_def,comb_def]
-		      THEN PAT_ASSUM ``∀ c g s1 s2. X``
+		      THEN PAT_X_ASSUM ``∀ c g s1 s2. X``
 		      (fn thm => ASSUME_TAC (SPECL [``c':'a``,``g:bool[32]``,
 						    ``s1:arm_state``, ``s2:arm_state``] thm))
     THEN RES_TAC
@@ -966,7 +966,7 @@ val forT_untouching_thm = store_thm(
                 THEN REPEAT STRIP_TAC
                 THEN NTAC 2 (PURE_ONCE_REWRITE_TAC [forT_def, LET_DEF])
                 THEN RW_TAC arith_ss [keep_untouched_relation_def, constT_def, seqT_def]
-                THEN (REPEAT (PAT_ASSUM (``!(l:num). X``) (fn th => (ASSUME_TAC (SPEC ``l:num`` th)))))
+                THEN (REPEAT (PAT_X_ASSUM (``!(l:num). X``) (fn th => (ASSUME_TAC (SPEC ``l:num`` th)))))
                 THEN REPEAT STRIP_TAC
                 THEN SEQT_UNTOUCHED_TAC
                 THEN FULL_SIMP_TAC (srw_ss()) [untouched_def, reflexive_comp_def]
@@ -977,8 +977,8 @@ val forT_untouching_thm = store_thm(
                 THEN UNDISCH_ALL_TAC
                 THEN RW_TAC arith_ss [constT_def]
                 THEN `v = h - (l+1)` by FULL_SIMP_TAC arith_ss []
-                THEN PAT_ASSUM ``!(h:num) (l:num). (X:bool) ==> Y`` (fn th => IMP_RES_TAC (SPECL [``h:num``, ``(l+1):num``] th))
-                THEN REPEAT (PAT_ASSUM (``!(l:num). X``) (fn th => (ASSUME_TAC (SPEC ``l:num`` th))))
+                THEN PAT_X_ASSUM ``!(h:num) (l:num). (X:bool) ==> Y`` (fn th => IMP_RES_TAC (SPECL [``h:num``, ``(l+1):num``] th))
+                THEN REPEAT (PAT_X_ASSUM (``!(l:num). X``) (fn th => (ASSUME_TAC (SPEC ``l:num`` th))))
                 THEN FULL_SIMP_TAC (srw_ss()) [keep_mode_relation_def]
                 THEN REPEAT STRIP_TAC
                 THEN SEQT_UNTOUCHED_TAC
@@ -1027,7 +1027,7 @@ val forT_similar_thm = store_thm(
                 THEN (REPEAT STRIP_TAC)
                 THEN (NTAC 2 (PURE_ONCE_REWRITE_TAC [forT_def, LET_DEF]))
                 THEN RW_TAC arith_ss [keep_similar_relation_def, constT_def, seqT_def]
-                THEN (REPEAT (PAT_ASSUM (``!(l:num). X``) (fn th => (ASSUME_TAC (SPEC ``l:num`` th)))))
+                THEN (REPEAT (PAT_X_ASSUM (``!(l:num). X``) (fn th => (ASSUME_TAC (SPEC ``l:num`` th)))))
                 THEN (REPEAT STRIP_TAC)
                 THEN UNDISCH_ALL_TAC
                 THEN SEQT_PRESERVE_TAC "f l",
@@ -1039,15 +1039,15 @@ val forT_similar_thm = store_thm(
                 THEN UNDISCH_ALL_TAC
                 THEN RW_TAC arith_ss []
                 THEN `v = h - (l+1)` by FULL_SIMP_TAC arith_ss []
-                THEN PAT_ASSUM ``!h l. X ==> Y`` (fn th => IMP_RES_TAC (SPECL [``h:num``, ``(l+1):num``] th))
-                THEN REPEAT (PAT_ASSUM ``!(a:num). Z (x)`` (fn th => ASSUME_TAC (SPEC ``l:num`` th)))
+                THEN PAT_X_ASSUM ``!h l. X ==> Y`` (fn th => IMP_RES_TAC (SPECL [``h:num``, ``(l+1):num``] th))
+                THEN REPEAT (PAT_X_ASSUM ``!(a:num). Z (x)`` (fn th => ASSUME_TAC (SPEC ``l:num`` th)))
                 THEN REPEAT STRIP_TAC
                 THEN UNDISCH_ALL_TAC
                 THEN SEQT_PRESERVE_BEGIN_TAC "f l"
                 THEN Cases_on `forT (l + 1) h f b`
                 THEN Cases_on `forT (l + 1) h f b'`
                 THEN FULL_SIMP_TAC (srw_ss()) []
-                THEN PAT_ASSUM ``∀g s1 s2. mmu_requirements s1 g ⇒
+                THEN PAT_X_ASSUM ``∀g s1 s2. mmu_requirements s1 g ⇒
                                            mmu_requirements s2 g ⇒
                                            similar g s1 s2 ⇒
                                            uy g s1 s2 ==>
@@ -1079,7 +1079,7 @@ val forT_mode_thm = store_thm(
                 THEN REPEAT STRIP_TAC
                 THEN NTAC 2 (PURE_ONCE_REWRITE_TAC [forT_def, LET_DEF])
                 THEN RW_TAC arith_ss [keep_untouched_relation_def, constT_def, seqT_def]
-                THEN (REPEAT (PAT_ASSUM (``!(l:num). X``) (fn th => (ASSUME_TAC (SPEC ``l:num`` th)))))
+                THEN (REPEAT (PAT_X_ASSUM (``!(l:num). X``) (fn th => (ASSUME_TAC (SPEC ``l:num`` th)))))
                 THEN REPEAT STRIP_TAC
                 THEN UNDISCH_ALL_TAC
                 THEN RW_TAC (srw_ss()) [seqT_def, keep_mode_relation_def]
@@ -1096,8 +1096,8 @@ val forT_mode_thm = store_thm(
                 THEN UNDISCH_ALL_TAC
                 THEN RW_TAC arith_ss [constT_def]
                 THEN `v = h - (l+1)` by FULL_SIMP_TAC arith_ss []
-                THEN PAT_ASSUM ``!h l. X ==> Y`` (fn th => IMP_RES_TAC (SPECL [``h:num``, ``(l+1):num``] th))
-                THEN REPEAT (PAT_ASSUM (``!(l:num). X``) (fn th => (ASSUME_TAC (SPEC ``l:num`` th))))
+                THEN PAT_X_ASSUM ``!h l. X ==> Y`` (fn th => IMP_RES_TAC (SPECL [``h:num``, ``(l+1):num``] th))
+                THEN REPEAT (PAT_X_ASSUM (``!(l:num). X``) (fn th => (ASSUME_TAC (SPEC ``l:num`` th))))
                 THEN UNDISCH_ALL_TAC
                 THEN RW_TAC (srw_ss()) [seqT_def, keep_mode_relation_def]
                 THEN UNDISCH_ALL_TAC
@@ -1152,5 +1152,3 @@ val errorT_comb_thm =
 
 
 val _ = export_theory();
-
-
