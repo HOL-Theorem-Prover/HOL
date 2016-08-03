@@ -42,7 +42,7 @@ fun statusString (MRunning c) = StringCvt.padLeft #" " 3 (str c) ^ " "
   | statusString (Stalling t) =
     let
       val numSecs = Time.toSeconds t
-      val n_s = Int.toString numSecs
+      val n_s = LargeInt.toString numSecs
     in
       if numSecs < 5 then "   "
       else if numSecs < 10 then "  " ^ n_s
