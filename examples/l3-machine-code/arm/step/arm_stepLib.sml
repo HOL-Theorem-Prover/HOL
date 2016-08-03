@@ -79,12 +79,15 @@ end
 
 (* ARM datatype theorems/conversions *)
 
+val not_novfp =
+  GSYM (LIST_CONJ (List.take (CONJUNCTS armTheory.VFPExtension_distinct, 3)))
+
 fun datatype_thms thms =
-   [cond_rand_thms, snd_exception_thms, FST_SWAP,
+   [cond_rand_thms, snd_exception_thms, FST_SWAP, not_novfp,
     arm_stepTheory.Align, arm_stepTheory.Aligned] @ thms @ cond_thms @
    utilsLib.datatype_rewrites true "arm"
      ["arm_state", "Architecture", "RName", "InstrSet", "SRType", "Encoding",
-      "PSR", "VFPNegMul"]
+      "PSR", "VFPNegMul", "FP"]
 
 val DATATYPE_CONV = REWRITE_CONV (datatype_thms [])
 val DATATYPE_RULE = Conv.CONV_RULE DATATYPE_CONV
@@ -1629,7 +1632,8 @@ in
               THENC Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
               THENC Conv.DEPTH_CONV selective_v2w_eq_CONV
               THENC REWRITE_CONV
-                      [armTheory.boolify4_v2w, Decode_simps, VFPExpandImm])
+                      [armTheory.boolify4_v2w, Decode_simps, VFPExpandImm,
+                       utilsLib.SET_CONV ``a IN {VFPv3; VFPv4}``])
 
    val DecodeARM_15 = DecodeARM |> inst_cond (K boolSyntax.T) |> REG_RULE
 
@@ -1762,9 +1766,9 @@ val arm_patterns = List.map (I ## epattern)
    ("StoreDual (imm)",                      "FFF__T_F_______F____TTTT"),
    ("StoreMultiple",                        "TFF__F_F________________"),
    ("VFPLoadStore",                         "TTFT__F_________TFT_____"),
-   ("VFPData",                              "TTTFF___________TFT____F"),
-   ("VFPOther",                             "TTTFT_TT________TFT____F"),
-   ("VFPMrs",                               "TTTFTTTTFFFT____TFTF___T"),
+   ("VFPData",                              "TTTF____________TFT____F"),
+   ("VFPTransfer",                          "TTTF____________TFTF___T"),
+   ("VFPTransfer2",                         "TTFFFTF_________TFT_FF_T"),
    ("MoveToRegisterFromSpecial",            "FFFTFFFF__________F_FFFF"),
    ("MoveToSpecialFromRegister",            "FFFTFFTF__________F_FFFF"),
    ("MoveToSpecialFromImmediate",           "FFTTFFTF________________"),
@@ -2251,22 +2255,93 @@ local
      ("SWP" , ("Swap", [xF 0])),
      ("SWPB", ("Swap", [xT 0])),
      ("SETEND", ("Setend", [xF 0])),
-     ("VADD (single)", ("VFPData", [xT 1, xT 2, xF 11, xF 13])),
-     ("VADD (double)", ("VFPData", [xT 1, xT 2, xT 11, xF 13])),
-     ("VSUB (single)", ("VFPData", [xT 1, xT 2, xF 11, xT 13])),
-     ("VSUB (double)", ("VFPData", [xT 1, xT 2, xT 11, xT 13])),
-     ("VMUL (single)", ("VFPData", [xT 1, xF 2, xF 11, xF 13])),
-     ("VMUL (double)", ("VFPData", [xT 1, xF 2, xT 11, xF 13])),
-     ("VMLA (single)", ("VFPData", [xF 1, xF 2, xF 11, xF 13])),
-     ("VMLA (double)", ("VFPData", [xF 1, xF 2, xT 11, xF 13])),
-     ("VMLS (single)", ("VFPData", [xF 1, xF 2, xF 11, xT 13])),
-     ("VMLS (double)", ("VFPData", [xF 1, xF 2, xT 11, xT 13])),
-     ("VNMUL (single)", ("VFPData", [xT 1, xF 2, xF 11, xT 13])),
-     ("VNMUL (double)", ("VFPData", [xT 1, xF 2, xT 11, xT 13])),
-     ("VNMLA (single)", ("VFPData", [xF 1, xT 2, xF 11, xT 13])),
-     ("VNMLA (double)", ("VFPData", [xF 1, xT 2, xT 11, xT 13])),
-     ("VNMLS (single)", ("VFPData", [xF 1, xT 2, xF 11, xF 13])),
-     ("VNMLS (double)", ("VFPData", [xF 1, xT 2, xT 11, xF 13])),
+     ("VADD (single)", ("VFPData", [xF 0, xT 2, xT 3, xF 12, xF 14])),
+     ("VADD (double)", ("VFPData", [xF 0, xT 2, xT 3, xT 12, xF 14])),
+     ("VSUB (single)", ("VFPData", [xF 0, xT 2, xT 3, xF 12, xT 14])),
+     ("VSUB (double)", ("VFPData", [xF 0, xT 2, xT 3, xT 12, xT 14])),
+     ("VMUL (single)", ("VFPData", [xF 0, xT 2, xF 3, xF 12, xF 14])),
+     ("VMUL (double)", ("VFPData", [xF 0, xT 2, xF 3, xT 12, xF 14])),
+     ("VNMUL (single)", ("VFPData", [xF 0, xT 2, xF 3, xF 12, xT 14])),
+     ("VNMUL (double)", ("VFPData", [xF 0, xT 2, xF 3, xT 12, xT 14])),
+     ("VMLA (single)", ("VFPData", [xF 0, xF 2, xF 3, xF 12, xF 14])),
+     ("VMLA (double)", ("VFPData", [xF 0, xF 2, xF 3, xT 12, xF 14])),
+     ("VMLS (single)", ("VFPData", [xF 0, xF 2, xF 3, xF 12, xT 14])),
+     ("VMLS (double)", ("VFPData", [xF 0, xF 2, xF 3, xT 12, xT 14])),
+     ("VNMLA (single)", ("VFPData", [xF 0, xF 2, xT 3, xF 12, xT 14])),
+     ("VNMLA (double)", ("VFPData", [xF 0, xF 2, xT 3, xT 12, xT 14])),
+     ("VNMLS (single)", ("VFPData", [xF 0, xF 2, xT 3, xF 12, xF 14])),
+     ("VNMLS (double)", ("VFPData", [xF 0, xF 2, xT 3, xT 12, xF 14])),
+     ("VFMA (single)", ("VFPData", [xT 0, xT 2, xF 3, xF 12])),
+     ("VFMA (double)", ("VFPData", [xT 0, xT 2, xF 3, xT 12])),
+     ("VFNMA (single)", ("VFPData", [xT 0, xF 2, xT 3, xF 12])),
+     ("VFNMA (double)", ("VFPData", [xT 0, xF 2, xT 3, xT 12])),
+     ("VMOV (single,reg)",
+        ("VFPData",
+         [xT 0, xT 2, xT 3, xF 4, xF 5, xF 6, xF 7, xF 12, xF 13, xT 14])),
+     ("VMOV (double,reg)",
+        ("VFPData",
+         [xT 0, xT 2, xT 3, xF 4, xF 5, xF 6, xF 7, xT 12, xF 13, xT 14])),
+     ("VMOV (single,imm)", ("VFPData", [xT 0, xT 2, xT 3, xF 12, xF 14])),
+     ("VMOV (double,imm)", ("VFPData", [xT 0, xT 2, xT 3, xT 12, xF 14])),
+     ("VCMP (single,zero)",
+        ("VFPData",
+         [xT 0, xT 2, xT 3, xF 4, xT 5, xF 6, xT 7, xF 12, xT 13, xT 14])),
+     ("VCMP (double,zero)",
+        ("VFPData",
+         [xT 0, xT 2, xT 3, xF 4, xT 5, xF 6, xT 7, xT 12, xT 13, xT 14])),
+     ("VCMP (single)",
+        ("VFPData",
+         [xT 0, xT 2, xT 3, xF 4, xT 5, xF 6, xF 7, xF 12, xT 13, xT 14])),
+     ("VCMP (double)",
+        ("VFPData",
+         [xT 0, xT 2, xT 3, xF 4, xT 5, xF 6, xF 7, xT 12, xT 13, xT 14])),
+     ("VABS (single)",
+        ("VFPData",
+         [xT 0, xT 2, xT 3, xF 4, xF 5, xF 6, xF 7, xF 12, xT 13, xT 14])),
+     ("VABS (double)",
+        ("VFPData",
+         [xT 0, xT 2, xT 3, xF 4, xF 5, xF 6, xF 7, xT 12, xT 13, xT 14])),
+     ("VNEG (single)",
+        ("VFPData",
+         [xT 0, xT 2, xT 3, xF 4, xF 5, xF 6, xT 7, xF 12, xF 13, xT 14])),
+     ("VNEG (double)",
+        ("VFPData",
+         [xT 0, xT 2, xT 3, xF 4, xF 5, xF 6, xT 7, xT 12, xF 13, xT 14])),
+     ("VSQRT (single)",
+        ("VFPData",
+         [xT 0, xT 2, xT 3, xF 4, xF 5, xF 6, xT 7, xF 12, xT 13, xT 14])),
+     ("VSQRT (double)",
+        ("VFPData",
+         [xT 0, xT 2, xT 3, xF 4, xF 5, xF 6, xT 7, xT 12, xT 13, xT 14])),
+     ("VDIV (single)", ("VFPData", [xT 0, xF 2, xF 3, xF 12, xF 14])),
+     ("VDIV (double)", ("VFPData", [xT 0, xF 2, xF 3, xT 12, xF 14])),
+     ("VCVT (single,double)",
+        ("VFPData",
+         [xT 0, xT 2, xT 3, xF 4, xT 5, xT 6, xT 7, xT 12, xT 13, xT 14])),
+     ("VCVT (double,single,lo)",
+        ("VFPData",
+         [xT 0, xF 1, xT 2, xT 3, xF 4, xT 5, xT 6, xT 7, xF 12, xT 13,
+          xT 14])),
+     ("VCVT (double,single,hi)",
+        ("VFPData",
+         [xT 0, xT 1, xT 2, xT 3, xF 4, xT 5, xT 6, xT 7, xF 12, xT 13,
+          xT 14])),
+     ("VCVT (signed int,single)",
+        ("VFPData", [xT 0, xT 2, xT 3, xT 4, xT 5, xF 6, xT 7, xF 12, xT 14])),
+     ("VCVT (unsigned int,single)",
+        ("VFPData", [xT 0, xT 2, xT 3, xT 4, xT 5, xF 6, xF 7, xF 12, xT 14])),
+     ("VCVT (signed int,double)",
+        ("VFPData", [xT 0, xT 2, xT 3, xT 4, xT 5, xF 6, xT 7, xT 12, xT 14])),
+     ("VCVT (unsigned int,double)",
+        ("VFPData", [xT 0, xT 2, xT 3, xT 4, xT 5, xF 6, xF 7, xT 12, xT 14])),
+     ("VCVT (single,int)",
+        ("VFPData", [xT 0, xT 2, xT 3, xT 4, xF 5, xF 6, xF 7, xF 12, xT 14])),
+     ("VCVT (double,int,lo)",
+        ("VFPData",
+         [xT 0, xF 1, xT 2, xT 3, xT 4, xF 5, xF 6, xF 7, xT 12, xT 14])),
+     ("VCVT (double,int,hi)",
+        ("VFPData",
+         [xT 0, xT 1, xT 2, xT 3, xT 4, xF 5, xF 6, xF 7, xT 12, xT 14])),
      ("VLDR (single,+imm)", ("VFPLoadStore", [xT 0, xT 2, xF 11])),
      ("VLDR (single,-imm)", ("VFPLoadStore", [xF 0, xT 2, xF 11])),
      ("VLDR (double,+imm)", ("VFPLoadStore", [xT 0, xT 2, xT 11])),
@@ -2291,22 +2366,22 @@ local
         ("VFPLoadStore", [xT 0, xF 2, xT 3, xT 4, xT 5, xT 6, xT 11])),
      ("VSTR (double,-imm,pc)",
         ("VFPLoadStore", [xF 0, xF 2, xT 3, xT 4, xT 5, xT 6, xT 11])),
-     ("VMOV (single,reg)",
-        ("VFPOther", [xF 1, xF 2, xF 3, xF 4, xF 9, xF 10, xT 11])),
-     ("VMOV (double,reg)",
-        ("VFPOther", [xF 1, xF 2, xF 3, xF 4, xT 9, xF 10, xT 11])),
-     ("VMOV (single,imm)", ("VFPOther", [xF 9, xF 11])),
-     ("VMOV (double,imm)", ("VFPOther", [xT 9, xF 11])),
-     ("VCMP (single,zero)",
-        ("VFPOther", [xF 1, xT 2, xF 3, xT 4, xF 9, xT 10, xT 11])),
-     ("VCMP (double,zero)",
-        ("VFPOther", [xF 1, xT 2, xF 3, xT 4, xT 9, xT 10, xT 11])),
-     ("VCMP (single)",
-        ("VFPOther", [xF 1, xT 2, xF 3, xF 4, xF 9, xT 10, xT 11])),
-     ("VCMP (double)",
-        ("VFPOther", [xF 1, xT 2, xF 3, xF 4, xT 9, xT 10, xT 11])),
-     ("VMRS (nzcv)", ("VFPMrs", [xT 0, xT 1, xT 2, xT 3])),
-     ("VMRS", ("VFPMrs", [])),
+     ("VMOV (single from arm)", ("VFPTransfer", [xF 0, xF 1, xF 2, xF 3])),
+     ("VMOV (single to arm)", ("VFPTransfer", [xF 0, xF 1, xF 2, xT 3])),
+     ("VMOV (singles from arm,lo)", ("VFPTransfer2", [xF 0, xF 9, xF 10])),
+     ("VMOV (singles from arm,hi)", ("VFPTransfer2", [xF 0, xF 9, xT 10])),
+     ("VMOV (singles to arm,lo)", ("VFPTransfer2", [xT 0, xF 9, xF 10])),
+     ("VMOV (singles to arm,hi)", ("VFPTransfer2", [xT 0, xF 9, xT 10])),
+     ("VMOV (double from arm)", ("VFPTransfer2", [xF 0, xT 9])),
+     ("VMOV (double to arm)", ("VFPTransfer2", [xT 0, xT 9])),
+     ("VMRS (nzcv)",
+        ("VFPTransfer",
+         [xT 0, xT 1, xT 2, xT 3, xF 4, xF 5, xF 6, xT 7,
+          xT 8, xT 9, xT 10, xT 11])),
+     ("VMRS",
+        ("VFPTransfer", [xT 0, xT 1, xT 2, xT 3, xF 4, xF 5, xF 6, xT 7])),
+     ("VMSR",
+        ("VFPTransfer", [xT 0, xT 1, xT 2, xF 3, xF 4, xF 5, xF 6, xT 7])),
      ("MRS (cpsr)", ("MoveToRegisterFromSpecial", [])),
      ("MSR (cpsr, reg)", ("MoveToSpecialFromRegister", [xF 3])),
      ("MSR (cpsr, imm)", ("SpecialFromImmediate", [xF 3])),
@@ -2515,10 +2590,11 @@ in
                                          "more than one matching decode pattern"
          val FALL_CONV =
             REWRITE_CONV
-               (datatype_thms [v2w_ground4] @ undef @ iConditionPassed_rwts @
+               (DecodeVFP :: datatype_thms [v2w_ground4] @ undef @
+                iConditionPassed_rwts @
                 gen_rws "decode ARM (fallback)" [DecodeARM_fall])
       in
-         fn (x, v) =>
+         fn (x : bool list, v) =>
             let
                val (c, t) = mk_opcode v
                val tm = mk_decode_arm t
@@ -2535,8 +2611,8 @@ in
                          (Conv.REWR_CONV rwt THENC rwconv) tm
                       end)
                 handle Conv.UNCHANGED =>
-                           (WARN "arm_decode" "fallback (slow) decode"
-                            ; FALL_CONV tm))
+                           ( WARN "arm_decode" "fallback (slow) decode"
+                           ; FALL_CONV tm ))
                |> utilsLib.split_conditions
                |> avoid
                |> utilsLib.pick x
@@ -3418,6 +3494,66 @@ val Swap_rwts =
 
 (* Floating-point *)
 
+val fpscr_thm = Q.prove(
+  `FPSCR a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16
+         a17 a18 a19 a20 a21 =
+   ^st.FP.FPSCR with
+   <|AHP := a0; C := a1; DN := a2; DZC := a3; DZE := a4;
+     FZ := a5; IDC := a6; IDE := a7; IOC := a8; IOE := a9;
+     IXC := a10; IXE := a11; N := a12; OFC := a13; OFE := a14;
+     QC := a15; RMode := a16; UFC := a17; UFE := a18; V := a19; Z := a20;
+     fpscr'rst := a21|>`,
+   simp [FPSCR_component_equality])
+
+val mov_two_singles =
+  List.map (blastLib.BBLAST_PROVE o Term)
+    [`(v2w [b9; b8; b7; b6; F] + 1w) // 2w = v2w [F; b9; b8; b7; b6] : word5`,
+     `word_bit 0 (v2w [b9; b8; b7; b6; F] + 1w : word5)`,
+     `~word_bit 0 (v2w [b9; b8; b7; b6; T] + 1w : word5)`,
+     `v2w [F; b9; b8; b7; b6] <> (v2w [b9; b8; b7; b6; T] + 1w) // 2w : word5`,
+     `bit_field_insert 63 32 (a : word32)
+        (bit_field_insert 31 0 (b : word32) (c : word64)) = a @@ b`]
+  |> Drule.LIST_CONJ
+
+val UnsignedSatQ_32_rwt =
+  EV [UnsignedSatQ_def, wordsTheory.word_len_def, wordsTheory.dimindex_32,
+      EVAL ``i2w 4294967295 : word32``] [] []
+    ``UnsignedSatQ (i, 32) : arm_state -> (word32 # bool) # arm_state``
+    |> hd
+
+val SignedSatQ_32_rwt =
+  EV [SignedSatQ_def, wordsTheory.word_len_def, wordsTheory.dimindex_32,
+      EVAL ``2147483648i - 1i``, EVAL ``i2w 2147483647i : word32``,
+      EVAL ``i2w (-2147483648i) : word32``] [] []
+    ``SignedSatQ (i, 32) : arm_state -> (word32 # bool) # arm_state``
+    |> hd
+
+val ev =
+  EV [FPToFixed32_def, FPToFixed64_def, RoundingMode,
+      UnsignedSatQ_32_rwt, SignedSatQ_32_rwt, SatQ_def,
+      intLib.ARITH_PROVE ``i > 4294967295i = ~(i <= 4294967295i)``,
+      intLib.ARITH_PROVE ``i > 2147483647i = ~(i <= 2147483647i)``,
+      intLib.ARITH_PROVE ``i < -2147483648i = ~(-2147483648i <= i)``,
+      intLib.ARITH_PROVE ``i < 0i = ~(0i <= i)``
+     ]
+     [[``fp32_to_int
+           (if round_towards_zero then roundTowardZero
+            else DecodeRoundingMode s.FP.FPSCR.RMode) operand = SOME i``,
+       ``fp64_to_int
+           (if round_towards_zero then roundTowardZero
+            else DecodeRoundingMode s.FP.FPSCR.RMode) operand = SOME i``,
+       ``0i <= i``, ``i <= 4294967295i``,
+       ``-2147483648i <= i``, ``i <= 2147483647i``]]
+     (TF `unsigned`)
+
+val (FPToFixed32_unsigned_rwt, FPToFixed32_signed_rwt) =
+  ev ``FPToFixed32 (operand,unsigned,round_towards_zero)``
+  |> Lib.pair_of_list
+
+val (FPToFixed64_unsigned_rwt, FPToFixed64_signed_rwt) =
+  ev ``FPToFixed64 (operand,unsigned,round_towards_zero)``
+  |> Lib.pair_of_list
+
 val rule = utilsLib.INST_REWRITE_RULE
               [arm_stepTheory.Align4_base_pc_plus,
                arm_stepTheory.Align4_base_pc_minus] o
@@ -3447,13 +3583,22 @@ fun fpMemEV c tm =
 
 fun fpEV c tm =
    EV [dfn'vadd_def, dfn'vsub_def, dfn'vmul_def, dfn'vneg_mul_def,
-       dfn'vmla_vmls_def, dfn'vmov_imm_def, dfn'vmov_def, dfn'vcmp_def,
+       dfn'vmla_vmls_def, dfn'vfma_vfms_def, dfn'vfnma_vfnms_def,
+       dfn'vdiv_def, dfn'vabs_def, dfn'vneg_def, dfn'vsqrt_def,
+       dfn'vmov_imm_def, dfn'vmov_def, dfn'vmov_single_def,
+       dfn'vmov_two_singles_def, dfn'vmov_double_def, dfn'vcmp_def,
+       dfn'vcvt_float_def, dfn'vcvt_to_integer_def, dfn'vcvt_from_integer_def,
        IncPC_rwt, S_def, D_def, write'S_def, write'D_def,
        FPAdd64_def, FPAdd32_def, FPSub64_def, FPSub32_def, fpreg_div2,
        FPMul64_def, FPMul32_def, FPZero64_def, FPZero32_def,
+       FixedToFP32_def, FixedToFP64_def,
+       FPToFixed32_signed_rwt, FPToFixed32_unsigned_rwt,
+       FPToFixed64_signed_rwt, FPToFixed64_unsigned_rwt,
+       R_rwt, write'R_rwt, arm_stepTheory.R_x_not_pc,
        write'reg'FPSCR_def, fpscr_nzcv,
        arm_stepTheory.RoundingMode, arm_stepTheory.get_vfp_imm32,
-       wordsTheory.word_concat_0_0] [] c tm
+       wordsTheory.word_concat_0_0, mov_two_singles, updateTheory.UPDATE_EQ]
+      [[``^st.Encoding = Encoding_ARM``, ``~^st.CPSR.T``]] c tm
    |> List.map rule
 
 val mk_fpreg = bitstringSyntax.mk_vec 5
@@ -3472,6 +3617,29 @@ val vmov_imm_rwt =
       ``dfn'vmov_imm (single, ^(mk_fpreg 0), imm64)``
    |> addThms
 
+val vmov_single_rwt =
+   fpEV (TF `to_arm_register`)
+      ``dfn'vmov_single (to_arm_register, t, ^(mk_fpreg 5))``
+   |> addThms
+
+val vmov_two_singles_rwt =
+   fpEV [[`to_arm_registers` |-> boolSyntax.F, `b5` |->  boolSyntax.F],
+         [`to_arm_registers` |-> boolSyntax.T, `b5` |->  boolSyntax.F],
+         [`to_arm_registers` |-> boolSyntax.F, `b5` |->  boolSyntax.T],
+         [`to_arm_registers` |-> boolSyntax.T, `b5` |->  boolSyntax.T]]
+      ``dfn'vmov_two_singles (to_arm_registers, t, t2, ^(mk_fpreg 5))``
+   |> List.map (utilsLib.ALL_HYP_CONV_RULE
+                  (DATATYPE_CONV THENC REWRITE_CONV [ASSUME ``~^st.CPSR.T``]) o
+                DATATYPE_RULE)
+   |> addThms
+
+val vmov_double_rwt =
+   fpEV (TF `to_arm_registers`)
+      ``dfn'vmov_double (to_arm_registers, t, t2, ^(mk_fpreg 5))``
+   |> List.map (utilsLib.ALL_HYP_CONV_RULE
+                  (DATATYPE_CONV THENC REWRITE_CONV [ASSUME ``~^st.CPSR.T``]))
+   |> addThms
+
 val vcmp_rwt =
    fpEV [[`dp` |-> boolSyntax.F, `m_w_z` |-> ``NONE:word5 option``],
          [`dp` |-> boolSyntax.T, `m_w_z` |-> ``NONE:word5 option``],
@@ -3485,7 +3653,7 @@ val vmrs_rwt =
       [[``t <> 15w: word4``]] []
       ``dfn'vmrs t``
    |> List.map (utilsLib.MATCH_HYP_CONV_RULE
-                   (REWRITE_CONV [ASSUME ``t <> 13w: word4``])
+                   (REWRITE_CONV [ASSUME ``~^st.CPSR.T``])
                    ``a \/ b \/ c : bool``)
    |> addThms
 
@@ -3493,6 +3661,27 @@ val vmrs15_rwt =
    EV [dfn'vmrs_def, IncPC_rwt] [] []
       ``dfn'vmrs 15w``
       |> addThms
+
+val vmsr_rwt =
+   EV [dfn'vmsr_def, IncPC_rwt, R_rwt, write'reg'FPSCR_def,
+       REWRITE_RULE [fpscr_thm] rec'FPSCR_def] [[``~^st.CPSR.T``]] []
+      ``dfn'vmsr t``
+      |> addThms
+
+val vabs_rwt =
+   fpEV (TF `dp`)
+      ``dfn'vabs (dp, ^(mk_fpreg 0), ^(mk_fpreg 5))``
+   |> addThms
+
+val vneg_rwt =
+   fpEV (TF `dp`)
+      ``dfn'vneg (dp, ^(mk_fpreg 0), ^(mk_fpreg 5))``
+   |> addThms
+
+val vsqrt_rwt =
+   fpEV (TF `dp`)
+      ``dfn'vsqrt (dp, ^(mk_fpreg 0), ^(mk_fpreg 5))``
+   |> addThms
 
 val vadd_rwt =
    fpEV (TF `dp`)
@@ -3507,6 +3696,21 @@ val vsub_rwt =
 val vmul_rwt =
    fpEV (TF `dp`)
        ``dfn'vmul (dp, ^(mk_fpreg 0), ^(mk_fpreg 5), ^(mk_fpreg 10))``
+   |> addThms
+
+val vdiv_rwt =
+   fpEV (TF `dp`)
+       ``dfn'vdiv (dp, ^(mk_fpreg 0), ^(mk_fpreg 5), ^(mk_fpreg 10))``
+   |> addThms
+
+val vfma_vfms_rwt =
+   fpEV (TF `dp`)
+       ``dfn'vfma_vfms (dp, add, ^(mk_fpreg 0), ^(mk_fpreg 5), ^(mk_fpreg 10))``
+   |> addThms
+
+val vfnma_vfnms_rwt =
+   fpEV (TF `dp`)
+     ``dfn'vfnma_vfnms (dp, add, ^(mk_fpreg 0), ^(mk_fpreg 5), ^(mk_fpreg 10))``
    |> addThms
 
 val vmla_mls_rwt =
@@ -3525,6 +3729,29 @@ val vneg_mul_rwt =
          [`dp` |-> boolSyntax.T, `typ` |-> ``VFPNegMul_VNMUL``],
          [`dp` |-> boolSyntax.F, `typ` |-> ``VFPNegMul_VNMUL``]]
       ``dfn'vneg_mul (dp, typ, ^(mk_fpreg 0), ^(mk_fpreg 5), ^(mk_fpreg 10))``
+   |> addThms
+
+val vcvt_float_rwt =
+   fpEV [[`double_to_single` |-> boolSyntax.F, `b4` |-> boolSyntax.F],
+         [`double_to_single` |-> boolSyntax.F, `b4` |-> boolSyntax.T],
+         [`double_to_single` |-> boolSyntax.T]]
+       ``dfn'vcvt_float (double_to_single, ^(mk_fpreg 0), ^(mk_fpreg 5))``
+   |> addThms
+
+val vcvt_from_integer_rwt =
+   fpEV [[`dp` |-> boolSyntax.T, `b4` |-> boolSyntax.F],
+         [`dp` |-> boolSyntax.T, `b4` |-> boolSyntax.T],
+         [`dp` |-> boolSyntax.F]]
+       ``dfn'vcvt_from_integer (dp, unsigned, ^(mk_fpreg 0), ^(mk_fpreg 5))``
+   |> addThms
+
+val vcvt_to_integer_rwt =
+   fpEV [[`dp` |-> boolSyntax.F, `unsigned` |-> boolSyntax.F],
+         [`dp` |-> boolSyntax.F, `unsigned` |-> boolSyntax.T],
+         [`dp` |-> boolSyntax.T, `unsigned` |-> boolSyntax.F],
+         [`dp` |-> boolSyntax.T, `unsigned` |-> boolSyntax.T]]
+       ``dfn'vcvt_to_integer
+           (dp, unsigned, round_zero, ^(mk_fpreg 0), ^(mk_fpreg 5))``
    |> addThms
 
 val vldr_pc_rwt =

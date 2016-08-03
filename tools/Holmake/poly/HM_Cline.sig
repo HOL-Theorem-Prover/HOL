@@ -6,6 +6,7 @@ type t = {
   poly : string option,
   polymllibdir : string option,
   poly_not_hol : bool,
+  time_limit : Time.time option,
   core : HM_Core_Cline.t
 }
 

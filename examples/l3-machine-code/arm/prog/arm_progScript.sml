@@ -77,7 +77,7 @@ val arm_BE_WORD_MEMORY_def = Define`
 
 val arm_CONFIG_def = Define`
    arm_CONFIG (vfp, arch, bigend, thumb, mode) =
-      arm_Extensions Extension_VFP vfp *
+      arm_VFPExtension vfp *
       arm_Extensions Extension_Security F *
       arm_Architecture arch *
       arm_exception NoException * arm_CPSR_J F *

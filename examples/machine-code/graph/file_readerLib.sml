@@ -263,7 +263,7 @@ val show_code = show_annotated_code (fn x => fail())
 
 (* tools *)
 
-val () = arm_progLib.arm_config "vfp" "mapped"
+val () = arm_progLib.arm_config "vfpv3" "mapped"
 val arm_tools = arm_decompLib.l3_arm_tools
 val (arm_spec,_,_,_) = arm_tools
 

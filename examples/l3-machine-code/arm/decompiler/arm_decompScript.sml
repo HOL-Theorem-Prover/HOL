@@ -3,6 +3,6 @@ open arm_progTheory
 
 val () = new_theory "arm_decomp"
 
-val arm_OK_def = Define `arm_OK mode = arm_CONFIG (T, ARMv7_A, F, F, mode)`
+val arm_OK_def = Define `arm_OK mode = arm_CONFIG (VFPv3, ARMv7_A, F, F, mode)`
 
 val () = export_theory()
