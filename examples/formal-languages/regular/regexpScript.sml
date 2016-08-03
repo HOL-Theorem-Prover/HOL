@@ -473,18 +473,18 @@ val regexp_compareW_eq = Q.store_thm
             >| [ metis_tac[totoTheory.cpn_distinct,charset_cmp_eq],
                  full_simp_tac list_ss [charset_cmp_eq],
                  metis_tac[totoTheory.cpn_distinct,charset_cmp_eq]])
-        >- (Q.PAT_ASSUM `$!M` (MP_TAC o Q.SPECL [`r::r0::t1`, `r'::r0'::t2`])
+        >- (Q.PAT_X_ASSUM `$!M` (MP_TAC o Q.SPECL [`r::r0::t1`, `r'::r0'::t2`])
             >> rw_tac list_ss [zip_def] >> metis_tac[])
-        >- (Q.PAT_ASSUM `$!M` (MP_TAC o Q.SPECL [`r::t1`, `r'::t2`])
+        >- (Q.PAT_X_ASSUM `$!M` (MP_TAC o Q.SPECL [`r::t1`, `r'::t2`])
             >> rw_tac list_ss [zip_def] >> metis_tac[])
         >- (CASE_TAC >> fs []
             >| [metis_tac[totoTheory.cpn_distinct,len_cmp_neq],
                 imp_res_tac len_cmp_length
-                  >> Q.PAT_ASSUM `$!M` (MP_TAC o Q.SPECL [`l ++ t1`, `l' ++ t2`])
+                  >> Q.PAT_X_ASSUM `$!M` (MP_TAC o Q.SPECL [`l ++ t1`, `l' ++ t2`])
                   >> RW_TAC list_ss []
                   >> METIS_TAC [APPEND_LENGTH_EQ,zip_append],
                 metis_tac[totoTheory.cpn_distinct,len_cmp_neq]])
-        >- (Q.PAT_ASSUM `$!M` (MP_TAC o Q.SPECL [`r::t1`, `r'::t2`])
+        >- (Q.PAT_X_ASSUM `$!M` (MP_TAC o Q.SPECL [`r::t1`, `r'::t2`])
             >> rw_tac list_ss [zip_def] >> metis_tac[])));
 
 val regexp_compare_eq = Q.store_thm
@@ -511,19 +511,19 @@ val regexp_compareW_strict = Q.store_thm
         >> fs [zip_def] >> rw_tac list_ss [regexp_compareW_thm]
         >- (every_case_tac >> fs []
              >> metis_tac [charset_cmp_strict,comparison_distinct])
-        >- (Q.PAT_ASSUM `$!M` (MP_TAC o Q.SPECL [`r::r0::t1`, `r'::r0'::t2`])
+        >- (Q.PAT_X_ASSUM `$!M` (MP_TAC o Q.SPECL [`r::r0::t1`, `r'::r0'::t2`])
             >> rw_tac list_ss [zip_def])
-        >- (Q.PAT_ASSUM `$!M` (MP_TAC o Q.SPECL [`r::t1`, `r'::t2`])
+        >- (Q.PAT_X_ASSUM `$!M` (MP_TAC o Q.SPECL [`r::t1`, `r'::t2`])
             >> rw_tac list_ss [zip_def])
         >- (CASE_TAC >> fs []
              >- (metis_tac [len_cmp_strict,totoTheory.cpn_case_def, comparison_distinct])
              >- (imp_res_tac len_cmp_length
                   >> fs [Once len_cmp_sym]
-                  >> Q.PAT_ASSUM `$!M` (MP_TAC o Q.SPECL [`l ++ t1`, `l' ++ t2`])
+                  >> Q.PAT_X_ASSUM `$!M` (MP_TAC o Q.SPECL [`l ++ t1`, `l' ++ t2`])
                   >> RW_TAC list_ss []
                   >> METIS_TAC [APPEND_LENGTH_EQ,zip_append])
              >- (metis_tac [len_cmp_strict,totoTheory.cpn_case_def, comparison_distinct]))
-        >- (Q.PAT_ASSUM `$!M` (MP_TAC o Q.SPECL [`r::t1`, `r'::t2`])
+        >- (Q.PAT_X_ASSUM `$!M` (MP_TAC o Q.SPECL [`r::t1`, `r'::t2`])
             >> rw_tac list_ss [zip_def]))
 );
 
@@ -1683,12 +1683,12 @@ Cases_on `h = h'` THEN RW_TAC list_ss [] THENL
  `R h h' /\ ~R h' h \/  R h' h /\ ~R h h'`
   by METIS_TAC [total_def,transitive_def,antisymmetric_def] THENL
  [`MEM h L2`
-     by (Q.PAT_ASSUM `PERM x y` MP_TAC THEN
+     by (Q.PAT_X_ASSUM `PERM x y` MP_TAC THEN
          RW_TAC list_ss [PERM_CONS_EQ_APPEND] THEN
          Cases_on `M` THEN FULL_SIMP_TAC list_ss [])
     THEN METIS_TAC [],
   `MEM h' L1`
-     by (Q.PAT_ASSUM `PERM x y` (MP_TAC o SIMP_RULE bool_ss [Once PERM_SYM])
+     by (Q.PAT_X_ASSUM `PERM x y` (MP_TAC o SIMP_RULE bool_ss [Once PERM_SYM])
          THEN RW_TAC list_ss [PERM_CONS_EQ_APPEND] THEN
          Cases_on `M` THEN FULL_SIMP_TAC list_ss [])
     THEN METIS_TAC []]]);

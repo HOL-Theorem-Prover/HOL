@@ -8,7 +8,7 @@ open optionTheory pairTheory relationTheory arithmeticTheory
 
 val _ = numLib.prefer_num();
 
-fun pat_elim q = Q.PAT_ASSUM q (K ALL_TAC);
+fun pat_elim q = Q.PAT_X_ASSUM q (K ALL_TAC);
 
 val SET_EQ_THM = Q.prove
 (`!s1 s2. (s1 = s2) = !x. s1 x = s2 x`,
@@ -244,7 +244,7 @@ val step2_lem1a = Q.prove
  RW_TAC std_ss [dom_Brz_def] THEN
  `d<>0` by METIS_TAC [IS_SOME_Brz] THEN
  Q.EXISTS_TAC `d-1` THEN
- Q.PAT_ASSUM `IS_SOME arg` (MP_TAC o ONCE_REWRITE_RULE [Brz_def]) THEN
+ Q.PAT_X_ASSUM `IS_SOME arg` (MP_TAC o ONCE_REWRITE_RULE [Brz_def]) THEN
  CASE_TAC THEN RW_TAC arith_ss [LET_THM]
  THEN METIS_TAC[]);
 
@@ -258,7 +258,7 @@ val step2_lem1b = Q.prove
  RW_TAC std_ss [dom_Brz_def] THEN
  `d<>0` by METIS_TAC [IS_SOME_Brz] THEN
  Q.EXISTS_TAC `d-1` THEN
- Q.PAT_ASSUM `IS_SOME arg` (MP_TAC o ONCE_REWRITE_RULE [Brz_def]) THEN
+ Q.PAT_X_ASSUM `IS_SOME arg` (MP_TAC o ONCE_REWRITE_RULE [Brz_def]) THEN
  CASE_TAC THEN RW_TAC arith_ss [LET_THM]
  THEN METIS_TAC[]);
 
@@ -432,7 +432,7 @@ val step3a_lt = Q.prove
    `rdepth seen (r::t) acc <> 0` by METIS_TAC [IS_SOME_Brz] THEN
    `rdepth seen (r::t) acc - 1 < rdepth seen (r::t) acc` by DECIDE_TAC THEN
    `IS_SOME (Brz seen t acc (rdepth seen (r::t) acc - 1))`
-     by (Q.PAT_ASSUM `IS_SOME (Brz seen (r::t) acc (rdepth seen (r::t) acc))`
+     by (Q.PAT_X_ASSUM `IS_SOME (Brz seen (r::t) acc (rdepth seen (r::t) acc))`
           (mp_tac o SIMP_RULE arith_ss [Once Brz_def])
         >> CASE_TAC >> rw[LET_THM]
            >- metis_tac[]
@@ -455,7 +455,7 @@ val step3b_lt = Q.prove
                    (remove_dups (MAP SND (transitions r)) ++ t)
                    (build_table (transitions r) r acc)
                    (rdepth seen (r::t) acc - 1))`
-     by (Q.PAT_ASSUM `IS_SOME (Brz seen (r::t) acc (rdepth seen (r::t) acc))`
+     by (Q.PAT_X_ASSUM `IS_SOME (Brz seen (r::t) acc (rdepth seen (r::t) acc))`
           (mp_tac o SIMP_RULE arith_ss [Once Brz_def])
         >> CASE_TAC >> rw[LET_THM]
            >- metis_tac[]
@@ -745,7 +745,7 @@ val lemma = Q.prove
        key_ordered regexp_compare k fmap Greater /\
        key_ordered regexp_compare k fmap' Less`
            by metis_tac [invariant_def]
-      >> qpat_assum `invariant cmp (Bin n k v fmap fmap')` (K ALL_TAC)
+      >> qpat_x_assum `invariant cmp (Bin n k v fmap fmap')` (K ALL_TAC)
       >> fs []
       >> RULE_ASSUM_TAC (REWRITE_RULE [foldrWithKey_def])
       >> RES_THEN MP_TAC >> BETA_TAC >> rw[]
@@ -867,7 +867,7 @@ val submap_insert = Q.prove
     ==> submap cmp bmap t`,
  rw_tac set_ss [submap_def]
   >> `invariant cmp (insert cmp x v bmap)` by metis_tac [insert_thm,eq_cmp_def]
-  >- (qpat_assum `$! M` (mp_tac o Q.ID_SPEC) >> rw_tac set_ss [fdom_insert])
+  >- (qpat_x_assum `$! M` (mp_tac o Q.ID_SPEC) >> rw_tac set_ss [fdom_insert])
   >- (`~(x' = x)` by (fs [fdom_def] >> metis_tac[])
        >> `fdom cmp (insert cmp x v bmap) x'` by rw [fdom_insert,IN_DEF]
        >> `good_cmp cmp` by metis_tac [eq_cmp_def]
@@ -912,7 +912,7 @@ val extend_states_thm = Q.prove
       >> metis_tac [NOT_SOME_NONE])
   >- decide_tac
   >- (pat_elim `$! M` >> rw[]
-       >> qpat_assum `submap _ __ ___` mp_tac
+       >> qpat_x_assum `submap _ __ ___` mp_tac
       >> rw_tac set_ss [submap_def,fapply_def]
       >> pop_assum (mp_tac o Q.SPEC `r'`)
       >> rw [fdom_insert]
@@ -921,7 +921,7 @@ val extend_states_thm = Q.prove
       >> rw [lookup_insert_thm,regexp_compare_eq]
       >> metis_tac [THE_DEF])
   >- (pat_elim `$! M` >> rw[]
-       >> qpat_assum `submap _ __ ___` mp_tac
+       >> qpat_x_assum `submap _ __ ___` mp_tac
       >> rw_tac set_ss [submap_def,fapply_def]
       >> pop_assum (mp_tac o Q.SPEC `r'`)
       >> rw [fdom_def]
@@ -1198,7 +1198,7 @@ val Brz_inv_pres = Q.prove (
                  Brz_invariant_def, build_table_def, transitions_def,set_def] >>
  imp_res_tac extend_states_thm >>
  `todo1 IN dom state_map`
-   by (qpat_assum `dom (union a b) = dom state_map` (mp_tac o SYM) >> rw [] >>
+   by (qpat_x_assum `dom (union a b) = dom state_map` (mp_tac o SYM) >> rw [] >>
        `invariant regexp_compare
          (oset regexp_compare (todo1::todos))` by metis_tac [invariant_oset,regexp_compare_good]
        >> rw [dom_union]
@@ -1219,7 +1219,7 @@ val Brz_inv_pres = Q.prove (
        by metis_tac [EXTENSION,dom_def,IN_UNION]
        >- metis_tac [dom_def]
        >- (fs [MAP_MAP_o,MEM_MAP] >> metis_tac [smart_deriv_normalized, dom_def]))
-  >- (fs [GSYM dom_def] >> qpat_assum `dom _ = dom __` (assume_tac o SYM)
+  >- (fs [GSYM dom_def] >> qpat_x_assum `dom _ = dom __` (assume_tac o SYM)
        >> rw [GSYM set_def]
        >> `invariant regexp_compare (insert regexp_compare todo1 () seen)`
             by metis_tac [insert_thm,regexp_compare_good]
@@ -1251,7 +1251,7 @@ val Brz_inv_pres = Q.prove (
       >> pop_assum SUBST_ALL_TAC
       >> AP_TERM_TAC
       >> `dom seen SUBSET dom state_map` by
-           (qpat_assum `dom _ = dom state_map` (SUBST_ALL_TAC o SYM)
+           (qpat_x_assum `dom _ = dom state_map` (SUBST_ALL_TAC o SYM)
              >> metis_tac [invariant_oset, eq_cmp_def,dom_union,SUBSET_UNION])
       >> rw[fdom_oimage_inst,SET_EQ_THM,EQ_IMP_THM,oin_fdom]
       >> Q.EXISTS_TAC `x''` >> rw[]
@@ -1278,7 +1278,7 @@ val Brz_inv_pres = Q.prove (
            (`eq_cmp num_cmp /\ eq_cmp regexp_compare`
                 by metis_tac[eq_cmp_regexp_compare,
                              num_cmp_good,num_cmp_antisym,eq_cmp_def]
-             >> qpat_assum `dom _ = dom state_map` (SUBST_ALL_TAC o SYM)
+             >> qpat_x_assum `dom _ = dom state_map` (SUBST_ALL_TAC o SYM)
              >> metis_tac [invariant_oset, eq_cmp_def,dom_union,SUBSET_UNION])
        >> pop_assum mp_tac
        >> rw_tac set_ss [dom_def, fdom_def, member_iff_lookup,SUBSET_DEF,oneTheory.one]
@@ -1295,12 +1295,12 @@ val Brz_inv_pres = Q.prove (
         >> rw[MAP_MAP_o,combinTheory.o_DEF]
         >> fs[MAP_REVERSE,MAP_MAP_o,combinTheory.o_DEF]
         >> metis_tac[])
-  >- (qpat_assum `(if _ then __ else ___) = ____` mp_tac
+  >- (qpat_x_assum `(if _ then __ else ___) = ____` mp_tac
         >> rw[MAP_MAP_o,combinTheory.o_DEF]
              >- (imp_res_tac alistTheory.ALOOKUP_MEM
                   >> fs [MEM_REVERSE,MEM_MAP])
              >- metis_tac[])
-  >- (qpat_assum `(if _ then __ else ___) = ____` mp_tac
+  >- (qpat_x_assum `(if _ then __ else ___) = ____` mp_tac
         >> rw[MAP_MAP_o,combinTheory.o_DEF]
            >- (qexists_tac `todo1` >> rw[]
                   >> imp_res_tac alistTheory.ALOOKUP_MEM
@@ -1323,12 +1323,12 @@ val Brz_invariant_alt = Q.prove
    (Brz_invariant seen worklist acc = Brz_invariant seen worklist' acc)`,
 rpt strip_tac >> PairCases_on `acc`
  >> rw[Brz_invariant_def,EQ_IMP_THM]
- >> ((qpat_assum `EVERY _ __` mp_tac >>
-        qpat_assum `LIST_TO_SET _ = LIST_TO_SET __` mp_tac
+ >> ((qpat_x_assum `EVERY _ __` mp_tac >>
+        qpat_x_assum `LIST_TO_SET _ = LIST_TO_SET __` mp_tac
          >> rw [EVERY_MEM]
          >> NO_TAC)
     ORELSE
-     (qpat_assum `dom _ = dom __` (SUBST_ALL_TAC o SYM)
+     (qpat_x_assum `dom _ = dom __` (SUBST_ALL_TAC o SYM)
          >> fs [invar_def]
          >> `invariant regexp_compare (set worklist') /\
              invariant regexp_compare (set worklist)`
@@ -1348,7 +1348,7 @@ val Brz_inv_thm = Q.prove
        Brz_invariant seen' [] acc'`,
  ho_match_mp_tac Brzozowski_ind
    >> rw []
-   >> qpat_assum `Brzozowski _ __ ___ = _4` mp_tac
+   >> qpat_x_assum `Brzozowski _ __ ___ = _4` mp_tac
    >> rw [Brzozowski_eqns]
    >> pop_assum mp_tac
    >> CASE_TAC
@@ -1356,10 +1356,10 @@ val Brz_inv_thm = Q.prove
       >- metis_tac[]
       >- (rfs []
           >> first_assum match_mp_tac
-          >> qpat_assum `Brz_invariant seen (h::t) args` mp_tac
+          >> qpat_x_assum `Brz_invariant seen (h::t) args` mp_tac
           >> PairCases_on `acc`
           >> rw [Brz_invariant_def]
-          >> qpat_assum `dom _ = dom __` (SUBST_ALL_TAC o SYM)
+          >> qpat_x_assum `dom _ = dom __` (SUBST_ALL_TAC o SYM)
           >> fs [invar_def]
           >> `invariant regexp_compare (set t) /\
               invariant regexp_compare (set (h::t))`
@@ -1392,17 +1392,17 @@ val Brz_mono = Q.prove
  ho_match_mp_tac Brzozowski_ind
  >> Cases_on `worklist`
     >- (rw []
-         >> qpat_assum `Brzozowski _ __ ___ = _4` mp_tac
+         >> qpat_x_assum `Brzozowski _ __ ___ = _4` mp_tac
          >> rw [Brzozowski_eqns,submap_id])
     >- (rw []
-         >> qpat_assum `Brzozowski _ __ ___ = _4` mp_tac
+         >> qpat_x_assum `Brzozowski _ __ ___ = _4` mp_tac
          >> rw [Brzozowski_eqns]
          >> fs[LET_THM]
             >- (first_assum match_mp_tac
-                >> qpat_assum `Brz_invariant seen (h::t) acc` mp_tac
+                >> qpat_x_assum `Brz_invariant seen (h::t) acc` mp_tac
                 >> PairCases_on `acc`
                 >> rw [Brz_invariant_def]
-                >> qpat_assum `dom _ = dom __` (SUBST_ALL_TAC o SYM)
+                >> qpat_x_assum `dom _ = dom __` (SUBST_ALL_TAC o SYM)
                 >> fs [invar_def]
                 >> `invariant regexp_compare (set t) /\
                     invariant regexp_compare (set (h::t))`
@@ -1437,7 +1437,7 @@ val Brz_mono = Q.prove
                 >> fs []
                 >> match_mp_tac submap_mono
                 >> rw[eq_cmp_regexp_compare]
-                >> qpat_assum `submap _ __ ___` mp_tac
+                >> qpat_x_assum `submap _ __ ___` mp_tac
                 >> rw [submap_def]
                 >> strip_tac
                 >> res_tac
@@ -1491,7 +1491,7 @@ val table_lang_correct = Q.prove
          by metis_tac[]
      >> pop_assum SUBST_ALL_TAC
      >> `r' = r`
-         by (qpat_assum `fmap_inj _ __` mp_tac
+         by (qpat_x_assum `fmap_inj _ __` mp_tac
               >> rw_tac set_ss [fmap_inj_def,fdom_def,regexp_compare_eq])
      >> rw []
      >> metis_tac [ORD_CHR_lem,mem_alphabet]))
@@ -1699,7 +1699,7 @@ val Brz_invariant_final = Q.prove (
            by metis_tac [LENGTH_MAP,ALL_DISTINCT_CARD_LIST_TO_SET, good_table_def] >>
      `fdom num_cmp (oimage num_cmp (apply state_map) seen) = range state_map`
        by (simp_tac set_ss [range_def, frange_def] >>
-           qpat_assum `dom _ = dom __` mp_tac >>
+           qpat_x_assum `dom _ = dom __` mp_tac >>
            rw [fdom_oimage_inst,apply_def, oin_fdom,fapply_def, dom_def] >>
            simp_tac set_ss [fdom_def] >> metis_tac[THE_DEF])
      >> rw [])
@@ -1709,7 +1709,7 @@ val Brz_invariant_final = Q.prove (
               >- fs [good_table_def]
               >- (`fdom num_cmp (oimage num_cmp (apply state_map) seen) = range state_map`
                     by (simp_tac set_ss [range_def, frange_def] >>
-                        qpat_assum `dom _ = dom __` mp_tac >>
+                        qpat_x_assum `dom _ = dom __` mp_tac >>
                         rw [fdom_oimage_inst,apply_def, oin_fdom,fapply_def, dom_def] >>
                         simp_tac set_ss [fdom_def] >> metis_tac[THE_DEF])
                     >> rw[]))
@@ -1959,7 +1959,7 @@ val Brzozowski_correct = Q.store_thm
      by (fs [invar_def,set_def,ounion_oempty,union_def]
           >> `fdom num_cmp (oimage num_cmp (apply state_map) seen) = frange regexp_compare state_map`
                     by (simp_tac set_ss [frange_def] >>
-                        qpat_assum `dom _ = dom __` mp_tac >>
+                        qpat_x_assum `dom _ = dom __` mp_tac >>
                         rw [fdom_oimage_inst,apply_def, oin_fdom,fapply_def, dom_def] >>
                         simp_tac set_ss [fdom_def] >> metis_tac[THE_DEF])
           >> mp_tac (table_lang_correct
@@ -1989,7 +1989,7 @@ val Brzozowski_correct = Q.store_thm
                lookup regexp_compare (normalize r) state_map)`
               by metis_tac [submap_def]
           >> fs [singleton_def,lookup_def,regexp_compare_id]
-          >> qpat_assum `table_lang (get_accepts state_map) table 0 nl ⇔
+          >> qpat_x_assum `table_lang (get_accepts state_map) table 0 nl ⇔
                          smart_deriv_matches (normalize r) (MAP CHR nl)`
              (SUBST_ALL_TAC o SYM)
           >> rw [MAP_MAP_o,combinTheory.o_DEF,apply_def, fapply_def]
