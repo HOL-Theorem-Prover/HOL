@@ -37,9 +37,19 @@ fun stallstr "|" = "!"
   | stallstr s = s
 
 datatype monitor_status = MRunning of char
-                        | Stalling of string * Time.time
+                        | Stalling of Time.time
 fun statusString (MRunning c) = StringCvt.padLeft #" " 3 (str c) ^ " "
-  | statusString (Stalling(s, _)) = StringCvt.padLeft #" " 3 s ^ " "
+  | statusString (Stalling t) =
+    let
+      val numSecs = Time.toSeconds t
+      val n_s = Int.toString numSecs
+    in
+      if numSecs < 5 then "   "
+      else if numSecs < 10 then "  " ^ n_s
+      else if numSecs < 30 then " " ^ boldyellow n_s
+      else if numSecs < 1000 then red (StringCvt.padLeft #" " 3 n_s)
+      else red "!!!"
+    end
 
 fun rtrunc n s =
   if String.size s > n then
@@ -158,12 +168,9 @@ fun new {info,warn,genLogFile,keep_going,time_limit} =
                 val stat' =
                     case stat of
                         MRunning c => if Time.>(delay, five_sec) then
-                                        Stalling(".", delay)
+                                        Stalling delay
                                       else MRunning c
-                      | Stalling (s, sofar) =>
-                        if Time.>(delay, Time.+(sofar, five_sec)) then
-                          Stalling(stallstr s, delay)
-                        else stat
+                      | Stalling _ => Stalling delay
               in
                 monitor_map :=
                   Binarymap.insert(!monitor_map, tag, (strm, stat'));
