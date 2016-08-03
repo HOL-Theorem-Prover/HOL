@@ -168,7 +168,7 @@ val RANDOM_LURCHES_MULTIPLICATIVE = store_thm
          ++ RW_TAC arith_ss [prob_while_cut_def, UNIT_DEF, BIND_DEF, UNCURRY,
                              o_THM, random_lurch_def]
          ++ Know `a < b - 1 \/ (a = b - 1)`
-         >> (Q.PAT_ASSUM `!x. P x` K_TAC ++ DECIDE_TAC)
+         >> (Q.PAT_X_ASSUM `!x. P x` K_TAC ++ DECIDE_TAC)
          ++ RW_TAC std_ss [] >> PROVE_TAC []
          ++ Cases_on `n`
          ++ RW_TAC arith_ss [prob_while_cut_def, UNIT_DEF, BIND_DEF, UNCURRY,
@@ -190,9 +190,9 @@ val RANDOM_LURCHES_MULTIPLICATIVE = store_thm
              ++ RW_TAC arith_ss [prob_while_cut_def, UNIT_DEF, BIND_DEF,
                                  UNCURRY, o_THM])
          ++ REPEAT STRIP_TAC
-         ++ Know `n <= m` >> (Q.PAT_ASSUM `!x. P x` K_TAC ++ DECIDE_TAC)
+         ++ Know `n <= m` >> (Q.PAT_X_ASSUM `!x. P x` K_TAC ++ DECIDE_TAC)
          ++ STRIP_TAC
-         ++ Q.PAT_ASSUM `x = y` MP_TAC
+         ++ Q.PAT_X_ASSUM `x = y` MP_TAC
          ++ RW_TAC arith_ss [prob_while_cut_def, GSYM BIND_ASSOC] <<
          [POP_ASSUM MP_TAC
           ++ ONCE_REWRITE_TAC [BIND_DEF]
@@ -225,7 +225,7 @@ val RANDOM_LURCHES_MULTIPLICATIVE = store_thm
                             o_THM]
         >> RW_TAC arith_ss [prob_while_cut_def, BIND_DEF, UNIT_DEF, UNCURRY,
                             o_THM, ADD_CLAUSES]
-        ++ Q.PAT_ASSUM `!x. P x` K_TAC
+        ++ Q.PAT_X_ASSUM `!x. P x` K_TAC
         ++ Know `!n : num. (n = 0) = ~(0 < n)` >> DECIDE_TAC
         ++ DISCH_THEN (fn th => FULL_SIMP_TAC std_ss [th])
         ++ MATCH_MP_TAC PROB_WHILE_CUT_MONO
@@ -423,10 +423,10 @@ val RANDOM_LURCHES_PARITY = store_thm
    ++ BasicProvers.NORM_TAC std_ss
       [prob_while_cut_def, UNIT_DEF, o_THM, random_lurch_def,
        BIND_DEF, UNCURRY, prob_cost_def] <<
-   [Q.PAT_ASSUM `0 < n` MP_TAC
+   [Q.PAT_X_ASSUM `0 < n` MP_TAC
     ++ POP_ASSUM_LIST K_TAC
     ++ RW_TAC arith_ss [GSYM ADD1, ADD_CLAUSES, EVEN],
-    Q.PAT_ASSUM `0 < n` MP_TAC
+    Q.PAT_X_ASSUM `0 < n` MP_TAC
     ++ POP_ASSUM_LIST K_TAC
     ++ RW_TAC arith_ss [ADD1],
     POP_ASSUM MP_TAC

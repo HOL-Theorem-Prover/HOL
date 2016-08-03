@@ -352,13 +352,13 @@ val UNIONL_LCOSET_LIST = store_thm
    ++ EQ_TAC <<
    [R_TAC [IN_UNIONL]
     ++ S_TAC
-    ++ Q.PAT_ASSUM `MEM s t` MP_TAC
+    ++ Q.PAT_X_ASSUM `MEM s t` MP_TAC
     ++ R_TAC [lcoset_list_def, MEM_KILL_DUPS, MAP_MEM]
     ++ S_TAC
     ++ AR_TAC []
     ++ POP_ASSUM K_TAC
     ++ AR_TAC [LIST_ELTS, IN_FINITE_GROUP]
-    ++ Q.PAT_ASSUM `v IN lcoset G y H` MP_TAC
+    ++ Q.PAT_X_ASSUM `v IN lcoset G y H` MP_TAC
     ++ R_TAC [lcoset_def, IN_IMAGE]
     ++ S_TAC
     ++ G_TAC [],
@@ -381,7 +381,7 @@ val CARD_LCOSET_LIST = store_thm
        MEM c (lcoset_list G H) ==> (CARD c = CARD (gset H))``,
    G_TAC [lcoset_list_def, MEM_KILL_DUPS, MAP_MEM]
    ++ S_TAC
-   ++ Q.PAT_ASSUM `MEM y x` MP_TAC
+   ++ Q.PAT_X_ASSUM `MEM y x` MP_TAC
    ++ G_TAC [LIST_ELTS, CARD_LCOSET]);
 
 val LAGRANGE = store_thm
@@ -421,9 +421,9 @@ val LAGRANGE_PROPER = store_thm
    ++ MATCH_MP_TAC LESS_MONO_MULT
    ++ Suff `~(q = 0) /\ ~(q = 1)` >> DECIDE_TAC
    ++ S_TAC <<
-   [Q.PAT_ASSUM `CARD x = y` MP_TAC
+   [Q.PAT_X_ASSUM `CARD x = y` MP_TAC
     ++ R_TAC [CARD_GROUP],
-    Q.PAT_ASSUM `CARD x = y` MP_TAC
+    Q.PAT_X_ASSUM `CARD x = y` MP_TAC
     ++ R_TAC []
     ++ Suff `CARD (gset H) < CARD (gset G)` >> DECIDE_TAC
     ++ G_TAC [CARD_PSUBSET]]);
@@ -584,7 +584,7 @@ val GORD_UNIQUE = store_thm
    S_TAC
    ++ Suff `~(gord G g < n) /\ ~(n < gord G g)` >> DECIDE_TAC
    ++ S_TAC <<
-   [Q.PAT_ASSUM `!m. P m` (MP_TAC o Q.SPEC `gord G g`)
+   [Q.PAT_X_ASSUM `!m. P m` (MP_TAC o Q.SPEC `gord G g`)
     ++ G_TAC [GORD],
     MP_TAC (Q_RESQ_SPECL [`G`, `g`] GORD)
     ++ S_TAC
@@ -616,13 +616,13 @@ val GORD_GPOW_PRIME = store_thm
     ++ S_TAC <<
     [Suff `~(gord G g DIV p = 0)` >> DECIDE_TAC
      ++ S_TAC
-     ++ Q.PAT_ASSUM `divides x y` MP_TAC
+     ++ Q.PAT_X_ASSUM `divides x y` MP_TAC
      ++ R_TAC [DIVIDES_ALT]
      ++ Suff `0 < gord G g` >> DECIDE_TAC
      ++ G_TAC [GORD],
      Suff `gpow G g (p * (gord G g DIV p)) = gid G`
      >> G_TAC []
-     ++ Q.PAT_ASSUM `divides x y` MP_TAC
+     ++ Q.PAT_X_ASSUM `divides x y` MP_TAC
      ++ R_TAC [DIVIDES_ALT]
      ++ DISCH_THEN (fn th => R_TAC [ONCE_REWRITE_RULE [MULT_COMM] th])
      ++ G_TAC [GORD],
@@ -631,7 +631,7 @@ val GORD_GPOW_PRIME = store_thm
      ++ S_TAC
      >> (Suff `0 < p * m` >> R_TAC []
          ++ R_TAC' [])
-     ++ Q.PAT_ASSUM `divides x y` MP_TAC
+     ++ Q.PAT_X_ASSUM `divides x y` MP_TAC
      ++ R_TAC [DIVIDES_ALT]
      ++ DISCH_THEN
         (fn th => ONCE_REWRITE_TAC [ONCE_REWRITE_RULE [MULT_COMM] (SYM th)])
@@ -687,25 +687,25 @@ val PRIME_DIVIDES_GORD_GPOW = store_thm
    ++ CONJ_TAC >> G_TAC [GORD_GID]
    ++ CONJ_TAC >> G_TAC [GPOW_1]
    ++ S_TAC
-   ++ Q.PAT_ASSUM `x ==> y` MATCH_MP_TAC
+   ++ Q.PAT_X_ASSUM `x ==> y` MATCH_MP_TAC
    ++ POP_ASSUM MP_TAC
    ++ ONCE_REWRITE_TAC [MULT_COMM]
    ++ G_TAC []
    ++ Know `gpow G g n IN gset G` >> G_TAC' []
-   ++ Q.PAT_ASSUM `g IN gset G` K_TAC
+   ++ Q.PAT_X_ASSUM `g IN gset G` K_TAC
    ++ Q.SPEC_TAC (`gpow G g n`, `g`)
    ++ S_TAC
    ++ CCONTR_TAC
-   ++ Q.PAT_ASSUM `divides x y` MP_TAC
+   ++ Q.PAT_X_ASSUM `divides x y` MP_TAC
    ++ G_TAC [GORD_GPOW_PRIME]
    ++ REVERSE (Cases_on `divides p' (gord G g)`) >> R_TAC []
    ++ R_TAC []
    ++ S_TAC
-   ++ Q.PAT_ASSUM `divides p' y` MP_TAC
+   ++ Q.PAT_X_ASSUM `divides p' y` MP_TAC
    ++ R_TAC [DIVIDES_ALT]
    ++ S_TAC
    ++ POP_ASSUM (ASSUME_TAC o ONCE_REWRITE_RULE [MULT_COMM] o SYM)
-   ++ Q.PAT_ASSUM `~divides x y` MP_TAC
+   ++ Q.PAT_X_ASSUM `~divides x y` MP_TAC
    ++ POP_ASSUM (PURE_ONCE_REWRITE_TAC o wrap)
    ++ R_TAC []
    ++ POP_ASSUM MP_TAC

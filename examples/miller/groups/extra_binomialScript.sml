@@ -136,7 +136,7 @@ val PRIME_ADD_1_EXP = store_thm
    ++ R_TAC []
    ++ CONJ_TAC >> PROVE_TAC [DIVIDES_ADD_1]
    ++ S_TAC
-   ++ Q.PAT_ASSUM `x = y` (REWRITE_TAC o wrap o SYM)
+   ++ Q.PAT_X_ASSUM `x = y` (REWRITE_TAC o wrap o SYM)
    ++ Know `k' + SUC 1 = k' + 2` >> DECIDE_TAC
    ++ DISCH_THEN (REWRITE_TAC o wrap)
    ++ R_TAC [MULT_EXP, MULT_ASSOC]
@@ -198,7 +198,7 @@ val PRIME_ADD_1_EXP = store_thm
     ++ Know `i <= k` >> DECIDE_TAC
     ++ S_TAC
     ++ AR_TAC []
-    ++ Q.PAT_ASSUM `a = b` (ONCE_REWRITE_TAC o wrap o SYM)
+    ++ Q.PAT_X_ASSUM `a = b` (ONCE_REWRITE_TAC o wrap o SYM)
     ++ R_TAC [FACT, PRIME_EXPONENT_MULT, FACT_LESS, ADD_ASSOC]
     ++ Know `p EXP k - 1 - i = SUC (p EXP k - 1 - SUC i)` >> DECIDE_TAC
     ++ S_TAC

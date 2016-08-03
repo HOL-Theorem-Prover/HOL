@@ -64,7 +64,7 @@ local
      ++ Q.EXISTS_TAC `m`
      ++ RW_TAC std_ss [prob_space_def, prob_def, events_def]
      ++ ONCE_REWRITE_TAC [GSYM PROB_MEASURE_BASIC]
-     ++ Q.PAT_ASSUM `!s. P s` MATCH_MP_TAC
+     ++ Q.PAT_X_ASSUM `!s. P s` MATCH_MP_TAC
      ++ MATCH_MP_TAC ALGEBRA_UNIV
      ++ RW_TAC std_ss [PROB_ALGEBRA_ALGEBRA]);
 in
@@ -378,7 +378,7 @@ val EVENTS_BERN_SING = store_thm
    ++ SEQ_CASES_TAC `w`
    ++ SEQ_CASES_TAC `v`
    ++ RW_TAC std_ss [scons_def]
-   ++ Q.PAT_ASSUM `!v w. P v w` MATCH_MP_TAC
+   ++ Q.PAT_X_ASSUM `!v w. P v w` MATCH_MP_TAC
    ++ GEN_TAC
    ++ POP_ASSUM (MP_TAC o Q.SPEC `SUC n`)
    ++ STRIP_TAC
@@ -795,7 +795,7 @@ val INDEP_FN_PROB_PRESERVING = store_thm
        ++ PROVE_TAC [])
    ++ DISCH_THEN (fn th => DISCH_THEN (fn ith => MP_TAC (MP ith th)))
    ++ STRIP_TAC
-   ++ Q.PAT_ASSUM `f' IN X` MP_TAC
+   ++ Q.PAT_X_ASSUM `f' IN X` MP_TAC
    ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, IN_INSERT, IN_IMAGE]
    ++ Know
       `prob bern (PREIMAGE (SND o f) s INTER BIGUNION (IMAGE prefix_set c)) =
@@ -816,7 +816,7 @@ val INDEP_FN_PROB_PRESERVING = store_thm
        ++ RW_TAC std_ss [PROB_SPACE_BERN, IN_FUNSET, IN_UNIV, o_THM]
        >> PROVE_TAC [IN_MEASURABLE, EVENTS_INTER, PROB_SPACE_BERN,
                      EVENTS_BERN_PREFIX_SET, IN_UNIV, EVENTS_BERN_EMPTY]
-       ++ Q.PAT_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`m`, `n`])
+       ++ Q.PAT_X_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`m`, `n`])
        ++ RW_TAC std_ss [DISJOINT_DEF, EXTENSION, IN_INTER, NOT_IN_EMPTY]
        ++ PROVE_TAC [])
    ++ Know `(\n. (prob bern o f') n * prob bern s) sums prob bern s`
@@ -844,7 +844,7 @@ val INDEP_FN_PROB_PRESERVING = store_thm
       `f' x INTER PREIMAGE (SND o f) s =
        f' x INTER PREIMAGE (sdrop (LENGTH x')) s`
    >> (RW_TAC std_ss [EXTENSION, IN_INTER, IN_PREIMAGE, o_THM]
-       ++ Q.PAT_ASSUM `!l s. P l s /\ Q l s ==> R l s`
+       ++ Q.PAT_X_ASSUM `!l s. P l s /\ Q l s ==> R l s`
           (MP_TAC o Q.SPECL [`x'`, `x''`])
        ++ RW_TAC std_ss []
        ++ PROVE_TAC [SND])
@@ -896,7 +896,7 @@ val INDEP_FN_STRONG = store_thm
        (IMAGE
         (($INTER (PREIMAGE (FST o f) x INTER PREIMAGE (SND o f) x')) o f')
         UNIV)`
-   >> (Q.PAT_ASSUM `X = Y` MP_TAC
+   >> (Q.PAT_X_ASSUM `X = Y` MP_TAC
        ++ ONCE_REWRITE_TAC [EXTENSION]
        ++ RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_INTER, o_THM, IN_UNIV]
        ++ PROVE_TAC [])
@@ -913,13 +913,13 @@ val INDEP_FN_STRONG = store_thm
        (($INTER (PREIMAGE (FST o f) x INTER PREIMAGE (SND o f) x')) o f') sums
        (prob bern (PREIMAGE (FST o f) x) * prob bern (PREIMAGE (SND o f) x'))`
    >> PROVE_TAC [SUM_UNIQ]
-   ++ Q.PAT_ASSUM `f' IN X` MP_TAC
+   ++ Q.PAT_X_ASSUM `f' IN X` MP_TAC
    ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, IN_INSERT, IN_IMAGE]
    >> (MATCH_MP_TAC PROB_COUNTABLY_ADDITIVE
        ++ RW_TAC std_ss [PROB_SPACE_BERN, IN_FUNSET, IN_UNIV, o_THM]
        >> PROVE_TAC [IN_MEASURABLE, EVENTS_INTER, PROB_SPACE_BERN,
                      EVENTS_BERN_PREFIX_SET, IN_UNIV, EVENTS_BERN_EMPTY]
-       ++ Q.PAT_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`m`, `n`])
+       ++ Q.PAT_X_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`m`, `n`])
        ++ RW_TAC std_ss [DISJOINT_DEF, EXTENSION, IN_INTER, NOT_IN_EMPTY]
        ++ PROVE_TAC [])
    ++ Know
@@ -940,7 +940,7 @@ val INDEP_FN_STRONG = store_thm
        ++ RW_TAC std_ss [PROB_SPACE_BERN, IN_FUNSET, IN_UNIV, o_THM] <<
        [PROVE_TAC [EVENTS_INTER, PROB_SPACE_BERN, EVENTS_BERN_EMPTY,
                    IN_MEASURABLE, IN_UNIV, EVENTS_BERN_PREFIX_SET],
-        Q.PAT_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`m`, `n`])
+        Q.PAT_X_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`m`, `n`])
         ++ RW_TAC std_ss [EXTENSION, NOT_IN_EMPTY, IN_INTER, DISJOINT_DEF]
         ++ PROVE_TAC [],
         RW_TAC std_ss [GSYM IMAGE_IMAGE, GSYM INTER_BIGUNION]])
@@ -968,7 +968,7 @@ val INDEP_FN_STRONG = store_thm
        if FST (f (prefix_seq x''')) IN x then f' x'' else {}`
    >> (REWRITE_TAC [EXTENSION]
        ++ STRIP_TAC
-       ++ Q.PAT_ASSUM `!l s. P l s /\ Q l s ==> R l s`
+       ++ Q.PAT_X_ASSUM `!l s. P l s /\ Q l s ==> R l s`
           (MP_TAC o Q.SPECL [`x'''`, `x''''`])
        ++ RW_TAC std_ss [IN_PREIMAGE, IN_INTER, IN_UNIV, o_THM,
                          NOT_IN_EMPTY]
@@ -980,7 +980,7 @@ val INDEP_FN_STRONG = store_thm
        prefix_set x''' INTER PREIMAGE (sdrop (LENGTH x''')) x'`
    >> (REWRITE_TAC [EXTENSION]
        ++ STRIP_TAC
-       ++ Q.PAT_ASSUM `!l s. P l s /\ Q l s ==> R l s`
+       ++ Q.PAT_X_ASSUM `!l s. P l s /\ Q l s ==> R l s`
           (MP_TAC o Q.SPECL [`x'''`, `x''''`])
        ++ RW_TAC std_ss [IN_PREIMAGE, IN_INTER, IN_UNIV, o_THM,
                          NOT_IN_EMPTY]
@@ -1083,7 +1083,7 @@ val PREFIX_COVER_NONEMPTY = store_thm
    ``!c. prefix_cover c ==> ~(c = {})``,
    RW_TAC std_ss [prefix_cover_def]
    ++ STRIP_TAC
-   ++ Q.PAT_ASSUM `prob bern X = 1` MP_TAC
+   ++ Q.PAT_X_ASSUM `prob bern X = 1` MP_TAC
    ++ RW_TAC std_ss [IMAGE_EMPTY, BIGUNION_EMPTY, PROB_BERN_BASIC]
    ++ REAL_ARITH_TAC);
 
@@ -1141,7 +1141,7 @@ val PREFIX_COVER_APPEND = store_thm
    ++ Rewr
    ++ RW_TAC std_ss [IN_UNIV, IN_FUNSET, IN_INSERT]
    ++ RW_TAC std_ss []
-   ++ Q.PAT_ASSUM `!x. P x \/ Q x` MP_TAC
+   ++ Q.PAT_X_ASSUM `!x. P x \/ Q x` MP_TAC
    ++ REWRITE_TAC [IN_IMAGE]
    ++ DISCH_THEN
       (MP_TAC o CONV_RULE (DEPTH_CONV RIGHT_OR_EXISTS_CONV THENC SKOLEM_CONV))
@@ -1175,7 +1175,7 @@ val PREFIX_COVER_APPEND = store_thm
         ++ STRIP_TAC
         ++ Know `f m = f n` >> PROVE_TAC []
         ++ STRIP_TAC
-        ++ Q.PAT_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`m`, `n`])
+        ++ Q.PAT_X_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`m`, `n`])
         ++ RW_TAC std_ss [GSYM DISJOINT_EMPTY_REFL],
         ONCE_REWRITE_TAC [EXTENSION]
         ++ Suff `!s. s IN c ==> ?n. ~(f n = {}) /\ (x' n = s)`
@@ -1184,7 +1184,7 @@ val PREFIX_COVER_APPEND = store_thm
             ++ BasicProvers.NORM_TAC std_ss [NOT_IN_EMPTY]
             ++ PROVE_TAC [])
         ++ RW_TAC std_ss []
-        ++ Q.PAT_ASSUM `X = Y` (MP_TAC o ONCE_REWRITE_RULE [EXTENSION])
+        ++ Q.PAT_X_ASSUM `X = Y` (MP_TAC o ONCE_REWRITE_RULE [EXTENSION])
         ++ RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_UNIV, o_THM]
         ++ MP_TAC (Q.ISPEC `(cf : bool list -> bool list -> bool) s`
                    SET_CASES)
@@ -1195,7 +1195,7 @@ val PREFIX_COVER_APPEND = store_thm
             ++ MATCH_MP_TAC PREFIX_COVER_NONEMPTY
             ++ RW_TAC std_ss [prefix_cover_def]
             ++ PROVE_TAC [])
-        ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `prefix_seq (APPEND s x)`)
+        ++ Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `prefix_seq (APPEND s x)`)
         ++ Know
         `?x'.
            x' IN c /\
@@ -1205,12 +1205,12 @@ val PREFIX_COVER_APPEND = store_thm
         >> PROVE_TAC [IN_INSERT, PREFIX_SEQ]
         ++ Rewr
         ++ RW_TAC std_ss []
-        ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x''`)
+        ++ Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x''`)
         ++ Know `~(f x'' = {})` >> PROVE_TAC [EXTENSION, NOT_IN_EMPTY]
         ++ RW_TAC std_ss []
         ++ Q.EXISTS_TAC `x''`
         ++ RW_TAC std_ss []
-        ++ Q.PAT_ASSUM `X = Y`
+        ++ Q.PAT_X_ASSUM `X = Y`
            (MP_TAC o Q.SPEC `prefix_seq (APPEND s x)` o
             ONCE_REWRITE_RULE [EXTENSION])
         ++ RW_TAC std_ss [IN_BIGUNION_IMAGE, o_THM]
@@ -1230,9 +1230,9 @@ val PREFIX_COVER_APPEND = store_thm
    >> RW_TAC std_ss []
    ++ FUN_EQ_TAC
    ++ RW_TAC std_ss [o_THM]
-   ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
+   ++ Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
    ++ RW_TAC std_ss []
-   ++ Q.PAT_ASSUM `!l. P l /\ Q l` (MP_TAC o Q.SPEC `x' (x:num)`)
+   ++ Q.PAT_X_ASSUM `!l. P l /\ Q l` (MP_TAC o Q.SPEC `x' (x:num)`)
    ++ KILL_TAC
    ++ Q.SPEC_TAC (`cf (x' x)`, `c`)
    ++ RW_TAC std_ss []
@@ -1282,7 +1282,7 @@ val INDEP_FN_BIND = store_thm
                        o_THM]
         ++ PROVE_TAC [])
     ++ RW_TAC std_ss [IN_UNIV]
-    ++ Q.PAT_ASSUM `countable X` MP_TAC
+    ++ Q.PAT_X_ASSUM `countable X` MP_TAC
     ++ Know `!x. FST o g x IN measurable (events bern) UNIV`
     >> PROVE_TAC []
     ++ KILL_TAC
@@ -1320,10 +1320,10 @@ val INDEP_FN_BIND = store_thm
                        o_THM]
         ++ PROVE_TAC [])
     ++ RW_TAC std_ss [IN_UNIV]
-    ++ Q.PAT_ASSUM `countable X` MP_TAC
+    ++ Q.PAT_X_ASSUM `countable X` MP_TAC
     ++ Know `!x. SND o g x IN measurable (events bern) (events bern)`
     >> (RW_TAC std_ss []
-        ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
+        ++ Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
         ++ RW_TAC std_ss [])
     ++ POP_ASSUM MP_TAC
     ++ KILL_TAC
@@ -1359,7 +1359,7 @@ val INDEP_FN_BIND = store_thm
     >> (MATCH_MP_TAC PREFIX_COVER_APPEND
         ++ RW_TAC std_ss [o_THM])
     ++ RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_IMAGE, o_THM, BIND_DEF]
-    ++ Q.PAT_ASSUM `!l s. P l s`
+    ++ Q.PAT_X_ASSUM `!l s. P l s`
        ((fn th =>
          MP_TAC (Q.SPEC `s` th)
          ++ MP_TAC (Q.SPEC `prefix_seq (APPEND l' x)` th)) o Q.SPEC `l'`)
@@ -1386,7 +1386,7 @@ val INDEP_FN_BIND = store_thm
         ++ Induct_on `l'` >> RW_TAC std_ss [sdrop_def, LENGTH, APPEND, I_THM]
         ++ RW_TAC std_ss [sdrop_def, LENGTH, APPEND, I_THM, prefix_seq_def,
                           o_THM, STL_SCONS])
-    ++ Q.PAT_ASSUM `s IN X` MP_TAC
+    ++ Q.PAT_X_ASSUM `s IN X` MP_TAC
     ++ KILL_TAC
     ++ Q.SPEC_TAC (`s`, `s`)
     ++ Induct_on `l'` >> RW_TAC std_ss [sdrop_def, LENGTH, APPEND, I_THM]
@@ -1421,7 +1421,7 @@ val INDEP_FN_FST_EVENTS = store_thm
   ("INDEP_FN_FST_EVENTS",
    ``!f p. f IN indep_fn ==> (p o FST o f) IN events bern``,
    RW_TAC std_ss [indep_fn_def, GSPECIFICATION]
-   ++ Q.PAT_ASSUM `FST o f IN X` MP_TAC
+   ++ Q.PAT_X_ASSUM `FST o f IN X` MP_TAC
    ++ RW_TAC std_ss [IN_MEASURABLE, IN_UNIV, PREIMAGE_ALT]);
 
 val INDEP_FN_FST_EVENTS' = store_thm
@@ -1434,7 +1434,7 @@ val INDEP_FN_SND_EVENTS = store_thm
    ``!f q.
        f IN indep_fn /\ q IN events bern ==> (q o SND o f) IN events bern``,
    RW_TAC std_ss [indep_fn_def, GSPECIFICATION]
-   ++ Q.PAT_ASSUM `SND o f IN X` MP_TAC
+   ++ Q.PAT_X_ASSUM `SND o f IN X` MP_TAC
    ++ RW_TAC std_ss [IN_MEASURABLE, PREIMAGE_ALT]);
 
 val INDEP_FN_SND_EVENTS' = store_thm
@@ -1611,7 +1611,7 @@ val PROB_BERN_BIND_FINITE = store_thm
    >> RW_TAC std_ss [COUNT_ZERO, sum, IMAGE_EMPTY, BIGUNION_EMPTY,
                      PROB_BERN_EMPTY]
    ++ STRIP_TAC
-   ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
+   ++ Q.PAT_X_ASSUM `X ==> Y` MP_TAC
    ++ Cond >> PROVE_TAC [LT_SUC]
    ++ RW_TAC bool_ss [sum]
    ++ POP_ASSUM K_TAC
@@ -1707,7 +1707,7 @@ val PROB_BERN_BIND_INFINITE = store_thm
         ++ PROVE_TAC [INDEP_FN_FST_EVENTS, INDEP_FN_BIND],
         POP_ASSUM MP_TAC
         ++ RW_TAC std_ss [SPECIFICATION, o_THM]
-        ++ Q.PAT_ASSUM `BIJ c X Y` MP_TAC
+        ++ Q.PAT_X_ASSUM `BIJ c X Y` MP_TAC
         ++ RW_TAC std_ss [BIJ_DEF, INJ_DEF, IN_UNIV]
         ++ PROVE_TAC []])
    ++ FUN_EQ_TAC
@@ -1779,7 +1779,7 @@ val PROB_BERN_BIND_UPPER = store_thm
           RW_TAC std_ss [IN_o, DISJOINT_ALT]
           ++ POP_ASSUM MP_TAC
           ++ RW_TAC std_ss [SPECIFICATION]
-          ++ Q.PAT_ASSUM `BIJ c X Y` MP_TAC
+          ++ Q.PAT_X_ASSUM `BIJ c X Y` MP_TAC
           ++ RW_TAC std_ss [BIJ_DEF, INJ_DEF, IN_UNIV]
           ++ PROVE_TAC [],
           POP_ASSUM MP_TAC
@@ -1826,7 +1826,7 @@ val PROB_BERN_BIND_UPPER = store_thm
           RW_TAC bool_ss [IN_o, DISJOINT_ALT]
           ++ POP_ASSUM MP_TAC
           ++ RW_TAC bool_ss [SPECIFICATION]
-          ++ Q.PAT_ASSUM `BIJ c X Y` MP_TAC
+          ++ Q.PAT_X_ASSUM `BIJ c X Y` MP_TAC
           ++ RW_TAC bool_ss [BIJ_DEF, INJ_DEF, IN_UNIV]
           ++ PROVE_TAC [],
           POP_ASSUM MP_TAC
@@ -1900,7 +1900,7 @@ val PROB_BERN_BIND_UPPER = store_thm
           RW_TAC bool_ss [IN_o, DISJOINT_ALT]
           ++ POP_ASSUM MP_TAC
           ++ RW_TAC bool_ss [SPECIFICATION]
-          ++ Q.PAT_ASSUM `BIJ c X Y` MP_TAC
+          ++ Q.PAT_X_ASSUM `BIJ c X Y` MP_TAC
           ++ RW_TAC bool_ss [BIJ_DEF, INJ_DEF, IN_COUNT]
           ++ PROVE_TAC [],
           POP_ASSUM MP_TAC
@@ -1948,7 +1948,7 @@ val PROB_BERN_BIND_UPPER = store_thm
           RW_TAC bool_ss [IN_o, DISJOINT_ALT]
           ++ POP_ASSUM MP_TAC
           ++ RW_TAC bool_ss [SPECIFICATION]
-          ++ Q.PAT_ASSUM `BIJ c X Y` MP_TAC
+          ++ Q.PAT_X_ASSUM `BIJ c X Y` MP_TAC
           ++ RW_TAC bool_ss [BIJ_DEF, INJ_DEF, IN_COUNT]
           ++ PROVE_TAC [],
           POP_ASSUM MP_TAC
@@ -1993,7 +1993,7 @@ val PROB_BERN_PROB_WHILE_CUT = store_thm
    RW_TAC std_ss []
    ++ Know `!a. countable (range (FST o b a))`
    >> (STRIP_TAC
-       ++ Q.PAT_ASSUM `!a. b a IN indep_fn` (MP_TAC o Q.SPEC `a`)
+       ++ Q.PAT_X_ASSUM `!a. b a IN indep_fn` (MP_TAC o Q.SPEC `a`)
        ++ RW_TAC std_ss [indep_fn_def, GSPECIFICATION])
    ++ STRIP_TAC
    ++ Know `!n. 0 <= p pow n`
@@ -2008,7 +2008,7 @@ val PROB_BERN_PROB_WHILE_CUT = store_thm
            ++ PSET_TAC [o_THM]
            ++ RW_TAC std_ss [SPECIFICATION])
        ++ Rewr
-       ++ Q.PAT_ASSUM `!a. b a IN indep_fn` (MP_TAC o Q.SPEC `a`)
+       ++ Q.PAT_X_ASSUM `!a. b a IN indep_fn` (MP_TAC o Q.SPEC `a`)
        ++ RW_TAC std_ss [indep_fn_def, GSPECIFICATION, IN_MEASURABLE, IN_UNIV])
    ++ STRIP_TAC
    ++ Q.SPEC_TAC (`a`, `a`)
@@ -2187,7 +2187,7 @@ val PREFIX_COVER_STAR_PREFIXFREE = store_thm
    ++ Know `l' = l''`
    >> PROVE_TAC [IS_PREFIX_APPEND1, IS_PREFIX_APPEND2]
    ++ STRIP_TAC
-   ++ Q.PAT_ASSUM `IS_PREFIX X Y` MP_TAC
+   ++ Q.PAT_X_ASSUM `IS_PREFIX X Y` MP_TAC
    ++ RW_TAC std_ss [IS_PREFIX_APPENDS]
    ++ PROVE_TAC []);
 
@@ -2322,12 +2322,12 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
        ++ RW_TAC std_ss [PROB_SPACE_BERN, COUNTABLE_IMAGE_NUM, SUBSET_DEF,
                          IN_IMAGE, IN_UNIV, GDEST]
        ++ RW_TAC std_ss [])
-   ++ Q.PAT_ASSUM `prob_while_terminates c b` MP_TAC
+   ++ Q.PAT_X_ASSUM `prob_while_terminates c b` MP_TAC
    ++ RW_TAC std_ss [prob_while_terminates_def]
    ++ POP_ASSUM (MP_TAC o Q.SPEC `a`)
    ++ RW_TAC std_ss [probably_def, probably_bern_def]
-   ++ Q.PAT_ASSUM `X IN events bern` K_TAC
-   ++ Q.PAT_ASSUM `!n. P n` ASSUME_TAC
+   ++ Q.PAT_X_ASSUM `X IN events bern` K_TAC
+   ++ Q.PAT_X_ASSUM `!n. P n` ASSUME_TAC
    ++ Know `!n a. {s | ~c (FST (FUNPOW (UNCURRY b) n (a,s)))} IN events bern`
    >> (RW_TAC std_ss [COUNTABLE_IMAGE_NUM, PROB_SPACE_BERN, SUBSET_DEF,
                       IN_IMAGE, IN_UNIV, GDEST]
@@ -2344,7 +2344,7 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
        ++ MATCH_MP_TAC INDEP_FN_FUNPOW
        ++ RW_TAC std_ss [])
    ++ RW_TAC std_ss []
-   ++ Q.PAT_ASSUM `X = Y` (ONCE_REWRITE_TAC o wrap o SYM)
+   ++ Q.PAT_X_ASSUM `X = Y` (ONCE_REWRITE_TAC o wrap o SYM)
    ++ Know
       `{s | ?n. ~c (FST (FUNPOW (UNCURRY b) n (a,s)))} =
        {s |
@@ -2389,7 +2389,7 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
           ++ RW_TAC std_ss []
           ++ EQ_TAC <<
           [RW_TAC std_ss []
-           ++ Q.PAT_ASSUM `X = Y` MP_TAC
+           ++ Q.PAT_X_ASSUM `X = Y` MP_TAC
            ++ Know `?n. ~c (FST (FUNPOW (UNCURRY b) n (a,x)))`
            >> PROVE_TAC []
            ++ RW_TAC std_ss []
@@ -2397,7 +2397,7 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
            ++ RW_TAC std_ss []
            ++ PROVE_TAC [],
            RW_TAC std_ss []
-           ++ Q.PAT_ASSUM `X = Y` MP_TAC
+           ++ Q.PAT_X_ASSUM `X = Y` MP_TAC
            ++ Know `?n. ~c (FST (FUNPOW (UNCURRY b) n (a,x)))`
            >> PROVE_TAC []
            ++ RW_TAC std_ss []
@@ -2480,7 +2480,7 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
    >> (RW_TAC std_ss [o_THM]
        ++ PROVE_TAC [IN_DISJOINT, IN_INTER])
    ++ RW_TAC std_ss [o_THM]
-   ++ Q.PAT_ASSUM `!x. P x \/ Q x` (MP_TAC o Q.SPEC `n'`)
+   ++ Q.PAT_X_ASSUM `!x. P x \/ Q x` (MP_TAC o Q.SPEC `n'`)
    ++ RW_TAC std_ss [] >> RW_TAC std_ss [INTER_EMPTY]
    ++ RW_TAC std_ss []
    ++ REVERSE (RW_TAC std_ss [prefix_cover_level_def, GDEST])
@@ -2495,7 +2495,7 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
          BIGUNION
          (IMAGE prefix_set (append_sets_fn (ca a) g)) INTER prefix_set x' =
          BIGUNION (IMAGE (prefix_set o APPEND x') (g x'))`
-   >> (Q.PAT_ASSUM `x' IN ca a` MP_TAC
+   >> (Q.PAT_X_ASSUM `x' IN ca a` MP_TAC
        ++ Know `prefix_cover (ca a)` >> PROVE_TAC []
        ++ KILL_TAC
        ++ SET_EQ_TAC
@@ -2552,7 +2552,7 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
        >> PROVE_TAC []
        ++ DISCH_THEN MATCH_MP_TAC
        ++ RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `!a l s. P a l s`  (MP_TAC o Q.SPECL [`a`, `x'`, `x`])
+       ++ Q.PAT_X_ASSUM `!a l s. P a l s`  (MP_TAC o Q.SPECL [`a`, `x'`, `x`])
        ++ RW_TAC std_ss [])
    ++ DISCH_THEN (REWRITE_TAC o wrap o ONCE_REWRITE_RULE [INTER_COMM])
    ++ ONCE_REWRITE_TAC [INTER_COMM]
@@ -2642,12 +2642,12 @@ val PREFIX_COVER_STAR_FIXES_FN = store_thm
    ++ RW_TAC std_ss [prefix_cover_level_def, NOT_IN_EMPTY, append_sets_fn_def,
                      GSPECIFICATION, PROB_WHILE_WITNESS_BIND, BIND_DEF, o_THM]
    ++ RW_TAC std_ss [UNCURRY]
-   ++ Q.PAT_ASSUM `s IN prefix_set (LL ++ y)` MP_TAC
+   ++ Q.PAT_X_ASSUM `s IN prefix_set (LL ++ y)` MP_TAC
    ++ Q.MATCH_ABBREV_TAC `s IN prefix_set (l' ++ y) ==> Q`
    ++ Q.UNABBREV_TAC `Q`
    ++ markerLib.RM_ALL_ABBREVS_TAC
    ++ STRIP_TAC
-   ++ Q.PAT_ASSUM `!a l s. P a l s /\ Q a l s ==> R a l s`
+   ++ Q.PAT_X_ASSUM `!a l s. P a l s /\ Q a l s ==> R a l s`
       (fn th =>
        MP_TAC (Q.SPECL [`a`, `l'`, `prefix_seq (APPEND l' y)`] th)
        ++ MP_TAC (Q.SPECL [`a`, `l'`, `s`] th))
@@ -2656,7 +2656,7 @@ val PREFIX_COVER_STAR_FIXES_FN = store_thm
    ++ Cond >> PROVE_TAC [SDROP_APPEND, PREFIX_SET_APPEND, PREFIX_SEQ]
    ++ Rewr
    ++ RW_TAC std_ss [SDROP_PREFIX_SEQ_APPEND]
-   ++ Q.PAT_ASSUM `!a l s. P a l s`
+   ++ Q.PAT_X_ASSUM `!a l s. P a l s`
       (MP_TAC o
        Q.SPECL [`FST ((b : 'a -> (num -> bool) -> 'a # (num -> bool)) a
                       (prefix_seq (l' : bool list)))`, `y`,
@@ -2787,7 +2787,7 @@ val PROB_WHILE_WITNESS_MEASURABLE_FST = store_thm
    >> (SET_EQ_TAC
        ++ RW_TAC std_ss [GSPECIFICATION, IN_PREIMAGE, o_THM, UNIT_DEF])
    ++ Rewr
-   ++ Q.PAT_ASSUM `!n. X n IN indep_fn` (MP_TAC o Q.SPEC `m`)
+   ++ Q.PAT_X_ASSUM `!n. X n IN indep_fn` (MP_TAC o Q.SPEC `m`)
    ++ RW_TAC std_ss [indep_fn_def, GSPECIFICATION, IN_MEASURABLE, IN_UNIV]);
 
 val PROB_WHILE_WITNESS_MEASURABLE_SND = store_thm
@@ -2886,7 +2886,7 @@ val PROB_WHILE_WITNESS_MEASURABLE_SND = store_thm
    >> (SET_EQ_TAC
        ++ RW_TAC std_ss [GSPECIFICATION, IN_PREIMAGE, o_THM, UNIT_DEF])
    ++ Rewr
-   ++ Q.PAT_ASSUM `!n. X n IN indep_fn` (MP_TAC o Q.SPEC `m`)
+   ++ Q.PAT_X_ASSUM `!n. X n IN indep_fn` (MP_TAC o Q.SPEC `m`)
    ++ RW_TAC std_ss [indep_fn_def, GSPECIFICATION, IN_MEASURABLE, IN_UNIV]);
 
 val PROB_WHILE_EXISTS = store_thm
@@ -2898,12 +2898,12 @@ val PROB_WHILE_EXISTS = store_thm
            prob_while a IN indep_fn /\
            (prob_while a = if c a then BIND (b a) prob_while else UNIT a)``,
    RW_TAC std_ss []
-   ++ Q.PAT_ASSUM `!a. P a`
+   ++ Q.PAT_X_ASSUM `!a. P a`
       (fn th =>
        MP_TAC (REWRITE_RULE [indep_fn_def] th)
        ++ ASSUME_TAC th)
    ++ RW_TAC std_ss [GSPECIFICATION, FORALL_AND_THM]
-   ++ Q.PAT_ASSUM `!a. P a` (MP_TAC o CONV_RULE SKOLEM_CONV)
+   ++ Q.PAT_X_ASSUM `!a. P a` (MP_TAC o CONV_RULE SKOLEM_CONV)
    ++ RW_TAC std_ss [FORALL_AND_THM]
    ++ Q.EXISTS_TAC `prob_while_witness c b`
    ++ Ho_Rewrite.REWRITE_TAC [GSYM FORALL_AND_THM]
@@ -3155,7 +3155,7 @@ val PROB_BERN_MIRROR_IMAGE_STL = store_thm
    ++ SEQ_CASES_TAC `x'`
    ++ SEQ_CASES_TAC `x`
    ++ FULL_SIMP_TAC std_ss [STL_SCONS]
-   ++ Q.PAT_ASSUM `s o mirror = s` MP_TAC
+   ++ Q.PAT_X_ASSUM `s o mirror = s` MP_TAC
    ++ SET_EQ_TAC
    ++ RW_TAC std_ss [IN_o]
    ++ Know `mirror (scons h t) IN s` >> PROVE_TAC []
@@ -3242,7 +3242,7 @@ val PROB_BERN_NONEVENT_SEQ = store_thm
        2 pow n * prob bern nonevent + 2 pow n * prob bern nonevent`
    >> RW_TAC real_ss [REAL_DOUBLE, REAL_MUL_ASSOC]
    ++ Rewr
-   ++ Q.PAT_ASSUM `X = Y` (REWRITE_TAC o wrap o SYM)
+   ++ Q.PAT_X_ASSUM `X = Y` (REWRITE_TAC o wrap o SYM)
    ++ MP_TAC (Q.SPEC `nonevent_seq n` PROB_BERN_MIRROR)
    ++ Cond >> PROVE_TAC [EVENTS_BERN_NONEVENT_SEQ]
    ++ DISCH_THEN
@@ -3346,7 +3346,7 @@ val PROB_WHILE_TERMINATES = store_thm
     ++ Know `b a s = (FST (b a s), SND (b a s))`
     >> RW_TAC std_ss [PAIR]
     ++ Rewr'
-    ++ Q.PAT_ASSUM `!a s. P a s` MATCH_MP_TAC
+    ++ Q.PAT_X_ASSUM `!a s. P a s` MATCH_MP_TAC
     ++ RW_TAC std_ss []
     ++ POP_ASSUM (fn th => MP_TAC (Q.SPEC `SUC n` th) ++ MP_TAC (Q.SPEC `0` th))
     ++ RW_TAC std_ss [prob_while_cut_def, UNIT_DEF, BIND_DEF, UNCURRY, o_THM],
@@ -3362,9 +3362,9 @@ val PROB_WHILE_TERMINATES = store_thm
     >> (POP_ASSUM (MP_TAC o Q.SPEC `0`)
         ++ RW_TAC std_ss [FUNPOW])
     ++ RW_TAC std_ss [prob_while_cut_def, UNIT_DEF, BIND_DEF, o_THM, UNCURRY]
-    ++ Q.PAT_ASSUM `!a s. P a s` MATCH_MP_TAC
+    ++ Q.PAT_X_ASSUM `!a s. P a s` MATCH_MP_TAC
     ++ RW_TAC std_ss []
-    ++ Q.PAT_ASSUM `!n. P n` (MP_TAC o Q.SPEC `SUC n`)
+    ++ Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `SUC n`)
     ++ RW_TAC std_ss [FUNPOW]]);
 
 val PROBABLY_RES_FORALL = store_thm
@@ -3497,8 +3497,8 @@ val STRONG_PROB_WHILE = store_thm
           p (FST (prob_while_cut c b n a s))}`
    >> (SET_EQ_TAC
        ++ RW_TAC std_ss [GSPECIFICATION, IN_INTER]
-       ++ Q.PAT_ASSUM `!a. b a IN indep_fn` MP_TAC
-       ++ Q.PAT_ASSUM `prob_while_terminates c b` MP_TAC
+       ++ Q.PAT_X_ASSUM `!a. b a IN indep_fn` MP_TAC
+       ++ Q.PAT_X_ASSUM `prob_while_terminates c b` MP_TAC
        ++ KILL_TAC
        ++ RW_TAC std_ss []
        ++ Know `!b. b = b /\ T` >> PROVE_TAC []
@@ -3512,12 +3512,12 @@ val STRONG_PROB_WHILE = store_thm
        >> RW_TAC std_ss [prob_while_cut_def, PROB_WHILE_ADVANCE, UNIT_DEF]
        ++ RW_TAC std_ss [prob_while_cut_def, PROB_WHILE_ADVANCE]
        ++ RW_TAC std_ss [BIND_DEF, UNCURRY, o_THM]
-       ++ Q.PAT_ASSUM `!a. P a` (MATCH_MP_TAC o REWRITE_RULE [AND_IMP_INTRO])
+       ++ Q.PAT_X_ASSUM `!a. P a` (MATCH_MP_TAC o REWRITE_RULE [AND_IMP_INTRO])
        ++ NTAC 2 (POP_ASSUM MP_TAC)
        ++ RW_TAC std_ss [BIND_DEF, UNCURRY, o_THM])
    ++ Rewr
-   ++ Q.PAT_ASSUM `X IN events bern` K_TAC
-   ++ Q.PAT_ASSUM `!*s. ?n. P s n` MP_TAC
+   ++ Q.PAT_X_ASSUM `X IN events bern` K_TAC
+   ++ Q.PAT_X_ASSUM `!*s. ?n. P s n` MP_TAC
    ++ RW_TAC std_ss [probably_bern_def, probably_def]
    ++ Suff
       `prob bern
@@ -3529,9 +3529,9 @@ val STRONG_PROB_WHILE = store_thm
    >> (Rewr
        ++ RW_TAC std_ss [])
    ++ POP_ASSUM K_TAC
-   ++ Q.PAT_ASSUM `X INTER Y IN Z` K_TAC
-   ++ Q.PAT_ASSUM `!n. P n` K_TAC
-   ++ Q.PAT_ASSUM `{s | p (FST (P s))} IN Z` K_TAC
+   ++ Q.PAT_X_ASSUM `X INTER Y IN Z` K_TAC
+   ++ Q.PAT_X_ASSUM `!n. P n` K_TAC
+   ++ Q.PAT_X_ASSUM `{s | p (FST (P s))} IN Z` K_TAC
    ++ MATCH_MP_TAC PROB_BERN_UNIVERSAL
    ++ Q.EXISTS_TAC
       `\s. !n.
@@ -3589,13 +3589,13 @@ val PROB_BERN_BIND_LOWER = store_thm
         ++ Know `p o FST o g a IN events bern`
         >> PROVE_TAC [INDEP_FN_FST_EVENTS]
         ++ RW_TAC std_ss [PROB_COMPL, PROB_SPACE_BERN]
-        ++ Q.PAT_ASSUM `X <= Y` MP_TAC
+        ++ Q.PAT_X_ASSUM `X <= Y` MP_TAC
         ++ REAL_ARITH_TAC,
         RES_TAC
         ++ Know `p o FST o g a IN events bern`
         >> PROVE_TAC [INDEP_FN_FST_EVENTS]
         ++ RW_TAC std_ss [PROB_COMPL, PROB_SPACE_BERN]
-        ++ Q.PAT_ASSUM `X <= Y` MP_TAC
+        ++ Q.PAT_X_ASSUM `X <= Y` MP_TAC
         ++ REAL_ARITH_TAC])
    ++ Know `p o FST o BIND f g IN events bern`
    >> PROVE_TAC [INDEP_FN_FST_EVENTS, INDEP_FN_BIND]
@@ -3701,12 +3701,12 @@ val PROB_BERN_BIND_COUNTABLE = store_thm
           BIJ_INSERT
        ++ Cond >> RW_TAC arith_ss [IN_COUNT]
        ++ RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `!x. P x` MP_TAC
+       ++ Q.PAT_X_ASSUM `!x. P x` MP_TAC
        ++ RW_TAC std_ss [IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM]
        ++ Know `?n'. c' n = c n'` >> PROVE_TAC []
        ++ DISCH_THEN (MP_TAC o Ho_Rewrite.ONCE_REWRITE_RULE [MINIMAL_EXISTS])
        ++ Q.SPEC_TAC (`minimal (\n'. c' n = c n')`, `k`)
-       ++ Q.PAT_ASSUM `X = Y` K_TAC
+       ++ Q.PAT_X_ASSUM `X = Y` K_TAC
        ++ RW_TAC std_ss []
        ++ Know
        `!n'.
@@ -3747,9 +3747,9 @@ val PROB_BERN_BIND_COUNTABLE = store_thm
        ++ Rewr
        ++ HO_MATCH_MP_TAC SER_ADD
        ++ CONJ_TAC
-       >> (Q.PAT_ASSUM `!s. P s ==> Q s ==> R s` (MP_TAC o Q.SPEC `u`)
+       >> (Q.PAT_X_ASSUM `!s. P s ==> Q s ==> R s` (MP_TAC o Q.SPEC `u`)
            ++ RW_TAC std_ss [])
-       ++ Q.PAT_ASSUM `!s. P s ==> Q s ==> R s` K_TAC
+       ++ Q.PAT_X_ASSUM `!s. P s ==> Q s ==> R s` K_TAC
        ++ Know
           `!n'. ((!m. m < n' ==> ~(c m = c n')) /\ (c n' = c k)) = (n' = k)`
        >> (RW_TAC std_ss []
@@ -3777,7 +3777,7 @@ val PROB_BERN_BIND_COUNTABLE = store_thm
            ++ PROVE_TAC [])
        ++ Suff `j m IN range (FST o f)`
        >> PROVE_TAC []
-       ++ Q.PAT_ASSUM `BIJ j X Y` MP_TAC
+       ++ Q.PAT_X_ASSUM `BIJ j X Y` MP_TAC
        ++ RW_TAC std_ss [BIJ_DEF, SURJ_DEF, IN_UNIV])
    ++ DISCH_THEN (MP_TAC o CONV_RULE SKOLEM_CONV)
    ++ RW_TAC std_ss []
@@ -3804,9 +3804,9 @@ val PROB_BERN_BIND_COUNTABLE = store_thm
            ++ CONJ_TAC
            >> (MATCH_MP_TAC INJ_IMAGE_BIJ
                ++ Q.EXISTS_TAC `IMAGE h UNIV`
-               ++ Q.PAT_ASSUM `BIJ j X Y` MP_TAC
-               ++ Q.PAT_ASSUM `!m. P m /\ Q m` MP_TAC
-               ++ Q.PAT_ASSUM `!x. P x ==> Q x` MP_TAC
+               ++ Q.PAT_X_ASSUM `BIJ j X Y` MP_TAC
+               ++ Q.PAT_X_ASSUM `!m. P m /\ Q m` MP_TAC
+               ++ Q.PAT_X_ASSUM `!x. P x ==> Q x` MP_TAC
                ++ KILL_TAC
                ++ RW_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_IMAGE, IN_UNIV]
                >> PROVE_TAC []
@@ -3817,7 +3817,7 @@ val PROB_BERN_BIND_COUNTABLE = store_thm
            ++ SET_EQ_TAC
            ++ RW_TAC std_ss [NOT_IN_EMPTY]
            ++ RW_TAC std_ss [SPECIFICATION, o_THM]
-           ++ Q.PAT_ASSUM `BIJ j X Y` MP_TAC
+           ++ Q.PAT_X_ASSUM `BIJ j X Y` MP_TAC
            ++ RW_TAC std_ss [BIJ_DEF, SURJ_DEF, IN_UNIV, range_def, IN_IMAGE,
                              o_THM]
            ++ POP_ASSUM
@@ -3826,14 +3826,14 @@ val PROB_BERN_BIND_COUNTABLE = store_thm
            ++ Cond >> (Q.EXISTS_TAC `x` ++ RW_TAC std_ss [])
            ++ STRIP_TAC
            ++ POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM)
-           ++ Q.PAT_ASSUM `!m. P m /\ Q m` (MP_TAC o GSYM o Q.SPEC `y`)
+           ++ Q.PAT_X_ASSUM `!m. P m /\ Q m` (MP_TAC o GSYM o Q.SPEC `y`)
            ++ RW_TAC std_ss []
            ++ STRIP_TAC
            ++ Know `n < h y \/ (n = h y) \/ h y < n` >> (KILL_TAC ++ DECIDE_TAC)
-           ++ Q.PAT_ASSUM `X = Y` MP_TAC
-           ++ Q.PAT_ASSUM `!n. P n` MP_TAC
-           ++ Q.PAT_ASSUM `!n. ~(X n = Y n)` MP_TAC
-           ++ Q.PAT_ASSUM `!n. X n ==> Y n` MP_TAC
+           ++ Q.PAT_X_ASSUM `X = Y` MP_TAC
+           ++ Q.PAT_X_ASSUM `!n. P n` MP_TAC
+           ++ Q.PAT_X_ASSUM `!n. ~(X n = Y n)` MP_TAC
+           ++ Q.PAT_X_ASSUM `!n. X n ==> Y n` MP_TAC
            ++ KILL_TAC
            ++ PROVE_TAC [])
        ++ RW_TAC std_ss [])
@@ -3847,7 +3847,7 @@ val PROB_BERN_BIND_COUNTABLE = store_thm
           prob bern (p o FST o g (j m)))`
    >> RW_TAC std_ss []
    ++ FUN_EQ_TAC
-   ++ Q.PAT_ASSUM `X sums Y` K_TAC
+   ++ Q.PAT_X_ASSUM `X sums Y` K_TAC
    ++ RW_TAC std_ss [o_THM]);
 
 val PROB_BERN_BIND_EQ = store_thm
@@ -3860,7 +3860,7 @@ val PROB_BERN_BIND_EQ = store_thm
        (prob bern (p o FST o BIND f1 g1) = prob bern (p o FST o BIND f2 g2))``,
    RW_TAC std_ss []
    ++ Know `countable (range (FST o f1) UNION range (FST o f2))`
-   >> (REPEAT (Q.PAT_ASSUM `X IN indep_fn` MP_TAC)
+   >> (REPEAT (Q.PAT_X_ASSUM `X IN indep_fn` MP_TAC)
        ++ RW_TAC std_ss [indep_fn_def, COUNTABLE_UNION, GSPECIFICATION])
    ++ RW_TAC std_ss [countable_def, IN_UNION, DISJ_IMP_THM, FORALL_AND_THM]
    ++ MP_TAC (Q.SPECL [`p`, `f1`, `g1`, `f`] PROB_BERN_BIND_COUNTABLE)
@@ -4402,7 +4402,7 @@ val PROB_TERMINATES_COST = store_thm
     >> RW_TAC std_ss [prob_while_cut_def, UNIT_DEF, o_THM]
     ++ RW_TAC std_ss [prob_while_cut_def, UNIT_DEF, o_THM, BIND_DEF,
                       prob_cost_def, UNCURRY]
-    ++ Q.PAT_ASSUM `!x. P x`
+    ++ Q.PAT_X_ASSUM `!x. P x`
        (MP_TAC o
         Q.SPECL [`SND ((b:'a->(num->bool)->'a#(num->bool)) q x)`,
                  `SUC r`,
@@ -4427,7 +4427,7 @@ val PROB_TERMINATES_COST = store_thm
     >> RW_TAC std_ss [prob_while_cut_def, UNIT_DEF, o_THM]
     ++ RW_TAC std_ss [prob_while_cut_def, UNIT_DEF, o_THM, BIND_DEF,
                       prob_cost_def, UNCURRY]
-    ++ Q.PAT_ASSUM `!x. P x`
+    ++ Q.PAT_X_ASSUM `!x. P x`
        (MP_TAC o
         Q.SPECL [`SND ((b:'a->(num->bool)->'a#(num->bool)) a x)`,
                  `SUC r`,
@@ -4538,9 +4538,9 @@ val PROB_TERMINATES_HART_LEMMA = store_thm
         >> RW_TAC std_ss [prob_while_cut_def, BIND_DEF, UNCURRY, o_THM]
         ++ STRIP_TAC
         ++ RW_TAC std_ss [prob_while_cut_def, BIND_DEF, UNCURRY, o_THM]
-        ++ Q.PAT_ASSUM `!s. P s` MATCH_MP_TAC
+        ++ Q.PAT_X_ASSUM `!s. P s` MATCH_MP_TAC
         ++ Cases_on `N a`
-        >> (Q.PAT_ASSUM `!a. P a` (MP_TAC o Q.SPEC `a`)
+        >> (Q.PAT_X_ASSUM `!a. P a` (MP_TAC o Q.SPEC `a`)
             ++ RW_TAC std_ss [prob_while_cut_def, UNIT_DEF, GEMPTY,
                               PROB_BERN_EMPTY, real_lte])
         ++ MP_TAC
@@ -4561,7 +4561,7 @@ val PROB_TERMINATES_HART_LEMMA = store_thm
         ++ Suff `?n. ~c (FST (prob_while_cut c b (N a + n) a s))`
         >> PROVE_TAC []
         ++ RW_TAC std_ss [PROB_WHILE_CUT_ADD, BIND_DEF, UNCURRY, o_THM]
-        ++ Q.PAT_ASSUM `!s. P s` MATCH_MP_TAC
+        ++ Q.PAT_X_ASSUM `!s. P s` MATCH_MP_TAC
         ++ FULL_SIMP_TAC std_ss [BIND_DEF, UNCURRY, o_THM]])
    ++ Rewr
    ++ POP_ASSUM MP_TAC
@@ -4617,10 +4617,10 @@ val PROB_TERMINATES_HART_LEMMA = store_thm
    ++ CONJ_TAC
    >> (MATCH_MP_TAC SEQ_POWER
        ++ RW_TAC std_ss [abs]
-       >> (Q.PAT_ASSUM `x < y` MP_TAC
+       >> (Q.PAT_X_ASSUM `x < y` MP_TAC
            ++ POP_ASSUM MP_TAC
            ++ REAL_ARITH_TAC)
-       ++ Q.PAT_ASSUM `x < y` MP_TAC
+       ++ Q.PAT_X_ASSUM `x < y` MP_TAC
        ++ POP_ASSUM MP_TAC
        ++ POP_ASSUM MP_TAC
        ++ REAL_ARITH_TAC)
@@ -4665,7 +4665,7 @@ val PROB_TERMINATES_HART_LEMMA = store_thm
        ++ RW_TAC std_ss [PROB_BERN_UNIV]
        ++ Suff `0 <= (1 - e) pow SUC n` >> REAL_ARITH_TAC
        ++ MATCH_MP_TAC POW_POS
-       ++ Q.PAT_ASSUM `e <= 1` MP_TAC
+       ++ Q.PAT_X_ASSUM `e <= 1` MP_TAC
        ++ REAL_ARITH_TAC)
    ++ MATCH_MP_TAC REAL_LE_TRANS
    ++ Q.EXISTS_TAC
@@ -4683,8 +4683,8 @@ val PROB_TERMINATES_HART_LEMMA = store_thm
        ++ SET_EQ_TAC
        ++ RW_TAC std_ss [IN_UNIV, IN_o, o_THM, GSPECIFICATION,
                          PROB_WHILE_CUT_ID, UNIT_DEF])
-   ++ Q.PAT_ASSUM `!a. P a` K_TAC
-   ++ Q.PAT_ASSUM `!a. P a` (MP_TAC o Q.SPEC `a`)
+   ++ Q.PAT_X_ASSUM `!a. P a` K_TAC
+   ++ Q.PAT_X_ASSUM `!a. P a` (MP_TAC o Q.SPEC `a`)
    ++ Q.SPEC_TAC (`prob bern ({x | ~c x} o FST o prob_while_cut c b (N a) a)`,
                   `r`)
    ++ RW_TAC real_ss [pow, REAL_SUB_RDISTRIB, REAL_SUB_LDISTRIB]
@@ -4693,7 +4693,7 @@ val PROB_TERMINATES_HART_LEMMA = store_thm
    ++ MATCH_MP_TAC REAL_LE_RMUL_IMP
    ++ RW_TAC std_ss []
    ++ MATCH_MP_TAC POW_POS
-   ++ Q.PAT_ASSUM `e <= 1` MP_TAC
+   ++ Q.PAT_X_ASSUM `e <= 1` MP_TAC
    ++ REAL_ARITH_TAC);
 
 val PROB_TERMINATES_HART = store_thm
@@ -4925,11 +4925,11 @@ val PROB_TERMINATES_MORGAN = store_thm
        ++ CONV_TAC (DEPTH_CONV NOT_FORALL_CONV)
        ++ REWRITE_TAC []
        ++ STRIP_TAC
-       ++ Q.PAT_ASSUM `!a. P a` (MP_TAC o Q.SPEC `a`)
+       ++ Q.PAT_X_ASSUM `!a. P a` (MP_TAC o Q.SPEC `a`)
        ++ RW_TAC std_ss []
        ++ DISJ2_TAC
        ++ STRIP_TAC
-       ++ Q.PAT_ASSUM `~x` MP_TAC
+       ++ Q.PAT_X_ASSUM `~x` MP_TAC
        ++ RW_TAC std_ss []
        ++ MATCH_MP_TAC REAL_LE_TRANS
        ++ Q.EXISTS_TAC `prob bern {s | f (FST (b a s)) < f a}`
@@ -4972,7 +4972,7 @@ val PROB_TERMINATES_MORGAN = store_thm
    ++ POP_ASSUM K_TAC
    ++ completeInduct_on `f a`
    ++ RW_TAC std_ss []
-   ++ Q.PAT_ASSUM `!m : num. P m`
+   ++ Q.PAT_X_ASSUM `!m : num. P m`
       (MP_TAC o
        CONV_RULE
        (DEPTH_CONV RIGHT_IMP_FORALL_CONV THENC HO_REWR_CONV SWAP_FORALL_THM) o
@@ -4992,7 +4992,7 @@ val PROB_TERMINATES_MORGAN = store_thm
    ++ Cases_on `f a`
    >> (RW_TAC std_ss [pow, PROB_WHILE_CUT_0, BIND_RIGHT_UNIT]
        ++ FULL_SIMP_TAC arith_ss []
-       ++ Q.PAT_ASSUM `!a. P a` (MP_TAC o Q.SPEC `a`)
+       ++ Q.PAT_X_ASSUM `!a. P a` (MP_TAC o Q.SPEC `a`)
        ++ RW_TAC arith_ss [GEMPTY, PROB_BERN_EMPTY]
        ++ Suff `0 < 0` >> REAL_ARITH_TAC
        ++ MATCH_MP_TAC REAL_LTE_TRANS

@@ -641,14 +641,14 @@ val PROB_CANON_MERGE_SORTED_PREFIXFREE_TWINFREE = store_thm
        >> PROVE_TAC [PROB_PREFIXFREE_MONO]
        ++ Cases_on `b` >> RW_TAC std_ss [prob_prefixfree_def]
        ++ POP_ASSUM MP_TAC
-       ++ Q.PAT_ASSUM `prob_prefixfree X` MP_TAC
-       ++ Q.PAT_ASSUM `prob_sorted (SNOC T X::Y)` MP_TAC
+       ++ Q.PAT_X_ASSUM `prob_prefixfree X` MP_TAC
+       ++ Q.PAT_X_ASSUM `prob_sorted (SNOC T X::Y)` MP_TAC
        ++ RW_TAC std_ss [prob_prefixfree_def, prob_sorted_def]
        ++ STRIP_TAC
        ++ MP_TAC (Q.SPECL [`h`, `l'`] PROB_TWINS_PREFIX)
        ++ RW_TAC std_ss []
        ++ STRIP_TAC
-       ++ Q.PAT_ASSUM `prob_order (SNOC F l') h` MP_TAC
+       ++ Q.PAT_X_ASSUM `prob_order (SNOC F l') h` MP_TAC
        ++ RW_TAC std_ss [PROB_ORDER_SNOC])
    ++ RW_TAC std_ss [BUTLAST]);
 
@@ -686,7 +686,7 @@ val PROB_CANON_MERGE_SHORTENS = store_thm
    Induct_on `b` >> RW_TAC std_ss [prob_canon_merge_def, MEM, IS_PREFIX_REFL]
    ++ REVERSE (RW_TAC std_ss [prob_canon_merge_def, prob_twin_def])
    >> PROVE_TAC [IS_PREFIX_REFL]
-   ++ Q.PAT_ASSUM `!l. P l` (MP_TAC o Q.SPECL [`l'`, `x`])
+   ++ Q.PAT_X_ASSUM `!l. P l` (MP_TAC o Q.SPECL [`l'`, `x`])
    ++ POP_ASSUM MP_TAC
    ++ RW_TAC std_ss [BUTLAST, MEM] <<
    [Q.EXISTS_TAC `SNOC F l'`
@@ -840,9 +840,9 @@ val PROB_CANONICAL_NIL_MEM = store_thm
    ++ NTAC 2 STRIP_TAC
    ++ Know `prob_canonical l` >> PROVE_TAC [PROB_CANONICAL_TL]
    ++ STRIP_TAC
-   ++ Q.PAT_ASSUM `prob_canonical (h::l)` MP_TAC
-   ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
-   ++ Q.PAT_ASSUM `MEM X Y` MP_TAC
+   ++ Q.PAT_X_ASSUM `prob_canonical (h::l)` MP_TAC
+   ++ Q.PAT_X_ASSUM `X ==> Y` MP_TAC
+   ++ Q.PAT_X_ASSUM `MEM X Y` MP_TAC
    ++ Cases_on `l` >> RW_TAC std_ss [MEM]
    ++ RW_TAC std_ss [MEM, PROB_CANONICAL_DEF_ALT, prob_sorted_def,
                      prob_prefixfree_def, PROB_ORDER_NIL, IS_PREFIX_NIL] <<
@@ -909,7 +909,7 @@ val PROB_CANONICAL_CASES_THM = store_thm
      ++ Q.EXISTS_TAC `[t]`
      ++ RW_TAC list_ss [PROB_CANONICAL_BASIC]],
     Suff `F` >> PROVE_TAC []
-    ++ Q.PAT_ASSUM `prob_canonical (X::Y)` MP_TAC
+    ++ Q.PAT_X_ASSUM `prob_canonical (X::Y)` MP_TAC
     ++ MP_TAC (Q.SPEC `(h'::t)::l` PROB_CANONICAL_NIL_MEM)
     ++ RW_TAC std_ss [MEM],
     DISJ2_TAC
@@ -918,7 +918,7 @@ val PROB_CANONICAL_CASES_THM = store_thm
     [Q.EXISTS_TAC `t::l1`
      ++ Q.EXISTS_TAC `l2`
      ++ RW_TAC list_ss []
-     ++ Q.PAT_ASSUM `prob_canonical (X::APPEND Y Z)` MP_TAC
+     ++ Q.PAT_X_ASSUM `prob_canonical (X::APPEND Y Z)` MP_TAC
      ++ KILL_TAC
      ++ MP_TAC (Q.SPECL [`t::l1`, `l2`] PROB_CANONICAL_STEP1)
      ++ RW_TAC list_ss [MAP],
@@ -926,7 +926,7 @@ val PROB_CANONICAL_CASES_THM = store_thm
      ++ Q.EXISTS_TAC `t::l2`
      ++ Cases_on `l1` <<
      [RW_TAC list_ss []
-      ++ Q.PAT_ASSUM `prob_canonical (X::APPEND Y Z)` MP_TAC
+      ++ Q.PAT_X_ASSUM `prob_canonical (X::APPEND Y Z)` MP_TAC
       ++ KILL_TAC
       ++ MP_TAC (Q.SPECL [`[]`, `t::l2`] PROB_CANONICAL_STEP1)
       ++ RW_TAC list_ss [MAP],
@@ -1017,18 +1017,18 @@ val PROB_SORTED_PREFIXFREE_EQUALITY = store_thm
     [Know `MEM h' (h::l)` >> PROVE_TAC [MEM]
      ++ REWRITE_TAC [MEM]
      ++ RW_TAC std_ss [] >> PROVE_TAC [PROB_ORDER_REFL]
-     ++ Q.PAT_ASSUM `prob_sorted (h::l)` MP_TAC
+     ++ Q.PAT_X_ASSUM `prob_sorted (h::l)` MP_TAC
      ++ RW_TAC std_ss [PROB_SORTED_DEF_ALT],
      Know `MEM h (h'::t)` >> PROVE_TAC [MEM]
      ++ REWRITE_TAC [MEM]
      ++ RW_TAC std_ss [] >> PROVE_TAC [PROB_ORDER_REFL]
-     ++ Q.PAT_ASSUM `prob_sorted (h'::t)` MP_TAC
+     ++ Q.PAT_X_ASSUM `prob_sorted (h'::t)` MP_TAC
      ++ RW_TAC std_ss [PROB_SORTED_DEF_ALT]],
     RW_TAC std_ss []
-    ++ Q.PAT_ASSUM `!l'. P l' ==> Q l'` MATCH_MP_TAC
+    ++ Q.PAT_X_ASSUM `!l'. P l' ==> Q l'` MATCH_MP_TAC
     ++ REVERSE CONJ_TAC >> PROVE_TAC [PROB_SORTED_TL, PROB_PREFIXFREE_TL]
     ++ RW_TAC std_ss []
-    ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
+    ++ Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
     ++ REWRITE_TAC [MEM]
     ++ REVERSE (Cases_on `x = h`) >> RW_TAC std_ss []
     ++ RW_TAC std_ss []

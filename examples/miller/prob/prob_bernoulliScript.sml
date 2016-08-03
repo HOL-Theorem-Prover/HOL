@@ -229,8 +229,8 @@ val PROB_BERNOULLI = store_thm
    ++ Q.SPEC_TAC (`p`, `p`)
    ++ Induct_on `n`
    >> (RW_TAC bool_ss [pow, abs]
-       ++ Q.PAT_ASSUM `!p. P p` (MP_TAC o Q.SPEC `p`)
-       ++ Q.PAT_ASSUM `!p. P p` (MP_TAC o Q.SPEC `p`)
+       ++ Q.PAT_X_ASSUM `!p. P p` (MP_TAC o Q.SPEC `p`)
+       ++ Q.PAT_X_ASSUM `!p. P p` (MP_TAC o Q.SPEC `p`)
        ++ REPEAT (POP_ASSUM MP_TAC)
        ++ REAL_ARITH_TAC)
    ++ GEN_TAC
@@ -266,8 +266,8 @@ val PROB_BERNOULLI = store_thm
         ++ RW_TAC std_ss [NOT_IN_EMPTY, IN_o, o_THM, IN_I, UNIT_DEF])
     ++ Rewr
     ++ RW_TAC bool_ss [PROB_BERN_EMPTY, REAL_ADD_LID]
-    ++ Q.PAT_ASSUM `!p. P p` MATCH_MP_TAC
-    ++ CONJ_TAC >> (Q.PAT_ASSUM `0 <= p` MP_TAC ++ REAL_ARITH_TAC)
+    ++ Q.PAT_X_ASSUM `!p. P p` MATCH_MP_TAC
+    ++ CONJ_TAC >> (Q.PAT_X_ASSUM `0 <= p` MP_TAC ++ REAL_ARITH_TAC)
     ++ Suff `2 * p <= 2 * (1 / 2)` >> RW_TAC std_ss [HALF_CANCEL]
     ++ RW_TAC arith_ss [REAL_LE_LMUL, REAL_LT],
     Know `(I o FST o UNIT T) = (UNIV:(num->bool)->bool)`
@@ -277,11 +277,11 @@ val PROB_BERNOULLI = store_thm
     ++ RW_TAC bool_ss [PROB_BERN_UNIV]
     ++ Know `!x y : real. (x + 1) - y = x - (y - 1)` >> REAL_ARITH_TAC
     ++ Rewr'
-    ++ Q.PAT_ASSUM `!p. P p` MATCH_MP_TAC
-    ++ REVERSE CONJ_TAC >> (Q.PAT_ASSUM `p <= 1` MP_TAC ++ REAL_ARITH_TAC)
+    ++ Q.PAT_X_ASSUM `!p. P p` MATCH_MP_TAC
+    ++ REVERSE CONJ_TAC >> (Q.PAT_X_ASSUM `p <= 1` MP_TAC ++ REAL_ARITH_TAC)
     ++ Suff `~(2 * p <= 1)` >> REAL_ARITH_TAC
     ++ STRIP_TAC
-    ++ Q.PAT_ASSUM `~x` MP_TAC
+    ++ Q.PAT_X_ASSUM `~x` MP_TAC
     ++ RW_TAC std_ss []
     ++ Know `2 * p <= 2 * (1 / 2)` >> RW_TAC std_ss [HALF_CANCEL]
     ++ RW_TAC arith_ss [REAL_LE_LMUL, REAL_LT]]);

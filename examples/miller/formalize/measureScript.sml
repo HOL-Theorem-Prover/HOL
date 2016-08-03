@@ -264,7 +264,7 @@ val LAMBDA_SYSTEM_INTER = store_thm
        >> (RW_TAC std_ss [EXTENSION, IN_INTER, IN_COMPL]
            ++ PROVE_TAC [])
        ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
-       ++ Q.PAT_ASSUM `!g. P g` MATCH_MP_TAC
+       ++ Q.PAT_X_ASSUM `!g. P g` MATCH_MP_TAC
        ++ PROVE_TAC [ALGEBRA_ALT_INTER])
    ++ Know `lam (l2 INTER g) + lam (COMPL l2 INTER g) = lam g`
    >> PROVE_TAC []
@@ -276,8 +276,8 @@ val LAMBDA_SYSTEM_INTER = store_thm
            ++ PROVE_TAC [])
        ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
        ++ REWRITE_TAC [INTER_ASSOC]
-       ++ Q.PAT_ASSUM `!g. P g` K_TAC
-       ++ Q.PAT_ASSUM `!g. P g` MATCH_MP_TAC
+       ++ Q.PAT_X_ASSUM `!g. P g` K_TAC
+       ++ Q.PAT_X_ASSUM `!g. P g` MATCH_MP_TAC
        ++ PROVE_TAC [ALGEBRA_ALT_INTER])
    ++ Q.SPEC_TAC (`l1 INTER l2`, `l`)
    ++ GEN_TAC
@@ -309,7 +309,7 @@ val LAMBDA_SYSTEM_STRONG_ADDITIVE = store_thm
        ++ PROVE_TAC [])
    ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
    ++ Know `l2 INTER g = COMPL l1 INTER ((l1 UNION l2) INTER g)`
-   >> (Q.PAT_ASSUM `DISJOINT x y` MP_TAC
+   >> (Q.PAT_X_ASSUM `DISJOINT x y` MP_TAC
        ++ RW_TAC std_ss [EXTENSION, IN_INTER, IN_UNION, IN_COMPL, DISJOINT_DEF,
                          NOT_IN_EMPTY]
        ++ PROVE_TAC [])
@@ -320,7 +320,7 @@ val LAMBDA_SYSTEM_STRONG_ADDITIVE = store_thm
        ++ !! (POP_ASSUM MP_TAC)
        ++ RW_TAC std_ss [lambda_system_def, GSPECIFICATION])
    ++ STRIP_TAC
-   ++ Q.PAT_ASSUM `l1 IN x` MP_TAC
+   ++ Q.PAT_X_ASSUM `l1 IN x` MP_TAC
    ++ RW_TAC std_ss [lambda_system_def, GSPECIFICATION]);
 
 val LAMBDA_SYSTEM_ADDITIVE = store_thm
@@ -339,7 +339,7 @@ val COUNTABLY_SUBADDITIVE_SUBADDITIVE = store_thm
        algebra (measurable_sets m) /\ positive m /\ countably_subadditive m ==>
        subadditive m``,
    RW_TAC std_ss [countably_subadditive_def, subadditive_def]
-   ++ Q.PAT_ASSUM `!f. P f`
+   ++ Q.PAT_X_ASSUM `!f. P f`
       (MP_TAC o Q.SPEC `\n : num. if n = 0 then s else if n = 1 then t else {}`)
    ++ Know
       `BIGUNION
@@ -380,7 +380,7 @@ val COUNTABLY_SUBADDITIVE_SUBADDITIVE = store_thm
    ++ DISCH_THEN (REWRITE_TAC o CONJUNCTS)
    ++ DISCH_THEN MATCH_MP_TAC
    ++ CONJ_TAC
-   >> (Q.PAT_ASSUM `algebra a` MP_TAC
+   >> (Q.PAT_X_ASSUM `algebra a` MP_TAC
        ++ BasicProvers.NORM_TAC std_ss [IN_FUNSET, IN_UNIV, algebra_def])
    ++ PROVE_TAC [algebra_def]);
 
@@ -394,7 +394,7 @@ val SIGMA_ALGEBRA_ALT = store_thm
    RW_TAC std_ss [sigma_algebra_def]
    ++ EQ_TAC
    >> (RW_TAC std_ss [countable_def, IN_FUNSET, IN_UNIV]
-       ++ Q.PAT_ASSUM `!c. P c ==> Q c` MATCH_MP_TAC
+       ++ Q.PAT_X_ASSUM `!c. P c ==> Q c` MATCH_MP_TAC
        ++ Reverse (RW_TAC std_ss [IN_IMAGE, SUBSET_DEF, IN_UNIV])
        >> PROVE_TAC []
        ++ Q.EXISTS_TAC `f`
@@ -402,19 +402,19 @@ val SIGMA_ALGEBRA_ALT = store_thm
        ++ PROVE_TAC [])
    ++ RW_TAC std_ss [COUNTABLE_ALT]
    >> PROVE_TAC [ALGEBRA_FINITE_UNION]
-   ++ Q.PAT_ASSUM `!f. P f` (MP_TAC o Q.SPEC `\n. enumerate c n`)
+   ++ Q.PAT_X_ASSUM `!f. P f` (MP_TAC o Q.SPEC `\n. enumerate c n`)
    ++ RW_TAC std_ss' [IN_UNIV, IN_FUNSET]
    ++ Know `BIGUNION c = BIGUNION (IMAGE (enumerate c) UNIV)`
    >> (RW_TAC std_ss [EXTENSION, IN_BIGUNION, IN_IMAGE, IN_UNIV]
        ++ Suff `!s. s IN c = ?n. (enumerate c n = s)` >> PROVE_TAC []
-       ++ Q.PAT_ASSUM `BIJ x y z` MP_TAC
+       ++ Q.PAT_X_ASSUM `BIJ x y z` MP_TAC
        ++ RW_TAC std_ss [BIJ_DEF, SURJ_DEF, IN_UNIV]
        ++ PROVE_TAC [])
    ++ DISCH_THEN (REWRITE_TAC o wrap)
    ++ POP_ASSUM MATCH_MP_TAC
    ++ Strip
    ++ Suff `enumerate c n IN c` >> PROVE_TAC [SUBSET_DEF]
-   ++ Q.PAT_ASSUM `BIJ i j k` MP_TAC
+   ++ Q.PAT_X_ASSUM `BIJ i j k` MP_TAC
    ++ RW_TAC std_ss [BIJ_DEF, SURJ_DEF, IN_UNIV]);
 
 val SIGMA_ALGEBRA_ALT_MONO = store_thm
@@ -428,7 +428,7 @@ val SIGMA_ALGEBRA_ALT_MONO = store_thm
    RW_TAC std_ss [SIGMA_ALGEBRA_ALT]
    ++ EQ_TAC >> PROVE_TAC []
    ++ RW_TAC std_ss []
-   ++ Q.PAT_ASSUM `!f. P f`
+   ++ Q.PAT_X_ASSUM `!f. P f`
       (MP_TAC o Q.SPEC `\n. BIGUNION (IMAGE f (count n))`)
    ++ RW_TAC std_ss [IN_UNIV, IN_FUNSET]
    ++ Know
@@ -473,7 +473,7 @@ val SIGMA_ALGEBRA_ALT_DISJOINT = store_thm
    Strip
    ++ EQ_TAC >> RW_TAC std_ss [SIGMA_ALGEBRA_ALT]
    ++ RW_TAC std_ss [SIGMA_ALGEBRA_ALT_MONO, IN_FUNSET, IN_UNIV]
-   ++ Q.PAT_ASSUM `!f. P f ==> Q f` (MP_TAC o Q.SPEC `\n. f (SUC n) DIFF f n`)
+   ++ Q.PAT_X_ASSUM `!f. P f ==> Q f` (MP_TAC o Q.SPEC `\n. f (SUC n) DIFF f n`)
    ++ RW_TAC std_ss []
    ++ Know
       `BIGUNION (IMAGE f UNIV) = BIGUNION (IMAGE (\n. f (SUC n) DIFF f n) UNIV)`
@@ -575,10 +575,10 @@ val INCREASING_ADDITIVE_SUMMABLE = store_thm
    ++ MP_TAC (Q.SPECL [`m`, `f`, `n`] ADDITIVE_SUM)
    ++ ASM_REWRITE_TAC []
    ++ DISCH_THEN (REWRITE_TAC o wrap)
-   ++ Q.PAT_ASSUM `!(s : 'a -> bool). P s` MATCH_MP_TAC
+   ++ Q.PAT_X_ASSUM `!(s : 'a -> bool). P s` MATCH_MP_TAC
    ++ RW_TAC std_ss [ALGEBRA_UNIV, SUBSET_DEF, IN_UNIV]
    ++ MATCH_MP_TAC ALGEBRA_FINITE_UNION
-   ++ Q.PAT_ASSUM `f IN x` MP_TAC
+   ++ Q.PAT_X_ASSUM `f IN x` MP_TAC
    ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, SUBSET_DEF, IN_IMAGE]
    ++ PROVE_TAC [IMAGE_FINITE, FINITE_COUNT]);
 
@@ -655,12 +655,12 @@ val LAMBDA_SYSTEM_CARATHEODORY = store_thm
        ++ RW_TAC std_ss [])
    ++ STRIP_TAC
    ++ Know `BIGUNION (IMAGE f UNIV) IN gsig`
-   >> (Q.PAT_ASSUM `sigma_algebra gsig` MP_TAC
-       ++ Q.PAT_ASSUM `f IN s` MP_TAC
+   >> (Q.PAT_X_ASSUM `sigma_algebra gsig` MP_TAC
+       ++ Q.PAT_X_ASSUM `f IN s` MP_TAC
        ++ RW_TAC std_ss [SIGMA_ALGEBRA_ALT, IN_FUNSET, IN_UNIV]
        ++ POP_ASSUM MATCH_MP_TAC
        ++ RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `!x. P x` MP_TAC
+       ++ Q.PAT_X_ASSUM `!x. P x` MP_TAC
        ++ RW_TAC std_ss [lambda_system_def, GSPECIFICATION])
    ++ STRIP_TAC
    ++ Suff
@@ -687,11 +687,11 @@ val LAMBDA_SYSTEM_CARATHEODORY = store_thm
        ++ RW_TAC std_ss []
        ++ Q.EXISTS_TAC `0`
        ++ RW_TAC arith_ss [o_DEF]
-       ++ Q.PAT_ASSUM `outer_measure_space (gsig, lam)` MP_TAC
+       ++ Q.PAT_X_ASSUM `outer_measure_space (gsig, lam)` MP_TAC
        ++ RW_TAC std_ss [outer_measure_space_def, increasing_def, positive_def,
                          measure_def, measurable_sets_def]
        ++ Know `f n IN gsig`
-       >> (Q.PAT_ASSUM `f IN x` MP_TAC
+       >> (Q.PAT_X_ASSUM `f IN x` MP_TAC
            ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, lambda_system_def,
                              GSPECIFICATION])
        ++ STRIP_TAC
@@ -700,7 +700,7 @@ val LAMBDA_SYSTEM_CARATHEODORY = store_thm
        ++ STRIP_TAC
        ++ Know `0 <= lam (f n INTER g)` >> PROVE_TAC []
        ++ RW_TAC std_ss [abs]
-       ++ Q.PAT_ASSUM `!s. P s` MATCH_MP_TAC
+       ++ Q.PAT_X_ASSUM `!s. P s` MATCH_MP_TAC
        ++ RW_TAC std_ss [SUBSET_DEF, IN_INTER])
    ++ STRIP_TAC
    ++ Suff
@@ -722,7 +722,7 @@ val LAMBDA_SYSTEM_CARATHEODORY = store_thm
     ++ RW_TAC std_ss [EXTENSION, DISJOINT_DEF, IN_INTER, NOT_IN_EMPTY, IN_COMPL,
                       IN_UNION]
     ++ PROVE_TAC [],
-    Q.PAT_ASSUM `f IN (x -> y)` MP_TAC
+    Q.PAT_X_ASSUM `f IN (x -> y)` MP_TAC
     ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV]
     ++ Know `lam = measure (gsig, lam)` >> RW_TAC std_ss [measure_def]
     ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
@@ -762,14 +762,14 @@ val LAMBDA_SYSTEM_CARATHEODORY = store_thm
     >> (Suff `BIGUNION (IMAGE f (count n)) IN lambda_system gsig lam`
         >> RW_TAC std_ss [lambda_system_def, GSPECIFICATION]
         ++ MATCH_MP_TAC ALGEBRA_FINITE_UNION
-        ++ Q.PAT_ASSUM `f IN (x -> y)` MP_TAC
+        ++ Q.PAT_X_ASSUM `f IN (x -> y)` MP_TAC
         ++ RW_TAC std_ss [SUBSET_DEF, IN_FUNSET, IN_UNIV, IN_IMAGE]
         ++ PROVE_TAC [LAMBDA_SYSTEM_ALGEBRA, SIGMA_ALGEBRA_ALGEBRA,
                       OUTER_MEASURE_SPACE_POSITIVE, IMAGE_FINITE, FINITE_COUNT])
-    ++ Q.PAT_ASSUM `outer_measure_space (gsig, lam)` MP_TAC
+    ++ Q.PAT_X_ASSUM `outer_measure_space (gsig, lam)` MP_TAC
     ++ RW_TAC std_ss [outer_measure_space_def, increasing_def, measure_def,
                       measurable_sets_def]
-    ++ Q.PAT_ASSUM `!s. P s` MATCH_MP_TAC
+    ++ Q.PAT_X_ASSUM `!s. P s` MATCH_MP_TAC
     ++ CONJ_TAC
     >> PROVE_TAC [SIGMA_ALGEBRA_ALGEBRA, ALGEBRA_COMPL, ALGEBRA_INTER]
     ++ CONJ_TAC
@@ -780,7 +780,7 @@ val LAMBDA_SYSTEM_CARATHEODORY = store_thm
         ++ MATCH_MP_TAC ALGEBRA_COMPL
         ++ RW_TAC std_ss []
         ++ MATCH_MP_TAC ALGEBRA_FINITE_UNION
-        ++ Q.PAT_ASSUM `f IN x` MP_TAC
+        ++ Q.PAT_X_ASSUM `f IN x` MP_TAC
         ++ RW_TAC std_ss [SUBSET_DEF, IN_FUNSET, IN_UNIV, lambda_system_def,
                           GSPECIFICATION, IN_IMAGE]
         ++ PROVE_TAC [IMAGE_FINITE, FINITE_COUNT])
@@ -869,7 +869,7 @@ val ADDITIVE_INCREASING = store_thm
    ++ Suff
       `?u. u IN measurable_sets m /\ (measure m t = measure m s + measure m u)`
    >> (RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `!s. P s` (MP_TAC o Q.SPEC `u`)
+       ++ Q.PAT_X_ASSUM `!s. P s` (MP_TAC o Q.SPEC `u`)
        ++ RW_TAC std_ss []
        ++ NTAC 2 (POP_ASSUM MP_TAC)
        ++ REAL_ARITH_TAC)
@@ -887,7 +887,7 @@ val COUNTABLY_ADDITIVE_ADDITIVE = store_thm
        algebra (measurable_sets m) /\ positive m /\ countably_additive m ==>
        additive m``,
    RW_TAC std_ss [additive_def, positive_def, countably_additive_def]
-   ++ Q.PAT_ASSUM `!f. P f`
+   ++ Q.PAT_X_ASSUM `!f. P f`
       (MP_TAC o Q.SPEC `\n : num. if n = 0 then s else if n = 1 then t else {}`)
    ++ Know
       `BIGUNION
@@ -968,7 +968,7 @@ val INF_MEASURE_AGREES = store_thm
    >> (RW_TAC std_ss [EXTENSION, IN_BIGUNION, IN_IMAGE, IN_INTER, o_THM]
        ++ EQ_TAC >> PROVE_TAC []
        ++ RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
+       ++ Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
        ++ RW_TAC std_ss [IN_UNIV]
        ++ Q.EXISTS_TAC `s INTER f x'`
        ++ RW_TAC std_ss [IN_INTER]
@@ -989,7 +989,7 @@ val INF_MEASURE_AGREES = store_thm
    ++ POP_ASSUM MATCH_MP_TAC
    ++ CONJ_TAC >> PROVE_TAC [ALGEBRA_INTER]
    ++ RW_TAC std_ss []
-   ++ Q.PAT_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`m'`, `n`])
+   ++ Q.PAT_X_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`m'`, `n`])
    ++ RW_TAC std_ss [DISJOINT_DEF, IN_INTER, NOT_IN_EMPTY, EXTENSION]
    ++ PROVE_TAC []);
 
@@ -1010,7 +1010,7 @@ val SIGMA_ALGEBRA_SIGMA = store_thm
                   GSPECIFICATION]
    ++ POP_ASSUM (fn th => MATCH_MP_TAC th ++ ASSUME_TAC th)
    ++ RW_TAC std_ss [SUBSET_DEF]
-   ++ Q.PAT_ASSUM `c SUBSET X` MP_TAC
+   ++ Q.PAT_X_ASSUM `c SUBSET X` MP_TAC
    ++ REWRITE_TAC [SUBSET_DEF, IN_BIGINTER, GSPECIFICATION]
    ++ BETA_TAC
    ++ DISCH_THEN (MP_TAC o Q.SPEC `x`)
@@ -1124,9 +1124,9 @@ val INF_MEASURE_LE = store_thm
                      IN_BIGUNION, IN_IMAGE, IN_COUNT]
     ++ Know `m' < n \/ n < m'` >> DECIDE_TAC
     ++ PROVE_TAC [],
-    Q.PAT_ASSUM `s SUBSET g` MP_TAC
+    Q.PAT_X_ASSUM `s SUBSET g` MP_TAC
     ++ RW_TAC arith_ss [SUBSET_DEF, IN_BIGUNION, IN_IMAGE, IN_UNIV]
-    ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
+    ++ Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
     ++ RW_TAC std_ss []
     ++ Know `?n. x IN f n` >> PROVE_TAC []
     ++ DISCH_THEN (MP_TAC o Ho_Rewrite.REWRITE_RULE [MINIMAL_EXISTS])
@@ -1199,7 +1199,7 @@ val INF_MEASURE_COUNTABLY_SUBADDITIVE = store_thm
    >> (RW_TAC std_ss []
        ++ POP_ASSUM (MP_TAC o Q.SPEC `n`)
        ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, SUMS_EQ]
-       ++ Q.PAT_ASSUM `a = b` (REWRITE_TAC o wrap o GSYM)
+       ++ Q.PAT_X_ASSUM `a = b` (REWRITE_TAC o wrap o GSYM)
        ++ MATCH_MP_TAC SUMINF_POS
        ++ RW_TAC std_ss [o_THM]
        ++ PROVE_TAC [positive_def])
@@ -1219,7 +1219,7 @@ val INF_MEASURE_COUNTABLY_SUBADDITIVE = store_thm
             suminf (\n. e * (1 / 2) pow (n + 1)) =
             suminf (\n. inf_measure m (f n) + e * (1 / 2) pow (n + 1)))`
        >> (HO_MATCH_MP_TAC SUMINF_ADD
-           ++ Q.PAT_ASSUM `summable (a o b)` MP_TAC
+           ++ Q.PAT_X_ASSUM `summable (a o b)` MP_TAC
            ++ RW_TAC std_ss [o_DEF, measure_def])
        ++ STRIP_TAC
        ++ POP_ASSUM (ONCE_REWRITE_TAC o wrap)
@@ -1231,19 +1231,19 @@ val INF_MEASURE_COUNTABLY_SUBADDITIVE = store_thm
    ++ MP_TAC NUM_2D_BIJ_INV
    ++ STRIP_TAC
    ++ Q.EXISTS_TAC `UNCURRY g o f'`
-   ++ Q.PAT_ASSUM `!n. P n /\ Q n` MP_TAC
+   ++ Q.PAT_X_ASSUM `!n. P n /\ Q n` MP_TAC
    ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, o_THM, SUBSET_DEF, IN_BIGUNION,
                      IN_IMAGE] <<
    [Cases_on `f' x`
     ++ RW_TAC std_ss [UNCURRY_DEF],
-    Q.PAT_ASSUM `!n. P n` (MP_TAC o Q.SPEC `x'`)
+    Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `x'`)
     ++ RW_TAC std_ss []
-    ++ Q.PAT_ASSUM `!n. P n` K_TAC
-    ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
+    ++ Q.PAT_X_ASSUM `!n. P n` K_TAC
+    ++ Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
     ++ RW_TAC std_ss []
     ++ Q.EXISTS_TAC `g x' x''`
     ++ RW_TAC std_ss []
-    ++ Q.PAT_ASSUM `BIJ a b c` MP_TAC
+    ++ Q.PAT_X_ASSUM `BIJ a b c` MP_TAC
     ++ RW_TAC std_ss [BIJ_DEF, SURJ_DEF, IN_UNIV, IN_CROSS]
     ++ POP_ASSUM (MP_TAC o Q.SPEC `(x', x'')`)
     ++ RW_TAC std_ss []
@@ -1322,13 +1322,13 @@ val ALGEBRA_SUBSET_LAMBDA_SYSTEM = store_thm
        ++ RW_TAC std_ss [REAL_LE_REFL, GSPECIFICATION]
        ++ Q.EXISTS_TAC `(\s. x' INTER s) o f`
        ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, ALGEBRA_INTER, o_THM, SUMS_EQ]
-       >> (Q.PAT_ASSUM `!n. P n` (MP_TAC o Q.SPECL [`m'`, `n`])
+       >> (Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPECL [`m'`, `n`])
            ++ RW_TAC std_ss [DISJOINT_DEF, EXTENSION, IN_INTER, NOT_IN_EMPTY]
            ++ PROVE_TAC [])
-       ++ Q.PAT_ASSUM `g SUBSET ss` MP_TAC
+       ++ Q.PAT_X_ASSUM `g SUBSET ss` MP_TAC
        ++ RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_INTER, IN_IMAGE,
                          IN_UNIV, o_THM]
-       ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x''`)
+       ++ Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x''`)
        ++ RW_TAC std_ss []
        ++ PROVE_TAC [IN_INTER])
    ++ DISCH_THEN
@@ -1339,8 +1339,8 @@ val ALGEBRA_SUBSET_LAMBDA_SYSTEM = store_thm
       `suminf (measure m o (\s. x INTER s) o f) +
        suminf (measure m o (\s. (COMPL x) INTER s) o f)`
    ++ CONJ_TAC
-   >> (Q.PAT_ASSUM `(a:real) <= b` MP_TAC
-       ++ Q.PAT_ASSUM `(a:real) <= b` MP_TAC
+   >> (Q.PAT_X_ASSUM `(a:real) <= b` MP_TAC
+       ++ Q.PAT_X_ASSUM `(a:real) <= b` MP_TAC
        ++ REAL_ARITH_TAC)
    ++ RW_TAC std_ss [SUMINF_ADD, o_THM]
    ++ Know `!a b : real. (a = b) ==> a <= b` >> REAL_ARITH_TAC
@@ -1403,7 +1403,7 @@ val SIGMA_ALGEBRA = store_thm
    RW_TAC std_ss [sigma_algebra_def, algebra_def]
    ++ EQ_TAC >> PROVE_TAC []
    ++ RW_TAC std_ss []
-   ++ Q.PAT_ASSUM `!c. P c` (MP_TAC o Q.SPEC `{s; t}`)
+   ++ Q.PAT_X_ASSUM `!c. P c` (MP_TAC o Q.SPEC `{s; t}`)
    ++ RW_TAC std_ss [COUNTABLE_ALT, FINITE_INSERT, FINITE_EMPTY, SUBSET_DEF,
                      BIGUNION_PAIR, IN_INSERT, NOT_IN_EMPTY]
    ++ PROVE_TAC []);
@@ -1439,7 +1439,7 @@ val MEASURABLE_SIGMA = store_thm
                      PREIMAGE_BIGUNION] <<
    [PROVE_TAC [SIGMA_ALGEBRA_ALGEBRA, ALGEBRA_EMPTY],
     PROVE_TAC [SIGMA_ALGEBRA_ALGEBRA, ALGEBRA_COMPL],
-    Q.PAT_ASSUM `sigma_algebra a` MP_TAC
+    Q.PAT_X_ASSUM `sigma_algebra a` MP_TAC
     ++ RW_TAC std_ss [sigma_algebra_def]
     ++ POP_ASSUM MATCH_MP_TAC
     ++ RW_TAC std_ss [SUBSET_DEF, IN_IMAGE]
@@ -1478,7 +1478,7 @@ val MEASURE_COMPL = store_thm
    ++ Suff `measure m UNIV = measure m s + measure m (COMPL s)`
    >> REAL_ARITH_TAC
    ++ MATCH_MP_TAC ADDITIVE
-   ++ Q.PAT_ASSUM `measure_space m` MP_TAC
+   ++ Q.PAT_X_ASSUM `measure_space m` MP_TAC
    ++ RW_TAC std_ss [measure_space_def, sigma_algebra_def, DISJOINT_DEF,
                      EXTENSION, IN_COMPL, IN_UNIV, IN_UNION, IN_INTER,
                      NOT_IN_EMPTY]
@@ -1526,12 +1526,12 @@ val SIGMA_ALGEBRA_FN = store_thm
    RW_TAC std_ss [SIGMA_ALGEBRA, IN_FUNSET, IN_UNIV, SUBSET_DEF]
    ++ EQ_TAC
    >> (RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `!c. P c ==> Q c` MATCH_MP_TAC
+       ++ Q.PAT_X_ASSUM `!c. P c ==> Q c` MATCH_MP_TAC
        ++ RW_TAC std_ss [COUNTABLE_IMAGE_NUM, IN_IMAGE]
        ++ PROVE_TAC [])
    ++ RW_TAC std_ss [COUNTABLE_ENUM]
    >> RW_TAC std_ss [BIGUNION_EMPTY]
-   ++ Q.PAT_ASSUM `!f. (!x. P x f) ==> Q f` MATCH_MP_TAC
+   ++ Q.PAT_X_ASSUM `!f. (!x. P x f) ==> Q f` MATCH_MP_TAC
    ++ POP_ASSUM MP_TAC
    ++ RW_TAC std_ss [IN_IMAGE, IN_UNIV]
    ++ PROVE_TAC []);
@@ -1604,7 +1604,7 @@ val CLOSED_CDI_DUNION = store_thm
        {} IN p /\ closed_cdi p /\ s IN p /\ t IN p /\ DISJOINT s t ==>
        s UNION t IN p``,
    RW_TAC std_ss [closed_cdi_def]
-   ++ Q.PAT_ASSUM `!f. P f`
+   ++ Q.PAT_X_ASSUM `!f. P f`
       (MP_TAC o Q.SPEC `\n. if n = 0 then s else if n = 1 then t else {}`)
    ++ Know
       `BIGUNION
@@ -1656,7 +1656,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA1 = store_thm
       `t IN
        {b | b IN smallest_closed_cdi a /\ s INTER b IN smallest_closed_cdi a}`
    >> RW_TAC std_ss [GSPECIFICATION, IN_BIGINTER, smallest_closed_cdi_def]
-   ++ Q.PAT_ASSUM `!s. P s` MATCH_MP_TAC
+   ++ Q.PAT_X_ASSUM `!s. P s` MATCH_MP_TAC
    ++ STRONG_CONJ_TAC
    >> (RW_TAC std_ss [SUBSET_DEF, GSPECIFICATION, IN_BIGINTER,
                       smallest_closed_cdi_def]
@@ -1680,7 +1680,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA1 = store_thm
     ++ CONJ_TAC >> PROVE_TAC [SMALLEST_CLOSED_CDI, SUBSET_DEF]
     ++ PSET_TAC [EXTENSION]
     ++ PROVE_TAC [],
-    Q.PAT_ASSUM `f IN x` MP_TAC
+    Q.PAT_X_ASSUM `f IN x` MP_TAC
     ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, GSPECIFICATION]
     ++ MATCH_MP_TAC CLOSED_CDI_INCREASING
     ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, SUBSET_DEF],
@@ -1705,14 +1705,14 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA1 = store_thm
          ++ PROVE_TAC []])
     ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
     ++ MATCH_MP_TAC CLOSED_CDI_INCREASING
-    ++ Q.PAT_ASSUM `f IN X` MP_TAC
+    ++ Q.PAT_X_ASSUM `f IN X` MP_TAC
     ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, IN_UNIV, GSPECIFICATION]
     >> (Reverse (Cases_on `x`) >> RW_TAC arith_ss []
         ++ RW_TAC arith_ss []
         ++ PROVE_TAC [SMALLEST_CLOSED_CDI, ALGEBRA_EMPTY, SUBSET_DEF])
     ++ Cases_on `n` >> RW_TAC arith_ss [num_case_def, EMPTY_SUBSET]
     ++ RW_TAC arith_ss [num_case_def, SUBSET_DEF, IN_INTER],
-    Q.PAT_ASSUM `f IN x` MP_TAC
+    Q.PAT_X_ASSUM `f IN x` MP_TAC
     ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, GSPECIFICATION]
     ++ MATCH_MP_TAC CLOSED_CDI_DISJOINT
     ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, SUBSET_DEF],
@@ -1735,9 +1735,9 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA1 = store_thm
          ++ PROVE_TAC []])
     ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
     ++ MATCH_MP_TAC CLOSED_CDI_DISJOINT
-    ++ Q.PAT_ASSUM `f IN X` MP_TAC
+    ++ Q.PAT_X_ASSUM `f IN X` MP_TAC
     ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, IN_UNIV, GSPECIFICATION]
-    ++ Q.PAT_ASSUM `!m n. PP m n` (MP_TAC o Q.SPECL [`m`, `n`])
+    ++ Q.PAT_X_ASSUM `!m n. PP m n` (MP_TAC o Q.SPECL [`m`, `n`])
     ++ PSET_TAC [DISJOINT_DEF, EXTENSION]
     ++ PROVE_TAC []]);
 
@@ -1757,7 +1757,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
       `t IN
        {b | b IN smallest_closed_cdi a /\ s INTER b IN smallest_closed_cdi a}`
    >> RW_TAC std_ss [GSPECIFICATION, IN_BIGINTER, smallest_closed_cdi_def]
-   ++ Q.PAT_ASSUM `!s. P s` MATCH_MP_TAC
+   ++ Q.PAT_X_ASSUM `!s. P s` MATCH_MP_TAC
    ++ STRONG_CONJ_TAC
    >> (RW_TAC std_ss [SUBSET_DEF, GSPECIFICATION] <<
        [PROVE_TAC [SMALLEST_CLOSED_CDI, SUBSET_DEF],
@@ -1780,7 +1780,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
     ++ CONJ_TAC >> PROVE_TAC [SMALLEST_CLOSED_CDI, SUBSET_DEF]
     ++ PSET_TAC [EXTENSION]
     ++ PROVE_TAC [],
-    Q.PAT_ASSUM `f IN x` MP_TAC
+    Q.PAT_X_ASSUM `f IN x` MP_TAC
     ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, GSPECIFICATION]
     ++ MATCH_MP_TAC CLOSED_CDI_INCREASING
     ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, SUBSET_DEF],
@@ -1805,14 +1805,14 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
          ++ PROVE_TAC []])
     ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
     ++ MATCH_MP_TAC CLOSED_CDI_INCREASING
-    ++ Q.PAT_ASSUM `f IN X` MP_TAC
+    ++ Q.PAT_X_ASSUM `f IN X` MP_TAC
     ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, IN_UNIV, GSPECIFICATION]
     >> (Reverse (Cases_on `x`) >> RW_TAC arith_ss []
         ++ RW_TAC arith_ss []
         ++ PROVE_TAC [SMALLEST_CLOSED_CDI, ALGEBRA_EMPTY, SUBSET_DEF])
     ++ Cases_on `n` >> RW_TAC arith_ss [num_case_def, EMPTY_SUBSET]
     ++ RW_TAC arith_ss [num_case_def, SUBSET_DEF, IN_INTER],
-    Q.PAT_ASSUM `f IN x` MP_TAC
+    Q.PAT_X_ASSUM `f IN x` MP_TAC
     ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, GSPECIFICATION]
     ++ MATCH_MP_TAC CLOSED_CDI_DISJOINT
     ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, SUBSET_DEF],
@@ -1835,9 +1835,9 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
          ++ PROVE_TAC []])
     ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
     ++ MATCH_MP_TAC CLOSED_CDI_DISJOINT
-    ++ Q.PAT_ASSUM `f IN X` MP_TAC
+    ++ Q.PAT_X_ASSUM `f IN X` MP_TAC
     ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, IN_UNIV, GSPECIFICATION]
-    ++ Q.PAT_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`m`, `n`])
+    ++ Q.PAT_X_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`m`, `n`])
     ++ PSET_TAC [DISJOINT_DEF, EXTENSION]
     ++ PROVE_TAC []]);
 
@@ -1937,7 +1937,7 @@ val MEASURE_COUNTABLY_ADDITIVE = store_thm
    >> PROVE_TAC [measure_space_def]
    ++ MATCH_MP_TAC SIGMA_ALGEBRA_COUNTABLE_UNION
    ++ CONJ_TAC >> PROVE_TAC [measure_space_def]
-   ++ Q.PAT_ASSUM `f IN P` MP_TAC
+   ++ Q.PAT_X_ASSUM `f IN P` MP_TAC
    ++ RW_TAC std_ss [COUNTABLE_IMAGE_NUM, SUBSET_DEF, IN_IMAGE, IN_UNIV,
                      IN_FUNSET]
    ++ PROVE_TAC []);
@@ -2030,7 +2030,7 @@ val MEASURE_PRESERVING_LIFT = store_thm
    ++ STRONG_CONJ_TAC
    >> (MATCH_MP_TAC MEASURABLE_LIFT
        ++ PROVE_TAC [measure_space_def])
-   ++ Q.PAT_ASSUM `f IN X` K_TAC
+   ++ Q.PAT_X_ASSUM `f IN X` K_TAC
    ++ REWRITE_TAC [IN_MEASURABLE]
    ++ STRIP_TAC
    ++ Suff `sigma a SUBSET {s | measure m1 (PREIMAGE f s) = measure m2 s}`

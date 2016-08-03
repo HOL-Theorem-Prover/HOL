@@ -151,7 +151,7 @@ val PROB_GEOMETRIC_LOOP_T_RANGE = store_thm
    ++ MATCH_MP_TAC LESS_TRANS
    ++ Q.EXISTS_TAC `SUC n`
    ++ CONJ_TAC >> DECIDE_TAC
-   ++ Q.PAT_ASSUM `!s. P s` MATCH_MP_TAC
+   ++ Q.PAT_X_ASSUM `!s. P s` MATCH_MP_TAC
    ++ RW_TAC std_ss []);
 
 val PROB_GEOMETRIC_LOOP_STOPS = store_thm

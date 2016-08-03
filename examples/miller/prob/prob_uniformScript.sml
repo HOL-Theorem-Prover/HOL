@@ -226,7 +226,7 @@ val PROB_UNIF_RANGE = store_thm
    ``!n s. FST (prob_unif n s) < 2 EXP log2 n``,
    recInduct log2_ind
    ++ RW_TAC arith_ss [prob_unif_def, log2_def, EXP]
-   ++ Q.PAT_ASSUM `!s. P s` (MP_TAC o Q.SPEC `s`)
+   ++ Q.PAT_X_ASSUM `!s. P s` (MP_TAC o Q.SPEC `s`)
    ++ RW_TAC arith_ss []);
 
 val PROB_BERN_UNIF_PAIR = store_thm
@@ -248,7 +248,7 @@ val PROB_BERN_UNIF_LT = store_thm
    >> (RW_TAC arith_ss [GEMPTY, PROB_BERN_BASIC]
        ++ RW_TAC real_ss [])
    ++ RW_TAC std_ss []
-   ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
+   ++ Q.PAT_X_ASSUM `X ==> Y` MP_TAC
    ++ Cond >> RW_TAC arith_ss []
    ++ RW_TAC std_ss' [INDEP_FN_PROB_FST_SUC, INDEP_FN_PROB_UNIF]
    ++ Know `k < 2 EXP log2 n` >> DECIDE_TAC
@@ -310,7 +310,7 @@ val PROB_BERN_UNIFORM_CUT_LOWER_BOUND = store_thm
        ++ RW_TAC real_ss [])
    ++ RW_TAC arith_ss []
    ++ ASSUME_TAC (Q.SPECL [`t`, `n`] INDEP_FN_PROB_UNIFORM_CUT)
-   ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
+   ++ Q.PAT_X_ASSUM `X ==> Y` MP_TAC
    ++ RW_TAC arith_ss []
    ++ MP_TAC
       (Q.SPECL [`prob_uniform_cut t (SUC n)`, `SUC m`] INDEP_FN_PROB_FST_SUC)
@@ -343,7 +343,7 @@ val PROB_BERN_UNIFORM_CUT_UPPER_BOUND = store_thm
        ++ RW_TAC real_ss [DECIDE ``(x:num) < 1 = (x = 0)``])
    ++ RW_TAC arith_ss []
    ++ ASSUME_TAC (Q.SPECL [`t`, `n`] INDEP_FN_PROB_UNIFORM_CUT)
-   ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
+   ++ Q.PAT_X_ASSUM `X ==> Y` MP_TAC
    ++ RW_TAC arith_ss []
    ++ MP_TAC (Q.SPECL [`prob_uniform_cut t (SUC n)`, `SUC m`]
               INDEP_FN_PROB_FST_SUC)
@@ -531,7 +531,7 @@ val PROB_BERN_UNIFORM_CUT_SUC = store_thm
            `(1 / 2) pow t <
             prob bern {s | FST (prob_uniform_cut t (SUC n) s) = k'} -
             prob bern {s | FST (prob_uniform_cut t (SUC n) s) = k}`
-	>> (Q.PAT_ASSUM `x < y - z` MP_TAC
+	>> (Q.PAT_X_ASSUM `x < y - z` MP_TAC
 	    ++ RW_TAC bool_ss [GSYM REAL_LT_ADD_SUB]
 	    ++ PROVE_TAC [REAL_ADD_SYM, REAL_LTE_TRANS])
         ++ STRIP_TAC
@@ -625,7 +625,7 @@ val PROB_BERN_UNIFORM_CUT_CARD_LOWER = store_thm
    ++ Know `FINITE a`
    >> PROVE_TAC [FINITE_COUNT, SUBSET_FINITE]
    ++ STRIP_TAC
-   ++ Q.PAT_ASSUM `a SUBSET x` MP_TAC
+   ++ Q.PAT_X_ASSUM `a SUBSET x` MP_TAC
    ++ POP_ASSUM MP_TAC
    ++ Q.SPEC_TAC (`a`, `a`)
    ++ HO_MATCH_MP_TAC FINITE_INDUCT
@@ -641,7 +641,7 @@ val PROB_BERN_UNIFORM_CUT_CARD_LOWER = store_thm
    >> REAL_ARITH_TAC
    ++ DISCH_THEN MATCH_MP_TAC
    ++ RW_TAC bool_ss [GSYM ADD1, REAL_ADD]
-   >> (Q.PAT_ASSUM `x ==> y` MATCH_MP_TAC
+   >> (Q.PAT_X_ASSUM `x ==> y` MATCH_MP_TAC
        ++ POP_ASSUM MP_TAC
        ++ RW_TAC bool_ss [SUBSET_DEF, IN_INSERT])
    ++ Suff

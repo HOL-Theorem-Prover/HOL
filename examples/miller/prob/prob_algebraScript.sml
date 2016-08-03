@@ -142,12 +142,12 @@ val PREFIX_SET_PREFIX_SUBSET = store_thm
    ++ Cases_on `c`
    >> PSET_TAC [prefix_set_def, IS_PREFIX_NIL, GSYM PREFIX_SET_NIL, EXTENSION]
    ++ PSET_TAC [prefix_set_def, IS_PREFIX, IN_HALFSPACE, EXTENSION]
-   ++ Q.PAT_ASSUM `!c. P c = Q c` (fn th => REWRITE_TAC [SYM (Q.SPEC `t` th)])
+   ++ Q.PAT_X_ASSUM `!c. P c = Q c` (fn th => REWRITE_TAC [SYM (Q.SPEC `t` th)])
    ++ REVERSE EQ_TAC >> RW_TAC std_ss []
    ++ STRIP_TAC
    ++ REVERSE STRONG_CONJ_TAC
    >> (RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `!x. P x ==> Q x` (MP_TAC o Q.SPEC `scons h x`)
+       ++ Q.PAT_X_ASSUM `!x. P x ==> Q x` (MP_TAC o Q.SPEC `scons h x`)
        ++ RW_TAC std_ss [SHD_SCONS, STL_SCONS])
    ++ Suff `?x. (shd x = h') /\ stl x IN prefix_set b`
    >> PROVE_TAC []
@@ -246,7 +246,7 @@ val PROB_CANON_PREFS_EMBED = store_thm
    ++ RW_TAC list_ss [prob_canon_prefs_def]
    ++ PSET_TAC [prob_embed_def, MAP_MEM, MEM, GSYM PREFIX_SET_PREFIX_SUBSET,
                 EXTENSION]
-   ++ Q.PAT_ASSUM `!x. P x = Q x` K_TAC
+   ++ Q.PAT_X_ASSUM `!x. P x = Q x` K_TAC
    ++ EQ_TAC >> PROVE_TAC []
    ++ RW_TAC std_ss []
    ++ PROVE_TAC []);
@@ -258,7 +258,7 @@ val PROB_CANON_FIND_EMBED = store_thm
    ++ Induct >> RW_TAC list_ss [prob_canon_find_def]
    ++ PSET_TAC [prob_canon_find_def, GSYM PREFIX_SET_PREFIX_SUBSET,
                 EXTENSION] <<
-   [Q.PAT_ASSUM `!x. P x = Q x` K_TAC
+   [Q.PAT_X_ASSUM `!x. P x = Q x` K_TAC
     ++ PSET_TAC [PROB_EMBED_CONS, EXTENSION]
     ++ PROVE_TAC [],
     ONCE_REWRITE_TAC [PROB_EMBED_TRANSPOSE]
@@ -310,15 +310,15 @@ val PROB_CANONICAL_UNIV = store_thm
    ++ HO_MATCH_MP_TAC PROB_CANONICAL_INDUCT
    ++ PSET_TAC [PROB_EMBED_BASIC, EXTENSION]
    ++ Suff `F` >> PROVE_TAC []
-   ++ Q.PAT_ASSUM `prob_canonical x` MP_TAC
+   ++ Q.PAT_X_ASSUM `prob_canonical x` MP_TAC
    ++ Suff `(l = [[]]) /\ (l' = [[]])`
    >> RW_TAC prob_canon_ss [prob_canonical_def]
    ++ CONJ_TAC <<
-   [Q.PAT_ASSUM `x ==> (l = y)` MATCH_MP_TAC
+   [Q.PAT_X_ASSUM `x ==> (l = y)` MATCH_MP_TAC
     ++ PSET_TAC [EXTENSION]
     ++ POP_ASSUM (MP_TAC o Q.SPEC `scons T x`)
     ++ PSET_TAC [PROB_EMBED_TLS, PROB_EMBED_APPEND, EXTENSION],
-    Q.PAT_ASSUM `x ==> (l' = y)` MATCH_MP_TAC
+    Q.PAT_X_ASSUM `x ==> (l' = y)` MATCH_MP_TAC
     ++ PSET_TAC [EXTENSION]
     ++ POP_ASSUM (MP_TAC o Q.SPEC `scons F x`)
     ++ PSET_TAC [PROB_EMBED_TLS, PROB_EMBED_APPEND, EXTENSION]]);
@@ -333,7 +333,7 @@ val PROB_CANON_REP = store_thm
                   (prob_embed b = prob_embed c) ==> (b = c))`
    >> (DISCH_THEN (MP_TAC o Q.SPEC `prob_canon b`)
        ++ RW_TAC std_ss [prob_canonical_def, PROB_CANON_IDEMPOT]
-       ++ Q.PAT_ASSUM `!c. P c` (MP_TAC o Q.SPEC `prob_canon c`)
+       ++ Q.PAT_X_ASSUM `!c. P c` (MP_TAC o Q.SPEC `prob_canon c`)
        ++ RW_TAC std_ss [PROB_CANON_IDEMPOT, PROB_CANON_EMBED])
    ++ HO_MATCH_MP_TAC PROB_CANONICAL_INDUCT
    ++ CONJ_TAC
@@ -873,7 +873,7 @@ val PROB_PREMEASURE_ADDITIVE = store_thm
    [Suff
     `(prob_embed l1 INTER prob_embed l1' = {}) /\
      (prob_embed b = prob_embed l1 UNION prob_embed l1')`
-    >> (Q.PAT_ASSUM
+    >> (Q.PAT_X_ASSUM
         `!c.
            prob_canonical c ==>
            !d.
@@ -899,7 +899,7 @@ val PROB_PREMEASURE_ADDITIVE = store_thm
     Suff
     `(prob_embed l2 INTER prob_embed l2' = {}) /\
      (prob_embed b' = prob_embed l2 UNION prob_embed l2')`
-    >> (Q.PAT_ASSUM
+    >> (Q.PAT_X_ASSUM
         `!c.
            prob_canonical c ==>
            !d.
@@ -969,7 +969,7 @@ val INFINITE_TLS = store_thm
    ++ DISCH_THEN (fn th => MP_TAC (Q.SPEC `T` th) ++ MP_TAC (Q.SPEC `F` th))
    ++ RW_TAC std_ss []
    ++ STRIP_TAC
-   ++ Q.PAT_ASSUM `~FINITE s` MP_TAC
+   ++ Q.PAT_X_ASSUM `~FINITE s` MP_TAC
    ++ RW_TAC std_ss []
    ++ ONCE_REWRITE_TAC [GSYM FINITE_TL]
    ++ Suff `{TL x | x IN s /\ HD x} UNION {TL x | x IN s /\ ~HD x} = IMAGE TL s`
@@ -989,7 +989,7 @@ val PREFIX_SET_UNION_UNIV = store_thm
    ++ POP_ASSUM MP_TAC
    ++ PURE_REWRITE_TAC []
    ++ STRIP_TAC
-   ++ Q.PAT_ASSUM `x = UNIV` MP_TAC
+   ++ Q.PAT_X_ASSUM `x = UNIV` MP_TAC
    ++ PSET_TAC [EXTENSION]
    ++ Suff `?x. !l. l IN s ==> ~(x IN prefix_set l)` >> PROVE_TAC []
    ++ Q.EXISTS_TAC
@@ -1007,7 +1007,7 @@ val PREFIX_SET_UNION_UNIV = store_thm
    ++ RW_TAC std_ss [o_DEF, FUNPOW, IN_HALFSPACE, shd_def]
    ++ REWRITE_TAC [GSYM IMP_DISJ_THM]
    ++ RW_TAC std_ss []
-   ++ Q.PAT_ASSUM `!s. P s ==> Q s`
+   ++ Q.PAT_X_ASSUM `!s. P s ==> Q s`
       (MATCH_MP_TAC o REWRITE_RULE [AND_IMP_INTRO])
    ++ REWRITE_TAC [GSYM CONJ_ASSOC]
    ++ REVERSE (PSET_TAC [EXTENSION])
@@ -1015,7 +1015,7 @@ val PREFIX_SET_UNION_UNIV = store_thm
        ++ RW_TAC std_ss [TL, HD])
    ++ Know `~([] IN s)`
    >> (STRIP_TAC
-       ++ Q.PAT_ASSUM `!a b. P a b`
+       ++ Q.PAT_X_ASSUM `!a b. P a b`
           (MP_TAC o Q.SPECL [`sel (s : bool list -> bool) :: l`, `[]`])
        ++ RW_TAC std_ss [IS_PREFIX_NIL])
    ++ STRIP_TAC
@@ -1023,7 +1023,7 @@ val PREFIX_SET_UNION_UNIV = store_thm
    ++ Cases_on `x'` >> PROVE_TAC []
    ++ REPEAT (POP_ASSUM MP_TAC)
    ++ RW_TAC std_ss [HD, TL]
-   ++ Q.PAT_ASSUM `!a b. P a b`
+   ++ Q.PAT_X_ASSUM `!a b. P a b`
       (MP_TAC o Q.SPECL [`sel (s : bool list -> bool) :: t`,
                          `sel (s : bool list -> bool) :: t'`])
    ++ RW_TAC std_ss [IS_PREFIX]);
@@ -1045,7 +1045,7 @@ val ALGEBRA_COUNTABLE_UNION_UNIV = store_thm
        (BIGUNION (IMAGE f UNIV) = UNIV) ==>
        ?N. !n. N <= n ==> (f n = {})``,
    RW_TAC std_ss [IN_FUNSET, IN_UNIV, IN_PROB_ALGEBRA_CANONICAL]
-   ++ Q.PAT_ASSUM `!x. ?b. P x b`
+   ++ Q.PAT_X_ASSUM `!x. ?b. P x b`
       (MP_TAC o CONV_RULE (SKOLEM_CONV THENC DEPTH_CONV FORALL_AND_CONV))
    ++ RW_TAC std_ss []
    ++ Suff `FINITE {n | ~(f n = {})}`
@@ -1073,7 +1073,7 @@ val ALGEBRA_COUNTABLE_UNION_UNIV = store_thm
        ++ PROVE_TAC [PREFIX_SET_POPULATED])
    ++ MATCH_MP_TAC PREFIX_SET_UNION_UNIV
    ++ REVERSE CONJ_TAC
-   >> (Q.PAT_ASSUM `x = UNIV` (ONCE_REWRITE_TAC o wrap o GSYM)
+   >> (Q.PAT_X_ASSUM `x = UNIV` (ONCE_REWRITE_TAC o wrap o GSYM)
        ++ POP_ASSUM MP_TAC
        ++ KILL_TAC
        ++ RW_TAC std_ss [EXTENSION, IN_BIGUNION, IN_PROB_EMBED]
@@ -1098,7 +1098,7 @@ val ALGEBRA_COUNTABLE_UNION_UNIV = store_thm
    >> (RW_TAC std_ss [prob_embed_def, IN_UNIONL, MAP_MEM]
        ++ PROVE_TAC [])
    ++ REPEAT STRIP_TAC
-   ++ Q.PAT_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`n`, `n'`])
+   ++ Q.PAT_X_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`n`, `n'`])
    ++ REVERSE (RW_TAC std_ss [DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, IN_INTER])
    >> PROVE_TAC []
    ++ STRIP_TAC
@@ -1148,9 +1148,9 @@ val ALGEBRA_COUNTABLE_UNION = store_thm
    >> (RW_TAC std_ss [PROB_EMBED_BASIC]
        ++ PROVE_TAC [ALGEBRA_COUNTABLE_UNION_UNIV])
    ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV]
-   ++ Q.PAT_ASSUM `!x. f x IN prob_algebra` MP_TAC
+   ++ Q.PAT_X_ASSUM `!x. f x IN prob_algebra` MP_TAC
    ++ RW_TAC std_ss [IN_PROB_ALGEBRA_CANONICAL]
-   ++ Q.PAT_ASSUM `!x. ?b. P x b`
+   ++ Q.PAT_X_ASSUM `!x. ?b. P x b`
       (MP_TAC o CONV_RULE (SKOLEM_CONV THENC DEPTH_CONV FORALL_AND_CONV))
    ++ RW_TAC std_ss []
    ++ Know
@@ -1160,10 +1160,10 @@ val ALGEBRA_COUNTABLE_UNION = store_thm
        >> DISCH_THEN
           (ACCEPT_TAC o CONV_RULE (REDEPTH_CONV (CHANGED_CONV SKOLEM_CONV)))
        ++ RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `!x. f x = prob_embed (b'' x)` (MP_TAC o Q.SPEC `x`)
-       ++ Q.PAT_ASSUM `BIGUNION p = q` MP_TAC
-       ++ Q.PAT_ASSUM `prob_canonical p` MP_TAC
-       ++ Q.PAT_ASSUM `!x. prob_canonical (b'' x)` (MP_TAC o Q.SPEC `x`)
+       ++ Q.PAT_X_ASSUM `!x. f x = prob_embed (b'' x)` (MP_TAC o Q.SPEC `x`)
+       ++ Q.PAT_X_ASSUM `BIGUNION p = q` MP_TAC
+       ++ Q.PAT_X_ASSUM `prob_canonical p` MP_TAC
+       ++ Q.PAT_X_ASSUM `!x. prob_canonical (b'' x)` (MP_TAC o Q.SPEC `x`)
        ++ Q.SPEC_TAC (`b'' x`, `B''`)
        ++ KILL_TAC
        ++ HO_MATCH_MP_TAC PROB_CANONICAL_CASES
@@ -1180,7 +1180,7 @@ val ALGEBRA_COUNTABLE_UNION = store_thm
        ++ Q.EXISTS_TAC `b'`
        ++ MATCH_MP_TAC EQ_SYM
        ++ MATCH_MP_TAC PROB_CANONICAL_UNIV
-       ++ Q.PAT_ASSUM `BIGUNION p = q` (ASM_REWRITE_TAC o wrap o GSYM)
+       ++ Q.PAT_X_ASSUM `BIGUNION p = q` (ASM_REWRITE_TAC o wrap o GSYM)
        ++ PSET_TAC [EXTENSION]
        ++ PROVE_TAC [])
    ++ RW_TAC std_ss []
@@ -1193,36 +1193,36 @@ val ALGEBRA_COUNTABLE_UNION = store_thm
        ++ Q.EXISTS_TAC `MAX N N'`
        ++ RW_TAC std_ss [MAX_LE_X])
    ++ CONJ_TAC <<
-   [Q.PAT_ASSUM `!f. P f ==> Q f` K_TAC
-    ++ Q.PAT_ASSUM `!f. P f ==> Q f` (MP_TAC o Q.SPEC `prob_embed o b1`)
+   [Q.PAT_X_ASSUM `!f. P f ==> Q f` K_TAC
+    ++ Q.PAT_X_ASSUM `!f. P f ==> Q f` (MP_TAC o Q.SPEC `prob_embed o b1`)
     ++ RW_TAC std_ss [o_THM, IN_PROB_ALGEBRA, AND_IMP_INTRO, GSYM CONJ_ASSOC]
     ++ POP_ASSUM MATCH_MP_TAC
     ++ CONJ_TAC >> PROVE_TAC []
     ++ CONJ_TAC
     >> (REPEAT STRIP_TAC
-        ++ Q.PAT_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`m`, `n`])
+        ++ Q.PAT_X_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`m`, `n`])
         ++ RW_TAC std_ss [DISJOINT_DEF, PROB_EMBED_APPEND,
                           EXTENSION, NOT_IN_EMPTY, IN_UNION, IN_INTER]
         ++ POP_ASSUM (MP_TAC o Q.SPEC `scons T x`)
         ++ RW_TAC std_ss [PROB_EMBED_TLS])
-    ++ Q.PAT_ASSUM `BIGUNION p = q` MP_TAC
+    ++ Q.PAT_X_ASSUM `BIGUNION p = q` MP_TAC
     ++ ONCE_REWRITE_TAC [EXTENSION]
     ++ RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_UNIV, o_THM]
     ++ POP_ASSUM (MP_TAC o Q.SPEC `scons T x`)
     ++ RW_TAC std_ss [PROB_EMBED_TLS, PROB_EMBED_APPEND, IN_UNION],
-    Q.PAT_ASSUM `!f. P f ==> Q f` (MP_TAC o Q.SPEC `prob_embed o b2`)
-    ++ Q.PAT_ASSUM `!f. P f ==> Q f` K_TAC
+    Q.PAT_X_ASSUM `!f. P f ==> Q f` (MP_TAC o Q.SPEC `prob_embed o b2`)
+    ++ Q.PAT_X_ASSUM `!f. P f ==> Q f` K_TAC
     ++ RW_TAC std_ss [o_THM, IN_PROB_ALGEBRA, AND_IMP_INTRO, GSYM CONJ_ASSOC]
     ++ POP_ASSUM MATCH_MP_TAC
     ++ CONJ_TAC >> PROVE_TAC []
     ++ CONJ_TAC
     >> (REPEAT STRIP_TAC
-        ++ Q.PAT_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`m`, `n`])
+        ++ Q.PAT_X_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`m`, `n`])
         ++ RW_TAC std_ss [DISJOINT_DEF, PROB_EMBED_APPEND,
                           EXTENSION, NOT_IN_EMPTY, IN_UNION, IN_INTER]
         ++ POP_ASSUM (MP_TAC o Q.SPEC `scons F x`)
         ++ RW_TAC std_ss [PROB_EMBED_TLS])
-    ++ Q.PAT_ASSUM `BIGUNION p = q` MP_TAC
+    ++ Q.PAT_X_ASSUM `BIGUNION p = q` MP_TAC
     ++ ONCE_REWRITE_TAC [EXTENSION]
     ++ RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_UNIV, o_THM]
     ++ POP_ASSUM (MP_TAC o Q.SPEC `scons F x`)
@@ -1234,7 +1234,7 @@ val PROB_MEASURE_COUNTABLY_ADDITIVE = store_thm
    RW_TAC std_ss [countably_additive_def, measure_def, measurable_sets_def]
    ++ MP_TAC (Q.SPEC `f` ALGEBRA_COUNTABLE_UNION)
    ++ RW_TAC std_ss []
-   ++ Q.PAT_ASSUM `BIGUNION p IN q` MP_TAC
+   ++ Q.PAT_X_ASSUM `BIGUNION p IN q` MP_TAC
    ++ Know `BIGUNION (IMAGE f UNIV) = BIGUNION (IMAGE f (count N))`
    >> (PSET_TAC [EXTENSION]
        ++ PROVE_TAC [NOT_LESS])
@@ -1478,7 +1478,7 @@ val PROB_MEASURE_MIRROR = store_thm
    >> (MP_TAC (Q.SPECL [`l2`, `l1`] PROB_CANONICAL_STEP)
        ++ Know `~((l2 = [[]]) /\ (l1 = [[]]))`
        >> (STRIP_TAC
-           ++ Q.PAT_ASSUM `prob_canonical x` MP_TAC
+           ++ Q.PAT_X_ASSUM `prob_canonical x` MP_TAC
            ++ RW_TAC prob_canon_ss [prob_canonical_def])
        ++ RW_TAC std_ss [])
    ++ POP_ASSUM MP_TAC
@@ -1598,7 +1598,7 @@ val PREFIX_SET_UNFIXED_SDROP = store_thm
    ++ RW_TAC bool_ss [prefix_set_def, IN_INTER, IN_HALFSPACE, IN_o, SHD_SCONS,
                      STL_SCONS]
    ++ STRIP_TAC
-   ++ Q.PAT_ASSUM `~(X = Y)` MP_TAC
+   ++ Q.PAT_X_ASSUM `~(X = Y)` MP_TAC
    ++ Know `(stl o sdrop (SUC n)) (scons h s) = stl (scons h s)`
    >> RW_TAC std_ss [o_THM]
    ++ RW_TAC bool_ss [STL_o_SDROP]
@@ -1644,7 +1644,7 @@ val PREFIX_SET_INJ = store_thm
        ++ REVERSE EQ_TAC >> RW_TAC std_ss []
        ++ SET_EQ_TAC
        ++ RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `!b. (P b = Q b) = R b` (REWRITE_TAC o wrap o GSYM)
+       ++ Q.PAT_X_ASSUM `!b. (P b = Q b) = R b` (REWRITE_TAC o wrap o GSYM)
        ++ SET_EQ_TAC
        ++ GEN_TAC
        ++ POP_ASSUM (MP_TAC o Q.SPEC `scons h x`)

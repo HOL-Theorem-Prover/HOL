@@ -169,8 +169,8 @@ val SEQUENCE_DEFINE_ALT = store_thm
    ++ RW_TAC std_ss []
    ++ MP_TAC (Q.ISPEC `(g:'a->num->'b) x` SCONS_SURJ)
    ++ RW_TAC std_ss []
-   ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
-   ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
+   ++ Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
+   ++ Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
    ++ RW_TAC std_ss [SCONS_EQ, SHD_SCONS, STL_SCONS]);
 
 local
