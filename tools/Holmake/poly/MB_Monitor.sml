@@ -44,11 +44,11 @@ fun statusString (MRunning c) = StringCvt.padLeft #" " 3 (str c) ^ " "
       val numSecs = Time.toSeconds t
       val n_s = LargeInt.toString numSecs
     in
-      if numSecs < 5 then "   "
-      else if numSecs < 10 then "  " ^ n_s
-      else if numSecs < 30 then " " ^ boldyellow n_s
-      else if numSecs < 1000 then red (StringCvt.padLeft #" " 3 n_s)
-      else red "!!!"
+      if numSecs < 5 then "    "
+      else if numSecs < 10 then "  " ^ n_s ^ " "
+      else if numSecs < 30 then " " ^ boldyellow n_s ^ " "
+      else if numSecs < 1000 then red (StringCvt.padLeft #" " 3 n_s) ^ " "
+      else red "!!! "
     end
 
 fun rtrunc n s =
