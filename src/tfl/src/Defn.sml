@@ -1499,7 +1499,6 @@ fun mk_defns stems eqnsl =
  end
  handle e => raise wrap_exn "Defn" "mk_defns" e;
 
-
 (*---------------------------------------------------------------------------
      Quotation interface to definition. This includes a pass for
      expansion of wildcards in patterns.
@@ -1786,6 +1785,19 @@ fun Hol_defns stems q =
     | eqnl => mk_defns stems eqnl)
   handle e => raise wrap_exn_loc "Defn" "Hol_defns"
                  (Absyn.locn_of_absyn (Parse.Absyn q)) e;
+
+local
+  val stems =
+    List.map (fst o dest_var o fst o strip_comb o lhs o snd o strip_forall o
+              hd o strip_conj)
+in
+  fun Hol_multi_defns q =
+    (case parse_quote q of
+       [] => raise ERR "Hol_multi_defns" "no definition"
+      | eqnsl => mk_defns (stems eqnsl) eqnsl)
+    handle e => raise wrap_exn_loc "Defn" "Hol_multi_defns"
+                   (Absyn.locn_of_absyn (Parse.Absyn q)) e
+end
 
 fun Hol_Rdefn stem Rquote eqs_quote =
   let val defn = Hol_defn stem eqs_quote
