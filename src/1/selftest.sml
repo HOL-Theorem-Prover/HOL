@@ -734,5 +734,28 @@ in
   if aconv (concl r_thm) g then OK() else die "FAILED!"
 end
 
+val _ = hide "Q"
+val _ = hide "P"
+
+val _ = let
+  open mp_then
+  val _ = tprint "mp_then + goal_assum 1"
+  val asl = [``P (x:'a):bool``, ``R (ARB:'b) (y:'a):bool``]
+  val g = (asl, ``?x:'a y:'b. Q x (f y : 'c) /\ R y x``)
+  val (res, _) = goal_assum (first_assum o mp_then Any mp_tac) g
+  val expected = ``Q (y:'a) (f (ARB:'b) : 'c) : bool``
+in
+  case res of
+      [(asl',g')] =>
+      (case Lib.list_compare Term.compare (asl,asl') of
+           EQUAL => if aconv expected g' then OK()
+                    else die ("FAILED\n  Got "^term_to_string g'^
+                              "; expected "^term_to_string expected)
+         | _ => die ("FAILED\n  Got back changed asm list: " ^
+                     String.concatWith ", " (map term_to_string asl')))
+    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals ("^
+                Int.toString (length res)^")")
+end
+
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)
