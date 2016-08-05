@@ -1953,20 +1953,6 @@ val SUC_EX = Q.prove (`(?x. P (SUC x)) ==> $? P`,
 val PRED_SET_ss = pred_setSimps.PRED_SET_ss ;
 val set_ss = std_ss ++ pred_setSimps.PRED_SET_ss ;
 
-(* TODO don't think we want this *)
-val MIN_LO = Q.prove (
-  `x IN X ==> linear_order lo X ==> (minimal_elements X lo = {y}) ==>
-    ~ (y = x) ==> (y, x) IN lo /\ (x, y) NOTIN lo`,
-  (SIMP_TAC set_ss [minimal_elements_def, linear_order_def,
-    EXTENSION, IN_GSPEC_IFF]) THEN
-  REPEAT DISCH_TAC THEN RULE_L_ASSUM_TAC CONJUNCTS THEN
-  FIRST_X_ASSUM (ASSUME_TAC o Q.SPECL [`x`, `y`]) THEN
-  FIRST_X_ASSUM (ASSUME_TAC o REWRITE_RULE [] o Q.SPEC `y`) THEN
-  RULE_L_ASSUM_TAC CONJUNCTS THEN
-  VALIDATE (FIRST_X_ASSUM (MP_TAC o UNDISCH)) THEN1 ASM_REWRITE_TAC [] THEN
-  FIRST_X_ASSUM (ASSUME_TAC o Q.SPEC `x`) THEN STRIP_TAC THEN
-  REV_FULL_SIMP_TAC std_ss []) ;
-
 val IN_MIN_LO = Q.store_thm ("IN_MIN_LO",
   `x IN X ==> linear_order lo X ==> y IN minimal_elements X lo ==> 
     (y, x) IN lo`,
@@ -2030,6 +2016,8 @@ val csd_gt0 = Q.prove (
 val set_o_CONS = Q.prove (`set o CONS h = $INSERT h o set`,
   REWRITE_TAC [FUN_EQ_THM, combinTheory.o_THM, listTheory.LIST_TO_SET]) ;
   
+(* we don't actually use the second clause of the conclusion of this,
+  but it didn't take much extra effort to prove *)
 val linear_order_to_list_lem1a = Q.prove (
 `!s. FINITE s ==>
   !lo X x.
@@ -2101,51 +2089,6 @@ val linear_order_to_list_lem1a = Q.prove (
     OPTION_MAP_DEF, CHOICE_SING, INSERT_DELETE] THEN
   irule INSERT_DELETE THEN ASM_REWRITE_TAC []) ;
 
-val linear_order_to_list_lem1 = Q.prove (
-`!s. FINITE s ==>
-  !lo X x.
-    x IN X /\
-    (s = { y | (y,x) IN lo }) /\
-    linear_order lo X /\
-    finite_prefixes lo X
-    ==>
-    ?i. LNTH i (LUNFOLD linear_order_to_list_f lo) = SOME x`,
-HO_MATCH_MP_TAC FINITE_COMPLETE_INDUCTION THEN
-REPEAT STRIP_TAC THEN
-`SING (minimal_elements X lo)` 
-  by EVERY [IMP_RES_THEN (IMP_RES_THEN irule) fploum,
-    Q.EXISTS_TAC `x`, FIRST_ASSUM ACCEPT_TAC ] THEN
-RULE_ASSUM_TAC (REWRITE_RULE [SING_DEF]) THEN POP_ASSUM CHOOSE_TAC THEN
-IMP_RES_TAC linear_order_dom_rg THEN Cases_on `x' = x`
-THENL [
-(* where x is minimum of X *)
-  VAR_EQ_TAC THEN
-  Q.EXISTS_TAC `0` THEN
-  IMP_RES_TAC linear_order_dom_rg THEN
-  Ho_Rewrite.ASM_REWRITE_TAC [BETA_THM, LNTH_LUNFOLD, NOT_INSERT_EMPTY,
-    CHOICE_SING, OPTION_MAP_DEF, SND,
-    linear_order_to_list_f_def, LET_DEF],
-
-  (* where x is not minimum of X *)
-  irule SUC_EX THEN BETA_TAC  THEN
-  Ho_Rewrite.ASM_REWRITE_TAC [BETA_THM, LNTH_LUNFOLD, NOT_INSERT_EMPTY,
-     OPTION_MAP_DEF, SND, option_case_def, pair_CASE_def, FST,
-      linear_order_to_list_f_def, LET_DEF] THEN FIRST_X_ASSUM irule 
-  THENL [
-    Q.EXISTS_TAC `{y | (y,x) ∈ rrestrict lo (X DIFF {x'})}` THEN
-    CONJ_TAC THEN1 REFL_TAC THEN
-    SRW_TAC [] [rrestrict_def, PSUBSET_DEF, SUBSET_DEF, IN_GSPEC_IFF,
-      EXTENSION] THEN
-    Q.EXISTS_TAC `x'` THEN ASM_REWRITE_TAC [] THEN
-    irule MIN_LO_IN THEN
-    Q.EXISTS_TAC `domain lo UNION range lo` THEN ASM_REWRITE_TAC [],
-
-    Q.EXISTS_TAC `X INTER (X DIFF {x'})` THEN REPEAT STRIP_TAC 
-    THENL [SRW_TAC [] [],
-      IMP_RES_THEN irule finite_prefixes_subset_rs
-      THENL [SRW_TAC [] [], irule rrestrict_SUBSET],
-      irule linear_order_restrict THEN FIRST_ASSUM ACCEPT_TAC ]]]) ;
-
 val linear_order_to_list_lem2a = Q.prove (
 `!i lo X x.
   linear_order lo X /\
@@ -2189,150 +2132,6 @@ val linear_order_to_list_lem2a = Q.prove (
     DISCH_TAC THEN RES_TAC THEN Q.EXISTS_TAC `y''` THEN
     ASM_REWRITE_TAC [] THEN
     IMP_RES_TAC (REWRITE_RULE [SUBSET_DEF] rrestrict_SUBSET) ]) ;
-
-val linear_order_to_list_lem2 = Q.prove (
-`!i lo X x.
-  linear_order lo X /\
-  (LNTH i (LUNFOLD linear_order_to_list_f lo) = SOME x)
-  ==>
-  x IN X`,
-  Induct THEN
-  Ho_Rewrite.REWRITE_TAC [LNTH_LUNFOLD,
-    linear_order_to_list_f_def, LET_DEF, BETA_THM] THEN
-  REPEAT GEN_TAC THEN COND_CASES_TAC THEN
-  REWRITE_TAC [OPTION_MAP_DEF, option_CLAUSES]
-  THENL [
-    IMP_RES_TAC CHOICE_DEF THEN
-      REPEAT STRIP_TAC THEN
-      IMP_RES_TAC linear_order_dom_rg THEN
-      FULL_SIMP_TAC std_ss [] THEN
-      IMP_RES_TAC (REWRITE_RULE [SUBSET_DEF] minimal_elements_subset),
-    Ho_Rewrite.REWRITE_TAC [ BETA_THM, pair_case_def] THEN
-      REPEAT STRIP_TAC THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [ONCE_REWRITE_RULE [CONJ_COMM] 
-	(GSYM AND_IMP_INTRO)]) THEN
-      RES_TAC THEN IMP_RES_TAC linear_order_restrict THEN
-      POP_ASSUM (ASSUME_TAC o Q.SPEC `(domain lo ∪ range lo DIFF
-	   minimal_elements (domain lo ∪ range lo) lo)`) THEN
-      RES_TAC THEN RULE_ASSUM_TAC (REWRITE_RULE [IN_INTER]) THEN
-      ASM_REWRITE_TAC [] ]) ; 
-
-val linear_order_to_list_lem3 = Q.prove (
-`!s. FINITE s ==>
-  !lo X x y.
-    (x,y) IN lo /\
-    (s = { z | (z,x) IN lo }) /\
-    linear_order lo X /\
-    finite_prefixes lo X
-    ==>
-    ?i j. i <= j /\
-          (LNTH i (LUNFOLD linear_order_to_list_f lo) = SOME x) /\
-          (LNTH j (LUNFOLD linear_order_to_list_f lo) = SOME y)`,
-HO_MATCH_MP_TAC FINITE_COMPLETE_INDUCTION THEN
-SRW_TAC [] [] THEN
-`x IN X /\ y IN X`
-        by (FULL_SIMP_TAC (srw_ss()) [linear_order_def, in_domain, in_range,
-                                      SUBSET_DEF] THEN
-            METIS_TAC []) THEN
-`SING (minimal_elements X lo)`
-        by METIS_TAC [finite_prefix_linear_order_has_unique_minimal,
-                      SUBSET_REFL] THEN
-FULL_SIMP_TAC (srw_ss()) [SING_DEF] THEN
-`{y | (y,x) IN rrestrict lo (X DIFF minimal_elements X lo) } PSUBSET
- { y | (y,x) IN lo }`
-        by (SRW_TAC [] [PSUBSET_DEF, in_rrestrict, SUBSET_DEF, EXTENSION] THEN
-            FULL_SIMP_TAC (srw_ss()) [minimal_elements_def, EXTENSION,
-                                      linear_order_def, transitive_def,
-                                      antisym_def] THEN
-            METIS_TAC []) THEN
-`X DIFF minimal_elements X lo SUBSET X` by SRW_TAC [] [SUBSET_DEF] THEN
-`linear_order (rrestrict lo (X DIFF minimal_elements X lo))
-              (X DIFF minimal_elements X lo)`
-        by METIS_TAC [linear_order_subset] THEN
-`finite_prefixes (rrestrict lo (X DIFF minimal_elements X lo))
-                 (X DIFF minimal_elements X lo)`
-        by METIS_TAC [finite_prefixes_subset] THEN
-Cases_on `x NOTIN X DIFF minimal_elements X lo` THENL
-[Q.EXISTS_TAC `0` THEN
-     SRW_TAC [] [Once LUNFOLD, linear_order_to_list_f_def, RIGHT_EXISTS_AND_THM]
-     THENL
-     [Q.UNABBREV_TAC `min` THEN
-          `domain lo UNION range lo = X`
-                  by (FULL_SIMP_TAC (srw_ss()) [EXTENSION, in_domain, in_range,
-                                                linear_order_def,
-                                                SUBSET_DEF] THEN
-                      METIS_TAC []) THEN
-          SRW_TAC [] [] THEN
-          FULL_SIMP_TAC (srw_ss()) [] THEN
-          METIS_TAC [IN_SING],
-      METIS_TAC [linear_order_to_list_lem1, finite_prefixes_def]],
- `y NOTIN minimal_elements X lo`
-         by (FULL_SIMP_TAC (srw_ss()) [minimal_elements_def, EXTENSION] THEN
-             METIS_TAC []) THEN
-     `(x,y) IN rrestrict lo (X DIFF minimal_elements X lo)`
-             by (FULL_SIMP_TAC (srw_ss()) [EXTENSION, in_rrestrict] THEN
-                 METIS_TAC []) THEN
-     `?i j. i <= j /\
-        (LNTH i (LUNFOLD linear_order_to_list_f
-                         (rrestrict lo (X DIFF minimal_elements X lo)))
-         = SOME x) /\
-        (LNTH j (LUNFOLD linear_order_to_list_f
-                         (rrestrict lo (X DIFF minimal_elements X lo)))
-         = SOME y)`
-             by METIS_TAC [] THEN
-     Q.EXISTS_TAC `SUC i` THEN
-     Q.EXISTS_TAC `SUC j` THEN
-     SRW_TAC [] [] THEN
-     SRW_TAC [] [Once LUNFOLD, Once linear_order_to_list_f_def] THEN
-     SRW_TAC [] [markerTheory.Abbrev_def] THEN
-     `domain lo UNION range lo = X`
-             by (FULL_SIMP_TAC (srw_ss()) [EXTENSION, in_domain, in_range,
-                                           linear_order_def, SUBSET_DEF] THEN
-                 METIS_TAC []) THEN
-     FULL_SIMP_TAC (srw_ss()) [] THEN
-     SRW_TAC [] []]);
-
-val linear_order_to_list_lem4 = Q.prove (
-`!i j lo X x.
-  linear_order lo X /\
-  (LNTH j (LUNFOLD linear_order_to_list_f lo) = SOME x) /\
-  (LNTH i (LUNFOLD linear_order_to_list_f lo) = SOME x)
-  ==>
-  (i = j)`,
-Induct THEN
-SRW_TAC [] [] THEN
-Cases_on `j` THEN
-FULL_SIMP_TAC (srw_ss()) [] THEN
-REPEAT (Q.PAT_ASSUM `LNTH a b = c`
-                    (MP_TAC o SIMP_RULE (srw_ss()) [Once LUNFOLD])) THEN
-SRW_TAC [] [] THEN
-Cases_on `linear_order_to_list_f lo` THEN
-FULL_SIMP_TAC (srw_ss()) [] THEN
-Cases_on `x'` THEN
-FULL_SIMP_TAC (srw_ss()) [linear_order_to_list_f_def, LET_THM] THEN
-IMP_RES_TAC CHOICE_DEF THEN
-SRW_TAC [] [] THEN
-`domain lo UNION range lo DIFF minimal_elements (domain lo UNION range lo) lo
- SUBSET X`
-        by (FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF, linear_order_def, in_domain,
-                                      in_range] THEN
-            METIS_TAC []) THEN
-IMP_RES_TAC linear_order_subset THENL
-[`x IN (domain lo UNION range lo DIFF
-        minimal_elements (domain lo UNION range lo) lo)`
-         by METIS_TAC [linear_order_to_list_lem2] THEN
-     FULL_SIMP_TAC (srw_ss()) [] THEN
-     METIS_TAC [],
- CCONTR_TAC THEN
-     `CHOICE (minimal_elements (domain lo UNION range lo) lo) IN
-        (domain lo UNION range lo DIFF
-         minimal_elements (domain lo UNION range lo) lo)`
-             by METIS_TAC [linear_order_to_list_lem2] THEN
-     FULL_SIMP_TAC (srw_ss()) [],
- RES_TAC THEN
-     FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF, in_domain, in_range,
-                               linear_order_def] THEN
-     METIS_TAC []]);
 
 fun REORDER_ANTS_MOD f g th =
   let val (ants, uth) = strip_gen_left (UNDISCH_TM o SPEC_ALL) th ;
@@ -2415,34 +2214,6 @@ val linear_order_to_llist = Q.store_thm ("linear_order_to_llist",
     (!i j x. (LNTH i ll = SOME x) /\ (LNTH j ll = SOME x) ==> (i = j))`,
   REPEAT STRIP_TAC THEN IMP_RES_TAC linear_order_to_llist_eq THEN
   Q.EXISTS_TAC `ll'` THEN ASM_REWRITE_TAC [SUBSET_REFL]) ;
-
-(*
-val linear_order_to_llist = Q.store_thm ("linear_order_to_llist",
-`!lo X.
-  linear_order lo X /\
-  finite_prefixes lo X
-  ==>
-  ?ll.
-    (X = { x | ?i. LNTH i ll = SOME x }) /\
-    lo SUBSET { (x,y) | ?i j. i <= j /\ (LNTH i ll = SOME x) /\
-                              (LNTH j ll = SOME y) } /\
-    (!i j x. (LNTH i ll = SOME x) /\ (LNTH j ll = SOME x) ==> (i = j))`,
-SRW_TAC [] [] THEN
-Q.EXISTS_TAC `LUNFOLD linear_order_to_list_f lo` THEN
-SRW_TAC [] [SUBSET_DEF, EXTENSION] THEN1
-METIS_TAC [linear_order_to_list_lem1, finite_prefixes_def,
-linear_order_to_list_lem2] THENL
-[`?y z. x = (y,z)`
-         by (Cases_on `x` THEN
-             METIS_TAC []) THEN
-     SRW_TAC [] [] THEN
-     `y IN X`
-             by (FULL_SIMP_TAC (srw_ss()) [in_domain, linear_order_def,
-                                           SUBSET_DEF] THEN
-                 METIS_TAC []) THEN
-     METIS_TAC [linear_order_to_list_lem3, finite_prefixes_def],
- METIS_TAC [linear_order_to_list_lem4]]);
-*)
 
 val LPREFIX_def = Define `
   LPREFIX l1 l2 =
