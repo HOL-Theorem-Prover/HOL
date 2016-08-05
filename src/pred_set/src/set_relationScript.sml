@@ -1124,6 +1124,34 @@ val strict_linear_order_restrict = Q.store_thm ("strict_linear_order_restrict",
   LASTGOAL (FIRST_X_ASSUM irule THEN FIRST_ASSUM ACCEPT_TAC) THEN
   RES_TAC) ;
 
+val linear_order_dom_rg = Q.store_thm ("linear_order_dom_rg",
+  `linear_order lo X ==> (domain lo UNION range lo = X)`,
+  REWRITE_TAC [linear_order_def] THEN STRIP_TAC THEN
+  ASM_REWRITE_TAC [SET_EQ_SUBSET, UNION_SUBSET] THEN
+  REWRITE_TAC [SUBSET_DEF, IN_UNION, in_domain] THEN
+  REPEAT STRIP_TAC THEN RES_TAC THEN DISJ1_TAC THEN
+  Q.EXISTS_TAC `x` THEN POP_ASSUM ACCEPT_TAC ) ;
+
+val linear_order_refl = Q.store_thm ("linear_order_refl",
+  `linear_order lo X ==> x IN X ==> (x, x) IN lo`,
+  REWRITE_TAC [linear_order_def] THEN REPEAT STRIP_TAC THEN RES_TAC) ; 
+
+val linear_order_in_set = Q.store_thm ("linear_order_in_set",
+  `linear_order lo X ==> (x, y) IN lo ==> x IN X /\ y IN X`,
+  REPEAT DISCH_TAC THEN IMP_RES_TAC linear_order_dom_rg THEN
+  VAR_EQ_TAC THEN 
+  IMP_RES_TAC in_dom_rg THEN ASM_REWRITE_TAC [IN_UNION]) ;
+
+val IN_MIN_LO = Q.store_thm ("IN_MIN_LO",
+  `x IN X ==> linear_order lo X ==> y IN minimal_elements X lo ==> 
+    (y, x) IN lo`,
+  Ho_Rewrite.REWRITE_TAC [minimal_elements_def, linear_order_def,
+      EXTENSION, IN_GSPEC_IFF] THEN
+  REPEAT STRIP_TAC THEN 
+  FIRST_X_ASSUM (ASSUME_TAC o Q.SPECL [`x`, `y`]) THEN
+  FIRST_X_ASSUM (ASSUME_TAC o Q.SPEC `x`) THEN
+  RES_TAC THEN RES_TAC THEN FULL_SIMP_TAC std_ss []) ;
+
 val extend_linear_order = Q.store_thm ("extend_linear_order",
 `!r s x.
   x NOTIN s /\

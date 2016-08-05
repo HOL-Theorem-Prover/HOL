@@ -1929,61 +1929,17 @@ val linear_order_to_list_f_def = Define `
       else
         SOME (rrestrict lo ((domain lo UNION range lo) DIFF min), CHOICE min)`;
 
-val linear_order_dom_rg = Q.store_thm ("linear_order_dom_rg",
-  `linear_order lo X ==> (domain lo UNION range lo = X)`,
-  REWRITE_TAC [linear_order_def] THEN STRIP_TAC THEN
-  ASM_REWRITE_TAC [SET_EQ_SUBSET, UNION_SUBSET] THEN
-  REWRITE_TAC [SUBSET_DEF, IN_UNION, in_domain] THEN
-  REPEAT STRIP_TAC THEN RES_TAC THEN DISJ1_TAC THEN
-  Q.EXISTS_TAC `x` THEN POP_ASSUM ACCEPT_TAC ) ;
-
-val linear_order_refl = Q.store_thm ("linear_order_refl",
-  `linear_order lo X ==> x IN X ==> (x, x) IN lo`,
-  REWRITE_TAC [linear_order_def] THEN REPEAT STRIP_TAC THEN RES_TAC) ; 
-
-val linear_order_in_set = Q.store_thm ("linear_order_in_set",
-  `linear_order lo X ==> (x, y) IN lo ==> x IN X /\ y IN X`,
-  REPEAT DISCH_TAC THEN IMP_RES_TAC linear_order_dom_rg THEN
-  VAR_EQ_TAC THEN 
-  IMP_RES_TAC in_dom_rg THEN ASM_REWRITE_TAC [IN_UNION]) ;
-
 val SUC_EX = Q.prove (`(?x. P (SUC x)) ==> $? P`,
   REWRITE_TAC [EXISTS_DEF] THEN BETA_TAC THEN MATCH_ACCEPT_TAC SELECT_AX) ;
 
 val PRED_SET_ss = pred_setSimps.PRED_SET_ss ;
 val set_ss = std_ss ++ pred_setSimps.PRED_SET_ss ;
 
-val IN_MIN_LO = Q.store_thm ("IN_MIN_LO",
-  `x IN X ==> linear_order lo X ==> y IN minimal_elements X lo ==> 
-    (y, x) IN lo`,
-  SIMP_TAC set_ss [minimal_elements_def, linear_order_def,
-      EXTENSION, IN_GSPEC_IFF] THEN
-  REPEAT STRIP_TAC THEN 
-  FIRST_X_ASSUM (ASSUME_TAC o Q.SPECL [`x`, `y`]) THEN
-  FIRST_X_ASSUM (ASSUME_TAC o Q.SPEC `x`) THEN
-  RES_TAC THEN RES_TAC THEN FULL_SIMP_TAC std_ss []) ;
-
 val MIN_LO_IN = Q.prove (
   `(minimal_elements X lo = {y}) ==> x IN X ==> linear_order lo X ==> 
      (y, x) IN lo`,
   REPEAT STRIP_TAC THEN IMP_RES_TAC IN_MIN_LO THEN
   POP_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC [IN_INSERT]) ;
-
-val lo_single_min_prefix = Q.prove (
-  `linear_order lo X ==> (minimal_elements X lo = {x}) ==>
-  ({y | (y,x) IN lo} = {x})`,
-  SIMP_TAC (srw_ss()) [EXTENSION, minimal_elements_def] THEN
-  REPEAT STRIP_TAC THEN EQ_TAC 
-  THENL [
-    POP_ASSUM (ASSUME_TAC o Q.SPEC `x`) THEN
-    RULE_L_ASSUM_TAC (CONJUNCTS o REWRITE_RULE []) THEN 
-    POP_ASSUM (ASSUME_TAC o Q.SPEC `x'`) THEN
-    DISCH_TAC THEN IMP_RES_TAC linear_order_in_set THEN
-    RES_TAC THEN ASM_REWRITE_TAC [],
-    DISCH_TAC THEN VAR_EQ_TAC THEN
-    POP_ASSUM (ASSUME_TAC o Q.SPEC `x`) THEN
-    RULE_L_ASSUM_TAC (CONJUNCTS o REWRITE_RULE [linear_order_def]) THEN
-    FIRST_X_ASSUM (ASSUME_TAC o Q.SPECL [`x`, `x`]) THEN RES_TAC]) ;
 
 val fploum = REWRITE_RULE [SUBSET_REFL, GSYM AND_IMP_INTRO]
 (Q.SPECL [`r`, `s`, `s`] finite_prefix_linear_order_has_unique_minimal) ;
@@ -2016,6 +1972,23 @@ val csd_gt0 = Q.prove (
 val set_o_CONS = Q.prove (`set o CONS h = $INSERT h o set`,
   REWRITE_TAC [FUN_EQ_THM, combinTheory.o_THM, listTheory.LIST_TO_SET]) ;
   
+val lo_single_min_prefix = Q.prove (
+  `linear_order lo X ==> (minimal_elements X lo = {x}) ==>
+  ({y | (y,x) IN lo} = {x})`,
+  Ho_Rewrite.REWRITE_TAC [minimal_elements_def,
+      EXTENSION, IN_GSPEC_IFF, IN_SING] THEN
+  REPEAT STRIP_TAC THEN EQ_TAC 
+  THENL [
+    POP_ASSUM (ASSUME_TAC o Q.SPEC `x`) THEN
+      RULE_L_ASSUM_TAC (CONJUNCTS o REWRITE_RULE []) THEN 
+      POP_ASSUM (ASSUME_TAC o Q.SPEC `x'`) THEN
+      DISCH_TAC THEN IMP_RES_TAC linear_order_in_set THEN
+      RES_TAC THEN ASM_REWRITE_TAC [],
+    DISCH_TAC THEN VAR_EQ_TAC THEN
+      POP_ASSUM (ASSUME_TAC o Q.SPEC `x`) THEN
+      RULE_L_ASSUM_TAC (CONJUNCTS o REWRITE_RULE [linear_order_def]) THEN
+      FIRST_X_ASSUM (ASSUME_TAC o Q.SPECL [`x`, `x`]) THEN RES_TAC]) ;
+
 (* we don't actually use the second clause of the conclusion of this,
   but it didn't take much extra effort to prove *)
 val linear_order_to_list_lem1a = Q.prove (
