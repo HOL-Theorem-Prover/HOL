@@ -144,7 +144,7 @@ val lisp_sexp2string_aux_loop_thm = prove(
   \\ FULL_SIMP_TAC std_ss [isDot_def,CAR_def,CDR_def]
   \\ Cases_on `isQuote (Dot S' S0)` THEN1
    (FULL_SIMP_TAC std_ss [LISP_TEST_def,EVAL ``Sym "T" = Sym "NIL"``]
-    \\ Q.PAT_ASSUM `!x1.bbb` MP_TAC
+    \\ Q.PAT_X_ASSUM `!x1.bbb` MP_TAC
     \\ SIMP_TAC std_ss [Once lisp_sexp2string_aux_loop_def]
     \\ SIMP_TAC std_ss [Once lisp_sexp2string_aux_loop_pre_def]
     \\ SIMP_TAC std_ss [LET_DEF]
@@ -158,8 +158,8 @@ val lisp_sexp2string_aux_loop_thm = prove(
   \\ ASM_SIMP_TAC std_ss [LISP_TEST_def]
   \\ REVERSE (Cases_on `b`) THEN1
    (FULL_SIMP_TAC std_ss [lisp_sexp2string_aux_extra_def]
-    \\ Q.PAT_ASSUM `!x1.bbb` MP_TAC
-    \\ Q.PAT_ASSUM `!x1.bbb` MP_TAC
+    \\ Q.PAT_X_ASSUM `!x1.bbb` MP_TAC
+    \\ Q.PAT_X_ASSUM `!x1.bbb` MP_TAC
     \\ SIMP_TAC std_ss [Once lisp_sexp2string_aux_loop_def]
     \\ SIMP_TAC std_ss [Once lisp_sexp2string_aux_loop_pre_def]
     \\ SIMP_TAC std_ss [LET_DEF]
@@ -174,26 +174,26 @@ val lisp_sexp2string_aux_loop_thm = prove(
              LIST_STRCAT_def,APPEND,APPEND_NIL] \\ METIS_TAC [])
     \\ SIMP_TAC std_ss [lisp_sexp2string_aux_space_def,LET_DEF,IO_WRITE_APPEND]
     \\ REVERSE (Cases_on `isDot S0`) \\ ASM_SIMP_TAC std_ss [] THEN1
-     (Q.PAT_ASSUM `!x1.bbb` (MP_TAC o Q.SPECL [`S0`,`xs`,`IO_WRITE io (STRCAT (sexp2string_aux (S',T)) " . ")`,`F`])
+     (Q.PAT_X_ASSUM `!x1.bbb` (MP_TAC o Q.SPECL [`S0`,`xs`,`IO_WRITE io (STRCAT (sexp2string_aux (S',T)) " . ")`,`F`])
       \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [IO_WRITE_APPEND,NOT_CONS_NIL,
            sexp2string_aux_def,LET_DEF,LIST_STRCAT_def,APPEND,APPEND_NIL]
       \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND] \\ METIS_TAC [])
     \\ ASM_SIMP_TAC std_ss [LISP_TEST_EQ_NIL]
     \\ Cases_on `isQuote S0` \\ FULL_SIMP_TAC std_ss [LISP_TEST_def]
     THEN1
-     (Q.PAT_ASSUM `!x1.bbb` (MP_TAC o Q.SPECL [`S0`,`xs`,`IO_WRITE io (STRCAT (sexp2string_aux (S',T)) " . ")`,`F`])
+     (Q.PAT_X_ASSUM `!x1.bbb` (MP_TAC o Q.SPECL [`S0`,`xs`,`IO_WRITE io (STRCAT (sexp2string_aux (S',T)) " . ")`,`F`])
       \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [IO_WRITE_APPEND,NOT_CONS_NIL,
            sexp2string_aux_def,LET_DEF,LIST_STRCAT_def,APPEND,APPEND_NIL]
       \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND] \\ METIS_TAC [])
     THEN1
-     (Q.PAT_ASSUM `!x1.bbb` (MP_TAC o Q.SPECL [`S0`,`xs`,`IO_WRITE io (STRCAT (sexp2string_aux (S',T)) " ")`,`F`])
+     (Q.PAT_X_ASSUM `!x1.bbb` (MP_TAC o Q.SPECL [`S0`,`xs`,`IO_WRITE io (STRCAT (sexp2string_aux (S',T)) " ")`,`F`])
       \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [IO_WRITE_APPEND,NOT_CONS_NIL,
            sexp2string_aux_def,LET_DEF,LIST_STRCAT_def,APPEND,APPEND_NIL]
       \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND] \\ METIS_TAC []))
   THEN1
    (FULL_SIMP_TAC std_ss [lisp_sexp2string_aux_extra_def,T_NOT_NIL]
-    \\ Q.PAT_ASSUM `!x1.bbb` MP_TAC
-    \\ Q.PAT_ASSUM `!x1.bbb` MP_TAC
+    \\ Q.PAT_X_ASSUM `!x1.bbb` MP_TAC
+    \\ Q.PAT_X_ASSUM `!x1.bbb` MP_TAC
     \\ SIMP_TAC std_ss [Once lisp_sexp2string_aux_loop_def]
     \\ SIMP_TAC std_ss [Once lisp_sexp2string_aux_loop_pre_def]
     \\ SIMP_TAC std_ss [LET_DEF]
@@ -211,7 +211,7 @@ val lisp_sexp2string_aux_loop_thm = prove(
            \\ METIS_TAC [])
     \\ SIMP_TAC std_ss [lisp_sexp2string_aux_space_def,LET_DEF,IO_WRITE_APPEND]
     \\ REVERSE (Cases_on `isDot S0`) \\ ASM_SIMP_TAC std_ss [] THEN1
-     (Q.PAT_ASSUM `!x1.bbb` (MP_TAC o Q.SPECL [`S0`,`Sym "T"::xs`,`IO_WRITE io (STRCAT "(" (STRCAT (sexp2string_aux (S',T)) " . "))`,`F`])
+     (Q.PAT_X_ASSUM `!x1.bbb` (MP_TAC o Q.SPECL [`S0`,`Sym "T"::xs`,`IO_WRITE io (STRCAT "(" (STRCAT (sexp2string_aux (S',T)) " . "))`,`F`])
       \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
       \\ SIMP_TAC std_ss [Once lisp_sexp2string_aux_loop_def]
       \\ SIMP_TAC std_ss [Once lisp_sexp2string_aux_loop_pre_def]
@@ -222,7 +222,7 @@ val lisp_sexp2string_aux_loop_thm = prove(
     \\ ASM_SIMP_TAC std_ss [LISP_TEST_EQ_NIL]
     \\ Cases_on `isQuote S0` \\ FULL_SIMP_TAC std_ss [LISP_TEST_def]
     THEN1
-     (Q.PAT_ASSUM `!x1.bbb` (MP_TAC o Q.SPECL [`S0`,`Sym "T"::xs`,`IO_WRITE io (STRCAT "(" (STRCAT (sexp2string_aux (S',T)) " . "))`,`F`])
+     (Q.PAT_X_ASSUM `!x1.bbb` (MP_TAC o Q.SPECL [`S0`,`Sym "T"::xs`,`IO_WRITE io (STRCAT "(" (STRCAT (sexp2string_aux (S',T)) " . "))`,`F`])
       \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
       \\ SIMP_TAC std_ss [Once lisp_sexp2string_aux_loop_def]
       \\ SIMP_TAC std_ss [Once lisp_sexp2string_aux_loop_pre_def]
@@ -231,7 +231,7 @@ val lisp_sexp2string_aux_loop_thm = prove(
       \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND]
       \\ METIS_TAC [])
     THEN1
-     (Q.PAT_ASSUM `!x1.bbb` (MP_TAC o Q.SPECL [`S0`,`Sym "T"::xs`,`IO_WRITE io (STRCAT "(" (STRCAT (sexp2string_aux (S',T)) " "))`,`F`])
+     (Q.PAT_X_ASSUM `!x1.bbb` (MP_TAC o Q.SPECL [`S0`,`Sym "T"::xs`,`IO_WRITE io (STRCAT "(" (STRCAT (sexp2string_aux (S',T)) " "))`,`F`])
       \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
       \\ SIMP_TAC std_ss [Once lisp_sexp2string_aux_loop_def]
       \\ SIMP_TAC std_ss [Once lisp_sexp2string_aux_loop_pre_def]
@@ -567,7 +567,7 @@ val lisp_parse_thm = prove(
       \\ ONCE_REWRITE_TAC [lisp_parse_def,lisp_parse_pre_def]
       \\ SIMP_TAC std_ss [LET_DEF,HD,SExp_distinct,TL,parse_stack_def,APPEND]
       \\ SIMP_TAC (srw_ss()) [] \\ STRIP_TAC
-      \\ Q.PAT_ASSUM `!exp.bbb` MATCH_MP_TAC
+      \\ Q.PAT_X_ASSUM `!exp.bbb` MATCH_MP_TAC
       \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [])
     \\ Cases_on `READ_L_STORE h` THEN1
      (FULL_SIMP_TAC std_ss [NOT_CONS_NIL]
@@ -605,7 +605,7 @@ val lisp_parse_thm = prove(
       \\ `LENGTH xs = LENGTH (UPDATE_NTH x exp xs)` by SIMP_TAC std_ss [LENGTH_UPDATE_NTH]
       \\ POP_ASSUM (fn th => SIMP_TAC std_ss [th])
       \\ REPEAT STRIP_TAC
-      \\ Q.PAT_ASSUM `!expp.bbb` (MP_TAC o Q.SPECL [`exp'`,`cs2`,`exp`,`Val x`,
+      \\ Q.PAT_X_ASSUM `!expp.bbb` (MP_TAC o Q.SPECL [`exp'`,`cs2`,`exp`,`Val x`,
                 `x2`,`x5`,`UPDATE_NTH x exp xs`,`ys`,`io`,`LENGTH (xs:SExp list) + LENGTH (ys:SExp list)`])
       \\ ASM_SIMP_TAC std_ss [] \\ SIMP_TAC std_ss [LENGTH_UPDATE_NTH]
       \\ METIS_TAC [LIST_UPDATE_NTH_def])
@@ -638,7 +638,7 @@ val lisp_parse_thm = prove(
       \\ ONCE_REWRITE_TAC [lisp_parse_def,lisp_parse_pre_def]
       \\ SIMP_TAC std_ss [LET_DEF,HD,SExp_distinct,TL,parse_stack_def,APPEND]
       \\ SIMP_TAC (srw_ss()) [] \\ STRIP_TAC
-      \\ Q.PAT_ASSUM `!exp.bbb` MATCH_MP_TAC \\ ASM_SIMP_TAC std_ss [])
+      \\ Q.PAT_X_ASSUM `!exp.bbb` MATCH_MP_TAC \\ ASM_SIMP_TAC std_ss [])
     \\ REVERSE (Cases_on `READ_L_CONS h`) THEN1
      (IMP_RES_TAC READ_L_CONS_NONE_IMP
       \\ FULL_SIMP_TAC (srw_ss()) [parse_stack_def]
@@ -682,35 +682,35 @@ val lisp_parse_thm = prove(
     \\ Cases_on `h` \\ SIMP_TAC std_ss [parse_stack_def,NOT_CONS_NIL,APPEND])
   \\ Cases_on `z2 = Val 0` \\ FULL_SIMP_TAC (srw_ss()) [parse_task2_def]
   THEN1
-   (Q.PAT_ASSUM `(exp,cs2) = xxx` MP_TAC \\ ONCE_REWRITE_TAC [sexp_lex_parse_def]
+   (Q.PAT_X_ASSUM `(exp,cs2) = xxx` MP_TAC \\ ONCE_REWRITE_TAC [sexp_lex_parse_def]
     \\ FULL_SIMP_TAC (srw_ss()) [APPLY_REPLACE_INPUT_IO,LET_DEF] \\ METIS_TAC [])
   \\ Cases_on `z2 = Val 1` \\ FULL_SIMP_TAC (srw_ss()) [parse_task2_def] THEN1
    (Cases_on `z1 = Val 0` \\ FULL_SIMP_TAC (srw_ss()) [parse_task2_def,
       parse_stack_def,APPLY_REPLACE_INPUT_IO] THEN1
-      (Q.PAT_ASSUM `(exp,cs2) = xxx` MP_TAC \\ ONCE_REWRITE_TAC [sexp_lex_parse_def]
+      (Q.PAT_X_ASSUM `(exp,cs2) = xxx` MP_TAC \\ ONCE_REWRITE_TAC [sexp_lex_parse_def]
        \\ FULL_SIMP_TAC (srw_ss()) [APPLY_REPLACE_INPUT_IO,LET_DEF] \\ METIS_TAC [])
     \\ Cases_on `z1 = Val 1` \\ FULL_SIMP_TAC (srw_ss()) [parse_task2_def,
       parse_stack_def,APPLY_REPLACE_INPUT_IO] THEN1
-      (Q.PAT_ASSUM `(exp,cs2) = xxx` MP_TAC \\ ONCE_REWRITE_TAC [sexp_lex_parse_def]
+      (Q.PAT_X_ASSUM `(exp,cs2) = xxx` MP_TAC \\ ONCE_REWRITE_TAC [sexp_lex_parse_def]
        \\ FULL_SIMP_TAC (srw_ss()) [APPLY_REPLACE_INPUT_IO,LET_DEF] \\ METIS_TAC [])
     \\ Cases_on `z1 = Val 3` \\ FULL_SIMP_TAC (srw_ss()) [parse_task2_def,
       parse_stack_def,APPLY_REPLACE_INPUT_IO] THEN1
-      (Q.PAT_ASSUM `(exp,cs2) = xxx` MP_TAC \\ ONCE_REWRITE_TAC [sexp_lex_parse_def]
+      (Q.PAT_X_ASSUM `(exp,cs2) = xxx` MP_TAC \\ ONCE_REWRITE_TAC [sexp_lex_parse_def]
        \\ FULL_SIMP_TAC (srw_ss()) [APPLY_REPLACE_INPUT_IO,LET_DEF] \\ METIS_TAC [])
     \\ `z1 = Val 2` by METIS_TAC [next_token_cases]
     \\ FULL_SIMP_TAC (srw_ss()) [parse_task2_def,
          parse_stack_def,APPLY_REPLACE_INPUT_IO]
-    \\ Q.PAT_ASSUM `(exp,cs2) = xxx` MP_TAC \\ ONCE_REWRITE_TAC [sexp_lex_parse_def]
+    \\ Q.PAT_X_ASSUM `(exp,cs2) = xxx` MP_TAC \\ ONCE_REWRITE_TAC [sexp_lex_parse_def]
     \\ FULL_SIMP_TAC (srw_ss()) [APPLY_REPLACE_INPUT_IO,LET_DEF] \\ METIS_TAC [])
   \\ Cases_on `z2 = Val 2` \\ FULL_SIMP_TAC (srw_ss()) [parse_task2_def] THEN1
-   (Q.PAT_ASSUM `(exp,cs2) = xxx` MP_TAC \\ ONCE_REWRITE_TAC [sexp_lex_parse_def]
+   (Q.PAT_X_ASSUM `(exp,cs2) = xxx` MP_TAC \\ ONCE_REWRITE_TAC [sexp_lex_parse_def]
     \\ FULL_SIMP_TAC (srw_ss()) [APPLY_REPLACE_INPUT_IO,LET_DEF]
     \\ `isVal z1` by METIS_TAC [next_token_cases]
     \\ FULL_SIMP_TAC (srw_ss()) [isVal_thm,getVal_def]
     \\ FULL_SIMP_TAC (srw_ss()) [parse_task2_def,
           parse_stack_def,APPLY_REPLACE_INPUT_IO,getVal_def] \\ METIS_TAC [])
   \\ Cases_on `z2 = Val 3` \\ FULL_SIMP_TAC (srw_ss()) [parse_task2_def] THEN1
-   (Q.PAT_ASSUM `(exp,cs2) = xxx` MP_TAC \\ ONCE_REWRITE_TAC [sexp_lex_parse_def]
+   (Q.PAT_X_ASSUM `(exp,cs2) = xxx` MP_TAC \\ ONCE_REWRITE_TAC [sexp_lex_parse_def]
     \\ FULL_SIMP_TAC (srw_ss()) [APPLY_REPLACE_INPUT_IO,LET_DEF]
     \\ `isVal z1` by METIS_TAC [next_token_cases]
     \\ FULL_SIMP_TAC (srw_ss()) [isVal_thm,getVal_def]
@@ -734,7 +734,7 @@ val lisp_parse_thm = prove(
     \\ `lisp_mem x5 a = mem a` by
           (FULL_SIMP_TAC std_ss [lisp_parse_mem_inv_def] \\ METIS_TAC [])
     \\ FULL_SIMP_TAC std_ss [] \\ METIS_TAC [])
-  \\ Q.PAT_ASSUM `(exp,cs2) = xxx` MP_TAC \\ ONCE_REWRITE_TAC [sexp_lex_parse_def]
+  \\ Q.PAT_X_ASSUM `(exp,cs2) = xxx` MP_TAC \\ ONCE_REWRITE_TAC [sexp_lex_parse_def]
   \\ FULL_SIMP_TAC (srw_ss()) [APPLY_REPLACE_INPUT_IO,LET_DEF]
   \\ FULL_SIMP_TAC std_ss [remove_parse_stack_thm,GSYM APPEND_ASSOC]
   \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `[]`
@@ -787,7 +787,7 @@ val lisp_string2sexp_thm = prove(
     \\ SIMP_TAC std_ss [rich_listTheory.BUTFIRSTN_LENGTH_APPEND])
   \\ ASM_SIMP_TAC std_ss [TL,HD,NOT_CONS_NIL,isVal_def]
   \\ ASM_SIMP_TAC std_ss [LENGTH_APPEND,LENGTH_LIST_UPDATE_NTH,LENGTH_GENLIST]
-  \\ Q.PAT_ASSUM `(exp,cs2) = xxx` (MP_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `(exp,cs2) = xxx` (MP_TAC o GSYM)
   \\ ASM_SIMP_TAC std_ss [read_sexp_def,next_sexp_def,sexp_parse_stream_def]
   \\ Cases_on `io` \\ FULL_SIMP_TAC std_ss [IO_INPUT_APPLY_def,getINPUT_def,
        REPLACE_INPUT_IO_def,sexp_parse_stream_def]
