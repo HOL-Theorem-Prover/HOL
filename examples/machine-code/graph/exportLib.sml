@@ -328,7 +328,7 @@ fun export_graph name rhs = let
      in raise (HOL_ERR e) end) :: my_map f xs
   val _ = my_map (write_graph o export_node) nodes
   val last_line = "EntryPoint " ^ int_to_hex entry ^ "\n"
-  val _ = write_graph last_line
+  val _ = if List.null nodes then () else write_graph last_line
   in () end
 
 
