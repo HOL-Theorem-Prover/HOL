@@ -103,7 +103,7 @@ fun prove_spec th imp def pre_tm post_tm = let
     \\ REWRITE_TAC [SEP_IMP_MOVE_COND]
     \\ REPEAT STRIP_TAC
     \\ IMP_RES_TAC (SIMP_RULE std_ss [] imp)
-    \\ REPEAT (Q.PAT_ASSUM `xx ==> yy` (K ALL_TAC))
+    \\ REPEAT (Q.PAT_X_ASSUM `xx ==> yy` (K ALL_TAC))
     \\ ASM_SIMP_TAC std_ss [LET_DEF]
     \\ SIMP_TAC std_ss [def,SEP_CLAUSES]
     \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS]
@@ -132,7 +132,7 @@ fun prove_spec th imp def pre_tm post_tm = let
     \\ AUTO_EXISTS_TAC
     \\ FULL_SIMP_TAC std_ss []
     \\ IMP_RES_TAC (SIMP_RULE std_ss [] imp)
-    \\ REPEAT (Q.PAT_ASSUM `xx ==> yy` (K ALL_TAC))
+    \\ REPEAT (Q.PAT_X_ASSUM `xx ==> yy` (K ALL_TAC))
     \\ FULL_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC (std_ss++star_ss) [] \\ METIS_TAC [])
   val th = MATCH_MP th lemma
@@ -1437,4 +1437,3 @@ val _ = map PPC_LISP_EQ_ZERO [1,2,3,4,5,6];
 
 
 val _ = export_theory();
-

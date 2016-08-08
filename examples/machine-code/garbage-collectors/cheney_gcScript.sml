@@ -357,7 +357,7 @@ val move_lemma = store_thm("move_lemma",
     \\ ONCE_REWRITE_TAC [EQ_SYM_EQ,SUBSET_REFL,LESS_EQ_REFL]
     \\ ASM_SIMP_TAC bool_ss [] \\ REPEAT STRIP_TAC
     \\ FULL_SIMP_TAC bool_ss [cheney_inv_def,heap_type_11] THENL [
-      Q.PAT_ASSUM `R1 m = RANGE (b,j)` (fn th => REWRITE_TAC [GSYM th]) \\ DISJ2_TAC
+      Q.PAT_X_ASSUM `R1 m = RANGE (b,j)` (fn th => REWRITE_TAC [GSYM th]) \\ DISJ2_TAC
       \\ SIMP_TAC bool_ss [GSYM IN_EQ_SUBSET,IN_DEF,R1] \\ METIS_TAC [],
       FULL_SIMP_TAC bool_ss [cheney_inv_def,SUBSET_DEF,IN_DEF]
       \\ `R1 m i'` by (REWRITE_TAC [R1] \\ METIS_TAC []) \\ METIS_TAC [],
@@ -383,7 +383,7 @@ val move_lemma = store_thm("move_lemma",
       \\ `~(j = x')` by (FULL_SIMP_TAC bool_ss [cheney_inv_def,IRANGE_def] \\ DECIDE_TAC)
       \\ ASM_REWRITE_TAC [])
   \\ `abs ((x =+ REF j) ((j =+ DATA (t,u,v)) m)) = apply (swap j x) (abs m)` by
-       (Q.PAT_ASSUM `m x = DATA (t,u,v)` (fn th => REWRITE_TAC [GSYM th] \\ ASSUME_TAC th)
+       (Q.PAT_X_ASSUM `m x = DATA (t,u,v)` (fn th => REWRITE_TAC [GSYM th] \\ ASSUME_TAC th)
         \\ REWRITE_TAC [GSYM move_lemma2]
         \\ MATCH_MP_TAC (GEN_ALL move_lemma_lemma)
         \\ Q.EXISTS_TAC `xx` \\ Q.EXISTS_TAC `f` \\ Q.EXISTS_TAC `v`
@@ -394,7 +394,7 @@ val move_lemma = store_thm("move_lemma",
         \\ `j <= j /\ j < e` by DECIDE_TAC
         \\ METIS_TAC [])
   \\ IMP_RES_TAC cheney_inv_CUT_lemma
-  \\ REPEAT (Q.PAT_ASSUM `!tyu.fgh` (fn th => ALL_TAC))
+  \\ REPEAT (Q.PAT_X_ASSUM `!tyu.fgh` (fn th => ALL_TAC))
   \\ FULL_SIMP_TAC std_ss [cheney_inv_def]
   \\ ASM_SIMP_TAC bool_ss [CUT_update,apply_apply,swap_swap,apply_I]
   \\ REPEAT STRIP_TAC THEN1 DECIDE_TAC THEN1 DECIDE_TAC THEN1 DECIDE_TAC
@@ -414,7 +414,7 @@ val move_lemma = store_thm("move_lemma",
   THEN1
      (MATCH_MP_TAC SUBSET0_TRANS \\ Q.EXISTS_TAC `RANGE (b,j)` \\ ASM_REWRITE_TAC [])
   THEN1
-     (Q.PAT_ASSUM `m x = DATA (t,u,v)` (ASSUME_TAC o GSYM) \\ ASM_REWRITE_TAC []
+     (Q.PAT_X_ASSUM `m x = DATA (t,u,v)` (ASSUME_TAC o GSYM) \\ ASM_REWRITE_TAC []
       \\ MATCH_MP_TAC SUBSET0_TRANS \\ Q.EXISTS_TAC `DR0 (ICUT (b,e) m)`
       \\ ONCE_REWRITE_TAC [CONJ_COMM] \\ STRIP_TAC THEN1
        (REWRITE_TAC [DR0,SUBSET0_DEF,SUBSET_DEF,IN_INSERT]
@@ -422,7 +422,7 @@ val move_lemma = store_thm("move_lemma",
         \\ STRIP_TAC \\ Cases_on `IRANGE (b,e) x'`
         \\ ASM_REWRITE_TAC [heap_type_distinct] \\ METIS_TAC [])
       \\ MATCH_MP_TAC D1_SUBSET0 \\ ASM_SIMP_TAC bool_ss [CUT_update]
-      \\ Q.PAT_ASSUM `DATA (t,u,v) = m x` (ASSUME_TAC o GSYM) \\ ASM_REWRITE_TAC []
+      \\ Q.PAT_X_ASSUM `DATA (t,u,v) = m x` (ASSUME_TAC o GSYM) \\ ASM_REWRITE_TAC []
       \\ MATCH_MP_TAC SUBSET0_TRANS \\ Q.EXISTS_TAC `{t;u}` \\ STRIP_TAC THEN1
        (REWRITE_TAC [DR0,SUBSET0_DEF,SUBSET_DEF,IN_INSERT,CUT_def]
         \\ SIMP_TAC std_ss [IN_DEF,DR0,UPDATE_def,ICUT_def,FUN_EQ_THM,D0,R0]
@@ -641,12 +641,12 @@ val cheney_inv_step = store_thm("cheney_inv_step",
   \\ SIMP_TAC bool_ss []
   \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
   \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM `i + 1 = i2` (K ALL_TAC)
-  \\ Q.PAT_ASSUM `j'' = j2` (K ALL_TAC)
-  \\ Q.PAT_ASSUM `e = e2` (K ALL_TAC)
-  \\ Q.PAT_ASSUM `(i =+ DATA (x',y',d)) m'' = m2` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `i + 1 = i2` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `j'' = j2` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `e = e2` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `(i =+ DATA (x',y',d)) m'' = m2` (K ALL_TAC)
   \\ `i <= e` by (FULL_SIMP_TAC bool_ss [cheney_inv_def] \\ DECIDE_TAC)
-  \\ Q.PAT_ASSUM `~(j = i)` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `_ <> _` (ASSUME_TAC o GSYM)
   \\ `?ax ay ad. m i = DATA (ax,ay,ad)` by METIS_TAC [m_DATA]
   \\ `~IRANGE (b,e) i /\ i + 1 <= j /\ b <= i /\ i <= j /\ ~RANGE(b,i)i /\ RANGE(i,j) i` by
      (FULL_SIMP_TAC bool_ss [cheney_inv_def,IRANGE_def,RANGE_def] \\ DECIDE_TAC)
@@ -664,8 +664,8 @@ val cheney_inv_step = store_thm("cheney_inv_step",
   \\ `{y} SUBSET0 DR0 (ICUT(b,e)m')` by
     FULL_SIMP_TAC bool_ss [SUBSET0_DEF,INSERT_SUBSET,EMPTY_SUBSET,IN_INSERT]
   \\ IMP_RES_TAC move_lemma
-  \\ Q.PAT_ASSUM `cheney_inv (b,b',i,j,j,e,f,m,w,xx,r)` (fn th => ALL_TAC)
-  \\ Q.PAT_ASSUM `cheney_inv (b,b',i,j',j,e,f,m',w,xx,r)` (fn th => ALL_TAC)
+  \\ Q.PAT_X_ASSUM `cheney_inv (b,b',i,j,j,e,f,m,w,xx,r)` (fn th => ALL_TAC)
+  \\ Q.PAT_X_ASSUM `cheney_inv (b,b',i,j',j,e,f,m',w,xx,r)` (fn th => ALL_TAC)
   \\ FULL_SIMP_TAC bool_ss [cheney_inv_def]
   \\ ASM_SIMP_TAC bool_ss [ICUT_update] THEN1 DECIDE_TAC
   \\ REPEAT STRIP_TAC
@@ -718,7 +718,7 @@ val cheney_inv_step = store_thm("cheney_inv_step",
     \\ SIMP_TAC std_ss [D1,IN_DEF,CUT_def,RANGE_def]
     \\ METIS_TAC [DECIDE ``i + 1 <= k /\ k < j'' ==> i <= k /\ k < j''``,heap_type_distinct])
   THEN1
-   (Q.PAT_ASSUM `R1 m'' = RANGE (b,j'')` (fn th => REWRITE_TAC [GSYM th])
+   (Q.PAT_X_ASSUM `R1 m'' = RANGE (b,j'')` (fn th => REWRITE_TAC [GSYM th])
     \\ `m'' i = DATA (ax,ay,ad)` by
      (`RANGE (b,j) i /\ RANGE (b,j') i` by ALL_TAC
       \\ FULL_SIMP_TAC bool_ss [CUT_def,FUN_EQ_THM]
@@ -766,7 +766,7 @@ val cheney_inv_step = store_thm("cheney_inv_step",
     \\ `abs ((i =+ DATA (x',y',d))m'') = abs m''` by ALL_TAC THENL [
       MATCH_MP_TAC (GEN_ALL abs_update_lemma)
       \\ Q.EXISTS_TAC `x` \\ Q.EXISTS_TAC `y` \\ ASM_SIMP_TAC bool_ss [heap_type_11]
-      \\ REPEAT (Q.PAT_ASSUM `fgh SUBSET0 jkl` (fn th => ALL_TAC))
+      \\ REPEAT (Q.PAT_X_ASSUM `fgh SUBSET0 jkl` (fn th => ALL_TAC))
       \\ `RANGE(b,j) i /\ RANGE(b,j') i` by (REWRITE_TAC [RANGE_def] \\ DECIDE_TAC)
       \\ `(m'' i = m i)` by (FULL_SIMP_TAC bool_ss [CUT_def,FUN_EQ_THM] \\ METIS_TAC [])
       \\ ASM_SIMP_TAC bool_ss [] \\ STRIP_TAC
@@ -847,11 +847,11 @@ val WFS_inv_IMP_cheney_inv = store_thm("ok_state_IMP_cheney_inv",
   THEN1 (Q.UNABBREV_TAC `b2` \\ Cases_on `u` \\ DECIDE_TAC)
   THEN1 (Q.UNABBREV_TAC `b2` \\ Cases_on `u` \\ DECIDE_TAC)
   THEN1
-   (Q.PAT_ASSUM `!k. ~bb:bool ==> c` MATCH_MP_TAC
+   (Q.PAT_X_ASSUM `!k. ~bb:bool ==> c` MATCH_MP_TAC
     \\ Cases_on `u` \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def]
     \\ Q.UNABBREV_TAC `b` \\ Q.UNABBREV_TAC `b2` \\ DECIDE_TAC)
   THEN1
-   (Q.PAT_ASSUM `!k. ~bbb:bool ==> c` MATCH_MP_TAC
+   (Q.PAT_X_ASSUM `!k. ~bbb:bool ==> c` MATCH_MP_TAC
     \\ Cases_on `u` \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def]
     \\ Q.UNABBREV_TAC `b` \\ Q.UNABBREV_TAC `b2` \\ DECIDE_TAC)
   THEN1 (SIMP_TAC std_ss [FUN_EQ_THM,D0,heap_type_distinct])
@@ -883,7 +883,7 @@ val WFS_inv_IMP_cheney_inv = store_thm("ok_state_IMP_cheney_inv",
     \\ Q.EXISTS_TAC `RANGE(b,i)` \\ FULL_SIMP_TAC std_ss [D0,SUBSET_DEF,IN_DEF,ICUT_def,FINITE_RANGE2]
     \\ METIS_TAC [heap_type_distinct])
   THEN1
-   (Q.PAT_ASSUM `!k. ~bbb:bool ==> c` MATCH_MP_TAC
+   (Q.PAT_X_ASSUM `!k. ~bbb:bool ==> c` MATCH_MP_TAC
     \\ Q.UNABBREV_TAC `b` \\ Cases_on `u` \\ FULL_SIMP_TAC bool_ss [RANGE_def,IN_DEF] \\ DECIDE_TAC)
   THEN1 REWRITE_TAC [GSYM EMPTY_DEF,EMPTY_SUBSET]
   THEN1
@@ -1034,7 +1034,7 @@ val move_roots_spec = prove(
   \\ `{h} SUBSET0 DR0 (ICUT (b,b + l) m)` by METIS_TAC []
   \\ IMP_RES_TAC move_lemma
   \\ `!k. MEM k r ==> {k} SUBSET0 DR0 (ICUT (b,b + l) m'')` by METIS_TAC []
-  \\ Q.PAT_ASSUM `!j m r'. bb` (STRIP_ASSUME_TAC o UNDISCH_ALL o
+  \\ Q.PAT_X_ASSUM `!j m r'. bb` (STRIP_ASSUME_TAC o UNDISCH_ALL o
        RW [GSYM AND_IMP_INTRO] o Q.SPECL [`j''`,`m''`,`rs3`,`j3`,`m3`,`w`,`ww`,`xx`])
   \\ STRIP_TAC THEN1 METIS_TAC []
   \\ STRIP_TAC THEN1 DECIDE_TAC
@@ -1044,7 +1044,7 @@ val move_roots_spec = prove(
   \\ STRIP_TAC THEN1
    (REPEAT STRIP_TAC \\ Cases_on `k = r''` THEN1 METIS_TAC [] \\ DISJ2_TAC
     \\ Cases_on `h = 0` THEN1 METIS_TAC [] \\ FULL_SIMP_TAC bool_ss [] \\ IMP_RES_TAC D0_IMP
-    \\ Q.PAT_ASSUM `!k. RANGE (j',j3) k ==> MEM k rs3` MATCH_MP_TAC
+    \\ Q.PAT_X_ASSUM `!k. RANGE (_,_) k ==> MEM k rs3` MATCH_MP_TAC
     \\ Cases_on ` m'' h = REF j` \\ FULL_SIMP_TAC bool_ss [heap_type_11]
     \\ FULL_SIMP_TAC bool_ss [RANGE_def] \\ DECIDE_TAC)
   \\ STRIP_TAC THEN1 METIS_TAC []
@@ -1054,8 +1054,8 @@ val move_roots_spec = prove(
     \\ REPEAT STRIP_TAC THENL [ALL_TAC,METIS_TAC []]
     \\ `~(h = 0)` by DECIDE_TAC
     \\ FULL_SIMP_TAC bool_ss [move_def,LET_DEF,PAIR_EQ]
-    \\ Q.PAT_ASSUM `!k. bbb ==> isREF (m3 k)` MATCH_MP_TAC \\ DISJ2_TAC
-    \\ Q.PAT_ASSUM `(h =+ REF j) ((j =+ m h) m) = m''` (fn th => REWRITE_TAC [GSYM th])
+    \\ Q.PAT_X_ASSUM `!k. bbb ==> isREF (m3 k)` MATCH_MP_TAC \\ DISJ2_TAC
+    \\ Q.PAT_X_ASSUM `(h =+ REF j) ((j =+ m h) m) = m''` (fn th => REWRITE_TAC [GSYM th])
     \\ SIMP_TAC std_ss [isREF_def,UPDATE_def,heap_type_11])
   \\ REPEAT STRIP_TAC THEN1 METIS_TAC []
   \\ Cases_on `k = 0` \\ ASM_SIMP_TAC bool_ss [] \\ METIS_TAC []);
@@ -1115,7 +1115,7 @@ val cheney_collector_spec = store_thm("cheney_collector_spec",
     \\ `!k. RANGE(b,j') k ==> RANGE(b,j'')k` by (REWRITE_TAC [RANGE_def] \\ DECIDE_TAC)
     \\ REPEAT STRIP_TAC THEN1 METIS_TAC [] THENL [
       Cases_on `RANGE(b,e)k` \\ ASM_SIMP_TAC std_ss [CUT_def]
-      \\ Q.PAT_ASSUM `!k. bb ==> (m'' k = EMP)` MATCH_MP_TAC
+      \\ Q.PAT_X_ASSUM `!k. bb ==> (m'' k = EMP)` MATCH_MP_TAC
       \\ FULL_SIMP_TAC std_ss [RANGE_def] \\ DECIDE_TAC,
       `D0 (CUT (b,j'') m'') k` by METIS_TAC [] \\ IMP_RES_TAC D0_IMP
       \\ Q.EXISTS_TAC `h` \\ Q.EXISTS_TAC `g` \\ Q.EXISTS_TAC `dd`
@@ -1129,10 +1129,10 @@ val cheney_collector_spec = store_thm("cheney_collector_spec",
      (MATCH_MP_TAC basic_abs_EQ_abs \\ FULL_SIMP_TAC bool_ss [ok_state_def,LET_DEF]
       \\ METIS_TAC [heap_type_distinct])
   \\ ASM_SIMP_TAC bool_ss []
-  \\ Q.PAT_ASSUM `cheney_inv (b,b,b,b,b,e,l+l+1,m,m,m,{})` (K ALL_TAC)
-  \\ Q.PAT_ASSUM `cheney_inv (b,j',b,j',j',e,l+l+1,m',m',m,RANGE (b,j'))` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `cheney_inv (b,b,b,b,b,e,l+l+1,m,m,m,{})` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `cheney_inv (b,j',b,j',j',e,l+l+1,m',m',m,RANGE (b,j'))` (K ALL_TAC)
   \\ `m' 0 = EMP` by METIS_TAC [cheney_inv_def]
-  \\ Q.PAT_ASSUM `cheney_inv (b,b,b,j',b,e,l+l+1,m',m,m,{})` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `cheney_inv (b,b,b,j',b,e,l+l+1,m',m,m,{})` (K ALL_TAC)
   \\ FULL_SIMP_TAC bool_ss [cheney_inv_def]
   \\ `(\x. ?t. t IN RANGE(b,j') /\ x IN reachable t (abs m''))
      SUBSET (0 INSERT RANGE (b,b+l))` by
@@ -1219,7 +1219,7 @@ val cheney_collector_spec = store_thm("cheney_collector_spec",
             (MATCH_MP_TAC fix_ADDR \\ Q.EXISTS_TAC `x` \\ Q.EXISTS_TAC `d` \\ Q.EXISTS_TAC `b`
              \\ Q.EXISTS_TAC `j''` \\ Q.EXISTS_TAC `b+l` \\ ASM_SIMP_TAC bool_ss [])
           \\ FULL_SIMP_TAC bool_ss []]])
-  \\ Q.PAT_ASSUM `roots_inv (b,j'',m'',abs m)` (STRIP_ASSUME_TAC o RW [roots_inv_def])
+  \\ Q.PAT_X_ASSUM `roots_inv (b,j'',m'',abs m)` (STRIP_ASSUME_TAC o RW [roots_inv_def])
   \\ Q.EXISTS_TAC `v` \\ ASM_SIMP_TAC bool_ss [apply_apply]
   \\ `apply v (reachables r (apply v (abs m''))) =
       reachables (MAP v r) (apply v (apply v (abs m'')))` by METIS_TAC [apply_reachables]

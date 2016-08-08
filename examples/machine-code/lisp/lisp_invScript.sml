@@ -108,8 +108,8 @@ val lisp_x_word_tree = prove(
    (Q.EXISTS_TAC `XVal (n2w n)`
     \\ REWRITE_TAC [word_tree_def,XSIZE_def,LSIZE_def,XDEPTH_def,LDEPTH_def]
     \\ ASM_SIMP_TAC std_ss [ADDR32_n2w,word_add_n2w,AC MULT_ASSOC MULT_COMM])
-  \\ Q.PAT_ASSUM `!a. bbb` IMP_RES_TAC
-  \\ Q.PAT_ASSUM `!a dm m sym. bbb` IMP_RES_TAC
+  \\ Q.PAT_X_ASSUM `!a. bbb` IMP_RES_TAC
+  \\ Q.PAT_X_ASSUM `!a dm m sym. bbb` IMP_RES_TAC
   \\ Q.EXISTS_TAC `XDot t' t`
   \\ ASM_SIMP_TAC std_ss [word_tree_def,XSIZE_def,LSIZE_def,XDEPTH_def,LDEPTH_def]);
 
@@ -152,7 +152,7 @@ val lisp_inv_cons = store_thm("lisp_inv_cons",
   \\ POP_ASSUM MP_TAC
   \\ SIMP_TAC std_ss [ch_tree_def,LET_DEF]
   \\ STRIP_TAC
-  \\ Q.PAT_ASSUM `a' = a` (fn th => FULL_SIMP_TAC std_ss [th])
+  \\ Q.PAT_X_ASSUM `a' = a` (fn th => FULL_SIMP_TAC std_ss [th])
   \\ Q.EXISTS_TAC `i'` \\ Q.EXISTS_TAC `u'`
   \\ FULL_SIMP_TAC std_ss [word_tree_def,lisp_x_def] \\ METIS_TAC []);
 
@@ -583,8 +583,8 @@ val lisp_inv_test_builtin_lemma = prove(
   \\ FULL_SIMP_TAC std_ss [ALIGNED_INTRO,word_arith_lemma4,
        ALIGNED_ADD_EQ,ALIGNED_ADDR32,ALIGNED_n2w]
   \\ FULL_SIMP_TAC std_ss [WORD_EQ_ADD_RCANCEL,ADDR32_11]
-  \\ Q.PAT_ASSUM `xx IN s` MP_TAC
-  \\ Q.PAT_ASSUM `lisp_symbol_table sss ssss` MP_TAC
+  \\ Q.PAT_X_ASSUM `xx IN s` MP_TAC
+  \\ Q.PAT_X_ASSUM `lisp_symbol_table sss ssss` MP_TAC
   \\ REPEAT (POP_ASSUM (K ALL_TAC)) \\ STRIP_TAC
   \\ IMP_RES_TAC builti_symbols_thm
   \\ REPEAT STRIP_TAC
