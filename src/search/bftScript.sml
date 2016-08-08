@@ -39,6 +39,8 @@ val Rel_def =   (* map arg. tuples into a pair of numbers for termination *)
    `Rel(G,f,seen,fringe,acc) =
         (CARD(Parents G DIFF (LIST_TO_SET seen)), LENGTH fringe)`;
 
+val () = computeLib.auto_import_definitions := false
+
 val def = (* Define function and prove termination *)
  tDefine
   "BFT"
