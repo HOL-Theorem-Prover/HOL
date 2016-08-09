@@ -110,10 +110,11 @@ fun new {info,warn,genLogFile,keep_going,time_limit} =
               let
                 val s = case tailbuffer.last_line tb of NONE => "" | SOME s => s
               in
-                print (polish k ^ rtrunc 57 (": " ^ s) ^
+                print (polish k ^ rtrunc 57 (": " ^ s) ^ " " ^
                        (case stat of
                             Stalling _ => statusString stat
-                          | _ => "   "))
+                          | _ => "   "));
+                print "\027[0K" (* ANSI clear to EOL code *)
               end
       end
     fun id (s:string) = s
