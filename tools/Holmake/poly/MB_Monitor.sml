@@ -155,6 +155,7 @@ fun new {info,warn,genLogFile,keep_going,time_limit} =
                   open tailbuffer
                 in
                   TextIO.output(strm,msg);
+                  TextIO.flushOut strm;
                   monitor_map :=
                     Binarymap.insert(!monitor_map, tag,
                                      (((strm,append msg tb), stat')));

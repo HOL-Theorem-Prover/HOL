@@ -461,12 +461,15 @@ fun derive_insts_for sec_name = let
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ^
     "0123456789_")
   fun remove_SKIP_TAG th = let
+    val pos = th |> concl |> rand |> rator |> rator |> rand |> rand
+                 |> numSyntax.dest_numeral
+                 |> Arbnumcore.toHexString
     val th = MATCH_MP SKIP_TAG_IMP_CALL th
     val name = find_term (can stringLib.dest_string) (concl th)
     fun join [] = ""
       | join [x] = x
       | join (x::ys) = x ^ "_" ^ join ys
-    fun prefix_instr str = "instruction'" ^ str
+    fun prefix_instr str = "instruction'" ^ str ^ "_" ^ pos
     val new_name = stringLib.fromHOLstring name
                    |> String.tokens (fn c => not (mem c all_ok_chars))
                    |> join |> prefix_instr |> get_name

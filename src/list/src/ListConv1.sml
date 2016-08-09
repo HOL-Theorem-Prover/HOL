@@ -660,48 +660,35 @@ val FLAT_CONV =
 (* iff 0 <= k <= n, otherwise failure occurs.                            *)
 (*-----------------------------------------------------------------------*)
 
-val EL_CONV =
-let val (bthm,ithm) = CONJ_PAIR (rich_listTheory.EL);
-    val HD = rich_listTheory.HD;
-    val TL = rich_listTheory.TL;
-    fun dec n = numSyntax.mk_numeral(Arbnum.fromInt(int_of_term n-1))
-    fun tail lst = hd(tl(snd(strip_comb lst)));
-    fun iter ct N bits =
-       let val (n',m',lst') = (ref(ct-1), ref(dec N), ref(tail bits));
-           val sthm = ref(PURE_ONCE_REWRITE_RULE[TL](ISPECL [!m',bits] ithm));
-       in (while (0 < !n') do
-            (n' :=  !n' - 1;
-             sthm := TRANS (RIGHT_CONV_RULE(RATOR_CONV(RAND_CONV num_CONV))
-                                           (!sthm))
-                           (SUBS[ISPECL(snd(strip_comb (!lst')))TL]
-                                (ISPECL[dec (!m'), !lst'] ithm));
-             lst' := tail (!lst');
-             m' := dec (!m'))
-           ;
-            (TRANS (!sthm) (SUBS [ISPECL(snd(strip_comb (!lst')))HD]
-                                 (ISPEC(!lst') bthm))))
-      end;
-in
-fn tm =>
-    let val (N,bits) = listSyntax.dest_el tm
-        val n = int_of_term N;
-        val lst = bits and m = N;
-     in
-        if (n = 0) then
-(* This fix would give purer behaviour. It has been left alone to mirror the
- *   definition EL 0 l == HD l
- *            if (length(#els(dest_list bits)) = 0) then
- *               (raise LIST_CONV_ERR{function="EL_CONV",
- *                                    message=("index too large: 0")})
- *            else
- *)
-             (PURE_ONCE_REWRITE_RULE[HD](ISPEC bits bthm))
-         else if (n < length(#1(dest_list bits))) then
-             (SUBS [SYM (num_CONV N)](iter n N bits))
-              else raise ERR "EL_CONV" ("index too large: "^int_to_string n)
-     end
-     handle e => raise wrap_exn "List_conv" "EL_CONV" e
-end;
+val bcT = CONJUNCT1 bool_case_thm
+val bcF = CONJUNCT2 bool_case_thm
+fun EL_CONV t =
+  let
+    val (N_t,list) = listSyntax.dest_el t
+      handle HOL_ERR _ => raise ERR "EL_CONV" "Arg not of form EL k l"
+    fun len a t =
+      case Lib.total listSyntax.dest_cons t of
+          NONE => if same_const listSyntax.nil_tm t then a
+                  else raise ERR "EL_CONV" "Arg 2 not a concrete list"
+        | SOME (_, t') => len (Arbnum.+(Arbnum.one, a)) t'
+    val length = len Arbnum.zero list
+    val N = numSyntax.dest_numeral N_t
+            handle HOL_ERR _ => raise ERR "EL_CONV" "Arg 1 not a numeral"
+  in
+    if Arbnum.<(N, length) then
+      let
+        val RED = reduceLib.REDUCE_CONV
+        fun recurse t =
+          (REWR_CONV listTheory.EL_compute THENC
+           RATOR_CONV (RATOR_CONV (RAND_CONV RED)) THENC
+           IFC (REWR_CONV bcF)
+               (FORK_CONV (RED, REWR_CONV listTheory.TL) THENC recurse)
+               (REWR_CONV bcT THENC REWR_CONV listTheory.HD)) t
+      in
+        recurse t
+      end
+    else raise ERR "EL_CONV" "Numeric argument too large"
+  end
 
 (*-----------------------------------------------------------------------*)
 (* ELL_CONV : conv                                                       *)

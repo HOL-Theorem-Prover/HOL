@@ -43,6 +43,10 @@ val in_range = Q.store_thm ("in_range",
 `!y r. y IN range r = ?x. (x,y) IN r`,
 SRW_TAC [] [range_def]);
 
+val in_dom_rg = Q.store_thm ("in_dom_rg",
+  `(x, y) IN r ==> x IN domain r /\ y IN range r`,
+  REWRITE_TAC [in_domain, in_range] THEN PROVE_TAC []) ;
+
 val domain_mono = Q.store_thm ("domain_mono",
   `r SUBSET r' ==> domain r SUBSET domain r'`,
   REWRITE_TAC [in_domain, SUBSET_DEF] THEN
@@ -109,9 +113,21 @@ val finite_prefixes_def = Define `
   finite_prefixes r s = !e. e IN s ==> FINITE {e' | (e', e) IN r}`;
 val _ = ot0 "finite_prefixes" "finitePrefixes"
 
-val finite_prefixes_subset = Q.store_thm ("finite_prefixes_subset",
+val finite_prefixes_subset_s = Q.store_thm ("finite_prefixes_subset_s",
 `!r s s'. finite_prefixes r s /\ s' SUBSET s ==> finite_prefixes r s'`,
 SRW_TAC [] [finite_prefixes_def, SUBSET_DEF]);
+
+val finite_prefixes_subset_r = Q.store_thm ("finite_prefixes_subset_r",
+`!r r' s. finite_prefixes r s /\ r' SUBSET r ==> finite_prefixes r' s`,
+  SRW_TAC [] [finite_prefixes_def, SUBSET_DEF] THEN
+  RES_TAC THEN IMP_RES_THEN MATCH_MP_TAC SUBSET_FINITE THEN
+  SRW_TAC [] [SUBSET_DEF]);
+
+val finite_prefixes_subset_rs = Q.store_thm ("finite_prefixes_subset_rs",
+`!r s r' s'. finite_prefixes r s ==> r' SUBSET r ==> s' SUBSET s ==>
+  finite_prefixes r' s'`,
+  REPEAT STRIP_TAC THEN IMP_RES_TAC finite_prefixes_subset_r THEN
+  IMP_RES_TAC finite_prefixes_subset_s) ;
 
 val finite_prefixes_subset = Q.store_thm ("finite_prefixes_subset",
 `!r s s'.
@@ -542,6 +558,12 @@ val partial_order_def = Define `
        domain r SUBSET s /\ range r SUBSET s /\
        transitive r /\ reflexive r s /\ antisym r`;
 
+val antisym_subset = Q.store_thm ("antisym_subset",
+  `antisym t ==> s SUBSET t ==> antisym s`,
+  REWRITE_TAC [antisym_def, SUBSET_DEF] THEN
+  REPEAT STRIP_TAC THEN RES_TAC THEN
+  FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC []) ;
+
 val partial_order_dom_rng = Q.store_thm ("partial_order_dom_rng",
 `!r s x y. (x, y) IN r /\ partial_order r s ==> x IN s /\ y IN s`,
 SRW_TAC [] [partial_order_def, domain_def, range_def, SUBSET_DEF] THEN
@@ -838,6 +860,10 @@ val minimal_elements_def = Define `
     {x | x IN xs /\ !x'. x' IN xs /\ (x', x) IN r ==> (x = x')}`;
 val _ = ot0 "minimal_elements" "minimalElements"
 
+val minimal_elements_subset = Q.store_thm ("minimal_elements_subset",
+  `minimal_elements s lo SUBSET s`,
+  SRW_TAC [] [SUBSET_DEF, minimal_elements_def]) ;
+
 val minimal_elements_SWAP = Q.store_thm ("minimal_elements_SWAP",
   `minimal_elements xs (IMAGE SWAP r) = maximal_elements xs r`,
   REWRITE_TAC [minimal_elements_def, maximal_elements_def,
@@ -1097,6 +1123,34 @@ val strict_linear_order_restrict = Q.store_thm ("strict_linear_order_restrict",
   REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [] THEN_LT
   LASTGOAL (FIRST_X_ASSUM irule THEN FIRST_ASSUM ACCEPT_TAC) THEN
   RES_TAC) ;
+
+val linear_order_dom_rg = Q.store_thm ("linear_order_dom_rg",
+  `linear_order lo X ==> (domain lo UNION range lo = X)`,
+  REWRITE_TAC [linear_order_def] THEN STRIP_TAC THEN
+  ASM_REWRITE_TAC [SET_EQ_SUBSET, UNION_SUBSET] THEN
+  REWRITE_TAC [SUBSET_DEF, IN_UNION, in_domain] THEN
+  REPEAT STRIP_TAC THEN RES_TAC THEN DISJ1_TAC THEN
+  Q.EXISTS_TAC `x` THEN POP_ASSUM ACCEPT_TAC ) ;
+
+val linear_order_refl = Q.store_thm ("linear_order_refl",
+  `linear_order lo X ==> x IN X ==> (x, x) IN lo`,
+  REWRITE_TAC [linear_order_def] THEN REPEAT STRIP_TAC THEN RES_TAC) ; 
+
+val linear_order_in_set = Q.store_thm ("linear_order_in_set",
+  `linear_order lo X ==> (x, y) IN lo ==> x IN X /\ y IN X`,
+  REPEAT DISCH_TAC THEN IMP_RES_TAC linear_order_dom_rg THEN
+  VAR_EQ_TAC THEN 
+  IMP_RES_TAC in_dom_rg THEN ASM_REWRITE_TAC [IN_UNION]) ;
+
+val IN_MIN_LO = Q.store_thm ("IN_MIN_LO",
+  `x IN X ==> linear_order lo X ==> y IN minimal_elements X lo ==> 
+    (y, x) IN lo`,
+  Ho_Rewrite.REWRITE_TAC [minimal_elements_def, linear_order_def,
+      EXTENSION, IN_GSPEC_IFF] THEN
+  REPEAT STRIP_TAC THEN 
+  FIRST_X_ASSUM (ASSUME_TAC o Q.SPECL [`x`, `y`]) THEN
+  FIRST_X_ASSUM (ASSUME_TAC o Q.SPEC `x`) THEN
+  RES_TAC THEN RES_TAC THEN FULL_SIMP_TAC std_ss []) ;
 
 val extend_linear_order = Q.store_thm ("extend_linear_order",
 `!r s x.

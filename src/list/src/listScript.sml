@@ -1971,6 +1971,14 @@ val ALL_DISTINCT_CARD_LIST_TO_SET = Q.store_thm(
 `!ls. ALL_DISTINCT ls ==> (CARD (set ls) = LENGTH ls)`,
 Induct THEN SRW_TAC [] []);
 
+val th1 = MATCH_MP arithmeticTheory.LESS_EQ_IMP_LESS_SUC CARD_LIST_TO_SET ;
+val th2 = MATCH_MP prim_recTheory.LESS_NOT_EQ th1 ;
+
+val CARD_LIST_TO_SET_ALL_DISTINCT = Q.store_thm(
+"CARD_LIST_TO_SET_ALL_DISTINCT",
+`!ls. (CARD (set ls) = LENGTH ls) ==> ALL_DISTINCT ls`,
+Induct THEN SRW_TAC [] [th2]);
+
 val LIST_TO_SET_REVERSE = store_thm(
   "LIST_TO_SET_REVERSE",
   ``!ls: 'a list. set (REVERSE ls) = set ls``,

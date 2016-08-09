@@ -157,13 +157,21 @@ val APPEND_PERM_SYM = Q.store_thm
  `!A B C. PERM (APPEND A B) C ==> PERM (APPEND B A) C`,
 PROVE_TAC [PERM_TRANS, PERM_APPEND]);
 
+val PERM_SPLIT_IF = Q.store_thm
+("PERM_SPLIT_IF",
+ `!P Q l. EVERY (\x. P x = ~ Q x) l ==> 
+   PERM l (APPEND (FILTER P l) (FILTER Q l))`,
+ Induct_on `l`
+ THEN RW_TAC list_ss [FILTER,PERM_REFL]
+ THEN RES_TAC 
+ THEN ASM_SIMP_TAC std_ss [PERM_MONO, CONS_PERM]) ;
+
 val PERM_SPLIT = Q.store_thm
 ("PERM_SPLIT",
  `!P l. PERM l (APPEND (FILTER P l) (FILTER ($~ o P) l))`,
-RW_TAC bool_ss [o_DEF]
- THEN Induct_on `l`
- THEN RW_TAC list_ss [FILTER,PERM_REFL]
- THEN PROVE_TAC [APPEND,PERM_MONO,CONS_PERM]);
+ REPEAT GEN_TAC 
+ THEN irule PERM_SPLIT_IF
+ THEN SIMP_TAC list_ss []) ;
 
 (* ----------------------------------------------------------------------
     Alternative definition of PERM
