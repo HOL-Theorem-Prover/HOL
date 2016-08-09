@@ -42,3 +42,4 @@ src/rational
 src/datatype/inftree
 !examples/hfs
 src/search
+!examples/l3-machine-code/common
