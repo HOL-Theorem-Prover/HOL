@@ -479,6 +479,7 @@ fun derive_individual_specs code = let
              (pos+4,(g (pos+4) th2,4,NONE),SOME (g (pos+4) th2a,4,SOME 4)) ::
              (pos+8,(g (pos+8) th3,4*l-8,SOME 4),NONE) ::
                get_specs code end
+        else if String.isPrefix "dmb" asm then failwith("not supported")
         else let
           val g = clean_spec_thm o
                   remove_arm_CONFIGURE o
