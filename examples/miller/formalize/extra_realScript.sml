@@ -229,10 +229,10 @@ val ABS_BETWEEN_LE = store_thm
     ++ RW_TAC std_ss [] <<
     [Suff `x <= y`
      >> (POP_ASSUM MP_TAC ++ KILL_TAC ++ REAL_ARITH_TAC)
-     ++ Q.PAT_ASSUM `0 <= y - x` MP_TAC
+     ++ Q.PAT_X_ASSUM `0 <= y - x` MP_TAC
      ++ KILL_TAC
      ++ REAL_ARITH_TAC,
-     Q.PAT_ASSUM `y - x <= d` MP_TAC
+     Q.PAT_X_ASSUM `y - x <= d` MP_TAC
      ++ KILL_TAC
      ++ REAL_ARITH_TAC],
     EQ_TAC >> REAL_ARITH_TAC
@@ -245,12 +245,12 @@ val ABS_BETWEEN_LE = store_thm
     ++ Know `0 <= d` >> PROVE_TAC [REAL_LE_TRANS]
     ++ STRIP_TAC
     ++ RW_TAC std_ss [] <<
-    [Q.PAT_ASSUM `x - y <= d` MP_TAC
+    [Q.PAT_X_ASSUM `x - y <= d` MP_TAC
      ++ KILL_TAC
      ++ REAL_ARITH_TAC,
      Suff `y <= x`
      >> (POP_ASSUM MP_TAC ++ KILL_TAC ++ REAL_ARITH_TAC)
-     ++ Q.PAT_ASSUM `0 <= x - y` MP_TAC
+     ++ Q.PAT_X_ASSUM `0 <= x - y` MP_TAC
      ++ KILL_TAC
      ++ REAL_ARITH_TAC]]);
 
@@ -549,7 +549,7 @@ val SER_POS_MONO = store_thm
    ++ MATCH_MP_TAC REAL_LE_TRANS
    ++ Q.EXISTS_TAC `sum (0, d + n) f`
    ++ RW_TAC real_ss [sum]
-   ++ Q.PAT_ASSUM `!n. 0 <= f n` (MP_TAC o Q.SPEC `d + n`)
+   ++ Q.PAT_X_ASSUM `!n. 0 <= f n` (MP_TAC o Q.SPEC `d + n`)
    ++ REAL_ARITH_TAC);
 
 val POS_SUMMABLE = store_thm
@@ -562,7 +562,7 @@ val POS_SUMMABLE = store_thm
    ++ Q.EXISTS_TAC `N`
    ++ RW_TAC arith_ss []
    ++ RW_TAC std_ss [abs, SUM_POS]
-   ++ Q.PAT_ASSUM `!n. P n` (MP_TAC o Q.SPEC `n`)
+   ++ Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `n`)
    ++ REAL_ARITH_TAC);
 
 val SUMMABLE_LE = store_thm
@@ -577,7 +577,7 @@ val SUMMABLE_LE = store_thm
    ++ Q.EXISTS_TAC `suminf f - x`
    ++ RW_TAC std_ss []
    ++ Q.EXISTS_TAC `N`
-   ++ Q.PAT_ASSUM `!n. P n` (MP_TAC o Q.SPEC `N`)
+   ++ Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `N`)
    ++ RW_TAC real_ss []
    ++ ONCE_REWRITE_TAC [ABS_SUB]
    ++ Know `0 <= suminf f - sum (0, N) f`
@@ -618,7 +618,7 @@ val REAL_LE_EPSILON = store_thm
    RW_TAC std_ss []
    ++ Suff `~(0 < x - y)` >> REAL_ARITH_TAC
    ++ STRIP_TAC
-   ++ Q.PAT_ASSUM `!e. P e` MP_TAC
+   ++ Q.PAT_X_ASSUM `!e. P e` MP_TAC
    ++ RW_TAC std_ss []
    ++ Know `!a b c : real. ~(a <= b + c) = c < a - b` >> REAL_ARITH_TAC
    ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
@@ -646,7 +646,7 @@ val INF_GREATER = store_thm
    ++ Suff `~(!x. x IN p ==> ~(x < z))` >> PROVE_TAC []
    ++ REWRITE_TAC [GSYM real_lte]
    ++ STRIP_TAC
-   ++ Q.PAT_ASSUM `inf p < z` MP_TAC
+   ++ Q.PAT_X_ASSUM `inf p < z` MP_TAC
    ++ RW_TAC std_ss [GSYM real_lte]
    ++ MATCH_MP_TAC LE_INF
    ++ PROVE_TAC []);
@@ -719,13 +719,13 @@ val INCREASING_SEQ = store_thm
        (!e. 0 < e ==> ?n. l < f n + e) ==>
        f --> l``,
    RW_TAC std_ss [SEQ, GREATER_EQ]
-   ++ Q.PAT_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`)
+   ++ Q.PAT_X_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`)
    ++ RW_TAC std_ss []
    ++ Q.EXISTS_TAC `n`
    ++ ONCE_REWRITE_TAC [ABS_SUB]
    ++ REVERSE (RW_TAC std_ss [abs])
-   >> (Q.PAT_ASSUM `~x` MP_TAC
-       ++ Q.PAT_ASSUM `!n. P n` (MP_TAC o Q.SPEC `n'`)
+   >> (Q.PAT_X_ASSUM `~x` MP_TAC
+       ++ Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `n'`)
        ++ REAL_ARITH_TAC)
    ++ Know `?d. n' = n + d` >> PROVE_TAC [LESS_EQ_EXISTS]
    ++ RW_TAC std_ss []
@@ -733,7 +733,7 @@ val INCREASING_SEQ = store_thm
    ++ NTAC 2 (POP_ASSUM K_TAC)
    ++ Induct_on `d` >> RW_TAC arith_ss []
    ++ RW_TAC std_ss [ADD_CLAUSES]
-   ++ Q.PAT_ASSUM `!n. f n <= f (SUC n)` (MP_TAC o Q.SPEC `n + d`)
+   ++ Q.PAT_X_ASSUM `!n. f n <= f (SUC n)` (MP_TAC o Q.SPEC `n + d`)
    ++ POP_ASSUM MP_TAC
    ++ REAL_ARITH_TAC);
 
@@ -760,7 +760,7 @@ val SUM_LT = store_thm
    ++ Strip
    ++ MATCH_MP_TAC REAL_LT_ADD2
    ++ CONJ_TAC
-   >> (Q.PAT_ASSUM `a ==> b` MATCH_MP_TAC
+   >> (Q.PAT_X_ASSUM `a ==> b` MATCH_MP_TAC
        ++ RW_TAC arith_ss [])
    ++ RW_TAC arith_ss []);
 
@@ -780,14 +780,14 @@ val SUMINF_2D = store_thm
    RW_TAC std_ss []
    ++ RW_TAC std_ss [sums]
    ++ Know `g sums suminf g` >> PROVE_TAC [SUMMABLE_SUM]
-   ++ Q.PAT_ASSUM `!n. P n` MP_TAC
+   ++ Q.PAT_X_ASSUM `!n. P n` MP_TAC
    ++ RW_TAC std_ss [SUMS_EQ, FORALL_AND_THM]
    ++ MATCH_MP_TAC INCREASING_SEQ
    ++ CONJ_TAC
    >> (RW_TAC std_ss [sum, o_THM, ADD_CLAUSES]
        ++ Cases_on `h n`
        ++ RW_TAC std_ss [UNCURRY_DEF]
-       ++ Q.PAT_ASSUM `!m n. 0 <= f m n` (MP_TAC o Q.SPECL [`q`, `r`])
+       ++ Q.PAT_X_ASSUM `!m n. 0 <= f m n` (MP_TAC o Q.SPECL [`q`, `r`])
        ++ REAL_ARITH_TAC)
    ++ Know `!m. 0 <= g m`
    >> (STRIP_TAC
@@ -810,7 +810,7 @@ val SUMINF_2D = store_thm
        ++ REVERSE CONJ_TAC
        >> (MATCH_MP_TAC SUM_LE
            ++ RW_TAC std_ss []
-           ++ Q.PAT_ASSUM `!n. suminf (f n) = g n` (REWRITE_TAC o wrap o GSYM)
+           ++ Q.PAT_X_ASSUM `!n. suminf (f n) = g n` (REWRITE_TAC o wrap o GSYM)
            ++ MATCH_MP_TAC SER_POS_LE
            ++ PROVE_TAC [])
        ++ Suff
@@ -829,7 +829,7 @@ val SUMINF_2D = store_thm
            ++ RW_TAC std_ss [REAL_LE_REFL])
        ++ Induct >> RW_TAC arith_ss [sum, SUM_0]
        ++ RW_TAC std_ss [sum]
-       ++ Q.PAT_ASSUM `p ==> q` MP_TAC
+       ++ Q.PAT_X_ASSUM `p ==> q` MP_TAC
        ++ RW_TAC arith_ss []
        ++ Know
           `!m n.
@@ -850,7 +850,7 @@ val SUMINF_2D = store_thm
            ++ Suff `(?i. i < j /\ (h i = (m,n'))) ==> ~(h j = (m,n'))`
            >> PROVE_TAC [REAL_ADD_LID, REAL_ADD_RID]
            ++ RW_TAC std_ss []
-           ++ Q.PAT_ASSUM `BIJ a b c` MP_TAC
+           ++ Q.PAT_X_ASSUM `BIJ a b c` MP_TAC
            ++ RW_TAC std_ss [BIJ_DEF, INJ_DEF, IN_UNIV, IN_CROSS]
            ++ PROVE_TAC [prim_recTheory.LESS_REFL])
        ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
@@ -880,7 +880,7 @@ val SUMINF_2D = store_thm
              (if (n = r) then if (m = q) then f m n else 0 else 0)`
        >> PROVE_TAC []
        ++ DISCH_THEN (REWRITE_TAC o wrap)
-       ++ Q.PAT_ASSUM `a SUBSET b` MP_TAC
+       ++ Q.PAT_X_ASSUM `a SUBSET b` MP_TAC
        ++ RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_COUNT, IN_CROSS]
        ++ Suff `q < k /\ r < k`
        >> RW_TAC std_ss [SUM_PICK]
@@ -935,7 +935,7 @@ val SUMINF_2D = store_thm
        ++ POP_ASSUM (MP_TAC o Q.SPEC `N`)
        ++ ONCE_REWRITE_TAC [ABS_SUB]
        ++ Know `sum (0, N) (f m) <= g m`
-       >> (Q.PAT_ASSUM `!n. P n = Q n` (REWRITE_TAC o wrap o GSYM)
+       >> (Q.PAT_X_ASSUM `!n. P n = Q n` (REWRITE_TAC o wrap o GSYM)
            ++ MATCH_MP_TAC SER_POS_LE
            ++ RW_TAC std_ss [])
        ++ REVERSE (RW_TAC arith_ss [abs])
@@ -986,12 +986,12 @@ val SUMINF_2D = store_thm
        ++ Cases_on `h r`
        ++ RW_TAC std_ss [UNCURRY_DEF])
    ++ NTAC 3 (POP_ASSUM MP_TAC)
-   ++ Q.PAT_ASSUM `BIJ h a b` MP_TAC
+   ++ Q.PAT_X_ASSUM `BIJ h a b` MP_TAC
    ++ KILL_TAC
    ++ RW_TAC std_ss []
    ++ Induct_on `M` >> RW_TAC arith_ss [sum, SUM_ZERO]
    ++ RW_TAC arith_ss [sum, LT_SUC]
-   ++ Q.PAT_ASSUM `a ==> b` K_TAC
+   ++ Q.PAT_X_ASSUM `a ==> b` K_TAC
    ++ Know
       `!k'.
          (?m n. (m < M \/ (m = M)) /\ n < N m /\ (h k' = (m, n))) =
@@ -1023,7 +1023,7 @@ val SUMINF_2D = store_thm
    ++ Q.SPEC_TAC (`N M`, `l`)
    ++ Induct >> RW_TAC real_ss [sum, SUM_0]
    ++ RW_TAC arith_ss [sum, LT_SUC]
-   ++ Q.PAT_ASSUM `a ==> b` K_TAC
+   ++ Q.PAT_X_ASSUM `a ==> b` K_TAC
    ++ Know
       `!k'.
          (?n. (n < l \/ (n = l)) /\ (h k' = (M,n))) =
@@ -1044,15 +1044,15 @@ val SUMINF_2D = store_thm
        ++ RW_TAC arith_ss [])
    ++ DISCH_THEN (REWRITE_TAC o wrap)
    ++ RW_TAC std_ss [SUM_ADD, REAL_EQ_LADD]
-   ++ Q.PAT_ASSUM `a SUBSET b` MP_TAC
+   ++ Q.PAT_X_ASSUM `a SUBSET b` MP_TAC
    ++ RW_TAC std_ss [SUBSET_DEF, IN_CROSS, IN_COUNT, IN_IMAGE]
    ++ POP_ASSUM (MP_TAC o Q.SPEC `(M, l)`)
    ++ RW_TAC arith_ss []
    ++ Suff `!k'. (h k' = (M, l)) = (k' = x')`
    >> (RW_TAC std_ss [SUM_PICK, o_THM]
-       ++ Q.PAT_ASSUM `(M,l) = a` (REWRITE_TAC o wrap o GSYM)
+       ++ Q.PAT_X_ASSUM `(M,l) = a` (REWRITE_TAC o wrap o GSYM)
        ++ RW_TAC std_ss [UNCURRY_DEF])
-   ++ Q.PAT_ASSUM `BIJ h a b` MP_TAC
+   ++ Q.PAT_X_ASSUM `BIJ h a b` MP_TAC
    ++ RW_TAC std_ss [BIJ_DEF, INJ_DEF, IN_UNIV, IN_CROSS]
    ++ PROVE_TAC []);
 
@@ -1112,10 +1112,10 @@ val LE_SEQ_IMP_LE_LIM = store_thm
    RW_TAC std_ss [SEQ]
    ++ MATCH_MP_TAC REAL_LE_EPSILON
    ++ RW_TAC std_ss []
-   ++ Q.PAT_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`)
+   ++ Q.PAT_X_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`)
    ++ RW_TAC std_ss []
    ++ POP_ASSUM (MP_TAC o Q.SPEC `N`)
-   ++ Q.PAT_ASSUM `!n. P n` (MP_TAC o Q.SPEC `N`)
+   ++ Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `N`)
    ++ RW_TAC arith_ss [abs]
    ++ REPEAT (POP_ASSUM MP_TAC)
    ++ REAL_ARITH_TAC);
@@ -1176,13 +1176,13 @@ val SUM_REORDER_LE = store_thm
        >> (MATCH_MP_TAC SUM_EQ
            ++ RW_TAC arith_ss [o_THM]
            ++ Suff `F` >> PROVE_TAC []
-           ++ Q.PAT_ASSUM `INJ j1 X Y` MP_TAC
+           ++ Q.PAT_X_ASSUM `INJ j1 X Y` MP_TAC
            ++ RW_TAC std_ss [INJ_DEF, IN_INSERT, IN_COUNT, IN_UNIV]
            ++ PROVE_TAC [prim_recTheory.LESS_NOT_EQ])
        ++ Rewr
-       ++ Q.PAT_ASSUM `!f n2. P f n2` MATCH_MP_TAC
+       ++ Q.PAT_X_ASSUM `!f n2. P f n2` MATCH_MP_TAC
        ++ RW_TAC std_ss [REAL_LE_REFL]
-       ++ Q.PAT_ASSUM `INJ j1 X Y` MP_TAC
+       ++ Q.PAT_X_ASSUM `INJ j1 X Y` MP_TAC
        ++ RW_TAC bool_ss [INJ_DEF, IN_INSERT, IN_COUNT, IN_UNIV])
    ++ MATCH_MP_TAC REAL_LE_TRANS
    ++ Q.EXISTS_TAC
@@ -1234,7 +1234,7 @@ val SER_BIJ_COMPRESS1 = store_thm
        >> RW_TAC std_ss [I_o_ID]
        ++ Rewr
        ++ MATCH_MP_TAC SUM_REORDER_LE
-       ++ Q.PAT_ASSUM `BIJ h X Y` MP_TAC
+       ++ Q.PAT_X_ASSUM `BIJ h X Y` MP_TAC
        ++ RW_TAC std_ss [INJ_DEF, BIJ_DEF, IN_UNIV, IN_COUNT, SUBSET_DEF,
                          I_THM, IN_IMAGE]
        ++ PROVE_TAC [])
@@ -1262,7 +1262,7 @@ val SER_BIJ_COMPRESS1 = store_thm
    ++ MATCH_MP_TAC REAL_LTE_TRANS
    ++ Q.EXISTS_TAC `sum (0, N) f`
    ++ CONJ_TAC
-   >> (Q.PAT_ASSUM `!n. P n ==> Q n < e` (MP_TAC o Q.SPEC `N`)
+   >> (Q.PAT_X_ASSUM `!n. P n ==> Q n < e` (MP_TAC o Q.SPEC `N`)
        ++ ONCE_REWRITE_TAC [ABS_SUB]
        ++ RW_TAC arith_ss [abs]
        >> (POP_ASSUM MP_TAC
@@ -1293,19 +1293,19 @@ val SER_BIJ_COMPRESS1 = store_thm
        ++ RW_TAC arith_ss [sum_case_def, o_THM])
    ++ Rewr
    ++ MATCH_MP_TAC SUM_REORDER_LE
-   ++ Q.PAT_ASSUM `BIJ h X Y` MP_TAC
+   ++ Q.PAT_X_ASSUM `BIJ h X Y` MP_TAC
    ++ ASM_SIMP_TAC (srw_ss()) [sumTheory.FORALL_SUM]
    ++ BasicProvers.NORM_TAC std_ss [SUBSET_DEF, IN_IMAGE, INJ_DEF, IN_UNIV,
                                     IN_COUNT, INJ_DEF, BIJ_DEF, SURJ_DEF] <<
-   [Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `n'`)
+   [Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `n'`)
     ++ RW_TAC std_ss []
     ++ Q.EXISTS_TAC `y`
     ++ RW_TAC std_ss []
     ++ Suff `y < n` >> RW_TAC arith_ss []
-    ++ Q.PAT_ASSUM `!n. P n ==> Q n` (MP_TAC o Q.SPEC `y`)
+    ++ Q.PAT_X_ASSUM `!n. P n ==> Q n` (MP_TAC o Q.SPEC `y`)
     ++ RW_TAC std_ss [IN_COUNT]
     ++ POP_ASSUM MP_TAC
-    ++ Q.PAT_ASSUM `N' <= n` MP_TAC
+    ++ Q.PAT_X_ASSUM `N' <= n` MP_TAC
     ++ KILL_TAC
     ++ DECIDE_TAC,
     Q.EXISTS_TAC `n' + n`
@@ -1356,14 +1356,14 @@ val SER_BIJ_COMPRESS2 = store_thm
        ++ Rewr
        ++ MATCH_MP_TAC SUM_REORDER_LE
        ++ ASM_SIMP_TAC (srw_ss()) [sumTheory.FORALL_SUM]
-       ++ Q.PAT_ASSUM `BIJ h X Y` MP_TAC
+       ++ Q.PAT_X_ASSUM `BIJ h X Y` MP_TAC
        ++ BasicProvers.NORM_TAC std_ss [SUBSET_DEF, IN_IMAGE, INJ_DEF, IN_UNIV,
                                         IN_COUNT, INJ_DEF, BIJ_DEF, SURJ_DEF] <<
-       [Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `n'`)
+       [Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `n'`)
         ++ RW_TAC std_ss []
         ++ Q.EXISTS_TAC `y`
         ++ Suff `y < N` >> RW_TAC arith_ss []
-        ++ Q.PAT_ASSUM `!n'. N <= n' ==> P n'` (MP_TAC o Q.SPEC `y`)
+        ++ Q.PAT_X_ASSUM `!n'. N <= n' ==> P n'` (MP_TAC o Q.SPEC `y`)
         ++ RW_TAC std_ss [IN_COUNT]
         ++ POP_ASSUM MP_TAC
         ++ KILL_TAC
@@ -1400,7 +1400,7 @@ val SER_BIJ_COMPRESS2 = store_thm
    ++ Q.EXISTS_TAC `sum (0, N) (f o h)`
    ++ CONJ_TAC
    >> (Suff `suminf (f o h) - sum (0, N) (f o h) < e` >> REAL_ARITH_TAC
-       ++ Q.PAT_ASSUM `!n. N <= n ==> P n` (MP_TAC o Q.SPEC `N`)
+       ++ Q.PAT_X_ASSUM `!n. N <= n ==> P n` (MP_TAC o Q.SPEC `N`)
        ++ ONCE_REWRITE_TAC [ABS_SUB]
        ++ RW_TAC arith_ss [abs]
        ++ Suff `F` >> PROVE_TAC []
@@ -1413,10 +1413,10 @@ val SER_BIJ_COMPRESS2 = store_thm
    >> RW_TAC std_ss [I_o_ID]
    ++ Rewr
    ++ MATCH_MP_TAC SUM_REORDER_LE
-   ++ Q.PAT_ASSUM `BIJ h X Y` MP_TAC
+   ++ Q.PAT_X_ASSUM `BIJ h X Y` MP_TAC
    ++ RW_TAC std_ss [INJ_DEF, BIJ_DEF, IN_UNIV, IN_COUNT, SUBSET_DEF,
                      I_THM, IN_IMAGE]
-   ++ Q.PAT_ASSUM `N' N <= n` MP_TAC
+   ++ Q.PAT_X_ASSUM `N' N <= n` MP_TAC
    ++ Suff `h x' < N' N` >> (KILL_TAC ++ DECIDE_TAC)
    ++ PROVE_TAC []);
 
@@ -1560,13 +1560,13 @@ val SEQ_SANDWICH = store_thm
    ``!f g h l.
        f --> l /\ h --> l /\ (!n. f n <= g n /\ g n <= h n) ==> g --> l``,
    RW_TAC std_ss [SEQ, GREATER_EQ]
-   ++ Q.PAT_ASSUM `!e. P e ==> Q e` (MP_TAC o Q.SPEC `e`)
-   ++ Q.PAT_ASSUM `!e. P e ==> Q e` (MP_TAC o Q.SPEC `e`)
+   ++ Q.PAT_X_ASSUM `!e. P e ==> Q e` (MP_TAC o Q.SPEC `e`)
+   ++ Q.PAT_X_ASSUM `!e. P e ==> Q e` (MP_TAC o Q.SPEC `e`)
    ++ RW_TAC std_ss []
    ++ Q.EXISTS_TAC `MAX N N'`
    ++ RW_TAC std_ss [MAX_LE_X]
-   ++ Q.PAT_ASSUM `!e. P e ==> Q e` (MP_TAC o Q.SPEC `n`)
-   ++ Q.PAT_ASSUM `!e. P e ==> Q e` (MP_TAC o Q.SPEC `n`)
+   ++ Q.PAT_X_ASSUM `!e. P e ==> Q e` (MP_TAC o Q.SPEC `n`)
+   ++ Q.PAT_X_ASSUM `!e. P e ==> Q e` (MP_TAC o Q.SPEC `n`)
    ++ RW_TAC std_ss []
    ++ REPEAT (POP_ASSUM MP_TAC)
    ++ DISCH_THEN (MP_TAC o Q.SPEC `n`)

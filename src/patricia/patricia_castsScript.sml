@@ -193,7 +193,7 @@ val l2n_11 = store_thm("l2n_11",
     \\ SRW_TAC [] []
     >| [
       SPOSE_NOT_THEN STRIP_ASSUME_TAC
-        \\ PAT_ASSUM `l2n b x = l2n b y` MP_TAC
+        \\ PAT_X_ASSUM `l2n b x = l2n b y` MP_TAC
         \\ ASM_SIMP_TAC (srw_ss()++ARITH_ss) [l2n_APPEND, l2n_b_1]
         \\ `(LENGTH l1 < LENGTH l2) \/ (LENGTH l2 < LENGTH l1)`
         by METIS_TAC [LESS_LESS_CASES]
@@ -255,7 +255,7 @@ val TL_REVERSE = prove(
 val TL_REVERSE_LAST = prove(
   `!l h. ~(l = []) ==> ((REVERSE l = h :: TL (REVERSE l)) = (h = LAST l))`,
   Induct \\ SRW_TAC [] [LAST_DEF] >- METIS_TAC []
-    \\ PAT_ASSUM `!h. P` IMP_RES_TAC
+    \\ PAT_X_ASSUM `!h. P` IMP_RES_TAC
     \\ NTAC 2 (POP_ASSUM (K ALL_TAC))
     \\ POP_ASSUM (SPEC_THEN `h'` (SUBST1_TAC o SYM))
     \\ SRW_TAC [] [TL_REVERSE, TL_APPEND, REVERSE_EQ_NIL]

@@ -163,7 +163,7 @@ val pos_simple_fn_integral_present = store_thm
 		 `m_space (m:('a -> bool) #
           	  (('a -> bool) -> bool) # (('a -> bool) -> real))`,
 		 `(b :num -> 'a -> bool)`]) indicator_fn_split
-	    ++ Q.PAT_ASSUM `!i. i IN s ==> (a:num->'a->bool) i IN measurable_sets m`
+	    ++ Q.PAT_X_ASSUM `!i. i IN s ==> (a:num->'a->bool) i IN measurable_sets m`
 		(ASSUME_TAC o UNDISCH o Q.SPEC `x'`)
 	    ++ `!a m. measure_space m /\
 	      a IN measurable_sets m ==> a SUBSET m_space m`
@@ -227,7 +227,7 @@ val pos_simple_fn_integral_present = store_thm
 		 `m_space (m:('a -> bool) #
           	  (('a -> bool) -> bool) # (('a -> bool) -> real))`,
 		 `(a :num -> 'a -> bool)`]) indicator_fn_split
-	    ++ Q.PAT_ASSUM `!i. i IN s' ==> (b:num->'a->bool) i IN measurable_sets m`
+	    ++ Q.PAT_X_ASSUM `!i. i IN s' ==> (b:num->'a->bool) i IN measurable_sets m`
 		(ASSUME_TAC o UNDISCH o Q.SPEC `x'`)
 	    ++ RW_TAC std_ss [MEASURE_SPACE_SUBSET_MSPACE])
        ++ POP_ORW
@@ -457,8 +457,8 @@ val pos_simple_fn_integral_present = store_thm
    ++ `m_space m = (BIGUNION (IMAGE a s)) INTER (BIGUNION (IMAGE b s'))`
 		by METIS_TAC [INTER_IDEMPOT]
    ++ POP_ORW
-   ++ Q.PAT_ASSUM `BIGUNION (IMAGE b s') = m_space m` (K ALL_TAC)
-   ++ Q.PAT_ASSUM `BIGUNION (IMAGE a s) = m_space m` (K ALL_TAC)
+   ++ Q.PAT_X_ASSUM `BIGUNION (IMAGE b s') = m_space m` (K ALL_TAC)
+   ++ Q.PAT_X_ASSUM `BIGUNION (IMAGE a s) = m_space m` (K ALL_TAC)
    ++ RW_TAC std_ss [IN_INTER, IN_BIGUNION, IN_IMAGE]
    ++ METIS_TAC []);
 
@@ -683,8 +683,8 @@ val pos_simple_fn_max = store_thm
        	++ `m_space m = (BIGUNION (IMAGE a s)) INTER (BIGUNION (IMAGE b s'))`
              by METIS_TAC [INTER_IDEMPOT]
         ++ POP_ORW
-       	++ Q.PAT_ASSUM `BIGUNION (IMAGE b s') = m_space m` (K ALL_TAC)
- 	++ Q.PAT_ASSUM `BIGUNION (IMAGE a s) = m_space m` (K ALL_TAC)
+       	++ Q.PAT_X_ASSUM `BIGUNION (IMAGE b s') = m_space m` (K ALL_TAC)
+ 	++ Q.PAT_X_ASSUM `BIGUNION (IMAGE a s) = m_space m` (K ALL_TAC)
 	++ RW_TAC std_ss [IN_INTER, IN_BIGUNION, IN_IMAGE]
 	++ METIS_TAC [])
   ++ `FINITE (s CROSS s')` by RW_TAC std_ss [FINITE_CROSS]
@@ -708,7 +708,7 @@ val pos_simple_fn_max = store_thm
 		  Q.ISPECL [`(s :num -> bool)`,
 		  `m_space (m:('a -> bool) # (('a -> bool) -> bool) # (('a -> bool) -> real))`,
 		  `(a :num -> 'a -> bool)`]) indicator_fn_split
-		++ Q.PAT_ASSUM `!i. i IN s' ==> (b:num->'a->bool) i IN measurable_sets m`
+		++ Q.PAT_X_ASSUM `!i. i IN s' ==> (b:num->'a->bool) i IN measurable_sets m`
 		     (ASSUME_TAC o UNDISCH o Q.SPEC `x''`)
 		++ `!a m. measure_space m /\ a IN measurable_sets m ==> a SUBSET m_space m`
 		     by RW_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def,
@@ -1365,7 +1365,7 @@ val pos_fn_integral_mspace = store_thm
   ++ RW_TAC real_ss [sup_le]
   ++ POP_ASSUM (MP_TAC o REWRITE_RULE [Once (GSYM SPECIFICATION)])
   ++ RW_TAC real_ss [GSPECIFICATION]
-  ++ Q.PAT_ASSUM `!z. Q z ==> z <= y` MATCH_MP_TAC
+  ++ Q.PAT_X_ASSUM `!z. Q z ==> z <= y` MATCH_MP_TAC
   ++ RW_TAC std_ss [Once (GSYM SPECIFICATION),GSPECIFICATION]
   ++ Q.EXISTS_TAC `(\x. g x * indicator_fn (m_space m) x)`
   ++ RW_TAC std_ss [IN_psfis_eq]
@@ -1452,7 +1452,7 @@ val pos_fn_integral_cmul = store_thm
   ++ POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
   ++ RW_TAC std_ss [GSPECIFICATION]
   ++ Suff `y' * Normal c <= y` >> METIS_TAC [le_rdiv]
-  ++ Q.PAT_ASSUM `!z. {r | ?g. r IN psfis m g /\ !x. g x <= Normal c * f x} z ==> z <= y'` MATCH_MP_TAC
+  ++ first_x_assum MATCH_MP_TAC
   ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
   ++ RW_TAC std_ss [GSPECIFICATION]
   ++ Q.EXISTS_TAC `(\x. Normal c * g x)`
@@ -1616,7 +1616,7 @@ val lebesgue_monotone_convergence_lemma = store_thm
       ++ Q.EXISTS_TAC `pos_fn_integral m (fi n)`
       ++ RW_TAC std_ss [] >> (Q.UNABBREV_TAC `ri` ++ BETA_TAC
                               ++ MATCH_MP_TAC pos_fn_integral_mono ++ METIS_TAC [le_mul,lt_le])
-      ++ Q.PAT_ASSUM `!z. IMAGE ri UNIV z ==> z <= y'` MATCH_MP_TAC
+      ++ Q.PAT_X_ASSUM `!z. IMAGE ri UNIV z ==> z <= y'` MATCH_MP_TAC
       ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
       ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]
       ++ Q.EXISTS_TAC `n`
@@ -1741,7 +1741,7 @@ val lebesgue_monotone_convergence = store_thm
       ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]
       ++ MATCH_MP_TAC pos_fn_integral_mono_mspace
       ++ RW_TAC std_ss []
-      ++ Q.PAT_ASSUM `!x. x IN m_space m ==> P` (MP_TAC o GSYM o UNDISCH o Q.SPEC `x`)
+      ++ Q.PAT_X_ASSUM `!x. x IN m_space m ==> P` (MP_TAC o GSYM o UNDISCH o Q.SPEC `x`)
       ++ RW_TAC std_ss []
       ++ FULL_SIMP_TAC std_ss [sup_le]
       ++ POP_ASSUM (K ALL_TAC)
@@ -2010,7 +2010,7 @@ val lemma_fn_mono_increasing = store_thm
            ++ FULL_SIMP_TAC real_ss []
 	   ++ `r < &(m' + 1) / (2 pow n)` by METIS_TAC [REAL_MUL,REAL_ADD]
     	   ++ Cases_on `m' IN count (4 ** n)`
-	   >> (Q.PAT_ASSUM `!n x k. Q` (MP_TAC o Q.SPECL [`n`,`x`, `m'`])
+	   >> (Q.PAT_X_ASSUM `!n x k. Q` (MP_TAC o Q.SPECL [`n`,`x`, `m'`])
                ++ RW_TAC std_ss [extreal_le_def,extreal_lt_eq]
 	       ++ `&(2 * m'):real <= &SUC (2*m')` by RW_TAC real_ss []
 	       ++ `&(2 * m') / 2:real <= &SUC (2 * m') / 2` by RW_TAC real_ss [REAL_LE_LDIV_EQ,REAL_DIV_RMUL]
@@ -3659,7 +3659,7 @@ val measure_space_finite_prod_measure_POW1 = store_thm
       ++ `!x. (PREIMAGE (\s1. (x,s1)) s) SUBSET m_space m1`
 	by (RW_TAC std_ss [IN_PREIMAGE, SUBSET_DEF]
 	    ++ FULL_SIMP_TAC std_ss [sigma_def, subsets_def, IN_BIGINTER, GSPECIFICATION]
-	    ++ Q.PAT_ASSUM `!s'. P s' ==> s IN s'`
+	    ++ Q.PAT_X_ASSUM `!s'. P s' ==> s IN s'`
 		(MP_TAC o Q.SPEC `POW (m_space m0 CROSS m_space m1)`)
 	    ++ SIMP_TAC std_ss [POW_SIGMA_ALGEBRA]
 	    ++ `prod_sets (measurable_sets m0) (measurable_sets m1) SUBSET
@@ -3695,7 +3695,7 @@ val measure_space_finite_prod_measure_POW1 = store_thm
       >> METIS_TAC [IN_POW]
       ++ RW_TAC std_ss [IN_PREIMAGE, SUBSET_DEF]
       ++ FULL_SIMP_TAC std_ss [sigma_def, subsets_def, IN_BIGINTER, GSPECIFICATION]
-      ++ Q.PAT_ASSUM `!s'. P s' ==> s IN s'`
+      ++ Q.PAT_X_ASSUM `!s'. P s' ==> s IN s'`
 	(MP_TAC o Q.SPEC `POW (m_space m0 CROSS m_space m1)`)
       ++ SIMP_TAC std_ss [POW_SIGMA_ALGEBRA]
       ++ `prod_sets (measurable_sets m0) (measurable_sets m1) SUBSET
@@ -3718,7 +3718,7 @@ val measure_space_finite_prod_measure_POW1 = store_thm
   ++ `!x. (PREIMAGE (\s1. (x,s1)) s) SUBSET m_space m1`
 	by (RW_TAC std_ss [IN_PREIMAGE, SUBSET_DEF]
 	    ++ FULL_SIMP_TAC std_ss [sigma_def, subsets_def, IN_BIGINTER, GSPECIFICATION]
-	    ++ Q.PAT_ASSUM `!s'. P s' ==> s IN s'`
+	    ++ Q.PAT_X_ASSUM `!s'. P s' ==> s IN s'`
 		(MP_TAC o Q.SPEC `POW (m_space m0 CROSS m_space m1)`)
 	    ++ SIMP_TAC std_ss [POW_SIGMA_ALGEBRA]
 	    ++ `prod_sets (measurable_sets m0) (measurable_sets m1) SUBSET
@@ -3735,7 +3735,7 @@ val measure_space_finite_prod_measure_POW1 = store_thm
   ++ `!x. (PREIMAGE (\s1. (x,s1)) t) SUBSET m_space m1`
 	by (RW_TAC std_ss [IN_PREIMAGE, SUBSET_DEF]
 	    ++ FULL_SIMP_TAC std_ss [sigma_def, subsets_def, IN_BIGINTER, GSPECIFICATION]
-	    ++ Q.PAT_ASSUM `!s'. P s' ==> t IN s'`
+	    ++ Q.PAT_X_ASSUM `!s'. P s' ==> t IN s'`
 		(MP_TAC o Q.SPEC `POW (m_space m0 CROSS m_space m1)`)
 	    ++ SIMP_TAC std_ss [POW_SIGMA_ALGEBRA]
 	    ++ `prod_sets (measurable_sets m0) (measurable_sets m1) SUBSET
@@ -3755,7 +3755,7 @@ val measure_space_finite_prod_measure_POW1 = store_thm
   ++ `!x. (PREIMAGE (\s1. (x,s1)) (s UNION t)) SUBSET m_space m1`
 	by (RW_TAC std_ss [IN_PREIMAGE, SUBSET_DEF]
 	    ++ FULL_SIMP_TAC std_ss [sigma_def, subsets_def, IN_BIGINTER, GSPECIFICATION]
-	    ++ Q.PAT_ASSUM `!s'. P s' ==> (s UNION t) IN s'`
+	    ++ Q.PAT_X_ASSUM `!s'. P s' ==> (s UNION t) IN s'`
 		(MP_TAC o Q.SPEC `POW (m_space m0 CROSS m_space m1)`)
 	    ++ SIMP_TAC std_ss [POW_SIGMA_ALGEBRA]
 	    ++ `prod_sets (measurable_sets m0) (measurable_sets m1) SUBSET
@@ -3835,8 +3835,8 @@ val measure_space_finite_prod_measure_POW2 = store_thm
           (measure m1 (PREIMAGE (\s1. (x,s1)) s) + measure m1 (PREIMAGE (\s1. (x,s1)) t))`
   >> RW_TAC std_ss []
   ++ MATCH_MP_TAC MEASURE_ADDITIVE
-  ++ Q.PAT_ASSUM `POW (m_space m1) = measurable_sets m1` (MP_TAC o GSYM)
-  ++ Q.PAT_ASSUM `POW (m_space m0) = measurable_sets m0` (MP_TAC o GSYM)
+  ++ Q.PAT_X_ASSUM `POW (m_space m1) = measurable_sets m1` (MP_TAC o GSYM)
+  ++ Q.PAT_X_ASSUM `POW (m_space m0) = measurable_sets m0` (MP_TAC o GSYM)
   ++ FULL_SIMP_TAC std_ss [IN_POW, SUBSET_DEF, IN_PREIMAGE, IN_CROSS, IN_DISJOINT]
   ++ RW_TAC std_ss []
   << [METIS_TAC [SND],
@@ -3853,7 +3853,7 @@ val finite_prod_measure_space_POW = store_thm
   ++ RW_TAC std_ss [GSYM EXTENSION]
   ++ EQ_TAC
   >> (RW_TAC std_ss []
-      ++ Q.PAT_ASSUM `!s. P ==> x IN s` (MP_TAC o Q.SPEC `POW (s1 CROSS s2)`)
+      ++ Q.PAT_X_ASSUM `!s. P ==> x IN s` (MP_TAC o Q.SPEC `POW (s1 CROSS s2)`)
       ++ RW_TAC std_ss [IN_POW, SUBSET_DEF, IN_CROSS, POW_SIGMA_ALGEBRA]
       ++ Suff `(!x''. (?x'. (x'',T) = (\(s,t). (s CROSS t,
             	   (!x. x IN s ==> x IN s1) /\ !x. x IN t ==> x IN s2))
@@ -3875,7 +3875,7 @@ val finite_prod_measure_space_POW = store_thm
       ++ POP_ASSUM MATCH_MP_TAC
       ++ METIS_TAC [SUBSET_DEF, IN_CROSS])
   ++ RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_SING]
-  ++ Q.PAT_ASSUM `!x. Q ==> x IN s` MATCH_MP_TAC
+  ++ Q.PAT_X_ASSUM `!x. Q ==> x IN s` MATCH_MP_TAC
   ++ Q.EXISTS_TAC `({FST a}, {SND a})` ++ RW_TAC std_ss [PAIR_EQ, IN_SING]
   ++ ONCE_REWRITE_TAC [EXTENSION] ++ RW_TAC std_ss [IN_CROSS, IN_SING]
   ++ METIS_TAC [PAIR_EQ, PAIR, FST, SND]);
@@ -4019,7 +4019,7 @@ val finite_prod_measure_space_POW3 = store_thm
   ++ RW_TAC std_ss [GSYM EXTENSION]
   ++ EQ_TAC
   >> (RW_TAC std_ss []
-      ++ Q.PAT_ASSUM `!s. P ==> x IN s` (MP_TAC o Q.SPEC `POW (s1 CROSS (s2 CROSS s3))`)
+      ++ Q.PAT_X_ASSUM `!s. P ==> x IN s` (MP_TAC o Q.SPEC `POW (s1 CROSS (s2 CROSS s3))`)
       ++ RW_TAC std_ss [IN_POW, SUBSET_DEF, IN_CROSS, POW_SIGMA_ALGEBRA]
       ++ Suff `(!x''. (?x'. (x'',T) =
                (\(s,t,u'). (s CROSS (t CROSS u'),
@@ -4047,7 +4047,7 @@ val finite_prod_measure_space_POW3 = store_thm
       ++ POP_ASSUM MATCH_MP_TAC
       ++ RW_TAC std_ss [SUBSET_DEF, IN_CROSS])
   ++ RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_SING]
-  ++ Q.PAT_ASSUM `!x. Q ==> x IN s` MATCH_MP_TAC
+  ++ Q.PAT_X_ASSUM `!x. Q ==> x IN s` MATCH_MP_TAC
   ++ Q.EXISTS_TAC `({FST a}, {FST (SND a)}, {SND(SND a)})` ++ RW_TAC std_ss [IN_SING]
   ++ RW_TAC std_ss [IN_SING,EXTENSION,IN_CROSS,PAIR]
   ++ METIS_TAC [PAIR]);
@@ -4158,7 +4158,7 @@ val EXTREAL_SUP_SEQ = store_thm
   ++ RW_TAC std_ss []
   ++ MATCH_MP_TAC le_add2
   ++ FULL_SIMP_TAC std_ss [lt_le]
-  ++ Q.PAT_ASSUM `!z. IMAGE (seq_sup P) UNIV z ==> z <= y` MATCH_MP_TAC
+  ++ Q.PAT_X_ASSUM `!z. IMAGE (seq_sup P) UNIV z ==> z <= y` MATCH_MP_TAC
   ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
   ++ RW_TAC std_ss [IN_UNIV,IN_IMAGE]
   ++ METIS_TAC []);
@@ -4310,8 +4310,8 @@ val lemma_radon_max_in_F = store_thm
 	   ++ METIS_TAC [IN_MEASURABLE_BOREL_LE, m_space_def, space_def, subsets_def,
 	      		 measurable_sets_def])
    ++ `measure v A = measure v A1 + measure v A2` by METIS_TAC [ADDITIVE]
-   ++ Q.PAT_ASSUM `A1 = M` (K ALL_TAC)
-   ++ Q.PAT_ASSUM `A2 = M` (K ALL_TAC)
+   ++ Q.PAT_X_ASSUM `A1 = M` (K ALL_TAC)
+   ++ Q.PAT_X_ASSUM `A2 = M` (K ALL_TAC)
    ++ `!x. max (f x) (g x) * indicator_fn A1 x = f x * indicator_fn A1 x`
        by (Q.UNABBREV_TAC `A1`
 	   ++ RW_TAC std_ss [extreal_max_def, indicator_fn_def, GSPECIFICATION, mul_rone,
@@ -4429,7 +4429,7 @@ val RN_lemma1 = store_thm
                  by METIS_TAC [real_lt]
 	    ++ METIS_TAC [UNION_EMPTY,REAL_LE_REFL])
   ++ Cases_on `?n. !B. ((B IN measurable_sets m /\ B SUBSET (m_space m DIFF (A n))) ==> -e < d B)`
-  >> (Q.PAT_ASSUM `!n. A (SUC n) = a UNION b` (K ALL_TAC)
+  >> (Q.PAT_X_ASSUM `!n. A (SUC n) = a UNION b` (K ALL_TAC)
       ++ FULL_SIMP_TAC std_ss []
       ++ `!n. m_space m DIFF (A n) IN measurable_sets m`
           by METIS_TAC [MEASURE_SPACE_DIFF,MEASURE_SPACE_MSPACE_MEASURABLE]
@@ -4669,14 +4669,14 @@ val Radon_Nikodym = store_thm
        by (RW_TAC std_ss [positive_def, measure_def, measurable_sets_def]
 	   ++ Q.UNABBREV_TAC `nu`
 	   ++ RW_TAC std_ss [MEASURE_EMPTY]
-	   ++ Q.PAT_ASSUM `!A. A IN measurable_sets m ==> (Q = Normal P)`
+	   ++ Q.PAT_X_ASSUM `!A. A IN measurable_sets m ==> (Q = Normal P)`
 	      		(MP_TAC o GSYM o Q.SPEC `{}`)
 	   ++ RW_TAC std_ss [MEASURE_SPACE_EMPTY_MEASURABLE, indicator_fn_def, NOT_IN_EMPTY,
 	      	     	     pos_fn_integral_zero, mul_rzero,mul_rone]
            ++ `IMAGE (\n. 0) univ(:num) = (\y. y = 0)`
 	       by RW_TAC std_ss [EXTENSION, IN_IMAGE, IN_UNIV, IN_ABS]
 	   ++ FULL_SIMP_TAC real_ss [sup_const, extreal_of_num_def, extreal_11])
-  ++ Q.PAT_ASSUM `!A. A IN measurable_sets m
+  ++ Q.PAT_X_ASSUM `!A. A IN measurable_sets m
      ==> (pos_fn_integral m (\x. g x * indicator_fn A x) = sup Q)` (K ALL_TAC)
   ++ RW_TAC std_ss []
   ++ `measure_space (m_space m, measurable_sets m, nu)`
@@ -4701,7 +4701,7 @@ val Radon_Nikodym = store_thm
 	     	     	    FINITE_COUNT]
           ++ RW_TAC std_ss [GSYM ext_suminf_def]
 	  ++ FULL_SIMP_TAC std_ss [IN_FUNSET, IN_UNIV]
-	  ++ Q.PAT_ASSUM `!A. A IN measurable_sets m ==>
+	  ++ Q.PAT_X_ASSUM `!A. A IN measurable_sets m ==>
                    (pos_fn_integral m (\x. g x * indicator_fn A x) = Normal (Ig A))`
 		     (MP_TAC o GSYM)
 	  ++ RW_TAC std_ss []

@@ -704,9 +704,9 @@ val IS_CLOSEST_EXISTS = store_thm (
           ASM_REWRITE_TAC [], ASM_REWRITE_TAC [REAL_LE_REFL], PROVE_TAC []],
         EXISTS_TAC (--`e:(num#num#num)`--) THEN UNDISCH_TAC(--`is_closest v s x (a:(num#num#num))`--) THEN
         REWRITE_TAC [is_closest] THEN REWRITE_TAC [IN_INSERT] THEN REPEAT STRIP_TAC THENL [
-          ASM_REWRITE_TAC [REAL_LE_REFL], PAT_ASSUM (--`!b:(num#num#num) . b IN s ==> abs
+          ASM_REWRITE_TAC [REAL_LE_REFL], PAT_X_ASSUM (--`!b:(num#num#num) . b IN s ==> abs
           (v a - x) <= abs (v b - x)`--) (MP_TAC o SPEC (--`b:(num#num#num)`--)) THEN ASM_REWRITE_TAC [] THEN
-          PAT_ASSUM (--`~(abs (v a - x) <= abs (v e - x))`--) MP_TAC THEN REAL_ARITH_TAC]],
+          PAT_X_ASSUM (--`~(abs (v a - x) <= abs (v e - x))`--) MP_TAC THEN REAL_ARITH_TAC]],
       ASM_REWRITE_TAC []]]);
 
 (*-------------------------------------------------------*)

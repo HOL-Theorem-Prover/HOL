@@ -1262,7 +1262,7 @@ val less_than_ulp = Q.store_thm("less_than_ulp",
           gt0_abs, realTheory.mult_rat, realTheory.REAL_LT_RDIV_0]
    >| [
       SPOSE_NOT_THEN strip_assume_tac
-      \\ qpat_assum `x < y: real` mp_tac
+      \\ qpat_x_assum `x < y: real` mp_tac
       \\ simp [realTheory.REAL_NOT_LT, GSYM realTheory.POW_ADD,
                realTheory.REAL_LE_RDIV_EQ, realTheory.REAL_DIV_RMUL]
       \\ Cases_on `a.Significand`
@@ -2044,7 +2044,7 @@ val float_to_real_eq = Q.store_thm("float_to_real_eq",
    >- metis_tac [diff_sign_neq]
    \\ Cases_on `x.Exponent <> y.Exponent`
    >- metis_tac [diff_exponent_neq]
-   \\ qpat_assum `~(p /\ q)` kall_tac
+   \\ qpat_x_assum `~(p /\ q)` kall_tac
    \\ fs [float_component_equality]
    \\ rw [float_to_real_def, sign_not_zero, div_twopow]
    )
@@ -2405,7 +2405,7 @@ val round_roundTowardZero = Q.store_thm("round_roundTowardZero",
       >- (
           `r = 0` by (pop_assum mp_tac \\ simp [float_is_zero_def])
           \\ `y.Exponent = 0w`
-          by (qpat_assum `float_is_zero y` mp_tac \\ simp [float_is_zero])
+          by (qpat_x_assum `float_is_zero y` mp_tac \\ simp [float_is_zero])
           \\ rlfs [ulp_def]
           \\ metis_tac [realLib.REAL_ARITH ``~(x < b /\ b <= x: real)``]
          )
@@ -2478,9 +2478,9 @@ val word_lsb_minus_1 = Q.prove(
    )
 
 val tac =
-   qpat_assum `!a. q \/ t` (qspec_then `y` strip_assume_tac)
+   qpat_x_assum `!a. q \/ t` (qspec_then `y` strip_assume_tac)
    \\ fs [realTheory.REAL_NOT_LE]
-   \\ qpat_assum `!b. p` (qspec_then `b` imp_res_tac)
+   \\ qpat_x_assum `!b. p` (qspec_then `b` imp_res_tac)
    \\ rlfs []
    \\ rfs []
 
@@ -2548,7 +2548,7 @@ val round_roundTiesToEven = Q.store_thm("round_roundTiesToEven",
       \\ Cases_on `float_is_zero y`
       >- (`r = 0` by (pop_assum mp_tac \\ simp [float_is_zero_def])
           \\ `y.Exponent = 0w`
-          by (qpat_assum `float_is_zero y` mp_tac \\ simp [float_is_zero])
+          by (qpat_x_assum `float_is_zero y` mp_tac \\ simp [float_is_zero])
           \\ rlfs [ulp_def]
           \\ metis_tac [ULP_gt0,
                 realLib.REAL_ARITH ``~(0 < x /\ x < b /\ 2 * b <= x: real)``])
@@ -2587,7 +2587,7 @@ val round_roundTiesToEven = Q.store_thm("round_roundTiesToEven",
           \\ fs [float_min_equiv_ULP_eq_float_to_real]
           \\ fs [float_components])
       \\ Cases_on `y.Significand = 0w`
-      >- (qpat_assum `~float_is_zero y` assume_tac
+      >- (qpat_x_assum `~float_is_zero y` assume_tac
           \\ `x'.Significand <> -1w` by (strip_tac \\ fs [] \\ tac)
           \\ Cases_on `y.Exponent = 1w`
           >- (fs [diff_ulp_next_float01] \\ tac)
@@ -2666,7 +2666,7 @@ val round_roundTiesToEven0 = Q.store_thm("round_roundTiesToEven0",
       \\ Cases_on `float_is_zero y`
       >- (`r = 0` by (pop_assum mp_tac \\ simp [float_is_zero_def])
           \\ `y.Exponent = 0w`
-          by (qpat_assum `float_is_zero y` mp_tac \\ simp [float_is_zero])
+          by (qpat_x_assum `float_is_zero y` mp_tac \\ simp [float_is_zero])
           \\ rlfs [ulp_def])
       \\ imp_res_tac Float_float_to_real
       \\ pop_assum (SUBST_ALL_TAC o SYM)
@@ -2726,7 +2726,7 @@ val tac =
    \\ Cases_on `float_is_zero y`
    >- (
        `r = 0` by (pop_assum mp_tac \\ simp [float_is_zero_def])
-       \\ qpat_assum `float_is_zero y` mp_tac
+       \\ qpat_x_assum `float_is_zero y` mp_tac
        \\ rw [float_is_zero]
        \\ fs [ulp_def]
        \\ prove_tac [realLib.REAL_ARITH ``~(x < b /\ b <= x: real)``,
@@ -2843,7 +2843,7 @@ val float_to_real_min_pos = Q.prove(
    ])
 
 val compare_with_zero_tac =
-   qpat_assum `!b. float_is_finite b  ==> p`
+   qpat_x_assum `!b. float_is_finite b  ==> p`
       (fn th =>
          assume_tac
             (SIMP_RULE (srw_ss())
@@ -2920,11 +2920,11 @@ val round_roundTiesToEven_is_zero = Q.store_thm("round_roundTiesToEven_is_zero",
          \\ imp_res_tac min_pos_odd
          \\ compare_with_zero_tac
          \\ fs []
-         \\ qpat_assum `!a. q \/ t`
+         \\ qpat_x_assum `!a. q \/ t`
                (qspec_then `float_plus_zero (:'t # 'w)` strip_assume_tac)
          \\ rfs [realTheory.ABS_NEG, zero_properties, zero_to_real,
                  float_components, GSYM ulp, GSYM neg_ulp]
-         \\ qpat_assum `!b. p` (qspec_then `b` imp_res_tac)
+         \\ qpat_x_assum `!b. p` (qspec_then `b` imp_res_tac)
          \\ metis_tac
               [realLib.REAL_ARITH
                   ``~((2 * abs x = u) /\ abs (u - x) <= abs x /\

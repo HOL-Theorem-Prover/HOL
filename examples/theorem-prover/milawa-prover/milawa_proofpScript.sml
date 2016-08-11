@@ -380,13 +380,13 @@ val syntax_ok_IMP_vars_ok = add_prove(
   \\ FS [term_syntax_ok_def,term_vars_ok_def]
   \\ REPEAT STRIP_TAC \\ FS [func_syntax_ok_def]
   \\ FS [EVERY_MEM] \\ REPEAT STRIP_TAC \\ RES_TAC THEN1
-   (Q.PAT_ASSUM `!t.bbb ==> b2 ==> b3` (MP_TAC o Q.SPEC `e`)
+   (Q.PAT_X_ASSUM `!t.bbb ==> b2 ==> b3` (MP_TAC o Q.SPEC `e`)
     \\ MATCH_MP_TAC IMP_IMP \\ FS []
     \\ EVAL_TAC \\ IMP_RES_TAC MEM_logic_term_size \\ DECIDE_TAC) THEN1
-   (Q.PAT_ASSUM `!t.bbb ==> b2 ==> b3` (MP_TAC o Q.SPEC `e`)
+   (Q.PAT_X_ASSUM `!t.bbb ==> b2 ==> b3` (MP_TAC o Q.SPEC `e`)
     \\ MATCH_MP_TAC IMP_IMP \\ FS []
     \\ EVAL_TAC \\ IMP_RES_TAC MEM_logic_term_size \\ DECIDE_TAC) THEN1
-   (Q.PAT_ASSUM `!t.bbb ==> b2 ==> b3` (MP_TAC o Q.SPEC `l`)
+   (Q.PAT_X_ASSUM `!t.bbb ==> b2 ==> b3` (MP_TAC o Q.SPEC `l`)
     \\ MATCH_MP_TAC IMP_IMP \\ FS []
     \\ EVAL_TAC \\ IMP_RES_TAC MEM_logic_term_size \\ DECIDE_TAC));
 
@@ -488,7 +488,7 @@ val logic_flag_termp_thm = prove(
     \\ Cases_on `S0` \\ FS []
     \\ IMP_RES_TAC logic_variable_listp_IMP
     \\ FS [LIST_LSIZE_def,LSIZE_def]
-    \\ Q.PAT_ASSUM `!xs.bbb` (MP_TAC o Q.SPEC `[S''']`)
+    \\ Q.PAT_X_ASSUM `!xs.bbb` (MP_TAC o Q.SPEC `[S''']`)
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1 (EVAL_TAC \\ DECIDE_TAC)
     \\ ASM_SIMP_TAC std_ss [logic_flag_termp_TERM] \\ STRIP_TAC
     \\ Cases_on `ts'` \\ FS [MAP,NOT_CONS_NIL]
@@ -496,7 +496,7 @@ val logic_flag_termp_thm = prove(
     \\ Q.EXISTS_TAC `mLamApp zs h ts` \\ FS [t2sexp_def,term_syntax_ok_def,EVERY_DEF]
     \\ FS [LENGTH_MAP] \\ FS [SUBSET_DEF,MEM_MAP]
     \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!x. bb1 ==> bb2` (MP_TAC o Q.SPEC `Sym x`) \\ FS [])
+    \\ Q.PAT_X_ASSUM `!x. bb1 ==> bb2` (MP_TAC o Q.SPEC `Sym x`) \\ FS [])
   \\ FS [LET_DEF] \\ Cases_on `?xs. S0 = list2sexp xs` \\ FS []
   \\ Cases_on `isTrue (logic_flag_termp (Sym "LIST") (list2sexp xs))` \\ FS []
   \\ `LIST_LSIZE xs < LIST_LSIZE (Dot S' (list2sexp xs)::t)` by ALL_TAC THEN1
@@ -580,21 +580,21 @@ val logic_flag_term_atblp_thm = prove(
   \\ Cases_on `isTrue (logic_flag_term_atblp (Sym "TERM") (t2sexp h) atbl)` \\ FS []
   \\ `logic_term1_size t < logic_term1_size (h::t)` by (EVAL_TAC \\ DECIDE_TAC)
   \\ FS [] \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM `isTrue (logic_flag_term_atblp (Sym "TERM") (t2sexp h) atbl)` MP_TAC
+  \\ Q.PAT_X_ASSUM `isTrue (logic_flag_term_atblp (Sym "TERM") (t2sexp h) atbl)` MP_TAC
   \\ ONCE_REWRITE_TAC [logic_flag_term_atblp_def] \\ FS [MAP]
   \\ REVERSE (Cases_on `h`)
   \\ FS [t2sexp_def,term_ok_def,logic_variablep_def,term_syntax_ok_def]
   \\ FS [LET_DEF,LENGTH_MAP] THEN1
    (Cases_on `isTrue (logic_flag_term_atblp (Sym "TERM") (t2sexp l) atbl)` \\ FS []
     \\ STRIP_TAC
-    \\ Q.PAT_ASSUM `!ts.bbb` (fn th => (MP_TAC o Q.SPEC `l0`) th THEN
+    \\ Q.PAT_X_ASSUM `!ts.bbb` (fn th => (MP_TAC o Q.SPEC `l0`) th THEN
                                        (MP_TAC o Q.SPEC `[l]`) th)
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1 (EVAL_TAC \\ DECIDE_TAC)
     \\ FULL_SIMP_TAC std_ss [EVERY_DEF,logic_flag_term_atblp_TERM] \\ STRIP_TAC
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1 (EVAL_TAC \\ DECIDE_TAC)
     \\ FS [EVERY_MEM])
   \\ Cases_on `Val (LENGTH l) = CDR (lookup (logic_func2sexp l0) atbl)` \\ FS []
-  \\ STRIP_TAC \\ Q.PAT_ASSUM `!ts.bbb` (MP_TAC o Q.SPEC `l`)
+  \\ STRIP_TAC \\ Q.PAT_X_ASSUM `!ts.bbb` (MP_TAC o Q.SPEC `l`)
   \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1 (EVAL_TAC \\ DECIDE_TAC)
   \\ FS [] \\ FS [EVERY_MEM] \\ STRIP_TAC
   \\ FS [atbl_ok_def] \\ RES_TAC \\ FS []
@@ -734,10 +734,10 @@ val logic_flag_appealp_thm = prove(
   \\ REVERSE (`?t. (h = a2sexp t) /\ appeal_syntax_ok t` by ALL_TAC)
   \\ `LIST_LSIZE t < LIST_LSIZE (h::t)` by (EVAL_TAC \\ DECIDE_TAC) \\ RES_TAC
   THEN1 (Q.EXISTS_TAC `t'::ts` \\ FS [CONS_11,APPEND,MAP,EVERY_DEF])
-  \\ Q.PAT_ASSUM `isTrue (logic_flag_appealp (Sym "PROOF") h)` MP_TAC
+  \\ Q.PAT_X_ASSUM `isTrue (logic_flag_appealp (Sym "PROOF") h)` MP_TAC
   \\ ONCE_REWRITE_TAC [logic_flag_appealp_def]
   \\ SRW_TAC [] [] \\ FS []
-  \\ Q.PAT_ASSUM `h = list2sexp xs` ASSUME_TAC \\ FS []
+  \\ Q.PAT_X_ASSUM `h = list2sexp xs` ASSUME_TAC \\ FS []
   \\ Cases_on `xs` THEN1 (FS [] \\ Cases_on `xs'` \\ FS [])
   \\ Cases_on `t` THEN1 (FS [] \\ Cases_on `xs'` \\ FS [])
   \\ Cases_on `t'` THEN1
@@ -747,24 +747,24 @@ val logic_flag_appealp_thm = prove(
     \\ FS [appeal_syntax_ok_def,a2sexp_def,list2sexp_def,LET_DEF,APPEND])
   \\ Cases_on `t` THEN1
    (FS [isSym_thm] \\ IMP_RES_TAC logic_formulap_thm \\ FS []
-    \\ Q.PAT_ASSUM `!xs.bb` (MP_TAC o Q.SPEC `xs'`)
+    \\ Q.PAT_X_ASSUM `!xs.bb` (MP_TAC o Q.SPEC `xs'`)
     \\ FULL_SIMP_TAC std_ss [isDot_def]
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
      (FULL_SIMP_TAC std_ss [LIST_LSIZE_def,LSIZE_def]
       \\ `LIST_LSIZE xs' <= LSIZE (list2sexp xs')` by FS [LIST_LSIZE_LESS_EQ]
       \\ DECIDE_TAC)
-    \\ Q.PAT_ASSUM `h''' = list2sexp xs'` ASSUME_TAC \\ FS []
+    \\ Q.PAT_X_ASSUM `h''' = list2sexp xs'` ASSUME_TAC \\ FS []
     \\ REPEAT STRIP_TAC
     \\ Q.EXISTS_TAC `Appeal a t (SOME(ts',NONE))`
     \\ FS [appeal_syntax_ok_def,a2sexp_def,list2sexp_def,LET_DEF,APPEND])
   \\ Cases_on `t'` THEN1
    (FS [isSym_thm] \\ IMP_RES_TAC logic_formulap_thm \\ FS []
-    \\ Q.PAT_ASSUM `!xs.bb` (MP_TAC o Q.SPEC `xs'`) \\ FS []
+    \\ Q.PAT_X_ASSUM `!xs.bb` (MP_TAC o Q.SPEC `xs'`) \\ FS []
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
      (FULL_SIMP_TAC std_ss [LIST_LSIZE_def,LSIZE_def]
       \\ `LIST_LSIZE xs' <= LSIZE (list2sexp xs')` by FS [LIST_LSIZE_LESS_EQ]
       \\ DECIDE_TAC)
-    \\ Q.PAT_ASSUM `h''' = list2sexp xs'` ASSUME_TAC \\ FS []
+    \\ Q.PAT_X_ASSUM `h''' = list2sexp xs'` ASSUME_TAC \\ FS []
     \\ REPEAT STRIP_TAC
     \\ Q.EXISTS_TAC `Appeal a t (SOME(ts',SOME h''''))`
     \\ FS [appeal_syntax_ok_def,a2sexp_def,list2sexp_def,LET_DEF,APPEND])
@@ -844,7 +844,7 @@ val t2sexp_11 = add_prove(
   \\ `(MAP Sym l1 = MAP Sym l1') = (l1 = l1')` by
         (MATCH_MP_TAC MAP_EQ_MAP \\ REPEAT STRIP_TAC \\ FS [])
   \\ `(t2sexp l = t2sexp l') = (l = l')` by ALL_TAC THEN1
-       (Q.PAT_ASSUM `!xx.bbb` (MATCH_MP_TAC o REWRITE_RULE [AND_IMP_INTRO])
+       (Q.PAT_X_ASSUM `!xx.bbb` (MATCH_MP_TAC o REWRITE_RULE [AND_IMP_INTRO])
         \\ FS [] \\ EVAL_TAC \\ DECIDE_TAC)
   \\ ASM_SIMP_TAC std_ss []
   \\ `(MAP t2sexp l0 = MAP t2sexp l0') = (l0 = l0')` by ALL_TAC
@@ -928,7 +928,7 @@ val logic_associativity_okp_thm = add_prove(
   \\ FS [f2sexp_def]
   \\ IMP_RES_TAC f2sexp_IMP
   \\ FS [f2sexp_def,formula_syntax_ok_def,EVERY_DEF,appeal_syntax_ok_thm]
-  \\ REPEAT (Q.PAT_ASSUM `f2sexp yyy = f2sexp xxx` MP_TAC)
+  \\ REPEAT (Q.PAT_X_ASSUM `f2sexp yyy = f2sexp xxx` MP_TAC)
   \\ FS [f2sexp_def,formula_syntax_ok_def,EVERY_DEF,appeal_syntax_ok_thm]
   \\ REPEAT STRIP_TAC
   \\ FS [f2sexp_def,formula_syntax_ok_def,EVERY_DEF,appeal_syntax_ok_thm]
@@ -979,7 +979,7 @@ val logic_expansion_okp_thm = add_prove(
   \\ FS [MAP,EVERY_DEF]
   \\ IMP_RES_TAC f2sexp_IMP
   \\ FS [f2sexp_def]
-  \\ REPEAT (Q.PAT_ASSUM `f2sexp yyy = f2sexp xxx` MP_TAC)
+  \\ REPEAT (Q.PAT_X_ASSUM `f2sexp yyy = f2sexp xxx` MP_TAC)
   \\ FS [f2sexp_def,formula_syntax_ok_def,EVERY_DEF,appeal_syntax_ok_thm]
   \\ REPEAT STRIP_TAC \\ FS []
   \\ IMP_RES_TAC logic_formula_atblp_thm
@@ -999,7 +999,7 @@ val logic_propositional_schema_okp_thm = add_prove(
   \\ FS [f2sexp_def]
   \\ IMP_RES_TAC f2sexp_IMP
   \\ FS [f2sexp_def]
-  \\ REPEAT (Q.PAT_ASSUM `f2sexp yyy = f2sexp xxx` MP_TAC)
+  \\ REPEAT (Q.PAT_X_ASSUM `f2sexp yyy = f2sexp xxx` MP_TAC)
   \\ FS [f2sexp_def,formula_syntax_ok_def,EVERY_DEF,appeal_syntax_ok_thm]
   \\ REPEAT STRIP_TAC \\ FS []
   \\ IMP_RES_TAC logic_formula_atblp_thm
@@ -1052,7 +1052,7 @@ val logic_check_functional_axiom_thm = prove(
     \\ `formula_size f0 < formula_size (Or (Not (Equal l l0)) f0)` by
         (EVAL_TAC \\ DECIDE_TAC)
     \\ FULL_SIMP_TAC std_ss [GSYM list2sexp_def,GSYM MAP,formula_syntax_ok_def]
-    \\ Q.PAT_ASSUM `!ff xx. bb` (MP_TAC o Q.SPECL [`f0`,`l::xs`,`l0::ys`])
+    \\ Q.PAT_X_ASSUM `!ff xx. bb` (MP_TAC o Q.SPECL [`f0`,`l::xs`,`l0::ys`])
     \\ FS [LENGTH,REVERSE_DEF,EVERY_APPEND,EVERY_DEF] \\ REPEAT STRIP_TAC
     \\ FS [GSYM or_not_equal_list_def]
     \\ Q.LIST_EXISTS_TAC [`(l,l0)::ts`,`g`]
@@ -1108,7 +1108,7 @@ val logic_base_evaluablep_thm = prove(
   \\ FULL_SIMP_TAC std_ss [GSYM alist2sexp_def,lookup_thm]
   \\ FULL_SIMP_TAC std_ss [LOOKUP_DOT_def]
   \\ Cases_on `t` \\ FS [t2sexp_def] \\ SRW_TAC [] [] \\ FS []
-  \\ Q.PAT_ASSUM `logic_func2sexp l0 = xxx` MP_TAC \\ FS [term_syntax_ok_def]
+  \\ Q.PAT_X_ASSUM `logic_func2sexp l0 = xxx` MP_TAC \\ FS [term_syntax_ok_def]
   \\ Cases_on `l0` \\ SRW_TAC [] [logic_func2sexp_def]
   \\ FS [func_syntax_ok_def] \\ FULL_SIMP_TAC (srw_ss()) [] \\ Cases_on `l'`
   \\ FULL_SIMP_TAC (srw_ss()) [primitive_arity_def,logic_prim2sym_def]
@@ -1151,7 +1151,7 @@ val logic_base_eval_okp_thm = add_prove(
   \\ FULL_SIMP_TAC std_ss []
   \\ IMP_RES_TAC logic_base_evaluator_thm
   \\ FULL_SIMP_TAC std_ss [t2sexp_11,term_syntax_ok_def]
-  \\ Q.PAT_ASSUM `xxx = t2` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
+  \\ Q.PAT_X_ASSUM `xxx = t2` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
   \\ ONCE_REWRITE_TAC [MilawaTrue_cases] \\ ASM_SIMP_TAC (srw_ss()) [] \\ METIS_TAC []);
 
 val sigmap2sexp_def = (add_rw o Define) `
@@ -1172,7 +1172,7 @@ val logic_sigmap_thm = prove(
   THEN1 (Q.EXISTS_TAC `[]` \\ FS []) THEN1 (Q.EXISTS_TAC `[]` \\ FS [])
   \\ POP_ASSUM MP_TAC \\ SRW_TAC [] [] \\ FS []
   \\ Cases_on `x` \\ FS []
-  \\ Q.PAT_ASSUM `isTrue (logic_variablep xxx)` MP_TAC
+  \\ Q.PAT_X_ASSUM `isTrue (logic_variablep xxx)` MP_TAC
   \\ IMP_RES_TAC logic_termp_thm \\ FS [logic_variablep_def]
   \\ SRW_TAC [] [] \\ FS [] \\ FS [isSym_thm]
   \\ Q.LIST_EXISTS_TAC [`(a,t)::xs`,`z`]
@@ -1232,7 +1232,7 @@ val logic_instantiation_okp_thm = add_prove(
   \\ FS [logic_substitute_formula_thm,EVERY_DEF,appeal_syntax_ok_thm]
   \\ IMP_RES_TAC logic_formula_atblp_thm
   \\ FS [f2sexp_11]
-  \\ Q.PAT_ASSUM `formula_sub xs (CONCL h1) = CONCL a` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `formula_sub xs (CONCL h1) = CONCL a` (ASSUME_TAC o GSYM)
   \\ REPEAT STRIP_TAC \\ FS []
   \\ ONCE_REWRITE_TAC [MilawaTrue_cases] \\ ASM_SIMP_TAC (srw_ss()) []
   \\ METIS_TAC []);
@@ -1263,7 +1263,7 @@ val logic_beta_reduction_okp_thm = add_prove(
   \\ FS [f2sexp_def]
   \\ Cases_on `t1`
   \\ FS [t2sexp_def,formula_syntax_ok_def,term_syntax_ok_def]
-  \\ Q.PAT_ASSUM `xxx = t2sexp t2` (MP_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `xxx = t2sexp t2` (MP_TAC o GSYM)
   \\ FS [list2sexp_CONS_ZIP,t2sexp_11] \\ REPEAT STRIP_TAC \\ FS []
   \\ REPEAT STRIP_TAC
   \\ ONCE_REWRITE_TAC [MilawaTrue_cases] \\ ASM_SIMP_TAC (srw_ss()) []
@@ -1463,21 +1463,21 @@ val logic_induction_okp_thm = add_prove(
   \\ `MilawaTrue ctxt (Equal (mApp (mPrimitiveFun logic_ORDP) [t])
          (mConst (Sym "T")))` by FS [EVERY_MEM]
   \\ FULL_SIMP_TAC std_ss []
-  \\ REPEAT (Q.PAT_ASSUM `isTrue xxx` MP_TAC)
+  \\ REPEAT (Q.PAT_X_ASSUM `isTrue xxx` MP_TAC)
   \\ FS [logic_make_all_measure_steps_thm]
   \\ FS [logic_make_induction_steps_thm]
   \\ FS [SUBSET_DEF,MEM_FLAT,MEM_MAP,f2sexp_11,
        PULL_EXISTS_IMP,EXISTS_PROD,PULL_CONJ]
   \\ REPEAT STRIP_TAC
   \\ `?x1 zs1. MEM (q,zs1,x1) (ZIP (qs,yss)) /\ (ss = MAP FST zs1)` by
-     (Q.PAT_ASSUM `MEM (q,ss) (ZIP (qs,qss))` MP_TAC \\ Q.UNABBREV_TAC `qss`
+     (Q.PAT_X_ASSUM `MEM (q,ss) (ZIP (qs,qss))` MP_TAC \\ Q.UNABBREV_TAC `qss`
       \\ FULL_SIMP_TAC std_ss [MEM_ZIP] \\ REPEAT STRIP_TAC
       \\ POP_ASSUM MP_TAC \\ FULL_SIMP_TAC std_ss [EL_MAP] \\ REPEAT STRIP_TAC
       \\ Q.EXISTS_TAC `SND (EL n yss)`
       \\ Q.EXISTS_TAC `FST (EL n yss)`
       \\ FS [] \\ Q.EXISTS_TAC `n` \\ FS [])
   \\ FS [] \\ RES_TAC \\ FS [EVERY_MEM,MEM_MAP,formula_sub_def]
-  \\ Q.PAT_ASSUM `!e. bbb ==> MilawaTrue ctxt e` MATCH_MP_TAC
+  \\ Q.PAT_X_ASSUM `!e. bbb ==> MilawaTrue ctxt e` MATCH_MP_TAC
   THEN1 (METIS_TAC [])
   \\ Cases_on `y'''` \\ FS [] \\ RES_TAC \\ METIS_TAC []);
 
@@ -1520,7 +1520,7 @@ val logic_flag_proofp_thm = prove(
   \\ SRW_TAC [] [] \\ FS []
   \\ MATCH_MP_TAC (REWRITE_RULE [AND_IMP_INTRO] logic_appeal_step_okp_thm)
   \\ FS [AND_IMP_INTRO,REWRITE_RULE [GSYM o_DEF] EVERY_MAP]
-  \\ Q.PAT_ASSUM `!xx.bbb` MATCH_MP_TAC
+  \\ Q.PAT_X_ASSUM `!xx.bbb` MATCH_MP_TAC
   \\ FULL_SIMP_TAC std_ss []
   \\ Cases_on `h` \\ Cases_on `o'` \\ FULL_SIMP_TAC std_ss [HYPS_def,EVERY_DEF]
   THEN1 (EVAL_TAC \\ DECIDE_TAC)
@@ -1654,7 +1654,7 @@ val term_syntax_ok_term_sub = prove(
   \\ FULL_SIMP_TAC std_ss [term_sub_def,term_syntax_ok_def,LENGTH_MAP]
   THEN1 (MATCH_MP_TAC LOOKUP_IMP \\ FULL_SIMP_TAC std_ss [term_syntax_ok_def])
   \\ FULL_SIMP_TAC std_ss [EVERY_MEM,MEM_MAP,PULL_EXISTS_IMP,AND_IMP_INTRO]
-  \\ REPEAT STRIP_TAC \\ Q.PAT_ASSUM `!t. b1 /\ b2 ==> b3` MATCH_MP_TAC \\ FS []
+  \\ REPEAT STRIP_TAC \\ Q.PAT_X_ASSUM `!t. b1 /\ b2 ==> b3` MATCH_MP_TAC \\ FS []
   \\ EVAL_TAC \\ IMP_RES_TAC MEM_logic_term_size \\ DECIDE_TAC);
 
 val logic_flag_callmap_thm = prove(
@@ -1694,7 +1694,7 @@ val logic_flag_callmap_thm = prove(
          \\ `F` by DECIDE_TAC)
       \\ FS [EVERY_DEF,MAP,EL,HD,TL,EVAL ``EL 1 (x1::x2::x3::xs)``,
            EVAL ``EL 2 (x1::x2::x3::xs)``]
-      \\ Q.PAT_ASSUM `!ts.bbb` (fn th =>
+      \\ Q.PAT_X_ASSUM `!ts.bbb` (fn th =>
            (MP_TAC o Q.SPEC `[x1]`) th THEN
            (MP_TAC o Q.SPEC `[x2]`) th THEN
            (MP_TAC o Q.SPEC `[x3]`) th)
@@ -1713,21 +1713,21 @@ val logic_flag_callmap_thm = prove(
     \\ Cases_on `l0 = mFun name` \\ FS [] THEN1
      (`(\a. callmap name a) = callmap name` by FULL_SIMP_TAC std_ss [FUN_EQ_THM]
       \\ FS [EVERY_DEF,MAP,term_ok_def,func_arity_def]
-      \\ FS [MAP,AND_IMP_INTRO] \\ Q.PAT_ASSUM `!ts.bbb` MATCH_MP_TAC
+      \\ FS [MAP,AND_IMP_INTRO] \\ Q.PAT_X_ASSUM `!ts.bbb` MATCH_MP_TAC
       \\ FS [term_ok_def,EVERY_MEM,logic_term_size_def] \\ DECIDE_TAC)
     \\ `~(logic_func2sexp l0 = Sym name)` by ALL_TAC THEN1
      (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ Cases_on `l0`
       \\ SIMP_TAC (srw_ss()) [logic_func2sexp_def]
       \\ REPEAT STRIP_TAC \\ FS [] THEN1
-       (Q.PAT_ASSUM `logic_func2sexp (mFun (logic_prim2sym l')) =
+       (Q.PAT_X_ASSUM `logic_func2sexp (mFun (logic_prim2sym l')) =
                      Sym (logic_prim2sym l')` MP_TAC
         \\ Cases_on `l'` \\ EVAL_TAC)
       \\ POP_ASSUM MP_TAC \\ SRW_TAC [] [] \\ FULL_SIMP_TAC std_ss [])
     \\ FS [] THEN1
      (`(\a. callmap name a) = callmap name` by FULL_SIMP_TAC std_ss [FUN_EQ_THM]
-      \\ FS [MAP,AND_IMP_INTRO] \\ Q.PAT_ASSUM `!ts.bbb` MATCH_MP_TAC
+      \\ FS [MAP,AND_IMP_INTRO] \\ Q.PAT_X_ASSUM `!ts.bbb` MATCH_MP_TAC
       \\ FS [term_ok_def,EVERY_MEM,logic_term_size_def] \\ DECIDE_TAC))
-  \\ Q.PAT_ASSUM `!ts.bbb` (fn th =>
+  \\ Q.PAT_X_ASSUM `!ts.bbb` (fn th =>
            (MP_TAC o Q.SPEC `l0`) th THEN (MP_TAC o Q.SPEC `[l]`) th)
   \\ FULL_SIMP_TAC std_ss [EVERY_DEF,term_ok_def]
   \\ `EVERY (term_ok ctxt) l0` by FULL_SIMP_TAC std_ss [EVERY_MEM]
@@ -1738,12 +1738,12 @@ val logic_flag_callmap_thm = prove(
   \\ IMP_RES_TAC logic_flag_callmap_TERM \\ FS [EVERY_APPEND]
   \\ `(\a. callmap name a) = callmap name` by FULL_SIMP_TAC std_ss [FUN_EQ_THM]
   \\ FS [logic_substitute_callmap_thm] \\ FS [callmap2sexp_def,MAP_APPEND]
-  \\ Q.PAT_ASSUM `EVERY (\x. LENGTH (FST x) = LENGTH (FST (ctxt ' name)))
+  \\ Q.PAT_X_ASSUM `EVERY (\x. LENGTH (FST x) = LENGTH (FST (ctxt ' name)))
          (callmap name l)` MP_TAC
-  \\ Q.PAT_ASSUM `EVERY (EVERY term_syntax_ok o xx) (callmap name l)` MP_TAC
-  \\ Q.PAT_ASSUM `EVERY (EVERY term_syntax_ok o xx) (callmap name l)` MP_TAC
-  \\ Q.PAT_ASSUM `LENGTH l1 = LENGTH l0` MP_TAC
-  \\ Q.PAT_ASSUM `EVERY (term_syntax_ok) l0` MP_TAC
+  \\ Q.PAT_X_ASSUM `EVERY (EVERY term_syntax_ok o xx) (callmap name l)` MP_TAC
+  \\ Q.PAT_X_ASSUM `EVERY (EVERY term_syntax_ok o xx) (callmap name l)` MP_TAC
+  \\ Q.PAT_X_ASSUM `LENGTH l1 = LENGTH l0` MP_TAC
+  \\ Q.PAT_X_ASSUM `EVERY (term_syntax_ok) l0` MP_TAC
   \\ Q.SPEC_TAC (`callmap name l`,`qs`)
   \\ REPEAT (POP_ASSUM (K ALL_TAC)) \\ FS [AND_IMP_INTRO]
   \\ FS [callmap_sub_def]
@@ -2022,7 +2022,7 @@ val EVERY_free_vars = prove(
   STRIP_TAC \\ completeInduct_on `logic_term_size y` \\ NTAC 3 STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [PULL_FORALL_IMP,AND_IMP_INTRO] \\ Cases_on `y`
   \\ FS [free_vars_def,EVERY_DEF,term_vars_ok_def,EVERY_FLAT,MEM_MAP,PULL_EXISTS_IMP]
-  \\ REPEAT STRIP_TAC \\ Q.PAT_ASSUM `!y.bbb` MATCH_MP_TAC \\ FS [EVERY_MEM]
+  \\ REPEAT STRIP_TAC \\ Q.PAT_X_ASSUM `!y.bbb` MATCH_MP_TAC \\ FS [EVERY_MEM]
   \\ EVAL_TAC \\ IMP_RES_TAC MEM_logic_term_size \\ DECIDE_TAC);
 
 val logic_translate_let_term_apply = prove(
@@ -2215,7 +2215,7 @@ val logic_flag_translate_thm = prove(
   \\ REVERSE (Cases_on `isSym S'`) \\ FS [LET_DEF] THEN1
    (SRW_TAC [] [] \\ FS []
     \\ IMP_RES_TAC list_exists3 \\ FS []
-    \\ Q.PAT_ASSUM `!xss.bbb` (fn th => (MP_TAC o Q.SPEC `xs'`) th THEN
+    \\ Q.PAT_X_ASSUM `!xss.bbb` (fn th => (MP_TAC o Q.SPEC `xs'`) th THEN
                                         (MP_TAC o Q.SPEC `[x3]`) th)
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
     THEN1 (EVAL_TAC \\ MP_TAC (Q.SPEC `xs'` LIST_LSIZE_LESS_EQ) \\ DECIDE_TAC)
@@ -2247,7 +2247,7 @@ val logic_flag_translate_thm = prove(
     \\ FULL_SIMP_TAC (srw_ss()) [EVAL ``sym2prim "FIRST"``]
     \\ FS [term2t_def,t2sexp_def,logic_func2sexp_def,logic_prim2sym_def,MAP]
     \\ Cases_on `S0` \\ FS [] \\ Cases_on `S0'` \\ FS []
-    \\ Q.PAT_ASSUM `!xs.bbb` (MP_TAC o Q.SPEC `[S']`)
+    \\ Q.PAT_X_ASSUM `!xs.bbb` (MP_TAC o Q.SPEC `[S']`)
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1 (EVAL_TAC \\ DECIDE_TAC)
     \\ FS [isTrue_logic_flag_translate_TERM,MAP,logic_flag_translate_TERM]
     \\ SIMP_TAC std_ss [sexp2sexp_def,markerTheory.Abbrev_def,term_vars_ok_def,
@@ -2259,7 +2259,7 @@ val logic_flag_translate_thm = prove(
     \\ FULL_SIMP_TAC (srw_ss()) [EVAL ``sym2prim "SECOND"``]
     \\ FS [term2t_def,t2sexp_def,logic_func2sexp_def,logic_prim2sym_def,MAP]
     \\ Cases_on `S0` \\ FS [] \\ Cases_on `S0'` \\ FS []
-    \\ Q.PAT_ASSUM `!xs.bbb` (MP_TAC o Q.SPEC `[S']`)
+    \\ Q.PAT_X_ASSUM `!xs.bbb` (MP_TAC o Q.SPEC `[S']`)
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1 (EVAL_TAC \\ DECIDE_TAC)
     \\ FS [isTrue_logic_flag_translate_TERM,MAP,logic_flag_translate_TERM]
     \\ SIMP_TAC std_ss [sexp2sexp_def,markerTheory.Abbrev_def,term_vars_ok_def,
@@ -2271,7 +2271,7 @@ val logic_flag_translate_thm = prove(
     \\ FULL_SIMP_TAC (srw_ss()) [EVAL ``sym2prim "THIRD"``]
     \\ FS [term2t_def,t2sexp_def,logic_func2sexp_def,logic_prim2sym_def,MAP]
     \\ Cases_on `S0` \\ FS [] \\ Cases_on `S0'` \\ FS []
-    \\ Q.PAT_ASSUM `!xs.bbb` (MP_TAC o Q.SPEC `[S']`)
+    \\ Q.PAT_X_ASSUM `!xs.bbb` (MP_TAC o Q.SPEC `[S']`)
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1 (EVAL_TAC \\ DECIDE_TAC)
     \\ FS [isTrue_logic_flag_translate_TERM,MAP,logic_flag_translate_TERM]
     \\ SIMP_TAC std_ss [sexp2sexp_def,markerTheory.Abbrev_def,term_vars_ok_def,
@@ -2283,7 +2283,7 @@ val logic_flag_translate_thm = prove(
     \\ FULL_SIMP_TAC (srw_ss()) [EVAL ``sym2prim "FOURTH"``]
     \\ FS [term2t_def,t2sexp_def,logic_func2sexp_def,logic_prim2sym_def,MAP]
     \\ Cases_on `S0` \\ FS [] \\ Cases_on `S0'` \\ FS []
-    \\ Q.PAT_ASSUM `!xs.bbb` (MP_TAC o Q.SPEC `[S']`)
+    \\ Q.PAT_X_ASSUM `!xs.bbb` (MP_TAC o Q.SPEC `[S']`)
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1 (EVAL_TAC \\ DECIDE_TAC)
     \\ FS [isTrue_logic_flag_translate_TERM,MAP,logic_flag_translate_TERM]
     \\ SIMP_TAC std_ss [sexp2sexp_def,markerTheory.Abbrev_def,term_vars_ok_def,
@@ -2296,13 +2296,13 @@ val logic_flag_translate_thm = prove(
     \\ FULL_SIMP_TAC (srw_ss()) [EVAL ``sym2prim "FIFTH"``]
     \\ FS [term2t_def,t2sexp_def,logic_func2sexp_def,logic_prim2sym_def,MAP]
     \\ Cases_on `S0` \\ FS [] \\ Cases_on `S0'` \\ FS []
-    \\ Q.PAT_ASSUM `!xs.bbb` (MP_TAC o Q.SPEC `[S'']`)
+    \\ Q.PAT_X_ASSUM `!xs.bbb` (MP_TAC o Q.SPEC `[S'']`)
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1 (EVAL_TAC \\ DECIDE_TAC)
     \\ FS [isTrue_logic_flag_translate_TERM,MAP,logic_flag_translate_TERM]
     \\ SIMP_TAC std_ss [sexp2sexp_def,markerTheory.Abbrev_def,term_vars_ok_def,
           EVERY_DEF] \\ STRIP_TAC \\ EVAL_TAC)
   THEN1
-   (Q.PAT_ASSUM `!xss.bbb` (MP_TAC o Q.SPEC `xs`)
+   (Q.PAT_X_ASSUM `!xss.bbb` (MP_TAC o Q.SPEC `xs`)
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
     THEN1 (EVAL_TAC \\ MP_TAC (Q.SPEC `xs` LIST_LSIZE_LESS_EQ) \\ DECIDE_TAC)
     \\ FS [] \\ REPEAT STRIP_TAC \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
@@ -2315,7 +2315,7 @@ val logic_flag_translate_thm = prove(
     \\ FS [markerTheory.Abbrev_def]
     \\ FS [logic_translate_and_term_thm])
   THEN1
-   (Q.PAT_ASSUM `!xss.bbb` (MP_TAC o Q.SPEC `xs`)
+   (Q.PAT_X_ASSUM `!xss.bbb` (MP_TAC o Q.SPEC `xs`)
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
     THEN1 (EVAL_TAC \\ MP_TAC (Q.SPEC `xs` LIST_LSIZE_LESS_EQ) \\ DECIDE_TAC)
     \\ FS [] \\ REPEAT STRIP_TAC \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
@@ -2327,7 +2327,7 @@ val logic_flag_translate_thm = prove(
     \\ FS [logic_translate_or_term_thm])
   THEN1
    (FULL_SIMP_TAC std_ss [GSYM list2sexp_def,memberp_thm] \\ FS []
-    \\ Q.PAT_ASSUM `!xss.bbb` (MP_TAC o Q.SPEC `xs`)
+    \\ Q.PAT_X_ASSUM `!xss.bbb` (MP_TAC o Q.SPEC `xs`)
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
     THEN1 (EVAL_TAC \\ MP_TAC (Q.SPEC `xs` LIST_LSIZE_LESS_EQ) \\ DECIDE_TAC)
     \\ FS [] \\ REPEAT STRIP_TAC \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
@@ -2340,7 +2340,7 @@ val logic_flag_translate_thm = prove(
   THEN1
    (SIMP_TAC std_ss [sexp2sexp_def] \\ ONCE_REWRITE_TAC [sexp3term_def]
     \\ FS [LET_DEF] \\ FULL_SIMP_TAC (srw_ss()) [getSym_def,sym2prim_def]
-    \\ Q.PAT_ASSUM `!ts.bbb` (fn th => (MP_TAC o Q.SPEC `MAP CAR xs`) th THEN
+    \\ Q.PAT_X_ASSUM `!ts.bbb` (fn th => (MP_TAC o Q.SPEC `MAP CAR xs`) th THEN
                                        (MP_TAC o Q.SPEC `MAP (CAR o CDR) xs`) th)
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
     THEN1 (EVAL_TAC \\ MP_TAC (Q.SPEC `xs` LIST_LSIZE_MAP) \\ DECIDE_TAC)
@@ -2353,7 +2353,7 @@ val logic_flag_translate_thm = prove(
    (SIMP_TAC std_ss [sexp2sexp_def] \\ ONCE_REWRITE_TAC [sexp3term_def]
     \\ FS [LET_DEF] \\ FULL_SIMP_TAC (srw_ss()) [getSym_def,sym2prim_def]
     \\ Cases_on `S0` \\ FS [] \\ Cases_on `S0'` \\ FS [] \\ Cases_on `S0` \\ FS []
-    \\ Q.PAT_ASSUM `!ts.bbb` (fn th =>
+    \\ Q.PAT_X_ASSUM `!ts.bbb` (fn th =>
           (MP_TAC o Q.SPEC `MAP (CAR o CDR) xs`) th THEN
           (MP_TAC o Q.SPEC `[S'']`) th)
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
@@ -2368,7 +2368,7 @@ val logic_flag_translate_thm = prove(
     \\ SIMP_TAC std_ss [sexp2sexp_def] \\ ONCE_REWRITE_TAC [sexp3term_def]
     \\ FS [LET_DEF] \\ FULL_SIMP_TAC (srw_ss()) [getSym_def,sym2prim_def]
     \\ Cases_on `S0` \\ FS [] \\ Cases_on `S0'` \\ FS [] \\ Cases_on `S0` \\ FS []
-    \\ Q.PAT_ASSUM `!ts.bbb` (fn th =>
+    \\ Q.PAT_X_ASSUM `!ts.bbb` (fn th =>
           (MP_TAC o Q.SPEC `MAP (CAR o CDR) xs`) th THEN
           (MP_TAC o Q.SPEC `[S''']`) th)
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
@@ -2379,7 +2379,7 @@ val logic_flag_translate_thm = prove(
     \\ FS [markerTheory.Abbrev_def,EVERY_DEF] \\ STRIP_TAC
     \\ FS [logic_translate_let__term_thm,sexp2sexp_def])
   THEN1
-   (Q.PAT_ASSUM `!xx.bbb` (MP_TAC o Q.SPEC `xs`)
+   (Q.PAT_X_ASSUM `!xx.bbb` (MP_TAC o Q.SPEC `xs`)
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
     THEN1 (EVAL_TAC \\ MP_TAC (Q.SPEC `xs` LIST_LSIZE_LESS_EQ) \\ DECIDE_TAC)
     \\ FS [] \\ REPEAT STRIP_TAC
@@ -2660,7 +2660,7 @@ val core_check_proof_inv_IMP_RAW = prove(
   \\ SIMP_TAC std_ss [core_check_proof_def]
   \\ ASM_SIMP_TAC std_ss [funcall_def]
   \\ Cases_on `ok2` THEN1
-   (FULL_SIMP_TAC std_ss [] \\ Q.PAT_ASSUM `io2 = ""` ASSUME_TAC
+   (FULL_SIMP_TAC std_ss [] \\ Q.PAT_X_ASSUM `io2 = ""` ASSUME_TAC
     \\ FULL_SIMP_TAC std_ss [APPEND_NIL]
     \\ `!x. R_ap (Funcall,[Sym name; t; axioms; thms; atbl],ARB,k,io,ok) x =
            (x = (res,k,io,T))` by METIS_TAC [R_ap_T_11]
@@ -2775,12 +2775,12 @@ val core_check_proof_list_inv_IMP_side = prove(
   \\ ONCE_REWRITE_TAC [core_check_proof_list_def,core_check_proof_list_side_def]
   \\ FS [LET_DEF] \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
   \\ FULL_SIMP_TAC std_ss [core_check_proof_inv_IMP]
-  \\ REPEAT STRIP_TAC \\ Q.PAT_ASSUM `!bb.bbb` MATCH_MP_TAC
+  \\ REPEAT STRIP_TAC \\ Q.PAT_X_ASSUM `!bb.bbb` MATCH_MP_TAC
   \\ Q.ABBREV_TAC `k2 = (FST (SND (core_check_proof checker t axioms thms atbl k io ok)))`
   \\ `k SUBMAP k2` by METIS_TAC [SUBMAP_core_check_proof]
   \\ FULL_SIMP_TAC std_ss [core_check_proof_inv_def]
   \\ FULL_SIMP_TAC (srw_ss()) [] \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM `!x1.bbb` (STRIP_ASSUME_TAC o Q.SPECL [`x1`,`x2`,`x3`,`x4`,`io'`,`ok'`])
+  \\ Q.PAT_X_ASSUM `!x1.bbb` (STRIP_ASSUME_TAC o Q.SPECL [`x1`,`x2`,`x3`,`x4`,`io'`,`ok'`])
   \\ Q.LIST_EXISTS_TAC [`res`,`ok2`,`io2`] \\ FULL_SIMP_TAC std_ss []
   \\ METIS_TAC [SUBMAP_IMP_R_ev]);
 
@@ -2800,7 +2800,7 @@ val core_check_proof_list_inv_IMP = prove(
   \\ FULL_SIMP_TAC std_ss []
   \\ IMP_RES_TAC core_check_proof_inv_IMP
   \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `ok` ASSUME_TAC \\ FULL_SIMP_TAC std_ss [])
+  \\ Q.PAT_X_ASSUM `ok` ASSUME_TAC \\ FULL_SIMP_TAC std_ss [])
   |> DISCH_ALL |> SIMP_RULE std_ss [];
 
 val core_check_proof_list_inv_IMP_OK = prove(
@@ -2956,16 +2956,16 @@ val core_check_proof_thm = prove(
   \\ FULL_SIMP_TAC std_ss [core_check_proof_inv_def]
   \\ FULL_SIMP_TAC std_ss [Once core_check_proof_side_def]
   \\ POP_ASSUM MP_TAC
-  \\ Q.PAT_ASSUM `!(x1:SExp). bbb` (MP_TAC o Q.SPECL [`a2sexp t`,
+  \\ Q.PAT_X_ASSUM `!(x1:SExp). bbb` (MP_TAC o Q.SPECL [`a2sexp t`,
        `list2sexp (MAP f2sexp axioms)`,
        `list2sexp (MAP f2sexp thms)`,`atbl`,`io`,`ok`])
   \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [core_check_proof_def,funcall_def]
-  \\ Q.PAT_ASSUM `checker = Sym name` (ASSUME_TAC)
+  \\ Q.PAT_X_ASSUM `checker = Sym name` (ASSUME_TAC)
   \\ IMP_RES_TAC Funcall_lemma
   \\ Cases_on `ok2` THEN1
    (FULL_SIMP_TAC std_ss [APPEND_NIL]
-    \\ Q.PAT_ASSUM `io2 = ""` ASSUME_TAC \\ FULL_SIMP_TAC std_ss [APPEND_NIL]
+    \\ Q.PAT_X_ASSUM `io2 = ""` ASSUME_TAC \\ FULL_SIMP_TAC std_ss [APPEND_NIL]
     \\ `!x. R_ap (Funcall,
          [Sym name; a2sexp t; list2sexp (MAP f2sexp axioms);
           list2sexp (MAP f2sexp thms); atbl],ARB,k,io,ok) x =
@@ -2994,7 +2994,7 @@ val core_admit_theorem_thm = prove(
       SIMP_RULE std_ss [DISJ_EQ_IMP,GSYM AND_IMP_INTRO,LET_DEF] core_admit_theorem_side_def]
   \\ SRW_TAC [] [] \\ FS [] \\ FS []
   \\ IMP_RES_TAC logic_appealp_thm \\ FS []
-  \\ Q.PAT_ASSUM `f2sexp (CONCL t) = xxx` (ASSUME_TAC o GSYM) \\ FS []
+  \\ Q.PAT_X_ASSUM `f2sexp (CONCL t) = xxx` (ASSUME_TAC o GSYM) \\ FS []
   \\ FS [milawa_inv_def,EVERY_DEF]
   \\ STRIP_ASSUME_TAC (core_check_proof_inv_IMP |> UNDISCH |> GEN_ALL)
   \\ FS [] THEN1
@@ -3111,7 +3111,7 @@ val core_check_proof_list_thm = prove(
   \\ FULL_SIMP_TAC std_ss []
   \\ IMP_RES_TAC core_check_proof_inv_IMP
   \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `ok` ASSUME_TAC \\ FULL_SIMP_TAC std_ss []
+  \\ Q.PAT_X_ASSUM `ok` ASSUME_TAC \\ FULL_SIMP_TAC std_ss []
   \\ FS [] \\ METIS_TAC [core_check_proof_thm]);
 
 val isTrue_lookup_safe = prove(
@@ -3160,7 +3160,7 @@ val MEM_MEM_ftbl = prove(
     MEM (Dot (Sym fname) x2) (sexp2list ftbl) /\
     ftbl_inv k ftbl ==> (x1 = x2)``,
   SIMP_TAC std_ss [ftbl_inv_def] \\ Q.SPEC_TAC (`sexp2list ftbl`,`xs`)
-  \\ REPEAT STRIP_TAC \\ Q.PAT_ASSUM `MEM xx yy` MP_TAC
+  \\ REPEAT STRIP_TAC \\ Q.PAT_X_ASSUM `MEM xx yy` MP_TAC
   \\ SIMP_TAC std_ss [MEM_SPLIT] \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [MEM_APPEND,MEM]
   \\ FS [MAP_APPEND,MAP,ALL_DISTINCT_APPEND,MEM_MAP,PULL_EXISTS_IMP,ALL_DISTINCT]
@@ -3200,7 +3200,7 @@ val ALL_DISTINCT_MAP_getSym = prove(
   ``!xs. ALL_DISTINCT xs /\ EVERY isSym xs ==> ALL_DISTINCT (MAP getSym xs)``,
   Induct \\ SIMP_TAC std_ss [ALL_DISTINCT,MAP,EVERY_DEF,isSym_thm]
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [MEM_MAP]
-  \\ Q.PAT_ASSUM `h = Sym a` ASSUME_TAC
+  \\ Q.PAT_X_ASSUM `h = Sym a` ASSUME_TAC
   \\ FULL_SIMP_TAC std_ss [getSym_def]
   \\ FULL_SIMP_TAC std_ss [EVERY_MEM] \\ RES_TAC
   \\ FULL_SIMP_TAC std_ss [isSym_thm]
@@ -3426,13 +3426,13 @@ val term2t_sexp3term_LEMMA = prove(
     \\ IMP_RES_TAC sexp2list_EQ_3 \\ IMP_RES_TAC sexp2list_NIL
     \\ ASM_REWRITE_TAC [sexp2list_def,CDR_def,MAP,CAR_def]
     \\ SIMP_TAC std_ss [EVERY_DEF,CONS_11]
-    \\ REPEAT (Q.PAT_ASSUM `!xx.bb` MP_TAC)
-    \\ Q.PAT_ASSUM `CAR raw_body = Sym "IF"` MP_TAC
+    \\ REPEAT (Q.PAT_X_ASSUM `!xx.bb` MP_TAC)
+    \\ Q.PAT_X_ASSUM `CAR raw_body = Sym "IF"` MP_TAC
     \\ ASM_REWRITE_TAC [CAR_def,CDR_def,sexp2list_def,MEM,EVERY_DEF]
     \\ STRIP_TAC
     \\ NTAC 22 (MATCH_MP_TAC (METIS_PROVE [] ``b ==> (c ==> b)``))
     \\ `~(x1 = Sym "QUOTE")` by (REPEAT STRIP_TAC \\ FULL_SIMP_TAC (srw_ss()) [])
-    \\ Q.PAT_ASSUM `CAR raw_body <> bbb` (K ALL_TAC)
+    \\ Q.PAT_X_ASSUM `CAR raw_body <> bbb` (K ALL_TAC)
     \\ REPEAT STRIP_TAC \\ RES_TAC \\ FULL_SIMP_TAC std_ss [])
   \\ ASM_SIMP_TAC std_ss []
   \\ Cases_on `sym2prim (getSym (CAR raw_body)) <> NONE` THEN1
@@ -3533,7 +3533,7 @@ val fake_ftbl_entries_NOT_IN_CTXT = prove(
   \\ IMP_RES_TAC lookup_safe_IMP_MEM
   \\ `CAR (Dot (Sym x) (Dot y (Dot z (Sym "NIL")))) = CAR (Dot (Sym x) (Sym "NIL"))` by EVAL_TAC
   \\ IMP_RES_TAC ALL_DISTINCT_IMP_11
-  \\ Q.PAT_ASSUM `xxx = yyy` MP_TAC \\ SS []);
+  \\ Q.PAT_X_ASSUM `xxx = yyy` MP_TAC \\ SS []);
 
 val MR_ap_CTXT =
   MR_ev_CTXT
@@ -3607,8 +3607,8 @@ val sexp2t_t2sexp_thm = prove(
    (FULL_SIMP_TAC std_ss [t2sexp_def,term_syntax_ok_def,EVERY_MEM,list2sexp_def]
     \\ ONCE_REWRITE_TAC [sexp2t_def] \\ FS [LET_DEF]
     \\ SIMP_TAC (srw_ss()) [] \\ STRIP_TAC
-    \\ Q.PAT_ASSUM `LENGTH xs = LENGTH ys` (K ALL_TAC)
-    \\ Q.PAT_ASSUM `set (free_vars b) SUBSET set xs` (K ALL_TAC)
+    \\ Q.PAT_X_ASSUM `LENGTH xs = LENGTH ys` (K ALL_TAC)
+    \\ Q.PAT_X_ASSUM `set (free_vars b) SUBSET set xs` (K ALL_TAC)
     THEN1 (Induct_on `xs` \\ FS [MAP,getSym_def,CONS_11,ALL_DISTINCT])
     THEN1 (Induct_on `ys` \\ FS [MAP,getSym_def,CONS_11,ALL_DISTINCT])));
 
@@ -3666,7 +3666,7 @@ val context_syntax_same_FUPDATE = prove(
   FS [context_syntax_same_def,FORALL_PROD,FDOM_FUPDATE,FEVERY_DEF,
     FAPPLY_FUPDATE_THM,IN_INSERT]
   \\ NTAC 6 STRIP_TAC \\ Cases_on `x = p_1` \\ FS [] \\ STRIP_TAC
-  \\ Q.PAT_ASSUM `!x.bbb` MP_TAC \\ FS []);
+  \\ Q.PAT_X_ASSUM `!x.bbb` MP_TAC \\ FS []);
 
 val similar_context_definition_ok = prove(
   ``similar_context ctxt ctxt2 ==>
@@ -3708,12 +3708,12 @@ val core_admit_defun_thm = prove(
   \\ IMP_RES_TAC SND_SND_SND_define_safe_IMP
   \\ IMP_RES_TAC core_check_proof_list_inv_IMP
   \\ IMP_RES_TAC core_admit_defun_cmd \\ FS []
-  \\ Q.PAT_ASSUM `formals = list2sexp xs` ASSUME_TAC \\ FS []
+  \\ Q.PAT_X_ASSUM `formals = list2sexp xs` ASSUME_TAC \\ FS []
   THEN1 (SRW_TAC [] [define_safe_def] \\ FS [define_safe_def]
          \\ SRW_TAC [] [] \\ FULL_SIMP_TAC std_ss [LET_DEF])
-  \\ REPEAT (Q.PAT_ASSUM `!xx.bbb` (K ALL_TAC)) \\ POP_ASSUM (K ALL_TAC)
-  \\ Q.PAT_ASSUM `xxx = io` (K ALL_TAC)
-  \\ Q.PAT_ASSUM `xxx = k` (K ALL_TAC)
+  \\ REPEAT (Q.PAT_X_ASSUM `!xx.bbb` (K ALL_TAC)) \\ POP_ASSUM (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `xxx = io` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `xxx = k` (K ALL_TAC)
   \\ POP_ASSUM (K ALL_TAC)
   \\ IMP_RES_TAC core_check_proof_list_inv_IMP_OK \\ FULL_SIMP_TAC std_ss []
   \\ `isTrue (logic_translate body) /\ isTrue (logic_translate meas)` by ALL_TAC THEN1
@@ -3725,7 +3725,7 @@ val core_admit_defun_thm = prove(
   \\ FS [] \\ `?fname. name = Sym fname` by
     (Cases_on `isSym name` \\ FS [logic_function_namep_def] \\ FS [isSym_thm])
   \\ FS [] \\ POP_ASSUM (K ALL_TAC)
-  \\ REPEAT (Q.PAT_ASSUM `isTrue (logic_termp (t2sexp xxx))` (K ALL_TAC))
+  \\ REPEAT (Q.PAT_X_ASSUM `isTrue (logic_termp (t2sexp xxx))` (K ALL_TAC))
   \\ `set xs = set (MAP Sym (MAP getSym xs))` by
      (IMP_RES_TAC logic_variable_listp_thm \\ FS [])
   \\ FS [] \\ POP_ASSUM (K ALL_TAC)
@@ -3739,7 +3739,7 @@ val core_admit_defun_thm = prove(
     \\ Q.UNABBREV_TAC `if_new_atbl` \\ FS [if_lookup_def]
     \\ FULL_SIMP_TAC std_ss [if_memberp_def]
     \\ SIMP_TAC std_ss [GSYM CONJ_ASSOC]
-    \\ Q.PAT_ASSUM `axioms_inv ctxt ftbl axioms` ASSUME_TAC
+    \\ Q.PAT_X_ASSUM `axioms_inv ctxt ftbl axioms` ASSUME_TAC
     \\ FS [atbl_ftbl_inv_def] \\ RES_TAC
     \\ FS [define_safe_ID]
     \\ REVERSE
@@ -3755,16 +3755,16 @@ val core_admit_defun_thm = prove(
        (IMP_RES_TAC MEM_ftbl
         \\ IMP_RES_TAC MEM_MEM_ftbl
         \\ FS [] \\ FS [sexp2sexp_def,witness_body_def]
-        \\ REPEAT (Q.PAT_ASSUM `T` (K ALL_TAC))
-        \\ Q.PAT_ASSUM `xxx = body` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
-        \\ Q.PAT_ASSUM `term2t (sexp3term xx) = b` MP_TAC
+        \\ REPEAT (Q.PAT_X_ASSUM `T` (K ALL_TAC))
+        \\ Q.PAT_X_ASSUM `xxx = body` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
+        \\ Q.PAT_X_ASSUM `term2t (sexp3term xx) = b` MP_TAC
         \\ SIMP_TAC (srw_ss()) [Once sexp3term_def,LET_DEF] \\ FS []
         \\ SIMP_TAC (srw_ss()) [] \\ FS [getSym_def,sym2prim_def]
         \\ SIMP_TAC (srw_ss()) [] \\ FS []
         \\ SIMP_TAC std_ss [sexp2list_def,MAP]
         \\ SIMP_TAC (srw_ss()) [Once sexp3term_def,LET_DEF] \\ FS []
         \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ STRIP_TAC \\ FS []
-        \\ REPEAT (Q.PAT_ASSUM `isTrue (logic_term_atblp xxx yyy)` MP_TAC)
+        \\ REPEAT (Q.PAT_X_ASSUM `isTrue (logic_term_atblp xxx yyy)` MP_TAC)
         \\ SIMP_TAC (srw_ss()) [logic_term_atblp_def,t2sexp_def,
              term2t_def,MAP,func2f_def,logic_func2sexp_def,list2sexp_def]
         \\ ONCE_REWRITE_TAC [logic_flag_term_atblp_def] \\ FS []
@@ -3780,7 +3780,7 @@ val core_admit_defun_thm = prove(
             \\ FULL_SIMP_TAC (srw_ss()) [isTrue_def,CDR_def])
           \\ RES_TAC \\ FULL_SIMP_TAC std_ss [])
         \\ FS [] \\ FULL_SIMP_TAC std_ss [GSYM list2sexp_def,len_thm] \\ FS [])
-      \\ Q.PAT_ASSUM `MEM xx axioms` MP_TAC
+      \\ Q.PAT_X_ASSUM `MEM xx axioms` MP_TAC
       \\ ASM_SIMP_TAC std_ss [def_axiom_def]
       \\ SIMP_TAC std_ss [MEM_MAP]
       \\ HO_MATCH_MP_TAC (METIS_PROVE [] ``P x ==> (MEM x xs ==> ?y. P y /\ MEM y xs)``)
@@ -3803,14 +3803,14 @@ val core_admit_defun_thm = prove(
       \\ FS [func_syntax_ok_def,logic_func2sexp_def,str2func_def]
       \\ IMP_RES_TAC fake_ftbl_entries \\ FS [fake_ftbl_entries_def])
     \\ `fname IN FDOM ctxt` by ALL_TAC THEN1
-     (CCONTR_TAC \\ Q.PAT_ASSUM `atbl_ok ctxt atbl` ASSUME_TAC
+     (CCONTR_TAC \\ Q.PAT_X_ASSUM `atbl_ok ctxt atbl` ASSUME_TAC
       \\ FULL_SIMP_TAC std_ss [atbl_ok_def]
       \\ POP_ASSUM (MP_TAC o Q.SPEC `mFun fname`)
       \\ FS [func_arity_def,CDR_lookup_NOT_NIL])
     \\ `?fparams fbody fsem. ctxt ' fname = (fparams,fbody,fsem)` by METIS_TAC [PAIR]
     \\ METIS_TAC [func_definition_exists_def])
   \\ `~MEM fname ["NOT";"RANK";"ORDP";"ORD<"]` by ALL_TAC THEN1
-   (STRIP_TAC \\ Q.PAT_ASSUM `atbl_ok ctxt atbl` ASSUME_TAC
+   (STRIP_TAC \\ Q.PAT_X_ASSUM `atbl_ok ctxt atbl` ASSUME_TAC
     \\ FS [atbl_ok_def] THENL [
       POP_ASSUM (MP_TAC o Q.SPEC `mPrimitiveFun logic_NOT`)
       \\ FS [func_syntax_ok_def,isTrue_def,logic_func2sexp_def,
@@ -3847,7 +3847,7 @@ val core_admit_defun_thm = prove(
   \\ FULL_SIMP_TAC std_ss [milawa_inv_def]
   \\ `ALL_DISTINCT (MAP getSym xs)` by METIS_TAC [logic_variable_listp_ALL_DISTINCT_IMP]
   \\ `~(fname IN FDOM ctxt)` by ALL_TAC THEN1
-   (REPEAT STRIP_TAC \\ Q.PAT_ASSUM `atbl_ok ctxt atbl` MP_TAC
+   (REPEAT STRIP_TAC \\ Q.PAT_X_ASSUM `atbl_ok ctxt atbl` MP_TAC
     \\ FS [atbl_ok_def] \\ Q.EXISTS_TAC `mFun fname`
     \\ FS [fake_ftbl_entries_def] \\ FULL_SIMP_TAC std_ss
          [logic_function_namep_def,GSYM list2sexp_def,memberp_thm,MEM] \\ FS []
@@ -3898,10 +3898,10 @@ val core_admit_defun_thm = prove(
     \\ FS [] \\ IMP_RES_TAC logic_appeal_anylistp_thm
     \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM (K ALL_TAC) \\ FS []
     \\ FS [logic_strip_conclusions_thm,MAP_f2sexp_11]
-    \\ Q.PAT_ASSUM `MAP CONCL ts = bbb` (ASSUME_TAC o GSYM)
+    \\ Q.PAT_X_ASSUM `MAP CONCL ts = bbb` (ASSUME_TAC o GSYM)
     \\ FULL_SIMP_TAC std_ss []
-    \\ Q.PAT_ASSUM `isTrue bbb` MP_TAC
-    \\ Q.PAT_ASSUM `SND (SND xxx)` MP_TAC
+    \\ Q.PAT_X_ASSUM `isTrue bbb` MP_TAC
+    \\ Q.PAT_X_ASSUM `SND (SND xxx)` MP_TAC
     \\ SIMP_TAC std_ss [AND_IMP_INTRO]
     \\ MATCH_MP_TAC core_check_proof_list_thm \\ FS []
     \\ STRIP_TAC THEN1 (MATCH_MP_TAC context_ok_None \\ FS [])
@@ -3929,7 +3929,7 @@ val core_admit_defun_thm = prove(
     \\ FS [FEVERY_DEF,FDOM_FUPDATE,IN_INSERT,FAPPLY_FUPDATE_THM] \\ STRIP_TAC
     \\ Cases_on `x' = fname` \\ FS []
     \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV) \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `FDOM simple_ctxt = FDOM ctxt` ASSUME_TAC \\ FS []
+    \\ Q.PAT_X_ASSUM `FDOM simple_ctxt = FDOM ctxt` ASSUME_TAC \\ FS []
     \\ RES_TAC \\ POP_ASSUM MP_TAC
     \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV) \\ REPEAT STRIP_TAC
     \\ FS [])
@@ -3960,7 +3960,7 @@ val core_admit_defun_thm = prove(
                   add_def k new_def` by ALL_TAC THEN1
       (FULL_SIMP_TAC std_ss [define_safe_def,LET_DEF] \\ METIS_TAC [])
     \\ FULL_SIMP_TAC std_ss []
-    \\ Q.PAT_ASSUM `core_check_proof_inv checker k` MP_TAC
+    \\ Q.PAT_X_ASSUM `core_check_proof_inv checker k` MP_TAC
     \\ METIS_TAC [core_check_proof_inv_step])
   \\ PUSH_STRIP_TAC THEN1
    (FS [define_safe_def,LET_DEF]
@@ -3986,7 +3986,7 @@ val core_admit_defun_thm = prove(
     \\ FS [axioms_inv_def,FDOM_FUPDATE,FAPPLY_FUPDATE_THM] \\ STRIP_TAC
     \\ REVERSE (Cases_on `name = fname`) \\ FS [IN_INSERT]
     \\ FS [func_definition_exists_NEQ] THEN1
-     (REPEAT STRIP_TAC \\ Q.PAT_ASSUM `!name params body sem. bbb` IMP_RES_TAC
+     (REPEAT STRIP_TAC \\ Q.PAT_X_ASSUM `!name params body sem. bbb` IMP_RES_TAC
       \\ REVERSE (Cases_on `body'`) \\ FULL_SIMP_TAC std_ss [axioms_aux_def] THEN1
        (Q.EXISTS_TAC `raw_body` \\ POP_ASSUM MP_TAC \\ FS [] \\ STRIP_TAC
         \\ STRIP_TAC THEN1
@@ -4010,7 +4010,7 @@ val core_admit_defun_thm = prove(
     \\ Q.EXISTS_TAC `body` \\ FS [] \\ REPEAT STRIP_TAC THEN1
      (FS [define_safe_def,LET_DEF]
       \\ Cases_on `isTrue (lookup_safe (Sym fname) ftbl)` \\ FS [sexp2list_def,MEM]
-      \\ Q.PAT_ASSUM `lookup_safe (Sym fname) ftbl = bb` (ASSUME_TAC o GSYM)
+      \\ Q.PAT_X_ASSUM `lookup_safe (Sym fname) ftbl = bb` (ASSUME_TAC o GSYM)
       \\ FS [ftbl_inv_def] \\ FULL_SIMP_TAC std_ss [isTrue_lookup_safe])
     THEN1 (FS [sexp2sexp_def]) THEN1
      (FS [sexp2sexp_def]
@@ -4030,7 +4030,7 @@ val core_admit_defun_thm = prove(
     \\ `~("ERROR" IN FDOM ((ctxt |+ (fname,MAP getSym xs,BODY_FUN b,ef))))` by ALL_TAC THEN1
      (FULL_SIMP_TAC std_ss [FDOM_FUPDATE,IN_INSERT]
       \\ FULL_SIMP_TAC std_ss [atbl_ok_def] \\ REPEAT STRIP_TAC
-      \\ Q.PAT_ASSUM `!f. func_syntax_ok f ==> bbb` (MP_TAC o Q.SPEC `mFun "ERROR"`)
+      \\ Q.PAT_X_ASSUM `!f. func_syntax_ok f ==> bbb` (MP_TAC o Q.SPEC `mFun "ERROR"`)
       \\ FULL_SIMP_TAC (srw_ss()) [func_syntax_ok_def,MEM,logic_func2sexp_def]
       \\ FULL_SIMP_TAC std_ss [func_arity_def,FDOM_FUPDATE,IN_INSERT]
       \\ `lookup (Sym "ERROR") atbl = Sym "NIL"` by METIS_TAC [atbl_ftbl_inv_def,isTrue_def]
@@ -4056,7 +4056,7 @@ val core_admit_defun_thm = prove(
     \\ FULL_SIMP_TAC std_ss [FDOM_FUPDATE]
     \\ REVERSE (Cases_on `fname = name`) \\ FULL_SIMP_TAC std_ss [] THEN1
      (FULL_SIMP_TAC std_ss [IN_INSERT,FAPPLY_FUPDATE_THM,runtime_inv_def]
-      \\ Q.PAT_ASSUM `!name params. bbb` (MP_TAC o Q.SPEC `name`)
+      \\ Q.PAT_X_ASSUM `!name params. bbb` (MP_TAC o Q.SPEC `name`)
       \\ ASM_SIMP_TAC std_ss []
       \\ STRIP_TAC \\ POP_ASSUM (MP_TAC o Q.SPECL [`args`,`ok'`])
       \\ FULL_SIMP_TAC std_ss [] \\ STRIP_TAC
@@ -4071,17 +4071,17 @@ val core_admit_defun_thm = prove(
     \\ Q.ABBREV_TAC `k2 = FST (SND (define_safe ftbl (Sym name) (list2sexp xs) body k io T))`
     \\ Q.ABBREV_TAC `ftbl2 = (FST (define_safe ftbl (Sym name) (list2sexp xs) body k io T))`
     \\ Q.ABBREV_TAC `ctxt2 = (ctxt |+ (name,params,body',sem))`
-    \\ Q.PAT_ASSUM `xxx = body'` (ASSUME_TAC o GSYM)
+    \\ Q.PAT_X_ASSUM `xxx = body'` (ASSUME_TAC o GSYM)
     \\ FULL_SIMP_TAC std_ss [axioms_inv_def]
     \\ `func_definition_exists ctxt2 name params (BODY_FUN b) sem` by ALL_TAC THEN1
      (FULL_SIMP_TAC std_ss [func_definition_exists_def]
       \\ Q.UNABBREV_TAC `ctxt2` \\ EVAL_TAC)
     \\ RES_TAC \\ FULL_SIMP_TAC std_ss [axioms_aux_def]
-    \\ Q.PAT_ASSUM `ftbl_inv k2 ftbl2` (fn th => ASSUME_TAC th THEN MP_TAC th)
+    \\ Q.PAT_X_ASSUM `ftbl_inv k2 ftbl2` (fn th => ASSUME_TAC th THEN MP_TAC th)
     \\ SIMP_TAC std_ss [ftbl_inv_def,EVERY_MEM] \\ STRIP_TAC
     \\ RES_TAC \\ FS [LET_DEF,isTrue_def,getSym_def,MAP_getSym_Sym]
     \\ ONCE_REWRITE_TAC [MR_ev_cases] \\ FULL_SIMP_TAC (srw_ss()) []
-    \\ Q.PAT_ASSUM `logic_func_inv name ctxt2 raw_body` MP_TAC
+    \\ Q.PAT_X_ASSUM `logic_func_inv name ctxt2 raw_body` MP_TAC
     \\ SS [logic_func_inv_def,LET_DEF] \\ ASM_SIMP_TAC std_ss []
     \\ STRIP_TAC \\ POP_ASSUM (MP_TAC o Q.SPEC `FunVarBind params args`)
     \\ `name IN FDOM ctxt2 /\
@@ -4115,9 +4115,9 @@ val core_admit_defun_thm = prove(
           (DISJ1_TAC \\ REVERSE STRIP_TAC
            THEN1 (MATCH_MP_TAC (GEN_ALL MR_ev_term2term) \\ FULL_SIMP_TAC std_ss [] \\ METIS_TAC [EvalTerm_IGNORE_BODY])
            \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [term2t_def]
-           \\ Q.PAT_ASSUM `term2t (sexp3term raw_body) = xx` MP_TAC
+           \\ Q.PAT_X_ASSUM `term2t (sexp3term raw_body) = xx` MP_TAC
            \\ SIMP_TAC std_ss []
-           \\ Q.PAT_ASSUM `term_ok ctxt2 (mApp (func2f Error) (MAP (\a. term2t a) xs'))` MP_TAC
+           \\ Q.PAT_X_ASSUM `term_ok ctxt2 (mApp (func2f Error) (MAP (\a. term2t a) xs'))` MP_TAC
            \\ ASM_SIMP_TAC std_ss [term_ok_def,func2f_def,func_arity_def])
          \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [MilawaTrueFun_def]
          \\ MATCH_MP_TAC (GEN_ALL MilawaTrue_TRANS)
@@ -4156,7 +4156,7 @@ val core_admit_defun_thm = prove(
     \\ `core_assum k2` by ALL_TAC THEN1
      (Q.UNABBREV_TAC `k2`
       \\ SIMP_TAC std_ss [define_safe_def,LET_DEF] \\ SRW_TAC [] []
-      \\ Q.PAT_ASSUM `core_assum kk` MP_TAC
+      \\ Q.PAT_X_ASSUM `core_assum kk` MP_TAC
       \\ ONCE_REWRITE_TAC [milawa_initTheory.core_assum_def]
       \\ MATCH_MP_TAC (METIS_PROVE [] ``(!x. f a x ==> f b x) ==> (f a x ==> f b x)``)
       \\ SIMP_TAC std_ss [fns_assum_add_def_IMP])
@@ -4179,7 +4179,7 @@ val core_admit_defun_thm = prove(
       \\ METIS_TAC [MR_ev_add_def])
     \\ STRIP_TAC THEN1
      (FULL_SIMP_TAC std_ss [proof_in_full_ctxt_def] \\ REPEAT STRIP_TAC
-      \\ Q.PAT_ASSUM `Abbrev (ctxt2 = pat)` (fn th =>
+      \\ Q.PAT_X_ASSUM `Abbrev (ctxt2 = pat)` (fn th =>
            ASSUME_TAC th THEN ONCE_REWRITE_TAC [REWRITE_RULE [markerTheory.Abbrev_def] th])
       \\ METIS_TAC [MilawaTrue_new_definition])
     \\ NTAC 2 STRIP_TAC
@@ -4188,7 +4188,7 @@ val core_admit_defun_thm = prove(
     \\ FULL_SIMP_TAC std_ss [params_lemma])
   THEN1 (* core_assums *)
    (SIMP_TAC std_ss [define_safe_def,LET_DEF] \\ SRW_TAC [] []
-    \\ Q.PAT_ASSUM `core_assum kk` MP_TAC
+    \\ Q.PAT_X_ASSUM `core_assum kk` MP_TAC
     \\ ONCE_REWRITE_TAC [milawa_initTheory.core_assum_def]
     \\ MATCH_MP_TAC (METIS_PROVE [] ``(!x. f a x ==> f b x) ==> (f a x ==> f b x)``)
     \\ SIMP_TAC std_ss [fns_assum_add_def_IMP]));
@@ -4270,11 +4270,11 @@ val core_admit_witness_thm = prove(
      \\ FS [EVAL ``logic_termp (Sym "NIL")``])
   \\ FS [logic_translate_thm]
   \\ `?body. term_syntax_ok body /\ (sexp2sexp raw_body = t2sexp body)` by METIS_TAC [logic_termp_thm]
-  \\ Q.PAT_ASSUM `free_vars' = list2sexp xs` ASSUME_TAC \\ FS []
+  \\ Q.PAT_X_ASSUM `free_vars' = list2sexp xs` ASSUME_TAC \\ FS []
   \\ FULL_SIMP_TAC std_ss [GSYM list2sexp_def,uniquep_thm] \\ FS []
   \\ `?fname. name = Sym fname` by
     (Cases_on `isSym name` \\ FS [logic_function_namep_def] \\ FS [isSym_thm])
-  \\ FS [] \\ POP_ASSUM (K ALL_TAC) \\ Q.PAT_ASSUM `cmd = bbb` (K ALL_TAC)
+  \\ FS [] \\ POP_ASSUM (K ALL_TAC) \\ Q.PAT_X_ASSUM `cmd = bbb` (K ALL_TAC)
   \\ `?var. bound_var = Sym var` by ALL_TAC THEN1
     (Cases_on `isSym bound_var` \\ FS [logic_variablep_def] \\ FS [isSym_thm])
   \\ `set (Sym var::xs) = set (MAP Sym (var::MAP getSym xs))` by ALL_TAC THEN1
@@ -4292,7 +4292,7 @@ val core_admit_witness_thm = prove(
     \\ Q.UNABBREV_TAC `if_new_atbl` \\ FS [if_lookup_def]
     \\ FULL_SIMP_TAC std_ss [if_memberp_def]
     \\ SIMP_TAC std_ss [GSYM CONJ_ASSOC]
-    \\ Q.PAT_ASSUM `axioms_inv ctxt ftbl axioms` ASSUME_TAC
+    \\ Q.PAT_X_ASSUM `axioms_inv ctxt ftbl axioms` ASSUME_TAC
     \\ FS [atbl_ftbl_inv_def] \\ RES_TAC
     \\ FS [define_safe_ID]
     \\ REVERSE
@@ -4308,7 +4308,7 @@ val core_admit_witness_thm = prove(
        (IMP_RES_TAC MEM_ftbl
         \\ IMP_RES_TAC MEM_MEM_ftbl
         \\ FS [] \\ FS [sexp2sexp_def,witness_body_def])
-      \\ Q.PAT_ASSUM `MEM xx axioms` MP_TAC
+      \\ Q.PAT_X_ASSUM `MEM xx axioms` MP_TAC
       \\ ASM_SIMP_TAC std_ss [def_axiom_def]
       \\ SIMP_TAC std_ss [MEM_MAP]
       \\ HO_MATCH_MP_TAC (METIS_PROVE [] ``P x ==> (MEM x xs ==> ?y. P y /\ MEM y xs)``)
@@ -4331,14 +4331,14 @@ val core_admit_witness_thm = prove(
       \\ FS [func_syntax_ok_def,logic_func2sexp_def,str2func_def]
       \\ IMP_RES_TAC fake_ftbl_entries \\ FS [fake_ftbl_entries_def])
     \\ `fname IN FDOM ctxt` by ALL_TAC THEN1
-     (CCONTR_TAC \\ Q.PAT_ASSUM `atbl_ok ctxt atbl` ASSUME_TAC
+     (CCONTR_TAC \\ Q.PAT_X_ASSUM `atbl_ok ctxt atbl` ASSUME_TAC
       \\ FULL_SIMP_TAC std_ss [atbl_ok_def]
       \\ POP_ASSUM (MP_TAC o Q.SPEC `mFun fname`)
       \\ FS [func_arity_def,CDR_lookup_NOT_NIL])
     \\ `?fparams fbody fsem. ctxt ' fname = (fparams,fbody,fsem)` by METIS_TAC [PAIR]
     \\ METIS_TAC [func_definition_exists_def])
   \\ `~MEM fname ["NOT";"RANK";"ORDP";"ORD<"]` by ALL_TAC THEN1
-   (STRIP_TAC \\ Q.PAT_ASSUM `atbl_ok ctxt atbl` ASSUME_TAC
+   (STRIP_TAC \\ Q.PAT_X_ASSUM `atbl_ok ctxt atbl` ASSUME_TAC
     \\ FS [atbl_ok_def] THENL [
       POP_ASSUM (MP_TAC o Q.SPEC `mPrimitiveFun logic_NOT`)
       \\ FS [func_syntax_ok_def,isTrue_def,logic_func2sexp_def,
@@ -4375,7 +4375,7 @@ val core_admit_witness_thm = prove(
     \\ SRW_TAC [] [] \\ FS [])
   \\ FULL_SIMP_TAC std_ss [milawa_inv_def]
   \\ `~(fname IN FDOM ctxt)` by ALL_TAC THEN1
-   (REPEAT STRIP_TAC \\ Q.PAT_ASSUM `atbl_ok ctxt atbl` MP_TAC
+   (REPEAT STRIP_TAC \\ Q.PAT_X_ASSUM `atbl_ok ctxt atbl` MP_TAC
     \\ FS [atbl_ok_def] \\ Q.EXISTS_TAC `mFun fname`
     \\ FS [fake_ftbl_entries_def] \\ FULL_SIMP_TAC std_ss
          [logic_function_namep_def,GSYM list2sexp_def,memberp_thm,MEM] \\ FS []
@@ -4425,7 +4425,7 @@ val core_admit_witness_thm = prove(
     \\ FS [FEVERY_DEF,FDOM_FUPDATE,IN_INSERT,FAPPLY_FUPDATE_THM] \\ STRIP_TAC
     \\ Cases_on `x' = fname` \\ FS []
     \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV) \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `FDOM simple_ctxt = FDOM ctxt` ASSUME_TAC \\ FS []
+    \\ Q.PAT_X_ASSUM `FDOM simple_ctxt = FDOM ctxt` ASSUME_TAC \\ FS []
     \\ RES_TAC \\ POP_ASSUM MP_TAC
     \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV) \\ REPEAT STRIP_TAC
     \\ FS [])
@@ -4464,7 +4464,7 @@ val core_admit_witness_thm = prove(
                   add_def k new_def` by ALL_TAC THEN1
       (FULL_SIMP_TAC std_ss [define_safe_def,LET_DEF] \\ METIS_TAC [])
     \\ FULL_SIMP_TAC std_ss []
-    \\ Q.PAT_ASSUM `core_check_proof_inv checker k` MP_TAC
+    \\ Q.PAT_X_ASSUM `core_check_proof_inv checker k` MP_TAC
     \\ METIS_TAC [core_check_proof_inv_step])
   \\ PUSH_STRIP_TAC THEN1
    (FS [define_safe_def,LET_DEF]
@@ -4490,7 +4490,7 @@ val core_admit_witness_thm = prove(
     \\ FS [axioms_inv_def,FDOM_FUPDATE,FAPPLY_FUPDATE_THM] \\ STRIP_TAC
     \\ REVERSE (Cases_on `name = fname`) \\ FS [IN_INSERT]
     \\ FS [func_definition_exists_NEQ] THEN1
-     (REPEAT STRIP_TAC \\ Q.PAT_ASSUM `!name params body sem. bbb` IMP_RES_TAC
+     (REPEAT STRIP_TAC \\ Q.PAT_X_ASSUM `!name params body sem. bbb` IMP_RES_TAC
       \\ REVERSE (Cases_on `body'`) \\ FULL_SIMP_TAC std_ss [axioms_aux_def] THEN1
        (Q.EXISTS_TAC `raw_body'` \\ POP_ASSUM MP_TAC \\ FS [] \\ STRIP_TAC
         \\ STRIP_TAC THEN1
@@ -4516,7 +4516,7 @@ val core_admit_witness_thm = prove(
       \\ Cases_on `isTrue (lookup_safe (Sym fname) ftbl)` \\ FS [sexp2list_def,MEM]
       \\ FULL_SIMP_TAC std_ss [witness_body_def,list2sexp_def] \\ Q.UNABBREV_TAC `r`
       \\ IMP_RES_TAC logic_variable_listp_thm \\ ASM_SIMP_TAC std_ss []
-      \\ Q.PAT_ASSUM `lookup_safe (Sym fname) ftbl = bb` (ASSUME_TAC o GSYM)
+      \\ Q.PAT_X_ASSUM `lookup_safe (Sym fname) ftbl = bb` (ASSUME_TAC o GSYM)
       \\ FS [ftbl_inv_def] \\ FULL_SIMP_TAC std_ss [isTrue_lookup_safe])
     THEN1 (FS [sexp2sexp_def]) THEN1
      (FS [sexp2sexp_def]
@@ -4560,7 +4560,7 @@ val core_admit_witness_thm = prove(
     \\ Q.ABBREV_TAC `ctxt2 = (ctxt |+ (name,params,body',sem))`
     \\ Q.EXISTS_TAC `F` \\ SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [axioms_inv_def]
-    \\ Q.PAT_ASSUM `xxx = body'` (ASSUME_TAC o GSYM)
+    \\ Q.PAT_X_ASSUM `xxx = body'` (ASSUME_TAC o GSYM)
     \\ `func_definition_exists ctxt2 name params (WITNESS_FUN body var) sem` by ALL_TAC THEN1
      (FULL_SIMP_TAC std_ss [func_definition_exists_def]
       \\ Q.UNABBREV_TAC `ctxt2` \\ EVAL_TAC)
@@ -4573,7 +4573,7 @@ val core_admit_witness_thm = prove(
     \\ Q.UNABBREV_TAC `ctxt2` \\ SIMP_TAC (srw_ss()) [])
   THEN1 (* core_assums *)
    (SIMP_TAC std_ss [define_safe_def,LET_DEF] \\ SRW_TAC [] []
-    \\ Q.PAT_ASSUM `core_assum kk` MP_TAC
+    \\ Q.PAT_X_ASSUM `core_assum kk` MP_TAC
     \\ ONCE_REWRITE_TAC [milawa_initTheory.core_assum_def]
     \\ MATCH_MP_TAC (METIS_PROVE [] ``(!x. f a x ==> f b x) ==> (f a x ==> f b x)``)
     \\ SIMP_TAC std_ss [fns_assum_add_def_IMP]));
@@ -4638,7 +4638,7 @@ val FUNPOW_CDR = prove(
 val MEM_init_ftbl_IMP = prove(
   ``MEM x (sexp2list init_ftbl) /\ ftbl_inv k ftbl ==>
     MEM x (sexp2list ftbl)``,
-  REPEAT STRIP_TAC \\ Q.PAT_ASSUM `MEM x (sexp2list init_ftbl)` MP_TAC
+  REPEAT STRIP_TAC \\ Q.PAT_X_ASSUM `MEM x (sexp2list init_ftbl)` MP_TAC
   \\ FULL_SIMP_TAC std_ss [ftbl_inv_def] \\ POP_ASSUM MP_TAC
   \\ REPEAT (POP_ASSUM (K ALL_TAC))
   \\ Q.SPEC_TAC (`ftbl`,`ftbl`)
@@ -4741,7 +4741,7 @@ val core_admit_switch_thm = prove(
    (Cases_on `g`
     THEN1 (Cases_on `l` \\ FULL_SIMP_TAC std_ss [func_arity_def,primitive_arity_def])
     \\ SIMP_TAC (srw_ss()) [] \\ CCONTR_TAC
-    \\ Q.PAT_ASSUM `isTrue (logic_function_namep (logic_func2sexp (mFun s)))` MP_TAC
+    \\ Q.PAT_X_ASSUM `isTrue (logic_function_namep (logic_func2sexp (mFun s)))` MP_TAC
     \\ SIMP_TAC std_ss []
     \\ ASM_SIMP_TAC std_ss [logic_func2sexp_def,MEM]
     \\ SRW_TAC [] []
@@ -4758,7 +4758,7 @@ val core_admit_switch_thm = prove(
   \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [formula_ok_def,term_ok_def,func_arity_def,EVERY_DEF,LENGTH]
   \\ FULL_SIMP_TAC std_ss [runtime_inv_def]
-  \\ Q.PAT_ASSUM `!name params. bbb` (fn th => MP_TAC th THEN MP_TAC (Q.SPEC `name` th))
+  \\ Q.PAT_X_ASSUM `!name params. bbb` (fn th => MP_TAC th THEN MP_TAC (Q.SPEC `name` th))
   \\ FS [] \\ STRIP_TAC
   \\ POP_ASSUM (MP_TAC o Q.SPECL [`[x1;x2;x3;x4]`,`ok`])
   \\ SIMP_TAC std_ss [LENGTH] \\ REPEAT STRIP_TAC
@@ -4768,12 +4768,12 @@ val core_admit_switch_thm = prove(
   \\ CONV_TAC (DEPTH_CONV ETA_CONV)
   \\ FULL_SIMP_TAC std_ss [GSYM thms_inv_def]
   \\ REVERSE (Cases_on `ok2`) \\ FS [] THEN1 METIS_TAC [MR_IMP_R]
-  \\ Q.PAT_ASSUM `!a:string->SExp.bbb` (MP_TAC o Q.SPEC `("X" =+ x1) (("AXIOMS" =+ x2)
+  \\ Q.PAT_X_ASSUM `!a:string->SExp.bbb` (MP_TAC o Q.SPEC `("X" =+ x1) (("AXIOMS" =+ x2)
       (("THMS" =+ x3) (("ATBL" =+ x4) (\x. ARB))))`)
   \\ FS [APPLY_UPDATE_THM] \\ FULL_SIMP_TAC (srw_ss()) []
-  \\ REPEAT (Q.PAT_ASSUM `T` (K ALL_TAC))
+  \\ REPEAT (Q.PAT_X_ASSUM `T` (K ALL_TAC))
   \\ FULL_SIMP_TAC std_ss [runtime_inv_def]
-  \\ Q.PAT_ASSUM `!name params. bbb` (fn th => MP_TAC th THEN MP_TAC (Q.SPEC `name` th))
+  \\ Q.PAT_X_ASSUM `!name params. bbb` (fn th => MP_TAC th THEN MP_TAC (Q.SPEC `name` th))
   \\ FS [] \\ STRIP_TAC
   \\ POP_ASSUM (MP_TAC o Q.SPECL [`[x1;x2;x3;x4]`,`ok`])
   \\ SIMP_TAC std_ss [LENGTH] \\ STRIP_TAC \\ STRIP_TAC
@@ -4786,7 +4786,7 @@ val core_admit_switch_thm = prove(
     \\ METIS_TAC [R_ap_T_11,R_ev_logic_appealp,PAIR_EQ,MR_IMP_R])
   \\ `!w1. conclusion [w1] = logic_conclusion w1` by ALL_TAC THEN1
    (REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!name params body sem args ok. bbb` (MP_TAC o Q.SPEC `"LOGIC.CONCLUSION"`) \\ FS []
+    \\ Q.PAT_X_ASSUM `!name params body sem args ok. bbb` (MP_TAC o Q.SPEC `"LOGIC.CONCLUSION"`) \\ FS []
     \\ STRIP_TAC \\ POP_ASSUM (MP_TAC o Q.SPECL [`[w1]`,`T`])
     \\ SIMP_TAC std_ss [LENGTH] \\ STRIP_TAC
     \\ IMP_RES_TAC (MR_IMP_R |> CONJUNCTS |> hd |> SPEC_ALL |> Q.INST [`f`|->`Fun (x::xs)`])
@@ -4819,7 +4819,7 @@ val core_admit_switch_thm = prove(
         (POP_ASSUM MP_TAC \\ EVAL_TAC \\ SRW_TAC [] [])
   \\ `(provablep = EvalFun "LOGIC.PROVABLEP" ctxt)` by ALL_TAC THEN1
         (FULL_SIMP_TAC std_ss [context_inv_def] \\ RES_TAC \\ ASM_REWRITE_TAC [])
-  \\ Q.PAT_ASSUM `isTrue (logic_appealp x1) ==> bbb` MP_TAC
+  \\ Q.PAT_X_ASSUM `isTrue (logic_appealp x1) ==> bbb` MP_TAC
   \\ ASM_REWRITE_TAC [] \\ REWRITE_TAC [EvalFun_def,Eval_M_ap_def]
   \\ ONCE_REWRITE_TAC [M_ev_cases] \\ ASM_SIMP_TAC (srw_ss()) []
   \\ `?r1 r2 provable_witness. ctxt ' "LOGIC.PROVABLE-WITNESS" =
@@ -4829,7 +4829,7 @@ val core_admit_switch_thm = prove(
   \\ FULL_SIMP_TAC std_ss []
   \\ `!w1 w2 w3 w4. proofp [w1;w2;w3;w4] = logic_proofp w1 w2 w3 w4` by ALL_TAC THEN1
    (REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!name params body sem args ok. bbb` (MP_TAC o Q.SPEC `"LOGIC.PROOFP"`) \\ FS []
+    \\ Q.PAT_X_ASSUM `!name params body sem args ok. bbb` (MP_TAC o Q.SPEC `"LOGIC.PROOFP"`) \\ FS []
     \\ STRIP_TAC \\ POP_ASSUM (MP_TAC o Q.SPECL [`[w1;w2;w3;w4]`,`T`])
     \\ SIMP_TAC std_ss [LENGTH] \\ STRIP_TAC
     \\ IMP_RES_TAC (MR_IMP_R |> CONJUNCTS |> hd |> SPEC_ALL |> Q.INST [`f`|->`Fun (x::xs)`])
@@ -4855,7 +4855,7 @@ val core_admit_switch_thm = prove(
                  (logic_proofp prooff (list2sexp (MAP f2sexp axioms'))
                     (list2sexp (MAP f2sexp thms')) x4)` \\ FS []
   \\ FULL_SIMP_TAC std_ss [primitive_arity_def]
-  \\ Q.PAT_ASSUM `bbb = prooff` MP_TAC
+  \\ Q.PAT_X_ASSUM `bbb = prooff` MP_TAC
   \\ `func_definition_exists ctxt "LOGIC.PROVABLE-WITNESS" r1 r2 provable_witness` by ALL_TAC THEN1
     (FULL_SIMP_TAC std_ss [func_definition_exists_def])
   \\ FULL_SIMP_TAC std_ss [axioms_inv_def]
@@ -4867,7 +4867,7 @@ val core_admit_switch_thm = prove(
   \\ IMP_RES_TAC (MATCH_MP lookup_init_lemma lookup_provable_witness_thm) \\ FS []
   \\ FULL_SIMP_TAC (srw_ss()) [lookup_provable_witness_body_def]
   \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM MP_TAC \\ NTAC 6 (POP_ASSUM (K ALL_TAC))
-  \\ Q.PAT_ASSUM `ctxt ' "LOGIC.PROVABLE-WITNESS" = bbb` MP_TAC
+  \\ Q.PAT_X_ASSUM `ctxt ' "LOGIC.PROVABLE-WITNESS" = bbb` MP_TAC
   \\ CONV_TAC (RATOR_CONV (RAND_CONV EVAL)) \\ STRIP_TAC \\ STRIP_TAC
   \\ `?r11 r12 r13 r14. r1 = [r11;r12;r13;r14]` by ALL_TAC THEN1
     (Cases_on `r1` \\ FS [MAP,list2sexp_def]
@@ -4876,7 +4876,7 @@ val core_admit_switch_thm = prove(
      \\ Cases_on `t` \\ FS [MAP,list2sexp_def]
      \\ Cases_on `t'` \\ FS [MAP,list2sexp_def,CONS_11])
   \\ FS [MAP]
-  \\ Q.PAT_ASSUM `ctxt ' "LOGIC.PROVABLE-WITNESS" = bbb` MP_TAC
+  \\ Q.PAT_X_ASSUM `ctxt ' "LOGIC.PROVABLE-WITNESS" = bbb` MP_TAC
   \\ Q.PAT_ABBREV_TAC `wit = mApp xxx yyy` \\ STRIP_TAC
   \\ `(provable_witness = (\args. @v.
         isTrue (EvalTerm (FunVarBind ("PROOF"::r1) (v::args),ctxt) wit)))`  by ALL_TAC THEN1
@@ -4984,7 +4984,7 @@ val core_admit_eval_thm = prove(
   \\ FULL_SIMP_TAC std_ss [GSYM list2sexp_def,memberp_thm,MEM]
   \\ FS [] \\ Cases_on `l0` THEN1
    (CCONTR_TAC
-    \\ Q.PAT_ASSUM `~isTrue
+    \\ Q.PAT_X_ASSUM `~isTrue
           (lookup (logic_func2sexp (mPrimitiveFun l'))
              core_initial_atbl)` MP_TAC
     \\ Cases_on `l'` \\ EVAL_TAC)
@@ -5163,7 +5163,7 @@ val core_accept_commands_thm = prove(
   \\ `?result. core_accept_command cmds (milawa_state state) k io3 T = result` by FS []
   \\ `?x1 x2 x3 x4 x5. state = (x1,x2,x3,x4,x5)` by METIS_TAC [PAIR] \\ FS []
   \\ `?y1 y2 y3 y4. result = (y1,y2,y3,y4)` by METIS_TAC [PAIR] \\ FS []
-  \\ Q.PAT_ASSUM `xxx yyy = (y1,y2,y3,y4)` MP_TAC
+  \\ Q.PAT_X_ASSUM `xxx yyy = (y1,y2,y3,y4)` MP_TAC
   \\ IMP_RES_TAC core_accept_command_thm \\ FS []
   \\ POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [`T`,`io3`,`cmds`]) \\ FS []
   \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) \\ STRIP_TAC \\ FS []
@@ -5177,20 +5177,20 @@ val core_accept_commands_thm = prove(
            witness_ctxt simple_ctxt cmds
          else
            simple_ctxt)`
-  \\ Q.PAT_ASSUM `!x1 x2 x3 x4. bbb`
+  \\ Q.PAT_X_ASSUM `!x1 x2 x3 x4. bbb`
        (MP_TAC o Q.SPECL [`1+n`,`result'`,`k2`,`io2`,`ctxt'`,`new_simple_ctxt`])
   \\ FS []
-  \\ Q.PAT_ASSUM `io2 = if CAR cmds = Sym "PRINT" then xxx else yyy` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `io2 = if CAR cmds = Sym "PRINT" then xxx else yyy` (ASSUME_TAC o GSYM)
   \\ FS [] \\ REPEAT STRIP_TAC \\ FS []
   \\ STRIP_TAC \\ FS []
-  \\ Q.PAT_ASSUM `EVERY P xs` MP_TAC
+  \\ Q.PAT_X_ASSUM `EVERY P xs` MP_TAC
   \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
   \\ FS [EVERY_APPEND,EVERY_DEF,line_ok_print_event_number]
   \\ `(FST (milawa_command simple_ctxt cmds)) = new_simple_ctxt` by ALL_TAC
   THEN1 (FS [milawa_command_def] \\ Q.UNABBREV_TAC `new_simple_ctxt` \\ SRW_TAC [] [])
   \\ FULL_SIMP_TAC std_ss [AC ADD_ASSOC ADD_COMM]
   \\ REPEAT STRIP_TAC THEN1 (FS [milawa_command_def] \\ SRW_TAC [] [])
-  \\ Q.PAT_ASSUM `xxx = io2` (ASSUME_TAC o GSYM) \\ FS []
+  \\ Q.PAT_X_ASSUM `xxx = io2` (ASSUME_TAC o GSYM) \\ FS []
   \\ Q.UNABBREV_TAC `io3`
   \\ FULL_SIMP_TAC std_ss [output_to_string_def,APPEND]
   \\ `SND (milawa_command simple_ctxt cmds) =
@@ -5264,7 +5264,7 @@ val ftbl_prop_MAINTAINED = prove(
   \\ REPEAT STRIP_TAC
   THEN1 (IMP_RES_TAC define_safe_list_IMP_ok \\ FS [] \\ RES_TAC)
   \\ IMP_RES_TAC define_safe_list_IMP_ok
-  \\ Q.PAT_ASSUM `!y.bbb` MATCH_MP_TAC
+  \\ Q.PAT_X_ASSUM `!y.bbb` MATCH_MP_TAC
   \\ Q.EXISTS_TAC `(Dot
        (Dot (CAR x) (Dot (CAR (CDR x)) (Dot (CAR (CDR (CDR x))) (Sym "NIL")))) y)`
   \\ Q.EXISTS_TAC `(add_def k
@@ -5437,4 +5437,3 @@ val milawa_main_soundness = store_thm("milawa_main_soundness",
 
 
 val _ = export_theory();
-

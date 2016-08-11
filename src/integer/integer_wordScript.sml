@@ -355,7 +355,7 @@ val sw2sw_i2w = Q.store_thm("sw2sw_i2w",
               (n = 1 * 2 ** (dimindex (:'b) - 1) + m)`
       by
        (FULL_SIMP_TAC std_ss [wordsTheory.INT_MIN_def]
-        \\ Q.PAT_ASSUM `2n ** x <= n` (fn th => STRIP_ASSUME_TAC
+        \\ Q.PAT_X_ASSUM `2n ** x <= n` (fn th => STRIP_ASSUME_TAC
              (MATCH_MP arithmeticTheory.LESS_EQUAL_ADD th))
         \\ Q.EXISTS_TAC `p`
         \\ SRW_TAC [] []
@@ -604,7 +604,7 @@ val NEG_MSB = Q.prove(
   \\ `Num (-i) = 2 ** n - p` by DECIDE_TAC
   \\ POP_ASSUM SUBST1_TAC
   \\ `p < 2 ** n` by intLib.ARITH_TAC
-  \\ Q.PAT_ASSUM `x = y + z : num` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `x = y + z : num` (K ALL_TAC)
   \\ ASM_SIMP_TAC bool_ss [EXP, BIT_def,
        DECIDE ``p < n ==> (2n * n - (n - p) = n + p)``,
        bitTheory.BITS_SUM |> Q.SPECL [`n`,`n`,`1`] |> SIMP_RULE std_ss []]
@@ -1296,7 +1296,7 @@ val overflow = Q.store_thm("overflow",
   \\ lfs [i2w_def, wordsTheory.word_2comp_n2w]
   \\ imp_res_tac arithmeticTheory.LESS_ADD
   \\ `p' < INT_MIN (:'a)` by lrw [wordsTheory.dimword_IS_TWICE_INT_MIN]
-  \\ qpat_assum `a + b = dimword(:'a)` (SUBST1_TAC o SYM)
+  \\ qpat_x_assum `a + b = dimword(:'a)` (SUBST1_TAC o SYM)
   \\ lrw [w2i_def, wordsTheory.word_msb_n2w_numeric])
 
 (* ------------------------------------------------------------------------- *)

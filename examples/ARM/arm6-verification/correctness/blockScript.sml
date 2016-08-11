@@ -190,13 +190,13 @@ val EXISTS_SUM_BITS = prove(
     << [
        Cases_on `x < LENGTH (GEN_REG_LIST wl n)`
          << [
-           PAT_ASSUM `!x n. P` IMP_RES_TAC
+           PAT_X_ASSUM `!x n. P` IMP_RES_TAC
              \\ `p < SUC wl` by DECIDE_TAC \\ PROVE_TAC [],
            `x = LENGTH (GEN_REG_LIST wl n)` by DECIDE_TAC
              \\ FULL_SIMP_TAC bool_ss [LENGTH_GEN_REG_LIST]
              \\ EXISTS_TAC `wl` \\ SIMP_TAC arith_ss []
          ],
-       PAT_ASSUM `!x n. P` IMP_RES_TAC
+       PAT_X_ASSUM `!x n. P` IMP_RES_TAC
          \\ `p < SUC wl` by DECIDE_TAC \\ PROVE_TAC []]);
 
 val SUM_LT = prove(
@@ -218,7 +218,7 @@ val SUM_LT = prove(
     \\ POP_ASSUM (K ALL_TAC) \\ EXISTS_TAC `z`
     \\ RW_TAC arith_ss []
     >> (ASM_SIMP_TAC fcp_ss [MASKN_THM,word_and_def] \\ PROVE_TAC [BIT_w2n])
-    \\ PAT_ASSUM `!n. P` (IMP_RES_TAC o SPEC `q`)
+    \\ PAT_X_ASSUM `!n. P` (IMP_RES_TAC o SPEC `q`)
     \\ FULL_SIMP_TAC arith_ss []
     >> (`q < p /\ p <= ^WL` by DECIDE_TAC \\ ASM_SIMP_TAC bool_ss [MASKN_THM])
     \\ ASM_SIMP_TAC (fcp_ss++ARITH_ss) [word_and_def]
@@ -231,9 +231,9 @@ val lem3a = prove(
            ~((list && (MASKN (SUM p (BITV (w2n list))) list)) %% q)) ==>
     (p <= y /\ y < ^WL /\ list %% y /\ (!q. q < y ==> ~(p <= q /\ list %% q)))`,
   RW_TAC bool_ss []
-    >> PAT_ASSUM `y < ^WL` (fn th => FULL_SIMP_TAC fcp_ss [word_and_def,th])
+    >> PAT_X_ASSUM `y < ^WL` (fn th => FULL_SIMP_TAC fcp_ss [word_and_def,th])
     \\ SPOSE_NOT_THEN STRIP_ASSUME_TAC
-    \\ PAT_ASSUM `!q. P` (SPEC_THEN `q` IMP_RES_TAC)
+    \\ PAT_X_ASSUM `!q. P` (SPEC_THEN `q` IMP_RES_TAC)
     \\ `q < ^WL` by DECIDE_TAC
     \\ POP_ASSUM (fn th => FULL_SIMP_TAC (fcp_ss++ARITH_ss) [word_and_def,th]
          \\ ASSUME_TAC th)
@@ -444,7 +444,7 @@ val REGISTER_LIST_LDM_THM = store_thm("REGISTER_LIST_LDM_THM",
   Induct_on `x` \\ REPEAT STRIP_TAC
     >> SIMP_TAC list_ss [FIRSTN,LDM_LIST_def,REG_WRITEN_def]
     \\ `x <= LENGTH (REGISTER_LIST list)` by DECIDE_TAC
-    \\ PAT_ASSUM `!n list reg mode inp. P` (IMP_RES_TAC o GSYM)
+    \\ PAT_X_ASSUM `!n list reg mode inp. _` (IMP_RES_TAC o GSYM)
     \\ ASM_SIMP_TAC arith_ss [REG_WRITEN_def,ADDR_MODE4_def,REG_WRITE_RP_def,
          (REWRITE_RULE [IN_LDM_STM] o GSYM) REGISTER_LIST_THM]
     \\ `SUC x <= n` by DECIDE_TAC
@@ -621,7 +621,7 @@ val PENCZ1 = prove(
     \\ POP_ASSUM SUBST_ALL_TAC
     \\ FULL_SIMP_TAC bool_ss [LENGTH_GEN_REG_LIST]
     \\ IMP_RES_TAC (INST_16 SUM_LT)
-    \\ PAT_ASSUM `list && (MASKN (SUM p (BITV (w2n list))) list) = 0w`
+    \\ PAT_X_ASSUM `list && (MASKN (SUM p (BITV (w2n list))) list) = 0w`
          SUBST_ALL_TAC
     \\ PROVE_TAC [INST_16 word_0]);
 
@@ -778,11 +778,11 @@ val lem = prove(
        (!n. (!m. m < n ==> m < w ==> ~IS_ABORT i (m + 1)) /\
              n < w /\ IS_ABORT i (n + 1) ==> (n = x + 1))`,
   RW_TAC std_ss [] \\ Cases_on `n < x + 1`
-    >> PAT_ASSUM `!s. s < w ==> ~IS_ABORT i (s + 1)`
+    >> PAT_X_ASSUM `!s. s < _ ==> ~IS_ABORT i (s + 1)`
          (SPEC_THEN `n` IMP_RES_TAC)
     \\ Tactical.REVERSE (Cases_on `x + 1 < n`) >> DECIDE_TAC
     \\ `s < n /\ s < w` by DECIDE_TAC
-    \\ PAT_ASSUM `!m. m < n ==> m < w ==> ~IS_ABORT i (m + 1)`
+    \\ PAT_X_ASSUM `!m. m < n ==> m < w ==> ~IS_ABORT i (m + 1)`
          (SPEC_THEN `s` IMP_RES_TAC));
 
 val NEW_LEAST_ABORT_SUC = prove(
@@ -942,7 +942,7 @@ val NEXT_CORE_LDM_TN_X = store_thm("NEXT_CORE_LDM_TN_X",
           FULL_SIMP_TAC arith_ss [interrupt_exists])
     \\ REPEAT STRIP_TAC
     \\ `1 < w /\ x <= w - 1` by DECIDE_TAC
-    \\ PAT_ASSUM `!w reg ireg alub alua din dout i. X` IMP_RES_TAC
+    \\ PAT_X_ASSUM `!w reg ireg alub alua din dout i. X` IMP_RES_TAC
     \\ POP_ASSUM (SPECL_THEN [`reg`,`dout`,`din`,`alub`,`alua`]
          STRIP_ASSUME_TAC)
     \\ FULL_SIMP_TAC arith_ss [FUNPOW_SUC]
@@ -1043,7 +1043,7 @@ val NEXT_CORE_STM_TN_X = store_thm("NEXT_CORE_STM_TN_X",
           METIS_TAC [interrupt_exists])
     \\ REPEAT STRIP_TAC
     \\ `x <= w - 2` by DECIDE_TAC
-    \\ PAT_ASSUM `!w y reg ireg alub alua dout i. X` IMP_RES_TAC
+    \\ PAT_X_ASSUM `!w y reg ireg alub alua dout i. X` IMP_RES_TAC
     \\ POP_ASSUM (STRIP_ASSUME_TAC o SPEC_ALL)
     \\ FULL_SIMP_TAC std_ss [FUNPOW_SUC]
     \\ POP_ASSUM (K ALL_TAC)
@@ -1105,7 +1105,7 @@ val NEXT_CORE_STM_TN_W1 = prove(
             mul' mul2' borrow2' mshift'); inp := ADVANCE (w + 1) i|>))`,
   REPEAT STRIP_TAC
     \\ `~((15 >< 0) ireg = 0w:word16)` by ASM_SIMP_TAC arith_ss [PENCZ_THM2]
-    \\ PAT_ASSUM `w = LENGTH (REGISTER_LIST ((15 >< 0) ireg))` SUBST_ALL_TAC
+    \\ PAT_X_ASSUM `w = LENGTH (REGISTER_LIST ((15 >< 0) ireg))` SUBST_ALL_TAC
     \\ IMP_RES_TAC NEXT_CORE_STM_TN_W2
     \\ POP_ASSUM (STRIP_ASSUME_TAC o SPEC_ALL)
     \\ ASM_SIMP_TAC std_ss [FUNPOW_SUC,

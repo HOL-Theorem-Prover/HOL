@@ -194,7 +194,7 @@ val mc_equal_lemma = prove(
     \\ FULL_SIMP_TAC std_ss [lisp_equal_stack_def]
     \\ `?w0n x0n w1n x1n. h = (w0n,x0n,w1n,x1n)` by METIS_TAC [PAIR]
     \\ FULL_SIMP_TAC std_ss []
-    \\ Q.PAT_ASSUM `!m.bbb` (MP_TAC o Q.SPEC `lisp_eq_measure ((w0n,x0n,w1n,x1n)::t) + (LENGTH t)`)
+    \\ Q.PAT_X_ASSUM `!m.bbb` (MP_TAC o Q.SPEC `lisp_eq_measure ((w0n,x0n,w1n,x1n)::t) + (LENGTH t)`)
     \\ MATCH_MP_TAC (METIS_PROVE [] ``b1 /\ (b2 ==> b3) ==> ((b1 ==> b2) ==> b3)``)
     \\ STRIP_TAC THEN1 (SIMP_TAC std_ss [lisp_eq_measure_def,ADD_ASSOC] \\ DECIDE_TAC)
     \\ STRIP_TAC \\ POP_ASSUM (MP_TAC o Q.SPECL [`w0n`,`x0n`,`w1n`,`x1n`,`t`])
@@ -249,9 +249,9 @@ val mc_equal_lemma = prove(
      (FULL_SIMP_TAC std_ss [isDot_thm,CAR_def,LDEPTH_def,MAX_DEF]
       \\ FULL_SIMP_TAC std_ss [isDot_thm,CAR_def,LDEPTH_def,MAX_DEF]
       \\ DECIDE_TAC)
-    \\ IMP_RES_TAC lisp_inv_car \\ REPEAT (Q.PAT_ASSUM `!xs xx xxxx. bbb` (K ALL_TAC))
+    \\ IMP_RES_TAC lisp_inv_car \\ REPEAT (Q.PAT_X_ASSUM `!xs xx xxxx. bbb` (K ALL_TAC))
     \\ IMP_RES_TAC lisp_inv_swap1
-    \\ IMP_RES_TAC lisp_inv_car \\ REPEAT (Q.PAT_ASSUM `!xs xx xxxx. bbb` (K ALL_TAC))
+    \\ IMP_RES_TAC lisp_inv_car \\ REPEAT (Q.PAT_X_ASSUM `!xs xx xxxx. bbb` (K ALL_TAC))
     \\ IMP_RES_TAC lisp_inv_swap1 \\ METIS_TAC [])
   \\ `lisp_equal_stack ((w04,CDR x0,w14,CDR x1)::(w00,CAR x0,w10,CAR x1)::ys) ^STAT (x2,x3,x4,x5,^VAR_REST)
         (w2,w3,w4,w5,df,f,^REST)` by ALL_TAC THEN1
@@ -261,14 +261,14 @@ val mc_equal_lemma = prove(
      (FULL_SIMP_TAC std_ss [isDot_thm,CDR_def,LDEPTH_def,MAX_DEF,LENGTH]
       \\ FULL_SIMP_TAC std_ss [isDot_thm,CDR_def,LDEPTH_def,MAX_DEF]
       \\ DECIDE_TAC)
-    \\ IMP_RES_TAC lisp_inv_cdr \\ REPEAT (Q.PAT_ASSUM `!xs xx xxxx. bbb` (K ALL_TAC))
+    \\ IMP_RES_TAC lisp_inv_cdr \\ REPEAT (Q.PAT_X_ASSUM `!xs xx xxxx. bbb` (K ALL_TAC))
     \\ IMP_RES_TAC lisp_inv_swap1
-    \\ IMP_RES_TAC lisp_inv_cdr \\ REPEAT (Q.PAT_ASSUM `!xs xx xxxx. bbb` (K ALL_TAC))
+    \\ IMP_RES_TAC lisp_inv_cdr \\ REPEAT (Q.PAT_X_ASSUM `!xs xx xxxx. bbb` (K ALL_TAC))
     \\ IMP_RES_TAC lisp_inv_swap1 \\ METIS_TAC [])
   \\ Q.ABBREV_TAC `fj = (n2w (8 * LENGTH ys) + bp2 + 0x4w =+ w10)
                           ((n2w (8 * LENGTH ys) + bp2 =+ w00) f)`
   \\ FULL_SIMP_TAC std_ss [GSYM lisp_equal_stack_def]
-  \\ Q.PAT_ASSUM `!m.bbb` (MP_TAC o Q.SPEC `lisp_eq_measure ((w04,CDR x0,w14,CDR x1)::(w00,CAR x0,w10,CAR x1)::ys) + LENGTH ((w00,CAR x0,w10,CAR x1)::ys)`)
+  \\ Q.PAT_X_ASSUM `!m.bbb` (MP_TAC o Q.SPEC `lisp_eq_measure ((w04,CDR x0,w14,CDR x1)::(w00,CAR x0,w10,CAR x1)::ys) + LENGTH ((w00,CAR x0,w10,CAR x1)::ys)`)
   \\ MATCH_MP_TAC (METIS_PROVE [] ``b1 /\ (b2 ==> b3) ==> ((b1 ==> b2) ==> b3)``)
   \\ STRIP_TAC THEN1
    (FULL_SIMP_TAC std_ss [isDot_thm]
@@ -305,7 +305,7 @@ val mc_equal_lemma = prove(
     \\ RANGE_TAC)
   \\ IMP_RES_TAC lisp_inv_ignore_write1
   \\ IMP_RES_TAC lisp_inv_ignore_write2
-  \\ REPEAT (Q.PAT_ASSUM `!x.bbb` (K ALL_TAC))
+  \\ REPEAT (Q.PAT_X_ASSUM `!x.bbb` (K ALL_TAC))
   \\ IMP_RES_TAC (RW [isDot_def] (Q.INST [`x0`|->`Dot a b`] lisp_inv_car))
   \\ IMP_RES_TAC (RW [isDot_def] (Q.INST [`x0`|->`Dot a b`] lisp_inv_cdr))
   \\ IMP_RES_TAC lisp_inv_swap1

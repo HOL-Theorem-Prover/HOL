@@ -454,12 +454,12 @@ val GROUP_SURJ_HOMO_GROUP = store_thm
    ++ S_TAC <<
    [R_TAC [IN_FUNSET]
     ++ S_TAC
-    ++ Q.PAT_ASSUM `!y :: q. P y`
+    ++ Q.PAT_X_ASSUM `!y :: q. P y`
         (fn th =>
          (MP_TAC o RESQ_SPEC ``x':'b``) th ++ (MP_TAC o RESQ_SPEC ``x:'b``) th)
     ++ S_TAC
     ++ R_TAC [],
-    Q.PAT_ASSUM `!y :: q. P y`
+    Q.PAT_X_ASSUM `!y :: q. P y`
       (fn th =>
        (MP_TAC o RESQ_SPEC ``x:'b``) th
         ++ (MP_TAC o RESQ_SPEC ``y:'b``) th
@@ -475,12 +475,12 @@ val GROUP_SURJ_HOMO_GROUP = store_thm
     [RW_TAC std_ss [IN_FUNSET]
      ++ Suff `(@y. y IN gset G /\ (x = f y)) IN gset G`
      >> (S_TAC ++ G_TAC [])
-     ++ Q.PAT_ASSUM `!y::q. P y` (MP_TAC o RESQ_SPEC ``x : 'b``)
+     ++ Q.PAT_X_ASSUM `!y::q. P y` (MP_TAC o RESQ_SPEC ``x : 'b``)
      ++ G_TAC [RES_EXISTS, EXISTS_DEF],
-     Q.PAT_ASSUM `!y::q. P y` (MP_TAC o RESQ_SPEC ``x:'b``)
+     Q.PAT_X_ASSUM `!y::q. P y` (MP_TAC o RESQ_SPEC ``x:'b``)
      ++ S_TAC
      ++ R_TAC [],
-     Q.PAT_ASSUM `!y::q. P y` (MP_TAC o RESQ_SPEC ``x:'b``)
+     Q.PAT_X_ASSUM `!y::q. P y` (MP_TAC o RESQ_SPEC ``x:'b``)
      ++ R_TAC [RES_EXISTS]
      ++ DISCH_THEN (fn th => MP_TAC th ++ MP_TAC th)
      ++ RESQ_STRIP_TAC
@@ -669,7 +669,7 @@ val SET_SUBGROUP = store_thm
    ++ Q_RESQ_EXISTS_TAC `gid G`
    ++ STRONG_CONJ_TAC
    >> (Know `?x. x IN s`
-       >> (Q.PAT_ASSUM `~(s = {})` MP_TAC
+       >> (Q.PAT_X_ASSUM `~(s = {})` MP_TAC
            ++ SET_EQ_TAC
            ++ Simplify [NOT_IN_EMPTY])
        ++ Strip
@@ -688,7 +688,7 @@ val GROUP_HOMO_GID = store_thm
        (f (gid G) = gid H)``,
    Simplify [IN_GROUP_HOMO]
    ++ Strip
-   ++ Q.PAT_ASSUM `!x :: P. M x`
+   ++ Q.PAT_X_ASSUM `!x :: P. M x`
       (MP_TAC o Q_RESQ_HALF_SPECL [`gid G`, `gid G`])
    ++ G_TAC' []);
 
@@ -698,7 +698,7 @@ val GROUP_HOMO_GPOW = store_thm
        f IN group_homo G H /\ G IN group /\ H IN group /\ g IN gset G ==>
        (f (gpow G g n) = gpow H (f g) n)``,
    Strip
-   ++ Q.PAT_ASSUM `f IN x`
+   ++ Q.PAT_X_ASSUM `f IN x`
       (fn th => MP_TAC th ++ Simplify [IN_GROUP_HOMO] ++ ASSUME_TAC th)
    ++ Strip
    ++ Induct_on `n` >> G_TAC [GROUP_HOMO_GID]

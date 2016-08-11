@@ -427,7 +427,7 @@ val x64_cmp_thm = prove(
   \\ FULL_SIMP_TAC std_ss [SNOC_APPEND,GSYM APPEND_ASSOC,APPEND]
   \\ STRIP_TAC THEN1 DECIDE_TAC
   \\ FULL_SIMP_TAC (srw_ss()) [rich_listTheory.EL_LENGTH_APPEND]
-  \\ Q.PAT_ASSUM `LENGTH ys2 = LENGTH xs` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `LENGTH ys2 = LENGTH xs` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC (srw_ss()) [rich_listTheory.EL_LENGTH_APPEND]
   \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
   \\ SIMP_TAC std_ss [Once mw_cmp_def]
@@ -561,7 +561,7 @@ val x64_add_loop1_thm = prove(
   \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND,
         rich_listTheory.EL_LENGTH_APPEND,NULL_DEF,HD,TL]
-  \\ Q.PAT_ASSUM `LENGTH ys1 = LENGTH xs1` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `LENGTH ys1 = LENGTH xs1` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND,
         rich_listTheory.EL_LENGTH_APPEND,NULL_DEF,HD,TL]
   \\ SIMP_TAC std_ss [GSYM word_sub_def,GSYM word_add_n2w,WORD_ADD_SUB]
@@ -650,7 +650,7 @@ val x64_add_thm = prove(
   \\ (x64_add_loop1_thm |> Q.SPECL [`xs1`,`ys`,`zs`,`[]`,`[]`,`[]`,`xs2`,`[]`,`zs2`]
       |> GEN_ALL |> MP_TAC)
   \\ FULL_SIMP_TAC std_ss [LENGTH,APPEND,APPEND_NIL] \\ STRIP_TAC
-  \\ Q.PAT_ASSUM `LENGTH xs1 = LENGTH ys` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `LENGTH xs1 = LENGTH ys` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [mw_addv_EQ_mw_add,LET_DEF]
   \\ `?qs1 c1. mw_add xs1 ys F = (qs1,c1)` by METIS_TAC [PAIR]
   \\ `?qs2 c2. mw_add xs2 (MAP (\x.0w) xs2) c1 = (qs2,c2)` by METIS_TAC [PAIR]
@@ -804,7 +804,7 @@ val x64_sub_loop1_thm = prove(
   \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND,
         rich_listTheory.EL_LENGTH_APPEND,NULL_DEF,HD,TL]
-  \\ Q.PAT_ASSUM `LENGTH ys1 = LENGTH xs1` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `LENGTH ys1 = LENGTH xs1` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND,
         rich_listTheory.EL_LENGTH_APPEND,NULL_DEF,HD,TL]
   \\ SIMP_TAC std_ss [GSYM word_sub_def,GSYM word_add_n2w,WORD_ADD_SUB]
@@ -905,7 +905,7 @@ val x64_sub_thm = prove(
   \\ (x64_sub_loop1_thm |> Q.SPECL [`xs1`,`ys`,`zs`,`[]`,`[]`,`[]`,`xs2`,`[]`,`zs2`]
       |> GEN_ALL |> MP_TAC)
   \\ FULL_SIMP_TAC std_ss [LENGTH,APPEND,APPEND_NIL] \\ STRIP_TAC
-  \\ Q.PAT_ASSUM `LENGTH xs1 = LENGTH ys` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `LENGTH xs1 = LENGTH ys` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [mw_subv_def,LET_DEF]
   \\ ASM_SIMP_TAC std_ss [mw_sub_APPEND]
   \\ `?qs1 c1. mw_sub xs1 ys T = (qs1,c1)` by METIS_TAC [PAIR]
@@ -1382,7 +1382,7 @@ val x64_imul_thm = prove(
   \\ `LENGTH qs1 < dimword (:64)` by (FULL_SIMP_TAC (srw_ss()) [] \\ DECIDE_TAC)
   \\ FULL_SIMP_TAC std_ss [x64_mul_zero_thm]
   \\ ASSUME_TAC x64_mul_thm
-  \\ Q.PAT_ASSUM `LENGTH ys = LENGTH qs1` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `LENGTH ys = LENGTH qs1` (ASSUME_TAC o GSYM)
   \\ `MAP (\x. 0x0w:word64) qs1 = MAP (\x. 0x0w) ys` by
        ASM_SIMP_TAC std_ss [MAP_EQ_MAP_EQ]
   \\ FULL_SIMP_TAC std_ss []
@@ -1417,7 +1417,7 @@ val MULT_LEMMA_LEMMA = prove(
   ``!m n. l < k /\ l + k * m < k + k * n ==> m <= n:num``,
   Induct \\ Cases_on `n` \\ FULL_SIMP_TAC std_ss [MULT_CLAUSES]
   THEN1 (REPEAT STRIP_TAC \\ CCONTR_TAC \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
-  \\ REPEAT STRIP_TAC \\ Q.PAT_ASSUM `!x.bbb` MATCH_MP_TAC
+  \\ REPEAT STRIP_TAC \\ Q.PAT_X_ASSUM `!x.bbb` MATCH_MP_TAC
   \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC);
 
 val MULT_LEMMA = prove(
@@ -1485,12 +1485,12 @@ val x64_simple_div_thm = prove(
   \\ FULL_SIMP_TAC (srw_ss()) []
   \\ FULL_SIMP_TAC std_ss [SNOC_APPEND,GSYM APPEND_ASSOC,APPEND,LUPDATE_LENGTH]
   \\ FULL_SIMP_TAC std_ss [rich_listTheory.EL_LENGTH_APPEND,NULL,HD]
-  \\ Q.PAT_ASSUM `LENGTH zs2 = LENGTH xs` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `LENGTH zs2 = LENGTH xs` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [LUPDATE_LENGTH,x64_single_div_thm]
   \\ `?q1 r1. single_div r2 x r9 = (q1,r1)` by METIS_TAC [PAIR]
   \\ `?qs2 r2 c2. mw_simple_div r1 (REVERSE xs) r9 = (qs2,r2,c2)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss [LET_DEF]
-  \\ Q.PAT_ASSUM `q1::qs2 = qs` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `q1::qs2 = qs` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [REVERSE,SNOC_APPEND,GSYM APPEND_ASSOC,APPEND]
   \\ DECIDE_TAC);
 
@@ -1521,7 +1521,7 @@ val x64_simple_div1_thm = prove(
   \\ `?q1 r1. single_div r2 x r9 = (q1,r1)` by METIS_TAC [PAIR]
   \\ `?qs2 r2 c2. mw_simple_div r1 (REVERSE zs) r9 = (qs2,r2,c2)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss [LET_DEF]
-  \\ Q.PAT_ASSUM `q1::qs2 = qs` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `q1::qs2 = qs` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [REVERSE,SNOC_APPEND,GSYM APPEND_ASSOC,APPEND]
   \\ DECIDE_TAC);
 
@@ -2071,7 +2071,7 @@ val x64_div_sub_loop_thm = prove(
       LENGTH (SNOC q ys1 ++ ys) < dimword (:64) /\
       LENGTH (SNOC q zs1 ++ zs) < dimword (:64)` by
         (FULL_SIMP_TAC std_ss [LENGTH_SNOC,ADD1,LENGTH_APPEND] \\ DECIDE_TAC)
-  \\ Q.PAT_ASSUM `!zs. bbb` (MP_TAC o Q.SPECL [`zs`,`SNOC y ys1`,
+  \\ Q.PAT_X_ASSUM `!zs. bbb` (MP_TAC o Q.SPECL [`zs`,`SNOC y ys1`,
          `SNOC q zs1`,`zs2`,`r`,`q2`,`q4`])
   \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND,LENGTH_SNOC]
@@ -2439,7 +2439,7 @@ val x64_copy_down_thm = prove(
        by (FULL_SIMP_TAC std_ss [LENGTH_APPEND,LENGTH,LENGTH_SNOC] \\ DECIDE_TAC)
   \\ FULL_SIMP_TAC std_ss [LUPDATE_LENGTH,GSYM APPEND_ASSOC,APPEND]
   \\ SIMP_TAC std_ss [SNOC_INTRO] \\ FULL_SIMP_TAC std_ss [APPEND_ASSOC]
-  \\ Q.PAT_ASSUM `!xx.bb` (MP_TAC o Q.SPECL [`SNOC h zs0`,`SNOC h zs`,`zs3`])
+  \\ Q.PAT_X_ASSUM `!xx.bb` (MP_TAC o Q.SPECL [`SNOC h zs0`,`SNOC h zs`,`zs3`])
   \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
     (FULL_SIMP_TAC std_ss [LENGTH_APPEND,LENGTH,LENGTH_SNOC,NOT_SNOC_NIL]
      \\ DECIDE_TAC) \\ STRIP_TAC \\ ASM_SIMP_TAC std_ss []
@@ -2476,7 +2476,7 @@ val x64_copy_over_thm = prove(
   \\ FULL_SIMP_TAC std_ss [n2w_11,ZERO_LT_dimword]
   \\ FULL_SIMP_TAC std_ss [GSYM word_add_n2w,WORD_ADD_SUB,LET_DEF]
   \\ FULL_SIMP_TAC std_ss [w2n_n2w,EL_LENGTH,SNOC_APPEND]
-  \\ Q.PAT_ASSUM `LENGTH l = LENGTH xs0` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `LENGTH l = LENGTH xs0` (ASSUME_TAC o GSYM)
   \\ ASM_SIMP_TAC std_ss [LUPDATE_LENGTH,APPEND,GSYM APPEND_ASSOC]
   \\ FULL_SIMP_TAC std_ss [LENGTH,LENGTH_APPEND]
   \\ `LENGTH l + LENGTH (x::zs) < dimword (:64)` by ALL_TAC
@@ -2749,7 +2749,7 @@ val x64_div_thm = prove(
     \\ FULL_SIMP_TAC std_ss [] \\ MATCH_MP_TAC LENGTH_mw_div_aux
     \\ Q.EXISTS_TAC `ts2` \\ FULL_SIMP_TAC std_ss [])
   \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `LENGTH rs1 = LENGTH ys` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `LENGTH rs1 = LENGTH ys` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC]
   \\ ASSUME_TAC x64_simple_div1_thm
   \\ SEP_I_TAC "x64_simple_div1" \\ POP_ASSUM MP_TAC
@@ -2851,7 +2851,7 @@ val x64_add1_thm = prove(
    (Q.EXISTS_TAC `t::zs2`
     \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND,LENGTH]
     \\ DECIDE_TAC) \\ FULL_SIMP_TAC std_ss [LENGTH]
-  \\ Q.PAT_ASSUM `!zss.bbb` (MP_TAC o Q.SPEC `SNOC 0w zs1`)
+  \\ Q.PAT_X_ASSUM `!zss.bbb` (MP_TAC o Q.SPEC `SNOC 0w zs1`)
   \\ FULL_SIMP_TAC std_ss [LENGTH_SNOC,ADD1]
   \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1 DECIDE_TAC \\ STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [SNOC_INTRO,AC ADD_COMM ADD_ASSOC]
@@ -2918,7 +2918,7 @@ val x64_div_sub_aux_thm = prove(
       LENGTH ys + 1 + 1 < dimword (:64) /\
       1 < dimword (:64)` by DECIDE_TAC
   \\ FULL_SIMP_TAC std_ss [EL_LENGTH,LUPDATE_LENGTH,GSYM APPEND_ASSOC,APPEND]
-  \\ Q.PAT_ASSUM `LENGTH zs1 = LENGTH ys1` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `LENGTH zs1 = LENGTH ys1` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [EL_LENGTH,LUPDATE_LENGTH,n2w_11,GSYM APPEND_ASSOC,APPEND]
   \\ SIMP_TAC std_ss [GSYM word_add_n2w,WORD_ADD_SUB]
   \\ FULL_SIMP_TAC std_ss [word_add_n2w]

@@ -125,12 +125,12 @@ val DONE_LESS_EQUAL_WL = prove(
          \\ SPOSE_NOT_THEN STRIP_ASSUME_TAC
          \\ RULE_ASSUM_TAC (REWRITE_RULE [NOT_LESS_EQUAL])
          \\ IMP_RES_TAC DIV_TWO_MONO_EVEN
-         \\ PAT_ASSUM `!m. m < n ==> P` IMP_RES_TAC
+         \\ PAT_X_ASSUM `!m. m < n ==> P` IMP_RES_TAC
          \\ FULL_SIMP_TAC arith_ss [],
        Cases_on `2 * n = 32` >> ASM_SIMP_TAC arith_ss []
          \\ `32 < 2 * n` by DECIDE_TAC
          \\ IMP_RES_TAC DIV_TWO_MONO_EVEN
-         \\ PAT_ASSUM `!m. m < n ==> P` IMP_RES_TAC
+         \\ PAT_X_ASSUM `!m. m < n ==> P` IMP_RES_TAC
          \\ FULL_SIMP_TAC arith_ss []]);
 
 val DUR_LT_EQ_HWL = prove(
@@ -299,7 +299,7 @@ val DONE_IMP_ZERO_MSBS = prove(
         \\ `2 * n'' + 2 <= 31`
         by FULL_SIMP_TAC (arith_ss++SIZES_ss) [NOT_LESS]
         \\ `SLICE 31 (SUC (2 * n'' + 1)) n = 0`
-        by (PAT_ASSUM `q = 0w` MP_TAC \\
+        by (PAT_X_ASSUM `q = 0w` MP_TAC \\
               ASM_SIMP_TAC arith_ss [dimword_def,GSYM BITS_ZERO3,SLICE_THM,MIN_DEF,
                 BITS_COMP_THM2,ZERO_LT_TWOEXP,word_bits_n2w,n2w_11] \\
               SIMP_TAC arith_ss [Abbr`m`])
@@ -719,7 +719,7 @@ val MLA_MUL_INVARIANT = Count.apply prove(
     \\ REWRITE_TAC [FUNPOW_SUC]
     \\ Cases_on `n = 0`
     << [
-      PAT_ASSUM `x ==> P` (K ALL_TAC)
+      PAT_X_ASSUM `x ==> P` (K ALL_TAC)
         \\ ASM_REWRITE_TAC [FUNPOW]
         \\ REPEAT STRIP_TAC
         \\ FULL_SIMP_TAC bool_ss [Abbr`pc`,REG_READ_WRITE,TO_WRITE_READ6]
@@ -752,7 +752,7 @@ val MLA_MUL_INVARIANT = Count.apply prove(
              pred_setTheory.NOT_IN_EMPTY],
       STRIP_TAC
         \\ `n <= w` by DECIDE_TAC
-        \\ PAT_ASSUM `nn ==> P` IMP_RES_TAC
+        \\ PAT_X_ASSUM `nn ==> P` IMP_RES_TAC
         \\ ASM_SIMP_TAC arith_ss [NOT_DONE_SUC,BORROW2,
              GSYM io_onestepTheory.ADVANCE_COMP,ADD1]
         \\ POP_ASSUM (K ALL_TAC)

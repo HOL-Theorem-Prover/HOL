@@ -1373,10 +1373,10 @@ val LE_SEQ_IMP_LE_LIM = store_thm
    RW_TAC boolSimps.bool_ss [SEQ]
    THEN MATCH_MP_TAC REAL_LE_EPSILON
    THEN RW_TAC boolSimps.bool_ss []
-   THEN Q.PAT_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`)
+   THEN Q.PAT_X_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`)
    THEN RW_TAC boolSimps.bool_ss []
    THEN POP_ASSUM (MP_TAC o Q.SPEC `N`)
-   THEN Q.PAT_ASSUM `!n. P n` (MP_TAC o Q.SPEC `N`)
+   THEN Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `N`)
    THEN RW_TAC boolSimps.bool_ss
         [GREATER_EQ, LESS_EQ_REFL, abs, REAL_LE_SUB_LADD, REAL_ADD_LID]
    THEN simpLib.FULL_SIMP_TAC boolSimps.bool_ss
@@ -1390,10 +1390,10 @@ val SEQ_LE_IMP_LIM_LE = store_thm
    RW_TAC boolSimps.bool_ss [SEQ]
    THEN MATCH_MP_TAC REAL_LE_EPSILON
    THEN RW_TAC boolSimps.bool_ss []
-   THEN Q.PAT_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`)
+   THEN Q.PAT_X_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`)
    THEN RW_TAC boolSimps.bool_ss []
    THEN POP_ASSUM (MP_TAC o Q.SPEC `N`)
-   THEN Q.PAT_ASSUM `!n. P n` (MP_TAC o Q.SPEC `N`)
+   THEN Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `N`)
    THEN (RW_TAC boolSimps.bool_ss
          [GREATER_EQ, LESS_EQ_REFL, abs, REAL_LE_SUB_LADD, REAL_ADD_LID]
          THEN simpLib.FULL_SIMP_TAC boolSimps.bool_ss
@@ -1413,11 +1413,11 @@ val SEQ_MONO_LE = store_thm
    RW_TAC boolSimps.bool_ss [SEQ]
    THEN MATCH_MP_TAC REAL_LE_EPSILON
    THEN RW_TAC boolSimps.bool_ss []
-   THEN Q.PAT_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`)
+   THEN Q.PAT_X_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`)
    THEN RW_TAC boolSimps.bool_ss [GREATER_EQ]
    THEN MP_TAC (Q.SPECL [`N`, `n`] LESS_EQ_CASES)
    THEN (STRIP_TAC
-         THEN1 (Q.PAT_ASSUM `!n. P n` (MP_TAC o Q.SPEC `n`)
+         THEN1 (Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `n`)
                 THEN RW_TAC boolSimps.bool_ss
                      [abs, REAL_LE_SUB_LADD, REAL_LT_SUB_RADD, REAL_ADD_LID,
                       REAL_NEG_SUB]
@@ -1429,7 +1429,7 @@ val SEQ_MONO_LE = store_thm
    THEN (SUFF_TAC ``!i : num. f (N - i) <= x + (e : real)``
          THEN1 PROVE_TAC [LESS_EQUAL_DIFF])
    THEN numLib.INDUCT_TAC
-   THENL [Q.PAT_ASSUM `!n. P n` (MP_TAC o Q.SPEC `N`)
+   THENL [Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `N`)
           THEN RW_TAC boolSimps.bool_ss [abs, LESS_EQ_REFL, SUB_0]
           THEN simpLib.FULL_SIMP_TAC boolSimps.bool_ss
                [REAL_LT_SUB_RADD, REAL_NEG_SUB, REAL_NOT_LE, REAL_ADD_LID,

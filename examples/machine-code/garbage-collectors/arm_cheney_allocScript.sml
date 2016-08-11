@@ -206,7 +206,7 @@ val arm_alloc_lemma = prove(
   \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ ASM_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [INSERT_SUBSET,NOT_IN_EMPTY,IN_INSERT,EMPTY_SUBSET]
   \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ STRIP_TAC \\ FULL_SIMP_TAC bool_ss []
-  \\ REPEAT (Q.PAT_ASSUM `~(i = 0)` ((K ALL_TAC)))
+  \\ REPEAT (Q.PAT_X_ASSUM `~(i = 0)` ((K ALL_TAC)))
   \\ IMP_RES_TAC arm_alloc_aux_lemma \\ ASM_SIMP_TAC std_ss []
   \\ REVERSE (REPEAT STRIP_TAC) \\ METIS_TAC []);
 
@@ -310,9 +310,9 @@ val ch_mem_cheney_alloc_lemma = prove(
   \\ FULL_SIMP_TAC bool_ss [ch_mem_def,APPEND,ZIP]
   \\ `ok_state (i',e',rs',l',u',m')` by METIS_TAC [cheney_alloc_ok]
   \\ FULL_SIMP_TAC std_ss [arm_coll_inv_def,CONS_11,ZIP,APPEND]
-  \\ Q.PAT_ASSUM `rs' = xxxxx` (fn th => FULL_SIMP_TAC std_ss [th])
+  \\ Q.PAT_X_ASSUM `rs' = xxxxx` (fn th => FULL_SIMP_TAC std_ss [th])
   \\ FULL_SIMP_TAC bool_ss [APPEND,roots_in_mem_def,field_list_def,ZIP,CONS_11]
-  \\ Q.PAT_ASSUM `ok_state (i',e',[x1''; x2''; x3''; x4''; x5''; x6''],l',u',m')` MP_TAC
+  \\ Q.PAT_X_ASSUM `ok_state (i',e',[x1''; x2''; x3''; x4''; x5''; x6''],l',u',m')` MP_TAC
   \\ ASM_SIMP_TAC std_ss []);
 
 val ch_word_alloc = prove(
@@ -350,7 +350,7 @@ val ch_word_alloc = prove(
     \\ `~(i = 0) /\ ~(e = 0)` by
           (Cases_on `u` \\ FULL_SIMP_TAC bool_ss [ok_state_def,LET_DEF] \\ DECIDE_TAC),
     IMP_RES_TAC ch_mem_cheney_alloc_lemma
-    \\ Q.PAT_ASSUM `ch_mem (i,e,rs,l,u,m) (a,x,xs1)` (K ALL_TAC)
+    \\ Q.PAT_X_ASSUM `ch_mem (i,e,rs,l,u,m) (a,x,xs1)` (K ALL_TAC)
     \\ FULL_SIMP_TAC bool_ss [APPEND,ZIP,ch_word_def,ch_mem_def,field_list_def,CONS_11]
     \\ FULL_SIMP_TAC bool_ss [APPEND,ZIP,ch_word_def,ch_mem_def,field_list_def,CONS_11]
     \\ FULL_SIMP_TAC std_ss [field_list_def,ZIP,APPEND,word_arith_lemma1,word_arith_lemma2]

@@ -409,7 +409,7 @@ srw_tac [][iso_pair_def] >> EQ_TAC >> strip_tac >> fsrw_tac [][] >- (
   conj_asm1_tac >- (
     fsrw_tac [][composable_nts_def] >>
     `(n2 o n1 -:[c1→c2]).cod = (id n1.dom -:[c1→c2]).cod` by srw_tac [][] >>
-    qpat_assum `X = id n1.dom -:C` (K ALL_TAC) >>
+    qpat_x_assum `X = id n1.dom -:C` (K ALL_TAC) >>
     pop_assum mp_tac >> fsrw_tac [][composable_nts_def] >>
     `n1.dom ∈ [c1→c2].obj` by (
       fsrw_tac [][composable_nts_def,is_nat_trans_is_functor] >>
@@ -428,7 +428,7 @@ srw_tac [][iso_pair_def] >> EQ_TAC >> strip_tac >> fsrw_tac [][] >- (
     fsrw_tac [][composable_nts_def] ) >>
   reverse conj_tac >- (
     `(n2 o n1 -:[c1→c2]) @+ x = (id n1.dom -:[c1→c2]) @+ x` by metis_tac [] >>
-    qpat_assum `n2 o n1 -:[c1→c2] = X` (K ALL_TAC) >>
+    qpat_x_assum `n2 o n1 -:[c1→c2] = X` (K ALL_TAC) >>
     pop_assum mp_tac >> fsrw_tac [][] >> strip_tac >>
     `n1.dom ∈ [c1→c2].obj` by (
       fsrw_tac [][composable_nts_def,is_nat_trans_is_functor] >>
@@ -440,7 +440,7 @@ srw_tac [][iso_pair_def] >> EQ_TAC >> strip_tac >> fsrw_tac [][] >- (
       fsrw_tac [][composable_nts_def] ) >>
     fsrw_tac [][maps_to_in_def] ) >>
   `(n1 o n2 -:[c1→c2]) @+ x = (id n2.dom -:[c1→c2]) @+ x` by metis_tac [] >>
-  qpat_assum `n1 o n2 -:[c1→c2] = X` (K ALL_TAC) >>
+  qpat_x_assum `n1 o n2 -:[c1→c2] = X` (K ALL_TAC) >>
   pop_assum mp_tac >> fsrw_tac [][] >> strip_tac >>
   `n2.dom ∈ [c1→c2].obj` by(
     fsrw_tac [][composable_nts_def,is_nat_trans_is_functor] >>
@@ -724,8 +724,8 @@ conj_tac >- (
   fsrw_tac [][full_def,faithful_def] >>
   map_every qx_gen_tac [`h`,`a`,`b`] >>
   strip_tac >>
-  qpat_assum `h.dom = postcomp_functor c g@@a` mp_tac >>
-  qpat_assum `h.cod = postcomp_functor c g@@b` mp_tac >>
+  qpat_x_assum `h.dom = postcomp_functor c g@@a` mp_tac >>
+  qpat_x_assum `h.cod = postcomp_functor c g@@b` mp_tac >>
   fsrw_tac [][] >> ntac 2 strip_tac >>
   fsrw_tac [][GSYM RIGHT_EXISTS_IMP_THM,SKOLEM_THM] >>
   qexists_tac `mk_nt <| dom := a; cod := b; map := λx. f (h@+x) (a@@x) (b@@x) |>` >>
@@ -787,14 +787,14 @@ conj_tac >- (
     `g##g1 = h@+y` by metis_tac [] >>
     `g##f2 = h@+x` by metis_tac [] >>
     `g##f1 = h.dom##k` by (
-      qpat_assum `k :- x → y -:(g ◎ a).dom` mp_tac >>
+      qpat_x_assum `k :- x → y -:(g ◎ a).dom` mp_tac >>
       unabbrev_all_tac >> fsrw_tac [][maps_to_in_def]  ) >>
     `g##g2 = h.cod##k` by (
-      qpat_assum `k :- x → y -:(g ◎ a).dom` mp_tac >>
+      qpat_x_assum `k :- x → y -:(g ◎ a).dom` mp_tac >>
       unabbrev_all_tac >> fsrw_tac [][maps_to_in_def]  ) >>
     fsrw_tac [][] >>
     match_mp_tac naturality >>
-    qpat_assum `k :- x → y -:(g ◎ a).dom` mp_tac >>
+    qpat_x_assum `k :- x → y -:(g ◎ a).dom` mp_tac >>
     fsrw_tac [][] ) >>
   fsrw_tac [][] >>
   match_mp_tac nt_eq_thm >>
@@ -817,7 +817,7 @@ qx_gen_tac `x` >> strip_tac >>
 first_x_assum match_mp_tac >>
 map_every qexists_tac [`n1.dom@@x`,`n1.cod@@x`] >>
 fsrw_tac [][nt_at_maps_to] >>
-qpat_assum `postcomp_functor c g##n1 = Y` mp_tac >>
+qpat_x_assum `postcomp_functor c g##n1 = Y` mp_tac >>
 fsrw_tac [][] >> strip_tac >>
 metis_tac [functor_nt_at,is_nat_trans_def,nat_trans_axioms_def]);
 
@@ -1138,7 +1138,7 @@ gen_tac >> strip_tac >> EQ_TAC >> strip_tac >- (
     pop_assum mp_tac >>
     `iso f.dom (n1 @+ a)` by (
       metis_tac [iso_def,functor_cat_iso_pair,maps_to_obj] ) >>
-    qpat_assum `k2 o X -:f.dom = k1 o Y -:f.dom` (K ALL_TAC) >>
+    qpat_x_assum `k2 o X -:f.dom = k1 o Y -:f.dom` (K ALL_TAC) >>
     `(n1 @+ a)⁻¹-:f.dom ≈> n1 @+ a -:f.dom` by (
       metis_tac [inv_composable,inv_idem] ) >>
     `a ∈ f.dom.obj` by metis_tac [maps_to_obj] >>
@@ -1167,7 +1167,7 @@ gen_tac >> strip_tac >> EQ_TAC >> strip_tac >- (
     pop_assum mp_tac >>
     `iso g.dom (n2 @+ a)` by (
       metis_tac [iso_def,functor_cat_iso_pair,maps_to_obj] ) >>
-    qpat_assum `k2 o X -:g.dom = k1 o Y -:g.dom` (K ALL_TAC) >>
+    qpat_x_assum `k2 o X -:g.dom = k1 o Y -:g.dom` (K ALL_TAC) >>
     `(n2 @+ a)⁻¹-:g.dom ≈> n2 @+ a -:g.dom` by (
       metis_tac [inv_composable,inv_idem] ) >>
     `a ∈ g.dom.obj` by metis_tac [maps_to_obj] >>
@@ -1221,7 +1221,7 @@ gen_tac >> strip_tac >> EQ_TAC >> strip_tac >- (
     `((n1 @+ b)⁻¹-:f.dom) o (n1 @+ b o g##(f##w) -:f.dom) -:f.dom =
      ((n1 @+ b)⁻¹-:f.dom) o (w o n1 @+ a -:f.dom) -:f.dom` by srw_tac [][] >>
     pop_assum mp_tac >>
-    qpat_assum `n1 @+ b o X -:f.dom = Y` (K ALL_TAC) >>
+    qpat_x_assum `n1 @+ b o X -:f.dom = Y` (K ALL_TAC) >>
     `g##(f##w) ≈> n1 @+ b -:f.dom` by (
       match_mp_tac maps_to_composable >>
       map_every qexists_tac [`g@@(f@@a)`,`g@@(f@@b)`,`b`] >>

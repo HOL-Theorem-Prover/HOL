@@ -305,7 +305,7 @@ val mw_ok_IMP_EXISTS_n2mw = prove(
        MATCH_MP (DECIDE ``0<n ==> ~(n = 0)``) ZERO_LT_dimword]
   \\ Cases_on `n = 0` \\ ASM_SIMP_TAC std_ss []
   \\ `xs = []` by METIS_TAC [n2mw_def] \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `h <> 0w` MP_TAC \\ Q.SPEC_TAC (`h`,`h`) \\ Cases
+  \\ Q.PAT_X_ASSUM `h <> 0w` MP_TAC \\ Q.SPEC_TAC (`h`,`h`) \\ Cases
   \\ FULL_SIMP_TAC std_ss [n2w_11,ZERO_LT_dimword,w2n_n2w]);
 
 val IMP_EQ_n2mw = prove(
@@ -517,10 +517,10 @@ val mw_add_thm = prove(
   Induct \\ Cases_on `ys` \\ SIMP_TAC std_ss
     [mw_add_def,LENGTH,dimwords_thm,mw2n_def,DECIDE ``~(SUC n = 0)``,HD,TL]
   \\ BasicProvers.LET_ELIM_TAC
-  \\ Q.PAT_ASSUM `bb = (zs,d)` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `bb = (zs,d)` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [mw2n_def]
   \\ IMP_RES_TAC single_add_thm
-  \\ Q.PAT_ASSUM `!ys. bbb` (MP_TAC o RW [] o Q.SPECL [`t`,`c1`])
+  \\ Q.PAT_X_ASSUM `!ys. bbb` (MP_TAC o RW [] o Q.SPECL [`t`,`c1`])
   \\ ASM_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [GSYM ADD_ASSOC,GSYM LEFT_ADD_DISTRIB,GSYM MULT_ASSOC]
   \\ DECIDE_TAC);
@@ -545,9 +545,9 @@ val mw_sub_lemma = prove(
   Induct \\ Cases_on `ys` \\ SIMP_TAC std_ss
     [mw_sub_def,LENGTH,dimwords_thm,mw2n_def,DECIDE ``~(SUC n = 0)``,HD,TL]
   \\ BasicProvers.LET_ELIM_TAC \\ IMP_RES_TAC single_sub_thm
-  \\ Q.PAT_ASSUM `bb = (zs,d)` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `bb = (zs,d)` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [mw2n_def]
-  \\ Q.PAT_ASSUM `!ys. bbb` (MP_TAC o RW [] o Q.SPECL [`t`,`c1`])
+  \\ Q.PAT_X_ASSUM `!ys. bbb` (MP_TAC o RW [] o Q.SPECL [`t`,`c1`])
   \\ ASM_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ SIMP_TAC std_ss [DECIDE ``z+d*zs+(h+d*t)+d*kk*c2 = z+h+d*zs+d*t+d*kk*c2:num``]
   \\ FULL_SIMP_TAC std_ss [GSYM ADD_ASSOC,GSYM LEFT_ADD_DISTRIB,GSYM MULT_ASSOC]
@@ -612,7 +612,7 @@ val mw_ok_addv = prove(
   \\ REV (Cases_on `xs`) \\ FULL_SIMP_TAC std_ss [mw_addv_def,SPLIT_LET2]
   \\ SIMP_TAC std_ss [LET_DEF,NOT_CONS_NIL]
   \\ Q.ABBREV_TAC `h2 = FST (if ys = [] then (0w,[]) else (HD ys,TL ys))`
-  \\ Q.PAT_ASSUM `h <> 0w` MP_TAC \\ Q.SPEC_TAC (`h`,`h`) \\ Cases
+  \\ Q.PAT_X_ASSUM `h <> 0w` MP_TAC \\ Q.SPEC_TAC (`h`,`h`) \\ Cases
   \\ ASM_SIMP_TAC std_ss [n2w_11,ZERO_LT_dimword]
   \\ `?z d. single_add (n2w n) h2 c = (z,d)` by METIS_TAC [PAIR]
   \\ IMP_RES_TAC single_add_thm
@@ -833,7 +833,7 @@ val single_mul_add_thm = prove(
   \\ IMP_RES_TAC mw_add_thm \\ FULL_SIMP_TAC bool_ss [LENGTH,dimwords_thm]
   \\ FULL_SIMP_TAC std_ss [mw2n_def,w2n_n2w,ZERO_LT_dimword,b2n_def]
   \\ `?z1 z2. zs = [z1;z2]` by
-   (Q.PAT_ASSUM `mw_add xss yss c = ppp` MP_TAC \\ FULL_SIMP_TAC std_ss [mw_add_def]
+   (Q.PAT_X_ASSUM `mw_add _ _ _ = _` MP_TAC \\ FULL_SIMP_TAC std_ss [mw_add_def]
     \\ BasicProvers.LET_ELIM_TAC \\ FULL_SIMP_TAC std_ss [] \\ METIS_TAC [])
   \\ FULL_SIMP_TAC std_ss [HD,TL,mw2n_def]
   \\ IMP_RES_TAC single_mul_thm \\ FULL_SIMP_TAC std_ss []
@@ -1020,7 +1020,7 @@ val LENGTH_LESS_IMP_mw2n_LESS = store_thm("LENGTH_LESS_IMP_mw2n_LESS",
   REPEAT STRIP_TAC \\ STRIP_ASSUME_TAC (Q.ISPEC `ys:'a word list` SNOC_CASES)
   \\ FULL_SIMP_TAC std_ss [LENGTH,mw_ok_def,NOT_SNOC_NIL,LAST_SNOC,LENGTH_SNOC]
   \\ SIMP_TAC std_ss [SNOC_APPEND,mw2n_APPEND,mw2n_def]
-  \\ Q.PAT_ASSUM `~(x = 0w)` MP_TAC \\ Q.SPEC_TAC (`x`,`x`)
+  \\ Q.PAT_X_ASSUM `~(x = 0w)` MP_TAC \\ Q.SPEC_TAC (`x`,`x`)
   \\ Cases \\ ASM_SIMP_TAC std_ss [n2w_11,w2n_n2w,ZERO_LT_dimword]
   \\ REPEAT STRIP_TAC \\ ASSUME_TAC (Q.ISPEC `xs:'a word list` mw2n_lt)
   \\ `dimwords (LENGTH xs) (:'a) <= dimwords (LENGTH l) (:'a)` by
@@ -1092,7 +1092,7 @@ val mw_cmp_alt_lemma = prove(
   \\ SIMP_TAC (srw_ss()) [mw_cmp_alt_def,HD,TL]
   THEN1 (STRIP_TAC \\ EVAL_TAC)
   \\ REPEAT STRIP_TAC \\ Cases_on `h = h'` \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `!xx.bb` (MP_TAC o Q.SPEC `t`)
+  \\ Q.PAT_X_ASSUM `!xx.bb` (MP_TAC o Q.SPEC `t`)
   \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ ASM_SIMP_TAC std_ss [Once mw_cmp_CONS]
   \\ Cases_on `mw_cmp xs t` \\ FULL_SIMP_TAC std_ss []
@@ -1528,10 +1528,10 @@ val d_lemma4 = store_thm ("d_lemma4",
   `2 < dimword(:'a)` by srw_tac[][] THEN1(
   Cases_on `n'` THEN1 DECIDE_TAC >>
   srw_tac[][EXP] >> METIS_TAC[LE_MULT_CANCEL_LBARE,ZERO_LT_EXP,DECIDE ``0 < 2 /\ 1 < 2``, LESS_LESS_EQ_TRANS] ) >>
-  qpat_assum `dimword(:'a) = xxx` (fn x => REWRITE_TAC [GSYM x] \\ (ASSUME_TAC x)) >>
+  qpat_x_assum `dimword(:'a) = xxx` (fn x => REWRITE_TAC [GSYM x] \\ (ASSUME_TAC x)) >>
   srw_tac[][LESS_MOD,DECIDE ``2 ** n * 2 = 2 * 2 ** n``,GSYM EXP] >>
   `SUC n < SUC n'` by ASSUME_TAC (Q.SPECL [`(2w:'a word)*(d:'a word)`,`x`] d_lemma3) THEN1(
-  qpat_assum `2 < xxx` (fn x => full_simp_tac (srw_ss())[FST] \\ ASSUME_TAC x) >>
+  qpat_x_assum `2 < xxx` (fn x => full_simp_tac (srw_ss())[FST] \\ ASSUME_TAC x) >>
   qsuff_tac `w2n (calc_d (2w * d, 1w)) < dimword(:'a) DIV 2` THEN1 (strip_tac >>
   `dimword(:'a) DIV 2 = 2 ** SUC n' DIV 2 ** 1` by srw_tac[][] >>
   `dimword(:'a) DIV 2 = 2 ** n'` by METIS_TAC[SUC_SUB1,EXP_SUB,DECIDE ``(0 < 2) /\ (1 <= SUC n')`` ] >>
@@ -1682,7 +1682,7 @@ val single_div_thm_bis = store_thm ( "single_div_thm_bis",
     (w2n q * w2n y + w2n r = w2n x1 * dimword(:'a) + w2n x2)``,
 
     REPEAT strip_tac >> IMP_RES_TAC single_div_lemma1 >>
-    qpat_assum `!xs. xxx` (fn x => (ASSUME_TAC (RW[Once ADD_COMM,Once MULT_COMM] (SPEC ``x2:'a word`` x)))) >>
+    qpat_x_assum `!xs. xxx` (fn x => (ASSUME_TAC (RW[Once ADD_COMM,Once MULT_COMM] (SPEC ``x2:'a word`` x)))) >>
     Cases_on `y = 0w` THEN1 full_simp_tac (srw_ss())[word_0_n2w] >>
     IMP_RES_TAC single_div_thm >> `0 < w2n y` by DECIDE_TAC >>
     METIS_TAC[DIVISION]);
@@ -1718,11 +1718,11 @@ Q.PAT_ABBREV_TAC `rxs = REVERSE (x1::x2::xs)` >>
 srw_tac[][Once mw_div_by_single_def]
 THENL [ALL_TAC,full_simp_tac (srw_ss())[],ALL_TAC]
 THEN1 (`(mw2n (REVERSE (r::xs)) = mw2n (mw_mul_by_single y (REVERSE (FRONT (mw_div_by_single (r::xs) y)))) + w2n (LAST (mw_div_by_single (r::xs) y)))` by METIS_TAC[] >>
-       REPEAT (qpat_assum `!q r. xxx` (K ALL_TAC)) >>
+       REPEAT (qpat_x_assum `!q r. xxx` (K ALL_TAC)) >>
        srw_tac[][Once mw_div_by_single_def] >>
        `w2n r < w2n y` by ALL_TAC
        THEN1 ( full_simp_tac (srw_ss())[single_div_def] >>
-             qpat_assum `xxx=r` (fn x => REWRITE_TAC[GSYM x]) >>
+             qpat_x_assum `xxx=r` (fn x => REWRITE_TAC[GSYM x]) >>
              srw_tac[][w2n_n2w] >>
              METIS_TAC[LESS_EQ_LESS_TRANS,MOD_LESS_EQ,MOD_LESS,ZERO_LT_dimword]) >>
        `mw_div_by_single (r::xs) y <> []` by
@@ -1730,7 +1730,7 @@ THEN1 (`(mw2n (REVERSE (r::xs)) = mw2n (mw_mul_by_single y (REVERSE (FRONT (mw_d
        srw_tac[][LAST_DEF,FRONT_DEF,mw2n_msf,mw_mul_by_single_lemma] >>
        `mw2n rxs = mw2n (REVERSE (r::xs)) + w2n q * w2n y * dimwords (LENGTH xs) (:'a)` by ALL_TAC
        THEN1(markerLib.UNABBREV_TAC "rxs" >>
-             qpat_assum `mw2n (REVERSE xx) = yy` (K ALL_TAC) >>
+             qpat_x_assum `mw2n (REVERSE xx) = yy` (K ALL_TAC) >>
              lrw[mw2n_msf] >>
              REWRITE_TAC[dimwords_dimword] >>
              REWRITE_TAC[GSYM ADD1, EXP,
@@ -1742,10 +1742,10 @@ THEN1 (`(mw2n (REVERSE (r::xs)) = mw2n (mw_mul_by_single y (REVERSE (FRONT (mw_d
        METIS_TAC[mw_div_by_single_LENGTH,DECIDE ``0 < SUC n``,NOT_NIL_EQ_LENGTH_NOT_0,rich_listTheory.LENGTH_BUTLAST,prim_recTheory.PRE] >>
        RW_TAC arith_ss[]) >>
 `mw2n (REVERSE (r::x2::xs)) = mw2n (mw_mul_by_single y (REVERSE (FRONT (mw_div_by_single (r::x2::xs) y)))) + w2n (LAST (mw_div_by_single (r::x2::xs) y))` by METIS_TAC[] >>
-REPEAT (qpat_assum `!q r. xxx` (K ALL_TAC)) >>
+REPEAT (qpat_x_assum `!q r. xxx` (K ALL_TAC)) >>
 `mw2n rxs = mw2n (REVERSE (r::x2::xs)) + w2n q * w2n y * dimwords (SUC(LENGTH xs)) (:'a)` by ALL_TAC
 THEN1 (markerLib.UNABBREV_TAC "rxs" >>
-       qpat_assum `mw2n (REVERSE xx) = yy` (K ALL_TAC) >>
+       qpat_x_assum `mw2n (REVERSE xx) = yy` (K ALL_TAC) >>
        lrw[mw2n_msf,GSYM ADD1,EXP] >>
        `w2n x1 = w2n r + w2n q * w2n y` by ALL_TAC
        THEN1 (IMP_RES_TAC single_div_thm_bis >> ASSUME_TAC word_0_n2w >>
@@ -1755,7 +1755,7 @@ RW_TAC arith_ss[]) >>
 POP_ASSUM (fn x => REWRITE_TAC[x]) >>
 `w2n r < w2n y` by ALL_TAC
 THEN1 ( full_simp_tac (srw_ss())[single_div_def] >>
-      qpat_assum `xxx=r` (fn x => REWRITE_TAC[GSYM x]) >>
+      qpat_x_assum `xxx=r` (fn x => REWRITE_TAC[GSYM x]) >>
       srw_tac[][w2n_n2w] >>
       METIS_TAC[LESS_EQ_LESS_TRANS,MOD_LESS_EQ,MOD_LESS,ZERO_LT_dimword]) >>
 `mw_div_by_single (r::x2::xs) y <> []` by
@@ -1817,7 +1817,7 @@ val mw_simple_div_lemma = prove(
   \\ `?qs r1 c1. mw_simple_div r' xs y = (qs,r1,c1)` by METIS_TAC [PAIR]
   \\ ASM_REWRITE_TAC [] \\ SIMP_TAC std_ss [] \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
   \\ SIMP_TAC std_ss [SNOC,CONS_11] \\ STRIP_TAC \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
-  \\ Q.PAT_ASSUM `!x.bb` MATCH_MP_TAC
+  \\ Q.PAT_X_ASSUM `!x.bb` MATCH_MP_TAC
   \\ FULL_SIMP_TAC std_ss [WORD_LO]
   \\ `y <> 0w` by (Cases_on `y` \\ FULL_SIMP_TAC (srw_ss()) [] \\ DECIDE_TAC)
   \\ `(w2n x * dimword (:'a) + w2n h) DIV w2n y < dimword (:'a)` by ALL_TAC THEN1
@@ -1842,7 +1842,7 @@ val mw_simple_div_thm = store_thm("mw_simple_div_thm",
   REPEAT STRIP_TAC \\ IMP_RES_TAC mw_simple_div_lemma
   \\ FULL_SIMP_TAC (srw_ss()) [WORD_LO]
   \\ IMP_RES_TAC mw_div_by_single_thm_bis
-  \\ REPEAT (Q.PAT_ASSUM `!xs.bbb` (MP_TAC o Q.SPEC `0w::xs`))
+  \\ REPEAT (Q.PAT_X_ASSUM `!xs.bbb` (MP_TAC o Q.SPEC `0w::xs`))
   \\ FULL_SIMP_TAC (srw_ss()) []
   \\ FULL_SIMP_TAC std_ss [GSYM SNOC_APPEND,FRONT_SNOC,mw2n_SNOC_0]);
 
@@ -1913,7 +1913,7 @@ val mw_div_range2 = store_thm( "mw_div_range2",
     Cases_on `V <= U`
     THEN1( (MATCH_MP_TAC o (fn (x,y) => y)) (EQ_IMP_RULE MONO_NOT_EQ) >>
            strip_tac >>
-           qpat_assum `~x` (ASSUME_TAC o (fn x => (MP ((fn (x,y)=>x) (EQ_IMP_RULE (Q.SPECL [`q'`,`q+2`] NOT_LESS_EQUAL)))  x))) >>
+           qpat_x_assum `~x` (ASSUME_TAC o (fn x => (MP ((fn (x,y)=>x) (EQ_IMP_RULE (Q.SPECL [`q'`,`q+2`] NOT_LESS_EQUAL)))  x))) >>
            Cases_on `LENGTH us = LENGTH vs`
            THEN1( Cases_on `q < dimword(:'a)`
                   THEN1( srw_tac[][] >> REWRITE_TAC [NOT_LESS_EQUAL] >>
@@ -1926,13 +1926,13 @@ val mw_div_range2 = store_thm( "mw_div_range2",
                                 `b ** (LENGTH vs ) <= V` by (lrw[Abbr`V`,mw2n_msf,LENGTH_REVERSE,dimwords_dimword] >> METIS_TAC[LE_MULT_CANCEL_LBARE,LESS_EQ_ADD,ADD_COMM,LESS_EQ_TRANS]) >>
                                 Cases_on `V = b ** (LENGTH vs)`
                                 THEN1( `V = mw2n ((REVERSE vs)++[v1])` by full_simp_tac (srw_ss())[] >>
-                                       qpat_assum `V = mw2n xxx` (fn x => (ASSUME_TAC (RW[mw2n_msf,LENGTH_REVERSE,dimwords_dimword] x))) >>
+                                       qpat_x_assum `V = mw2n xxx` (fn x => (ASSUME_TAC (RW[mw2n_msf,LENGTH_REVERSE,dimwords_dimword] x))) >>
                                        `b ** LENGTH vs * w2n v1 <= V` by METIS_TAC[ADD_COMM,LESS_EQ_ADD] >>
                                        `0 < b ** LENGTH vs` by METIS_TAC[ZERO_LT_EXP,Abbr`b`,ZERO_LT_dimword] >>
                                        `a <= 1` by METIS_TAC[Abbr`a`,LE_MULT_CANCEL_RBARE,NOT_ZERO_LT_ZERO] >>
                                        `a = 1` by DECIDE_TAC  >>
                                        `U = mw2n (REVERSE us) + V*(w2n u2) + V*b*(w2n u1)` by full_simp_tac (srw_ss())[MULT_COMM,Abbr`b`,Abbr`U`,LENGTH_REVERSE,mw2n_msf,dimwords_dimword,GSYM ADD1,EXP] >>
-                                       qpat_assum `U = xxx` (fn x => ASSUME_TAC(RW[GSYM MULT_ASSOC,GSYM ADD_ASSOC,GSYM LEFT_ADD_DISTRIB] x)) >>
+                                       qpat_x_assum `U = xxx` (fn x => ASSUME_TAC(RW[GSYM MULT_ASSOC,GSYM ADD_ASSOC,GSYM LEFT_ADD_DISTRIB] x)) >>
                                        `mw2n (REVERSE us) < V` by METIS_TAC[mw2n_lt,dimwords_dimword,Abbr`b`,LENGTH_REVERSE] >>
                                        `q = w2n u1 * b + w2n u2` by METIS_TAC[RIGHT_ADD_DISTRIB,DIV_MULT,ADD_COMM,MULT_COMM] >>
                                        `q' = MIN (b-1) q` by full_simp_tac (srw_ss())[MIN_COMM] >>
@@ -1940,7 +1940,7 @@ val mw_div_range2 = store_thm( "mw_div_range2",
                                        `q' = q` by full_simp_tac (srw_ss())[MIN_DEF] >>
                                        RW_TAC arith_ss [] ) >>
                                 `b ** (LENGTH vs) < V` by DECIDE_TAC >>
-                                qpat_assum `xxx <> yyy` (fn x => ALL_TAC) >>
+                                qpat_x_assum `xxx <> yyy` (fn x => ALL_TAC) >>
                                 `2 * V * (V - b ** (LENGTH vs)) <= U * b ** (LENGTH vs)` by ALL_TAC
                                 THEN1( Q.PAT_ABBREV_TAC`l = b ** LENGTH vs` >>
                                        `l < V` by METIS_TAC[LE_MULT_CANCEL_LBARE,LESS_EQ_LESS_TRANS] >>
@@ -1948,7 +1948,7 @@ val mw_div_range2 = store_thm( "mw_div_range2",
                                        `0 < l` by METIS_TAC[ZERO_LT_dimword,ZERO_LT_EXP] >>
                                        `0 < q*V` by METIS_TAC[DIV_GT0,ZERO_LESS_MULT] >>
                                        `U - V < q * V + V - V` by METIS_TAC[DIV_thm4,DIV_thm3,LESS_MONO_ADD,SUB_ADD,ADD_COMM,LT_SUB_RCANCEL,ADD_0] >>
-                                       qpat_assum `U - V < xxx` (fn x => ASSUME_TAC ( METIS_PROVE[x,ADD_SUB] ``U-V < q*V``)) >>
+                                       qpat_x_assum `U - V < xxx` (fn x => ASSUME_TAC ( METIS_PROVE[x,ADD_SUB] ``U-V < q*V``)) >>
                                        `q' <= (w2n u1 * b + w2n u2) DIV a` by lrw[Abbr`a`,Abbr`q'`] >>
                                        `q' * (a * l) <= (w2n u1 * b + w2n u2) * l` by METIS_TAC[MULT_ASSOC,Abbr`a`,DIV_thm3,LESS_EQ_TRANS,LESS_MONO_MULT,Abbr`q'`] >>
                                        `U = (w2n u1 * b + w2n u2) * l + mw2n (REVERSE us)` by lrw[Abbr`U`,Abbr`b`,Abbr`l`,mw2n_msf,dimwords_dimword,EXP,GSYM ADD1] >>
@@ -1962,8 +1962,8 @@ val mw_div_range2 = store_thm( "mw_div_range2",
                                                      `X < a * l` by full_simp_tac (srw_ss())[Abbr`X`,ADD_SUB,LT_SUB_RCANCEL,LT_ADDL,ADD_COMM] >>
                                                      METIS_TAC[LT_MULT_RCANCEL,MULT_COMM,LESS_LESS_EQ_TRANS]) >>
                                               DECIDE_TAC) >>
-                                       qpat_assum `q' <= xxx` (fn x => ALL_TAC)>>
-                                       REPEAT (qpat_assum `q' * (a * l) <= xxx` (fn x => ALL_TAC)) >>
+                                       qpat_x_assum `q' <= xxx` (fn x => ALL_TAC)>>
+                                       REPEAT (qpat_x_assum `q' * (a * l) <= xxx` (fn x => ALL_TAC)) >>
                                        `3 * (X * V) <= q' * (X * V) - q * (X * V) /\
                                        (q' * (X * V) < U * V) /\
                                        ((U - V) * X < q * (V * X))`
@@ -1979,31 +1979,31 @@ val mw_div_range2 = store_thm( "mw_div_range2",
                                        `V*l <= U*l` by METIS_TAC[LESS_MONO_MULT] >>
                                        `3*((V-l)*V) <= (V*V + U*l) - V*l` by METIS_TAC[ADD_COMM,LESS_MONO_MULT,LESS_EQ_ADD_SUB] >>
                                        `3*((V-l)*V) <= U*l + V*(V-l)` by METIS_TAC[ADD_COMM,LEFT_SUB_DISTRIB,LESS_EQ_ADD_SUB,SUB_LESS_0,LESS_IMP_LESS_OR_EQ,LE_MULT_LCANCEL] >>
-                                       qpat_assum `xxx <= yyy + V*(V-l)` (fn x =>
+                                       qpat_x_assum `xxx <= yyy + V*(V-l)` (fn x =>
                                                    ASSUME_TAC (RW[DECIDE ``3 = 2 + 1``,RIGHT_ADD_DISTRIB,MULT_LEFT_1] x)) >>
                                        `(V-l)*V <= V*V` by METIS_TAC[SUB_LESS_EQ,LESS_MONO_MULT] >>
-                                       REPEAT (qpat_assum `3*xxx <= yyy` (fn x => ALL_TAC)) >>
+                                       REPEAT (qpat_x_assum `3*xxx <= yyy` (fn x => ALL_TAC)) >>
                                        METIS_TAC[MULT_COMM,MULT_ASSOC,LESS_EQ_MONO_ADD_EQ]) >>
                                `V = (a-1+1) * b ** LENGTH vs + mw2n(REVERSE vs)` by lrw[Abbr`V`,Abbr`a`,mw2n_msf,dimwords_dimword] >>
-                               qpat_assum `V = xxx` (fn x => (ASSUME_TAC (RW[RIGHT_ADD_DISTRIB,MULT_LEFT_1,Once (DECIDE ``a + b + c = a + c + b``)] x))) >>
+                               qpat_x_assum `V = xxx` (fn x => (ASSUME_TAC (RW[RIGHT_ADD_DISTRIB,MULT_LEFT_1,Once (DECIDE ``a + b + c = a + c + b``)] x))) >>
                                `(a - 1) * b ** (LENGTH vs) <= V - b ** (LENGTH vs)`  by METIS_TAC[ADD_SUB,LESS_EQ_ADD] >>
                                `2 * V * ((a-1) * b ** LENGTH vs) <= 2 * V * (V - b ** LENGTH vs)` by full_simp_tac (srw_ss())[] >>
                                `2 * V * ((a-1) * b ** LENGTH vs) <= U * b ** LENGTH vs` by METIS_TAC[LESS_EQ_TRANS] >>
-                               qpat_assum `xxx <= U * b ** LENGTH vs` (fn x => ASSUME_TAC (RW[MULT_ASSOC] x)) >>
+                               qpat_x_assum `xxx <= U * b ** LENGTH vs` (fn x => ASSUME_TAC (RW[MULT_ASSOC] x)) >>
                                `b ** LENGTH vs <> 0` by METIS_TAC[ZERO_LT_EXP,Abbr`b`,ZERO_LT_dimword,NOT_ZERO_LT_ZERO] >>
                                `2 * V * (a-1) <= U` by METIS_TAC[LE_MULT_RCANCEL] >>
-                               qpat_assum `2 * V * xxx <= U` (fn x => (ASSUME_TAC (RW[Once (DECIDE ``a * b * c = a * c * b``)] x))) >>
+                               qpat_x_assum `2 * V * xxx <= U` (fn x => (ASSUME_TAC (RW[Once (DECIDE ``a * b * c = a * c * b``)] x))) >>
                                `2 * (a-1) <= q` by METIS_TAC[Abbr`q`,DIV_LE_MONOTONE,MULT_DIV] >>
                                `q + 3 <= q'` by METIS_TAC [LESS_EQ, EVAL ``SUC 2``,ADD,ADD_COMM] >>
                                `q <= (q' - 3)` by METIS_TAC[LE_SUB_RCANCEL,ADD_SUB,ADD_COMM,LESS_EQ_ADD] >>
-                               qpat_assum ` q + 3 <= q'` (fn x => ALL_TAC) >>
+                               qpat_x_assum ` q + 3 <= q'` (fn x => ALL_TAC) >>
                                `!xx yy.MIN xx yy <= yy` by srw_tac[][] >>
-                               `q' <= b - 1` by METIS_TAC[] >> qpat_assum `!xx yy. zzz` (fn x => ALL_TAC) >>
+                               `q' <= b - 1` by METIS_TAC[] >> qpat_x_assum `!xx yy. zzz` (fn x => ALL_TAC) >>
                                `2 <= b - 2` by METIS_TAC[SUB_LESS_EQ,LESS_EQ_TRANS,LE_SUB_RCANCEL,DECIDE ``(3-1 = 2)/\(b - 1 - 1 = b - 2)``]  >>
                                `2 <= 2 * a` by METIS_TAC[LE_MULT_CANCEL_LBARE,Abbr`a`] >>
                                `q' - 3 <= b - 4` by  METIS_TAC[LE_SUB_RCANCEL,SUB_LESS_EQ,LESS_EQ_TRANS,DECIDE ``x - 1 - 3 = x - 4``] >>
                                `2 * a <= b - 2` by RW_TAC arith_ss [] >>
-                               qpat_assum `2*a <= xxx` (ASSUME_TAC o (fn x => (METIS_PROVE [DIV_LE_MONOTONE, DECIDE ``0<2``, MULT_COMM,MULT_DIV,x] ``a <= (b - 2) DIV 2``))) >>
+                               qpat_x_assum `2*a <= xxx` (ASSUME_TAC o (fn x => (METIS_PROVE [DIV_LE_MONOTONE, DECIDE ``0<2``, MULT_COMM,MULT_DIV,x] ``a <= (b - 2) DIV 2``))) >>
                                `2 <= b` by METIS_TAC[SUB_LESS_EQ, LESS_EQ_TRANS] >>
                                `a <= (b DIV 2 - 1)` by METIS_TAC[DECIDE ``0<2``,MULT_RIGHT_1,DIV_SUB] >>
                                RW_TAC arith_ss [Abbr`b`,ZERO_LT_dimword] ) >>
@@ -2012,11 +2012,11 @@ val mw_div_range2 = store_thm( "mw_div_range2",
                DECIDE_TAC)>>
        DECIDE_TAC)>>
   strip_tac >>
-  qpat_assum `~x` (fn x => ASSUME_TAC(MP ((fn (x,y) => x)(EQ_IMP_RULE (Q.SPECL [`V`,`U`] NOT_LESS_EQUAL))) x)) >>
+  qpat_x_assum `~x` (fn x => ASSUME_TAC(MP ((fn (x,y) => x)(EQ_IMP_RULE (Q.SPECL [`V`,`U`] NOT_LESS_EQUAL))) x)) >>
   `LENGTH ((REVERSE us) ++ [u2]) = SUC(LENGTH us)` by lrw[] >>
   `U = mw2n (REVERSE us) + dimword(:'a) ** LENGTH us * w2n u2 + dimword(:'a) ** (LENGTH(REVERSE us ++ [u2])) * w2n u1` by full_simp_tac (srw_ss())[Abbr`U`,LENGTH_REVERSE,GSYM ADD1,mw2n_msf,dimwords_dimword] >>
   `U = mw2n (REVERSE us) + dimword(:'a) ** LENGTH us * w2n u2 + dimword(:'a) ** (LENGTH us) * dimword(:'a) * w2n u1` by full_simp_tac (srw_ss())[EXP,MULT_COMM] >>
-  qpat_assum `U = xxx` (fn x => ASSUME_TAC(RW[GSYM MULT_ASSOC,GSYM ADD_ASSOC,GSYM LEFT_ADD_DISTRIB] x)) >>
+  qpat_x_assum `U = xxx` (fn x => ASSUME_TAC(RW[GSYM MULT_ASSOC,GSYM ADD_ASSOC,GSYM LEFT_ADD_DISTRIB] x)) >>
   `V = mw2n (REVERSE vs) + dimword(:'a) ** LENGTH vs * w2n v1` by full_simp_tac (srw_ss())[mw2n_msf,dimwords_dimword] >>
   `V < dimword(:'a) ** LENGTH vs * SUC (w2n v1)` by METIS_TAC[mw2n_lt,LENGTH_REVERSE,LESS_MONO_ADD,MULT,ADD_COMM,MULT_COMM,dimwords_dimword] >>
   `U < dimword(:'a) ** SUC(LENGTH us)` by METIS_TAC[mw2n_lt,LESS_TRANS,LENGTH_REVERSE,LENGTH,dimwords_dimword]>>
@@ -2057,7 +2057,7 @@ val mw_div_test_lemma2 = store_thm( "mw_div_test_lemma2",
            THEN1( strip_tac >>
                   Cases_on `mw_cmp [u2; u1] (FST (mw_add [FST s; SND s] [0w; 1w] F)) = SOME T` >>
                   METIS_TAC[Abbr`q2`]) >>
-           qpat_assum `!q'. xxx` (K ALL_TAC) >>
+           qpat_x_assum `!q'. xxx` (K ALL_TAC) >>
            qsuff_tac `w2n u1 * dimword (:'a) * dimword (:'a) + w2n u2 * dimword (:'a) + w2n u3 < w2n q * (w2n v1 * dimword (:'a) + w2n v2)`
            THEN1( strip_tac >>
                   Cases_on `mw2n (REVERSE u) DIV mw2n (REVERSE v) = 0` THEN1 DECIDE_TAC >>
@@ -2080,13 +2080,13 @@ val mw_div_test_lemma2 = store_thm( "mw_div_test_lemma2",
                    Q.PAT_ABBREV_TAC`X1 = w2n v1 * dimword(:'a) + w2n v2` >>
                    Q.PAT_ABBREV_TAC`X2 = dimword(:'a) ** LENGTH vs` >>
                    `U DIV (X1 * X2) = U DIV X2 DIV X1` by METIS_TAC[MULT_COMM,DIV_DIV_DIV_MULT] >>
-                   qpat_assum `U DIV xxx = yyy` (fn x => REWRITE_TAC[x]) >>
+                   qpat_x_assum `U DIV xxx = yyy` (fn x => REWRITE_TAC[x]) >>
                    srw_tac[][Abbr`U`,Abbr`u`,mw2n_msf,dimwords_dimword,EXP, GSYM ADD1] >>
                    REWRITE_TAC[DECIDE ``u + x2 * u3 + b * x2 * u2 + b * (b * x2) * u1 = (u3 + u2*b + u1*b*b)*x2 + u``] >>
                    Q.PAT_ABBREV_TAC`A = (w2n u3 + w2n u2 * dimword (:'a) + w2n u1 * dimword (:'a) * dimword (:'a))` >>
                    Q.PAT_ABBREV_TAC`B = mw2n (REVERSE us)` >>
                    `(A * X2 + B) DIV X2 = A` by METIS_TAC[DIV_MULT,Abbr`X2`,Abbr`B`,mw2n_lt,dimwords_dimword,LENGTH_REVERSE] >>
-                   qpat_assum `xx DIV X2 = A` (fn x => REWRITE_TAC[x]) >>
+                   qpat_x_assum `xx DIV X2 = A` (fn x => REWRITE_TAC[x]) >>
                    `A < w2n q * X1` by METIS_TAC[ADD_COMM,ADD_ASSOC] >>
                    `A DIV X1 < w2n q` by METIS_TAC[DIV_thm2] >>
                    Cases_on `w2n q` THEN1 full_simp_tac (srw_ss())[] >>
@@ -2166,7 +2166,7 @@ val mw_div_test_thm = store_thm( "mw_div_test_thm",
     `dimword(:'a) - 1 < dimword(:'a)` by (Cases_on `dimword(:'a)` >> full_simp_tac (srw_ss())[ZERO_LT_dimword]) >>
     `w2n q <= dimword(:'a)-1` by METIS_TAC[w2n_lt,SUB_LESS_OR]  >>
     `w2n q>=Q` by METIS_TAC[Abbr`Q`,mw_div_range1,Abbr `U`, Abbr`V`] >>
-    qpat_assum `w2n q >= Q` (fn x => ASSUME_TAC(METIS_PROVE [x,GREATER_EQ] ``Q <= w2n q``)) >>
+    qpat_x_assum `w2n q >= Q` (fn x => ASSUME_TAC(METIS_PROVE [x,GREATER_EQ] ``Q <= w2n q``)) >>
     `Q <= w2n (mw_div_test q u1 u2 u3 v1 v2)` by METIS_TAC[mw_div_test_lemma2] >>
     `w2n q <= Q + 2` by METIS_TAC[Abbr`Q`,mw_div_range2,Abbr `U`, Abbr`V`] >>
     REV (Cases_on `w2n q = Q + 2`) THEN1
@@ -2179,7 +2179,7 @@ val mw_div_test_thm = store_thm( "mw_div_test_thm",
     THEN1 (Q.PAT_ABBREV_TAC`test = w2n (mw_div_test q u1 u2 u3 v1 v2)` >>
            `test <= w2n q - 1` by ALL_TAC
            THEN1( markerLib.UNABBREV_TAC "test" >>
-                  REPEAT (qpat_assum `w2n q = xxx` (K ALL_TAC)) >>
+                  REPEAT (qpat_x_assum `w2n q = xxx` (K ALL_TAC)) >>
                   srw_tac[][Once mw_div_test_def] >>
                   `w2n q2 = w2n q - 1` by (markerLib.UNABBREV_TAC "q2" >> lrw[]) >>
                   Cases_on `mw_cmp [u2; u1] (FST (mw_add [FST s; SND s] [0w; 1w] F)) = SOME T` >>
@@ -2191,7 +2191,7 @@ val mw_div_test_thm = store_thm( "mw_div_test_thm",
       (qsuff_tac `mw2n [u3;u2;u1] < mw2n (mw_mul_by_single q [v2;v1])`
        THEN1( `LENGTH [u3;u2;u1] = LENGTH (mw_mul_by_single q [v2;v1])` by METIS_TAC[mw_mul_by_single_lemma,LENGTH,ADD1] >>
        FULL_SIMP_TAC std_ss [mw_cmp_thm,prim_recTheory.LESS_NOT_EQ]) >>
-       REPEAT (qpat_assum `w2n q = xxx` (K ALL_TAC)) >>
+       REPEAT (qpat_x_assum `w2n q = xxx` (K ALL_TAC)) >>
        FULL_SIMP_TAC arith_ss[mw2n_def,mw_mul_by_single_lemma,LEFT_ADD_DISTRIB]) >>
     Q.PAT_ABBREV_TAC` b = dimword(:'a)` >>
     Q.PAT_ABBREV_TAC`V1 = w2n v1` >>
@@ -2226,7 +2226,7 @@ val mw_div_test_thm = store_thm( "mw_div_test_thm",
                     u + b**y * U3 + b * b**y * U2 + b * b * b**y * U1 + V``] >>
     markerLib.UNABBREV_TAC "b" >>
     markerLib.UNABBREV_TAC "U3" >> markerLib.UNABBREV_TAC "U2" >> markerLib.UNABBREV_TAC "U1" >>
-    qpat_assum `LENGTH us = xxx` (fn x => (ASSUME_TAC x \\ REWRITE_TAC[GSYM x])) >>
+    qpat_x_assum `LENGTH us = xxx` (fn x => (ASSUME_TAC x \\ REWRITE_TAC[GSYM x])) >>
     REWRITE_TAC[DECIDE ``b*b*b**c = (b:num)*(b*b**c)``,GSYM EXP, Once
     (METIS_PROVE [ADD1,LENGTH_APPEND,LENGTH_REVERSE,EVAL ``LENGTH [x]``]``SUC(LENGTH us) = LENGTH ((REVERSE us)++[u3])``),
     Once (METIS_PROVE [ADD1,LENGTH_APPEND,LENGTH_REVERSE,EVAL ``LENGTH [x]``] ``SUC(SUC(LENGTH us)) = LENGTH (((REVERSE us)++[u3])++[u2])``)] >>
@@ -2253,8 +2253,8 @@ REPEAT strip_tac >>
 srw_tac[][Once mw_div_loop_def] >>
 Cases_on `mw_cmp (REVERSE us) q2ys = SOME T` >>
 srw_tac[][]
-THEN1 (qpat_assum `! us q q2. xxx` (K ALL_TAC) >>
-       qpat_assum `! us. xxx` (fn x => ASSUME_TAC (Q.SPECL [`us`,`q`,`q2`,`q2ys`,`q3`,`q3ys`,`zs2'`] x)) >>
+THEN1 (qpat_x_assum `! us q q2. xxx` (K ALL_TAC) >>
+       qpat_x_assum `! us. xxx` (fn x => ASSUME_TAC (Q.SPECL [`us`,`q`,`q2`,`q2ys`,`q3`,`q3ys`,`zs2'`] x)) >>
        `LENGTH zs = SUC (LENGTH zs2')` by ALL_TAC
        THEN1(`LENGTH q3ys = LENGTH us` by METIS_TAC[Abbr`us`,Abbr`q3ys`,mw_mul_by_single_lemma,ADD1,LENGTH_TAKE,LESS_EQ,LENGTH_REVERSE] >>
              markerLib.UNABBREV_TAC "zs2'" >>
@@ -2266,8 +2266,8 @@ THEN1 (qpat_assum `! us q q2. xxx` (K ALL_TAC) >>
              RW_TAC arith_ss[]) >>
        Cases_on `LENGTH ys < LENGTH zs2'` THEN1 METIS_TAC[] >>
        srw_tac[][Once mw_div_loop_def]) >>
-qpat_assum `! us. xxx` (fn x => ASSUME_TAC (Q.SPECL [`us`,`q`,`q2`,`q2ys`,`zs2`] x)) >>
-qpat_assum `! us q q2. xxx` (K ALL_TAC) >>
+qpat_x_assum `! us. xxx` (fn x => ASSUME_TAC (Q.SPECL [`us`,`q`,`q2`,`q2ys`,`zs2`] x)) >>
+qpat_x_assum `! us q q2. xxx` (K ALL_TAC) >>
 `LENGTH zs = SUC (LENGTH zs2)` by ALL_TAC
 THEN1 (`LENGTH q2ys = LENGTH us` by METIS_TAC[Abbr`us`,Abbr`q2ys`,mw_mul_by_single_lemma,ADD1,LENGTH_TAKE,LESS_EQ,LENGTH_REVERSE] >>
        markerLib.UNABBREV_TAC "zs2" >>
@@ -2305,13 +2305,13 @@ val tac_div_loop_1 =
       `mw2n (REVERSE (BUTLASTN (LENGTH ys) (mw_div_loop zs2 ys))) *
       mw2n (REVERSE ys) + mw2n (REVERSE (LASTN (LENGTH ys) (mw_div_loop zs2 ys))) =
       mw2n (REVERSE zs2)` by METIS_TAC[] >>
-      qpat_assum ` xx /\ (us = us) /\ yyy ==> zz` (K ALL_TAC) >>
+      qpat_x_assum ` xx /\ (us = us) /\ yyy ==> zz` (K ALL_TAC) >>
       `LENGTH ys <= LENGTH (mw_div_loop zs2 ys) /\ (LENGTH (mw_div_loop zs2 ys) = LENGTH zs2)` by METIS_TAC[mw_div_loop_LENGTH,LESS_IMP_LESS_OR_EQ] >>
       srw_tac[][rich_listTheory.LASTN_CONS,rich_listTheory.BUTLASTN_CONS,mw2n_msf,dimwords_dimword,rich_listTheory.LENGTH_BUTLASTN] >>
       REWRITE_TAC[DECIDE ``(a + b)* c + d = a*c + d + b*c``] >>
-      qpat_assum `xxx = mw2n (REVERSE zs2)` (fn x => REWRITE_TAC[x]) >>
+      qpat_x_assum `xxx = mw2n (REVERSE zs2)` (fn x => REWRITE_TAC[x]) >>
       markerLib.UNABBREV_TAC "zs2" >> REWRITE_TAC[REVERSE_APPEND,REVERSE_REVERSE,mw2n_APPEND] >>
-      qpat_assum `mw2n (FRONT xx) = mw2n xx` (fn x => REWRITE_TAC[x]) >>
+      qpat_x_assum `mw2n (FRONT xx) = mw2n xx` (fn x => REWRITE_TAC[x]) >>
       REWRITE_TAC[LENGTH_REVERSE,LENGTH_APPEND,LENGTH_DROP] >>
       full_simp_tac (srw_ss())[rich_listTheory.LENGTH_BUTLAST] >>
       markerLib.UNABBREV_TAC "q3ys" >>
@@ -2365,10 +2365,10 @@ val mw_div_loop_thm = store_thm( "mw_div_loop_thm",
   Cases_on `mw_cmp (REVERSE us) q2ys = SOME T` >>
   srw_tac[][]
 
-THENL[qpat_assum `!us. xxx` (K ALL_TAC) >>
-      qpat_assum `!us. xxx` (fn x => ASSUME_TAC (Q.SPECL [`us`,`q`,`q2`,`q2ys`,`q3`,`q3ys`,`zs2'`] x)),
-      qpat_assum `!us. xxx` (fn x => ASSUME_TAC (Q.SPECL [`us`,`q`,`q2`,`q2ys`,`zs2`] x)) >>
-      qpat_assum `!us. xxx` (K ALL_TAC)]
+THENL[qpat_x_assum `!us. xxx` (K ALL_TAC) >>
+      qpat_x_assum `!us. xxx` (fn x => ASSUME_TAC (Q.SPECL [`us`,`q`,`q2`,`q2ys`,`q3`,`q3ys`,`zs2'`] x)),
+      qpat_x_assum `!us. xxx` (fn x => ASSUME_TAC (Q.SPECL [`us`,`q`,`q2`,`q2ys`,`zs2`] x)) >>
+      qpat_x_assum `!us. xxx` (K ALL_TAC)]
 THENL[ALL_TAC,markerLib.UNABBREV_TAC "q3" >> markerLib.UNABBREV_TAC "q2" >>
       Q.PAT_ABBREV_TAC `q3 = mw_div_test q (HD us) (HD (TL us)) (HD (TL (TL us))) (HD ys) (HD (TL ys))`] >>
 markerLib.UNABBREV_TAC "zs2" >>
@@ -2391,7 +2391,7 @@ Q.PAT_ABBREV_TAC `zs2 = (REVERSE (FRONT w) ++ DROP (SUC (LENGTH ys)) zs)` >>
 THENL[`(w2n q2 = mw2n (REVERSE us) DIV mw2n (REVERSE ys)) \/(w2n q2 = SUC (mw2n (REVERSE us) DIV mw2n (REVERSE ys)))` by tac_div_loop_test
        THEN1(`mw2n (REVERSE us) < mw2n (mw_mul_by_single q2 (REVERSE ys))` by FULL_SIMP_TAC std_ss[ADD1,LENGTH,LENGTH_REVERSE,mw_mul_by_single_lemma,mw_cmp_thm] >>
             POP_ASSUM (fn x => ASSUME_TAC (RW[mw_mul_by_single_lemma] x)) >>
-            qpat_assum `w2n q2 = xxx` (fn x => FULL_SIMP_TAC std_ss [x]) >>
+            qpat_x_assum `w2n q2 = xxx` (fn x => FULL_SIMP_TAC std_ss [x]) >>
             METIS_TAC[NOT_LESS,DIV_thm3]) >>
        METIS_TAC[SUC_SUB1,w2n_n2w,w2n_lt,LESS_MOD,DECIDE ``x < SUC x``,LESS_TRANS,Abbr`q3`],
       ALL_TAC,
@@ -2400,7 +2400,7 @@ THENL[`(w2n q2 = mw2n (REVERSE us) DIV mw2n (REVERSE ys)) \/(w2n q2 = SUC (mw2n 
       `mw2n q3ys <= mw2n (REVERSE us)` by FULL_SIMP_TAC std_ss[mw_cmp_thm,NOT_LESS] >>
       markerLib.UNABBREV_TAC "q3ys" >>
       POP_ASSUM (fn x => ASSUME_TAC (RW[mw_mul_by_single_lemma] x)) >>
-      qpat_assum `w2n q3 = xxx` (fn x => FULL_SIMP_TAC std_ss [x]) >>
+      qpat_x_assum `w2n q3 = xxx` (fn x => FULL_SIMP_TAC std_ss [x]) >>
       METIS_TAC[X_LE_DIV,NOT_LESS,DECIDE ``z < SUC z``],
       ALL_TAC] >>
 `w <> [] /\ (LENGTH w = SUC(LENGTH ys))` by METIS_TAC[mw_sub_lemma,PAIR,LENGTH_REVERSE,NOT_NIL_EQ_LENGTH_NOT_0] >>
@@ -2413,7 +2413,7 @@ THENL[`(w2n q2 = mw2n (REVERSE us) DIV mw2n (REVERSE ys)) \/(w2n q2 = SUC (mw2n 
 `mw2n w = mw2n (REVERSE us) - mw2n q3ys` by METIS_TAC[LENGTH_REVERSE,mw_sub_thm] >>
 `mw2n (FRONT w) = mw2n w` by(
        `mw2n w < dimword(:'a) ** LENGTH (FRONT w)` by (
-                qpat_assum `mw2n xx = mw2n yy - mw2n zz` (K ALL_TAC) >>
+                qpat_x_assum `mw2n xx = mw2n yy - mw2n zz` (K ALL_TAC) >>
                 srw_tac[][rich_listTheory.LENGTH_BUTLAST,prim_recTheory.PRE] >>
                 `mw2n w = mw2n (REVERSE us) - mw2n q3ys` by METIS_TAC[LENGTH_REVERSE,mw_sub_thm] >>
                 POP_ASSUM (fn x => REWRITE_TAC[x]) >>
@@ -2523,7 +2523,7 @@ srw_tac[][] >>
 THENL[`(w2n q2 = mw2n (REVERSE us) DIV mw2n (REVERSE ys)) \/(w2n q2 = SUC (mw2n (REVERSE us) DIV mw2n (REVERSE ys)))` by tac_div_loop_test
        THEN1(`mw2n (REVERSE us) < mw2n (mw_mul_by_single q2 (REVERSE ys))` by FULL_SIMP_TAC std_ss[ADD1,LENGTH,LENGTH_REVERSE,mw_mul_by_single_lemma,mw_cmp_thm] >>
             POP_ASSUM (fn x => ASSUME_TAC (RW[mw_mul_by_single_lemma] x)) >>
-            qpat_assum `w2n q2 = xxx` (fn x => FULL_SIMP_TAC std_ss [x]) >>
+            qpat_x_assum `w2n q2 = xxx` (fn x => FULL_SIMP_TAC std_ss [x]) >>
             METIS_TAC[NOT_LESS,DIV_thm3]) >>
        METIS_TAC[SUC_SUB1,w2n_n2w,w2n_lt,LESS_MOD,DECIDE ``x < SUC x``,LESS_TRANS,Abbr`q3`],
       ALL_TAC,
@@ -2532,7 +2532,7 @@ THENL[`(w2n q2 = mw2n (REVERSE us) DIV mw2n (REVERSE ys)) \/(w2n q2 = SUC (mw2n 
       `mw2n q3ys <= mw2n (REVERSE us)` by FULL_SIMP_TAC std_ss[mw_cmp_thm,NOT_LESS] >>
       markerLib.UNABBREV_TAC "q3ys" >>
       POP_ASSUM (fn x => ASSUME_TAC (RW[mw_mul_by_single_lemma] x)) >>
-      qpat_assum `w2n q3 = xxx` (fn x => FULL_SIMP_TAC std_ss [x]) >>
+      qpat_x_assum `w2n q3 = xxx` (fn x => FULL_SIMP_TAC std_ss [x]) >>
       METIS_TAC[X_LE_DIV,NOT_LESS,DECIDE ``z < SUC z``],
       ALL_TAC] >>
 `mw2n q3ys <= mw2n (REVERSE us)` by METIS_TAC[Abbr`q3ys`,mw_mul_by_single_lemma,DIV_thm3] >>
@@ -2540,7 +2540,7 @@ THENL[`(w2n q2 = mw2n (REVERSE us) DIV mw2n (REVERSE ys)) \/(w2n q2 = SUC (mw2n 
 `mw2n w = mw2n (REVERSE us) - mw2n q3ys` by METIS_TAC[Abbr`w`,LENGTH_REVERSE,mw_sub_thm] >>
 `mw2n (FRONT w) = mw2n w` by (
        `mw2n w < dimword(:'a) ** LENGTH (FRONT w)` by (
-                qpat_assum `mw2n xx = mw2n yy - mw2n zz` (fn x => (
+                qpat_x_assum `mw2n xx = mw2n yy - mw2n zz` (fn x => (
                     srw_tac[][rich_listTheory.LENGTH_BUTLAST,prim_recTheory.PRE] >>
                     ASSUME_TAC x)) >>
                 POP_ASSUM (fn x => REWRITE_TAC[x]) >>
@@ -2653,10 +2653,10 @@ val mw_div_aux_lemma = prove(
   \\ `(zs1 = []) \/ ?x l. zs1 = SNOC x l` by METIS_TAC [SNOC_CASES] THEN1
    (FULL_SIMP_TAC std_ss [APPEND,EVAL ``mw_div_aux [] zs2 ys``]
     \\ ONCE_REWRITE_TAC [mw_div_loop_def]
-    \\ Q.PAT_ASSUM `[] = qs` (ASSUME_TAC o GSYM)
+    \\ Q.PAT_X_ASSUM `[] = qs` (ASSUME_TAC o GSYM)
     \\ FULL_SIMP_TAC (srw_ss()) [APPEND])
   \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `mw_div_aux (SNOC x l) zs2 ys = (qs,rs)` MP_TAC
+  \\ Q.PAT_X_ASSUM `mw_div_aux (SNOC x l) zs2 ys = (qs,rs)` MP_TAC
   \\ SIMP_TAC std_ss [Once mw_div_aux_def,LAST_SNOC,FRONT_SNOC]
   \\ FULL_SIMP_TAC std_ss [REVERSE_APPEND,SNOC_APPEND,APPEND_ASSOC]
   \\ ONCE_REWRITE_TAC [mw_div_loop_alt]
@@ -2673,7 +2673,7 @@ val mw_div_aux_lemma = prove(
   \\ Q.ABBREV_TAC `q2 = mw_div_guess (REVERSE zs2 ++ [x]) (REVERSE ys)`
   \\ FULL_SIMP_TAC std_ss [REVERSE_APPEND,REVERSE_REVERSE,REVERSE_DEF,APPEND]
   \\ SIMP_TAC (srw_ss()) [Once LET_DEF]
-  \\ Q.PAT_ASSUM `exp = (xx,yy)` MP_TAC
+  \\ Q.PAT_X_ASSUM `exp = (xx,yy)` MP_TAC
   \\ SIMP_TAC (srw_ss()) [Once LET_DEF]
   \\ Q.ABBREV_TAC `qq = mw_div_adjust q2 (x::zs2) ys`
   \\ SIMP_TAC std_ss [LET_DEF]
@@ -2685,7 +2685,7 @@ val mw_div_aux_lemma = prove(
     \\ FULL_SIMP_TAC std_ss [rich_listTheory.DROP_LENGTH_APPEND,APPEND_ASSOC])
   \\ FULL_SIMP_TAC std_ss []
   \\ `?qs1 rs1. mw_div_aux l ts ys = (qs1,rs1)` by METIS_TAC [PAIR]
-  \\ Q.PAT_ASSUM `!xxx. bbb` (MP_TAC o Q.SPECL [`l`,`ts`,`ys`])
+  \\ Q.PAT_X_ASSUM `!xxx. bbb` (MP_TAC o Q.SPECL [`l`,`ts`,`ys`])
   \\ FULL_SIMP_TAC std_ss []
   \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
    (Q.UNABBREV_TAC `ts`
@@ -2746,7 +2746,7 @@ val LENGTH_mw_simple_div = store_thm("LENGTH_mw_simple_div",
   \\ FULL_SIMP_TAC std_ss []
   \\ `?qs1 r1 c1. mw_simple_div r' xs ys = (qs1,r1,c1)` by METIS_TAC [PAIR]
   \\ RES_TAC \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `q::qs1 = qs` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `q::qs1 = qs` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [LENGTH]);
 
 val mw_div_thm = store_thm("mw_div_thm",
@@ -2876,7 +2876,7 @@ val mw_div_thm = store_thm("mw_div_thm",
   \\ SIMP_TAC std_ss [rich_listTheory.BUTLASTN_LENGTH_APPEND]
   \\ SIMP_TAC std_ss [rich_listTheory.LASTN_LENGTH_APPEND]
   \\ FULL_SIMP_TAC std_ss [REVERSE_REVERSE] \\ STRIP_TAC
-  \\ Q.PAT_ASSUM `xxx = (res,mod,c)` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `xxx = (res,mod,c)` (ASSUME_TAC o GSYM)
   \\ `?n. w2n d = 2 ** n` by METIS_TAC [d_lemma4 |> SIMP_RULE std_ss []]
   \\ `?q2 r2 c2. mw_simple_div 0x0w (REVERSE rs1) d = (q2,r2,c2)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss []
@@ -2927,7 +2927,7 @@ val NEG_MOD_LEMMA = prove(
   \\ FULL_SIMP_TAC (srw_ss()) [integerTheory.INT_MUL_CALCULATE]
   \\ `0 < m` by DECIDE_TAC THEN1 (METIS_TAC [DIVISION,ADD_0])
   \\ IMP_RES_TAC DIVISION
-  \\ REPEAT (Q.PAT_ASSUM `!k. bbb` (MP_TAC o GSYM o Q.SPEC `n`))
+  \\ REPEAT (Q.PAT_X_ASSUM `!k. bbb` (MP_TAC o GSYM o Q.SPEC `n`))
   \\ REPEAT STRIP_TAC
   \\ SIMP_TAC std_ss [RIGHT_ADD_DISTRIB]
   \\ `n DIV m * m = n - n MOD m` by DECIDE_TAC
@@ -3039,13 +3039,13 @@ val mw_to_dec_def = tDefine "mw_to_dec" `
           let (result,c2) = mw_to_dec qs in
             (result ++ [r + 48w],c1 /\ c2)`
  (WF_REL_TAC `measure (mw2n)` \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM `(xx,yy) = zz` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `(xx,yy) = zz` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [GSYM NOT_LESS]
   \\ `0x0w <+ 10w` by FULL_SIMP_TAC (srw_ss()) [WORD_LO]
   \\ IMP_RES_TAC mw_simple_div_thm
   \\ FULL_SIMP_TAC (srw_ss()) [REVERSE_REVERSE,mw2n_mw_fix]
   \\ FULL_SIMP_TAC std_ss [DIV_LT_X,mw_fix_LENGTH_ZERO]
-  \\ Q.PAT_ASSUM `10 < dimword (:'a)` ASSUME_TAC
+  \\ Q.PAT_X_ASSUM `10 < dimword (:'a)` ASSUME_TAC
   \\ FULL_SIMP_TAC std_ss [DIV_EQ_X,NOT_LESS]
   \\ DECIDE_TAC);
 
@@ -3060,7 +3060,7 @@ val mw_to_dec_thm = store_thm("mw_to_dec_thm",
       10 < dimword (:'a) ==>
       (mw_to_dec xs = (MAP (n2w o ORD) (num_to_dec_string (mw2n xs)),T))``,
   STRIP_TAC \\ STRIP_ASSUME_TAC (SPEC_ALL k2mw_EXISTS)
-  \\ Q.PAT_ASSUM `xs = bb` (fn th => ONCE_REWRITE_TAC [th])
+  \\ Q.PAT_X_ASSUM `xs = bb` (fn th => ONCE_REWRITE_TAC [th])
   \\ POP_ASSUM MP_TAC \\ Q.SPEC_TAC (`xs`,`xs`)
   \\ completeInduct_on `k` \\ ONCE_REWRITE_TAC [mw_to_dec_def]
   \\ FULL_SIMP_TAC std_ss [GSYM NOT_LESS,LET_DEF] \\ STRIP_TAC
@@ -3070,7 +3070,7 @@ val mw_to_dec_thm = store_thm("mw_to_dec_thm",
   \\ IMP_RES_TAC mw_simple_div_thm
   \\ FULL_SIMP_TAC std_ss [REVERSE_REVERSE]
   \\ IMP_RES_TAC mw2n_k2mw \\ FULL_SIMP_TAC (srw_ss()) [w2n_n2w]
-  \\ Q.PAT_ASSUM `10 < dimword (:'a)` ASSUME_TAC \\ FULL_SIMP_TAC std_ss []
+  \\ Q.PAT_X_ASSUM `10 < dimword (:'a)` ASSUME_TAC \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [PULL_FORALL,AND_IMP_INTRO]
   \\ FULL_SIMP_TAC std_ss [mw_fix_LENGTH_ZERO]
   \\ ONCE_REWRITE_TAC [num_to_dec_string_unroll]
@@ -3081,7 +3081,7 @@ val mw_to_dec_thm = store_thm("mw_to_dec_thm",
    (EVAL_TAC \\ `48 + k < 256` by DECIDE_TAC
     \\ Cases_on `x2` \\ FULL_SIMP_TAC (srw_ss()) [SNOC,MAP,word_add_n2w]
     \\ FULL_SIMP_TAC std_ss [AC ADD_COMM ADD_ASSOC])
-  \\ Q.PAT_ASSUM `!m. bbb` (MP_TAC o Q.SPECL [`k DIV 10`,`(mw_fix (REVERSE x1))`])
+  \\ Q.PAT_X_ASSUM `!m. bbb` (MP_TAC o Q.SPECL [`k DIV 10`,`(mw_fix (REVERSE x1))`])
   \\ MATCH_MP_TAC (METIS_PROVE [] ``b /\ (c ==> d) ==> ((b ==> c) ==> d)``)
   \\ STRIP_TAC THEN1
    (FULL_SIMP_TAC std_ss [DIV_LT_X,NOT_LESS]

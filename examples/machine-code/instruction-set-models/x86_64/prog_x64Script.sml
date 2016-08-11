@@ -125,13 +125,13 @@ val x64_2set''_11 = prove(
   \\ `?r e t m i. s = (r,e,t,m,i)` by METIS_TAC [PAIR]
   \\ `?r2 e2 t2 m2 i2. s2 = (r2,e2,t2,m2,i2)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC bool_ss [PAIR_EQ,EXTENSION]
-  THEN1 (Q.PAT_ASSUM `!x.bb` (ASSUME_TAC o Q.GEN `xi` o Q.GEN `yi` o Q.SPEC `zReg xi yi`)
+  THEN1 (Q.PAT_X_ASSUM `!x.bb` (ASSUME_TAC o Q.GEN `xi` o Q.GEN `yi` o Q.SPEC `zReg xi yi`)
     \\ FULL_SIMP_TAC std_ss [IN_x64_2set] \\ METIS_TAC [])
-  THEN1 (Q.PAT_ASSUM `!x.bb` (ASSUME_TAC o Q.GEN `xi` o Q.GEN `yi` o Q.SPEC `zStatus xi yi`)
+  THEN1 (Q.PAT_X_ASSUM `!x.bb` (ASSUME_TAC o Q.GEN `xi` o Q.GEN `yi` o Q.SPEC `zStatus xi yi`)
     \\ FULL_SIMP_TAC std_ss [IN_x64_2set] \\ METIS_TAC [])
-  THEN1 (Q.PAT_ASSUM `!x.bb` (ASSUME_TAC o Q.GEN `ei` o Q.SPEC `zRIP ei`)
+  THEN1 (Q.PAT_X_ASSUM `!x.bb` (ASSUME_TAC o Q.GEN `ei` o Q.SPEC `zRIP ei`)
     \\ FULL_SIMP_TAC std_ss [IN_x64_2set] \\ METIS_TAC [])
-  THEN (Q.PAT_ASSUM `!x.bb` (ASSUME_TAC o Q.GEN `xi` o Q.GEN `yi` o Q.GEN `zi` o Q.SPEC `zMem xi yi zi`)
+  THEN (Q.PAT_X_ASSUM `!x.bb` (ASSUME_TAC o Q.GEN `xi` o Q.GEN `yi` o Q.GEN `zi` o Q.SPEC `zMem xi yi zi`)
     \\ FULL_SIMP_TAC std_ss [IN_x64_2set] \\ METIS_TAC []));
 
 val DELETE_x64_2set = prove(``
@@ -243,7 +243,7 @@ val X64_SPEC_SEMANTICS = store_thm("X64_SPEC_SEMANTICS",
    (FULL_SIMP_TAC bool_ss [SPLIT_x64_2set_EXISTS]
     \\ NTAC 4 (POP_ASSUM MP_TAC) \\ ASM_SIMP_TAC std_ss []
     \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!y.bbb` (MP_TAC o Q.SPECL [`y`,`state`,`s`,`seq`])
+    \\ Q.PAT_X_ASSUM `!y.bbb` (MP_TAC o Q.SPECL [`y`,`state`,`s`,`seq`])
     \\ FULL_SIMP_TAC std_ss [] \\ REVERSE STRIP_TAC THEN1 METIS_TAC []
     \\ Q.EXISTS_TAC `k` \\ DISJ1_TAC \\ Q.EXISTS_TAC `t2`
     \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [])
@@ -252,7 +252,7 @@ val X64_SPEC_SEMANTICS = store_thm("X64_SPEC_SEMANTICS",
     \\ FULL_SIMP_TAC bool_ss [SPLIT_x64_2set_EXISTS]
     \\ IMP_RES_TAC x64_2set''_11
     \\ FULL_SIMP_TAC std_ss [PULL_EXISTS]
-    \\ Q.PAT_ASSUM `!y.bbb` (MP_TAC o Q.SPECL [`s`,`\x. x = (x64_2set'' y t1)`,
+    \\ Q.PAT_X_ASSUM `!y.bbb` (MP_TAC o Q.SPECL [`s`,`\x. x = (x64_2set'' y t1)`,
           `t1`,`seq`,`y`]) \\ FULL_SIMP_TAC std_ss []
     \\ REVERSE (REPEAT STRIP_TAC) THEN1 (METIS_TAC [])
     \\ Q.LIST_EXISTS_TAC [`i`,`s''`]
@@ -273,7 +273,7 @@ val X64_SPEC_1_SEMANTICS = store_thm("X64_SPEC_1_SEMANTICS",
   \\ REPEAT STRIP_TAC \\ REVERSE EQ_TAC \\ REPEAT STRIP_TAC THEN1
    (FULL_SIMP_TAC bool_ss [SPLIT_x64_2set_EXISTS] \\ SRW_TAC [] []
     \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!y.bbb` (MP_TAC o Q.SPECL [`y`,`state`,`s`,`seq`])
+    \\ Q.PAT_X_ASSUM `!y.bbb` (MP_TAC o Q.SPECL [`y`,`state`,`s`,`seq`])
     \\ FULL_SIMP_TAC std_ss []
     \\ Cases_on `X64_STACK_FULL state` \\ FULL_SIMP_TAC std_ss []
     THEN1 (FULL_SIMP_TAC std_ss [rel_sequence_def] \\ METIS_TAC [])
@@ -286,7 +286,7 @@ val X64_SPEC_1_SEMANTICS = store_thm("X64_SPEC_1_SEMANTICS",
   \\ FULL_SIMP_TAC std_ss [PULL_EXISTS]
   THEN1 (METIS_TAC [])
   \\ SRW_TAC [] []
-  \\ Q.PAT_ASSUM `!y.bbb` (MP_TAC o Q.SPECL [`s`,`seq`,`\s. s = x64_2set'' y t1`])
+  \\ Q.PAT_X_ASSUM `!y.bbb` (MP_TAC o Q.SPECL [`s`,`seq`,`\s. s = x64_2set'' y t1`])
   \\ FULL_SIMP_TAC std_ss []
   \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
   THEN1 METIS_TAC [rel_sequence_def]
@@ -493,7 +493,7 @@ val IMP_X64_SPEC_LEMMA = prove(
   \\ FULL_SIMP_TAC std_ss [X64_NEXT_REL_def]
   \\ `seq 0 = s` by FULL_SIMP_TAC std_ss [rel_sequence_def]
   \\ FULL_SIMP_TAC std_ss [] \\ Q.EXISTS_TAC `0`
-  \\ Q.PAT_ASSUM `!y s t1. bbb` (MP_TAC o
+  \\ Q.PAT_X_ASSUM `!y s t1. bbb` (MP_TAC o
        RW [GSYM AND_IMP_INTRO] o Q.SPECL [`y`,`u`,`t1`])
   \\ IMP_RES_TAC X64_ICACHE_TRANS
   \\ FULL_SIMP_TAC std_ss []
@@ -616,7 +616,7 @@ val IMP_X64_SPEC_LEMMA2 = prove(
   \\ `?rs st ei ms. y = (rs,st,ei,ms)` by METIS_TAC [PAIR]
   \\ `?r e t m i. t1 = (r,e,t,m,i)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `!rs.bb` (STRIP_ASSUME_TAC o UNDISCH o Q.SPECL [`rs`,`st`,`ei`,`ms`,`z`,`r`,`e`,`t`,`m`,`i`])
+  \\ Q.PAT_X_ASSUM `!rs.bb` (STRIP_ASSUME_TAC o UNDISCH o Q.SPECL [`rs`,`st`,`ei`,`ms`,`z`,`r`,`e`,`t`,`m`,`i`])
   \\ ASM_SIMP_TAC std_ss []
   \\ Q.EXISTS_TAC `(X64_ICACHE_REVERT v (r,e,t,m,i))`
   \\ FULL_SIMP_TAC std_ss []
@@ -713,7 +713,7 @@ val zBYTE_MEMORY_ANY_INSERT = store_thm("zBYTE_MEMORY_ANY_INSERT",
     FULL_SIMP_TAC std_ss [zBYTE_MEMORY_ANY_def,SEP_CLAUSES]
     \\ FULL_SIMP_TAC std_ss [SEP_EXISTS,GSYM zBYTE_MEMORY_ANY_C_def]
     \\ `(y = (a =+ y a) y)` by SIMP_TAC std_ss [APPLY_UPDATE_THM,FUN_EQ_THM]
-    \\ Q.PAT_ASSUM `zBYTE_MEMORY_ANY_C e df ((a =+ w) g) y x` MP_TAC
+    \\ Q.PAT_X_ASSUM `zBYTE_MEMORY_ANY_C e df ((a =+ w) g) y x` MP_TAC
     \\ POP_ASSUM (fn th => ONCE_REWRITE_TAC [th])
     \\ ASM_SIMP_TAC std_ss [zBYTE_MEMORY_ANY_C_INSERT]
     \\ REPEAT STRIP_TAC
@@ -1094,7 +1094,7 @@ val IMP_X64_SPEC_LEMMA3 = prove(
   \\ `?rs st ei ms. y = (rs,st,ei,ms)` by METIS_TAC [PAIR]
   \\ `?r e t m i. t1 = (r,e,t,m,i)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `!rs.bb` (STRIP_ASSUME_TAC o UNDISCH o Q.SPECL [`rs`,`st`,`ei`,`ms`,`z`,`r`,`e`,`t`,`m`,`i`])
+  \\ Q.PAT_X_ASSUM `!rs.bb` (STRIP_ASSUME_TAC o UNDISCH o Q.SPECL [`rs`,`st`,`ei`,`ms`,`z`,`r`,`e`,`t`,`m`,`i`])
   \\ ASM_SIMP_TAC std_ss [X64_ICACHE_UPDATE_def]
   \\ `?r e t m i. v = (r,e,t,m,i)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss []
@@ -1356,7 +1356,7 @@ val zCODE_HEAP_SNOC = store_thm("zCODE_HEAP_SNOC",
   \\ MATCH_MP_TAC (SPEC_WEAKEN |> SIMP_RULE std_ss [PULL_FORALL,AND_IMP_INTRO])
   \\ Q.EXISTS_TAC `q * zBYTE_MEMORY_Z df ((a + n2w (LENGTH xs) =+ x) f)`
   \\ FULL_SIMP_TAC std_ss [] \\ STRIP_TAC THEN1
-   (FULL_SIMP_TAC std_ss [SPEC_MOVE_COND] \\ Q.PAT_ASSUM `!x.bb` MATCH_MP_TAC
+   (FULL_SIMP_TAC std_ss [SPEC_MOVE_COND] \\ Q.PAT_X_ASSUM `!x.bb` MATCH_MP_TAC
     \\ FULL_SIMP_TAC std_ss [SEP_ARRAY_APPEND,SEP_ARRAY_def]
     \\ FULL_SIMP_TAC std_ss [word_mul_n2w] \\ helperLib.SEP_R_TAC)
   \\ FULL_SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS_THM] \\ REPEAT STRIP_TAC
@@ -1390,7 +1390,7 @@ val zCODE_HEAP_UPDATE = store_thm("zCODE_HEAP_UPDATE",
   \\ MATCH_MP_TAC (SPEC_WEAKEN |> SIMP_RULE std_ss [PULL_FORALL,AND_IMP_INTRO])
   \\ Q.EXISTS_TAC `q * zBYTE_MEMORY_Z df ((a + n2w k =+ x) f)`
   \\ FULL_SIMP_TAC std_ss [] \\ STRIP_TAC THEN1
-   (FULL_SIMP_TAC std_ss [SPEC_MOVE_COND] \\ Q.PAT_ASSUM `!x.bb` MATCH_MP_TAC
+   (FULL_SIMP_TAC std_ss [SPEC_MOVE_COND] \\ Q.PAT_X_ASSUM `!x.bb` MATCH_MP_TAC
     \\ IMP_RES_TAC list_lemma
     \\ FULL_SIMP_TAC std_ss [SEP_ARRAY_APPEND,SEP_ARRAY_def,word_mul_n2w]
     \\ helperLib.SEP_R_TAC)
@@ -1484,7 +1484,7 @@ val SPEC_X64_RUN_CODE_HEAP_AUX = prove(
    (Cases_on `n` THEN1 FULL_SIMP_TAC (srw_ss()) []
     \\ DISJ2_TAC \\ FULL_SIMP_TAC std_ss [EL,TL,CONS_11]
     \\ FULL_SIMP_TAC std_ss [ADD1,word_arith_lemma1]
-    \\ Q.PAT_ASSUM `!x.bbb` (MP_TAC o Q.SPEC `x`)
+    \\ Q.PAT_X_ASSUM `!x.bbb` (MP_TAC o Q.SPEC `x`)
     \\ FULL_SIMP_TAC (srw_ss()) [] \\ METIS_TAC [])
   THEN1 (Q.EXISTS_TAC `0` \\ FULL_SIMP_TAC (srw_ss()) [])
   \\ `(?n. (x = (a + n2w n + 0x1w,[EL n xs])) /\ n < LENGTH xs)` by METIS_TAC []

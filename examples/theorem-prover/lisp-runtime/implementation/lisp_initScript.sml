@@ -313,14 +313,14 @@ val mc_full_init_thm = prove(
   \\ STRIP_TAC THEN1
    (REVERSE STRIP_TAC THEN1
      (FULL_SIMP_TAC std_ss [GSYM word_mul_n2w] \\ Q.SPEC_TAC (`(n2w sl):word64`,`slw`)
-      \\ Q.PAT_ASSUM `sp && 3w = 0w` MP_TAC \\ blastLib.BBLAST_TAC)
+      \\ Q.PAT_X_ASSUM `sp && 3w = 0w` MP_TAC \\ blastLib.BBLAST_TAC)
     \\ REVERSE STRIP_TAC THEN1
      (FULL_SIMP_TAC std_ss [SEP_EXISTS_THM,AC WORD_ADD_COMM WORD_ADD_ASSOC] \\ SEP_R_TAC)
     \\ IMP_RES_TAC expand_list
     \\ FULL_SIMP_TAC std_ss [ref_static_def,LET_DEF,SEP_EXISTS_THM,
          word64_3232_def,APPEND,word_arith_lemma1,STAR_ASSOC,SEP_CLAUSES,
          ref_static_APPEND]
-    \\ REPEAT (Q.PAT_ASSUM `(p_p * q_q) (fun2set (f_f,df_df))`
+    \\ REPEAT (Q.PAT_X_ASSUM `(p_p * q_q) (fun2set (f_f,df_df))`
        (STRIP_ASSUME_TAC o MATCH_MP fun2set_STAR_IMP))
     \\ IMP_RES_TAC one_fun2set_IMP \\ FULL_SIMP_TAC std_ss [DIFF_UNION]
     \\ FULL_SIMP_TAC std_ss [IN_DIFF])
@@ -387,7 +387,7 @@ val mc_full_init_thm = prove(
     \\ IMP_RES_TAC init_func_thm
     \\ Cases_on `sa1` \\ Cases_on `sa_len`
     \\ FULL_SIMP_TAC wstd_ss [word_add_n2w,w2n_n2w]
-    \\ Q.PAT_ASSUM `n' = xxx` ASSUME_TAC \\ FULL_SIMP_TAC std_ss []
+    \\ Q.PAT_X_ASSUM `n' = xxx` ASSUME_TAC \\ FULL_SIMP_TAC std_ss []
     \\ NO_TAC)
   THEN1
    (IMP_RES_TAC expand_list

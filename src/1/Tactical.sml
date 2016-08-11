@@ -512,36 +512,6 @@ fun PRED_ASSUM pred thfun (asl, w) =
       SOME (ob, asl') => thfun (ASSUME ob) (asl', w)
     | NONE => raise ERR "PRED_ASSUM" "No suitable assumption found."
 
-(*---------------------------------------------------------------------------
- * Pop the first assumption matching (higher-order match) the given term
- * and give it to a function (tactic).
- *---------------------------------------------------------------------------*)
-
-local
-   fun match_with_constants constants pat ob =
-      let
-         val (tm_inst, ty_inst) = ho_match_term [] empty_tmset pat ob
-         val bound_vars = map #redex tm_inst
-      in
-         null (intersect constants bound_vars)
-      end
-      handle HOL_ERR _ => false
-in
-   fun PAT_ASSUM pat thfun (asl, w) =
-     case List.filter (can (ho_match_term [] empty_tmset pat)) asl of
-        [] => raise ERR "PAT_ASSUM" "No assumptions match the given pattern"
-      | [x] => let
-                  val (ob, asl') = Lib.pluck (Lib.equal x) asl
-               in
-                  thfun (ASSUME ob) (asl', w)
-               end
-      |  _ => let
-                 val fvars = free_varsl (w :: asl)
-                 val (ob, asl') = Lib.pluck (match_with_constants fvars pat) asl
-              in
-                 thfun (ASSUME ob) (asl', w)
-              end
-end
 
 (*-- Tactical quantifiers -- Apply a list of tactics in succession. -------*)
 
@@ -623,6 +593,46 @@ in
    val first_x_assum = FIRST_X_ASSUM
    val last_x_assum = LAST_X_ASSUM
 end
+
+(*---------------------------------------------------------------------------
+ * Pop the first assumption matching (higher-order match) the given term
+ * and give it to a function (tactic).
+ *---------------------------------------------------------------------------*)
+
+local
+  fun can_match_with_constants constants pat ob =
+    let
+      val (tm_inst, _) = ho_match_term [] empty_tmset pat ob
+      val bound_vars = map #redex tm_inst
+    in
+      null (intersect constants bound_vars)
+    end handle HOL_ERR _ => false
+
+ (* you might think that one could simply pass the free variable set
+    to ho_match_term, and do without this bogus looking
+    can_match_with_constants function. Unfortunately, this doesn't
+    quite work because the match is higher-order, meaning that a
+    pattern like ``_ x``, where x is a "constant" will match something
+    like ``f y``, where y is of the right type, but manifestly not x.
+    This is because
+
+      ho_match_term [] (some set including x) ``_ x`` ``f y``
+
+    will return an instantiation where _ maps to (\x. y). This
+    respects the request not to bind x, but the intention is bypassed.
+ *)
+
+   fun gen tcl pat thfun (g as (asl,w)) =
+     let
+       val fvs = free_varsl (w::asl)
+     in
+       tcl (thfun o assert (can_match_with_constants fvs pat o concl))
+     end g
+in
+   val PAT_X_ASSUM = gen FIRST_X_ASSUM
+   val PAT_ASSUM = gen FIRST_ASSUM
+end
+
 
 local
 fun hdsym t = (t |> lhs |> strip_comb |> #1)
@@ -754,5 +764,12 @@ fun parse_with_goal t (asms, g) =
    end
 
 val Q_TAC = fn tac => fn g => W (tac o parse_with_goal g)
+
+fun QTY_TAC ty tac q (g as (asl,w)) =
+  let
+    val ctxt = free_varsl (w::asl)
+  in
+    tac (Parse.typed_parse_in_context ty ctxt q) g
+  end
 
 end (* Tactical *)

@@ -153,7 +153,7 @@ val LOG_UNIQUE = Q.store_thm("LOG_UNIQUE",
    THEN Cases_on `a = 1`
    THEN FULL_SIMP_TAC arith_ss [EXP]
    THEN ((`0 < n /\ 1 < a` by DECIDE_TAC
-          THEN REPEAT (PAT_ASSUM ``~(a = b:num)`` (K (ALL_TAC))))
+          THEN REPEAT (PAT_X_ASSUM ``~(a = b:num)`` (K (ALL_TAC))))
          ORELSE
          (Cases_on `a`
           THEN FULL_SIMP_TAC arith_ss [EXP, ZERO_LESS_EXP]))
@@ -492,7 +492,7 @@ val iSQRT_lemma = Q.prove(
            [CONJUNCT2 (SPEC_ALL sqrt_compute)]
    THEN RW_TAC (arith_ss ++ boolSimps.LET_ss)
            [mult_eq_lemma, ADD1, LEFT_ADD_DISTRIB, RIGHT_ADD_DISTRIB]
-   THEN PAT_ASSUM ``~(a < b:num)`` MP_TAC
+   THEN PAT_X_ASSUM ``~(a < b:num)`` MP_TAC
    THEN FULL_SIMP_TAC arith_ss
            [ADD1, LEFT_ADD_DISTRIB, RIGHT_ADD_DISTRIB, mult_eq_lemma,
             METIS_PROVE [DECIDE ``SUC 1 = 2``, EXP, EXP_1]

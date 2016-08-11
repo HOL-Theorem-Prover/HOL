@@ -286,7 +286,7 @@ val mono_increasing_suc = store_thm
     ++ RW_TAC std_ss []
     ++ Induct_on `d` >> RW_TAC real_ss []
     ++ RW_TAC std_ss []
-    ++ Q.PAT_ASSUM `!n. f n <= f (SUC n)` (MP_TAC o Q.SPEC `m + d`)
+    ++ Q.PAT_X_ASSUM `!n. f n <= f (SUC n)` (MP_TAC o Q.SPEC `m + d`)
     ++ METIS_TAC [REAL_LE_TRANS, ADD_CLAUSES, LESS_EQ_ADD]);
 
 val mono_decreasing_def = Define
@@ -302,7 +302,7 @@ val mono_decreasing_suc = store_thm
     ++ RW_TAC std_ss []
     ++ Induct_on `d` >> RW_TAC real_ss []
     ++ RW_TAC std_ss []
-    ++ Q.PAT_ASSUM `!n. f (SUC n) <= f n` (MP_TAC o Q.SPEC `m + d`)
+    ++ Q.PAT_X_ASSUM `!n. f (SUC n) <= f n` (MP_TAC o Q.SPEC `m + d`)
     ++ METIS_TAC [REAL_LE_TRANS, ADD_CLAUSES, LESS_EQ_ADD]);
 
 val mono_increasing_converges_to_sup = store_thm
@@ -1552,7 +1552,7 @@ val ext_mono_increasing_suc = store_thm
   ++ RW_TAC std_ss []
   ++ Induct_on `d` >> RW_TAC std_ss [add_rzero,le_refl]
   ++ RW_TAC std_ss []
-  ++ Q.PAT_ASSUM `!n. f n <= f (SUC n)` (MP_TAC o Q.SPEC `m + d`)
+  ++ Q.PAT_X_ASSUM `!n. f n <= f (SUC n)` (MP_TAC o Q.SPEC `m + d`)
   ++ METIS_TAC [le_trans,ADD_CLAUSES,LESS_EQ_ADD]);
 
 val ext_mono_decreasing_def = Define
@@ -1567,7 +1567,7 @@ val ext_mono_decreasing_suc = store_thm
   ++ RW_TAC std_ss []
   ++ Induct_on `d` >> RW_TAC std_ss [add_rzero,le_refl]
   ++ RW_TAC std_ss []
-  ++ Q.PAT_ASSUM `!n. f (SUC n) <= f n` (MP_TAC o Q.SPEC `m + d`)
+  ++ Q.PAT_X_ASSUM `!n. f (SUC n) <= f n` (MP_TAC o Q.SPEC `m + d`)
   ++ METIS_TAC [le_trans,ADD_CLAUSES,LESS_EQ_ADD]);
 
 val _ = overload_on ("mono_increasing", Term `ext_mono_increasing`);
@@ -1642,7 +1642,7 @@ val REAL_LE_MUL_EPSILON = store_thm
 		x <= y``,
     REPEAT STRIP_TAC
     ++ Cases_on `x = 0`
-    >> (Q.PAT_ASSUM `!z. P z` (MP_TAC o Q.SPEC `1/2`)
+    >> (Q.PAT_X_ASSUM `!z. P z` (MP_TAC o Q.SPEC `1/2`)
         ++ RW_TAC real_ss [REAL_HALF_BETWEEN])
     ++ Cases_on `0 < x`
     >> (MATCH_MP_TAC REAL_LE_EPSILON
@@ -1653,7 +1653,7 @@ val REAL_LE_MUL_EPSILON = store_thm
             ++ CONJ_TAC
             >> (RW_TAC real_ss [REAL_SUB_RDISTRIB]
                 ++ METIS_TAC [REAL_DIV_RMUL, REAL_LE_REFL])
-            ++ Q.PAT_ASSUM `!z. P z` MATCH_MP_TAC
+            ++ Q.PAT_X_ASSUM `!z. P z` MATCH_MP_TAC
             ++ RW_TAC real_ss [REAL_LT_SUB_RADD, REAL_LT_ADDR, REAL_LT_DIV, REAL_LT_SUB_LADD,
                                REAL_LT_1, REAL_LT_IMP_LE])
 	++ FULL_SIMP_TAC std_ss [REAL_NOT_LT]
@@ -1684,7 +1684,7 @@ val le_epsilon = store_thm
       	 	        extreal_le_def],
       `!e. 0 < e  ==> Normal r <= Normal r' + Normal e`
          by (RW_TAC std_ss []
-             ++ Q.PAT_ASSUM `!e. P e` MATCH_MP_TAC
+             ++ Q.PAT_X_ASSUM `!e. P e` MATCH_MP_TAC
 	     ++ METIS_TAC [extreal_not_infty, extreal_of_num_def, extreal_lt_eq])
       ++ `!e. 0 < e ==> Normal r <= Normal (r' + e)`
          by (RW_TAC real_ss [extreal_le_def, REAL_LT_IMP_LE, REAL_LE_ADD]
@@ -1849,7 +1849,7 @@ val EXTREAL_SUM_IMAGE_FINITE_SAME = store_thm
   >> RW_TAC real_ss [EXTREAL_SUM_IMAGE_THM, CARD_EMPTY, mul_lzero]
   ++ `f e = f x` by FULL_SIMP_TAC std_ss [IN_INSERT]
   ++ FULL_SIMP_TAC std_ss [] ++ POP_ASSUM (K ALL_TAC)
-  ++ Q.PAT_ASSUM `!f p. b` MATCH_MP_TAC ++ METIS_TAC [IN_INSERT]);
+  ++ Q.PAT_X_ASSUM `!f p. b` MATCH_MP_TAC ++ METIS_TAC [IN_INSERT]);
 
 val EXTREAL_SUM_IMAGE_FINITE_CONST = store_thm
   ("EXTREAL_SUM_IMAGE_FINITE_CONST", ``!P. FINITE P ==>
@@ -1900,7 +1900,7 @@ val EXTREAL_SUM_IMAGE_IN_IF = store_thm
   ++ `EXTREAL_SUM_IMAGE f s = EXTREAL_SUM_IMAGE (\x. if x IN s then f x else 0) s`
         by METIS_TAC [IN_INSERT]
   ++ POP_ORW
-  ++ Q.PAT_ASSUM `!f. P` (MP_TAC o Q.SPEC `(\x. if (x = e) \/ x IN s then f x else 0)`)
+  ++ Q.PAT_X_ASSUM `!f. P` (MP_TAC o Q.SPEC `(\x. if (x = e) \/ x IN s then f x else 0)`)
   ++ RW_TAC std_ss []);
 
 val EXTREAL_SUM_IMAGE_CMUL = store_thm
@@ -2377,7 +2377,7 @@ val le_sup = store_thm
 	       >> METIS_TAC [extreal_cases, le_infty, extreal_not_infty]
 	       ++ METIS_TAC [extreal_le_def])
 	       ++ RW_TAC std_ss []
-               ++ Q.PAT_ASSUM `!y. (!z. p z ==> z <= y) ==> Normal r' <= y`
+               ++ Q.PAT_X_ASSUM `!y. (!z. p z ==> z <= y) ==> Normal r' <= y`
                     (MATCH_MP_TAC o REWRITE_RULE [extreal_le_def] o Q.SPEC `Normal y`)
 	       ++ Cases
 	       << [METIS_TAC [le_infty],
@@ -2422,7 +2422,7 @@ val sup_num = store_thm
       ++ MP_TAC (Q.SPEC `r` REAL_BIGNUM)
       ++ PURE_REWRITE_TAC [real_lt]
       ++ STRIP_TAC
-      ++ Q.PAT_ASSUM `!z. P z` (MP_TAC o Q.SPEC `&n`)
+      ++ Q.PAT_X_ASSUM `!z. P z` (MP_TAC o Q.SPEC `&n`)
       ++ RW_TAC std_ss [extreal_of_num_def] >> METIS_TAC []
       ++ METIS_TAC [extreal_le_def]]);
 
@@ -2435,12 +2435,12 @@ val sup_mono = store_thm
 ("sup_mono",
    ``!p q. (!n:num. p n <= q n) ==> sup (IMAGE p UNIV) <= sup (IMAGE q UNIV)``,
   RW_TAC std_ss [sup_le,le_sup]
-  ++ Q.PAT_ASSUM `IMAGE p UNIV y` (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
+  ++ Q.PAT_X_ASSUM `IMAGE p UNIV y` (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
   ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]
   ++ MATCH_MP_TAC le_trans
   ++ Q.EXISTS_TAC `q x`
   ++ RW_TAC std_ss []
-  ++ Q.PAT_ASSUM `!z. Q ==> z <= y'` MATCH_MP_TAC
+  ++ Q.PAT_X_ASSUM `!z. Q ==> z <= y'` MATCH_MP_TAC
   ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
   ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]
   ++ METIS_TAC []);
@@ -2506,7 +2506,7 @@ val sup_seq = store_thm
   ++ FULL_SIMP_TAC std_ss []
   ++ `!n. Normal (f n) <= x`
        by (RW_TAC std_ss []
-           ++ Q.PAT_ASSUM `!y. P` MATCH_MP_TAC
+           ++ Q.PAT_X_ASSUM `!y. P` MATCH_MP_TAC
 	   ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
 	   ++ RW_TAC std_ss [IN_UNIV,IN_IMAGE]
 	   ++ METIS_TAC [])
@@ -2571,19 +2571,19 @@ val sup_add_mono = store_thm
   >> (RW_TAC std_ss [sup_le, add_lzero]
       ++ FULL_SIMP_TAC std_ss [sup_eq]
       ++ `!n. f n = 0` by METIS_TAC [EXTENSION,IN_IMAGE,IN_UNIV,SPECIFICATION,le_antisym]
-      ++ Q.PAT_ASSUM `!z. Q z ==> z <= y` MATCH_MP_TAC
+      ++ Q.PAT_X_ASSUM `!z. Q z ==> z <= y` MATCH_MP_TAC
       ++ RW_TAC std_ss [add_lzero]
       ++ METIS_TAC [])
   ++ Cases_on `sup (IMAGE g UNIV) = 0`
   >> (RW_TAC std_ss [sup_le, add_rzero]
       ++ FULL_SIMP_TAC std_ss [sup_eq]
       ++ `!n. g n = 0` by METIS_TAC [EXTENSION,IN_IMAGE,IN_UNIV,SPECIFICATION,le_antisym]
-      ++ Q.PAT_ASSUM `!z. Q z ==> z <= y` MATCH_MP_TAC
+      ++ Q.PAT_X_ASSUM `!z. Q z ==> z <= y` MATCH_MP_TAC
       ++ RW_TAC std_ss [add_rzero]
       ++ METIS_TAC [])
   ++ `!n. f n + g n <= y`
        by (RW_TAC std_ss []
-	   ++ Q.PAT_ASSUM `!z. Q z ==> P z` MATCH_MP_TAC
+	   ++ Q.PAT_X_ASSUM `!z. Q z ==> P z` MATCH_MP_TAC
 	   ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
 	   ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]
 	   ++ METIS_TAC [])
@@ -2610,7 +2610,7 @@ val sup_add_mono = store_thm
       >> (MATCH_MP_TAC le_trans
           ++ Q.EXISTS_TAC `f n + g n`
           ++ CONJ_TAC >> METIS_TAC [le_radd,ext_mono_increasing_def,ext_mono_increasing_suc]
-	  ++ Q.PAT_ASSUM `!z. Q z ==> z <= y` MATCH_MP_TAC
+	  ++ Q.PAT_X_ASSUM `!z. Q z ==> z <= y` MATCH_MP_TAC
           ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
 	  ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]
 	  ++ METIS_TAC [])
@@ -2618,7 +2618,7 @@ val sup_add_mono = store_thm
       ++ Q.EXISTS_TAC `f x + g x`
       ++ CONJ_TAC >> METIS_TAC [le_ladd,ext_mono_increasing_def,ext_mono_increasing_suc,
                                 le_refl,NOT_LEQ,le_trans]
-      ++ Q.PAT_ASSUM `!z. Q z ==> z <= y` MATCH_MP_TAC
+      ++ Q.PAT_X_ASSUM `!z. Q z ==> z <= y` MATCH_MP_TAC
       ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
       ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]
       ++ METIS_TAC [])
@@ -2653,7 +2653,7 @@ val sup_add_mono = store_thm
   ++ MATCH_MP_TAC le_sub_imp
   ++ RW_TAC std_ss []
   ++ RW_TAC std_ss [le_sup]
-  ++ Q.PAT_ASSUM `IMAGE g UNIV y'` (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
+  ++ Q.PAT_X_ASSUM `IMAGE g UNIV y'` (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
   ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]
   ++ POP_ASSUM MATCH_MP_TAC
   ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
@@ -2807,7 +2807,7 @@ val inf_le = store_thm
   ++ RW_TAC std_ss []
   ++ `!z. p z ==> -z <= y`
        by (RW_TAC std_ss []
-           ++ Q.PAT_ASSUM `!z. IMAGE numeric_negate p z ==> z <= y` MATCH_MP_TAC
+           ++ Q.PAT_X_ASSUM `!z. IMAGE numeric_negate p z ==> z <= y` MATCH_MP_TAC
            ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
 	   ++ RW_TAC std_ss [IN_IMAGE]
 	   ++ METIS_TAC [SPECIFICATION])
@@ -2897,7 +2897,7 @@ val inf_seq = store_thm
   ++ FULL_SIMP_TAC std_ss []
   ++ `!n. -Normal (f n) <= x`
        by (RW_TAC std_ss []
-           ++ Q.PAT_ASSUM `!y. P` MATCH_MP_TAC
+           ++ Q.PAT_X_ASSUM `!y. P` MATCH_MP_TAC
 	   ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
 	   ++ RW_TAC std_ss [IN_UNIV,IN_IMAGE]
 	   ++ METIS_TAC [])
@@ -2940,7 +2940,7 @@ val inf_cminus = store_thm
       ++ METIS_TAC [le_lsub_imp])
   ++ `!n. Normal c - f n <= y`
         by (RW_TAC std_ss []
-            ++ Q.PAT_ASSUM `!z. P` MATCH_MP_TAC
+            ++ Q.PAT_X_ASSUM `!z. P` MATCH_MP_TAC
 	    ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
 	    ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]
 	    ++ METIS_TAC [])
@@ -3146,7 +3146,7 @@ val ext_suminf_suminf = store_thm
   ++ FULL_SIMP_TAC std_ss [sup_eq,le_infty]
   ++ `!n. SIGMA (\n. Normal (r n)) (count n) <= y`
        by (RW_TAC std_ss []
-           ++ Q.PAT_ASSUM `!z. P ==> Q` MATCH_MP_TAC
+           ++ Q.PAT_X_ASSUM `!z. P ==> Q` MATCH_MP_TAC
            ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
 	   ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]
 	   ++ METIS_TAC [])
@@ -3167,7 +3167,7 @@ val ext_suminf_mono = store_thm
  ("ext_suminf_mono",``!f g. (!n. g n <> NegInf /\ g n <= f n)
                       ==> (ext_suminf g <= ext_suminf f)``,
   RW_TAC std_ss [ext_suminf_def,sup_le,le_sup]
-  ++ Q.PAT_ASSUM `IMAGE f s y` (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
+  ++ Q.PAT_X_ASSUM `IMAGE _ s y` (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
   ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]
   ++ MATCH_MP_TAC le_trans
   ++ Q.EXISTS_TAC `SIGMA f (count n)`
@@ -3189,7 +3189,7 @@ val ext_suminf_sub = store_thm
   RW_TAC std_ss []
   ++ `ext_suminf g <= ext_suminf f`
       by (RW_TAC std_ss [ext_suminf_def,sup_le,le_sup]
-          ++ Q.PAT_ASSUM `IMAGE (\n. SIGMA g (count n)) univ(:num) y`
+          ++ Q.PAT_X_ASSUM `IMAGE (\n. SIGMA g (count n)) univ(:num) y`
                    (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
 	  ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]
           ++ MATCH_MP_TAC le_trans
@@ -3236,26 +3236,26 @@ val ext_suminf_sub = store_thm
   ++ FULL_SIMP_TAC std_ss [ext_suminf_def,sup_eq,le_infty]
   ++ `!n. SIGMA (\n. Normal (p n)) (count n) <= y`
        by (RW_TAC std_ss []
-           ++ Q.PAT_ASSUM `!z. Q ==> (z <= y)` MATCH_MP_TAC
+           ++ Q.PAT_X_ASSUM `!z. Q ==> (z <= y)` MATCH_MP_TAC
 	   ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
 	   ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]
 	   ++ METIS_TAC [])
   ++ `!n. SIGMA (\n. Normal (q n)) (count n) <= y'`
        by (RW_TAC std_ss []
-           ++ Q.PAT_ASSUM `!z. Q ==> (z <= y')` MATCH_MP_TAC
+           ++ Q.PAT_X_ASSUM `!z. Q ==> (z <= y')` MATCH_MP_TAC
 	   ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
 	   ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]
 	   ++ METIS_TAC [])
   ++ `!n. SIGMA (\n. Normal (p n - q n)) (count n) <= y''`
        by (RW_TAC std_ss []
-           ++ Q.PAT_ASSUM `!z. Q ==> (z <= y'')` MATCH_MP_TAC
+           ++ Q.PAT_X_ASSUM `!z. Q ==> (z <= y'')` MATCH_MP_TAC
 	   ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
 	   ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]
 	   ++ METIS_TAC [])
-  ++ Q.PAT_ASSUM `!z. Q ==> (z <= y)` (K ALL_TAC)
-  ++ Q.PAT_ASSUM `!z. Q ==> (z <= y')` (K ALL_TAC)
-  ++ Q.PAT_ASSUM `!z. Q ==> (z <= y'')` (K ALL_TAC)
-  ++ Q.PAT_ASSUM `sup a <= sup b` (K ALL_TAC)
+  ++ Q.PAT_X_ASSUM `!z. Q ==> (z <= y)` (K ALL_TAC)
+  ++ Q.PAT_X_ASSUM `!z. Q ==> (z <= y')` (K ALL_TAC)
+  ++ Q.PAT_X_ASSUM `!z. Q ==> (z <= y'')` (K ALL_TAC)
+  ++ Q.PAT_X_ASSUM `sup a <= sup b` (K ALL_TAC)
   ++ FULL_SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_NORMAL,FINITE_COUNT]
   ++ `0 <= y` by METIS_TAC [REAL_SUM_IMAGE_POS,FINITE_COUNT,extreal_le_def,
                             extreal_of_num_def,le_trans]
@@ -3492,7 +3492,7 @@ val Q_COUNTABLE = store_thm
       ++ Q.EXISTS_TAC `(\(a,b). &a/(&b)) o f`
       ++ RW_TAC std_ss [GSPECIFICATION]
       ++ FULL_SIMP_TAC std_ss [BIJ_DEF,INJ_DEF,SURJ_DEF,IN_UNIV]
-      ++ PAT_ASSUM ``!x. x IN P ==> Q x y`` (MP_TAC o Q.SPEC `(&a,&b)`)
+      ++ PAT_X_ASSUM ``!x. x IN P ==> Q x y`` (MP_TAC o Q.SPEC `(&a,&b)`)
       ++ RW_TAC std_ss []
       ++ FULL_SIMP_TAC real_ss [IN_CROSS,IN_UNIV,IN_SING,DIFF_DEF,
        			        GSPECIFICATION,GSYM REAL_LT_NZ]
@@ -3505,7 +3505,7 @@ val Q_COUNTABLE = store_thm
   ++ Q.EXISTS_TAC `(\(a,b). -(&a/(&b))) o f`
   ++ RW_TAC std_ss [GSPECIFICATION]
   ++ FULL_SIMP_TAC std_ss [BIJ_DEF,INJ_DEF,SURJ_DEF,IN_UNIV]
-  ++ PAT_ASSUM ``!x. x IN P ==> Q x y`` (MP_TAC o Q.SPEC `(&a,&b)`)
+  ++ PAT_X_ASSUM ``!x. x IN P ==> Q x y`` (MP_TAC o Q.SPEC `(&a,&b)`)
   ++ RW_TAC std_ss []
   ++ FULL_SIMP_TAC real_ss [IN_CROSS,IN_UNIV,IN_SING,
 	  		    DIFF_DEF,GSPECIFICATION,GSYM REAL_LT_NZ]
@@ -3764,7 +3764,7 @@ val CEILING_UBOUND = store_thm
   ++ REWRITE_TAC [SIMP_REAL_ARCH]
   ++ RW_TAC real_ss []
   ++ FULL_SIMP_TAC real_ss [GSYM real_lt]
-  ++ PAT_ASSUM ``!m. P`` (MP_TAC o Q.SPEC `n-1`)
+  ++ PAT_X_ASSUM ``!m. P`` (MP_TAC o Q.SPEC `n-1`)
   ++ RW_TAC real_ss []
   ++ Cases_on `n = 0` >> METIS_TAC [REAL_LET_ADD2,REAL_LT_01,REAL_ADD_RID]
   ++ `0 < n` by RW_TAC real_ss []
@@ -3928,7 +3928,7 @@ val CROSS_COUNTABLE_LEMMA1 = store_thm
   ("CROSS_COUNTABLE_LEMMA1", ``!s. countable s /\ FINITE s /\ countable t
                            ==> countable (s CROSS t)``,
   RW_TAC std_ss []
-  ++ Q.PAT_ASSUM `FINITE s` MP_TAC
+  ++ Q.PAT_X_ASSUM `FINITE s` MP_TAC
   ++ Q.SPEC_TAC (`s`, `s`)
   ++ HO_MATCH_MP_TAC FINITE_INDUCT
   ++ RW_TAC std_ss [] >> METIS_TAC [CROSS_EMPTY,COUNTABLE_EMPTY]

@@ -219,7 +219,7 @@ val stack_ok_thm = prove(
   \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND,LENGTH_REVERSE,REVERSE_EQ_NIL]
   \\ `rsp = top + n2w (8 * LENGTH rest)` by
    (FULL_SIMP_TAC std_ss [LEFT_ADD_DISTRIB,GSYM addressTheory.word_arith_lemma1]
-    \\ Q.PAT_ASSUM `xx + yy = base` (ASSUME_TAC o GSYM)
+    \\ Q.PAT_X_ASSUM `xx + yy = base` (ASSUME_TAC o GSYM)
     \\ FULL_SIMP_TAC std_ss [wordsTheory.WORD_EQ_ADD_RCANCEL,WORD_ADD_ASSOC])
   \\ FULL_SIMP_TAC std_ss [stack_list_REVERSE,stack_list_APPEND]
   \\ FULL_SIMP_TAC std_ss [stack_list_rev_REVERSE,LENGTH_REVERSE]);
@@ -239,7 +239,7 @@ val stack_ok_POP = prove(
   \\ FULL_SIMP_TAC std_ss [stack_list_rev_def,stack_list_def,NOT_CONS_NIL]
   \\ SEP_R_TAC \\ FULL_SIMP_TAC std_ss [WORD_ADD_SUB]
   \\ FULL_SIMP_TAC (std_ss++star_ss) []
-  \\ Q.PAT_ASSUM `rsp && 0x7w = 0x0w` MP_TAC
+  \\ Q.PAT_X_ASSUM `rsp && 0x7w = 0x0w` MP_TAC
   \\ blastLib.BBLAST_TAC);
 
 fun x64_pop (s,r,v) = save_thm("x64_pop_" ^ s,let
@@ -291,12 +291,12 @@ val stack_ok_PUSH = prove(
   \\ Cases_on `t = []` \\ FULL_SIMP_TAC std_ss [] THEN1
    (FULL_SIMP_TAC std_ss [LENGTH,GSYM word_add_n2w]
     \\ Q.ABBREV_TAC `s = 8 * LENGTH stack`
-    \\ NTAC 2 (Q.PAT_ASSUM `x = y:word64` MP_TAC)
-    \\ REPEAT (Q.PAT_ASSUM `x <> y:word64` MP_TAC)
+    \\ NTAC 2 (Q.PAT_X_ASSUM `x = y:word64` MP_TAC)
+    \\ REPEAT (Q.PAT_X_ASSUM `x <> y:word64` MP_TAC)
     \\ blastLib.BBLAST_TAC)
   \\ FULL_SIMP_TAC (std_ss++star_ss) [WORD_ADD_ASSOC,WORD_SUB_ADD]
   \\ SIMP_TAC std_ss [CONJ_ASSOC] \\ STRIP_TAC
-  THEN1 (Q.PAT_ASSUM `rsp && 0x7w = 0x0w` MP_TAC \\ blastLib.BBLAST_TAC)
+  THEN1 (Q.PAT_X_ASSUM `rsp && 0x7w = 0x0w` MP_TAC \\ blastLib.BBLAST_TAC)
   \\ SEP_W_TAC \\ FULL_SIMP_TAC (std_ss++star_ss) []);
 
 val X64_SPEC_WEAKEN = prove(
@@ -305,7 +305,7 @@ val X64_SPEC_WEAKEN = prove(
                    zR1 RSP x * zR1 zGhost_stack_top x * frame) ==>
                 SPEC X64_MODEL p EMPTY r``,
   SIMP_TAC std_ss [X64_SPEC_SEMANTICS] \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM `!x.bbb` (MP_TAC o Q.SPECL [`y`,`s`,`t1`,`seq`])
+  \\ Q.PAT_X_ASSUM `!x.bbb` (MP_TAC o Q.SPECL [`y`,`s`,`t1`,`seq`])
   \\ FULL_SIMP_TAC std_ss [] \\ REVERSE STRIP_TAC THEN1 (METIS_TAC [])
   \\ Q.LIST_EXISTS_TAC [`k`,`t2`] \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [SEP_IMP_def,SEP_DISJ_def,SEP_EXISTS_THM]
@@ -338,7 +338,7 @@ val X64_SPEC_1_WEAKEN = prove(
                    zR1 RSP x * zR1 zGhost_stack_top x * frame) ==>
                 SPEC_1 X64_MODEL p EMPTY r SEP_F``,
   SIMP_TAC std_ss [X64_SPEC_1_SEMANTICS] \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM `!x.bbb` (MP_TAC o Q.SPECL [`y`,`s`,`t1`,`seq`])
+  \\ Q.PAT_X_ASSUM `!x.bbb` (MP_TAC o Q.SPECL [`y`,`s`,`t1`,`seq`])
   \\ FULL_SIMP_TAC std_ss [] \\ REVERSE STRIP_TAC THEN1 (METIS_TAC [])
   \\ Cases_on `X64_STACK_FULL (seq (k+1))` THEN1 METIS_TAC []
   \\ Cases_on `X64_STACK_FULL (seq k)` THEN1 METIS_TAC []
@@ -563,7 +563,7 @@ val stack_ok_POPS = store_thm("stack_ok_POPS",
   \\ FULL_SIMP_TAC std_ss [addressTheory.word_arith_lemma1,
        rich_listTheory.DROP_LENGTH_APPEND,GSYM LEFT_ADD_DISTRIB,LENGTH_APPEND]
   \\ FULL_SIMP_TAC std_ss [GSYM word_mul_n2w] \\ STRIP_TAC
-  THEN1 (Q.PAT_ASSUM `rsp && 0x7w = 0x0w` MP_TAC \\ blastLib.BBLAST_TAC)
+  THEN1 (Q.PAT_X_ASSUM `rsp && 0x7w = 0x0w` MP_TAC \\ blastLib.BBLAST_TAC)
   \\ Q.EXISTS_TAC `REVERSE ys ++ rest`
   \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND,ADD_ASSOC,APPEND_eq_NIL,LENGTH_REVERSE]
   \\ FULL_SIMP_TAC std_ss [stack_list_APPEND,STAR_ASSOC]
@@ -737,7 +737,7 @@ val stack_ok_EL = store_thm("stack_ok_EL",
   \\ FULL_SIMP_TAC std_ss [stack_list_APPEND,stack_list_def]
   \\ SEP_R_TAC \\ STRIP_TAC
   THEN1 (SIMP_TAC std_ss [GSYM word_mul_n2w]
-         \\ Q.PAT_ASSUM `0x7w && rsp = 0x0w` MP_TAC \\ blastLib.BBLAST_TAC)
+         \\ Q.PAT_X_ASSUM `0x7w && rsp = 0x0w` MP_TAC \\ blastLib.BBLAST_TAC)
   \\ SEP_W_TAC \\ FULL_SIMP_TAC (std_ss++star_ss) []);
 
 val LENGTH_LESS_REV = prove(
@@ -770,8 +770,8 @@ val stack_ok_REV_EL = store_thm("stack_ok_REV_EL",
        |> Q.SPEC `x::xs` |> SIMP_RULE (srw_ss()) []]
   \\ SIMP_TAC std_ss [LENGTH_REVERSE]
   \\ FULL_SIMP_TAC std_ss [stack_list_APPEND,stack_list_def]
-  \\ Q.PAT_ASSUM `xx = base` (ASSUME_TAC o GSYM) \\ POP_ASSUM (K ALL_TAC)
-  \\ Q.PAT_ASSUM `xx = base` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `xx = base` (ASSUME_TAC o GSYM) \\ POP_ASSUM (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `xx = base` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND,LENGTH,LEFT_ADD_DISTRIB]
   \\ SIMP_TAC std_ss [MULT_CLAUSES,GSYM word_arith_lemma1]
   \\ SIMP_TAC std_ss [WORD_ADD_SUB,WORD_ADD_ASSOC]
@@ -780,7 +780,7 @@ val stack_ok_REV_EL = store_thm("stack_ok_REV_EL",
   \\ SIMP_TAC std_ss [WORD_ADD_SUB,WORD_ADD_ASSOC]
   \\ SEP_R_TAC \\ FULL_SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [GSYM word_mul_n2w]
-  \\ Q.PAT_ASSUM `rsp && 0x7w = 0x0w` MP_TAC
+  \\ Q.PAT_X_ASSUM `rsp && 0x7w = 0x0w` MP_TAC
   \\ blastLib.BBLAST_TAC);
 
 val x64_el_r0_r8 = save_thm("x64_el_r0_r8",let
@@ -873,7 +873,7 @@ val stack_ok_EL_VAR = prove(
   \\ FULL_SIMP_TAC std_ss [stack_list_APPEND,stack_list_def]
   \\ SEP_R_TAC \\ STRIP_TAC
   THEN1 (SIMP_TAC std_ss [GSYM word_mul_n2w]
-         \\ Q.PAT_ASSUM `rsp && 0x7w = 0x0w` MP_TAC \\ blastLib.BBLAST_TAC)
+         \\ Q.PAT_X_ASSUM `rsp && 0x7w = 0x0w` MP_TAC \\ blastLib.BBLAST_TAC)
   \\ SEP_W_TAC \\ FULL_SIMP_TAC (std_ss++star_ss) []);
 
 val x64_el_r0_imm = save_thm("x64_el_r0_imm",let

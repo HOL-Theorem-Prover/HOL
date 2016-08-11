@@ -324,7 +324,7 @@ val SWAP_TAC =
   \\ FULL_SIMP_TAC std_ss [ok_split_heap_def,UNION_SUBSET,ref_heap_addr_def]
   \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,ADDR_SET_def,GSPECIFICATION,lisp_x_def]
   \\ FULL_SIMP_TAC std_ss [MEM,MEM_APPEND,n2w_w2n,w2n_lt30] \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
+  \\ Q.PAT_X_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
   \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC (srw_ss()) [];
 
 val lisp_inv_swap0 = METIS_PROVE [] ``^LISP ==> ^LISP``;
@@ -447,7 +447,7 @@ val lisp_inv_Sym_lemma = prove(
   \\ FULL_SIMP_TAC std_ss [MEM,MEM_APPEND,n2w_w2n,w2n_lt30]
   \\ REVERSE (REPEAT STRIP_TAC) THEN1
    (Cases_on `x0` \\ FULL_SIMP_TAC (srw_ss()) [lisp_x_def]
-    \\ Q.PAT_ASSUM `ref_heap_addr s0 = w0` (MP_TAC o GSYM)
+    \\ Q.PAT_X_ASSUM `ref_heap_addr s0 = w0` (MP_TAC o GSYM)
     \\ ASM_SIMP_TAC std_ss [ref_heap_addr_def] \\ REPEAT STRIP_TAC
     \\ POP_ASSUM MP_TAC THEN1 blastLib.BBLAST_TAC THEN1 blastLib.BBLAST_TAC
     \\ REPEAT STRIP_TAC \\ Cases_on `s = s'` THEN1
@@ -468,7 +468,7 @@ val lisp_inv_Sym_lemma = prove(
     (Q.EXISTS_TAC `w2n w`
      \\ ASM_SIMP_TAC std_ss [n2w_w2n,w2n_lt29,LIST_FIND_APPEND])
   \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
+  \\ Q.PAT_X_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
   \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC (srw_ss()) [])
   |> SIMP_RULE std_ss [LET_DEF] |> Q.SPEC `n2w n` |> GEN ``n:num``;
 
@@ -522,12 +522,12 @@ val lisp_inv_car = prove(
   \\ Q.LIST_EXISTS_TAC [`ax`,`s1`,`s2`,`s3`,`s4`,`s5`]
   \\ Q.LIST_EXISTS_TAC [`m`,`i`,`ss`,`ss1`,`sym`,`b'`]
   \\ FULL_SIMP_TAC std_ss [MAP,CONS_11]
-  \\ Q.PAT_ASSUM `xx = w0` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
+  \\ Q.PAT_X_ASSUM `xx = w0` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
   \\ FULL_SIMP_TAC std_ss [ref_heap_addr_def,CONJ_ASSOC]
   \\ REVERSE STRIP_TAC
-  THEN1 (Q.PAT_ASSUM `bp && 3w = 0w` MP_TAC \\ blastLib.BBLAST_TAC)
+  THEN1 (Q.PAT_X_ASSUM `bp && 3w = 0w` MP_TAC \\ blastLib.BBLAST_TAC)
   \\ REVERSE STRIP_TAC
-  THEN1 (Q.PAT_ASSUM `bp && 3w = 0w` MP_TAC \\ blastLib.BBLAST_TAC)
+  THEN1 (Q.PAT_X_ASSUM `bp && 3w = 0w` MP_TAC \\ blastLib.BBLAST_TAC)
   \\ `k < i` by ALL_TAC THEN1
    (FULL_SIMP_TAC std_ss [ok_split_heap_def,RANGE_def] \\ CCONTR_TAC
     \\ FULL_SIMP_TAC std_ss [NOT_LESS] \\ RES_TAC
@@ -544,10 +544,10 @@ val lisp_inv_car = prove(
   \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,ADDR_SET_def,GSPECIFICATION,lisp_x_def]
   \\ FULL_SIMP_TAC std_ss [MEM,MEM_APPEND,n2w_w2n,w2n_lt30]
   \\ REPEAT STRIP_TAC THEN1
-   (Q.PAT_ASSUM `!x. x IN D1 m ==> x IN D0 m` MATCH_MP_TAC
+   (Q.PAT_X_ASSUM `!x. x IN D1 m ==> x IN D0 m` MATCH_MP_TAC
     \\ SIMP_TAC std_ss [D1_def,IN_DEF] \\ Q.EXISTS_TAC `k`
     \\ ASM_SIMP_TAC (srw_ss()) [ADDR_SET])
-  \\ Q.PAT_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
+  \\ Q.PAT_X_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
   \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC (srw_ss()) [])
   |> SIMP_RULE std_ss [LET_DEF];
 
@@ -561,12 +561,12 @@ val lisp_inv_cdr = prove(
   \\ Q.LIST_EXISTS_TAC [`ay`,`s1`,`s2`,`s3`,`s4`,`s5`]
   \\ Q.LIST_EXISTS_TAC [`m`,`i`,`ss`,`ss1`,`sym`,`b'`]
   \\ FULL_SIMP_TAC std_ss [MAP,CONS_11]
-  \\ Q.PAT_ASSUM `xx = w0` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
+  \\ Q.PAT_X_ASSUM `xx = w0` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
   \\ FULL_SIMP_TAC std_ss [ref_heap_addr_def,CONJ_ASSOC]
   \\ REVERSE STRIP_TAC
-  THEN1 (Q.PAT_ASSUM `bp && 3w = 0w` MP_TAC \\ blastLib.BBLAST_TAC)
+  THEN1 (Q.PAT_X_ASSUM `bp && 3w = 0w` MP_TAC \\ blastLib.BBLAST_TAC)
   \\ REVERSE STRIP_TAC
-  THEN1 (Q.PAT_ASSUM `bp && 3w = 0w` MP_TAC \\ blastLib.BBLAST_TAC)
+  THEN1 (Q.PAT_X_ASSUM `bp && 3w = 0w` MP_TAC \\ blastLib.BBLAST_TAC)
   \\ `k < i` by ALL_TAC THEN1
    (FULL_SIMP_TAC std_ss [ok_split_heap_def,RANGE_def] \\ CCONTR_TAC
     \\ FULL_SIMP_TAC std_ss [NOT_LESS] \\ RES_TAC
@@ -583,10 +583,10 @@ val lisp_inv_cdr = prove(
   \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,ADDR_SET_def,GSPECIFICATION,lisp_x_def]
   \\ FULL_SIMP_TAC std_ss [MEM,MEM_APPEND,n2w_w2n,w2n_lt30]
   \\ REPEAT STRIP_TAC THEN1
-   (Q.PAT_ASSUM `!x. x IN D1 m ==> x IN D0 m` MATCH_MP_TAC
+   (Q.PAT_X_ASSUM `!x. x IN D1 m ==> x IN D0 m` MATCH_MP_TAC
     \\ SIMP_TAC std_ss [D1_def,IN_DEF] \\ Q.EXISTS_TAC `k`
     \\ ASM_SIMP_TAC (srw_ss()) [ADDR_SET])
-  \\ Q.PAT_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
+  \\ Q.PAT_X_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
   \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC (srw_ss()) [])
   |> SIMP_RULE std_ss [LET_DEF];
 
@@ -651,7 +651,7 @@ val lisp_inv_cons = prove(
        \\ SIMP_TAC std_ss [IN_D1,IN_D0,APPLY_UPDATE_THM] \\ STRIP_TAC
        \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC THEN1
         (Cases_on `i = k` \\ FULL_SIMP_TAC (srw_ss()) [] THEN1
-          (Q.PAT_ASSUM `[s0; s1] = x'` (ASSUME_TAC o GSYM)
+          (Q.PAT_X_ASSUM `[s0; s1] = x'` (ASSUME_TAC o GSYM)
            \\ FULL_SIMP_TAC std_ss [ADDR_SET_def,MEM,GSPECIFICATION])
          \\ METIS_TAC [])
        THEN1 (SIMP_TAC bool_ss [IN_DEF] \\ METIS_TAC [ADDR_SET])
@@ -665,7 +665,7 @@ val lisp_inv_cons = prove(
    (FULL_SIMP_TAC (srw_ss()) [EVERY_DEF,CONS_11,lisp_x_def,APPLY_UPDATE_THM]
     \\ `m i = H_EMP` by FULL_SIMP_TAC std_ss [ok_split_heap_def]
     \\ ASM_SIMP_TAC std_ss [lisp_x_UPDATE]
-    \\ Q.PAT_ASSUM `EVERY (lisp_x (m,INIT_SYMBOLS ++ sym)) (ZIP (ss2,xs2))` MP_TAC
+    \\ Q.PAT_X_ASSUM `EVERY (lisp_x (m,INIT_SYMBOLS ++ sym)) (ZIP (ss2,xs2))` MP_TAC
     \\ Q.SPEC_TAC (`ZIP (ss2,xs2)`,`ys`)
     \\ Induct \\ ASM_SIMP_TAC std_ss [EVERY_DEF]
     \\ Cases \\ ASM_SIMP_TAC std_ss [lisp_x_UPDATE])
@@ -699,11 +699,11 @@ val lisp_inv_top = prove(
    (FULL_SIMP_TAC std_ss [ok_split_heap_def,UNION_SUBSET,ref_heap_addr_def]
     \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,ADDR_SET_def,GSPECIFICATION,lisp_x_def]
     \\ FULL_SIMP_TAC std_ss [MEM,MEM_APPEND,n2w_w2n,w2n_lt30] \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
+    \\ Q.PAT_X_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
     \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC (srw_ss()) [])
   \\ FULL_SIMP_TAC std_ss [ref_full_stack_def,ref_stack_def,APPEND] \\ SEP_R_TAC
   \\ SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `sp && 3w = 0w` MP_TAC \\ blastLib.BBLAST_TAC)
+  \\ Q.PAT_X_ASSUM `sp && 3w = 0w` MP_TAC \\ blastLib.BBLAST_TAC)
   |> SIMP_RULE std_ss [LET_DEF];
 
 val SPLIT_LIST_LESS_EQ = store_thm("SPLIT_LIST_LESS_EQ",
@@ -770,7 +770,7 @@ val lisp_inv_pops_lemma = prove(
   \\ FULL_SIMP_TAC std_ss [rich_listTheory.BUTFIRSTN_LENGTH_APPEND]
   \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND]
   \\ STRIP_TAC THEN1
-   (Q.PAT_ASSUM `xx = sl` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
+   (Q.PAT_X_ASSUM `xx = sl` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
     \\ Cases_on `wsp` \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_add_n2w,w2n_n2w]
     \\ `(n' + LENGTH xs1'') < 18446744073709551616` by DECIDE_TAC
     \\ ASM_SIMP_TAC std_ss [] \\ DECIDE_TAC)
@@ -780,13 +780,13 @@ val lisp_inv_pops_lemma = prove(
    (FULL_SIMP_TAC std_ss [ok_split_heap_def,UNION_SUBSET,ref_heap_addr_def]
     \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,ADDR_SET_def,GSPECIFICATION,lisp_x_def]
     \\ FULL_SIMP_TAC std_ss [MEM,MEM_APPEND,n2w_w2n,w2n_lt30] \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
+    \\ Q.PAT_X_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
     \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC (srw_ss()) [])
   \\ FULL_SIMP_TAC std_ss [ref_full_stack_def,ref_stack_def,word_mul_n2w]
   \\ Cases_on `wsp` \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_add_n2w,w2n_n2w]
   \\ `(n' + LENGTH xs1'') < 18446744073709551616` by DECIDE_TAC
   \\ FULL_SIMP_TAC std_ss [ref_stack_APPEND,word_mul_n2w,word_arith_lemma1,LEFT_ADD_DISTRIB]
-  \\ Q.PAT_ASSUM `xxx (fun2set (f,df))` MP_TAC
+  \\ Q.PAT_X_ASSUM `xxx (fun2set (f,df))` MP_TAC
   \\ ONCE_REWRITE_TAC [STAR_COMM]
   \\ ASM_SIMP_TAC std_ss [ref_stack_space_LEMMA]
   \\ SIMP_TAC (std_ss++sep_cond_ss) [SEP_CLAUSES,SEP_EXISTS_THM,cond_STAR]
@@ -834,16 +834,16 @@ val lisp_inv_push = prove(
   \\ Q.LIST_EXISTS_TAC [`m`,`i`,`s0::ss`,`ss1`,`sym`,`b`]
   \\ FULL_SIMP_TAC std_ss [MAP,CONS_11,EVERY_DEF]
   \\ `n' < dimword (:64)` by DECIDE_TAC
-  \\ Q.PAT_ASSUM `xxx = sl` MP_TAC
+  \\ Q.PAT_X_ASSUM `xxx = sl` MP_TAC
   \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1,TL,ZIP,EVERY_DEF,w2n_n2w,word_add_n2w,APPEND]
   \\ REPEAT STRIP_TAC THEN1 DECIDE_TAC
   THEN1
    (FULL_SIMP_TAC std_ss [ok_split_heap_def,UNION_SUBSET,ref_heap_addr_def]
     \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,ADDR_SET_def,GSPECIFICATION,lisp_x_def]
     \\ FULL_SIMP_TAC std_ss [MEM,MEM_APPEND,n2w_w2n,w2n_lt30] \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
+    \\ Q.PAT_X_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
     \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC (srw_ss()) [])
-  \\ Q.PAT_ASSUM `n' + 1 < dimword (:64)` ASSUME_TAC
+  \\ Q.PAT_X_ASSUM `n' + 1 < dimword (:64)` ASSUME_TAC
   \\ FULL_SIMP_TAC std_ss [ref_full_stack_def,ref_stack_def,word_mul_n2w,w2n_n2w,APPEND]
   \\ FULL_SIMP_TAC std_ss [word_arith_lemma1,word_mul_n2w,LENGTH,LEFT_ADD_DISTRIB,ADD1]
   \\ `n' + 1 + 6 = SUC (n' + 6)` by DECIDE_TAC
@@ -896,7 +896,7 @@ val lisp_inv_load_lemma = prove(
    (FULL_SIMP_TAC std_ss [ok_split_heap_def,UNION_SUBSET,ref_heap_addr_def]
     \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,ADDR_SET_def,GSPECIFICATION,lisp_x_def]
     \\ FULL_SIMP_TAC std_ss [MEM,MEM_APPEND,n2w_w2n,w2n_lt30] \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
+    \\ Q.PAT_X_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
     \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC (srw_ss()) [])
   \\ FULL_SIMP_TAC std_ss [ref_full_stack_def,GSYM APPEND_ASSOC]
   \\ FULL_SIMP_TAC std_ss [ref_stack_def,Once ref_stack_APPEND,APPEND]
@@ -944,7 +944,7 @@ val lisp_inv_store_lemma = prove(
    (FULL_SIMP_TAC std_ss [ok_split_heap_def,UNION_SUBSET,ref_heap_addr_def]
     \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,ADDR_SET_def,GSPECIFICATION,lisp_x_def]
     \\ FULL_SIMP_TAC std_ss [MEM,MEM_APPEND,n2w_w2n,w2n_lt30] \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
+    \\ Q.PAT_X_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
     \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC (srw_ss()) [])
   \\ FULL_SIMP_TAC std_ss [ref_full_stack_def,UPDATE_NTH_APPEND]
   \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND]
@@ -978,7 +978,7 @@ val lisp_inv_type = prove(
     ((w0 && 3w = 3w) = isSym x0)``,
   SIMP_TAC std_ss [LET_DEF,lisp_inv_def,EXISTS_OVER_CONJ] \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [EVERY_DEF,MAP,CONS_11]
-  \\ Q.PAT_ASSUM `xxx = w0` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
+  \\ Q.PAT_X_ASSUM `xxx = w0` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
   \\ Cases_on `x0` \\ FULL_SIMP_TAC std_ss [lisp_x_def,ref_heap_addr_def,
        isDot_def,isSym_def,isVal_def] \\ blastLib.BBLAST_TAC);
 
@@ -1076,7 +1076,7 @@ val lisp_inv_eq_zero = store_thm("lisp_inv_eq_zero",
   \\ FULL_SIMP_TAC std_ss [EVAL ``(w2w (0w:word30):word32) << 2 !! 1w``]
   \\ `tw1 = 1w` by FULL_SIMP_TAC std_ss [lisp_inv_def]
   \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `xxx = (x0 = Val 0)` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
+  \\ Q.PAT_X_ASSUM `xxx = (x0 = Val 0)` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
   \\ blastLib.BBLAST_TAC);
 
 val lisp_inv_eq_lucky = prove(
@@ -1119,11 +1119,11 @@ val lisp_inv_limit = prove(
   \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1,TL,ZIP,EVERY_DEF,getVal_def]
   \\ FULL_SIMP_TAC std_ss [MAP,CONS_11,EVERY_DEF]
-  \\ Q.PAT_ASSUM `ref_heap_addr s0 = w0` (ASSUME_TAC o GSYM)
-  \\ Q.PAT_ASSUM `ref_heap_addr s1 = w1` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `ref_heap_addr s0 = w0` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `ref_heap_addr s1 = w1` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `x0 = xxx` (ASSUME_TAC)
-  \\ Q.PAT_ASSUM `x1 = xxx` (ASSUME_TAC)
+  \\ Q.PAT_X_ASSUM `x0 = xxx` (ASSUME_TAC)
+  \\ Q.PAT_X_ASSUM `x1 = xxx` (ASSUME_TAC)
   \\ FULL_SIMP_TAC std_ss [lisp_x_def,ref_heap_addr_def,lisp_inv_limit_blast]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2w_n2w,BITS_THM,WORD_ADD_SUB]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_mul_n2w,word_add_n2w,w2n_n2w]
@@ -1147,10 +1147,10 @@ val lisp_inv_add_lemma = prove(
    (FULL_SIMP_TAC std_ss [ok_split_heap_def,UNION_SUBSET,ref_heap_addr_def]
     \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,ADDR_SET_def,GSPECIFICATION,lisp_x_def]
     \\ FULL_SIMP_TAC std_ss [MEM,MEM_APPEND,n2w_w2n,w2n_lt30] \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
+    \\ Q.PAT_X_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
     \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC (srw_ss()) [])
-  \\ Q.PAT_ASSUM `ref_heap_addr s0 = w0` (ASSUME_TAC o GSYM)
-  \\ Q.PAT_ASSUM `ref_heap_addr s1 = w1` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `ref_heap_addr s0 = w0` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `ref_heap_addr s1 = w1` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [ref_heap_addr_def,WORD_OR_EQ_WORD_ADD_LEMMA]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2w_def,w2n_n2w]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_mul_n2w,word_add_n2w,WORD_MUL_LSL]
@@ -1190,9 +1190,9 @@ val lisp_inv_limit1 = prove(
   \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1,TL,ZIP,EVERY_DEF,getVal_def]
   \\ FULL_SIMP_TAC std_ss [MAP,CONS_11,EVERY_DEF]
-  \\ Q.PAT_ASSUM `ref_heap_addr s0 = w0` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `ref_heap_addr s0 = w0` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `x0 = xxx` (ASSUME_TAC)
+  \\ Q.PAT_X_ASSUM `x0 = xxx` (ASSUME_TAC)
   \\ FULL_SIMP_TAC std_ss [lisp_x_def,ref_heap_addr_def,lisp_inv_limit_blast]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2w_n2w,BITS_THM,WORD_ADD_SUB]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_mul_n2w,word_add_n2w,w2n_n2w]
@@ -1214,9 +1214,9 @@ val lisp_inv_add1_lemma = prove(
    (FULL_SIMP_TAC std_ss [ok_split_heap_def,UNION_SUBSET,ref_heap_addr_def]
     \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,ADDR_SET_def,GSPECIFICATION,lisp_x_def]
     \\ FULL_SIMP_TAC std_ss [MEM,MEM_APPEND,n2w_w2n,w2n_lt30] \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
+    \\ Q.PAT_X_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
     \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC (srw_ss()) [])
-  \\ Q.PAT_ASSUM `ref_heap_addr s0 = w0` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `ref_heap_addr s0 = w0` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [ref_heap_addr_def,WORD_OR_EQ_WORD_ADD_LEMMA]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2w_def,w2n_n2w]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_mul_n2w,word_add_n2w,WORD_MUL_LSL]
@@ -1240,10 +1240,10 @@ val lisp_inv_sub = prove(
    (FULL_SIMP_TAC std_ss [ok_split_heap_def,UNION_SUBSET,ref_heap_addr_def]
     \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,ADDR_SET_def,GSPECIFICATION,lisp_x_def]
     \\ FULL_SIMP_TAC std_ss [MEM,MEM_APPEND,n2w_w2n,w2n_lt30] \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
+    \\ Q.PAT_X_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
     \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC (srw_ss()) [])
-  \\ Q.PAT_ASSUM `ref_heap_addr s0 = w0` (ASSUME_TAC o GSYM)
-  \\ Q.PAT_ASSUM `ref_heap_addr s1 = w1` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `ref_heap_addr s0 = w0` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `ref_heap_addr s1 = w1` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [ref_heap_addr_def,WORD_OR_EQ_WORD_ADD_LEMMA]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2w_def,w2n_n2w]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_mul_n2w,word_add_n2w,WORD_MUL_LSL]
@@ -1271,10 +1271,10 @@ val lisp_inv_sub = prove(
    (FULL_SIMP_TAC std_ss [ok_split_heap_def,UNION_SUBSET,ref_heap_addr_def]
     \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,ADDR_SET_def,GSPECIFICATION,lisp_x_def]
     \\ FULL_SIMP_TAC std_ss [MEM,MEM_APPEND,n2w_w2n,w2n_lt30] \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
+    \\ Q.PAT_X_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
     \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC (srw_ss()) [])
-  \\ Q.PAT_ASSUM `ref_heap_addr s0 = w0` (ASSUME_TAC o GSYM)
-  \\ Q.PAT_ASSUM `ref_heap_addr s1 = w1` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `ref_heap_addr s0 = w0` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `ref_heap_addr s1 = w1` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [ref_heap_addr_def,WORD_OR_EQ_WORD_ADD_LEMMA]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2w_def,w2n_n2w]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_mul_n2w,word_add_n2w,WORD_MUL_LSL]
@@ -1325,10 +1325,10 @@ val lisp_inv_sub = prove(
    (FULL_SIMP_TAC std_ss [ok_split_heap_def,UNION_SUBSET,ref_heap_addr_def]
     \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,ADDR_SET_def,GSPECIFICATION,lisp_x_def]
     \\ FULL_SIMP_TAC std_ss [MEM,MEM_APPEND,n2w_w2n,w2n_lt30] \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
+    \\ Q.PAT_X_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
     \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC (srw_ss()) [])
-  \\ Q.PAT_ASSUM `ref_heap_addr s0 = w0` (ASSUME_TAC o GSYM)
-  \\ Q.PAT_ASSUM `ref_heap_addr s1 = w1` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `ref_heap_addr s0 = w0` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `ref_heap_addr s1 = w1` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [ref_heap_addr_def,WORD_OR_EQ_WORD_ADD_LEMMA]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2w_def,w2n_n2w]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_mul_n2w,word_add_n2w,WORD_MUL_LSL]
@@ -1358,13 +1358,13 @@ val lisp_inv_sub1 = prove(
    (FULL_SIMP_TAC std_ss [ok_split_heap_def,UNION_SUBSET,ref_heap_addr_def]
     \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,ADDR_SET_def,GSPECIFICATION,lisp_x_def]
     \\ FULL_SIMP_TAC std_ss [MEM,MEM_APPEND,n2w_w2n,w2n_lt30] \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
+    \\ Q.PAT_X_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
     \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC (srw_ss()) [])
-  \\ Q.PAT_ASSUM `ref_heap_addr s0 = w0` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `ref_heap_addr s0 = w0` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [ref_heap_addr_def,WORD_OR_EQ_WORD_ADD_LEMMA]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2w_def,w2n_n2w]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [word_mul_n2w,word_add_n2w,WORD_MUL_LSL]
-  \\ Q.PAT_ASSUM `x0 = Val a` (fn th => FULL_SIMP_TAC std_ss [th,SExp_11])
+  \\ Q.PAT_X_ASSUM `x0 = Val a` (fn th => FULL_SIMP_TAC std_ss [th,SExp_11])
   \\ `(a - 1) < 1073741824 /\ a < 1073741825 /\ ~(4 * a + 1 < 4)` by DECIDE_TAC
   \\ ASM_SIMP_TAC std_ss [word_arith_lemma2]
   \\ AP_TERM_TAC \\ DECIDE_TAC)
@@ -1390,7 +1390,7 @@ val lisp_inv_even = prove(
   \\ ASM_SIMP_TAC std_ss [lisp_inv_def,EVERY_DEF,lisp_x_def,MAP,CONS_11,
        ref_heap_addr_def] \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
   \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM `w0 = dfgdf` (fn th => SIMP_TAC std_ss [th])
+  \\ Q.PAT_X_ASSUM `w0 = dfgdf` (fn th => SIMP_TAC std_ss [th])
   \\ `!w:word30. (w2w (w2w w << 2 !! 0x1w:word32) && 0x4w = 0x0w:word64) = (w && 1w = 0w)` by blastLib.BBLAST_TAC
   \\ POP_ASSUM (MP_TAC o Q.SPEC `n2w a`) \\ SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [n2w_and_1] \\ SIMP_TAC wstd_ss [n2w_11]
@@ -1418,10 +1418,10 @@ val lisp_inv_div2 = prove(
    (FULL_SIMP_TAC std_ss [ok_split_heap_def,UNION_SUBSET,ref_heap_addr_def]
     \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,ADDR_SET_def,GSPECIFICATION,lisp_x_def]
     \\ FULL_SIMP_TAC std_ss [MEM,MEM_APPEND,n2w_w2n,w2n_lt30] \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
+    \\ Q.PAT_X_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
     \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC (srw_ss()) [])
   \\ SIMP_TAC wstd_ss [DIV_LT_X,w2n_n2w]
-  \\ Q.PAT_ASSUM `xxx = w0` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `xxx = w0` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss [ref_heap_addr_def]
   \\ STRIP_TAC THEN1 DECIDE_TAC
   \\ SUBGOAL `n2w (a DIV 2) = (n2w a >>> 1):word30`
@@ -1486,7 +1486,7 @@ val addr_path_ALL_DISTINCT = prove(
   Induct \\ SIMP_TAC std_ss [ALL_DISTINCT] \\ REVERSE (REPEAT STRIP_TAC)
   THEN1 METIS_TAC [addr_path_def]
   \\ FULL_SIMP_TAC std_ss [MEM_SPLIT]
-  \\ FULL_SIMP_TAC std_ss [] \\ Q.PAT_ASSUM `!s.bbb` (K ALL_TAC)
+  \\ FULL_SIMP_TAC std_ss [] \\ Q.PAT_X_ASSUM `!s.bbb` (K ALL_TAC)
   \\ FULL_SIMP_TAC std_ss [addr_path_def]
   \\ IMP_RES_TAC addr_path_APPEND
   \\ FULL_SIMP_TAC std_ss [addr_path_def]
@@ -1547,7 +1547,7 @@ val lisp_inv_LDEPTH = prove(
   \\ FULL_SIMP_TAC std_ss [lisp_inv_def,EVERY_DEF,lisp_x_def,MAP,CONS_11,
          ref_heap_addr_def] \\ Q.LIST_EXISTS_TAC [`INIT_SYMBOLS ++ sym`,`m`,`s0`]
   \\ FULL_SIMP_TAC std_ss [ok_split_heap_def] \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM `!k. bbb` MATCH_MP_TAC \\ DECIDE_TAC);
+  \\ Q.PAT_X_ASSUM `!k. bbb` MATCH_MP_TAC \\ DECIDE_TAC);
 
 val _ = save_thm("lisp_inv_LDEPTH",lisp_inv_LDEPTH);
 
@@ -1609,7 +1609,7 @@ val lisp_inv_error = store_thm("lisp_inv_error",
   \\ FULL_SIMP_TAC std_ss [STAR_ASSOC,word_arith_lemma1,SEP_CLAUSES]
   \\ FULL_SIMP_TAC std_ss [STAR_ASSOC,word_arith_lemma3,INSERT_SUBSET,EMPTY_SUBSET]
   \\ SEP_R_TAC \\ ASM_SIMP_TAC std_ss [gc_w2w_lemma]
-  \\ Q.PAT_ASSUM `sp && 0x3w = 0x0w` MP_TAC \\ blastLib.BBLAST_TAC);
+  \\ Q.PAT_X_ASSUM `sp && 0x3w = 0x0w` MP_TAC \\ blastLib.BBLAST_TAC);
 
 
 (* I/O *)
@@ -1683,13 +1683,13 @@ val lisp_inv_cs_read = prove(
     (w2w (f (sp - n2w (188 - 8 * 9))) << 32 !! w2w (f (sp - n2w (192 - 8 * 9))) = EL 9 cs) /\
     (sp - n2w (188 - 8 * 9)) IN df /\ (sp - n2w (192 - 8 * 9)) IN df``,
   SIMP_TAC std_ss [lisp_inv_def,ref_full_stack_def,APPEND] \\ STRIP_TAC
-  \\ Q.PAT_ASSUM `LENGTH ds = 10` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `LENGTH ds = 10` (K ALL_TAC)
   \\ IMP_RES_TAC expand_list \\ FULL_SIMP_TAC std_ss [APPEND,EL,HD,TL,EL_CONS]
   \\ FULL_SIMP_TAC std_ss [ref_full_stack_def,word64_3232_def,LET_DEF,ref_static_def]
   \\ FULL_SIMP_TAC std_ss [STAR_ASSOC,word_arith_lemma1,SEP_CLAUSES]
   \\ FULL_SIMP_TAC std_ss [STAR_ASSOC,word_arith_lemma3,INSERT_SUBSET,EMPTY_SUBSET]
   \\ FULL_SIMP_TAC std_ss [lisp_inv_cs_read_blast]
-  \\ REPEAT (Q.PAT_ASSUM `(p_p * q_q) (fun2set (f_f,df_df))`
+  \\ REPEAT (Q.PAT_X_ASSUM `(p_p * q_q) (fun2set (f_f,df_df))`
        (STRIP_ASSUME_TAC o MATCH_MP fun2set_STAR_IMP))
     \\ IMP_RES_TAC one_fun2set_IMP \\ FULL_SIMP_TAC std_ss [DIFF_UNION]
     \\ FULL_SIMP_TAC std_ss [IN_DIFF]) |> SIMP_RULE std_ss [];
@@ -1726,7 +1726,7 @@ val lisp_inv_cs_write = prove(
               (((sp - n2w (188 - 8 * 3)) =+ w2w (w >>> 32)) f) in
     let cs = UPDATE_NTH 3 w cs in ^LISP)``,
   SIMP_TAC std_ss [lisp_inv_def,ref_full_stack_def,APPEND] \\ STRIP_TAC
-  \\ Q.PAT_ASSUM `LENGTH ds = 10` MP_TAC
+  \\ Q.PAT_X_ASSUM `LENGTH ds = 10` MP_TAC
   \\ IMP_RES_TAC expand_list \\ FULL_SIMP_TAC std_ss [APPEND,EL,HD,TL,EL_CONS]
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [UPDATE_NTH_CONS,LET_DEF]
   \\ FULL_SIMP_TAC std_ss [ref_full_stack_def,word64_3232_def,LET_DEF,
@@ -1762,16 +1762,16 @@ val lisp_inv_ds_read = prove(
     (w2w (f (sp - n2w (108 - 8 * 9))) << 32 !! w2w (f (sp - n2w (112 - 8 * 9))) = EL 9 ds) /\
     (sp - n2w (108 - 8 * 9)) IN df /\ (sp - n2w (112 - 8 * 9)) IN df``,
   SIMP_TAC std_ss [lisp_inv_def,ref_full_stack_def,APPEND] \\ STRIP_TAC
-  \\ Q.PAT_ASSUM `LENGTH cs = 10` MP_TAC
+  \\ Q.PAT_X_ASSUM `LENGTH cs = 10` MP_TAC
   \\ IMP_RES_TAC expand_list \\ FULL_SIMP_TAC std_ss [APPEND,EL,HD,TL,EL_CONS]
   \\ FULL_SIMP_TAC std_ss [ref_full_stack_def,word64_3232_def,LET_DEF,
         ref_static_def,ref_static_APPEND] \\ STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [STAR_ASSOC,word_arith_lemma1,SEP_CLAUSES]
   \\ FULL_SIMP_TAC std_ss [STAR_ASSOC,word_arith_lemma3,INSERT_SUBSET,EMPTY_SUBSET]
   \\ FULL_SIMP_TAC std_ss [lisp_inv_cs_read_blast]
-  \\ Q.PAT_ASSUM `c1 = xxx` ASSUME_TAC \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `n2w amnt = c9` (K ALL_TAC)
-  \\ REPEAT (Q.PAT_ASSUM `(p_p * q_q) (fun2set (f_f,df_df))`
+  \\ Q.PAT_X_ASSUM `c1 = xxx` ASSUME_TAC \\ FULL_SIMP_TAC std_ss []
+  \\ Q.PAT_X_ASSUM `n2w amnt = c9` (K ALL_TAC)
+  \\ REPEAT (Q.PAT_X_ASSUM `(p_p * q_q) (fun2set (f_f,df_df))`
        (STRIP_ASSUME_TAC o MATCH_MP fun2set_STAR_IMP))
     \\ IMP_RES_TAC one_fun2set_IMP \\ FULL_SIMP_TAC std_ss [DIFF_UNION]
     \\ FULL_SIMP_TAC std_ss [IN_DIFF]) |> SIMP_RULE std_ss [];
@@ -1793,7 +1793,7 @@ val lisp_inv_ds_write = prove(
               (((sp - n2w (112 - 8 * 0)) =+ w2w (w:word64)) f) in
     let ds = UPDATE_NTH 0 w ds in ^LISP)``,
   SIMP_TAC std_ss [lisp_inv_def,ref_full_stack_def,APPEND] \\ STRIP_TAC
-  \\ Q.PAT_ASSUM `LENGTH cs = 10` MP_TAC
+  \\ Q.PAT_X_ASSUM `LENGTH cs = 10` MP_TAC
   \\ IMP_RES_TAC expand_list \\ FULL_SIMP_TAC std_ss [APPEND,EL,HD,TL,EL_CONS]
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [UPDATE_NTH_CONS,LET_DEF]
   \\ FULL_SIMP_TAC std_ss [ref_full_stack_def,word64_3232_def,LET_DEF,
@@ -1902,7 +1902,7 @@ val lisp_inv_gc = prove(
        0x4w * wsp + sp - 0xCw IN df /\
        0x4w * wsp + sp - 0x8w IN df /\
        0x4w * wsp + sp - 0x4w IN df` by ALL_TAC THEN1
-   (Q.PAT_ASSUM `MAP ref_heap_addr xxx = yyy` (ASSUME_TAC o GSYM)
+   (Q.PAT_X_ASSUM `MAP ref_heap_addr xxx = yyy` (ASSUME_TAC o GSYM)
     \\ FULL_SIMP_TAC std_ss [MAP,CONS_11,ref_stack_def,word_arith_lemma1,APPEND]
     \\ FULL_SIMP_TAC std_ss [word_arith_lemma3,STAR_ASSOC]
     \\ Q.UNABBREV_TAC `f5`
@@ -1917,10 +1917,10 @@ val lisp_inv_gc = prove(
   \\ FULL_SIMP_TAC std_ss [ok_split_heap]
   \\ IMP_RES_TAC split_gc_thm
   \\ FULL_SIMP_TAC std_ss [APPEND]
-  \\ Q.PAT_ASSUM `split_gc xxx = yyy` MP_TAC
+  \\ Q.PAT_X_ASSUM `split_gc xxx = yyy` MP_TAC
   \\ SEP_I_TAC "split_gc"
   \\ STRIP_TAC
-  \\ Q.PAT_ASSUM `!xs2. bbb` MP_TAC \\ ASM_SIMP_TAC std_ss []
+  \\ Q.PAT_X_ASSUM `!xs2. bbb` MP_TAC \\ ASM_SIMP_TAC std_ss []
   \\ Q.ABBREV_TAC `XX = ref_stack_space_above (sp + 4w * wsp + n2w (4 * LENGTH (ss ++ ss1))) (sl1 - LENGTH ss1)`
   \\ STRIP_TAC
   \\ POP_ASSUM (MP_TAC o Q.SPEC `^STATIC * ref_stack_space (sp + 0x4w * wsp - 0x18w) (w2n wsp) * XX`)
@@ -1939,18 +1939,18 @@ val lisp_inv_gc = prove(
     \\ SEP_WRITE_TAC)
   \\ ASM_SIMP_TAC std_ss [lisp_inv_gc_blast]
   \\ SIMP_TAC std_ss [CONJ_ASSOC] \\ STRIP_TAC THEN1
-   (Q.PAT_ASSUM `xxx (fun2set (f5,df))` (K ALL_TAC)
-    \\ Q.PAT_ASSUM `xxx (fun2set (fi,df))` (K ALL_TAC)
-    \\ Q.PAT_ASSUM `xxx (fun2set (f,df))` (K ALL_TAC)
+   (Q.PAT_X_ASSUM `xxx (fun2set (f5,df))` (K ALL_TAC)
+    \\ Q.PAT_X_ASSUM `xxx (fun2set (fi,df))` (K ALL_TAC)
+    \\ Q.PAT_X_ASSUM `xxx (fun2set (f,df))` (K ALL_TAC)
     \\ POP_ASSUM MP_TAC \\ FULL_SIMP_TAC std_ss [APPEND]
     \\ NTAC 4 (ONCE_REWRITE_TAC [ref_static_def])
     \\ FULL_SIMP_TAC std_ss [word64_3232_def,LET_DEF,STAR_ASSOC]
     \\ FULL_SIMP_TAC std_ss [word_arith_lemma3] \\ STRIP_TAC \\ SEP_R_TAC
     \\ ASM_SIMP_TAC std_ss [gc_addr_lemma1])
   \\ `w2w (fj (sp - 236w)) << 32 !! w2w (fj (sp - 240w)) = (n2w e):word64` by ALL_TAC THEN1
-   (Q.PAT_ASSUM `xxx (fun2set (f5,df))` (K ALL_TAC)
-    \\ Q.PAT_ASSUM `xxx (fun2set (fi,df))` (K ALL_TAC)
-    \\ Q.PAT_ASSUM `xxx (fun2set (f,df))` (K ALL_TAC)
+   (Q.PAT_X_ASSUM `xxx (fun2set (f5,df))` (K ALL_TAC)
+    \\ Q.PAT_X_ASSUM `xxx (fun2set (fi,df))` (K ALL_TAC)
+    \\ Q.PAT_X_ASSUM `xxx (fun2set (f,df))` (K ALL_TAC)
     \\ POP_ASSUM MP_TAC \\ FULL_SIMP_TAC std_ss [APPEND]
     \\ NTAC 4 (ONCE_REWRITE_TAC [ref_static_def])
     \\ FULL_SIMP_TAC std_ss [word64_3232_def,LET_DEF,STAR_ASSOC]
@@ -1968,11 +1968,11 @@ val lisp_inv_gc = prove(
      \\ Cases_on `t` \\ FULL_SIMP_TAC std_ss [LENGTH,DECIDE ``~(SUC n = 0)``]
      \\ FULL_SIMP_TAC std_ss [CONS_11])
   \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `xxx (fun2set (f5,df))` (K ALL_TAC)
-  \\ Q.PAT_ASSUM `xxx (fun2set (fi,df))` (K ALL_TAC)
-  \\ Q.PAT_ASSUM `xxx (fun2set (f,df))` (K ALL_TAC)
-  \\ Q.PAT_ASSUM `Abbrev (xxx = (zz =+ yy) ff)` (K ALL_TAC)
-  \\ Q.PAT_ASSUM `Abbrev (xxx = (zz =+ yy) ff)` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `xxx (fun2set (f5,df))` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `xxx (fun2set (fi,df))` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `xxx (fun2set (f,df))` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `Abbrev (xxx = (zz =+ yy) ff)` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `Abbrev (xxx = (zz =+ yy) ff)` (K ALL_TAC)
   \\ FULL_SIMP_TAC std_ss [ref_stack_def,word_arith_lemma3,STAR_ASSOC]
   \\ `fj (sp + 0x4w * wsp - 0x18w) = ref_heap_addr r0` by SEP_READ_TAC
   \\ `fj (sp + 0x4w * wsp - 0x14w) = ref_heap_addr r1` by SEP_READ_TAC
@@ -2007,7 +2007,7 @@ val lisp_inv_gc = prove(
   THEN1 (Cases_on `b` \\ FULL_SIMP_TAC std_ss [])
   \\ `i2 <= e` by ALL_TAC THEN1 (FULL_SIMP_TAC std_ss [ok_split_heap_def])
   \\ ASM_SIMP_TAC std_ss [word_add_n2w,DECIDE ``2*n = n+n:num``]
-  \\ Q.PAT_ASSUM `EVERY xxx yyy` MP_TAC
+  \\ Q.PAT_X_ASSUM `EVERY xxx yyy` MP_TAC
   \\ SIMP_TAC std_ss [GSYM ZIP]
   \\ MATCH_MP_TAC EVERY_IMP_EVERY
   \\ SIMP_TAC std_ss [CONJ_ASSOC] \\ STRIP_TAC
@@ -2064,7 +2064,7 @@ val lisp_inv_gc = prove(
        0x4w * wsp + sp - 0xCw IN df /\
        0x4w * wsp + sp - 0x8w IN df /\
        0x4w * wsp + sp - 0x4w IN df` by ALL_TAC THEN1
-   (Q.PAT_ASSUM `MAP ref_heap_addr xxx = yyy` (ASSUME_TAC o GSYM)
+   (Q.PAT_X_ASSUM `MAP ref_heap_addr xxx = yyy` (ASSUME_TAC o GSYM)
     \\ FULL_SIMP_TAC std_ss [MAP,CONS_11,ref_stack_def,word_arith_lemma1,APPEND]
     \\ FULL_SIMP_TAC std_ss [word_arith_lemma3,STAR_ASSOC]
     \\ Q.UNABBREV_TAC `f5`
@@ -2083,10 +2083,10 @@ val lisp_inv_gc = prove(
   \\ IMP_RES_TAC gen_gc_thm
   \\ POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `l`)
   \\ FULL_SIMP_TAC std_ss [APPEND]
-  \\ Q.PAT_ASSUM `gen_gc xxx = yyy` MP_TAC
+  \\ Q.PAT_X_ASSUM `gen_gc xxx = yyy` MP_TAC
   \\ SEP_I_TAC "gen_gc"
   \\ STRIP_TAC
-  \\ Q.PAT_ASSUM `!xs2. bbb` MP_TAC \\ ASM_SIMP_TAC std_ss []
+  \\ Q.PAT_X_ASSUM `!xs2. bbb` MP_TAC \\ ASM_SIMP_TAC std_ss []
   \\ Q.ABBREV_TAC `XX = ref_stack_space_above (sp + 4w * wsp + n2w (4 * LENGTH (ss ++ ss1))) (sl1 - LENGTH ss1)`
   \\ STRIP_TAC
   \\ POP_ASSUM (MP_TAC o Q.SPEC `^STATIC * ref_stack_space (sp + 0x4w * wsp - 0x18w) (w2n wsp) * XX`)
@@ -2097,8 +2097,8 @@ val lisp_inv_gc = prove(
   \\ REPEAT STRIP_TAC
   \\ ASM_SIMP_TAC std_ss [lisp_inv_gc_blast]
   \\ SIMP_TAC std_ss [CONJ_ASSOC] \\ STRIP_TAC THEN1
-   (Q.PAT_ASSUM `xxx (fun2set (f5,df))` (K ALL_TAC)
-    \\ Q.PAT_ASSUM `xxx (fun2set (f,df))` (K ALL_TAC)
+   (Q.PAT_X_ASSUM `xxx (fun2set (f5,df))` (K ALL_TAC)
+    \\ Q.PAT_X_ASSUM `xxx (fun2set (f,df))` (K ALL_TAC)
     \\ NTAC 4 (POP_ASSUM MP_TAC) \\ FULL_SIMP_TAC std_ss [APPEND]
     \\ NTAC 4 (ONCE_REWRITE_TAC [ref_static_def])
     \\ FULL_SIMP_TAC std_ss [word64_3232_def,LET_DEF,STAR_ASSOC]
@@ -2106,8 +2106,8 @@ val lisp_inv_gc = prove(
     \\ ASM_SIMP_TAC std_ss [gc_addr_lemma1,align_blast]
     \\ ASM_SIMP_TAC std_ss [n2w_and_3])
   \\ `w2w (fi (sp - 236w)) << 32 !! w2w (fi (sp - 240w)) = (n2w e):word64` by ALL_TAC THEN1
-   (Q.PAT_ASSUM `xxx (fun2set (f5,df))` (K ALL_TAC)
-    \\ Q.PAT_ASSUM `xxx (fun2set (f,df))` (K ALL_TAC)
+   (Q.PAT_X_ASSUM `xxx (fun2set (f5,df))` (K ALL_TAC)
+    \\ Q.PAT_X_ASSUM `xxx (fun2set (f,df))` (K ALL_TAC)
     \\ NTAC 4 (POP_ASSUM MP_TAC) \\ FULL_SIMP_TAC std_ss [APPEND]
     \\ NTAC 4 (ONCE_REWRITE_TAC [ref_static_def])
     \\ FULL_SIMP_TAC std_ss [word64_3232_def,LET_DEF,STAR_ASSOC]
@@ -2126,9 +2126,9 @@ val lisp_inv_gc = prove(
      \\ Cases_on `t` \\ FULL_SIMP_TAC std_ss [LENGTH,DECIDE ``~(SUC n = 0)``]
      \\ FULL_SIMP_TAC std_ss [CONS_11])
   \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `xxx (fun2set (f5,df))` (K ALL_TAC)
-  \\ Q.PAT_ASSUM `xxx (fun2set (f,df))` (K ALL_TAC)
-  \\ Q.PAT_ASSUM `Abbrev (xxx = (zz =+ yy) ff)` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `xxx (fun2set (f5,df))` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `xxx (fun2set (f,df))` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `Abbrev (xxx = (zz =+ yy) ff)` (K ALL_TAC)
   \\ FULL_SIMP_TAC std_ss [ref_stack_def,word_arith_lemma3,STAR_ASSOC]
   \\ `fi (sp + 0x4w * wsp - 0x18w) = ref_heap_addr r0` by SEP_READ_TAC
   \\ `fi (sp + 0x4w * wsp - 0x14w) = ref_heap_addr r1` by SEP_READ_TAC
@@ -2162,7 +2162,7 @@ val lisp_inv_gc = prove(
   \\ SIMP_TAC std_ss [CONJ_ASSOC]
   \\ `i2 <= e` by ALL_TAC THEN1 (FULL_SIMP_TAC std_ss [ok_split_heap_def])
   \\ ASM_SIMP_TAC std_ss [word_add_n2w,DECIDE ``2*n = n+n:num``]
-  \\ Q.PAT_ASSUM `EVERY xxx yyy` MP_TAC
+  \\ Q.PAT_X_ASSUM `EVERY xxx yyy` MP_TAC
   \\ SIMP_TAC std_ss [GSYM ZIP]
   \\ MATCH_MP_TAC EVERY_IMP_EVERY
   \\ SIMP_TAC std_ss [CONJ_ASSOC] \\ STRIP_TAC
@@ -2251,12 +2251,12 @@ val lisp_inv_xbp_load = prove(
   Cases_on `isVal x1` \\ FULL_SIMP_TAC std_ss [LET_DEF]
   \\ FULL_SIMP_TAC std_ss [isVal_thm,getVal_def] \\ STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_ds_read \\ ASM_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `lisp_inv xxx yyy zzz` MP_TAC \\ REPEAT (POP_ASSUM (K ALL_TAC))
+  \\ Q.PAT_X_ASSUM `lisp_inv xxx yyy zzz` MP_TAC \\ REPEAT (POP_ASSUM (K ALL_TAC))
   \\ NTAC 2 STRIP_TAC
   \\ Q.ABBREV_TAC `n = LENGTH xs + a - xbp`
   \\ `EL 1 ds + w2w w1 = sp + 0x4w * wsp + 0x4w * n2w n` by ALL_TAC THEN1
    (FULL_SIMP_TAC std_ss [lisp_inv_def,MAP,CONS_11,EVERY_DEF,lisp_x_def]
-    \\ Q.PAT_ASSUM `ref_heap_addr s1 = w1` (MP_TAC o GSYM)
+    \\ Q.PAT_X_ASSUM `ref_heap_addr s1 = w1` (MP_TAC o GSYM)
     \\ FULL_SIMP_TAC std_ss [ref_heap_addr_def,BLAST_LEMMA]
     \\ REPEAT STRIP_TAC
     \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2w_def,w2n_n2w,WORD_MUL_LSL]
@@ -2265,7 +2265,7 @@ val lisp_inv_xbp_load = prove(
     \\ ONCE_REWRITE_TAC [ADD_COMM]
     \\ SIMP_TAC std_ss [GSYM word_add_n2w,WORD_SUB_ADD,WORD_ADD_ASSOC]
     \\ ASM_SIMP_TAC std_ss [word_arith_lemma3]
-    \\ Q.PAT_ASSUM `LENGTH ss + w2n wsp = sl` (MP_TAC o GSYM)
+    \\ Q.PAT_X_ASSUM `LENGTH ss + w2n wsp = sl` (MP_TAC o GSYM)
     \\ ASM_SIMP_TAC std_ss [] \\ Q.SPEC_TAC (`wsp`,`w`)
     \\ Cases \\ ASM_SIMP_TAC std_ss [word_arith_lemma1,word_mul_n2w,w2n_n2w]
     \\ `~(4 * (LENGTH ss + n') < 4 * xbp - 4 * a)` by DECIDE_TAC
@@ -2297,12 +2297,12 @@ val lisp_inv_xbp_store = prove(
   Cases_on `isVal x1` \\ FULL_SIMP_TAC std_ss [LET_DEF]
   \\ FULL_SIMP_TAC std_ss [isVal_thm,getVal_def] \\ STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_ds_read \\ ASM_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `lisp_inv xxx yyy zzz` MP_TAC \\ REPEAT (POP_ASSUM (K ALL_TAC))
+  \\ Q.PAT_X_ASSUM `lisp_inv xxx yyy zzz` MP_TAC \\ REPEAT (POP_ASSUM (K ALL_TAC))
   \\ NTAC 2 STRIP_TAC
   \\ Q.ABBREV_TAC `n = LENGTH xs + a - xbp`
   \\ `EL 1 ds + w2w w1 = sp + 0x4w * wsp + 0x4w * n2w n` by ALL_TAC THEN1
    (FULL_SIMP_TAC std_ss [lisp_inv_def,MAP,CONS_11,EVERY_DEF,lisp_x_def]
-    \\ Q.PAT_ASSUM `ref_heap_addr s1 = w1` (MP_TAC o GSYM)
+    \\ Q.PAT_X_ASSUM `ref_heap_addr s1 = w1` (MP_TAC o GSYM)
     \\ FULL_SIMP_TAC std_ss [ref_heap_addr_def,BLAST_LEMMA]
     \\ REPEAT STRIP_TAC
     \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2w_def,w2n_n2w,WORD_MUL_LSL]
@@ -2311,7 +2311,7 @@ val lisp_inv_xbp_store = prove(
     \\ ONCE_REWRITE_TAC [ADD_COMM]
     \\ SIMP_TAC std_ss [GSYM word_add_n2w,WORD_SUB_ADD,WORD_ADD_ASSOC]
     \\ ASM_SIMP_TAC std_ss [word_arith_lemma3]
-    \\ Q.PAT_ASSUM `LENGTH ss + w2n wsp = sl` (MP_TAC o GSYM)
+    \\ Q.PAT_X_ASSUM `LENGTH ss + w2n wsp = sl` (MP_TAC o GSYM)
     \\ ASM_SIMP_TAC std_ss [] \\ Q.SPEC_TAC (`wsp`,`w`)
     \\ Cases \\ ASM_SIMP_TAC std_ss [word_arith_lemma1,word_mul_n2w,w2n_n2w]
     \\ `~(4 * (LENGTH ss + n') < 4 * xbp - 4 * a)` by DECIDE_TAC

@@ -177,7 +177,7 @@ SIMP_TAC std_ss [FUN_EQ_THM, PMATCH_ROW_def,
   OPTION_MAP_EQ_OPTION_MAP] THEN
 CONV_TAC (RENAME_VARS_CONV ["i"]) THEN
 GEN_TAC THEN
-Q.PAT_ASSUM `!i. (_ = _)` (fn thm => ASSUME_TAC (Q.SPEC `i` thm))  THEN
+Q.PAT_X_ASSUM `!i. (_ = _)` (fn thm => ASSUME_TAC (Q.SPEC `i` thm))  THEN
 Tactical.REVERSE (Cases_on `?x. PMATCH_ROW_COND p g i x`) THEN (
   FULL_SIMP_TAC std_ss []
 ) THEN
@@ -671,7 +671,7 @@ REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC list_ss [IS_REDUNDANT_ROWS_INFO_def, SNOC_APPEND] THEN
 REPEAT STRIP_TAC THEN
 Cases_on `i' < LENGTH infos` THEN1 (
-  Q.PAT_ASSUM `!i. _` (MP_TAC o Q.SPEC `i'`) THEN
+  Q.PAT_X_ASSUM `!i. _` (MP_TAC o Q.SPEC `i'`) THEN
   FULL_SIMP_TAC (list_ss++boolSimps.CONJ_ss) [PMATCH_ROW_REDUNDANT_def,
      rich_listTheory.EL_APPEND1]
 ) THEN
@@ -685,7 +685,7 @@ REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [EVERY_MEM, MEM_EL] THEN
 Q.EXISTS_TAC `n` THEN
 FULL_SIMP_TAC list_ss [] THEN
-Q.PAT_ASSUM `r' = _` (ASSUME_TAC o GSYM) THEN
+Q.PAT_X_ASSUM `r' = _` (ASSUME_TAC o GSYM) THEN
 Cases_on `r' v` THEN (
   FULL_SIMP_TAC std_ss []
 ))
@@ -724,14 +724,14 @@ val IS_REDUNDANT_ROWS_INFO_CONS = store_thm (
 
 EQ_TAC THEN SIMP_TAC list_ss [IS_REDUNDANT_ROWS_INFO_def] THEN
 REPEAT STRIP_TAC THENL [
-  Q.PAT_ASSUM `!i'. _` (MP_TAC o SPEC ``0``) THEN
+  Q.PAT_X_ASSUM `!i'. _` (MP_TAC o SPEC ``0``) THEN
   ASM_SIMP_TAC list_ss [PMATCH_ROW_REDUNDANT_def],
 
-  Q.PAT_ASSUM `!i'. _` (MP_TAC o Q.SPEC `SUC i'`) THEN
+  Q.PAT_X_ASSUM `!i'. _` (MP_TAC o Q.SPEC `SUC i'`) THEN
   FULL_SIMP_TAC list_ss [PMATCH_ROW_REDUNDANT_def] THEN
   REPEAT STRIP_TAC THEN
   FULL_SIMP_TAC std_ss [] THEN
-  Q.PAT_ASSUM `row v = NONE` ASSUME_TAC THEN
+  Q.PAT_X_ASSUM `row v = NONE` ASSUME_TAC THEN
   Q.EXISTS_TAC `PRE j` THEN
   Cases_on `j` THEN (
     FULL_SIMP_TAC list_ss []
@@ -750,7 +750,7 @@ REPEAT STRIP_TAC THENL [
     ASM_SIMP_TAC list_ss []
   ) THEN
   FULL_SIMP_TAC std_ss [] THEN
-  Q.PAT_ASSUM `!i. _` (MP_TAC o Q.SPEC `i''`) THEN
+  Q.PAT_X_ASSUM `!i. _` (MP_TAC o Q.SPEC `i''`) THEN
   ASM_SIMP_TAC std_ss [] THEN
   STRIP_TAC THEN
   Q.EXISTS_TAC `SUC j` THEN
@@ -794,7 +794,7 @@ REPEAT STRIP_TAC THEN
   FULL_SIMP_TAC list_ss [IS_REDUNDANT_ROWS_INFO_def]
 ) THEN
 FULL_SIMP_TAC std_ss [IS_REDUNDANT_ROWS_INFO_CONS] THEN
-Q.PAT_ASSUM `!c infos. _` (MP_TAC o Q.SPECL [`c`, `infos'`]) THEN
+Q.PAT_X_ASSUM `!c infos. _` (MP_TAC o Q.SPECL [`c`, `infos'`]) THEN
 Cases_on `i` THENL [
   FULL_SIMP_TAC std_ss [APPLY_REDUNDANT_ROWS_INFO_THMS,
     PMATCH_EQUIV_ROWS_CONS_NONE],
@@ -944,7 +944,7 @@ REPEAT STRIP_TAC THEN
 Cases_on `i = LENGTH infos` THEN1 (
   ASM_SIMP_TAC list_ss [SNOC_APPEND, EL1_STRONGEST_REDUNDANT_ROWS_INFO_AUX, rich_listTheory.EL_APPEND2]
 ) THEN
-Q.PAT_ASSUM `!p infos. _` (MP_TAC o Q.SPECL [
+Q.PAT_X_ASSUM `!p infos. _` (MP_TAC o Q.SPECL [
   `p /\ (h (v:'a) = NONE)`, `SNOC (p ==> (h (v:'a) = NONE)) infos`, `i`]) THEN
 ASM_SIMP_TAC list_ss [SNOC_APPEND, GSYM arithmeticTheory.ADD1] THEN
 REPEAT STRIP_TAC THEN
@@ -1002,7 +1002,7 @@ Tactical.REVERSE (`?j. j < i /\ (EL j rows = e)` by ALL_TAC) THEN1 (
   ASM_SIMP_TAC std_ss [] THEN
   Cases_on `e v` THEN FULL_SIMP_TAC std_ss []
 ) THEN
-Q.PAT_ASSUM `MEM e _` MP_TAC THEN
+Q.PAT_X_ASSUM `MEM e _` MP_TAC THEN
 ASM_SIMP_TAC (list_ss++boolSimps.CONJ_ss) [MEM_EL,rich_listTheory.EL_TAKE] THEN
 PROVE_TAC[])
 
@@ -1147,9 +1147,9 @@ Induct_on `rows'` THEN1 (
   ASM_SIMP_TAC list_ss [PMATCH_def, PMATCH_ROW_def]
 ) THEN
 
-Q.PAT_ASSUM `_ = _` (ASSUME_TAC o GSYM) THEN
+Q.PAT_X_ASSUM `_ = _` (ASSUME_TAC o GSYM) THEN
 FULL_SIMP_TAC list_ss [PMATCH_def, PMATCH_ROW_def] THEN
-Q.PAT_ASSUM `_ = _` (K ALL_TAC) THEN
+Q.PAT_X_ASSUM `_ = _` (K ALL_TAC) THEN
 
 Cases_on `some x. PMATCH_ROW_COND p g v x` THEN (
   ASM_SIMP_TAC std_ss [PMATCH_FLATTEN_FUN_def]
@@ -1192,14 +1192,14 @@ Cases_on ` some x. PMATCH_ROW_COND p g v x` THEN1 (
 
 ASM_SIMP_TAC std_ss [] THEN
 FULL_SIMP_TAC std_ss [PMATCH_ROW_COND_def] THEN
-Q.PAT_ASSUM `_ = SOME x` (fn thm =>
+Q.PAT_X_ASSUM `_ = SOME x` (fn thm =>
   ASSUME_TAC (HO_MATCH_MP some_eq_SOME thm)) THEN
 `!x'. (p x' = v) = (x' = x)` by PROVE_TAC[] THEN
 ASM_SIMP_TAC (std_ss++boolSimps.CONJ_ss) [] THEN
 Cases_on `(some x'. (p' x' = x) /\ g' x x')` THEN (
   ASM_SIMP_TAC std_ss []
 ) THEN
-Q.PAT_ASSUM `_ = SOME x'` (fn thm =>
+Q.PAT_X_ASSUM `_ = SOME x'` (fn thm =>
   ASSUME_TAC (HO_MATCH_MP some_eq_SOME thm)) THEN
 ASM_SIMP_TAC std_ss [])
 

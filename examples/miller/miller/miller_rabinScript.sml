@@ -148,7 +148,7 @@ val FACTOR_TWOS_CORRECT = store_thm
    [AR_TAC []
     ++ Cases_on `r`
     >> (RW_TAC arith_ss [GSYM EVEN_ODD, EXP] ++ PROVE_TAC [])
-    ++ Q.PAT_ASSUM `!r. P r` (MP_TAC o Q.SPECL [`n'`, `s`])
+    ++ Q.PAT_X_ASSUM `!r. P r` (MP_TAC o Q.SPECL [`n'`, `s`])
     ++ Know `0 < n DIV 2`
     >> (Suff `~(n DIV 2 = 0)` >> DECIDE_TAC
         ++ R_TAC []
@@ -214,7 +214,7 @@ val WITNESS_TAIL_CORRECT = store_thm
    Induct_on `k` <<
    [Simplify [witness_tail_def]
     ++ Strip
-    ++ Q.PAT_ASSUM `~(x = y)` MP_TAC
+    ++ Q.PAT_X_ASSUM `~(x = y)` MP_TAC
     ++ REWRITE_TAC []
     ++ MATCH_MP_TAC FERMAT_LITTLE_PRIME
     ++ Simplify []
@@ -222,27 +222,27 @@ val WITNESS_TAIL_CORRECT = store_thm
     ++ DECIDE_TAC,
     RW_TAC bool_ss [LET_DEF, witness_tail_def] <<
     [Strip
-     ++ Q.PAT_ASSUM `(x * y) MOD n = 1` MP_TAC
+     ++ Q.PAT_X_ASSUM `(x * y) MOD n = 1` MP_TAC
      ++ Know `0 < n` >> DECIDE_TAC
      ++ RW_TAC std_ss [SQUARE_1_MOD_PRIME, MOD_MOD],
      Know `0 < n` >> DECIDE_TAC
      ++ Strip
-     ++ Q.PAT_ASSUM `witness_tail x y z` MP_TAC
-     ++ Q.PAT_ASSUM `~(x = y)` MP_TAC
+     ++ Q.PAT_X_ASSUM `witness_tail x y z` MP_TAC
+     ++ Q.PAT_X_ASSUM `~(x = y)` MP_TAC
      ++ Know `!x : num. x + x = 2 * x` >> DECIDE_TAC
      ++ Know `SUC (r - SUC k) = r - k`
-     >> (Q.PAT_ASSUM `SUC k <= r` MP_TAC
+     >> (Q.PAT_X_ASSUM `SUC k <= r` MP_TAC
          ++ KILL_TAC
          ++ DECIDE_TAC)
      ++ RW_TAC std_ss [MOD_MULT1, MOD_MULT2, GSYM EXP_ADD, GSYM EXP, MULT_ASSOC]
      ++ Strip
      ++ Suff `~prime n` >> PROVE_TAC []
-     ++ Q.PAT_ASSUM `!n a. P n a` MATCH_MP_TAC
+     ++ Q.PAT_X_ASSUM `!n a. P n a` MATCH_MP_TAC
      ++ Q.EXISTS_TAC `a`
      ++ Q.EXISTS_TAC `r`
      ++ Q.EXISTS_TAC `s`
      ++ RW_TAC std_ss []
-     ++ Q.PAT_ASSUM `SUC k <= r` MP_TAC
+     ++ Q.PAT_X_ASSUM `SUC k <= r` MP_TAC
      ++ KILL_TAC
      ++ DECIDE_TAC]]);
 
@@ -250,7 +250,7 @@ val WITNESS_CORRECT = store_thm
   ("WITNESS_CORRECT",
    ``!n a. 0 < a /\ a < n /\ witness n a ==> ~prime n``,
    S_TAC
-   ++ Q.PAT_ASSUM `witness n a` MP_TAC
+   ++ Q.PAT_X_ASSUM `witness n a` MP_TAC
    ++ RW_TAC std_ss [witness_def, LET_DEF]
    ++ Cases_on `factor_twos (n - 1)`
    ++ Know `0 < n - 1` >> DECIDE_TAC
@@ -305,7 +305,7 @@ val NONWITNESS_TAIL_1 = store_thm
    ++ Know `k <= r` >> DECIDE_TAC
    ++ DISCH_THEN
       (fn th =>
-       Q.PAT_ASSUM `x ==> y ==> z` (fn th2 => MATCH_MP_TAC (MP th2 th)))
+       Q.PAT_X_ASSUM `x ==> y ==> z` (fn th2 => MATCH_MP_TAC (MP th2 th)))
    ++ PROVE_TAC [NONWITNESS_TAIL_LEMMA]);
 
 val NONWITNESS_TAIL_2 = store_thm
@@ -328,12 +328,12 @@ val NONWITNESS_TAIL_2 = store_thm
    ++ Strip
    ++ Know `r - k <= j \/ (j = r - SUC k)` >> DECIDE_TAC
    ++ Strip
-   >> (Q.PAT_ASSUM `!j. P j` MATCH_MP_TAC
+   >> (Q.PAT_X_ASSUM `!j. P j` MATCH_MP_TAC
        ++ ASM_REWRITE_TAC []
        ++ CONJ_TAC >> DECIDE_TAC
        ++ PROVE_TAC [NONWITNESS_TAIL_LEMMA])
-   ++ Q.PAT_ASSUM `!j. P j` K_TAC
-   ++ Q.PAT_ASSUM `~x` MP_TAC
+   ++ Q.PAT_X_ASSUM `!j. P j` K_TAC
+   ++ Q.PAT_X_ASSUM `~x` MP_TAC
    ++ RW_TAC std_ss [witness_tail_def, LET_DEF]
    ++ POP_ASSUM K_TAC
    ++ Suff `F` >> Simplify []
@@ -377,7 +377,7 @@ val NONWITNESS_2 = store_thm
    RW_TAC std_ss [witness_def, LET_DEF]
    ++ Know `0 < n - 1` >> DECIDE_TAC
    ++ Strip
-   ++ Q.PAT_ASSUM `~x` MP_TAC
+   ++ Q.PAT_X_ASSUM `~x` MP_TAC
    ++ MP_TAC (Q.SPECL [`n - 1`, `r`, `s`] FACTOR_TWOS_CORRECT)
    ++ ASM_REWRITE_TAC []
    ++ DISCH_THEN (REWRITE_TAC o wrap)
@@ -471,7 +471,7 @@ val CARD_WITNESS = store_thm
         ++ REVERSE CONJ_TAC
         >> (R_TAC [gset_def, PSUBSET_DEF, SUBSET_DEF, IN_INTER]
             ++ Strip
-            ++ Q.PAT_ASSUM `~!x :: P. M x` MP_TAC
+            ++ Q.PAT_X_ASSUM `~!x :: P. M x` MP_TAC
             ++ REWRITE_TAC []
             ++ Strip
             ++ POP_ASSUM MP_TAC
@@ -505,8 +505,8 @@ val CARD_WITNESS = store_thm
         ++ ASSUME_TAC (Q.SPEC `n` MULT_GROUP)
         ++ RES_TAC
         ++ Strip >> G_TAC' []
-        ++ Q.PAT_ASSUM `x IN (\g. P g)` MP_TAC
-        ++ Q.PAT_ASSUM `x' IN (\g. P g)` MP_TAC
+        ++ Q.PAT_X_ASSUM `x IN (\g. P g)` MP_TAC
+        ++ Q.PAT_X_ASSUM `x' IN (\g. P g)` MP_TAC
         ++ Simplify [SPECIFICATION]
         ++ ASSUME_TAC (Q.SPEC `n` MULT_GROUP_ABELIAN)
         ++ RES_TAC
@@ -534,9 +534,9 @@ val CARD_WITNESS = store_thm
        ++ STRIP_TAC
        ++ G_TAC [CYCLIC_ALT, MULT_GROUP_SUBTYPE]
        ++ Strip
-       ++ Q.PAT_ASSUM `!x :: P. M x` (MP_TAC o Q_RESQ_SPEC `g`)
+       ++ Q.PAT_X_ASSUM `!x :: P. M x` (MP_TAC o Q_RESQ_SPEC `g`)
        ++ G_TAC [GPOW_GID_GORD, MULT_GROUP_SUBTYPE]
-       ++ Q.PAT_ASSUM `xx = n` (AR_TAC o wrap o SYM)
+       ++ Q.PAT_X_ASSUM `xx = n` (AR_TAC o wrap o SYM)
        ++ Simplify [MULT_GROUP_SET_PRIME_POWER]
        ++ Cases_on `a` >> AR_TAC []
        ++ Simplify [SUC_SUB1]
@@ -544,7 +544,7 @@ val CARD_WITNESS = store_thm
        ++ Simplify [EXP, GSYM MULT_ASSOC]
        ++ Suff `~divides p (p * (p * p EXP n') - 1)`
        >> PROVE_TAC [DIVIDES_DOWNL]
-       ++ Q.PAT_ASSUM `prime p` MP_TAC
+       ++ Q.PAT_X_ASSUM `prime p` MP_TAC
        ++ KILL_TAC
        ++ STRIP_TAC
        ++ Know `1 < p * p EXP n'` >> Simplify []
@@ -585,10 +585,10 @@ val CARD_WITNESS = store_thm
    ++ Know `!j x. t - m < j /\ j <= t /\ x IN gset (mult_group n) ==>
               ~(gpow (mult_group n) x (2 EXP j * u) = n - 1)`
    >> (Strip
-       ++ Q.PAT_ASSUM `!j. P j` (MP_TAC o Q.SPEC `t - j`)
+       ++ Q.PAT_X_ASSUM `!j. P j` (MP_TAC o Q.SPEC `t - j`)
        ++ Know `t - j < m`
-       >> (Q.PAT_ASSUM `t - m < j` MP_TAC
-           ++ Q.PAT_ASSUM `j <= t` MP_TAC
+       >> (Q.PAT_X_ASSUM `t - m < j` MP_TAC
+           ++ Q.PAT_X_ASSUM `j <= t` MP_TAC
            ++ KILL_TAC
            ++ DECIDE_TAC)
        ++ DISCH_THEN (Simplify o wrap)
@@ -624,22 +624,22 @@ val CARD_WITNESS = store_thm
        >> (DISCH_THEN (MP_TAC o Q.SPEC `t - m`)
            ++ Know `m + (t - m) = t` >> DECIDE_TAC
            ++ DISCH_THEN (ASM_REWRITE_TAC o wrap)
-           ++ Q.PAT_ASSUM `!x :: P. M x`
+           ++ Q.PAT_X_ASSUM `!x :: P. M x`
               (ASM_REWRITE_TAC o wrap o Q_RESQ_SPEC `x'`)
            ++ Simplify [MULT_GROUP_ID])
        ++ Induct >> (RW_TAC std_ss [] ++ METIS_TAC [])
        ++ REVERSE Strip
-       >> (Q.PAT_ASSUM `!j. P j` (MP_TAC o Q.SPECL [`m + SUC i`, `x'`])
+       >> (Q.PAT_X_ASSUM `!j. P j` (MP_TAC o Q.SPECL [`m + SUC i`, `x'`])
            ++ RW_TAC std_ss []
            ++ KILL_TAC
            ++ DECIDE_TAC)
        ++ Know `m + i <= t`
-       >> (Q.PAT_ASSUM `f:num <= g` MP_TAC ++ KILL_TAC ++ DECIDE_TAC)
+       >> (Q.PAT_X_ASSUM `f:num <= g` MP_TAC ++ KILL_TAC ++ DECIDE_TAC)
        ++ STRIP_TAC
-       ++ Q.PAT_ASSUM `!j. P j` K_TAC
-       ++ Q.PAT_ASSUM `x ==> y` MP_TAC
+       ++ Q.PAT_X_ASSUM `!j. P j` K_TAC
+       ++ Q.PAT_X_ASSUM `x ==> y` MP_TAC
        ++ ASM_REWRITE_TAC []
-       ++ Q.PAT_ASSUM `xx:num = 1` MP_TAC
+       ++ Q.PAT_X_ASSUM `xx:num = 1` MP_TAC
        ++ Simplify [MULT_GROUP_GPOW, ADD_CLAUSES]
        ++ Strip
        ++ MATCH_MP_TAC NONWITNESS_2
@@ -659,8 +659,8 @@ val CARD_WITNESS = store_thm
        ++ RW_TAC std_ss [IN_FUNSET, IN_INTER] >> G_TAC' []
        ++ RW_TAC std_ss [IN_UNION]
        ++ RW_TAC std_ss [SPECIFICATION]
-       ++ Q.PAT_ASSUM `x IN a UNION b` MP_TAC
-       ++ Q.PAT_ASSUM `x IN a UNION b` MP_TAC
+       ++ Q.PAT_X_ASSUM `_ IN _ UNION _` MP_TAC
+       ++ Q.PAT_X_ASSUM `_ IN _ UNION _` MP_TAC
        ++ Q.SPEC_TAC (`2 EXP m * u`, `a`)
        ++ Know `abelian (mult_group (p * q))` >> PROVE_TAC [MULT_GROUP_ABELIAN]
        ++ Strip
@@ -673,15 +673,15 @@ val CARD_WITNESS = store_thm
    ++ Strip
    ++ RW_TAC std_ss [PSUBSET_DEF, gset_def, INTER_SUBSET]
    ++ POP_ASSUM K_TAC
-   ++ Q.PAT_ASSUM `!j. P j` K_TAC
-   ++ Q.PAT_ASSUM `x = y` MP_TAC
+   ++ Q.PAT_X_ASSUM `!j. P j` K_TAC
+   ++ Q.PAT_X_ASSUM `x = y` MP_TAC
    ++ Q.SPEC_TAC (`2 EXP m * u`, `k`)
-   ++ Q.PAT_ASSUM `m <= t` K_TAC
-   ++ Q.PAT_ASSUM `x = y` K_TAC
-   ++ Q.PAT_ASSUM `0 < p * q - 1` K_TAC
-   ++ Q.PAT_ASSUM `ODD u` K_TAC
-   ++ Q.PAT_ASSUM `!x :: P. M x` K_TAC
-   ++ Q.PAT_ASSUM `~prime (p * q)` K_TAC
+   ++ Q.PAT_X_ASSUM `m <= t` K_TAC
+   ++ Q.PAT_X_ASSUM `x = y` K_TAC
+   ++ Q.PAT_X_ASSUM `0 < p * q - 1` K_TAC
+   ++ Q.PAT_X_ASSUM `ODD u` K_TAC
+   ++ Q.PAT_X_ASSUM `!x :: P. M x` K_TAC
+   ++ Q.PAT_X_ASSUM `~prime (p * q)` K_TAC
    ++ AR_TAC [ODD_MULT]
    ++ NTAC 2 STRIP_TAC
    ++ Suff
@@ -704,7 +704,7 @@ val CARD_WITNESS = store_thm
    ++ Know
       `?w.
          w IN gset (mult_group (p * q)) /\ ((w MOD p, w MOD q) = (v MOD p, 1))`
-   >> (Q.PAT_ASSUM `BIJ f s t` MP_TAC
+   >> (Q.PAT_X_ASSUM `BIJ f s t` MP_TAC
        ++ Simplify [BIJ_ALT]
        ++ DISCH_THEN (MP_TAC o Q_RESQ_SPEC `(v MOD p, 1)` o CONJUNCT2)
        ++ Simplify [RES_EXISTS_UNIQUE]
@@ -733,7 +733,7 @@ val CARD_WITNESS = store_thm
    ++ DISCH_THEN K_TAC
    ++ Q.EXISTS_TAC `\x. (x MOD p, x MOD q)`
    ++ Simplify []
-   ++ Q.PAT_ASSUM `(v MOD p, 1:num) IN gset x` MP_TAC
+   ++ Q.PAT_X_ASSUM `(v MOD p, 1:num) IN gset x` MP_TAC
    ++ G_TAC [PROD_GROUP_GPOW, PROD_GROUP_SET, IN_CROSS]
    ++ STRIP_TAC
    ++ Know `gpow (mult_group q) 1 k = 1`
@@ -746,7 +746,7 @@ val CARD_WITNESS = store_thm
        ++ KILL_TAC
        ++ DECIDE_TAC)
    ++ DISCH_THEN (Simplify o wrap)
-   ++ Q.PAT_ASSUM `gpow xx v k = yy` MP_TAC
+   ++ Q.PAT_X_ASSUM `gpow xx v k = yy` MP_TAC
    ++ Simplify [MULT_GROUP_GPOW, MULT_GROUP_ID]
    ++ Strip
    ++ Know `(v EXP k MOD (p * q)) MOD p = (p * q - 1) MOD p`
@@ -764,7 +764,7 @@ val MILLER_RABIN_1_PRIME = store_thm
     ++ RW_TAC std_ss []) <<
    [PROVE_TAC [NOT_PRIME_1],
     PROVE_TAC [NOT_PRIME_EVEN],
-    Q.PAT_ASSUM `~(a \/ b)` MP_TAC
+    Q.PAT_X_ASSUM `~(a \/ b)` MP_TAC
     ++ Cases_on `prob_uniform_cut (2 * log2 (n - 1)) (n - 2) s`
     ++ RW_TAC std_ss [LET_DEF]
     ++ Suff `ODD n /\ 0 < q + 2 /\ q + 2 < n` >> PROVE_TAC [WITNESS_CORRECT]
@@ -886,7 +886,7 @@ val INDEP_FN_MILLER_RABIN_1 = store_thm
    ++ MATCH_MP_TAC INDEP_FN_BIND
    ++ Cases_on `n - 2`
    >> (Suff `~(n = 1) ==> (n = 0)` >> PROVE_TAC [EVEN_ODD_BASIC]
-       ++ Q.PAT_ASSUM `~(a \/ b)` K_TAC
+       ++ Q.PAT_X_ASSUM `~(a \/ b)` K_TAC
        ++ DECIDE_TAC)
    ++ RW_TAC std_ss [INDEP_FN_PROB_UNIFORM_CUT, INDEP_FN_UNIT]);
 

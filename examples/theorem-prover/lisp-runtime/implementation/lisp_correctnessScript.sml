@@ -73,7 +73,7 @@ val IO_WRITE_RW = prove(
 val LENGTH_SND_read_while = prove(
   ``!t p s. STRLEN (SND (read_while p t s)) <= STRLEN t``,
   Induct \\ SIMP_TAC std_ss [read_while_def] \\ SRW_TAC [] []
-  \\ Q.PAT_ASSUM `!p.bbb` (ASSUME_TAC o Q.SPECL [`p`,`STRCAT s (STRING h "")`])
+  \\ Q.PAT_X_ASSUM `!p.bbb` (ASSUME_TAC o Q.SPECL [`p`,`STRCAT s (STRING h "")`])
   \\ DECIDE_TAC);
 
 val is_eof_T_IMP = prove(
@@ -85,7 +85,7 @@ val is_eof_T_IMP = prove(
    (`STRLEN t < STRLEN (STRING h t)` by (EVAL_TAC \\ DECIDE_TAC)
     \\ RES_TAC \\ ASM_SIMP_TAC std_ss [])
   \\ Cases_on `h = #";"` \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `!s.bbb` MATCH_MP_TAC
+  \\ Q.PAT_X_ASSUM `!s.bbb` MATCH_MP_TAC
   \\ MATCH_MP_TAC LESS_EQ_LESS_TRANS \\ Q.EXISTS_TAC `STRLEN t`
   \\ ASM_SIMP_TAC std_ss [LENGTH_SND_read_while] \\ SIMP_TAC std_ss [LENGTH]);
 
@@ -169,7 +169,7 @@ val iSTEP_iRETURN = prove(
    (NTAC 2 STRIP_TAC
     \\ `bc_inv bc1 /\ (bc1.code 0 = SOME iRETURN)` by
      (`bc_inv bc1` by METIS_TAC [bc_inv_BC_COMPILE] \\ ASM_SIMP_TAC std_ss []
-      \\ Q.PAT_ASSUM `BC_COMPILE (getSym fname,MAP getSym (sexp2list formals),sexp2term body,bc) = bc1`
+      \\ Q.PAT_X_ASSUM `BC_COMPILE (getSym fname,MAP getSym (sexp2list formals),sexp2term body,bc) = bc1`
            (fn th => ONCE_REWRITE_TAC [GSYM th])
       \\ SIMP_TAC std_ss [BC_COMPILE_def,LET_DEF,LENGTH_MAP]
       \\ Q.ABBREV_TAC `bcA = BC_STORE_COMPILED bc (getSym fname) (bc.code_end,LENGTH (sexp2list formals))`
@@ -267,7 +267,7 @@ val READ_EVAL_PRINT_LOOP_THM = prove(
   \\ FULL_SIMP_TAC std_ss [AND_IMP_INTRO,next_sexp_def,IO_INPUT_APPLY_def,
         REPLACE_INPUT_IO_def,getINPUT_def]
   \\ Cases_on `bc8.ok` \\ FULL_SIMP_TAC std_ss [] THEN1
-   (Q.PAT_ASSUM `!x0.bbb` MATCH_MP_TAC
+   (Q.PAT_X_ASSUM `!x0.bbb` MATCH_MP_TAC
     \\ Q.EXISTS_TAC `IO_STREAMS rest (STRCAT (STRCAT io2 (sexp2string s)) "\n")`
     \\ FULL_SIMP_TAC (srw_ss()) [getINPUT_def,getOUTPUT_def,BC_PRINT_def]
     \\ FULL_SIMP_TAC (srw_ss()) [bc_inv_def,BC_REFINES_def,BC_CODE_OK_def,

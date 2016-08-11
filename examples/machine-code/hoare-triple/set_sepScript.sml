@@ -197,7 +197,7 @@ val fun2set_eq = Q.store_thm("fun2set_eq",
    \\ EQ_TAC
    \\ REPEAT STRIP_TAC
    THENL [
-      Q.PAT_ASSUM `!x. P` (Q.SPEC_THEN `(a, f a)` ASSUME_TAC),
+      Q.PAT_X_ASSUM `!x. P` (Q.SPEC_THEN `(a, f a)` ASSUME_TAC),
       Cases_on `x` \\ Cases_on `q IN d`
    ]
    \\ REV_FULL_SIMP_TAC std_ss [fun2set_thm]

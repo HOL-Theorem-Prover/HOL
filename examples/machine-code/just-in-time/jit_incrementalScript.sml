@@ -446,7 +446,7 @@ val CODE_LOOP_UNROLL = (SIMP_RULE std_ss [] o Q.SPEC `0` o prove) (
   Induct_on `cs` \\ SIMP_TAC std_ss [iFETCH_def] \\ REPEAT STRIP_TAC \\ Cases_on `p`
   THEN1 (FULL_SIMP_TAC std_ss [CODE_LOOP_def,INSTR_IN_MEM_def,SEP_CLAUSES] \\ METIS_TAC [])
   \\ FULL_SIMP_TAC std_ss [ADD1,CODE_LOOP_def]
-  \\ Q.PAT_ASSUM `!i.bbb` (ASSUME_TAC o Q.SPECL [`i+1`,`n`,`j`])
+  \\ Q.PAT_X_ASSUM `!i.bbb` (ASSUME_TAC o Q.SPECL [`i+1`,`n`,`j`])
   \\ RES_TAC \\ ASM_SIMP_TAC std_ss []
   \\ Q.EXISTS_TAC `INSTR_IN_MEM (j i) h i j * q`
   \\ SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM,AC ADD_COMM ADD_ASSOC]);
@@ -462,11 +462,11 @@ val CODE_LOOP_IMP_BYTES_IN_MEM = prove(
    \\ FULL_SIMP_TAC std_ss [INSTR_IN_MEM_def,SEP_CLAUSES]
    \\ FULL_SIMP_TAC std_ss [SEP_EXISTS_THM,cond_STAR,GSYM STAR_ASSOC]
    \\ Q.EXISTS_TAC `bs` \\ ASM_SIMP_TAC std_ss []
-   \\ Q.PAT_ASSUM `(SEP_BYTES_IN_MEM w bs * (q * r)) (fun2set (f,df))` MP_TAC
+   \\ Q.PAT_X_ASSUM `(SEP_BYTES_IN_MEM w bs * (q * r)) (fun2set (f,df))` MP_TAC
    \\ Q.SPEC_TAC (`w`,`a`) \\ Q.SPEC_TAC (`q * r`,`rr`) \\ REPEAT (POP_ASSUM (K ALL_TAC))
    \\ Induct_on `bs` \\ SIMP_TAC std_ss [SEP_BYTES_IN_MEM_def,BYTES_IN_MEM_def]
    \\ REPEAT STRIP_TAC THEN1 SEP_READ_TAC THEN1 SEP_READ_TAC
-   \\ Q.PAT_ASSUM `!rr. bb` MATCH_MP_TAC \\ Q.EXISTS_TAC `one (a,h) * rr`
+   \\ Q.PAT_X_ASSUM `!rr. bb` MATCH_MP_TAC \\ Q.EXISTS_TAC `one (a,h) * rr`
    \\ FULL_SIMP_TAC (std_ss++star_ss) []);
 
 val cont_jump_def = Define `
@@ -511,7 +511,7 @@ val x86_write_jump_thm = prove(
       FULL_SIMP_TAC std_ss [X86_IMMEDIATE_def,APPEND,ENCODES_JUMP_def,CONS_11]
     \\ FULL_SIMP_TAC std_ss [word_arith_lemma3,WORD_ADD_0]
     \\ FULL_SIMP_TAC std_ss [x86_write_jump_def,x86_write_jump_pre_def,LET_DEF]
-    \\ Q.PAT_ASSUM `y = bbb` ASSUME_TAC
+    \\ Q.PAT_X_ASSUM `y = bbb` ASSUME_TAC
     \\ FULL_SIMP_TAC std_ss [X86_IMMEDIATE_def,APPEND,SEP_BYTES_IN_MEM_def]
     \\ FULL_SIMP_TAC std_ss [CONJ_ASSOC,word_arith_lemma4,
          WORD_ADD_0,word_arith_lemma1,SEP_CLAUSES,word_arith_lemma3]
@@ -535,7 +535,7 @@ val x86_write_jump_thm = prove(
       FULL_SIMP_TAC std_ss [X86_IMMEDIATE_def,APPEND,ENCODES_JUMP_def,CONS_11]
     \\ FULL_SIMP_TAC std_ss [word_arith_lemma3,WORD_ADD_0]
     \\ FULL_SIMP_TAC std_ss [x86_write_jump_def,x86_write_jump_pre_def,LET_DEF]
-    \\ Q.PAT_ASSUM `y = bbb` ASSUME_TAC
+    \\ Q.PAT_X_ASSUM `y = bbb` ASSUME_TAC
     \\ FULL_SIMP_TAC std_ss [X86_IMMEDIATE_def,APPEND,SEP_BYTES_IN_MEM_def]
     \\ FULL_SIMP_TAC std_ss [CONJ_ASSOC,word_arith_lemma4,
          WORD_ADD_0,word_arith_lemma1,SEP_CLAUSES,word_arith_lemma3]
@@ -559,7 +559,7 @@ val x86_write_jump_thm = prove(
       FULL_SIMP_TAC std_ss [X86_IMMEDIATE_def,APPEND,ENCODES_JUMP_def,CONS_11]
     \\ FULL_SIMP_TAC std_ss [word_arith_lemma3,WORD_ADD_0]
     \\ FULL_SIMP_TAC std_ss [x86_write_jump_def,x86_write_jump_pre_def,LET_DEF]
-    \\ Q.PAT_ASSUM `y = bbb` ASSUME_TAC
+    \\ Q.PAT_X_ASSUM `y = bbb` ASSUME_TAC
     \\ FULL_SIMP_TAC std_ss [X86_IMMEDIATE_def,APPEND,SEP_BYTES_IN_MEM_def]
     \\ FULL_SIMP_TAC std_ss [CONJ_ASSOC,word_arith_lemma4,
          WORD_ADD_0,word_arith_lemma1,SEP_CLAUSES,word_arith_lemma3]
@@ -583,7 +583,7 @@ val x86_write_jump_thm = prove(
       FULL_SIMP_TAC std_ss [X86_IMMEDIATE_def,APPEND,ENCODES_JUMP_def,CONS_11]
     \\ FULL_SIMP_TAC std_ss [word_arith_lemma3,WORD_ADD_0]
     \\ FULL_SIMP_TAC std_ss [x86_write_jump_def,x86_write_jump_pre_def,LET_DEF]
-    \\ Q.PAT_ASSUM `y = bbb` ASSUME_TAC
+    \\ Q.PAT_X_ASSUM `y = bbb` ASSUME_TAC
     \\ FULL_SIMP_TAC std_ss [X86_IMMEDIATE_def,APPEND,SEP_BYTES_IN_MEM_def]
     \\ FULL_SIMP_TAC std_ss [CONJ_ASSOC,word_arith_lemma4,
          WORD_ADD_0,word_arith_lemma1,SEP_CLAUSES,word_arith_lemma3]
@@ -678,7 +678,7 @@ val x86_findbyte_thm = (SIMP_RULE std_ss [prev_jump_def,DROP_0] o Q.SPECL [`p`,`
   \\ ASM_SIMP_TAC std_ss []
   \\ SIMP_TAC (std_ss++SIZES_ss) [n2w_11]
   \\ FULL_SIMP_TAC std_ss [DECIDE ``i + (k + 1) = (i + 1) + k``,ADD1]
-  \\ Q.PAT_ASSUM `!i.bbb` MATCH_MP_TAC
+  \\ Q.PAT_X_ASSUM `!i.bbb` MATCH_MP_TAC
   \\ ASM_SIMP_TAC std_ss [RW[ADD1]prev_jump_def,IS_JUMP_def]
   \\ METIS_TAC []);
 
@@ -723,7 +723,7 @@ val SPACE_LENGTH_UNROLL = (SIMP_RULE std_ss [] o Q.SPEC `0` o prove) (
          \\ `i < i + 1` by DECIDE_TAC
          \\ ASM_SIMP_TAC std_ss [SPACE_LENGTH_UPDATE])
   \\ FULL_SIMP_TAC std_ss [ADD1,SPACE_LENGTH_def,APPLY_UPDATE_THM]
-  \\ Q.PAT_ASSUM `!i.bbb` (ASSUME_TAC o Q.SPECL [`i+1`,`n`,`c`,`j`,`w`])
+  \\ Q.PAT_X_ASSUM `!i.bbb` (ASSUME_TAC o Q.SPECL [`i+1`,`n`,`c`,`j`,`w`])
   \\ RES_TAC \\ ASM_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM,AC ADD_COMM ADD_ASSOC]
   \\ RES_TAC \\ Cases_on `j i <> NONE`
@@ -784,7 +784,7 @@ val CODE_LOOP_PULL = (SIMP_RULE std_ss [] o Q.SPEC `0` o prove) (
   \\ ONCE_REWRITE_TAC [STAR_COMM]
   \\ REPEAT STRIP_TAC THEN1
    (REWRITE_TAC [DECIDE ``1 + i = i + 1``]
-    \\ Q.PAT_ASSUM `!i.bbb` MATCH_MP_TAC
+    \\ Q.PAT_X_ASSUM `!i.bbb` MATCH_MP_TAC
     \\ ASM_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [DECIDE ``1 + i = i + 1``])
   \\ MATCH_MP_TAC SEP_IMP_INSTR_IN_MEM_UPDATE
@@ -809,7 +809,7 @@ val CODE_INV_UPDATE = prove(
   \\ IMP_RES_TAC SPACE_LENGTH_UNROLL
   \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `w`)
   \\ FULL_SIMP_TAC std_ss [CODE_SPACE_ADD,STAR_ASSOC]
-  \\ Q.PAT_ASSUM `!r. bbb`  (ASSUME_TAC o Q.SPEC `CODE_LOOP 0 j cs *
+  \\ Q.PAT_X_ASSUM `!r. bbb`  (ASSUME_TAC o Q.SPEC `CODE_LOOP 0 j cs *
        CODE_SPACE (w + n2w (INSTR_LENGTH c)) (SPACE_LENGTH 0 ((p =+ SOME w) j) cs)`)
   \\ FULL_SIMP_TAC (std_ss++star_ss) [] \\ RES_TAC
   \\ POP_ASSUM MP_TAC
@@ -878,11 +878,11 @@ val x86_writecode_thm = prove(
     \\ METIS_TAC [])
   \\ `v = LENGTH cs - (n + 1)` by DECIDE_TAC
   \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `!cs n. bbb` (ASSUME_TAC o RW [] o Q.SPECL [`cs`,`n + 1`])
+  \\ Q.PAT_X_ASSUM `!cs n. bbb` (ASSUME_TAC o RW [] o Q.SPECL [`cs`,`n + 1`])
   \\ `n < LENGTH cs` by DECIDE_TAC
   \\ IMP_RES_TAC DROP_EQ_CONS
   \\ FULL_SIMP_TAC std_ss [] \\ POP_ASSUM (K ALL_TAC)
-  \\ Q.PAT_ASSUM `j n = NONE` ASSUME_TAC
+  \\ Q.PAT_X_ASSUM `j n = NONE` ASSUME_TAC
   \\ FULL_SIMP_TAC std_ss [MAP_INV_def,MAP_ROW_def,STAR_ASSOC]
   \\ `(pp * MAP_ROW r4 ((n =+ SOME r3) j n) *
        MAP_INV (r4 + 0x8w) (n + 1) j (DROP (n + 1) cs))
@@ -932,7 +932,7 @@ val x86_writecode_thm = prove(
       \\ SIMP_TAC std_ss [SEP_EXISTS,cond_STAR,X86_ENCODE_def,SEP_BYTES_IN_MEM_def]
       \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,CODE_SPACE_def]
       \\ REPEAT STRIP_TAC \\ SEP_WRITE_TAC)
-    \\ Q.PAT_ASSUM `!q j g. bbb` (MP_TAC o
+    \\ Q.PAT_X_ASSUM `!q j g. bbb` (MP_TAC o
          Q.SPECL [`q * one_string r6 (iENCODE1 c) (r6 + 1w)`,`(n =+ SOME r3) j`,
                   `g`,`fi`,`r3 + n2w (INSTR_LENGTH c)`,`r4 + 8w`, `r6+1w`,
                   `pp * MAP_ROW r4 (((n:num) =+ SOME r3) j n)`,`hi`])
@@ -955,7 +955,7 @@ val x86_writecode_thm = prove(
     \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,APPLY_UPDATE_THM]
     \\ FULL_SIMP_TAC std_ss [SEP_EXISTS,cond_STAR,GSYM STAR_ASSOC]
     \\ FULL_SIMP_TAC std_ss [X86_ENCODE_def]
-    \\ Q.PAT_ASSUM `y = bbbb` ASSUME_TAC
+    \\ Q.PAT_X_ASSUM `y = bbbb` ASSUME_TAC
     \\ FULL_SIMP_TAC std_ss [SEP_BYTES_IN_MEM_def,SEP_CLAUSES]
     \\ REVERSE (REPEAT STRIP_TAC)
     THEN1 (`i <> n` by DECIDE_TAC \\ METIS_TAC [])
@@ -990,7 +990,7 @@ val x86_writecode_thm = prove(
       \\ SIMP_TAC std_ss [SEP_EXISTS,cond_STAR,X86_ENCODE_def,SEP_BYTES_IN_MEM_def]
       \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,CODE_SPACE_def]
       \\ REPEAT STRIP_TAC \\ SEP_WRITE_TAC)
-    \\ Q.PAT_ASSUM `!q j g. bbb` (MP_TAC o
+    \\ Q.PAT_X_ASSUM `!q j g. bbb` (MP_TAC o
          Q.SPECL [`q * one_string r6 (iENCODE1 c) (r6 + 1w)`,`(n =+ SOME r3) j`,
                   `g`,`fi`,`r3 + n2w (INSTR_LENGTH c)`,`r4 + 8w`, `r6+1w`,
                   `pp * MAP_ROW r4 (((n:num) =+ SOME r3) j n)`,`hi`])
@@ -1013,7 +1013,7 @@ val x86_writecode_thm = prove(
     \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,APPLY_UPDATE_THM]
     \\ FULL_SIMP_TAC std_ss [SEP_EXISTS,cond_STAR,GSYM STAR_ASSOC]
     \\ FULL_SIMP_TAC std_ss [X86_ENCODE_def]
-    \\ Q.PAT_ASSUM `y = bbbb` ASSUME_TAC
+    \\ Q.PAT_X_ASSUM `y = bbbb` ASSUME_TAC
     \\ FULL_SIMP_TAC std_ss [SEP_BYTES_IN_MEM_def,SEP_CLAUSES]
     \\ REVERSE (REPEAT STRIP_TAC)
     THEN1 (`i <> n` by DECIDE_TAC \\ METIS_TAC [])
@@ -1063,7 +1063,7 @@ val x86_writecode_thm = prove(
     \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,APPLY_UPDATE_THM]
     \\ FULL_SIMP_TAC std_ss [SEP_EXISTS,cond_STAR,GSYM STAR_ASSOC]
     \\ FULL_SIMP_TAC std_ss [X86_ENCODE_def]
-    \\ Q.PAT_ASSUM `y = bbbb` ASSUME_TAC
+    \\ Q.PAT_X_ASSUM `y = bbbb` ASSUME_TAC
     \\ FULL_SIMP_TAC std_ss [SEP_BYTES_IN_MEM_def,SEP_CLAUSES]
     \\ SEP_READ_TAC)
   THEN1
@@ -1090,7 +1090,7 @@ val x86_writecode_thm = prove(
       \\ SIMP_TAC std_ss [SEP_EXISTS,cond_STAR,X86_ENCODE_def,SEP_BYTES_IN_MEM_def]
       \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,CODE_SPACE_def,word_arith_lemma1]
       \\ REPEAT STRIP_TAC \\ SEP_WRITE_TAC)
-    \\ Q.PAT_ASSUM `!q j g. bbb` (MP_TAC o
+    \\ Q.PAT_X_ASSUM `!q j g. bbb` (MP_TAC o
          Q.SPECL [`q * one_string r6 (iENCODE1 c) (r6 + 1w)`,`(n =+ SOME r3) j`,
                   `g`,`fi`,`r3 + n2w (INSTR_LENGTH c)`,`r4 + 8w`, `r6+1w`,
                   `pp * MAP_ROW r4 (((n:num) =+ SOME r3) j n)`,`hi`])
@@ -1113,7 +1113,7 @@ val x86_writecode_thm = prove(
     \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,APPLY_UPDATE_THM]
     \\ FULL_SIMP_TAC std_ss [SEP_EXISTS,cond_STAR,GSYM STAR_ASSOC]
     \\ FULL_SIMP_TAC std_ss [X86_ENCODE_def]
-    \\ Q.PAT_ASSUM `y = bbbb` ASSUME_TAC
+    \\ Q.PAT_X_ASSUM `y = bbbb` ASSUME_TAC
     \\ FULL_SIMP_TAC std_ss [SEP_BYTES_IN_MEM_def,SEP_CLAUSES]
     \\ REVERSE (REPEAT STRIP_TAC)
     THEN1 (`i <> n` by DECIDE_TAC \\ METIS_TAC [])
@@ -1172,7 +1172,7 @@ val x86_writecode_thm = prove(
       \\ SIMP_TAC std_ss [SEP_EXISTS,cond_STAR,X86_ENCODE_def,SEP_BYTES_IN_MEM_def]
       \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,CODE_SPACE_def,word_arith_lemma1,w2w_def]
       \\ REPEAT STRIP_TAC \\ SEP_WRITE_TAC)
-    \\ Q.PAT_ASSUM `!q j g. bbb` (MP_TAC o
+    \\ Q.PAT_X_ASSUM `!q j g. bbb` (MP_TAC o
          Q.SPECL [`q * one_string r6 (iENCODE1 d) (r6 + 2w)`,`(n =+ SOME r3) j`,
                   `g`,`fi`,`r3 + n2w (INSTR_LENGTH d)`,`r4 + 8w`, `r6+2w`,
                   `pp * MAP_ROW r4 (((n:num) =+ SOME r3) j n)`,`hi`])
@@ -1196,7 +1196,7 @@ val x86_writecode_thm = prove(
     \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,APPLY_UPDATE_THM]
     \\ FULL_SIMP_TAC std_ss [SEP_EXISTS,cond_STAR,GSYM STAR_ASSOC]
     \\ FULL_SIMP_TAC std_ss [X86_ENCODE_def]
-    \\ Q.PAT_ASSUM `y = bbbb` ASSUME_TAC
+    \\ Q.PAT_X_ASSUM `y = bbbb` ASSUME_TAC
     \\ FULL_SIMP_TAC std_ss [SEP_BYTES_IN_MEM_def,SEP_CLAUSES]
     \\ REVERSE (REPEAT STRIP_TAC)
     THEN1 (`i <> n` by DECIDE_TAC \\ METIS_TAC [])
@@ -1211,7 +1211,7 @@ val x86_writecode_thm = prove(
       \\ FULL_SIMP_TAC std_ss [GSYM iFETCH_NOT_NONE])
     \\ FULL_SIMP_TAC std_ss [word_arith_lemma1]
     \\ SEP_READ_TAC)
-  \\ Q.PAT_ASSUM `!q j g. bbb` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `!q j g. bbb` (K ALL_TAC)
   THEN1
    (ONCE_REWRITE_TAC [x86_writecode_def,x86_writecode_pre_def]
     \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [LET_DEF,w2w_def,w2n_n2w,n2w_11]
@@ -1260,7 +1260,7 @@ val x86_writecode_thm = prove(
     \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,APPLY_UPDATE_THM]
     \\ FULL_SIMP_TAC std_ss [SEP_EXISTS,cond_STAR,GSYM STAR_ASSOC]
     \\ FULL_SIMP_TAC std_ss [X86_ENCODE_def,ENCODES_JUMP_def]
-    \\ Q.PAT_ASSUM `y = bbbb` ASSUME_TAC
+    \\ Q.PAT_X_ASSUM `y = bbbb` ASSUME_TAC
     \\ FULL_SIMP_TAC std_ss [SEP_BYTES_IN_MEM_def,SEP_CLAUSES,X86_IMMEDIATE_def,APPEND]
     \\ FULL_SIMP_TAC std_ss [word_arith_lemma1]
     \\ SEP_READ_TAC)
@@ -1325,21 +1325,21 @@ val x86_writecode_thm = prove(
         (Q.UNABBREV_TAC `f3`
          \\ FULL_SIMP_TAC std_ss [SEP_BYTES_IN_MEM_def,SEP_CLAUSES,word_arith_lemma1]
          \\ SEP_WRITE_TAC)
-      \\ Q.PAT_ASSUM `Abbrev (f3 = fff)` (K ALL_TAC)
+      \\ Q.PAT_X_ASSUM `Abbrev (f3 = fff)` (K ALL_TAC)
       \\ `n + 1 < 256` by DECIDE_TAC
       \\ IMP_RES_TAC (Q.INST [`i`|->`i+1`] x86_encodes_jump_thm)
       \\ POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `(n =+ SOME r3) j`)
       \\ FULL_SIMP_TAC std_ss []
-      \\ Q.PAT_ASSUM `f2 = f4` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
+      \\ Q.PAT_X_ASSUM `f2 = f4` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
       \\ `(SEP_BYTES_IN_MEM (r3 + 0xDw) [y13; y14; y15; y16; y17] *
         (SEP_BYTES_IN_MEM r3 [0x3Bw; 0x7w; 0xFw; 0x84w; 0x5w; 0x0w; 0x0w; 0x0w] *
          SEP_BYTES_IN_MEM (r3 + 0x8w) bs * r))
          (fun2set (f2,df))` by FULL_SIMP_TAC (std_ss++star_ss) []
-      \\ Q.PAT_ASSUM `(SEP_BYTES_IN_MEM (r3 + 0x8w) bs * rr) ggg` (K ALL_TAC)
+      \\ Q.PAT_X_ASSUM `(SEP_BYTES_IN_MEM (r3 + 0x8w) bs * rr) ggg` (K ALL_TAC)
       \\ IMP_RES_TAC (Q.INST [`i`|->`w2n (c:word7)`,`a`|->`a+0xDw`] x86_encodes_jump_thm)
       \\ POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `(n =+ SOME r3) j`)
       \\ FULL_SIMP_TAC std_ss []
-      \\ Q.PAT_ASSUM `f2' = f5` (fn th => FULL_SIMP_TAC std_ss [th])
+      \\ Q.PAT_X_ASSUM `f2' = f5` (fn th => FULL_SIMP_TAC std_ss [th])
       \\ IMP_RES_TAC (Q.SPEC `a + 8w` ENCODES_JUMP_IMP)
       \\ IMP_RES_TAC (Q.SPEC `a + 0xDw` ENCODES_JUMP_IMP)
       \\ FULL_SIMP_TAC std_ss []
@@ -1351,7 +1351,7 @@ val x86_writecode_thm = prove(
         \\ ASM_SIMP_TAC std_ss [])
       \\ FULL_SIMP_TAC std_ss [SEP_BYTES_IN_MEM_def,word_arith_lemma1,SEP_CLAUSES,APPEND]
       \\ FULL_SIMP_TAC (std_ss++star_ss) [])
-    \\ Q.PAT_ASSUM `Abbrev (f3 = fff)` (K ALL_TAC)
+    \\ Q.PAT_X_ASSUM `Abbrev (f3 = fff)` (K ALL_TAC)
     \\ Q.EXISTS_TAC `(n =+ SOME r3) j` \\ ASM_SIMP_TAC std_ss []
     \\ Q.UNABBREV_TAC `d` \\ FULL_SIMP_TAC std_ss [INSTR_LENGTH_def,APPLY_UPDATE_THM]
     \\ FULL_SIMP_TAC std_ss [MATCH_MP MAP_INV_IGNORE (DECIDE ``n < n+1``)]
@@ -1372,7 +1372,7 @@ val x86_writecode_thm = prove(
     \\ FULL_SIMP_TAC std_ss [X86_ENCODE_def]
     \\ IMP_RES_TAC ENCODES_JUMP_IMP
     \\ FULL_SIMP_TAC std_ss [APPEND]
-    \\ Q.PAT_ASSUM `y = bbbb` ASSUME_TAC
+    \\ Q.PAT_X_ASSUM `y = bbbb` ASSUME_TAC
     \\ FULL_SIMP_TAC std_ss [SEP_BYTES_IN_MEM_def,SEP_CLAUSES,X86_IMMEDIATE_def,APPEND]
     \\ FULL_SIMP_TAC std_ss [word_arith_lemma1]
     \\ SEP_READ_TAC)
@@ -1440,23 +1440,23 @@ val x86_writecode_thm = prove(
         (Q.UNABBREV_TAC `f3`
          \\ FULL_SIMP_TAC std_ss [SEP_BYTES_IN_MEM_def,SEP_CLAUSES,word_arith_lemma1]
          \\ SEP_WRITE_TAC)
-      \\ Q.PAT_ASSUM `Abbrev (f3 = fff)` (K ALL_TAC)
+      \\ Q.PAT_X_ASSUM `Abbrev (f3 = fff)` (K ALL_TAC)
       \\ `n + 1 < 256` by DECIDE_TAC
       \\ IMP_RES_TAC (Q.INST [`i`|->`i+1`] x86_encodes_jump_thm)
       \\ POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `(n =+ SOME r3) j`)
       \\ FULL_SIMP_TAC std_ss []
-      \\ Q.PAT_ASSUM `f2 = f4` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
+      \\ Q.PAT_X_ASSUM `f2 = f4` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
       \\ `(SEP_BYTES_IN_MEM (r3 + 0xDw) [y13; y14; y15; y16; y17] *
         (SEP_BYTES_IN_MEM r3 [0x3Bw; 0x7w; 0xFw; 0x82w; 0x5w; 0x0w; 0x0w; 0x0w] *
          SEP_BYTES_IN_MEM (r3 + 0x8w) bs * r))
          (fun2set ((r3 + 0x3w =+ 0x82w) f2,df))` by ALL_TAC THEN1
        (FULL_SIMP_TAC std_ss [SEP_BYTES_IN_MEM_def,word_arith_lemma1,SEP_CLAUSES]
         \\ SEP_WRITE_TAC)
-      \\ Q.PAT_ASSUM `(SEP_BYTES_IN_MEM (r3 + 0x8w) bs * rr) ggg` (K ALL_TAC)
+      \\ Q.PAT_X_ASSUM `(SEP_BYTES_IN_MEM (r3 + 0x8w) bs * rr) ggg` (K ALL_TAC)
       \\ IMP_RES_TAC (Q.INST [`i`|->`w2n (c:word7)`,`a`|->`a+0xDw`] x86_encodes_jump_thm)
       \\ POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `(n =+ SOME r3) j`)
       \\ FULL_SIMP_TAC std_ss []
-      \\ Q.PAT_ASSUM `f2' = f5` (fn th => FULL_SIMP_TAC std_ss [th])
+      \\ Q.PAT_X_ASSUM `f2' = f5` (fn th => FULL_SIMP_TAC std_ss [th])
       \\ IMP_RES_TAC (Q.SPEC `a + 8w` ENCODES_JUMP_IMP)
       \\ IMP_RES_TAC (Q.SPEC `a + 0xDw` ENCODES_JUMP_IMP)
       \\ FULL_SIMP_TAC std_ss []
@@ -1468,7 +1468,7 @@ val x86_writecode_thm = prove(
         \\ ASM_SIMP_TAC std_ss [])
       \\ FULL_SIMP_TAC std_ss [SEP_BYTES_IN_MEM_def,word_arith_lemma1,SEP_CLAUSES,APPEND]
       \\ FULL_SIMP_TAC (std_ss++star_ss) [])
-    \\ Q.PAT_ASSUM `Abbrev (f3 = fff)` (K ALL_TAC)
+    \\ Q.PAT_X_ASSUM `Abbrev (f3 = fff)` (K ALL_TAC)
     \\ Q.UNABBREV_TAC `d` \\ FULL_SIMP_TAC std_ss [INSTR_LENGTH_def,APPLY_UPDATE_THM]
     \\ FULL_SIMP_TAC std_ss [MATCH_MP MAP_INV_IGNORE (DECIDE ``n < n+1``)]
     \\ SIMP_TAC std_ss [DECIDE ``n < m ==> ~(n = m:num)``]
@@ -1488,7 +1488,7 @@ val x86_writecode_thm = prove(
     \\ FULL_SIMP_TAC std_ss [X86_ENCODE_def]
     \\ IMP_RES_TAC ENCODES_JUMP_IMP
     \\ FULL_SIMP_TAC std_ss [APPEND]
-    \\ Q.PAT_ASSUM `y = bbbb` ASSUME_TAC
+    \\ Q.PAT_X_ASSUM `y = bbbb` ASSUME_TAC
     \\ FULL_SIMP_TAC std_ss [SEP_BYTES_IN_MEM_def,SEP_CLAUSES,X86_IMMEDIATE_def,APPEND]
     \\ FULL_SIMP_TAC std_ss [word_arith_lemma1]
     \\ SEP_READ_TAC));
@@ -1555,7 +1555,7 @@ val MAP_INV_TAKE_EQ = prove(
   \\ `i < i + (k + 1)` by DECIDE_TAC
   \\ RES_TAC \\ ASM_SIMP_TAC std_ss []
   \\ MATCH_MP_TAC (METIS_PROVE [] ``(p = q) ==> (f m p = f m q)``)
-  \\ Q.PAT_ASSUM `!a cs. bb` MATCH_MP_TAC
+  \\ Q.PAT_X_ASSUM `!a cs. bb` MATCH_MP_TAC
   \\ FULL_SIMP_TAC std_ss [AC ADD_ASSOC ADD_COMM]);
 
 val x86_newcode_thm = prove(
@@ -1641,12 +1641,12 @@ val x86_inc_thm = prove(
        \\ SIMP_TAC (std_ss++SIZES_ss) [APPLY_UPDATE_THM,WORD_EQ_ADD_LCANCEL,
          word_sub_def,word_2comp_n2w,n2w_11])
     \\ ASM_SIMP_TAC std_ss [] \\ SEP_READ_TAC)
-  \\ Q.PAT_ASSUM `Abbrev bbb` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `Abbrev bbb` (K ALL_TAC)
   \\ `LENGTH cs <= 128` by DECIDE_TAC
   \\ IMP_RES_TAC x86_access_j_thm
   \\ ASM_SIMP_TAC std_ss [ALIGNED_INTRO,ALIGNED]
-  \\ REPEAT (Q.PAT_ASSUM `x86_access_j bb = nnn` (K ALL_TAC))
-  \\ REPEAT (Q.PAT_ASSUM `x86_access_j_pre bb` (K ALL_TAC))
+  \\ REPEAT (Q.PAT_X_ASSUM `x86_access_j bb = nnn` (K ALL_TAC))
+  \\ REPEAT (Q.PAT_X_ASSUM `x86_access_j_pre bb` (K ALL_TAC))
   \\ ASM_SIMP_TAC std_ss []
   \\ (STRIP_ASSUME_TAC o UNDISCH_ALL o RW [SEP_CLAUSES] o
    Q.INST [`r3`|->`a`,`r6`|->`b`,`pp`|->`SEP_T * one (r7 - 0xCw,r1) * one (r7 - 0x10w,r2) *
@@ -1655,14 +1655,14 @@ val x86_inc_thm = prove(
       ``x86_newcode (if (j:num->word32 option) n = NONE
         then 0x0w else 0x1w,n2w n,r7,df,f,dg,g,dh,h3)``
   \\ ASM_SIMP_TAC std_ss []
-  \\ REPEAT (Q.PAT_ASSUM `x86_newcode bb = nnn` (K ALL_TAC))
-  \\ REPEAT (Q.PAT_ASSUM `x86_newcode_pre bb` (K ALL_TAC))
+  \\ REPEAT (Q.PAT_X_ASSUM `x86_newcode bb = nnn` (K ALL_TAC))
+  \\ REPEAT (Q.PAT_X_ASSUM `x86_newcode_pre bb` (K ALL_TAC))
   \\ `h2 (r7 - 0x20w) = n2w n` by SEP_READ_TAC
   \\ ASM_SIMP_TAC std_ss []
   \\ IMP_RES_TAC x86_access_j_thm
   \\ ASM_SIMP_TAC std_ss []
-  \\ REPEAT (Q.PAT_ASSUM `x86_access_j bb = nnn` (K ALL_TAC))
-  \\ REPEAT (Q.PAT_ASSUM `x86_access_j_pre bb` (K ALL_TAC))
+  \\ REPEAT (Q.PAT_X_ASSUM `x86_access_j bb = nnn` (K ALL_TAC))
+  \\ REPEAT (Q.PAT_X_ASSUM `x86_access_j_pre bb` (K ALL_TAC))
   \\ Cases_on `j2 n` \\ FULL_SIMP_TAC std_ss []
   \\ `h2 (r7 - 0x18w) = r4` by SEP_READ_TAC
   \\ ASM_SIMP_TAC std_ss []
@@ -1841,8 +1841,8 @@ val xINC_CODEGEN_THM = let
     \\ FULL_SIMP_TAC std_ss [GSYM iFETCH_NOT_NONE]
     \\ IMP_RES_TAC x86_inc_thm
     \\ FULL_SIMP_TAC std_ss [xINC_def,SEP_CLAUSES,STAR_ASSOC,xSTACK_def,SEP_EXISTS_THM]
-    \\ Q.PAT_ASSUM `!r6' r3' r2' r1'. ?h2. bbb` (STRIP_ASSUME_TAC o Q.SPECL [`ebx`,`edi`,`edx`,`x`])
-    \\ REPEAT (Q.PAT_ASSUM `!b. bb` (K ALL_TAC))
+    \\ Q.PAT_X_ASSUM `!r6' r3' r2' r1'. ?h2. bbb` (STRIP_ASSUME_TAC o Q.SPECL [`ebx`,`edi`,`edx`,`x`])
+    \\ REPEAT (Q.PAT_X_ASSUM `!b. bb` (K ALL_TAC))
     \\ QEXISTSL_TAC [`w`,`p`,`j`,`h2`,`h`,`g`,`f2`,`f`,
          `cp`,`edi`,`jw`,`dh`,`dg`,`df`]
     \\ ASM_SIMP_TAC std_ss []
@@ -1903,7 +1903,7 @@ val state_inv_IMP = prove(
   \\ FULL_SIMP_TAC std_ss [SEP_EXISTS]
   \\ FULL_SIMP_TAC (std_ss++sep_cond_ss) [cond_STAR]
   \\ Q.EXISTS_TAC `y` \\ ASM_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `ppp (fun2set (f,df))` MP_TAC
+  \\ Q.PAT_X_ASSUM `ppp (fun2set (f,df))` MP_TAC
   \\ SIMP_TAC std_ss [GSYM STAR_ASSOC]
   \\ ONCE_REWRITE_TAC [STAR_COMM]
   \\ Q.SPEC_TAC (`q * CODE_SPACE a (SPACE_LENGTH 0 j cs)`,`x`)
@@ -2012,7 +2012,7 @@ val xINC_JUMP_THM = prove(
    (SIMP_TAC std_ss [RW1[STAR_COMM]X86_SPEC_CODE]
     \\ MATCH_MP_TAC (GEN_ALL (RW [AND_IMP_INTRO] SPEC_X86_MODEL_IN_BYTE_MEM))
     \\ Q.EXISTS_TAC `[0x83w; 0xF1w; n2w t]` \\ Q.EXISTS_TAC `eip`
-    \\ Q.PAT_ASSUM `BYTES_IN_MEM eip df f bs` MP_TAC
+    \\ Q.PAT_X_ASSUM `BYTES_IN_MEM eip df f bs` MP_TAC
     \\ FULL_SIMP_TAC std_ss [BYTES_IN_MEM_def,word_arith_lemma1]
     \\ REPEAT STRIP_TAC
     \\ `n2w t = (sw2sw ((n2w t):word8)):word32` by ALL_TAC THEN1
@@ -2025,7 +2025,7 @@ val xINC_JUMP_THM = prove(
   \\ MATCH_MP_TAC (GEN_ALL xBYTE_MEMORY_X_FLIP)
   \\ Q.EXISTS_TAC `[0xFFw; 0xD3w]` \\ Q.EXISTS_TAC `eip+3w`
   \\ ASM_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `BYTES_IN_MEM eip df f bs` MP_TAC
+  \\ Q.PAT_X_ASSUM `BYTES_IN_MEM eip df f bs` MP_TAC
   \\ FULL_SIMP_TAC std_ss [BYTES_IN_MEM_def,word_arith_lemma1]
   \\ REPEAT STRIP_TAC
   \\ SIMP_TAC (bool_ss++sep_cond_ss) [X86_STACK_def,xLIST_def,
@@ -2052,10 +2052,10 @@ val iSTEP_INIT_TAC =
     \\ SIMP_TAC std_ss [RW1 [STAR_COMM] X86_SPEC_CODE]
     \\ MATCH_MP_TAC (GEN_ALL (RW [AND_IMP_INTRO] SPEC_X86_MODEL_IN_BYTE_MEM))
     \\ Q.EXISTS_TAC `bs` \\ Q.EXISTS_TAC `eip`
-    \\ Q.PAT_ASSUM `bs = xxx` (fn th => FULL_SIMP_TAC std_ss [th])
-    \\ REPEAT (Q.PAT_ASSUM `yyy = xxx:word8 list` (K ALL_TAC))
+    \\ Q.PAT_X_ASSUM `bs = xxx` (fn th => FULL_SIMP_TAC std_ss [th])
+    \\ REPEAT (Q.PAT_X_ASSUM `yyy = xxx:word8 list` (K ALL_TAC))
     \\ ASM_SIMP_TAC std_ss []
-    \\ REPEAT (Q.PAT_ASSUM `BYTES_IN_MEM eip df f bss` (K ALL_TAC))
+    \\ REPEAT (Q.PAT_X_ASSUM `BYTES_IN_MEM eip df f bss` (K ALL_TAC))
     \\ SIMP_TAC bool_ss [xSTACK_def,SEP_CLAUSES,xLIST_def,xSPACE_def,GSYM ADD1]
     \\ SIMP_TAC std_ss [STAR_ASSOC]
     \\ SIMP_TAC std_ss [GSYM SPEC_PRE_EXISTS] \\ STRIP_TAC
@@ -2078,8 +2078,8 @@ val iSTEP2_TAC =
     \\ SIMP_TAC std_ss [SPEC_MOVE_COND] \\ REPEAT STRIP_TAC
     \\ IMP_RES_TAC iEXEC_IMP
     \\ IMP_RES_TAC state_inv_IMP
-    \\ Q.PAT_ASSUM `BYTES_IN_MEM eip df f bs` MP_TAC
-    \\ Q.PAT_ASSUM `X86_ENCODE c eip p j bs` MP_TAC
+    \\ Q.PAT_X_ASSUM `BYTES_IN_MEM eip df f bs` MP_TAC
+    \\ Q.PAT_X_ASSUM `X86_ENCODE c eip p j bs` MP_TAC
     \\ SIMP_TAC std_ss [X86_ENCODE_def] \\ STRIP_TAC
     \\ IMP_RES_TAC ENCODE_JUMP_LENGTH
     \\ FULL_SIMP_TAC std_ss [BYTES_IN_MEM_APPEND,LENGTH_APPEND,LENGTH,GSYM iFETCH_NOT_NONE]
@@ -2157,7 +2157,7 @@ val iSTEP_xINC = prove(
     \\ Q.EXISTS_TAC `[0x3Bw; 0x7w; 0xFw; 0x84w; 0x5w; 0x0w; 0x0w; 0x0w]` \\ Q.EXISTS_TAC `eip`
     \\ ASM_SIMP_TAC std_ss [xSTACK_def,SEP_CLAUSES,STAR_ASSOC,xLIST_def]
     \\ HO_MATCH_MP_TAC SPEC_EXISTS_EXISTS \\ STRIP_TAC
-    \\ Q.PAT_ASSUM `x <> y` MP_TAC
+    \\ Q.PAT_X_ASSUM `x <> y` MP_TAC
     \\ SIMP_TAC (std_ss++sep_cond_ss) [SPEC_MOVE_COND,SEP_CLAUSES]
     \\ SIMP_TAC (std_ss++sep_cond_ss) [GSYM SPEC_MOVE_COND]
     \\ SPEC_PROVE_TAC [je_nop_th])
@@ -2171,7 +2171,7 @@ val iSTEP_xINC = prove(
     \\ Q.EXISTS_TAC `[0x3Bw; 0x7w; 0xFw; 0x82w; 0x5w; 0x0w; 0x0w; 0x0w]` \\ Q.EXISTS_TAC `eip`
     \\ ASM_SIMP_TAC std_ss [xSTACK_def,SEP_CLAUSES,STAR_ASSOC,xLIST_def]
     \\ HO_MATCH_MP_TAC SPEC_EXISTS_EXISTS \\ STRIP_TAC
-    \\ Q.PAT_ASSUM `x <+ y` MP_TAC
+    \\ Q.PAT_X_ASSUM `x <+ y` MP_TAC
     \\ SIMP_TAC (std_ss++sep_cond_ss) [SPEC_MOVE_COND,SEP_CLAUSES]
     \\ SIMP_TAC std_ss [GSYM SPEC_MOVE_COND]
     \\ SPEC_PROVE_TAC [jb_th])
@@ -2187,7 +2187,7 @@ val iSTEP_xINC = prove(
     \\ Q.EXISTS_TAC `[0x3Bw; 0x7w; 0xFw; 0x82w; 0x5w; 0x0w; 0x0w; 0x0w]` \\ Q.EXISTS_TAC `eip`
     \\ ASM_SIMP_TAC std_ss [xSTACK_def,SEP_CLAUSES,STAR_ASSOC,xLIST_def]
     \\ HO_MATCH_MP_TAC SPEC_EXISTS_EXISTS \\ STRIP_TAC
-    \\ Q.PAT_ASSUM `~(x <+ y)` MP_TAC
+    \\ Q.PAT_X_ASSUM `~(x <+ y)` MP_TAC
     \\ SIMP_TAC (std_ss++sep_cond_ss) [SPEC_MOVE_COND,SEP_CLAUSES]
     \\ SIMP_TAC std_ss [GSYM SPEC_MOVE_COND]
     \\ SPEC_PROVE_TAC [jb_nop_th]));
@@ -2216,8 +2216,8 @@ val iEXEC_xINC = prove(
   \\ REPEAT STRIP_TAC
   \\ IMP_RES_TAC state_inv_IMP
   \\ FULL_SIMP_TAC std_ss [IS_JUMP_def]
-  \\ Q.PAT_ASSUM `BYTES_IN_MEM eip df f bs` MP_TAC
-  \\ Q.PAT_ASSUM `X86_ENCODE iSTOP eip p j bs` MP_TAC
+  \\ Q.PAT_X_ASSUM `BYTES_IN_MEM eip df f bs` MP_TAC
+  \\ Q.PAT_X_ASSUM `X86_ENCODE iSTOP eip p j bs` MP_TAC
   \\ FULL_SIMP_TAC std_ss [X86_ENCODE_def]
   \\ REPEAT STRIP_TAC
   \\ ONCE_REWRITE_TAC [STAR_COMM] \\ SIMP_TAC std_ss [STAR_ASSOC]
@@ -2388,11 +2388,11 @@ val zero_loop_thm = prove(
     \\ `(p * one (r2,0w) * one (r2 + 0x4w,0w) * TEMP_SPACE (r2 + 0x8w) (n + n))
           (fun2set ((r2 + 0x4w =+ 0x0w) ((r2 =+ 0x0w) h),dh))` by SEP_WRITE_TAC
     \\ POP_ASSUM MP_TAC
-    \\ Q.PAT_ASSUM `bbb (fun2set (h,dh))` (K ALL_TAC)
+    \\ Q.PAT_X_ASSUM `bbb (fun2set (h,dh))` (K ALL_TAC)
     \\ REPEAT STRIP_TAC
     \\ `ALIGNED (r2 + 8w)` by FULL_SIMP_TAC std_ss [ALIGNED]
     \\ FULL_SIMP_TAC std_ss [TIMES2]
-    \\ RES_TAC \\ Q.PAT_ASSUM `!p q x. bb` (K ALL_TAC)
+    \\ RES_TAC \\ Q.PAT_X_ASSUM `!p q x. bb` (K ALL_TAC)
     \\ ASM_SIMP_TAC std_ss []
     \\ REPEAT STRIP_TAC THEN1 SEP_READ_TAC THEN1 SEP_READ_TAC
     \\ Cases_on `xs`
@@ -2484,14 +2484,14 @@ val xINC_SETUP_INTRO = prove(
        one (r5 + 0x1Cw,r4) * one (r5 + 0x20w,r3) *
        TEMP_SPACE (r5 + 0x24w) 256) (fun2set (hi,dh))` by
      (Q.UNABBREV_TAC `hi` \\ SEP_WRITE_TAC)
-  \\ Q.PAT_ASSUM `bbbb (fun2set (h,dh))` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `bbbb (fun2set (h,dh))` (K ALL_TAC)
   \\ `ALIGNED (r5 + 0x24w)` by ASM_SIMP_TAC std_ss [ALIGNED]
-  \\ Q.PAT_ASSUM `ALIGNED r5` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `ALIGNED r5` (K ALL_TAC)
   \\ IMP_RES_TAC (SIMP_RULE std_ss [] (Q.SPEC `128` zero_loop_thm))
   \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `0`)
   \\ ASM_SIMP_TAC std_ss [word_arith_lemma4,WORD_ADD_0]
   \\ IMP_RES_TAC LENGTH_EXTEND
-  \\ Q.PAT_ASSUM `!xs. bb` IMP_RES_TAC
+  \\ Q.PAT_X_ASSUM `!xs. bb` IMP_RES_TAC
   \\ `h2 r5 = 1w` by SEP_READ_TAC
   \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [n2w_11]
   \\ SIMP_TAC std_ss [CONJ_ASSOC] \\ STRIP_TAC THEN1 SEP_READ_TAC
@@ -2547,4 +2547,3 @@ val x86_incremental_jit = let
 val _ = write_code_to_file "incremental-jit.s" x86_incremental_jit;
 
 val _ = export_theory();
-

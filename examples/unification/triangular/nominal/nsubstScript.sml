@@ -23,14 +23,14 @@ val nwfs_no_cycles = Q.store_thm(
   SRW_TAC [] [nwfs_def,WF_IFF_WELLFOUNDED,wellfounded_def] THEN
   SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
   `!n. (f n) IN FDOM s /\ f (SUC n) IN nvars (s ' (f n))` by
-    (STRIP_TAC THEN Q.PAT_ASSUM `!n.nvR s (f (SUC n)) (f n)` (Q.SPEC_THEN `n` MP_TAC)
+    (STRIP_TAC THEN Q.PAT_X_ASSUM `!n.nvR s (f (SUC n)) (f n)` (Q.SPEC_THEN `n` MP_TAC)
      THEN FULL_SIMP_TAC (srw_ss()) [nvR_def] THEN Cases_on `FLOOKUP s (f n)` THEN
-     Q.PAT_ASSUM `FLOOKUP s (f n) = Z` MP_TAC THEN SRW_TAC [] [FLOOKUP_DEF])
+     Q.PAT_X_ASSUM `FLOOKUP s (f n) = Z` MP_TAC THEN SRW_TAC [] [FLOOKUP_DEF])
   THEN
   `!n m. (nvR s)^+ (f (SUC (n + m))) (f n)` by
     (REPEAT STRIP_TAC THEN Induct_on `m` THEN1
        (SRW_TAC [] [] THEN METIS_TAC [TC_SUBSET]) THEN
-     Q.PAT_ASSUM `!n. f n IN FDOM s /\ Z` (Q.SPEC_THEN `SUC (n + m)` MP_TAC)
+     Q.PAT_X_ASSUM `!n. f n IN FDOM s /\ Z` (Q.SPEC_THEN `SUC (n + m)` MP_TAC)
      THEN SRW_TAC [] [] THEN
      `(nvR s) (f (SUC (SUC (n + m)))) (f (SUC (n + m)))`
      by METIS_TAC [nvR_def,FLOOKUP_DEF] THEN

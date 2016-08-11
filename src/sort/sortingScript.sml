@@ -548,7 +548,7 @@ val QSORT_MEM = Q.store_thm
 recInduct QSORT_IND
  THEN RW_TAC bool_ss [QSORT_DEF,PARTITION_DEF]
  THEN RW_TAC list_ss []
- THEN Q.PAT_ASSUM `x = y` (MP_TAC o MATCH_MP PART_MEM o SYM)
+ THEN Q.PAT_X_ASSUM `_ = _` (MP_TAC o MATCH_MP PART_MEM o SYM)
  THEN RW_TAC list_ss [] THEN PROVE_TAC []);
 
 (*---------------------------------------------------------------------------*)
@@ -586,7 +586,7 @@ Q.store_thm
   THEN IMP_RES_THEN (fn th => ASM_REWRITE_TAC [th]) SORTED_EQ
   THEN RW_TAC list_ss [MEM_FILTER,MEM,QSORT_MEM]
   THEN ((RES_TAC THEN NO_TAC) ORELSE ALL_TAC)
-  THEN Q.PAT_ASSUM `x = y` (MP_TAC o MATCH_MP
+  THEN Q.PAT_X_ASSUM `_ = _` (MP_TAC o MATCH_MP
         (REWRITE_RULE[PROVE [] (Term `x/\y/\z ==> w = x ==> y/\z ==> w`)]
             PARTS_HAVE_PROP))
   THEN RW_TAC std_ss [MEM]
@@ -1189,7 +1189,7 @@ val PERM3 =
 val PULL_CONV = REPEATC (DEPTH_CONV (RIGHT_IMP_FORALL_CONV ORELSEC AND_IMP_INTRO_CONV));
 val PULL_RULE = CONV_RULE PULL_CONV;
 
-val IND_STEP_TAC = PAT_ASSUM ``!y. P ==> Q`` (MATCH_MP_TAC o PULL_RULE);
+val IND_STEP_TAC = PAT_X_ASSUM ``!y. P ==> Q`` (MATCH_MP_TAC o PULL_RULE);
 
 val tospec =
     Q.GEN `P`

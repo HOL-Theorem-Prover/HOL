@@ -153,6 +153,7 @@ sig
   val qhdtm_assum : term quotation -> thm_tactic -> tactic
   val qhdtm_x_assum : term quotation -> thm_tactic -> tactic
   val qpat_assum : term quotation -> thm_tactic -> tactic
+  val qpat_x_assum : term quotation -> thm_tactic -> tactic
   val qpat_abbrev_tac : term quotation -> tactic
   val qmatch_abbrev_tac : term quotation -> tactic
   val qho_match_abbrev_tac : term quotation -> tactic

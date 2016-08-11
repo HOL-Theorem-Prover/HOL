@@ -361,7 +361,7 @@ val PROB_ZERO_UNION = store_thm
    ++ Know `prob p (t DIFF s) = 0`
    >> (ONCE_REWRITE_TAC [GSYM REAL_LE_ANTISYM]
        ++ Reverse CONJ_TAC >> PROVE_TAC [PROB_POSITIVE]
-       ++ Q.PAT_ASSUM `prob p t = 0` (ONCE_REWRITE_TAC o wrap o SYM)
+       ++ Q.PAT_X_ASSUM `prob p t = 0` (ONCE_REWRITE_TAC o wrap o SYM)
        ++ MATCH_MP_TAC PROB_INCREASING
        ++ RW_TAC std_ss [DIFF_SUBSET])
    ++ STRIP_TAC
@@ -407,7 +407,7 @@ val EVENTS_COUNTABLE_INTER = store_thm
    ++ MATCH_MP_TAC EVENTS_COMPL
    ++ RW_TAC std_ss [COMPL_BIGINTER]
    ++ MATCH_MP_TAC EVENTS_COUNTABLE_UNION
-   ++ Q.PAT_ASSUM `c SUBSET events p` MP_TAC
+   ++ Q.PAT_X_ASSUM `c SUBSET events p` MP_TAC
    ++ RW_TAC std_ss [COUNTABLE_IMAGE, SUBSET_DEF, IN_IMAGE]
    ++ PROVE_TAC [EVENTS_COMPL]);
 

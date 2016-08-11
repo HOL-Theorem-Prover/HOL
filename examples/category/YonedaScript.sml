@@ -364,7 +364,7 @@ qmatch_rename_tac `_ = n @+ z` >>
   pop_assum mp_tac >> srw_tac [][YMapInv_def] ) >>
 srw_tac [][] >>
 fsrw_tac [][] >>
-qpat_assum `X = (Yfunctor c)@@x` mp_tac >> srw_tac [][] >>
+qpat_x_assum `X = (Yfunctor c)@@x` mp_tac >> srw_tac [][] >>
 `∀z. z ∈ c.obj ⇒ n @+ z :- c|z→x| → (n.cod@@z) -:n.cod.cod` by (
   fsrw_tac [][is_nat_trans_def,nat_trans_axioms_def] >>
   metis_tac [contra_hom_functor_objf] ) >>

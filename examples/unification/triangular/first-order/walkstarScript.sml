@@ -37,13 +37,13 @@ val [h2,h1,h3] = hyp (inst_walkstar pre_walkstar_def)
 
 val th1 = Q.store_thm("walkstar_th1",`wfs s ⇒ ^h1`,
 SRW_TAC [][inv_image_def,LEX_DEF,walkstarR_def] THEN
-Q.PAT_ASSUM `wfs s` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `wfs s` ASSUME_TAC THEN
 Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
   MATCH_MP_TAC TC_SUBSET THEN
   SRW_TAC [][mlt1_def] THEN
   MAP_EVERY Q.EXISTS_TAC [`n`,`varb t1`,`{||}`] THEN
   SRW_TAC [][vwalk_vR],
-  REPEAT (Q.PAT_ASSUM `X = Y` (K ALL_TAC)) THEN
+  REPEAT (Q.PAT_X_ASSUM `X = Y` (K ALL_TAC)) THEN
   Cases_on `varb t2 = {||}` THEN1
     SRW_TAC [ARITH_ss][measure_thm] THEN
   DISJ1_TAC THEN MATCH_MP_TAC TC_mlt1_UNION2_I THEN
@@ -52,13 +52,13 @@ Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
 
 val th2 = Q.store_thm("walkstar_th2",`wfs s ⇒ ^h2`,
 SRW_TAC [][inv_image_def,LEX_DEF,walkstarR_def] THEN
-Q.PAT_ASSUM `wfs s` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `wfs s` ASSUME_TAC THEN
 Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
   MATCH_MP_TAC TC_SUBSET THEN
   SRW_TAC [][mlt1_def] THEN
   MAP_EVERY Q.EXISTS_TAC [`n`,`varb t2`,`{||}`] THEN
   SRW_TAC [][vwalk_vR],
-  REPEAT (Q.PAT_ASSUM `X = Y` (K ALL_TAC)) THEN
+  REPEAT (Q.PAT_X_ASSUM `X = Y` (K ALL_TAC)) THEN
   Cases_on `varb t1 = {||}` THEN1
     SRW_TAC [ARITH_ss][measure_thm] THEN
   DISJ1_TAC THEN
@@ -102,9 +102,9 @@ val NOT_FDOM_walkstar = Q.store_thm(
 "NOT_FDOM_walkstar",
 `wfs s ==> !t. v NOTIN FDOM s ==> v IN vars t ==> v IN vars (walk* s t)`,
 DISCH_TAC THEN HO_MATCH_MP_TAC walkstar_ind THEN SRW_TAC [][] THEN Cases_on `t` THENL [
-  Q.PAT_ASSUM `wfs s` ASSUME_TAC THEN
+  Q.PAT_X_ASSUM `wfs s` ASSUME_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [Once vwalk_def, vars_def, FLOOKUP_DEF],
-  Q.PAT_ASSUM `wfs s` ASSUME_TAC THEN FULL_SIMP_TAC (srw_ss()) [],
+  Q.PAT_X_ASSUM `wfs s` ASSUME_TAC THEN FULL_SIMP_TAC (srw_ss()) [],
   FULL_SIMP_TAC (srw_ss()) [vars_def]]);
 
 val vwalk_EQ_var_vR = prove(
@@ -114,7 +114,7 @@ val vwalk_EQ_var_vR = prove(
   IMP_RES_TAC TC_CASES2 THEN
   FULL_SIMP_TAC (srw_ss()) [vR_def] THEN
   Cases_on `FLOOKUP s u` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-  Q.PAT_ASSUM `vwalk s u = UU` MP_TAC THEN
+  Q.PAT_X_ASSUM `vwalk s u = UU` MP_TAC THEN
   SRW_TAC [][Once vwalk_def] THEN
   Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
   POP_ASSUM MP_TAC THEN SRW_TAC [][NOT_FDOM_vwalk]);
@@ -140,7 +140,7 @@ val vwalk_EQ_pair_vR = prove(
   HO_MATCH_MP_TAC TC_STRONG_INDUCT_RIGHT1 THEN SRW_TAC [][] THEN
   FULL_SIMP_TAC (srw_ss()) [vR_def] THENL [
     Cases_on `FLOOKUP s u` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-    Q.PAT_ASSUM `vwalk s u = XXX` MP_TAC THEN
+    Q.PAT_X_ASSUM `vwalk s u = XXX` MP_TAC THEN
     SRW_TAC [][Once vwalk_def] THEN
     Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
       POP_ASSUM MP_TAC THEN SRW_TAC [][NOT_FDOM_vwalk],
@@ -148,7 +148,7 @@ val vwalk_EQ_pair_vR = prove(
       Q.EXISTS_TAC `v` THEN SRW_TAC [][]
     ],
     Cases_on `FLOOKUP s u'` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-    Q.PAT_ASSUM `vwalk s u' = XXX` MP_TAC THEN
+    Q.PAT_X_ASSUM `vwalk s u' = XXX` MP_TAC THEN
     SRW_TAC [][Once vwalk_def] THEN
     Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC [TC_RTC]
   ]);
@@ -187,7 +187,7 @@ STRIP_TAC THEN IMP_RES_TAC wfs_SUBMAP THEN
 Q.ID_SPEC_TAC `t` THEN
 HO_MATCH_MP_TAC walkstar_ind THEN
 SRW_TAC [][] THEN
-Q.PAT_ASSUM `wfs s` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `wfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
 Cases_on `t` THEN SRW_TAC [][] THEN
 Q.SPECL_THEN [`n`,`s`] MP_TAC (UNDISCH vwalk_SUBMAP) THEN
@@ -263,12 +263,12 @@ Q.ID_SPEC_TAC `n` THEN
 HO_MATCH_MP_TAC vwalk_ind THEN
 SRW_TAC [][] THEN
 Cases_on `FLOOKUP s n` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-Q.PAT_ASSUM `wfs s` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `wfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [Once vwalk_def] THEN
 Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
 Q_TAC SUFF_TAC `∀t. (FLOOKUP s n = SOME t) ⇒ P t` THEN1 METIS_TAC [] THEN
 SRW_TAC [][] THEN
-Q.PAT_ASSUM `∀t1 t2. X ⇒ P t2` MP_TAC THEN
+Q.PAT_X_ASSUM `∀t1 t2. X ⇒ P t2` MP_TAC THEN
 SRW_TAC [][Once vwalk_def])));
 
 val vars_walkstar = Q.store_thm(
@@ -394,7 +394,7 @@ val oc_if_vars_walkstar = Q.prove(
 `wfs s ==> !t. vars (walk* s t) v ==> oc s t v`,
 DISCH_TAC THEN HO_MATCH_MP_TAC walkstar_ind THEN SRW_TAC [] [] THEN
 Cases_on `t` THENL [
-  Cases_on `walk* s (Var n)` THEN Q.PAT_ASSUM `wfs s` ASSUME_TAC
+  Cases_on `walk* s (Var n)` THEN Q.PAT_X_ASSUM `wfs s` ASSUME_TAC
   THENL [
     `v = n'` by METIS_TAC [vars_def,IN_DEF,IN_INSERT,NOT_IN_EMPTY] THEN
     Cases_on `vwalk s n` THEN FULL_SIMP_TAC (srw_ss()) [],
@@ -403,10 +403,10 @@ Cases_on `t` THENL [
     FULL_SIMP_TAC (srw_ss()) [] THEN `v IN {}` by METIS_TAC [IN_DEF]
     THEN FULL_SIMP_TAC (srw_ss()) [NOT_IN_EMPTY]
   ],
-  Q.PAT_ASSUM `vars (walkstar s t) v` MP_TAC THEN SRW_TAC [][] THEN
-  Q.PAT_ASSUM `wfs s` ASSUME_TAC THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+  Q.PAT_X_ASSUM `vars (walkstar s t) v` MP_TAC THEN SRW_TAC [][] THEN
+  Q.PAT_X_ASSUM `wfs s` ASSUME_TAC THEN FULL_SIMP_TAC (srw_ss()) [] THEN
   METIS_TAC [IN_DEF,IN_UNION],
-  Q.PAT_ASSUM `wfs s` ASSUME_TAC THEN
+  Q.PAT_X_ASSUM `wfs s` ASSUME_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN
   METIS_TAC [IN_DEF,NOT_IN_EMPTY]]);
 
@@ -421,7 +421,7 @@ STRIP_TAC THEN HO_MATCH_MP_TAC oc_strong_ind THEN SRW_TAC [] [] THEN1
   METIS_TAC [NOT_FDOM_walkstar] THEN
 Induct_on `t` THEN SRW_TAC [][] THENL [
     Cases_on `vwalk s n` THEN SRW_TAC [][] THEN
-    Q.PAT_ASSUM `Y IN vars X` MP_TAC THEN
+    Q.PAT_X_ASSUM `Y IN vars X` MP_TAC THEN
     ASM_SIMP_TAC (srw_ss()) [] THEN
    `vwalk s n' = Var n'` by METIS_TAC [vwalk_to_var,NOT_FDOM_vwalk] THEN
     SRW_TAC [][],

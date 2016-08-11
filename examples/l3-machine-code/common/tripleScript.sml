@@ -91,14 +91,14 @@ val TRIPLE_TERM_TAILREC = Q.prove(
    >- (fs []
        \\ Cases_on `d (WHILE g f x)`
        \\ fs [TRIPLE_def])
-   \\ qpat_assum `!c. ~bbb` kall_tac
+   \\ qpat_x_assum `!c. ~bbb` kall_tac
    \\ fs []
    \\ pop_assum mp_tac
    \\ Q.SPEC_TAC (`x`, `x`)
    \\ Induct_on `n`
    \\ fs [FUNPOW]
    \\ REPEAT strip_tac
-   >- (qpat_assum `!x.bbb` (MP_TAC o Q.SPEC `x`)
+   >- (qpat_x_assum `!x.bbb` (MP_TAC o Q.SPEC `x`)
        \\ once_rewrite_tac [WHILE]
        \\ fs []
        \\ Cases_on `d x`
@@ -116,7 +116,7 @@ val TRIPLE_TERM_TAILREC = Q.prove(
    >- (pop_assum mp_tac
        \\ pop_assum kall_tac
        \\ pop_assum kall_tac
-       \\ qpat_assum `!x.bbb` (MP_TAC o Q.SPEC `x`)
+       \\ qpat_x_assum `!x.bbb` (MP_TAC o Q.SPEC `x`)
        \\ once_rewrite_tac [WHILE]
        \\ fs []
        \\ Cases_on `d x`

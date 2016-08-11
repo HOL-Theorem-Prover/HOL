@@ -79,7 +79,7 @@ val ABELIAN_GPOW_GOP = store_thm
        gop G (gop G (gpow G g n) h) (gpow G h n)`
    >> R_TAC [GROUP_ASSOC, FINITE_GROUP_GROUP, GPOW_SUBTYPE, GOP_SUBTYPE]
    ++ G_TAC []
-   ++ Q.PAT_ASSUM `abelian G` MP_TAC
+   ++ Q.PAT_X_ASSUM `abelian G` MP_TAC
    ++ R_TAC [abelian_def]
    ++ DISCH_THEN (fn th => G_TAC [Q_RESQ_HALF_SPECL [`h`, `gpow G g n`] th]));
 
@@ -124,7 +124,7 @@ val ABELIAN_GORD_GCD_1 = store_thm
        ++ PROVE_TAC [])
    ++ Suff `divides p (gord G (gpow G h m))`
    >> (MP_TAC (Q_RESQ_HALF_SPECL [`G`, `h`] PRIME_DIVIDES_GORD_GPOW)
-       ++ Q.PAT_ASSUM `gpow G h m = x` K_TAC
+       ++ Q.PAT_X_ASSUM `gpow G h m = x` K_TAC
        ++ ASM_REWRITE_TAC []
        ++ PROVE_TAC [])
    ++ G_TAC [GORD_GINV]);
@@ -142,7 +142,7 @@ val STRUCTURE_LEMMA = store_thm
          (gcd (gord G g1) (gord G g2) = g) ==>
          ?h :: gset G. gord G h = lcm (gord G g1) (gord G g2)`
    >> (S_TAC
-       ++ Q.PAT_ASSUM `!g. P g` (MP_TAC o Q.SPEC `gcd (gord G g1) (gord G g2)`)
+       ++ Q.PAT_X_ASSUM `!g. P g` (MP_TAC o Q.SPEC `gcd (gord G g1) (gord G g2)`)
        ++ G_TAC [])
    ++ HO_MATCH_MP_TAC FACTOR_INDUCT
    ++ CONJ_TAC >> G_TAC []
@@ -172,7 +172,7 @@ val STRUCTURE_LEMMA = store_thm
         ++ R_TAC []
         ++ ASSUME_TAC th)
     ++ S_TAC
-    ++ Q.PAT_ASSUM `!g1 :: gset G. P g1`
+    ++ Q.PAT_X_ASSUM `!g1 :: gset G. P g1`
        (MP_TAC o Q_RESQ_HALF_SPECL [`g1`, `gpow G g2 p`])
     ++ G_TAC' []
     ++ Know `gcd (gord G g1) (gord G (gpow G g2 p)) = g`
@@ -185,7 +185,7 @@ val STRUCTURE_LEMMA = store_thm
                  lcm (gord G g1) (gord G g2)`
     >> R_TAC []
     ++ G_TAC [lcm_def, GORD_EQ_0]
-    ++ Q.PAT_ASSUM `p * x = y` (R_TAC o wrap o SYM)
+    ++ Q.PAT_X_ASSUM `p * x = y` (R_TAC o wrap o SYM)
     ++ Know `gord G g1 * (p * gord G (gpow G g2 p)) =
                  p * (gord G g1 * gord G (gpow G g2 p))`
     >> PROVE_TAC [MULT_ASSOC, MULT_COMM]
@@ -210,7 +210,7 @@ val STRUCTURE_LEMMA = store_thm
         ++ R_TAC []
         ++ ASSUME_TAC th)
     ++ S_TAC
-    ++ Q.PAT_ASSUM `!g1 :: gset G. P g1`
+    ++ Q.PAT_X_ASSUM `!g1 :: gset G. P g1`
        (MP_TAC o Q_RESQ_HALF_SPECL [`gpow G g1 p`, `g2`])
     ++ G_TAC' []
     ++ Know `gcd (gord G (gpow G g1 p)) (gord G g2) = g`
@@ -223,7 +223,7 @@ val STRUCTURE_LEMMA = store_thm
                  lcm (gord G g1) (gord G g2)`
     >> R_TAC []
     ++ G_TAC [lcm_def, GORD_EQ_0]
-    ++ Q.PAT_ASSUM `p * x = y` (R_TAC o wrap o SYM)
+    ++ Q.PAT_X_ASSUM `p * x = y` (R_TAC o wrap o SYM)
     ++ Suff `0 < g` >> R_TAC [DIV_CANCEL, GSYM MULT_ASSOC]
     ++ Suff `~(g = 0)` >> DECIDE_TAC
     ++ S_TAC

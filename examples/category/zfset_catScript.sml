@@ -386,7 +386,7 @@ qmatch_rename_tac `m1 = m2` >>
 first_assum (qspec_then `m1` mp_tac) >>
 first_x_assum (qspec_then `m2` mp_tac) >>
 ntac 2 strip_tac >>
-rpt (qpat_assum `f o g -:set_cat = h` mp_tac) >>
+rpt (qpat_x_assum `f o g -:set_cat = h` mp_tac) >>
 ntac 2 (pop_assum mp_tac) >>
 fsrw_tac [][] >>
 srw_tac [][morphism_component_equality] >>
@@ -404,7 +404,7 @@ map_every qunabbrev_tac [`P`,`Q`,`R`,`Z`] >>
 `(ComposeFn (X,Y,b) (GraphFn Y Snd) m1.map) ' x = p2.map ' x` by srw_tac [][] >>
 `(ComposeFn (X,Y,a) (GraphFn Y Fst) m2.map) ' x = p1.map ' x` by srw_tac [][] >>
 `(ComposeFn (X,Y,b) (GraphFn Y Snd) m2.map) ' x = p2.map ' x` by srw_tac [][] >>
-rpt (qpat_assum `ComposeFn (X,Y,Z) (GraphFn Y P) Q = R` (K ALL_TAC)) >>
+rpt (qpat_x_assum `ComposeFn (X,Y,Z) (GraphFn Y P) Q = R` (K ALL_TAC)) >>
 ntac 4 (pop_assum mp_tac) >>
 `GraphFn Y Fst In (Y -> a)` by metis_tac [GraphFnType] >>
 `GraphFn Y Snd In (Y -> b)` by metis_tac [GraphFnType] >>
@@ -545,7 +545,7 @@ SELECT_ELIM_TAC >>
 conj_tac >- metis_tac [cat_iso_set_to_ens,cat_iso_def] >>
 qx_gen_tac `ets` >> strip_tac >>
 fsrw_tac [][cat_iso_pair_bij] >>
-qpat_assum `X = ets.dom` (assume_tac o SYM) >>
+qpat_x_assum `X = ets.dom` (assume_tac o SYM) >>
 fsrw_tac [][] >>
 first_x_assum (qspecl_then [`implode f.dom`,`implode f.cod`] mp_tac) >>
 fsrw_tac [][] >>
@@ -571,7 +571,7 @@ srw_tac [][] >>
 qmatch_abbrev_tac `a = b` >>
 `a ∈ set_cat|implode f.dom→implode f.cod|` by (
   fsrw_tac [][hom_def] >>
-  qpat_assum `ets##f = a` assume_tac >>
+  qpat_x_assum `ets##f = a` assume_tac >>
   fsrw_tac [][] ) >>
 `b ∈ set_cat|implode f.dom→implode f.cod|` by (
   fsrw_tac [][Abbr`b`,hom_def] >>
@@ -719,10 +719,10 @@ val rep_functor_embedding = Q.store_thm(
 `∀u. (∀s. s ∈ u ⇒ IsSmall s) ⇒ embedding (rep_functor u)`,
 srw_tac [][embedding_def,full_def,faithful_def] >- (
   qmatch_abbrev_tac `X` >>
-  qpat_assum `a ∈ u` assume_tac >>
-  qpat_assum `b ∈ u` assume_tac >>
+  qpat_x_assum `a ∈ u` assume_tac >>
+  qpat_x_assum `b ∈ u` assume_tac >>
   res_tac >> fsrw_tac [][] >>
-  qpat_assum `IsTypedFun h` mp_tac >>
+  qpat_x_assum `IsTypedFun h` mp_tac >>
   asm_simp_tac (srw_ss()) [IsTypedFun_def] >>
   asm_simp_tac (srw_ss()++DNF_ss) [HasFunType_def,explode_def,In_zfrep_thm] >>
   srw_tac [][GSYM RIGHT_EXISTS_IMP_THM,SKOLEM_THM] >>
@@ -746,13 +746,13 @@ srw_tac [][FUN_EQ_THM] >>
 reverse (Cases_on `x ∈ g.dom`) >- metis_tac [] >>
 res_tac >> fsrw_tac [DNF_ss][In_zfrep_thm] >>
 `zfel g.cod (g.map x) = zfel g.cod (h.map (elzf g.dom (zfel g.dom x)))` by metis_tac [] >>
-qpat_assum  `IsSmall g.dom` assume_tac >>
-qpat_assum `x ∈ g.dom` assume_tac >>
+qpat_x_assum  `IsSmall g.dom` assume_tac >>
+qpat_x_assum `x ∈ g.dom` assume_tac >>
 fsrw_tac [][elzf_zfel] >>
 `elzf g.cod (zfel g.cod (g.map x)) = elzf g.cod (zfel g.cod (h.map x))` by metis_tac [] >>
-qpat_assum  `IsSmall g.cod` assume_tac >>
+qpat_x_assum  `IsSmall g.cod` assume_tac >>
 `g.map x ∈ g.cod ∧ h.map x ∈ g.cod` by metis_tac [] >>
-qpat_assum `g.map x ∈ g.cod` assume_tac >>
+qpat_x_assum `g.map x ∈ g.cod` assume_tac >>
 fsrw_tac [][elzf_zfel]);
 
 (*
@@ -825,7 +825,7 @@ fsrw_tac [][tag_fun_def,PairEq] >>
 srw_tac [][In_zfrep_thm] >>
 fsrw_tac [][tagged_homset_def,InProdEq,Snd] >>
 `IsSmall f.dom` by ( fsrw_tac [][is_locally_small_def] ) >>
-qpat_assum `x2 In X` mp_tac >>
+qpat_x_assum `x2 In X` mp_tac >>
 srw_tac [][In_zfrep_thm] >>
 qexists_tac `f.map x` >>
 fsrw_tac [][IsTypedFun_def,HasFunType_def] >>
@@ -875,7 +875,7 @@ qmatch_abbrev_tac `(ens_to_set##ff).map ' Snd x = (ens_to_set##gg).map ' ((ens_t
   metis_tac [elzf_zfel] ) >>
 `Snd x ∈ explode (zfrep f.dom)` by (
   fsrw_tac [][tagged_homset_def,InProdEq,Snd] >>
-  qpat_assum `f.dom ∈ homs c` assume_tac >>
+  qpat_x_assum `f.dom ∈ homs c` assume_tac >>
   fsrw_tac [][] >>
   srw_tac [][explode_def] ) >>
 `(ens_to_set##gg).map ' ((ens_to_set##hh).map ' Snd x) =
@@ -962,18 +962,18 @@ conj_tac >- (
     fsrw_tac [][is_locally_small_def] ) >>
   `f ∈ (ens_cat {s | IsSmall s}).mor` by (
     srw_tac [][Abbr`f`] >>
-    qpat_assum `IsSmall x` assume_tac >>
+    qpat_x_assum `IsSmall x` assume_tac >>
     fsrw_tac [][explode_def,In_zfrep_thm] >>
     srw_tac [][restrict_def] >>
     metis_tac [] ) >>
   srw_tac [][] >>
-  qpat_assum `x ∈ homs c` assume_tac >>
+  qpat_x_assum `x ∈ homs c` assume_tac >>
   `x2 In implode f.dom` by (
     fsrw_tac [][Abbr`f`,explode_def] ) >>
   fsrw_tac [][GraphFnAp,Abbr`f`] >>
   srw_tac [][restrict_def] >>
   fsrw_tac [][In_zfrep_thm,explode_def] >>
-  qpat_assum `x2 In zfrep x` mp_tac >>
+  qpat_x_assum `x2 In zfrep x` mp_tac >>
   srw_tac [][In_zfrep_thm] >>
   metis_tac [elzf_zfel] ) >>
 srw_tac [][morphism_component_equality]);
@@ -1003,18 +1003,18 @@ conj_tac >- (
     fsrw_tac [][is_locally_small_def] ) >>
   `f ∈ (ens_cat {s | IsSmall s}).mor` by (
     srw_tac [][Abbr`f`] >>
-    qpat_assum `IsSmall x` assume_tac >>
+    qpat_x_assum `IsSmall x` assume_tac >>
     fsrw_tac [][explode_def,In_zfrep_thm] >>
     srw_tac [][restrict_def] >>
     metis_tac [] ) >>
   srw_tac [][] >>
-  qpat_assum `x ∈ homs c` assume_tac >>
+  qpat_x_assum `x ∈ homs c` assume_tac >>
   `x2 In implode f.dom` by (
     fsrw_tac [][Abbr`f`,explode_def] ) >>
   fsrw_tac [][GraphFnAp,Abbr`f`] >>
   srw_tac [][restrict_def] >>
   fsrw_tac [][In_zfrep_thm,explode_def] >>
-  qpat_assum `x2 In zfrep x` mp_tac >>
+  qpat_x_assum `x2 In zfrep x` mp_tac >>
   srw_tac [][In_zfrep_thm] >>
   metis_tac [elzf_zfel] ) >>
 srw_tac [][] >>
@@ -1070,7 +1070,7 @@ conj_tac >- (
   fsrw_tac [][full_def] >>
   map_every qx_gen_tac [`h`,`a`,`b`] >>
   strip_tac >>
-  rpt (qpat_assum `X = tag_functor c@@Y` mp_tac) >>
+  rpt (qpat_x_assum `X = tag_functor c@@Y` mp_tac) >>
   srw_tac [][] >>
   qabbrev_tac `hhdom = (ens_to_set ◎ rep_functor (homs c))@@a` >>
   qabbrev_tac `hhcod = (ens_to_set ◎ rep_functor (homs c))@@b` >>
@@ -1081,7 +1081,7 @@ conj_tac >- (
     fsrw_tac [][is_locally_small_def] ) >>
   `IsTypedFn hh` by (
     srw_tac [][Abbr`hh`] >>
-    rpt (qpat_assum `xxx = tagged_homset c yyy` mp_tac) >>
+    rpt (qpat_x_assum `xxx = tagged_homset c yyy` mp_tac) >>
     fsrw_tac [][IsTypedFn_def,tagged_homset_def] >>
     fsrw_tac [][HasFnType_def,Abbr`hhdom`,Abbr`hhcod`] >>
     srw_tac [][] >>
@@ -1134,14 +1134,14 @@ qmatch_abbrev_tac `ens_to_set##f1 = ens_to_set##f2` >>
 `IsSmall g.dom ∧ IsSmall g.cod` by fsrw_tac [][is_locally_small_def] >>
 `f1 ∈ (ens_cat {s | IsSmall s}).mor` by (
   srw_tac [][Abbr`f1`] >>
-  rpt (qpat_assum `IsSmall X` mp_tac) >>
+  rpt (qpat_x_assum `IsSmall X` mp_tac) >>
   rpt strip_tac >>
   fsrw_tac [][explode_def,In_zfrep_thm] >>
   fsrw_tac [][IsTypedFun_def,HasFunType_def] >>
   metis_tac [] ) >>
 `f2 ∈ (ens_cat {s | IsSmall s}).mor` by (
   srw_tac [][Abbr`f2`] >>
-  rpt (qpat_assum `IsSmall X` mp_tac) >>
+  rpt (qpat_x_assum `IsSmall X` mp_tac) >>
   rpt strip_tac >>
   fsrw_tac [][explode_def,In_zfrep_thm] >>
   fsrw_tac [][IsTypedFun_def,HasFunType_def] >>
@@ -1158,7 +1158,7 @@ qmatch_rename_tac `zfel g.cod (g.map z) = zfel g.cod (h.map z)` >>
 `GraphFn (tagged_homset c g.dom) (tag_fun c g) ' (Pair (the_hom_tag c g.dom) (zfel g.dom z)) =
  GraphFn (tagged_homset c h.dom) (tag_fun c h) ' (Pair (the_hom_tag c h.dom) (zfel h.dom z))`
 by metis_tac [] >>
-qpat_assum `GraphFn X Y = Z` (K ALL_TAC) >>
+qpat_x_assum `GraphFn X Y = Z` (K ALL_TAC) >>
 qmatch_assum_abbrev_tac `GraphFn X f1 ' p1 = GraphFn X2 f2 ' p2` >>
 `p1 In X` by (
   unabbrev_all_tac >>
@@ -1171,7 +1171,7 @@ qmatch_assum_abbrev_tac `GraphFn X f1 ' p1 = GraphFn X2 f2 ' p2` >>
 fsrw_tac [][GraphFnAp] >>
 unabbrev_all_tac >>
 fsrw_tac [][tag_fun_def,PairEq,Snd] >>
-qpat_assum `X ' w = Y ' w2` mp_tac >>
+qpat_x_assum `X ' w = Y ' w2` mp_tac >>
 fsrw_tac [][] >>
 `zfel g.dom z In zfrep g.dom` by (
   fsrw_tac [][explode_def,In_zfrep_thm] ) >>
@@ -1218,7 +1218,7 @@ srw_tac [][inj_obj_def] >>
 qmatch_assum_abbrev_tac `(f ◎ g)@@a = (f ◎ g)@@b` >>
 `is_functor f ∧ is_functor g ∧ (g ≈> f) ∧ a ∈ g.dom.obj ∧ b ∈ g.dom.obj` by (
   unabbrev_all_tac >> fsrw_tac [][is_functor_Yfunctor] ) >>
-qpat_assum `is_category c` assume_tac >>
+qpat_x_assum `is_category c` assume_tac >>
 fsrw_tac [][Abbr`g`,Yfunctor_objf] >>
 `(c|_→a|) ∈ [(c°)→(tag_functor c).dom].obj` by (
   srw_tac [][] ) >>
@@ -1227,16 +1227,16 @@ fsrw_tac [][Abbr`g`,Yfunctor_objf] >>
 `is_functor (tag_functor c)` by srw_tac [][] >>
 full_simp_tac std_ss [Abbr`f`,is_category_op_cat,postcomp_functor_objf] >>
 `(tag_functor c ◎ (c|_→a|))@@a = (tag_functor c ◎ (c|_→b|))@@a` by metis_tac [] >>
-qpat_assum `tag_functor c ◎ X = Y` (K ALL_TAC) >>
+qpat_x_assum `tag_functor c ◎ X = Y` (K ALL_TAC) >>
 pop_assum mp_tac >> srw_tac [][tagged_homset_def,ProdEq] >- (
   fsrw_tac [][ProdEmpty] >>
-  rpt (qpat_assum `X = {}` mp_tac) >>
+  rpt (qpat_x_assum `X = {}` mp_tac) >>
   `IsSmall (c|a→a|) ∧ (c|a→a|) ∈ homs c` by (
     fsrw_tac [][homs_def,is_locally_small_def,LET_THM] >>
     metis_tac [] ) >>
   fsrw_tac [][hom_def,EXTENSION] >>
   metis_tac [id_maps_to] ) >>
-qpat_assum `hom_tag c X = Y` mp_tac >>
+qpat_x_assum `hom_tag c X = Y` mp_tac >>
 fsrw_tac [][hom_tag_def] >>
 `is_self_hom c (c|a→a|)` by (
   srw_tac [][is_self_hom_def] >>

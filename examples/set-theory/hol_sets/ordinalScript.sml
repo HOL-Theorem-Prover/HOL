@@ -173,7 +173,7 @@ val preds_11 = store_thm(
   rw[EQ_IMP_THM] >>
   spose_not_then strip_assume_tac >>
   `ordlt w1 w2 \/ ordlt w2 w1` by metis_tac [ordlt_trichotomy] >>
-  qpat_assum `x = y` mp_tac >> rw[EXTENSION, preds_def] >>
+  qpat_x_assum `x = y` mp_tac >> rw[EXTENSION, preds_def] >>
   metis_tac [ordlt_REFL]);
 val _ = export_rewrites ["preds_11"]
 
@@ -560,7 +560,7 @@ val omax_SOME = store_thm(
   simp[] >> first_assum (qspec_then `α` mp_tac) >>
   disch_then (Q.X_CHOOSE_THEN `β` strip_assume_tac) >>
   Cases_on `β = α`
-  >- (qpat_assum `P ∧ Q <=/=> R` mp_tac >> simp[] >> metis_tac [ordle_lteq]) >>
+  >- (qpat_x_assum `P ∧ Q <=/=> R` mp_tac >> simp[] >> metis_tac [ordle_lteq]) >>
   fs[] >> metis_tac []);
 
 val omax_NONE = store_thm(
@@ -1045,7 +1045,7 @@ val generic_continuity = store_thm(
         simp[mklesup sup_thm]) >>
     `0 < sup s` by metis_tac [ordlt_trichotomy, ordlt_ZERO] >>
     simp[preds_sup] >>
-    qpat_assum `islimit (sup s)` mp_tac >> simp[preds_sup] >> strip_tac >>
+    qpat_x_assum `islimit (sup s)` mp_tac >> simp[preds_sup] >> strip_tac >>
     dsimp[sup_thm, IMAGE_cardleq_rwt, impI, dclose_cardleq_univinf,
           dclose_def] >>
     ntac 4 strip_tac >>
@@ -1955,7 +1955,7 @@ val polyform_exists = store_thm(
   gen_tac >>
   `(∃i0. i = SUC i0) ∨ i = 0` by (Cases_on `i` >> simp[])
   >- (gen_tac >> Cases_on `j` >> simp[]) >>
-  qpat_assum `∀g. g < E ⇔ P` (K ALL_TAC) >> simp[] >>
+  qpat_x_assum `∀g. g < E ⇔ P` (K ALL_TAC) >> simp[] >>
   qsuff_tac `0 < LENGTH ces ⇒ SND (EL 0 ces) < E`
   >- (strip_tac >> qx_gen_tac `j` >> strip_tac >>
       `j = 0 ∨ ∃j0. j = SUC j0` by (Cases_on `j` >> simp[]) >> simp[] >>

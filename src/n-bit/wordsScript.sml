@@ -733,7 +733,7 @@ val n2w_w2n_lem = Q.prove(
         \\ `SBIT (f n) n = (if f n then 1 else 0) * 2 ** p * 2 ** (SUC i)`
         by RW_TAC (std_ss++numSimps.ARITH_AC_ss) [SBIT_def,EXP_ADD,EXP]
         \\ FULL_SIMP_TAC std_ss [BITS_SUM2,BIT_def],
-      Q.PAT_ASSUM `!f i. P` (Q.SPECL_THEN [`f`,`i`] ASSUME_TAC)
+      Q.PAT_X_ASSUM `!f i. P` (Q.SPECL_THEN [`f`,`i`] ASSUME_TAC)
         \\ `SUM n (\i. SBIT (f i) i) < 2 ** n` by METIS_TAC [SUM_SBIT_LT]
         \\ IMP_RES_TAC LESS_EQUAL_ADD
         \\ `SBIT (f n) n = (if f n then 1 else 0) * 2 ** n`
@@ -1691,7 +1691,7 @@ val CONCAT_EXTRACT = Q.store_thm("CONCAT_EXTRACT",
   SRW_TAC [boolSimps.LET_ss,ARITH_ss,fcpLib.FCP_ss]
         [DIMINDEX_GT_0,word_concat_def,word_extract_def,word_join_def,
          w2w,fcpTheory.index_sum,word_bits_def,word_or_def,word_lsl_def]
-    \\ Q.PAT_ASSUM `~(x = 1)` (K ALL_TAC)
+    \\ Q.PAT_X_ASSUM `~(x = 1)` (K ALL_TAC)
     \\ Cases_on `dimindex (:'c) <= i`
     \\ ASM_REWRITE_TAC [] \\ FULL_SIMP_TAC std_ss [NOT_LESS_EQUAL]
     \\ Cases_on `i < dimindex (:'a)`
@@ -1892,7 +1892,7 @@ val BIT_SET_lem = Q.prove(
   Induct_on `i` \\ ONCE_REWRITE_TAC [BIT_SET_def]
     \\ SRW_TAC [] [BIT_ZERO, BIT0_ODD, BIT_SET_lem_]
     \\ REWRITE_TAC [DECIDE ``SUC a + b = a + SUC b``]
-    \\ Q.PAT_ASSUM `!k n. BIT i n = i + k IN BIT_SET k n`
+    \\ Q.PAT_X_ASSUM `!k n. BIT i n = i + k IN BIT_SET k n`
          (fn th => REWRITE_TAC [GSYM th, BIT_DIV2]))
 
 val BIT_SET = save_thm("BIT_SET",
@@ -2121,7 +2121,7 @@ val LOG2_w2n = Q.store_thm("LOG2_w2n",
     SPOSE_NOT_THEN STRIP_ASSUME_TAC
     \\ `!i. i <= dimindex (:'a) - 1 ==> ~BIT i n`
     by (SRW_TAC [] []
-        \\ Q.PAT_ASSUM `!n. P` (Q.SPEC_THEN `dimindex(:'a) - i - 1` MP_TAC)
+        \\ Q.PAT_X_ASSUM `!n. P` (Q.SPEC_THEN `dimindex(:'a) - i - 1` MP_TAC)
         \\ ASM_SIMP_TAC arith_ss [])
     \\ FULL_SIMP_TAC (srw_ss()) [MOD_DIMINDEX, BITS_ZERO5],
     SPOSE_NOT_THEN (STRIP_ASSUME_TAC o SIMP_RULE std_ss [NOT_LESS])
@@ -2130,7 +2130,7 @@ val LOG2_w2n = Q.store_thm("LOG2_w2n",
     \\ `?i. SUC (dimindex (:'a) - (n' + 1)) <= i /\ i < dimindex(:'a)  /\
             BIT i n`
     by METIS_TAC [EXISTS_BIT_IN_RANGE]
-    \\ Q.PAT_ASSUM `!m. P` (Q.SPEC_THEN `dimindex(:'a) - i - 1` MP_TAC)
+    \\ Q.PAT_X_ASSUM `!m. P` (Q.SPEC_THEN `dimindex(:'a) - i - 1` MP_TAC)
     \\ SRW_TAC [ARITH_ss] []
   ])
 
@@ -2144,7 +2144,7 @@ val LEAST_BIT_LT = Q.store_thm("LEAST_BIT_LT",
   THEN1 METIS_TAC [word_index]
   \\ SPOSE_NOT_THEN (ASSUME_TAC o SIMP_RULE std_ss [NOT_LESS])
   \\ `i < n'` by DECIDE_TAC
-  \\ Q.PAT_ASSUM `!m. P` (Q.SPEC_THEN `i` IMP_RES_TAC)
+  \\ Q.PAT_X_ASSUM `!m. P` (Q.SPEC_THEN `i` IMP_RES_TAC)
   \\ POP_ASSUM MP_TAC
   \\ ASM_SIMP_TAC std_ss [word_index])
 
@@ -2220,13 +2220,13 @@ val EXISTS_HD_T = Q.prove(
 val NOT_UINTMAXw = Q.store_thm ("NOT_UINTMAXw",
   `!w:'a word. w <> UINT_MAXw ==> ?i. i < dimindex(:'a) /\ ~(w ' i)`,
   STRIP_TAC \\ SPOSE_NOT_THEN STRIP_ASSUME_TAC
-     \\ Q.PAT_ASSUM `a <> b` MP_TAC
+     \\ Q.PAT_X_ASSUM `a <> b` MP_TAC
      \\ SRW_TAC [fcpLib.FCP_ss] [word_T])
 
 val NOT_0w = Q.store_thm ("NOT_0w",
   `!w:'a word. w <> 0w ==> ?i. i < dimindex(:'a) /\ w ' i`,
   STRIP_TAC \\ SPOSE_NOT_THEN STRIP_ASSUME_TAC
-     \\ Q.PAT_ASSUM `a <> b` MP_TAC
+     \\ Q.PAT_X_ASSUM `a <> b` MP_TAC
      \\ SRW_TAC [fcpLib.FCP_ss] [word_0])
 
 val reduce_and = Q.store_thm ("reduce_and",
@@ -2249,7 +2249,7 @@ val reduce_and = Q.store_thm ("reduce_and",
     >| [Cases_on `i = n` >- FULL_SIMP_TAC std_ss []
           \\ `i < n` by DECIDE_TAC
           \\ `n - i - 1 < n` by DECIDE_TAC
-          \\ Q.PAT_ASSUM `!i. P` (Q.SPEC_THEN ` n - i - 1` IMP_RES_TAC)
+          \\ Q.PAT_X_ASSUM `!i. P` (Q.SPEC_THEN ` n - i - 1` IMP_RES_TAC)
           \\ FULL_SIMP_TAC std_ss []
           \\ METIS_TAC
                [DECIDE ``0 < n /\ i < n ==> (n - SUC (n - i - 1) = i)``],
@@ -2276,7 +2276,7 @@ val reduce_or = Q.store_thm ("reduce_or",
     >| [Cases_on `i = n` >- FULL_SIMP_TAC std_ss []
           \\ `i < n` by DECIDE_TAC
           \\ `n - i - 1 < n` by DECIDE_TAC
-          \\ Q.PAT_ASSUM `!i. P` (Q.SPEC_THEN ` n - i - 1` IMP_RES_TAC)
+          \\ Q.PAT_X_ASSUM `!i. P` (Q.SPEC_THEN ` n - i - 1` IMP_RES_TAC)
           \\ FULL_SIMP_TAC std_ss []
           \\ METIS_TAC
                [DECIDE ``0 < n /\ i < n ==> (n - SUC (n - i - 1) = i)``],
@@ -2966,7 +2966,7 @@ val word_ror_n2w = Q.store_thm("word_ror_n2w",
     \\ Cases_on `i < SUC m - n MOD SUC m`
     >| [
       `i + n MOD SUC m < SUC m` by DECIDE_TAC
-        \\ Q.PAT_ASSUM `i < y - z` (fn th => (STRIP_ASSUME_TAC o REWRITE_RULE
+        \\ Q.PAT_X_ASSUM `i < y - z` (fn th => (STRIP_ASSUME_TAC o REWRITE_RULE
              [DECIDE ``a + (b + 1) = b + SUC a``]) (MATCH_MP LESS_ADD_1 th))
         \\ ASM_SIMP_TAC std_ss [BITS_SUM2,EXP_ADD,BIT_def,MULT_ASSOC]
         \\ ASM_SIMP_TAC arith_ss [GSYM BIT_def,BIT_OF_BITS_THM],
@@ -3365,7 +3365,7 @@ val MSB_THM3 = Q.prove(
     \\ `~(m = 0)` by DECIDE_TAC
     \\ MAP_EVERY IMP_RES_TAC [BIT_SLICE_THM3,SLICE_COMP_MSB]
     \\ POP_ASSUM (Q.SPEC_THEN `n` ASSUME_TAC)
-    \\ Q.PAT_ASSUM `SLICE m m n = 0` (fn th =>
+    \\ Q.PAT_X_ASSUM `SLICE m m n = 0` (fn th =>
          FULL_SIMP_TAC arith_ss [th,GSYM SLICE_ZERO_THM]))
 
 val MSB_THM4 = Q.prove(
@@ -3441,7 +3441,7 @@ val TWO_COMP_POS = Q.prove(
     \\ Cases_on `^HB = 0` >- PROVE_TAC [HB_0_NOT_MSB]
     \\ `~(m = 0)` by DECIDE_TAC
     \\ MAP_EVERY IMP_RES_TAC [MSB_THM4,w2n_mod]
-    \\ Q.PAT_ASSUM `dimindex(:'a) = SUC m` (fn t =>
+    \\ Q.PAT_X_ASSUM `dimindex(:'a) = SUC m` (fn t =>
          FULL_SIMP_TAC arith_ss [word_msb_n2w,BITS_COMP_THM2,MIN_DEF,BIT_def,t])
     \\ `2 ** SUC m - BITS (m - 1) 0 (w2n ((n2w n):'a word)) < 2 ** SUC m /\
         2 ** m - BITS (m - 1) 0 (w2n ((n2w n):'a word)) < 2 ** m`
@@ -3594,7 +3594,7 @@ val WORD_LT_lem = Q.prove(
          NOT_MOD2_LEM2,SUB_SUC1]
     \\ SIMP_TAC arith_ss [MOD_2EXP_LT,SUB_LEFT_ADD,
          DECIDE ``a < b ==> ~(b <= a:num)``]
-    \\ Q.PAT_ASSUM `~(x = 0)` ASSUME_TAC \\ STRIP_ASSUME_TAC EXISTS_HB
+    \\ Q.PAT_X_ASSUM `~(x = 0)` ASSUME_TAC \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ FULL_SIMP_TAC bool_ss [SUC_SUB1,BITS_ZERO3,LESS_EQ_ADD_SUB,SUB_SUC1,
          DECIDE ``a < c /\ b < c ==> (a - b) < c:num``,MOD_2EXP_LT,DIV_MULT,
          DIVMOD_ID,DECIDE ``0 < 2``])
@@ -3604,7 +3604,8 @@ val WORD_LT_lem2 = Q.prove(
          ~word_msb (a - b) ==> ~(w2n a < w2n b)`,
   start_tac
     \\ ONCE_REWRITE_TAC [DECIDE (Term `!a b c. (a:num) + b + c = a + c + b`)]
-    \\ Q.PAT_ASSUM `x + y < x + z` (ASSUME_TAC o (MATCH_MP LESS_ADD2))
+    \\ Q.PAT_X_ASSUM `2 ** N + _ < 2 ** N + _`
+         (ASSUME_TAC o (MATCH_MP LESS_ADD2))
     \\ IMP_RES_TAC LESS_ADD_1
     \\ `y < ^INT_MIN_ML` by METIS_TAC [BITS_MSB_LT]
     \\ `p + 1 <= ^INT_MIN_ML` by DECIDE_TAC
@@ -4364,7 +4365,7 @@ val saturate_mul = Q.store_thm("saturate_mul",
   \\ Cases_on `b`
   \\ FULL_SIMP_TAC (srw_ss()++ARITH_ss)
        [LESS_MULT_MONO2, word_T_def, UINT_MAX_def]
-  \\ Q.PAT_ASSUM `~FINITE (univ(:'a))` ASSUME_TAC
+  \\ Q.PAT_X_ASSUM `~FINITE (univ(:'a))` ASSUME_TAC
   \\ FULL_SIMP_TAC std_ss [NOT_FINITE_IMP_dimword_2, lt_2_mul]
 )
 
@@ -4379,7 +4380,7 @@ val WORD_DIVISION = Q.store_thm("WORD_DIVISION",
   \\ ASM_SIMP_TAC std_ss [word_add_n2w,word_mul_n2w,WORD_LO,w2n_n2w]
   \\ FULL_SIMP_TAC bool_ss [NOT_ZERO_LT_ZERO]
   \\ IMP_RES_TAC (GSYM DIVISION)
-  \\ REPEAT (Q.PAT_ASSUM `!k. bbb` (ASSUME_TAC o Q.SPEC `n'`))
+  \\ REPEAT (Q.PAT_X_ASSUM `!k. bbb` (ASSUME_TAC o Q.SPEC `n'`))
   \\ IMP_RES_TAC LESS_TRANS
   \\ ASM_SIMP_TAC std_ss [])
 
