@@ -20,6 +20,10 @@ Contents
 New features:
 -------------
 
+*   `Holmake` under Poly/ML (*i.e.*, for the moment only Unix systems (including OSX/MacOS)) now runs build scripts concurrently when targets do not depend on each other.
+    The degree of parallelisation depends on the `-j` flag, and is set to 4 by default.
+    Output from the build processes is logged into a `.hollogs` sub-directory rather than interleaved randomly to standard out.
+
 Bugs fixed:
 -----------
 
