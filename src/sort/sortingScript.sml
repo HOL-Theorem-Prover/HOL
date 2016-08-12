@@ -2,9 +2,6 @@
  *  General specification of sorting and correctness of quicksort            *
  *---------------------------------------------------------------------------*)
 
-structure sortingScript =
-struct
-
 open HolKernel Parse boolLib bossLib;
 open combinTheory pairTheory relationTheory listTheory
      markerLib metisLib BasicProvers
@@ -159,17 +156,17 @@ PROVE_TAC [PERM_TRANS, PERM_APPEND]);
 
 val PERM_SPLIT_IF = Q.store_thm
 ("PERM_SPLIT_IF",
- `!P Q l. EVERY (\x. P x = ~ Q x) l ==> 
+ `!P Q l. EVERY (\x. P x = ~ Q x) l ==>
    PERM l (APPEND (FILTER P l) (FILTER Q l))`,
  Induct_on `l`
  THEN RW_TAC list_ss [FILTER,PERM_REFL]
- THEN RES_TAC 
+ THEN RES_TAC
  THEN ASM_SIMP_TAC std_ss [PERM_MONO, CONS_PERM]) ;
 
 val PERM_SPLIT = Q.store_thm
 ("PERM_SPLIT",
  `!P l. PERM l (APPEND (FILTER P l) (FILTER ($~ o P) l))`,
- REPEAT GEN_TAC 
+ REPEAT GEN_TAC
  THEN irule PERM_SPLIT_IF
  THEN SIMP_TAC list_ss []) ;
 
@@ -1404,5 +1401,3 @@ val sorted_filter = Q.store_thm("sorted_filter",
 end
 
 val _ = export_theory();
-
-end;
