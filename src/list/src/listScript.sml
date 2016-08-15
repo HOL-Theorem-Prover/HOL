@@ -23,7 +23,7 @@
  *---------------------------------------------------------------------------*)
 
 local
-  open arithmeticTheory pairTheory pred_setTheory operatorTheory Datatype
+  open arithmeticTheory pairTheory pred_setTheory Datatype
        OpenTheoryMap
 in end;
 
@@ -34,7 +34,7 @@ in end;
 
 open HolKernel Parse boolLib Num_conv Prim_rec BasicProvers mesonLib
      simpLib boolSimps pairTheory pred_setTheory TotalDefn metisLib
-     relationTheory
+     relationTheory combinTheory
 
 val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
 fun simp l = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss) l
@@ -444,11 +444,11 @@ val MAP_EQ_f = store_thm ("MAP_EQ_f",
 val MAP_o = store_thm("MAP_o",
     (--`!f:'b->'c. !g:'a->'b.  MAP (f o g) = (MAP f) o (MAP g)`--),
     REPEAT GEN_TAC THEN CONV_TAC FUN_EQ_CONV
-    THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [MAP, combinTheory.o_THM]);
+    THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [MAP, o_THM]);
 
 val MAP_MAP_o = store_thm("MAP_MAP_o",
     (--`!(f:'b->'c) (g:'a->'b) l. MAP f (MAP g l) = MAP (f o g) l`--),
-    REPEAT GEN_TAC THEN REWRITE_TAC [MAP_o, combinTheory.o_DEF]
+    REPEAT GEN_TAC THEN REWRITE_TAC [MAP_o, o_DEF]
     THEN BETA_TAC THEN REFL_TAC);
 
 val EL_MAP = store_thm("EL_MAP",
@@ -605,14 +605,14 @@ val NOT_EVERY = store_thm(
   ``!P l. ~EVERY P l = EXISTS ($~ o P) l``,
   GEN_TAC THEN LIST_INDUCT_TAC THEN
   ASM_REWRITE_TAC [EVERY_DEF, EXISTS_DEF, DE_MORGAN_THM,
-                   combinTheory.o_THM]);
+                   o_THM]);
 
 val NOT_EXISTS = store_thm(
   "NOT_EXISTS",
   ``!P l. ~EXISTS P l = EVERY ($~ o P) l``,
   GEN_TAC THEN LIST_INDUCT_TAC THEN
   ASM_REWRITE_TAC [EVERY_DEF, EXISTS_DEF, DE_MORGAN_THM,
-                   combinTheory.o_THM]);
+                   o_THM]);
 
 val MEM_MAP = store_thm(
   "MEM_MAP",
@@ -826,8 +826,8 @@ val FOLDL_EQ_FOLDR = Q.store_thm
  `!f l e. (ASSOC f /\ COMM f) ==>
           ((FOLDL f e l) = (FOLDR f e l))`,
 GEN_TAC THEN
-FULL_SIMP_TAC bool_ss [RIGHT_FORALL_IMP_THM, operatorTheory.COMM_DEF,
-  operatorTheory.ASSOC_DEF] THEN
+FULL_SIMP_TAC bool_ss [RIGHT_FORALL_IMP_THM, COMM_DEF,
+  ASSOC_DEF] THEN
 STRIP_TAC THEN LIST_INDUCT_TAC THENL [
   SIMP_TAC bool_ss [FOLDR, FOLDL],
 
@@ -2291,11 +2291,11 @@ val SNOC_Axiom_old = prove(
     THEN STRIP_ASSUME_TAC lemma THEN CONJ_TAC THENL
     [
       EXISTS_TAC (--`(fn1:('a)list->'b) o REVERSE`--)
-      THEN REWRITE_TAC[combinTheory.o_DEF] THEN BETA_TAC THEN ASM_REWRITE_TAC[],
+      THEN REWRITE_TAC[o_DEF] THEN BETA_TAC THEN ASM_REWRITE_TAC[],
 
       REPEAT GEN_TAC THEN POP_ASSUM (ACCEPT_TAC o SPEC_ALL o
         REWRITE_RULE[REVERSE_REVERSE, f_REVERSE_lemma] o
-        BETA_RULE o REWRITE_RULE[combinTheory.o_DEF] o
+        BETA_RULE o REWRITE_RULE[o_DEF] o
         SPECL [(--`(fn1' o REVERSE):('a)list->'b`--),(--`(fn1'' o REVERSE):('a)list->'b`--)])
      ]
   end);
@@ -2360,7 +2360,7 @@ val PAD_RIGHT = bDefine`
 val MAP_GENLIST = store_thm("MAP_GENLIST",
   ``!f g n. MAP f (GENLIST g n) = GENLIST (f o g) n``,
   Induct_on `n`
-  THEN ASM_SIMP_TAC arith_ss [GENLIST, MAP_SNOC, MAP, combinTheory.o_THM]);
+  THEN ASM_SIMP_TAC arith_ss [GENLIST, MAP_SNOC, MAP, o_THM]);
 
 val EL_GENLIST = store_thm("EL_GENLIST",
   ``!f n x. x < n ==> (EL x (GENLIST f n) = f x)``,
@@ -2831,7 +2831,7 @@ val splitAtPki_APPEND = store_thm(
       (splitAtPki P k (l1 ++ l2) = k l1 l2)``,
   Induct THEN SRW_TAC [] [EVERYi_def, splitAtPki_def] THEN1
     (Cases_on `l2` THEN FULL_SIMP_TAC (srw_ss())[splitAtPki_def]) THEN
-  FULL_SIMP_TAC (srw_ss()) [combinTheory.o_DEF]);
+  FULL_SIMP_TAC (srw_ss()) [o_DEF]);
 
 val splitAtPki_EQN = store_thm(
   "splitAtPki_EQN",
@@ -3018,7 +3018,7 @@ val LIST_APPLY_o = store_thm(
   Induct_on `fs` THEN
   ASM_SIMP_TAC (srw_ss()) [LIST_BIND_APPEND, MAP_LIST_BIND,
                            APPEND_11] THEN
-  SIMP_TAC (srw_ss()) [combinTheory.o_DEF, MAP_MAP_o, LIST_BIND_MAP]);
+  SIMP_TAC (srw_ss()) [o_DEF, MAP_MAP_o, LIST_BIND_MAP]);
 
 (* ----------------------------------------------------------------------
     LLEX : lexicographic ordering on lists
@@ -3320,7 +3320,7 @@ val IMAGE_EL_count_LENGTH = Q.store_thm("IMAGE_EL_count_LENGTH",
 
 val GENLIST_EL_MAP = Q.store_thm("GENLIST_EL_MAP",
    `!f ls. GENLIST (\n. f (EL n ls)) (LENGTH ls) = MAP f ls`,
-   GEN_TAC >> Induct >> rw [GENLIST_CONS, combinTheory.o_DEF])
+   GEN_TAC >> Induct >> rw [GENLIST_CONS, o_DEF])
 
 val LENGTH_FILTER_LEQ_MONO = Q.store_thm("LENGTH_FILTER_LEQ_MONO",
    `!P Q. (!x. P x ==> Q x) ==>

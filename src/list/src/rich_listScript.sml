@@ -2,7 +2,7 @@ structure rich_listScript =
 struct
 
 open HolKernel Parse BasicProvers boolLib numLib metisLib simpLib
-open operatorTheory arithmeticTheory prim_recTheory
+open combinTheory arithmeticTheory prim_recTheory
 
 local
    open listTheory
