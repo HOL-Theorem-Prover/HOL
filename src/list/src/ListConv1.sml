@@ -632,24 +632,36 @@ end
 (*----------------------------------------------------------------*)
 
 val FLAT_CONV =
-    let val lem = prove((--`APPEND = (\x1 x2:'a list. APPEND x1 x2)`--),
-                        CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN BETA_TAC
-                        THEN CONV_TAC FUN_EQ_CONV THEN GEN_TAC
-                        THEN BETA_TAC THEN REFL_TAC)
-        val ffthm = rich_listTheory.FLAT_FOLDR
-        val afthm = rich_listTheory.APPEND_FOLDR
-        val fthm = REWRITE_RULE[afthm](SUBS[lem] ffthm)
-        val conv = (RAND_CONV (FOLDR_CONV ((RATOR_CONV BETA_CONV)
-                        THENC BETA_CONV THENC (FOLDR_CONV ALL_CONV))))
+    let
+      val (fnil,fnilcons,fconscons) =
+          case CONJUNCTS listTheory.FLAT_compute of
+              [c1,c2,c3] => (c1,c2,c3)
+            | _ => raise Fail "FLAT_compute of wrong shape"
+      fun doit t =
+        let
+          val arg = dest_flat t
+                    handle HOL_ERR _ => raise ERR "FLAT_CONV" "Not a FLAT term"
+          val (els,listend) = strip_cons arg
+          val _ = (listSyntax.is_nil listend andalso
+                   List.all listSyntax.is_list els) orelse
+                  raise ERR "FLAT_CONV" "Argument to FLAT not a list"
+          fun recurse t =
+            if listSyntax.is_nil (rand t) then REWR_CONV fnil t
+            else
+              let
+                val (h,_) = listSyntax.dest_cons (rand t)
+              in
+                if listSyntax.is_nil h then
+                  (REWR_CONV fnilcons THENC recurse) t
+                else
+                  (REWR_CONV fconscons THENC RAND_CONV recurse) t
+              end
+        in
+          recurse t
+        end
     in
-  fn tm =>
-    (let val lst = listSyntax.dest_flat tm
-         val fthm' = ISPEC lst fthm
-     in
-         CONV_RULE conv fthm'
-     end)
-        handle e => raise wrap_exn "List_conv" "FLAT_CONV" e
-    end;
+      doit
+    end
 
 (*-----------------------------------------------------------------------*)
 (* EL_CONV : conv                                                        *)

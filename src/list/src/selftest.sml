@@ -50,3 +50,15 @@ val _ = Lib.appi (fn i => fn t =>
                   (``EL 1 [a;b;c:num]``, SOME ``b:num``),
                   (``EL 3 [a;b;c:num;d]``, SOME ``d:num``)
                  ]
+
+val _ = Lib.appi (fn i => fn t =>
+                     test0 ("FLAT_CONV "^Int.toString (i + 1))
+                           Term.compare term_to_string FLAT_CONV t)
+                 [(``FLAT ([]:'a list list)``, SOME ``[] : 'a list``),
+                  (``FLAT [[1];[2];[3];[1]]``, SOME ``[1;2;3;1]``),
+                  (``FLAT [[];[];[]:'a list]``, SOME ``[]:'a list``),
+                  (``FLAT [[1+2];[];[2*4]]``, SOME ``[1+2;2*4]``),
+                  (``FLAT [[1+2;3;3*8];[];[];[1+21];[3;4]]``,
+                     SOME ``[1+2;3;3*8;1+21;3;4]``),
+                  (``FLAT ([]::(t:'a list list))``, NONE)
+                 ]

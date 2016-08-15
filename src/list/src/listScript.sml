@@ -579,6 +579,13 @@ val FLAT_APPEND = Q.store_thm ("FLAT_APPEND",
    THEN ASM_REWRITE_TAC [APPEND_ASSOC]);
 val _ = export_rewrites ["FLAT_APPEND"]
 
+val FLAT_compute = Q.store_thm(
+  "FLAT_compute",
+  `(FLAT [] = []) /\
+   (FLAT ([]::t) = FLAT t) /\
+   (FLAT ((h::t1)::t2) = h::FLAT (t1::t2))`,
+  SIMP_TAC (srw_ss()) []);
+
 val EVERY_APPEND = store_thm(
   "EVERY_APPEND",
   ``!P (l1:'a list) l2.
