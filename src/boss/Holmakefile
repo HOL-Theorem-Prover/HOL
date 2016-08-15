@@ -7,7 +7,7 @@ builder0 = $(HOLDIR)/src/num/termination/numheap
 
 boss_deps = listTheory pred_setTheory arithmeticTheory numLib \
             pred_setLib pred_setSimps numSimps optionTheory \
-            RecordType
+            RecordType rich_listTheory
 DEPS = bossLib.uo $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(boss_deps)) \
        $(dprot $(builder0))
 
