@@ -23,6 +23,7 @@ src/HolSmt
 src/Boolify/src
 src/float
 src/floating-point
+!examples/l3-machine-code/common
 [poly]src/floating-point/native
 src/probability
 src/temporal/src
