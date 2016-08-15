@@ -870,10 +870,10 @@ fun typecheck pfns ptm0 =
 fun typecheckS ptm =
   let
     open seqmonad
+    val TC' = errormonad.with_flagM (show_typecheck_errors, false) (TC NONE ptm)
   in
     lift (!post_process_term o remove_case_magic)
-         (fromErr (TC NONE ptm) >>
-          overloading_resolutionS ptm >-
+         (fromErr TC' >> overloading_resolutionS ptm >-
           (fn ptm' => fromErr (to_term ptm')))
   end
 

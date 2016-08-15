@@ -527,25 +527,19 @@ fun parse_in_context FVs q =
     smashErrm m
   end
 
-fun typed_parse_in_context ty FVs q =
-  let
-    open errormonad
-    val a = Absyn.TYPED(locn.Loc_None, Absyn q, Pretype.fromType ty)
-    val m = absyn_to_preterm a >- TermParse.ctxt_preterm_to_term stdprinters FVs
-  in
-    smashErrm m
-  end
-
 fun grammar_parse_in_context(tyg,tmg) ctxt q =
     TermParse.ctxt_term stdprinters tmg tyg ctxt q |> smashErrm
 
-fun grammar_typed_parse_in_context (tyg,tmg) ty ctxt q =
-  let
-    val a = Absyn.TYPED(locn.Loc_None, TermParse.absyn tmg tyg q,
-                        Pretype.fromType ty)
-  in
-    TermParse.absyn_to_term stdprinters tmg a
-  end
+fun grammar_typed_parses_in_context (tyg,tmg) ty ctxt q =
+  TermParse.ctxt_termS tmg tyg (SOME ty) ctxt q
+
+fun grammar_typed_parse_in_context gs ty ctxt q =
+  case seq.cases (grammar_typed_parses_in_context gs ty ctxt q) of
+      SOME(tm, _) => tm
+    | NONE => raise ERROR "grammar_typed_parse_in_context" "No consistent parse"
+
+fun typed_parse_in_context ty ctxt q =
+  grammar_typed_parse_in_context (type_grammar(), term_grammar()) ty ctxt q
 
 fun parse_preterm_in_context ctxt =
     TermParse.ctxt_preterm_to_term stdprinters ctxt

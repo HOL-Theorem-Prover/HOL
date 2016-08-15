@@ -14,6 +14,8 @@ sig
   (* standard transformations *)
   val absyn : grammar -> tygrammar -> term quotation -> absyn
   val preterm : grammar -> tygrammar -> term quotation -> preterm in_env
+  val typed_preterm : grammar -> tygrammar -> hol_type -> term quotation ->
+                      preterm in_env
   val absyn_to_preterm : grammar -> absyn -> preterm in_env
   val absyn_to_preterm_in_env : grammar -> absyn -> Parse_support.preterm_in_env
   val absyn_to_term : pprinters -> grammar -> absyn -> term
@@ -26,7 +28,7 @@ sig
                              term Preterm.errM
   val ctxt_term : pprinters -> grammar -> tygrammar -> term list ->
                   term quotation -> term Preterm.errM
-  val ctxt_termS : grammar -> tygrammar -> term list -> term quotation ->
-                   term seq.seq
+  val ctxt_termS : grammar -> tygrammar -> hol_type option -> term list ->
+                   term quotation -> term seq.seq
 
 end

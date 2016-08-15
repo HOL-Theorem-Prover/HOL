@@ -315,6 +315,14 @@ fun absyn_to_preterm g a =
 fun preterm g tyg q : preterm Pretype.in_env =
   q |> absyn g tyg |> absyn_to_preterm g
 
+fun typed_preterm g tyg ty q : preterm in_env =
+  let
+    val a = Absyn.TYPED(locn.Loc_None, absyn g tyg q, Pretype.fromType ty)
+  in
+    absyn_to_preterm g a
+  end
+
+
 (* ----------------------------------------------------------------------
     Targetting terms
    ---------------------------------------------------------------------- *)
@@ -421,9 +429,11 @@ in
     fn fvs => fn q => ph1 q >- ctxt_preterm_to_term pprinters fvs
   end
 
-  fun ctxt_termS g tyg =
+  fun ctxt_termS g tyg tyopt =
     let
-      val ph1 = preterm g tyg
+      val ph1 = case tyopt of
+                    NONE => preterm g tyg
+                  | SOME ty => typed_preterm g tyg ty
       open seqmonad
     in
       fn fvs => fn q =>
