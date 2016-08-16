@@ -7,10 +7,7 @@ all: $(TARGETS)
 .PHONY: all
 
 ifeq ($(KERNELID),-otknl)
-all: triple-unint.art machine-code-hoare-logic-state-unint.art
-
-triple-unint.art: hol4-triple-unint.thy triple.ot.art
-	opentheory info --article -o $@ $<
+all: triple.ot.art machine-code-hoare-logic-state-unint.art
 
 machine-code-hoare-logic-state-unint.art: machine-code-hoare-logic-state-unint.thy state.ot.art temporal_state.ot.art
 	opentheory info --article -o $@ $<
