@@ -13,7 +13,7 @@ show_assums := true;
 *)
 
 open finite_mapTheory relationTheory pred_setTheory listTheory rich_listTheory arithmeticTheory
-     operatorTheory containerTheory bagTheory stringLib
+     combinTheory containerTheory bagTheory stringLib
      boolSimps ConseqConv sortingTheory quantHeuristicsLib;
 
 (*
