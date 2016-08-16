@@ -956,7 +956,7 @@ fun RM patobs (theta0 as (tminfo, tyS)) =
                  patbvars = Map.insert(patbvars, x1, n),
                  obbvars = Map.insert(obbvars, x2, n)}, tyS')
           end
-        | _ => MERR "Incompatible term types"
+        | _ => MERR "different constructors"
       end
     | BVrestore{patbvars, obbvars, n} :: rest => let
         val {ids, theta, ...} = tminfo

@@ -823,7 +823,7 @@ val body = snd o dest_abs;
  ---------------------------------------------------------------------------*)
 
 local
-  fun MERR s = raise ERR "raw_match_term error" s
+  fun MERR s = raise ERR "raw_match_term" s
   fun free (Bv i) n             = i<n
     | free (Comb(Rator,Rand)) n = free Rand n andalso free Rator n
     | free (Abs(_,Body)) n      = free Body (n+1)
@@ -840,7 +840,7 @@ in
 fun RM [] theta = theta
   | RM (((v as Fv(n,Ty)),tm,scoped)::rst) ((S1 as (tmS,Id)),tyS)
      = if bound_by_scope scoped tm
-       then MERR "variable bound by scope"
+       then MERR "Attempt to capture bound variable"
        else RM rst
             ((case lookup v Id tmS
                of NONE => if v=tm then (tmS,HOLset.add(Id,v))
@@ -855,7 +855,7 @@ fun RM [] theta = theta
           let val n1 = id_toString c1
               val n2 = id_toString c2
           in
-           MERR ("different constants: "^n1^" matched against "^n2)
+           MERR ("Different constants: "^n1^" and "^n2)
           end
          else
          case (ty1,ty2)
@@ -868,7 +868,7 @@ fun RM [] theta = theta
       = RM ((M,N,true)::rst) (tmS, tymatch ty1 ty2 tyS)
   | RM ((Comb(M,N),Comb(P,Q),s)::rst) S = RM ((M,P,s)::(N,Q,s)::rst) S
   | RM ((Bv i,Bv j,_)::rst) S  = if i=j then RM rst S
-                                 else MERR "Bound var. depth"
+                                 else MERR "Bound var doesn't match"
   | RM (((pat as Clos _),ob,s)::t) S = RM ((push_clos pat,ob,s)::t) S
   | RM ((pat,(ob as Clos _),s)::t) S = RM ((pat,push_clos ob,s)::t) S
   | RM all others                    = MERR "different constructors"
