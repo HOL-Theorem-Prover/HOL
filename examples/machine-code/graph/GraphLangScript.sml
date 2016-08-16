@@ -647,7 +647,7 @@ val next_trans_IMP = prove(
   REVERSE Induct
   \\ SIMP_TAC (srw_ss()) [next_trans_def,LET_DEF,CONS_11,EVERY_DEF,ODD_ADD]
   THEN1 (EVAL_TAC \\ SIMP_TAC std_ss [])
-  THEN1 (Cases_on `^(mk_var("o",``:assert option``))`
+  THEN1 (Cases
          \\ EVAL_TAC \\ SIMP_TAC (srw_ss()) [] \\ EVAL_TAC \\ SRW_TAC [] []
          \\ FULL_SIMP_TAC std_ss [ODD_ADD])
   \\ REPEAT STRIP_TAC
@@ -655,7 +655,7 @@ val next_trans_IMP = prove(
   \\ Cases_on `next_trans (k + 2) q nn'` \\ FULL_SIMP_TAC std_ss []
   \\ `ODD (k + 4) /\ ODD (k + 2)` by FULL_SIMP_TAC (srw_ss()) [ODD_ADD]
   \\ RES_TAC \\ RES_TAC
-  \\ REPEAT (Q.PAT_ASSUM `!xx.bb` (K ALL_TAC))  \\ REVERSE (SRW_TAC [] [])
+  \\ REPEAT (Q.PAT_X_ASSUM `!xx.bb` (K ALL_TAC))  \\ REVERSE (SRW_TAC [] [])
   \\ FULL_SIMP_TAC std_ss [odd_nums_def,CONS_11]
   \\ FULL_SIMP_TAC std_ss [sortingTheory.PERM_CONS_IFF,MAP,TL]
   THEN1 DECIDE_TAC
@@ -1107,7 +1107,7 @@ fun exec_graph_step_IMP_exec_next arch = let
   Induct \\ NTAC 4 STRIP_TAC
   THEN1 (* IF *)
    (Cases_on `n` \\ FULL_SIMP_TAC std_ss [NRC] \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `exec_graph_step (list_func_trans fs)
+    \\ Q.PAT_X_ASSUM `exec_graph_step (list_func_trans fs)
          ((NextNode i,st,name)::t) z` MP_TAC
     \\ ASM_SIMP_TAC (srw_ss()) [Once exec_graph_step_def]
     \\ FULL_SIMP_TAC std_ss [next_trans_def]
@@ -1120,8 +1120,8 @@ fun exec_graph_step_IMP_exec_next arch = let
     \\ FULL_SIMP_TAC std_ss []
     \\ SIMP_TAC (srw_ss()) [exec_node_def,exec_next_def,upd_stack_def]
     \\ Cases_on `f st` \\ FULL_SIMP_TAC std_ss [next_ok_def]
-    THEN1 (SRW_TAC [] [] \\ Q.PAT_ASSUM `!xx.bbb` (K ALL_TAC)
-      \\ Q.PAT_ASSUM `!xx.bbb` (MP_TAC o Q.SPECL [`k`,`k+4`,`n'`])
+    THEN1 (SRW_TAC [] [] \\ Q.PAT_X_ASSUM `!xx.bbb` (K ALL_TAC)
+      \\ Q.PAT_X_ASSUM `!xx.bbb` (MP_TAC o Q.SPECL [`k`,`k+4`,`n'`])
       \\ `n' <> 0` by ALL_TAC THEN1 (IMP_RES_TAC exec_graph_step_NOT_ZERO)
       \\ FULL_SIMP_TAC std_ss [ODD_ADD,EVERY_APPEND]
       \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss []
@@ -1132,7 +1132,7 @@ fun exec_graph_step_IMP_exec_next arch = let
       \\ REWRITE_TAC [NRC]
       \\ FULL_SIMP_TAC (srw_ss()) [exec_graph_step_def,exec_node_def,upd_stack_def])
     THEN1 (SRW_TAC [] []
-      \\ Q.PAT_ASSUM `!xx.bbb` (MP_TAC o Q.SPECL [`k+2`,`t1`,`n'`])
+      \\ Q.PAT_X_ASSUM `!xx.bbb` (MP_TAC o Q.SPECL [`k+2`,`t1`,`n'`])
       \\ `ODD (k+2) /\ ODD (k+4)` by FULL_SIMP_TAC std_ss [ODD_ADD]
       \\ `n' <> 0` by ALL_TAC THEN1 (IMP_RES_TAC exec_graph_step_NOT_ZERO)
       \\ `ODD t1` by METIS_TAC [next_trans_lemma]
@@ -1147,7 +1147,7 @@ fun exec_graph_step_IMP_exec_next arch = let
   THEN1 (* ASM *)
    (Cases_on `^(mk_var("o'",``:assert option``))` THEN1
      (Cases_on `n` \\ FULL_SIMP_TAC std_ss [NRC] \\ REPEAT STRIP_TAC
-      \\ Q.PAT_ASSUM `exec_graph_step (list_func_trans fs)
+      \\ Q.PAT_X_ASSUM `exec_graph_step (list_func_trans fs)
            ((NextNode i,st,name)::t) z` MP_TAC
       \\ ASM_SIMP_TAC (srw_ss()) [Once exec_graph_step_def]
       \\ FULL_SIMP_TAC std_ss [next_trans_def]
@@ -1179,7 +1179,7 @@ fun exec_graph_step_IMP_exec_next arch = let
       \\ Cases_on `j`
       \\ FULL_SIMP_TAC (srw_ss()) [check_jump_def,get_jump_def])
     \\ Cases_on `n` \\ FULL_SIMP_TAC std_ss [NRC] \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `exec_graph_step (list_func_trans fs)
+    \\ Q.PAT_X_ASSUM `exec_graph_step (list_func_trans fs)
          ((NextNode i,st,name)::t) z` MP_TAC
     \\ ASM_SIMP_TAC (srw_ss()) [Once exec_graph_step_def]
     \\ FULL_SIMP_TAC std_ss [next_trans_def]
@@ -1194,8 +1194,8 @@ fun exec_graph_step_IMP_exec_next arch = let
     \\ Q.MATCH_ASSUM_RENAME_TAC `SUC n1 <> 0`
     \\ `n1 <> 0` by ALL_TAC THEN1 (IMP_RES_TAC exec_graph_step_NOT_ZERO)
     \\ Cases_on `n1` \\ FULL_SIMP_TAC std_ss [NRC]
-    \\ Q.PAT_ASSUM `exec_graph_step (list_func_trans fs)
-         ((NextNode i,st,name)::t) z` MP_TAC
+    \\ Q.PAT_X_ASSUM `exec_graph_step (list_func_trans fs)
+         ((NextNode _,st,name)::t) _` MP_TAC
     \\ ASM_SIMP_TAC (srw_ss()) [Once exec_graph_step_def]
     \\ SIMP_TAC (srw_ss()) [exec_node_def,upd_stack_def]
     \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [exec_next_def]
@@ -1220,7 +1220,7 @@ fun exec_graph_step_IMP_exec_next arch = let
     \\ Cases_on `j`
     \\ FULL_SIMP_TAC (srw_ss()) [check_jump_def,get_jump_def])
   THEN (* CALL *) Cases_on `n` \\ FULL_SIMP_TAC std_ss [NRC] \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `exec_graph_step (list_func_trans fs)
+    \\ Q.PAT_X_ASSUM `exec_graph_step (list_func_trans fs)
          ((NextNode i,st,name)::t) z` MP_TAC
     \\ ASM_SIMP_TAC (srw_ss()) [Once exec_graph_step_def]
     \\ FULL_SIMP_TAC std_ss [next_trans_def]
@@ -1235,8 +1235,8 @@ fun exec_graph_step_IMP_exec_next arch = let
     \\ Q.MATCH_ASSUM_RENAME_TAC `SUC n1 <> 0`
     \\ `n1 <> 0` by ALL_TAC THEN1 (IMP_RES_TAC exec_graph_step_NOT_ZERO)
     \\ Cases_on `n1` \\ FULL_SIMP_TAC std_ss [NRC]
-    \\ Q.PAT_ASSUM `exec_graph_step (list_func_trans fs)
-         ((NextNode i,st,name)::t) z` MP_TAC
+    \\ Q.PAT_X_ASSUM `exec_graph_step (list_func_trans fs)
+         ((NextNode _,st,name)::t) _` MP_TAC
     \\ ASM_SIMP_TAC (srw_ss()) [Once exec_graph_step_def]
     \\ SIMP_TAC (srw_ss()) [exec_node_def,upd_stack_def]
     \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [exec_next_def]
@@ -1278,7 +1278,7 @@ fun exec_graph_step_IMP_exec_next arch = let
       \\ TRY (MATCH_MP_TAC m0_STATE_all_names)
       \\ FULL_SIMP_TAC std_ss [EVERY_MEM,MAP_MAP_o,o_DEF]
       \\ FULL_SIMP_TAC std_ss [next_ok_def]
-      \\ Q.PAT_ASSUM `MAP FST l = ret_and_all_names` (ASSUME_TAC o GSYM)
+      \\ Q.PAT_X_ASSUM `MAP FST l = ret_and_all_names` (ASSUME_TAC o GSYM)
       \\ FULL_SIMP_TAC std_ss [save_vals_def,ZIP_MAP_MAP,fold_MAP]
       \\ FULL_SIMP_TAC std_ss [EVERY_MEM,MAP_MAP_o,o_DEF]
       \\ POP_ASSUM (ASSUME_TAC o GSYM)
