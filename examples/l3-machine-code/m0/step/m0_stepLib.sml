@@ -1192,7 +1192,8 @@ in
          val (thm, s) =
              (DecodeThumb,
               state_with_pcinc ``2w:word32`` :: fst (Term.match_term v1 pat))
-             handle HOL_ERR {message = "different constructors", ...} =>
+             handle HOL_ERR {message = "different constructors",
+                             origin_function = "raw_match_term", ...} =>
              (DecodeThumb2,
               state_with_pcinc ``4w:word32`` :: fst (Term.match_term v2 pat))
       in
