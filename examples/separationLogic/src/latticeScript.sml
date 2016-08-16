@@ -10,7 +10,7 @@ map load ["relationTheory", "pred_setTheory", "operatorTheory"];
 show_assums := true;
 *)
 
-open relationTheory pred_setTheory operatorTheory optionTheory;
+open relationTheory pred_setTheory combinTheory optionTheory;
 
 (*
 quietdec := false;
