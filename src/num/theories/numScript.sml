@@ -1,6 +1,3 @@
-structure numScript =
-struct
-
 open HolKernel Parse boolLib boolTheory;
 
 infix THEN THENL;
@@ -207,5 +204,3 @@ val INDUCTION = store_thm("INDUCTION",
       ASM_REWRITE_TAC [num_ISO_DEF,SYM (SPEC_ALL SUC_DEF)]]);
 
 val _ = export_theory();
-
-end;

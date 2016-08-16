@@ -1,6 +1,3 @@
-structure ind_typeScript =
-struct
-
 open HolKernel boolLib Prim_rec Parse simpLib boolSimps
      numTheory prim_recTheory arithmeticTheory InductiveDefinition;
 
@@ -417,5 +414,3 @@ local open OpenTheoryMap in
 end
 
 val _ = export_theory();
-
-end;

@@ -12,9 +12,6 @@
   app load ["IndDefLib", "Datatype", "clTheory"] ;
 *)
 
-structure monosetScript =
-struct
-
 open HolKernel Parse boolLib listLib listTheory IndDefLib bossLib
 
 (* --------------------------------------------------------------------- *)
@@ -95,5 +92,3 @@ val strong_allbigger_ind = save_thm(
 (* --------------------------------------------------------------------- *)
 
 val _ = export_theory();
-
-end;

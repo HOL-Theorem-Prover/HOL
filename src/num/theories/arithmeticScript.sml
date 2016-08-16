@@ -11,14 +11,6 @@
 (* ADDITIONS     : December 22, 1992                                     *)
 (* ===================================================================== *)
 
-structure arithmeticScript =
-struct
-
-(* interactive use:
-
-   app load ["prim_recTheory", "Q", "metisLib", "boolSimps", "SatisfySimps"];
-*)
-
 open HolKernel boolLib Parse
      Prim_rec simpLib boolSimps metisLib BasicProvers;
 
@@ -3900,5 +3892,3 @@ val datatype_num = store_thm(
   REWRITE_TAC[DATATYPE_TAG_THM]);
 
 val _ = export_theory()
-
-end

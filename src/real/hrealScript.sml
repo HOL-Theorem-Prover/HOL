@@ -2,9 +2,6 @@
 (* Construct positive reals from positive rationals                          *)
 (*---------------------------------------------------------------------------*)
 
-structure hrealScript =
-struct
-
 (*
 app load ["hol88Lib",
           "numLib",
@@ -923,5 +920,3 @@ val HREAL_SUP = store_thm("HREAL_SUP",
       ASM_REWRITE_TAC[]]] end);
 
 val _ = export_theory();
-
-end

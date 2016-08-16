@@ -1,6 +1,3 @@
-structure llistScript =
-struct
-
 open HolKernel boolLib Parse bossLib
 
 open BasicProvers boolSimps markerLib optionTheory ;
@@ -2384,5 +2381,3 @@ val _ = Theory.quote_adjoin_to_theory `none`
        induction = NONE, size = NONE, encode = NONE})]`
 
 val _ = export_theory();
-
-end;

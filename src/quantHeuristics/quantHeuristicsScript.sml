@@ -1,6 +1,3 @@
-structure quantHeuristicsScript =
-struct
-
 open HolKernel Parse boolLib Drule BasicProvers
      pairTheory listTheory optionTheory metisLib simpLib
      boolSimps pureSimps TotalDefn numLib ConseqConv
@@ -935,6 +932,3 @@ val LIST_LENGTH_COMPARE_SUC = store_thm ("LIST_LENGTH_COMPARE_SUC",
 SIMP_TAC std_ss [arithmeticTheory.ADD1, LIST_LENGTH_1]);
 
 val _ = export_theory();
-
-
-end

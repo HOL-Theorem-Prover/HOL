@@ -55,9 +55,6 @@
  * After proving this we prove some standard properties of <.
  *---------------------------------------------------------------------------*)
 
-structure prim_recScript =
-struct
-
 open HolKernel boolLib Prim_rec Parse
 
 type thm = Thm.thm
@@ -648,5 +645,3 @@ val measure_thm = Q.store_thm
 val _ = BasicProvers.export_rewrites ["measure_thm"]
 
 val _ = export_theory() ;
-
-end;

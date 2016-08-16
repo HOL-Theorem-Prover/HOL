@@ -12,8 +12,6 @@
 (* expressed with constants from relationTheory.                       *)
 (* ******************************************************************* *)
 
-structure wotScript = struct
-
 open HolKernel boolLib Parse bossLib;
 val _ = set_trace "Unicode" 0;
 open pred_setLib pred_setTheory relationTheory;
@@ -544,5 +542,3 @@ REWRITE_TAC [WellOrd_mex_less, GSYM StrongWellOrder]);
 val _ = delete_const"t0";
 
 val _ = export_theory ();
-
-end;

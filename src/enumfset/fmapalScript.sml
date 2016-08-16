@@ -3,8 +3,6 @@
 (* Uses bt, bl basics from enumeralScript, puts 'a#'b in place of 'a. *)
 (* Revised 13 Dec. 2013 for HOL_Kananaskis 9. *)
 
-structure fmapalScript = struct
-
 open HolKernel boolLib Parse;
 
 (* app load ["totoTheory", "res_quanLib", "enumeralTheory",
@@ -2516,5 +2514,3 @@ val fmap_ORWL_thm = store_thm ("fmap_ORWL_thm",
 REWRITE_TAC [ORWL, incr_sort_fmap, incr_sort_ORL]);
 
 val _ = export_theory ();
-
-end;

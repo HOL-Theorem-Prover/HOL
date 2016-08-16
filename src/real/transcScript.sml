@@ -3,11 +3,6 @@
 (*===========================================================================*)
 
 (*
-*)
-structure transcScript =
-struct
-
-(*
 app load ["hol88Lib",
           "numLib",
           "reduceLib",
@@ -4061,5 +4056,3 @@ let MCLAURIN_LN_NEG = prove
 endnew*)
 
 val _ = export_theory();
-
-end;

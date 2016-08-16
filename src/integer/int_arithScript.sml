@@ -1,5 +1,3 @@
-structure int_arithScript = struct
-
 open HolKernel boolLib Parse
 
 open integerTheory intSyntax dividesTheory
@@ -1133,5 +1131,3 @@ val eq_context_rwt2 = store_thm(
 val _ = hide "bmarker";
 
 val _ = export_theory();
-
-end (* structure *)

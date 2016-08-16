@@ -2,8 +2,6 @@
 (* PIN-based finite set representation; name a homage to numeralTheory *)
 (* Revision of 5/12/13 - bringing back bt & bl to avoid finiteness hyps. *)
 
-structure enumeralScript = struct
-
 open HolKernel boolLib Parse;
 
 (* app load ["totoTheory", "res_quanLib"]; *)
@@ -1167,5 +1165,3 @@ val set_OWL_thm = store_thm ("set_OWL_thm",
 REWRITE_TAC [OWL, incr_ssort_set, incr_ssort_OL]);
 
 val _ = export_theory ();
-
-end;

@@ -21,9 +21,6 @@
 (* ===================================================================== *)
 
 
-structure oneScript =
-struct
-
 open Lib HolKernel Parse boolLib BasicProvers
 
 val _ = new_theory "one";
@@ -177,5 +174,3 @@ val _ = adjoin_to_theory
    end)};
 
 val _ = export_theory();
-
-end

@@ -1,7 +1,3 @@
-(*
-*)
-structure summationScript =
-struct
 open HolKernel Parse boolLib
 
 (* interactive mode
@@ -99,5 +95,3 @@ Term `!i j f. summation (SUC j) i f = summation j i (\n. f (n + 1))`,
 
 
 val _ = export_theory();
-
-end;

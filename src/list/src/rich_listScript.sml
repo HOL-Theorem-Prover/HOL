@@ -1,6 +1,3 @@
-structure rich_listScript =
-struct
-
 open HolKernel Parse BasicProvers boolLib numLib metisLib simpLib
 open combinTheory arithmeticTheory prim_recTheory
 
@@ -3564,5 +3561,3 @@ val conv = EVAL
 *)
 
 val () = export_theory ()
-
-end

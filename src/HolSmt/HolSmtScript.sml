@@ -2,9 +2,6 @@
 
 (* Various theorems for HolSmtLib *)
 
-structure HolSmtScript =
-struct
-
   val T = tautLib.TAUT_PROVE
   val P = bossLib.PROVE []
   val S = simpLib.SIMP_PROVE (simpLib.++ (simpLib.++ (simpLib.++
@@ -537,5 +534,3 @@ struct
   val _ = s ("p009", S ``dimindex (:8) <= dimindex (:32)``)
 
   val _ = Theory.export_theory ()
-
-end

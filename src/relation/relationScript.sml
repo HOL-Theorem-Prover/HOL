@@ -5,9 +5,6 @@
  * are also defined.                                                         *
  *---------------------------------------------------------------------------*)
 
-structure relationScript =
-struct
-
 open HolKernel Parse boolLib QLib tautLib mesonLib metisLib
      simpLib boolSimps BasicProvers;
 
@@ -2218,5 +2215,3 @@ val Newmans_lemma = store_thm(
 
 
 val _ = export_theory();
-
-end

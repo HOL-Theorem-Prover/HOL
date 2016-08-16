@@ -4,9 +4,6 @@
 (* Camilleri.                                                                *)
 (*===========================================================================*)
 
-structure opsemScript =
-struct
-
 (* Interactive use:
   app load ["stringLib", "finite_mapTheory"];
 *)
@@ -281,5 +278,3 @@ val DISJ_TRIPLE = store_thm
  RW_TAC std_ss [SPEC_def] THEN METIS_TAC[]);
 
 val _ = export_theory();
-
-end

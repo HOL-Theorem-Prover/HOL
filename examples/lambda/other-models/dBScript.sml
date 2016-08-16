@@ -11,9 +11,6 @@
    app load ["bossLib", "Q", "pred_setTheory", "stringTheory"];
 *)
 
-structure dBScript =
-struct
-
 open HolKernel Parse boolLib
      bossLib numLib IndDefLib
      pred_setTheory arithmeticTheory
@@ -666,5 +663,3 @@ Q.EXISTS_TAC
  ASM_REWRITE_TAC []);
 
 val _ = export_theory();
-
-end; (* structure dBScript *)

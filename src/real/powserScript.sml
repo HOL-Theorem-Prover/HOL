@@ -3,11 +3,6 @@
 (*===========================================================================*)
 
 (*
-*)
-structure powserScript =
-struct
-
-(*
 app load ["numLib",
           "reduceLib",
           "pairTheory",
@@ -606,5 +601,3 @@ val TERMDIFF = store_thm("TERMDIFF",
       ASM_REWRITE_TAC[GSYM REAL_LT_SUB_LADD]]]);
 
 val _ = export_theory();
-
-end;

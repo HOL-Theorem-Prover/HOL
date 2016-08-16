@@ -3,11 +3,6 @@
 (*===========================================================================*)
 
 (*
-*)
-structure limScript =
-struct
-
-(*
 app load ["numLib",
           "pairLib",
           "jrhUtils",
@@ -1676,6 +1671,3 @@ val DIFF_INVERSE_OPEN = store_thm("DIFF_INVERSE_OPEN",
 
 
 val _ = export_theory();
-
-
-end;

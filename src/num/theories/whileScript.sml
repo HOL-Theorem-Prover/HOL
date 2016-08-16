@@ -3,9 +3,6 @@
 (* binder.                                                                   *)
 (*===========================================================================*)
 
-structure whileScript =
-struct
-
 open HolKernel boolLib Parse Prim_rec simpLib boolSimps metisLib
      combinTheory prim_recTheory arithmeticTheory BasicProvers
      optionTheory
@@ -410,5 +407,3 @@ val _ =
    ,"LEAST_DEF"];
 
 val _ = export_theory();
-
-end

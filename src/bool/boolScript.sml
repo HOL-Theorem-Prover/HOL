@@ -9,9 +9,6 @@
 (*                 mind.                                                 *)
 (* ===================================================================== *)
 
-structure boolScript =
-struct
-
 open HolKernel Parse
 open Unicode TexTokenMap
 
@@ -4266,5 +4263,3 @@ val _ = TeX_notation {hol=UChar.not_iff,
                       TeX = ("\\HOLTokenNotEquiv{}",2)}
 
 val _ = export_theory();
-
-end (* boolScript *)

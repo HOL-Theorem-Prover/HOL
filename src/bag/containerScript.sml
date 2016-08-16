@@ -5,9 +5,6 @@
        TFL technology makes an easy job of it.
  ---------------------------------------------------------------------------*)
 
-structure containerScript =
-struct
-
 open HolKernel Parse boolLib pred_setTheory listTheory bagTheory
      Defn TotalDefn BasicProvers sortingTheory finite_mapTheory
      listSimps bossLib;
@@ -349,5 +346,3 @@ SIMP_TAC std_ss [BAG_OF_FMAP_THM, FINITE_EMPTY_BAG,
 
 
 val _ = export_theory ();
-
-end;

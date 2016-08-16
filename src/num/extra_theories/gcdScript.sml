@@ -1,6 +1,3 @@
-structure gcdScript =
-struct
-
 open HolKernel Parse boolLib TotalDefn BasicProvers
      arithmeticTheory dividesTheory simpLib boolSimps
      Induction;
@@ -446,5 +443,3 @@ val BINARY_GCD = store_thm("BINARY_GCD",
          ONCE_REWRITE_RULE [GCD_SYM] ODD_IMP_GCD_CANCEL_EVEN]);
 
 val _ = export_theory();
-
-end;

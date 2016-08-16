@@ -1,6 +1,3 @@
-structure dividesScript =
-struct
-
 open HolKernel Parse boolLib simpLib BasicProvers
      prim_recTheory arithmeticTheory boolSimps
      metisLib numLib;
@@ -368,5 +365,3 @@ val _ =
      ["compute_divides"];
 
 val _ = export_theory();
-
-end

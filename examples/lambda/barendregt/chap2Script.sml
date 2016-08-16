@@ -1,5 +1,8 @@
 structure chap2Script =
 struct
+(* This structure bracketting is necessary for Moscow ML because of rebinding of
+   structure Q below
+*)
 
 open HolKernel Parse boolLib
 

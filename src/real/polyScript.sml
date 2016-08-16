@@ -1,10 +1,6 @@
-
 (* ========================================================================= *)
 (* Properties of real polynomials (not canonically represented).             *)
 (* ========================================================================= *)
-
-structure polyScript =
-struct
 
 (*
 app load ["numLib",
@@ -1428,5 +1424,3 @@ val POLY_NORMALIZE_CONV =
 *)
 
 val _ = export_theory ();
-
-end;

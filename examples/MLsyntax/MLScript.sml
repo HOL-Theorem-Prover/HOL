@@ -55,9 +55,6 @@
  *---------------------------------------------------------------------------*)
 
 
-structure MLScript =
-struct
-
 open bossLib Theory Parse ;
 
 local open stringTheory pred_setTheory   (* Make strings and sets be present *)
@@ -133,5 +130,3 @@ val Vars_def =
     (patV (var_pat v)        = {v})`;
 
 val _ = export_theory();
-
-end;

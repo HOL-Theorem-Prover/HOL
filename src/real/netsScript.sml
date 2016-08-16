@@ -3,11 +3,6 @@
 (*===========================================================================*)
 
 (*
-*)
-structure netsScript =
-struct
-
-(*
 app load ["hol88Lib",
           "numLib",
           "reduceLib",
@@ -620,7 +615,3 @@ val NET_LE = store_thm("NET_LE",
   FIRST_ASSUM ACCEPT_TAC);
 
 val _ = export_theory();
-
-(*
-*)
-end;

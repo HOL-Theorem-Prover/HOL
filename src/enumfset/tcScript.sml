@@ -9,8 +9,6 @@
 (* needing a conversion reducing a three-valued "toto" ordering, for which   *)
 (* see totoTheory, totoTacs, and also enumeralTheory/Tacs, fmapalTheory/Tacs.*)
 
-structure tcScript = struct
-
 (* app load ["pred_setLib", "pred_setTheory", "relationTheory", "pairTheory",
 "optionTheory", "TotalDefn", "bossLib", "finite_mapTheory",
 "wotTheory"]; *) (* wotTheory only for definiton of type 'a reln *)
@@ -632,5 +630,3 @@ GEN_TAC THEN Induct THENL
 ]]]);
 
 val _ = export_theory ();
-
-end; (* struct *)

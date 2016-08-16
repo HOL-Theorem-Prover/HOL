@@ -2,9 +2,6 @@
 (* Construct reals from positive reals                                       *)
 (*===========================================================================*)
 
-structure realaxScript =
-struct
-
 (*
 app load ["hol88Lib",
           "numLib",
@@ -682,5 +679,3 @@ val _ = map save_thm
   ("REAL_LT_MUL",REAL_LT_MUL),       ("REAL_INV_0",REAL_INV_0)];
 
 val _ = export_theory();
-
-end;

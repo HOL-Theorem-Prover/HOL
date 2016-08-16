@@ -1,8 +1,6 @@
 (* file inttoScript.sml, split off from totoScript 12/13/13 to be the  *)
 (* only theory that loads intLib. *)
 
-structure inttoScript = struct
-
 (* app load ["totoTheory", "intLib"]; *)
 
 open HolKernel boolLib Parse;
@@ -124,5 +122,3 @@ val ZERO_eq_neg_ZERO_thm = store_thm ("ZERO_eq_neg_ZERO_thm",
 SRW_TAC [] [TO_of_LinearOrder, intOrd, GSYM arithmeticTheory.ALT_ZERO]);
 
 val _ = export_theory ();
-
-end;

@@ -2,9 +2,6 @@
    A bridging theory between integers and reals
    ------------------------------------------------------------------------- *)
 
-structure intrealScript =
-struct
-
 open HolKernel boolLib bossLib
 open intLib realLib
 
@@ -366,5 +363,3 @@ in
 end
 
 val _ = export_theory ()
-
-end

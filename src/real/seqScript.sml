@@ -3,11 +3,6 @@
 (*===========================================================================*)
 
 (*
-*)
-structure seqScript =
-struct
-
-(*
 app load ["hol88Lib",
           "numLib",
           "reduceLib",
@@ -1448,7 +1443,3 @@ val SEQ_LE_MONO = store_thm
    THEN RW_TAC boolSimps.bool_ss [GSYM SEQ_NEG, REAL_LE_NEG]);
 
 val _ = export_theory();
-
-(*
-*)
-end;

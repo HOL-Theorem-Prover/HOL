@@ -1,13 +1,6 @@
 (*---------------------------------------------------------------------------
           Theory of list permutations
  ---------------------------------------------------------------------------*)
-structure permScript =
-struct
-
-(* interactive use:
-app load ["bossLib"];
-*)
-
 open HolKernel Parse boolLib bossLib listTheory;
 
 infix THEN THENL |-> ;
@@ -181,5 +174,3 @@ Induct
   THEN RW_TAC list_ss []);
 
 val _ = export_theory();
-
-end;

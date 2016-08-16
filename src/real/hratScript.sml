@@ -2,9 +2,6 @@
 (* Construct positive (nonzero) rationals from natural numbers               *)
 (*===========================================================================*)
 
-structure hratScript =
-struct
-
 open HolKernel boolLib;
 infix THEN THENL ORELSE;
 
@@ -359,5 +356,3 @@ val HRAT_SUCINT = store_thm("HRAT_SUCINT",
   MATCH_ACCEPT_TAC HRAT_SUCINT);
 
 val _ = export_theory();
-
-end;

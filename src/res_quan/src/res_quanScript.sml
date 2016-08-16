@@ -13,11 +13,6 @@
 app load ["combinTheory", "pred_setTheory", "BasicProvers"];
 *)
 
-(* non-interactive use
-*)
-structure res_quanScript =
-struct
-
 open HolKernel Parse boolLib combinTheory pred_setTheory BasicProvers;
 
 val _ = new_theory "res_quan";
@@ -245,5 +240,3 @@ val _ = let
 in
   export_theory_as_docfiles (Path.parentArc ^^ "help" ^^ "thms")
 end
-
-end;

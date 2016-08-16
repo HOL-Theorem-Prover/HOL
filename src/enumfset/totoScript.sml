@@ -12,8 +12,6 @@
 (* based on a total order.                                             *)
 (* ******************************************************************  *)
 
-structure totoScript = struct
-
 (* app load ["wotTheory", "stringTheory"]; *)
 
 open HolKernel boolLib Parse;
@@ -1011,5 +1009,3 @@ val TO_of_LinearOrder_LEX = store_thm("TO_of_LinearOrder_LEX",
   simp[lexTO,StrongLinearOrder_of_TO_TO_of_LinearOrder])
 
 val _ = export_theory ();
-
-end;

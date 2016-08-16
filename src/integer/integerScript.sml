@@ -1,6 +1,3 @@
-structure integerScript =
-struct
-
 (*==========================================================================*)
 (* Theory of integers. (John Harrison)                                      *)
 (*                                                                          *)
@@ -3412,5 +3409,3 @@ val () = Literal.add_literal
       | _ => false)`
 
 val _ = export_theory()
-
-end

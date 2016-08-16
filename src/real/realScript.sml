@@ -2,9 +2,6 @@
 (* Develop the theory of reals                                               *)
 (*---------------------------------------------------------------------------*)
 
-structure realScript =
-struct
-
 (*
 app load ["numLib",
           "pairLib",
@@ -3810,5 +3807,3 @@ val NUM_CEILING_LE = store_thm
    THEN METIS_TAC [NOT_LESS_EQUAL]);
 
 val _ = export_theory();
-
-end
