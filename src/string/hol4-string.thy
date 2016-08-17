@@ -1,5 +1,5 @@
 name: hol-string
-version: 1.1
+version: 1.2
 description: HOL string theories
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT

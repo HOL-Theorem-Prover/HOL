@@ -1,5 +1,5 @@
 name: hol-ring
-version: 1.1
+version: 1.2
 description: HOL ring theories
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT

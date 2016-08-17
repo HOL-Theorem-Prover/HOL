@@ -1,5 +1,5 @@
 name: hol-words
-version: 1.1
+version: 1.2
 description: n-bit words
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
