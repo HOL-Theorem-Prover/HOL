@@ -1,6 +1,7 @@
 src/real
 src/complex
 !!examples/separationLogic/src/
+!!examples/separationLogic/src/holfoot
 src/HolQbf
 src/HolSmt
 !examples/misc
