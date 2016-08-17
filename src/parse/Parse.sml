@@ -522,13 +522,13 @@ fun parse_in_context FVs q =
     open errormonad
     val m =
         (q |> Absyn |> absyn_to_preterm) >-
-        TermParse.ctxt_preterm_to_term stdprinters FVs
+        TermParse.ctxt_preterm_to_term stdprinters NONE FVs
   in
     smashErrm m
   end
 
 fun grammar_parse_in_context(tyg,tmg) ctxt q =
-    TermParse.ctxt_term stdprinters tmg tyg ctxt q |> smashErrm
+    TermParse.ctxt_term stdprinters tmg tyg NONE ctxt q |> smashErrm
 
 fun grammar_typed_parses_in_context (tyg,tmg) ty ctxt q =
   TermParse.ctxt_termS tmg tyg (SOME ty) ctxt q
@@ -540,10 +540,6 @@ fun grammar_typed_parse_in_context gs ty ctxt q =
 
 fun typed_parse_in_context ty ctxt q =
   grammar_typed_parse_in_context (type_grammar(), term_grammar()) ty ctxt q
-
-fun parse_preterm_in_context ctxt =
-    TermParse.ctxt_preterm_to_term stdprinters ctxt
-
 
 (*---------------------------------------------------------------------------
      Making temporary and persistent changes to the grammars.

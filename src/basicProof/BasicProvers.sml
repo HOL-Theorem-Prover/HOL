@@ -349,7 +349,10 @@ fun (q by tac) (g as (asl,w)) = let
   val tm = trace ("show_typecheck_errors", 0)
                  (Preterm.smash
                      (goal_pt >-
-                      Parse.parse_preterm_in_context (free_varsl (w::asl))))
+                      TermParse.ctxt_preterm_to_term
+                        Parse.stdprinters
+                        (SOME bool)
+                        (free_varsl (w::asl))))
                  Pretype.Env.empty
 in
   SUBGOAL_THEN tm finisher THEN1 tac

@@ -65,15 +65,7 @@ signature Parse = sig
   val typedTerm        : term frag list -> hol_type -> term
   val ty_antiq         : hol_type -> term
   val parse_in_context : term list -> term frag list -> term
-  val parse_preterm_in_context : term list -> Preterm.preterm ->
-                                 term Pretype.in_env
   val typed_parse_in_context : hol_type -> term list -> term frag list -> term
-  val grammar_parse_in_context :
-      (type_grammar.grammar * term_grammar.grammar) ->
-      term list -> term frag list -> term
-  val grammar_typed_parse_in_context :
-      (type_grammar.grammar * term_grammar.grammar) ->
-      hol_type -> term list -> term frag list -> term
   val parse_from_grammars :
       (type_grammar.grammar * term_grammar.grammar) ->
       ((hol_type frag list -> hol_type) * (term frag list -> term))
@@ -194,6 +186,7 @@ signature Parse = sig
   val pp_term : ppstream -> term -> unit
   val pp_type : ppstream -> hol_type -> unit
   val pp_thm : ppstream -> thm -> unit
+  val stdprinters : ((term -> string) * (hol_type -> string)) option
 
   val pp_with_bquotes :
     (ppstream -> 'a -> unit) -> (ppstream -> 'a -> unit)

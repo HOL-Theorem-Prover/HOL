@@ -418,15 +418,25 @@ in
     preterm_to_term pprinters ptm
   end
 
-  fun ctxt_preterm_to_term pprinters FVs ptm : term in_env =
-    errormonad.with_flagM (Globals.notify_on_tyvar_guess,false)
-                          (parse_preterm_in_context0 pprinters FVs ptm)
+  fun trace tinfo (m:'a in_env) : 'a in_env = fn env =>
+    Feedback.trace tinfo m env
 
-  fun ctxt_term pprinters g tyg = let
-    val ph1 = preterm g tyg
+  fun ctxt_preterm_to_term pprinters tyopt FVs ptm0 : term in_env =
+    let
+      val ptm =
+          case tyopt of
+              NONE => ptm0
+            | SOME ty => Constrained{Ptm=ptm0,Ty=Pretype.fromType ty,
+                                     Locn = locn.Loc_None}
+    in
+      errormonad.with_flagM (Globals.notify_on_tyvar_guess,false)
+                            (parse_preterm_in_context0 pprinters FVs ptm)
+    end
+
+  fun ctxt_term pprinters g tyg tyopt fvs q = let
     open errormonad
   in
-    fn fvs => fn q => ph1 q >- ctxt_preterm_to_term pprinters fvs
+    preterm g tyg q >- ctxt_preterm_to_term pprinters tyopt fvs
   end
 
   fun ctxt_termS g tyg tyopt =

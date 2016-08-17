@@ -24,10 +24,10 @@ sig
   val termS : grammar -> tygrammar -> term quotation -> term seq.seq
 
   (* in contexts *)
-  val ctxt_preterm_to_term : pprinters -> term list -> preterm ->
-                             term Preterm.errM
-  val ctxt_term : pprinters -> grammar -> tygrammar -> term list ->
-                  term quotation -> term Preterm.errM
+  val ctxt_preterm_to_term : pprinters -> hol_type option -> term list ->
+                             preterm -> term in_env
+  val ctxt_term : pprinters -> grammar -> tygrammar -> hol_type option ->
+                  term list -> term quotation -> term Preterm.errM
   val ctxt_termS : grammar -> tygrammar -> hol_type option -> term list ->
                    term quotation -> term seq.seq
 
