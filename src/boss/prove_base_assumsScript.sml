@@ -1,10 +1,10 @@
-open HolKernel boolLib Opentheory lcsymtacs BasicProvers
+open HolKernel boolLib Opentheory bossLib BasicProvers
 
 val Thy = "prove_base_assums";
 
 val _ = new_theory Thy;
 
-val _ = new_constant("base-1.202",alpha);
+val _ = new_constant("base-1.203",alpha);
 
 fun fix_tyop {abs={Name="_",Thy=athy},rep={Name="_",Thy=rthy},args,ax,name={Thy=tthy,Tyop=tyop}} =
   {abs={Name=(tyop^"_abs"),Thy=athy},
@@ -781,7 +781,7 @@ val th78 = store_thm("th78", el 78 goals |> concl,
     \\ MATCH_ACCEPT_TAC less_suc )
   \\ `!n. Number_Natural_less n a ==> P n`
   by (
-    qpat_assum`P a`mp_tac
+    qpat_x_assum`P a`mp_tac
     \\ qid_spec_tac`a`
     \\ ho_match_mp_tac num_ind
     \\ conj_tac
