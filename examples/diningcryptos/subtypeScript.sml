@@ -56,16 +56,9 @@ val FUNSET_def = Define
 val DFUNSET_def = Define
   `DFUNSET (P:'a->bool) (Q:'a->'b->bool) = \f. !x. x IN P ==> f x IN Q x`;
 
-(* home
 val _ = overload_on
   ("->", ``FUNSET:('a->bool) -> ('b->bool) -> (('a->'b)->bool)``);
-*)
-
-(* work
-*)
-val _ = overload_on
-  (GrammarSpecials.case_arrow_special,
-   ``FUNSET : ('a->bool) -> ('b->bool) -> (('a->'b)->bool)``);
+val _ = set_fixity "->" (Infixr 700)
 
 val _ = overload_on
   ("-->", ``DFUNSET : ('a->bool) -> ('a->'b->bool) -> (('a->'b)->bool)``);
