@@ -49,7 +49,6 @@ ARTS =bool_defs.ot.art\
   ../num/extra_theories/numeral_bit.ot.art\
   ../datatype/ind_type.ot.art\
   ../pred_set/src/pred_set.ot.art\
-  ../list/src/operator.ot.art\
   ../list/src/list.ot.art\
   ../list/src/rich_list.ot.art\
   ../list/src/indexedLists.ot.art\

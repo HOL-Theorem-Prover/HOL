@@ -28,7 +28,6 @@ main {
   import: numeral-bit
   import: pred-set
   import: ind-type
-  import: operator
   import: list
   import: rich-list
   import: indexed-lists
@@ -193,10 +192,6 @@ ind-type {
   import: arithmetic
   article: "../datatype/ind_type.ot.art"
 }
-operator {
-  import: bool
-  article: "../list/src/operator.ot.art"
-}
 list {
   import: bool
   import: arithmetic
@@ -207,7 +202,7 @@ list {
   import: while
   import: marker
   import: pred-set
-  import: operator
+  import: combin
   article: "../list/src/list.ot.art"
 }
 rich-list {
@@ -215,7 +210,6 @@ rich-list {
   import: list
   import: arithmetic
   import: combin
-  import: operator
   article: "../list/src/rich_list.ot.art"
 }
 indexed-lists {
