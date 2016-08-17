@@ -125,7 +125,7 @@ fun read_complete_sections filename filename_sigs ignore = let
     in (sec_name,(arg_lengths,ret_length,returns_struct)) end
   val ss_alist = map process_sig_line ss
   (* combine section info with signatures *)
-  fun lookup x [] = (add_missing_sig; fail())
+  fun lookup x [] = (add_missing_sig x; fail())
     | lookup x ((y,z)::ys) = if x = y then z else lookup x ys
   fun combine_ss (sec_name,location,body) =
     (sec_name,lookup (hd (String.tokens (fn x => x = #".") sec_name)) ss_alist,location,body)
