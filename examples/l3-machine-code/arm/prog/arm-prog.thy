@@ -1,5 +1,5 @@
 name: arm-prog
-version: 1.0
+version: 1.1
 description: ARM evaluator
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT

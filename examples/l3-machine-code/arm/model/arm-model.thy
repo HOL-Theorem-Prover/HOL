@@ -1,5 +1,5 @@
 name: arm-model
-version: 1.0
+version: 1.1
 description: ARM model
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
