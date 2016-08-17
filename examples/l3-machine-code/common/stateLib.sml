@@ -840,7 +840,7 @@ in
                          end
                     | NONE => default (f_upd, l, p, q))
               | (s, l) => default (s, l, p, q) : (term list * term list))
-            handle HOL_ERR {message = "not a const", ...} => (p, q)
+            handle HOL_ERR {origin_function = "dest_thy_const", ...} => (p, q)
       in
          loop
       end
