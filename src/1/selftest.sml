@@ -760,13 +760,13 @@ end
 val _ = hide "f"
 val _ = hide "R"
 
-fun dolvtests(modname, empty,insert,match) = let
+fun dolvtests(modname,empty,insert,match) = let
   val n = List.foldl (fn ((k,v),acc) => insert (acc,k,v)) empty
                      [(([],``R x y:bool``), 1)]
   fun test (nm, pat, expected) =
     let
       val _ = tprint (modname ^ ": " ^ nm)
-      val result = List.map #2 (match (n,pat))
+      val result = List.map snd (match (n,pat))
     in
       if result = expected then OK() else die "FAILED"
     end
@@ -777,25 +777,10 @@ end
 
 val _ = dolvtests("LVTermNet", LVTermNet.empty, LVTermNet.insert,
                   LVTermNet.match)
-
-structure PMDataSet = struct
-  type value = int
-  type t = value HOLset.set
-  val empty = HOLset.empty Int.compare
-  val insert = HOLset.add
-  val fold = HOLset.foldl
-  val listItems = HOLset.listItems
-  fun filter P s =
-      fold (fn (v,a) => if P v then insert(a,v) else a)
-           empty
-           s
-  val numItems = HOLset.numItems
-end
-
-structure PrintMap = LVTermNetFunctor(PMDataSet)
-
-val _ = dolvtests("LVTermNetFunctor", PrintMap.empty, PrintMap.insert,
-                  PrintMap.match)
+val _ = dolvtests("LVTermNetFunctor",
+                  LVTermNetFunctorApplied.PrintMap.empty,
+                  LVTermNetFunctorApplied.PrintMap.insert,
+                  LVTermNetFunctorApplied.PrintMap.match)
 
 
 val _ = Process.exit (if List.all substtest tests then Process.success
