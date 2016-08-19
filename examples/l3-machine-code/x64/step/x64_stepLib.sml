@@ -67,19 +67,6 @@ in
    val setEvConv = utilsLib.setStepConv
 end
 
-local
-   val state_with_pre = (st |-> ``^st with RIP := ^st.RIP + n2w len``)
-   fun ADD_PRECOND_RULE thm =
-      thm |> Thm.INST [state_with_pre]
-          |> utilsLib.ALL_HYP_CONV_RULE DATATYPE_CONV
-          |> Conv.CONV_RULE DATATYPE_CONV
-   val rwts = ref ([]: thm list)
-in
-   fun getThms () = List.map ADD_PRECOND_RULE (!rwts)
-   fun resetThms () = rwts := []
-   fun addThms thms = (rwts := thms @ !rwts; thms)
-end
-
 (* ------------------------------------------------------------------------ *)
 
 local
@@ -139,6 +126,24 @@ in
    val x64_CONV = utilsLib.CHANGE_CBV_CONV cmp
 end
 
+val highByte =
+  utilsLib.map_conv x64_CONV
+    (List.map (fn r => ``num2Zreg (Zreg2num ^r - 4)``)
+              [``RSP``, ``RBP``, ``RSI``, ``RDI``])
+
+local
+   val state_with_pre = (st |-> ``^st with RIP := ^st.RIP + n2w len``)
+   fun ADD_PRECOND_RULE thm =
+      thm |> Thm.INST [state_with_pre]
+          |> utilsLib.ALL_HYP_CONV_RULE DATATYPE_CONV
+          |> Conv.CONV_RULE DATATYPE_CONV
+   val rwts = ref ([]: thm list)
+in
+   fun getThms () = [highByte] @ List.map ADD_PRECOND_RULE (!rwts)
+   fun resetThms () = rwts := []
+   fun addThms thms = (rwts := thms @ !rwts; thms)
+end
+
 (* ------------------------------------------------------------------------ *)
 
 val mem8_rwt =
@@ -183,8 +188,6 @@ val write_SF_rwt =
        Zsize_width_def] []
       (mapl (`size`, sizes))
       ``write_SF (size, w)``
-
-val () = resetEvConv ()
 
 val write_ZF_rwt =
    EV [write_ZF_def, write'ZF_def, write'Eflag_rwt] [] (mapl (`size`, sizes))
@@ -272,12 +275,6 @@ val ea =
 
 val () = resetThms()
 
-val highByte =
-   [utilsLib.map_conv x64_CONV
-     (List.map (fn r => ``num2Zreg (Zreg2num ^r - 4)``)
-               [``RSP``, ``RBP``, ``RSI``, ``RDI``])]
-   |> addThms
-
 val EA_rwt =
    EV [EA_def, restrictSize_def, id_state_cond, pred_setTheory.IN_INSERT,
        pred_setTheory.NOT_IN_EMPTY, mem8_rwt, mem16_rwt, mem32_rwt, mem64_rwt]
@@ -328,6 +325,8 @@ val ea_op =
 val monops = TypeBase.constructors_of ``:Zmonop_name``
 val binops = Lib.set_diff (TypeBase.constructors_of ``:Zbinop_name``)
                           [``Zrcl``, ``Zrcr``]
+
+val () = resetEvConv ()
 
 val write_binop_rwt =
    EV ([write_binop_def, write_arith_result_def, write_logical_result_def,
@@ -442,7 +441,7 @@ val rm_cases = utilsLib.augment (`size`, sizes) rm
 
 (* ------------------------------------------------------------------------ *)
 
-(* TODO: CMPXCHG, DIV, XADD *)
+(* TODO: CMPXCHG, XADD *)
 
 val data_hyp_rule =
    List.map (utilsLib.ALL_HYP_CONV_RULE
@@ -606,6 +605,62 @@ val Zxchg_rwts =
       ``dfn'Zxchg (size, rm, r2)``
    |> data_hyp_rule
    (* |> is_some_hyp_rule *)
+   |> addThms
+
+val () = setEvConv (Conv.DEPTH_CONV wordsLib.SIZES_CONV)
+
+fun div_assums d rax rdx v =
+  [``w2n ^v <> 0``, ``~(^d <= (w2n ^rax * ^d + w2n ^rdx) DIV w2n ^v)``]
+
+fun div_tms n =
+  let
+    val ty = fcpSyntax.mk_int_numeric_type n
+    val wty = wordsSyntax.mk_int_word_type n
+    fun mask x = case n of
+                    8  => ``^x && 0xFFw``
+                  | 16 => ``^x && 0xFFFFw``
+                  | 32 => ``^x && 0xFFFFFFFFw``
+                  | _ => x
+    val rax = mask ``s.REG RAX``
+    val rdx = mask ``s.REG RDX``
+    val r = mask ``s.REG r``
+    val v = Term.mk_var ("v", wty)
+    val f = div_assums (eval (wordsSyntax.mk_dimword ty)) rax rdx
+  in
+    f v @ f r
+  end
+
+val div_ev =
+   EV ([dfn'Zdiv_def, erase_eflags, value_width_def, Zsize_width_def,
+        wordsTheory.w2n_w2w] @ ea_Zrm_rwt @ EA_rwt @ write'EA_rwt)
+
+val Zdiv_rwts =
+  div_ev [List.concat (List.map div_tms [8, 16, 32, 64])] (tl rm_cases)
+      ``dfn'Zdiv (size, rm)``
+   |> data_hyp_rule
+   |> addThms
+
+val Zdiv_byte_reg_rwts_1 =
+  div_ev [div_tms 8] [] ``dfn'Zdiv (Z8 T, Zr r)``
+   |> data_hyp_rule
+   |> addThms
+
+val tms =
+  let
+    val l = [``RAX``, ``RCX``, ``RDX``, ``RBX``]
+  in
+    List.map (div_assums ``256n`` ``s.REG RAX && 255w`` ``s.REG RDX && 255w``)
+      (List.map (fn r => ``s.REG ^r >>> 8 && 255w``) l @
+       List.map (fn r => ``s.REG ^r && 255w``) l)
+    |> List.concat
+  end
+
+val Zdiv_byte_reg_rwts_2 =
+  div_ev [tms]
+   [[`r` |-> ``RAX``], [`r` |-> ``RCX``], [`r` |-> ``RDX``], [`r` |-> ``RBX``],
+    [`r` |-> ``RSP``], [`r` |-> ``RBP``], [`r` |-> ``RSI``], [`r` |-> ``RDI``]]
+      ``dfn'Zdiv (Z8 F, Zr r)``
+   |> data_hyp_rule
    |> addThms
 
 (* ------------------------------------------------------------------------ *)
