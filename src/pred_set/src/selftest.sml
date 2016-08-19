@@ -77,6 +77,10 @@ in
         OS.Process.exit OS.Process.failure)
 end
 
+val feq_def = new_definition("feq_def", ``feq f x y = (f x = f y)``);
+val _ = temp_overload_on("equiv_class", ``\R s x. {y | y IN s /\ R x y}``);
+val _ = testutils.tpp "equiv_class (feq f) s x"
+
 val _ =
     Process.exit
         (if

@@ -143,19 +143,23 @@ fun match ((net,sz), tm) = let
                             NONE => acc
                           | SOME n => trav acc (n, ks0)
           val (lab, rest) = lookup_label k
-          val varhead_result = let
-            val n = length (#2 (strip_comb k))
+          val restn = length rest
+          val varhead_results = let
+            fun recurse acc n =
+              if n = 0 then acc
+              else
+                case Binarymap.peek (d, V n) of
+                    NONE => recurse acc (n - 1)
+                  | SOME m => recurse
+                                (trav acc (m, List.drop(rest, restn - n)))
+                                (n - 1)
           in
-            if n = 0 then varresult
-            else
-              case Binarymap.peek (d, V n) of
-                NONE => varresult
-              | SOME n => trav varresult (n, rest @ ks0)
+            recurse varresult (length (#2 (strip_comb k)))
           end
         in
           case Binarymap.peek (d, lab) of
-            NONE => varhead_result
-          | SOME n => trav varhead_result (n, rest @ ks0)
+            NONE => varhead_results
+          | SOME n => trav varhead_results (n, rest @ ks0)
         end
       | _ => raise Fail "LVTermNet.match: catastrophic invariant failure"
 in
