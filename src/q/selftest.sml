@@ -231,4 +231,56 @@ val _ = case sgs of
             else die "FAILED!"
           | _ => die "FAILED!"
 
+fun tactest (nm, tac, g, expected) =
+  let
+    val _ = tprint nm
+    val (sgs, _) = tac g
+  in
+    if list_compare (pair_compare(list_compare Term.compare, Term.compare))
+                    (sgs, expected) = EQUAL
+    then
+      OK()
+    else die "FAILED!"
+  end
+
+val fa_y = ``!y:'a. P y``
+val fa_n = ``!n:num. SUC n < zero``
+val _ = new_type ("int", 0)
+val _ = new_constant ("int_plus1", ``:int -> int``)
+val fa_i = ``!i:int. Q i``
+val _ = overload_on("SUC", ``int_plus1``)
+val _ = List.app tactest [
+         ("Q.SPEC_THEN 1", FIRST_X_ASSUM (Q.SPEC_THEN `x` MP_TAC),
+          ([fa_y, fa_n], ``x < x``),
+          [([fa_y], ``SUC x < zero ==> x < x``)]),
+
+         ("Q.SPEC_THEN 2", FIRST_X_ASSUM (Q.SPEC_THEN `SUC x` MP_TAC),
+          ([fa_y, fa_n], ``x < f (y:int)``),
+          [([fa_y], ``SUC (SUC x) < zero ==> x < f (y:int)``)]),
+
+         ("Q.SPEC_THEN 3", FIRST_X_ASSUM (Q.SPEC_THEN `SUC j` MP_TAC),
+          ([fa_y, fa_i, fa_n], ``x < f (y:int)``),
+          [([fa_y, fa_n], ``Q (int_plus1 j) ==> x < f (y:int)``)]),
+
+         ("Q.SPECL_THEN 1", FIRST_X_ASSUM (Q.SPECL_THEN [`SUC x`, `x`] MP_TAC),
+          ([fa_y, fa_n, ``!j k. j < k``], ``x < x``),
+          [([fa_y, fa_n], ``SUC x < x ==> x < x``)]),
+
+         ("Q.SPECL_THEN 2", FIRST_X_ASSUM (Q.SPECL_THEN [`SUC x`, `x`] MP_TAC),
+          ([fa_y, fa_n, fa_i, ``!j k. j < k``], ``x < x``),
+          [([fa_y, fa_n, fa_i], ``SUC x < x ==> x < x``)]),
+
+         ("Q.SPECL_THEN 3", FIRST_X_ASSUM (Q.SPECL_THEN [`SUC x`, `x`] MP_TAC),
+          ([fa_y, fa_n, fa_i, ``!j (k:int). j < f k``, ``!a b. a < b``],
+           ``x < x``),
+          [([fa_y, fa_n, fa_i, ``!j (k:int). j < f k``],
+           ``SUC x < x ==> x < x``)]),
+
+         ("Q.SPECL_THEN 4", FIRST_X_ASSUM (Q.SPECL_THEN [`SUC x`, `j`] MP_TAC),
+          ([fa_y, fa_n, fa_i, ``!j (k:int). j < f k``, ``!a b. a < b``],
+           ``x < x``),
+          [([fa_y, fa_n, fa_i, ``!a b. a < b``],
+           ``SUC x < f (j:int) ==> x < x``)])
+    ]
+
 val _ = Process.exit Process.success;

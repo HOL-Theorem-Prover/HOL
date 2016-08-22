@@ -763,13 +763,21 @@ fun parse_with_goal t (asms, g) =
       Parse.parse_in_context ctxt t
    end
 
-val Q_TAC = fn tac => fn g => W (tac o parse_with_goal g)
-
-fun QTY_TAC ty tac q (g as (asl,w)) =
+fun Q_TAC0 tyopt (tac : term -> tactic) q (g as (asl,w)) =
   let
     val ctxt = free_varsl (w::asl)
+    val s = TermParse.ctxt_termS (Parse.term_grammar()) (Parse.type_grammar())
+                                 tyopt ctxt q
   in
-    tac (Parse.typed_parse_in_context ty ctxt q) g
+    case seq.cases s of
+        NONE => raise ERR "Q_TAC" "No parse for quotation"
+      | SOME _ =>
+        (case seq.cases (seq.mapPartial (fn t => total (tac t) g) s) of
+             NONE => raise ERR "Q_TAC" "No parse of quotation leads to success"
+           | SOME (res,_) => res)
   end
+
+val Q_TAC = Q_TAC0 NONE
+fun QTY_TAC ty = Q_TAC0 (SOME ty)
 
 end (* Tactical *)

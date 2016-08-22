@@ -87,27 +87,15 @@ val ISPECL = Drule.ISPECL o map ptm;
 val ID_SPEC = W(Thm.SPEC o (fst o dest_forall o concl))
 
 fun SPEC_THEN q ttac thm (g as (asl,w)) = let
-  val ctxt = free_varsl (w::asl)
   val (Bvar,_) = dest_forall (concl thm)
-  val t = ptm_with_ctxtty' ctxt (type_of Bvar) q
 in
-  ttac (Thm.SPEC t thm) g
+  QTY_TAC (type_of Bvar) (fn t => ttac (Thm.SPEC t thm)) q g
 end
 
-fun SPECL_THEN ql ttac thm (g as (asl,w)) = let
-  val ctxt = free_varsl (w::asl)
-  fun spec ql thm =
-    case ql of
-      [] => thm
-    | (q::qs) => let
-        val (Bvar,_) = dest_forall (concl thm)
-        val t = ptm_with_ctxtty' ctxt (type_of Bvar) q
-      in
-        spec qs (Thm.SPEC t thm)
-      end
-in
-  ttac (spec ql thm) g
-end
+fun SPECL_THEN ql =
+  case ql of
+      [] => ALL_THEN
+    | q::qs => SPEC_THEN q THEN_TCL SPECL_THEN qs
 
 fun ISPEC_THEN q ttac thm (g as (asl,w)) = let
   val ctxt = free_varsl (w::asl)
