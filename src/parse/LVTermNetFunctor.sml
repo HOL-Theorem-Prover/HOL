@@ -76,7 +76,7 @@ fun ndest_term (fvs, tm) = let
   val args' = map (fn t => (fvs, t)) args
 in
   case dest_term f of
-    VAR(s, ty) => if mem tm fvs then (LV (s, length args), args')
+    VAR(s, ty) => if mem f fvs then (LV (s, length args), args')
                   else (V (length args), args')
   | LAMB(bv, bod) => (Lam (length args), (subtract fvs [bv], bod) :: args')
   | CONST{Name,Thy,Ty} => (C ({Name=Name,Thy=Thy}, length args), args')
@@ -179,7 +179,7 @@ fun match ((net,sz), tm) = let
                 case Binarymap.peek (d, V n) of
                     NONE => recurse acc (n - 1)
                   | SOME m => recurse
-                                (trav acc (m, List.drop(rest, restn - n)))
+                                (trav acc (m, List.drop(rest, restn - n) @ ks0))
                                 (n - 1)
           in
             recurse varresult (length (#2 (strip_comb k)))

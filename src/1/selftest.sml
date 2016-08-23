@@ -762,17 +762,27 @@ val _ = hide "R"
 
 fun dolvtests(modname,empty,insert,match) = let
   val n = List.foldl (fn ((k,v),acc) => insert (acc,k,v)) empty
-                     [(([],``R x y:bool``), 1)]
+                     [(([],``R x y:bool``), 1),
+                      (([], ``!s:'a. f s = T``), 2),
+                      (([``f:'a -> bool``], ``!s:'a. f s = T``), 3),
+                      (([``f:'a -> bool``], ``f (s:'a) = T``), 4)
+                     ]
   fun test (nm, pat, expected) =
     let
       val _ = tprint (modname ^ ": " ^ nm)
       val result = List.map snd (match (n,pat))
+                   handle e => die ("FAILED\n  EXN "^General.exnMessage e)
     in
       if result = expected then OK() else die "FAILED"
     end
 in
   List.app test [("exact", ``f x y : bool``, [1]),
-                 ("one extra", ``f a x y : bool``, [1])]
+                 ("one extra", ``f a x y : bool``, [1]),
+                 ("lvar 1", ``g (z:'a) = T``, [1]),
+                 ("lvar 2", ``f (z:'a) = T``, [4,1]),
+                 ("quant eq 1", ``!z:'a. g z = T``, [2]),
+                 ("quant lv match", ``!z:'a. f z = T``, [3,2])
+                ]
 end
 
 val _ = dolvtests("LVTermNet", LVTermNet.empty, LVTermNet.insert,
