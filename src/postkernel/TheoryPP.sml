@@ -131,6 +131,9 @@ fun pp_sig pp_thm info_record ppstrm = let
        else with_flag(Globals.show_tags,true)
              (with_flag(Globals.show_assums, true) pp_thm) th;
      end_block())
+      handle e => (print ("Failed to print theorem in theory export: "^s^"\n");
+                   print (General.exnMessage e ^ "\n");
+                   raise e)
   fun pr_thms _ [] = ()
     | pr_thms heading plist =
        ( begin_block CONSISTENT 0;
