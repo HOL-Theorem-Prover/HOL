@@ -127,6 +127,7 @@ val sup_gamma =  U 0x02E0
 
 (* subscripts *)
 val sub_plus =   U 0x208A
+val sub_r =      U 0x1D63
 
 (* arithmetic *)
 val leq =   U 0x2264

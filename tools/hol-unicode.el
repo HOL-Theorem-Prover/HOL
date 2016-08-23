@@ -82,6 +82,7 @@
 (define-key hol-unicode-subscript-map "8" "₈")
 (define-key hol-unicode-subscript-map "9" "₉")
 (define-key hol-unicode-subscript-map "0" "₀")
+(define-key hol-unicode-subscript-map "r" "ᵣ")
 (define-key hol-unicode-subscript-map "t" "ₜ")
 
 (define-key hol-unicode-superscript-map "1" "¹")

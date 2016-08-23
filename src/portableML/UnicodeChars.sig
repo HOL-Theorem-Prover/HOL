@@ -63,6 +63,7 @@ sig
 
   (* subscripts *)
   val sub_plus : string
+  val sub_r : string
 
   (* arrows *)
   val rightarrow : string
