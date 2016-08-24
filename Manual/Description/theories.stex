@@ -4265,7 +4265,7 @@ infix), inversion (\holtxt{inv}, or $\_^{\mathsf{T}}$ (suffix superscript `T')),
    EMPTY_REL_DEF
      |- !x y. EMPTY_REL x y = F
    O_DEF
-     |- $O R1 R2 x z = ?y. R1 x y /\ R2 y z
+     |- $O R1 R2 x z = ?y. R2 x y /\ R1 y z
    inv_DEF
      |- inv R x y = R y x
    RDOM_DEF
