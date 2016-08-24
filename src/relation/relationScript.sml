@@ -944,6 +944,10 @@ val EMPTY_REL_DEF =
 Q.new_definition
         ("EMPTY_REL_DEF", `EMPTY_REL (x:'a) (y:'a) = F`);
 val _ = export_rewrites ["EMPTY_REL_DEF"]
+val _ = overload_on ("REMPTY", ``EMPTY_REL``)
+val _ = Unicode.unicode_version {u = UnicodeChars.emptyset ^ UnicodeChars.sub_r,
+                                 tmnm = "EMPTY_REL"}
+
 
 val WF_Empty =
 Q.store_thm
@@ -1539,7 +1543,13 @@ end;
 
 val inv_DEF = new_definition(
   "inv_DEF",
-  ``inv (R:'a->'a->bool) x y = R y x``);
+  ``inv (R:'a->'b->bool) x y = R y x``);
+(* superscript suffix T, for "transpose" *)
+val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                   fixity = Suffix 2100,
+                   paren_style = OnlyIfNecessary,
+                   pp_elements = [TOK (UTF8.chr 0x1D40)],
+                   term_name = "inv"}
 
 val inv_inv = store_thm(
   "inv_inv",
@@ -1697,6 +1707,9 @@ val O_DEF = new_definition(
   "O_DEF",
   ``(O) R1 R2 (x:'g) (z:'k) = ?y:'h. R2 x y /\ R1 y z``);
 val _ = set_fixity "O" (Infixr 800)
+val _ = Unicode.unicode_version {u = UTF8.chr 0x2218 ^ UnicodeChars.sub_r,
+                                 tmnm = "O"}
+
 
 val inv_O = store_thm(
   "inv_O",
@@ -1712,6 +1725,8 @@ val RSUBSET = new_definition(
   ``(RSUBSET) R1 R2 = !x y. R1 x y ==> R2 x y``);
 val _ = set_fixity "RSUBSET" (Infix(NONASSOC, 450));
 val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="RSUBSET"},name=(["Relation"],"subrelation")}
+val _ = Unicode.unicode_version {u = UnicodeChars.subset ^ UnicodeChars.sub_r,
+                                 tmnm = "RSUBSET"}
 
 val irreflexive_RSUBSET = store_thm(
   "irreflexive_RSUBSET",
@@ -1738,6 +1753,9 @@ val RUNION_ASSOC = store_thm(
   ``R1 RUNION (R2 RUNION R3) = (R1 RUNION R2) RUNION R3``,
   SRW_TAC [][RUNION, FUN_EQ_THM] THEN PROVE_TAC []);
 
+val _ = Unicode.unicode_version {u = UnicodeChars.union ^ UnicodeChars.sub_r,
+                                 tmnm = "RUNION"}
+
 (* ----------------------------------------------------------------------
     relational intersection
    ---------------------------------------------------------------------- *)
@@ -1747,6 +1765,8 @@ val RINTER = new_definition(
   ``(RINTER) R1 R2 x y = R1 x y /\ R2 x y``);
 val _ = set_fixity "RINTER" (Infixl 600)
 val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="RINTER"},name=(["Relation"],"intersect")}
+val _ = Unicode.unicode_version {u = UnicodeChars.inter ^ UnicodeChars.sub_r,
+                                 tmnm = "RINTER"}
 
 val RINTER_COMM = store_thm(
   "RINTER_COMM",
@@ -2052,6 +2072,10 @@ val RUNIV = new_definition(
   ``RUNIV x y = T``);
 val _ = export_rewrites ["RUNIV"]
 val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="RUNIV"},name=(["Relation"],"universe")}
+val _ = Unicode.unicode_version {
+  u = UnicodeChars.universal_set ^ UnicodeChars.sub_r,
+  tmnm = "RUNIV"}
+
 
 val RUNIV_SUBSET = store_thm(
   "RUNIV_SUBSET",
@@ -2059,8 +2083,6 @@ val RUNIV_SUBSET = store_thm(
     (R RSUBSET RUNIV)``,
   SRW_TAC [][RSUBSET, FUN_EQ_THM]);
 val _ = export_rewrites ["RUNIV_SUBSET"]
-
-val _ = overload_on ("REMPTY", ``EMPTY_REL``)
 
 val REMPTY_SUBSET = store_thm(
   "REMPTY_SUBSET",

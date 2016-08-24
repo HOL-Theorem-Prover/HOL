@@ -4254,9 +4254,10 @@ The following basic properties of relations are defined.
 
 \paragraph{Basic operations}
 
+\newcommand{\subr}{\sb{\mathsf{r}}}
 The following basic operations on relations are defined: the empty
-relation (\holtxt{EMPTY\_REL}), relation composition (\holtxt{O},
-infix), inversion (\holtxt{inv}), domain (\holtxt{RDOM}), and range
+relation (\holtxt{EMPTY\_REL}, or $\emptyset\subr$), relation composition (\holtxt{O}, or $\circ\subr$,
+infix), inversion (\holtxt{inv}, or $\_^{\mathsf{T}}$ (suffix superscript `T')), domain (\holtxt{RDOM}), and range
 (\holtxt{RRANGE}).
 %
 \begin{hol}
@@ -4275,9 +4276,9 @@ infix), inversion (\holtxt{inv}), domain (\holtxt{RDOM}), and range
 \end{hol}
 
 \noindent Set operations lifted to work on relations include subset
-(\holtxt{RSUBSET}, infix), union (\holtxt{RUNION}, infix),
-intersection (\holtxt{RINTER}, infix), complement (\holtxt{RCOMPL}),
-and universe (\holtxt{RUNIV}).
+(\holtxt{RSUBSET}, or $\subseteq\subr$, infix), union (\holtxt{RUNION}, or $\cup\subr$, infix),
+intersection (\holtxt{RINTER}, or $\cap\subr$, infix), complement (\holtxt{RCOMPL}),
+and universe (\holtxt{RUNIV}, or $\mathbb{U}\subr$).
 %
 \begin{hol}
 \begin{verbatim}
