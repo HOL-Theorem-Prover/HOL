@@ -1952,7 +1952,7 @@ local
     SIMP_TAC std_ss [w2n_n2w, bitTheory.MOD_LEQ, ZERO_LT_dimword])
 
   val word_extract_le = Q.prove(
-    `!a:'a word h l. w2n ((h >< l) a) <= w2n a`,
+    `!a:'a word h l. w2n ((h >< l) a : 'b word) <= w2n a`,
     Cases THEN SRW_TAC [] [word_extract_n2w]
     THEN SRW_TAC [] [bitTheory.BITS_COMP_THM2, MOD_DIMINDEX]
     THEN SRW_TAC [] [arithmeticTheory.MIN_DEF, bitTheory.BITS_LEQ])
@@ -2012,21 +2012,21 @@ local
     THEN SRW_TAC [numSimps.ARITH_ss] [])
 
   val word_extract_order1 = Q.prove(
-    `!a b h l. w2n a < b ==> w2n ((h >< l) a) < b`,
+    `!a : 'a word b h l. w2n a < b ==> w2n ((h >< l) a : 'b word) < b`,
     REPEAT STRIP_TAC
-    THEN Q.SPECL_THEN [`w2n ((h >< l) a)`, `w2n a`]
+    THEN Q.SPECL_THEN [`w2n ((h >< l) a : 'b word)`, `w2n a`]
            MATCH_MP_TAC arithmeticTheory.LESS_EQ_LESS_TRANS
     THEN ASM_REWRITE_TAC [word_extract_le])
 
   val word_extract_order2 = Q.prove(
-    `!a b h l. w2n a <= b ==> w2n ((h >< l) a) <= b`,
+    `!a : 'a word b h l. w2n a <= b ==> w2n ((h >< l) a : 'b word) <= b`,
     REPEAT STRIP_TAC
-    THEN Q.SPECL_THEN [`w2n ((h >< l) a)`, `w2n a`]
+    THEN Q.SPECL_THEN [`w2n ((h >< l) a : 'b word)`, `w2n a`]
            MATCH_MP_TAC arithmeticTheory.LESS_EQ_TRANS
     THEN ASM_REWRITE_TAC [word_extract_le])
 
   val word_add_order1 = Q.prove(
-    `!a b m n. w2n a <= m /\ w2n b <= n ==> w2n (a + b) <= m + n`,
+    `!a : 'a word b m n. w2n a <= m /\ w2n b <= n ==> w2n (a + b) <= m + n`,
     REPEAT STRIP_TAC
     THEN `w2n a + w2n b <= m + n` by DECIDE_TAC
     THEN Q.SPECL_THEN [`w2n (a + b)`, `w2n a + w2n b`]
@@ -2034,7 +2034,7 @@ local
     THEN ASM_REWRITE_TAC [word_add_le])
 
   val word_add_order2 = Q.prove(
-    `!a b m n. w2n a <= m /\ w2n b < n ==> w2n (a + b) < m + n`,
+    `!a : 'a word b m n. w2n a <= m /\ w2n b < n ==> w2n (a + b) < m + n`,
     REPEAT STRIP_TAC
     THEN `w2n a + w2n b < m + n` by DECIDE_TAC
     THEN Q.SPECL_THEN [`w2n (a + b)`, `w2n a + w2n b`]
@@ -2042,7 +2042,7 @@ local
     THEN ASM_REWRITE_TAC [word_add_le])
 
   val word_add_order3 = Q.prove(
-    `!a b m n. w2n a < m /\ w2n b <= n ==> w2n (a + b) < m + n`,
+    `!a : 'a word b m n. w2n a < m /\ w2n b <= n ==> w2n (a + b) < m + n`,
     REPEAT STRIP_TAC
     THEN `w2n a + w2n b < m + n` by DECIDE_TAC
     THEN Q.SPECL_THEN [`w2n (a + b)`, `w2n a + w2n b`]
@@ -2050,7 +2050,7 @@ local
     THEN ASM_REWRITE_TAC [word_add_le])
 
   val word_add_order4 = Q.prove(
-    `!a b m n. w2n a < m /\ w2n b < n ==> w2n (a + b) < m + n - 1`,
+    `!a : 'a word b m n. w2n a < m /\ w2n b < n ==> w2n (a + b) < m + n - 1`,
     REPEAT STRIP_TAC
     THEN `w2n a + w2n b < m + n - 1` by DECIDE_TAC
     THEN Q.SPECL_THEN [`w2n (a + b)`, `w2n a + w2n b`]
@@ -2058,7 +2058,7 @@ local
     THEN ASM_REWRITE_TAC [word_add_le])
 
   val word_mul_order1 = Q.prove(
-    `!a b m n. w2n a <= m /\ w2n b <= n ==> w2n (a * b) <= m * n`,
+    `!a : 'a word b m n. w2n a <= m /\ w2n b <= n ==> w2n (a * b) <= m * n`,
     REPEAT STRIP_TAC
     THEN `w2n a * w2n b <= m * n`
       by ASM_SIMP_TAC std_ss [arithmeticTheory.LESS_MONO_MULT2]
@@ -2067,7 +2067,7 @@ local
     THEN ASM_REWRITE_TAC [word_mul_le])
 
   val word_mul_order2 = Q.prove(
-    `!a b m n. w2n a <= m /\ w2n b < n ==> w2n (a * b) <= m * n`,
+    `!a : 'a word b m n. w2n a <= m /\ w2n b < n ==> w2n (a * b) <= m * n`,
     REPEAT STRIP_TAC
     THEN `w2n a * w2n b <= m * n`
       by ASM_SIMP_TAC arith_ss [arithmeticTheory.LESS_MONO_MULT2]
@@ -2076,7 +2076,7 @@ local
     THEN ASM_SIMP_TAC arith_ss [word_mul_le])
 
   val word_mul_order3 = Q.prove(
-    `!a b m n. w2n a < m /\ w2n b <= n ==> w2n (a * b) <= m * n`,
+    `!a : 'a word b m n. w2n a < m /\ w2n b <= n ==> w2n (a * b) <= m * n`,
     REPEAT STRIP_TAC
     THEN `w2n a * w2n b <= m * n`
       by ASM_SIMP_TAC arith_ss [arithmeticTheory.LESS_MONO_MULT2]
@@ -2085,7 +2085,7 @@ local
     THEN ASM_SIMP_TAC arith_ss [word_mul_le])
 
   val word_mul_order4 = Q.prove(
-    `!a b m n. w2n a < m /\ w2n b < n ==> w2n (a * b) <= m * n`,
+    `!a : 'a word b m n. w2n a < m /\ w2n b < n ==> w2n (a * b) <= m * n`,
     REPEAT STRIP_TAC
     THEN `w2n a * w2n b <= m * n`
       by ASM_SIMP_TAC arith_ss [arithmeticTheory.LESS_MONO_MULT2]
