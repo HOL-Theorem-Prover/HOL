@@ -428,7 +428,7 @@ val EQ_LENGTH_SNOC_INDUCT_TAC =
 val FOLDR_CONV  =
  let val (bthm,ithm) = CONJ_PAIR (rich_listTheory.FOLDR) in
   fn conv => fn tm =>
-    let val (f,e,l) = listSyntax.dest_foldl tm
+    let val (f,e,l) = listSyntax.dest_foldr tm
         val ithm' = ISPECL[f,e] ithm
         val (els,lty) =  (dest_list l)
         fun itfn a th =
