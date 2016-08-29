@@ -69,8 +69,12 @@ val _ = Lib.appi (fn i => fn t =>
 val _ = test0 "FOLDR_CONV 1" Term.compare term_to_string
               (FOLDR_CONV ALL_CONV)
               (``FOLDR f 0 [1;2;3;x]``, SOME ``f 1 (f 2 (f 3 (f x 0)))``)
+val _ = test0 "FOLDR_CONV 2" Term.compare term_to_string
+              (FOLDR_CONV (TRY_CONV reduceLib.ADD_CONV))
+              (``FOLDR f (3 + 2) [1 * 4; 3 - 1]``,
+                   SOME ``f (1 * 4) (f (3 - 1) (3 + 2))``)
 val _ = Lib.appi (fn i => fn t =>
-                     test0 ("FOLDR_CONV "^Int.toString (i + 2))
+                     test0 ("FOLDR_CONV "^Int.toString (i + 3))
                            Term.compare term_to_string
                            (FOLDR_CONV numLib.REDUCE_CONV) t)
                  [(``FOLDR (+) 0 [0;1;2;3]``, SOME ``6``),
