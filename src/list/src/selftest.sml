@@ -3,18 +3,21 @@ open ListConv1
 
 open testutils
 
+datatype 'a exnsum = Some of 'a | Exn of exn
+fun total f x = Some (f x) handle Interrupt => raise Interrupt | e => Exn e
+
 fun test0 nm cmp pr f (x, expected_opt) = let
   val _ = tprint (StringCvt.padRight #" " 20 nm ^ pr x)
 in
-  case (Lib.total f x, expected_opt) of
-      (SOME result, SOME expected) =>
+  case (total f x, expected_opt) of
+      (Some result, SOME expected) =>
         if cmp(rhs (concl result),expected) <> EQUAL then die "FAILED - BAD RHS"
         else if not (null (hyp result)) then die "FAILED - HYPS"
         else if cmp(lhs (concl result),x) <> EQUAL then die "FAILED - BAD LHS"
         else OK()
-    | (SOME _, NONE) => die "FAILED - didn't raise EXN"
-    | (NONE, SOME _) => die "FAILED - EXN"
-    | (NONE, NONE) => OK()
+    | (Some _, NONE) => die "FAILED - didn't raise EXN"
+    | (Exn e, SOME _) => die ("FAILED\n  EXN: "^General.exnMessage e)
+    | (Exn _, NONE) => OK()
 end
 
 fun test nm cmp pr f (x, e) = test0 nm cmp pr f (x, SOME e)
@@ -62,3 +65,14 @@ val _ = Lib.appi (fn i => fn t =>
                      SOME ``[1+2;3;3*8;1+21;3;4]``),
                   (``FLAT ([]::(t:'a list list))``, NONE)
                  ]
+
+val _ = test0 "FOLDR_CONV 1" Term.compare term_to_string
+              (FOLDR_CONV ALL_CONV)
+              (``FOLDR f 0 [1;2;3;x]``, SOME ``f 1 (f 2 (f 3 (f x 0)))``)
+val _ = Lib.appi (fn i => fn t =>
+                     test0 ("FOLDR_CONV "^Int.toString (i + 2))
+                           Term.compare term_to_string
+                           (FOLDR_CONV numLib.REDUCE_CONV) t)
+                 [(``FOLDR (+) 0 [0;1;2;3]``, SOME ``6``),
+                  (``FOLDR (-) 0 [3;2;1]``, SOME ``2``),
+                  (``FOLDR $* 1 []``, SOME ``1``)]

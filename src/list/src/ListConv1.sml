@@ -437,7 +437,7 @@ val FOLDR_CONV  =
                         | _ => raise ERR "FOLDR_CONV" ""
               val lem = SUBS [th](SPECL[a,l'] ithm')
           in
-            TRANS lem (conv (rhs (concl lem)))
+            TRANS lem (QCONV conv (rhs (concl lem)))
           end
     in
         (itlist itfn els (ISPECL [f,e] bthm))
