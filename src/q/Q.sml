@@ -13,6 +13,18 @@ type tyquote = hol_type quotation
 val ERR = mk_HOL_ERR "Q";
 
 val ptm = Parse.Term
+fun ptmk fnm f q =
+  let
+    val t_s = TermParse.termS (Parse.term_grammar()) (Parse.type_grammar()) q
+  in
+    case seq.cases t_s of
+        NONE => raise ERR fnm "Quotation doesn't have any parses"
+      | SOME _ => (case seq.cases (seq.mapPartial (fn t => total f t) t_s) of
+                       NONE => raise ERR fnm
+                                     "No parse of quotation leads to success"
+                     | SOME (res, _) => res)
+  end
+
 val pty = Parse.Type;
 val ty_antiq = Parse.ty_antiq;
 
@@ -97,19 +109,37 @@ fun SPECL_THEN ql =
       [] => ALL_THEN
     | q::qs => SPEC_THEN q THEN_TCL SPECL_THEN qs
 
-fun ISPEC_THEN q ttac thm (g as (asl,w)) = let
-  val ctxt = free_varsl (w::asl)
-  val t = Parse.parse_in_context ctxt q
-in
-  ttac (Drule.ISPEC t thm) g
-end
+fun ISPEC_THEN q ttac thm g = Q_TAC (fn t => ttac (Drule.ISPEC t thm)) q g
 
-fun ISPECL_THEN ql ttac thm (g as (asl, w)) = let
-  val ctxt = free_varsl (w::asl)
-  val ts = map (Parse.parse_in_context ctxt) ql
-in
-  ttac (Drule.ISPECL ts thm) g
-end
+fun goal_ctxt (asl,w) = free_varsl (w::asl)
+
+fun seq_mmap mf list =
+  case list of
+      [] => seq.result []
+    | x::xs => seq.bind (mf x)
+                        (fn x' =>
+                            seq.bind (seq_mmap mf xs)
+                                     (fn xs' => seq.result (x'::xs')))
+
+fun ISPECL_THEN ql ttac thm g =
+  let
+    open Parse TermParse
+    val ctxt = goal_ctxt g
+    fun tf q = ctxt_termS (term_grammar()) (type_grammar()) NONE ctxt q
+    val tl_s = seq_mmap tf ql
+  in
+    case seq.cases tl_s of
+        NONE => raise ERR "ISPECL_THEN" "No parse for quotation list"
+      | SOME _ =>
+        let
+          fun f tl = SOME (ttac (Drule.ISPECL tl thm) g)
+                     handle HOL_ERR _ => NONE
+        in
+          case seq.cases (seq.mapPartial f tl_s) of
+              NONE => raise ERR "ISPECL_THEN" "No parse leads to success"
+            | SOME (res, _) => res
+        end
+  end
 
 fun SPEC_TAC (q1,q2) (g as (asl,w)) = let
   val ctxt = free_varsl (w::asl)
@@ -138,11 +168,11 @@ fun EXISTS(q1,q2) thm =
  end;
 
 fun EXISTS_TAC q (g as (asl, w)) =
- let val ctxt = free_varsl (w::asl)
-     val exvartype = type_of (fst (dest_exists w))
-       handle HOL_ERR _ => raise ERR "EXISTS_TAC" "goal not an exists"
+ let
+   val exvartype = type_of (fst (dest_exists w))
+           handle HOL_ERR _ => raise ERR "EXISTS_TAC" "goal not an exists"
  in
-  Tactic.EXISTS_TAC (ptm_with_ctxtty' ctxt exvartype q) g
+   QTY_TAC exvartype (fn t => Tactic.EXISTS_TAC t) q g
  end
 
 fun LIST_EXISTS_TAC qL = EVERY (map EXISTS_TAC qL)
@@ -172,9 +202,8 @@ fun X_CHOOSE_THEN q ttac thm (g as (asl,w)) =
  let val ty = type_of (fst (dest_exists (concl thm)))
        handle HOL_ERR _ =>
           raise ERR "X_CHOOSE_THEN" "provided thm not an exists"
-     val ctxt = free_varsl (w::asl)
  in
-   Thm_cont.X_CHOOSE_THEN (ptm_with_ctxtty' ctxt ty q) ttac thm g
+   QTY_TAC ty (fn t => Thm_cont.X_CHOOSE_THEN t ttac thm) q g
  end
 
 val X_CHOOSE_TAC = C X_CHOOSE_THEN Tactic.ASSUME_TAC;
@@ -197,18 +226,13 @@ end;
 fun PAT_ASSUM q ttac = QTY_TAC bool (fn t => Tactical.PAT_ASSUM t ttac) q
 fun PAT_X_ASSUM q ttac = QTY_TAC bool (fn t => Tactical.PAT_X_ASSUM t ttac) q
 
-fun SUBGOAL_THEN q ttac (g as (asl,w)) = let
-  val ctxt = free_varsl (w::asl)
-in
-  Tactical.SUBGOAL_THEN (ptm_with_ctxtty' ctxt Type.bool q) ttac g
-end
+fun SUBGOAL_THEN q ttac =
+  QTY_TAC Type.bool (fn t => Tactical.SUBGOAL_THEN t ttac) q
 
-fun UNDISCH_TAC q (g as (asl, w)) = let
-  val ctxt = free_varsl (w::asl)
-in Tactic.UNDISCH_TAC (ptm_with_ctxtty' ctxt Type.bool q) g
-end
+val UNDISCH_TAC = QTY_TAC Type.bool Tactic.UNDISCH_TAC
 
-fun UNDISCH_THEN q ttac = UNDISCH_TAC q THEN DISCH_THEN ttac;
+fun UNDISCH_THEN q ttac =
+  QTY_TAC Type.bool (fn t => Tactic.UNDISCH_TAC t THEN DISCH_THEN ttac) q
 
 fun hdtm_assum q ttac = Q_TAC (C Tactical.hdtm_assum ttac) q
 fun hdtm_x_assum q ttac = Q_TAC (C Tactical.hdtm_x_assum ttac) q
@@ -216,10 +240,10 @@ fun hdtm_x_assum q ttac = Q_TAC (C Tactical.hdtm_x_assum ttac) q
 val ASSUME = ASSUME o btm
 
 fun X_GEN_TAC q (g as (asl, w)) =
- let val ctxt = free_varsl (w::asl)
-     val ty = type_of (fst(dest_forall w))
+ let
+   val ty = type_of (fst(dest_forall w))
  in
-   Tactic.X_GEN_TAC (ptm_with_ctxtty' ctxt ty q) g
+   QTY_TAC ty Tactic.X_GEN_TAC q g
  end
 
 fun X_FUN_EQ_CONV q tm =
@@ -261,10 +285,7 @@ fun AP_THM th q =
    Thm.AP_THM th (ptm_with_ctxtty ctxt ty q)
  end;
 
-fun ASM_CASES_TAC q (g as (asl,w)) =
- let val ctxt = free_varsl (w::asl)
- in Tactic.ASM_CASES_TAC (ptm_with_ctxtty' ctxt bool q) g
- end
+val ASM_CASES_TAC = QTY_TAC bool Tactic.ASM_CASES_TAC
 
 fun AC_CONV p = Conv.AC_CONV p o ptm;
 
