@@ -479,7 +479,8 @@ metis_tac[MAP_KEYS_def,INJ_I,SUBSET_UNIV,combinTheory.I_THM])
 
 val alist_to_fmap_MAP_values = store_thm(
 "alist_to_fmap_MAP_values",
-``!f al. alist_to_fmap (MAP (\(k,v). (k, f v)) al) = f o_f (alist_to_fmap al)``,
+``!f (al:('c,'a) alist).
+   alist_to_fmap (MAP (\(k,v). (k, f v)) al) = f o_f (alist_to_fmap al)``,
 rw[] >>
 Q.ISPECL_THEN [`I:'c->'c`,`f`,`al`] match_mp_tac alist_to_fmap_MAP_matchable >>
 SRW_TAC[][INJ_DEF,SUBSET_DEF,MAP_KEYS_I])
