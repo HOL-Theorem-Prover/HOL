@@ -1,4 +1,5 @@
 open HolKernel boolLib bossLib Parse finite_mapTheory listTheory pred_setTheory sortingTheory
+open pairTheory boolSimps relationTheory
 
 val _ = new_theory "alist";
 
@@ -401,7 +402,6 @@ metis_tac[PERM_TRANS,PERM_SYM,ALL_DISTINCT_PERM,PERM_MAP,alist_to_fmap_to_alist_
 (*---------------------------------------------------------------------------*)
 (* Various lemmas from the CakeML project https://cakeml.org                 *)
 (*---------------------------------------------------------------------------*)
-local open pairTheory boolSimps sortingTheory relationTheory in
 
 val ALOOKUP_ALL_DISTINCT_EL = store_thm("ALOOKUP_ALL_DISTINCT_EL",
   ``!ls n. n < LENGTH ls /\ ALL_DISTINCT (MAP FST ls) ==>
@@ -601,8 +601,5 @@ val ALOOKUP_ALL_DISTINCT_PERM_same = store_thm("ALOOKUP_ALL_DISTINCT_PERM_same",
     metis_tac[ALL_DISTINCT_PERM]) >>
   imp_res_tac ALOOKUP_ALL_DISTINCT_MEM >>
   metis_tac[])
-
-end
-(* end CakeML lemmas *)
 
 val _ = export_theory ();
