@@ -75,6 +75,7 @@ const "HOL4.arithmetic.EXP" as "Number.Natural.^"
 const "HOL4.arithmetic.FACT" as "Number.Natural.factorial"
 const "HOL4.arithmetic.BIT1" as "Number.Natural.bit1"
 const "HOL4.arithmetic.ZERO" as "Number.Natural.zero"
+const "HOL4.numeralConv.BIT0" as "Number.Natural.bit0"
 
 type "HOL4.list.list" as "Data.List.list"
 const "HOL4.list.NIL" as "Data.List.[]"
