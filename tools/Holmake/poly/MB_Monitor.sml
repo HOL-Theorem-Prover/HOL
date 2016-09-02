@@ -86,6 +86,8 @@ val cheat_string = "Saved CHEAT _"
 val oracle_string = "Saved ORACLE thm _"
 val used_cheat_string = "(used CHEAT)"
 
+val CLR_EOL = "\027[0K" (* ANSI clear to EOL code *)
+
 fun new {info,warn,genLogFile,keep_going,time_limit} =
   let
     val monitor_map = ref (Binarymap.mkDict String.compare)
@@ -102,7 +104,7 @@ fun new {info,warn,genLogFile,keep_going,time_limit} =
           (Binarymap.app (fn (k,(_,v)) =>
                              print (polish k ^ statusString v))
                          (!monitor_map);
-           print "\027[0K" (* ANSI clear to EOL code *))
+           print CLR_EOL)
         else
           case Binarymap.listItems (!monitor_map) of
               [] => ()
@@ -114,7 +116,7 @@ fun new {info,warn,genLogFile,keep_going,time_limit} =
                        (case stat of
                             Stalling _ => statusString stat
                           | _ => "   "));
-                print "\027[0K" (* ANSI clear to EOL code *)
+                print CLR_EOL
               end
       end
     fun id (s:string) = s
@@ -130,7 +132,7 @@ fun new {info,warn,genLogFile,keep_going,time_limit} =
         | SOME info => f info
     fun taginfo tag colour s =
       info (infopfx ^ StringCvt.padRight #" " (80 - String.size s) tag ^
-            colour s)
+            colour s ^ CLR_EOL)
     fun monitor msg =
       case msg of
           StartJob (_, tag) =>
