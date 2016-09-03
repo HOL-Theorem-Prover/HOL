@@ -6,14 +6,18 @@ val refl_zero = REFL zero_tm
 
 val SUC_0 =
   BIT1_def |> SPEC zero_tm
-  |> CONV_RULE(RAND_CONV(RAND_CONV(REWR_CONV(CONJUNCT1 BIT0_def))))
+  |> CONV_RULE(RAND_CONV(RAND_CONV(REWR_CONV BIT0_0)))
   |> SYM
 
 val SUC_BIT0 = GSYM BIT1_def
 
 val SUC_BIT1 =
-  BIT0_def |> CONJUNCT2 |> GSYM
+  BIT0_SUC |> GSYM
   |> CONV_RULE(QUANT_CONV(LAND_CONV(RAND_CONV(REWR_CONV SUC_BIT0))))
+
+val BIT2_def =
+  numeralTheory.numeral_suc
+  |> CONJUNCTS |> el 2 |> GSYM
 
 fun binc tm = tm |> (
   (REWR_CONV SUC_0) ORELSEC
