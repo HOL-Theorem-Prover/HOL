@@ -1,20 +1,21 @@
-# Writing Large Proofs
+% Writing Large Proofs
 
 The following describes how to write large proofs in HOL4.
 It pays particular attention to writing proofs so that they are robust and easy to maintain.
 It also “pushes” a particular proof style in terms of aspects such as
+
 * tactic selection
 * indentation
 * naming
 
 These aspects are less important, and can be varied, but do result in consistent documents that are easy to work with.
 
-## The Problem
+# The Problem
 
 Bad proofs are a maintenance nightmare.
 For better or worse, maintenance of HOL4 proofs involves interactive replay of proof scripts and a lot of cut-and-paste (for all that this is probably ameliorated through editor-support).
 
-## Basic Commandments
+# Basic Commandments
 
 *   **Don’t try to be too smart**. Overly tricky proofs are hard for future readers to debug.
     Things that probably count as “too smart” include
@@ -60,7 +61,8 @@ For better or worse, maintenance of HOL4 proofs involves interactive replay of p
 2. Use indentation. Don’t put goals *or* tactics onto one long line (see above), and when breaking lines, do it in logically sensible places.
    The HOL pretty-printer does a reasonable indentation job with terms; follow its style.
    For example
-   *    Indent after forall-blocks. Thus
+
+    *    Indent after forall-blocks. Thus
 
             ∀x y z.
                R x y ==> Q (f x) z
@@ -77,7 +79,7 @@ For better or worse, maintenance of HOL4 proofs involves interactive replay of p
 
 # More Important Layout Rules
 
-4.  Indent tactics underneath `THENL` (or `>|`)
+1.  Indent tactics underneath `THENL` (or `>|`)
     Thus
 
         tac >| [
@@ -104,5 +106,26 @@ For better or worse, maintenance of HOL4 proofs involves interactive replay of p
     This is important because it makes it easy for the replayer to find where the tactic blocks are, which is a prerequisite to cutting and pasting.
 
 6.  With large multi-way branching, prefer `>-` (or `THEN1`) to `>|`.
+    *   Because one cannot cut-and-paste into the middle of `>-` blocks, it is reasonable to highlight their presence by putting the `>-` at the start of the line:
+
+            tac1 >> tac2 >> tac3
+            >- ( (* case 1 *) tac4 >> tac5 >> tac6 >>
+                tac7) >>
+            ... rest of proof ...
+
+    *   To make it easier to cut-and-paste over multiple sub-goals, whether from the start, or within a proof, split large conjunctive goals up one conjunct at a time:
+
+            tac >> conj_tac
+            >- ((* conj 1 *) ... tactics
+                ...) >> conj_tac
+            >- ((* conj 2 *) ... tactics
+                ...) >> conj_tac
+            >- ((* conj 3 *) ... tactics
+                ...) >> conj_tac
+            >- ...
+
+        Given this, it is possible to cut-and-paste from the start of the tactic to any of the sub-goals in one fell swoop, and to then move from a completed sub-goal to any of the subsequent sub-goals, again by just selecting one region of text to feed to the HOL process.
+
+7.  Use a semicolon at the end of every declaration. Rationale: if an exception is raised when running the file interactively, previous successful bindings are kept.
 
 # Handling (Generated) Names
