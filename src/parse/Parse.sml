@@ -218,6 +218,16 @@ end
 
 val min_grammars = (type_grammar.min_grammar, term_grammar.min_grammar)
 
+type grammarDB_info = type_grammar.grammar * term_grammar.grammar
+val grammarDB_value =
+    ref (Binarymap.mkDict String.compare :(string,grammarDB_info)Binarymap.dict)
+fun grammarDB s = Binarymap.peek (!grammarDB_value, s)
+fun grammarDB_fold f acc = Binarymap.foldl f acc (!grammarDB_value)
+fun grammarDB_insert (s, i) =
+  grammarDB_value := Binarymap.insert(!grammarDB_value, s, i)
+
+val _ = grammarDB_insert("min", min_grammars)
+
 fun minprint t = let
   fun default t = let
     val (_, baseprinter) =
@@ -1577,6 +1587,10 @@ in
          add_newline();
          add_string (String.concat
              ["val ", thyname, "_grammars = Parse.current_lgrms()"]);
+         add_newline();
+         add_string (String.concat
+             ["val _ = Parse.grammarDB_insert(",Lib.mlquote thyname,",",
+              thyname, "_grammars)"]);
          add_newline();
          add_string "end"; add_newline();
        EB()
