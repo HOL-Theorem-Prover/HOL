@@ -190,6 +190,7 @@ val patterns =
       (``(sw2sw (x:'a word)):'b word``,"WordCastSigned"),
       (``(n:num) + m``,"Plus"),
       (``if b then x else y``,"IfThenElse"),
+      (``word_reverse x``,"WordReverse"),
       (``count_leading_zero_bits (w:'a word)``,"CountLeadingZeroes")];
 
 val last_fail_node_tm = ref T;
