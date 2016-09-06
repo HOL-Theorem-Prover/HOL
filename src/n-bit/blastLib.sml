@@ -785,11 +785,11 @@ local
       SRW_TAC [fcpLib.FCP_ss] [word_L])
 
    val minus1_thm = Q.prove(
-      `-1w = $FCP (K T)`,
+      `-1w : 'a word = $FCP (K T)`,
       SRW_TAC [fcpLib.FCP_ss] [REWRITE_RULE [SYM WORD_NEG_1] word_T])
 
    val w2w_thm = Q.prove(
-      `!w: 'a word. w2w w = FCP i. i < dimindex (:'a) /\ w ' i`,
+      `!w: 'a word. w2w w : 'b word = FCP i. i < dimindex (:'a) /\ w ' i`,
       SRW_TAC [fcpLib.FCP_ss] [w2w])
 
    val sw2sw_thm = Q.prove(

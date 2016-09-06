@@ -203,7 +203,8 @@ val long_term_to_string =
    Lib.with_flag (Globals.linewidth, 1000) Hol_pp.term_to_string
 
 val strings_to_quote =
-   Lib.list_of_singleton o QUOTE o String.concat o Lib.separate "\n"
+   (Lib.list_of_singleton o QUOTE o String.concat o Lib.separate "\n")
+   : string list -> string frag list
 
 val lhsc = boolSyntax.lhs o Thm.concl
 val rhsc = boolSyntax.rhs o Thm.concl
@@ -568,21 +569,21 @@ end
 
 local
    val COND_UPDATE0 = Q.prove(
-      `!b s1 s2. (if b then ((), s1) else ((), s2)) =
-                 ((), if b then s1 else s2)`,
+      `!b s1 : 'a s2.
+        (if b then ((), s1) else ((), s2)) = ((), if b then s1 else s2)`,
       RW_TAC std_ss [])
    val COND_UPDATE1 = Q.prove(
-      `!f b v1 v2 s1 s2.
+      `!f : ('a -> 'b) -> 'c -> 'd b v1 v2 s1 s2.
          (if b then f (K v1) s1 else f (K v2) s2) =
          f (K (if b then v1 else v2)) (if b then s1 else s2)`,
       Cases_on `b` THEN REWRITE_TAC [])
    val COND_UPDATE2 = Q.prove(
-      `(!b a x y f.
+      `(!b a x y f : 'a -> 'b.
          (if b then (a =+ x) f else (a =+ y) f) =
          (a =+ if b then x else y) f) /\
-       (!b a x y f.
+       (!b a y f : 'a -> 'b.
          (if b then f else (a =+ y) f) = (a =+ if b then f a else y) f) /\
-       (!b a x y f.
+       (!b a x f : 'a -> 'b.
          (if b then (a =+ x) f else f) = (a =+ if b then x else f a) f)`,
       REPEAT CONJ_TAC
       THEN Cases
@@ -675,7 +676,7 @@ local
       Conv.REWR_CONV th tm
     end
   val literal_case_rand = Q.prove(
-    `!f x y a b.
+    `!f : 'a -> 'b x : 'c y a b.
        f (literal_case (\v. if v = x then a else b) y) =
        literal_case (\v. if v = x then f a else f b) y`,
     SIMP_TAC std_ss [boolTheory.literal_case_DEF, boolTheory.COND_RAND])
@@ -816,6 +817,7 @@ end
 
     [...] |- a
 *)
+
 local
    val rule =
       Conv.CONV_RULE
