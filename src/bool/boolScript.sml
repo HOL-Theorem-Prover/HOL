@@ -4097,8 +4097,6 @@ val ITSELF_TYPE_DEF = let
 in
   new_type_definition("itself", EQ_MP eq_sym_eq' itself_exists)
 end
-val _ = add_type "itself"
-
 val _ = new_constant("the_value", Type`:'a itself`)
 val _ = add_const "the_value"
 

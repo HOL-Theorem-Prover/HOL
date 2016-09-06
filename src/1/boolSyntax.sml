@@ -307,7 +307,7 @@ fun new_binder_definition (s, t) =
    Definition.new_definition (s, t) before Parse.set_fixity (defname t) Binder
 
 fun new_type_definition (name, inhab_thm) =
-   Definition.new_type_definition (name, inhab_thm) before Parse.add_type name
+   Definition.new_type_definition (name, inhab_thm)
 
 fun new_infix (Name, Ty, Prec) =
    Theory.new_constant (Name, Ty)
