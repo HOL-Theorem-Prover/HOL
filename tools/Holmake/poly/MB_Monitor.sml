@@ -86,8 +86,6 @@ val cheat_string = "Saved CHEAT _"
 val oracle_string = "Saved ORACLE thm _"
 val used_cheat_string = "(used CHEAT)"
 
-val CLR_EOL = "\027[0K" (* ANSI clear to EOL code *)
-
 fun new {info,warn,genLogFile,keep_going,time_limit} =
   let
     val monitor_map = ref (Binarymap.mkDict String.compare)
@@ -132,7 +130,7 @@ fun new {info,warn,genLogFile,keep_going,time_limit} =
           NONE => (warn ("Lost monitor info for "^tag); NONE)
         | SOME info => f info
     fun taginfo tag colour s =
-      info (infopfx ^ StringCvt.padRight #" " (80 - String.size s) tag ^
+      info (infopfx ^ StringCvt.padRight #" " (79 - String.size s) tag ^
             colour s ^ CLR_EOL)
     fun monitor msg =
       case msg of

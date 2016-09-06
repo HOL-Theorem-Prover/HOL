@@ -45,6 +45,9 @@ val boldgreen = checkterm "\027[32m\027[1m"
 val boldyellow = checkterm "\027[33m\027[1m"
 val red = checkterm "\027[31m"
 val dim = checkterm "\027[2m"
+val CLR_EOL = "\027[0K" (* ANSI clear to EOL code *)
+
+
 
 fun realspace_delimited_fields s = let
   open Substring

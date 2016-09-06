@@ -50,6 +50,7 @@ sig
   val boldyellow : string -> string
   val bold : string -> string
   val dim : string -> string
+  val CLR_EOL : string
 
   (* diagnostics/output *)
   type output_functions = {warn : string -> unit,

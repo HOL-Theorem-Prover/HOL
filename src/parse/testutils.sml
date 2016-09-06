@@ -16,7 +16,7 @@ fun crush extra w s =
       UTF8.substring(s,0,w-exsize) ^ extra
   end
 
-fun tprint s = print (crush " ...  " 78 s)
+fun tprint s = print (crush " ...  " 77 s)
 fun checkterm pfx s =
   case OS.Process.getEnv "TERM" of
       NONE => s
