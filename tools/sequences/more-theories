@@ -10,6 +10,7 @@ src/string
 !examples/STE
 src/res_quan/src
 src/quotient/src
+src/hol88
 !src/quotient/examples
 src/finite_map
 !examples/ind_def
@@ -34,7 +35,6 @@ src/emit
 !!src/emit/ML
 !src/emit/theory_tests
 !src/emit/theory_tests1
-src/hol88
 !examples/dev
 !src/quotient/examples/lambda
 !src/quotient/examples/sigma
