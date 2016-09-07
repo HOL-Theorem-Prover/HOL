@@ -284,8 +284,12 @@ struct
   fun execute_cmds mfn cmds wl =
     case cmds of
         [] => wl
-      | KillAll :: rest => killall mfn wl
-      | Kill jk :: rest => killjob mfn jk wl
+      | KillAll :: rest =>
+          wl |> killall mfn
+             |> (fn wl => updateWL wl (U #genjob NoMoreJobs) $$)
+             |> execute_cmds mfn rest
+      | Kill jk :: rest =>
+          wl |> killjob mfn jk |> execute_cmds mfn rest
 
   fun elapsed wj = Time.-(Time.now(), #starttime wj)
 
