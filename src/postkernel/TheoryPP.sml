@@ -452,8 +452,8 @@ in
                                termtable_nm = "tmvector"} tmtable >>
              bind_theorems >> add_newline >>
              dblist() >> add_newline >>
-             pr_psl struct_ps >>
-             pr_thydata name thydata)) >>
+             pr_thydata name thydata >>
+             pr_psl struct_ps)) >>
          add_break(0,0) >>
          add_string "val _ = if !Globals.print_thy_loads then print \
                     \\"done\\n\" else ()" >> add_newline >>
