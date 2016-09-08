@@ -228,6 +228,30 @@ fun grammarDB_insert (s, i) =
 
 val _ = grammarDB_insert("min", min_grammars)
 
+fun merge_grm (gname, (tyG0, tmG0)) (tyG1, tmG1) =
+  (type_grammar.merge_grammars (tyG0, tyG1),
+   term_grammar.merge_grammars (tmG0, tmG1)
+  )
+  handle HOLgrammars.GrammarError s
+   => (Feedback.HOL_WARNING "Parse" "mk_local_grms"
+       (String.concat["Error ", s, " while merging grammar ",
+                      gname, "; ignoring it.\n"])
+      ; (tyG1, tmG1));
+
+fun mk_local_grms [] = raise ERROR "mk_local_grms" "no grammars"
+  | mk_local_grms (gs as (n::t)) =
+    let
+      fun getGrm nm =
+        case grammarDB nm of
+            NONE => raise ERROR "mk_local_grms" ("No grammar for theory: "^nm)
+          | SOME grms => (nm,grms)
+      val grms = map getGrm gs
+      val (ty_grm0,tm_grm0) = itlist merge_grm (tl grms) (#2 (hd grms))
+    in
+      the_lty_grm := ty_grm0;
+      the_ltm_grm := tm_grm0
+    end
+
 fun minprint t = let
   fun default t = let
     val (_, baseprinter) =
@@ -1488,36 +1512,6 @@ in
   the_term_grammar := tmG
 end
 
-fun merge_grm (gname, (tyG0, tmG0)) (tyG1, tmG1) =
-  (type_grammar.merge_grammars (tyG0, tyG1),
-   term_grammar.merge_grammars (tmG0, tmG1)
-  )
-  handle HOLgrammars.GrammarError s
-   => (Feedback.HOL_WARNING "Parse" "mk_local_grms"
-       (String.concat["Error ", s, " while merging grammar ",
-                      gname, "; ignoring it.\n"])
-      ; (tyG1, tmG1));
-
-fun mk_local_grms [] = raise ERROR "mk_local_grms" "no grammars"
-  | mk_local_grms ((n,gg)::t) =
-      let val (ty_grm0,tm_grm0) = itlist merge_grm t gg
-      in the_lty_grm := ty_grm0;
-         the_ltm_grm := tm_grm0
-      end;
-
-fun parent_grammars () = let
-  open Theory
-  fun echo s = (quote s, s)
-  fun grm_string "min" = echo "min_grammars"
-    | grm_string s     = echo (s^"Theory."^s^"_grammars")
-  val ct = current_theory()
-in
-  case parents ct of
-    [] => raise ERROR "parent_grammars"
-                        ("no parents found for theory "^quote ct)
-  | plist => map grm_string plist
- end;
-
 local fun sig_addn s = String.concat
        ["val ", s, "_grammars : type_grammar.grammar * term_grammar.grammar"]
       open Portable
@@ -1555,12 +1549,6 @@ in
                 add_string f; add_break(1,0);
                 B 0; add_string x;  (* can be more fancy *)
                 EB(); EB())
-         fun pp_pair f1 f2 (x,y) =
-              (B 0; add_string"(";
-                    B 0; f1 x;
-                         add_string",";add_break(0,0);
-                         f2 y;
-                    EB(); add_string")"; EB())
          val (names,rules) = partition (equal"reveal" o #1)
                                 (List.rev(!grm_updates))
          val reveals = map #2 names
@@ -1574,9 +1562,10 @@ in
          add_newline();
          add_string "in"; add_newline();
          add_string "val _ = mk_local_grms [";
-             IB 0; pr_list (pp_pair add_string add_string)
-                          (fn () => add_string ",")
-                          (fn () => add_break(1,0)) (parent_grammars());
+             IB 0; pr_list (add_string o quote)
+                           (fn () => add_string ",")
+                           (fn () => add_break(1,0))
+                           (parents (current_theory()));
              EB();
          add_string "]"; add_newline();
          B 10; add_string "val _ = List.app (update_grms reveal)";

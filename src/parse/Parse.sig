@@ -224,8 +224,7 @@ signature Parse = sig
 
   val update_grms   : ('a -> unit) -> 'a -> unit
   val pending_updates : unit -> (string * string * term option) list
-  val mk_local_grms
-    : (string * (type_grammar.grammar * term_grammar.grammar)) list -> unit
+  val mk_local_grms : string list -> unit
 
 
   val hide   : string -> ({Name : string, Thy : string} list *
