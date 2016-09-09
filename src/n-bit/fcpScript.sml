@@ -9,6 +9,7 @@ open HolKernel Parse boolLib bossLib;
 open pred_setTheory listTheory
 
 val () = new_theory "fcp";
+val _ = set_grammar_ancestry ["list"]
 
 (* ------------------------------------------------------------------------- *)
 

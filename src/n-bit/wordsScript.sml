@@ -11,6 +11,7 @@ open bitTheory sum_numTheory fcpTheory fcpLib
 open numposrepTheory ASCIInumbersTheory
 
 val () = new_theory "words"
+val _ = set_grammar_ancestry ["ASCIInumbers", "numeral_bit", "fcp", "sum_num"]
 
 val fcp_ss = std_ss ++ fcpLib.FCP_ss
 
