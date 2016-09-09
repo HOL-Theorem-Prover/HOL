@@ -6,6 +6,8 @@ fun ARITH q = EQT_ELIM (ARITH_CONV (Parse.Term q));
 
 val _ = new_theory "bag";
 
+val _ = set_grammar_ancestry ["list", "divides"]
+
 val _ = type_abbrev("bag", Type`:'a -> num`)
 val _ = disable_tyabbrev_printing "bag"
 val _ = type_abbrev("multiset", Type`:'a -> num`)

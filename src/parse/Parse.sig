@@ -20,6 +20,7 @@ signature Parse = sig
   val grammarDB_insert : string * grammarDB_info -> unit
   val grammarDB_fold : (string * grammarDB_info * 'a -> 'a) -> 'a -> 'a
   val grammarDB : string -> grammarDB_info option
+  val set_grammar_ancestry : string list -> unit
 
   (* Parsing Types *)
 

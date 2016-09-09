@@ -238,15 +238,32 @@ fun merge_grm (gname, (tyG0, tmG0)) (tyG1, tmG1) =
                       gname, "; ignoring it.\n"])
       ; (tyG1, tmG1));
 
-fun mk_local_grms [] = raise ERROR "mk_local_grms" "no grammars"
-  | mk_local_grms (gs as (n::t)) =
+fun merge_grammars_by_name gnames =
     let
       fun getGrm nm =
         case grammarDB nm of
             NONE => raise ERROR "mk_local_grms" ("No grammar for theory: "^nm)
           | SOME grms => (nm,grms)
-      val grms = map getGrm gs
-      val (ty_grm0,tm_grm0) = itlist merge_grm (tl grms) (#2 (hd grms))
+      val grms = map getGrm gnames
+    in
+      itlist merge_grm (tl grms) (#2 (hd grms))
+    end
+
+fun set_grammar_ancestry slist =
+  let
+    val (tyg,tmg) = merge_grammars_by_name slist
+  in
+    GrammarAncestry.set_ancestry slist;
+    the_type_grammar := tyg;
+    the_term_grammar := tmg;
+    type_grammar_changed := true;
+    term_grammar_changed := true
+  end
+
+fun mk_local_grms [] = raise ERROR "mk_local_grms" "no grammars"
+  | mk_local_grms (gs as (n::t)) =
+    let
+      val (ty_grm0,tm_grm0) = merge_grammars_by_name gs
     in
       the_lty_grm := ty_grm0;
       the_ltm_grm := tm_grm0
@@ -1512,6 +1529,11 @@ in
   the_term_grammar := tmG
 end
 
+fun gparents () =
+  case GrammarAncestry.ancestry {thy = current_theory()} of
+      [] => parents (current_theory())
+    | thys => thys
+
 local fun sig_addn s = String.concat
        ["val ", s, "_grammars : type_grammar.grammar * term_grammar.grammar"]
       open Portable
@@ -1565,7 +1587,7 @@ in
              IB 0; pr_list (add_string o quote)
                            (fn () => add_string ",")
                            (fn () => add_break(1,0))
-                           (parents (current_theory()));
+                           (gparents ());
              EB();
          add_string "]"; add_newline();
          B 10; add_string "val _ = List.app (update_grms reveal)";
