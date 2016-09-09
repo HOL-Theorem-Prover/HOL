@@ -6,7 +6,10 @@ open HolKernel Parse boolLib bossLib;
 open combinTheory pairTheory relationTheory listTheory
      markerLib metisLib BasicProvers
 
+local open rich_listTheory in end
+
 val _ = new_theory "sorting";
+val _ = set_grammar_ancestry ["rich_list"]
 
 val _ = Defn.def_suffix := "_DEF";
 val _ = Defn.ind_suffix := "_IND";
