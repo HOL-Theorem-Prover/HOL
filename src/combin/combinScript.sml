@@ -365,11 +365,12 @@ val FAIL_THM = Q.store_thm("FAIL_THM", `FAIL x y = x`,
     THEN CONV_TAC (DEPTH_CONV BETA_CONV)
     THEN REFL_TAC);
 
+val _ = remove_ovl_mapping "C" {Name="C", Thy = "combin"}
+
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME (fn ppstrm =>
   let fun S s = (PP.add_string ppstrm s; PP.add_newline ppstrm) in
-    S "val _ = Parse.hide \"C\";";
     S "val _ =";
     S "   let open computeLib";
     S "       val K_tm = Term.prim_mk_const{Name=\"K\",Thy=\"combin\"}";

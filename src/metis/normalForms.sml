@@ -244,7 +244,7 @@ val SKI_CONV =
 (* ------------------------------------------------------------------------- *)
 
 val MK_C = prove
-  (``!x y. (\v. (x v) y) = C (x:'a->'b->'c) y``,
+  (``!x y. (\v. (x v) y) = combin$C (x:'a->'b->'c) y``,
    REPEAT STRIP_TAC THEN
    CONV_TAC (FUN_EQ_CONV) THEN
    SIMP_TAC boolSimps.bool_ss
