@@ -4,7 +4,7 @@ local open basis_emitTheory in end
 val (is_con, thy, name, ty) = ConstMapML.apply ``bool$IN``
 val _ = tprint "Testing ConstMapML information for bool$IN"
 
-val _ = if thy <> "set" then die "FAILED!" else print "OK\n"
+val _ = if thy <> "set" then die "FAILED!" else OK()
 
 fun gh157() = let
   val gh157a_def = Define`gh157a = T`
@@ -16,7 +16,7 @@ in
    die "FAILED!")
   handle HOL_ERR _ =>
          if List.exists exists ["bugML.sml", "bugML.sig"] then die "FAILED!\n"
-         else print "OK\n"
+         else OK()
 end
 
 val _ = trace ("Define.storage_message", 0) gh157 ()
