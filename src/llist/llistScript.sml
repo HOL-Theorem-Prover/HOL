@@ -2112,7 +2112,7 @@ fun MODIFY_CONS g th = REORDER_ANTS_MOD (fn th => th) g th ;
 
 val linear_order_to_list_lem1d = Q.prove (
   `linear_order lo X ==> finite_prefixes lo X ==> x IN X ==>
-  (LNTH (PRE (CARD {y | (y,x) ∈ lo})) (LUNFOLD linear_order_to_list_f lo) =
+  (LNTH (PRE (CARD {y | (y,x) IN lo})) (LUNFOLD linear_order_to_list_f lo) =
     SOME x)`,
   REPEAT DISCH_TAC THEN
   irule (MODIFY_CONS CONJUNCT1 linear_order_to_list_lem1a)
@@ -2139,12 +2139,12 @@ val linear_order_to_llist_eq = Q.store_thm ("linear_order_to_llist",
   REPEAT (STRIP_TAC ORELSE EQ_TAC)
   THENL [
     IMP_RES_TAC linear_order_to_list_lem1d THEN
-    Q.EXISTS_TAC `PRE (CARD {y | (y,x) ∈ lo})` THEN
+    Q.EXISTS_TAC `PRE (CARD {y | (y,x) IN lo})` THEN
     ASM_REWRITE_TAC [],
     IMP_RES_TAC linear_order_to_list_lem2a,
     Cases_on `x` THEN Ho_Rewrite.REWRITE_TAC [PAIR_IN_GSPEC_IFF] THEN
-    Q.EXISTS_TAC `PRE (CARD {y | (y,q) ∈ lo})` THEN
-    Q.EXISTS_TAC `PRE (CARD {y | (y,r) ∈ lo})` THEN
+    Q.EXISTS_TAC `PRE (CARD {y | (y,q) IN lo})` THEN
+    Q.EXISTS_TAC `PRE (CARD {y | (y,r) IN lo})` THEN
     IMP_RES_TAC in_dom_rg THEN IMP_RES_TAC linear_order_dom_rg THEN
     IMP_RES_TAC linear_order_to_list_lem1d THEN
     Q.SUBGOAL_THEN `q IN X /\ r IN X`

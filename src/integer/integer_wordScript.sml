@@ -1308,11 +1308,11 @@ val i2w_w2n = store_thm("i2w_w2n[simp]",
 val w2n_i2w = store_thm("w2n_i2w",
   ``&w2n ((i2w n):'a word) = n % (& dimword (:'a))``,
   fs [i2w_def] \\ Cases_on `n` \\ fs []
-  \\ `dimword (:α) <> 0` by (assume_tac ZERO_LT_dimword \\ decide_tac)
+  \\ `dimword (:'a) <> 0` by (assume_tac ZERO_LT_dimword \\ decide_tac)
   \\ imp_res_tac integerTheory.INT_MOD \\ fs []
   \\ fs [word_2comp_n2w]
   \\ fs [INT_MOD_NEG_NUMERATOR]
-  \\ `&dimword (:α) <> 0i` by fs []
+  \\ `&dimword (:'a) <> 0i` by fs []
   \\ imp_res_tac (UNDISCH INT_MOD_SUB |> GSYM |> DISCH_ALL)
   \\ pop_assum (fn th => once_rewrite_tac [th]) \\ fs []
   \\ fs [INT_MOD_NEG_NUMERATOR]

@@ -2137,7 +2137,7 @@ val MAP_KEYS_BIJ_LINV = Q.store_thm("MAP_KEYS_BIJ_LINV",
   \\ imp_res_tac LINV_DEF \\ full_simp_tac(srw_ss())[]);
 
 val FLOOKUP_MAP_KEYS = Q.store_thm("FLOOKUP_MAP_KEYS",
-  `INJ f (FDOM m) UNIV ⇒
+  `INJ f (FDOM m) UNIV ==>
    (FLOOKUP (MAP_KEYS f m) k =
     OPTION_BIND (some x. (k = f x) /\ x IN FDOM m) (FLOOKUP m))`,
   strip_tac >> DEEP_INTRO_TAC optionTheory.some_intro >>
