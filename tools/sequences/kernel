@@ -26,6 +26,5 @@ src/proofman
 !tools/Holmake/tests/holdep
 !tools/Holmake/tests/nullary_tgt
 !tools/Holmake/tests/phony_tgt
-!tools/Holmake/tests/
 [poly]!tools/Holmake/tests/cheatspotting
 !src/1/theory_tests
