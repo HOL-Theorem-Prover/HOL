@@ -263,6 +263,11 @@ fun extra_deps t =
     Option.map #dependencies
                (Holmake_types.get_rule_info extra_rules hmakefile_env t)
 
+fun isPHONY t =
+  case extra_deps ".PHONY" of
+      NONE => false
+    | SOME l => member t l
+
 fun extra_commands t =
     Option.map #commands
                (Holmake_types.get_rule_info extra_rules hmakefile_env t)
@@ -529,9 +534,11 @@ in
                                            end)
                               depnodes
               val needs_building =
-                  (not (null unbuilt_deps) orelse
+                  (not (OS.FileSys.access(target_s, [])) orelse
+                   not (null unbuilt_deps) orelse
                    List.exists (fn d => d forces_update_of target_s)
-                               dependencies) andalso
+                               dependencies orelse
+                   isPHONY target_s) andalso
                   not (null commands)
               val status = if needs_building then Pending else Succeeded
               fun foldthis (c, (depnode, seqnum, g)) =
