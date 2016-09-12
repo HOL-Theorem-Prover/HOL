@@ -1600,6 +1600,11 @@ in
              ["val ", thyname, "_grammars = Parse.current_lgrms()"]);
          add_newline();
          add_string (String.concat
+             ["val ", thyname,
+              "_grammars = Portable.apsnd (ProvideUnicode.apply_thydata true ",
+              quote thyname, ")", thyname, "_grammars"]);
+         add_newline();
+         add_string (String.concat
              ["val _ = Parse.grammarDB_insert(",Lib.mlquote thyname,",",
               thyname, "_grammars)"]);
          add_newline();
