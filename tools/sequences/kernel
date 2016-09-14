@@ -27,4 +27,6 @@ src/proofman
 !tools/Holmake/tests/nullary_tgt
 !tools/Holmake/tests/phony_tgt
 [poly]!tools/Holmake/tests/cheatspotting
+[poly]!tools/Holmake/tests/depchain_heap/
+[poly]!tools/Holmake/tests/depchain_heap/dir2
 !src/1/theory_tests
