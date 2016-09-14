@@ -1,31 +1,18 @@
 structure term_grammar :> term_grammar =
 struct
 
-open HOLgrammars GrammarSpecials Lib Feedback
+open HOLgrammars GrammarSpecials Lib Feedback term_grammar_dtype
 
-  type ppstream = Portable.ppstream
+type ppstream = Portable.ppstream
 
 type term = Term.term
 
 type nthy_rec = {Name : string, Thy : string}
 
-  type block_info = PP.break_style * int
-  datatype rule_element = TOK of string | TM
-  fun RE_compare (TOK s1, TOK s2) = String.compare(s1,s2)
-    | RE_compare (TOK _, TM) = LESS
-    | RE_compare (TM, TOK _) = GREATER
-    | RE_compare (TM, TM) = EQUAL
-  datatype pp_element =
-    PPBlock of pp_element list * block_info |
-    EndInitialBlock of block_info | BeginFinalBlock of block_info |
-    HardSpace of int | BreakSpace of (int * int) |
-    RE of rule_element | LastTM | FirstTM
-  (* these last two only used internally *)
-
-    datatype PhraseBlockStyle =
-      AroundSameName | AroundSamePrec | AroundEachPhrase | NoPhrasing
-    datatype ParenStyle =
-      Always | OnlyIfNecessary | ParoundName | ParoundPrec | NotEvenIfRand
+fun RE_compare (TOK s1, TOK s2) = String.compare(s1,s2)
+  | RE_compare (TOK _, TM) = LESS
+  | RE_compare (TM, TOK _) = GREATER
+  | RE_compare (TM, TM) = EQUAL
 
   fun rule_elements0 acc pplist =
     case pplist of
@@ -66,48 +53,6 @@ type nthy_rec = {Name : string, Thy : string}
 
 fun reltoString (TOK s) = s
   | reltoString TM = "TM"
-
-type rule_record = {term_name : string,
-                    elements : pp_element list,
-                    timestamp : int,
-                    block_style : PhraseBlockStyle * block_info,
-                    paren_style : ParenStyle}
-
-datatype binder = LAMBDA
-                | BinderString of {tok : string, term_name : string,
-                                   timestamp : int}
-
-datatype prefix_rule = STD_prefix of rule_record list | BINDER of binder list
-datatype suffix_rule = STD_suffix of rule_record list | TYPE_annotation
-datatype infix_rule =
-         STD_infix of rule_record list * associativity
-       | RESQUAN_OP
-       | VSCONS
-       | FNAPP of rule_record list
-
-type listspec =
-  {separator : pp_element list, leftdelim : pp_element list,
-   rightdelim : pp_element list, cons : string, nilstr : string,
-   block_info : block_info}
-
-datatype grammar_rule =
-         PREFIX of prefix_rule
-       | SUFFIX of suffix_rule
-       | INFIX of infix_rule
-       | CLOSEFIX of rule_record list
-       | LISTRULE of listspec list
-
-datatype rule_fixity =
-  Infix of associativity * int | Closefix | Suffix of int | Prefix of int
-
-datatype user_delta =
-         GRULE of {term_name : string,
-                   fixity : rule_fixity,
-                   pp_elements: pp_element list,
-                   paren_style : ParenStyle,
-                   block_style : PhraseBlockStyle * block_info}
-       | LRULE of listspec
-       | BRULE of {tok : string, term_name : string}
 
 fun pptoks ppels = List.mapPartial (fn TOK s => SOME s | _ => NONE)
                                    (rule_elements ppels)

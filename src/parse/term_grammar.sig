@@ -3,98 +3,34 @@ signature term_grammar =
 sig
 
   type ppstream = Portable.ppstream
-  type block_info = Portable.break_style * int
+  type block_info = term_grammar_dtype.block_info
   type overload_info = Overload.overload_info
-  type associativity = HOLgrammars.associativity
+  type associativity = term_grammar_dtype.associativity
 
-  datatype rule_element
-     = TOK of string
-     | TM
+  datatype rule_element = datatype term_grammar_dtype.rule_element
   val RE_compare : rule_element * rule_element -> order
 
-  datatype pp_element
-     = PPBlock of pp_element list * block_info
-     | EndInitialBlock of block_info
-     | BeginFinalBlock of block_info
-     | HardSpace of int
-     | BreakSpace of (int * int)
-     | RE of rule_element
-     | LastTM
-     | FirstTM   (* these last two only used internally *)
-
-  datatype PhraseBlockStyle
-     = AroundSameName
-     | AroundSamePrec
-     | AroundEachPhrase
-     | NoPhrasing
-
-  datatype ParenStyle
-     = Always
-     | OnlyIfNecessary
-     | NotEvenIfRand
-     | ParoundName
-     | ParoundPrec
+  datatype pp_element = datatype term_grammar_dtype.pp_element
+  datatype PhraseBlockStyle = datatype term_grammar_dtype.PhraseBlockStyle
+  datatype ParenStyle = datatype term_grammar_dtype.ParenStyle
 
   val rule_elements  : pp_element list -> rule_element list
   val pp_elements_ok : pp_element list -> bool
 
   val reltoString    : rule_element -> string
 
-  type rule_record = {term_name   : string,
-                      elements    : pp_element list,
-                      timestamp   : int,
-                      block_style : PhraseBlockStyle * block_info,
-                      paren_style : ParenStyle}
-
-  datatype binder
-     = LAMBDA
-     | BinderString of {tok : string, term_name : string, timestamp : int}
-
-  datatype prefix_rule
-     = STD_prefix of rule_record list
-     | BINDER of binder list
-
-  datatype suffix_rule
-     = STD_suffix of rule_record list
-     | TYPE_annotation
-
-  datatype infix_rule
-     = STD_infix of rule_record list * associativity
-     | RESQUAN_OP
-     | VSCONS
-     | FNAPP of rule_record list
-
-  type listspec =
-     {separator  : pp_element list,
-      leftdelim  : pp_element list,
-      rightdelim : pp_element list,
-      block_info : block_info,
-      cons       : string,
-      nilstr     : string}
-
-  datatype grammar_rule
-     = PREFIX of prefix_rule
-     | SUFFIX of suffix_rule
-     | INFIX of infix_rule
-     | CLOSEFIX of rule_record list
-     | LISTRULE of listspec list
+  datatype binder = datatype term_grammar_dtype.binder
+  datatype prefix_rule = datatype term_grammar_dtype.prefix_rule
+  datatype suffix_rule = datatype term_grammar_dtype.suffix_rule
+  datatype infix_rule = datatype term_grammar_dtype.infix_rule
+  datatype grammar_rule = datatype term_grammar_dtype.grammar_rule
+  datatype rule_fixity = datatype term_grammar_dtype.rule_fixity
+  datatype user_delta = datatype term_grammar_dtype.user_delta
+  type listspec = term_grammar_dtype.listspec
+  type rule_record = term_grammar_dtype.rule_record
 
   type grammar
 
-  datatype rule_fixity
-     = Infix of associativity * int
-     | Closefix
-     | Suffix of int
-     | Prefix of int
-
-  datatype user_delta =
-           GRULE of {term_name : string,
-                     fixity : rule_fixity,
-                     pp_elements: pp_element list,
-                     paren_style : ParenStyle,
-                     block_style : PhraseBlockStyle * block_info}
-         | LRULE of listspec
-         | BRULE of {tok : string, term_name : string}
 
   val userdelta_toks : user_delta -> string list
   val userdelta_name : user_delta -> string
