@@ -4,6 +4,8 @@ struct
 open Lib
 open errormonad term_tokens term_grammar HOLgrammars
 open GrammarSpecials
+open parse_term_dtype
+
 infix >> >- ++ >->
 
 val syntax_error_trace = ref true
@@ -122,11 +124,6 @@ fun left_grabbing_elements rule =
     | SUFFIX TYPE_annotation => [TypeColon]
     | _ => []
 
-datatype mx_src = Ifx | Pfx | MS_Other | MS_Multi
-datatype mx_order = PM_LESS of mx_src
-                  | PM_GREATER of mx_src
-                  | PM_EQUAL
-                  | PM_LG of {pfx:order,ifx:order}
 datatype order_compat_verdict = OK | Multify of mx_order | Bad
 fun order_compat mx1 mx2 =
     case (mx1, mx2) of
@@ -146,8 +143,57 @@ fun mx_order mxo =
     | PM_EQUAL => SOME EQUAL
     | PM_LG _ => NONE
 
+(* turn a rule element list into a list of std_hol_toks *)
+val rel_list_to_toklist =
+  List.mapPartial (fn TOK s => SOME (STD_HOL_TOK s) | _ => NONE)
+
+fun find_suffix_rhses (G : grammar) = let
+  fun select (SUFFIX TYPE_annotation) = [[TypeTok]]
+    | select (SUFFIX (STD_suffix rules)) = let
+      in
+        map (rel_list_to_toklist o rule_elements o #elements) rules
+        end
+    | select (CLOSEFIX rules) =
+        map (rel_list_to_toklist o rule_elements o #elements) rules
+    | select (LISTRULE rlist) =
+        map (fn r => [STD_HOL_TOK (first_tok (#rightdelim r))]) rlist
+    | select _ = []
+  val suffix_rules = List.concat (map (select o #2) (rules G))
+in
+  Id :: map List.last suffix_rules
+end
+
+fun find_prefix_lhses (G : grammar) = let
+  fun select x = let
+  in
+    case x of
+      PREFIX (STD_prefix rules) =>
+        map (rel_list_to_toklist o rule_elements o #elements) rules
+    | CLOSEFIX rules =>
+        map (rel_list_to_toklist o rule_elements o #elements) rules
+    | (LISTRULE rlist) =>
+        map (fn r => [STD_HOL_TOK (first_tok (#leftdelim r))]) rlist
+    | _ => []
+  end
+  val prefix_rules = List.concat (map (select o #2) (rules G))
+in
+  Id :: map STD_HOL_TOK (binders G) @ map hd prefix_rules
+end
+
 val ambigrm = ref 1
 val _ = Feedback.register_trace ("ambiguous grammar warning", ambigrm, 2)
+
+fun STtoString (G:grammar) x =
+  case x of
+    STD_HOL_TOK s => s
+  | BOS => "<beginning of input>"
+  | EOS => "<end of input>"
+  | VS_cons => "<gap between varstructs>"
+  | Id => "<identifier>"
+  | TypeColon => #type_intro (specials G)
+  | TypeTok => "<type>"
+  | EndBinding => #endbinding (specials G) ^ " (end binding)"
+  | ResquanOpTok => #res_quanop (specials G)^" (res quan operator)"
 
 fun mk_prec_matrix G = let
   exception NotFound = Binarymap.NotFound

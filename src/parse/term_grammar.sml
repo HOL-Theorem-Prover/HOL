@@ -361,37 +361,6 @@ fun associate_restriction G {binder = b, resbinder = s} =
 
 fun is_binder G = let val bs = binders G in fn s => Lib.mem s bs end
 
-datatype stack_terminal =
-  STD_HOL_TOK of string | BOS | EOS | Id  | TypeColon | TypeTok | EndBinding |
-  VS_cons | ResquanOpTok
-
-fun STi st =
-    case st of
-      STD_HOL_TOK _ => 0
-    | BOS => 1
-    | EOS => 2
-    | Id => 3
-    | TypeColon => 4
-    | TypeTok => 5
-    | EndBinding => 6
-    | VS_cons => 7
-    | ResquanOpTok => 8
-fun ST_compare (p as (st1,st2)) =
-    case p of
-      (STD_HOL_TOK s1, STD_HOL_TOK s2) => String.compare(s1,s2)
-    | _ => Lib.measure_cmp STi p
-
-fun STtoString (G:grammar) x =
-  case x of
-    STD_HOL_TOK s => s
-  | BOS => "<beginning of input>"
-  | EOS => "<end of input>"
-  | VS_cons => "<gap between varstructs>"
-  | Id => "<identifier>"
-  | TypeColon => #type_intro (specials G)
-  | TypeTok => "<type>"
-  | EndBinding => #endbinding (specials G) ^ " (end binding)"
-  | ResquanOpTok => #res_quanop (specials G)^" (res quan operator)"
 
 (* gives the "wrong" lexicographic order, but is more likely to
    resolve differences with one comparison because types/terms with
@@ -510,44 +479,7 @@ in
   fun rule_tokens G r = Lib.mk_set (#1 (rule_specials G r []))
 end
 
-(* turn a rule element list into a list of std_hol_toks *)
-val rel_list_to_toklist =
-  List.mapPartial (fn TOK s => SOME (STD_HOL_TOK s) | _ => NONE)
-
 (* right hand elements of suffix and closefix rules *)
-fun find_suffix_rhses (G : grammar) = let
-  fun select (SUFFIX TYPE_annotation) = [[TypeTok]]
-    | select (SUFFIX (STD_suffix rules)) = let
-      in
-        map (rel_list_to_toklist o rule_elements o #elements) rules
-        end
-    | select (CLOSEFIX rules) =
-        map (rel_list_to_toklist o rule_elements o #elements) rules
-    | select (LISTRULE rlist) =
-        map (fn r => [STD_HOL_TOK (first_tok (#rightdelim r))]) rlist
-    | select _ = []
-  val suffix_rules = List.concat (map (select o #2) (rules G))
-in
-  Id :: map List.last suffix_rules
-end
-
-fun find_prefix_lhses (G : grammar) = let
-  fun select x = let
-  in
-    case x of
-      PREFIX (STD_prefix rules) =>
-        map (rel_list_to_toklist o rule_elements o #elements) rules
-    | CLOSEFIX rules =>
-        map (rel_list_to_toklist o rule_elements o #elements) rules
-    | (LISTRULE rlist) =>
-        map (fn r => [STD_HOL_TOK (first_tok (#leftdelim r))]) rlist
-    | _ => []
-  end
-  val prefix_rules = List.concat (map (select o #2) (rules G))
-in
-  Id :: map STD_HOL_TOK (binders G) @ map hd prefix_rules
-end
-
 fun compatible_listrule (G:grammar) arg = let
   val {separator, leftdelim, rightdelim} = arg
   fun recurse rules =

@@ -31,8 +31,8 @@ fun absyn_phase1 G ty = let
              raise ERROR "Term"
                (String.concat
                  ["Grammar introduces precedence conflict between tokens ",
-                  term_grammar.STtoString G st1, " and ",
-                  term_grammar.STtoString G st2])
+                  parse_term.STtoString G st1, " and ",
+                  parse_term.STtoString G st2])
   open base_tokens qbuf
 in
 fn q => let

@@ -115,24 +115,8 @@ sig
                                  rightdelim : string}
                              -> {cons : string, nilstr : string} option
 
-  datatype stack_terminal
-     = STD_HOL_TOK of string
-     | BOS
-     | EOS
-     | Id
-     | TypeColon
-     | TypeTok
-     | EndBinding
-     | VS_cons
-     | ResquanOpTok
-  val ST_compare : stack_terminal * stack_terminal -> order
-
-  val STtoString : grammar -> stack_terminal -> string
-
   val grammar_tokens : grammar -> string list
   val rule_tokens : grammar -> grammar_rule -> string list
-  val find_suffix_rhses : grammar -> stack_terminal list
-  val find_prefix_lhses : grammar -> stack_terminal list
 
   val add_binder : {term_name:string,tok:string} -> grammar -> grammar
   val add_listform : grammar -> listspec -> grammar
