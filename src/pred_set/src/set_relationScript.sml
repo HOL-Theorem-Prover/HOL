@@ -1134,20 +1134,20 @@ val linear_order_dom_rg = Q.store_thm ("linear_order_dom_rg",
 
 val linear_order_refl = Q.store_thm ("linear_order_refl",
   `linear_order lo X ==> x IN X ==> (x, x) IN lo`,
-  REWRITE_TAC [linear_order_def] THEN REPEAT STRIP_TAC THEN RES_TAC) ; 
+  REWRITE_TAC [linear_order_def] THEN REPEAT STRIP_TAC THEN RES_TAC) ;
 
 val linear_order_in_set = Q.store_thm ("linear_order_in_set",
   `linear_order lo X ==> (x, y) IN lo ==> x IN X /\ y IN X`,
   REPEAT DISCH_TAC THEN IMP_RES_TAC linear_order_dom_rg THEN
-  VAR_EQ_TAC THEN 
+  VAR_EQ_TAC THEN
   IMP_RES_TAC in_dom_rg THEN ASM_REWRITE_TAC [IN_UNION]) ;
 
 val IN_MIN_LO = Q.store_thm ("IN_MIN_LO",
-  `x IN X ==> linear_order lo X ==> y IN minimal_elements X lo ==> 
+  `x IN X ==> linear_order lo X ==> y IN minimal_elements X lo ==>
     (y, x) IN lo`,
   Ho_Rewrite.REWRITE_TAC [minimal_elements_def, linear_order_def,
       EXTENSION, IN_GSPEC_IFF] THEN
-  REPEAT STRIP_TAC THEN 
+  REPEAT STRIP_TAC THEN
   FIRST_X_ASSUM (ASSUME_TAC o Q.SPECL [`x`, `y`]) THEN
   FIRST_X_ASSUM (ASSUME_TAC o Q.SPEC `x`) THEN
   RES_TAC THEN RES_TAC THEN FULL_SIMP_TAC std_ss []) ;
