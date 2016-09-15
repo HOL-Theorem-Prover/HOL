@@ -715,7 +715,7 @@ val rcomp_to_rel_conv = Q.store_thm ("rcomp_to_rel_conv",
   `r1 OO r2 = rel_to_reln ((reln_to_rel r2) O (reln_to_rel r1))`,
 SRW_TAC [] [rcomp_def, rextension, reln_rel_conv_props, relationTheory.O_DEF])
 
-val univ_reln_to_rel_conv = Q.store_thm ("rrestrict_to_rel_conv",
+val univ_reln_to_rel_conv = Q.store_thm ("univ_reln_to_rel_conv",
   `univ_reln s = rel_to_reln (RRUNIV s)`,
 SRW_TAC [] [univ_reln_def, rextension, reln_rel_conv_props, RRUNIV_def])
 
