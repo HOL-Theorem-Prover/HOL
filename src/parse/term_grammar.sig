@@ -38,6 +38,7 @@ sig
   val stdhol         : grammar
   val min_grammar    : grammar
 
+  val binder_grule   : {term_name : string, tok : string} -> grule
   val standard_mapped_spacing :
       {term_name:string,tok:string,fixity:fixity} -> grule
   val standard_spacing : string -> fixity -> grule

@@ -61,14 +61,12 @@ fun pptoks ppels = List.mapPartial (fn TOK s => SOME s | _ => NONE)
 fun userdelta_toks ud =
     case ud of
       GRULE {pp_elements, ...} => pptoks pp_elements
-    | BRULE {tok,...} => [tok]
     | LRULE {leftdelim, separator, rightdelim, ...} =>
       pptoks leftdelim @ pptoks separator @ pptoks rightdelim
 
 fun userdelta_name ud =
     case ud of
       GRULE {term_name, ...} => term_name
-    | BRULE {term_name, ...} => term_name
     | LRULE {cons, ...} => cons
 
 
@@ -757,6 +755,11 @@ in
           fixity = rf})
 end
 
+fun binder_grule {term_name,tok} =
+  {term_name = term_name, paren_style = OnlyIfNecessary,
+   block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
+   pp_elements = [RE (TOK tok)], fixity = Binder}
+
 fun rules_for G nm = let
   fun search_rrlist rf acc rrl = let
     fun recurse acc0 rrl =
@@ -775,7 +778,8 @@ fun rules_for G nm = let
       | BinderString {tok,term_name,timestamp} :: rest =>
         if term_name = nm then
           search_blist
-            ((timestamp, BRULE {term_name = term_name, tok = tok}) :: acc)
+            ((timestamp, GRULE (binder_grule {term_name=term_name,tok=tok})) ::
+             acc)
             rest
         else
           search_blist acc rest
@@ -883,7 +887,7 @@ fun standard_mapped_spacing {term_name,tok,fixity}  = let
       | Prefix _ => [RE(TOK tok), HardSpace 1]
       | Suffix _ => [HardSpace 1, RE(TOK tok)]
       | Closefix  => [RE(TOK tok)]
-      | Binder => [] (* won't be used *)
+      | Binder => [RE(TOK tok)]
 in
   {term_name = term_name, fixity = fixity, pp_elements = ppels,
    paren_style = pstyle, block_style = bstyle}
@@ -913,7 +917,6 @@ fun set_mapped_fixity {term_name,tok,fixity} G =
 fun add_delta ud G =
     case ud of
       GRULE r => add_rule r G
-    | BRULE r => add_binder r G
     | LRULE r => add_listform G r
 
 fun prefer_form_with_tok (r as {term_name,tok}) G0 = let
@@ -1542,22 +1545,18 @@ fun user_delta_encode ud =
                      block_style_encode block_style ::
                      fixity_encode fixity ::
                      List.map ppel_encode pp_elements @ ["X"])
-    | BRULE {tok,term_name} =>
-      "B" ^ StringData.encode tok ^ StringData.encode term_name
     | LRULE lspec => "L" ^ lspec_encode lspec
 
 val user_delta_reader = let
   fun grule ((((tn,ps),bs),f),ppels) =
       GRULE {term_name = tn, paren_style = ps, block_style = bs,
              fixity = f, pp_elements = ppels}
-  fun brule (tok,tn) = BRULE {tok = tok, term_name = tn}
 in
   (literal "G" >> Coding.map grule (StringData.reader >*
                                     paren_style_reader >*
                                     block_style_reader >*
                                     fixity_reader >*
                                     many (ppel_reader) >-> literal "X")) ||
-  (literal "B" >> Coding.map brule (StringData.reader >* StringData.reader)) ||
   (literal "L" >> Coding.map LRULE lspec_reader)
 end
 

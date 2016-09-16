@@ -647,10 +647,7 @@ struct
 
   fun uset_fixity0 setter s fxty = let
     open term_grammar
-    val rule =
-      case fxty of
-          Binder => BRULE {tok = s, term_name = s}
-        | rf => GRULE (standard_spacing s rf)
+    val rule = GRULE (standard_spacing s fxty)
   in
     lift setter {u = [s], term_name = s, newrule = rule, oldtok = NONE}
   end
@@ -913,24 +910,6 @@ in
   List.exists (fn RE (TOK s) => includes_unicode s | _ => false)
 end
 
-datatype 'a erroption = Error of string | Some of 'a
-fun prule_to_grule {term_name,fixity,pp_elements,paren_style,block_style} = let
-  open term_grammar
-in
-  case fixity of
-    Binder => let
-    in
-      case rule_elements pp_elements of
-        [TOK s] => Some (BRULE {term_name = term_name, tok = s})
-      | _ => Error "Rules for binders must feature exactly one TOK and no TMs"
-    end
-  | rf => Some (GRULE {term_name = term_name,
-                       fixity = rf,
-                       pp_elements = pp_elements,
-                       paren_style = paren_style,
-                       block_style = block_style})
-end
-
 val unicode_off_but_unicode_act_complaint = ref true
 val _ = register_btrace("Parse.unicode_trace_off_complaints",
                         unicode_off_but_unicode_act_complaint)
@@ -959,10 +938,7 @@ in
     end
 end handle GrammarError s => raise ERROR "add_rule" ("Grammar error: "^s)
 
-fun temp_add_rule rule =
-    case prule_to_grule rule of
-      Error s => raise mk_HOL_ERR "Parse" "add_rule" s
-    | Some gr => temp_add_grule gr
+fun temp_add_rule rule = temp_add_grule (GRULE rule)
 
 fun add_rule (r as {term_name, fixity, pp_elements,
                     paren_style, block_style = (bs,bi)}) = let in
@@ -1100,20 +1076,11 @@ fun remove_rules_for_term s = let in
    update_grms "remove_rules_for_term" ("temp_remove_rules_for_term", quote s)
  end
 
-fun temp_set_mapped_fixity {fixity:fixity,term_name,tok} = let
+fun temp_set_mapped_fixity (r as {fixity:fixity,term_name,tok}) = let
   val nmtok = {term_name = term_name, tok = tok}
 in
   temp_remove_termtok nmtok;
-  case fixity of
-      Binder => if term_name <> tok then
-                  raise ERROR "set_mapped_fixity"
-                        "Can't map binders to different strings"
-                else
-                  temp_add_grule (BRULE nmtok)
-    | rf => {fixity = rf, term_name = term_name, tok = tok}
-              |> standard_mapped_spacing
-              |> GRULE
-              |> temp_add_grule
+  r |> standard_mapped_spacing |> GRULE |> temp_add_grule
 end
 
 fun set_mapped_fixity (arg as {fixity,term_name,tok}) = let

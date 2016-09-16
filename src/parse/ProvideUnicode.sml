@@ -69,7 +69,7 @@ fun getrule G term_name = let
           else search_rrlist rf tfopt k rest
         end
 
-  fun breplace s = BRULE {term_name = term_name, tok = s}
+  fun breplace s = GRULE (binder_grule {term_name = term_name, tok = s})
   fun search_bslist tfopt k blist =
       case blist of
         [] => k tfopt
