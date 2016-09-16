@@ -24,7 +24,7 @@ sig
   datatype suffix_rule = datatype term_grammar_dtype.suffix_rule
   datatype infix_rule = datatype term_grammar_dtype.infix_rule
   datatype grammar_rule = datatype term_grammar_dtype.grammar_rule
-  datatype rule_fixity = datatype term_grammar_dtype.rule_fixity
+  datatype fixity = datatype term_grammar_dtype.fixity
   datatype user_delta = datatype term_grammar_dtype.user_delta
   type listspec = term_grammar_dtype.listspec
   type rule_record = term_grammar_dtype.rule_record
@@ -39,8 +39,8 @@ sig
   val min_grammar    : grammar
 
   val standard_mapped_spacing :
-      {term_name:string,tok:string,rule_fixity:rule_fixity} -> grule
-  val standard_spacing : string -> rule_fixity -> grule
+      {term_name:string,tok:string,fixity:fixity} -> grule
+  val standard_spacing : string -> fixity -> grule
 
   val merge_grammars : grammar * grammar -> grammar
   val fupdate_overload_info :
@@ -126,7 +126,7 @@ sig
   val add_binder : {term_name:string,tok:string} -> grammar -> grammar
   val add_listform : grammar -> listspec -> grammar
 
-  val rule_fixityToString : rule_fixity -> string
+  val fixityToString : fixity -> string
   val add_rule : grule -> grammar -> grammar
   val add_delta : user_delta -> grammar -> grammar
 
@@ -169,7 +169,7 @@ sig
 
 
   val set_associativity_at_level : grammar -> int * associativity -> grammar
-  val get_precedence : grammar -> string -> rule_fixity option
+  val get_precedence : grammar -> string -> fixity option
   val rules_for : grammar -> string -> (int * user_delta) list
 
 
@@ -183,7 +183,7 @@ sig
   val grule_encode : grammar_rule -> string
   val user_delta_reader : user_delta Coding.reader
   val user_delta_encode : user_delta -> string
-  val rule_fixity_encode : rule_fixity -> string
-  val rule_fixity_reader : rule_fixity Coding.reader
+  val fixity_encode : fixity -> string
+  val fixity_reader : fixity Coding.reader
 
 end

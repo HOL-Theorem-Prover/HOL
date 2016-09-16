@@ -765,11 +765,10 @@ end
 
 (* Enabling pmatch *)
 open parsePMATCH
-val fixityRF = ar_fixity_fupd Parse.RF
 
 val ENABLE_PMATCH_CASES =
     add_pmatch {get = term_grammar,
-                arule = K o Parse.temp_add_rule o fixityRF,
+                arule = K o Parse.temp_add_rule,
                 rmtmtok = K o Parse.temp_remove_termtok,
                 add_ptmproc =
                   (fn s => fn pp => K (temp_add_preterm_processor s pp)),
@@ -778,7 +777,7 @@ val ENABLE_PMATCH_CASES =
 
 val grammar_add_pmatch =
     add_pmatch { get = (fn g => g),
-                 arule = C term_grammar.add_rule,
+                 arule = term_grammar.add_rule,
                  rmtmtok = C term_grammar.remove_form_with_tok,
                  add_ptmproc = term_grammar.new_preterm_processor,
                  addup = term_grammar.add_user_printer,

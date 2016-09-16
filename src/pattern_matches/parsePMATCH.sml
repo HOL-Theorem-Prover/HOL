@@ -21,28 +21,23 @@ fun case_rulerecord s fixity (rr : rule_record, acc) =
     else acc
   end
 
-type 'a add_record = { block_style : PhraseBlockStyle * block_info,
-                       fixity : 'a,
-                       paren_style : ParenStyle,
-                       pp_elements : pp_element list,
-                       term_name : string }
+type add_record = { block_style : PhraseBlockStyle * block_info,
+                    fixity : term_grammar.fixity,
+                    paren_style : ParenStyle,
+                    pp_elements : pp_element list,
+                    term_name : string }
 fun ar_elements_fupd
       f
-      ({block_style,fixity,paren_style,pp_elements,term_name} : 'a add_record) =
+      ({block_style,fixity,paren_style,pp_elements,term_name} : add_record) =
   { block_style = block_style, fixity = fixity, paren_style = paren_style,
     pp_elements = f pp_elements, term_name = term_name }
 fun ar_name_fupd
       (f : string -> string)
-      ({block_style,fixity,paren_style,pp_elements,term_name} : 'a add_record) =
+      ({block_style,fixity,paren_style,pp_elements,term_name} : add_record) =
   { block_style = block_style, fixity = fixity, paren_style = paren_style,
     pp_elements = pp_elements, term_name = f term_name }
-fun ar_fixity_fupd
-      (f : 'a -> 'b)
-      ({block_style,fixity,paren_style,pp_elements,term_name} : 'a add_record) =
-  { block_style = block_style, fixity = f fixity, paren_style = paren_style,
-    pp_elements = pp_elements, term_name = term_name }
 
-fun case_rules s ((precopt, r : grammar_rule),acc) : rule_fixity add_record list
+fun case_rules s ((precopt, r : grammar_rule),acc) : add_record list
   =
   case (precopt, r) of
       (_, CLOSEFIX rrs) =>
@@ -289,7 +284,7 @@ fun pmatch_case G recursor a =
 
 fun add_pmatch actions (G:'a) =
   let
-    val {get, arule : rule_fixity add_record -> 'a -> 'a, rmtmtok,
+    val {get, arule : add_record -> 'a -> 'a, rmtmtok,
          add_ptmproc: string * int -> preterm_processor -> 'a -> 'a,
          addup, up} =
         actions

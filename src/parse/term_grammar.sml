@@ -64,13 +64,11 @@ fun userdelta_toks ud =
     | BRULE {tok,...} => [tok]
     | LRULE {leftdelim, separator, rightdelim, ...} =>
       pptoks leftdelim @ pptoks separator @ pptoks rightdelim
-    | SET_MAPPED_FIXITY {tok,...} => [tok]
 
 fun userdelta_name ud =
     case ud of
       GRULE {term_name, ...} => term_name
     | BRULE {term_name, ...} => term_name
-    | SET_MAPPED_FIXITY {term_name,...} => term_name
     | LRULE {cons, ...} => cons
 
 
@@ -741,12 +739,13 @@ fun remove_form_with_tok G r = map_rules (remove_tok r) G
 fun remove_form_with_toklist r = map_rules (remove_toklist r)
 
 
-fun rule_fixityToString f =
+fun fixityToString f =
   case f of
     Infix(a,i) => "Infix("^assocToString a^", "^Int.toString i^")"
   | Closefix => "Closefix"
   | Suffix p => "Suffix "^Int.toString p
   | Prefix p => "Prefix "^Int.toString p
+  | Binder => "Binder"
 
 
 fun rrec2delta rf (rr : rule_record) = let
@@ -755,7 +754,7 @@ in
   (#timestamp rr,
    GRULE {term_name = term_name, paren_style = paren_style,
           block_style = block_style, pp_elements = elements,
-          rule_fixity = rf})
+          fixity = rf})
 end
 
 fun rules_for G nm = let
@@ -811,7 +810,7 @@ in
   search [] (rules G)
 end
 
-fun add_rule {term_name = s : string, rule_fixity = f, pp_elements,
+fun add_rule {term_name = s : string, fixity = f, pp_elements,
               paren_style, block_style} G0 = let
   val _ =  pp_elements_ok pp_elements orelse
                  raise GrammarError "token list no good"
@@ -825,6 +824,13 @@ fun add_rule {term_name = s : string, rule_fixity = f, pp_elements,
     | Suffix p => (SOME p, SUFFIX (STD_suffix [rr]))
     | Prefix p => (SOME p, PREFIX (STD_prefix [rr]))
     | Closefix => (NONE, CLOSEFIX [rr])
+    | Binder =>
+      case pp_elements of
+          [RE (TOK b)] => (SOME std_binder_precedence,
+                           PREFIX(BINDER[BinderString{tok=b,term_name=s,
+                                                      timestamp=new_tstamp}]))
+        | _ => raise ERROR "add_rule" "Rules for binders must have one TOK only"
+
 in
   G0 Gmerge [new_rule]
 end
@@ -868,22 +874,23 @@ fun rename_to_fixity_field
   {fixity=rule_fixity, term_name = term_name, pp_elements = pp_elements,
    paren_style = paren_style, block_style = block_style}
 
-fun standard_mapped_spacing {term_name,tok,rule_fixity}  = let
+fun standard_mapped_spacing {term_name,tok,fixity}  = let
   val bstyle = (AroundSamePrec, (Portable.INCONSISTENT, 0))
   val pstyle = OnlyIfNecessary
   val ppels =
-      case rule_fixity of
+      case fixity of
         Infix _ => [HardSpace 1, RE (TOK tok), BreakSpace(1,0)]
       | Prefix _ => [RE(TOK tok), HardSpace 1]
-      | Suffix _     => [HardSpace 1, RE(TOK tok)]
+      | Suffix _ => [HardSpace 1, RE(TOK tok)]
       | Closefix  => [RE(TOK tok)]
+      | Binder => [] (* won't be used *)
 in
-  {term_name = term_name, rule_fixity = rule_fixity, pp_elements = ppels,
+  {term_name = term_name, fixity = fixity, pp_elements = ppels,
    paren_style = pstyle, block_style = bstyle}
 end
 
 fun standard_spacing name fixity =
-    standard_mapped_spacing {term_name = name, tok = name, rule_fixity = fixity}
+    standard_mapped_spacing {term_name = name, tok = name, fixity = fixity}
 
 val std_binder_precedence = 0;
 
@@ -898,9 +905,9 @@ fun set_mapped_fixity {term_name,tok,fixity} G =
                           "Can't map binders to different strings"
                   else
                     add_binder nmtok G
-      | RF rf => {rule_fixity = rf, tok = tok, term_name = term_name}
-                   |> standard_mapped_spacing
-                   |> C add_rule G
+      | rf => {fixity = rf, tok = tok, term_name = term_name}
+                |> standard_mapped_spacing
+                |> C add_rule G
   end
 
 fun add_delta ud G =
@@ -908,7 +915,6 @@ fun add_delta ud G =
       GRULE r => add_rule r G
     | BRULE r => add_binder r G
     | LRULE r => add_listform G r
-    | SET_MAPPED_FIXITY r => set_mapped_fixity r G
 
 fun prefer_form_with_tok (r as {term_name,tok}) G0 = let
   val contending_timestamps = map #1 (rules_for G0 term_name)
@@ -965,13 +971,20 @@ fun get_precedence (G:grammar) s = let
     | PREFIX(STD_prefix elms) =>
           if elmem s elms then SOME (Prefix (valOf p))
           else NONE
+    | PREFIX (BINDER bs) =>
+      find_partial
+        (fn BinderString r => if #tok r = s then SOME Binder else NONE
+          | LAMBDA => NONE)
+        bs
     | SUFFIX (STD_suffix elms) => if elmem s elms then SOME (Suffix (valOf p))
                                   else NONE
     | CLOSEFIX elms => if elmem s elms then SOME Closefix else NONE
     | _ => NONE
   end
 in
-  find_partial check_rule rules
+  if Lib.mem s (#lambda (specials G)) then SOME Binder
+  else
+    find_partial check_rule rules
 end
 
 fun update_assoc (k,v) alist = let
@@ -1333,13 +1346,13 @@ in
             INCONSISTENT. *)
          |> add_rule {term_name   = "==>",
                       block_style = (AroundSamePrec, (CONSISTENT, 0)),
-                      rule_fixity = Infix(RIGHT, 200),
+                      fixity = Infix(RIGHT, 200),
                       pp_elements = [HardSpace 1, RE (TOK "==>"),
                                      BreakSpace(1,0)],
                       paren_style = OnlyIfNecessary}
          |> add_rule {term_name   = "=",
                       block_style = (AroundSamePrec, (CONSISTENT, 0)),
-                      rule_fixity = Infix(NONASSOC, 100),
+                      fixity = Infix(NONASSOC, 100),
                       pp_elements = [HardSpace 1, RE (TOK "="),
                                      BreakSpace(1,0)],
                       paren_style = OnlyIfNecessary}
@@ -1507,57 +1520,45 @@ in
          StringData.reader >* many ppel_reader >* binfo_reader)
 end
 
-fun rule_fixity_encode f =
+fun fixity_encode f =
     case f of
       Infix(a,p) => "I" ^ assoc_encode a ^ IntData.encode p
     | Suffix p => "S" ^ IntData.encode p
     | Prefix p => "P" ^ IntData.encode p
     | Closefix => "C"
-val rule_fixity_reader =
+    | Binder => "B"
+val fixity_reader =
     (literal "I" >> map Infix (assoc_reader >* IntData.reader)) ||
     (literal "S" >> map Suffix IntData.reader) ||
     (literal "P" >> map Prefix IntData.reader) ||
-    (literal "C" >> return Closefix)
-
-fun fixity_encode f =
-  case f of
-      Binder => "B"
-    | RF rf => rule_fixity_encode rf
-val fixity_reader =
-  (literal "B" >> return Binder) || map RF rule_fixity_reader
+    (literal "C" >> return Closefix) ||
+    (literal "B" >> return Binder)
 
 fun user_delta_encode ud =
     case ud of
-      GRULE {term_name, pp_elements, paren_style, block_style, rule_fixity} =>
+      GRULE {term_name, pp_elements, paren_style, block_style, fixity} =>
       String.concat ("G" :: StringData.encode term_name ::
                      paren_style_encode paren_style ::
                      block_style_encode block_style ::
-                     rule_fixity_encode rule_fixity ::
+                     fixity_encode fixity ::
                      List.map ppel_encode pp_elements @ ["X"])
     | BRULE {tok,term_name} =>
       "B" ^ StringData.encode tok ^ StringData.encode term_name
-    | SET_MAPPED_FIXITY {tok,term_name,fixity} =>
-      "F" ^ StringData.encode tok ^ StringData.encode term_name ^
-      fixity_encode fixity
     | LRULE lspec => "L" ^ lspec_encode lspec
 
 val user_delta_reader = let
   fun grule ((((tn,ps),bs),f),ppels) =
       GRULE {term_name = tn, paren_style = ps, block_style = bs,
-             rule_fixity = f, pp_elements = ppels}
+             fixity = f, pp_elements = ppels}
   fun brule (tok,tn) = BRULE {tok = tok, term_name = tn}
-  fun smf ((tok,tn), fixity) =
-    SET_MAPPED_FIXITY {tok = tok, term_name = tn, fixity = fixity}
 in
   (literal "G" >> Coding.map grule (StringData.reader >*
                                     paren_style_reader >*
                                     block_style_reader >*
-                                    rule_fixity_reader >*
+                                    fixity_reader >*
                                     many (ppel_reader) >-> literal "X")) ||
   (literal "B" >> Coding.map brule (StringData.reader >* StringData.reader)) ||
-  (literal "L" >> Coding.map LRULE lspec_reader) ||
-  (literal "F" >>
-   map smf (StringData.reader >* StringData.reader >* fixity_reader))
+  (literal "L" >> Coding.map LRULE lspec_reader)
 end
 
 

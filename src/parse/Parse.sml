@@ -46,17 +46,8 @@ fun lose_constrec_ty {Name,Thy,Ty} = {Name = Name, Thy = Thy}
     Fixity stuff
  ---------------------------------------------------------------------------*)
 
-fun Infix x = x;  (* namespace hackery *)
-fun Suffix x = x;
-fun Closefix x = x;
-fun Prefix x = x;
-
-val Infix        = fn (a,i) => RF (term_grammar.Infix (a,i))
 val Infixl       = fn i => Infix(LEFT, i)
 val Infixr       = fn i => Infix(RIGHT, i)
-val Suffix       = fn n => RF (term_grammar.Suffix n)
-val Closefix     = RF term_grammar.Closefix
-val Prefix       = fn n => RF (term_grammar.Prefix n)
 
 
 (*---------------------------------------------------------------------------
@@ -108,12 +99,7 @@ val the_ltm_grm = ref term_grammar.stdhol
 fun current_lgrms() = (!the_lty_grm, !the_ltm_grm);
 
 
-fun fixity s =
-  case term_grammar.get_precedence (term_grammar()) s
-   of SOME rf => SOME (RF rf)
-    | NONE => if Lib.mem s (term_grammar.binders (term_grammar()))
-                 then SOME Binder
-                 else NONE
+fun fixity s = term_grammar.get_precedence (term_grammar()) s
 
 (*---------------------------------------------------------------------------
        Mysterious stuff
@@ -652,10 +638,10 @@ struct
     open term_grammar
   in
     case f of
-      RF (Infix(_, p)) => SOME p
-    | RF (Suffix p) => SOME p
-    | RF (Prefix p) => SOME p
-    | RF Closefix => NONE
+      Infix(_, p) => SOME p
+    | Suffix p => SOME p
+    | Prefix p => SOME p
+    | Closefix => NONE
     | Binder => SOME std_binder_precedence
   end
 
@@ -663,8 +649,8 @@ struct
     open term_grammar
     val rule =
       case fxty of
-        Binder => BRULE {tok = s, term_name = s}
-      | RF rf => GRULE (standard_spacing s rf)
+          Binder => BRULE {tok = s, term_name = s}
+        | rf => GRULE (standard_spacing s rf)
   in
     lift setter {u = [s], term_name = s, newrule = rule, oldtok = NONE}
   end
@@ -841,7 +827,7 @@ fun temp_add_infix(s, prec, associativity) =
    the_term_grammar
     := add_rule
           {term_name=s, block_style=(AroundSamePrec, (INCONSISTENT,0)),
-           rule_fixity=Infix(associativity, prec),
+           fixity=Infix(associativity, prec),
            pp_elements = [HardSpace 1, RE(TOK s), BreakSpace(1,0)],
            paren_style = OnlyIfNecessary}
           (!the_term_grammar)
@@ -860,8 +846,6 @@ fun add_infix (s, prec, associativity) = let in
 
 local open term_grammar
 in
-fun fixityToString Binder  = "Binder"
-  | fixityToString (RF rf) = term_grammar.rule_fixityToString rf
 
 fun relToString TM = "TM"
   | relToString (TOK s) = "TOK "^quote s
@@ -940,11 +924,11 @@ in
         [TOK s] => Some (BRULE {term_name = term_name, tok = s})
       | _ => Error "Rules for binders must feature exactly one TOK and no TMs"
     end
-  | RF rf => Some (GRULE {term_name = term_name,
-                          rule_fixity = rf,
-                          pp_elements = pp_elements,
-                          paren_style = paren_style,
-                          block_style = block_style})
+  | rf => Some (GRULE {term_name = term_name,
+                       fixity = rf,
+                       pp_elements = pp_elements,
+                       paren_style = paren_style,
+                       block_style = block_style})
 end
 
 val unicode_off_but_unicode_act_complaint = ref true
@@ -1121,15 +1105,15 @@ fun temp_set_mapped_fixity {fixity:fixity,term_name,tok} = let
 in
   temp_remove_termtok nmtok;
   case fixity of
-    RF rf => {rule_fixity = rf, term_name = term_name, tok = tok}
-               |> standard_mapped_spacing
-               |> GRULE
-               |> temp_add_grule
-  | Binder => if term_name <> tok then
-                raise ERROR "set_mapped_fixity"
-                            "Can't map binders to different strings"
-              else
-                temp_add_grule (BRULE nmtok)
+      Binder => if term_name <> tok then
+                  raise ERROR "set_mapped_fixity"
+                        "Can't map binders to different strings"
+                else
+                  temp_add_grule (BRULE nmtok)
+    | rf => {fixity = rf, term_name = term_name, tok = tok}
+              |> standard_mapped_spacing
+              |> GRULE
+              |> temp_add_grule
 end
 
 fun set_mapped_fixity (arg as {fixity,term_name,tok}) = let

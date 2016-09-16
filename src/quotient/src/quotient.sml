@@ -1515,12 +1515,11 @@ fun define_quotient_lifted_function quot_ths tyops tyop_simps =
             (* new_gen_definition(def_name, def, fixity) *)
 
 (* The following notes are to explain the treatment of fixities:
-structure Parse:
-datatype fixity = RF of term_grammar.rule_fixity | Binder
 
 structure term_grammar:
-datatype rule_fixity =
-  Infix of associativity * int | Closefix | Suffix of int | Prefix of int
+datatype fixity =
+  Infix of associativity * int | Closefix | Suffix of int | Prefix of int |
+  Binder
 
 structure HOLgrammars :
 datatype associativity = LEFT | RIGHT | NONASSOC
@@ -1531,7 +1530,7 @@ datatype associativity = LEFT | RIGHT | NONASSOC
                     new_definition(def_name, def)
             | SOME Binder =>
                     new_binder_definition(def_name, def)
-            | SOME (RF rule_fixity) =>
+            | SOME rule_fixity =>
                (case rule_fixity of
                   term_grammar.Infix (associativity, priority) =>
                     Definition.new_definition(def_name, def)

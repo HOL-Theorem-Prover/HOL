@@ -41,23 +41,21 @@ datatype grammar_rule =
        | CLOSEFIX of rule_record list
        | LISTRULE of listspec list
 
-datatype rule_fixity =
+datatype fixity =
          Infix of associativity * int
        | Closefix
        | Suffix of int
        | Prefix of int
-datatype fixity = RF of rule_fixity | Binder
+       | Binder
 
 type grule = {term_name : string,
-              rule_fixity : rule_fixity,
+              fixity : fixity,
               pp_elements: pp_element list,
               paren_style : ParenStyle,
               block_style : PhraseBlockStyle * block_info}
 
 datatype user_delta =
          GRULE of grule
-       | SET_MAPPED_FIXITY of {term_name : string, tok : string,
-                               fixity : fixity}
        | LRULE of listspec
        | BRULE of {tok : string, term_name : string}
 

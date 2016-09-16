@@ -244,10 +244,6 @@ signature Parse = sig
 
   val Infixl     : int -> fixity
   val Infixr     : int -> fixity
-  val Infix      : associativity * int -> fixity
-  val Prefix     : int -> fixity
-  val Closefix   : fixity
-  val Suffix     : int -> fixity
   val fixity     : string -> fixity option
 
   (* more constructors/values that come across from term_grammar *)

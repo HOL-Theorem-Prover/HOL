@@ -49,7 +49,7 @@ fun getrule G term_name = let
              pp_elements = map (fn (RE (TOK _)) => RE (TOK s) | x => x)
                                elements,
              block_style = block_style,
-             rule_fixity = rf}
+             fixity = rf}
   fun search_rrlist rf tfopt k (rrlist : rule_record list) =
       case rrlist of
         [] => k tfopt
