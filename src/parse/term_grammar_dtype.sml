@@ -46,13 +46,18 @@ datatype rule_fixity =
        | Closefix
        | Suffix of int
        | Prefix of int
+datatype fixity = RF of rule_fixity | Binder
+
+type grule = {term_name : string,
+              rule_fixity : rule_fixity,
+              pp_elements: pp_element list,
+              paren_style : ParenStyle,
+              block_style : PhraseBlockStyle * block_info}
 
 datatype user_delta =
-         GRULE of {term_name : string,
-                   fixity : rule_fixity,
-                   pp_elements: pp_element list,
-                   paren_style : ParenStyle,
-                   block_style : PhraseBlockStyle * block_info}
+         GRULE of grule
+       | SET_MAPPED_FIXITY of {term_name : string, tok : string,
+                               fixity : fixity}
        | LRULE of listspec
        | BRULE of {tok : string, term_name : string}
 

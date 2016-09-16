@@ -3,6 +3,8 @@ struct
 
 open HOLgrammars GrammarSpecials Lib Feedback term_grammar_dtype
 
+val ERROR = mk_HOL_ERR "term_grammar"
+
 type ppstream = Portable.ppstream
 
 type term = Term.term
@@ -62,11 +64,13 @@ fun userdelta_toks ud =
     | BRULE {tok,...} => [tok]
     | LRULE {leftdelim, separator, rightdelim, ...} =>
       pptoks leftdelim @ pptoks separator @ pptoks rightdelim
+    | SET_MAPPED_FIXITY {tok,...} => [tok]
 
 fun userdelta_name ud =
     case ud of
       GRULE {term_name, ...} => term_name
     | BRULE {term_name, ...} => term_name
+    | SET_MAPPED_FIXITY {term_name,...} => term_name
     | LRULE {cons, ...} => cons
 
 
@@ -750,7 +754,8 @@ fun rrec2delta rf (rr : rule_record) = let
 in
   (#timestamp rr,
    GRULE {term_name = term_name, paren_style = paren_style,
-          block_style = block_style, pp_elements = elements, fixity = rf})
+          block_style = block_style, pp_elements = elements,
+          rule_fixity = rf})
 end
 
 fun rules_for G nm = let
@@ -806,8 +811,8 @@ in
   search [] (rules G)
 end
 
-fun add_rule G0 {term_name = s : string, fixity = f, pp_elements,
-                 paren_style, block_style} = let
+fun add_rule {term_name = s : string, rule_fixity = f, pp_elements,
+              paren_style, block_style} G0 = let
   val _ =  pp_elements_ok pp_elements orelse
                  raise GrammarError "token list no good"
   val contending_tstamps = map #1 (rules_for G0 s)
@@ -858,11 +863,52 @@ in
   G Gmerge [(NONE, LISTRULE [lrule])]
 end
 
+fun rename_to_fixity_field
+      {rule_fixity,term_name,pp_elements,paren_style, block_style} =
+  {fixity=rule_fixity, term_name = term_name, pp_elements = pp_elements,
+   paren_style = paren_style, block_style = block_style}
+
+fun standard_mapped_spacing {term_name,tok,rule_fixity}  = let
+  val bstyle = (AroundSamePrec, (Portable.INCONSISTENT, 0))
+  val pstyle = OnlyIfNecessary
+  val ppels =
+      case rule_fixity of
+        Infix _ => [HardSpace 1, RE (TOK tok), BreakSpace(1,0)]
+      | Prefix _ => [RE(TOK tok), HardSpace 1]
+      | Suffix _     => [HardSpace 1, RE(TOK tok)]
+      | Closefix  => [RE(TOK tok)]
+in
+  {term_name = term_name, rule_fixity = rule_fixity, pp_elements = ppels,
+   paren_style = pstyle, block_style = bstyle}
+end
+
+fun standard_spacing name fixity =
+    standard_mapped_spacing {term_name = name, tok = name, rule_fixity = fixity}
+
+val std_binder_precedence = 0;
+
+fun set_mapped_fixity {term_name,tok,fixity} G =
+  let
+    val nmtok = {term_name=term_name, tok = tok}
+    val G = remove_form_with_tok G nmtok
+  in
+    case fixity of
+        Binder => if term_name <> tok then
+                    raise ERROR "set_mapped_fixity"
+                          "Can't map binders to different strings"
+                  else
+                    add_binder nmtok G
+      | RF rf => {rule_fixity = rf, tok = tok, term_name = term_name}
+                   |> standard_mapped_spacing
+                   |> C add_rule G
+  end
+
 fun add_delta ud G =
     case ud of
-      GRULE r => add_rule G r
+      GRULE r => add_rule r G
     | BRULE r => add_binder r G
     | LRULE r => add_listform G r
+    | SET_MAPPED_FIXITY r => set_mapped_fixity r G
 
 fun prefer_form_with_tok (r as {term_name,tok}) G0 = let
   val contending_timestamps = map #1 (rules_for G0 term_name)
@@ -1285,18 +1331,18 @@ in
             following customised printing spec works better.  The crucial
             difference is that the blocking style is CONSISTENT rather than
             INCONSISTENT. *)
-         |> C add_rule {term_name   = "==>",
-                        block_style = (AroundSamePrec, (CONSISTENT, 0)),
-                        fixity      = Infix(RIGHT, 200),
-                        pp_elements = [HardSpace 1, RE (TOK "==>"),
-                                       BreakSpace(1,0)],
-                        paren_style = OnlyIfNecessary}
-         |> C add_rule {term_name   = "=",
-                        block_style = (AroundSamePrec, (CONSISTENT, 0)),
-                        fixity      = Infix(NONASSOC, 100),
-                        pp_elements = [HardSpace 1, RE (TOK "="),
-                                       BreakSpace(1,0)],
-                        paren_style = OnlyIfNecessary}
+         |> add_rule {term_name   = "==>",
+                      block_style = (AroundSamePrec, (CONSISTENT, 0)),
+                      rule_fixity = Infix(RIGHT, 200),
+                      pp_elements = [HardSpace 1, RE (TOK "==>"),
+                                     BreakSpace(1,0)],
+                      paren_style = OnlyIfNecessary}
+         |> add_rule {term_name   = "=",
+                      block_style = (AroundSamePrec, (CONSISTENT, 0)),
+                      rule_fixity = Infix(NONASSOC, 100),
+                      pp_elements = [HardSpace 1, RE (TOK "="),
+                                     BreakSpace(1,0)],
+                      paren_style = OnlyIfNecessary}
 
 end
 (* ----------------------------------------------------------------------
@@ -1461,43 +1507,57 @@ in
          StringData.reader >* many ppel_reader >* binfo_reader)
 end
 
-fun fixity_encode f =
+fun rule_fixity_encode f =
     case f of
       Infix(a,p) => "I" ^ assoc_encode a ^ IntData.encode p
     | Suffix p => "S" ^ IntData.encode p
     | Prefix p => "P" ^ IntData.encode p
     | Closefix => "C"
-val fixity_reader =
+val rule_fixity_reader =
     (literal "I" >> map Infix (assoc_reader >* IntData.reader)) ||
     (literal "S" >> map Suffix IntData.reader) ||
     (literal "P" >> map Prefix IntData.reader) ||
     (literal "C" >> return Closefix)
 
+fun fixity_encode f =
+  case f of
+      Binder => "B"
+    | RF rf => rule_fixity_encode rf
+val fixity_reader =
+  (literal "B" >> return Binder) || map RF rule_fixity_reader
+
 fun user_delta_encode ud =
     case ud of
-      GRULE {term_name, pp_elements, paren_style, block_style, fixity} =>
+      GRULE {term_name, pp_elements, paren_style, block_style, rule_fixity} =>
       String.concat ("G" :: StringData.encode term_name ::
                      paren_style_encode paren_style ::
                      block_style_encode block_style ::
-                     fixity_encode fixity ::
+                     rule_fixity_encode rule_fixity ::
                      List.map ppel_encode pp_elements @ ["X"])
     | BRULE {tok,term_name} =>
       "B" ^ StringData.encode tok ^ StringData.encode term_name
+    | SET_MAPPED_FIXITY {tok,term_name,fixity} =>
+      "F" ^ StringData.encode tok ^ StringData.encode term_name ^
+      fixity_encode fixity
     | LRULE lspec => "L" ^ lspec_encode lspec
 
 val user_delta_reader = let
   fun grule ((((tn,ps),bs),f),ppels) =
-      GRULE {term_name = tn, paren_style = ps, block_style = bs, fixity = f,
-             pp_elements = ppels}
+      GRULE {term_name = tn, paren_style = ps, block_style = bs,
+             rule_fixity = f, pp_elements = ppels}
   fun brule (tok,tn) = BRULE {tok = tok, term_name = tn}
+  fun smf ((tok,tn), fixity) =
+    SET_MAPPED_FIXITY {tok = tok, term_name = tn, fixity = fixity}
 in
   (literal "G" >> Coding.map grule (StringData.reader >*
                                     paren_style_reader >*
                                     block_style_reader >*
-                                    fixity_reader >*
+                                    rule_fixity_reader >*
                                     many (ppel_reader) >-> literal "X")) ||
   (literal "B" >> Coding.map brule (StringData.reader >* StringData.reader)) ||
-  (literal "L" >> Coding.map LRULE lspec_reader)
+  (literal "L" >> Coding.map LRULE lspec_reader) ||
+  (literal "F" >>
+   map smf (StringData.reader >* StringData.reader >* fixity_reader))
 end
 
 

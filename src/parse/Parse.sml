@@ -2,6 +2,7 @@ structure Parse :> Parse =
 struct
 
 open Feedback HolKernel HOLgrammars GrammarSpecials term_grammar type_grammar
+open term_grammar_dtype
 
 type pp_element = term_grammar.pp_element
 type PhraseBlockStyle = term_grammar.PhraseBlockStyle
@@ -44,10 +45,6 @@ fun lose_constrec_ty {Name,Thy,Ty} = {Name = Name, Thy = Thy}
 (*---------------------------------------------------------------------------
     Fixity stuff
  ---------------------------------------------------------------------------*)
-
-datatype fixity
-    = RF of rule_fixity
-    | Binder
 
 fun Infix x = x;  (* namespace hackery *)
 fun Suffix x = x;
@@ -638,26 +635,6 @@ in
   type_grammar_changed := true
 end
 
-fun standard_mapped_spacing {term_name,tok,fixity}  = let
-  open term_grammar  (* to get fixity constructors *)
-  val bstyle = (AroundSamePrec, (Portable.INCONSISTENT, 0))
-  val pstyle = OnlyIfNecessary
-  val ppels =
-      case fixity of
-        Infix _ => [HardSpace 1, RE (TOK tok), BreakSpace(1,0)]
-      | Prefix _ => [RE(TOK tok), HardSpace 1]
-      | Suffix _     => [HardSpace 1, RE(TOK tok)]
-      | Closefix  => [RE(TOK tok)]
-in
-  {term_name = term_name, fixity = fixity, pp_elements = ppels,
-   paren_style = pstyle, block_style = bstyle}
-end
-
-fun standard_spacing name fixity =
-    standard_mapped_spacing {term_name = name, tok = name, fixity = fixity}
-
-val std_binder_precedence = 0;
-
 structure Unicode =
 struct
 
@@ -862,11 +839,12 @@ fun temp_add_infix(s, prec, associativity) =
  let open term_grammar Portable
  in
    the_term_grammar
-    := add_rule (!the_term_grammar)
+    := add_rule
           {term_name=s, block_style=(AroundSamePrec, (INCONSISTENT,0)),
-           fixity=Infix(associativity, prec),
+           rule_fixity=Infix(associativity, prec),
            pp_elements = [HardSpace 1, RE(TOK s), BreakSpace(1,0)],
            paren_style = OnlyIfNecessary}
+          (!the_term_grammar)
    ;
    term_grammar_changed := true
   end handle GrammarError s => raise ERROR "add_infix" ("Grammar Error: "^s)
@@ -962,7 +940,8 @@ in
         [TOK s] => Some (BRULE {term_name = term_name, tok = s})
       | _ => Error "Rules for binders must feature exactly one TOK and no TMs"
     end
-  | RF rf => Some (GRULE {term_name = term_name, fixity = rf,
+  | RF rf => Some (GRULE {term_name = term_name,
+                          rule_fixity = rf,
                           pp_elements = pp_elements,
                           paren_style = paren_style,
                           block_style = block_style})
@@ -1137,14 +1116,15 @@ fun remove_rules_for_term s = let in
    update_grms "remove_rules_for_term" ("temp_remove_rules_for_term", quote s)
  end
 
-fun temp_set_mapped_fixity {fixity,term_name,tok} = let
+fun temp_set_mapped_fixity {fixity:fixity,term_name,tok} = let
   val nmtok = {term_name = term_name, tok = tok}
 in
   temp_remove_termtok nmtok;
   case fixity of
-    RF rf => temp_add_grule
-                 (GRULE (standard_mapped_spacing {fixity = rf, tok = tok,
-                                                  term_name = term_name}))
+    RF rf => {rule_fixity = rf, term_name = term_name, tok = tok}
+               |> standard_mapped_spacing
+               |> GRULE
+               |> temp_add_grule
   | Binder => if term_name <> tok then
                 raise ERROR "set_mapped_fixity"
                             "Can't map binders to different strings"

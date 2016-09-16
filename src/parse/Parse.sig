@@ -11,9 +11,7 @@ signature Parse = sig
   type 'a frag = 'a Portable.frag
   type ppstream = Portable.ppstream
 
-  datatype fixity
-     = RF of term_grammar.rule_fixity
-     | Binder
+  datatype fixity = datatype term_grammar_dtype.fixity
   val fixityToString : fixity -> string
 
   type grammarDB_info = type_grammar.grammar * term_grammar.grammar

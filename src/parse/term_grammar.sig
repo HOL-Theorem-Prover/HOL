@@ -1,4 +1,3 @@
-
 signature term_grammar =
 sig
 
@@ -6,6 +5,7 @@ sig
   type block_info = term_grammar_dtype.block_info
   type overload_info = Overload.overload_info
   type associativity = term_grammar_dtype.associativity
+  type grule = term_grammar_dtype.grule
 
   datatype rule_element = datatype term_grammar_dtype.rule_element
   val RE_compare : rule_element * rule_element -> order
@@ -37,6 +37,11 @@ sig
 
   val stdhol         : grammar
   val min_grammar    : grammar
+
+  val standard_mapped_spacing :
+      {term_name:string,tok:string,rule_fixity:rule_fixity} -> grule
+  val standard_spacing : string -> rule_fixity -> grule
+
   val merge_grammars : grammar * grammar -> grammar
   val fupdate_overload_info :
     (overload_info -> overload_info) -> grammar -> grammar
@@ -122,13 +127,7 @@ sig
   val add_listform : grammar -> listspec -> grammar
 
   val rule_fixityToString : rule_fixity -> string
-  val add_rule : grammar
-                  -> {term_name : string,
-                      fixity : rule_fixity,
-                      pp_elements: pp_element list,
-                      paren_style : ParenStyle,
-                      block_style : PhraseBlockStyle * block_info}
-                  -> grammar
+  val add_rule : grule -> grammar -> grammar
   val add_delta : user_delta -> grammar -> grammar
 
   val add_numeral_form : grammar -> (char * string option) -> grammar
@@ -184,7 +183,7 @@ sig
   val grule_encode : grammar_rule -> string
   val user_delta_reader : user_delta Coding.reader
   val user_delta_encode : user_delta -> string
-  val fixity_encode : rule_fixity -> string
-  val fixity_reader : rule_fixity Coding.reader
+  val rule_fixity_encode : rule_fixity -> string
+  val rule_fixity_reader : rule_fixity Coding.reader
 
 end
