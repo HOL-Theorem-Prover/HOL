@@ -58,16 +58,24 @@ fun reltoString (TOK s) = s
 
 fun pptoks ppels = List.mapPartial (fn TOK s => SOME s | _ => NONE)
                                    (rule_elements ppels)
+
+(* used so that ProvideUnicode can look at additions to grammars and see if
+   they involve Unicode *)
 fun userdelta_toks ud =
     case ud of
       GRULE {pp_elements, ...} => pptoks pp_elements
     | LRULE {leftdelim, separator, rightdelim, ...} =>
       pptoks leftdelim @ pptoks separator @ pptoks rightdelim
+    | RMTMTOK _ => []
+    | RMTMNM _ => []
 
+(* ProvideUnicode wants to track term names of additions *)
 fun userdelta_name ud =
     case ud of
       GRULE {term_name, ...} => term_name
     | LRULE {cons, ...} => cons
+    | RMTMTOK _ => ""
+    | RMTMNM _ => ""
 
 
 type overload_info = Overload.overload_info
@@ -918,6 +926,8 @@ fun add_delta ud G =
     case ud of
       GRULE r => add_rule r G
     | LRULE r => add_listform G r
+    | RMTMTOK r => remove_form_with_tok G r
+    | RMTMNM s => remove_standard_form G s
 
 fun prefer_form_with_tok (r as {term_name,tok}) G0 = let
   val contending_timestamps = map #1 (rules_for G0 term_name)
@@ -1546,6 +1556,9 @@ fun user_delta_encode ud =
                      fixity_encode fixity ::
                      List.map ppel_encode pp_elements @ ["X"])
     | LRULE lspec => "L" ^ lspec_encode lspec
+    | RMTMNM s => "RN" ^ StringData.encode s
+    | RMTMTOK {term_name,tok} =>
+        "RK" ^ StringData.encode term_name ^ StringData.encode tok
 
 val user_delta_reader = let
   fun grule ((((tn,ps),bs),f),ppels) =
@@ -1557,7 +1570,11 @@ in
                                     block_style_reader >*
                                     fixity_reader >*
                                     many (ppel_reader) >-> literal "X")) ||
-  (literal "L" >> Coding.map LRULE lspec_reader)
+  (literal "L" >> Coding.map LRULE lspec_reader) ||
+  (literal "RN" >> Coding.map RMTMNM StringData.reader) ||
+  (literal "RK" >>
+   Coding.map (fn (nm,tok) => RMTMTOK {term_name = nm, tok = tok})
+              (StringData.reader >* StringData.reader))
 end
 
 

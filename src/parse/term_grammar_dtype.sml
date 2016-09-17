@@ -57,6 +57,8 @@ type grule = {term_name : string,
 datatype user_delta =
          GRULE of grule
        | LRULE of listspec
+       | RMTMTOK of {term_name : string, tok : string}
+       | RMTMNM of string
 
 
 end
