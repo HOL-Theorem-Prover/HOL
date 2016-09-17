@@ -371,17 +371,17 @@ fun pp_struct info_record = let
 
   fun stringbrk s = (add_string s >> add_break(1,0))
   val bind_theorems =
-      if null thml then nothing
-      else
-        block CONSISTENT 0
-           (block CONSISTENT 0
-                  (add_string "structure ThmBind = struct" >> add_break(1,2) >>
-                   add_string "val DT = Thm.disk_thm" >> add_break(1,2) >>
-                   add_string "val read = Term.read_raw tmvector" >>
-                   add_break(1,0) >> add_string"end") >> add_newline >>
-            block CONSISTENT 0
-               (pr_list pr_bind nothing add_newline thml) >>
-            add_newline)
+      block CONSISTENT 0
+            (block CONSISTENT 0
+                   (add_string "structure ThmBind = struct" >> add_break(1,2) >>
+                    add_string "val DT = Thm.disk_thm" >> add_break(1,2) >>
+                    add_string "val read = Term.read_raw tmvector" >>
+                    add_break(1,0) >> add_string"end") >> add_newline >>
+             (if null thml then nothing
+              else
+                block CONSISTENT 0
+                      (pr_list pr_bind nothing add_newline thml)) >>
+             add_newline)
 
   fun pr_dbtriple (class,th) =
       block CONSISTENT 1
