@@ -55,8 +55,10 @@ sig
 (* -- and persistent data added to theories *)
   structure LoadableThyData : sig
     type t
-    val new : {thydataty : string, merge : 'a * 'a -> 'a,
-               read : string -> 'a option, write : 'a -> string} ->
+    val new : {thydataty : string,
+               merge : 'a * 'a -> 'a,
+               read : (string -> term) -> string -> 'a option,
+               write : 'a -> string} ->
               ('a -> t) * (t -> 'a option)
     val segment_data : {thy: string, thydataty: string} -> t option
 
@@ -71,6 +73,7 @@ sig
        might have been there. *)
 
     val temp_encoded_update : {thy : string, thydataty : string,
+                               read : string -> term,
                                data : string} -> unit
     (* updates segment data using an encoded string *)
   end

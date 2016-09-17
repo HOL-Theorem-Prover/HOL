@@ -25,10 +25,9 @@ struct
   end
   val tyname = "TexTokenMap"
 
-  val (mk,dest) = Theory.LoadableThyData.new {thydataty = tyname,
-                                              merge = op@,
-                                              read = Coding.lift read_deltas,
-                                              write = write_deltas}
+  val (mk,dest) = Theory.LoadableThyData.new
+                    {thydataty = tyname, merge = op@,
+                     read = K (Coding.lift read_deltas), write = write_deltas}
 
 
   val tokmap = ref (Binarymap.mkDict String.compare)

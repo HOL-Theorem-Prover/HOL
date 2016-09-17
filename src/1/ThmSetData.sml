@@ -89,7 +89,7 @@ end
 
 fun new ty = let
   val (mk,dest) = LoadableThyData.new {merge = set_alist_merge,
-                                       read = read ty,
+                                       read = Lib.K (read ty),
                                        write = writeset, thydataty = ty}
   fun foldthis (nm,set) =
       case lookup ty ("<internal>: "^nm) nm of

@@ -54,10 +54,11 @@ struct
     fun f ({name,tyop ={Thy,Tyop}},s) = String.concat[e (ots name),e Thy,e Tyop,s]
   in List.foldl f (" "^s2) l1 end
   val tyname = "OpenTheoryMap"
-  val (mk,dest) = Theory.LoadableThyData.new {thydataty = tyname,
-                                              merge = fn((a,b),(c,d))=>(c@a,d@b),
-                                              read = Coding.lift read_deltas,
-                                              write = write_deltas}
+  val (mk,dest) =
+      Theory.LoadableThyData.new {thydataty = tyname,
+                                  merge = fn((a,b),(c,d))=>(c@a,d@b),
+                                  read = Lib.K (Coding.lift read_deltas),
+                                  write = write_deltas}
   fun tyopToString  {Thy,Tyop} = "(Thy="^Thy^",Tyop="^Tyop^")"
   fun constToString {Thy,Name} = "(Thy="^Thy^",Name="^Name^")"
   fun temp_OpenTheory_tyop_name0 src {tyop,name} = ()

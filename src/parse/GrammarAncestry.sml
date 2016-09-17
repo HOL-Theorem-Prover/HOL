@@ -9,7 +9,7 @@ val tag = "GrammarAncestry"
 
 val (write, read) =
     Theory.LoadableThyData.new {thydataty = tag, merge = op @,
-                                read = Coding.StringData.decodel,
+                                read = Lib.K Coding.StringData.decodel,
                                 write = Coding.StringData.encodel}
 
 fun ancestry {thy} =

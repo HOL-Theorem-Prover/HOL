@@ -230,7 +230,7 @@ fun drop_Axkind (Axiom rth) = rth
  *---------------------------------------------------------------------------*)
 
 datatype thydata = Loaded of UniversalType.t
-                 | Pending of string list
+                 | Pending of (string * (string -> term)) list
 type ThyDataMap = (string,thydata)Binarymap.dict
                   (* map from string identifying the "type" of the data,
                      e.g., "simp", "mono", "cong", "grammar_update",
@@ -652,7 +652,8 @@ structure LoadableThyData =
 struct
 
   type t = UniversalType.t
-  type DataOps = {merge : t * t -> t, read : string -> t option,
+  type DataOps = {merge : t * t -> t,
+                  read : (string -> term) -> string -> t option,
                   write : t -> string}
   val allthydata = ref (Binarymap.mkDict String.compare :
                         (string, ThyDataMap) Binarymap.dict)
@@ -709,7 +710,7 @@ struct
                   thid = thid, adjoin = adjoin, facts = facts}
         end
 
-  fun temp_encoded_update {thy, thydataty, data} = let
+  fun temp_encoded_update {thy, thydataty, data, read = tmread} = let
     val {thydata, thid, adjoin, facts} = theCT()
     open Binarymap
     fun updatemap inmap = let
@@ -717,15 +718,15 @@ struct
                           ("Bad decode for "^thydataty^" ("^data^")")
       val newdata =
         case (peek(inmap, thydataty), peek(!dataops,thydataty)) of
-          (NONE, NONE) => Pending [data]
+          (NONE, NONE) => Pending [(data,tmread)]
         | (NONE, SOME {read,...}) =>
-            Loaded (valOf (read data) handle Option => raise baddecode)
+            Loaded (valOf (read tmread data) handle Option => raise baddecode)
         | (SOME (Loaded t), NONE) =>
              raise Fail "temp_encoded_update invariant failure 1"
         | (SOME (Loaded t), SOME {merge,read,...}) =>
-             Loaded (merge(t, valOf (read data)
+             Loaded (merge(t, valOf (read tmread data)
                               handle Option => raise baddecode))
-        | (SOME (Pending ds), NONE) => Pending (data::ds)
+        | (SOME (Pending ds), NONE) => Pending ((data,tmread)::ds)
         | (SOME (Pending _), SOME _) =>
              raise Fail "temp_encoded_update invariant failure 2"
     in
@@ -755,11 +756,12 @@ fun update_pending (m,r) thydataty = let
                      " already in use.")
       | SOME (Pending []) => raise Fail "update_pending invariant failure 2"
       | SOME (Pending (ds as (_ :: _))) => let
-          fun foldthis (d,acc) = m(acc, valOf (r d))
+          fun foldthis ((d,tmrd),acc) = m(acc, valOf (r tmrd d))
           val ds' = List.rev ds
+          val (d1,tmrd1) = hd ds'
         in
           insert(inmap,thydataty,
-                 Loaded (List.foldl foldthis (valOf (r (hd ds'))) (tl ds')))
+                 Loaded (List.foldl foldthis (valOf (r tmrd1 d1)) (tl ds')))
         end
   fun foldthis (k,v,acc) = insert(acc,k,update1 v)
   val _ = allthydata := Binarymap.foldl foldthis
@@ -774,7 +776,7 @@ fun 'a new {thydataty, merge, read, write} = let
   val (mk : 'a -> t, dest) = UniversalType.embed ()
   fun vdest t = valOf (dest t)
   fun merge' (t1, t2) = mk(merge(vdest t1, vdest t2))
-  fun read' s = Option.map mk (read s)
+  fun read' tmread s = Option.map mk (read tmread s)
   fun write' t = write (vdest t)
 in
   update_pending (merge',read') thydataty;
