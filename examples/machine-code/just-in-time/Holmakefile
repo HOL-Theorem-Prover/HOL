@@ -1,9 +1,9 @@
-INCLUDES = $(HOLDIR)/examples/machine-code/decompiler \
-           $(HOLDIR)/examples/machine-code/compiler \
-           $(HOLDIR)/examples/machine-code/hoare-triple \
+INCLUDES = ../decompiler \
+           ../compiler \
+           ../hoare-triple \
            $(HOLDIR)/tools/mlyacc/mlyacclib \
-           $(HOLDIR)/examples/machine-code/instruction-set-models/common \
-           $(HOLDIR)/examples/machine-code/instruction-set-models/x86
+           ../instruction-set-models/common \
+           ../instruction-set-models/x86
 OPTIONS=QUIT_ON_FAILURE
 
 ifdef POLY
