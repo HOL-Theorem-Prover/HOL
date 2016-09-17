@@ -345,7 +345,7 @@ fun pp_struct info_record = let
   fun pparent (s,i,j) = Thry s
 
   fun pp_tm tm =
-      (add_string "read\"">>
+      (add_string "ThmBind.read\"">>
        add_string (Term.write_raw
                      (fn t => Map.find(#termmap tmtable, t))
                      tm)>>
@@ -361,7 +361,7 @@ fun pp_struct info_record = let
          add_string "val">>
          add_break(1,0)>> add_string ("op "^s) >> add_break(1,0)>>
          add_string "=">> add_break(1,0)>>
-         add_string "DT(">>
+         add_string "ThmBind.DT(">>
          block INCONSISTENT 0
             (C Tag.pp_to_disk tg>>
              add_string ",">> add_break(1,0)>>
@@ -374,16 +374,14 @@ fun pp_struct info_record = let
       if null thml then nothing
       else
         block CONSISTENT 0
-           (stringbrk "local" >>
-            block CONSISTENT 0
-              (stringbrk"val DT = Thm.disk_thm" >>
-               stringbrk"val read = Term.read_raw tmvector") >>
-            add_newline >>
-            add_string"in" >> add_newline >>
+           (block CONSISTENT 0
+                  (add_string "structure ThmBind = struct" >> add_break(1,2) >>
+                   add_string "val DT = Thm.disk_thm" >> add_break(1,2) >>
+                   add_string "val read = Term.read_raw tmvector" >>
+                   add_break(1,0) >> add_string"end") >> add_newline >>
             block CONSISTENT 0
                (pr_list pr_bind nothing add_newline thml) >>
-            add_newline >>
-            add_string"end")
+            add_newline)
 
   fun pr_dbtriple (class,th) =
       block CONSISTENT 1
