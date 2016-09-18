@@ -26,7 +26,7 @@ struct
   val tyname = "TexTokenMap"
 
   val (mk,dest) = Theory.LoadableThyData.new
-                    {thydataty = tyname, merge = op@,
+                    {thydataty = tyname, merge = op@, terms = K [],
                      read = K (Coding.lift read_deltas), write = write_deltas}
 
 

@@ -57,6 +57,7 @@ sig
     type t
     val new : {thydataty : string,
                merge : 'a * 'a -> 'a,
+               terms : 'a -> term list,
                read : (string -> term) -> string -> 'a option,
                write : 'a -> string} ->
               ('a -> t) * (t -> 'a option)

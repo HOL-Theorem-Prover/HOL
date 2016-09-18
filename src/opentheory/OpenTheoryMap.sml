@@ -55,7 +55,7 @@ struct
   in List.foldl f (" "^s2) l1 end
   val tyname = "OpenTheoryMap"
   val (mk,dest) =
-      Theory.LoadableThyData.new {thydataty = tyname,
+      Theory.LoadableThyData.new {thydataty = tyname, terms = Lib.K [],
                                   merge = fn((a,b),(c,d))=>(c@a,d@b),
                                   read = Lib.K (Coding.lift read_deltas),
                                   write = write_deltas}

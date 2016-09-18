@@ -241,6 +241,7 @@ val decode = Coding.lift reader
 open LoadableThyData
 val (mk,dest) =
     new {merge = op@, read = Lib.K (Coding.lift (Coding.many reader)),
+         terms = K [],
          write = String.concat o map encode, thydataty = "unicodedata"}
 
 fun update value =

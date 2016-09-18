@@ -772,7 +772,7 @@ in
   makeCT {thid=thid,facts=facts,adjoin=adjoin,thydata = update1 thydata}
 end
 
-fun 'a new {thydataty, merge, read, write} = let
+fun 'a new {thydataty, merge, read, write, terms} = let
   val (mk : 'a -> t, dest) = UniversalType.embed ()
   fun vdest t = valOf (dest t)
   fun merge' (t1, t2) = mk(merge(vdest t1, vdest t2))
