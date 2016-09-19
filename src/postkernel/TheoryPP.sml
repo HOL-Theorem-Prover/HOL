@@ -267,11 +267,13 @@ end
 
 fun pp_struct info_record = let
   open Term Thm
-  val {theory as (name,i1,i2), parents=parents0, thydata,
+  val {theory as (name,i1,i2), parents=parents0,
+       thydata = (thydata_tms, thydata),
        axioms,definitions,theorems,types,constants,struct_ps} = info_record
   val parents1 = filter (fn (s,_,_) => not ("min"=s)) parents0
   val thml = axioms@definitions@theorems
-  val all_term_atoms_set = thml_atoms (map #2 thml) empty_tmset
+  val all_term_atoms_set =
+      thml_atoms (map #2 thml) empty_tmset |> Term.all_atomsl thydata_tms
   open SharingTables
   fun dotypes (ty, (idtable, tytable)) = let
     val (_, idtable, tytable) = make_shared_type ty idtable tytable

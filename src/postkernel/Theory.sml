@@ -654,7 +654,8 @@ struct
   type t = UniversalType.t
   type DataOps = {merge : t * t -> t,
                   read : (string -> term) -> string -> t option,
-                  write : (term -> string) -> t -> string}
+                  write : (term -> string) -> t -> string,
+                  terms : t -> term list}
   val allthydata = ref (Binarymap.mkDict String.compare :
                         (string, ThyDataMap) Binarymap.dict)
   val dataops = ref (Binarymap.mkDict String.compare :
@@ -680,7 +681,7 @@ struct
       case Binarymap.peek(!dataops, thydataty) of
         NONE => raise ERR "write_data_update"
                           ("No operations defined for "^thydataty)
-      | SOME {merge,read,write} => let
+      | SOME {merge,read,write,terms} => let
           val {thydata,thid,adjoin,facts} = theCT()
           open Binarymap
           fun updatemap inmap = let
@@ -778,11 +779,12 @@ fun 'a new {thydataty, merge, read, write, terms} = let
   fun merge' (t1, t2) = mk(merge(vdest t1, vdest t2))
   fun read' tmread s = Option.map mk (read tmread s)
   fun write' tmwrite t = write tmwrite (vdest t)
+  fun terms' t = terms (vdest t)
 in
   update_pending (merge',read') thydataty;
-  dataops := Binarymap.insert(!dataops,
-                              thydataty,
-                              {merge=merge', read=read', write=write'});
+  dataops := Binarymap.insert(!dataops, thydataty,
+                              {merge=merge', read=read', write=write',
+                               terms=terms'});
   (mk,dest)
 end
 
@@ -867,16 +869,18 @@ fun export_theory () = let
                  theorems = T,
                  sig_ps = sig_ps}
   fun mungethydata dmap = let
-    fun foldthis (k,v,acc) =
+    fun foldthis (k,v,acc as (tmlist,dict)) =
         case v of
-          Loaded t => let
-            val w = #write (Binarymap.find(!LoadableThyData.dataops, k))
+          Loaded t =>
+          let
+            val {write,terms,...} = Binarymap.find(!LoadableThyData.dataops, k)
           in
-            Binarymap.insert(acc,k,(fn wrtm => w wrtm t))
+            (terms t @ tmlist,
+             Binarymap.insert(dict,k,(fn wrtm => write wrtm t)))
           end
         | _ => acc
   in
-    Binarymap.foldl foldthis (Binarymap.mkDict String.compare) dmap
+    Binarymap.foldl foldthis ([], Binarymap.mkDict String.compare) dmap
   end
   val structthry =
       {theory = dest_thyid thid,
