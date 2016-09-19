@@ -52,13 +52,11 @@ val T_DEF =
  Definition.new_definition
    ("T_DEF",          Term `T = ((\x:bool. x) = \x:bool. x)`);
 
-val _ = add_const "T";
-
 val FORALL_DEF =
  Definition.new_definition
    ("FORALL_DEF",     Term `! = \P:'a->bool. P = \x. T`);
 
-val _ = (set_fixity "!" Binder; add_const "!");
+val _ = set_fixity "!" Binder
 val _ = unicode_version {u = UChar.forall, tmnm = "!"};
 val _ = TeX_notation {hol = "!", TeX = ("\\HOLTokenForall{}",1)}
 val _ = TeX_notation {hol = UChar.forall, TeX = ("\\HOLTokenForall{}",1)}
@@ -67,7 +65,7 @@ val EXISTS_DEF =
  Definition.new_definition
    ("EXISTS_DEF",     Term `? = \P:'a->bool. P ($@ P)`);
 
-val _ = (set_fixity "?" Binder; add_const "?");
+val _ = set_fixity "?" Binder
 val _ = unicode_version {u = UChar.exists, tmnm = "?"}
 val _ = TeX_notation {hol = "?", TeX = ("\\HOLTokenExists{}",1)}
 val _ = TeX_notation {hol = UChar.exists, TeX = ("\\HOLTokenExists{}",1)}
@@ -76,7 +74,7 @@ val AND_DEF =
  Definition.new_definition
    ("AND_DEF",        Term `/\ = \t1 t2. !t. (t1 ==> t2 ==> t) ==> t`);
 
-val _ = (add_infix ("/\\", 400, RIGHT); add_const "/\\");
+val _ = set_fixity "/\\" (Infixr 400);
 val _ = unicode_version {u = UChar.conj, tmnm = "/\\"};
 val _ = TeX_notation {hol = "/\\", TeX = ("\\HOLTokenConj{}",1)}
 val _ = TeX_notation {hol = UChar.conj, TeX = ("\\HOLTokenConj{}",1)}
@@ -86,7 +84,7 @@ val OR_DEF =
  Definition.new_definition
    ("OR_DEF",         Term `\/ = \t1 t2. !t. (t1 ==> t) ==> (t2 ==> t) ==> t`)
 
-val _ = (add_infix ("\\/", 300, RIGHT); add_const "\\/");
+val _ = set_fixity "\\/" (Infixr 300)
 val _ = unicode_version {u = UChar.disj, tmnm = "\\/"}
 val _ = TeX_notation {hol = "\\/", TeX = ("\\HOLTokenDisj{}",1)}
 val _ = TeX_notation {hol = UChar.disj, TeX = ("\\HOLTokenDisj{}",1)}
@@ -96,20 +94,16 @@ val F_DEF =
  Definition.new_definition
    ("F_DEF",          Term `F = !t. t`);
 
-val _ = Parse.add_const "F";
-
 val NOT_DEF =
  Definition.new_definition
    ("NOT_DEF",        Term `~ = \t. t ==> F`);
-
-val _ = add_const "~";
 
 val EXISTS_UNIQUE_DEF =
 Definition.new_definition
 ("EXISTS_UNIQUE_DEF", Term `?! = \P:'a->bool.
                                     $? P /\ !x y. P x /\ P y ==> (x=y)`);
 
-val _ = (set_fixity "?!" Binder; add_const "?!")
+val _ = set_fixity "?!" Binder
 
 val _ = unicode_version { u = UChar.exists ^ "!", tmnm = "?!"}
 val _ = TeX_notation {hol = "?!", TeX = ("\\HOLTokenUnique{}",2)}
@@ -119,27 +113,19 @@ val LET_DEF =
  Definition.new_definition
    ("LET_DEF",        Term `LET = \(f:'a->'b) x. f x`);
 
-val _ = add_const "LET";
-
 val COND_DEF =
  Definition.new_definition
    ("COND_DEF",       Term `COND = \t t1 t2.
                                       @x:'a. ((t=T) ==> (x=t1)) /\
                                              ((t=F) ==> (x=t2))`);
-val _ = add_const "COND";
-
 val ONE_ONE_DEF =
  Definition.new_definition
    ("ONE_ONE_DEF",    Term `ONE_ONE = \f:'a->'b. !x1 x2.
                                          (f x1 = f x2) ==> (x1 = x2)`);
 
-val _ = add_const "ONE_ONE";
-
 val ONTO_DEF =
  Definition.new_definition
    ("ONTO_DEF",       Term `ONTO = \f:'a->'b. !y. ?x. y = f x`);
-
-val _ = add_const "ONTO";
 
 val TYPE_DEFINITION =
  Definition.new_definition
@@ -147,8 +133,6 @@ val TYPE_DEFINITION =
                       Term `TYPE_DEFINITION = \P:'a->bool. \rep:'b->'a.
                               (!x' x''. (rep x' = rep x'') ==> (x' = x'')) /\
                               (!x. P x = (?x'. x = rep x'))`);
-
-val _ = add_const "TYPE_DEFINITION";
 
 
 (*---------------------------------------------------------------------------*
@@ -227,14 +211,13 @@ val literal_case_DEF =
  Definition.new_definition
    ("literal_case_DEF",  Term `literal_case = \(f:'a->'b) x. f x`);
 
-val _ = List.app add_const ["ARB", "literal_case"];
 val _ = overload_on ("case", ``bool$literal_case``);
 
 val IN_DEF =
  Definition.new_definition
    ("IN_DEF",         Term `IN = \x (f:'a->bool). f x`);
 
-val _ = (add_infix ("IN", 425, Parse.NONASSOC); add_const "IN");
+val _ = set_fixity "IN" (Infix(NONASSOC, 425))
 val _ = unicode_version {u = UChar.setelementof, tmnm = "IN"};
 val _ = TeX_notation {hol = "IN", TeX = ("\\HOLTokenIn{}",1)}
 val _ = TeX_notation {hol = UChar.setelementof, TeX = ("\\HOLTokenIn{}",1)}
@@ -243,13 +226,13 @@ val RES_FORALL_DEF =
  Definition.new_definition
    ("RES_FORALL_DEF", Term `RES_FORALL = \p m. !x : 'a. x IN p ==> m x`);
 
-val _ = (add_const "RES_FORALL"; associate_restriction ("!",  "RES_FORALL"));
+val _ = associate_restriction ("!",  "RES_FORALL")
 
 val RES_EXISTS_DEF =
  Definition.new_definition
    ("RES_EXISTS_DEF", Term `RES_EXISTS = \p m. ?x : 'a. x IN p /\ m x`);
 
-val _ = (add_const "RES_EXISTS"; associate_restriction ("?",  "RES_EXISTS"));
+val _ = associate_restriction ("?",  "RES_EXISTS")
 
 val RES_EXISTS_UNIQUE_DEF =
  Definition.new_definition
@@ -257,14 +240,13 @@ val RES_EXISTS_UNIQUE_DEF =
     Term `RES_EXISTS_UNIQUE =
           \p m. (?(x : 'a) :: p. m x) /\ !x y :: p. m x /\ m y ==> (x = y)`);
 
-val _ = add_const "RES_EXISTS_UNIQUE";
 val _ = associate_restriction ("?!",  "RES_EXISTS_UNIQUE");
 
 val RES_SELECT_DEF =
  Definition.new_definition
    ("RES_SELECT_DEF", Term `RES_SELECT = \p m. @x : 'a. x IN p /\ m x`);
 
-val _ = (add_const "RES_SELECT"; associate_restriction ("@",  "RES_SELECT"));
+val _ = associate_restriction ("@",  "RES_SELECT")
 
 (* Note: RES_ABSTRACT comes later, defined by new_specification *)
 
@@ -285,8 +267,6 @@ val DATATYPE_TAG_DEF =
   Definition.new_definition
     ("DATATYPE_TAG_DEF",
      Term`DATATYPE = \x. T`);
-
-val _ = List.app add_const ["BOUNDED", "DATATYPE"];
 
 (*---------------------------------------------------------------------------*
  *                   THEOREMS                                                *
@@ -3701,7 +3681,6 @@ val RES_ABSTRACT_DEF =
   Definition.new_specification
   ("RES_ABSTRACT_DEF", ["RES_ABSTRACT"], RES_ABSTRACT_EXISTS);
 
-val _ = add_const "RES_ABSTRACT";
 val _ = associate_restriction ("\\", "RES_ABSTRACT");
 
 
@@ -4098,7 +4077,6 @@ in
   new_type_definition("itself", EQ_MP eq_sym_eq' itself_exists)
 end
 val _ = new_constant("the_value", Type`:'a itself`)
-val _ = add_const "the_value"
 
 (* prove uniqueness of the itself value:
      |- !i:'a itself. i = (:'a)
