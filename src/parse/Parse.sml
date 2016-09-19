@@ -593,6 +593,7 @@ fun temp_remove_termtok r = let open term_grammar in
 
 fun remove_termtok (r as {term_name, tok}) = let in
    temp_remove_termtok r;
+   GrammarDeltas.record_delta (RMTMTOK r);
    update_grms "remove_termtok" ("temp_remove_termtok",
                                  String.concat
                                    ["{term_name = ", quote term_name,
@@ -943,6 +944,7 @@ fun temp_add_rule rule = temp_add_grule (GRULE rule)
 fun add_rule (r as {term_name, fixity, pp_elements,
                     paren_style, block_style = (bs,bi)}) = let in
   temp_add_rule r;
+  GrammarDeltas.record_delta (GRULE r);
   update_grms "add_rule"
               ("(UTOFF temp_add_rule)",
                String.concat
@@ -996,6 +998,7 @@ fun add_listform x = let
   val {separator,leftdelim,rightdelim,cons,nilstr,block_info} = x
 in
   temp_add_listform x;
+  GrammarDeltas.record_delta (LRULE x);
   update_grms "add_listform"
               ("(UTOFF temp_add_listform)",
                String.concat
@@ -1073,6 +1076,7 @@ fun temp_remove_rules_for_term s = let open term_grammar in
 
 fun remove_rules_for_term s = let in
    temp_remove_rules_for_term s;
+   GrammarDeltas.record_delta (RMTMNM s);
    update_grms "remove_rules_for_term" ("temp_remove_rules_for_term", quote s)
  end
 
