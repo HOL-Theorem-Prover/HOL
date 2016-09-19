@@ -1,4 +1,4 @@
-INCLUDES = ../.. ../model
+INCLUDES = ../.. ../../lib ../model
 CLINE_OPTIONS = --qof
 
 ifdef POLY
