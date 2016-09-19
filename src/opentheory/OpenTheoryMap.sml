@@ -58,7 +58,7 @@ struct
       Theory.LoadableThyData.new {thydataty = tyname, terms = Lib.K [],
                                   merge = fn((a,b),(c,d))=>(c@a,d@b),
                                   read = Lib.K (Coding.lift read_deltas),
-                                  write = write_deltas}
+                                  write = Lib.K write_deltas}
   fun tyopToString  {Thy,Tyop} = "(Thy="^Thy^",Tyop="^Tyop^")"
   fun constToString {Thy,Name} = "(Thy="^Thy^",Name="^Name^")"
   fun temp_OpenTheory_tyop_name0 src {tyop,name} = ()

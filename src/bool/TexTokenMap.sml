@@ -27,7 +27,8 @@ struct
 
   val (mk,dest) = Theory.LoadableThyData.new
                     {thydataty = tyname, merge = op@, terms = K [],
-                     read = K (Coding.lift read_deltas), write = write_deltas}
+                     read = K (Coding.lift read_deltas),
+                     write = K write_deltas}
 
 
   val tokmap = ref (Binarymap.mkDict String.compare)

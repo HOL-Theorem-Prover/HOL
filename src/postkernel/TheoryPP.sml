@@ -243,7 +243,7 @@ fun pr_list f g h obs pps = Portable.pr_list (fn x => f x pps)
 val flush = HOLPP.flush_ppstream
 fun nothing pps = ()
 
-fun pr_thydata thyname thymap = let
+fun pr_thydata tmwrite thyname thymap = let
   fun keyval commap (k,v) =
       block CONSISTENT 2 (add_string (k^" =") >> add_break(1,2) >>
                           add_string ("\""^String.toString v^"\"" ^
@@ -260,7 +260,7 @@ fun pr_thydata thyname thymap = let
        add_string "}" >>
        add_newline)
 in
-  Binarymap.foldl (fn (k, data, rest) => one_entry (k,data) >> rest)
+  Binarymap.foldl (fn (k, data, rest) => one_entry (k, data tmwrite) >> rest)
                   nothing
                   thymap
 end
@@ -342,6 +342,7 @@ fun pp_struct info_record = let
        add_newline)
 
   fun pparent (s,i,j) = Thry s
+  val term_to_string = Term.write_raw (fn t => Map.find(#termmap tmtable, t))
 
   fun pp_tm tm =
       (add_string "ThmBind.read\"">>
@@ -449,7 +450,7 @@ in
                                termtable_nm = "tmvector"} tmtable >>
              bind_theorems >> add_newline >>
              dblist() >> add_newline >>
-             pr_thydata name thydata >>
+             pr_thydata term_to_string name thydata >>
              pr_psl struct_ps)) >>
          add_break(0,0) >>
          add_string "val _ = if !Globals.print_thy_loads then print \

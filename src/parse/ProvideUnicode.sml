@@ -242,7 +242,7 @@ open LoadableThyData
 val (mk,dest) =
     new {merge = op@, read = Lib.K (Coding.lift (Coding.many reader)),
          terms = K [],
-         write = String.concat o map encode, thydataty = "unicodedata"}
+         write = K (String.concat o map encode), thydataty = "unicodedata"}
 
 fun update value =
     write_data_update {data= mk[value], thydataty = "unicodedata"}

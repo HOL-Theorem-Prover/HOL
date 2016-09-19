@@ -35,7 +35,7 @@ sig
       definitions : (string * thm) list,
       theorems    : (string * thm) list,
       struct_ps   : (ppstream -> unit) option list,
-      thydata     : (string,string)Binarymap.dict}
+      thydata     : (string,(Term.term -> string) -> string)Binarymap.dict}
    -> ppstream
    -> unit
 

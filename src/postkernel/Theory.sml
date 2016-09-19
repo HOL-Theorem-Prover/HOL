@@ -654,7 +654,7 @@ struct
   type t = UniversalType.t
   type DataOps = {merge : t * t -> t,
                   read : (string -> term) -> string -> t option,
-                  write : t -> string}
+                  write : (term -> string) -> t -> string}
   val allthydata = ref (Binarymap.mkDict String.compare :
                         (string, ThyDataMap) Binarymap.dict)
   val dataops = ref (Binarymap.mkDict String.compare :
@@ -777,7 +777,7 @@ fun 'a new {thydataty, merge, read, write, terms} = let
   fun vdest t = valOf (dest t)
   fun merge' (t1, t2) = mk(merge(vdest t1, vdest t2))
   fun read' tmread s = Option.map mk (read tmread s)
-  fun write' t = write (vdest t)
+  fun write' tmwrite t = write tmwrite (vdest t)
 in
   update_pending (merge',read') thydataty;
   dataops := Binarymap.insert(!dataops,
@@ -872,7 +872,7 @@ fun export_theory () = let
           Loaded t => let
             val w = #write (Binarymap.find(!LoadableThyData.dataops, k))
           in
-            Binarymap.insert(acc,k,w t)
+            Binarymap.insert(acc,k,(fn wrtm => w wrtm t))
           end
         | _ => acc
   in

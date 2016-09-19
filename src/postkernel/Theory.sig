@@ -59,7 +59,7 @@ sig
                merge : 'a * 'a -> 'a,
                terms : 'a -> term list,
                read : (string -> term) -> string -> 'a option,
-               write : 'a -> string} ->
+               write : (term -> string) -> 'a -> string} ->
               ('a -> t) * (t -> 'a option)
     val segment_data : {thy: string, thydataty: string} -> t option
 
