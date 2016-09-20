@@ -648,7 +648,7 @@ struct
 
   fun uset_fixity0 setter s fxty = let
     open term_grammar
-    val rule = GRULE (standard_spacing s fxty)
+    val rule = standard_spacing s fxty
   in
     lift setter {u = [s], term_name = s, newrule = rule, oldtok = NONE}
   end
@@ -915,9 +915,9 @@ val unicode_off_but_unicode_act_complaint = ref true
 val _ = register_btrace("Parse.unicode_trace_off_complaints",
                         unicode_off_but_unicode_act_complaint)
 
-fun temp_add_grule gr = let
+fun temp_add_rule gr = let
   val uni_on = get_tracefn "Unicode" () > 0
-  val toks = userdelta_toks gr
+  val toks = grule_toks gr
 in
   if List.exists includes_unicode toks then let
     in
@@ -926,7 +926,7 @@ in
                        "Adding a Unicode-ish rule without Unicode trace \
                        \being true";
       the_term_grammar := ProvideUnicode.temp_uadd_rule uni_on {
-        u = toks, term_name = userdelta_name gr,
+        u = toks, term_name = grule_name gr,
         newrule = gr,
         oldtok = NONE
       } (term_grammar());
@@ -934,12 +934,11 @@ in
     end
   else let
     in
-      the_term_grammar := term_grammar.add_delta gr (!the_term_grammar) ;
+      the_term_grammar := term_grammar.add_delta (GRULE gr) (!the_term_grammar);
       term_grammar_changed := true
     end
-end handle GrammarError s => raise ERROR "add_rule" ("Grammar error: "^s)
 
-fun temp_add_rule rule = temp_add_grule (GRULE rule)
+end handle GrammarError s => raise ERROR "add_rule" ("Grammar error: "^s)
 
 fun add_rule (r as {term_name, fixity, pp_elements,
                     paren_style, block_style = (bs,bi)}) = let in
@@ -986,7 +985,9 @@ in
     SOME t)
 end
 
-val overload_on = make_overload_on temp_overload_on "temp_overload_on"
+fun overload_on p =
+    (make_overload_on temp_overload_on "temp_overload_on" p;
+     GrammarDeltas.record_delta (OVERLOAD_ON p))
 val inferior_overload_on = make_overload_on temp_inferior_overload_on "temp_inferior_overload_on"
 
 fun temp_add_listform x = let open term_grammar in
@@ -1084,7 +1085,7 @@ fun temp_set_mapped_fixity (r as {fixity:fixity,term_name,tok}) = let
   val nmtok = {term_name = term_name, tok = tok}
 in
   temp_remove_termtok nmtok;
-  r |> standard_mapped_spacing |> GRULE |> temp_add_grule
+  r |> standard_mapped_spacing |> temp_add_rule
 end
 
 fun set_mapped_fixity (arg as {fixity,term_name,tok}) = let

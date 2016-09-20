@@ -59,6 +59,7 @@ datatype user_delta =
        | LRULE of listspec
        | RMTMTOK of {term_name : string, tok : string}
        | RMTMNM of string
+       | OVERLOAD_ON of string * Term.term
 
 
 end

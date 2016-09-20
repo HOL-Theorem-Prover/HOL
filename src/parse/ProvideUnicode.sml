@@ -14,7 +14,7 @@ type gopns = {prefer_form_with_tok : {term_name:string, tok:string} -> unit,
               remove_termtok : {term_name:string,tok:string} -> unit,
               master_unicode_switch : bool}
 type urule = {u:string list, term_name : string,
-              newrule : term_grammar.user_delta,
+              newrule : term_grammar.grule,
               oldtok : string option}
 
 datatype stored_data =
@@ -45,11 +45,11 @@ fun getrule G term_name = let
   fun tok_of {elements, ...} = tok_of0 elements
 
   fun rreplace rf {term_name,paren_style,elements,timestamp,block_style} s =
-      GRULE {term_name=term_name, paren_style = paren_style,
-             pp_elements = map (fn (RE (TOK _)) => RE (TOK s) | x => x)
-                               elements,
-             block_style = block_style,
-             fixity = rf}
+      {term_name=term_name, paren_style = paren_style,
+       pp_elements = map (fn (RE (TOK _)) => RE (TOK s) | x => x)
+                         elements,
+       block_style = block_style,
+       fixity = rf}
   fun search_rrlist rf tfopt k (rrlist : rule_record list) =
       case rrlist of
         [] => k tfopt
@@ -69,7 +69,7 @@ fun getrule G term_name = let
           else search_rrlist rf tfopt k rest
         end
 
-  fun breplace s = GRULE (binder_grule {term_name = term_name, tok = s})
+  fun breplace s = binder_grule {term_name = term_name, tok = s}
   fun search_bslist tfopt k blist =
       case blist of
         [] => k tfopt
@@ -136,7 +136,7 @@ fun enable_one g0 sd =
       RuleUpdate {u,term_name,newrule = r,oldtok} => let
         open term_grammar
       in
-        g0 |> add_delta r
+        g0 |> add_delta (GRULE r)
       end
     | OverloadUpdate{u,ts} => let
         fun foldthis (t,g) =
@@ -205,12 +205,12 @@ in
   | RULE {u,term_name,newrule,oldtok} => let
       val tn' = StringData.encode term_name
       val u' = StringData.encodel u
-      val delta' = user_delta_encode newrule
+      val delta' = grule_encode newrule
       val oldtok' = case oldtok of
                       NONE => "N"
                     | SOME s => "S" ^ StringData.encode s
     in
-      String.concat ["R",tn',u',delta',oldtok']
+      String.concat ["R",tn',u',"R",delta',oldtok']
     end
   | OVL (s,tm) => let
       val s' = StringData.encode s
@@ -230,7 +230,7 @@ in
                       (StringData.reader >* StringData.reader)) ||
   (literal "R" >>
    map mkrule (StringData.reader >* many StringData.reader >*
-               term_grammar.user_delta_reader >*
+               (literal "R" >> term_grammar.grule_reader) >*
                ((literal "N" >> return NONE) ||
                 (literal "S" >> map SOME StringData.reader)))) ||
   (literal "O" >> map OVL (StringData.reader >* TermCoding.reader))

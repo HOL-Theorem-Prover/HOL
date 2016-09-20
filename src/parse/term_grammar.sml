@@ -61,21 +61,10 @@ fun pptoks ppels = List.mapPartial (fn TOK s => SOME s | _ => NONE)
 
 (* used so that ProvideUnicode can look at additions to grammars and see if
    they involve Unicode *)
-fun userdelta_toks ud =
-    case ud of
-      GRULE {pp_elements, ...} => pptoks pp_elements
-    | LRULE {leftdelim, separator, rightdelim, ...} =>
-      pptoks leftdelim @ pptoks separator @ pptoks rightdelim
-    | RMTMTOK _ => []
-    | RMTMNM _ => []
+fun grule_toks ({pp_elements, ...}:grule) = pptoks pp_elements
 
 (* ProvideUnicode wants to track term names of additions *)
-fun userdelta_name ud =
-    case ud of
-      GRULE {term_name, ...} => term_name
-    | LRULE {cons, ...} => cons
-    | RMTMTOK _ => ""
-    | RMTMNM _ => ""
+fun grule_name ({term_name, ...}:grule) = term_name
 
 
 type overload_info = Overload.overload_info
@@ -928,6 +917,9 @@ fun add_delta ud G =
     | LRULE r => add_listform G r
     | RMTMTOK r => remove_form_with_tok G r
     | RMTMNM s => remove_standard_form G s
+    | OVERLOAD_ON p => fupdate_overload_info (Overload.add_overloading p) G
+
+
 
 fun prefer_form_with_tok (r as {term_name,tok}) G0 = let
   val contending_timestamps = map #1 (rules_for G0 term_name)
@@ -1547,39 +1539,53 @@ val fixity_reader =
     (literal "C" >> return Closefix) ||
     (literal "B" >> return Binder)
 
-fun user_delta_encode ud =
+fun grule_encode (gr : grule) =
+  let
+    val {term_name, pp_elements, paren_style, block_style, fixity} = gr
+  in
+    String.concat (StringData.encode term_name ::
+                   paren_style_encode paren_style ::
+                   block_style_encode block_style ::
+                   fixity_encode fixity ::
+                   List.map ppel_encode pp_elements @ ["X"])
+  end
+
+val grule_reader : grule Coding.reader = let
+  fun grule ((((tn,ps),bs),f),ppels) =
+      {term_name = tn, paren_style = ps, block_style = bs,
+       fixity = f, pp_elements = ppels}
+in
+  Coding.map grule (StringData.reader >* paren_style_reader >*
+                    block_style_reader >* fixity_reader >*
+                    many (ppel_reader) >-> literal "X")
+end
+
+fun user_delta_encode write_tm ud =
     case ud of
-      GRULE {term_name, pp_elements, paren_style, block_style, fixity} =>
-      String.concat ("G" :: StringData.encode term_name ::
-                     paren_style_encode paren_style ::
-                     block_style_encode block_style ::
-                     fixity_encode fixity ::
-                     List.map ppel_encode pp_elements @ ["X"])
+      GRULE gr => "G" ^ grule_encode gr
     | LRULE lspec => "L" ^ lspec_encode lspec
     | RMTMNM s => "RN" ^ StringData.encode s
     | RMTMTOK {term_name,tok} =>
         "RK" ^ StringData.encode term_name ^ StringData.encode tok
+    | OVERLOAD_ON (s,t) =>
+        "OO" ^ StringData.encode s ^ StringData.encode (write_tm t)
 
-val user_delta_reader = let
-  fun grule ((((tn,ps),bs),f),ppels) =
-      GRULE {term_name = tn, paren_style = ps, block_style = bs,
-             fixity = f, pp_elements = ppels}
+fun user_delta_reader read_tm = let
 in
-  (literal "G" >> Coding.map grule (StringData.reader >*
-                                    paren_style_reader >*
-                                    block_style_reader >*
-                                    fixity_reader >*
-                                    many (ppel_reader) >-> literal "X")) ||
+  (literal "G" >> Coding.map GRULE grule_reader) ||
   (literal "L" >> Coding.map LRULE lspec_reader) ||
   (literal "RN" >> Coding.map RMTMNM StringData.reader) ||
   (literal "RK" >>
    Coding.map (fn (nm,tok) => RMTMTOK {term_name = nm, tok = tok})
-              (StringData.reader >* StringData.reader))
+              (StringData.reader >* StringData.reader)) ||
+  (literal "OO" >>
+   Coding.map OVERLOAD_ON
+     (StringData.reader >* Coding.map read_tm StringData.reader))
 end
 
 
 
-fun grule_encode grule =
+fun grammar_rule_encode grule =
     case grule of
       PREFIX pr => "P" ^ pfxrule_encode pr
     | SUFFIX sr => "S" ^ sfxrule_encode sr
@@ -1587,7 +1593,7 @@ fun grule_encode grule =
     | CLOSEFIX rrl => String.concat ("C"::List.map rrule_encode rrl)
     | LISTRULE lspecl => String.concat ("L"::List.map lspec_encode lspecl)
 
-val grule_reader =
+val grammar_rule_reader =
     (literal "P" >> pfxrule_reader >- (return o PREFIX)) ||
     (literal "S" >> sfxrule_reader >- (return o SUFFIX)) ||
     (literal "I" >> ifxrule_reader >- (return o INFIX)) ||
