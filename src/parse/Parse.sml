@@ -586,19 +586,26 @@ fun pending_updates() = !grm_updates
 fun update_grms fname (x,y) = grm_updates := ((x,y,NONE) :: !grm_updates);
 fun full_update_grms (x,y,opt) = grm_updates := ((x,y,opt) :: !grm_updates)
 
-fun temp_remove_termtok r = let open term_grammar in
-  the_term_grammar := remove_form_with_tok (term_grammar()) r;
-  term_grammar_changed := true
- end
+fun apply_udeltas uds =
+  let
+  in
+    term_grammar_changed := true;
+    the_term_grammar :=
+      List.foldl (uncurry term_grammar.add_delta) (term_grammar()) uds
+  end
 
-fun remove_termtok (r as {term_name, tok}) = let in
-   temp_remove_termtok r;
-   GrammarDeltas.record_delta (RMTMTOK r);
-   update_grms "remove_termtok" ("temp_remove_termtok",
-                                 String.concat
-                                   ["{term_name = ", quote term_name,
-                                    ", tok = ", quote tok, "}"])
- end
+fun mk_temp f x = apply_udeltas (f x)
+fun mk_perm f x =
+  let
+    val uds = f x
+  in
+    apply_udeltas uds;
+    List.app GrammarDeltas.record_delta uds
+  end
+
+fun remove_termtok0 r = [RMTMTOK r]
+val temp_remove_termtok = mk_temp remove_termtok0
+val remove_termtok = mk_perm remove_termtok0
 
 fun temp_prefer_form_with_tok r = let open term_grammar in
     the_term_grammar := prefer_form_with_tok r (term_grammar());
@@ -941,19 +948,12 @@ in
 end handle GrammarError s => raise ERROR "add_rule" ("Grammar error: "^s)
 
 fun add_rule (r as {term_name, fixity, pp_elements,
-                    paren_style, block_style = (bs,bi)}) = let in
-  temp_add_rule r;
-  GrammarDeltas.record_delta (GRULE r);
-  update_grms "add_rule"
-              ("(UTOFF temp_add_rule)",
-               String.concat
-                 ["{term_name = ", quote term_name,
-                  ", fixity = ", fixityToString fixity, ",\n",
-                  "pp_elements = [", pplistToString pp_elements, "],\n",
-                  "paren_style = ", ParenStyleToString paren_style,",\n",
-                  "block_style = (", BlockStyleToString bs, ", ",
-                  block_infoToString bi,")}"])
- end
+                    paren_style, block_style = (bs,bi)}) =
+  let
+  in
+    temp_add_rule r;
+    GrammarDeltas.record_delta (GRULE r)
+  end
 
 fun make_temp_overload_on add (s, t) = let
   val uni_on = get_tracefn "Unicode" () > 0
@@ -976,41 +976,20 @@ end
 val temp_overload_on = make_temp_overload_on Overload.add_overloading
 val temp_inferior_overload_on = make_temp_overload_on Overload.add_inferior_overloading
 
-fun make_overload_on temp temps (s, t) = let
+fun make_overload_on temp udCON p = let
 in
-  temp (s, t);
-  full_update_grms
-    ("(UTOFF "^temps^")",
-     String.concat ["(", quote s, ", ", minprint t, ")"],
-    SOME t)
+  temp p;
+  GrammarDeltas.record_delta (udCON p)
 end
 
-fun overload_on p =
-    (make_overload_on temp_overload_on "temp_overload_on" p;
-     GrammarDeltas.record_delta (OVERLOAD_ON p))
-val inferior_overload_on = make_overload_on temp_inferior_overload_on "temp_inferior_overload_on"
+val overload_on = make_overload_on temp_overload_on OVERLOAD_ON
+val inferior_overload_on =
+    make_overload_on temp_inferior_overload_on IOVERLOAD_ON
 
-fun temp_add_listform x = let open term_grammar in
-    the_term_grammar := add_listform (term_grammar()) x;
-    term_grammar_changed := true
-  end
 
-fun add_listform x = let
-  val {separator,leftdelim,rightdelim,cons,nilstr,block_info} = x
-in
-  temp_add_listform x;
-  GrammarDeltas.record_delta (LRULE x);
-  update_grms "add_listform"
-              ("(UTOFF temp_add_listform)",
-               String.concat
-                 ["{separator = [",   pplistToString separator, "]\n",
-                  ", leftdelim = [",  pplistToString leftdelim, "]\n",
-                  ", rightdelim = [", pplistToString rightdelim, "]\n",
-                  ", cons = ",        quote cons,
-                  ", nilstr = ",      quote nilstr,
-                  ", block_info = ",  block_infoToString block_info,
-                  "}"])
- end
+fun add_listform0 x = [LRULE x]
+val temp_add_listform = mk_temp add_listform0
+val add_listform = mk_perm add_listform0
 
 fun temp_add_bare_numeral_form x =
  let val _ = Lib.can Term.prim_mk_const{Name="NUMERAL", Thy="arithmetic"}
@@ -1053,22 +1032,15 @@ fun remove_numeral_form c = let in
                                      String.concat ["#", Lib.quote(str c)])
   end
 
-fun temp_associate_restriction (bs, s) =
+fun associate_restriction0 (bs, s) =
  let val lambda = #lambda (specials (term_grammar()))
      val b = if mem bs lambda then NONE else SOME bs
  in
-    the_term_grammar :=
-    term_grammar.associate_restriction (term_grammar())
-                                       {binder = b, resbinder = s};
-    term_grammar_changed := true
+   [ASSOC_RESTR{binder = b, resbinder = s}]
  end
 
-fun associate_restriction (bs, s) = let in
-   temp_associate_restriction (bs, s);
-   update_grms "associate_restriction"
-               ("temp_associate_restriction",
-                String.concat["(", quote bs, ", ", quote s, ")"])
- end
+val temp_associate_restriction = mk_temp associate_restriction0
+val associate_restriction = mk_perm associate_restriction0
 
 fun temp_remove_rules_for_term s = let open term_grammar in
     the_term_grammar := remove_standard_form (term_grammar()) s;
@@ -1081,31 +1053,19 @@ fun remove_rules_for_term s = let in
    update_grms "remove_rules_for_term" ("temp_remove_rules_for_term", quote s)
  end
 
-fun temp_set_mapped_fixity (r as {fixity:fixity,term_name,tok}) = let
-  val nmtok = {term_name = term_name, tok = tok}
-in
-  temp_remove_termtok nmtok;
-  r |> standard_mapped_spacing |> temp_add_rule
-end
+fun set_mapped_fixity0 (r as {fixity:fixity,term_name,tok}) =
+  let
+    val nmtok = {term_name = term_name, tok = tok}
+  in
+    [RMTMTOK nmtok, r |> standard_mapped_spacing |> GRULE]
+  end
+fun set_fixity0 (s, f) = set_mapped_fixity0 {fixity = f, term_name = s, tok = s}
 
-fun set_mapped_fixity (arg as {fixity,term_name,tok}) = let
-in
-  temp_set_mapped_fixity arg;
-  update_grms "set_mapped_fixity"
-              ("(fn () => (temp_set_mapped_fixity {term_name = "^
-               quote term_name^", "^ "tok = "^quote tok^", fixity = "^
-               fixityToString fixity^"}))", "()")
-end
 
-fun temp_set_fixity s f =
-    temp_set_mapped_fixity {fixity = f, term_name = s, tok = s}
-
-fun set_fixity s f = let in
-    temp_set_fixity s f;
-    update_grms "set_fixity"
-                ("(UTOFF (temp_set_fixity "^quote s^"))",
-                 "("^fixityToString f^")")
- end
+val temp_set_mapped_fixity = mk_temp set_mapped_fixity0
+val temp_set_fixity = curry (mk_temp set_fixity0)
+val set_mapped_fixity = mk_perm set_mapped_fixity0
+val set_fixity = curry (mk_perm set_fixity0)
 
 (* ----------------------------------------------------------------------
     Post-processing : adding user transformations to the parse processs.
@@ -1223,20 +1183,9 @@ fun clear_overloads_on s = let in
   update_grms "clear_overloads_on" ("temp_clear_overloads_on", quote s)
 end
 
-fun temp_remove_ovl_mapping s crec = let open term_grammar in
-  the_term_grammar :=
-    fupdate_overload_info (Overload.remove_mapping s crec) (term_grammar());
-  term_grammar_changed := true
-end
-
-fun remove_ovl_mapping s (crec as {Name,Thy}) = let
-in
-  temp_remove_ovl_mapping s crec;
-  update_grms "remove_ovl_mapping"
-              ("(temp_remove_ovl_mapping "^quote s^")",
-               String.concat
-                 [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"])
-end
+fun remove_ovl_mapping0 (s, kid) = [RMOVMAP(s,kid)]
+val temp_remove_ovl_mapping = curry (mk_temp remove_ovl_mapping0)
+val remove_ovl_mapping = curry (mk_perm remove_ovl_mapping0)
 
 fun temp_gen_remove_ovl_mapping s t =
   let

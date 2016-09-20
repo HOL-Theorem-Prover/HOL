@@ -918,8 +918,11 @@ fun add_delta ud G =
     | RMTMTOK r => remove_form_with_tok G r
     | RMTMNM s => remove_standard_form G s
     | OVERLOAD_ON p => fupdate_overload_info (Overload.add_overloading p) G
-
-
+    | IOVERLOAD_ON p =>
+        fupdate_overload_info (Overload.add_inferior_overloading p) G
+    | ASSOC_RESTR r => associate_restriction G r
+    | RMOVMAP (s,kid) =>
+        fupdate_overload_info (Overload.remove_mapping s kid) G
 
 fun prefer_form_with_tok (r as {term_name,tok}) G0 = let
   val contending_timestamps = map #1 (rules_for G0 term_name)
@@ -1569,6 +1572,15 @@ fun user_delta_encode write_tm ud =
         "RK" ^ StringData.encode term_name ^ StringData.encode tok
     | OVERLOAD_ON (s,t) =>
         "OO" ^ StringData.encode s ^ StringData.encode (write_tm t)
+    | IOVERLOAD_ON (s,t) =>
+        "OI" ^ StringData.encode s ^ StringData.encode (write_tm t)
+    | ASSOC_RESTR {binder,resbinder} =>
+        "AR" ^ OptionData.encode StringData.encode binder ^
+        StringData.encode resbinder
+    | RMOVMAP (s,{Name,Thy}) =>
+        "RMO" ^ StringData.encode s ^ StringData.encode Name ^
+        StringData.encode Thy
+
 
 fun user_delta_reader read_tm = let
 in
@@ -1580,7 +1592,16 @@ in
               (StringData.reader >* StringData.reader)) ||
   (literal "OO" >>
    Coding.map OVERLOAD_ON
-     (StringData.reader >* Coding.map read_tm StringData.reader))
+     (StringData.reader >* Coding.map read_tm StringData.reader)) ||
+  (literal "OI" >>
+   Coding.map IOVERLOAD_ON
+     (StringData.reader >* Coding.map read_tm StringData.reader)) ||
+  (literal "AR" >>
+   Coding.map (fn (b,rb) => ASSOC_RESTR {binder = b, resbinder = rb})
+              (OptionData.reader StringData.reader >* StringData.reader)) ||
+  (literal "RMO" >>
+   Coding.map (fn ((s,n),thy) => RMOVMAP (s,{Name=n,Thy=thy}))
+              (StringData.reader >* StringData.reader >* StringData.reader))
 end
 
 

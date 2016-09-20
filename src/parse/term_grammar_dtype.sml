@@ -60,6 +60,9 @@ datatype user_delta =
        | RMTMTOK of {term_name : string, tok : string}
        | RMTMNM of string
        | OVERLOAD_ON of string * Term.term
+       | IOVERLOAD_ON of string * Term.term
+       | ASSOC_RESTR of {binder: string option, resbinder : string}
+       | RMOVMAP of string * {Name:string, Thy:string}
 
 
 end
