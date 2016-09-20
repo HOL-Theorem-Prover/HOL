@@ -874,6 +874,9 @@ fun export_theory () = let
           Loaded t =>
           let
             val {write,terms,...} = Binarymap.find(!LoadableThyData.dataops, k)
+              handle NotFound => raise ERR "export_theory"
+                                       ("Couldn't find thydata ops for "^k)
+
           in
             (terms t @ tmlist,
              Binarymap.insert(dict,k,(fn wrtm => write wrtm t)))
