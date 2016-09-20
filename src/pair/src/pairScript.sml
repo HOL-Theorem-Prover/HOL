@@ -883,10 +883,9 @@ S "fun add_varstruct v th = "; NL();
 S "  RHS_CONV(BETA_CONV ORELSEC PAIRED_BETA_CONV) (AP_THM th v)"; NL();
 NL();
 S "fun post (V,th) ="; NL();
-S "  let val cname = fst(dest_const(lhs(concl th)))"; NL();
-S "      val vars = List.concat (map free_vars_lr V)"; NL();
-S "  in Parse.add_const cname"; NL();
-S "   ; itlist GEN vars (rev_itlist add_varstruct V th)"; NL();
+S "  let val vars = List.concat (map free_vars_lr V)"; NL();
+S "  in"; NL();
+S "    itlist GEN vars (rev_itlist add_varstruct V th)"; NL();
 S "  end;"; NL();
 S "  "; NL();
 S "val _ = Definition.new_definition_hook := (dest, post)"; NL()
