@@ -281,7 +281,6 @@ fun RIGHT_BETA th = TRANS th (BETA_CONV (rhs (concl th)))
 fun post (V, th) =
    let
       fun add_var v th = RIGHT_BETA (AP_THM th v)
-      val cname = fst (dest_const (lhs (concl th)))
    in
       itlist GEN V (rev_itlist add_var V th)
    end
