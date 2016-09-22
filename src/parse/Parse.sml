@@ -938,7 +938,7 @@ fun temp_add_infix(s, prec, associativity) =
 fun add_infix (s, prec, associativity) =
   add_rule (standard_spacing s (Infix(associativity, prec)))
 
-fun make_temp_overload_on add (s, t) = let
+fun make_overload_on add uaction (s, t) = let
   val uni_on = get_tracefn "Unicode" () > 0
 in
   if includes_unicode s then
@@ -948,7 +948,7 @@ in
                    \being true"
      else
        term_grammar_changed := true;
-     Unicode.temp_uoverload_on (s,t))
+     uaction (s,t))
   else
     (the_term_grammar := fupdate_overload_info
                              (add (s, t))
@@ -956,19 +956,18 @@ in
      term_grammar_changed := true)
 end
 
-val temp_overload_on = make_temp_overload_on Overload.add_overloading
-val temp_inferior_overload_on = make_temp_overload_on Overload.add_inferior_overloading
+val temp_overload_on =
+    make_overload_on Overload.add_overloading Unicode.temp_uoverload_on
+val temp_inferior_overload_on =
+    make_overload_on Overload.add_inferior_overloading
+                          Unicode.temp_uoverload_on
 
-fun make_overload_on temp udCON p = let
-in
-  temp p;
-  GrammarDeltas.record_delta (udCON p)
-end
-
-val overload_on = make_overload_on temp_overload_on OVERLOAD_ON
-val inferior_overload_on =
-    make_overload_on temp_inferior_overload_on IOVERLOAD_ON
-
+fun overload_on p =
+  (make_overload_on Overload.add_overloading Unicode.uoverload_on p ;
+   GrammarDeltas.record_delta (OVERLOAD_ON p))
+fun inferior_overload_on p =
+  (make_overload_on Overload.add_inferior_overloading Unicode.uoverload_on p;
+   GrammarDeltas.record_delta (IOVERLOAD_ON p))
 
 fun add_listform0 x = [LRULE x]
 val temp_add_listform = mk_temp add_listform0
