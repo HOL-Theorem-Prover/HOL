@@ -224,7 +224,7 @@ fun pptest (nm, t, expected) = let
   val s = Parse.term_to_string t
 in
   if s = expected then OK()
-  else (print "FAILED!\n"; Process.exit Process.failure)
+  else die ("FAILED!\n  Expected \""^expected^"\"; got \""^s^"\"")
 end
 
 fun s t = let open HolKernel boolLib
