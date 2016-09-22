@@ -1113,46 +1113,15 @@ fun overload_on_by_nametype s (r as {Name, Thy}) = let in
      )
  end
 
-fun temp_send_to_back_overload s {Name, Thy} = let
-  open term_grammar
-in
-  the_term_grammar :=
-    fupdate_overload_info
-    (Overload.send_to_back_overloading {opname=s, realname=Name, realthy=Thy})
-    (term_grammar());
-  term_grammar_changed := true
-end
+val temp_send_to_back_overload =
+    curry (mk_temp (fn skid => [MOVE_OVLPOSN{frontp = false, skid = skid}]))
+val send_to_back_overload =
+    curry (mk_perm (fn skid => [MOVE_OVLPOSN{frontp = false, skid = skid}]))
 
-fun send_to_back_overload s (r as {Name, Thy}) = let in
-   temp_send_to_back_overload s r;
-   full_update_grms
-     ("(temp_send_to_back_overload "^quote s^")",
-      String.concat
-        [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"],
-      SOME (prim_mk_const r)
-     )
- end
-
-fun temp_bring_to_front_overload s {Name, Thy} = let
-  open term_grammar
-in
-  the_term_grammar :=
-    fupdate_overload_info
-    (Overload.bring_to_front_overloading {opname=s, realname=Name, realthy=Thy})
-    (term_grammar());
-  term_grammar_changed := true
-end
-
-fun bring_to_front_overload s (r as {Name, Thy}) = let in
-   temp_bring_to_front_overload s r;
-   full_update_grms
-     ("(temp_bring_to_front_overload "^quote s^")",
-      String.concat
-        [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"],
-      SOME (prim_mk_const r)
-     )
- end
-
+val temp_bring_to_front_overload =
+    curry (mk_temp (fn skid => [MOVE_OVLPOSN{frontp = true, skid = skid}]))
+val bring_to_front_overload =
+    curry (mk_perm (fn skid => [MOVE_OVLPOSN{frontp = true, skid = skid}]))
 
 fun temp_clear_overloads_on s = let
   open term_grammar

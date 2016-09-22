@@ -44,6 +44,8 @@ fun check_delta (d: user_delta) =
       OVERLOAD_ON (_, t) => Term.uptodate_term t
     | IOVERLOAD_ON (_, t) => Term.uptodate_term t
     | GRMOVMAP(_, t) => Term.uptodate_term t
+    | MOVE_OVLPOSN {skid = (_, kid), ...} => can prim_mk_const kid
+    | RMOVMAP (_, kid) => can prim_mk_const kid
     | _ => true
 
 fun revise_data td =

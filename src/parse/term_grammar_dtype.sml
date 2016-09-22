@@ -54,6 +54,7 @@ type grule = {term_name : string,
               paren_style : ParenStyle,
               block_style : PhraseBlockStyle * block_info}
 
+type skid = string * {Name:string, Thy:string}
 datatype user_delta =
          GRULE of grule
        | LRULE of listspec
@@ -62,8 +63,9 @@ datatype user_delta =
        | OVERLOAD_ON of string * Term.term
        | IOVERLOAD_ON of string * Term.term
        | ASSOC_RESTR of {binder: string option, resbinder : string}
-       | RMOVMAP of string * {Name:string, Thy:string}
+       | RMOVMAP of skid
        | GRMOVMAP of string * Term.term
+       | MOVE_OVLPOSN of {frontp : bool, skid : skid}
 
 
 end

@@ -925,6 +925,13 @@ fun add_delta ud G =
         fupdate_overload_info (Overload.remove_mapping s kid) G
     | GRMOVMAP (s,tm) =>
         fupdate_overload_info (Overload.gen_remove_mapping s tm) G
+    | MOVE_OVLPOSN {frontp,skid=(s,{Name,Thy})} =>
+      let
+        val oact = if frontp then Overload.bring_to_front_overloading
+                   else Overload.send_to_back_overloading
+      in
+        fupdate_overload_info (oact {opname=s,realname=Name,realthy=Thy}) G
+      end
 
 fun add_deltas uds G = List.foldl (uncurry add_delta) G uds
 
@@ -1567,50 +1574,57 @@ in
                     many (ppel_reader) >-> literal "X")
 end
 
+fun skid_encode (s, {Name,Thy}) =
+  StringData.encode s ^ StringData.encode Name ^ StringData.encode Thy
+val skid_reader =
+    Coding.map (fn ((s,n),thy) => (s,{Name=n,Thy=thy}))
+               (StringData.reader >* StringData.reader >* StringData.reader)
+
 fun user_delta_encode write_tm ud =
     case ud of
-      GRULE gr => "G" ^ grule_encode gr
+      ASSOC_RESTR {binder,resbinder} =>
+        "AR" ^ OptionData.encode StringData.encode binder ^
+        StringData.encode resbinder
+    | GRMOVMAP(s,tm) =>
+        "RMG" ^ StringData.encode s ^ StringData.encode (write_tm tm)
+    | GRULE gr => "G" ^ grule_encode gr
+    | IOVERLOAD_ON (s,t) =>
+        "OI" ^ StringData.encode s ^ StringData.encode (write_tm t)
     | LRULE lspec => "L" ^ lspec_encode lspec
+    | MOVE_OVLPOSN {frontp,skid} =>
+        "MOP" ^ BoolData.encode frontp ^ skid_encode skid
+    | OVERLOAD_ON (s,t) =>
+        "OO" ^ StringData.encode s ^ StringData.encode (write_tm t)
+    | RMOVMAP skid => "RMO" ^ skid_encode skid
     | RMTMNM s => "RN" ^ StringData.encode s
     | RMTMTOK {term_name,tok} =>
         "RK" ^ StringData.encode term_name ^ StringData.encode tok
-    | OVERLOAD_ON (s,t) =>
-        "OO" ^ StringData.encode s ^ StringData.encode (write_tm t)
-    | IOVERLOAD_ON (s,t) =>
-        "OI" ^ StringData.encode s ^ StringData.encode (write_tm t)
-    | ASSOC_RESTR {binder,resbinder} =>
-        "AR" ^ OptionData.encode StringData.encode binder ^
-        StringData.encode resbinder
-    | RMOVMAP (s,{Name,Thy}) =>
-        "RMO" ^ StringData.encode s ^ StringData.encode Name ^
-        StringData.encode Thy
-    | GRMOVMAP(s,tm) =>
-        "RMG" ^ StringData.encode s ^ StringData.encode (write_tm tm)
 
 
 fun user_delta_reader read_tm = let
 in
-  (literal "G" >> Coding.map GRULE grule_reader) ||
-  (literal "L" >> Coding.map LRULE lspec_reader) ||
-  (literal "RN" >> Coding.map RMTMNM StringData.reader) ||
-  (literal "RK" >>
-   Coding.map (fn (nm,tok) => RMTMTOK {term_name = nm, tok = tok})
-              (StringData.reader >* StringData.reader)) ||
-  (literal "OO" >>
-   Coding.map OVERLOAD_ON
-     (StringData.reader >* Coding.map read_tm StringData.reader)) ||
-  (literal "OI" >>
-   Coding.map IOVERLOAD_ON
-     (StringData.reader >* Coding.map read_tm StringData.reader)) ||
   (literal "AR" >>
    Coding.map (fn (b,rb) => ASSOC_RESTR {binder = b, resbinder = rb})
               (OptionData.reader StringData.reader >* StringData.reader)) ||
-  (literal "RMO" >>
-   Coding.map (fn ((s,n),thy) => RMOVMAP (s,{Name=n,Thy=thy}))
-              (StringData.reader >* StringData.reader >* StringData.reader)) ||
+  (literal "G" >> Coding.map GRULE grule_reader) ||
+  (literal "L" >> Coding.map LRULE lspec_reader) ||
+  (literal "MOP" >>
+   Coding.map (fn (frontp,skid) => MOVE_OVLPOSN {frontp=frontp,skid=skid})
+              (BoolData.reader >* skid_reader)) ||
+  (literal "OI" >>
+   Coding.map IOVERLOAD_ON
+     (StringData.reader >* Coding.map read_tm StringData.reader)) ||
+  (literal "OO" >>
+   Coding.map OVERLOAD_ON
+     (StringData.reader >* Coding.map read_tm StringData.reader)) ||
+  (literal "RK" >>
+   Coding.map (fn (nm,tok) => RMTMTOK {term_name = nm, tok = tok})
+              (StringData.reader >* StringData.reader)) ||
   (literal "RMG" >>
    Coding.map GRMOVMAP
-              (StringData.reader >* Coding.map read_tm StringData.reader))
+              (StringData.reader >* Coding.map read_tm StringData.reader)) ||
+  (literal "RMO" >> Coding.map RMOVMAP skid_reader) ||
+  (literal "RN" >> Coding.map RMTMNM StringData.reader)
 end
 
 
