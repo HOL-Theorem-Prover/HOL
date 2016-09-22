@@ -1,3 +1,6 @@
+structure comparelogs =
+struct
+
 val theory_width = 30
 
 
@@ -163,3 +166,5 @@ in
      print "\n")
   else ()
 end
+
+end (* struct *)

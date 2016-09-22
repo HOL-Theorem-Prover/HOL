@@ -22,10 +22,10 @@ unicode-grep: ugrep.sml
 else
 
 comparelogs: comparelogs.uo
-	$(MOSMLC) -o $< $@
+	$(MOSMLC) -o $@ $<
 
 unicode-grep: ugrep_mosml.uo ugrep.uo
-	$(MOSMLC) -o $< $@
+	$(MOSMLC) -o $@ $<
 
 endif
 
