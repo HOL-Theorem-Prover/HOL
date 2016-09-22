@@ -924,6 +924,8 @@ fun add_delta ud G =
     | RMOVMAP (s,kid) =>
         fupdate_overload_info (Overload.remove_mapping s kid) G
 
+fun add_deltas uds G = List.foldl (uncurry add_delta) G uds
+
 fun prefer_form_with_tok (r as {term_name,tok}) G0 = let
   val contending_timestamps = map #1 (rules_for G0 term_name)
   val newstamp = List.foldl Int.max 0 contending_timestamps + 1

@@ -826,29 +826,6 @@ fun temp_set_associativity (i,a) = let in
  end
 
 
-fun temp_add_infix(s, prec, associativity) =
- let open term_grammar Portable
- in
-   the_term_grammar
-    := add_rule
-          {term_name=s, block_style=(AroundSamePrec, (INCONSISTENT,0)),
-           fixity=Infix(associativity, prec),
-           pp_elements = [HardSpace 1, RE(TOK s), BreakSpace(1,0)],
-           paren_style = OnlyIfNecessary}
-          (!the_term_grammar)
-   ;
-   term_grammar_changed := true
-  end handle GrammarError s => raise ERROR "add_infix" ("Grammar Error: "^s)
-
-fun add_infix (s, prec, associativity) = let in
-  temp_add_infix(s,prec,associativity);
-  update_grms "add_infix"
-              ("temp_add_infix", String.concat
-                  ["(", quote s, ", ", Int.toString prec, ", ",
-                        assocToString associativity,")"])
- end;
-
-
 local open term_grammar
 in
 
@@ -954,6 +931,12 @@ fun add_rule (r as {term_name, fixity, pp_elements,
     temp_add_rule r;
     GrammarDeltas.record_delta (GRULE r)
   end
+
+fun temp_add_infix(s, prec, associativity) =
+   temp_add_rule (standard_spacing s (Infix(associativity, prec)))
+
+fun add_infix (s, prec, associativity) =
+  add_rule (standard_spacing s (Infix(associativity, prec)))
 
 fun make_temp_overload_on add (s, t) = let
   val uni_on = get_tracefn "Unicode" () > 0
@@ -1484,6 +1467,16 @@ in
          add_string (String.concat
              ["val ", thyname, "_grammars = Parse.current_lgrms()"]);
          add_newline();
+         add_string ("local");
+         add_newline();
+         add_string ("val addUDs = term_grammar.add_deltas " ^
+                     "(GrammarDeltas.thy_deltas{thyname="^ quote thyname^"})");
+         add_newline(); add_string ("in"); add_newline();
+
+         add_string ("val " ^ thyname ^ "_grammars = "); add_break(1,2);
+         add_string ("Portable.apsnd addUDs " ^ thyname ^ "_grammars");
+         add_newline();
+
          add_string (String.concat
              ["val ", thyname,
               "_grammars = Portable.apsnd (ProvideUnicode.apply_thydata true ",
@@ -1493,6 +1486,11 @@ in
              ["val _ = Parse.grammarDB_insert(",Lib.mlquote thyname,",",
               thyname, "_grammars)"]);
          add_newline();
+         add_string (String.concat
+             ["val _ = Parse.temp_set_grammars (Parse.type_grammar(), ",
+              "addUDs (Parse.term_grammar()))"]); add_newline();
+         add_string "end (* addUDs local *)"; add_newline();
+
          add_string "end"; add_newline();
        EB()
      end)}

@@ -130,6 +130,7 @@ sig
   val fixityToString : fixity -> string
   val add_rule : grule -> grammar -> grammar
   val add_delta : user_delta -> grammar -> grammar
+  val add_deltas : user_delta list -> grammar -> grammar
 
   val add_numeral_form : grammar -> (char * string option) -> grammar
   val give_num_priority : grammar -> char -> grammar
