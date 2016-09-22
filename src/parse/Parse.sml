@@ -594,19 +594,6 @@ fun apply_udeltas uds =
       List.foldl (uncurry term_grammar.add_delta) (term_grammar()) uds
   end
 
-fun mk_temp f x = apply_udeltas (f x)
-fun mk_perm f x =
-  let
-    val uds = f x
-  in
-    apply_udeltas uds;
-    List.app GrammarDeltas.record_delta uds
-  end
-
-fun remove_termtok0 r = [RMTMTOK r]
-val temp_remove_termtok = mk_temp remove_termtok0
-val remove_termtok = mk_perm remove_termtok0
-
 fun temp_prefer_form_with_tok r = let open term_grammar in
     the_term_grammar := prefer_form_with_tok r (term_grammar());
     term_grammar_changed := true
@@ -899,7 +886,7 @@ val unicode_off_but_unicode_act_complaint = ref true
 val _ = register_btrace("Parse.unicode_trace_off_complaints",
                         unicode_off_but_unicode_act_complaint)
 
-fun temp_add_rule gr = let
+fun make_add_rule uaction gr = let
   val uni_on = get_tracefn "Unicode" () > 0
   val toks = grule_toks gr
 in
@@ -909,7 +896,7 @@ in
       else HOL_WARNING "Parse" "temp_add_rule"
                        "Adding a Unicode-ish rule without Unicode trace \
                        \being true";
-      the_term_grammar := ProvideUnicode.temp_uadd_rule uni_on {
+      the_term_grammar := uaction uni_on {
         u = toks, term_name = grule_name gr,
         newrule = gr,
         oldtok = NONE
@@ -921,16 +908,34 @@ in
       the_term_grammar := term_grammar.add_delta (GRULE gr) (!the_term_grammar);
       term_grammar_changed := true
     end
-
 end handle GrammarError s => raise ERROR "add_rule" ("Grammar error: "^s)
 
-fun add_rule (r as {term_name, fixity, pp_elements,
-                    paren_style, block_style = (bs,bi)}) =
+fun core_udprocess f uact k x =
   let
+    val uds = f x
+    fun apply_one ud =
+      case ud of
+          GRULE gr => make_add_rule uact gr
+        | _ => apply_udeltas [ud]
   in
-    temp_add_rule r;
-    GrammarDeltas.record_delta (GRULE r)
+    List.app apply_one uds ;
+    k uds
   end
+
+fun mk_temp f =
+  core_udprocess f ProvideUnicode.temp_uadd_rule (fn uds => ())
+fun mk_perm f =
+  core_udprocess f ProvideUnicode.uadd_rule
+                 (List.app GrammarDeltas.record_delta)
+
+fun remove_termtok0 r = [RMTMTOK r]
+val temp_remove_termtok = mk_temp remove_termtok0
+val remove_termtok = mk_perm remove_termtok0
+
+
+
+val temp_add_rule = mk_temp (fn x => [GRULE x])
+val add_rule = mk_perm (fn x => [GRULE x])
 
 fun temp_add_infix(s, prec, associativity) =
    temp_add_rule (standard_spacing s (Infix(associativity, prec)))
@@ -1031,8 +1036,7 @@ fun temp_remove_rules_for_term s = let open term_grammar in
 
 fun remove_rules_for_term s = let in
    temp_remove_rules_for_term s;
-   GrammarDeltas.record_delta (RMTMNM s);
-   update_grms "remove_rules_for_term" ("temp_remove_rules_for_term", quote s)
+   GrammarDeltas.record_delta (RMTMNM s)
  end
 
 fun set_mapped_fixity0 (r as {fixity:fixity,term_name,tok}) =
