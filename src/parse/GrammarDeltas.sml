@@ -11,6 +11,7 @@ fun delta_terms (d:user_delta) =
   case d of
       OVERLOAD_ON (_,t) => [t]
     | IOVERLOAD_ON (_, t) => [t]
+    | GRMOVMAP (_, t) => [t]
     | _ => []
 
 val deltal_terms = List.foldl (fn (d, acc) => delta_terms d @ acc) []
@@ -42,6 +43,7 @@ fun check_delta (d: user_delta) =
   case d of
       OVERLOAD_ON (_, t) => Term.uptodate_term t
     | IOVERLOAD_ON (_, t) => Term.uptodate_term t
+    | GRMOVMAP(_, t) => Term.uptodate_term t
     | _ => true
 
 fun revise_data td =

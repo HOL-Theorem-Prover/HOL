@@ -923,6 +923,8 @@ fun add_delta ud G =
     | ASSOC_RESTR r => associate_restriction G r
     | RMOVMAP (s,kid) =>
         fupdate_overload_info (Overload.remove_mapping s kid) G
+    | GRMOVMAP (s,tm) =>
+        fupdate_overload_info (Overload.gen_remove_mapping s tm) G
 
 fun add_deltas uds G = List.foldl (uncurry add_delta) G uds
 
@@ -1582,6 +1584,8 @@ fun user_delta_encode write_tm ud =
     | RMOVMAP (s,{Name,Thy}) =>
         "RMO" ^ StringData.encode s ^ StringData.encode Name ^
         StringData.encode Thy
+    | GRMOVMAP(s,tm) =>
+        "RMG" ^ StringData.encode s ^ StringData.encode (write_tm tm)
 
 
 fun user_delta_reader read_tm = let
@@ -1603,7 +1607,10 @@ in
               (OptionData.reader StringData.reader >* StringData.reader)) ||
   (literal "RMO" >>
    Coding.map (fn ((s,n),thy) => RMOVMAP (s,{Name=n,Thy=thy}))
-              (StringData.reader >* StringData.reader >* StringData.reader))
+              (StringData.reader >* StringData.reader >* StringData.reader)) ||
+  (literal "RMG" >>
+   Coding.map GRMOVMAP
+              (StringData.reader >* Coding.map read_tm StringData.reader))
 end
 
 

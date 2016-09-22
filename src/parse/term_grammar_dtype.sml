@@ -63,6 +63,7 @@ datatype user_delta =
        | IOVERLOAD_ON of string * Term.term
        | ASSOC_RESTR of {binder: string option, resbinder : string}
        | RMOVMAP of string * {Name:string, Thy:string}
+       | GRMOVMAP of string * Term.term
 
 
 end

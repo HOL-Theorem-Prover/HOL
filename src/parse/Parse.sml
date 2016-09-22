@@ -1173,24 +1173,8 @@ fun remove_ovl_mapping0 (s, kid) = [RMOVMAP(s,kid)]
 val temp_remove_ovl_mapping = curry (mk_temp remove_ovl_mapping0)
 val remove_ovl_mapping = curry (mk_perm remove_ovl_mapping0)
 
-fun temp_gen_remove_ovl_mapping s t =
-  let
-    open term_grammar
-  in
-    the_term_grammar :=
-      fupdate_overload_info (Overload.gen_remove_mapping s t) (term_grammar());
-    term_grammar_changed := true
-  end
-
-fun gen_remove_ovl_mapping s t =
-  let
-  in
-    temp_gen_remove_ovl_mapping s t ;
-    update_grms "gen_remove_ovl_mapping"
-                ("(UTOFF (temp_gen_remove_ovl_mapping " ^ quote s ^ "))",
-                 minprint t)
-  end
-
+val temp_gen_remove_ovl_mapping = curry (mk_temp (fn p => [GRMOVMAP p]))
+val gen_remove_ovl_mapping = curry (mk_perm (fn p => [GRMOVMAP p]))
 
 fun primadd_rcdfld f ovopn (fldname, t) = let
   val (d,r) = dom_rng (type_of t)
