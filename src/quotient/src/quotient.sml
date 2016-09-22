@@ -1530,13 +1530,11 @@ datatype associativity = LEFT | RIGHT | NONASSOC
                     new_definition(def_name, def)
             | SOME Binder =>
                     new_binder_definition(def_name, def)
-            | SOME rule_fixity =>
-               (case rule_fixity of
-                  term_grammar.Infix (associativity, priority) =>
+            | SOME (term_grammar.Infix (associativity, priority)) =>
                     Definition.new_definition(def_name, def)
                      before
                     Parse.add_infix(nam, priority, associativity)
-                | term_grammar.Prefix priority =>
+            | SOME (term_grammar.Prefix priority) =>
                     Definition.new_definition(def_name, def)
                      before
                     Parse.add_rule{term_name=nam,
@@ -1545,7 +1543,7 @@ datatype associativity = LEFT | RIGHT | NONASSOC
                                    paren_style=OnlyIfNecessary,
                                    block_style=(AroundEachPhrase,
                                                 (PP.CONSISTENT,0))}
-                | term_grammar.Suffix priority =>
+            | SOME (term_grammar.Suffix priority) =>
                     Definition.new_definition(def_name, def)
                      before
                     Parse.add_rule{term_name=nam,
@@ -1554,7 +1552,7 @@ datatype associativity = LEFT | RIGHT | NONASSOC
                                    paren_style=OnlyIfNecessary,
                                    block_style=(AroundEachPhrase,
                                                 (PP.CONSISTENT,0))}
-                | term_grammar.Closefix =>
+            | SOME term_grammar.Closefix =>
                     Definition.new_definition(def_name, def)
                      before
                     Parse.add_rule{term_name=nam,
@@ -1563,7 +1561,6 @@ datatype associativity = LEFT | RIGHT | NONASSOC
                                    paren_style=OnlyIfNecessary,
                                    block_style=(AroundEachPhrase,
                                                 (PP.CONSISTENT,0))}
-               )
           end
 
 (* An example of use:
