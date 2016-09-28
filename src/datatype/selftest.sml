@@ -295,7 +295,7 @@ val _ = Feedback.emit_MESG := false
 (* a test for Hol_defn that requires a datatype: *)
 (* mutrec defs with sums *)
 val _ = tprint "Mutrec defn with sums"
-val _ = Hol_datatype `foo = F1 of unit | F2 of foo + num`
+val _ = Hol_datatype `foo2 = F1 of unit | F2 of foo2 + num`
 val _ = Defn.Hol_defn "foo"`
 (foo1 (F1 ()) = F1 ()) /\
 (foo1 (F2 sf) = F2 (foo2 sf)) /\
