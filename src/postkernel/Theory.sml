@@ -551,12 +551,6 @@ fun scrubCT() = (scrub(); theCT());
  *   WRITING AXIOMS, DEFINITIONS, AND THEOREMS INTO THE CURRENT SEGMENT      *
  *---------------------------------------------------------------------------*)
 
-val is_temp_binding = let
-  val temp_binding_pfx = "@temp"
-in
-  String.isPrefix temp_binding_pfx
-end
-
 local
   fun check_name tempok (fname,s) =
     if Lexis.ok_sml_identifier s andalso

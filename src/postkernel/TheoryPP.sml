@@ -18,6 +18,11 @@ val ERR = mk_HOL_ERR "TheoryPP";
 val temp_binding_pfx = "@temp"
 val is_temp_binding = String.isPrefix temp_binding_pfx
 fun temp_binding s = temp_binding_pfx ^ s
+fun dest_temp_binding s =
+  if is_temp_binding s then
+    String.extract(s, size temp_binding_pfx, NONE)
+  else raise ERR "dest_temp_binding" "String not a temp-binding"
+
 
 val pp_sig_hook = ref (fn () => ());
 

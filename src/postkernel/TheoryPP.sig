@@ -42,5 +42,6 @@ sig
 
  val temp_binding : string -> string
  val is_temp_binding : string -> bool
+ val dest_temp_binding : string -> string
 
 end

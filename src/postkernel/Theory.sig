@@ -17,6 +17,7 @@ sig
 
   val temp_binding       : string -> string
   val is_temp_binding    : string -> bool
+  val dest_temp_binding  : string -> string
   val new_type           : string * int -> unit
   val new_constant       : string * hol_type -> unit
   val new_axiom          : string * term -> thm
