@@ -1531,11 +1531,13 @@ val TOK = term_grammar.RE o term_grammar.TOK
             (fn G => type_pp.pp_type G PPBackEnd.raw_terminal)
     val _ = let
       open TheoryDelta
+      fun tempchk f nm = if Theory.is_temp_binding nm then ()
+                         else ignore (f nm)
       fun hook ev =
           case ev of
-            NewConstant{Thy,Name} => add_const Name
-          | NewTypeOp{Thy,Name} => add_type Name
-          | DelConstant{Thy,Name} => ignore (hide Name)
+            NewConstant{Thy,Name} => tempchk add_const Name
+          | NewTypeOp{Thy,Name} => tempchk add_type Name
+          | DelConstant{Thy,Name} => tempchk hide Name
           | _ => ()
     in
       Theory.register_hook ("Parse.watch_constants", hook)

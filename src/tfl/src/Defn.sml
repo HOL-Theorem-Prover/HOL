@@ -1083,7 +1083,7 @@ fun pairf (stem, eqs0) =
      then (tuple_args [(f, (f, map type_of args))] eqs0, stem, I)
    else
      let
-       val stem'name = stem ^ "_tupled"
+       val stem'name = Theory.temp_binding (stem ^ "_tupled")
        val argtys = map type_of args
        val rng_ty = type_of rhs
        val tuple_dom = list_mk_prod_type argtys

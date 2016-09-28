@@ -68,11 +68,15 @@ type thy_addon = {sig_ps    : (ppstream -> unit) option,
 local
   val hooks =
     (* hooks are stored in the order they are registered, with later
-       hooks earlier in the list. *)
-      ref ([] : (string * (TheoryDelta.t -> unit)) list)
+       hooks earlier in the list.
+       The set component is the list of the disabled hooks.
+     *)
+      ref (HOLset.empty String.compare,
+           [] : (string * (TheoryDelta.t -> unit)) list)
 in
 fun call_hooks td = let
-  val hooks_rev = List.rev (!hooks)
+  val (disabled, hooks) = !hooks
+  val hooks_rev = List.rev hooks
   fun protect nm (f:TheoryDelta.t -> unit) td = let
     fun error_pfx() =
         "Hook "^nm^" failed on event " ^ TheoryDelta.toString td
@@ -95,31 +99,51 @@ fun call_hooks td = let
         [] => ()
       | (nm, f) :: rest => let
         in
-          protect nm f td;
+          if HOLset.member(disabled,nm) then ()
+          else protect nm f td;
           recurse rest
         end
 in
-  recurse (List.rev (!hooks))
+  recurse hooks_rev
 end
 
 fun register_hook (nm, f) = let
-  val hooks0 = !hooks
+  val (disabled, hooks0) = !hooks
   val hooks0 = List.filter (fn (nm',f) => nm' <> nm) hooks0
 in
-  hooks := ((nm,f) :: hooks0)
+  hooks := (disabled, (nm,f) :: hooks0)
 end
 
 fun delete_hook nm = let
-  val (deleting, remaining) =
-      Lib.partition (fn (nm', _) => nm' = nm) (!hooks)
+  val (disabled, hookfns) = !hooks
+  val (deleting, remaining) = Lib.partition (fn (nm', _) => nm' = nm) hookfns
 in
   case deleting of
     [] => HOL_WARNING "Theory" "delete_hook" ("No hook with name: "^nm)
   | _ => ();
-  hooks := remaining
+  hooks := (HOLset.delete(disabled,nm), remaining)
 end
 
-fun get_hooks () = !hooks
+fun get_hooks () = #2 (!hooks)
+
+fun hook_modify act f x =
+  let
+    val (disabled0, fns) = !hooks
+    fun finish() = hooks := (disabled0, fns)
+    val _ = hooks := (act disabled0, fns)
+    val result = f x handle e => (finish(); raise e)
+  in
+    finish();
+    result
+  end
+
+fun disable_hook nm f x =
+  hook_modify (fn s => HOLset.add(s,nm)) f x
+
+fun safedel_fromset nm s =
+  HOLset.delete(s, nm) handle HOLset.NotFound => s
+fun enable_hook nm f x =
+  hook_modify (safedel_fromset nm) f x
 
 
 end (* local block enclosing declaration of hooks variable *)

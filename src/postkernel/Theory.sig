@@ -51,6 +51,8 @@ sig
   val register_hook : string * (TheoryDelta.t -> unit) -> unit
   val delete_hook : string -> unit
   val get_hooks : unit -> (string * (TheoryDelta.t -> unit)) list
+  val disable_hook : string -> ('a -> 'b) -> 'a -> 'b
+  val enable_hook : string -> ('a -> 'b) -> 'a -> 'b
 
 (* -- and persistent data added to theories *)
   structure LoadableThyData : sig
