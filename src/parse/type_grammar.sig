@@ -5,6 +5,7 @@ sig
 
   datatype grammar_rule = datatype type_grammar_dtype.grammar_rule
   datatype type_structure = datatype type_grammar_dtype.type_structure
+  datatype delta = datatype type_grammar_dtype.delta
 
   type grammar
 

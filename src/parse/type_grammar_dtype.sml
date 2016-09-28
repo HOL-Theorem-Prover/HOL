@@ -9,4 +9,9 @@ datatype type_structure =
          TYOP of {Thy : string, Tyop : string, Args : type_structure list}
        | PARAM of int
 
+datatype delta =
+         NEW_TYPE of string
+       | NEW_INFIX of {Name : string, ParseName : string,
+                       Assoc : HOLgrammars.associativity, Prec : int}
+
 end
