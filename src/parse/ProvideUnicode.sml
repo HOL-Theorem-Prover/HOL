@@ -197,30 +197,18 @@ datatype ThyUpdateInfo = UV of {u:string,tmnm:string}
                        | RULE of urule
                        | OVL of string * term
 
-fun encode tui = let
+fun encode tmwrite tui = let
   open Coding
 in
   case tui of
     UV {u,tmnm} => "U" ^ StringData.encode u ^ StringData.encode tmnm
-  | RULE {u,term_name,newrule,oldtok} => let
-      val tn' = StringData.encode term_name
-      val u' = StringData.encodel u
-      val delta' = grule_encode newrule
-      val oldtok' = case oldtok of
-                      NONE => "N"
-                    | SOME s => "S" ^ StringData.encode s
-    in
-      String.concat ["R",tn',u',"R",delta',oldtok']
-    end
-  | OVL (s,tm) => let
-      val s' = StringData.encode s
-      val tm' = TermCoding.encode tm
-    in
-      String.concat ["O",s',tm']
-    end
+  | RULE {u,term_name,newrule,oldtok} =>
+      "R" ^ StringData.encode term_name ^ StringData.encodel u ^ "R" ^
+      grule_encode newrule ^ OptionData.encode StringData.encode oldtok
+  | OVL (s,tm) => "O" ^ StringData.encode s ^ StringData.encode (tmwrite tm)
 end
 
-val reader = let
+fun reader tmread = let
   open Coding
   infix >> >- >-> >* ||
   fun mkrule (((tn,u),delta),oldtok) =
@@ -231,18 +219,23 @@ in
   (literal "R" >>
    map mkrule (StringData.reader >* many StringData.reader >*
                (literal "R" >> term_grammar.grule_reader) >*
-               ((literal "N" >> return NONE) ||
-                (literal "S" >> map SOME StringData.reader)))) ||
-  (literal "O" >> map OVL (StringData.reader >* TermCoding.reader))
+               (OptionData.reader StringData.reader))) ||
+  (literal "O" >> map OVL (StringData.reader >* map tmread StringData.reader))
 end
 
-val decode = Coding.lift reader
+fun tui_terms tui =
+  case tui of
+      OVL (_, tm) => [tm]
+    | _ => []
+val tuil_terms = List.foldl (fn (tui,acc) => tui_terms tui @ acc) []
 
 open LoadableThyData
 val (mk,dest) =
-    new {merge = op@, read = Lib.K (Coding.lift (Coding.many reader)),
-         terms = K [],
-         write = K (String.concat o map encode), thydataty = "unicodedata"}
+    new {merge = op@,
+         read = (fn rtm => Coding.lift (Coding.many (reader rtm))),
+         terms = tuil_terms,
+         write = (fn wtm => String.concat o map (encode wtm)),
+         thydataty = "unicodedata"}
 
 fun update value =
     write_data_update {data= mk[value], thydataty = "unicodedata"}

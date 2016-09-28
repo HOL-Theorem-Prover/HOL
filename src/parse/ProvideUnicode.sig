@@ -34,9 +34,5 @@ sig
 datatype ThyUpdateInfo = UV of {u:string,tmnm:string}
                        | RULE of urule
                        | OVL of string * term
-val encode : ThyUpdateInfo -> string
-val decode : string -> ThyUpdateInfo option
-val reader : ThyUpdateInfo Coding.reader
-
 
 end
