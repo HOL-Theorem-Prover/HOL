@@ -44,10 +44,6 @@ sig
     overload_info -> {Name : string, Thy : string} ->
     string option
 
-  val add_actual_overloading:
-    {opname: string, realname: string, realthy : string} ->
-    overload_info -> overload_info
-
   val add_overloading : string * term -> overload_info -> overload_info
   val add_inferior_overloading : string * term -> overload_info -> overload_info
 

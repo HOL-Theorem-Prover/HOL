@@ -34,6 +34,12 @@ sig
     val reader : int reader
   end
 
+  structure CharData : sig
+    val encode : char -> string
+    val decode : string -> char option
+    val reader : char reader
+  end
+
   structure BoolData : sig
     val encode : bool -> string
     val decode : string -> bool option

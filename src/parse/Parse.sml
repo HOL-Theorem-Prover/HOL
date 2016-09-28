@@ -978,24 +978,9 @@ fun add_listform0 x = [LRULE x]
 val temp_add_listform = mk_temp add_listform0
 val add_listform = mk_perm add_listform0
 
-fun temp_add_bare_numeral_form x =
- let val _ = Lib.can Term.prim_mk_const{Name="NUMERAL", Thy="arithmetic"}
-             orelse raise ERROR "add_numeral_form"
-            ("Numeral support not present; try load \"arithmeticTheory\"")
- in
-    the_term_grammar := term_grammar.add_numeral_form (term_grammar()) x;
-    term_grammar_changed := true
- end
-
-fun add_bare_numeral_form (c, stropt) =
-    (temp_add_bare_numeral_form (c, stropt);
-     update_grms "add_bare_numeral_form"
-                 ("temp_add_bare_numeral_form",
-                  String.concat
-                    ["(#", quote(str c), ", ",
-                     case stropt of
-                       NONE => "NONE"
-                     | SOME s => "SOME "^quote s,")"]));
+fun add_bare_numeral_form0 x = [ADD_NUMFORM x]
+val temp_add_bare_numeral_form = mk_temp add_bare_numeral_form0
+val add_bare_numeral_form = mk_perm add_bare_numeral_form0
 
 fun temp_give_num_priority c = let open term_grammar in
     the_term_grammar := give_num_priority (term_grammar()) c;
@@ -1093,25 +1078,16 @@ fun temp_remove_preterm_processor k =
         Overloading
  -------------------------------------------------------------------------*)
 
-fun temp_overload_on_by_nametype s {Name, Thy} = let
-  open term_grammar
+fun overload_on_by_nametype0 (s, recd as {Name, Thy}) = let
+  val c = prim_mk_const recd handle HOL_ERR _ =>
+              raise ERROR "temp_overload_on_by_nametype"
+                    ("No such constant: "^Thy^"$"^Name)
 in
-  the_term_grammar :=
-    fupdate_overload_info
-    (Overload.add_actual_overloading {opname=s, realname=Name, realthy=Thy})
-    (term_grammar());
-  term_grammar_changed := true
+  [OVERLOAD_ON (s,c)]
 end
 
-fun overload_on_by_nametype s (r as {Name, Thy}) = let in
-   temp_overload_on_by_nametype s r;
-   full_update_grms
-     ("(temp_overload_on_by_nametype "^quote s^")",
-      String.concat
-        [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"],
-      SOME (prim_mk_const r)
-     )
- end
+val temp_overload_on_by_nametype = curry (mk_temp overload_on_by_nametype0)
+val overload_on_by_nametype = curry (mk_perm overload_on_by_nametype0)
 
 val temp_send_to_back_overload =
     curry (mk_temp (fn skid => [MOVE_OVLPOSN{frontp = false, skid = skid}]))
@@ -1173,7 +1149,7 @@ val temp_add_record_fupdate =
     buildfupdt "temp_add_record_fupdate" temp_overload_on
 val add_record_fupdate = buildfupdt "add_record_fupdate" overload_on
 
-fun temp_add_numeral_form (c, stropt) = let
+fun add_numeral_form0 (c, stropt) = let
   val _ =
     Lib.can Term.prim_mk_const{Name="NUMERAL", Thy="arithmetic"}
     orelse
@@ -1181,30 +1157,20 @@ fun temp_add_numeral_form (c, stropt) = let
       ("Numeral support not present; try load \"arithmeticTheory\"")
   val num = Type.mk_thy_type {Tyop="num", Thy="num",Args = []}
   val fromNum_type = num --> alpha
-  val const_record =
+  val const =
     case stropt of
-      NONE => {Name = nat_elim_term, Thy = "arithmetic"}
+      NONE => prim_mk_const {Name = nat_elim_term, Thy = "arithmetic"}
     | SOME s =>
         case Term.decls s of
           [] => raise ERROR "add_numeral_form" ("No constant with name "^s)
-        | h::_ => lose_constrec_ty (dest_thy_const h)
+        | h::_ => h
 in
-  temp_add_bare_numeral_form (c, stropt);
-  temp_overload_on_by_nametype fromNum_str const_record;
-  if isSome stropt then
-    temp_overload_on_by_nametype num_injection const_record
-  else ()
+  ADD_NUMFORM (c, stropt) :: OVERLOAD_ON (fromNum_str, const) ::
+  (if isSome stropt then [OVERLOAD_ON (num_injection, const)] else [])
 end
 
-fun add_numeral_form (c, stropt) = let in
-  temp_add_numeral_form (c, stropt);
-  update_grms "add_numeral_form"
-              ("temp_add_numeral_form",
-               String.concat
-               ["(#", quote (str c), ", ",
-                case stropt of NONE => "NONE" | SOME s => "SOME "^quote s, ")"
-               ])
- end
+val temp_add_numeral_form = mk_temp add_numeral_form0
+val add_numeral_form = mk_perm add_numeral_form0
 
 
 (*---------------------------------------------------------------------------

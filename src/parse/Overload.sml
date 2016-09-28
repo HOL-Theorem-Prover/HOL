@@ -330,14 +330,6 @@ end
 val add_overloading = add_overloading_with_inserter (op ::) (fn () => pos_tstamp true)
 val add_inferior_overloading = add_overloading_with_inserter (fn (a,l) => l @ [a]) (fn() => pos_tstamp false)
 
-fun add_actual_overloading {opname, realname, realthy} oinfo = let
-  val cnst = prim_mk_const{Name = realname, Thy = realthy}
-      handle HOL_ERR _ =>
-             raise OVERLOAD_ERR ("No such constant: "^realthy^"$"^realname)
-in
-  add_overloading (opname, cnst) oinfo
-end
-
 local
   fun foverloading f {opname, realname, realthy} oinfo = let
     val nthy_rec = {Name = realname, Thy = realthy}

@@ -911,29 +911,6 @@ fun set_mapped_fixity {term_name,tok,fixity} G =
                 |> C add_rule G
   end
 
-fun add_delta ud G =
-    case ud of
-      GRULE r => add_rule r G
-    | LRULE r => add_listform G r
-    | RMTMTOK r => remove_form_with_tok G r
-    | RMTMNM s => remove_standard_form G s
-    | OVERLOAD_ON p => fupdate_overload_info (Overload.add_overloading p) G
-    | IOVERLOAD_ON p =>
-        fupdate_overload_info (Overload.add_inferior_overloading p) G
-    | ASSOC_RESTR r => associate_restriction G r
-    | RMOVMAP (s,kid) =>
-        fupdate_overload_info (Overload.remove_mapping s kid) G
-    | GRMOVMAP (s,tm) =>
-        fupdate_overload_info (Overload.gen_remove_mapping s tm) G
-    | MOVE_OVLPOSN {frontp,skid=(s,{Name,Thy})} =>
-      let
-        val oact = if frontp then Overload.bring_to_front_overloading
-                   else Overload.send_to_back_overloading
-      in
-        fupdate_overload_info (oact {opname=s,realname=Name,realthy=Thy}) G
-      end
-
-fun add_deltas uds G = List.foldl (uncurry add_delta) G uds
 
 fun prefer_form_with_tok (r as {term_name,tok}) G0 = let
   val contending_timestamps = map #1 (rules_for G0 term_name)
@@ -1019,6 +996,31 @@ fun check c =
 
 fun add_numeral_form G (c, stropt) =
   fupdate_numinfo (update_assoc (check c, stropt)) G
+
+fun add_delta ud G =
+    case ud of
+      GRULE r => add_rule r G
+    | LRULE r => add_listform G r
+    | RMTMTOK r => remove_form_with_tok G r
+    | RMTMNM s => remove_standard_form G s
+    | OVERLOAD_ON p => fupdate_overload_info (Overload.add_overloading p) G
+    | IOVERLOAD_ON p =>
+        fupdate_overload_info (Overload.add_inferior_overloading p) G
+    | ASSOC_RESTR r => associate_restriction G r
+    | RMOVMAP (s,kid) =>
+        fupdate_overload_info (Overload.remove_mapping s kid) G
+    | GRMOVMAP (s,tm) =>
+        fupdate_overload_info (Overload.gen_remove_mapping s tm) G
+    | MOVE_OVLPOSN {frontp,skid=(s,{Name,Thy})} =>
+      let
+        val oact = if frontp then Overload.bring_to_front_overloading
+                   else Overload.send_to_back_overloading
+      in
+        fupdate_overload_info (oact {opname=s,realname=Name,realthy=Thy}) G
+      end
+    | ADD_NUMFORM cs => add_numeral_form G cs
+
+fun add_deltas uds G = List.foldl (uncurry add_delta) G uds
 
 fun give_num_priority G c = let
   val realc = check c
@@ -1582,7 +1584,9 @@ val skid_reader =
 
 fun user_delta_encode write_tm ud =
     case ud of
-      ASSOC_RESTR {binder,resbinder} =>
+      ADD_NUMFORM (c,s) =>
+        "AN" ^ CharData.encode c ^ OptionData.encode StringData.encode s
+    | ASSOC_RESTR {binder,resbinder} =>
         "AR" ^ OptionData.encode StringData.encode binder ^
         StringData.encode resbinder
     | GRMOVMAP(s,tm) =>
@@ -1603,6 +1607,9 @@ fun user_delta_encode write_tm ud =
 
 fun user_delta_reader read_tm = let
 in
+  (literal "AN" >>
+   Coding.map ADD_NUMFORM
+     (CharData.reader >* OptionData.reader StringData.reader)) ||
   (literal "AR" >>
    Coding.map (fn (b,rb) => ASSOC_RESTR {binder = b, resbinder = rb})
               (OptionData.reader StringData.reader >* StringData.reader)) ||

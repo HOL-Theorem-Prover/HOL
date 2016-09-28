@@ -66,6 +66,7 @@ datatype user_delta =
        | RMOVMAP of skid
        | GRMOVMAP of string * Term.term
        | MOVE_OVLPOSN of {frontp : bool, skid : skid}
+       | ADD_NUMFORM of char * string option
 
 
 end

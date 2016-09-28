@@ -67,6 +67,14 @@ in
 end
 
 
+structure CharData =
+struct
+  fun encode c = IntData.encode (ord c)
+  fun i2c i = return (chr i) handle Chr => fail
+  val reader = IntData.reader >- i2c
+  val decode = lift reader
+end
+
 structure StringData =
 struct
 
