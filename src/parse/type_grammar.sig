@@ -3,13 +3,8 @@ sig
 
   type kernelname = KernelSig.kernelname
 
-  datatype grammar_rule =
-           INFIX of {opname : string, parse_string : string} list *
-                    HOLgrammars.associativity
-
-  datatype type_structure
-    = TYOP of {Thy : string, Tyop : string, Args : type_structure list}
-    | PARAM of int
+  datatype grammar_rule = datatype type_grammar_dtype.grammar_rule
+  datatype type_structure = datatype type_grammar_dtype.type_structure
 
   type grammar
 
