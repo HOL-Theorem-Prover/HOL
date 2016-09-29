@@ -23,46 +23,66 @@ fun break_qident s =
 
 datatype grammar = TYG of {
   rules : (int * grammar_rule) list,
-  suffixes : string list,
-  abbparse : (kernelname, type_structure) Binarymap.dict,
-  abbprint : (int * kernelname) TypeNet.typenet,
-  privabbs : (string, string) Binarymap.dict,
+  parse_str : (kernelname, type_structure) Binarymap.dict,
+  str_print : (int * kernelname) TypeNet.typenet,
+  bare_names : (string, string) Binarymap.dict,
   tstamp   : int
 }
-(* Abbreviations are handled by four fields of the grammar record :
 
-   abbparse: maps (Thy,Name) pairs to type structures, encoding the abbreviation
-   abbprint: maps type-patterns (i.e., structures in effect) to kernel names,
-             as well as a "time stamp".  In this way, more recent patterns
-             take precedence over older ones (the "specific-ness" of the
-             match is more important than this though).
-   privabbs: records which bare strings/Names are "privileged", and get to
-             be printed without being qualified by their theory.  The map is
-             from Name to Theory, so that when parsing, if the algorithm sees
-             bare Name nm, it then looks up in privabbs to see which theory
-             this name is associated with, and then looks up the given
-             (theory,name) pair to see what structure this abbreviation has.
-   tstamp:   provides the timestamps for abbprint above
+datatype ty_absyn =
+         VTY of string
+       | QTYOP of kernelname * ty_absyn list
+(*
+
+   Like term parsing, type parsing is handled in two phases:
+
+   1. Concrete syntax (involving infixes and the special syntax for
+      array-typeshere) is mapped to abstract syntax, the ty_absyn type
+      above.  The infix rules are in the rules field.
+
+      Along the way, bare names in the concrete syntax are mapped to
+      "qualified" operators (the QTYOP constructor) using the
+      bare_names map of the grammar.
+
+   2. The parse_str field of the grammar is then used to turn QTYOPs
+      into genuine type operators.
+
+   Printing uses the str_print field to turn structures into syntactic
+   structure names. If these are privileged, they get to print in bare
+   form; otherwise they will be qualified.
+
+   As with term overloads, more specific structure matches are
+   preferred when turning underlying type operators into names, and
+   the timestamp is used to break ties.
+
 *)
+open FunctionalRecordUpdate
+fun tyg_mkUp z = makeUpdate5 z
+fun update_G z = let
+  fun from rules parse_str str_print bare_names tstamp =
+    {rules = rules, parse_str = parse_str,
+     str_print = str_print, bare_names = bare_names, tstamp = tstamp}
+  (* fields in reverse order *)
+  fun from' tstamp bare_names str_print parse_str rules =
+    {rules = rules, parse_str = parse_str,
+     str_print = str_print, bare_names = bare_names, tstamp = tstamp}
+  (* first order *)
+  fun to f {rules, parse_str, str_print, bare_names, tstamp} =
+    f rules parse_str str_print bare_names tstamp
+in
+  tyg_mkUp (from, from', to)
+end z
 
-fun fupdate_rules f (TYG{rules,suffixes,abbprint,abbparse,privabbs,tstamp}) =
-  TYG{rules=f rules,suffixes=suffixes,abbprint=abbprint,abbparse=abbparse,
-      privabbs = privabbs, tstamp = tstamp}
-fun fupdate_suffixes f (TYG{rules,suffixes,abbprint,abbparse,privabbs,tstamp}) =
-  TYG{rules=rules,suffixes=f suffixes,abbprint=abbprint,abbparse=abbparse,
-      privabbs = privabbs, tstamp = tstamp}
-fun fupdate_abbprint f (TYG{rules,suffixes,abbprint,abbparse,privabbs,tstamp}) =
-  TYG{rules=rules,suffixes=suffixes,abbprint=f abbprint,abbparse=abbparse,
-      privabbs = privabbs, tstamp = tstamp}
-fun fupdate_abbparse f (TYG{rules,suffixes,abbprint,abbparse,privabbs,tstamp}) =
-  TYG{rules=rules,suffixes=suffixes,abbprint=abbprint,abbparse=f abbparse,
-      privabbs = privabbs, tstamp = tstamp}
-fun fupdate_privabbs f (TYG{rules,suffixes,abbprint,abbparse,privabbs,tstamp}) =
-  TYG{rules=rules,suffixes=suffixes,abbprint=abbprint,abbparse=abbparse,
-      privabbs = f privabbs, tstamp = tstamp}
-fun fupdate_tstamp f (TYG{rules,suffixes,abbprint,abbparse,privabbs,tstamp}) =
-  TYG{rules=rules,suffixes=suffixes,abbprint=abbprint,abbparse=abbparse,
-      privabbs = privabbs, tstamp = f tstamp}
+fun fupdate_rules f (TYG g) =
+  TYG (update_G g (U #rules (f (#rules g))) $$)
+fun fupdate_str_print f (TYG g) =
+  TYG (update_G g (U #str_print (f (#str_print g))) $$)
+fun fupdate_parse_str f (TYG g) =
+  TYG (update_G g (U #parse_str (f (#parse_str g))) $$)
+fun fupdate_tstamp f (TYG g) =
+  TYG (update_G g (U #tstamp (f (#tstamp g))) $$)
+fun fupdate_bare_names f (TYG g) =
+  TYG (update_G g (U #bare_names (f (#bare_names g))) $$)
 
 fun default_typrinter (G:grammar) (pps:Portable.ppstream)
                       (ty:Type.hol_type) = PP.add_string pps "<a type>"
@@ -95,13 +115,7 @@ val num_params = HOLset.numItems o params
 
 fun suffix_arity (abbrevs, privs) s =
   case Binarymap.peek (privs, s) of
-      NONE =>
-      let
-      in
-        case Type.decls s of
-          [] => NONE
-        | ty :: _ => Option.map (fn n => (s,n)) (Type.op_arity ty)
-      end
+      NONE => NONE
     | SOME thy =>
       let
       in
@@ -135,18 +149,28 @@ fun insert_sorted (k, v) [] = [(k, v)]
 
 fun new_binary_tyop g {precedence, infix_form, opname, associativity} =
     let
+      val TYG {tstamp, ...} = g
       val rule =
           if isSome infix_form then
-            (precedence, INFIX([{parse_string = valOf infix_form,
-                                 opname = opname}],
-                               associativity))
-          else (precedence, INFIX([{parse_string = opname, opname = opname}],
-                                  associativity))
+            (precedence,
+             INFIX([{parse_string = valOf infix_form, opname = opname}],
+                   associativity))
+          else
+            (precedence,
+             INFIX([{parse_string = opname, opname = opname}], associativity))
     in
       g |> fupdate_rules (insert_sorted rule)
-        |> fupdate_suffixes (Lib.insert opname)
     end
 
+
+(*
+      val thy = current_theory()
+      val kid = {Name = opname, Thy = thy}
+      val opstructure = TYOP {Thy = current_theory(), Tyop = opname,
+                              Args = [PARAM 1, PARAM 2]}
+      val ty = mk_thy_type {Tyop = opname, Thy = thy, Args = [alpha, beta]}
+
+*)
 fun remove_binary_tyop g s = let
   fun bad_irule {parse_string,...} = parse_string = s
   fun edit_rule (prec, r) =
@@ -162,18 +186,44 @@ in
 end
 
 
-fun new_tyop g name = g |> fupdate_suffixes (cons name)
+fun new_qtyop (kid as {Name = name, Thy = thy}) g =
+  let
+    open Type Theory
+  in
+    case Type.op_arity {Tyop = name, Thy = thy} of
+        NONE => raise GrammarError
+                      (name ^ " is not the name of a type operator in theory "^
+                       thy)
+      | SOME i =>
+        let
+          val TYG {tstamp,...} = g
+          val opstructure = TYOP {Thy = thy, Tyop = name,
+                                  Args = List.tabulate(i, PARAM)}
+          fun mk_vari i = mk_vartype ("'a" ^ Int.toString i)
+          val ty =
+              mk_thy_type {Tyop = name, Thy = thy,
+                           Args = List.tabulate(i, mk_vari)}
+        in
+          g |> fupdate_str_print
+                 (fn tynet => TypeNet.insert(tynet,ty,(tstamp,kid)))
+            |> fupdate_parse_str (fn m => Binarymap.insert(m, kid, opstructure))
+            |> fupdate_tstamp (fn i => i + 1)
+            |> fupdate_bare_names (fn m => Binarymap.insert(m, name, thy))
+        end
+  end
 
-val empty_grammar = TYG { rules = [], suffixes = [],
-                          abbparse = Binarymap.mkDict KernelSig.name_compare,
-                          privabbs = Binarymap.mkDict String.compare,
-                          abbprint = TypeNet.empty,
+val empty_grammar = TYG { rules = [],
+                          parse_str = Binarymap.mkDict KernelSig.name_compare,
+                          bare_names = Binarymap.mkDict String.compare,
+                          str_print = TypeNet.empty,
                           tstamp = 0 }
 
-fun rules (TYG gr) = {infixes = #rules gr, suffixes = #suffixes gr}
-fun abbreviations (TYG gr) = #abbparse gr
-fun abbprintmap (TYG gr) = #abbprint gr
-fun privabbs (TYG gr) = #privabbs gr
+fun keys m = Binarymap.foldr (fn (k,v,acc) => k :: acc) [] m
+
+fun rules (TYG gr) = {infixes = #rules gr, suffixes = keys (#bare_names gr)}
+fun parse_map (TYG gr) = #parse_str gr
+fun print_map (TYG gr) = #str_print gr
+fun privabbs (TYG gr) = #bare_names gr
 val privileged_abbrevs = privabbs
 fun tstamp (TYG gr) = #tstamp gr
 fun bump_tstamp g = (tstamp g, fupdate_tstamp (fn n => n + 1) g)
@@ -195,7 +245,7 @@ in
 end
 
 fun remove_knm_abbreviation g knm = let
-  val (dict, st) = Binarymap.remove(abbreviations g, knm)
+  val (dict, st) = Binarymap.remove(parse_map g, knm)
   fun doprint pmap0 = #1 (TypeNet.delete(pmap0, structure_to_type st))
                      handle Binarymap.NotFound => pmap0
   fun maybe_rmpriv d =
@@ -204,8 +254,9 @@ fun remove_knm_abbreviation g knm = let
       | SOME thy' => if thy' = #Thy knm then #1 (Binarymap.remove(d, #Name knm))
                      else d
 in
-  g |> fupdate_abbparse (K dict) |> fupdate_abbprint doprint
-    |> fupdate_privabbs maybe_rmpriv
+  g |> fupdate_parse_str (K dict)
+    |> fupdate_str_print doprint
+    |> fupdate_bare_names maybe_rmpriv
 end
 
 fun remove_abbreviation g s =
@@ -227,16 +278,16 @@ fun remove_abbreviation g s =
                               handle Binarymap.NotFound => m))
           | SOME thy => (equal {Name = nm, Thy = thy}, thyprivrm thy)
   in
-    g |> fupdate_privabbs privrm
-      |> fupdate_abbprint (TypeNet.fold (printmap check) TypeNet.empty)
-      |> fupdate_abbparse
+    g |> fupdate_bare_names privrm
+      |> fupdate_str_print (TypeNet.fold (printmap check) TypeNet.empty)
+      |> fupdate_parse_str
            (Binarymap.foldl (parsemap check)
                             (Binarymap.mkDict KernelSig.name_compare))
   end
 
 fun new_abbreviation tyg (knm as {Name=s,Thy=thy}, st) = let
   val _ = check_structure st
-  val tyg = case Binarymap.peek(abbreviations tyg, knm) of
+  val tyg = case Binarymap.peek(parse_map tyg, knm) of
                 NONE => tyg
               | SOME st' =>
                 if st = st' then tyg
@@ -259,12 +310,11 @@ fun new_abbreviation tyg (knm as {Name=s,Thy=thy}, st) = let
                    | _ => ()
   val (tstamp, tyg) = bump_tstamp tyg
   val result =
-    tyg |> fupdate_abbparse (fn d => Binarymap.insert(d,knm,st))
-        |> fupdate_abbprint
+    tyg |> fupdate_parse_str (fn d => Binarymap.insert(d,knm,st))
+        |> fupdate_str_print
              (fn pmap => TypeNet.insert(pmap, structure_to_type st,
                                         (tstamp, knm)))
-        |> fupdate_privabbs (fn d => Binarymap.insert(d,s,thy))
-        |> C new_tyop s
+        |> fupdate_bare_names(fn d => Binarymap.insert(d,s,thy))
 in
   result
 end
@@ -280,7 +330,7 @@ fun merge_abbrevs G (d1, d2) = let
       | SOME v0 =>
         if v0 <> v then
           (Feedback.HOL_WARNING "parse_type" "merge_grammars"
-                                ("Conflicting entries for abbreviation "^
+                                ("Conflicting entries for op/abbrev "^
                                  KernelSig.name_toString k ^
                                  "; arbitrarily keeping map to "^
                                  PP.pp_to_string (!Globals.linewidth)
@@ -301,10 +351,10 @@ fun merge_privs (p1, p2) =
 
 fun merge_grammars (G1, G2) = let
   (* both grammars are sorted, with no adjacent suffixes *)
-  val TYG { rules = grules1, suffixes = sfxs1, abbparse = abbrevs1,
-            abbprint = pmap1, tstamp = t1, privabbs = priv1 } = G1
-  val TYG { rules = grules2, suffixes = sfxs2, abbparse = abbrevs2,
-            abbprint = pmap2, tstamp = t2, privabbs = priv2 } = G2
+  val TYG { rules = grules1, parse_str = abbrevs1,
+            str_print = pmap1, tstamp = t1, bare_names = priv1 } = G1
+  val TYG { rules = grules2, parse_str = abbrevs2,
+            str_print = pmap2, tstamp = t2, bare_names = priv2 } = G2
   fun merge_acc acc (gs as (g1, g2)) =
     case gs of
       ([], _) => rev_append acc g2
@@ -318,17 +368,15 @@ fun merge_grammars (G1, G2) = let
       end
 in
   TYG { rules = merge_acc [] (grules1, grules2),
-        suffixes = Lib.union sfxs1 sfxs2,
-        abbparse = merge_abbrevs G2 (abbrevs1, abbrevs2),
-        abbprint = merge_pmaps (pmap1, pmap2),
-        privabbs = merge_privs (priv1, priv2),
+        parse_str = merge_abbrevs G2 (abbrevs1, abbrevs2),
+        str_print = merge_pmaps (pmap1, pmap2),
+        bare_names = merge_privs (priv1, priv2),
         tstamp = Int.max(t1,t2) + 1 }
 end
 
 fun prettyprint_grammar pps G = let
   val TYG grm  = G
-  val {rules=g, suffixes=sfxs, abbparse=abbrevs, abbprint=pmap, ... } = grm
-  val privabbs = #privabbs grm
+  val {rules=g, parse_str=abbrevs, str_print=pmap, bare_names,... } = grm
   open Portable Lib
   val {add_break,add_newline,add_string,begin_block,end_block,...} =
       with_ppstream pps
@@ -348,7 +396,7 @@ fun prettyprint_grammar pps G = let
 
   fun print_abbrev (s, st) = let
     val kns = KernelSig.name_toString s
-    val ispriv = case Binarymap.peek (privabbs, #Name s) of
+    val ispriv = case Binarymap.peek (bare_names, #Name s) of
                      SOME thy => thy = #Thy s
                    | NONE => false
     fun print_lhs () =
@@ -413,7 +461,7 @@ fun prettyprint_grammar pps G = let
   end
 
   fun print_suffixes slist = let
-    val oksl = List.mapPartial (suffix_arity (abbrevs, privabbs)) slist
+    val oksl = List.mapPartial (suffix_arity (abbrevs, bare_names)) slist
   in
     if null oksl then ()
     else let
@@ -457,7 +505,7 @@ in
       add_break (1,2);
       begin_block CONSISTENT 0;
         app print_rule g;
-        print_suffixes sfxs;
+        print_suffixes (keys bare_names);
         add_string "       TY  ::=  TY[TY] (array type)";
       end_block ();
     end_block ();
@@ -477,12 +525,12 @@ fun tysize ty =
       end
 
 fun dest_type' ty = let
-  val (nm, args) = Type.dest_type ty
+  val {Thy, Tyop, Args} = Type.dest_thy_type ty
 in
-  {Thy = NONE, Tyop = nm, Args = args}
+  {Thy = SOME Thy, Tyop = Tyop, Args = Args}
 end
 
-fun abb_dest_type0 (TYG{abbprint = pmap, privabbs, ...}) ty = let
+fun abb_dest_type0 (TYG{str_print = pmap, bare_names, ...}) ty = let
   open HolKernel
   val net_matches = TypeNet.match(pmap, ty)
   fun mymatch pat ty = let
@@ -509,7 +557,7 @@ in
       val inst' = Listsort.sort instcmp inst
       val args = map #residue inst'
     in
-      case Binarymap.peek (privabbs, Name) of
+      case Binarymap.peek (bare_names, Name) of
           NONE => {Thy = SOME Thy, Tyop = Name, Args = args}
         | SOME thy' => if Thy = thy' then {Thy = NONE, Tyop = Name, Args = args}
                        else {Thy = SOME Thy, Tyop = Name, Args = args}
@@ -528,9 +576,9 @@ fun disable_abbrev_printing s (g as TYG grm) = let
                            if namecheck knm then acc
                            else TypeNet.insert(acc,ty, (tstamp, knm)))
                        TypeNet.empty
-                       (abbprintmap g)
+                       (print_map g)
     in
-      fupdate_abbprint (K pmap') g
+      fupdate_str_print (K pmap') g
     end
 in
   case thyopt of
@@ -545,13 +593,29 @@ end
     fun, which also has an infix -> presentation
    ---------------------------------------------------------------------- *)
 
-val min_grammar =
-    empty_grammar |> C new_tyop "bool"
-                  |> C new_tyop "ind"
-                  |> C new_binary_tyop {opname = "fun",
-                                        associativity = RIGHT,
-                                        infix_form = SOME "->",
-                                        precedence = 50}
+fun nparams s n = TYOP {Thy = "min", Tyop = s,
+                        Args = List.tabulate(n, PARAM)}
+val funty = Type.-->(Type.alpha,Type.beta)
+val indty = Type.mk_thy_type {Thy = "min", Tyop = "ind", Args = []}
 
+fun insert_minop (s,arity,ty) g =
+  let
+    val kid = {Thy = "min", Name = s}
+  in
+    g |> fupdate_parse_str (fn m => Binarymap.insert(m,kid, nparams s arity))
+      |> fupdate_str_print (fn n => TypeNet.insert(n,ty,(tstamp g, kid)))
+      |> fupdate_bare_names (fn m => Binarymap.insert(m,s,"min"))
+      |> fupdate_tstamp (fn i => i + 1)
+  end
+
+
+val fun_rule = (50,INFIX([{opname = "fun", parse_string = "->"}], RIGHT))
+
+val min_grammar =
+    empty_grammar
+      |> fupdate_rules (K [fun_rule])
+      |> insert_minop ("ind", 0, indty)
+      |> insert_minop ("bool", 0, Type.bool)
+      |> insert_minop ("fun", 2, funty)
 
 end

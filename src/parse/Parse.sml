@@ -693,19 +693,26 @@ struct
 
 end
 
+fun temp_add_qtype kid =
+  let
+  in
+    the_type_grammar := new_qtyop kid (!the_type_grammar);
+    type_grammar_changed := true;
+    term_grammar_changed := true
+  end
 
+fun temp_add_type s = temp_add_qtype {Name = s, Thy = current_theory()}
 
+fun add_qtype (kid as {Thy,Name}) =
+  let
+  in
+    temp_add_qtype kid;
+    update_grms "add_qtype"
+                ("temp_add_qtype",
+                 "{Thy = "^Lib.quote Thy^","^ "Name = "^Lib.quote Name^"}")
+  end
 
-fun temp_add_type s = let open parse_type in
-   the_type_grammar := new_tyop (!the_type_grammar) s;
-   type_grammar_changed := true;
-   term_grammar_changed := true
- end;
-
-fun add_type s = let in
-   temp_add_type s;
-   update_grms "add_type" ("temp_add_type", Lib.quote s)
- end
+fun add_type s = add_qtype {Thy=current_theory(), Name = s}
 
 fun temp_add_infix_type {Name, ParseName, Assoc, Prec} =
  let open parse_type

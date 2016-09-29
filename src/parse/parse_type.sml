@@ -32,7 +32,7 @@ val ERRloc = Feedback.mk_HOL_ERRloc "Parse" "parse_type"
 fun totalify f x = SOME (f x) handle InternalFailure _ => NONE
 
 fun parse_type tyfns allow_unknown_suffixes G = let
-  val G = rules G and abbrevs = abbreviations G
+  val G = rules G and abbrevs = parse_map G
   and privabbs = privileged_abbrevs G
   val {vartype = pVartype, tyop = pType, antiq = pAQ, qtyop} = tyfns
   fun structure_to_value0 (s,locn) args st =
@@ -127,7 +127,8 @@ fun parse_type tyfns allow_unknown_suffixes G = let
           | SOME thy => let
             in
               case Binarymap.peek(abbrevs, {Name = s, Thy = thy}) of
-                  NONE => pType((s,locn),args)
+                  NONE => raise Fail
+                            "parse_tyop.apply_tyop: probably shouldn't happen"
                 | SOME st => structure_to_value (s,locn) args st
             end
       end

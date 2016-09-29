@@ -8,9 +8,7 @@ datatype mygrav = Sfx
                 | Rfx of int * string
                 | Top
 
-datatype single_rule
-   = SR
-   | IR of int * associativity * string
+datatype single_rule = IR of int * associativity * string
 
 val ERR = mk_HOL_ERR "type_pp" "pp_type";
 
@@ -85,7 +83,7 @@ val _ = register_btrace ("pp_array_types", pp_array_types)
 fun pp_type0 (G:grammar) backend = let
   val {infixes,suffixes} = rules G
   fun lookup_tyop s = let
-    fun recurse [] = if Lib.mem s suffixes then SOME SR else NONE
+    fun recurse [] = NONE
       | recurse (x::xs) = let
         in
           case x of
@@ -139,7 +137,7 @@ fun pp_type0 (G:grammar) backend = let
                 | SOME thy => KernelSig.name_toString {Thy = thy, Name = abop}
           fun tooltip () =
             let
-              val abbs = type_grammar.abbreviations G
+              val abbs = type_grammar.parse_map G
               fun doabbrev st =
                 let
                   val numps = num_params st
@@ -196,17 +194,6 @@ fun pp_type0 (G:grammar) backend = let
             end_block();
             pend parens_needed
           end
-          fun print_ghastly () = let
-            val {Thy,Tyop,Args} = dest_thy_type ty
-          in
-            add_string "(";
-            begin_block INCONSISTENT 0;
-            if not (null Args) then (print_args Sfx Args; add_break(1,0))
-            else ();
-            add_string (Thy ^ "$" ^ Tyop);
-            end_block();
-            add_string ")"
-          end
           val {Thy, Tyop = realTyop, Args = realArgs} = dest_thy_type ty
         in
           if abop = "cart" andalso length abargs = 2 andalso
@@ -218,61 +205,55 @@ fun pp_type0 (G:grammar) backend = let
              add_string "]")
           else
             case abargs of
-              [] => let
-              in
-                case lookup_tyop abop of
-                  NONE => print_ghastly ()
-                | _ => add_ann_string (abop_s, TyOp tooltip)
-
-              end
-            | [arg1, arg2] => (let
-                val rule = valOf (lookup_tyop abop)
-              in
-                case rule of
-                  SR => let
-                  in
-                    begin_block INCONSISTENT 0;
+              [] => add_ann_string (abop_s, TyOp tooltip)
+            | [arg1, arg2] =>
+              let
+                fun print_suffix_style () =
+                   (begin_block INCONSISTENT 0;
                     (* knowing that there are two args, we know that they will
                        be printed with parentheses, so the gravity we pass in
                        here makes no difference. *)
                     print_args Top abargs;
                     add_break(1,0);
                     add_ann_string (abop_s, TyOp tooltip);
-                    end_block()
-                  end
-                | IR(prec, assoc, printthis) => let
-                    val parens_needed =
-                        case grav of
-                          Sfx => true
-                        | Lfx (n, s) => if s = printthis then assoc <> LEFT
-                                        else (n >= prec)
-                        | Rfx (n, s) => if s = printthis then assoc <> RIGHT
-                                        else (n >= prec)
-                        | _ => false
-                  in
-                    pbegin parens_needed;
-                    begin_block INCONSISTENT 0;
-                    pr_ty pps arg1 (Lfx (prec, printthis)) (depth - 1);
-                    add_break(1,0);
-                    add_ann_string (printthis, TySyn tooltip);
-                    add_break(1,0);
-                    pr_ty pps arg2 (Rfx (prec, printthis)) (depth -1);
-                    end_block();
-                    pend parens_needed
-                  end
-              end handle Option => print_ghastly())
-            | _ => let
+                    end_block())
               in
-                case lookup_tyop abop of
-                  NONE => print_ghastly()
-                | SOME _ => let
-                  in
-                    begin_block INCONSISTENT 0;
-                    print_args Sfx abargs;
-                    add_break(1,0);
-                    add_ann_string (abop_s, TyOp tooltip);
-                    end_block()
-                  end
+                if isSome thyopt then print_suffix_style()
+                else
+                  case lookup_tyop abop of
+                      SOME (IR(prec, assoc, printthis)) =>
+                      let
+                        val parens_needed =
+                            case grav of
+                                Sfx => true
+                              | Lfx (n, s) => if s = printthis then
+                                                assoc <> LEFT
+                                              else (n >= prec)
+                              | Rfx (n, s) => if s = printthis then
+                                                assoc <> RIGHT
+                                              else (n >= prec)
+                              | _ => false
+                      in
+                        pbegin parens_needed;
+                        begin_block INCONSISTENT 0;
+                        pr_ty pps arg1 (Lfx (prec, printthis)) (depth - 1);
+                        add_break(1,0);
+                        add_ann_string (printthis, TySyn tooltip);
+                        add_break(1,0);
+                        pr_ty pps arg2 (Rfx (prec, printthis)) (depth -1);
+                        end_block();
+                        pend parens_needed
+                      end
+                    | NONE => print_suffix_style()
+              end
+            | _ =>
+              let
+              in
+                begin_block INCONSISTENT 0;
+                print_args Sfx abargs;
+                add_break(1,0);
+                add_ann_string (abop_s, TyOp tooltip);
+                end_block()
               end
           end
   end

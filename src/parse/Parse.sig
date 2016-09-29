@@ -27,7 +27,9 @@ signature Parse = sig
   val ==           : hol_type frag list -> 'a -> hol_type
 
   val add_type : string -> unit
+  val add_qtype : {Thy:string,Name:string} -> unit
   val temp_add_type : string -> unit
+  val temp_add_qtype : {Thy:string,Name:string} -> unit
   val add_infix_type : {Prec : int,
                         ParseName : string option,
                         Name : string,

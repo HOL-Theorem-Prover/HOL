@@ -22,7 +22,7 @@ fun typrinttest s =
 val _ = typrinttest ":bool -> bool"
 val _ = typrinttest ":bool -> bool -> bool"
 val _ = tprint "type_grammar abbrevs map is empty"
-val _ = if Binarymap.numItems (type_grammar.abbreviations tyg) = 0 then OK()
+val _ = if Binarymap.numItems (type_grammar.parse_map tyg) = 4 then OK()
         else die "FAILED!"
 
 val _ = export_theory();

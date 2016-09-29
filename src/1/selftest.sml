@@ -310,7 +310,7 @@ local
                     |> unicode_off
   val s = pfn ty
 in
-val _ = if s = "(('a -> 'b) "^ct()^"$option)" then OK()
+val _ = if s = "('a -> 'b) "^ct()^"$option" then OK()
         else die ("FAILED! - "^s)
 end
 

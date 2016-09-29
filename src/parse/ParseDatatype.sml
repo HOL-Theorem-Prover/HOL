@@ -36,6 +36,8 @@ datatype datatypeForm
    = Constructors of constructor list
    | Record of field list
 
+type AST0 = {typename: string,
+             toparse : Type.hol_type base_tokens.base_token locn.located list}
 type AST = string * datatypeForm
 
 fun pretypeToType pty =
@@ -146,18 +148,20 @@ fun qtyop {Tyop, Thy, Locn, Args} =
     dTyop {Tyop = Tyop, Thy = SOME Thy, Args = Args}
 fun tyop ((s,locn), args) = dTyop {Tyop = s, Thy = NONE, Args = args}
 
-fun parse_type strm =
-  parse_type.parse_type {vartype = dVartype o #1, tyop = tyop, qtyop = qtyop,
-                         antiq = dAQ} true
-  (Parse.type_grammar()) strm
+fun parse_type G strm =
+  parse_type.parse_type
+    {vartype = dVartype o #1, tyop = tyop, qtyop = qtyop, antiq = dAQ}
+    true
+    G
+    strm
 
 val parse_constructor_id = ident
 
-fun parse_record_fld qb = let
+fun parse_record_fld G qb = let
   val fldname = ident qb
   val () = scan ":" qb
 in
-  (fldname, parse_type qb)
+  (fldname, parse_type G qb)
 end
 
 fun sepby1 sepsym p qb = let
@@ -170,21 +174,21 @@ in
   recurse [i1]
 end
 
-fun parse_record_defn qb = let
+fun parse_record_defn G qb = let
   val () = scan "<|" qb
-  val result = sepby1 ";" parse_record_fld qb
+  val result = sepby1 ";" (parse_record_fld G) qb
   val () = scan "|>" qb
 in
   result
 end
 
-fun parse_phrase qb = let
+fun parse_phrase G qb = let
   val constr_id = parse_constructor_id qb
 in
   case pdtok_of qb of
     (_,base_tokens.BT_Ident "of",_) => let
       val _ = qbuf.advance qb
-      val optargs = sepby1 "=>" parse_type qb
+      val optargs = sepby1 "=>" (parse_type G) qb
     in
       (constr_id, optargs)
     end
@@ -196,16 +200,16 @@ fun optscan tok qb =
         (tok',_) => if tok = tok' then (qbuf.advance qb; qb)
                     else qb
 
-fun parse_form qb =
+fun parse_form G qb =
     case pdtok_of qb of
-      (_,base_tokens.BT_Ident "<|",_) => Record (parse_record_defn qb)
-    | _ => Constructors (sepby1 "|" parse_phrase qb)
+      (_,base_tokens.BT_Ident "<|",_) => Record (parse_record_defn G qb)
+    | _ => Constructors (sepby1 "|" (parse_phrase G) qb)
 
-fun parse_G qb = let
+fun parse_G G qb = let
   val tyname = ident qb
   val () = scan "=" qb
 in
-  (tyname, parse_form qb)
+  (tyname, parse_form G qb)
 end
 
 fun fragtoString (QUOTE s) = s
@@ -214,9 +218,9 @@ fun fragtoString (QUOTE s) = s
 fun quotetoString [] = ""
   | quotetoString (x::xs) = fragtoString x ^ quotetoString xs
 
-fun parse q = let
+fun parse0 G q = let
   val strm = qbuf.new_buffer q
-  val result = sepby1 ";" parse_G strm
+  val result = sepby1 ";" (parse_G G) strm
 in
   case qbuf.current strm of
     (base_tokens.BT_EOI,_) => result
@@ -224,7 +228,9 @@ in
                              "Parse failed"
 end
 
-fun parse_harg qb =
+fun parse q = parse0 (Parse.type_grammar()) q
+
+fun parse_harg G qb =
   case qbuf.current qb of
       (base_tokens.BT_Ident s, _) =>
       if String.sub(s,0) = #"(" then
@@ -232,52 +238,82 @@ fun parse_harg qb =
           val (adv,_,_) = pdtok_of qb
           val _ = adv()
         in
-          parse_type qb before scan ")" qb
+          parse_type G qb before scan ")" qb
         end
       else let
         val qb' = qbuf.new_buffer [QUOTE s]
       in
-        qbuf.advance qb; parse_type qb'
+        qbuf.advance qb; parse_type G qb'
       end
     | (base_tokens.BT_AQ ty, _) => (qbuf.advance qb; dAQ ty)
     | (_, locn) => raise ERRloc "parse_harg" locn
                          "Unexpected token in constructor's argument"
 
-fun parse_hargs qb =
+fun parse_hargs G qb =
   case pdtok_of qb of
       (_, base_tokens.BT_Ident "|", _) => []
     | (_, base_tokens.BT_Ident ";", _) => []
     | (_, base_tokens.BT_EOI, _) => []
     | _ => let
-      val arg = parse_harg qb
-      val args = parse_hargs qb
+      val arg = parse_harg G qb
+      val args = parse_hargs G qb
     in
       arg::args
     end
 
-fun parse_hphrase qb = let
+fun parse_hphrase G qb = let
   val constr_id = parse_constructor_id qb
 in
-  (constr_id, parse_hargs qb)
+  (constr_id, parse_hargs G qb)
 end
 
-fun parse_hform qb =
+fun parse_hform G qb =
     case pdtok_of qb of
-      (_,base_tokens.BT_Ident "<|",_) => Record (parse_record_defn qb)
+      (_,base_tokens.BT_Ident "<|",_) => Record (parse_record_defn G qb)
     | _ => Constructors (qb |> optscan (base_tokens.BT_Ident "|")
-                            |> sepby1 "|" parse_hphrase)
+                            |> sepby1 "|" (parse_hphrase G))
 
-fun parse_HG qb = let
+fun grab_rhs qb =
+  let
+    fun recurse delims acc =
+      case pdtok_of qb of
+          (adv,t as base_tokens.BT_Ident ";",loc) =>
+            if null delims then acc
+            else (adv(); recurse delims ((t,loc)::acc))
+        | (_,base_tokens.BT_EOI, _) =>
+            if null delims then acc
+            else raise ERR "parse_HG"
+                       ("looking for delimiter match ("^ hd delims^
+                        ") but came to end of input")
+        | (adv,t as base_tokens.BT_Ident "(",locn) =>
+            (adv(); recurse (")" :: delims) ((t,locn)::acc))
+        | (adv,t as base_tokens.BT_Ident "<|", locn) =>
+            (adv(); recurse ("|>" :: delims) ((t,locn)::acc))
+        | (adv,t as base_tokens.BT_Ident "[", locn) =>
+            (adv(); recurse ("]" :: delims) ((t,locn)::acc))
+        | (adv, t as base_tokens.BT_Ident s, locn) =>
+            (case delims of
+                 [] => (adv(); recurse delims ((t,locn)::acc))
+               | d::ds => if d = s then (adv(); recurse ds ((t,locn)::acc))
+                          else (adv(); recurse delims ((t,locn)::acc)))
+        | (adv, tok, locn) => (adv(); recurse delims ((tok,locn)::acc))
+  in
+    recurse [] []
+  end
+
+
+
+fun parse_HG G qb = let
   val tyname = ident qb
   val () = scan "=" qb
 in
-  (tyname, parse_hform qb)
+  (tyname, parse_hform G qb)
 end
 
 
 fun hparse q = let
   val strm = qbuf.new_buffer q
-  val result = sepby1 ";" parse_HG strm
+  val result = sepby1 ";" (parse_HG (Parse.type_grammar())) strm
   val qb = optscan (base_tokens.BT_Ident ";") strm
 in
   case qbuf.current qb of
