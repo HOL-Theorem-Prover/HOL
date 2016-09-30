@@ -212,6 +212,10 @@ fun new_qtyop (kid as {Name = name, Thy = thy}) g =
         end
   end
 
+fun hide_tyop s =
+  fupdate_bare_names
+    (fn m => #1 (Binarymap.remove(m,s)) handle Binarymap.NotFound => m)
+
 val empty_grammar = TYG { rules = [],
                           parse_str = Binarymap.mkDict KernelSig.name_compare,
                           bare_names = Binarymap.mkDict String.compare,

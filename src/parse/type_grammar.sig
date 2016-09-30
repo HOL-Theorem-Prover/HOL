@@ -34,6 +34,7 @@ sig
   (* removes by infix symbol, i.e. "+", not "sum" *)
 
   val new_qtyop        : kernelname -> grammar -> grammar
+  val hide_tyop        : string -> grammar -> grammar
   val new_abbreviation : grammar -> kernelname * type_structure -> grammar
   val remove_abbreviation : grammar -> string -> grammar
   val num_params : type_structure -> int
