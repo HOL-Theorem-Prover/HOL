@@ -17,7 +17,8 @@ sig
 
  type AST = string * datatypeForm
 
- val parse : Type.hol_type Portable.quotation -> AST list
+ val parse : type_grammar.grammar -> Type.hol_type Portable.quotation ->
+             AST list
 
 (*---------------------------------------------------------------------------
   Grammar we're parsing is:
@@ -34,7 +35,8 @@ sig
   code will still work as long as the input puts the types in parentheses.
  ---------------------------------------------------------------------------*)
 
-val hparse : Type.hol_type Portable.quotation -> AST list
+val hparse : type_grammar.grammar -> Type.hol_type Portable.quotation ->
+             AST list
 
 (* The grammar for hparse is:
 

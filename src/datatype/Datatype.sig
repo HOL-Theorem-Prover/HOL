@@ -11,7 +11,7 @@ sig
 
  val big_record_size : int ref
 
- val tyspecs_of    : hol_type quotation -> tyspec list
+ val tyspecs_of    : type_grammar.grammar -> hol_type quotation -> tyspec list
  val to_tyspecs    : AST list -> tyspec list
 
  (*---------------------------------------------------------------------------*)

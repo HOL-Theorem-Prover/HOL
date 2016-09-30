@@ -36,8 +36,6 @@ datatype datatypeForm
    = Constructors of constructor list
    | Record of field list
 
-type AST0 = {typename: string,
-             toparse : Type.hol_type base_tokens.base_token locn.located list}
 type AST = string * datatypeForm
 
 fun pretypeToType pty =
@@ -228,8 +226,6 @@ in
                              "Parse failed"
 end
 
-fun parse q = parse0 (Parse.type_grammar()) q
-
 fun parse_harg G qb =
   case qbuf.current qb of
       (base_tokens.BT_Ident s, _) =>
@@ -273,35 +269,44 @@ fun parse_hform G qb =
     | _ => Constructors (qb |> optscan (base_tokens.BT_Ident "|")
                             |> sepby1 "|" (parse_hphrase G))
 
-fun grab_rhs qb =
+fun extract_tynames q =
   let
+    val qb = qbuf.new_buffer q
     fun recurse delims acc =
       case pdtok_of qb of
           (adv,t as base_tokens.BT_Ident ";",loc) =>
-            if null delims then acc
-            else (adv(); recurse delims ((t,loc)::acc))
+            if null delims then (adv(); next_decl acc)
+            else (adv(); recurse delims acc)
         | (_,base_tokens.BT_EOI, _) =>
-            if null delims then acc
+            if null delims then List.rev acc
             else raise ERR "parse_HG"
                        ("looking for delimiter match ("^ hd delims^
                         ") but came to end of input")
         | (adv,t as base_tokens.BT_Ident "(",locn) =>
-            (adv(); recurse (")" :: delims) ((t,locn)::acc))
+            (adv(); recurse (")" :: delims) acc)
         | (adv,t as base_tokens.BT_Ident "<|", locn) =>
-            (adv(); recurse ("|>" :: delims) ((t,locn)::acc))
+            (adv(); recurse ("|>" :: delims) acc)
         | (adv,t as base_tokens.BT_Ident "[", locn) =>
-            (adv(); recurse ("]" :: delims) ((t,locn)::acc))
+            (adv(); recurse ("]" :: delims) acc)
         | (adv, t as base_tokens.BT_Ident s, locn) =>
             (case delims of
-                 [] => (adv(); recurse delims ((t,locn)::acc))
-               | d::ds => if d = s then (adv(); recurse ds ((t,locn)::acc))
-                          else (adv(); recurse delims ((t,locn)::acc)))
-        | (adv, tok, locn) => (adv(); recurse delims ((tok,locn)::acc))
+                 [] => (adv(); recurse delims acc)
+               | d::ds => if d = s then (adv(); recurse ds acc)
+                          else (adv(); recurse delims acc))
+        | (adv, tok, locn) => (adv(); recurse delims acc)
+    and next_decl acc =
+        case pdtok_of qb of
+            (_, base_tokens.BT_EOI, _) => List.rev acc
+          | _ =>
+            let
+              val tyname = ident qb
+              val () = scan "=" qb
+            in
+              recurse [] (tyname :: acc)
+            end
   in
-    recurse [] []
+    next_decl []
   end
-
-
 
 fun parse_HG G qb = let
   val tyname = ident qb
@@ -310,10 +315,20 @@ in
   (tyname, parse_hform G qb)
 end
 
+fun hide_tynames q G0 =
+  List.foldl (uncurry type_grammar.hide_tyop) G0 (extract_tynames q)
 
-fun hparse q = let
+fun parse G0 q =
+  let
+    val G = hide_tynames q G0
+  in
+    parse0 G0 q
+  end
+
+fun hparse G0 q = let
+  val G = hide_tynames q G0
   val strm = qbuf.new_buffer q
-  val result = sepby1 ";" (parse_HG (Parse.type_grammar())) strm
+  val result = sepby1 ";" (parse_HG G) strm
   val qb = optscan (base_tokens.BT_Ident ";") strm
 in
   case qbuf.current qb of

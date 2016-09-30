@@ -1519,4 +1519,8 @@ val defs =
 val _ = eSML "sorting" defs;
 val _ = eCAML "sorting" defs;
 
+(* restore "standard" set type abbreviation to have pride of place *)
+val _ = type_abbrev("set", alpha --> bool)
+val _ = disable_tyabbrev_printing "set"
+
 val _ = export_theory ();

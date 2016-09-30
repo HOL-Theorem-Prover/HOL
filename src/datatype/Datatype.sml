@@ -269,10 +269,11 @@ fun to_tyspecs ASTs =
   end
 end;
 
-fun tyspecs_of q = to_tyspecs (ParseDatatype.parse q);
+fun tyspecs_of tyg q = to_tyspecs (ParseDatatype.parse tyg q);
 
 val new_asts_datatype = define_type o to_tyspecs;
-fun new_datatype q    = new_asts_datatype (ParseDatatype.parse q);
+fun new_datatype q =
+  new_asts_datatype (ParseDatatype.parse (type_grammar()) q);
 
 
 (*---------------------------------------------------------------------------*)
@@ -1321,8 +1322,8 @@ fun astHol_datatype astl =
   HOL_MESG message
  end handle ? as HOL_ERR _ => Raise (wrap_exn "Datatype" "Hol_datatype" ?);
 
-val Hol_datatype = astHol_datatype o ParseDatatype.parse
-val Datatype = astHol_datatype o ParseDatatype.hparse
+fun Hol_datatype q = astHol_datatype (ParseDatatype.parse (type_grammar()) q)
+fun Datatype q = astHol_datatype (ParseDatatype.hparse (type_grammar()) q)
 
 val _ = Parse.temp_set_grammars ambient_grammars
 
