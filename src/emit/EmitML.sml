@@ -41,6 +41,7 @@ open HolKernel boolSyntax Abbrev;
 
 val ERR = mk_HOL_ERR "EmitML";
 val WARN = HOL_WARNING "EmitML";
+val type_grammar = Parse.type_grammar
 
 (*---------------------------------------------------------------------------*)
 (* All ref cells.                                                            *)
@@ -1065,20 +1066,20 @@ end;
 fun elemi (DEFN th) (cs,il) = (cs,iDEFN (!reshape_thm_hook th) :: il)
   | elemi (DEFN_NOSIG th) (cs,il) = (cs,iDEFN_NOSIG (!reshape_thm_hook th)::il)
   | elemi (DATATYPE q) (cs,il) =
-       let val tyAST = ParseDatatype.hparse q
+       let val tyAST = ParseDatatype.hparse (type_grammar()) q
            val _ = if !emitOcaml then ocaml_type_abbrevs tyAST else ()
            val defs = datatype_silent_defs tyAST
        in (cs, defs @ (iDATATYPE tyAST :: il))
        end
   | elemi (EQDATATYPE(sl,q)) (cs,il) =
-       let val tyAST = ParseDatatype.hparse q
+       let val tyAST = ParseDatatype.hparse (type_grammar()) q
            val _ = if !emitOcaml then ocaml_type_abbrevs tyAST else ()
            val defs = datatype_silent_defs tyAST
        in (cs,defs @ (iEQDATATYPE(sl,tyAST) :: il))
        end
   | elemi (ABSDATATYPE(sl,q)) (cs,il) = (* build rewrites for pseudo constrs *)
      let open ParseDatatype
-         val tyAST = hparse q
+         val tyAST = hparse (type_grammar()) q
          val _ = if !emitOcaml then ocaml_type_abbrevs tyAST else ()
          val pconstrs = constrl tyAST
          val constr_names = flatten(map (map fst o snd) pconstrs)
