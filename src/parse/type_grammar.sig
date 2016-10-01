@@ -16,6 +16,7 @@ sig
   val rules            : grammar -> {infixes: (int * grammar_rule) list,
                                      suffixes : string list}
   val parse_map    : grammar -> (kernelname,type_structure) Binarymap.dict
+  val print_map    : grammar -> (int * kernelname) TypeNet.typenet
   val privileged_abbrevs : grammar -> (string,string) Binarymap.dict
 
   val abb_dest_type : grammar -> Type.hol_type ->

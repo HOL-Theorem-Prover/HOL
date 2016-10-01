@@ -268,8 +268,8 @@ fun remove_abbreviation g s =
     val (thyopt, nm) = break_qident s
     fun parsemap nmcheck (knm,st,acc) =
       if nmcheck knm then acc else Binarymap.insert(acc,knm,st)
-    fun printmap nmcheck (ty,v as (tstamp,knm),acc) =
-      if nmcheck knm then acc else TypeNet.insert(acc,ty,v)
+    fun printmap nmcheck (ty,i as (_, knm),acc) =
+        if nmcheck knm then acc else TypeNet.insert(acc,ty,i)
     fun thyprivrm thy m =
       case Binarymap.peek (m, nm) of
           NONE => m
@@ -316,7 +316,8 @@ fun new_abbreviation tyg (knm as {Name=s,Thy=thy}, st) = let
   val result =
     tyg |> fupdate_parse_str (fn d => Binarymap.insert(d,knm,st))
         |> fupdate_str_print
-             (fn pmap => TypeNet.insert(pmap, structure_to_type st,
+             (fn pmap => TypeNet.insert(pmap,
+                                        structure_to_type st,
                                         (tstamp, knm)))
         |> fupdate_bare_names(fn d => Binarymap.insert(d,s,thy))
 in
@@ -378,6 +379,15 @@ in
         tstamp = Int.max(t1,t2) + 1 }
 end
 
+fun can_print pmap kns ty =
+  let
+    val net_matches = TypeNet.match(pmap, ty)
+    fun check_match (pat, (tstamp, nm)) =
+      can (Type.match_type pat) ty andalso nm = kns
+  in
+    not (null (List.filter check_match net_matches))
+  end
+
 fun prettyprint_grammar pps G = let
   val TYG grm  = G
   val {rules=g, parse_str=abbrevs, str_print=pmap, bare_names,... } = grm
@@ -398,40 +408,28 @@ fun prettyprint_grammar pps G = let
     add_string s
   end
 
-  fun print_abbrev (s, st) = let
-    val kns = KernelSig.name_toString s
-    val ispriv = case Binarymap.peek (bare_names, #Name s) of
-                     SOME thy => thy = #Thy s
+  fun print_abbrev (kid, st) = let
+    val ispriv = case Binarymap.peek (bare_names, #Name kid) of
+                     SOME thy => thy = #Thy kid
                    | NONE => false
-    fun print_lhs () =
+    val kns = if ispriv then #Name kid else KernelSig.name_toString kid
+    val paramstr = Type.dest_vartype o structure_to_type o PARAM
+    val lhs_string =
       case num_params st of
-        0 => add_string kns
-      | 1 => (add_string "'a "; add_string kns)
-      | n => (begin_block INCONSISTENT 0;
-              add_string "(";
-              pr_list (pp_type G pps o structure_to_type o PARAM)
-                      (fn () => add_string ",")
-                      (fn () => add_break(1,0))
-                      (List.tabulate(n, I));
-              add_string ") ";
-              add_string kns)
-    fun print_priv () = if ispriv then add_string " (*)" else ()
+        0 => kns ^ " = "
+      | 1 => "'a " ^ kns ^ " = "
+      | n => "(" ^ String.concatWith ", " (List.tabulate(n, paramstr)) ^ ") " ^
+             kns ^ " = "
     val ty = structure_to_type st
-    val printed = case TypeNet.peek (pmap, ty) of
-                    NONE => false
-                  | SOME (_, s') => s = s'
+    val printed = can_print pmap kid ty
+    val ty_string = PP.pp_to_string 100
+                      (fn pps => Feedback.trace ("print_tyabbrevs", 0)
+                                                (pp_type G pps))
+                      ty
   in
     begin_block CONSISTENT 0;
-    print_lhs ();
-    add_string " =";
-    add_break(1,2);
-    Feedback.trace ("print_tyabbrevs", 0) (pp_type G pps) ty;
-    if not printed orelse ispriv then
-      (add_break(5,2); add_string "(";
-       (if ispriv then add_string "preferred" else ());
-       if printed then add_string ")"
-       else if ispriv then add_string ", not printed)"
-       else add_string "not printed)")
+    add_string (StringCvt.padRight #" " 55 (lhs_string ^ ty_string));
+    if not printed then (add_break(1,55); add_string "(not printed)")
     else ();
     end_block()
   end
@@ -575,12 +573,9 @@ fun disable_abbrev_printing s (g as TYG grm) = let
   val (thyopt, nm) = break_qident s
   fun rmprints namecheck g =
     let
-      val pmap' =
-          TypeNet.fold (fn (ty, (tstamp, knm), acc) =>
-                           if namecheck knm then acc
-                           else TypeNet.insert(acc,ty, (tstamp, knm)))
-                       TypeNet.empty
-                       (print_map g)
+      fun foldthis (ty, i as (_, knm), acc) =
+        if namecheck knm then acc else TypeNet.insert(acc,ty,i)
+      val pmap' = TypeNet.fold foldthis TypeNet.empty (print_map g)
     in
       fupdate_str_print (K pmap') g
     end
