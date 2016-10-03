@@ -210,11 +210,15 @@ val _ = Hol_datatype `foo = fooC of 'a`
 val _ = Hol_datatype `foo = fooC' of num`
 
 (* from uvm-hol, 2016/10/03
-     issue is/was lexing of r-paren/semi-colon agglomeration on line 1
+     issue is/was lexing of r-paren/semi-colon agglomerations
 *)
 val _ = Datatype.Datatype `
   uvmhol1 = uvmholC uvmhol2 num (num -> bool);
-  uvmhol2 = uvmholD1 of num | uvmHOLD2 of uvmhol1
+  uvmhol2 = uvmholD1 num | uvmHOLD2 uvmhol1
+`;
+
+val _ = Datatype.Datatype`
+  uvmhol3 = <| uvmfld1 : num # (num -> bool); uvmfld2 : bool |>
 `;
 
 val _ = tprint "Testing independence of case variables"

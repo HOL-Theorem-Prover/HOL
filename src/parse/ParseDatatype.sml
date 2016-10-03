@@ -71,6 +71,22 @@ in
     end
 end
 
+fun consume_n n (qb,s,locn) =
+  let
+    open base_tokens
+    val pfx = String.substring(s,0,n)
+    val sfx = String.extract(s,n,NONE)
+  in
+    if sfx = "" then ((fn () => qbuf.advance qb), BT_Ident pfx, locn)
+    else
+      let
+        val (locn',locn'') = locn.split_at n locn
+      in
+        ((fn () => qbuf.replace_current (BT_Ident sfx,locn'') qb),
+         BT_Ident pfx, locn')
+      end
+  end
+
 fun okident c = Char.isAlphaNum c orelse c = #"'" orelse c = #"_"
 
 fun ident_munge dollared qb s locn = let
@@ -108,25 +124,43 @@ fun ident qb =
                                               base_tokens.toString bt)
 
 
+fun cmem c s =
+  let
+    fun recurse i =
+      i >= 0 andalso (String.sub(s,i) = c orelse recurse (i - 1))
+  in
+    recurse (size s - 1)
+  end
+
+
 fun pdtok_of qb = let
   open base_tokens CharSet
   fun advance () = qbuf.advance qb
 in
   case qbuf.current qb of
-    (t as BT_Ident s,locn) =>
-    if Char.isAlpha (String.sub(s, 0)) then let
-        val (adv,idstr,locn') = consume Char.isAlphaNum (qb,s,locn)
+      (t as BT_Ident s,locn) =>
+      let
+        val c0 = String.sub(s, 0)
       in
-        (adv,BT_Ident idstr,locn')
+        if Char.isAlpha c0 then
+          let
+            val (adv,idstr,locn') = consume Char.isAlphaNum (qb,s,locn)
+          in
+            (adv,BT_Ident idstr,locn')
+          end
+        else if cmem c0 "()[]" then consume_n 1 (qb,s,locn)
+        else if String.isPrefix "<|" s then consume_n 2 (qb,s,locn)
+        else if String.isPrefix "|>" s then consume_n 2 (qb,s,locn)
+        else
+          let
+            fun oksym c = Char.isPunct c andalso c <> #"(" andalso c <> #")"
+                          andalso c <> #"'"
+            val (adv,idstr,locn') = consume oksym (qb,s,locn)
+          in
+            (adv,BT_Ident idstr,locn')
+          end
       end
-    else let
-        fun oksym c = Char.isPunct c andalso c <> #"(" andalso c <> #")" andalso
-                      c <> #"'"
-        val (adv,idstr,locn') = consume oksym (qb,s,locn)
-      in
-        (adv,BT_Ident idstr,locn')
-      end
-  | (t,locn) => (advance, t, locn)
+    | (t,locn) => (advance, t, locn)
 end;
 
 
