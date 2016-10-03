@@ -26,7 +26,7 @@ sig
 
   val new_binary_tyop  : grammar
                           -> {precedence : int,
-                              infix_form : string option,
+                              infix_form : string,
                               opname : string,
                               associativity : HOLgrammars.associativity}
                           -> grammar
@@ -36,11 +36,14 @@ sig
 
   val new_qtyop        : kernelname -> grammar -> grammar
   val hide_tyop        : string -> grammar -> grammar
-  val new_abbreviation : grammar -> kernelname * type_structure -> grammar
+  val new_abbreviation : grammar -> kernelname * Type.hol_type -> grammar
   val remove_abbreviation : grammar -> string -> grammar
   val num_params : type_structure -> int
 
   val merge_grammars   : grammar * grammar -> grammar
+
+  val apply_delta : delta -> grammar -> grammar
+  val apply_deltas : delta list -> grammar -> grammar
 
   val prettyprint_grammar   : Portable.ppstream -> grammar -> unit
   val initialise_typrinter

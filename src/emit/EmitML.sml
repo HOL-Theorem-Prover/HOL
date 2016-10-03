@@ -858,7 +858,7 @@ fun adjust_tygram tygram =
                          tygram
                          ["+", "#", "|->", "**"]
  in
-   new_binary_tyop g0 {precedence = 70, infix_form = SOME "*",
+   new_binary_tyop g0 {precedence = 70, infix_form = "*",
                        opname = "prod", associativity = NONASSOC}
  end;
 

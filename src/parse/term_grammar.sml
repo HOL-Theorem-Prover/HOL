@@ -1385,14 +1385,6 @@ end
 open Coding
 infix || >- >> >* >->
 
-fun assoc_encode LEFT = "L"
-  | assoc_encode RIGHT = "R"
-  | assoc_encode NONASSOC = "N"
-val assoc_reader =
-    (literal "L" >> return LEFT) ||
-    (literal "R" >> return RIGHT) ||
-    (literal "N" >> return NONASSOC)
-
 fun binfo_encode (brks,i) =
     (case brks of
        Portable.CONSISTENT => "C"

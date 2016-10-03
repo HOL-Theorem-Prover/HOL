@@ -693,87 +693,49 @@ struct
 
 end
 
-fun temp_add_qtype kid =
+fun core_process_tyds f x k =
   let
+    open type_grammar
+    val tyds = f x
   in
-    the_type_grammar := new_qtyop kid (!the_type_grammar);
+    the_type_grammar :=
+      List.foldl (uncurry apply_delta) (!the_type_grammar) tyds;
     type_grammar_changed := true;
-    term_grammar_changed := true
+    term_grammar_changed := true;
+    k tyds
   end
 
-fun temp_add_type s = temp_add_qtype {Name = s, Thy = current_theory()}
+fun mk_temp_tyd f x = core_process_tyds f x (fn uds => ())
+fun mk_perm_tyd f x =
+  core_process_tyds f x (List.app GrammarDeltas.record_tydelta)
 
-fun add_qtype (kid as {Thy,Name}) =
-  let
-  in
-    temp_add_qtype kid;
-    update_grms "add_qtype"
-                ("temp_add_qtype",
-                 "{Thy = "^Lib.quote Thy^","^ "Name = "^Lib.quote Name^"}")
-  end
+fun add_qtype0 kid = [NEW_TYPE kid]
 
+val temp_add_qtype = mk_temp_tyd add_qtype0
+val add_qtype = mk_perm_tyd add_qtype0
+
+fun temp_add_type s = temp_add_qtype {Thy=current_theory(), Name = s}
 fun add_type s = add_qtype {Thy=current_theory(), Name = s}
 
-fun temp_add_infix_type {Name, ParseName, Assoc, Prec} =
- let open parse_type
- in the_type_grammar
-       := new_binary_tyop (!the_type_grammar)
-              {precedence = Prec, infix_form = ParseName,
-               opname = Name, associativity = Assoc};
-    type_grammar_changed := true;
-    term_grammar_changed := true
- end
+fun add_infix_type0 {Name,ParseName,Assoc,Prec} =
+  let
+    val pnm = case ParseName of NONE => Name | SOME s => s
+  in
+    [NEW_INFIX{Prec=Prec,ParseName=pnm,Name=Name,Assoc=Assoc}]
+  end
 
-fun add_infix_type (x as {Name, ParseName, Assoc, Prec}) = let in
-  temp_add_infix_type x;
-  update_grms "add_infix_type"
-              ("temp_add_infix_type",
-               String.concat
-                 ["{Name = ", quote Name,
-                  ", ParseName = ",
-                  case ParseName of NONE => "NONE"
-                                  | SOME s => "SOME "^quote s,
-                  ", Assoc = ", assocToString Assoc,
-                  ", Prec = ", Int.toString Prec, "}"])
- end
+val temp_add_infix_type = mk_temp_tyd add_infix_type0
+val add_infix_type = mk_perm_tyd add_infix_type0
 
 fun replace_exnfn fnm f x =
   f x handle HOL_ERR {message = m, origin_structure = s, ...} =>
              raise HOL_ERR {message = m, origin_function = fnm,
                             origin_structure = s}
 
-fun temp_thytype_abbrev (knm, ty) = let
-  val params = Listsort.sort Type.compare (type_vars ty)
-  val (num_vars, pset) =
-      List.foldl (fn (ty,(i,pset)) => (i + 1, Binarymap.insert(pset,ty,i)))
-                 (0, Binarymap.mkDict Type.compare) params
-  fun mk_structure pset ty =
-      if is_vartype ty then type_grammar.PARAM (Binarymap.find(pset, ty))
-      else let
-          val {Thy,Tyop,Args} = dest_thy_type ty
-        in
-          type_grammar.TYOP {Thy = Thy, Tyop = Tyop,
-                             Args = map (mk_structure pset) Args}
-        end
-in
-  the_type_grammar := type_grammar.new_abbreviation (!the_type_grammar)
-                                                    (knm, mk_structure pset ty);
-  type_grammar_changed := true;
-  term_grammar_changed := true
-end handle GrammarError s => raise ERR "temp_thytype_abbrev" s
+fun thytype_abbrev0 r = [TYABBREV r]
 
-fun thytype_abbrev(knm, ty) = let
-in
-  replace_exnfn "thytype_abbrev" temp_thytype_abbrev (knm, ty);
-  full_update_grms ("temp_thytype_abbrev",
-                    String.concat ["(", KernelSig.name_toMLString knm, ", ",
-                                   PP.pp_to_string (!Globals.linewidth)
-                                                   (TheoryPP.pp_type "U" "T")
-                                                   ty,
-                                   ")"],
-                    SOME (mk_thy_const{Name = "ARB", Thy = "bool", Ty = ty})
-                   )
-end
+val temp_thytype_abbrev = mk_temp_tyd thytype_abbrev0
+val thytype_abbrev = mk_perm_tyd thytype_abbrev0
 
 fun temp_type_abbrev (s, ty) =
   replace_exnfn "temp_type_abbrev" temp_thytype_abbrev
@@ -783,35 +745,13 @@ fun type_abbrev (s, ty) =
   replace_exnfn "type_abbrev" thytype_abbrev
                 ({Thy = Theory.current_theory(), Name = s}, ty)
 
-fun temp_disable_tyabbrev_printing s = let
-  val tyg = the_type_grammar
-in
-  tyg := type_grammar.disable_abbrev_printing s (!tyg);
-  type_grammar_changed := true;
-  term_grammar_changed := true
-end
+fun disable_tyabbrev_printing0 s = [DISABLE_TYPRINT s]
+val temp_disable_tyabbrev_printing = mk_temp_tyd disable_tyabbrev_printing0
+val disable_tyabbrev_printing = mk_perm_tyd disable_tyabbrev_printing0
 
-fun disable_tyabbrev_printing s = let
-in
-  temp_disable_tyabbrev_printing s;
-  update_grms "disable_tyabbrev_printing"
-              ("temp_disable_tyabbrev_printing", mlquote s)
-end
-
-fun temp_remove_type_abbrev s = let
-  val tyg = the_type_grammar
-in
-  tyg := type_grammar.remove_abbreviation (!tyg) s;
-  type_grammar_changed := true;
-  term_grammar_changed := true
-end
-
-fun remove_type_abbrev s = let
-in
-  temp_remove_type_abbrev s;
-  update_grms "remove_type_abbrev" ("temp_remove_type_abbrev", mlquote s)
-end
-
+fun remove_type_abbrev0 s = [RM_TYABBREV s]
+val temp_remove_type_abbrev = mk_temp_tyd remove_type_abbrev0
+val remove_type_abbrev = mk_perm_tyd remove_type_abbrev0
 
 (* Not persistent? *)
 fun temp_set_associativity (i,a) = let in
@@ -933,7 +873,7 @@ fun mk_temp f =
   core_udprocess f ProvideUnicode.temp_uadd_rule (fn uds => ())
 fun mk_perm f =
   core_udprocess f ProvideUnicode.uadd_rule
-                 (List.app GrammarDeltas.record_delta)
+                 (List.app GrammarDeltas.record_tmdelta)
 
 fun remove_termtok0 r = [RMTMTOK r]
 val temp_remove_termtok = mk_temp remove_termtok0
@@ -976,10 +916,10 @@ val temp_inferior_overload_on =
 
 fun overload_on p =
   (make_overload_on Overload.add_overloading Unicode.uoverload_on p ;
-   GrammarDeltas.record_delta (OVERLOAD_ON p))
+   GrammarDeltas.record_tmdelta (OVERLOAD_ON p))
 fun inferior_overload_on p =
   (make_overload_on Overload.add_inferior_overloading Unicode.uoverload_on p;
-   GrammarDeltas.record_delta (IOVERLOAD_ON p))
+   GrammarDeltas.record_tmdelta (IOVERLOAD_ON p))
 
 fun add_listform0 x = [LRULE x]
 val temp_add_listform = mk_temp add_listform0
@@ -1028,7 +968,7 @@ fun temp_remove_rules_for_term s = let open term_grammar in
 
 fun remove_rules_for_term s = let in
    temp_remove_rules_for_term s;
-   GrammarDeltas.record_delta (RMTMNM s)
+   GrammarDeltas.record_tmdelta (RMTMNM s)
  end
 
 fun set_mapped_fixity0 (r as {fixity:fixity,term_name,tok}) =
@@ -1398,12 +1338,17 @@ in
          add_newline();
          add_string ("local");
          add_newline();
-         add_string ("val addUDs = term_grammar.add_deltas " ^
-                     "(GrammarDeltas.thy_deltas{thyname="^ quote thyname^"})");
+         add_string ("val (tyUDs, tmUDs) = "^
+                     "GrammarDeltas.thy_deltas{thyname="^ quote thyname^"}");
+         add_newline();
+         add_string ("val addtmUDs = term_grammar.add_deltas tmUDs");
+         add_newline();
+         add_string ("val addtyUDs = type_grammar.apply_deltas tyUDs");
          add_newline(); add_string ("in"); add_newline();
 
          add_string ("val " ^ thyname ^ "_grammars = "); add_break(1,2);
-         add_string ("Portable.apsnd addUDs " ^ thyname ^ "_grammars");
+         add_string ("Portable.## (addtyUDs,addtmUDs) " ^
+                     thyname ^ "_grammars");
          add_newline();
 
          add_string (String.concat
@@ -1416,8 +1361,9 @@ in
               thyname, "_grammars)"]);
          add_newline();
          add_string (String.concat
-             ["val _ = Parse.temp_set_grammars (Parse.type_grammar(), ",
-              "addUDs (Parse.term_grammar()))"]); add_newline();
+             ["val _ = Parse.temp_set_grammars ("^
+              "addtyUDs (Parse.type_grammar()), ",
+              "addtmUDs (Parse.term_grammar()))"]); add_newline();
          add_string "end (* addUDs local *)"; add_newline();
 
          add_string "end"; add_newline();

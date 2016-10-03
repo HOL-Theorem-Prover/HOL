@@ -147,30 +147,13 @@ fun insert_sorted (k, v) [] = [(k, v)]
           kv2 :: insert_sorted kv1 rest
     end
 
-fun new_binary_tyop g {precedence, infix_form, opname, associativity} =
+fun new_binary_tyop g {precedence, infix_form = ix, opname, associativity = a} =
     let
-      val TYG {tstamp, ...} = g
-      val rule =
-          if isSome infix_form then
-            (precedence,
-             INFIX([{parse_string = valOf infix_form, opname = opname}],
-                   associativity))
-          else
-            (precedence,
-             INFIX([{parse_string = opname, opname = opname}], associativity))
+      val rule = (precedence, INFIX([{parse_string = ix, opname = opname}], a))
     in
       g |> fupdate_rules (insert_sorted rule)
     end
 
-
-(*
-      val thy = current_theory()
-      val kid = {Name = opname, Thy = thy}
-      val opstructure = TYOP {Thy = current_theory(), Tyop = opname,
-                              Args = [PARAM 1, PARAM 2]}
-      val ty = mk_thy_type {Tyop = opname, Thy = thy, Args = [alpha, beta]}
-
-*)
 fun remove_binary_tyop g s = let
   fun bad_irule {parse_string,...} = parse_string = s
   fun edit_rule (prec, r) =
@@ -289,8 +272,27 @@ fun remove_abbreviation g s =
                             (Binarymap.mkDict KernelSig.name_compare))
   end
 
-fun new_abbreviation tyg (knm as {Name=s,Thy=thy}, st) = let
-  val _ = check_structure st
+fun type_to_structure ty =
+  let
+    open Type
+    val params = Listsort.sort Type.compare (type_vars ty)
+    val (num_vars, pset) =
+        List.foldl (fn (ty,(i,pset)) => (i + 1, Binarymap.insert(pset,ty,i)))
+                   (0, Binarymap.mkDict Type.compare) params
+    fun mk_structure pset ty =
+      if is_vartype ty then PARAM (Binarymap.find(pset, ty))
+      else let
+        val {Thy,Tyop,Args} = dest_thy_type ty
+      in
+        TYOP {Thy = Thy, Tyop = Tyop, Args = map (mk_structure pset) Args}
+      end
+  in
+    mk_structure pset ty
+  end
+
+
+fun new_abbreviation tyg (knm as {Name=s,Thy=thy}, ty) = let
+  val st = type_to_structure ty
   val tyg = case Binarymap.peek(parse_map tyg, knm) of
                 NONE => tyg
               | SOME st' =>
@@ -616,5 +618,20 @@ val min_grammar =
       |> insert_minop ("ind", 0, indty)
       |> insert_minop ("bool", 0, Type.bool)
       |> insert_minop ("fun", 2, funty)
+
+fun apply_delta d g =
+  case d of
+      NEW_TYPE kid => new_qtyop kid g
+    | NEW_INFIX {Name,ParseName,Assoc,Prec} =>
+      new_binary_tyop g {precedence=Prec, infix_form = ParseName,
+                         opname = Name, associativity = Assoc}
+    | TYABBREV (kid,ty) => new_abbreviation g (kid,ty)
+    | DISABLE_TYPRINT s => disable_abbrev_printing s g
+    | RM_KNM_TYABBREV kid => remove_knm_abbreviation g kid
+    | RM_TYABBREV s => remove_abbreviation g s
+
+
+fun apply_deltas ds g =
+  List.foldl (uncurry apply_delta) g ds
 
 end

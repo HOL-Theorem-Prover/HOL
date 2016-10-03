@@ -10,6 +10,20 @@ fun assocToString x =
   | RIGHT => "HOLgrammars.RIGHT"
   | NONASSOC => "HOLgrammars.NONASSOC"
 
+fun assoc_encode LEFT = "L"
+  | assoc_encode RIGHT = "R"
+  | assoc_encode NONASSOC = "N"
+
+val assoc_reader =
+    let
+      open Coding optmonad
+      infix >> ||
+    in
+      (literal "L" >> return LEFT) ||
+      (literal "R" >> return RIGHT) ||
+      (literal "N" >> return NONASSOC)
+    end
+
 datatype rule_element = TOK of string | TM
 type block_info = Portable.break_style * int
 
