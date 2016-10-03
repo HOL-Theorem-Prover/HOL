@@ -209,6 +209,14 @@ val _ = Hol_datatype `u3 = d3 of u4 u2 u1 ;
 val _ = Hol_datatype `foo = fooC of 'a`
 val _ = Hol_datatype `foo = fooC' of num`
 
+(* from uvm-hol, 2016/10/03
+     issue is/was lexing of r-paren/semi-colon agglomeration on line 1
+*)
+val _ = Datatype.Datatype `
+  uvmhol1 = uvmholC uvmhol2 num (num -> bool);
+  uvmhol2 = uvmholD1 of num | uvmHOLD2 of uvmhol1
+`;
+
 val _ = tprint "Testing independence of case variables"
 val t = Lib.total Parse.Term `case (x:valbind) of
                                 bind p e => 3
