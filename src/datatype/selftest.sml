@@ -102,6 +102,7 @@ val _ = Hol_datatype`
 
 val _ = Hol_datatype`squish_record = <|fld1:bool|>`
 val _ = Hol_datatype`poly_squish_record = <|fld1:'a->'b|>`
+val _ = Datatype.Datatype`parentest1 = C (('a,'b)fun)`
 
 val _ = tprint "Parse polymorphic record literal"
 val r = with_flag (Globals.guessing_tyvars, false) Parse.Term
