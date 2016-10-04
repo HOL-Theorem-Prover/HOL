@@ -976,21 +976,25 @@ val app     = "@"
 val lam     = "|"
 val dollar  = "$"
 val percent = "%"
-datatype pptask = ppTM of term | ppLAM | ppAPP
+datatype pptask = ppTM of term | ppLAM | ppAPP of int
 fun pp_raw_term index tm = let
+  fun mkAPP [] = [ppAPP 1]
+    | mkAPP (ppAPP n :: rest) = ppAPP (n + 1) :: rest
+    | mkAPP rest = ppAPP 1 :: rest
   fun pp acc tasklist =
       case tasklist of
           [] => String.concat (List.rev acc)
         | ppTM (Abs(Bvar, Body)) :: rest =>
             pp acc (ppTM Bvar :: ppTM Body :: ppLAM :: rest)
         | ppTM (Comb(Rator, Rand)) :: rest =>
-            pp acc (ppTM Rator :: ppTM Rand :: ppAPP :: rest)
+            pp acc (ppTM Rator :: ppTM Rand :: mkAPP rest)
         | ppTM (Bv i) :: rest =>
             pp (dollar ^ Int.toString i :: acc) rest
         | ppTM a :: rest =>
             pp (percent ^ Int.toString (index a) :: acc) rest
         | ppLAM :: rest => pp (lam :: acc) rest
-        | ppAPP :: rest => pp (app :: acc) rest
+        | ppAPP n :: rest =>
+            pp (app ^ (if n = 1 then "" else Int.toString n) :: acc) rest
 in
   pp [] [ppTM tm]
 end
@@ -1004,7 +1008,7 @@ fun write_raw index tm = pp_raw_term index (norm_clos tm)
 
 local
 datatype lexeme
-   = app
+   = app of int
    | lamb
    | ident of int
    | bvar  of int;
@@ -1029,7 +1033,9 @@ fun lexer ss1 =
         #"|" => SOME(lamb,  ss2)
       | #"%"  => let val (n,ss3) = take_numb ss2 in SOME(ident n, ss3) end
       | #"$"  => let val (n,ss3) = take_numb ss2 in SOME(bvar n,  ss3) end
-      | #"@" => SOME(app, ss2)
+      | #"@" =>
+        (let val (n,ss3) = take_numb ss2 in SOME(app n, ss3) end
+         handle HOL_ERR _ => SOME (app 1, ss2))
       |   _   => raise ERR "raw lexer" "bad character";
 
 in
@@ -1039,13 +1045,19 @@ fun read_raw tmv = let
       case (stk, lexer ss) of
         (_, SOME (bvar n,  rst)) => parse (Bv n::stk,rst)
       | (_, SOME (ident n, rst)) => parse (index n::stk,rst)
-      | (x::f::stk, SOME (app, rst)) => parse (Comb(f,x)::stk, rst)
+      | (stk, SOME (app n, rst)) => doapps n stk rst
       | (bd::bv::stk, SOME(lam,rst)) => parse (Abs(bv,bd)::stk, rst)
-      | (_, SOME(app, _)) => raise ERR "read_raw" "app: small stack"
       | (_, SOME(lam, _)) => raise ERR "read_raw" "lam: small stack"
       | ([tm], NONE) => tm
       | ([], NONE) => raise ERR "read_raw" "eof: empty stack"
       | (_, NONE) => raise ERR "read_raw" "eof: large stack"
+  and doapps n stk rst =
+      if n = 0 then parse (stk,rst)
+      else
+        case stk of
+            x::f::stk => doapps (n - 1) (Comb(f,x)::stk) rst
+          | _ =>  raise ERR "read_raw" "app: small stack"
+
 in
 fn s => parse ([], Substring.full s)
 end

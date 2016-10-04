@@ -1062,26 +1062,29 @@ val app     = "@"
 val lam     = "|"
 val percent = "%"
 
-datatype pptask = ppTM of term | ppLAM | ppAPP
+datatype pptask = ppTM of term | ppLAM | ppAPP of int
 fun pp_raw_term index tm = let
+  fun mkAPP (ppAPP n :: rest) = ppAPP (n + 1) :: rest
+    | mkAPP rest = ppAPP 1 :: rest
   fun pp acc tasklist =
       case tasklist of
           [] => String.concat (List.rev acc)
         | ppTM (Abs(Bvar, Body)) :: rest =>
             pp acc (ppTM Bvar :: ppTM Body :: ppLAM :: rest)
         | ppTM (App(Rator, Rand)) :: rest =>
-            pp acc (ppTM Rator :: ppTM Rand :: ppAPP :: rest)
+            pp acc (ppTM Rator :: ppTM Rand :: mkAPP rest)
         | ppTM vc :: rest =>
             pp (percent ^ Int.toString (index vc) :: acc) rest
         | ppLAM :: rest => pp ("|" :: acc) rest
-        | ppAPP :: rest => pp ("@" :: acc) rest
+        | ppAPP n :: rest =>
+            pp ("@" ^ (if n = 1 then "" else Int.toString n) :: acc) rest
 in
   pp [] [ppTM tm]
 end
 val write_raw = pp_raw_term
 
 local
-datatype tok = lam | id of int | app
+datatype tok = lam | id of int | app of int
 open StringCvt
 
 fun readtok (c : (char, cs) reader) cs = let
@@ -1090,7 +1093,10 @@ in
   case c cs of
     NONE => NONE
   | SOME (#"|",cs') => SOME (lam,cs')
-  | SOME (#"@",cs') => SOME (app,cs')
+  | SOME (#"@",cs') =>
+      (case intread cs' of
+           NONE => SOME (app 1,cs')
+         | SOME (i,cs'') => SOME (app i, cs''))
   | SOME (c,cs') => (case intread cs' of
                          NONE => NONE
                        | SOME (i,cs'') => SOME(id i, cs''))
@@ -1107,11 +1113,15 @@ fun parse tmv c cs0 = let
         | (body :: bvar :: stk, (SOME lam, cs')) =>
             parse_term (Abs(bvar,body) :: stk) (adv cs')
         | (_, (SOME lam, _)) => raise Fail "raw_parse.abs: short stack"
-        | (x :: f :: stk, (SOME app, cs')) =>
-            parse_term (App(f,x) :: stk) (adv cs')
-        | (_, (SOME app, _)) => raise Fail "raw_parse.app: short stack"
+        | (stk, (SOME (app i), cs')) => doapp i stk cs'
         | (stk, (SOME (id i), cs')) =>
             parse_term (Vector.sub(tmv, i) :: stk) (adv cs')
+  and doapp i stk cs =
+      if i = 0 then parse_term stk (adv cs)
+      else
+        case stk of
+            x :: f :: stk => doapp (i - 1) (App(f,x) :: stk) cs
+          | _ => raise Fail "raw_parse.app: short stack"
 in
   parse_term [] (adv cs0)
 end
@@ -1119,7 +1129,8 @@ end
 
 in
 
-fun read_raw tmv s = valOf (scanString (parse tmv) s)
+fun read_raw tmv s =
+  valOf (scanString (parse tmv) s)
 
 end (* local *)
 
