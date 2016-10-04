@@ -223,11 +223,6 @@ signature Parse = sig
 
   val export_theorems_as_docfiles : string -> (string * thm) list -> unit
 
-  val update_grms   : ('a -> unit) -> 'a -> unit
-  val pending_updates : unit -> (string * string * term option) list
-  val mk_local_grms : string list -> unit
-
-
   val hide   : string -> ({Name : string, Thy : string} list *
                           {Name : string, Thy : string} list)
   val update_overload_maps :
@@ -270,7 +265,8 @@ signature Parse = sig
   val NoPhrasing       : PhraseBlockStyle
 
   val min_grammars : type_grammar.grammar * term_grammar.grammar
-  val current_lgrms : unit -> type_grammar.grammar * term_grammar.grammar
+  val merge_grammars : string list ->
+                       type_grammar.grammar * term_grammar.grammar
   val current_grammars : unit -> type_grammar.grammar * term_grammar.grammar
 
   structure Unicode : sig
