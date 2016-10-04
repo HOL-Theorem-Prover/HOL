@@ -667,16 +667,15 @@ in
 end
 
 
-fun remove_tok {term_name, tok} r = let
+fun remove_tok P tok r = let
   fun rels_safe rels = not (List.exists (fn e => e = TOK tok) rels)
   fun rr_safe ({term_name = s, elements,...}:rule_record) =
-    s <> term_name orelse rels_safe (rule_elements elements)
+    not (P s) orelse rels_safe (rule_elements elements)
   fun binder_safe b =
       case b of
         BinderString {term_name = tnm, tok = tk, ...} =>
-          tk <> tok orelse tnm <> term_name
+          tk <> tok orelse not (P tnm)
       | LAMBDA => true
-
 in
   case r of
     SUFFIX (STD_suffix slist) =>
@@ -690,7 +689,7 @@ in
   | CLOSEFIX slist => CLOSEFIX (List.filter rr_safe slist)
   | LISTRULE rlist => let
       fun lrule_ok (r:listspec) =
-        (#cons r <> term_name andalso #nilstr r <> term_name)  orelse
+        (not (P (#cons r)) andalso not (P (#nilstr r)))  orelse
         (first_tok (#leftdelim r) <> tok andalso
          first_tok (#rightdelim r) <> tok andalso
          first_tok (#separator r) <> tok)
@@ -730,8 +729,11 @@ in
 end
 
 fun remove_standard_form G s = map_rules (remove_form s) G
-fun remove_form_with_tok G r = map_rules (remove_tok r) G
+fun remove_form_with_tok G {tok,term_name} =
+  map_rules (remove_tok (fn s => s = term_name) tok) G
 fun remove_form_with_toklist r = map_rules (remove_toklist r)
+fun remove_rules_with_tok s =
+  map_rules (remove_tok (fn _ => true) s)
 
 
 fun fixityToString f =
