@@ -971,12 +971,8 @@ fun remove_rules_for_term s = let in
    GrammarDeltas.record_tmdelta (RMTMNM s)
  end
 
-fun set_mapped_fixity0 (r as {fixity:fixity,term_name,tok}) =
-  let
-    val nmtok = {term_name = term_name, tok = tok}
-  in
-    [RMTMTOK nmtok, r |> standard_mapped_spacing |> GRULE]
-  end
+fun set_mapped_fixity0 (r as {tok,...}) =
+  [RMTOK tok, r |> standard_mapped_spacing |> GRULE]
 fun set_fixity0 (s, f) = set_mapped_fixity0 {fixity = f, term_name = s, tok = s}
 
 
