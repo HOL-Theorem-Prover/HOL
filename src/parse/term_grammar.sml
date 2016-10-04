@@ -1005,6 +1005,7 @@ fun add_delta ud G =
     | LRULE r => add_listform G r
     | RMTMTOK r => remove_form_with_tok G r
     | RMTMNM s => remove_standard_form G s
+    | RMTOK s => remove_rules_with_tok s G
     | OVERLOAD_ON p => fupdate_overload_info (Overload.add_overloading p) G
     | IOVERLOAD_ON p =>
         fupdate_overload_info (Overload.add_inferior_overloading p) G
@@ -1597,6 +1598,7 @@ fun user_delta_encode write_tm ud =
     | RMTMNM s => "RN" ^ StringData.encode s
     | RMTMTOK {term_name,tok} =>
         "RK" ^ StringData.encode term_name ^ StringData.encode tok
+    | RMTOK s => "RMT" ^ StringData.encode s
 
 
 fun user_delta_reader read_tm = let
@@ -1625,6 +1627,7 @@ in
    Coding.map GRMOVMAP
               (StringData.reader >* Coding.map read_tm StringData.reader)) ||
   (literal "RMO" >> Coding.map RMOVMAP skid_reader) ||
+  (literal "RMT" >> Coding.map RMTOK StringData.reader) ||
   (literal "RN" >> Coding.map RMTMNM StringData.reader)
 end
 
