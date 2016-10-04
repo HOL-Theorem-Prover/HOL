@@ -1022,6 +1022,8 @@ fun add_delta ud G =
         fupdate_overload_info (oact {opname=s,realname=Name,realthy=Thy}) G
       end
     | ADD_NUMFORM cs => add_numeral_form G cs
+    | CLR_OVL s =>
+        fupdate_overload_info (#1 o Overload.remove_overloaded_form s) G
 
 fun add_deltas uds G = List.foldl (uncurry add_delta) G uds
 
@@ -1584,6 +1586,7 @@ fun user_delta_encode write_tm ud =
     | ASSOC_RESTR {binder,resbinder} =>
         "AR" ^ OptionData.encode StringData.encode binder ^
         StringData.encode resbinder
+    | CLR_OVL s => "COV" ^ StringData.encode s
     | GRMOVMAP(s,tm) =>
         "RMG" ^ StringData.encode s ^ StringData.encode (write_tm tm)
     | GRULE gr => "G" ^ grule_encode gr
@@ -1609,6 +1612,7 @@ in
   (literal "AR" >>
    Coding.map (fn (b,rb) => ASSOC_RESTR {binder = b, resbinder = rb})
               (OptionData.reader StringData.reader >* StringData.reader)) ||
+  (literal "COV" >> Coding.map CLR_OVL StringData.reader) ||
   (literal "G" >> Coding.map GRULE grule_reader) ||
   (literal "L" >> Coding.map LRULE lspec_reader) ||
   (literal "MOP" >>

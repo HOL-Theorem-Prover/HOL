@@ -999,20 +999,10 @@ val temp_bring_to_front_overload =
 val bring_to_front_overload =
     curry (mk_perm (fn skid => [MOVE_OVLPOSN{frontp = true, skid = skid}]))
 
-fun temp_clear_overloads_on s = let
-  open term_grammar
-in
-  the_term_grammar :=
-    #1 (mfupdate_overload_info
-        (Overload.remove_overloaded_form s) (term_grammar()));
-  app (curry temp_overload_on s) (Term.decls s);
-  term_grammar_changed := true
-end
-
-fun clear_overloads_on s = let in
-  temp_clear_overloads_on s;
-  update_grms "clear_overloads_on" ("temp_clear_overloads_on", quote s)
-end
+fun clear_overloads_on0 s =
+  CLR_OVL s :: map (fn t => OVERLOAD_ON(s,t)) (Term.decls s)
+val temp_clear_overloads_on = mk_temp clear_overloads_on0
+val clear_overloads_on = mk_perm clear_overloads_on0
 
 fun remove_ovl_mapping0 (s, kid) = [RMOVMAP(s,kid)]
 val temp_remove_ovl_mapping = curry (mk_temp remove_ovl_mapping0)

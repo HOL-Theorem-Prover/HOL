@@ -65,6 +65,7 @@ datatype user_delta =
        | IOVERLOAD_ON of string * Term.term
        | ASSOC_RESTR of {binder: string option, resbinder : string}
        | RMOVMAP of skid
+       | CLR_OVL of string
        | GRMOVMAP of string * Term.term
        | MOVE_OVLPOSN of {frontp : bool, skid : skid}
        | ADD_NUMFORM of char * string option
