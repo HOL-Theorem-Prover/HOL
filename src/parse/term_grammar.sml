@@ -76,6 +76,10 @@ type special_info = {type_intro : string,
                      endbinding : string,
                      restr_binders : (string option * string) list,
                      res_quanop : string}
+fun fupd_lambda f {type_intro,lambda,endbinding,restr_binders,res_quanop} =
+  {type_intro = type_intro, lambda = f lambda, endbinding = endbinding,
+   restr_binders = restr_binders, res_quanop = res_quanop}
+
 
 type prmP0 = Absyn.absyn -> Parse_supportENV.preterm_in_env
 
@@ -1382,8 +1386,9 @@ in
                       pp_elements = [HardSpace 1, RE (TOK "="),
                                      BreakSpace(1,0)],
                       paren_style = OnlyIfNecessary}
-
+         |> fupdate_specials (fupd_lambda (cons UnicodeChars.lambda))
 end
+
 (* ----------------------------------------------------------------------
     encoding and decoding grammars to and from strings
    ---------------------------------------------------------------------- *)

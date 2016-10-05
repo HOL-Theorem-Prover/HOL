@@ -87,6 +87,9 @@ sig
                        endbinding    : string,
                        restr_binders : (string option * string) list,
                        res_quanop    : string}
+  val fupd_lambda    : (string list -> string list) -> special_info ->
+                       special_info
+
   type ruleset
   val rules          : grammar -> (int option * grammar_rule) list
   val ruleset        : grammar -> ruleset

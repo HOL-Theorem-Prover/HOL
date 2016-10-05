@@ -608,10 +608,6 @@ struct
   val uset_fixity = uset_fixity0 ProvideUnicode.uadd_rule
 
   structure UChar = UnicodeChars
-  fun fupd_lambda f {type_intro,lambda,endbinding,restr_binders,res_quanop} =
-      {type_intro = type_intro, lambda = f lambda, endbinding = endbinding,
-       restr_binders = restr_binders, res_quanop = res_quanop}
-
 
   fun bare_lambda() =
       temp_set_term_grammar (fupdate_specials (fupd_lambda (fn _ => ["\\"]))
