@@ -160,6 +160,10 @@ sig
   val remove_form_with_toklist : {term_name : string, toklist : string list} ->
                                  grammar -> grammar
 
+  (* this one is the nuclear option, and just removes every rule that uses
+     the given token *)
+  val remove_rules_with_tok : string -> grammar -> grammar
+
   (*-----------------------------------------------------------------------*
    * Pretty-printing                                                       *
    *-----------------------------------------------------------------------*)

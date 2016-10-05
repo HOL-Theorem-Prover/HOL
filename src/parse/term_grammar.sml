@@ -667,16 +667,15 @@ in
 end
 
 
-fun remove_tok {term_name, tok} r = let
+fun remove_tok P tok r = let
   fun rels_safe rels = not (List.exists (fn e => e = TOK tok) rels)
   fun rr_safe ({term_name = s, elements,...}:rule_record) =
-    s <> term_name orelse rels_safe (rule_elements elements)
+    not (P s) orelse rels_safe (rule_elements elements)
   fun binder_safe b =
       case b of
         BinderString {term_name = tnm, tok = tk, ...} =>
-          tk <> tok orelse tnm <> term_name
+          tk <> tok orelse not (P tnm)
       | LAMBDA => true
-
 in
   case r of
     SUFFIX (STD_suffix slist) =>
@@ -690,7 +689,7 @@ in
   | CLOSEFIX slist => CLOSEFIX (List.filter rr_safe slist)
   | LISTRULE rlist => let
       fun lrule_ok (r:listspec) =
-        (#cons r <> term_name andalso #nilstr r <> term_name)  orelse
+        (not (P (#cons r)) andalso not (P (#nilstr r)))  orelse
         (first_tok (#leftdelim r) <> tok andalso
          first_tok (#rightdelim r) <> tok andalso
          first_tok (#separator r) <> tok)
@@ -730,8 +729,11 @@ in
 end
 
 fun remove_standard_form G s = map_rules (remove_form s) G
-fun remove_form_with_tok G r = map_rules (remove_tok r) G
+fun remove_form_with_tok G {tok,term_name} =
+  map_rules (remove_tok (fn s => s = term_name) tok) G
 fun remove_form_with_toklist r = map_rules (remove_toklist r)
+fun remove_rules_with_tok s =
+  map_rules (remove_tok (fn _ => true) s)
 
 
 fun fixityToString f =
@@ -1003,6 +1005,7 @@ fun add_delta ud G =
     | LRULE r => add_listform G r
     | RMTMTOK r => remove_form_with_tok G r
     | RMTMNM s => remove_standard_form G s
+    | RMTOK s => remove_rules_with_tok s G
     | OVERLOAD_ON p => fupdate_overload_info (Overload.add_overloading p) G
     | IOVERLOAD_ON p =>
         fupdate_overload_info (Overload.add_inferior_overloading p) G
@@ -1019,6 +1022,8 @@ fun add_delta ud G =
         fupdate_overload_info (oact {opname=s,realname=Name,realthy=Thy}) G
       end
     | ADD_NUMFORM cs => add_numeral_form G cs
+    | CLR_OVL s =>
+        fupdate_overload_info (#1 o Overload.remove_overloaded_form s) G
 
 fun add_deltas uds G = List.foldl (uncurry add_delta) G uds
 
@@ -1581,6 +1586,7 @@ fun user_delta_encode write_tm ud =
     | ASSOC_RESTR {binder,resbinder} =>
         "AR" ^ OptionData.encode StringData.encode binder ^
         StringData.encode resbinder
+    | CLR_OVL s => "COV" ^ StringData.encode s
     | GRMOVMAP(s,tm) =>
         "RMG" ^ StringData.encode s ^ StringData.encode (write_tm tm)
     | GRULE gr => "G" ^ grule_encode gr
@@ -1595,6 +1601,7 @@ fun user_delta_encode write_tm ud =
     | RMTMNM s => "RN" ^ StringData.encode s
     | RMTMTOK {term_name,tok} =>
         "RK" ^ StringData.encode term_name ^ StringData.encode tok
+    | RMTOK s => "RMT" ^ StringData.encode s
 
 
 fun user_delta_reader read_tm = let
@@ -1605,6 +1612,7 @@ in
   (literal "AR" >>
    Coding.map (fn (b,rb) => ASSOC_RESTR {binder = b, resbinder = rb})
               (OptionData.reader StringData.reader >* StringData.reader)) ||
+  (literal "COV" >> Coding.map CLR_OVL StringData.reader) ||
   (literal "G" >> Coding.map GRULE grule_reader) ||
   (literal "L" >> Coding.map LRULE lspec_reader) ||
   (literal "MOP" >>
@@ -1623,6 +1631,7 @@ in
    Coding.map GRMOVMAP
               (StringData.reader >* Coding.map read_tm StringData.reader)) ||
   (literal "RMO" >> Coding.map RMOVMAP skid_reader) ||
+  (literal "RMT" >> Coding.map RMTOK StringData.reader) ||
   (literal "RN" >> Coding.map RMTMNM StringData.reader)
 end
 

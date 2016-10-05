@@ -105,7 +105,8 @@ fun thy_deltas {thyname} =
 
 fun userdelta_toString ud =
   case ud of
-      OVERLOAD_ON (s, _) => "OVERLOAD_ON(" ^ Lib.mlquote s ^ ")"
+      OVERLOAD_ON (s, _) => "overload_on(" ^ Lib.mlquote s ^ ")"
+    | CLR_OVL s => "clear_overloads_on(" ^ Lib.mlquote s ^ ")"
     | _ => ""
 
 fun record_tmdelta d =

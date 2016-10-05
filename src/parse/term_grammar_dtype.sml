@@ -60,10 +60,12 @@ datatype user_delta =
        | LRULE of listspec
        | RMTMTOK of {term_name : string, tok : string}
        | RMTMNM of string
+       | RMTOK of string
        | OVERLOAD_ON of string * Term.term
        | IOVERLOAD_ON of string * Term.term
        | ASSOC_RESTR of {binder: string option, resbinder : string}
        | RMOVMAP of skid
+       | CLR_OVL of string
        | GRMOVMAP of string * Term.term
        | MOVE_OVLPOSN of {frontp : bool, skid : skid}
        | ADD_NUMFORM of char * string option

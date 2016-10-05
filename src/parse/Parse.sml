@@ -211,47 +211,6 @@ fun grammarDB_insert (s, i) =
 
 val _ = grammarDB_insert("min", min_grammars)
 
-fun merge_grm (gname, (tyG0, tmG0)) (tyG1, tmG1) =
-  (type_grammar.merge_grammars (tyG0, tyG1),
-   term_grammar.merge_grammars (tmG0, tmG1)
-  )
-  handle HOLgrammars.GrammarError s
-   => (Feedback.HOL_WARNING "Parse" "mk_local_grms"
-       (String.concat["Error ", s, " while merging grammar ",
-                      gname, "; ignoring it.\n"])
-      ; (tyG1, tmG1));
-
-fun merge_grammars_by_name gnames =
-    let
-      fun getGrm nm =
-        case grammarDB nm of
-            NONE => raise ERROR "mk_local_grms" ("No grammar for theory: "^nm)
-          | SOME grms => (nm,grms)
-      val grms = map getGrm gnames
-    in
-      itlist merge_grm (tl grms) (#2 (hd grms))
-    end
-
-fun set_grammar_ancestry slist =
-  let
-    val (tyg,tmg) = merge_grammars_by_name slist
-  in
-    GrammarAncestry.set_ancestry slist;
-    the_type_grammar := tyg;
-    the_term_grammar := tmg;
-    type_grammar_changed := true;
-    term_grammar_changed := true
-  end
-
-fun mk_local_grms [] = raise ERROR "mk_local_grms" "no grammars"
-  | mk_local_grms (gs as (n::t)) =
-    let
-      val (ty_grm0,tm_grm0) = merge_grammars_by_name gs
-    in
-      the_lty_grm := ty_grm0;
-      the_ltm_grm := tm_grm0
-    end
-
 fun minprint t = let
   fun default t = let
     val (_, baseprinter) =
@@ -580,8 +539,6 @@ fun typed_parse_in_context ty ctxt q =
  ---------------------------------------------------------------------------*)
 
 val grm_updates = ref [] : (string * string * term option) list ref;
-
-fun pending_updates() = !grm_updates
 
 fun update_grms fname (x,y) = grm_updates := ((x,y,NONE) :: !grm_updates);
 fun full_update_grms (x,y,opt) = grm_updates := ((x,y,opt) :: !grm_updates)
@@ -971,12 +928,8 @@ fun remove_rules_for_term s = let in
    GrammarDeltas.record_tmdelta (RMTMNM s)
  end
 
-fun set_mapped_fixity0 (r as {fixity:fixity,term_name,tok}) =
-  let
-    val nmtok = {term_name = term_name, tok = tok}
-  in
-    [RMTMTOK nmtok, r |> standard_mapped_spacing |> GRULE]
-  end
+fun set_mapped_fixity0 (r as {tok,...}) =
+  [RMTOK tok, r |> standard_mapped_spacing |> GRULE]
 fun set_fixity0 (s, f) = set_mapped_fixity0 {fixity = f, term_name = s, tok = s}
 
 
@@ -1046,20 +999,10 @@ val temp_bring_to_front_overload =
 val bring_to_front_overload =
     curry (mk_perm (fn skid => [MOVE_OVLPOSN{frontp = true, skid = skid}]))
 
-fun temp_clear_overloads_on s = let
-  open term_grammar
-in
-  the_term_grammar :=
-    #1 (mfupdate_overload_info
-        (Overload.remove_overloaded_form s) (term_grammar()));
-  app (curry temp_overload_on s) (Term.decls s);
-  term_grammar_changed := true
-end
-
-fun clear_overloads_on s = let in
-  temp_clear_overloads_on s;
-  update_grms "clear_overloads_on" ("temp_clear_overloads_on", quote s)
-end
+fun clear_overloads_on0 s =
+  CLR_OVL s :: map (fn t => OVERLOAD_ON(s,t)) (Term.decls s)
+val temp_clear_overloads_on = mk_temp clear_overloads_on0
+val clear_overloads_on = mk_perm clear_overloads_on0
 
 fun remove_ovl_mapping0 (s, kid) = [RMOVMAP(s,kid)]
 val temp_remove_ovl_mapping = curry (mk_temp remove_ovl_mapping0)
@@ -1266,10 +1209,62 @@ in
   the_term_grammar := tmG
 end
 
-fun gparents () =
-  case GrammarAncestry.ancestry {thy = current_theory()} of
-      [] => parents (current_theory())
+fun gparents thyname =
+  case GrammarAncestry.ancestry {thy = thyname} of
+      [] => parents thyname
     | thys => thys
+
+fun gancestry thynm =
+  let
+    fun recurse acc worklist =
+      case worklist of
+          [] => acc
+        | thynm :: rest =>
+            recurse (HOLset.add(acc,thynm)) (gparents thynm @ rest)
+  in
+    recurse (HOLset.empty String.compare) (gparents thynm)
+  end
+
+fun merge_into (gname, (G, gset)) =
+  let
+    fun apply (tyuds, tmuds) (tyG, tmG) =
+      (type_grammar.apply_deltas tyuds tyG, term_grammar.add_deltas tmuds tmG)
+    datatype action =
+             Visit of string
+           | Apply of type_grammar.delta list * term_grammar.user_delta list
+    fun recurse (G, gset) worklist =
+      case worklist of
+          [] => (G, gset)
+        | Visit thy :: rest =>
+          let
+            val parents0 = gparents thy
+            val parents =
+                List.filter (fn thy => not (HOLset.member(gset,thy))) parents0
+            val uds = GrammarDeltas.thy_deltas {thyname = thy}
+          in
+            recurse (G, HOLset.add(gset, thy))
+                    (map Visit parents @ (Apply uds :: rest))
+          end
+        | Apply uds :: rest => recurse (apply uds G, gset) rest
+  in
+    recurse (G, gset) [Visit gname]
+  end
+
+fun merge_grammars slist =
+  case slist of
+      [] => raise ERROR "merge_grammars" "Empty grammar list"
+    | h::t => List.foldl merge_into (valOf (grammarDB h), gancestry h) t |> #1
+
+fun set_grammar_ancestry slist =
+  let
+    val (tyg,tmg) = merge_grammars slist
+  in
+    GrammarAncestry.set_ancestry slist;
+    the_type_grammar := tyg;
+    the_term_grammar := tmg;
+    type_grammar_changed := true;
+    term_grammar_changed := true
+  end
 
 local fun sig_addn s = String.concat
        ["val ", s, "_grammars : type_grammar.grammar * term_grammar.grammar"]
@@ -1308,10 +1303,6 @@ in
                 add_string f; add_break(1,0);
                 B 0; add_string x;  (* can be more fancy *)
                 EB(); EB())
-         val (names,rules) = partition (equal"reveal" o #1)
-                                (List.rev(!grm_updates))
-         val reveals = map #2 names
-         val _ = grm_updates := []
      in
        B 0;
          add_string "local open GrammarSpecials Parse";
@@ -1320,22 +1311,13 @@ in
                     \off_complaints\",0)f";
          add_newline();
          add_string "in"; add_newline();
-         add_string "val _ = mk_local_grms [";
+         add_string ("val " ^thyname ^ "_grammars = merge_grammars [");
              IB 0; pr_list (add_string o quote)
                            (fn () => add_string ",")
                            (fn () => add_break(1,0))
-                           (gparents ());
+                           (gparents (current_theory()));
              EB();
          add_string "]"; add_newline();
-         B 10; add_string "val _ = List.app (update_grms reveal)";
-              add_break(1,0);
-              pr_sml_list add_string reveals;
-         EB(); add_newline();
-         pr_list pp_update (fn () => ()) add_newline rules;
-         add_newline();
-         add_string (String.concat
-             ["val ", thyname, "_grammars = Parse.current_lgrms()"]);
-         add_newline();
          add_string ("local");
          add_newline();
          add_string ("val (tyUDs, tmUDs) = "^
