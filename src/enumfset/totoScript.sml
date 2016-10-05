@@ -41,8 +41,6 @@ val BigSig = true;
 fun maybe_thm (s, tm, tac) = if BigSig then store_thm (s, tm, tac)
                                        else prove (tm, tac);
 
-val _ = type_abbrev ("reln", Type`:'a->'a->bool`);
-
 (* **************************************************************** *)
 (* Make our one appeal to wotTheory. To condense all its goodness   *)
 (* into one theorem, wotTheory proves that, at any type, some reln. *)
