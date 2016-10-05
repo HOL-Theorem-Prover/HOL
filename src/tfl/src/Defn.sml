@@ -707,11 +707,10 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
  let val R1 = rand WFR
      val (f,rhs_proto_def) = dest_eq proto_def
      (* make parameterized definition *)
-     fun safe_desttemp s = dest_temp_binding s handle HOL_ERR _ => s
      val (Name,Ty) = Lib.trye dest_var f
-     val aux_name = safe_desttemp Name ^ "_aux"
+     val aux_name = Name^"_aux"
      val faux = mk_var(aux_name,itlist(curry(op-->)) (map type_of (R1::SV)) Ty)
-     val aux_bindstem = auxStem (safe_desttemp bindstem)
+     val aux_bindstem = auxStem bindstem
      val (def,theory) =
            make_definition thy (defSuffix aux_bindstem)
                (mk_eq(list_mk_comb(faux,R1::SV), rhs_proto_def))
@@ -1084,7 +1083,7 @@ fun pairf (stem, eqs0) =
      then (tuple_args [(f, (f, map type_of args))] eqs0, stem, I)
    else
      let
-       val stem'name = Theory.temp_binding (stem ^ "_tupled")
+       val stem'name = stem ^ "_tupled"
        val argtys = map type_of args
        val rng_ty = type_of rhs
        val tuple_dom = list_mk_prod_type argtys
