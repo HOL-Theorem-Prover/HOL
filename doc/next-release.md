@@ -56,6 +56,10 @@ Incompatibilities:
     This example would have previously worked if there was exactly one assumption with `<`.
     The fix in cases like this is to use more underscores in one’s patterns.
 
+*   The functions `Parse.Unicode.uoverload_on` and `Parse.Unicode.uset_fixity` have been removed because their functionality should be accessed *via* the standard `overload_on` and `set_fixity` functions.
+    The “temporary” versions of these functions (*e.g.*, `Parse.Unicode.temp_uoverload_on`) have also been removed, analogously.
+    The `Parse.Unicode.unicode_version` function remains, as does its temporary counterpart.
+
 * * * * *
 
 <div class="footer">

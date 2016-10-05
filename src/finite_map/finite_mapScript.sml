@@ -768,9 +768,8 @@ val union_lemma = Q.prove
 val FUNION_DEF = new_specification
   ("FUNION_DEF", ["FUNION"],
    CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) union_lemma);
-val funion_symbol = UTF8.chr 0x228C
-val _ = Unicode.uset_fixity funion_symbol (Infixl 500)
-val _ = Unicode.uoverload_on (funion_symbol, ``FUNION``)
+val _ = set_mapped_fixity {term_name = "FUNION", tok = UTF8.chr 0x228C,
+                           fixity = Infixl 500}
 
 val FDOM_FUNION = save_thm("FDOM_FUNION", FUNION_DEF |> SPEC_ALL |> CONJUNCT1)
 val _ = export_rewrites ["FDOM_FUNION"]

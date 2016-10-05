@@ -4218,8 +4218,8 @@ val _ = overload_on ("<>", ``\x:'a y:'a. ~(x = y)``)
 val _ = set_fixity "<>" (Infix(NONASSOC, 450))
 val _ = TeX_notation {hol="<>", TeX = ("\\HOLTokenNotEqual{}",1)}
 
-val _ = uset_fixity UChar.neq (Infix(NONASSOC, 450))
-val _ = uoverload_on (UChar.neq, ``\x:'a y:'a. ~(x = y)``)
+val _ = set_fixity UChar.neq (Infix(NONASSOC, 450))
+val _ = overload_on (UChar.neq, ``\x:'a y:'a. ~(x = y)``)
 val _ = TeX_notation {hol=UChar.neq, TeX = ("\\HOLTokenNotEqual{}",1)}
 
 (* not an element of *)

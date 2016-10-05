@@ -13,7 +13,7 @@ val FUNION_def = new_definition(
   ``FUNION f1 f2 x <=> f1 x \/ f2 x``);
 
 val funion_symbol = UTF8.chr 0x228C
-val _ = Unicode.uset_fixity funion_symbol (Infixl 500)
-val _ = Unicode.uoverload_on (funion_symbol, ``FUNION``)
+val _ = set_fixity funion_symbol (Infixl 500)
+val _ = overload_on (funion_symbol, ``FUNION``)
 
 val _ = export_theory();

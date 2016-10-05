@@ -586,27 +586,6 @@ struct
   fun temp_unicode_version r = lift ProvideUnicode.temp_unicode_version r
   fun temp_uoverload_on r = lift ProvideUnicode.temp_uoverload_on r
 
-  fun fixity_prec f = let
-    open term_grammar
-  in
-    case f of
-      Infix(_, p) => SOME p
-    | Suffix p => SOME p
-    | Prefix p => SOME p
-    | Closefix => NONE
-    | Binder => SOME std_binder_precedence
-  end
-
-  fun uset_fixity0 setter s fxty = let
-    open term_grammar
-    val rule = standard_spacing s fxty
-  in
-    lift setter {u = [s], term_name = s, newrule = rule, oldtok = NONE}
-  end
-
-  val temp_uset_fixity = uset_fixity0 ProvideUnicode.temp_uadd_rule
-  val uset_fixity = uset_fixity0 ProvideUnicode.uadd_rule
-
   structure UChar = UnicodeChars
 
   fun bare_lambda() =
