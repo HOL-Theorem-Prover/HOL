@@ -129,8 +129,6 @@ in
   {Name = Name, Thy = Thy}
 end
 
-fun mktemp_resb s = "_" ^ s ^ "resb"
-
 fun enable_one g0 sd =
     case sd of
       RuleUpdate {u,term_name,newrule = r,oldtok} => let
@@ -144,10 +142,6 @@ fun enable_one g0 sd =
       in
         List.foldl foldthis g0 ts
       end
-
-fun fupd_restrs f {type_intro,lambda,endbinding,restr_binders,res_quanop} =
-    {type_intro = type_intro, lambda = lambda, endbinding = endbinding,
-     restr_binders = f restr_binders, res_quanop = res_quanop}
 
 fun remove_uoverload G s =
     #1 (term_grammar.mfupdate_overload_info
