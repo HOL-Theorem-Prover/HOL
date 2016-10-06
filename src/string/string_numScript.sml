@@ -1,6 +1,7 @@
 open HolKernel boolLib Parse bossLib stringTheory arithmeticTheory markerLib;
 
 val _ = new_theory "string_num"
+val _ = set_grammar_ancestry ["string"]
 
 val n2s_def = tDefine
  "n2s" `

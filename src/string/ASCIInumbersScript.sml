@@ -16,6 +16,7 @@ val op << = op THENL;
 val op >> = op THEN1;
 
 val _ = new_theory "ASCIInumbers";
+val _ = set_grammar_ancestry ["string", "numposrep"]
 
 (* ------------------------------------------------------------------------- *)
 

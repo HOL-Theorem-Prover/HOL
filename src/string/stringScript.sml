@@ -18,6 +18,7 @@ open numLib numSyntax listTheory rich_listTheory arithmeticTheory;
 (* ---------------------------------------------------------------------*)
 
 val _ = new_theory "string";
+val _ = set_grammar_ancestry ["rich_list"]
 
 (* ---------------------------------------------------------------------*)
 (* Characters are represented by the natural numbers <= 255.            *)
