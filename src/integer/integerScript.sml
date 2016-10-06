@@ -19,6 +19,8 @@ open HolKernel Parse boolLib
 
 val _ = new_theory "integer";
 
+val _ = set_grammar_ancestry ["arithmetic", "pred_set"]
+
 (* interactive mode
   app load ["jrhUtils", "quotient", "liteLib", "QLib",
             "BasicProvers", "boolSimps", "pairSimps",
