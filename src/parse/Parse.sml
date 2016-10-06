@@ -581,10 +581,27 @@ struct
   val master_unicode_switch = ref true
   fun lift0 f = temp_set_term_grammar (f (term_grammar()))
   fun lift f x = lift0 (f (!master_unicode_switch) x)
-  fun unicode_version r = lift ProvideUnicode.unicode_version r
   fun uoverload_on r = lift ProvideUnicode.uoverload_on r
-  fun temp_unicode_version r = lift ProvideUnicode.temp_unicode_version r
   fun temp_uoverload_on r = lift ProvideUnicode.temp_uoverload_on r
+
+  fun unicode_version r =
+    let
+      open ProvideUnicode
+      val (sd, uds) = mk_unicode_version r (term_grammar())
+    in
+      record_data sd;
+      record_updateinfo (UV r);
+      if !master_unicode_switch then apply_udeltas uds else ();
+      List.app GrammarDeltas.record_tmdelta uds
+    end
+
+  fun temp_unicode_version r =
+    let
+      val (sd, uds) = ProvideUnicode.mk_unicode_version r (term_grammar())
+    in
+      ProvideUnicode.record_data sd;
+      if !master_unicode_switch then apply_udeltas uds else ()
+    end
 
   structure UChar = UnicodeChars
 
@@ -1309,14 +1326,10 @@ in
          add_newline();
 
          add_string (String.concat
-             ["val ", thyname,
-              "_grammars = Portable.apsnd (ProvideUnicode.apply_thydata true ",
-              quote thyname, ")", thyname, "_grammars"]);
-         add_newline();
-         add_string (String.concat
              ["val _ = Parse.grammarDB_insert(",Lib.mlquote thyname,",",
               thyname, "_grammars)"]);
          add_newline();
+
          add_string (String.concat
              ["val _ = Parse.temp_set_grammars ("^
               "addtyUDs (Parse.type_grammar()), ",

@@ -35,6 +35,8 @@ datatype stored_data =
 
 val term_table = ref ([] : stored_data list)
 fun stored_data () = !term_table
+fun record_data d = term_table := d :: !term_table
+
 
 fun getrule G term_name = let
   fun tok_of0 es =
@@ -129,19 +131,12 @@ in
   {Name = Name, Thy = Thy}
 end
 
-fun enable_one g0 sd =
-    case sd of
-      RuleUpdate {u,term_name,newrule = r,oldtok} => let
-        open term_grammar
-      in
-        g0 |> add_delta (GRULE r)
-      end
-    | OverloadUpdate{u,ts} => let
-        fun foldthis (t,g) =
-            fupdate_overload_info (Overload.add_overloading(u,t)) g
-      in
-        List.foldl foldthis g0 ts
-      end
+fun sd_to_deltas sd =
+  case sd of
+      RuleUpdate {u,term_name,newrule = r,oldtok} => [GRULE r]
+    | OverloadUpdate{u,ts} => map (fn t => OVERLOAD_ON(u,t)) ts
+
+fun enable_one g0 sd = add_deltas (sd_to_deltas sd) g0
 
 fun remove_uoverload G s =
     #1 (term_grammar.mfupdate_overload_info
@@ -163,23 +158,23 @@ fun disable_one G sd =
 
 fun new_action switch G a =
   (if switch then enable_one G a else G) before
-  term_table := a :: !term_table
+  record_data a
 
-fun temp_unicode_version switch {u,tmnm} G = let
+fun mk_unicode_version {u,tmnm} G = let
   val oi = term_grammar.overload_info G
   val sd =
       case getrule G tmnm of
         NONE => let
         in
           case Overload.info_for_name oi tmnm of
-            NONE => raise mk_HOL_ERR "Unicode" "unicode_version"
+            NONE => raise mk_HOL_ERR "Unicode" "mk_unicode_version"
                                      ("No data for term with name "^tmnm)
           | SOME ops => OverloadUpdate{u = u, ts = #actual_ops ops}
         end
       | SOME(f,s) => RuleUpdate{u = [u],term_name = tmnm, newrule = f u,
                                 oldtok = SOME s}
 in
-  new_action switch G sd
+  (sd, sd_to_deltas sd)
 end
 
 fun temp_uadd_rule switch rule G = new_action switch G (RuleUpdate rule)
@@ -234,11 +229,7 @@ val (mk,dest) =
 fun update value =
     write_data_update {data= mk[value], thydataty = "unicodedata"}
 
-fun unicode_version switch p G = let
-in
-    temp_unicode_version switch p G before
-    update (UV p)
-end
+val record_updateinfo = update
 
 fun uadd_rule switch rule G = let
 in
@@ -262,7 +253,13 @@ fun disable_all G = List.foldl (fn (a,G) => disable_one G a) G (!term_table)
 fun apply_thydata switch thyname G = let
   fun apply1 (up,G) =
       case up of
-        UV p => temp_unicode_version switch p G
+        UV p =>
+        let
+          val (sd, uds) = mk_unicode_version p G
+        in
+          record_data sd;
+          if switch then term_grammar.add_deltas uds G else G
+        end
       | RULE r => temp_uadd_rule switch r G
       | OVL st => temp_uoverload_on switch st G
 in
