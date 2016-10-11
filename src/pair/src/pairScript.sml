@@ -541,6 +541,7 @@ val pair_case_thm = save_thm("pair_case_thm",
 (* and, to be consistent with what would be generated if we could use
    Hol_datatype to generate the pair type: *)
 val pair_case_def = save_thm("pair_case_def", pair_case_thm)
+val _ = overload_on("case", ``pair_CASE``)
 
 
 val pair_case_cong = save_thm("pair_case_cong",

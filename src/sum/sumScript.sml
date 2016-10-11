@@ -377,6 +377,7 @@ val _ = export_rewrites ["INR"]
 
 val [sum_case_def] = Prim_rec.define_case_constant sum_Axiom
 val _ = export_rewrites ["sum_case_def"]
+val _ = overload_on("case", ``sum_CASE``)
 
 val sum_case_cong = save_thm("sum_case_cong",
                              Prim_rec.case_cong_thm sum_CASES sum_case_def);

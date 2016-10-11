@@ -212,6 +212,7 @@ val ODD = new_recursive_definition
 val _ = ot0 "ODD" "odd"
 
 val [num_case_def] = Prim_rec.define_case_constant num_Axiom
+val _ = overload_on("case", ``num_CASE``)
 
 val FUNPOW = new_recursive_definition
    {name = "FUNPOW",

@@ -111,6 +111,7 @@ val option_nchotomy = save_thm(
 
 val [option_case_def] = Prim_rec.define_case_constant option_Axiom
 val _ = ot0 "option_case" "case"
+val _ = overload_on("case", ``option_CASE``)
 
 val FORALL_OPTION = Q.store_thm
  ("FORALL_OPTION",

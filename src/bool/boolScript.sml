@@ -118,6 +118,8 @@ val COND_DEF =
    ("COND_DEF",       Term `COND = \t t1 t2.
                                       @x:'a. ((t=T) ==> (x=t1)) /\
                                              ((t=F) ==> (x=t2))`);
+val _ = overload_on ("case", ``COND``)
+
 val ONE_ONE_DEF =
  Definition.new_definition
    ("ONE_ONE_DEF",    Term `ONE_ONE = \f:'a->'b. !x1 x2.
@@ -4143,6 +4145,7 @@ in
                             witness)
                            (GEN_ALL witness_applied2))
 end
+val _ = overload_on("case", ``itself_case``)
 
 
 (*---------------------------------------------------------------------------*)

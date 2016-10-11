@@ -1266,6 +1266,8 @@ val write_tyinfos = adjoin o map (write_tyinfo ## I);
 fun persistent_tyinfo tyinfos_etc =
   let val (tyinfos, etc) = unzip tyinfos_etc
       val tyinfos = TypeBase.write tyinfos
+      fun ovl tyi = Parse.overload_on ("case", TypeBasePure.case_const_of tyi)
+      val () = app ovl tyinfos
       val () = app computeLib.write_datatype_info tyinfos
   in
     write_tyinfos tyinfos_etc

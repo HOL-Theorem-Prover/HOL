@@ -25,9 +25,8 @@ in
   fun write tyinfos =
     let
       fun write1 tyinfo =
-        (dBase := insert (theTypeBase()) tyinfo;
-         Parse.temp_overload_on("case", case_const_of tyinfo)
-         handle HOL_ERR _ => ())
+        dBase := insert (theTypeBase()) tyinfo
+        handle HOL_ERR _ => ()
       val tyinfos = list_compose (!update_fns) tyinfos
       val () = app write1 tyinfos
     in
