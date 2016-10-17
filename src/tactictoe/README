@@ -1,0 +1,33 @@
+TacTicToe is a tactic-based prover.
+
+It explores a proof trees by repeatly selecting tactics that are
+appropriate to solve the current goal.
+The selection relies on a machine learning algorithm on a data set of recorded human tactics in previous proofs.
+
+There are two versions:
+
+- bare_tactictoe is only based on recorded tactics.
+- tactictoe additionally introduces metis calls with predicted lemmas.
+
+Install:
+
+  - run Holmake in the src directory. (cd src; Holmake; cd ..)
+  - wget http://cl-informatik.uibk.ac.at/users/tgauthier/tactictoe/record.tar.gz
+  - extract it in the directory record
+
+Run: run hol in this directory
+  load "src/tactictoe";
+  open tactictoe;
+  bare_tactictoe ``1+1=2``; (* first call *)
+  bare_tactictoe ``1+1=2``; (* second call *)
+  val it = (): unit
+      ( numLib.DECIDE_TAC )
+  val it = (): unit
+  val it = (): unit
+
+Remark: the first call of either tactictoe or bare_tactictoe load all 
+the tactics from transitively dependent theories (ancestors). That is 
+why it prints a lot of effects which maybe annoying but is not repeated 
+for later calls.
+
+
