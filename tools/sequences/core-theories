@@ -11,6 +11,7 @@ src/refute
 src/simp/src
 src/metis
 #include sequences/holyhammer
+src/tactictoe/src
 src/meson/src
 src/IndDef
 src/basicProof
