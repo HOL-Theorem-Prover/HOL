@@ -332,9 +332,11 @@ val LNTH_EQ = store_thm(
 val LUNFOLD_def = zDefine `LUNFOLD f z = llist_abs (\n. OPTION_MAP SND
   (FUNPOW (\m. OPTION_BIND m (UNCURRY (K o f))) n (f z)))` ;
 
-(* would be ok to add this presentation to compset if you'd applied set_skip
-   to option_CASE à la
+(* would be somewhat ok to add this presentation to compset if you'd
+   applied set_skip to option_CASE à la
      computeLib.set_skip computeLib.the_compset ``option_CASE`` (SOME 1)
+   and you never had a concrete function f that actually wanted to generate
+   an infinite list.
 *)
 val LUNFOLD = Q.store_thm (
   "LUNFOLD",
