@@ -329,11 +329,18 @@ val LNTH_EQ = store_thm(
 (* which was proved independently                                            *)
 (*---------------------------------------------------------------------------*)
 
-val LUNFOLD_def = Define `LUNFOLD f z = llist_abs (\n. OPTION_MAP SND
+val LUNFOLD_def = zDefine `LUNFOLD f z = llist_abs (\n. OPTION_MAP SND
   (FUNPOW (\m. OPTION_BIND m (UNCURRY (K o f))) n (f z)))` ;
 
-val LUNFOLD = Q.store_thm ("LUNFOLD", `!f x. LUNFOLD f x =
-     case f x of NONE => [||] | SOME (v1,v2) => v2 ::: LUNFOLD f v1`,
+(* would be ok to add this presentation to compset if you'd applied set_skip
+   to option_CASE à la
+     computeLib.set_skip computeLib.the_compset ``option_CASE`` (SOME 1)
+*)
+val LUNFOLD = Q.store_thm (
+  "LUNFOLD",
+  `!f x.
+     LUNFOLD f x =
+       case f x of NONE => [||] | SOME (v1,v2) => v2 ::: LUNFOLD f v1`,
   REPEAT GEN_TAC THEN
   REWRITE_TAC [LUNFOLD_def] THEN
   irule (GSYM llist_if_rep_abs) THEN
