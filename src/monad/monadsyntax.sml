@@ -158,6 +158,7 @@ fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) depth t = let
   val {add_string=strn,add_break=brk,ublock,...} = ppfns
   val (prname, arg1, arg2) = valOf (dest_bind tmg t)
                              handle Option => raise UserPP_Failed
+  val minprint = ppstring (#2 (print_from_grammars min_grammars))
   fun syspr bp gravs t =
     sysprinter {gravs = gravs, binderp = bp, depth = depth - 1} t
   fun pr_action (v, action) =
