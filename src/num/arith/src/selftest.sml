@@ -4,14 +4,14 @@ open testutils
 
 val pr = tprint
 
-val _ = pr "Testing REDUCE_ss ..."
+val _ = pr "Testing REDUCE_ss"
 val ss = simpLib.empty_ss ++ numSimps.REDUCE_ss
 val th = QCONV (SIMP_CONV ss []) ``(0 :num) DIV 0``
 val _ = if not (aconv (rhs (concl th)) ``(0 :num) DIV 0``) then
           die "FAILED!\n"
         else OK()
 
-val _ = pr "Testing SUC_FILTER_ss ..."
+val _ = pr "Testing SUC_FILTER_ss"
 val ss = boolSimps.bool_ss ++ numSimps.REDUCE_ss ++ numSimps.SUC_FILTER_ss
 val th = QCONV (SIMP_CONV ss [arithmeticTheory.FUNPOW])
                ``FUNPOW (f:'a->'a) 2 x``
@@ -21,18 +21,18 @@ val _ = if not (aconv (rhs (concl th)) ``(f:'a -> 'a) (f x)``) then
 
 val arith_ss = boolSimps.bool_ss ++ numSimps.ARITH_ss
 val SIMP_CONV = fn ss => fn thl => QCONV (SIMP_CONV ss thl)
-val _ = pr "Testing coefficient gathering in ARITH_ss (1) ..."
+val _ = pr "Testing coefficient gathering in ARITH_ss (1)"
 val _ = if not (aconv (rhs (concl (SIMP_CONV arith_ss [] ``x + x + x``)))
                       ``3 * x``)
         then die "FAILED!\n"
         else OK()
-val _ = pr "Testing coefficient gathering in ARITH_ss (2) ..."
+val _ = pr "Testing coefficient gathering in ARITH_ss (2)"
 val _ = if not (aconv (rhs (concl (SIMP_CONV arith_ss [] ``x + x * 2``)))
                       ``3 * x``)
         then die "FAILED\n"
         else OK()
 
-val _ = pr "Testing arith on ground ctxt ..."
+val _ = pr "Testing arith on ground ctxt"
 val _ = let
   val (res, vfn) = ASM_SIMP_TAC arith_ss [] ([``2 <= 0``], ``F``)
 in
@@ -40,7 +40,7 @@ in
   else die "FAILED!\n"
 end
 
-val _ = pr "Testing with hypothesis-less context ..."
+val _ = pr "Testing with hypothesis-less context"
 val _ = let
   val _ = new_constant("foo", ``:num``)
   val foo_ax = new_axiom("foo_ax", ``3 < foo``)
@@ -93,7 +93,7 @@ val _ = TRUE_ARITH
                else (if i < j then i + 1 else i − 1) − j) <
               if i < j then j − i else i − j``
 
-val _ = pr "Testing r-cache behaviour with CONJ_ss ..."
+val _ = pr "Testing r-cache behaviour with CONJ_ss"
 val _ = let
   val t = ``(168 = 0) /\ (13 = 13) /\ (105 = 1)``
   open boolSimps
@@ -107,7 +107,7 @@ end
 
 val ss = boolSimps.bool_ss ++ numSimps.REDUCE_ss ++ numSimps.MOD_ss ++
          numSimps.ARITH_RWTS_ss
-val _ = pr "Testing MOD_ss with constant denominator ..."
+val _ = pr "Testing MOD_ss with constant denominator"
 val _ = let
   val t = ``(6 * x + 7 + 10 * y) MOD 6``
   val result = SIMP_CONV ss [] t
@@ -116,7 +116,7 @@ in
   else die "FAILED!\n"
 end handle _ => die "FAILED!\n"
 
-val _ = pr "Testing MOD_ss with variable denominator ..."
+val _ = pr "Testing MOD_ss with variable denominator"
 val _ = let
   val t = ``(4 + 3 * n + 1) MOD n``
   val result = SIMP_CONV ss [ASSUME ``0 < n``] t
