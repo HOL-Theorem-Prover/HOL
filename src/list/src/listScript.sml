@@ -1626,18 +1626,34 @@ val TAKE_def = zDefine`
   (TAKE n [] = []) /\
   (TAKE n (x::xs) = if n = 0 then [] else x :: TAKE (n - 1) xs)
 `;
-val _ = export_rewrites ["TAKE_def"]
 
 val DROP_def = zDefine`
   (DROP n [] = []) /\
   (DROP n (x::xs) = if n = 0 then x::xs else DROP (n - 1) xs)
 `;
-val _ = export_rewrites ["DROP_def"]
+
+val TAKE_nil = save_thm(
+  "TAKE_nil", CONJUNCT1 TAKE_def)
+val _ = export_rewrites ["TAKE_nil"];
+
+val TAKE_cons = store_thm(
+  "TAKE_cons", ``0 < n ==> (TAKE n (x::xs) = x::(TAKE (n-1) xs))``,
+  SRW_TAC[][TAKE_def]);
+val _ = export_rewrites ["TAKE_cons"];
+
+val DROP_nil = save_thm(
+  "DROP_nil", CONJUNCT1 DROP_def);
+val _ = export_rewrites ["DROP_nil"];
+
+val DROP_cons = store_thm(
+  "DROP_cons",``0 < n ==> (DROP n (x::xs) = DROP (n-1) xs)``,
+  SRW_TAC[][DROP_def]);
+val _ = export_rewrites ["DROP_cons"];
 
 val TAKE_0 = store_thm(
   "TAKE_0",
   ``TAKE 0 l = []``,
-  Cases_on `l` THEN SRW_TAC [] []);
+  Cases_on `l` THEN SRW_TAC [] [TAKE_def]);
 val _  = export_rewrites ["TAKE_0"]
 
 val TAKE_LENGTH_ID = store_thm(
@@ -1649,13 +1665,18 @@ val _ = export_rewrites ["TAKE_LENGTH_ID"]
 val LENGTH_TAKE = store_thm(
   "LENGTH_TAKE",
   ``!n l. n <= LENGTH l ==> (LENGTH (TAKE n l) = n)``,
-  Induct_on `l` THEN SRW_TAC [numSimps.ARITH_ss] []);
+  Induct_on `l` THEN SRW_TAC [numSimps.ARITH_ss] [TAKE_def]);
 val _ = export_rewrites ["LENGTH_TAKE"]
+
+val MAP_TAKE = store_thm(
+  "MAP_TAKE",
+  ``!f n l. MAP f (TAKE n l) = TAKE n (MAP f l)``,
+  Induct_on`l` THEN SRW_TAC[][TAKE_def]);
 
 val TAKE_APPEND1 = store_thm(
   "TAKE_APPEND1",
   ``!n. n <= LENGTH l1 ==> (TAKE n (APPEND l1 l2) = TAKE n l1)``,
-  Induct_on `l1` THEN SRW_TAC [numSimps.ARITH_ss] []);
+  Induct_on `l1` THEN SRW_TAC [numSimps.ARITH_ss] [TAKE_def]);
 
 val TAKE_APPEND2 = store_thm(
   "TAKE_APPEND2",
@@ -1665,19 +1686,19 @@ val TAKE_APPEND2 = store_thm(
 val DROP_0 = store_thm(
   "DROP_0",
   ``DROP 0 l = l``,
-  Induct_on `l` THEN SRW_TAC [] [])
+  Induct_on `l` THEN SRW_TAC [] [DROP_def])
 val _ = export_rewrites ["DROP_0"]
 
 val TAKE_DROP = store_thm(
   "TAKE_DROP",
   ``!n l. TAKE n l ++ DROP n l = l``,
-  Induct_on `l` THEN SRW_TAC [numSimps.ARITH_ss] []);
+  Induct_on `l` THEN SRW_TAC [numSimps.ARITH_ss] [TAKE_def]);
 val _ = export_rewrites ["TAKE_DROP"]
 
 val LENGTH_DROP = store_thm(
   "LENGTH_DROP",
   ``!n l. LENGTH (DROP n l) = LENGTH l - n``,
-  Induct_on `l` THEN SRW_TAC [numSimps.ARITH_ss] []);
+  Induct_on `l` THEN SRW_TAC [numSimps.ARITH_ss] [DROP_def]);
 val _ = export_rewrites ["LENGTH_DROP"]
 
 val MEM_DROP = store_thm(
@@ -1693,7 +1714,7 @@ PROVE_TAC[])
 val DROP_NIL = store_thm(
 "DROP_NIL",
 ``!ls n. (DROP n ls = []) = (n >= LENGTH ls)``,
-Induct THEN SRW_TAC[] [] THEN numLib.DECIDE_TAC)
+Induct THEN SRW_TAC[] [DROP_def] THEN numLib.DECIDE_TAC)
 
 (* More functions for operating on pairs of lists *)
 
@@ -3179,7 +3200,7 @@ val length_nub_append = Q.store_thm ("length_nub_append",
 
 val ALL_DISTINCT_DROP = Q.store_thm("ALL_DISTINCT_DROP",
    `!ls n. ALL_DISTINCT ls ==> ALL_DISTINCT (DROP n ls)`,
-   Induct >> SIMP_TAC (srw_ss()) [] >> rw [])
+   Induct >> SIMP_TAC (srw_ss()) [] >> rw [DROP_def])
 
 val EXISTS_LIST_EQ_MAP = Q.store_thm("EXISTS_LIST_EQ_MAP",
    `!ls f. EVERY (\x. ?y. x = f y) ls ==> ?l. ls = MAP f l`,
@@ -3229,6 +3250,7 @@ val ZIP_DROP = Q.store_thm("ZIP_DROP",
    THEN SRW_TAC [] [LENGTH_NIL_SYM, arithmeticTheory.ADD1]
    THEN Cases_on`b`
    THEN FULL_SIMP_TAC (srw_ss()) [ZIP]
+   THEN Cases_on`0<n` THEN FULL_SIMP_TAC (srw_ss()) [ZIP]
    THEN FIRST_X_ASSUM MATCH_MP_TAC
    THEN FULL_SIMP_TAC arith_ss [])
 
@@ -3342,7 +3364,7 @@ val LIST_EQ_MAP_PAIR = Q.store_thm("LIST_EQ_MAP_PAIR",
 
 val TAKE_SUM = Q.store_thm("TAKE_SUM",
    `!n m l. TAKE (n + m) l = TAKE n l ++ TAKE m (DROP n l)`,
-   Induct_on `l` >> simp[] >> rw[] >> simp[] >>
+   Induct_on `l` >> simp[TAKE_def] >> rw[] >> simp[] >>
    `m + n - 1 = (n - 1) + m` by simp[] >>
    ASM_REWRITE_TAC[]);
 
@@ -3482,7 +3504,7 @@ val LAST_REVERSE = Q.store_thm("LAST_REVERSE",
 
 val last_drop = Q.store_thm ("last_drop",
   `!l n. n < LENGTH l ==> (LAST (DROP n l) = LAST l)`,
-  Induct >> rw [] >>
+  Induct >> rw [DROP_def] >>
   Q.SPEC_THEN`l`FULL_STRUCT_CASES_TAC list_CASES >> fs [] >>
   FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) [] >> SRW_TAC[] [] >>
   FIRST_X_ASSUM (Q.SPEC_THEN `n - 1` MP_TAC) >>

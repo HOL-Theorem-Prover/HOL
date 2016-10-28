@@ -146,10 +146,6 @@ val s2n_n2s = Q.store_thm("s2n_n2s",
 
 (* ......................................................................... *)
 
-val MAP_TAKE = Q.prove(
-  `!f n l. MAP f (TAKE n l) = TAKE n (MAP f l)`,
-  Induct_on `l` \\ SRW_TAC [] []);
-
 val REVERSE_LASTN = Q.prove(
   `!n l. n <= LENGTH l ==> (LASTN n l = REVERSE (TAKE n (REVERSE l)))`,
   SRW_TAC [] [FIRSTN_REVERSE]);

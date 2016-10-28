@@ -303,7 +303,7 @@ val testbit = Q.store_thm("testbit",
   lrw [zero_extend_def, testbit_def, field_def, fixwidth_def, shiftr_def,
        listTheory.PAD_LEFT, arithmeticTheory.SUB_LEFT_SUB, bitTheory.SUC_SUB]
   \\ Induct_on `v`
-  \\ lrw []
+  \\ lrw [listTheory.DROP_def]
   \\ lfs [arithmeticTheory.NOT_LESS, arithmeticTheory.NOT_LESS_EQUAL,
           arithmeticTheory.ADD1]
   >- (`b = LENGTH v` by decide_tac \\ lrw [])
