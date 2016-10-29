@@ -631,11 +631,14 @@ val MOD_ss = let
              rewrs = [MODEQ_NUMERAL, MODEQ_MOD, MODEQ_0]}
   val RSD_ss = relsimp_ss rsd
   val congs = SSFRAG {dprocs = [], ac = [], rewrs = [],
-                      congs = [MODEQ_PLUS_CONG, MODEQ_MULT_CONG],
+                      congs = [MODEQ_PLUS_CONG, MODEQ_MULT_CONG, MODEQ_SUC_CONG,
+                               MODEQ_EXP_CONG],
                       filter = NONE, convs = [], name = NONE}
 in
   merge_ss [RSD_ss, congs] |> name_ss "MOD_ss"
 end
+
+val _ = BasicProvers.augment_srw_ss [MOD_ss]
 
 (* ----------------------------------------------------------------------
     ARITH_NORM_ss

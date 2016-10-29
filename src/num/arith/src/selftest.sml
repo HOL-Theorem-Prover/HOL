@@ -125,4 +125,22 @@ in
   else die "FAILED!\n"
 end handle _ => die "FAILED!\n"
 
+val _ = tprint "Testing MOD_ss with SUC"
+val _ = let
+  val t = ``(SUC (x MOD 3) + 10) MOD 3``
+  val result = SIMP_CONV ss [] t
+in
+  if aconv (rhs (concl result)) ``(SUC x + 1) MOD 3`` then OK()
+  else die "FAILED!\n"
+end
+
+val _ = tprint "Testing MOD_ss with EXP"
+val _ = let
+  val t = ``((x MOD 3 + 10) ** 10 + 10) MOD 3``
+  val result = SIMP_CONV ss [] t
+in
+  if aconv (rhs (concl result)) ``((x + 1) ** 10 + 1) MOD 3`` then OK()
+  else die "FAILED!\n"
+end
+
 val _ = Process.exit Process.success

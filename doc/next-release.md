@@ -60,6 +60,12 @@ Incompatibilities:
     The “temporary” versions of these functions (*e.g.*, `Parse.Unicode.temp_uoverload_on`) have also been removed, analogously.
     The `Parse.Unicode.unicode_version` function remains, as does its temporary counterpart.
 
+*   The simpset fragment `MOD_ss` has been added to the standard stateful simpset.
+    This fragment does smart things with terms involving (natural number) `MOD`, allowing, for example, something like `((7 + y) * 100 + 5 * (z MOD 6)) MOD 6` to simplify to `((1 + y) * 4 + 5 * z) MOD 6`.
+    If this breaks existing proofs in a script file, the fragment can be removed (for the rest of the execution of the script) with the command
+
+        val _ = diminish_srw_ss ["MOD_ss"]
+
 * * * * *
 
 <div class="footer">

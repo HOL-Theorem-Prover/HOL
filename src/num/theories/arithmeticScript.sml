@@ -3810,6 +3810,26 @@ val MODEQ_REFL = store_thm ("MODEQ_REFL",
   ``!x. MODEQ n x x``,
   SRW_TAC [][MODEQ_THM, GSYM NOT_ZERO_LT_ZERO]);
 
+val MODEQ_SUC_CONG = store_thm("MODEQ_SUC_CONG",
+  ``MODEQ n x y ==> MODEQ n (SUC x) (SUC y)``,
+  SRW_TAC[][ADD1] >> irule MODEQ_PLUS_CONG >> SRW_TAC [][MODEQ_REFL]);
+
+val MODEQ_EXP_CONG = store_thm(
+  "MODEQ_EXP_CONG",
+  ``MODEQ n x y ==> MODEQ n (x EXP e) (y EXP e)``,
+  Q.ID_SPEC_TAC `e` >>
+  INDUCT_TAC >> SRW_TAC[][EXP, MODEQ_REFL] >>
+  irule MODEQ_MULT_CONG >> SRW_TAC[][])
+
+val EXP_MOD = save_thm(
+  "EXP_MOD",
+  MODEQ_EXP_CONG |> SIMP_RULE bool_ss [GSYM NOT_LT_ZERO_EQ_ZERO,
+                                       ASSUME ``0 < n``, MODEQ_THM]
+                 |> INST [``y:num`` |-> ``x MOD n``, ``e1:num`` |-> ``e:num``,
+                          ``e2:num`` |-> ``e:num``]
+                 |> SIMP_RULE bool_ss [MATCH_MP MOD_MOD (ASSUME ``0 < n``)]
+                 |> SYM |> DISCH_ALL)
+
 val MODEQ_SYM = store_thm ("MODEQ_SYM",
   ``MODEQ n x y <=> MODEQ n y x``,
   SRW_TAC [][MODEQ_THM] THEN METIS_TAC []);
@@ -3849,7 +3869,7 @@ val modss = simpLib.add_relsimp {refl = MODEQ_REFL, trans = MODEQ_TRANS,
                                  rewrs = [MODEQ_NUMERAL, MODEQ_MOD, MODEQ_0]}
                                 (srw_ss()) ++
             SSFRAG {dprocs = [], ac = [], rewrs = [],
-                    congs = [MODEQ_PLUS_CONG, MODEQ_MULT_CONG],
+                    congs = [MODEQ_PLUS_CONG, MODEQ_MULT_CONG, MODEQ_SUC_CONG],
                     filter = NONE, convs = [], name = NONE}
 
 val result1 =
