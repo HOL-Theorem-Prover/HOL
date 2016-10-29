@@ -1,5 +1,6 @@
 open HolKernel Parse BasicProvers boolLib numLib metisLib simpLib
 open combinTheory arithmeticTheory prim_recTheory
+local open listTheory listSimps pred_setSimps TotalDefn in end
 
 local
    open listTheory
@@ -2123,14 +2124,14 @@ val EXISTS_SEG = Q.store_thm ("EXISTS_SEG",
 
 val EXISTS_TAKE_IMP = Q.store_thm ("EXISTS_TAKE_IMP",
    `!l m P. EXISTS P (TAKE m l) ==> EXISTS P l`,
-   EVERY [Induct, ASM_SIMP_TAC list_ss [],
+   EVERY [Induct, ASM_SIMP_TAC list_ss [listTheory.TAKE_def],
      REPEAT GEN_TAC, COND_CASES_TAC,
      ASM_SIMP_TAC list_ss [EXISTS_DEF],
      PROVE_TAC [EXISTS_DEF] ]) ;
 
 val EXISTS_DROP_IMP = Q.store_thm ("EXISTS_DROP_IMP",
    `!l m P. EXISTS P (DROP m l) ==> EXISTS P l`,
-   EVERY [Induct, ASM_SIMP_TAC list_ss [],
+   EVERY [Induct, ASM_SIMP_TAC list_ss [listTheory.DROP_def],
      REPEAT GEN_TAC, COND_CASES_TAC,
      ASM_SIMP_TAC list_ss [EXISTS_DEF],
      PROVE_TAC [EXISTS_DEF] ]) ;
@@ -2192,13 +2193,13 @@ val MEM_SEG = Q.store_thm ("MEM_SEG",
 
 val MEM_TAKE_IMP = Q.store_thm ("MEM_TAKE_IMP",
    `!l m x.  MEM x (TAKE m l) ==> MEM x l`,
-   EVERY [Induct, ASM_SIMP_TAC list_ss [],
+   EVERY [Induct, ASM_SIMP_TAC list_ss [listTheory.TAKE_def],
      REPEAT GEN_TAC, COND_CASES_TAC,
      ASM_SIMP_TAC list_ss [], PROVE_TAC [] ]) ;
 
 val MEM_DROP_IMP = Q.store_thm ("MEM_DROP_IMP",
    `!l m x.  MEM x (DROP m l) ==> MEM x l`,
-   EVERY [Induct, ASM_SIMP_TAC list_ss [],
+   EVERY [Induct, ASM_SIMP_TAC list_ss [listTheory.DROP_def],
      REPEAT GEN_TAC, COND_CASES_TAC,
      ASM_SIMP_TAC list_ss [], PROVE_TAC [] ]) ;
 
@@ -2962,7 +2963,7 @@ val EVERY_REPLICATE = Q.store_thm ("EVERY_REPLICATE",
 
 val ALL_DISTINCT_DROP = Q.store_thm("ALL_DISTINCT_DROP",
    `!ls n. ALL_DISTINCT ls ==> ALL_DISTINCT (DROP n ls)`,
-   Induct >> simp[] >> rw[])
+   Induct >> simp[DROP_def] >> rw[])
 
 val MAP_SND_FILTER_NEQ = Q.store_thm("MAP_SND_FILTER_NEQ",
    `MAP SND (FILTER (\(x,y). y <> z) ls) = FILTER ($<> z) (MAP SND ls)`,
@@ -2998,7 +2999,7 @@ val MAP_FST_funs = Q.store_thm("MAP_FST_funs",
 val TAKE_PRE_LENGTH = Q.store_thm("TAKE_PRE_LENGTH",
    `!ls. ls <> [] ==> (TAKE (PRE (LENGTH ls)) ls = FRONT ls)`,
    Induct
-   THEN SRW_TAC[][LENGTH_NIL]
+   THEN SRW_TAC[][LENGTH_NIL,TAKE_def]
    THEN FULL_SIMP_TAC(srw_ss())[FRONT_DEF,PRE_SUB1])
 
 val DROP_LENGTH_NIL_rwt = Q.store_thm("DROP_LENGTH_NIL_rwt",
@@ -3008,7 +3009,7 @@ val DROP_LENGTH_NIL_rwt = Q.store_thm("DROP_LENGTH_NIL_rwt",
 val DROP_EL_CONS = Q.store_thm("DROP_EL_CONS",
    `!ls n. n < LENGTH ls ==> (DROP n ls = EL n ls :: DROP (n + 1) ls)`,
    Induct
-   >> rw[EL_CONS,PRE_SUB1]
+   >> rw[EL_CONS,PRE_SUB1,DROP_def]
    >> FULL_SIMP_TAC arith_ss []
    >> `0 < n` by RW_TAC arith_ss []
    >> rw [EL_CONS, PRE_SUB1]);
@@ -3194,7 +3195,7 @@ val take_drop_partition = Q.store_thm ("take_drop_partition",
    Induct_on `m`
    >> rw []
    >> Cases_on `l`
-   >> rw []
+   >> rw [TAKE_def]
    THEN1 RW_TAC arith_ss []
    >> FIRST_X_ASSUM (MP_TAC o Q.SPECL [`n - 1`, `t`])
    >> rw []
