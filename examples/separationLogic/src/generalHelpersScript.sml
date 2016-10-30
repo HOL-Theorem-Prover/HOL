@@ -762,10 +762,8 @@ ASM_SIMP_TAC std_ss [LIST_TO_FUN_THM]);
 
 
 val NULL_DROP = store_thm ("NULL_DROP",
-``!n l. NULL (DROP n l) = (LENGTH l <= n)``,
-Induct_on `l` THEN (
-   ASM_SIMP_TAC (list_ss++boolSimps.LIFT_COND_ss) []
-));
+  ``!n l. NULL (DROP n l) = (LENGTH l <= n)``,
+  Induct_on `l` >> simp[] >> Cases_on `n` >> simp[])
 
 
 val DROP_TAKE_PRE_LENGTH = store_thm ("DROP_TAKE_PRE_LENGTH",
