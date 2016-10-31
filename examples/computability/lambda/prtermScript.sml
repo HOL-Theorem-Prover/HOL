@@ -3,9 +3,10 @@ open HolKernel boolLib bossLib Parse
 open prnlistTheory numpairTheory pure_dBTheory
 open enumerationsTheory primrecfnsTheory
 open rich_listTheory arithmeticTheory
-open reductionEval churchnumTheory churchboolTheory
 
-open lcsymtacs
+open reductionEval churchnumTheory churchboolTheory normal_orderTheory
+     dnoreductTheory stepsTheory recursivefnsTheory recfunsTheory
+     churchlistTheory churchDBTheory
 
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
@@ -1019,7 +1020,6 @@ val pr_noreduct_def = Define`
       (λabs. 3 * abs ' 1 + 2)
 `;
 
-open normal_orderTheory
 val fv_exists = prove(
   ``∀d. ∃n. ∀m. n < m ⇒ m ∉ dFV d``,
   Induct THEN SRW_TAC [][] THENL [
@@ -1033,7 +1033,6 @@ val bnf_noreduct = prove(
   ``¬bnf t ⇒ ∃u. noreduct t = SOME u``,
   Cases_on `noreduct t` THEN FULL_SIMP_TAC (srw_ss())[noreduct_bnf]);
 
-open dnoreductTheory
 val pr_noreduct_correct = store_thm(
   "pr_noreduct_correct",
   ``pr_noreduct [n] =
@@ -1108,7 +1107,6 @@ val primrec_steps = Store_thm(
   SRW_TAC [][LET_THM, primrec_rules] THEN
   intro prCOND THEN SRW_TAC [][prCn1, prpred, combinTheory.o_ABS_R, prdbnf]);
 
-open stepsTheory
 val pr_steps_correct = store_thm(
   "pr_steps_correct",
   ``pr_steps [n; t] = dBnum (fromTerm (steps n (toTerm (numdB t))))``,
@@ -1138,7 +1136,6 @@ val pr_steps_correct = store_thm(
     bnf_of (requires minimisation - and thus recursivefnsTheory
    ---------------------------------------------------------------------- *)
 
-open recursivefnsTheory
 val pr_steps_pred_def = Define`
   pr_steps_pred =
   Cn (pr2 $-) [K 1; Cn pr_bnf [pr_steps]]
@@ -1206,7 +1203,6 @@ val recbnf_of_correct = Store_thm(
     METIS_TAC [optionTheory.option_CASES, bnf_steps]
   ]);
 
-open recfunsTheory
 val pr_is_ichurch_def = Define`
   pr_is_ichurch = prtermrec0
                       (Cn pr_eq [proj 0; K 1])
@@ -1482,7 +1478,6 @@ val nel_proj = prove(
     SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []
   ]);
 
-open churchlistTheory churchDBTheory
 val cnlist_of_def = Define`
   cnlist_of =
   LAM "ns" (VAR "ns"
