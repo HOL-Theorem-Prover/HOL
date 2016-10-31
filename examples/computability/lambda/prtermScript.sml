@@ -150,8 +150,7 @@ val TAKE_EQ_GENLIST = store_thm(
   "TAKE_EQ_GENLIST",
   ``n ≤ LENGTH l ⇒ (TAKE n l = GENLIST (λi. l ' i) n)``,
   Q.ID_SPEC_TAC `n` THEN Induct_on `l` THEN SRW_TAC [][GENLIST] THEN
-  `∃m. n = SUC m` by (Cases_on `n` THEN SRW_TAC [][]) THEN
-  FULL_SIMP_TAC (srw_ss()) [GENLIST_CONS, combinTheory.o_DEF]);
+  Cases_on `n` >> simp[GENLIST_CONS, combinTheory.o_DEF]);
 
 val swap2_def = Define`
   (swap2 f [] = f [0; 0]) ∧
