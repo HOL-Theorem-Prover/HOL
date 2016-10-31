@@ -58,6 +58,7 @@ val list_rel_lem1 = Q.prove (
      unabbrev_all_tac >>
      decide_tac));
 
+val _ = augment_srw_ss [rewrites [listTheory.TAKE_def]]
 val list_rel_lem2 = Q.prove (
 `!l l'.
   LIST_REL f l l'
