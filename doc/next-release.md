@@ -66,6 +66,15 @@ Incompatibilities:
 
         val _ = diminish_srw_ss ["MOD_ss"]
 
+*   The rewrites `listTheory.TAKE_def` and `listTheory.DROP_def` have been removed from the standard stateful simpset.
+    These rewrites introduce conditional expressions that are often painful to work with.
+    Other more specific rewrites have been added to the simpset in their place.
+    If the old behaviour is desired in a script file, the following will restore it
+
+        val _ = augment_srw_ss
+                 [rewrites [listTheory.DROP_def, listTheory.TAKE_def]]
+
+
 * * * * *
 
 <div class="footer">
