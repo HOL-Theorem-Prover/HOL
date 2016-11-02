@@ -1208,13 +1208,22 @@ fun gparents thyname =
 
 fun gancestry thynm =
   let
-    fun recurse acc worklist =
+    fun recurse acc seen worklist =
       case worklist of
           [] => acc
         | thynm :: rest =>
-            recurse (HOLset.add(acc,thynm)) (gparents thynm @ rest)
+          let
+            val unseen_ps =
+                List.filter (fn thy => not (HOLset.member(seen,thy)))
+                            (gparents thynm)
+          in
+            recurse (HOLset.add(acc,thynm))
+                    (HOLset.addList(seen, unseen_ps))
+                    (unseen_ps @ rest)
+          end
+    val empty_strset = HOLset.empty String.compare
   in
-    recurse (HOLset.empty String.compare) (gparents thynm)
+    recurse empty_strset empty_strset (gparents thynm)
   end
 
 fun merge_into (gname, (G, gset)) =
