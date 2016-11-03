@@ -43,6 +43,9 @@ val _ = if Type.compare(Parse.Type`:u8`, u8) <> EQUAL then die "FAILED!"
 val _ = tprint "Printing abbreviated word types"
 val _ = if type_to_string u8 = ":u8" then OK() else die "FAILED!"
 
+val _ = tprint "Parsing Datatype with bool-array type"
+val _ = (Datatype`mytype = mytype_con (bool[3])`; OK()) handle HOL_ERR _ => die "FAILED"
+
 fun test (c:conv) tm = let
   val rt = Timer.startRealTimer ()
   val res = Lib.total c tm

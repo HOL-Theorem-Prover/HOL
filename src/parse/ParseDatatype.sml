@@ -148,6 +148,12 @@ in
           in
             (adv,BT_Ident idstr,locn')
           end
+        else if Char.isDigit c0 then
+          let
+            val (adv,idstr,locn') = consume Char.isDigit (qb,s,locn)
+          in
+            (adv, BT_Ident idstr, locn')
+          end
         else if cmem c0 "()[]" then consume_n 1 (qb,s,locn)
         else if String.isPrefix "<|" s then consume_n 2 (qb,s,locn)
         else if String.isPrefix "|>" s then consume_n 2 (qb,s,locn)
