@@ -19,6 +19,7 @@ val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 fun SUBGOAL q = REVERSE (q by ALL_TAC)
 
+val _ = augment_srw_ss [rewrites [listTheory.DROP_def, listTheory.TAKE_def]]
 
 val align_blast = blastLib.BBLAST_PROVE
   ``(a && 3w = 0w) ==> ((a - w && 3w = 0w) = (w && 3w = 0w:word64))``
@@ -2080,4 +2081,3 @@ val _ = save_thm("lisp_inv_stack",lisp_inv_stack);
 
 
 val _ = export_theory();
-
