@@ -1222,4 +1222,23 @@ val subspt_LN = Q.store_thm(
   `(subspt LN sp <=> T) /\ (subspt sp LN <=> (domain sp = {}))`,
   simp[subspt_def, pred_setTheory.EXTENSION]);
 
+val filter_v_def = Define `
+  (filter_v f LN = LN) /\
+  (filter_v f (LS x) = if f x then LS x else LN) /\
+  (filter_v f (BN l r) = mk_BN (filter_v f l) (filter_v f r)) /\
+  (filter_v f (BS l x r) =
+    if f x then mk_BS (filter_v f l) x (filter_v f r)
+           else mk_BN (filter_v f l) (filter_v f r))`;
+
+val lookup_filter_v = store_thm("lookup_filter_v",
+  ``!k t f. lookup k (filter_v f t) = case lookup k t of
+      | SOME v => if f v then SOME v else NONE
+      | NONE => NONE``,
+  ho_match_mp_tac (theorem "lookup_ind") \\ rpt strip_tac \\
+  rw [filter_v_def, lookup_mk_BS, lookup_mk_BN] \\ rw [lookup_def] \\ fs []);
+
+val wf_filter_v = store_thm("wf_filter_v",
+  ``!t f. wf t ==> wf (filter_v f t)``,
+  Induct \\ rw [filter_v_def, wf_def, mk_BN_thm, mk_BS_thm] \\ fs []);
+
 val _ = export_theory();
