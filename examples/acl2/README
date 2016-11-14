@@ -30,6 +30,15 @@ However, you may wish to execute
 in your bash shell, in case you are using tools in any way other than
 through tests/doit.
 
-Originbally created by Mike Gordon (16 Dec, 2005)
+-----------------------------------------------------------------
+An unpublished paper written in 2006 by Gordon, Hunt and Kaufmann
+entitled "Connecting HOL to ACL2" can be found at
+http://www.cl.cam.ac.uk/users/mjcg/hol2acl2/papers/HOL-ACL2-V2.4.pdf.
+There is also website associated with this paper:
+http://www.cl.cam.ac.uk/~mjcg/hol2acl2/backpack/GordonHuntKaufmannPaper.html.
+-----------------------------------------------------------------
+
+Originally created by Mike Gordon (16 Dec, 2005)
 Updated by Matt Kaufmann (8 Dec, 2008; 19 Aug, 2010)
-Updated by Mike Gordon and Matt Kaufmann (Sep 9, 2010)
+Updated by Mike Gordon and Matt Kaufmann (9 Sep, 2010)
+Updated by Mike Gordon (14 Nov, 2016)
