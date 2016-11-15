@@ -72,6 +72,7 @@ fun add_sptree_compset compset =
       sptreeTheory.lookup_compute,
       sptreeTheory.lrnext_thm,
       sptreeTheory.map_def,
+      sptreeTheory.filter_v_def,
       sptreeTheory.mk_BN_def,
       sptreeTheory.mk_BS_def,
       sptreeTheory.mk_wf_def,
