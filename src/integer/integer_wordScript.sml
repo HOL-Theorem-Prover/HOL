@@ -1301,7 +1301,11 @@ val overflow = Q.store_thm("overflow",
 
 (* ------------------------------------------------------------------------- *)
 
-val i2w_w2n = store_thm("i2w_w2n[simp]",
+val i2w_w2n_w2w = Q.store_thm("i2w_w2n_w2w[simp]",
+  `!w : 'a word. i2w (&w2n w) = w2w w : 'b word`,
+  fs [i2w_def, wordsTheory.w2w_def]);
+
+val i2w_w2n = store_thm("i2w_w2n",
   ``i2w (&w2n w) = w``,
   fs [i2w_def]);
 

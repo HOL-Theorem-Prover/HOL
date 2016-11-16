@@ -1244,10 +1244,10 @@ val WORD_ss = rewrites [word_extract_def, word_slice_def,word_bits_def,
 
 val FIELD_WORD_TAC = RW_TAC (fcp_ss++WORD_ss++ARITH_ss) []
 
-val w2w_id = Q.store_thm("w2w_id",
+val w2w_id = Q.store_thm("w2w_id[simp]",
   `!w:'a word. w2w w:'a word = w`, FIELD_WORD_TAC)
 
-val sw2sw_id = Q.store_thm("sw2sw_id",
+val sw2sw_id = Q.store_thm("sw2sw_id[simp]",
   `!w:'a word. sw2sw w:'a word = w`, FIELD_WORD_TAC)
 
 val w2w_w2w = Q.store_thm("w2w_w2w",
