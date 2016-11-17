@@ -1,411 +1,31 @@
 
 open HolKernel Parse boolLib bossLib;
-val _ = new_theory "x64_multiword";
+val _ = new_theory "any_multiword";
 
-infix \\ val op \\ = op THEN;
-open multiwordTheory;
+open multiwordTheory helperLib;
+open wordsTheory wordsLib addressTheory arithmeticTheory listTheory pairSyntax;
+open addressTheory pairTheory set_sepTheory rich_listTheory integerTheory;
+
+val REV = Tactical.REVERSE;
 
 fun tailrec_define name tm =
   tailrecLib.tailrec_define_from_step name tm NONE;
 
-fun here name = let
-  fun rename_conv tm = let
-    val (v,x) = dest_abs tm
-    val (name,ty) = dest_var v
-    val toks = String.tokens (fn c => c = #"@") name
-    in if 1 < length toks then
-         ALPHA_CONV (mk_var(last toks,ty)) tm
-       else NO_CONV tm end
-  val tm = fetch "-" name
-    |> REWRITE_RULE [addressTheory.GUARD_def]
-    |> CONV_RULE (DEPTH_CONV rename_conv)
-    |> concl |> rand |> rand
-  val name = "temp_" ^ name
-  val names = name ^ "_def, _,\n     " ^ name ^ "_pre_def, _"
-  val _ = print ("\n\nval ("^names^") = \n  tailrec_define \"" ^
-                 name ^ "\" ``")
-  val str = "\n(" ^ term_to_string tm ^ ")\n" ^ type_to_string (type_of tm)
-  val str = String.translate(fn s => if s = #"\n" then "\n    " else implode [s]) str
-  val _ = print str
-  val _ = print "``;\n\n"
-  in () end;
-
-val _ = set_trace "Unicode" 0;
-
-open progTheory;
-open decompilerLib x64_codegenLib prog_x64Lib x64_compilerLib;
-open wordsTheory wordsLib addressTheory arithmeticTheory listTheory pairSyntax;
-open addressTheory pairTheory set_sepTheory rich_listTheory integerTheory;
-open prog_x64_extraTheory x64_encodeLib
-
-val REV = Tactical.REVERSE;
-
-fun x64_decompile name asm =
-  decompile_strings x64_tools_64 name (assemble asm);
-
-fun x64_decompile_no_status name asm =
-  decompile_strings x64_tools_64_no_status name (assemble asm);
-
 (*
 
-  This file produces a single blob of x64 machine code that is able to
-  do any of the following arithmetic functions over arbitrary size
-  integer inputs.
+  This file produces functions that resemble machine code. The
+  functions perform any of the following arithmetic functions over
+  arbitrary size integer inputs.
 
     + - * div mod compare print-to-dec
 
-  This blob of machine code takes to bignum integers as input. Each
-  bignum is represented as a pointer to the payload in memory (an
-  unsigned natural number) and a word containing the length of the
-  payload and the sign of the integer.
-
-    input 1: R13 hold pointer, R0 holds length with sign
-    input 2: R14 hold pointer, R1 holds length with sign
-
-  The name of the operation to perform is held in R2 and a pointer to
-  free space is given in R15. Output is produced where at the location
-  given in R15 and the length of this output is returned in R0 with
-  sign --- the exception is comparison which returns its full result
-  in R0.
-
 *)
-
-(*
-
-  All of the functions in this file operate over three arrays (bignum
-  payloads): two read-only that may alias and one which is the result
-  of the arithemtic operation. In order to make it easy to write
-  functions that operate over these we will provide an abstraction
-  which makes it clear that we are operating over such arrays. We
-  provide two indexes into each array.
-
-*)
-
-val array64_def = Define `
-  (array64 a [] = emp) /\
-  (array64 a (x::xs) = one (a:word64,x:word64) * array64 (a+8w) xs)`;
-
-val bignum_mem_def = Define `
-  bignum_mem p dm m xa xs ya ys za zs =
-    (xa && 7w = 0w) /\ (ya && 7w = 0w) /\ (za && 7w = 0w) /\
-    if xa = ya then
-      (xs = ys) /\ (array64 xa xs * array64 za zs * p) (fun2set (m,dm))
-    else
-      (array64 xa xs * array64 ya ys * array64 za zs * p) (fun2set (m,dm))`
-
-val zBIGNUMS_def = Define `
-  zBIGNUMS (xa,xs,ya,ys,za,zs,p) =
-    SEP_EXISTS dm m.
-      zMEMORY64 dm m * zR 13w xa * zR 14w ya * zR 15w za *
-      cond (bignum_mem p dm m xa xs ya ys za zs)`;
-
-(* read xs, ys, zs *)
-
-val LESS_LENGTH_IMP = prove(
-  ``!xs n. n < LENGTH xs ==>
-           ?ys1 ys2. (xs = ys1 ++ EL n xs :: ys2) /\ (LENGTH ys1 = n)``,
-  Induct \\ FULL_SIMP_TAC (srw_ss()) []
-  \\ Cases_on `n` \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_NIL]
-  \\ REPEAT STRIP_TAC \\ RES_TAC
-  \\ Q.LIST_EXISTS_TAC [`h::ys1`,`ys2`]
-  \\ FULL_SIMP_TAC std_ss [APPEND,LENGTH] \\ METIS_TAC []);
-
-val array64_APPEND = prove(
-  ``!xs a ys.
-      array64 a (xs ++ ys) = array64 a xs * array64 (a + n2w (8 * LENGTH xs)) ys``,
-  Induct \\ FULL_SIMP_TAC (srw_ss()) [array64_def,SEP_CLAUSES,STAR_ASSOC,
-      MULT_CLAUSES,word_arith_lemma1,AC ADD_COMM ADD_ASSOC]);
-
-val ALIGNED64_IMP = prove(
-  ``(x && 7w = 0w:word64) ==> (x + 8w * w && 7w = 0w) /\
-                              (8w * w + x && 7w = 0w)``,
-  blastLib.BBLAST_TAC);
-
-val FINISH_TAC =
-  FULL_SIMP_TAC std_ss [array64_APPEND,array64_def]
-  \\ Cases_on `xa = ya` \\ FULL_SIMP_TAC std_ss [GSYM word_mul_n2w,
-        AC WORD_ADD_COMM WORD_ADD_ASSOC,GSYM w2w_def,
-        AC WORD_MULT_COMM WORD_MULT_ASSOC,w2w_id]
-  \\ SEP_R_TAC
-
-val x0 = ("r0",``0w:word4``,``r0:word64``);
-val x1 = ("r1",``1w:word4``,``r1:word64``);
-val x2 = ("r2",``2w:word4``,``r2:word64``);
-val x3 = ("r3",``3w:word4``,``r3:word64``);
-val x7 = ("r7",``7w:word4``,``r7:word64``);
-val x8 = ("r8",``8w:word4``,``r8:word64``);
-val x9 = ("r9",``9w:word4``,``r9:word64``);
-val x10 = ("r10",``10w:word4``,``r10:word64``);
-val x11 = ("r11",``11w:word4``,``r11:word64``);
-val x12 = ("r12",``12w:word4``,``r12:word64``);
-
-fun READ_XS (at,wt,rt) (a,w,r) = let
-  val ((th,_,_),_) = x64_spec_memory64 (x64_encode ("mov "^at^",[8*"^a^"+r13]"))
-  val th = SPEC_FRAME_RULE th ``zR 14w ya * zR 15w za *
-                 cond (bignum_mem p df f xa xs ya ys za zs /\
-                       w2n (^r:word64) < LENGTH xs)``
-  val th = Q.INST [`r13`|->`xa`] th
-  val (th,goal) = SPEC_WEAKEN_RULE th
-    ``let ^rt = (EL (w2n ^r) xs) in zPC (rip + 0x5w) * zR ^wt ^rt * zR ^w ^r *
-      zBIGNUMS (xa,xs,ya,ys,za,zs,p)``
-  val lemma = prove(goal,
-    FULL_SIMP_TAC (std_ss++sep_cond_ss) [zBIGNUMS_def,SEP_CLAUSES,
-      cond_STAR,SEP_IMP_def,SEP_EXISTS_THM,LET_DEF] \\ REPEAT STRIP_TAC
-    \\ Q.LIST_EXISTS_TAC [`df`,`f`] \\ FULL_SIMP_TAC std_ss []
-    \\ `f (8w * ^r + xa) = EL (w2n (^r:word64)) xs` by ALL_TAC
-    \\ FULL_SIMP_TAC (std_ss++star_ss) []
-    \\ FULL_SIMP_TAC std_ss [bignum_mem_def]
-    \\ IMP_RES_TAC LESS_LENGTH_IMP
-    \\ Q.ABBREV_TAC `y = EL (w2n (^r:word64)) xs` \\ POP_ASSUM (K ALL_TAC)
-    \\ FINISH_TAC)
-  val th = MP th lemma
-  val th = th |> Q.GEN `df` |> Q.GEN `f` |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
-  val (th,goal) = SPEC_STRENGTHEN_RULE th
-    ``zPC rip * zR ^wt ^rt * zR ^w ^r *
-      zBIGNUMS (xa,xs,ya,ys,za,zs,p) * cond (w2n ^r < LENGTH xs)``
-  val lemma = prove(goal,
-    FULL_SIMP_TAC (std_ss++sep_cond_ss) [zBIGNUMS_def,SEP_CLAUSES,
-      cond_STAR,SEP_IMP_def,SEP_EXISTS_THM] \\ REPEAT STRIP_TAC
-    \\ Q.LIST_EXISTS_TAC [`m`,`dm`] \\ FULL_SIMP_TAC (std_ss++star_ss) []
-    \\ FULL_SIMP_TAC std_ss [bignum_mem_def]
-    \\ IMP_RES_TAC ALIGNED64_IMP \\ FULL_SIMP_TAC std_ss [GSYM word_mul_n2w]
-    \\ IMP_RES_TAC LESS_LENGTH_IMP
-    \\ Q.ABBREV_TAC `y = EL (w2n (^r:word64)) xs` \\ POP_ASSUM (K ALL_TAC)
-    \\ FINISH_TAC)
-  val th = MP th lemma
-  val th = th |> INST [``rip:word64``|->``p:word64``]
-  val _ = add_compiled [SIMP_RULE std_ss [LET_DEF] th]
-  in th end;
-
-val mov_r10_xs = READ_XS x0 x10;
-val mov_r10_xs = READ_XS x2 x10;
-val mov_r10_xs = READ_XS x2 x11;
-val mov_r11_xs = READ_XS x8 x11;
-val mov_r12_xs = READ_XS x8 x12;
-
-val r8_el_r10_xs = READ_XS x8 x10;
-
-val _ = add_decompiled("r8_el_r10_xs",r8_el_r10_xs,5,SOME 5);
-
-fun READ_YS (at,wt,rt) (a,w,r) = let
-  val ((th,_,_),_) = x64_spec_memory64 (x64_encode ("mov "^at^",[8*"^a^"+r14]"))
-  val th = SPEC_FRAME_RULE th ``zR 13w xa * zR 15w za *
-                 cond (bignum_mem p df f xa xs ya ys za zs /\
-                       w2n (^r:word64) < LENGTH ys)``
-  val th = Q.INST [`r14`|->`ya`] th
-  val (th,goal) = SPEC_WEAKEN_RULE th
-    ``let ^rt = (EL (w2n ^r) ys) in zPC (rip + 0x4w) * zR ^wt ^rt * zR ^w ^r *
-      zBIGNUMS (xa,xs,ya,ys,za,zs,p)``
-  val lemma = prove(goal,
-    FULL_SIMP_TAC (std_ss++sep_cond_ss) [zBIGNUMS_def,SEP_CLAUSES,
-      cond_STAR,SEP_IMP_def,SEP_EXISTS_THM,LET_DEF] \\ REPEAT STRIP_TAC
-    \\ Q.LIST_EXISTS_TAC [`df`,`f`] \\ FULL_SIMP_TAC std_ss []
-    \\ `f (8w * ^r + ya) = EL (w2n (^r:word64)) ys` by ALL_TAC
-    \\ FULL_SIMP_TAC (std_ss++star_ss) []
-    \\ FULL_SIMP_TAC std_ss [bignum_mem_def]
-    \\ IMP_RES_TAC LESS_LENGTH_IMP
-    \\ Q.ABBREV_TAC `y = EL (w2n (^r:word64)) ys` \\ POP_ASSUM (K ALL_TAC)
-    \\ Cases_on `xs = ys` \\ FULL_SIMP_TAC std_ss []
-    \\ FINISH_TAC)
-  val th = MP th lemma
-  val th = th |> Q.GEN `df` |> Q.GEN `f` |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
-  val (th,goal) = SPEC_STRENGTHEN_RULE th
-    ``zPC rip * zR ^wt ^rt * zR ^w ^r *
-      zBIGNUMS (xa,xs,ya,ys,za,zs,p) * cond (w2n ^r < LENGTH ys)``
-  val lemma = prove(goal,
-    FULL_SIMP_TAC (std_ss++sep_cond_ss) [zBIGNUMS_def,SEP_CLAUSES,
-      cond_STAR,SEP_IMP_def,SEP_EXISTS_THM] \\ REPEAT STRIP_TAC
-    \\ Q.LIST_EXISTS_TAC [`m`,`dm`] \\ FULL_SIMP_TAC (std_ss++star_ss) []
-    \\ FULL_SIMP_TAC std_ss [bignum_mem_def]
-    \\ IMP_RES_TAC ALIGNED64_IMP \\ FULL_SIMP_TAC std_ss [GSYM word_mul_n2w]
-    \\ IMP_RES_TAC LESS_LENGTH_IMP
-    \\ Q.ABBREV_TAC `y = EL (w2n (^r:word64)) ys` \\ POP_ASSUM (K ALL_TAC)
-    \\ Cases_on `xs = ys` \\ FULL_SIMP_TAC std_ss []
-    \\ FINISH_TAC)
-  val th = MP th lemma
-  val th = th |> INST [``rip:word64``|->``p:word64``]
-  val _ = add_compiled [SIMP_RULE std_ss [LET_DEF] th]
-  in th end;
-
-val mov_r10_ys = READ_YS x1 x10;
-val mov_r10_ys = READ_YS x2 x10;
-val mov_r11_ys = READ_YS x2 x11;
-val mov_r12_ys = READ_YS x2 x12;
-val mov_r11_ys = READ_YS x8 x11;
-val mov_r12_ys = READ_YS x8 x12;
-val mov_r11_ys = READ_YS x9 x11;
-val mov_r12_ys = READ_YS x9 x12;
-
-val r8_el_r10_ys = READ_YS x8 x10;
-val r9_el_r10_ys = READ_YS x9 x10;
-
-val _ = add_decompiled("r8_el_r10_ys",r8_el_r10_ys,4,SOME 4);
-val _ = add_decompiled("r9_el_r10_ys",r9_el_r10_ys,4,SOME 4);
-
-fun READ_ZS (at,wt,rt) (a,w,r) = let
-  val ((th,_,_),_) = x64_spec_memory64 (x64_encode ("mov "^at^",[8*"^a^"+r15]"))
-  val th = SPEC_FRAME_RULE th ``zR 13w xa * zR 14w ya *
-                 cond (bignum_mem p df f xa xs ya ys za zs /\
-                       w2n (^r:word64) < LENGTH zs)``
-  val th = Q.INST [`r15`|->`za`] th
-  val (th,goal) = SPEC_WEAKEN_RULE th
-    ``let ^rt = (EL (w2n ^r) zs) in zPC (rip + 0x4w) * zR ^wt ^rt * zR ^w ^r *
-      zBIGNUMS (xa,xs,ya,ys,za,zs,p)``
-  val lemma = prove(goal,
-    FULL_SIMP_TAC (std_ss++sep_cond_ss) [zBIGNUMS_def,SEP_CLAUSES,
-      cond_STAR,SEP_IMP_def,SEP_EXISTS_THM,LET_DEF] \\ REPEAT STRIP_TAC
-    \\ Q.LIST_EXISTS_TAC [`df`,`f`] \\ FULL_SIMP_TAC std_ss []
-    \\ `f (8w * ^r + za) = EL (w2n (^r:word64)) zs` by ALL_TAC
-    \\ FULL_SIMP_TAC (std_ss++star_ss) []
-    \\ FULL_SIMP_TAC std_ss [bignum_mem_def]
-    \\ IMP_RES_TAC LESS_LENGTH_IMP
-    \\ Q.ABBREV_TAC `y = EL (w2n (^r:word64)) zs` \\ POP_ASSUM (K ALL_TAC)
-    \\ FINISH_TAC)
-  val th = MP th lemma
-  val th = th |> Q.GEN `df` |> Q.GEN `f` |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
-  val (th,goal) = SPEC_STRENGTHEN_RULE th
-    ``zPC rip * zR ^wt ^rt * zR ^w ^r *
-      zBIGNUMS (xa,xs,ya,ys,za,zs,p) * cond (w2n ^r < LENGTH zs)``
-  val lemma = prove(goal,
-    FULL_SIMP_TAC (std_ss++sep_cond_ss) [zBIGNUMS_def,SEP_CLAUSES,
-      cond_STAR,SEP_IMP_def,SEP_EXISTS_THM] \\ REPEAT STRIP_TAC
-    \\ Q.LIST_EXISTS_TAC [`m`,`dm`] \\ FULL_SIMP_TAC (std_ss++star_ss) []
-    \\ FULL_SIMP_TAC std_ss [bignum_mem_def]
-    \\ IMP_RES_TAC ALIGNED64_IMP \\ FULL_SIMP_TAC std_ss [GSYM word_mul_n2w]
-    \\ IMP_RES_TAC LESS_LENGTH_IMP
-    \\ Q.ABBREV_TAC `y = EL (w2n (^r:word64)) zs` \\ POP_ASSUM (K ALL_TAC)
-    \\ FINISH_TAC)
-  val th = MP th lemma
-  val th = th |> INST [``rip:word64``|->``p:word64``]
-  val _ = add_compiled [SIMP_RULE std_ss [LET_DEF] th]
-  in th end;
-
-val mov_r10_zs = READ_ZS x0 x10;
-val mov_r10_zs = READ_ZS x1 x10;
-val mov_r10_zs = READ_ZS x2 x10;
-val mov_r10_zs = READ_ZS x3 x10;
-val mov_r10_zs = READ_ZS x3 x10;
-val mov_r11_zs = READ_ZS x3 x11;
-val mov_r12_zs = READ_ZS x3 x12;
-val mov_r10_zs = READ_ZS x8 x10;
-val mov_r11_zs = READ_ZS x8 x11;
-val mov_r12_zs = READ_ZS x8 x12;
-val mov_r10_zs = READ_ZS x9 x10;
-
-val r8_el_r10_zs = READ_ZS x8 x10;
-val r9_el_r10_zs = READ_ZS x9 x10;
-
-val _ = add_decompiled("r8_el_r10_zs",r8_el_r10_zs,4,SOME 4);
-val _ = add_decompiled("r9_el_r10_zs",r9_el_r10_zs,4,SOME 4);
-
-(* write zs *)
-
-fun WRITE_ZS (at,wt,rt) (a,w,r) = let
-  val ((th,_,_),_) = x64_spec_memory64 (x64_encode ("mov [8*"^a^"+r15],"^at))
-  val th = SPEC_FRAME_RULE th ``zR 13w xa * zR 14w ya *
-                 cond (bignum_mem p df f xa xs ya ys za zs /\
-                       w2n (^r:word64) < LENGTH zs)``
-  val th = Q.INST [`r15`|->`za`] th
-  val (th,goal) = SPEC_WEAKEN_RULE th
-    ``let zs = LUPDATE ^rt (w2n ^r) zs in
-        zPC (rip + 0x4w) * zR ^wt ^rt * zR ^w ^r *
-        zBIGNUMS (xa,xs,ya,ys,za,zs,p)``
-  val lemma = prove(goal,
-    FULL_SIMP_TAC (std_ss++sep_cond_ss) [zBIGNUMS_def,SEP_CLAUSES,
-      cond_STAR,SEP_IMP_def,SEP_EXISTS_THM,LET_DEF] \\ REPEAT STRIP_TAC
-    \\ Q.LIST_EXISTS_TAC [`df`,`(0x8w * ^r + za =+ ^rt) f`]
-    \\ FULL_SIMP_TAC (std_ss++star_ss) []
-    \\ FULL_SIMP_TAC std_ss [bignum_mem_def]
-    \\ IMP_RES_TAC LESS_LENGTH_IMP
-    \\ POP_ASSUM (ASSUME_TAC o GSYM)
-    \\ Q.ABBREV_TAC `y = EL (w2n ^r) zs` \\ POP_ASSUM (K ALL_TAC)
-    \\ FULL_SIMP_TAC std_ss [APPEND,GSYM APPEND_ASSOC,LUPDATE_LENGTH]
-    \\ FULL_SIMP_TAC std_ss [array64_APPEND,array64_def]
-    \\ `za + n2w (8 * LENGTH ys1) = 0x8w * ^r + za` by ALL_TAC THEN1
-      (Cases_on `^r` \\ FULL_SIMP_TAC (srw_ss()) [word_mul_n2w])
-    \\ FULL_SIMP_TAC std_ss []
-    \\ Cases_on `xa = ya` \\ FULL_SIMP_TAC std_ss [] \\ SEP_WRITE_TAC
-    \\ FULL_SIMP_TAC (std_ss++star_ss) [])
-  val th = MP th lemma
-  val th = th |> Q.GEN `df` |> Q.GEN `f` |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
-  val (th,goal) = SPEC_STRENGTHEN_RULE th
-    ``zPC rip * zR ^wt ^rt * zR ^w ^r *
-      zBIGNUMS (xa,xs,ya,ys,za,zs,p) * cond (w2n ^r < LENGTH zs)``
-  val lemma = prove(goal,
-    FULL_SIMP_TAC (std_ss++sep_cond_ss) [zBIGNUMS_def,SEP_CLAUSES,
-      cond_STAR,SEP_IMP_def,SEP_EXISTS_THM] \\ REPEAT STRIP_TAC
-    \\ Q.LIST_EXISTS_TAC [`m`,`dm`] \\ FULL_SIMP_TAC (std_ss++star_ss) []
-    \\ FULL_SIMP_TAC std_ss [bignum_mem_def]
-    \\ IMP_RES_TAC ALIGNED64_IMP \\ FULL_SIMP_TAC std_ss [GSYM word_mul_n2w]
-    \\ IMP_RES_TAC LESS_LENGTH_IMP
-    \\ Q.ABBREV_TAC `y = EL (w2n (^r:word64)) zs` \\ POP_ASSUM (K ALL_TAC)
-    \\ FINISH_TAC)
-  val th = MP th lemma
-  val th = th |> INST [``rip:word64``|->``p:word64``]
-  val _ = add_compiled [SIMP_RULE std_ss [LET_DEF] th]
-  in th end;
-
-val mov_zs_r10 = WRITE_ZS x0 x10;
-val mov_zs_r11 = WRITE_ZS x0 x11;
-val mov_zs_r12 = WRITE_ZS x0 x12;
-val mov_zs_r10 = WRITE_ZS x1 x10;
-val mov_zs_r11 = WRITE_ZS x1 x11;
-val mov_zs_r12 = WRITE_ZS x1 x12;
-val mov_zs_r10 = WRITE_ZS x2 x10;
-val mov_zs_r10 = WRITE_ZS x7 x10;
-val mov_zs_r10 = WRITE_ZS x8 x10;
-val mov_zs_r11 = WRITE_ZS x8 x11;
-val mov_zs_r12 = WRITE_ZS x8 x12;
-
-val _ = add_decompiled("lupdate_r10_zs_with_r8",mov_zs_r10,4,SOME 4);
-
-(* swap xs ys *)
-
-val SWAP_XS_YS = let
-  val ((th,_,_),_) = x64_spec_memory64 (x64_encode ("xchg r13,r14"))
-  val th = SPEC_FRAME_RULE th ``zR 15w za * zMEMORY64 df f *
-                 cond (bignum_mem p df f xa xs ya ys za zs)``
-  val th = Q.INST [`r13`|->`xa`,`r14`|->`ya`] th
-  val (th,goal) = SPEC_WEAKEN_RULE th
-    ``zPC (rip + 0x3w) * zBIGNUMS (ya,ys,xa,xs,za,zs,p)``
-  val lemma = prove(goal,
-    FULL_SIMP_TAC (std_ss++sep_cond_ss) [zBIGNUMS_def,SEP_CLAUSES,
-      cond_STAR,SEP_IMP_def,SEP_EXISTS_THM,LET_DEF] \\ REPEAT STRIP_TAC
-    \\ Q.LIST_EXISTS_TAC [`df`,`f`]
-    \\ FULL_SIMP_TAC (std_ss++star_ss) []
-    \\ FULL_SIMP_TAC std_ss [bignum_mem_def]
-    \\ SRW_TAC [] [] \\ FULL_SIMP_TAC (std_ss++star_ss) []);
-  val th = MP th lemma
-  val th = th |> Q.GEN `df` |> Q.GEN `f` |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
-  val (th,goal) = SPEC_STRENGTHEN_RULE th
-    ``zPC rip * zBIGNUMS (xa,xs,ya,ys,za,zs,p)``
-  val lemma = prove(goal,
-    FULL_SIMP_TAC (std_ss++sep_cond_ss) [zBIGNUMS_def,SEP_CLAUSES,
-      cond_STAR,SEP_IMP_def,SEP_EXISTS_THM] \\ REPEAT STRIP_TAC
-    \\ Q.LIST_EXISTS_TAC [`m`,`dm`] \\ FULL_SIMP_TAC (std_ss++star_ss) [])
-  val th = MP th lemma
-  val th = th |> INST [``rip:word64``|->``p:word64``]
-  val _ = add_compiled [SIMP_RULE std_ss [LET_DEF] th]
-  in th end;
-
-val _ = print_compiler_grammar ();
 
 (* compare *)
 
-val (res,x64_cmp_def,x64_cmp_pre_def) = x64_compile `
-  x64_cmp (r10:word64,xs:word64 list,ys:word64 list) =
-    if r10 = 0w then (r10,xs,ys) else
-      let r10 = r10 - 1w in
-      let r8 = EL (w2n r10) xs in
-      let r9 = EL (w2n r10) ys in
-        if r8 = r9 then
-          x64_cmp (r10,xs,ys)
-        else if r8 <+ r9 then let r10 = 1w in (r10,xs,ys)
-                         else let r10 = 2w in (r10,xs,ys)`
-
-val (temp_x64_cmp_def, _,
-     temp_x64_cmp_pre_def, _) =
-  tailrec_define "temp_x64_cmp" ``
+val (x64_cmp_def, _,
+     x64_cmp_pre_def, _) =
+  tailrec_define "x64_cmp" ``
     (\(r10,xs,ys).
       if r10 = 0x0w then (INR (r10,xs,ys),T)
       else
@@ -418,19 +38,12 @@ val (temp_x64_cmp_def, _,
            if r8 = r9 then (INL (r10,xs,ys),cond)
            else if r8 <+ r9 then (let r10 = 0x1w in (INR (r10,xs,ys),cond))
            else (let r10 = 0x2w in (INR (r10,xs,ys),cond))))
-    :Zimm # Zimm list # Zimm list ->
-     (Zimm # Zimm list # Zimm list + Zimm # Zimm list # Zimm list) # bool``;
+    :word64 # word64 list # word64 list ->
+     (word64 # word64 list # word64 list + word64 # word64 list # word64 list) # bool``;
 
-val (res,x64_compare_def,x64_compare_pre_def) = x64_compile `
-  x64_compare (r10:word64,r11,xs:word64 list,ys:word64 list) =
-    if r10 <+ r11 then let r10 = 1w in (r10,xs,ys) else
-    if r11 <+ r10 then let r10 = 2w in (r10,xs,ys) else
-      let (r10,xs,ys) = x64_cmp (r10,xs,ys) in
-        (r10,xs,ys)`
-
-val (temp_x64_compare_def, _,
-     temp_x64_compare_pre_def, _) =
-  tailrec_define "temp_x64_compare" ``
+val (x64_compare_def, _,
+     x64_compare_pre_def, _) =
+  tailrec_define "x64_compare" ``
     (\(r10,r11,xs,ys).
       if r10 <+ r11 then (let r10 = 0x1w in (INR (r10,xs,ys),T))
       else if r11 <+ r10 then (let r10 = 0x2w in (INR (r10,xs,ys),T))
@@ -439,32 +52,16 @@ val (temp_x64_compare_def, _,
          let (r10,xs,ys) = x64_cmp (r10,xs,ys)
          in
            (INR (r10,xs,ys),cond)))
-    :Zimm # Zimm # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm list # Zimm list + Zimm # Zimm list # Zimm list) #
+    :word64 # word64 # word64 list # word64 list ->
+     (word64 # word64 # word64 list # word64 list + word64 # word64 list # word64 list) #
      bool``;
 
 val x64_header_def = Define `
   x64_header (s,xs:word64 list) = n2w (LENGTH xs * 2) + if s then 1w else 0w:word64`;
 
-val (x64_icompare_res,x64_icompare_def,x64_icompare_pre_def) = x64_compile `
-  x64_icompare (r10:word64,r11,xs:word64 list,ys:word64 list) =
-    if r10 && 1w = 0w then
-      if ~(r11 && 1w = 0w) then let r10 = 2w in (r10,xs,ys) else
-        let r10 = r10 >>> 1 in
-        let r11 = r11 >>> 1 in
-        let (r10,xs,ys) = x64_compare (r10,r11,xs,ys) in
-          (r10,xs,ys)
-    else
-      if r11 && 1w = 0w then let r10 = 1w in (r10,xs,ys) else
-        let r10 = r10 >>> 1 in
-        let r11 = r11 >>> 1 in
-        let (r10,xs,ys) = x64_compare (r10,r11,xs,ys) in
-          if r10 = 0w then (r10,xs,ys) else
-            let r10 = r10 ?? 3w in (r10,xs,ys)`
-
-val (temp_x64_icompare_def, _,
-     temp_x64_icompare_pre_def, _) =
-  tailrec_define "temp_x64_icompare" ``
+val (x64_icompare_def, _,
+     x64_icompare_pre_def, _) =
+  tailrec_define "x64_icompare" ``
     (\(r10,r11,xs,ys).
       if r10 && 0x1w = 0x0w then
         if r11 && 0x1w = 0x0w then
@@ -485,8 +82,8 @@ val (temp_x64_icompare_def, _,
          in
            if r10 = 0x0w then (INR (r10,xs,ys),cond)
            else (let r10 = r10 ?? 0x3w in (INR (r10,xs,ys),cond))))
-    :Zimm # Zimm # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm list # Zimm list + Zimm # Zimm list # Zimm list) #
+    :word64 # word64 # word64 list # word64 list ->
+     (word64 # word64 # word64 list # word64 list + word64 # word64 list # word64 list) #
      bool``;
 
 val cmp2w_def = Define `
@@ -572,40 +169,9 @@ val x64_icompare_thm = prove(
 
 (* addition *)
 
-val (res,x64_add_loop_def) = x64_decompile_no_status "x64_add_loop" `
-      inc r1
-      inc r2
-      add r1,0
-      jmp L2
-  L1: insert r8_el_r10_xs
-      insert r9_el_r10_ys
-      adc r8,r9
-      insert lupdate_r10_zs_with_r8
-      lea r10,[r10+1]
-  L2: loop L1
-      mov r1,r2
-      mov r9,0
-      jmp L4
-  L3: insert r8_el_r10_xs
-      adc r8,r9
-      insert lupdate_r10_zs_with_r8
-      lea r10,[r10+1]
-  L4: loop L3
-      jnb L5
-      mov r8,1
-      insert lupdate_r10_zs_with_r8
-      lea r10,[r10+1]
-  L5:`
-
-val (x64_add_res,x64_add_def) = x64_decompile "x64_add" `
-  sub r2,r1
-  insert x64_add_loop`;
-
-val _ = add_compiled [x64_add_res]
-
-val (temp_x64_add_loop2_def, _,
-     temp_x64_add_loop2_pre_def, _) =
-  tailrec_define "temp_x64_add_loop2" ``
+val (x64_add_loop2_def, _,
+     x64_add_loop2_pre_def, _) =
+  tailrec_define "x64_add_loop2" ``
     (\(r1,r8,r9,r10,xs,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs).
       if r1 = 0x1w then
         (let r1 = 0x0w
@@ -616,36 +182,36 @@ val (temp_x64_add_loop2_def, _,
          let cond = w2n r10 < LENGTH xs in
          let r8 = EL (w2n r10) xs in
          let cond = cond /\ z_cf <> NONE in
-         let z_zf = SOME (r8 + r9 + n2w (bool2num (THE z_cf)) = 0x0w) in
-         let z_sf = SOME (word_msb (r8 + r9 + n2w (bool2num (THE z_cf)))) in
+         let z_zf = SOME (r8 + r9 + n2w (b2n (THE z_cf)) = 0x0w) in
+         let z_sf = SOME (word_msb (r8 + r9 + n2w (b2n (THE z_cf)))) in
          let z_pf =
                SOME
-                 (byte_parity (w2w (r8 + r9 + n2w (bool2num (THE z_cf))):word8))
+                 (K T (w2w (r8 + r9 + n2w (b2n (THE z_cf))):word8))
          in
          let z_of = NONE in
          let z_cf' =
                SOME
                  (18446744073709551616 <=
-                  w2n r8 + w2n r9 + bool2num (THE z_cf))
+                  w2n r8 + w2n r9 + b2n (THE z_cf))
          in
          let z_af = NONE in
-         let r8 = r8 + r9 + n2w (bool2num (THE z_cf)) in
+         let r8 = r8 + r9 + n2w (b2n (THE z_cf)) in
          let cond = cond /\ w2n r10 < LENGTH zs in
          let zs = LUPDATE r8 (w2n r10) zs in
          let r10 = r10 + 0x1w
          in
            (INL (r1,r8,r9,r10,xs,z_af,z_cf',z_of,z_pf,z_sf,z_zf,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm list # bool option # bool option
-     # bool option # bool option # bool option # bool option # Zimm
-     list -> (Zimm # Zimm # Zimm # Zimm # Zimm list # bool option #
+    :word64 # word64 # word64 # word64 # word64 list # bool option # bool option
+     # bool option # bool option # bool option # bool option # word64
+     list -> (word64 # word64 # word64 # word64 # word64 list # bool option #
      bool option # bool option # bool option # bool option # bool
-     option # Zimm list + Zimm # Zimm # Zimm # Zimm # Zimm list # bool
+     option # word64 list + word64 # word64 # word64 # word64 # word64 list # bool
      option # bool option # bool option # bool option # bool option #
-     bool option # Zimm list) # bool``;
+     bool option # word64 list) # bool``;
 
-val (temp_x64_add_loop1_def, _,
-     temp_x64_add_loop1_pre_def, _) =
-  tailrec_define "temp_x64_add_loop1" ``
+val (x64_add_loop1_def, _,
+     x64_add_loop1_pre_def, _) =
+  tailrec_define "x64_add_loop1" ``
     (\(r1,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs).
       if r1 = 0x1w then
         (let r1 = 0x0w
@@ -658,52 +224,52 @@ val (temp_x64_add_loop1_def, _,
          let cond = cond /\ w2n r10 < LENGTH ys in
          let r9 = EL (w2n r10) ys in
          let cond = cond /\ z_cf <> NONE in
-         let z_zf = SOME (r8 + r9 + n2w (bool2num (THE z_cf)) = 0x0w) in
-         let z_sf = SOME (word_msb (r8 + r9 + n2w (bool2num (THE z_cf)))) in
+         let z_zf = SOME (r8 + r9 + n2w (b2n (THE z_cf)) = 0x0w) in
+         let z_sf = SOME (word_msb (r8 + r9 + n2w (b2n (THE z_cf)))) in
          let z_pf =
                SOME
-                 (byte_parity (w2w (r8 + r9 + n2w (bool2num (THE z_cf))):word8))
+                 (K T (w2w (r8 + r9 + n2w (b2n (THE z_cf))):word8))
          in
          let z_of = NONE in
          let z_cf' =
                SOME
                  (18446744073709551616 <=
-                  w2n r8 + w2n r9 + bool2num (THE z_cf))
+                  w2n r8 + w2n r9 + b2n (THE z_cf))
          in
          let z_af = NONE in
-         let r8 = r8 + r9 + n2w (bool2num (THE z_cf)) in
+         let r8 = r8 + r9 + n2w (b2n (THE z_cf)) in
          let cond = cond /\ w2n r10 < LENGTH zs in
          let zs = LUPDATE r8 (w2n r10) zs in
          let r10 = r10 + 0x1w
          in
            (INL (r1,r8,r9,r10,xs,ys,z_af,z_cf',z_of,z_pf,z_sf,z_zf,zs),
             cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # bool option #
+    :word64 # word64 # word64 # word64 # word64 list # word64 list # bool option #
      bool option # bool option # bool option # bool option # bool
-     option # Zimm list -> (Zimm # Zimm # Zimm # Zimm # Zimm list #
-     Zimm list # bool option # bool option # bool option # bool option
-     # bool option # bool option # Zimm list + Zimm # Zimm # Zimm #
-     Zimm # Zimm list # Zimm list # bool option # bool option # bool
-     option # bool option # bool option # bool option # Zimm list) #
+     option # word64 list -> (word64 # word64 # word64 # word64 # word64 list #
+     word64 list # bool option # bool option # bool option # bool option
+     # bool option # bool option # word64 list + word64 # word64 # word64 #
+     word64 # word64 list # word64 list # bool option # bool option # bool
+     option # bool option # bool option # bool option # word64 list) #
      bool``;
 
-val (temp_x64_add_loop_def, _,
-     temp_x64_add_loop_pre_def, _) =
-  tailrec_define "temp_x64_add_loop" ``
+val (x64_add_loop_def, _,
+     x64_add_loop_pre_def, _) =
+  tailrec_define "x64_add_loop" ``
     (\(r1,r2,r8,r9,r10,xs,ys,zs).
       (let z_zf = SOME (r1 + 0x1w = 0x0w) in
        let z_sf = SOME (word_msb (r1 + 0x1w)) in
-       let z_pf = SOME (byte_parity (w2w (r1 + 0x1w):word8)) in
+       let z_pf = SOME (K T (w2w (r1 + 0x1w):word8)) in
        let z_af = SOME T in
        let r1 = r1 + 0x1w in
        let z_zf = SOME (r2 + 0x1w = 0x0w) in
        let z_sf = SOME (word_msb (r2 + 0x1w)) in
-       let z_pf = SOME (byte_parity (w2w (r2 + 0x1w):word8)) in
+       let z_pf = SOME (K T (w2w (r2 + 0x1w):word8)) in
        let z_af = SOME T in
        let r2 = r2 + 0x1w in
        let z_zf = SOME (r1 = 0x0w) in
        let z_sf = SOME (word_msb r1) in
-       let z_pf = SOME (byte_parity (w2w r1:word8)) in
+       let z_pf = SOME (K T (w2w r1:word8)) in
        let z_of = SOME F in
        let z_cf = SOME (18446744073709551616 <= w2n r1) in
        let z_af = SOME T in
@@ -740,15 +306,20 @@ val (temp_x64_add_loop_def, _,
             in
               (INR (r1,r2,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs),
                cond))))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm
-     list -> (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list
-     # Zimm list + Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm
+    :word64 # word64 # word64 # word64 # word64 # word64 list # word64 list # word64
+     list -> (word64 # word64 # word64 # word64 # word64 # word64 list # word64 list
+     # word64 list + word64 # word64 # word64 # word64 # word64 # word64 list # word64
      list # bool option # bool option # bool option # bool option #
-     bool option # bool option # Zimm list) # bool``;
+     bool option # bool option # word64 list) # bool``;
 
-val (temp_x64_add_def, _,
-     temp_x64_add_pre_def, _) =
-  tailrec_define "temp_x64_add" ``
+val x64_add_loop_def =
+  LIST_CONJ [x64_add_loop_def,x64_add_loop_pre_def,
+             x64_add_loop1_def,x64_add_loop1_pre_def,
+             x64_add_loop2_def,x64_add_loop2_pre_def]
+
+val (x64_add_def, _,
+     x64_add_pre_def, _) =
+  tailrec_define "x64_add" ``
     (\(r1,r2,r8,r9,r10,xs,ys,zs).
       (let r2 = r2 - r1 in
        let cond = x64_add_loop_pre (r1,r2,r8,r9,r10,xs,ys,zs) in
@@ -756,9 +327,9 @@ val (temp_x64_add_def, _,
              x64_add_loop (r1,r2,r8,r9,r10,xs,ys,zs)
        in
          (INR (r1,r2,r8,r9,r10,xs,ys,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list +
-      Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list)
+    :word64 # word64 # word64 # word64 # word64 # word64 list # word64 list # word64 list ->
+     (word64 # word64 # word64 # word64 # word64 # word64 list # word64 list # word64 list +
+      word64 # word64 # word64 # word64 # word64 # word64 list # word64 list # word64 list)
      # bool``;
 
 val SNOC_INTRO = prove(
@@ -772,7 +343,7 @@ val LUPDATE_SNOC = prove(
   ONCE_REWRITE_TAC [EQ_SYM_EQ]
   \\ FULL_SIMP_TAC std_ss [SNOC_APPEND,GSYM APPEND_ASSOC,APPEND,LUPDATE_LENGTH]);
 
-val bool2num_thm = prove(``!b. bool2num b = b2n b``,Cases \\ EVAL_TAC)
+val b2n_thm = prove(``!b. b2n b = b2n b``,Cases \\ EVAL_TAC)
 
 val x64_add_loop1_thm = prove(
   ``!xs ys zs xs1 ys1 zs1 xs2 ys2 zs2
@@ -822,7 +393,7 @@ val x64_add_loop1_thm = prove(
   THEN1 (FULL_SIMP_TAC (srw_ss()) [] \\ DECIDE_TAC)
   \\ STRIP_TAC \\ ASM_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_SNOC,ADD1,AC ADD_COMM ADD_ASSOC,mw_add_def,
-       LET_DEF,single_add_def,bool2num_thm]
+       LET_DEF,single_add_def,b2n_thm]
   \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
   \\ FULL_SIMP_TAC (srw_ss()) [b2w_def] \\ DECIDE_TAC)
 
@@ -870,7 +441,7 @@ val x64_add_loop2_thm = prove(
   THEN1 (FULL_SIMP_TAC (srw_ss()) [] \\ DECIDE_TAC)
   \\ STRIP_TAC \\ ASM_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_SNOC,ADD1,AC ADD_COMM ADD_ASSOC,mw_add_def,
-       LET_DEF,single_add_def,bool2num_thm]
+       LET_DEF,single_add_def,b2n_thm]
   \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
   \\ FULL_SIMP_TAC (srw_ss()) [b2w_def]
   \\ DECIDE_TAC)
@@ -884,7 +455,7 @@ val x64_add_thm = prove(
         (x64_add (n2w (LENGTH ys),n2w (LENGTH xs),0w,0w,0w,xs,ys,zs++zs2) =
           (r1',r2',r8',r9',n2w (LENGTH (mw_addv xs ys F)),xs,ys,mw_addv xs ys F ++ zs2))``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC LESS_EQ_LENGTH
-  \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND,x64_add_def,LET_DEF]
+  \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND,x64_add_def,x64_add_pre_def,LET_DEF]
   \\ ONCE_REWRITE_TAC [ADD_COMM]
   \\ SIMP_TAC std_ss [GSYM word_add_n2w,WORD_ADD_SUB]
   \\ ONCE_REWRITE_TAC [x64_add_loop_def]
@@ -942,48 +513,9 @@ val x64_add_thm = prove(
 
 (* subtraction *)
 
-val (res,x64_sub_loop_def) = x64_decompile_no_status "x64_sub_loop" `
-      inc r1
-      inc r2
-      sub r8,0
-      jmp L2
-  L1: insert r8_el_r10_xs
-      insert r9_el_r10_ys
-      sbb r8,r9
-      insert lupdate_r10_zs_with_r8
-      lea r10,[r10+1]
-  L2: loop L1
-      mov r1,r2
-      mov r9,0
-      jmp L4
-  L3: insert r8_el_r10_xs
-      sbb r8,r9
-      insert lupdate_r10_zs_with_r8
-      lea r10,[r10+1]
-  L4: loop L3`
-
-val (x64_fix_res,x64_fix_def) = x64_decompile "x64_fix" `
-  L1: test r10,r10
-      je L2
-      dec r10
-      insert r8_el_r10_zs
-      test r8,r8
-      je L1
-      inc r10
-  L2: `
-
-val _ = add_compiled [x64_fix_res];
-
-val (x64_sub_res,x64_sub_def) = x64_decompile "x64_sub" `
-      sub r2,r1
-      insert x64_sub_loop
-      insert x64_fix`
-
-val _ = add_compiled [x64_sub_res]
-
-val (temp_x64_sub_loop2_def, _,
-     temp_x64_sub_loop2_pre_def, _) =
-  tailrec_define "temp_x64_sub_loop2" ``
+val (x64_sub_loop2_def, _,
+     x64_sub_loop2_pre_def, _) =
+  tailrec_define "x64_sub_loop2" ``
     (\(r1,r8,r9,r10,xs,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs).
       if r1 = 0x1w then
         (let r1 = 0x0w
@@ -994,33 +526,33 @@ val (temp_x64_sub_loop2_def, _,
          let cond = w2n r10 < LENGTH xs in
          let r8 = EL (w2n r10) xs in
          let cond = cond /\ z_cf <> NONE in
-         let z_zf = SOME (r8 = r9 + n2w (bool2num (THE z_cf))) in
-         let z_sf = SOME (word_msb (r8 - (r9 + n2w (bool2num (THE z_cf)))))
+         let z_zf = SOME (r8 = r9 + n2w (b2n (THE z_cf))) in
+         let z_sf = SOME (word_msb (r8 - (r9 + n2w (b2n (THE z_cf)))))
          in
          let z_pf =
                SOME
-                 (byte_parity (w2w (r8 - (r9 + n2w (bool2num (THE z_cf)))):word8))
+                 (K T (w2w (r8 - (r9 + n2w (b2n (THE z_cf)))):word8))
          in
          let z_of = SOME T in
-         let z_cf' = SOME (w2n r8 < w2n r9 + bool2num (THE z_cf)) in
+         let z_cf' = SOME (w2n r8 < w2n r9 + b2n (THE z_cf)) in
          let z_af = SOME T in
-         let r8 = r8 - (r9 + n2w (bool2num (THE z_cf))) in
+         let r8 = r8 - (r9 + n2w (b2n (THE z_cf))) in
          let cond = cond /\ w2n r10 < LENGTH zs in
          let zs = LUPDATE r8 (w2n r10) zs in
          let r10 = r10 + 0x1w
          in
            (INL (r1,r8,r9,r10,xs,z_af,z_cf',z_of,z_pf,z_sf,z_zf,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm list # bool option # bool option
-     # bool option # bool option # bool option # bool option # Zimm
-     list -> (Zimm # Zimm # Zimm # Zimm # Zimm list # bool option #
+    :word64 # word64 # word64 # word64 # word64 list # bool option # bool option
+     # bool option # bool option # bool option # bool option # word64
+     list -> (word64 # word64 # word64 # word64 # word64 list # bool option #
      bool option # bool option # bool option # bool option # bool
-     option # Zimm list + Zimm # Zimm # Zimm # Zimm # Zimm list # bool
+     option # word64 list + word64 # word64 # word64 # word64 # word64 list # bool
      option # bool option # bool option # bool option # bool option #
-     bool option # Zimm list) # bool``;
+     bool option # word64 list) # bool``;
 
-val (temp_x64_sub_loop1_def, _,
-     temp_x64_sub_loop1_pre_def, _) =
-  tailrec_define "temp_x64_sub_loop1" ``
+val (x64_sub_loop1_def, _,
+     x64_sub_loop1_pre_def, _) =
+  tailrec_define "x64_sub_loop1" ``
     (\(r1,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs).
       if r1 = 0x1w then
         (let r1 = 0x0w
@@ -1033,49 +565,49 @@ val (temp_x64_sub_loop1_def, _,
          let cond = cond /\ w2n r10 < LENGTH ys in
          let r9 = EL (w2n r10) ys in
          let cond = cond /\ z_cf <> NONE in
-         let z_zf = SOME (r8 = r9 + n2w (bool2num (THE z_cf))) in
-         let z_sf = SOME (word_msb (r8 - (r9 + n2w (bool2num (THE z_cf)))))
+         let z_zf = SOME (r8 = r9 + n2w (b2n (THE z_cf))) in
+         let z_sf = SOME (word_msb (r8 - (r9 + n2w (b2n (THE z_cf)))))
          in
          let z_pf =
                SOME
-                 (byte_parity (w2w (r8 - (r9 + n2w (bool2num (THE z_cf)))):word8))
+                 (K T (w2w (r8 - (r9 + n2w (b2n (THE z_cf)))):word8))
          in
          let z_of = SOME T in
-         let z_cf' = SOME (w2n r8 < w2n r9 + bool2num (THE z_cf)) in
+         let z_cf' = SOME (w2n r8 < w2n r9 + b2n (THE z_cf)) in
          let z_af = SOME T in
-         let r8 = r8 - (r9 + n2w (bool2num (THE z_cf))) in
+         let r8 = r8 - (r9 + n2w (b2n (THE z_cf))) in
          let cond = cond /\ w2n r10 < LENGTH zs in
          let zs = LUPDATE r8 (w2n r10) zs in
          let r10 = r10 + 0x1w
          in
            (INL (r1,r8,r9,r10,xs,ys,z_af,z_cf',z_of,z_pf,z_sf,z_zf,zs),
             cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # bool option #
+    :word64 # word64 # word64 # word64 # word64 list # word64 list # bool option #
      bool option # bool option # bool option # bool option # bool
-     option # Zimm list -> (Zimm # Zimm # Zimm # Zimm # Zimm list #
-     Zimm list # bool option # bool option # bool option # bool option
-     # bool option # bool option # Zimm list + Zimm # Zimm # Zimm #
-     Zimm # Zimm list # Zimm list # bool option # bool option # bool
-     option # bool option # bool option # bool option # Zimm list) #
+     option # word64 list -> (word64 # word64 # word64 # word64 # word64 list #
+     word64 list # bool option # bool option # bool option # bool option
+     # bool option # bool option # word64 list + word64 # word64 # word64 #
+     word64 # word64 list # word64 list # bool option # bool option # bool
+     option # bool option # bool option # bool option # word64 list) #
      bool``;
 
-val (temp_x64_sub_loop_def, _,
-     temp_x64_sub_loop_pre_def, _) =
-  tailrec_define "temp_x64_sub_loop" ``
+val (x64_sub_loop_def, _,
+     x64_sub_loop_pre_def, _) =
+  tailrec_define "x64_sub_loop" ``
     (\(r1,r2,r8,r9,r10,xs,ys,zs).
       (let z_zf = SOME (r1 + 0x1w = 0x0w) in
        let z_sf = SOME (word_msb (r1 + 0x1w)) in
-       let z_pf = SOME (byte_parity (w2w (r1 + 0x1w):word8)) in
+       let z_pf = SOME (K T (w2w (r1 + 0x1w):word8)) in
        let z_af = SOME T in
        let r1 = r1 + 0x1w in
        let z_zf = SOME (r2 + 0x1w = 0x0w) in
        let z_sf = SOME (word_msb (r2 + 0x1w)) in
-       let z_pf = SOME (byte_parity (w2w (r2 + 0x1w):word8)) in
+       let z_pf = SOME (K T (w2w (r2 + 0x1w):word8)) in
        let z_af = SOME T in
        let r2 = r2 + 0x1w in
        let z_zf = SOME (r8 = 0x0w) in
        let z_sf = SOME (word_msb (r8 - 0x0w)) in
-       let z_pf = SOME (byte_parity (w2w (r8 - 0x0w):word8)) in
+       let z_pf = SOME (K T (w2w (r8 - 0x0w):word8)) in
        let z_of =
              SOME
                ((word_msb r8 <=/=> word_msb (0x0w:word64)) /\
@@ -1105,15 +637,20 @@ val (temp_x64_sub_loop_def, _,
        in
          (INR (r1,r2,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs),
           cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm
-     list -> (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list
-     # Zimm list + Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm
+    :word64 # word64 # word64 # word64 # word64 # word64 list # word64 list # word64
+     list -> (word64 # word64 # word64 # word64 # word64 # word64 list # word64 list
+     # word64 list + word64 # word64 # word64 # word64 # word64 # word64 list # word64
      list # bool option # bool option # bool option # bool option #
-     bool option # bool option # Zimm list) # bool``;
+     bool option # bool option # word64 list) # bool``;
 
-val (temp_x64_fix_def, _,
-     temp_x64_fix_pre_def, _) =
-  tailrec_define "temp_x64_fix" ``
+val x64_sub_loop_def =
+  LIST_CONJ [x64_sub_loop_def,x64_sub_loop_pre_def,
+             x64_sub_loop1_def,x64_sub_loop1_pre_def,
+             x64_sub_loop2_def,x64_sub_loop2_pre_def]
+
+val (x64_fix_def, _,
+     x64_fix_pre_def, _) =
+  tailrec_define "x64_fix" ``
     (\(r8,r10,zs).
       if r10 = 0x0w then (INR (r8,r10,zs),T)
       else
@@ -1123,12 +660,15 @@ val (temp_x64_fix_def, _,
          in
            if r8 = 0x0w then (INL (r8,r10,zs),cond)
            else (let r10 = r10 + 0x1w in (INR (r8,r10,zs),cond))))
-    :Zimm # Zimm # Zimm list ->
-     (Zimm # Zimm # Zimm list + Zimm # Zimm # Zimm list) # bool``;
+    :word64 # word64 # word64 list ->
+     (word64 # word64 # word64 list + word64 # word64 # word64 list) # bool``;
 
-val (temp_x64_sub_def, _,
-     temp_x64_sub_pre_def, _) =
-  tailrec_define "temp_x64_sub" ``
+val x64_fix_def =
+  LIST_CONJ [x64_fix_def,x64_fix_pre_def]
+
+val (x64_sub_def, _,
+     x64_sub_pre_def, _) =
+  tailrec_define "x64_sub" ``
     (\(r1,r2,r8,r9,r10,xs,ys,zs).
       (let r2 = r2 - r1 in
        let cond = x64_sub_loop_pre (r1,r2,r8,r9,r10,xs,ys,zs) in
@@ -1139,10 +679,13 @@ val (temp_x64_sub_def, _,
        let (r8,r10,zs) = x64_fix (r8,r10,zs)
        in
          (INR (r1,r2,r8,r9,r10,xs,ys,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list +
-      Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list)
+    :word64 # word64 # word64 # word64 # word64 # word64 list # word64 list # word64 list ->
+     (word64 # word64 # word64 # word64 # word64 # word64 list # word64 list # word64 list +
+      word64 # word64 # word64 # word64 # word64 # word64 list # word64 list # word64 list)
      # bool``;
+
+val x64_sub_def =
+  LIST_CONJ [x64_sub_def,x64_sub_pre_def]
 
 val x64_fix_thm = prove(
   ``!zs zs1 r8.
@@ -1228,7 +771,7 @@ val x64_sub_loop1_thm = prove(
   THEN1 (FULL_SIMP_TAC (srw_ss()) [] \\ DECIDE_TAC)
   \\ STRIP_TAC \\ ASM_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_SNOC,ADD1,AC ADD_COMM ADD_ASSOC,mw_sub_def,
-       LET_DEF,single_sub_def,bool2num_thm,single_add_def]
+       LET_DEF,single_sub_def,b2n_thm,single_add_def]
   \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
   \\ FULL_SIMP_TAC (srw_ss()) [b2w_def]
   \\ `(18446744073709551616 <= b2n ~c + (w2n h' + w2n (~h))) =
@@ -1283,7 +826,7 @@ val x64_sub_loop2_thm = prove(
   THEN1 (FULL_SIMP_TAC (srw_ss()) [] \\ DECIDE_TAC)
   \\ STRIP_TAC \\ ASM_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_SNOC,ADD1,AC ADD_COMM ADD_ASSOC,mw_sub_def,
-       LET_DEF,single_add_def,bool2num_thm,single_sub_def]
+       LET_DEF,single_add_def,b2n_thm,single_sub_def]
   \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
   \\ FULL_SIMP_TAC (srw_ss()) [b2w_def]
   \\ `(18446744073709551616 <= b2n ~c + (w2n h + w2n (~(0w:word64)))) =
@@ -1351,22 +894,9 @@ val x64_sub_thm = prove(
 
 (* integer addition *)
 
-val (res,x64_iadd1_def,x64_iadd1_pre_def) = x64_compile `
-  x64_iadd1 (r1:word64,r2:word64,xs:word64 list,ys:word64 list,xa:word64,ya:word64) =
-    let r0 = 0w:word64 in
-      if r1 <+ r2 then
-        let (xa,xs,ya,ys) = (ya,ys,xa,xs) in
-        let r0 = 1w in
-          (r1,r2,r0,xs,ys,xa,ya)
-      else
-        let r8 = r1 in
-        let r1 = r2 in
-        let r2 = r8 in
-          (r1,r2,r0,xs,ys,xa,ya)`
-
-val (temp_x64_iadd1_def, _,
-     temp_x64_iadd1_pre_def, _) =
-  tailrec_define "temp_x64_iadd1" ``
+val (x64_iadd1_def, _,
+     x64_iadd1_pre_def, _) =
+  tailrec_define "x64_iadd1" ``
     (\(r1,r2,xs,ys,xa,ya).
       (let r0 = 0x0w
        in
@@ -1381,27 +911,13 @@ val (temp_x64_iadd1_def, _,
             let r2 = r8
             in
               (INR (r1,r2,r0,xs,ys,xa,ya),T))))
-    :Zimm # Zimm # Zimm list # Zimm list # Zimm # Zimm ->
-     (Zimm # Zimm # Zimm list # Zimm list # Zimm # Zimm +
-      Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm # Zimm) # bool``;
+    :word64 # word64 # word64 list # word64 list # word64 # word64 ->
+     (word64 # word64 # word64 list # word64 list # word64 # word64 +
+      word64 # word64 # word64 # word64 list # word64 list # word64 # word64) # bool``;
 
-val (res,x64_iadd2_def,x64_iadd2_pre_def) = x64_compile `
-  x64_iadd2 (r1:word64,r2:word64,r10:word64,r12:word64,xs,ys,xa,ya) =
-    let r0 = 0w:word64 in
-      if r10 = 1w then
-        let (xa,xs,ya,ys) = (ya,ys,xa,xs) in
-        let r12 = r12 ?? 1w in
-        let r0 = 1w in
-          (r1,r2,r0,r12,xs,ys,xa,ya)
-      else
-        let r8 = r1 in
-        let r1 = r2 in
-        let r2 = r8 in
-          (r1,r2,r0,r12,xs:word64 list,ys:word64 list,xa:word64,ya:word64)`
-
-val (temp_x64_iadd2_def, _,
-     temp_x64_iadd2_pre_def, _) =
-  tailrec_define "temp_x64_iadd2" ``
+val (x64_iadd2_def, _,
+     x64_iadd2_pre_def, _) =
+  tailrec_define "x64_iadd2" ``
     (\(r1,r2,r10,r12,xs,ys,xa,ya).
       (let r0 = 0x0w
        in
@@ -1417,66 +933,24 @@ val (temp_x64_iadd2_def, _,
             let r2 = r8
             in
               (INR (r1,r2,r0,r12,xs,ys,xa,ya),T))))
-    :Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm # Zimm ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm # Zimm +
-      Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm # Zimm) #
+    :word64 # word64 # word64 # word64 # word64 list # word64 list # word64 # word64 ->
+     (word64 # word64 # word64 # word64 # word64 list # word64 list # word64 # word64 +
+      word64 # word64 # word64 # word64 # word64 list # word64 list # word64 # word64) #
      bool``;
 
-val (res,x64_iadd3_def,x64_iadd3_pre_def) = x64_compile `
-  x64_iadd3 (r0:word64,xs:word64 list,ys:word64 list,xa:word64,ya:word64) =
-      if r0 = 0w then (xs,ys,xa,ya) else
-        let (xa,xs,ya,ys) = (ya,ys,xa,xs) in
-          (xs,ys,xa,ya)`
-
-val (temp_x64_iadd3_def, _,
-     temp_x64_iadd3_pre_def, _) =
-  tailrec_define "temp_x64_iadd3" ``
+val (x64_iadd3_def, _,
+     x64_iadd3_pre_def, _) =
+  tailrec_define "x64_iadd3" ``
     (\(r0,xs,ys,xa,ya).
       if r0 = 0x0w then (INR (xs,ys,xa,ya),T)
       else (let (xa,xs,ya,ys) = (ya,ys,xa,xs) in (INR (xs,ys,xa,ya),T)))
-    :Zimm # Zimm list # Zimm list # Zimm # Zimm ->
-     (Zimm # Zimm list # Zimm list # Zimm # Zimm +
-      Zimm list # Zimm list # Zimm # Zimm) # bool``;
+    :word64 # word64 list # word64 list # word64 # word64 ->
+     (word64 # word64 list # word64 list # word64 # word64 +
+      word64 list # word64 list # word64 # word64) # bool``;
 
-val (x64_iadd_res,x64_iadd_def,x64_iadd_pre_def) = x64_compile `
-  x64_iadd (r1:word64,r2:word64,xs:word64 list,ys:word64 list,zs:word64 list,xa,ya) =
-    let r10 = r1 && 1w in
-    let r11 = r2 && 1w in
-      if r10 = r11 then (* same sign *)
-        let r1 = r1 >>> 1 in
-        let r2 = r2 >>> 1 in
-        let (r1,r2,r0,xs,ys,xa,ya) = x64_iadd1 (r1,r2,xs,ys,xa,ya) in
-        let r8 = 0w in
-        let r9 = r8 in
-        let r10 = r8 in
-        let (r1,r2,r8,r9,r10,xs,ys,zs) = x64_add (r1,r2,r8,r9,r10,xs,ys,zs) in
-        let (xs,ys,xa,ya) = x64_iadd3 (r0,xs,ys,xa,ya) in
-        let r10 = r10 << 1 in
-        let r10 = r10 + r11 in
-          (r10,xs,ys,zs,xa,ya)
-      else (* signs differ *)
-        let r12 = r10 in
-        let r10 = r1 >>> 1 in
-        let r11 = r2 >>> 1 in
-        let (r10,xs,ys) = x64_compare (r10,r11,xs,ys) in
-          if r10 = 0w then
-            (r10,xs,ys,zs,xa,ya)
-          else
-            let (r1,r2,r0,r12,xs,ys,xa,ya) = x64_iadd2 (r1,r2,r10,r12,xs,ys,xa,ya) in
-            let r8 = 0w in
-            let r9 = r8 in
-            let r10 = r8 in
-            let r1 = r1 >>> 1 in
-            let r2 = r2 >>> 1 in
-            let (r1,r2,r8,r9,r10,xs,ys,zs) = x64_sub (r1,r2,r8,r9,r10,xs,ys,zs) in
-            let (xs,ys,xa,ya) = x64_iadd3 (r0,xs,ys,xa,ya) in
-            let r10 = r10 << 1 in
-            let r10 = r10 + r12 in
-              (r10,xs,ys,zs,xa,ya)`
-
-val (temp_x64_iadd_def, _,
-     temp_x64_iadd_pre_def, _) =
-  tailrec_define "temp_x64_iadd" ``
+val (x64_iadd_def, _,
+     x64_iadd_pre_def, _) =
+  tailrec_define "x64_iadd" ``
     (\(r1,r2,xs,ys,zs,xa,ya).
       (let r10 = r1 in
        let r10 = r10 && 0x1w in
@@ -1528,9 +1002,9 @@ val (temp_x64_iadd_def, _,
                  let r10 = r10 + r12
                  in
                    (INR (r10,xs,ys,zs,xa,ya),cond)))))
-    :Zimm # Zimm # Zimm list # Zimm list # Zimm list # Zimm # Zimm ->
-     (Zimm # Zimm # Zimm list # Zimm list # Zimm list # Zimm # Zimm +
-      Zimm # Zimm list # Zimm list # Zimm list # Zimm # Zimm) # bool``;
+    :word64 # word64 # word64 list # word64 list # word64 list # word64 # word64 ->
+     (word64 # word64 # word64 list # word64 list # word64 list # word64 # word64 +
+      word64 # word64 list # word64 list # word64 list # word64 # word64) # bool``;
 
 val x64_header_AND_1 = prove(
   ``x64_header (s,xs) && 0x1w = b2w s``,
@@ -1657,34 +1131,27 @@ val x64_iadd_thm = prove(
 
 (* multiplication *)
 
-val (x64_single_mul_add_res,
-     x64_single_mul_add_def) = x64_decompile "x64_single_mul_add" `
-  mul r2
-  add r0,r1
-  adc r2,0
-  add r0,r3
-  adc r2,0`
-
-val _ = add_compiled [x64_single_mul_add_res]
-
-val (temp_x64_single_mul_add_def, _,
-     temp_x64_single_mul_add_pre_def, _) =
-  tailrec_define "temp_x64_single_mul_add" ``
+val (x64_single_mul_add_def, _,
+     x64_single_mul_add_pre_def, _) =
+  tailrec_define "x64_single_mul_add" ``
     (\(r0,r1,r2,r3).
-      (let cond = Z64 <> Z8 in
+      (let cond = T in
        let r2' = n2w (w2n r0 * w2n r2 DIV 18446744073709551616) in
        let r0 = r0 * r2 in
        let r0' = r0 + r1 in
        let r2 =
-             r2' + n2w (bool2num (18446744073709551616 <= w2n r0 + w2n r1))
+             r2' + n2w (b2n (18446744073709551616 <= w2n r0 + w2n r1))
        in
        let r0 = r0' + r3 in
        let r2 =
-             r2 + n2w (bool2num (18446744073709551616 <= w2n r0' + w2n r3))
+             r2 + n2w (b2n (18446744073709551616 <= w2n r0' + w2n r3))
        in
          (INR (r0,r1,r2,r3),cond)))
-    :Zimm # Zimm # Zimm # Zimm ->
-     (Zimm # Zimm # Zimm # Zimm + Zimm # Zimm # Zimm # Zimm) # bool``;
+    :word64 # word64 # word64 # word64 ->
+     (word64 # word64 # word64 # word64 + word64 # word64 # word64 # word64) # bool``;
+
+val x64_single_mul_add_def =
+  LIST_CONJ [x64_single_mul_add_def,x64_single_mul_add_pre_def]
 
 val x64_single_mul_add_thm = prove(
   ``x64_single_mul_add_pre (p,k,q,s) /\
@@ -1692,7 +1159,7 @@ val x64_single_mul_add_thm = prove(
       let (x1,x2) = single_mul_add p q k s in (x1,k,x2,s))``,
   FULL_SIMP_TAC (srw_ss()) [x64_single_mul_add_def,LET_DEF]
   \\ Cases_on `k` \\ Cases_on `s` \\ Cases_on `p` \\ Cases_on `q`
-  \\ FULL_SIMP_TAC (srw_ss()) [single_mul_add_def,LET_DEF,single_mul_def,bool2num_thm,
+  \\ FULL_SIMP_TAC (srw_ss()) [single_mul_add_def,LET_DEF,single_mul_def,b2n_thm,
        mw_add_def,single_add_def,b2n_def,b2w_def,word_add_n2w,word_mul_n2w]
   \\ FULL_SIMP_TAC std_ss [AC ADD_COMM ADD_ASSOC, AC MULT_COMM MULT_ASSOC]
   \\ `10 < 18446744073709551616:num` by DECIDE_TAC
@@ -1715,26 +1182,9 @@ val x64_single_mul_add_thm = prove(
   \\ `l MOD k < k` by FULL_SIMP_TAC std_ss []
   \\ ASM_SIMP_TAC std_ss [DIV_EQ_X] \\ DECIDE_TAC);
 
-val (res,x64_mul_pass_def,x64_mul_pass_pre_def) = x64_compile `
-  x64_mul_pass (r1:word64,r8:word64,r9:word64,r10:word64,r11:word64,ys:word64 list,zs:word64 list) =
-    if r9 = r11 then
-      let zs = LUPDATE r1 (w2n r10) zs in
-      let r10 = r10 + 1w in
-        (r1,r9,r10,ys,zs)
-    else
-      let r3 = EL (w2n r10) zs in
-      let r2 = EL (w2n r11) ys in
-      let r0 = r8 in
-      let (r0,r1,r2,r3) = x64_single_mul_add (r0,r1,r2,r3) in
-      let zs = LUPDATE r0 (w2n r10) zs in
-      let r1 = r2 in
-      let r10 = r10 + 1w in
-      let r11 = r11 + 1w in
-        x64_mul_pass (r1,r8,r9,r10,r11,ys,zs)`
-
-val (temp_x64_mul_pass_def, _,
-     temp_x64_mul_pass_pre_def, _) =
-  tailrec_define "temp_x64_mul_pass" ``
+val (x64_mul_pass_def, _,
+     x64_mul_pass_pre_def, _) =
+  tailrec_define "x64_mul_pass" ``
     (\(r1,r8,r9,r10,r11,ys,zs).
       if r9 = r11 then
         (let cond = w2n r10 < LENGTH zs in
@@ -1756,25 +1206,13 @@ val (temp_x64_mul_pass_def, _,
          let r11 = r11 + 0x1w
          in
            (INL (r1,r8,r9,r10,r11,ys,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list +
-      Zimm # Zimm # Zimm # Zimm list # Zimm list) # bool``;
+    :word64 # word64 # word64 # word64 # word64 # word64 list # word64 list ->
+     (word64 # word64 # word64 # word64 # word64 # word64 list # word64 list +
+      word64 # word64 # word64 # word64 list # word64 list) # bool``;
 
-val (res,x64_mul_def,x64_mul_pre_def) = x64_compile `
-  x64_mul (r7:word64,r9,r10:word64,r12:word64,xs:word64 list,ys,zs) =
-    if r7 = 0w then let r10 = r10 + r9 in (r10,xs,ys,zs) else
-      let r7 = r7 - 1w in
-      let r8 = EL (w2n r12) xs in
-      let r12 = r12 + 1w in
-      let r11 = 0w in
-      let r1 = r11 in
-      let (r1,r9,r10,ys,zs) = x64_mul_pass (r1,r8,r9,r10,r11,ys,zs) in
-      let r10 = r10 - r9 in
-        x64_mul (r7,r9,r10,r12,xs,ys,zs)`
-
-val (temp_x64_mul_def, _,
-     temp_x64_mul_pre_def, _) =
-  tailrec_define "temp_x64_mul" ``
+val (x64_mul_def, _,
+     x64_mul_pre_def, _) =
+  tailrec_define "x64_mul" ``
     (\(r7,r9,r10,r12,xs,ys,zs).
       if r7 = 0x0w then (let r10 = r10 + r9 in (INR (r10,xs,ys,zs),T))
       else
@@ -1789,20 +1227,13 @@ val (temp_x64_mul_def, _,
          let r10 = r10 - r9
          in
            (INL (r7,r9,r10,r12,xs,ys,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list +
-      Zimm # Zimm list # Zimm list # Zimm list) # bool``;
+    :word64 # word64 # word64 # word64 # word64 list # word64 list # word64 list ->
+     (word64 # word64 # word64 # word64 # word64 list # word64 list # word64 list +
+      word64 # word64 list # word64 list # word64 list) # bool``;
 
-val (res,x64_mul_zero_def,x64_mul_zero_pre_def) = x64_compile `
-  x64_mul_zero (r0:word64,r10:word64,zs:word64 list) =
-    if r10 = 0w then (r10,zs) else
-      let r10 = r10 - 1w in
-      let zs = LUPDATE r0 (w2n r10) zs in
-        x64_mul_zero (r0,r10,zs)`;
-
-val (temp_x64_mul_zero_def, _,
-     temp_x64_mul_zero_pre_def, _) =
-  tailrec_define "temp_x64_mul_zero" ``
+val (x64_mul_zero_def, _,
+     x64_mul_zero_pre_def, _) =
+  tailrec_define "x64_mul_zero" ``
     (\(r0,r10,zs).
       if r10 = 0x0w then (INR (r10,zs),T)
       else
@@ -1811,44 +1242,12 @@ val (temp_x64_mul_zero_def, _,
          let zs = LUPDATE r0 (w2n r10) zs
          in
            (INL (r0,r10,zs),cond)))
-    :Zimm # Zimm # Zimm list ->
-     (Zimm # Zimm # Zimm list + Zimm # Zimm list) # bool``;
+    :word64 # word64 # word64 list ->
+     (word64 # word64 # word64 list + word64 # word64 list) # bool``;
 
-val (x64_imul_res,x64_imul_def,x64_imul_pre_def) = x64_compile `
-  x64_imul (r1:word64,r2:word64,xs:word64 list,ys:word64 list,zs:word64 list) =
-    let r10 = 0w in
-      if r1 = 0w then (r10,xs,ys,zs) else
-      if r2 = 0w then (r10,xs,ys,zs) else
-        let r0 = 0w in
-        let r10 = r2 >>> 1 in
-        let (r10,zs) = x64_mul_zero (r0,r10,zs) in
-        let r10 = r1 && 1w in
-        let r11 = r2 && 1w in
-          if r10 = r11 then
-            let r7 = r1 >>> 1 in
-            let r9 = r2 >>> 1 in
-            let r10 = 0w in
-            let r12 = r10 in
-            let (r10,xs,ys,zs) = x64_mul (r7,r9,r10,r12,xs,ys,zs) in
-            let r8 = 0w in
-            let (r8,r10,zs) = x64_fix (r8,r10,zs) in
-            let r10 = r10 << 1 in
-              (r10,xs,ys,zs)
-          else
-            let r7 = r1 >>> 1 in
-            let r9 = r2 >>> 1 in
-            let r10 = 0w in
-            let r12 = r10 in
-            let (r10,xs,ys,zs) = x64_mul (r7,r9,r10,r12,xs,ys,zs) in
-            let r8 = 0w in
-            let (r8,r10,zs) = x64_fix (r8,r10,zs) in
-            let r10 = r10 << 1 in
-            let r10 = r10 + 1w in
-              (r10,xs,ys,zs)`;
-
-val (temp_x64_imul_def, _,
-     temp_x64_imul_pre_def, _) =
-  tailrec_define "temp_x64_imul" ``
+val (x64_imul_def, _,
+     x64_imul_pre_def, _) =
+  tailrec_define "x64_imul" ``
     (\(r1,r2,xs,ys,zs).
       (let r10 = 0x0w
        in
@@ -1896,9 +1295,9 @@ val (temp_x64_imul_def, _,
                  let r10 = r10 + 0x1w
                  in
                    (INR (r10,xs,ys,zs),cond)))))
-    :Zimm # Zimm # Zimm list # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm list # Zimm list # Zimm list +
-      Zimm # Zimm list # Zimm list # Zimm list) # bool``;
+    :word64 # word64 # word64 list # word64 list # word64 list ->
+     (word64 # word64 # word64 list # word64 list # word64 list +
+      word64 # word64 list # word64 list # word64 list) # bool``;
 
 val x64_mul_pass_thm = prove(
   ``!ys ys1 x zs k zs1 zs2 z2.
@@ -2064,14 +1463,9 @@ val x64_imul_thm = prove(
 
 (* simple div xs into zs and zs into zs *)
 
-val (x64_single_div_res,x64_single_div_def) = x64_decompile "x64_single_div" `
-  div r9`
-
-val _ = add_compiled [x64_single_div_res]
-
-val (temp_x64_single_div_def, _,
-     temp_x64_single_div_pre_def, _) =
-  tailrec_define "temp_x64_single_div" ``
+val (x64_single_div_def, _,
+     x64_single_div_pre_def, _) =
+  tailrec_define "x64_single_div" ``
     (\(r0,r2,r9).
       (let cond =
              r9 <> 0x0w /\
@@ -2083,7 +1477,9 @@ val (temp_x64_single_div_def, _,
        let r0 = n2w ((w2n r2 * 18446744073709551616 + w2n r0) DIV w2n r9)
        in
          (INR (r0,r2',r9),cond)))
-    :Zimm # Zimm # Zimm -> (Zimm # Zimm # Zimm + Zimm # Zimm # Zimm) # bool``;
+    :word64 # word64 # word64 -> (word64 # word64 # word64 + word64 # word64 # word64) # bool``;
+
+val x64_single_div_def = LIST_CONJ [x64_single_div_def,x64_single_div_pre_def]
 
 val MULT_LEMMA_LEMMA = prove(
   ``!m n. l < k /\ l + k * m < k + k * n ==> m <= n:num``,
@@ -2113,18 +1509,9 @@ val x64_single_div_thm = prove(
   \\ FULL_SIMP_TAC std_ss [MULT_LEMMA]
   \\ DECIDE_TAC);
 
-val (res,x64_simple_div_def,x64_simple_div_pre_def) = x64_compile `
-  x64_simple_div (r2:word64,r9:word64,r10:word64,xs:word64 list,zs:word64 list) =
-    if r10 = 0w then (r2,r9,r10,xs,zs) else
-      let r10 = r10 - 1w in
-      let r0 = EL (w2n r10) xs in
-      let (r0,r2,r9) = x64_single_div (r0,r2,r9) in
-      let zs = LUPDATE r0 (w2n r10) zs in
-        x64_simple_div (r2,r9,r10,xs,zs)`
-
-val (temp_x64_simple_div_def, _,
-     temp_x64_simple_div_pre_def, _) =
-  tailrec_define "temp_x64_simple_div" ``
+val (x64_simple_div_def, _,
+     x64_simple_div_pre_def, _) =
+  tailrec_define "x64_simple_div" ``
     (\(r2,r9,r10,xs,zs).
       if r10 = 0x0w then (INR (r2,r9,r10,xs,zs),T)
       else
@@ -2137,22 +1524,13 @@ val (temp_x64_simple_div_def, _,
          let zs = LUPDATE r0 (w2n r10) zs
          in
            (INL (r2,r9,r10,xs,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm list # Zimm list +
-      Zimm # Zimm # Zimm # Zimm list # Zimm list) # bool``;
+    :word64 # word64 # word64 # word64 list # word64 list ->
+     (word64 # word64 # word64 # word64 list # word64 list +
+      word64 # word64 # word64 # word64 list # word64 list) # bool``;
 
-val (res,x64_simple_div1_def,x64_simple_div1_pre_def) = x64_compile `
-  x64_simple_div1 (r2:word64,r9:word64,r10:word64,zs:word64 list) =
-    if r10 = 0w then (r2,r9,r10,zs) else
-      let r10 = r10 - 1w in
-      let r0 = EL (w2n r10) zs in
-      let (r0,r2,r9) = x64_single_div (r0,r2,r9) in
-      let zs = LUPDATE r0 (w2n r10) zs in
-        x64_simple_div1 (r2,r9,r10,zs)`
-
-val (temp_x64_simple_div1_def, _,
-     temp_x64_simple_div1_pre_def, _) =
-  tailrec_define "temp_x64_simple_div1" ``
+val (x64_simple_div1_def, _,
+     x64_simple_div1_pre_def, _) =
+  tailrec_define "x64_simple_div1" ``
     (\(r2,r9,r10,zs).
       if r10 = 0x0w then (INR (r2,r9,r10,zs),T)
       else
@@ -2164,8 +1542,8 @@ val (temp_x64_simple_div1_def, _,
          let zs = LUPDATE r0 (w2n r10) zs
          in
            (INL (r2,r9,r10,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm list + Zimm # Zimm # Zimm # Zimm list) #
+    :word64 # word64 # word64 # word64 list ->
+     (word64 # word64 # word64 # word64 list + word64 # word64 # word64 # word64 list) #
      bool``;
 
 val x64_simple_div_thm = prove(
@@ -2236,18 +1614,9 @@ val x64_simple_div1_thm = prove(
 
 (* mw_div -- calc_d *)
 
-val (res,x64_calc_d_def,x64_calc_d_pre_def) = x64_compile `
-  x64_calc_d (r1:word64,r2:word64) =
-    let r0 = r1 + r1 in
-    let r0 = r0 >>> 1 in
-      if r0 <> r1 then r2 else
-        let r1 = r1 + r1 in
-        let r2 = r2 + r2 in
-          x64_calc_d (r1,r2)`
-
-val (temp_x64_calc_d_def, _,
-     temp_x64_calc_d_pre_def, _) =
-  tailrec_define "temp_x64_calc_d" ``
+val (x64_calc_d_def, _,
+     x64_calc_d_pre_def, _) =
+  tailrec_define "x64_calc_d" ``
     (\(r1,r2).
       (let r0 = r1 + r1 in
        let r0 = r0 >>> 1
@@ -2255,7 +1624,7 @@ val (temp_x64_calc_d_def, _,
          if r0 = r1 then
            (let r1 = r1 + r1 in let r2 = r2 + r2 in (INL (r1,r2),T))
          else (INR r2,T)))
-    :Zimm # Zimm -> (Zimm # Zimm + Zimm) # bool``;
+    :word64 # word64 -> (word64 # word64 + word64) # bool``;
 
 val x64_calc_d_thm = prove(
   ``!v1 d.
@@ -2279,27 +1648,21 @@ val x64_calc_d_thm = prove(
 
 (* mw_div -- mw_div_guess *)
 
-val (x64_single_mul_res,
-     x64_single_mul_def) = x64_decompile "x64_single_mul" `
-  mul r2
-  add r0,r1
-  adc r2,0`
-
-val _ = add_compiled [x64_single_mul_res]
-
-val (temp_x64_single_mul_def, _,
-     temp_x64_single_mul_pre_def, _) =
-  tailrec_define "temp_x64_single_mul" ``
+val (x64_single_mul_def, _,
+     x64_single_mul_pre_def, _) =
+  tailrec_define "x64_single_mul" ``
     (\(r0,r1,r2).
-      (let cond = Z64 <> Z8 in
+      (let cond = T in
        let r2' = n2w (w2n r0 * w2n r2 DIV 18446744073709551616) in
        let r0 = r0 * r2 in
        let r0' = r0 + r1 in
        let r2 =
-             r2' + n2w (bool2num (18446744073709551616 <= w2n r0 + w2n r1))
+             r2' + n2w (b2n (18446744073709551616 <= w2n r0 + w2n r1))
        in
          (INR (r0',r1,r2),cond)))
-    :Zimm # Zimm # Zimm -> (Zimm # Zimm # Zimm + Zimm # Zimm # Zimm) # bool``;
+    :word64 # word64 # word64 -> (word64 # word64 # word64 + word64 # word64 # word64) # bool``;
+
+val x64_single_mul_def = LIST_CONJ [x64_single_mul_def,x64_single_mul_pre_def]
 
 val single_mul_add_thm  = prove(
   ``single_mul_add p q k s =
@@ -2315,27 +1678,11 @@ val x64_single_mul_thm = prove(
       let (x1,x2) = single_mul_add p q k 0w in (x1,k,x2))``,
   SIMP_TAC (srw_ss()) [single_mul_add_thm,x64_single_mul_def,LET_DEF,
     x64_single_mul_add_def] \\ SIMP_TAC std_ss [GSYM (EVAL ``dimword (:64)``)]
-  \\ SIMP_TAC std_ss [GSYM NOT_LESS,w2n_lt,EVAL ``bool2num F``,WORD_ADD_0]);
+  \\ SIMP_TAC std_ss [GSYM NOT_LESS,w2n_lt,EVAL ``b2n F``,WORD_ADD_0]);
 
-val (res,x64_mul_by_single2_def,x64_mul_by_single2_pre_def) = x64_compile `
-  x64_mul_by_single2 (r6:word64,r7:word64,r8:word64) =
-    let r0 = r6 in
-    let r1 = 0w in
-    let r2 = r7 in
-    let (r0,r1,r2) = x64_single_mul (r0,r1,r2) in
-    let r12 = r0 in
-    let r0 = r6 in
-    let r1 = r2 in
-    let r2 = r8 in
-    let (r0,r1,r2) = x64_single_mul (r0,r1,r2) in
-    let r3 = r2 in
-    let r2 = r0 in
-    let r1 = r12 in
-      (r1,r2,r3,r6,r7,r8)`
-
-val (temp_x64_mul_by_single2_def, _,
-     temp_x64_mul_by_single2_pre_def, _) =
-  tailrec_define "temp_x64_mul_by_single2" ``
+val (x64_mul_by_single2_def, _,
+     x64_mul_by_single2_pre_def, _) =
+  tailrec_define "x64_mul_by_single2" ``
     (\(r6,r7,r8).
       (let r0 = r6 in
        let r1 = 0x0w in
@@ -2353,8 +1700,8 @@ val (temp_x64_mul_by_single2_def, _,
        let r1 = r12
        in
          (INR (r1,r2,r3,r6,r7,r8),cond)))
-    :Zimm # Zimm # Zimm -> (Zimm # Zimm # Zimm + Zimm # Zimm # Zimm #
-     Zimm # Zimm # Zimm) # bool``;
+    :word64 # word64 # word64 -> (word64 # word64 # word64 + word64 # word64 # word64 #
+     word64 # word64 # word64) # bool``;
 
 val x64_mul_by_single2_thm = prove(
   ``!r6 r7 r8.
@@ -2370,23 +1717,9 @@ val x64_mul_by_single2_thm = prove(
   \\ SIMP_TAC std_ss [x64_mul_by_single2_pre_def,LET_DEF,x64_single_mul_add_def]
   \\ SIMP_TAC std_ss [x64_single_mul_thm] \\ EVAL_TAC);
 
-val (res,x64_cmp3_def,x64_cmp3_pre_def) = x64_compile `
-  x64_cmp3 (r1:word64,r2,r3,r9:word64,r10:word64,r11:word64) =
-    let r0 = 1w:word64 in
-      if r3 <> r11 then
-        if r11 <+ r3 then (r0,r1,r2,r3,r9,r10,r11) else
-          let r0 = 0w in (r0,r1,r2,r3,r9,r10,r11) else
-      if r2 <> r10 then
-        if r10 <+ r2 then (r0,r1,r2,r3,r9,r10,r11) else
-          let r0 = 0w in (r0,r1,r2,r3,r9,r10,r11) else
-      if r1 <> r9 then
-        if r9 <+ r1 then (r0,r1,r2,r3,r9,r10,r11) else
-          let r0 = 0w in (r0,r1,r2,r3,r9,r10,r11) else
-      let r0 = 0w in (r0,r1,r2,r3,r9,r10,r11)`
-
-val (temp_x64_cmp3_def, _,
-     temp_x64_cmp3_pre_def, _) =
-  tailrec_define "temp_x64_cmp3" ``
+val (x64_cmp3_def, _,
+     x64_cmp3_pre_def, _) =
+  tailrec_define "x64_cmp3" ``
     (\(r1,r2,r3,r9,r10,r11).
       (let r0 = 0x1w
        in
@@ -2400,9 +1733,9 @@ val (temp_x64_cmp3_def, _,
            else (let r0 = 0x0w in (INR (r0,r1,r2,r3,r9,r10,r11),T))
          else if r11 <+ r3 then (INR (r0,r1,r2,r3,r9,r10,r11),T)
          else (let r0 = 0x0w in (INR (r0,r1,r2,r3,r9,r10,r11),T))))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm +
-      Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm) # bool``;
+    :word64 # word64 # word64 # word64 # word64 # word64 ->
+     (word64 # word64 # word64 # word64 # word64 # word64 +
+      word64 # word64 # word64 # word64 # word64 # word64 # word64) # bool``;
 
 val x64_cmp3_thm = prove(
   ``x64_cmp3_pre (r1,r2,r3,r9,r10,r11) /\
@@ -2418,24 +1751,18 @@ val x64_cmp3_thm = prove(
   \\ Tactical.REVERSE (Cases_on `r1 = r9`)
   \\ FULL_SIMP_TAC std_ss [] THEN1 SRW_TAC [] []);
 
-val (res,x64_cmp_mul2_def,x64_cmp_mul2_pre_def) = x64_compile `
-  x64_cmp_mul2 (r6,r7,r8,r9,r10,r11) =
-    let (r1,r2,r3,r6,r7,r8) = x64_mul_by_single2 (r6,r7,r8) in
-    let (r0,r1,r2,r3,r9,r10,r11) = x64_cmp3 (r1,r2,r3,r9,r10,r11) in
-      (r0,r6,r7,r8,r9,r10,r11)`
-
-val (temp_x64_cmp_mul2_def, _,
-     temp_x64_cmp_mul2_pre_def, _) =
-  tailrec_define "temp_x64_cmp_mul2" ``
+val (x64_cmp_mul2_def, _,
+     x64_cmp_mul2_pre_def, _) =
+  tailrec_define "x64_cmp_mul2" ``
     (\(r6,r7,r8,r9,r10,r11).
       (let cond = x64_mul_by_single2_pre (r6,r7,r8) in
        let (r1,r2,r3,r6,r7,r8) = x64_mul_by_single2 (r6,r7,r8) in
        let (r0,r1,r2,r3,r9,r10,r11) = x64_cmp3 (r1,r2,r3,r9,r10,r11)
        in
          (INR (r0,r6,r7,r8,r9,r10,r11),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm +
-      Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm) # bool``;
+    :word64 # word64 # word64 # word64 # word64 # word64 ->
+     (word64 # word64 # word64 # word64 # word64 # word64 +
+      word64 # word64 # word64 # word64 # word64 # word64 # word64) # bool``;
 
 val x64_cmp_mul2_thm = prove(
   ``x64_cmp_mul2_pre (r6,r7,r8,r9,r10,r11) /\
@@ -2446,16 +1773,12 @@ val x64_cmp_mul2_thm = prove(
   \\ STRIP_ASSUME_TAC (x64_mul_by_single2_thm |> SPEC_ALL)
   \\ FULL_SIMP_TAC std_ss [LET_DEF,x64_cmp3_thm]);
 
-val (res,x64_sub1_def,x64_sub1_pre_def) = x64_compile `
-  x64_sub1 (r6:word64) =
-    if r6 = 0w then r6 else let r6 = r6 - 1w in r6`
-
-val (temp_x64_sub1_def, _,
-     temp_x64_sub1_pre_def, _) =
-  tailrec_define "temp_x64_sub1" ``
+val (x64_sub1_def, _,
+     x64_sub1_pre_def, _) =
+  tailrec_define "x64_sub1" ``
     (\r6.
       if r6 = 0x0w then (INR r6,T) else (let r6 = r6 - 0x1w in (INR r6,T)))
-    :Zimm -> (Zimm + Zimm) # bool``;
+    :word64 -> (word64 + word64) # bool``;
 
 val x64_sub1_thm = prove(
   ``!r6. x64_sub1_pre r6 /\ (x64_sub1 r6 = n2w (w2n r6 - 1))``,
@@ -2464,20 +1787,9 @@ val x64_sub1_thm = prove(
   \\ `~(n < 1)` by DECIDE_TAC
   \\ ASM_SIMP_TAC std_ss [addressTheory.word_arith_lemma2]);
 
-val (res,x64_cmp2_def,x64_cmp2_pre_def) = x64_compile `
-  x64_cmp2 (r0:word64,r2,r10:word64,r11:word64) =
-    let r1 = 1w:word64 in
-      if r2 <> r11 then
-        if r11 <+ r2 then (r0,r1,r2,r10,r11) else
-          let r1 = 0w in (r0,r1,r2,r10,r11) else
-      if r0 <> r10 then
-        if r10 <+ r0 then (r0,r1,r2,r10,r11) else
-          let r1 = 0w in (r0,r1,r2,r10,r11) else
-      let r1 = 0w in (r0,r1,r2,r10,r11)`
-
-val (temp_x64_cmp2_def, _,
-     temp_x64_cmp2_pre_def, _) =
-  tailrec_define "temp_x64_cmp2" ``
+val (x64_cmp2_def, _,
+     x64_cmp2_pre_def, _) =
+  tailrec_define "x64_cmp2" ``
     (\(r0,r2,r10,r11).
       (let r1 = 0x1w
        in
@@ -2487,8 +1799,8 @@ val (temp_x64_cmp2_def, _,
            else (let r1 = 0x0w in (INR (r0,r1,r2,r10,r11),T))
          else if r11 <+ r2 then (INR (r0,r1,r2,r10,r11),T)
          else (let r1 = 0x0w in (INR (r0,r1,r2,r10,r11),T))))
-    :Zimm # Zimm # Zimm # Zimm ->
-     (Zimm # Zimm # Zimm # Zimm + Zimm # Zimm # Zimm # Zimm # Zimm) # bool``;
+    :word64 # word64 # word64 # word64 ->
+     (word64 # word64 # word64 # word64 + word64 # word64 # word64 # word64 # word64) # bool``;
 
 val x64_cmp2_thm = prove(
   ``x64_cmp2_pre (r0,r2,r10,r11) /\
@@ -2502,27 +1814,9 @@ val x64_cmp2_thm = prove(
   \\ Tactical.REVERSE (Cases_on `r0 = r10`)
   \\ FULL_SIMP_TAC std_ss [] THEN1 SRW_TAC [] []);
 
-val (res,x64_div_test_def,x64_div_test_pre_def) = x64_compile `
-  x64_div_test (r6,r7,r8,r9,r10,r11) =
-    let (r0,r6,r7,r8,r9,r10,r11) = x64_cmp_mul2 (r6,r7,r8,r9,r10,r11) in
-      if r0 <> 0w then
-        let r6 = x64_sub1 r6 in
-        let r0 = r6 in
-        let r1 = 0w in
-        let r2 = r8 in
-        let r3 = r1 in
-        let (r0,r1,r2,r3) = x64_single_mul_add (r0,r1,r2,r3) in
-        let r2 = r2 + 1w in
-        let (r0,r1,r2,r10,r11) = x64_cmp2 (r0,r2,r10,r11) in
-          if r1 <> 0w then
-            x64_div_test (r6,r7,r8,r9,r10,r11)
-          else (r6,r7,r8,r9,r10,r11)
-      else
-        (r6,r7,r8,r9,r10,r11)`
-
-val (temp_x64_div_test_def, _,
-     temp_x64_div_test_pre_def, _) =
-  tailrec_define "temp_x64_div_test" ``
+val (x64_div_test_def, _,
+     x64_div_test_pre_def, _) =
+  tailrec_define "x64_div_test" ``
     (\(r6,r7,r8,r9,r10,r11).
       (let cond = x64_cmp_mul2_pre (r6,r7,r8,r9,r10,r11) in
        let (r0,r6,r7,r8,r9,r10,r11) = x64_cmp_mul2 (r6,r7,r8,r9,r10,r11)
@@ -2541,9 +1835,9 @@ val (temp_x64_div_test_def, _,
             in
               if r1 = 0x0w then (INR (r6,r7,r8,r9,r10,r11),cond)
               else (INL (r6,r7,r8,r9,r10,r11),cond))))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm +
-      Zimm # Zimm # Zimm # Zimm # Zimm # Zimm) # bool``;
+    :word64 # word64 # word64 # word64 # word64 # word64 ->
+     (word64 # word64 # word64 # word64 # word64 # word64 +
+      word64 # word64 # word64 # word64 # word64 # word64) # bool``;
 
 val single_mul_thm = prove(
   ``single_mul_add x y 0w 0w = single_mul x y 0w``,
@@ -2574,20 +1868,9 @@ val x64_div_test_thm = prove(
   \\ Cases_on `mw_cmp [u2; u1] [q1; q2 + 0x1w] = SOME T`
   \\ FULL_SIMP_TAC std_ss [EVAL ``0w = 1w:word64``]);
 
-val (x64_div_r1_res,x64_div_r1_def) = x64_decompile "x64_div_r1" `
-      cmp r2 r1
-      jb L
-      xor r0,r0
-      not r0
-      jmp EXIT
-L:    div r1
-EXIT: `;
-
-val _ = add_compiled [x64_div_r1_res]
-
-val (temp_x64_div_r1_def, _,
-     temp_x64_div_r1_pre_def, _) =
-  tailrec_define "temp_x64_div_r1" ``
+val (x64_div_r1_def, _,
+     x64_div_r1_pre_def, _) =
+  tailrec_define "x64_div_r1" ``
     (\(r0,r1,r2).
       if r2 <+ r1 then
         (let cond =
@@ -2601,7 +1884,9 @@ val (temp_x64_div_r1_def, _,
          in
            (INR (r0,r1,r2'),cond))
       else (let r0 = 0x0w in let r0 = ~r0 in (INR (r0,r1,r2),T)))
-    :Zimm # Zimm # Zimm -> (Zimm # Zimm # Zimm + Zimm # Zimm # Zimm) # bool``;
+    :word64 # word64 # word64 -> (word64 # word64 # word64 + word64 # word64 # word64) # bool``;
+
+val x64_div_r1_def = LIST_CONJ [x64_div_r1_def,x64_div_r1_pre_def]
 
 val x64_div_r1_thm = prove(
   ``x64_div_r1 (r0,r1,r2) =
@@ -2610,19 +1895,9 @@ val x64_div_r1_thm = prove(
       else (~0w,r1,r2)``,
   SIMP_TAC (srw_ss()) [x64_div_r1_def,single_div_def,LET_DEF]);
 
-val (res,x64_div_guess_def,x64_div_guess_pre_def) = x64_compile `
-  x64_div_guess (r7,r8,r9,r10,r11) =
-    let r0 = r10 in
-    let r1 = r8 in
-    let r2 = r11 in
-    let (r0,r1,r2) = x64_div_r1 (r0,r1,r2) in
-    let r6 = r0 in
-    let (r6,r7,r8,r9,r10,r11) = x64_div_test (r6,r7,r8,r9,r10,r11) in
-      (r6,r7,r8,r9,r10,r11)`
-
-val (temp_x64_div_guess_def, _,
-     temp_x64_div_guess_pre_def, _) =
-  tailrec_define "temp_x64_div_guess" ``
+val (x64_div_guess_def, _,
+     x64_div_guess_pre_def, _) =
+  tailrec_define "x64_div_guess" ``
     (\(r7,r8,r9,r10,r11).
       (let r0 = r10 in
        let r1 = r8 in
@@ -2634,9 +1909,9 @@ val (temp_x64_div_guess_def, _,
        let (r6,r7,r8,r9,r10,r11) = x64_div_test (r6,r7,r8,r9,r10,r11)
        in
          (INR (r6,r7,r8,r9,r10,r11),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm +
-      Zimm # Zimm # Zimm # Zimm # Zimm # Zimm) # bool``;
+    :word64 # word64 # word64 # word64 # word64 ->
+     (word64 # word64 # word64 # word64 # word64 +
+      word64 # word64 # word64 # word64 # word64 # word64) # bool``;
 
 val x64_div_guess_thm = prove(
   ``!q u1 u2 u3 v1 v2.
@@ -2672,16 +1947,9 @@ val x64_div_guess_thm = prove(
 
 *)
 
-val (res,x64_adj_cmp_def,x64_adj_cmp_pre_def) = x64_compile `
-  x64_adj_cmp (r0:word64,r3:word64,r8:word64) =
-    if r0 = r3 then (r0,r3,r8) else
-      let r8 = 1w in
-        if r3 <+ r0 then (r0,r3,r8)
-        else let r8 = 0w in (r0,r3,r8)`
-
-val (temp_x64_adj_cmp_def, _,
-     temp_x64_adj_cmp_pre_def, _) =
-  tailrec_define "temp_x64_adj_cmp" ``
+val (x64_adj_cmp_def, _,
+     x64_adj_cmp_pre_def, _) =
+  tailrec_define "x64_adj_cmp" ``
     (\(r0,r3,r8).
       if r0 = r3 then (INR (r0,r3,r8),T)
       else
@@ -2689,36 +1957,11 @@ val (temp_x64_adj_cmp_def, _,
          in
            if r3 <+ r0 then (INR (r0,r3,r8),T)
            else (let r8 = 0x0w in (INR (r0,r3,r8),T))))
-    :Zimm # Zimm # Zimm -> (Zimm # Zimm # Zimm + Zimm # Zimm # Zimm) # bool``;
+    :word64 # word64 # word64 -> (word64 # word64 # word64 + word64 # word64 # word64) # bool``;
 
-val (res,x64_adjust_aux_def,x64_adjust_aux_pre_def) = x64_compile `
-  x64_adjust_aux (r1,r6,r7,r8,r9,r10:word64,r11:word64,r12,ys:word64 list,zs) =
-    if r9 = r11 then
-      let r0 = r12 in
-      let r3 = EL (w2n r10) zs in
-      let r10 = r10 + 1w in
-      let (r0,r3,r8) = x64_adj_cmp (r0,r3,r8) in
-        (r6,r7,r8,r9,r10,r11,ys,zs)
-    else
-      let r0 = r6 in (* x1 *)
-      let r2 = EL (w2n r11) ys in
-      let (r0,r1,r2) = x64_single_mul (r0,r1,r2) in
-      let r1 = r12 in
-      let r12 = r2 in
-      let r2 = r0 in
-      let r0 = r7 in
-      let (r0,r1,r2) = x64_single_mul (r0,r1,r2) in
-      let r1 = r12 in
-      let r12 = r2 in
-      let r3 = EL (w2n r10) zs in
-      let (r0,r3,r8) = x64_adj_cmp (r0,r3,r8) in
-      let r11 = r11 + 1w in
-      let r10 = r10 + 1w in
-        x64_adjust_aux (r1,r6,r7,r8,r9,r10,r11,r12,ys,zs)`
-
-val (temp_x64_adjust_aux_def, _,
-     temp_x64_adjust_aux_pre_def, _) =
-  tailrec_define "temp_x64_adjust_aux" ``
+val (x64_adjust_aux_def, _,
+     x64_adjust_aux_pre_def, _) =
+  tailrec_define "x64_adjust_aux" ``
     (\(r1,r6,r7,r8,r9,r10,r11,r12,ys,zs).
       if r9 = r11 then
         (let r0 = r12 in
@@ -2749,26 +1992,14 @@ val (temp_x64_adjust_aux_def, _,
          let r10 = r10 + 0x1w
          in
            (INL (r1,r6,r7,r8,r9,r10,r11,r12,ys,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list
-     # Zimm list -> (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm #
-     Zimm # Zimm list # Zimm list + Zimm # Zimm # Zimm # Zimm # Zimm #
-     Zimm # Zimm list # Zimm list) # bool``;
+    :word64 # word64 # word64 # word64 # word64 # word64 # word64 # word64 # word64 list
+     # word64 list -> (word64 # word64 # word64 # word64 # word64 # word64 # word64 #
+     word64 # word64 list # word64 list + word64 # word64 # word64 # word64 # word64 #
+     word64 # word64 list # word64 list) # bool``;
 
-val (res,x64_div_adjust_def,x64_div_adjust_pre_def) = x64_compile `
-  x64_div_adjust (r6,r7,r9,r10,ys,zs) =
-    let r1 = 0w in
-    let r8 = r1 in
-    let r11 = r1 in
-    let r12 = r1 in
-    let (r6,r7,r8,r9,r10,r11,ys,zs) =
-      x64_adjust_aux (r1,r6,r7,r8,r9,r10,r11,r12,ys,zs) in
-      if (r7 = 0w) then (r6,r7,r9,r10,r11,ys,zs) else
-      if (r8 = 0w) then (r6,r7,r9,r10,r11,ys,zs) else
-        let r7 = r7 - 1w in (r6,r7,r9,r10,r11,ys,zs)`
-
-val (temp_x64_div_adjust_def, _,
-     temp_x64_div_adjust_pre_def, _) =
-  tailrec_define "temp_x64_div_adjust" ``
+val (x64_div_adjust_def, _,
+     x64_div_adjust_pre_def, _) =
+  tailrec_define "x64_div_adjust" ``
     (\(r6,r7,r9,r10,ys,zs).
       (let r1 = 0x0w in
        let r8 = r1 in
@@ -2781,9 +2012,9 @@ val (temp_x64_div_adjust_def, _,
          if r7 = 0x0w then (INR (r6,r7,r9,r10,r11,ys,zs),cond)
          else if r8 = 0x0w then (INR (r6,r7,r9,r10,r11,ys,zs),cond)
          else (let r7 = r7 - 0x1w in (INR (r6,r7,r9,r10,r11,ys,zs),cond))))
-    :Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list +
-      Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list) # bool``;
+    :word64 # word64 # word64 # word64 # word64 list # word64 list ->
+     (word64 # word64 # word64 # word64 # word64 list # word64 list +
+      word64 # word64 # word64 # word64 # word64 # word64 list # word64 list) # bool``;
 
 val x64_adj_cmp_thm = prove(
   ``x64_adj_cmp_pre (r1,h,anything) /\
@@ -2889,25 +2120,14 @@ val x64_div_adjust_thm = prove(
 
 (* mw_div -- mw_sub *)
 
-val (x64_div_sub_res,x64_div_sub_def) = x64_decompile "x64_div_sub" `
-      not r0
-      add r8,1
-      adc r3,r0
-      mov r0,0
-      mov r8,r0
-      not r0
-      cmovb r8,r0`;
-
-val _ = add_compiled [x64_div_sub_res]
-
-val (temp_x64_div_sub_def, _,
-     temp_x64_div_sub_pre_def, _) =
-  tailrec_define "temp_x64_div_sub" ``
+val (x64_div_sub_def, _,
+     x64_div_sub_pre_def, _) =
+  tailrec_define "x64_div_sub" ``
     (\(r0,r3,r8).
       (let r0 = ~r0 in
        let r8' = r8 + 0x1w in
        let r3' =
-             r3 + r0 + n2w (bool2num (18446744073709551616 <= w2n r8 + 1))
+             r3 + r0 + n2w (b2n (18446744073709551616 <= w2n r8 + 1))
        in
        let r0' = 0x0w in
        let r8' = r0' in
@@ -2915,14 +2135,16 @@ val (temp_x64_div_sub_def, _,
        in
          if
            18446744073709551616 <=
-           w2n r3 + w2n r0 + bool2num (18446744073709551616 <= w2n r8 + 1)
+           w2n r3 + w2n r0 + b2n (18446744073709551616 <= w2n r8 + 1)
          then
            (let r8 = r0' in (INR (r0',r3',r8),T))
          else (INR (r0',r3',r8'),T)))
-    :Zimm # Zimm # Zimm -> (Zimm # Zimm # Zimm + Zimm # Zimm # Zimm) # bool``;
+    :word64 # word64 # word64 -> (word64 # word64 # word64 + word64 # word64 # word64) # bool``;
 
-val bool2num_thm = prove(
-  ``bool2num = b2n``,
+val x64_div_sub_def = LIST_CONJ [x64_div_sub_def,x64_div_sub_pre_def]
+
+val b2n_thm = prove(
+  ``b2n = b2n``,
   FULL_SIMP_TAC std_ss [FUN_EQ_THM] \\ Cases \\ EVAL_TAC);
 
 val x64_div_sub_thm = prove(
@@ -2931,47 +2153,16 @@ val x64_div_sub_thm = prove(
        let (r3,c) = single_sub r3 r0 (dimword (:64) <= w2n r8 + 1) in
          (~0w,r3,if c then ~0w else 0w))``,
   SIMP_TAC std_ss [single_sub_def,x64_div_sub_def,LET_DEF]
-  \\ FULL_SIMP_TAC std_ss [bool2num_thm]
+  \\ FULL_SIMP_TAC std_ss [b2n_thm]
   \\ SIMP_TAC std_ss [GSYM (EVAL ``dimword (:64)``)]
   \\ SIMP_TAC std_ss [GSYM (EVAL ``FST (single_add x y c)``)]
   \\ SIMP_TAC std_ss [GSYM (EVAL ``SND (single_add x y c)``)]
   \\ Cases_on `single_add r3 (~r0) (dimword (:64) <= w2n r8 + 1)`
   \\ FULL_SIMP_TAC std_ss [] \\ Cases_on `r` \\ EVAL_TAC);
 
-val (res,x64_div_sub_loop_def,x64_div_sub_loop_pre_def) = x64_compile `
-  x64_div_sub_loop (r1,r6,r7,r8:word64,r9,r10:word64,r11:word64,r12,ys:word64 list,zs) =
-    if r9 = r11 then
-      let r0 = r12 in
-      let r3 = EL (w2n r10) zs in
-      let (r0,r3,r8) = x64_div_sub (r0,r3,r8) in
-      let r1 = r3 in
-      let zs = LUPDATE r1 (w2n r10) zs in
-      let r10 = r10 + 1w in
-        (r6,r7,r9,r10,r11,ys,zs)
-    else
-      let r0 = r6 in (* x1 *)
-      let r2 = EL (w2n r11) ys in
-      let (r0,r1,r2) = x64_single_mul (r0,r1,r2) in
-      let r1 = r12 in
-      let r12 = r2 in
-      let r2 = r0 in
-      let r0 = r7 in
-      let (r0,r1,r2) = x64_single_mul (r0,r1,r2) in
-      let r1 = r12 in
-      let r12 = r2 in
-      let r3 = EL (w2n r10) zs in
-      let (r0,r3,r8) = x64_div_sub (r0,r3,r8) in
-      let r0 = r1 in
-      let r1 = r3 in
-      let zs = LUPDATE r1 (w2n r10) zs in
-      let r1 = r0 in
-      let r11 = r11 + 1w in
-      let r10 = r10 + 1w in
-        x64_div_sub_loop (r1,r6,r7,r8,r9,r10,r11,r12,ys,zs)`
-
-val (temp_x64_div_sub_loop_def, _,
-     temp_x64_div_sub_loop_pre_def, _) =
-  tailrec_define "temp_x64_div_sub_loop" ``
+val (x64_div_sub_loop_def, _,
+     x64_div_sub_loop_pre_def, _) =
+  tailrec_define "x64_div_sub_loop" ``
     (\(r1,r6,r7,r8,r9,r10,r11,r12,ys,zs).
       if r9 = r11 then
         (let r0 = r12 in
@@ -3008,10 +2199,10 @@ val (temp_x64_div_sub_loop_def, _,
          let r10 = r10 + 0x1w
          in
            (INL (r1,r6,r7,r8,r9,r10,r11,r12,ys,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list
-     # Zimm list -> (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm #
-     Zimm # Zimm list # Zimm list + Zimm # Zimm # Zimm # Zimm # Zimm #
-     Zimm list # Zimm list) # bool``;
+    :word64 # word64 # word64 # word64 # word64 # word64 # word64 # word64 # word64 list
+     # word64 list -> (word64 # word64 # word64 # word64 # word64 # word64 # word64 #
+     word64 # word64 list # word64 list + word64 # word64 # word64 # word64 # word64 #
+     word64 list # word64 list) # bool``;
 
 val LUPDATE_THM = prove(
   ``(LUPDATE q (LENGTH xs) (SNOC x xs) = SNOC q xs) /\
@@ -3089,55 +2280,9 @@ val x64_div_sub_loop_thm = prove(
 
 (* mw_div -- mw_div_aux *)
 
-val (res,x64_div_loop_def,x64_div_loop_pre_def) = x64_compile `
-  x64_div_loop (r7,r9,r10,r11,ys,zs,ss) =
-    if r10 = 0w then
-      (r7,r9,r10,r11,ys,zs,ss)
-    else
-      let (r6,ss) = (HD ss,TL ss) in
-      let (r3,ss) = (HD ss,TL ss) in
-      let ss = r7::ss in
-      let ss = r9::ss in
-      let ss = r10::ss in
-      let r10 = r10 + r9 in
-      let r10 = r10 - 1w in
-      let r0 = EL (w2n r10) zs in
-      let r10 = r10 - 1w in
-      let r1 = EL (w2n r10) zs in
-      let r10 = r10 - 1w in
-      let r2 = EL (w2n r10) zs in
-      let r11 = r0 in
-      let r10 = r1 in
-      let r9 = r2 in
-      let r7 = r3 in
-      let r8 = r6 in
-      let (r6,r7,r8,r9,r10,r11) = x64_div_guess (r7,r8,r9,r10,r11) in
-      let r0 = r6 in
-      let (r10,ss) = (HD ss,TL ss) in
-      let (r9,ss) = (HD ss,TL ss) in
-      let (r6,ss) = (HD ss,TL ss) in
-      let r10 = r10 - 1w in
-      let ss = r7::ss in
-      let ss = r8::ss in
-      let r7 = r0 in
-      let (r6,r7,r9,r10,r11,ys,zs) = x64_div_adjust (r6,r7,r9,r10,ys,zs) in
-      let r10 = r10 - r9 in
-      let r10 = r10 - 1w in
-      let r1 = 0w in
-      let r8 = ~r1 in
-      let r11 = r1 in
-      let r12 = r1 in
-      let (r6,r7,r9,r10,r11,ys,zs) =
-            x64_div_sub_loop (r1,r6,r7,r8,r9,r10,r11,r12,ys,zs) in
-      let r10 = r10 - 1w in
-      let zs = LUPDATE r7 (w2n r10) zs in
-      let r10 = r10 - r9 in
-      let r7 = r6 in
-        x64_div_loop (r7,r9,r10,r11,ys,zs,ss)`
-
-val (temp_x64_div_loop_def, _,
-     temp_x64_div_loop_pre_def, _) =
-  tailrec_define "temp_x64_div_loop" ``
+val (x64_div_loop_def, _,
+     x64_div_loop_pre_def, _) =
+  tailrec_define "x64_div_loop" ``
     (\(r7,r9,r10,r11,ys,zs,ss).
       if r10 = 0x0w then (INR (r7,r9,r10,r11,ys,zs,ss),T)
       else
@@ -3200,9 +2345,9 @@ val (temp_x64_div_loop_def, _,
          let r7 = r6
          in
            (INL (r7,r9,r10,r11,ys,zs,ss),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list +
-      Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list) # bool``;
+    :word64 # word64 # word64 # word64 # word64 list # word64 list # word64 list ->
+     (word64 # word64 # word64 # word64 # word64 list # word64 list # word64 list +
+      word64 # word64 # word64 # word64 # word64 list # word64 list # word64 list) # bool``;
 
 val x64_div_loop_thm = prove(
   ``!zs1 zs ys1 zs2 c r1 r12.
@@ -3374,26 +2519,9 @@ val x64_div_loop_thm = prove(
 
 (* mw_div -- mul_by_single *)
 
-val (res,x64_mul_by_single_def,x64_mul_by_single_pre_def) = x64_compile `
-  x64_mul_by_single (r1:word64,r8:word64,r9:word64,r10:word64,r11:word64,xs:word64 list,zs:word64 list) =
-    if r9 = r11 then
-      let zs = LUPDATE r1 (w2n r10) zs in
-      let r10 = r10 + 1w in
-        (r1,r8,r9,r10,xs,zs)
-    else
-      let r2 = EL (w2n r11) xs in
-      let r0 = r8 in
-      let r3 = 0w in
-      let (r0,r1,r2,r3) = x64_single_mul_add (r0,r1,r2,r3) in
-      let zs = LUPDATE r0 (w2n r10) zs in
-      let r1 = r2 in
-      let r10 = r10 + 1w in
-      let r11 = r11 + 1w in
-        x64_mul_by_single (r1,r8,r9,r10,r11,xs,zs)`
-
-val (temp_x64_mul_by_single_def, _,
-     temp_x64_mul_by_single_pre_def, _) =
-  tailrec_define "temp_x64_mul_by_single" ``
+val (x64_mul_by_single_def, _,
+     x64_mul_by_single_pre_def, _) =
+  tailrec_define "x64_mul_by_single" ``
     (\(r1,r8,r9,r10,r11,xs,zs).
       if r9 = r11 then
         (let cond = w2n r10 < LENGTH zs in
@@ -3415,9 +2543,9 @@ val (temp_x64_mul_by_single_def, _,
          let r11 = r11 + 0x1w
          in
            (INL (r1,r8,r9,r10,r11,xs,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list +
-      Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list) # bool``;
+    :word64 # word64 # word64 # word64 # word64 # word64 list # word64 list ->
+     (word64 # word64 # word64 # word64 # word64 # word64 list # word64 list +
+      word64 # word64 # word64 # word64 # word64 list # word64 list) # bool``;
 
 val x64_mul_by_single_thm = prove(
   ``!xs xs1 x zs k zs1 zs2 z2.
@@ -3459,23 +2587,9 @@ val x64_mul_by_single_thm = prove(
 
 (* mw_div -- mul_by_single, top two from ys *)
 
-val (res,x64_top_two_def,x64_top_two_pre_def) = x64_compile `
-  x64_top_two (r0,r1:word64,r3,r8:word64,r9:word64,r11:word64,ys:word64 list) =
-    if r9 = r11 then
-      let r1 = r3 in
-        (r0,r1,r8,r9,r11,ys)
-    else
-      let r3 = r0 in
-      let r2 = EL (w2n r11) ys in
-      let r0 = r8 in
-      let (r0,r1,r2) = x64_single_mul (r0,r1,r2) in
-      let r1 = r2 in
-      let r11 = r11 + 1w in
-        x64_top_two (r0,r1,r3,r8,r9,r11,ys)`
-
-val (temp_x64_top_two_def, _,
-     temp_x64_top_two_pre_def, _) =
-  tailrec_define "temp_x64_top_two" ``
+val (x64_top_two_def, _,
+     x64_top_two_pre_def, _) =
+  tailrec_define "x64_top_two" ``
     (\(r0,r1,r3,r8,r9,r11,ys).
       if r9 = r11 then (let r1 = r3 in (INR (r0,r1,r8,r9,r11,ys),T))
       else
@@ -3489,9 +2603,9 @@ val (temp_x64_top_two_def, _,
          let r11 = r11 + 0x1w
          in
            (INL (r0,r1,r3,r8,r9,r11,ys),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list +
-      Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list) # bool``;
+    :word64 # word64 # word64 # word64 # word64 # word64 # word64 list ->
+     (word64 # word64 # word64 # word64 # word64 # word64 # word64 list +
+      word64 # word64 # word64 # word64 # word64 # word64 list) # bool``;
 
 val x64_top_two_thm = prove(
   ``!ys x k1 k2 k3 ys1.
@@ -3525,19 +2639,9 @@ val x64_top_two_thm = prove(
 
 (* mw_div -- copy result down *)
 
-val (res,x64_copy_down_def,x64_copy_down_pre_def) = x64_compile `
-  x64_copy_down (r8:word64,r10:word64,r11:word64,zs:word64 list) =
-    if r8 = 0w then zs else
-      let r0 = EL (w2n r10) zs in
-      let r8 = r8 - 1w in
-      let r10 = r10 + 1w in
-      let zs = LUPDATE r0 (w2n r11) zs in
-      let r11 = r11 + 1w in
-        x64_copy_down (r8,r10,r11,zs)`
-
-val (temp_x64_copy_down_def, _,
-     temp_x64_copy_down_pre_def, _) =
-  tailrec_define "temp_x64_copy_down" ``
+val (x64_copy_down_def, _,
+     x64_copy_down_pre_def, _) =
+  tailrec_define "x64_copy_down" ``
     (\(r8,r10,r11,zs).
       if r8 = 0x0w then (INR zs,T)
       else
@@ -3550,8 +2654,8 @@ val (temp_x64_copy_down_def, _,
          let r11 = r11 + 0x1w
          in
            (INL (r8,r10,r11,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm list + Zimm list) # bool``;
+    :word64 # word64 # word64 # word64 list ->
+     (word64 # word64 # word64 # word64 list + word64 list) # bool``;
 
 val x64_copy_down_thm = prove(
   ``!zs0 zs1 zs2 zs3.
@@ -3592,17 +2696,9 @@ val x64_copy_down_thm = prove(
 
 (* mw_div -- copy xs into zs *)
 
-val (res,x64_copy_over_def,x64_copy_over_pre_def) = x64_compile `
-  x64_copy_over (r10:word64,xs:word64 list,zs:word64 list) =
-    if r10 = 0w then (xs,zs) else
-      let r10 = r10 - 1w in
-      let r0 = EL (w2n r10) xs in
-      let zs = LUPDATE r0 (w2n r10) zs in
-        x64_copy_over (r10,xs,zs)`;
-
-val (temp_x64_copy_over_def, _,
-     temp_x64_copy_over_pre_def, _) =
-  tailrec_define "temp_x64_copy_over" ``
+val (x64_copy_over_def, _,
+     x64_copy_over_pre_def, _) =
+  tailrec_define "x64_copy_over" ``
     (\(r10,xs,zs).
       if r10 = 0x0w then (INR (xs,zs),T)
       else
@@ -3613,8 +2709,8 @@ val (temp_x64_copy_over_def, _,
          let zs = LUPDATE r0 (w2n r10) zs
          in
            (INL (r10,xs,zs),cond)))
-    :Zimm # Zimm list # Zimm list ->
-     (Zimm # Zimm list # Zimm list + Zimm list # Zimm list) # bool``;
+    :word64 # word64 list # word64 list ->
+     (word64 # word64 list # word64 list + word64 list # word64 list) # bool``;
 
 val x64_copy_over_thm = prove(
   ``!xs0 zs0 xs zs.
@@ -3645,103 +2741,9 @@ val x64_copy_over_thm = prove(
 
 (* mw_div -- top-level function *)
 
-val (res,x64_div_def,x64_div_pre_def) = x64_compile `
-  x64_div (r0,r1,r3,xs,ys,zs,ss) =
-    if r0 <+ r1 then (* LENGTH xs < LENGTH ys *)
-      let r6 = r0 in
-        if r3 = 0w then (* return div *)
-          let r0 = 0w in
-            (r0,r3,r6,xs,ys,zs,ss)
-        else (* return mod *)
-          let r11 = r0 in
-          let r10 = r1 in
-          let r0 = 0w in
-          let (r10,zs) = x64_mul_zero (r0,r10,zs) in
-          let r10 = r11 in
-          let (xs,zs) = x64_copy_over (r10,xs,zs) in
-          let r0 = r1 in
-            (r0,r3,r6,xs,ys,zs,ss)
-    else if r1 = 1w then (* LENGTH ys = 1 *)
-      let ss = r3 :: ss in
-      let r2 = 0w in
-      let r10 = r2 in
-      let r9 = EL (w2n r10) ys in
-      let r10 = r0 in
-      let r8 = r0 in
-      let (r2,r9,r10,xs,zs) = x64_simple_div (r2,r9,r10,xs,zs) in
-      let r6 = 0w in
-      let r0 = r8 in
-      let (r3,ss) = (HD ss,TL ss) in
-        if r3 = 0w then
-          if r2 = 0w then (r0,r3,r6,xs,ys,zs,ss) else
-            let r6 = 1w in
-              (r0,r3,r6,xs,ys,zs,ss)
-        else
-          let r0 = 1w in
-          let r10 = 0w:word64 in
-          let zs = LUPDATE r2 (w2n r10) zs in
-            if r2 = 0w then (r0,r3,r6,xs,ys,zs,ss) else
-              let r6 = 1w in
-                (r0,r3,r6,xs,ys,zs,ss)
-    else (* 1 < LENGTH ys <= LENGTH xs *)
-      let ss = r3 :: ss in
-      let ss = r0 :: ss in
-      let r7 = r1 in
-      let r9 = r0 in
-      let r10 = r1 - 1w in
-      let r1 = EL (w2n r10) ys in
-      let r2 = 1w in
-      let r2 = x64_calc_d (r1,r2) in
-      let r1 = 0w in
-      let r8 = r2 in
-      let r10 = r1 in
-      let r11 = r1 in
-      let (r1,r8,r9,r10,xs,zs) = x64_mul_by_single (r1,r8,r9,r10,r11,xs,zs) in
-      let r1 = 0w in
-      let zs = LUPDATE r1 (w2n r10) zs in
-      let r0 = 0w in
-      let r1 = r0 in
-      let r3 = r0 in
-      let r11 = r0 in
-      let r9 = r7 in
-      let (r0,r1,r8,r9,r11,ys) = x64_top_two (r0,r1,r3,r8,r9,r11,ys) in
-      let r7 = r8 in
-      let r11 = r9 in
-      let (r10,ss) = (HD ss,TL ss) in
-      let r10 = r10 - r9 in
-      let r10 = r10 + 2w in
-      let ss = r10 :: ss in
-      let ss = r1 :: ss in
-      let ss = r0 :: ss in
-      let (r7,r9,r10,r11,ys,zs,ss) = x64_div_loop (r7,r9,r10,r11,ys,zs,ss) in
-      let (r0,ss) = (HD ss,TL ss) in
-      let (r0,ss) = (HD ss,TL ss) in
-      let (r8,ss) = (HD ss,TL ss) in
-      let r11 = r9 in
-      let r10 = r9 in
-      let r9 = r7 in
-      let r2 = 0w in
-      let (r2,r9,r10,zs) = x64_simple_div1 (r2,r9,r10,zs) in
-      let r9 = r11 in
-      let r10 = r9 in
-      let r7 = r8 in
-      let (r8,r10,zs) = x64_fix (r8,r10,zs) in
-      let r6 = r10 in
-      let r10 = r9 in
-      let (r3,ss) = (HD ss,TL ss) in
-      let r8 = r7 in
-        if r3 = 0w then
-          let r11 = 0w in
-          let zs = x64_copy_down (r8,r10,r11,zs) in
-          let r0 = r7 in
-            (r0,r3,r6,xs,ys,zs,ss)
-        else
-          let r0 = r9 in
-            (r0,r3,r6,xs,ys,zs,ss)`
-
-val (temp_x64_div_def, _,
-     temp_x64_div_pre_def, _) =
-  tailrec_define "temp_x64_div" ``
+val (x64_div_def, _,
+     x64_div_pre_def, _) =
+  tailrec_define "x64_div" ``
     (\(r0,r1,r3,xs,ys,zs,ss).
       if r0 <+ r1 then
         (let r6 = r0
@@ -3861,9 +2863,9 @@ val (temp_x64_div_def, _,
               in
                 (INR (r0,r3,r6,xs,ys,zs,ss),cond))
            else (let r0 = r9 in (INR (r0,r3,r6,xs,ys,zs,ss),cond))))
-    :Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list # Zimm list +
-      Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list # Zimm list) #
+    :word64 # word64 # word64 # word64 list # word64 list # word64 list # word64 list ->
+     (word64 # word64 # word64 # word64 list # word64 list # word64 list # word64 list +
+      word64 # word64 # word64 # word64 list # word64 list # word64 list # word64 list) #
      bool``;
 
 val mw_fix_SNOC = store_thm("mw_fix_SNOC",
@@ -4079,28 +3081,9 @@ val x64_div_thm = prove(
 
 (* mwi_div -- addv zs [] c *)
 
-val (res,x64_add1_def,x64_add1_pre_def) = x64_compile `
-  x64_add1 (r2,r10,r11:word64,zs:word64 list) =
-    if r10 = r11 then
-      let r0 = 1w in
-      let zs = LUPDATE r0 (w2n r10) zs in
-      let r11 = r11 + 1w in
-        (r11,zs)
-    else
-      let r0 = EL (w2n r10) zs in
-        if r0 <> r2 then
-          let r0 = r0 + 1w in
-          let zs = LUPDATE r0 (w2n r10) zs in
-            (r11,zs)
-        else
-          let r0 = 0w in
-          let zs = LUPDATE r0 (w2n r10) zs in
-          let r10 = r10 + 1w in
-            x64_add1 (r2,r10,r11,zs)`
-
-val (temp_x64_add1_def, _,
-     temp_x64_add1_pre_def, _) =
-  tailrec_define "temp_x64_add1" ``
+val (x64_add1_def, _,
+     x64_add1_pre_def, _) =
+  tailrec_define "x64_add1" ``
     (\(r2,r10,r11,zs).
       if r10 = r11 then
         (let r0 = 0x1w in
@@ -4124,22 +3107,12 @@ val (temp_x64_add1_def, _,
               let zs = LUPDATE r0 (w2n r10) zs
               in
                 (INR (r11,zs),cond))))
-    :Zimm # Zimm # Zimm # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm list + Zimm # Zimm list) # bool``;
+    :word64 # word64 # word64 # word64 list ->
+     (word64 # word64 # word64 # word64 list + word64 # word64 list) # bool``;
 
-val (res,x64_add1_call_def,x64_add1_call_pre_def) = x64_compile `
-  x64_add1_call (r2:word64,r6:word64,r11,zs) =
-    if r2 = 0w then (r11,zs) else
-    if r6 = 0w then (r11,zs) else
-      let r2 = 0w in
-      let r10 = r2 in
-      let r2 = ~r2 in
-      let (r11,zs) = x64_add1 (r2,r10,r11,zs) in
-        (r11,zs)`
-
-val (temp_x64_add1_call_def, _,
-     temp_x64_add1_call_pre_def, _) =
-  tailrec_define "temp_x64_add1_call" ``
+val (x64_add1_call_def, _,
+     x64_add1_call_pre_def, _) =
+  tailrec_define "x64_add1_call" ``
     (\(r2,r6,r11,zs).
       if r2 = 0x0w then (INR (r11,zs),T)
       else if r6 = 0x0w then (INR (r11,zs),T)
@@ -4151,8 +3124,8 @@ val (temp_x64_add1_call_def, _,
          let (r11,zs) = x64_add1 (r2,r10,r11,zs)
          in
            (INR (r11,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm list -> (Zimm # Zimm # Zimm # Zimm list
-     + Zimm # Zimm list) # bool``;
+    :word64 # word64 # word64 # word64 list -> (word64 # word64 # word64 # word64 list
+     + word64 # word64 list) # bool``;
 
 val x64_add1_thm = prove(
   ``!zs zs1.
@@ -4193,36 +3166,58 @@ val x64_add1_thm = prove(
 
 (* mwi_div -- subtraction *)
 
-val (res,x64_div_sub_aux_def) = x64_decompile_no_status "x64_div_sub_aux" `
-      xor r10,r10
-      inc r1
-      jmp L2
-  L1: insert r8_el_r10_ys
-      insert r9_el_r10_zs
-      sbb r8,r9
-      insert lupdate_r10_zs_with_r8
-      lea r10,[r10+1]
-  L2: loop L1`
+val (x64_div_sub_aux1_def, _,
+     x64_div_sub_aux1_pre_def, _) =
+  tailrec_define "x64_div_sub_aux1" ``
+    (\(r1,r8,r9,r10,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs).
+      if r1 = 0x1w then
+        (let r1 = 0x0w
+         in
+           (INR (r1,r8,r9,r10,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs),T))
+      else
+        (let r1 = r1 - 0x1w in
+         let cond = w2n r10 < LENGTH ys in
+         let r8 = EL (w2n r10) ys in
+         let cond = cond /\ w2n r10 < LENGTH zs in
+         let r9 = EL (w2n r10) zs in
+         let cond = cond /\ z_cf <> NONE in
+         let z_zf = SOME (r8 = r9 + n2w (b2n (THE z_cf))) in
+         let z_sf = SOME (word_msb (r8 - (r9 + n2w (b2n (THE z_cf)))))
+         in
+         let z_pf =
+               SOME
+                 (K T (w2w (r8 - (r9 + n2w (b2n (THE z_cf)))):word8))
+         in
+         let z_of = NONE in
+         let z_cf' = SOME (w2n r8 < w2n r9 + b2n (THE z_cf)) in
+         let z_af = NONE in
+         let r8 = r8 - (r9 + n2w (b2n (THE z_cf))) in
+         let zs = LUPDATE r8 (w2n r10) zs in
+         let r10 = r10 + 0x1w
+         in
+           (INL (r1,r8,r9,r10,ys,z_af,z_cf',z_of,z_pf,z_sf,z_zf,zs),cond)))
+    :word64 # word64 # word64 # word64 # word64 list # bool option # bool option
+     # bool option # bool option # bool option # bool option # word64
+     list -> (word64 # word64 # word64 # word64 # word64 list # bool option #
+     bool option # bool option # bool option # bool option # bool
+     option # word64 list + word64 # word64 # word64 # word64 # word64 list # bool
+     option # bool option # bool option # bool option # bool option #
+     bool option # word64 list) # bool``;
 
-val (x64_div_sub_res,x64_div_sub_def) = x64_decompile "x64_div_sub" `
-  insert x64_div_sub_aux`
-
-val _ = add_compiled [x64_div_sub_res]
-
-val (temp_x64_div_sub_aux_def, _,
-     temp_x64_div_sub_aux_pre_def, _) =
-  tailrec_define "temp_x64_div_sub_aux" ``
+val (x64_div_sub_aux_def, _,
+     x64_div_sub_aux_pre_def, _) =
+  tailrec_define "x64_div_sub_aux" ``
     (\(r1,r8,r9,ys,zs).
       (let z_zf = SOME T in
        let z_sf = SOME (word_msb (0x0w:word64)) in
-       let z_pf = SOME (byte_parity (0x0w:word8)) in
+       let z_pf = SOME (K T (0x0w:word8)) in
        let z_of = SOME F in
        let z_cf = SOME F in
        let z_af = NONE:bool option in
        let r10 = 0x0w in
        let z_zf = SOME (r1 + 0x1w = 0x0w) in
        let z_sf = SOME (word_msb (r1 + 0x1w)) in
-       let z_pf = SOME (byte_parity (w2w (r1 + 0x1w):word8)) in
+       let z_pf = SOME (K T (w2w (r1 + 0x1w):word8)) in
        let z_af = NONE:bool option in
        let r1 = r1 + 0x1w in
        let cond =
@@ -4234,40 +3229,34 @@ val (temp_x64_div_sub_aux_def, _,
                (r1,r8,r9,r10,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs)
        in
          (INR (r1,r8,r9,r10,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm list # Zimm list -> (Zimm # Zimm # Zimm
-     # Zimm list # Zimm list + Zimm # Zimm # Zimm # Zimm # Zimm list #
+    :word64 # word64 # word64 # word64 list # word64 list -> (word64 # word64 # word64
+     # word64 list # word64 list + word64 # word64 # word64 # word64 # word64 list #
      bool option # bool option # bool option # bool option # bool
-     option # bool option # Zimm list) # bool``;
+     option # bool option # word64 list) # bool``;
 
-val (temp_x64_div_sub_def, _,
-     temp_x64_div_sub_pre_def, _) =
-  tailrec_define "temp_x64_div_sub" ``
+val x64_div_sub_aux_def =
+  LIST_CONJ [x64_div_sub_aux_def,x64_div_sub_aux_pre_def,
+             x64_div_sub_aux1_def,x64_div_sub_aux1_pre_def]
+
+val (x64_div_sub_def, _,
+     x64_div_sub_pre_def, _) =
+  tailrec_define "x64_div_sub" ``
     (\(r1,r8,r9,ys,zs).
       (let cond = x64_div_sub_aux_pre (r1,r8,r9,ys,zs) in
        let (r1,r8,r9,r10,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs) =
              x64_div_sub_aux (r1,r8,r9,ys,zs)
        in
          (INR (r1,r8,r9,r10,ys,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm list # Zimm list +
-      Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list) # bool``;
+    :word64 # word64 # word64 # word64 list # word64 list ->
+     (word64 # word64 # word64 # word64 list # word64 list +
+      word64 # word64 # word64 # word64 # word64 list # word64 list) # bool``;
 
-val (res,x64_div_sub_call_def,x64_div_sub_call_pre_def) = x64_compile `
-  x64_div_sub_call (r1,r2:word64,r6:word64,ys,zs) =
-    if r2 = 0w then (r6,ys,zs) else
-    if r6 = 0w then (r6,ys,zs) else
-      let r8 = r6 in
-      let r9 = r6 in
-      let r3 = r1 in
-      let (r1,r8,r9,r10,ys,zs) = x64_div_sub (r1,r8,r9,ys,zs) in
-      let r10 = r3 in
-      let (r8,r10,zs) = x64_fix (r8,r10,zs) in
-      let r6 = r10 in
-        (r6,ys,zs)`
+val x64_div_sub_def =
+  LIST_CONJ [x64_div_sub_def,x64_div_sub_pre_def]
 
-val (temp_x64_div_sub_call_def, _,
-     temp_x64_div_sub_call_pre_def, _) =
-  tailrec_define "temp_x64_div_sub_call" ``
+val (x64_div_sub_call_def, _,
+     x64_div_sub_call_pre_def, _) =
+  tailrec_define "x64_div_sub_call" ``
     (\(r1,r2,r6,ys,zs).
       if r2 = 0x0w then (INR (r6,ys,zs),T)
       else if r6 = 0x0w then (INR (r6,ys,zs),T)
@@ -4283,9 +3272,9 @@ val (temp_x64_div_sub_call_def, _,
          let r6 = r10
          in
            (INR (r6,ys,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm list # Zimm list +
-      Zimm # Zimm list # Zimm list) # bool``;
+    :word64 # word64 # word64 # word64 list # word64 list ->
+     (word64 # word64 # word64 # word64 list # word64 list +
+      word64 # word64 list # word64 list) # bool``;
 
 val x64_div_sub_aux_thm = prove(
   ``!ys zs ys1 zs1 ys2 zs2
@@ -4328,7 +3317,7 @@ val x64_div_sub_aux_thm = prove(
   THEN1 (FULL_SIMP_TAC (srw_ss()) [] \\ DECIDE_TAC)
   \\ STRIP_TAC \\ ASM_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_SNOC,ADD1,AC ADD_COMM ADD_ASSOC,mw_sub_def,
-       LET_DEF,single_sub_def,bool2num_thm,single_add_def]
+       LET_DEF,single_sub_def,b2n_thm,single_add_def]
   \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
   \\ FULL_SIMP_TAC (srw_ss()) [b2w_def]
   \\ `(18446744073709551616 <= b2n ~c + (w2n h' + w2n (~h))) =
@@ -4358,16 +3347,9 @@ val x64_div_sub_thm = prove(
 
 (* mwi_div -- integer division *)
 
-val (res,x64_idiv_mod_header_def,x64_idiv_mod_header_pre_def) = x64_compile `
-  x64_idiv_mod_header (r6:word64,r11:word64) =
-    if r6 = 0w then r6 else
-      let r6 = r6 << 1 in
-        if r11 && 1w = 0w then r6 else
-          let r6 = r6 + 1w in r6`;
-
-val (temp_x64_idiv_mod_header_def, _,
-     temp_x64_idiv_mod_header_pre_def, _) =
-  tailrec_define "temp_x64_idiv_mod_header" ``
+val (x64_idiv_mod_header_def, _,
+     x64_idiv_mod_header_pre_def, _) =
+  tailrec_define "x64_idiv_mod_header" ``
     (\(r6,r11).
       if r6 = 0x0w then (INR r6,T)
       else
@@ -4375,7 +3357,7 @@ val (temp_x64_idiv_mod_header_def, _,
          in
            if r11 && 0x1w = 0x0w then (INR r6,T)
            else (let r6 = r6 + 0x1w in (INR r6,T))))
-    :Zimm # Zimm -> (Zimm # Zimm + Zimm) # bool``;
+    :word64 # word64 -> (word64 # word64 + word64) # bool``;
 
 val x64_idiv_mod_header_thm = prove(
   ``LENGTH xs < dimword (:64) ==>
@@ -4386,39 +3368,9 @@ val x64_idiv_mod_header_thm = prove(
   \\ Cases_on `xs = []` \\ ASM_SIMP_TAC (srw_ss()) []
   \\ Cases_on `t` \\ ASM_SIMP_TAC (srw_ss()) []);
 
-val (x64_idiv_res,x64_idiv_def,x64_idiv_pre_def) = x64_compile `
-  x64_idiv (r3,r10,r11,xs,ys,zs,ss) =
-    let r0 = r10 >>> 1 in
-    let r1 = r11 >>> 1 in
-    let r10 = r10 ?? r11 in
-    let r10 = r10 && 1w in
-    let ss = r10 :: ss in
-    let ss = r11 :: ss in
-    let (r0,r3,r6,xs,ys,zs,ss) = x64_div (r0,r1,r3,xs,ys,zs,ss) in
-    let (r11,ss) = (HD ss, TL ss) in
-      if r3 <> 0w then
-        let (r2,ss) = (HD ss, TL ss) in
-        let r1 = r11 >>> 1 in
-        let (r6,ys,zs) = x64_div_sub_call (r1,r2,r6,ys,zs) in
-        let r6 = x64_idiv_mod_header (r6,r11) in
-        let r11 = r6 in
-          (r11,xs,ys,zs,ss)
-      else
-        let r10 = r0 in
-        let r8 = r10 in
-        let (r8,r10,zs) = x64_fix (r8,r10,zs) in
-        let r11 = r10 in
-        let (r2,ss) = (HD ss, TL ss) in
-        let r3 = r2 in
-        let (r11,zs) = x64_add1_call (r2,r6,r11,zs) in
-          if r11 = 0w then (r11,xs,ys,zs,ss) else
-            let r11 = r11 << 1 in
-            let r11 = r11 + r3 in
-              (r11,xs,ys,zs,ss)`
-
-val (temp_x64_idiv_def, _,
-     temp_x64_idiv_pre_def, _) =
-  tailrec_define "temp_x64_idiv" ``
+val (x64_idiv_def, _,
+     x64_idiv_pre_def, _) =
+  tailrec_define "x64_idiv" ``
     (\(r3,r10,r11,xs,ys,zs,ss).
       (let r0 = r10 in
        let r0 = r0 >>> 1 in
@@ -4462,9 +3414,9 @@ val (temp_x64_idiv_def, _,
             let r11 = r6
             in
               (INR (r11,xs,ys,zs,ss),cond))))
-    :Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list # Zimm list +
-      Zimm # Zimm list # Zimm list # Zimm list # Zimm list) # bool``;
+    :word64 # word64 # word64 # word64 list # word64 list # word64 list # word64 list ->
+     (word64 # word64 # word64 # word64 list # word64 list # word64 list # word64 list +
+      word64 # word64 list # word64 list # word64 list # word64 list) # bool``;
 
 val x64_header_XOR = prove(
   ``!s t. ((x64_header (s,xs) ?? x64_header (t,ys)) && 0x1w:word64) =
@@ -4608,22 +3560,9 @@ val x64_idiv_thm = prove(
 
 (* int to decimal conversion *)
 
-val (res,x64_to_dec_def,x64_to_dec_pre_def) = x64_compile `
-  x64_to_dec (r9,r10,zs,ss) =
-    let r2 = 0w in
-    let r11 = r10 in
-    let (r2,r9,r10,zs) = x64_simple_div1 (r2,r9,r10,zs) in
-    let r2 = r2 + 0x30w in
-    let ss = r2 :: ss in
-    let r8 = r10 in
-    let r10 = r11 in
-    let (r8,r10,zs) = x64_fix (r8,r10,zs) in
-      if r10 = 0w then (zs,ss) else
-        x64_to_dec (r9,r10,zs,ss)`
-
-val (temp_x64_to_dec_def, _,
-     temp_x64_to_dec_pre_def, _) =
-  tailrec_define "temp_x64_to_dec" ``
+val (x64_to_dec_def, _,
+     x64_to_dec_pre_def, _) =
+  tailrec_define "x64_to_dec" ``
     (\(r9,r10,zs,ss).
       (let r2 = 0x0w in
        let r11 = r10 in
@@ -4638,25 +3577,12 @@ val (temp_x64_to_dec_def, _,
        in
          if r10 = 0x0w then (INR (zs,ss),cond)
          else (INL (r9,r10,zs,ss),cond)))
-    :Zimm # Zimm # Zimm list # Zimm list -> (Zimm # Zimm # Zimm list #
-     Zimm list + Zimm list # Zimm list) # bool``;
+    :word64 # word64 # word64 list # word64 list -> (word64 # word64 # word64 list #
+     word64 list + word64 list # word64 list) # bool``;
 
-val (res,x64_int_to_dec_def,x64_int_to_dec_pre_def) = x64_compile `
-  x64_int_to_dec (r10,xs,zs,ss) =
-    let r1 = r10 in
-    let r10 = r10 >>> 1 in
-    let (xs,zs) = x64_copy_over (r10,xs,zs) in
-    let r10 = r1 >>> 1 in
-    let r9 = 10w in
-    let (zs,ss) = x64_to_dec (r9,r10,zs,ss) in
-      if r1 && 1w = 0w then (xs,zs,ss) else
-        let r2 = 0x7Ew in
-        let ss = r2 :: ss in
-          (xs,zs,ss)`
-
-val (temp_x64_int_to_dec_def, _,
-     temp_x64_int_to_dec_pre_def, _) =
-  tailrec_define "temp_x64_int_to_dec" ``
+val (x64_int_to_dec_def, _,
+     x64_int_to_dec_pre_def, _) =
+  tailrec_define "x64_int_to_dec" ``
     (\(r10,xs,zs,ss).
       (let r1 = r10 in
        let r10 = r10 >>> 1 in
@@ -4670,8 +3596,8 @@ val (temp_x64_int_to_dec_def, _,
        in
          if r1 && 0x1w = 0x0w then (INR (xs,zs,ss),cond)
          else (let r2 = 0x7Ew in let ss = r2::ss in (INR (xs,zs,ss),cond))))
-    :Zimm # Zimm list # Zimm list # Zimm list -> (Zimm # Zimm list #
-     Zimm list # Zimm list + Zimm list # Zimm list # Zimm list) #
+    :word64 # word64 list # word64 list # word64 list -> (word64 # word64 list #
+     word64 list # word64 list + word64 list # word64 list # word64 list) #
      bool``;
 
 val x64_to_dec_thm = prove(
@@ -4755,52 +3681,28 @@ val int_op_rep_def = Define `
   (int_op_rep Mod = 6w) /\
   (int_op_rep Dec = 7w:'a word)`;
 
-val (res,x64_isub_flip_def,x64_isub_flip_pre_def) = x64_compile `
-  x64_isub_flip (r1:word64,r3:word64) =
-    if r3 = 0w then (r1,r3) else let r1 = r1 ?? 1w in (r1,r3)`
-
-val (temp_x64_isub_flip_def, _,
-     temp_x64_isub_flip_pre_def, _) =
-  tailrec_define "temp_x64_isub_flip" ``
+val (x64_isub_flip_def, _,
+     x64_isub_flip_pre_def, _) =
+  tailrec_define "x64_isub_flip" ``
     (\(r1,r3).
       if r3 = 0x0w then (INR (r1,r3),T)
       else (let r1 = r1 ?? 0x1w in (INR (r1,r3),T)))
-    :Zimm # Zimm -> (Zimm # Zimm + Zimm # Zimm) # bool``;
+    :word64 # word64 -> (word64 # word64 + word64 # word64) # bool``;
 
-val (res,x64_icmp_res_def,x64_icmp_res_pre_def) = x64_compile `
-  x64_icmp_res (r10:word64,r3:word64) =
-    if r3 = 2w then (* lt *)
-      if r10 = 1w then let r10 = 1w in r10
-                  else let r10 = 0w in r10
-    else (* eq *)
-      if r10 = 0w then let r10 = 1w in r10
-                  else let r10 = 0w in r10:word64`
-
-val (temp_x64_icmp_res_def, _,
-     temp_x64_icmp_res_pre_def, _) =
-  tailrec_define "temp_x64_icmp_res" ``
+val (x64_icmp_res_def, _,
+     x64_icmp_res_pre_def, _) =
+  tailrec_define "x64_icmp_res" ``
     (\(r10,r3).
       if r3 = 0x2w then
         if r10 = 0x1w then (let r10 = 0x1w in (INR r10,T))
         else (let r10 = 0x0w in (INR r10,T))
       else if r10 = 0x0w then (let r10 = 0x1w in (INR r10,T))
       else (let r10 = 0x0w in (INR r10,T)))
-    :Zimm # Zimm -> (Zimm # Zimm + Zimm) # bool``;
+    :word64 # word64 -> (word64 # word64 + word64) # bool``;
 
-val (res,x64_full_cmp_def,x64_full_cmp_pre_def) = x64_compile `
-  x64_full_cmp (r3,r10,r11,xs,ys,zs) =
-    let (r10,xs,ys) = x64_icompare (r10,r11,xs,ys) in
-    let r10 = x64_icmp_res (r10,r3) in
-      if r10 = 0w then (r10,xs,ys,zs) else
-        let r0 = 1w:word64 in
-        let r10 = 0w:word64 in
-        let zs = LUPDATE r0 (w2n r10) zs in
-        let r10 = 2w in
-          (r10,xs,ys,zs)`
-
-val (temp_x64_full_cmp_def, _,
-     temp_x64_full_cmp_pre_def, _) =
-  tailrec_define "temp_x64_full_cmp" ``
+val (x64_full_cmp_def, _,
+     x64_full_cmp_pre_def, _) =
+  tailrec_define "x64_full_cmp" ``
     (\(r3,r10,r11,xs,ys,zs).
       (let cond = x64_icompare_pre (r10,r11,xs,ys) in
        let (r10,xs,ys) = x64_icompare (r10,r11,xs,ys) in
@@ -4815,9 +3717,9 @@ val (temp_x64_full_cmp_def, _,
             let r10 = 0x2w
             in
               (INR (r10,xs,ys,zs),cond))))
-    :Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list +
-      Zimm # Zimm list # Zimm list # Zimm list) # bool``;
+    :word64 # word64 # word64 # word64 list # word64 list # word64 list ->
+     (word64 # word64 # word64 # word64 list # word64 list # word64 list +
+      word64 # word64 list # word64 list # word64 list) # bool``;
 
 val NumABS_LEMMA = prove(
   ``(Num (ABS (0:int)) = 0:num) /\ (Num (ABS (1:int)) = 1:num)``,
@@ -4876,42 +3778,9 @@ val x64_full_cmp_eq = prove(
   \\ SIMP_TAC std_ss [i2mw_def,NumABS_LEMMA,EVAL ``n2mw 0``]
   \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [ADD1] \\ DECIDE_TAC);
 
-val (x64_iop_res,x64_iop_def,x64_iop_pre_def) = x64_compile `
-  x64_iop (r0,r1,r3,xs,ys,zs,xa,ya,ss) =
-    if r3 <+ 2w then (* + or - *)
-      let (r1,r3) = x64_isub_flip (r1,r3) in
-      let r2 = r1 in
-      let r1 = r0 in
-      let (r10,xs,ys,zs,xa,ya) = x64_iadd (r1,r2,xs,ys,zs,xa,ya) in
-        (r10,xs,ys,zs,xa,ya,ss)
-    else if r3 <+ 4w then (* < or = *)
-      let r10 = r0 in
-      let r11 = r1 in
-      let (r10,xs,ys,zs) = x64_full_cmp (r3,r10,r11,xs,ys,zs) in
-        (r10,xs,ys,zs,xa,ya,ss)
-    else if r3 = 4w then (* * *)
-      let r2 = r1 in
-      let r1 = r0 in
-      let (r10,xs,ys,zs) = x64_imul (r1,r2,xs,ys,zs) in
-        (r10,xs,ys,zs,xa,ya,ss)
-    else if r3 <+ 7w then (* / or % *)
-      let r3 = r3 - 5w in
-      let r10 = r0 in
-      let r11 = r1 in
-      let (r11,xs,ys,zs,ss) = x64_idiv (r3,r10,r11,xs,ys,zs,ss) in
-      let r10 = r11 in
-        (r10,xs,ys,zs,xa,ya,ss)
-    else (* print to dec *)
-      let r10 = r0 in
-      let (xs,zs,ss) = x64_int_to_dec (r10,xs,zs,ss) in
-      let r10 = 0w in
-        (r10,xs,ys,zs,xa,ya,ss)`
-
-val _ = save_thm("x64_iop_res",x64_iop_res);
-
-val (temp_x64_iop_def, _,
-     temp_x64_iop_pre_def, _) =
-  tailrec_define "temp_x64_iop" ``
+val (x64_iop_def, _,
+     x64_iop_pre_def, _) =
+  tailrec_define "x64_iop" ``
     (\(r0,r1,r3,xs,ys,zs,xa,ya,ss).
       if r3 <+ 0x2w then
         (let (r1,r3) = x64_isub_flip (r1,r3) in
@@ -4951,10 +3820,10 @@ val (temp_x64_iop_def, _,
          let r10 = 0x0w
          in
            (INR (r10,xs,ys,zs,xa,ya,ss),cond)))
-    :Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list # Zimm #
-     Zimm # Zimm list -> (Zimm # Zimm # Zimm # Zimm list # Zimm list #
-     Zimm list # Zimm # Zimm # Zimm list + Zimm # Zimm list # Zimm
-     list # Zimm list # Zimm # Zimm # Zimm list) # bool``;
+    :word64 # word64 # word64 # word64 list # word64 list # word64 list # word64 #
+     word64 # word64 list -> (word64 # word64 # word64 # word64 list # word64 list #
+     word64 list # word64 # word64 # word64 list + word64 # word64 list # word64
+     list # word64 list # word64 # word64 # word64 list) # bool``;
 
 val x64_header_XOR_1 = prove(
   ``x64_header (s,xs) ?? 1w = x64_header (~s,xs)``,
