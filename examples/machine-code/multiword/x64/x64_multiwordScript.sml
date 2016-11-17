@@ -5,33 +5,6 @@ val _ = new_theory "x64_multiword";
 infix \\ val op \\ = op THEN;
 open multiwordTheory;
 
-fun tailrec_define name tm =
-  tailrecLib.tailrec_define_from_step name tm NONE;
-
-fun here name = let
-  fun rename_conv tm = let
-    val (v,x) = dest_abs tm
-    val (name,ty) = dest_var v
-    val toks = String.tokens (fn c => c = #"@") name
-    in if 1 < length toks then
-         ALPHA_CONV (mk_var(last toks,ty)) tm
-       else NO_CONV tm end
-  val tm = fetch "-" name
-    |> REWRITE_RULE [addressTheory.GUARD_def]
-    |> CONV_RULE (DEPTH_CONV rename_conv)
-    |> concl |> rand |> rand
-  val name = "temp_" ^ name
-  val names = name ^ "_def, _,\n     " ^ name ^ "_pre_def, _"
-  val _ = print ("\n\nval ("^names^") = \n  tailrec_define \"" ^
-                 name ^ "\" ``")
-  val str = "\n(" ^ term_to_string tm ^ ")\n" ^ type_to_string (type_of tm)
-  val str = String.translate(fn s => if s = #"\n" then "\n    " else implode [s]) str
-  val _ = print str
-  val _ = print "``;\n\n"
-  in () end;
-
-val _ = set_trace "Unicode" 0;
-
 open progTheory;
 open decompilerLib x64_codegenLib prog_x64Lib x64_compilerLib;
 open wordsTheory wordsLib addressTheory arithmeticTheory listTheory pairSyntax;
@@ -403,45 +376,12 @@ val (res,x64_cmp_def,x64_cmp_pre_def) = x64_compile `
         else if r8 <+ r9 then let r10 = 1w in (r10,xs,ys)
                          else let r10 = 2w in (r10,xs,ys)`
 
-val (temp_x64_cmp_def, _,
-     temp_x64_cmp_pre_def, _) =
-  tailrec_define "temp_x64_cmp" ``
-    (\(r10,xs,ys).
-      if r10 = 0x0w then (INR (r10,xs,ys),T)
-      else
-        (let r10 = r10 - 0x1w in
-         let cond = w2n r10 < LENGTH xs in
-         let r8 = EL (w2n r10) xs in
-         let cond = cond /\ w2n r10 < LENGTH ys in
-         let r9 = EL (w2n r10) ys
-         in
-           if r8 = r9 then (INL (r10,xs,ys),cond)
-           else if r8 <+ r9 then (let r10 = 0x1w in (INR (r10,xs,ys),cond))
-           else (let r10 = 0x2w in (INR (r10,xs,ys),cond))))
-    :Zimm # Zimm list # Zimm list ->
-     (Zimm # Zimm list # Zimm list + Zimm # Zimm list # Zimm list) # bool``;
-
 val (res,x64_compare_def,x64_compare_pre_def) = x64_compile `
   x64_compare (r10:word64,r11,xs:word64 list,ys:word64 list) =
     if r10 <+ r11 then let r10 = 1w in (r10,xs,ys) else
     if r11 <+ r10 then let r10 = 2w in (r10,xs,ys) else
       let (r10,xs,ys) = x64_cmp (r10,xs,ys) in
         (r10,xs,ys)`
-
-val (temp_x64_compare_def, _,
-     temp_x64_compare_pre_def, _) =
-  tailrec_define "temp_x64_compare" ``
-    (\(r10,r11,xs,ys).
-      if r10 <+ r11 then (let r10 = 0x1w in (INR (r10,xs,ys),T))
-      else if r11 <+ r10 then (let r10 = 0x2w in (INR (r10,xs,ys),T))
-      else
-        (let cond = x64_cmp_pre (r10,xs,ys) in
-         let (r10,xs,ys) = x64_cmp (r10,xs,ys)
-         in
-           (INR (r10,xs,ys),cond)))
-    :Zimm # Zimm # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm list # Zimm list + Zimm # Zimm list # Zimm list) #
-     bool``;
 
 val x64_header_def = Define `
   x64_header (s,xs:word64 list) = n2w (LENGTH xs * 2) + if s then 1w else 0w:word64`;
@@ -461,33 +401,6 @@ val (x64_icompare_res,x64_icompare_def,x64_icompare_pre_def) = x64_compile `
         let (r10,xs,ys) = x64_compare (r10,r11,xs,ys) in
           if r10 = 0w then (r10,xs,ys) else
             let r10 = r10 ?? 3w in (r10,xs,ys)`
-
-val (temp_x64_icompare_def, _,
-     temp_x64_icompare_pre_def, _) =
-  tailrec_define "temp_x64_icompare" ``
-    (\(r10,r11,xs,ys).
-      if r10 && 0x1w = 0x0w then
-        if r11 && 0x1w = 0x0w then
-          (let r10 = r10 >>> 1 in
-           let r11 = r11 >>> 1 in
-           let cond = x64_compare_pre (r10,r11,xs,ys) in
-           let (r10,xs,ys) = x64_compare (r10,r11,xs,ys)
-           in
-             (INR (r10,xs,ys),cond))
-        else (let r10 = 0x2w in (INR (r10,xs,ys),T))
-      else if r11 && 0x1w = 0x0w then
-        (let r10 = 0x1w in (INR (r10,xs,ys),T))
-      else
-        (let r10 = r10 >>> 1 in
-         let r11 = r11 >>> 1 in
-         let cond = x64_compare_pre (r10,r11,xs,ys) in
-         let (r10,xs,ys) = x64_compare (r10,r11,xs,ys)
-         in
-           if r10 = 0x0w then (INR (r10,xs,ys),cond)
-           else (let r10 = r10 ?? 0x3w in (INR (r10,xs,ys),cond))))
-    :Zimm # Zimm # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm list # Zimm list + Zimm # Zimm list # Zimm list) #
-     bool``;
 
 val cmp2w_def = Define `
   (cmp2w NONE = 0w:word64) /\
@@ -602,164 +515,6 @@ val (x64_add_res,x64_add_def) = x64_decompile "x64_add" `
   insert x64_add_loop`;
 
 val _ = add_compiled [x64_add_res]
-
-val (temp_x64_add_loop2_def, _,
-     temp_x64_add_loop2_pre_def, _) =
-  tailrec_define "temp_x64_add_loop2" ``
-    (\(r1,r8,r9,r10,xs,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs).
-      if r1 = 0x1w then
-        (let r1 = 0x0w
-         in
-           (INR (r1,r8,r9,r10,xs,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs),T))
-      else
-        (let r1 = r1 - 0x1w in
-         let cond = w2n r10 < LENGTH xs in
-         let r8 = EL (w2n r10) xs in
-         let cond = cond /\ z_cf <> NONE in
-         let z_zf = SOME (r8 + r9 + n2w (bool2num (THE z_cf)) = 0x0w) in
-         let z_sf = SOME (word_msb (r8 + r9 + n2w (bool2num (THE z_cf)))) in
-         let z_pf =
-               SOME
-                 (byte_parity (w2w (r8 + r9 + n2w (bool2num (THE z_cf))):word8))
-         in
-         let z_of = NONE in
-         let z_cf' =
-               SOME
-                 (18446744073709551616 <=
-                  w2n r8 + w2n r9 + bool2num (THE z_cf))
-         in
-         let z_af = NONE in
-         let r8 = r8 + r9 + n2w (bool2num (THE z_cf)) in
-         let cond = cond /\ w2n r10 < LENGTH zs in
-         let zs = LUPDATE r8 (w2n r10) zs in
-         let r10 = r10 + 0x1w
-         in
-           (INL (r1,r8,r9,r10,xs,z_af,z_cf',z_of,z_pf,z_sf,z_zf,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm list # bool option # bool option
-     # bool option # bool option # bool option # bool option # Zimm
-     list -> (Zimm # Zimm # Zimm # Zimm # Zimm list # bool option #
-     bool option # bool option # bool option # bool option # bool
-     option # Zimm list + Zimm # Zimm # Zimm # Zimm # Zimm list # bool
-     option # bool option # bool option # bool option # bool option #
-     bool option # Zimm list) # bool``;
-
-val (temp_x64_add_loop1_def, _,
-     temp_x64_add_loop1_pre_def, _) =
-  tailrec_define "temp_x64_add_loop1" ``
-    (\(r1,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs).
-      if r1 = 0x1w then
-        (let r1 = 0x0w
-         in
-           (INR (r1,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs),T))
-      else
-        (let r1 = r1 - 0x1w in
-         let cond = w2n r10 < LENGTH xs in
-         let r8 = EL (w2n r10) xs in
-         let cond = cond /\ w2n r10 < LENGTH ys in
-         let r9 = EL (w2n r10) ys in
-         let cond = cond /\ z_cf <> NONE in
-         let z_zf = SOME (r8 + r9 + n2w (bool2num (THE z_cf)) = 0x0w) in
-         let z_sf = SOME (word_msb (r8 + r9 + n2w (bool2num (THE z_cf)))) in
-         let z_pf =
-               SOME
-                 (byte_parity (w2w (r8 + r9 + n2w (bool2num (THE z_cf))):word8))
-         in
-         let z_of = NONE in
-         let z_cf' =
-               SOME
-                 (18446744073709551616 <=
-                  w2n r8 + w2n r9 + bool2num (THE z_cf))
-         in
-         let z_af = NONE in
-         let r8 = r8 + r9 + n2w (bool2num (THE z_cf)) in
-         let cond = cond /\ w2n r10 < LENGTH zs in
-         let zs = LUPDATE r8 (w2n r10) zs in
-         let r10 = r10 + 0x1w
-         in
-           (INL (r1,r8,r9,r10,xs,ys,z_af,z_cf',z_of,z_pf,z_sf,z_zf,zs),
-            cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # bool option #
-     bool option # bool option # bool option # bool option # bool
-     option # Zimm list -> (Zimm # Zimm # Zimm # Zimm # Zimm list #
-     Zimm list # bool option # bool option # bool option # bool option
-     # bool option # bool option # Zimm list + Zimm # Zimm # Zimm #
-     Zimm # Zimm list # Zimm list # bool option # bool option # bool
-     option # bool option # bool option # bool option # Zimm list) #
-     bool``;
-
-val (temp_x64_add_loop_def, _,
-     temp_x64_add_loop_pre_def, _) =
-  tailrec_define "temp_x64_add_loop" ``
-    (\(r1,r2,r8,r9,r10,xs,ys,zs).
-      (let z_zf = SOME (r1 + 0x1w = 0x0w) in
-       let z_sf = SOME (word_msb (r1 + 0x1w)) in
-       let z_pf = SOME (byte_parity (w2w (r1 + 0x1w):word8)) in
-       let z_af = SOME T in
-       let r1 = r1 + 0x1w in
-       let z_zf = SOME (r2 + 0x1w = 0x0w) in
-       let z_sf = SOME (word_msb (r2 + 0x1w)) in
-       let z_pf = SOME (byte_parity (w2w (r2 + 0x1w):word8)) in
-       let z_af = SOME T in
-       let r2 = r2 + 0x1w in
-       let z_zf = SOME (r1 = 0x0w) in
-       let z_sf = SOME (word_msb r1) in
-       let z_pf = SOME (byte_parity (w2w r1:word8)) in
-       let z_of = SOME F in
-       let z_cf = SOME (18446744073709551616 <= w2n r1) in
-       let z_af = SOME T in
-       let cond =
-             x64_add_loop1_pre
-               (r1,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs)
-       in
-       let (r1,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs) =
-             x64_add_loop1
-               (r1,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs)
-       in
-       let r1 = r2 in
-       let r9 = 0x0w in
-       let cond =
-             cond /\
-             x64_add_loop2_pre
-               (r1,r8,r9,r10,xs,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs)
-       in
-       let (r1,r8,r9,r10,xs,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs) =
-             x64_add_loop2
-               (r1,r8,r9,r10,xs,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs)
-       in
-         if THE z_cf then
-           (let cond = cond /\ z_cf <> NONE in
-            let r8 = 0x1w in
-            let cond = cond /\ w2n r10 < LENGTH zs in
-            let zs = LUPDATE r8 (w2n r10) zs in
-            let r10 = r10 + 0x1w
-            in
-              (INR (r1,r2,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs),
-               cond))
-         else
-           (let cond = cond /\ z_cf <> NONE
-            in
-              (INR (r1,r2,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs),
-               cond))))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm
-     list -> (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list
-     # Zimm list + Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm
-     list # bool option # bool option # bool option # bool option #
-     bool option # bool option # Zimm list) # bool``;
-
-val (temp_x64_add_def, _,
-     temp_x64_add_pre_def, _) =
-  tailrec_define "temp_x64_add" ``
-    (\(r1,r2,r8,r9,r10,xs,ys,zs).
-      (let r2 = r2 - r1 in
-       let cond = x64_add_loop_pre (r1,r2,r8,r9,r10,xs,ys,zs) in
-       let (r1,r2,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs) =
-             x64_add_loop (r1,r2,r8,r9,r10,xs,ys,zs)
-       in
-         (INR (r1,r2,r8,r9,r10,xs,ys,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list +
-      Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list)
-     # bool``;
 
 val SNOC_INTRO = prove(
   ``xs1 ++ x::(xs ++ xs2) = SNOC x xs1 ++ (xs ++ xs2)``,
@@ -981,169 +736,6 @@ val (x64_sub_res,x64_sub_def) = x64_decompile "x64_sub" `
 
 val _ = add_compiled [x64_sub_res]
 
-val (temp_x64_sub_loop2_def, _,
-     temp_x64_sub_loop2_pre_def, _) =
-  tailrec_define "temp_x64_sub_loop2" ``
-    (\(r1,r8,r9,r10,xs,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs).
-      if r1 = 0x1w then
-        (let r1 = 0x0w
-         in
-           (INR (r1,r8,r9,r10,xs,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs),T))
-      else
-        (let r1 = r1 - 0x1w in
-         let cond = w2n r10 < LENGTH xs in
-         let r8 = EL (w2n r10) xs in
-         let cond = cond /\ z_cf <> NONE in
-         let z_zf = SOME (r8 = r9 + n2w (bool2num (THE z_cf))) in
-         let z_sf = SOME (word_msb (r8 - (r9 + n2w (bool2num (THE z_cf)))))
-         in
-         let z_pf =
-               SOME
-                 (byte_parity (w2w (r8 - (r9 + n2w (bool2num (THE z_cf)))):word8))
-         in
-         let z_of = SOME T in
-         let z_cf' = SOME (w2n r8 < w2n r9 + bool2num (THE z_cf)) in
-         let z_af = SOME T in
-         let r8 = r8 - (r9 + n2w (bool2num (THE z_cf))) in
-         let cond = cond /\ w2n r10 < LENGTH zs in
-         let zs = LUPDATE r8 (w2n r10) zs in
-         let r10 = r10 + 0x1w
-         in
-           (INL (r1,r8,r9,r10,xs,z_af,z_cf',z_of,z_pf,z_sf,z_zf,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm list # bool option # bool option
-     # bool option # bool option # bool option # bool option # Zimm
-     list -> (Zimm # Zimm # Zimm # Zimm # Zimm list # bool option #
-     bool option # bool option # bool option # bool option # bool
-     option # Zimm list + Zimm # Zimm # Zimm # Zimm # Zimm list # bool
-     option # bool option # bool option # bool option # bool option #
-     bool option # Zimm list) # bool``;
-
-val (temp_x64_sub_loop1_def, _,
-     temp_x64_sub_loop1_pre_def, _) =
-  tailrec_define "temp_x64_sub_loop1" ``
-    (\(r1,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs).
-      if r1 = 0x1w then
-        (let r1 = 0x0w
-         in
-           (INR (r1,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs),T))
-      else
-        (let r1 = r1 - 0x1w in
-         let cond = w2n r10 < LENGTH xs in
-         let r8 = EL (w2n r10) xs in
-         let cond = cond /\ w2n r10 < LENGTH ys in
-         let r9 = EL (w2n r10) ys in
-         let cond = cond /\ z_cf <> NONE in
-         let z_zf = SOME (r8 = r9 + n2w (bool2num (THE z_cf))) in
-         let z_sf = SOME (word_msb (r8 - (r9 + n2w (bool2num (THE z_cf)))))
-         in
-         let z_pf =
-               SOME
-                 (byte_parity (w2w (r8 - (r9 + n2w (bool2num (THE z_cf)))):word8))
-         in
-         let z_of = SOME T in
-         let z_cf' = SOME (w2n r8 < w2n r9 + bool2num (THE z_cf)) in
-         let z_af = SOME T in
-         let r8 = r8 - (r9 + n2w (bool2num (THE z_cf))) in
-         let cond = cond /\ w2n r10 < LENGTH zs in
-         let zs = LUPDATE r8 (w2n r10) zs in
-         let r10 = r10 + 0x1w
-         in
-           (INL (r1,r8,r9,r10,xs,ys,z_af,z_cf',z_of,z_pf,z_sf,z_zf,zs),
-            cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # bool option #
-     bool option # bool option # bool option # bool option # bool
-     option # Zimm list -> (Zimm # Zimm # Zimm # Zimm # Zimm list #
-     Zimm list # bool option # bool option # bool option # bool option
-     # bool option # bool option # Zimm list + Zimm # Zimm # Zimm #
-     Zimm # Zimm list # Zimm list # bool option # bool option # bool
-     option # bool option # bool option # bool option # Zimm list) #
-     bool``;
-
-val (temp_x64_sub_loop_def, _,
-     temp_x64_sub_loop_pre_def, _) =
-  tailrec_define "temp_x64_sub_loop" ``
-    (\(r1,r2,r8,r9,r10,xs,ys,zs).
-      (let z_zf = SOME (r1 + 0x1w = 0x0w) in
-       let z_sf = SOME (word_msb (r1 + 0x1w)) in
-       let z_pf = SOME (byte_parity (w2w (r1 + 0x1w):word8)) in
-       let z_af = SOME T in
-       let r1 = r1 + 0x1w in
-       let z_zf = SOME (r2 + 0x1w = 0x0w) in
-       let z_sf = SOME (word_msb (r2 + 0x1w)) in
-       let z_pf = SOME (byte_parity (w2w (r2 + 0x1w):word8)) in
-       let z_af = SOME T in
-       let r2 = r2 + 0x1w in
-       let z_zf = SOME (r8 = 0x0w) in
-       let z_sf = SOME (word_msb (r8 - 0x0w)) in
-       let z_pf = SOME (byte_parity (w2w (r8 - 0x0w):word8)) in
-       let z_of =
-             SOME
-               ((word_msb r8 <=/=> word_msb (0x0w:word64)) /\
-                (word_msb (r8 - 0x0w) <=/=> word_msb r8))
-       in
-       let z_cf = SOME (r8 <+ 0x0w) in
-       let z_af = SOME T in
-       let r8 = r8 - 0x0w in
-       let cond =
-             x64_sub_loop1_pre
-               (r1,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs)
-       in
-       let (r1,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs) =
-             x64_sub_loop1
-               (r1,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs)
-       in
-       let r1 = r2 in
-       let r9 = 0x0w in
-       let cond =
-             cond /\
-             x64_sub_loop2_pre
-               (r1,r8,r9,r10,xs,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs)
-       in
-       let (r1,r8,r9,r10,xs,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs) =
-             x64_sub_loop2
-               (r1,r8,r9,r10,xs,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs)
-       in
-         (INR (r1,r2,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs),
-          cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm
-     list -> (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list
-     # Zimm list + Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm
-     list # bool option # bool option # bool option # bool option #
-     bool option # bool option # Zimm list) # bool``;
-
-val (temp_x64_fix_def, _,
-     temp_x64_fix_pre_def, _) =
-  tailrec_define "temp_x64_fix" ``
-    (\(r8,r10,zs).
-      if r10 = 0x0w then (INR (r8,r10,zs),T)
-      else
-        (let r10 = r10 - 0x1w in
-         let cond = w2n r10 < LENGTH zs in
-         let r8 = EL (w2n r10) zs
-         in
-           if r8 = 0x0w then (INL (r8,r10,zs),cond)
-           else (let r10 = r10 + 0x1w in (INR (r8,r10,zs),cond))))
-    :Zimm # Zimm # Zimm list ->
-     (Zimm # Zimm # Zimm list + Zimm # Zimm # Zimm list) # bool``;
-
-val (temp_x64_sub_def, _,
-     temp_x64_sub_pre_def, _) =
-  tailrec_define "temp_x64_sub" ``
-    (\(r1,r2,r8,r9,r10,xs,ys,zs).
-      (let r2 = r2 - r1 in
-       let cond = x64_sub_loop_pre (r1,r2,r8,r9,r10,xs,ys,zs) in
-       let (r1,r2,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs) =
-             x64_sub_loop (r1,r2,r8,r9,r10,xs,ys,zs)
-       in
-       let cond = cond /\ x64_fix_pre (r8,r10,zs) in
-       let (r8,r10,zs) = x64_fix (r8,r10,zs)
-       in
-         (INR (r1,r2,r8,r9,r10,xs,ys,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list +
-      Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list)
-     # bool``;
-
 val x64_fix_thm = prove(
   ``!zs zs1 r8.
       LENGTH zs < dimword(:64) ==>
@@ -1364,27 +956,6 @@ val (res,x64_iadd1_def,x64_iadd1_pre_def) = x64_compile `
         let r2 = r8 in
           (r1,r2,r0,xs,ys,xa,ya)`
 
-val (temp_x64_iadd1_def, _,
-     temp_x64_iadd1_pre_def, _) =
-  tailrec_define "temp_x64_iadd1" ``
-    (\(r1,r2,xs,ys,xa,ya).
-      (let r0 = 0x0w
-       in
-         if r1 <+ r2 then
-           (let (xa,xs,ya,ys) = (ya,ys,xa,xs) in
-            let r0 = 0x1w
-            in
-              (INR (r1,r2,r0,xs,ys,xa,ya),T))
-         else
-           (let r8 = r1 in
-            let r1 = r2 in
-            let r2 = r8
-            in
-              (INR (r1,r2,r0,xs,ys,xa,ya),T))))
-    :Zimm # Zimm # Zimm list # Zimm list # Zimm # Zimm ->
-     (Zimm # Zimm # Zimm list # Zimm list # Zimm # Zimm +
-      Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm # Zimm) # bool``;
-
 val (res,x64_iadd2_def,x64_iadd2_pre_def) = x64_compile `
   x64_iadd2 (r1:word64,r2:word64,r10:word64,r12:word64,xs,ys,xa,ya) =
     let r0 = 0w:word64 in
@@ -1399,44 +970,11 @@ val (res,x64_iadd2_def,x64_iadd2_pre_def) = x64_compile `
         let r2 = r8 in
           (r1,r2,r0,r12,xs:word64 list,ys:word64 list,xa:word64,ya:word64)`
 
-val (temp_x64_iadd2_def, _,
-     temp_x64_iadd2_pre_def, _) =
-  tailrec_define "temp_x64_iadd2" ``
-    (\(r1,r2,r10,r12,xs,ys,xa,ya).
-      (let r0 = 0x0w
-       in
-         if r10 = 0x1w then
-           (let (xa,xs,ya,ys) = (ya,ys,xa,xs) in
-            let r12 = r12 ?? 0x1w in
-            let r0 = 0x1w
-            in
-              (INR (r1,r2,r0,r12,xs,ys,xa,ya),T))
-         else
-           (let r8 = r1 in
-            let r1 = r2 in
-            let r2 = r8
-            in
-              (INR (r1,r2,r0,r12,xs,ys,xa,ya),T))))
-    :Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm # Zimm ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm # Zimm +
-      Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm # Zimm) #
-     bool``;
-
 val (res,x64_iadd3_def,x64_iadd3_pre_def) = x64_compile `
   x64_iadd3 (r0:word64,xs:word64 list,ys:word64 list,xa:word64,ya:word64) =
       if r0 = 0w then (xs,ys,xa,ya) else
         let (xa,xs,ya,ys) = (ya,ys,xa,xs) in
           (xs,ys,xa,ya)`
-
-val (temp_x64_iadd3_def, _,
-     temp_x64_iadd3_pre_def, _) =
-  tailrec_define "temp_x64_iadd3" ``
-    (\(r0,xs,ys,xa,ya).
-      if r0 = 0x0w then (INR (xs,ys,xa,ya),T)
-      else (let (xa,xs,ya,ys) = (ya,ys,xa,xs) in (INR (xs,ys,xa,ya),T)))
-    :Zimm # Zimm list # Zimm list # Zimm # Zimm ->
-     (Zimm # Zimm list # Zimm list # Zimm # Zimm +
-      Zimm list # Zimm list # Zimm # Zimm) # bool``;
 
 val (x64_iadd_res,x64_iadd_def,x64_iadd_pre_def) = x64_compile `
   x64_iadd (r1:word64,r2:word64,xs:word64 list,ys:word64 list,zs:word64 list,xa,ya) =
@@ -1473,64 +1011,6 @@ val (x64_iadd_res,x64_iadd_def,x64_iadd_pre_def) = x64_compile `
             let r10 = r10 << 1 in
             let r10 = r10 + r12 in
               (r10,xs,ys,zs,xa,ya)`
-
-val (temp_x64_iadd_def, _,
-     temp_x64_iadd_pre_def, _) =
-  tailrec_define "temp_x64_iadd" ``
-    (\(r1,r2,xs,ys,zs,xa,ya).
-      (let r10 = r1 in
-       let r10 = r10 && 0x1w in
-       let r11 = r2 in
-       let r11 = r11 && 0x1w
-       in
-         if r10 = r11 then
-           (let r1 = r1 >>> 1 in
-            let r2 = r2 >>> 1 in
-            let (r1,r2,r0,xs,ys,xa,ya) = x64_iadd1 (r1,r2,xs,ys,xa,ya) in
-            let r8 = 0x0w in
-            let r9 = r8 in
-            let r10 = r8 in
-            let cond = x64_add_pre (r1,r2,r8,r9,r10,xs,ys,zs) in
-            let (r1,r2,r8,r9,r10,xs,ys,zs) =
-                  x64_add (r1,r2,r8,r9,r10,xs,ys,zs)
-            in
-            let (xs,ys,xa,ya) = x64_iadd3 (r0,xs,ys,xa,ya) in
-            let r10 = r10 << 1 in
-            let r10 = r10 + r11
-            in
-              (INR (r10,xs,ys,zs,xa,ya),cond))
-         else
-           (let r12 = r10 in
-            let r10 = r1 in
-            let r10 = r10 >>> 1 in
-            let r11 = r2 in
-            let r11 = r11 >>> 1 in
-            let cond = x64_compare_pre (r10,r11,xs,ys) in
-            let (r10,xs,ys) = x64_compare (r10,r11,xs,ys)
-            in
-              if r10 = 0x0w then (INR (r10,xs,ys,zs,xa,ya),cond)
-              else
-                (let (r1,r2,r0,r12,xs,ys,xa,ya) =
-                       x64_iadd2 (r1,r2,r10,r12,xs,ys,xa,ya)
-                 in
-                 let r8 = 0x0w in
-                 let r9 = r8 in
-                 let r10 = r8 in
-                 let r1 = r1 >>> 1 in
-                 let r2 = r2 >>> 1 in
-                 let cond = cond /\ x64_sub_pre (r1,r2,r8,r9,r10,xs,ys,zs)
-                 in
-                 let (r1,r2,r8,r9,r10,xs,ys,zs) =
-                       x64_sub (r1,r2,r8,r9,r10,xs,ys,zs)
-                 in
-                 let (xs,ys,xa,ya) = x64_iadd3 (r0,xs,ys,xa,ya) in
-                 let r10 = r10 << 1 in
-                 let r10 = r10 + r12
-                 in
-                   (INR (r10,xs,ys,zs,xa,ya),cond)))))
-    :Zimm # Zimm # Zimm list # Zimm list # Zimm list # Zimm # Zimm ->
-     (Zimm # Zimm # Zimm list # Zimm list # Zimm list # Zimm # Zimm +
-      Zimm # Zimm list # Zimm list # Zimm list # Zimm # Zimm) # bool``;
 
 val x64_header_AND_1 = prove(
   ``x64_header (s,xs) && 0x1w = b2w s``,
@@ -1667,25 +1147,6 @@ val (x64_single_mul_add_res,
 
 val _ = add_compiled [x64_single_mul_add_res]
 
-val (temp_x64_single_mul_add_def, _,
-     temp_x64_single_mul_add_pre_def, _) =
-  tailrec_define "temp_x64_single_mul_add" ``
-    (\(r0,r1,r2,r3).
-      (let cond = Z64 <> Z8 in
-       let r2' = n2w (w2n r0 * w2n r2 DIV 18446744073709551616) in
-       let r0 = r0 * r2 in
-       let r0' = r0 + r1 in
-       let r2 =
-             r2' + n2w (bool2num (18446744073709551616 <= w2n r0 + w2n r1))
-       in
-       let r0 = r0' + r3 in
-       let r2 =
-             r2 + n2w (bool2num (18446744073709551616 <= w2n r0' + w2n r3))
-       in
-         (INR (r0,r1,r2,r3),cond)))
-    :Zimm # Zimm # Zimm # Zimm ->
-     (Zimm # Zimm # Zimm # Zimm + Zimm # Zimm # Zimm # Zimm) # bool``;
-
 val x64_single_mul_add_thm = prove(
   ``x64_single_mul_add_pre (p,k,q,s) /\
     (x64_single_mul_add (p,k,q,s) =
@@ -1732,34 +1193,6 @@ val (res,x64_mul_pass_def,x64_mul_pass_pre_def) = x64_compile `
       let r11 = r11 + 1w in
         x64_mul_pass (r1,r8,r9,r10,r11,ys,zs)`
 
-val (temp_x64_mul_pass_def, _,
-     temp_x64_mul_pass_pre_def, _) =
-  tailrec_define "temp_x64_mul_pass" ``
-    (\(r1,r8,r9,r10,r11,ys,zs).
-      if r9 = r11 then
-        (let cond = w2n r10 < LENGTH zs in
-         let zs = LUPDATE r1 (w2n r10) zs in
-         let r10 = r10 + 0x1w
-         in
-           (INR (r1,r9,r10,ys,zs),cond))
-      else
-        (let cond = w2n r10 < LENGTH zs in
-         let r3 = EL (w2n r10) zs in
-         let cond = cond /\ w2n r11 < LENGTH ys in
-         let r2 = EL (w2n r11) ys in
-         let r0 = r8 in
-         let cond = cond /\ x64_single_mul_add_pre (r0,r1,r2,r3) in
-         let (r0,r1,r2,r3) = x64_single_mul_add (r0,r1,r2,r3) in
-         let zs = LUPDATE r0 (w2n r10) zs in
-         let r1 = r2 in
-         let r10 = r10 + 0x1w in
-         let r11 = r11 + 0x1w
-         in
-           (INL (r1,r8,r9,r10,r11,ys,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list +
-      Zimm # Zimm # Zimm # Zimm list # Zimm list) # bool``;
-
 val (res,x64_mul_def,x64_mul_pre_def) = x64_compile `
   x64_mul (r7:word64,r9,r10:word64,r12:word64,xs:word64 list,ys,zs) =
     if r7 = 0w then let r10 = r10 + r9 in (r10,xs,ys,zs) else
@@ -1772,47 +1205,12 @@ val (res,x64_mul_def,x64_mul_pre_def) = x64_compile `
       let r10 = r10 - r9 in
         x64_mul (r7,r9,r10,r12,xs,ys,zs)`
 
-val (temp_x64_mul_def, _,
-     temp_x64_mul_pre_def, _) =
-  tailrec_define "temp_x64_mul" ``
-    (\(r7,r9,r10,r12,xs,ys,zs).
-      if r7 = 0x0w then (let r10 = r10 + r9 in (INR (r10,xs,ys,zs),T))
-      else
-        (let r7 = r7 - 0x1w in
-         let cond = w2n r12 < LENGTH xs in
-         let r8 = EL (w2n r12) xs in
-         let r12 = r12 + 0x1w in
-         let r11 = 0x0w in
-         let r1 = r11 in
-         let cond = cond /\ x64_mul_pass_pre (r1,r8,r9,r10,r11,ys,zs) in
-         let (r1,r9,r10,ys,zs) = x64_mul_pass (r1,r8,r9,r10,r11,ys,zs) in
-         let r10 = r10 - r9
-         in
-           (INL (r7,r9,r10,r12,xs,ys,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list +
-      Zimm # Zimm list # Zimm list # Zimm list) # bool``;
-
 val (res,x64_mul_zero_def,x64_mul_zero_pre_def) = x64_compile `
   x64_mul_zero (r0:word64,r10:word64,zs:word64 list) =
     if r10 = 0w then (r10,zs) else
       let r10 = r10 - 1w in
       let zs = LUPDATE r0 (w2n r10) zs in
         x64_mul_zero (r0,r10,zs)`;
-
-val (temp_x64_mul_zero_def, _,
-     temp_x64_mul_zero_pre_def, _) =
-  tailrec_define "temp_x64_mul_zero" ``
-    (\(r0,r10,zs).
-      if r10 = 0x0w then (INR (r10,zs),T)
-      else
-        (let r10 = r10 - 0x1w in
-         let cond = w2n r10 < LENGTH zs in
-         let zs = LUPDATE r0 (w2n r10) zs
-         in
-           (INL (r0,r10,zs),cond)))
-    :Zimm # Zimm # Zimm list ->
-     (Zimm # Zimm # Zimm list + Zimm # Zimm list) # bool``;
 
 val (x64_imul_res,x64_imul_def,x64_imul_pre_def) = x64_compile `
   x64_imul (r1:word64,r2:word64,xs:word64 list,ys:word64 list,zs:word64 list) =
@@ -1845,60 +1243,6 @@ val (x64_imul_res,x64_imul_def,x64_imul_pre_def) = x64_compile `
             let r10 = r10 << 1 in
             let r10 = r10 + 1w in
               (r10,xs,ys,zs)`;
-
-val (temp_x64_imul_def, _,
-     temp_x64_imul_pre_def, _) =
-  tailrec_define "temp_x64_imul" ``
-    (\(r1,r2,xs,ys,zs).
-      (let r10 = 0x0w
-       in
-         if r1 = 0x0w then (INR (r10,xs,ys,zs),T)
-         else if r2 = 0x0w then (INR (r10,xs,ys,zs),T)
-         else
-           (let r0 = 0x0w in
-            let r10 = r2 in
-            let r10 = r10 >>> 1 in
-            let cond = x64_mul_zero_pre (r0,r10,zs) in
-            let (r10,zs) = x64_mul_zero (r0,r10,zs) in
-            let r10 = r1 in
-            let r10 = r10 && 0x1w in
-            let r11 = r2 in
-            let r11 = r11 && 0x1w
-            in
-              if r10 = r11 then
-                (let r7 = r1 in
-                 let r7 = r7 >>> 1 in
-                 let r9 = r2 in
-                 let r9 = r9 >>> 1 in
-                 let r10 = 0x0w in
-                 let r12 = r10 in
-                 let cond = cond /\ x64_mul_pre (r7,r9,r10,r12,xs,ys,zs) in
-                 let (r10,xs,ys,zs) = x64_mul (r7,r9,r10,r12,xs,ys,zs) in
-                 let r8 = 0x0w in
-                 let cond = cond /\ x64_fix_pre (r8,r10,zs) in
-                 let (r8,r10,zs) = x64_fix (r8,r10,zs) in
-                 let r10 = r10 << 1
-                 in
-                   (INR (r10,xs,ys,zs),cond))
-              else
-                (let r7 = r1 in
-                 let r7 = r7 >>> 1 in
-                 let r9 = r2 in
-                 let r9 = r9 >>> 1 in
-                 let r10 = 0x0w in
-                 let r12 = r10 in
-                 let cond = cond /\ x64_mul_pre (r7,r9,r10,r12,xs,ys,zs) in
-                 let (r10,xs,ys,zs) = x64_mul (r7,r9,r10,r12,xs,ys,zs) in
-                 let r8 = 0x0w in
-                 let cond = cond /\ x64_fix_pre (r8,r10,zs) in
-                 let (r8,r10,zs) = x64_fix (r8,r10,zs) in
-                 let r10 = r10 << 1 in
-                 let r10 = r10 + 0x1w
-                 in
-                   (INR (r10,xs,ys,zs),cond)))))
-    :Zimm # Zimm # Zimm list # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm list # Zimm list # Zimm list +
-      Zimm # Zimm list # Zimm list # Zimm list) # bool``;
 
 val x64_mul_pass_thm = prove(
   ``!ys ys1 x zs k zs1 zs2 z2.
@@ -2069,22 +1413,6 @@ val (x64_single_div_res,x64_single_div_def) = x64_decompile "x64_single_div" `
 
 val _ = add_compiled [x64_single_div_res]
 
-val (temp_x64_single_div_def, _,
-     temp_x64_single_div_pre_def, _) =
-  tailrec_define "temp_x64_single_div" ``
-    (\(r0,r2,r9).
-      (let cond =
-             r9 <> 0x0w /\
-             (w2n r2 * 18446744073709551616 + w2n r0) DIV w2n r9 <
-             18446744073709551616
-       in
-       let r2' = n2w ((w2n r2 * 18446744073709551616 + w2n r0) MOD w2n r9)
-       in
-       let r0 = n2w ((w2n r2 * 18446744073709551616 + w2n r0) DIV w2n r9)
-       in
-         (INR (r0,r2',r9),cond)))
-    :Zimm # Zimm # Zimm -> (Zimm # Zimm # Zimm + Zimm # Zimm # Zimm) # bool``;
-
 val MULT_LEMMA_LEMMA = prove(
   ``!m n. l < k /\ l + k * m < k + k * n ==> m <= n:num``,
   Induct \\ Cases_on `n` \\ FULL_SIMP_TAC std_ss [MULT_CLAUSES]
@@ -2122,25 +1450,6 @@ val (res,x64_simple_div_def,x64_simple_div_pre_def) = x64_compile `
       let zs = LUPDATE r0 (w2n r10) zs in
         x64_simple_div (r2,r9,r10,xs,zs)`
 
-val (temp_x64_simple_div_def, _,
-     temp_x64_simple_div_pre_def, _) =
-  tailrec_define "temp_x64_simple_div" ``
-    (\(r2,r9,r10,xs,zs).
-      if r10 = 0x0w then (INR (r2,r9,r10,xs,zs),T)
-      else
-        (let r10 = r10 - 0x1w in
-         let cond = w2n r10 < LENGTH xs in
-         let r0 = EL (w2n r10) xs in
-         let cond = cond /\ x64_single_div_pre (r0,r2,r9) in
-         let (r0,r2,r9) = x64_single_div (r0,r2,r9) in
-         let cond = cond /\ w2n r10 < LENGTH zs in
-         let zs = LUPDATE r0 (w2n r10) zs
-         in
-           (INL (r2,r9,r10,xs,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm list # Zimm list +
-      Zimm # Zimm # Zimm # Zimm list # Zimm list) # bool``;
-
 val (res,x64_simple_div1_def,x64_simple_div1_pre_def) = x64_compile `
   x64_simple_div1 (r2:word64,r9:word64,r10:word64,zs:word64 list) =
     if r10 = 0w then (r2,r9,r10,zs) else
@@ -2149,24 +1458,6 @@ val (res,x64_simple_div1_def,x64_simple_div1_pre_def) = x64_compile `
       let (r0,r2,r9) = x64_single_div (r0,r2,r9) in
       let zs = LUPDATE r0 (w2n r10) zs in
         x64_simple_div1 (r2,r9,r10,zs)`
-
-val (temp_x64_simple_div1_def, _,
-     temp_x64_simple_div1_pre_def, _) =
-  tailrec_define "temp_x64_simple_div1" ``
-    (\(r2,r9,r10,zs).
-      if r10 = 0x0w then (INR (r2,r9,r10,zs),T)
-      else
-        (let r10 = r10 - 0x1w in
-         let cond = w2n r10 < LENGTH zs in
-         let r0 = EL (w2n r10) zs in
-         let cond = cond /\ x64_single_div_pre (r0,r2,r9) in
-         let (r0,r2,r9) = x64_single_div (r0,r2,r9) in
-         let zs = LUPDATE r0 (w2n r10) zs
-         in
-           (INL (r2,r9,r10,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm list + Zimm # Zimm # Zimm # Zimm list) #
-     bool``;
 
 val x64_simple_div_thm = prove(
   ``!xs xs1 zs zs1 r2 r9 qs r.
@@ -2245,18 +1536,6 @@ val (res,x64_calc_d_def,x64_calc_d_pre_def) = x64_compile `
         let r2 = r2 + r2 in
           x64_calc_d (r1,r2)`
 
-val (temp_x64_calc_d_def, _,
-     temp_x64_calc_d_pre_def, _) =
-  tailrec_define "temp_x64_calc_d" ``
-    (\(r1,r2).
-      (let r0 = r1 + r1 in
-       let r0 = r0 >>> 1
-       in
-         if r0 = r1 then
-           (let r1 = r1 + r1 in let r2 = r2 + r2 in (INL (r1,r2),T))
-         else (INR r2,T)))
-    :Zimm # Zimm -> (Zimm # Zimm + Zimm) # bool``;
-
 val x64_calc_d_thm = prove(
   ``!v1 d.
       (\(v1,d).
@@ -2286,20 +1565,6 @@ val (x64_single_mul_res,
   adc r2,0`
 
 val _ = add_compiled [x64_single_mul_res]
-
-val (temp_x64_single_mul_def, _,
-     temp_x64_single_mul_pre_def, _) =
-  tailrec_define "temp_x64_single_mul" ``
-    (\(r0,r1,r2).
-      (let cond = Z64 <> Z8 in
-       let r2' = n2w (w2n r0 * w2n r2 DIV 18446744073709551616) in
-       let r0 = r0 * r2 in
-       let r0' = r0 + r1 in
-       let r2 =
-             r2' + n2w (bool2num (18446744073709551616 <= w2n r0 + w2n r1))
-       in
-         (INR (r0',r1,r2),cond)))
-    :Zimm # Zimm # Zimm -> (Zimm # Zimm # Zimm + Zimm # Zimm # Zimm) # bool``;
 
 val single_mul_add_thm  = prove(
   ``single_mul_add p q k s =
@@ -2333,29 +1598,6 @@ val (res,x64_mul_by_single2_def,x64_mul_by_single2_pre_def) = x64_compile `
     let r1 = r12 in
       (r1,r2,r3,r6,r7,r8)`
 
-val (temp_x64_mul_by_single2_def, _,
-     temp_x64_mul_by_single2_pre_def, _) =
-  tailrec_define "temp_x64_mul_by_single2" ``
-    (\(r6,r7,r8).
-      (let r0 = r6 in
-       let r1 = 0x0w in
-       let r2 = r7 in
-       let cond = x64_single_mul_pre (r0,r1,r2) in
-       let (r0,r1,r2) = x64_single_mul (r0,r1,r2) in
-       let r12 = r0 in
-       let r0 = r6 in
-       let r1 = r2 in
-       let r2 = r8 in
-       let cond = cond /\ x64_single_mul_pre (r0,r1,r2) in
-       let (r0,r1,r2) = x64_single_mul (r0,r1,r2) in
-       let r3 = r2 in
-       let r2 = r0 in
-       let r1 = r12
-       in
-         (INR (r1,r2,r3,r6,r7,r8),cond)))
-    :Zimm # Zimm # Zimm -> (Zimm # Zimm # Zimm + Zimm # Zimm # Zimm #
-     Zimm # Zimm # Zimm) # bool``;
-
 val x64_mul_by_single2_thm = prove(
   ``!r6 r7 r8.
       ?r1 r2 r3.
@@ -2384,26 +1626,6 @@ val (res,x64_cmp3_def,x64_cmp3_pre_def) = x64_compile `
           let r0 = 0w in (r0,r1,r2,r3,r9,r10,r11) else
       let r0 = 0w in (r0,r1,r2,r3,r9,r10,r11)`
 
-val (temp_x64_cmp3_def, _,
-     temp_x64_cmp3_pre_def, _) =
-  tailrec_define "temp_x64_cmp3" ``
-    (\(r1,r2,r3,r9,r10,r11).
-      (let r0 = 0x1w
-       in
-         if r3 = r11 then
-           if r2 = r10 then
-             if r1 = r9 then
-               (let r0 = 0x0w in (INR (r0,r1,r2,r3,r9,r10,r11),T))
-             else if r9 <+ r1 then (INR (r0,r1,r2,r3,r9,r10,r11),T)
-             else (let r0 = 0x0w in (INR (r0,r1,r2,r3,r9,r10,r11),T))
-           else if r10 <+ r2 then (INR (r0,r1,r2,r3,r9,r10,r11),T)
-           else (let r0 = 0x0w in (INR (r0,r1,r2,r3,r9,r10,r11),T))
-         else if r11 <+ r3 then (INR (r0,r1,r2,r3,r9,r10,r11),T)
-         else (let r0 = 0x0w in (INR (r0,r1,r2,r3,r9,r10,r11),T))))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm +
-      Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm) # bool``;
-
 val x64_cmp3_thm = prove(
   ``x64_cmp3_pre (r1,r2,r3,r9,r10,r11) /\
     (x64_cmp3 (r1,r2,r3,r9,r10,r11) =
@@ -2424,19 +1646,6 @@ val (res,x64_cmp_mul2_def,x64_cmp_mul2_pre_def) = x64_compile `
     let (r0,r1,r2,r3,r9,r10,r11) = x64_cmp3 (r1,r2,r3,r9,r10,r11) in
       (r0,r6,r7,r8,r9,r10,r11)`
 
-val (temp_x64_cmp_mul2_def, _,
-     temp_x64_cmp_mul2_pre_def, _) =
-  tailrec_define "temp_x64_cmp_mul2" ``
-    (\(r6,r7,r8,r9,r10,r11).
-      (let cond = x64_mul_by_single2_pre (r6,r7,r8) in
-       let (r1,r2,r3,r6,r7,r8) = x64_mul_by_single2 (r6,r7,r8) in
-       let (r0,r1,r2,r3,r9,r10,r11) = x64_cmp3 (r1,r2,r3,r9,r10,r11)
-       in
-         (INR (r0,r6,r7,r8,r9,r10,r11),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm +
-      Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm) # bool``;
-
 val x64_cmp_mul2_thm = prove(
   ``x64_cmp_mul2_pre (r6,r7,r8,r9,r10,r11) /\
     (x64_cmp_mul2 (r6,r7,r8,r9,r10,r11) =
@@ -2449,13 +1658,6 @@ val x64_cmp_mul2_thm = prove(
 val (res,x64_sub1_def,x64_sub1_pre_def) = x64_compile `
   x64_sub1 (r6:word64) =
     if r6 = 0w then r6 else let r6 = r6 - 1w in r6`
-
-val (temp_x64_sub1_def, _,
-     temp_x64_sub1_pre_def, _) =
-  tailrec_define "temp_x64_sub1" ``
-    (\r6.
-      if r6 = 0x0w then (INR r6,T) else (let r6 = r6 - 0x1w in (INR r6,T)))
-    :Zimm -> (Zimm + Zimm) # bool``;
 
 val x64_sub1_thm = prove(
   ``!r6. x64_sub1_pre r6 /\ (x64_sub1 r6 = n2w (w2n r6 - 1))``,
@@ -2474,21 +1676,6 @@ val (res,x64_cmp2_def,x64_cmp2_pre_def) = x64_compile `
         if r10 <+ r0 then (r0,r1,r2,r10,r11) else
           let r1 = 0w in (r0,r1,r2,r10,r11) else
       let r1 = 0w in (r0,r1,r2,r10,r11)`
-
-val (temp_x64_cmp2_def, _,
-     temp_x64_cmp2_pre_def, _) =
-  tailrec_define "temp_x64_cmp2" ``
-    (\(r0,r2,r10,r11).
-      (let r1 = 0x1w
-       in
-         if r2 = r11 then
-           if r0 = r10 then (let r1 = 0x0w in (INR (r0,r1,r2,r10,r11),T))
-           else if r10 <+ r0 then (INR (r0,r1,r2,r10,r11),T)
-           else (let r1 = 0x0w in (INR (r0,r1,r2,r10,r11),T))
-         else if r11 <+ r2 then (INR (r0,r1,r2,r10,r11),T)
-         else (let r1 = 0x0w in (INR (r0,r1,r2,r10,r11),T))))
-    :Zimm # Zimm # Zimm # Zimm ->
-     (Zimm # Zimm # Zimm # Zimm + Zimm # Zimm # Zimm # Zimm # Zimm) # bool``;
 
 val x64_cmp2_thm = prove(
   ``x64_cmp2_pre (r0,r2,r10,r11) /\
@@ -2519,31 +1706,6 @@ val (res,x64_div_test_def,x64_div_test_pre_def) = x64_compile `
           else (r6,r7,r8,r9,r10,r11)
       else
         (r6,r7,r8,r9,r10,r11)`
-
-val (temp_x64_div_test_def, _,
-     temp_x64_div_test_pre_def, _) =
-  tailrec_define "temp_x64_div_test" ``
-    (\(r6,r7,r8,r9,r10,r11).
-      (let cond = x64_cmp_mul2_pre (r6,r7,r8,r9,r10,r11) in
-       let (r0,r6,r7,r8,r9,r10,r11) = x64_cmp_mul2 (r6,r7,r8,r9,r10,r11)
-       in
-         if r0 = 0x0w then (INR (r6,r7,r8,r9,r10,r11),cond)
-         else
-           (let r6 = x64_sub1 r6 in
-            let r0 = r6 in
-            let r1 = 0x0w in
-            let r2 = r8 in
-            let r3 = r1 in
-            let cond = cond /\ x64_single_mul_add_pre (r0,r1,r2,r3) in
-            let (r0,r1,r2,r3) = x64_single_mul_add (r0,r1,r2,r3) in
-            let r2 = r2 + 0x1w in
-            let (r0,r1,r2,r10,r11) = x64_cmp2 (r0,r2,r10,r11)
-            in
-              if r1 = 0x0w then (INR (r6,r7,r8,r9,r10,r11),cond)
-              else (INL (r6,r7,r8,r9,r10,r11),cond))))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm +
-      Zimm # Zimm # Zimm # Zimm # Zimm # Zimm) # bool``;
 
 val single_mul_thm = prove(
   ``single_mul_add x y 0w 0w = single_mul x y 0w``,
@@ -2585,24 +1747,6 @@ EXIT: `;
 
 val _ = add_compiled [x64_div_r1_res]
 
-val (temp_x64_div_r1_def, _,
-     temp_x64_div_r1_pre_def, _) =
-  tailrec_define "temp_x64_div_r1" ``
-    (\(r0,r1,r2).
-      if r2 <+ r1 then
-        (let cond =
-               r1 <> 0x0w /\
-               (w2n r2 * 18446744073709551616 + w2n r0) DIV w2n r1 <
-               18446744073709551616
-         in
-         let r2' = n2w ((w2n r2 * 18446744073709551616 + w2n r0) MOD w2n r1)
-         in
-         let r0 = n2w ((w2n r2 * 18446744073709551616 + w2n r0) DIV w2n r1)
-         in
-           (INR (r0,r1,r2'),cond))
-      else (let r0 = 0x0w in let r0 = ~r0 in (INR (r0,r1,r2),T)))
-    :Zimm # Zimm # Zimm -> (Zimm # Zimm # Zimm + Zimm # Zimm # Zimm) # bool``;
-
 val x64_div_r1_thm = prove(
   ``x64_div_r1 (r0,r1,r2) =
       if r2 <+ r1 then
@@ -2619,24 +1763,6 @@ val (res,x64_div_guess_def,x64_div_guess_pre_def) = x64_compile `
     let r6 = r0 in
     let (r6,r7,r8,r9,r10,r11) = x64_div_test (r6,r7,r8,r9,r10,r11) in
       (r6,r7,r8,r9,r10,r11)`
-
-val (temp_x64_div_guess_def, _,
-     temp_x64_div_guess_pre_def, _) =
-  tailrec_define "temp_x64_div_guess" ``
-    (\(r7,r8,r9,r10,r11).
-      (let r0 = r10 in
-       let r1 = r8 in
-       let r2 = r11 in
-       let cond = x64_div_r1_pre (r0,r1,r2) in
-       let (r0,r1,r2) = x64_div_r1 (r0,r1,r2) in
-       let r6 = r0 in
-       let cond = cond /\ x64_div_test_pre (r6,r7,r8,r9,r10,r11) in
-       let (r6,r7,r8,r9,r10,r11) = x64_div_test (r6,r7,r8,r9,r10,r11)
-       in
-         (INR (r6,r7,r8,r9,r10,r11),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm +
-      Zimm # Zimm # Zimm # Zimm # Zimm # Zimm) # bool``;
 
 val x64_div_guess_thm = prove(
   ``!q u1 u2 u3 v1 v2.
@@ -2679,18 +1805,6 @@ val (res,x64_adj_cmp_def,x64_adj_cmp_pre_def) = x64_compile `
         if r3 <+ r0 then (r0,r3,r8)
         else let r8 = 0w in (r0,r3,r8)`
 
-val (temp_x64_adj_cmp_def, _,
-     temp_x64_adj_cmp_pre_def, _) =
-  tailrec_define "temp_x64_adj_cmp" ``
-    (\(r0,r3,r8).
-      if r0 = r3 then (INR (r0,r3,r8),T)
-      else
-        (let r8 = 0x1w
-         in
-           if r3 <+ r0 then (INR (r0,r3,r8),T)
-           else (let r8 = 0x0w in (INR (r0,r3,r8),T))))
-    :Zimm # Zimm # Zimm -> (Zimm # Zimm # Zimm + Zimm # Zimm # Zimm) # bool``;
-
 val (res,x64_adjust_aux_def,x64_adjust_aux_pre_def) = x64_compile `
   x64_adjust_aux (r1,r6,r7,r8,r9,r10:word64,r11:word64,r12,ys:word64 list,zs) =
     if r9 = r11 then
@@ -2716,44 +1830,6 @@ val (res,x64_adjust_aux_def,x64_adjust_aux_pre_def) = x64_compile `
       let r10 = r10 + 1w in
         x64_adjust_aux (r1,r6,r7,r8,r9,r10,r11,r12,ys,zs)`
 
-val (temp_x64_adjust_aux_def, _,
-     temp_x64_adjust_aux_pre_def, _) =
-  tailrec_define "temp_x64_adjust_aux" ``
-    (\(r1,r6,r7,r8,r9,r10,r11,r12,ys,zs).
-      if r9 = r11 then
-        (let r0 = r12 in
-         let cond = w2n r10 < LENGTH zs in
-         let r3 = EL (w2n r10) zs in
-         let r10 = r10 + 0x1w in
-         let (r0,r3,r8) = x64_adj_cmp (r0,r3,r8)
-         in
-           (INR (r6,r7,r8,r9,r10,r11,ys,zs),cond))
-      else
-        (let r0 = r6 in
-         let cond = w2n r11 < LENGTH ys in
-         let r2 = EL (w2n r11) ys in
-         let cond = cond /\ x64_single_mul_pre (r0,r1,r2) in
-         let (r0,r1,r2) = x64_single_mul (r0,r1,r2) in
-         let r1 = r12 in
-         let r12 = r2 in
-         let r2 = r0 in
-         let r0 = r7 in
-         let cond = cond /\ x64_single_mul_pre (r0,r1,r2) in
-         let (r0,r1,r2) = x64_single_mul (r0,r1,r2) in
-         let r1 = r12 in
-         let r12 = r2 in
-         let cond = cond /\ w2n r10 < LENGTH zs in
-         let r3 = EL (w2n r10) zs in
-         let (r0,r3,r8) = x64_adj_cmp (r0,r3,r8) in
-         let r11 = r11 + 0x1w in
-         let r10 = r10 + 0x1w
-         in
-           (INL (r1,r6,r7,r8,r9,r10,r11,r12,ys,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list
-     # Zimm list -> (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm #
-     Zimm # Zimm list # Zimm list + Zimm # Zimm # Zimm # Zimm # Zimm #
-     Zimm # Zimm list # Zimm list) # bool``;
-
 val (res,x64_div_adjust_def,x64_div_adjust_pre_def) = x64_compile `
   x64_div_adjust (r6,r7,r9,r10,ys,zs) =
     let r1 = 0w in
@@ -2765,25 +1841,6 @@ val (res,x64_div_adjust_def,x64_div_adjust_pre_def) = x64_compile `
       if (r7 = 0w) then (r6,r7,r9,r10,r11,ys,zs) else
       if (r8 = 0w) then (r6,r7,r9,r10,r11,ys,zs) else
         let r7 = r7 - 1w in (r6,r7,r9,r10,r11,ys,zs)`
-
-val (temp_x64_div_adjust_def, _,
-     temp_x64_div_adjust_pre_def, _) =
-  tailrec_define "temp_x64_div_adjust" ``
-    (\(r6,r7,r9,r10,ys,zs).
-      (let r1 = 0x0w in
-       let r8 = r1 in
-       let r11 = r1 in
-       let r12 = r1 in
-       let cond = x64_adjust_aux_pre (r1,r6,r7,r8,r9,r10,r11,r12,ys,zs) in
-       let (r6,r7,r8,r9,r10,r11,ys,zs) =
-             x64_adjust_aux (r1,r6,r7,r8,r9,r10,r11,r12,ys,zs)
-       in
-         if r7 = 0x0w then (INR (r6,r7,r9,r10,r11,ys,zs),cond)
-         else if r8 = 0x0w then (INR (r6,r7,r9,r10,r11,ys,zs),cond)
-         else (let r7 = r7 - 0x1w in (INR (r6,r7,r9,r10,r11,ys,zs),cond))))
-    :Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list +
-      Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list) # bool``;
 
 val x64_adj_cmp_thm = prove(
   ``x64_adj_cmp_pre (r1,h,anything) /\
@@ -2900,27 +1957,6 @@ val (x64_div_sub_res,x64_div_sub_def) = x64_decompile "x64_div_sub" `
 
 val _ = add_compiled [x64_div_sub_res]
 
-val (temp_x64_div_sub_def, _,
-     temp_x64_div_sub_pre_def, _) =
-  tailrec_define "temp_x64_div_sub" ``
-    (\(r0,r3,r8).
-      (let r0 = ~r0 in
-       let r8' = r8 + 0x1w in
-       let r3' =
-             r3 + r0 + n2w (bool2num (18446744073709551616 <= w2n r8 + 1))
-       in
-       let r0' = 0x0w in
-       let r8' = r0' in
-       let r0' = ~r0'
-       in
-         if
-           18446744073709551616 <=
-           w2n r3 + w2n r0 + bool2num (18446744073709551616 <= w2n r8 + 1)
-         then
-           (let r8 = r0' in (INR (r0',r3',r8),T))
-         else (INR (r0',r3',r8'),T)))
-    :Zimm # Zimm # Zimm -> (Zimm # Zimm # Zimm + Zimm # Zimm # Zimm) # bool``;
-
 val bool2num_thm = prove(
   ``bool2num = b2n``,
   FULL_SIMP_TAC std_ss [FUN_EQ_THM] \\ Cases \\ EVAL_TAC);
@@ -2968,50 +2004,6 @@ val (res,x64_div_sub_loop_def,x64_div_sub_loop_pre_def) = x64_compile `
       let r11 = r11 + 1w in
       let r10 = r10 + 1w in
         x64_div_sub_loop (r1,r6,r7,r8,r9,r10,r11,r12,ys,zs)`
-
-val (temp_x64_div_sub_loop_def, _,
-     temp_x64_div_sub_loop_pre_def, _) =
-  tailrec_define "temp_x64_div_sub_loop" ``
-    (\(r1,r6,r7,r8,r9,r10,r11,r12,ys,zs).
-      if r9 = r11 then
-        (let r0 = r12 in
-         let cond = w2n r10 < LENGTH zs in
-         let r3 = EL (w2n r10) zs in
-         let (r0,r3,r8) = x64_div_sub (r0,r3,r8) in
-         let r1 = r3 in
-         let zs = LUPDATE r1 (w2n r10) zs in
-         let r10 = r10 + 0x1w
-         in
-           (INR (r6,r7,r9,r10,r11,ys,zs),cond))
-      else
-        (let r0 = r6 in
-         let cond = w2n r11 < LENGTH ys in
-         let r2 = EL (w2n r11) ys in
-         let cond = cond /\ x64_single_mul_pre (r0,r1,r2) in
-         let (r0,r1,r2) = x64_single_mul (r0,r1,r2) in
-         let r1 = r12 in
-         let r12 = r2 in
-         let r2 = r0 in
-         let r0 = r7 in
-         let cond = cond /\ x64_single_mul_pre (r0,r1,r2) in
-         let (r0,r1,r2) = x64_single_mul (r0,r1,r2) in
-         let r1 = r12 in
-         let r12 = r2 in
-         let cond = cond /\ w2n r10 < LENGTH zs in
-         let r3 = EL (w2n r10) zs in
-         let (r0,r3,r8) = x64_div_sub (r0,r3,r8) in
-         let r0 = r1 in
-         let r1 = r3 in
-         let zs = LUPDATE r1 (w2n r10) zs in
-         let r1 = r0 in
-         let r11 = r11 + 0x1w in
-         let r10 = r10 + 0x1w
-         in
-           (INL (r1,r6,r7,r8,r9,r10,r11,r12,ys,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list
-     # Zimm list -> (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm #
-     Zimm # Zimm list # Zimm list + Zimm # Zimm # Zimm # Zimm # Zimm #
-     Zimm list # Zimm list) # bool``;
 
 val LUPDATE_THM = prove(
   ``(LUPDATE q (LENGTH xs) (SNOC x xs) = SNOC q xs) /\
@@ -3134,75 +2126,6 @@ val (res,x64_div_loop_def,x64_div_loop_pre_def) = x64_compile `
       let r10 = r10 - r9 in
       let r7 = r6 in
         x64_div_loop (r7,r9,r10,r11,ys,zs,ss)`
-
-val (temp_x64_div_loop_def, _,
-     temp_x64_div_loop_pre_def, _) =
-  tailrec_define "temp_x64_div_loop" ``
-    (\(r7,r9,r10,r11,ys,zs,ss).
-      if r10 = 0x0w then (INR (r7,r9,r10,r11,ys,zs,ss),T)
-      else
-        (let cond = ss <> [] in
-         let (r6,ss) = (HD ss,TL ss) in
-         let cond = cond /\ ss <> [] in
-         let (r3,ss) = (HD ss,TL ss) in
-         let ss = r7::ss in
-         let ss = r9::ss in
-         let ss = r10::ss in
-         let r10 = r10 + r9 in
-         let r10 = r10 - 0x1w in
-         let cond = cond /\ w2n r10 < LENGTH zs in
-         let r0 = EL (w2n r10) zs in
-         let r10 = r10 - 0x1w in
-         let cond = cond /\ w2n r10 < LENGTH zs in
-         let r1 = EL (w2n r10) zs in
-         let r10 = r10 - 0x1w in
-         let cond = cond /\ w2n r10 < LENGTH zs in
-         let r2 = EL (w2n r10) zs in
-         let r11 = r0 in
-         let r10 = r1 in
-         let r9 = r2 in
-         let r7 = r3 in
-         let r8 = r6 in
-         let cond = cond /\ x64_div_guess_pre (r7,r8,r9,r10,r11) in
-         let (r6,r7,r8,r9,r10,r11) = x64_div_guess (r7,r8,r9,r10,r11) in
-         let r0 = r6 in
-         let cond = cond /\ ss <> [] in
-         let (r10,ss) = (HD ss,TL ss) in
-         let cond = cond /\ ss <> [] in
-         let (r9,ss) = (HD ss,TL ss) in
-         let cond = cond /\ ss <> [] in
-         let (r6,ss) = (HD ss,TL ss) in
-         let r10 = r10 - 0x1w in
-         let ss = r7::ss in
-         let ss = r8::ss in
-         let r7 = r0 in
-         let cond = cond /\ x64_div_adjust_pre (r6,r7,r9,r10,ys,zs) in
-         let (r6,r7,r9,r10,r11,ys,zs) = x64_div_adjust (r6,r7,r9,r10,ys,zs)
-         in
-         let r10 = r10 - r9 in
-         let r10 = r10 - 0x1w in
-         let r1 = 0x0w in
-         let r8 = r1 in
-         let r8 = ~r8 in
-         let r11 = r1 in
-         let r12 = r1 in
-         let cond =
-               cond /\
-               x64_div_sub_loop_pre (r1,r6,r7,r8,r9,r10,r11,r12,ys,zs)
-         in
-         let (r6,r7,r9,r10,r11,ys,zs) =
-               x64_div_sub_loop (r1,r6,r7,r8,r9,r10,r11,r12,ys,zs)
-         in
-         let r10 = r10 - 0x1w in
-         let cond = cond /\ w2n r10 < LENGTH zs in
-         let zs = LUPDATE r7 (w2n r10) zs in
-         let r10 = r10 - r9 in
-         let r7 = r6
-         in
-           (INL (r7,r9,r10,r11,ys,zs,ss),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list +
-      Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list) # bool``;
 
 val x64_div_loop_thm = prove(
   ``!zs1 zs ys1 zs2 c r1 r12.
@@ -3391,34 +2314,6 @@ val (res,x64_mul_by_single_def,x64_mul_by_single_pre_def) = x64_compile `
       let r11 = r11 + 1w in
         x64_mul_by_single (r1,r8,r9,r10,r11,xs,zs)`
 
-val (temp_x64_mul_by_single_def, _,
-     temp_x64_mul_by_single_pre_def, _) =
-  tailrec_define "temp_x64_mul_by_single" ``
-    (\(r1,r8,r9,r10,r11,xs,zs).
-      if r9 = r11 then
-        (let cond = w2n r10 < LENGTH zs in
-         let zs = LUPDATE r1 (w2n r10) zs in
-         let r10 = r10 + 0x1w
-         in
-           (INR (r1,r8,r9,r10,xs,zs),cond))
-      else
-        (let cond = w2n r11 < LENGTH xs in
-         let r2 = EL (w2n r11) xs in
-         let r0 = r8 in
-         let r3 = 0x0w in
-         let cond = cond /\ x64_single_mul_add_pre (r0,r1,r2,r3) in
-         let (r0,r1,r2,r3) = x64_single_mul_add (r0,r1,r2,r3) in
-         let cond = cond /\ w2n r10 < LENGTH zs in
-         let zs = LUPDATE r0 (w2n r10) zs in
-         let r1 = r2 in
-         let r10 = r10 + 0x1w in
-         let r11 = r11 + 0x1w
-         in
-           (INL (r1,r8,r9,r10,r11,xs,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list +
-      Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list) # bool``;
-
 val x64_mul_by_single_thm = prove(
   ``!xs xs1 x zs k zs1 zs2 z2.
       LENGTH (xs1++xs) < dimword (:64) /\  (LENGTH zs = LENGTH xs) /\
@@ -3473,26 +2368,6 @@ val (res,x64_top_two_def,x64_top_two_pre_def) = x64_compile `
       let r11 = r11 + 1w in
         x64_top_two (r0,r1,r3,r8,r9,r11,ys)`
 
-val (temp_x64_top_two_def, _,
-     temp_x64_top_two_pre_def, _) =
-  tailrec_define "temp_x64_top_two" ``
-    (\(r0,r1,r3,r8,r9,r11,ys).
-      if r9 = r11 then (let r1 = r3 in (INR (r0,r1,r8,r9,r11,ys),T))
-      else
-        (let r3 = r0 in
-         let cond = w2n r11 < LENGTH ys in
-         let r2 = EL (w2n r11) ys in
-         let r0 = r8 in
-         let cond = cond /\ x64_single_mul_pre (r0,r1,r2) in
-         let (r0,r1,r2) = x64_single_mul (r0,r1,r2) in
-         let r1 = r2 in
-         let r11 = r11 + 0x1w
-         in
-           (INL (r0,r1,r3,r8,r9,r11,ys),cond)))
-    :Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list +
-      Zimm # Zimm # Zimm # Zimm # Zimm # Zimm list) # bool``;
-
 val x64_top_two_thm = prove(
   ``!ys x k1 k2 k3 ys1.
       LENGTH (ys1 ++ ys) < dimword (:64) ==>
@@ -3534,24 +2409,6 @@ val (res,x64_copy_down_def,x64_copy_down_pre_def) = x64_compile `
       let zs = LUPDATE r0 (w2n r11) zs in
       let r11 = r11 + 1w in
         x64_copy_down (r8,r10,r11,zs)`
-
-val (temp_x64_copy_down_def, _,
-     temp_x64_copy_down_pre_def, _) =
-  tailrec_define "temp_x64_copy_down" ``
-    (\(r8,r10,r11,zs).
-      if r8 = 0x0w then (INR zs,T)
-      else
-        (let cond = w2n r10 < LENGTH zs in
-         let r0 = EL (w2n r10) zs in
-         let r8 = r8 - 0x1w in
-         let r10 = r10 + 0x1w in
-         let cond = cond /\ w2n r11 < LENGTH zs in
-         let zs = LUPDATE r0 (w2n r11) zs in
-         let r11 = r11 + 0x1w
-         in
-           (INL (r8,r10,r11,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm list + Zimm list) # bool``;
 
 val x64_copy_down_thm = prove(
   ``!zs0 zs1 zs2 zs3.
@@ -3599,22 +2456,6 @@ val (res,x64_copy_over_def,x64_copy_over_pre_def) = x64_compile `
       let r0 = EL (w2n r10) xs in
       let zs = LUPDATE r0 (w2n r10) zs in
         x64_copy_over (r10,xs,zs)`;
-
-val (temp_x64_copy_over_def, _,
-     temp_x64_copy_over_pre_def, _) =
-  tailrec_define "temp_x64_copy_over" ``
-    (\(r10,xs,zs).
-      if r10 = 0x0w then (INR (xs,zs),T)
-      else
-        (let r10 = r10 - 0x1w in
-         let cond = w2n r10 < LENGTH xs in
-         let r0 = EL (w2n r10) xs in
-         let cond = cond /\ w2n r10 < LENGTH zs in
-         let zs = LUPDATE r0 (w2n r10) zs
-         in
-           (INL (r10,xs,zs),cond)))
-    :Zimm # Zimm list # Zimm list ->
-     (Zimm # Zimm list # Zimm list + Zimm list # Zimm list) # bool``;
 
 val x64_copy_over_thm = prove(
   ``!xs0 zs0 xs zs.
@@ -3738,133 +2579,6 @@ val (res,x64_div_def,x64_div_pre_def) = x64_compile `
         else
           let r0 = r9 in
             (r0,r3,r6,xs,ys,zs,ss)`
-
-val (temp_x64_div_def, _,
-     temp_x64_div_pre_def, _) =
-  tailrec_define "temp_x64_div" ``
-    (\(r0,r1,r3,xs,ys,zs,ss).
-      if r0 <+ r1 then
-        (let r6 = r0
-         in
-           if r3 = 0x0w then
-             (let r0 = 0x0w in (INR (r0,r3,r6,xs,ys,zs,ss),T))
-           else
-             (let r11 = r0 in
-              let r10 = r1 in
-              let r0 = 0x0w in
-              let cond = x64_mul_zero_pre (r0,r10,zs) in
-              let (r10,zs) = x64_mul_zero (r0,r10,zs) in
-              let r10 = r11 in
-              let cond = cond /\ x64_copy_over_pre (r10,xs,zs) in
-              let (xs,zs) = x64_copy_over (r10,xs,zs) in
-              let r0 = r1
-              in
-                (INR (r0,r3,r6,xs,ys,zs,ss),cond)))
-      else if r1 = 0x1w then
-        (let ss = r3::ss in
-         let r2 = 0x0w in
-         let r10 = r2 in
-         let cond = w2n r10 < LENGTH ys in
-         let r9 = EL (w2n r10) ys in
-         let r10 = r0 in
-         let r8 = r0 in
-         let cond = cond /\ x64_simple_div_pre (r2,r9,r10,xs,zs) in
-         let (r2,r9,r10,xs,zs) = x64_simple_div (r2,r9,r10,xs,zs) in
-         let r6 = 0x0w in
-         let r0 = r8 in
-         let cond = cond /\ ss <> [] in
-         let (r3,ss) = (HD ss,TL ss)
-         in
-           if r3 = 0x0w then
-             if r2 = 0x0w then (INR (r0,r3,r6,xs,ys,zs,ss),cond)
-             else (let r6 = 0x1w in (INR (r0,r3,r6,xs,ys,zs,ss),cond))
-           else
-             (let r0 = 0x1w in
-              let r10 = 0x0w:word64 in
-              let cond = cond /\ w2n r10 < LENGTH zs in
-              let zs = LUPDATE r2 (w2n r10) zs
-              in
-                if r2 = 0x0w then (INR (r0,r3,r6,xs,ys,zs,ss),cond)
-                else (let r6 = 0x1w in (INR (r0,r3,r6,xs,ys,zs,ss),cond))))
-      else
-        (let ss = r3::ss in
-         let ss = r0::ss in
-         let r7 = r1 in
-         let r9 = r0 in
-         let r10 = r1 in
-         let r10 = r10 - 0x1w in
-         let cond = w2n r10 < LENGTH ys in
-         let r1 = EL (w2n r10) ys in
-         let r2 = 0x1w in
-         let cond = cond /\ x64_calc_d_pre (r1,r2) in
-         let r2 = x64_calc_d (r1,r2) in
-         let r1 = 0x0w in
-         let r8 = r2 in
-         let r10 = r1 in
-         let r11 = r1 in
-         let cond = cond /\ x64_mul_by_single_pre (r1,r8,r9,r10,r11,xs,zs)
-         in
-         let (r1,r8,r9,r10,xs,zs) =
-               x64_mul_by_single (r1,r8,r9,r10,r11,xs,zs)
-         in
-         let r1 = 0x0w in
-         let cond = cond /\ w2n r10 < LENGTH zs in
-         let zs = LUPDATE r1 (w2n r10) zs in
-         let r0 = 0x0w in
-         let r1 = r0 in
-         let r3 = r0 in
-         let r11 = r0 in
-         let r9 = r7 in
-         let cond = cond /\ x64_top_two_pre (r0,r1,r3,r8,r9,r11,ys) in
-         let (r0,r1,r8,r9,r11,ys) = x64_top_two (r0,r1,r3,r8,r9,r11,ys) in
-         let r7 = r8 in
-         let r11 = r9 in
-         let cond = cond /\ ss <> [] in
-         let (r10,ss) = (HD ss,TL ss) in
-         let r10 = r10 - r9 in
-         let r10 = r10 + 0x2w in
-         let ss = r10::ss in
-         let ss = r1::ss in
-         let ss = r0::ss in
-         let cond = cond /\ x64_div_loop_pre (r7,r9,r10,r11,ys,zs,ss) in
-         let (r7,r9,r10,r11,ys,zs,ss) =
-               x64_div_loop (r7,r9,r10,r11,ys,zs,ss)
-         in
-         let cond = cond /\ ss <> [] in
-         let (r0,ss) = (HD ss,TL ss) in
-         let cond = cond /\ ss <> [] in
-         let (r0,ss) = (HD ss,TL ss) in
-         let cond = cond /\ ss <> [] in
-         let (r8,ss) = (HD ss,TL ss) in
-         let r11 = r9 in
-         let r10 = r9 in
-         let r9 = r7 in
-         let r2 = 0x0w in
-         let cond = cond /\ x64_simple_div1_pre (r2,r9,r10,zs) in
-         let (r2,r9,r10,zs) = x64_simple_div1 (r2,r9,r10,zs) in
-         let r9 = r11 in
-         let r10 = r9 in
-         let r7 = r8 in
-         let cond = cond /\ x64_fix_pre (r8,r10,zs) in
-         let (r8,r10,zs) = x64_fix (r8,r10,zs) in
-         let r6 = r10 in
-         let r10 = r9 in
-         let cond = cond /\ ss <> [] in
-         let (r3,ss) = (HD ss,TL ss) in
-         let r8 = r7
-         in
-           if r3 = 0x0w then
-             (let r11 = 0x0w in
-              let cond = cond /\ x64_copy_down_pre (r8,r10,r11,zs) in
-              let zs = x64_copy_down (r8,r10,r11,zs) in
-              let r0 = r7
-              in
-                (INR (r0,r3,r6,xs,ys,zs,ss),cond))
-           else (let r0 = r9 in (INR (r0,r3,r6,xs,ys,zs,ss),cond))))
-    :Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list # Zimm list +
-      Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list # Zimm list) #
-     bool``;
 
 val mw_fix_SNOC = store_thm("mw_fix_SNOC",
  ``mw_fix (SNOC 0w xs) = mw_fix xs``,
@@ -4098,35 +2812,6 @@ val (res,x64_add1_def,x64_add1_pre_def) = x64_compile `
           let r10 = r10 + 1w in
             x64_add1 (r2,r10,r11,zs)`
 
-val (temp_x64_add1_def, _,
-     temp_x64_add1_pre_def, _) =
-  tailrec_define "temp_x64_add1" ``
-    (\(r2,r10,r11,zs).
-      if r10 = r11 then
-        (let r0 = 0x1w in
-         let cond = w2n r10 < LENGTH zs in
-         let zs = LUPDATE r0 (w2n r10) zs in
-         let r11 = r11 + 0x1w
-         in
-           (INR (r11,zs),cond))
-      else
-        (let cond = w2n r10 < LENGTH zs in
-         let r0 = EL (w2n r10) zs
-         in
-           if r0 = r2 then
-             (let r0 = 0x0w in
-              let zs = LUPDATE r0 (w2n r10) zs in
-              let r10 = r10 + 0x1w
-              in
-                (INL (r2,r10,r11,zs),cond))
-           else
-             (let r0 = r0 + 0x1w in
-              let zs = LUPDATE r0 (w2n r10) zs
-              in
-                (INR (r11,zs),cond))))
-    :Zimm # Zimm # Zimm # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm list + Zimm # Zimm list) # bool``;
-
 val (res,x64_add1_call_def,x64_add1_call_pre_def) = x64_compile `
   x64_add1_call (r2:word64,r6:word64,r11,zs) =
     if r2 = 0w then (r11,zs) else
@@ -4136,23 +2821,6 @@ val (res,x64_add1_call_def,x64_add1_call_pre_def) = x64_compile `
       let r2 = ~r2 in
       let (r11,zs) = x64_add1 (r2,r10,r11,zs) in
         (r11,zs)`
-
-val (temp_x64_add1_call_def, _,
-     temp_x64_add1_call_pre_def, _) =
-  tailrec_define "temp_x64_add1_call" ``
-    (\(r2,r6,r11,zs).
-      if r2 = 0x0w then (INR (r11,zs),T)
-      else if r6 = 0x0w then (INR (r11,zs),T)
-      else
-        (let r2 = 0x0w in
-         let r10 = r2 in
-         let r2 = ~r2 in
-         let cond = x64_add1_pre (r2,r10,r11,zs) in
-         let (r11,zs) = x64_add1 (r2,r10,r11,zs)
-         in
-           (INR (r11,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm list -> (Zimm # Zimm # Zimm # Zimm list
-     + Zimm # Zimm list) # bool``;
 
 val x64_add1_thm = prove(
   ``!zs zs1.
@@ -4209,49 +2877,6 @@ val (x64_div_sub_res,x64_div_sub_def) = x64_decompile "x64_div_sub" `
 
 val _ = add_compiled [x64_div_sub_res]
 
-val (temp_x64_div_sub_aux_def, _,
-     temp_x64_div_sub_aux_pre_def, _) =
-  tailrec_define "temp_x64_div_sub_aux" ``
-    (\(r1,r8,r9,ys,zs).
-      (let z_zf = SOME T in
-       let z_sf = SOME (word_msb (0x0w:word64)) in
-       let z_pf = SOME (byte_parity (0x0w:word8)) in
-       let z_of = SOME F in
-       let z_cf = SOME F in
-       let z_af = NONE:bool option in
-       let r10 = 0x0w in
-       let z_zf = SOME (r1 + 0x1w = 0x0w) in
-       let z_sf = SOME (word_msb (r1 + 0x1w)) in
-       let z_pf = SOME (byte_parity (w2w (r1 + 0x1w):word8)) in
-       let z_af = NONE:bool option in
-       let r1 = r1 + 0x1w in
-       let cond =
-             x64_div_sub_aux1_pre
-               (r1,r8,r9,r10,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs)
-       in
-       let (r1,r8,r9,r10,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs) =
-             x64_div_sub_aux1
-               (r1,r8,r9,r10,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs)
-       in
-         (INR (r1,r8,r9,r10,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm list # Zimm list -> (Zimm # Zimm # Zimm
-     # Zimm list # Zimm list + Zimm # Zimm # Zimm # Zimm # Zimm list #
-     bool option # bool option # bool option # bool option # bool
-     option # bool option # Zimm list) # bool``;
-
-val (temp_x64_div_sub_def, _,
-     temp_x64_div_sub_pre_def, _) =
-  tailrec_define "temp_x64_div_sub" ``
-    (\(r1,r8,r9,ys,zs).
-      (let cond = x64_div_sub_aux_pre (r1,r8,r9,ys,zs) in
-       let (r1,r8,r9,r10,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs) =
-             x64_div_sub_aux (r1,r8,r9,ys,zs)
-       in
-         (INR (r1,r8,r9,r10,ys,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm list # Zimm list +
-      Zimm # Zimm # Zimm # Zimm # Zimm list # Zimm list) # bool``;
-
 val (res,x64_div_sub_call_def,x64_div_sub_call_pre_def) = x64_compile `
   x64_div_sub_call (r1,r2:word64,r6:word64,ys,zs) =
     if r2 = 0w then (r6,ys,zs) else
@@ -4264,28 +2889,6 @@ val (res,x64_div_sub_call_def,x64_div_sub_call_pre_def) = x64_compile `
       let (r8,r10,zs) = x64_fix (r8,r10,zs) in
       let r6 = r10 in
         (r6,ys,zs)`
-
-val (temp_x64_div_sub_call_def, _,
-     temp_x64_div_sub_call_pre_def, _) =
-  tailrec_define "temp_x64_div_sub_call" ``
-    (\(r1,r2,r6,ys,zs).
-      if r2 = 0x0w then (INR (r6,ys,zs),T)
-      else if r6 = 0x0w then (INR (r6,ys,zs),T)
-      else
-        (let r8 = r6 in
-         let r9 = r6 in
-         let r3 = r1 in
-         let cond = x64_div_sub_pre (r1,r8,r9,ys,zs) in
-         let (r1,r8,r9,r10,ys,zs) = x64_div_sub (r1,r8,r9,ys,zs) in
-         let r10 = r3 in
-         let cond = cond /\ x64_fix_pre (r8,r10,zs) in
-         let (r8,r10,zs) = x64_fix (r8,r10,zs) in
-         let r6 = r10
-         in
-           (INR (r6,ys,zs),cond)))
-    :Zimm # Zimm # Zimm # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm list # Zimm list +
-      Zimm # Zimm list # Zimm list) # bool``;
 
 val x64_div_sub_aux_thm = prove(
   ``!ys zs ys1 zs1 ys2 zs2
@@ -4365,18 +2968,6 @@ val (res,x64_idiv_mod_header_def,x64_idiv_mod_header_pre_def) = x64_compile `
         if r11 && 1w = 0w then r6 else
           let r6 = r6 + 1w in r6`;
 
-val (temp_x64_idiv_mod_header_def, _,
-     temp_x64_idiv_mod_header_pre_def, _) =
-  tailrec_define "temp_x64_idiv_mod_header" ``
-    (\(r6,r11).
-      if r6 = 0x0w then (INR r6,T)
-      else
-        (let r6 = r6 << 1
-         in
-           if r11 && 0x1w = 0x0w then (INR r6,T)
-           else (let r6 = r6 + 0x1w in (INR r6,T))))
-    :Zimm # Zimm -> (Zimm # Zimm + Zimm) # bool``;
-
 val x64_idiv_mod_header_thm = prove(
   ``LENGTH xs < dimword (:64) ==>
     (x64_idiv_mod_header (n2w (LENGTH xs),x64_header (t,ys)) =
@@ -4415,56 +3006,6 @@ val (x64_idiv_res,x64_idiv_def,x64_idiv_pre_def) = x64_compile `
             let r11 = r11 << 1 in
             let r11 = r11 + r3 in
               (r11,xs,ys,zs,ss)`
-
-val (temp_x64_idiv_def, _,
-     temp_x64_idiv_pre_def, _) =
-  tailrec_define "temp_x64_idiv" ``
-    (\(r3,r10,r11,xs,ys,zs,ss).
-      (let r0 = r10 in
-       let r0 = r0 >>> 1 in
-       let r1 = r11 in
-       let r1 = r1 >>> 1 in
-       let r10 = r10 ?? r11 in
-       let r10 = r10 && 0x1w in
-       let ss = r10::ss in
-       let ss = r11::ss in
-       let cond = x64_div_pre (r0,r1,r3,xs,ys,zs,ss) in
-       let (r0,r3,r6,xs,ys,zs,ss) = x64_div (r0,r1,r3,xs,ys,zs,ss) in
-       let cond = cond /\ ss <> [] in
-       let (r11,ss) = (HD ss,TL ss)
-       in
-         if r3 = 0x0w then
-           (let r10 = r0 in
-            let r8 = r10 in
-            let cond = cond /\ x64_fix_pre (r8,r10,zs) in
-            let (r8,r10,zs) = x64_fix (r8,r10,zs) in
-            let r11 = r10 in
-            let cond = cond /\ ss <> [] in
-            let (r2,ss) = (HD ss,TL ss) in
-            let r3 = r2 in
-            let cond = cond /\ x64_add1_call_pre (r2,r6,r11,zs) in
-            let (r11,zs) = x64_add1_call (r2,r6,r11,zs)
-            in
-              if r11 = 0x0w then (INR (r11,xs,ys,zs,ss),cond)
-              else
-                (let r11 = r11 << 1 in
-                 let r11 = r11 + r3
-                 in
-                   (INR (r11,xs,ys,zs,ss),cond)))
-         else
-           (let cond = cond /\ ss <> [] in
-            let (r2,ss) = (HD ss,TL ss) in
-            let r1 = r11 in
-            let r1 = r1 >>> 1 in
-            let cond = cond /\ x64_div_sub_call_pre (r1,r2,r6,ys,zs) in
-            let (r6,ys,zs) = x64_div_sub_call (r1,r2,r6,ys,zs) in
-            let r6 = x64_idiv_mod_header (r6,r11) in
-            let r11 = r6
-            in
-              (INR (r11,xs,ys,zs,ss),cond))))
-    :Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list # Zimm list +
-      Zimm # Zimm list # Zimm list # Zimm list # Zimm list) # bool``;
 
 val x64_header_XOR = prove(
   ``!s t. ((x64_header (s,xs) ?? x64_header (t,ys)) && 0x1w:word64) =
@@ -4621,26 +3162,6 @@ val (res,x64_to_dec_def,x64_to_dec_pre_def) = x64_compile `
       if r10 = 0w then (zs,ss) else
         x64_to_dec (r9,r10,zs,ss)`
 
-val (temp_x64_to_dec_def, _,
-     temp_x64_to_dec_pre_def, _) =
-  tailrec_define "temp_x64_to_dec" ``
-    (\(r9,r10,zs,ss).
-      (let r2 = 0x0w in
-       let r11 = r10 in
-       let cond = x64_simple_div1_pre (r2,r9,r10,zs) in
-       let (r2,r9,r10,zs) = x64_simple_div1 (r2,r9,r10,zs) in
-       let r2 = r2 + 0x30w in
-       let ss = r2::ss in
-       let r8 = r10 in
-       let r10 = r11 in
-       let cond = cond /\ x64_fix_pre (r8,r10,zs) in
-       let (r8,r10,zs) = x64_fix (r8,r10,zs)
-       in
-         if r10 = 0x0w then (INR (zs,ss),cond)
-         else (INL (r9,r10,zs,ss),cond)))
-    :Zimm # Zimm # Zimm list # Zimm list -> (Zimm # Zimm # Zimm list #
-     Zimm list + Zimm list # Zimm list) # bool``;
-
 val (res,x64_int_to_dec_def,x64_int_to_dec_pre_def) = x64_compile `
   x64_int_to_dec (r10,xs,zs,ss) =
     let r1 = r10 in
@@ -4653,26 +3174,6 @@ val (res,x64_int_to_dec_def,x64_int_to_dec_pre_def) = x64_compile `
         let r2 = 0x7Ew in
         let ss = r2 :: ss in
           (xs,zs,ss)`
-
-val (temp_x64_int_to_dec_def, _,
-     temp_x64_int_to_dec_pre_def, _) =
-  tailrec_define "temp_x64_int_to_dec" ``
-    (\(r10,xs,zs,ss).
-      (let r1 = r10 in
-       let r10 = r10 >>> 1 in
-       let cond = x64_copy_over_pre (r10,xs,zs) in
-       let (xs,zs) = x64_copy_over (r10,xs,zs) in
-       let r10 = r1 in
-       let r10 = r10 >>> 1 in
-       let r9 = 0xAw in
-       let cond = cond /\ x64_to_dec_pre (r9,r10,zs,ss) in
-       let (zs,ss) = x64_to_dec (r9,r10,zs,ss)
-       in
-         if r1 && 0x1w = 0x0w then (INR (xs,zs,ss),cond)
-         else (let r2 = 0x7Ew in let ss = r2::ss in (INR (xs,zs,ss),cond))))
-    :Zimm # Zimm list # Zimm list # Zimm list -> (Zimm # Zimm list #
-     Zimm list # Zimm list + Zimm list # Zimm list # Zimm list) #
-     bool``;
 
 val x64_to_dec_thm = prove(
   ``!xs ys zs ss.
@@ -4759,14 +3260,6 @@ val (res,x64_isub_flip_def,x64_isub_flip_pre_def) = x64_compile `
   x64_isub_flip (r1:word64,r3:word64) =
     if r3 = 0w then (r1,r3) else let r1 = r1 ?? 1w in (r1,r3)`
 
-val (temp_x64_isub_flip_def, _,
-     temp_x64_isub_flip_pre_def, _) =
-  tailrec_define "temp_x64_isub_flip" ``
-    (\(r1,r3).
-      if r3 = 0x0w then (INR (r1,r3),T)
-      else (let r1 = r1 ?? 0x1w in (INR (r1,r3),T)))
-    :Zimm # Zimm -> (Zimm # Zimm + Zimm # Zimm) # bool``;
-
 val (res,x64_icmp_res_def,x64_icmp_res_pre_def) = x64_compile `
   x64_icmp_res (r10:word64,r3:word64) =
     if r3 = 2w then (* lt *)
@@ -4775,17 +3268,6 @@ val (res,x64_icmp_res_def,x64_icmp_res_pre_def) = x64_compile `
     else (* eq *)
       if r10 = 0w then let r10 = 1w in r10
                   else let r10 = 0w in r10:word64`
-
-val (temp_x64_icmp_res_def, _,
-     temp_x64_icmp_res_pre_def, _) =
-  tailrec_define "temp_x64_icmp_res" ``
-    (\(r10,r3).
-      if r3 = 0x2w then
-        if r10 = 0x1w then (let r10 = 0x1w in (INR r10,T))
-        else (let r10 = 0x0w in (INR r10,T))
-      else if r10 = 0x0w then (let r10 = 0x1w in (INR r10,T))
-      else (let r10 = 0x0w in (INR r10,T)))
-    :Zimm # Zimm -> (Zimm # Zimm + Zimm) # bool``;
 
 val (res,x64_full_cmp_def,x64_full_cmp_pre_def) = x64_compile `
   x64_full_cmp (r3,r10,r11,xs,ys,zs) =
@@ -4797,27 +3279,6 @@ val (res,x64_full_cmp_def,x64_full_cmp_pre_def) = x64_compile `
         let zs = LUPDATE r0 (w2n r10) zs in
         let r10 = 2w in
           (r10,xs,ys,zs)`
-
-val (temp_x64_full_cmp_def, _,
-     temp_x64_full_cmp_pre_def, _) =
-  tailrec_define "temp_x64_full_cmp" ``
-    (\(r3,r10,r11,xs,ys,zs).
-      (let cond = x64_icompare_pre (r10,r11,xs,ys) in
-       let (r10,xs,ys) = x64_icompare (r10,r11,xs,ys) in
-       let r10 = x64_icmp_res (r10,r3)
-       in
-         if r10 = 0x0w then (INR (r10,xs,ys,zs),cond)
-         else
-           (let r0 = 0x1w in
-            let r10 = (0x0w:word64) in
-            let cond = cond /\ w2n r10 < LENGTH zs in
-            let zs = LUPDATE r0 (w2n r10) zs in
-            let r10 = 0x2w
-            in
-              (INR (r10,xs,ys,zs),cond))))
-    :Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list ->
-     (Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list +
-      Zimm # Zimm list # Zimm list # Zimm list) # bool``;
 
 val NumABS_LEMMA = prove(
   ``(Num (ABS (0:int)) = 0:num) /\ (Num (ABS (1:int)) = 1:num)``,
@@ -4908,53 +3369,6 @@ val (x64_iop_res,x64_iop_def,x64_iop_pre_def) = x64_compile `
         (r10,xs,ys,zs,xa,ya,ss)`
 
 val _ = save_thm("x64_iop_res",x64_iop_res);
-
-val (temp_x64_iop_def, _,
-     temp_x64_iop_pre_def, _) =
-  tailrec_define "temp_x64_iop" ``
-    (\(r0,r1,r3,xs,ys,zs,xa,ya,ss).
-      if r3 <+ 0x2w then
-        (let (r1,r3) = x64_isub_flip (r1,r3) in
-         let r2 = r1 in
-         let r1 = r0 in
-         let cond = x64_iadd_pre (r1,r2,xs,ys,zs,xa,ya) in
-         let (r10,xs,ys,zs,xa,ya) = x64_iadd (r1,r2,xs,ys,zs,xa,ya)
-         in
-           (INR (r10,xs,ys,zs,xa,ya,ss),cond))
-      else if r3 <+ 0x4w then
-        (let r10 = r0 in
-         let r11 = r1 in
-         let cond = x64_full_cmp_pre (r3,r10,r11,xs,ys,zs) in
-         let (r10,xs,ys,zs) = x64_full_cmp (r3,r10,r11,xs,ys,zs)
-         in
-           (INR (r10,xs,ys,zs,xa,ya,ss),cond))
-      else if r3 = 0x4w then
-        (let r2 = r1 in
-         let r1 = r0 in
-         let cond = x64_imul_pre (r1,r2,xs,ys,zs) in
-         let (r10,xs,ys,zs) = x64_imul (r1,r2,xs,ys,zs)
-         in
-           (INR (r10,xs,ys,zs,xa,ya,ss),cond))
-      else if r3 <+ 0x7w then
-        (let r3 = r3 - 0x5w in
-         let r10 = r0 in
-         let r11 = r1 in
-         let cond = x64_idiv_pre (r3,r10,r11,xs,ys,zs,ss) in
-         let (r11,xs,ys,zs,ss) = x64_idiv (r3,r10,r11,xs,ys,zs,ss) in
-         let r10 = r11
-         in
-           (INR (r10,xs,ys,zs,xa,ya,ss),cond))
-      else
-        (let r10 = r0 in
-         let cond = x64_int_to_dec_pre (r10,xs,zs,ss) in
-         let (xs,zs,ss) = x64_int_to_dec (r10,xs,zs,ss) in
-         let r10 = 0x0w
-         in
-           (INR (r10,xs,ys,zs,xa,ya,ss),cond)))
-    :Zimm # Zimm # Zimm # Zimm list # Zimm list # Zimm list # Zimm #
-     Zimm # Zimm list -> (Zimm # Zimm # Zimm # Zimm list # Zimm list #
-     Zimm list # Zimm # Zimm # Zimm list + Zimm # Zimm list # Zimm
-     list # Zimm list # Zimm # Zimm # Zimm list) # bool``;
 
 val x64_header_XOR_1 = prove(
   ``x64_header (s,xs) ?? 1w = x64_header (~s,xs)``,
