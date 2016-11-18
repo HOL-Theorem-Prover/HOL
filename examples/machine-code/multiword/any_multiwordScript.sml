@@ -11,24 +11,23 @@ val REV = Tactical.REVERSE;
 fun tailrec_define name tm =
   tailrecLib.tailrec_define_from_step name tm NONE;
 
+(*
 val good_dimindex_def = Define`
   good_dimindex a <=> (dimindex a = 32) \/ (dimindex a = 64)`;
+*)
 
+(* TODO: move *)
 val EVEN_BIT0 = Q.store_thm("EVEN_BIT0",
   `EVEN n <=> ~BIT 0 n`,
   Induct_on`n` \\ simp[bitTheory.ADD_BIT0,ADD1,EVEN_ADD]);
 
 val EVEN_MOD = Q.store_thm("EVEN_MOD",
   `0 < m /\ EVEN m ==> (EVEN (n MOD m) <=> EVEN n)`,
-  Induct_on`n` \\ rw[] \\ fs[]
-  \\ Cases_on`n < m` \\ fs[]
-  >- (
-    Cases_on`SUC n < m` \\ fs[]
-    \\ fs[NOT_LESS]
-    \\ `m = SUC n` by decide_tac
-    \\ fs[] )
-  m``SUC n MOD _``
-  m``EVEN (_ MOD _)``
+  strip_tac
+  \\ first_x_assum(CHANGED_TAC o strip_assume_tac o REWRITE_RULE[EVEN_EXISTS])
+  \\ rw[EVEN_MOD2]
+  \\ rw[MOD_MULT_MOD]);
+(* -- *)
 
 (*
 
@@ -150,18 +149,27 @@ val x64_compare_thm = prove(
   \\ `LENGTH xs = LENGTH ys` by DECIDE_TAC
   \\ MP_TAC x64_cmp_thm \\ FULL_SIMP_TAC (srw_ss()) []);
 
-val x64_header_sign = prove(
-  ``good_dimindex (:'a) ==> ((x64_header (s,xs) && 1w = (0w:'a word)) = ~s)``,
-  simp[good_dimindex_def,x64_header_def,GSYM word_mul_n2w]
+val x64_header_AND_1 = prove(
+  ``x64_header (s,xs) && (0x1w:'a word) = b2w s``,
+  rw[x64_header_def,GSYM word_mul_n2w,b2w_def,b2n_def]
   \\ Q.SPEC_TAC (`n2w (LENGTH xs) :α word`,`w`)
   \\ rw[fcpTheory.CART_EQ]
-  \\ TRY(qexists_tac`0` \\ simp[word_0])
   \\ rw[word_and_def,WORD_ADD_BIT0,fcpTheory.FCP_BETA]
-  \\ EVAL_TAC
   \\ rw[word_mul_def,dimword_def,word_index]
-  \\ TRY(Cases_on`i=0` \\ fs[])
-  \\ qspecl_then[`0`,`w2n w`,`1`]mp_tac bitTheory.BIT_SHIFT_THM3
-  \\ simp[]);
+  \\ Cases_on`i=0` \\ fs[word_add_n2w,word_index]
+  \\ fs[bitTheory.ADD_BIT0]
+  \\ simp[GSYM EVEN_BIT0,EVEN_MULT]
+  \\ rw[EVEN_MULT] \\ disj2_tac
+  THEN_LT USE_SG_THEN ACCEPT_TAC 1 2
+  \\ qmatch_goalsub_abbrev_tac`EVEN (n MOD m)`
+  \\ `0 < m ∧ EVEN m`
+  by ( simp[Abbr`m`,Abbr`n`,EVEN_EXP] )
+  \\ simp[EVEN_MOD,Abbr`n`]);
+
+val x64_header_sign = prove(
+  ``(x64_header (s,xs) && 1w = (0w:'a word)) = ~s``,
+  Cases_on`s` \\ rw[x64_header_AND_1]
+  \\ EVAL_TAC \\ simp[]);
 
 val x64_length_lemma = prove(
   ``(w * 2w + if s then 0x1w else 0x0w) >>> 1 = (w * 2w:'a word) >>> 1``,
@@ -191,8 +199,7 @@ val dim63_IMP_dim64 = prove(
   fs[X_LT_DIV]);
 
 val x64_icompare_thm = prove(
-  ``good_dimindex(:'a) ==>
-    LENGTH (xs:'a word list) < dimword (:'a) DIV 2 /\ LENGTH ys < dimword (:'a) DIV 2 ==>
+  ``LENGTH (xs:'a word list) < dimword (:'a) DIV 2 /\ LENGTH ys < dimword (:'a) DIV 2 ==>
     x64_icompare_pre (x64_header (s,xs),x64_header (t,ys),xs,ys) /\
     (x64_icompare (x64_header (s,xs),x64_header (t,ys),xs,ys) =
      (cmp2w (mwi_compare (s,xs) (t,ys)),xs,ys))``,
@@ -203,7 +210,22 @@ val x64_icompare_thm = prove(
   \\ Cases_on `s` \\ Cases_on `t` \\ FULL_SIMP_TAC std_ss [cmp2w_def]
   \\ Cases_on `mw_compare xs ys` \\ FULL_SIMP_TAC std_ss [cmp2w_def,option_eq_def]
   \\ Cases_on `x` \\ FULL_SIMP_TAC (srw_ss()) [cmp2w_def,option_eq_def,n2w_11]
-  \\ rw[] \\ rfs[good_dimindex_def,dimword_def] \\ rfs[]);
+  \\ rw[]
+  \\ rfs[MOD_EQ_0_DIVISOR]
+  \\ Cases_on`d` \\ fs[MULT]
+  \\ Cases_on`dimword(:'a)` \\ fs[ADD1]
+  \\ Cases_on`n` \\ fs[MULT]
+  >- (
+    Cases_on`xs` \\ fs[] \\
+    Cases_on`ys` \\ fs[] \\
+    fs[mw_compare_def] \\
+    fs[Once mw_cmp_def] )
+  \\ qmatch_asmsub_rename_tac`2n = 2 * k + _`
+  \\ Cases_on`k` \\ fs[]
+  \\ Cases_on`xs` \\ fs[]
+  \\ Cases_on`ys` \\ fs[]
+  \\ fs[mw_compare_def]
+  \\ fs[Once mw_cmp_def] )
 
 (* addition *)
 
@@ -1044,38 +1066,17 @@ val (x64_iadd_def, _,
      ('a word # 'a word # 'a word list # 'a word list # 'a word list # 'a word # 'a word +
       'a word # 'a word list # 'a word list # 'a word list # 'a word # 'a word) # bool``;
 
-val x64_header_AND_1 = prove(
-  ``good_dimindex(:'a) ==>
-    (x64_header (s,xs) && (0x1w:'a word) = b2w s)``,
-  strip_tac \\ imp_res_tac x64_header_sign
-  \\ Cases_on`s` \\ fs[b2w_def,b2n_def]
-  \\ fs[x64_header_def,GSYM word_mul_n2w]
-  \\ rw[fcpTheory.CART_EQ]
-  \\ rw[word_and_def,WORD_ADD_BIT0,fcpTheory.FCP_BETA]
-  \\ rw[word_mul_def,dimword_def,word_index]
-  \\ Cases_on`i=0` \\ fs[word_add_n2w,word_index]
-  \\ fs[bitTheory.ADD_BIT0]
-  \\ simp[GSYM EVEN_BIT0,EVEN_MULT]
-
-  m``EVEN (_ MOD _)``
-
-  \\ qmatch_goalsub_abbrev_tac`BIT 0 ww `
-  \\ qspecl_then[`0`,`ww`,`1`]mp_tac bitTheory.BIT_SHIFT_THM3
-  \\ simp[]);
-
-  \\ blastLib.BBLAST_TAC);
-
 val x64_header_EQ = prove(
   ``(x64_header (s,xs) && 0x1w = x64_header (t,ys) && 0x1w) = (s = t)``,
   FULL_SIMP_TAC std_ss [x64_header_AND_1]
-  \\ Cases_on `s` \\ Cases_on `t` \\ EVAL_TAC);
+  \\ Cases_on `s` \\ Cases_on `t` \\ EVAL_TAC \\ simp[]);
 
 val b2w_NOT = prove(
-  ``!s. b2w s ?? 0x1w = b2w (~s):word64``,
-  Cases \\ EVAL_TAC);
+  ``!s. b2w s ?? 0x1w = b2w (~s):'a word``,
+  Cases \\ rw[b2w_def,b2n_def]);
 
 val x64_iadd_thm = prove(
-  ``LENGTH xs < dimword (:63) /\ LENGTH ys < dimword (:63) /\
+  ``LENGTH (xs:'a word list) < dimword (:'a) DIV 2 /\ LENGTH ys < dimword (:'a) DIV 2 /\
     LENGTH xs + LENGTH ys <= LENGTH zs /\ mw_ok xs /\ mw_ok ys ==>
     ?zs1.
       x64_iadd_pre (x64_header (s,xs),x64_header (t,ys),xs,ys,zs,xa,ya) /\
@@ -1098,7 +1099,7 @@ val x64_iadd_thm = prove(
       \\ FULL_SIMP_TAC std_ss []
       \\ SEP_I_TAC "x64_add" \\ POP_ASSUM MP_TAC
       \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
-      THEN1 (FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
+      THEN1 (FULL_SIMP_TAC std_ss [X_LT_DIV] \\ DECIDE_TAC)
       \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND]
       \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_APPEND,x64_iadd3_def,x64_iadd3_pre_def,LET_DEF]
       \\ FULL_SIMP_TAC std_ss [WORD_MUL_LSL,word_mul_n2w]
@@ -1117,7 +1118,7 @@ val x64_iadd_thm = prove(
       \\ FULL_SIMP_TAC std_ss []
       \\ SEP_I_TAC "x64_add" \\ POP_ASSUM MP_TAC
       \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
-      THEN1 (FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
+      THEN1 (FULL_SIMP_TAC std_ss [X_LT_DIV] \\ DECIDE_TAC)
       \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND]
       \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_APPEND,x64_iadd3_def,x64_iadd3_pre_def,LET_DEF]
       \\ FULL_SIMP_TAC std_ss [WORD_MUL_LSL,word_mul_n2w]
@@ -1141,10 +1142,10 @@ val x64_iadd_thm = prove(
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
     \\ `mw2n xs <= mw2n ys` by DECIDE_TAC
     \\ IMP_RES_TAC mw2n_LESS
-    THEN1 (FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
+    THEN1 (FULL_SIMP_TAC std_ss [X_LT_DIV] \\ DECIDE_TAC)
     \\ REPEAT STRIP_TAC
     \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND,x64_iadd3_def,
-         x64_iadd3_pre_def,LET_DEF,EVAL ``1w=0w:word64``]
+         x64_iadd3_pre_def,LET_DEF,SIMP_CONV(srw_ss())[] ``1w=0w:'a word``]
     \\ SIMP_TAC (srw_ss()) [GSYM APPEND_ASSOC,LENGTH_REPLICATE]
     \\ STRIP_TAC THEN1
      (FULL_SIMP_TAC std_ss [WORD_MUL_LSL,word_mul_n2w]
@@ -1156,6 +1157,18 @@ val x64_iadd_thm = prove(
            AC ADD_COMM ADD_ASSOC,word_add_n2w])
     \\ `LENGTH (mw_subv ys xs) <= LENGTH ys` by ASM_SIMP_TAC std_ss [LENGTH_mw_subv]
     \\ DECIDE_TAC)
+  \\ Cases_on`2 MOD dimword(:'a) = 0` \\ fs[]
+  >- (
+    Cases_on`dimword(:'a)` \\ fs[]
+    \\ Cases_on`n` \\ fs[]
+    \\ Cases_on`n'` \\ fs[]
+    \\ Cases_on`xs` \\ fs[]
+    \\ Cases_on`ys` \\ fs[] )
+  \\ Cases_on`2 MOD dimword (:'a) = 1` \\ fs[]
+  >- (
+    Cases_on`dimword(:'a)` \\ fs[]
+    \\ Cases_on`n` \\ fs[]
+    \\ Cases_on`n'` \\ fs[] )
   THEN1
    (`LENGTH xs <= LENGTH zs` by DECIDE_TAC
     \\ IMP_RES_TAC LESS_EQ_LENGTH
@@ -1166,7 +1179,7 @@ val x64_iadd_thm = prove(
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
     \\ `mw2n ys <= mw2n xs` by DECIDE_TAC
     \\ IMP_RES_TAC mw2n_LESS
-    THEN1 (FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
+    THEN1 (FULL_SIMP_TAC std_ss [X_LT_DIV] \\ DECIDE_TAC)
     \\ REPEAT STRIP_TAC
     \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND,x64_iadd3_def,x64_iadd3_pre_def,LET_DEF]
     \\ SIMP_TAC (srw_ss()) [GSYM APPEND_ASSOC,LENGTH_REPLICATE]
@@ -1180,7 +1193,6 @@ val x64_iadd_thm = prove(
            AC ADD_COMM ADD_ASSOC,word_add_n2w])
     \\ `LENGTH (mw_subv xs ys) <= LENGTH xs` by ASM_SIMP_TAC std_ss [LENGTH_mw_subv]
     \\ DECIDE_TAC));
-
 
 (* multiplication *)
 
