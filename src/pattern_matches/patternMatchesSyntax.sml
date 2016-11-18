@@ -671,7 +671,13 @@ end handle HOL_ERR _ => (vars, pat, guard, rh)
 fun is_uscV v =
   isSome (GrammarSpecials.dest_fakeconst_name (#1 (dest_var v)))
 
-fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t =
+fun pmatch_printer
+    (GS : type_grammar.grammar * term_grammar.grammar)
+    (backend : term_grammar.grammar term_pp_types.ppbackend)
+    sys
+    (ppfns:term_pp_types.ppstream_funs)
+    ((pgr,lgr,rgr) : term_pp_types.grav * term_pp_types.grav * term_pp_types.grav)
+    d t =
   let
     open Portable term_pp_types smpp
     infix >>
@@ -683,6 +689,15 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
      fn gravs => fn d => sys {gravs = gravs, depth = d, binderp = true}
     val sys =
      fn gravs => fn d => sys {gravs = gravs, depth = d, binderp = false}
+    val paren_required =
+      (case rgr of
+         Prec(p, _) => p > 70
+       | _ => false) orelse
+      (case lgr of
+         Prec(_, n) => n = GrammarSpecials.fnapp_special
+       | _ => false)
+    val doparen = if paren_required then (fn c => add_string c)
+                  else (fn c => nothing)
 
     fun pp_row (vars, pat, guard, rh) =
       let
@@ -695,7 +710,7 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
                             empty_tmset
                             pvs0
             in
-              if HOLset.isSubset(pvs,vs) then (false, false)
+              if HOLset.isSubset(pvs,vs) andalso HOLset.isSubset(vs,pvs) then (false, false)
               else
                 (true, HOLset.find (not o varname_starts_with_uscore) vs = NONE)
             end
@@ -721,6 +736,7 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
             sys (Top, Top, Top) (d - 1) rh))
       end
   in
+    doparen "(" >>
     ublock PP.CONSISTENT 0 (
        ublock PP.CONSISTENT 2
                (add_string "case" >> add_break(1,2) >>
@@ -732,7 +748,8 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
            pp_row
            (add_break(1,~2) >> add_string "|" >> add_string " ") rows'
        )
-    )
+    ) >>
+    doparen ")"
   end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
 val userprinter_info = let

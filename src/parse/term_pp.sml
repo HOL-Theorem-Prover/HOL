@@ -79,7 +79,13 @@ fun convert_case tm =
       end
 
 val prettyprint_cases = ref true;
+val prettyprint_cases_dt = ref false;
 val _ = register_btrace ("pp_cases", prettyprint_cases)
+val _ = register_btrace ("pp_cases_dt", prettyprint_cases_dt)
+
+fun prettyprint_cases_name () = if !prettyprint_cases_dt then "dtcase" else "case";
+
+
 
 (* ----------------------------------------------------------------------
     A flag controlling whether to print escaped syntax with a dollar
@@ -1900,7 +1906,7 @@ fun pp_term (G : grammar) TyG backend = let
                    in
                      p (block PP.CONSISTENT 0
                           (block PP.CONSISTENT 0
-                            (add_string "case" >> add_break(1,2) >>
+                            (add_string (prettyprint_cases_name ()) >> add_break(1,2) >>
                              pr_term split_on Top Top Top (decdepth depth) >>
                              add_break(1,0) >> add_string "of") >>
                            (if !pp_print_firstcasebar then

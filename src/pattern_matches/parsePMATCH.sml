@@ -296,6 +296,7 @@ fun add_pmatch actions (G:'a) =
             [] => raise mk_HOL_ERR "parsePMATCH" "ADD_PMATCH"
                         "No existing case rules?"
           | c :: _ => #term_name c <> PMATCH_case_special
+    val _ = set_trace "pp_cases_dt" 1
     val G =
         if do_pm then rmtmtok {term_name = GrammarSpecials.core_case_special,
                                tok = "case"} G
