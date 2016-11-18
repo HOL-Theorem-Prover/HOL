@@ -497,11 +497,8 @@ fun pmatch2case t = let
   val row_eqs = map process_row rows
   val rows_tm = list_mk_conj row_eqs
 
-  (* compile patterns with parse deep cases turned off *)
-  val parse_pp = Feedback.current_trace "parse deep cases"
-  val _ = Feedback.set_trace "parse deep cases" 0
+  (* compile patterns *)
   val case_tm0 = GrammarSpecials.compile_pattern_match rows_tm
-  val _ = Feedback.set_trace "parse deep cases" parse_pp
 
 
   (* nearly there, now remove lambda's *)
@@ -523,19 +520,17 @@ fun PMATCH_ELIM_CONV t =
 (*
 val rc_arg = ([], NONE)
 
-set_trace "parse deep cases" 0
-
 val t = ``
-   CASE l OF [
-     ||. [] ~> 0;
-     || (x,y). x::y::x::y::_ ~> (x + y);
-     ||! x::x::x::x::_ when (x > 10) ~> x;
-     ||! x::x::x::x::x::_ ~> 9;
-     ||. [] ~> 1;
-     ||! x::x::x::y::_ ~> (x + x + x);
-     || x. x::_ ~> 1;
-     ||! x::y::z::_ ~> (x + x + x)
-   ]``
+   case l of
+     | [] => 0
+     | x::y::x::y::_ => (x + y)
+     | x::x::x::x::_ when (x > 10) => x
+     | x::x::x::x::x::_ => 9
+     | [] => 1
+     | x::x::x::y::_ => (x + x + x)
+     | x::_ => 1
+     | x::y::z::_ => (x + x + x)
+   ``
 
 val (rows, _) = listSyntax.dest_list (rand t)
 *)
@@ -640,14 +635,14 @@ val t = case2pmatch false ``case (x, y, z) of
  | (x, SOME y, l) => x+y``
 
 val t =
-   ``CASE (x,y,z) OF [
-    || v1. (0,v1) ~> 2;
-    || v4. (SUC v4,NONE,[]) ~> (SUC v4);
-    || (v4,v10,v11). (SUC v4,NONE,v10::v11) ~> ARB;
-    || v4. (v4,NONE,_) ~> v4;
-    || (v4,v10,v11). (0,SOME _ ,_) ~> ARB;
-    || (v4,v9,v8). (SUC v4,SOME v9,v8) ~> (SUC v4 + v9)
-  ]``
+   ``case (x,y,z) of
+    | (0,v1) => 2
+    | (SUC v4,NONE,[]) => (SUC v4)
+    | (SUC v4,NONE,v10::v11) => ARB
+    | (v4,NONE,_) => v4
+    | (0,SOME _ ,_) => ARB
+    | (SUC v4,SOME v9,v8) => (SUC v4 + v9)
+  ``
 
 *)
 
@@ -1703,15 +1698,15 @@ val PMATCH_REMOVE_GUARDS_ss = PMATCH_REMOVE_GUARDS_GEN_ss []
 
 
 val tm = ``P (
-  CASE xx OF [
+  case xx of | _ => ARB)``
     ]):bool``
 
 val tm = ``P (
-  CASE xx OF [
-    || (x, y, ys). (x, y::ys) ~> (x + y);
-    ||.  (0, []) ~> 9;
-    || x.  (x, []) when x > 3 ~> x;
-    || x.  (x, []) ~> 0]):bool``
+  case xx of
+    | (x, y::ys) ~> (x + y)
+    | (0, []) ~> 9
+    | (x, []) when x > 3 ~> x
+    | (x, []) ~> 0]):bool``
 
 val tm = mk_comb (P_v, p_tm)
 val rc_arg = ([], NONE)
@@ -1776,18 +1771,18 @@ end
 (*
 
 val tm = ``(P2 /\ Q ==> (
-  CASE xx OF [
-    || (x, y, ys). (x, y::ys) ~> (x + y);
-    ||.  (0, []) ~> 9;
-    || x.  (x, []) when x > 3 ~> x;
-    || x.  (x, []) ~> 0] = 5))``
+  (case xx of
+    | (x, y::ys) => (x + y)
+    | (0, []) => 9
+    | (x, []) when x > 3 => x
+    | (x, []) => 0) = 5))``
 
 val tm = ``
-  CASE xx OF [
-    || (x, y, ys). (x, y::ys) ~> (x + y);
-    ||.  (0, []) ~> 9;
-    || x.  (x, []) when x > 3 ~> x;
-    || x.  (x, []) ~> 0] = 5``
+  (case xx of
+    | (x, y::ys) => (x + y)
+    | (0, []) => 9
+    | (x, []) when x > 3 => x
+    | (x, []) => 0) = 5``
 *)
 
 
@@ -2001,16 +1996,16 @@ fun colHeu_default cols = colHeu_qba (!thePmatchCompileDB) cols
    case-splits using such heuristics. *)
 
 (*
-val t = ``CASE (a,x,xs) OF [
-    || x. (NONE,x,[]) ~> x;
-    || x. (NONE,x,[2]) ~> x;
-    || (x,v18). (NONE,x,[v18]) ~> 3;
-    || (x,v12,v16,v17). (NONE,x,v12::v16::v17) ~> 3;
-    || (y,x,z,zs). (SOME y,x,[z]) ~> (x + 5 + z);
-    || (y,v23,v24). (SOME y,0,v23::v24) ~> (v23 + y);
-    || (y,z,v23). (SOME y,SUC z,[v23]) when (y > 5) ~> 3;
-    || (y,z). (SOME y,SUC z,[1; 2]) ~> (y + z)
-  ]``
+val t = ``case (a,x,xs) of
+    | (NONE,x,[]) => x
+    | (NONE,x,[2]) => x
+    | (NONE,x,[v18]) => 3
+    | (NONE,x,v12::v16::v17) => 3
+    | (y,x,z,zs) .| (SOME y,x,[z]) => (x + 5 + z)
+    | (y,v23,v24) .| (SOME y,0,v23::v24) => (v23 + y)
+    | (y,z,v23) .| (SOME y,SUC z,[v23]) when (y > 5) => 3
+    | (y,z) .| (SOME y,SUC z,[1; 2]) => (y + z)
+  ``
 *)
 
 fun PMATCH_CASE_SPLIT_AUX rc_arg col_no expand_thm t = let
@@ -2164,18 +2159,17 @@ fun PMATCH_CASE_SPLIT_ss () =
 
 (*
 val t = ``
-  CASE (a,x,xs) OF [
-    ||. (NONE,_,[]) ~> 0;
-    || x. (NONE,x,[]) when x < 10 ~> x;
-    || x. (NONE,x,[2]) ~> x;
-    ||! (NONE,x,[v18]) ~> 3;
-    ||! (NONE,_,[_;_]) ~> x;
-    || (x,v12,v16,v17). (NONE,x,v12::v16::v17) ~> 3;
-    || (y,x,z,zs). (SOME y,x,[z]) ~> x + 5 + z;
-    || (y,v23,v24). (SOME y,0,v23::v24) ~> (v23 + y);
-    || (y,z,v23). (SOME y,SUC z,[v23]) when y > 5 ~> 3;
-    || (y,z). (SOME y,SUC z,[1; 2]) ~> y + z
-  ]``;
+  case (a,x,xs) of
+    | (NONE,_,[]) => 0
+    | (NONE,x,[]) when x < 10 => x
+    | (NONE,x,[2]) => x
+    | (NONE,x,[v18]) => 3
+    | (NONE,_,[_;_]) => x
+    | (NONE,x,v12::v16::v17) => 3
+    | (SOME y,x,[z]) => x + 5 + z
+    | (SOME y,0,v23::v24) => (v23 + y)
+    | (SOME y,SUC z,[v23]) when y > 5 => 3
+    | (SOME y,SUC z,[1; 2]) => y + z``;
 
   val (v, rows) = dest_PMATCH t
   val pats = List.map (#1 o dest_PMATCH_ROW) rows
@@ -2445,21 +2439,21 @@ in
   thm01
 end handle HOL_ERR _ => raise UNCHANGED
 
-
 (*
+
 val t = ``
-  CASE (x,y,z) OF [
-    ||. (NONE,_,[]) ~> 0;
-    || x. (NONE,x,[]) when x < 10 ~> x;
-    || x. (NONE,x,[2]) ~> x;
-    || (x, v18). (NONE,x,[v18]) ~> 3;
-    ||. (NONE,_,[_;_]) ~> 4;
-    || (x,v12,v16,v17). (NONE,x,v12::v16::v17) ~> 3;
-    || (y,x,z,zs). (SOME y,x,[z]) ~> x + 5 + z;
-    || (y,v23,v24). (SOME y,0,v23::v24) ~> (v23 + y);
-    || (y,z,v23). (SOME y,SUC z,[v23]) when y > 5 ~> 3;
-    || (y,z). (SOME y,SUC z,[1; 2]) ~> y + z
-  ]``;
+  case (x,y,z) of
+    | (NONE,_,[]) => 0
+    | (NONE,x,[]) when x < 10 => x
+    | (NONE,x,[2]) => x
+    | (NONE,x,[v18]) => 3
+    | (NONE,_,[_;_]) => 4
+    | (NONE,x,v12::v16::v17) => 3
+    | (SOME y,x,[z]) => x + 5 + z
+    | (SOME y,0,v23::v24) => (v23 + y)
+    | (SOME y,SUC z,[v23]) when y > 5 => 3
+    | (SOME y,SUC z,[1; 2]) => y + z
+  ``;
 
   val (v, rows) = dest_PMATCH t
   val pats = List.map (#1 o dest_PMATCH_ROW) rows
@@ -2752,23 +2746,23 @@ fun COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH t =
 
 
 (*
-val t = ``CASE (x, z) OF [
-  ||. (NONE, NONE) ~> 0;
-  ||. (SOME _, _) ~> 1;
-  ||. (_, SOME _) ~> 2
-]``
+val t = ``case (x, z) of
+  | (NONE, NONE) => 0
+  | (SOME _, _) => 1
+  | (_, SOME _) => 2
+``
 
-val t = ``CASE (x, z) OF [
-  ||. (NONE, NONE) ~> 0;
-  ||. (SOME _, _) ~> 1;
-  ||. (_, NONE) ~> 2
-]``
+val t = ``case (x, z) of
+  | (NONE, NONE) => 0
+  | (SOME _, _) => 1
+  | (_, NONE) => 2
+``
 
-val t = ``CASE (x, z) OF [
-  ||. (NONE, 1) ~> 0;
-  ||. (SOME _, 2) ~> 1;
-  || x. (_, x) when x > 5 ~> 2
-]``
+val t = ``case (x, z) of
+  | (NONE, 1) => 0
+  | (SOME _, 2) => 1
+  | (_, x) when x > 5 => 2
+``
 *)
 
 fun IS_REDUNDANT_ROWS_INFO_WEAKEN_RULE info_thm = let
@@ -2848,22 +2842,22 @@ val rc_arg = ([], NONE)
 
 
 (*
-val t = ``CASE (x, z) OF [
-  ||. (NONE, NONE) ~> 0;
-  ||. (_, SOME _) ~> 2
-]``
+val t = ``case (x, z) of
+  | (NONE, NONE) => 0
+  | (_, SOME _) => 2
+``
 
-val t = ``CASE (x, z) OF [
-  ||. (NONE, NONE) ~> 0;
-  ||. (SOME _, _) ~> 1;
-  ||. (_, NONE) ~> 2
-]``
+val t = ``case (x, z) of
+  | (NONE, NONE) => 0
+  | (SOME _, _) => 1
+  | (_, NONE) => 2
+``
 
-val t = ``CASE (x, z) OF [
-  ||. (NONE, 1) ~> 0;
-  ||. (SOME _, 2) ~> 1;
-  || x. (_, x) when x > 5 ~> 2
-]``
+val t = ``case (x, z) of
+  | (NONE, 1) => 0
+  | (SOME _, 2) => 1
+  | (_, x) when x > 5 => 2
+``
 
 val info_thm = COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH t
 

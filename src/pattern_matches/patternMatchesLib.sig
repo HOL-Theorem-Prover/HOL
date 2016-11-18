@@ -3,8 +3,14 @@ sig
   include Abbrev
   type ssfrag = simpLib.ssfrag
 
-
+  (* ENABLE_PMATCH_CASES() turns on parsing for
+     PMATCH style case expressions. After calling it
+     expressions like `case ... of ...` are not parsed
+     to decision trees any more, but to PMATCH expressions.
+     Decision tree case expressions are afterwards available
+     via `dtcase ... of ...`. *)
   val ENABLE_PMATCH_CASES : unit -> unit
+
   (********************************)
   (* eliminating select           *)
   (********************************)
@@ -143,7 +149,7 @@ sig
   val PMATCH_LIFT_BOOL_GEN_ss : ssfrag list -> ssfrag
   val PMATCH_LIFT_BOOL_ss : ssfrag
 
-  (* A special case of lifting are function definitons,
+  (* A special case of lifting are function definitions,
      which use PMATCH. In order to use such definitions
      with the rewriting tools, it is often handy to
      move the PMATCH to the toplevel and introduce
@@ -199,9 +205,9 @@ sig
        Checking exhaustiveness is expensive, therefore it
        can be skipped. However, if a theorem is stored here,
        it is of the form `|- ~(cond) -> exhaustive`.
-       There are no other guarentees. We don't guarentee that
+       There are no other guarantees. We don't guarantee that
        if the condition holds, the pattern match is inexhaustive.
-       This is usually the case, put we don't guarentee it.
+       This is usually the case, put we don't guarantee it.
        To check, whether the match is exhaustive, check whether
        the guard is T. See below for functions using this
        field.
@@ -218,7 +224,7 @@ sig
   (* Check whether the PMATCH is syntactically well-formed. *)
   val is_well_formed_pmatch : pmatch_info -> bool
 
-  (* Check whethe the PMATCH is falling into the subset
+  (* Check whether the PMATCH is falling into the subset
      supported by OCAML *)
   val is_ocaml_pmatch : pmatch_info -> bool
 
@@ -264,7 +270,7 @@ sig
 
   (* Many heuristics are build on ranking funs.
      A ranking fun assigns an integer to a column. Larger
-     numbers are prefered. If two columns have the same
+     numbers are preferred. If two columns have the same
      value, either another ranking fun is used to decide or
      just the first one is used, if no ranking fun is available. *)
   type column_ranking_fun = term * (term list * term) list -> int
@@ -289,7 +295,7 @@ sig
   (* the default heuristic, currently it is
      colHeu_qba applied to the default db. However,
      this might change. You can just rely on a decent heuristic,
-     that often works. No specific properties guarenteed. *)
+     that often works. No specific properties guaranteed. *)
   val colHeu_default : column_heuristic
 
 
@@ -335,7 +341,7 @@ sig
      have some nice properties like e.g. not overlapping with each other.
      Such a nchotomy theorem is often handy. We use it to check for
      exhaustiveness for example. The interface
-     to compute such an nchotomy is exponsed here as well. *)
+     to compute such an nchotomy is exposed here as well. *)
 
   (* [nchotomy_of_pats_GEN db colHeu pats] computes an nchotomy-theorem
      for a list of patterns. A pattern is written as for PMATCH, i.e. in the form ``\(v1, ..., vn). p v1 ... vn``. *)
@@ -348,7 +354,7 @@ sig
   (* Remove redundant rows *)
   (*-----------------------*)
 
-  (* fancy, slow conversion for decting and removing
+  (* fancy, slow conversion for detecting and removing
      redundant rows. Internally this uses [nchotomy_of_pats] and
      therefore requires a pmatch-compile db and a column-heuristic. *)
   val PMATCH_REMOVE_REDUNDANT_CONV_GEN :
