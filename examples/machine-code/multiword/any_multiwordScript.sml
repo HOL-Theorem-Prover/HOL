@@ -92,8 +92,8 @@ val (x64_cmp_def, _,
            if r8 = r9 then (INL (r10,xs,ys),cond)
            else if r8 <+ r9 then (let r10 = 0x1w in (INR (r10,xs,ys),cond))
            else (let r10 = 0x2w in (INR (r10,xs,ys),cond))))
-    :α word # α word list # α word list ->
-     (α word # α word list # α word list + α word # α word list # α word list) # bool``;
+    :α word # α word list # α word list -> (α word # α word list # α
+     word list + α word # α word list # α word list) # bool``;
 
 val (x64_compare_def, _,
      x64_compare_pre_def, _) =
@@ -106,8 +106,8 @@ val (x64_compare_def, _,
          let (r10,xs,ys) = x64_cmp (r10,xs,ys)
          in
            (INR (r10,xs,ys),cond)))
-    :α word # α word # α word list # α word list ->
-     (α word # α word # α word list # α word list + α word # α word list # α word list) #
+    :α word # α word # α word list # α word list -> (α word # α word #
+     α word list # α word list + α word # α word list # α word list) #
      bool``;
 
 val x64_header_def = Define `
@@ -576,13 +576,14 @@ val (x64_sub_loop2_def, _,
          let r10 = r10 + 0x1w
          in
            (INL (r1,r8,r9,r10,xs,z_af,z_cf',z_of,z_pf,z_sf,z_zf,zs),cond)))
-    :'a word # 'a word # 'a word # 'a word # 'a word list # bool option # bool option
-     # bool option # bool option # bool option # bool option # 'a word
-     list -> ('a word # 'a word # 'a word # 'a word # 'a word list # bool option #
-     bool option # bool option # bool option # bool option # bool
-     option # 'a word list + 'a word # 'a word # 'a word # 'a word # 'a word list # bool
-     option # bool option # bool option # bool option # bool option #
-     bool option # 'a word list) # bool``;
+    :'a word # 'a word # 'a word # 'a word # 'a word list # bool
+    option # bool option # bool option # bool option # bool option #
+    bool option # 'a word list -> ('a word # 'a word # 'a word # 'a
+    word # 'a word list # bool option # bool option # bool option #
+    bool option # bool option # bool option # 'a word list + 'a word #
+    'a word # 'a word # 'a word # 'a word list # bool option # bool
+    option # bool option # bool option # bool option # bool option #
+    'a word list) # bool``;
 
 val (x64_sub_loop1_def, _,
      x64_sub_loop1_pre_def, _) =
@@ -616,14 +617,15 @@ val (x64_sub_loop1_def, _,
          in
            (INL (r1,r8,r9,r10,xs,ys,z_af,z_cf',z_of,z_pf,z_sf,z_zf,zs),
             cond)))
-    :'a word # 'a word # 'a word # 'a word # 'a word list # 'a word list # bool option #
+    :'a word # 'a word # 'a word # 'a word # 'a word list # 'a word
+     list # bool option # bool option # bool option # bool option #
+     bool option # bool option # 'a word list -> ('a word # 'a word #
+     'a word # 'a word # 'a word list # 'a word list # bool option #
      bool option # bool option # bool option # bool option # bool
-     option # 'a word list -> ('a word # 'a word # 'a word # 'a word # 'a word list #
-     'a word list # bool option # bool option # bool option # bool option
-     # bool option # bool option # 'a word list + 'a word # 'a word # 'a word #
-     'a word # 'a word list # 'a word list # bool option # bool option # bool
-     option # bool option # bool option # bool option # 'a word list) #
-     bool``;
+     option # 'a word list + 'a word # 'a word # 'a word # 'a word #
+     'a word list # 'a word list # bool option # bool option # bool
+     option # bool option # bool option # bool option # 'a word list)
+     # bool``;
 
 val (x64_sub_loop_def, _,
      x64_sub_loop_pre_def, _) =
@@ -671,11 +673,12 @@ val (x64_sub_loop_def, _,
        in
          (INR (r1,r2,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs),
           cond)))
-    :'a word # 'a word # 'a word # 'a word # 'a word # 'a word list # 'a word list # 'a word
-     list -> ('a word # 'a word # 'a word # 'a word # 'a word # 'a word list # 'a word list
-     # 'a word list + 'a word # 'a word # 'a word # 'a word # 'a word # 'a word list # 'a word
-     list # bool option # bool option # bool option # bool option #
-     bool option # bool option # 'a word list) # bool``;
+    :'a word # 'a word # 'a word # 'a word # 'a word # 'a word list #
+     'a word list # 'a word list -> ('a word # 'a word # 'a word # 'a
+     word # 'a word # 'a word list # 'a word list # 'a word list + 'a
+     word # 'a word # 'a word # 'a word # 'a word # 'a word list # 'a
+     word list # bool option # bool option # bool option # bool option
+     # bool option # bool option # 'a word list) # bool``;
 
 val x64_sub_loop_def =
   LIST_CONJ [x64_sub_loop_def,x64_sub_loop_pre_def,
@@ -713,10 +716,11 @@ val (x64_sub_def, _,
        let (r8,r10,zs) = x64_fix (r8,r10,zs)
        in
          (INR (r1,r2,r8,r9,r10,xs,ys,zs),cond)))
-    :'a word # 'a word # 'a word # 'a word # 'a word # 'a word list # 'a word list # 'a word list ->
-     ('a word # 'a word # 'a word # 'a word # 'a word # 'a word list # 'a word list # 'a word list +
-      'a word # 'a word # 'a word # 'a word # 'a word # 'a word list # 'a word list # 'a word list)
-     # bool``;
+    :'a word # 'a word # 'a word # 'a word # 'a word # 'a word list #
+     'a word list # 'a word list -> ('a word # 'a word # 'a word # 'a
+     word # 'a word # 'a word list # 'a word list # 'a word list + 'a
+     word # 'a word # 'a word # 'a word # 'a word # 'a word list # 'a
+     word list # 'a word list) # bool``;
 
 val x64_sub_def =
   LIST_CONJ [x64_sub_def,x64_sub_pre_def]
@@ -945,9 +949,10 @@ val (x64_iadd1_def, _,
             let r2 = r8
             in
               (INR (r1,r2,r0,xs,ys,xa,ya),T))))
-    :'a word # 'a word # 'a word list # 'a word list # 'a word # 'a word ->
-     ('a word # 'a word # 'a word list # 'a word list # 'a word # 'a word +
-      'a word # 'a word # 'a word # 'a word list # 'a word list # 'a word # 'a word) # bool``;
+    :'a word # 'a word # 'a word list # 'a word list # 'a word # 'a
+     word -> ('a word # 'a word # 'a word list # 'a word list # 'a
+     word # 'a word + 'a word # 'a word # 'a word # 'a word list # 'a
+     word list # 'a word # 'a word) # bool``;
 
 val (x64_iadd2_def, _,
      x64_iadd2_pre_def, _) =
@@ -967,10 +972,11 @@ val (x64_iadd2_def, _,
             let r2 = r8
             in
               (INR (r1,r2,r0,r12,xs,ys,xa,ya),T))))
-    :'a word # 'a word # 'a word # 'a word # 'a word list # 'a word list # 'a word # 'a word ->
-     ('a word # 'a word # 'a word # 'a word # 'a word list # 'a word list # 'a word # 'a word +
-      'a word # 'a word # 'a word # 'a word # 'a word list # 'a word list # 'a word # 'a word) #
-     bool``;
+    :'a word # 'a word # 'a word # 'a word # 'a word list # 'a word
+     list # 'a word # 'a word -> ('a word # 'a word # 'a word # 'a
+     word # 'a word list # 'a word list # 'a word # 'a word + 'a word
+     # 'a word # 'a word # 'a word # 'a word list # 'a word list # 'a
+     word # 'a word) # bool``;
 
 val (x64_iadd3_def, _,
      x64_iadd3_pre_def, _) =
@@ -1036,9 +1042,10 @@ val (x64_iadd_def, _,
                  let r10 = r10 + r12
                  in
                    (INR (r10,xs,ys,zs,xa,ya),cond)))))
-    :'a word # 'a word # 'a word list # 'a word list # 'a word list # 'a word # 'a word ->
-     ('a word # 'a word # 'a word list # 'a word list # 'a word list # 'a word # 'a word +
-      'a word # 'a word list # 'a word list # 'a word list # 'a word # 'a word) # bool``;
+    :'a word # 'a word # 'a word list # 'a word list # 'a word list #
+     'a word # 'a word -> ('a word # 'a word # 'a word list # 'a word
+     list # 'a word list # 'a word # 'a word + 'a word # 'a word list
+     # 'a word list # 'a word list # 'a word # 'a word) # bool``;
 
 val x64_header_EQ = prove(
   ``(x64_header (s,xs) && 0x1w = x64_header (t,ys) && 0x1w) = (s = t)``,
@@ -1244,9 +1251,10 @@ val (x64_mul_pass_def, _,
          let r11 = r11 + 0x1w
          in
            (INL (r1,r8,r9,r10,r11,ys,zs),cond)))
-    :'a word # 'a word # 'a word # 'a word # 'a word # 'a word list # 'a word list ->
-     ('a word # 'a word # 'a word # 'a word # 'a word # 'a word list # 'a word list +
-      'a word # 'a word # 'a word # 'a word list # 'a word list) # bool``;
+    :'a word # 'a word # 'a word # 'a word # 'a word # 'a word list #
+     'a word list -> ('a word # 'a word # 'a word # 'a word # 'a word
+     # 'a word list # 'a word list + 'a word # 'a word # 'a word # 'a
+     word list # 'a word list) # bool``;
 
 val (x64_mul_def, _,
      x64_mul_pre_def, _) =
@@ -1265,9 +1273,10 @@ val (x64_mul_def, _,
          let r10 = r10 - r9
          in
            (INL (r7,r9,r10,r12,xs,ys,zs),cond)))
-    :'a word # 'a word # 'a word # 'a word # 'a word list # 'a word list # 'a word list ->
-     ('a word # 'a word # 'a word # 'a word # 'a word list # 'a word list # 'a word list +
-      'a word # 'a word list # 'a word list # 'a word list) # bool``;
+    :'a word # 'a word # 'a word # 'a word # 'a word list # 'a word
+     list # 'a word list -> ('a word # 'a word # 'a word # 'a word #
+     'a word list # 'a word list # 'a word list + 'a word # 'a word
+     list # 'a word list # 'a word list) # bool``;
 
 val (x64_mul_zero_def, _,
      x64_mul_zero_pre_def, _) =
@@ -1515,7 +1524,8 @@ val (x64_single_div_def, _,
        let r0 = n2w ((w2n r2 * dimword(:'a) + w2n r0) DIV w2n r9)
        in
          (INR (r0,r2',r9),cond)))
-    :'a word # 'a word # 'a word -> ('a word # 'a word # 'a word + 'a word # 'a word # 'a word) # bool``;
+    :'a word # 'a word # 'a word -> ('a word # 'a word # 'a word + 'a
+    word # 'a word # 'a word) # bool``;
 
 val x64_single_div_def = LIST_CONJ [x64_single_div_def,x64_single_div_pre_def]
 
@@ -1580,9 +1590,9 @@ val (x64_simple_div1_def, _,
          let zs = LUPDATE r0 (w2n r10) zs
          in
            (INL (r2,r9,r10,zs),cond)))
-    :'a word # 'a word # 'a word # 'a word list ->
-     ('a word # 'a word # 'a word # 'a word list + 'a word # 'a word # 'a word # 'a word list) #
-     bool``;
+    :'a word # 'a word # 'a word # 'a word list -> ('a word # 'a word
+     # 'a word # 'a word list + 'a word # 'a word # 'a word # 'a word
+     list) # bool``;
 
 val x64_simple_div_thm = prove(
   ``!(xs:'a word list) xs1 zs zs1 r2 r9 qs r.
@@ -1698,7 +1708,8 @@ val (x64_single_mul_def, _,
              r2' + n2w (b2n (dimword(:'a) <= w2n r0 + w2n r1))
        in
          (INR (r0',r1,r2),cond)))
-    :'a word # 'a word # 'a word -> ('a word # 'a word # 'a word + 'a word # 'a word # 'a word) # bool``;
+    :'a word # 'a word # 'a word -> ('a word # 'a word # 'a word + 'a
+    word # 'a word # 'a word) # bool``;
 
 val x64_single_mul_def = LIST_CONJ [x64_single_mul_def,x64_single_mul_pre_def]
 
@@ -1738,8 +1749,8 @@ val (x64_mul_by_single2_def, _,
        let r1 = r12
        in
          (INR (r1,r2,r3,r6,r7,r8),cond)))
-    :'a word # 'a word # 'a word -> ('a word # 'a word # 'a word + 'a word # 'a word # 'a word #
-     'a word # 'a word # 'a word) # bool``;
+    :'a word # 'a word # 'a word -> ('a word # 'a word # 'a word + 'a
+     word # 'a word # 'a word # 'a word # 'a word # 'a word) # bool``;
 
 val x64_mul_by_single2_thm = prove(
   ``!r6 r7 r8.
@@ -1772,9 +1783,10 @@ val (x64_cmp3_def, _,
            else (let r0 = 0x0w in (INR (r0,r1,r2,r3,r9,r10,r11),T))
          else if r11 <+ r3 then (INR (r0,r1,r2,r3,r9,r10,r11),T)
          else (let r0 = 0x0w in (INR (r0,r1,r2,r3,r9,r10,r11),T))))
-    :'a word # 'a word # 'a word # 'a word # 'a word # 'a word ->
-     ('a word # 'a word # 'a word # 'a word # 'a word # 'a word +
-      'a word # 'a word # 'a word # 'a word # 'a word # 'a word # 'a word) # bool``;
+    :'a word # 'a word # 'a word # 'a word # 'a word # 'a word -> ('a
+     word # 'a word # 'a word # 'a word # 'a word # 'a word + 'a word
+     # 'a word # 'a word # 'a word # 'a word # 'a word # 'a word) #
+     bool``;
 
 val x64_cmp3_thm = prove(
   ``x64_cmp3_pre (r1,r2,r3,r9,r10,r11) /\
@@ -1799,9 +1811,10 @@ val (x64_cmp_mul2_def, _,
        let (r0,r1,r2,r3,r9,r10,r11) = x64_cmp3 (r1,r2,r3,r9,r10,r11)
        in
          (INR (r0,r6,r7,r8,r9,r10,r11),cond)))
-    :'a word # 'a word # 'a word # 'a word # 'a word # 'a word ->
-     ('a word # 'a word # 'a word # 'a word # 'a word # 'a word +
-      'a word # 'a word # 'a word # 'a word # 'a word # 'a word # 'a word) # bool``;
+    :'a word # 'a word # 'a word # 'a word # 'a word # 'a word -> ('a
+     word # 'a word # 'a word # 'a word # 'a word # 'a word + 'a word
+     # 'a word # 'a word # 'a word # 'a word # 'a word # 'a word) #
+     bool``;
 
 val x64_cmp_mul2_thm = prove(
   ``x64_cmp_mul2_pre (r6,r7,r8,r9,r10,r11) /\
@@ -1838,8 +1851,9 @@ val (x64_cmp2_def, _,
            else (let r1 = 0x0w in (INR (r0,r1,r2,r10,r11),T))
          else if r11 <+ r2 then (INR (r0,r1,r2,r10,r11),T)
          else (let r1 = 0x0w in (INR (r0,r1,r2,r10,r11),T))))
-    :'a word # 'a word # 'a word # 'a word ->
-     ('a word # 'a word # 'a word # 'a word + 'a word # 'a word # 'a word # 'a word # 'a word) # bool``;
+    :'a word # 'a word # 'a word # 'a word -> ('a word # 'a word # 'a
+     word # 'a word + 'a word # 'a word # 'a word # 'a word # 'a word)
+     # bool``;
 
 val x64_cmp2_thm = prove(
   ``x64_cmp2_pre (r0,r2,r10,r11) /\
@@ -1923,7 +1937,8 @@ val (x64_div_r1_def, _,
          in
            (INR (r0,r1,r2'),cond))
       else (let r0 = 0x0w in let r0 = ~r0 in (INR (r0,r1,r2),T)))
-    :'a word # 'a word # 'a word -> ('a word # 'a word # 'a word + 'a word # 'a word # 'a word) # bool``;
+    :'a word # 'a word # 'a word -> ('a word # 'a word # 'a word + 'a
+    word # 'a word # 'a word) # bool``;
 
 val x64_div_r1_def = LIST_CONJ [x64_div_r1_def,x64_div_r1_pre_def]
 
@@ -2000,7 +2015,8 @@ val (x64_adj_cmp_def, _,
          in
            if r3 <+ r0 then (INR (r0,r3,r8),T)
            else (let r8 = 0x0w in (INR (r0,r3,r8),T))))
-    :'a word # 'a word # 'a word -> ('a word # 'a word # 'a word + 'a word # 'a word # 'a word) # bool``;
+    :'a word # 'a word # 'a word -> ('a word # 'a word # 'a word + 'a
+    word # 'a word # 'a word) # bool``;
 
 val (x64_adjust_aux_def, _,
      x64_adjust_aux_pre_def, _) =
@@ -2035,10 +2051,11 @@ val (x64_adjust_aux_def, _,
          let r10 = r10 + 0x1w
          in
            (INL (r1,r6,r7,r8,r9,r10,r11,r12,ys,zs),cond)))
-    :'a word # 'a word # 'a word # 'a word # 'a word # 'a word # 'a word # 'a word # 'a word list
-     # 'a word list -> ('a word # 'a word # 'a word # 'a word # 'a word # 'a word # 'a word #
-     'a word # 'a word list # 'a word list + 'a word # 'a word # 'a word # 'a word # 'a word #
-     'a word # 'a word list # 'a word list) # bool``;
+    :'a word # 'a word # 'a word # 'a word # 'a word # 'a word # 'a
+    word # 'a word # 'a word list # 'a word list -> ('a word # 'a word
+    # 'a word # 'a word # 'a word # 'a word # 'a word # 'a word # 'a
+    word list # 'a word list + 'a word # 'a word # 'a word # 'a word #
+    'a word # 'a word # 'a word list # 'a word list) # bool``;
 
 val (x64_div_adjust_def, _,
      x64_div_adjust_pre_def, _) =
@@ -2055,9 +2072,10 @@ val (x64_div_adjust_def, _,
          if r7 = 0x0w then (INR (r6,r7,r9,r10,r11,ys,zs),cond)
          else if r8 = 0x0w then (INR (r6,r7,r9,r10,r11,ys,zs),cond)
          else (let r7 = r7 - 0x1w in (INR (r6,r7,r9,r10,r11,ys,zs),cond))))
-    :'a word # 'a word # 'a word # 'a word # 'a word list # 'a word list ->
-     ('a word # 'a word # 'a word # 'a word # 'a word list # 'a word list +
-      'a word # 'a word # 'a word # 'a word # 'a word # 'a word list # 'a word list) # bool``;
+    :'a word # 'a word # 'a word # 'a word # 'a word list # 'a word
+     list -> ('a word # 'a word # 'a word # 'a word # 'a word list #
+     'a word list + 'a word # 'a word # 'a word # 'a word # 'a word #
+     'a word list # 'a word list) # bool``;
 
 val x64_adj_cmp_thm = prove(
   ``x64_adj_cmp_pre (r1,h,anything) /\
@@ -2182,7 +2200,8 @@ val (x64_div_sub_def, _,
          then
            (let r8 = r0' in (INR (r0',r3',r8),T))
          else (INR (r0',r3',r8'),T)))
-    :'a word # 'a word # 'a word -> ('a word # 'a word # 'a word + 'a word # 'a word # 'a word) # bool``;
+    :'a word # 'a word # 'a word -> ('a word # 'a word # 'a word + 'a
+    word # 'a word # 'a word) # bool``;
 
 val x64_div_sub_def = LIST_CONJ [x64_div_sub_def,x64_div_sub_pre_def]
 
@@ -2242,10 +2261,11 @@ val (x64_div_sub_loop_def, _,
          let r10 = r10 + 0x1w
          in
            (INL (r1,r6,r7,r8,r9,r10,r11,r12,ys,zs),cond)))
-    :'a word # 'a word # 'a word # 'a word # 'a word # 'a word # 'a word # 'a word # 'a word list
-     # 'a word list -> ('a word # 'a word # 'a word # 'a word # 'a word # 'a word # 'a word #
-     'a word # 'a word list # 'a word list + 'a word # 'a word # 'a word # 'a word # 'a word #
-     'a word list # 'a word list) # bool``;
+    :'a word # 'a word # 'a word # 'a word # 'a word # 'a word # 'a
+    word # 'a word # 'a word list # 'a word list -> ('a word # 'a word
+    # 'a word # 'a word # 'a word # 'a word # 'a word # 'a word # 'a
+    word list # 'a word list + 'a word # 'a word # 'a word # 'a word #
+    'a word # 'a word list # 'a word list) # bool``;
 
 val LUPDATE_THM = prove(
   ``(LUPDATE q (LENGTH xs) (SNOC x xs) = SNOC q xs) /\
@@ -2388,9 +2408,11 @@ val (x64_div_loop_def, _,
          let r7 = r6
          in
            (INL (r7,r9,r10,r11,ys,zs,ss),cond)))
-    :'a word # 'a word # 'a word # 'a word # 'a word list # 'a word list # 'a word list ->
-     ('a word # 'a word # 'a word # 'a word # 'a word list # 'a word list # 'a word list +
-      'a word # 'a word # 'a word # 'a word # 'a word list # 'a word list # 'a word list) # bool``;
+    :'a word # 'a word # 'a word # 'a word # 'a word list # 'a word
+     list # 'a word list -> ('a word # 'a word # 'a word # 'a word #
+     'a word list # 'a word list # 'a word list + 'a word # 'a word #
+     'a word # 'a word # 'a word list # 'a word list # 'a word list) #
+     bool``;
 
 val x64_div_loop_thm = prove(
   ``!(zs1:'a word list) zs ys1 zs2 c r1 r12.
@@ -2586,9 +2608,10 @@ val (x64_mul_by_single_def, _,
          let r11 = r11 + 0x1w
          in
            (INL (r1,r8,r9,r10,r11,xs,zs),cond)))
-    :'a word # 'a word # 'a word # 'a word # 'a word # 'a word list # 'a word list ->
-     ('a word # 'a word # 'a word # 'a word # 'a word # 'a word list # 'a word list +
-      'a word # 'a word # 'a word # 'a word # 'a word list # 'a word list) # bool``;
+    :'a word # 'a word # 'a word # 'a word # 'a word # 'a word list #
+     'a word list -> ('a word # 'a word # 'a word # 'a word # 'a word
+     # 'a word list # 'a word list + 'a word # 'a word # 'a word # 'a
+     word # 'a word list # 'a word list) # bool``;
 
 val x64_mul_by_single_thm = prove(
   ``!(xs:'a word list) xs1 x zs k zs1 zs2 z2.
@@ -2646,9 +2669,10 @@ val (x64_top_two_def, _,
          let r11 = r11 + 0x1w
          in
            (INL (r0,r1,r3,r8,r9,r11,ys),cond)))
-    :'a word # 'a word # 'a word # 'a word # 'a word # 'a word # 'a word list ->
-     ('a word # 'a word # 'a word # 'a word # 'a word # 'a word # 'a word list +
-      'a word # 'a word # 'a word # 'a word # 'a word # 'a word list) # bool``;
+    :'a word # 'a word # 'a word # 'a word # 'a word # 'a word # 'a
+     word list -> ('a word # 'a word # 'a word # 'a word # 'a word #
+     'a word # 'a word list + 'a word # 'a word # 'a word # 'a word #
+     'a word # 'a word list) # bool``;
 
 val x64_top_two_thm = prove(
   ``!(ys:'a word list) x k1 k2 k3 ys1.
@@ -2697,8 +2721,8 @@ val (x64_copy_down_def, _,
          let r11 = r11 + 0x1w
          in
            (INL (r8,r10,r11,zs),cond)))
-    :'a word # 'a word # 'a word # 'a word list ->
-     ('a word # 'a word # 'a word # 'a word list + 'a word list) # bool``;
+    :'a word # 'a word # 'a word # 'a word list -> ('a word # 'a word
+     # 'a word # 'a word list + 'a word list) # bool``;
 
 val x64_copy_down_thm = prove(
   ``!(zs0:'a word list) zs1 zs2 zs3.
@@ -2752,8 +2776,8 @@ val (x64_copy_over_def, _,
          let zs = LUPDATE r0 (w2n r10) zs
          in
            (INL (r10,xs,zs),cond)))
-    :'a word # 'a word list # 'a word list ->
-     ('a word # 'a word list # 'a word list + 'a word list # 'a word list) # bool``;
+    :'a word # 'a word list # 'a word list -> ('a word # 'a word list
+     # 'a word list + 'a word list # 'a word list) # bool``;
 
 val x64_copy_over_thm = prove(
   ``!(xs0:'a word list) zs0 xs zs.
@@ -2906,10 +2930,11 @@ val (x64_div_def, _,
               in
                 (INR (r0,r3,r6,xs,ys,zs,ss),cond))
            else (let r0 = r9 in (INR (r0,r3,r6,xs,ys,zs,ss),cond))))
-    :'a word # 'a word # 'a word # 'a word list # 'a word list # 'a word list # 'a word list ->
-     ('a word # 'a word # 'a word # 'a word list # 'a word list # 'a word list # 'a word list +
-      'a word # 'a word # 'a word # 'a word list # 'a word list # 'a word list # 'a word list) #
-     bool``;
+    :'a word # 'a word # 'a word # 'a word list # 'a word list # 'a
+     word list # 'a word list -> ('a word # 'a word # 'a word # 'a
+     word list # 'a word list # 'a word list # 'a word list + 'a word
+     # 'a word # 'a word # 'a word list # 'a word list # 'a word list
+     # 'a word list) # bool``;
 
 val mw_fix_SNOC = store_thm("mw_fix_SNOC",
  ``mw_fix (SNOC 0w xs) = mw_fix xs``,
@@ -3150,8 +3175,8 @@ val (x64_add1_def, _,
               let zs = LUPDATE r0 (w2n r10) zs
               in
                 (INR (r11,zs),cond))))
-    :'a word # 'a word # 'a word # 'a word list ->
-     ('a word # 'a word # 'a word # 'a word list + 'a word # 'a word list) # bool``;
+    :'a word # 'a word # 'a word # 'a word list -> ('a word # 'a word
+     # 'a word # 'a word list + 'a word # 'a word list) # bool``;
 
 val (x64_add1_call_def, _,
      x64_add1_call_pre_def, _) =
@@ -3167,8 +3192,8 @@ val (x64_add1_call_def, _,
          let (r11,zs) = x64_add1 (r2,r10,r11,zs)
          in
            (INR (r11,zs),cond)))
-    :'a word # 'a word # 'a word # 'a word list -> ('a word # 'a word # 'a word # 'a word list
-     + 'a word # 'a word list) # bool``;
+    :'a word # 'a word # 'a word # 'a word list -> ('a word # 'a word
+     # 'a word # 'a word list + 'a word # 'a word list) # bool``;
 
 val x64_add1_thm = prove(
   ``!(zs:'a word list) zs1.
@@ -3239,13 +3264,14 @@ val (x64_div_sub_aux1_def, _,
          let r10 = r10 + 0x1w
          in
            (INL (r1,r8,r9,r10,ys,z_af,z_cf',z_of,z_pf,z_sf,z_zf,zs),cond)))
-    :'a word # 'a word # 'a word # 'a word # 'a word list # bool option # bool option
-     # bool option # bool option # bool option # bool option # 'a word
-     list -> ('a word # 'a word # 'a word # 'a word # 'a word list # bool option #
-     bool option # bool option # bool option # bool option # bool
-     option # 'a word list + 'a word # 'a word # 'a word # 'a word # 'a word list # bool
-     option # bool option # bool option # bool option # bool option #
-     bool option # 'a word list) # bool``;
+    :'a word # 'a word # 'a word # 'a word # 'a word list # bool
+    option # bool option # bool option # bool option # bool option #
+    bool option # 'a word list -> ('a word # 'a word # 'a word # 'a
+    word # 'a word list # bool option # bool option # bool option #
+    bool option # bool option # bool option # 'a word list + 'a word #
+    'a word # 'a word # 'a word # 'a word list # bool option # bool
+    option # bool option # bool option # bool option # bool option #
+    'a word list) # bool``;
 
 val (x64_div_sub_aux_def, _,
      x64_div_sub_aux_pre_def, _) =
@@ -3272,10 +3298,11 @@ val (x64_div_sub_aux_def, _,
                (r1,r8,r9,r10,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs)
        in
          (INR (r1,r8,r9,r10,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs),cond)))
-    :'a word # 'a word # 'a word # 'a word list # 'a word list -> ('a word # 'a word # 'a word
-     # 'a word list # 'a word list + 'a word # 'a word # 'a word # 'a word # 'a word list #
-     bool option # bool option # bool option # bool option # bool
-     option # bool option # 'a word list) # bool``;
+    :'a word # 'a word # 'a word # 'a word list # 'a word list -> ('a
+    word # 'a word # 'a word # 'a word list # 'a word list + 'a word #
+    'a word # 'a word # 'a word # 'a word list # bool option # bool
+    option # bool option # bool option # bool option # bool option #
+    'a word list) # bool``;
 
 val x64_div_sub_aux_def =
   LIST_CONJ [x64_div_sub_aux_def,x64_div_sub_aux_pre_def,
@@ -3290,9 +3317,10 @@ val (x64_div_sub_def, _,
              x64_div_sub_aux (r1,r8,r9,ys,zs)
        in
          (INR (r1,r8,r9,r10,ys,zs),cond)))
-    :'a word # 'a word # 'a word # 'a word list # 'a word list ->
-     ('a word # 'a word # 'a word # 'a word list # 'a word list +
-      'a word # 'a word # 'a word # 'a word # 'a word list # 'a word list) # bool``;
+    :'a word # 'a word # 'a word # 'a word list # 'a word list -> ('a
+     word # 'a word # 'a word # 'a word list # 'a word list + 'a word
+     # 'a word # 'a word # 'a word # 'a word list # 'a word list) #
+     bool``;
 
 val x64_div_sub_def =
   LIST_CONJ [x64_div_sub_def,x64_div_sub_pre_def]
@@ -3460,9 +3488,11 @@ val (x64_idiv_def, _,
             let r11 = r6
             in
               (INR (r11,xs,ys,zs,ss),cond))))
-    :'a word # 'a word # 'a word # 'a word list # 'a word list # 'a word list # 'a word list ->
-     ('a word # 'a word # 'a word # 'a word list # 'a word list # 'a word list # 'a word list +
-      'a word # 'a word list # 'a word list # 'a word list # 'a word list) # bool``;
+    :'a word # 'a word # 'a word # 'a word list # 'a word list # 'a
+     word list # 'a word list -> ('a word # 'a word # 'a word # 'a
+     word list # 'a word list # 'a word list # 'a word list + 'a word
+     # 'a word list # 'a word list # 'a word list # 'a word list) #
+     bool``;
 
 val x64_header_XOR = prove(
   ``!s t. ((x64_header (s,xs) ?? x64_header (t,ys)) && 0x1w:'a word) =
@@ -3479,7 +3509,8 @@ val mwi_divmod_alt_def = Define `
     if w = 0w then mwi_div s_xs t_ys else mwi_mod s_xs t_ys`;
 
 val x64_idiv_thm = prove(
-  ``LENGTH (xs:'a word list) + LENGTH ys <= LENGTH zs /\ LENGTH zs < dimword (:'a) DIV 2 /\
+  ``LENGTH (xs:'a word list) + LENGTH ys <= LENGTH zs /\
+    LENGTH zs < dimword (:'a) DIV 2 /\
     mw_ok xs /\ mw_ok ys /\ ys <> [] ==>
     ?zs1.
       x64_idiv_pre (r3,x64_header (s,xs),x64_header (t,ys),xs,ys,zs,ss) /\
@@ -3634,8 +3665,9 @@ val (x64_to_dec_def, _,
        in
          if r10 = 0x0w then (INR (zs,ss),cond)
          else (INL (r9,r10,zs,ss),cond)))
-    :'a word # 'a word # 'a word list # 'a word list -> ('a word # 'a word # 'a word list #
-     'a word list + 'a word list # 'a word list) # bool``;
+    :'a word # 'a word # 'a word list # 'a word list -> ('a word # 'a
+     word # 'a word list # 'a word list + 'a word list # 'a word list)
+     # bool``;
 
 val (x64_int_to_dec_def, _,
      x64_int_to_dec_pre_def, _) =
@@ -3653,9 +3685,9 @@ val (x64_int_to_dec_def, _,
        in
          if r1 && 0x1w = 0x0w then (INR (xs,zs,ss),cond)
          else (let r2 = 0x7Ew in let ss = r2::ss in (INR (xs,zs,ss),cond))))
-    :'a word # 'a word list # 'a word list # 'a word list -> ('a word # 'a word list #
-     'a word list # 'a word list + 'a word list # 'a word list # 'a word list) #
-     bool``;
+    :'a word # 'a word list # 'a word list # 'a word list -> ('a word
+     # 'a word list # 'a word list # 'a word list + 'a word list # 'a
+     word list # 'a word list) # bool``;
 
 val x64_to_dec_thm = prove(
   ``!(xs:'a word list) ys zs ss.
@@ -3892,9 +3924,10 @@ val (x64_iop_def, _,
          let r10 = 0x0w
          in
            (INR (r10,xs,ys,zs,xa,ya,ss),cond)))
-    :'a word # 'a word # 'a word # 'a word list # 'a word list # 'a word list # 'a word #
-     'a word # 'a word list -> ('a word # 'a word # 'a word # 'a word list # 'a word list #
-     'a word list # 'a word # 'a word # 'a word list + 'a word # 'a word list # 'a word
+    :'a word # 'a word # 'a word # 'a word list # 'a word list # 'a
+     word list # 'a word # 'a word # 'a word list -> ('a word # 'a
+     word # 'a word # 'a word list # 'a word list # 'a word list # 'a
+     word # 'a word # 'a word list + 'a word # 'a word list # 'a word
      list # 'a word list # 'a word # 'a word # 'a word list) # bool``;
 
 val x64_header_XOR_1 = prove(
