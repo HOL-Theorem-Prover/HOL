@@ -91,4 +91,35 @@ val SHORT_TAILREC_THM = store_thm("SHORT_TAILREC_THM",
   \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [TAILREC_THM,TAILREC_PRE_THM]))
   \\ SIMP_TAC std_ss []);
 
+val SHORT_TAILREC_PRE_INDUCT = store_thm("SHORT_TAILREC_PRE_INDUCT",
+  ``∀P.
+     (!x. SHORT_TAILREC_PRE f x /\
+          SND (f x) /\ (!y. (FST (f x) = INL y) ==> P y) ==>
+          P x) ==>
+     (∀x. SHORT_TAILREC_PRE f x ⇒ P x)``,
+  rewrite_tac [SHORT_TAILREC_PRE_def] \\ ntac 2 strip_tac
+  \\ ho_match_mp_tac TAILREC_PRE_INDUCT \\ rw []
+  \\ res_tac \\ Cases_on `f x` \\ fs [] \\ Cases_on `q` \\ fs []);
+
+val SHORT_TAILREC_SIM = store_thm("SHORT_TAILREC_SIM",
+  ``!f g R P.
+      (!x s q r.
+         R x s /\ (f x = (q,T)) ==>
+         (!y. (q = INL y) ==> ?y1. (g s = (INL y1,T)) /\ R y y1) /\
+         (!y. (q = INR y) ==> ?y1. (g s = (INR y1,T)) /\ P y y1)) ==>
+      !x. SHORT_TAILREC_PRE f x ==>
+          !s. R x s ==>
+              P (SHORT_TAILREC f x) (SHORT_TAILREC g s) /\
+              SHORT_TAILREC_PRE g s``,
+  rpt gen_tac \\ strip_tac
+  \\ ho_match_mp_tac SHORT_TAILREC_PRE_INDUCT \\ rw []
+  \\ Cases_on `f x` \\ fs [] \\ rw []
+  \\ first_assum (qspecl_then [`x`,`s`,`q`] mp_tac)
+  \\ disch_then (strip_assume_tac o UNDISCH o UNDISCH o
+          REWRITE_RULE [GSYM AND_IMP_INTRO])
+   \\ rewrite_tac [SHORT_TAILREC_def]
+  \\ once_rewrite_tac [TAILREC_THM] \\ fs []
+  \\ Cases_on `q` \\ fs [SHORT_TAILREC_def,SHORT_TAILREC_PRE_def]
+  \\ once_rewrite_tac [TAILREC_PRE_THM] \\ fs []);
+
 val _ = export_theory();
