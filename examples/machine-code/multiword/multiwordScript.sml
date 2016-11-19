@@ -726,6 +726,15 @@ val n2mw_NIL = store_thm("n2mw_NIL",
   REPEAT STRIP_TAC \\ Cases_on `n = 0` \\ ONCE_REWRITE_TAC [n2mw_def]
   \\ ASM_SIMP_TAC std_ss [NOT_CONS_NIL]);
 
+val n2mw_1 = Q.store_thm("n2mw_1",
+  `n2mw 1 = [1w]`,
+  rw[Once n2mw_def]
+  \\ `1 DIV dimword(:'a) = 0`
+  by (
+    MATCH_MP_TAC LESS_DIV_EQ_ZERO
+    \\ rw[dimword_def] )
+  \\ rw[n2mw_NIL]);
+
 val mwi_add_thm = store_thm("mwi_add_thm",
   ``!i j. mwi_add (i2mw i) (i2mw j) = i2mw (i + j)``,
   REPEAT STRIP_TAC \\ MATCH_MP_TAC mw2i_EQ_IMP_EQ_i2mw
@@ -3354,14 +3363,15 @@ val mw_addv_NIL_F = prove(
 
 val mw_addv_CONS_NIL_T = prove(
   ``mw_addv (x::xs) [] T =
-      if x = ~0w:word64 then 0w::mw_addv xs [] T else (x+1w)::xs``,
+      if x = ~0w then 0w::mw_addv xs [] T else (x+1w)::xs``,
   Cases_on `x = ~0x0w`
   \\ ASM_SIMP_TAC std_ss [mw_addv_def,LET_DEF,
-       EVAL ``single_add (~0x0w) (0x0w:word64) T``]
+       EVAL ``single_add (~0x0w) (0x0w) T``]
+  >- ( assume_tac ZERO_LT_dimword \\ simp[] )
   \\ `single_add x 0x0w T = (x+1w,F)` by ALL_TAC THEN1
    (Cases_on `x` \\ FULL_SIMP_TAC std_ss [single_add_def,word_add_n2w,b2w_def,
-      b2n_def,w2n_n2w,ZERO_LT_dimword,GSYM NOT_LESS,n2w_11,EVAL ``~0w:word64``,
-      EVAL ``dimword (:64)``] \\ DECIDE_TAC)
+      b2n_def,w2n_n2w,ZERO_LT_dimword,GSYM NOT_LESS,n2w_11]
+    \\ fs[word_2comp_def])
   \\ ASM_SIMP_TAC std_ss [mw_addv_NIL_F]);
 
 val mw_addv_NIL = save_thm("mw_addv_NIL",LIST_CONJ
