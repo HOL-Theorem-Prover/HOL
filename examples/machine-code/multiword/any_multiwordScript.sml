@@ -547,138 +547,79 @@ val x64_add_thm = prove(
 
 (* subtraction *)
 
+val single_sub_word_def = Define `
+  single_sub_word w1 w2 c =
+    let (z,c) = single_sub w1 w2 (c = 0w:'a word) in
+      (z:'a word, (b2w ~c) :'a word)`;
+
+val single_sub_word_thm =
+  single_sub_word_def
+  |> SIMP_RULE std_ss [LET_DEF]
+  |> CONV_RULE (DEPTH_CONV PairRules.PBETA_CONV);
+
 val (x64_sub_loop2_def, _,
      x64_sub_loop2_pre_def, _) =
   tailrec_define "x64_sub_loop2" ``
-    (\(r1,r8,r9,r10,xs,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs).
+    (\(r1:'a word,r3:'a word,r8:'a word,r9:'a word,r10:'a word,xs,zs).
       if r1 = 0x1w then
-        (let r1 = 0x0w
+        (let r1 = 0x0w:'a word
          in
-           (INR (r1,r8,r9,r10,xs,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs),T))
+           (INR (r1,r3,r8,r9,r10,xs,zs),T))
       else
         (let r1 = r1 - 0x1w in
          let cond = w2n r10 < LENGTH xs in
          let r8 = EL (w2n r10) xs in
-         let cond = cond /\ z_cf <> NONE in
-         let z_zf = SOME (r8 = r9 + n2w (b2n (THE z_cf))) in
-         let z_sf = SOME (word_msb (r8 - (r9 + n2w (b2n (THE z_cf)))))
-         in
-         let z_pf =
-               SOME
-                 (K T (w2w (r8 - (r9 + n2w (b2n (THE z_cf)))):word8))
-         in
-         let z_of = SOME T in
-         let z_cf' = SOME (w2n r8 < w2n r9 + b2n (THE z_cf)) in
-         let z_af = SOME T in
-         let r8 = r8 - (r9 + n2w (b2n (THE z_cf))) in
+         let cond = cond /\ (r3 <> 0w ==> (r3 = 1w)) in
+         let (r8,r3) = single_sub_word r8 r9 r3 in
          let cond = cond /\ w2n r10 < LENGTH zs in
          let zs = LUPDATE r8 (w2n r10) zs in
          let r10 = r10 + 0x1w
          in
-           (INL (r1,r8,r9,r10,xs,z_af,z_cf',z_of,z_pf,z_sf,z_zf,zs),cond)))
-    :'a word # 'a word # 'a word # 'a word # 'a word list # bool
-    option # bool option # bool option # bool option # bool option #
-    bool option # 'a word list -> ('a word # 'a word # 'a word # 'a
-    word # 'a word list # bool option # bool option # bool option #
-    bool option # bool option # bool option # 'a word list + 'a word #
-    'a word # 'a word # 'a word # 'a word list # bool option # bool
-    option # bool option # bool option # bool option # bool option #
-    'a word list) # bool``;
+           (INL (r1,r3,r8,r9,r10,xs,zs),cond)))``;
 
 val (x64_sub_loop1_def, _,
      x64_sub_loop1_pre_def, _) =
   tailrec_define "x64_sub_loop1" ``
-    (\(r1,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs).
+    (\(r1:'a word,r3:'a word,r8:'a word,r9:'a word,r10:'a word,xs,ys,zs).
       if r1 = 0x1w then
-        (let r1 = 0x0w
+        (let r1 = 0x0w:'a word
          in
-           (INR (r1,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs),T))
+           (INR (r1,r3,r8,r9,r10,xs,ys,zs),T))
       else
         (let r1 = r1 - 0x1w in
          let cond = w2n r10 < LENGTH xs in
          let r8 = EL (w2n r10) xs in
          let cond = cond /\ w2n r10 < LENGTH ys in
          let r9 = EL (w2n r10) ys in
-         let cond = cond /\ z_cf <> NONE in
-         let z_zf = SOME (r8 = r9 + n2w (b2n (THE z_cf))) in
-         let z_sf = SOME (word_msb (r8 - (r9 + n2w (b2n (THE z_cf)))))
-         in
-         let z_pf =
-               SOME
-                 (K T (w2w (r8 - (r9 + n2w (b2n (THE z_cf)))):word8))
-         in
-         let z_of = SOME T in
-         let z_cf' = SOME (w2n r8 < w2n r9 + b2n (THE z_cf)) in
-         let z_af = SOME T in
-         let r8 = r8 - (r9 + n2w (b2n (THE z_cf))) in
+         let cond = cond /\ (r3 <> 0w ==> (r3 = 1w)) in
+         let (r8,r3) = single_sub_word r8 r9 r3 in
          let cond = cond /\ w2n r10 < LENGTH zs in
          let zs = LUPDATE r8 (w2n r10) zs in
          let r10 = r10 + 0x1w
          in
-           (INL (r1,r8,r9,r10,xs,ys,z_af,z_cf',z_of,z_pf,z_sf,z_zf,zs),
-            cond)))
-    :'a word # 'a word # 'a word # 'a word # 'a word list # 'a word
-     list # bool option # bool option # bool option # bool option #
-     bool option # bool option # 'a word list -> ('a word # 'a word #
-     'a word # 'a word # 'a word list # 'a word list # bool option #
-     bool option # bool option # bool option # bool option # bool
-     option # 'a word list + 'a word # 'a word # 'a word # 'a word #
-     'a word list # 'a word list # bool option # bool option # bool
-     option # bool option # bool option # bool option # 'a word list)
-     # bool``;
+           (INL (r1,r3,r8,r9,r10,xs,ys,zs),cond)))``;
 
 val (x64_sub_loop_def, _,
      x64_sub_loop_pre_def, _) =
   tailrec_define "x64_sub_loop" ``
     (\(r1,r2,r8,r9,r10,xs,ys,zs).
-      (let z_zf = SOME (r1 + 0x1w = 0x0w) in
-       let z_sf = SOME (word_msb (r1 + 0x1w)) in
-       let z_pf = SOME (K T (w2w (r1 + 0x1w):word8)) in
-       let z_af = SOME T in
-       let r1 = r1 + 0x1w in
-       let z_zf = SOME (r2 + 0x1w = 0x0w) in
-       let z_sf = SOME (word_msb (r2 + 0x1w)) in
-       let z_pf = SOME (K T (w2w (r2 + 0x1w):word8)) in
-       let z_af = SOME T in
+      (let r1 = r1 + 0x1w in
        let r2 = r2 + 0x1w in
-       let z_zf = SOME (r8 = 0x0w) in
-       let z_sf = SOME (word_msb (r8 - 0x0w)) in
-       let z_pf = SOME (K T (w2w (r8 - 0x0w):word8)) in
-       let z_of =
-             SOME
-               ((word_msb r8 <=/=> word_msb (0x0w:'a word)) /\
-                (word_msb (r8 - 0x0w) <=/=> word_msb r8))
-       in
-       let z_cf = SOME (r8 <+ 0x0w) in
-       let z_af = SOME T in
+       let r3 = 0w in
        let r8 = r8 - 0x0w in
-       let cond =
-             x64_sub_loop1_pre
-               (r1,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs)
-       in
-       let (r1,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs) =
-             x64_sub_loop1
-               (r1,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs)
-       in
+       let cond = x64_sub_loop1_pre (r1,r3,r8,r9,r10,xs,ys,zs) in
+       let (r1,r3,r8,r9,r10,xs,ys,zs) = x64_sub_loop1 (r1,r3,r8,r9,r10,xs,ys,zs) in
        let r1 = r2 in
        let r9 = 0x0w in
-       let cond =
-             cond /\
-             x64_sub_loop2_pre
-               (r1,r8,r9,r10,xs,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs)
+       let cond = cond /\ x64_sub_loop2_pre (r1,r3,r8,r9,r10,xs,zs) in
+       let (r1,r3,r8,r9,r10,xs,zs) = x64_sub_loop2 (r1,r3,r8,r9,r10,xs,zs)
        in
-       let (r1,r8,r9,r10,xs,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs) =
-             x64_sub_loop2
-               (r1,r8,r9,r10,xs,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs)
-       in
-         (INR (r1,r2,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs),
-          cond)))
-    :'a word # 'a word # 'a word # 'a word # 'a word # 'a word list #
-     'a word list # 'a word list -> ('a word # 'a word # 'a word # 'a
-     word # 'a word # 'a word list # 'a word list # 'a word list + 'a
-     word # 'a word # 'a word # 'a word # 'a word # 'a word list # 'a
-     word list # bool option # bool option # bool option # bool option
-     # bool option # bool option # 'a word list) # bool``;
+         (INR (r1,r2,r8,r9,r10,xs,ys,zs),cond)))
+  :'a word # 'a word # 'a word # 'a word # 'a word # 'a word list # 'a
+   word list # 'a word list -> ('a word # 'a word # 'a word # 'a word
+   # 'a word # 'a word list # 'a word list # 'a word list + 'a word #
+   'a word # 'a word # 'a word # 'a word # 'a word list # 'a word list
+   # 'a word list) # bool``
 
 val x64_sub_loop_def =
   LIST_CONJ [x64_sub_loop_def,x64_sub_loop_pre_def,
@@ -697,8 +638,8 @@ val (x64_fix_def, _,
          in
            if r8 = 0x0w then (INL (r8,r10,zs),cond)
            else (let r10 = r10 + 0x1w in (INR (r8,r10,zs),cond))))
-    :'a word # 'a word # 'a word list ->
-     ('a word # 'a word # 'a word list + 'a word # 'a word # 'a word list) # bool``;
+    :'a word # 'a word # 'a word list -> ('a word # 'a word # 'a word
+     list + 'a word # 'a word # 'a word list) # bool``;
 
 val x64_fix_def =
   LIST_CONJ [x64_fix_def,x64_fix_pre_def]
@@ -709,9 +650,7 @@ val (x64_sub_def, _,
     (\(r1,r2,r8,r9,r10,xs,ys,zs).
       (let r2 = r2 - r1 in
        let cond = x64_sub_loop_pre (r1,r2,r8,r9,r10,xs,ys,zs) in
-       let (r1,r2,r8,r9,r10,xs,ys,z_af,z_cf,z_of,z_pf,z_sf,z_zf,zs) =
-             x64_sub_loop (r1,r2,r8,r9,r10,xs,ys,zs)
-       in
+       let (r1,r2,r8,r9,r10,xs,ys,zs) = x64_sub_loop (r1,r2,r8,r9,r10,xs,ys,zs) in
        let cond = cond /\ x64_fix_pre (r8,r10,zs) in
        let (r8,r10,zs) = x64_fix (r8,r10,zs)
        in
@@ -762,28 +701,25 @@ val sub_borrow_lemma = prove(
   \\ FULL_SIMP_TAC (srw_ss()) [b2n_def,word_1comp_n2w] \\ DECIDE_TAC);
 
 val x64_sub_loop1_thm = prove(
-  ``!(xs:'a word list) ys zs xs1 ys1 zs1 xs2 ys2 zs2
-     z_af z_of c z_pf z_sf z_zf r8 r9.
+  ``!(xs:'a word list) ys zs xs1 ys1 zs1 xs2 ys2 zs2 c r8 r9.
       (LENGTH ys1 = LENGTH xs1) /\ (LENGTH zs1 = LENGTH xs1) /\
       (LENGTH ys = LENGTH xs) /\ (LENGTH zs = LENGTH xs) /\
       LENGTH (xs1 ++ xs) + 1 < dimword(:'a) ==>
-      ?r8' r9' z_af' z_of' z_pf' z_sf' z_zf'.
-        x64_sub_loop1_pre (n2w (LENGTH xs + 1),r8,r9,n2w (LENGTH xs1),
-          xs1 ++ xs ++ xs2, ys1 ++ ys ++ ys2,z_af,SOME c,
-          z_of,z_pf,z_sf,z_zf,zs1 ++ zs ++ zs2) /\
-        (x64_sub_loop1 (n2w (LENGTH xs + 1),r8,r9,n2w (LENGTH xs1),
-          xs1 ++ xs ++ xs2, ys1 ++ ys ++ ys2,z_af,SOME c,
-          z_of,z_pf,z_sf,z_zf,zs1 ++ zs ++ zs2) =
-          (0w,r8',r9',n2w (LENGTH (xs1++xs)),xs1 ++ xs ++ xs2,ys1 ++ ys ++ ys2,z_af',
-             SOME (~SND (mw_sub xs ys ~c)),z_of',z_pf',z_sf',z_zf',
-                        zs1 ++ FST (mw_sub xs ys ~c) ++ zs2))``,
+      ?r8' r9'.
+        x64_sub_loop1_pre (n2w (LENGTH xs + 1),b2w c,r8,r9,n2w (LENGTH xs1),
+          xs1 ++ xs ++ xs2, ys1 ++ ys ++ ys2,zs1 ++ zs ++ zs2) /\
+        (x64_sub_loop1 (n2w (LENGTH xs + 1),b2w c,r8,r9,n2w (LENGTH xs1),
+          xs1 ++ xs ++ xs2, ys1 ++ ys ++ ys2,zs1 ++ zs ++ zs2) =
+          (0w,b2w (~SND (mw_sub xs ys ~c)),r8',r9',n2w (LENGTH (xs1++xs)),
+           xs1 ++ xs ++ xs2,ys1 ++ ys ++ ys2,
+           zs1 ++ FST (mw_sub xs ys ~c) ++ zs2))``,
   Induct THEN1
    (FULL_SIMP_TAC (srw_ss()) [LENGTH,LENGTH_NIL,mw_sub_def]
     \\ ONCE_REWRITE_TAC [x64_sub_loop_def]
     \\ FULL_SIMP_TAC (srw_ss()) [LENGTH,LENGTH_NIL,mw_sub_def,LET_DEF])
   \\ Cases_on `ys` \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1]
   \\ ONCE_REWRITE_TAC [x64_sub_loop_def]
-  \\ FULL_SIMP_TAC (srw_ss()) [LET_DEF]
+  \\ FULL_SIMP_TAC (srw_ss()) [LET_DEF,single_sub_word_thm]
   \\ REPEAT STRIP_TAC
   \\ `LENGTH xs < dimword(:'a) /\
       LENGTH xs + 1 < dimword(:'a) /\
@@ -812,36 +748,26 @@ val x64_sub_loop1_thm = prove(
        LET_DEF,single_sub_def,b2n_thm,single_add_def]
   \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
   \\ FULL_SIMP_TAC (srw_ss()) [b2w_def]
-  \\ `(dimword(:'a) <= b2n ~c + (w2n h' + w2n (~h))) =
-      ~(w2n h' < b2n c + w2n h)` by METIS_TAC [sub_borrow_lemma]
-  \\ FULL_SIMP_TAC std_ss [AC ADD_COMM ADD_ASSOC]
-  \\ REPEAT (STRIP_TAC THEN1 DECIDE_TAC)
-  \\ Cases_on `c` \\ FULL_SIMP_TAC std_ss [b2n_def]
-  \\ REPEAT (POP_ASSUM (K ALL_TAC))
-  \\ blastLib.BBLAST_TAC);
+  \\ DECIDE_TAC);
 
 val x64_sub_loop2_thm = prove(
-  ``!(xs:'a word list) zs xs1 zs1 xs2 zs2
-     z_af z_of c z_pf z_sf z_zf r8.
+  ``!(xs:'a word list) zs xs1 zs1 xs2 zs2 c r8.
       (LENGTH zs1 = LENGTH xs1) /\ (LENGTH zs = LENGTH xs) /\
       LENGTH (xs1 ++ xs) + 1 < dimword(:'a) ==>
-      ?r8' r9' z_af' z_of' z_pf' z_sf' z_zf'.
-        x64_sub_loop2_pre (n2w (LENGTH xs + 1),r8,0w,n2w (LENGTH xs1),
-          xs1 ++ xs ++ xs2,z_af,SOME c,
-          z_of,z_pf,z_sf,z_zf,zs1 ++ zs ++ zs2) /\
-        (x64_sub_loop2 (n2w (LENGTH xs + 1),r8,0w,n2w (LENGTH xs1),
-          xs1 ++ xs ++ xs2,z_af,SOME c,
-          z_of,z_pf,z_sf,z_zf,zs1 ++ zs ++ zs2) =
-          (0w,r8',r9',n2w (LENGTH (xs1++xs)),xs1 ++ xs ++ xs2,z_af',
-             SOME (~SND (mw_sub xs [] ~c)),z_of',z_pf',z_sf',z_zf',
-                        zs1 ++ FST (mw_sub xs [] ~c) ++ zs2))``,
+      ?r8' r9'.
+        x64_sub_loop2_pre (n2w (LENGTH xs + 1),b2w c,r8,0w,n2w (LENGTH xs1),
+          xs1 ++ xs ++ xs2,zs1 ++ zs ++ zs2) /\
+        (x64_sub_loop2 (n2w (LENGTH xs + 1),b2w c,r8,0w,n2w (LENGTH xs1),
+          xs1 ++ xs ++ xs2,zs1 ++ zs ++ zs2) =
+          (0w,b2w (~SND (mw_sub xs [] ~c)),r8',r9',n2w (LENGTH (xs1++xs)),
+           xs1 ++ xs ++ xs2,zs1 ++ FST (mw_sub xs [] ~c) ++ zs2))``,
   Induct THEN1
    (FULL_SIMP_TAC (srw_ss()) [LENGTH,LENGTH_NIL,mw_sub_def]
     \\ ONCE_REWRITE_TAC [x64_sub_loop_def]
     \\ FULL_SIMP_TAC (srw_ss()) [LENGTH,LENGTH_NIL,mw_sub_def,LET_DEF])
   \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1]
   \\ ONCE_REWRITE_TAC [x64_sub_loop_def]
-  \\ FULL_SIMP_TAC (srw_ss()) [LET_DEF]
+  \\ FULL_SIMP_TAC (srw_ss()) [LET_DEF,single_sub_word_thm]
   \\ REPEAT STRIP_TAC
   \\ `LENGTH xs < dimword(:'a) /\
       LENGTH xs + 1 < dimword(:'a) /\
@@ -866,14 +792,7 @@ val x64_sub_loop2_thm = prove(
   \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_SNOC,ADD1,AC ADD_COMM ADD_ASSOC,mw_sub_def,
        LET_DEF,single_add_def,b2n_thm,single_sub_def]
   \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
-  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def]
-  \\ `(dimword(:'a) <= b2n ~c + (w2n h + w2n (~(0w:'a word)))) =
-      ~(w2n h < b2n c + w2n (0w:'a word))` by METIS_TAC [sub_borrow_lemma]
-  \\ FULL_SIMP_TAC (srw_ss()) [AC ADD_COMM ADD_ASSOC]
-  \\ REPEAT (STRIP_TAC THEN1 DECIDE_TAC)
-  \\ Cases_on `c` \\ FULL_SIMP_TAC std_ss [b2n_def]
-  \\ REPEAT (POP_ASSUM (K ALL_TAC))
-  \\ blastLib.BBLAST_TAC);
+  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def] \\ DECIDE_TAC);
 
 val x64_sub_thm = prove(
   ``!(xs:'a word list) ys zs zs2.
@@ -891,7 +810,9 @@ val x64_sub_thm = prove(
   \\ ONCE_REWRITE_TAC [x64_sub_loop_def]
   \\ SIMP_TAC std_ss [LET_DEF,w2n_n2w,word_add_n2w,WORD_LO]
   \\ FULL_SIMP_TAC (srw_ss()) []
-  \\ (x64_sub_loop1_thm |> Q.SPECL [`xs1`,`ys`,`zs`,`[]`,`[]`,`[]`,`xs2`,`[]`,`zs2`]
+  \\ (x64_sub_loop1_thm |> Q.SPECL [`xs1`,`ys`,`zs`,`[]`,`[]`,`[]`,
+           `xs2`,`[]`,`zs2`,`F`]
+      |> SIMP_RULE std_ss [EVAL ``b2w F``]
       |> GEN_ALL |> MP_TAC)
   \\ FULL_SIMP_TAC std_ss [LENGTH,APPEND,APPEND_NIL] \\ STRIP_TAC
   \\ Q.PAT_X_ASSUM `LENGTH xs1 = LENGTH ys` (ASSUME_TAC o GSYM)
