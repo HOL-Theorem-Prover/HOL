@@ -11,18 +11,16 @@ val REV = Tactical.REVERSE;
 fun tailrec_define name tm =
   tailrecLib.tailrec_define_from_step name tm NONE;
 
-(* TODO: move *)
+val EVEN_BIT0 = bitTheory.BIT0_ODD |> REWRITE_RULE [ODD_EVEN,FUN_EQ_THM]
 
-val EVEN_BIT0 = Q.store_thm("EVEN_BIT0",
-  `EVEN n <=> ~BIT 0 n`,
-  Induct_on`n` \\ simp[bitTheory.ADD_BIT0,ADD1,EVEN_ADD]);
+(* TODO: move? *)
 
 val EVEN_BIT_SUC = Q.store_thm("EVEN_BIT_SUC",
   `EVEN n ==> !i. (BIT i (SUC n) = if i = 0 then T else BIT i n)`,
   completeInduct_on`n` \\ rw[]
   \\ Cases_on`i=0` \\ fs[]
   >- (
-    CCONTR_TAC \\ fs[GSYM EVEN_BIT0,EVEN] )
+    CCONTR_TAC \\ fs[EVEN_BIT0,EVEN] )
   \\ Cases_on`i` \\ fs[]
   \\ fs[GSYM bitTheory.BIT_DIV2]
   \\ fs[ADD1,ADD_DIV_RWT,EVEN_MOD2]);
@@ -53,14 +51,14 @@ val xor_one_add_one = Q.store_thm("xor_one_add_one",
   `~w ' 0 ==> (w ?? 1w = w + 1w)`,
   srw_tac[wordsLib.WORD_BIT_EQ_ss][word_index]
   \\ Cases_on`i=0` \\ fs[WORD_ADD_BIT0,word_index]
-  \\ Cases_on`w` \\ fs[word_add_n2w,word_index,GSYM EVEN_BIT0]
+  \\ Cases_on`w` \\ fs[word_add_n2w,word_index,EVEN_BIT0]
   \\ simp[GSYM ADD1,EVEN_BIT_SUC]);
 
 val add_one_xor_one = Q.store_thm("add_one_xor_one",
   `~w ' 0 ==> (w + 1w ?? 1w = w)`,
   srw_tac[wordsLib.WORD_BIT_EQ_ss][word_index]
   \\ Cases_on`i=0` \\ fs[WORD_ADD_BIT0,word_index]
-  \\ Cases_on`w` \\ fs[word_add_n2w,word_index,GSYM EVEN_BIT0]
+  \\ Cases_on`w` \\ fs[word_add_n2w,word_index,EVEN_BIT0]
   \\ simp[GSYM ADD1,EVEN_BIT_SUC]);
 
 val one_neq_zero_word = SIMP_CONV(srw_ss())[]``1w = 0w``
@@ -196,7 +194,7 @@ val x64_header_AND_1 = prove(
   \\ rw[word_mul_def,dimword_def,word_index]
   \\ Cases_on`i=0` \\ fs[word_add_n2w,word_index]
   \\ fs[bitTheory.ADD_BIT0]
-  \\ simp[GSYM EVEN_BIT0,EVEN_MULT]
+  \\ simp[EVEN_BIT0,EVEN_MULT]
   \\ rw[EVEN_MULT] \\ disj2_tac
   THEN_LT USE_SG_THEN ACCEPT_TAC 1 2
   \\ qmatch_goalsub_abbrev_tac`EVEN (n MOD m)`
