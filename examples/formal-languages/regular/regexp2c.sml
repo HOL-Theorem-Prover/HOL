@@ -10,7 +10,14 @@ fun stdErr_print s = let open TextIO in output(stdErr,s); flushOut stdErr end;
 
 fun spread s [] = []
   | spread s [x] = [x]
-  | spread s (h1::t) = h1::s::spread s t;
+  | spread s (h::t) = h::s::spread s t;
+
+fun spreadln s k n [] = []
+  | spreadln s k n [x] = [x]
+  | spreadln s k n (h::t) = 
+      if n <= 0 
+        then h::s::"\n  "::spreadln s k k t
+        else h::s::spreadln s k (n-1) t;
 
 fun bool_to_C true = 1
   | bool_to_C false = 0;
@@ -19,8 +26,14 @@ fun arrayString intList =
  String.concat
    (("{"::spread "," (map Int.toString intList)) @ ["}"]);
 
+fun array256String intList = 
+ let val spreadList = spreadln "," 31 31 (map Int.toString intList)
+ in 
+   String.concat ("{":: spreadList @ ["}"])
+ end
+
 fun twoDarrayString intLists = 
-  let val arrays = map arrayString intLists
+  let val arrays = map array256String intLists
   in String.concat
       (("{"::spread ",\n " arrays) @ ["};"])
   end;
@@ -65,7 +78,7 @@ fun deconstruct {certificate, final, matchfn, start, table} =
 
 fun quote_to_C justify name q = 
  let val regexp = Regexp_Type.fromString q
-     val _ = stdErr_print "Parsed regexp, now constructing DFA (can take time) ..."
+     val _ = stdErr_print "Parsed regexp, now constructing DFA (can take time) ... "
      val result = regexpLib.matcher justify regexp
      val _ = stdErr_print "done. Generating C file.\n"
      val (start,finals,table) = deconstruct result
@@ -93,7 +106,6 @@ fun parse_args args =
 fun main () = 
  let val _ = stdErr_print "regexp2c: \n"
      val (justify,name,quote) = parse_args(CommandLine.arguments())
-     val _ = stdErr_print "command line args parsed.\n"
  in 
    quote_to_C justify name quote
  end;

@@ -8,6 +8,9 @@ open listTheory stringTheory arithmeticTheory pred_setTheory
      charsetTheory regexpTheory vec_mapTheory regexp_compilerTheory; 
 open Regexp_Type regexpSyntax;
 
+fun stdOut_print s = let open TextIO in output(stdOut,s); flushOut stdOut end;
+fun stdErr_print s = let open TextIO in output(stdErr,s); flushOut stdErr end;
+
 (*---------------------------------------------------------------------------*)
 (* Proof-based compilation of regexps into DFAs, and associated regexp       *)
 (* matching.                                                                 *)
@@ -174,7 +177,7 @@ val Brzozowski_partial_eval_alt =
 
 fun hol_matcher r = 
  let open listSyntax regexpSyntax
-     val _ = print "Compiling regexp to DFA by deduction (can be slow) :\n"
+     val _ = stdErr_print "Compiling regexp to DFA by deduction (can be slow) :\n"
      val regexp_tm = regexpSyntax.mk_regexp r
      val compile_thm = Count.apply regexpEval ``regexp_compiler$compile_regexp ^regexp_tm``
      val triple = rhs (concl compile_thm)
@@ -190,16 +193,16 @@ fun hol_matcher r =
       let val stm = stringLib.fromMLstring s
           val dfa_thm1 = SPEC stm dfa_thm
        (* val (string_ok_tm,_) = dest_imp (concl dfa_thm1)
-          val _ = print "Checking input string is in alphabet ... "
+          val _ = stdErr_print "Checking input string is in alphabet ... "
           val string_ok_thm = EQT_ELIM(regexpEval string_ok_tm)
-          val _ = print "it is.\n"
+          val _ = stdErr_print "it is.\n"
           val dfa_thm2 = MP dfa_thm1 string_ok_thm
         *)
           val dfa_thm2 = dfa_thm1
-          val _ = print ("Running DFA on string: "^Lib.quote s^" ... ")
+          val _ = stdErr_print ("Running DFA on string: "^Lib.quote s^" ... ")
           val dfa_exec_thm = regexpEval (lhs(concl dfa_thm2))
           val verdict = (boolSyntax.T = rhs(concl dfa_exec_thm))
-          val _ = if verdict then print "accepted.\n" else print "rejected.\n"
+          val _ = if verdict then stdErr_print "accepted.\n" else stdErr_print "rejected.\n"
       in 
         verdict
       end
@@ -216,7 +219,7 @@ fun hol_matcher r =
      val rows2 = fst(dest_list(snd(dest_map rows1)))
      val itable = List.map dest_row rows2
      val len = length ifinal
-     val _ = print (Int.toString len^" states.\n")
+     val _ = stdErr_print (Int.toString len^" states.\n")
  in 
      {certificate = SOME dfa_thm,
       matchfn = match_string_by_proof,
@@ -227,7 +230,7 @@ fun hol_matcher r =
 
 fun sml_matcher r = 
  let val {matchfn,start,table,final} = Regexp_Match.vector_matcher r
-     val _ = print (Int.toString(Vector.length final)^" states.\n")
+     val _ = stdErr_print (Int.toString(Vector.length final)^" states.\n")
  in {certificate = NONE:thm option,
      matchfn = matchfn,
      table = table,
