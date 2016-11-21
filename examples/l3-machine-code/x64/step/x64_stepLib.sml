@@ -282,7 +282,7 @@ val EA_rwt =
       ``EA ea``
 
 val write'EA_rwt =
-   EV [write'EA_def, bitfield_inserts, unit_state_cond,
+   EV [write'EA_def, bitfield_inserts,
        pred_setTheory.IN_INSERT, pred_setTheory.NOT_IN_EMPTY,
        write'mem8_rwt, write'mem16_rwt, write'mem32_rwt, write'mem64_rwt] []
       no_imm_ea
@@ -498,8 +498,7 @@ val Zcall_rm_rwts =
    |> addThms
 
 val Zjcc_rwts =
-   EV ([dfn'Zjcc_def, unit_state_cond] @ read_cond_rwts) []
-      (mapl (`c`, conds))
+   EV ([dfn'Zjcc_def] @ read_cond_rwts) [] (mapl (`c`, conds))
       ``dfn'Zjcc (c, imm)``
    |> cond_update_rule
    |> addThms
@@ -537,7 +536,7 @@ val Zmonop_rwts =
    |> addThms
 
 val Zmov_rwts =
-   EV ([dfn'Zmov_def, unit_state_cond] @
+   EV ([dfn'Zmov_def] @
        ea_Zsrc_rwt @ ea_Zdest_rwt @ read_cond_rwts @ EA_rwt @ write'EA_rwt)
        [] (utilsLib.augment (`c`, conds) src_dst)
       ``dfn'Zmov (c, size, ds)``
@@ -597,6 +596,13 @@ val Zret_rwts =
        combinTheory.UPDATE_EQ]
       [[``(7 >< 0) (imm: word64) = 0w: word8``]] []
       ``dfn'Zret imm``
+   |> addThms
+
+val Zset_rwts =
+   EV ([dfn'Zset_def, word_thms] @
+       read_cond_rwts @ ea_Zrm_rwt @ write'EA_rwt) []
+      (utilsLib.augment (`c`, Lib.butlast conds) rm)
+      ``dfn'Zset (c, have_rex, rm)``
    |> addThms
 
 val Zxchg_rwts =

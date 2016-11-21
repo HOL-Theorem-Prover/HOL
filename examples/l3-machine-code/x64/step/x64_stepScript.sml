@@ -294,10 +294,6 @@ val eflags_none = Q.store_thm("eflags_none",
 
 (* ------------------------------------------------------------------------ *)
 
-val unit_state_cond = Q.store_thm("unit_state_cond",
-  `!b s1 s2. (if b then ((), s1: x64_state) else ((), s2)) =
-             ((), if b then s1 else s2)`, rw [])
-
 val id_state_cond = Q.store_thm("id_state_cond",
    `!b x y s.
       (if b then (x, s: x64_state) else (y, s)) = (if b then x else y, s)`,
@@ -392,7 +388,10 @@ val word_thms = Q.store_thm("word_thms",
     (!a: word64. (31 >< 0) (a && 0xFFFFFFFFw) = a && 0xFFFFFFFFw) /\
     (!a: word64. (7 >< 0) (~(a && 0xFFw)) = ~a && 0xFFw) /\
     (!a: word64. (15 >< 0) (~(a && 0xFFFFw)) = ~a && 0xFFFFw) /\
-    (!a: word64. (31 >< 0) (~(a && 0xFFFFFFFFw)) = ~a && 0xFFFFFFFFw)
+    (!a: word64. (31 >< 0) (~(a && 0xFFFFFFFFw)) = ~a && 0xFFFFFFFFw) /\
+    (!b. (7 >< 0) (v2w [b] : word64) = v2w [b] : word8) /\
+    (!b. 255w && (v2w [b] : word64) = v2w [b] : word64) /\
+    (!b. 0xFF00w && (v2w [b] : word64) << 8 = (v2w [b] << 8) : word64)
    `,
    rw [] \\ blastLib.BBLAST_TAC
    );
