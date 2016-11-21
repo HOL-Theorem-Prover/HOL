@@ -702,13 +702,9 @@ fun pmatch_printer
     fun pp_row (vars, pat, guard, rh) =
       let
         val (print_vars, print_unit) =
-            let val vs = FVL [vars] empty_tmset
-                val pvs0 = FVL [pat] empty_tmset
-                val pvs = HOLset.foldl
-                            (fn (v, acc) => if is_uscV v then acc
-                                            else HOLset.add(acc,v))
-                            empty_tmset
-                            pvs0
+            let fun get_real_vars t = HOLset.filter (fn v => not (is_uscV v orelse varname_starts_with_uscore v)) (FVL [t] empty_tmset)
+                val vs =  get_real_vars vars
+                val pvs = get_real_vars pat
             in
               if HOLset.isSubset(pvs,vs) andalso HOLset.isSubset(vs,pvs) then (false, false)
               else
