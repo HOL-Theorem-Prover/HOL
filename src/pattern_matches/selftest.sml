@@ -1,8 +1,10 @@
 open HolKernel Parse boolTheory boolLib pairTheory
 open constrFamiliesLib patternMatchesLib computeLib
 open quantHeuristicsLib simpLib boolSimps
+open testutils
 
 val hard_fail = true;
+val _ = really_die := true;
 val quiet = false;
 val _ = Parse.current_backend := PPBackEnd.vt100_terminal;
 
@@ -10,6 +12,7 @@ val _ = Parse.current_backend := PPBackEnd.vt100_terminal;
 
 set_trace "use pmatch_pp" 0
 val hard_fail = false;
+val _ = really_die := false;
 val quiet = false;
 val _ = Parse.current_backend := PPBackEnd.emacs_terminal;
 
@@ -498,7 +501,6 @@ val _ = run_test (``(4::3::l) : num list``, ``PMATCH ((4 :num)::(3 :num)::l)
     Parser
    ---------------------------------------------------------------------- *)
 
-open testutils
 val _ = patternMatchesLib.ENABLE_PMATCH_CASES ()
 fun pel2string [] = ""
   | pel2string (pLeft::rest) = "L" ^ pel2string rest
@@ -640,8 +642,18 @@ val _ = app shouldfail [
 
 val _ = app (raw_backend tpp) [
   "case x of 0 => 3 | SUC n => n",
+  "dtcase x of 0 => 3 | SUC n => n",
+  "(case x of 0 => 3 | SUC n => n) > 5",
+  "(dtcase x of 0 => 3 | SUC n => n) = 3",
+  "case SUC 5 of 0 => 3 | SUC n => n",
+  "dtcase SUC (SUC 5) of 0 => 3 | SUC n => n",
   "case x of 0 => 4 | SUC _ => 10",
   "case (x,y) of (NONE,_) => 10 | (SOME n,0) when n < 10 => 11",
   "case x of 0 => 3 | () .| n => 4 | x => 100",
-  "case x of NONE => 3 | () .| SOME n => n | SOME x => x + 1"
+  "case x of NONE => 3 | () .| SOME n => n | SOME x => x + 1",
+  "dtcase (x,y) of (NONE,z) => SUC z | (SOME n,z) => n",
+  "SUC (case x of 0 => 3 | SUC n => n)",
+  "SUC (dtcase x of 0 => 3 | SUC n => n)",
+  "case x of z .| 0 => z | SUC _ => 10",
+  "case x of (z,y) .| 0 => z | SUC _ => 10"
 ]

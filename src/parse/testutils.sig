@@ -2,6 +2,7 @@ signature testutils =
 sig
 
 val linewidth : int ref
+val really_die : bool ref
 val OK : unit -> unit
 val die : string -> 'a
 val tprint : string -> unit

@@ -32,7 +32,8 @@ val boldgreen = checkterm "\027[32m\027[1m"
 val red = checkterm "\027[31m"
 val dim = checkterm "\027[2m"
 
-fun die s = (print (boldred s ^ "\n"); OS.Process.exit OS.Process.failure)
+val really_die = ref true;
+fun die s = (print (boldred s ^ "\n"); (if (!really_die) then OS.Process.exit OS.Process.failure else raise (Fail ("DIE:" ^ s))));
 fun OK () = print (boldgreen "OK" ^ "\n")
 
 fun unicode_off f = Feedback.trace ("Unicode", 0) f

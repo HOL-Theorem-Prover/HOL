@@ -27,6 +27,7 @@ val revapp       : ('item -> unit) -> 'item set -> unit
 val foldr        : ('item * 'b -> 'b) -> 'b -> 'item set -> 'b
 val foldl        : ('item * 'b -> 'b) -> 'b -> 'item set -> 'b
 val find         : ('item -> bool) -> 'item set -> 'item option
+val filter       : ('item -> bool) -> 'item set -> 'item set
 
 end
 
