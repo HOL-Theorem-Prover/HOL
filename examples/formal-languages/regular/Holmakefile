@@ -1,2 +1,11 @@
 INCLUDES = $(HOLDIR)/examples/balanced_bst $(HOLDIR)/examples/formal-languages
 EXTRA_CLEANS = $(wildcard *.tex)
+
+mustbuild: regexp2c regexpLib.uo
+.PHONY: mustbuild
+
+EXTRA_CLEANS = regexp2c.o regexp2c
+
+regexp2c : regexp2c.sml Regexp_Match.uo regexpSyntax.uo regexp_compilerTheory.uo regexpLib.uo
+	$(HOLDIR)/bin/hol < regexp2c.sml
+	polyc -o regexp2c regexp2c.o 

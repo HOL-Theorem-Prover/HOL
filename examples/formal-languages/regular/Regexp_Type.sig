@@ -52,6 +52,7 @@ sig
    | Power of tree * int
    | Range of tree * int option * int option
    | Interval of IntInf.int * IntInf.int * direction 
+   | Pack of (IntInf.int * IntInf.int) list
 
  val tree_parse        : substring -> tree list * substring
  val substring_to_tree : substring -> tree

@@ -347,25 +347,31 @@ Lib.all (equal false) (map (test o num2string 3) (upto ~119999 ~116536));
 Lib.all (equal false) (map (test o num2string 3) (upto ~122 ~1));
 Lib.all (equal false) (map (test o num2string 3) (upto ~122 1000));
 
+(*---------------------------------------------------------------------------*)
+(* Test numeric constants                                                    *)
+(*---------------------------------------------------------------------------*)
+
+val test = matcher `\k{23}`;
 
 (*---------------------------------------------------------------------------*)
 (* CANBUS GPS message format. Taken from                                     *)
 (*                                                                           *)
 (* http://www.caemax.de/Downloads/QIC/QIC_GPS_DE.pdf                         *)
 (*                                                                           *)
-(* NB: The regexp for message 1801 is wrong, since it needs data packing to  *)
-(* handle bytes 4 and 5 properly.                                            *)
+(* NB: The regexp we have written here to recognize the contents of message  *)
+(* 1801 is wrong, since it needs data packing to handle bytes 4 and 5        *)
+(* properly.                                                                 *)
 (*---------------------------------------------------------------------------*)
 
 (*
  * CAN ID Name Position (Format) Range of Values Units (Result)
  * Identifier 1800 
  * Time Day Byte 0 (unsigned char) 1 ... 31 
- * Time Month Byte 1 ( unsigned char) 1 ... 12 
- * Time Year Byte 2 ( unsigned char) 0 ... 99 
- * Time Hour Byte 3 ( unsigned char) 0 … 23 
- * Time Minute Byte 4 ( unsigned char) 0 … 59 
- * Time Second Byte 5 ( unsigned char) 0 … 59 
+ * Time Month Byte 1 (unsigned char) 1 ... 12 
+ * Time Year Byte 2 (unsigned char) 0 ... 99 
+ * Time Hour Byte 3 (unsigned char) 0 … 23 
+ * Time Minute Byte 4 (unsigned char) 0 … 59 
+ * Time Second Byte 5 (unsigned char) 0 … 59 
  * Altitude Byte 6, 7 (LSB, MSB) 0 … 17999 "m" (1 m)
  *
  * Identifier 1801 
@@ -394,8 +400,58 @@ val test_1801 = matcher `\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,59
 val test_1802 = matcher `\i{0,9999,LSB}\i{0,3599,LSB}`;
 val test_1803 = matcher `\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
 
-val test_18xx_all = matcher 
+fun prod [] l2 = []
+  | prod (h::t) l2 = map (strcat h) l2 @ prod t l2;
+
+fun PROD [] = []
+  | PROD [list] = list
+  | PROD (h::t) = prod h (PROD t);
+
+(*---------------------------------------------------------------------------*)
+(* 58 trillion strings to test exhaustively. Slightly unfeasible as written. *)
+(* Could be done one-at-a-time, I suppose.                                   *)
+(*---------------------------------------------------------------------------*)
+(*
+Lib.all (equal true)
+ (map test_1800 
+   (PROD 
+     [map (num2string 1) (upto 1 31),
+      map (num2string 1) (upto 1 12),
+      map (num2string 1) (upto 0 99),
+      map (num2string 1) (upto 0 23),
+      map (num2string 1) (upto 0 59),
+      map (num2string 1) (upto 0 59),
+      map (num2string 2) (upto 0 17999)]));
+*)
+
+Lib.all (equal true)
+ (map test_1800 
+   (PROD 
+     [map (num2string 1) (upto 1 10),
+      map (num2string 1) (upto 1 10),
+      map (num2string 1) (upto 0 9),
+      map (num2string 1) (upto 0 9),
+      map (num2string 1) (upto 0 9),
+      map (num2string 1) (upto 0 9),
+      map (num2string 2) (upto 0 9)]));
+
+val test_18xx_disjunctive = matcher 
  `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}|\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}|\i{0,9999,LSB}\i{0,3599,LSB}|\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
+
+val test_18xx_concat = matcher 
+ `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}\i{0,9999,LSB}\i{0,3599,LSB}\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
+
+fun deconstruct {certificate, final, matchfn,start, table} = 
+ let fun toList V = List.map (curry Vector.sub V) (upto 0 (Vector.length V - 1))
+ in (start, toList final, toList (Vector.map toList table))
+ end;
+
+val (a,b,c) = deconstruct test_1800;
+val (a,b,c) = deconstruct test_1801;
+val (a,b,c) = deconstruct test_1802;
+val (a,b,c) = deconstruct test_1803;
+val (a,b,c) = deconstruct test_18xx_concat;
+
 
 (*---------------------------------------------------------------------------*)
 (* Hard cases for Brzozowski? These seem to take exponential time.           *)

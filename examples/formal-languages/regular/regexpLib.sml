@@ -246,9 +246,9 @@ fun dfa_by_proof (name,q) =
                else (HOL_MESG (Lib.quote name^
                        " is not a suitable identifier, using \"foo\" instead");
                      "foo")
-     val {certificate, start,table,final,matchfn} = matcher HOL (Regexp_Type.fromQuote q)
+     val {certificate, start,table,final,matchfn} = hol_matcher (Regexp_Type.fromQuote q)
      val SOME thm = certificate
-     val eqn = snd(dest_imp(snd(dest_forall(concl thm))))
+     val eqn = snd(dest_forall(concl thm))
      val (exec_dfa,[finals,table,start,s]) = strip_comb(lhs eqn)
      val finals_var = mk_var(name^"_finals",type_of finals)
      val table_var = mk_var(name^"_table",type_of table)

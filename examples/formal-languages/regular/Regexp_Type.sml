@@ -148,6 +148,7 @@ datatype lexeme
    | postFix of Char.char (* *+? *)
    | power of IntInf.int
    | range of IntInf.int option * IntInf.int option * direction option  (* range + direction *)
+   | pack of (IntInf.int * IntInf.int) list
 ;
 
 fun lexeme_equal lparen lparen = true
@@ -157,6 +158,7 @@ fun lexeme_equal lparen lparen = true
   | lexeme_equal alphanum alphanum = true
   | lexeme_equal whitespace whitespace = true
   | lexeme_equal interval interval = true
+  | lexeme_equal (pack p1) (pack p2) = (p1=p2)
   | lexeme_equal (char c1) (char c2) = (c1=c2)
   | lexeme_equal (chars c1) (chars c2) = (charset_compare(c1,c2) = EQUAL)
   | lexeme_equal (preFix c1) (preFix c2) = (c1=c2)
@@ -192,6 +194,13 @@ fun opt3string (lowOpt,hiOpt,ordOpt) = String.concat
                                 "opt3string: unexpected format",
   "}"]
 
+fun pack2string flds = 
+ let fun field_to_strings (lo,hi) = 
+          String.concat["(", IntInf.toString lo, ",", IntInf.toString hi, ")"]
+ in String.concat 
+      ("\\p{" :: (Lib.commafy (List.map field_to_strings flds) @ ["}"]))
+ end
+
 fun lexeme2string lparen    = "("
   | lexeme2string rparen    = ")"
   | lexeme2string dot       = "."
@@ -199,13 +208,14 @@ fun lexeme2string lparen    = "("
   | lexeme2string alphanum  = "\\w"
   | lexeme2string whitespace = "\\s"
   | lexeme2string interval   = "\\i"
-  | lexeme2string (char c) = Char.toString c
-  | lexeme2string (chars s) = "<charset>"
+  | lexeme2string (char c)   = Char.toString c
+  | lexeme2string (chars s)  = "<charset>"
   | lexeme2string (preFix c) = Char.toString c
-  | lexeme2string (inFix c) = Char.toString c
+  | lexeme2string (inFix c)  = Char.toString c
   | lexeme2string (postFix c) = Char.toString c
-  | lexeme2string (power n) = "{"^IntInf.toString n^"}"
-  | lexeme2string (range t) = opt3string t;
+  | lexeme2string (power n)   = "{"^IntInf.toString n^"}"
+  | lexeme2string (range t)   = opt3string t
+  | lexeme2string (pack list) = pack2string list;
 
 
 (*---------------------------------------------------------------------------*)
@@ -301,6 +311,45 @@ fun get_range strm =
  end
 
 (*---------------------------------------------------------------------------*)
+(* Lexing a pack spec of the form                                            *)
+(*                                                                           *)
+(* \p{(lo,hi), ..., (lo,hi)}                                                 *)
+(*                                                                           *)
+(* where the \p has already been consumed by the lexer.                      *)
+(*---------------------------------------------------------------------------*)
+
+fun get_pack strm = 
+ let open Substring
+  fun eat_then ch f strm = 
+    case getc strm
+     of NONE => NONE
+      | SOME(ch1,strm) => if ch=ch1 then f strm else NONE
+  fun try_alt f1 f2 strm = 
+    case f1 strm
+     of NONE => f2 strm
+      | other => other
+  fun get_field strm = 
+      case eat_then #"(" getNum strm
+       of NONE =>  NONE
+        | SOME(i,strm) =>
+      case eat_then #"," getNum strm
+       of NONE =>  NONE
+        | SOME(j,strm) =>
+      eat_then #")" (fn strm => SOME((i,j),strm)) strm
+  fun get_fields list strm = 
+       case get_field strm
+        of NONE => eat_then #"}" (fn strm => SOME (pack(rev list), strm)) strm
+         | SOME (ij,strm) => 
+             try_alt
+              (eat_then #"," (get_fields (ij::list)))
+              (eat_then #"}" (fn strm => SOME (pack(rev (ij::list)), strm)))
+             strm
+ in
+  eat_then #"{" (get_fields []) strm
+ end
+
+
+(*---------------------------------------------------------------------------*)
 (* Lexing a character set, which has the form                                *)
 (*                                                                           *)
 (*    [ ... ]  or [^ ... ]                                                   *)
@@ -379,6 +428,7 @@ fun lex strm =
            | SOME(#"w",strm'') => SOME(alphanum,strm'')
            | SOME(#"s",strm'') => SOME(whitespace,strm'')
            | SOME(#"i",strm'') => SOME(interval,strm'')
+           | SOME(#"p",strm'') => get_pack strm''
            | SOME(ch,strm'')   => SOME(char ch,strm'')
         )
       | SOME (ch,strm') => SOME (char ch,strm')
@@ -417,7 +467,8 @@ datatype tree = Ident of Char.char
               | Ap of string * tree list
               | Power of tree * int
               | Range of tree * int option * int option
-              | Interval of IntInf.int * IntInf.int * direction;
+              | Interval of IntInf.int * IntInf.int * direction
+              | Pack of (IntInf.int * IntInf.int) list;
 
 
 fun expect lexeme (stk,ss) =
@@ -536,6 +587,7 @@ and
     | SOME(alphanum,ss')   => (Ap("alphanum",[])::stk,ss')
     | SOME(whitespace,ss') => (Ap("whitespace",[])::stk,ss')
     | SOME(interval,ss')   => (Ap("interval",[])::stk,ss')
+    | SOME(pack list,ss')   => (Pack list::stk,ss')
     | SOME(lparen,ss')     => 
        let in 
          case expect rparen (parse ss')
@@ -831,7 +883,7 @@ fun match_upto LSB = lsb_match_upto
 (*---------------------------------------------------------------------------*)
 
 fun regexp_interval lo hi order = 
- if lo >= hi 
+ if lo > hi 
      then raise ERR "regexp_interval" "trivial interval" 
  else
  if lo < 0 andalso hi < 0 then
@@ -870,6 +922,7 @@ fun tree_to_regexp tree =
      end
    | Range (t,NONE,NONE) => Star (tree_to_regexp t)
    | Interval(i,j,dir) => regexp_interval i j dir
+   | Pack list => raise ERR "tree_to_regexp" "Pack construct not handled yet"
    | Ap("dot",[]) => DOT
    | Ap("digit",[]) => DIGIT
    | Ap("alphanum",[]) => ALPHANUM

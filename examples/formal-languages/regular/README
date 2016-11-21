@@ -13,7 +13,7 @@ Regexp_Type
 
    * The size of the alphabet (default 256) can be set here, and the
      resulting matchers will work properly. Note that large alphabets 
-     like Unicode will need a different approach. Also not that the
+     like Unicode will need a different approach. Also note that the
      interval encodings assume that the alphabet size is 256.
 
    * There is a regexp parser supplied (entrypoints: fromSubstring,
