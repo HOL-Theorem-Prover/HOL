@@ -395,4 +395,11 @@ struct
                 RED arg => BLACK arg
               | tree    => tree
           , n-1) end
+
+  fun filter p (set as (compare, _, _)) =
+      foldl (fn (e, acc) => if p e then add(acc,e)
+                            else acc)
+         (empty compare)
+         set
+
 end
