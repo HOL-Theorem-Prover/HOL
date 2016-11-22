@@ -54,7 +54,7 @@ local
   end
   local
     fun removeAfterUse tmp =
-      (use tmp handle e => (checkTryRemove tmp; raise e);
+      (QUse.use tmp handle e => (checkTryRemove tmp; raise e);
        checkTryRemove tmp)
     open Mutex ConditionVar
   in
