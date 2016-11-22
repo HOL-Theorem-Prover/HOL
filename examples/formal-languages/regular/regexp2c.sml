@@ -1,4 +1,7 @@
-app load ["regexpLib"];
+val _ = PolyML.SaveState.loadState "../../../bin/hol.state";
+
+val _ = load "regexpLib";
+open Lib
 
 val justifyDefault = regexpLib.SML;
 
@@ -14,31 +17,31 @@ fun spread s [] = []
 
 fun spreadln s k n [] = []
   | spreadln s k n [x] = [x]
-  | spreadln s k n (h::t) = 
-      if n <= 0 
+  | spreadln s k n (h::t) =
+      if n <= 0
         then h::s::"\n  "::spreadln s k k t
         else h::s::spreadln s k (n-1) t;
 
 fun bool_to_C true = 1
   | bool_to_C false = 0;
 
-fun arrayString intList = 
+fun arrayString intList =
  String.concat
    (("{"::spread "," (map Int.toString intList)) @ ["}"]);
 
-fun array256String intList = 
+fun array256String intList =
  let val spreadList = spreadln "," 31 31 (map Int.toString intList)
- in 
+ in
    String.concat ("{":: spreadList @ ["}"])
  end
 
-fun twoDarrayString intLists = 
+fun twoDarrayString intLists =
   let val arrays = map array256String intLists
   in String.concat
       (("{"::spread ",\n " arrays) @ ["};"])
   end;
 
-fun Cfile name quote (_,finals,table) = 
+fun Cfile name quote (_,finals,table) =
  let val nstates = List.length finals
      val finals = map bool_to_C finals
  in String.concat
@@ -51,7 +54,7 @@ fun Cfile name quote (_,finals,table) =
   "int ACCEPTING_",name," [", Int.toString nstates,"] = ",arrayString finals, ";\n",
   "\n",
   "unsigned long DELTA_",name," [",Int.toString nstates,"] [256] = \n",
-  twoDarrayString table, 
+  twoDarrayString table,
   "\n\n",
   "int match_",name,"(unsigned char *s, int len) {\n",
   "  int state, i;\n",
@@ -67,7 +70,7 @@ fun Cfile name quote (_,finals,table) =
  ]
  end;
 
-fun deconstruct {certificate, final, matchfn, start, table} = 
+fun deconstruct {certificate, final, matchfn, start, table} =
  let fun toList V = List.map (curry Vector.sub V) (upto 0 (Vector.length V - 1))
  in (start, toList final, toList (Vector.map toList table))
  end;
@@ -76,14 +79,14 @@ fun deconstruct {certificate, final, matchfn, start, table} =
 (* Map to C and write to stdOut                                              *)
 (*---------------------------------------------------------------------------*)
 
-fun quote_to_C justify name q = 
+fun quote_to_C justify name q =
  let val regexp = Regexp_Type.fromString q
      val _ = stdErr_print "Parsed regexp, now constructing DFA (can take time) ... "
      val result = regexpLib.matcher justify regexp
      val _ = stdErr_print "done. Generating C file.\n"
      val (start,finals,table) = deconstruct result
      val Cstring = Cfile name q (start,finals,table)
- in 
+ in
    stdOut_print Cstring
  ; succeed()
  end
@@ -92,22 +95,20 @@ fun quote_to_C justify name q =
 (* Parse, transform, write to C files.                                    *)
 (*---------------------------------------------------------------------------*)
 
-fun parse_args args = 
- let fun printHelp() = stdErr_print 
+fun parse_args args =
+ let fun printHelp() = stdErr_print
           ("Usage: regexp2c [-dfagen (HOL | SML)] <name> <quotation>\n")
      val fail = fn () => (printHelp(); fail())
- in case args 
+ in case args
      of ["-dfagen","SML",name,quote] => (regexpLib.SML,name,quote)
       | ["-dfagen","HOL",name,quote] => (regexpLib.HOL,name,quote)
       | [name,quote] => (justifyDefault, name,quote)
       | otherwise => fail()
  end
 
-fun main () = 
+fun main () =
  let val _ = stdErr_print "regexp2c: \n"
      val (justify,name,quote) = parse_args(CommandLine.arguments())
- in 
+ in
    quote_to_C justify name quote
  end;
-
-val _ = PolyML.export("regexp2c",main);
