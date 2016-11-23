@@ -839,13 +839,14 @@ Since decision-tree case-expressions support only constructor patterns, it is gu
 A simple example of a case expression is
 %
 \begin{hol}
-\begin{verbatim}
-  case n of
-     0 => "none"
-   | 1 => "one"
-   | 2 => "two"
-   | _ => "many"
-\end{verbatim}
+\begin{alltt}
+>>__ load "stringTheory";
+##eval “case n of
+          0 => "none"
+        | 1 => "one"
+        | 2 => "two"
+        | _ => "many"”
+\end{alltt}
 \end{hol}
 %
 This could have been expressed using several ``if--then--else'' constructs,
@@ -858,11 +859,11 @@ Many standard HOL{} types have constructors, including \ml{num}, \ml{list}, and 
 A simple example using constructor patterns is (notice the optional bar in front of the first case).
 %
 \begin{hol}
-\begin{verbatim}
-  case spouse(employee) of
-   | NONE   => "single"
-   | SOME s => "married to " ++ name_of s
-\end{verbatim}
+\begin{alltt}
+##eval  “case spouse(employee) of
+          | NONE   => "single"
+          | SOME s => "married to " ++ name_of s”
+\end{alltt}
 \end{hol}
 
 HOL{} supports a rich structure of case expressions using a single notation.
@@ -899,11 +900,11 @@ Note that the pattern \ml{0} is acceptable to either group.
 Patterns can be nested as well, as shown in the next example, where the function \ml{parents} returns a pair containing the person's father and/or mother, where each is represented by \ml{NONE} if deceased.
 %
 \begin{hol}
-\begin{verbatim}
-  case parents(john) of
-     (NONE,NONE) => "orphan"
-   | _ => "not an orphan"
-\end{verbatim}
+\begin{alltt}
+##eval  “case parents(john) of
+           (NONE,NONE) => "orphan"
+         | _ => "not an orphan"”
+\end{alltt}
 \end{hol}
 %
 This shows the nesting of option patterns within a pair pattern, and also the use of a wildcard \ml{\_} to match the cases not given.
@@ -924,21 +925,16 @@ Let's for example consider the following case expression.
 \end{hol}
 %
 Using the default heuristic, this compiles to a reasonably small decision tree that is pretty printed well.
-\begin{hol}
-\begin{verbatim}
-  case a of
-    (1,y,z) => y + z
-  | (x,2,z) => x - z
-  | (x,y',3) => x * y'
-  | (x,y',v10) => ARB
-
-  pair_CASE a (\v v1. pair_CASE v1 (\y z.
-    literal_case (\x. if x = 1 then y + z else
-      literal_case (\y'. if y' = 2 then x - z else
-        literal_case (\v10. if v10 = 3 then x * y' else ARB)
-    z) y) v))
-\end{verbatim}
-\end{hol}
+The exact combination of equality tests with if-then-else and the case constant for products that this term produces can be seen in the session below:
+\begin{session}
+\begin{alltt}
+>>_ set_trace "pp_cases" 0;
+>> “case a of
+       (1,y,z) => y + z
+     | (x,2,z) => x - z
+     | (x,y,3) => x * y”;
+\end{alltt}
+\end{session}
 %
 However, depending on the heuristic used, possible other results are:
 \begin{hol}
@@ -970,30 +966,20 @@ Many more examples of patterns are provided in Section~\ref{TFL} on the definiti
 \subsection{\pmatch{} case-expressions}
 
 The library \texttt{patternMatchesLib} supports another form of case-expression.
-After executing \texttt{patternMatchesLib.ENABLE_PMATCH_CASES ()}, the case-expression syntax introduced above is parsed into \pmatch{}-based terms.
-The example expression
-\begin{hol}
-\begin{verbatim}
-  case a of
-    (1, y, z) => y + z
-  | (x, 2, z) => x - z
-  | (x, y, 3) => x * y
-\end{verbatim}
-\end{hol}
-is parsed as
-\begin{hol}
-\begin{verbatim}
-  PMATCH a
-    [PMATCH_ROW (\(y,z). (1,y,z)) (\(y,z). T) (\(y,z). y + z);
-     PMATCH_ROW (\(x,z). (x,2,z)) (\(x,z). T) (\(x,z). x - z);
-     PMATCH_ROW (\(x,y). (x,y,3)) (\(x,y). T) (\(x,y). x * y)]
-\end{verbatim}
-\end{hol}
-%
-This expression is pretty printed in exactly the same form
-as the input.
-One can see that in contrast to decision-tree case-expression the internal representation of \pmatch{} case-expressions is very close to the input.
-No fancy pretty printers or parsers are needed.
+After executing \texttt{patternMatchesLib.ENABLE_PMATCH_CASES()}, the case-expression syntax introduced above is parsed into \pmatch{}-based terms.
+If we turn off the library's pretty-printing, we can see how the example expression we used earlier is rendered:
+\begin{session}
+\begin{alltt}
+>>_ patternMatchesLib.ENABLE_PMATCH_CASES();
+>>_ set_trace "use pmatch_pp" 0;
+>> “case a of
+      (1, y, z) => y + z
+    | (x, 2, z) => x - z
+    | (x, y, 3) => x * y”;
+\end{alltt}
+\end{session}
+One can see that in contrast to decision-tree case-expressions the internal representation of \pmatch{} case-expressions is very close to the input.
+No fancy parsing is required to turn the input into the internal representation, and conversely, printing (when enabled) can easily produce the syntax that the user chose as input.
 After parsing \pmatch{} case-expressions has been enabled, the keyword \texttt{dtcase} is used for parsing and pretty printing decision-tree case expressions.
 
 \pmatch{} case-expressions are more expressive than decision-tree based ones.
