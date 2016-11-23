@@ -214,9 +214,7 @@ of the whole is obtained by evaluating $e_2$.\footnote{This
 \end{session}
 
 The sessions above are enough to give a feel for \ML.  In the next
-chapter, the logic supported by the \HOL{} system (higher order logic)
-will be introduced, together with the tools in \ML{} for manipulating
-it.
+chapter, the syntax of the logic supported by the \HOL{} system (higher order logic) will be introduced.
 
 %%% Local Variables:
 %%% mode: latex
