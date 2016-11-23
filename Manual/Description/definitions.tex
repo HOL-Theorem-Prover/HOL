@@ -787,6 +787,7 @@ fun define_equivalence_type {name,equiv,defs,welldefs,old_thms} =
 \section{Case Expressions}\label{CaseExp}
 \index{case expressions|(}
 
+\newcommand{\pmatch}{\textsc{Pmatch}}
 Case constructs are an important feature of functional programming languages such as Standard ML.
 They provide a very compact and convenient notation for multi-way selection among the values of several expressions.
 \HOL{} provides such a feature in the form of case expressions.
@@ -798,7 +799,7 @@ There are two implementations of case expressions in \HOL{}.
 The parser supports case expressions, which it compiles into decision trees based on if-then-else expressions and case-constants as introduced by datatype definitions.
 The pretty printer presents these complicated decision trees as nicely readable case-expressions again.
 In addition, there is {\tt patternMatchesLib}, which provides a formalisation of case expressions based on Hilbert's choice operator.
-Following the name of the main function, these are called PMATCH case-expressions.
+Following the name of the main function, these are called \pmatch{} case-expressions.
 
 The benefit of decision-tree case-expressions is that the whole semantic complexity is handled by the parser and pretty printer.
 The resulting terms are simple.
@@ -806,11 +807,11 @@ However, one needs to trust the complicated, lengthy case expression code in the
 Moreover, the internal structure might differ considerably from the input and is hard to predict.
 In some cases there can be a serious blow-up in size.
 
-PMATCH case-expressions are simple to parse and pretty print.
+\pmatch{} case-expressions are simple to parse and pretty print.
 They support more features than decision-tree ones.
 There are guards, unbound variables in patterns and a wider variety of supported patterns in general.
 There is no size-blowup or surprising internal structure.
-Therefore, code generated from PMATCH case-expressions tends to be better. However, this comes at the price of a much heavier machinery to reason about PMATCH case-expressions.
+Therefore, code generated from \pmatch{} case-expressions tends to be better. However, this comes at the price of a much heavier machinery to reason about \pmatch{} case-expressions.
 
 \subsection{Decision-tree case-expressions}
 By default, \HOL{} uses decision-tree case-expressions.
@@ -825,7 +826,7 @@ Then, the syntax of decision-tree case-expressions is given by
 \end{eqnarray*}
 The choice in the rule for the first case ($\mathit{case}_1$) allows the use of more uniform syntax, where every case is preceded by a vertical bar.
 Omitting the bar, which is what the pretty-printer does when the syntax is printed, conforms with the syntax used by SML.
-If the library \texttt{patternMatchesLib} has been loaded, the keyword \texttt{case} is used to parse PMATCH case-expressions.
+If the library \texttt{patternMatchesLib} has been loaded, the keyword \texttt{case} is used to parse \pmatch{} case-expressions.
 In this case, \texttt{dtcase} should be used instead of \texttt{case} to describe decision-tree case expressions.
 
 Case expressions consider their list of pattern expressions in sequence to see if they match the test expression.
@@ -966,10 +967,10 @@ However, depending on the heuristic used, possible other results are:
 This is just a brief description of some of the expressive capabilities of the case expression with patterns.
 Many more examples of patterns are provided in Section~\ref{TFL} on the definition of recursive functions.
 
-\subsection{PMATCH case-expressions}
+\subsection{\pmatch{} case-expressions}
 
 The library \texttt{patternMatchesLib} supports another form of case-expression.
-After executing \texttt{patternMatchesLib.ENABLE_PMATCH_CASES ()}, the case-expression syntax introduced above is parsed into PMATCH-based terms.
+After executing \texttt{patternMatchesLib.ENABLE_PMATCH_CASES ()}, the case-expression syntax introduced above is parsed into \pmatch{}-based terms.
 The example expression
 \begin{hol}
 \begin{verbatim}
@@ -991,13 +992,13 @@ is parsed as
 %
 This expression is pretty printed in exactly the same form
 as the input.
-One can see that in contrast to decision-tree case-expression the internal representation of PMATCH case-expressions is very close to the input.
+One can see that in contrast to decision-tree case-expression the internal representation of \pmatch{} case-expressions is very close to the input.
 No fancy pretty printers or parsers are needed.
-After parsing PMATCH case-expressions has been enabled, the keyword \texttt{dtcase} is used for parsing and pretty printing decision-tree case expressions.
+After parsing \pmatch{} case-expressions has been enabled, the keyword \texttt{dtcase} is used for parsing and pretty printing decision-tree case expressions.
 
-PMATCH case-expressions are more expressive than decision-tree based ones.
-The syntax allowed for decision-tree case-expressions is a subset of the syntax of PMATCH ones.
-In addition, PMATCH case-expressions support guards.
+\pmatch{} case-expressions are more expressive than decision-tree based ones.
+The syntax allowed for decision-tree case-expressions is a subset of the syntax of \pmatch{} ones.
+In addition, \pmatch{} case-expressions support guards.
 Moreover, arbitrary terms instead of just ones using literals and constructors can be used as patterns.
 One has full control over the variables bound by patterns.
 Bound variables can even be used more than once in a pattern.
@@ -1021,7 +1022,7 @@ Variables whose names start with an underscore are bound, no matter whether ther
 This is convenient for using wildcard notations.
 
 These extensions of the basic case-expression syntax allow the expression of some interesting concepts using case-expressions.
-One can for example express division with reminder using PMATCH case-expressions:
+One can for example express division with reminder using \pmatch{} case-expressions:
 
 \begin{hol}
 \begin{verbatim}
@@ -1046,10 +1047,10 @@ The following case-expression states for example that a list \texttt{l} starts w
 
 The price for this increased expressive power and the simpler, more trustworthy parsing and pretty printing is that the semantic complexity now needs to be dealt with inside the logic.
 \texttt{patternMatchesLib} provides the necessary machinery in the form or conversions, rules, simp-sets, \ldots.
-The standard simp-sets defined by \texttt{bossLib} already contain the necessary conversions to deal with PMATCH case-expressions.
+The standard simp-sets defined by \texttt{bossLib} already contain the necessary conversions to deal with \pmatch{} case-expressions.
 Therefore, in practice they are as convenient to use as decision-tree based case-expressions.
-In fact, preserving the structure allows to simply and partially evaluate PMATCH case-expressions in ways, not easily possible for decision-tree case expressions.
-The PMATCH case-expression
+In fact, preserving the structure allows to simply and partially evaluate \pmatch{} case-expressions in ways, not easily possible for decision-tree case expressions.
+The \pmatch{} case-expression
 %
 \begin{hol}
 \begin{verbatim}
@@ -1074,10 +1075,10 @@ In contrast, the corresponding decision-tree case-expression
 \end{hol}
 cannot be simplified by the standard tools.
 
-There are many more tools for working with PMATCH case-expressions.
+There are many more tools for working with \pmatch{} case-expressions.
 There are for example tools for removing multiple variable binding or guards.
-One can translate between PMATCH and decision-tree case-expressions.
-There are tools for proving exhaustiveness of PMATCH case-expressions or for removing redundant rows.
+One can translate between \pmatch{} and decision-tree case-expressions.
+There are tools for proving exhaustiveness of \pmatch{} case-expressions or for removing redundant rows.
 For more details, please have a look at \texttt{patternMatchesLib}.
 \index{case expressions|)}
 
