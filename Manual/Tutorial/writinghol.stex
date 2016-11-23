@@ -65,7 +65,7 @@ $\;\;\mkern14mu\not\mathrel{\mkern-14mu}\iff$ & \texttt{<=/=>} & $\;\;\times$ & 
 \label{tab:unicode-equivalents}
 \end{table}
 
-\section*{\HOL{} looks like \ML{}}
+\section*{\HOL{} looks like ML}
 
 One interesting (and also confusing for beginners) aspect of \HOL{} is that its terms and types look like \ML's.
 For example, the zip function in \ML{} (from the previous chapter) might be characterised by the HOL term that can be written:
