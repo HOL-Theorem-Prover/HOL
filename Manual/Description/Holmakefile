@@ -10,6 +10,9 @@ PS_COMMAND = $(PS_STUFF) < $< > $@
 description.pdf: $(TEX_SOURCES)
 	latexmk -pdf description
 
+definitions.tex: definitions.stex $(PS_STUFF)
+	$(PS_COMMAND)
+
 drules.tex: drules.stex $(PS_STUFF)
 	$(PS_COMMAND)
 
