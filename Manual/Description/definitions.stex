@@ -1060,7 +1060,7 @@ For example, the following session demonstrates simplifying our \pmatch{} case e
 \begin{session}
 \begin{alltt}
 >>__ set_trace "use pmatch_pp" 1
->> SIMP_CONV std_ss []
+>> SIMP_CONV (srw_ss()) []
      “case (x,2,z) of (1,y,z) => y + z | (x,2,z) => x - z | (x,y,3) => x * y”;
 \end{alltt}
 \end{session}
@@ -1068,9 +1068,11 @@ In contrast, the corresponding decision-tree case expression cannot be simplifie
 \begin{session}
 \begin{alltt}
 >>__ set_trace "pp_cases" 1;
->> SIMP_CONV std_ss []
+>> SIMP_CONV (srw_ss()) []
     “dtcase (x,2,z) of (1,y,z) => y + z | (x,2,z) => x - z
                      | (x,y,3) => x * y”;
+>>__ val (l,r) = dest_eq (concl it)
+##assert term_size r + 10 > term_size l
 \end{alltt}
 \end{session}
 
