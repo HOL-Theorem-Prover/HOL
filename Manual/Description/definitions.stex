@@ -855,7 +855,7 @@ selection between various choices made clearly evident.
 Internally though, it is compiled to nested ``if-then-else'' statements.
 
 In addition to literals as patterns, as above, patterns may be constructor expressions.
-Many standard HOL{} types have constructors, including \ml{num}, \ml{list}, and \ml{option}.
+Many standard \HOL{} types have constructors, including \ml{num}, \ml{list}, and \ml{option}.
 A simple example using constructor patterns is (notice the optional bar in front of the first case).
 %
 \begin{hol}
@@ -866,7 +866,7 @@ A simple example using constructor patterns is (notice the optional bar in front
 \end{alltt}
 \end{hol}
 
-HOL{} supports a rich structure of case expressions using a single notation.
+\HOL{} supports a rich structure of case expressions using a single notation.
 The format is related to that of definitions of recursive functions, as described in Section~\ref{TFL}.
 In addition, case expressions may contain literals as patterns, either singly or as elements of deeply nested patterns.
 
@@ -874,7 +874,7 @@ Decision-tree case expressions may test values of any type.
 If the test expression is a type with constructors, then the patterns may be expressed using the constructors applied to arguments, as for example \ml{SOME s} in the example above.
 A free variable within the constructor pattern, for example \ml{s} in the pattern \ml{SOME s}, becomes bound to the corresponding value within the value of the test expression, and can be used within the associated result expression for that pattern.
 
-In addition to the constructors of standard types in HOL{}, constructor patterns may also be used for types created by use of the datatype definition facility described in Section~\ref{sec:datatype}, including user-defined types.
+In addition to the constructors of standard types in \HOL{}, constructor patterns may also be used for types created by use of the datatype definition facility described in Section~\ref{sec:datatype}, including user-defined types.
 
 Whether or not the test expression is a type with constructors, the patterns may be expressed using the appropriate literals of that type, if any such literals exist.
 A complex pattern may contain either or both of literals and constructor
@@ -1071,7 +1071,7 @@ For more details, please have a look at \texttt{patternMatchesLib}.
 
 \section{Recursive Functions}\label{TFL}
 
-HOL{} provides a function definition mechanism based on the
+\HOL{} provides a function definition mechanism based on the
 wellfounded recursion theorem proved in \theoryimp{relationTheory},
 discussed in Section~\ref{relation}.  \ml{Define} takes a high-level,
 possibly recursive, specification of a function, and attempts to
@@ -1149,7 +1149,7 @@ is incomplete since it does not tell how \holtxt{f} should behave when
 applied to two non-zero arguments: e.g., \holtxt{f (SUC m) (SUC n)}. In the
 implementation, such missing clauses are filled in, and have the value
 \holtxt{ARB}. This `pattern-completion` step is a way of turning descriptions
-of partial functions into total functions suitable for HOL. However,
+of partial functions into total functions suitable for \HOL. However,
 since the user has not completely specified the function, the system
 takes that as a hint that the user is not interested in using the
 function at the missing-but-filled-in clauses, and so such clauses are
@@ -1187,7 +1187,7 @@ must perform a termination proof. It automatically constructs
 termination conditions for the function, and invokes a termination
 prover in an attempt to prove the termination conditions.  If the
 function is primitive recursive, in the sense that it exactly follows
-the recursion pattern of a previously declared HOL datatype, then this
+the recursion pattern of a previously declared \HOL{} datatype, then this
 proof always succeeds, and \ml{Define} stores the derived equations in
 the current theory segment.
 Otherwise, the function is not an
@@ -1593,7 +1593,7 @@ numbers:
 The invocation \holtxt{gcd(m,n)} recurses in its first argument, and
 since we know that \holtxt{m} is not 0, it is the case that
 \holtxt{n MOD m} is smaller than \holtxt{m}. The way to phrase the
-termination of \holtxt{gcd} in HOL is to use a `measure` function
+termination of \holtxt{gcd} in \HOL{} is to use a `measure` function
 to map from the domain of \holtxt{gcd}---a pair of numbers---to a number.
 The definition of {measure} in \HOL{} is equivalent to
 %
@@ -1811,7 +1811,7 @@ extract the termination constraints:
 \end{hol}
 %
 which are unprovable, because the \emph{context} of the recursive call has not
-been taken account of. This example is in fact not a problem for HOL,
+been taken account of. This example is in fact not a problem for \HOL,
 since the following congruence theorem is known to \ml{Hol\_defn}:
 %
 \begin{hol}
