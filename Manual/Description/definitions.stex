@@ -849,10 +849,10 @@ A simple example of a case expression is
 \end{alltt}
 \end{hol}
 %
-This could have been expressed using several ``if--then--else'' constructs,
+This could have been expressed using several ``if-then-else'' constructs,
 but the case expression is much more compact and clean, with the
 selection between various choices made clearly evident.
-Internally though, it is compiled to nested ``if--then--else'' statements.
+Internally though, it is compiled to nested ``if-then-else'' statements.
 
 In addition to literals as patterns, as above, patterns may be constructor expressions.
 Many standard HOL{} types have constructors, including \ml{num}, \ml{list}, and \ml{option}.
