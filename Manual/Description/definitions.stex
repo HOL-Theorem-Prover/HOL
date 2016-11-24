@@ -966,7 +966,8 @@ Many more examples of patterns are provided in Section~\ref{TFL} on the definiti
 \subsection{\pmatch{} case-expressions}
 
 The library \texttt{patternMatchesLib} supports another form of case-expression.
-After executing \texttt{patternMatchesLib.ENABLE_PMATCH_CASES()}, the case-expression syntax introduced above is parsed into \pmatch{}-based terms.
+After executing \texttt{patternMatchesLib.ENABLE_PMATCH_CASES()}, the case-expression syntax introduced above is parsed into \pmatch{}-based terms.%
+\footnote{After parsing \pmatch{} case-expressions has been enabled, the keyword \texttt{dtcase} is used for parsing and pretty printing decision-tree case expressions.}
 If we turn off the library's pretty-printing, we can see how the example expression we used earlier is rendered:
 \begin{session}
 \begin{alltt}
@@ -980,7 +981,7 @@ If we turn off the library's pretty-printing, we can see how the example express
 \end{session}
 One can see that in contrast to decision-tree case-expressions the internal representation of \pmatch{} case-expressions is very close to the input.
 No fancy parsing is required to turn the input into the internal representation, and conversely, printing (when enabled) can easily produce the syntax that the user chose as input.
-After parsing \pmatch{} case-expressions has been enabled, the keyword \texttt{dtcase} is used for parsing and pretty printing decision-tree case expressions.
+
 
 \pmatch{} case-expressions are more expressive than decision-tree based ones.
 The syntax allowed for decision-tree case-expressions is a subset of the syntax of \pmatch{} ones.
