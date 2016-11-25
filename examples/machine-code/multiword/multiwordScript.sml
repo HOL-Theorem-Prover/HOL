@@ -332,7 +332,7 @@ val mw2i_EQ_IMP_EQ_i2mw = prove(
   ``!x. mw_ok (SND x) /\ ~(x = (T,[])) /\ (mw2i x = i) ==> (x = i2mw i)``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC EXISTS_i2mw \\ FULL_SIMP_TAC std_ss [mw2i_i2mw]);
 
-val LENGTH_n2mw_LESS_LENGTH_n2mw = prove(
+val LENGTH_n2mw_LESS_LENGTH_n2mw = store_thm("LENGTH_n2mw_LESS_LENGTH_n2mw",
   ``!m n. m <= n ==>
           LENGTH (n2mw m:'a word list) <= LENGTH (n2mw n:'a word list)``,
   HO_MATCH_MP_TAC n2mw_ind
