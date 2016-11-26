@@ -684,8 +684,8 @@ fun PMATCH_REMOVE_SUBSUMED_CONV_GENCALL_SINGLE
 
     fun extract_el_n n rs = let
       val rows1 = List.take (rs, n)
-      val r1 = List.nth (rs, r_no1)
-      val rows_rest = List.drop (rs, r_no1+1)
+      val r1 = List.nth (rs, n)
+      val rows_rest = List.drop (rs, n+1)
       val rows1_tm = mk_row_list rows1
 
       fun build_tm rest_tm =
@@ -1657,7 +1657,6 @@ fun PMATCH_REMOVE_GUARDS_CONV_GENCALL rc_arg t = let
 in
   thm1
 end handle HOL_ERR _ => raise UNCHANGED
-
 
 fun PMATCH_REMOVE_GUARDS_CONV_GEN ssl = PMATCH_REMOVE_GUARDS_CONV_GENCALL (ssl, NONE)
 
