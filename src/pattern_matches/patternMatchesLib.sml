@@ -140,7 +140,7 @@ val static_ss = simpLib.merge_ss
 (* We add the stateful rewrite set (to simplify
    e.g. case-constants or constructors) and a
    custum component as well. *)
-fun rc_ss gl = srw_ss() ++ simpLib.merge_ss (static_ss :: gl)
+fun rc_ss gl = simpLib.remove_ssfrags (srw_ss() ++ simpLib.merge_ss (static_ss :: gl)) ["patternMatchesSimp"]
 
 (* finally we add a call-back component. This is an
    external conversion that is used at the end if
@@ -150,7 +150,9 @@ fun rc_ss gl = srw_ss() ++ simpLib.merge_ss (static_ss :: gl)
    simplifier. This is realised with these call-backs. *)
 fun callback_CONV cb_opt t = (case cb_opt of
     NONE => NO_CONV t
-  | SOME cb => cb t)
+  | SOME cb => (if (can (find_term is_PMATCH) t) then
+                  NO_CONV t
+                else cb t));
 
 fun rc_conv_rws (gl, callback_opt) thms = REPEATC (
   SIMP_CONV (rc_ss gl) thms THENC
