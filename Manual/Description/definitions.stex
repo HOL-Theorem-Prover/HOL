@@ -818,7 +818,7 @@ By default, \HOL{} uses decision-tree case expressions.
 Let the non-terminal $\mathit{term}$ stand for any \HOL{} term and the non-terminal $\mathit{cpat}$ represent any constructor pattern, i.e. any \HOL{} term containing only literals, datatype constructors and variables.
 Then, the syntax of decision-tree case expressions is given by
 \[
-\mathit{term} ::= \texttt{case}\;\mathit{term}\;\texttt{of}\;\texttt{|}^?\; \mathit{pat}\;\texttt{=>}\;\mathit{term}\; (\texttt{|}\;\mathit{pat}\;\texttt{=>}\;\mathit{term})^*
+\mathit{term} ::= \texttt{case}\;\mathit{term}\;\texttt{of}\;\texttt{|}^?\; \mathit{cpat}\;\texttt{=>}\;\mathit{term}\; (\texttt{|}\;\mathit{cpat}\;\texttt{=>}\;\mathit{term})^*
 \]
 The choice in the rule allows the use of more uniform syntax, where every case is preceded by a vertical bar.
 Omitting the bar, which is what the pretty-printer does when the syntax is printed, conforms to the syntax used by SML.
@@ -935,10 +935,12 @@ Rows might be reordered or modified, there might be several new rows generated, 
 Moreover, the exact result depends on complicated heuristics to decide which case-split to perform next in the decision tree.
 For non-trivial case expressions the result can be hard to predict.
 
-For example, consider the second case expression in Figure~\ref{fig:case-exp-examples}:
+For example, consider the second case expression in Figure~\ref{fig:case-exp-examples}.
 %
 Using the default heuristic, this compiles to a reasonably small decision tree that is pretty-printed well.
 The exact combination of equality tests with if-then-else and the case constant for products that this term produces can be seen in the session in Figure~\ref{fig:case-expr-structure}.
+However other heuristics result in more complicated terms as shown in the session in Figure~\ref{fig:case-expr-heuristics}.
+%
 \begin{figure}[phtb]
 \begin{session}
 \begin{alltt}
@@ -953,33 +955,30 @@ The exact combination of equality tests with if-then-else and the case constant 
 \label{fig:case-expr-structure}
 \end{figure}
 %
-However, depending on the heuristic used, possible other results are:
-\begin{hol}
+\begin{figure}[phtb]
+\begin{session}
 \begin{alltt}
-##parsetm  case a of
-               (1,y,z) => y + z
-             | (x,2,3) => x - 3
-             | (x,y',3) => x * y'
-             | (x,2,z') => x - z'
-             | (x,v13,z') => ARB
+>>__ set_trace "pp_cases" 1;
+>>_ Pmatch.set_classic_heuristic ();
+>> “case a of
+       (1,y,z) => y + z
+     | (x,2,z) => x - z
+     | (x,y,3) => x * y”;
+>>_ PmatchHeuristics.set_heuristic PmatchHeuristics.pheu_last_col;
+>> “case a of
+       (1,y,z) => y + z
+     | (x,2,z) => x - z
+     | (x,y,3) => x * y”;
+>>_ Pmatch.set_default_heuristic ();
+>> “case a of
+       (1,y,z) => y + z
+     | (x,2,z) => x - z
+     | (x,y,3) => x * y”;
 \end{alltt}
-\end{hol}
-or
-\begin{hol}
-\begin{alltt}
-##parsetm  case a of
-               (1,2,3) => 2 + 3
-             | (1,2,v10) => 2 + v10
-             | (1,y,3) => y + 3
-             | (1,y,z) => y + z
-             | (x,2,3) => x - 3
-             | (x,2,z') => x - z'
-             | (x,y',3) => x * y'
-             | (x,y',v24) => ARB
-
-  ...
-\end{alltt}
-\end{hol}
+\end{session}
+\caption{Effect of different pattern match heuristics}
+\label{fig:case-expr-heuristics}
+\end{figure}
 
 This is just a brief description of some of the expressive capabilities of the case expression with patterns.
 Many more examples of patterns are provided in Section~\ref{TFL} on the definition of recursive functions.
@@ -1054,33 +1053,42 @@ The price for this increased expressive power and the simpler, more trustworthy 
 The \texttt{patternMatchesLib} library provides the necessary machinery in the form or conversions, rules, simpsets, and other technology.
 For example, \texttt{patternMatchesLib} enhances \texttt{bossLib}'s standard simpsets with the conversions to deal with \pmatch{} case expressions.
 Therefore, in practice \pmatch{} case expressions are as convenient to use as decision-tree based case expressions.
-In fact, the way these expressions preserve input structure allow them to be simplified and partially evaluated in ways that are difficult for decision-tree case expressions.
-For example, the following session demonstrates simplifying our \pmatch{} case expression:
+In fact, the explicit case expression structure provided by
+\pmatch{} case expressions allows simplifications not easily possible for decision-tree case expressions.
+The standard tools can only (partially) evaluate decision-tree case expressions.
+This evaluation usually destroys the case expression view.
+This is illustrated by the example shown in Figure~\ref{fig:case-expr-simplify}, which adds a row that is subsumed by a later one to our running example.
 %
+\begin{figure}[phtb]
 \begin{session}
 \begin{alltt}
 >>__ set_trace "use pmatch_pp" 1
+>>__ SIMP_CONV (srw_ss()) [] ``SUC 0``
 >> SIMP_CONV (srw_ss()) []
-     “case (x,2,z) of (1,y,z) => y + z | (x,2,z) => x - z | (x,y,3) => x * y”;
-\end{alltt}
-\end{session}
-In contrast, the corresponding decision-tree case expression cannot be simplified by the standard tools (the simplifier only $\alpha$-converts the input term at best):
-\begin{session}
-\begin{alltt}
+     “case (x,y,z) of
+        (1,y,z) => y + z
+      | (x,2,4) => x - 4  (* subsumed by next row *)
+      | (x,2,z) => x - z
+      | (x,y,3) => x * y”;
 >>__ set_trace "pp_cases" 1;
+>>__ Pmatch.set_default_heuristic ()
 >> SIMP_CONV (srw_ss()) []
-    “dtcase (x,2,z) of (1,y,z) => y + z | (x,2,z) => x - z
-                     | (x,y,3) => x * y”;
->>__ val (l,r) = dest_eq (concl it)
-##assert term_size r + 10 > term_size l
+    “dtcase (x,y,z) of
+       (1,y,z) => y + z
+     | (x,2,4) => x - 4
+     | (x,2,z) => x - z
+     | (x,y,3) => x * y”;
 \end{alltt}
 \end{session}
+\caption{Simplification of case expressions}
+\label{fig:case-expr-simplify}
+\end{figure}
 
 There are many more tools for working with \pmatch{} case expressions.
 There are, for example, tools for removing multiple variable binding or guards.
 One can translate between \pmatch{} and decision-tree case expressions.
 There are tools for proving exhaustiveness of \pmatch{} case expressions or for removing redundant rows.
-For more details, consult the \texttt{patternMatchesLib} implementation.
+For more details, please consult the \texttt{patternMatchesLib} implementation.
 \index{case expressions|)}
 
 \section{Recursive Functions}\label{TFL}
