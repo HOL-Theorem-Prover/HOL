@@ -5,15 +5,20 @@ use (Globals.HOLDIR ^ "/tools/quote-filter/filter.sml");
 
 fun read_from_stream is n = TextIO.input is
 
-fun unquote_to ifile ofile = 
+fun unquote_to ifile ofile =
 let
-     val is = TextIO.openIn ifile 
+     val is = TextIO.openIn ifile
      val os = TextIO.openOut ofile
 
      open filter.UserDeclarations
      val state as QFS args =
-        QFS {output_stream=os, comdepth=ref 0, pardepth=ref 0,
-           antiquote=ref false, row=ref 0, rowstart=ref 0};
+        QFS {output_stream=(fn s => TextIO.output(os, s)),
+             comdepth=ref 0,
+             pardepth=ref 0,
+             flush=(fn () => TextIO.flushOut os),
+             antiquote=ref false,
+             row=ref 0,
+             rowstart=ref 0};
 
      fun loop() = let
        val lexer = filter.makeLexer (read_from_stream is) state
