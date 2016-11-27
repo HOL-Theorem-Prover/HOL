@@ -223,10 +223,12 @@ val length_rotate = Q.store_thm("length_rotate",
   `!v n. LENGTH (rotate v n) = LENGTH v`,
   simp [rotate_def, LET_THM]
   \\ srw_tac[][length_field]
-  \\ full_simp_tac (srw_ss()) [DECIDE ``n <> 0n ==> (SUC (n - 1) = n)``,
-                               DECIDE ``n:num < l ==> (n + (l - n) = l)``,
-                               arithmeticTheory.NOT_ZERO_LT_ZERO,
-                               arithmeticTheory.MOD_LESS])
+  \\ full_simp_tac (std_ss++ARITH_ss)
+       [DECIDE ``n <> 0n ==> (SUC (n - 1) = n)``,
+        DECIDE ``n:num < l ==> (n + (l - n) = l)``,
+        GSYM listTheory.LENGTH_NIL,
+        arithmeticTheory.NOT_ZERO_LT_ZERO,
+        arithmeticTheory.MOD_LESS])
 
 val el_rev_count_list = Q.store_thm("el_rev_count_list",
   `!n i. i < n ==> (EL i (rev_count_list n) = n - 1 - i)`,
@@ -289,8 +291,9 @@ val el_shiftr = Q.store_thm("el_shiftr",
        n < d /\ i < d - n /\ 0 < d ==>
        (EL i (shiftr (fixwidth d v) n) =
        d <= i + LENGTH v /\ EL (i + LENGTH v - d) v)`,
-  lrw [shiftr_field, length_fixwidth, el_field, el_fixwidth,
-       arithmeticTheory.ADD1])
+  simp_tac(std_ss++ARITH_ss)
+    [shiftr_field, length_fixwidth, el_field, el_fixwidth,
+     arithmeticTheory.ADD1] \\ rw[])
 
 val shiftr_0 = Q.store_thm("shiftr_0", `!v. shiftr v 0 = v`, lrw [shiftr_def])
 
@@ -862,11 +865,10 @@ val extract_v2w = Q.store_thm("extract_v2w",
 
 val DROP_LAST = Q.prove(
    `!l. ~NULL l ==> (DROP (LENGTH l - 1) l = [LAST l])`,
-   lrw [listTheory.NULL_LENGTH]
-   \\ `LENGTH l - 1 <= LENGTH l` by decide_tac
-   \\ imp_res_tac rich_listTheory.DROP_LASTN
-   \\ lfs []
-   \\ lfs [rich_listTheory.LASTN_1, listTheory.LENGTH_NIL])
+   rw[rich_listTheory.DROP_LASTN,arithmeticTheory.SUB_LEFT_SUB,
+      rich_listTheory.LASTN_1,rich_listTheory.NULL_EQ_NIL]
+   \\ `(LENGTH l = 0) \/ (LENGTH l = 1)` by decide_tac
+   \\ fs[listTheory.LENGTH_EQ_NUM_compute,rich_listTheory.LASTN_1]);
 
 val word_bit_last_shiftr = Q.store_thm("word_bit_last_shiftr",
   `!i v. i < dimindex(:'a) ==>

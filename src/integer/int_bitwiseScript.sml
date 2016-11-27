@@ -191,11 +191,10 @@ val LAST_bits_of_num = prove(
         EL (LENGTH (bits_of_num n) - 1) (bits_of_num n)``,
   HO_MATCH_MP_TAC (fetch "-" "bits_of_num_ind")
   \\ REPEAT STRIP_TAC \\ ONCE_REWRITE_TAC [bits_of_num_def]
-  \\ Cases_on `n = 0` \\ fs [EVAL ``LENGTH (bits_of_num 0)``]
-  \\ Cases_on `LENGTH (bits_of_num (n DIV 2))` \\ fs []
+  \\ Cases_on `n = 0` \\ fs [EVAL ``bits_of_num 0``]
+  \\ Cases_on `bits_of_num (n DIV 2)` \\ fs []
   \\ Cases_on `n = 1` \\ fs []
-  \\ Q.PAT_X_ASSUM `kk = 0:num` MP_TAC
-  \\ ONCE_REWRITE_TAC [bits_of_num_def]
+  \\ fs[Once bits_of_num_def]
   \\ `~(n < 2)` by decide_tac
   \\ fs [DIV_EQ_X]);
 
@@ -214,7 +213,7 @@ val bits_of_int_LAST = prove(
   ``!i bs r. (bits_of_int i = (bs,r)) /\ (bs <> []) ==>
              EL (LENGTH bs - 1) bs <> r``,
   srw_tac [] [bits_of_int_def,EL_MAP,LENGTH_MAP]
-  \\ fs [MAP_EQ_NIL] \\ fs [GSYM LENGTH_NIL]
+  \\ fs [MAP_EQ_NIL] \\ full_simp_tac std_ss [GSYM LENGTH_NIL]
   \\ imp_res_tac (DECIDE ``n <> 0 ==> n - 1 < n:num``)
   \\ fs [bits_of_int_def,EL_MAP,LENGTH_MAP]
   \\ match_mp_tac LAST_bits_of_num \\ fs []);
