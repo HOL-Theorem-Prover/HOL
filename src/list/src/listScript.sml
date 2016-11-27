@@ -620,13 +620,13 @@ val MEM_MAP = store_thm(
        MEM x (MAP f l) = ?y. (x = f y) /\ MEM y l``,
   LIST_INDUCT_TAC THEN SRW_TAC [] [MAP] THEN PROVE_TAC[]);
 
-val LENGTH_NIL = store_thm("LENGTH_NIL",
+val LENGTH_NIL = store_thm("LENGTH_NIL[simp]",
  --`!l:'a list. (LENGTH l = 0) = (l = [])`--,
       LIST_INDUCT_TAC THEN
       REWRITE_TAC [LENGTH, NOT_SUC, NOT_CONS_NIL]);
 
 val LENGTH_NIL_SYM = store_thm (
-   "LENGTH_NIL_SYM",
+   "LENGTH_NIL_SYM[simp]",
    ``(0 = LENGTH l) = (l = [])``,
    PROVE_TAC[LENGTH_NIL]);
 
