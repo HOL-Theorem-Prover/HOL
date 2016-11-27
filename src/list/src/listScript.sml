@@ -1448,7 +1448,7 @@ val MAP_ZIP = Q.store_thm(
      (MAP (f o FST) (ZIP (l1,l2)) = MAP f l1) /\
      (MAP (g o SND) (ZIP (l1,l2)) = MAP g l2)`,
   Q.ID_SPEC_TAC `l2` THEN Induct_on `l1` THEN
-  SRW_TAC [] [] THEN Cases_on `l2` THEN
+  SRW_TAC [] [] THEN TRY(Cases_on `l2`) THEN
   FULL_SIMP_TAC (srw_ss()) [ZIP, MAP]);
 
 val MEM_EL = store_thm(
@@ -1901,8 +1901,8 @@ val NRC_LRC = Q.store_thm(
 MAP_EVERY Q.ID_SPEC_TAC [`y`,`x`] THEN
 Induct_on `n` THEN SRW_TAC [] [] THEN1 (
   SRW_TAC [] [EQ_IMP_THM] THEN1 (
-    Q.EXISTS_TAC `[]` THEN SRW_TAC [] [LRC_def] ) THEN
-  Cases_on `ls` THEN FULL_SIMP_TAC (srw_ss()) [LRC_def]
+    SRW_TAC [] [LRC_def] ) THEN
+  FULL_SIMP_TAC (srw_ss()) [LRC_def]
 ) THEN
 SRW_TAC [] [arithmeticTheory.NRC, EQ_IMP_THM] THEN1 (
   Q.EXISTS_TAC `x::ls` THEN
@@ -3468,7 +3468,7 @@ val every_zip_snd = Q.store_thm ("every_zip_snd",
      (EVERY (\x. P (SND x)) (ZIP (l1,l2)) = EVERY P l2)`,
    Induct_on `l1`
    >> rw []
-   >> Cases_on `l2`
+   >> TRY(Cases_on `l2`)
    >> fs [ZIP]);
 
 val every_zip_fst = Q.store_thm ("every_zip_fst",
@@ -3476,7 +3476,7 @@ val every_zip_fst = Q.store_thm ("every_zip_fst",
               (EVERY (\x. P (FST x)) (ZIP (l1,l2)) = EVERY P l1)`,
    Induct_on `l1`
    >> rw []
-   >> Cases_on `l2`
+   >> TRY(Cases_on `l2`)
    >> fs [ZIP]);
 
 val el_append3 = Q.store_thm ("el_append3",
