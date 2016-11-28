@@ -386,7 +386,10 @@ fun mk_case0_heu (heu : pmatch_heuristic) ty_info ty_match FV range_ty =
                            " is a bad pattern (of var type?)")
      in
      if exists Literal.is_pure_literal col0 (* col0 has a literal *) then
-       let val other_var = fresh_var pty
+       let val is_lit_col = all (fn t => Literal.is_literal t orelse is_var t) col0
+           val _ = if is_lit_col then () else
+                   mk_case_fail "case expression mixes literals with non-literals."
+           val other_var = fresh_var pty
            val constructors = rev (mk_set (rev (filter (not o is_var) col0)))
                               @ [other_var]
            val arb = mk_arb range_ty

@@ -272,16 +272,39 @@ fun mk_PMATCH_ROW_PABS vars (p_t, g_t, r_t) = let
     mk_PMATCH_ROW (mk_pabs p_t, mk_pabs g_t, mk_pabs r_t)
   end
 
+fun MULTIPLE_FV_AUX (dups : term HOLset.set) (seen : term HOLset.set) (t : term) =
+  case Psyntax.dest_term t of
+      Psyntax.VAR (_, _) =>
+      if (HOLset.member (seen, t)) then
+        (HOLset.add (dups, t), seen)
+      else
+        (dups, HOLset.add (seen, t))
+    | Psyntax.CONST _ => (dups, seen)
+    | Psyntax.LAMB (v, t') => let
+         val (dups', seen') = MULTIPLE_FV_AUX dups seen t'
+         val dups'' = if HOLset.member (dups, v) then dups' else
+                         HOLset.delete (dups', v) handle NotFound => dups'
+         val seen'' = if HOLset.member (seen, v) then seen' else
+                         HOLset.delete (seen', v) handle NotFound => seen'
+       in (dups'', seen'') end
+    | Psyntax.COMB (t1, t2) => let
+         val (dups',  seen')  = MULTIPLE_FV_AUX dups  seen  t1
+         val (dups'', seen'') = MULTIPLE_FV_AUX dups' seen' t2
+      in
+         (dups'', seen'')
+      end;
+
+fun MULTIPLE_FV t = MULTIPLE_FV_AUX empty_tmset empty_tmset t;
 
 fun mk_PMATCH_ROW_PABS_WILDCARDS vars (p_t, g_t, r_t) = let
-    val gr_s = FVL [g_t, r_t] empty_tmset
-    val p_s = FVL [p_t] empty_tmset
+    val (pm_s, p_s) = MULTIPLE_FV p_t
+    val grd_s = FVL [g_t, r_t] pm_s
 
     val mk_wc = mk_wildcard_gen (HOLset.listItems
-      (HOLset.union (gr_s, p_s)))
+      (HOLset.union (grd_s, p_s)))
 
     fun apply (v, (vars', subst)) = (
-      if (not (HOLset.member (gr_s, v)) andalso
+      if (not (HOLset.member (grd_s, v)) andalso
           not (varname_starts_with_uscore v)) then let
         val v' = mk_wc (type_of v)
       in

@@ -8,8 +8,11 @@ EXTRA_CLEANS = holfoot.grm-sig.sml holfoot.grm.sml holfoot.lex.sig \
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 
-all: $(TARGETS) holfootLib.ui
+all: $(TARGETS) holfootLib.ui selftest.exe
 .PHONY: all
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
 
 Parsetree.uo : Parsetree.sml
 	$(HOLMOSMLC) -c Parsetree.sml

@@ -246,7 +246,7 @@ end
    val holfoot_auto_verify_spec        : string -> thm
    val holfoot_verify_spec             : string -> holfoot_tactics.gen_step_tac_opt list -> thm
    val holfoot_tac_verify_spec         : string -> (holfoot_tactics.gen_step_tac_opt list) option -> (string * tactic) list -> thm
-   val holfoot_interactive_verify_spec : bool -> bool -> string -> (holfoot_tactics.gen_step_tac_opt list) option -> (string * tactic) list -> thm
+   val holfoot_interactive_verify_spec : bool -> bool -> string -> (holfoot_tactics.gen_step_tac_opt list) option -> (string * tactic) list -> (thm * bool)
    val holfoot_prove_remaining         : (thm * tactic) -> thm
    val holfoot_set_remaining_goal      : thm -> proofManagerLib.proofs
 
