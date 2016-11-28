@@ -1,11 +1,11 @@
 src/real
 src/complex
+src/HolQbf
+src/HolSmt
 !!examples/separationLogic/src/
 !!examples/separationLogic/src/holfoot
 [poly]!!examples/separationLogic/src/holfoot/poly
 [mosml]!!examples/separationLogic/src/holfoot/mosml
-src/HolQbf
-src/HolSmt
 !examples/misc
 # these examples require Muddy, which is MoscowML specific
 [mosml]!examples/muddy/muddyC
