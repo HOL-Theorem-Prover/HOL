@@ -1172,7 +1172,7 @@ val _ = e(ASSUME_TAC (SPECL [``(λcpsr.
            | 22w => read__psr <|proc := 0|> SPSR_mon
            | 23w => read__psr <|proc := 0|> SPSR_abt
            | 27w => read__psr <|proc := 0|> SPSR_und
-           | cpsr.M => errorT "read_spsr: unpredictable")):(ARMpsr -> ARMpsr M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> Type `:ARMpsr`] cpsr_simp_rel_ext_lem)));
+           | _ => errorT "read_spsr: unpredictable")):(ARMpsr -> ARMpsr M)``, ``(assert_mode 16w):(arm_state->bool)``,  ``empty_unt``, ``(empty_sim):(word32->arm_state->arm_state->bool)``, ``xI:bool``, ``xF:bool``] (INST_TYPE [alpha |-> Type `:ARMpsr`] cpsr_simp_rel_ext_lem)));
 val _ = e(FULL_SIMP_TAC (srw_ss()) []);
 val _ = go_on 1;
 val read_spsr_empty_thm = save_thm("read_spsr_empty_thm", top_thm());
