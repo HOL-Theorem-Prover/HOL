@@ -780,10 +780,17 @@ val LAST_DROP_THM = store_thm ("LAST_DROP_THM",
  ``!x xs. (if xs = [] then [x] else DROP (LENGTH xs - 1) xs) = [LAST (x::xs)]``,
 SIMP_TAC std_ss [DROP_TAKE_PRE_LENGTH, LAST_DEF, COND_RAND, COND_RATOR]);
 
+val LAST_DROP_THM2 = store_thm ("LAST_DROP_THM2",
+ ``!x xs. DROP (LENGTH xs) (x::xs) = [LAST (x::xs)]``,
+Induct_on `xs` THEN ASM_SIMP_TAC list_ss []);
+
 val FRONT_TAKE_THM = store_thm ("FRONT_TAKE_THM",
  ``!x xs. (if xs = [] then [] else (x::(TAKE (LENGTH xs - 1) xs))) = FRONT (x::xs)``,
 SIMP_TAC std_ss [DROP_TAKE_PRE_LENGTH, FRONT_DEF]);
 
+val FRONT_TAKE_THM2 = store_thm ("FRONT_TAKE_THM2",
+ ``!x xs. TAKE (LENGTH xs) (x::xs) = FRONT (x::xs)``,
+Induct_on `xs` THEN ASM_SIMP_TAC list_ss []);
 
 val SWAP_ELEMENTS_def = Define `
 SWAP_ELEMENTS n m l =

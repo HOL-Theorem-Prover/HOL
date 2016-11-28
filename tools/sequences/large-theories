@@ -2,6 +2,8 @@ src/real
 src/complex
 !!examples/separationLogic/src/
 !!examples/separationLogic/src/holfoot
+[poly]!!examples/separationLogic/src/holfoot/poly
+[mosml]!!examples/separationLogic/src/holfoot/mosml
 src/HolQbf
 src/HolSmt
 !examples/misc
