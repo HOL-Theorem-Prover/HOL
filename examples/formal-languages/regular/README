@@ -1,5 +1,5 @@
 The code in this directory generates DFAs from regular expressions.
-There are two ways to go, with an identical interface.
+There are two ways mechanisms available, with an identical interface.
 
   1. HOL proof
   2. SML code with no proofs generated
@@ -69,6 +69,10 @@ test.{hol,ml}
 
    * Examples of the application of the compiler/DFA evaluator, with,
      and without, proofs.
+
+regexp2c
+
+   * Command-line tool for generating C programs from regexps.
 
 
 Concrete syntax of regular expressions.

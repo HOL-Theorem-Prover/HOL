@@ -32,8 +32,8 @@ val alphabet = List.tabulate (alphabet_size,Char.chr)
 (* Character sets                                                            *)
 (*---------------------------------------------------------------------------*)
 
-val charset_empty = Vector.tabulate(alphabet_size, fn _ => false);
-val charset_full  = Vector.tabulate(alphabet_size, fn _ => true);
+val charset_empty = Vector.tabulate(alphabet_size, K false);
+val charset_full  = Vector.tabulate(alphabet_size, K true);
 
 fun charset_of clist = 
  let val A = Array.array(alphabet_size,false)
@@ -41,11 +41,11 @@ fun charset_of clist =
  in Array.vector A
  end
 
+fun charset_sing c = charset_of [c]
+
 fun els v = 
  mapfilter (fn i => if Vector.sub(v,i) then i else raise ERR "" "")
            (upto 0 (alphabet_size-1));
-
-fun charset_sing c = charset_of [c]
 
 fun charset_mem c (cs:charset) = Vector.sub(cs,Char.ord c);
 
@@ -148,6 +148,7 @@ datatype lexeme
    | postFix of Char.char (* *+? *)
    | power of IntInf.int
    | range of IntInf.int option * IntInf.int option * direction option  (* range + direction *)
+   | const of IntInf.int * direction
    | pack of (IntInf.int * IntInf.int) list
 ;
 
@@ -158,6 +159,7 @@ fun lexeme_equal lparen lparen = true
   | lexeme_equal alphanum alphanum = true
   | lexeme_equal whitespace whitespace = true
   | lexeme_equal interval interval = true
+  | lexeme_equal (const cd1) (const cd2) = (cd1=cd2)
   | lexeme_equal (pack p1) (pack p2) = (p1=p2)
   | lexeme_equal (char c1) (char c2) = (c1=c2)
   | lexeme_equal (chars c1) (chars c2) = (charset_compare(c1,c2) = EQUAL)
@@ -194,6 +196,11 @@ fun opt3string (lowOpt,hiOpt,ordOpt) = String.concat
                                 "opt3string: unexpected format",
   "}"]
 
+fun const2string (i,d) = 
+ String.concat
+      ["\\k{", Int.toString i, ",", dir2string d, "}"]
+  
+
 fun pack2string flds = 
  let fun field_to_strings (lo,hi) = 
           String.concat["(", IntInf.toString lo, ",", IntInf.toString hi, ")"]
@@ -215,6 +222,7 @@ fun lexeme2string lparen    = "("
   | lexeme2string (postFix c) = Char.toString c
   | lexeme2string (power n)   = "{"^IntInf.toString n^"}"
   | lexeme2string (range t)   = opt3string t
+  | lexeme2string (const c)   = const2string c
   | lexeme2string (pack list) = pack2string list;
 
 
@@ -233,6 +241,11 @@ fun takeWhile P ss =
 fun compose f NONE = NONE
   | compose f (SOME (x,y)) = f x y;
 
+fun try_alt f1 f2 strm = 
+  case f1 strm
+   of NONE => f2 strm
+    | other => other
+
 fun chomp ch = 
  let open Substring
  in compose (fn l => fn strm => 
@@ -240,6 +253,11 @@ fun chomp ch =
        of SOME(c,strm') => if ch=c then SOME(l,strm') else NONE
         | NONE => NONE)
  end;
+
+fun eat_then ch f strm = 
+ case Substring.getc strm
+  of NONE => NONE
+   | SOME(ch1,strm) => if ch=ch1 then f strm else NONE;
 
 fun is_tilde ch = (ch = #"~");
 
@@ -320,14 +338,6 @@ fun get_range strm =
 
 fun get_pack strm = 
  let open Substring
-  fun eat_then ch f strm = 
-    case getc strm
-     of NONE => NONE
-      | SOME(ch1,strm) => if ch=ch1 then f strm else NONE
-  fun try_alt f1 f2 strm = 
-    case f1 strm
-     of NONE => f2 strm
-      | other => other
   fun get_field strm = 
       case eat_then #"(" getNum strm
        of NONE =>  NONE
@@ -346,6 +356,23 @@ fun get_pack strm =
              strm
  in
   eat_then #"{" (get_fields []) strm
+ end
+
+fun get_const strm = 
+ let fun getDir i strm = 
+       case getDirection strm
+        of NONE => NONE
+         | SOME(d,strm) => eat_then #"}" (fn strm => SOME (const(i,d), strm)) strm
+     fun get strm = 
+      case getNum strm
+       of NONE =>  NONE
+        | SOME(i,strm) =>
+           try_alt
+              (eat_then #"," (getDir i))
+              (eat_then #"}" (fn strm => SOME (const(i,LSB), strm)))
+           strm
+ in
+  eat_then #"{" get strm
  end
 
 
@@ -429,6 +456,7 @@ fun lex strm =
            | SOME(#"s",strm'') => SOME(whitespace,strm'')
            | SOME(#"i",strm'') => SOME(interval,strm'')
            | SOME(#"p",strm'') => get_pack strm''
+           | SOME(#"k",strm'') => get_const strm''
            | SOME(ch,strm'')   => SOME(char ch,strm'')
         )
       | SOME (ch,strm') => SOME (char ch,strm')
@@ -468,6 +496,7 @@ datatype tree = Ident of Char.char
               | Power of tree * int
               | Range of tree * int option * int option
               | Interval of IntInf.int * IntInf.int * direction
+              | Const of IntInf.int * direction
               | Pack of (IntInf.int * IntInf.int) list;
 
 
@@ -587,7 +616,8 @@ and
     | SOME(alphanum,ss')   => (Ap("alphanum",[])::stk,ss')
     | SOME(whitespace,ss') => (Ap("whitespace",[])::stk,ss')
     | SOME(interval,ss')   => (Ap("interval",[])::stk,ss')
-    | SOME(pack list,ss')   => (Pack list::stk,ss')
+    | SOME(const copt,ss') => (Const copt::stk,ss')
+    | SOME(pack list,ss')  => (Pack list::stk,ss')
     | SOME(lparen,ss')     => 
        let in 
          case expect rparen (parse ss')
@@ -872,6 +902,35 @@ val msb_match_downto =
     end
  end;
 
+val lsb_sing =
+ let val _ = if alphabet_size <> 256 
+             then raise ERR "lsb_sing" "alphabet_size != 256"
+             else ()
+ in fn i => fn width =>
+    let val rep_256 = map byte2num (bytes_of i width)
+    in case lsb_split rep_256
+        of ([],_) => raise ERR "lsb_sing" "unreachable"
+         | (numbers,zeros) => 
+             catlist (List.map num2chset (rev numbers) @
+                      List.map (K zero_chset) zeros)
+    end
+ end;
+
+val msb_sing =
+ let val _ = if alphabet_size <> 256 
+             then raise ERR "msb_sing" "alphabet_size != 256"
+             else ()
+ in fn i => fn width =>
+    let val rep_256 = map byte2num (bytes_of i width)
+    in case msb_split rep_256
+        of ([],_) => raise ERR "msb_sing" "unreachable"
+         | (zeros,numbers) => 
+             catlist (List.map (K zero_chset) zeros @
+                      List.map num2chset numbers)
+                      
+    end
+ end;
+
 fun match_downto LSB = lsb_match_downto
   | match_downto MSB = msb_match_downto
 
@@ -909,6 +968,14 @@ fun regexp_interval lo hi order =
          Diff (match_upto order hi width, match_upto order (lo-1) width)
   end;
 
+fun sing_interval i order = 
+ let val width = if i < 0 then signed_width_256 i else unsigned_width_256 i
+ in 
+   case order 
+    of LSB => lsb_sing i width
+     | MSB => msb_sing i width
+ end;
+
 fun tree_to_regexp tree = 
  case tree 
   of Ident ch => Chset (charset_of [ch])
@@ -922,6 +989,7 @@ fun tree_to_regexp tree =
      end
    | Range (t,NONE,NONE) => Star (tree_to_regexp t)
    | Interval(i,j,dir) => regexp_interval i j dir
+   | Const (k,dir) => sing_interval k dir
    | Pack list => raise ERR "tree_to_regexp" "Pack construct not handled yet"
    | Ap("dot",[]) => DOT
    | Ap("digit",[]) => DIGIT

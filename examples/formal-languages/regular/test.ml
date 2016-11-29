@@ -352,6 +352,19 @@ Lib.all (equal false) (map (test o num2string 3) (upto ~122 1000));
 (*---------------------------------------------------------------------------*)
 
 val test = matcher `\k{23}`;
+test (num2string 1 23);
+test (num2string 1 22);
+Lib.all (equal false) (map (test o num2string 1) (upto 0 22));
+Lib.all (equal false) (map (test o num2string 1) (upto 24 255));
+
+
+val test = matcher `\k{~23}`;
+test (num2string 1 ~23);
+test (num2string 1 ~22);
+Lib.all (equal false) (map (test o num2string 1) (upto ~22 0));
+Lib.all (equal false) (map (test o num2string 1) (upto 1 127));
+Lib.all (equal false) (map (test o num2string 1) (upto ~128 ~24));
+
 
 (*---------------------------------------------------------------------------*)
 (* CANBUS GPS message format. Taken from                                     *)
