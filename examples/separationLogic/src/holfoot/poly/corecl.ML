@@ -1,7 +1,6 @@
 (* build command line tool *)
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/poly/header.sml");
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/poly/holfoot_command_line.sml");
-use (Globals.HOLDIR ^ "/tools/quote-filter/filter.sml");
+use "header.sml";
+use "holfoot_command_line.sml";
 
 fun read_from_stream is n = TextIO.input is
 
@@ -48,13 +47,3 @@ let
 in
    ()
 end;
-
-fun holfoot_run_simple () = holfoot_run (false, fn x => Parse.print_with_style [PPBackEnd.FG PPBackEnd.OrangeRed] "File mode not supported in compressed version!\n");
-
-fun holfoot_run_full () = holfoot_run (true, use);
-
-val _ = let
-  val _ = PolyML.export (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/poly/holfoot", holfoot_run_simple);
-  val _ = PolyML.export (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/poly/holfoot-full", holfoot_run_full);
-  val _ = PolyML.export (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/poly/holfoot-web", holfoot_web_interface);
-in () end
