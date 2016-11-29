@@ -8,18 +8,18 @@ EXTRA_CLEANS = holfoot.o holfoot holfoot-web.o holfoot-web holfoot-full holfoot-
 all: holfoot holfoot-web holfoot-full
 
 holfoot.o holfoot-web.o holfoot-full.o: holfoot.state holfoot_command_line.sml
-	hol < build-cl.hol
+	$(HOLDIR)/bin/hol < build-cl.hol
 
 holfoot.state: ../holfootLib.uo ../holfootLib.ui ../holfootTheory.ui ../AssembleHolfootParser.uo ../AssembleHolfootParser.ui
-	hol < build-state.hol
+	$(HOLDIR)/bin/hol < build-state.hol
 
 holfoot: holfoot.o 
-	cc -o $@ $< $($(OS)_LIBS)
+	$(CC) -o $@ $< $($(OS)_LIBS)
 
 holfoot-full: holfoot-full.o 
-	cc -o $@ $< $($(OS)_LIBS)
+	$(CC) -o $@ $< $($(OS)_LIBS)
 
 holfoot-web: holfoot-web.o
-	cc -o $@ $< $($(OS)_LIBS)
+	$(CC) -o $@ $< $($(OS)_LIBS)
 
 force-tools: holfoot holfoot-web
