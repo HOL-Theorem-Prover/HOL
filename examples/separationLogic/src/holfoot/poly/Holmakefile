@@ -1,6 +1,6 @@
 INCLUDES=..
 
-linux_LIBS = $(POLY_LDFLAGS_STATIC) -lgmp 
+linux_LIBS = $(POLY_LDFLAGS_STATIC) -lgmp
 macosx_LIBS = $(POLY_LDFLAGS) -lgmp
 
 EXTRA_CLEANS = holfoot.o holfoot holfoot-web.o holfoot-web holfoot-full holfoot-full.o holfoot.state
@@ -13,10 +13,10 @@ holfoot.o holfoot-web.o holfoot-full.o: holfoot.state holfoot_command_line.sml
 holfoot.state: ../holfootLib.uo ../holfootLib.ui ../holfootTheory.ui ../AssembleHolfootParser.uo ../AssembleHolfootParser.ui
 	$(HOLDIR)/bin/hol < build-state.hol
 
-holfoot: holfoot.o 
+holfoot: holfoot.o
 	$(CC) -o $@ $< $($(OS)_LIBS)
 
-holfoot-full: holfoot-full.o 
+holfoot-full: holfoot-full.o
 	$(CC) -o $@ $< $($(OS)_LIBS)
 
 holfoot-web: holfoot-web.o
