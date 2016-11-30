@@ -140,7 +140,7 @@ val static_ss = simpLib.merge_ss
 (* We add the stateful rewrite set (to simplify
    e.g. case-constants or constructors) and a
    custum component as well. *)
-fun rc_ss gl = srw_ss() ++ simpLib.merge_ss (static_ss :: gl)
+fun rc_ss gl = simpLib.remove_ssfrags (srw_ss() ++ simpLib.merge_ss (static_ss :: gl)) ["patternMatchesSimp"]
 
 (* finally we add a call-back component. This is an
    external conversion that is used at the end if
@@ -150,7 +150,9 @@ fun rc_ss gl = srw_ss() ++ simpLib.merge_ss (static_ss :: gl)
    simplifier. This is realised with these call-backs. *)
 fun callback_CONV cb_opt t = (case cb_opt of
     NONE => NO_CONV t
-  | SOME cb => cb t)
+  | SOME cb => (if (can (find_term is_PMATCH) t) then
+                  NO_CONV t
+                else cb t));
 
 fun rc_conv_rws (gl, callback_opt) thms = REPEATC (
   SIMP_CONV (rc_ss gl) thms THENC
@@ -682,8 +684,8 @@ fun PMATCH_REMOVE_SUBSUMED_CONV_GENCALL_SINGLE
 
     fun extract_el_n n rs = let
       val rows1 = List.take (rs, n)
-      val r1 = List.nth (rs, r_no1)
-      val rows_rest = List.drop (rs, r_no1+1)
+      val r1 = List.nth (rs, n)
+      val rows_rest = List.drop (rs, n+1)
       val rows1_tm = mk_row_list rows1
 
       fun build_tm rest_tm =
@@ -1486,6 +1488,7 @@ fun PMATCH_SIMP_GEN_ss ssl =
   make_gen_conv_ss PMATCH_SIMP_CONV_GENCALL "PMATCH_SIMP_REDUCER" ssl
 
 val PMATCH_SIMP_ss = name_ss "patternMatchesSimp" (PMATCH_SIMP_GEN_ss [])
+val _ = BasicProvers.augment_srw_ss [PMATCH_SIMP_ss]
 
 
 (***********************************************)
@@ -1654,7 +1657,6 @@ fun PMATCH_REMOVE_GUARDS_CONV_GENCALL rc_arg t = let
 in
   thm1
 end handle HOL_ERR _ => raise UNCHANGED
-
 
 fun PMATCH_REMOVE_GUARDS_CONV_GEN ssl = PMATCH_REMOVE_GUARDS_CONV_GENCALL (ssl, NONE)
 

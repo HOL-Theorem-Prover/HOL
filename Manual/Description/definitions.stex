@@ -352,7 +352,7 @@ results in the definitions
 \end{hol}
 %
 being added to the current theory.
-The case constant (here \holtxt{tree_CASE}) allows pretty case-expressions; see Section~\ref{CaseExp} below.
+The case constant (here \holtxt{tree_CASE}) allows pretty case expressions; see Section~\ref{CaseExp} below.
 The following theorems about the datatype are also proved and stored in the current theory.
 %
 \begin{hol}
@@ -787,151 +787,313 @@ fun define_equivalence_type {name,equiv,defs,welldefs,old_thms} =
 \section{Case Expressions}\label{CaseExp}
 \index{case expressions|(}
 
-Within the HOL{} logic, case expressions provide a very compact and convenient notation for multi-way selection among the values of several expressions.
-This is modeled on the case constructs in functional programming languages such as Standard ML.
-Such case expressions can simplify the expression of complicated branches between different cases or combinations of cases.
-The basic syntax (where the non-terminal $\mathit{term}$ stands for any \HOL{} term) is
-\begin{eqnarray*}
-\mathit{term} & ::= & \texttt{case}\;\mathit{term}\;\texttt{of}\;\mathit{cases}\\
-\mathit{cases} &::= & \mathit{case}_1 \;\mathit{morecases}\\
-\mathit{case}_1 & ::= & \texttt{\bfseries |}\;\mathit{case} \;\;\;|\;\;\;\mathit{case}\\
-\mathit{morecases} & ::= & \varepsilon\;\;\;|\;\;\;\texttt{|}\;\mathit{case}\;\mathit{morecases}\\
-\mathit{case} & ::= & \mathit{term} \;\texttt{=>}\; \mathit{term}
-\end{eqnarray*}
-The choice in the rule for the first case ($\mathit{case}_1$) allows the use of more uniform syntax, where every case is preceded by a vertical bar.
-Omitting the bar, which is what the pretty-printer does when the syntax is printed, conforms with the syntax used by SML.
+\newcommand{\pmatch}{\textsc{Pmatch}}
+Case constructs are an important feature of functional programming languages such as Standard ML.
+They provide a very compact and convenient notation for multi-way selection among the values of several expressions.
+\HOL{} provides such a feature in the form of case expressions.
+Case expressions can simplify the expression of complicated branches between different cases or combinations of cases.
 
-Based on the value of a test expression, a list of pattern expressions
-are considered in sequence to see if they match the test expression.
-The first pattern which successfully matches causes its associated result
-expression to be evaluated and its value yielded as the value of the
-entire case expression.  For example,
+Pattern matching and case expressions are not directly supported by higher order logic.
+Thus, some effort is needed to support them in \HOL{}.
+There are two implementations of case expressions in \HOL{}.
+The parser supports case expressions, which it compiles into decision trees based on if-then-else expressions and case-constants as introduced by datatype definitions.
+The pretty-printer presents these complicated decision trees as nicely readable case expressions again.
+In addition, there is {\tt patternMatchesLib}, which provides a formalisation of case expressions based on Hilbert's choice operator.
+Following the name of the main function, these are called \pmatch{} case expressions.
+
+The benefit of decision-tree case expressions is that the whole semantic complexity is handled by the parser and pretty-printer.
+The resulting terms are simple.
+However, one needs to trust the complicated, lengthy case expression code in the parser and pretty-printer.
+Moreover, the internal structure might differ considerably from the input and is hard to predict.
+In some cases there can be a serious blow-up in size.
+
+\pmatch{} case expressions are simple to parse and pretty-print.
+They support more features than decision-tree ones.
+There are guards, unbound variables in patterns and a wider variety of supported patterns in general.
+There is no size-blowup or surprising internal structure.
+Therefore, code generated from \pmatch{} case expressions tends to be better. However, this comes at the price of a much heavier machinery to reason about \pmatch{} case expressions.
+
+\subsection{Decision-tree case expressions}
+By default, \HOL{} uses decision-tree case expressions.
+Let the non-terminal $\mathit{term}$ stand for any \HOL{} term and the non-terminal $\mathit{cpat}$ represent any constructor pattern, i.e. any \HOL{} term containing only literals, datatype constructors and variables.
+Then, the syntax of decision-tree case expressions is given by
+\[
+\mathit{term} ::= \texttt{case}\;\mathit{term}\;\texttt{of}\;\texttt{|}^?\; \mathit{cpat}\;\texttt{=>}\;\mathit{term}\; (\texttt{|}\;\mathit{cpat}\;\texttt{=>}\;\mathit{term})^*
+\]
+The choice in the rule allows the use of more uniform syntax, where every case is preceded by a vertical bar.
+Omitting the bar, which is what the pretty-printer does when the syntax is printed, conforms to the syntax used by SML.
+If \pmatch{} case expressions have been enabled (see below), then decision-tree case expressions can still be generated by using the \texttt{dtcase} keyword instead of \texttt{case}.
+
+Case expressions consider their list of pattern expressions in sequence to see if they match the test expression.
+Matching means that there is an assignment for the bound variables of that pattern expressions such that it equals the test expression.
+The first pattern which successfully matches causes its associated result expression to be evaluated with the matching variable assignment.
+The resulting value is yielded as the value of the entire case expression.
+If no pattern expression matches, the result of the case expression is \texttt{ARB}.
+Since decision-tree case expressions support only constructor patterns, it is guaranteed that if a pattern expression matches, the resulting variable assignment is uniquely determined.
+
+A simple example of a case expression is
 %
 \begin{hol}
-\begin{verbatim}
-  case n of
-     0 => "none"
-   | 1 => "one"
-   | 2 => "two"
-   | _ => "many"
-\end{verbatim}
+\begin{alltt}
+>>__ load "stringTheory";
+##parsetm case n of
+              0 => "none"
+            | 1 => "one"
+            | 2 => "two"
+            | _ => "many"
+\end{alltt}
 \end{hol}
 %
-
-This could have been expressed using several ``if--then--else'' constructs,
+This could have been expressed using several ``if-then-else'' constructs,
 but the case expression is much more compact and clean, with the
 selection between various choices made clearly evident.
+Internally though, it is compiled to nested ``if-then-else'' statements.
 
-In addition to literals as patterns, as above, patterns may be
-constructor expressions.  Many standard HOL{} types have constructors,
-including \ml{num}, \ml{list}, and \ml{option}.
+In addition to literals as patterns, as above, patterns may be constructor expressions.
+Many standard \HOL{} types have constructors, including \ml{num}, \ml{list}, and \ml{option}.
+A simple example using constructor patterns is (notice the optional bar in front of the first case).
 %
 \begin{hol}
-\begin{verbatim}
-  case spouse(employee) of
-   | NONE   => "single"
-   | SOME s => "married to " ++ name_of s
-\end{verbatim}
+\begin{alltt}
+##parsetm case spouse(employee) of
+            | NONE   => "single"
+            | SOME s => "married to " ++ name_of s
+\end{alltt}
 \end{hol}
-(This example uses the optional bar in front of the first case.)
 
-HOL{} supports a rich structure of case expressions using a single
-notation.  The format is related to that of definitions of recursive
-functions, as described in Section~\ref{TFL}.  In addition, case
-expressions may contain literals as patterns, either singly or as
-elements of deeply nested patterns.
+\HOL{} supports a rich structure of case expressions using a single notation.
+The format is related to that of definitions of recursive functions, as described in Section~\ref{TFL}.
+In addition, case expressions may contain literals as patterns, either singly or as elements of deeply nested patterns.
 
-Case expressions may test values of any type.  If the test expression
-is a type with constructors, then the patterns may be expressed
-using the constructors applied to arguments, as for example \ml{SOME s}
-in the example above.  A free variable within the constructor pattern,
-for example \ml{s} in the pattern \ml{SOME s}, becomes bound to the
-corresponding value within the value of the test expression, and
-can be used within the associated result expression for that pattern.
+Decision-tree case expressions may test values of any type.
+If the test expression is a type with constructors, then the patterns may be expressed using the constructors applied to arguments, as for example \ml{SOME s} in the example above.
+A free variable within the constructor pattern, for example \ml{s} in the pattern \ml{SOME s}, becomes bound to the corresponding value within the value of the test expression, and can be used within the associated result expression for that pattern.
 
-In addition to the constructors of standard types in HOL{},
-constructor patterns may also be used for types created by use of the
-datatype definition facility described in Section~\ref{sec:datatype},
-including user-defined types.
+In addition to the constructors of standard types in \HOL{}, constructor patterns may also be used for types created by use of the datatype definition facility described in Section~\ref{sec:datatype}, including user-defined types.
 
-Whether or not the test expression is a type with constructors,
-the patterns may be expressed using the appropriate literals of that type,
-if any such literals exist.
+Whether or not the test expression is a type with constructors, the patterns may be expressed using the appropriate literals of that type, if any such literals exist.
 A complex pattern may contain either or both of literals and constructor
 patterns nested within it.
-However, literals and constructors may not be mixed as alternatives of
-each other within the same case expression,
-except insofar as a particular pattern may be both a literal
-and also a (0-ary) constructor of its type, as for example \ml{0} (zero)
-is both a literal and a constructor of the type \ml{num}.
-Here is an example of this kind of improper mixture.
-%
-\begin{hol}
-\begin{verbatim}
-  case n of
-     0 => "none"
-   | 1 => "one"
-   | 2 => "two"
-   | SUC m => "many"
-\end{verbatim}
-\end{hol}
-%
-In this pattern, the constructor pattern \ml{SUC m} is given as
-an alternative to the literal patterns \ml{1} and \ml{2}.
+However, literals and constructors may not be mixed as alternatives of each other within the same case expression, except insofar as a particular pattern may be both a literal and also a (0-ary) constructor of its type, as for example \ml{0} (zero) is both a literal and a constructor of the type \ml{num}.
+The session in Figure~\ref{fig:case-expr-bad} demonstrates the way in which such an improper mixture is misinterpreted.
+In this pattern, the constructor pattern \ml{SUC m} is given as an alternative to the literal patterns \ml{1} and \ml{2}.
 This makes this attempted case expression invalid.
-Deleting either group of rows would resolve the conflict,
-and make the expression valid.
+Deleting either group of rows would resolve the conflict, and make the expression valid.
 Note that the pattern \ml{0} is acceptable to either group.
 
-Patterns can be nested as well, as shown in the next example, where
-the function \ml{parents} returns a pair containing the person's father
-and/or mother, where each is represented by \ml{NONE} if deceased.
-%
-\begin{hol}
-\begin{verbatim}
-  case parents(john) of
-     (NONE,NONE) => "orphan"
-   | _ => "not an orphan"
-\end{verbatim}
-\end{hol}
-%
-This shows the nesting of option patterns within a pair pattern,
-and also the use of a wildcard \ml{\_} to match the cases not given.
 
-If the set of patterns is sparse, there may be several new rows generated
-automatically to fill it out, and possibly some new variables or the
-\ml{ARB} constant to properly represent the case expression.
+\begin{figure}
+\begin{session}
+\begin{alltt}
+>>+ “case n of
+        0 => "none"
+      | 1 => "one"
+      | 2 => "two"
+      | SUC m => "many"”
+\end{alltt}
+\end{session}
+\caption{Decision-tree case expression parsing going wrong}
+\label{fig:case-expr-bad}
+\end{figure}
+
+Patterns can be nested as well, as shown in the first example of Figure~\ref{fig:case-exp-examples}, where the function \ml{parents} returns a pair containing the person's father and/or mother, where each is represented by \ml{NONE} if deceased.
 %
+This shows the nesting of option patterns within a pair pattern, and also the use of a wildcard \ml{\_} to match the cases not given.
+
+%
+\begin{figure}[phbt]
+\quad\begin{minipage}[t]{0.4\textwidth}
+\begin{center}
 \begin{hol}
-\begin{verbatim}
-- ``case a of
+\begin{alltt}
+##parsetm case parents(john) of
+             (NONE,NONE) => "orphan"
+           | _ => "not an orphan"
+\end{alltt}
+\end{hol}
+\end{center}
+\end{minipage}%
+\begin{minipage}[t]{0.49\textwidth}
+\begin{center}
+\begin{hol}
+\begin{alltt}
+##parsetm  case a of
+               (1, y, z) => y + z
+             | (x, 2, z) => x - z
+             | (x, y, 3) => x * y
+\end{alltt}
+\end{hol}
+\end{center}
+\end{minipage}
+\caption{Two examples of case expressions}
+\label{fig:case-exp-examples}
+\end{figure}
+
+
+Since decision-tree case expressions are compiled internally to a decision tree, the result of this compilation might look quite different from the input.
+Rows might be reordered or modified, there might be several new rows generated, and new variables or the \ml{ARB} constant may also be introduced to properly represent the case expression.
+Moreover, the exact result depends on complicated heuristics to decide which case-split to perform next in the decision tree.
+For non-trivial case expressions the result can be hard to predict.
+
+For example, consider the second case expression in Figure~\ref{fig:case-exp-examples}.
+%
+Using the default heuristic, this compiles to a reasonably small decision tree that is pretty-printed well.
+The exact combination of equality tests with if-then-else and the case constant for products that this term produces can be seen in the session in Figure~\ref{fig:case-expr-structure}.
+However other heuristics result in more complicated terms as shown in the session in Figure~\ref{fig:case-expr-heuristics}.
+%
+\begin{figure}[phtb]
+\begin{session}
+\begin{alltt}
+>>_ set_trace "pp_cases" 0;
+>> “case a of
+       (1,y,z) => y + z
+     | (x,2,z) => x - z
+     | (x,y,3) => x * y”;
+\end{alltt}
+\end{session}
+\caption{The decision-tree structure underneath a case expression}
+\label{fig:case-expr-structure}
+\end{figure}
+%
+\begin{figure}[phtb]
+\begin{session}
+\begin{alltt}
+>>__ set_trace "pp_cases" 1;
+>>_ Pmatch.set_classic_heuristic ();
+>> “case a of
+       (1,y,z) => y + z
+     | (x,2,z) => x - z
+     | (x,y,3) => x * y”;
+>>_ PmatchHeuristics.set_heuristic PmatchHeuristics.pheu_last_col;
+>> “case a of
+       (1,y,z) => y + z
+     | (x,2,z) => x - z
+     | (x,y,3) => x * y”;
+>>_ Pmatch.set_default_heuristic ();
+>> “case a of
+       (1,y,z) => y + z
+     | (x,2,z) => x - z
+     | (x,y,3) => x * y”;
+\end{alltt}
+\end{session}
+\caption{Effect of different pattern match heuristics}
+\label{fig:case-expr-heuristics}
+\end{figure}
+
+This is just a brief description of some of the expressive capabilities of the case expression with patterns.
+Many more examples of patterns are provided in Section~\ref{TFL} on the definition of recursive functions.
+
+\subsection{\pmatch{} case expressions}
+
+The library \texttt{patternMatchesLib} supports another form of case expression.
+After executing \texttt{patternMatchesLib.ENABLE_PMATCH_CASES()}, the case expression syntax introduced above is parsed into \pmatch{}-based terms.%
+\footnote{After parsing \pmatch{} case expressions has been enabled, the keyword \texttt{dtcase} is used for parsing and pretty-printing decision-tree case expressions.}
+If we turn off the library's pretty-printing, we can see how the example expression we used earlier is rendered:
+\begin{session}
+\begin{alltt}
+>>_ patternMatchesLib.ENABLE_PMATCH_CASES();
+>>_ set_trace "use pmatch_pp" 0;
+>> “case a of
       (1, y, z) => y + z
     | (x, 2, z) => x - z
-    | (x, y, 3) => x * y``;
-> val it =
-    ``case a of
-        (1,2,3) => 2 + 3
-      | (1,2,z) => 2 + z
-      | (1,y,3) => y + 3
-      | (1,y,z) => y + z
-      | (x,2,3) => x - 3
-      | (x,2,z') => x - z'
-      | (x,y',3) => x * y'
-      | (x,y',z') => ARB`` : term
-\end{verbatim}
+    | (x, y, 3) => x * y”;
+\end{alltt}
+\end{session}
+One can see that in contrast to decision-tree case expressions the internal representation of \pmatch{} case expressions is very close to the input.
+No fancy parsing is required to turn the input into the internal representation, and conversely, printing (when enabled) can easily produce the syntax that the user chose as input.
+
+
+\pmatch{} case expressions are more expressive than decision-tree based ones.
+The syntax allowed for decision-tree case expressions is a subset of the syntax of \pmatch{} ones.
+In addition, \pmatch{} case expressions support guards.
+Moreover, arbitrary terms instead of just ones using literals and constructors can be used as patterns.
+One has full control over the variables bound by patterns.
+Bound variables can even be used more than once in a pattern.
+
+\begin{eqnarray*}
+\mathit{term} & ::= & \texttt{case}\;\mathit{term}\;\texttt{of}\;\texttt{\bfseries|}^?\;\mathit{clause}\;(\texttt{|}\;\mathit{clause})^*\\
+\mathit{clause} & ::= & \mathit{vardecl}^?\;\mathit{term}\; (\texttt{when}\;\mathit{term})^? \;\texttt{=>}\; \mathit{term} \\
+\mathit{vardecl} & ::= & \texttt{(}\mathit{vars}^?\texttt{)}\;\texttt{.|}\;\;\;\mid\;\;\;
+\mathit{vars}\;\texttt{.|}\\
+\mathit{vars} & ::= & \mathit{var}\;\;\;\mid\;\;\;\mathit{var}\;\texttt{,}\;\mathit{vars}
+\end{eqnarray*}
+
+If a \texttt{when}-guard is omitted, it defaults to true (\texttt{T}).
+Omitting the declaration of variables bound by a pattern means that all variables used in the pattern are bound (as with the decision-tree syntax).
+Variables whose names start with an underscore are always bound, no matter whether they appear in the list of bound variables.
+This is convenient for using wildcard notations.
+
+These extensions of the basic case expression syntax allow the expression of some interesting concepts using case expressions.
+One can for example express division with reminder using \pmatch{} case expressions:
+
+\begin{hol}
+\begin{alltt}
+##parsetm !n c.
+            0 < c ==>
+            ((case n of (q,r) .| q * c + r when r < c => (q,r)) =
+             (n DIV c,n MOD c))
+\end{alltt}
+\end{hol}
+Notice that \begin{itemize}
+\item the guard is used to make the match unique;
+\item listing the bound variables of the pattern \texttt{q * c + r} explicitly allows \texttt{c} to not be bound by the pattern; and
+\item the pattern (of form $qc + r$) would not be supported by decision-tree case expressions because it is not a constructor pattern
+\end{itemize}
+
+Another interesting option is to use bound variables multiple times.
+The following case expression states for example that a list \texttt{l} starts with two copies of the same element:
+%
+\begin{hol}
+\begin{alltt}
+##parsetm  case l of | x::x::_ => T | _ => F
+\end{alltt}
 \end{hol}
 
-This is just a brief description of some of the
-expressive capabilities of the case expression with patterns.
-Many more examples of patterns are provided in Section~\ref{TFL}
-on the definition of recursive functions.
+The price for this increased expressive power and the simpler, more trustworthy parsing and pretty-printing is that the semantic complexity now needs to be dealt with inside the logic.
+The \texttt{patternMatchesLib} library provides the necessary machinery in the form or conversions, rules, simpsets, and other technology.
+For example, \texttt{patternMatchesLib} enhances \texttt{bossLib}'s standard simpsets with the conversions to deal with \pmatch{} case expressions.
+Therefore, in practice \pmatch{} case expressions are as convenient to use as decision-tree based case expressions.
+In fact, the explicit case expression structure provided by
+\pmatch{} case expressions allows simplifications not easily possible for decision-tree case expressions.
+The standard tools can only (partially) evaluate decision-tree case expressions.
+This evaluation usually destroys the case expression view.
+This is illustrated by the example shown in Figure~\ref{fig:case-expr-simplify}, which adds a row that is subsumed by a later one to our running example.
+%
+\begin{figure}[phtb]
+\begin{session}
+\begin{alltt}
+>>__ set_trace "use pmatch_pp" 1
+>>__ SIMP_CONV (srw_ss()) [] ``SUC 0``
+>> SIMP_CONV (srw_ss()) []
+     “case (x,y,z) of
+        (1,y,z) => y + z
+      | (x,2,4) => x - 4  (* subsumed by next row *)
+      | (x,2,z) => x - z
+      | (x,y,3) => x * y”;
+>>__ set_trace "pp_cases" 1;
+>>__ Pmatch.set_default_heuristic ()
+>> SIMP_CONV (srw_ss()) []
+    “dtcase (x,y,z) of
+       (1,y,z) => y + z
+     | (x,2,4) => x - 4
+     | (x,2,z) => x - z
+     | (x,y,3) => x * y”;
+\end{alltt}
+\end{session}
+\caption{Simplification of case expressions}
+\label{fig:case-expr-simplify}
+\end{figure}
 
+There are many more tools for working with \pmatch{} case expressions.
+There are, for example, tools for removing multiple variable binding or guards.
+One can translate between \pmatch{} and decision-tree case expressions.
+There are tools for proving exhaustiveness of \pmatch{} case expressions or for removing redundant rows.
+For more details, please consult the \texttt{patternMatchesLib} implementation.
 \index{case expressions|)}
-
 
 \section{Recursive Functions}\label{TFL}
 
-HOL{} provides a function definition mechanism based on the
+\HOL{} provides a function definition mechanism based on the
 wellfounded recursion theorem proved in \theoryimp{relationTheory},
 discussed in Section~\ref{relation}.  \ml{Define} takes a high-level,
 possibly recursive, specification of a function, and attempts to
@@ -1009,7 +1171,7 @@ is incomplete since it does not tell how \holtxt{f} should behave when
 applied to two non-zero arguments: e.g., \holtxt{f (SUC m) (SUC n)}. In the
 implementation, such missing clauses are filled in, and have the value
 \holtxt{ARB}. This `pattern-completion` step is a way of turning descriptions
-of partial functions into total functions suitable for HOL. However,
+of partial functions into total functions suitable for \HOL. However,
 since the user has not completely specified the function, the system
 takes that as a hint that the user is not interested in using the
 function at the missing-but-filled-in clauses, and so such clauses are
@@ -1047,7 +1209,7 @@ must perform a termination proof. It automatically constructs
 termination conditions for the function, and invokes a termination
 prover in an attempt to prove the termination conditions.  If the
 function is primitive recursive, in the sense that it exactly follows
-the recursion pattern of a previously declared HOL datatype, then this
+the recursion pattern of a previously declared \HOL{} datatype, then this
 proof always succeeds, and \ml{Define} stores the derived equations in
 the current theory segment.
 Otherwise, the function is not an
@@ -1453,7 +1615,7 @@ numbers:
 The invocation \holtxt{gcd(m,n)} recurses in its first argument, and
 since we know that \holtxt{m} is not 0, it is the case that
 \holtxt{n MOD m} is smaller than \holtxt{m}. The way to phrase the
-termination of \holtxt{gcd} in HOL is to use a `measure` function
+termination of \holtxt{gcd} in \HOL{} is to use a `measure` function
 to map from the domain of \holtxt{gcd}---a pair of numbers---to a number.
 The definition of {measure} in \HOL{} is equivalent to
 %
@@ -1671,7 +1833,7 @@ extract the termination constraints:
 \end{hol}
 %
 which are unprovable, because the \emph{context} of the recursive call has not
-been taken account of. This example is in fact not a problem for HOL,
+been taken account of. This example is in fact not a problem for \HOL,
 since the following congruence theorem is known to \ml{Hol\_defn}:
 %
 \begin{hol}

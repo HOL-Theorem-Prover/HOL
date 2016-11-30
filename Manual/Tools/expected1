@@ -106,3 +106,6 @@ strip_tac);
 val foo = |- p \(\land\) q \(\Rightarrow\) p: thm
 > foo;
 val it = |- p \(\land\) q \(\Rightarrow\) p: thm
+x /\bs{} y
+\(\alpha\) list
+:'a list

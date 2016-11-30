@@ -17,6 +17,7 @@ val quiet = false;
 val _ = Parse.current_backend := PPBackEnd.emacs_terminal;
 
 *)
+val _ = patternMatchesLib.ENABLE_PMATCH_CASES ()
 
 fun test_conv_gen dest s conv (t, r_opt) =
 let
@@ -80,13 +81,13 @@ end)
 
 val tc = test_conv "PMATCH_INTRO_CONV" PMATCH_INTRO_CONV
 
-val t = ``case x of (NONE, []) => 0``;
+val t = ``dtcase x of (NONE, []) => 0``;
 val r_thm = SOME ``PMATCH (x :'a option # 'b list)
     [PMATCH_ROW (\(uv :unit). ((NONE :'a option),([] :'b list)))
        (\(uv :unit). T) (\(uv :unit). (0 :num))]``
 val _ = tc (t, r_thm);
 
-val t = ``case x of
+val t = ``dtcase x of
    (NONE, []) => 0
  | (SOME 2, []) => 2
  | (SOME 3, (x :: xs)) => 3 + x
@@ -106,9 +107,10 @@ val _ = tc (t, r_thm);
 
 
 
+
 val tcn = test_conv "PMATCH_INTRO_CONV_NO_OPTIMISE" PMATCH_INTRO_CONV_NO_OPTIMISE
 
-val t = ``case x of (NONE, []) => 0``
+val t = ``dtcase x of (NONE, []) => 0``
 val r_thm = SOME ``PMATCH x
      [PMATCH_ROW (\(uv :unit). ((NONE :'a option),([] :'b list)))
         (\(uv :unit). T) (\(uv :unit). (0 :num));
@@ -120,7 +122,7 @@ val r_thm = SOME ``PMATCH x
         (\((v2 :'a),(v1 :'b list)). (ARB :num))]``
 val _ = tcn (t, r_thm);
 
-val t = ``case x of
+val t = ``dtcase x of
    (NONE, []) => 0
  | (SOME 2, []) => 2
  | (SOME 3, (x :: xs)) => 3 + x
@@ -217,6 +219,21 @@ val t' = ``PMATCH (a,x,xs)
       PMATCH_ROW
         (\((y :num),(z :num)). (SOME y,SUC z,[(1 :num); (2 :num)]))
         (\((y :num),(z :num)). T) (\((y :num),(z :num)). y + z)]``;
+
+val _ = test (t, (SOME t'))
+
+
+val t = ``PMATCH (x,y,z)
+     [PMATCH_ROW (λ(y,z). (1,y,z)) (λ(y,z). T) (λ(y,z). y + z);
+      PMATCH_ROW (λx. (x,2,4)) (λx. T) (λx. x + 4);
+      PMATCH_ROW (λ(x,z). (x,2,z)) (λ(x,z). T) (λ(x,z). x + z);
+      PMATCH_ROW (λ(x,y). (x,y,3)) (λ(x,y). T) (λ(x,y). x + y)]``;
+
+val t' = ``
+   PMATCH (x,y,z)
+     [PMATCH_ROW (λ(y,z). (1,y,z)) (λ(y,z). T) (λ(y,z). y + z);
+      PMATCH_ROW (λ(x,z). (x,2,z)) (λ(x,z). T) (λ(x,z). x + z);
+      PMATCH_ROW (λ(x,y). (x,y,3)) (λ(x,y). T) (λ(x,y). x + y)]``;
 
 val _ = test (t, (SOME t'))
 
@@ -501,7 +518,6 @@ val _ = run_test (``(4::3::l) : num list``, ``PMATCH ((4 :num)::(3 :num)::l)
     Parser
    ---------------------------------------------------------------------- *)
 
-val _ = patternMatchesLib.ENABLE_PMATCH_CASES ()
 fun pel2string [] = ""
   | pel2string (pLeft::rest) = "L" ^ pel2string rest
   | pel2string (pRight::rest) = "R" ^ pel2string rest

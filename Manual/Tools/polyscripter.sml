@@ -326,6 +326,20 @@ in
     in
       (ws ^ umunge umap input, NONE)
     end
+  else if String.isPrefix "##parse" line then
+    let
+      val line = String.extract(line, 7, NONE)
+      val pfx =
+          if String.isPrefix "tm " line then ""
+          else if String.isPrefix "ty " line then ":"
+          else lnumdie (linenum lbuf) "Mal-formed ##parse directive" (Fail "")
+      val (firstline, indent) = (String.extract(line, 3, NONE), 10)
+      val input = getRest (indent + 1) [firstline]
+      val _ = compiler obuf (lnumdie (linenum lbuf))
+                       (mkLex (quote ("``" ^ pfx ^ input ^ "``")))
+    in
+      (ws ^ umunge umap input, NONE)
+    end
   else if String.isPrefix "##use " line then
     let
       val fname = String.substring(line, 6, size line - 7) (* for \n at end *)
