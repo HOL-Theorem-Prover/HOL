@@ -55,6 +55,33 @@ val mk_type_exists_thm_tyinfo : tyinfo -> thm
 val mk_type_forall_thm_tyinfo : tyinfo -> thm
 val mk_type_quant_thms_tyinfo : tyinfo -> thm * thm
 
+
+(* mk_case_pred_elim_thm_tyinfo_or and
+   mk_case_pred_elim_thm_tyinfo_and generate an elimination theorem
+   for case-splits that are applied to a predicate.  There is a choice
+   to expand to either a disjunction or a conjunction. The most common
+   case is an equality used as this predicate. Therefore, the
+   specialised versions mk_case_eq_elim_thm_tyinfo_or and
+   mk_case_eq_elim_thm_tyinfo_and are provided as well.
+
+   |- !P M r1 r2. (P (case M of C1 => r1 | C2 x0 => r2 x0)) <=>
+      ((M = C1) ==> P r1) /\ (!x0. (M = C2 x0) ==> P (r2 x0))
+
+   |- !P M r1 r2. (P (case M of C1 => r1 | C2 x0 => r2 x0)) <=>
+      ((M = C1) /\ P r1) \/ (?x0. (M = C2 x0) /\ P (r2 x0))
+
+   |- !r M r1 r2. (case M of C1 => r1 | C2 x0 => r2 x0) = r <=>
+      ((M = C1) ==> r1 = r) /\ (!x0. (M = C2 x0) ==> (r2 x0 = r))
+
+   |- !r M r1 r2. ((case M of C1 => r1 | C2 x0 => r2 x0) = r) <=>
+      ((M = C1) /\ (r1 = r)) \/ (?x0. (M = C2 x0) /\ (r2 x0 = r))
+*)
+val mk_case_pred_elim_thm_tyinfo_or  : tyinfo -> thm
+val mk_case_eq_elim_thm_tyinfo_or    : tyinfo -> thm
+val mk_case_pred_elim_thm_tyinfo_and : tyinfo -> thm
+val mk_case_eq_elim_thm_tyinfo_and   : tyinfo -> thm
+
+
 (* mk_case_rand_thm_tyinfo, mk_case_rand_thm_tyinfo and
    mk_case_abs_thm_tyinfo provide theorems that are used for
    lifting case constants. Use carefully, since their application
@@ -106,6 +133,15 @@ val expand_type_quants_typeinfos_ss : tyinfo list -> ssfrag
 val expand_type_quants_ss : hol_type list -> ssfrag
 val expand_type_quants_stateful_ss : unit -> ssfrag
 
+(* elim case eq patterns and introduce disjunctions instead *)
+val elim_case_eq_or_typeinfos_ss : tyinfo list -> ssfrag
+val elim_case_eq_or_ss : hol_type list -> ssfrag
+val elim_case_eq_or_stateful_ss : unit -> ssfrag
+
+(* elim case eq patterns and introduce conjunctions instead *)
+val elim_case_eq_and_typeinfos_ss : tyinfo list -> ssfrag
+val elim_case_eq_and_ss : hol_type list -> ssfrag
+val elim_case_eq_and_stateful_ss : unit -> ssfrag
 
 (*---------------------------------------------------------------------------*)
 (* Rules                                                                     *)
