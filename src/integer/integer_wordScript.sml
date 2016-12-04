@@ -844,12 +844,18 @@ val w2i_lt_0 = Q.store_thm("w2i_lt_0",
   \\ SRW_TAC [] [w2i_i2w, word_0_w2i, WORD_LTi])
 
 val w2i_neg = Q.store_thm("w2i_neg",
-  `!w:'a word. 1 < dimindex(:'a) /\ w <> INT_MINw ==> (w2i (-w) = -w2i w)`,
+  `!w:'a word. w <> INT_MINw ==> (w2i (-w) = -w2i w)`,
   SRW_TAC [] [w2i_def]
   \\ IMP_RES_TAC TWO_COMP_POS
   \\ IMP_RES_TAC TWO_COMP_NEG
   \\ NTAC 2 (POP_ASSUM MP_TAC)
   \\ SRW_TAC [ARITH_ss] []
+  >- (Cases_on `w`
+      \\ `dimindex(:'a) = 1`
+      by metis_tac [DECIDE ``0n < i /\ i <= 1 ==> (i = 1)``,
+                    wordsTheory.DIMINDEX_GT_0]
+      \\ fs [wordsTheory.word_L_def, wordsTheory.INT_MIN_def,
+             wordsTheory.dimword_def])
   \\ FULL_SIMP_TAC (srw_ss()) [])
 
 val i2w_0 = Q.store_thm("i2w_0",
@@ -1298,6 +1304,70 @@ val overflow = Q.store_thm("overflow",
   \\ `p' < INT_MIN (:'a)` by lrw [wordsTheory.dimword_IS_TWICE_INT_MIN]
   \\ qpat_x_assum `a + b = dimword(:'a)` (SUBST1_TAC o SYM)
   \\ lrw [w2i_def, wordsTheory.word_msb_n2w_numeric])
+
+val sub_overflow = Q.store_thm("sub_overflow",
+  `!x y : 'a word.
+      (w2i (x - y) <> w2i x - w2i y) =
+      ((word_msb x <> word_msb y) /\ word_msb x <> word_msb (x - y))`,
+  REPEAT strip_tac
+  \\ Cases_on `y = 0w`
+  >- simp [word_0_w2i]
+  \\ Cases_on `y = INT_MINw`
+  >- (
+      assume_tac wordsTheory.word_msb_add_word_L
+      \\ `!a: 'a word. a - INT_MINw = a + INT_MINw`
+      by simp_tac std_ss [wordsTheory.word_sub_def, wordsTheory.WORD_NEG_L]
+      \\ asm_simp_tac std_ss
+           [wordsTheory.WORD_L_NEG, DECIDE ``a <> ~(a : bool)``]
+      \\ rw_tac std_ss
+          [w2i_def, wordsTheory.WORD_L_NEG,
+           wordsTheory.WORD_NEG_L, integerTheory.INT_SUB_RNEG,
+           wordsTheory.WORD_NEG_SUB, integerTheory.INT_ADD,
+           intLib.ARITH_PROVE ``(i = -j + x : int) = (i + j = x)``,
+           intLib.ARITH_PROVE ``(-i = j : int) = (i + j = 0)``]
+      \\ full_simp_tac intSimps.int_ss [wordsTheory.w2n_eq_0]
+      \\ Cases_on `x = 0w`
+      \\ asm_simp_tac std_ss
+           [wordsTheory.WORD_NEG_0, wordsTheory.WORD_ADD_0,
+            wordsTheory.word_0_n2w]
+      \\ Cases_on `x = INT_MINw`
+      >- (`INT_MINw + INT_MINw = 0w : 'a word`
+          by metis_tac [wordsTheory.WORD_SUM_ZERO, wordsTheory.WORD_NEG_L]
+          \\ asm_simp_tac std_ss
+               [wordsTheory.WORD_NEG_L, wordsTheory.word_0_n2w])
+      \\ `~word_msb (-x) /\ ~word_msb (x + INT_MINw)`
+      by metis_tac [wordsTheory.TWO_COMP_POS_NEG]
+      \\ metis_tac [wordsTheory.w2n_add, wordsTheory.WORD_ADD_LINV,
+                    wordsTheory.WORD_ADD_0, wordsTheory.WORD_ADD_ASSOC]
+     )
+  \\ metis_tac
+       [overflow
+        |> Q.SPECL [`x`, `-y`]
+        |> Q.DISCH `y <> 0w /\ y <> INT_MINw`
+        |> SIMP_RULE arith_ss
+             [GSYM wordsTheory.word_sub_def, w2i_neg,
+              GSYM integerTheory.int_sub, GSYM wordsTheory.TWO_COMP_POS_NEG]]
+  )
+
+val n2w_add_dimword = Q.prove(
+  `!n. n2w (dimword(:'a) + n) = n2w n : 'a word`,
+  simp [])
+
+val overflow_add = Q.store_thm("overflow_add",
+  `!x y. w2i (x + y) <> w2i x + w2i y = OVERFLOW x y F`,
+  simp [overflow, wordsTheory.add_with_carry_def, GSYM wordsTheory.word_add_def]
+  )
+
+val overflow_sub = Q.store_thm("overflow_sub",
+  `!x y. w2i (x - y) <> w2i x - w2i y = OVERFLOW x (~y) T`,
+  rw [sub_overflow, wordsTheory.add_with_carry_def, wordsTheory.WORD_MSB_1COMP]
+  \\ Cases_on `word_msb x`
+  \\ Cases_on `word_msb y`
+  \\ rw [wordsTheory.w2n_plus1, GSYM wordsTheory.word_add_def, n2w_add_dimword,
+         METIS_PROVE [wordsTheory.WORD_NEG_1, wordsTheory.WORD_NOT_T,
+                      wordsTheory.WORD_NOT_NOT] ``(~y = -1w) = (y = 0w)``]
+  \\ simp [wordsTheory.WORD_NOT]
+  )
 
 (* ------------------------------------------------------------------------- *)
 
