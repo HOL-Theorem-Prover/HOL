@@ -30,5 +30,26 @@ sig
                   term list -> term quotation -> term Preterm.errM
   val ctxt_termS : grammar -> tygrammar -> hol_type option -> term list ->
                    term quotation -> term seq.seq
+  val prim_ctxt_termS : (term quotation -> absyn) -> grammar -> term list ->
+                        term quotation -> term seq.seq
 
 end
+
+(*
+   Note that ctxt_termS and other functions that take grammars and move from
+   quotations through the Absyn type (to terms, preterms and similar) will
+   almost certainly calculate the precedence matrix for the given term
+   grammar, which can take noticeable amounts of time for large grammars.
+
+   For this reason, prim_ctxt_termS takes a function parameter which is given
+   the task of doing the concrete syntax parsing. In particular, Parse.Absyn
+   is a good choice for this parameter: it is rebound (using a reference)
+   when the global grammar changes.
+
+   Alternatively, write something like
+
+     val p = ctxt_termS g tyg
+
+   and then use the p function from then on; that way the precedence matrix
+   calculation is only done with the call to ctxt_termS, not when p is applied.
+*)

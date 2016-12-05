@@ -13,18 +13,6 @@ type tyquote = hol_type quotation
 val ERR = mk_HOL_ERR "Q";
 
 val ptm = Parse.Term
-fun ptmk fnm f q =
-  let
-    val t_s = TermParse.termS (Parse.term_grammar()) (Parse.type_grammar()) q
-  in
-    case seq.cases t_s of
-        NONE => raise ERR fnm "Quotation doesn't have any parses"
-      | SOME _ => (case seq.cases (seq.mapPartial (fn t => total f t) t_s) of
-                       NONE => raise ERR fnm
-                                     "No parse of quotation leads to success"
-                     | SOME (res, _) => res)
-  end
-
 val pty = Parse.Type;
 val ty_antiq = Parse.ty_antiq;
 
@@ -125,7 +113,7 @@ fun ISPECL_THEN ql ttac thm g =
   let
     open Parse TermParse
     val ctxt = goal_ctxt g
-    fun tf q = ctxt_termS (term_grammar()) (type_grammar()) NONE ctxt q
+    fun tf q = prim_ctxt_termS Absyn (term_grammar()) ctxt q
     val tl_s = seq_mmap tf ql
   in
     case seq.cases tl_s of

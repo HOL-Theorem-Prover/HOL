@@ -532,7 +532,13 @@ fun grammar_typed_parse_in_context gs ty ctxt q =
     | NONE => raise ERROR "grammar_typed_parse_in_context" "No consistent parse"
 
 fun typed_parse_in_context ty ctxt q =
-  grammar_typed_parse_in_context (type_grammar(), term_grammar()) ty ctxt q
+  let
+    fun mkA q = Absyn.TYPED(locn.Loc_None, Absyn q, Pretype.fromType ty)
+  in
+    case seq.cases (TermParse.prim_ctxt_termS mkA (term_grammar()) ctxt q) of
+        SOME (tm, _) => tm
+      | NONE => raise ERROR "typed_parse_in_context" "No consistent parse"
+  end
 
 (*---------------------------------------------------------------------------
      Making temporary and persistent changes to the grammars.
