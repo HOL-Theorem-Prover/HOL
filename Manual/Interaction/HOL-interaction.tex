@@ -62,12 +62,12 @@ Restart emacs to make these changes take effect.
 \begin{enum}
 \item Start emacs.
 \item Press {\tt C-x C-f} to open a file for your proof script.
-\item Press {\tt C-h 3} to split the emacs window into two columns and start HOL4.
+\item Press {\tt M-h 3} to split the emacs window into two columns and start HOL4.
 \end{enum}
 The HOL window should look something like this:
 \begin{code}
 ---------------------------------------------------------------------
-       HOL-4 [Kananaskis 11 (stdknl, built Fri Jan 15 10:58:28 2016)]
+       HOL-4 [Kananaskis 11 (stdknl, built Sun Dec 04 08:04:59 2016)]
 
        For introductory HOL help, type: help "hol";
        To exit type <Control>-D
@@ -90,6 +90,10 @@ open arithmeticTheory listTheory;
 \end{code}
 makes HOL4 open the library theories for arithmetic (over natural numbers)
 and lists. HOL4 prints a long list of definitions and already proved results.
+
+\noindent\rule{0em}{1.5em}\emph{Tip:} To avoid long printouts as above, prefix your command with
+{\tt C-u C-u} i.e. instead of pressing {\tt M-h M-r} press
+{\tt C-u C-u M-h M-r}.
 
 \mysubsec{Starting a goal-oriented proof}
 
@@ -167,11 +171,11 @@ Induct_on `n`                   (* comment: induction on n  *)
 Tactics can be pieced together for {\tt prove} using \ml{\gt\gt} and \ml{\gt-}. The \ml{\gt\gt} operator is an infix that composes tactics. Similarly, \ml{\gt-} \emph{tac} proves the first subgoal using \emph{tac}.
 \begin{code}
 val LESS_EQ_MULT = prove(
-  {`}` !n. n <= n * n {`}`,
+  {`}` !n:num. n <= n * n {`}`,
   Induct_on `n`
   >- decide_tac
-  >- (ASM_SIMP_TAC bool_ss [MULT]
-         >> decide_tac]));
+  >- (asm_simp_tac bool_ss [MULT]
+      >> decide_tac]));
 \end{code}
 Copy the above into HOL4 using {\tt C-space} then
 {\tt M-h M-r}, as in Section~\ref{copy}.
