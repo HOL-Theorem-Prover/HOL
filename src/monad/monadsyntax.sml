@@ -11,18 +11,7 @@ val monadassign_special = "__monad_assign"
 val monad_unitbind = "monad_unitbind"
 val monad_bind = "monad_bind"
 
-val _ = temp_add_listform {block_info = (PP.CONSISTENT,0),
-                           cons = monadseq_special,
-                           nilstr = monad_emptyseq_special,
-                           leftdelim = [TOK "do", BreakSpace(1,2)],
-                           rightdelim = [TOK "od"],
-                           separator = [TOK ";", BreakSpace(1,0)]}
 
-val _ = temp_add_rule {block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
-                       fixity = Infix(NONASSOC, 100),
-                       paren_style = OnlyIfNecessary,
-                       pp_elements = [BreakSpace(1,0), TOK "<-", HardSpace 1],
-                       term_name = monadassign_special}
 
 fun to_vstruct a = let
   open Absyn
@@ -124,8 +113,6 @@ end
 
 fun transform_absyn G a = clean_do false a
 
-val _ = Parse.temp_add_absyn_postprocessor ("monadsyntax.transform_absyn",
-                                            transform_absyn)
 
 
 fun dest_bind G t = let
@@ -200,8 +187,29 @@ in
      strn "od" >> setbvs oldbvs))
 end
 
-val _ = temp_add_user_printer ("monadsyntax.print_monads", ``x:'a``,
-                               print_monads)
+fun syntax_actions al ar aup app =
+  (al {block_info = (PP.CONSISTENT,0),
+       cons = monadseq_special,
+       nilstr = monad_emptyseq_special,
+       leftdelim = [TOK "do", BreakSpace(1,2)],
+       rightdelim = [TOK "od"],
+       separator = [TOK ";", BreakSpace(1,0)]};
+   ar {block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
+       fixity = Infix(NONASSOC, 100),
+       paren_style = OnlyIfNecessary,
+       pp_elements = [BreakSpace(1,0), TOK "<-", HardSpace 1],
+       term_name = monadassign_special};
+   aup ("monadsyntax.print_monads", ``x:'a``, print_monads);
+   app ("monadsyntax.transform_absyn", transform_absyn))
+
+fun temp_add_monadsyntax () =
+    syntax_actions temp_add_listform temp_add_rule temp_add_user_printer
+                   temp_add_absyn_postprocessor
+
+fun add_monadsyntax () =
+    syntax_actions add_listform add_rule add_user_printer
+                   add_absyn_postprocessor
+
 
 fun mkc s = prim_mk_const{Thy = "state_transformer", Name = s}
 val _ = temp_overload_on (monad_bind, mkc "BIND")

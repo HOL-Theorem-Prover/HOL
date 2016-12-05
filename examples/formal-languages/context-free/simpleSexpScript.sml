@@ -7,6 +7,8 @@ open monadsyntax lcsymtacs pegTheory
 
 val _ = new_theory "simpleSexp";
 
+val _ = temp_add_monadsyntax()
+
 val _ = overload_on ("monad_bind", ``OPTION_BIND``)
 val _ = overload_on ("monad_unitbind", ``OPTION_IGNORE_BIND``)
 val _ = temp_overload_on ("return", ``SOME``)
