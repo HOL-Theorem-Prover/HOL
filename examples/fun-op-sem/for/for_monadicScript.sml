@@ -1,8 +1,9 @@
 open HolKernel Parse boolLib bossLib lcsymtacs;
-open forTheory state_transformerTheory monadsyntax;
+open forTheory state_transformerTheory
 
 val _ = new_theory "for_monadic";
 val _ = temp_tight_equality ();
+val _ = monadsyntax.temp_add_monadsyntax()
 
 (*
 This file casts the semantics for the FOR language from forTheory using a monad

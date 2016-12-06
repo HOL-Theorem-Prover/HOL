@@ -1,6 +1,7 @@
-open HolKernel boolLib bossLib ramanaLib Parse stringTheory arithmeticTheory finite_mapTheory pred_setTheory bagTheory relationTheory prim_recTheory pairTheory termTheory monadsyntax substTheory walkTheory walkstarTheory
+open HolKernel boolLib bossLib ramanaLib Parse stringTheory arithmeticTheory finite_mapTheory pred_setTheory bagTheory relationTheory prim_recTheory pairTheory termTheory substTheory walkTheory walkstarTheory
 
 val _ = new_theory "unifDef";
+val _ = monadsyntax.temp_add_monadsyntax()
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 };
 val _ = overload_on("monad_bind",``OPTION_BIND``);
 
