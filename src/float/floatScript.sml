@@ -1093,7 +1093,7 @@ val REAL_POS_IN_BINADE = Q.prove (
   \\ qpat_x_assum `x < threshold (^expw_tm,^fracw_tm)`
        (assume_tac o MATCH_MP LT_THRESHOLD_LT_POW_INV)
   \\ `2 pow n / 2 pow ^pbias_tm <
-      2 pow (emax (^expw_tm,^fracw_tm) − 1) / 2 pow ^pbias_tm`
+      2 pow (emax (^expw_tm,^fracw_tm) - 1) / 2 pow ^pbias_tm`
   by metis_tac [REAL_LET_TRANS]
   \\ spose_not_then assume_tac
   \\ `^pemax_tm <= n` by decide_tac
