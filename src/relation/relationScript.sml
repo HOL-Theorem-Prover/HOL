@@ -407,6 +407,29 @@ val TC_STRONG_INDUCT_RIGHT1 = store_thm(
           (!u v. TC R u v ==> P u v)``,
   REPEAT STRIP_TAC THEN IMP_RES_TAC TC_STRONG_INDUCT_RIGHT1_0);
 
+(* can get inductive principles for properties which do not hold generally
+  but only for particular cases of x or y in TC R x y *)
+
+fun tc_ind_alt_tacs tc_ind_thm tq =
+  REPEAT STRIP_TAC THEN
+  POP_ASSUM (ASSUME_TAC o Ho_Rewrite.REWRITE_RULE [BETA_THM]
+    o Q.SPEC tq o GEN_ALL o MATCH_MP (REORDER_ANTS rev tc_ind_thm)) THEN
+  VALIDATE (POP_ASSUM (ACCEPT_TAC o UNDISCH)) THEN
+  POP_ASSUM (K ALL_TAC) THEN REPEAT STRIP_TAC THEN
+  TRY COND_CASES_TAC THEN
+  FULL_SIMP_TAC bool_ss [TC_SUBSET] THEN
+  RES_TAC THEN IMP_RES_TAC TC_RULES ;
+
+val TC_INDUCT_ALT_LEFT = Q.store_thm ("TC_INDUCT_ALT_LEFT",
+  `!R Q. (!x. R x b ==> Q x) /\ (!x y. R x y /\ Q y ==> Q x) ==>
+    !a. TC R a b ==> Q a`,
+  tc_ind_alt_tacs TC_INDUCT_LEFT1 `\x y. if y = b then Q x else TC R x y`) ;
+
+val TC_INDUCT_ALT_RIGHT = Q.store_thm ("TC_INDUCT_ALT_RIGHT",
+  `!R Q. (!y. R a y ==> Q y) /\ (!x y. Q x /\ R x y ==> Q y) ==>
+    !b. TC R a b ==> Q b`,
+  tc_ind_alt_tacs TC_INDUCT_RIGHT1 `\x y. if x = a then Q y else TC R x y`) ;
+
 val TC_lifts_monotonicities = store_thm(
   "TC_lifts_monotonicities",
   ``(!x y. R x y ==> R (f x) (f y)) ==>
