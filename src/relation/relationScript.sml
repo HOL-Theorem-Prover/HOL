@@ -473,28 +473,50 @@ val TC_RC_EQNS = store_thm(
     HO_MATCH_MP_TAC RTC_INDUCT THEN MESON_TAC [TC_RULES, RC_DEF]
   ]);
 
+(* can get inductive principles for properties which do not hold generally
+  but only for particular cases of x or y in RTC R x y *)
+
+val RTC_ALT_DEF = Q.store_thm ("RTC_ALT_DEF",
+  `!R a b. RTC R a b = !Q. Q b /\ (!x y. R x y /\ Q y ==> Q x) ==> Q a`,
+  REWRITE_TAC [RTC_DEF] THEN REPEAT (STRIP_TAC ORELSE EQ_TAC)
+  THENL [ FIRST_X_ASSUM (ASSUME_TAC o Ho_Rewrite.REWRITE_RULE [BETA_THM] o
+      Q.SPEC `\x y. if y = b then Q x else RTC R x y`),
+    FIRST_X_ASSUM (ASSUME_TAC o Ho_Rewrite.REWRITE_RULE [BETA_THM] o
+      Q.SPEC `\x. P x (b : 'a)`) ] THEN
+  VALIDATE (POP_ASSUM (ACCEPT_TAC o UNDISCH)) THEN
+  POP_ASSUM (K ALL_TAC) THEN REPEAT STRIP_TAC THEN
+  TRY COND_CASES_TAC THEN
+  FULL_SIMP_TAC bool_ss [RTC_REFL] THEN
+  RES_TAC THEN IMP_RES_TAC RTC_RULES) ;
+
+val RTC_ALT_INDUCT = Q.store_thm ("RTC_ALT_INDUCT",
+  `!R Q b. Q b /\ (!x y. R x y /\ Q y ==> Q x) ==> !x. RTC R x b ==> Q x`,
+  REWRITE_TAC [RTC_ALT_DEF] THEN REPEAT STRIP_TAC THEN RES_TAC) ;
+
+val RTC_ALT_RIGHT_DEF = Q.store_thm ("RTC_ALT_RIGHT_DEF",
+  `!R a b. RTC R a b = !Q. Q a /\ (!y z. Q y /\ R y z ==> Q z) ==> Q b`,
+  REWRITE_TAC [RTC_ALT_DEF] THEN REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
+  FIRST_X_ASSUM (ASSUME_TAC o Q.SPEC `$~ o Q`) THEN
+  REV_FULL_SIMP_TAC bool_ss [combinTheory.o_THM] THEN RES_TAC) ;
+
+val RTC_ALT_RIGHT_INDUCT = Q.store_thm ("RTC_ALT_RIGHT_INDUCT",
+  `!R Q a. Q a /\ (!y z. Q y /\ R y z ==> Q z) ==> !z. RTC R a z ==> Q z`,
+  REWRITE_TAC [RTC_ALT_RIGHT_DEF] THEN REPEAT STRIP_TAC THEN RES_TAC) ;
+
 val RTC_INDUCT_RIGHT1 = store_thm(
   "RTC_INDUCT_RIGHT1",
   ``!R P. (!x. P x x) /\
           (!x y z. P x y /\ R y z ==> P x z) ==>
           (!x y. RTC R x y ==> P x y)``,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
-  Q.SUBGOAL_THEN `!x y. RTC R x y = RC (TC R) x y`
-    (fn th => ASM_REWRITE_TAC [th])
-  THENL[
-    REWRITE_TAC [TC_RC_EQNS],
-    ALL_TAC
-  ] THEN ASM_SIMP_TAC bool_ss [RC_DEF, DISJ_IMP_THM, FORALL_AND_THM] THEN
-  HO_MATCH_MP_TAC TC_INDUCT_RIGHT1 THEN ASM_MESON_TAC []);
+  REPEAT STRIP_TAC THEN
+  FIRST_X_ASSUM (irule o MATCH_MP (REORDER_ANTS rev RTC_ALT_RIGHT_INDUCT)) THEN
+  ASM_REWRITE_TAC []) ;
 
 val RTC_RULES_RIGHT1 = store_thm(
   "RTC_RULES_RIGHT1",
   ``!R. (!x. RTC R x x) /\ (!x y z. RTC R x y /\ R y z ==> RTC R x z)``,
-  SIMP_TAC bool_ss [RTC_RULES] THEN GEN_TAC THEN
-  Q_TAC SUFF_TAC
-        `!x y. RTC R x y ==> !z. R y z ==> RTC R x z`
-        THEN1 MESON_TAC [] THEN
-  HO_MATCH_MP_TAC RTC_INDUCT THEN MESON_TAC [RTC_RULES]);
+  REWRITE_TAC [RTC_ALT_RIGHT_DEF] THEN
+  REPEAT STRIP_TAC THEN RES_TAC THEN RES_TAC) ;
 
 val RTC_STRONG_INDUCT_RIGHT1 = store_thm(
   "RTC_STRONG_INDUCT_RIGHT1",
@@ -2234,6 +2256,5 @@ val Newmans_lemma = store_thm(
   `?z2. RTC R z z2 /\ RTC R x0 z2` by PROVE_TAC [] THEN
   `TC R x x0` by PROVE_TAC [EXTEND_RTC_TC] THEN
   PROVE_TAC [RTC_RTC]);
-
 
 val _ = export_theory();
