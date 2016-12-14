@@ -2360,19 +2360,18 @@ val x64_div_sub_loop_thm = prove(
 val (x64_div_loop_def, _,
      x64_div_loop_pre_def, _) =
   tailrec_define "x64_div_loop" ``
-    (\(l,r7,r9,r10,r11,ys,zs,ss).
-      if r10 = 0x0w then (INR (l,r7,r9,r10,r11,ys,zs,ss),T)
+    (\(l,r7:'a word,r9:'a word,r10:'a word,r11:'a word,
+       r14:'a word,r15:'a word,ys:'a word list,zs:'a word list).
+      if r10 = 0x0w then (INR (l,r7,r9,r10,r11,r14,r15,ys,zs),T)
       else
-        (let cond = ss <> [] in
-         let (r6,ss) = (HD ss,TL ss) in
-         let cond = cond /\ ss <> [] in
-         let (r3,ss) = (HD ss,TL ss) in
-         let ss = r7::ss in
-         let ss = r9::ss in
-         let ss = r10::ss in
+        (let r6 = r14 in
+         let r3 = r15 in
+         let r14 = r7 in
+         let r15 = r9 in
+         let r16 = r10 in
          let r10 = r10 + r9 in
          let r10 = r10 - 0x1w in
-         let cond = cond /\ w2n r10 < LENGTH zs in
+         let cond = w2n r10 < LENGTH zs in
          let r0 = EL (w2n r10) zs in
          let r10 = r10 - 0x1w in
          let cond = cond /\ w2n r10 < LENGTH zs in
@@ -2388,15 +2387,12 @@ val (x64_div_loop_def, _,
          let cond = cond /\ x64_div_guess_pre (l,r7,r8,r9,r10,r11) in
          let (l,r6,r7,r8,r9,r10,r11) = x64_div_guess (l,r7,r8,r9,r10,r11) in
          let r0 = r6 in
-         let cond = cond /\ ss <> [] in
-         let (r10,ss) = (HD ss,TL ss) in
-         let cond = cond /\ ss <> [] in
-         let (r9,ss) = (HD ss,TL ss) in
-         let cond = cond /\ ss <> [] in
-         let (r6,ss) = (HD ss,TL ss) in
+         let r6 = r14 in
+         let r9 = r15 in
+         let r10 = r16 in
          let r10 = r10 - 0x1w in
-         let ss = r7::ss in
-         let ss = r8::ss in
+         let r15 = r7 in
+         let r14 = r8 in
          let r7 = r0 in
          let cond = cond /\ x64_div_adjust_pre (l,r6,r7,r9,r10,ys,zs) in
          let (l,r6,r7,r9,r10,r11,ys,zs) = x64_div_adjust (l,r6,r7,r9,r10,ys,zs) in
@@ -2420,12 +2416,7 @@ val (x64_div_loop_def, _,
          let r10 = r10 - r9 in
          let r7 = r6
          in
-           (INL (l-1,r7,r9,r10,r11,ys,zs,ss),cond /\ l <> 0)))
-    :num # 'a word # 'a word # 'a word # 'a word # 'a word list # 'a
-     word list # 'a word list -> (num # 'a word # 'a word # 'a word #
-     'a word # 'a word list # 'a word list # 'a word list + num # 'a
-     word # 'a word # 'a word # 'a word # 'a word list # 'a word list
-     # 'a word list) # bool``;
+           (INL (l-1,r7,r9,r10,r11,r14,r15,ys,zs),cond /\ l <> 0)))``;
 
 val x64_div_loop_thm = prove(
   ``!(zs1:'a word list) zs ys1 zs2 c r1 r12 l.
@@ -2435,12 +2426,12 @@ val x64_div_loop_thm = prove(
       ?l2.
         let ys1 = (FRONT (mw_mul_by_single d ys)) in
           x64_div_loop_pre (l,d,n2w (LENGTH ys),n2w (LENGTH zs1),n2w (LENGTH ys),
-            ys,zs1 ++ zs ++ zs2,(LAST ys1)::(LAST (BUTLAST ys1))::ss) /\
+            LAST ys1,LAST (BUTLAST ys1),ys,zs1 ++ zs ++ zs2) /\
           (x64_div_loop (l,d,n2w (LENGTH ys),n2w (LENGTH zs1),n2w (LENGTH ys),
-            ys,zs1 ++ zs ++ zs2,(LAST ys1)::(LAST (BUTLAST ys1))::ss) =
-            (l2,d,n2w (LENGTH ys),0w,n2w (LENGTH ys),ys,
+            LAST ys1,LAST (BUTLAST ys1),ys,zs1 ++ zs ++ zs2) =
+            (l2,d,n2w (LENGTH ys),0w,n2w (LENGTH ys),LAST ys1,LAST (BUTLAST ys1),ys,
              (let (qs,rs) = mw_div_aux zs1 zs ys1 in
-                rs ++ REVERSE qs ++ zs2),(LAST ys1)::(LAST (BUTLAST ys1))::ss)) /\
+                rs ++ REVERSE qs ++ zs2))) /\
           l <= l2 + LENGTH zs1 * (dimword (:'a) + 2 * LENGTH ys + 4)``,
   Q.ABBREV_TAC `ys1 = FRONT (mw_mul_by_single d ys)`
   \\ SIMP_TAC std_ss [LET_DEF] \\ HO_MATCH_MP_TAC SNOC_INDUCT
@@ -2843,12 +2834,12 @@ val x64_copy_over_thm = prove(
 val (x64_div_def, _,
      x64_div_pre_def, _) =
   tailrec_define "x64_div" ``
-    (\(l,r0,r1,r3,xs,ys,zs,ss).
+    (\(l,r0,r1,r3,xs,ys,zs).
       if r0 <+ r1 then
         (let r6 = r0
          in
            if r3 = 0x0w then
-             (let r0 = 0x0w in (INR (l,r0,r3,r6,xs,ys,zs,ss),T))
+             (let r0 = 0x0w in (INR (l,r0,r3,r6,xs,ys,zs),T))
            else
              (let r11 = r0 in
               let r10 = r1 in
@@ -2860,9 +2851,9 @@ val (x64_div_def, _,
               let (l,xs,zs) = x64_copy_over (l-1,r10,xs,zs) in
               let r0 = r1
               in
-                (INR (l,r0,r3,r6,xs,ys,zs,ss),cond)))
+                (INR (l,r0,r3,r6,xs,ys,zs),cond)))
       else if r1 = 0x1w then
-        (let ss = r3::ss in
+        (let r14 = r3 in
          let r2 = 0x0w in
          let r10 = r2 in
          let cond = w2n r10 < LENGTH ys in
@@ -2873,23 +2864,22 @@ val (x64_div_def, _,
          let (l,r2,r9,r10,xs,zs) = x64_simple_div (l-1,r2,r9,r10,xs,zs) in
          let r6 = 0x0w in
          let r0 = r8 in
-         let cond = cond /\ ss <> [] in
-         let (r3,ss) = (HD ss,TL ss)
+         let r3 = r14
          in
            if r3 = 0x0w then
-             if r2 = 0x0w then (INR (l,r0,r3,r6,xs,ys,zs,ss),cond)
-             else (let r6 = 0x1w in (INR (l,r0,r3,r6,xs,ys,zs,ss),cond))
+             if r2 = 0x0w then (INR (l,r0,r3,r6,xs,ys,zs),cond)
+             else (let r6 = 0x1w in (INR (l,r0,r3,r6,xs,ys,zs),cond))
            else
              (let r0 = 0x1w in
               let r10 = 0x0w:'a word in
               let cond = cond /\ w2n r10 < LENGTH zs in
               let zs = LUPDATE r2 (w2n r10) zs
               in
-                if r2 = 0x0w then (INR (l,r0,r3,r6,xs,ys,zs,ss),cond)
-                else (let r6 = 0x1w in (INR (l,r0,r3,r6,xs,ys,zs,ss),cond))))
+                if r2 = 0x0w then (INR (l,r0,r3,r6,xs,ys,zs),cond)
+                else (let r6 = 0x1w in (INR (l,r0,r3,r6,xs,ys,zs),cond))))
       else
-        (let ss = r3::ss in
-         let ss = r0::ss in
+        (let r18 = r3 in
+         let r19 = r0 in
          let r7 = r1 in
          let r9 = r0 in
          let r10 = r1 in
@@ -2920,23 +2910,17 @@ val (x64_div_def, _,
          let (l,r0,r1,r8,r9,r11,ys) = x64_top_two (l-1,r0,r1,r3,r8,r9,r11,ys) in
          let r7 = r8 in
          let r11 = r9 in
-         let cond = cond /\ ss <> [] in
-         let (r10,ss) = (HD ss,TL ss) in
+         let r10 = r19 in
          let r10 = r10 - r9 in
          let r10 = r10 + 0x2w in
-         let ss = r10::ss in
-         let ss = r1::ss in
-         let ss = r0::ss in
-         let cond = cond /\ x64_div_loop_pre (l-1,r7,r9,r10,r11,ys,zs,ss) /\ l<>0 in
-         let (l,r7,r9,r10,r11,ys,zs,ss) =
-               x64_div_loop (l-1,r7,r9,r10,r11,ys,zs,ss)
+         let r14 = r0 in
+         let r15 = r1 in
+         let r17 = r10 in
+         let cond = cond /\ x64_div_loop_pre (l-1,r7,r9,r10,r11,r14,r15,ys,zs) /\ l<>0 in
+         let (l,r7,r9,r10,r11,r14,r15,ys,zs) =
+               x64_div_loop (l-1,r7,r9,r10,r11,r14,r15,ys,zs)
          in
-         let cond = cond /\ ss <> [] in
-         let (r0,ss) = (HD ss,TL ss) in
-         let cond = cond /\ ss <> [] in
-         let (r0,ss) = (HD ss,TL ss) in
-         let cond = cond /\ ss <> [] in
-         let (r8,ss) = (HD ss,TL ss) in
+         let r8 = r17 in
          let r11 = r9 in
          let r10 = r9 in
          let r9 = r7 in
@@ -2950,8 +2934,7 @@ val (x64_div_def, _,
          let (l,r8,r10,zs) = x64_fix (l-1,r8,r10,zs) in
          let r6 = r10 in
          let r10 = r9 in
-         let cond = cond /\ ss <> [] in
-         let (r3,ss) = (HD ss,TL ss) in
+         let r3 = r18 in
          let r8 = r7
          in
            if r3 = 0x0w then
@@ -2960,13 +2943,12 @@ val (x64_div_def, _,
               let (l,zs) = x64_copy_down (l-1,r8,r10,r11,zs) in
               let r0 = r7
               in
-                (INR (l,r0,r3,r6,xs,ys,zs,ss),cond))
-           else (let r0 = r9 in (INR (l,r0,r3,r6,xs,ys,zs,ss),cond))))
+                (INR (l,r0,r3,r6,xs,ys,zs),cond))
+           else (let r0 = r9 in (INR (l,r0,r3,r6,xs,ys,zs),cond))))
     :num # 'a word # 'a word # 'a word # 'a word list # 'a word list #
-     'a word list # 'a word list -> (num # 'a word # 'a word # 'a word
-     # 'a word list # 'a word list # 'a word list # 'a word list + num
-     # 'a word # 'a word # 'a word # 'a word list # 'a word list # 'a
-     word list # 'a word list) # bool``;
+     'a word list -> (num # 'a word # 'a word # 'a word # 'a word list
+     # 'a word list # 'a word list + num # 'a word # 'a word # 'a word
+     # 'a word list # 'a word list # 'a word list) # bool``;
 
 val mw_fix_SNOC = store_thm("mw_fix_SNOC",
  ``mw_fix (SNOC 0w xs) = mw_fix xs``,
@@ -2992,11 +2974,11 @@ val x64_div_thm = prove(
     LENGTH zs < dimword (:'a) /\ ((res,mod,T) = mw_div xs ys) /\
     x64_div_max xs ys zs <= l ==>
     ?zs2 l2.
-      x64_div_pre (l,n2w (LENGTH xs),n2w (LENGTH ys),r3,xs,ys,zs,ss) /\
-      (x64_div (l,n2w (LENGTH xs),n2w (LENGTH ys),r3,xs,ys,zs,ss) =
+      x64_div_pre (l,n2w (LENGTH xs),n2w (LENGTH ys),r3,xs,ys,zs) /\
+      (x64_div (l,n2w (LENGTH xs),n2w (LENGTH ys),r3,xs,ys,zs) =
          (l2,n2w (LENGTH (if r3 = 0w then res else mod)),r3,
           n2w (LENGTH (mw_fix mod)),xs,ys,
-          (if r3 = 0w then res else mod) ++ zs2,ss)) /\
+          (if r3 = 0w then res else mod) ++ zs2)) /\
       (LENGTH zs = LENGTH ((if r3 = 0w then res else mod) ++ zs2)) /\
       ((r3 = 0w) ==> LENGTH zs2 <> 0) /\ LENGTH (mw_fix mod) < dimword (:'a) /\
       l <= l2 + x64_div_max xs ys zs``,
@@ -3519,19 +3501,16 @@ val x64_idiv_mod_header_thm = prove(
 val (x64_idiv_def, _,
      x64_idiv_pre_def, _) =
   tailrec_define "x64_idiv" ``
-    (\(l,r3,r10,r11,xs,ys,zs,ss).
-      (let r0 = r10 in
-       let r0 = r0 >>> 1 in
-       let r1 = r11 in
-       let r1 = r1 >>> 1 in
+    (\(l,r3,r10,r11,xs,ys,zs).
+      (let r0 = r10 >>> 1 in
+       let r1 = r11 >>> 1 in
        let r10 = r10 ?? r11 in
        let r10 = r10 && 0x1w in
-       let ss = r10::ss in
-       let ss = r11::ss in
-       let cond = x64_div_pre (l,r0,r1,r3,xs,ys,zs,ss) in
-       let (l,r0,r3,r6,xs,ys,zs,ss) = x64_div (l,r0,r1,r3,xs,ys,zs,ss) in
-       let cond = cond /\ ss <> [] in
-       let (r11,ss) = (HD ss,TL ss)
+       let r20 = r10 in
+       let r21 = r11 in
+       let cond = x64_div_pre (l,r0,r1,r3,xs,ys,zs) in
+       let (l,r0,r3,r6,xs,ys,zs) = x64_div (l,r0,r1,r3,xs,ys,zs) in
+       let r11 = r21
        in
          if r3 = 0x0w then
            (let r10 = r0 in
@@ -3539,21 +3518,19 @@ val (x64_idiv_def, _,
             let cond = cond /\ x64_fix_pre (l-1,r8,r10,zs) /\ l<>0 in
             let (l,r8,r10,zs) = x64_fix (l-1,r8,r10,zs) in
             let r11 = r10 in
-            let cond = cond /\ ss <> [] in
-            let (r2,ss) = (HD ss,TL ss) in
+            let r2 = r20 in
             let r3 = r2 in
             let cond = cond /\ x64_add1_call_pre (l,r2,r6,r11,zs) in
             let (l,r11,zs) = x64_add1_call (l,r2,r6,r11,zs)
             in
-              if r11 = 0x0w then (INR (l,r11,xs,ys,zs,ss),cond)
+              if r11 = 0x0w then (INR (l,r11,xs,ys,zs),cond)
               else
                 (let r11 = r11 << 1 in
                  let r11 = r11 + r3
                  in
-                   (INR (l,r11,xs,ys,zs,ss),cond)))
+                   (INR (l,r11,xs,ys,zs),cond)))
          else
-           (let cond = cond /\ ss <> [] in
-            let (r2,ss) = (HD ss,TL ss) in
+           (let r2 = r20 in
             let r1 = r11 in
             let r1 = r1 >>> 1 in
             let cond = cond /\ x64_div_sub_call_pre (l,r1,r2,r6,ys,zs) in
@@ -3561,12 +3538,11 @@ val (x64_idiv_def, _,
             let r6 = x64_idiv_mod_header (r6,r11) in
             let r11 = r6
             in
-              (INR (l,r11,xs,ys,zs,ss),cond))))
+              (INR (l,r11,xs,ys,zs),cond))))
     :num # 'a word # 'a word # 'a word # 'a word list # 'a word list #
-     'a word list # 'a word list -> (num # 'a word # 'a word # 'a word
-     # 'a word list # 'a word list # 'a word list # 'a word list + num
-     # 'a word # 'a word list # 'a word list # 'a word list # 'a word
-     list) # bool``;
+     'a word list -> (num # 'a word # 'a word # 'a word # 'a word list
+     # 'a word list # 'a word list + num # 'a word # 'a word list # 'a
+     word list # 'a word list) # bool``;
 
 val x64_header_XOR = prove(
   ``!s t. ((x64_header (s,xs) ?? x64_header (t,ys)) && 0x1w:'a word) =
@@ -3588,10 +3564,10 @@ val x64_idiv_thm = prove(
     mw_ok xs /\ mw_ok ys /\ ys <> [] /\
     x64_div_max xs ys zs + 2 * LENGTH zs + 2 <= l ==>
     ?zs1 l2.
-      x64_idiv_pre (l,r3,x64_header (s,xs),x64_header (t,ys),xs,ys,zs,ss) /\
-      (x64_idiv (l,r3,x64_header (s,xs),x64_header (t,ys),xs,ys,zs,ss) =
+      x64_idiv_pre (l,r3,x64_header (s,xs),x64_header (t,ys),xs,ys,zs) /\
+      (x64_idiv (l,r3,x64_header (s,xs),x64_header (t,ys),xs,ys,zs) =
         (l2,x64_header ((mwi_divmod_alt r3 (s,xs) (t,ys))),xs,ys,
-         SND ((mwi_divmod_alt r3 (s,xs) (t,ys)))++zs1,ss)) /\
+         SND ((mwi_divmod_alt r3 (s,xs) (t,ys)))++zs1)) /\
       (LENGTH (SND ((mwi_divmod_alt r3 (s,xs) (t,ys)))++zs1) = LENGTH zs) /\
       l <= l2 + x64_div_max xs ys zs + 2 * LENGTH zs + 2``,
   FULL_SIMP_TAC std_ss [x64_idiv_def,x64_idiv_pre_def,LET_DEF]
@@ -3973,7 +3949,7 @@ val x64_full_cmp_eq = prove(
 val (x64_iop_def, _,
      x64_iop_pre_def, _) =
   tailrec_define "x64_iop" ``
-    (\(l,r0,r1,r3,xs,ys,zs,xa,ya,ss).
+    (\(l,r0,r1,r3,xs,ys,zs,xa,ya).
       if r3 <+ 0x2w then
         (let (r1,r3) = x64_isub_flip (r1,r3) in
          let r2 = r1 in
@@ -3981,7 +3957,7 @@ val (x64_iop_def, _,
          let cond = x64_iadd_pre (l,r1,r2,xs,ys,zs,xa,ya) in
          let (l,r10,xs,ys,zs,xa,ya) = x64_iadd (l,r1,r2,xs,ys,zs,xa,ya)
          in
-           (INR (l,r10,xs,ys,zs,xa,ya,ss),cond))
+           (INR (l,r10,xs,ys,zs,xa,ya),cond))
   (*  else if r3 <+ 0x4w then
         (let r10 = r0 in
          let r11 = r1 in
@@ -3995,16 +3971,16 @@ val (x64_iop_def, _,
          let cond = x64_imul_pre (l,r1,r2,xs,ys,zs) in
          let (l,r10,xs,ys,zs) = x64_imul (l,r1,r2,xs,ys,zs)
          in
-           (INR (l,r10,xs,ys,zs,xa,ya,ss),cond))
+           (INR (l,r10,xs,ys,zs,xa,ya),cond))
       else (* if r3 <+ 0x7w then *)
         (let r3 = r3 - 0x5w in
          let r10 = r0 in
          let r11 = r1 in
-         let cond = x64_idiv_pre (l,r3,r10,r11,xs,ys,zs,ss) in
-         let (l,r11,xs,ys,zs,ss) = x64_idiv (l,r3,r10,r11,xs,ys,zs,ss) in
+         let cond = x64_idiv_pre (l,r3,r10,r11,xs,ys,zs) in
+         let (l,r11,xs,ys,zs) = x64_idiv (l,r3,r10,r11,xs,ys,zs) in
          let r10 = r11
          in
-           (INR (l,r10,xs,ys,zs,xa,ya,ss),cond)))
+           (INR (l,r10,xs,ys,zs,xa,ya),cond)))
   (*  else
         (let r10 = r0 in
          let cond = x64_int_to_dec_pre (r10,xs,zs,ss) in
@@ -4013,11 +3989,10 @@ val (x64_iop_def, _,
          in
            (INR (r10,xs,ys,zs,xa,ya,ss),cond)) *)
     :num # 'a word # 'a word # 'a word # 'a word list # 'a word list #
-     'a word list # 'a word # 'a word # 'a word list -> (num # 'a word
-     # 'a word # 'a word # 'a word list # 'a word list # 'a word list
-     # 'a word # 'a word # 'a word list + num # 'a word # 'a word list
-     # 'a word list # 'a word list # 'a word # 'a word # 'a word list)
-     # bool``;
+     'a word list # 'a word # 'a word -> (num # 'a word # 'a word # 'a
+     word # 'a word list # 'a word list # 'a word list # 'a word # 'a
+     word + num # 'a word # 'a word list # 'a word list # 'a word list
+     # 'a word # 'a word) # bool``;
 
 val x64_header_XOR_1 = prove(
   ``x64_header (s,xs) ?? 1w = x64_header (~s,xs)``,
@@ -4036,20 +4011,16 @@ val x64_iop_thm = store_thm("x64_iop_thm",
     ((x64_header (t,ys) = 0x0w) <=> (ys = [])) /\ mw_ok ys /\
     LENGTH (xs:'a word list) + LENGTH ys < LENGTH zs /\
     LENGTH zs < dimword (:'a) DIV 2 /\
-    iop <> Lt /\
-    iop <> Eq /\
-    iop <> Dec /\
+    iop <> Lt /\ iop <> Eq /\ iop <> Dec /\
     (((iop = Div) \/ (iop = Mod)) ==> ys <> []) /\
     x64_div_max xs ys zs + 2 * LENGTH zs + 2 <= l ==>
     ?zs1 l2.
       x64_iop_pre (l,x64_header (s,xs),x64_header (t,ys),int_op_rep iop,
-                   xs,ys,zs,xa,ya,ss) /\
+                   xs,ys,zs,xa,ya) /\
       (x64_iop (l,x64_header (s,xs),x64_header (t,ys),int_op_rep iop,
-                xs,ys,zs,xa,ya,ss) =
+                xs,ys,zs,xa,ya) =
        (l2,x64_header (mwi_op iop (s,xs) (t,ys)),xs,ys,
-        SND (mwi_op iop (s,xs) (t,ys)) ++ zs1,xa,ya,
-        if iop = Dec then MAP (n2w o ORD) (int_to_str (mw2i (s,xs))) ++ ss
-        else ss)) /\
+        SND (mwi_op iop (s,xs) (t,ys)) ++ zs1,xa,ya)) /\
       (LENGTH (SND (mwi_op iop (s,xs) (t,ys)) ++ zs1) = LENGTH zs) /\
       l <= l2 + x64_div_max xs ys zs + 2 * LENGTH zs + 2``,
   strip_tac \\
@@ -4088,7 +4059,7 @@ val x64_iop_thm = store_thm("x64_iop_thm",
     \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [mwi_op_def]
     \\ FULL_SIMP_TAC (srw_ss()) [mwi_divmod_alt_def])
   THEN1 (
-    IF_CASES_TAC  \\ rfs[]
+    IF_CASES_TAC \\ rfs[]
     \\ MP_TAC (x64_idiv_thm |> Q.INST [`r3`|->`1w`]) \\ fs[]
     \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [mwi_op_def]
     \\ fs[mwi_divmod_alt_def] ));
