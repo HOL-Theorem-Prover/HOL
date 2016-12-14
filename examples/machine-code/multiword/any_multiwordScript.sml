@@ -3837,6 +3837,8 @@ val x64_int_to_dec_thm = prove(
   \\ FULL_SIMP_TAC std_ss [x64_header_sign]
   \\ Cases_on `s` \\ FULL_SIMP_TAC std_ss [APPEND]);
 
+*)
+
 (* top-level entry point *)
 
 val int_op_rep_def = Define `
@@ -3871,12 +3873,12 @@ val (x64_icmp_res_def, _,
 val (x64_full_cmp_def, _,
      x64_full_cmp_pre_def, _) =
   tailrec_define "x64_full_cmp" ``
-    (\(r3,r10,r11,xs,ys,zs).
-      (let cond = x64_icompare_pre (r10,r11,xs,ys) in
-       let (r10,xs,ys) = x64_icompare (r10,r11,xs,ys) in
+    (\(l,r3,r10,r11,xs,ys,zs).
+      (let cond = x64_icompare_pre (l,r10,r11,xs,ys) in
+       let (l,r10,xs,ys) = x64_icompare (l,r10,r11,xs,ys) in
        let r10 = x64_icmp_res (r10,r3)
        in
-         if r10 = 0x0w then (INR (r10,xs,ys,zs),cond)
+         if r10 = 0x0w then (INR (l,r10,xs,ys,zs),cond)
          else
            (let r0 = 0x1w in
             let r10 = (0x0w:'a word) in
@@ -3884,10 +3886,11 @@ val (x64_full_cmp_def, _,
             let zs = LUPDATE r0 (w2n r10) zs in
             let r10 = 0x2w
             in
-              (INR (r10,xs,ys,zs),cond))))
-    :'a word # 'a word # 'a word # 'a word list # 'a word list # 'a word list ->
-     ('a word # 'a word # 'a word # 'a word list # 'a word list # 'a word list +
-      'a word # 'a word list # 'a word list # 'a word list) # bool``;
+              (INR (l,r10,xs,ys,zs),cond))))
+    :num # 'a word # 'a word # 'a word # 'a word list # 'a word list #
+     'a word list -> (num # 'a word # 'a word # 'a word # 'a word list
+     # 'a word list # 'a word list + num # 'a word # 'a word list # 'a
+     word list # 'a word list) # bool``;
 
 val NumABS_LEMMA = prove(
   ``(Num (ABS (0:int)) = 0:num) /\ (Num (ABS (1:int)) = 1:num)``,
@@ -3896,14 +3899,17 @@ val NumABS_LEMMA = prove(
 val x64_full_cmp_lt = prove(
   ``((x64_header (s,xs) = 0x0w) <=> (xs = [])) /\ mw_ok xs /\
     ((x64_header (t,ys) = 0x0w) <=> (ys = [])) /\ mw_ok ys /\
-    LENGTH (xs:'a word list) < dimword (:'a) DIV 2 /\ LENGTH ys < dimword (:'a) DIV 2 /\
-    LENGTH xs + LENGTH ys < LENGTH zs /\ LENGTH zs < dimword (:'a) DIV 2 ==>
-    ?zs1.
-      x64_full_cmp_pre (2w,x64_header (s,xs),x64_header (t,ys),xs,ys,zs) /\
-      (x64_full_cmp (2w,x64_header (s,xs),x64_header (t,ys),xs,ys,zs) =
-       (x64_header (mwi_op Lt (s,xs) (t,ys)),xs,ys,
+    LENGTH (xs:'a word list) < dimword (:'a) DIV 2 /\
+    LENGTH ys < dimword (:'a) DIV 2 /\
+    LENGTH xs + LENGTH ys < LENGTH zs /\ LENGTH zs < dimword (:'a) DIV 2 /\
+    LENGTH xs + 1 <= l ==>
+    ?zs1 l2.
+      x64_full_cmp_pre (l,2w,x64_header (s,xs),x64_header (t,ys),xs,ys,zs) /\
+      (x64_full_cmp (l,2w,x64_header (s,xs),x64_header (t,ys),xs,ys,zs) =
+       (l2,x64_header (mwi_op Lt (s,xs) (t,ys)),xs,ys,
         SND (mwi_op Lt (s,xs) (t,ys)) ++ zs1)) /\
-      (LENGTH (SND (mwi_op Lt (s,xs) (t,ys)) ++ zs1) = LENGTH zs)``,
+      (LENGTH (SND (mwi_op Lt (s,xs) (t,ys)) ++ zs1) = LENGTH zs) /\
+      l <= l2 + LENGTH xs + 1``,
   SIMP_TAC std_ss [x64_full_cmp_def,x64_full_cmp_pre_def,LET_DEF] \\ STRIP_TAC
   \\ MP_TAC x64_icompare_thm \\ FULL_SIMP_TAC std_ss []
   \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [mwi_op_def] \\ SIMP_TAC std_ss [mwi_lt_def]
@@ -3928,14 +3934,17 @@ val x64_full_cmp_lt = prove(
 val x64_full_cmp_eq = prove(
   ``((x64_header (s,xs) = 0x0w) <=> (xs = [])) /\ mw_ok xs /\
     ((x64_header (t,ys) = 0x0w) <=> (ys = [])) /\ mw_ok ys /\
-    LENGTH (xs:'a word list) < dimword (:'a) DIV 2 /\ LENGTH ys < dimword (:'a) DIV 2 /\
-    LENGTH xs + LENGTH ys < LENGTH zs /\ LENGTH zs < dimword (:'a) DIV 2 ==>
-    ?zs1.
-      x64_full_cmp_pre (3w,x64_header (s,xs),x64_header (t,ys),xs,ys,zs) /\
-      (x64_full_cmp (3w,x64_header (s,xs),x64_header (t,ys),xs,ys,zs) =
-       (x64_header (mwi_op Eq (s,xs) (t,ys)),xs,ys,
+    LENGTH (xs:'a word list) < dimword (:'a) DIV 2 /\
+    LENGTH ys < dimword (:'a) DIV 2 /\
+    LENGTH xs + LENGTH ys < LENGTH zs /\ LENGTH zs < dimword (:'a) DIV 2 /\
+    LENGTH xs + 1 <= l ==>
+    ?zs1 l2.
+      x64_full_cmp_pre (l,3w,x64_header (s,xs),x64_header (t,ys),xs,ys,zs) /\
+      (x64_full_cmp (l,3w,x64_header (s,xs),x64_header (t,ys),xs,ys,zs) =
+       (l2,x64_header (mwi_op Eq (s,xs) (t,ys)),xs,ys,
         SND (mwi_op Eq (s,xs) (t,ys)) ++ zs1)) /\
-      (LENGTH (SND (mwi_op Eq (s,xs) (t,ys)) ++ zs1) = LENGTH zs)``,
+      (LENGTH (SND (mwi_op Eq (s,xs) (t,ys)) ++ zs1) = LENGTH zs) /\
+      l <= l2 + LENGTH xs + 1``,
   SIMP_TAC std_ss [x64_full_cmp_def,x64_full_cmp_pre_def,LET_DEF] \\ STRIP_TAC
   \\ MP_TAC x64_icompare_thm \\ FULL_SIMP_TAC std_ss []
   \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [mwi_op_def] \\ SIMP_TAC std_ss [mwi_eq_def]
@@ -3964,50 +3973,51 @@ val x64_full_cmp_eq = prove(
 val (x64_iop_def, _,
      x64_iop_pre_def, _) =
   tailrec_define "x64_iop" ``
-    (\(r0,r1,r3,xs,ys,zs,xa,ya,ss).
+    (\(l,r0,r1,r3,xs,ys,zs,xa,ya,ss).
       if r3 <+ 0x2w then
         (let (r1,r3) = x64_isub_flip (r1,r3) in
          let r2 = r1 in
          let r1 = r0 in
-         let cond = x64_iadd_pre (r1,r2,xs,ys,zs,xa,ya) in
-         let (r10,xs,ys,zs,xa,ya) = x64_iadd (r1,r2,xs,ys,zs,xa,ya)
+         let cond = x64_iadd_pre (l,r1,r2,xs,ys,zs,xa,ya) in
+         let (l,r10,xs,ys,zs,xa,ya) = x64_iadd (l,r1,r2,xs,ys,zs,xa,ya)
          in
-           (INR (r10,xs,ys,zs,xa,ya,ss),cond))
-      else if r3 <+ 0x4w then
+           (INR (l,r10,xs,ys,zs,xa,ya,ss),cond))
+  (*  else if r3 <+ 0x4w then
         (let r10 = r0 in
          let r11 = r1 in
          let cond = x64_full_cmp_pre (r3,r10,r11,xs,ys,zs) in
          let (r10,xs,ys,zs) = x64_full_cmp (r3,r10,r11,xs,ys,zs)
          in
-           (INR (r10,xs,ys,zs,xa,ya,ss),cond))
+           (INR (r10,xs,ys,zs,xa,ya,ss),cond))  *)
       else if r3 = 0x4w then
         (let r2 = r1 in
          let r1 = r0 in
-         let cond = x64_imul_pre (r1,r2,xs,ys,zs) in
-         let (r10,xs,ys,zs) = x64_imul (r1,r2,xs,ys,zs)
+         let cond = x64_imul_pre (l,r1,r2,xs,ys,zs) in
+         let (l,r10,xs,ys,zs) = x64_imul (l,r1,r2,xs,ys,zs)
          in
-           (INR (r10,xs,ys,zs,xa,ya,ss),cond))
-      else if r3 <+ 0x7w then
+           (INR (l,r10,xs,ys,zs,xa,ya,ss),cond))
+      else (* if r3 <+ 0x7w then *)
         (let r3 = r3 - 0x5w in
          let r10 = r0 in
          let r11 = r1 in
-         let cond = x64_idiv_pre (r3,r10,r11,xs,ys,zs,ss) in
-         let (r11,xs,ys,zs,ss) = x64_idiv (r3,r10,r11,xs,ys,zs,ss) in
+         let cond = x64_idiv_pre (l,r3,r10,r11,xs,ys,zs,ss) in
+         let (l,r11,xs,ys,zs,ss) = x64_idiv (l,r3,r10,r11,xs,ys,zs,ss) in
          let r10 = r11
          in
-           (INR (r10,xs,ys,zs,xa,ya,ss),cond))
-      else
+           (INR (l,r10,xs,ys,zs,xa,ya,ss),cond)))
+  (*  else
         (let r10 = r0 in
          let cond = x64_int_to_dec_pre (r10,xs,zs,ss) in
          let (xs,zs,ss) = x64_int_to_dec (r10,xs,zs,ss) in
          let r10 = 0x0w
          in
-           (INR (r10,xs,ys,zs,xa,ya,ss),cond)))
-    :'a word # 'a word # 'a word # 'a word list # 'a word list # 'a
-     word list # 'a word # 'a word # 'a word list -> ('a word # 'a
-     word # 'a word # 'a word list # 'a word list # 'a word list # 'a
-     word # 'a word # 'a word list + 'a word # 'a word list # 'a word
-     list # 'a word list # 'a word # 'a word # 'a word list) # bool``;
+           (INR (r10,xs,ys,zs,xa,ya,ss),cond)) *)
+    :num # 'a word # 'a word # 'a word # 'a word list # 'a word list #
+     'a word list # 'a word # 'a word # 'a word list -> (num # 'a word
+     # 'a word # 'a word # 'a word list # 'a word list # 'a word list
+     # 'a word # 'a word # 'a word list + num # 'a word # 'a word list
+     # 'a word list # 'a word list # 'a word # 'a word # 'a word list)
+     # bool``;
 
 val x64_header_XOR_1 = prove(
   ``x64_header (s,xs) ?? 1w = x64_header (~s,xs)``,
@@ -4024,18 +4034,24 @@ val x64_iop_thm = store_thm("x64_iop_thm",
   ``3 < dimindex(:'a) ==>
     ((x64_header (s,xs) = 0x0w) <=> (xs = [])) /\ mw_ok xs /\
     ((x64_header (t,ys) = 0x0w) <=> (ys = [])) /\ mw_ok ys /\
-    LENGTH (xs:'a word list) + LENGTH ys < LENGTH zs /\ LENGTH zs < dimword (:'a) DIV 2 /\
-    (((iop = Div) \/ (iop = Mod)) ==> ys <> []) ==>
-    ?zs1.
-      x64_iop_pre (x64_header (s,xs),x64_header (t,ys),int_op_rep iop,
+    LENGTH (xs:'a word list) + LENGTH ys < LENGTH zs /\
+    LENGTH zs < dimword (:'a) DIV 2 /\
+    iop <> Lt /\
+    iop <> Eq /\
+    iop <> Dec /\
+    (((iop = Div) \/ (iop = Mod)) ==> ys <> []) /\
+    x64_div_max xs ys zs + 2 * LENGTH zs + 2 <= l ==>
+    ?zs1 l2.
+      x64_iop_pre (l,x64_header (s,xs),x64_header (t,ys),int_op_rep iop,
                    xs,ys,zs,xa,ya,ss) /\
-      (x64_iop (x64_header (s,xs),x64_header (t,ys),int_op_rep iop,
+      (x64_iop (l,x64_header (s,xs),x64_header (t,ys),int_op_rep iop,
                 xs,ys,zs,xa,ya,ss) =
-       (x64_header (mwi_op iop (s,xs) (t,ys)),xs,ys,
+       (l2,x64_header (mwi_op iop (s,xs) (t,ys)),xs,ys,
         SND (mwi_op iop (s,xs) (t,ys)) ++ zs1,xa,ya,
         if iop = Dec then MAP (n2w o ORD) (int_to_str (mw2i (s,xs))) ++ ss
         else ss)) /\
-      (LENGTH (SND (mwi_op iop (s,xs) (t,ys)) ++ zs1) = LENGTH zs)``,
+      (LENGTH (SND (mwi_op iop (s,xs) (t,ys)) ++ zs1) = LENGTH zs) /\
+      l <= l2 + x64_div_max xs ys zs + 2 * LENGTH zs + 2``,
   strip_tac \\
  `10 < dimword(:'a)`
   by (
@@ -4049,57 +4065,32 @@ val x64_iop_thm = store_thm("x64_iop_thm",
   THEN1 (
     reverse IF_CASES_TAC \\ rfs[]
     \\ MP_TAC x64_iadd_thm \\ fs[]
+    \\ match_mp_tac IMP_IMP \\ conj_tac THEN1 fs [x64_div_max_def]
     \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [mwi_op_def]
-    \\ fs[] )
+    \\ fs[] \\ fs [x64_div_max_def])
   THEN1 (
     reverse IF_CASES_TAC \\ rfs[]
     \\ MP_TAC (x64_iadd_thm |> Q.INST [`t`|->`~t`])
     \\ fs[x64_header_XOR_1]
+    \\ match_mp_tac IMP_IMP \\ conj_tac THEN1 fs [x64_div_max_def]
     \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [mwi_op_def,mwi_sub_def]
-    \\ fs[])
+    \\ fs[] \\ fs [x64_div_max_def])
   THEN1 (
     IF_CASES_TAC \\ rfs[]
     \\ MP_TAC x64_imul_thm \\ fs[]
+    \\ match_mp_tac IMP_IMP \\ conj_tac THEN1 fs [x64_div_max_def]
     \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [mwi_op_def]
-    \\ FULL_SIMP_TAC (srw_ss()) [])
+    \\ FULL_SIMP_TAC (srw_ss()) []
+    \\ fs[] \\ fs [x64_div_max_def])
   THEN1 (
     IF_CASES_TAC \\ rfs[]
-    \\ MP_TAC (x64_idiv_thm |> Q.INST [`r3`|->`0w`])
-    \\ fs[]
+    \\ MP_TAC (x64_idiv_thm |> Q.INST [`r3`|->`0w`]) \\ fs[]
     \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [mwi_op_def]
     \\ FULL_SIMP_TAC (srw_ss()) [mwi_divmod_alt_def])
   THEN1 (
     IF_CASES_TAC  \\ rfs[]
-    \\ MP_TAC (x64_idiv_thm |> Q.INST [`r3`|->`1w`])
-    \\ fs[]
+    \\ MP_TAC (x64_idiv_thm |> Q.INST [`r3`|->`1w`]) \\ fs[]
     \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [mwi_op_def]
-    \\ fs[mwi_divmod_alt_def] )
-  THEN1 (
-    reverse IF_CASES_TAC \\ rfs[]
-    \\ MP_TAC x64_full_cmp_lt \\ fs[]
-    \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [mwi_op_def]
-    \\ fs[] )
-  THEN1 (
-    IF_CASES_TAC \\ rfs[]
-    \\ MP_TAC x64_full_cmp_eq \\ fs[]
-    \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [mwi_op_def]
-    \\ FULL_SIMP_TAC (srw_ss()) [])
-  \\ IF_CASES_TAC \\ rfs[]
-  \\ FULL_SIMP_TAC std_ss [mwi_op_def]
-  \\ MP_TAC (mwi_to_dec_thm)
-  \\ fs[] \\ STRIP_TAC
-  \\ `((xs = []) ==> ~s)` by ALL_TAC
-  THEN1 (REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [EVAL ``x64_header (T,[])=0x0w``] \\ rfs[])
-  \\ FULL_SIMP_TAC std_ss []
-  \\ IMP_RES_TAC x64_int_to_dec_thm
-  \\ POP_ASSUM (MP_TAC o Q.SPEC `zs`) \\ POP_ASSUM (K ALL_TAC)
-  \\ `LENGTH xs <= LENGTH zs /\ LENGTH zs < dimword (:'a) DIV 2` by
-        (FULL_SIMP_TAC (srw_ss()) [] \\ DECIDE_TAC)
-  \\ FULL_SIMP_TAC std_ss [] \\ STRIP_TAC
-  \\ FIRST_X_ASSUM (Q.ISPEC_THEN `ss`STRIP_ASSUME_TAC)
-  \\ FULL_SIMP_TAC std_ss []
-  \\ EVAL_TAC \\ fs[]);
-
-*)
+    \\ fs[mwi_divmod_alt_def] ));
 
 val _ = export_theory();
