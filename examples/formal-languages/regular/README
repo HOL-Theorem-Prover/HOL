@@ -95,6 +95,14 @@ For now, spaces are significant.
      unsigned (both lo and hi are positive) or signed twos complement
      (lo is negative, hi can be positive or negative). Currently only 
      binary representation is supported.
+  \p{(lo_1,hi_1), ..., (lo_n,hi_n)}
+     "Packed" intervals. This support scenarios where adjacent intervals
+     don't line up on byte boundaries. For example, suppose one interval
+     needs 9 bits to represent and the adjacent interval needs only 6 to 
+     represent. Then the two intervals can be supported in 2 bytes via 
+     the \p{...} specification, rather than the 3 bytes needed by the
+     \i{...}\i{...} representation. Also intended to be used for packing 
+     multiple intervals into a single byte.
     
   r|s = alternation
   r&s = intersection

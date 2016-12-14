@@ -790,6 +790,21 @@ in
 end
 
 (*---------------------------------------------------------------------------*
+ * !x. A ==> !y. B ==> !z. C ==> !w. D                                       *
+ * -----------------------------------                                       *
+ *     C ==> B ==> A ==> D' (for example)                                    *
+ *                                                                           *
+ * reorders antecedents, modifies the conclusion D                           *
+ *---------------------------------------------------------------------------*)
+
+fun REORDER_ANTS_MOD f g th =
+  let val (ants, uth) = strip_gen_left (UNDISCH_TM o SPEC_ALL) th ;
+  in Lib.itlist DISCH (f ants) (g (SPEC_ALL uth)) end ;
+
+fun REORDER_ANTS f th = REORDER_ANTS_MOD f (fn c => c) th ;
+fun MODIFY_CONS g th = REORDER_ANTS_MOD (fn hs => hs) g th ;
+
+(*---------------------------------------------------------------------------*
  * Use the conclusion of the first theorem to delete a hypothesis of         *
  * the second theorem.                                                       *
  *                                                                           *

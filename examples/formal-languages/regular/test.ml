@@ -410,6 +410,7 @@ Lib.all (equal false) (map (test o num2string 1) (upto ~128 ~24));
  
 val test_1800 = matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}`;
 val test_1801 = matcher `\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}`;
+val test_1801_real = matcher `\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180),(0,59)}\i{0,5999}`;
 val test_1802 = matcher `\i{0,9999,LSB}\i{0,3599,LSB}`;
 val test_1803 = matcher `\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
 

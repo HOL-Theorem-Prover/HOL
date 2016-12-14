@@ -423,6 +423,9 @@ val feq = new_definition (
 val float_format = new_definition (
   "float_format",
   --`float_format = ((8:num),(23:num))`--);
+  (* for double
+  --`float_format = ((11:num),(52:num))`--);
+  *)
 
 val float_tybij = define_new_type_bijections {
   name="float_tybij",

@@ -1,3 +1,4 @@
+
 open HolKernel boolLib Parse bossLib
 
 open BasicProvers boolSimps markerLib optionTheory ;
@@ -2112,13 +2113,6 @@ val linear_order_to_list_lem2a = Q.prove (
     ASM_REWRITE_TAC [] THEN
     IMP_RES_TAC (REWRITE_RULE [SUBSET_DEF] rrestrict_SUBSET) ]) ;
 
-fun REORDER_ANTS_MOD f g th =
-  let val (ants, uth) = strip_gen_left (UNDISCH_TM o SPEC_ALL) th ;
-  in Lib.itlist DISCH (f ants) (g (SPEC_ALL uth)) end ;
-
-fun REORDER_ANTS f th = REORDER_ANTS_MOD f (fn th => th) th ;
-fun MODIFY_CONS g th = REORDER_ANTS_MOD (fn th => th) g th ;
-
 val linear_order_to_list_lem1d = Q.prove (
   `linear_order lo X ==> finite_prefixes lo X ==> x IN X ==>
   (LNTH (PRE (CARD {y | (y,x) IN lo})) (LUNFOLD linear_order_to_list_f lo) =
@@ -2128,9 +2122,6 @@ val linear_order_to_list_lem1d = Q.prove (
   THENL [RULE_ASSUM_TAC (REWRITE_RULE [finite_prefixes_def]) THEN RES_TAC,
     REFL_TAC,
     Q.EXISTS_TAC `X` THEN ASM_REWRITE_TAC []]) ;
-
-val PRE_LESS_EQ = Q.store_thm ("PRE_LESS_EQ", `m <= n ==> PRE m <= PRE n`,
-  SIMP_TAC arith_ss [INV_PRE_LESS_EQ]) ;
 
 val linear_order_to_llist_eq = Q.store_thm ("linear_order_to_llist",
   `!lo X.

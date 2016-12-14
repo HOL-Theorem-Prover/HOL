@@ -198,7 +198,7 @@ fun opt3string (lowOpt,hiOpt,ordOpt) = String.concat
 
 fun const2string (i,d) = 
  String.concat
-      ["\\k{", Int.toString i, ",", dir2string d, "}"]
+      ["\\k{", IntInf.toString i, ",", dir2string d, "}"]
   
 
 fun pack2string flds = 
@@ -690,6 +690,19 @@ fun catlist [] = EPSILON
 (* Numeric intervals                                                         *)
 (*---------------------------------------------------------------------------*)
 
+fun unsigned_width_bits (n:IntInf.int) = 
+ if n < 0 then raise ERR "unsigned_width_bits" "negative number" else
+ if n < 2 then 1
+ else 1 + unsigned_width_bits (n div 2);
+
+fun signed_width_bits (n:IntInf.int) = 
+  let fun fus bits = 
+       let val N = IntInf.pow(2,bits-1)
+       in if ~N <= n andalso n <= N-1 then bits else fus (bits+1)
+       end
+ in fus 0
+ end;
+
 fun unsigned_width_256 (n:IntInf.int) = 
  if n < 0 then raise ERR "unsigned_width_256" "negative number" else
  if n < 256 then 1
@@ -747,9 +760,9 @@ fun msb_int_of wlist = lsb_int_of (rev wlist);
 
 fun dots n = if n <= 0 then [] else SIGMA::dots (n-1);
 
-val byte2char = Char.chr o Word8.toInt;
-val byte2num = Word8.toInt;
 val num2byte = Word8.fromInt;
+val byte2num = Word8.toInt;
+val byte2char = Char.chr o Word8.toInt;
 val char2byte = num2byte o Char.ord;
 
 fun num2chset n = 
@@ -976,6 +989,132 @@ fun sing_interval i order =
      | MSB => msb_sing i width
  end;
 
+fun packed_intervals lists width order = 
+ let val intervals = map (fn list => (hd list, last list)) lists
+     fun interval2regexp (lo,hi) = 
+      if lo > hi 
+        then raise ERR "interval2regexp" "trivial interval" 
+      else
+      if lo < 0 andalso hi < 0 then
+        (if hi = ~1 then 
+           match_downto order lo width
+         else 
+           Diff (match_downto order lo width, 
+                 match_downto order (hi+1) width))
+      else
+      if lo < 0 andalso hi >= 0 then 
+        (if hi = 0 then
+           Or[match_downto order lo width, match_upto order 0 width]
+         else
+           Or [match_downto order lo width, match_upto order hi width])
+      else  (* lo and hi both non-negative *)
+       (if lo = 0 then 
+          match_upto order hi width
+        else 
+          Diff (match_upto order hi width, 
+                match_upto order (lo-1) width))
+ in
+   Or (map interval2regexp intervals)
+ end
+
+
+val allones = IntInf.notb(IntInf.fromInt 0);
+
+(*---------------------------------------------------------------------------*)
+(* Clear top (all but rightmost width) bits in w                             *)
+(*---------------------------------------------------------------------------*)
+
+fun clear_top_bits width w = 
+ let open IntInf
+     val mask = notb(<<(allones,Word.fromInt(width)))
+ in andb(w,mask)
+ end
+
+fun clear_bot_bits width w = 
+ let open IntInf
+ in ~>>(w,Word.fromInt width)
+ end
+
+fun sign_extend w width = 
+ let open IntInf
+ in if ~>>(w,Word.fromInt (width - 1)) = 1
+  then (* signed *)
+     orb(w,IntInf.<<(allones,Word.fromInt width))
+  else w
+ end
+
+fun icat w shift i = 
+ let val shiftw = Word.fromInt shift
+     val shifted = IntInf.<<(w,shiftw)
+     val x = clear_top_bits shift (IntInf.fromInt i)
+ in 
+   IntInf.orb(shifted,x)
+ end
+
+fun find_width (lo,hi) = 
+ if lo > hi 
+  then raise ERR "find_width" "malformed interval (lo > hi)"
+ else
+ if lo < 0 andalso hi < 0 
+    then signed_width_bits lo else
+ if lo < 0 andalso hi >= 0 
+    then Int.max(signed_width_bits lo, signed_width_bits hi)
+ else  (* lo and hi both non-negative *)
+   unsigned_width_bits hi;
+
+fun sum [] = 0
+  | sum (h::t) = h + sum t;
+
+fun add_slop iwlist slop = 
+ let fun add [(p,w)] = [(p,w+slop)]
+       | add (h::t) = h::add t
+       | add [] = raise ERR "add_slop" "expected non-empty list of intervals"
+ in 
+   add iwlist
+ end;
+
+fun i2regexp nbytes i = 
+    catlist (List.map (num2chset o byte2num) (bytes_of i nbytes))
+
+fun crunch list = 
+ let val slist = Listsort.sort Int.compare list
+     fun follows j i = j = i + 1
+     fun chop [] A = rev (map rev A)
+       | chop (h::t) [] = chop t [[h]]
+       | chop (h::t) ([]::rst) = chop t ([h]::rst)
+       | chop (h::t) ((a::L)::rst) = 
+          if follows h a
+           then chop t ((h::a::L)::rst)
+           else chop t ([h]::(a::L)::rst)
+ in
+   chop slist []
+ end;
+
+
+fun pack_intervals ilist = 
+ let val iwlist = map (fn x => (x,find_width x)) ilist
+     val nbits = sum (map snd iwlist)
+     val nbytes = let val bnd = nbits div 8 
+                  in if nbits mod 8 = 0 then bnd else 1 + bnd
+                  end
+     val slop = nbytes * 8 - nbits
+     val iwlist' = add_slop iwlist slop
+     fun step A width B = 
+      List.concat 
+        (List.map (fn a => List.map (icat a width) B) A)
+     fun iter W [] = W
+       | iter W (((lo,hi),width)::t) = iter (step W width (upto lo hi)) t
+ in
+   case iwlist'
+   of [] => raise ERR "pack_intervals" "supposedly unreachable!"
+    | ((lo,hi),_)::t =>
+       let val intlist = iter (upto lo hi) t
+           val sections = crunch intlist
+       in
+          packed_intervals sections nbytes LSB
+       end
+ end
+
 fun tree_to_regexp tree = 
  case tree 
   of Ident ch => Chset (charset_of [ch])
@@ -990,7 +1129,7 @@ fun tree_to_regexp tree =
    | Range (t,NONE,NONE) => Star (tree_to_regexp t)
    | Interval(i,j,dir) => regexp_interval i j dir
    | Const (k,dir) => sing_interval k dir
-   | Pack list => raise ERR "tree_to_regexp" "Pack construct not handled yet"
+   | Pack list => pack_intervals list
    | Ap("dot",[]) => DOT
    | Ap("digit",[]) => DIGIT
    | Ap("alphanum",[]) => ALPHANUM
@@ -1017,3 +1156,114 @@ fun fromQuote q = tree_to_regexp (quote_to_tree q)
  handle e => raise wrap_exn "Regexp_Type" "fromQuote" e;
 
 end
+
+
+(* Testing packed intervals
+
+`\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180),(0,59)}\i{0,5999}`;
+
+val ilist = [(~180,180),(0,59)];
+
+fun byte_me i = Word8.fromInt (IntInf.toInt i);
+fun inf_byte w = IntInf.fromInt(Word8.toInt w);
+
+val bytes_of = 
+ let val eight = Word.fromInt 8
+     val mask = 0xFF:IntInf.int
+     fun step i n =
+      if n=1 then [byte_me i]
+      else
+        let val a = IntInf.andb(i,mask)
+            val j = IntInf.~>>(i,eight)
+       in byte_me a::step j (n-1)
+       end
+  in
+   step
+ end
+
+val allones = IntInf.notb(IntInf.fromInt 0);
+
+(*---------------------------------------------------------------------------*)
+(* Clear top (all but rightmost width) bits in w                             *)
+(*---------------------------------------------------------------------------*)
+
+fun clear_top_bits width w = 
+ let open IntInf
+     val mask = notb(<<(allones,Word.fromInt(width)))
+ in andb(w,mask)
+ end
+
+fun clear_bot_bits width w = 
+ let open IntInf
+ in ~>>(w,Word.fromInt width)
+ end
+
+fun sign_extend w width = 
+ let open IntInf
+ in if ~>>(w,Word.fromInt (width - 1)) = 1
+  then (* signed *)
+     orb(w,IntInf.<<(allones,Word.fromInt width))
+  else w
+ end
+
+fun icat w shift i = 
+ let val shiftw = Word.fromInt shift
+     val shifted = IntInf.<<(w,shiftw)
+     val x = clear_top_bits shift (IntInf.fromInt i)
+ in 
+   IntInf.orb(shifted,x)
+ end
+
+fun allpairs A B = 
+  List.concat(map (fn a => map (fn b => (a,b)) B) A);
+
+
+val match = matcher SML o Regexp_Type.fromQuote;
+
+val tester = #matchfn (match `\p{(~180,180),(0,59)}`);
+
+fun check (a,b) = 
+  tester (String.implode (map byte2char (bytes_of (icat a 7 b) 2)))
+
+fun alltests (lo1,hi1) (lo2,hi2) = 
+ let val A = upto lo1 hi1
+     val B = upto lo2 hi2
+     val AxB = allpairs A B
+ in 
+  List.all check AxB
+ end;
+
+alltests  (~180,180) (0,59);
+
+check (181,59);
+Lib.all (equal false)
+        (map (fn i => check (181,i)) (upto 0 59));
+
+Lib.all (equal false)
+        (map (fn i => check (~181,i)) (upto 0 59));
+
+
+val tester = 
+ #matchfn (match `\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180),(0,59)}\i{0,5999}`)
+
+val tester = 
+ #matchfn (match `\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}`)
+
+
+fun bin i = IntInf.fmt StringCvt.BIN i;
+
+val input = icat ~180 7 24;
+sign_extend(clear_top_bits 7 test) 7;
+sign_extend(clear_bot_bits 7 test) 7;
+
+(* swapped *)
+val test = icat 24 9 ~180;
+sign_extend (clear_top_bits 9 test) 9;
+sign_extend (clear_bot_bits 9 test) 9;
+
+val tspan = upto 0 59;
+val dspan = upto ~180 180;
+
+fun crunch a bwidth b = bytes_of (icat a bwidth b) 2;
+
+*)
