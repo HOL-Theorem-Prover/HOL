@@ -888,63 +888,61 @@ val x64_sub_thm = prove(
 val (x64_iadd1_def, _,
      x64_iadd1_pre_def, _) =
   tailrec_define "x64_iadd1" ``
-    (\(r1,r2,xs,ys,xa,ya).
+    (\(r1,r2,xs,ys).
       (let r0 = 0x0w
        in
          if r1 <+ r2 then
-           (let (xa,xs,ya,ys) = (ya,ys,xa,xs) in
+           (let (xs,ys) = (ys,xs) in
             let r0 = 0x1w
             in
-              (INR (r1,r2,r0,xs,ys,xa,ya),T))
+              (INR (r1,r2,r0,xs,ys),T))
          else
            (let r8 = r1 in
             let r1 = r2 in
             let r2 = r8
             in
-              (INR (r1,r2,r0,xs,ys,xa,ya),T))))
-    :'a word # 'a word # 'a word list # 'a word list # 'a word # 'a
-     word -> ('a word # 'a word # 'a word list # 'a word list # 'a
-     word # 'a word + 'a word # 'a word # 'a word # 'a word list # 'a
-     word list # 'a word # 'a word) # bool``;
+              (INR (r1,r2,r0,xs,ys),T))))
+    :'a word # 'a word # 'a word list # 'a word list -> ('a word # 'a
+     word # 'a word list # 'a word list + 'a word # 'a word # 'a word
+     # 'a word list # 'a word list) # bool``;
 
 val (x64_iadd2_def, _,
      x64_iadd2_pre_def, _) =
   tailrec_define "x64_iadd2" ``
-    (\(r1,r2,r10,r12,xs,ys,xa,ya).
+    (\(r1,r2,r10,r12,xs,ys).
       (let r0 = 0x0w
        in
          if r10 = 0x1w then
-           (let (xa,xs,ya,ys) = (ya,ys,xa,xs) in
+           (let (xs,ys) = (ys,xs) in
             let r12 = r12 ?? 0x1w in
             let r0 = 0x1w
             in
-              (INR (r1,r2,r0,r12,xs,ys,xa,ya),T))
+              (INR (r1,r2,r0,r12,xs,ys),T))
          else
            (let r8 = r1 in
             let r1 = r2 in
             let r2 = r8
             in
-              (INR (r1,r2,r0,r12,xs,ys,xa,ya),T))))
+              (INR (r1,r2,r0,r12,xs,ys),T))))
     :'a word # 'a word # 'a word # 'a word # 'a word list # 'a word
-     list # 'a word # 'a word -> ('a word # 'a word # 'a word # 'a
-     word # 'a word list # 'a word list # 'a word # 'a word + 'a word
-     # 'a word # 'a word # 'a word # 'a word list # 'a word list # 'a
-     word # 'a word) # bool``;
+     list -> ('a word # 'a word # 'a word # 'a word # 'a word list #
+     'a word list + 'a word # 'a word # 'a word # 'a word # 'a word
+     list # 'a word list) # bool``;
 
 val (x64_iadd3_def, _,
      x64_iadd3_pre_def, _) =
   tailrec_define "x64_iadd3" ``
-    (\(r0,xs,ys,xa,ya).
-      if r0 = 0x0w then (INR (xs,ys,xa,ya),T)
-      else (let (xa,xs,ya,ys) = (ya,ys,xa,xs) in (INR (xs,ys,xa,ya),T)))
-    :'a word # 'a word list # 'a word list # 'a word # 'a word ->
-     ('a word # 'a word list # 'a word list # 'a word # 'a word +
-      'a word list # 'a word list # 'a word # 'a word) # bool``;
+    (\(r0,xs,ys).
+      if r0 = 0x0w then (INR (xs,ys),T)
+      else (let (xs,ys) = (ys,xs) in (INR (xs,ys),T)))
+    :'a word # 'a word list # 'a word list ->
+     ('a word # 'a word list # 'a word list +
+      'a word list # 'a word list) # bool``;
 
 val (x64_iadd_def, _,
      x64_iadd_pre_def, _) =
   tailrec_define "x64_iadd" ``
-    (\(l,r1,r2,xs,ys,zs,xa,ya).
+    (\(l,r1,r2,xs,ys,zs).
       (let r10 = r1 in
        let r10 = r10 && 0x1w in
        let r11 = r2 in
@@ -953,7 +951,7 @@ val (x64_iadd_def, _,
          if r10 = r11 then
            (let r1 = r1 >>> 1 in
             let r2 = r2 >>> 1 in
-            let (r1,r2,r0,xs,ys,xa,ya) = x64_iadd1 (r1,r2,xs,ys,xa,ya) in
+            let (r1,r2,r0,xs,ys) = x64_iadd1 (r1,r2,xs,ys) in
             let r8 = 0x0w in
             let r9 = r8 in
             let r10 = r8 in
@@ -961,11 +959,11 @@ val (x64_iadd_def, _,
             let (l,r1,r2,r8,r9,r10,xs,ys,zs) =
                   x64_add (l,r1,r2,r8,r9,r10,xs,ys,zs)
             in
-            let (xs,ys,xa,ya) = x64_iadd3 (r0,xs,ys,xa,ya) in
+            let (xs,ys) = x64_iadd3 (r0,xs,ys) in
             let r10 = r10 << 1 in
             let r10 = r10 + r11
             in
-              (INR (l,r10,xs,ys,zs,xa,ya),cond))
+              (INR (l,r10,xs,ys,zs),cond))
          else
            (let r12 = r10 in
             let r10 = r1 in
@@ -975,10 +973,10 @@ val (x64_iadd_def, _,
             let cond = x64_compare_pre (l,r10,r11,xs,ys) in
             let (l,r10,xs,ys) = x64_compare (l,r10,r11,xs,ys)
             in
-              if r10 = 0x0w then (INR (l,r10,xs,ys,zs,xa,ya),cond)
+              if r10 = 0x0w then (INR (l,r10,xs,ys,zs),cond)
               else
-                (let (r1,r2,r0,r12,xs,ys,xa,ya) =
-                       x64_iadd2 (r1,r2,r10,r12,xs,ys,xa,ya)
+                (let (r1,r2,r0,r12,xs,ys) =
+                       x64_iadd2 (r1,r2,r10,r12,xs,ys)
                  in
                  let r8 = 0x0w in
                  let r9 = r8 in
@@ -990,16 +988,15 @@ val (x64_iadd_def, _,
                  let (l,r1,r2,r8,r9,r10,xs,ys,zs) =
                        x64_sub (l,r1,r2,r8,r9,r10,xs,ys,zs)
                  in
-                 let (xs,ys,xa,ya) = x64_iadd3 (r0,xs,ys,xa,ya) in
+                 let (xs,ys) = x64_iadd3 (r0,xs,ys) in
                  let r10 = r10 << 1 in
                  let r10 = r10 + r12
                  in
-                   (INR (l,r10,xs,ys,zs,xa,ya),cond)))))
+                   (INR (l,r10,xs,ys,zs),cond)))))
     :num # 'a word # 'a word # 'a word list # 'a word list # 'a word
-     list # 'a word # 'a word -> (num # 'a word # 'a word # 'a word
-     list # 'a word list # 'a word list # 'a word # 'a word + num # 'a
-     word # 'a word list # 'a word list # 'a word list # 'a word # 'a
-     word) # bool``;
+     list -> (num # 'a word # 'a word # 'a word list # 'a word list #
+     'a word list + num # 'a word # 'a word list # 'a word list # 'a
+     word list) # bool``;
 
 val x64_header_EQ = prove(
   ``(x64_header (s,xs) && 0x1w = x64_header (t,ys) && 0x1w) = (s = t)``,
@@ -1016,10 +1013,10 @@ val x64_iadd_thm = prove(
     LENGTH xs + LENGTH ys <= LENGTH zs /\ mw_ok xs /\ mw_ok ys /\
     4 * LENGTH xs + 4 * LENGTH ys + 4 <= l ==>
     ?zs1 l2.
-      x64_iadd_pre (l,x64_header (s,xs),x64_header (t,ys),xs,ys,zs,xa,ya) /\
-      (x64_iadd (l,x64_header (s,xs),x64_header (t,ys),xs,ys,zs,xa,ya) =
+      x64_iadd_pre (l,x64_header (s,xs),x64_header (t,ys),xs,ys,zs) /\
+      (x64_iadd (l,x64_header (s,xs),x64_header (t,ys),xs,ys,zs) =
         (l2,x64_header (mwi_add (s,xs) (t,ys)),xs,ys,
-         SND (mwi_add (s,xs) (t,ys))++zs1,xa,ya)) /\
+         SND (mwi_add (s,xs) (t,ys))++zs1)) /\
       (LENGTH (SND (mwi_add (s,xs) (t,ys))++zs1) = LENGTH zs) /\
       l <= l2 + 4 * LENGTH xs + 4 * LENGTH ys + 4``,
   FULL_SIMP_TAC std_ss [x64_iadd_def,x64_iadd_pre_def,LET_DEF]
@@ -3949,29 +3946,29 @@ val x64_full_cmp_eq = prove(
 val (x64_iop_def, _,
      x64_iop_pre_def, _) =
   tailrec_define "x64_iop" ``
-    (\(l,r0,r1,r3,xs,ys,zs,xa,ya).
+    (\(l,r0,r1,r3,xs,ys,zs).
       if r3 <+ 0x2w then
         (let (r1,r3) = x64_isub_flip (r1,r3) in
          let r2 = r1 in
          let r1 = r0 in
-         let cond = x64_iadd_pre (l,r1,r2,xs,ys,zs,xa,ya) in
-         let (l,r10,xs,ys,zs,xa,ya) = x64_iadd (l,r1,r2,xs,ys,zs,xa,ya)
+         let cond = x64_iadd_pre (l,r1,r2,xs,ys,zs) in
+         let (l,r10,xs,ys,zs) = x64_iadd (l,r1,r2,xs,ys,zs)
          in
-           (INR (l,r10,xs,ys,zs,xa,ya),cond))
+           (INR (l,r10,xs,ys,zs),cond))
   (*  else if r3 <+ 0x4w then
         (let r10 = r0 in
          let r11 = r1 in
          let cond = x64_full_cmp_pre (r3,r10,r11,xs,ys,zs) in
          let (r10,xs,ys,zs) = x64_full_cmp (r3,r10,r11,xs,ys,zs)
          in
-           (INR (r10,xs,ys,zs,xa,ya,ss),cond))  *)
+           (INR (r10,xs,ys,zs,ss),cond))  *)
       else if r3 = 0x4w then
         (let r2 = r1 in
          let r1 = r0 in
          let cond = x64_imul_pre (l,r1,r2,xs,ys,zs) in
          let (l,r10,xs,ys,zs) = x64_imul (l,r1,r2,xs,ys,zs)
          in
-           (INR (l,r10,xs,ys,zs,xa,ya),cond))
+           (INR (l,r10,xs,ys,zs),cond))
       else (* if r3 <+ 0x7w then *)
         (let r3 = r3 - 0x5w in
          let r10 = r0 in
@@ -3980,19 +3977,18 @@ val (x64_iop_def, _,
          let (l,r11,xs,ys,zs) = x64_idiv (l,r3,r10,r11,xs,ys,zs) in
          let r10 = r11
          in
-           (INR (l,r10,xs,ys,zs,xa,ya),cond)))
+           (INR (l,r10,xs,ys,zs),cond)))
   (*  else
         (let r10 = r0 in
          let cond = x64_int_to_dec_pre (r10,xs,zs,ss) in
          let (xs,zs,ss) = x64_int_to_dec (r10,xs,zs,ss) in
          let r10 = 0x0w
          in
-           (INR (r10,xs,ys,zs,xa,ya,ss),cond)) *)
+           (INR (r10,xs,ys,zs,ss),cond)) *)
     :num # 'a word # 'a word # 'a word # 'a word list # 'a word list #
-     'a word list # 'a word # 'a word -> (num # 'a word # 'a word # 'a
-     word # 'a word list # 'a word list # 'a word list # 'a word # 'a
-     word + num # 'a word # 'a word list # 'a word list # 'a word list
-     # 'a word # 'a word) # bool``;
+     'a word list -> (num # 'a word # 'a word # 'a word # 'a word list
+     # 'a word list # 'a word list + num # 'a word # 'a word list # 'a
+     word list # 'a word list) # bool``;
 
 val x64_header_XOR_1 = prove(
   ``x64_header (s,xs) ?? 1w = x64_header (~s,xs)``,
@@ -4016,11 +4012,11 @@ val x64_iop_thm = store_thm("x64_iop_thm",
     x64_div_max xs ys zs + 2 * LENGTH zs + 2 <= l ==>
     ?zs1 l2.
       x64_iop_pre (l,x64_header (s,xs),x64_header (t,ys),int_op_rep iop,
-                   xs,ys,zs,xa,ya) /\
+                   xs,ys,zs) /\
       (x64_iop (l,x64_header (s,xs),x64_header (t,ys),int_op_rep iop,
-                xs,ys,zs,xa,ya) =
+                xs,ys,zs) =
        (l2,x64_header (mwi_op iop (s,xs) (t,ys)),xs,ys,
-        SND (mwi_op iop (s,xs) (t,ys)) ++ zs1,xa,ya)) /\
+        SND (mwi_op iop (s,xs) (t,ys)) ++ zs1)) /\
       (LENGTH (SND (mwi_op iop (s,xs) (t,ys)) ++ zs1) = LENGTH zs) /\
       l <= l2 + x64_div_max xs ys zs + 2 * LENGTH zs + 2``,
   strip_tac \\
