@@ -8,8 +8,11 @@ val _ = new_theory "mc_multiword";
 
 val REV = Tactical.REVERSE;
 
-fun tailrec_define name tm =
-  tailrecLib.tailrec_define_from_step name tm NONE;
+fun tailrec_define name tm = let
+  val (def,t1,pre,t2) = tailrecLib.tailrec_define_from_step name tm NONE;
+  val _ = save_thm(name ^ "_def", def)
+  val _ = save_thm(name ^ "_pre_def", pre)
+  in (def,t1,pre,t2) end
 
 val EVEN_BIT0 = bitTheory.BIT0_ODD |> REWRITE_RULE [ODD_EVEN,FUN_EQ_THM]
 
