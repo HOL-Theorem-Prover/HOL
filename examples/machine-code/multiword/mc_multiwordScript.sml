@@ -3369,9 +3369,9 @@ val mc_div_sub_aux_def =
   LIST_CONJ [mc_div_sub_aux_def,mc_div_sub_aux_pre_def,
              mc_div_sub_aux1_def,mc_div_sub_aux1_pre_def]
 
-val (mc_div_sub_def, _,
-     mc_div_sub_pre_def, _) =
-  tailrec_define "mc_div_sub" ``
+val (mc_div_sub1_def, _,
+     mc_div_sub1_pre_def, _) =
+  tailrec_define "mc_div_sub1" ``
     (\(l,r1,r8,r9,ys,zs).
       (let cond = mc_div_sub_aux_pre (l,r1,r8,r9,ys,zs) in
        let (l,r1,r4,r8,r9,r10,ys,zs) = mc_div_sub_aux (l,r1,r8,r9,ys,zs)
@@ -3382,8 +3382,8 @@ val (mc_div_sub_def, _,
      list + num # 'a word # 'a word # 'a word # 'a word # 'a word list
      # 'a word list) # bool``;
 
-val mc_div_sub_def =
-  LIST_CONJ [mc_div_sub_def,mc_div_sub_pre_def]
+val mc_div_sub1_def =
+  LIST_CONJ [mc_div_sub1_def,mc_div_sub1_pre_def]
 
 val (mc_div_sub_call_def, _,
      mc_div_sub_call_pre_def, _) =
@@ -3395,8 +3395,8 @@ val (mc_div_sub_call_def, _,
         (let r8 = r6 in
          let r9 = r6 in
          let r3 = r1 in
-         let cond = mc_div_sub_pre (l,r1,r8,r9,ys,zs) in
-         let (l,r1,r8,r9,r10,ys,zs) = mc_div_sub (l,r1,r8,r9,ys,zs) in
+         let cond = mc_div_sub1_pre (l,r1,r8,r9,ys,zs) in
+         let (l,r1,r8,r9,r10,ys,zs) = mc_div_sub1 (l,r1,r8,r9,ys,zs) in
          let r10 = r3 in
          let cond = cond /\ mc_fix_pre (l-1,r8,r10,zs) /\ l<>0 in
          let (l,r8,r10,zs) = mc_fix (l-1,r8,r10,zs) in
@@ -3455,16 +3455,16 @@ val mc_div_sub_aux_thm = prove(
   |> Q.SPECL [`ys`,`zs`,`[]`,`[]`,`ys2`,`zs2`,`T`]
   |> SIMP_RULE std_ss [APPEND,LENGTH,EVAL ``b2w T``] |> GEN_ALL;
 
-val mc_div_sub_thm = prove(
+val mc_div_sub1_thm = prove(
   ``(LENGTH (zs:'a word list) = LENGTH ys) /\ LENGTH zs + 1 < dimword (:'a) /\
     LENGTH ys + 1 <= l ==>
     ?r8' r9' l2.
-      mc_div_sub_pre (l,n2w (LENGTH ys),r8,r9,ys ++ ys2,zs ++ zs2) /\
-      (mc_div_sub (l,n2w (LENGTH ys),r8,r9,ys ++ ys2,zs ++ zs2) =
+      mc_div_sub1_pre (l,n2w (LENGTH ys),r8,r9,ys ++ ys2,zs ++ zs2) /\
+      (mc_div_sub1 (l,n2w (LENGTH ys),r8,r9,ys ++ ys2,zs ++ zs2) =
         (l2,0x0w,r8',r9',n2w (LENGTH ys),ys ++ ys2,
          FST (mw_sub ys zs T) ++ zs2)) /\
       l <= l2 + LENGTH ys + 1``,
-  SIMP_TAC std_ss [mc_div_sub_def]
+  SIMP_TAC std_ss [mc_div_sub1_def]
   \\ ONCE_REWRITE_TAC [mc_div_sub_aux_def]
   \\ SIMP_TAC std_ss [LET_DEF,WORD_SUB_RZERO,word_add_n2w]
   \\ REPEAT STRIP_TAC \\ ASSUME_TAC mc_div_sub_aux_thm
@@ -3609,9 +3609,9 @@ val mc_idiv_thm = prove(
     \\ FULL_SIMP_TAC std_ss [EVAL ``b2w T = 0x0w:'a word``,n2w_11,ZERO_LT_dimword]
     \\ FULL_SIMP_TAC std_ss [LENGTH_NIL]
     \\ Cases_on`1 MOD dimword(:'a) = 0` \\ fs[]
-    \\ (mc_div_sub_thm |> Q.INST [`ys2`|->`[]`]
+    \\ (mc_div_sub1_thm |> Q.INST [`ys2`|->`[]`]
         |> SIMP_RULE std_ss [APPEND_NIL] |> GEN_ALL |> ASSUME_TAC)
-    \\ SEP_I_TAC "mc_div_sub" \\ POP_ASSUM MP_TAC
+    \\ SEP_I_TAC "mc_div_sub1" \\ POP_ASSUM MP_TAC
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
     THEN1 (FULL_SIMP_TAC std_ss [GSYM LENGTH_NIL,X_LT_DIV] \\ fs [])
     \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss []
