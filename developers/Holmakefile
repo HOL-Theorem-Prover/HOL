@@ -1,9 +1,9 @@
 OPTIONS = NO_OVERLAY
-EXTRA_CLEANS = comparelogs generateBuildSummary genUseScript unicode-grep
+EXTRA_CLEANS = comparelogs generateBuildSummary genUseScript
 MLTON_SRCS = mlton-srcs/Binarymap.sml mlton-srcs/Listsort.sml comparelogs.mlb
 
 .PHONY: all
-all: comparelogs generateBuildSummary unicode-grep
+all: comparelogs generateBuildSummary
 
 ifdef POLY
 
@@ -16,15 +16,9 @@ genUseScript: genUseScript.sml $(dprot $(HOLDIR)/src/portableML/GetOpt.sig) \
               $(dprot $(HOLDIR)/src/portableML/GetOpt.sml)
 	$(POLYC) $< -o $@
 
-unicode-grep: ugrep.sml
-	$(POLYC) $< -o $@
-
 else
 
 comparelogs: comparelogs.uo
-	$(MOSMLC) -o $@ $<
-
-unicode-grep: ugrep_mosml.uo ugrep.uo
 	$(MOSMLC) -o $@ $<
 
 endif
