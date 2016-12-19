@@ -15,14 +15,42 @@ fun read_cline args =
     | "-v" :: args => (2, args)
     | _ => (1, args)
 
+(* acceptable Unicode characters are
+
+                  UTF-8
+    ‘   U+2018   0xE28098
+    ’   U+2019   0xE28099
+    “   U+201C   0xE2809C
+    ”   U+201D   0xE2809D
+*)
+
 fun includes_unicode s =
   let
+    val sz = size s
     fun recurse i =
-      if i < 0 then false
+      if i = sz then false
       else
-        ord (String.sub(s,i)) > 127 orelse recurse (i - 1)
+        let val c = ord (String.sub(s,i))
+        in
+          if c = 0xE2 then quote_char2 (i + 1)
+          else if c > 127 then true
+          else recurse (i + 1)
+        end
+    and quote_char2 i =
+        if i = sz then true
+        else if ord (String.sub(s,i)) = 0x80 then quote_char3 (i + 1)
+        else true
+    and quote_char3 i =
+        if i = sz then true
+        else
+          let val c = ord (String.sub(s,i))
+          in
+            if c = 0x98 orelse c = 0x99 orelse c = 0x9C orelse c = 0x9D then
+              recurse (i + 1)
+            else true
+          end
   in
-    recurse (size s - 1)
+    recurse 0
   end
 
 
