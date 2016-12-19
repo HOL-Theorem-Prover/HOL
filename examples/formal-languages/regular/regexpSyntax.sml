@@ -94,7 +94,9 @@ fun word_to_bitvector tm =
               let val (d,m) = divmod(n,two) in (update(A,i,m=one); d) end) n A
  in vector A
  end
-*)
+
+
+ The following functions implement the maps for bool vectors
 
 fun bitvector_to_bitlist bv =  
  let open boolSyntax
@@ -107,6 +109,33 @@ fun bitlist_to_bitvector tm =
  let val (tmlist,ty) = listSyntax.dest_list tm
      val blist = List.map (equal boolSyntax.T) tmlist
  in Vector.fromList blist
+ end
+*)
+
+fun bitvector_to_bitlist bv =  
+ let open boolSyntax
+     fun bit ch = (ch = #"1")
+     fun bin i = IntInf.fmt StringCvt.BIN i
+     val ml_bitlist = map bit (explode (bin bv))
+ in 
+    List.foldr(fn (b,list) => 
+        listSyntax.mk_cons(if b then T else F,list)) 
+       (listSyntax.mk_nil Type.bool) ml_bitlist
+ end;
+
+fun bitlist_to_bitvector tm = 
+ let val (tmlist,ty) = listSyntax.dest_list tm
+     fun binchar tm = 
+       if tm = T then #"1" else 
+       if tm = F then #"0" 
+       else raise ERR "bitlist_to_bitvector" "expected boolean literal"
+     val blist = List.map binchar tmlist
+     fun list_reader (h::t) = SOME(h,t)
+       | list_reader [] = NONE
+ in 
+   case IntInf.scan StringCvt.BIN list_reader blist
+    of SOME (i,[]) => i
+     | otherwise => raise ERR "bitlist_to_bitvector" "unexpected input"
  end
 
 (*---------------------------------------------------------------------------*)

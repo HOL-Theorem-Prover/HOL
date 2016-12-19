@@ -248,9 +248,18 @@ val char2byte = Word8.fromInt o Char.ord;
 val string2num = lsb_num_of o map char2byte o String.explode;
 val string2int = lsb_int_of o map char2byte o String.explode;
 
-fun num2string w n =
+(*---------------------------------------------------------------------------*)
+(* Puts int out in LSB                                                       *)
+(*---------------------------------------------------------------------------*)
+
+fun int2string w n =
  let val blist = bytes_of (IntInf.fromInt n) w
  in String.implode (map byte2char blist)
+ end;
+
+fun int2string_msb w n =
+ let val blist = bytes_of (IntInf.fromInt n) w
+ in String.implode (map byte2char (rev blist))
  end;
 
 (*---------------------------------------------------------------------------*)
@@ -258,24 +267,24 @@ fun num2string w n =
 (*---------------------------------------------------------------------------*)
 
 val test = matcher `\i{0,17999}`;
-val nlist = map (num2string 2) (upto 0 17999);
+val nlist = map (int2string 2) (upto 0 17999);
 Lib.all (equal true) (map test nlist);
-Lib.all (equal false) (map (test o num2string 2) (upto 18000 21212));
+Lib.all (equal false) (map (test o int2string 2) (upto 18000 21212));
 
 val test = matcher `\i{1,17999}`;
-val nlist = map (num2string 2) (upto 1 17999);
+val nlist = map (int2string 2) (upto 1 17999);
 Lib.all (equal true) (map test nlist);
-Lib.all (equal false) (map (test o num2string 2) [~1,0,18000]);
+Lib.all (equal false) (map (test o int2string 2) [~1,0,18000]);
 
 val test = matcher `\i{0,2500000}`;
-Lib.all (equal true) (map (test o num2string 3) (upto 0 2500000));
-Lib.all (equal false) (map (test o num2string 3) (upto 2500001 2502999));
+Lib.all (equal true) (map (test o int2string 3) (upto 0 2500000));
+Lib.all (equal false) (map (test o int2string 3) (upto 2500001 2502999));
 
 val test = matcher `\i{17999,2500000}`;
-val nlist = map (num2string 3) (upto 17999 2500000);
+val nlist = map (int2string 3) (upto 17999 2500000);
 Lib.all (equal true) (map test nlist);
-Lib.all (equal false) (map (test o num2string 3) (upto 0 17998));
-Lib.all (equal false) (map (test o num2string 3) (upto 2500001 2502999));
+Lib.all (equal false) (map (test o int2string 3) (upto 0 17998));
+Lib.all (equal false) (map (test o int2string 3) (upto 2500001 2502999));
 
 (*---------------------------------------------------------------------------*)
 (* Test ranges over integers                                                 *)
@@ -283,88 +292,125 @@ Lib.all (equal false) (map (test o num2string 3) (upto 2500001 2502999));
 
 val test = matcher `\i{~4,0}`;
 signed_width_256 ~4 = 1;
-Lib.all (equal true) (map (test o num2string 1) (upto ~4 0));
-Lib.all (equal false) (map (test o num2string 1) [~5, ~6, ~64, 1, 2, 3, 4]);
+Lib.all (equal true) (map (test o int2string 1) (upto ~4 0));
+Lib.all (equal false) (map (test o int2string 1) [~5, ~6, ~64, 1, 2, 3, 4]);
 
 val test = matcher `\i{~90,0}`;
 signed_width_256 ~90 = 1;
-Lib.all (equal true) (map (test o num2string 1) (upto ~90 0));
-Lib.all (equal false) (map (test o num2string 1) (upto ~128 ~91));
-Lib.all (equal false) (map (test o num2string 1) (upto 1 127));
+Lib.all (equal true) (map (test o int2string 1) (upto ~90 0));
+Lib.all (equal false) (map (test o int2string 1) (upto ~128 ~91));
+Lib.all (equal false) (map (test o int2string 1) (upto 1 127));
 
 val test = matcher `\i{~90,90}`;
 signed_width_256 ~90 = 1;
-Lib.all (equal true) (map (test o num2string 1) (upto ~90 90));
-Lib.all (equal false) (map (test o num2string 1) (upto ~128 ~91));
-Lib.all (equal false) (map (test o num2string 1) (upto 91 127));
+Lib.all (equal true) (map (test o int2string 1) (upto ~90 90));
+Lib.all (equal false) (map (test o int2string 1) (upto ~128 ~91));
+Lib.all (equal false) (map (test o int2string 1) (upto 91 127));
 
 val test = matcher `\i{~180,0}`;
 signed_width_256 ~180 = 2;
-Lib.all (equal true) (map (test o num2string 2) (upto ~180 0));
-Lib.all (equal false) (map (test o num2string 2) (upto ~32768 ~181));
-Lib.all (equal false) (map (test o num2string 2) (upto 181 1027));
+Lib.all (equal true) (map (test o int2string 2) (upto ~180 0));
+Lib.all (equal false) (map (test o int2string 2) (upto ~32768 ~181));
+Lib.all (equal false) (map (test o int2string 2) (upto 181 1027));
 
 val test = matcher `\i{~180,180}`;
 signed_width_256 ~180 = 2;
-Lib.all (equal true) (map (test o num2string 2) (upto ~180 180));
-Lib.all (equal false) (map (test o num2string 2) [~181,181,192,18000,~1888]);
+Lib.all (equal true) (map (test o int2string 2) (upto ~180 180));
+Lib.all (equal false) (map (test o int2string 2) [~181,181,192,18000,~1888]);
 
 val test = matcher `\i{~2500000,2500000}`;
 signed_width_256 ~2500000 = 3;
-Lib.all (equal true) (map (test o num2string 3) (upto ~2500000 2500000));
-Lib.all (equal false) (map (test o num2string 3) 
+Lib.all (equal true) (map (test o int2string 3) (upto ~2500000 2500000));
+Lib.all (equal false) (map (test o int2string 3) 
                       [~2500001,~2500001, 2500001,2500002,2599999]);
 
 val test = matcher `\i{~3,300}`;
 signed_width_256 300 = 2;
-Lib.all (equal true) (map (test o num2string 2) (upto ~3 300));
-Lib.all (equal false) (map (test o num2string 2) (upto ~300 ~4));
-Lib.all (equal false) (map (test o num2string 2) (upto 301 16534));
+Lib.all (equal true) (map (test o int2string 2) (upto ~3 300));
+Lib.all (equal false) (map (test o int2string 2) (upto ~300 ~4));
+Lib.all (equal false) (map (test o int2string 2) (upto 301 16534));
 
 val test = matcher `\i{~3,800}`;
 signed_width_256 800 = 2;
-Lib.all (equal true) (map (test o num2string 2) (upto ~3 800));
-Lib.all (equal false) (map (test o num2string 2) (upto ~12000 ~4));
-Lib.all (equal false) (map (test o num2string 2) (upto 801 16534));
+Lib.all (equal true) (map (test o int2string 2) (upto ~3 800));
+Lib.all (equal false) (map (test o int2string 2) (upto ~12000 ~4));
+Lib.all (equal false) (map (test o int2string 2) (upto 801 16534));
 
 val test = matcher `\i{~17999,0}`;
 signed_width_256 ~17999 = 2;
-Lib.all (equal true) (map (test o num2string 2) (upto ~17999 0));
-Lib.all (equal false) (map (test o num2string 2) (upto ~34000 ~18000));
-Lib.all (equal false) (map (test o num2string 2) (upto 1 18000));
+Lib.all (equal true) (map (test o int2string 2) (upto ~17999 0));
+Lib.all (equal false) (map (test o int2string 2) (upto ~34000 ~18000));
+Lib.all (equal false) (map (test o int2string 2) (upto 1 18000));
 
 val test = matcher `\i{~17999,~123}`;
 signed_width_256 ~17999 = 2;
-Lib.all (equal true) (map (test o num2string 2) (upto ~17999 ~123));
-Lib.all (equal false) (map (test o num2string 2) (upto ~34000 ~18000));
-Lib.all (equal false) (map (test o num2string 2) (upto ~122 ~1));
-Lib.all (equal false) (map (test o num2string 2) (upto ~122 1000));
+Lib.all (equal true) (map (test o int2string 2) (upto ~17999 ~123));
+Lib.all (equal false) (map (test o int2string 2) (upto ~34000 ~18000));
+Lib.all (equal false) (map (test o int2string 2) (upto ~122 ~1));
+Lib.all (equal false) (map (test o int2string 2) (upto ~122 1000));
 
 val test = matcher `\i{~116535,~23}`;
 signed_width_256 ~116535 = 3;
-Lib.all (equal true) (map (test o num2string 3) (upto ~116535 ~23));
-Lib.all (equal false) (map (test o num2string 3) (upto ~119999 ~116536));
-Lib.all (equal false) (map (test o num2string 3) (upto ~122 ~1));
-Lib.all (equal false) (map (test o num2string 3) (upto ~122 1000));
+Lib.all (equal true) (map (test o int2string 3) (upto ~116535 ~23));
+Lib.all (equal false) (map (test o int2string 3) (upto ~119999 ~116536));
+Lib.all (equal false) (map (test o int2string 3) (upto ~122 ~1));
+Lib.all (equal false) (map (test o int2string 3) (upto ~122 1000));
 
 (*---------------------------------------------------------------------------*)
 (* Test numeric constants                                                    *)
 (*---------------------------------------------------------------------------*)
 
 val test = matcher `\k{23}`;
-test (num2string 1 23);
-test (num2string 1 22);
-Lib.all (equal false) (map (test o num2string 1) (upto 0 22));
-Lib.all (equal false) (map (test o num2string 1) (upto 24 255));
+true = test (int2string 1 23);
+equal false (test (int2string 1 22));
+Lib.all (equal false) (map (test o int2string 1) (upto 0 22));
+Lib.all (equal false) (map (test o int2string 1) (upto 24 255));
 
 
 val test = matcher `\k{~23}`;
-test (num2string 1 ~23);
-test (num2string 1 ~22);
-Lib.all (equal false) (map (test o num2string 1) (upto ~22 0));
-Lib.all (equal false) (map (test o num2string 1) (upto 1 127));
-Lib.all (equal false) (map (test o num2string 1) (upto ~128 ~24));
+test (int2string 1 ~23);
+false = test (int2string 1 ~22);
+Lib.all (equal false) (map (test o int2string 1) (upto ~22 0));
+Lib.all (equal false) (map (test o int2string 1) (upto 1 127));
+Lib.all (equal false) (map (test o int2string 1) (upto ~128 ~24));
 
+val test = matcher `\k{~128}`;
+signed_width_256 ~128;
+test (int2string 1 ~128);
+equal false (test (int2string 1 ~22));
+equal false (test (int2string 1 22));;
+Lib.all (equal false) (map (test o int2string 1) (upto ~22 127));
+Lib.all (equal false) (map (test o int2string 1) (upto ~127 ~24));
+
+val test = matcher `\k{116535}`;
+3 = signed_width_256 116535;
+equal true (test (int2string 3 116535));
+equal false (test (int2string 3 ~22));
+equal false (test (int2string 3 22));;
+Lib.all (equal false) (map (test o int2string 3) (upto ~22 116535));
+Lib.all (equal false) (map (test o int2string 3) (upto ~127 ~24));
+
+val test = matcher `\k{~116535}`;
+signed_width_256 ~116535;
+equal true (test (int2string 3 ~116535));
+equal false (test (int2string 3 ~22));
+equal false (test (int2string 3 22));;
+equal false (test (int2string 3 ~116536));
+equal false (test (int2string 3 ~116537));
+equal false (test (int2string 3 ~116538));
+Lib.all (equal false) (map (test o int2string 3) (upto ~22 127));
+Lib.all (equal false) (map (test o int2string 3) (upto ~127 ~24));
+
+val test = matcher `\k{~116535,MSB}`;
+3 = signed_width_256 ~116535;
+equal true (test (int2string_msb 3 ~116535));
+equal false (test (int2string_msb 3 ~22));
+equal false (test (int2string_msb 3 22));;
+equal false (test (int2string_msb 3 ~116536));
+equal false (test (int2string 3 ~116537));
+equal false (test (int2string 3 ~116538));
+Lib.all (equal false) (map (test o int2string 3) (upto ~22 127));
+Lib.all (equal false) (map (test o int2string 3) (upto ~127 ~24));
 
 (*---------------------------------------------------------------------------*)
 (* CANBUS GPS message format. Taken from                                     *)
@@ -408,11 +454,11 @@ Lib.all (equal false) (map (test o num2string 1) (upto ~128 ~24));
  * VDOP (positional accuracy) Byte 6, 7 (LSB, MSB) 0 ... 999 "m" (0.1 m)
  *)
  
-val test_1800 = matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}`;
-val test_1801 = matcher `\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}`;
-val test_1801_real = matcher `\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180),(0,59)}\i{0,5999}`;
-val test_1802 = matcher `\i{0,9999,LSB}\i{0,3599,LSB}`;
-val test_1803 = matcher `\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
+val match_1800        = matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}`;
+val match_1801        = matcher `\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}`;
+val match_1801_packed = matcher `\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180),(0,59)}\i{0,5999}`;
+val match_1802        = matcher `\i{0,9999,LSB}\i{0,3599,LSB}`;
+val match_1803        = matcher `\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
 
 fun prod [] l2 = []
   | prod (h::t) l2 = map (strcat h) l2 @ prod t l2;
@@ -422,55 +468,110 @@ fun PROD [] = []
   | PROD (h::t) = prod h (PROD t);
 
 (*---------------------------------------------------------------------------*)
-(* 58 trillion strings to test exhaustively. Slightly unfeasible as written. *)
+(* 58 trillion strings to match exhaustively. Slightly unfeasible as written. *)
 (* Could be done one-at-a-time, I suppose.                                   *)
 (*---------------------------------------------------------------------------*)
 (*
 Lib.all (equal true)
- (map test_1800 
+ (map match_1800 
    (PROD 
-     [map (num2string 1) (upto 1 31),
-      map (num2string 1) (upto 1 12),
-      map (num2string 1) (upto 0 99),
-      map (num2string 1) (upto 0 23),
-      map (num2string 1) (upto 0 59),
-      map (num2string 1) (upto 0 59),
-      map (num2string 2) (upto 0 17999)]));
+     [map (int2string 1) (upto 1 31),
+      map (int2string 1) (upto 1 12),
+      map (int2string 1) (upto 0 99),
+      map (int2string 1) (upto 0 23),
+      map (int2string 1) (upto 0 59),
+      map (int2string 1) (upto 0 59),
+      map (int2string 2) (upto 0 17999)]));
 *)
 
 Lib.all (equal true)
- (map test_1800 
+ (map match_1800 
    (PROD 
-     [map (num2string 1) (upto 1 10),
-      map (num2string 1) (upto 1 10),
-      map (num2string 1) (upto 0 9),
-      map (num2string 1) (upto 0 9),
-      map (num2string 1) (upto 0 9),
-      map (num2string 1) (upto 0 9),
-      map (num2string 2) (upto 0 9)]));
+     [map (int2string 1) (upto 1 10),
+      map (int2string 1) (upto 1 10),
+      map (int2string 1) (upto 0 9),
+      map (int2string 1) (upto 0 9),
+      map (int2string 1) (upto 0 9),
+      map (int2string 1) (upto 0 9),
+      map (int2string 2) (upto 0 9)]));
 
-val test_18xx_disjunctive = matcher 
+val match_18xx_disjunctive = matcher 
  `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}|\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}|\i{0,9999,LSB}\i{0,3599,LSB}|\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
 
-val test_18xx_concat = matcher 
+val match_18xx_concat = matcher 
  `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}\i{0,9999,LSB}\i{0,3599,LSB}\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
 
-fun deconstruct {certificate, final, matchfn,start, table} = 
- let fun toList V = List.map (curry Vector.sub V) (upto 0 (Vector.length V - 1))
- in (start, toList final, toList (Vector.map toList table))
+fun unsigned_width_bits (n:IntInf.int) = 
+ if n < 0 then raise ERR "unsigned_width_bits" "negative number" else
+ if n < 2 then 1
+ else 1 + unsigned_width_bits (n div 2);
+
+fun signed_width_bits (n:IntInf.int) = 
+  let fun fus bits = 
+       let val N = IntInf.pow(2,bits-1)
+       in if ~N <= n andalso n <= N-1 then bits else fus (bits+1)
+       end
+ in fus 0
  end;
 
-val (a,b,c) = deconstruct test_1800;
-val (a,b,c) = deconstruct test_1801;
-val (a,b,c) = deconstruct test_1802;
-val (a,b,c) = deconstruct test_1803;
-val (a,b,c) = deconstruct test_18xx_concat;
+fun find_width (lo,hi) = 
+ if lo > hi 
+  then raise ERR "find_width" "malformed interval (lo > hi)"
+ else
+ if lo < 0 andalso hi < 0 
+    then signed_width_bits lo else
+ if lo < 0 andalso hi >= 0 
+    then Int.max(signed_width_bits lo, signed_width_bits hi)
+ else  (* lo and hi both non-negative *)
+   unsigned_width_bits hi;
+
+map find_width [(0,63),(~32,31),(35,60),(~12,27)];
+
+val allones = IntInf.notb(IntInf.fromInt 0);
+
+(*---------------------------------------------------------------------------*)
+(* Clear top (all but rightmost width) bits in w                             *)
+(*---------------------------------------------------------------------------*)
+
+fun clear_top_bits width w = 
+ let open IntInf
+     val mask = notb(<<(allones,Word.fromInt(width)))
+ in andb(w,mask)
+ end
+
+fun clear_bot_bits width w = 
+ let open IntInf
+ in ~>>(w,Word.fromInt width)
+ end
+
+fun sign_extend w width = 
+ let open IntInf
+ in if ~>>(w,Word.fromInt (width - 1)) = 1
+  then (* signed *)
+     orb(w,IntInf.<<(allones,Word.fromInt width))
+  else w
+ end
+
+fun icat w shift i = 
+ let val shiftw = Word.fromInt shift
+     val shifted = IntInf.<<(w,shiftw)
+     val x = clear_top_bits shift (IntInf.fromInt i)
+ in 
+   IntInf.orb(shifted,x)
+ end
+
+val test = icat (icat (icat 63 6 31) 6 45) 6 ~1;
+
+matcher `\p{(0,63),(~32,31),(35,60),(~12,27)}`;
+
+matcher `\p{(0,1),(0,2),(0,3),(~1,1)}`
+
+map find_width [(0,1),(0,2),(0,3),(~1,1)];
 
 
 (*---------------------------------------------------------------------------*)
 (* Hard cases for Brzozowski? These seem to take exponential time.           *)
 (*---------------------------------------------------------------------------*)
-
 (*
 time matcher `\w{1,20}`; 
 time matcher `\w{1,50}`; 

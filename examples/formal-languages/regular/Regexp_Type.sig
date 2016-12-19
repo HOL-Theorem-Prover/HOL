@@ -1,6 +1,8 @@
 signature Regexp_Type = 
 sig
- type charset = bool vector
+
+(* type charset = bool vector *)
+ type charset = IntInf.int
 
  datatype regexp 
     = Chset of charset
@@ -17,7 +19,7 @@ sig
  val charset_full    : charset
  val charset_mem     : char -> charset -> bool
  val charset_of      : char list -> charset
- val els             : charset -> int list
+
  val charset_sing    : char -> charset
  val charset_union   : charset -> charset -> charset
  val charset_diff    : charset -> charset -> charset

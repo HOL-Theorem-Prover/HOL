@@ -9,7 +9,7 @@ open Lib Feedback;
 
 val ERR = mk_HOL_ERR "Regexp_Type";
 
-type charset = IntInf.int;
+type charset = bool vector;
 
 datatype regexp 
    = Chset of charset
@@ -32,56 +32,55 @@ val alphabet = List.tabulate (alphabet_size,Char.chr)
 (* Character sets                                                            *)
 (*---------------------------------------------------------------------------*)
 
-val charset_empty = WordOps.allzero;
+val charset_empty = Vector.tabulate(alphabet_size, K false);
+val charset_full  = Vector.tabulate(alphabet_size, K true);
 
-val powers = 
-  Vector.fromList (map (curry IntInf.pow 2) (upto 0 (alphabet_size-1)));
-
-fun setbit n w = IntInf.orb(Vector.sub(powers,n),w);
- 
-fun charset_insert ch cset = setbit (Char.ord ch) cset;
-
-fun charset_of clist = itlist charset_insert clist charset_empty;
+fun charset_of clist = 
+ let val A = Array.array(alphabet_size,false)
+     val () = List.app (fn c => Array.update(A,Char.ord c, true)) clist
+ in Array.vector A
+ end
 
 fun charset_sing c = charset_of [c]
 
-val charset_full = charset_of (map Char.chr (upto 0 (alphabet_size-1)))
+fun els v = 
+ mapfilter (fn i => if Vector.sub(v,i) then i else raise ERR "" "")
+           (upto 0 (alphabet_size-1));
 
-val charset_mem = 
- let open IntInf
- in fn c => fn (cs:charset) => 
-    not (andb(cs,Vector.sub(powers, Char.ord c)) = 0)
- end;
+fun charset_mem c (cs:charset) = Vector.sub(cs,Char.ord c);
 
-fun charset_union cs1 cs2 = IntInf.orb(cs1,cs2);
+fun charset_union cs1 cs2 = 
+  if cs1 = cs2 then cs1 else 
+  if cs1 = charset_empty then cs2 else
+  if cs2 = charset_empty then cs1 else
+  let fun indexFn i = Vector.sub(cs1,i) orelse Vector.sub(cs2,i)
+  in Vector.tabulate(alphabet_size,indexFn)
+  end;
 
-fun charset_diff cs1 cs2 = IntInf.andb(cs1,IntInf.notb cs2)
+fun charset_diff cs1 cs2 = 
+  Vector.mapi (fn (i,b) => b andalso not(Vector.sub(cs2,i))) cs1;
 
-fun charset_string cset = String.implode (filter (C charset_mem cset) alphabet);
-
-(*---------------------------------------------------------------------------*)
-(* print regexp as string (basic)                                            *)
-(*---------------------------------------------------------------------------*)
-
-fun between x [] = []
-  | between x [a] = [a]
-  | between x (a::b::t) = a::x::between x (b::t)
-
-fun print_regexp regexp = 
- case regexp
-  of Chset cs => "["^charset_string cs^"]"
-   | Cat(s,t) => print_regexp s^print_regexp t
-   | Star r   => print_regexp r^"*"
-   | Or rlist => 
-      String.concat ("(" :: (between "|" (map print_regexp rlist) @ [")"]))
-   | Neg r => "~"^print_regexp r
-
+fun charset_insert ch cset = 
+  if charset_mem ch cset 
+    then cset
+  else charset_union (charset_sing ch) cset;
 
 (*---------------------------------------------------------------------------*)
 (* Assumes v1 and v2 are of equal length                                     *)
 (*---------------------------------------------------------------------------*)
 
-val charset_compare = IntInf.compare;
+fun vector_cmp (v1,v2) = 
+ let fun chk i = 
+     case (Vector.sub(v1,i), Vector.sub(v2, i))
+      of (false,true) => LESS
+       | (true,false) => GREATER
+       | (true,true) => chk (i+1)
+       | (false,false) => chk (i+1)
+ in
+  if v1=v2 then EQUAL else chk 0
+end;
+
+val charset_compare = vector_cmp;
 
 fun list_cmp cmp pair = 
  case pair
@@ -679,24 +678,43 @@ fun replicate x (n:int) =
  if n = 1 then x 
   else Cat(x,replicate x (n-1));
 
+fun range r i j = 
+ if j < i then EMPTY
+ else Cat (replicate r i,replicate (Or [EPSILON,r]) (j-i))
 
 fun catlist [] = EPSILON
   | catlist [x] = x
   | catlist (h::t) = Cat (h,catlist t);
 
-(* compressed version ... hard for derivative taker to do well with the nesting.
-fun range r i j = 
- if j < i then EMPTY
- else Cat (replicate r i,replicate (Or [EPSILON,r]) (j-i))
-*)
-fun range r i j = 
- if j < i then EMPTY 
- else Or (map (replicate r) (upto i j));
-
-
 (*---------------------------------------------------------------------------*)
 (* Numeric intervals                                                         *)
 (*---------------------------------------------------------------------------*)
+
+val allzero = IntInf.fromInt 0;
+val allones = IntInf.notb allzero;
+
+(*---------------------------------------------------------------------------*)
+(* Clear top (all but rightmost width) bits in w                             *)
+(*---------------------------------------------------------------------------*)
+
+fun clear_top_bits width w = 
+ let open IntInf
+     val mask = notb(<<(allones,Word.fromInt(width)))
+ in andb(w,mask)
+ end
+
+fun clear_bot_bits width w = 
+ let open IntInf
+ in ~>>(w,Word.fromInt width)
+ end
+
+fun sign_extend w width = 
+ let open IntInf
+ in if ~>>(w,Word.fromInt (width - 1)) = 1
+  then (* signed *)
+     orb(w,IntInf.<<(allones,Word.fromInt width))
+  else w
+ end
 
 fun unsigned_width_bits (n:IntInf.int) = 
  if n < 0 then raise ERR "unsigned_width_bits" "negative number" else
@@ -1016,31 +1034,6 @@ fun packed_intervals lists width order =
    Or (map interval2regexp intervals)
  end
 
-
-val allones = IntInf.notb(IntInf.fromInt 0);
-
-(*---------------------------------------------------------------------------*)
-(* Clear top (all but rightmost width) bits in w                             *)
-(*---------------------------------------------------------------------------*)
-
-fun clear_top_bits width w = 
- let open IntInf
-     val mask = notb(<<(allones,Word.fromInt(width)))
- in andb(w,mask)
- end
-
-fun clear_bot_bits width w = 
- let open IntInf
- in ~>>(w,Word.fromInt width)
- end
-
-fun sign_extend w width = 
- let open IntInf
- in if ~>>(w,Word.fromInt (width - 1)) = 1
-  then (* signed *)
-     orb(w,IntInf.<<(allones,Word.fromInt width))
-  else w
- end
 
 fun icat w shift i = 
  let val shiftw = Word.fromInt shift

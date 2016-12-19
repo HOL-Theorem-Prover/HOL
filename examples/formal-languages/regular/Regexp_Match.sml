@@ -24,10 +24,7 @@ fun inv_image rel f x y = rel (f x) (f y);
 
 fun el n list = if n = 0 then hd list else el (n-1) (tl list);
 
-fun upto b t = 
- if b > t then [] else
- if b = t then [b] else
- b::upto (b+1) t;
+fun upto b t = if b <= t then b::upto (b+1) t else [];;
 
 fun genlist f n = if n<0 then [] else map f (upto 0 (n-1));
 
@@ -345,9 +342,10 @@ fun extend_states next_state state_map trans translist =
                         t;
 
 fun build_table translist r arg = 
- case arg of (next_state,state_map,table) =>
- case extend_states 
-       next_state state_map [] translist of (next_state,state_map,trans) =>
+ case arg of 
+      (next_state,state_map,table) =>
+ case extend_states next_state state_map [] translist of 
+      (next_state,state_map,trans) =>
  case Finite_Map.lookup regexp_compare r state_map 
   of SOME n => (next_state, state_map, (n,trans)::table)
    | NONE   => (next_state + 1,
@@ -470,7 +468,7 @@ fun dom_brzozo seen [] = seen
          else let val _ = print ("new state. size: "^Int.toString (PolyML.objSize r)^"\n")
                   val arcs = transitions r
               in dom_brzozo (insert_regexp r seen)
-                            (map snd arcs @ t)
+                            (remove_dups (map snd arcs @ t))
               end;
 
 fun domBrz r = 

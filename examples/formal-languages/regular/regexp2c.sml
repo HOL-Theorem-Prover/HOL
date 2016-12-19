@@ -92,14 +92,14 @@ fun quote_to_C justify name q =
  end
 
 (*---------------------------------------------------------------------------*)
-(* Parse, transform, write to C files.                                    *)
+(* Parse, transform, write to C files.                                       *)
 (*---------------------------------------------------------------------------*)
 
-fun parse_args args =
+fun parse_args () =
  let fun printHelp() = stdErr_print
           ("Usage: regexp2c [-dfagen (HOL | SML)] <name> <quotation>\n")
      val fail = fn () => (printHelp(); fail())
- in case args
+ in case CommandLine.arguments()
      of ["-dfagen","SML",name,quote] => (regexpLib.SML,name,quote)
       | ["-dfagen","HOL",name,quote] => (regexpLib.HOL,name,quote)
       | [name,quote] => (justifyDefault, name,quote)
@@ -108,7 +108,7 @@ fun parse_args args =
 
 fun main () =
  let val _ = stdErr_print "regexp2c: \n"
-     val (justify,name,quote) = parse_args(CommandLine.arguments())
+     val (justify,name,quote) = parse_args()
  in
    quote_to_C justify name quote
  end;
