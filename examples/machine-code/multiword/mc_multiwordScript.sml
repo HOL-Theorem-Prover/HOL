@@ -318,7 +318,7 @@ val (mc_add_loop2_def, _,
          let zs = LUPDATE r8 (w2n r10) zs in
          let r10 = r10 + 0x1w
          in
-           (INL (l,r1,r3,r8,r9,r10,xs,zs),cond /\ l <> 0n)))``;
+           (INL (l-1,r1,r3,r8,r9,r10,xs,zs),cond /\ l <> 0n)))``;
 
 val (mc_add_loop1_def, _,
      mc_add_loop1_pre_def, _) =
@@ -340,7 +340,7 @@ val (mc_add_loop1_def, _,
          let zs = LUPDATE r8 (w2n r10) zs in
          let r10 = r10 + 0x1w
          in
-           (INL (l,r1,r3,r8,r9,r10,xs,ys,zs),cond /\ l <> 0n)))``;
+           (INL (l-1,r1,r3,r8,r9,r10,xs,ys,zs),cond /\ l <> 0n)))``;
 
 val (mc_add_loop_def, _,
      mc_add_loop_pre_def, _) =
