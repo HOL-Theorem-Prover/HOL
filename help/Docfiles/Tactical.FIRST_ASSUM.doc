@@ -37,7 +37,13 @@ searches the assumption list for an implication whose conclusion
 matches the goal, reducing the goal to the antecedent of the corresponding
 instance of this implication.
 
+\COMMENTS
+By default, the assumption list is printed in reverse order,
+with the head of the list printed last.
+To process the assumption list in the opposite order, use {LAST_ASSUM}
+
 \SEEALSO
-Tactical.FIRST_X_ASSUM, Tactical.ASSUM_LIST, Tactical.EVERY,
+Tactical.FIRST_X_ASSUM, Tactical.LAST_ASSUM,
+Tactical.ASSUM_LIST, Tactical.EVERY,
 Tactical.EVERY_ASSUM, Tactical.FIRST, Tactical.MAP_EVERY, Tactical.MAP_FIRST.
 \ENDDOC
