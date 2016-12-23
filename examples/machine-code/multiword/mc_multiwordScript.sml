@@ -1282,9 +1282,9 @@ val (mc_imul_def, _,
             let r9 = r2 in
             let r9 = r9 >>> 1 in
             let r10 = 0x0w in
-            let r5 = r10 in
-            let cond = cond /\ mc_mul_pre (l-1,r7,r9,r10,r5,xs,ys,zs) /\ l <> 0 in
-            let (l,r10,xs,ys,zs) = mc_mul (l-1,r7,r9,r10,r5,xs,ys,zs) in
+            let r12 = 0x0w in
+            let cond = cond /\ mc_mul_pre (l-1,r7,r9,r10,r12,xs,ys,zs) /\ l <> 0 in
+            let (l,r10,xs,ys,zs) = mc_mul (l-1,r7,r9,r10,r12,xs,ys,zs) in
             let r8 = 0x0w in
             let cond = cond /\ mc_fix_pre (l-1,r8,r10,zs) /\ l <> 0 in
             let (l,r8,r10,zs) = mc_fix (l-1,r8,r10,zs) in
