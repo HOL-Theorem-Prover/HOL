@@ -67,4 +67,7 @@ sig
  val fromString    : string -> regexp
  val fromQuote     : 'a frag list -> regexp
 
+ val pp_regexp     : HOLPP.ppstream -> regexp -> unit
+ val print_regexp  : regexp -> unit
+
 end

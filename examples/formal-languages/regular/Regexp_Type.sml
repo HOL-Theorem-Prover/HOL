@@ -26,7 +26,8 @@ fun Diff (r1,r2) = And(r1,Neg r2);
 (*---------------------------------------------------------------------------*)
 
 val alphabet_size = 256;
-val alphabet = List.tabulate (alphabet_size,Char.chr)
+val alphabetN = List.tabulate (alphabet_size,I)
+val alphabet = map Char.chr alphabetN;
 
 (*---------------------------------------------------------------------------*)
 (* Character sets                                                            *)
@@ -57,25 +58,94 @@ fun charset_union cs1 cs2 = IntInf.orb(cs1,cs2);
 
 fun charset_diff cs1 cs2 = IntInf.andb(cs1,IntInf.notb cs2)
 
-fun charset_string cset = String.implode (filter (C charset_mem cset) alphabet);
+val charset_whitespace = charset_of (String.explode" \n\r\t\f");
+val charset_digit      = charset_of (String.explode"0123456789");
+val charset_alpha = 
+  charset_of (String.explode "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+val charset_alphanum = charset_insert #"_" (charset_union charset_digit charset_alpha);
+
+fun charset_string cset = 
+ if cset = charset_full
+  then "." else
+ if cset = charset_empty
+  then "[]" else 
+ if cset = charset_digit
+  then "\\d" else 
+ if cset = charset_alphanum
+  then "\\w" else 
+ if cset = charset_whitespace
+  then "\\s" 
+ else 
+ String.concat ["[", String.implode (filter (C charset_mem cset) alphabet), "]"];
+
+ 
+(*---------------------------------------------------------------------------*)
+(* precedence: Or = 1                                                        *)
+(*            Cat = 2                                                        *)
+(*            Neg = 3                                                        *)
+(*           Star = 4                                                        *)
+(*        charset = 5                                                        *)
+(*---------------------------------------------------------------------------*)
+
+fun strip_cat r = 
+ case r
+  of Cat(a,b) => a::strip_cat b
+   | otherwise => [r]
+
+fun pp_regexp ppstrm = 
+ let open Portable
+     val {add_string, begin_block, end_block, add_break,...} = with_ppstream ppstrm
+     fun paren i j x = if i < j then () else add_string x
+     fun pp i regexp = 
+      case regexp
+       of Chset cs => add_string (charset_string cs)
+        | Cat(s,t) => 
+            let val rlist = strip_cat regexp
+            in 
+               paren i 2 "("
+             ; begin_block INCONSISTENT 2
+             ; List.app (pp 2) rlist
+             ; end_block ()
+             ; paren i 2 ")"
+            end
+        | Or rlist => 
+           let in
+               paren i 1 "("
+             ; begin_block INCONSISTENT 1
+             ; pr_list (pp 1)
+                       (fn () => add_string " |")
+                       (fn () => add_break(1,0)) rlist
+             ; end_block ()
+             ; paren i 1 ")"
+           end
+        | Neg r => 
+            let in 
+               paren i 3 "("
+             ; add_string "~"
+             ; begin_block CONSISTENT 1
+             ; pp 3 r
+             ; end_block ()
+             ; paren i 3 ")"
+            end 
+        | Star r => 
+            let in 
+               paren i 4 "("
+             ; begin_block CONSISTENT 1
+             ; pp 4 r
+             ; end_block ()
+             ; add_string "*"
+             ; paren i 4 ")"
+            end 
+ in
+   pp 0 
+ end;
+
 
 (*---------------------------------------------------------------------------*)
-(* print regexp as string (basic)                                            *)
+(* print regexp as string to stdOut                                          *)
 (*---------------------------------------------------------------------------*)
 
-fun between x [] = []
-  | between x [a] = [a]
-  | between x (a::b::t) = a::x::between x (b::t)
-
-fun print_regexp regexp = 
- case regexp
-  of Chset cs => "["^charset_string cs^"]"
-   | Cat(s,t) => print_regexp s^print_regexp t
-   | Star r   => print_regexp r^"*"
-   | Or rlist => 
-      String.concat ("(" :: (between "|" (map print_regexp rlist) @ [")"]))
-   | Neg r => "~"^print_regexp r
-
+val print_regexp = Portable.pprint pp_regexp;
 
 (*---------------------------------------------------------------------------*)
 (* Assumes v1 and v2 are of equal length                                     *)
@@ -104,6 +174,9 @@ fun list_compare cmp l1 l2 =
     | strict => strict;
 
 fun regexp_compare pair = 
+ if PolyML.pointerEq pair
+ then EQUAL
+ else
  case pair
   of (Chset cs1, Chset cs2) => charset_compare(cs1,cs2)
    | (Chset cs, r) => LESS
@@ -121,7 +194,7 @@ fun regexp_compare pair =
    | (Or rs,Chset _) => GREATER
    | (Or rs,Cat (r,s)) => GREATER
    | (Or rs,Star _) => GREATER
-   | (Or rs1,Or rs2) => list_compare regexp_compare rs1 rs2
+   | (Or rs1,Or rs2) => list_compare regexp_compare (List.rev rs1) (List.rev rs2) 
    | (Or rs, _) => LESS
    | (Neg r,Neg s) =>  regexp_compare (r,s)
    | (Neg r,_) => GREATER
@@ -530,7 +603,7 @@ val isInfix = Char.contains"|&";
 (*      | ~re                                                                *)
 (*      | re<p>        ;; p in {+,*,?} or a power or a range                 *)
 (*      | "(" re ")"                                                         *)
-(*      | char                                                               *)
+(*      | charset                                                            *)
 (*                                                                           *)
 (*---------------------------------------------------------------------------*)
 
@@ -654,15 +727,6 @@ fun quote_to_tree input =
 (*---------------------------------------------------------------------------*)
 (* Map a parse tree into a regexp                                            *)
 (*---------------------------------------------------------------------------*)
-
-val charset_whitespace = charset_of (String.explode" \n\r\t\f");
-
-val charset_digit = charset_of (String.explode"0123456789");
-
-val charset_alpha = 
-  charset_of (String.explode "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
-
-val charset_alphanum = charset_insert #"_" (charset_union charset_digit charset_alpha);
 
 val WHITESPACE = Chset charset_whitespace
 val DIGIT      = Chset charset_digit
@@ -1072,7 +1136,7 @@ fun add_slop iwlist slop =
    add iwlist
  end;
 
-fun crunch list = 
+fun intervals list = 
  let val slist = Listsort.sort Int.compare list
      fun follows j i = j = i + 1
      fun chop [] A = rev (map rev A)
@@ -1105,7 +1169,7 @@ fun pack_intervals ilist =
    of [] => raise ERR "pack_intervals" "supposedly unreachable!"
     | ((lo,hi),_)::t =>
        let val intlist = iter (upto lo hi) t
-           val sections = crunch intlist
+           val sections = intervals intlist
        in
           packed_intervals sections nbytes LSB
        end

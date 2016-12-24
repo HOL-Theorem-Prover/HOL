@@ -301,7 +301,7 @@ fun nullable r =
   of Chset cs => false
    | Star s   => true
    | Cat(s,t) => nullable s andalso nullable t
-   | Or rs    => List.exists nullable rs
+   | Or rs    => List.exists nullable (List.rev rs)
    | Neg s    => not(nullable s);
 
 (*---------------------------------------------------------------------------*)
@@ -369,10 +369,11 @@ fun brzozo seen worklist acc n =
      if mem_regexp r seen 
        then brzozo seen t acc (n-1)
         else let val translist = transitions r
-             in brzozo (insert_regexp r seen) 
-                    (remove_dups (map snd translist) @ t)
-                    (build_table translist r acc)
-                    (n-1)
+             in brzozo 
+                  (insert_regexp r seen) 
+                  (remove_dups (map snd translist) @ t)
+                  (build_table translist r acc)
+                  (n-1)
              end;
 
 val bigIndex = 2147483647;
@@ -461,19 +462,39 @@ fun vector_matcher r =
      matchfn = fn s => match_string (String.explode s)}
  end
 
+fun uniq rlist = remove_dups (mergesort regexp_leq rlist);
+
+val tracing = ref true;
+
+fun kprint s = 
+ if !tracing
+  then print s 
+  else ();
+
+val _ = Feedback.register_btrace("regexp-compiler",tracing);
+
 fun dom_brzozo seen [] = seen
   | dom_brzozo seen (r::t) = 
-      if mem_regexp r seen 
-         then dom_brzozo seen t
-         else let val _ = print ("new state. size: "^Int.toString (PolyML.objSize r)^"\n")
-                  val arcs = transitions r
+      (kprint ("Worklist length: "^Int.toString(length t + 1)^". Head:\n  ")
+       ; if !tracing then print_regexp r else ()
+       ; kprint "\n"
+       ;
+        if mem_regexp r seen 
+         then (kprint "already seen; trying next element.\n\n"
+               ;
+               dom_brzozo seen t
+              )
+         else let val _ = kprint ("will be a new state (size: "^Int.toString (PolyML.objSize r)^"). ")
+                  val arcs = uniq (map snd (transitions r))
+                  val _ = kprint ("Successors: "^Int.toString (length arcs)^"\n\n")
               in dom_brzozo (insert_regexp r seen)
-                            (remove_dups (map snd arcs @ t))
-              end;
+                            (arcs @ t)
+              end
+        );
 
 fun domBrz r = 
  let val states = dom_brzozo Finite_Map.empty [normalize r]
-     val _ = print ("states: "^Int.toString (Finite_Map.size states)^"\n");
+     val _ = kprint ("states: "^Int.toString (Finite_Map.size states)^"\n");
  in  
    ()
  end;
