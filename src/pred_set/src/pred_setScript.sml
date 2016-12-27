@@ -1689,16 +1689,6 @@ val SURJ_IMAGE = store_thm(
   REWRITE_TAC[IMAGE_SURJ]);
 val _ = export_rewrites ["SURJ_IMAGE"]
 
-val SURJ_INJ_INV = store_thm(
-  "SURJ_INJ_INV",
-  ``SURJ f s t ==> ?g. INJ g t s /\ !y. y IN t ==> (f (g y) = y)``,
-  SIMP_TAC (srw_ss())[SURJ_DEF, INJ_DEF] THEN
-  DISCH_THEN (CONJUNCTS_THEN2 ASSUME_TAC
-                (ASSUME_TAC o
-                 SIMP_RULE (srw_ss() ++ DNF_ss)
-                           [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM])) THEN
-  METIS_TAC[]);
-
 (* ===================================================================== *)
 (* Bijective functions on a set.					 *)
 (* ===================================================================== *)
@@ -1880,6 +1870,21 @@ val RINV_DEF = Q.store_thm ("RINV_DEF",
   irule (BETA_RULE (Q.SPECL [`P`, `\y. f y = x`] SELECT_ELIM_THM)) THEN1
     SIMP_TAC std_ss [] THEN
   Q.EXISTS_TAC `y` THEN ASM_SIMP_TAC std_ss []) ;
+
+val SURJ_INJ_INV = store_thm(
+  "SURJ_INJ_INV",
+  ``SURJ f s t ==> ?g. INJ g t s /\ !y. y IN t ==> (f (g y) = y)``,
+  REWRITE_TAC [IMAGE_SURJ] THEN 
+  DISCH_TAC THEN Q.EXISTS_TAC `THE o LINV_OPT f s` THEN
+  BasicProvers.VAR_EQ_TAC THEN REPEAT STRIP_TAC 
+  THENL [
+  irule INJ_COMPOSE THEN Q.EXISTS_TAC `IMAGE SOME s` THEN
+    REWRITE_TAC [INJ_LINV_OPT_IMAGE] THEN REWRITE_TAC [INJ_DEF, IN_IMAGE] THEN
+    REPEAT STRIP_TAC THEN REPEAT BasicProvers.VAR_EQ_TAC THEN
+    FULL_SIMP_TAC std_ss [optionTheory.THE_DEF],
+  ASM_REWRITE_TAC [LINV_OPT_def, combinTheory.o_THM, optionTheory.THE_DEF] THEN
+    RULE_ASSUM_TAC (Ho_Rewrite.REWRITE_RULE 
+      [IN_IMAGE', GSYM SELECT_THM, BETA_THM]) THEN ASM_REWRITE_TAC [] ]) ;
 
 (* ===================================================================== *)
 (* Finiteness								 *)
