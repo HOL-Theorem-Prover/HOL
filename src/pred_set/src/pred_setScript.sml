@@ -1750,14 +1750,37 @@ val LINV_OPT_def = new_definition ("LINV_OPT_def",
   ``LINV_OPT f s y =
     if y IN IMAGE f s then SOME (@x. x IN s /\ (f x = y)) else NONE``) ;
 
-val SELECT_EQ_AX = Q.prove (`($@ P = x) ==> $? P ==> P x`,
+val SELECT_EQ_AX = Q.prove
+  (`($@ P = x) ==> $? P ==> P x`,
   DISCH_THEN (fn th => REWRITE_TAC [SYM th]) THEN DISCH_TAC THEN
   irule SELECT_AX THEN ASM_REWRITE_TAC [ETA_AX]) ;
+
+val IN_IMAGE' = Q.prove (`y IN IMAGE f s = ?x. x IN s /\ (f x = y)`,
+  mesonLib.MESON_TAC [IN_IMAGE]) ;
+
+val LINV_OPT_THM = Q.store_thm ("LINV_OPT_THM",
+  `(LINV_OPT f s y = SOME x) ==> x IN s /\ (f x = y)`,
+  REWRITE_TAC [LINV_OPT_def, IN_IMAGE'] THEN COND_CASES_TAC THEN
+  REWRITE_TAC [optionTheory.SOME_11, optionTheory.NOT_NONE_SOME] THEN
+  RULE_ASSUM_TAC (BETA_RULE o 
+    Ho_Rewrite.ONCE_REWRITE_RULE [GSYM SELECT_THM]) THEN
+  DISCH_TAC THEN BasicProvers.VAR_EQ_TAC THEN FIRST_ASSUM ACCEPT_TAC) ;
+
+val INJ_LINV_OPT_IMAGE = Q.store_thm ("INJ_LINV_OPT_IMAGE",
+  `INJ (LINV_OPT f s) (IMAGE f s) (IMAGE SOME s)`,
+  REWRITE_TAC [INJ_DEF, LINV_OPT_def] THEN
+  CONJ_TAC THEN REPEAT GEN_TAC THEN DISCH_TAC THEN
+  ASM_REWRITE_TAC [optionTheory.SOME_11] THEN
+  RULE_L_ASSUM_TAC (CONJUNCTS o Ho_Rewrite.REWRITE_RULE [IN_IMAGE',
+    GSYM SELECT_THM, BETA_THM])
+  THENL [
+    irule IMAGE_IN THEN FIRST_ASSUM ACCEPT_TAC,
+    DISCH_THEN (MP_TAC o Q.AP_TERM `f`) THEN ASM_REWRITE_TAC []]) ;
 
 val INJ_LINV_OPT = Q.store_thm ("INJ_LINV_OPT",
   `INJ f s t ==> !x:'a. !y:'b.
     (LINV_OPT f s y = SOME x) = (y = f x) /\ x IN s /\ y IN t`,
-  REWRITE_TAC [LINV_OPT_def, INJ_DEF, IMAGE_DEF, GSPECIFICATION] THEN
+  REWRITE_TAC [LINV_OPT_def, INJ_DEF, IN_IMAGE] THEN
   REPEAT STRIP_TAC THEN
   REVERSE COND_CASES_TAC THEN FULL_SIMP_TAC std_ss [] THEN1
   (POP_ASSUM (ASSUME_TAC o Q.SPEC `x`) THEN REV_FULL_SIMP_TAC std_ss []) THEN
@@ -1782,7 +1805,7 @@ val LINV_LO = new_definition ("LINV_LO",
 (* --------------------------------------------------------------------- *)
 
 val LINV_DEF = Q.store_thm ("LINV_DEF",
-  `!f s t. INJ f s t ==> (!x. x IN s ==> (LINV f s(f x) = x))`,
+  `!f s t. INJ f s t ==> (!x. x IN s ==> (LINV f s (f x) = x))`,
   REWRITE_TAC [LINV_LO] THEN REPEAT GEN_TAC THEN
   DISCH_THEN (fn th => ASSUME_TAC th THEN
     ASSUME_TAC (MATCH_MP INJ_LINV_OPT th)) THEN
