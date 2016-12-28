@@ -99,11 +99,11 @@ fun strong ((th, CLOS{Env,Term=Abs t}), stk) =
       strong (cbv_wk((thb, mk_clos(NEUTR :: Env, t)), stk'))
       end
   | strong (clos as (_,CLOS _), stk) = raise DEAD_CODE "strong"
-  | strong (hcl as (th,CST {Args,...}), stk) =
-      let val (th',stk') =
- 	if is_skip hcl then (th,stk)
- 	else foldl (push_in_stk snd) (th,stk) Args in
-      strong_up (th',stk')
+  | strong ((th,CST {Skip,Args,...}), stk) =
+      let val (argssk, argsrd) = partition_skip Skip Args
+          val (th',stk') = foldl (push_skip_stk snd) (th,stk) argssk
+          val (th'',stk'') = foldl (push_in_stk snd) (th',stk') argsrd in
+      strong_up (th'',stk'')
       end
   | strong ((th, NEUTR), stk) = strong_up (th,stk)
 
