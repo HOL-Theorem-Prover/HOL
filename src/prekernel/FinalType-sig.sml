@@ -9,6 +9,11 @@ sig
  val is_vartype    : hol_type -> bool
  val is_gen_tyvar  : hol_type -> bool
 
+ val variant_ty    : hol_type list -> hol_type -> hol_type
+ val prim_variant_ty : hol_type list -> hol_type -> hol_type
+ val gen_variant_ty  : (string -> bool) -> string ->
+		       hol_type list -> hol_type -> hol_type
+
  val mk_type       : string * hol_type list -> hol_type
  val dest_type     : hol_type -> string * hol_type list
  val is_type       : hol_type -> bool

@@ -242,6 +242,36 @@ fun type_subst theta = delta_apply (ty_sub theta)
 fun polymorphic (Tyv _) = true
   | polymorphic (Tyapp(_,Args)) = exists polymorphic Args
 
+(*---------------------------------------------------------------------------*
+ * Given a type variable and a list of type variables,                       *
+ * if the type variable does not exist on the list, then return the          *
+ * type variable.  Otherwise, rename the type variable and try again.        *
+ *---------------------------------------------------------------------------*)
+
+fun gen_variant_ty P caller =
+  let fun var_name _ (Tyv Name) = Name
+        | var_name caller _ = raise ERR caller "not a type variable"
+      fun vary vlist (Tyv Name) =
+          let val p = !Globals.priming ;
+             val _ = Globals.priming := SOME "_" ;
+             val next = Lexis.nameStrm Name ;
+             val _ = Globals.priming := p ;
+              val L = map (var_name caller) vlist
+              fun away s = if mem s L then away (next()) else s
+              fun loop name =
+                 let val s = away name
+                 in if P s then loop (next()) else s
+                 end
+          in mk_vartype(loop Name) 
+          end
+        | vary _ _ = raise ERR caller "2nd argument should be a type variable"
+  in vary
+  end;
+
+fun inST str = decls str <> [] ;
+
+val variant_ty      = gen_variant_ty inST "variant_ty"
+val prim_variant_ty = gen_variant_ty (K false) "prim_variant_ty";
 
 (*---------------------------------------------------------------------------
          This matching algorithm keeps track of identity bindings
