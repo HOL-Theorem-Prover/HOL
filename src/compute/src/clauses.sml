@@ -152,6 +152,15 @@ fun is_skip (_, CST {Skip=SOME n,Args,...}) = (n <= List.length Args)
   | is_skip _ = false
 ;
 
+fun partition_skip (SOME n) Args =
+  let val len = List.length Args in
+     if n <= len
+     then Lib.split_after (len - n) Args
+     else ([], Args)
+  end
+   | partition_skip NONE Args = ([], Args)
+;
+
 (*---------------------------------------------------------------------------
  * equation database
  * We should try to factorize the rules (cf discrimination nets)
