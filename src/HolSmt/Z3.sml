@@ -44,12 +44,14 @@ structure Z3 = struct
       " -smt2 -file:"
       (Lib.K is_sat_file)
 
+  (* e.g. "Z3 version 4.5.0 - 64 bit" *)
   fun parse_Z3_version fname =
     let
       val instrm = TextIO.openIn fname
       val s = TextIO.inputAll instrm before TextIO.closeIn instrm
+      val tokens = String.tokens Char.isSpace s
     in
-      List.last (String.tokens Char.isSpace s)
+      List.nth (tokens, 2)
     end
 
   val Z3version =
