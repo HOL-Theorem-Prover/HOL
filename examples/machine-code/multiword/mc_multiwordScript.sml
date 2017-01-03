@@ -2246,6 +2246,7 @@ val (mc_div_sub_loop_def, _,
         (let r0 = r12 in
          let cond = w2n r10 < LENGTH zs in
          let r3 = EL (w2n r10) zs in
+         let cond = cond /\ mc_div_sub_pre (r0,r3,r8) in
          let (r0,r3,r8) = mc_div_sub (r0,r3,r8) in
          let r1 = r3 in
          let zs = LUPDATE r1 (w2n r10) zs in
@@ -2268,6 +2269,7 @@ val (mc_div_sub_loop_def, _,
          let r12 = r2 in
          let cond = cond /\ w2n r10 < LENGTH zs in
          let r3 = EL (w2n r10) zs in
+         let cond = cond /\ mc_div_sub_pre (r0,r3,r8) in
          let (r0,r3,r8) = mc_div_sub (r0,r3,r8) in
          let r0 = r1 in
          let r1 = r3 in
@@ -2831,13 +2833,11 @@ val mc_copy_over_thm = prove(
 
 (* mw_div -- top-level function *)
 
-val (mc_div_def, _,
-     mc_div_pre_def, _) =
-  tailrec_define "mc_div" ``
-    (\(l,r0,r1,r3,xs,ys,zs).
-      if r0 <+ r1 then
-        (let r6 = r0
-         in
+val (mc_div0_def, _,
+     mc_div0_pre_def, _) =
+  tailrec_define "mc_div0" ``
+    ( \ (l,r0,r1,r3,xs,ys,zs).
+         let r6 = r0 in
            if r3 = 0x0w then
              (let r0 = 0x0w in (INR (l,r0,r3,r6,xs,ys,zs),T))
            else
@@ -2852,7 +2852,16 @@ val (mc_div_def, _,
               let r0 = r1
               in
                 (INR (l,r0,r3,r6,xs,ys,zs),cond)))
-      else if r1 = 0x1w then
+    :num # 'a word # 'a word # 'a word # 'a word list # 'a word list #
+     'a word list -> (num # 'a word # 'a word # 'a word # 'a word list
+     # 'a word list # 'a word list + num # 'a word # 'a word # 'a word
+     # 'a word list # 'a word list # 'a word list) # bool``;
+
+
+val (mc_div1_def, _,
+     mc_div1_pre_def, _) =
+  tailrec_define "mc_div1" ``
+    ( \ (l,r0,r1,r3,xs,ys,zs).
         (let r14 = r3 in
          let r2 = 0x0w in
          let r10 = r2 in
@@ -2876,24 +2885,53 @@ val (mc_div_def, _,
               let zs = LUPDATE r2 (w2n r10) zs
               in
                 if r2 = 0x0w then (INR (l,r0,r3,r6,xs,ys,zs),cond)
-                else (let r6 = 0x1w in (INR (l,r0,r3,r6,xs,ys,zs),cond))))
-      else
-        (let r18 = r3 in
-         let r19 = r0 in
-         let r7 = r1 in
-         let r9 = r0 in
-         let r10 = r1 in
-         let r10 = r10 - 0x1w in
-         let cond = w2n r10 < LENGTH ys in
-         let r1 = EL (w2n r10) ys in
-         let r2 = 0x1w in
-         let cond = cond /\ mc_calc_d_pre (l-1,r1,r2) /\ l <> 0 in
-         let (l,r2) = mc_calc_d (l-1,r1,r2) in
+                else (let r6 = 0x1w in (INR (l,r0,r3,r6,xs,ys,zs),cond)))))
+    :num # 'a word # 'a word # 'a word # 'a word list # 'a word list #
+     'a word list -> (num # 'a word # 'a word # 'a word # 'a word list
+     # 'a word list # 'a word list + num # 'a word # 'a word # 'a word
+     # 'a word list # 'a word list # 'a word list) # bool``;
+
+val (mc_div2_def, _,
+     mc_div2_pre_def, _) =
+  tailrec_define "mc_div2" ``
+    (\(l,r7,r8,r10,r11,r18,xs,ys,zs).
+         let r9 = r7 in
+         let r2 = 0x0w in
+         let cond = mc_simple_div1_pre (l-1,r2,r9,r10,zs) /\ l <> 0 in
+         let (l,r2,r9,r10,zs) = mc_simple_div1 (l-1,r2,r9,r10,zs) in
+         let r9 = r11 in
+         let r10 = r9 in
+         let r7 = r8 in
+         let cond = cond /\ mc_fix_pre (l-1,r8,r10,zs) /\ l <> 0 in
+         let (l,r8,r10,zs) = mc_fix (l-1,r8,r10,zs) in
+         let r6 = r10 in
+         let r10 = r9 in
+         let r3 = r18 in
+         let r8 = r7
+         in
+           if r3 = 0x0w then
+             (let r11 = 0x0w in
+              let cond = cond /\ mc_copy_down_pre (l-1,r8,r10,r11,zs) /\ l<>0 in
+              let (l,zs) = mc_copy_down (l-1,r8,r10,r11,zs) in
+              let r0 = r7
+              in
+                (INR (l,r0,r3,r6,xs,ys,zs),cond))
+           else (let r0 = r9 in (INR (l,r0,r3,r6,xs,ys,zs),cond)))
+   : num # α word # α word # α word # α word # α word # α word list #
+     α word list # α word list -> (num # α word # α word # α word # α
+     word # α word # α word list # α word list # α word list + num # α
+     word # α word # α word # α word list # α word list # α word list)
+     # bool``
+
+val (mc_div3_def, _,
+     mc_div3_pre_def, _) =
+  tailrec_define "mc_div3" ``
+    (\(l,r2,r7,r9,r18,r19,xs,ys,zs).
          let r1 = 0x0w in
          let r8 = r2 in
          let r10 = r1 in
          let r11 = r1 in
-         let cond = cond /\ mc_mul_by_single_pre (l-1,r1,r8,r9,r10,r11,xs,zs) /\ l<>0
+         let cond = mc_mul_by_single_pre (l-1,r1,r8,r9,r10,r11,xs,zs) /\ l<>0
          in
          let (l,r1,r8,r9,r10,xs,zs) =
                mc_mul_by_single (l-1,r1,r8,r9,r10,r11,xs,zs)
@@ -2923,32 +2961,58 @@ val (mc_div_def, _,
          let r8 = r17 in
          let r11 = r9 in
          let r10 = r9 in
-         let r9 = r7 in
-         let r2 = 0x0w in
-         let cond = cond /\ mc_simple_div1_pre (l-1,r2,r9,r10,zs) /\ l <> 0 in
-         let (l,r2,r9,r10,zs) = mc_simple_div1 (l-1,r2,r9,r10,zs) in
-         let r9 = r11 in
-         let r10 = r9 in
-         let r7 = r8 in
-         let cond = cond /\ mc_fix_pre (l-1,r8,r10,zs) /\ l <> 0 in
-         let (l,r8,r10,zs) = mc_fix (l-1,r8,r10,zs) in
-         let r6 = r10 in
-         let r10 = r9 in
-         let r3 = r18 in
-         let r8 = r7
-         in
-           if r3 = 0x0w then
-             (let r11 = 0x0w in
-              let cond = cond /\ mc_copy_down_pre (l-1,r8,r10,r11,zs) /\ l<>0 in
-              let (l,zs) = mc_copy_down (l-1,r8,r10,r11,zs) in
-              let r0 = r7
-              in
-                (INR (l,r0,r3,r6,xs,ys,zs),cond))
-           else (let r0 = r9 in (INR (l,r0,r3,r6,xs,ys,zs),cond))))
+         let cond = cond /\ mc_div2_pre (l,r7,r8,r10,r11,r18,xs,ys,zs) in
+         let (l,r0,r3,r6,xs,ys,zs) = mc_div2 (l,r7,r8,r10,r11,r18,xs,ys,zs) in
+           (INR (l,r0,r3,r6,xs,ys,zs),cond))
+  : num # α word # α word # α word # α word # α word # α word list # α
+    word list # α word list -> (num # α word # α word # α word # α
+    word # α word # α word list # α word list # α word list + num # α
+    word # α word # α word # α word list # α word list # α word list)
+    # bool``
+
+val (mc_div_def, _,
+     mc_div_pre_def, _) =
+  tailrec_define "mc_div" ``
+    (\(l,r0,r1,r3,xs,ys,zs).
+      if r0 <+ r1 then
+        (let cond = mc_div0_pre (l,r0,r1,r3,xs,ys,zs) in
+         let (l,r0,r3,r6,xs,ys,zs) = mc_div0 (l,r0,r1,r3,xs,ys,zs) in
+           (INR (l,r0,r3,r6,xs,ys,zs),cond))
+      else if r1 = 0x1w then
+        (let cond = mc_div1_pre (l,r0,r1,r3,xs,ys,zs) in
+         let (l,r0,r3,r6,xs,ys,zs) = mc_div1 (l,r0,r1,r3,xs,ys,zs) in
+           (INR (l,r0,r3,r6,xs,ys,zs),cond))
+      else
+        (let r18 = r3 in
+         let r19 = r0 in
+         let r7 = r1 in
+         let r9 = r0 in
+         let r10 = r1 in
+         let r10 = r10 - 0x1w in
+         let cond = w2n r10 < LENGTH ys in
+         let r1 = EL (w2n r10) ys in
+         let r2 = 0x1w in
+         let cond = cond /\ mc_calc_d_pre (l-1,r1,r2) /\ l <> 0 in
+         let (l,r2) = mc_calc_d (l-1,r1,r2) in
+         let cond = cond /\ mc_div3_pre (l,r2,r7,r9,r18,r19,xs,ys,zs) in
+         let (l,r0,r3,r6,xs,ys,zs) = mc_div3 (l,r2,r7,r9,r18,r19,xs,ys,zs) in
+           (INR (l,r0,r3,r6,xs,ys,zs),cond)))
     :num # 'a word # 'a word # 'a word # 'a word list # 'a word list #
      'a word list -> (num # 'a word # 'a word # 'a word # 'a word list
      # 'a word list # 'a word list + num # 'a word # 'a word # 'a word
      # 'a word list # 'a word list # 'a word list) # bool``;
+
+val mc_div_def = mc_div_def
+  |> REWRITE_RULE [mc_div0_def,mc_div0_pre_def,
+                   mc_div1_def,mc_div1_pre_def,
+                   mc_div2_def,mc_div2_pre_def,
+                   mc_div3_def,mc_div3_pre_def]
+
+val mc_div_pre_def = mc_div_pre_def
+  |> REWRITE_RULE [mc_div0_def,mc_div0_pre_def,
+                   mc_div1_def,mc_div1_pre_def,
+                   mc_div2_def,mc_div2_pre_def,
+                   mc_div3_def,mc_div3_pre_def]
 
 val mw_fix_SNOC = store_thm("mw_fix_SNOC",
  ``mw_fix (SNOC 0w xs) = mw_fix xs``,
@@ -3498,24 +3562,14 @@ val mc_idiv_mod_header_thm = prove(
   \\ `dimindex(:'a) = 1` by fs[DIMINDEX_GT_0]
   \\ fs[dimword_def]);
 
-val (mc_idiv_def, _,
-     mc_idiv_pre_def, _) =
-  tailrec_define "mc_idiv" ``
-    (\(l,r3,r10,r11,xs,ys,zs).
-      (let r0 = r10 >>> 1 in
-       let r1 = r11 >>> 1 in
-       let r10 = r10 ?? r11 in
-       let r10 = r10 && 0x1w in
-       let r20 = r10 in
-       let r21 = r11 in
-       let cond = mc_div_pre (l,r0,r1,r3,xs,ys,zs) in
-       let (l,r0,r3,r6,xs,ys,zs) = mc_div (l,r0,r1,r3,xs,ys,zs) in
-       let r11 = r21
-       in
+val (mc_idiv0_def, _,
+     mc_idiv0_pre_def, _) =
+  tailrec_define "mc_idiv0" ``
+    (\(l,r0:'a word,r3:'a word,r6,r11,r20,xs:'a word list,ys,zs).
          if r3 = 0x0w then
            (let r10 = r0 in
             let r8 = r10 in
-            let cond = cond /\ mc_fix_pre (l-1,r8,r10,zs) /\ l<>0 in
+            let cond = mc_fix_pre (l-1,r8,r10,zs) /\ l<>0 in
             let (l,r8,r10,zs) = mc_fix (l-1,r8,r10,zs) in
             let r11 = r10 in
             let r2 = r20 in
@@ -3533,16 +3587,40 @@ val (mc_idiv_def, _,
            (let r2 = r20 in
             let r1 = r11 in
             let r1 = r1 >>> 1 in
-            let cond = cond /\ mc_div_sub_call_pre (l,r1,r2,r6,ys,zs) in
+            let cond = mc_div_sub_call_pre (l,r1,r2,r6,ys,zs) in
             let (l,r6,ys,zs) = mc_div_sub_call (l,r1,r2,r6,ys,zs) in
             let r6 = mc_idiv_mod_header (r6,r11) in
             let r11 = r6
             in
-              (INR (l,r11,xs,ys,zs),cond))))
+              (INR (l,r11,xs,ys,zs),cond)))
+    : num # α word # α word # α word # α word # α word # α word list #
+      α word list # α word list -> (num # α word # α word # α word # α
+      word # α word # α word list # α word list # α word list + num #
+      α word # α word list # α word list # α word list) # bool``
+
+val (mc_idiv_def, _,
+     mc_idiv_pre_def, _) =
+  tailrec_define "mc_idiv" ``
+    (\(l,r3,r10,r11,xs,ys,zs).
+      (let r0 = r10 >>> 1 in
+       let r1 = r11 >>> 1 in
+       let r10 = r10 ?? r11 in
+       let r10 = r10 && 0x1w in
+       let r20 = r10 in
+       let r21 = r11 in
+       let cond = mc_div_pre (l,r0,r1,r3,xs,ys,zs) in
+       let (l,r0,r3,r6,xs,ys,zs) = mc_div (l,r0,r1,r3,xs,ys,zs) in
+       let r11 = r21 in
+       let cond = cond /\ mc_idiv0_pre (l,r0,r3,r6,r11,r20,xs,ys,zs) in
+       let (l,r11,xs,ys,zs) = mc_idiv0 (l,r0,r3,r6,r11,r20,xs,ys,zs) in
+         (INR (l,r11,xs,ys,zs),cond)))
     :num # 'a word # 'a word # 'a word # 'a word list # 'a word list #
      'a word list -> (num # 'a word # 'a word # 'a word # 'a word list
      # 'a word list # 'a word list + num # 'a word # 'a word list # 'a
      word list # 'a word list) # bool``;
+
+val mc_idiv_def = mc_idiv_def |> REWRITE_RULE [mc_idiv0_def,mc_idiv0_pre_def]
+val mc_idiv_pre_def = mc_idiv_pre_def |> REWRITE_RULE [mc_idiv0_def,mc_idiv0_pre_def]
 
 val mc_header_XOR = prove(
   ``!s t. ((mc_header (s,xs) ?? mc_header (t,ys)) && 0x1w:'a word) =
