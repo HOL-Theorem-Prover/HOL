@@ -599,21 +599,17 @@ the region contains no backquotes, then send region instead."
       (if (not done) (message "Incomplete comment in region given"))
       done))
 
-(defun remove-hol-term (end-marker)
-  (let ((start (point)))
-    (if (re-search-forward "`" end-marker t)
-        (delete-region (- start 1) (point))
+(defun remove-quoted-hol-term (bq eq end-marker)
+  (let ((start (point))
+        (bqsize (length bq)))
+    (if (re-search-forward eq end-marker t)
+        (delete-region (- start bqsize) (point))
       (error
-       "Incomplete HOL quotation in region given; starts >`%s<"
-       (buffer-substring (point) (+ (point) 10))))))
-
-(defun remove-dq-hol-term (end-marker)
-  (let ((start (point)))
-    (if (re-search-forward "``" end-marker t)
-        (delete-region (- start 2) (point))
-      (error
-       "Incomplete (``-quoted) HOL term in region given; starts >``%s<"
-       (buffer-substring (point) (+ (point) 10))))))
+       (format "Incomplete (%s...%s-quoted) HOL term in region given; \
+starts >%s%s<"
+               bq eq
+               bq
+               (buffer-substring (point) (+ (point) 10)))))))
 
 (defun remove-hol-string (end-marker)
   (let ((start (point)))
@@ -630,14 +626,17 @@ the region contains no backquotes, then send region instead."
     (set-marker m end)
     (save-excursion
       (goto-char start)
-      (while (re-search-forward "(\\*\\|`\\|\"" m t)
-        (cond ((string= (match-string 0) "(*") (remove-sml-comments m))
-              ((string= (match-string 0) "\"") (remove-hol-string m))
-              (t ; must be a back-tick
-               (if (not (looking-at "`"))
-                   (remove-hol-term m)
-                 (forward-char 1)
-                 (remove-dq-hol-term m)))))
+      (while (re-search-forward "(\\*\\|`\\|\"\\|“\\|‘" m t)
+        (let ((ms (match-string 0)))
+          (cond ((string= ms "(*") (remove-sml-comments m))
+                ((string= ms "\"") (remove-hol-string m))
+                ((string= ms "“") (remove-quoted-hol-term "“" "”" m))
+                ((string= ms "‘") (remove-quoted-hol-term "‘" "’" m))
+                (t ; must be a back-tick
+                 (if (not (looking-at "`"))
+                     (remove-quoted-hol-term "`" "`" m)
+                   (forward-char 1)
+                   (remove-quoted-hol-term "``" "``" m))))))
       (set-marker m nil))))
 
 (defun remove-sml-lets-locals
