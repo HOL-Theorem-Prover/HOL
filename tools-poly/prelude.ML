@@ -182,40 +182,7 @@ end;
  * Set parameters for parsing and help.                                      *
  *---------------------------------------------------------------------------*)
 
-local
-  fun try_remove f = ((OS.FileSys.remove f) handle OS.SysErr _ => ())
-  fun has_dq file =
-    let
-      val istrm = TextIO.openIn file
-      fun loop() =
-        case TextIO.input1 istrm of
-          NONE => false
-        | SOME #"`" => true
-        | SOME _ => loop()
-    in
-      loop() before TextIO.closeIn istrm
-    end handle IO.Io _ => false
-  infix ++
-  val op ++ = OS.Path.concat
-  fun unquote_to file1 file2 =
-    Systeml.systeml [HOLDIR ++ "bin" ++ "unquote", file1, file2];
-in
-  fun use s =
-    if has_dq s then
-      let
-        val filename = OS.FileSys.tmpName()
-      in
-        (if OS.Process.isSuccess (unquote_to s filename) then
-           (PolyML.use filename; OS.FileSys.remove filename)
-         else
-           ( TextIO.output
-               (TextIO.stdOut, ("Failed to translate file: " ^ s ^ "\n"))
-           ; raise Fail "use"
-           ))
-        handle e => (try_remove filename; raise e)
-      end
-    else PolyML.use s
-end; (* local *)
+val use = QUse.use
 
 local
   infix ++
