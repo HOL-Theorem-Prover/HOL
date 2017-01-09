@@ -244,6 +244,11 @@ in
   list_mk_comb(ant', [submap, abs])
 end
 in
+val num_ty = num_ty
+val int_ty = let val () = new_type ("int", 0)
+             in
+               mk_thy_type{Thy = thy, Tyop = "int", Args = []}
+             end
 val _ =
     case Lib.total (VALID (HO_MATCH_MP_TAC th)) ([], goal) of
       SOME ([([],subgoal)],_) => if aconv subgoal expected then OK()
@@ -791,6 +796,41 @@ val _ = dolvtests("LVTermNetFunctor",
                   LVTermNetFunctorApplied.PrintMap.empty,
                   LVTermNetFunctorApplied.PrintMap.insert,
                   LVTermNetFunctorApplied.PrintMap.match)
+
+(* set up overloading situation with < and + overloaded to num and int *)
+val thy = current_theory()
+val ilt = (new_constant("ilt", int_ty --> (int_ty --> bool));
+           mk_thy_const{Thy = thy, Name = "ilt",
+                        Ty = int_ty --> (int_ty --> bool)})
+val _ = overload_on("<", ilt)
+
+val _ = set_fixity "+" (Infixl 500)
+val _ = set_fixity "<" (Infix(NONASSOC, 450))
+
+val nplus = (new_constant("nplus", num_ty --> (num_ty --> num_ty));
+             mk_thy_const{Thy = thy, Name = "nplus",
+                          Ty = num_ty --> (num_ty --> num_ty)})
+val _ = overload_on("+", nplus)
+
+val iplus = (new_constant("iplus", int_ty --> (int_ty --> int_ty));
+             mk_thy_const{Thy = thy, Name = "iplus",
+                          Ty = int_ty --> (int_ty --> int_ty)})
+val _ = overload_on("+", iplus)
+
+val _ = tprint "Checking error message on x + y < T parse (w/ints around)"
+val ptie = TermParse.preterm (term_grammar()) (type_grammar()) `x + y < T`
+val res = let
+  open errormonad Preterm
+  infix >- >>
+  val checked =
+      ptie >- (fn pt => typecheck_phase1 NONE pt >> overloading_resolution pt)
+in
+  case checked Pretype.Env.empty of
+      Error (OvlNoType(s,_), _) => if s = "<" orelse s = "+" then OK()
+                                   else die "FAILED"
+    | _ => die "FAILED"
+end
+
 
 
 val _ = Process.exit (if List.all substtest tests then Process.success

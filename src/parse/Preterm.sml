@@ -442,7 +442,7 @@ fun remove_overloading_phase1 ptm =
 end (* local *)
 
 
-fun remove_overloading ptm = let
+val remove_overloading : preterm -> preterm seqM = let
   open seqmonad Term
   infix >- >> ++
   fun unify t1 t2 = fromErr (Pretype.unify t1 t2)
@@ -491,11 +491,17 @@ fun remove_overloading ptm = let
           else ()
 *)
 in
-  fromErr (remove_overloading_phase1 ptm) >- recurse
+  recurse
 end
 
+(* this version loses the sequence/lazy-list backtracking of the parse *)
 fun do_overloading_removal ptm =
-  seqmonad.toError (OvlFail, locn.Loc_Unknown) (remove_overloading ptm)
+  let
+    open errormonad
+  in
+    remove_overloading_phase1 ptm >-
+    (seqmonad.toError (OvlFail, locn.Loc_Unknown) o remove_overloading)
+  end
 
 fun report_ovl_ambiguity b env =
   (* b is true if multiple resolutions weren't possible *)
@@ -535,7 +541,13 @@ fun overloading_resolution (ptm : preterm) : (preterm * bool) errM =
     (do_overloading_removal ptm)
 
 fun overloading_resolutionS ptm =
-  seqmonad.lift remove_elim_magics (remove_overloading ptm)
+  let
+    open seqmonad
+  in
+    lift
+      remove_elim_magics
+      (fromErr (remove_overloading_phase1 ptm) >- remove_overloading)
+  end
 
 (*---------------------------------------------------------------------------
  * Type inference for HOL terms. Looks ugly because of error messages, but is
