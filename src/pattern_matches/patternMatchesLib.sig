@@ -3,14 +3,6 @@ sig
   include Abbrev
   type ssfrag = simpLib.ssfrag
 
-  (* ENABLE_PMATCH_CASES() turns on parsing for
-     PMATCH style case expressions. After calling it
-     expressions like `case ... of ...` are not parsed
-     to decision trees any more, but to PMATCH expressions.
-     Decision tree case expressions are afterwards available
-     via `dtcase ... of ...`. *)
-  val ENABLE_PMATCH_CASES : unit -> unit
-
   (********************************)
   (* eliminating select           *)
   (********************************)
@@ -27,10 +19,21 @@ sig
      @x. x = ..
 
      and therefore eliminate the select operator.
-     This is done by the following conversion + ssfrag. *)
+     This is done by the following conversion + ssfrag.
+     These are used internally by the pattern matches
+     infrastructure. *)
   val ELIM_FST_SND_SELECT_CONV : conv
   val elim_fst_snd_select_ss : ssfrag
 
+
+
+  (* ENABLE_PMATCH_CASES() turns on parsing for
+     PMATCH style case expressions. After calling it
+     expressions like `case ... of ...` are not parsed
+     to decision trees any more, but to PMATCH expressions.
+     Decision tree case expressions are afterwards available
+     via `dtcase ... of ...`. *)
+  val ENABLE_PMATCH_CASES : unit -> unit
 
   (********************************)
   (* convert between              *)
@@ -79,13 +82,9 @@ sig
   (* PMATCH_SIMP_CONV consists of various
      component conversions. These can be used
      independently as well. *)
-  val PMATCH_REMOVE_FAST_REDUNDANT_CONV : conv
-  val PMATCH_REMOVE_FAST_REDUNDANT_CONV_GEN : ssfrag list -> conv
-
-  val PMATCH_REMOVE_SUBSUMED_CONV : bool -> conv
-  val PMATCH_REMOVE_SUBSUMED_CONV_GEN : bool -> ssfrag list -> conv
-
   val PMATCH_CLEANUP_PVARS_CONV : conv
+  val PMATCH_EXPAND_COLS_CONV : conv
+  val PMATCH_INTRO_WILDCARDS_CONV : conv
 
   val PMATCH_CLEANUP_CONV : conv
   val PMATCH_CLEANUP_CONV_GEN : ssfrag list -> conv
@@ -93,8 +92,11 @@ sig
   val PMATCH_SIMP_COLS_CONV : conv
   val PMATCH_SIMP_COLS_CONV_GEN : ssfrag list -> conv
 
-  val PMATCH_EXPAND_COLS_CONV : conv
+  val PMATCH_REMOVE_FAST_REDUNDANT_CONV : conv
+  val PMATCH_REMOVE_FAST_REDUNDANT_CONV_GEN : ssfrag list -> conv
 
+  val PMATCH_REMOVE_FAST_SUBSUMED_CONV : bool -> conv
+  val PMATCH_REMOVE_FAST_SUBSUMED_CONV_GEN : bool -> ssfrag list -> conv
 
   (********************************)
   (* removing double variable     *)

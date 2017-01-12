@@ -83,8 +83,8 @@ val tc = test_conv "PMATCH_INTRO_CONV" PMATCH_INTRO_CONV
 
 val t = ``dtcase x of (NONE, []) => 0``;
 val r_thm = SOME ``PMATCH (x :'a option # 'b list)
-    [PMATCH_ROW (\(uv :unit). ((NONE :'a option),([] :'b list)))
-       (\(uv :unit). T) (\(uv :unit). (0 :num))]``
+    [PMATCH_ROW (\(_uv :unit). ((NONE :'a option),([] :'b list)))
+       (\(_uv :unit). T) (\(_uv :unit). (0 :num))]``
 val _ = tc (t, r_thm);
 
 val t = ``dtcase x of
@@ -93,10 +93,10 @@ val t = ``dtcase x of
  | (SOME 3, (x :: xs)) => 3 + x
  | (SOME _, (x :: xs)) => x``
 val r_thm = SOME ``PMATCH x
-     [PMATCH_ROW (\(uv :unit). ((NONE :num option),([] :num list)))
-        (\(uv :unit). T) (\(uv :unit). (0 :num));
-      PMATCH_ROW (\(uv :unit). (SOME (2 :num),([] :num list)))
-        (\(uv :unit). T) (\(uv :unit). (2 :num));
+     [PMATCH_ROW (\(_uv :unit). ((NONE :num option),([] :num list)))
+        (\(_uv :unit). T) (\(_uv :unit). (0 :num));
+      PMATCH_ROW (\(_uv :unit). (SOME (2 :num),([] :num list)))
+        (\(_uv :unit). T) (\(_uv :unit). (2 :num));
       PMATCH_ROW (\((x :num),(_0 :num list)). (SOME (3 :num),x::_0))
         (\((x :num),(_0 :num list)). T)
         (\((x :num),(_0 :num list)). (3 :num) + x);
@@ -112,8 +112,8 @@ val tcn = test_conv "PMATCH_INTRO_CONV_NO_OPTIMISE" PMATCH_INTRO_CONV_NO_OPTIMIS
 
 val t = ``dtcase x of (NONE, []) => 0``
 val r_thm = SOME ``PMATCH x
-     [PMATCH_ROW (\(uv :unit). ((NONE :'a option),([] :'b list)))
-        (\(uv :unit). T) (\(uv :unit). (0 :num));
+     [PMATCH_ROW (\(_uv :unit). ((NONE :'a option),([] :'b list)))
+        (\(_uv :unit). T) (\(_uv :unit). (0 :num));
       PMATCH_ROW (\((v4 :'b),(v5 :'b list)). ((NONE :'a option),v4::v5))
         (\((v4 :'b),(v5 :'b list)). T)
         (\((v4 :'b),(v5 :'b list)). (ARB :num));
@@ -129,10 +129,10 @@ val t = ``dtcase x of
  | (SOME _, (x :: xs)) => x``
 val r_thm = SOME ``
    PMATCH x
-     [PMATCH_ROW (\(uv :unit). ((NONE :num option),([] :num list)))
-        (\(uv :unit). T) (\(uv :unit). (0 :num));
-      PMATCH_ROW (\(uv :unit). (SOME (2 :num),([] :num list)))
-        (\(uv :unit). T) (\(uv :unit). (2 :num));
+     [PMATCH_ROW (\(_uv :unit). ((NONE :num option),([] :num list)))
+        (\(_uv :unit). T) (\(_uv :unit). (0 :num));
+      PMATCH_ROW (\(_uv :unit). (SOME (2 :num),([] :num list)))
+        (\(_uv :unit). T) (\(_uv :unit). (2 :num));
       PMATCH_ROW (\(v5 :num). (SOME v5,([] :num list))) (\(v5 :num). T)
         (\(v5 :num). (ARB :num));
       PMATCH_ROW
@@ -153,6 +153,112 @@ val _ = tcn (t, r_thm);
 (******************************************************************************)
 (* Simplification                                                             *)
 (******************************************************************************)
+
+val test =  test_conv "PMATCH_CLEANUP_PVARS_CONV" PMATCH_CLEANUP_PVARS_CONV (``PMATCH (x:('b # 'c) option) [
+     PMATCH_ROW (\x:'a. NONE) (\x. T) (\x. 5);
+     PMATCH_ROW (\ (x,y). SOME (x,z)) (\ (x,y). T) (\ (x,y). 8);
+     PMATCH_ROW (\ (x,z). SOME (x,z)) (\_. T) (\ (a,y). 8)]``,
+SOME ``PMATCH (x:('b # 'c) option)
+     [PMATCH_ROW (\_uv:unit. NONE) (\_uv. T) (\_uv. 5);
+      PMATCH_ROW (\x. SOME (x,z)) (\x. T) (\x. 8);
+      PMATCH_ROW (\(x,z). SOME (x,z)) (\(x,z). T) (\(x,z). 8)]``)
+
+val test = test_conv "PMATCH_EXPAND_COLS_CONV" PMATCH_EXPAND_COLS_CONV (``PMATCH (x,y,z)
+    [PMATCH_ROW (\y. (0,y,T)) (\y. T) (\y. y);
+     PMATCH_ROW (\xyz. xyz) (\xyz. ~SND (SND xyz)) (\xyz. 2);
+     PMATCH_ROW (\(x,yz). (x,yz)) (\(x,yz). T) (\(x,yz). x)]``,
+SOME ``PMATCH (x,y,z)
+     [PMATCH_ROW (\y. (0,y,T)) (\y. T) (\y. y);
+      PMATCH_ROW (\(xyz_0,xyz_1,xyz_2). (xyz_0,xyz_1,xyz_2))
+        (\(xyz_0,xyz_1,xyz_2). ~SND (SND (xyz_0,xyz_1,xyz_2)))
+        (\(xyz_0,xyz_1,xyz_2). 2);
+      PMATCH_ROW (\(x,yz_0,yz_1). (x,yz_0,yz_1)) (\(x,yz_0,yz_1). T)
+        (\(x,yz_0,yz_1). x)]``)
+
+
+val test = test_conv "PMATCH_INTRO_WILDCARDS_CONV" PMATCH_INTRO_WILDCARDS_CONV (``PMATCH (x,y,z)
+    [PMATCH_ROW (\(x,y,z). (x,y,z)) (\(x,y,z). T) (\(x,y,z). x + y);
+     PMATCH_ROW (\(x,y,z). (x,y,z)) (\(x,y,z). z) (\(x,y,z). x)]``, SOME ``PMATCH (x,y,z)
+     [PMATCH_ROW (\(x,y,_0). (x,y,_0)) (\(x,y,_0). T)
+        (\(x,y,_0). x + y);
+      PMATCH_ROW (\(x,_0,z). (x,_0,z)) (\(x,_0,z). z) (\(x,_0,z). x)]``)
+
+
+val test = test_conv "PMATCH_CLEANUP_CONV" PMATCH_CLEANUP_CONV (``case (SUC x) of
+     x => x + 5``, SOME ``SUC x + 5``)
+
+val test = test_conv "PMATCH_CLEANUP_CONV" PMATCH_CLEANUP_CONV (``case (SOME (x:'a),y) of
+     (NONE, y) => 0
+   | (x, 0) => 1
+   | (SOME x, y) => 2
+   | (x, y) => 3``, SOME `` PMATCH (SOME (x:'a),y)
+     [PMATCH_ROW (\x. (x,0)) (\x. T) (\x. 1);
+      PMATCH_ROW (\(x,y). (SOME x,y)) (\(x,y). T) (\(x,y). 2)]``)
+
+val test = test_conv "PMATCH_CLEANUP_CONV" PMATCH_CLEANUP_CONV (``case (SOME (x:'a),y) of
+     (NONE, y) => 0
+   | (SOME x, y) => 2
+   | (x, y) => 3``, SOME ``2``)
+
+val test = test_conv "PMATCH_SIMP_COLS_CONV" PMATCH_SIMP_COLS_CONV (``case (SOME x,y) of
+   | (SOME x, 1) => x+y
+   | (x, y) => 3``, SOME ``PMATCH y
+     [PMATCH_ROW (\(_uv:unit). 1) (\_uv. T) (\_uv. x + y);
+      PMATCH_ROW (\y. y) (\y. T) (\y. 3)]``)
+
+val test = test_conv "PMATCH_SIMP_COLS_CONV" PMATCH_SIMP_COLS_CONV (``case (SOME x,y) of
+   | (SOME x, 1) => x+y
+   | (SOME 2, 2) => y
+   | (x, y) => 3``, SOME ``PMATCH (x,y)
+     [PMATCH_ROW (\x. (x,1)) (\x. T) (\x. x + y);
+      PMATCH_ROW (\(_uv:unit). (2,2)) (\_uv. T) (\_uv. y);
+      PMATCH_ROW (\(x_0,y). (x_0,y)) (\(x_0,y). T) (\(x_0,y). 3)]``)
+
+
+val test =  test_conv "PMATCH_REMOVE_FAST_REDUNDANT_CONV" PMATCH_REMOVE_FAST_REDUNDANT_CONV (``case xy of
+   | (SOME x, y) => 1
+   | (SOME 2, 3) => 2
+   | (NONE, y) => 3
+   | (NONE, y) => 4
+   | (x, 5) => 5``, SOME ``
+  case xy of
+   | (SOME (x:num), y) => 1
+   | (NONE, y) => 3
+   | (x, 5) => 5``)
+
+val test =  test_conv "PMATCH_REMOVE_REDUNDANT_CONV" PMATCH_REMOVE_REDUNDANT_CONV (``case xy of
+   | (SOME x, y) => 1
+   | (SOME 2, 3) => 2
+   | (NONE, y) => 3
+   | (NONE, y) => 4
+   | (x, 5) => 5``, SOME ``
+  case xy of
+   | (SOME (x:num), (y:num)) => 1
+   | (NONE, y) => 3``)
+
+
+val test =  test_conv "PMATCH_REMOVE_FAST_SUBSUMED_CONV true" (PMATCH_REMOVE_FAST_SUBSUMED_CONV true) (``case xy of
+   | (SOME 2, _) => 2
+   | (NONE, 3) => 1
+   | (SOME x, _) => x
+   | (NONE, y) => y
+   | (x, 5) => ARB``, SOME
+``case xy of
+   | (NONE, 3) => 1
+   | (SOME x, _) => x
+   | (NONE, y) => y``)
+
+val test =  test_conv "PMATCH_REMOVE_FAST_SUBSUMED_CONV false" (PMATCH_REMOVE_FAST_SUBSUMED_CONV false) (``case xy of
+   | (SOME 2, _) => 2
+   | (NONE, 3) => 1
+   | (SOME x, _) => x
+   | (NONE, y) => y
+   | (x, 5) => ARB``, SOME
+``case xy of
+   | (NONE, 3) => 1
+   | (SOME x, _) => x
+   | (NONE, y) => y
+   | (x, 5) => ARB``)
 
 val test =  test_conv "PMATCH_SIMP_CONV" PMATCH_SIMP_CONV
 
@@ -306,8 +412,8 @@ val _ = test (t, (SOME t'))
 
 val t0 =
    ``PMATCH (l :num list)
-    [PMATCH_ROW (\(uv :unit). ([] :num list)) (\(uv :unit). T)
-       (\(uv :unit). (0 :num));
+    [PMATCH_ROW (\(_uv :unit). ([] :num list)) (\(_uv :unit). T)
+       (\(_uv :unit). (0 :num));
      PMATCH_ROW (\((x :num),(y :num),(_0 :num list)). x::y::x::y::_0)
        (\((x :num),(y :num),(_0 :num list)). T)
        (\((x :num),(y :num),(_0 :num list)). x + y);
@@ -319,20 +425,20 @@ val t0 =
        (\((x :num),(_2 :num list)). (1 :num))]``;
 
 val t1 = ``PMATCH l
-     [PMATCH_ROW (\(uv :unit). ([] :num list)) (\(uv :unit). T)
-        (\(uv :unit). (0 :num));
+     [PMATCH_ROW (\(_uv :unit). ([] :num list)) (\(_uv :unit). T)
+        (\(_uv :unit). (0 :num));
       PMATCH_ROW
         (\((x :num),(y :num),(_0 :num list),(y' :num),(x' :num)).
            x::y::x'::y'::_0)
         (\((x :num),(y :num),(_0 :num list),(y' :num),(x' :num)).
-           (y' = y) /\ (x' = x) /\ T)
+           (y' = y) /\ (x' = x))
         (\((x :num),(y :num),(_0 :num list),(y' :num),(x' :num)).
            x + y);
       PMATCH_ROW
         (\((x :num),(y :num),(_1 :num list),(x'' :num),(x' :num)).
            x::x'::x''::y::_1)
         (\((x :num),(y :num),(_1 :num list),(x'' :num),(x' :num)).
-           (x'' = x) /\ (x' = x) /\ T)
+           (x'' = x) /\ (x' = x))
         (\((x :num),(y :num),(_1 :num list),(x'' :num),(x' :num)).
            x + x + x);
       PMATCH_ROW (\((x :num),(_2 :num list)). x::_2)
@@ -369,6 +475,19 @@ val t2 = ``
         (\((_0 :num),(_2 :num list)). (1 :num))]``
 
 val _ = test_conv "PMATCH_REMOVE_DOUBLE_BIND_CONV" PMATCH_REMOVE_DOUBLE_BIND_CONV (t0, SOME t1);
+
+val _ = test_conv "PMATCH_REMOVE_DOUBLE_BIND_CONV" PMATCH_REMOVE_DOUBLE_BIND_CONV (``case xy of
+   | (x, x) when x > 0 => x + x
+   | x.| (x, y) => x
+   | (x, _) => SUC x``, SOME ``
+case xy of
+     (x,x') when (x' = x) /\ x > 0 => x + x
+   | (x,y') when (y' = y) => x
+   | (x,_) => SUC x``)
+
+
+val _ = test_conv "PMATCH_REMOVE_DOUBLE_BIND_CONV" PMATCH_REMOVE_DOUBLE_BIND_CONV (``case (xx:('a # 'a)) of (x, x) => T | _ => F``, SOME ``case (xx:('a # 'a)) of (x, x') when (x' = x) => T | _ => F``) ;
+
 val _ = test_conv "PMATCH_REMOVE_GUARDS_CONV" PMATCH_REMOVE_GUARDS_CONV (t1, SOME t2);
 
 val t = ``PMATCH ((y :num option),(x :num option),(l :num list))
@@ -400,6 +519,37 @@ val t' = ``   PMATCH (y,l)
 val _ = test_conv "PMATCH_REMOVE_GUARDS_CONV" PMATCH_REMOVE_GUARDS_CONV (t, SOME t');
 
 
+val _ = test_conv "PMATCH_REMOVE_GUARDS_CONV" PMATCH_REMOVE_GUARDS_CONV (``case (x, y) of
+  | (x, 2) when EVEN x => x + x
+  | (SUC x, y) when ODD x => y + x + SUC x
+  | (SUC x, 1) => x
+  | (x, _) => x+3``, SOME ``case (x,y) of
+     (x,2) =>
+          if EVEN x then x + x
+          else (case x of SUC x when ODD x => 2 + x + SUC x | x => x + 3)
+   | (SUC x,y) =>
+          if ODD x then y + x + SUC x
+          else (case y of 1 => x | _ => SUC x + 3)
+   | (x,_) => x + 3``);
+
+
+
+val _ = test_conv "PMATCH_REMOVE_GUARDS_CONV" PMATCH_REMOVE_GUARDS_CONV (``case (x, y) of
+  | (x, 0) when EVEN x => (SOME x, T)
+  | (x, 0) => (SOME x, F)
+  | (0, _) => (NONE, T)
+  | (_, _) => (NONE, F)``, SOME ``case (x,y) of
+     (x,0) => if EVEN x then (SOME x,T) else (SOME x,F)
+   | (0,_) => (NONE,T)
+   | (_,_) => (NONE,F)``);
+
+
+val _ = test_conv "SIMP_CONV (numLib.std_ss ++ PMATCH_REMOVE_GUARDS_ss) []" (SIMP_CONV (numLib.std_ss ++ PMATCH_REMOVE_GUARDS_ss) []) (
+  ``case x of
+  | _ when x < 5 => 0
+  | _ when x < 10 => 1
+  | _ when x < 15 => 2
+  | _ => 3``, SOME ``if x < 5 then 0 else if x < 10 then 1 else if x < 15 then 2 else 3``);
 
 (*********************************)
 (* Fancy redundancy removal      *)
@@ -407,8 +557,8 @@ val _ = test_conv "PMATCH_REMOVE_GUARDS_CONV" PMATCH_REMOVE_GUARDS_CONV (t, SOME
 
 val t =
    ``PMATCH ((x :'a option),(z :'b option))
-    [PMATCH_ROW (\(uv :unit). ((NONE :'a option),(NONE :'b option)))
-       (\(uv :unit). T) (\(uv :unit). (0 :num));
+    [PMATCH_ROW (\(_uv :unit). ((NONE :'a option),(NONE :'b option)))
+       (\(_uv :unit). T) (\(_uv :unit). (0 :num));
      PMATCH_ROW (\((_1 :'b option),(_0 :'a)). (SOME _0,_1))
        (\((_1 :'b option),(_0 :'a)). T)
        (\((_1 :'b option),(_0 :'a)). (1 :num));
@@ -417,8 +567,8 @@ val t =
 
 val t' = ``
    PMATCH (x,z)
-     [PMATCH_ROW (\(uv :unit). ((NONE :'a option),(NONE :'b option)))
-        (\(uv :unit). T) (\(uv :unit). (0 :num));
+     [PMATCH_ROW (\(_uv :unit). ((NONE :'a option),(NONE :'b option)))
+        (\(_uv :unit). T) (\(_uv :unit). (0 :num));
       PMATCH_ROW (\((_1 :'b option),(_0 :'a)). (SOME _0,_1))
         (\((_1 :'b option),(_0 :'a)). T)
         (\((_1 :'b option),(_0 :'a)). (1 :num))]``;
@@ -438,8 +588,8 @@ end)
 
 val t =
    ``PMATCH ((x :'a option),(z :'b option))
-    [PMATCH_ROW (\(uv :unit). ((NONE :'a option),(NONE :'b option)))
-       (\(uv :unit). T) (\(uv :unit). (0 :num));
+    [PMATCH_ROW (\(_uv :unit). ((NONE :'a option),(NONE :'b option)))
+       (\(_uv :unit). T) (\(_uv :unit). (0 :num));
      PMATCH_ROW (\((_1 :'b option),(_0 :'a)). (SOME _0,_1))
        (\((_1 :'b option),(_0 :'a)). T)
        (\((_1 :'b option),(_0 :'a)). (1 :num));
@@ -450,8 +600,8 @@ val t =
 val _ = test_precond "PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV" PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV (t, SOME ``~F``)
 
 val t = ``PMATCH ((x :'a option),(z :'b option))
-    [PMATCH_ROW (\(uv :unit). ((NONE :'a option),(NONE :'b option)))
-       (\(uv :unit). T) (\(uv :unit). (0 :num));
+    [PMATCH_ROW (\(_uv :unit). ((NONE :'a option),(NONE :'b option)))
+       (\(_uv :unit). T) (\(_uv :unit). (0 :num));
      PMATCH_ROW (\((_1 :'b option),(_0 :'a)). (SOME _0,_1))
        (\((_1 :'b option),(_0 :'a)). T)
        (\((_1 :'b option),(_0 :'a)). (1 :num));
@@ -462,8 +612,8 @@ val p = ``~PMATCH_ROW_COND_EX ((x :'a option),(z :'b option))
       (\(v3 :'b). ((NONE :'a option),SOME v3)) (\(v3 :'b). T)``
 
 val t' = ``PMATCH (x,z)
-     [PMATCH_ROW (\(uv :unit). ((NONE :'a option),(NONE :'b option)))
-        (\(uv :unit). T) (\(uv :unit). (0 :num));
+     [PMATCH_ROW (\(_uv :unit). ((NONE :'a option),(NONE :'b option)))
+        (\(_uv :unit). T) (\(_uv :unit). (0 :num));
       PMATCH_ROW (\((_1 :'b option),(_0 :'a)). (SOME _0,_1))
         (\((_1 :'b option),(_0 :'a)). T)
         (\((_1 :'b option),(_0 :'a)). (1 :num));
@@ -489,8 +639,8 @@ fun mk_t t  = ``PMATCH (^t :num list)
      PMATCH_ROW (\((x :num),(y :num),(_3 :num list)). x::y::_3)
        (\((x :num),(y :num),(_3 :num list)). T)
        (\((x :num),(y :num),(_3 :num list)). x + y);
-     PMATCH_ROW (\(uv :unit). ([] :num list)) (\(uv :unit). T)
-       (\(uv :unit). (0 :num));
+     PMATCH_ROW (\(_uv :unit). ([] :num list)) (\(_uv :unit). T)
+       (\(_uv :unit). (0 :num));
      PMATCH_ROW (\(_4 :num list). _4) (\(_4 :num list). T)
        (\(_4 :num list). (1 :num))]``;
 
@@ -597,14 +747,14 @@ val _ = app test [
    \ | z .| (SOME T, z) when LENGTH x > 5 => 6\
    \ | (z1, z2, z3:'b list) .| (SOME z1, z2) when LENGTH z3 > 5 => 7",
    ``PMATCH ((y :bool option),(x :bool list))
-      [PMATCH_ROW (\uv :unit. (NONE :bool option,[] :bool list))
-                  (\uv :unit. T)
-                  (\uv :unit. 0n);
-       PMATCH_ROW (\uv :unit. (NONE :bool option,[T]))
-                  (\uv:unit. T)
-                  (\uv:unit. 1n);
-       PMATCH_ROW (\uv:unit. (SOME T, [] :bool list)) (\uv:unit. T)
-                  (\uv :unit. 2n);
+      [PMATCH_ROW (\_uv :unit. (NONE :bool option,[] :bool list))
+                  (\_uv :unit. T)
+                  (\_uv :unit. 0n);
+       PMATCH_ROW (\_uv :unit. (NONE :bool option,[T]))
+                  (\_uv:unit. T)
+                  (\_uv:unit. 1n);
+       PMATCH_ROW (\_uv:unit. (SOME T, [] :bool list)) (\_uv:unit. T)
+                  (\_uv :unit. 2n);
        PMATCH_ROW (\ ((xx :bool),(yy :bool list)). (SOME xx,yy))
                   (\ ((xx :bool),(yy :bool list)). T)
                   (\ ((xx :bool),(yy :bool list)). 3n);
@@ -624,13 +774,13 @@ val _ = app test [
 
   ("case x of NONE => y | SOME (z:'foo) => (f z : 'bar)",
    ``PMATCH (x:'foo option) [
-       PMATCH_ROW (\uv:unit. NONE) (\uv:unit. T) (\uv:unit. y:'bar);
+       PMATCH_ROW (\_uv:unit. NONE) (\_uv:unit. T) (\_uv:unit. y:'bar);
        PMATCH_ROW (\z:'foo. SOME z) (\z:'foo. T) (\z:'foo. f z : 'bar)
      ]``),
 
   ("case x of NONE => y | z:'foo .| SOME z => (f z : 'bar)",
    ``PMATCH (x:'foo option) [
-       PMATCH_ROW (\uv:unit. NONE) (\uv:unit. T) (\uv:unit. y:'bar);
+       PMATCH_ROW (\_uv:unit. NONE) (\_uv:unit. T) (\_uv:unit. y:'bar);
        PMATCH_ROW (\z:'foo. SOME z) (\z:'foo. T) (\z:'foo. f z : 'bar)
      ]``),
 

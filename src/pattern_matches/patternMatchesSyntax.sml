@@ -259,7 +259,7 @@ fun mk_PMATCH_ROW (p_t, g_t, r_t) =
 fun mk_pabs_from_vars vars tl = case vars of
       []  => let
                val uv =
-                   variant (free_varsl tl) (mk_var("uv", oneSyntax.one_ty))
+                   variant (free_varsl tl) (mk_var("_uv", oneSyntax.one_ty))
              in
                fn t => mk_abs (uv, t)
              end
