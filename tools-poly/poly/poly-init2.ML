@@ -140,6 +140,7 @@ in
     fun loaded () = Binaryset.listItems (!loadedMods);
     fun fakeload s =
         loadedMods := Binaryset.add(!loadedMods,s)
+    fun findMod modname = findUo (modname ^ ".uo") ("." :: !loadPath)
   end;
 
 open Meta;

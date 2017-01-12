@@ -6,7 +6,7 @@ local
 open TextIO
 in
 fun warn s = (output(stdErr, s ^ "\n"); flushOut stdErr)
-fun die s = (warn s; OS.Process.exit OS.Process.failure)
+fun die (s:string) : 'a = (warn s; OS.Process.exit OS.Process.failure)
 end
 
 fun member s [] = false
@@ -82,18 +82,37 @@ List.app (hol_use ("tools" ++ "Holmake"))
           "Holdep_tokens", "Holdep", "Holmake_tools", "Holmake_types",
           "ReadHMF"];
 
+fun findUo [] _ = NONE
+  | findUo (search::rest) modPath =
+      let val path =
+         OS.Path.mkAbsolute
+           {path = modPath, relativeTo = OS.Path.mkAbsolute
+                                           {path=search,
+                                            relativeTo = OS.FileSys.getDir ()}};
+      in
+        if OS.FileSys.access (path, []) then
+          SOME path
+        else
+          findUo rest modPath
+      end;
+
 fun check_objpath die incs (p, b) =
   if b then ()
   else
     if member (OS.Path.dir p) incs then ()
     else die ("Object file "^p^" has suspicious path; use -f to override")
 
-fun create_heap qp (objs, outputheap0, base0) = let
+fun time_max (t1, t2) = if Time.<(t1,t2) then t2 else t1
+
+fun create_heap qp findMod (objs, outputheap0, base0) = let
   open Systeml TextIO
   val ofile = OS.FileSys.tmpName()
   val ostrm = openOut ofile
   fun p s = output(ostrm, s ^ "\n")
-  val die = if qp then (fn s => OS.Process.exit OS.Process.failure) else die
+  val original_die = die
+  fun die s =
+      if qp then OS.Process.exit OS.Process.failure
+      else original_die s
   val (diestr,hloadstr,printstr) =
       if qp then
         ("fun die s = OS.Process.exit OS.Process.failure;",
@@ -128,7 +147,19 @@ in
   p ("val _ = OS.Process.exit OS.Process.success");
   p ("end");
   closeOut ostrm;
-  system_ps (Systeml.POLY ^ " -q < " ^ ofile)
+  system_ps (Systeml.POLY ^ " -q < " ^ ofile);
+  case OS.Process.getEnv "HOL_REBUILD_HEAPS_ONLY" of
+      NONE => ()
+    | SOME "1" =>
+      let
+        val getTime = OS.FileSys.modTime o findMod
+        fun foldthis (modname, t0) = time_max(t0, getTime modname)
+      in
+        OS.FileSys.setTime (outputheap,
+                            SOME (foldl foldthis (getTime (hd objs)) (tl objs)))
+      end
+    | SOME s =>
+      warn ("Ignoring strange value (" ^ s ^ ") for HOL_REBUILD_HEAPS_ONLY")
 end
 
 
@@ -137,7 +168,8 @@ end
 fun main() = let
   val (objs0, cloutput, clbase, qp) = read_cline()
   val warn = if qp then (fn s => ()) else warn
-  val die = if qp then (fn s => OS.Process.exit OS.Process.failure) else die
+  val original_die = die
+  fun die s = if qp then OS.Process.exit OS.Process.failure else original_die s
   val allincs =
       if OS.FileSys.access ("Holmakefile", [OS.FileSys.A_READ]) then let
         open Holmake_types
@@ -157,6 +189,12 @@ fun main() = let
   val base = case clbase of
                NONE => defaultbase
              | SOME s => s
+  val search_these = "." :: OS.Path.concat(Systeml.HOLDIR, "sigobj") :: allincs
+  fun findmod s =
+    case findUo search_these (s ^ ".uo") of
+        NONE => die ("In "^OS.FileSys.getDir()^": couldn't find "^s^".uo\n\
+                     \After searching: " ^ String.concatWith ", " search_these)
+      | SOME p => p
 in
-  create_heap qp (map #1 objs0, output, base)
+  create_heap qp findmod (map #1 objs0, output, base)
 end
