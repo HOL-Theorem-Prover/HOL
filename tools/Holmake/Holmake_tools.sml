@@ -591,7 +591,8 @@ fun generate_all_plausible_targets warn first_target =
           fun not_a_dot f = not (String.isPrefix "." f)
           fun ok_file f =
               case (toFile f) of
-                  SIG _ => true
+                  SIG (Theory _) => false
+                | SIG _ => true
                 | SML (Script s) =>
                   (case OS.Path.ext s of
                        SOME "art" => false
@@ -602,6 +603,7 @@ fun generate_all_plausible_targets warn first_target =
                                 ") can't include '.' characters");
                           false)
                      | NONE => true)
+                | SML (Theory _) => false
                 | SML _ => true
                 | _ => false
           val src_files = find_files cds (fn s => ok_file s andalso not_a_dot s)
