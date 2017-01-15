@@ -195,7 +195,6 @@ val PMATCH_ROW_EQ_NONE = store_thm ("PMATCH_ROW_EQ_NONE",
     (!x. ~(PMATCH_ROW_COND p g i x))``,
 SIMP_TAC std_ss [PMATCH_ROW_def, some_eq_NONE]);
 
-
 val PMATCH_ROW_EQ_SOME = store_thm ("PMATCH_ROW_EQ_SOME",
   ``(PMATCH_ROW p g r i = SOME y) ==>
     (?x. (PMATCH_ROW_COND p g i x) /\ (y = r x))``,
@@ -204,6 +203,22 @@ REPEAT STRIP_TAC THEN
 Q.EXISTS_TAC `z` THEN
 IMP_RES_TAC some_eq_SOME THEN
 ASM_SIMP_TAC std_ss []);
+
+
+val PMATCH_COND_SELECT_UNIQUE = store_thm ("PMATCH_COND_SELECT_UNIQUE",
+  ``!p g i.
+    (!x1 x2. (g x1 /\ g x2 /\ (p x1 = p x2)) ==> (x1 = x2)) ==>
+    !x. PMATCH_ROW_COND p g i x ==>
+    ((@y. PMATCH_ROW_COND p g i y) = x)``,
+
+SIMP_TAC std_ss [PMATCH_ROW_COND_def] THEN
+METIS_TAC[]);
+
+val PMATCH_ROW_COND_DEF_GSYM = store_thm ("PMATCH_ROW_COND_DEF_GSYM",
+  ``PMATCH_ROW_COND pat guard inp v =
+    ((inp = pat v) /\ (guard v))``,
+SIMP_TAC std_ss [PMATCH_ROW_COND_def] THEN
+PROVE_TAC[])
 
 
 val PMATCH_EVAL = store_thm ("PMATCH_EVAL",
@@ -223,12 +238,10 @@ Cases_on `PMATCH_ROW p g r v` THENL [
 val PMATCH_EVAL_MATCH = store_thm ("PMATCH_EVAL_MATCH",
  ``~(PMATCH_ROW p g r v = NONE) ==>
    (PMATCH v ((PMATCH_ROW p g r) :: rs) =
-      (r (@x.PMATCH_ROW_COND p g v x)))``,
+      (r (@x. PMATCH_ROW_COND p g v x)))``,
 
 SIMP_TAC std_ss [PMATCH_EVAL,
  PMATCH_ROW_EQ_NONE]);
-
-
 
 
 (***************************************************)
@@ -826,6 +839,17 @@ val PMATCH_IS_EXHAUSTIVE_def = Define `
    PMATCH_IS_EXHAUSTIVE v rs = (
    EXISTS (\r. IS_SOME (r v)) rs)`
 
+
+val PMATCH_IS_EXHAUSTIVE_REWRITES = store_thm ("PMATCH_IS_EXHAUSTIVE_REWRITES", ``
+   (!v. (PMATCH_IS_EXHAUSTIVE v [] = F)) /\
+
+   (!v r rs. (PMATCH_IS_EXHAUSTIVE v (r::rs) =
+     ~(r v = NONE) \/ PMATCH_IS_EXHAUSTIVE v rs))``,
+
+SIMP_TAC list_ss [PMATCH_IS_EXHAUSTIVE_def,
+quantHeuristicsTheory.IS_SOME_EQ_NOT_NONE])
+
+
 val IS_REDUNDANT_ROWS_INFO_EXTRACT_IS_EXHAUSTIVE =
   store_thm ("IS_REDUNDANT_ROWS_INFO_EXTRACT_IS_EXHAUSTIVE",
   ``!v rows c infos.
@@ -1060,6 +1084,20 @@ FULL_SIMP_TAC list_ss [PMATCH_IS_EXHAUSTIVE_def,
   combinTheory.o_DEF, quantHeuristicsTheory.IS_SOME_EQ_NOT_NONE])
 
 
+val PMATCH_ROW_EVAL_COND_EX = store_thm ("PMATCH_ROW_EVAL_COND_EX",
+  ``PMATCH_ROW_COND_EX i p g ==>
+    ((PMATCH_ROW p g r i) = SOME (r (@x. PMATCH_ROW_COND p g i x)))``,
+
+SIMP_TAC std_ss [PMATCH_ROW_def, some_def, PMATCH_ROW_COND_EX_def])
+
+val PMATCH_ROW_NEQ_NONE = store_thm ("PMATCH_ROW_NEQ_NONE",
+  ``(PMATCH_ROW p g r i <> NONE) <=>
+    (PMATCH_ROW_COND_EX i p g)``,
+
+SIMP_TAC std_ss [PMATCH_ROW_def, some_eq_NONE,
+  PMATCH_ROW_COND_EX_def]);
+
+
 (***************************************************)
 (* ELIMINATE DOUBLE VAR-BINDS                      *)
 (***************************************************)
@@ -1209,57 +1247,180 @@ ASM_SIMP_TAC std_ss [])
 (* UNROLLING PREDICATES                            *)
 (***************************************************)
 
-(* trivial case added only for completeness *)
+val PMATCH_ROW_COND_NOT_EX_OR_EQ_def = Define `PMATCH_ROW_COND_NOT_EX_OR_EQ i p g r rows =
+(~(PMATCH_ROW_COND_EX i p g) \/ ((EXISTS (\row. row i <> NONE) rows) /\
+     (r (@x. PMATCH_ROW_COND p g i x) = PMATCH i rows)))`
+
+val PMATCH_ROW_COND_NOT_EX_OR_EQ_FIRST_ROW = store_thm ("PMATCH_ROW_COND_NOT_EX_OR_EQ_FIRST_ROW",
+  ``!i p g r p' g' r' rows.
+
+    PMATCH_ROW_COND_EX i p' g' ==>
+    ((PMATCH_ROW_COND_NOT_EX_OR_EQ i p g r ((PMATCH_ROW p' g' r')::rows)) =
+    (!x. PMATCH_ROW_COND p g i x ==>
+      (r  (@x.  PMATCH_ROW_COND p  g  i x) =
+       r' (@x'. PMATCH_ROW_COND p' g' i x'))))``,
+
+SIMP_TAC (list_ss++QUANT_INST_ss [std_qp]) [PMATCH_ROW_COND_NOT_EX_OR_EQ_def, PMATCH_def, PMATCH_ROW_def, some_def, PMATCH_ROW_COND_EX_def] THEN
+PROVE_TAC[]);
+
+
+val PMATCH_ROW_COND_NOT_EX_OR_EQ_NIL = store_thm ("PMATCH_ROW_COND_NOT_EX_OR_EQ_NIL",
+  ``PMATCH_ROW_COND_NOT_EX_OR_EQ i p g r [] =
+    (!x. (PMATCH_ROW_COND p g i x) ==> F)``,
+
+SIMP_TAC list_ss [PMATCH_ROW_COND_NOT_EX_OR_EQ_def,
+ PMATCH_ROW_COND_EX_def]);
+
+
+val PMATCH_ROW_COND_NOT_EX_OR_EQ_NOT_FIRST_ROW = store_thm ("PMATCH_ROW_COND_NOT_EX_OR_EQ_NOT_FIRST_ROW",
+  ``PMATCH_ROW_COND_NOT_EX_OR_EQ i p' g' r' rows ==>
+    (PMATCH_ROW_COND_NOT_EX_OR_EQ i p g r ((PMATCH_ROW p' g' r')::rows) =
+    PMATCH_ROW_COND_NOT_EX_OR_EQ i p g r rows)``,
+
+SIMP_TAC list_ss [PMATCH_ROW_COND_NOT_EX_OR_EQ_def, PMATCH_def, PMATCH_ROW_def, some_def] THEN
+Cases_on `PMATCH_ROW_COND_EX i p g` THEN ASM_REWRITE_TAC[] THEN
+Cases_on `PMATCH_ROW_COND_EX i p' g'` THEN (
+  FULL_SIMP_TAC (std_ss++QUANT_INST_ss[std_qp]) [PMATCH_ROW_COND_EX_def]
+));
 
 val PMATCH_PRED_UNROLL_NIL = store_thm ("PMATCH_PRED_UNROLL_NIL",
   ``!P v. P (PMATCH v []) = P ARB``,
   SIMP_TAC std_ss [PMATCH_def, PMATCH_INCOMPLETE_def]);
 
+
 val PMATCH_PRED_UNROLL_CONS = store_thm ("PMATCH_PRED_UNROLL_CONS",
 ``!P v p g r rows.
-     (!x1 x2. (g x1 /\ g x2 /\ (p x1 = p x2)) ==> (x1 = x2)) ==>
-
-     (P (PMATCH v ((PMATCH_ROW p g r)::rows)) <=>
-       (!x. ((v = p x) /\ g x) ==> P (r x)) /\
-       ((!x. (v = p x) ==> ~(g x)) ==> P (PMATCH v rows)))``,
+     P (PMATCH v ((PMATCH_ROW p g r)::rows)) <=> (
+       (PMATCH_ROW_COND_EX v p g ==> P (r (@x. PMATCH_ROW_COND p g v x))) /\
+       ((PMATCH_ROW_COND_NOT_EX_OR_EQ v p g r rows) ==>
+         P (PMATCH v rows)))``,
 
 REPEAT STRIP_TAC THEN
-SIMP_TAC std_ss [PMATCH_def, PMATCH_ROW_def] THEN
+SIMP_TAC std_ss [PMATCH_def, PMATCH_ROW_def, some_def,
+  PMATCH_ROW_COND_NOT_EX_OR_EQ_def,
+  PMATCH_ROW_COND_EX_def] THEN
 Cases_on `?x. PMATCH_ROW_COND p g v x` THENL [
-  FULL_SIMP_TAC std_ss [PMATCH_ROW_COND_def] THEN
-  `!x'. ((p x' = v) /\ g x') = (x' = x)` by METIS_TAC[] THEN
-  ASM_SIMP_TAC (std_ss++boolSimps.CONJ_ss) [] THEN
+  ASM_REWRITE_TAC [] THEN
+  FULL_SIMP_TAC std_ss [] THEN
   METIS_TAC[],
 
-  FULL_SIMP_TAC std_ss [] THEN
-  FULL_SIMP_TAC std_ss [PMATCH_ROW_COND_def] THEN
-  METIS_TAC[]
+  FULL_SIMP_TAC std_ss []
 ])
 
-val PMATCH_PRED_UNROLL_CONS_NO_INJ = store_thm ("PMATCH_PRED_UNROLL_CONS_NO_INJ",
+
+
+val PMATCH_ROW_COND_NOT_EX_OR_EQ_def = Define `PMATCH_ROW_COND_NOT_EX_OR_EQ (i:'a) (r : 'a -> 'b option) rows =
+(~(r i <> NONE) \/ ((EXISTS (\row. row i <> NONE) rows) /\
+     (THE (r i) = PMATCH i rows)))`
+
+val PMATCH_ROW_COND_NOT_EX_OR_EQ_FIRST_ROW = store_thm ("PMATCH_ROW_COND_NOT_EX_OR_EQ_FIRST_ROW",
+  ``!i r r' rows.
+
+    (r' i <> NONE) ==>
+    ((PMATCH_ROW_COND_NOT_EX_OR_EQ i r (r'::rows)) =
+    ((r i <> NONE) ==>
+      (r i = r' i)))``,
+
+SIMP_TAC list_ss [PMATCH_ROW_COND_NOT_EX_OR_EQ_def, PMATCH_def] THEN
+REPEAT GEN_TAC THEN
+Cases_on `r' i` THEN Cases_on `r i` THEN (
+  SIMP_TAC std_ss []
+))
+
+
+val PMATCH_ROW_COND_NOT_EX_OR_EQ_NIL = store_thm ("PMATCH_ROW_COND_NOT_EX_OR_EQ_NIL",
+  ``PMATCH_ROW_COND_NOT_EX_OR_EQ i r [] =
+    ((r i <> NONE) ==> F)``,
+
+SIMP_TAC list_ss [PMATCH_ROW_COND_NOT_EX_OR_EQ_def]);
+
+
+val PMATCH_ROW_COND_NOT_EX_OR_EQ_NOT_FIRST_ROW = store_thm ("PMATCH_ROW_COND_NOT_EX_OR_EQ_NOT_FIRST_ROW",
+  ``PMATCH_ROW_COND_NOT_EX_OR_EQ i r' rows ==>
+    (PMATCH_ROW_COND_NOT_EX_OR_EQ i r (r'::rows) =
+    (PMATCH_ROW_COND_NOT_EX_OR_EQ i r rows))``,
+
+SIMP_TAC list_ss [PMATCH_ROW_COND_NOT_EX_OR_EQ_def, PMATCH_def] THEN
+Cases_on `r i` THEN ASM_SIMP_TAC std_ss [] THEN
+Cases_on `r' i` THEN ASM_SIMP_TAC std_ss []
+);
+
+val PMATCH_PRED_UNROLL_NIL = store_thm ("PMATCH_PRED_UNROLL_NIL",
+  ``!P v. P (PMATCH v []) = P ARB``,
+  SIMP_TAC std_ss [PMATCH_def, PMATCH_INCOMPLETE_def]);
+
+
+val PMATCH_PRED_UNROLL_CONS = store_thm ("PMATCH_PRED_UNROLL_CONS",
 ``!P v p g r rows.
-     (P (PMATCH v ((PMATCH_ROW p g r)::rows)) <=>
-       ((?x. (p x = v) /\ g x) ==> ?x. (
-         (v = p x) /\ g x /\ ((@x. PMATCH_ROW_COND p g v x) = x) /\
-         P (r x))) /\
-       ((!x. (v = p x) ==> ~(g x)) ==> P (PMATCH v rows)))``,
+     P (PMATCH v (r::rows)) <=> (
+       ((r v <> NONE) ==> P (THE (r v))) /\
+       ((PMATCH_ROW_COND_NOT_EX_OR_EQ v r rows) ==>
+         P (PMATCH v rows)))``,
 
 REPEAT STRIP_TAC THEN
-SIMP_TAC std_ss [PMATCH_def, PMATCH_ROW_def] THEN
-Cases_on `?x. PMATCH_ROW_COND p g v x` THENL [
-  ASM_SIMP_TAC std_ss [some_def] THEN
-  FULL_SIMP_TAC std_ss [PMATCH_ROW_COND_def] THEN
-  EQ_TAC THEN REPEAT STRIP_TAC THENL [
-    SELECT_ELIM_TAC THEN PROVE_TAC [],
-    SELECT_ELIM_TAC THEN PROVE_TAC [],
-    ASM_REWRITE_TAC[],
-    PROVE_TAC[],
-    PROVE_TAC[]
-  ],
+SIMP_TAC std_ss [PMATCH_def, PMATCH_ROW_def, some_def,
+  PMATCH_ROW_COND_NOT_EX_OR_EQ_def,
+  PMATCH_ROW_COND_EX_def] THEN
+Cases_on `r v` THEN ASM_SIMP_TAC std_ss [] THEN
+METIS_TAC[]);
 
-  ASM_SIMP_TAC std_ss [some_def] THEN
-  FULL_SIMP_TAC std_ss [PMATCH_ROW_COND_def] THEN
-  METIS_TAC[]
-])
+
+val PMATCH_EXPAND_PRED_def = Define `(PMATCH_EXPAND_PRED P v rows_before [] = (~(PMATCH_IS_EXHAUSTIVE v (REVERSE rows_before)) ==> P ARB)) /\
+
+  (PMATCH_EXPAND_PRED P v rows_before (r::rows_after) = (
+  ((r v <> NONE) ==> (EVERY (\r'. (r' v <> NONE) ==> (r' v = r v)) rows_before)
+  ==> P (THE (r v))) /\ PMATCH_EXPAND_PRED P v (r::rows_before) rows_after))`;
+
+
+val PMATCH_EXPAND_PRED_THM_GEN = store_thm ("PMATCH_EXPAND_PRED_THM_GEN",
+``!P v rows_before rows_after.
+         PMATCH_EXPAND_PRED P v rows_before rows_after <=> (
+         EVERY (\r. PMATCH_ROW_COND_NOT_EX_OR_EQ v r rows_after ) rows_before ==>
+         P (PMATCH v rows_after))``,
+
+Induct_on `rows_after` THEN1 (
+  SIMP_TAC list_ss [PMATCH_EXPAND_PRED_def, PMATCH_IS_EXHAUSTIVE_def, PMATCH_def, PMATCH_INCOMPLETE_def, PMATCH_ROW_COND_NOT_EX_OR_EQ_NIL, combinTheory.o_DEF, rich_listTheory.EVERY_REVERSE]
+) THEN
+
+ASM_SIMP_TAC list_ss [PMATCH_EXPAND_PRED_def, PMATCH_IS_EXHAUSTIVE_def, PMATCH_PRED_UNROLL_CONS] THEN
+POP_ASSUM (K ALL_TAC) THEN
+REPEAT GEN_TAC THEN
+Q.RENAME1_TAC `P (THE (r v))` THEN
+Cases_on `r v` THENL [
+  ASM_SIMP_TAC (std_ss++boolSimps.EQUIV_EXTRACT_ss) [EVERY_MEM] THEN
+  REPEAT STRIP_TAC THEN
+  METIS_TAC[PMATCH_ROW_COND_NOT_EX_OR_EQ_NOT_FIRST_ROW],
+
+
+  Q.RENAME1_TAC `r v = SOME x` THEN
+  ASM_SIMP_TAC std_ss [PMATCH_ROW_COND_NOT_EX_OR_EQ_FIRST_ROW] THEN
+
+  Cases_on `PMATCH_ROW_COND_NOT_EX_OR_EQ v r rows_after` THEN (
+    ASM_SIMP_TAC std_ss []
+  ) THEN
+  Cases_on `EVERY (\r'. r' v <> NONE ==> (r' v = SOME x)) rows_before` THENL [
+    FULL_SIMP_TAC (std_ss++boolSimps.EQUIV_EXTRACT_ss) [EVERY_MEM, PMATCH_ROW_COND_NOT_EX_OR_EQ_def] THEN
+    METIS_TAC[],
+
+
+    ASM_SIMP_TAC std_ss [] THEN
+    FULL_SIMP_TAC std_ss [EVERY_MEM, PMATCH_ROW_COND_NOT_EX_OR_EQ_def] THEN1 (FULL_SIMP_TAC std_ss []) THEN
+
+    STRIP_TAC THEN
+    POP_ASSUM (MP_TAC o Q.SPEC `r'`) THEN
+    Q.PAT_X_ASSUM `THE (r v) = _` (ASSUME_TAC o GSYM) THEN
+    ASM_SIMP_TAC std_ss [] THEN
+    Cases_on `r' v` THEN FULL_SIMP_TAC std_ss []
+  ]
+]);
+
+
+val PMATCH_EXPAND_PRED_THM = store_thm ("PMATCH_EXPAND_PRED_THM",
+``!P v rows_before rows_after.
+         P (PMATCH v rows) <=>
+         PMATCH_EXPAND_PRED P v [] rows``,
+
+SIMP_TAC list_ss [PMATCH_EXPAND_PRED_THM_GEN]);
+
 
 val _ = export_theory();;

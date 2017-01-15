@@ -98,6 +98,14 @@ sig
   (* applies a conversion to all rows of a pmatch *)
   val PMATCH_ROWS_CONV : conv -> conv
 
+  (* Often one wants to work on the PMATCH structure without
+     touching the concrete patterns or right-hand-sides.
+     "PMATCH_INTRO_GENVARS t" replaces in "t" all
+     patterns, guards and right-hand-sides with freshly
+     generated variables and returns a  substitution
+     s and a term t' such that "subst s t'" is alpha-equivalent
+     to "t". *)
+  val PMATCH_INTRO_GENVARS : term -> term * (term, term) Term.subst
 
   (*******************)
   (* PMATCH_ROW_COND *)
@@ -145,9 +153,19 @@ sig
      (term list -> term -> term option) ->
      term list -> term * term * term -> term
 
-  (******************)
-  (* Pretty printer *)
-  (******************)
+
+  (********)
+  (* MISC *)
+  (********)
+
+  val PMATCH_IS_EXHAUSTIVE_tm   : term
+  val dest_PMATCH_IS_EXHAUSTIVE : term -> (term * term list)
+  val is_PMATCH_IS_EXHAUSTIVE   : term -> bool
+  val mk_PMATCH_IS_EXHAUSTIVE   : term -> term -> term
+
+  (*****************************)
+  (* Pretty printer and Parser *)
+  (*****************************)
 
   (* A pretty printer is defined and added for PMATCH.
      Whether it is use can be controled via the trace
@@ -155,15 +173,10 @@ sig
      "use pmatch_pp"
   *)
 
+  (* Enable Parser *)
+  val ENABLE_PMATCH_CASES : unit -> unit
 
-  (******************)
-  (* Parser         *)
-  (******************)
-
-  (* Writing a parser for CASES is tricky. The existing
-     one can be used however. If the trace "parse deep cases"
-     is set to true, standard case-expressions are parsed
-     to deep-matches, otherwise the default state-expressions. *)
+  val grammar_add_pmatch : term_grammar.grammar -> term_grammar.grammar
 
 
   (**************************)
@@ -257,8 +270,5 @@ sig
      generator for strings starting with [pr], which are all distinct
      from each other *)
   val mk_new_label_gen : string -> (unit -> string)
-
-  val ENABLE_PMATCH_CASES : unit -> unit
-  val grammar_add_pmatch : term_grammar.grammar -> term_grammar.grammar
 
 end

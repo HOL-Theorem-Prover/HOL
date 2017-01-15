@@ -88,6 +88,8 @@ sig
 
   val PMATCH_CLEANUP_CONV : conv
   val PMATCH_CLEANUP_CONV_GEN : ssfrag list -> conv
+  val PMATCH_CLEANUP_GEN_ss : ssfrag list -> ssfrag
+  val PMATCH_CLEANUP_ss : ssfrag
 
   val PMATCH_SIMP_COLS_CONV : conv
   val PMATCH_SIMP_COLS_CONV_GEN : ssfrag list -> conv
@@ -138,18 +140,25 @@ sig
      around a PMATCH such that the term is of type
      bool. This term is then expanded into a big
      conjunction. For each case of the pattern match,
-     one conjunct is created. *)
-  val PMATCH_LIFT_BOOL_CONV : conv
+     one conjunct is created.
+
+     If the flag "check_exh" is is set to true, the
+     conversion tries to prove the exhaustiveness of
+     the expanded pattern match. This is slow, but if
+     successful allows to eliminate the last
+     generated conjunct.
+  *)
+  val PMATCH_LIFT_BOOL_CONV : bool -> conv
 
   (* There is also a more generic version that
      allows to provide extra ssfrags. This might
      be handy, if the PMATCH contains functions
      not known by the default methods. *)
-  val PMATCH_LIFT_BOOL_CONV_GEN : ssfrag list -> conv
+  val PMATCH_LIFT_BOOL_CONV_GEN : ssfrag list -> bool -> conv
 
   (* corresponding ssfrags *)
-  val PMATCH_LIFT_BOOL_GEN_ss : ssfrag list -> ssfrag
-  val PMATCH_LIFT_BOOL_ss : ssfrag
+  val PMATCH_LIFT_BOOL_GEN_ss : ssfrag list -> bool -> ssfrag
+  val PMATCH_LIFT_BOOL_ss : bool -> ssfrag
 
   (* A special case of lifting are function definitions,
      which use PMATCH. In order to use such definitions
@@ -396,17 +405,68 @@ sig
   (* Exhaustiveness        *)
   (*-----------------------*)
 
-  (* One can easily use a redundant rows info to
-     show that a pattern match is exhaustive. This
-     is done in the form of a consequence conversion.
-     So the user has to take care of a precondition (which is
-     ideally true) *)
+  (* A IS_REDUNDANT_ROW_INFO theorem contains already
+     information, whether the pattern match is exhaustive.
 
-  val PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV : ConseqConv.conseq_conv;
+     IS_REDUNDANT_ROWS_INFO_TO_PMATCH_IS_EXHAUSTIVE extracts
+     this information in the form of an implication. Idially,
+     the precondition is ~F, but the user has to check. *)
 
-  val PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV_GEN :
+  val IS_REDUNDANT_ROWS_INFO_TO_PMATCH_IS_EXHAUSTIVE : thm -> thm
+
+  (* For convience this is combined with the computation of the
+     IS_REDUNDANT_ROWS_INFO. So given a PMATCH term, the following
+     functions compute an implication, whose conclusion is the
+     exhaustiveness of the PMATCH. *)
+
+   val PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK : term -> thm
+   val PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK_GEN :
+     ssfrag list -> term -> thm
+   val PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK_FULLGEN :
      constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
-     ssfrag list -> ConseqConv.conseq_conv;
+     (ssfrag list * conv option) -> term -> thm
+
+   (* Computing the IS_REDUNDANT_ROWS_INFO takes time and
+      is often not necessary. Many pattern matches contain
+      for example and catch-all pattern as the last row.
+      The following functions try to compute the redundancy
+      fast by searching such rows. If they succeed they result
+      in a theorem of the form
+
+      EHX_STATEMENT = T
+
+      or
+
+      EHX_STATEMENT = F
+
+      So, this time, there is an equation, not an implication
+      and the right-hand-side is always T or F.
+    *)
+
+   val PMATCH_IS_EXHAUSTIVE_FAST_CHECK : term -> thm
+   val PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GEN : ssfrag list -> term -> thm
+
+
+   (* Both methods can be combined to combine the speed of
+      the fast version with the power of the slow one.
+
+      There are two versions of this, one resulting in an
+      equation and one resulting in an implication. The
+      equation one is suitable, if one just wants yes/no
+      answers, the implicational one to analyse what is missing
+      to make the pattern match exhaustive. *)
+
+   val PMATCH_IS_EXHAUSTIVE_CHECK : term -> thm
+   val PMATCH_IS_EXHAUSTIVE_CHECK_GEN : ssfrag list -> term -> thm
+   val PMATCH_IS_EXHAUSTIVE_CHECK_FULLGEN :
+      constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+      (ssfrag list * conv option) -> term -> thm
+
+   val PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK : term -> thm
+   val PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_GEN : ssfrag list -> term -> thm
+   val PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_FULLGEN :
+      constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+      (ssfrag list * conv option) -> term -> thm
 
 
    (* More interesting than just computing whether a PMATCH

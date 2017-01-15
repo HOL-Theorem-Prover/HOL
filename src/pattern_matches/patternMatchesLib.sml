@@ -4,6 +4,7 @@ struct
 open HolKernel Parse boolLib Drule BasicProvers
 open simpLib numLib metisLib
 open patternMatchesTheory
+open listTheory
 open quantHeuristicsLib
 open DatatypeSimps
 open patternMatchesSyntax
@@ -954,6 +955,9 @@ end handle HOL_ERR _ => raise UNCHANGED
 
 
 fun PMATCH_CLEANUP_CONV_GEN ssl = PMATCH_CLEANUP_CONV_GENCALL (ssl, NONE)
+fun PMATCH_CLEANUP_GEN_ss ssl =
+  make_gen_conv_ss PMATCH_CLEANUP_CONV_GENCALL "PMATCH_CLEANUP_REDUCER" ssl
+val PMATCH_CLEANUP_ss = PMATCH_CLEANUP_GEN_ss []
 val PMATCH_CLEANUP_CONV = PMATCH_CLEANUP_CONV_GEN [];
 val _ = computeLib.add_convs [(patternMatchesSyntax.PMATCH_tm, 2, CHANGED_CONV PMATCH_CLEANUP_CONV)];
 
@@ -1702,212 +1706,6 @@ fun PMATCH_REMOVE_GUARDS_GEN_ss ssl =
 val PMATCH_REMOVE_GUARDS_ss = PMATCH_REMOVE_GUARDS_GEN_ss []
 
 
-(***********************************************)
-(* Lifting to lowest boolean level             *)
-(***********************************************)
-
-(* One can replace pattern matches with a big-conjunction.
-   Each row becomes one conjunct. Since the conjunction is
-   of type bool, this needs to be done at a boolean level.
-   So we can replace an arbitry term
-
-   P (PMATCH i rows) with
-
-   (row_cond 1 i -> P (row_rhs 1)) /\
-   ...
-   (row_cond n i -> P (row_rhs n)) /\
-
-   The row-cond contains that the pattern does not overlap with
-   any previous pattern, that the guard holds.
-
-   The most common use-case of lifting are function definitions.
-   of the form
-
-   f x = PMATCH x rows
-
-   which can be turned into a conjunction of top-level
-   rewrite rules for the function f.
-*)
-
-(*
-
-
-
-val tm = ``P (
-  case xx of | _ => ARB)``
-    ]):bool``
-
-val tm = ``P (
-  case xx of
-    | (x, y::ys) ~> (x + y)
-    | (0, []) ~> 9
-    | (x, []) when x > 3 ~> x
-    | (x, []) ~> 0]):bool``
-
-val tm = mk_comb (P_v, p_tm)
-val rc_arg = ([], NONE)
-*)
-
-fun PMATCH_LIFT_BOOL_CONV_AUX rc_arg tm = let
-  val (p_tm, m_tm) = dest_comb tm
-  val (v, rows) = dest_PMATCH m_tm
-in
-  case rows of
-     [] =>
-     REWRITE_CONV [PMATCH_PRED_UNROLL_NIL] tm
-   | row::rows' => let
-(*    val (row::rows') = rows *)
-      val (pt, gt, rh) = dest_PMATCH_ROW row
-      val rows'_tm = listSyntax.mk_list (rows', type_of row)
-
-      (* instantiate base thm and try to prove precond *)
-      val (thm1, is_inj) = let
-        val thm00 = FRESH_TY_VARS_RULE PMATCH_PRED_UNROLL_CONS
-        val thm01 = ISPECL [p_tm, v, pt, gt, rh, rows'_tm] thm00
-        val thm02 = rc_elim_precond rc_arg thm01
-      in
-        (thm02, true)
-      end handle HOL_ERR _ => let
-         (* proving precond failed, try fallback theorem *)
-        val thm00 = FRESH_TY_VARS_RULE PMATCH_PRED_UNROLL_CONS_NO_INJ
-        val thm01 = ISPECL [p_tm, v, pt, gt, rh, rows'_tm] thm00
-      in
-        (thm01, false)
-      end
-
-      (* Use right variable names *)
-      val thm2 = let
-        val vars_tm = fst (pairSyntax.dest_pabs pt)
-
-        val c = (RAND_CONV (pairTools.PABS_INTRO_CONV vars_tm)) THENC
-                TRY_CONV (pairTools.ELIM_TUPLED_QUANT_CONV) THENC
-                SIMP_CONV std_ss []
-        val c2a_inj = RHS_CONV (RATOR_CONV (RAND_CONV c))
-        val c2a_no_inj = RHS_CONV (RATOR_CONV (RAND_CONV
-           (BINOP_CONV c)))
-        val c2a = if is_inj then c2a_inj else c2a_no_inj
-        val thm2a = CONV_RULE c2a thm1
-        val thm2b = CONV_RULE (RHS_CONV (RAND_CONV (RATOR_CONV (RAND_CONV c)))) thm2a
-      in
-        thm2b
-      end
-
-      (* recursive call *)
-      val thm3 = let
-        val c = PMATCH_LIFT_BOOL_CONV_AUX rc_arg
-        val thm3 = CONV_RULE (RHS_CONV (RAND_CONV (RAND_CONV c))) thm2
-      in
-        thm3
-      end
-    in
-      thm3
-    end
-end
-
-(*
-
-val tm = ``(P2 /\ Q ==> (
-  (case xx of
-    | (x, y::ys) => (x + y)
-    | (0, []) => 9
-    | (x, []) when x > 3 => x
-    | (x, []) => 0) = 5))``
-
-val tm = ``
-  (case xx of
-    | (x, y::ys) => (x + y)
-    | (0, []) => 9
-    | (x, []) when x > 3 => x
-    | (x, []) => 0) = 5``
-*)
-
-
-val PMATCH_LIFT_BOOL_CONV_GENCALL_AUX_THM = prove (
- ``(P1 ==> (X1 /\ (P2 ==> X2))) =
-   ((P1 ==> X1) /\ ((P1 /\ P2) ==> X2))``,
-REWRITE_TAC [IMP_CONJ_THM, AND_IMP_INTRO]);
-
-fun PMATCH_LIFT_BOOL_CONV_GENCALL rc_arg tm = let
-  (* check whether we should really process tm *)
-  val _ = if type_of tm = bool then () else raise UNCHANGED
-  val p_tm = find_term is_PMATCH tm
-  fun has_subterm p t = (find_term p t; true) handle HOL_ERR _ => false
-
-  val is_minimal = not (has_subterm (fn t =>
-    (not (aconv t tm)) andalso
-    (type_of t = bool) andalso
-    (has_subterm is_PMATCH t)) tm)
-  val _ = if is_minimal then () else raise UNCHANGED
-
-  (* prepare tm *)
-  val v = genvar (type_of p_tm)
-  val P_tm = mk_abs (v, subst [p_tm |-> v] tm)
-  val P_v = genvar (type_of P_tm)
-
-  (* do real work *)
-  val thm0 = PMATCH_LIFT_BOOL_CONV_AUX rc_arg (mk_comb (P_v, p_tm))
-
-  (* create conjuncts *)
-  val thm1 = let
-     fun c t = (REWR_CONV PMATCH_LIFT_BOOL_CONV_GENCALL_AUX_THM THENC
-               TRY_CONV (RAND_CONV c)) t
-     val thm1a = CONV_RULE (RHS_CONV (RAND_CONV c)) thm0 handle HOL_ERR _ => thm0
-
-     val c = SIMP_CONV (std_ss++boolSimps.CONJ_ss) [AND_IMP_INTRO, GSYM RIGHT_FORALL_IMP_THM, GSYM CONJ_ASSOC]
-     val thm1b = CONV_RULE (RHS_CONV (EVERY_CONJ_CONV c)) thm1a
-
-     val c = rc_conv rc_arg
-     val thm1c = CONV_RULE (RHS_CONV (EVERY_CONJ_CONV c)) thm1b
-  in
-     thm1c
-  end
-
-  (* restore original predicate *)
-  val thm2 = let
-    val thm2a = INST [P_v |-> P_tm] thm1
-    val thm2b = CONV_RULE (LHS_CONV BETA_CONV) thm2a
-    val thm2c = CONV_RULE (RHS_CONV (DEPTH_CONV BETA_CONV)) thm2b
-    val _ = assert (fn thm => aconv (lhs (concl thm)) tm) thm2c
-  in
-    thm2c
-  end
-in
-  thm2
-end
-
-fun PMATCH_LIFT_BOOL_CONV_GEN ssl = PMATCH_LIFT_BOOL_CONV_GENCALL (ssl, NONE)
-
-val PMATCH_LIFT_BOOL_CONV = PMATCH_LIFT_BOOL_CONV_GEN [];
-
-fun PMATCH_LIFT_BOOL_GEN_ss ssl =
-  make_gen_conv_ss PMATCH_LIFT_BOOL_CONV_GENCALL "PMATCH_LIFT_BOOL_REDUCER" ssl
-
-val PMATCH_LIFT_BOOL_ss = PMATCH_LIFT_BOOL_GEN_ss []
-
-
-fun PMATCH_TO_TOP_RULE_SINGLE ssl thm = let
-  val thm0 = GEN_ALL thm
-  val thm1 = CONV_RULE (DEPTH_CONV (PMATCH_LIFT_BOOL_CONV_GEN ssl)) thm0
-  val thm2 = CONV_RULE (STRIP_QUANT_CONV (
-     EVERY_CONJ_CONV (STRIP_QUANT_CONV (TRY_CONV (RAND_CONV markerLib.stmark_term))))) thm1
-  val thm3 = SIMP_RULE std_ss [FORALL_AND_THM,
-   Cong (REFL ``stmarker (t:'a)``)] thm2
-  val thm4 = PURE_REWRITE_RULE [markerTheory.stmarker_def] thm3
-in
-  thm4
-end
-
-fun PMATCH_TO_TOP_RULE_GEN ssl thm = let
-  val thms = BODY_CONJUNCTS thm
-  val thms' = List.map (PMATCH_TO_TOP_RULE_SINGLE ssl) thms
-  val thm0 = LIST_CONJ thms'
-  val thm1 = CONV_RULE unwindLib.FLATTEN_CONJ_CONV thm0
-in
-  thm1
-end
-
-fun PMATCH_TO_TOP_RULE thm = PMATCH_TO_TOP_RULE_GEN [] thm;
-
 
 (***********************************************)
 (* PATTERN COMPILATION                         *)
@@ -2410,9 +2208,7 @@ in (* in of local *)
       val (thm, cols, lbl) = el 3 xxx
 *)
 
-    val args = ref []
     fun compile (thm, cols, lbl) = let
-      val _ = args := (thm, cols, lbl) :: (!args)
       val (v, nthm) = find_nchotomy_for_cols db col_heu cols
       val (current_col, cols_rest) = pick_current_column v cols
       val (nthm', cases_info) = compute_cases_info var_gen lbl_gen v nthm
@@ -2864,12 +2660,45 @@ fun IS_REDUNDANT_ROWS_INFO_SHOW_ROW_IS_REDUNDANT_set_goal thm i = let
   val t = List.nth (l, i)
 in
   Manager.set_goal ([], t)
-end
+end;
 
 
 (*************************************)
 (* Exhaustiveness                    *)
 (*************************************)
+
+fun PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GENCALL rc_arg t = let
+  val (v, rows) = dest_PMATCH t
+
+  fun check_row r = let
+    val r_tm = mk_eq (mk_comb (r, v), optionSyntax.mk_none (type_of t))
+    val r_thm = rc_conv rc_arg r_tm
+    val res_tm = rhs (concl r_thm)
+  in
+    if (same_const res_tm T) then SOME (true, r_thm) else
+    (if (same_const res_tm F) then SOME (false, r_thm) else NONE)
+  end handle HOL_ERR _ => NONE
+
+  fun find_thms a thmL [] = (a, thmL)
+    | find_thms a thmL (r::rows) = (
+      case (check_row r) of
+         NONE => find_thms true thmL rows
+       | SOME (true, r_thm) => find_thms a (r_thm :: thmL) rows
+       | SOME (false, r_thm) => (false, [r_thm]))
+
+  val (abort, rewrite_thms) = find_thms false [] (List.rev rows)
+  val _ = if abort then raise UNCHANGED else ()
+
+  val t0 = mk_PMATCH_IS_EXHAUSTIVE v (rand t)
+in
+  REWRITE_CONV (PMATCH_IS_EXHAUSTIVE_REWRITES::rewrite_thms) t0
+end;
+
+fun PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GEN ssl =
+    PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GENCALL (ssl, NONE)
+
+val PMATCH_IS_EXHAUSTIVE_FAST_CHECK =
+    PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GEN [];
 
 (*
 val db = !thePmatchCompileDB
@@ -2908,18 +2737,71 @@ in
   thm0
 end
 
-
-fun PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV_GEN db col_heu ssl t = let
-  val info_thm = COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH_GENCALL (ssl, NONE) db col_heu t
+fun PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK_FULLGEN db col_heu rc_arg t = let
+  val info_thm = COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH_GENCALL rc_arg db col_heu t
 in
   IS_REDUNDANT_ROWS_INFO_TO_PMATCH_IS_EXHAUSTIVE info_thm
 end
 
-fun PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV t =
-  PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV_GEN
-  (!thePmatchCompileDB) colHeu_default [] t;
+fun PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK_GENCALL rc_arg t =
+  PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK_FULLGEN
+    (!thePmatchCompileDB) colHeu_default rc_arg t
+
+fun PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK_GEN ssl =
+  PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK_GENCALL (ssl, NONE)
+
+val PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK =
+  PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK_GEN [];
 
 
+fun PMATCH_IS_EXHAUSTIVE_CHECK_FULLGEN db col_heu rc_arg t =
+  QCHANGED_CONV (PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GENCALL rc_arg) t
+  handle HOL_ERR _ => let
+    val thm_ex0 = PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK_FULLGEN db col_heu rc_arg t
+    val thm_ex = rc_elim_precond rc_arg thm_ex0
+  in
+    EQT_INTRO thm_ex
+  end
+
+fun PMATCH_IS_EXHAUSTIVE_CHECK_GENCALL rc_arg t =
+  PMATCH_IS_EXHAUSTIVE_CHECK_FULLGEN (!thePmatchCompileDB) colHeu_default rc_arg t
+
+fun PMATCH_IS_EXHAUSTIVE_CHECK_GEN ssl =
+  PMATCH_IS_EXHAUSTIVE_CHECK_GENCALL (ssl, NONE)
+
+val PMATCH_IS_EXHAUSTIVE_CHECK = PMATCH_IS_EXHAUSTIVE_CHECK_GEN []
+
+
+local
+  val EQ_F_ELIM = prove (``!b. F ==> b``, PROVE_TAC[])
+  val EQ_T_ELIM = prove (``!b. (b = T) ==> ~F ==> b``, PROVE_TAC[])
+  val EQ_O_ELIM = prove (``!b1 b2. (b1 = b2) ==> b2 ==> b1``, PROVE_TAC[])
+
+in
+
+fun PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_FULLGEN db col_heu rc_arg t = let
+    val thm0 = QCHANGED_CONV (PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GENCALL rc_arg) t
+    val (ex_t, r) = dest_eq (concl thm0)
+  in
+    if (r = T) then
+      MP (SPEC ex_t EQ_T_ELIM) thm0
+    else (if (r = F) then
+      (SPEC ex_t EQ_F_ELIM)
+    else
+      (MP (SPEC r (SPEC ex_t EQ_O_ELIM)) thm0)
+    )
+  end handle HOL_ERR _ =>
+    PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK_FULLGEN db col_heu rc_arg t;
+end;
+
+
+fun PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_GENCALL rc_arg t =
+  PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_FULLGEN (!thePmatchCompileDB) colHeu_default rc_arg t
+
+fun PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_GEN ssl =
+  PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_GENCALL (ssl, NONE)
+
+val PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK = PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_GEN []
 
 
 (*************************************)
@@ -3010,7 +2892,6 @@ fun SHOW_NCHOTOMY_CONSEQ_CONV tt =
   SHOW_NCHOTOMY_CONSEQ_CONV_GEN [] (!thePmatchCompileDB) colHeu_default tt
 
 
-
 (*************************************)
 (* Add missing patterns              *)
 (*************************************)
@@ -3077,37 +2958,245 @@ fun PMATCH_COMPLETE_GEN_ss ssl db colHeu use_guards =
 val PMATCH_COMPLETE_ss = PMATCH_COMPLETE_GEN_ss [] (!thePmatchCompileDB) colHeu_default;
 
 
+(***********************************************)
+(* Lifting to lowest boolean level             *)
+(***********************************************)
+
+(* One can replace pattern matches with a big-conjunction.
+   Each row becomes one conjunct. Since the conjunction is
+   of type bool, this needs to be done at a boolean level.
+   So we can replace an arbitry term
+
+   P (PMATCH i rows) with
+
+   (row_cond 1 i -> P (row_rhs 1)) /\
+   ...
+   (row_cond n i -> P (row_rhs n)) /\
+
+   The row-cond contains that the pattern does not overlap with
+   any previous pattern, that the guard holds.
+
+   The most common use-case of lifting are function definitions.
+   of the form
+
+   f x = PMATCH x rows
+
+   which can be turned into a conjunction of top-level
+   rewrite rules for the function f.
+*)
 
 (*
 
+val tm = ``(P2 /\ Q ==> (
+  (case xx of
+    | (x, y::ys) => (x + y)
+    | (0, []) => 9
+    | (x, []) when x > 3 => x
+    | (x, []) => 0) = 5))``
 
-val tt = rhs (concl thm)
-val x = el 2 (free_vars tt)
-val tt = mk_forall(v, tt)
+val tm = ``
+  (case xx of
+    | (x, y::ys) => (x + y)
+    | (0, []) => 9
+    | (x, []) when x > 3 => x
+    | (x, []) => 0) = 5``
 
-val thm = DEPTH_CONV (PMATCH_ROW_COND_EX_ELIM_CONV) tt
-
-val t = dest_forall ``!x y. XXX``
-val t = ``PMATCH (x,z) [
-  ||. (NONE, c) ~> 0
-]``
-
-val t = ``PMATCH (x, z) [
-  ||. (NONE, c) ~> 0;
-  ||. (SOME _, _) ~> 1;
-  ||. (_, NONE) ~> 2
-]``
-
-val (v, rows) = dest_PMATCH t
-fun mk_xx r = let
-  val (p, g, _) = dest_PMATCH_ROW r
-in
-  mk_PMATCH_ROW_COND_EX (v, p, g)
-end
-val disjs = List.map mk_xx rows
-val disjs_tm = list_mk_disj disjs
-val tt = list_mk_disj disjs
+val _ = ENABLE_PMATCH_CASES()
+val OPT_PAIR_def = TotalDefn.Define `OPT_PAIR xy = case xy of
+ | (NONE, _) => NONE
+ | (_, NONE) => NONE
+ | (SOME x, SOME y) => SOME (x, y)`
+val thm = OPT_PAIR_def
+val tm = concl (hd (BODY_CONJUNCTS thm))
+val force_minimal = false
+val rc_arg = ([], NONE)
+val try_exh = true
 *)
+
+
+local
+val IMP_AUX_THM = prove (``(P ==> (X <=> Y)) <=>
+   ((P ==> X) <=> (P ==> Y))``, PROVE_TAC[])
+in
+fun SIMPLE_IMP_COND_REWRITE_CONV thm tt = let
+  val (pre, post) = dest_imp tt
+  val pre_thm = ASSUME pre
+  val rewr_thm = MATCH_MP thm pre_thm
+  val thm0 = REWRITE_CONV [rewr_thm] post
+  val thm1 = DISCH pre thm0
+  val thm2 = CONV_RULE (REWR_CONV IMP_AUX_THM) thm1
+in
+  thm2
+end
+end;
+
+fun rename_uscore_vars ren avoid [] = ren
+  | rename_uscore_vars ren avoid (v::vs) =
+    let
+      val (v_n, v_ty) = dest_var v
+      val _ = if (String.sub(v_n, 0) = #"_") then () else failwith "nothing to do"
+      val v' = variant avoid (mk_var ("v", v_ty))
+    in
+      rename_uscore_vars ((v |-> v')::ren) (v'::avoid) vs
+    end handle HOL_ERR _ => rename_uscore_vars ren avoid vs
+
+
+
+fun PMATCH_LIFT_BOOL_CONV_GENCALL force_minimal try_exh rc_arg tm = let
+  (* check whether we should really process tm *)
+  val _ = if type_of tm = bool then () else raise UNCHANGED
+  val p_tm = find_term is_PMATCH tm
+  fun has_subterm p t = (find_term p t; true) handle HOL_ERR _ => false
+
+  val is_minimal = not force_minimal orelse not (has_subterm (fn t =>
+    (not (aconv t tm)) andalso
+    (type_of t = bool) andalso
+    (has_subterm is_PMATCH t)) tm)
+  val _ = if is_minimal then () else raise UNCHANGED
+
+  (* prepare tm *)
+  val v = genvar (type_of p_tm)
+  val P_tm = mk_abs (v, subst [p_tm |-> v] tm)
+  val P_v = genvar (type_of P_tm)
+
+  (* do real work *)
+  val thm0 = let
+    val (p_tm', genvars_elim_s) = PMATCH_INTRO_GENVARS p_tm
+    val t0 = (mk_comb (P_v, p_tm'))
+    val c1 = SIMP_CONV std_ss [PMATCH_EXPAND_PRED_THM,
+      PMATCH_EXPAND_PRED_def, PMATCH_ROW_NEQ_NONE,
+      EVERY_DEF, PMATCH_ROW_EVAL_COND_EX, REVERSE_REV, REV_DEF]
+    val c2 = REWRITE_CONV [PMATCH_ROW_COND_EX_def,
+      PULL_EXISTS]
+
+    val thm00 = (c1 THENC c2) t0
+    val thm01 = INST genvars_elim_s thm00
+  in
+    thm01
+  end
+
+  (* Elim choice *)
+  val thm1 = let
+    val (v, rows) = dest_PMATCH p_tm
+    fun process_row (r, thm') = let
+      val (pt, gt, rt) = dest_PMATCH_ROW r
+      val thm00 = ISPECL [pt, gt, v] (FRESH_TY_VARS_RULE PMATCH_COND_SELECT_UNIQUE)
+      val thm01 = rc_elim_precond rc_arg thm00
+      val thm'' = CONV_RULE (DEPTH_CONV (SIMPLE_IMP_COND_REWRITE_CONV thm01)) thm'
+    in
+      thm''
+    end handle HOL_ERR _ => thm'
+  in
+    foldl process_row thm0 rows
+  end
+
+  (* get rid of exhaustiveness check *)
+  val thm2 = let
+    val _ = if try_exh then () else failwith "skip"
+    val thm_ex = PMATCH_IS_EXHAUSTIVE_CHECK_GENCALL rc_arg p_tm
+    val thm2 = CONV_RULE (RHS_CONV (REWRITE_CONV [thm_ex])) thm1
+  in
+    thm2
+  end handle HOL_ERR _ => thm1
+           | UNCHANGED => thm1
+
+
+  (* Use the right variable names and simplify *)
+  val thm3 = let
+    fun special_CONV tt = let
+      val (vars_tm0, row) = let
+        val (_, tt0) = dest_forall tt
+        val (tt1, _) = dest_imp_only tt0
+        val (tt2, _, _, _) = dest_PMATCH_ROW_COND tt1
+      in (fst (pairSyntax.dest_pabs tt2), tt1) end
+
+      val vars_tm = let
+        val to_ren = free_vars vars_tm0
+        val avoid = free_vars row @ to_ren
+        val ren = rename_uscore_vars [] avoid to_ren
+      in
+        subst ren vars_tm0
+      end
+
+     val intro_marker = TRY_CONV (QUANT_CONV (RAND_CONV (RATOR_CONV (RAND_CONV markerLib.stmark_term))))
+
+      val elim_COND_CONV =
+        QUANT_CONV (RATOR_CONV (RAND_CONV (REWR_CONV PMATCH_ROW_COND_DEF_GSYM)))
+
+      val intro_CONV = RAND_CONV (pairTools.PABS_INTRO_CONV vars_tm)
+      val elim_CONV = TRY_CONV (pairTools.ELIM_TUPLED_QUANT_CONV)
+      val eval_preconds = STRIP_QUANT_CONV (RAND_CONV (fn t => let
+         val _ = dest_imp_only t
+       in RATOR_CONV (RAND_CONV (rc_conv rc_arg)) t end))
+
+      val simp_CONV = TRY_CONV (SIMP_CONV std_ss [])
+
+      val elim_marker =
+        (REWR_CONV markerTheory.stmarker_def) THENC
+        TRY_CONV (rc_conv rc_arg)
+    in
+      EVERY_CONV [
+        intro_marker,
+        elim_COND_CONV,
+        intro_CONV, elim_CONV,
+        simp_CONV,
+        DEPTH_CONV elim_marker,
+        TRY_CONV (REWRITE_CONV [])
+        ] tt
+    end
+  in
+    CONV_RULE (RHS_CONV (ALL_CONJ_CONV special_CONV)) thm2
+  end
+
+
+  (* restore original predicate *)
+  val thm4 = let
+    val thm00 = INST [P_v |-> P_tm] thm3
+    val thm01 = CONV_RULE (LHS_CONV BETA_CONV) thm00
+    val thm02 = CONV_RULE (RHS_CONV (DEPTH_CONV BETA_CONV)) thm01
+    val _ = assert (fn thm => aconv (lhs (concl thm)) tm) thm02
+  in
+    thm02
+  end
+in
+  thm4
+end
+
+fun PMATCH_LIFT_BOOL_CONV_GEN ssl try_exh = PMATCH_LIFT_BOOL_CONV_GENCALL true try_exh (ssl, NONE)
+
+val PMATCH_LIFT_BOOL_CONV = PMATCH_LIFT_BOOL_CONV_GEN [];
+
+fun PMATCH_LIFT_BOOL_GEN_ss ssl try_exh =
+  make_gen_conv_ss (PMATCH_LIFT_BOOL_CONV_GENCALL true try_exh) "PMATCH_LIFT_BOOL_REDUCER" ssl
+
+val PMATCH_LIFT_BOOL_ss = PMATCH_LIFT_BOOL_GEN_ss []
+
+
+fun PMATCH_TO_TOP_RULE_SINGLE ssl thm = let
+  val thm0 = GEN_ALL thm
+
+  val thm1 = CONV_RULE (STRIP_QUANT_CONV (PMATCH_LIFT_BOOL_CONV_GENCALL false false (ssl, NONE))) thm0
+  val thm2 = CONV_RULE (STRIP_QUANT_CONV (
+     EVERY_CONJ_CONV (STRIP_QUANT_CONV (TRY_CONV (RAND_CONV markerLib.stmark_term))))) thm1
+  val thm3 = SIMP_RULE std_ss [FORALL_AND_THM,
+   Cong (REFL ``stmarker (t:'a)``)] thm2
+  val thm4 = PURE_REWRITE_RULE [markerTheory.stmarker_def] thm3
+
+  val thm5 = LIST_CONJ (butlast (CONJUNCTS thm4))
+in
+  thm5
+end
+
+fun PMATCH_TO_TOP_RULE_GEN ssl thm = let
+  val thms = BODY_CONJUNCTS thm
+  val thms' = List.map (PMATCH_TO_TOP_RULE_SINGLE ssl) thms
+  val thm0 = LIST_CONJ thms'
+  val thm1 = CONV_RULE unwindLib.FLATTEN_CONJ_CONV thm0
+in
+  thm1
+end
+
+fun PMATCH_TO_TOP_RULE thm = PMATCH_TO_TOP_RULE_GEN [] thm;
 
 
 
@@ -3339,7 +3428,7 @@ fun analyse_pmatch try_exh t = let
   val pmi = List.foldl analyse_row pmi nrows
 
   val pmi = (if (try_exh andalso is_ocaml_pmatch pmi) then
-      pmi_set_pmi_exhaustiveness_cond (SOME (PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV t)) pmi else pmi) handle HOL_ERR _ => pmi
+      pmi_set_pmi_exhaustiveness_cond (SOME (PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK t)) pmi else pmi) handle HOL_ERR _ => pmi
 
 in
   pmi

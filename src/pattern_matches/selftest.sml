@@ -17,7 +17,7 @@ val quiet = false;
 val _ = Parse.current_backend := PPBackEnd.emacs_terminal;
 
 *)
-val _ = patternMatchesLib.ENABLE_PMATCH_CASES ()
+val _ = patternMatchesLib.ENABLE_PMATCH_CASES ();
 
 fun test_conv_gen dest s conv (t, r_opt) =
 let
@@ -551,6 +551,103 @@ val _ = test_conv "SIMP_CONV (numLib.std_ss ++ PMATCH_REMOVE_GUARDS_ss) []" (SIM
   | _ when x < 15 => 2
   | _ => 3``, SOME ``if x < 5 then 0 else if x < 10 then 1 else if x < 15 then 2 else 3``);
 
+
+(*************************************)
+(* LIFTING                           *)
+(*************************************)
+
+
+val _ = test_conv "PMATCH_LIFT_BOOL_CONV false" (PMATCH_LIFT_BOOL_CONV false) (``(P (case (l1:'a list, l2) of
+  | ([], _) => []
+  | (_, []) => []
+  | (x::xs, y::ys) => [(x, y)])):bool``,
+  SOME ``((l1 = ([]:'a list)) ==> P []) /\ ((l2 = []) ==> P []) /\
+   (!x xs y ys. (l1 = x::xs) /\ (l2 = y::ys) ==> P [(x,y)]) /\
+   (~PMATCH_IS_EXHAUSTIVE (l1,l2)
+       [PMATCH_ROW (\_0. ([],_0)) (\_0. T) (\_0. []);
+        PMATCH_ROW (\_0. (_0,[])) (\_0. T) (\_0. []);
+        PMATCH_ROW (\(x,xs,y,ys). (x::xs,y::ys)) (\(x,xs,y,ys). T)
+          (\(x,xs,y,ys). [(x,y)])] ==>
+    P ARB)``)
+
+
+val _ = test_conv "PMATCH_LIFT_BOOL_CONV true" (PMATCH_LIFT_BOOL_CONV true) (``(P (case (l1:'a list, l2) of
+  | ([], _) => []
+  | (_, []) => []
+  | (x::xs, y::ys) => [(x, y)])):bool``,
+  SOME ``((l1 = ([]:'a list)) ==> P []) /\ ((l2 = []) ==> P []) /\
+   (!x xs y ys. (l1 = x::xs) /\ (l2 = y::ys) ==> P [(x,y)])``)
+
+
+val _ = Datatype.Datatype `
+  tree = Empty
+       | Red tree 'a tree
+       | Black tree 'a tree`;
+
+
+val balance_black_def = TotalDefn.Define `balance_black a n b =
+   case (a,b) of
+       | (Red (Red a x b) y c,d) =>
+            (Red (Black a x b) y (Black c n d))
+       | (Red a x (Red b y c),d) =>
+            (Red (Black a x b) y (Black c n d))
+       | (a,Red (Red b y c) z d) =>
+            (Red (Black a n b) y (Black c z d))
+       | (a,Red b y (Red c z d)) =>
+            (Red (Black a n b) y (Black c z d))
+       | other => (Black a n b)`
+
+val tm = #2 (strip_forall (concl (balance_black_def)))
+
+val _ = test_conv "PMATCH_LIFT_BOOL_CONV true" (PMATCH_LIFT_BOOL_CONV true) (tm, SOME ``
+   (!a' x b' y c.
+      (a = Red (Red a' x b') y c) ==>
+      (balance_black a n b = Red (Black a' x b') y (Black c n b))) /\
+   (!a' x b' y c.
+      (a = Red a' x (Red b' y c)) ==>
+      (!p_1 p_1' p_1''.
+         (Red p_1 p_1' p_1'' = a') ==>
+         ((p_1 = a') /\ (p_1' = x) /\ (p_1'' = b')) /\ (x = y) /\
+         (Red b' y c = c)) ==>
+      (balance_black a n b = Red (Black a' x b') y (Black c n b))) /\
+   (!b' y c z d.
+      (b = Red (Red b' y c) z d) ==>
+      (!p_1 p_1' p_1'' p_1''' p_1''''.
+         (Red p_1 p_1' (Red p_1'' p_1''' p_1'''') = a) ==>
+         ((p_1 = a) /\ (p_1' = n) /\ (p_1'' = b')) /\ (p_1''' = y) /\
+         (p_1'''' = c) /\ (n = z) /\ (Red (Red b' y c) z d = d)) /\
+      (!p_1 p_1' p_1'' p_1''' p_1''''.
+         (Red (Red p_1 p_1' p_1'') p_1''' p_1'''' = a) ==>
+         ((p_1 = a) /\ (p_1' = n) /\ (p_1'' = b')) /\ (p_1''' = y) /\
+         (p_1'''' = c) /\ (n = z) /\ (Red (Red b' y c) z d = d)) ==>
+      (balance_black a n b = Red (Black a n b') y (Black c z d))) /\
+   (!b' y c z d.
+      (b = Red b' y (Red c z d)) ==>
+      (!p_1' p_1'' p_1'''.
+         (Red p_1' p_1'' p_1''' = b') ==>
+         (p_1' = b') /\ (p_1'' = y) /\ (p_1''' = c) /\ (y = z) /\
+         (Red c z d = d)) /\
+      (!p_1 p_1' p_1'' p_1''' p_1''''.
+         (Red p_1 p_1' (Red p_1'' p_1''' p_1'''') = a) ==>
+         ((p_1 = a) /\ (p_1' = n) /\ (p_1'' = b')) /\ (p_1''' = y) /\
+         (p_1'''' = c) /\ (n = z) /\ (Red b' y (Red c z d) = d)) /\
+      (!p_1 p_1' p_1'' p_1''' p_1''''.
+         (Red (Red p_1 p_1' p_1'') p_1''' p_1'''' = a) ==>
+         ((p_1 = a) /\ (p_1' = n) /\ (p_1'' = b')) /\ (p_1''' = y) /\
+         (p_1'''' = c) /\ (n = z) /\ (Red b' y (Red c z d) = d)) ==>
+      (balance_black a n b = Red (Black a n b') y (Black c z d))) /\
+   ((!p_1' p_1'' p_1''' p_1'''' p_2.
+       Red p_1' p_1'' (Red p_1''' p_1'''' p_2) <> b) /\
+    (!p_1' p_1'' p_1''' p_1'''' p_2.
+       Red (Red p_1' p_1'' p_1''') p_1'''' p_2 <> b) /\
+    (!p_1 p_1' p_1'' p_1''' p_1''''.
+       Red p_1 p_1' (Red p_1'' p_1''' p_1'''') <> a) /\
+    (!p_1 p_1' p_1'' p_1''' p_1''''.
+       Red (Red p_1 p_1' p_1'') p_1''' p_1'''' <> a) ==>
+    (balance_black a n b = Black a n b))``)
+
+
+
 (*********************************)
 (* Fancy redundancy removal      *)
 (*********************************)
@@ -586,6 +683,12 @@ in
   (NONE, p)
 end)
 
+val test_rhs = test_conv_gen (fn t => let
+  val (p, c) = dest_eq t
+in
+  (NONE, c)
+end)
+
 val t =
    ``PMATCH ((x :'a option),(z :'b option))
     [PMATCH_ROW (\(_uv :unit). ((NONE :'a option),(NONE :'b option)))
@@ -597,7 +700,107 @@ val t =
        (\((_3 :'b),(_2 :'a option)). T)
        (\((_3 :'b),(_2 :'a option)). (2 :num))]``;
 
-val _ = test_precond "PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV" PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV (t, SOME ``~F``)
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK (t, SOME ``~F``)
+
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK (t, SOME ``~F``)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_CHECK" PMATCH_IS_EXHAUSTIVE_CHECK (t, SOME T)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_FAST_CHECK" PMATCH_IS_EXHAUSTIVE_FAST_CHECK (t, NONE)
+
+
+val t =
+   ``PMATCH ((x :'a option),(z :'b option))
+    [PMATCH_ROW (\(_uv :unit). ((NONE :'a option),(NONE :'b option)))
+       (\(_uv :unit). T) (\(_uv :unit). (0 :num));
+     PMATCH_ROW (\((_1 :'b option),(_0 :'a)). (SOME _0,_1))
+       (\((_1 :'b option),(_0 :'a)). T)
+       (\((_1 :'b option),(_0 :'a)). (1 :num));
+     PMATCH_ROW (\((_3 :'b option),(_2 :'a option)). (_2,_3))
+       (\((_3 :'b option),(_2 :'a option)). T)
+       (\((_3 :'b option),(_2 :'a option)). (2 :num))]``;
+
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK (t, SOME ``~F``)
+
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK (t, SOME ``~F``)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_CHECK" PMATCH_IS_EXHAUSTIVE_CHECK (t, SOME T)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_FAST_CHECK" PMATCH_IS_EXHAUSTIVE_FAST_CHECK (t, SOME T)
+
+
+val t =``PMATCH xy []``;
+
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK (t, NONE)
+
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK (t, SOME ``F``)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_CHECK" PMATCH_IS_EXHAUSTIVE_CHECK (t, SOME F)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_FAST_CHECK" PMATCH_IS_EXHAUSTIVE_FAST_CHECK (t, SOME F)
+
+
+val t =
+   ``PMATCH ((x :'a option),(z :'b option))
+    [PMATCH_ROW (\(_uv :unit). ((NONE :'a option),(NONE :'b option)))
+       (\(_uv :unit). T) (\(_uv :unit). (0 :num));
+     PMATCH_ROW (\((_3 :'b),(_2 :'a option)). (_2,SOME _3))
+       (\((_3 :'b),(_2 :'a option)). T)
+       (\((_3 :'b),(_2 :'a option)). (2 :num))]``;
+
+val t' = ``PMATCH (x,z)
+     [PMATCH_ROW (\(_uv :unit). ((NONE :'a option),(NONE :'b option)))
+        (\(_uv :unit). T) (\(_uv :unit). (0 :num));
+      PMATCH_ROW (\((_3 :'b),(_2 :'a option)). (_2,SOME _3))
+        (\((_3 :'b),(_2 :'a option)). T)
+        (\((_3 :'b),(_2 :'a option)). (2 :num));
+      PMATCH_ROW (\(v3 :'a). (SOME v3,(NONE :'b option))) (\(v3 :'a). T)
+        (\(v3 :'a). (ARB :num))]``
+
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK (t, SOME ``~PMATCH_ROW_COND_EX (x,z) (\v3. (SOME v3,NONE)) (\v3. T)``)
+
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK (t, SOME ``~PMATCH_ROW_COND_EX (x,z) (\v3. (SOME v3,NONE)) (\v3. T)``)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_CHECK" PMATCH_IS_EXHAUSTIVE_CHECK (t, NONE)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_FAST_CHECK" PMATCH_IS_EXHAUSTIVE_FAST_CHECK (t, NONE)
+
+val _ = test_conv "PMATCH_COMPLETE_CONV true" (PMATCH_COMPLETE_CONV true) (t, SOME t')
+
+val t =
+   ``PMATCH (SOME x, NONE)
+    [PMATCH_ROW (\(_uv :unit). ((NONE :'a option),(NONE :'b option)))
+       (\(_uv :unit). T) (\(_uv :unit). (0 :num));
+     PMATCH_ROW (\((_3 :'b),(_2 :'a option)). (_2,SOME _3))
+       (\((_3 :'b),(_2 :'a option)). T)
+       (\((_3 :'b),(_2 :'a option)). (2 :num))]``;
+
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK (t, SOME ``~PMATCH_ROW_COND_EX (SOME x,NONE) (\v3. (SOME v3,NONE)) (\v3. T)``)
+
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK (t, SOME ``F``)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_CHECK" PMATCH_IS_EXHAUSTIVE_CHECK (t, SOME F)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_FAST_CHECK" PMATCH_IS_EXHAUSTIVE_FAST_CHECK (t, SOME F)
+
+
+val t =
+   ``PMATCH (NONE, SOME b)
+    [PMATCH_ROW (\(_uv :unit). ((NONE :'a option),(NONE :'b option)))
+       (\(_uv :unit). T) (\(_uv :unit). (0 :num));
+     PMATCH_ROW (\((_3 :'b),(_2 :'a option)). (_2,SOME _3))
+       (\((_3 :'b),(_2 :'a option)). T)
+       (\((_3 :'b),(_2 :'a option)). (2 :num))]``;
+
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK (t, SOME ``~PMATCH_ROW_COND_EX (NONE,SOME b) (\v3. (SOME v3,NONE)) (\v3. T)``)
+
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK (t, SOME ``~F``)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_CHECK" PMATCH_IS_EXHAUSTIVE_CHECK (t, SOME T)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_FAST_CHECK" PMATCH_IS_EXHAUSTIVE_FAST_CHECK (t, SOME T)
+
+
 
 val t = ``PMATCH ((x :'a option),(z :'b option))
     [PMATCH_ROW (\(_uv :unit). ((NONE :'a option),(NONE :'b option)))
@@ -622,12 +825,18 @@ val t' = ``PMATCH (x,z)
       PMATCH_ROW (\(v3 :'b). ((NONE :'a option),SOME v3)) (\(v3 :'b). T)
         (\(v3 :'b). (ARB :num))]``;
 
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK (t, SOME `` ~PMATCH_ROW_COND_EX (x,z) (\v3. (NONE,SOME v3)) (\v3. T)``)
 
-val _ = test_precond "PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV" PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV (t, SOME p)
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK (t, SOME `` ~PMATCH_ROW_COND_EX (x,z) (\v3. (NONE,SOME v3)) (\v3. T)``)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_CHECK" PMATCH_IS_EXHAUSTIVE_CHECK (t, NONE)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_FAST_CHECK" PMATCH_IS_EXHAUSTIVE_FAST_CHECK (t, NONE)
+
 val _ = test_conv "PMATCH_COMPLETE_CONV true" (PMATCH_COMPLETE_CONV true) (t, SOME t')
 
 (*********************************)
-(* Exhaustiveness                *)
+(* EVAL                          *)
 (*********************************)
 
 fun mk_t t  = ``PMATCH (^t :num list)
