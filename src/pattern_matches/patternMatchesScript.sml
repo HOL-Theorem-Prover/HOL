@@ -1247,68 +1247,6 @@ ASM_SIMP_TAC std_ss [])
 (* UNROLLING PREDICATES                            *)
 (***************************************************)
 
-val PMATCH_ROW_COND_NOT_EX_OR_EQ_def = Define `PMATCH_ROW_COND_NOT_EX_OR_EQ i p g r rows =
-(~(PMATCH_ROW_COND_EX i p g) \/ ((EXISTS (\row. row i <> NONE) rows) /\
-     (r (@x. PMATCH_ROW_COND p g i x) = PMATCH i rows)))`
-
-val PMATCH_ROW_COND_NOT_EX_OR_EQ_FIRST_ROW = store_thm ("PMATCH_ROW_COND_NOT_EX_OR_EQ_FIRST_ROW",
-  ``!i p g r p' g' r' rows.
-
-    PMATCH_ROW_COND_EX i p' g' ==>
-    ((PMATCH_ROW_COND_NOT_EX_OR_EQ i p g r ((PMATCH_ROW p' g' r')::rows)) =
-    (!x. PMATCH_ROW_COND p g i x ==>
-      (r  (@x.  PMATCH_ROW_COND p  g  i x) =
-       r' (@x'. PMATCH_ROW_COND p' g' i x'))))``,
-
-SIMP_TAC (list_ss++QUANT_INST_ss [std_qp]) [PMATCH_ROW_COND_NOT_EX_OR_EQ_def, PMATCH_def, PMATCH_ROW_def, some_def, PMATCH_ROW_COND_EX_def] THEN
-PROVE_TAC[]);
-
-
-val PMATCH_ROW_COND_NOT_EX_OR_EQ_NIL = store_thm ("PMATCH_ROW_COND_NOT_EX_OR_EQ_NIL",
-  ``PMATCH_ROW_COND_NOT_EX_OR_EQ i p g r [] =
-    (!x. (PMATCH_ROW_COND p g i x) ==> F)``,
-
-SIMP_TAC list_ss [PMATCH_ROW_COND_NOT_EX_OR_EQ_def,
- PMATCH_ROW_COND_EX_def]);
-
-
-val PMATCH_ROW_COND_NOT_EX_OR_EQ_NOT_FIRST_ROW = store_thm ("PMATCH_ROW_COND_NOT_EX_OR_EQ_NOT_FIRST_ROW",
-  ``PMATCH_ROW_COND_NOT_EX_OR_EQ i p' g' r' rows ==>
-    (PMATCH_ROW_COND_NOT_EX_OR_EQ i p g r ((PMATCH_ROW p' g' r')::rows) =
-    PMATCH_ROW_COND_NOT_EX_OR_EQ i p g r rows)``,
-
-SIMP_TAC list_ss [PMATCH_ROW_COND_NOT_EX_OR_EQ_def, PMATCH_def, PMATCH_ROW_def, some_def] THEN
-Cases_on `PMATCH_ROW_COND_EX i p g` THEN ASM_REWRITE_TAC[] THEN
-Cases_on `PMATCH_ROW_COND_EX i p' g'` THEN (
-  FULL_SIMP_TAC (std_ss++QUANT_INST_ss[std_qp]) [PMATCH_ROW_COND_EX_def]
-));
-
-val PMATCH_PRED_UNROLL_NIL = store_thm ("PMATCH_PRED_UNROLL_NIL",
-  ``!P v. P (PMATCH v []) = P ARB``,
-  SIMP_TAC std_ss [PMATCH_def, PMATCH_INCOMPLETE_def]);
-
-
-val PMATCH_PRED_UNROLL_CONS = store_thm ("PMATCH_PRED_UNROLL_CONS",
-``!P v p g r rows.
-     P (PMATCH v ((PMATCH_ROW p g r)::rows)) <=> (
-       (PMATCH_ROW_COND_EX v p g ==> P (r (@x. PMATCH_ROW_COND p g v x))) /\
-       ((PMATCH_ROW_COND_NOT_EX_OR_EQ v p g r rows) ==>
-         P (PMATCH v rows)))``,
-
-REPEAT STRIP_TAC THEN
-SIMP_TAC std_ss [PMATCH_def, PMATCH_ROW_def, some_def,
-  PMATCH_ROW_COND_NOT_EX_OR_EQ_def,
-  PMATCH_ROW_COND_EX_def] THEN
-Cases_on `?x. PMATCH_ROW_COND p g v x` THENL [
-  ASM_REWRITE_TAC [] THEN
-  FULL_SIMP_TAC std_ss [] THEN
-  METIS_TAC[],
-
-  FULL_SIMP_TAC std_ss []
-])
-
-
-
 val PMATCH_ROW_COND_NOT_EX_OR_EQ_def = Define `PMATCH_ROW_COND_NOT_EX_OR_EQ (i:'a) (r : 'a -> 'b option) rows =
 (~(r i <> NONE) \/ ((EXISTS (\row. row i <> NONE) rows) /\
      (THE (r i) = PMATCH i rows)))`
