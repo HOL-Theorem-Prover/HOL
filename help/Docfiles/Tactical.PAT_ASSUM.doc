@@ -54,7 +54,7 @@ of the assumption, and the fact that {f} is effectively a local
 constant in the goal to find the correct assumption.
 
 \COMMENTS
-The behavior of `PAT_ASSUM` changed in Kananaskis 11. The old `PAT_ASSUM`
+The behavior of `PAT_ASSUM` changed in Kananaskis 12. The old `PAT_ASSUM`
 (and `qpat_assum`, `Q.PAT_ASSUM`) was changed to include an extra `_X_` (or
 `_x_`), indicating that the matching assumption is pulled out of the
 assumption list. The old name now provides a version that doesn't pull
