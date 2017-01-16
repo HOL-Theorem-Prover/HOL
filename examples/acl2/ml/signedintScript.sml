@@ -213,7 +213,7 @@ val BITWISE_DIV = store_thm("BITWISE_DIV",
     ``!m op x y. BITWISE (SUC m) op x y =
     	      (if op (ODD x) (ODD y) then 1 else 0) +
 	      2 * BITWISE m op (x DIV 2) (y DIV 2)``,
-    RW_TAC int_ss [BITWISE_EVAL,SBIT_def,LSB_def,BIT_ZERO_ODD]);
+    RW_TAC int_ss [BITWISE_EVAL,SBIT_def,BIT_ZERO_ODD]);
 
 val BITWISE_ZERO = store_thm("BITWISE_ZERO",
     ``!op x y. BITWISE 0 op x y = 0``,
