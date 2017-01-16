@@ -1,5 +1,5 @@
 open bossLib Theory Datatype Drule Tactical Tactic translateTheory
-open Thm Term Lib listTheory ratTheory testTypesTheory Conv sexpTheory;
+open Thm Term Lib listTheory pairTheory sumTheory ratTheory testTypesTheory Conv sexpTheory;
 
 val _ = new_theory "testFunctions";
 
@@ -19,7 +19,7 @@ val SPLIT_def = tDefine "SPLIT"
      (split1 (x::ys) (X,Y) = split2 ys (x::X,Y)) /\
      (split2 [] (X,Y) = (X,Y)) /\
      (split2 (x::ys) (X,Y) = split1 ys (X,x::Y))`
-    (WF_REL_TAC `measure (sum_case (LENGTH o FST) (LENGTH o FST))` THEN
+    (WF_REL_TAC `measure (\s. case s of INL s => LENGTH (FST s) | INR s => LENGTH (FST s))` THEN
      RW_TAC arith_ss [listTheory.LENGTH]);
 
 val merge_def = Define `
