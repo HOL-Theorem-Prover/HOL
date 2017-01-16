@@ -4,7 +4,7 @@
 
 \SYNOPSIS
 Finds the first assumption that matches the term argument, applies
-the theorem tactic to it, and removes this assumption.
+the theorem tactic to it. The matching assumption is still kept in the assumption list.
 
 \KEYWORDS
 theorem-tactical, assumption.
@@ -53,8 +53,14 @@ This use of the tactic exploits higher order matching to
 match the RHS of the assumption, and the fact that {f} is effectively
 a local constant in the goal to find the correct assumption.
 
+\COMMENTS
+The behavior of PAT_ASSUM has been changed in Kananaskis 11.
+The old PAT_ASSUM (and qpat_assum, Q.PAT_ASSUM) was changed to include an extra _X_ (or _x_),
+indicating that the matching assumption is pulled out of the assumption list.
+The old name now provide a version that doesn't pull the assumption out of the list.
+
 \SEEALSO
-Tactical.ASSUM_LIST, Tactical.EVERY, Tactical.EVERY_ASSUM, Tactical.FIRST,
+Tactical.PAT_X_ASSUM, Tactical.ASSUM_LIST, Tactical.EVERY, Tactical.EVERY_ASSUM, Tactical.FIRST,
 Tactical.MAP_EVERY, Tactical.MAP_FIRST, Thm_cont.UNDISCH_THEN, Term.match_term.
 
 \ENDDOC
