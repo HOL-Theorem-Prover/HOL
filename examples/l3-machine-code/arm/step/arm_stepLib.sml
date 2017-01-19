@@ -3073,7 +3073,8 @@ val BitFieldExtract_rwt =
       ``dfn'BitFieldExtract (U, d, n, lsb, widthminus1)``
 
 val BitFieldClearOrInsert_rwt =
-   regEV [`d`] [dfn'BitFieldClearOrInsert_def] [[``d <> 15w: word4``]] []
+   regEV [`d`] [dfn'BitFieldClearOrInsert_def, field_insert]
+     [[``d <> 15w: word4``]] []
       ``dfn'BitFieldClearOrInsert (d, n, lsb, msb)``
 
 (* Add a few more multiplies and SIMD instructions *)
