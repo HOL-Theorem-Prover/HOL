@@ -1010,7 +1010,7 @@ fun pp_term (G : grammar) TyG backend = let
       else fail
     end
 
-    fun check_for_record_update t1 t2 =
+    fun check_for_record_update wholetm t1 t2 =
         if isSome recwith_info andalso isSome reclist_info andalso
            isSome recfupd_info andalso isSome recupd_info
         then let
@@ -1018,14 +1018,18 @@ fun pp_term (G : grammar) TyG backend = let
             fun ap1 t = let val (d,_) = dom_rng (type_of t)
                         in mk_comb(t,genvar d) end
             fun ap2 t = t |> ap1 |> ap1
-            fun fupdstr0 t =
-              t |> ap2 |> Overload.oi_strip_comb overload_info
-                |> Option.map (atom_name o #1)
-            val fupdstr = Option.join o Lib.total fupdstr0
+            val fupdhelper = Option.map (atom_name o #1) o
+                             Overload.oi_strip_comb overload_info
+            fun fupdstr0 wholetm_opt t =
+              case wholetm_opt of
+                  NONE => t |> ap2 |> fupdhelper
+                | SOME t => t |> fupdhelper
+            fun fupdstr wholetm_opt =
+              Option.join o Lib.total (fupdstr0 wholetm_opt)
             (* function to determine if t is a record update *)
-            fun is_record_update t =
+            fun is_record_update wholetm_opt t =
                 if is_comb t andalso is_const (rator t) then
-                  case fupdstr (rator t) of
+                  case fupdstr wholetm_opt (rator t) of
                       SOME s =>
                       (!prettyprint_bigrecs andalso isSuffix "_fupd" s andalso
                        is_substring (bigrec_subdivider_string ^ "sf") s) orelse
@@ -1036,14 +1040,14 @@ fun pp_term (G : grammar) TyG backend = let
                update is found.  Return this and the list of rators up to
                this point. *)
             fun find_first_non_update acc t =
-                if is_comb t andalso is_record_update (rator t) then
+                if is_comb t andalso is_record_update NONE (rator t) then
                   find_first_non_update ((rator t)::acc) (rand t)
                 else
                   (List.rev acc, t)
             fun categorise_bigrec_updates v = let
               fun bigrec_update t =
                   if is_comb t then
-                    case fupdstr (rator t) of
+                    case fupdstr NONE (rator t) of
                       SOME s => if is_substring bigrec_subdivider_string s then
                                   SOME (s, rand t)
                                 else NONE
@@ -1102,7 +1106,7 @@ fun pp_term (G : grammar) TyG backend = let
                string, and a boolean, which is true iff the update is a value
                update (not a "fupd") *)
             val (fld, value) = dest_comb t
-            val rname = valOf (fupdstr fld)
+            val rname = valOf (fupdstr NONE fld)
           in
             if isPrefix recfupd_special rname then let
                 val (f, x) = dest_comb value
@@ -1119,7 +1123,7 @@ fun pp_term (G : grammar) TyG backend = let
               handle HOL_ERR _ => raise NotReallyARecord
           end
         in
-          if is_record_update t1 then let
+          if is_record_update (SOME wholetm) t1 then let
             val (updates0, base) = find_first_non_update [] t2
             val updates = List.concat (map categorise_update (t1::updates0))
             val (with_prec, with_tok) = valOf recwith_info
@@ -1874,7 +1878,7 @@ fun pp_term (G : grammar) TyG backend = let
                 in
                   check_for_field_selection (list_mk_comb(oif,args)) Rand
                 end) |||
-          (fn _ => check_for_record_update Rator Rand) |||
+          (fn _ => check_for_record_update tm Rator Rand) |||
 
           check_for_setcomprehensions |||
 

@@ -248,6 +248,7 @@ fun s t = let open HolKernel boolLib
 val _ = Hol_datatype`ovlrcd = <| id : num ; opn : num -> num |>`
 val _ = overload_on ("ID", ``f.id``)
 val _ = overload_on ("inv", ``f.opn``)
+val _ = overload_on ("ovlfoo", ``\n r:ovlrcd. opn_fupd (K (K n)) r``)
 
 val _ = type_abbrev ("ms", ``:'a -> num``)
 val _ = Hol_datatype`
@@ -259,7 +260,8 @@ val _ = Datatype.Datatype`
 `
 
 val _ = List.app pptest
-        [("field selection", ``r.fld2``, "r.fld2"),
+        [("specific upd overload", ``ovlfoo 2 x``, "ovlfoo 2 x"),
+         ("field selection", ``r.fld2``, "r.fld2"),
          ("field sel. for fn type", ``r.fld1 x``, "r.fld1 x"),
          ("singleton field update",
           ``r with fld1 := (\x. T)``, "r with fld1 := (\\x. T)"),
