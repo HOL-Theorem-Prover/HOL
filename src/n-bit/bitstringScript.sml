@@ -846,7 +846,7 @@ val reduce_or_v2w =
 val extract_v2w = Q.store_thm("extract_v2w",
   `!h l v.
      (LENGTH v <= dimindex(:'a)) /\ (dimindex(:'b) = SUC h - l) /\
-     dimindex(:'b) < dimindex(:'a) ==>
+     dimindex(:'b) <= dimindex(:'a) ==>
      ((h >< l) (v2w v : 'a word) : 'b word = v2w (field h l v))`,
   lrw [word_extract_v2w, word_bits_v2w, fixwidth_fixwidth, fixwidth_eq,
        testbit, w2w_v2w, length_shiftr, length_fixwidth, length_field, v2w_11]
