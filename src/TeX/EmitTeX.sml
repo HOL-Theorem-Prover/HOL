@@ -354,6 +354,10 @@ end;
 val print_datatype_names_as_types = ref false
 val _ = register_btrace ("EmitTeX: print datatype names as types", print_datatype_names_as_types)
 
+val print_datatypes_compactly = ref false
+val _ = register_btrace ("EmitTeX: print datatypes compactly",
+                         print_datatypes_compactly)
+
 fun pp_datatype_theorem backend ostrm thm =
 let val {add_string,add_break,begin_block,add_newline,end_block,add_xstring,...} =
            PPBackEnd.with_ppstream backend ostrm
@@ -427,7 +431,8 @@ let val {add_string,add_break,begin_block,add_newline,end_block,add_xstring,...}
          EB();
          EB())
       else
-        (BB PP.CONSISTENT 2;
+        (BB (if !print_datatypes_compactly then PP.INCONSISTENT
+             else PP.CONSISTENT) 2;
          PT0 n; S " "; S "="; BR(1,2);
          app (fn x => (pp_clause x; BR(1,0); S "|"; S " "))
              (List.take(l, length l - 1));
