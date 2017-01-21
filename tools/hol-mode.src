@@ -38,7 +38,8 @@
 (defun hol-set-executable (filename)
   "*Set hol executable variable to be NAME."
   (interactive "fHOL executable: ")
-  (setq hol-executable filename))
+  (setq hol-executable filename)
+  (setq hol-bare-p nil))
 
 (defun holmake-set-executable (filename)
   "*Set holmake executable variable to be NAME."
@@ -77,6 +78,9 @@ evaluations.")
 
 (defvar hol-auto-load-p t
   "*Do automatic loading?")
+
+(defvar hol-bare-p nil
+  "*use hol.bare?")
 
 ;;; For compatability between both Emacs and XEmacs, please use the following
 ;;; two functions to determine if the mark is active, or to set it active.
@@ -961,6 +965,10 @@ region instead. With prefix ARG prompt for a file-name to load."
    ))
 
 ;** hol map keys and function definitions
+(defun hol-executable-with-bare ()
+  (if hol-bare-p (concat hol-executable ".bare")
+                 hol-executable))
+
 (defun hol (niceness)
   "Runs a HOL session in a comint window.
 With a numeric prefix argument, runs it niced to that level
@@ -974,8 +982,8 @@ or at level 10 with a bare prefix. "
          (buf (cond ((> niceval 0)
                      (make-comint holname "nice" nil
                                   (format "-%d" niceval)
-                                  hol-executable))
-                    (t (make-comint "HOL" hol-executable)))))
+                                  (hol-executable-with-bare)))
+                    (t (make-comint "HOL" (hol-executable-with-bare))))))
     (setq hol-buffer-name (buffer-name buf))
     (switch-to-buffer buf)
     (setq comint-prompt-regexp "^- ")
@@ -993,6 +1001,12 @@ or at level 10 with a bare prefix. "
     (if hol-was-ok t (hol-mode-init-sml))
     (send-raw-string-to-hol
      "val _ = Parse.current_backend := PPBackEnd.emacs_terminal;" nil nil)))
+
+(defun hol-toggle-bare ()
+  "Toggles the elisp variable 'hol-bare-p."
+  (interactive)
+  (setq hol-bare-p (not hol-bare-p))
+  (concat "using " (hol-executable-with-bare)))
 
 (defun hol-display ()
    (interactive)
@@ -1195,13 +1209,6 @@ argument N, sets the trace to that value in particular."
     "print \"*** PP Backend now \\\"raw\\\" ***\\n\")"
     "else (Parse.current_backend := PPBackEnd.emacs_terminal;"
     "print \"*** PP Backend now \\\"emacs\\\" ***\\n\")") nil nil))
-
-
-
-(defun set-hol-executable (filename)
-  "Sets the HOL executable variable to be equal to FILENAME."
-  (interactive "fHOL executable: ")
-  (setq hol-executable filename))
 
 (defun hol-restart-goal ()
   "Restarts the current goal."
@@ -2100,6 +2107,12 @@ second is to show the new term.
 
 (define-key global-map [menu-bar hol-menu hol-process sep1]
    '(menu-item "--"))
+
+(define-key global-map [menu-bar hol-menu hol-process toggle-hol-bare]
+   '(menu-item "Use bare" hol-toggle-bare
+                     :button (:toggle
+                              . (and (boundp 'hol-bare-p)
+                                     hol-bare-p))))
 
 (define-key global-map [menu-bar hol-menu hol-process hol-exe]
    '("Set HOL executable" . hol-set-executable))
