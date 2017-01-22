@@ -436,16 +436,16 @@ end
 fun is_PMATCH t = can dest_PMATCH t
 
 fun dest_PATLIST_COLS v ps = let
-  fun split_pat p = let
+  fun split_pat (p, (m, l)) = let
     val (vars_tm, pt) = pairSyntax.dest_pabs p
     val vars = pairSyntax.strip_pair vars_tm
-    val pts = pairSyntax.strip_pair pt
+    val ps = pairSyntax.strip_pair pt
+    val m' = length ps
   in
-    List.map (fn x => (vars, x)) pts
+    (Int.max (m, m'), (vars, pt, ps, m')::l)
   end
-  val rows' = map split_pat ps
+  val (col_no, rows') = foldl split_pat (0, []) ps
 
-  val col_no = length (hd rows')
   fun aux acc v col_no = if (col_no <= 1) then List.rev (v::acc) else (
     let
        val (v1, v2) = pairSyntax.dest_pair v handle HOL_ERR _ =>
@@ -455,6 +455,14 @@ fun dest_PATLIST_COLS v ps = let
     end
   )
 
+  fun final_process ((vars, pt, ps, cols), l) =
+  let
+    val ps' = if (cols = col_no) then ps else aux [] pt col_no
+  in
+    (List.map (fn p => (vars, p)) ps')::l
+  end
+
+  val rows'' = foldl final_process [] rows'
   val vs = aux [] v col_no
 
   fun get_cols acc vs rows = case vs of
@@ -465,7 +473,8 @@ fun dest_PATLIST_COLS v ps = let
       in
         get_cols ((v, col)::acc) vs' rows'
       end
-  val cols = get_cols [] vs rows'
+
+  val cols = get_cols [] vs rows''
 in
   cols
 end handle Empty => failwith "dest_PATLIST_COLS"

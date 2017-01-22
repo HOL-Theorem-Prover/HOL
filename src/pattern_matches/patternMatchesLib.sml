@@ -959,7 +959,7 @@ fun PMATCH_CLEANUP_GEN_ss ssl =
   make_gen_conv_ss PMATCH_CLEANUP_CONV_GENCALL "PMATCH_CLEANUP_REDUCER" ssl
 val PMATCH_CLEANUP_ss = PMATCH_CLEANUP_GEN_ss []
 val PMATCH_CLEANUP_CONV = PMATCH_CLEANUP_CONV_GEN [];
-val _ = computeLib.add_convs [(patternMatchesSyntax.PMATCH_tm, 2, CHANGED_CONV PMATCH_CLEANUP_CONV)];
+val _ = computeLib.add_convs [(patternMatchesSyntax.PMATCH_tm, 2, QCHANGED_CONV PMATCH_CLEANUP_CONV)];
 
 
 (***********************************************)
@@ -1393,7 +1393,8 @@ fun PMATCH_EXPAND_COLS_CONV t = let
 
   val col_no_v = length (pairSyntax.strip_pair v)
   val col_no = foldl (fn (r, m) => let
-    val (_, pt, _) = dest_PMATCH_ROW r
+    val (pt', _, _) = dest_PMATCH_ROW r
+    val (_, pt) = pairSyntax.dest_pabs pt'
     val m' = length (pairSyntax.strip_pair pt)
     val m'' = if m' > m then m' else m
   in m'' end) col_no_v rows
@@ -1467,27 +1468,8 @@ fun PMATCH_EXPAND_COLS_CONV t = let
 
   val base_thm = INST_TYPE [gamma |-> type_of t] (ISPECL [v, v] PMATCH_EXTEND_BASE)
   val thm0 = foldl process_row base_thm (zip row_thms rows)
-
-  val thm1 = if (col_no_v >= col_no) then thm0 else let
-     val avoids = free_vars t
-     val vs = pairSyntax.strip_pair v
-     val l = List.last vs
-     val new_vars = split_var avoids col_no_v l
-     val new_vars_tm = pairSyntax.list_mk_pair new_vars
-
-     val sub = [l |-> new_vars_tm]
-
-     val tt = rhs (concl thm0)
-     val tt' = Term.subst sub tt
-     val tt'' = boolSyntax.mk_let (pairSyntax.mk_pabs (new_vars_tm, tt'), l)
-
-     val thm_eq = prove (mk_eq (tt, tt''),
-       SIMP_TAC (rc_ss []) [LET_DEF])
-  in
-     TRANS thm0 thm_eq
-  end
 in
-  thm1
+  thm0
 end handle HOL_ERR _ => raise UNCHANGED;
 
 
@@ -1505,15 +1487,30 @@ PMATCH (SOME y,x,l)
    ]``
 *)
 
+val PMATCH_NORMALISE_CONV_AUX =
+EVERY_CONV [
+  TRY_CONV (QCHANGED_CONV PMATCH_CLEANUP_PVARS_CONV),
+  TRY_CONV (QCHANGED_CONV PMATCH_FORCE_SAME_VARS_CONV),
+  TRY_CONV (QCHANGED_CONV PMATCH_EXPAND_COLS_CONV),
+  TRY_CONV (QCHANGED_CONV PMATCH_INTRO_WILDCARDS_CONV)
+];
+
+fun PMATCH_NORMALISE_CONV t =
+  if (is_PMATCH t) then PMATCH_NORMALISE_CONV_AUX t else raise UNCHANGED;
+
+val PMATCH_NORMALISE_ss =
+    simpLib.conv_ss
+      {name  = "PMATCH_NORMALISE_CONV",
+       trace = 2,
+       key   = SOME ([],``PMATCH (p:'a) (rows : ('a -> 'b option) list)``),
+       conv  = K (K PMATCH_NORMALISE_CONV)}
+
+
 fun PMATCH_SIMP_CONV_GENCALL_AUX rc_arg =
+(TRY_CONV PMATCH_NORMALISE_CONV_AUX) THENC
 REPEATC (FIRST_CONV [
-  QCHANGED_CONV (PMATCH_CLEANUP_PVARS_CONV),
   QCHANGED_CONV (PMATCH_CLEANUP_CONV_GENCALL rc_arg),
   QCHANGED_CONV (PMATCH_SIMP_COLS_CONV_GENCALL rc_arg),
-  QCHANGED_CONV (PMATCH_EXPAND_COLS_CONV),
-  QCHANGED_CONV PMATCH_FORCE_SAME_VARS_CONV,
-  QCHANGED_CONV PMATCH_INTRO_WILDCARDS_CONV,
-  REWR_CONV (CONJUNCT1 PMATCH_def),
   QCHANGED_CONV (PMATCH_REMOVE_FAST_REDUNDANT_CONV_GENCALL rc_arg),
   QCHANGED_CONV (PMATCH_REMOVE_FAST_SUBSUMED_CONV_GENCALL false rc_arg)
 ]);
@@ -1531,6 +1528,26 @@ fun PMATCH_SIMP_GEN_ss ssl =
 
 val PMATCH_SIMP_ss = name_ss "patternMatchesSimp" (PMATCH_SIMP_GEN_ss [])
 val _ = BasicProvers.augment_srw_ss [PMATCH_SIMP_ss];
+
+
+fun PMATCH_FAST_SIMP_CONV_GENCALL_AUX rc_arg =
+REPEATC (FIRST_CONV [
+  QCHANGED_CONV (PMATCH_CLEANUP_CONV_GENCALL rc_arg),
+  QCHANGED_CONV (PMATCH_SIMP_COLS_CONV_GENCALL rc_arg)
+]);
+
+fun PMATCH_FAST_SIMP_CONV_GENCALL rc_arg t =
+  if (is_PMATCH t) then PMATCH_FAST_SIMP_CONV_GENCALL_AUX rc_arg t else
+  raise UNCHANGED
+
+fun PMATCH_FAST_SIMP_CONV_GEN ssl = PMATCH_FAST_SIMP_CONV_GENCALL (ssl, NONE)
+
+val PMATCH_FAST_SIMP_CONV = PMATCH_FAST_SIMP_CONV_GEN [];
+
+fun PMATCH_FAST_SIMP_GEN_ss ssl =
+  make_gen_conv_ss PMATCH_FAST_SIMP_CONV_GENCALL "PMATCH_FAST_SIMP_REDUCER" ssl
+
+val PMATCH_FAST_SIMP_ss = name_ss "patternMatchesFastSimp" (PMATCH_FAST_SIMP_GEN_ss [])
 
 
 (***********************************************)
@@ -1831,6 +1848,10 @@ fun colHeu_default cols = colHeu_qba (!thePmatchCompileDB) cols
 
 (*
 val t = ``case (a,x,xs) of
+    | (NONE,x,[]) when x > 5 => x
+    | (NONE,x,_) => SUC x``
+
+val t = ``case (a,x,xs) of
     | (NONE,x,[]) => x
     | (NONE,x,[2]) => x
     | (NONE,x,[v18]) => 3
@@ -1841,6 +1862,13 @@ val t = ``case (a,x,xs) of
     | (y,z) .| (SOME y,SUC z,[1; 2]) => (y + z)
   ``
 *)
+
+fun literal_case_CONV c tt = if boolSyntax.is_literal_case tt then
+   RATOR_CONV (RAND_CONV (ABS_CONV c)) tt else c tt
+
+val literal_cong_stop = prove(
+   ``(v = v') ==> (literal_case (f:'a -> 'b) v = literal_case f v')``,
+   SIMP_TAC std_ss [])
 
 fun PMATCH_CASE_SPLIT_AUX rc_arg col_no expand_thm t = let
   val (v, rows) = dest_PMATCH t
@@ -1861,22 +1889,46 @@ fun PMATCH_CASE_SPLIT_AUX rc_arg col_no expand_thm t = let
   val thm0 = ISPEC arg (ISPEC ff expand_thm)
   val thm1 = CONV_RULE (LHS_CONV BETA_CONV) thm0
 
-  val c = SIMP_CONV
-    (std_ss++simpLib.merge_ss (fst rc_arg) ++ PMATCH_SIMP_GEN_ss (fst rc_arg)) []
-  val thm2 = CONV_RULE (RHS_CONV c) thm1
+  val c' = REPEATC (
+    TRY_CONV (QCHANGED_CONV (PMATCH_CLEANUP_CONV_GENCALL rc_arg)) THENC
+    TRY_CONV (QCHANGED_CONV (PMATCH_SIMP_COLS_CONV_GENCALL rc_arg)) THENC
+    TRY_CONV (REWR_CONV PMATCH_INCOMPLETE_def)
+  );
 
-  (* check whether it got simpler *)
-  val _ = if (does_conv_loop thm2) then raise UNCHANGED else ()
+  fun c tt = let
+    val _ = let
+      val (t0, _) = dest_comb tt
+      val (v', _) = dest_abs t0
+    in
+      if (aconv arg_v v') then () else failwith "not a new position"!
+    end
+  in
+    (BETA_CONV THENC c') tt
+  end;
+
+  val thm2 = CONV_RULE (RHS_CONV (TOP_SWEEP_CONV c)) thm1
+
+  (* check whether it got simpler, if not try full simp including propagating
+     case information *)
+  val thm3 = if (does_conv_loop thm2) then let
+       val thm3 = CONV_RULE (RHS_CONV (literal_case_CONV (SIMP_CONV (
+           (std_ss++simpLib.merge_ss (fst rc_arg) ++ PMATCH_SIMP_GEN_ss (fst rc_arg))) [PMATCH_INCOMPLETE_def, Cong literal_cong_stop]))) thm2
+       val _ = if  (does_conv_loop thm3) then raise UNCHANGED else ()
+       in thm3 end
+     else thm2
 in
-  thm2
+  thm3
 end
 
 (*
 val t = t'
 val col_no = 1
 val rc_arg = ([], NONE)
+val gl = []
+val callback_opt = NONE
 val db = !thePmatchCompileDB
 val col_heu = colHeu_default
+val t = ``case x of 3 => 1 | _ => 0``
 *)
 
 fun PMATCH_CASE_SPLIT_CONV_GENCALL_STEP (gl, callback_opt) db col_heu t = let
@@ -1920,12 +1972,12 @@ fun PMATCH_CASE_SPLIT_CONV_GENCALL rc_arg db col_heu t = let
   val cols = dest_PMATCH_COLS t'
   val col_no = length cols
   val (v, rows) = dest_PMATCH t'
+  val rows_tm = rand t'
 
   fun mk_pair avoid acc col_no v = if (col_no <= 1) then (
       let
         val vs = List.rev (v::acc)
         val p = pairSyntax.list_mk_pair vs
-        val rows_tm = listSyntax.mk_list (rows, type_of (hd rows))
       in
         mk_PMATCH p rows_tm
       end
@@ -1944,7 +1996,6 @@ fun PMATCH_CASE_SPLIT_CONV_GENCALL rc_arg db col_heu t = let
         t2c
       end
     )
-
 
   val t'' = mk_pair (free_vars t') [] col_no v
   val thm1_tm = mk_eq (t', t'')

@@ -1,6 +1,7 @@
 open HolKernel Parse boolTheory boolLib pairTheory
 open constrFamiliesLib patternMatchesLib computeLib
-open quantHeuristicsLib simpLib boolSimps
+open quantHeuristicsLib simpLib boolSimps listTheory
+open BasicProvers
 open testutils
 
 val hard_fail = true;
@@ -18,6 +19,8 @@ val _ = Parse.current_backend := PPBackEnd.emacs_terminal;
 
 *)
 val _ = patternMatchesLib.ENABLE_PMATCH_CASES ();
+val list_ss  = numLib.arith_ss ++ listSimps.LIST_ss
+
 
 fun test_conv_gen dest s conv (t, r_opt) =
 let
@@ -73,6 +76,167 @@ val test_conv = test_conv_gen (fn t => let
 in
   (SOME l, r)
 end)
+
+
+(* ----------------------------------------------------------------------
+    Parser
+   ---------------------------------------------------------------------- *)
+
+fun pel2string [] = ""
+  | pel2string (pLeft::rest) = "L" ^ pel2string rest
+  | pel2string (pRight::rest) = "R" ^ pel2string rest
+  | pel2string (pAbs::rest) = "A" ^ pel2string rest
+fun d2string (p,t1,t2) =
+  "   " ^
+  trace ("types", 1) term_to_string t1 ^ " - " ^
+  trace ("types", 1) term_to_string t2 ^
+  "  (" ^ pel2string p ^ ")\n"
+
+fun test(inp, expected) =
+  let
+    val _ = tprint ("Parsing "^inp)
+    val tm = Parse.Term [QUOTE inp]
+  in
+    if aconv tm expected then OK()
+    else
+      let
+        val diffs = term_diff expected tm
+      in
+        die ("FAILED!\n" ^ String.concat (map d2string diffs))
+      end
+  end
+
+val _ = app test [
+  ("case b of T => F | F => T",
+   ``PMATCH (b:bool) [PMATCH_ROW (\u:one. T) (\u:one. T) (\u:one. F);
+                      PMATCH_ROW (\u:one. F) (\u:one. T) (\u:one. T)]``),
+
+  ("case x of 0 => 3 | SUC n => n + 1",
+   ``PMATCH x [PMATCH_ROW (\u:one. 0) (\u:one. T) (\u:one. 3);
+               PMATCH_ROW (\n. SUC n) (\n:num. T) (\n. n + 1)]``),
+
+  ("case x of 0 => 3 | SUC _ => 4",
+   ``PMATCH x [PMATCH_ROW (\u:one. 0) (\u:one. T) (\u:one. 3);
+               PMATCH_ROW (\n:num. SUC n) (\n:num. T) (\n:num. 4)]``),
+
+  ("case (x : bool list) of [] => F | (x,xs) .| x::xs => x",
+   ``PMATCH x [PMATCH_ROW (\u:one. []:bool list) (\u:one. T) (\u:one. F);
+               PMATCH_ROW (\ (x:bool,xs:bool list). x::xs)
+                          (\ (x:bool,xs:bool list). T)
+                          (\ (x:bool,xs:bool list). x)]``),
+
+  ("(n:num) + case m of 0 => 3 | () .| SUC n => 10 | z => z",
+   ``(n:num) +
+     PMATCH m [PMATCH_ROW (\u:one. 0n) (\u:one. T) (\u:one. 3n);
+               PMATCH_ROW (\u:one. SUC n) (\u:one. T) (\u:one. 10);
+               PMATCH_ROW (\z:num. z) (\z:num. T) (\z:num. z)]``),
+
+  ("case x of 0 => 3 | () .| n => 4 | _ => 100",
+   ``PMATCH (x:num) [PMATCH_ROW (\u:one. 0n) (\u:one. T) (\u:one. 3n);
+                     PMATCH_ROW (\u:one. n:num) (\u:one. T) (\u:one. 4n);
+                     PMATCH_ROW (\x:num. x) (\x:num. T) (\x:num. 100n)]``),
+
+  ("n + case b of T => 1 | n => 2",
+   ``n + PMATCH (b:bool)
+                [PMATCH_ROW (\u:one. T) (\u:one. T) (\u:one. 1n);
+                 PMATCH_ROW (\n:bool. n) (\n:bool. T) (\n:bool. 2n)]``),
+
+  ("n + case x of 0 => 1 | m .| m + n => m * 2",
+   ``n + PMATCH (x:num)
+                [PMATCH_ROW (\u:one. 0) (\u:one. T) (\u:one. 1);
+                 PMATCH_ROW (\m:num. m + n) (\m:num. T) (\m:num. m * 2)]``),
+
+  ("case x of 0 => 3 | () .| n => 4 | x => 100",
+   ``PMATCH (x:num) [PMATCH_ROW (\u:one. 0n) (\u:one. T) (\u:one. 3n);
+                     PMATCH_ROW (\u:one. n:num) (\u:one. T) (\u:one. 4n);
+                     PMATCH_ROW (\x:num. x) (\x:num. T) (\x:num. 100n)]``),
+
+  ("case (y,x) of\
+   \ | (NONE,[]) => 0\
+   \ | (NONE,[T]) => 1\
+   \ | (SOME T,[]) => 2\
+   \ | (SOME _, _) => 3\
+   \ | z .| (SOME _, z) => 4\
+   \ | (z1, z2:'a) .| (SOME _, z1) => 5\
+   \ | z .| (SOME T, z) when LENGTH x > 5 => 6\
+   \ | (z1, z2, z3:'b list) .| (SOME z1, z2) when LENGTH z3 > 5 => 7",
+   ``PMATCH ((y :bool option),(x :bool list))
+      [PMATCH_ROW (\_uv :unit. (NONE :bool option,[] :bool list))
+                  (\_uv :unit. T)
+                  (\_uv :unit. 0n);
+       PMATCH_ROW (\_uv :unit. (NONE :bool option,[T]))
+                  (\_uv:unit. T)
+                  (\_uv:unit. 1n);
+       PMATCH_ROW (\_uv:unit. (SOME T, [] :bool list)) (\_uv:unit. T)
+                  (\_uv :unit. 2n);
+       PMATCH_ROW (\ ((xx :bool),(yy :bool list)). (SOME xx,yy))
+                  (\ ((xx :bool),(yy :bool list)). T)
+                  (\ ((xx :bool),(yy :bool list)). 3n);
+       PMATCH_ROW (\ ((z :bool list),(u2 :bool)). (SOME u2,z))
+                  (\ ((z :bool list),(u2 :bool)). T)
+                  (\ ((z :bool list),(u2 :bool)). 4n);
+       PMATCH_ROW (\ (z1 :bool list, (z2 :'a, u3 :bool)). (SOME u3,z1))
+                  (\ (z1 :bool list, (z2 :'a, u3 :bool)). T)
+                  (\ (z1 :bool list, (z2 :'a, u3 :bool)). 5n);
+       PMATCH_ROW (\ (z :bool list). (SOME T,z))
+                  (\ (z :bool list). LENGTH x > 5n)
+                  (\ (z :bool list). 6n);
+       PMATCH_ROW
+         (\ ((z1 :bool),(z2 :bool list),(z3 :'b list)). (SOME z1,z2))
+         (\ ((z1 :bool),(z2 :bool list),(z3 :'b list)). LENGTH z3 > 5n)
+         (\ ((z1 :bool),(z2 :bool list),(z3 :'b list)). 7n)]``),
+
+  ("case x of NONE => y | SOME (z:'foo) => (f z : 'bar)",
+   ``PMATCH (x:'foo option) [
+       PMATCH_ROW (\_uv:unit. NONE) (\_uv:unit. T) (\_uv:unit. y:'bar);
+       PMATCH_ROW (\z:'foo. SOME z) (\z:'foo. T) (\z:'foo. f z : 'bar)
+     ]``),
+
+  ("case x of NONE => y | z:'foo .| SOME z => (f z : 'bar)",
+   ``PMATCH (x:'foo option) [
+       PMATCH_ROW (\_uv:unit. NONE) (\_uv:unit. T) (\_uv:unit. y:'bar);
+       PMATCH_ROW (\z:'foo. SOME z) (\z:'foo. T) (\z:'foo. f z : 'bar)
+     ]``),
+
+  ("dtcase x of NONE => 3 | SOME y => y + 1",
+   ``option_CASE (x : num option) 3n (\z:num. z + 1)``)
+
+]
+
+fun shouldfail s = let
+  val _ = tprint ("Should NOT parse: " ^ s)
+in
+  case Lib.total (trace ("show_typecheck_errors", 0) Parse.Term) [QUOTE s] of
+      NONE => OK()
+    | SOME t => die ("FAILED!\n  Parsed to: " ^ term_to_string t)
+end
+
+
+val _ = app shouldfail [
+      "case x of NONE => F | y .| SOME(x,y) => x < y"
+]
+
+(* ----------------------------------------------------------------------
+    Pretty-printer
+   ---------------------------------------------------------------------- *)
+
+val _ = app (raw_backend tpp) [
+  "case x of 0 => 3 | SUC n => n",
+  "dtcase x of 0 => 3 | SUC n => n",
+  "(case x of 0 => 3 | SUC n => n) > 5",
+  "(dtcase x of 0 => 3 | SUC n => n) = 3",
+  "case SUC 5 of 0 => 3 | SUC n => n",
+  "dtcase SUC (SUC 5) of 0 => 3 | SUC n => n",
+  "case x of 0 => 4 | SUC _ => 10",
+  "case (x,y) of (NONE,_) => 10 | (SOME n,0) when n < 10 => 11",
+  "case x of 0 => 3 | () .| n => 4 | x => 100",
+  "case x of NONE => 3 | () .| SOME n => n | SOME x => x + 1",
+  "dtcase (x,y) of (NONE,z) => SUC z | (SOME n,z) => n",
+  "SUC (case x of 0 => 3 | SUC n => n)",
+  "SUC (dtcase x of 0 => 3 | SUC n => n)",
+  "case x of z .| 0 => z | SUC _ => 10",
+  "case x of (z,y) .| 0 => z | SUC _ => 10"
+]
 
 
 (******************************************************************************)
@@ -175,6 +339,16 @@ SOME ``PMATCH (x,y,z)
       PMATCH_ROW (\(x,yz_0,yz_1). (x,yz_0,yz_1)) (\(x,yz_0,yz_1). T)
         (\(x,yz_0,yz_1). x)]``)
 
+val test = test_conv "PMATCH_EXPAND_COLS_CONV" PMATCH_EXPAND_COLS_CONV (``case xy of
+    | (SOME x, SOME y) => SOME (x + y)
+    | _ => NONE``, SOME (``case xy of
+        (SOME x,SOME y) => SOME (x + y) | (_,_) => NONE``))
+
+val test = test_conv "PMATCH_EXPAND_COLS_CONV" PMATCH_EXPAND_COLS_CONV (``case (x,y) of
+    | (SOME x, SOME y) => SOME (x + y)
+    | _ => NONE``, SOME (``
+      case (x,y) of
+        (SOME x,SOME y) => SOME (x + y) | (_,_) => NONE``))
 
 val test = test_conv "PMATCH_INTRO_WILDCARDS_CONV" PMATCH_INTRO_WILDCARDS_CONV (``PMATCH (x,y,z)
     [PMATCH_ROW (\(x,y,z). (x,y,z)) (\(x,y,z). T) (\(x,y,z). x + y);
@@ -261,6 +435,7 @@ val test =  test_conv "PMATCH_REMOVE_FAST_SUBSUMED_CONV false" (PMATCH_REMOVE_FA
    | (x, 5) => ARB``)
 
 val test =  test_conv "PMATCH_SIMP_CONV" PMATCH_SIMP_CONV
+val test_fast =  test_conv "PMATCH_FAST_SIMP_CONV" PMATCH_FAST_SIMP_CONV
 
 val t =
    ``PMATCH ((a :num option),(x :num),(xs :num list))
@@ -327,6 +502,7 @@ val t' = ``PMATCH (a,x,xs)
         (\((y :num),(z :num)). T) (\((y :num),(z :num)). y + z)]``;
 
 val _ = test (t, (SOME t'))
+val _ = test_fast (t, NONE)
 
 
 val t = ``PMATCH (x,y,z)
@@ -342,32 +518,7 @@ val t' = ``
       PMATCH_ROW (λ(x,y). (x,y,3)) (λ(x,y). T) (λ(x,y). x + y)]``;
 
 val _ = test (t, (SOME t'))
-
-
-val t =
-   ``PMATCH ((h :num)::(t :num list))
-    [PMATCH_ROW (\(_ :'a). ([] :num list)) (\(_ :'a). T)
-       (\(_ :'a). (x :num));
-     PMATCH_ROW (\(_ :'b). [(2 :num)]) (\(_ :'b). T) (\(_ :'b). x);
-     PMATCH_ROW (\(v18 :num). [v18]) (\(v19 :num). T)
-       (\(v18 :num). (3 :num));
-     PMATCH_ROW
-       (\((v12 :num),(v16 :num),(v17 :num list)). v12::v16::v17)
-       (K T :num # num # num list -> bool)
-       (\((v12 :num),(v16 :num),(v17 :num list)). (3 :num));
-     PMATCH_ROW (\(_ :'c). [(2 :num); (4 :num); (3 :num)]) (\(_ :'c). T)
-       (\(_ :'c). (3 :num) + x)]``;
-
-val t' = ``PMATCH (h,t)
-     [PMATCH_ROW (\(_0 :unit). ((2 :num),([] :num list)))
-        (\(_0 :unit). T) (\(_0 :unit). x);
-      PMATCH_ROW (\(_0 :num). (_0,([] :num list))) (\(_0 :num). T)
-        (\(_0 :num). (3 :num));
-      PMATCH_ROW (\((_0 :num),(_1 :num),(_2 :num list)). (_0,_1::_2))
-        (\((_0 :num),(_1 :num),(_2 :num list)). T)
-        (\((_0 :num),(_1 :num),(_2 :num list)). (3 :num))]``
-
-val _ = test (t, (SOME t'))
+val _ = test_fast (t, NONE)
 
 
 val t =
@@ -401,8 +552,16 @@ val t' = ``
         (\((_0 :num),(_1 :num),(_2 :num list)). T)
         (\((_0 :num),(_1 :num),(_2 :num list)). (3 :num))]``;
 
-val _ = test (t, (SOME t'))
+val t'' = ``PMATCH xs
+     [PMATCH_ROW (\(_uv:unit). []) (\_uv. T) (\_uv. x);
+      PMATCH_ROW (\(_uv:unit). [2]) (\_uv. T) (\_uv. x);
+      PMATCH_ROW (\v18. [v18]) (\v18. T) (\v18. 3);
+      PMATCH_ROW (\(v12,v16,v17). v12::v16::v17) (\(v12,v16,v17). T)
+        (\(v12,v16,v17). 3);
+      PMATCH_ROW (\(_uv:unit). [2; 4; 3]) (\_uv. x > 5) (\_uv. 3 + x)]``
 
+val _ = test (t, (SOME t'))
+val _ = test_fast (t, (SOME t''))
 
 
 
@@ -557,26 +716,26 @@ val _ = test_conv "SIMP_CONV (numLib.std_ss ++ PMATCH_REMOVE_GUARDS_ss) []" (SIM
 (*************************************)
 
 
-val _ = test_conv "PMATCH_LIFT_BOOL_CONV false" (PMATCH_LIFT_BOOL_CONV false) (``(P (case (l1:'a list, l2) of
+val _ = test_conv "DEPTH_CONV (PMATCH_LIFT_BOOL_CONV false)" (DEPTH_CONV (PMATCH_LIFT_BOOL_CONV false)) (``P1 /\ (P (case (l1:'a list, l2) of
   | ([], _) => []
   | (_, []) => []
   | (x::xs, y::ys) => [(x, y)])):bool``,
-  SOME ``((l1 = ([]:'a list)) ==> P []) /\ ((l2 = []) ==> P []) /\
+  SOME ``P1 /\ (((l1 = ([]:'a list)) ==> P []) /\ ((l2 = []) ==> P []) /\
    (!x xs y ys. (l1 = x::xs) /\ (l2 = y::ys) ==> P [(x,y)]) /\
    (~PMATCH_IS_EXHAUSTIVE (l1,l2)
        [PMATCH_ROW (\_0. ([],_0)) (\_0. T) (\_0. []);
         PMATCH_ROW (\_0. (_0,[])) (\_0. T) (\_0. []);
         PMATCH_ROW (\(x,xs,y,ys). (x::xs,y::ys)) (\(x,xs,y,ys). T)
           (\(x,xs,y,ys). [(x,y)])] ==>
-    P ARB)``)
+    P ARB))``)
 
 
-val _ = test_conv "PMATCH_LIFT_BOOL_CONV true" (PMATCH_LIFT_BOOL_CONV true) (``(P (case (l1:'a list, l2) of
+val _ = test_conv "DEPTH_CONV (PMATCH_LIFT_BOOL_CONV true)" (DEPTH_CONV (PMATCH_LIFT_BOOL_CONV true)) (``P1 /\ (P (case (l1:'a list, l2) of
   | ([], _) => []
   | (_, []) => []
   | (x::xs, y::ys) => [(x, y)])):bool``,
-  SOME ``((l1 = ([]:'a list)) ==> P []) /\ ((l2 = []) ==> P []) /\
-   (!x xs y ys. (l1 = x::xs) /\ (l2 = y::ys) ==> P [(x,y)])``)
+  SOME ``P1 /\ (((l1 = ([]:'a list)) ==> P []) /\ ((l2 = []) ==> P []) /\
+   (!x xs y ys. (l1 = x::xs) /\ (l2 = y::ys) ==> P [(x,y)]))``)
 
 
 val _ = Datatype.Datatype `
@@ -646,6 +805,200 @@ val _ = test_conv "PMATCH_LIFT_BOOL_CONV true" (PMATCH_LIFT_BOOL_CONV true) (tm,
        Red (Red p_1 p_1' p_1'') p_1''' p_1'''' <> a) ==>
     (balance_black a n b = Black a n b))``)
 
+
+(*********************************)
+(* Pattern Compilation           *)
+(*********************************)
+
+val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  ``case l of NONE => 0 | SOME x => x``, SOME ``option_CASE l 0 (\x'. x')``)
+
+val t = ``case xyz of
+  | (_, F, T) => 1
+  | (F, T, _) => 2
+  | (_, _, F) => 3
+  | (_, _, T) => 4``
+
+val test =  test_conv "PMATCH_CASE_SPLIT_CONV_HEU colHeu_first_col" (PMATCH_CASE_SPLIT_CONV_HEU colHeu_first_col) (t, SOME
+  ``pair_CASE xyz
+     (\v v'.
+        pair_CASE v'
+          (\v'' v'''.
+             if v then
+               if v'' then if v''' then 4 else 3
+               else if v''' then 1
+               else 3
+             else if v'' then 2
+             else if v''' then 1
+             else 3))``)
+
+val test =  test_conv "PMATCH_CASE_SPLIT_CONV_HEU colHeu_last_col" (PMATCH_CASE_SPLIT_CONV_HEU colHeu_last_col) (t, SOME
+  ``pair_CASE xyz
+     (\v v'.
+        pair_CASE v'
+          (\v'' v'''.
+             if v''' then if v'' then if v then 4 else 2 else 1
+             else if v'' then if v then 3 else 2
+             else 3))``)
+
+val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (t, SOME
+  ``pair_CASE xyz
+     (\v v'.
+        pair_CASE v'
+          (\v'' v'''.
+             if v'' then if v then if v''' then 4 else 3 else 2
+             else if v''' then 1
+             else 3))``)
+
+val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (t, SOME
+  ``pair_CASE xyz
+     (\v v'.
+        pair_CASE v'
+          (\v'' v'''.
+             if v'' then if v then if v''' then 4 else 3 else 2
+             else if v''' then 1
+             else 3))``)
+
+val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  ``case l of (SOME x, SOME y) => SOME (x+y) | _ => NONE``, SOME ``pair_CASE l
+     (\v v'.
+        option_CASE v NONE
+          (\x'. option_CASE v' NONE (\x''. SOME (x' + x''))))``
+)
+
+val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  ``case x of 3 => 1 | _ => 0``, SOME ``literal_case (\v. if v = 3 then 1 else 0) x``)
+
+val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  ``case x of 0 => 1 | 1 => 1 | 2 => 2``, SOME ``   literal_case
+     (\x.
+        if x = 0 then 1
+        else if x = 1 then 1
+        else if x = 2 then 2
+        else ARB) x``)
+
+val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  ``case x of 0 => 1 | SUC 0 => 1 | SUC (SUC 0) => 2``, SOME ``
+        num_CASE x 1
+          (\n. num_CASE n 1 (\n'. num_CASE n' 2 (\n''. ARB)))``)
+
+
+val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  ``case l of [] => 1 | [_;_] => 2 | [3] => 3 |  [_] => 4 | _ => 5``, SOME ``
+    list_CASE l 1
+     (\h t.
+        list_CASE t (literal_case (\x. if x = 3 then 3 else 4) h)
+          (\h' t'. list_CASE t' 2 (\h'' t''. 5)))``)
+
+val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  ``case xy of (0,0) => 1 | (1,1) => 1 | (1,2) => 2``, SOME ``pair_CASE xy
+     (\v v'.
+        literal_case
+          (\x.
+             if x = 0 then num_CASE v' 1 (\n. ARB)
+             else if x = 1 then
+               literal_case
+                 (\x'. if x' = 1 then 1 else if x' = 2 then 2 else ARB)
+                 v'
+             else ARB) v)``)
+
+
+val list_REVCASE_def = TotalDefn.Define `
+  list_REVCASE l c_nil c_snoc =
+    (if l = [] then c_nil else (
+     c_snoc (LAST l) (BUTLAST l)))`
+
+val list_REVCASE_THM = prove (``
+  ((list_REVCASE [] c_nil c_snoc) = c_nil) /\
+  ((list_REVCASE (SNOC x xs) c_nil c_snoc) = c_snoc x xs)``,
+SIMP_TAC numLib.std_ss [list_REVCASE_def, rich_listTheory.NOT_SNOC_NIL, LAST_SNOC, FRONT_SNOC])
+
+val cl = make_constructorList true [
+  (``[]:'a list``, []),
+  (``SNOC: 'a -> 'a list -> 'a list``,  ["x", "xs"])
+]
+
+(* set_constructorFamily (cl, ``list_REVCASE``) *)
+val cf = mk_constructorFamily (cl, ``list_REVCASE``,
+  SIMP_TAC list_ss [rich_listTheory.NOT_SNOC_NIL] THEN
+  REPEAT STRIP_TAC THENL [
+    ASSUME_TAC (Q.SPEC `x` listTheory.SNOC_CASES) THEN
+    FULL_SIMP_TAC numLib.std_ss [list_REVCASE_THM],
+
+    ASSUME_TAC (Q.SPEC `x` listTheory.SNOC_CASES) THEN
+    FULL_SIMP_TAC numLib.std_ss [list_REVCASE_THM],
+    PROVE_TAC [listTheory.SNOC_CASES]
+  ]
+)
+
+(* add this family *)
+val _ = pmatch_compile_db_register_constrFam cf
+
+val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+ ``case l of
+  | [] => 0
+  | SNOC x _ => x``, SOME ``list_REVCASE l 0 (\x' xs. x')``)
+
+val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+ ``case lx of
+  | ([], NONE) => 0
+  | (SNOC x _, SOME y) => x + y``, SOME ``pair_CASE lx
+     (\v v'.
+        list_REVCASE v (option_CASE v' 0 (\x'. ARB))
+          (\x'' xs. option_CASE v' ARB (\x'''. x'' + x''')))``)
+
+val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+ ``case lx of
+  | [] => 0
+  | x::_ => x + y
+  ``, SOME ``list_CASE lx 0 (\h t. h + y)``)
+
+val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+ ``case lx of
+  | [] => 0
+  | SNOC x _ => x
+  | x::_ => x + y
+  ``, NONE)
+
+
+val tree_case_def = DB.fetch "-" "tree_case_def";
+
+val tree_red_CASE_def = TotalDefn.Define `
+ tree_red_CASE tr f_red f_else =
+ tree_CASE tr (f_else Empty) f_red
+   (\t1 n t2. f_else (Black t1 n t2))`
+
+val tree_red_CASE_THM = prove (``
+  (tree_red_CASE Empty f_red f_else = f_else Empty) /\
+  (tree_red_CASE (Red t1 n t2) f_red f_else = f_red t1 n t2) /\
+  (tree_red_CASE (Black t1 n t2) f_red f_else = f_else (Black t1 n t2))``,
+SIMP_TAC list_ss [tree_red_CASE_def, tree_case_def])
+
+val cl = make_constructorList false [
+  (``Red : 'a tree -> 'a -> 'a tree -> 'a tree``, ["t1", "n", "t2"])
+]
+
+(* set_constructorFamily (cl, ``tree_red_CASE``) *)
+val cf = mk_constructorFamily (cl, ``tree_red_CASE``,
+  SIMP_TAC (srw_ss()) [tree_red_CASE_def] THEN
+  CONJ_TAC THEN (
+    Cases_on `x` THEN
+    SIMP_TAC (srw_ss()) [tree_red_CASE_def]
+  ));
+
+val _ = pmatch_compile_db_register_constrFam cf;
+
+val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+ ``case (t:'a tree) of
+  | Red _ _ _ => T
+  | _ => F
+  ``, SOME (``tree_red_CASE (t:'a tree) (\t a t0. T) (\x. F)``))
+
+val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+ ``case (t:'a tree) of
+  | Black _ _ _ => T
+  | _ => F
+  ``, SOME (``tree_CASE (t:'a tree) F (\t a t0. F) (\t' a' t0'. T)``))
 
 
 (*********************************)
@@ -872,163 +1225,17 @@ val _ = run_test (``(4::3::l) : num list``, ``PMATCH ((4 :num)::(3 :num)::l)
         (\((x :num),(y :num),(_3 :num list)). T)
         (\((x :num),(y :num),(_3 :num list)). x + y)]``);
 
+val _ = test_conv "EVAL_CONV" EVAL_CONV (``case [] of x::xs => SUC x``, SOME ``ARB:num``);
 
-(* ----------------------------------------------------------------------
-    Parser
-   ---------------------------------------------------------------------- *)
+val _ = test_conv "EVAL_CONV" EVAL_CONV (``case [] of SNOC x xs => SUC x``, SOME ``ARB:num``);
 
-fun pel2string [] = ""
-  | pel2string (pLeft::rest) = "L" ^ pel2string rest
-  | pel2string (pRight::rest) = "R" ^ pel2string rest
-  | pel2string (pAbs::rest) = "A" ^ pel2string rest
-fun d2string (p,t1,t2) =
-  "   " ^
-  trace ("types", 1) term_to_string t1 ^ " - " ^
-  trace ("types", 1) term_to_string t2 ^
-  "  (" ^ pel2string p ^ ")\n"
+val _ = test_conv "EVAL_CONV" EVAL_CONV (``case [] of [] => 0 | SNOC x xs => SUC x``, SOME ``0``);
 
-fun test(inp, expected) =
-  let
-    val _ = tprint ("Parsing "^inp)
-    val tm = Parse.Term [QUOTE inp]
-  in
-    if aconv tm expected then OK()
-    else
-      let
-        val diffs = term_diff expected tm
-      in
-        die ("FAILED!\n" ^ String.concat (map d2string diffs))
-      end
-  end
+val _ = test_conv "EVAL_CONV" EVAL_CONV (``case SNOC x xs of [] => 0 | SNOC x xs => SUC x``, SOME ``SUC x``);
 
-val _ = app test [
-  ("case b of T => F | F => T",
-   ``PMATCH (b:bool) [PMATCH_ROW (\u:one. T) (\u:one. T) (\u:one. F);
-                      PMATCH_ROW (\u:one. F) (\u:one. T) (\u:one. T)]``),
-
-  ("case x of 0 => 3 | SUC n => n + 1",
-   ``PMATCH x [PMATCH_ROW (\u:one. 0) (\u:one. T) (\u:one. 3);
-               PMATCH_ROW (\n. SUC n) (\n:num. T) (\n. n + 1)]``),
-
-  ("case x of 0 => 3 | SUC _ => 4",
-   ``PMATCH x [PMATCH_ROW (\u:one. 0) (\u:one. T) (\u:one. 3);
-               PMATCH_ROW (\n:num. SUC n) (\n:num. T) (\n:num. 4)]``),
-
-  ("case (x : bool list) of [] => F | (x,xs) .| x::xs => x",
-   ``PMATCH x [PMATCH_ROW (\u:one. []:bool list) (\u:one. T) (\u:one. F);
-               PMATCH_ROW (\ (x:bool,xs:bool list). x::xs)
-                          (\ (x:bool,xs:bool list). T)
-                          (\ (x:bool,xs:bool list). x)]``),
-
-  ("(n:num) + case m of 0 => 3 | () .| SUC n => 10 | z => z",
-   ``(n:num) +
-     PMATCH m [PMATCH_ROW (\u:one. 0n) (\u:one. T) (\u:one. 3n);
-               PMATCH_ROW (\u:one. SUC n) (\u:one. T) (\u:one. 10);
-               PMATCH_ROW (\z:num. z) (\z:num. T) (\z:num. z)]``),
-
-  ("case x of 0 => 3 | () .| n => 4 | _ => 100",
-   ``PMATCH (x:num) [PMATCH_ROW (\u:one. 0n) (\u:one. T) (\u:one. 3n);
-                     PMATCH_ROW (\u:one. n:num) (\u:one. T) (\u:one. 4n);
-                     PMATCH_ROW (\x:num. x) (\x:num. T) (\x:num. 100n)]``),
-
-  ("n + case b of T => 1 | n => 2",
-   ``n + PMATCH (b:bool)
-                [PMATCH_ROW (\u:one. T) (\u:one. T) (\u:one. 1n);
-                 PMATCH_ROW (\n:bool. n) (\n:bool. T) (\n:bool. 2n)]``),
-
-  ("n + case x of 0 => 1 | m .| m + n => m * 2",
-   ``n + PMATCH (x:num)
-                [PMATCH_ROW (\u:one. 0) (\u:one. T) (\u:one. 1);
-                 PMATCH_ROW (\m:num. m + n) (\m:num. T) (\m:num. m * 2)]``),
-
-  ("case x of 0 => 3 | () .| n => 4 | x => 100",
-   ``PMATCH (x:num) [PMATCH_ROW (\u:one. 0n) (\u:one. T) (\u:one. 3n);
-                     PMATCH_ROW (\u:one. n:num) (\u:one. T) (\u:one. 4n);
-                     PMATCH_ROW (\x:num. x) (\x:num. T) (\x:num. 100n)]``),
-
-  ("case (y,x) of\
-   \ | (NONE,[]) => 0\
-   \ | (NONE,[T]) => 1\
-   \ | (SOME T,[]) => 2\
-   \ | (SOME _, _) => 3\
-   \ | z .| (SOME _, z) => 4\
-   \ | (z1, z2:'a) .| (SOME _, z1) => 5\
-   \ | z .| (SOME T, z) when LENGTH x > 5 => 6\
-   \ | (z1, z2, z3:'b list) .| (SOME z1, z2) when LENGTH z3 > 5 => 7",
-   ``PMATCH ((y :bool option),(x :bool list))
-      [PMATCH_ROW (\_uv :unit. (NONE :bool option,[] :bool list))
-                  (\_uv :unit. T)
-                  (\_uv :unit. 0n);
-       PMATCH_ROW (\_uv :unit. (NONE :bool option,[T]))
-                  (\_uv:unit. T)
-                  (\_uv:unit. 1n);
-       PMATCH_ROW (\_uv:unit. (SOME T, [] :bool list)) (\_uv:unit. T)
-                  (\_uv :unit. 2n);
-       PMATCH_ROW (\ ((xx :bool),(yy :bool list)). (SOME xx,yy))
-                  (\ ((xx :bool),(yy :bool list)). T)
-                  (\ ((xx :bool),(yy :bool list)). 3n);
-       PMATCH_ROW (\ ((z :bool list),(u2 :bool)). (SOME u2,z))
-                  (\ ((z :bool list),(u2 :bool)). T)
-                  (\ ((z :bool list),(u2 :bool)). 4n);
-       PMATCH_ROW (\ (z1 :bool list, (z2 :'a, u3 :bool)). (SOME u3,z1))
-                  (\ (z1 :bool list, (z2 :'a, u3 :bool)). T)
-                  (\ (z1 :bool list, (z2 :'a, u3 :bool)). 5n);
-       PMATCH_ROW (\ (z :bool list). (SOME T,z))
-                  (\ (z :bool list). LENGTH x > 5n)
-                  (\ (z :bool list). 6n);
-       PMATCH_ROW
-         (\ ((z1 :bool),(z2 :bool list),(z3 :'b list)). (SOME z1,z2))
-         (\ ((z1 :bool),(z2 :bool list),(z3 :'b list)). LENGTH z3 > 5n)
-         (\ ((z1 :bool),(z2 :bool list),(z3 :'b list)). 7n)]``),
-
-  ("case x of NONE => y | SOME (z:'foo) => (f z : 'bar)",
-   ``PMATCH (x:'foo option) [
-       PMATCH_ROW (\_uv:unit. NONE) (\_uv:unit. T) (\_uv:unit. y:'bar);
-       PMATCH_ROW (\z:'foo. SOME z) (\z:'foo. T) (\z:'foo. f z : 'bar)
-     ]``),
-
-  ("case x of NONE => y | z:'foo .| SOME z => (f z : 'bar)",
-   ``PMATCH (x:'foo option) [
-       PMATCH_ROW (\_uv:unit. NONE) (\_uv:unit. T) (\_uv:unit. y:'bar);
-       PMATCH_ROW (\z:'foo. SOME z) (\z:'foo. T) (\z:'foo. f z : 'bar)
-     ]``),
-
-  ("dtcase x of NONE => 3 | SOME y => y + 1",
-   ``option_CASE (x : num option) 3n (\z:num. z + 1)``)
-
-]
-
-fun shouldfail s = let
-  val _ = tprint ("Should NOT parse: " ^ s)
-in
-  case Lib.total (trace ("show_typecheck_errors", 0) Parse.Term) [QUOTE s] of
-      NONE => OK()
-    | SOME t => die ("FAILED!\n  Parsed to: " ^ term_to_string t)
-end
-
-
-val _ = app shouldfail [
-      "case x of NONE => F | y .| SOME(x,y) => x < y"
-]
-
-(* ----------------------------------------------------------------------
-    Pretty-printer
-   ---------------------------------------------------------------------- *)
-
-val _ = app (raw_backend tpp) [
-  "case x of 0 => 3 | SUC n => n",
-  "dtcase x of 0 => 3 | SUC n => n",
-  "(case x of 0 => 3 | SUC n => n) > 5",
-  "(dtcase x of 0 => 3 | SUC n => n) = 3",
-  "case SUC 5 of 0 => 3 | SUC n => n",
-  "dtcase SUC (SUC 5) of 0 => 3 | SUC n => n",
-  "case x of 0 => 4 | SUC _ => 10",
-  "case (x,y) of (NONE,_) => 10 | (SOME n,0) when n < 10 => 11",
-  "case x of 0 => 3 | () .| n => 4 | x => 100",
-  "case x of NONE => 3 | () .| SOME n => n | SOME x => x + 1",
-  "dtcase (x,y) of (NONE,z) => SUC z | (SOME n,z) => n",
-  "SUC (case x of 0 => 3 | SUC n => n)",
-  "SUC (dtcase x of 0 => 3 | SUC n => n)",
-  "case x of z .| 0 => z | SUC _ => 10",
-  "case x of (z,y) .| 0 => z | SUC _ => 10"
-]
+val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+ ``case lx of
+  | [] => 0
+  | SNOC x _ => x
+  | x::_ => x + y
+  ``, NONE)

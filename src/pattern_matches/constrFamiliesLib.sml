@@ -483,7 +483,7 @@ fun constructorFamily_of_typebase ty = let
     handle Option => failwith "constructorList_of_typebase" "not a datatype"
   val case_split_tm = TypeBase.case_const_of ty
   val thm_distinct = TypeBase.distinct_of ty
-  val thm_one_one = TypeBase.one_one_of ty
+  val thm_one_one = TypeBase.one_one_of ty handle HOL_ERR _ => TRUTH
   val thm_case = TypeBase.case_def_of ty
   val thm_case_cong = TypeBase.case_cong_of ty
 
@@ -645,8 +645,11 @@ fun lookup_constructorFamily force_exh (db : pmatch_compile_db) col = let
 
   val weighted_fams = List.map (fn (ty, cf) =>
     ((ty, cf), measure_constructorFamily cf col)) cts_fams'
+
+  val weighted_fams' = filter (fn (_, w) => (#colstat_missed_rows w = 0)) weighted_fams
+
   val weighted_fams_sorted = sort (fn (_, w1) => fn (_, w2) =>
-    matchcol_stats_compare w1 w2) weighted_fams
+    matchcol_stats_compare w1 w2) weighted_fams'
 in
   case weighted_fams_sorted of
      [] => NONE
@@ -839,9 +842,13 @@ fun literals_compile_fun (col:(term list * term) list) = let
       end
 
   val thm0 = mk_expand_thm lits
-  val thm1 = GEN split_fun (GEN split_arg thm0)
+  val thm0_rhs = rhs (concl thm0)
+  val thm1a = GSYM (ISPECL [mk_abs(split_arg, thm0_rhs), split_arg] literal_case_THM)
+  val thm1 = CONV_RULE (LHS_CONV BETA_CONV) thm1a
+  val thm2 = TRANS thm0 thm1
+  val thm3 = GEN split_fun (GEN split_arg thm2)
 in
-  SOME (thm1, cases_no, simpLib.rewrites [Cong boolTheory.COND_CONG])
+  SOME (thm3, cases_no, simpLib.rewrites [Cong boolTheory.COND_CONG])
 end
 
 val _ = pmatch_compile_db_register_compile_fun literals_compile_fun
