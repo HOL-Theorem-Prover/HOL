@@ -983,7 +983,7 @@ However other heuristics result in more complicated terms as shown in the sessio
 This is just a brief description of some of the expressive capabilities of the case expression with patterns.
 Many more examples of patterns are provided in Section~\ref{TFL} on the definition of recursive functions.
 
-\subsection{\pmatch{} case expressions}
+\subsection{\pmatch{} case expressions}\label{sec:pmatch-case-expressions}
 
 The library \texttt{patternMatchesLib} supports another form of case expression.
 After executing \texttt{patternMatchesLib.ENABLE_PMATCH_CASES()}, the case expression syntax introduced above is parsed into \pmatch{}-based terms.%
@@ -1088,7 +1088,7 @@ There are many more tools for working with \pmatch{} case expressions.
 There are, for example, tools for removing multiple variable binding or guards.
 One can translate between \pmatch{} and decision-tree case expressions.
 There are tools for proving exhaustiveness of \pmatch{} case expressions or for removing redundant rows.
-For more details, please consult the \texttt{patternMatchesLib} implementation.
+For more details, please consult the \texttt{patternMatchesLib} documentation in Section~\ref{sec:PatternMatchesLib}.
 \index{case expressions|)}
 
 \section{Recursive Functions}\label{TFL}
