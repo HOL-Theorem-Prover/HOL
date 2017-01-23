@@ -10,7 +10,7 @@ Moreover, advanced features are discussed here.
 
 \index{PMATCH_SIMP_CONV@\ml{PMATCH\_SIMP\_CONV}}
 The most important tool to deal with \pmatch{} case expressions is the conversion \texttt{PMATCH\_SIMP\_CONV} or the corresponding \texttt{PMATCH\_SIMP\_ss}, which is part of \texttt{bossLib.std\_ss}.
-It combines the following methods of simplifying and (partially) evaluating \pmatch{} case expressions. 
+It combines the following methods of simplifying and (partially) evaluating \pmatch{} case expressions.
 A subset of of these methods that skips normalisations and potentially expensive searches for redundant and subsumed rows is available as \texttt{PMATCH_FAST_SIMP_CONV}.\index{PMATCH_FAST_SIMP_CONV@\ml{PMATCH\_FAST_SIMP\_CONV}}
 
 \subsubsection{Normalisation}
@@ -43,7 +43,7 @@ This normal form is enforced by \texttt{PMATCH_EXPAND_COLS_CONV}.
 \end{session}
 
 Finally, the conversion \texttt{PMATCH_INTRO_WILDCARDS_CONV} renames unused pattern variables such that they start with an underscore.
-As a result, they are printed as a wildcard pattern, making case expressions easier readable.
+As a result, they are printed as a wildcard pattern, making case expressions more readable.
 
 \begin{session}
 \begin{alltt}
@@ -60,17 +60,17 @@ as \texttt{PMATCH_NORMALISE_CONV}.
 
 \subsubsection{(Partial) evaluation}
 \label{subsubsec:pmatch-cleanup}
-\texttt{PMATCH\_CLEANUP\_CONV} checks for each row of a \pmatch{} case expression, whether it matches.
+The function \texttt{PMATCH\_CLEANUP\_CONV} checks each row of a \pmatch{} case expression and determines whether it matches the tested expression.
 There are three possible outcomes of such a check:
-a proof that the row matches, a proof that the row does not match or that it could not be decided, whether the row matches.
+a proof that the row matches, a proof that the row does not match or that it could not be decided whether the row matches.
 Rows that are proved to not match are removed.
 Similarly, all rows after the first matching row are redundant and are removed.
-If the first remaining row matches, the whole case expression is evaluated.
+If the first remaining row is known to match, the whole case expression is evaluated.
 
 The proof of whether a row matches is attempted using some default proof methods.
 In particular information about datatype constructors is automatically used from \texttt{TypeBase} and \texttt{constrFamiliesLib} (see Sec.~\ref{subsec:pmatch/constrFamily}).
-If used via \texttt{PMATCH_SIMP_ss}, a callback to the simplifier is used.
-The conversion \texttt{PMATCH_CLEANUP_CONV_GEN} is a generalised version of the partial evaluation conversion that allows to manually providing additional ssfrags to the used proof method.
+If used \emph{via} \texttt{PMATCH_SIMP_ss}, a callback to the simplifier is used.
+The conversion \texttt{PMATCH_CLEANUP_CONV_GEN} is a generalised version of the partial evaluation conversion that allows manually providing additional simpset fragments to the used proof method.
 
 In the following example, the first row is removed, because it does not match.
 The second line is kept, since depending on the value of \texttt{y} it might or might not match.
@@ -108,7 +108,8 @@ Similarly, if no row matches, the whole case expression is evaluated.
 
 \subsubsection{Simplifying columns}
 
-Before, we have seen how rows can be removed. \texttt{PMATCH\_SIMP\_COLS\_CONV} allows removing a column of a \pmatch{} case expression.
+Before, we saw how rows can be removed.
+\texttt{PMATCH\_SIMP\_COLS\_CONV} allows removing a column of a \pmatch{} case expression.
 If for all rows a certain column matches the input value for this column, the column can be removed.
 This situation usually arises after removing certain rows from a case expression via partial evaluation.
 
@@ -120,7 +121,7 @@ This situation usually arises after removing certain rows from a case expression
 \end{alltt}
 \end{session}
 
-Similarly, a column is partially evaluated, if all rows contain either a variable, a wildcard or a term of the same constructor in this column.
+Similarly, a column is partially evaluated if all rows contain either a variable, a wildcard or a term of the same constructor in this column.
 
 \begin{session}
 \begin{alltt}
@@ -134,10 +135,10 @@ Similarly, a column is partially evaluated, if all rows contain either a variabl
 \subsubsection{Removing redundant rows}\label{subsec:pmatch/fast-remove-red}
 
 The simplifications above easily lead to case expressions that contain multiple similar rows.
-The conversion \texttt{PMATCH\_REMOVE\_FAST\_REDUNDANT\_CONV} is indented to cleanup such rows.
-A row is called redundant, if each value that matches it, also matches an earlier row.
+The conversion \texttt{PMATCH\_REMOVE\_FAST\_REDUNDANT\_CONV} is intended to cleanup such rows.
+A row is called redundant if each value that matches it also matches an earlier row.
 Redundant rows will never matter and can therefore safely be removed.
-The conversion \texttt{PMATCH\_REMOVE\_FAST\_REDUNDANT\_CONV} checks, whether a pattern of a row is an instance of a pattern of an earlier row.
+Thus the conversion \texttt{PMATCH\_REMOVE\_FAST\_REDUNDANT\_CONV} checks whether a pattern of a row is an instance of a pattern of an earlier row.
 This simple, fast heuristic is sufficient to detect most instances of redundant rows occurring during simplification.
 In the following example, the rows with right-hand-side 2, 4 and 5 are redundant.
 However, this simple heuristic cannot detect that row 5 is redundant.
@@ -155,19 +156,18 @@ A more advanced method for removing redundant rows, which is slower but for exam
 
 \subsubsection{Removing subsumed rows}
 
-Redundant rows are rows that are not needed, because they are shadowed by a later row.
+Redundant rows are rows that are not needed, because they are shadowed by an earlier row.
 Similarly, subsumed rows are rows that can be dropped, because in case they match a later row matches as well and evaluates to the same value.
-It is trickier to check for subsumed rows, because one needs to check that no row in the middle matches and because the right hand side needs to be considered as well.
-\texttt{PMATCH\_REMOVE\_FAST\_SUBSUMED\_CONV ra} removes subsumed rows that can be detected quickly.
+It is trickier to check for subsumed rows, because one needs to check that no row between the subsuming row and the possibly subsumed row matches, and because the right hand sides of the rows need to be considered as well.
+The function \texttt{PMATCH\_REMOVE\_FAST\_SUBSUMED\_CONV} removes subsumed rows that can be detected quickly.
 
 If no row matches, a \pmatch{} case expression evaluates to
 \texttt{ARB}.
-Therefore, a row with right-hand-side \texttt{ARB} is considered
-to be subsumed, if no further row matches.
+Therefore, a row with right-hand-side of \texttt{ARB} is considered
+to be subsumed if no further row matches.
 This is not always what users expect or want.
-For example, it might be unintended to turn an exhaustive pattern match into a non-exhaustive one.
-The argument \texttt{ra} allows to configure, whether such rows are removed.
-The conversion \texttt{PMATCH\_SIMP\_CONV} keeps such rows.
+For example, the user might not want to see an exhaustive pattern match turn into a non-exhaustive one.
+Thus \texttt{PMATCH\_REMOVE\_FAST\_SUBSUMED\_CONV} takes an additional boolean argument \texttt{ra}, which allows one to configure whether such rows are removed.
 
 \begin{session}
 \begin{alltt}
@@ -185,6 +185,7 @@ The conversion \texttt{PMATCH\_SIMP\_CONV} keeps such rows.
    | (x, 5) => ARB``
 \end{alltt}
 \end{session}
+The \texttt{PMATCH\_SIMP\_CONV} conversion keeps such rows.
 \begin{session}
 \begin{alltt}
 >> PMATCH_SIMP_CONV ``case xy of
@@ -196,7 +197,7 @@ The conversion \texttt{PMATCH\_SIMP\_CONV} keeps such rows.
 
 \subsection{Support for \texttt{computeLib}}
 
-The conversion \texttt{PMATCH_CLEANUP_CONV} (see 
+The conversion \texttt{PMATCH_CLEANUP_CONV} (see
 Sec.~\ref{subsubsec:pmatch-cleanup}) is added to the internal
 database of \texttt{computeLib}. This allows the efficient
 evaluation of ground terms that contain \pmatch{} case expressions.
@@ -228,8 +229,8 @@ A typical example is that they need to be removed before code-extraction.\index{
 
 \subsubsection{Normalising pattern variables}
 
-\texttt{PMATCH_REMOVE_DOUBLE_BIND_CONV} and the corresponding \texttt{PMATCH_REMOVE_DOUBLE_BIND_ss} remove variables bound multiple times by a pattern as well as variables not bound by the pattern.
-This is easily achievable by introducing extra variables to the pattern and constraining their value by adding extra conditions to the guard.
+The function \texttt{PMATCH_REMOVE_DOUBLE_BIND_CONV} and the corresponding simpset fragment \texttt{PMATCH_REMOVE_DOUBLE_BIND_ss} remove variables bound multiple times by a pattern as well as variables not bound by the pattern.
+This is easily achievable by introducing extra variables into the pattern and constraining their value by adding extra conditions to the guard.
 \index{PMATCH_REMOVE_DOUBLE_BIND_CONV@\ml{PMATCH\_REMOVE\_DOUBLE\_BIND\_CONV}}
 
 \begin{session}
@@ -245,7 +246,7 @@ This is easily achievable by introducing extra variables to the pattern and cons
 \subsubsection{Removing guards}
 
 Guards can be removed by introducing an if-then-else expression on the right-hand-side.
-The else-part of this if-then-else expression needs to continue the case-split with the rows occurring after the one, whose guard is removed.
+The else-part of this if-then-else expression needs to continue the case-split with the rows occurring after the row whose guard is removed.
 Usually this case expression can be simplified significantly, since we know that the input matches the pattern of the row, whose guard is removed.
 Therefore, the conversion \texttt{PMATCH_REMOVE_GUARDS_CONV} as well as the corresponding \texttt{PMATCH_REMOVE_GUARDS_ss} internally call \texttt{PMATCH_SIMP_CONV}.
 \index{PMATCH_REMOVE_GUARDS_CONV@\ml{PMATCH\_REMOVE\_GUARDS\_CONV}}
@@ -281,11 +282,11 @@ Therefore, the conversion \texttt{PMATCH_REMOVE_GUARDS_CONV} as well as the corr
 
 \subsection{Lifting case expressions}
 
-\HOL{} provides powerful tools for rewriting. 
+\HOL{} provides powerful tools for rewriting.
 Probably the most commonly used way of using case expressions in \HOL{} is at top-level for defining recursive functions.
 Special support in \texttt{Define} turns multiple top-level equations into a decision tree case expressions, uses this case expression for defining an function and then derives top-level equations similar to the input ones.
 Since compilation to decision trees is used, the issues discussed in Sec.~\ref{CaseExp} are present.
-It is sometimes hard to predict, which equations will be generated. 
+It is sometimes hard to predict, which equations will be generated.
 There might be a blow-up in the number of equations.
 Moreover, equations can't overlap and are therefore often unnecessarily complicated.
 
@@ -314,7 +315,7 @@ As an example consider the following definition of a zipping functions for lists
 \end{session}
 
 We can use \pmatch{} case expressions to fight these issues.
-There is, however, no special support for \pmatch{} case expressions build into \texttt{Define}.
+There is, however, no special support for \pmatch{} case expressions built into \texttt{Define}.
 Instead, one needs to define a function with a \pmatch{} case expression on the right-hand-side.
 Using the rule \texttt{PMATCH_TO_TOP_RULE} then produces the desired (conditional) equations.
 \index{Define@\ml{Define}}
@@ -323,7 +324,7 @@ Using the rule \texttt{PMATCH_TO_TOP_RULE} then produces the desired (conditiona
 \begin{session}
 \begin{alltt}
 >>_ val MYZIP3_def = Define `
-  MYZIP3 xl yl = (case (xl, yl) of 
+  MYZIP3 xl yl = (case (xl, yl) of
    | ([], _) => []
    | (_, []) => []
    | (x::xs, y::ys) => (x,y) :: (MYZIP3 xs ys))`
@@ -346,12 +347,12 @@ be as nice.
 
 For the zipping examples the resulting equations are particularly nice.
 In general, conditional equations need to be generated.
-The preconditions state that no previous row matched or that the result of such a matching row coincides the result of the current row.
+The preconditions state that no previous row matched or that the result of such a matching row coincides with the result of the current row.
 
 \begin{session}
 \begin{alltt}
 >>_ val MYZIP4_def = Define `
-  MYZIP4 xl yl = (case (xl, yl) of 
+  MYZIP4 xl yl = (case (xl, yl) of
    | ([], []) => (NONE, [])
    | ([], _) => (SOME T, [])
    | (_, []) => (SOME F, [])
@@ -381,14 +382,14 @@ Moreover, notice that \texttt{PMATCH_LIFT_BOOL_CONV} always tries to lift to the
 \end{session}
 
 
-\subsection{Translating \pmatch{} and decision tree case expression}
+\subsection{Translating \pmatch{} and decision tree case expressions}
 
 As discussed in Sec.~\ref{CaseExp}, there are benefits to both \pmatch{} and decision tree based case expressions.
 Therefore, there are tools for translating between both representations.
 
-\texttt{pmatch2case} uses the pattern compilation algorithm implemented in \HOL{}'s parser to generate decision tree case expressions. 
+The function \texttt{pmatch2case} uses the pattern compilation algorithm implemented in \HOL{}'s parser to generate decision tree case expressions.
 This is done outside the logic without any formal justification.
-However, a brute force method that repeatedly performs case splits and evaluates is sufficient for proving equivalence. 
+However, a brute force method that repeatedly performs case splits and evaluates is sufficient for proving equivalence.
 This leads to \texttt{PMATCH_ELIM_CONV}.
 \index{PMATCH_ELIM_CONV@\ml{PMATCH\_ELIM\_CONV}}
 
@@ -403,9 +404,9 @@ This means that no guards can be used and that all patterns need to be construct
 \end{session}
 
 
-An approach similar to the one implemented in \HOL{}'s pretty printer allows to translate decision tree case expressions to \pmatch{} ones.
-There is \texttt{case2pmatch do_opt}.
-The flag \texttt{do_opt} states whether certain non-trivial optimisations are attempted.
+An approach similar to the one implemented in \HOL{}'s pretty printer allows the translation of decision tree case expressions to equivalent \pmatch{} expressions.
+The underlying function is \texttt{case2pmatch do_opt}, where
+the \texttt{do_opt} flag determines whether certain non-trivial optimisations are attempted.
 The corresponding conversions are named \texttt{PMATCH_INTRO_CONV} and \texttt{PMATCH_INTRO_CONV_NO_OPTIMISE}.
 \index{PMATCH_ELIM_CONV@\ml{PMATCH\_INTRO\_CONV}}
 
@@ -417,7 +418,7 @@ The corresponding conversions are named \texttt{PMATCH_INTRO_CONV} and \texttt{P
 \end{session}
 \begin{session}
 \begin{alltt}
->> PMATCH_INTRO_CONV_NO_OPTIMISE 
+>> PMATCH_INTRO_CONV_NO_OPTIMISE
    ``dtcase (xy:(num option # num list)) of (NONE, x::xs) => 0``
 \end{alltt}
 \end{session}
@@ -425,17 +426,17 @@ The corresponding conversions are named \texttt{PMATCH_INTRO_CONV} and \texttt{P
 \subsection{Pattern Compilation}
 
 \index{pattern compilation|(}
-\texttt{pmatch2case} allows to compile \pmatch{} case expressions into decision tree case expressions. 
-It is fast and the result is usually pretty good. However, it relies on the pattern compilation implementation of \HOL{}'s parser. 
-This has several drawbacks. 
+The \texttt{pmatch2case} function allows \pmatch{} case expressions to be compiled into decision tree case expressions.
+It is fast and the result is usually pretty good. However, it relies on the pattern compilation implementation of \HOL{}'s parser.
+This has several drawbacks.
 The most significant one is that it is an all-or-nothing approach.
 Either the compilation succeeds and we get an equivalent decision tree case expression (without proof) or it fails and one has nothing.
 It is not easily possible to get partial results or use the information obtained during pattern compilation to prove exhaustiveness or find a set of missing patterns.
 With simplification of \pmatch{} case expressions (see Sec.~\ref{subsec:pmatch/simp}) in place, it is straightforward to implement pattern compilation.
 One performs a case-split on one variable occurring in the input of the case expression, simplifies and iterates.
 This is implemented as \texttt{PMATCH_CASE_SPLIT_CONV}.\index{PMATCH_CASE_SPLIT_CONV@\ml{PMATCH\_CASE\_SPLIT\_CONV}}
-Please notice that \texttt{PMATCH_CASE_SPLIT_CONV} has no support for guards or pattern variables bound multiple times. 
-These features need to be removed (see Sec.~\ref{subsec:pmatch/remove-feat}) before calling it. 
+Note that \texttt{PMATCH_CASE_SPLIT_CONV} has no support for guards or pattern variables bound multiple times.
+These features need to be removed (see Sec.~\ref{subsec:pmatch/remove-feat}) before calling it.
 
 \begin{session}
 \begin{alltt}
@@ -445,14 +446,14 @@ These features need to be removed (see Sec.~\ref{subsec:pmatch/remove-feat}) bef
 \end{session}
 
 The trick is to choose which case split to apply next.
-This decision is taken by two mechanisms: 
+This decision is taken by two mechanisms:
 a \emph{column heuristic} picks the column to perform a case split on and the available case-splits are maintained by the \emph{constructor family library}.
 
 \subsubsection{Column Heuristic}
 
-The most important decision during pattern compilation is which column, i.e. which input variable to perform a case split on next.
+The most important decision during pattern compilation is which column, \ie, which input variable to perform a case split on next.
 Different decisions lead to different decision trees, which can differ significantly in size and time needed to evaluate.
-Finding a good column to split on, is not trivial.
+Finding a good column to split on is not trivial.
 Currently, mainly heuristics presented by Maranget~\cite{Maranget2008} are implemented.
 In \HOL{} a column heuristic is a ML function of type \texttt{column_heuristic}.
 Given a list of columns such a heuristic returns the number of the column to perform a split on.
@@ -470,11 +471,11 @@ Figure~\ref{fig:pattern-compilation-column-heuristics} shows the effects of usin
      | (_, _, F) => 3
      | (_, _, T) => 4``
 
->> PMATCH_CASE_SPLIT_CONV_HEU colHeu_first_col t  
+>> PMATCH_CASE_SPLIT_CONV_HEU colHeu_first_col t
 
->> PMATCH_CASE_SPLIT_CONV_HEU colHeu_last_col t  
+>> PMATCH_CASE_SPLIT_CONV_HEU colHeu_last_col t
 
->> PMATCH_CASE_SPLIT_CONV_HEU colHeu_default t 
+>> PMATCH_CASE_SPLIT_CONV_HEU colHeu_default t
 \end{alltt}
 \end{session}
 \caption{Effect of different column heuristics}
@@ -492,14 +493,14 @@ It might for example be desirable to know to how many cases splitting on a colum
 Essentially, one needs to lookup the constructors of a datatype together with its case-constant.
 Moreover, theorems about injectivity and pairwise distinctiveness of the constructors as well as some theorems about the case-constant are needed.
 All this information can be found in \texttt{TypeBase} (see Sec.~\ref{sec:datatype}).
-The pattern compilation algorithm in the parser uses \texttt{TypeBase}. 
+The pattern compilation algorithm in the parser uses \texttt{TypeBase}.
 However, \texttt{patternMatchesLib} has two demands not met by \texttt{TypeBase}.
 For each type, it should be possible to store multiple sets of constructors.
-Moreover, sometimes the case split should not be stored statically but - given a column - be computed dynamically. 
+Moreover, sometimes the case split should not be stored statically but---given a column---be computed dynamically.
 These demands lead to the implementation of \texttt{constrFamiliesLib}.\index{constrFamiliesLib@\ml{constrFamiliesLib}}
 
 The constructor family library \texttt{contrFamiliesLib} is a library for collecting information about constructors and case-splits.
-At its core is the concept of a \textit{constructor family}. 
+At its core is the concept of a \textit{constructor family}.
 A constructor family is a list of functions together with a case-split functions.
 The functions should all be injective and pairwise distinct.
 The case-split function should provide a case-analysis that corresponds with the functions.
@@ -507,22 +508,23 @@ Constructor families can be exhaustive or inexhaustive.
 For inexhaustive ones, the case-split function has to provide an extra \textit{otherwise}-case.
 
 The constructors of datatypes together with the case constant form constructor families.
-The constructors \texttt{[]} and \texttt{CONS} form with \texttt{list_CASE} for example an exhaustive constructor family for lists.
-The information for the constructor families corresponding to the datatype constructors is automatically extracted from \texttt{TypeBase} and available via \texttt{constrFamiliesLib}.
-However, there might be other interesting constructor families. For example, \texttt{[]} and \texttt{SNOC} form together with an appropriate case split function another exhaustive constructor family for lists.
+For example, the constructors \texttt{[]} and \texttt{CONS} with \texttt{list_CASE} for an exhaustive constructor family for lists.
+The information for the constructor families corresponding to the datatype constructors is automatically extracted from \texttt{TypeBase} and available \emph{via} \texttt{constrFamiliesLib}.
+However, there might be other interesting constructor families.
+For example, \texttt{[]} and \texttt{SNOC} together with an appropriate case split function form another exhaustive constructor family for lists.
 \bigskip
 
-First, we need to define a case-split function for \texttt{[]} and \texttt{SNOC}.
+\noindent First, we need to define a case-split function for \texttt{[]} and \texttt{SNOC}.
 \begin{session}
 \begin{alltt}
 >>_ val list_REVCASE_def = Define `
       list_REVCASE l c_nil c_snoc =
         (if l = [] then c_nil else (c_snoc (LAST l) (BUTLAST l)))`
 
->>_ val case_const_tm = 
+>>_ val case_const_tm =
       ``list_REVCASE:'a list -> 'b -> ('a -> 'a list -> 'b) -> 'b``
 \end{alltt}
-\end{session}   
+\end{session}
 %
 Next, we define an exhaustive list of constructors. This is the list of functions combined with names for the arguments of each constructor.
 \begin{session}
@@ -536,7 +538,7 @@ Next, we define an exhaustive list of constructors. This is the list of function
 %
 This enables us to create a constructor family via \texttt{mk_constructorFamily}.
 This requires proving the discussed properties.
-In order to develop the necessary tactic, \texttt{set_constructorFamily} can be used. 
+In order to develop the necessary tactic, \texttt{set_constructorFamily} can be used.
 %
 \begin{session}
 \begin{alltt}
@@ -581,8 +583,8 @@ Consider the example of red-black-trees defined as follows:
 \end{alltt}
 \end{session}
 %
-A lot of functions (e.\,g.\ balancing) tread black nodes and leaves the same.
-However, when compiling corresponding case expressions to decision trees, 3 cases instead the required 2 are produced.
+A lot of functions (\eg, balancing) treat black nodes and leaves the same.
+However, when compiling corresponding case expressions to decision trees, 3 cases instead of the required 2 are produced.
 Defining an inexhaustive constructor family for just the \texttt{RED} constructor solves this issue (see Fig.~\ref{fig:pattern-compilation-inexh-family}).
 
 \begin{figure}[phtb]
@@ -617,13 +619,13 @@ Compiling to decision tree based case expressions is sometimes handy.
 However, computing the patterns corresponding to this decision tree is even more useful, since this set of patterns has very interesting properties.
 It is exhaustive and each pattern in this set is either a subpattern of an input pattern or distinct.
 There are no partial overlaps.
-Even better, whether a output pattern is a subpattern of an input pattern is checkable via simple first order matching.
+Even better, whether a output pattern is a subpattern of an input pattern is checkable \emph{via} simple first order matching.
 
 Let's look at an example. First we compile a case expression to a decision tree.
 %
 \begin{session}
 \begin{alltt}
->> PMATCH_CASE_SPLIT_CONV ``case xy of 
+>> PMATCH_CASE_SPLIT_CONV ``case xy of
   | (SOME x, SOME y) => x + y
   | (_, SOME 0) => 0``
 \end{alltt}
@@ -632,17 +634,17 @@ Let's look at an example. First we compile a case expression to a decision tree.
 We end up with 4 rows in the pretty-printed form of the decision tree case expression.
 These 4 output patterns have the desired properties.
 They are exhaustive and for example \texttt{(NONE, SOME 0)} is a subpattern of \texttt{(_, SOME 0)}, but distinct from \texttt{(SOME x, SOME y)}.
-\texttt{nchotomy_of_pats}\index{nchotomy_of_pats@\ml{nchotomy\_of\_pats}} allows compiling the list of input patterns to an nchotomy-theorem containing exactly these 4 patterns.
+The \texttt{nchotomy_of_pats}\index{nchotomy_of_pats@\ml{nchotomy\_of\_pats}} function compiles the list of input patterns to an nchotomy-theorem containing exactly these 4 patterns.
 %
 \begin{session}
 \begin{alltt}
 >> nchotomy_of_pats [``\(x,y). (SOME (x:num), SOME (y:num))``,
                   ``\(xo:num option). (xo, SOME 0)``]
 \end{alltt}
-\end{session}                
+\end{session}
 
 Such nchotomy theorems are very useful for finding missing patterns, detecting redundant rows and proving exhaustiveness.
-Essentially, one just removes one input pattern after the other by just applying first order matching.
+Essentially, one just removes one input pattern after the other by applying first order matching.
 The patterns that remain are not covered by the input.
 
 \index{pattern compilation|)}
@@ -664,7 +666,7 @@ The conversion \texttt{PMATCH_REMOVE_REDUNDANT_CONV}\index{PMATCH_REMOVE_REDUNDA
 %
 If the redundancy of a row depends not only on patterns, but also guards, the automated method often fails.
 Figure~\ref{fig:pmatch/manual-red} shows an example, where the information that each natural number is either even or odd is needed to show that a row is redundant.
-In such situations, it is often beneficial to combine the automated redundancy removal technique with manual reasoning (see Fig.~\ref{fig:pmatch/manual-red}).
+In such situations, it is often beneficial to combine the automated redundancy removal technique with manual reasoning (as in the figure).
 
 \begin{figure}[phtb]
 \begin{session}
@@ -689,32 +691,32 @@ In such situations, it is often beneficial to combine the automated redundancy r
 
 \subsection{Pattern Match Completion}
 
-The techniques used for computing redundant rows compute implicitly a set of missing patterns.
-\texttt{PMATCH_COMPLETE_CONV}\index{PMATCH_COMPLETE_CONV@\ml{PMATCH\_COMPLETE\_CONV}} and
-\texttt{PMATCH_COMPLETE_ss} use this implicitly computed information to extend case expressions with \texttt{ARB} rows and thereby produce exhaustive \pmatch{} case expressions.
-A flag determines, whether these newly introduced rows should use guards.
+The techniques used for computing redundant rows implicitly compute a set of missing patterns.
+The conversion \texttt{PMATCH_COMPLETE_CONV}\index{PMATCH_COMPLETE_CONV@\ml{PMATCH\_COMPLETE\_CONV}} and
+simpset fragment \texttt{PMATCH_COMPLETE_ss} use this implicitly computed information to extend case expressions with \texttt{ARB} rows and thereby produce exhaustive \pmatch{} case expressions.
+A flag determines whether these newly introduced rows should use guards.
 
 \begin{session}
 \begin{alltt}
->> PMATCH_COMPLETE_CONV true ``case (xy : (num option # num option)) of 
-       (SOME x, NONE) when x > 0 => 0 | (NONE, _) => 1``
+>> PMATCH_COMPLETE_CONV true ``case (xy : (num option # num option)) of
+       (SOME x, NONE) when x > 0 => 0 | (NONE, _) => 1``;
 \end{alltt}
 \end{session}
 \begin{session}
 \begin{alltt}
->> PMATCH_COMPLETE_CONV false ``case (xy : (num option # num option)) of 
-       (SOME x, NONE) when x > 0 => 0 | (NONE, _) => 1``
+>> PMATCH_COMPLETE_CONV false ``case (xy : (num option # num option)) of
+       (SOME x, NONE) when x > 0 => 0 | (NONE, _) => 1``;
 \end{alltt}
-\end{session}     
+\end{session}
 
 \subsection{Exhaustiveness Checks}\label{subsec:pmatch/exhaust}
 
-Similarly, also the exhaustiveness can be derived via pattern compilation.
+Similarly, exhaustiveness can be derived \emph{via} pattern compilation.
 %
 \begin{session}
 \begin{alltt}
->> PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK 
-     ``case (xy : (num option # num option)) of 
+>> PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK
+     ``case (xy : (num option # num option)) of
        (SOME _, _) => 0 | (_, NONE) => 1 | (NONE, SOME _) => 2``
 \end{alltt}
 \end{session}
@@ -723,10 +725,10 @@ Often, the exhaustiveness can be proved much faster by just searching a matching
 %
 \begin{session}
 \begin{alltt}
->> PMATCH_IS_EXHAUSTIVE_FAST_CHECK ``case (x:num option, y:num) of 
+>> PMATCH_IS_EXHAUSTIVE_FAST_CHECK ``case (x:num option, y:num) of
        (SOME _, _) => 0 | (_, _) => 1``
 
->>+ PMATCH_IS_EXHAUSTIVE_FAST_CHECK ``case (xy : (num option # num option)) of 
+>>+ PMATCH_IS_EXHAUSTIVE_FAST_CHECK ``case (xy : (num option # num option)) of
        (SOME _, _) => 0 | (_, NONE) => 1 | (NONE, SOME _) => 2``
 \end{alltt}
 \end{session}
@@ -742,14 +744,14 @@ Missing cases are automatically added.
 %
 \begin{session}
 \begin{alltt}
->> SHOW_NCHOTOMY_CONSEQ_CONV 
+>> SHOW_NCHOTOMY_CONSEQ_CONV
      ``!x:'a list. (x = []) \/ (?e. x = [e]) \/ (?e1 e2 l. x = e1::e2::l)``
 \end{alltt}
 \end{session}
 
 \begin{session}
 \begin{alltt}
->> SHOW_NCHOTOMY_CONSEQ_CONV 
+>> SHOW_NCHOTOMY_CONSEQ_CONV
      ``!x:'a list. (x = []) \/ (?e1 e2 l. x = e1::e2::l)``
 \end{alltt}
 \end{session}
@@ -761,8 +763,8 @@ However, not all case expressions are supported.
 Supported case expressions may only contain constructor patterns and each pattern variable needs to be used exactly once.
 Moreover, when extracting to SML, no guards are allowed.
 
-To check, whether a case expression can be exported, the function \texttt{analyse_pmatch} can be used.
-The flag of this function indicates, whether an exhaustiveness proof should be attempted.
+To check whether a case expression can be exported, the function \texttt{analyse_pmatch} can be used.
+The flag of this function indicates whether an exhaustiveness proof should be attempted.
 
 \begin{session}
 \begin{alltt}
@@ -775,3 +777,8 @@ The flag of this function indicates, whether an exhaustiveness proof should be a
 \end{session}
 
 \index{case expressions|)}
+
+%%% Local variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:
