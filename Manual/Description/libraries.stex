@@ -3255,6 +3255,10 @@ A decision procedure for linear arithmetic on the real numbers
 is also provided by \ml{realLib}, under the name \ml{REAL\_ARITH\_CONV}
 and \ml{REAL\_ARITH\_TAC}.
 
+\section{Pattern Matches Library---\texttt{patternMatchesLib}}\label{sec:PatternMatchesLib}
+\input{PatternMatchesLib.tex}
+
+
 \section{Bit Vector Library---\texttt{wordsLib}}
 
 The library \theoryimp{wordsLib} provides tool support for bit-vectors, this includes facilities for: evaluation, parsing, pretty-printing and simplification.

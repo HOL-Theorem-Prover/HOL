@@ -1,6 +1,6 @@
 INCLUDES = ../Tools
 
-TEX_CORES = description title preface system drules tactics theories definitions libraries misc HolSat
+TEX_CORES = description title preface system drules tactics theories definitions libraries misc HolSat PatternMatchesLib
 
 TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex $(patsubst %,%.tex,$(TEX_CORES))
 
@@ -22,6 +22,9 @@ tactics.tex: tactics.stex $(PS_STUFF)
 theories.tex: theories.stex $(PS_STUFF)
 	$(PS_COMMAND)
 
+PatternMatchesLib.tex: PatternMatchesLib.stex $(PS_STUFF)
+	$(PS_COMMAND)
+
 libraries.tex: libraries.stex $(PS_STUFF)
 	$(PS_COMMAND)
 
@@ -31,7 +34,7 @@ system.tex: system.stex $(PS_STUFF)
 HolSat.tex: HolSat.stex $(PS_STUFF) zchaff.cnf
 	$(PS_COMMAND)
 
-EXTRA_CLEANS = drules.tex tactics.tex theories.tex libraries.tex HolSat.tex \
+EXTRA_CLEANS = drules.tex tactics.tex theories.tex libraries.tex PatternMatchesLib.tex HolSat.tex \
                system.tex\
                description.pdf \
                $(patsubst %,%.aux,$(TEX_CORES)) description.log description.out \
