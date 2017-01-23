@@ -645,6 +645,85 @@ val PMATCH_ROW_REDUNDANT_def = Define `
   (i < LENGTH rs /\ (IS_SOME ((EL i rs) v) ==>
     (?j. ((j < i) /\ IS_SOME ((EL j rs) v))))))`;
 
+val PMATCH_ROW_REDUNDANT_NIL = store_thm ("PMATCH_ROW_REDUNDANT_NIL",
+  ``PMATCH_ROW_REDUNDANT v [] i = F``,
+SIMP_TAC list_ss [PMATCH_ROW_REDUNDANT_def]);
+
+val PMATCH_ROW_REDUNDANT_0 = store_thm ("PMATCH_ROW_REDUNDANT_0",
+  ``PMATCH_ROW_REDUNDANT v (r::rs) 0 <=> (r v = NONE)``,
+SIMP_TAC list_ss [PMATCH_ROW_REDUNDANT_def]);
+
+val PMATCH_ROW_REDUNDANT_SUC = store_thm ("PMATCH_ROW_REDUNDANT_SUC",
+  ``!v r rs i.
+    PMATCH_ROW_REDUNDANT v (r::rs) (SUC i) <=>
+    (((~(r v = NONE)) /\ i < LENGTH rs) \/ PMATCH_ROW_REDUNDANT v rs i)``,
+
+SIMP_TAC (list_ss++boolSimps.EQUIV_EXTRACT_ss) [PMATCH_ROW_REDUNDANT_def] THEN
+REPEAT STRIP_TAC THEN
+EQ_TAC THENL [
+  STRIP_TAC THEN
+  Cases_on `j` THENL [
+    Cases_on `r v` THEN FULL_SIMP_TAC list_ss [],
+
+    Q.RENAME1_TAC `SUC j' < SUC i` THEN
+    DISJ2_TAC THEN
+    Q.EXISTS_TAC `j'` THEN
+    FULL_SIMP_TAC list_ss []
+  ],
+
+  REPEAT STRIP_TAC THENL [
+    Q.EXISTS_TAC `0` THEN
+    Cases_on `r v` THEN FULL_SIMP_TAC list_ss [],
+
+    Q.EXISTS_TAC `SUC j` THEN
+    FULL_SIMP_TAC list_ss []
+  ]
+]);
+
+
+val PMATCH_ROW_REDUNDANT_APPEND_LT = store_thm ("PMATCH_ROW_REDUNDANT_APPEND_LT",
+  ``!v r rs1 rs2 i.
+    i < LENGTH rs1 ==>
+    (PMATCH_ROW_REDUNDANT v (rs1 ++ rs2) i =
+     PMATCH_ROW_REDUNDANT v rs1 i)``,
+SIMP_TAC list_ss [PMATCH_ROW_REDUNDANT_def] THEN
+REPEAT STRIP_TAC THEN
+FULL_SIMP_TAC (list_ss++boolSimps.CONJ_ss) [rich_listTheory.EL_APPEND1]);
+
+val PMATCH_ROW_REDUNDANT_APPEND_GE = store_thm ("PMATCH_ROW_REDUNDANT_APPEND_GE",
+  ``!v r rs1 rs2 i.
+    ~(i < LENGTH rs1) ==>
+    (PMATCH_ROW_REDUNDANT v (rs1 ++ rs2) i <=> (
+     (~(EVERY (\r. r v = NONE) rs1) /\
+        (i < LENGTH rs1 + LENGTH rs2)) \/
+     PMATCH_ROW_REDUNDANT v rs2 (i - LENGTH rs1)))``,
+
+SIMP_TAC list_ss [PMATCH_ROW_REDUNDANT_def, MEM_EL, EXISTS_MEM, GSYM LEFT_EXISTS_AND_THM] THEN
+REPEAT STRIP_TAC THEN
+FULL_SIMP_TAC (list_ss++boolSimps.EQUIV_EXTRACT_ss) [arithmeticTheory.NOT_LESS, rich_listTheory.EL_APPEND2,
+  quantHeuristicsTheory.IS_SOME_EQ_NOT_NONE] THEN
+REPEAT STRIP_TAC THEN
+EQ_TAC THEN STRIP_TAC THENL [
+  Cases_on `j < LENGTH rs1` THENL [
+    FULL_SIMP_TAC list_ss [rich_listTheory.EL_APPEND1] THEN
+    METIS_TAC[],
+
+    FULL_SIMP_TAC list_ss [arithmeticTheory.NOT_LESS, rich_listTheory.EL_APPEND2] THEN
+    DISJ2_TAC THEN
+    Q.EXISTS_TAC `j - LENGTH rs1` THEN
+    FULL_SIMP_TAC arith_ss []
+  ],
+
+  Q.RENAME1_TAC `j' < LENGTH rs1` THEN
+  Q.EXISTS_TAC `j'` THEN
+  ASM_SIMP_TAC arith_ss [rich_listTheory.EL_APPEND1],
+
+
+  Q.EXISTS_TAC `j + LENGTH rs1` THEN
+  ASM_SIMP_TAC list_ss [rich_listTheory.EL_APPEND2]
+]);
+
+
 (* We can accumulate redundancy information for all rows.
    This is done via IS_REDUNDANT_ROWS_INFO v rows c infos.
    If the n-th entry of list infos is true, then the n-th
@@ -668,7 +747,7 @@ val IS_REDUNDANT_ROWS_INFO_def = Define `
 val IS_REDUNDANT_ROWS_INFO_NIL = store_thm (
   "IS_REDUNDANT_ROWS_INFO_NIL",
 ``!v. IS_REDUNDANT_ROWS_INFO v [] T []``,
-SIMP_TAC list_ss [IS_REDUNDANT_ROWS_INFO_def])
+SIMP_TAC list_ss [IS_REDUNDANT_ROWS_INFO_def]);
 
 
 val IS_REDUNDANT_ROWS_INFO_SNOC = store_thm (
@@ -684,24 +763,13 @@ REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC list_ss [IS_REDUNDANT_ROWS_INFO_def, SNOC_APPEND] THEN
 REPEAT STRIP_TAC THEN
 Cases_on `i' < LENGTH infos` THEN1 (
-  Q.PAT_X_ASSUM `!i. _` (MP_TAC o Q.SPEC `i'`) THEN
-  FULL_SIMP_TAC (list_ss++boolSimps.CONJ_ss) [PMATCH_ROW_REDUNDANT_def,
-     rich_listTheory.EL_APPEND1]
+  FULL_SIMP_TAC list_ss [PMATCH_ROW_REDUNDANT_APPEND_LT, rich_listTheory.EL_APPEND1]
 ) THEN
 
 `i' = LENGTH infos` by DECIDE_TAC THEN
-FULL_SIMP_TAC list_ss [rich_listTheory.EL_APPEND2] THEN
-ASM_SIMP_TAC (list_ss++boolSimps.CONJ_ss) [PMATCH_ROW_REDUNDANT_def,
-  rich_listTheory.EL_APPEND2, rich_listTheory.EL_APPEND1] THEN
-Cases_on `c` THEN FULL_SIMP_TAC std_ss [] THEN
-REPEAT STRIP_TAC THEN
-FULL_SIMP_TAC std_ss [EVERY_MEM, MEM_EL] THEN
-Q.EXISTS_TAC `n` THEN
-FULL_SIMP_TAC list_ss [] THEN
-Q.PAT_X_ASSUM `r' = _` (ASSUME_TAC o GSYM) THEN
-Cases_on `r' v` THEN (
-  FULL_SIMP_TAC std_ss []
-))
+Cases_on `c` THEN FULL_SIMP_TAC list_ss [rich_listTheory.EL_APPEND2, PMATCH_ROW_REDUNDANT_APPEND_GE,
+  PMATCH_ROW_REDUNDANT_0]
+);
 
 
 (* However, we still need to specialise this for
@@ -738,36 +806,20 @@ val IS_REDUNDANT_ROWS_INFO_CONS = store_thm (
 EQ_TAC THEN SIMP_TAC list_ss [IS_REDUNDANT_ROWS_INFO_def] THEN
 REPEAT STRIP_TAC THENL [
   Q.PAT_X_ASSUM `!i'. _` (MP_TAC o SPEC ``0``) THEN
-  ASM_SIMP_TAC list_ss [PMATCH_ROW_REDUNDANT_def],
+  ASM_SIMP_TAC list_ss [PMATCH_ROW_REDUNDANT_0],
 
   Q.PAT_X_ASSUM `!i'. _` (MP_TAC o Q.SPEC `SUC i'`) THEN
-  FULL_SIMP_TAC list_ss [PMATCH_ROW_REDUNDANT_def] THEN
-  REPEAT STRIP_TAC THEN
-  FULL_SIMP_TAC std_ss [] THEN
-  Q.PAT_X_ASSUM `row v = NONE` ASSUME_TAC THEN
-  Q.EXISTS_TAC `PRE j` THEN
-  Cases_on `j` THEN (
-    FULL_SIMP_TAC list_ss []
-  ),
+  FULL_SIMP_TAC list_ss [PMATCH_ROW_REDUNDANT_SUC],
 
-  FULL_SIMP_TAC list_ss [PMATCH_ROW_REDUNDANT_def] THEN
   `(i'=0) \/ (?i''. (i' = SUC i''))` by ALL_TAC THENL [
      Cases_on `i'` THEN SIMP_TAC std_ss [],
     FULL_SIMP_TAC list_ss [],
     ALL_TAC
   ] THEN
-  FULL_SIMP_TAC list_ss [] THEN
-  STRIP_TAC THEN
-  Tactical.REVERSE (Cases_on `row v`) THEN1 (
-    Q.EXISTS_TAC `0` THEN
-    ASM_SIMP_TAC list_ss []
-  ) THEN
-  FULL_SIMP_TAC std_ss [] THEN
-  Q.PAT_X_ASSUM `!i. _` (MP_TAC o Q.SPEC `i''`) THEN
-  ASM_SIMP_TAC std_ss [] THEN
-  STRIP_TAC THEN
-  Q.EXISTS_TAC `SUC j` THEN
-  ASM_SIMP_TAC list_ss []
+  FULL_SIMP_TAC list_ss [PMATCH_ROW_REDUNDANT_0, PMATCH_ROW_REDUNDANT_SUC] THEN
+  Tactical.REVERSE (Cases_on `row v`) THEN (
+    FULL_SIMP_TAC std_ss []
+  )
 ])
 
 

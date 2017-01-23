@@ -4,6 +4,7 @@ open quantHeuristicsLib simpLib boolSimps listTheory
 open BasicProvers
 open testutils
 
+
 val hard_fail = true;
 val _ = really_die := true;
 val quiet = false;
@@ -21,28 +22,21 @@ val _ = Parse.current_backend := PPBackEnd.emacs_terminal;
 val _ = patternMatchesLib.ENABLE_PMATCH_CASES ();
 val list_ss  = numLib.arith_ss ++ listSimps.LIST_ss
 
-
-fun test_conv_gen dest s conv (t, r_opt) =
+fun test_gen print_inp print_res print_out check_res s f (inp, out_opt) =
 let
     open PPBackEnd Parse
-    val _ = print (if quiet then "``" else "Testing "^s^" ``");
-    val _ = print_term t;
-    val _ = print ("``\n   ");
+    val _ = print (if quiet then "" else "Testing "^s^" ");
+    val _ = print_inp inp;
+    val _ = print ("\n   ");
     val ct = Timer.startCPUTimer();
-    val thm_opt = SOME (conv t) handle Interrupt => raise Interrupt
-                                     | _ => NONE;
+    val res_opt = SOME (f inp) handle Interrupt => raise Interrupt
+                                      | _ => NONE;
 
-    val ok = if not (isSome r_opt) then not (isSome thm_opt) else
-             isSome thm_opt andalso
-             let
-                val thm_t = concl (valOf thm_opt);
-                val (t'_opt, r') = dest thm_t;
-             in
-               (aconv r' (valOf r_opt)) andalso
-               case t'_opt of
-                    SOME t' => (aconv t' t)
-                  | _ => true
-             end handle HOL_ERR _ => false
+    val ok = if not (isSome out_opt) then not (isSome res_opt) else
+             isSome res_opt andalso
+             (
+                check_res (inp, (valOf out_opt), (valOf res_opt))
+             ) handle HOL_ERR _ => false
     val quiet = quiet andalso ok
     val _ = if ok then
                print_with_style [FG Green] "OK "
@@ -56,11 +50,11 @@ let
     val _ = if quiet then () else
        let
           val _ = print "---> ";
-          val _ = if isSome thm_opt then (print_thm (valOf thm_opt);print "\n")
+          val _ = if isSome res_opt then (print_res (valOf res_opt);print "\n")
                   else print "-\n"
           val _ = if (not ok) then
                      (print "   EXPECTED ";
-                      if isSome r_opt then (print "``";print_term (valOf r_opt);print "``\n")
+                      if isSome out_opt then (print "``";print_out (valOf out_opt);print "``\n")
                       else print "-\n")
                   else ()
        in () end
@@ -70,11 +64,14 @@ in
     ()
 end;
 
+fun print_term' t = (print "``"; print_term t; print "``");
 
-val test_conv = test_conv_gen (fn t => let
-  val (l, r) = dest_eq t
+val test_term_thm_gen = test_gen print_term' print_thm print_term'
+
+val test_conv = test_term_thm_gen (fn (inp, out, res) => let
+  val (l, r) = dest_eq (concl res)
 in
-  (SOME l, r)
+  (aconv l inp andalso aconv r out)
 end)
 
 
@@ -738,6 +735,27 @@ val _ = test_conv "DEPTH_CONV (PMATCH_LIFT_BOOL_CONV true)" (DEPTH_CONV (PMATCH_
    (!x xs y ys. (l1 = x::xs) /\ (l2 = y::ys) ==> P [(x,y)]))``)
 
 
+val _ = test_conv "DEPTH_CONV (PMATCH_LIFT_BOOL_CONV false)" (DEPTH_CONV (PMATCH_LIFT_BOOL_CONV false)) (``P1 /\ (P (case (l1:'a list, l2:'c list) of
+  | ([], _) => ([]:'b list)
+  | (_, []) => [])):bool``,
+  SOME ``P1 /\ ((l1 = ([] :'a list)) ==> P ([] :'b list)) /\
+   ((l2 = ([] :'c list)) ==> P ([] :'b list)) /\
+   (~PMATCH_IS_EXHAUSTIVE (l1,l2)
+       [PMATCH_ROW (\(_0 :'c list). (([] :'a list),_0))
+          (\(_0 :'c list). T) (\(_0 :'c list). ([] :'b list));
+        PMATCH_ROW (\(_0 :'a list). (_0,([] :'c list)))
+          (\(_0 :'a list). T) (\(_0 :'a list). ([] :'b list))] ==>
+    P (ARB :'b list))``)
+
+val _ = test_conv "DEPTH_CONV (PMATCH_LIFT_BOOL_CONV true)" (DEPTH_CONV (PMATCH_LIFT_BOOL_CONV true)) (``P1 /\ (P (case (l1:'a list, l2:'c list) of
+  | ([], _) => ([]:'b list)
+  | (_, []) => [])):bool``,
+  SOME ``P1 /\ (((l1:'a list) = []) ==> P ([]:'b list)) /\ (((l2:'c list) = []) ==> P []) /\
+   (PMATCH_ROW_COND_EX (l1,l2) (\(v2,v3,v6,v7). (v2::v3,v6::v7))
+      (\(v2,v3,v6,v7). T) ==>
+    P ARB)``)
+
+
 val _ = Datatype.Datatype `
   tree = Empty
        | Red tree 'a tree
@@ -1002,6 +1020,48 @@ val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
 
 
 (*********************************)
+(* Compilation to nchotomies     *)
+(*********************************)
+
+val test_nchot = test_gen (fn l => (
+  print "[";
+  Portable.pr_list print_term' (fn () => print ", ") (fn () => ()) l;
+  print "]"))
+  print_thm print_term' (fn (inp, out, res) => aconv  out (concl res))
+  "nchotomy_of_pats" nchotomy_of_pats
+
+
+val _ =  test_nchot ([``\x:unit. (NONE : num option)``,
+   ``\x:num. SOME x``] , SOME ``!x. (x = NONE) \/ ?v1:num. x = SOME v1``)
+
+val _ =  test_nchot ([``\x:num. x``, ``\x:num. x``],
+  SOME ``!x. ?v0:num. x = v0``)
+
+val _ =  test_nchot ([
+   ``\v:bool. (v, F, T)``,
+   ``\v:bool. (F, T, v)``,
+   ``\(v1:bool, v2:bool). (v1, v2, F)``,
+   ``\(v1:bool, v2:bool). (v1, v2, F)``],
+   SOME ``!x.
+     (x = (T,T,T)) \/ (x = (T,T,F)) \/ (x = (F,T,T)) \/ (x = (F,T,F)) \/
+     (?v0. x = (v0,F,T)) \/ ?v0. x = (v0,F,F)``)
+
+val _ =  test_nchot ([
+   ``\(x:num, y:num). (SOME x, SOME y)``,
+   ``\(x : num option, y : num option). (x, y)``],
+   SOME ``!x.
+     (?v1. x = (NONE,v1)) \/ (?v2. x = (SOME v2,NONE)) \/
+     ?(v2:num) (v3:num). x = (SOME v2,SOME v3)``)
+
+val _ =  test_nchot ([``\_:unit. 3``, ``\x:num. x``], SOME (
+  ``!x. (x = 3) \/ ?v1. v1 <> 3 /\ (x = v1)``))
+
+val _ =  test_nchot ([``\_:unit. 0``, ``\_:unit. SUC 0``, ``\_:unit. SUC (SUC 0)``], SOME (
+  ``!x. (x = 0) \/ (x = SUC 0) \/ (x = SUC (SUC 0)) \/
+     ?v3. x = SUC (SUC (SUC v3))``))
+
+
+(*********************************)
 (* Fancy redundancy removal      *)
 (*********************************)
 
@@ -1030,16 +1090,16 @@ val _ = test_conv "PMATCH_REMOVE_REDUNDANT_CONV" PMATCH_REMOVE_REDUNDANT_CONV (t
 (* Exhaustiveness                *)
 (*********************************)
 
-val test_precond = test_conv_gen (fn t => let
-  val (p, c) = dest_imp_only t
+val test_precond = test_term_thm_gen (fn (inp, out, res) => let
+  val (r, _) = dest_imp_only (concl res)
 in
-  (NONE, p)
+  (aconv r out)
 end)
 
-val test_rhs = test_conv_gen (fn t => let
-  val (p, c) = dest_eq t
+val test_rhs = test_term_thm_gen (fn (inp, out, res) => let
+  val (_, r) = dest_eq (concl res)
 in
-  (NONE, c)
+  (aconv r out)
 end)
 
 val t =
@@ -1053,13 +1113,15 @@ val t =
        (\((_3 :'b),(_2 :'a option)). T)
        (\((_3 :'b),(_2 :'a option)). (2 :num))]``;
 
-val _ = test_precond "PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK (t, SOME ``~F``)
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK (t, SOME ``~F``)
 
 val _ = test_precond "PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK (t, SOME ``~F``)
 
 val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_CHECK" PMATCH_IS_EXHAUSTIVE_CHECK (t, SOME T)
 
 val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_FAST_CHECK" PMATCH_IS_EXHAUSTIVE_FAST_CHECK (t, NONE)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK (t, SOME T)
 
 
 val t =
@@ -1073,7 +1135,7 @@ val t =
        (\((_3 :'b option),(_2 :'a option)). T)
        (\((_3 :'b option),(_2 :'a option)). (2 :num))]``;
 
-val _ = test_precond "PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK (t, SOME ``~F``)
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK (t, SOME ``~F``)
 
 val _ = test_precond "PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK (t, SOME ``~F``)
 
@@ -1081,16 +1143,20 @@ val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_CHECK" PMATCH_IS_EXHAUSTIVE_CHECK (t, SOM
 
 val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_FAST_CHECK" PMATCH_IS_EXHAUSTIVE_FAST_CHECK (t, SOME T)
 
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK (t, SOME T)
+
 
 val t =``PMATCH xy []``;
 
-val _ = test_precond "PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK (t, NONE)
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK (t, NONE)
 
 val _ = test_precond "PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK (t, SOME ``F``)
 
 val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_CHECK" PMATCH_IS_EXHAUSTIVE_CHECK (t, SOME F)
 
 val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_FAST_CHECK" PMATCH_IS_EXHAUSTIVE_FAST_CHECK (t, SOME F)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK (t, NONE)
 
 
 val t =
@@ -1110,15 +1176,17 @@ val t' = ``PMATCH (x,z)
       PMATCH_ROW (\(v3 :'a). (SOME v3,(NONE :'b option))) (\(v3 :'a). T)
         (\(v3 :'a). (ARB :num))]``
 
-val _ = test_precond "PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK (t, SOME ``~PMATCH_ROW_COND_EX (x,z) (\v3. (SOME v3,NONE)) (\v3. T)``)
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK (t, SOME ``~PMATCH_ROW_COND_EX (x,z) (\v3. (SOME v3,NONE)) (\v3. T)``)
 
 val _ = test_precond "PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK (t, SOME ``~PMATCH_ROW_COND_EX (x,z) (\v3. (SOME v3,NONE)) (\v3. T)``)
 
-val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_CHECK" PMATCH_IS_EXHAUSTIVE_CHECK (t, NONE)
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_CHECK" PMATCH_IS_EXHAUSTIVE_CHECK (t, SOME ``~PMATCH_ROW_COND_EX (x,z) (\v3. (SOME v3,NONE)) (\v3. T)``)
 
 val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_FAST_CHECK" PMATCH_IS_EXHAUSTIVE_FAST_CHECK (t, NONE)
 
 val _ = test_conv "PMATCH_COMPLETE_CONV true" (PMATCH_COMPLETE_CONV true) (t, SOME t')
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK (t, SOME ``~PMATCH_ROW_COND_EX (x,z) (\v3. (SOME v3,NONE)) (\v3. T)``)
 
 val t =
    ``PMATCH (SOME x, NONE)
@@ -1128,13 +1196,16 @@ val t =
        (\((_3 :'b),(_2 :'a option)). T)
        (\((_3 :'b),(_2 :'a option)). (2 :num))]``;
 
-val _ = test_precond "PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK (t, SOME ``~PMATCH_ROW_COND_EX (SOME x,NONE) (\v3. (SOME v3,NONE)) (\v3. T)``)
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK (t, SOME ``~PMATCH_ROW_COND_EX (SOME x,NONE) (\v3. (SOME v3,NONE)) (\v3. T)``)
 
 val _ = test_precond "PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK (t, SOME ``F``)
 
 val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_CHECK" PMATCH_IS_EXHAUSTIVE_CHECK (t, SOME F)
 
 val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_FAST_CHECK" PMATCH_IS_EXHAUSTIVE_FAST_CHECK (t, SOME F)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK (t, SOME
+``~PMATCH_ROW_COND_EX (SOME x,NONE) (\v3. (SOME v3,NONE)) (\v3. T)``)
 
 
 val t =
@@ -1145,7 +1216,7 @@ val t =
        (\((_3 :'b),(_2 :'a option)). T)
        (\((_3 :'b),(_2 :'a option)). (2 :num))]``;
 
-val _ = test_precond "PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK (t, SOME ``~PMATCH_ROW_COND_EX (NONE,SOME b) (\v3. (SOME v3,NONE)) (\v3. T)``)
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK (t, SOME ``~PMATCH_ROW_COND_EX (NONE,SOME b) (\v3. (SOME v3,NONE)) (\v3. T)``)
 
 val _ = test_precond "PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK (t, SOME ``~F``)
 
@@ -1153,6 +1224,7 @@ val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_CHECK" PMATCH_IS_EXHAUSTIVE_CHECK (t, SOM
 
 val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_FAST_CHECK" PMATCH_IS_EXHAUSTIVE_FAST_CHECK (t, SOME T)
 
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK (t, SOME T)
 
 
 val t = ``PMATCH ((x :'a option),(z :'b option))
@@ -1178,15 +1250,18 @@ val t' = ``PMATCH (x,z)
       PMATCH_ROW (\(v3 :'b). ((NONE :'a option),SOME v3)) (\(v3 :'b). T)
         (\(v3 :'b). (ARB :num))]``;
 
-val _ = test_precond "PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK (t, SOME `` ~PMATCH_ROW_COND_EX (x,z) (\v3. (NONE,SOME v3)) (\v3. T)``)
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK (t, SOME `` ~PMATCH_ROW_COND_EX (x,z) (\v3. (NONE,SOME v3)) (\v3. T)``)
 
 val _ = test_precond "PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK (t, SOME `` ~PMATCH_ROW_COND_EX (x,z) (\v3. (NONE,SOME v3)) (\v3. T)``)
 
-val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_CHECK" PMATCH_IS_EXHAUSTIVE_CHECK (t, NONE)
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_CHECK" PMATCH_IS_EXHAUSTIVE_CHECK (t, SOME p)
 
 val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_FAST_CHECK" PMATCH_IS_EXHAUSTIVE_FAST_CHECK (t, NONE)
 
 val _ = test_conv "PMATCH_COMPLETE_CONV true" (PMATCH_COMPLETE_CONV true) (t, SOME t')
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK (t, SOME p)
+
 
 (*********************************)
 (* EVAL                          *)

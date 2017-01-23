@@ -635,8 +635,12 @@ end
 
 fun lookup_constructorFamily force_exh (db : pmatch_compile_db) col = let
   val _ = if (List.null col) then (failwith "constructorFamiliesLib" "lookup_constructorFamilies: null col") else ()
-  val ty = type_of (snd (hd col))
 
+  val _ = if List.all (fn (vs, c) => is_var c andalso Lib.mem c vs) col then
+            (failwith "constructorFamiliesLib" "lookup_constructorFamilies: var col")
+          else ()
+
+  val ty = type_of (snd (hd col))
   val cts_fams = lookup_constructorFamilies_for_type db ty
   val cts_fams' = if not force_exh then
      cts_fams
@@ -888,7 +892,7 @@ fun literals_nchotomy_fun (col:(term list * term) list) = let
 
   val nchot_tm = list_mk_disj (lit_tms @ [wc_tm])
   val nchot_thm = prove(nchot_tm,
-    SIMP_TAC std_ss [] THEN
+    CONV_TAC (DEPTH_CONV Unwind.UNWIND_EXISTS_CONV) THEN
     EVERY (List.map (fn t =>
        (BOOL_CASES_TAC t THEN REWRITE_TAC[])) lit_tms))
   val nchot_thm' = GEN split_arg nchot_thm

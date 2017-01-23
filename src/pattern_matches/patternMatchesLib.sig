@@ -457,14 +457,24 @@ sig
      functions compute an implication, whose conclusion is the
      exhaustiveness of the PMATCH. *)
 
-   val PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK : term -> thm
-   val PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK_GEN :
+  val PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK : term -> thm
+  val PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_GEN :
      ssfrag list -> term -> thm
-   val PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK_FULLGEN :
+  val PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_FULLGEN :
      constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
      (ssfrag list * conv option) -> term -> thm
 
-   (* Computing the IS_REDUNDANT_ROWS_INFO takes time and
+  (* One can usually even derive an equality.  *)
+
+  val PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK : term -> thm
+  val PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_GEN :
+     ssfrag list -> term -> thm
+  val PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_FULLGEN :
+     constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+     (ssfrag list * conv option) -> term -> thm
+
+
+  (* Computing the IS_REDUNDANT_ROWS_INFO takes time and
       is often not necessary. Many pattern matches contain
       for example and catch-all pattern as the last row.
       The following functions try to compute the redundancy
@@ -479,8 +489,7 @@ sig
 
       So, this time, there is an equation, not an implication
       and the right-hand-side is always T or F.
-    *)
-
+   *)
    val PMATCH_IS_EXHAUSTIVE_FAST_CHECK : term -> thm
    val PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GEN : ssfrag list -> term -> thm
 

@@ -2652,6 +2652,7 @@ val t = ``case (x, z) of
 fun IS_REDUNDANT_ROWS_INFO_WEAKEN_RULE info_thm = let
   val (conds, _) = listSyntax.dest_list (rand (concl info_thm))
   val conds' = List.map (fn c => if (aconv c T) then T else F) conds
+  val _ = if exists (aconv T) conds' then () else raise UNCHANGED
   val conds'_tm = listSyntax.mk_list (conds', bool)
 
   val thm00 = REDUNDANT_ROWS_INFOS_CONJ_THM
@@ -2788,31 +2789,63 @@ in
   thm0
 end
 
-fun PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK_FULLGEN db col_heu rc_arg t = let
+fun PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_FULLGEN db col_heu rc_arg t = let
   val info_thm = COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH_GENCALL rc_arg db col_heu t
 in
   IS_REDUNDANT_ROWS_INFO_TO_PMATCH_IS_EXHAUSTIVE info_thm
 end
 
-fun PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK_GENCALL rc_arg t =
-  PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK_FULLGEN
+fun PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_GENCALL rc_arg t =
+  PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_FULLGEN
     (!thePmatchCompileDB) colHeu_default rc_arg t
 
-fun PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK_GEN ssl =
-  PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK_GENCALL (ssl, NONE)
+fun PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_GEN ssl =
+  PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_GENCALL (ssl, NONE)
 
-val PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK =
-  PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK_GEN [];
+val PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK =
+  PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_GEN [];
+
+
+val IMP_TO_EQ_THM = prove (``!P Q. (P ==> Q) ==> (~P ==> ~Q) ==> (Q <=> P)``, PROVE_TAC[])
+
+fun PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_FULLGEN db col_heu rc_arg t = let
+  val thm0 = PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_FULLGEN db col_heu rc_arg t
+in
+  let
+    val thm = rc_elim_precond rc_arg thm0
+  in
+    EQT_INTRO thm
+  end handle HOL_ERR _ => let
+    val thm1 = MATCH_MP IMP_TO_EQ_THM thm0
+
+    val (precond, _) = dest_imp_only (concl thm1)
+    val pre_thm = prove_attempt (precond,
+      REWRITE_TAC[PMATCH_IS_EXHAUSTIVE_REWRITES, PMATCH_ROW_EQ_NONE, PMATCH_ROW_COND_EX_def,
+        DISJ_IMP_THM, GSYM LEFT_FORALL_IMP_THM] THEN
+      SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [PMATCH_ROW_COND_DEF_GSYM] THEN
+      rc_tac rc_arg)
+
+    val thm2 = MP thm1 pre_thm
+  in
+    thm2
+  end
+end
+
+fun PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_GENCALL rc_arg t =
+  PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_FULLGEN
+    (!thePmatchCompileDB) colHeu_default rc_arg t
+
+fun PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_GEN ssl =
+  PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_GENCALL (ssl, NONE)
+
+val PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK =
+  PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_GEN [];
 
 
 fun PMATCH_IS_EXHAUSTIVE_CHECK_FULLGEN db col_heu rc_arg t =
   QCHANGED_CONV (PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GENCALL rc_arg) t
-  handle HOL_ERR _ => let
-    val thm_ex0 = PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK_FULLGEN db col_heu rc_arg t
-    val thm_ex = rc_elim_precond rc_arg thm_ex0
-  in
-    EQT_INTRO thm_ex
-  end
+  handle HOL_ERR _ =>
+    PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_FULLGEN db col_heu rc_arg t;
 
 fun PMATCH_IS_EXHAUSTIVE_CHECK_GENCALL rc_arg t =
   PMATCH_IS_EXHAUSTIVE_CHECK_FULLGEN (!thePmatchCompileDB) colHeu_default rc_arg t
@@ -2842,7 +2875,7 @@ fun PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_FULLGEN db col_heu rc_arg t = let
       (MP (SPEC r (SPEC ex_t EQ_O_ELIM)) thm0)
     )
   end handle HOL_ERR _ =>
-    PMATCH_IS_EXHAUSTIVE_FULL_CONSEQ_CHECK_FULLGEN db col_heu rc_arg t;
+    PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_FULLGEN db col_heu rc_arg t;
 end;
 
 
