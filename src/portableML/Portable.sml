@@ -570,6 +570,11 @@ in
       fromReal (Real.+ (Arbnum.toReal sec, Arbnum.toReal usec / 1000000.0))
    fun time_eq (t1:time) t2 = (t1 = t2)
    fun time_lt (t1:time) t2 = Time.<(t1,t2)
+   fun time_max (t1,t2) = if time_lt t1 t2 then t2 else t1
+   fun time_maxl l =
+     case l of
+         [] => Time.zeroTime
+       | h::t => List.foldl time_max h t
 end
 
 (*---------------------------------------------------------------------------*
