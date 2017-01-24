@@ -49,7 +49,7 @@ elf = os.path.abspath(args.filename)
 output_file = os.path.abspath(args.filename + '_output.txt')
 
 ml_input = """
-use "writerLib"; load "decompileLib";
+load "decompileLib";
 val _ = decompileLib.decomp "{0}" {1} "{2}";
 """
 
