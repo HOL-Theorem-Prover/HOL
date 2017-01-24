@@ -461,6 +461,25 @@ in
   recurse (false, false, ss)
 end
 
+local
+  fun split p = let val {base, ext} = OS.Path.splitBaseExt p in (base, ext) end
+in
+  fun target_string l =
+    let
+      val (names, e) = ListPair.unzip (List.map split l)
+      val exts = List.mapPartial (fn x => x) e
+      val n = List.length exts
+    in
+      case names of
+         [] => ""
+       | [_] => List.hd l
+       | h :: t => if List.all (fn x => x = h) t andalso List.length e = n
+                     then if n = 2 andalso String.isSuffix "Theory" h
+                            then h
+                          else h ^ ".{" ^ String.concatWith "," exts ^ "}"
+                   else String.concatWith " " l
+    end
+end
 
 type include_info = {includes : string list, preincludes : string list }
 type 'dir holmake_dirinfo = {visited : hmdir.t Binaryset.set, includes : 'dir list,

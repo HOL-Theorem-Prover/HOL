@@ -108,6 +108,9 @@ sig
   val process_hypat_options :
       string -> {noecho : bool, ignore_error : bool, command : string}
 
+  (* nicely format a list of makefile targets *)
+  val target_string : string list -> string
+
   val maybe_recurse :
       {warn: string -> unit,
        diag : string -> unit,

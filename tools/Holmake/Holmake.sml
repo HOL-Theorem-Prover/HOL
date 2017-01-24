@@ -474,7 +474,7 @@ in
          no_full_extra_rule target
          (* path outside of current directory *)
       then
-        add_node {target = target_s, seqnum = 0,
+        add_node {target = target_s, seqnum = 0, phony = false,
                   status = if exists_readable target_s then Succeeded
                            else Failed,
                   command = NoCmd, dependencies = []} g0
@@ -503,7 +503,7 @@ in
               List.exists (fn d => d forces_update_of target_s)
                           (fromFile pdep :: map fromFile secondaries)
         in
-            add_node {target = target_s, seqnum = 0,
+            add_node {target = target_s, seqnum = 0, phony = false,
                       status = if needs_building then Pending else Succeeded,
                       command = BuiltInCmd,
                       dependencies = depnodes } g2
@@ -511,7 +511,7 @@ in
       else
         case extra_rule_for target_s of
             NONE =>
-              add_node {target = target_s, seqnum = 0,
+              add_node {target = target_s, seqnum = 0, phony = false,
                         status = if exists_readable target_s then Succeeded
                                  else Failed,
                         command = NoCmd,
@@ -533,18 +533,19 @@ in
                                              stat = Pending orelse stat = Failed
                                            end)
                               depnodes
+              val is_phony = isPHONY target_s
               val needs_building =
                   (not (OS.FileSys.access(target_s, [])) orelse
                    not (null unbuilt_deps) orelse
                    List.exists (fn d => d forces_update_of target_s)
                                dependencies orelse
-                   isPHONY target_s) andalso
+                   is_phony) andalso
                   not (null commands)
               val status = if needs_building then Pending else Succeeded
               fun foldthis (c, (depnode, seqnum, g)) =
                 let
                   val (g',n) = add_node {target = target_s, seqnum = seqnum,
-                                         status = status,
+                                         status = status, phony = is_phony,
                                          command = SomeCmd c,
                                          dependencies = depnode @ depnodes } g
                 in
@@ -565,7 +566,7 @@ in
                   (g, #1 (hd lastnodelist))
                 end
               else
-                add_node {target = target_s, seqnum = 0,
+                add_node {target = target_s, seqnum = 0, phony = is_phony,
                           status = status, command = NoCmd,
                           dependencies = depnodes} g1
             end

@@ -91,7 +91,37 @@ fun addPath I file =
          | SOME p => OS.Path.concat (p, file)
     end;
 
-fun poly_compile diag quietp file I deps = let
+fun time_max(t1,t2) = if Time.<(t1,t2) then t2 else t1
+
+fun finish_compilation warn depMods0 filename tgt =
+  case OS.Process.getEnv Systeml.build_after_reloc_envvar of
+      NONE => OS.Process.success
+    | SOME "1" =>
+      let
+        val filename_base = OS.Path.base filename
+        val depMods = List.filter (fn s => s <> filename_base) depMods0
+        fun getFTime fname =
+          SOME (OS.FileSys.modTime fname) handle OS.SysErr _ => NONE
+        fun combine fname t =
+          case getFTime fname of NONE => t | SOME t0 => time_max(t0,t)
+        fun foldthis (modn, t) =
+          t |> combine (modn ^ ".uo") |> combine (modn ^ ".ui")
+        val startTime =
+            case getFTime filename of
+                NONE => (warn("Can't see base file " ^ filename ^
+                              " though I just compiled it??");
+                         Time.zeroTime)
+              | SOME t => t
+      in
+        OS.FileSys.setTime (tgt, SOME (List.foldl foldthis startTime depMods));
+        OS.Process.success
+      end
+    | SOME s =>
+      (warn ("Ignoring strange value (" ^ s ^ ") in " ^
+             Systeml.build_after_reloc_envvar ^ " environment variable");
+       OS.Process.success)
+
+fun poly_compile warn diag quietp file I deps = let
   val modName = fromFileNoSuf file
   val deps = let
     open Binaryset
@@ -111,20 +141,25 @@ fun poly_compile diag quietp file I deps = let
   val say = if quietp then (fn s => ())
             else (fn s => TextIO.output(TextIO.stdOut, s ^ "\n"))
   val _ = say ("HOLMOSMLC -c " ^ fromFile file)
+  val filename = addPath [] (fromFile file)
 in
 case file of
   SIG _ =>
-    (let val outUi = TextIO.openOut (modName ^ ".ui")
+    (let
+      val tgt = modName ^ ".ui"
+      val outUi = TextIO.openOut tgt
      in
        TextIO.output (outUi, String.concatWith "\n" depMods);
        TextIO.output (outUi, "\n");
-       TextIO.output (outUi, addPath [] (fromFile file) ^ "\n");
+       TextIO.output (outUi, filename ^ "\n");
        TextIO.closeOut outUi;
-       OS.Process.success
+       finish_compilation warn depMods filename tgt
      end
      handle IO.Io _ => OS.Process.failure)
 | SML _ =>
-    (let val outUo = TextIO.openOut (modName ^ ".uo")
+    (let
+      val tgt = modName ^ ".uo"
+      val outUo = TextIO.openOut tgt
      in
        TextIO.output (outUo, String.concatWith "\n" depMods);
        TextIO.output (outUo, "\n");
@@ -137,7 +172,7 @@ case file of
           in
             TextIO.closeOut outUi
           end);
-       OS.Process.success
+       finish_compilation warn depMods filename tgt
      end
      handle IO.Io _ => OS.Process.failure)
 | _ => raise Match
@@ -298,7 +333,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                     (warn ("Wanted to compile "^file^
                             ", but it wasn't there\n");
                      raise FileNotFound)
-            val res = poly_compile diag true arg include_flags deps
+            val res = poly_compile warn diag true arg include_flags deps
           in
             if OS.Process.isSuccess res then BR_OK else BR_Failed
           end
@@ -356,7 +391,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       in
         case process_mosml_args outs (if isHolmosmlcc then " -c " ^ c else c) of
             (Mosml_compile (objs, src), I) =>
-            SOME (poly_compile diag (noecho orelse quiet_flag)
+            SOME (poly_compile warn diag (noecho orelse quiet_flag)
                                (toFile src)
                                I
                                (deps @ objs))

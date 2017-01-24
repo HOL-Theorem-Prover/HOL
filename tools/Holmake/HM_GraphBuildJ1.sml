@@ -47,6 +47,11 @@ fun fail (outs : Holmake_tools.output_functions) g =
         end
   end
 
+fun is_heap_only() =
+  case OS.Process.getEnv Systeml.build_after_reloc_envvar of
+      SOME "1" => true
+    | _ => false
+
 fun graphbuildj1 static_info =
   let
     val {build_command, mosml_build_command, outs, keep_going,
@@ -68,6 +73,7 @@ fun graphbuildj1 static_info =
               let
                 val deps = map #2 (#dependencies nI)
                 val depfs = map toFile deps
+                val target_s = target_string (#target nI)
                 fun k res =
                   let
                     val g = updnode(n, if res then Succeeded else Failed) g
@@ -76,57 +82,78 @@ fun graphbuildj1 static_info =
                     else if keep_going then recurse OS.Process.failure g
                     else fail outs g
                   end
+                fun stdprocess () =
+                  case #command nI of
+                      BuiltInCmd =>
+                      (diag("J1Build: Running built-in command on " ^
+                            String.concatWith " " (#target nI));
+                       case #target nI of
+                           [f] =>
+                           (case toFile f of
+                                UI c => k (bc (Compile depfs) (SIG c))
+                              | UO c => k (bc (Compile depfs) (SML c))
+                              | ART (RawArticle s) =>
+                                  k (bc (BuildArticle(s,depfs))
+                                        (SML (Script s)))
+                              | ART (ProcessedArticle s) =>
+                                  k (bc (ProcessArticle s) (ART (RawArticle s)))
+                              | _ => raise Fail ("bg tgt = " ^ f))
+                         | [thyfile, _] =>
+                           let
+                             val thyname = extract_thypart thyfile
+                           in
+                             k (bc (BuildScript(thyname, depfs))
+                                   (SML (Script thyname)))
+                           end
+                         | ts =>
+                           raise Fail ("implicit bg targets: " ^
+                                       String.concatWith ", " ts))
+                    | SomeCmd c =>
+                      let
+                        val hypargs as {noecho,ignore_error,command=c} =
+                            process_hypat_options c
+                      in
+                        case mosml_build_command hmenv hypargs depfs of
+                            SOME r => k (OS.Process.isSuccess r)
+                          | NONE =>
+                            let
+                              val () =
+                                  if not noecho andalso not quiet then
+                                    (TextIO.output(TextIO.stdOut, c ^ "\n");
+                                     TextIO.flushOut TextIO.stdOut)
+                                  else ()
+                              val result = Systeml.system_ps c
+                              val res_b = OS.Process.isSuccess result
+                            in
+                              if not res_b andalso ignore_error
+                              then
+                                (warn ("[" ^ hd (#target nI) ^
+                                       "] Error (ignored)");
+                                 k true)
+                              else k res_b
+                            end
+                      end
+                    | NoCmd => k true
               in
-                case #command nI of
-                    BuiltInCmd =>
-                    (diag("J1Build: Running built-in command on " ^
-                          String.concatWith " " (#target nI));
-                     case #target nI of
-                         [f] =>
-                         (case toFile f of
-                              UI c => k (bc (Compile depfs) (SIG c))
-                            | UO c => k (bc (Compile depfs) (SML c))
-                            | ART (RawArticle s) =>
-                                k (bc (BuildArticle(s,depfs)) (SML (Script s)))
-                            | ART (ProcessedArticle s) =>
-                                k (bc (ProcessArticle s) (ART (RawArticle s)))
-                            | _ => raise Fail ("bg tgt = " ^ f))
-                       | [thyfile, _] =>
-                         let
-                           val thyname = extract_thypart thyfile
-                         in
-                           k (bc (BuildScript(thyname, depfs))
-                                 (SML (Script thyname)))
-                         end
-                       | ts =>
-                         raise Fail ("implicit bg targets: " ^
-                                     String.concatWith ", " ts))
-                  | SomeCmd c =>
-                    let
-                      val hypargs as {noecho,ignore_error,command=c} =
-                          process_hypat_options c
-                    in
-                      case mosml_build_command hmenv hypargs depfs of
-                          SOME r => k (OS.Process.isSuccess r)
-                        | NONE =>
-                          let
-                            val () =
-                                if not noecho andalso not quiet then
-                                  (TextIO.output(TextIO.stdOut, c ^ "\n");
-                                   TextIO.flushOut TextIO.stdOut)
-                                else ()
-                            val result = Systeml.system_ps c
-                            val res_b = OS.Process.isSuccess result
-                          in
-                            if not res_b andalso ignore_error
-                            then
-                              (warn ("[" ^ hd (#target nI) ^
-                                     "] Error (ignored)");
-                               k true)
-                            else k res_b
-                          end
-                    end
-                  | NoCmd => k true
+                if is_heap_only() andalso not (#phony nI) andalso
+                   List.all exists_readable (#target nI)
+                then
+                  let
+                    val _ = diag ("May not need to rebuild "^target_s)
+                  in
+                    case List.find
+                           (fn (_, d) =>
+                               List.exists (fn tgt => forces_update_of(d,tgt))
+                                           (#target nI))
+                           (#dependencies nI)
+                     of
+                        NONE => (diag ("Can skip work on "^target_s); k true)
+                      | SOME (_,d) =>
+                        (diag ("Dependency "^d^" forces rebuild of "^ target_s);
+                         stdprocess())
+                  end
+                else
+                  stdprocess()
               end
       in
         recurse OS.Process.success g
