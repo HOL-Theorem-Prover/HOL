@@ -7,18 +7,56 @@ in
    val _ = PolyML.print_depth pd
 end;
 
+val rebuild_heaps_var = "HOL_REBUILD_HEAPS_ONLY"
+
 local
    infix ++
    fun p1 ++ p2 = OS.Path.concat (p1,p2)
+   val target = Systeml.HOLDIR ++ "bin/hol.state0"
    val _ = loadPath := (Systeml.HOLDIR ++ "src/proofman") ::
                        (Systeml.HOLDIR ++ "sigobj") ::
                        (!loadPath)
+in
    val _ = app load ["boolLib", "proofManagerLib", "Arbrat"]
                handle e => OS.Process.exit OS.Process.failure
+end;
+
+local
+   infix ++
+   fun p1 ++ p2 = OS.Path.concat (p1,p2)
+   val target = Systeml.HOLDIR ++ "bin/hol.state0"
+   val _ = loadPath := (Systeml.HOLDIR ++ "src/proofman") ::
+                       (Systeml.HOLDIR ++ "sigobj") ::
+                       (!loadPath)
+   fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
+                OS.Process.exit OS.Process.failure)
+
+
+   fun maxModTime (fname,maxt) =
+     Portable.time_max(maxt, OS.FileSys.modTime fname)
+      handle OS.SysErr(s, _) =>
+       die ("OS error while reading mod-time of "^ fname^": "^s)
+
+   val maxModTimel = List.foldl maxModTime Time.zeroTime
+   fun sigobjify s = Systeml.HOLDIR ++ "sigobj" ++ (s ^ ".uo")
+   val deps = [sigobjify "boolLib", sigobjify "Arbrat", sigobjify "Parse",
+               sigobjify "term_pp",
+               Systeml.HOLDIR ++ "src/proofman/proofManagerLib.uo"]
+
    fun safe_use s = if String.sub (s, 0) = #"-" then () else use s
    fun main () =
      (List.app safe_use (CommandLine.arguments ())
       ; PolyML.rootFunction ())
+   fun adjust_timestamp() =
+     OS.FileSys.setTime (target, SOME (maxModTimel deps))
+      handle OS.SysErr(s, _) => die ("OS error while adjusting time stamp: "^s)
 in
-   val _ = PolyML.SaveState.saveState (Systeml.HOLDIR ++ "bin/hol.state0")
+   val _ = PolyML.SaveState.saveState target
+   val _ =
+       case OS.Process.getEnv rebuild_heaps_var of
+           NONE => ()
+         | SOME "1" => adjust_timestamp()
+         | SOME s => TextIO.output(TextIO.stdErr,
+                                   "Ignoring strange value (" ^ s ^ ") for " ^
+                                   rebuild_heaps_var ^ "\n")
 end
