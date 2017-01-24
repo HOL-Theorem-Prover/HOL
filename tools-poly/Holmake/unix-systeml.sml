@@ -123,6 +123,7 @@ fun exec (x as (comm,args)) =
 val build_log_dir = fullPath [HOLDIR, "tools-poly", "build-logs"]
 val build_log_file = fullPath [build_log_dir, "current-build-log"]
 val make_log_file = "current-make-log";
+val build_after_reloc_envvar = "HOL_REBUILD_HEAPS_ONLY"
 
 fun base_interactive state scripts =
     [POLY, "-q", "--use", fullPath [HOLDIR, "bin", "hol.ML"], state] @ scripts

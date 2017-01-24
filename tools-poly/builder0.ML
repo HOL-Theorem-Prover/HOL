@@ -7,8 +7,6 @@ in
    val _ = PolyML.print_depth pd
 end;
 
-val rebuild_heaps_var = "HOL_REBUILD_HEAPS_ONLY"
-
 local
    infix ++
    fun p1 ++ p2 = OS.Path.concat (p1,p2)
@@ -22,6 +20,7 @@ in
 end;
 
 local
+   val rebuild_heaps_var = Systeml.build_after_reloc_envvar
    infix ++
    fun p1 ++ p2 = OS.Path.concat (p1,p2)
    val target = Systeml.HOLDIR ++ "bin/hol.state0"

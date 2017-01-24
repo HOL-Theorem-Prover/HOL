@@ -148,7 +148,7 @@ in
   p ("end");
   closeOut ostrm;
   system_ps (Systeml.POLY ^ " -q < " ^ ofile);
-  case OS.Process.getEnv "HOL_REBUILD_HEAPS_ONLY" of
+  case OS.Process.getEnv Systeml.build_after_reloc_envvar of
       NONE => ()
     | SOME "1" =>
       let
@@ -159,7 +159,8 @@ in
                             SOME (foldl foldthis (getTime (hd objs)) (tl objs)))
       end
     | SOME s =>
-      warn ("Ignoring strange value (" ^ s ^ ") for HOL_REBUILD_HEAPS_ONLY")
+      warn ("Ignoring strange value (" ^ s ^ ") for " ^
+            Systeml.build_after_reloc_envvar)
 end
 
 
