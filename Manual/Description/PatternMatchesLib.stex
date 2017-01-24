@@ -11,7 +11,7 @@ Moreover, advanced features are discussed here.
 \index{PMATCH_SIMP_CONV@\ml{PMATCH\_SIMP\_CONV}}
 The most important tool to deal with \pmatch{} case expressions is the conversion \texttt{PMATCH\_SIMP\_CONV} or the corresponding \texttt{PMATCH\_SIMP\_ss}, which is part of \texttt{bossLib.std\_ss}.
 It combines the following methods of simplifying and (partially) evaluating \pmatch{} case expressions.
-A subset of of these methods that skips normalisations and potentially expensive searches for redundant and subsumed rows is available as \texttt{PMATCH_FAST_SIMP_CONV}.\index{PMATCH_FAST_SIMP_CONV@\ml{PMATCH\_FAST_SIMP\_CONV}}
+A subset of these methods that skips normalisations and potentially expensive searches for redundant and subsumed rows is available as \texttt{PMATCH_FAST_SIMP_CONV}.\index{PMATCH_FAST_SIMP_CONV@\ml{PMATCH\_FAST_SIMP\_CONV}}
 
 \subsubsection{Normalisation}
 
@@ -284,11 +284,11 @@ Therefore, the conversion \texttt{PMATCH_REMOVE_GUARDS_CONV} as well as the corr
 
 \HOL{} provides powerful tools for rewriting.
 Probably the most commonly used way of using case expressions in \HOL{} is at top-level for defining recursive functions.
-Special support in \texttt{Define} turns multiple top-level equations into a decision tree case expressions, uses this case expression for defining an function and then derives top-level equations similar to the input ones.
+Special support in \texttt{Define} turns multiple top-level equations into a decision tree case expressions, uses this case expression for defining a function and then derives top-level equations similar to the input ones.
 Since compilation to decision trees is used, the issues discussed in Sec.~\ref{CaseExp} are present.
 It is sometimes hard to predict, which equations will be generated.
 There might be a blow-up in the number of equations.
-Moreover, equations can't overlap and are therefore often unnecessarily complicated.
+Moreover, equations cannot overlap and are therefore often unnecessarily complicated.
 
 As an example consider the following definition of a zipping functions for lists.
 
@@ -453,7 +453,7 @@ a \emph{column heuristic} picks the column to perform a case split on and the av
 
 The most important decision during pattern compilation is which column, \ie, which input variable to perform a case split on next.
 Different decisions lead to different decision trees, which can differ significantly in size and time needed to evaluate.
-Finding a good column to split on is not trivial.
+It is not trivial to find a good column to split on.
 Currently, mainly heuristics presented by Maranget~\cite{Maranget2008} are implemented.
 In \HOL{} a column heuristic is a ML function of type \texttt{column_heuristic}.
 Given a list of columns such a heuristic returns the number of the column to perform a split on.
@@ -508,7 +508,7 @@ Constructor families can be exhaustive or inexhaustive.
 For inexhaustive ones, the case-split function has to provide an extra \textit{otherwise}-case.
 
 The constructors of datatypes together with the case constant form constructor families.
-For example, the constructors \texttt{[]} and \texttt{CONS} with \texttt{list_CASE} for an exhaustive constructor family for lists.
+For example, the constructors \texttt{[]} and \texttt{CONS} with \texttt{list_CASE} form an exhaustive constructor family for lists.
 The information for the constructor families corresponding to the datatype constructors is automatically extracted from \texttt{TypeBase} and available \emph{via} \texttt{constrFamiliesLib}.
 However, there might be other interesting constructor families.
 For example, \texttt{[]} and \texttt{SNOC} together with an appropriate case split function form another exhaustive constructor family for lists.
@@ -520,8 +520,7 @@ For example, \texttt{[]} and \texttt{SNOC} together with an appropriate case spl
 >>_ val list_REVCASE_def = Define `
       list_REVCASE l c_nil c_snoc =
         (if l = [] then c_nil else (c_snoc (LAST l) (BUTLAST l)))`
-
->>_ val case_const_tm =
+>>__ val case_const_tm =
       ``list_REVCASE:'a list -> 'b -> ('a -> 'a list -> 'b) -> 'b``
 \end{alltt}
 \end{session}
@@ -536,7 +535,7 @@ Next, we define an exhaustive list of constructors. This is the list of function
 \end{alltt}
 \end{session}
 %
-This enables us to create a constructor family via \texttt{mk_constructorFamily}.
+The function \texttt{mk_constructorFamily} is then used to create a constructor family.
 This requires proving the discussed properties.
 In order to develop the necessary tactic, \texttt{set_constructorFamily} can be used.
 %
@@ -595,9 +594,9 @@ Defining an inexhaustive constructor family for just the \texttt{RED} constructo
      tree_CASE tr (f_else Empty) f_red
        (\t1 n t2. f_else (Black t1 n t2))`
 >>_ val cl = make_constructorList false [(``Red``, ["t1", "n", "t2"])]
->>_ val case_const_tm = ``tree_red_CASE``
-> val cf = mk_constructorFamily (cl, case_const_tm, \textit{... some tactic ...})
->>__ val cf = mk_constructorFamily (cl, case_const_tm, cheat)
+> val cf = mk_constructorFamily (cl, ``tree_red_CASE``, \textit{... some tactic ...})
+>>__ val cf = mk_constructorFamily (cl, ``tree_red_CASE``, cheat)
+>>_ val _ = pmatch_compile_db_register_constrFam cf
 
 >> PMATCH_CASE_SPLIT_CONV ``case (t:'a tree) of
      | Red _ _ _ => T
@@ -617,9 +616,9 @@ Defining an inexhaustive constructor family for just the \texttt{RED} constructo
 
 Compiling to decision tree based case expressions is sometimes handy.
 However, computing the patterns corresponding to this decision tree is even more useful, since this set of patterns has very interesting properties.
-It is exhaustive and each pattern in this set is either a subpattern of an input pattern or distinct.
+It is exhaustive and for each input pattern each pattern in this set is either a subpattern of the input pattern or distinct.
 There are no partial overlaps.
-Even better, whether a output pattern is a subpattern of an input pattern is checkable \emph{via} simple first order matching.
+Even better, whether an output pattern is a subpattern of an input pattern is checkable \emph{via} simple first order matching.
 
 Let's look at an example. First we compile a case expression to a decision tree.
 %
@@ -653,7 +652,7 @@ The patterns that remain are not covered by the input.
 \subsection{Removing Redundant Rows}\label{subsec:pmatch/remove-red}
 
 Using pattern compilation, it is straightforward to implement advanced redundancy checks.
-The conversion \texttt{PMATCH_REMOVE_REDUNDANT_CONV}\index{PMATCH_REMOVE_REDUNDANT_CONV@\ml{PMATCH\_REMOVE\_REDUNDANT\_CONV}} and the corresponding \texttt{PMATCH_REMOVE_REDUNDANT_ss} are able to remove row 5 of the example already discussed in Sec.~\ref{subsec:pmatch/fast-remove-red}.
+The conversion \texttt{PMATCH_REMOVE_REDUNDANT_CONV}\index{PMATCH_REMOVE_REDUNDANT_CONV@\ml{PMATCH\_REMOVE\_REDUNDANT\_CONV}} and the corresponding simpset fragment \texttt{PMATCH_REMOVE_REDUNDANT_ss} are able to remove row 5 of the example already discussed in Sec.~\ref{subsec:pmatch/fast-remove-red}.
 %
 \begin{session}
 \begin{alltt}
@@ -772,7 +771,7 @@ The flag of this function indicates whether an exhaustiveness proof should be at
    ``case l of [] => 1 | [x] when (x > 2) => 2 | _ => 3``
 
 >> val sml_ok = is_sml_pmatch info
->> val ocmal_ok = is_ocaml_pmatch info
+>> val ocaml_ok = is_ocaml_pmatch info
 \end{alltt}
 \end{session}
 
