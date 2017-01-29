@@ -61,32 +61,70 @@ fun mkIntOpt nm sel =
                            else updateT t (U sel (SOME i)) $$ }),
           "int")
 
+val optSelftestInt = let
+  fun doit i_s (wn,t) =
+    case Int.fromString i_s of
+        NONE => (wn ("Couldn't read integer from "^i_s); t)
+      | SOME i => if i < 0 then
+                    (wn "Ignoring negative number for selftest level"; t)
+                  else
+                    updateT t (U #selftest i) $$
+in
+  OptArg ((fn sopt =>
+              case sopt of
+                  NONE => {update = doit "1"}
+                | SOME i_s => {update = doit i_s}), "int")
+end
+
 val setSeqNameOnce =
   ReqArg ((fn s => { update = fn (wn,t) =>
              (case #seqname t of
                  NONE => ()
                | SOME _ =>
-                 wn ("Multiple --seq specs; ignoring earlier spec(s)");
+                 wn "Multiple sequence specs; ignoring earlier spec(s)";
               updateT t (U #seqname (SOME s)) $$) }),
           "fname")
 
-
+fun setKname k =
+  NoArg (fn () =>
+            { update =
+              fn (wn,t) =>
+                 (case #kernelspec t of
+                      NONE => ()
+                    | SOME _ => wn "Multiple kernel specs; \
+                                   \ignoring earlier spec(s)";
+                  updateT t (U #kernelspec (SOME k)) $$) })
 
 val cline_opt_descrs = [
+  {help = "build with experimental kernel", long = ["expk"], short = "",
+   desc = setKname "--expk"},
   {help = "build a theory dependency graph", long = ["graph"], short = "",
    desc = mkBoolOpt #build_theory_graph true},
-  {help = "don't build a thy dep. graph", long = ["nograph"], short = "",
-   desc = mkBoolOpt #build_theory_graph false},
-  {help = "specify selftest level", long = ["selftest"], short = "t",
-   desc = mkInt "selftest" #selftest},
+  {help = "build with full sequence", long = ["fullbuild"], short = "F",
+   desc = NoArg (fn () => {
+     update = fn (wn,t) =>
+       (case #seqname t of
+           NONE => ()
+         | SOME _ => wn "Multiple sequence specs; ignoring earlier spec(s)";
+        updateT t (U #seqname (SOME "")) $$) })},
+
+  {help = "display help", long = ["help", "h"], short = "h?",
+   desc = mkBool #help true},
   {help = "specify concurrency limit", long = [], short = "j",
    desc = mkIntOpt "-j" #jobcount},
-  {help = "display help", long = ["help", "h"], short = "h",
-   desc = mkBool #help true},
-  {help = "do relocation build", long = ["relocbuild"], short = "",
+  {help = "don't build a thy dep. graph", long = ["nograph"], short = "",
+   desc = mkBoolOpt #build_theory_graph false},
+  {help = "build with logging kernel", long = ["otknl"], short = "",
+   desc = setKname "--otknl"},
+  {help = "do relocation build (e.g., after a cleanForReloc)",
+   long = ["relocbuild"], short = "",
    desc = mkBool #relocbuild true},
+  {help = "specify selftest level", long = ["selftest"], short = "t",
+   desc = optSelftestInt},
   {help = "build this directory sequence", long = ["seq"], short = "",
-   desc = setSeqNameOnce}
+   desc = setSeqNameOnce},
+  {help = "build with standard kernel", long = ["stdknl"], short = "",
+   desc = setKname "--stdknl"}
 ]
 
 end (* struct *)

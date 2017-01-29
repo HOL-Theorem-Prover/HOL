@@ -74,6 +74,10 @@ Incompatibilities:
         val _ = augment_srw_ss
                  [rewrites [listTheory.DROP_def, listTheory.TAKE_def]]
 
+*   The command-line options to the `build` tool have changed in some of their details.
+    The standard usage by most users, which is to simply type `build` with no options at all, behaves as it did previously.
+    For details on the options that are now handled, see the output of `build -h`.
+
 
 * * * * *
 

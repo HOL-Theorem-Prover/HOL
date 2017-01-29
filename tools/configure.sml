@@ -433,6 +433,12 @@ val _ = let
   val _ = echo "Making bin/build."
   val cwd = FileSys.getDir()
   val _ = FileSys.chDir (fullPath[holdir, "tools"])
+  (* cline stuff *)
+  val _ = if compile ["-I", holmakedir] "buildcline_dtype.sml" andalso
+             compile ["-I", holmakedir] "buildcline.sig" andalso
+             compile ["-I", holmakedir] "buildcline.sml"
+          then ()
+          else die "Failed to build buildcline module"
   (* utils first *)
   val _ = let
     val utilsig = "buildutils.sig"

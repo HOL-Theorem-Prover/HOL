@@ -22,8 +22,8 @@ datatype phase = Initial | Bare | Full
     Analysing the command-line
    ---------------------------------------------------------------------- *)
 
-val {cmdline,build_theory_graph,do_selftests,SRCDIRS,jobcount} =
-  process_cline (fn c => c)
+val {cmdline,build_theory_graph,do_selftests,SRCDIRS,jobcount,relocbuild} =
+    process_cline ()
 
 open Systeml;
 
@@ -159,14 +159,7 @@ end
 in
     case cmdline of
       []            => build_hol default_link
-    | ["-symlink"]  => build_hol (symlink_check()) (* w/ symbolic linking *)
-    | ["-nosymlink"]=> build_hol cp
-    | ["-dir",path] => buildDir cp (path, 0)
-    | ["-dir",path,
-       "-symlink"]  => buildDir (symlink_check()) (path, 0)
-    | ["symlink"]   => build_hol (symlink_check())
-    | ["nosymlink"] => build_hol cp
-    | ["small"]     => build_hol mv
-    | otherwise     => warn help_mesg
+    | _ => die "Multi-dir build not implemented yet"
+
   end
 end (* struct *)

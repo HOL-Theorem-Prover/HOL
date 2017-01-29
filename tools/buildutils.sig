@@ -2,7 +2,6 @@ signature buildutils =
 sig
 
   val startup_check : unit -> unit
-  val help_mesg : string
   val normPath : string -> string
   val fullPath : string list -> string
   val quote : string -> string
@@ -15,9 +14,9 @@ sig
   val HOLMAKE : string
 
   val process_cline :
-      (string -> string) ->
+      unit ->
       {cmdline : string list, build_theory_graph : bool,
-       jobcount : int,
+       jobcount : int, relocbuild : bool,
        do_selftests : int, SRCDIRS : (string * int) list}
 
   val map_dir : (string * string -> unit) -> string -> unit
