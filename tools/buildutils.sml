@@ -495,7 +495,6 @@ end
    ---------------------------------------------------------------------- *)
 
 fun equal x y = (x=y);
-fun mem x l = List.exists (equal x) l;
 val SIGOBJ = fullPath [HOLDIR, "sigobj"];
 
 fun clean_sigobj() = let
