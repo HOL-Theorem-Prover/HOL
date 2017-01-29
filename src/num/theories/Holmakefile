@@ -11,7 +11,7 @@ all: $(TARGETS) selftest.exe
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-ifeq ($(KERNELID),-otknl)
+ifeq ($(KERNELID),otknl)
 all: $(patsubst %,%.ot.art,$(THYCORES))
 
 num.art: num.otd

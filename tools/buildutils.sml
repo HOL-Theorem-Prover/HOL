@@ -6,6 +6,9 @@ structure FileSys = OS.FileSys
 structure Process = OS.Process
 
 
+infix |>
+fun x |> f = f x
+
 (* path manipulation functions *)
 fun normPath s = Path.toString(Path.fromString s)
 fun itstrings f [] = raise Fail "itstrings: empty list"
@@ -70,9 +73,9 @@ fun exit_with_help() =
 fun read_buildsequence {kernelname} bseq_fname = let
   val kernelpath = fullPath [HOLDIR, "src",
     case kernelname of
-        "--stdknl" => "0"
-      | "--expk" => "experimental-kernel"
-      | "--otknl" => "logging-kernel"
+        "stdknl" => "0"
+      | "expk" => "experimental-kernel"
+      | "otknl" => "logging-kernel"
       | _ => die ("Bad kernelname: "^kernelname)
     ]
   val readline = TextIO.inputLine
@@ -171,7 +174,7 @@ fun read_buildsequence {kernelname} bseq_fname = let
               open FileSys
             in
               if (mlsys = "" orelse mlsys = Systeml.ML_SYSNAME) andalso
-                 (knl = "" orelse ("-"^knl) = kernelname) then
+                 (knl = "" orelse knl = kernelname) then
                 if access (dirname, [A_READ, A_EXEC]) then
                   if isDir dirname orelse mlsys <> "" then
                     read_file ((dirname,testcount)::acc)
@@ -229,36 +232,24 @@ fun setdiff big small =
 
 
 
-fun delseq dflt numseen list = let
+fun findseq dflt numseen list = let
   fun maybewarn () =
       if numseen = 1 then
         warn "Multiple build-sequence options; taking last one\n"
       else ()
 in
   case list of
-    [] => (NONE, [])
-  | ["-seq"] => (warn "Trailing -seq command-line option ignored";
-                 (NONE, []))
-  | "-seq"::fname::t => let
+    [] => NONE
+  | ["--seq"] => (warn "Trailing --seq option in last build info ignored";
+                  NONE)
+  | "--seq"::fname::t => let
       val _ = maybewarn()
-      val (optval, rest) = delseq dflt (numseen + 1) t
     in
-      case optval of
-        SOME v => (optval, rest)
-      | NONE => (SOME fname, rest)
+      case findseq dflt (numseen + 1) t of
+          NONE => SOME fname
+        | v => v
     end
-  | "-fullbuild" :: t => let
-      val _ = maybewarn()
-      val (optval, rest) = delseq dflt (numseen + 1) t
-    in
-      case optval of
-        SOME v => (optval, rest)
-      | NONE => (SOME dflt, rest)
-    end
-  | h :: t => let val (optval, rest) = delseq dflt numseen t
-              in
-                (optval, h::rest)
-              end
+  | h :: t => findseq dflt numseen t
 end
 
 fun orlist slist =
@@ -293,7 +284,6 @@ fun apply_updates l t =
     | {update} :: rest => apply_updates rest (update (warn, t))
 
 fun get_cline () = let
-  (* handle -fullbuild vs -seq fname, and -expk vs -otknl vs -stdknl *)
   open GetOpt
   val oldopts = read_earlier_options TextIO.inputLine
   val (opts, rest) = getOpt { argOrder = RequireOrder,
@@ -311,9 +301,9 @@ fun get_cline () = let
         NONE =>
         let
         in
-          case delseq dfltbuildseq 0 oldopts of
-            (NONE, _) => dfltbuildseq
-          | (SOME f, _) =>
+          case findseq dfltbuildseq 0 oldopts of
+            NONE => dfltbuildseq
+          | SOME f =>
             if f = dfltbuildseq then f
             else (warn ("Using build-sequence file "^f^
                         " from earlier build command; \n\
@@ -323,16 +313,16 @@ fun get_cline () = let
       | SOME f => if f = "" then dfltbuildseq else f
   val knlspec =
       case #kernelspec option_record of
-          SOME s => s
+          SOME s => String.extract(s,2,NONE)
         | NONE =>
           (case
               List.find (fn s => mem s ["--expk", "--otknl", "--stdknl"])oldopts
              of
-                NONE => "--stdknl"
+                NONE => "stdknl"
               | SOME s =>
                 (warn ("Using kernel spec "^s^ " from earlier build command;\n\
-                       \   use one of --expk, --stdknl, --otknl to override");
-                 s))
+                       \    use one of --expk, --stdknl, --otknl to override");
+                 String.extract(s,2,NONE)))
   val _ = write_kernelid knlspec
   val buildgraph =
       case #build_theory_graph option_record of
@@ -367,9 +357,9 @@ fun get_cline () = let
   val joption = "-j" ^ Int.toString jcount
   val _ =
       if seqspec = dfltbuildseq then
-        write_options (knlspec::joption::bgoption)
+        write_options ("--"^knlspec::joption::bgoption)
       else
-        write_options (knlspec::"-seq"::seqspec::joption::bgoption)
+        write_options ("--"^knlspec::"--seq"::seqspec::joption::bgoption)
 in
   Normal {kernelspec = knlspec, seqname = seqspec, rest = rest,
           jobcount = jcount, selftest_level = #selftest option_record,
@@ -801,8 +791,18 @@ fun process_cline () =
                          "cleanAll" => cleanAll
                        | "clean" => clean
                        | _ => die ("Clean action = "^s^"???")
+        val knlseq = fullPath [HOLDIR, "tools", "sequences", "kernel"]
         val SRCDIRS =
-            read_buildsequence {kernelname = "--stdknl"} dfltbuildseq
+            let
+              fun add kspec seq s =
+                Binaryset.addList(s,read_buildsequence {kernelname = kspec} seq)
+              fun cmp ((s1,_),(s2,_)) = String.compare(s1,s2)
+              val alldirs =
+                  Binaryset.empty cmp |> add "stdknl" dfltbuildseq
+                                      |> add "expk" knlseq |> add "otknl" knlseq
+            in
+              Binaryset.listItems alldirs
+            end
       in
         (full_clean SRCDIRS action; Process.exit Process.success)
       end

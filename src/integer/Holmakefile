@@ -3,7 +3,7 @@ TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 
 all: $(TARGETS)
 
-ifeq ($(KERNELID),-otknl)
+ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 all: $(ARTFILES)
 

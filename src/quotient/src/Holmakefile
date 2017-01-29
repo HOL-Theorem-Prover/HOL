@@ -7,7 +7,7 @@ all: $(TARGETS) selftest.exe
 selftest.exe: selftest.uo quotient.uo
 	$(HOLMOSMLC) -o $@ $<
 
-ifeq ($(KERNELID),-otknl)
+ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 all: $(ARTFILES)
 

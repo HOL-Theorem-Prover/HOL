@@ -33,7 +33,7 @@ $(HOLHEAP): $(DEPS)
 	$(protect $(HOLDIR)/bin/buildheap) -o $(HOLHEAP) $(BARE_THYS)
 endif
 
-ifeq ($(KERNELID),-otknl)
+ifeq ($(KERNELID),otknl)
 all: machine-code-straightline-unint.art
 
 machine-code-straightline-unint.art: machine-code-straightline-unint.thy straightline.ot.art GraphLang.ot.art

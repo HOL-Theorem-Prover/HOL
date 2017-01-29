@@ -19,6 +19,6 @@ $(HOLHEAP): $(DEPS)
 
 endif
 
-ifeq($(KERNELID),-otknl)
+ifeq($(KERNELID),otknl)
 arm_prog.art: arm_prog.otd
 endif

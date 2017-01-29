@@ -5,7 +5,7 @@ TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 all: $(TARGETS)
 .PHONY: all
 
-ifeq ($(KERNELID),-otknl)
+ifeq ($(KERNELID),otknl)
 all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 
 one.art: one.otd

@@ -3,7 +3,7 @@ INCLUDES = ../../common ../../lib
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 
-ifeq ($(KERNELID),-otknl)
+ifeq ($(KERNELID),otknl)
 all: $(TARGETS)
 .PHONY: all
 m0-model.art: m0-model.thy m0.ot.art

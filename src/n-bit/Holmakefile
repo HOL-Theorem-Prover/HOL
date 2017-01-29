@@ -9,7 +9,7 @@ selftest.exe: selftest.uo wordsLib.uo wordsSyntax.uo
 
 EXTRA_CLEANS = selftest.exe
 
-ifeq ($(KERNELID),-otknl)
+ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 all: $(ARTFILES)
 

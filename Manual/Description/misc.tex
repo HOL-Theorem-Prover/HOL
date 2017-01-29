@@ -638,8 +638,8 @@ See Section~\ref{sec:polyml-heaps} below for more on using custom heaps with Pol
   files, but not for linking of HOL object code, which can be done
   with \texttt{HOLMOSMLC}.
 \item[\texttt{KERNELID}]
-  The kernel option that was passed to \HOL's \texttt{build} command.
-  This will typically be \texttt{-stdknl} (the standard kernel) but may take on other values if other custom kernels are being used.
+  The kernel option that was passed to \HOL's \texttt{build} command, stripped of its leading hyphens.
+  This will typically be \texttt{stdknl} (the standard kernel) but may take on other values if other custom kernels are being used.
 \item[\texttt{ML\_SYSNAME}] The name of the ML system being used:
   either \texttt{mosml} or \texttt{poly}.
 \item[\texttt{MLLEX}] This is the path of the \texttt{mllex} tool that
