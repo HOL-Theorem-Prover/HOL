@@ -40,4 +40,4 @@ matrix:
       sudo: true
   allow_failures:
     - os: osx
-    - env: ROOTPOLY= GITPOLY=1 BUILDOPTS="--seq developers/travis/selftestseq"
+    - env: ROOTPOLY= GITPOLY=1 BUILDOPTS="--seq=developers/travis/selftestseq"
