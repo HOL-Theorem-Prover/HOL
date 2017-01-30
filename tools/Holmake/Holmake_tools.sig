@@ -86,6 +86,7 @@ sig
 
   val clean_dir : {extra_cleans: string list} -> unit
   val clean_depdir : {depdirname : string} -> bool
+  val clean_forReloc : {holheap : string option} -> unit
 
   structure hmdir : sig
     type t

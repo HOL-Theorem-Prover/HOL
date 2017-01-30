@@ -448,19 +448,22 @@ fun hmakefile_data HOLDIR =
             map dequote (tokenize (perform_substitution env [VREF id]))
       in
         {includes = envlist "PRE_INCLUDES" @ envlist "INCLUDES",
-         extra_cleans = envlist "EXTRA_CLEANS"}
+         extra_cleans = envlist "EXTRA_CLEANS",
+         holheap = case envlist "HOLHEAP" of
+                       [x] => SOME x
+                     | _ => NONE}
       end
-    else {includes = [], extra_cleans = []}
+    else {includes = [], extra_cleans = [], holheap = NONE}
 
 fun clean0 HOLDIR = let
-  val {includes,extra_cleans} = hmakefile_data HOLDIR
+  val {includes,extra_cleans,...} = hmakefile_data HOLDIR
 in
   Holmake_tools.clean_dir {extra_cleans = extra_cleans} ;
   includes
 end
 
 fun cleanAll0 HOLDIR = let
-  val {includes,extra_cleans} = hmakefile_data HOLDIR
+  val {includes,extra_cleans,...} = hmakefile_data HOLDIR
 in
   Holmake_tools.clean_dir {extra_cleans = extra_cleans};
   Holmake_tools.clean_depdir {depdirname = ".HOLMK"};
@@ -468,8 +471,21 @@ in
   includes
 end
 
+fun cleanForReloc0 HOLDIR =
+  let
+    val {includes,holheap,...} = hmakefile_data HOLDIR
+  in
+    Holmake_tools.clean_forReloc {holheap = holheap};
+    Holmake_tools.clean_depdir {depdirname = ".HOLMK"};
+    Holmake_tools.clean_depdir {depdirname = ".hollogs"};
+    includes
+  end
+
+
 fun clean HOLDIR dirname = moveTo dirname (fn () => clean0 HOLDIR)
 fun cleanAll HOLDIR dirname = moveTo dirname (fn () => cleanAll0 HOLDIR)
+fun cleanForReloc HOLDIR dirname =
+  moveTo dirname (fn () => cleanForReloc0 HOLDIR)
 
 fun clean_dirs {HOLDIR,action} dirs = let
   val seen = Binaryset.empty String.compare
@@ -530,7 +546,7 @@ val EXECUTABLE = Systeml.xable_string (fullPath [HOLDIR, "bin", "build"])
 
 fun full_clean (SRCDIRS:(string*int) list)  f =
     clean_sigobj() before
-    (* clean both kernel directories, regardless of which was actually built,
+    (* clean all kernel directories, regardless of which was actually built,
        the help src directory too, and all the src directories, including
        those with ! annotations  *)
     clean_dirs {HOLDIR=HOLDIR, action = f}
@@ -783,13 +799,23 @@ fun build_help graph =
    else ()
  end
 
+val delete_heaps =
+    if Systeml.ML_SYSNAME = "poly" then
+      fn () => (safedelete (fullPath [HOLDIR, "bin", "hol.state"]);
+                safedelete (fullPath [HOLDIR, "bin", "hol.state0"]))
+    else fn () => ()
+
+
 fun process_cline () =
     case get_cline () of
-      Clean s => let
-        val action = case s of
-                         "cleanAll" => cleanAll
-                       | "clean" => clean
-                       | _ => die ("Clean action = "^s^"???")
+      Clean s =>
+      let
+        val (per_dir_action, post_action) =
+            case s of
+                "cleanAll" => (cleanAll, fn () => ())
+              | "clean" => (clean, fn () => ())
+              | "cleanForReloc" => (cleanForReloc, delete_heaps)
+              | _ => die ("Clean action = "^s^"???")
         val knlseq = fullPath [HOLDIR, "tools", "sequences", "kernel"]
         val SRCDIRS =
             let
@@ -798,12 +824,15 @@ fun process_cline () =
               fun cmp ((s1,_),(s2,_)) = String.compare(s1,s2)
               val alldirs =
                   Binaryset.empty cmp |> add "stdknl" dfltbuildseq
-                                      |> add "expk" knlseq |> add "otknl" knlseq
+                                      |> add "expk" knlseq
+                                      |> add "otknl" knlseq
             in
               Binaryset.listItems alldirs
             end
       in
-        (full_clean SRCDIRS action; Process.exit Process.success)
+        full_clean SRCDIRS per_dir_action;
+        post_action();
+        Process.exit Process.success
       end
     | Normal {kernelspec, seqname, rest, build_theory_graph, jobcount,
               relocbuild, selftest_level} =>

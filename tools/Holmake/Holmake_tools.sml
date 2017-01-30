@@ -337,6 +337,7 @@ fun read_files ds P action =
       (if P nextfile then action nextfile else ();
        read_files ds P action)
 
+fun quiet_remove s = OS.FileSys.remove s handle e => ()
 
 fun clean_dir {extra_cleans} = let
   val cdstream = OS.FileSys.openDir "."
@@ -350,11 +351,25 @@ fun clean_dir {extra_cleans} = let
           (case OS.Path.ext s of SOME "art" => true | _ => false)
       | ART _ => true
       | _ => false
-  fun quiet_remove s = OS.FileSys.remove s handle e => ()
 in
   read_files cdstream to_delete quiet_remove;
   app quiet_remove extra_cleans
 end
+
+fun clean_forReloc {holheap} =
+  if Systeml.ML_SYSNAME = "poly" then
+    let
+      val cdstream = OS.FileSys.openDir "."
+      fun to_delete f =
+        case toFile f of
+            UO _ => true
+          | UI _ => true
+          | _ => false
+    in
+      read_files cdstream to_delete quiet_remove;
+      case holheap of SOME s => quiet_remove s | _ => ()
+    end
+  else ()
 
 exception DirNotFound
 fun clean_depdir {depdirname} = let
