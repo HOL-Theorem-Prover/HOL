@@ -170,7 +170,8 @@ case file of
         else
           let val outUi = TextIO.openOut (modName ^ ".ui")
           in
-            TextIO.closeOut outUi
+            TextIO.closeOut outUi;
+            ignore (finish_compilation warn depMods filename (modName ^ ".ui"))
           end);
        finish_compilation warn depMods filename tgt
      end
