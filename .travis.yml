@@ -29,7 +29,6 @@ env:
     - ROOTPOLY= BUILDOPTS="--expk --seq=developers/travis/selftestseq -t1"
     - ROOTPOLY= BUILDOPTS="--seq=developers/travis/more_examples_seq -t1"
     - ROOTPOLY= BUILDOPTS="--expk --seq=developers/travis/more_examples_seq -t1"
-    - ROOTPOLY= BUILDOPTS="--seq=developers/travis/selftestseq"
     - ROOTPOLY= GITPOLY=1 BUILDOPTS="--seq=developers/travis/selftestseq"
 
 matrix:
