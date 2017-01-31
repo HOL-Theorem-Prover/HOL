@@ -6,6 +6,8 @@ open Feedback Lib HolKernel boolLib
 
 val ERR = mk_HOL_ERR "regexpSyntax";
 
+val charset_ty = ``:bool[256]``;
+
 val regexp_ty = mk_thy_type{Thy="regexp",Tyop="regexp",Args=[]};
 
 (*---------------------------------------------------------------------------*)
@@ -50,9 +52,10 @@ fun dest_or tm =
 
 (*
 val vector_tm = prim_mk_const{Thy="ml_translator",Name="Vector"};
+val vector_tm = prim_mk_const{Thy="charset",Name="Vector"} 
 *)
 
-val vector_tm = prim_mk_const{Thy="charset",Name="Vector"} 
+val vector_tm = prim_mk_const{Thy="regexp_compiler",Name="Vector"} 
 
 val mk_vector = mk_monop vector_tm;
 val dest_vector = dest_monop vector_tm (ERR "dest_vector" "expected a Vector");
@@ -63,9 +66,6 @@ fun list_mk_vector (tlist,ty) = mk_vector(listSyntax.mk_list(tlist,ty))
 fun strip_vector tm = 
   listSyntax.dest_list(dest_vector tm)
   handle HOL_ERR _ => raise ERR "strip_vector" "";
-
-fun list_mk_chset blist = mk_chset (list_mk_vector(blist,Type.bool));
-fun chset_to_list tm = fst(strip_vector(dest_chset tm));
 
 val is_chset = Lib.can dest_chset
 val is_cat     = Lib.can dest_cat
@@ -95,8 +95,7 @@ fun word_to_bitvector tm =
  in vector A
  end
 
-
- The following functions implement the maps for bool vectors
+The following functions implement the maps for bool vectors
 
 fun bitvector_to_bitlist bv =  
  let open boolSyntax
@@ -110,7 +109,8 @@ fun bitlist_to_bitvector tm =
      val blist = List.map (equal boolSyntax.T) tmlist
  in Vector.fromList blist
  end
-*)
+
+The following functions implement the maps for bool vectors
 
 fun bitvector_to_bitlist bv =  
  let open boolSyntax
@@ -137,6 +137,16 @@ fun bitlist_to_bitvector tm =
     of SOME (i,[]) => i
      | otherwise => raise ERR "bitlist_to_bitvector" "unexpected input"
  end
+*)
+
+val charset_to_term = (* IntInf.int -> ``:bool[256]`` *)
+ let val num_of = IntInf.toInt
+ in
+   fn bv => wordsSyntax.mk_wordii(num_of bv,Regexp_Type.alphabet_size)
+ end;
+
+fun term_to_charset tm = (* ``:bool[256]`` -> IntInf.int *)
+ IntInf.fromInt (wordsSyntax.uint_of_word tm);
 
 (*---------------------------------------------------------------------------*)
 (* Build a regexp term from an ML regexp expression                          *)
@@ -144,15 +154,15 @@ fun bitlist_to_bitvector tm =
 
 fun mk_regexp r = 
  case r 
-  of Chset bv    => mk_chset(mk_vector(bitvector_to_bitlist bv))
+  of Chset bv    => mk_chset(charset_to_term bv)
    | Cat (r1,r2) => mk_cat(mk_regexp r1,mk_regexp r2)
    | Star r      => mk_star (mk_regexp r)
    | Or rlist    => mk_or (List.map mk_regexp rlist)
    | Neg r       => mk_neg (mk_regexp r);
 
 fun dest_regexp tm = 
- (case total (dest_vector o dest_chset) tm
-  of SOME w => Chset (bitlist_to_bitvector w)
+ (case total dest_chset tm
+  of SOME w => Chset (term_to_charset w)
    | NONE =>
  case total dest_cat tm
   of SOME (t1,t2) => Cat(dest_regexp t1,dest_regexp t2)

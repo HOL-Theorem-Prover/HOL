@@ -28,6 +28,20 @@ val eq_cmp_regexp_compare = Q.prove
  metis_tac [eq_cmp_def, regexp_compare_good,regexp_compare_eq]);
 
 (*---------------------------------------------------------------------------*)
+(* Output of the compiler is in term of vectors.                             *)
+(*---------------------------------------------------------------------------*)
+
+val _ = Hol_datatype `vector = Vector of 'a list`;
+
+val fromList_def = Define `fromList l = Vector l`;
+val sub_def      = Define `sub (Vector l) n = EL n l`;
+val length_def   = Define `length (Vector l) = LENGTH l`;
+
+val fromList_Vector = save_thm
+("fromList_Vector",
+ SIMP_RULE list_ss [GSYM FUN_EQ_THM] fromList_def);
+
+(*---------------------------------------------------------------------------*)
 (* Manipulate the set of seen states                                         *)
 (*---------------------------------------------------------------------------*)
 
@@ -651,6 +665,17 @@ CONJ_TAC
  >- rw_tac list_ss [exec_dfa_def]
  >- rw_tac list_ss [SimpLHS, Once exec_dfa_def])
 
+(*
+val exec_dfa_def = 
+  Define 
+   `(exec_dfa finals table n [] = EL n finals) /\
+    (exec_dfa finals table n (c::t) = 
+        case EL (ORD c) (EL n table) of
+         | NONE => F
+         | SOME k => exec_dfa finals table k t)`;
+*)
+
+
 (*---------------------------------------------------------------------------*)
 (* Returns a function of type :string -> bool                                *)
 (*---------------------------------------------------------------------------*)
@@ -665,6 +690,16 @@ val regexp_matcher_def =
     let deltaV = fromList (MAP fromList delta)
     in
       exec_dfa acceptsV deltaV start_state`;
+
+(*
+val regexp_matcher_def = 
+ Define 
+  `regexp_matcher r = 
+    let (state_numbering,delta,accepts) = compile_regexp r in
+    let start_state_opt = balanced_map$lookup regexp_compare (normalize r) state_numbering
+    in 
+      exec_dfa accepts delta (THE start_state_opt)`;
+*)
 
 (*---------------------------------------------------------------------------*)
 (* get_accepts properties                                                    *)
@@ -2103,3 +2138,4 @@ val Brzozowski_partial_eval_256 = save_thm
 (* val _ = EmitTeX.tex_theory"-"; *)
 
 val _ = export_theory();
+

@@ -1,7 +1,9 @@
 structure Regexp_Match :> Regexp_Match =
 struct
 
-open Lib Regexp_Type;
+open Lib Feedback Regexp_Type;
+
+val ERR = mk_HOL_ERR "Regexp_Match";
 
 type regexp = Regexp_Type.regexp;
 
@@ -274,13 +276,19 @@ fun build_or rlist =
               (mergesort regexp_leq 
                  (flatten_or rlist)))
  in 
-  if mem (Neg EMPTY) rlist' then Neg EMPTY  
+  if mem (Neg EMPTY) rlist' then Neg EMPTY else
+  if mem (Star SIGMA) rlist' then Neg EMPTY  
   else
   case rlist'
    of [] => EMPTY
     | [r] => r
-    | [Chset cs, r] => if cs = charset_empty then r else Or rlist'
-    | Chset cs :: t => if cs = charset_empty then Or t else Or rlist'
+    | [Chset cs, r] => (if r = Neg (Chset cs) then Neg EMPTY else
+                        if cs = charset_empty then r 
+                        else Or rlist')
+    | Chset cs :: t => 
+       (if mem (Neg (Chset cs)) t then Neg EMPTY else
+        if cs = charset_empty then Or t 
+        else Or rlist')
     | _ => Or rlist'
 end;
 
@@ -322,6 +330,67 @@ fun smart_deriv c r =
    | Or rs  => build_or (map (smart_deriv c) rs)
    | Neg s  => build_neg (smart_deriv c s);
 
+(*---------------------------------------------------------------------------*)
+(* Cache applications of smart_deriv. Unhelpful right now ... might be too   *)
+(* fine-grained.                                                             *)
+(*---------------------------------------------------------------------------*)
+(*
+type table = (char * regexp,regexp) Redblackmap.dict
+type cache = table ref
+
+fun regexp_cmp (r1,r2) = regexp_compare r1 r2;
+
+fun new_table() = 
+  Redblackmap.mkDict (pair_compare (Char.compare,regexp_cmp)) : table
+
+
+local 
+  val cache = ref (new_table()) : cache
+  fun lookup x = Redblackmap.peek (!cache, x) 
+  fun store (x,y) = (cache := Redblackmap.insert(!cache,x,y))
+  fun storable (Chset _) = false
+    | storable other = true
+in 
+fun clear_cache () = (cache := new_table())
+fun cached_values () = Redblackmap.listItems (!cache)
+
+fun smart_deriv c r = 
+ if storable r then 
+  (case lookup (c,r)
+    of SOME y => y
+     | NONE =>
+       let val r' = 
+           (case r 
+             of Chset cs => if charset_mem c cs then EPSILON else EMPTY
+              | Cat(Chset cs,t) => if charset_mem c cs then t else EMPTY
+              | Cat(s,t) =>
+                let val dr = build_cat (smart_deriv c s) t
+                in if nullable s 
+                    then build_or [dr, smart_deriv c t]
+                    else dr
+                end
+             | Star s => build_cat (smart_deriv c s) (build_star s)
+             | Or rs  => build_or (map (smart_deriv c) rs)
+             | Neg s  => build_neg (smart_deriv c s))
+      in 
+         store((c,r),r')
+       ; r'
+      end)
+  else
+   (case r 
+     of Chset cs => if charset_mem c cs then EPSILON else EMPTY
+      | Cat(Chset cs,t) => if charset_mem c cs then t else EMPTY
+      | Cat(s,t) =>
+        let val dr = build_cat (smart_deriv c s) t
+        in if nullable s 
+           then build_or [dr, smart_deriv c t]
+           else dr
+        end
+      | Star s => build_cat (smart_deriv c s) (build_star s)
+      | Or rs  => build_or (map (smart_deriv c) rs)
+      | Neg s  => build_neg (smart_deriv c s))
+end
+*)
 
 (*---------------------------------------------------------------------------*)
 (* Support for the core regexp compiler.                                     *)
@@ -462,16 +531,71 @@ fun vector_matcher r =
      matchfn = fn s => match_string (String.explode s)}
  end
 
-fun uniq rlist = remove_dups (mergesort regexp_leq rlist);
+(*---------------------------------------------------------------------------*)
+(* Just compute the states; no tracking of info needed to construct the rest *)
+(* of the DFA.                                                               *)
+(*---------------------------------------------------------------------------*)
+
+(*---------------------------------------------------------------------------*)
+(* Optimization of certain annoying (because slow to compile) Or regexps.    *)
+(*                                                                           *)
+(* The following code asserts that                                           *)
+(*                                                                           *)
+(*  smart_deriv c (Or [w, wr_1, ..., wr_n, EPSILON])                         *)
+(*                                                                           *)
+(* is equal to                                                               *)
+(*                                                                           *)
+(*  Or [r_1, ..., r_n, EPSILON] OR EMPTY                                     *)
+(*                                                                           *)
+(* (where w is a charset) depending on whether c is in the charset or not.   *)
+(*                                                                           *)
+(* Assumption: the input Or regexp is in normal form. That would mean that   *)
+(* EPSILON comes after all the charsets and Cats, so should be at the end.   *)
+(* Also, if args is the list constructed by Or, len(args) > 1 so there is a  *)
+(* last element x of args, and a separate head element w. Also, w can't be   *)
+(* the empty charset. If w is the full charset then EMPTY is not returned.   *)
+(*---------------------------------------------------------------------------*)
 
 val tracing = ref true;
 
-fun kprint s = 
- if !tracing
-  then print s 
-  else ();
+fun kprint s = if !tracing then print s else ();
 
 val _ = Feedback.register_btrace("regexp-compiler",tracing);
+
+fun drop w (Cat(a,b)) = 
+     (case regexp_compare w a
+       of EQUAL => b
+        | otherwise => raise ERR "drop" "")
+  | drop r _ = raise ERR "drop" "";
+
+fun lift_cset_from_or rlist = 
+ case rlist
+  of (w as Chset _) :: t =>
+      let val (t',x) = Lib.front_last t
+          val t'' = mapfilter (drop w) t'
+      in 
+        if x = EPSILON andalso length t' = length t''
+        then let val _ = kprint "\n\n Optimization SUCCEEDS!!\n\n"
+                 val trimmed = build_or (t'' @ [EPSILON])
+             in if w = SIGMA
+                then SOME [trimmed]
+                else SOME [EMPTY,trimmed]
+             end
+        else NONE
+      end
+   | otherwise => NONE
+
+fun uniq rlist = remove_dups (mergesort regexp_leq rlist);
+
+fun transitions r = 
+ case r of 
+  Or rlist => 
+     (case lift_cset_from_or rlist
+       of SOME rlist' => rlist'
+        | NONE => uniq(List.map (fn c => smart_deriv c r) alphabet)
+     )
+   | otherwise => 
+      uniq(List.map (fn c => smart_deriv c r) alphabet);
 
 fun dom_brzozo seen [] = seen
   | dom_brzozo seen (r::t) = 
@@ -485,16 +609,18 @@ fun dom_brzozo seen [] = seen
                dom_brzozo seen t
               )
          else let val _ = kprint ("will be a new state (size: "^Int.toString (PolyML.objSize r)^"). ")
-                  val arcs = uniq (map snd (transitions r))
-                  val _ = kprint ("Successors: "^Int.toString (length arcs)^"\n\n")
+                  val prospects = transitions r
+                  val _ = kprint ("Successors: "^Int.toString (length prospects)^"\n\n")
               in dom_brzozo (insert_regexp r seen)
-                            (arcs @ t)
+                            (prospects @ t)
               end
         );
 
 fun domBrz r = 
- let val states = dom_brzozo Finite_Map.empty [normalize r]
-     val _ = kprint ("states: "^Int.toString (Finite_Map.size states)^"\n");
+ let open regexpMisc
+     val _ = stdErr_print "Starting Brzozowski.\n"
+     val states = time (dom_brzozo Finite_Map.empty) [normalize r]
+     val _ = stdErr_print ("states: "^Int.toString (Finite_Map.size states)^"\n");
  in  
    ()
  end;
