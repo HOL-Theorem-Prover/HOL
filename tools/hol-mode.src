@@ -1109,7 +1109,8 @@ argument N, sets the trace to that value in particular."
 (defun hol-toggle-pp-cases ()
   "Toggles the \"pp_cases\" trace."
   (interactive)
-  (hol-toggle-trace "pp_cases"))
+  (hol-toggle-trace "pp_cases")
+  (hol-toggle-trace "use pmatch_pp"))
 
 (defun hol-toggle-pp-annotations ()
   "Toggles whether HOL produces annotations while pretty-printing."
