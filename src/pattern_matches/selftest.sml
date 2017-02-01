@@ -959,11 +959,10 @@ val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
 
 val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
  ``case lx of
-  | ([], NONE) => 0
+  | (_, NONE) => 0
   | (SNOC x _, SOME y) => x + y``, SOME ``pair_CASE lx
      (\v v'.
-        list_REVCASE v (option_CASE v' 0 (\x'. ARB))
-          (\x'' xs. option_CASE v' ARB (\x'''. x'' + x''')))``)
+        option_CASE v' 0 (\x'. list_REVCASE v ARB (\x'' xs. x'' + x')))``)
 
 val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
  ``case lx of

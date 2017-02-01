@@ -1828,7 +1828,7 @@ fun colRank_small_branching_factor db : column_ranking_fun = (fn col =>
 fun colRank_arity db : column_ranking_fun = (fn col =>
   case col_get_constr_set db col of
      SOME (cL, full_constrL, exh) =>
-       List.foldl (fn (c, s) => s + length (fst (strip_fun (type_of c)))) 0 cL
+       ~(List.foldl (fn (c, s) => s + length (fst (strip_fun (type_of c)))) 0 cL)
    | NONE => 0)
 
 
