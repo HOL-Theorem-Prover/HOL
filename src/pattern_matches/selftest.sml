@@ -348,7 +348,7 @@ val test = test_conv "PMATCH_EXPAND_COLS_CONV" PMATCH_EXPAND_COLS_CONV (``case (
         (SOME x,SOME y) => SOME (x + y) | (_,_) => NONE``))
 
 val test = test_conv "PMATCH_INTRO_WILDCARDS_CONV" PMATCH_INTRO_WILDCARDS_CONV (``PMATCH (x,y,z)
-    [PMATCH_ROW (\(x,y,z). (x,y,z)) (\(x,y,z). T) (\(x,y,z). x + y);
+    [PMATCH_ROW (\(_x,y,z). (_x,y,z)) (\(_x,y,z). T) (\(_x,y,z). _x + y);
      PMATCH_ROW (\(x,y,z). (x,y,z)) (\(x,y,z). z) (\(x,y,z). x)]``, SOME ``PMATCH (x,y,z)
      [PMATCH_ROW (\(x,y,_0). (x,y,_0)) (\(x,y,_0). T)
         (\(x,y,_0). x + y);

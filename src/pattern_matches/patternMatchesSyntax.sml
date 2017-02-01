@@ -303,25 +303,32 @@ fun mk_PMATCH_ROW_PABS_WILDCARDS vars (p_t, g_t, r_t) = let
     val (pm_s, p_s) = MULTIPLE_FV p_t
     val grd_s = FVL [g_t, r_t] pm_s
 
-    val mk_wc = mk_wildcard_gen (HOLset.listItems
-      (HOLset.union (grd_s, p_s)))
+    val avoid = HOLset.listItems (HOLset.union (grd_s, p_s))
+    val mk_wc = mk_wildcard_gen avoid
+    val mk_var = mk_var_gen "v" avoid
 
-    fun apply (v, (vars', subst)) = (
-      if (not (HOLset.member (grd_s, v)) andalso
-          not (varname_starts_with_uscore v)) then let
-        val v' = mk_wc (type_of v)
+    fun apply (v, (vars', subst)) = let
+      val should_be_uc = not (HOLset.member (grd_s, v))
+      val is_uc = varname_starts_with_uscore v
+    in
+      if (should_be_uc = is_uc) then
+         (v::vars', subst)
+      else let
+        val v' = if should_be_uc then
+          mk_wc (type_of v) else mk_var (type_of v)
       in
         (v'::vars', (v |-> v')::subst)
-      end else
-         (v::vars', subst)
-    )
+      end
+    end
 
     val (vars'_rev, subst) = List.foldl apply ([], []) vars
     val vars' = List.rev vars'_rev
     val p_t' = Term.subst subst p_t
-    val use_wc = not (List.null subst)
+    val g_t' = Term.subst subst g_t
+    val r_t' = Term.subst subst r_t
+    val changed_wc = not (List.null subst)
   in
-    (use_wc, mk_PMATCH_ROW_PABS vars' (p_t', g_t, r_t))
+    (changed_wc, mk_PMATCH_ROW_PABS vars' (p_t', g_t', r_t'))
   end
 
 
@@ -385,7 +392,6 @@ fun PMATCH_ROW_FORCE_SAME_VARS_CONV row = let
 in
   TRANS thm0 thm1
 end handle HOL_ERR _ => raise UNCHANGED
-
 
 fun PMATCH_ROW_INTRO_WILDCARDS_CONV row = let
   val (vars_tm, p_t, g_t, r_t) = dest_PMATCH_ROW_ABS row
