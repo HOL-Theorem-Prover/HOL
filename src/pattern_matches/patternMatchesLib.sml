@@ -2711,7 +2711,7 @@ fun IS_REDUNDANT_ROWS_INFO_SHOW_ROW_IS_REDUNDANT_set_goal thm i = let
   val (l, _) = (listSyntax.dest_list o rand o concl) thm
   val t = List.nth (l, i)
 in
-  Manager.set_goal ([], t)
+  proofManagerLib.set_goal ([], t)
 end;
 
 

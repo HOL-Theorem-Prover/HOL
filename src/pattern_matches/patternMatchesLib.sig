@@ -436,7 +436,7 @@ sig
     thm -> int -> tactic -> thm
 
   val IS_REDUNDANT_ROWS_INFO_SHOW_ROW_IS_REDUNDANT_set_goal :
-    thm -> int -> Manager.proof
+    thm -> int -> proofManagerLib.proofs
 
 
   (*-----------------------*)
