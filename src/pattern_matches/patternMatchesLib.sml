@@ -1802,7 +1802,7 @@ fun colRank_first_row_constr db (_, rows) = case rows of
 
 val colRank_constr_prefix : column_ranking_fun = (fn (_, rows) =>
   let fun aux n [] = n
-        | aux n ((vs, p) :: pL) = if (is_var p andalso mem p vs)
+        | aux n ((vs, p) :: pL) = if (is_var p)
              then n else aux (n+1)  pL
   in aux 0 rows end)
 
