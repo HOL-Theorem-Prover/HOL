@@ -1472,6 +1472,7 @@ val SORTED_starts_charsets = Q.store_thm
  fs [] >>
  rw []
  >- (fs [EVERY_MEM] >>
+     rename[`SORTED _ (h::(rs1 ++ rs2))`] >>
      Cases_on `rs1` >>
      fs [] >>
      Cases_on `is_charset h`
