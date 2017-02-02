@@ -591,9 +591,10 @@ fun compute_row_pat_pairs rows = let
     val (vars_tm, pb) = pairSyntax.dest_pabs p
     val vars = pairSyntax.strip_pair vars_tm
     val s = List.map (fn v => (v |-> genvar (type_of v))) vars
+    val vars' = map (fn x => #residue x) s
     val pb' = subst s pb
   in
-    pb'
+    (vars', pb')
   end) rows)
 
   (* get all pairs, first component always appears before second *)
@@ -615,8 +616,13 @@ fun PMATCH_REMOVE_FAST_REDUNDANT_CONV_GENCALL_SINGLE rc_arg t = let
 
   (* quick filter on matching *)
   val candidates_match = let
-     fun does_match ((_, p1), (_, p2)) =
-        can (match_term p1) p2
+     fun does_match ((_, (v1, p1)), (_, (v2, p2))) =
+     let
+        val (t_s, ty_s) = match_term p1 p2
+     in
+        (null ty_s) andalso
+        (Lib.all (fn x => mem (#redex x) v1) t_s)
+     end handle HOL_ERR _ => false
   in
      List.filter does_match candidates
   end
@@ -698,8 +704,13 @@ fun PMATCH_REMOVE_FAST_SUBSUMED_CONV_GENCALL_SINGLE
 
   (* quick filter on matching *)
   val candidates_match = let
-     fun does_match ((_, p1), (_, p2)) =
-        can (match_term p2) p1
+     fun does_match ((_, (v1, p1)), (_, (v2, p2))) =
+     let
+        val (t_s, ty_s) = match_term p2 p1
+     in
+        (null ty_s) andalso
+        (Lib.all (fn x => mem (#redex x) v2) t_s)
+     end handle HOL_ERR _ => false
   in
      List.filter does_match candidates
   end
