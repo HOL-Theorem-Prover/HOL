@@ -1388,6 +1388,12 @@ val FINITE_PRED_11 = Q.store_thm
    ]
  ]);
 
+val f_o_ASSOC = Q.store_thm(
+  "f_o_ASSOC",
+  `(!x y. (g x = g y) <=> (x = y)) /\ (!x y. (h x = h y) <=> (x = y)) ==>
+   ((f f_o g) f_o h = f f_o (g o h))`,
+  simp[FDOM_f_o, FINITE_PRED_11, FAPPLY_f_o, fmap_EXT])
+
 (* ----------------------------------------------------------------------
     Domain subtraction (at a single point)
    ---------------------------------------------------------------------- *)
