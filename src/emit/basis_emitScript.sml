@@ -855,7 +855,7 @@ val FRANGE_EQNS = Q.prove
 
 val o_f_EQNS = Q.prove
 (`(f          o_f (FEMPTY:'a|->'b) = (FEMPTY:'a|->'c)) /\
-  ((f:'b->'c) o_f ((fm:'a|->'b) |+ (k,v)) = (f o_f fm \\ k) |+ (k,f v))`,
+  ((f:'b->'c) o_f ((fm:'a|->'b) |+ (k,v)) = (f o_f (fm \\ k)) |+ (k,f v))`,
  METIS_TAC [o_f_FEMPTY, o_f_FUPDATE])
 
 val T_INTRO = PURE_ONCE_REWRITE_RULE [PROVE[] (Term `x = (x = T)`)]
