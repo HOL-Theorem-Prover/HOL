@@ -192,14 +192,12 @@ val FUNION_alist_to_fmap = store_thm("FUNION_alist_to_fmap",
 val alist_to_fmap_MAP = store_thm(
 "alist_to_fmap_MAP",
 ``!f1 f2 al. INJ f1 (set (MAP FST al)) UNIV ==>
- (alist_to_fmap (MAP (\(x,y). (f1 x, f2 y)) al) =
+ (alist_to_fmap (MAP (\ (x,y). (f1 x, f2 y)) al) =
   MAP_KEYS f1 (f2 o_f alist_to_fmap al))``,
 NTAC 2 GEN_TAC THEN
 Induct THEN1 SRW_TAC[][] THEN
 Cases THEN SRW_TAC[][INJ_INSERT] THEN
-Q.MATCH_ABBREV_TAC `x = MAP_KEYS f1 ((f o_f (a \\ q)) |+ b)` THEN
-`f o_f (a \\ q) = (f o_f a) \\ q` by SRW_TAC[][] THEN
-POP_ASSUM SUBST1_TAC THEN
+Q.MATCH_ABBREV_TAC `x = MAP_KEYS f1 ((f o_f a) |+ b)` THEN
 UNABBREV_ALL_TAC THEN
 SRW_TAC[][GSYM FUPDATE_PURGE] THEN
 Q.MATCH_ABBREV_TAC `x = MAP_KEYS f1 (fm |+ (k,v))` THEN

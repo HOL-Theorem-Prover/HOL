@@ -1495,14 +1495,11 @@ val DOMSUB_COMMUTES = store_thm(
 
 val o_f_FUPDATE = store_thm(
   "o_f_FUPDATE",
-  ``f o_f (fm |+ (k,v)) = (f o_f (fm \\ k)) |+ (k, f v)``,
-  SRW_TAC [][GSYM fmap_EQ_THM]
+  ``f o_f (fm |+ (k,v)) = (f o_f fm) |+ (k, f v)``,
+  SRW_TAC [][fmap_EXT]
   THENL [
-    SRW_TAC [][pred_setTheory.EXTENSION] THEN PROVE_TAC [],
-    SRW_TAC [][GSYM fmap_EQ_THM, o_f_FAPPLY],
-    Cases_on `x = k` THEN
-    SRW_TAC [][GSYM fmap_EQ_THM, o_f_FAPPLY, NOT_EQ_FAPPLY,
-               DOMSUB_FAPPLY_NEQ]
+    SRW_TAC [][o_f_FAPPLY, FDOM_o_f],
+    SRW_TAC [][FAPPLY_FUPDATE_THM]
   ]);
 val _ = export_rewrites ["o_f_FUPDATE"]
 
