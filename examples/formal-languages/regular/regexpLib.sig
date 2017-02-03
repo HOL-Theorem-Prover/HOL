@@ -16,6 +16,6 @@ sig
                       matchfn : string -> bool,
                       certificate: thm option}
 
-  val dfa_by_proof : string * 'a frag list -> thm
+  val dfa_by_proof : string * regexp -> thm
 
 end

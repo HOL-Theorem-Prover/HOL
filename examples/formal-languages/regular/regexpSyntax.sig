@@ -2,7 +2,8 @@ signature regexpSyntax =
 sig
   include Abbrev
 
-  val regexp_ty : hol_type
+  val charset_ty : hol_type
+  val regexp_ty  : hol_type
 
   val chset_tm   : term
   val cat_tm     : term
@@ -25,9 +26,6 @@ sig
   val dest_or    : term -> term list
   val dest_and   : term -> term * term
 
-  val list_mk_chset : term list -> term 
-  val chset_to_list : term -> term list
-
   val is_chset   : term -> bool
   val is_cat     : term -> bool
   val is_star    : term -> bool 
@@ -44,6 +42,8 @@ sig
   val dest_regexp_matcher : term -> term * term
   val is_regexp_matcher   : term -> bool
 
+  val charset_to_term  : Regexp_Type.charset -> term
+  val term_to_charset  : term -> Regexp_Type.charset
   val mk_regexp        : Regexp_Type.regexp -> term
   val dest_regexp      : term -> Regexp_Type.regexp
 

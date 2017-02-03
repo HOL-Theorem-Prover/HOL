@@ -1143,12 +1143,10 @@ val FAPPLY_eqv_lswapstr = store_thm(
   "FAPPLY_eqv_lswapstr",
   ``d ∈ FDOM fm ⇒ (pmact rpm pi (fm ' d) = fmpm string_pmact rpm pi fm ' (lswapstr pi d))``,
   srw_tac [][fmpm_def] >>
-  qmatch_abbrev_tac `z = (f f_o g) ' x` >>
-  `FINITE {x | g x ∈ FDOM f}` by metis_tac [lemma] >>
-  `FDOM (f f_o g) = {x | g x ∈ FDOM f}` by metis_tac [FDOM_f_o] >>
-  `x ∈ FDOM (f f_o g)` by ( unabbrev_all_tac >> srw_tac [][stringpm_raw] ) >>
-  unabbrev_all_tac >>
-  srw_tac [][FAPPLY_f_o, stringpm_raw]);
+  qmatch_abbrev_tac `z = (f o_f g) ' x` >>
+  `FDOM g = { x | lswapstr pi⁻¹ x ∈ FDOM fm }`
+    by simp[FINITE_PRED_11, FDOM_f_o, Abbr`g`] >>
+  simp[Abbr`g`, FAPPLY_f_o, FINITE_PRED_11, Abbr`x`]);
 
 val fmpm_FEMPTY = store_thm(
   "fmpm_FEMPTY",

@@ -811,27 +811,32 @@ val COND_CONG_APPLY = prove (``(if (x:'a) = c then (ff x):'b else ff x) =
   (if x = c then ff c else ff x)``,
 Cases_on `x = c` THEN ASM_REWRITE_TAC[])
 
+
 fun literals_compile_fun (col:(term list * term) list) = let
 
-  fun extract_literal ((vs, c), ts) = let
+  fun extract_literal ((vs, c), (tl, ts)) = let
      val vars = FVL [c] empty_tmset
      val is_lit = not (List.exists (fn v => HOLset.member (vars, v)) vs)
   in
-    if is_lit then HOLset.add(ts,c) else
-      (if is_var c then ts else failwith "" "extract_literal")
+    if is_lit then (
+         if (HOLset.member(ts,c)) then
+            (tl, ts)
+         else
+            ((c::tl), HOLset.add(ts,c))
+    ) else
+      (if is_var c then (tl, ts) else failwith "" "extract_literal")
   end
 
-  val ts = List.foldl extract_literal empty_tmset col
-  val lits = HOLset.listItems ts
+  val (lits_rev, _) = List.foldl extract_literal ([], empty_tmset) col
+  val _ = if (List.null lits_rev) then (failwith "" "no lits") else ()
+  val lits = List.rev lits_rev
   val cases_no = List.length lits + 1
-  val _ = if (List.null lits) then (failwith "" "no lits") else ()
 
   val rty = gen_tyvar ()
   val lit_ty = type_of (snd (List.hd col))
   val split_arg = mk_var ("x", lit_ty)
   val split_fun = mk_var ("ff", lit_ty --> rty)
   val arg = mk_comb (split_fun, split_arg)
-
 
   fun mk_expand_thm lits = case lits of
       [] => REFL arg
@@ -846,13 +851,59 @@ fun literals_compile_fun (col:(term list * term) list) = let
       end
 
   val thm0 = mk_expand_thm lits
-  val thm0_rhs = rhs (concl thm0)
-  val thm1a = GSYM (ISPECL [mk_abs(split_arg, thm0_rhs), split_arg] literal_case_THM)
-  val thm1 = CONV_RULE (LHS_CONV BETA_CONV) thm1a
+  val thm1 = let
+    val thm0_rhs = rhs (concl thm0)
+    val thm1a = GSYM (ISPECL [mk_abs(split_arg, thm0_rhs), split_arg] literal_case_THM)
+    val thm1 = CONV_RULE (LHS_CONV BETA_CONV) thm1a
+  in
+    thm1
+  end
   val thm2 = TRANS thm0 thm1
   val thm3 = GEN split_fun (GEN split_arg thm2)
+
+
+  val cong_thm = let
+     fun mk_lits_preconds (sua, sub, c_tms) pre lits =
+       case lits of
+           [] => let
+             val negs = map (fn pl => mk_neg (mk_eq (split_arg, pl))) pre
+             val a = list_mk_conj negs
+             val sf = mk_comb (split_fun, split_arg)
+             val va = genvar (type_of sf)
+             val vb = genvar (type_of sf)
+             val c = mk_eq (va, vb)
+
+             val new_p = mk_imp (a, c)
+
+           in ((sf |-> va)::sua, (sf |-> vb)::sub, new_p::c_tms) end
+         | (l::lits') => let
+             val negs = map (fn pl => mk_neg (mk_eq (l, pl))) pre
+             val eq = mk_eq (split_arg, l)
+             val a = list_mk_conj (eq::negs)
+
+             val sf = mk_comb (split_fun, l)
+             val va = genvar (type_of sf)
+             val vb = genvar (type_of sf)
+             val c = mk_eq (va, vb)
+
+             val new_p = mk_imp (a, c)
+         in
+            (mk_lits_preconds ((sf |-> va)::sua, (sf |-> vb)::sub, new_p::c_tms) (l::pre) lits')
+         end
+
+    val (sua, sub, c_tms) = mk_lits_preconds ([], [], []) [] lits
+    val tt00 = rhs (concl thm0)
+
+    val tt0a = subst sua tt00
+    val tt0b = subst sub tt00
+    val tt0 = mk_eq (tt0a, tt0b)
+    val tt1 = list_mk_imp (List.rev c_tms, tt0)
+    val thm1 = prove(tt1, metisLib.METIS_TAC[])
+  in
+    thm1
+  end
 in
-  SOME (thm3, cases_no, simpLib.rewrites [Cong boolTheory.COND_CONG])
+  SOME (thm3, cases_no, cong_ss [cong_thm])
 end
 
 val _ = pmatch_compile_db_register_compile_fun literals_compile_fun

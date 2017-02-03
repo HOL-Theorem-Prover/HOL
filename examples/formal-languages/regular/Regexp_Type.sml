@@ -5,7 +5,7 @@
 structure Regexp_Type :> Regexp_Type =
 struct
 
-open Lib Feedback;
+open Lib Feedback regexpMisc WordOps;
 
 val ERR = mk_HOL_ERR "Regexp_Type";
 
@@ -30,7 +30,7 @@ val alphabetN = List.tabulate (alphabet_size,I)
 val alphabet = map Char.chr alphabetN;
 
 (*---------------------------------------------------------------------------*)
-(* Character sets                                                            *)
+(* Character sets represented as (256-bit) bigints.                          *)
 (*---------------------------------------------------------------------------*)
 
 val charset_empty = WordOps.allzero;
@@ -54,6 +54,8 @@ val charset_mem =
     not (andb(cs,Vector.sub(powers, Char.ord c)) = 0)
  end;
 
+fun charset_elts cs = filter (C charset_mem cs) alphabet;
+
 fun charset_union cs1 cs2 = IntInf.orb(cs1,cs2);
 
 fun charset_diff cs1 cs2 = IntInf.andb(cs1,IntInf.notb cs2)
@@ -63,6 +65,20 @@ val charset_digit      = charset_of (String.explode"0123456789");
 val charset_alpha = 
   charset_of (String.explode "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
 val charset_alphanum = charset_insert #"_" (charset_union charset_digit charset_alpha);
+
+fun intervals list = 
+ let val slist = Listsort.sort Int.compare list
+     fun follows j i = j = i + 1
+     fun chop [] A = rev (map rev A)
+       | chop (h::t) [] = chop t [[h]]
+       | chop (h::t) ([]::rst) = chop t ([h]::rst)
+       | chop (h::t) ((a::L)::rst) = 
+          if follows h a
+           then chop t ((h::a::L)::rst)
+           else chop t ([h]::(a::L)::rst)
+ in
+   chop slist []
+ end;
 
 fun charset_string cset = 
  if cset = charset_full
@@ -76,7 +92,24 @@ fun charset_string cset =
  if cset = charset_whitespace
   then "\\s" 
  else 
- String.concat ["[", String.implode (filter (C charset_mem cset) alphabet), "]"];
+ let val ords = List.map Char.ord (charset_elts cset)
+     fun prchar ch = 
+      if Char.isGraph ch then String.str ch
+      else let val i = Char.ord ch
+           in String.concat
+               ["\\", (if i <= 9 then "00" else
+                      if i <= 100 then "0" else ""), 
+                Int.toString i]
+           end
+     fun printerval [] = raise ERR "charset_string" "empty interval"
+       | printerval [i] = prchar (Char.chr i)
+       | printerval (i::t) = String.concat 
+                               [prchar (Char.chr i),"-",
+                                prchar(Char.chr(List.last t))]
+     val interval_strings = String.concat (map printerval (intervals ords))
+ in
+   String.concat ["[", interval_strings, "]"]
+ end;
 
  
 (*---------------------------------------------------------------------------*)
@@ -104,7 +137,10 @@ fun pp_regexp ppstrm =
             in 
                paren i 2 "("
              ; begin_block INCONSISTENT 2
-             ; List.app (pp 2) rlist
+             ; pr_list (pp 2) 
+                       (fn () => ())
+                       (fn () => add_break(0,0)) 
+                       rlist
              ; end_block ()
              ; paren i 2 ")"
             end
@@ -146,6 +182,7 @@ fun pp_regexp ppstrm =
 (*---------------------------------------------------------------------------*)
 
 val print_regexp = Portable.pprint pp_regexp;
+fun println_regexp r = (print_regexp r; print "\n");
 
 (*---------------------------------------------------------------------------*)
 (* Assumes v1 and v2 are of equal length                                     *)
@@ -743,20 +780,23 @@ fun replicate x (n:int) =
  if n = 1 then x 
   else Cat(x,replicate x (n-1));
 
-
 fun catlist [] = EPSILON
   | catlist [x] = x
   | catlist (h::t) = Cat (h,catlist t);
 
-(* compressed version ... hard for derivative taker to do well with the nesting.
-fun range r i j = 
- if j < i then EMPTY
- else Cat (replicate r i,replicate (Or [EPSILON,r]) (j-i))
-*)
 fun range r i j = 
  if j < i then EMPTY 
  else Or (map (replicate r) (upto i j));
 
+(*---------------------------------------------------------------------------*)
+(* compressed version ... hard for derivative taker to do well with the      *)
+(* nesting.                                                                  *)
+(*---------------------------------------------------------------------------*)
+(*
+fun range r i j = 
+ if j < i then EMPTY
+ else Cat (replicate r i,replicate (Or [EPSILON,r]) (j-i))
+*)
 
 (*---------------------------------------------------------------------------*)
 (* Numeric intervals                                                         *)
@@ -843,6 +883,8 @@ fun num2chset n =
  else raise ERR "num2chset" "";
 
 val zero_chset = num2chset 0;
+
+val byte2charset = num2chset o byte2num;
 
 (*---------------------------------------------------------------------------*)
 (* Contiguous char lists.                                                    *)
@@ -1052,6 +1094,8 @@ fun sing_interval i order =
      | MSB => msb_sing i width
  end;
 
+
+(* Interval approach
 fun packed_intervals lists width order = 
  let val intervals = map (fn list => (hd list, last list)) lists
      fun interval2regexp (lo,hi) = 
@@ -1065,11 +1109,11 @@ fun packed_intervals lists width order =
            Diff (match_downto order lo width, 
                  match_downto order (hi+1) width))
       else
-      if lo < 0 andalso hi >= 0 then 
-        (if hi = 0 then
+      if lo < 0 andalso hi = 0 then 
            Or[match_downto order lo width, match_upto order 0 width]
-         else
-           Or [match_downto order lo width, match_upto order hi width])
+      else
+      if lo < 0 andalso hi > 0 then 
+           Or [match_downto order lo width, match_upto order hi width]
       else  (* lo and hi both non-negative *)
        (if lo = 0 then 
           match_upto order hi width
@@ -1079,31 +1123,140 @@ fun packed_intervals lists width order =
  in
    Or (map interval2regexp intervals)
  end
+*)
 
+fun dest_chset (Chset cs) = cs
+  | dest_chset other = raise ERR "dest_chset" "";
 
-val allones = IntInf.notb(IntInf.fromInt 0);
-
-(*---------------------------------------------------------------------------*)
-(* Clear top (all but rightmost width) bits in w                             *)
-(*---------------------------------------------------------------------------*)
-
-fun clear_top_bits width w = 
- let open IntInf
-     val mask = notb(<<(allones,Word.fromInt(width)))
- in andb(w,mask)
+fun csets_union L = 
+ let val (L,z) = front_last L
+     fun cs_union r cs = charset_union (dest_chset r) cs
+ in 
+   Chset (itlist cs_union L (dest_chset z))
  end
 
-fun clear_bot_bits width w = 
- let open IntInf
- in ~>>(w,Word.fromInt width)
+fun bytes2charset bytes = 
+ let val (L,z) = front_last bytes
+     fun add b cs = charset_insert (byte2char b) cs
+ in 
+   Chset (itlist add L (charset_of [byte2char z]))
  end
+  
+(*---------------------------------------------------------------------------*)
+(* Given a list of lists, all of same length, the hd element of each list is *)
+(* the same.                                                                 *)
+(*---------------------------------------------------------------------------*)
 
-fun sign_extend w width = 
- let open IntInf
- in if ~>>(w,Word.fromInt (width - 1)) = 1
-  then (* signed *)
-     orb(w,IntInf.<<(allones,Word.fromInt width))
-  else w
+fun hd_card_eq_one [] = raise ERR "packed_intervals.hd_card_eq_one" "empty list"
+  | hd_card_eq_one ([]::t) = Lib.all null t
+  | hd_card_eq_one ((h::_)::rst) =
+     let fun check [] = true
+           | check ((g::_)::t) = h=g andalso check t
+           | check other = raise ERR "packed_intervals.hd_card_eq_one" ""
+     in check rst
+     end
+
+(*---------------------------------------------------------------------------*)
+(* Given a list of lists, the last element of each list is the same.         *)
+(*---------------------------------------------------------------------------*)
+
+fun last_card_eq_one [] = raise ERR "packed_intervals.last_card_eq_one" "empty list"
+  | last_card_eq_one ([]::rst) = Lib.all null rst
+  | last_card_eq_one (list::rst) =
+     let val item = last list
+         fun check [] = true
+           | check (L::t) = item=last L andalso check t
+     in check rst
+     end
+     
+fun pull_front L = 
+ if hd_card_eq_one L
+   then SOME (hd (hd L), map tl L)
+   else NONE
+ 
+ fun pull_last L = 
+  if last_card_eq_one L
+    then SOME (map butlast L, last (hd L))
+    else NONE
+ 
+fun pull_fronts L = 
+ case pull_front L
+  of NONE => ([],L)
+   | SOME (a,L') => 
+      let val (A,L'') = pull_fronts L'
+      in (a::A,L'')
+      end
+fun pull_lasts L = 
+ case pull_last L
+  of NONE => (L,[])
+   | SOME (L',z) => 
+      let val (L'',Z) = pull_lasts L'
+      in (L'',Z@[z])
+      end
+
+fun grabRun f a list acc = 
+ case list
+  of [] => (acc,list)
+   | h::t => if f h = a then grabRun f a t (h::acc) else (acc,list);
+
+fun chunk f [] = []
+  | chunk f (h::t) =  
+     let val (run,rst) = grabRun f (f h) (h::t) []
+     in run :: chunk f rst
+     end;
+
+fun inv_image R f (a,b) = R (f a,f b);
+
+fun sort3 X Y Z = Listsort.sort (inv_image Int.compare fst) [X,Y,Z];
+
+(*---------------------------------------------------------------------------*)
+(* Pick smallest regexp resulting from various strategies for building the   *)
+(* regexp representing the interval union.                                   *)
+(*---------------------------------------------------------------------------*)
+
+fun crunch_interval ibytes =
+ let val (L',Z) = pull_lasts ibytes
+     val (A,L'') = pull_fronts L'
+     fun singleton [_] = true | singleton _ = false
+     val core = 
+       if null L'' then [] 
+       else 
+       if Lib.all singleton L''
+          then [bytes2charset (map hd L'')]
+          else [Or (map (fn bytes => catlist(map byte2charset bytes)) L'')]
+  in 
+   catlist (map byte2charset A @ core @ map byte2charset Z)
+  end;
+
+fun create_regexps intlist nbytes = 
+ let val intervalL = intervals intlist
+     val _ = stdOut_print("Number of sub-intervals: "
+                          ^Int.toString (length intervalL)^"\n")
+     fun int_bytes i = bytes_of i nbytes
+     val intervalL_bytes = map (map int_bytes) intervalL
+     val intervalL_regexp = Or (map crunch_interval intervalL_bytes)
+
+     val bytesL = map int_bytes intlist
+     val last_sorted = Listsort.sort (inv_image Word8.compare last) bytesL
+     val hd_sorted = Listsort.sort (inv_image Word8.compare hd) bytesL
+     val last_chunks = chunk last last_sorted
+     val hd_chunks = chunk hd hd_sorted
+     val hd_regexp = Or (map crunch_interval hd_chunks)
+     val last_regexp = Or (map crunch_interval last_chunks)
+ in
+  (intervalL_regexp, hd_regexp, last_regexp)
+
+ end;
+
+fun sub_intervals intlist nbytes order = 
+ let val (r1,r2,r3) = create_regexps intlist nbytes
+     val sorted = sort3 (PolyML.objSize r1, r1)
+                        (PolyML.objSize r2, r2)
+                        (PolyML.objSize r3, r3)
+     val nregexp = hd sorted
+ in 
+    stdOut_print ("Size of regexp: "^Int.toString (fst nregexp)^"\n")   
+  ; snd nregexp
  end
 
 fun icat w shift i = 
@@ -1113,6 +1266,9 @@ fun icat w shift i =
  in 
    IntInf.orb(shifted,x)
  end
+
+fun icatlist w [] = w
+  | icatlist w ((shift,i)::t) = icatlist (icat w shift i) t;
 
 fun find_width (lo,hi) = 
  if lo > hi 
@@ -1136,28 +1292,30 @@ fun add_slop iwlist slop =
    add iwlist
  end;
 
-fun intervals list = 
- let val slist = Listsort.sort Int.compare list
-     fun follows j i = j = i + 1
-     fun chop [] A = rev (map rev A)
-       | chop (h::t) [] = chop t [[h]]
-       | chop (h::t) ([]::rst) = chop t ([h]::rst)
-       | chop (h::t) ((a::L)::rst) = 
-          if follows h a
-           then chop t ((h::a::L)::rst)
-           else chop t ([h]::(a::L)::rst)
- in
-   chop slist []
- end;
+fun interval_string (i,j) = String.concat  ["(",Int.toString i,",",Int.toString j,")"]
 
+fun interval_width_string (p,w) = 
+  let val s = interval_string p
+      val w = Int.toString w
+  in 
+   String.concat ["interval: ", s, " ; width in bits: ", w]
+  end;
 
 fun pack_intervals ilist = 
  let val iwlist = map (fn x => (x,find_width x)) ilist
+     val _ = stdOut_print ("Packed interval.\n  "^
+               String.concat (spread "\n  " (map interval_width_string iwlist))
+                ^ "\n")
      val nbits = sum (map snd iwlist)
      val nbytes = let val bnd = nbits div 8 
                   in if nbits mod 8 = 0 then bnd else 1 + bnd
                   end
+     val _ = stdOut_print ("Number of bytes needed: "^Int.toString nbytes^"\n")
      val slop = nbytes * 8 - nbits
+     val _ = if slop = 0 then   
+            stdOut_print "No padding needed.\n" 
+            else
+            stdOut_print ("Unused bits: "^Int.toString slop^" (added before last packed element)\n")
      val iwlist' = add_slop iwlist slop
      fun step A width B = 
       List.concat 
@@ -1168,10 +1326,14 @@ fun pack_intervals ilist =
    case iwlist'
    of [] => raise ERR "pack_intervals" "supposedly unreachable!"
     | ((lo,hi),_)::t =>
-       let val intlist = iter (upto lo hi) t
-           val sections = intervals intlist
-       in
-          packed_intervals sections nbytes LSB
+      let val intlist = iter (upto lo hi) t
+          val _ = stdOut_print ("Cardinality of specified interval: "
+                                ^Int.toString (length intlist)^"\n")
+      in
+       if Lib.all (fn i => 0 <= i andalso i <= 255) intlist (* fits in a byte *)
+        then Chset (charset_of (map Char.chr intlist)) 
+       else 
+          sub_intervals intlist nbytes LSB
        end
  end
 
@@ -1189,7 +1351,7 @@ fun tree_to_regexp tree =
    | Range (t,NONE,NONE) => Star (tree_to_regexp t)
    | Interval(i,j,dir) => regexp_interval i j dir
    | Const (k,dir) => sing_interval k dir
-   | Pack list => pack_intervals list
+   | Pack ilist => pack_intervals ilist
    | Ap("dot",[]) => DOT
    | Ap("digit",[]) => DIGIT
    | Ap("alphanum",[]) => ALPHANUM
@@ -1216,113 +1378,3 @@ fun fromQuote q = tree_to_regexp (quote_to_tree q)
  handle e => raise wrap_exn "Regexp_Type" "fromQuote" e;
 
 end
-
-
-(* Testing packed intervals
-
-`\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180),(0,59)}\i{0,5999}`;
-
-val ilist = [(~180,180),(0,59)];
-
-fun byte_me i = Word8.fromInt (IntInf.toInt i);
-fun inf_byte w = IntInf.fromInt(Word8.toInt w);
-
-val bytes_of = 
- let val eight = Word.fromInt 8
-     val mask = 0xFF:IntInf.int
-     fun step i n =
-      if n=1 then [byte_me i]
-      else
-        let val a = IntInf.andb(i,mask)
-            val j = IntInf.~>>(i,eight)
-       in byte_me a::step j (n-1)
-       end
-  in
-   step
- end
-
-val allones = IntInf.notb(IntInf.fromInt 0);
-
-(*---------------------------------------------------------------------------*)
-(* Clear top (all but rightmost width) bits in w                             *)
-(*---------------------------------------------------------------------------*)
-
-fun clear_top_bits width w = 
- let open IntInf
-     val mask = notb(<<(allones,Word.fromInt(width)))
- in andb(w,mask)
- end
-
-fun clear_bot_bits width w = 
- let open IntInf
- in ~>>(w,Word.fromInt width)
- end
-
-fun sign_extend w width = 
- let open IntInf
- in if ~>>(w,Word.fromInt (width - 1)) = 1
-  then (* signed *)
-     orb(w,IntInf.<<(allones,Word.fromInt width))
-  else w
- end
-
-fun icat w shift i = 
- let val shiftw = Word.fromInt shift
-     val shifted = IntInf.<<(w,shiftw)
-     val x = clear_top_bits shift (IntInf.fromInt i)
- in 
-   IntInf.orb(shifted,x)
- end
-
-fun allpairs A B = 
-  List.concat(map (fn a => map (fn b => (a,b)) B) A);
-
-val match = matcher SML o Regexp_Type.fromQuote;
-
-val tester = #matchfn (match `\p{(~180,180),(0,59)}`);
-
-fun check (a,b) = 
-  tester (String.implode (map byte2char (bytes_of (icat a 7 b) 2)))
-
-fun alltests (lo1,hi1) (lo2,hi2) = 
- let val A = upto lo1 hi1
-     val B = upto lo2 hi2
-     val AxB = allpairs A B
- in 
-  List.all check AxB
- end;
-
-alltests  (~180,180) (0,59);
-
-check (181,59);
-Lib.all (equal false)
-        (map (fn i => check (181,i)) (upto 0 59));
-
-Lib.all (equal false)
-        (map (fn i => check (~181,i)) (upto 0 59));
-
-
-val tester = 
- #matchfn (match `\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180),(0,59)}\i{0,5999}`)
-
-val tester = 
- #matchfn (match `\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}`)
-
-
-fun bin i = IntInf.fmt StringCvt.BIN i;
-
-val input = icat ~180 7 24;
-sign_extend(clear_top_bits 7 test) 7;
-sign_extend(clear_bot_bits 7 test) 7;
-
-(* swapped *)
-val test = icat 24 9 ~180;
-sign_extend (clear_top_bits 9 test) 9;
-sign_extend (clear_bot_bits 9 test) 9;
-
-val tspan = upto 0 59;
-val dspan = upto ~180 180;
-
-fun crunch a bwidth b = bytes_of (icat a bwidth b) 2;
-
-*)

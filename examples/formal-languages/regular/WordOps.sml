@@ -29,4 +29,6 @@ fun sign_extend w width =
   else w
  end
 
+fun bin i = IntInf.fmt StringCvt.BIN i;
+
 end

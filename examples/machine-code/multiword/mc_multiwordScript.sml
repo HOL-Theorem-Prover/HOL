@@ -206,7 +206,7 @@ val mc_compare_thm = prove(
   \\ disch_then (qspec_then `l-1` mp_tac) \\ fs []
   \\ strip_tac \\ fs []);
 
-val mc_header_AND_1 = prove(
+val mc_header_AND_1 = store_thm("mc_header_AND_1",
   ``mc_header (s,xs) && (0x1w:'a word) = b2w s``,
   rw[mc_header_def,GSYM word_mul_n2w,b2w_def,b2n_def]
   \\ Q.SPEC_TAC (`n2w (LENGTH xs) :α word`,`w`)

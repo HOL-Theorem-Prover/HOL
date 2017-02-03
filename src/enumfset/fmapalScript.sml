@@ -2208,7 +2208,7 @@ val fmap_CONS = maybe_thm ("fmap_CONS",
 SRW_TAC [] [fmap, FUPDATE_LIST_SNOC, FAPPLY_FUPDATE_THM]);
 
 val o_f_FUPDATE_ALT = maybe_thm ("o_f_FUPDATE_ALT",
-``!f:'b->'c fm:'a|->'b k v. f o_f fm |+ (k,v) = (f o_f fm) |+ (k,f v)``,
+``!f:'b->'c fm:'a|->'b k v. f o_f (fm |+ (k,v)) = (f o_f fm) |+ (k,f v)``,
 REPEAT GEN_TAC THEN
 REWRITE_TAC [fmap_EXT, FDOM_o_f, FDOM_FUPDATE] THEN
 GEN_TAC THEN REWRITE_TAC [IN_INSERT, FAPPLY_FUPDATE_THM, o_f_FAPPLY] THEN

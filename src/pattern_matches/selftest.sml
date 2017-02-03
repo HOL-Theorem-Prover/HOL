@@ -348,7 +348,7 @@ val test = test_conv "PMATCH_EXPAND_COLS_CONV" PMATCH_EXPAND_COLS_CONV (``case (
         (SOME x,SOME y) => SOME (x + y) | (_,_) => NONE``))
 
 val test = test_conv "PMATCH_INTRO_WILDCARDS_CONV" PMATCH_INTRO_WILDCARDS_CONV (``PMATCH (x,y,z)
-    [PMATCH_ROW (\(x,y,z). (x,y,z)) (\(x,y,z). T) (\(x,y,z). x + y);
+    [PMATCH_ROW (\(_x,y,z). (_x,y,z)) (\(_x,y,z). T) (\(_x,y,z). _x + y);
      PMATCH_ROW (\(x,y,z). (x,y,z)) (\(x,y,z). z) (\(x,y,z). x)]``, SOME ``PMATCH (x,y,z)
      [PMATCH_ROW (\(x,y,_0). (x,y,_0)) (\(x,y,_0). T)
         (\(x,y,_0). x + y);
@@ -896,6 +896,29 @@ val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
         else ARB) x``)
 
 val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  ``case x of 1 => 1 | 0 => 1 | 2 => 2``, SOME ``   literal_case
+     (\x.
+        if x = 1 then 1
+        else if x = 0 then 1
+        else if x = 2 then 2
+        else ARB) x``)
+
+val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  ``case x of 1 => 1 | ().| c => 1``, SOME ``   literal_case
+     (\x.
+        if x = 1 then 1
+        else if x = c then 1
+        else ARB) x``)
+
+val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  ``case x of 1 => 1 | ().| c => 2 | ().| d => 3``, SOME ``   literal_case
+     (\x.
+        if x = 1 then 1
+        else if x = c then 2
+        else if x = d then 3
+        else ARB) x``)
+
+val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
   ``case x of 0 => 1 | SUC 0 => 1 | SUC (SUC 0) => 2``, SOME ``
         num_CASE x 1
           (\n. num_CASE n 1 (\n'. num_CASE n' 2 (\n''. ARB)))``)
@@ -919,6 +942,23 @@ val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
                  (\x'. if x' = 1 then 1 else if x' = 2 then 2 else ARB)
                  v'
              else ARB) v)``)
+
+
+val test =  test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
+  ``case xy of (0,0) => 1 | (1,1) => 1 | ().| (c,3) => 3 | (1,2) => 2 | ().| (c, 4) => 2``, SOME ``pair_CASE xy
+     (\v v'.
+        literal_case
+          (\x.
+             if x = 0 then num_CASE v 1 (\n. ARB)
+             else if x = 1 then
+               literal_case (\x'. if x' = 1 then 1 else ARB) v
+             else if x = 3 then
+               literal_case (\x''. if x'' = c then 3 else ARB) v
+             else if x = 2 then
+               literal_case (\x'''. if x''' = 1 then 2 else ARB) v
+             else if x = 4 then
+               literal_case (\x''''. if x'''' = c then 2 else ARB) v
+             else ARB) v')``)
 
 
 val list_REVCASE_def = TotalDefn.Define `
@@ -959,11 +999,10 @@ val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
 
 val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
  ``case lx of
-  | ([], NONE) => 0
+  | (_, NONE) => 0
   | (SNOC x _, SOME y) => x + y``, SOME ``pair_CASE lx
      (\v v'.
-        list_REVCASE v (option_CASE v' 0 (\x'. ARB))
-          (\x'' xs. option_CASE v' ARB (\x'''. x'' + x''')))``)
+        option_CASE v' 0 (\x'. list_REVCASE v ARB (\x'' xs. x'' + x')))``)
 
 val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
  ``case lx of

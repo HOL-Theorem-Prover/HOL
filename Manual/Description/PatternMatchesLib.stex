@@ -44,11 +44,13 @@ This normal form is enforced by \texttt{PMATCH_EXPAND_COLS_CONV}.
 
 Finally, the conversion \texttt{PMATCH_INTRO_WILDCARDS_CONV} renames unused pattern variables such that they start with an underscore.
 As a result, they are printed as a wildcard pattern, making case expressions more readable.
+It also renames used variables that start with an underscore.
+This is rarely needed, though.
 
 \begin{session}
 \begin{alltt}
 >> PMATCH_INTRO_WILDCARDS_CONV ``case (x,y,z) of
-    (x, y, z) => x + y
+    (_x, y, z) => _x + y
   | (x, y, z) when z => x``
 \end{alltt}
 \end{session}

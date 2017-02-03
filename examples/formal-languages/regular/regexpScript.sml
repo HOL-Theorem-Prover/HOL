@@ -9,7 +9,7 @@ open arithmeticTheory listTheory optionTheory rich_listTheory
      mergesortTheory charsetTheory FormalLangTheory;
 
 
-local open numSyntax Regexp_Type in end;
+local open numSyntax Regexp_Type wordsLib in end;
 
 (* local open numSyntax Regexp_Type ml_translatorTheory in end; *)
 
@@ -94,18 +94,18 @@ val Sigma_def   = Define `Sigma = Chset charset_full`;
 val Epsilon_def = Define `Epsilon = Star (Chset charset_empty)`;
 
 (*---------------------------------------------------------------------------*)
-(* Regexp of a string                                                        *)
+(* Regexp of a string (currently unused).                                    *)
 (*---------------------------------------------------------------------------*)
 
 val catstring_def =
  Define
    `(catstring [] = Epsilon) /\
-    (catstring (c::t) = Cat(Chset(charset_sing(ORD c))) (catstring t))`;
+    (catstring (c::t) = Cat(Chset(charset_sing c)) (catstring t))`;
 
 (*---------------------------------------------------------------------------*)
 (* Size of a regular expression. The system-generated regexp_size goes       *)
 (* "through" Chset and into its representation, but really the size          *)
-(* computation should stop at Chset, as in rsize_def.                        *)
+(* computation should stop at Chset, as is done in rsize_def.                *)
 (*---------------------------------------------------------------------------*)
 
 val rsize_def =
@@ -189,49 +189,65 @@ val regexp_lang_epsilon = Q.store_thm
  `regexp_lang Epsilon = {""}`,
  rw [regexp_lang_def,Epsilon_def,charset_mem_empty,KSTAR_EMPTYSET,SET_EQ_THM]);
 
-val in_regexp_lang_epsilon = Q.store_thm
-("in_regexp_lang_epsilon",
- `!s. s IN regexp_lang Epsilon <=> (s = "")`,
- rw [regexp_lang_epsilon,SET_EQ_THM]);
-
 val regexp_lang_empty = Q.store_thm
 ("regexp_lang_empty",
  `regexp_lang Empty = EMPTY`,
  rw [regexp_lang_def,Empty_def,charset_mem_empty]);
 
-val in_regexp_lang_empty = Q.prove
-(`!s. s IN regexp_lang Empty <=> F`,
- METIS_TAC [regexp_lang_empty,EMPTY_DEF,IN_DEF]);
+val regexp_lang_epsilon_thm = Q.store_thm
+("regexp_lang_epsilon_thm",
+ `!s. regexp_lang Epsilon s <=> (s = "")`,
+ rw [regexp_lang_epsilon,SET_EQ_THM]);
+
+val regexp_lang_empty_thm = Q.store_thm
+("regexp_lang_empty_thm",
+ `!s. regexp_lang Empty s <=> F`,
+ METIS_TAC [regexp_lang_empty,EMPTY_DEF]);
 
 val regexp_lang_sigma = Q.store_thm
 ("regexp_lang_sigma",
- `!c:char. regexp_lang Sigma (STRING c "")`,
-rw_tac list_ss [Sigma_def,regexp_lang_thm]
- >> qexists_tac `ORD c`
- >> rw_tac list_ss [CHR_ORD]
- >> match_mp_tac charset_mem_full
- >> rw_tac list_ss [alphabet_size_def,ORD_BOUND]);
-
-val in_regexp_lang_sigma_star = Q.store_thm
-("in_regexp_lang_sigma_star",
-  `!w. w IN regexp_lang(Star Sigma)`,
- simp_tac list_ss [regexp_lang_def]
-  >> Induct
-  >- metis_tac [IN_KSTAR_THM]
-  >- (RW_TAC list_ss [Once IN_KSTAR_THM]
-      >> MAP_EVERY qexists_tac [`[h]`, `w`]
-      >> rw_tac list_ss [IN_DEF,regexp_lang_sigma]));
+ `regexp_lang Sigma = \w. ?c. w = [c]`,
+rw_tac set_ss [Sigma_def, regexp_lang_def, EXTENSION, EQ_IMP_THM]
+ >> Cases_on `c`
+ >> qexists_tac `n`
+ >> pop_assum mp_tac
+ >> Q.ID_SPEC_TAC `n`
+ >> REPEAT (CONV_TAC (numLib.BOUNDED_FORALL_CONV EVAL))
+ >> rw_tac bool_ss []);
 
 val regexp_lang_sigma_star = Q.store_thm
 ("regexp_lang_sigma_star",
-  `regexp_lang(Star Sigma) = \x.T`,
- metis_tac [in_regexp_lang_sigma_star,IN_DEF]);
+ `regexp_lang (Star Sigma) = \w. T`,
+rw_tac set_ss [regexp_lang_def, regexp_lang_sigma]
+ >> Induct_on `w`
+  >- metis_tac [IN_DEF,IN_KSTAR_THM]
+  >- (rw_tac set_ss [Once (SIMP_RULE bool_ss [IN_DEF] IN_KSTAR_THM)]
+      >> qexists_tac `[h]`
+      >> qexists_tac `w`
+      >> rw_tac set_ss []));
 
-val regexp_lang_empty_alt = Q.store_thm
-("regexp_lang_empty_alt",
- `regexp_lang(Neg(Star Sigma)) = regexp_lang Empty`,
- RW_TAC list_ss [Once regexp_lang_def,regexp_lang_sigma_star,FUN_EQ_THM,
-                 regexp_lang_empty,COMPL_applied,IN_DEF,EMPTY_DEF]);
+val union_compl = Q.prove
+(`!s. s UNION COMPL s = UNIV`,
+ rw_tac set_ss [EXTENSION]);
+
+val regexp_lang_invol = Q.store_thm
+("regexp_lang_invol",
+ `!r. regexp_lang (Or [r ; Neg r]) = \w. T`,
+rw_tac set_ss [regexp_lang_def]
+ >> EVAL_TAC
+ >> rw_tac set_ss [union_compl]);
+
+val regexp_lang_invol_sigma_star = Q.store_thm
+("regexp_lang_invol_sigma_star",
+ `!r. regexp_lang (Or [r ; Neg r]) = regexp_lang (Star Sigma)`,
+ rw_tac bool_ss [regexp_lang_invol, GSYM regexp_lang_sigma_star]);
+
+val regexp_lang_sigmastar_negempty = Q.store_thm
+("regexp_lang_sigmastar_negempty",
+ `regexp_lang (Star Sigma) = regexp_lang (Neg Empty)`,
+ rw_tac set_ss [regexp_lang_sigma_star,Empty_def]
+  >> rw_tac set_ss [regexp_lang_def]
+  >> metis_tac [charset_mem_empty]);
 
 (*---------------------------------------------------------------------------*)
 (* Compare lists by length. Used to speed up comparisons of Or regexps.      *)
@@ -551,37 +567,35 @@ val regexp_compareW_trans = Q.store_thm
  recInduct regexp_compareW_ind_thm >> rw[]
   >- full_simp_tac list_ss [regexp_compareW_thm,comparison_distinct]
   >- (Cases_on `p_1` >> Cases_on `p_2`
-      >> rw[]
-      >> imp_res_tac cons_eq_zip
-      >> fs [zip_def,regexp_compareW_thm]
-      >> rw_tac list_ss []
-      >> Cases_on `l3`
-      >> fs [zip_def]
-      >> Cases_on `h`
-      >> fs [zip_def,regexp_compareW_thm]
-         >- (every_case_tac >> rw[]
-             >> metis_tac [charset_cmp_eq,charset_cmp_strict,
-                           charset_cmp_trans,comparison_distinct])
-         >- (rfs[]
-             >> pop_assum (mp_tac o
-                Q.SPECL [`r::r0::t1`, `r'::r0'::t2`, `r''::r0''::t`])
-             >> rw[zip_def])
-         >- (rfs[]
-             >> pop_assum (mp_tac o Q.SPECL [`r::t1`, `r'::t2`, `r''::t`])
-             >> rw[zip_def])
-         >- (every_case_tac
-             >> fs [] >> rw []
+        >> rw[] >> imp_res_tac cons_eq_zip
+        >> fs [zip_def,regexp_compareW_thm]
+        >> rw_tac list_ss []
+        >> Cases_on `l3` >> fs [zip_def]
+        >> Cases_on `h` >> fs [zip_def,regexp_compareW_thm]
+           >- (every_case_tac >> rw[] >>
+               metis_tac [charset_cmp_eq,charset_cmp_strict,charset_cmp_trans,
+                          comparison_distinct])
+           >- (rfs[]
+               >> pop_assum (mp_tac o
+                  Q.SPECL [`r::r0::t1`, `r'::r0'::t2`, `r''::r0''::t`])
+               >> rw[zip_def])
+           >- (rfs[]
+               >> pop_assum (mp_tac o
+                  Q.SPECL [`r::t1`, `r'::t2`, `r''::t`])
+               >> rw[zip_def])
+        >- (every_case_tac >> fs [] >> rw []
              >- metis_tac [len_cmp_good,good_cmp_thm,comparison_distinct]
              >- (imp_res_tac len_cmp_length
                   >> rw_tac list_ss [Once (GSYM zip_append)]
-                  >> first_assum match_mp_tac
+                  >> first_x_assum match_mp_tac
                   >> qexists_tac `l' ++ t2`
                   >> rw[LENGTH_APPEND]
-                  >> full_simp_tac arith_ss [])
+                     >- full_simp_tac arith_ss []
+                     >- full_simp_tac arith_ss [])
              >- metis_tac [len_cmp_good,good_cmp_thm,comparison_distinct]
              >- (imp_res_tac len_cmp_length
                   >> rw_tac list_ss [Once (GSYM zip_append)]
-                  >> first_assum match_mp_tac
+                  >> first_x_assum match_mp_tac
                   >> qexists_tac `l' ++ t2`
                   >> rw[LENGTH_APPEND]
                   >> metis_tac[zip_append])
@@ -589,7 +603,7 @@ val regexp_compareW_trans = Q.store_thm
              >- metis_tac [len_cmp_good,good_cmp_thm,comparison_distinct]
              >- metis_tac [len_cmp_good,good_cmp_thm,comparison_distinct]
              >- metis_tac [len_cmp_good,good_cmp_thm,comparison_distinct])
-         >- (pop_assum (mp_tac o Q.SPECL [`r::t1`, `r'::t2`, `r''::t`])
+        >- (pop_assum (mp_tac o Q.SPECL [`r::t1`, `r'::t2`, `r''::t`])
              >> rw[zip_def]))
 );
 
@@ -635,7 +649,7 @@ val regexp_compareW_trans_eq = Q.store_thm
              >- (imp_res_tac len_cmp_length >> full_simp_tac arith_ss [])
              >- (imp_res_tac len_cmp_length >>
                  rw_tac list_ss [Once (GSYM zip_append)] >>
-                 first_assum match_mp_tac >>
+                 first_x_assum match_mp_tac >>
                  qexists_tac `l' ++ t2` >>
                  metis_tac [LENGTH_APPEND,zip_append])
              >- metis_tac [len_cmp_good,good_cmp_thm,comparison_distinct]
@@ -1146,6 +1160,29 @@ val smart_constructors_correct = Q.store_thm
  >- metis_tac [build_neg_correct, regexp_lang_ctxt_eqns]);
 
 
+val lem = Q.prove
+(`smart_deriv c (Cat (Chset cs) r) = if charset_mem c cs then r else Empty`,
+ rw_tac list_ss [smart_deriv_def,LET_THM]
+  >- full_simp_tac list_ss [nullable_def,nullableW_def]
+  >- full_simp_tac list_ss [nullable_def,nullableW_def]
+  >- rw_tac list_ss [build_cat_def,Empty_def, Epsilon_def]
+  >- rw_tac list_ss [build_cat_def]
+);
+
+val smart_deriv_thm = Q.store_thm
+("smart_deriv_thm",
+ `(smart_deriv c (Chset cs) = if charset_mem c cs then Epsilon else Empty) ∧
+  (smart_deriv c (Cat (Chset cs) r) = if charset_mem c cs then r else Empty) /\
+  (smart_deriv c (Cat r1 r2) =
+    let d1 = build_cat (smart_deriv c r1) r2
+    in if nullable r1
+         then build_or [d1; smart_deriv c r2]
+         else d1) ∧
+  (smart_deriv c (Star r) = build_cat (smart_deriv c r) (build_star r)) ∧
+  (smart_deriv c (Or rs) = build_or (MAP (smart_deriv c) rs)) ∧
+  (smart_deriv c (Neg r) = build_neg (smart_deriv c r))`,
+metis_tac [lem,smart_deriv_def]);
+
 (*---------------------------------------------------------------------------*)
 (* Matcher that uses smart constructor derivatives                           *)
 (*---------------------------------------------------------------------------*)
@@ -1210,6 +1247,11 @@ val regexp_lang_normalize = Q.store_thm
 ("regexp_lang_normalize",
  `!r s. regexp_lang r s = regexp_lang (normalize r) s`,
  metis_tac [regexp_lang_normalize_help]);
+
+val regexp_lang_normalize_eta = Q.store_thm
+("regexp_lang_normalize_eta",
+ `!r. regexp_lang r = regexp_lang (normalize r)`,
+ metis_tac [regexp_lang_normalize]);
 
 (*---------------------------------------------------------------------------*)
 (* Is a regexp in normal form?                                               *)
@@ -1280,6 +1322,7 @@ val is_normalized_eqns = Q.store_thm
    RW_TAC list_ss [Once is_normalized_def] THEN CASE_TAC,
    RW_TAC list_ss [Once is_normalized_def] THEN CASE_TAC,
    RW_TAC list_ss [Once is_normalized_def] THEN METIS_TAC[]]);
+
 
 (*---------------------------------------------------------------------------*)
 (* Smart constructors do in fact normalize                                   *)
@@ -1427,9 +1470,9 @@ val SORTED_starts_charsets = Q.store_thm
  Cases_on `rs1 = []` >>
  rw [] >>
  fs [] >>
- rw [] >>
- rename[`SORTED regexp_leq (h::(rs1++rs2))`]
+ rw []
  >- (fs [EVERY_MEM] >>
+     rename[`SORTED _ (h::(rs1 ++ rs2))`] >>
      Cases_on `rs1` >>
      fs [] >>
      Cases_on `is_charset h`
@@ -1579,8 +1622,7 @@ val remove_dups_no_dups = Q.store_thm
      every_case_tac >>
      fs [regexp_compare_antisym, regexp_compare_eq] >>
      metis_tac [regexp_compare_trans,regexp_compare_eq, comparison_distinct])
- >- (first_x_assum match_mp_tac >>
-     imp_res_tac SORTED_EQ));
+ >- (first_x_assum match_mp_tac >> imp_res_tac SORTED_EQ));
 
 val norm_or = Q.store_thm
 ("norm_or",
@@ -1639,7 +1681,6 @@ val norm_or = Q.store_thm
               >- (Cases_on `h` >> fs [is_charset_def])
               >- (fs [FILTER_EQ_NIL, EVERY_MEM] >> metis_tac [is_charset_def])))
 );
-
 
 (*---------------------------------------------------------------------------*)
 (* Normalization delivers normal form                                        *)
@@ -1749,6 +1790,7 @@ val normalize_idempotent = Q.store_thm
  `!r. normalize (normalize r) = normalize r`,
  METIS_TAC [normalize_id,normalize_thm]);
 
+
 (*---------------------------------------------------------------------------*)
 (* Smart derivative yields a regexp in normal form                           *)
 (*---------------------------------------------------------------------------*)
@@ -1828,3 +1870,13 @@ REPEAT CONJ_TAC
 
 
 val _ = export_theory();
+
+(* g `!cs1 cs2 cs3. regexp_lang (Cat (Or [Chset cs1 ; Chset cs2]) (Chset cs3))
+                  = regexp_lang (Cat (Chset (charset_union cs1 cs2)) (Charset cs3))`;
+
+val regexp_lang_or2 = Q.prove
+(`!cs1 cs2 cs3. regexp_lang (Or [Chset cs1 ; Chset cs2]) = regexp_lang (Chset (charset_union cs1 cs2))`,
+rw_tac set_ss [SET_EQ_THM, regexp_lang_thm,charset_mem_union,EQ_IMP_THM]
+ >> metis_tac[]);
+
+*)

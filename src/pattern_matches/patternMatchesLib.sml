@@ -591,9 +591,10 @@ fun compute_row_pat_pairs rows = let
     val (vars_tm, pb) = pairSyntax.dest_pabs p
     val vars = pairSyntax.strip_pair vars_tm
     val s = List.map (fn v => (v |-> genvar (type_of v))) vars
+    val vars' = map (fn x => #residue x) s
     val pb' = subst s pb
   in
-    pb'
+    (vars', pb')
   end) rows)
 
   (* get all pairs, first component always appears before second *)
@@ -615,8 +616,13 @@ fun PMATCH_REMOVE_FAST_REDUNDANT_CONV_GENCALL_SINGLE rc_arg t = let
 
   (* quick filter on matching *)
   val candidates_match = let
-     fun does_match ((_, p1), (_, p2)) =
-        can (match_term p1) p2
+     fun does_match ((_, (v1, p1)), (_, (v2, p2))) =
+     let
+        val (t_s, ty_s) = match_term p1 p2
+     in
+        (null ty_s) andalso
+        (Lib.all (fn x => mem (#redex x) v1) t_s)
+     end handle HOL_ERR _ => false
   in
      List.filter does_match candidates
   end
@@ -698,8 +704,13 @@ fun PMATCH_REMOVE_FAST_SUBSUMED_CONV_GENCALL_SINGLE
 
   (* quick filter on matching *)
   val candidates_match = let
-     fun does_match ((_, p1), (_, p2)) =
-        can (match_term p2) p1
+     fun does_match ((_, (v1, p1)), (_, (v2, p2))) =
+     let
+        val (t_s, ty_s) = match_term p2 p1
+     in
+        (null ty_s) andalso
+        (Lib.all (fn x => mem (#redex x) v2) t_s)
+     end handle HOL_ERR _ => false
   in
      List.filter does_match candidates
   end
@@ -1791,7 +1802,7 @@ fun colRank_first_row_constr db (_, rows) = case rows of
 
 val colRank_constr_prefix : column_ranking_fun = (fn (_, rows) =>
   let fun aux n [] = n
-        | aux n ((vs, p) :: pL) = if (is_var p andalso mem p vs)
+        | aux n ((vs, p) :: pL) = if (is_var p)
              then n else aux (n+1)  pL
   in aux 0 rows end)
 
@@ -1828,7 +1839,7 @@ fun colRank_small_branching_factor db : column_ranking_fun = (fn col =>
 fun colRank_arity db : column_ranking_fun = (fn col =>
   case col_get_constr_set db col of
      SOME (cL, full_constrL, exh) =>
-       List.foldl (fn (c, s) => s + length (fst (strip_fun (type_of c)))) 0 cL
+       ~(List.foldl (fn (c, s) => s + length (fst (strip_fun (type_of c)))) 0 cL)
    | NONE => 0)
 
 
@@ -2711,7 +2722,7 @@ fun IS_REDUNDANT_ROWS_INFO_SHOW_ROW_IS_REDUNDANT_set_goal thm i = let
   val (l, _) = (listSyntax.dest_list o rand o concl) thm
   val t = List.nth (l, i)
 in
-  Manager.set_goal ([], t)
+  proofManagerLib.set_goal ([], t)
 end;
 
 

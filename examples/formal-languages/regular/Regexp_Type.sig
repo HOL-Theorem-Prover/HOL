@@ -1,7 +1,6 @@
 signature Regexp_Type = 
 sig
 
-(* type charset = bool vector *)
  type charset = IntInf.int
 
  datatype regexp 
@@ -19,11 +18,12 @@ sig
  val charset_full    : charset
  val charset_mem     : char -> charset -> bool
  val charset_of      : char list -> charset
+ val charset_elts    : charset -> char list
 
+ val charset_insert  : char -> charset -> charset
  val charset_sing    : char -> charset
  val charset_union   : charset -> charset -> charset
  val charset_diff    : charset -> charset -> charset
- val charset_insert  : char -> charset -> charset
  val charset_compare : charset * charset -> order
 
  val regexp_compare : regexp * regexp -> order
@@ -69,5 +69,6 @@ sig
 
  val pp_regexp     : HOLPP.ppstream -> regexp -> unit
  val print_regexp  : regexp -> unit
+ val println_regexp  : regexp -> unit
 
 end
