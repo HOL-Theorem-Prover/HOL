@@ -49,7 +49,6 @@ val _ = Hol_datatype `
            | Result of (('atok # locs)  list # 'cvalue) option # locs
            | Looped
 `;
-(* TODO: some unknown_loc can be replaced *)
 val coreloop_def = zDefine`
   coreloop G =
    OWHILE (λs. case s of Result _ => F
@@ -191,14 +190,14 @@ val exec_correct0 = prove(
   ho_match_mp_tac peg_eval_strongind' >>
   simp[peg_exec_thm, peg_nt_thm, applykont_thm] >>
   rpt conj_tac
-  >- cheat (* TODO ?*)
+  >- cheat 
   >- ((* rpt - no elements succeed *)
       map_every qx_gen_tac [`e`, `f`, `i`, `j`, `vlist`, `l`, `l'`] >> 
       strip_tac >>
       map_every qx_gen_tac [`k`, `stk`] >>
       first_x_assum (qspecl_then [`f`, `k`, `stk`, `[]`] mp_tac) >>
       simp[merge_list_locs_def] >>
-      cheat (* TODO *)
+      cheat 
       )
   >- ((* poplistval works *)
       rpt strip_tac >> rpt AP_TERM_TAC >> rpt (pop_assum (K ALL_TAC)) >>
@@ -219,7 +218,7 @@ val exec_correct0 = prove(
       simp[] >>
       simp_tac bool_ss [GSYM
           listTheory.APPEND_ASSOC,listTheory.APPEND,merge_locs_def] >>
-      cheat (* TODO something is wrong with locaction merge*)
+      cheat
       ))
 
 val exec_correct = save_thm(
@@ -242,7 +241,6 @@ val pair_CASES = pairTheory.pair_CASES
 val option_CASES = optionTheory.option_nchotomy
 val list_CASES = listTheory.list_CASES
 
-(* TODO: improve with location equality *)
 val pegexec = store_thm(
   "pegexec",
   ``peg_eval G (s,e) (r,l) ⇒ ?l'. peg_exec G e s [] done failed = Result (r,l')``,

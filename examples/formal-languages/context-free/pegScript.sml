@@ -1,6 +1,5 @@
 open HolKernel Parse boolLib bossLib
 open boolSimps
-open lcsymtacs
 open grammarTheory finite_mapTheory
 open locationTheory
 
@@ -340,7 +339,7 @@ val peg_eval_total = store_thm(
   `s' ≠ s` by metis_tac [lemma4_1a] >>
   `LENGTH s' < LENGTH s` by metis_tac [peg_eval_suffix'] >>
   metis_tac [peg_eval_rules, reducing_peg_eval_makes_list])
-(* HERE *)
+
 (* derived and useful PEG forms *)
 val pegf_def = Define`pegf sym f = seq sym (empty ARB) (λl1 l2. f l1)`
 
