@@ -734,6 +734,152 @@ val IMP_NEG_CONTRA = store_thm("IMP_NEG_CONTRA",
 val DISJ_IMP_INTRO  = store_thm ("DISJ_IMP_INTRO",
   ``(!x. P x \/ Q x) ==> ((~(P y) ==> Q y) /\ (~(Q y) ==> P y))``, PROVE_TAC[])
 
+
+(******************************************************************************)
+(* Simple GUESSES                                                             *)
+(******************************************************************************)
+
+val SIMPLE_GUESS_EXISTS_def = Define `
+    SIMPLE_GUESS_EXISTS (v : 'a) (i : 'a) (P : bool) =
+      (P ==> (v = i))`
+
+val SIMPLE_GUESS_EXISTS_ALT_DEF = store_thm ("SIMPLE_GUESS_EXISTS_ALT_DEF",
+  ``(!v. SIMPLE_GUESS_EXISTS (v:'a) i (P v)) <=> (
+    GUESS_EXISTS_GAP ((K i):(unit -> 'a)) (\v. P v))``,
+SIMP_TAC std_ss [SIMPLE_GUESS_EXISTS_def, GUESS_EXISTS_GAP_def]);
+
+
+val SIMPLE_GUESS_FORALL_def = Define `
+    SIMPLE_GUESS_FORALL (v : 'a) (i : 'a) (P : bool) =
+      (~P ==> (v = i))`
+
+val SIMPLE_GUESS_FORALL_ALT_DEF = store_thm ("SIMPLE_GUESS_FORALL_ALT_DEF",
+  ``(!v. SIMPLE_GUESS_FORALL (v:'a) i (P v)) <=> (
+    GUESS_FORALL_GAP ((K i):(unit -> 'a)) (\v. P v))``,
+SIMP_TAC std_ss [SIMPLE_GUESS_FORALL_def, GUESS_FORALL_GAP_def]);
+
+val SIMPLE_GUESS_FORALL_THM = store_thm ("SIMPLE_GUESS_FORALL_THM",
+  ``!i P. (!v. SIMPLE_GUESS_FORALL v i (P v)) ==>
+    ((!v. P v) <=> (P i))``,
+REWRITE_TAC [SIMPLE_GUESS_FORALL_def] THEN
+METIS_TAC[])
+
+val SIMPLE_GUESS_EXISTS_THM = store_thm ("SIMPLE_GUESS_EXISTS_THM",
+  ``!i P. (!v. SIMPLE_GUESS_EXISTS v i (P v)) ==>
+    ((?v. P v) <=> (P i))``,
+REWRITE_TAC [SIMPLE_GUESS_EXISTS_def] THEN
+METIS_TAC[])
+
+val SIMPLE_GUESS_UEXISTS_THM = store_thm ("SIMPLE_GUESS_UEXISTS_THM",
+  ``!i P.
+    (!v. SIMPLE_GUESS_EXISTS v i (P v)) ==>
+    ((?!v. P v) <=> (P i))``,
+SIMP_TAC std_ss [SIMPLE_GUESS_EXISTS_def, EXISTS_UNIQUE_THM] THEN
+METIS_TAC[])
+
+val SIMPLE_GUESS_SELECT_THM = store_thm ("SIMPLE_GUESS_SELECT_THM",
+  ``!i P.
+    (!v. SIMPLE_GUESS_EXISTS v i (P v)) ==>
+    ((@v. P v) = if P i then i else (@v. F))``,
+SIMP_TAC std_ss [SIMPLE_GUESS_EXISTS_def] THEN
+REPEAT STRIP_TAC THEN
+Cases_on `P i` THEN ASM_REWRITE_TAC [] THENL [
+  SELECT_ELIM_TAC THEN
+  METIS_TAC[],
+
+  `!v. P v = F` by METIS_TAC[] THEN
+  ASM_REWRITE_TAC[]
+])
+
+
+val SIMPLE_GUESS_SOME_THM = store_thm ("SIMPLE_GUESS_SOME_THM",
+  ``!i P.
+    (!v. SIMPLE_GUESS_EXISTS v i (P v)) ==>
+    ((some v. P v) = (if P i then SOME i else NONE))``,
+
+SIMP_TAC std_ss [SIMPLE_GUESS_EXISTS_def, some_def] THEN
+REPEAT STRIP_TAC THEN
+Cases_on `?v. P v` THEN (
+  ASM_REWRITE_TAC [] THEN
+  METIS_TAC[]
+))
+
+val SIMPLE_GUESS_TAC =
+  SIMP_TAC std_ss [SIMPLE_GUESS_FORALL_def, SIMPLE_GUESS_EXISTS_def] THEN METIS_TAC[];
+
+val SIMPLE_GUESS_EXISTS_EQ_1 = store_thm ("SIMPLE_GUESS_EXISTS_EQ_1",
+  ``!v:'a i. SIMPLE_GUESS_EXISTS v i (v = i)``,
+  SIMPLE_GUESS_TAC)
+
+val SIMPLE_GUESS_EXISTS_EQ_2 = store_thm ("SIMPLE_GUESS_EXISTS_EQ_2",
+  ``!v:'a i. SIMPLE_GUESS_EXISTS v i (i = v)``,
+  SIMPLE_GUESS_TAC)
+
+val SIMPLE_GUESS_EXISTS_EQ_T = store_thm ("SIMPLE_GUESS_EXISTS_EQ_T",
+  ``!v. SIMPLE_GUESS_EXISTS v T v``,
+  SIMPLE_GUESS_TAC)
+
+val SIMPLE_GUESS_FORALL_NEG = store_thm ("SIMPLE_GUESS_FORALL_NEG",
+  ``!v:'a i P. SIMPLE_GUESS_EXISTS v i P ==> SIMPLE_GUESS_FORALL v i (~P)``,
+  SIMPLE_GUESS_TAC
+)
+
+val SIMPLE_GUESS_EXISTS_NEG = store_thm ("SIMPLE_GUESS_EXISTS_NEG",
+  ``!v:'a i P. SIMPLE_GUESS_FORALL v i P ==> SIMPLE_GUESS_EXISTS v i (~P)``,
+  SIMPLE_GUESS_TAC
+)
+
+val SIMPLE_GUESS_FORALL_OR_1 = store_thm ("SIMPLE_GUESS_FORALL_OR_1",
+  ``!v:'a i P1 P2. SIMPLE_GUESS_FORALL v i P1 ==> SIMPLE_GUESS_FORALL v i (P1 \/ P2)``,
+  SIMPLE_GUESS_TAC);
+
+val SIMPLE_GUESS_FORALL_OR_2 = store_thm ("SIMPLE_GUESS_FORALL_OR_2",
+  ``!v:'a i P1 P2. SIMPLE_GUESS_FORALL v i P2 ==> SIMPLE_GUESS_FORALL v i (P1 \/ P2)``,
+  SIMPLE_GUESS_TAC);
+
+val SIMPLE_GUESS_EXISTS_AND_1 = store_thm ("SIMPLE_GUESS_EXISTS_AND_1",
+  ``!v:'a i P1 P2. SIMPLE_GUESS_EXISTS v i P1 ==> SIMPLE_GUESS_EXISTS v i (P1 /\ P2)``,
+  SIMPLE_GUESS_TAC);
+
+val SIMPLE_GUESS_EXISTS_AND_2 = store_thm ("SIMPLE_GUESS_EXISTS_AND_2",
+  ``!v:'a i P1 P2. SIMPLE_GUESS_EXISTS v i P2 ==> SIMPLE_GUESS_EXISTS v i (P1 /\ P2)``,
+  SIMPLE_GUESS_TAC);
+
+val SIMPLE_GUESS_EXISTS_EXISTS = store_thm ("SIMPLE_GUESS_EXISTS_EXISTS",
+  ``!v:'a i P. (!v2. SIMPLE_GUESS_EXISTS v i (P v2)) ==>
+               SIMPLE_GUESS_EXISTS v i (?v2. P v2)``,
+  SIMPLE_GUESS_TAC)
+
+val SIMPLE_GUESS_EXISTS_FORALL = store_thm ("SIMPLE_GUESS_EXISTS_FORALL",
+  ``!v:'a i P. (!v2. SIMPLE_GUESS_EXISTS v i (P v2)) ==>
+               SIMPLE_GUESS_EXISTS v i (!v2. P v2)``,
+  SIMPLE_GUESS_TAC)
+
+val SIMPLE_GUESS_FORALL_EXISTS = store_thm ("SIMPLE_GUESS_FORALL_EXISTS",
+  ``!v:'a i P. (!v2. SIMPLE_GUESS_FORALL v i (P v2)) ==>
+               SIMPLE_GUESS_FORALL v i (?v2. P v2)``,
+  SIMPLE_GUESS_TAC)
+
+val SIMPLE_GUESS_FORALL_FORALL = store_thm ("SIMPLE_GUESS_FORALL_FORALL",
+  ``!v i P. (!v2. SIMPLE_GUESS_FORALL v i (P v2)) ==>
+            SIMPLE_GUESS_FORALL v i (!v2. P v2)``,
+  SIMPLE_GUESS_TAC)
+
+val SIMPLE_GUESS_FORALL_IMP_1 = store_thm ("SIMPLE_GUESS_FORALL_IMP_1",
+  ``!v:'a i P1 P2. SIMPLE_GUESS_EXISTS v i P1 ==> SIMPLE_GUESS_FORALL v i (P1 ==> P2)``,
+  SIMPLE_GUESS_TAC);
+
+val SIMPLE_GUESS_FORALL_IMP_2 = store_thm ("SIMPLE_GUESS_FORALL_IMP_2",
+  ``!v:'a i P1 P2. SIMPLE_GUESS_FORALL v i P2 ==> SIMPLE_GUESS_FORALL v i (P1 ==> P2)``,
+  SIMPLE_GUESS_TAC);
+
+val SIMPLE_GUESS_EXISTS_EQ_FUN = store_thm ("SIMPLE_GUESS_EXISTS_EQ_FUN",
+  ``!v:'a i t1 t2 f.
+      SIMPLE_GUESS_EXISTS v i (f t1 = f t2) ==>
+      SIMPLE_GUESS_EXISTS v i (t1 = t2)``,
+  SIMPLE_GUESS_TAC)
+
+
 (******************************************************************************)
 (* Removing functions under quantifiers                                       *)
 (******************************************************************************)
