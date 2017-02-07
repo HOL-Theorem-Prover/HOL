@@ -59,12 +59,18 @@ val _ = set_mapped_fixity { tok = "<*", term_name = "igRight", fixity = Infixl 5
 
 val igtok_def = Define‘igtok P = tok P (K NONE)’
 
-val DigitSet_def = Define‘DigitSet = 10w : bool[256]’; (* made up *)
+val charset_string_def = Define‘
+  charset_string s = FOLDL (λa c. charset_union a (charset_sing c))
+                           charset_empty
+                           s
+’
+
+val DigitSet_def = Define‘
+  DigitSet = charset_string "0123456789"
+’
 
 val EscapableChar_def = Define‘
   EscapableChar c <=> MEM c "\\.^$*+?|~{}[]()" ∨ ORD c = 96’
-
-val setOfChar_def = Define‘setOfChar c : bool[256] = 1w << ORD c’
 
 val OrM_def = Define‘
   OrM roptlist = OPTION_MAP Or (OPT_MMAP I roptlist)
@@ -76,7 +82,7 @@ val rePEG_def = Define‘
     rules := FEMPTY |++ [
       (mkNT Atom,
        choicel [
-         tok ((=) #".") (K (SOME (Chset (-1w))));
+         tok ((=) #".") (K (SOME (Chset charset_full)));
 
          igtok ((=) #"(") *> pnt Top <* igtok ((=) #")");
 
@@ -85,13 +91,13 @@ val rePEG_def = Define‘
          igtok ((=) #"\\") *> pnt BslashSpecial ;
 
          not (tok EscapableChar (K NONE)) NONE *>
-         any (λc. SOME (Chset (setOfChar c)))
+         any (λc. SOME (Chset (charset_sing c)))
        ]);
 
       (mkNT BslashSpecial,
        choicel [
          tok ((=) #"d") (K (SOME (Chset DigitSet)));
-         tok EscapableChar (λc. SOME (Chset (setOfChar c)))
+         tok EscapableChar (λc. SOME (Chset (charset_sing c)))
        ]);
 
       (mkNT Star,
