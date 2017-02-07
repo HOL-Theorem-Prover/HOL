@@ -166,6 +166,7 @@ val static_ss = simpLib.merge_ss
    select_conj_ss,
    elim_fst_snd_select_ss,
    boolSimps.EQUIV_EXTRACT_ss,
+   quantHeuristicsLib.SIMPLE_QUANT_INST_ss,
    simpLib.rewrites [
      some_var_bool_T, some_var_bool_F,
      GSYM boolTheory.F_DEF,

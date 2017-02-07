@@ -1185,6 +1185,49 @@ val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_FAST_CHECK" PMATCH_IS_EXHAUSTIVE_FAST_CHE
 val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK (t, SOME T)
 
 
+val t =
+   ``PMATCH (xy : ('a option # 'b option))
+    [PMATCH_ROW (\(_uv :unit). ((NONE :'a option),(NONE :'b option)))
+       (\(_uv :unit). T) (\(_uv :unit). (0 :num));
+     PMATCH_ROW (\((_1 :'b option),(_0 :'a)). (SOME _0,_1))
+       (\((_1 :'b option),(_0 :'a)). T)
+       (\((_1 :'b option),(_0 :'a)). (1 :num));
+     PMATCH_ROW (\ (_3 : ('a option # 'b option)). _3)
+       (\_. T)
+       (\_. (2 :num))]``;
+
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK (t, SOME ``~F``)
+
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK (t, SOME ``~F``)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_CHECK" PMATCH_IS_EXHAUSTIVE_CHECK (t, SOME T)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_FAST_CHECK" PMATCH_IS_EXHAUSTIVE_FAST_CHECK (t, SOME T)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK (t, SOME T)
+
+val t =
+   ``PMATCH (xy : ('a option # 'b option))
+    [PMATCH_ROW (\(_uv :unit). ((NONE :'a option),(NONE :'b option)))
+       (\(_uv :unit). T) (\(_uv :unit). (0 :num));
+     PMATCH_ROW (\((_1 :'b option),(_0 :'a)). (SOME _0,_1))
+       (\((_1 :'b option),(_0 :'a)). T)
+       (\((_1 :'b option),(_0 :'a)). (1 :num));
+     PMATCH_ROW (\((_3 :'b option),(_2 :'a option)). (_2,_3))
+       (\((_3 :'b option),(_2 :'a option)). T)
+       (\((_3 :'b option),(_2 :'a option)). (2 :num))]``;
+
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK (t, SOME ``~F``)
+
+val _ = test_precond "PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK (t, SOME ``~F``)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_CHECK" PMATCH_IS_EXHAUSTIVE_CHECK (t, SOME T)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_FAST_CHECK" PMATCH_IS_EXHAUSTIVE_FAST_CHECK (t, SOME T)
+
+val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK (t, SOME T)
+
+
 val t =``PMATCH xy []``;
 
 val _ = test_precond "PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK (t, NONE)
