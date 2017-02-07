@@ -3608,8 +3608,12 @@ val LUPDATE_SAME = store_thm("LUPDATE_SAME",
 
 (* end CakeML lemmas *)
 
-
-(* --------------------------------------------------------------------- *)
+(* OPT_MMAP : ('a -> 'b option) -> 'a list -> 'b list option *)
+val OPT_MMAP_def = Define`
+  (OPT_MMAP f [] = SOME []) /\
+  (OPT_MMAP f (h0::t0) =
+     OPTION_BIND (f h0) (\h. OPTION_BIND (OPT_MMAP f t0) (\t. SOME (h::t))))
+`;
 
 val LAST_compute = Q.store_thm("LAST_compute",
    `(!x. LAST [x] = x) /\
