@@ -374,6 +374,7 @@ end
 
 fun case2pmatch_aux optimise x t = let
   val (a, ps) = dest_case_fun t
+  val _ = if is_var a andalso free_in a x then () else failwith "case-split on non pattern var"
   val (a, ps) = if optimise then (dest_case_fun_collapse (a, ps)) else (a, ps)
 
   fun process_arg (p, rh) = let

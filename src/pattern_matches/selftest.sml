@@ -310,6 +310,10 @@ val r_thm = SOME ``
 val _ = tcn (t, r_thm);
 
 
+val t = ``dtcase x of 0 => 0 | SUC x => if (x+1 = 2) then 1 else 2``;
+val r_thm = SOME ``case x of 0 => 0 | SUC x => (if x + 1 = 2 then 1 else 2)``
+val _ = tc (t, r_thm);
+
 
 (******************************************************************************)
 (* Simplification                                                             *)
