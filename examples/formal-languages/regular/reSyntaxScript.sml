@@ -59,12 +59,6 @@ val _ = set_mapped_fixity { tok = "<*", term_name = "igRight", fixity = Infixl 5
 
 val igtok_def = Define‘igtok P = tok P (K NONE)’
 
-val charset_string_def = Define‘
-  charset_string s = FOLDL (λa c. charset_union a (charset_sing c))
-                           charset_empty
-                           s
-’
-
 val DigitSet_def = Define‘
   DigitSet = charset_string "0123456789"
 ’
@@ -101,7 +95,7 @@ val rePEG_def = Define‘
        ]);
 
       (mkNT Star,
-       seq (pnt Atom) (try (tok ((=) #"*") (K (SOME (Chset 0w)))))
+       seq (pnt Atom) (try (tok ((=) #"*") (K (SOME (Chset charset_empty)))))
            (λa_m s_m. do
               a <- a_m ;
               (do s <- s_m ; return (Star a) od ++ return a)

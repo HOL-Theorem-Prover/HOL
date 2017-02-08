@@ -220,4 +220,10 @@ val charset_cmp_trans = Q.store_thm
   >> Cases
   >> rw_tac arith_ss [charset_cmp_less]);
 
+val charset_string_def = Define‘
+  charset_string s = FOLDL (λa c. charset_union a (charset_sing c))
+                           charset_empty
+                           s
+’
+
 val _ = export_theory();

@@ -6,7 +6,7 @@ open HolKernel Parse boolLib bossLib lcsymtacs;
 open arithmeticTheory listTheory optionTheory rich_listTheory
      pairTheory relationTheory sortingTheory stringTheory
      comparisonTheory bagTheory containerTheory pred_setTheory
-     mergesortTheory charsetTheory FormalLangTheory;
+     mergesortTheory charset64Theory FormalLangTheory;
 
 
 local open numSyntax Regexp_Type wordsLib in end;
