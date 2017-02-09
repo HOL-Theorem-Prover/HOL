@@ -355,7 +355,9 @@ fun SIMPLE_QUANT_INST_GEN_ss wcl = simpLib.SSFRAG
            trace=1,
            key=SOME ([],``@x:'a. P``),
            conv=K (K (SIMPLE_SELECT_INSTANTIATE_CONV_GEN wcl))}],
-   rewrs=[],filter=NONE,ac=[],dprocs=[],congs=[]};
+   rewrs=[HD_TL_EQ_THMS, SOME_THE_EQ, FST_PAIR_EQ, SND_PAIR_EQ,
+          SOME_THE_EQ_SYM, FST_PAIR_EQ_SYM, SND_PAIR_EQ_SYM
+         ],filter=NONE,ac=[],dprocs=[],congs=[]};
 
 val SIMPLE_QUANT_INST_ss = SIMPLE_QUANT_INST_GEN_ss default_sgsfwcs;
 
