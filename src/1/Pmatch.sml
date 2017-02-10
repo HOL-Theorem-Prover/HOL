@@ -656,14 +656,13 @@ local fun dest tybase (pat,rhs) =
           in if is_eq exp
              then let val (v,e) = dest_eq exp
                       val fvs = free_vars v
-                      val pat0 = if is_var v then subst [v |-> e] pat
-                                             else e (* fails if pat ~= v *)
                       (* val theta = fst (Term.match_term v e) handle HOL_ERR _ => [] *)
                   in if null (subtract fvs patvars) andalso null (free_vars e)
+                        andalso is_var v
                         (* andalso null_intersection fvs (free_vars (hd rhsides)) *)
                      then flatten
                             (map (dest tybase)
-                               (zip [pat0, pat] rhsides))
+                               (zip [subst [v |-> e] pat, pat] rhsides))
                      else [(pat,rhs)]
                   end
              else let val fvs = free_vars exp
