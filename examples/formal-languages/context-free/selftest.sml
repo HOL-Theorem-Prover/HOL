@@ -26,14 +26,12 @@ end (* local *)
 
 fun test (s, exp) = let
   val result = test0 ``sxnt_sexp`` s
-  val exp_t = ``Result (SOME ([], ^exp),(<|row := 0; col := 0; offset := 0|>,
-                                         <|row := 0; col := 0; offset := 0|>)) 
-                : (char, sexpNT, sexp) evalcase``
+  val exp_t = ``Result (SOME ([], ^exp)) : (char, sexpNT, sexp) evalcase``
 in
   tprint (s ^ " --> " ^ term_to_string result);
   if aconv exp_t result then OK() else die "FAILED\n"
 end
-val _ = temp_overload_on ("Ok", ``λt. (Result (SOME ([], t),unknown_loc))``)
+val _ = temp_overload_on ("Ok", ``λt. (Result (SOME ([], t)))``)
 
 val _ = print "\n" before app test [
   ("123", ``123s``),

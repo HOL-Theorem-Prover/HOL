@@ -16,7 +16,7 @@ val _ = Hol_datatype `
 
 val ty = ty_antiq ``:(tok, string, expr) pegsym``
 val lift_number_def = Define`
-  lift_number (Number n) = XN n
+  lift_number (Number n,l) = XN n
 `;
 
 val nrule = ``tok (λt. case t of Number n => T | _ => F) lift_number : ^ty``
@@ -109,3 +109,4 @@ val result2' = save_thm(
 
 
 val _ = export_theory()
+

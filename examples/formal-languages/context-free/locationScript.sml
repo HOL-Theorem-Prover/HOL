@@ -10,6 +10,9 @@ val _ = type_abbrev ("locs", ``:locn # locn``);
 val default_loc_def = Define`
   default_loc = <| row := 1; col := 1; offset := 0 |>`;
 
+val start_loc_def = Define`
+  start_loc = (default_loc,default_loc)`;
+
 val unknown_loc_def = Define`
   unknown_loc = (<| row := 0; col := 0; offset := 0 |>,
                  <| row := 0; col := 0; offset := 0 |>)`;
