@@ -238,11 +238,11 @@ val  r4 = tf ``:'v1 # ('v2 list)`` ``:'v3 # 'v1``
 val  r5 = tf ``:'v1 list`` ``:'v3 # 'v1``
 val  r6 = tf ``:'v1 list`` ``:'v1``
 val  r7 = tf ``:'v4 # ('v5 list)`` ``:'v3 # 'v4``
-val  r8 = tf ``:'v4 # (α -> 'v4)`` ``:'v3 # 'v3``
-val  r9 = tf ``:'v4 list`` ``:(α -> 'v5) list``
-val r10 = tf ``:(α -> 'v5) list`` ``:'v4``
-val r11 = tf ``:α`` ``:'v1``
-val r12 = tf ``:α`` ``:'v1 list``
+val  r8 = tf ``:'v4 # ('a -> 'v4)`` ``:'v3 # 'v3``
+val  r9 = tf ``:'v4 list`` ``:('a -> 'v5) list``
+val r10 = tf ``:('a -> 'v5) list`` ``:'v4``
+val r11 = tf ``:'a`` ``:'v1``
+val r12 = tf ``:'a`` ``:'v1 list``
 val r13 = tf ``:'a -> bool`` ``:'a -> 'v``
 
 val tmvar = String.isPrefix "uv"
@@ -256,9 +256,9 @@ fun tmf f (tm1,tm2) =
     ((fn {tmE, tyE} => (Binarymap.listItems tyE, Binarymap.listItems tmE)) o f)
     (tmunify P E0 (dest_term P tm1, dest_term P tm2))
 
-val t1 = tmf (tmcollapse P) (``f:α->'v1``, ``uv:α->bool``)
-val t2 = tmf I (``(f:'v1->'v2) uv2``, ``(uv:α -> bool) x``)
-val t3 = tmf (``(f:'v1->bool) uv2``, ``(uv:α -> 'v2) x``)
+val t1 = tmf (tmcollapse P) (``f:'a->'v1``, ``uv:'a->bool``)
+val t2 = tmf I (``(f:'v1->'v2) uv2``, ``(uv:'a -> bool) x``)
+val t3 = tmf (``(f:'v1->bool) uv2``, ``(uv:'a -> 'v2) x``)
 val t4 = tmf (``(uvf:'v1->'v2) uv2``, ``CONS (h:'a) t``)
 val t5 = tmf (``?x. x /\ T``, ``?y:'v1. uv y``)
 val t6 = tmf (``?y:'v1. uv y``, ``?x:bool. x /\ T``)
