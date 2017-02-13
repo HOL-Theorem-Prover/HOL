@@ -1,6 +1,8 @@
 structure FullUnify :> FullUnify =
 struct
 
+open HolKernel
+
 type tyenv = (string, hol_type) Binarymap.dict
 val empty_tyenv : tyenv = Binarymap.mkDict String.compare
 
