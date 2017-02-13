@@ -166,6 +166,7 @@ val static_ss = simpLib.merge_ss
    select_conj_ss,
    elim_fst_snd_select_ss,
    boolSimps.EQUIV_EXTRACT_ss,
+   quantHeuristicsLib.SIMPLE_QUANT_INST_ss,
    simpLib.rewrites [
      some_var_bool_T, some_var_bool_F,
      GSYM boolTheory.F_DEF,
@@ -373,6 +374,7 @@ end
 
 fun case2pmatch_aux optimise x t = let
   val (a, ps) = dest_case_fun t
+  val _ = if is_var a andalso free_in a x then () else failwith "case-split on non pattern var"
   val (a, ps) = if optimise then (dest_case_fun_collapse (a, ps)) else (a, ps)
 
   fun process_arg (p, rh) = let

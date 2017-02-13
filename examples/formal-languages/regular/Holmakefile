@@ -1,7 +1,13 @@
-INCLUDES = $(HOLDIR)/examples/balanced_bst $(HOLDIR)/examples/formal-languages
+INCLUDES = $(HOLDIR)/examples/balanced_bst $(HOLDIR)/examples/formal-languages \
+           $(HOLDIR)/examples/formal-languages/context-free
+
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) mustbuild
 
 mustbuild: regexp2c regexpLib.uo
-.PHONY: mustbuild
+.PHONY: mustbuild all
 
 EXTRA_CLEANS = regexp2c.o regexp2c
 
