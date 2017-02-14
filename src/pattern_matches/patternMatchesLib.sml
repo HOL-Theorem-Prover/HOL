@@ -11,6 +11,7 @@ open patternMatchesSyntax
 open Traverse
 open constrFamiliesLib
 open unwindLib
+open oneSyntax
 
 val list_ss  = numLib.arith_ss ++ listSimps.LIST_ss
 
@@ -799,7 +800,7 @@ fun PMATCH_CLEANUP_PVARS_CONV t = let
 
   fun row_conv row = let
      val (vars_tm, pt, gt, rh) = dest_PMATCH_ROW_ABS row
-     val _ = if (type_of vars_tm = ``:unit``) then raise UNCHANGED else ()
+     val _ = if (type_of vars_tm = one_ty) then raise UNCHANGED else ()
      val vars = pairSyntax.strip_pair vars_tm
      val used_vars = FVL [pt, rh] empty_tmset
 
@@ -1025,6 +1026,12 @@ fun PMATCH_REMOVE_COL_AUX rc_arg col t = let
   val (v', c_v) = pair_get_col col v
   val vs = free_vars c_v
 
+  val thm_row = let
+    val thm = FRESH_TY_VARS_RULE PMATCH_ROW_REMOVE_FUN_VAR
+    val thm = ISPEC v thm
+    val thm = ISPEC v' thm
+  in thm end
+
   fun PMATCH_ROW_REMOVE_FUN_VAR_COL_AUX row = let
      val (vars_tm, pt, gt, rh) = dest_PMATCH_ROW_ABS_VARIANT vs row
      val vars = pairSyntax.strip_pair vars_tm
@@ -1078,9 +1085,7 @@ fun PMATCH_REMOVE_COL_AUX rc_arg col t = let
      val r = pairSyntax.mk_pabs (vars_tm, rh)
 
      val thm0 = let
-       val thm = FRESH_TY_VARS_RULE PMATCH_ROW_REMOVE_FUN_VAR
-       val thm = ISPEC v thm
-       val thm = ISPEC v' thm
+       val thm = thm_row
        val thm = ISPEC f thm
        val thm = ISPEC p thm
        val thm = ISPEC g thm
@@ -1180,14 +1185,8 @@ fun PMATCH_REMOVE_FUN_AUX rc_arg col t = let
       val _ = if (is_var tt_col) then () else failwith "no var"
 
       val (var_basename, _) = dest_var (tt_col)
-      fun gen_var i arg = let
-        val n = var_basename ^ "_"^int_to_string i
-      in
-        mk_var (n, type_of arg)
-      end
-
-
-      val (args, _) = quantHeuristicsTools.list_variant avoid (mapi gen_var args_vars)
+      val gen_fun = mk_var_gen (var_basename ^ "_") avoid;
+      val args =  map (fn t => gen_fun (type_of t)) args_vars
 
       val (vars, _) = replace_element tts col args
     in
@@ -1237,6 +1236,12 @@ fun PMATCH_REMOVE_FUN_AUX rc_arg col t = let
      thm2
   end
 
+  val thm_row = let
+     val thm = FRESH_TY_VARS_RULE PMATCH_ROW_REMOVE_FUN_VAR
+     val thm = ISPEC v thm
+     val thm = ISPEC v' thm
+  in thm end
+
   fun PMATCH_ROW_REMOVE_VAR_COL_AUX row = let
      val (vars_tm, pt, gt, rh) = dest_PMATCH_ROW_ABS row
      val vars = pairSyntax.strip_pair vars_tm
@@ -1267,10 +1272,7 @@ fun PMATCH_REMOVE_FUN_AUX rc_arg col t = let
      val vgt = pairSyntax.mk_pabs (vars_tm, gt)
 
      val thm0 = let
-       val thm = FRESH_TY_VARS_RULE PMATCH_ROW_REMOVE_FUN_VAR
-       val thm = ISPEC v thm
-       val thm = ISPEC v' thm
-       val thm = ISPEC f_tm thm
+       val thm = ISPEC f_tm thm_row
        val thm = ISPEC vpt thm
        val thm = ISPEC vgt thm
        val thm = ISPEC vrh thm
@@ -1382,6 +1384,154 @@ val PMATCH_SIMP_COLS_CONV = PMATCH_SIMP_COLS_CONV_GEN [];
 
 
 (***********************************************)
+(* Resort and add dummy columns                *)
+(***********************************************)
+
+(*
+val t = ``PMATCH (s:'a option,x : 'a option, l:num list)
+     [PMATCH_ROW (\_uv:unit. (NONE,NONE,[])) (\_uv. T) (\_uv. NONE);
+      PMATCH_ROW (\z. (NONE,z,[2])) (\z. F) (\z. z);
+      PMATCH_ROW (\(x, b). (SOME b,x,[2])) (\(x, b). T) (\(x, b). x);
+      PMATCH_ROW (\(_0,y). (y,_0,[2])) (\(_0, y). IS_SOME y) (\(_0, y). y)
+   ]``
+
+val nv = ``((l:num list), x : 'a option, xx:'a, s:'a option, z:'b)``
+
+val t = ``case (xs : num list) of [] => x | _ => HD xs``
+val t = ``case (xs : num list) of [] => x | _::_ => HD xs``
+val nv = ``(xs: num list, x:num)``
+val rc_arg = ([], NONE)
+
+*)
+fun PMATCH_EXTEND_INPUT_CONV_GENCALL rc_arg nv t = let
+  val (v, rows) = dest_PMATCH t
+  val _ = if aconv v nv then raise UNCHANGED else ()
+
+  val (new_pat_tm, new_col_vars, new_col_subst, old_col_vars, f'_tm, nv_vars_pair) = let
+    val nv_parts = pairSyntax.strip_pair nv
+    val v_parts = pairSyntax.strip_pair v
+    val v_l = map (fn t => (t, genvar (type_of t))) v_parts
+
+    val avoid = all_varsl [t, nv]
+    val gen_fun = mk_var_gen "_" avoid
+
+    fun compute_nv_l res_l nv_vars v_l [] =
+      if (null v_l) then (res_l, nv_vars) else failwith "PMATCH_EXTEND_INPUT_CONV_AUX: part missing"
+
+    | compute_nv_l res nv_vars v_l (p::nv_parts) = let
+        val ((_, v_v), v_l') = pluck (fn (t, _) => aconv p t) v_l
+      in
+        compute_nv_l (v_v::res) nv_vars v_l' nv_parts
+      end handle HOL_ERR _ => let
+        val vg = gen_fun (type_of p)
+      in
+        compute_nv_l (vg::res) (vg::nv_vars) v_l nv_parts
+      end
+
+    val (res_l, nv_vars) = compute_nv_l [] [] v_l nv_parts
+
+    val t0 = pairSyntax.list_mk_pair (List.rev res_l)
+
+    val nv_parts_vars = filter (fn (v, n) => is_var n) (zip (List.rev res_l) nv_parts)
+    val t1 = pairSyntax.list_mk_pair (map fst nv_parts_vars)
+    val f'_tm = pairSyntax.mk_pabs(t0, t1)
+    val nv_vars_pair = pairSyntax.list_mk_pair (map snd nv_parts_vars)
+    val nv_parts_subst = map (fn (v, n) => v |-> n) nv_parts_vars
+  in
+    (t0, List.rev nv_vars, nv_parts_subst, List.map snd v_l, f'_tm, nv_vars_pair)
+  end
+
+  val thm_row = let
+    val thm = FRESH_TY_VARS_RULE PMATCH_ROW_EXTEND_INPUT
+    val thm = ISPEC v thm
+    val thm = ISPEC nv thm
+    val thm = ISPEC f'_tm thm
+  in thm end
+
+  fun process_row_aux row = let
+     val (pt, gt, rh) = dest_PMATCH_ROW row
+     val (vars_tm, pt_b) = pairSyntax.dest_pabs pt
+
+     val (old_vars_tm, new_vars) =
+        if ((type_of vars_tm) = one_ty) then (
+          if (List.null new_col_vars) then
+            (one_tm, [vars_tm])
+          else (one_tm, new_col_vars)
+        ) else (
+          let val ov = pairSyntax.strip_pair vars_tm
+          in (vars_tm, ov @ new_col_vars) end
+        )
+
+     val pat_vars_s0 = let
+         val pt_ps = pairSyntax.strip_pair pt_b
+       in map2 (fn v => fn t => (v |-> t)) old_col_vars pt_ps end
+
+     val new_vars_s0 = filter (fn vp => free_in (#residue vp) row
+       andalso is_var (subst pat_vars_s0 (#redex vp))) new_col_subst
+
+     val new_vars_s = map (fn vp => subst pat_vars_s0 (#redex vp) |-> #residue vp) new_vars_s0
+     val pat_vars_s = map (fn vp => #redex vp |-> subst new_vars_s (#residue vp)) pat_vars_s0
+
+     val new_vars_tm = subst new_vars_s (pairSyntax.list_mk_pair new_vars)
+     val pt_b' = subst pat_vars_s (subst new_vars_s new_pat_tm)
+
+     val f_tm = pairSyntax.mk_pabs (new_vars_tm, subst new_vars_s old_vars_tm)
+     val pt' = pairSyntax.mk_pabs (new_vars_tm, pt_b')
+
+     val thm0 = let
+       val thm = ISPEC f_tm thm_row
+       val thm = ISPEC pt thm
+       val thm = ISPEC (pairSyntax.mk_pabs (nv_vars_pair, gt)) thm
+       val thm = ISPEC (pairSyntax.mk_pabs (nv_vars_pair, rh)) thm
+       val thm = ISPEC pt' thm
+
+       fun elim_conv_aux vs = (
+         (pairTools.PABS_INTRO_CONV vs) THENC
+         (DEPTH_CONV (pairLib.PAIRED_BETA_CONV ORELSEC BETA_CONV))
+       )
+
+       fun elim_conv vs = PMATCH_ROW_ARGS_CONV (elim_conv_aux vs)
+       val thm = CONV_RULE ((RAND_CONV o RHS_CONV) (elim_conv new_vars_tm)) thm
+     in
+       thm
+     end
+
+     val pre_tm = fst (dest_imp (concl thm0))
+(* set_goal ([], pre_tm) *)
+     val pre_thm = prove (pre_tm, rc_tac rc_arg)
+     val thm1 = MP thm0 pre_thm
+
+     val eq_tm = mk_eq (mk_comb (row, v), lhs (concl thm1))
+     val eq_thm = prove (eq_tm, SIMP_TAC std_ss [])
+     val thm2 = TRANS eq_thm thm1
+
+     (* fix wildcards *)
+     val thm3 = CONV_RULE (RHS_CONV (RATOR_CONV (PMATCH_ROW_INTRO_WILDCARDS_CONV))) thm2
+  in
+     thm3
+  end
+
+  fun process_row (row, thm) = let
+    val row_thm = process_row_aux row
+    val thmA = PMATCH_EXTEND_BOTH
+    val thmB = HO_MATCH_MP thmA row_thm
+    val thmC = HO_MATCH_MP thmB thm
+  in
+    thmC
+  end
+
+  val base_thm = INST_TYPE [gamma |-> type_of t] (ISPECL [v, nv] PMATCH_EXTEND_BASE)
+  val thm0 = List.foldl process_row base_thm (List.rev rows)
+in
+  thm0
+end handle HOL_ERR _ => raise UNCHANGED
+
+
+fun PMATCH_EXTEND_INPUT_CONV_GEN ssl = PMATCH_EXTEND_INPUT_CONV_GENCALL (ssl, NONE)
+val PMATCH_EXTEND_INPUT_CONV = PMATCH_EXTEND_INPUT_CONV_GEN [];
+
+
+(***********************************************)
 (* Expand columns                              *)
 (***********************************************)
 
@@ -1399,7 +1549,6 @@ PMATCH (SOME y,x,l)
       PMATCH_ROW (\(z,y). (y,z,[2])) (\(z, y). IS_SOME y) (\(z, y). y)
    ]``
 *)
-
 
 fun PMATCH_EXPAND_COLS_CONV t = let
   val (v, rows) = dest_PMATCH t
@@ -1423,13 +1572,8 @@ fun PMATCH_EXPAND_COLS_CONV t = let
     val types = splits [] (col_no - cols) (type_of l)
 
     val var_basename = fst (dest_var l) handle HOL_ERR _ => "v"
-    fun gen_var i ty = let
-       val n = var_basename ^ "_"^int_to_string i
-    in
-      mk_var (n, ty)
-    end
-
-    val (new_vars, _) = quantHeuristicsTools.list_variant avoid (mapi gen_var types)
+    val gen_fun = mk_var_gen (var_basename ^ "_") avoid;
+    val new_vars =  map gen_fun types
   in
     new_vars
   end
@@ -2998,9 +3142,16 @@ val use_guards = true
 val rc_arg = ([], NONE)
 val db = !thePmatchCompileDB
 val col_heu = colHeu_default
+val t = ``case (x, y) of ([], x::xs) => x | (_, _) => 2``
+val t = ``case (x, y) of ([], x::xs) => x``
 *)
 
-fun PMATCH_COMPLETE_CONV_GENCALL rc_arg db col_heu use_guards t = let
+fun PMATCH_COMPLETE_CONV_GENCALL_AUX rc_arg db col_heu use_guards t =
+let
+  val exh_thm = EQT_ELIM (PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GENCALL rc_arg t)
+                handle UNCHANGED => failwith "NOT EXH"
+in (false, REFL t, (fn () => exh_thm)) end handle HOL_ERR _ =>
+let
   val (v, rows) = dest_PMATCH t
   fun row_to_cond_ex r = let
     val (vs_t, p, g, _) = dest_PMATCH_ROW_ABS r
@@ -3018,7 +3169,7 @@ fun PMATCH_COMPLETE_CONV_GENCALL rc_arg db col_heu use_guards t = let
     val disj = dest_neg pre
   in
     strip_disj disj
-  end handle HOL_ERR _ => raise UNCHANGED
+  end handle HOL_ERR _ => []
 
   fun add_missing_pat (missing_t, thm) = let
     val (_, vs, p_t0, g_t0) = dest_PMATCH_ROW_COND_EX_ABS missing_t
@@ -3037,22 +3188,44 @@ fun PMATCH_COMPLETE_CONV_GENCALL rc_arg db col_heu use_guards t = let
     TRANS thm thm04
   end
 
+  val thm_expand = foldl add_missing_pat (REFL t) missing_list
+
+  (* set_goal ([], mk_PMATCH_IS_EXHAUSTIVE v (rand (rhs (concl thm_expand)))) *)
+  fun exh_thm () = prove (mk_PMATCH_IS_EXHAUSTIVE v (rand (rhs (concl thm_expand))),
+    ASSUME_TAC (thm_nchot) THEN
+    PURE_REWRITE_TAC [PMATCH_IS_EXHAUSTIVE_REWRITES, PMATCH_ROW_NEQ_NONE] THEN
+    PROVE_TAC[])
 in
-  foldl add_missing_pat (REFL t) missing_list
+  (not (List.null missing_list), thm_expand, exh_thm)
 end
+
+fun PMATCH_COMPLETE_CONV_GENCALL rc_arg db col_heu use_guards t =
+  let
+    val (ch, thm, _) = (PMATCH_COMPLETE_CONV_GENCALL_AUX rc_arg db col_heu use_guards t)
+    val _ = if ch then () else raise UNCHANGED
+  in thm end;
 
 fun PMATCH_COMPLETE_CONV_GEN ssl =
     PMATCH_COMPLETE_CONV_GENCALL (ssl, NONE);
 
-val PMATCH_COMPLETE_CONV =
-    PMATCH_COMPLETE_CONV_GEN [] (!thePmatchCompileDB) colHeu_default;
+fun PMATCH_COMPLETE_CONV use_guards =
+    PMATCH_COMPLETE_CONV_GEN [] (!thePmatchCompileDB) colHeu_default use_guards;
 
 fun PMATCH_COMPLETE_GEN_ss ssl db colHeu use_guards =
   make_gen_conv_ss (fn rc_arg =>
     PMATCH_COMPLETE_CONV_GENCALL rc_arg db colHeu use_guards)
     "PMATCH_COMPLETE_REDUCER" ssl;
 
-val PMATCH_COMPLETE_ss = PMATCH_COMPLETE_GEN_ss [] (!thePmatchCompileDB) colHeu_default;
+fun PMATCH_COMPLETE_ss use_guards = PMATCH_COMPLETE_GEN_ss [] (!thePmatchCompileDB) colHeu_default use_guards;
+
+
+fun PMATCH_COMPLETE_CONV_GEN_WITH_EXH_PROOF ssl db col_heu use_guards t =
+    let val (ch, mt, rt) = PMATCH_COMPLETE_CONV_GENCALL_AUX (ssl, NONE) db col_heu use_guards t in
+    (if ch then SOME mt else NONE, rt ()) end
+
+fun PMATCH_COMPLETE_CONV_WITH_EXH_PROOF use_guards =
+    PMATCH_COMPLETE_CONV_GEN_WITH_EXH_PROOF [] (!thePmatchCompileDB) colHeu_default use_guards;
+
 
 
 (***********************************************)
@@ -3295,6 +3468,265 @@ end
 
 fun PMATCH_TO_TOP_RULE thm = PMATCH_TO_TOP_RULE_GEN [] thm;
 
+
+(*************************************)
+(* Lifting                           *)
+(*************************************)
+
+(*
+val tm = ``\y. SUC (SUC
+  (case y of
+    | (x, y::ys) => (x + y)
+    | (0, []) => 0)) +
+  (case xx of
+    | (x, y::ys) => (x + y)
+    | (0, []) => 0)``
+val tm = p_tm
+*)
+
+fun PMATCH_LIFT_CONV_GENCALL_AUX rc_arg db col_heu tm = let
+  (* check whether we should really process tm *)
+  val _ = if (is_PMATCH tm) then failwith "PMATCH_LIFT_CONV_GENCALL_AUX: nothing to do" else ()
+
+  (* search subterm to lift *)
+  fun search_pred (bvs, tt) = if is_PMATCH tt andalso
+    HOLset.isEmpty (HOLset.intersection (HOLset.fromList Term.compare bvs, FVL [tt] empty_tmset)) then SOME tt else NONE
+  val p_tm = case gen_find_term search_pred tm of SOME p_tm => p_tm | NONE => failwith "no_case"
+
+  (* Abstract context with f_tm *)
+  val f_tm = let
+    val nv = genvar (type_of p_tm)
+    val tm' = subst [p_tm |-> nv] tm
+  in
+    mk_abs (nv, tm')
+  end
+  val (_, p_thm, exh_thm) = PMATCH_COMPLETE_CONV_GENCALL_AUX rc_arg db col_heu true p_tm
+
+  (* Intro f_tm *)
+  val thm0 = let
+    val f_tm_thm = GSYM (BETA_CONV (mk_comb (f_tm, p_tm)))
+    val f_tm_thm' = CONV_RULE (RHS_CONV (RAND_CONV (K p_thm))) f_tm_thm
+  in f_tm_thm' end
+
+  (* Apply lifting thm *)
+  val (v, rows_tm, thm1) = let
+    val p_tm' = rhs (concl p_thm)
+    val (v, rows) = dest_PMATCH p_tm'
+    val rows_tm = rand p_tm'
+    val thm10 = ISPECL [f_tm, v, rows_tm] (FRESH_TY_VARS_RULE PMATCH_LIFT_THM)
+    val thm11 = MP thm10 (exh_thm())
+  in (v, rows_tm, thm11) end
+
+  (* Simplify *)
+  val thm2 = let
+    fun c3 tt = let
+      val (vt, _) = pairSyntax.dest_pabs (rator (rand (snd (dest_abs tt))))
+      val c30 = (pairTools.PABS_INTRO_CONV vt)
+      val c31 = PairRules.PABS_CONV (RAND_CONV PairRules.PBETA_CONV)
+      val c32 = PairRules.PABS_CONV BETA_CONV
+    in
+      (c30 THENC (TRY_CONV c31) THENC c32) tt
+    end
+    val c2 = REWR_CONV PMATCH_ROW_LIFT_THM THENC (RAND_CONV c3)
+    val c = listLib.MAP_CONV c2
+    val thm2 = c (rand (rhs (concl thm1)))
+  in
+    thm2
+  end
+
+  val thm_lift = CONV_RULE (RHS_CONV (RAND_CONV (K thm2))) (TRANS thm0 thm1)
+
+  (* construct exhaustiveness result *)
+  fun exh_thm' () = let
+    val exh_thm = exh_thm ()
+    val thm00 = ISPECL [f_tm, v, rows_tm] PMATCH_IS_EXHAUSTIVE_LIFT
+    val thm01 = MP thm00 exh_thm
+    val thm02 = CONV_RULE (RAND_CONV (K thm2)) thm01
+  in thm02 end
+in
+  (thm_lift, exh_thm')
+end;
+
+
+fun PMATCH_LIFT_CONV_GENCALL rc_arg db col_heu t =
+  let
+    val (thm, _) = (PMATCH_LIFT_CONV_GENCALL_AUX rc_arg db col_heu t)
+  in thm end;
+
+fun PMATCH_LIFT_CONV_GENCALL_WITH_EXH_PROOF rc_arg db col_heu t =
+  let
+    val (thm, exh) = (PMATCH_LIFT_CONV_GENCALL_AUX rc_arg db col_heu t)
+  in (thm, exh()) end;
+
+fun PMATCH_LIFT_CONV_GEN ssl =
+    PMATCH_LIFT_CONV_GENCALL (ssl, NONE);
+
+fun PMATCH_LIFT_CONV t =
+    PMATCH_LIFT_CONV_GEN [] (!thePmatchCompileDB) colHeu_default t;
+
+fun PMATCH_LIFT_CONV_GEN_WITH_EXH_PROOF ssl =
+    PMATCH_LIFT_CONV_GENCALL_WITH_EXH_PROOF (ssl, NONE);
+
+fun PMATCH_LIFT_CONV_WITH_EXH_PROOF t =
+    PMATCH_LIFT_CONV_GEN_WITH_EXH_PROOF [] (!thePmatchCompileDB) colHeu_default t;
+
+
+(*************************************)
+(* FLATTENING                        *)
+(*************************************)
+
+(*
+val do_lift = false
+val use_guards = true
+val rc_arg = ([], NONE)
+val db = !thePmatchCompileDB
+val col_heu = colHeu_default
+
+
+val tm = ``case (x, y) of ([], x::xs) => (
+           case xs of [] => 0 | _ => 5) | (_, []) => 1 ``
+
+val tm = ``case (x, y) of (x::xs, []) => 2 | ([], x::xs) => (
+           SUC (case xs of [] => x | _ => HD xs)) | (_, []) => 1 ``
+*)
+
+fun PMATCH_FLATTEN_CONV_GENCALL_AUX rc_arg db col_heu do_lift tm = let
+  val (v, rows) = dest_PMATCH tm
+
+  (* Try to flatten row no i *)
+  fun try_row i = let
+    val (rows_b, row, rows_a) = extract_element rows i
+    val (pt, gt, rt0) = dest_PMATCH_ROW row
+    val (vs, rt) = pairSyntax.dest_pabs rt0
+
+    (* lift the rhs of row i to be PMATCH expression *)
+    val thm0 = if do_lift andalso not (is_PMATCH rt) then
+      PMATCH_LIFT_CONV_GENCALL rc_arg db col_heu rt
+    else
+      PMATCH_COMPLETE_CONV_GENCALL rc_arg db col_heu true rt handle UNCHANGED => REFL rt
+
+    (* extend the input to match the output of the outer PMATCH exactly *)
+    val thm1 = let
+      val thm1a = PMATCH_EXTEND_INPUT_CONV_GENCALL rc_arg vs (rhs (concl thm0))
+      val thm1 = TRANS thm0 thm1a
+    in thm1 end
+
+
+    (* Apply the flatten theorem, discard preconditions and show that rhs equals input *)
+    val thm2 = let
+      val rt' = rhs (concl thm1)
+      val (v', rows') = dest_PMATCH rt'
+      val rows'' = map (fn t => pairSyntax.mk_pabs (v', t)) rows'
+
+
+      (* instantiate thm *)
+      val thm2a = let
+        val thm20 = FRESH_TY_VARS_RULE PMATCH_FLATTEN_THM
+        val thm20 = ISPEC v thm20
+        val thm20 = ISPEC pt thm20
+        val thm20 = ISPEC gt thm20
+        val thm20 = ISPEC (listSyntax.mk_list(rows_b, type_of row)) thm20
+        val thm20 = ISPEC (listSyntax.mk_list(rows_a, type_of row)) thm20
+        val thm20 = ISPEC (listSyntax.mk_list(rows'', type_of (hd rows''))) thm20
+        val thm21 = CONV_RULE (RATOR_CONV (RAND_CONV (RAND_CONV (pairTools.PABS_INTRO_CONV v')))) thm20
+        val c = RATOR_CONV (RAND_CONV (RAND_CONV (pairTools.PABS_INTRO_CONV v')))
+        val thm22 = CONV_RULE (RAND_CONV (LHS_CONV (RAND_CONV (RAND_CONV c)))) thm21
+
+      in thm22 end
+
+      (* simplify MAP (\x. r x) rows'' = rows' *)
+      val thm2b = let
+        val map_tm = rand (snd (pairSyntax.dest_pforall (fst (dest_imp (concl thm2a)))))
+        val map_tm_eq = mk_eq (map_tm, listSyntax.mk_list (rows', type_of (hd rows')))
+        val map_thm = prove (map_tm_eq, SIMP_TAC list_ss [])
+
+        val thm2b = CONV_RULE (DEPTH_CONV (REWR_CONV map_thm)) thm2a
+      in thm2b end
+
+      (* elim precond *)
+      val thm2c = let
+        val exh_thm = PMATCH_IS_EXHAUSTIVE_CHECK_GENCALL rc_arg rt'
+        val (pre, _) = dest_imp (concl thm2b)
+        val pre_thm = prove (pre, SIMP_TAC std_ss [exh_thm, GSYM pairTheory.PFORALL_THM])
+        val thm2c = MP thm2b pre_thm
+      in thm2c end
+
+      (* use thm1 on lhs *)
+      val thm2d = let
+        val c = RATOR_CONV (RAND_CONV (RAND_CONV (PairRules.PABS_CONV (K (GSYM thm1)))))
+        val thm20 = CONV_RULE (LHS_CONV (RAND_CONV (RAND_CONV c))) thm2c
+        val l_eq = mk_eq (tm, lhs (concl thm20))
+        val l_thm = prove (l_eq, SIMP_TAC list_ss [])
+        val thm2d = TRANS l_thm thm20
+      in thm2d end
+    in
+      thm2d
+    end
+
+    (* EVALUATE MAP PMATCH_FLATTEN_FUN on rhs *)
+    val thm3 = let
+      val flatten_thm = let
+        val thm00 = FRESH_TY_VARS_RULE PMATCH_FLATTEN_FUN_PMATCH_ROW
+        val thm01 = ISPEC pt thm00
+        val thm02 = rc_elim_precond rc_arg thm01
+        val thm03 = ISPEC gt thm02
+        val c = pairTools.PABS_INTRO_CONV vs
+        val thm04 = CONV_RULE (STRIP_QUANT_CONV (LHS_CONV (RAND_CONV c))) thm03
+      in thm04 end
+
+      fun flatten_fun_conv tt = let
+        val (_, row_d) = pairSyntax.dest_pabs (rand tt)
+        val (pt_d, gt_d, rt_d) = dest_PMATCH_ROW row_d
+        val thm00 = ISPECL [pt_d, pairSyntax.mk_pabs(vs, gt_d), pairSyntax.mk_pabs(vs, rt_d)] flatten_thm
+        val eq_tm = mk_eq (tt, lhs (concl thm00))
+        val eq_thm = prove (eq_tm, SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [])
+
+        val thm01 = TRANS eq_thm thm00
+        val (vs', _) = pairSyntax.dest_pabs pt_d
+        val thm02 = CONV_RULE (RHS_CONV (PMATCH_ROW_PABS_INTRO_CONV vs')) thm01
+
+        val thm03 = CONV_RULE (RHS_CONV (DEPTH_CONV (pairLib.PAIRED_BETA_CONV ORELSEC BETA_CONV))) thm02
+        val thm04 = CONV_RULE (RHS_CONV (REWRITE_CONV [])) thm03
+      in thm04 end
+
+      val c = BETA_CONV THENC flatten_fun_conv
+      val thm30 = CONV_RULE (RHS_CONV (RAND_CONV (RATOR_CONV (
+             RAND_CONV (RAND_CONV (listLib.MAP_CONV c)))))) thm2
+
+      val thm31 = CONV_RULE (RHS_CONV (RAND_CONV (RATOR_CONV (RAND_CONV
+        listLib.APPEND_CONV)))) thm30
+
+      val thm32 = CONV_RULE (RHS_CONV (RAND_CONV
+        listLib.APPEND_CONV)) thm31
+    in thm32 end
+
+    (* Fix wildcards *)
+    val thm4 = CONV_RULE (RHS_CONV PMATCH_INTRO_WILDCARDS_CONV) thm3
+  in
+    thm4
+  end
+
+  val row_index_l = Lib.upto 0 (length rows - 1)
+in
+  tryfind try_row row_index_l
+end
+
+
+fun PMATCH_FLATTEN_CONV_GENCALL rc_arg db col_heu do_lift =
+  REPEATC (PMATCH_FLATTEN_CONV_GENCALL_AUX rc_arg db col_heu do_lift)
+
+fun PMATCH_FLATTEN_CONV_GEN ssl =
+    PMATCH_FLATTEN_CONV_GENCALL (ssl, NONE);
+
+fun PMATCH_FLATTEN_CONV do_lift =
+    PMATCH_FLATTEN_CONV_GEN [] (!thePmatchCompileDB) colHeu_default do_lift;
+
+fun PMATCH_FLATTEN_GEN_ss ssl db col_heu do_lift =
+  make_gen_conv_ss (fn rc_arg => PMATCH_FLATTEN_CONV_GENCALL rc_arg db col_heu do_lift)
+    "PMATCH_FLATTEN_REDUCER" ssl
+
+fun PMATCH_FLATTEN_ss do_lift =
+  PMATCH_FLATTEN_GEN_ss [] (!thePmatchCompileDB) colHeu_default do_lift;
 
 
 (*************************************)

@@ -54,7 +54,7 @@ let
                   else print "-\n"
           val _ = if (not ok) then
                      (print "   EXPECTED ";
-                      if isSome out_opt then (print "``";print_out (valOf out_opt);print "``\n")
+                      if isSome out_opt then (print_out (valOf out_opt);print "\n")
                       else print "-\n")
                   else ()
        in () end
@@ -64,9 +64,10 @@ in
     ()
 end;
 
-fun print_term' t = (print "``"; print_term t; print "``");
+fun print_term' t = (print "``"; print (ppstring pp_term t); print "``");
+fun print_thm' t = print (ppstring pp_thm t);
 
-val test_term_thm_gen = test_gen print_term' print_thm print_term'
+val test_term_thm_gen = test_gen print_term' print_thm' print_term'
 
 val test_conv = test_term_thm_gen (fn (inp, out, res) => let
   val (l, r) = dest_eq (concl res)
@@ -713,7 +714,7 @@ val _ = test_conv "SIMP_CONV (numLib.std_ss ++ PMATCH_REMOVE_GUARDS_ss) []" (SIM
 
 
 (*************************************)
-(* LIFTING                           *)
+(* LIFTING BOOLEAN                   *)
 (*************************************)
 
 
@@ -1070,7 +1071,7 @@ val test_nchot = test_gen (fn l => (
   print "[";
   Portable.pr_list print_term' (fn () => print ", ") (fn () => ()) l;
   print "]"))
-  print_thm print_term' (fn (inp, out, res) => aconv  out (concl res))
+  print_thm' print_term' (fn (inp, out, res) => aconv  out (concl res))
   "nchotomy_of_pats" nchotomy_of_pats
 
 
@@ -1347,6 +1348,174 @@ val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_FAST_CHECK" PMATCH_IS_EXHAUSTIVE_FAST_CHE
 val _ = test_conv "PMATCH_COMPLETE_CONV true" (PMATCH_COMPLETE_CONV true) (t, SOME t')
 
 val _ = test_rhs "PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK" PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK (t, SOME p)
+
+
+(*********************************)
+(* LIFTING                       *)
+(*********************************)
+
+val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
+  (``case t of [] => 0 | x::_ => x``, NONE)
+
+val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
+  (``SUC (case t of [] => 0 | x::_ => x)``, SOME
+   ``case t of [] => SUC 0 | x::_ => SUC x``)
+
+val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
+  (``SUC ((\c. (case t of [] => 0 | x::_ => x) + c) 5)``, SOME
+   ``case t of [] => SUC ((\c. 0 + c) 5) | x::_ => SUC ((\c. x + c) 5)``)
+
+val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
+  (``(\c. (case t of [] => 0 | x::_ => x) + c)``, SOME
+   ``case t of [] => (\c. 0 + c) | x::_ => (\c. x + c)``)
+
+val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
+  (``SUC ((\c. (case t of [] => c | x::_ => x) + c) 5)``, NONE)
+
+val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
+  (``(\c. (case t of [] => c | x::_ => x) + c)``, NONE)
+
+val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
+  (``SUC (case t of [] => 0)``, SOME
+   ``case t of [] => SUC 0 | v1::v2 => SUC ARB``)
+
+val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
+  (``SUC ((\c. (case t of [] => 0) + c) 5)``, SOME
+   ``case t of [] => SUC ((\c. 0 + c) 5) | _::_ => SUC ((\c. ARB + c) 5)``)
+
+val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
+  (``(\c. (case t of [] => 0) + c)``, SOME
+   ``case t of [] => (\c. 0 + c) | _::_ => (\c. ARB + c)``)
+
+
+val _ = test_conv "PMATCH_LIFT_CONV" PMATCH_LIFT_CONV
+  (``(\c. (case t of [] => 0) + c + 2 * (case t of [] => 0))``, SOME
+   ``case t of [] => (\c. 0 + c + 2 * 0) | _::_ => (\c. ARB + c + 2 * ARB)``)
+
+
+(*********************************)
+(* EXTENDING INPUT               *)
+(*********************************)
+
+val _ = test_conv "PMATCH_EXTEND_INPUT_CONV" (PMATCH_EXTEND_INPUT_CONV ``(n:num, l:num list)``)
+  (``case (l, n) of ([], _) => c | (x::_, SUC m) => x + m``, SOME
+   ``PMATCH ((n :num),(l :num list))
+     [PMATCH_ROW (\(_0 :num). (_0,([] :num list))) (\(_0 :num). T)
+        (\(_0 :num). c);
+      PMATCH_ROW (\((x :num),(_0 :num list),(m :num)). (SUC m,x::_0))
+        (\((x :num),(_0 :num list),(m :num)). T)
+        (\((x :num),(_0 :num list),(m :num)). x + m)]``)
+
+
+val _ = test_conv "PMATCH_EXTEND_INPUT_CONV" (PMATCH_EXTEND_INPUT_CONV ``(x1: 'a, n:num, x2:'b, l:num list, x3:'c)``)
+  (``case (l, n) of ([], _) => c | (x::_, SUC m) => x + m``, SOME
+   ``PMATCH ((x1 :'a),n,(x2 :'b),l,(x3 :num))
+     [PMATCH_ROW
+        (\((_0 :num),(_1 :'a),(_2 :'b),(_3 :num)).
+           (_1,_0,_2,([] :num list),_3))
+        (\((_0 :num),(_1 :'a),(_2 :'b),(_3 :num)). T)
+        (\((_0 :num),(_1 :'a),(_2 :'b),(_3 :num)). c);
+      PMATCH_ROW
+        (\((x :num),(_0 :num list),(m :num),(_1 :'a),(_2 :'b),
+           (_3 :num)).
+           (_1,SUC m,_2,x::_0,_3))
+        (\((x :num),(_0 :num list),(m :num),(_1 :'a),(_2 :'b),
+           (_3 :num)).
+           T)
+        (\((x :num),(_0 :num list),(m :num),(_1 :'a),(_2 :'b),
+           (_3 :num)).
+           x + m)]``)
+
+
+val _ = test_conv "PMATCH_EXTEND_INPUT_CONV" (PMATCH_EXTEND_INPUT_CONV ``(x1: 'a, n:num, n, x2:'b, l:num list, x3:'c)``)
+  (``case (l, n) of ([], _) => c | (x::_, SUC m) => x + m``, SOME
+   ``PMATCH ((x1 :'a),n,n,(x2 :'b),l,(x3 :num))
+     [PMATCH_ROW
+        (\((_0 :num),(_1 :'a),(_2 :num),(_3 :'b),(_4 :num)).
+           (_1,_0,_2,_3,([] :num list),_4))
+        (\((_0 :num),(_1 :'a),(_2 :num),(_3 :'b),(_4 :num)). T)
+        (\((_0 :num),(_1 :'a),(_2 :num),(_3 :'b),(_4 :num)). c);
+      PMATCH_ROW
+        (\((x :num),(_0 :num list),(m :num),(_1 :'a),(_2 :num),(_3 :'b),
+           (_4 :num)).
+           (_1,SUC m,_2,_3,x::_0,_4))
+        (\((x :num),(_0 :num list),(m :num),(_1 :'a),(_2 :num),(_3 :'b),
+           (_4 :num)).
+           T)
+        (\((x :num),(_0 :num list),(m :num),(_1 :'a),(_2 :num),(_3 :'b),
+           (_4 :num)).
+           x + m)]``)
+
+
+val _ = test_conv "PMATCH_EXTEND_INPUT_CONV" (PMATCH_EXTEND_INPUT_CONV ``(c:num, n:num, l:num list)``)
+  (``case (l, n) of ([], _) => c | (x::_, SUC m) => x + m + n``, SOME
+   ``PMATCH (c,n,l)
+     [PMATCH_ROW (\(_0,c). (c,_0,[])) (\(_0,c). T) (\(_0,c). c);
+      PMATCH_ROW (\(x,_0,m,_1). (_1,SUC m,x::_0)) (\(x,_0,m,_1). T)
+        (\(x,_0,m,_1). x + m + SUC m)]``)
+
+
+(*********************************)
+(* FLATTENING                    *)
+(*********************************)
+
+val _ = test_conv "PMATCH_FLATTEN_CONV false" (PMATCH_FLATTEN_CONV false)
+  (``case (x, y) of ([], x::xs) => (
+           case xs of [] => 1 + x | (x::xs) => 5 + x + LENGTH xs) | (_, []) => 1``,
+   SOME ``PMATCH (x,y)
+     [PMATCH_ROW (\x. ([],[x])) (\x. T) (\x. 1 + x);
+      PMATCH_ROW (\(x,xs,_0). ([],_0::x::xs)) (\(x,xs,_0). T)
+        (\(x,xs,_0). 5 + x + LENGTH xs);
+      PMATCH_ROW (\_0. (_0,[])) (\_0. T) (\_0. 1)]``)
+
+val _ = test_conv "PMATCH_FLATTEN_CONV true" (PMATCH_FLATTEN_CONV true)
+  (``case (x, y) of ([], x::xs) => (
+           case xs of [] => 1 + x | (x::xs) => 5 + x + LENGTH xs) | (_, []) => 1``,
+   SOME ``PMATCH (x,y)
+     [PMATCH_ROW (\x. ([],[x])) (\x. T) (\x. 1 + x);
+      PMATCH_ROW (\(x,xs,_0). ([],_0::x::xs)) (\(x,xs,_0). T)
+        (\(x,xs,_0). 5 + x + LENGTH xs);
+      PMATCH_ROW (\_0. (_0,[])) (\_0. T) (\_0. 1)]``)
+
+val _ = test_conv "PMATCH_FLATTEN_CONV false" (PMATCH_FLATTEN_CONV false)
+  (``case (x, y) of ([], x::xs) => SUC (
+           case xs of [] => 1 + x | (x::xs) => 5 + x + LENGTH xs) | (_, []) => 1``,
+   NONE)
+
+
+val _ = test_conv "PMATCH_FLATTEN_CONV true" (PMATCH_FLATTEN_CONV true)
+  (``case (x, y) of ([], x::xs) => SUC (
+       case xs of [] => 1 + x | (x::xs) => 5 + x + LENGTH xs) | (_, []) => 1``,
+   SOME ``PMATCH (x,y)
+     [PMATCH_ROW (\x. ([],[x])) (\x. T) (\x. SUC (1 + x));
+      PMATCH_ROW (\(x,xs,_0). ([],_0::x::xs)) (\(x,xs,_0). T)
+        (\(x,xs,_0). SUC (5 + x + LENGTH xs));
+      PMATCH_ROW (\_0. (_0,[])) (\_0. T) (\_0. 1)]``)
+
+
+val _ = test_conv "PMATCH_FLATTEN_CONV true" (PMATCH_FLATTEN_CONV true)
+  (``case (x, y) of ([], x::xs) => SUC (
+       case xs of [] => 1 + x | (x::xs) => 5 + x + LENGTH xs) | (y::ys, []) => (case y of 0 => 1 | _ => 2)``,
+   SOME ``PMATCH (x,y)
+     [PMATCH_ROW (\x. ([],[x])) (\x. T) (\x. SUC (1 + x));
+      PMATCH_ROW (\(x,xs,_0). ([],_0::x::xs)) (\(x,xs,_0). T)
+        (\(x,xs,_0). SUC (5 + x + LENGTH xs));
+      PMATCH_ROW (\_1. (0::_1,[])) (\_1. T) (\_1. 1);
+      PMATCH_ROW (\(_0,_1). (_0::_1,[])) (\(_0,_1). T) (\(_0,_1). 2)]``)
+
+
+val _ = test_conv "PMATCH_FLATTEN_CONV true" (PMATCH_FLATTEN_CONV true)
+  (``case (x, y) of ([], x::xs) => SUC (
+       case xs of [] => 1 + x | (x::xs) => 5 + x + LENGTH xs) | (y::ys, []) => (case z of 0 => 1 | _ => 2)``,
+   SOME ``PMATCH (x,y)
+     [PMATCH_ROW (\x. ([],[x])) (\x. T) (\x. SUC (1 + x));
+      PMATCH_ROW (\(x,xs,_0). ([],_0::x::xs)) (\(x,xs,_0). T)
+        (\(x,xs,_0). SUC (5 + x + LENGTH xs));
+      PMATCH_ROW (\(_0,_1). (_0::_1,[])) (\(_0,_1). T)
+        (\(_0,_1).
+           PMATCH z
+             [PMATCH_ROW (\_:unit. 0) (\_. T) (\_. 1);
+              PMATCH_ROW (\_0. _0) (\_0. T) (\_0. 2)])]``)
 
 
 (*********************************)
