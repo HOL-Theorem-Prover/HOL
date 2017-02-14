@@ -2,7 +2,7 @@ open HolKernel Parse boolLib bossLib;
 
 open regexpTheory pegTheory monadsyntax
 
-val _ = new_theory "reSyntax";
+val _ = new_theory "regexp_parser";
 
 val _ = temp_add_monadsyntax()
 
@@ -23,8 +23,17 @@ val _ = overload_on ("++", ``option$OPTION_CHOICE``)
 val _ = overload_on ("lift", ``option$OPTION_MAP``)
 
 
-val _ = Datatype‘reNT = Top | Alt | Concat | Star | Atom | CharSet |
-                        BslashSpecial’;
+val _ =
+ Datatype
+   `reNT = Top 
+         | Alt 
+         | Concat 
+         | Star 
+         | Atom 
+         | CharSet 
+         | BslashSpecial`
+;
+
 val _ = overload_on("mkNT", ``INL : reNT -> reNT inf``)
 
 val sumID_def = Define`
@@ -55,6 +64,7 @@ val _ = set_mapped_fixity { tok = "*>", term_name = "igLeft", fixity = Infixl 50
 val igRight_def = Define‘
   igRight s1 s2 = seq s1 s2 (λl1 l2. l1)
 ’;
+
 val _ = set_mapped_fixity { tok = "<*", term_name = "igRight", fixity = Infixl 500 }
 
 val igtok_def = Define‘igtok P = tok P (K NONE)’

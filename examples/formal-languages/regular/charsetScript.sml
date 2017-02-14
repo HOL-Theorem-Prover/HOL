@@ -1,7 +1,7 @@
-open HolKernel Parse boolLib bossLib wordsLib lcsymtacs;
+open HolKernel Parse boolLib bossLib wordsLib;
 open arithmeticTheory listTheory optionTheory rich_listTheory
      pairTheory comparisonTheory stringTheory;
-
+ 
 local open numSyntax Regexp_Type in end;
 
 val _ = new_theory "charset";
@@ -11,11 +11,11 @@ val _ = new_theory "charset";
 (* Regexp_Type.sml.                                                          *)
 (*---------------------------------------------------------------------------*)
 
-val alphabet_size_def =
- Define
+val alphabet_size_def = 
+ Define 
    `alphabet_size = ^(numSyntax.term_of_int Regexp_Type.alphabet_size)`;
 
-val ALPHABET_def =
+val ALPHABET_def = 
  Define
   `ALPHABET = ^(rhs (concl (EVAL ``GENLIST I alphabet_size``)))`;
 
@@ -27,7 +27,7 @@ val mem_alphabet = Q.store_thm
 val alphabet_mem = Q.store_thm
 ("alphabet_mem",
  `!c. c < alphabet_size ==> MEM c ALPHABET`,
- simp_tac bool_ss [alphabet_size_def]
+ simp_tac bool_ss [alphabet_size_def] 
   >> CONV_TAC (REPEATC (numLib.BOUNDED_FORALL_CONV EVAL))
   >> rw []);
 
@@ -43,100 +43,180 @@ val ORD_CHR_lem = Q.store_thm
 
 
 (*---------------------------------------------------------------------------*)
-(* Charsets are represented by bool[n], from wordsLib.                       *)
+(* Charsets are represented by :word64#word64#word64#word64                  *)
 (*---------------------------------------------------------------------------*)
 
-val _ =
-  type_abbrev("charset",
-              wordsSyntax.mk_int_word_type Regexp_Type.alphabet_size);
+val _ = Hol_datatype 
+         `charset = Charset of word64 => word64 => word64 => word64`;
 
 (*---------------------------------------------------------------------------*)
 (* Character sets.                                                           *)
 (*---------------------------------------------------------------------------*)
 
-val charset_empty_def =
- Define
-   `charset_empty:charset = 0w`;
+val charset_empty_def = 
+ Define 
+   `charset_empty = Charset 0w 0w 0w 0w`;
 
-val charset_full_def =
-  let val num_of = Vector.foldr(fn (b,n) => if b then  2 * n + 1 else 2 * n) 0
-      val full_num = num_of (Vector.tabulate (Regexp_Type.alphabet_size, K true))
-  in
-    Define
-      `charset_full:charset =
-         ^(wordsSyntax.mk_wordii(full_num,Regexp_Type.alphabet_size))`
-  end;
-
-val charset_mem_def =
+val charset_full_def = 
  Define
-  `charset_mem c (cs:charset) = c < alphabet_size /\ word_bit c cs`;
+  `charset_full = Charset (~0w) (~0w) (~0w) (~0w)`;
 
-val charset_union_def =
+(*---------------------------------------------------------------------------*)
+(*   |- charset_full =                                                       *)
+(*        Charset                                                            *)
+(*         0xFFFFFFFFFFFFFFFFw 0xFFFFFFFFFFFFFFFFw                           *)
+(*         0xFFFFFFFFFFFFFFFFw 0xFFFFFFFFFFFFFFFFw                           *)
+(*---------------------------------------------------------------------------*)
+
+val charset_full_thm = save_thm
+("charset_full_thm",
+ CONV_RULE (RHS_CONV EVAL) charset_full_def);
+
+val words4_bit_def = 
  Define
-  `charset_union (cs1:charset) (cs2:charset) =
-    if cs1 = cs2 then cs1 else
+   `words4_bit c (Charset w1 w2 w3 w4) = 
+       if c < 64 then word_bit c w4 else
+       if c < 128 then word_bit (c-64) w3 else
+       if c < 192 then word_bit (c-128) w2 
+       else word_bit (c-192) w1`
+;
+           
+val charset_mem_def = 
+ Define 
+  `charset_mem c (cs:charset) = c < alphabet_size /\ words4_bit c cs`;
+
+val charset_union_def = 
+ Define 
+  `charset_union (cs1:charset) (cs2:charset) = 
+    if cs1 = cs2 then cs1 else 
     if cs1 = charset_empty then cs2 else
-    if cs2 = charset_empty then cs1
-    else word_or cs1 cs2`;
+    if cs2 = charset_empty then cs1 
+    else 
+    case (cs1,cs2) 
+     of (Charset u1 u2 u3 u4, Charset v1 v2 v3 v4) 
+        => Charset (word_or u1 v1)
+                   (word_or u2 v2)
+                   (word_or u3 v3)
+                   (word_or u4 v4)`
+;
+            
+val charset_sing_def = 
+ Define 
+  `charset_sing c = 
+     let n = ORD c 
+     in if n < 64  then Charset 0w 0w 0w (1w << n) else
+        if n < 128 then Charset 0w 0w (1w << (n-64)) 0w else
+        if n < 192 then Charset 0w (1w << (n-128)) 0w 0w 
+        else Charset (1w << (n-192)) 0w 0w 0w`
+;
 
-val charset_sing_def =
+val charset_cmp_def = 
  Define
-  `charset_sing c = (1w << ORD c):charset`;
-
-val charset_cmp_def =
- Define
-  `charset_cmp (cs1:charset) cs2 = num_cmp (w2n cs1) (w2n cs2)`;
+  `charset_cmp (Charset u1 u2 u3 u4) (Charset v1 v2 v3 v4) = 
+    case num_cmp (w2n u1) (w2n v1)
+      of Less => Less
+       | Greater => Greater
+       | Equal => 
+    case num_cmp (w2n u2) (w2n v2)
+      of Less => Less
+       | Greater => Greater
+       | Equal => 
+    case num_cmp (w2n u3) (w2n v3)
+      of Less => Less
+       | Greater => Greater
+       | Equal => 
+    num_cmp (w2n u4) (w2n v4)`
+;
 
 (*---------------------------------------------------------------------------*)
 (* Charset theorems                                                          *)
 (*---------------------------------------------------------------------------*)
 
-val charset_mem_empty = Q.store_thm
+val charset_mem_empty = Q.store_thm 
 ("charset_mem_empty",
  `!c. ~charset_mem c charset_empty`,
-  simp_tac list_ss [charset_mem_def,charset_empty_def,wordsTheory.word_bit_0]);
+  rw_tac list_ss [charset_mem_def,charset_empty_def,words4_bit_def, 
+               alphabet_size_def,GSYM IMP_DISJ_THM,wordsTheory.word_bit_0]);
 
-val charset_mem_union = Q.store_thm ("charset_mem_union",
-`!c cs1 cs2.
-  charset_mem c (charset_union cs1 cs2) ⇔ charset_mem c cs1 ∨ charset_mem c cs2`,
- rw [charset_mem_def, charset_union_def,charset_empty_def,
-     wordsTheory.word_bit_0, alphabet_size_def,EQ_IMP_THM]
-  >> pop_assum mp_tac
-  >> srw_tac [WORD_ss, WORD_EXTRACT_ss, WORD_BIT_EQ_ss] []);
+val charset_mem_union = Q.store_thm 
+("charset_mem_union",
+ `!c cs1 cs2.
+    charset_mem c (charset_union cs1 cs2) <=> charset_mem c cs1 \/ charset_mem c cs2`, 
+ rw_tac list_ss [charset_mem_empty, charset_union_def,EQ_IMP_THM]
+  >> REPEAT (WEAKEN_TAC is_neg)
+  >> BasicProvers.EVERY_CASE_TAC
+  >> full_simp_tac list_ss [charset_mem_def,words4_bit_def,alphabet_size_def]
+  >> rw_tac arith_ss [] 
+  >> full_simp_tac arith_ss []
+  >> qpat_x_assum `word_bit _ __` mp_tac
+  >> srw_tac [WORD_ss, WORD_EXTRACT_ss, WORD_BIT_EQ_ss] []
+);
 
 val num_cmp_eq = Q.store_thm
 ("num_cmp_eq",
  `!k. num_cmp k k = Equal`,
- RW_TAC std_ss [comparisonTheory.num_cmp_def]);
+ rw_tac std_ss [comparisonTheory.num_cmp_def]);
 
-val charset_cmp_eq = Q.store_thm
-("charset_cmp_eq",
+val charset_cmp_id = Q.store_thm
+("charset_cmp_id",
  `!cs. charset_cmp (cs:charset) cs = Equal`,
- RW_TAC std_ss [charset_cmp_def,num_cmp_eq]);
+ Cases >> rw_tac std_ss [charset_cmp_def,num_cmp_eq]);
 
-val charset_cmp_eq = Q.store_thm
+val charset_cmp_eq = Q.store_thm 
 ("charset_cmp_eq",
  `!cs1 cs2. (charset_cmp cs1 cs2 = Equal) <=> (cs1 = cs2)`,
- rw [charset_cmp_def,num_cmp_def])
+ Cases 
+  >> Cases
+  >> rw_tac std_ss [charset_cmp_def]
+  >> BasicProvers.EVERY_CASE_TAC
+  >> rw_tac std_ss [GSYM IMP_DISJ_THM]
+  >> full_simp_tac std_ss [num_cmp_eq]
+  >> rw_tac arith_ss []
+  >> rpt (pop_assum mp_tac)
+  >> rw_tac arith_ss [num_cmp_def,wordsTheory.w2n_11]);
 
-val charset_cmp_strict = Q.store_thm
+val charset_cmp_less = Q.prove
+(`!u1 u2 u3 u4 v1 v2 v3 v4. 
+    (charset_cmp (Charset u1 u2 u3 u4) (Charset v1 v2 v3 v4) = Less) 
+   <=> 
+    w2n u1 < w2n v1
+    \/ (w2n u1 = w2n v1) /\ w2n u2 < w2n v2
+    \/ (w2n u1 = w2n v1) /\ (w2n u2 = w2n v2) /\ w2n u3 < w2n v3
+    \/ (w2n u1 = w2n v1) /\ (w2n u2 = w2n v2) /\ (w2n u3 = w2n v3) /\ w2n u4 < w2n v4`,
+  rw_tac std_ss [charset_cmp_def]
+  >> BasicProvers.EVERY_CASE_TAC
+  >> full_simp_tac std_ss [num_cmp_eq]
+  >> rpt (pop_assum mp_tac)
+  >> rw_tac arith_ss [num_cmp_def,wordsTheory.w2n_11]);
+
+val charset_cmp_strict = Q.store_thm 
 ("charset_cmp_strict",
  `!cs1 cs2. (charset_cmp cs1 cs2 = Less) <=> (charset_cmp cs2 cs1 = Greater)`,
- metis_tac [charset_cmp_def,num_cmp_good,good_cmp_thm]);
+ Cases 
+ >> Cases
+ >> rw_tac std_ss [charset_cmp_def]
+ >> BasicProvers.EVERY_CASE_TAC
+ >> metis_tac [num_cmp_good,good_cmp_thm,comparison_distinct])
+;
 
-val charset_cmp_trans = Q.store_thm
+val charset_cmp_trans = Q.store_thm 
 ("charset_cmp_trans",
- `!cs1 cs2 cs3.
-      (charset_cmp cs1 cs2 = Less) /\
+ `!cs1 cs2 cs3. 
+      (charset_cmp cs1 cs2 = Less) /\ 
       (charset_cmp cs2 cs3 = Less)
-      ==>
+      ==> 
       (charset_cmp cs1 cs3 = Less)`,
- metis_tac [charset_cmp_def,num_cmp_good,good_cmp_thm]);
+  Cases 
+  >> Cases
+  >> Cases
+  >> rw_tac arith_ss [charset_cmp_less]);
 
-val charset_string_def = Define‘
-  charset_string s = FOLDL (λa c. charset_union a (charset_sing c))
-                           charset_empty
-                           s
-’
+val charset_string_def = 
+ Define
+  `charset_string s = 
+      FOLDL (\a c. charset_union a (charset_sing c))
+            charset_empty
+            s`
+;
 
 val _ = export_theory();

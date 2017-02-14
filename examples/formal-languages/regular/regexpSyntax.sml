@@ -1,12 +1,12 @@
-structure regexpSyntax :> regexpSyntax =
+structure regexpSyntax :> regexpSyntax = 
 struct
 
-open Feedback Lib HolKernel boolLib
+open Feedback Lib HolKernel boolLib 
      Regexp_Type regexpTheory regexp_compilerTheory;
 
 val ERR = mk_HOL_ERR "regexpSyntax";
 
-val charset_ty = ``:charset64$charset``;
+val charset_ty = ``:charset``;
 
 val regexp_ty = mk_thy_type{Thy="regexp",Tyop="regexp",Args=[]};
 
@@ -22,7 +22,7 @@ val star_tm  = mkc "Star"
 val or_tm    = mkc "Or"
 val neg_tm   = mkc "Neg"
 val and_tm   = mkc "And"
-val regexp_matcher_tm =
+val regexp_matcher_tm = 
   prim_mk_const{Thy="regexp_compiler", Name = "regexp_matcher"};
 
 
@@ -36,13 +36,13 @@ val mk_regexp_matcher = mk_binop regexp_matcher_tm
 
 val dest_chset = dest_monop chset_tm (ERR "dest_chset" "expected a Chset");
 val dest_cat   = dest_binop cat_tm   (ERR "dest_cat" "expected a Cat");
-val dest_star   = dest_monop star_tm  (ERR "dest_star" "expected a Star");
+val dest_star  = dest_monop star_tm  (ERR "dest_star" "expected a Star");
 val dest_neg   = dest_monop neg_tm   (ERR "dest_neg" "expected a Neg");
 val dest_and   = dest_binop and_tm   (ERR "dest_and" "expected an And");
 val dest_regexp_matcher = dest_binop regexp_matcher_tm
         (ERR "dest_regexp_matcher" "expected an instance of regexp_matcher");
 
-fun dest_or tm =
+fun dest_or tm = 
  let val (tlist,ty) = listSyntax.dest_list
                         (dest_monop or_tm (ERR "dest_or" "expected an Or") tm)
  in if ty = regexp_ty
@@ -52,10 +52,10 @@ fun dest_or tm =
 
 (*
 val vector_tm = prim_mk_const{Thy="ml_translator",Name="Vector"};
-val vector_tm = prim_mk_const{Thy="charset",Name="Vector"}
+val vector_tm = prim_mk_const{Thy="charset",Name="Vector"} 
 *)
 
-val vector_tm = prim_mk_const{Thy="regexp_compiler",Name="Vector"}
+val vector_tm = prim_mk_const{Thy="regexp_compiler",Name="Vector"} 
 
 val mk_vector = mk_monop vector_tm;
 val dest_vector = dest_monop vector_tm (ERR "dest_vector" "expected a Vector");
@@ -63,16 +63,16 @@ val is_vector = Lib.can dest_vector;
 
 fun list_mk_vector (tlist,ty) = mk_vector(listSyntax.mk_list(tlist,ty))
 
-fun strip_vector tm =
+fun strip_vector tm = 
   listSyntax.dest_list(dest_vector tm)
   handle HOL_ERR _ => raise ERR "strip_vector" "";
 
 val is_chset = Lib.can dest_chset
-val is_cat     = Lib.can dest_cat
-val is_star    = Lib.can dest_star
-val is_neg     = Lib.can dest_neg
-val is_or      = Lib.can dest_or
-val is_and     = Lib.can dest_and
+val is_cat   = Lib.can dest_cat
+val is_star  = Lib.can dest_star
+val is_neg   = Lib.can dest_neg
+val is_or    = Lib.can dest_or
+val is_and   = Lib.can dest_and
 val is_regexp_matcher = Lib.can dest_regexp_matcher;
 
 
@@ -80,31 +80,31 @@ val is_regexp_matcher = Lib.can dest_regexp_matcher;
 (* Maps between ML bitvectors and HOL terms                                  *)
 (* The following commented out functions implement the maps for n-bit words  *)
 (*
-val bitvector_to_word =
- let val num_of = Vector.foldr(fn (b,n) => if b then  2 * n + 1 else 2 * n) 0
+val bitvector_to_word = 
+ let val num_of = Vector.foldr(fn (b,n) => if b then  2 * n + 1 else 2 * n) 0 
  in
    fn bv => wordsSyntax.mk_wordii(num_of bv,Regexp_Type.alphabet_size)
  end;
 
-fun word_to_bitvector tm =
+fun word_to_bitvector tm = 
  let val n = wordsSyntax.dest_word_literal tm
      val A = Array.tabulate(Regexp_Type.alphabet_size, K false)
      open Arbnum Array
-     val _ = foldli (fn (i,e,n) =>
+     val _ = foldli (fn (i,e,n) => 
               let val (d,m) = divmod(n,two) in (update(A,i,m=one); d) end) n A
  in vector A
  end
 
 The following functions implement the maps for bool vectors
 
-fun bitvector_to_bitlist bv =
+fun bitvector_to_bitlist bv =  
  let open boolSyntax
- in Vector.foldr(fn (b,list) =>
-        listSyntax.mk_cons(if b then T else F,list))
+ in Vector.foldr(fn (b,list) => 
+        listSyntax.mk_cons(if b then T else F,list)) 
        (listSyntax.mk_nil Type.bool) bv
  end;
 
-fun bitlist_to_bitvector tm =
+fun bitlist_to_bitvector tm = 
  let val (tmlist,ty) = listSyntax.dest_list tm
      val blist = List.map (equal boolSyntax.T) tmlist
  in Vector.fromList blist
@@ -112,55 +112,99 @@ fun bitlist_to_bitvector tm =
 
 The following functions implement the maps for bool vectors
 
-fun bitvector_to_bitlist bv =
+fun bitvector_to_bitlist bv =  
  let open boolSyntax
      fun bit ch = (ch = #"1")
      fun bin i = IntInf.fmt StringCvt.BIN i
      val ml_bitlist = map bit (explode (bin bv))
- in
-    List.foldr(fn (b,list) =>
-        listSyntax.mk_cons(if b then T else F,list))
+ in 
+    List.foldr(fn (b,list) => 
+        listSyntax.mk_cons(if b then T else F,list)) 
        (listSyntax.mk_nil Type.bool) ml_bitlist
  end;
 
-fun bitlist_to_bitvector tm =
+fun bitlist_to_bitvector tm = 
  let val (tmlist,ty) = listSyntax.dest_list tm
-     fun binchar tm =
-       if tm = T then #"1" else
-       if tm = F then #"0"
+     fun binchar tm = 
+       if tm = T then #"1" else 
+       if tm = F then #"0" 
        else raise ERR "bitlist_to_bitvector" "expected boolean literal"
      val blist = List.map binchar tmlist
      fun list_reader (h::t) = SOME(h,t)
        | list_reader [] = NONE
- in
+ in 
    case IntInf.scan StringCvt.BIN list_reader blist
     of SOME (i,[]) => i
      | otherwise => raise ERR "bitlist_to_bitvector" "unexpected input"
  end
 *)
 
-val charset_to_term = (* IntInf.int -> ``:bool[256]`` *)
- let val num_of = IntInf.toInt
- in
-   fn bv => wordsSyntax.mk_wordii(num_of bv,Regexp_Type.alphabet_size)
+(*---------------------------------------------------------------------------*)
+(* Lift and drop charsets between ML and HOL                                 *)
+(*---------------------------------------------------------------------------*)
+
+val charset_tm = prim_mk_const{Thy="charset",Name="Charset"}
+
+val (chop4,join4) = 
+ let open IntInf
+     val exp2_64 = pow(2,64)
+     val exp2_128 = pow(2,128)
+     val exp2_192 = pow(2,192)
+     val exp2_256 = pow(2,256)
+     fun chop4 i = 
+      let val (a,b) = divMod(i,exp2_64)
+          val (c,d) = divMod(a,exp2_64)
+          val (e,f) = divMod(c,exp2_64)
+          val (g,h) = divMod(e,exp2_64)
+      in (h,f,d,b)
+      end
+     fun join4 (h,f,d,b) = b + d*exp2_64 + f*exp2_128 + h*exp2_192
+ in 
+  (chop4,join4)
  end;
 
-fun term_to_charset tm = (* ``:bool[256]`` -> IntInf.int *)
- IntInf.fromInt (wordsSyntax.uint_of_word tm);
+val charset_to_term = (* IntInf.int -> ``:charset`` *)
+ let val num = IntInf.toInt
+ in fn cset => 
+    let open wordsSyntax
+        val (h,f,d,b) = chop4 cset
+        val htm = mk_wordii(num h,64)
+        val ftm = mk_wordii(num f,64)
+        val dtm = mk_wordii(num d,64)
+        val btm = mk_wordii(num b,64)
+    in list_mk_comb(charset_tm,[htm,ftm,dtm,btm])
+    end
+ end;
+
+fun term_to_charset tm = (* ``:charset`` -> IntInf.int *) 
+ case strip_comb tm
+  of (const,[htm,ftm,dtm,btm]) =>
+      if same_const const charset_tm
+        then let open wordsSyntax
+                 val inf = IntInf.fromInt
+                 val h = inf (uint_of_word htm)
+                 val f = inf (uint_of_word ftm)
+                 val d = inf (uint_of_word dtm)
+                 val b = inf (uint_of_word btm)
+             in join4(h,f,d,b)
+             end
+        else raise ERR "term_to_charset" "expected Charset _ _ _ _"
+   | other => raise ERR "term_to_charset" "expected Charset _ _ _ _"
+
 
 (*---------------------------------------------------------------------------*)
 (* Build a regexp term from an ML regexp expression                          *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_regexp r =
- case r
+fun mk_regexp r = 
+ case r 
   of Chset bv    => mk_chset(charset_to_term bv)
    | Cat (r1,r2) => mk_cat(mk_regexp r1,mk_regexp r2)
    | Star r      => mk_star (mk_regexp r)
    | Or rlist    => mk_or (List.map mk_regexp rlist)
    | Neg r       => mk_neg (mk_regexp r);
 
-fun dest_regexp tm =
+fun dest_regexp tm = 
  (case total dest_chset tm
   of SOME w => Chset (term_to_charset w)
    | NONE =>
@@ -172,7 +216,7 @@ fun dest_regexp tm =
    | NONE =>
  case total dest_or tm
   of SOME tlist => Or (List.map dest_regexp tlist)
-   | NONE =>
+   | NONE => 
  case total dest_neg tm
   of SOME t => Neg (dest_regexp t)
    | NONE => raise ERR "dest_regexp" "not a ground regexp term")
@@ -182,7 +226,7 @@ fun dest_regexp tm =
 (* Derived syntax                                                            *)
 (*---------------------------------------------------------------------------*)
 
-fun mkc s = prim_mk_const {Thy = "charset64", Name = s};
+fun mkc s = prim_mk_const {Thy = "charset", Name = s};
 
 val charset_empty_tm = mkc "charset_empty";
 val charset_full_tm = mkc "charset_full";

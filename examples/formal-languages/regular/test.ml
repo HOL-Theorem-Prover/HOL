@@ -8,6 +8,18 @@ open regexpLib;
 fun matcher q = #matchfn(regexpLib.matcher SML (Regexp_Type.fromQuote q));
 fun dom q = Regexp_Match.domBrz (Regexp_Type.fromQuote q);
 
+val _ = 
+let fun pp2polypp (ppfn: PP.ppstream -> 'a -> unit) =
+     let fun f pps x = Parse.respect_width_ref Globals.linewidth ppfn pps x
+                       handle e => Raise e
+     in
+       fn depth => fn printArgTypes => fn e:'a =>
+        PolyML.PrettyString (PP.pp_to_string (!Globals.linewidth) f e)
+     end
+ in 
+   PolyML.addPrettyPrinter (pp2polypp Regexp_Type.pp_regexp)
+ end;
+
 val test = matcher `foobar`;
  not (test "fo2b") 
  andalso (test "foobar")
@@ -382,7 +394,6 @@ equal false (test (int2string 1 22));
 Lib.all (equal false) (map (test o int2string 1) (upto 0 22));
 Lib.all (equal false) (map (test o int2string 1) (upto 24 255));
 
-
 val test = matcher `\k{~23}`;
 test (int2string 1 ~23);
 false = test (int2string 1 ~22);
@@ -403,7 +414,7 @@ val test = matcher `\k{116535}`;
 equal true (test (int2string 3 116535));
 equal false (test (int2string 3 ~22));
 equal false (test (int2string 3 22));;
-Lib.all (equal false) (map (test o int2string 3) (upto ~22 116535));
+Lib.all (equal false) (map (test o int2string 3) (upto ~22 116534));
 Lib.all (equal false) (map (test o int2string 3) (upto ~127 ~24));
 
 val test = matcher `\k{~116535}`;
@@ -472,7 +483,8 @@ Lib.all (equal false) (map (test o int2string 3) (upto ~127 ~24));
  
 val match_1800        = matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}`;
 val match_1801        = matcher `\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}`;
-val match_1801_packed = matcher `\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180),(0,59)}\i{0,5999}`;
+val match_1801_packed = 
+ matcher `\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}`;
 val match_1802        = matcher `\i{0,9999,LSB}\i{0,3599,LSB}`;
 val match_1803        = matcher `\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
 
@@ -578,17 +590,17 @@ fun icat w shift i =
 
 val test = icat (icat (icat 63 6 31) 6 45) 6 ~1;
 
-matcher `\p{(~180,180),(0,59)}`;
+matcher `\p{(~180,180)(0,59)}`;
 
-matcher `\p{(0,63),(~32,31),(35,60),(~12,27)}`;
+matcher `\p{(0,63)(~32,31)(35,60)(~12,27)}`;
 
-matcher `\p{(0,1),(0,2),(0,3),(~1,1)}`
+matcher `\p{(0,1)(0,2)(0,3)(~1,1)}`
 
 map find_width [(0,1),(0,2),(0,3),(~1,1)];
 
-matcher `\p{(0,7),(0,1),(0,15)}`
-matcher `\p{(1,5),(0,1),(0,15)}`
-matcher `\p{(1,5),(0,1),(0,15)}\i{0,999}`;
+matcher `\p{(0,7)(0,1)(0,15)}`
+matcher `\p{(1,5)(0,1)(0,15)}`
+matcher `\p{(1,5)(0,1)(0,15)}\i{0,999}`;
 
 (*---------------------------------------------------------------------------*)
 (* Hard cases for Brzozowski? These seem to take exponential time.           *)
@@ -608,59 +620,67 @@ dom `\w{75}`;
 dom `\w{100}`;
 dom `\w{200}`;
 
-dom `\w{1,20}`;       (* 256: 0.02s ; 0.12s ; 128: 0.052s *)
-time dom `\w{1,50}`;  (* 256: 0.16s ; 1.8s  ; 128: 0.73600s *)
-time dom `\w{1,75}`;  (* 256: 0.38s ; 6.2s  ; 128: 2.784s *)
-time dom `\w{1,100}`; (* 256: 0.78s ; 13.6s ; 128: 6.912s *)
-time dom `\w{1,200}`; (* 256: 4.5s  ; 123s  ; 128: 62 s *)
-time dom `\w{1,300}`; (* 256: 13.1s *)
-time dom `\w{1,400}`; (* 256: 29.9s *)
-time dom `\w{1,500}`; (* 256: 57.4ss *)
+dom `\w{1,20}`;  (* 256: 0.02s ; 0.12s ; 128: 0.052s *)
+dom `\w{1,50}`;  (* 256: 0.14s ; 1.8s  ; 128: 0.73600s *)
+dom `\w{1,75}`;  (* 256: 0.37s ; 6.2s  ; 128: 2.784s *)
+dom `\w{1,100}`; (* 256: 0.72s ; 13.6s ; 128: 6.912s *)
+dom `\w{1,200}`; (* 256: 4.4s  ; 123s  ; 128: 62 s *)
+dom `\w{1,300}`; (* 256: 12.8s *)
+dom `\w{1,400}`; (* 256: 28.2s *)
+dom `\w{1,500}`; (* 256: 55.5ss *)
 
 (*---------------------------------------------------------------------------*)
 (* packed intervals                                                          *)
 (*---------------------------------------------------------------------------*)
 
-dom `\p{(0,5),(0,3),(3,5)}`;
+dom `\p{(0,5)(0,3)(3,5)}`;
 (* 0.002s. 1 byte needed *)
 
-dom `\p{(0,5),(0,63),(0,127)}`;
+dom `\p{(0,5)(0,63)(0,127)}`;  (* Weird regexp generated *)
 (* 7.5s. 2 bytes needed. 1 interval *)
 (* 8.5s. 2 bytes needed. 1 interval *)
 (* 8.7s. 2 bytes needed. 442371 intervals  (smallest total size) *)
 (* 0.52s. 2 bytes needed. 49152 elements; 3911 nodes in regexp *)
+(* 0.068s. ditto the rest *)
 
-dom `\p{(0,127),(0,63),(0,5)}`;
+dom `\p{(0,127)(0,63)(0,5)}`;    (* Another weird regexp generated *)
 (* 1.3s. 2 bytes. 8192 intervals *)
 (* 0.17s. 2 bytes. 192 intervals *)
 (* 0.29s. 2 bytes. 442944 intervals (smallest total size) *)
 (* 0.384s. 2 bytes needed. 49152 elements; 4035 nodes in regexp *)
 
-dom `\p{(~180,180),(0,59)}`;
+dom `\p{(0,360)(0,59).{1}}`;
+dom `\p{(0,360)(0,59)(1,1)}`;
+dom `\p{(0,360).{1}(0,59)}`;
+dom `\p{.{1}(0,360)(0,59)}`;
+
+dom `\p{(~180,180)(0,59)(0,0)}`;
 (* 0.12s. 2 bytes needed. 361 intervals *)
 (* 0.08s. 2 bytes needed. 120 intervals *)
 (* 0.15s. 2 bytes needed. 195300 intervals (smallest total size) *)
 (* 0.039s. 2 bytes needed. 21660 elements; 2403 nodes in regexp *)
 
-dom `\p{(0,59),(~180,180)}`;
+dom `\p{(0,59)(~180,180).{1}}`;
 (* 3.4s. 2 bytes needed. 61 intervals *)
 (* 4.9s. 2 bytes needed. 61 intervals *)
 (* 3.5s. 2 bytes needed. 195,123 intervals (smallest total size) *)
 (* 0.012s. 2 bytes needed. 21660 elements;  2449 nodes in regexp *)
 
-dom `\p{(0,41),(0,127),(0,255)}`;
+dom `\p{(0,41)(0,127)(0,255),(0,0),(0,0),(0,0)}`;
+dom `\p{(0,41)(0,127)(0,255),(0,7)}`;
+dom `\p{(0,41)(0,127)(0,255).{3}}`;
 (* 12.2s. 3 bytes. 79464 intervals generated *)
 (* 11.5s. 5376 intervals *)
 (* 263s. 168 intervals *)
 (* 228s. 16,515,576 intervals (smallest total size) *)
-(* 7.4s. 1,376,256 elements; 161923 nodes in regexp *)
+(* 5.1s. 1,376,256 elements; 161923 nodes in regexp *)
 
-dom `\p{(0,41),(0,42),(0,43),(0,48)}`;
+dom `\p{(0,41)(0,42)(0,43)(0,48)}`;
 (* 56s. 3 bytes. 79464 intervals generated *)
 (* 113s 3 bytes. 26,080,059 intervals generated *)
-(* 38.9s. 3 bytes. 3,893,736 elements ;  2,216,899 nodes in regexp *)
+(* 34.3s. 3 bytes. 3,893,736 elements ;  2,216,899 nodes in regexp *)
 
-dom `\p{(0,63),(0,42),(0,63),(0,63)}`;
+dom `\p{(0,63)(0,42)(0,63)(0,63)}`;
 (* 261s. 3 bytes, 11,272,192 elements in set, 33,993,813 nodes in regexp *)
 
 dom `(201\d|202[0-5])-([1-9]|1[0-2])-([1-9]|[1-2]\d|3[0-1]) (1?\d|2[0-3]):(\d|[1-5]\d):(\d|[1-5]\d)`;
@@ -669,7 +689,7 @@ dom `(201\d|202[0-5])-([1-9]|1[0-2])-([1-9]|[1-2]\d|3[0-1]) (1?\d|2[0-3]):(\d|[1
 dom `\[\{"time":"\d{13}(:\d{3})?","\w{1,20}":\{("\w{1,25}":"\w{1,30}",?)+\}\}\]`;
 (* 119 states; 0.68s *)
 
-dom `\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180),(0,59)}\i{0,5999}`;
+dom `\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}`;
 (* 14 states ; 0.46s *)
 (* 13 states ; 0.54s *)
 (* 0.27s. 195,300 intervals *)
