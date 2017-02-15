@@ -35,6 +35,14 @@ val _ = Datatype`
             | Nd ('b inf # locs) (parsetree list)
 `;
 
+val ptree_loc_def = Define`
+  (ptree_loc (Lf(_,l)) = l)/\
+  (ptree_loc (Nd(_,l) _) = l)`
+
+val ptree_list_loc = Define`
+  ptree_list_loc l = merge_list_locs (MAP ptree_loc l)`
+
+
 val ptree_size_def = tDefine "ptree_size" `
   (ptree_size (Lf (tok, l)) = 1) ∧
   (ptree_size (Nd nt children) = 1 + SUM (MAP ptree_size children))
