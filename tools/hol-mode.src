@@ -1458,6 +1458,98 @@ second is to show the new term.
    (hol-remove-tailing-empty-lines)
    (message "Buffer cleaned up!"))
 
+;;replace common unicode chars with ascii version
+(setq hol-unicode-replacements '(
+  (nil "¬" "~")
+  (nil "∧" "/\\\\")
+  (nil "∨" "\\\\/")
+  (nil "⇒" "==>")
+  (nil "⇔" "<=>")
+  (nil "⇎" "<=/=>")
+  (nil "≠" "<>")
+  (nil "∃" "?")
+  (nil "∀" "!")
+  (nil "λ" "\\\\")
+  (nil "“" "``")
+  (nil "”" "``")
+  (nil "‘" "`")
+  (nil "’" "`")
+  (t "∈" "IN")
+  (t "∉" "NOTIN")
+  (nil "α" "'a")
+  (nil "β" "'b")
+  (nil "γ" "'c")
+  (nil "δ" "'d")
+  (nil "ε" "'e")
+  (nil "ζ" "'f")
+  (nil "η" "'g")
+  (nil "θ" "'h")
+  (nil "ι" "'i")
+  (nil "κ" "'j")
+  (nil "μ" "'l")
+  (nil "ν" "'m")
+  (nil "ξ" "'n")
+  (nil "ο" "'o")
+  (nil "π" "'p")
+  (nil "ρ" "'q")
+  (nil "ς" "'r")
+  (nil "σ" "'s")
+  (nil "τ" "'t")
+  (nil "υ" "'u")
+  (nil "φ" "'v")
+  (nil "χ" "'w")
+  (nil "ψ" "'x")
+  (nil "ω" "'y")
+  (t "≤₊" "<=+")
+  (t ">₊" ">+")
+  (t "<₊" "<+")
+  (t "≥₊" ">=+")
+  (t "≤" "<=")
+  (t "≥" ">=")
+  (nil "⁺" "^+")
+  (t "∅ᵣ" "EMPTY_REL")
+  (t "𝕌ᵣ" "RUNIV")
+  (t "⊆ᵣ" "RSUBSET")
+  (t "∪ᵣ" "RUNION")
+  (t "∩ᵣ" "RINTER")
+  (t "∅" "EMPTY")
+  (t "𝕌" "UNIV")
+  (t "⊆" "SUBSET")
+  (t "∪" "UNION")
+  (t "∩" "INTER")
+  (t "⊕" "??")
+  (t "‖" "||")
+  (t "≪" "<<")
+  (t "≫" ">>")
+  (t "⋙" ">>>")
+  (t "⇄" "#>>")
+  (t "⇆" "#<<")
+))
+
+
+(defun replace-string-in-buffer (s_old s_new)
+   (save-excursion
+      (goto-char (point-min))
+      (while (search-forward s_old nil t)
+         (replace-match s_new))))
+
+(defun replace-string-in-buffer_ensure_ws (s_old s_new)
+  (replace-string-in-buffer (concat " " s_old " ") (concat " " s_new " "))
+  (replace-string-in-buffer (concat s_old " ") (concat " " s_new " "))
+  (replace-string-in-buffer (concat " " s_old) (concat " " s_new " "))
+  (replace-string-in-buffer s_old (concat " " s_new " "))
+)
+
+(defun hol-remove-unicode ()
+  (interactive)
+  (save-excursion
+    (save-restriction
+      (if (use-region-p) (narrow-to-region (region-beginning) (region-end)))
+      (dolist (elt hol-unicode-replacements)
+        (if (nth 0 elt)
+          (replace-string-in-buffer_ensure_ws (nth 1 elt) (nth 2 elt))
+          (replace-string-in-buffer (nth 1 elt) (nth 2 elt))
+          )))))
 
 
 ;;load-path
@@ -1782,6 +1874,7 @@ second is to show the new term.
 (define-key hol-map "s"    'interactive-send-string-to-hol)
 (define-key hol-map "u"    'hol-use-file)
 (define-key hol-map "c"    'hol-db-check-current)
+(define-key hol-map "a"    'hol-remove-unicode)
 (define-key hol-map "*"    'hol-template-comment-star)
 (define-key hol-map "-"    'hol-template-comment-minus)
 (define-key hol-map "="    'hol-template-comment-equal)
@@ -1830,6 +1923,10 @@ second is to show the new term.
 (define-key global-map [menu-bar hol-menu hol-misc clean-up]
    '("Clean up (remove tab, white spaces at end of line, etc...)" .
      hol-cleanup-buffer))
+
+(define-key global-map [menu-bar hol-menu hol-misc remove-unicode]
+   '("Replace common HOL unicode symbols" .
+     hol-remove-unicode))
 
 (define-key global-map [menu-bar hol-menu hol-misc check-names]
    '("Check names in store_thm, ..." . hol-check-statement-eq-string))
