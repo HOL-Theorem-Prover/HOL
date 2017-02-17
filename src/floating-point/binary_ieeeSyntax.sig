@@ -10,6 +10,9 @@ sig
    val mk_float_ty: hol_type * hol_type -> hol_type
    val dest_float_ty: hol_type -> hol_type * hol_type
 
+   val mk_fp_op_ty: hol_type * hol_type -> hol_type
+   val dest_fp_op_ty: hol_type -> hol_type * hol_type
+
    val mk_ifloat_ty: int * int -> hol_type
    val dest_ifloat_ty: hol_type -> int * int
 

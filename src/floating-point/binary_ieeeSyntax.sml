@@ -2,7 +2,7 @@ structure binary_ieeeSyntax :> binary_ieeeSyntax =
 struct
 
 open Abbrev HolKernel
-open fcpSyntax binary_ieeeTheory
+open realSyntax fcpSyntax wordsSyntax binary_ieeeTheory
 
 val ERR = Feedback.mk_HOL_ERR "binary_ieeeSyntax"
 
@@ -20,10 +20,18 @@ val float_compare_ty =
 fun mk_float_ty (t, w) =
    Type.mk_thy_type {Thy = "binary_ieee", Tyop = "float", Args = [t, w]}
 
+fun mk_fp_op_ty (t, w) =
+   Type.mk_thy_type {Thy = "binary_ieee", Tyop = "fp_op", Args = [t, w]}
+
 fun dest_float_ty ty =
    case Type.dest_thy_type ty of
       {Thy = "binary_ieee", Args = [t, w], Tyop = "float"} => (t, w)
     | _ => raise ERR "dest_float_ty" ""
+
+fun dest_fp_op_ty ty =
+   case Type.dest_thy_type ty of
+      {Thy = "binary_ieee", Args = [t, w], Tyop = "fp_op"} => (t, w)
+    | _ => raise ERR "dest_fp_op_ty" ""
 
 val mk_ifloat_ty =
    mk_float_ty o
