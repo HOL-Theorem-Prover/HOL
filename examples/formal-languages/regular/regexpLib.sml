@@ -5,7 +5,8 @@ open HolKernel boolLib bossLib;
 open pairLib optionLib pred_setLib listLib stringLib wordsLib;
 open listTheory stringTheory arithmeticTheory pred_setTheory 
      sortingTheory mergesortTheory comparisonTheory balanced_mapTheory 
-     charsetTheory regexpTheory vec_mapTheory regexp_compilerTheory;
+     vec_mapTheory charsetTheory 
+     regexpTheory regexp_compilerTheory regexp_parserTheory;
 
 open Regexp_Type regexpSyntax regexpMisc;
 
@@ -52,7 +53,8 @@ val regexp_compute_thms =
   @
   [ALPHABET_def, alphabet_size_def, And_def, zip_def,
    charset_empty_def, charset_full_def, 
-   charset_mem_def, charset_union_def, charset_sing_def, merge_charsets_def, 
+   words4_bit_def, charset_mem_def, charset_union_def, 
+   charset_sing_def, merge_charsets_def, 
 
    charset_cmp_def, numeral_cmp_thm, len_cmp_def, 
    regexp_compare_def,regexp_compareW_def,regexp_compare_eq,regexp_leq_def, 
@@ -100,8 +102,9 @@ fun regexp_compset() =
      val _ = wordsLib.add_words_compset true compset
      val _ = stringLib.add_string_compset compset
      val _ = add_datatype_info compset (valOf(TypeBase.fetch ``:cpn``))
-     val _ = add_datatype_info compset (valOf(TypeBase.fetch ``:regexp``))
      val _ = add_datatype_info compset (valOf(TypeBase.fetch ``:('a,'b)balanced_map``))
+     val _ = add_datatype_info compset (valOf(TypeBase.fetch ``:charset``))
+     val _ = add_datatype_info compset (valOf(TypeBase.fetch ``:regexp``))
      val _ = add_thms regexp_compute_thms compset
  in
    compset

@@ -6,7 +6,7 @@ open Feedback Lib HolKernel boolLib
 
 val ERR = mk_HOL_ERR "regexpSyntax";
 
-val charset_ty = ``:bool[256]``;
+val charset_ty = ``:charset``;
 
 val regexp_ty = mk_thy_type{Thy="regexp",Tyop="regexp",Args=[]};
 
@@ -36,7 +36,7 @@ val mk_regexp_matcher = mk_binop regexp_matcher_tm
 
 val dest_chset = dest_monop chset_tm (ERR "dest_chset" "expected a Chset");
 val dest_cat   = dest_binop cat_tm   (ERR "dest_cat" "expected a Cat");
-val dest_star   = dest_monop star_tm  (ERR "dest_star" "expected a Star");
+val dest_star  = dest_monop star_tm  (ERR "dest_star" "expected a Star");
 val dest_neg   = dest_monop neg_tm   (ERR "dest_neg" "expected a Neg");
 val dest_and   = dest_binop and_tm   (ERR "dest_and" "expected an And");
 val dest_regexp_matcher = dest_binop regexp_matcher_tm
@@ -68,11 +68,11 @@ fun strip_vector tm =
   handle HOL_ERR _ => raise ERR "strip_vector" "";
 
 val is_chset = Lib.can dest_chset
-val is_cat     = Lib.can dest_cat
-val is_star    = Lib.can dest_star
-val is_neg     = Lib.can dest_neg
-val is_or      = Lib.can dest_or
-val is_and     = Lib.can dest_and
+val is_cat   = Lib.can dest_cat
+val is_star  = Lib.can dest_star
+val is_neg   = Lib.can dest_neg
+val is_or    = Lib.can dest_or
+val is_and   = Lib.can dest_and
 val is_regexp_matcher = Lib.can dest_regexp_matcher;
 
 
@@ -139,14 +139,58 @@ fun bitlist_to_bitvector tm =
  end
 *)
 
-val charset_to_term = (* IntInf.int -> ``:bool[256]`` *)
- let val num_of = IntInf.toInt
- in
-   fn bv => wordsSyntax.mk_wordii(num_of bv,Regexp_Type.alphabet_size)
+(*---------------------------------------------------------------------------*)
+(* Lift and drop charsets between ML and HOL                                 *)
+(*---------------------------------------------------------------------------*)
+
+val charset_tm = prim_mk_const{Thy="charset",Name="Charset"}
+
+val (chop4,join4) = 
+ let open IntInf
+     val exp2_64 = pow(2,64)
+     val exp2_128 = pow(2,128)
+     val exp2_192 = pow(2,192)
+     val exp2_256 = pow(2,256)
+     fun chop4 i = 
+      let val (a,b) = divMod(i,exp2_64)
+          val (c,d) = divMod(a,exp2_64)
+          val (e,f) = divMod(c,exp2_64)
+          val (g,h) = divMod(e,exp2_64)
+      in (h,f,d,b)
+      end
+     fun join4 (h,f,d,b) = b + d*exp2_64 + f*exp2_128 + h*exp2_192
+ in 
+  (chop4,join4)
  end;
 
-fun term_to_charset tm = (* ``:bool[256]`` -> IntInf.int *)
- IntInf.fromInt (wordsSyntax.uint_of_word tm);
+val charset_to_term = (* IntInf.int -> ``:charset`` *)
+ let val num = IntInf.toInt
+ in fn cset => 
+    let open wordsSyntax
+        val (h,f,d,b) = chop4 cset
+        val htm = mk_wordii(num h,64)
+        val ftm = mk_wordii(num f,64)
+        val dtm = mk_wordii(num d,64)
+        val btm = mk_wordii(num b,64)
+    in list_mk_comb(charset_tm,[htm,ftm,dtm,btm])
+    end
+ end;
+
+fun term_to_charset tm = (* ``:charset`` -> IntInf.int *) 
+ case strip_comb tm
+  of (const,[htm,ftm,dtm,btm]) =>
+      if same_const const charset_tm
+        then let open wordsSyntax
+                 val inf = IntInf.fromInt
+                 val h = inf (uint_of_word htm)
+                 val f = inf (uint_of_word ftm)
+                 val d = inf (uint_of_word dtm)
+                 val b = inf (uint_of_word btm)
+             in join4(h,f,d,b)
+             end
+        else raise ERR "term_to_charset" "expected Charset _ _ _ _"
+   | other => raise ERR "term_to_charset" "expected Charset _ _ _ _"
+
 
 (*---------------------------------------------------------------------------*)
 (* Build a regexp term from an ML regexp expression                          *)

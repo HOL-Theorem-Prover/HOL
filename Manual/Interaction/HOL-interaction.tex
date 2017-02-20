@@ -44,14 +44,23 @@ The text assumes that the reader has HOL4 installed. You can download and instal
 \mysec{Interaction with HOL4 (via emacs or xemacs)\label{interaction}}
 
 Michael Norrish has written an emacs script which makes interaction
-with HOL easy. To install the script add this line to your {\tt
-.emacs} file:
+with HOL easy. To install the script add the following line to your {\tt
+.emacs} file with {\tt <path>} replaced with the full path to your HOL4
+installation.
 \begin{code}
 (load "<path>/HOL/tools/hol-mode")
 \end{code}
-Replace {\tt <path>} with the full path to your HOL4 installation. To make
-emacs highlight the active region, also add the following line to your
-{\tt .emacs} file:
+I recommend adding the following (by Chun Tian) to the {\tt .emacs} file
+in order to turn off automatic indentation for the SML mode.
+\begin{code}
+(defun my-sml-mode-hook ()
+  "Local defaults for SML mode"
+  (setq electric-indent-chars '()))
+
+(add-hook 'sml-mode-hook 'my-sml-mode-hook)
+\end{code}
+To make emacs highlight the active region, also add the following line
+to your {\tt .emacs} file, if it is not already there.
 \begin{code}
 (transient-mark-mode 1)
 \end{code}
@@ -67,7 +76,7 @@ Restart emacs to make these changes take effect.
 The HOL window should look something like this:
 \begin{code}
 ---------------------------------------------------------------------
-       HOL-4 [Kananaskis 11 (stdknl, built Sun Dec 04 08:04:59 2016)]
+       HOL-4 [Kananaskis 11 (stdknl, built Sun Feb 12 16:22:29 2017)]
 
        For introductory HOL help, type: help "hol";
        To exit type <Control>-D
@@ -149,7 +158,7 @@ One can use {\tt prove} to store the result of a proof (called a
 \emph{theorem}), \eg{} the following stores the theorem $\forall n.\;n < n +
 1$ in an ML variable {\tt LESS\_ADD\_1}:
 \begin{code}
-val LESS_ADD_1 = prove({`}` !n. n < n + 1 {`}`,decide_tac);
+val LESS_ADD_1 = Q.prove({`} !n. n < n + 1 {`},decide_tac);
 \end{code}
 When the above line is copied into HOL4 (using {\tt C-space} then
 {\tt M-h M-r}, as described in Section~\ref{copy}), HOL4 responds with:
@@ -170,8 +179,8 @@ Induct_on `n`                   (* comment: induction on n  *)
 \end{code}
 Tactics can be pieced together for {\tt prove} using \ml{\gt\gt} and \ml{\gt-}. The \ml{\gt\gt} operator is an infix that composes tactics. Similarly, \ml{\gt-} \emph{tac} proves the first subgoal using \emph{tac}.
 \begin{code}
-val LESS_EQ_MULT = prove(
-  {`}` !n:num. n <= n * n {`}`,
+val LESS_EQ_MULT = Q.prove(
+  {`} !n:num. n <= n * n {`},
   Induct_on `n`
   >- decide_tac
   >- (asm_simp_tac bool_ss [MULT]
@@ -257,7 +266,7 @@ val _ = export_theory();
 Replace {\tt prove} by {\tt store\_thm} for results you
 wish to export from the theory, \eg{}
 \begin{code}
-val LESS_ADD_1 = store_thm("LESS_ADD_1",{`}`!n.n<n+1{`}`,decide_tac);
+val LESS_ADD_1 = Q.store_thm("LESS_ADD_1",{`}!n.n<n+1{`},decide_tac);
 \end{code}
 Make sure your script only consists of ML definitions ({\tt \small val
   x = y}, {\tt \small fun g x = y}), open commands ({\tt \small
@@ -266,8 +275,6 @@ Make sure your script only consists of ML definitions ({\tt \small val
 The theory {\tt mytreeTheory} is created by executing {\tt Holmake} in
 the directory where {\tt mytreeScript.sml} is stored. A
 readable version of the theory is stored under {\tt mytreeTheory.sig}.
-
-\newpage
 
 \mysec{Searching for theorems and theories\label{search}}
 

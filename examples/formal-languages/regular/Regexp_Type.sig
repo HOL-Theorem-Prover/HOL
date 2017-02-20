@@ -47,6 +47,10 @@ sig
 
  datatype direction = MSB | LSB
 
+ datatype packelt 
+   = Span of IntInf.int * IntInf.int 
+   | Pad of IntInf.int;
+
  datatype tree 
    = Ap of string * tree list
    | Cset of charset
@@ -55,7 +59,7 @@ sig
    | Range of tree * int option * int option
    | Interval of IntInf.int * IntInf.int * direction 
    | Const of IntInf.int * direction
-   | Pack of (IntInf.int * IntInf.int) list
+   | Pack of packelt list
 
  val tree_parse        : substring -> tree list * substring
  val substring_to_tree : substring -> tree

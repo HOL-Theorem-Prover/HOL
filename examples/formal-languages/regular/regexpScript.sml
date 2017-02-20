@@ -475,7 +475,7 @@ val regexp_compareW_thm = Q.prove
 
 val regexp_compareW_eq = Q.store_thm
 ("regexp_compareW_eq",
-`!plist l1 l2.
+ `!plist l1 l2.
     (LENGTH l1 = LENGTH l2) /\ (zip l1 l2 = plist)
     ==>
     ((regexp_compareW plist = Equal) <=> (l1 = l2))`,

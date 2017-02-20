@@ -157,9 +157,6 @@ val float_bottom_def = Define`
 val float_minus_min_def = Define`
    float_minus_min (:'t # 'w) = float_negate (float_plus_min (:'t # 'w))`
 
-val float_some_nan_def = Define`
-   float_some_nan (:'t # 'w) = @a: ('t, 'w) float. float_is_nan a`
-
 (* ------------------------------------------------------------------------
    Rounding reals to floating-point values
    ------------------------------------------------------------------------ *)
@@ -273,6 +270,24 @@ val integral_round_def = Define`
           else closest {a | float_is_integral a /\ float_to_real a <= x} x`
 
 (* ------------------------------------------------------------------------
+   NaNs
+   ------------------------------------------------------------------------ *)
+
+val () = Datatype`
+   fp_op =
+     FP_Sqrt rounding (('t, 'w) float)
+   | FP_Add rounding (('t, 'w) float) (('t, 'w) float)
+   | FP_Sub rounding (('t, 'w) float) (('t, 'w) float)
+   | FP_Mul rounding (('t, 'w) float) (('t, 'w) float)
+   | FP_Div rounding (('t, 'w) float) (('t, 'w) float)
+   | FP_MulAdd rounding (('t, 'w) float) (('t, 'w) float) (('t, 'w) float)
+   | FP_MulSub rounding (('t, 'w) float) (('t, 'w) float) (('t, 'w) float)`
+
+val float_some_nan_def = Define`
+   float_some_nan (fp_op : ('t, 'w) fp_op) =
+   (@f. float_is_nan (f fp_op)) fp_op : ('t, 'w) float`
+
+(* ------------------------------------------------------------------------
    Some arithmetic operations
    ------------------------------------------------------------------------ *)
 
@@ -318,19 +333,19 @@ val float_sqrt_def = Define`
    float_sqrt mode (x: ('t, 'w) float) =
       if x.Sign = 0w then
          case float_value x of
-            NaN => float_some_nan (:'t # 'w)
+            NaN => float_some_nan (FP_Sqrt mode x)
           | Infinity => float_plus_infinity (:'t # 'w)
           | Float r => float_round mode F (sqrt r)
       else
-         float_some_nan (:'t # 'w)`
+         float_some_nan (FP_Sqrt mode x)`
 
 val float_add_def = Define`
    float_add mode (x: ('t, 'w) float) (y: ('t, 'w) float) =
       case float_value x, float_value y of
-         NaN, _ => float_some_nan (:'t # 'w)
-       | _, NaN => float_some_nan (:'t # 'w)
+         NaN, _ => float_some_nan (FP_Add mode x y)
+       | _, NaN => float_some_nan (FP_Add mode x y)
        | Infinity, Infinity =>
-            if x.Sign = y.Sign then x else float_some_nan (:'t # 'w)
+            if x.Sign = y.Sign then x else float_some_nan (FP_Add mode x y)
        | Infinity, _ => x
        | _, Infinity => y
        | Float r1, Float r2 =>
@@ -341,10 +356,10 @@ val float_add_def = Define`
 val float_sub_def = Define`
    float_sub mode (x: ('t, 'w) float) (y: ('t, 'w) float) =
       case float_value x, float_value y of
-         NaN, _ => float_some_nan (:'t # 'w)
-       | _, NaN => float_some_nan (:'t # 'w)
+         NaN, _ => float_some_nan (FP_Sub mode x y)
+       | _, NaN => float_some_nan (FP_Sub mode x y)
        | Infinity, Infinity =>
-            if x.Sign = y.Sign then float_some_nan (:'t # 'w) else x
+            if x.Sign = y.Sign then float_some_nan (FP_Sub mode x y) else x
        | Infinity, _ => x
        | _, Infinity => float_negate y
        | Float r1, Float r2 =>
@@ -355,17 +370,17 @@ val float_sub_def = Define`
 val float_mul_def = Define`
    float_mul mode (x: ('t, 'w) float) (y: ('t, 'w) float) =
       case float_value x, float_value y of
-         NaN, _ => float_some_nan (:'t # 'w)
-       | _, NaN => float_some_nan (:'t # 'w)
+         NaN, _ => float_some_nan (FP_Mul mode x y)
+       | _, NaN => float_some_nan (FP_Mul mode x y)
        | Infinity, Float r =>
             if r = 0
-               then float_some_nan (:'t # 'w)
+               then float_some_nan (FP_Mul mode x y)
             else if x.Sign = y.Sign
                then float_plus_infinity (:'t # 'w)
             else float_minus_infinity (:'t # 'w)
        | Float r, Infinity =>
             if r = 0
-               then float_some_nan (:'t # 'w)
+               then float_some_nan (FP_Mul mode x y)
             else if x.Sign = y.Sign
                then float_plus_infinity (:'t # 'w)
             else float_minus_infinity (:'t # 'w)
@@ -379,9 +394,9 @@ val float_mul_def = Define`
 val float_div_def = Define`
    float_div mode (x: ('t, 'w) float) (y: ('t, 'w) float) =
       case float_value x, float_value y of
-         NaN, _ => float_some_nan (:'t # 'w)
-       | _, NaN => float_some_nan (:'t # 'w)
-       | Infinity, Infinity => float_some_nan (:'t # 'w)
+         NaN, _ => float_some_nan (FP_Div mode x y)
+       | _, NaN => float_some_nan (FP_Div mode x y)
+       | Infinity, Infinity => float_some_nan (FP_Div mode x y)
        | Infinity, _ =>
             if x.Sign = y.Sign
                then float_plus_infinity (:'t # 'w)
@@ -393,7 +408,7 @@ val float_div_def = Define`
        | Float r1, Float r2 =>
             if r2 = 0
                then if r1 = 0
-                       then float_some_nan (:'t # 'w)
+                       then float_some_nan (FP_Div mode x y)
                     else if x.Sign = y.Sign
                        then float_plus_infinity (:'t # 'w)
                     else float_minus_infinity (:'t # 'w)
@@ -409,7 +424,7 @@ val float_mul_add_def = Define`
             float_is_infinite x /\ float_is_zero y \/
             float_is_zero x /\ float_is_infinite y \/
             float_is_infinite z /\ infP /\ z.Sign <> signP
-            then float_some_nan (:'t # 'w)
+            then float_some_nan (FP_MulAdd mode x y z)
          else if float_is_infinite z /\ (z.Sign = 0w) \/ infP /\ (signP = 0w)
             then float_plus_infinity (:'t # 'w)
          else if float_is_infinite z /\ (z.Sign = 1w) \/ infP /\ (signP = 1w)
@@ -434,7 +449,7 @@ val float_mul_sub_def = Define`
             float_is_infinite x /\ float_is_zero y \/
             float_is_zero x /\ float_is_infinite y \/
             float_is_infinite z /\ infP /\ (z.Sign = signP)
-            then float_some_nan (:'t # 'w)
+            then float_some_nan (FP_MulSub mode x y z)
          else if float_is_infinite z /\ (z.Sign = 1w) \/ infP /\ (signP = 0w)
             then float_plus_infinity (:'t # 'w)
          else if float_is_infinite z /\ (z.Sign = 0w) \/ infP /\ (signP = 1w)
@@ -802,20 +817,23 @@ val sign_neq = Q.prove(
    )
 
 val some_nan_components = Q.prove(
-   `((float_some_nan (:'t # 'w)).Exponent = UINT_MAXw) /\
-    ((float_some_nan (:'t # 'w)).Significand <> 0w)`,
-   simp [float_some_nan_def]
+   `!fp_op.
+       ((float_some_nan fp_op).Exponent = UINT_MAXw) /\
+       ((float_some_nan fp_op).Significand <> 0w)`,
+   strip_tac \\ simp [float_some_nan_def]
    \\ SELECT_ELIM_TAC
    \\ conj_tac
    >- (
        simp [float_is_nan_def]
-       \\ qexists_tac `<| Sign := 0w;
-                          Exponent := UINT_MAXw: 'w word;
-                          Significand := 1w: 't word |>`
+       \\ EXISTS_TAC
+             ``(K (<| Sign := 0w;
+                      Exponent := UINT_MAXw: 'b word;
+                      Significand := 1w: 'a word |>)) :
+               ('a, 'b) fp_op -> ('a, 'b) float``
        \\ simp [float_value_def]
       )
    \\ strip_tac
-   \\ Cases_on `float_value x`
+   \\ Cases_on `float_value (x fp_op)`
    \\ simp [float_is_nan_def]
    \\ pop_assum mp_tac
    \\ rw [float_value_def]
@@ -846,8 +864,8 @@ val float_components = Q.store_thm("float_components",
     ((float_bottom (:'t # 'w)).Sign = 1w) /\
     ((float_bottom (:'t # 'w)).Exponent = UINT_MAXw - 1w) /\
     ((float_bottom (:'t # 'w)).Significand = UINT_MAXw) /\
-    ((float_some_nan (:'t # 'w)).Exponent = UINT_MAXw) /\
-    ((float_some_nan (:'t # 'w)).Significand <> 0w) /\
+    (!fp_op. (float_some_nan fp_op).Exponent = UINT_MAXw) /\
+    (!fp_op. (float_some_nan fp_op).Significand <> 0w) /\
     (!x. (float_negate x).Sign = ~x.Sign) /\
     (!x. (float_negate x).Exponent = x.Exponent) /\
     (!x. (float_negate x).Significand = x.Significand)`,
@@ -865,33 +883,33 @@ val float_distinct = Q.store_thm("float_distinct",
     (float_plus_infinity (:'t # 'w) <> float_bottom (:'t # 'w)) /\
     (float_plus_infinity (:'t # 'w) <> float_plus_min (:'t # 'w)) /\
     (float_plus_infinity (:'t # 'w) <> float_minus_min (:'t # 'w)) /\
-    (float_plus_infinity (:'t # 'w) <> float_some_nan (:'t # 'w)) /\
+    (!fp_op. float_plus_infinity (:'t # 'w) <> float_some_nan fp_op) /\
     (float_minus_infinity (:'t # 'w) <> float_plus_zero (:'t # 'w)) /\
     (float_minus_infinity (:'t # 'w) <> float_minus_zero (:'t # 'w)) /\
     (float_minus_infinity (:'t # 'w) <> float_top (:'t # 'w)) /\
     (float_minus_infinity (:'t # 'w) <> float_bottom (:'t # 'w)) /\
     (float_minus_infinity (:'t # 'w) <> float_plus_min (:'t # 'w)) /\
     (float_minus_infinity (:'t # 'w) <> float_minus_min (:'t # 'w)) /\
-    (float_minus_infinity (:'t # 'w) <> float_some_nan (:'t # 'w)) /\
+    (!fp_op. float_minus_infinity (:'t # 'w) <> float_some_nan fp_op) /\
     (float_plus_zero (:'t # 'w) <> float_minus_zero (:'t # 'w)) /\
     (float_plus_zero (:'t # 'w) <> float_top (:'t # 'w)) /\
     (float_plus_zero (:'t # 'w) <> float_bottom (:'t # 'w)) /\
     (float_plus_zero (:'t # 'w) <> float_plus_min (:'t # 'w)) /\
     (float_plus_zero (:'t # 'w) <> float_minus_min (:'t # 'w)) /\
-    (float_plus_zero (:'t # 'w) <> float_some_nan (:'t # 'w)) /\
+    (!fp_op. float_plus_zero (:'t # 'w) <> float_some_nan fp_op) /\
     (float_minus_zero (:'t # 'w) <> float_top (:'t # 'w)) /\
     (float_minus_zero (:'t # 'w) <> float_bottom (:'t # 'w)) /\
     (float_minus_zero (:'t # 'w) <> float_plus_min (:'t # 'w)) /\
     (float_minus_zero (:'t # 'w) <> float_minus_min (:'t # 'w)) /\
-    (float_minus_zero (:'t # 'w) <> float_some_nan (:'t # 'w)) /\
+    (!fp_op. float_minus_zero (:'t # 'w) <> float_some_nan fp_op) /\
     (float_top (:'t # 'w) <> float_minus_min (:'t # 'w)) /\
     (float_top (:'t # 'w) <> float_bottom (:'t # 'w)) /\
-    (float_top (:'t # 'w) <> float_some_nan (:'t # 'w)) /\
+    (!fp_op. float_top (:'t # 'w) <> float_some_nan fp_op) /\
     (float_bottom (:'t # 'w) <> float_plus_min (:'t # 'w)) /\
-    (float_bottom (:'t # 'w) <> float_some_nan (:'t # 'w)) /\
-    (float_plus_min (:'t # 'w) <> float_some_nan (:'t # 'w)) /\
+    (!fp_op. float_bottom (:'t # 'w) <> float_some_nan fp_op) /\
+    (!fp_op. float_plus_min (:'t # 'w) <> float_some_nan fp_op) /\
     (float_plus_min (:'t # 'w) <> float_minus_min (:'t # 'w)) /\
-    (float_minus_min (:'t # 'w) <> float_some_nan (:'t # 'w)) /\
+    (!fp_op. float_minus_min (:'t # 'w) <> float_some_nan fp_op) /\
     (!x. float_negate x <> x)`,
    rw [float_component_equality, float_components, two_mod_not_one, sign_neq,
        wordsTheory.word_T_not_zero, wordsTheory.WORD_EQ_NEG])
@@ -899,7 +917,7 @@ val float_distinct = Q.store_thm("float_distinct",
 val float_values = Q.store_thm("float_values",
    `(float_value (float_plus_infinity (:'t # 'w)) = Infinity) /\
     (float_value (float_minus_infinity (:'t # 'w)) = Infinity) /\
-    (float_value (float_some_nan (:'t # 'w)) = NaN) /\
+    (!fp_op. float_value (float_some_nan fp_op) = NaN) /\
     (float_value (float_plus_zero (:'t # 'w)) = Float 0) /\
     (float_value (float_minus_zero (:'t # 'w)) = Float 0) /\
     (float_value (float_plus_min (:'t # 'w)) =
@@ -986,13 +1004,14 @@ val zero_properties = Q.store_thm("zero_properties",
    )
 
 val some_nan_properties = Q.store_thm("some_nan_properties",
-   `~float_is_zero (float_some_nan (:'t # 'w)) /\
-    ~float_is_finite (float_some_nan (:'t # 'w)) /\
-    ~float_is_integral (float_some_nan (:'t # 'w)) /\
-    float_is_nan (float_some_nan (:'t # 'w)) /\
-    ~float_is_normal (float_some_nan (:'t # 'w)) /\
-    ~float_is_subnormal (float_some_nan (:'t # 'w)) /\
-    ~float_is_infinite (float_some_nan (:'t # 'w))`,
+   `!fp_op.
+      ~float_is_zero (float_some_nan fp_op) /\
+      ~float_is_finite (float_some_nan fp_op) /\
+      ~float_is_integral (float_some_nan fp_op) /\
+      float_is_nan (float_some_nan fp_op) /\
+      ~float_is_normal (float_some_nan fp_op) /\
+      ~float_is_subnormal (float_some_nan fp_op) /\
+      ~float_is_infinite (float_some_nan fp_op)`,
    tac
    )
 
@@ -3244,20 +3263,21 @@ val float_round_to_integral_compute = Q.store_thm(
          float_minus_infinity (:'t # 'w)) /\
     (!m. float_round_to_integral m (float_plus_infinity (:'t # 'w)) =
          float_plus_infinity (:'t # 'w)) /\
-    (!m. float_round_to_integral m (float_some_nan (:'t # 'w)) =
-         float_some_nan (:'t # 'w))`,
+    (!m fp_op.
+         float_round_to_integral m (float_some_nan fp_op) =
+         float_some_nan fp_op)`,
    simp [float_round_to_integral_def, float_values]
    )
 
 (* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  *)
 
 val float_add_compute = Q.store_thm("float_add_compute",
-   `(!mode x.
-       float_add mode (float_some_nan (:'t # 'w)) x =
-       float_some_nan (:'t # 'w)) /\
-    (!mode x.
-       float_add mode x (float_some_nan (:'t # 'w)) =
-       float_some_nan (:'t # 'w)) /\
+   `(!mode x fp_op.
+       float_add mode (float_some_nan fp_op) x =
+       float_some_nan (FP_Add mode (float_some_nan fp_op) x)) /\
+    (!mode x fp_op.
+       float_add mode x (float_some_nan fp_op) =
+       float_some_nan (FP_Add mode x (float_some_nan fp_op))) /\
     (!mode.
        float_add mode (float_minus_infinity (:'t # 'w))
                       (float_minus_infinity (:'t # 'w)) =
@@ -3265,7 +3285,8 @@ val float_add_compute = Q.store_thm("float_add_compute",
     (!mode.
        float_add mode (float_minus_infinity (:'t # 'w))
                       (float_plus_infinity (:'t # 'w)) =
-       float_some_nan (:'t # 'w)) /\
+       float_some_nan (FP_Add mode (float_minus_infinity (:'t # 'w))
+                                   (float_plus_infinity (:'t # 'w)))) /\
     (!mode.
        float_add mode (float_plus_infinity (:'t # 'w))
                       (float_plus_infinity (:'t # 'w)) =
@@ -3273,9 +3294,11 @@ val float_add_compute = Q.store_thm("float_add_compute",
     (!mode.
        float_add mode (float_plus_infinity (:'t # 'w))
                       (float_minus_infinity (:'t # 'w)) =
-       float_some_nan (:'t # 'w))
+       float_some_nan (FP_Add mode (float_plus_infinity (:'t # 'w))
+                                   (float_minus_infinity (:'t # 'w))))
    `,
    simp [float_add_def, float_values, float_components]
+   \\ strip_tac
    \\ strip_tac
    \\ Cases_on `float_value x`
    \\ simp []
@@ -3284,7 +3307,7 @@ val float_add_compute = Q.store_thm("float_add_compute",
 val float_add_nan = Q.store_thm("float_add_nan",
    `!mode x y.
        (float_value x = NaN) \/ (float_value y = NaN) ==>
-       (float_add mode x y = float_some_nan (:'t # 'w))`,
+       (float_add mode x y = float_some_nan (FP_Add mode x y))`,
    NTAC 3 strip_tac
    \\ Cases_on `float_value x`
    \\ Cases_on `float_value y`
@@ -3340,16 +3363,17 @@ val float_add_minus_infinity_finite = Q.store_thm(
 (* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  *)
 
 val float_sub_compute = Q.store_thm("float_sub_compute",
-   `(!mode x.
-       float_sub mode (float_some_nan (:'t # 'w)) x =
-       float_some_nan (:'t # 'w)) /\
-    (!mode x.
-       float_sub mode x (float_some_nan (:'t # 'w)) =
-       float_some_nan (:'t # 'w)) /\
+   `(!mode x fp_op.
+       float_sub mode (float_some_nan fp_op) x =
+       float_some_nan (FP_Sub mode (float_some_nan fp_op) x)) /\
+    (!mode x fp_op.
+       float_sub mode x (float_some_nan fp_op) =
+       float_some_nan (FP_Sub mode x (float_some_nan fp_op))) /\
     (!mode.
        float_sub mode (float_minus_infinity (:'t # 'w))
                       (float_minus_infinity (:'t # 'w)) =
-       float_some_nan (:'t # 'w)) /\
+       float_some_nan (FP_Sub mode (float_minus_infinity (:'t # 'w))
+                                   (float_minus_infinity (:'t # 'w)))) /\
     (!mode.
        float_sub mode (float_minus_infinity (:'t # 'w))
                       (float_plus_infinity (:'t # 'w)) =
@@ -3357,13 +3381,15 @@ val float_sub_compute = Q.store_thm("float_sub_compute",
     (!mode.
        float_sub mode (float_plus_infinity (:'t # 'w))
                       (float_plus_infinity (:'t # 'w)) =
-       float_some_nan (:'t # 'w)) /\
+       float_some_nan (FP_Sub mode (float_plus_infinity (:'t # 'w))
+                                   (float_plus_infinity (:'t # 'w)))) /\
     (!mode.
        float_sub mode (float_plus_infinity (:'t # 'w))
                       (float_minus_infinity (:'t # 'w)) =
        float_plus_infinity (:'t # 'w))
    `,
    simp [float_sub_def, float_values, float_components]
+   \\ strip_tac
    \\ strip_tac
    \\ Cases_on `float_value x`
    \\ simp []
@@ -3372,7 +3398,7 @@ val float_sub_compute = Q.store_thm("float_sub_compute",
 val float_sub_nan = Q.store_thm("float_sub_nan",
    `!mode x y.
        (float_value x = NaN) \/ (float_value y = NaN) ==>
-       (float_sub mode x y = float_some_nan (:'t # 'w))`,
+       (float_sub mode x y = float_some_nan (FP_Sub mode x y))`,
    NTAC 3 strip_tac
    \\ Cases_on `float_value x`
    \\ Cases_on `float_value y`
@@ -3429,12 +3455,12 @@ val float_sub_minus_infinity_finite = Q.store_thm(
 (* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  *)
 
 val float_mul_compute = Q.store_thm("float_mul_compute",
-   `(!mode x.
-       float_mul mode (float_some_nan (:'t # 'w)) x =
-       float_some_nan (:'t # 'w)) /\
-    (!mode x.
-       float_mul mode x (float_some_nan (:'t # 'w)) =
-       float_some_nan (:'t # 'w)) /\
+   `(!mode x fp_op.
+       float_mul mode (float_some_nan fp_op) x =
+       float_some_nan (FP_Mul mode (float_some_nan fp_op) x)) /\
+    (!mode x fp_op.
+       float_mul mode x (float_some_nan fp_op) =
+       float_some_nan (FP_Mul mode x (float_some_nan fp_op))) /\
     (!mode.
        float_mul mode (float_minus_infinity (:'t # 'w))
                       (float_minus_infinity (:'t # 'w)) =
@@ -3454,6 +3480,7 @@ val float_mul_compute = Q.store_thm("float_mul_compute",
    `,
    simp [float_mul_def, float_values, float_components]
    \\ strip_tac
+   \\ strip_tac
    \\ Cases_on `float_value x`
    \\ simp []
    )
@@ -3461,7 +3488,7 @@ val float_mul_compute = Q.store_thm("float_mul_compute",
 val float_mul_nan = Q.store_thm("float_mul_nan",
    `!mode x y.
        (float_value x = NaN) \/ (float_value y = NaN) ==>
-       (float_mul mode x y = float_some_nan (:'t # 'w))`,
+       (float_mul mode x y = float_some_nan (FP_Mul mode x y))`,
    NTAC 3 strip_tac
    \\ Cases_on `float_value x`
    \\ Cases_on `float_value y`
@@ -3482,7 +3509,7 @@ val float_mul_finite_plus_infinity = Q.store_thm(
        (float_value x = Float r) ==>
        (float_mul mode x (float_plus_infinity (:'t # 'w)) =
         if r = 0
-           then float_some_nan (:'t # 'w)
+           then float_some_nan (FP_Mul mode x (float_plus_infinity (:'t # 'w)))
         else if x.Sign = 0w
            then float_plus_infinity (:'t # 'w)
         else float_minus_infinity (:'t # 'w))`,
@@ -3496,7 +3523,7 @@ val float_mul_plus_infinity_finite = Q.store_thm(
        (float_value x = Float r) ==>
        (float_mul mode (float_plus_infinity (:'t # 'w)) x =
         if r = 0
-           then float_some_nan (:'t # 'w)
+           then float_some_nan (FP_Mul mode (float_plus_infinity (:'t # 'w)) x)
         else if x.Sign = 0w
            then float_plus_infinity (:'t # 'w)
         else float_minus_infinity (:'t # 'w))`,
@@ -3510,7 +3537,7 @@ val float_mul_finite_minus_infinity = Q.store_thm(
        (float_value x = Float r) ==>
        (float_mul mode x (float_minus_infinity (:'t # 'w)) =
         if r = 0
-           then float_some_nan (:'t # 'w)
+           then float_some_nan (FP_Mul mode x (float_minus_infinity (:'t # 'w)))
         else if x.Sign = 0w
            then float_minus_infinity (:'t # 'w)
         else float_plus_infinity (:'t # 'w))`,
@@ -3525,7 +3552,7 @@ val float_mul_minus_infinity_finite = Q.store_thm(
        (float_value x = Float r) ==>
        (float_mul mode (float_minus_infinity (:'t # 'w)) x =
         if r = 0
-           then float_some_nan (:'t # 'w)
+           then float_some_nan (FP_Mul mode (float_minus_infinity (:'t # 'w)) x)
         else if x.Sign = 0w
            then float_minus_infinity (:'t # 'w)
         else float_plus_infinity (:'t # 'w))`,
@@ -3537,30 +3564,35 @@ val float_mul_minus_infinity_finite = Q.store_thm(
 (* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  *)
 
 val float_div_compute = Q.store_thm("float_div_compute",
-   `(!mode x.
-       float_div mode (float_some_nan (:'t # 'w)) x =
-       float_some_nan (:'t # 'w)) /\
-    (!mode x.
-       float_div mode x (float_some_nan (:'t # 'w)) =
-       float_some_nan (:'t # 'w)) /\
+   `(!mode x fp_op.
+       float_div mode (float_some_nan fp_op) x =
+       float_some_nan (FP_Div mode (float_some_nan fp_op) x)) /\
+    (!mode x fp_op.
+       float_div mode x (float_some_nan fp_op) =
+       float_some_nan (FP_Div mode x (float_some_nan fp_op))) /\
     (!mode.
        float_div mode (float_minus_infinity (:'t # 'w))
                       (float_minus_infinity (:'t # 'w)) =
-       float_some_nan (:'t # 'w)) /\
+       float_some_nan (FP_Div mode (float_minus_infinity (:'t # 'w))
+                                   (float_minus_infinity (:'t # 'w)))) /\
     (!mode.
        float_div mode (float_minus_infinity (:'t # 'w))
                       (float_plus_infinity (:'t # 'w)) =
-       float_some_nan (:'t # 'w)) /\
+       float_some_nan (FP_Div mode (float_minus_infinity (:'t # 'w))
+                                   (float_plus_infinity (:'t # 'w)))) /\
     (!mode.
        float_div mode (float_plus_infinity (:'t # 'w))
                       (float_plus_infinity (:'t # 'w)) =
-       float_some_nan (:'t # 'w)) /\
+       float_some_nan (FP_Div mode (float_plus_infinity (:'t # 'w))
+                                   (float_plus_infinity (:'t # 'w)))) /\
     (!mode.
        float_div mode (float_plus_infinity (:'t # 'w))
                       (float_minus_infinity (:'t # 'w)) =
-       float_some_nan (:'t # 'w))
+       float_some_nan (FP_Div mode (float_plus_infinity (:'t # 'w))
+                                   (float_minus_infinity (:'t # 'w))))
    `,
    simp [float_div_def, float_values, float_components]
+   \\ strip_tac
    \\ strip_tac
    \\ Cases_on `float_value x`
    \\ simp []
@@ -3569,7 +3601,7 @@ val float_div_compute = Q.store_thm("float_div_compute",
 val float_div_nan = Q.store_thm("float_div_nan",
    `!mode x y.
        (float_value x = NaN) \/ (float_value y = NaN) ==>
-       (float_div mode x y = float_some_nan (:'t # 'w))`,
+       (float_div mode x y = float_some_nan (FP_Div mode x y))`,
    NTAC 3 strip_tac
    \\ Cases_on `float_value x`
    \\ Cases_on `float_value y`
@@ -3582,7 +3614,7 @@ val float_div_finite = Q.store_thm("float_div_finite",
        (float_div mode x y =
         if r2 = 0
            then if r1 = 0
-                   then float_some_nan (:'t # 'w)
+                   then float_some_nan (FP_Div mode x y)
                 else if x.Sign = y.Sign
                    then float_plus_infinity (:'t # 'w)
                 else float_minus_infinity (:'t # 'w)

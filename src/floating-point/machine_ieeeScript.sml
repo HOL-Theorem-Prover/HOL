@@ -44,7 +44,7 @@ val convert_def = Define`
   let f = to_float w in
   case float_value f of
      Float r => from_real m r
-   | NaN => from_float (float_some_nan (:'d # 'e))
+   | NaN => from_float (@fp. float_is_nan fp)
    | Infinity => from_float (if f.Sign = 0w then
                                float_plus_infinity (:'d # 'e)
                              else

@@ -138,6 +138,13 @@ sig
 
 
   (********************************)
+  (* extending input              *)
+  (********************************)
+
+  val PMATCH_EXTEND_INPUT_CONV_GEN : ssfrag list -> term -> conv
+  val PMATCH_EXTEND_INPUT_CONV : term -> conv
+
+  (********************************)
   (* removing PMATCH-terms        *)
   (* via lifting it to the nearest*)
   (* boolean term and then        *)
@@ -182,7 +189,6 @@ sig
      PMATCH. This is automated by the following rules. *)
   val PMATCH_TO_TOP_RULE_GEN : ssfrag list -> rule
   val PMATCH_TO_TOP_RULE : rule
-
 
   (********************************)
   (* convert between              *)
@@ -541,6 +547,17 @@ sig
      column_heuristic -> bool -> ssfrag
 
 
+   (* Versions with suffix "WITH_EXH_PROOF" return a theorem stating
+      that the resulting case split is exhaustive is returned as well.
+      In case the original case split is already exhaustive, no
+      conversion theorem is returned. However a theorem stating that the
+      original case split is exhaustive is still computed. *)
+   val PMATCH_COMPLETE_CONV_WITH_EXH_PROOF : bool -> (term -> (thm option * thm))
+
+   val PMATCH_COMPLETE_CONV_GEN_WITH_EXH_PROOF : ssfrag list ->
+     constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+     bool -> (term -> (thm option * thm))
+
   (*-----------------------*)
   (* Show nchotomy         *)
   (*-----------------------*)
@@ -559,6 +576,54 @@ sig
     ssfrag list -> constrFamiliesLib.pmatch_compile_db ->
     column_heuristic -> ConseqConv.conseq_conv
 
+
+  (********************************)
+  (* General Lifting              *)
+  (********************************)
+
+  (* One can also lift to arbitrary levels. This requires forcing the
+     lifted case expression to be exhaustive though.  Therefore,
+     PMATCH_COMPLETE_CONV is used internally and a compilation database
+     and a column heuristic are needed. Similarly to lifting, there is
+     also a version that returns an exhaustiveness statement of the
+     result. *)
+
+  val PMATCH_LIFT_CONV : conv
+
+  val PMATCH_LIFT_CONV_GEN : ssfrag list ->
+     constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+     conv
+
+  val PMATCH_LIFT_CONV_WITH_EXH_PROOF : term -> (thm * thm)
+
+  val PMATCH_LIFT_CONV_GEN_WITH_EXH_PROOF : ssfrag list ->
+     constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+     term -> (thm * thm)
+
+
+  (********************************)
+  (* Flattening                   *)
+  (********************************)
+
+  (* Flattening tries to flatten nested PMATCH case expressions into a
+     single one. It needs to enforce exhaustiveness. Therefore a
+     compilation database and a column heuristic are needed.  The
+     additional flag states whether lifting should be attempted.  If
+     set to false, only nested PMATCH expressions directly at the top
+     of the rhs of a row are considered for flattening. Otherwise,
+     lifting is attempted. *)
+
+  val PMATCH_FLATTEN_CONV_GEN : ssfrag list ->
+     constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+     bool -> conv
+
+  val PMATCH_FLATTEN_CONV : bool -> conv
+
+  val PMATCH_FLATTEN_GEN_ss : ssfrag list ->
+     constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+     bool -> ssfrag
+
+  val PMATCH_FLATTEN_ss : bool -> ssfrag
 
   (********************************)
   (* eliminating select           *)

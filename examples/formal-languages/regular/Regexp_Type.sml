@@ -239,10 +239,14 @@ fun regexp_compare pair =
 
 
 (*---------------------------------------------------------------------------*)
-(* Python-style regexp lexer and parser                                      *)
+(* Lexer and parser for Python-style regexp syntax.                          *)
 (*---------------------------------------------------------------------------*)
 
 datatype direction = LSB | MSB;
+
+datatype packelt 
+  = Span of IntInf.int * IntInf.int 
+  | Pad of IntInf.int;
 
 datatype lexeme 
    = lparen 
@@ -260,7 +264,7 @@ datatype lexeme
    | power of IntInf.int
    | range of IntInf.int option * IntInf.int option * direction option  (* range + direction *)
    | const of IntInf.int * direction
-   | pack of (IntInf.int * IntInf.int) list
+   | pack of packelt list
 ;
 
 fun lexeme_equal lparen lparen = true
@@ -311,10 +315,15 @@ fun const2string (i,d) =
  String.concat
       ["\\k{", IntInf.toString i, ",", dir2string d, "}"]
   
+fun bstring b = if b then "1" else "0";
 
 fun pack2string flds = 
- let fun field_to_strings (lo,hi) = 
-          String.concat["(", IntInf.toString lo, ",", IntInf.toString hi, ")"]
+ let fun field_to_strings pelt = 
+      case pelt
+       of Span(lo,hi) => 
+            String.concat["(", IntInf.toString lo, ",", IntInf.toString hi, ")"]
+        | Pad i =>
+            String.concat["{", IntInf.toString i, "}"]
  in String.concat 
       ("\\p{" :: (Lib.commafy (List.map field_to_strings flds) @ ["}"]))
  end
@@ -439,6 +448,7 @@ fun get_range strm =
       | otherwise => NONE
  end
 
+(*
 (*---------------------------------------------------------------------------*)
 (* Lexing a pack spec of the form                                            *)
 (*                                                                           *)
@@ -468,6 +478,56 @@ fun get_pack strm =
  in
   eat_then #"{" (get_fields []) strm
  end
+*)
+
+(*---------------------------------------------------------------------------*)
+(* Lexing a pack spec of the form                                            *)
+(*                                                                           *)
+(*   \p{elt_1 ... elt_n}                                                     *)
+(*                                                                           *)
+(* where the \p has already been consumed by the lexer. Each elt_i is either *)
+(* of the form                                                               *)
+(*                                                                           *)
+(*   (lo,hi) (an interval)                                                   *)
+(*                                                                           *)
+(*   or                                                                      *)
+(*                                                                           *)
+(*   .{n}  (padding by n bits)                                               *)
+(*---------------------------------------------------------------------------*)
+
+fun get_pack strm = 
+ let open Substring
+  fun getPad strm = 
+    case getc strm
+     of NONE => NONE
+      | SOME(#".",strm') =>
+         (case eat_then #"{" getNum strm'
+           of NONE => NONE
+            | SOME (n,strm'') => 
+           eat_then #"}" (fn s => SOME (Pad n, s)) strm''
+         )
+      | SOME(_,strm') => NONE
+  fun getSpan strm = 
+      case eat_then #"(" getNum strm
+       of NONE =>  NONE
+        | SOME(i,strm) =>
+      case eat_then #"," getNum strm
+       of NONE =>  NONE
+        | SOME(j,strm) =>
+      eat_then #")" (fn strm => SOME(Span(i,j),strm)) strm
+  fun get_block strm = try_alt getPad getSpan strm
+  fun get_blocks list strm = 
+       case get_block strm
+        of NONE => eat_then #"}" (fn strm => SOME (pack(rev list), strm)) strm
+         | SOME (el,strm) => 
+             try_alt
+(*              (eat_then #"," (get_blocks (el::list))) *)
+              (get_blocks (el::list))
+              (eat_then #"}" (fn strm => SOME (pack(rev (el::list)), strm)))
+             strm
+ in
+  eat_then #"{" (get_blocks []) strm
+ end
 
 fun get_const strm = 
  let fun getDir i strm = 
@@ -485,7 +545,6 @@ fun get_const strm =
  in
   eat_then #"{" get strm
  end
-
 
 (*---------------------------------------------------------------------------*)
 (* Lexing a character set, which has the form                                *)
@@ -608,7 +667,7 @@ datatype tree = Ident of Char.char
               | Range of tree * int option * int option
               | Interval of IntInf.int * IntInf.int * direction
               | Const of IntInf.int * direction
-              | Pack of (IntInf.int * IntInf.int) list;
+              | Pack of packelt list;
 
 
 fun expect lexeme (stk,ss) =
@@ -1147,12 +1206,12 @@ fun bytes2charset bytes =
 (* the same.                                                                 *)
 (*---------------------------------------------------------------------------*)
 
-fun hd_card_eq_one [] = raise ERR "packed_intervals.hd_card_eq_one" "empty list"
-  | hd_card_eq_one ([]::t) = Lib.all null t
+fun hd_card_eq_one [] = false
+  | hd_card_eq_one ([]::t) = false (* Lib.all null t *)
   | hd_card_eq_one ((h::_)::rst) =
      let fun check [] = true
            | check ((g::_)::t) = h=g andalso check t
-           | check other = raise ERR "packed_intervals.hd_card_eq_one" ""
+           | check other = false
      in check rst
      end
 
@@ -1160,8 +1219,8 @@ fun hd_card_eq_one [] = raise ERR "packed_intervals.hd_card_eq_one" "empty list"
 (* Given a list of lists, the last element of each list is the same.         *)
 (*---------------------------------------------------------------------------*)
 
-fun last_card_eq_one [] = raise ERR "packed_intervals.last_card_eq_one" "empty list"
-  | last_card_eq_one ([]::rst) = Lib.all null rst
+fun last_card_eq_one [] = false
+  | last_card_eq_one ([]::rst) = false (* Lib.all null rst *)
   | last_card_eq_one (list::rst) =
      let val item = last list
          fun check [] = true
@@ -1174,7 +1233,7 @@ fun pull_front L =
    then SOME (hd (hd L), map tl L)
    else NONE
  
- fun pull_last L = 
+fun pull_last L = 
   if last_card_eq_one L
     then SOME (map butlast L, last (hd L))
     else NONE
@@ -1245,7 +1304,6 @@ fun create_regexps intlist nbytes =
      val last_regexp = Or (map crunch_interval last_chunks)
  in
   (intervalL_regexp, hd_regexp, last_regexp)
-
  end;
 
 fun sub_intervals intlist nbytes order = 
@@ -1270,16 +1328,19 @@ fun icat w shift i =
 fun icatlist w [] = w
   | icatlist w ((shift,i)::t) = icatlist (icat w shift i) t;
 
-fun find_width (lo,hi) = 
- if lo > hi 
-  then raise ERR "find_width" "malformed interval (lo > hi)"
- else
- if lo < 0 andalso hi < 0 
-    then signed_width_bits lo else
- if lo < 0 andalso hi >= 0 
-    then Int.max(signed_width_bits lo, signed_width_bits hi)
- else  (* lo and hi both non-negative *)
-   unsigned_width_bits hi;
+fun bits_width pelt = 
+  case pelt 
+   of Pad i => i
+    | Span (lo,hi) => 
+       if lo > hi 
+         then raise ERR "find_width" "malformed interval (lo > hi)"
+       else
+       if lo < 0 andalso hi < 0 
+          then signed_width_bits lo else
+       if lo < 0 andalso hi >= 0 
+          then Int.max(signed_width_bits lo, signed_width_bits hi)
+        else  (* lo and hi both non-negative *)
+        unsigned_width_bits hi;
 
 fun sum [] = 0
   | sum (h::t) = h + sum t;
@@ -1292,31 +1353,38 @@ fun add_slop iwlist slop =
    add iwlist
  end;
 
-fun interval_string (i,j) = String.concat  ["(",Int.toString i,",",Int.toString j,")"]
+fun add_padding iwlist = 
+ let fun add ((Pad _,i)::(Pad _,j)::t) = add ((Pad (i+j),i+j)::t)
+       | add ((Pad _,i)::(Span jk,w)::t) = add ((Span jk,w+i)::t)
+       | add ((Span jk,w)::(Pad _,i)::t) = add ((Span jk,w+i)::t)
+       | add ((Span jk,w)::t) = (jk,w)::add t
+       | add [(Pad _,_)] = raise ERR "add_padding" "padding but no interval?"
+       | add [] = []
+ in 
+   add iwlist
+ end;
 
 fun interval_width_string (p,w) = 
-  let val s = interval_string p
-      val w = Int.toString w
+ let open String Int
+     fun ivl_str (Pad n)     = concat  ["padding: "]
+       | ivl_str (Span(i,j)) = concat  ["interval: (",toString i,",",toString j,") ; "]
   in 
-   String.concat ["interval: ", s, " ; width in bits: ", w]
+   String.concat [ivl_str p, "width in bits: ", toString w]
   end;
 
-fun pack_intervals ilist = 
- let val iwlist = map (fn x => (x,find_width x)) ilist
+fun pack_intervals list = 
+ let val iwlist = map (fn x => (x,bits_width x)) list
      val _ = stdOut_print ("Packed interval.\n  "^
                String.concat (spread "\n  " (map interval_width_string iwlist))
                 ^ "\n")
      val nbits = sum (map snd iwlist)
      val nbytes = let val bnd = nbits div 8 
-                  in if nbits mod 8 = 0 then bnd else 1 + bnd
+                  in if nbits mod 8 = 0 then bnd 
+                     else raise ERR "pack_intervals" 
+                         "subcomponent widths do not sum to a multiple of 8"
                   end
      val _ = stdOut_print ("Number of bytes needed: "^Int.toString nbytes^"\n")
-     val slop = nbytes * 8 - nbits
-     val _ = if slop = 0 then   
-            stdOut_print "No padding needed.\n" 
-            else
-            stdOut_print ("Unused bits: "^Int.toString slop^" (added before last packed element)\n")
-     val iwlist' = add_slop iwlist slop
+     val iwlist' = add_padding iwlist 
      fun step A width B = 
       List.concat 
         (List.map (fn a => List.map (icat a width) B) A)
@@ -1351,7 +1419,7 @@ fun tree_to_regexp tree =
    | Range (t,NONE,NONE) => Star (tree_to_regexp t)
    | Interval(i,j,dir) => regexp_interval i j dir
    | Const (k,dir) => sing_interval k dir
-   | Pack ilist => pack_intervals ilist
+   | Pack list => pack_intervals list
    | Ap("dot",[]) => DOT
    | Ap("digit",[]) => DIGIT
    | Ap("alphanum",[]) => ALPHANUM
