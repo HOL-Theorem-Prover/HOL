@@ -47,13 +47,13 @@ The text assumes that the reader has HOL4 installed. You can download and instal
 \mysec{Interaction with HOL4 (via emacs)\label{interaction}}
 
 Michael Norrish has written an emacs script which makes interaction
-with HOL easy. To install the script add the following line to your {\tt
-.emacs} file with {\tt <path>} replaced with the full path to your HOL4
+with HOL easy. To install the script add the following line to your emacs initialisation file ({\tt
+.emacs} or \texttt{.emacs.d/init.el}) with {\tt <path>} replaced with the full path to your HOL4
 installation.
 \begin{code}
 (load "<path>/HOL/tools/hol-mode")
 \end{code}
-I recommend adding the following (by Chun Tian) to the {\tt .emacs} file
+I recommend adding the following (by Chun Tian) to the same file
 in order to turn off automatic indentation for the SML mode.
 \begin{code}
 (defun my-sml-mode-hook ()
@@ -62,8 +62,9 @@ in order to turn off automatic indentation for the SML mode.
 
 (add-hook 'sml-mode-hook 'my-sml-mode-hook)
 \end{code}
-To make emacs highlight the active region, also add the following line
-to your {\tt .emacs} file, if it is not already there.
+
+If your version of emacs does not highlight the active region, also add the following line
+to your initialisation file:
 \begin{code}
 (transient-mark-mode 1)
 \end{code}
@@ -90,13 +91,15 @@ The HOL window should look something like this:
 
 \mysubsec{Copying input into HOL4 (Opening a theory)\label{copy}}
 
-\begin{enum}
-\item Select text by pressing {\tt C-space} at one end of the text.
-\item Copy the region into HOL4 by pressing {\tt M-h M-r} at the other
-  end. (You can also use drag the mouse to select text to be sent to
-  HOL.)
-\end{enum}
-For example, pressing {\tt C-space} then {\tt M-h M-r} around the following line
+First, make sure you know how to select text in emacs. Either:
+\begin{itemize}
+\item Move the cursor while holding the shift key; or
+\item Hit \texttt{C-space}, and then move the cursor normally; or
+\item Use the mouse (hold the primary button and drag)
+\end{itemize}
+
+To copy and paste the selected region into the HOL session press {\tt M-h~M-r}.
+For example, selecting the following line, and then pressing {\tt M-h M-r}
 \begin{code}
 open arithmeticTheory listTheory;
 \end{code}
