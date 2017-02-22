@@ -666,10 +666,10 @@ CONJ_TAC
  >- rw_tac list_ss [SimpLHS, Once exec_dfa_def])
 
 (*
-val exec_dfa_def = 
-  Define 
+val exec_dfa_def =
+  Define
    `(exec_dfa finals table n [] = EL n finals) /\
-    (exec_dfa finals table n (c::t) = 
+    (exec_dfa finals table n (c::t) =
         case EL (ORD c) (EL n table) of
          | NONE => F
          | SOME k => exec_dfa finals table k t)`;
@@ -692,12 +692,12 @@ val regexp_matcher_def =
       exec_dfa acceptsV deltaV start_state`;
 
 (*
-val regexp_matcher_def = 
- Define 
-  `regexp_matcher r = 
+val regexp_matcher_def =
+ Define
+  `regexp_matcher r =
     let (state_numbering,delta,accepts) = compile_regexp r in
     let start_state_opt = balanced_map$lookup regexp_compare (normalize r) state_numbering
-    in 
+    in
       exec_dfa accepts delta (THE start_state_opt)`;
 *)
 

@@ -1,4 +1,4 @@
-signature regexpMisc = 
+signature regexpMisc =
 sig
  val succeed : unit -> 'a
  val fail    : unit -> 'a
@@ -7,6 +7,7 @@ sig
  val stdErr_print : string -> unit
 
  val spread : 'a -> 'a list -> 'a list
- val spreadln : string -> int -> int -> string list -> string list
+ val spreadln : {sep:string, ln:string, width:int}
+                -> string list -> string list
 
 end

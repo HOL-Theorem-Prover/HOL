@@ -1,9 +1,9 @@
-signature Regexp_Type = 
+signature Regexp_Type =
 sig
 
  type charset = IntInf.int
 
- datatype regexp 
+ datatype regexp
     = Chset of charset
     | Cat of regexp * regexp
     | Star of regexp
@@ -47,17 +47,17 @@ sig
 
  datatype direction = MSB | LSB
 
- datatype packelt 
-   = Span of IntInf.int * IntInf.int 
+ datatype packelt
+   = Span of IntInf.int * IntInf.int
    | Pad of IntInf.int;
 
- datatype tree 
+ datatype tree
    = Ap of string * tree list
    | Cset of charset
    | Ident of char
    | Power of tree * int
    | Range of tree * int option * int option
-   | Interval of IntInf.int * IntInf.int * direction 
+   | Interval of IntInf.int * IntInf.int * direction
    | Const of IntInf.int * direction
    | Pack of packelt list
 

@@ -1,4 +1,4 @@
-signature regexpSyntax = 
+signature regexpSyntax =
 sig
   include Abbrev
 
@@ -12,29 +12,29 @@ sig
   val neg_tm     : term
   val and_tm     : term
 
-  val mk_chset   : term -> term 
-  val mk_star    : term -> term 
-  val mk_neg     : term -> term 
-  val mk_cat     : term * term -> term 
+  val mk_chset   : term -> term
+  val mk_star    : term -> term
+  val mk_neg     : term -> term
+  val mk_cat     : term * term -> term
   val mk_or      : term list -> term
-  val mk_and     : term * term -> term 
+  val mk_and     : term * term -> term
 
-  val dest_chset : term -> term 
+  val dest_chset : term -> term
   val dest_cat   : term -> term * term
-  val dest_star  : term -> term 
-  val dest_neg   : term -> term 
+  val dest_star  : term -> term
+  val dest_neg   : term -> term
   val dest_or    : term -> term list
   val dest_and   : term -> term * term
 
   val is_chset   : term -> bool
   val is_cat     : term -> bool
-  val is_star    : term -> bool 
+  val is_star    : term -> bool
   val is_neg     : term -> bool
   val is_or      : term -> bool
   val is_and     : term -> bool
 
   val vector_tm  : term
-  val mk_vector  : term -> term 
+  val mk_vector  : term -> term
   val dest_vector : term -> term
 
   val regexp_matcher_tm   : term

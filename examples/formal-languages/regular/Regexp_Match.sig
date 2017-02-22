@@ -3,13 +3,13 @@ sig
 
  type regexp = Regexp_Type.regexp;
 
- val matcher : 
+ val matcher :
      regexp -> {matchfn : string -> bool,
                 start   : int,
                 table   : int list list,
                 final   : bool list}
 
- val vector_matcher : 
+ val vector_matcher :
      regexp -> {matchfn: string -> bool,
                 table  : int vector vector,
                 start  : int,

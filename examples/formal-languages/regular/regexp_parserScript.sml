@@ -25,12 +25,12 @@ val _ = overload_on ("lift", ``option$OPTION_MAP``)
 
 val _ =
  Datatype
-   `reNT = Top 
-         | Alt 
-         | Concat 
-         | Star 
-         | Atom 
-         | CharSet 
+   `reNT = Top
+         | Alt
+         | Concat
+         | Star
+         | Atom
+         | CharSet
          | BslashSpecial`
 ;
 

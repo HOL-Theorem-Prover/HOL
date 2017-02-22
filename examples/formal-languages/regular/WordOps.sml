@@ -1,4 +1,4 @@
-structure WordOps = 
+structure WordOps =
 struct
 
 type word = IntInf.int;
@@ -10,18 +10,18 @@ val allones = IntInf.notb allzero;
 (* Clear top (all but rightmost width) bits in w                             *)
 (*---------------------------------------------------------------------------*)
 
-fun clear_top_bits width w = 
+fun clear_top_bits width w =
  let open IntInf
      val mask = notb(<<(allones,Word.fromInt(width)))
  in andb(w,mask)
  end
 
-fun clear_bot_bits width w = 
+fun clear_bot_bits width w =
  let open IntInf
  in ~>>(w,Word.fromInt width)
  end
 
-fun sign_extend w width = 
+fun sign_extend w width =
  let open IntInf
  in if ~>>(w,Word.fromInt (width - 1)) = 1
   then (* signed *)
