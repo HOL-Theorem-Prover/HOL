@@ -95,13 +95,13 @@ val rePEG_def = Define‘
          igtok ((=) #"\\") *> pnt BslashSpecial ;
 
          not (tok EscapableChar (K NONE)) NONE *>
-         any (λc. SOME (Chset (charset_sing c)))
+         any (λcl. SOME (Chset (charset_sing (FST cl))))
        ]);
 
       (mkNT BslashSpecial,
        choicel [
          tok ((=) #"d") (K (SOME (Chset DigitSet)));
-         tok EscapableChar (λc. SOME (Chset (charset_sing c)))
+         tok EscapableChar (λcl. SOME (Chset (charset_sing (FST cl))))
        ]);
 
       (mkNT Star,
