@@ -31,8 +31,8 @@ val _ = Datatype`
 |> `;
 
 val _ = Datatype`
-  parsetree = Lf (('a,'b) symbol # locs)
-            | Nd ('b inf # locs) (parsetree list)
+  parsetree = Lf (('a,'b) symbol # 'locs)
+            | Nd ('b inf # 'locs) (parsetree list)
 `;
 
 val ptree_loc_def = Define`
@@ -44,15 +44,14 @@ val ptree_list_loc = Define`
 
 
 val ptree_size_def = tDefine "ptree_size" `
-  (ptree_size (Lf (tok, l)) = 1) ∧
+  (ptree_size (Lf _) = 1) ∧
   (ptree_size (Nd nt children) = 1 + SUM (MAP ptree_size children))
 `
-(WF_REL_TAC `measure (parsetree_size (K 1) (K 1))` THEN
-   Induct_on `children` 
-   THEN SRW_TAC [][definition "parsetree_size_def"] 
-   THEN1 DECIDE_TAC THEN
-   RES_TAC THEN POP_ASSUM (Q.SPECL_THEN [`p_2`, `p_1'`, `p_1`] MP_TAC) THEN
-   DECIDE_TAC)
+(WF_REL_TAC `measure (parsetree_size (K 1) (K 1) (K 1))` >>
+   Induct_on `children` >>
+   rw[definition "parsetree_size_def"] >- decide_tac >>
+   res_tac >> pop_assum (qspecl_then [`p_2`, `p_1`] mp_tac) >>
+   simp_tac (srw_ss()) [] >> decide_tac)
 
 val ptree_size_def = save_thm(
   "ptree_size_def",
@@ -95,9 +94,13 @@ val complete_ptree_def = Define`
     valid_ptree G pt ∧ ptree_head pt = NT G.start ∧
     ∀t. t ∈ set (ptree_fringe pt) ⇒ isTOK t`
 
+(* loc-free parse tree *)
+val _ = type_abbrev("lfptree", ``:(α,β,one) parsetree``)
+
 val language_def = Define`
   language G =
-   { ts | ∃pt. complete_ptree G pt ∧ ptree_fringe pt = MAP TOK ts }`
+   { ts |
+     ∃pt:(α,β)lfptree. complete_ptree G pt ∧ ptree_fringe pt = MAP TOK ts }`
 
 val derive_def = Define`
   derive G sf1 sf2 ⇔
@@ -156,7 +159,7 @@ val derives_paste_horizontally = store_thm(
 
 val ptree_ind = save_thm(
   "ptree_ind",
-  TypeBase.induction_of ``:('a,'b)parsetree``
+  TypeBase.induction_of ``:('a,'b,'l)parsetree``
      |> Q.SPECL [`P`, `λl. ∀pt. MEM pt l ⇒ P pt`]
      |> SIMP_RULE (srw_ss() ++ CONJ_ss) []
      |> SIMP_RULE (srw_ss()) [DISJ_IMP_THM, FORALL_AND_THM]
@@ -212,27 +215,29 @@ val FLAT_EQ_SING = store_thm(
 
 val fringe_element = store_thm(
   "fringe_element",
-  ``∀pt p x s.
+  ``∀pt:(α,β)lfptree p x s.
       ptree_fringe pt = p ++ [x] ++ s ⇒
-      ∃l. (pt = Lf (x,l) ∧ p = [] ∧ s = []) ∨
-      ∃nt l ip is ts1 xpt ts2.
-        pt = Nd (nt,l) (ts1 ++ [xpt] ++ ts2) ∧
+      pt = Lf (x,()) ∧ p = [] ∧ s = [] ∨
+      ∃nt ip is ts1 xpt ts2.
+        pt = Nd (nt,()) (ts1 ++ [xpt] ++ ts2) ∧
         p = FLAT (MAP ptree_fringe ts1) ++ ip ∧
         s = is ++ FLAT (MAP ptree_fringe ts2) ∧
         ptree_fringe xpt = ip ++ [x] ++ is``,
   gen_tac >>
-  `(∃tok l . pt = Lf (tok,l)) ∨ (∃sym ptl. pt = Nd sym ptl)`
-    by (Cases_on `pt` >> Cases_on `p` >> simp[] ) 
+  `(∃tok. pt = Lf (tok,())) ∨ (∃sym ptl. pt = Nd sym ptl)`
+    by (Cases_on `pt` >> Cases_on `p` >> simp[])
   >- simp[APPEND_EQ_CONS] >>
   simp[] >> pop_assum (K ALL_TAC) >> rpt gen_tac >>
   simp[Once FLAT_EQ_APPEND] >>
   disch_then
-    (DISJ_CASES_THEN2 (qxchl [`fsp`, `fss`] strip_assume_tac) mp_tac) >| [
+   (DISJ_CASES_THEN2 (qxchl [`fsp`, `fss`] strip_assume_tac) mp_tac)
+  >| [
     Cases_on `sym` >> simp[] >>
     qpat_x_assum `p ++ [x] = FLAT fsp` mp_tac >>
     simp[Once FLAT_EQ_APPEND] >>
     disch_then
-    (DISJ_CASES_THEN2 (qxchl [`fsp1`, `fsp2`] strip_assume_tac) mp_tac) >| [
+      (DISJ_CASES_THEN2 (qxchl [`fsp1`, `fsp2`] strip_assume_tac) mp_tac)
+    >| [
       qpat_x_assum `[x] = FLAT fsp2` mp_tac >>
       simp[FLAT_EQ_SING] >>
       disch_then (qxchl [`nilps`, `nilss`] strip_assume_tac) >>
@@ -288,33 +293,34 @@ val fringe_element = store_thm(
                      f2 = MAP ptree_fringe pt2 ∧
                      fp ++ [x] ++ fs = ptree_fringe ptx`
       by metis_tac [th,APPEND_ASSOC]) >>
-    Cases_on `sym` >> simp[] >>  
+    Cases_on `sym` >> simp[] >>
     map_every qexists_tac [`fp`, `fs`, `pt1`, `ptx`, `pt2`] >>
-    simp[] >> rw[] >> fs[] ]);
+    simp[] >> rw[] >> fs[]
+  ]);
 
 val derive_fringe = store_thm(
   "derive_fringe",
-  ``∀pt sf.
+  ``∀pt:(α,β)lfptree sf.
       derive G (ptree_fringe pt) sf ∧ valid_ptree G pt ⇒
-      ∃pt'.
+      ∃pt' : (α,β)lfptree.
          ptree_head pt' = ptree_head pt ∧ valid_ptree G pt' ∧
          ptree_fringe pt' = sf``,
   ho_match_mp_tac ptree_ind>> rw[]
   >- (
       Cases_on `pt` >>
       fs[derive_def, APPEND_EQ_CONS] >>
-      qexists_tac `Nd (sym,unknown_loc) (MAP (\x. Lf(x, unknown_loc)) sf)`
+      qexists_tac `Nd (sym,ARB) (MAP (\x. Lf(x, ARB)) sf)`
       >> rw[MEM_MAP,ptree_fringe_def]
       >- rw[MAP_MAP_o, combinTheory.o_DEF]
       >- rw[] >>
       rw[MAP_MAP_o, combinTheory.o_DEF] >>
       pop_assum (K ALL_TAC) >> Induct_on `sf` >> rw[]) >>
-  Cases_on `pt` >>
+  rename [`Nd ntl pts`] >> Cases_on `ntl` >> rename [`Nd (rootnt,l) pts`] >>
   qpat_x_assum `derive G XX YY` mp_tac >>
   simp[derive_def] >>
   disch_then (qxchl [`pfx`, `nt`, `rhs`, `sfx`] strip_assume_tac) >>
-  qspecl_then [`Nd s l`, `pfx`, `NT nt`, `sfx`] mp_tac fringe_element >>
-  Cases_on `s` >>
+  qspecl_then [`Nd (rootnt,l) pts`, `pfx`, `NT nt`, `sfx`]
+    mp_tac fringe_element >>
   fs[] >>
   disch_then (qxchl [`ip`, `is`, `ts1`, `xpt`, `ts2`] strip_assume_tac) >>
   rw[] >>
@@ -325,22 +331,22 @@ val derive_fringe = store_thm(
     (fn th => first_x_assum
                 (fn impth => mp_tac (MATCH_MP impth th))) >>
   disch_then (qxch `pt'` strip_assume_tac) >>
-  qexists_tac `Nd (q,r') (ts1 ++ [pt'] ++ ts2)` >>
+  qexists_tac `Nd (rootnt, ()) (ts1 ++ [pt'] ++ ts2)` >>
   simp[FLAT_APPEND, DISJ_IMP_THM, FORALL_AND_THM]);
 
 val ptrees_derive_extensible = store_thm(
   "ptrees_derive_extensible",
-  ``∀pt sf.
+  ``∀pt:(α,β)lfptree sf.
       valid_ptree G pt ∧ derives G (ptree_fringe pt) sf ⇒
-      ∃pt'.
+      ∃pt':(α,β)lfptree.
          valid_ptree G pt' ∧ ptree_head pt' = ptree_head pt ∧
          ptree_fringe pt' = sf``,
   qsuff_tac
     `∀sf1 sf2.
        derives G sf1 sf2 ⇒
-       ∀pt.
+       ∀pt:(α,β)lfptree.
           valid_ptree G pt ∧ ptree_fringe pt = sf1 ⇒
-          ∃pt'.
+          ∃pt':(α,β)lfptree.
              valid_ptree G pt' ∧ ptree_head pt' = ptree_head pt ∧
              ptree_fringe pt' = sf2`
     >- metis_tac[] >>
@@ -350,7 +356,8 @@ val ptrees_derive_extensible = store_thm(
 val singleton_derives_ptree = store_thm(
   "singleton_derives_ptree",
   ``derives G [h] sf ⇒
-    ∃pt. valid_ptree G pt ∧ ptree_head pt = h ∧ ptree_fringe pt = sf``,
+    ∃pt:(α,β)lfptree.
+      valid_ptree G pt ∧ ptree_head pt = h ∧ ptree_fringe pt = sf``,
   strip_tac >> qspec_then `Lf (h,l)` mp_tac ptrees_derive_extensible >> simp[]);
 
 val derives_language = store_thm(
@@ -359,10 +366,10 @@ val derives_language = store_thm(
   rw[language_def, EXTENSION, complete_ptree_def] >> eq_tac
   >- metis_tac[valid_ptree_derive] >>
   strip_tac >>
-  qspecl_then [`Lf (NT G.start, unknown_loc)`, `MAP TOK x`] mp_tac
+  qspecl_then [`Lf (NT G.start, ())`, `MAP TOK x`] mp_tac
     ptrees_derive_extensible >> simp[] >>
   disch_then (qxch `pt` strip_assume_tac) >> qexists_tac `pt` >>
-  simp[] >> asm_simp_tac (srw_ss() ++ DNF_ss) [MEM_MAP]);
+  simp[] >> dsimp[MEM_MAP]);
 
 val derives_leading_nonNT_E = store_thm(
   "derives_leading_nonNT_E",
