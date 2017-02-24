@@ -17,7 +17,8 @@ local
 in
 fun test0 nt s = let
   val str_t = stringSyntax.fromMLstring s
-  val th = EVAL ``peg_exec sexpPEG (pnt ^nt) ^str_t [] done failed``
+  val th = EVAL ``peg_exec sexpPEG (pnt ^nt) (MAP (λc. (c, unknown_loc)) (^str_t))
+                           [] done failed``
 in
   rhs (concl th)
 end
@@ -25,12 +26,12 @@ end (* local *)
 
 fun test (s, exp) = let
   val result = test0 ``sxnt_sexp`` s
-  val exp_t = ``Result (SOME ("", ^exp)) : (char, sexpNT, sexp) evalcase``
+  val exp_t = ``Result (SOME ([], ^exp)) : (char, sexpNT, sexp) evalcase``
 in
   tprint (s ^ " --> " ^ term_to_string result);
   if aconv exp_t result then OK() else die "FAILED\n"
 end
-val _ = temp_overload_on ("Ok", ``λt. Result (SOME ("", t))``)
+val _ = temp_overload_on ("Ok", ``λt. (Result (SOME ([], t)))``)
 
 val _ = print "\n" before app test [
   ("123", ``123s``),
