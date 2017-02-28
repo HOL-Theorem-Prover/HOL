@@ -1202,10 +1202,94 @@ val insert_shadow = store_thm("insert_shadow",
   metis_tac[])
 
 (* the sub-map relation, a partial order *)
-val subspt_def = Define`
-  subspt sp1 sp2 <=>
-    !k. k IN domain sp1 ==> k IN domain sp2 /\ (lookup k sp2 = lookup k sp1)
-`;
+
+val spt_left_def = Define `
+  (spt_left LN = LN) /\
+  (spt_left (LS x) = LN) /\
+  (spt_left (BN t1 t2) = t1) /\
+  (spt_left (BS t1 x t2) = t1)`
+
+val spt_right_def = Define `
+  (spt_right LN = LN) /\
+  (spt_right (LS x) = LN) /\
+  (spt_right (BN t1 t2) = t2) /\
+  (spt_right (BS t1 x t2) = t2)`
+
+val spt_center_def = Define `
+  (spt_center (LS x) = SOME x) /\
+  (spt_center (BS t1 x t2) = SOME x) /\
+  (spt_center _ = NONE)`
+
+val subspt_eq = Define `
+  (subspt LN t <=> T) /\
+  (subspt (LS x) t <=> (spt_center t = SOME x)) /\
+  (subspt (BN t1 t2) t <=>
+     subspt t1 (spt_left t) /\ subspt t2 (spt_right t)) /\
+  (subspt (BS t1 x t2) t <=>
+     (spt_center t = SOME x) /\
+     subspt t1 (spt_left t) /\ subspt t2 (spt_right t))`
+
+val _ = save_thm("subspt_eq",subspt_eq);
+
+val subspt_lookup_lemma = Q.prove(
+  `(!x y. ((if x = 0:num then SOME a else f x) = SOME y) ==> p x y)
+   <=>
+   p 0 a /\ (!x y. x <> 0 /\ (f x = SOME y) ==> p x y)`,
+  metis_tac [optionTheory.SOME_11]);
+
+val subspt_lookup = Q.store_thm("subspt_lookup",
+  `!t1 t2.
+     subspt t1 t2 <=>
+     !x y. (lookup x t1 = SOME y) ==> (lookup x t2 = SOME y)`,
+  Induct
+  \\ fs [lookup_def,subspt_eq]
+  THEN1 (Cases_on `t2` \\ fs [lookup_def,spt_center_def])
+  \\ rw []
+  THEN1
+   (Cases_on `t2`
+    \\ fs [lookup_def,spt_center_def,spt_left_def,spt_right_def]
+    \\ eq_tac \\ rw []
+    \\ TRY (Cases_on `x = 0` \\ fs [] \\ rw [] \\ fs [] \\ NO_TAC)
+    \\ TRY (first_x_assum (fn th => qspec_then `2 * x + 1` mp_tac th THEN
+                                    qspec_then `(2 * x + 1) + 1` mp_tac th))
+    \\ fs [MULT_DIV |> ONCE_REWRITE_RULE [MULT_COMM],
+           DIV_MULT |> ONCE_REWRITE_RULE [MULT_COMM]]
+    \\ fs [EVEN_ADD,EVEN_DOUBLE])
+  \\ Cases_on `spt_center t2` \\ fs []
+  THEN1
+   (qexists_tac `0` \\ fs []
+    \\ Cases_on `t2` \\ fs [spt_center_def,lookup_def])
+  \\ reverse (Cases_on `x = a`) \\ fs []
+  THEN1
+   (qexists_tac `0` \\ fs []
+    \\ Cases_on `t2` \\ fs [spt_center_def,lookup_def])
+  \\ BasicProvers.var_eq_tac
+  \\ fs [subspt_lookup_lemma]
+  \\ `lookup 0 t2 = SOME a` by
+       (Cases_on `t2` \\ fs [spt_center_def,lookup_def])
+  \\ fs []
+  \\ Cases_on `t2`
+  \\ fs [lookup_def,spt_center_def,spt_left_def,spt_right_def]
+  \\ eq_tac \\ rw []
+  \\ TRY (Cases_on `x = 0` \\ fs [] \\ rw [] \\ fs [] \\ NO_TAC)
+  \\ TRY (first_x_assum (fn th => qspec_then `2 * x + 1` mp_tac th THEN
+                                  qspec_then `(2 * x + 1) + 1` mp_tac th))
+  \\ fs [MULT_DIV |> ONCE_REWRITE_RULE [MULT_COMM],
+         DIV_MULT |> ONCE_REWRITE_RULE [MULT_COMM]]
+  \\ fs [EVEN_ADD,EVEN_DOUBLE]);
+
+val subspt_domain = Q.store_thm("subspt_domain",
+  `!t1 (t2:unit spt).
+     subspt t1 t2 <=> domain t1 SUBSET domain t2`,
+  fs [subspt_lookup,domain_lookup,pred_setTheory.SUBSET_DEF]);
+
+val subspt_def = Q.store_thm("subspt_def",
+  `!sp1 sp2.
+     subspt sp1 sp2 <=>
+     !k. k IN domain sp1 ==> k IN domain sp2 /\
+         (lookup k sp2 = lookup k sp1)`,
+  fs [subspt_lookup,domain_lookup]
+  \\ metis_tac [optionTheory.SOME_11]);
 
 val subspt_refl = Q.store_thm(
   "subspt_refl[simp]",
@@ -1221,6 +1305,8 @@ val subspt_LN = Q.store_thm(
   "subspt_LN[simp]",
   `(subspt LN sp <=> T) /\ (subspt sp LN <=> (domain sp = {}))`,
   simp[subspt_def, pred_setTheory.EXTENSION]);
+
+(* filter values stored in sptree *)
 
 val filter_v_def = Define `
   (filter_v f LN = LN) /\
