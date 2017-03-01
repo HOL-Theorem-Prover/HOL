@@ -175,10 +175,10 @@ val ptree_nullableML = store_thm(
   HO_MATCH_MP_TAC grammarTheory.ptree_ind >>
   strip_tac >- (rw[] >> Cases_on`pt` >> fs[]) >>
   qx_gen_tac `subs` >> strip_tac >> dsimp[] >>
-  dsimp[FLAT_EQ_NIL, listTheory.MEM_MAP] >> 
+  dsimp[FLAT_EQ_NIL, listTheory.MEM_MAP] >>
   map_every qx_gen_tac [`N`, `sn`] >> Cases_on `N` >>
   simp[nullableML_def, ptree_NTs_def, ptree_rptfree_def] >>
-  strip_tac >> simp[EXTENSION] >> 
+  strip_tac >> simp[EXTENSION] >>
   qexists_tac `MAP ptree_head subs` >> simp[] >>
   simp[Once nullableML_by_singletons] >> dsimp[listTheory.MEM_MAP] >>
   rw[] >> res_tac >> rw[]);
@@ -194,8 +194,8 @@ val rptfree_subtree = store_thm(
   HO_MATCH_MP_TAC grammarTheory.ptree_ind >>
   strip_tac >- (rw[] >> Cases_on`pt` >> fs[]) >>
   simp[ptree_rptfree_def, ptree_NTs_def] >> qx_gen_tac `subs` >> strip_tac >>
-  dsimp[listTheory.MEM_MAP, FLAT_EQ_NIL] >> 
-  NTAC 2 strip_tac >> 
+  dsimp[listTheory.MEM_MAP, FLAT_EQ_NIL] >>
+  NTAC 2 strip_tac >>
   Cases_on `pt` >>
   fs[ptree_rptfree_def, FLAT_EQ_NIL, listTheory.MEM_MAP,ptree_NTs_def]
   >-(qexists_tac `Nd (N, ARB) subs` >>
