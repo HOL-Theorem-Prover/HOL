@@ -12,21 +12,30 @@ warn () {
 }
 
 usage () {
-        echo "Usage: releasing-hol [--relname=<name>] (-Lpath)* <ref> <ML>" >&2
-        echo "  <ref> is a git reference (e.g., HEAD or a tag name)" >&2
-        echo "  <ML> is a path to mosml or poly" >&2
-        echo "  Use -Lpath to add library paths for Poly" >&2
-        echo "  Use --relname=<name> to give the release a name other than <ref>" >&2
-        exit 1
+  echo "Usage: releasing-hol [--relname=<name>] [--reuse-checkout] <ref> <ML>" >&2
+  echo "  <ref> is a git reference (e.g., HEAD or a tag name)" >&2
+  echo "  <ML> is a path to mosml or poly" >&2
+  echo "  Use -Lpath to add library paths for Poly" >&2
+  echo "  Use --relname=<name> to give the release a name other than <ref>" >&2
+  echo "  Use --reuse-checkout to reuse local checkout of <ref>" >&2
+  exit 1
 }
 
-TEMP=$(getopt -n releasing-hol -oL: -lrelname: -- "$@")
+if [ $(uname) = "Darwin" ]
+then
+    if [ -d "/usr/local/opt/gnu-getopt/bin" ]
+    then
+        PATH="/usr/local/opt/gnu-getopt/bin":$PATH
+    fi
+fi
+
+TEMP=$(getopt -n releasing-hol -o '' -lrelname: -lreuse-checkout -- "$@")
 eval set -- "$TEMP"
 
 while true
 do
     case "$1" in
-        -L ) Lpaths+=(-L$2) ; shift 2 ;;
+        --reuse-checkout ) reusecommit=1 ; shift 1 ;;
         --relname ) userrelname=$2 ; shift 2 ;;
         -- ) shift ; break ;;
         * ) die "Internal getopt error!" ;;
@@ -55,6 +64,23 @@ localholdir=$(cd $localholdir ; pwd)
 echo "Local HOL directory: $localholdir"
 
 cd $localholdir
+
+if [ -d /tmp/localhol -a "${reusecommit}" -eq 1 ]
+then
+    :
+else
+  /bin/rm -rf /tmp/localhol
+  echo -n "Cloning into /tmp - "
+  (git clone -q ./ /tmp/localhol && echo "done" || die "failed")
+fi
+
+cd /tmp/localhol
+localholdir=/tmp/localhol
+
+echo -n "Switching to ${gitref} - "
+(git checkout -f -q ${gitref} && echo "done" || die "failed")
+$ML < tools/smart-configure.sml
+bin/build
 
 texlogs=/tmp/$releasename-latex-logs
 
@@ -125,14 +151,13 @@ fi
 
 
 echo ; echo Building Doc2Tex
-cd $archive/help/src-sml
+cd $localholdir/help/src-sml
 # ../../bin/Holmake Doc2Tex
 if [ $ML = "mosml" ]
 then
     ../../bin/Holmake Doc2Tex.exe
 else
-    $ML < poly-Doc2Tex.ML
-    gcc -o Doc2Tex.exe Doc2Tex.o "${Lpaths[@]}" -lpolymain -lpolyml
+    ${ML}c  poly-Doc2Tex.ML -o Doc2Tex.exe
 fi
 
 echo ; echo Building documentation
@@ -140,15 +165,20 @@ for man_name in Reference Description Tutorial Quick Logic Developers
 do
     lcname=$(echo $man_name | tr A-Z a-z)
     echo -n "  $man_name"
-    cd $archive/Manual/$man_name
-    if make $lcname.pdf > $texlogs/$man_name.log 2>&1 < /dev/null
+    cd ${localholdir}/Manual/$man_name
+    if [ -f Holmakefile ]
+    then
+        MAKE=$localholdir/bin/Holmake
+    else
+        MAKE=make
+    fi
+    if ${MAKE} $lcname.pdf > $texlogs/$man_name.log 2>&1 < /dev/null
     then :
     else echo Build failed - see $texlogs/$man_name.log ; exit 1
     fi
     mv $lcname.pdf /tmp/$releasename-$lcname.pdf
     echo " -> /tmp/$releasename-$lcname.pdf"
 done
-/bin/rm -f $archive/help/src-sml/Doc2Tex.{exe,o}
 
 echo ; echo Cleaning up
 cd $archive
@@ -159,6 +189,8 @@ cd $archive
         warn "  *** Couldn't delete $line ***"
   esac
  done) < $localholdir/developers/deleted-in-release.txt
+find . -name '.gitignore' -delete
+
 echo
 
 mv bin/README ../bin-README
