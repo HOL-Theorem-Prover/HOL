@@ -4,11 +4,8 @@ TARGETS = developers.pdf developers.html
 
 all: $(TARGETS)
 
-developers.pdf: developers.tex
-	latexmk -pdf developers
-
-developers.tex: developers.md
-	pandoc -s --template=hol4 $< -o $@
+developers.pdf: developers.md
+	pandoc --template=hol4 $< -o $@
 
 developers.html: developers.md
 	pandoc -s $< -o $@
