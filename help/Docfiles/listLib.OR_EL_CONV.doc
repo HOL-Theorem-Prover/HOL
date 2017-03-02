@@ -37,7 +37,7 @@ are not boolean constants.
 }
 {
 - OR_EL_CONV (--`OR_EL [x;T;y]`--);
-|- OR_EL [x; T; y] = T 
+|- OR_EL [x; T; y] = T
 }
 
 

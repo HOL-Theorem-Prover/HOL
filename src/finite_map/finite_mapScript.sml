@@ -777,12 +777,12 @@ val FDOM_FUNION = save_thm("FDOM_FUNION", FUNION_DEF |> SPEC_ALL |> CONJUNCT1)
 val _ = export_rewrites ["FDOM_FUNION"]
 
 val FUNION_FEMPTY_1 = Q.store_thm
-("FUNION_FEMPTY_1",
+("FUNION_FEMPTY_1[simp]",
  `!g. FUNION FEMPTY g = g`,
  SRW_TAC [][GSYM fmap_EQ_THM, FUNION_DEF, FDOM_FEMPTY]);
 
 val FUNION_FEMPTY_2 = Q.store_thm
-("FUNION_FEMPTY_2",
+("FUNION_FEMPTY_2[simp]",
  `!f. FUNION f FEMPTY = f`,
  SRW_TAC [][GSYM fmap_EQ_THM, FUNION_DEF, FDOM_FEMPTY]);
 
@@ -1608,24 +1608,24 @@ val FUPDATE_LIST_APPLY_MEM = store_thm(
 Induct THEN1 SRW_TAC[][] THEN
 Cases THEN NTAC 3 GEN_TAC THEN
 Cases THEN1 (
-  Q.MATCH_RENAME_TAC `0 < LENGTH ((q,r)::kvl) /\ X ==> Y` ["X","Y"] THEN
+  Q.MATCH_RENAME_TAC `0 < LENGTH ((q,r)::kvl) /\ _ ==> _` THEN
   Q.ISPECL_THEN [`kvl`,`f |+ (k,r)`,`k`] MP_TAC FUPDATE_LIST_APPLY_NOT_MEM THEN
   SRW_TAC[][FUPDATE_LIST_THM] THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN
   SRW_TAC[][MEM_MAP,MEM_EL,pairTheory.EXISTS_PROD] THEN
-  Q.MATCH_RENAME_TAC `X \/ Y <> EL n kvl` ["X","Y"] THEN
+  Q.MATCH_RENAME_TAC `_ \/ _ <> EL n kvl` THEN
   FIRST_X_ASSUM (Q.SPEC_THEN `SUC n` MP_TAC) THEN
   SRW_TAC[][EL_MAP] THEN
   METIS_TAC[pairTheory.FST]) THEN
 SRW_TAC[][] THEN
-Q.MATCH_RENAME_TAC `(f |++ ((q,r)::kvl)) ' X = Y` ["X","Y"] THEN
+Q.MATCH_RENAME_TAC `(f |++ ((q,r)::kvl)) ' _ = _` THEN
 Q.ISPECL_THEN [`(q,r)`,`kvl`] SUBST1_TAC rich_listTheory.CONS_APPEND THEN
 REWRITE_TAC [FUPDATE_LIST_APPEND] THEN
 FIRST_X_ASSUM MATCH_MP_TAC THEN
-Q.MATCH_ASSUM_RENAME_TAC `n < LENGTH kvl` [] THEN
+Q.MATCH_ASSUM_RENAME_TAC `n < LENGTH kvl` THEN
 Q.EXISTS_TAC `n` THEN
 SRW_TAC[][] THEN
-Q.MATCH_RENAME_TAC `EL m (MAP FST kvl) <> X` ["X"] THEN
+Q.MATCH_RENAME_TAC `EL m (MAP FST kvl) <> _` THEN
 FIRST_X_ASSUM (Q.SPEC_THEN `SUC m` MP_TAC) THEN
 SRW_TAC[][])
 end
@@ -2132,7 +2132,7 @@ GEN_TAC THEN
 Induct THEN Cases THEN SRW_TAC[][FUPDATE_LIST_THM,listTheory.LIST_REL_CONS1] THEN
 Cases_on `ls2` THEN FULL_SIMP_TAC(srw_ss())[FUPDATE_LIST_THM] THEN
 FIRST_X_ASSUM MATCH_MP_TAC THEN FULL_SIMP_TAC(srw_ss())[] THEN SRW_TAC[][] THEN
-Q.MATCH_ASSUM_RENAME_TAC `R a (SND b)`[] THEN
+Q.MATCH_ASSUM_RENAME_TAC `R a (SND b)` THEN
 Cases_on `b` THEN FULL_SIMP_TAC(srw_ss())[] THEN
 SRW_TAC[][fmap_rel_FUPDATE_same])
 
@@ -2421,7 +2421,7 @@ ho_match_mp_tac SNOC_INDUCT >>
 conj_tac >- rw[] >>
 rw[FUPDATE_LIST,FOLDL_SNOC] >>
 match_mp_tac FUPDATE_SAME_APPLY >>
-qmatch_rename_tac `(y = FST p) \/ Z` ["Z"] >>
+qmatch_rename_tac `(y = FST p) \/ _` >>
 Cases_on `y = FST p` >> rw[] >>
 first_x_assum match_mp_tac >>
 fs[MEM_MAP] >>
@@ -2590,7 +2590,7 @@ val f_o_f_FUPDATE_compose = store_thm("f_o_f_FUPDATE_compose",
   fs[IN_FRANGE] >> rw[]
   >- PROVE_TAC[]
   >- PROVE_TAC[] >>
-  qmatch_assum_rename_tac`y <> k`[] >>
+  qmatch_assum_rename_tac`y <> k` >>
   `y IN FDOM (f1 f_o_f f2)` by rw[f_o_f_DEF] >>
   rw[f_o_f_DEF])
 

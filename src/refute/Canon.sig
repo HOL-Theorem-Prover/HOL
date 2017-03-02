@@ -32,7 +32,6 @@ sig
     val UNLAMB_CONV : conv
     val EQ_ABS_CONV : conv
 
-    val latest :  (thm * thm * term) option ref;
+    val latest :  (thm * thm * term) option ref
 
 end (* sig *)
-

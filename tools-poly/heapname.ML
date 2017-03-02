@@ -1,7 +1,3 @@
-(* this is an -*- sml -*- file *)
-val _ = PolyML.Compiler.prompt1:="";
-val _ = PolyML.Compiler.prompt2:="";
-val _ = PolyML.print_depth 0;
 val _ = use "../tools/Holmake/Systeml.sig";
 val _ = use "Holmake/Systeml.sml";
 val _ = use "poly/Binarymap.sig";
@@ -33,7 +29,7 @@ fun warn s = (TextIO.output(TextIO.stdErr, s ^ "\n");
               TextIO.flushOut TextIO.stdErr)
 
 fun main() = let
-  val default = Path.concat(HOLDIR, Path.concat("bin", "hol.builder"))
+  val default = Systeml.DEFAULT_STATE
   val heap =
       if FileSys.access ("Holmakefile", [FileSys.A_READ]) then let
           open Holmake_types
@@ -55,7 +51,3 @@ fun main() = let
 in
   TextIO.output(TextIO.stdOut, heap ^ "\n")
 end
-
-
-val _ = PolyML.shareCommonData main
-val _ = PolyML.export ("heapname", main);

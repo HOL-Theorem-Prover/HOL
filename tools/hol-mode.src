@@ -138,16 +138,39 @@ process in it."
     hol-buffer-name))
 
 
+(defun forward-smlsymbol (n)
+  (interactive "p")
+  (cond ((> n 0)
+         (while (> n 0)
+           (skip-syntax-forward "^.")
+           (skip-syntax-forward ".")
+           (setq n (- n 1))))
+        ((< n 0)
+         (setq n (- n))
+         (setq n (- n (if (equal (skip-syntax-backward ".") 0) 0 1))))
+         (while (> n 0)
+           (skip-syntax-backward "^.")
+           (skip-syntax-backward ".")
+           (setq n (- n 1)))))
+
 (defun is-a-then (s)
-  (and s (or (string-equal s "THEN") (string-equal s "THENL"))))
+  (and s (or (string-equal s "THEN")
+             (string-equal s "THENL")
+             (string-equal s "val")
+             (string-equal s ">-")
+             (string-equal s ">>")
+             (string-equal s ">|")
+             (string-equal s "\\\\"))))
 
 (defun next-hol-lexeme-terminates-tactic ()
   (skip-syntax-forward " ")
   (or (eobp)
       (char-equal (following-char) ?,)
+      (char-equal (following-char) ?\))
       ;; (char-equal (following-char) ?=)
       (char-equal (following-char) ?\;)
       (is-a-then (word-at-point))
+      (is-a-then (thing-at-point 'smlsymbol t))
       (string= (word-at-point) "val")))
 
 (defun previous-hol-lexeme-terminates-tactic ()
@@ -157,11 +180,154 @@ process in it."
         (char-equal (preceding-char) ?,)
         (char-equal (preceding-char) ?=)
         (char-equal (preceding-char) ?\;)
+        (char-equal (preceding-char) ?\))
         (and (condition-case nil
                  (progn (backward-char 1) t)
                  (error nil))
              (or (is-a-then (word-at-point))
+                 (is-a-then (thing-at-point 'smlsymbol t))
                  (string= (word-at-point) "val"))))))
+
+(defun looking-at-tactic-terminator ()
+  "Returns a cons-pair (x . y), with x the distance to end, and y the
+   size of the terminator, or nil if there isn't one there. The x value may
+   be zero, if point is immediately after the terminator."
+  (interactive)
+  (let ((c (following-char))
+        (pc (preceding-char)))
+    (cond ((char-equal c ?,) '(1 . 1))
+          ((char-equal pc ?,) '(0 . 1))
+          ((char-equal c ?\)) '(1 . 1))
+          ((char-equal pc ?\)) '(0 . 1))
+          ((char-equal c ?\]) '(1 . 1))
+          ((char-equal pc ?\]) '(0 . 1))
+          ((char-equal c ?\;) '(1 . 1))
+          ((char-equal pc ?\;) '(0 . 1))
+          ((let ((w (word-at-point)))
+             (if (is-a-then w)
+                 (cons
+                  (- (cdr (bounds-of-thing-at-point 'word)) (point))
+                  (length w))
+               (let ((w (thing-at-point 'smlsymbol t)))
+                 (if (is-a-then w)
+                     (cons
+                      (- (cdr (bounds-of-thing-at-point 'smlsymbol)) (point))
+                      (length w))
+                   nil))))))))
+
+(defun looking-at-tactic-starter ()
+  "Returns a cons-pair (x . y), with x the distance to end, and y the
+   size of the terminator, or nil if there isn't one there. The x value may
+   be zero, if point is immediately after the terminator."
+  (interactive)
+  (let ((c (following-char))
+        (pc (preceding-char)))
+    (cond ((char-equal c ?,) '(1 . 1))
+          ((char-equal pc ?,) '(0 . 1))
+          ((char-equal c ?\() '(1 . 1))
+          ((char-equal pc ?\() '(0 . 1))
+          ((char-equal c ?\[) '(1 . 1))
+          ((char-equal pc ?\[) '(0 . 1))
+          ((char-equal c ?\;) '(1 . 1))
+          ((char-equal pc ?\;) '(0 . 1))
+          ((let ((w (word-at-point)))
+             (if (is-a-then w)
+                 (cons
+                  (- (cdr (bounds-of-thing-at-point 'word)) (point))
+                  (length w))
+               (let ((w (thing-at-point 'smlsymbol t)))
+                 (if (is-a-then w)
+                     (cons
+                      (- (cdr (bounds-of-thing-at-point 'smlsymbol)) (point))
+                      (length w))
+                   nil))))))))
+
+
+(defun forward-tactic-terminator (n)
+  (interactive "^p")
+  (cond ((> n 0)
+         (let (c)
+           (while (> n 0)
+             (skip-syntax-forward " ")
+             (setq c (looking-at-tactic-terminator))
+             (while (or (not c) (equal (car c) 0))
+               (forward-sexp)
+               (skip-syntax-forward " ")
+               (setq c (looking-at-tactic-terminator)))
+             (forward-char (car c))
+             (setq n (- n 1)))))
+        ((< n 0)
+         (setq n (- n))
+         (let (c)
+           (while (> n 0)
+             (skip-syntax-backward " ")
+             (setq c (looking-at-tactic-terminator))
+             (while (or (not c) (equal (car c) (cdr c)))
+               (condition-case nil
+                   (backward-sexp)
+                 (error (backward-char)))
+               (skip-syntax-backward " ")
+               (setq c (looking-at-tactic-terminator)))
+             (backward-char (- (cdr c) (car c)))
+             (setq n (- n 1)))))))
+
+(defun forward-tactic-starter (n)
+  (interactive "^p")
+  (cond ((> n 0)
+         (let (c)
+           (while (> n 0)
+             (skip-syntax-forward " ")
+             (setq c (looking-at-tactic-starter))
+             (while (or (not c) (equal (car c) 0))
+               (forward-sexp)
+               (skip-syntax-forward " ")
+               (setq c (looking-at-tactic-starter)))
+             (forward-char (car c))
+             (setq n (- n 1)))))
+        ((< n 0)
+         (setq n (- n))
+         (let (c)
+           (while (> n 0)
+             (skip-syntax-backward " ")
+             (setq c (looking-at-tactic-starter))
+             (while (or (not c) (equal (car c) (cdr c)))
+               (condition-case nil
+                   (backward-sexp)
+                 (error (backward-char)))
+               (skip-syntax-backward " ")
+               (setq c (looking-at-tactic-starter)))
+             (backward-char (- (cdr c) (car c)))
+             (setq n (- n 1)))))))
+
+(defun preceded-by-starter ()
+  (save-excursion
+    (backward-char)
+    (thing-at-point 'tactic-starter)))
+(defun forward-hol-tactic (n)
+  (interactive "^p")
+  (cond ((> n 0)
+         (while (> n 0)
+           (skip-syntax-forward " ")
+           (while (thing-at-point 'tactic-terminator)
+             (forward-tactic-terminator 1)
+             (skip-syntax-forward " "))
+           (while (not (thing-at-point 'tactic-terminator))
+             (forward-sexp 1)
+             (skip-syntax-forward " "))
+           (skip-syntax-backward " ")
+           (setq n (- n 1))))
+        ((< n 0)
+         (setq n (- n))
+         (while (> n 0)
+           (skip-syntax-backward " ")
+           (while (preceded-by-starter)
+             (forward-tactic-starter -1)
+             (skip-syntax-backward " "))
+           (while (not (preceded-by-starter))
+             (forward-sexp -1)
+             (skip-syntax-backward " "))
+           (skip-syntax-forward " ")
+           (setq n (- n 1))))))
 
 ;;; returns true and moves forward a sexp if this is possible, returns nil
 ;;; and stays where it is otherwise
@@ -174,53 +340,11 @@ process in it."
       (progn (backward-sexp 1) t)
     (error nil)))
 
-(defun skip-hol-tactic-punctuation-forward ()
-  (let ((last-point (point)))
-    (while (progn (if (is-a-then (word-at-point)) (forward-word 1))
-                  (skip-chars-forward ", \n\t\r")
-                  (not (= last-point (point))))
-      (setq last-point (point)))))
-
 (defun word-before-point ()
   (save-excursion
     (condition-case nil
         (progn (backward-char 1) (word-at-point))
       (error nil))))
-
-(defun skip-hol-tactic-punctuation-backward ()
-  (let ((last-point (point)))
-    (while (progn (if (is-a-then (word-before-point)) (forward-word -1))
-                  (skip-chars-backward ", \n\t")
-                  (not (= last-point (point))))
-      (setq last-point (point)))))
-
-(defun forward-hol-tactic (n)
-  (interactive "p")
-  ;; to start you have to get off "tactic" punctuation, i.e. whitespace,
-  ;; commas and the words THEN and THENL.
-  (let ((count (or n 1)))
-    (cond ((> count 0)
-           (while (> count 0)
-             (let (moved)
-               (skip-hol-tactic-punctuation-forward)
-               (while (and (not (next-hol-lexeme-terminates-tactic))
-                           (my-forward-sexp))
-                 (setq moved t))
-               (skip-chars-backward " \n\t\r")
-               (setq count (- count 1))
-               (if (not moved)
-                   (error "No more HOL tactics at this level")))))
-          ((< count 0)
-           (while (< count 0)
-             (let (moved)
-               (skip-hol-tactic-punctuation-backward)
-               (while (and (not (previous-hol-lexeme-terminates-tactic))
-                           (my-backward-sexp))
-                 (setq moved t))
-               (skip-chars-forward " \n\t\r")
-               (setq count (+ count 1))
-               (if (not moved)
-                   (error "No more HOL tactics at this level"))))))))
 
 (defun backward-hol-tactic (n)
   (interactive "p")
@@ -305,6 +429,25 @@ or \">-\"."
                                       ""
                                       string)))
     (replace-regexp-in-string (concat tactic-connective-regexp "\\'") "" s0)))
+
+(defun hol-find-eval-next-tactic (arg)
+  "Highlights the next tactic in the source and evaluates in the HOL buffer.
+With a prefix ARG, uses `expandf' rather than `e'."
+  (interactive "P")
+  (deactivate-mark)
+  (skip-syntax-forward " ")
+  (let
+      ((term (thing-at-point 'tactic-terminator))
+       (sqb (char-equal (following-char) ?\[)))
+    (while (or term sqb)
+      (cond (term (forward-tactic-terminator 1))
+            (sqb (forward-char)))
+      (skip-syntax-forward " ")
+      (setq term (thing-at-point 'tactic-terminator))
+      (setq sqb (char-equal (following-char) ?\[))))
+  (mark-hol-tactic)
+  (copy-region-as-hol-tactic (region-beginning) (region-end) arg)
+  (goto-char (region-end)))
 
 (defun copy-region-as-hol-tactic (start end arg)
   "Send selected region to HOL process as tactic."
@@ -1436,6 +1579,15 @@ second is to show the new term.
   (holpp-quiet-reset)
   (send-raw-string-to-hol "print \"\\n\\n*** hol-mode reset ***\\n\";" nil nil))
 
+; this filter function is complicated by the fact that comint chunks
+; output (in 1024 character chunks in my tests) and so doesn't
+; necessarily give complete (in the sense of containing matching
+; comment-blocks) strings to the filter. This means that a solution
+; with with-temp-buffer won't work. Instead, there is a persistent
+; working space buffer, and if the code finds a non-matching comment
+; start (a "(*(*(*" substring), it just leaves that in the working
+; space so that the next piece of output can be appended and processed
+; properly.
 (defun holpp-output-filter (s)
   "Converts a munged emacs_terminal string into a pretty one with text properties."
   (interactive "sinput: ")
@@ -1599,6 +1751,7 @@ second is to show the new term.
 (define-key hol-map "d"    'hol-drop-goal)
 (define-key hol-map "D"    'hol-drop-all-goals)
 (define-key hol-map "e"    'copy-region-as-hol-tactic)
+(define-key hol-map "\M-e" 'hol-find-eval-next-tactic)
 (define-key hol-map "E"    'copy-region-as-goaltree-tactic)
 (define-key hol-map "g"    'hol-do-goal)
 (define-key hol-map "G"    'hol-do-goaltree)
@@ -1910,6 +2063,9 @@ second is to show the new term.
 
 (define-key global-map [menu-bar hol-menu hol-goalstack apply-tactic]
    '("Apply tactic" . copy-region-as-hol-tactic))
+
+(define-key global-map [menu-bar hol-menu hol-goalstack new-termination-goal]
+  '("New termination goal" . hol-start-termination-proof))
 
 (define-key global-map [menu-bar hol-menu hol-goalstack new-goal]
    '("New goal" . hol-do-goal))

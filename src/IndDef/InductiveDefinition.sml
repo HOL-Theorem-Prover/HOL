@@ -212,7 +212,11 @@ fun canonicalize_clause clause carg =
           in IMP_ANTISYM_RULE (DISCH_ALL th5) (DISCH_ALL th8)
           end
         else
-          let val atm = list_mk_conj(map mk_eq_of_bind (yes@no))
+          let val _   = not (null no) orelse
+                        raise mk_HOL_ERR "InductiveDefinition"
+                              "canonicalize_clause"
+                              "Vacuous clause trivialises whole definition"
+              val atm = list_mk_conj(map mk_eq_of_bind (yes@no))
               val ths = CONJUNCTS (ASSUME atm)
               val thl = map(fn t => first(fn th => lhs(concl th) = t) ths) carg
               val th0 = SPECL avs (ASSUME clause)

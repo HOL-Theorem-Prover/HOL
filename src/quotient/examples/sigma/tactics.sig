@@ -151,4 +151,4 @@ val THEN1 : tactic * tactic -> tactic
 (* infix THEN1; *)
 val EVERY1 : tactic list -> tactic
 
-end; (* sig *)
+end (* sig *)

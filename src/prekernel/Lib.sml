@@ -354,6 +354,12 @@ fun appi f =
       recurse 0
    end
 
+(* apnth : ('a -> 'a) -> int -> 'a list -> 'a list
+  apply a function to the nth member of a list *)
+fun apnth f 0 (y :: ys) = f y :: ys
+  | apnth f n (y :: ys) = y :: apnth f (n-1) ys
+  | apnth f n [] = raise ERR "apnth" "list too short (or -ve index)"
+
 fun mapi f lst =
    let
       fun recurse n acc lst =
@@ -679,7 +685,7 @@ val string_to_int =
 
 val saying = ref true
 
-fun say s = if !saying then TextIO.print s else ()
+fun say s = if !saying then !Feedback.MESG_outstream s else ()
 
 (*---------------------------------------------------------------------------
    quote puts double quotes around a string. mlquote does this as well,
@@ -792,11 +798,9 @@ fun end_time timer =
       val {sys, usr} = Timer.checkCPUTimer timer
       val gc = Timer.checkGCTime timer
    in
-      TextIO.output (TextIO.stdOut,
-           "runtime: " ^ timeToString usr ^ ",\
+      say ("runtime: " ^ timeToString usr ^ ",\
        \    gctime: " ^ timeToString gc ^ ", \
-       \    systime: " ^ timeToString sys ^ ".\n");
-      TextIO.flushOut TextIO.stdOut
+       \    systime: " ^ timeToString sys ^ ".\n")
    end
 
 fun time f x =
@@ -810,10 +814,7 @@ fun time f x =
 fun start_real_time () = Timer.startRealTimer ()
 
 fun end_real_time timer =
-  (TextIO.output
-     (TextIO.stdOut,
-      "realtime: " ^ Time.toString (Timer.checkRealTimer timer) ^ "s\n")
-   ; TextIO.flushOut TextIO.stdOut)
+  say ("realtime: " ^ Time.toString (Timer.checkRealTimer timer) ^ "s\n")
 
 fun real_time f x =
    let

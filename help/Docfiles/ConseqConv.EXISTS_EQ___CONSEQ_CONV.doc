@@ -4,7 +4,7 @@
 
 
 \SYNOPSIS
-Given a term of the form {(?x. P x) = (?x. Q x)} this consequence 
+Given a term of the form {(?x. P x) = (?x. Q x)} this consequence
 conversion returns the theorem
 {|- (!x. (P x = Q x)) ==> ((?x. P x) = (?x. Q x))}.
 

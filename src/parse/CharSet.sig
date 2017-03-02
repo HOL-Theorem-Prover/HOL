@@ -15,4 +15,4 @@ sig
 
   val listItems : CharSet -> char list
 
-end;
+end

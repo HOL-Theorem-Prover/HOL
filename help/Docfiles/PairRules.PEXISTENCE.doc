@@ -13,7 +13,7 @@ Deduces paired existence from paired unique existence.
 
 \DESCRIBE
 When applied to a theorem with a paired unique-existentially quantified
-conclusion, {EXISTENCE} returns the same theorem with normal paired 
+conclusion, {EXISTENCE} returns the same theorem with normal paired
 existential quantification over the same pair.
 {
     A |- ?!p. t

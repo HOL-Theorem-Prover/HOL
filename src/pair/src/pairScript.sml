@@ -12,11 +12,8 @@
 (* DATE          : August 7, 1997                                        *)
 (* ===================================================================== *)
 
-structure pairScript =
-struct
-
 (*  interactive use:
- app load ["Q", "relationTheory", "mesonLib"];
+ app load ["Q", "relationTheory", "mesonLib", "OpenTheoryMap", "BasicProvers"];
  open Parse relationTheory mesonLib;
 *)
 
@@ -331,6 +328,37 @@ val FORALL_PROD = Q.store_thm("FORALL_PROD",
 
 val pair_induction = save_thm("pair_induction", #2(EQ_IMP_RULE FORALL_PROD));
 
+(* ----------------------------------------------------------------------
+    PROD_ALL
+   ---------------------------------------------------------------------- *)
+
+val PROD_ALL_def = new_definition(
+  "PROD_ALL_def",
+  ``PROD_ALL (P:'a -> bool) (Q : 'b -> bool) p <=> P (FST p) /\ Q (SND p)``);
+
+val PROD_ALL_THM = store_thm(
+  "PROD_ALL_THM",
+  ``PROD_ALL P Q (x:'a,y:'b) <=> P x /\ Q y``,
+  REWRITE_TAC [PROD_ALL_def, FST, SND]);
+val _ = BasicProvers.export_rewrites ["PROD_ALL_THM"]
+val _ = computeLib.add_persistent_funs ["PROD_ALL_THM"]
+
+val PROD_ALL_MONO = store_thm(
+  "PROD_ALL_MONO",
+  ``(!x:'a. P x ==> P' x) /\ (!y:'b. Q y ==> Q' y) ==>
+    PROD_ALL P Q p ==> PROD_ALL P' Q' p``,
+  Q.SPEC_THEN `p` STRUCT_CASES_TAC ABS_PAIR_THM THEN
+  REWRITE_TAC [PROD_ALL_THM] THEN REPEAT STRIP_TAC THEN RES_TAC);
+val _ = IndDefLib.export_mono "PROD_ALL_MONO"
+
+val PROD_ALL_CONG = store_thm(
+  "PROD_ALL_CONG[defncong]",
+  ``!p p' P P' Q Q'.
+      (p = p') /\ (!x:'a y:'b. (p' = (x,y)) ==> (P x <=> P' x)) /\
+      (!x:'a y:'b. (p' = (x,y)) ==> (Q y <=> Q' y)) ==>
+      (PROD_ALL P Q p <=> PROD_ALL P' Q' p')``,
+  SIMP_TAC (BasicProvers.srw_ss()) [FORALL_PROD, PAIR_EQ]);
+
 (* ------------------------------------------------------------------------- *)
 (* ELIM_PEXISTS = |- !P. (?p. P (FST p) (SND p)) = ?p1 p2. P p1 p2           *)
 (* ------------------------------------------------------------------------- *)
@@ -596,6 +624,18 @@ val LEX_DEF_THM = Q.store_thm
   REWRITE_TAC [LEX_DEF,UNCURRY_DEF] THEN BETA_TAC THEN
   REWRITE_TAC [UNCURRY_DEF] THEN BETA_TAC THEN REFL_TAC);
 
+val LEX_MONO = store_thm("LEX_MONO",
+  ``(!x y. R1 x y ==> R2 x y) /\
+    (!x y. R3 x y ==> R4 x y)
+    ==>
+    (R1 LEX R3) x y ==> (R2 LEX R4) x y``,
+  STRIP_TAC THEN
+  Q.SPEC_THEN`x`FULL_STRUCT_CASES_TAC pair_CASES THEN
+  Q.SPEC_THEN`y`FULL_STRUCT_CASES_TAC pair_CASES THEN
+  SRW_TAC[][LEX_DEF_THM] THEN
+  PROVE_TAC[])
+val () = IndDefLib.export_mono"LEX_MONO";
+
 val WF_LEX = Q.store_thm("WF_LEX",
  `!(R:'a->'a->bool) (Q:'b->'b->bool). WF R /\ WF Q ==> WF (R LEX Q)`,
 REWRITE_TAC [LEX_DEF, relationTheory.WF_DEF]
@@ -679,6 +719,20 @@ val symmetric_LEX = store_thm(
   SIMP_TAC (srw_ss()) [symmetric_def, LEX_DEF, FORALL_PROD, UNCURRY_DEF] THEN
   METIS_TAC[]);
 val _ = export_rewrites ["symmetric_LEX"]
+
+val LEX_CONG = Q.store_thm
+("LEX_CONG",
+ `!R1 R2 v1 v2 R1' R2' v1' v2'.
+     (v1 = v1') /\ (v2 = v2') /\
+     (!a b c d. (v1' = (a,b)) /\ (v2' = (c,d)) ==> (R1 a c = R1' a c)) /\
+     (!a b c d. (v1' = (a,b)) /\ (v2' = (c,d)) /\ (a=c) ==> (R2 b d = R2' b d))
+   ==>
+    ($LEX R1 R2 v1 v2 = $LEX R1' R2' v1' v2')`,
+ Ho_Rewrite.REWRITE_TAC [LEX_DEF,FORALL_PROD,PAIR_EQ]
+   THEN NTAC 2 (REWRITE_TAC [UNCURRY_VAR,FST,SND] THEN BETA_TAC)
+   THEN METIS_TAC[]);
+
+val _ = DefnBase.export_cong "LEX_CONG";
 
 (*---------------------------------------------------------------------------
     Generate some ML that gets evaluated at theory load time.
@@ -810,6 +864,7 @@ NL();
 S "fun dest t = "; NL();
 S "  let val (lhs,rhs) = dest_eq (snd(strip_forall t))"; NL();
 S "      val (f,args) = strip_comb lhs"; NL();
+S "      val f = mk_var(dest_const f) handle HOL_ERR _ => f"; NL();
 S "  in "; NL();
 S "  case filter (not o is_vstruct) args "; NL();
 S "   of [] => (case joint_vars (map free_vars args)"; NL();
@@ -859,5 +914,3 @@ val _ = adjoin_to_theory
 val _ = export_theory();
 
 val _ = export_theory_as_docfiles (Path.concat (Path.parentArc, "help/thms"))
-
-end;

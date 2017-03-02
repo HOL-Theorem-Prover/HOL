@@ -29,9 +29,6 @@
 (* ===================================================================== *)
 
 
-structure sumScript =
-struct
-
 open HolKernel Parse boolLib BasicProvers;
 
 (* done to keep Holmake happy - satTheory is an ancestor of BasicProvers *)
@@ -433,8 +430,36 @@ val NOT_ISR_ISL = store_thm("NOT_ISR_ISL",
   GEN_TAC THEN Q.SPEC_THEN `x` STRUCT_CASES_TAC sum_CASES THEN SRW_TAC[][])
 val _ = export_rewrites["NOT_ISR_ISL"]
 
+(* ----------------------------------------------------------------------
+    SUM_ALL
+   ---------------------------------------------------------------------- *)
+
+val SUM_ALL_def = Prim_rec.new_recursive_definition {
+  def = ``(SUM_ALL (P:'a -> bool) (Q:'b -> bool) (INL x) <=> P x) /\
+          (SUM_ALL (P:'a -> bool) (Q:'b -> bool) (INR y) <=> Q y)``,
+  name = "SUM_ALL_def",
+  rec_axiom = sum_Axiom}
+val _ = export_rewrites ["SUM_ALL_def"]
+
+val SUM_ALL_MONO = store_thm(
+  "SUM_ALL_MONO",
+  ``(!x:'a. P x ==> P' x) /\ (!y:'b. Q y ==> Q' y) ==>
+    SUM_ALL P Q s ==> SUM_ALL P' Q' s``,
+  Q.SPEC_THEN `s` STRUCT_CASES_TAC sum_CASES THEN
+  REWRITE_TAC [SUM_ALL_def] THEN REPEAT STRIP_TAC THEN RES_TAC);
+val _ = IndDefLib.export_mono "SUM_ALL_MONO"
+
+val SUM_ALL_CONG = store_thm(
+  "SUM_ALL_CONG[defncong]",
+  ``!(s:'a + 'b) s' P P' Q Q'.
+       (s = s') /\ (!a. (s' = INL a) ==> (P a <=> P' a)) /\
+       (!b. (s' = INR b) ==> (Q b <=> Q' b)) ==>
+       (SUM_ALL P Q s <=> SUM_ALL P' Q' s')``,
+  SIMP_TAC (srw_ss()) [FORALL_SUM]);
+
 val _ = computeLib.add_persistent_funs ["sum_case_def", "INL_11", "INR_11",
                                         "sum_distinct", "sum_distinct1",
+                                        "SUM_ALL_def",
                                         "OUTL", "OUTR", "ISL", "ISR"]
 
 local open OpenTheoryMap
@@ -496,5 +521,3 @@ val datatype_sum = store_thm(
   REWRITE_TAC[DATATYPE_TAG_THM]);
 
 val _ = export_theory();
-
-end

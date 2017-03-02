@@ -142,14 +142,15 @@ end
 (* ------------------------------------------------------------------------ *)
 
 val mem8_rwt =
-   EV [mem8_def] [[``^st.MEM a = SOME v``]] []
+   EV [mem8_def] [[``^st.MEM a = v``]] []
       ``mem8 a``
       |> hd
 
 val write'mem8_rwt =
-   EV [write'mem8_def] [[``^st.MEM addr = SOME wv``]] []
+   EV [write'mem8_def] [] []
       ``write'mem8 (d, addr)``
       |> hd
+      |> Drule.ADD_ASSUM ``^st.MEM addr = wv``
 
 (* ------------------------------------------------------------------------ *)
 
@@ -482,11 +483,6 @@ val Zcall_rm_rwts =
    |> data_hyp_rule
    |> addThms
 
-val Zcpuid_rwts =
-   EV [dfn'Zcpuid_def] [] []
-      ``dfn'Zcpuid``
-   |> addThms
-
 val Zjcc_rwts =
    EV ([dfn'Zjcc_def, unit_state_cond] @ read_cond_rwts) []
       (mapl (`c`, conds))
@@ -629,11 +625,11 @@ local
          (fn (b, (i, thm)) =>
             let
                val rwt = if i = 0
-                            then ``^st.MEM (^st.RIP) = SOME ^b``
+                            then ``^st.MEM (^st.RIP) = ^b``
                          else let
                                  val j = numSyntax.term_of_int i
                               in
-                                 ``^st.MEM (^st.RIP + n2w ^j) = SOME ^b``
+                                 ``^st.MEM (^st.RIP + n2w ^j) = ^b``
                               end
             in
                (i + 1, PURE_REWRITE_RULE [ASSUME rwt, optionTheory.THE_DEF] thm)
@@ -677,7 +673,7 @@ in
                        (case listSyntax.dest_list l of
                            ([], _) => thm
                          | (h :: _, _) =>
-                             (optionSyntax.is_the h
+                             (not (wordsSyntax.is_n2w h)
                               orelse raise decode_err "trailing bytes"; thm))
                   | _ => raise decode_err "decode failed")
            | _ => (Parse.print_thm thm; raise decode_err "too few bytes")
@@ -685,36 +681,11 @@ in
    val x64_decode_hex = x64_decode o get_bytes
 end
 
-local
-    val Icache_CONV =
-       x64_CONV
-       THENC REWRITE_CONV
-         (wordsTheory.WORD_ADD_0 ::
-          List.tabulate
-             (20, fn 0 => ASSUME ``^st.ICACHE (^st.RIP) = ^st.MEM (^st.RIP)``
-                   | i => let
-                             val j = numSyntax.term_of_int i
-                          in
-                             ASSUME ``^st.ICACHE (^st.RIP + n2w ^j) =
-                                      ^st.MEM (^st.RIP + n2w ^j)``
-                          end))
-in
-   val checkIcache_rwts =
-      List.tabulate
-         (20, fn i => let
-                         val j = numSyntax.term_of_int (i + 1)
-                      in
-                          utilsLib.NCONV (i + 1) Icache_CONV
-                             ``checkIcache ^j s``
-                      end)
-end
-
 (* ------------------------------------------------------------------------ *)
 
 local
    fun is_some_wv tm =
       ((tm |> boolSyntax.dest_eq |> snd
-           |> optionSyntax.dest_some
            |> Term.dest_var |> fst) = "wv")
       handle HOL_ERR _ => false
 in
@@ -723,11 +694,9 @@ in
          ([], _) => thm
        | ([t], rst) =>
            let
-              val (l, r) = boolSyntax.dest_eq t
-              val wv = optionSyntax.dest_some r
+              val (l, wv) = boolSyntax.dest_eq t
               val v = Term.mk_var ("v", Term.type_of wv)
-              val sv = optionSyntax.mk_some v
-              val tv = boolSyntax.mk_eq (l, sv)
+              val tv = boolSyntax.mk_eq (l, v)
            in
               if List.exists (Lib.equal tv) rst
                  then Thm.INST [wv |-> v] thm
@@ -749,17 +718,9 @@ local
       Term.prim_mk_const {Thy = "x64", Name = "x64_state_exception"}
    fun mk_proj_exception r = Term.mk_comb (state_exception_tm, r)
    val twenty = numSyntax.term_of_int 20
-   fun mk_len_icache_thms thm1 =
-      let
-         val strm1 = get_strm1 thm1
-         val len_thm =
-            (Conv.RAND_CONV listLib.LENGTH_CONV THENC numLib.REDUCE_CONV)
-               (numSyntax.mk_minus (twenty, listSyntax.mk_length strm1))
-         val len = utilsLib.rhsc len_thm
-         val n = numSyntax.int_of_term len
-      in
-         (len_thm, List.nth (checkIcache_rwts, n - 1), len)
-      end
+   fun mk_len_thm thm1 =
+      (Conv.RAND_CONV listLib.LENGTH_CONV THENC numLib.REDUCE_CONV)
+         (numSyntax.mk_minus (twenty, listSyntax.mk_length (get_strm1 thm1)))
    fun bump_rip len = Term.subst [st |-> ``^st with RIP := ^st.RIP + n2w ^len``]
    val run_CONV = utilsLib.Run_CONV ("x64", st) o get_ast
    val run = utilsLib.ALL_HYP_CONV_RULE utilsLib.WGROUND_CONV o
@@ -774,7 +735,6 @@ local
       raise ERR "x64_step"
          ("Failed to evaluate: " ^
             Hol_pp.term_to_string (listSyntax.mk_list (l, ``:word8``)))
-
    val cache =
       ref (Redblackmap.mkDict String.compare: (string, thm) Redblackmap.dict)
    fun addToCache (s, thm) = (cache := Redblackmap.insert (!cache, s, thm); thm)
@@ -783,11 +743,11 @@ in
    fun x64_step l =
       let
          val thm1 = x64_decode l
-         val (thm2, thm3, len) = mk_len_icache_thms thm1
+         val thm2 = mk_len_thm thm1
          val thm4 = run_CONV thm1
          val thm5 = (thm4 |> Drule.SPEC_ALL
                           |> utilsLib.rhsc
-                          |> bump_rip len
+                          |> bump_rip (utilsLib.rhsc thm2)
                           |> run)
                     handle Conv.UNCHANGED => unchanged l
          val r = get_state thm5
@@ -796,7 +756,7 @@ in
                     ; print "\n"
                     ; raise ERR "eval" "failed to fully evaluate")
          val thm6 = STATE_CONV (mk_proj_exception r)
-         val thm = Drule.LIST_CONJ [thm1, thm2, thm3, thm4, thm5, thm6]
+         val thm = Drule.LIST_CONJ [thm1, thm2, thm4, thm5, thm6]
       in
          MP_Next thm
          handle HOL_ERR {message = "different constructors", ...} =>
@@ -832,22 +792,22 @@ val thms = Count.apply x64_step_code
    movsx eax, al             ; 0f be c0
    movzx eax, al             ; 0f b6 c0`
 
-Count.apply x64_step "90";
-Count.apply x64_step "418803";
-Count.apply x64_step "487207";
-Count.apply x64_step "8345F801";
-Count.apply x64_step "4863D0";
-Count.apply x64_step "0FBEC0";
-Count.apply x64_step "0FB6C0";
+Count.apply x64_step_hex "90";
+Count.apply x64_step_hex "418803";
+Count.apply x64_step_hex "487207";
+Count.apply x64_step_hex "8345F801";
+Count.apply x64_step_hex "4863D0";
+Count.apply x64_step_hex "0FBEC0";
+Count.apply x64_step_hex "0FB6C0";
 
-Count.apply x64_step "48BA________________";
-Count.apply x64_decode "48BA________________"
+Count.apply x64_step_hex "48BA________________";
+Count.apply x64_decode_hex "48BA________________"
 
-Count.apply x64_step "41B8________";
-Count.apply x64_decode "41B8________"
+Count.apply x64_step_hex "41B8________";
+Count.apply x64_decode_hex "41B8________"
 
-Count.apply x64_decode "8345F8__";
-Count.apply x64_step "8345F8__"
+Count.apply x64_decode_hex "8345F8__";
+Count.apply x64_step_hex "8345F8__"
 
 *)
 

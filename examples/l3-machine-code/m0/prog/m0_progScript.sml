@@ -3,9 +3,6 @@ open lcsymtacs blastLib stateLib set_sepTheory progTheory m0_stepTheory
 
 val () = new_theory "m0_prog"
 
-infix \\
-val op \\ = op THEN;
-
 (* ------------------------------------------------------------------------ *)
 
 val _ = stateLib.sep_definitions "m0"
@@ -70,7 +67,7 @@ val m0_CONFIG_def = Define`
       m0_CONTROL_SPSEL spsel`
 
 val m0_PC_def = Define`
-   m0_PC pc = m0_REG RName_PC pc * cond (Aligned (pc,2))`
+   m0_PC pc = m0_REG RName_PC pc * cond (aligned 1 pc)`
 
 val m0_NZCV_def = Define`
    m0_NZCV (n,z,c,v) = m0_PSR_N n * m0_PSR_Z z * m0_PSR_C c * m0_PSR_V v`
@@ -98,7 +95,7 @@ val m0_PSR_T_F = Q.store_thm("m0_PSR_T_F",
 
 val m0_PC_INTRO = Q.store_thm("m0_PC_INTRO",
    `SPEC m (p1 * m0_PC pc) code (p2 * m0_REG RName_PC pc') ==>
-    (Aligned (pc,2) ==> Aligned (pc',2)) ==>
+    (aligned 1 pc ==> aligned 1 pc') ==>
     SPEC m (p1 * m0_PC pc) code (p2 * m0_PC pc')`,
    REPEAT STRIP_TAC
    \\ FULL_SIMP_TAC std_ss [m0_PC_def, SPEC_MOVE_COND, STAR_ASSOC, SEP_CLAUSES]
@@ -106,7 +103,7 @@ val m0_PC_INTRO = Q.store_thm("m0_PC_INTRO",
 
 val m0_TEMPORAL_PC_INTRO = Q.store_thm("m0_TEMPORAL_PC_INTRO",
    `TEMPORAL_NEXT m (p1 * m0_PC pc) code (p2 * m0_REG RName_PC pc') ==>
-    (Aligned (pc,2) ==> Aligned (pc',2)) ==>
+    (aligned 1 pc ==> aligned 1 pc') ==>
     TEMPORAL_NEXT m (p1 * m0_PC pc) code (p2 * m0_PC pc')`,
    REPEAT STRIP_TAC
    \\ FULL_SIMP_TAC std_ss

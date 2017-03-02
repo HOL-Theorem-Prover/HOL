@@ -25,12 +25,16 @@
 (define-prefix-command 'hol-unicode-subscript-map)
 (define-prefix-command 'hol-unicode-superscript-map)
 (define-prefix-command 'hol-unicode-U-map)
+(define-prefix-command 'hol-unicode-lparen-map)
+(define-prefix-command 'hol-unicode-rparen-map)
 (define-key global-map (kbd "C-S-p") 'hol-unicode-p-map)
 (define-key global-map (kbd "C-M-S-p") 'hol-unicode-P-map)
 (define-key global-map (kbd "C-M-|") 'hol-unicode-not-map)
 (define-key global-map (kbd "C-M-_") 'hol-unicode-subscript-map)
 (define-key global-map (kbd "C-M-^") 'hol-unicode-superscript-map)
 (define-key global-map (kbd "C-S-M-u") 'hol-unicode-U-map)
+(define-key global-map (kbd "C-M-(") 'hol-unicode-lparen-map)
+(define-key global-map (kbd "C-M-)") 'hol-unicode-rparen-map)
 
 ;; Greek : C-S-<char> for lower case version of Greek <char>
 ;;         add the Meta modifier for upper case Greek letter.
@@ -150,3 +154,15 @@
 (define-key hol-unicode-U-map "u" "𝕌")
 (define-key hol-unicode-U-map "+" "⊎") ; U+228E "multiset union"
 (define-key hol-unicode-U-map "<" "⊌") ; U+228C called simply "multiset", used in HOL for FUNION
+
+; parenthesis map - for various forms of parenthesis
+(define-key hol-unicode-lparen-map (kbd "C-M-|") "⦇")
+(define-key hol-unicode-rparen-map (kbd "C-M-|") "⦈")
+(define-key hol-unicode-lparen-map (kbd "C-M-(") "⦅")
+(define-key hol-unicode-rparen-map (kbd "C-M-)") "⦆")
+(define-key hol-unicode-lparen-map (kbd "C-<") "⟨")
+(define-key hol-unicode-rparen-map (kbd "C->") "⟩")
+(define-key hol-unicode-lparen-map (kbd "C-M-<") "⟪")
+(define-key hol-unicode-rparen-map (kbd "C-M->") "⟫")
+(define-key hol-unicode-lparen-map (kbd "C-M-^") "⎡")
+(define-key hol-unicode-rparen-map (kbd "C-M-^") "⎤")

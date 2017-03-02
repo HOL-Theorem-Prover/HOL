@@ -350,35 +350,143 @@ fun MATCH_ASSUM_ABBREV_TAC q (gl as (asl,w)) =
 (*    Renaming tactics                                                       *)
 (*---------------------------------------------------------------------------*)
 
-fun make_rename_tac s fvs except ERR =
-let val (sf,sb) = partition (fn {redex=l,residue=r} => mem l fvs) s in
-  if exists (fn {redex=l,residue=r} => (not (l = r))) sf
-  then raise ERR "Double bind"
-  else MAP_EVERY
-         (fn {redex=l,residue=r} =>
-            CHOOSE_THEN SUBST_ALL_TAC
+fun make_rename_tac s =
+  MAP_EVERY
+      (fn {redex=l,residue=r} =>
+          CHOOSE_THEN SUBST_ALL_TAC
             (Thm.EXISTS(mk_exists(l, mk_eq(r, l)), r) (Thm.REFL r)))
-       (filter (fn {redex=l,residue=r} => not (mem (fst(dest_var l)) except)) sb)
-end
+      (Listsort.sort markerLib.safe_inst_cmp s)
 
-fun MATCH_RENAME_TAC q except (g as (asl,t)) = let
+fun isnt_uscore_var v = let
+  val (s, _) = dest_var v
+in
+  size s <> 0 andalso String.sub(s, 0) <> #"_"
+end
+val strip_uscore_bindings = filter (fn {redex,residue} => isnt_uscore_var redex)
+fun redex_map f {redex,residue} = {redex = f redex, residue = residue}
+
+(* needs to be eta-expanded so that the possible HOL_ERRs are raised
+   when applied to a goal, not before, thereby letting FIRST_ASSUM catch
+   the exception *)
+fun wholeterm_rename_helper {pat,fvs_set,ERR} tm g = let
+  val ((tmtheta0, _), (tytheta, _)) =
+      raw_match [] fvs_set pat tm ([],[])
+      handle HOL_ERR _ => raise ERR "No match"
+in
+  tmtheta0 |> strip_uscore_bindings |> map (redex_map (inst tytheta))
+           |> make_rename_tac
+end g
+
+(* these functions should probably be using raw_match_term in order to
+   handle the variables that are only allowed to be bound to themselves *)
+fun MATCH_RENAME_TAC q (g as (asl,t)) = let
   val fvs = free_varsl(t::asl)
   val pat = Parse.parse_in_context fvs q
 in
-  make_rename_tac
-    (fst (match_term pat t)) fvs except (ERR "MATCH_RENAME_TAC")
+  wholeterm_rename_helper
+    {pat=pat, ERR = ERR "MATCH_RENAME_TAC",
+     fvs_set = HOLset.fromList Term.compare fvs}
+    t
 end g
 
-fun MATCH_ASSUM_RENAME_TAC q except (g as (asl,t)) = let
-  val ERR = ERR "MATCH_ASSUM_RENAME_TAC"
+fun kMATCH_ASSUM_RENAME_TAC q k (g as (asl,t)) = let
   val fvs = free_varsl(t::asl)
   val pat = Parse.parse_in_context fvs q
-  fun find [] = raise ERR "No matching assumption found"
-    | find (asm::tl) =
-      case (total (match_term pat)) asm of
-          NONE => find tl
-        | SOME (s,_) => make_rename_tac s fvs except ERR
-                      handle HOL_ERR e => find tl
-in find asl end g
+in
+  FIRST_ASSUM (fn th =>
+    wholeterm_rename_helper
+      {pat=pat, ERR = ERR "MATCH_ASSUM_RENAME_TAC",
+       fvs_set = HOLset.fromList Term.compare fvs}
+      (concl th) THEN k)
+end g
+
+fun MATCH_ASSUM_RENAME_TAC q = kMATCH_ASSUM_RENAME_TAC q ALL_TAC
+
+(* needs to be eta-expanded so that the possible HOL_ERRs are raised
+   when applied to a goal, not before, thereby letting FIRST_ASSUM catch
+   the exception *)
+fun subterm_rename_helper k {thetasz,ERR,pat,fvs_set} t g = let
+  fun test (bvs, subt) =
+      case Lib.total (fn t => raw_match [] fvs_set pat t ([],[])) subt of
+          SOME ((theta0, _), (tytheta,_)) =>
+          let
+            fun filt {residue, ...} =
+                List.all (fn bv => not (free_in bv residue)) bvs
+            val theta0 =
+                filter (fn s => isnt_uscore_var (#redex s) andalso filt s)
+                       theta0
+            val theta = map (redex_map (inst tytheta)) theta0
+          in
+            if length theta <> thetasz then NONE
+            else Lib.total (make_rename_tac theta THEN k) g
+          end
+        | NONE => NONE
+in
+  case gen_find_term test t of
+      SOME tacresult => tacresult
+    | NONE => raise ERR "No matching sub-term found"
+end
+
+fun prep_rename q nm (asl, t) = let
+  val ERR = ERR nm
+  val fvs = free_varsl (t::asl)
+  val pat = Parse.parse_in_context fvs q
+  val fvs_set = HOLset.fromList Term.compare fvs
+  val patfvs = free_vars pat
+  val pat_binds =
+      filter (fn v => not (mem v fvs) andalso isnt_uscore_var v) patfvs
+in
+  {ERR = ERR, pat = pat, fvs_set = fvs_set, thetasz = length pat_binds}
+end
+
+fun kMATCH_GOALSUB_RENAME_TAC q k (g as (asl, t)) =
+    subterm_rename_helper k (prep_rename q "MATCH_GOALSUB_RENAME_TAC" g) t g
+
+fun MATCH_GOALSUB_RENAME_TAC q = kMATCH_GOALSUB_RENAME_TAC q ALL_TAC
+
+fun kMATCH_ASMSUB_RENAME_TAC q k (g as (asl, t)) = let
+  val args = prep_rename q "MATCH_ASMSUB_RENAME_TAC" g
+in
+  FIRST_ASSUM (subterm_rename_helper k args o concl) g
+end
+
+fun MATCH_ASMSUB_RENAME_TAC q = kMATCH_ASMSUB_RENAME_TAC q ALL_TAC
+
+fun RENAME1_TAC q =
+    MATCH_RENAME_TAC q ORELSE MATCH_ASSUM_RENAME_TAC q ORELSE
+    MATCH_GOALSUB_RENAME_TAC q ORELSE MATCH_ASMSUB_RENAME_TAC q
+
+fun coreRENAME_TAC qs k =
+  let
+    fun kRENAME1 q k =
+      (MATCH_RENAME_TAC q THEN k) ORELSE kMATCH_ASSUM_RENAME_TAC q k ORELSE
+      kMATCH_GOALSUB_RENAME_TAC q k ORELSE kMATCH_ASMSUB_RENAME_TAC q k
+    fun recurse qs =
+      case qs of
+          [] => k
+        | q::rest => kRENAME1 q (recurse rest)
+  in
+    recurse qs
+  end
+
+fun flip_inst s = map (fn {redex,residue} => {redex=residue,residue=redex}) s
+
+fun gvarify (goal as (asl,w)) =
+  let
+    fun gentheta (v, acc) = {residue = v, redex = genvar (type_of v)} :: acc
+  in
+    HOLset.foldl gentheta [] (FVL (w::asl) empty_tmset)
+  end
+
+fun kRENAME_TAC qs k g =
+  let
+    val gsig = gvarify g
+    val gsig_inv = flip_inst gsig
+  in
+    make_rename_tac gsig THEN
+    coreRENAME_TAC qs (make_rename_tac gsig_inv THEN k)
+  end g
+
+fun RENAME_TAC qs = kRENAME_TAC qs ALL_TAC
 
 end (* Q *)

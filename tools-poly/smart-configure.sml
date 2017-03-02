@@ -12,6 +12,10 @@ fun warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
 fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
              OS.Process.exit OS.Process.failure)
 
+val _ = if PolyML.Compiler.compilerVersionNumber < 551 then
+          die "Must be running PolyML with version >= 5.5.1\n"
+        else ()
+
 fun readdir s = let
   val ds = OS.FileSys.openDir s
   fun recurse acc =
@@ -37,6 +41,9 @@ in
 end
 val check_poly = check_dir "poly" [OS.FileSys.A_EXEC]
 val check_libpoly = check_dir "libpolymain.a" [OS.FileSys.A_READ]
+fun check_polyc c =
+  Option.map (fn p => OS.Path.concat(p,"polyc"))
+             (check_dir "polyc" [OS.FileSys.A_EXEC] c)
 
 fun findpartial f [] = NONE
   | findpartial f (h::t) =
@@ -60,7 +67,9 @@ fun determining s =
 print "\nHOL smart configuration.\n\n";
 
 val poly = ""
+val polyc = NONE : string option
 val polymllibdir = "";
+val DOT_PATH = "";
 
 val _ = let
   val override = "tools-poly/poly-includes.ML"
@@ -121,11 +130,11 @@ in
 end
 
 val polyinstruction =
-    "Please write file tools-poly/poly-includes.ML to specify it\
+    "Please write file tools-poly/poly-includes.ML to specify it \
     \properly.\n\
     \This file should include a line of the form\n\n\
     \  val poly = \"path-to-poly\";"
-val poly =
+val (poly,polycopt) =
     if poly = "" then let
         val _ = determining "poly"
         val nm = CommandLine.name()
@@ -154,7 +163,7 @@ val poly =
         | SOME c => let
           in
             case check_poly c of
-              SOME p => OS.Path.concat(p,"poly")
+              SOME p => (OS.Path.concat(p,"poly"), check_polyc p)
             | NONE =>
               die ("\n\nI tried to figure out where your poly executable is\
                    \n\by examining your command-line.\n\
@@ -170,7 +179,12 @@ val poly =
                      ^poly^
                      "'\nas the location of the poly executable.\n"^
                      polyinstruction)
-      | SOME p => OS.Path.concat(p, "poly")
+      | SOME p => (OS.Path.concat(p, "poly"), check_polyc p)
+
+val polyc =
+    case polycopt of
+        NONE => die ("Couldn't find polyc executable\n" ^ polyinstruction)
+      | SOME p => p
 
 val polylibsister = let
   val p as {arcs,isAbs,vol} = OS.Path.fromString poly
@@ -206,13 +220,13 @@ val polymllibdir =
       | NONE => die ("\n\nYour overrides file specifies bogus location '"
                      ^polymllibdir ^
                      "'\nas the location of libpolymain.a\n" ^
-                     polylibinstruction)
+                     polylibinstruction);
+
+val DOT_PATH = if DOT_PATH = "" then "/usr/bin/dot" else DOT_PATH;
 
 val dynlib_available = false;
 
 print "\n";
-
-val DOT_PATH = "/usr/bin/dot"
 
 fun verdict (prompt, value) =
     if value = "" then
@@ -224,8 +238,14 @@ fun verdict (prompt, value) =
        print value;
        print "\n");
 
+fun optverdict (prompt, optvalue) =
+  (print (StringCvt.padRight #" " 20 (prompt ^ ":"));
+   print (case optvalue of NONE => "NONE" | SOME p => "SOME "^p);
+   print "\n");
+
 verdict ("OS", OS);
 verdict ("poly", poly);
+verdict ("polyc", polyc);
 verdict ("polymllibdir", polymllibdir);
 verdict ("holdir", holdir);
 verdict ("DOT_PATH", DOT_PATH);

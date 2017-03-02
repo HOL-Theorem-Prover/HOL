@@ -13,16 +13,16 @@ theorem-tactic, selective, free.
 and a theorem {(A1 |- w)} as arguments.  The tactic-generating function {f}
 is applied to the theorem {(w |- w)}.  If this tactic generates the subgoal:
 {
-    A ?- t
+    A0 ?- t
    =========  f (w |- w)
-    A ?- t1
+     A ?- t1
 }
 then applying {FREEZE_THEN f (A1 |- w)}
-to the goal {(A ?- t)} produces the subgoal:
+to the goal {(A0 ?- t)} produces the subgoal:
 {
-    A ?- t
-   =========  FREEZE_THEN f (A1 |- w)
-    A ?- t1
+             A0 ?- t
+   ===================  FREEZE_THEN f (A1 |- w)
+    A - {w}, A1 ?- t1
 }
 Since the term {w} is a hypothesis of the argument to the
 function {f}, none of the free variables present in {w} may be
@@ -35,7 +35,7 @@ tactic arises if the hypotheses of the theorem are not
 alpha-convertible to assumptions of the goal.
 
 \EXAMPLE
-Given the goal {([ "b < c"; "a < b" ], "(SUC a) <= c")}, and the
+Given the goal {([ ``b < c``, ``a < b`` ], ``SUC a <= c``)}, and the
 specialized variant of the theorem {LESS_TRANS}:
 {
    th = |- !p. a < b /\ b < p ==> a < p
@@ -43,7 +43,7 @@ specialized variant of the theorem {LESS_TRANS}:
 {IMP_RES_TAC th} will generate several unneeded assumptions:
 {
    {b < c, a < b, a < c, !p. c < p ==> b < p, !a'. a' < a ==> a' < b}
-       ?- (SUC a) <= c
+       ?- SUC a <= c
 }
 which can be avoided by first `freezing' the theorem, using
 the tactic
@@ -52,7 +52,7 @@ the tactic
 }
 This prevents the variables {a} and {b} from being instantiated.
 {
-   {b < c, a < b, a < c} ?- (SUC a) <= c
+   {b < c, a < b, a < c} ?- SUC a <= c
 }
 
 

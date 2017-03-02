@@ -2,9 +2,6 @@ open HolKernel boolLib bossLib
 open lcsymtacs blastLib stateLib
 open set_sepTheory progTheory temporal_stateTheory arm_stepTheory
 
-infix \\
-val op \\ = op THEN;
-
 val () = new_theory "arm_prog"
 
 (* ------------------------------------------------------------------------ *)
@@ -72,11 +69,11 @@ val arm_BE_WORD_def = Define`
 
 val arm_WORD_MEMORY_def = Define`
   arm_WORD_MEMORY dmem mem =
-  {BIGUNION { BIGUNION (arm_WORD a (mem a)) | a IN dmem /\ Aligned (a, 4)}}`
+  {BIGUNION { BIGUNION (arm_WORD a (mem a)) | a IN dmem /\ aligned 2 a}}`
 
 val arm_BE_WORD_MEMORY_def = Define`
   arm_BE_WORD_MEMORY dmem mem =
-  {BIGUNION { BIGUNION (arm_BE_WORD a (mem a)) | a IN dmem /\ Aligned (a, 4)}}`
+  {BIGUNION { BIGUNION (arm_BE_WORD a (mem a)) | a IN dmem /\ aligned 2 a}}`
 
 val arm_CONFIG_def = Define`
    arm_CONFIG (vfp, arch, bigend, thumb, mode) =
@@ -88,7 +85,7 @@ val arm_CONFIG_def = Define`
       arm_CPSR_M mode * cond (GoodMode mode)`;
 
 val arm_PC_def = Define`
-   arm_PC pc = arm_REG RName_PC pc * cond (Aligned (pc,4))`;
+   arm_PC pc = arm_REG RName_PC pc * cond (aligned 2 pc)`;
 
 val aS_def = Define `
    aS (n,z,c,v) = arm_CPSR_N n * arm_CPSR_Z z * arm_CPSR_C c * arm_CPSR_V v`;
@@ -118,7 +115,7 @@ val arm_CPSR_T_F = Q.store_thm("arm_CPSR_T_F",
 
 val arm_PC_INTRO = Q.store_thm("arm_PC_INTRO",
    `SPEC m (p1 * arm_PC pc) code (p2 * arm_REG RName_PC pc') ==>
-    (Aligned (pc,4) ==> Aligned (pc',4)) ==>
+    (aligned 2 pc ==> aligned 2 pc') ==>
     SPEC m (p1 * arm_PC pc) code (p2 * arm_PC pc')`,
    REPEAT STRIP_TAC
    \\ FULL_SIMP_TAC std_ss [arm_PC_def, SPEC_MOVE_COND, STAR_ASSOC, SEP_CLAUSES]
@@ -126,7 +123,7 @@ val arm_PC_INTRO = Q.store_thm("arm_PC_INTRO",
 
 val arm_TEMPORAL_PC_INTRO = Q.store_thm("arm_TEMPORAL_PC_INTRO",
    `TEMPORAL_NEXT m (p1 * arm_PC pc) code (p2 * arm_REG RName_PC pc') ==>
-    (Aligned (pc,4) ==> Aligned (pc',4)) ==>
+    (aligned 2 pc ==> aligned 2 pc') ==>
     TEMPORAL_NEXT m (p1 * arm_PC pc) code (p2 * arm_PC pc')`,
    REPEAT STRIP_TAC
    \\ FULL_SIMP_TAC std_ss
@@ -144,9 +141,9 @@ val x = mk_addr (boolSyntax.T, "x")
 val y = mk_addr (boolSyntax.F, "y")
 
 val Aligned_Branch = Q.store_thm("Aligned_Branch",
-   `(Aligned (pc:word32, 4) ==>
-     Aligned ((if b then pc - (^x + 1w) else pc + ^y), 4)) = T`,
-   rw [Aligned]
+   `(aligned 2 (pc:word32) ==>
+     aligned 2 (if b then pc - (^x + 1w) else pc + ^y)) = T`,
+   rw [alignmentTheory.aligned_extract]
    \\ blastLib.FULL_BBLAST_TAC
    )
 
@@ -166,17 +163,17 @@ val lem1 = Q.prove(
    simp [wordsTheory.word_lo_n2w])
 
 val lem2 = Q.prove(
-   `Aligned (a: word32, 4) /\ Aligned (b, 4) /\ x <+ 4w /\ y <+ 4w ==>
+   `aligned 2 (a: word32) /\ aligned 2 b /\ x <+ 4w /\ y <+ 4w ==>
     ((a + x = b + y) = (a = b) /\ (x = y))`,
-   simp [arm_stepTheory.Aligned]
+   simp [alignmentTheory.aligned_extract]
    \\ blastLib.BBLAST_TAC
    )
 
 fun thm v x y =
    stateTheory.MAPPED_COMPONENT_INSERT
    |> Q.ISPECL
-        [`\a:word32. Aligned (a, 4)`, `4`, `\a i. arm_c_MEM (a + n2w i)`,
-         `\v:word32 i.  arm_d_word8 (EL i ^v)`, x, y]
+        [`\a:word32. aligned 2 a`, `4n`, `\a i. arm_c_MEM (a + n2w i)`,
+         `\v:word32 i. arm_d_word8 (EL i ^v)`, x, y]
    |> Conv.CONV_RULE
         (Conv.LAND_CONV
             (SIMP_CONV (srw_ss())
@@ -197,7 +194,7 @@ val be_v4 = ``[(31 >< 24) v; (23 >< 16) v;
 (* Need ``(\a. ..) c`` below for automation to work *)
 val arm_WORD_MEMORY_INSERT = Q.store_thm("arm_WORD_MEMORY_INSERT",
    `!f df c d.
-     c IN df /\ (\a. Aligned (a, 4)) c ==>
+     c IN df /\ (\a. aligned 2 a) c ==>
      (arm_WORD c d * arm_WORD_MEMORY (df DELETE c) f =
       arm_WORD_MEMORY df ((c =+ d) f))`,
    match_mp_tac (thm v4 `arm_WORD` `arm_WORD_MEMORY`)
@@ -210,7 +207,7 @@ val arm_WORD_MEMORY_INSERT = Q.store_thm("arm_WORD_MEMORY_INSERT",
 
 val arm_BE_WORD_MEMORY_INSERT = Q.store_thm("arm_BE_WORD_MEMORY_INSERT",
    `!f df c d.
-     c IN df /\ (\a. Aligned (a, 4)) c ==>
+     c IN df /\ (\a. aligned 2 a) c ==>
      (arm_BE_WORD c d * arm_BE_WORD_MEMORY (df DELETE c) f =
       arm_BE_WORD_MEMORY df ((c =+ d) f))`,
    match_mp_tac (thm be_v4 `arm_BE_WORD` `arm_BE_WORD_MEMORY`)

@@ -1,8 +1,8 @@
 \DOC dest_thy_type
 
 \BLTYPE
-dest_thy_type 
-    : hol_type -> {Thy:string, Tyop:string, 
+dest_thy_type
+    : hol_type -> {Thy:string, Tyop:string,
                    Args:hol_type list}
 \ELTYPE
 
@@ -12,8 +12,8 @@ Breaks apart a type (other than a variable type).
 
 
 \DESCRIBE
-If {ty} is an application of a type operator {Tyop}, which 
-was declared in theory {Thy}, to a list of types {Args}, then 
+If {ty} is an application of a type operator {Tyop}, which
+was declared in theory {Thy}, to a list of types {Args}, then
 {dest_thy_type ty} returns {{Tyop,Thy,Args}}.
 
 \FAILURE

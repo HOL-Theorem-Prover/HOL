@@ -44,7 +44,7 @@ val BAG_IN = new_definition (
 val _ = set_fixity "<:" (Infix(NONASSOC, 425))
 val _ = overload_on ("<:", ``BAG_IN``)
 val _ = Unicode.unicode_version {tmnm = "<:", u = UTF8.chr 0x22F2}
-        (* U+22F2 looks like ⋲ in your current font; unfortunately this
+        (* U+22F2 looks like ⋲ in your current font; unfortunately this   (UOK)
            symbol doesn't seem to correspond to anything in LaTeX... *)
 val _ = TeX_notation {hol = "<:", TeX = ("\\HOLTokenIn{}:",2)}
 val _ = TeX_notation {hol = UTF8.chr 0x22F2, TeX = ("\\HOLTokenIn{}:",2)}
@@ -139,16 +139,14 @@ val BAG_INN_BAG_INSERT_STRONG = store_thm (
   PROVE_TAC[BAG_INN_LESS]);
 
 val BAG_UNION_EQ_LCANCEL1 = store_thm(
-  "BAG_UNION_EQ_LCANCEL1",
+  "BAG_UNION_EQ_LCANCEL1[simp]",
   ``(b = BAG_UNION b c) <=> (c = {||})``,
   rw[BAG_UNION, EMPTY_BAG, FUN_EQ_THM, DECIDE ``(x:num = x + y) <=> (y = 0)``])
-val _ = export_rewrites ["BAG_UNION_EQ_LCANCEL1"]
 
 val BAG_UNION_EQ_RCANCEL1 = store_thm(
-  "BAG_UNION_EQ_RCANCEL1",
+  "BAG_UNION_EQ_RCANCEL1[simp]",
   ``(b = BAG_UNION c b) <=> (c = {||})``,
-  rw[BAG_UNION, EMPTY_BAG, FUN_EQ_THM, DECIDE ``(x:num = y + x) <=> (y = 0)``])
-val _ = export_rewrites ["BAG_UNION_EQ_RCANCEL1"]
+  rw[BAG_UNION, EMPTY_BAG, FUN_EQ_THM, DECIDE ``(x:num = x + y) <=> (y = 0)``])
 
 val BAG_IN_BAG_UNION = Q.store_thm(
   "BAG_IN_BAG_UNION",
@@ -2470,11 +2468,11 @@ val mlt_dominates_thm1 = store_thm(
           strip_tac >> map_every qexists_tac [`{|e|}`, `rep`] >>
           simp[COMM_BAG_UNION]) >>
       rpt strip_tac >>
-      qmatch_assum_rename_tac `mlt1 R B0 B1` [] >>
-      qmatch_assum_rename_tac `mlt R B1 B2` [] >>
+      qmatch_assum_rename_tac `mlt1 R B0 B1` >>
+      qmatch_assum_rename_tac `mlt R B1 B2` >>
       fs[mlt1_def] >>
-      qmatch_assum_rename_tac `!e'. BAG_IN e' Rep ==> R e' E` [] >>
-      qmatch_assum_rename_tac `(B2 - X) + Y = Res + {|E|}` []>>
+      qmatch_assum_rename_tac `!e'. BAG_IN e' Rep ==> R e' E` >>
+      qmatch_assum_rename_tac `(B2 - X) + Y = Res + {|E|}` >>
       Cases_on `BAG_IN E Y`
       >- (map_every qexists_tac [`X`, `Y - {| E |} + Rep`] >>
           simp[] >> reverse conj_tac

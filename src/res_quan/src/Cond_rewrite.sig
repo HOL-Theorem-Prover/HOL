@@ -18,7 +18,7 @@ sig
   val search_top_down
    :term -> term -> ((term,term)subst * (hol_type,hol_type)subst) list
   val COND_REWR_CONV
-   :(term -> term -> ((term,term)subst * (hol_type,hol_type)subst)list)
+   :(term -> term -> ((term,term)subst * (hol_type,hol_type)subst) list)
     -> thm -> conv
   val COND_REWR_CANON    : thm -> thm
   val COND_REWRITE1_TAC  : thm_tactic

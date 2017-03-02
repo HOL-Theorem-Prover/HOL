@@ -6,13 +6,13 @@
 Sets up a new binder in the current theory.
 
 \DESCRIBE
-A call {new_binder(bnd,ty)} declares a new binder {bnd} in the 
+A call {new_binder(bnd,ty)} declares a new binder {bnd} in the
 current theory. The type must be of the form {('a -> 'b) -> 'c}, because
-being a binder, {bnd} will apply to an abstraction; for example 
+being a binder, {bnd} will apply to an abstraction; for example
 {
    !x:bool. (x=T) \/ (x=F)
 }
-is actually a prettyprinting of 
+is actually a prettyprinting of
 {
    $! (\x. (x=T) \/ (x=F))
 }

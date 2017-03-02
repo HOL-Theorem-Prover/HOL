@@ -6,12 +6,13 @@ sig
   val exec : string * string list -> 'a
   val protect : string -> string
   val xable_string : string -> string
-  val mk_xable : string -> string
+  val mk_xable : string -> OS.Process.status
 
 (* first argument to these are the name of the desired executable, the
    second is the name of the post-initialisation script to run. *)
-  val emit_hol_script : string -> string -> string list -> string
-  val emit_hol_unquote_script : string -> string -> string list -> string
+  val emit_hol_script : string -> string -> string list -> OS.Process.status
+  val emit_hol_unquote_script : string -> string -> string list ->
+                                OS.Process.status
 
   val find_my_path : unit -> string
 
@@ -19,6 +20,8 @@ sig
   val HOLDIR : string
   val POLYMLLIBDIR : string
   val POLY : string
+  val POLYC : string
+  val POLY_VERSION : int
   val POLY_LDFLAGS : string list
   val POLY_LDFLAGS_STATIC : string list
   val CC : string
@@ -30,6 +33,7 @@ sig
   val DYNLIB : bool
   val ML_SYSNAME : string
   val DOT_PATH : string
+  val DEFAULT_STATE : string
 
   val isUnix : bool
   val pointer_eq : 'a * 'a -> bool
@@ -44,4 +48,4 @@ sig
   val release : string
   val version : int
 
-end;
+end

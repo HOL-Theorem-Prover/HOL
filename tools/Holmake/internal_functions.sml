@@ -238,6 +238,32 @@ fun wildcard s =
         | _ => (case recurse pfx starting_dir rest of [] => [s] | x => x)
     end
 
+fun get_first f [] = NONE
+  | get_first f (h::t) = (case f h of NONE => get_first f t | x => x)
+
+fun which arg =
+  let
+    open OS.FileSys Systeml
+    val sepc = if isUnix then #":" else #";"
+    fun check p =
+      let
+        val fname = OS.Path.concat(p, arg)
+      in
+        if access (fname, [A_READ, A_EXEC]) then SOME fname else NONE
+      end
+    fun smash NONE = "" | smash (SOME s) = s
+  in
+    case OS.Process.getEnv "PATH" of
+        SOME path =>
+        let
+          val paths = (if isUnix then [] else ["."]) @
+                      String.fields (fn c => c = sepc) path
+        in
+          smash (get_first check paths)
+        end
+    | NONE => if isUnix then "" else smash (check ".")
+  end
+
 fun function_call (fnname, args, eval) = let
   open Substring
 in
@@ -294,6 +320,13 @@ in
                       in
                         if size sfx = 0 then "" else findstr
                       end
+  | "which" => if length args <> 1 then
+                 raise Fail "Bad number of arguments to 'which' function"
+               else let
+                 val arg_evalled = eval (hd args)
+               in
+                 which arg_evalled
+               end
   | "wildcard" => if length args <> 1 then
                     raise Fail "Bad number of arguments to 'wildcard' function"
                   else let

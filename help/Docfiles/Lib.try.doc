@@ -12,7 +12,7 @@ exception, error, application
 The application {try f x} evaluates {f x}; if this evaluation raises an
 exception {e}, then {e} is examined and some information about it is
 printed before {e} is re-raised. If {f x} evaluates to {y}, then {y} is
-returned. 
+returned.
 
 Often, a {HOL_ERR} exception can propagate all the way to the top level.
 Unfortunately, the information held in the exception is not then printed.
@@ -24,14 +24,14 @@ When application of the first argument to the second raises an exception.
 \EXAMPLE
 {
 - mk_comb (T,F);
-! Uncaught exception: 
+! Uncaught exception:
 ! HOL_ERR
 
 - try mk_comb (T,F);
 
 Exception raised at Term.mk_comb:
 incompatible types
-! Uncaught exception: 
+! Uncaught exception:
 ! HOL_ERR
 }
 Evaluation order can be significant. ML evaluates {try M N} by
@@ -43,14 +43,14 @@ abstraction is not detected by {try} and the exception propagates all
 the way to the top level; however, {Raise} does handle the exception.
 {
     - try mk_comb (T, mk_abs(T,T));
-    ! Uncaught exception: 
+    ! Uncaught exception:
     ! HOL_ERR
 
     - mk_comb (T, mk_abs(T,T)) handle e => Raise e;
 
     Exception raised at Term.mk_abs:
     Bvar not a variable
-    ! Uncaught exception: 
+    ! Uncaught exception:
     ! HOL_ERR
 }
 

@@ -9,8 +9,8 @@ Check a running timer, and print out how long it has been running.
 time.
 
 \DESCRIBE
-An application {end_time timer}	looks to see how long {timer} has been 
-running, and prints out the elapsed runtime, garbage collection time, 
+An application {end_time timer}	looks to see how long {timer} has been
+running, and prints out the elapsed runtime, garbage collection time,
 and system time.
 
 \FAILURE
@@ -21,7 +21,7 @@ Never fails.
 - val clock = start_time();
 > val clock = <cpu_timer> : cpu_timer
 
-- use "foo.sml";  
+- use "foo.sml";
 > ... output omitted ...
 
 - end_time clock;
@@ -31,8 +31,8 @@ runtime: 525.996s,    gctime: 0.000s,     systime: 525.996s.
 
 
 \COMMENTS
-A {start_time} ... {end_time} pair is for use when calling {time} 
-would be clumsy, e.g., when multiple function applications are to 
+A {start_time} ... {end_time} pair is for use when calling {time}
+would be clumsy, e.g., when multiple function applications are to
 be timed.
 
 \SEEALSO

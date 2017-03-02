@@ -12,6 +12,7 @@ sig
   val disj1_tac : tactic
   val disj2_tac : tactic
   val gen_tac : tactic
+  val var_eq_tac : tactic
   val rpt : tactic -> tactic
   val ntac : int -> tactic -> tactic
   val reverse : tactic -> tactic
@@ -25,6 +26,9 @@ sig
   val ho_match_mp_tac : thm_tactic
   val mp_tac : thm_tactic
   val match_mp_tac : thm_tactic
+
+  val every_case_tac : tactic
+  val full_case_tac : tactic
 
   val rule_assum_tac : (thm -> thm) -> tactic
   val pop_assum : thm_tactic -> tactic
@@ -46,9 +50,12 @@ sig
   val qpat_abbrev_tac : term quotation -> tactic
   val qmatch_abbrev_tac : term quotation -> tactic
   val qho_match_abbrev_tac : term quotation -> tactic
-  val qmatch_rename_tac : term quotation -> string list -> tactic
+  val qmatch_rename_tac : term quotation -> tactic
   val qmatch_assum_abbrev_tac : term quotation -> tactic
-  val qmatch_assum_rename_tac : term quotation -> string list -> tactic
+  val qmatch_assum_rename_tac : term quotation -> tactic
+  val qmatch_asmsub_rename_tac : term quotation -> tactic
+  val qmatch_goalsub_rename_tac : term quotation -> tactic
+  val rename1 : term quotation -> tactic
 
   val assume_tac : thm_tactic
   val strip_assume_tac : thm_tactic
@@ -87,9 +94,22 @@ sig
   val fs : thm list -> tactic
   val rfs : thm list -> tactic
 
-  val >> : tactic * tactic -> tactic
-  val \\ : tactic * tactic -> tactic
-  val >| : tactic * tactic list -> tactic
+  val >> : ('a -> goal list * (thm list -> 'b)) * tactic ->
+         'a -> goal list * (thm list -> 'b)
+  val \\ : ('a -> goal list * (thm list -> 'b)) * tactic ->
+         'a -> goal list * (thm list -> 'b)
+  (* ie, tactic * tactic -> tactic OR list_tactic * tactic -> list_tactic *)
+
+  val >| : ('a -> goal list * (thm list -> 'b)) * tactic list ->
+         'a -> goal list * (thm list -> 'b)
+  (* ie, tactic * tactic list -> tactic OR
+    list_tactic * tactic list -> list_tactic *)
+
   val >- : tactic * tactic -> tactic
+
+  val >>> : ('a -> goal list * (thm list -> 'b)) * list_tactic ->
+        'a -> goal list * (thm list -> 'b)
+  (* ie, tactic * list_tactic -> tactic OR
+    list_tactic * list_tactic -> list_tactic *)
 
 end

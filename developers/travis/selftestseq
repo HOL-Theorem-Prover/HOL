@@ -10,6 +10,7 @@ src/n-bit
 src/bag
 !examples/ind_def
 !examples/lambda/basics
-!examples/parsing
+!examples/formal-languages
+!examples/formal-languages/context-free
 !examples/unification/triangular/first-order
 !examples/zipper

@@ -29,6 +29,7 @@
 *.tix
 *.hix
 *.fdb_latexmk
+*.synctex.gz
 
 #Generated Verilog from Iyoda/Gordon hw compilation
 *.vl
@@ -41,19 +42,6 @@ build-log
 svn-update
 developers/generateBuildSummary
 developers/comparelogs
-bin/Holmake
-bin/build
-bin/hol
-bin/hol.bare
-bin/hol.bare.noquote
-bin/hol.noquote
-bin/unquote
-bin/hol.builder
-bin/hol.builder0
-bin/heapname
-bin/buildheap
-bin/*.bat
-
 developers/docfiles/*.txt
 
 tools*/Holmake/Systeml.sml
@@ -133,11 +121,7 @@ examples/set-theory/hol_sets/ordinalML.*
 
 examples/theorem-prover/lisp-runtime/bin/*.s
 
-
 examples/computability/lambda/computability-heap
-
-examples/miniML/hol2miniml/*.txt
-examples/miniML/hol2miniml/miniml-heap
 
 local-hol-heap
 examples/l3-machine-code/**/*-heap

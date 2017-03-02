@@ -208,7 +208,7 @@ srw_tac [][] >- (
   srw_tac [][EQ_IMP_THM,CHOICE_DEF] >>
   first_x_assum (qspec_then `t` mp_tac) >>
   srw_tac [][] >>
-  qmatch_assum_rename_tac `x ∈ f.cod` [] >>
+  qmatch_assum_rename_tac `x ∈ f.cod` >>
   first_x_assum (qspecl_then [`TypedGraphFun (f.dom,f.cod) (K x)`,`TypedGraphFun (f.dom,f.cod) (K (CHOICE f.cod))`] mp_tac) >>
   srw_tac [][CHOICE_DEF] >>
   fsrw_tac [][morphism_component_equality,restrict_def] >>
@@ -219,7 +219,7 @@ srw_tac [][] >- (
   qpat_assum `x ∈ f.cod` mp_tac >>
   simp_tac std_ss [] )
 >- (
-  qmatch_assum_rename_tac `y ∈ U` [] >>
+  qmatch_assum_rename_tac `y ∈ U` >>
   qexists_tac `TypedGraphFun (y,{x}) (K x)` >>
   srw_tac [][] ) >>
 srw_tac [][TypedFun_ext] >>

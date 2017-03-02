@@ -544,64 +544,65 @@ structure Yices = struct
              is still missing. *)
 
           (* case constants for data types (+ arguments) *)
-          (if List.null rands then
-            raise Feedback.mk_HOL_ERR "Yices" "translate_term"
-              "not a case constant (no operands)"
-          else
-            let val (cases, elem) = Lib.front_last rands
-                val data_ty = Term.type_of elem
-            in
-              case TypeBase.fetch data_ty of
-                SOME tyinfo =>
-                  if Term.same_const rator (TypeBasePure.case_const_of tyinfo)
-                  then
-                    let (* constructors *)
-                        val cs = TypeBasePure.constructors_of tyinfo
-                        val _ = if List.length cs = List.length cases then ()
-                          else
-                            raise Feedback.mk_HOL_ERR "Yices" "translate_term"
-                              "not a case constant (wrong number of cases)"
-                        (* translate argument terms *)
-                        val (acc, yices_cases) = Lib.foldl_map translate_term
-                          (acc, cases)
-                        val (acc, yices_elem) = translate_term (acc, elem)
-                        val (_, _, ty_dict, _, _) = acc
-                        val ty_name = Redblackmap.find (ty_dict, data_ty)
-                        (* recognizers, accessors *)
-                        val cs = List.map (List.length o Lib.fst o
-                          boolSyntax.strip_fun o Term.type_of) cs
-                        val (_, cs) = Lib.foldl_map (fn (i, n) =>
-                          let val cname = "c_" ^ ty_name ^ "_" ^ Int.toString i
-                              fun aname j =
-                                "a_" ^ ty_name ^ "_" ^ Int.toString i ^ "_" ^
-                                  Int.toString j
-                              val anames = List.tabulate (n, aname)
-                          in
-                            (i + 1, (cname, anames))
-                          end) (0, cs)
-                        (* build the cascaded ite expression *)
-                        val mk_case = List.foldl (fn (aname, yices_case) =>
-                          "(" ^ yices_case ^ " (" ^ aname ^ " " ^ yices_elem ^
-                          "))")
-                        fun cascaded_ite [ycase] [(_, anames)] =
-                          mk_case ycase anames
-                          | cascaded_ite (ycase::ys) ((cname, anames)::cs) =
-                          "(ite (" ^ cname ^ "? " ^ yices_elem ^ ") " ^
-                            mk_case ycase anames ^ " " ^ cascaded_ite ys cs ^
-                            ")"
-                          | cascaded_ite _ _ =
-                          raise Feedback.mk_HOL_ERR "Yices" "translate_term"
-                            "not a case constant (error in cascaded_ite)"
-                    in
-                      (acc, cascaded_ite yices_cases cs)
-                    end
-                  else
+          let val (cases, elem) =
+                case rands of
+                  [] =>
                     raise Feedback.mk_HOL_ERR "Yices" "translate_term"
-                      "not a case constant (different constant)"
-              | NONE =>
+                      "not a case constant (no operands)"
+                | (h::t) => (t,h)
+              val data_ty = Term.type_of elem
+          in
+            case TypeBase.fetch data_ty of
+              SOME tyinfo =>
+                if Term.same_const rator (TypeBasePure.case_const_of tyinfo)
+                then
+                  let (* constructors *)
+                      val cs = TypeBasePure.constructors_of tyinfo
+                      val _ = if List.length cs = List.length cases then ()
+                        else
+                          raise Feedback.mk_HOL_ERR "Yices" "translate_term"
+                            "not a case constant (wrong number of cases)"
+                      (* translate argument terms *)
+                      val (acc, yices_cases) = Lib.foldl_map translate_term
+                        (acc, cases)
+                      val (acc, yices_elem) = translate_term (acc, elem)
+                      val (_, _, ty_dict, _, _) = acc
+                      val ty_name = Redblackmap.find (ty_dict, data_ty)
+                      (* recognizers, accessors *)
+                      val cs = List.map (List.length o Lib.fst o
+                        boolSyntax.strip_fun o Term.type_of) cs
+                      val (_, cs) = Lib.foldl_map (fn (i, n) =>
+                        let val cname = "c_" ^ ty_name ^ "_" ^ Int.toString i
+                            fun aname j =
+                              "a_" ^ ty_name ^ "_" ^ Int.toString i ^ "_" ^
+                                Int.toString j
+                            val anames = List.tabulate (n, aname)
+                        in
+                          (i + 1, (cname, anames))
+                        end) (0, cs)
+                      (* build the cascaded ite expression *)
+                      val mk_case = List.foldl (fn (aname, yices_case) =>
+                        "(" ^ yices_case ^ " (" ^ aname ^ " " ^ yices_elem ^
+                        "))")
+                      fun cascaded_ite [ycase] [(_, anames)] =
+                        mk_case ycase anames
+                        | cascaded_ite (ycase::ys) ((cname, anames)::cs) =
+                        "(ite (" ^ cname ^ "? " ^ yices_elem ^ ") " ^
+                          mk_case ycase anames ^ " " ^ cascaded_ite ys cs ^
+                          ")"
+                        | cascaded_ite _ _ =
+                        raise Feedback.mk_HOL_ERR "Yices" "translate_term"
+                          "not a case constant (error in cascaded_ite)"
+                  in
+                    (acc, cascaded_ite yices_cases cs)
+                  end
+                else
                   raise Feedback.mk_HOL_ERR "Yices" "translate_term"
-                    "not a case constant (last argument is not a data type)"
-            end)
+                    "not a case constant (different constant)"
+            | NONE =>
+                raise Feedback.mk_HOL_ERR "Yices" "translate_term"
+                  "not a case constant (last argument is not a data type)"
+          end
           handle Feedback.HOL_ERR _ =>  (* not a case constant *)
 
           (* record field selectors *)

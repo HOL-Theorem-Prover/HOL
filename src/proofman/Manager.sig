@@ -27,6 +27,8 @@ sig
   (* Applying a tactic to a goal *)
   val expand         : tactic -> proof -> proof
   val expandf        : tactic -> proof -> proof
+  val expand_list    : list_tactic -> proof -> proof
+  val expand_listf   : list_tactic -> proof -> proof
   val expandv        : string * tactic -> proof -> proof
 
   (* Seeing what the state of the proof manager is *)
@@ -39,6 +41,7 @@ sig
 
   (* Switch focus to a different subgoal (or proof attempt) *)
   val rotate         : int -> proof -> proof
+  val flatn          : int -> proof -> proof
   val rotate_proofs  : int -> proofs -> proofs
 
   (* Operations on proof attempts *)

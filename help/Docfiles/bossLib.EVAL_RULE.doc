@@ -8,14 +8,14 @@ Evaluate conclusion of a theorem.
 \KEYWORDS
 evaluation.
 
-\DESCRIBE 
+\DESCRIBE
 
 An invocation {EVAL_RULE th} symbolically evaluates the
 conclusion of {th} by applying the defining equations of constants
 which occur in the conclusion of {th}. These equations are held in a
 mutable datastructure that is automatically added to by {Hol_datatype},
 {Define}, and {tprove}. The underlying algorithm is call-by-value with a
-few differences, see the entry for {CBV_CONV} for details.   
+few differences, see the entry for {CBV_CONV} for details.
 
 \FAILURE
 Never fails, but may diverge.

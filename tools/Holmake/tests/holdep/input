@@ -1,0 +1,39 @@
+open foo bar (* yikes *) baz openfoo
+open manic1 open manic2;
+open data1
+open data2.fool
+datatype datafoo
+
+fun f x = qux.yy.z + r2.x * f (2 * (* foo (* bar foolcomment.x *) ****) z)
+fun g x = m31.z + x
+fun h x = let
+    open module module_2 module' inf #$
+in
+   x "fooledyou1.bar open fooledyou2 in" * 3
+end
+
+"\226\138\140", "foo", "$\\\\", "\^[", #"\000"
+
+open OS.Process ++.fool1.barfool
+val x = f y
+
+fun openFool1 x = x
+fun opopen openFool2 x = x
+fun f x = Opopen.x + qidcolon.::>
+
+include included_module'
+type extrastate = base_lexer.UserDecs.extrastate
+
+include included1 included2
+val x : int
+
+include included3 ;
+val y : int
+
+include included4
+datatype datafoo
+
+include included5 where type t = int
+
+open functortest
+functor funct(val x : int) =

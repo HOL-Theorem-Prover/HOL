@@ -972,31 +972,30 @@ fun trav f =
  *  Raw syntax prettyprinter for terms.                                      *
  *---------------------------------------------------------------------------*)
 
-val dot     = "."
+val app     = "@"
+val lam     = "|"
 val dollar  = "$"
-val percent = "%";
+val percent = "%"
+datatype pptask = ppTM of term | ppLAM | ppAPP
+fun pp_raw_term index tm = let
+  fun pp acc tasklist =
+      case tasklist of
+          [] => String.concat (List.rev acc)
+        | ppTM (Abs(Bvar, Body)) :: rest =>
+            pp acc (ppTM Bvar :: ppTM Body :: ppLAM :: rest)
+        | ppTM (Comb(Rator, Rand)) :: rest =>
+            pp acc (ppTM Rator :: ppTM Rand :: ppAPP :: rest)
+        | ppTM (Bv i) :: rest =>
+            pp (dollar ^ Int.toString i :: acc) rest
+        | ppTM a :: rest =>
+            pp (percent ^ Int.toString (index a) :: acc) rest
+        | ppLAM :: rest => pp (lam :: acc) rest
+        | ppAPP :: rest => pp (app :: acc) rest
+in
+  pp [] [ppTM tm]
+end
 
-fun pp_raw_term index pps tm =
- let open Portable
-     val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
-     fun pp (Abs(Bvar,Body)) =
-          ( add_string "(|";
-            pp Bvar; add_string dot; add_break(1,0);
-            pp Body; add_string ")" )
-      | pp (Comb(Rator,Rand)) =
-         ( add_string "("; pp Rator; add_break(1,0);
-                           pp Rand; add_string ")")
-      | pp (Bv i) = add_string (dollar^Lib.int_to_string i)
-      | pp a      = add_string (percent^Lib.int_to_string (index a))
- in
-   begin_block INCONSISTENT 0;
-   pp (norm_clos tm);
-   end_block()
- end;
-
-fun write_raw index =
-    String.translate (fn #"\n" => " " | c => str c) o
-    HOLPP.pp_to_string 75 (pp_raw_term index)
+fun write_raw index tm = pp_raw_term index (norm_clos tm)
 
 (*---------------------------------------------------------------------------*
  * Fetching theorems from disk. The following parses the "raw" term          *
@@ -1005,10 +1004,8 @@ fun write_raw index =
 
 local
 datatype lexeme
-   = dot
+   = app
    | lamb
-   | lparen
-   | rparen
    | ident of int
    | bvar  of int;
 
@@ -1025,60 +1022,33 @@ end;
 (* don't allow numbers to be split across fragments *)
 
 fun lexer ss1 =
-  case Substring.getc (Lib.deinitcommentss ss1) of
-                      (* was: (Substring.dropl Char.isSpace ss1) *)
+  case Substring.getc ss1 of
     NONE => NONE
   | SOME (c,ss2) =>
     case c of
-      #"."  => SOME(dot,   ss2)
-    | #"|" => SOME(lamb,  ss2)
-    | #"("  => SOME(lparen,ss2)
-    | #")"  => SOME(rparen,ss2)
-    | #"%"  => let val (n,ss3) = take_numb ss2 in SOME(ident n, ss3) end
-    | #"$"  => let val (n,ss3) = take_numb ss2 in SOME(bvar n,  ss3) end
-    |   _   => raise ERR "raw lexer" "bad character";
-
-fun eat_rparen ss =
-  case lexer ss
-   of SOME (rparen, ss') => ss'
-    |   _ => raise ERR "eat_rparen" "expected right parenthesis";
-
-fun eat_dot ss =
-  case lexer ss
-   of SOME (dot, ss') => ss'
-    |   _ => raise ERR "eat_dot" "expected a \".\"";
+        #"|" => SOME(lamb,  ss2)
+      | #"%"  => let val (n,ss3) = take_numb ss2 in SOME(ident n, ss3) end
+      | #"$"  => let val (n,ss3) = take_numb ss2 in SOME(bvar n,  ss3) end
+      | #"@" => SOME(app, ss2)
+      |   _   => raise ERR "raw lexer" "bad character";
 
 in
 fun read_raw tmv = let
   fun index i = Vector.sub(tmv, i)
   fun parse (stk,ss) =
-      case lexer ss of
-        SOME (bvar n,  rst) => (Bv n::stk,rst)
-      | SOME (ident n, rst) => (index n::stk,rst)
-      | SOME (lparen,  rst) =>
-        (case lexer rst
-          of SOME (lamb, rst') => parse (glamb (stk,rst'))
-           |    _              => parse (parsel (parse (stk,rst))))
-      |  _ => (stk,ss)
-  and
-     parsel (stk,ss) =
-        case parse (stk,ss)
-         of (h1::h2::t, ss') => (Comb(h2,h1)::t, eat_rparen ss')
-          |   _              => raise ERR "raw.parsel" "impossible"
-  and
-     glamb(stk,ss) =
-     case lexer ss
-       of SOME (ident n, rst) =>
-            (case parse (stk, eat_dot rst)
-              of (h::t,rst1) => (Abs(index n,h)::t, eat_rparen rst1)
-               |   _         => raise ERR "glamb" "impossible")
-        | _ => raise ERR "glamb" "expected an identifier"
+      case (stk, lexer ss) of
+        (_, SOME (bvar n,  rst)) => parse (Bv n::stk,rst)
+      | (_, SOME (ident n, rst)) => parse (index n::stk,rst)
+      | (x::f::stk, SOME (app, rst)) => parse (Comb(f,x)::stk, rst)
+      | (bd::bv::stk, SOME(lam,rst)) => parse (Abs(bv,bd)::stk, rst)
+      | (_, SOME(app, _)) => raise ERR "read_raw" "app: small stack"
+      | (_, SOME(lam, _)) => raise ERR "read_raw" "lam: small stack"
+      | ([tm], NONE) => tm
+      | ([], NONE) => raise ERR "read_raw" "eof: empty stack"
+      | (_, NONE) => raise ERR "read_raw" "eof: large stack"
 in
-fn s =>
-   case parse ([], Substring.full s)
-     of ([v], _)  => v
-      | otherwise => raise ERR "raw term parser" "parse failed"
-end;
+fn s => parse ([], Substring.full s)
+end
 end (* local *)
 
 (* ----------------------------------------------------------------------

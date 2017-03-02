@@ -119,4 +119,6 @@ sig
  val TUPLE_TAC        : term -> tactic
 
  val LET_INTRO_TAC    : tactic
+
+ val new_specification : string * string list * thm -> thm
 end

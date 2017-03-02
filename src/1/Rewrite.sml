@@ -190,6 +190,8 @@ fun REWRITE_TAC thl = GEN_REWRITE_TAC Conv.TOP_DEPTH_CONV (implicit_rewrites())
 and ONCE_REWRITE_TAC thl =
     GEN_REWRITE_TAC Conv.ONCE_DEPTH_CONV (implicit_rewrites()) thl;
 
+val rewrite_tac = REWRITE_TAC and once_rewrite_tac = ONCE_REWRITE_TAC
+
 
 (* Rewrite a goal with the help of its assumptions *)
 
@@ -201,6 +203,9 @@ and PURE_ONCE_ASM_REWRITE_TAC thl :tactic =
    Tactical.ASSUM_LIST (fn asl => PURE_ONCE_REWRITE_TAC (asl @ thl))
 and ONCE_ASM_REWRITE_TAC thl :tactic      =
    Tactical.ASSUM_LIST (fn asl => ONCE_REWRITE_TAC (asl @ thl));
+
+val asm_rewrite_tac = ASM_REWRITE_TAC
+val once_asm_rewrite_tac = ONCE_ASM_REWRITE_TAC
 
 (* Rewriting using equations that satisfy a predicate  *)
 fun FILTER_PURE_ASM_REWRITE_RULE f thl th =

@@ -2269,11 +2269,12 @@ REPEAT STRIP_TAC THEN EQ_TAC THENL [
 
 
    REPEAT STRIP_TAC THEN
-   Cases_on `R (SOME s1) NONE` THEN (
-      ASM_SIMP_TAC std_ss [fasl_star_REWRITE, fasl_order_THM]
-   ) THEN
+   lcsymtacs.rename1 `f (SOME s1) (SOME s2) = SOME y` THEN
+   Cases_on `R (SOME s1) NONE` THEN
+   ASM_SIMP_TAC std_ss [fasl_star_REWRITE, fasl_order_THM] THEN
    `~(R (SOME y) NONE)` by METIS_TAC[] THEN
-   ASM_SIMP_TAC std_ss [asl_star_def, IN_ABS, IN_SING, fasl_order_THM, SUBSET_DEF]
+   ASM_SIMP_TAC std_ss [asl_star_def, IN_ABS, IN_SING, fasl_order_THM,
+                        SUBSET_DEF]
 ]);
 
 
@@ -2429,7 +2430,8 @@ val fasl_action_order_TRANSITIVE = store_thm ("fasl_action_order_TRANSITIVE",
 PROVE_TAC [fasl_action_order_IS_WEAK_ORDER, WeakOrder, transitive_def]);
 
 
-val ASL_IS_LOCAL_ACTION___HOARE_TRIPLE = store_thm ("ASL_IS_LOCAL_ACTION___HOARE_TRIPLE",
+val ASL_IS_LOCAL_ACTION___HOARE_TRIPLE = store_thm (
+  "ASL_IS_LOCAL_ACTION___HOARE_TRIPLE",
    ``!f a. (
       ASL_IS_LOCAL_ACTION f a =
       (!P Q. (HOARE_TRIPLE P a Q ==>
@@ -2439,16 +2441,18 @@ SIMP_TAC std_ss [HOARE_TRIPLE_def, fasl_order_THM, ASL_IS_LOCAL_ACTION_def,
    ASL_IS_SEPARATE_def, IS_SOME_EXISTS, GSYM LEFT_FORALL_IMP_THM] THEN
 REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
    FULL_SIMP_TAC std_ss [asl_star_def, IN_ABS, SUBSET_DEF] THEN
+   lcsymtacs.rename1 `SOME s = f (SOME p) (SOME q)` THEN
    `fasl_order (a s) (fasl_star f (a p) (SOME {q}))` by METIS_TAC[] THEN
    `?p'. (a p = SOME p') /\ !x. x IN p' ==> x IN Q` by METIS_TAC[] THEN
    FULL_SIMP_TAC std_ss [fasl_star_REWRITE, fasl_order_THM,
       asl_star_def, IN_SING, IN_ABS, SUBSET_DEF] THEN
    METIS_TAC[],
 
-   Cases_on `a s1` THEN (
-      ASM_SIMP_TAC std_ss [fasl_star_REWRITE, fasl_order_THM]
-   ) THEN
-   Q.PAT_ASSUM `!P Q. X P Q` (MP_TAC o Q.SPECL [`{s1}`, `x`]) THEN
+   lcsymtacs.rename1 `f (SOME s1) (SOME s2) = SOME y` THEN
+   Cases_on `a s1` THEN
+   ASM_SIMP_TAC std_ss [fasl_star_REWRITE, fasl_order_THM] THEN
+   lcsymtacs.rename1 `a s1 = SOME xx` THEN
+   Q.PAT_ASSUM `!P Q. X P Q` (MP_TAC o Q.SPECL [`{s1}`, `xx`]) THEN
    ASM_SIMP_TAC std_ss [IN_SING, SUBSET_REFL, asl_star_def,
       IN_ABS, SUBSET_DEF] THEN
    SIMP_TAC std_ss [GSYM LEFT_EXISTS_IMP_THM] THEN
@@ -2865,12 +2869,13 @@ SIMP_TAC std_ss [IS_NON_EMPTY_COMPLETE_LATTICE_def,
 val best_local_action_def = Define `
    best_local_action f P1 P2 s =
       let set = \p. ?s0 s1. ((SOME s) = f (SOME s0) (SOME s1)) /\ (s1 IN P1) /\ (p = fasl_star f (SOME P2) (SOME {s0})) in
-      INF_fasl_order set`
+      INF_fasl_order set`;
 
-val best_local_action_IS_LOCAL = store_thm ("best_local_action_IS_LOCAL",
-``!f P1 P2.
-IS_SEPARATION_COMBINATOR f ==>
-ASL_IS_LOCAL_ACTION f (best_local_action f P1 P2)``,
+val best_local_action_IS_LOCAL = store_thm (
+  "best_local_action_IS_LOCAL",
+  ``!f P1 P2.
+      IS_SEPARATION_COMBINATOR f ==>
+      ASL_IS_LOCAL_ACTION f (best_local_action f P1 P2)``,
 
 ONCE_REWRITE_TAC [IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
 SIMP_TAC std_ss [ASL_IS_LOCAL_ACTION_def, ASL_IS_SEPARATE_def,
@@ -2879,6 +2884,7 @@ SIMP_TAC std_ss [ASL_IS_LOCAL_ACTION_def, ASL_IS_SEPARATE_def,
    fasl_star_def, BIN_OPTION_MAP_ALL_DEF_THM,
    INF_fasl_order_def] THEN
 REPEAT STRIP_TAC THEN
+lcsymtacs.rename1 `f (SOME s1) (SOME s2) = SOME y` THEN
 Cases_on `!s0 s1'. ~(SOME y = f (SOME s0) (SOME s1')) \/ ~(s1' IN P1)` THENL [
    ASM_SIMP_TAC std_ss [COND_RAND, COND_RATOR, fasl_order_THM,
       BIN_OPTION_MAP_ALL_DEF_THM] THEN
@@ -2947,8 +2953,6 @@ Cases_on `!s0 s1'. ~(SOME y = f (SOME s0) (SOME s1')) \/ ~(s1' IN P1)` THENL [
       METIS_TAC[option_CLAUSES]
    ]
 ]);
-
-
 
 val best_local_action_SPEC = store_thm ("best_local_action_SPEC",
 ``!f P1 P2.
@@ -5043,15 +5047,16 @@ METIS_TAC[COMM_DEF]);
 
 
 
-val ASL_TRACE_SEM___PARALLEL_DECOMPOSITION = store_thm ("ASL_TRACE_SEM___PARALLEL_DECOMPOSITION",
-``!f lock_env q1 q2 s s1 s2 t1 t2 t .
-(IS_SEPARATION_COMBINATOR f /\
-fasl_order (ASL_TRACE_SEM (f, lock_env) t1 s1) q1 /\
-fasl_order (ASL_TRACE_SEM (f, lock_env) t2 s2) q2 /\
-(t IN (ASL_TRACE_ZIP t1 t2)) /\
-(SOME s = f (SOME s1) (SOME s2))) ==>
+val ASL_TRACE_SEM___PARALLEL_DECOMPOSITION = store_thm (
+  "ASL_TRACE_SEM___PARALLEL_DECOMPOSITION",
+  ``!f lock_env q1 q2 s s1 s2 t1 t2 t .
+       (IS_SEPARATION_COMBINATOR f /\
+       fasl_order (ASL_TRACE_SEM (f, lock_env) t1 s1) q1 /\
+       fasl_order (ASL_TRACE_SEM (f, lock_env) t2 s2) q2 /\
+       (t IN (ASL_TRACE_ZIP t1 t2)) /\
+       (SOME s = f (SOME s1) (SOME s2))) ==>
 
-fasl_order (ASL_TRACE_SEM (f, lock_env) t s) (fasl_star f q1 q2)``,
+       fasl_order (ASL_TRACE_SEM (f, lock_env) t s) (fasl_star f q1 q2)``,
 
 
 NTAC 2 GEN_TAC THEN
@@ -5265,6 +5270,8 @@ SIMP_TAC std_ss [fasl_star_REWRITE, fasl_order_THM, asl_star_def,
    `f (SOME s2) (SOME s1) = f (SOME s1) (SOME s2)` by METIS_TAC[IS_SEPARATION_COMBINATOR_def, COMM_DEF] THEN
    ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
    REPEAT STRIP_TAC THEN
+   lcsymtacs.rename1 `la1 s = SOME y` THEN
+   lcsymtacs.rename1 `x IN y` THEN
    Q.PAT_ASSUM  `!s1 s2 s3 y. P s1 s2 s3 y` (
       MP_TAC o Q.SPECL [`s2`, `s1`, `s`, `vq3`, `y`, `x`]) THEN
    ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN

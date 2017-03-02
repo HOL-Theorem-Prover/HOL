@@ -18,7 +18,6 @@ sig
       {cmdline : string list, build_theory_graph : bool,
        do_selftests : int, SRCDIRS : (string * int) list}
 
-  val Poly_link : {exe:string,obj:string} -> unit
   val map_dir : (string * string -> unit) -> string -> unit
                 (* f gets dirname * filename *)
   val rem_file : string -> unit
@@ -37,8 +36,13 @@ sig
 
   val clean_sigobj : unit -> unit
 
-  val check_against : string -> unit
-       (* checks to see if string is newer than build executable *)
+  val check_against : string -> string -> unit
+    (* [check_against f1 f2] checks to see if file f1 is older than file f2
+       and prints big warning if so *)
+
+  val app_sml_files : (string -> unit) -> {dirname : string} -> unit
+    (* applies function to every .sml and .sig file in given
+       directory *)
 
   val transfer_file : (bool -> string -> string -> unit) -> string ->
                       (string * string) -> unit

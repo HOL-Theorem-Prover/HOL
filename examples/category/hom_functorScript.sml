@@ -112,7 +112,7 @@ srw_tac [][functor_axioms_def]
   imp_res_tac maps_to_obj >>
   fsrw_tac [][maps_to_in_def] )
 >- (
-  qmatch_assum_rename_tac `y ∈ c.obj` [] >>
+  qmatch_assum_rename_tac `y ∈ c.obj` >>
   qexists_tac `c|x→y|` >>
   srw_tac [][TypedGraphFun_def] >>
   srw_tac [][FUN_EQ_THM,restrict_def] >>
@@ -171,7 +171,7 @@ qmatch_abbrev_tac `inclusion_functor u1 u2##z = X` >>
   fsrw_tac [][hom_def] >>
   match_mp_tac maps_to_comp >>
   metis_tac [maps_to_in_def,maps_to_def] ) >>
-srw_tac [][]);
+srw_tac [][Abbr`X`]);
 
 val _ = export_rewrites["hom_functor_objf","hom_functor_morf"];
 
@@ -382,7 +382,7 @@ fsrw_tac [][] >> srw_tac [][] >>
 qmatch_abbrev_tac `(op_mor_functor u1 u2)##f = g` >>
 `IsTypedFun f` by (
   srw_tac [][Abbr`f`,Abbr`g`] >>
-  qmatch_assum_rename_tac `f ∈ (c|g.cod→x|)` [] >>
+  qmatch_assum_rename_tac `f ∈ (c|g.cod→x|)` >>
   qexists_tac `f° ° o g° ° -:c` >>
   `g° ° ≈> f° ° -:c` by (
     match_mp_tac maps_to_composable >>
@@ -401,7 +401,7 @@ srw_tac [][Abbr`g`,Abbr`f`,morphism_component_equality] >>
 TRY (srw_tac [DNF_ss][EXTENSION] >> NO_TAC) >>
 srw_tac [][restrict_def,FUN_EQ_THM] >>
 srw_tac [][] >> fsrw_tac [DNF_ss][] >- (
-  qmatch_rename_tac `(g° o f° -:c°)° = f o g -:c` [] >>
+  qmatch_rename_tac `(g° o f° -:c°)° = f o g -:c` >>
   qspecl_then [`f`,`g`,`c°`] mp_tac op_cat_compose_in >>
   srw_tac [][] >> pop_assum (match_mp_tac o GSYM) >>
   match_mp_tac maps_to_composable >>

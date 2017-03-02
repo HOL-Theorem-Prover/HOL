@@ -88,10 +88,6 @@ val LENGTH_l2n = Q.store_thm("LENGTH_l2n",
         `~(l2n b l = 0)` by (STRIP_TAC \\ FULL_SIMP_TAC arith_ss [])
           \\ SRW_TAC [] []]);
 
-val EL_TAKE = Q.store_thm("EL_TAKE",
-  `!x n l. x < n /\ n <= LENGTH l ==> (EL x (TAKE n l) = EL x l)`,
-  Induct_on `l` \\ Cases_on `x` \\ SRW_TAC [ARITH_ss] []);
-
 val l2n_DIGIT = Q.store_thm("l2n_DIGIT",
   `!b l x. 1 < b /\ EVERY ($> b) l /\ x < LENGTH l ==>
       ((l2n b l DIV b ** x) MOD b = EL x l)`,

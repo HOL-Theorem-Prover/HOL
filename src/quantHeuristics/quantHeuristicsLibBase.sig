@@ -163,6 +163,8 @@ sig
 
   val empty_qp           : quant_param;
   val basic_qp           : quant_param; (* the basic things that should always be turned on *)
+  val direct_context_qp  : quant_param; (* use the context, but don't recurse *)
+  val context_qp         : quant_param; (* use the context *)
   val stateful_qp        : unit -> quant_param;
   val pure_stateful_qp   : unit -> quant_param;
   val TypeBase_qp        : quant_param;
@@ -184,8 +186,9 @@ sig
   val QUANT_INSTANTIATE_HEURISTIC___EQUATION_two_cases  : thm -> quant_heuristic;
   val QUANT_INSTANTIATE_HEURISTIC___one_case            : thm -> quant_heuristic;
   val QUANT_INSTANTIATE_HEURISTIC___cases               : thm -> quant_heuristic;
-  val QUANT_INSTANTIATE_HEURISTIC___GIVEN_INSTANTIATION : thm list -> quant_heuristic;
+  val QUANT_INSTANTIATE_HEURISTIC___GIVEN_INSTANTIATION : bool -> thm list -> quant_heuristic;
   val QUANT_INSTANTIATE_HEURISTIC___STRENGTHEN_WEAKEN   : thm list -> quant_heuristic;
+  val QUANT_INSTANTIATE_HEURISTIC___QUANT               : bool -> quant_heuristic;
 
   val QUANT_INSTANTIATE_HEURISTIC___max_rec_depth : int ref
 

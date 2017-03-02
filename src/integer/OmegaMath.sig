@@ -26,7 +26,7 @@ sig
   val calculate_range_disjunct   : conv
 
   val OmegaEq                    : conv
-end;
+end
 
 (*
 
@@ -148,4 +148,3 @@ end;
 
 
 *)
-

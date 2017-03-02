@@ -6,7 +6,7 @@
 Fetch a theorem by theory and name.
 
 \DESCRIBE
-An invocation {fetch thy name} searches through the currently loaded 
+An invocation {fetch thy name} searches through the currently loaded
 theory segments in an attempt to find a theorem, axiom, or definition
  stored under {name} in theory {thy}.
 

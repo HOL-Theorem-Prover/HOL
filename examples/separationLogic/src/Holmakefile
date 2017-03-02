@@ -1,3 +1,9 @@
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS)
+.PHONY: all
+
 vars_as_resourceBaseFunctor.uo: vars_as_resourceBaseFunctor.sml vars_as_resourceSyntax.uo $(dprot $(SIGOBJ)/listLib.uo) $(dprot $(SIGOBJ)/bagLib.uo)
 	$(HOLMOSMLC) -c -toplevel Overlay.ui vars_as_resourceBaseFunctor.sml
 

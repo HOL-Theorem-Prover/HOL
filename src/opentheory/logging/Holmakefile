@@ -1,3 +1,5 @@
+all: $(patsubst %.sml,%.uo,$(wildcard *.sml))
+.PHONY: all
 mkholdecide: holdecide.uo
 	HOLMOSMLC -o $@ $<
 holdecide.o: mkholdecide

@@ -265,4 +265,3 @@ fun EQ_CONGPROC {relation,depther,solver,freevars} tm =
 
 
 end (* struct *)
-

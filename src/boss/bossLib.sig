@@ -20,8 +20,14 @@ sig
 
   (* new (inductive) relations *)
   val Hol_reln     : term quotation -> thm * thm * thm
+  val Hol_coreln   : term quotation -> thm * thm * thm
   val xHol_reln    : string -> term quotation -> thm * thm * thm
+  val xHol_coreln  : string -> term quotation -> thm * thm * thm
   val export_mono  : string -> unit
+
+  (* Derived rule for specifying new constants.
+    (Should have the same effect as Thm.new_specification.) *)
+  val new_specification : string * string list * thm -> thm
 
   (* Case-splitting and induction operations *)
 
@@ -41,8 +47,11 @@ sig
   val METIS_PROVE    : thm list -> term -> thm   (* First order *)
   val DECIDE         : term -> thm               (* Cooperating dec. procs *)
   val PROVE_TAC      : thm list -> tactic
+  val prove_tac      : thm list -> tactic
   val METIS_TAC      : thm list -> tactic
+  val metis_tac      : thm list -> tactic
   val DECIDE_TAC     : tactic
+  val decide_tac     : tactic
 
   (* Simplification *)
 
@@ -55,6 +64,7 @@ sig
   val old_arith_ss    : simpset
   val list_ss         : simpset
   val srw_ss          : unit -> simpset
+  val QI_ss           : ssfrag
   val ARITH_ss        : ssfrag            (* arithmetic d.p. + some rewrites *)
   val old_ARITH_ss    : ssfrag
   val type_rws        : hol_type -> thm list
@@ -76,11 +86,24 @@ sig
   val SIMP_CONV         : simpset -> thm list -> conv
   val SIMP_RULE         : simpset -> thm list -> thm -> thm
   val SIMP_TAC          : simpset -> thm list -> tactic
+  val simp_tac          : simpset -> thm list -> tactic
   val ASM_SIMP_TAC      : simpset -> thm list -> tactic
+  val asm_simp_tac      : simpset -> thm list -> tactic
   val FULL_SIMP_TAC     : simpset -> thm list -> tactic
+  val full_simp_tac     : simpset -> thm list -> tactic
   val REV_FULL_SIMP_TAC : simpset -> thm list -> tactic
+  val rev_full_simp_tac : simpset -> thm list -> tactic
   val RW_TAC            : simpset -> thm list -> tactic
+  val rw_tac            : simpset -> thm list -> tactic
   val SRW_TAC           : ssfrag list -> thm list -> tactic
+  val srw_tac           : ssfrag list -> thm list -> tactic
+
+  val NO_STRIP_FULL_SIMP_TAC     : simpset -> thm list -> tactic
+  val NO_STRIP_REV_FULL_SIMP_TAC : simpset -> thm list -> tactic
+
+  val QI_TAC     : tactic
+  val ASM_QI_TAC : tactic
+  val GEN_EXISTS_TAC : string -> Parse.term Lib.frag list -> tactic
 
   (* Call-by-value evaluation *)
   val EVAL           : term -> thm
@@ -91,9 +114,11 @@ sig
 
   val ZAP_TAC        : simpset -> thm list -> tactic
   val SPOSE_NOT_THEN : (thm -> tactic) -> tactic
+  val spose_not_then : (thm -> tactic) -> tactic
   val by             : term quotation * tactic -> tactic   (* infix *)
   val suffices_by    : term quotation * tactic -> tactic   (* infix *)
   val cheat          : tactic
+  val kall_tac       : 'a -> tactic
 
   (* Abbreviations  (see also Q structure) *)
 
@@ -101,5 +126,43 @@ sig
   val UNABBREV_ALL_TAC : tactic
   val REABBREV_TAC     : tactic
   val WITHOUT_ABBREVS  : tactic -> tactic
+
+  (* more simplification variants *)
+  val fsrw_tac : simpLib.ssfrag list -> thm list -> tactic
+  val simp : thm list -> tactic
+  val csimp : thm list -> tactic
+  val dsimp : thm list -> tactic
+  val lrw : thm list -> tactic
+  val lfs : thm list -> tactic
+  val lrfs : thm list -> tactic
+  val rw : thm list -> tactic
+  val fs : thm list -> tactic
+  val rfs : thm list -> tactic
+
+  (* useful quotation-based tactics (from Q) *)
+  val qx_gen_tac : term quotation -> tactic
+  val qx_choose_then : term quotation -> thm_tactic -> thm_tactic
+  val qexists_tac : term quotation -> tactic
+  val qsuff_tac : term quotation -> tactic
+  val qid_spec_tac : term quotation -> tactic
+  val qspec_tac : term quotation * term quotation -> tactic
+  val qspec_then : term quotation -> thm_tactic -> thm -> tactic
+  val qspecl_then : term quotation list -> thm_tactic -> thm -> tactic
+  val qpat_assum : term quotation -> thm_tactic -> tactic
+  val qpat_abbrev_tac : term quotation -> tactic
+  val qmatch_abbrev_tac : term quotation -> tactic
+  val qho_match_abbrev_tac : term quotation -> tactic
+  val qmatch_rename_tac : term quotation -> tactic
+  val qmatch_assum_abbrev_tac : term quotation -> tactic
+  val qmatch_assum_rename_tac : term quotation -> tactic
+  val qmatch_asmsub_rename_tac : term quotation -> tactic
+  val qmatch_goalsub_rename_tac : term quotation -> tactic
+  val rename1 : term quotation -> tactic
+  val rename : term quotation list -> tactic
+  val qabbrev_tac : term quotation -> tactic
+  val qunabbrev_tac : term quotation -> tactic
+  val unabbrev_all_tac : tactic
+  val qx_genl_tac : term quotation list -> tactic
+  val qx_choosel_then : term quotation list -> thm_tactic -> thm_tactic
 
 end

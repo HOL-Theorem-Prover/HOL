@@ -21,7 +21,7 @@ is the theorem
 
 
 \FAILURE
-{BUTFIRSTN_CONV tm} fails if {tm} is not of the form described above, 
+{BUTFIRSTN_CONV tm} fails if {tm} is not of the form described above,
 or {k} is greater than the length of the list.
 
 \ENDDOC

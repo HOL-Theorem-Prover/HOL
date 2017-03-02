@@ -53,6 +53,10 @@ val terms_to_test =
            (((((i >= 0 /\ j >= 0 /\ k >= 0) /\
            ~(((i = 0) \/ (j = 0)) \/ (k = 0))) /\ ~(i = j)) /\ ~(i = k)) /\
            (j = k)) /\ i < j + k``),
+   T ("NAT MAX 1", ``x:num <= MAX x y``),
+   T ("NAT MAX 2", ``!y:num. 0 < y ==> ?x:num. x < MAX x y``),
+   T ("INT MAX 1", ``x <= int_max x y``),
+   T ("INT MAX 2", ``!y. ?x:int. x < int_max x y``),
    T ("BUG1",
     ``(?x. y <= x /\ x <= z /\ 2i * z + 1 <= x /\ x <= 2 * y) =
     y <= z /\ 2 * z + 1 <= 2 * y /\ y <= 2 * y /\ 2 * z + 1 <= z``),

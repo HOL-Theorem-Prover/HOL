@@ -1,6 +1,6 @@
 (* File: fmapalTacs.sml. Author: F. Lockwood Morris. Begun 6 Aug 2013.    *)
 
-(* Basic conversions and conversionals, and inference rules for         *)    
+(* Basic conversions and conversionals, and inference rules for         *)
 (* sorting lists, building FMAPALS, look-up and converting them to      *)
 (* lists and uniting and restricting them.                              *)
 
@@ -256,7 +256,7 @@ val [ORL_lu_nt, ORL_lu_node] = CONJUNCTS ORL_bt_lb_ub;
      ORL_bt_lb_ub cmp lb (node l (x,y) r) ub <=>
      ORL_bt_lb_ub cmp lb l x /\ ORL_bt_lb_ub cmp x r ub *)
 
-fun ORL_bt_lb_ub_CONV keyconv = 
+fun ORL_bt_lb_ub_CONV keyconv =
 let fun olu t =
 ((REWR_CONV ORL_lu_nt THENC LAND_CONV keyconv THENC EQ_LESS_CONV) ORELSEC
  (REWR_CONV ORL_lu_node THENC
@@ -270,7 +270,7 @@ val [ORL_l_nt, ORL_l_node] = CONJUNCTS ORL_bt_lb;
      ORL_bt_lb cmp lb (node l (x,y) r) <=>
      ORL_bt_lb_ub cmp lb l x /\ ORL_bt_lb cmp x r *)
 
-fun ORL_bt_lb_CONV keyconv = 
+fun ORL_bt_lb_CONV keyconv =
 let fun ol t =
 ((REWR_CONV ORL_l_node THENC
   LAND_CONV (ORL_bt_lb_ub_CONV keyconv) THENC RAND_CONV ol THENC AND_CONV)
@@ -284,7 +284,7 @@ val [ORL_u_nt, ORL_u_node] = CONJUNCTS ORL_bt_ub;
      ORL_bt_ub cmp (node l (x,y) r) ub <=>
      ORL_bt_ub cmp l x /\ ORL_bt_lb_ub cmp x r ub *)
 
-fun ORL_bt_ub_CONV keyconv = 
+fun ORL_bt_ub_CONV keyconv =
 let fun ou t =
 ((REWR_CONV ORL_u_node THENC
   LAND_CONV ou THENC RAND_CONV (ORL_bt_lb_ub_CONV keyconv) THENC AND_CONV)
@@ -610,7 +610,7 @@ else FMAPAL_FUPDATE_CONV keyconv t;
 (* ******************************************************************* *)
 
 fun FMAPAL_EXPR_TO_ORWL keyconv t =
-let val c = rator (rator t) 
+let val c = rator (rator t)
 in if is_const c then
    let val d = fst (dest_const c)
    in if d = "FMAPAL" then FMAPAL_TO_ORWL keyconv t
@@ -623,7 +623,7 @@ in if is_const c then
                  ORWL_DRESTRICT_COMPL keyconv
                    (FMAPAL_EXPR_TO_ORWL keyconv (rand (rator t)))
                    (ENUMERAL_TO_OWL keyconv (rand (rand t)))
-              else 
+              else
                  ORWL_DRESTRICT keyconv
                    (FMAPAL_EXPR_TO_ORWL keyconv (rand (rator t)))
                    (ENUMERAL_TO_OWL keyconv (rand t))
@@ -659,7 +659,7 @@ incr_merge_CONV numto_CONV imz;
  val ibl = Term`incr_build numto
                   [(3,()); (1,()); (3,()); (4,()); (2,()); (1,())]`;
 incr_build_CONV numto_CONV ibl;
-                
+
 val mo5 = Term`merge_out numto [(5,())]
       [NONE; SOME [(1,()); (3,())]; SOME [(1,()); (2,()); (3,()); (4,())]]`;
 merge_out_CONV numto_CONV mo5;

@@ -1,6 +1,7 @@
 (* tests for Hol_datatype *)
 
 open HolKernel Parse
+open testutils
 
 val _ = Feedback.set_trace "Theory.save_thm_reporting" 0;
 
@@ -101,6 +102,26 @@ val _ = Hol_datatype`
 
 val _ = Hol_datatype`squish_record = <|fld1:bool|>`
 val _ = Hol_datatype`poly_squish_record = <|fld1:'a->'b|>`
+
+val _ = tprint "Parse polymorphic record literal"
+val r = with_flag (Globals.guessing_tyvars, false) Parse.Term
+                  `<| fld1 := SUC |>`
+val rnd = repeat rand r
+val fupd_t = repeat rator r
+val (args, _) = strip_fun (type_of fupd_t)
+val fty = hd args
+val (d,r) = dom_rng fty
+val _ = if type_of rnd = ``:(num, num)poly_squish_record`` andalso
+           Type.compare(d,r) = EQUAL
+        then print "OK\n"
+        else die "FAILED!"
+val _ = tprint "TypeBase.mk_record on polymorphic record"
+val _ =
+    case Lib.total TypeBase.mk_record
+                   (``:(num,num)poly_squish_record``, [("fld1", ``SUC``)]) of
+        NONE => die "FAILED!"
+      | SOME _ => print "OK\n"
+
 val _ = Hol_datatype`K = <| F : 'a -> bool; S : num |>`
 
 val _ = Datatype.big_record_size := 10;
@@ -188,8 +209,6 @@ val _ = Hol_datatype `u3 = d3 of u4 u2 u1 ;
 val _ = Hol_datatype `foo = fooC of 'a`
 val _ = Hol_datatype `foo = fooC' of num`
 
-fun tprint s = print (StringCvt.padRight #" " 70 s)
-
 val _ = tprint "Testing independence of case variables"
 val t = Lib.total Parse.Term `case (x:valbind) of
                                 bind p e => 3
@@ -201,7 +220,7 @@ val _ = case t of NONE => (print "FAILED!\n"; Process.exit Process.failure)
 val _ = set_trace "Unicode" 0
 
 fun pptest (nm, t, expected) = let
-  val _ = tprint ("Testing pretty-printing of "^nm)
+  val _ = tprint ("Pretty-printing of "^nm)
   val s = Parse.term_to_string t
 in
   if s = expected then print "OK\n"
@@ -216,6 +235,15 @@ fun s t = let open HolKernel boolLib
 val _ = Hol_datatype`ovlrcd = <| id : num ; opn : num -> num |>`
 val _ = overload_on ("ID", ``f.id``)
 val _ = overload_on ("inv", ``f.opn``)
+
+val _ = type_abbrev ("ms", ``:'a -> num``)
+val _ = Hol_datatype`
+  polyrcd = <| pfld1 : 'a ms ; pfld2 : 'b -> bool ; pfld3 : num|>
+`;
+
+val _ = Datatype.Datatype`
+  polyrcd2 = <| p2fld1 : 'a ms ; p2fld2 : 'a # 'b -> bool ; p2fld3 : num |>
+`
 
 val _ = List.app pptest
         [("field selection", ``r.fld2``, "r.fld2"),
@@ -237,16 +265,85 @@ val _ = List.app pptest
           s ``r with <| fld3 := 6; fld9 := (T,6)|>``,
           "r with <|fld3 := 6; fld9 := (T,6)|>"),
          ("overloaded bare var.fld", ``ID``, "ID"),
-         ("overloaded var.fld with args", ``inv x``, "inv x")
+         ("overloaded var.fld with args", ``inv x``, "inv x"),
+         ("poly simple upd", ``r : ('c,num) polyrcd with pfld1 := K 1``,
+            "r with pfld1 := K 1"),
+         ("poly simple seln", ``(r : ('c,'d)polyrcd).pfld1``, "r.pfld1"),
+         ("bare ('a,'b) polyrcd_pfld1",
+             ``polyrcd_pfld1 : ('a,'b) polyrcd -> 'a ms``, "polyrcd_pfld1"),
+         ("bare ('a,'b) polyrcd_pfld1_fupd",
+            ``polyrcd_pfld1_fupd :
+                ('a ms -> 'a ms) -> ('a,'b) polyrcd -> ('a,'b) polyrcd``,
+            "pfld1_fupd"),
+         ("bare (num,num) polyrcd_pfld1",
+            ``polyrcd_pfld1 : (num,num) polyrcd -> num ms``, "polyrcd_pfld1"),
+         ("bare ('c,'d) polyrcd_pfld1",
+            ``polyrcd_pfld1 : ('c,'d) polyrcd -> 'c ms``, "polyrcd_pfld1"),
+         ("bare ('c,'d) polyrcd_pfld3",
+            ``polyrcd_pfld3 : ('c,'d) polyrcd -> num``, "polyrcd_pfld3"),
+         ("bare ('c,'d) polyrcd_pfld1_fupd",
+            ``polyrcd_pfld1_fupd :
+                ('c ms -> 'c ms) -> ('c,'d) polyrcd -> ('c,'d) polyrcd``,
+            "pfld1_fupd"),
+         ("one-arg polyrcd_pfld1_fupd",
+            ``polyrcd_pfld1_fupd f : ('a,'b) polyrcd -> ('a,'b) polyrcd``,
+            "pfld1_fupd f")
          ]
+
+val _ = Feedback.emit_MESG := false
 
 (* a test for Hol_defn that requires a datatype: *)
 (* mutrec defs with sums *)
+val _ = tprint "Mutrec defn with sums"
 val _ = Hol_datatype `foo = F1 of unit | F2 of foo + num`
 val _ = Defn.Hol_defn "foo"`
 (foo1 (F1 ()) = F1 ()) /\
 (foo1 (F2 sf) = F2 (foo2 sf)) /\
 (foo2 (INR n) = INL (F1 ())) /\
-(foo2 (INL f) = INL (foo1 f))`
+(foo2 (INL f) = INL (foo1 f))` handle HOL_ERR _ => die "FAILED!"
+val _ = print "OK\n"
+
+val _ = tprint "Non-recursive num"
+val _ = Datatype.Datatype `num = C10 num$num | C11 num | C12 scratch$num`;
+val (d,r) = dom_rng (type_of ``C10``)
+val _ = Type.compare(d, numSyntax.num) = EQUAL orelse die "FAILED!"
+val (d,r) = dom_rng (type_of ``C11``)
+val _ = Type.compare(d, numSyntax.num) <> EQUAL orelse die "FAILED!"
+val (d,r) = dom_rng (type_of ``C12``)
+val _ = Type.compare(d, numSyntax.num) <> EQUAL orelse die "FAILED!"
+val _ = print "OK\n"
+
+val _ = tprint "Datatype and antiquote (should be quick)"
+val num = numSyntax.num
+val _ = Datatype.Datatype `dtypeAQ = C13 ^num bool | C14 (^num -> bool)`
+val _ = print "OK\n"
+
+val _ = tprint "Records with polymorphic fields 1"
+val _ = (``polyrcd_pfld1_fupd :
+             ('c ms -> 'e ms) -> ('c,'d) polyrcd -> ('e,'d)polyrcd``;
+         print "OK\n"; true)
+        orelse die "FAILED!"
+
+val _ = tprint "Records with polymorphic fields 2"
+val _ = (``polyrcd2_p2fld1_fupd :
+             ('a ms -> 'a ms) -> ('a,'b) polyrcd2 -> ('a,'b)polyrcd2``;
+         print "OK\n"; true)
+        orelse die "FAILED!"
+
+val _ = tprint "Records with polymorphic fields 3"
+val _ = (``polyrcd2_p2fld2_fupd :
+             (('a # 'b -> bool) -> ('a # 'c -> bool)) ->
+             ('a,'b) polyrcd2 -> ('a,'c)polyrcd2``;
+         print "OK\n"; true)
+        orelse die "FAILED!"
+
+val _ = tprint "Records with polymorphic fields 4"
+val _ =
+  case Lib.total (trace("show_typecheck_errors", 0) Parse.Term)
+       `polyrcd2_p2fld1_fupd :
+             ('a ms -> 'b ms) -> ('a,'c) polyrcd2 -> ('b,'c)polyrcd2`
+  of
+    NONE => print "OK\n"
+  | _ => die "FAILED!";
 
 val _ = Process.exit Process.success;

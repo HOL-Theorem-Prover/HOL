@@ -21,34 +21,16 @@ datatype phase = Initial | Bare | Full
     Analysing the command-line
    ---------------------------------------------------------------------- *)
 
-fun kmod kernelspec = let
-  (* use the experimental kernel? Depends on the command-line and the
-     compiler version... *)
-  val version_string_w1 =
-      hd (String.tokens Char.isSpace PolyML.Compiler.compilerVersion)
-      handle Empty => ""
-  val compiler_number =
-      Real.floor (100.0 * valOf (Real.fromString version_string_w1))
-      handle Option => 0
-in
-  if kernelspec <> "-expk" andalso compiler_number < 530 then
-    (warn "*** Using the experimental kernel (standard kernel requires \
-          \Poly/ML 5.3 or\n*** higher)";
-     "-expk")
-  else
-    kernelspec
-end
-
-
-val {cmdline,build_theory_graph,do_selftests,SRCDIRS} = process_cline kmod
+val {cmdline,build_theory_graph,do_selftests,SRCDIRS} =
+  process_cline (fn c => c)
 
 open Systeml;
 
-fun which_hol () =
+fun phase_extras () =
   case !phase of
-    Initial => [POLY, "--poly_not_hol"]
-  | Bare => [fullPath [HOLDIR, "bin", "hol.builder0"]]
-  | Full => [fullPath [HOLDIR, "bin", "hol.builder"]]
+    Initial => ["--poly_not_hol"]
+  | Bare => ["--holstate", fullPath [HOLDIR, "bin", "hol.state0"]]
+  | Full => []
 
 fun aug_systeml proc args = let
   open Posix.Process
@@ -67,7 +49,6 @@ end
 
 
 val Holmake = let
-  fun extras() = "--poly" :: which_hol()
   fun isSuccess Posix.Process.W_EXITED = true
     | isSuccess _ = false
   fun analysis hmstatus = let
@@ -82,7 +63,7 @@ val Holmake = let
                       SysWord.toString (Posix.Signal.toWord sg)
   end
 in
-  buildutils.Holmake aug_systeml isSuccess extras analysis do_selftests
+  buildutils.Holmake aug_systeml isSuccess phase_extras analysis do_selftests
 end
 
 (* create a symbolic link - Unix only *)
@@ -123,17 +104,6 @@ fun upload ((src, regulardir), target, symlink) =
     (thus requiring only a single place to look for things).
  ---------------------------------------------------------------------------*)
 
-fun make_exe (name:string) (POLY : string) (target:string) : unit = let
-  val _ = print ("Building "^target^"\n")
-  val dir = OS.FileSys.getDir()
- in
-   OS.FileSys.chDir (fullPath [HOLDIR, "tools-poly"]);
-   Systeml.system_ps (POLY ^ " < " ^ name);
-   Poly_link {exe = fullPath [Systeml.HOLDIR, "bin", target],
-              obj = target ^ ".o"};
-   OS.FileSys.chDir dir
- end
-
 fun buildDir symlink s =
   if #1 s = fullPath [HOLDIR, "bin/hol.bare"] then phase := Bare
   else if #1 s = fullPath [HOLDIR, "bin/hol"] then phase := Full
@@ -159,10 +129,26 @@ end
        Get rid of compiled code and dependency information.
  ---------------------------------------------------------------------------*)
 
-val _ = check_against "tools-poly/smart-configure.sml"
-val _ = check_against "tools-poly/configure.sml"
-val _ = check_against "tools-poly/build.sml"
-val _ = check_against "tools/Holmake/Systeml.sig"
+val check_againstB = check_against EXECUTABLE
+val _ = check_againstB "tools-poly/smart-configure.sml"
+val _ = check_againstB "tools-poly/configure.sml"
+val _ = check_againstB "tools-poly/build.sml"
+val _ = check_againstB "tools/Holmake/Systeml.sig"
+
+val _ = let
+  val fP = fullPath
+  open OS.FileSys
+  val hmake = fP [HOLDIR,"bin",xable_string "Holmake"]
+in
+  if access(hmake, [A_READ, A_EXEC]) then
+    (app_sml_files (check_against hmake)
+                   {dirname = fP [HOLDIR, "tools-poly", "Holmake"]};
+     app_sml_files (check_against hmake)
+                   {dirname = fP [HOLDIR, "tools", "Holmake"]})
+  else
+    die ("No Holmake executable in " ^ fP [HOLDIR, "bin"])
+end
+
 
 
 

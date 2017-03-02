@@ -184,4 +184,3 @@ sig
   val lift_string       : hol_type -> string -> term
 
 end
-

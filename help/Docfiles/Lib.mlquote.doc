@@ -18,12 +18,12 @@ Never fails
 
 \EXAMPLE
 {
-- print (quote "foo\nbar" ^ "\n"); 
+- print (quote "foo\nbar" ^ "\n");
 "foo
 bar"
 > val it = () : unit
 
-- print (mlquote "foo\nbar" ^ "\n"); 
+- print (mlquote "foo\nbar" ^ "\n");
 "foo\nbar"
 > val it = () : unit
 }

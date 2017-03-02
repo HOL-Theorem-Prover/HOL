@@ -571,8 +571,8 @@ fun elim_triv_literal_CONV tm =
 fun checkSV pats SV =
  let fun get_pat (GIVEN(p,_)) = p
        | get_pat (OMITTED(p,_)) = p
-     fun strings_of vlist = 
-         Lib.commafy (List.map (Lib.quote o #1 o dest_var) 
+     fun strings_of vlist =
+         Lib.commafy (List.map (Lib.quote o #1 o dest_var)
                                (Listsort.sort Term.compare vlist))
  in
    if null SV then ()
@@ -584,7 +584,7 @@ fun checkSV pats SV =
     of [] => ()
      | probs =>
        raise ERR "wfrec_eqns"
-         (String.concat 
+         (String.concat
              (["the following variables occur both free (schematic) ",
                "and bound in the definition: \n   "] @ strings_of probs))
  end
@@ -595,8 +595,7 @@ fun checkSV pats SV =
 (*---------------------------------------------------------------------------*)
 
 fun wfrec_eqns facts tup_eqs =
-  let
-     val {functional,pats} =
+ let val {functional,pats} =
         mk_functional (TypeBasePure.toPmatchThry facts) (protect tup_eqs)
      val SV = free_vars functional    (* schematic variables *)
      val _ = checkSV pats SV
@@ -1583,9 +1582,9 @@ in
 fun munge eq (eqs,fset,V) =
  let val (vlist,body) = Absyn.strip_forall eq
      val (lhs0,rhs)   = multi_dest_eq body
-     val   _          = if exists wildcard (names_of rhs []) then
+(*     val   _          = if exists wildcard (names_of rhs []) then
                          raise ERRloc "munge" (Absyn.locn_of_absyn rhs)
-                                      "wildcards on rhs" else ()
+                                      "wildcards on rhs" else () *)
      val (tys, lhs)   = strip_tyannote lhs0
      val (f,pats)     = Absyn.strip_app lhs
      val (pats',V')   = rev_itlist expand_wildcards pats
@@ -1664,7 +1663,10 @@ end
 fun ptdefn_freevars pt = let
   open Preterm
   val (uvars, body) = strip_pforall pt
-  val (l,r) = pdest_eq body
+  val (l,r) = case strip_pcomb body of
+                  (_, [l,r]) => (l,r)
+                | _ => raise ERRloc "ptdefn_freevars" (locn body)
+                             "Couldn't see preterm as equality"
   val (f0, args) = strip_pcomb l
   val f = head_var f0
   val lfs = op_U eq (map ptfvs args)

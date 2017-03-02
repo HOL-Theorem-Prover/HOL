@@ -232,7 +232,7 @@ val COMPLEX_MULT_COMM =
 val COMPLEX_MULT_ASSOC =
  store_thm
   ("COMPLEX_MULT_ASSOC",
-   ``a * (b * c) = a * b * c:complex_rational``,	
+   ``a * (b * c) = a * b * c:complex_rational``,
    Cases_on `a` THEN Cases_on `b` THEN Cases_on `c`
     THEN RW_TAC std_ss
           [COMPLEX_MULT_def,RAT_LDISTRIB,RAT_RDISTRIB,

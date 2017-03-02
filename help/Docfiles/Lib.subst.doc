@@ -9,14 +9,14 @@ Type abbreviation for substitutions.
 substitutions.
 
 \DESCRIBE
-The type {('a,'b) subst} abbreviates the type {{redex,residue} list}, 
+The type {('a,'b) subst} abbreviates the type {{redex,residue} list},
 in which {redex} has type {'a} and {residue} has type {'b}. Usually,
 a {{redex,residue}} pair in a substition is interpreted as `replace
 occurrences of {redex} by {residue}'.
 
 \COMMENTS
 The different types of {redex} and {residue} components allows
-flexibility, as in the rule of inference {SUBST}, which takes a 
+flexibility, as in the rule of inference {SUBST}, which takes a
 {(term,thm) subst} argument.
 
 \SEEALSO

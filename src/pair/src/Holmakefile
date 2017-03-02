@@ -1,0 +1,7 @@
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) selftest.exe
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<

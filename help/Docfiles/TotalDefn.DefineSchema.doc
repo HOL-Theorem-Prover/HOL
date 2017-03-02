@@ -13,19 +13,19 @@ Schema, recursive definition.
 `recursion schemas`. These are just recursive functions with extra
 free variables (also called `parameters`) on the right-hand side of some
 clauses. Such schemas have been used as a basis for program
-transformation systems. 
+transformation systems.
 
 {DefineSchema} takes its input in exactly the same format as {Define}.
 
 The termination constraints of a schematic definition are collected on
-the hypotheses of the definition, and also on the hypotheses of the 
+the hypotheses of the definition, and also on the hypotheses of the
 automatically proved induction theorem, but a termination proof is only
-attempted when the termination conditions have no occurrences of 
+attempted when the termination conditions have no occurrences of
 parameters. This is because, in general, termination can only be proved
 after some of the parameters of the schema have been instantiated.
 
 \FAILURE
-{DefineSchema} fails in many of the same ways as {Define}. However, it 
+{DefineSchema} fails in many of the same ways as {Define}. However, it
 will not fail if it cannot prove termination.
 
 \EXAMPLE
@@ -43,7 +43,7 @@ The following defines a schema for binary recursion.
    Induction stored under "binRec_ind".
 
    > val it =
-        [!x. ~atomic x ==> R (left x) x, 
+        [!x. ~atomic x ==> R (left x) x,
          !x. ~atomic x ==> R (right x) x, WF R]
        |- binRec A atomic join left right x =
            if atomic x then A x
@@ -52,7 +52,7 @@ The following defines a schema for binary recursion.
                   (binRec A atomic join left right (right x)) : thm
 }
 The following defines a schema in which a termination proof is
-attempted successfully. 
+attempted successfully.
 {
    - DefineSchema `(map [] = []) /\ (map (h::t) = f h :: map t)`;
 

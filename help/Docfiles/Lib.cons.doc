@@ -3,7 +3,7 @@
 \TYPE {cons : 'a -> 'a list -> 'a list}
 
 \SYNOPSIS
-Curried form of list cons operation
+Curried form of list cons operation.
 
 \KEYWORDS
 Curry

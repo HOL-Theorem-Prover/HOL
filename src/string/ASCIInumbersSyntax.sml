@@ -7,14 +7,9 @@ open Abbrev HolKernel ASCIInumbersTheory
 (* Helper functions                                                          *)
 (*---------------------------------------------------------------------------*)
 
-val monop =
-   HolKernel.syntax_fns "ASCIInumbers" 1 HolKernel.dest_monop HolKernel.mk_monop
-
-val binop =
-   HolKernel.syntax_fns "ASCIInumbers" 2 HolKernel.dest_binop HolKernel.mk_binop
-
-val triop =
-   HolKernel.syntax_fns "ASCIInumbers" 3 HolKernel.dest_triop HolKernel.mk_triop
+val monop = HolKernel.syntax_fns1 "ASCIInumbers"
+val binop = HolKernel.syntax_fns2 "ASCIInumbers"
+val triop = HolKernel.syntax_fns3 "ASCIInumbers"
 
 val (hex_tm,mk_hex,dest_hex,is_hex)         = monop "HEX"
 val (unhex_tm,mk_unhex,dest_unhex,is_unhex) = monop "UNHEX"

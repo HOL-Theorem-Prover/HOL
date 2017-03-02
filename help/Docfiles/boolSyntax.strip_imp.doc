@@ -6,7 +6,7 @@
 Iteratively breaks apart implications.
 
 \DESCRIBE
-If {M} is of the form {t1 ==> (... (tn ==> t) ...)}, then {strip_imp M} 
+If {M} is of the form {t1 ==> (... (tn ==> t) ...)}, then {strip_imp M}
 returns {([t1,...,tn],t)}. Note that
 {
    strip_imp(list_mk_imp([t1,...,tn],t))

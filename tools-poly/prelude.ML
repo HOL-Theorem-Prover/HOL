@@ -1,212 +1,267 @@
 (* this is an -*- sml -*- file *)
-val _ = PolyML.print_depth 0;
-open HolKernel Parse boolLib proofManagerLib;
+val () = PolyML.print_depth 0;
 
-val _ = let
-  open PP
-  fun with_pp ppfn pps x =
-      Parse.respect_width_ref Globals.linewidth ppfn pps x handle e => Raise e
-  fun pp_from_stringfn sf pps x = PP.add_string pps (sf x)
-  fun pp2polypp (f : PP.ppstream -> 'a -> unit)
-              (putString : string -> unit,
-               beginBlock : int * bool -> unit,
-               spaceBlock : int * int -> unit,
-               endBlock : unit -> unit)
-              (dpth_limit : int)
-              recursive_print
-              (e : 'a) =
-    putString (pp_to_string (!Globals.linewidth) f e)
-  fun gprint g pps t = let
-    val tyg = Parse.type_grammar()
-    val (_, ppt) = Parse.print_from_grammars (tyg,g)
-  in
-    ppt pps t
-  end
-  fun ppg pps g = term_grammar.prettyprint_grammar gprint pps g
-  fun locpp pps l = PP.add_string pps (locn.toShortString l)
-  fun tybpp pps (t:TypeBasePure.typeBase) = PP.add_string pps "<typeBase>"
-  open PolyML
-  val version_string_w1 =
-      hd (String.tokens Char.isSpace Compiler.compilerVersion)
-      handle Empty => ""
-  val compiler_number =
-      Real.floor (100.0 * valOf (Real.fromString version_string_w1))
-      handle Option => 0
-in
-  if compiler_number >= 530 then
+open HolKernel Parse boolLib proofManagerLib
+
+(* Install pretty-printers *)
+
+local
+  fun pp2polypp (ppfn: PP.ppstream -> 'b -> unit) =
     let
-      fun pp_redblackmap pps (_:('a,'b) Redblackmap.dict) =
-            HOLPP.add_string pps "<Redblackmap>"
-      fun pp_redblackset pps (_:'a Redblackset.set) =
-            HOLPP.add_string pps "<Redblackset>"
+      fun f pps x = Parse.respect_width_ref Globals.linewidth ppfn pps x
+                    handle e => Raise e
     in
-      install_pp (pp2polypp (with_pp HOLset.pp_holset));
-      install_pp (pp2polypp (with_pp pp_redblackmap));
-      install_pp (pp2polypp (with_pp pp_redblackset))
+      fn depth => fn printArgTypes => fn e: 'b =>
+        PolyML.PrettyString (PP.pp_to_string (!Globals.linewidth) f e)
     end
-  else ();
-  install_pp (pp2polypp
-                  (with_pp (Parse.term_pp_with_delimiters Hol_pp.pp_term)));
-  install_pp (pp2polypp
-                  (with_pp (Parse.type_pp_with_delimiters Hol_pp.pp_type)));
-  install_pp (pp2polypp (with_pp Pretype.pp_pretype));
-  install_pp (pp2polypp (with_pp Hol_pp.pp_thm));
-  install_pp (pp2polypp (with_pp Hol_pp.pp_theory));
-  install_pp (pp2polypp (with_pp type_grammar.prettyprint_grammar));
-  install_pp (pp2polypp (with_pp ppg));
-
-  install_pp (pp2polypp (with_pp proofManagerLib.pp_proof));
-  install_pp (pp2polypp (with_pp proofManagerLib.pp_proofs));
-  install_pp (pp2polypp (with_pp Rewrite.pp_rewrites));
-  install_pp (pp2polypp (with_pp TypeBasePure.pp_tyinfo));
-  install_pp (pp2polypp (with_pp DefnBase.pp_defn));
-  install_pp (pp2polypp (with_pp Arbnum.pp_num));
-  install_pp (pp2polypp (with_pp Arbint.pp_int));
-  install_pp (pp2polypp (with_pp Arbrat.pp_rat));
-  install_pp (pp2polypp (with_pp locpp));
-  install_pp (pp2polypp (with_pp tybpp))
+  fun gprint g pps t =
+    let
+      val tyg = Parse.type_grammar ()
+      val (_, ppt) = Parse.print_from_grammars (tyg, g)
+    in
+      ppt pps t
+    end
+  val ppg = term_grammar.prettyprint_grammar gprint
+  fun locpp pps l = PP.add_string pps (locn.toShortString l)
+  fun pp_redblackmap pps (d: ('a,'b) Redblackmap.dict) =
+    PP.add_string pps
+      ("<Redblackmap(" ^ Int.toString (Redblackmap.numItems d) ^ ")>")
+  fun pp_redblackset pps (s: 'a Redblackset.set) =
+    PP.add_string pps
+      ("<Redblackset(" ^ Int.toString (Redblackset.numItems s) ^ ")>")
+in
+  val () =
+  ( if PolyML.Compiler.compilerVersionNumber < 560 then
+      let
+        fun pp_typebase _ _ (_: TypeBasePure.typeBase) =
+          PolyML.PrettyString "<typeBase>"
+        fun pp_seq _ _ (_: 'a seq.seq) = PolyML.PrettyString "<seq>"
+      in
+        PolyML.addPrettyPrinter pp_typebase
+      ; PolyML.addPrettyPrinter pp_seq
+      ; PolyML.addPrettyPrinter (pp2polypp HOLset.pp_holset)
+      end
+    else
+      let
+        fun pp_db _ _ (c: DB.class) =
+          PolyML.PrettyString
+            (case c of
+               DB.Thm => "Thm"
+             | DB.Axm => "Axm"
+             | DB.Def => "Def")
+        fun pp_delta depth printArgTypes (d: 'a delta) =
+          case d of
+            Lib.SAME => PolyML.PrettyString "SAME"
+          | Lib.DIFF a =>
+              PolyML.PrettyBlock
+                (2, false, [],
+                 [PolyML.PrettyString "DIFF", PolyML.PrettyBreak (1, 0),
+                  printArgTypes (a, depth)])
+        fun pp_verdict depth (pra, prb) (v: ('a, 'b) Lib.verdict) =
+          case v of
+            Lib.PASS (a: 'a) =>
+              PolyML.PrettyBlock
+                (2, false, [],
+                 [PolyML.PrettyString "PASS", PolyML.PrettyBreak (1, 0),
+                  pra (a, depth)])
+          | Lib.FAIL (b: 'b) =>
+              PolyML.PrettyBlock
+                (2, false, [],
+                 [PolyML.PrettyString "FAIL", PolyML.PrettyBreak (1, 0),
+                  prb (b, depth)])
+        fun pp_frag depth printArgTypes (f: 'a HOLPP.frag) =
+          case f of
+            HOLPP.QUOTE s =>
+              PolyML.PrettyBlock
+                (2, false, [],
+                 [PolyML.PrettyString "QUOTE", PolyML.PrettyBreak (1, 0),
+                  PolyML.PrettyString s])
+          | HOLPP.ANTIQUOTE a =>
+              PolyML.PrettyBlock
+                (2, false, [],
+                 [PolyML.PrettyString "ANTIQUOTE", PolyML.PrettyBreak (1, 0),
+                  printArgTypes (a, depth)])
+        fun pp_breakstyle _ _ (b: HOLPP.break_style) =
+          PolyML.PrettyString
+            (case b of
+               HOLPP.CONSISTENT => "CONSISTENT"
+             | HOLPP.INCONSISTENT => "INCONSISTENT")
+      in
+        PolyML.addPrettyPrinter pp_db
+      ; PolyML.addPrettyPrinter pp_delta
+      ; PolyML.addPrettyPrinter pp_verdict
+      ; PolyML.addPrettyPrinter pp_frag
+      ; PolyML.addPrettyPrinter pp_breakstyle
+      end
+  ; PolyML.addPrettyPrinter (pp2polypp ppg)
+  ; PolyML.addPrettyPrinter (pp2polypp locpp)
+  ; PolyML.addPrettyPrinter (pp2polypp pp_redblackmap)
+  ; PolyML.addPrettyPrinter (pp2polypp pp_redblackset)
+  ; PolyML.addPrettyPrinter
+      (pp2polypp (Parse.term_pp_with_delimiters Hol_pp.pp_term))
+  ; PolyML.addPrettyPrinter
+      (pp2polypp (Parse.type_pp_with_delimiters Hol_pp.pp_type))
+  ; PolyML.addPrettyPrinter (pp2polypp Pretype.pp_pretype)
+  ; PolyML.addPrettyPrinter (pp2polypp Hol_pp.pp_thm)
+  ; PolyML.addPrettyPrinter (pp2polypp Hol_pp.pp_theory)
+  ; PolyML.addPrettyPrinter (pp2polypp type_grammar.prettyprint_grammar)
+  ; PolyML.addPrettyPrinter (pp2polypp proofManagerLib.pp_proof)
+  ; PolyML.addPrettyPrinter (pp2polypp proofManagerLib.pp_proofs)
+  ; PolyML.addPrettyPrinter (pp2polypp Rewrite.pp_rewrites)
+  ; PolyML.addPrettyPrinter (pp2polypp TypeBasePure.pp_tyinfo)
+  ; PolyML.addPrettyPrinter (pp2polypp DefnBase.pp_defn)
+  ; PolyML.addPrettyPrinter (pp2polypp Arbnum.pp_num)
+  ; PolyML.addPrettyPrinter (pp2polypp Arbint.pp_int)
+  ; PolyML.addPrettyPrinter (pp2polypp Arbrat.pp_rat)
+  )
 end
 
 (*---------------------------------------------------------------------------*
- * Set up the help paths.                                                    *
+   Switch in and out of quiet mode
  *---------------------------------------------------------------------------*)
 
-val _ = let
-fun huse s = use (Path.concat(HOLDIR, s));
-in
-huse "help/src-sml/Database.sig";
-huse "help/src-sml/Database.sml";
-huse "tools-poly/poly/Help.sig";
-huse "tools-poly/poly/Help.sml"
-end;
-local
-  open Path
-  fun HELP s = toString(fromString(concat(HOLDIR, concat("help",s))))
-  val SIGOBJ = toString(fromString(concat(HOLDIR, "sigobj")))
-in
-  val () = Help.indexfiles := HELP "HOL.Help" :: !Help.indexfiles
-  val () = Help.helpdirs   := HOLDIR :: SIGOBJ :: !Help.helpdirs
-  val () = Help.specialfiles :=
-             {file = "help/Docfiles/HOL.help",
-              term = "hol", title = "HOL Overview"}
-             :: !Help.specialfiles
-  val help = Help.help
-end (* local *)
-
-
-(*---------------------------------------------------------------------------*
- *  Set parameters for parsing and help.                                     *
- *---------------------------------------------------------------------------*)
-
-val _ = Help.displayLines := 60;
-
-
-local
- fun try_remove f = ((OS.FileSys.remove f) handle OS.SysErr _ => ());
- fun has_dq file =
-      let
-        val istrm = TextIO.openIn file
-        fun loop() =
-            case TextIO.input1 istrm of
-              NONE => false
-            | SOME #"`" => true
-            | SOME _ => loop()
-      in
-        loop() before TextIO.closeIn istrm
-      end handle IO.Io _ => false;
-  infix ++;
-  fun p1 ++ p2 = OS.Path.concat (p1, p2);
-  open Systeml;
-  fun unquote_to file1 file2 =
-      systeml [HOLDIR ++ "bin" ++ "unquote", file1, file2];
-in
-fun use s =
-  if has_dq s then
+structure HOL_Interactive :>
+  sig
+    val toggle_quietdec : unit -> bool
+    val amquiet : unit -> bool
+    val print_banner : unit -> unit
+  end =
+struct
+  infix ++
+  val op ++ = OS.Path.concat
+  val qd = ref true
+  fun toggle_quietdec () =
+    if !qd then
+      ( PolyML.Compiler.prompt1 := "> "
+      ; PolyML.Compiler.prompt2 := "# "
+      ; PolyML.print_depth 100
+      ; qd := false
+      ; false
+      )
+    else
+      ( PolyML.Compiler.prompt1 := ""
+      ; PolyML.Compiler.prompt2 := ""
+      ; PolyML.print_depth 0
+      ; qd := true
+      ; true
+      )
+  fun amquiet () = !qd
+  val build_stamp =
     let
-      val filename = OS.FileSys.tmpName()
+      val stampstr = TextIO.openIn (HOLDIR ++ "tools" ++ "build-stamp")
+      val stamp = TextIO.inputAll stampstr before TextIO.closeIn stampstr
     in
-      (if OS.Process.isSuccess (unquote_to s filename) then
-         (PolyML.use filename; OS.FileSys.remove filename)
-       else (TextIO.output(TextIO.stdOut,
-                           ("Failed to translate file: "^s^"\n"));
-             raise Fail "use"))
-      handle e => (try_remove filename; raise e)
+      stamp
     end
-  else PolyML.use s;
-end (* local *)
-
-val _ = Globals.interactive := true;
-val _ = Parse.current_backend := Parse.interactive_ppbackend()
-
-val build_stamp =
- let open TextIO Path;
-     val stampstr = openIn (concat(HOLDIR, concat("tools", "build-stamp")));
-     val stamp = inputAll stampstr before closeIn stampstr;
- in
-     stamp
- end handle _ => "";
-
-val exit_string =
+    handle _ => ""
+  val id_string =
+    "HOL-4 [" ^ Globals.release ^ " " ^ Lib.int_to_string Globals.version ^
+    " (" ^ Thm.kernelid ^ ", " ^ build_stamp ^ ")]\n\n"
+  val exit_string =
     if Systeml.OS = "winNT" then
       "To exit type <Control>-Z <Return>  (*not* quit();)"
     else
       "To exit type <Control>-D"
+  val line =
+    "\n---------------------------------------------------------------------\n"
 
-val _ =
-TextIO.output(TextIO.stdOut,
-   "\n---------------------------------------------------------------------\n"
-  ^"       HOL-4 ["
-  ^Globals.release^" "^Lib.int_to_string(Globals.version)
-  ^" ("^Thm.kernelid^", "^build_stamp^")"
-  ^"]\n\n"
-  ^"       For introductory HOL help, type: help \"hol\";\n"
-  ^"       "^exit_string
-  ^"\n---------------------------------------------------------------------\n\
-   \\n")
+  fun print_banner () =
+    TextIO.output (TextIO.stdOut,
+      line ^
+      "       " ^ id_string ^
+      "       For introductory HOL help, type: help \"hol\";\n" ^
+      "       " ^ exit_string ^
+      line)
+end;
 
-val _ = let
+(*---------------------------------------------------------------------------*
+ * Set up the help paths.                                                    *
+ * Set parameters for parsing and help.                                      *
+ *---------------------------------------------------------------------------*)
+
+local
+  fun try_remove f = ((OS.FileSys.remove f) handle OS.SysErr _ => ())
+  fun has_dq file =
+    let
+      val istrm = TextIO.openIn file
+      fun loop() =
+        case TextIO.input1 istrm of
+          NONE => false
+        | SOME #"`" => true
+        | SOME _ => loop()
+    in
+      loop() before TextIO.closeIn istrm
+    end handle IO.Io _ => false
   infix ++
-  fun p1 ++ p2 = OS.Path.concat (p1,p2)
-  fun appthis s = let
-    val nm = HOLDIR ++ "tools" ++ "Holmake" ++ s
-  in
-    use (nm ^ ".sig");
-    use (nm ^ ".sml")
-  end
+  val op ++ = OS.Path.concat
+  fun unquote_to file1 file2 =
+    Systeml.systeml [HOLDIR ++ "bin" ++ "unquote", file1, file2];
 in
-  app appthis ["regexpMatch", "parse_glob", "internal_functions",
-               "Holmake_types", "ReadHMF"]
+  fun use s =
+    if has_dq s then
+      let
+        val filename = OS.FileSys.tmpName()
+      in
+        (if OS.Process.isSuccess (unquote_to s filename) then
+           (PolyML.use filename; OS.FileSys.remove filename)
+         else
+           ( TextIO.output
+               (TextIO.stdOut, ("Failed to translate file: " ^ s ^ "\n"))
+           ; raise Fail "use"
+           ))
+        handle e => (try_remove filename; raise e)
+      end
+    else PolyML.use s
+end; (* local *)
+
+local
+  infix ++
+  val op ++ = OS.Path.concat
+  fun hol_use p s =
+    let
+      val nm = HOLDIR ++ p ++ s
+    in
+      use (nm ^ ".sig")
+    ; use (nm ^ ".sml")
+    end
+in
+  val _ = HOL_Interactive.print_banner()
+  val () =
+    ( hol_use ("help" ++ "src-sml") "Database"
+    ; hol_use ("tools-poly" ++ "poly") "Help"
+    ; List.app (hol_use ("tools" ++ "Holmake"))
+        ["regexpMatch", "parse_glob", "internal_functions", "Holmake_types",
+         "ReadHMF"]
+    ; List.app (fn s => PolyML.use (HOLDIR ++ "tools" ++ s))
+        ["makefile-includes.ML", "check-intconfig.sml"]
+    ; List.app Meta.fakeload ["PP", "PolyML"]
+    ; Globals.interactive := true
+    ; Parse.current_backend := Parse.interactive_ppbackend ()
+    ; term_pp_prefix := "``"
+    ; term_pp_suffix := "``"
+    ; type_pp_prefix := "``"
+    ; type_pp_suffix := "``"
+    ; Feedback.set_trace "pp_annotations" 1
+    )
 end;
 
-use (OS.Path.concat (HOLDIR, OS.Path.concat("tools", "makefile-includes.ML")));
+local
+  infix ++
+  val op ++ = OS.Path.concat
+  val path = Path.toString o Path.fromString
+  fun HELP s = path (HOLDIR ++ "help" ++ s)
+  val SIGOBJ = path (HOLDIR ++ "sigobj")
+  val () =
+    ( Help.indexfiles := HELP "HOL.Help" :: !Help.indexfiles
+    ; Help.helpdirs   := HOLDIR :: SIGOBJ :: !Help.helpdirs
+    ; Help.specialfiles :=
+        {file = "help" ++ "Docfiles" ++ "HOL.help",
+         term = "hol",
+         title = "HOL Overview"} :: !Help.specialfiles
+    ; Help.displayLines := 60
+    )
+in
+  val help = Help.help
+end
 
-val _ =
-  (term_pp_prefix := "``";   term_pp_suffix := "``";
-   type_pp_prefix  := "``";   type_pp_suffix := "``");
-structure HOL_Interactive :> sig
-  val toggle_quietdec : unit -> bool
-  val amquiet : unit -> bool
-end =
-struct
-  val qd = ref false
-  fun toggle_quietdec () =
-      if !qd then (PolyML.Compiler.prompt1 := "> ";
-                   PolyML.Compiler.prompt2 := "# ";
-                   PolyML.print_depth 100;
-                   qd := false;
-                   false)
-      else (PolyML.Compiler.prompt1 := "";
-            PolyML.Compiler.prompt2 := "";
-            PolyML.print_depth 0;
-            qd := true;
-            true)
-  fun amquiet () = !qd
-end;
-
-val _ = app Meta.fakeload ["PP", "PolyML"];
-
-use (Path.concat(Globals.HOLDIR, "tools/check-intconfig.sml"));
-
-val _ = set_trace "pp_annotations" 1
-
-val _ = PolyML.print_depth 100;
+val _ = HOL_Interactive.toggle_quietdec ()

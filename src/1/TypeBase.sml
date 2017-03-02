@@ -218,9 +218,15 @@ end
 *)
 
 (* Less ambitious version, which only fires if all (>1) but one row have
-   the same right-hand-side and it doesn't depend on any pattern variables.*)
+   the same right-hand-side and it doesn't depend on any pattern variables.
+
+   NOTE: This is also broken, since
+      ``case x of 0n => T | 2 => T | _ => F``
+   is printed as
+      ``case x of v => F | _ => T``
+
 local
-  val disjoint = HOLset.isEmpty o HOLset.intersection
+  fun disjoint x = HOLset.isEmpty (HOLset.intersection x)
   fun FV tm = FVL [tm] empty_varset
 in
   fun pp_strip_case tm =
@@ -252,7 +258,8 @@ in
       (split_on, reduced_splits)
     end
 end
+*)
 
-val _ = term_pp.init_casesplit_munger pp_strip_case
+val _ = term_pp.init_casesplit_munger strip_case
 
 end

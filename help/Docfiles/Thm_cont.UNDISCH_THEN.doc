@@ -18,9 +18,9 @@ the theorem-tactic and then applies the consequent tactic.  Thus:
 }
 For example, if
 {
-    A u {t1} ?- t
-   ===============  f (ASSUME t1)
-    B u {t1} ?- v
+    A ?- t
+   ========  f (ASSUME t1)
+    B ?- v
 }
 then
 {
@@ -35,5 +35,5 @@ then
 assumption list.
 
 \SEEALSO
-Tactical.PAT_ASSUM, Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Drule.NEG_DISCH, Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, Tactic.STRIP_TAC, Drule.UNDISCH, Drule.UNDISCH_ALL, Tactic.UNDISCH_TAC.
+Tactical.PRED_ASSUM, Tactical.PAT_ASSUM, Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Drule.NEG_DISCH, Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, Tactic.STRIP_TAC, Drule.UNDISCH, Drule.UNDISCH_ALL, Tactic.UNDISCH_TAC.
 \ENDDOC

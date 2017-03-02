@@ -38,6 +38,7 @@ val rat_les_tm = prim_mk_const {Name="rat_les",Thy="rat"};
 val rat_gre_tm = prim_mk_const {Name="rat_gre",Thy="rat"};
 val rat_leq_tm = prim_mk_const {Name="rat_leq",Thy="rat"};
 val rat_geq_tm = prim_mk_const {Name="rat_geq",Thy="rat"};
+val rat_of_num_tm = prim_mk_const {Name = "rat_of_num", Thy = "rat"}
 
 (*--------------------------------------------------------------------------*
  * constructors
@@ -52,6 +53,7 @@ val mk_rat_sgn = mk_monop rat_sgn_tm;
 
 val mk_rat_ainv = mk_monop rat_ainv_tm;
 val mk_rat_minv = mk_monop rat_minv_tm;
+val mk_rat_of_num = mk_monop rat_of_num_tm;
 
 val mk_rat_add = mk_binop rat_add_tm;
 val mk_rat_sub = mk_binop rat_sub_tm;
@@ -70,6 +72,7 @@ val mk_rat_geq = mk_binop rat_geq_tm;
 val dest_rat_nmr = dest_monop rat_nmr_tm (ERR "dest_rat_nmr" "");
 val dest_rat_dnm = dest_monop rat_dnm_tm (ERR "dest_rat_dnm" "");
 val dest_rat_sgn = dest_monop rat_sgn_tm (ERR "dest_rat_sgn" "");
+val dest_rat_of_num = dest_monop rat_of_num_tm (ERR "dest_rat_of_num" "")
 
 val dest_rat_ainv = dest_monop rat_ainv_tm (ERR "dest_rat_ainv" "");
 val dest_rat_minv = dest_monop rat_minv_tm (ERR "dest_rat_minv" "");
@@ -91,6 +94,7 @@ val dest_rat_geq = dest_binop rat_geq_tm (ERR "dest_rat_geq" "");
 val is_rat_nmr = can dest_rat_nmr;
 val is_rat_dnm = can dest_rat_dnm;
 val is_rat_sgn = can dest_rat_sgn;
+val is_rat_of_num = can dest_rat_of_num
 
 val is_rat_ainv = can dest_rat_ainv;
 val is_rat_minv = can dest_rat_minv;
@@ -104,6 +108,22 @@ val is_rat_les = can dest_rat_les;
 val is_rat_gre = can dest_rat_gre;
 val is_rat_leq = can dest_rat_leq;
 val is_rat_geq = can dest_rat_geq;
+
+(* ----------------------------------------------------------------------
+    literals
+   ---------------------------------------------------------------------- *)
+
+fun is_int_injection t =
+  is_rat_of_num t orelse
+  is_rat_of_num (dest_rat_ainv t) handle HOL_ERR _ => false
+
+fun is_literal t =
+  is_int_injection t orelse
+  (let val (n,d) = dest_rat_div t
+   in
+     is_int_injection n andalso is_rat_of_num d
+   end handle HOL_ERR _ => false)
+
 
 (*--------------------------------------------------------------------------*
  * list constructors

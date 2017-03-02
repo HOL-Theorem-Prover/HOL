@@ -6,7 +6,7 @@ structure arm8_stepLib :> arm8_stepLib =
 struct
 
 open HolKernel boolLib bossLib
-open lcsymtacs sptreeTheory arm8Theory arm8_stepTheory arm8AssemblerLib
+open lcsymtacs arm8Theory arm8_stepTheory arm8AssemblerLib
 open blastLib
 
 structure Parse =
@@ -39,8 +39,7 @@ fun reg_var v = Term.mk_var (v, reg_ty)
 val r31 = wordsSyntax.mk_wordii (31, 5)
 fun NetFromList l = List.foldl (Lib.uncurry Net.insert) Net.empty l
 
-val arm8_monop =
-   HolKernel.syntax_fns "arm8" 1 HolKernel.dest_monop HolKernel.mk_monop
+val arm8_monop = HolKernel.syntax_fns1 "arm8"
 
 (* ---------------------------- *)
 
@@ -138,6 +137,9 @@ val Address_rwt =
       ``dfn'Address (page, imm, d)``
 
 (* ---------------------------- *)
+
+val Nop_rwt =
+   EV [dfn'Hint_def] [] [] ``dfn'Hint SystemHintOp_NOP``
 
 val AddSubCarry_rwt =
    EV [dfn'AddSubCarry_def] (SPLIT_31 "d") (TF0 `setflags`)
@@ -342,7 +344,9 @@ val LoadLiteral_rwt =
 val map_sp_rule =
    List.map
       (utilsLib.ALL_HYP_CONV_RULE
-         (DATATYPE_CONV THENC SIMP_CONV std_ss [Aligned_plus]) o sp_rule)
+         (DATATYPE_CONV
+          THENC SIMP_CONV std_ss [alignmentTheory.aligned_numeric]) o
+       sp_rule)
 
 val LoadStorePair_rwt =
    List.map
@@ -485,7 +489,13 @@ local
            v2w [x2; x3; x4; x5; x6; x7],F)= SOME (imm:word64, x)`
       ]
 
-   val r1 = REWRITE_RULE []
+   val r_rwt =
+      utilsLib.map_conv
+         (EVAL THENC REWRITE_CONV [arm8Theory.num2SystemHintOp_thm])
+         [``v2w [F; F; F] <+ 6w: word3``,
+          ``arm8$num2SystemHintOp (w2n (v2w [F; F; F]: word3))``]
+
+   val r1 = REWRITE_RULE [r_rwt]
    val r2 = utilsLib.INST_REWRITE_RULE (LoadStoreImmediate @ LoadStorePair)
    val r3 =
       utilsLib.ALL_HYP_CONV_RULE
@@ -612,7 +622,8 @@ val ps = (List.concat o List.map decode_rwt)
    ("LoadStoreRegister",            "..TTTFFF..T______T__TF__________"),
    ("StorePair32",                  "FFTFTFF_.F______________________"),
    ("LoadPair32",                   "F_TFTFF_.T______________________"),
-   ("LoadStorePair64",              "TFTFTFF_..______________________")
+   ("LoadStorePair64",              "TFTFTFF_..______________________"),
+   ("NoOperation",                  "TTFTFTFTFFFFFFTTFFTFFFFFFFFTTTTT")
   ]
 
 local
@@ -678,7 +689,7 @@ local
       MultiplyHigh_rwt @ Reverse32_rwt @ Reverse64_rwt @ CRC_rwt @
       BranchImmediate_rwt @ BranchRegister_rwt @ BranchConditional_rwt @
       CompareAndBranch_rwt @ TestBitAndBranch_rwt @ LoadStoreImmediate_rwt @
-      LoadStoreRegister_rwt @ LoadLiteral_rwt @ LoadStorePair_rwt
+      LoadStoreRegister_rwt @ LoadLiteral_rwt @ LoadStorePair_rwt @ Nop_rwt
       )
    val get_next = Term.rator o utilsLib.lhsc
    val r = REWRITE_RULE []

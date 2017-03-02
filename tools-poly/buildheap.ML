@@ -13,7 +13,7 @@ use "../tools/Holmake/Systeml.sig";
 use "Holmake/Systeml.sml";
 open Systeml;
 
-val defaultbase = fullPath [HOLDIR, "bin", "hol.builder"]
+val defaultbase = Systeml.DEFAULT_STATE
 
 fun usage() =
     (output(stdErr, "Usage:\n");
@@ -43,7 +43,9 @@ in
   recurse args ([], NONE, NONE)
 end
 
-fun create_heap (objs, outputheap, base) = let
+fun mkAbs p = OS.Path.mkAbsolute {relativeTo = OS.FileSys.getDir(), path = p}
+
+fun create_heap (objs, outputheap0, base0) = let
   open Systeml
   val ofile = OS.FileSys.tmpName()
   val ostrm = openOut ofile
@@ -51,7 +53,13 @@ fun create_heap (objs, outputheap, base) = let
   fun system_ps s =
       if OS.Process.isSuccess (Systeml.system_ps s) then ()
       else die ("*** Failed to execute\n  "^s^"\nsuccessfully")
+  val outputheap = mkAbs outputheap0
+  val base = mkAbs base0
 in
+  p ("fun die s = (TextIO.output(TextIO.stdErr, s ^ \"\\n\"); \
+     \OS.Process.exit OS.Process.failure)");
+  p ("val _ = PolyML.SaveState.loadState \"" ^ String.toString base ^ "\"\n");
+  p ("  handle e => die (General.exnMessage e)");
   p ("val heapname = \""^outputheap^"\";");
   p "local";
   p "fun hload s = (print (\"Loading \"^s^\"\\n\"); load s)";
@@ -59,18 +67,14 @@ in
   p ("val _ = List.map hload [" ^
      String.concatWith "," (map (fn f => "\"" ^ String.toString f ^ "\"") objs) ^
      "] handle x => ((case x of Fail s => print (s^\"\\n\") | _ => ()); OS.Process.exit OS.Process.failure);");
-  p "fun safe_use s = if String.sub (s, 0) = #\"-\" then () else use s";
-  p "fun main() = (List.app safe_use (CommandLine.arguments()); PolyML.rootFunction());";
-  p "val _ = PolyML.shareCommonData main;";
   p "in";
-  p ("val _ = PolyML.export(\""^ outputheap ^"\", main) end");
+  p ("val _ = PolyML.SaveState.saveChild(\""^ outputheap ^
+     "\", List.length (PolyML.SaveState.showHierarchy()))");
+  p ("val _ = print \"Exported "^outputheap^"\\n\"");
+  p ("val _ = OS.Process.exit OS.Process.success");
+  p ("end");
   closeOut ostrm;
-  system_ps (base ^ " < " ^ ofile);
-  system_ps ("cc -o " ^ outputheap ^ " " ^ outputheap^".o" ^ " " ^
-             String.concatWith " " POLY_LDFLAGS);
-  OS.FileSys.remove (outputheap^".o")
-    handle OS.SysErr(msg, _) =>
-           warn ("Couldn't remove "^outputheap^".o: "^msg)
+  system_ps (Systeml.POLY ^ " -q < " ^ ofile)
 end
 
 
@@ -87,5 +91,3 @@ fun main() = let
 in
   create_heap (objs, output, base)
 end
-val _ = PolyML.shareCommonData main;
-val _ = PolyML.export ("buildheap", ignore o main);

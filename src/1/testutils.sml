@@ -6,8 +6,9 @@ open Lib
 val linewidth = ref 80
 
 fun die s = (print (s ^ "\n"); OS.Process.exit OS.Process.failure)
+fun OK () = print "OK\n"
 
-fun tprint s = print (StringCvt.padRight #" " 65 (s ^ " ... "))
+fun tprint s = print (UTF8.padRight #" " 65 (s ^ " ... "))
 
 fun unicode_off f = Feedback.trace ("Unicode", 0) f
 fun raw_backend f =

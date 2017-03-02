@@ -6,8 +6,8 @@
 Convert ML bignum value to HOL numeral.
 
 \DESCRIBE
-An invocation {mk_numeral n}, where {n} is an ML value of type 
-{Arbnum.num} returns the corrresponding HOL term. 
+An invocation {mk_numeral n}, where {n} is an ML value of type
+{Arbnum.num} returns the corrresponding HOL term.
 
 \EXAMPLE
 {

@@ -6,6 +6,7 @@ structure arm_stepLib :> arm_stepLib =
 struct
 
 open HolKernel boolLib bossLib
+
 open lcsymtacs armTheory arm_stepTheory arm_configLib
 open state_transformerSyntax blastLib
 
@@ -21,9 +22,6 @@ end
 
 open Parse
 val _ = Parse.hide "add"
-
-infix \\
-val op \\ = op THEN
 
 val ERR = Feedback.mk_HOL_ERR "arm_stepLib"
 val WARN = Feedback.HOL_WARNING "arm_stepLib"
@@ -66,6 +64,9 @@ local
       u_of "arm_state"
    val exc = ``SND (raise'exception e s : 'a # arm_state)``
 in
+   val cond_thms =
+      [SIMP_CONV std_ss [] ``if a then b else if a then c else d : 'a``,
+       boolTheory.COND_ID]
    val cond_rand_thms = utilsLib.mk_cond_rand_thms (other_fns @ state_fns)
    val snd_exception_thms =
       utilsLib.map_conv
@@ -79,7 +80,8 @@ end
 (* ARM datatype theorems/conversions *)
 
 fun datatype_thms thms =
-   thms @ [cond_rand_thms, snd_exception_thms, FST_SWAP] @
+   [cond_rand_thms, snd_exception_thms, FST_SWAP,
+    arm_stepTheory.Align, arm_stepTheory.Aligned] @ thms @ cond_thms @
    utilsLib.datatype_rewrites true "arm"
      ["arm_state", "Architecture", "RName", "InstrSet", "SRType", "Encoding",
       "PSR", "VFPNegMul"]
@@ -175,7 +177,7 @@ local
 
    val thms = [merge_cond, cond_rand_thms, isnot15, IsSecure_def,
                CurrentInstrSet_rwt, NotMon, HaveSecurityExt_def, Rmode_def,
-               write'Rmode_def, LookUpRName_rwt, GSYM Aligned]
+               write'Rmode_def, LookUpRName_rwt, arm_stepTheory.aligned_23]
 
    val Rmode_rwt =
       EV thms [[``Extension_Security NOTIN ^st.Extensions``]] []
@@ -184,7 +186,7 @@ local
    val write'Rmode_rwt =
       EV thms
          [[``Extension_Security NOTIN ^st.Extensions``, ``n <> 15w: word4``,
-           ``~(((n = 13w: word4) /\ ~Aligned (v: word32, 4)) /\ ^st.CPSR.T)``]]
+           ``~(((n = 13w: word4) /\ ~aligned 2 (v: word32)) /\ ^st.CPSR.T)``]]
          []
         ``write'Rmode (v, n, m)``
         |> hd
@@ -212,7 +214,7 @@ in
        ~^st.Extensions Extension_Security==>
        ~^st.CPSR.J ==>
        n <> 15w ==>
-       ((n <> 13w) \/ Aligned (v, 4) \/ ~^st.CPSR.T) ==>
+       ((n <> 13w) \/ aligned 2 v \/ ~^st.CPSR.T) ==>
        (write'R (v, n) ^st =
         ((), ^st with REG := (R_mode (^st.CPSR.M) n =+ v) ^st.REG))`,
       rewrite_tac [in_ext]
@@ -220,7 +222,7 @@ in
       \\ DISCH_THEN
            (fn th => IMP_RES_TAC (MATCH_MP (DISCH_ALL write'Rmode_rwt) th))
       \\ simp [write'R_def]
-      \\ pop_assum (K all_tac)
+      \\ pop_assum kall_tac
       \\ lrw [R_mode_def, CurrentInstrSet_rwt]
       \\ fs [GoodMode_def]
       \\ blastLib.FULL_BBLAST_TAC
@@ -254,12 +256,13 @@ local
    val a =
       ``(^st.Architecture <> ARMv4) /\ (^st.Architecture <> ARMv4T) /\
         (^st.Architecture <> ARMv5T) /\ (^st.Architecture <> ARMv5TE) \/
-        (Aligned (imm32: word32, 4))``
+        aligned 2 (imm32: word32)``
    val rwt = a |> boolSyntax.mk_neg |> utilsLib.SRW_CONV [] |> Thm.SYM
 in
    val BranchWritePC_rwt =
      EV [BranchWritePC_def, CurrentInstrSet_rwt, BranchTo_rwt,
-         ArchVersion_rwts, GSYM Aligned, not_cond, rwt]
+         ArchVersion_rwts, arm_stepTheory.aligned_23, not_cond, rwt,
+         Align_LoadWritePC]
         [[``^st.CPSR.T``], [``~^st.CPSR.T``, a]] []
         ``BranchWritePC imm32``
 end
@@ -277,12 +280,14 @@ in
        ``BXWritePC imm32`` |> hd
 end
 
+val align_aligned = UNDISCH_ALL (SPEC_ALL alignmentTheory.align_aligned)
+
 local
    val rwt = Q.prove(
      `(^st.Architecture = ARMv4) \/ (^st.Architecture = ARMv4T) ==>
       (^st.Architecture <> ARMv4 /\ ^st.Architecture <> ARMv4T /\
        ^st.Architecture <> ARMv5T /\ ^st.Architecture <> ARMv5TE \/
-       Aligned (imm32: word32,4) = Aligned (imm32, 4))`,
+       aligned 2 (imm32: word32) = aligned 2 imm32)`,
      lrw [] \\ lfs []) |> Drule.UNDISCH
 
    val LoadWritePC_rwt1 =
@@ -303,7 +308,7 @@ local
 
    val LoadWritePC_rwt3 =
      EV [LoadWritePC_def, hd (tl (BranchWritePC_rwt)), CurrentInstrSet_rwt,
-         ArchVersion_rwts, arm_stepTheory.Align_LoadWritePC]
+         ArchVersion_rwts, arm_stepTheory.Align_LoadWritePC, align_aligned]
         [[``~(^st.Architecture <> ARMv4 /\ ^st.Architecture <> ARMv4T)``]] []
        ``LoadWritePC imm32``
        |> hd
@@ -343,59 +348,55 @@ val BigEndianReverse_rwt =
 local
    val rwts =
      [MemA_with_priv_def, cond_rand_thms, snd_exception_thms,
-      wordsTheory.WORD_ADD_0, bitstringTheory.v2w_w2v] @
+      wordsTheory.WORD_ADD_0, bitstringTheory.v2w_w2v,
+      AlignedAlign, alignmentTheory.aligned_0, alignmentTheory.align_0] @
      mem_rwt @ BigEndianReverse_rwt
 in
    val MemA_with_priv_1_rwt =
-     EV (rwts @ [Thm.CONJUNCT1 Aligned, bitstringTheory.field_fixwidth,
-                 fixwidth_for ``:8``])
+     EV (rwts @ [bitstringTheory.field_fixwidth, fixwidth_for ``:8``])
         [] []
        ``MemA_with_priv (v, 1, priv) : arm_state -> word8 # arm_state``
        |> hd
 
    val MemU_with_priv_1_rwt =
-     EV (tl rwts @ [MemU_with_priv_def, MemA_with_priv_1_rwt,
-                    Thm.CONJUNCT1 Aligned, Align])
+     EV (tl rwts @ [MemU_with_priv_def, MemA_with_priv_1_rwt])
         [] []
        ``MemU_with_priv (v, 1, priv) : arm_state -> word8 # arm_state``
        |> hd
 
    val MemA_with_priv_2_rwt =
      EV (extract16 :: rwts)
-        [[``Aligned (v:word32,2)``]] []
+        [[``aligned 1 (v:word32)``]] []
        ``MemA_with_priv (v, 2, priv) : arm_state -> word16 # arm_state``
        |> hd
 
    val MemU_with_priv_2_rwt =
-     EV ([extract16, MemU_with_priv_def, AlignedAlign_2, MemA_with_priv_2_rwt] @
-         tl rwts)
-        [[``Aligned (v:word32,2)``]] []
+     EV ([extract16, MemU_with_priv_def, MemA_with_priv_2_rwt] @ tl rwts)
+        [[``aligned 1 (v:word32)``]] []
        ``MemU_with_priv (v, 2, priv) : arm_state -> word16 # arm_state``
        |> hd
 
    val MemA_with_priv_4_rwt =
      EV (extract32 :: rwts)
-        [[``Aligned (v:word32,4)``]] []
+        [[``aligned 2 (v:word32)``]] []
        ``MemA_with_priv (v, 4, priv) : arm_state -> word32 # arm_state``
        |> hd
 
    val MemU_with_priv_4_rwt =
-     EV ([extract16, MemU_with_priv_def, AlignedAlign_4, MemA_with_priv_4_rwt] @
-         tl rwts)
-        [[``Aligned (v:word32,4)``]] []
+     EV ([extract16, MemU_with_priv_def, MemA_with_priv_4_rwt] @ tl rwts)
+        [[``aligned 2 (v:word32)``]] []
        ``MemU_with_priv (v, 4, priv) : arm_state -> word32 # arm_state``
        |> hd
 
    val MemA_with_priv_8_rwt =
      EV (extract64 :: rwts)
-        [[``Aligned (v:word32,8)``]] []
+        [[``aligned 3 (v:word32)``]] []
        ``MemA_with_priv (v, 8, priv) : arm_state -> word64 # arm_state``
        |> hd
 
    val MemU_with_priv_8_rwt =
-     EV ([extract16, MemU_with_priv_def, AlignedAlign_8, MemA_with_priv_8_rwt] @
-         tl rwts)
-        [[``Aligned (v:word32,8)``]] []
+     EV ([extract16, MemU_with_priv_def, MemA_with_priv_8_rwt] @ tl rwts)
+        [[``aligned 3 (v:word32)``]] []
        ``MemU_with_priv (v, 8, priv) : arm_state -> word64 # arm_state``
        |> hd
 end
@@ -476,8 +477,9 @@ local
    val field_cond_rand = Drule.ISPEC ``field h l`` boolTheory.COND_RAND
    val rwts =
      [write'MemA_with_priv_def, cond_rand_thms, snd_exception_thms,
-      wordsTheory.WORD_ADD_0, bitstringTheory.v2w_w2v, Thm.CONJUNCT1 Aligned,
-      field_cond_rand] @ write'mem_rwt @ BigEndianReverse_rwt
+      wordsTheory.WORD_ADD_0, bitstringTheory.v2w_w2v, field_cond_rand,
+      AlignedAlign, alignmentTheory.aligned_0, alignmentTheory.align_0] @
+     write'mem_rwt @ BigEndianReverse_rwt
 in
    val write'MemA_with_priv_1_rwt =
      EV (rwts @ [fixwidth_for ``:8``, bitstringTheory.field_fixwidth]) [] []
@@ -492,26 +494,24 @@ in
        |> hd
 
    val write'MemA_with_priv_2_rwt =
-     EV (field16 :: rwts) [[``Aligned (v:word32,2)``]] []
+     EV (field16 :: rwts) [[``aligned 1 (v:word32)``]] []
        ``write'MemA_with_priv (w:word16, v, 2, priv)``
        |> hd
 
    val write'MemU_with_priv_2_rwt =
-     EV ([write'MemU_with_priv_def, AlignedAlign_2,
-          write'MemA_with_priv_2_rwt] @ tl rwts)
-        [[``Aligned (v:word32,2)``]] []
+     EV ([write'MemU_with_priv_def, write'MemA_with_priv_2_rwt] @ tl rwts)
+        [[``aligned 1 (v:word32)``]] []
        ``write'MemU_with_priv (w: word16, v, 2, priv)``
        |> hd
 
    val write'MemA_with_priv_4_rwt =
-     EV (field32 :: rwts) [[``Aligned (v:word32,4)``]] []
+     EV (field32 :: rwts) [[``aligned 2 (v:word32)``]] []
        ``write'MemA_with_priv (w:word32, v, 4, priv)``
        |> hd
 
    val write'MemU_with_priv_4_rwt =
-     EV ([write'MemU_with_priv_def, AlignedAlign_4,
-          write'MemA_with_priv_4_rwt] @ tl rwts)
-        [[``Aligned (v:word32,4)``]] []
+     EV ([write'MemU_with_priv_def, write'MemA_with_priv_4_rwt] @ tl rwts)
+        [[``aligned 2 (v:word32)``]] []
        ``write'MemU_with_priv (w: word32, v, 4, priv)``
        |> hd
 end
@@ -664,12 +664,12 @@ fun regEV npcs thms ctxt s tm =
 
 fun memEV rl mem thms ctxt s tm =
    let
-      val thms = [NullCheckIfThumbEE_rwt, IncPC_rwt, PC_rwt,
+      val thms = [NullCheckIfThumbEE_rwt, IncPC_rwt, PC_rwt, R_rwt,
                   armTheory.offset1_case_def,
                   armTheory.offset2_case_def,
                   pairTheory.pair_case_thm,
-                  Shift_C_DecodeImmShift_rwt, Shift_C_LSL_rwt,
-                  Aligned_plus, Shift_def, R_rwt] @ thms
+                  Shift_C_DecodeImmShift_rwt, Shift_C_LSL_rwt, Shift_def,
+                  alignmentTheory.aligned_add_sub_123] @ thms
    in
       List.map (fn r => EV ([r] @ thms) ctxt s tm |> List.map rl) mem
       |> List.concat
@@ -758,7 +758,7 @@ local
    val cond_write'R_13_rwt = Q.prove(
       `~^st.CPSR.J ==> GoodMode (^st.CPSR.M) ==>
        ~^st.Extensions Extension_Security ==>
-       (p ==> (Aligned (w, 4) \/ ~^st.CPSR.T)) ==>
+       (p ==> (aligned 2 w \/ ~^st.CPSR.T)) ==>
        ((if p then
             ((), a, SND (write'R (w, 13w) s))
          else
@@ -792,50 +792,50 @@ local
                               LDM_UPTO_0, LDM_UPTO_SUC]) tm
       end
 
-   fun LDM a i =
-      LDM_thm
-      |> Q.INST [`increment` |-> a, `index` |-> i]
-      |> Conv.RIGHT_CONV_RULE
-           (REWRITE_CONV [R_rwt,
-                          ASSUME ``~word_bit 15 (registers: word16)``,
-                          ASSUME ``n <> 15w: word4``]
-            THENC Conv.EVERY_CONV
-                     (List.tabulate
-                         (15, fn i => Conv.ONCE_DEPTH_CONV (FOR_BETA_CONV i))))
-      |> utilsLib.ALL_HYP_CONV_RULE
-            (utilsLib.WGROUND_CONV
-             THENC REWRITE_CONV
-                      [Aligned_plus, Aligned_concat4, LDM_UPTO_components]
-             THENC numLib.REDUCE_CONV)
-      |> REWRITE_RULE [rearrange]
+   val pc_conv =
+      Conv.RAND_CONV
+         (PairedLambda.let_CONV
+          THENC utilsLib.INST_REWRITE_CONV [hd MemA_4_rwt]
+          THENC REWRITE_CONV
+                  [pairTheory.pair_case_thm, EVAL ``14 + 1n``,
+                   alignmentTheory.aligned_numeric,
+                   alignmentTheory.aligned_add_sub_123,
+                   arm_stepTheory.Aligned_concat4,
+                   LDM_UPTO_components]
+          THENC Conv.RAND_CONV
+                  (Conv.RAND_CONV
+                     (Conv.RATOR_CONV PairedLambda.GEN_BETA_CONV
+                      THENC PairedLambda.GEN_BETA_CONV)
+                   THENC PairedLambda.let_CONV))
 
-   fun LDM_PC a i =
-      LDM_thm
-      |> Q.INST [`increment` |-> a, `index` |-> i]
-      |> Conv.RIGHT_CONV_RULE
-           (REWRITE_CONV [R_rwt,
-                          ASSUME ``word_bit 15 (registers: word16)``,
-                          ASSUME ``n <> 15w: word4``]
-            THENC Conv.EVERY_CONV
-                     (List.tabulate
-                         (15, fn i => Conv.ONCE_DEPTH_CONV (FOR_BETA_CONV i)))
-            THENC Conv.RAND_CONV
-                     (PairedLambda.let_CONV
-                      THENC utilsLib.INST_REWRITE_CONV [hd MemA_4_rwt]
-                      THENC REWRITE_CONV
-                              [pairTheory.pair_case_thm, EVAL ``14 + 1n``,
-                               LDM_UPTO_components]
-                      THENC Conv.RAND_CONV
-                              (Conv.RAND_CONV
-                                 (Conv.RATOR_CONV PairedLambda.GEN_BETA_CONV
-                                  THENC PairedLambda.GEN_BETA_CONV)
-                               THENC PairedLambda.let_CONV)))
-      |> utilsLib.ALL_HYP_CONV_RULE
-            (utilsLib.WGROUND_CONV
-             THENC REWRITE_CONV
-                      [Aligned_plus, Aligned_concat4, LDM_UPTO_components]
-             THENC numLib.REDUCE_CONV)
-      |> REWRITE_RULE [rearrange]
+   val pc_tm = ``word_bit 15 (registers: word16)``
+
+   fun LDM ispc a i =
+      let
+         val (tm, cnv) = if ispc then (pc_tm, pc_conv)
+                         else (boolSyntax.mk_neg pc_tm, ALL_CONV)
+      in
+         LDM_thm
+         |> Q.INST [`increment` |-> a, `index` |-> i]
+         |> Conv.RIGHT_CONV_RULE
+              (REWRITE_CONV [R_rwt, ASSUME tm, ASSUME ``n <> 15w: word4``]
+               THENC Conv.EVERY_CONV
+                       (List.tabulate
+                          (15, fn i => Conv.ONCE_DEPTH_CONV (FOR_BETA_CONV i)))
+               THENC cnv)
+         |> utilsLib.ALL_HYP_CONV_RULE
+               (utilsLib.WGROUND_CONV
+                THENC REWRITE_CONV
+                         [alignmentTheory.aligned_numeric,
+                          alignmentTheory.aligned_add_sub_123,
+                          arm_stepTheory.Aligned_concat4,
+                          LDM_UPTO_components]
+                THENC numLib.REDUCE_CONV)
+         |> REWRITE_RULE [rearrange]
+      end
+
+   val LDM_PC = LDM true
+   val LDM = LDM false
 
    val LDMDA_PC = LDM_PC `F` `F`
    val LDMDB_PC = LDM_PC `F` `T`
@@ -846,6 +846,17 @@ local
    val LDMDB = LDM `F` `T`
    val LDMIA = LDM `T` `F`
    val LDMIB = LDM `T` `T`
+
+   val rule =
+      REWRITE_RULE [count_list_15] o
+      utilsLib.ALL_HYP_CONV_RULE
+        (DATATYPE_CONV
+         THENC REWRITE_CONV
+                 [ASSUME ``aligned 2 (^st.REG (arm_step$R_mode ^st.CPSR.M n))``,
+                  alignmentTheory.aligned_numeric,
+                  alignmentTheory.aligned_add_sub_123,
+                  arm_stepTheory.Aligned_concat4,
+                  LDM_UPTO_components])
 in
    fun ldmEV wb =
       EV [LDMDA, LDMDB, LDMIA, LDMIB, LDM_UPTO_def, IncPC_rwt, LDM_UPTO_PC,
@@ -859,8 +870,7 @@ in
           [`inc` |-> ``T``, `index` |-> ``T``]]
         ``dfn'LoadMultiple
             (inc, index, ^(bitstringSyntax.mk_b wb), n, registers)``
-        |> List.map (REWRITE_RULE [count_list_15] o
-                     utilsLib.ALL_HYP_CONV_RULE DATATYPE_CONV)
+        |> List.map rule
         |> addThms
 
    fun ldm_pcEV wb =
@@ -876,15 +886,7 @@ in
              [`inc` |-> ``T``, `index` |-> ``T``]]
            ``dfn'LoadMultiple
                (inc, index, ^(bitstringSyntax.mk_b wb), n, registers)``
-           |> List.map
-                (REWRITE_RULE [count_list_15] o
-                 utilsLib.ALL_HYP_CONV_RULE
-                   (DATATYPE_CONV
-                    THENC REWRITE_CONV
-                            [ASSUME
-                               ``Aligned
-                                   (^st.REG (arm_step$R_mode ^st.CPSR.M n),4)``,
-                             Aligned_plus, LDM_UPTO_components])))
+           |> List.map rule)
            LoadWritePC_rwt
         |> List.concat
         |> addThms
@@ -951,7 +953,10 @@ in
       |> utilsLib.ALL_HYP_CONV_RULE
             (numLib.REDUCE_CONV
              THENC REWRITE_CONV
-                     [Aligned_plus, Aligned_concat4, STM_UPTO_components]
+                     [alignmentTheory.aligned_numeric,
+                      alignmentTheory.aligned_add_sub_123,
+                      arm_stepTheory.Aligned_concat4,
+                      STM_UPTO_components]
              THENC utilsLib.INST_REWRITE_CONV [R_rwt]
              THENC DATATYPE_CONV)
       |> utilsLib.ALL_HYP_CONV_RULE (REWRITE_CONV [STM_UPTO_components])
@@ -1001,11 +1006,16 @@ in
                   ``a \/ b \/ c : bool`` o
                utilsLib.ALL_HYP_CONV_RULE
                   (DATATYPE_CONV
-                   THENC REWRITE_CONV [boolTheory.COND_ID, Aligned_plus]) o
+                   THENC REWRITE_CONV
+                            [boolTheory.COND_ID,
+                             alignmentTheory.aligned_numeric,
+                             alignmentTheory.aligned_add_sub_123]) o
                utilsLib.ALL_HYP_CONV_RULE
                   (DATATYPE_CONV
                    THENC SIMP_CONV std_ss
-                           [pairTheory.pair_case_thm, Aligned_plus]
+                           [pairTheory.pair_case_thm,
+                            alignmentTheory.aligned_numeric,
+                            alignmentTheory.aligned_add_sub_123]
                    THENC utilsLib.INST_REWRITE_CONV [hd write'MemA_4_rwt]))
         |> addThms
 end
@@ -1237,7 +1247,7 @@ in
             then ground_mul_rule o rule o
                  Conv.CONV_RULE (Conv.DEPTH_CONV FOLDL_LDM1_CONV)
          else if String.isPrefix "STM" s'
-            then stm_rule2 o stm_rule1 o rule o
+            then ground_mul_rule o stm_rule2 o stm_rule1 o rule o
                  Conv.CONV_RULE (Conv.DEPTH_CONV FOLDL_STM1_CONV)
          else Lib.I
       end
@@ -1322,8 +1332,10 @@ local
       utilsLib.ALL_HYP_CONV_RULE DATATYPE_CONV
 
    val ALIGNED_PLUS_RULE =
-      utilsLib.MATCH_HYP_CONV_RULE (REWRITE_CONV [Aligned_plus])
-        ``Aligned (a + b : 'a word, c)``
+      utilsLib.MATCH_HYP_CONV_RULE
+        (REWRITE_CONV [alignmentTheory.aligned_numeric,
+                       alignmentTheory.aligned_add_sub_123])
+        ``aligned c (a + b : 'a word)``
 
    val thumb2_test_tm =
       fix_datatype
@@ -1684,6 +1696,10 @@ val arm_patterns = List.map (I ## epattern)
    ("Signed16x32Multiply32Result",          "FFFTFFTF____________T_TF"),
    ("Signed16Multiply64Accumulate",         "FFFTFTFF____________T__F"),
    ("Signed16Multiply32Result",             "FFFTFTTF____________T__F"),
+   ("BitFieldClearOrInsert",                "FTTTTTF______________FFT"),
+   ("BitFieldExtract",                      "FTTTT_T______________TFT"),
+   ("ExtendByte16",                         "FTTFT_FF__________FFFTTT"),
+   ("ByteReverse",                          "FTTFTFTTTTTT____TTTTFFTT"),
    ("Register",                             "FFFF___________________F"),
    ("Register ORR/BIC",                     "FFFTT_F________________F"),
    ("ShiftImmediate",                       "FFFTT_T________________F"),
@@ -1766,6 +1782,7 @@ val arm_patterns = List.map (I ## epattern)
 val arm_patterns15 = List.map (I ## epattern)
   [("Setend",                                 "FFFTFFFF___T________FFFF"),
    ("ChangeProcessorState",                   "FFFTFFFF___F__________F_"),
+   ("DataMemoryBarrier",                      "FTFTFTTTTTTTTTTTFFFFFTFT"),
    ("ReturnFromException",                    "TFF__F_T________________"),
    ("BranchLinkExchangeImmediate (to Thumb)", "TFT_____________________")
   ]
@@ -1916,6 +1933,7 @@ local
      ("BLX (imm)", ("BranchLinkExchangeImmediate (to Thumb)", [])),
      ("BLX (reg)", ("BranchLinkExchangeRegister", [])),
      ("CLZ", ("CountLeadingZeroes", [])),
+     ("DMB", ("DataMemoryBarrier", [])),
      ("MOVT", ("MoveHalfword", [xT 0])),
      ("MOVW", ("MoveHalfword", [xF 0])),
      ("MOV (imm)", ("Move", [xF 0, xF 1])),
@@ -2008,16 +2026,25 @@ local
      ("SMULL", ("MultiplyLong", [xT 0, xF 1, xF 2])),
      ("UMLAL", ("MultiplyLong", [xF 0, xT 1, xF 2])),
      ("SMLAL", ("MultiplyLong", [xT 0, xT 1, xF 2])),
-     ("MULS", ("Multiply32", [xT 0])),
-     ("MLAS", ("MultiplyAccumulate", [xT 0])),
-     ("UXTAB", ("ExtendByte", [xT 0])),
-     ("SXTAB", ("ExtendByte", [xF 0])),
-     ("UXTB", ("ExtendByte", [xT 0, xT 1, xT 2, xT 3, xT 4])),
-     ("SXTB", ("ExtendByte", [xF 0, xT 1, xT 2, xT 3, xT 4])),
      ("UMULLS", ("MultiplyLong", [xF 0, xF 1, xT 2])),
      ("SMULLS", ("MultiplyLong", [xT 0, xF 1, xT 2])),
      ("UMLALS", ("MultiplyLong", [xF 0, xT 1, xT 2])),
      ("SMLALS", ("MultiplyLong", [xT 0, xT 1, xT 2])),
+     ("MULS", ("Multiply32", [xT 0])),
+     ("MLAS", ("MultiplyAccumulate", [xT 0])),
+     ("SMLA<XY>", ("Signed16Multiply32Accumulate", [])),
+     ("BFC", ("BitFieldClearOrInsert", [])),
+     ("REV", ("ByteReverse", [])),
+     ("UXTAB", ("ExtendByte", [xT 0])),
+     ("SXTAB", ("ExtendByte", [xF 0])),
+     ("UXTB", ("ExtendByte", [xT 0, xT 1, xT 2, xT 3, xT 4])),
+     ("SXTB", ("ExtendByte", [xF 0, xT 1, xT 2, xT 3, xT 4])),
+     ("UXTAB16", ("ExtendByte16", [xT 0])),
+     ("SXTAB16", ("ExtendByte16", [xF 0])),
+     ("UXTB16", ("ExtendByte16", [xT 0, xT 1, xT 2, xT 3, xT 4])),
+     ("SXTB16", ("ExtendByte16", [xF 0, xT 1, xT 2, xT 3, xT 4])),
+     ("UBFX", ("BitFieldExtract", [xT 0])),
+     ("SBFX", ("BitFieldExtract", [xF 0])),
      ("LDR (+imm,pre,wb)", ("LoadWord (imm,pre)", [xT 0, xT 1])),
      ("LDR (-imm,pre,wb)", ("LoadWord (imm,pre)", [xF 0, xT 1])),
      ("LDR (+imm,pre)", ("LoadWord (imm,pre)", [xT 0, xF 1])),
@@ -2095,6 +2122,10 @@ local
      ("LDRSB (-reg,pre,pc)",
         ("LoadSignedByte (reg,pre)", [xF 0, xF 1, xT 2, xT 3, xT 4, xT 5])),
      ("LDRSB (reg,post)", ("LoadSignedByte (reg,post)", [])),
+     ("LDRBT (+imm)", ("LoadByteUnprivileged (imm)", [xT 0])),
+     ("LDRBT (-imm)", ("LoadByteUnprivileged (imm)", [xF 0])),
+     ("LDRBT (+reg)", ("LoadByteUnprivileged (reg)", [xT 0])),
+     ("LDRBT (-reg)", ("LoadByteUnprivileged (reg)", [xF 0])),
      ("LDRH (+imm,pre,wb)", ("LoadHalf (imm,pre)", [xT 0, xT 1, xF 13])),
      ("LDRH (-imm,pre,wb)", ("LoadHalf (imm,pre)", [xF 0, xT 1, xF 13])),
      ("LDRH (+imm,pre)", ("LoadHalf (imm,pre)", [xT 0, xF 1, xF 13])),
@@ -2533,6 +2564,7 @@ in
       in
          fn s =>
             let
+               val s = utilsLib.removeSpaces s
                val v = bitstringSyntax.bitstring_of_hexstring s
                val x = if String.size s = 8 andalso uncond (String.sub (s, 0))
                           then [true]
@@ -2552,6 +2584,11 @@ val NoOperation_rwt =
       ``dfn'NoOperation``
    |> addThms
 
+val DataMemoryBarrier_rwt =
+   EV [dfn'DataMemoryBarrier_def, IncPC_rwt] [] []
+      ``dfn'DataMemoryBarrier opt``
+   |> addThms
+
 (* ---------------------------- *)
 
 val Setend_rwt =
@@ -2562,25 +2599,35 @@ val Setend_rwt =
 (* ---------------------------- *)
 
 val BranchTarget_rwts =
-   List.map (fn b =>
-     EV [dfn'BranchTarget_def, PC_rwt, b, not_cond] [] []
-     ``dfn'BranchTarget imm32``) BranchWritePC_rwt
-     |> List.concat
-     |> List.map
-           (utilsLib.MATCH_HYP_RULE
-               (utilsLib.INST_REWRITE_RULE [AlignedPC_plus] o
-                ASM_REWRITE_RULE []) ``a \/ b : bool`` o
-            utilsLib.INST_REWRITE_RULE
-               [AlignedPC_plus_thumb, AlignedPC_plus_arm] o
-            ASM_REWRITE_RULE [] o
-            FULL_DATATYPE_RULE)
+   let
+      val thms = [dfn'BranchTarget_def, PC_rwt, not_cond, align_aligned]
+      val tm =
+         ``aligned 2 (s.REG RName_PC + (if s.CPSR.T then 4w else 8w) + imm32)``
+   in
+     (
+      EV (hd BranchWritePC_rwt :: thms) [] []
+        ``dfn'BranchTarget imm32``
+      |> List.map (utilsLib.ALL_HYP_RULE
+                     (utilsLib.INST_REWRITE_RULE [Aligned_BranchTarget_thumb]))
+     )
+      @
+     (
+      EV (tl BranchWritePC_rwt @ thms) [] []
+        ``dfn'BranchTarget imm32``
+      |> List.map (utilsLib.ALL_HYP_CONV_RULE
+                     (utilsLib.INST_REWRITE_CONV [ASSUME tm]
+                      THENC REWRITE_CONV []))
+      |> List.map (utilsLib.ALL_HYP_RULE
+                     (utilsLib.INST_REWRITE_RULE [Aligned_BranchTarget_arm]))
+     )
      |> addThms
+   end
 
 (* ---------------------------- *)
 
 val BranchExchange_rwt =
-   EV ([dfn'BranchExchange_def, R_rwt, BXWritePC_rwt, CurrentInstrSet_rwt] @
-       SelectInstrSet_rwt)
+   EV ([dfn'BranchExchange_def, R_rwt, BXWritePC_rwt, CurrentInstrSet_rwt,
+        Align_LoadWritePC] @ SelectInstrSet_rwt)
       [[``m <> 15w: word4``]] []
       ``dfn'BranchExchange m``
      |> List.map COND_UPDATE_RULE
@@ -2595,24 +2642,19 @@ val BranchExchange_pc_arm_rwt =
           (utilsLib.MATCH_HYP_CONV_RULE
               (utilsLib.INST_REWRITE_CONV
                   [arm_stepTheory.Aligned4_bit0, arm_stepTheory.Aligned4_bit1]
-               THENC REWRITE_CONV []) ``a ==> b`` o
-           COND_UPDATE_RULE)
-     |> addThms
+               THENC REWRITE_CONV []) ``a ==> b``)
 
 val BranchExchange_pc_thumb_rwt =
    EV ([dfn'BranchExchange_def, BXWritePC_rwt, R15_rwt,
-        arm_stepTheory.Aligned2_bit0, CurrentInstrSet_rwt] @ SelectInstrSet_rwt)
+        Aligned4_bit0_t, CurrentInstrSet_rwt] @ SelectInstrSet_rwt)
       [[``^st.CPSR.T``]] []
       ``dfn'BranchExchange 15w``
      |> List.map
           (utilsLib.MATCH_HYP_CONV_RULE
               (utilsLib.INST_REWRITE_CONV
-                  [arm_stepTheory.Aligned2_bit0,
-                   blastLib.BBLAST_PROVE
-                      ``word_bit 1 (pc + 4w: word32) = word_bit 1 pc``]
-               THENC REWRITE_CONV []) ``a ==> b`` o
-           COND_UPDATE_RULE)
-     |> addThms
+                  [arm_stepTheory.Aligned4_bit0_t,
+                   arm_stepTheory.Aligned4_bit1_t]
+               THENC REWRITE_CONV []) ``a ==> b``)
 
 (* ---------------------------- *)
 
@@ -2624,7 +2666,7 @@ val R_x_14_not_pc =
 val BranchLinkExchangeRegister_rwt =
    EV ([dfn'BranchLinkExchangeRegister_def, R_rwt, write'R_rwt, PC_rwt,
         BXWritePC_rwt, CurrentInstrSet_rwt, write'LR_def, R_x_14_not_pc,
-        not_cond] @ SelectInstrSet_rwt)
+        not_cond, Align_LoadWritePC] @ SelectInstrSet_rwt)
       [[``m <> 15w: word4``]] []
       ``dfn'BranchLinkExchangeRegister m``
      |> List.map
@@ -2710,11 +2752,17 @@ val DataProcessingPC_nsetflags_rwt =
           AddWithCarry, wordsTheory.FST_ADD_WITH_CARRY,
           ArithmeticOpcode_def, PC_rwt, IncPC_rwt, cond_rand_thms] []
          (mapl (`opc`, utilsLib.tab_fixedwidth 16 4))
-         ``DataProcessingPC (opc, F, n, imm32, c)``) reg_rwts
+         ``DataProcessingPC (opc, F, n, imm32)``) reg_rwts
       |> List.concat
 *)
 
 local
+   val x = ``x: word32 # bool``
+   val DataProcessing =
+      DataProcessing_def
+      |> Q.SPECL [`opc`, `setflags`, `d`, `n`, `FST ^x`, `SND ^x`]
+      |> REWRITE_RULE [pairTheory.PAIR]
+      |> utilsLib.SET_RULE
    val DataProcessing_rwts =
       List.map
          (fn opc =>
@@ -2723,12 +2771,11 @@ local
                val wr = if i < 8 orelse 11 < i then [write'R_rwt] else []
             in
                EV ([R_rwt, arm_stepTheory.R_x_not_pc,
-                   utilsLib.SET_RULE DataProcessing_def,
-                   DataProcessingALU_def,
+                   DataProcessing, DataProcessingALU_def,
                    AddWithCarry, wordsTheory.FST_ADD_WITH_CARRY,
                    ArithmeticOpcode_def, PC_rwt, IncPC_rwt, cond_rand_thms,
                    unit_state_cond] @ wr) [] [[`opc` |-> opc]]
-                  ``DataProcessing (opc, setflags, d, n, imm32, c)``
+                  ``DataProcessing (opc, setflags, d, n, imm32_c)``
             end
             |> List.map
                  (utilsLib.ALL_HYP_CONV_RULE
@@ -2778,7 +2825,7 @@ val ArithLogicImmediate_rwt =
        ExpandImm_C_rwt] @ al)
       [[``d <> 15w: word4``]] (mapl (`op`, arithlogic))
       ``dfn'ArithLogicImmediate
-           (op, s, d, n, ^(bitstringSyntax.mk_vec 12 0))``
+           (op, setflags, d, n, ^(bitstringSyntax.mk_vec 12 0))``
    |> addThms
 
 (* ---------------------------- *)
@@ -2899,6 +2946,15 @@ val MultiplyLong_rwt =
         ``n <> 15w: word4``, ``m <> 15w: word4``]] (TF `signed`)
       ``dfn'MultiplyLong (accumulate, signed, setflags, dhi, dlo, n, m)``
 
+val Signed16Multiply32Accumulate_rwt =
+   EV ([dfn'Signed16Multiply32Accumulate_def, IncPC_rwt, R_rwt, write'R_rwt] @
+       npc_thm [`d`])
+      [[``d <> 15w: word4``, ``n <> 15w: word4``,
+        ``m <> 15w: word4``, ``a <> 15w: word4``]] []
+      ``dfn'Signed16Multiply32Accumulate (m_high, n_high, d, n, m, a)``
+   |> List.map (FULL_DATATYPE_RULE o COND_UPDATE_RULE)
+   |> addThms
+
 (* ---------------------------- *)
 
 val ExtendByte_rwt =
@@ -2952,6 +3008,7 @@ in
    val bpc_addr1 = immediate1 List.tl bpc_addr
    val bpc_addr2 = immediate2 List.tl bpc_addr
    val bpc_addr3 = immediate3 List.tl bpc_addr
+   val plain_addr1 = immediate1 Lib.I [[`a` |-> ``T``], [`a` |-> ``F``]]
 end
 
 (* ---------------------------- *)
@@ -2982,7 +3039,7 @@ val align_base_pc_rule =
       (utilsLib.INST_REWRITE_CONV
          [Aligned2_base_pc_plus, Aligned2_base_pc_minus,
           Aligned4_base_pc_plus, Aligned4_base_pc_minus])
-      ``Aligned (w: word32, n)``
+      ``aligned n (w: word32)``
 
 val rule_base_pc =
    align_base_pc_rule o
@@ -2994,12 +3051,12 @@ val rule_base_pc =
 
 val rule_literal_pc =
    utilsLib.MATCH_HYP_CONV_RULE (REWRITE_CONV [Aligned_Align_plus_minus])
-      ``Aligned (w: word32, 4)`` o
+      ``aligned 2 (w: word32)`` o
    ASM_REWRITE_RULE []
 
 val rule_literal =
    utilsLib.MATCH_HYP_CONV_RULE (REWRITE_CONV [Aligned_Align_plus_minus])
-      ``Aligned (w: word32, n)`` o
+      ``aligned n (w: word32)`` o
    utilsLib.INST_REWRITE_RULE [Align4_base_pc_plus, Align4_base_pc_minus] o
    REWRITE_RULE (npc_thm [`t`]) o
    DATATYPE_RULE o
@@ -3011,7 +3068,8 @@ val rule_npc2 =
    utilsLib.ALL_HYP_CONV_RULE
       (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [write'R_rwt])
        THENC DATATYPE_CONV
-       THENC REWRITE_CONV [Aligned_plus]) o
+       THENC REWRITE_CONV [alignmentTheory.aligned_numeric,
+                           alignmentTheory.aligned_add_sub_123]) o
    REWRITE_RULE (npc_thm [`t`, `t2`, `n`]) o
    FULL_DATATYPE_RULE o
    Conv.CONV_RULE (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [write'R_rwt])) o
@@ -3021,7 +3079,8 @@ val rule_base_pc2 =
    utilsLib.ALL_HYP_CONV_RULE
       (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [write'R_rwt])
        THENC DATATYPE_CONV
-       THENC REWRITE_CONV [Aligned_plus]
+       THENC REWRITE_CONV [alignmentTheory.aligned_numeric,
+                           alignmentTheory.aligned_add_sub_123]
        THENC utilsLib.INST_REWRITE_CONV
                 [Aligned4_base_pc_plus, Aligned4_base_pc_minus]) o
    REWRITE_RULE (npc_thm [`t`, `t2`]) o
@@ -3032,12 +3091,13 @@ val rule_base_pc2 =
 
 val rule_literal2 =
    utilsLib.MATCH_HYP_CONV_RULE (REWRITE_CONV [Aligned_Align_plus_minus])
-      ``Aligned (w: word32, n)`` o
+      ``aligned n (w: word32)`` o
    utilsLib.INST_REWRITE_RULE [Align4_base_pc_plus, Align4_base_pc_minus] o
    utilsLib.ALL_HYP_CONV_RULE
       (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [write'R_rwt])
        THENC DATATYPE_CONV
-       THENC REWRITE_CONV [Aligned_plus]) o
+       THENC REWRITE_CONV [alignmentTheory.aligned_numeric,
+                           alignmentTheory.aligned_add_sub_123]) o
    REWRITE_RULE (npc_thm [`t`, `t2`]) o
    FULL_DATATYPE_RULE o
    Conv.CONV_RULE (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [write'R_rwt])) o
@@ -3116,6 +3176,12 @@ val LoadSignedByte_base_pc_rwts =
      ``dfn'LoadByte
          (F, a, idx, wb, t, 15w, register_form1 (r, SRType_LSL, imm2))``
 
+val LoadByteUnprivileged_rwts =
+   memEV (rule_npc false) MemU_unpriv_1_rwt [dfn'LoadByteUnprivileged_def]
+     [[``t <> 15w: word4``, ``n <> 15w: word4``, ``r <> 15w: word4``]]
+     plain_addr1
+     ``dfn'LoadByteUnprivileged (a, T, t, n, m)``
+
 (* ---------------------------- *)
 
 val LoadHalf_rwts =
@@ -3170,7 +3236,8 @@ val rule_npc2 =
    utilsLib.ALL_HYP_CONV_RULE
       (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [R_rwt])
        THENC DATATYPE_CONV
-       THENC REWRITE_CONV [Aligned_plus]) o
+       THENC REWRITE_CONV [alignmentTheory.aligned_numeric,
+                           alignmentTheory.aligned_add_sub_123]) o
    rule_sp o
    utilsLib.MATCH_HYP_CONV_RULE
       (utilsLib.INST_REWRITE_CONV [Aligned_plus_minus]) ``a \/ b \/ c : bool`` o
@@ -3273,7 +3340,7 @@ val StoreHalf_base_pc_rwt =
 
 val StoreDual_rwt =
    storeEV rule_npc2
-     write'MemA_4_rwt [dfn'StoreDual_def, Aligned_plus]
+     write'MemA_4_rwt [dfn'StoreDual_def, alignmentTheory.aligned_add_sub_123]
      [[``Aligned (^st.REG (R_mode ^st.CPSR.M n), 4)``,
        ``Aligned (^st.REG (R_mode ^st.CPSR.M n) +
             FST (FST (Shift_C (^st.REG (R_mode ^st.CPSR.M r),
@@ -3293,17 +3360,9 @@ val StoreDual_rwt =
 
 (* ---------------------------- *)
 
-val align4_rwt =
-   arm_stepTheory.Aligned
-   |> Drule.CONJUNCTS
-   |> tl |> tl |> hd
-   |> Drule.SPEC_ALL
-   |> Thm.EQ_IMP_RULE |> fst
-   |> Drule.UNDISCH
-
 val Swap_rwts =
    EV ([R_rwt, write'R_rwt, Q.INST [`d` |-> `t`] arm_stepTheory.R_x_not_pc,
-       dfn'Swap_def, IncPC_rwt, ROR_rwt, align4_rwt,
+       dfn'Swap_def, IncPC_rwt, ROR_rwt,
        EVAL ``(a: word32) #>> (8 * w2n (0w: word2))``] @
        MemA_1_rwt @ write'MemA_1_rwt @ MemA_4_rwt @ write'MemA_4_rwt)
       [[``^st.Encoding = Encoding_ARM``, ``~^st.CPSR.T``,
@@ -3350,7 +3409,8 @@ fun fpMemEV c tm =
                    (DATATYPE_CONV
                     THENC REWRITE_CONV
                             [arm_stepTheory.Aligned_Align_plus_minus,
-                             arm_stepTheory.Aligned_plus]) o rule)
+                             alignmentTheory.aligned_add_sub_123,
+                             alignmentTheory.aligned_numeric]) o rule)
 
 fun fpEV c tm =
    EV [dfn'vadd_def, dfn'vsub_def, dfn'vmul_def, dfn'vneg_mul_def,
@@ -3453,6 +3513,29 @@ val vstr_npc_rwt =
    |> addThms
 
 val () = resetEvConv ()
+
+(* ---------------------------- *)
+
+(* Media *)
+
+val BitFieldClearOrInsert_rwt =
+   regEV [`d`] [dfn'BitFieldClearOrInsert_def] [[``d <> 15w: word4``]] []
+      ``dfn'BitFieldClearOrInsert (d, n, lsb, msb)``
+
+val BitFieldExtract_rwt =
+   regEV [`d`] [dfn'BitFieldExtract_def]
+      [[``d <> 15w: word4``, ``n <> 15w: word4``]] []
+      ``dfn'BitFieldExtract (U, d, n, lsb, widthminus1)``
+
+val ExtendByte16_rwt =
+   regEV [`d`] [dfn'ExtendByte16_def, ROR_rwt, wordsTheory.WORD_EXTRACT_ZERO2]
+      [[``d <> 15w: word4``, ``m <> 15w: word4``]] []
+      ``dfn'ExtendByte16 (U, d, n, m, rot)``
+
+val ByteReverse_rwt =
+   regEV [`d`] [dfn'ByteReverse_def]
+      [[``d <> 15w: word4``, ``m <> 15w:word4``]] []
+      ``dfn'ByteReverse (d, m)``
 
 (* ---------------------------- *)
 
@@ -3676,7 +3759,8 @@ val ReturnFromException_le_rwts =
                 utilsLib.ALL_HYP_CONV_RULE
                   (DATATYPE_CONV
                    THENC REWRITE_CONV
-                            [arm_stepTheory.Aligned_numeric,
+                            [alignmentTheory.aligned_add_sub_123,
+                             alignmentTheory.aligned_numeric,
                              ASSUME ``^st.CPSR.M <> 16w``]))
    |> addThms
 
@@ -3837,6 +3921,7 @@ in
       in
          fn s =>
             let
+               val s = utilsLib.removeSpaces s
                val v = bitstringSyntax.bitstring_of_hexstring s
             in
                if String.size s = 8 andalso uncond (String.sub (s, 0))

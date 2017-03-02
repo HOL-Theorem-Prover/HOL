@@ -6,7 +6,7 @@
 Attempt to find matching theorems in the currently loaded theories.
 
 \DESCRIBE
-An invocation {DB.apropos M} collects all theorems, definitions, and 
+An invocation {DB.apropos M} collects all theorems, definitions, and
 axioms of the currently loaded theories that have a subterm
 that matches {M}. If there are no matches, the empty list is returned.
 
@@ -34,5 +34,5 @@ The notion of matching is a restricted version of higher-order matching.
 For finer control over the theories searched, use {DB.match}.
 
 \SEEALSO
-DB.match, DB.find.
+DB.match, DB.find, DB.apropos_in, DB.matches.
 \ENDDOC

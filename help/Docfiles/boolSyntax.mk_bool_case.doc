@@ -11,7 +11,7 @@ displays this as {case b of T -> M1 || F -> M2}. The {bool_case} constant
 may be thought of as a pattern-matching version of the conditional.
 
 \FAILURE
-Fails if {b} is not of type {bool}. Also fails if {M1} and {M2} do not 
+Fails if {b} is not of type {bool}. Also fails if {M1} and {M2} do not
 have the same type.
 
 \EXAMPLE

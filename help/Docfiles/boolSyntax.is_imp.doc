@@ -6,8 +6,8 @@
 Tests a term to see if it is an implication or a negation.
 
 \DESCRIBE
-If {M} has the form {t1 ==> t2}, or the form {~t}, then {is_imp M} 
-returns {true}. If the term is neither an implication nor a negation 
+If {M} has the form {t1 ==> t2}, or the form {~t}, then {is_imp M}
+returns {true}. If the term is neither an implication nor a negation
 the result is {false}.
 
 \FAILURE

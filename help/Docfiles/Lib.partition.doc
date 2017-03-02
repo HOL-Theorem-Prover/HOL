@@ -10,7 +10,7 @@ list
 
 \DESCRIBE
 An invocation {partition P l} divides {l} into a pair of lists {(l1,l2)}.
-{P} holds of each element of {l1}, and {P} does not hold of any element of 
+{P} holds of each element of {l1}, and {P} does not hold of any element of
 {l2}.
 
 \FAILURE
@@ -28,7 +28,7 @@ If applying {P} to any element of {l} results in failure.
 > val it = ([], []) : int list * int list
 
 - partition (fn _ => raise Fail "") [1];
-! Uncaught exception: 
+! Uncaught exception:
 ! Fail  ""
 }
 

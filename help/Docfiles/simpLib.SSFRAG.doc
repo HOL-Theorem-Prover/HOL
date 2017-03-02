@@ -55,7 +55,7 @@ proceeds, producing {Q'}.  Another example is a rule for conjunction:
    |- (P ==> (Q = Q')) ==> (Q' ==> (P = P')) ==> ((P /\ Q) = (P' /\ Q'))
 }
 Here {P} is assumed while {Q} is simplified to {Q'}.  Then,
-{Q'} is assumed while {P} is simplified to {P'}.  If a antecedent
+{Q'} is assumed while {P} is simplified to {P'}.  If an antecedent
 doesn't involve the relation in question (here, equality) then it is
 treated as a side-condition, and the simplifier will be recursively
 invoked to try and solve it.

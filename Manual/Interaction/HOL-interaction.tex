@@ -1,11 +1,13 @@
 \documentclass[a4paper,10pt]{article}
 
 \usepackage{alltt}
+\usepackage{url}
 
 \addtolength{\voffset}{-1em}
 \addtolength{\textheight}{-2em}
 \addtolength{\textwidth}{0.5em}
 \setlength{\arraycolsep}{0.1em}
+\input{../LaTeX/commands}
 
 \begin{document}
 
@@ -16,16 +18,12 @@
 
 \maketitle
 
-\newcommand{\etal}{{et al$.$}}
-\newcommand{\eg}{{e$.$g$.$}}
-\newcommand{\ie}{{i$.$e$.$}}
-
 \newenvironment{code}{\begin{quote}\begin{alltt}\small}{\end{alltt}\end{quote}}
 \newenvironment{enum}{\begin{enumerate}
 \setlength{\itemsep}{-\parsep}
 }{\end{enumerate}}
 
-\newcommand{\conj}{\(\begin{array}{c}\texttt{\bf\scriptsize/\textbackslash}\\[0.18em]\end{array}\)}
+\renewcommand{\conj}{\(\begin{array}{c}\texttt{\bf\scriptsize/\textbackslash}\\[0.18em]\end{array}\)}
 \newcommand{\mysec}[1]{\section{\large #1}}
 \newcommand{\mysubsec}[1]{\subsection{\normalsize#1}}
 
@@ -41,7 +39,7 @@ reference manual.
 \item[~] Section \ref{tactics}:~~Common proof tactics
 \item[~] Section \ref{reading}:~~Further reading and general advice
 \end{enum}
-The text assumes that the reader has HOL4 installed from: {\tt\small http://hol.sf.net/}.
+The text assumes that the reader has HOL4 installed. You can download and install HOL4 following the instructions on \url{https://hol-theorem-prover.org}.
 
 \mysec{Interaction with HOL4 (via emacs or xemacs)\label{interaction}}
 
@@ -64,21 +62,18 @@ Restart emacs to make these changes take effect.
 \begin{enum}
 \item Start emacs.
 \item Press {\tt C-x C-f} to open a file for your proof script.
-\item Press {\tt C-x 3} to split the emacs window into two columns.
-\item Press {\tt M-h h} to start HOL4.
-\item Press {\tt C-x o} to move cursor to the other window (where we type).
+\item Press {\tt C-h 3} to split the emacs window into two columns and start HOL4.
 \end{enum}
 The HOL window should look something like this:
 \begin{code}
------------------------------------------------------------------
-       HOL-4 [Kananaskis 5 (built Thu Feb 21 08:37:11 2008)]
+---------------------------------------------------------------------
+       HOL-4 [Kananaskis 11 (stdknl, built Fri Jan 15 10:58:28 2016)]
 
        For introductory HOL help, type: help "hol";
------------------------------------------------------------------
-
-[loading theories and proof tools ............. ]
-[closing file "/local/scratch/user/HOL/tools/end-init-boss.sml"]
--
+       To exit type <Control>-D
+---------------------------------------------------------------------
+[Use-ing configuration file /Users/myreen/.hol-config.sml]
+> > > > >
 \end{code}
 
 \mysubsec{Copying input into HOL4 (Opening a theory)\label{copy}}
@@ -123,7 +118,7 @@ The HOL4 window should look something like this:
 Make progress in a proof using \emph{proof tactics}.
 
 \begin{enum}
-\item Write the name of a tactic, \eg{} {\tt DECIDE\_TAC},~see Section~\ref{tactics} for more tactics
+\item Write the name of a tactic, \eg{} {\tt decide\_tac},~see Section~\ref{tactics} for more tactics
 \item Press {\tt C-space} at one end of the text.
 \item Move the cursor to the other end of the text.
 \item Press {\tt M-h e} to apply the tactic.
@@ -150,7 +145,7 @@ One can use {\tt prove} to store the result of a proof (called a
 \emph{theorem}), \eg{} the following stores the theorem $\forall n.\;n < n +
 1$ in an ML variable {\tt LESS\_ADD\_1}:
 \begin{code}
-val LESS_ADD_1 = prove({`}` !n. n < n + 1 {`}`,DECIDE_TAC);
+val LESS_ADD_1 = prove({`}` !n. n < n + 1 {`}`,decide_tac);
 \end{code}
 When the above line is copied into HOL4 (using {\tt C-space} then
 {\tt M-h M-r}, as described in Section~\ref{copy}), HOL4 responds with:
@@ -164,18 +159,19 @@ Suppose we have proved the goal {\tt `!n{.}~n <= n * n`} with the following tact
 \begin{code}
 Induct_on `n`                   (* comment: induction on n  *)
 
-  DECIDE_TAC                    (* comment: solve base case *)
+  decide_tac                    (* comment: solve base case *)
 
   ASM_SIMP_TAC bool_ss [MULT]   (* comment: simplify goal   *)
-  DECIDE_TAC                    (* comment: solve step case *)
+  decide_tac                    (* comment: solve step case *)
 \end{code}
-Tactics can be pieced together for {\tt prove} using {\tt THEN} and {\tt THENL}:
+Tactics can be pieced together for {\tt prove} using \ml{\gt\gt} and \ml{\gt-}. The \ml{\gt\gt} operator is an infix that composes tactics. Similarly, \ml{\gt-} \emph{tac} proves the first subgoal using \emph{tac}.
 \begin{code}
-val LESS_EQ_MULT = prove({`}` !n. n <= n * n {`}`,
-  Induct_on `n` THENL [
-    DECIDE_TAC,
-    ASM_SIMP_TAC bool_ss [MULT] THEN
-    DECIDE_TAC]);
+val LESS_EQ_MULT = prove(
+  `{`} !n. n <= n * n `{`},
+  Induct_on `n`
+  >- decide_tac
+  >- (ASM_SIMP_TAC bool_ss [MULT]
+         >> decide_tac]));
 \end{code}
 Copy the above into HOL4 using {\tt C-space} then
 {\tt M-h M-r}, as in Section~\ref{copy}.
@@ -208,7 +204,7 @@ printing of type information on or off.
 \mysubsec{Interrupting HOL4}
 
 Press {\tt M-h C-c} to interrupt HOL4 --- useful when a tactic fails to terminate
-(\eg{} {\tt\small METIS\_TAC} often fails to terminate when unsuccessfully applied).
+(\eg{} {\tt\small metis\_tac} often fails to terminate when unsuccessfully applied).
 
 \mysubsec{Making a definition\label{definition}}
 
@@ -218,10 +214,10 @@ val SQUARE_def = Define `SQUARE n = n * n`;
 \end{code}
 
 \noindent
-Data-types are defined using {\tt Hol\_datatype}, \eg{} a binary tree
+Data-types are defined using {\tt Datatype}, \eg{} a binary tree
 which holds values of type {\tt 'a} (a type variable) at the leaves:
 \begin{code}
-val _ = Hol_datatype `TREE = LEAF of 'a | BRANCH of TREE => TREE`;
+val _ = Datatype `TREE = LEAF 'a | BRANCH TREE TREE`;
 \end{code}
 
 \noindent
@@ -247,7 +243,7 @@ Proofs and definitions are stored in files called scripts, \eg{} we
 can store the definitions from above in a file called {\tt
   mytreeScript.sml}, which should begin with the lines
 \begin{code}
-open HolKernel boolLib bossLib Parse;
+open HolKernel boolLib bossLib Parse
 val _ = new_theory "mytree";
 \end{code}
 and end with the line
@@ -257,7 +253,7 @@ val _ = export_theory();
 Replace {\tt prove} by {\tt store\_thm} for results you
 wish to export from the theory, \eg{}
 \begin{code}
-val LESS_ADD_1 = store_thm("LESS_ADD_1",{`}`!n.n<n+1{`}`,DECIDE_TAC);
+val LESS_ADD_1 = store_thm("LESS_ADD_1",{`}`!n.n<n+1{`}`,decide_tac);
 \end{code}
 Make sure your script only consists of ML definitions ({\tt \small val
   x = y}, {\tt \small fun g x = y}), open commands ({\tt \small
@@ -328,18 +324,18 @@ basic use of the most important proof tactics.  Press {\tt\small
 \mysubsec{Automatic provers}
 
 Simple goals can often be proved automatically by {\tt\small
-  METIS\_TAC}, {\tt\small DECIDE\_TAC} or {\tt\small EVAL\_TAC}.
-{\tt\small METIS\_TAC} is first-order prover which is good at general
+  metis\_tac}, {\tt\small decide\_tac} or {\tt\small EVAL\_TAC}.
+{\tt\small metis\_tac} is first-order prover which is good at general
 problems, but requires the user to supply a list of relevant theorems,
-\eg{} the following goal is proved by {\tt\small METIS\_TAC
+\eg{} the following goal is proved by {\tt\small metis\_tac
   [MOD\_TIMES2,MOD\_MOD,MOD\_PLUS]}.
 \begin{code}
 !k. 0 < k ==> !m p n. (m MOD k * p + n) MOD k = (m * p + n) MOD k
 \end{code}
 
 \noindent
-{\tt\small DECIDE\_TAC} handles linear arithmetic over natural
-numbers, \eg{} {\tt\small DECIDE\_TAC} solves:
+{\tt\small decide\_tac} handles linear arithmetic over natural
+numbers, \eg{} {\tt\small decide\_tac} solves:
 \begin{code}
 !m n k. m < n \conj{} n < m+k \conj{} k <= 3 \conj{} ~(n = m+1) ==> (n = m+2)
 \end{code}
@@ -455,11 +451,11 @@ we might want to prove {\tt\small h n = g n} assuming {\tt\small 0 <
     ------------------------------------
       0 < n
 \end{code}
-If {\tt\small `h n = g n`} can be proved in one step, \eg{} using {\tt\small METIS\_TAC [MY\_LEMMA]}, then
-apply {\tt\small `h n = g n` by METIS\_TAC [MY\_LEMMA]} instead of
+If {\tt\small `h n = g n`} can be proved in one step, \eg{} using {\tt\small metis\_tac [MY\_LEMMA]}, then
+apply {\tt\small `h n = g n` by metis\_tac [MY\_LEMMA]} instead of
 {\tt\small `h n = g n` by ALL\_TAC}.  If the sub-goal requires
 multiple steps the tactic after the \texttt{by} will need to be
-parenthesised: {\tt\small`\textit{goal}` by ($\mathit{tac}_1$ THEN
+parenthesised: {\tt\small`\textit{goal}` by ($\mathit{tac}_1$ \ml{\gt\gt}
   $\mathit{tac}_2$ ...)}
 
 \mysubsec{Proof by contradiction}
@@ -495,10 +491,10 @@ General advice on using HOL4:
 One can only learn HOL4 via examples, so try proving something.
 Example problems and solutions are presented in the \emph{HOL
   Tutorial}, available under:
-\begin{code}
-http://hol.sf.net/documentation.html
-\end{code}
-The same page also contains:
+\begin{center}
+\url{https://hol-theorem-prover.org/#doc}
+\end{center}
+The same page also contains links to:
 \begin{enum}
 \item[~]\emph{HOL Description} -- a description of the HOL4 system
 \item[~]\emph{HOL Reference} -- a detailed descriptions of proof tactics and other tools

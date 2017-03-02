@@ -270,6 +270,11 @@ fun UNDISCH th =
    MP th (ASSUME (fst (dest_imp (concl th))))
    handle HOL_ERR _ => raise ERR "UNDISCH" ""
 
+fun UNDISCH_TM th =
+   let val (ant, conseq) = dest_imp (concl th) ;
+   in (ant, MP th (ASSUME ant)) end
+   handle HOL_ERR _ => raise ERR "UNDISCH_TM" ""
+
 (*---------------------------------------------------------------------------*
  * =T elimination                                                            *
  *                                                                           *
@@ -444,6 +449,17 @@ val CONJUNCTS =
    in
       aux []
    end
+
+(*---------------------------------------------------------------------------*
+ * "t1 /\ ... /\ tn"   --->   [t1, ..., tn] |- t1 /\ ... /\ tn               *
+ *                                                                           *
+ *  constructs a theorem proving conjunction from individual conjuncts       *
+ *---------------------------------------------------------------------------*)
+
+fun ASSUME_CONJS tm =
+  let val (tm1, tm2) = dest_conj tm ;
+  in CONJ (ASSUME_CONJS tm1) (ASSUME_CONJS tm2) end
+  handle _ => ASSUME tm ;
 
 (*---------------------------------------------------------------------------*
  * |- t1 = t2  if t1 and t2 are equivalent using idempotence, symmetry and   *
@@ -1194,6 +1210,22 @@ fun EXISTS_IMP x th =
 fun INST_TY_TERM (Stm, Sty) th = INST Stm (INST_TYPE Sty th)
 
 (*---------------------------------------------------------------------------*
+ * Instantiate terms and types of a theorem, also returning a list of        *
+ * substituted hypotheses in the same order as in hyp th                     *
+ * (required for predictability of order of new subgoals from (prim_)irule)  *
+ *---------------------------------------------------------------------------*)
+
+fun INST_TT_HYPS subs th =
+  let val nhyps = HOLset.numItems (hypset th) ;
+    val thd = DISCH_ALL th ;
+    val thdsub = INST_TY_TERM subs thd ;
+    (* UNDISCH_TM nhyps times only *)
+    fun UNDISCH_TM_L (th, tms) =
+      let val (tm, th') = UNDISCH_TM th ;
+      in (th', tm :: tms) end ;
+  in Lib.funpow nhyps UNDISCH_TM_L (thdsub, []) end ;
+
+(*---------------------------------------------------------------------------*
  *   |- !x y z. w   --->  |- w[g1/x][g2/y][g3/z]                             *
  *---------------------------------------------------------------------------*)
 
@@ -1223,6 +1255,96 @@ fun PART_MATCH partfn th =
    in
       fn tm => INST_TY_TERM (matchfn tm) th
    end
+
+(*---------------------------------------------------------------------------*
+ * version of PART_MATCH which allows substituting in assumptions            *
+ *---------------------------------------------------------------------------*)
+fun PART_MATCH_A partfn th =
+   let
+      val pat = partfn (concl (SPEC_ALL th))
+   in
+      fn tm => INST_TY_TERM (match_term pat tm) th
+   end
+
+(* --------------------------------------------------------------------------*
+    EXISTS_LEFT, EXISTS_LEFT1
+    existentially quantifying variables which appear only in the hypotheses
+
+			[x = y, y = z] |- x = z
+	(eg)   -------------------------------- EXISTS_LEFT1 ``y``
+	       [∃y. (x = y) ∧ (y = z)] |- x = z                         (UOK)
+
+ * --------------------------------------------------------------------------*)
+
+(* EXISTS_LEFT' : bool ->
+   term list -> {fvs: term list, hyp: term} list -> term list -> thm -> thm
+   used below, saves hyps, their free vars, and free vars of conclusion,
+   across recursive calls
+   arg1 - whether to ignore errors, ie, free vars which are either in the
+     conclusion or not in any hypothesis
+   arg2 - list of free vars in the conclusion
+   arg3 - list of assumptions of the theorem, each with the list of free vars
+     which it contains
+   arg4 - list of free vars to become existentially quantified
+*)
+
+fun EXISTS_LEFT' strict fvs_c hfvs [] th = th
+  | EXISTS_LEFT' strict fvs_c hfvs (fv :: fvs) th =
+    let
+      val _ = if is_var fv then ()
+        else raise mk_HOL_ERR "Drule" "EXISTS_LEFT'" "not free variable" ;
+      (* following raises Bind if fv in conclusion *)
+      val _ = List.all (not o aconv fv) fvs_c orelse raise Bind
+      fun hyp_ctns_fv {hyp, fvs} = List.exists (Lib.equal fv) fvs ;
+      val (hyps_ctg_fv, hyps_nc) = List.partition hyp_ctns_fv hfvs ;
+      (* following raises Bind if fv not in any hypothesis *)
+      val _ = not (null hyps_ctg_fv) orelse raise Bind
+      val conj_tm = list_mk_conj (map #hyp hyps_ctg_fv) ;
+      val conj_th = ASSUME conj_tm ;
+      (* CONJ_LIST gives original hyps, even if they are conjunctions *)
+      val sep_ths = CONJ_LIST (length hyps_ctg_fv) conj_th ;
+      val th2 = Lib.itlist PROVE_HYP sep_ths th ;
+      val ex_conj_tm = mk_exists (fv, conj_tm) ;
+      val ex_conj_th = ASSUME ex_conj_tm ;
+      val the = CHOOSE (fv, ex_conj_th) th2 ;
+      val thex = EXISTS_LEFT' strict fvs_c
+        ({hyp = ex_conj_tm, fvs = free_vars ex_conj_tm} :: hyps_nc) fvs the ;
+    in thex end
+    handle Bind =>
+           if strict then
+             raise mk_HOL_ERR "Drule" "EXISTS_LEFT'"
+                   "free variable in conclusion or not in any hypothesis"
+           else EXISTS_LEFT' strict fvs_c hfvs fvs th ;
+
+(* EXISTS_LEFT : term list -> thm -> thm
+  for each free var in turn, do the following:
+  replace hyps containing the free var by their conjunction,
+  existentially quantified over the free var;
+  ignore free vars for which this can't be done *)
+fun EXISTS_LEFT [] th = th
+  | EXISTS_LEFT fvs th =
+    let val hfvs = map (fn h => {hyp = h, fvs = free_vars h}) (Thm.hyp th) ;
+      val fvs_c = free_vars (concl th) ;
+    in EXISTS_LEFT' false fvs_c hfvs fvs th end ;
+
+(* EXISTS_LEFT1 : term -> thm -> thm
+  for the free var argument, replace hyps containing the free var
+  by their conjunction, existentially quantified over the free var;
+  error if this can't be done for a free var *)
+fun EXISTS_LEFT1 fv th =
+    let val hfvs = map (fn h => {hyp = h, fvs = free_vars h}) (Thm.hyp th) ;
+      val fvs_c = free_vars (concl th) ;
+    in EXISTS_LEFT' true fvs_c hfvs [fv] th end ;
+
+(* --------------------------------------------------------------------------*
+ * SPEC_UNDISCH_EXL: strips !x, ant ==>, then EXISTS_LEFT for stripped vars  *
+ * --------------------------------------------------------------------------*)
+
+fun SPEC_UNDISCH_EXL thm =
+  let val (fvs, th1) = strip_gen_left (SPEC_VAR o UNDISCH_ALL) thm ;
+    val th2 = UNDISCH_ALL th1 ;
+    val th3 = EXISTS_LEFT (rev fvs) th2 ;
+  in th3 end ;
 
 (* --------------------------------------------------------------------------*
  * MATCH_MP: Matching Modus Ponens for implications.                         *
@@ -1952,7 +2074,10 @@ fun define_new_type_bijections {name, ABS, REP, tyax} =
            consts = [{const_name = REP, fixity = NONE},
                      {const_name = ABS, fixity = NONE}]}
       end
-      handle e => raise (wrap_exn "Drule" "define_new_type_bijections" e)
+      handle e =>
+       raise (wrap_exn "Drule"
+                       ("define_new_type_bijections {name=\""^name^"\"...}")
+                       e)
 
 (* --------------------------------------------------------------------------*
  * NAME: prove_rep_fn_one_one                                                *

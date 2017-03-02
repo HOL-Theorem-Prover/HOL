@@ -1,5 +1,5 @@
 (* This is demo / test file for new features of the pattern matcher.
-   It's just a collection of tests and demos, nothing substantial. 
+   It's just a collection of tests and demos, nothing substantial.
    It is not even decently documented and not intended to make it
    back into the main branch. *)
 
@@ -67,7 +67,7 @@ term_size (concl SWAP_ELEMENTS_def)
     (!v38 v37 n m e. SWAP_ELEMENTS (SUC m)  (SUC n)   (e::v37::v38)   = e::SWAP_ELEMENTS m n (v37::v38):
    thm
 
-with Define_f 
+with Define_f
 
  |- (!l.             SWAP_ELEMENTS 0        0         l               = l) /\
     (!n l.           SWAP_ELEMENTS (SUC n)  0         l               = l) /\
@@ -146,11 +146,11 @@ val x = def_size test_pair_org_def (* 89 *)
 (* Test runtime performance *)
 
 (* generate input *)
-local 
+local
 
 fun all_bool_lists 0 = [``[]:bool list``]
   | all_bool_lists n =
-    let 
+    let
        val l = all_bool_lists (n - 1)
        fun my_cons n L = map (fn l => listSyntax.mk_cons (n,l)) L
     in
@@ -159,7 +159,7 @@ fun all_bool_lists 0 = [``[]:bool list``]
 
 fun all_bool_pairs 1 = [T, F]
   | all_bool_pairs n =
-    let 
+    let
        val l = all_bool_pairs (n - 1)
        fun my_cons n L = map (fn l => pairSyntax.mk_pair (n,l)) L
     in

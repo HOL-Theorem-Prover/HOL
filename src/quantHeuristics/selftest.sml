@@ -19,7 +19,7 @@ let
     val _ = print ("``\n   ");
     val ct = Timer.startCPUTimer();
     val thm_opt = SOME (conv t) handle Interrupt => raise Interrupt
-                                     | _ => NONE;	
+                                     | _ => NONE;
 
     val ok = if not (isSome r_opt) then not (isSome thm_opt) else
              isSome thm_opt andalso
@@ -292,13 +292,18 @@ val _ = map (qh_test_sum hard_fail quiet) qh_testCases_sum;
 (* Context tests                                                              *)
 (******************************************************************************)
 
-val qh_test_context = test_conv "SIMP_CONV (bool_ss++QUANT_INST_ss[]) []" (SIMP_CONV (bool_ss++QUANT_INST_ss[]) [])
+val qh_test_direct_context = test_conv "SIMP_CONV (bool_ss++QUANT_INST_ss[direct_context_qp]) []" (SIMP_CONV (bool_ss++QUANT_INST_ss[direct_context_qp]) [])
 
-val qh_testCases_context =
+val qh_testCases_direct_context =
   [(``(P x) ==> !x. ~(P x) /\ Q x``, SOME ``~(P x)``),
    (``~(P x) ==> !x. P x /\ Q x``, SOME ``(P (x:'a)):bool``),
-   (``P x ==> ?x. Q x \/ P x``, SOME ``T``),
-   (``(!x. P x ==> (x = 2)) ==> (!x. P x ==> Q x)``, SOME ``(!x. P x ==> (x = 2)) ==> P 2 ==> Q 2``),
+   (``P x ==> ?x. Q x \/ P x``, SOME ``T``)
+]
+
+
+val qh_test_context = test_conv "SIMP_CONV (bool_ss++QUANT_INST_ss[context_qp]) []" (SIMP_CONV (bool_ss++QUANT_INST_ss[context_qp]) [])
+val qh_testCases_context =
+  [(``(!x. P x ==> (x = 2)) ==> (!x. P x ==> Q x)``, SOME ``(!x. P x ==> (x = 2)) ==> P 2 ==> Q 2``),
    (``(!x. Q x ==> P x) /\ Q 2 ==> (?x. P x)``, SOME T)
 ]
 
@@ -317,4 +322,3 @@ val _ = map (qh_test_context2 hard_fail quiet) qh_testCases_context2;
 
 
 val _ = Process.exit Process.success;
-

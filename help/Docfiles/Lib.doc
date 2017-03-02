@@ -3,10 +3,10 @@
 \TYPE {structure Lib}
 
 \SYNOPSIS
-Collection of commonly used functions
+Collection of commonly used functions.
 
 \DESCRIBE
-{Lib} is a collection of functions that have been found useful in 
+{Lib} is a collection of functions that have been found useful in
 writing the HOL system.
 
 \COMMENTS

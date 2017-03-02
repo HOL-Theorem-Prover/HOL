@@ -9,10 +9,10 @@ Applies a conversion underneath a quantifier prefix.
 conversion, quantifier.
 
 \DESCRIBE
-If {tm} has the form {Q(\v1. ... (Q(\vn.M))...)} and the application of 
+If {tm} has the form {Q(\v1. ... (Q(\vn.M))...)} and the application of
 {conv} to {M} yields {|- M = N}, then {STRIP_QUANT_CONV conv tm}
 returns {|- Q(\v1. ... (Q(\vn.M))...) = Q(\v1. ... (Q(\vn.N))...)},
-provided {Q} is Hilbert's choice operator or a universal, existential, or 
+provided {Q} is Hilbert's choice operator or a universal, existential, or
 unique-existence quantifer.
 
 Otherwise, {STRIP_QUANT_CONV conv tm} returns {conv tm}.
@@ -32,11 +32,11 @@ Also fails if some of {[v1,...,vn]} are free in the hypotheses of {conv M}.
 }
 
 \COMMENTS
-To deal with binders not in the above list, e.g., newly introduced ones, 
-use {STRIP_BINDER_CONV}. 
+To deal with binders not in the above list, e.g., newly introduced ones,
+use {STRIP_BINDER_CONV}.
 
 For deeply nested quantifiers, {STRIP_QUANT_CONV} and {STRIP_BINDER_CONV}
-are more efficient than iterated application of {QUANT_CONV}, {BINDER_CONV}, 
+are more efficient than iterated application of {QUANT_CONV}, {BINDER_CONV},
 or {ABS_CONV}.
 
 \SEEALSO

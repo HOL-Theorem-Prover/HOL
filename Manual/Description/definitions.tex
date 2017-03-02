@@ -109,17 +109,14 @@ example, if one defines
 %
 \begin{hol}
 \begin{verbatim}
-   Datatype `sum = Left 'left | Right 'right`;
+   Datatype `sum = C1 'left | C2 'right`;
 \end{verbatim}
 \end{hol}
 %
 and then writes \ml{('a,'b)sum}, will the \ml{'a} value be under the
-\ml{Left} or \ml{Right} constructor?  The system chooses to make the
-arguments corresponding to variables appear in the order given by the
-dictionary ordering of the variables' names.  Thus, in the example
-given, the \ml{'a} of \ml{('a,'b)sum} will be the \ml{Left} argument
-because \ml{left} comes before \ml{right} in the standard (ASCII)
-dictionary ordering.
+\ml{C1} or \ml{C2} constructor?
+The system chooses to make the arguments corresponding to variables appear in the order given by the dictionary ordering of the names of the variables occurring in the definition.
+Thus, in the example given, the \ml{'a} of \ml{('a,'b)sum} will be the argument to the \holtxt{C1} constructor because \holtxt{'left} comes before \holtxt{'right} in the standard (ASCII) dictionary ordering.
 
 \subsection{Further examples}
 
@@ -2122,7 +2119,8 @@ The low-level approach to goals of this form is to apply
    HO_MATCH_MP_TAC R_ind
 \end{verbatim}
 \index{Induct_on (ML induction tactic)@\ml{Induct\_on} (\ML{} induction tactic)}
-A slightly more high-level approach is use the \ml{Induct\_on} tactic.
+A slightly more high-level approach is use the \ml{Induct\_on} tactic, which will actually use the automatically generated ``strong'' induction principle.%
+\footnote{Thus, to get the equivalent of the \ml{Induct_on} call, one might write something like \ml{HO_MATCH_MP_TAC~(theorem "R_strongind")}.}
 (This tactic is also used to perform structural inductions over algebraic data types; see Section~\ref{sec:bossLib}.)
 When performing a rule induction, the quotation passed to \ml{Induct\_on} should be of the constant being used.
 For the sake of aesthetics, the constant may also be applied to arguments.

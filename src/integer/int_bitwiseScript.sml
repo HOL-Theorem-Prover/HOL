@@ -88,7 +88,7 @@ val num_of_bits_bits_of_num = prove(
   \\ Q.PAT_ASSUM `n = kkk:num` (fn th => CONV_TAC
        (RAND_CONV (ONCE_REWRITE_CONV [th])))
   \\ ASSUME_TAC MOD2
-  \\ fs [AC MULT_COMM MULT_ASSOC, AC ADD_ASSOC ADD_COMM]);
+  \\ fs []);
 
 val bits_bitwise_NIL = prove(
   ``!xs rest f. bits_bitwise f ([],F) (xs,rest) = (MAP (f F) xs,f F rest)``,
@@ -120,12 +120,12 @@ val BIT_lemmas = prove(
     (BIT 0 (1 + 2 * k) = T) /\
     (BIT (SUC n) (2 * k) = BIT n k) /\
     (BIT (SUC n) (1 + 2 * k) = BIT n k)``,
-  fs [GSYM BIT_DIV2]
+  simp_tac (srw_ss()) [GSYM BIT_DIV2]
   \\ ONCE_REWRITE_TAC [ADD_COMM]
   \\ ONCE_REWRITE_TAC [MULT_COMM]
-  \\ fs [DIV_MULT,MULT_DIV]
-  \\ fs [BIT_def,BITS_THM]
-  \\ fs [MOD_TIMES,MOD_EQ_0]);
+  \\ simp_tac (srw_ss()) [DIV_MULT,MULT_DIV]
+  \\ simp_tac (srw_ss()) [BIT_def,BITS_THM]
+  \\ rw [MOD_TIMES,MOD_EQ_0]);
 
 val BIT_num_of_bits = prove(
   ``!bs n. BIT n (num_of_bits bs) = n < LENGTH bs /\ EL n bs``,
@@ -235,7 +235,7 @@ val int_bit_equiv = store_thm("int_bit_equiv",
          \\ first_x_assum (mp_tac o Q.SPEC `x`)
          \\ fs [])
   \\ CCONTR_TAC
-  \\ Q.MATCH_ASSUM_RENAME_TAC `LENGTH bs2 <> LENGTH bs1` []
+  \\ Q.MATCH_ASSUM_RENAME_TAC `LENGTH bs2 <> LENGTH bs1`
   \\ `LENGTH bs1 < LENGTH bs2 \/ LENGTH bs2 < LENGTH bs1` by DECIDE_TAC
   \\ IMP_RES_TAC bits_of_int_LAST
   THEN1 (Cases_on `bs2 = []` \\ fs [LENGTH]
@@ -265,10 +265,10 @@ val int_bit_shift_left_lemma2 = prove(
 val int_bit_shift_left = store_thm("int_bit_shift_left",
   ``!b n i. int_bit b (int_shift_left n i) = n <= b /\ int_bit (b - n) i``,
   REPEAT STRIP_TAC \\ Cases_on `b < n`
-  \\ fs [int_bit_shift_left_lemma2] THEN1 decide_tac
+  \\ asm_simp_tac (srw_ss()) [int_bit_shift_left_lemma2] THEN1 decide_tac
   \\ fs [NOT_LESS] \\ imp_res_tac LESS_EQUAL_ADD
   \\ fs [] \\ ONCE_REWRITE_TAC [ADD_COMM]
-  \\ fs [int_bit_shift_left_lemma1]);
+  \\ simp_tac (srw_ss()) [int_bit_shift_left_lemma1]);
 
 val int_bit_shift_right = store_thm("int_bit_shift_right",
   ``!b n i. int_bit b (int_shift_right n i) = int_bit (b + n) i``,

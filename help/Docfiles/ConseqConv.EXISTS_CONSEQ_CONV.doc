@@ -3,7 +3,7 @@
 \TYPE {EXISTS_CONSEQ_CONV : (conseq_conv -> conseq_conv)}
 
 \SYNOPSIS
-Applies a consequence conversion to the body of a existentially
+Applies a consequence conversion to the body of an existentially
 quantified term.
 
 \DESCRIBE
@@ -14,7 +14,7 @@ to a theorem {|- t x = t' x},  {|- t' x ==> t x} or
 {|- ?x. t x ==> ?x. t' x}, respectively.
 
 \FAILURE
-{EXISTS_CONSEQ_CONV c t} fails, if {t} is not a existentially
+{EXISTS_CONSEQ_CONV c t} fails, if {t} is not an existentially
 quantified term or if {c} fails on the body of {t}.
 
 \SEEALSO

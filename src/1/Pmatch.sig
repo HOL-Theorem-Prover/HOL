@@ -28,4 +28,7 @@ sig
    val set_default_heuristic : unit -> unit
    val set_classic_heuristic : unit -> unit
    val with_classic_heuristic : ('a -> 'b) -> ('a -> 'b)
+
+   (* provide choices manually *)
+   val with_manual_heuristic : int list -> ('a -> 'b) -> ('a -> 'b)
 end

@@ -1,0 +1,1 @@
+\HOLinline{(\HOLFreeVar{f} \HOLConst{\HOLTokenCompose} \HOLFreeVar{g}) \HOLFreeVar{x}}

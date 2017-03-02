@@ -30,4 +30,4 @@ sig
   val compute_inst_infos : term list -> inst_infos -> cinst_infos
   val inst_thm_fun : cinst_infos -> thm -> thm
 
-end;
+end

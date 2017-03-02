@@ -21,7 +21,7 @@ under binders is done when it occurs in a position where it cannot be
 substituted.
 
 The simplification sets are mutable objects, this means they are
-extended by side-effect. The function {new_compset} will create 
+extended by side-effect. The function {new_compset} will create
 a new set containing reflexivity ({REFL_CLAUSE}), plus the supplied rewrites.
 Theorems can be added to an existing compset with the function {add_thms}.
 
@@ -60,7 +60,7 @@ expression to reduce (all also for those that appear in the right hand
 side of a rule), unless the given constant is considered as a
 constructor of the representation chosen. As an example,
 {reduceLib.num_compset} creates a new simplification set with all the
-rules needed for basic boolean and arithmetical calculations built in.  
+rules needed for basic boolean and arithmetical calculations built in.
 
 \EXAMPLE
 {
@@ -115,7 +115,7 @@ example illustrates that issue.
    - val rws = from_list [th];
    - CBV_CONV rws tm;
 }
-This fails because the 0 is replaced by {x}, making the assumption 
+This fails because the 0 is replaced by {x}, making the assumption
 {0 = x}. Then, the abstraction cannot be rebuilt since {x} appears
 free in the assumptions.
 

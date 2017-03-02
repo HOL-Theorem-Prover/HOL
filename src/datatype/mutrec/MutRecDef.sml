@@ -1477,4 +1477,3 @@ end
 val _ = Parse.temp_set_grammars ambient_grammars
 
 end (* MutRecDef *)
-

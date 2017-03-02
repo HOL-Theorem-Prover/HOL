@@ -191,6 +191,18 @@ val write_fun2set = store_thm("write_fun2set",
   \\ Cases_on `q = a` \\ ASM_SIMP_TAC std_ss [combinTheory.APPLY_UPDATE_THM]
   \\ METIS_TAC []);
 
+val fun2set_eq = Q.store_thm("fun2set_eq",
+   `!f g d. (fun2set (f, d) = fun2set (g, d)) = (!a. a IN d ==> (f a = g a))`,
+   SRW_TAC [] [FUN_EQ_THM]
+   \\ EQ_TAC
+   \\ REPEAT STRIP_TAC
+   THENL [
+      Q.PAT_ASSUM `!x. P` (Q.SPEC_THEN `(a, f a)` ASSUME_TAC),
+      Cases_on `x` \\ Cases_on `q IN d`
+   ]
+   \\ REV_FULL_SIMP_TAC std_ss [fun2set_thm]
+   )
+
 val one_fun2set = store_thm("one_fun2set",
   ``!a x p f. (one (a,x) * p) (fun2set (f,d)) =
               (f a = x) /\ a IN d /\ p (fun2set (f,d DELETE a))``,

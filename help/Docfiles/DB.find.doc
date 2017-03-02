@@ -32,5 +32,5 @@ Never fails. If nothing suitable can be found, the empty list is returned.
 Finding theorems in interactive proof sessions.
 
 \SEEALSO
-DB.match, DB.apropos, DB.thy, DB.theorems.
+DB.find_in, DB.match, DB.apropos, DB.thy, DB.theorems.
 \ENDDOC

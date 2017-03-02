@@ -6,7 +6,7 @@ open sptreeTheory
 
 val ERR = Feedback.mk_HOL_ERR "sptreeSyntax"
 
-fun syntax_fns n d m = HolKernel.syntax_fns "sptree" n d m
+fun syntax_fns n d m = HolKernel.syntax_fns {n = n, dest = d, make = m} "sptree"
 
 (* ------------------------------------------------------------------------- *)
 
@@ -31,7 +31,7 @@ val (ln_tm, mk_ln, dest_ln, is_ln) = s0 "LN"
 
 (* ------------------------------------------------------------------------- *)
 
-val s1 = syntax_fns 1 HolKernel.dest_monop HolKernel.mk_monop
+val s1 = HolKernel.syntax_fns1 "sptree"
 val s1' = syntax_fns 2 HolKernel.dest_monop HolKernel.mk_monop
 
 val (domain_tm, mk_domain, dest_domain, is_domain) = s1' "domain"
@@ -47,7 +47,7 @@ val (wf_tm, mk_wf, dest_wf, is_wf) = s1 "wf"
 
 (* ------------------------------------------------------------------------- *)
 
-val s2 = syntax_fns 2 HolKernel.dest_binop HolKernel.mk_binop
+val s2 = HolKernel.syntax_fns2 "sptree"
 
 val (bn_tm, mk_bn, dest_bn, is_bn) = s2 "BN"
 val (delete_tm, mk_delete, dest_delete, is_delete) = s2 "delete"
@@ -61,7 +61,7 @@ val (union_tm, mk_union, dest_union, is_union) = s2 "union"
 
 (* ------------------------------------------------------------------------- *)
 
-val s3 = syntax_fns 3 HolKernel.dest_triop HolKernel.mk_triop
+val s3 = HolKernel.syntax_fns3 "sptree"
 
 val (bs_tm, mk_bs, dest_bs, is_bs) = s3 "BS"
 val (mk_bs_tm, mk_mk_bs, dest_mk_bs, is_mk_bs) = s3 "mk_BS"
@@ -69,7 +69,7 @@ val (insert_tm, mk_insert, dest_insert, is_insert) = s3 "insert"
 
 (* ------------------------------------------------------------------------- *)
 
-val s4 = syntax_fns 4 HolKernel.dest_quadop HolKernel.mk_quadop
+val s4 = HolKernel.syntax_fns4 "sptree"
 
 val (foldi_tm, mk_foldi, dest_foldi, is_foldi) = s4 "foldi"
 

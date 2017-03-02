@@ -1,0 +1,11 @@
+.PHONY: all
+
+all: geo mepo3
+
+mepo3: mepo3.cpp formatnow.cpp
+	-g++ -std=c++0x mepo3.cpp -o mepo3
+
+geo: geo.cpp format.cpp
+	-g++ -std=c++0x geo.cpp -o geo
+
+EXTRA_CLEANS = mepo3 geo

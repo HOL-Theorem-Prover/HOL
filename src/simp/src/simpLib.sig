@@ -167,9 +167,16 @@ sig
     * ---------------------------------------------------------------------*)
 
    val SIMP_TAC      : simpset -> thm list -> tactic
+   val simp_tac      : simpset -> thm list -> tactic
    val ASM_SIMP_TAC  : simpset -> thm list -> tactic
+   val asm_simp_tac  : simpset -> thm list -> tactic
    val FULL_SIMP_TAC : simpset -> thm list -> tactic
-   val REV_FULL_SIMP_TAC : simpset -> thm list -> tactic
+   val full_simp_tac : simpset -> thm list -> tactic
+
+   val REV_FULL_SIMP_TAC          : simpset -> thm list -> tactic
+   val rev_full_simp_tac          : simpset -> thm list -> tactic
+   val NO_STRIP_FULL_SIMP_TAC     : simpset -> thm list -> tactic
+   val NO_STRIP_REV_FULL_SIMP_TAC : simpset -> thm list -> tactic
 
    (* ---------------------------------------------------------------------
     * SIMP_RULE : simpset -> tactic

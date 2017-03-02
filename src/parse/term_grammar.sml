@@ -127,8 +127,8 @@ fun userdelta_name ud =
 
 type overload_info = Overload.overload_info
 
-type 'a printer_info =
-  (term * string * 'a term_pp_types.userprinter) Net.net * string Binaryset.set
+type ('a,'b) printer_info =
+  (term * string * ('a,'b) term_pp_types.userprinter) Net.net * string Binaryset.set
 type special_info = {type_intro : string,
                      lambda : string list,
                      endbinding : string,
@@ -141,11 +141,12 @@ datatype grammar = GCONS of
    specials : special_info,
    numeral_info : (char * string option) list,
    overload_info : overload_info,
-   user_printers : (type_grammar.grammar * grammar) printer_info,
+   user_printers : (type_grammar.grammar * grammar, grammar) printer_info,
    absyn_postprocessors : (string * (Absyn.absyn -> Absyn.absyn)) list
    }
 
-type userprinter = (type_grammar.grammar * grammar) term_pp_types.userprinter
+type userprinter =
+     (type_grammar.grammar * grammar, grammar) term_pp_types.userprinter
 
 fun specials (GCONS G) = #specials G
 fun numeral_info (GCONS G) = #numeral_info G
@@ -468,7 +469,7 @@ val stdhol : grammar =
    absyn_postprocessors = []
    }
 
-fun first_tok [] = raise Fail "Shouldn't happen parse_term 133"
+fun first_tok [] = raise Fail "Shouldn't happen: term_grammar.first_tok"
   | first_tok (RE (TOK s)::_) = s
   | first_tok (_ :: t) = first_tok t
 

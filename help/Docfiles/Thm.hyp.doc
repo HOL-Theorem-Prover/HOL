@@ -13,7 +13,7 @@ list of hypotheses of the theorem.
 Never fails.
 
 \COMMENTS
-The order in which hypotheses are returned can not be relied on. 
+The order in which hypotheses are returned can not be relied on.
 
 \SEEALSO
 Thm.dest_thm, Thm.concl.

@@ -1,0 +1,8 @@
+INCLUDES = ../../../cmp
+
+.PHONY: test
+test: input expected_output
+	$(protect $(HOLDIR)/bin/holdeptool.exe) input > output
+	$(protect $(HOLDIR)/tools/cmp/cmp.exe) output expected_output
+
+EXTRA_CLEANS = output

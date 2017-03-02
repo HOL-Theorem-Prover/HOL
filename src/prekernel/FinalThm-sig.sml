@@ -5,6 +5,7 @@ sig
   type term
   type hol_type
   type 'a set   = 'a HOLset.set
+  type depdisk  = (string * int) * ((string * int list) list)
 
   val kernelid : string
 
@@ -110,10 +111,15 @@ sig
 
   (* definitional rules of inference *)
   val prim_type_definition : {Thy : string, Tyop : string} * thm -> thm
-  val prim_constant_definition : string -> term -> thm
   val prim_specification : string -> string list -> thm -> thm
+  val gen_prim_specification : string -> thm -> string list * thm
 
   (* Fetching theorems from disk *)
 
-  val disk_thm      : string list * term list -> thm
+  val disk_thm : (depdisk * string list) * term list -> thm
+
+  (* Saving proof dependencies *)
+
+  val save_dep : string -> thm -> thm
+
 end;

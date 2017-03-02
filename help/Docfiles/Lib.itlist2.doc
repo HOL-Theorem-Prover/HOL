@@ -15,11 +15,11 @@ list.
 {
    f x1 y1 (f x2 y2 ... (f xn yn z)...)
 }
-An invocation {itlist2 f list1 list2 b} returns {b} if 
+An invocation {itlist2 f list1 list2 b} returns {b} if
 {list1} and {list2} are empty.
 
 \FAILURE
-Fails if the two lists are of different lengths, or if one of the 
+Fails if the two lists are of different lengths, or if one of the
 applications of {f} fails.
 
 \EXAMPLE

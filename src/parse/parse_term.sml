@@ -82,7 +82,7 @@ exception PrecConflict of stack_terminal * stack_terminal
 
 val complained_already = ref false;
 
-fun first_tok [] = raise Fail "Shouldn't happen parse_term 133"
+fun first_tok [] = raise Fail "Shouldn't happen: parse_term.first_tok"
   | first_tok (RE (TOK s)::_) = s
   | first_tok (_ :: t) = first_tok t
 
@@ -1527,7 +1527,7 @@ fun remove_specials t =
                 ("Record selection must have single id to right \
                  \(possibly non-integer numeric literal)",#2 t2)
           else if s = reccons_special then
-            remove_recupdate (#2 t) f t2 (IDENT (locn.Loc_None,"ARB"))
+            remove_recupdate (#2 t) f t2 (QIDENT (locn.Loc_None,"bool", "ARB"))
           else if s = recwith_special then
             remove_recupdate' (#2 t) t2 (remove_specials f)
           else

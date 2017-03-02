@@ -1,5 +1,5 @@
 ifdef POLY
-TARGET = $(dprot $(HOLDIR)/bin/hol.builder0)
+TARGET = $(dprot $(HOLDIR)/bin/hol.state0)
 
 BOOLTHEORY = $(dprot $(SIGOBJ)/boolTheory.uo)
 BOOLLIB = $(dprot $(SIGOBJ)/boolLib.uo)
@@ -18,13 +18,23 @@ DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
        $(dprot $(SIGOBJ)/TypeBase.uo) \
        $(dprot $(SIGOBJ)/Preterm.uo) \
        $(dprot $(SIGOBJ)/type_pp.uo) \
-       $(dprot $(SIGOBJ)/ParseExtras.uo)
+       $(dprot $(SIGOBJ)/ParseExtras.uo) \
+       $(dprot $(SIGOBJ)/Drule.uo) \
+       $(dprot $(SIGOBJ)/TheoryPP.uo) \
+       $(dprot $(SIGOBJ)/Conv.uo) \
+       $(dprot $(SIGOBJ)/ParseDatatype.uo) \
+       $(dprot $(SIGOBJ)/type_grammar.uo)
 
 EXTRA_CLEANS = $(TARGET)
 
 $(TARGET): $(DEPS)
 	cd $(protect $(HOLDIR)/tools-poly) && \
-        $(POLY) < builder0.ML && \
-        cc -o $(protect $@) hol.builder0.o $(POLY_LDFLAGS) && \
-        rm hol.builder0.o
+        $(POLY) -q < builder0.ML
+
+all: selftest.exe $(TARGET)
+.PHONY: all
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
 endif

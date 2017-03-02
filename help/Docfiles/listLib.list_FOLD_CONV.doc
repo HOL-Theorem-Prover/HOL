@@ -40,7 +40,7 @@ following theorem:
 {
   |- !l. SUM l = FOLDR $+ 0 l
 }
-The conversion for {SUM}, {SUM_CONV} can be implemented as 
+The conversion for {SUM}, {SUM_CONV} can be implemented as
 {
    load_library_in_place num_lib;
    val SUM_CONV =

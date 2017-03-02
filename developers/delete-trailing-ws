@@ -21,7 +21,7 @@ then
     exit 1
 fi
 
-find "$1" \( -name '*.sml' -o -name '*.sig' -o -name '*.tex' -o -name '*.ML' -o -name '*.lem' \) \
+find "$1" \( -name '*.sml' -o -name '*.sig' -o -name '*.tex' -o -name '*.ML' -o -name '*.lem' -o -name '*.bib' -o -name '*.doc' \) \
           \! -name '*ML.sml' \! -name '*Theory.sml' \! -name '*Theory.sig' \
           -exec perl -e "while (<>) { if (/$wspace_re/) { exit 0; }}; exit 1" \{\} \; \
           "${trailingcommand[@]}"

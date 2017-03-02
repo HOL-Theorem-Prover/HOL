@@ -17,20 +17,18 @@ struct
    val compare = L3.listCompare boolCompare
 
    fun zero n = List.tabulate (Nat.toInt n, fn _ => false)
-
-   fun one n =
-      let
-         val i = Nat.toInt n
-      in
-         if i = 0
-            then []
-         else List.tabulate (i - 1, fn _ => false) @ [true]
-      end
+   fun one n = if n < 1 then [] else zero (n - 1) @ [true]
 
    val size: bitstring -> Nat.nat = Nat.fromInt o List.length
 
    local
-      fun iter a i = if i <= 0 then a else iter ((i mod 2 = 1) :: a) (i div 2)
+      fun iter a i =
+         if i <= 0 then a
+         else let
+                  val (q, r) = IntInf.quotRem (i, 2)
+              in
+                  iter ((r = 1) :: a) q
+              end
    in
       fun fromInt i =
          if i < 0
@@ -92,10 +90,10 @@ struct
          val v = String.extract (s, 1, NONE)
       in
          case String.sub (s, 0) of
-           #"d" => fromDecString v
-         | #"b" => fromBinString v
-         | #"x" => fromHexString v
-         | _ => NONE
+            #"d" => fromDecString v
+          | #"b" => fromBinString v
+          | #"x" => fromHexString v
+          | _ => NONE
       end
 
    val toBinString = String.implode o List.map (fn false => #"0" | true => #"1")
@@ -140,15 +138,9 @@ struct
    fun fromList l = l
 
    fun modify (f: Nat.nat * bool -> bool) a =
-      let
-         val s = List.length a
-         val n = List.tabulate (s, fn i => Nat.fromInt (s - 1 - i))
-         val z = ListPair.zip (n, a)
-      in
-         List.map f z
-      end
+      #1 (List.foldr (fn (b, (l, i)) => (f (i, b) :: l, i + 1)) ([], 0) a)
 
-   fun op << (l, s) = l @ List.tabulate (Nat.toInt s, fn _ => false)
+   fun op << (l, s) = l @ zero s
 
    fun op >>+ (l, s) = List.take (l, List.length l - Nat.toInt s)
                        handle General.Subscript => []
@@ -165,26 +157,23 @@ struct
       let
          val n = List.length l
       in
-         if n < s
-            then List.tabulate (s - n, fn _ => false) @ l
-         else List.drop (l, n - s)
+         if n < s then zero (s - n) @ l else List.drop (l, n - s)
       end
 
-   fun bits (b, h, l) =
+   fun bits (h, l) =
       let
          val s = Nat.- (Nat.suc h, l)
       in
-         if s = Nat.zero then [false] else setSize (Nat.toInt s) (b >>+ l)
+         fn b =>
+           if s = Nat.zero then [false] else setSize (Nat.toInt s) (b >>+ l)
       end
 
-   fun bit (a, n) = bits (a, n, n) = [true]
+   fun bit (a, n) = bits (n, n) a = [true]
 
-   fun bitFieldInsert (x, y, h, l) =
-      modify
-        (fn (i, b) =>
-           if Nat.<= (l, i) andalso Nat.<= (i, h)
-              then bit (y, Nat.- (i, l))
-           else b) x
+   fun bitFieldInsert (h,l) (x, y) =
+      modify (fn (i, b) => if Nat.<= (l, i) andalso Nat.<= (i, h)
+                              then bit (y, Nat.- (i, l))
+                           else b) x
 
    fun maxLength (l1, l2) = Int.max (List.length l1, List.length l2)
 

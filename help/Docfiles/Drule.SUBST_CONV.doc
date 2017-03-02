@@ -44,14 +44,14 @@ variables in {vi} becoming bound after substitution.
 \FAILURE
 {SUBST_CONV [{redex=x1,residue=th1},...,{redex=xn,residue=thn}] t[x1,...,xn] t'} fails
 if the conclusion of any theorem {thi} in the list is not an equation; or if
-the template {t[x1,...,xn]} does not match the term {t'}; or if and term {ti} 
-in {t'} marked by the variable {xi} in the template, is not identical to the 
+the template {t[x1,...,xn]} does not match the term {t'}; or if and term {ti}
+in {t'} marked by the variable {xi} in the template, is not identical to the
 left-hand side of the conclusion of the theorem {thi}.
 
 \EXAMPLE
 The values
 {
-   - val thm0 = SPEC (Term`0`) ADD1 
+   - val thm0 = SPEC (Term`0`) ADD1
      and thm1 = SPEC (Term`1`) ADD1
      and x = Term`x:num` and y = Term`y:num`;
 

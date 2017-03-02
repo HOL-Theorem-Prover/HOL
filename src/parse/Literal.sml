@@ -232,11 +232,12 @@ end
 (* patterns.                                                                 *)
 (*---------------------------------------------------------------------------*)
 
-val other_literals = ref (fn _:term => false);
-
-fun is_literal tm =
- is_numeral tm orelse is_string_lit tm orelse is_char_lit tm
-               orelse !other_literals tm
+local
+   val literals = ref [is_numeral, is_string_lit, is_char_lit]
+in
+   fun add_literal is_lit = literals := !literals @ [is_lit]
+   fun is_literal tm = List.exists (fn f => f tm) (!literals)
+end
 
 fun is_pure_literal x =
   is_literal x andalso not (is_zero x) andalso not (is_string_lit x);

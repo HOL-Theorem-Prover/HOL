@@ -15,8 +15,8 @@ instantiation of type variables.
 
               A |- t
   ----------------------------------- INST_TYPE[vty1|->ty1,..., vtyn|->tyn]
-   A[ty1,...,tyn/vty1,...,vtyn] 
-    |- 
+   A[ty1,...,tyn/vty1,...,vtyn]
+    |-
    t[ty1,...,tyn/vty1,...,vtyn]
 }
 Type substitution is performed throughout the hypotheses and

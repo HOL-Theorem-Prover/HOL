@@ -200,8 +200,8 @@ end
     A flag controlling printing of set comprehensions
    ---------------------------------------------------------------------- *)
 
-val unamb_comp = ref false
-val _ = Feedback.register_btrace ("pp_unambiguous_comprehensions", unamb_comp)
+val unamb_comp = ref 0
+val _ = Feedback.register_trace ("pp_unambiguous_comprehensions", unamb_comp, 2)
 
 fun grav_name (Prec(n, s)) = s | grav_name _ = ""
 fun grav_prec (Prec(n,s)) = n | grav_prec _ = ~1
@@ -368,10 +368,6 @@ val prettyprint_bigrecs = ref true;
 
 val _ = register_btrace ("pp_bigrecs", prettyprint_bigrecs)
 
-fun first_tok [] = raise Fail "Shouldn't happen term_pp 133"
-  | first_tok (RE (TOK s)::_) = s
-  | first_tok (_ :: t) = first_tok t
-
 fun decdepth n = if n < 0 then n else n - 1
 
 val unfakeconst = Option.map #fake o GrammarSpecials.dest_fakeconst_name
@@ -393,6 +389,8 @@ end handle HOL_ERR _ => false
 fun is_constish tm = is_const tm orelse is_fakeconst tm
 
 fun pp_term (G : grammar) TyG backend = let
+  val G = #tm_grammar_upd backend G
+  val TyG = #ty_grammar_upd backend TyG
   fun block x = backend_block backend x
   fun tystr ty =
       PP.pp_to_string 10000 (type_pp.pp_type TyG PPBackEnd.raw_terminal) ty
@@ -1006,18 +1004,23 @@ fun pp_term (G : grammar) TyG backend = let
            isSome recfupd_info andalso isSome recupd_info
         then let
             open Overload
+            fun ap1 t = let val (d,_) = dom_rng (type_of t)
+                        in mk_comb(t,genvar d) end
+            fun ap2 t = t |> ap1 |> ap1
+            fun fupdstr0 t =
+              t |> ap2 |> Overload.oi_strip_comb overload_info
+                |> Option.map (atom_name o #1)
+            val fupdstr = Option.join o Lib.total fupdstr0
             (* function to determine if t is a record update *)
             fun is_record_update t =
-                if is_comb t andalso is_const (rator t) then let
-                    val rname = overloading_of_term overload_info (rator t)
-                  in
-                    case rname of
+                if is_comb t andalso is_const (rator t) then
+                  case fupdstr (rator t) of
                       SOME s =>
                       (!prettyprint_bigrecs andalso isSuffix "_fupd" s andalso
                        is_substring (bigrec_subdivider_string ^ "sf") s) orelse
                       isPrefix recfupd_special s
                     | NONE => false
-                  end else false
+                else false
             (* descend the rands of a term until one that is not a record
                update is found.  Return this and the list of rators up to
                this point. *)
@@ -1029,7 +1032,7 @@ fun pp_term (G : grammar) TyG backend = let
             fun categorise_bigrec_updates v = let
               fun bigrec_update t =
                   if is_comb t then
-                    case overloading_of_term overload_info (rator t) of
+                    case fupdstr (rator t) of
                       SOME s => if is_substring bigrec_subdivider_string s then
                                   SOME (s, rand t)
                                 else NONE
@@ -1088,7 +1091,7 @@ fun pp_term (G : grammar) TyG backend = let
                string, and a boolean, which is true iff the update is a value
                update (not a "fupd") *)
             val (fld, value) = dest_comb t
-            val rname = valOf (overloading_of_term' overload_info fld)
+            val rname = valOf (fupdstr fld)
           in
             if isPrefix recfupd_special rname then let
                 val (f, x) = dest_comb value
@@ -1645,30 +1648,8 @@ fun pp_term (G : grammar) TyG backend = let
                 NONE => add_prim_name()
               | SOME s =>
                 (* term is overloaded *)
-                if isPrefix recsel_special s orelse
-                   isPrefix recupd_special s orelse
-                   isPrefix recfupd_special s
-                then
-                  (* if overloaded to a record special, check to see if it *)
-                  (* has a normal name in the map that we could use instead. *)
-                  (* This way we will print out something that can still be *)
-                  (* parsed back to the original term, without having to go *)
-                  (* for full uglification with dollared syntax.  *)
-
-                  (* Note that if we've got this far, we can't print out *)
-                  (* the special record syntax for some other reason, so *)
-                  (* is our "fall-back" action *)
-                  case Overload.info_for_name overload_info Name of
-                    NONE => add_prim_name()
-                  | SOME {actual_ops,...} =>
-                    if List.exists (aconv tm) actual_ops then
-                      cope_with_rules Name
-                    else
-                      add_prim_name()
-                else if s = "case" then
-                  cope_with_rules Name
-                else
-                  cope_with_rules s
+                if s = "case" then cope_with_rules Name
+                else cope_with_rules s
           end
         in
           case (showtypes_v, const_is_polymorphic tm, const_has_multi_ovl tm) of
@@ -1700,10 +1681,11 @@ fun pp_term (G : grammar) TyG backend = let
                   val rfrees = FVL [r] empty_tmset
                   open HOLset
                 in
-                  if (equal(intersection(lfrees,rfrees), vfrees) orelse
-                      (isEmpty lfrees andalso equal(rfrees, vfrees)) orelse
-                      (isEmpty rfrees andalso equal(lfrees, vfrees)))
-                     andalso not (!unamb_comp)
+                  if ((equal(intersection(lfrees,rfrees), vfrees) orelse
+                       (isEmpty lfrees andalso equal(rfrees, vfrees)) orelse
+                       (isEmpty rfrees andalso equal(lfrees, vfrees)))
+                      andalso !unamb_comp = 0) orelse
+                     !unamb_comp = 2
                   then
                     block CONSISTENT 0
                        (record_bvars bvars_seen_here

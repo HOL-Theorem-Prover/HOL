@@ -20,6 +20,7 @@
 \usepackage{../../src/TeX/holtexbasic}
 \usepackage{fancyvrb}
 
+\hyphenation{docu-ments}
 
 % ---------------------------------------------------------------------
 % Input defined macros and commands
@@ -36,6 +37,10 @@
 %\includeonly{system,theories,libraries}
 
 \usepackage[hidelinks,hypertexnames=false,pdftitle={The HOL System DESCRIPTION}]{hyperref}
+
+\usepackage{centernot}
+\newcommand{\notiff}{%
+  \mathrel{{\ooalign{\hidewidth$\not\phantom{"}$\hidewidth\cr$\iff$}}}}
 
 \makeindex
 
@@ -81,6 +86,7 @@
 
    \include{system}                      % embedding HOL logic in ML
    \include{drules}                      % derived rules
+   \include{tactics}                     % tactics
    \include{theories}
    \include{definitions}
    \include{libraries}
@@ -95,7 +101,6 @@
 
 %   \include{syntax}
 %   \include{conv}                        % conversions
-%   \include{tactics}                     % tactics
 %   \include{see}
 
    % ---------------------------------------------------------------------

@@ -44,7 +44,7 @@ the tactic is invalid.
 - expand CONJ_TAC;
 - expand CONJ_TAC;
 OK..
-NO_PROOFS! Uncaught exception: 
+NO_PROOFS! Uncaught exception:
 ! NO_PROOFS
 
 - g `(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])`;
@@ -53,7 +53,7 @@ NO_PROOFS! Uncaught exception:
     1. Incomplete:
          Initial goal:
          (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3])
-         
+
      : proofs
 
 - expand CONJ_TAC;
@@ -61,10 +61,10 @@ OK..
 2 subgoals:
 > val it =
     TL [1; 2; 3] = [2; 3]
-    
-    
+
+
     HD [1; 2; 3] = 1
-    
+
      : proof
 
 - expand (REWRITE_TAC[listTheory.HD]);
@@ -76,7 +76,7 @@ Goal proved.
 Remaining subgoals:
 > val it =
     TL [1; 2; 3] = [2; 3]
-    
+
      : proof
 
 - expand (REWRITE_TAC[listTheory.TL]);
@@ -100,17 +100,44 @@ justification would not prove the goal that was set.
     1. Incomplete:
          Initial goal:
          1 = 2
-         
+
      : proofs
 - expand (REWRITE_TAC[ASSUME (Term `1=2`)]);
 OK..
 
 Exception raised at Tactical.VALID:
 Invalid tactic
-! Uncaught exception: 
+! Uncaught exception:
 ! HOL_ERR
 }
 
+Note that an invalid tactic may "succeed".
+Thus, where {tac1} is invalid, and {tac2} is valid (and both succeed),
+{FIRST [tac1, tac2]} is invalid.  For example, where
+theorem {uth} is {[p] |- q} and {uth'} is {[p'] |- q}
+
+{
+1 subgoal:
+val it =
+
+q
+------------------------------------
+  p
+:
+   proof
+
+> e (FIRST (map ACCEPT_TAC [uth', uth])) ;
+OK..
+
+Exception raised at Tactical.VALID:
+Invalid tactic [...]
+
+> e (FIRST (map (VALID o ACCEPT_TAC) [uth', uth])) ;
+OK..
+
+Goal proved.
+ [p] |- q
+}
 
 \USES
 Doing a step in an interactive goal-directed proof.
@@ -119,6 +146,7 @@ Doing a step in an interactive goal-directed proof.
 proofManagerLib.set_goal, proofManagerLib.restart,
 proofManagerLib.backup,proofManagerLib.restore, proofManagerLib.save,
 proofManagerLib.set_backup,proofManagerLib.expand, proofManagerLib.expandf,
-proofManagerLib.p,proofManagerLib.top_thm, proofManagerLib.top_goal.
+proofManagerLib.flatn,proofManagerLib.p,proofManagerLib.top_thm,
+proofManagerLib.top_goal, Tactical.VALID, Tactical.VALIDATE
 
 \ENDDOC

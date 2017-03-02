@@ -60,6 +60,10 @@ sig
            |- (A /\ B /\ C <=> C /\ B /\ D) <=> C /\ B ==> (A <=> D)
          *)
 
+     val NORMEQ_ss : simpLib.ssfrag
+       (* flips equalities that have a ground term on the left and a
+          non-ground term on the right *)
+
      val SimpLHS : thm
      val SimpRHS : thm
      val SimpL   : term -> thm
@@ -67,4 +71,3 @@ sig
 
 
 end
-

@@ -6,7 +6,7 @@ HOL_ERR : {message : string, origin_function : string,
 \ELTYPE
 
 \SYNOPSIS
-Standard HOL exception
+Standard HOL exception.
 
 \KEYWORDS
 exception, error

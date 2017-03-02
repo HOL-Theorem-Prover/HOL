@@ -88,6 +88,8 @@ fun html (name,sectionl) ostrm =
             (out "<SPAN class = \"TEXT\">";
              out  (text_encode ss);
              out "</SPAN>")
+       | markout (EMPH ss) =
+            out ("<em>" ^ text_encode ss ^ "</em>")
        | markout (BRKT ss) =
            (out "<SPAN class = \"BRKT\">";
             out (bracket_trans ss);

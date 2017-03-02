@@ -185,7 +185,7 @@ datatype simpset =
 
  val empty_ss = SS {mk_rewrs=fn x => [x],
                     ssfrags = [], limit = NONE,
-                    initial_net=empty_net,
+                    initial_net=empty,
                     dprocs=[],travrules=EQ_tr};
 
  fun ssfrags_of (SS x) = #ssfrags x;
@@ -414,7 +414,7 @@ datatype simpset =
      mk_comb(Term.inst theta f, x)
    end
 
-   fun apply {solver,context,stack,relation = (relation,_)} t = let
+   fun apply {solver,conv,context,stack,relation = (relation,_)} t = let
      val _ = can (match_term rel_t) relation orelse
              raise ERR ("mk_reducer.apply", "Wrong relation")
      val n = case context of redExn n => n
@@ -518,10 +518,10 @@ fun remove_ssfrags ss names =
    in
      CONVNET (net_add_convs net (List.mapPartial mk_rewr_convdata new_rwts))
    end
-   fun apply {solver,context,stack,relation} tm = let
+   fun apply {solver,conv,context,stack,relation} tm = let
      val net = (raise context) handle CONVNET net => net
    in
-     tryfind (fn conv => conv solver stack tm) (lookup tm net)
+     tryfind (fn conv' => conv' solver stack tm) (lookup tm net)
    end
    in REDUCER {name=SOME"rewriter_for_ss",
                addcontext=addcontext, apply=apply,
@@ -589,17 +589,18 @@ fun SIMP_RULE ss l = CONV_RULE (SIMP_CONV ss l)
 fun ASM_SIMP_RULE ss l th = SIMP_RULE ss (l@map ASSUME (hyp th)) th;
 
 fun SIMP_TAC ss l = markerLib.ABBRS_THEN (CONV_TAC o SIMP_CONV ss) l;
+val simp_tac = SIMP_TAC
 
 fun ASM_SIMP_TAC ss =
    markerLib.ABBRS_THEN
     (fn thl => fn gl as (asl,_) =>
          SIMP_TAC ss (markerLib.LLABEL_RESOLVE thl asl) gl);
+val asm_simp_tac = ASM_SIMP_TAC
 
 local
    (* differs only in that it doesn't call OPPOSITE_TAC or DISCARD_TAC *)
-   val STRIP_ASSUME_TAC' =
-      REPEAT_TCL STRIP_THM_THEN
-         (fn th => FIRST [CONTR_TAC th, ACCEPT_TAC th, ASSUME_TAC th])
+   fun caa_tac th = FIRST [CONTR_TAC th, ACCEPT_TAC th, ASSUME_TAC th]
+   val STRIP_ASSUME_TAC' = REPEAT_TCL STRIP_THM_THEN caa_tac
    fun drop r =
       fn n =>
          POP_ASSUM_LIST
@@ -607,20 +608,25 @@ local
               MAP_EVERY ASSUME_TAC
                  (Lib.with_exn (r o List.take) (l, List.length l - n)
                    (Feedback.mk_HOL_ERR "simpLib" "drop" "Bad cut off number")))
-   fun GEN_FULL_SIMP_TAC (drop, r) =
+   fun GEN_FULL_SIMP_TAC (drop, r) tac =
       fn ss => fn thms =>
          let
             fun simp_asm (t, l') = SIMP_RULE ss (l' @ thms) t :: l'
-            fun f asms =
-               MAP_EVERY STRIP_ASSUME_TAC' (List.foldl simp_asm [] (r asms))
-               THEN drop (List.length asms)
+            fun f asms = MAP_EVERY tac (List.foldl simp_asm [] (r asms))
+                         THEN drop (List.length asms)
          in
             markerLib.ABBRS_THEN
                (fn l => ASSUM_LIST f THEN ASM_SIMP_TAC ss l) thms
          end
+   val full_tac = GEN_FULL_SIMP_TAC (drop List.rev, Lib.I)
+   val rev_full_tac = GEN_FULL_SIMP_TAC (drop Lib.I, List.rev)
 in
-   val FULL_SIMP_TAC = GEN_FULL_SIMP_TAC (drop List.rev, Lib.I)
-   val REV_FULL_SIMP_TAC = GEN_FULL_SIMP_TAC (drop Lib.I, List.rev)
+   val FULL_SIMP_TAC = full_tac STRIP_ASSUME_TAC'
+   val full_simp_tac = FULL_SIMP_TAC
+   val REV_FULL_SIMP_TAC = rev_full_tac STRIP_ASSUME_TAC'
+   val rev_full_simp_tac = REV_FULL_SIMP_TAC
+   val NO_STRIP_FULL_SIMP_TAC = full_tac caa_tac
+   val NO_STRIP_REV_FULL_SIMP_TAC = rev_full_tac caa_tac
 end
 
 fun track f x =

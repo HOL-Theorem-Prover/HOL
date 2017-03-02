@@ -64,4 +64,3 @@ time (funpow 100 (fn() => (tri_heap (L200()); ()))) (); (* ~ 0.36s *)
 time (funpow 100 (fn() => (tri_heap (L1200()); ()))) (); (* ~ 4.17s *)
 time (funpow 10 (fn() => (tri_heap (L19200()); ()))) (); (* ~ 15.7s *)
 time (funpow 10 (fn() => (tri_heap (L38400()); ()))) (); (* ~ 43.3s *)
-

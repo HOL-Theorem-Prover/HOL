@@ -6,4 +6,4 @@ sig
   val OMEGA_PROVE : conv
   val OMEGA_TAC : tactic
 
-end;
+end

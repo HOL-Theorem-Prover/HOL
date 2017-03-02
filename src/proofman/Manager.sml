@@ -87,6 +87,16 @@ fun expandf tac (GOALSTACK s) = GOALSTACK (apply (goalStack.expandf tac) s)
 fun expand tac (GOALSTACK s) = GOALSTACK (apply (goalStack.expand tac) s)
   | expand tac (GOALTREE t) = GOALTREE (apply (goalTree.expand("",tac)) t);
 
+fun expand_listf ltac (GOALSTACK s) =
+    GOALSTACK (apply (goalStack.expand_listf ltac) s)
+  | expand_listf _ _ =
+    raise ERR "expand_listf" "not implemented for goal trees";
+
+fun expand_list ltac (GOALSTACK s) =
+    GOALSTACK (apply (goalStack.expand_list ltac) s)
+  | expand_list _ _ =
+    raise ERR "expand_list" "not implemented for goal trees";
+
 fun expandv (s,tac) (GOALTREE t) =
      GOALTREE (apply (goalTree.expand (s,tac)) t)
    | expandv _ _ = raise ERR "expandv" "not implemented for goal stacks";
@@ -108,6 +118,10 @@ fun top_goals (GOALSTACK s) = project goalStack.top_goals s
 
 fun rotate i (GOALSTACK s) = GOALSTACK(apply (C goalStack.rotate i) s)
   | rotate i (GOALTREE t) = raise ERR "rotate"
+                               "not implemented for goal trees";
+
+fun flatn i (GOALSTACK s) = GOALSTACK(apply (C goalStack.flatn i) s)
+  | flatn i (GOALTREE t) = raise ERR "flatn"
                                "not implemented for goal trees";
 
 fun restart (GOALSTACK s) = GOALSTACK (new_history_default (initialValue s))

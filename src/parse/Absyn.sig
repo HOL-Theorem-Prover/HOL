@@ -91,4 +91,4 @@ sig
   val is_exists  : absyn -> bool
   val is_exists1 : absyn -> bool
   val is_select  : absyn -> bool
-end;
+end

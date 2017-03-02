@@ -15,9 +15,10 @@
 structure Thm :> Thm =
 struct
 
-open Feedback Lib Term KernelTypes Tag
+open Feedback Lib Term KernelTypes Tag Dep
 
 type 'a set = 'a HOLset.set;
+type depdisk = (string * int) * ((string * int list) list);
 
 val --> = Type.-->;
 infixr 3 -->;
@@ -955,7 +956,6 @@ fun INST [] th = th
       else
         raise ERR "INST" "can only instantiate variables"
 
-
 (*---------------------------------------------------------------------------*
  * Now some derived rules optimized for computations, avoiding most          *
  * of useless type-checking, using pointer equality and delayed              *
@@ -1143,6 +1143,14 @@ fun check_free_vars tm f =
             ("Free variables in rhs of definition: "
              :: commafy (map (Lib.quote o fst o dest_var) V)));
 
+fun check_vars tm vars f =
+ case Lib.set_diff (free_vars tm) vars
+  of [] => ()
+   | extras =>
+      raise f (String.concat
+         ("Unbound variable(s) in definition: "
+           :: commafy (map (Lib.quote o fst o dest_var) extras)));
+
 fun check_tyvars body_tyvars ty f =
  case Lib.set_diff body_tyvars (Type.type_vars ty)
   of [] => ()
@@ -1174,6 +1182,7 @@ in
   mk_defn_thm(tag thm, mk_exists(rep, list_mk_comb(TYDEF,[P,rep])))
 end
 
+(* subsumed by gen_prim_specification
 fun prim_constant_definition Thy M = let
   val (lhs, rhs) = with_exn dest_eq M DEF_FORM_ERR
   val {Name, Thy, Ty} =
@@ -1196,6 +1205,7 @@ fun prim_constant_definition Thy M = let
 in
   mk_defn_thm(empty_tag, mk_eq(new_lhs, rhs))
 end
+*)
 
 fun bind thy s ty =
     Term.prim_new_const {Name = s, Thy = thy} ty
@@ -1217,21 +1227,73 @@ in
   mk_defn_thm (tag th, subst (map2 addc V cnames) body)
 end
 
+fun gen_prim_specification thyname th = let
+  val hyps        = hypset th
+  val stys        =
+    let
+      fun foldthis (tm,stys) =
+        let
+          val (l,r)   =
+              with_exn dest_eq tm (SPEC_ERR "non-equational hypothesis")
+          val (s,ty)  =
+              with_exn dest_var l (SPEC_ERR "lhs of hyp not a variable")
+          val checked = check_free_vars r SPEC_ERR
+          val checked = check_tyvars (type_vars_in_term r) ty SPEC_ERR
+        in
+          (s,ty)::stys
+        end
+    in
+      HOLset.foldl foldthis [] hyps
+    end
+  val cnames      = List.map fst stys
+  val checked     =
+      assert_exn (op=) (length(mk_set cnames),length cnames)
+                 (SPEC_ERR "duplicate constant names in specification")
+  val body        = concl th
+  val checked     = check_vars body (List.map mk_var stys) SPEC_ERR
+  fun addc (s,ty) = (mk_var (s,ty)) |-> bind thyname s ty
+in
+  (cnames, mk_defn_thm (tag th, subst (List.map addc stys) body))
+end
 
 
 
 
 
+
+
+(* ----------------------------------------------------------------------
+    Creating a theorem from disk
+   ---------------------------------------------------------------------- *)
 
 local
   val mk_disk_thm  = make_thm Count.Disk
 in
-fun disk_thm (s, termlist) = let
+fun disk_thm ((d,ocl), termlist) = let
   val c = hd termlist
   val asl = tl termlist
 in
-  mk_disk_thm(Tag.read_disk_tag s,list_hyp asl,c)
+  mk_disk_thm (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
 end
 end; (* local *)
+
+(* ----------------------------------------------------------------------
+    Saving dependencies of a theorem
+   ---------------------------------------------------------------------- *)
+
+(* This reference is automatically reset to 0 each time you create
+   a theory. *)
+val thm_order = ref 0
+
+fun save_dep thy (th as (THM(t,h,c))) =
+  let
+    val did = (thy,!thm_order)
+    val dl  = (transfer_thydepl o dep_of o tag) th
+    val dep = DEP_SAVED(did,dl)
+  in
+    thm_order := (!thm_order) + 1;
+    THM(Tag.set_dep dep t,h,c)
+  end
+
 
 end (* Thm *)

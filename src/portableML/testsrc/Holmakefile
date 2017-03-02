@@ -1,0 +1,8 @@
+ifneq($(OS),winNT)
+
+.PHONY: all
+
+all:
+	if $(HOLDIR)/developers/unicode-grep ; then false ; else true ; fi
+
+endif

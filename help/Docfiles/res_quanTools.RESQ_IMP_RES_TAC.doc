@@ -17,7 +17,7 @@ implication. This resulting theorem is used in the resolution.
 
 Given a theorem {th}, the theorem-tactic {RESQ_IMP_RES_TAC}
 applies {RESQ_IMP_RES_THEN} repeatedly to resolve the theorem with the
-assumptions. 
+assumptions.
 
 \FAILURE
 Never fails

@@ -1,0 +1,72 @@
+\DOC irule
+
+\TYPE {irule : thm_tactic}
+
+\SYNOPSIS
+Reduces the goal using a supplied implication, with matching.
+
+\KEYWORDS
+tactic, modus ponens, implication.
+
+\DESCRIBE
+When applied to a theorem of the form
+{
+   A' |- !x1...xn. s ==> !y1...ym. t ==> !z1...zk. u
+}
+{irule} produces a tactic that reduces a goal whose conclusion {u'} is
+a substitution and/or type instance of {u} to the corresponding
+instances of {s} and of {t}. Any variables free in {s} or {t} but not
+in {u} will be existentially quantified in the resulting subgoal, and
+a variable free in both {s} and {t} will result in a subgoal which is
+{s /\ t}, existentially quantified
+
+The following diagram is simplified: more implications and quantified
+variables than shown are allowed.
+{
+     A ?- u'
+  =========================  irule (A' |- !x. s ==> !y. t ==> u)
+   A ?- ?z. s'   A ?- ?w. t'
+}
+where {z} and {w} are (type instances of) variables among {x}, {y}
+that do not occur free in {s}, {t}. The assumptions {A'},
+instantiated, are added as further new subgoals.
+
+\FAILURE
+Fails unless the theorem, when stripped of universal quantification and
+antecedents of implications, can be instantiated to match the goal.
+
+\COMMENTS
+The supplied theorem is pre-processed using {SPEC_UNDISCH_EXL}, which
+removes the universal quantifiers and antecedents of implications, and
+applies {EXISTS_LEFT} which existentially quantifies variables which
+were instantiated but appeared only in the antecedents of
+implications. See {SPEC_UNDISCH_EXL} for details.
+
+Then {prim_irule} is applied. To avoid this preprocessing just use
+{prim_irule}.
+
+The order of the new subgoals depends on the order in which the hypotheses of
+the pre-processed theorem (before the substitution) are stored.
+See {prim_irule}.
+
+\EXAMPLE
+With goal {R a (f b)} and theorem {thm} being
+{
+   |- !x u. P u x ==> !y. Q w x y ==> R x (f y)
+}
+the proof step {e (irule thm)} gives new goals {Q w a b} and
+{?u. P u a}.
+
+With goal {a = b} and theorem {trans}
+{
+   |- !x y. (x = y) ==> !z. (y = z) ==> (x = z)
+}
+the proof step {e (irule trans)} gives new goal
+{
+   ?y. (a = y) /\ (y = b)
+}
+
+\SEEALSO
+Tactic.MATCH_MP_TAC, Tactic.prim_irule, Drule.SPEC_UNDISCH_EXL,
+Drule.EXISTS_LEFT
+\ENDDOC

@@ -6,15 +6,9 @@ open realSyntax transcTheory
 
 (* ------------------------------------------------------------------------- *)
 
-val monop =
-   HolKernel.syntax_fns "transc" 1 HolKernel.dest_monop
-      (Lib.curry boolSyntax.mk_icomb)
-
-val binop =
-   HolKernel.syntax_fns "transc" 2 HolKernel.dest_binop HolKernel.mk_binop
-
-val triop =
-   HolKernel.syntax_fns "transc" 3 HolKernel.dest_triop HolKernel.mk_triop
+val monop = HolKernel.syntax_fns1 "transc"
+val binop = HolKernel.syntax_fns2 "transc"
+val triop = HolKernel.syntax_fns3 "transc"
 
 (* ------------------------------------------------------------------------- *)
 

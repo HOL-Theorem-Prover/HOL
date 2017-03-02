@@ -8,31 +8,21 @@ EXTRA_CLEANS = munger.lex.sml $(EXE) mkmunge.o munger.o $(TARGET) \
                holindex.grm-sig.sml holindex.grm.sml holindex.lex.sig \
                holindex.lex.sml holindex.grm.sig
 
-mosml_MKMUNGE_DEP = mkmkmunge.uo mungeTools.uo
-poly_MKMUNGE_DEP = mkmunge.o mungeTools.uo
+mosml_MKMUNGE_DEP = mkmkmunge.uo mungeTools.uo warning_stream.uo
+poly_MKMUNGE_DEP = poly-mkmkmunge.ML mkmkcline.sml \
+                   $(dprot $(HOLDIR)/bin/hol.state) \
+                   EmitTeX.uo mungeTools.uo
 
 mosml_MKMUNGE_COMM = $(HOLMOSMLC) -o $@ $<
-poly_MKMUNGE_COMM = cc -o $@ $< $(POLY_LDFLAGS)
+poly_MKMUNGE_COMM = $(POLYC) $< -o $@
 
 UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
 
-all: selftest.exe $(EXE) $(UOFILES)
+all: selftest.exe $(TARGET) $(UOFILES)
 .PHONY: all
 
-$(TARGET) : $(EXE)
-	$(CP) $< $@
-
-$(EXE): $($(ML_SYSNAME)_MKMUNGE_DEP)
+$(TARGET): $($(ML_SYSNAME)_MKMUNGE_DEP)
 	$($(ML_SYSNAME)_MKMUNGE_COMM)
-	$(CP) $@ $(protect $(HOLDIR)/bin)
-
-ifdef POLY
-
-mkmunge.o: poly-mkmkmunge.ML mkmkcline.sml $(dprot $(HOLDIR)/bin/hol.builder) \
-           EmitTeX.uo
-	$(HOLDIR)/bin/hol.builder -q < $<
-
-endif
 
 munger.lex.sml: munger.lex
 	$(MLLEX) $<

@@ -12,7 +12,7 @@ sig
 
   val conv_tac : conv -> tactic
 
-end;
+end
 
 (*
    [BASIC_CONV s c t] normalises term t, and then applies conversion c

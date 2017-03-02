@@ -111,7 +111,8 @@ sig
   (* User code additions *)
   (* Users can add special-purpose printers and parsers to grammars *)
   type term = Term.term
-  type userprinter = (type_grammar.grammar * grammar) term_pp_types.userprinter
+  type userprinter =
+       (type_grammar.grammar * grammar,grammar) term_pp_types.userprinter
   val add_user_printer :
     (string * term * userprinter) -> grammar ->
     grammar

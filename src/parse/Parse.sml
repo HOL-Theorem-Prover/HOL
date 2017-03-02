@@ -221,11 +221,13 @@ val min_grammars = (type_grammar.min_grammar, term_grammar.min_grammar)
 fun minprint t = let
   fun default t = let
     val (_, baseprinter) =
-        Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
-                      print_from_grammars
-                      min_grammars
+        with_flag (current_backend, PPBackEnd.raw_terminal)
+                  print_from_grammars
+                  min_grammars
     fun printer pps =
-        baseprinter pps |> trace ("types", 1) |> trace ("Greek tyvars", 0)
+        baseprinter pps
+                    |> trace ("types", 1) |> trace ("Greek tyvars", 0)
+                    |> with_flag (max_print_depth, ~1)
     val t_str =
         String.toString (PP.pp_to_string 1000000 printer t)
   in
@@ -463,7 +465,7 @@ fun pp_thm ppstrm th =
     end_block()
  end;
 
-val thm_to_string = ppstring (rawterm_pp pp_thm)
+val thm_to_string = rawterm_pp (ppstring pp_thm)
 val print_thm = print o thm_to_string
 
 (*---------------------------------------------------------------------------
@@ -701,7 +703,12 @@ fun add_infix_type (x as {Name, ParseName, Assoc, Prec}) = let in
                   ", Prec = ", Int.toString Prec, "}"])
  end
 
-fun temp_type_abbrev (s, ty) = let
+fun replace_exnfn fnm f x =
+  f x handle HOL_ERR {message = m, origin_structure = s, ...} =>
+             raise HOL_ERR {message = m, origin_function = fnm,
+                            origin_structure = s}
+
+fun temp_thytype_abbrev (knm, ty) = let
   val params = Listsort.sort Type.compare (type_vars ty)
   val (num_vars, pset) =
       List.foldl (fn (ty,(i,pset)) => (i + 1, Binarymap.insert(pset,ty,i)))
@@ -716,23 +723,31 @@ fun temp_type_abbrev (s, ty) = let
         end
 in
   the_type_grammar := type_grammar.new_abbreviation (!the_type_grammar)
-                                                    (s, mk_structure pset ty);
+                                                    (knm, mk_structure pset ty);
   type_grammar_changed := true;
   term_grammar_changed := true
-end handle GrammarError s => raise ERROR "type_abbrev" s
+end handle GrammarError s => raise ERR "temp_thytype_abbrev" s
 
-fun type_abbrev (s, ty) = let
+fun thytype_abbrev(knm, ty) = let
 in
-  temp_type_abbrev (s, ty);
-  full_update_grms ("temp_type_abbrev",
-                    String.concat ["(", mlquote s, ", ",
+  replace_exnfn "thytype_abbrev" temp_thytype_abbrev (knm, ty);
+  full_update_grms ("temp_thytype_abbrev",
+                    String.concat ["(", KernelSig.name_toMLString knm, ", ",
                                    PP.pp_to_string (!Globals.linewidth)
                                                    (TheoryPP.pp_type "U" "T")
                                                    ty,
                                    ")"],
                     SOME (mk_thy_const{Name = "ARB", Thy = "bool", Ty = ty})
                    )
-end;
+end
+
+fun temp_type_abbrev (s, ty) =
+  replace_exnfn "temp_type_abbrev" temp_thytype_abbrev
+                ({Thy = Theory.current_theory(), Name = s}, ty)
+
+fun type_abbrev (s, ty) =
+  replace_exnfn "type_abbrev" thytype_abbrev
+                ({Thy = Theory.current_theory(), Name = s}, ty)
 
 fun temp_disable_tyabbrev_printing s = let
   val tyg = the_type_grammar
@@ -747,6 +762,20 @@ in
   temp_disable_tyabbrev_printing s;
   update_grms "disable_tyabbrev_printing"
               ("temp_disable_tyabbrev_printing", mlquote s)
+end
+
+fun temp_remove_type_abbrev s = let
+  val tyg = the_type_grammar
+in
+  tyg := type_grammar.remove_abbreviation (!tyg) s;
+  type_grammar_changed := true;
+  term_grammar_changed := true
+end
+
+fun remove_type_abbrev s = let
+in
+  temp_remove_type_abbrev s;
+  update_grms "remove_type_abbrev" ("temp_remove_type_abbrev", mlquote s)
 end
 
 
@@ -1183,30 +1212,52 @@ in
                  [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"])
 end
 
+fun temp_gen_remove_ovl_mapping s t =
+  let
+    open term_grammar
+  in
+    the_term_grammar :=
+      fupdate_overload_info (Overload.gen_remove_mapping s t) (term_grammar());
+    term_grammar_changed := true
+  end
 
-fun temp_add_record_field (fldname, term) = let
+fun gen_remove_ovl_mapping s t =
+  let
+  in
+    temp_gen_remove_ovl_mapping s t ;
+    update_grms "gen_remove_ovl_mapping"
+                ("(UTOFF (temp_gen_remove_ovl_mapping " ^ quote s ^ "))",
+                 minprint t)
+  end
+
+
+fun primadd_rcdfld f ovopn (fldname, t) = let
+  val (d,r) = dom_rng (type_of t)
+              handle HOL_ERR _ =>
+              raise ERROR f "field selection term must be of type t -> a"
+  val r = mk_var("rcd", d)
   val recfldname = recsel_special^fldname
 in
-  temp_overload_on(recfldname, term)
+  ovopn(recfldname, mk_abs(r, mk_comb(t, r)))
 end
 
-fun add_record_field (fldname, term) = let
-  val recfldname = recsel_special^fldname
+val temp_add_record_field =
+    primadd_rcdfld "temp_add_record_field" temp_overload_on
+val add_record_field = primadd_rcdfld "add_record_field" overload_on
+
+fun buildfupdt f ovopn (fnm, t) = let
+  val (argtys, rty) = strip_fun (type_of t)
+  val err = ERROR f "fupdate term must be of type (a -> a) -> t -> t"
+  val f = mk_var("f", hd argtys) handle Empty => raise err
+  val x = mk_var("x", hd (tl argtys)) handle Empty => raise err
+  val recfldname = recfupd_special ^ fnm
 in
-  overload_on(recfldname, term)
+  ovopn(recfldname, list_mk_abs([f,x], list_mk_comb(t, [f,x])))
 end
 
-fun temp_add_record_fupdate (fldname, term) = let
-  val recfldname = recfupd_special ^ fldname
-in
-  temp_overload_on(recfldname, term)
-end
-
-fun add_record_fupdate (fldname, term) = let
-  val recfldname = recfupd_special ^ fldname
-in
-  overload_on(recfldname, term)
-end
+val temp_add_record_fupdate =
+    buildfupdt "temp_add_record_fupdate" temp_overload_on
+val add_record_fupdate = buildfupdt "add_record_fupdate" overload_on
 
 fun temp_add_numeral_form (c, stropt) = let
   val _ =

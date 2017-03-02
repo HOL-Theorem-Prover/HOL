@@ -955,7 +955,7 @@ fun maketable (fins:(int * (int list)) list,
 	 fun GetEndLeaf t =
 	   let fun f ((tl,el)::r) = if (tl=t) then el else f r
 		 | f [] = raise Fail "GetEndLeaf"
-           in f tcpairs
+	   in f tcpairs
 	   end
 	 fun GetTrConLeaves s =
 	   let fun f ((s',l)::r) = if (s = s') then l else f r

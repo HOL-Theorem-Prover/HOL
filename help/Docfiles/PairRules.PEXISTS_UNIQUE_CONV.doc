@@ -21,7 +21,7 @@ there is at most one value {p} for which {t[p]} holds. The theorem returned is:
 }
 where {p'} is a primed variant of the pair {p} none of the components
 of which appear free in the input term.  Note that the quantified pair {p}
-need not in fact appear free in the body of the input term.  
+need not in fact appear free in the body of the input term.
 For example, {PEXISTS_UNIQUE_CONV "?!(x,y). T"}
 returns the theorem:
 {

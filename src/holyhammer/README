@@ -1,0 +1,53 @@
+HOLyHammer is a machine learning for theorem proving framework.
+
+Requires:
+
+* OCaml >= 3.12
+    sudo apt-get install ocaml 
+* g++ >= 4.8 (recent version with C++11 support)  
+    Ubuntu 12.04:
+    sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+    sudo apt-get update
+    sudo apt-get install g++-4.8
+
+Install holyhammer: (done during the build)
+ 
+  run Holmake in src/holyhammer
+  run Holmake in src/holyhammer/hh/hh1
+  run Holmake in src/holyhammer/hh
+  run Holmake in src/holyhammer/predict
+  run Holmake in src/holyhammer/predict/mepo
+
+Supported provers: Eprover(1.9), Z3 (4.0) and (Vampire) 
+  
+  Binaries with the appropriate version should be copied or linked in the directory 
+  src/holyhammer/provers. 
+  Their names should respectively be eprover, z3 and vampire.
+
+  Eprover 1.9 : http://wwwlehre.dhbw-stuttgart.de/~sschulz/E/E.html.
+  Vampire 2.6: Difficult to obtain.
+  Z3 4.0 (not 4.4.0): http://isabelle.in.tum.de/components/ .
+  
+Predictors:
+
+  The two best predictors are KNN and Mepo. The default predictor is KNN. 
+  - Mepo works best when your conjecture has rare symbols.
+  - KNN learns from previous proofs.
+  - Kepo is a combination of the previous two.
+  They have different strength so please switch between predictors:
+  - "set_predictors KNN;"
+  - "set_predictors Mepo;" 
+  - "set_predictors Kepo;"
+  Alternatively, you can call hh_try which tries all of them sequentially.
+   
+Example: 
+
+  load "holyHammer";
+  open holyHammer;
+  hh [] ``1 + 1 = 2``;
+  METIS_PROVE lemmas ``1 + 1 = 2``; 
+
+Questions:
+
+  If you have any question, you can send an email to thibault_gauthier@hotmail.fr (or 
+  thibault.gauthier@uibk.ac.at)

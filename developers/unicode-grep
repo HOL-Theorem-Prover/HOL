@@ -1,7 +1,23 @@
 #!/bin/bash
 
-# assumes a particular flavour of grep, as per http://stackoverflow.com/questions/3001177/how-do-i-grep-for-all-non-ascii-characters-in-unix
+if [ $# -eq 1 ]
+then
+    if [ $1 = "-h" -o $1 = "-?" ]
+    then
+        echo "Usage:"
+        echo "  $0 dir1 dir2 .. dirn"
+        echo
+        echo "Recursively grep over dirs looking for non-ASCII characters"
+        echo "If no directories given, run in HOL's src directory"
+        exit 0
+    fi
+fi
 
-# As of 18 Feb 2014, sources include some Unicode in comments.
+cmd="grep -R -n -v -E '^[[:print:][:space:]]*$|UOK' --include='*.sml' --exclude='*Theory.sml' --exclude='*Theory.sig' --exclude selftest.sml --exclude EmitTeX.sml"
 
-grep -R --color=auto -P -n "[\x80-\xFF]" --include=*.sml --exclude=*Theory.sml --exclude=*Theory.sig --exclude selftest.sml --exclude EmitTeX.sml "$(dirname $0)/../src/"
+if [ $# -eq 0 ]
+then
+    LC_ALL=C eval $cmd $(dirname $0)/../src/
+else
+    LC_ALL=C eval $cmd "$@"
+fi

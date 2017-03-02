@@ -1,2 +1,2 @@
-selftest.exe: selftest.uo IndDefLib.uo IndDefRules.uo InductiveDefinition.uo
+selftest.exe: selftest.uo IndDefLib.uo IndDefRules.uo InductiveDefinition.uo CoIndDefLib.uo
 	$(HOLMOSMLC) -o $@ $<

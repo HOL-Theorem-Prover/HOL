@@ -1,0 +1,65 @@
+.PHONY: all
+
+ifneq ($(which ocamlopt),)
+
+HH2_CMX=toolbox.cmx hh_parse.cmx hh_lexer.cmx read.cmx predict.cmx preprocess.cmx init.cmx \
+dependency.cmx thf1hh1.cmx features.cmx prepredict.cmx write.cmx
+
+HL_CMX=hh1/lib.cmx hh1/fusion.cmx hh1/basics.cmx hh1/printer.cmx \
+hh1/preterm.cmx hh1/hl_parser.cmx hh1/equal.cmx hh1/bool.cmx \
+hh1/drule.cmx hh1/tactics.cmx hh1/simp.cmx hh1/theorems.cmx \
+hh1/canon.cmx hh1/fol.cmx hh1/follist.cmx hh1/meson.cmx \
+hh1/hh_symbols.cmx hh1/features_dt.cmx hh1/hh_tac.cmx hh1/hh_write.cmx
+
+ALL_CMX=$(HL_CMX) $(HH2_CMX)
+
+EXTRA_CLEANS = $(HH2_CMX) $(patsubst %.cmx,%.cmi,$(HH2_CMX)) $(patsubst %.cmx,%.o,$(HH2_CMX)) hh_parse.ml hh_lexer.ml
+
+
+
+all: $(HH2_CMX) hh
+
+hh: main.ml
+	ocamlopt nums.cmxa str.cmxa unix.cmxa -o $@ -I hh1 $(ALL_CMX) $<
+
+hh_parse.ml: hh_parse.mly
+	ocamlyacc $<
+	rm hh_parse.mli
+
+hh_lexer.ml: hh_lexer.mll hh_parse.ml
+	ocamllex $<
+
+toolbox.cmx: toolbox.ml
+	ocamlopt -c -I hh1 $<
+hh_parse.cmx: hh_parse.ml
+	ocamlopt -c $<
+hh_lexer.cmx: hh_lexer.ml
+	ocamlopt -c $<
+read.cmx: read.ml
+	ocamlopt -c -I hh1 $<
+predict.cmx: predict.ml
+	ocamlopt -c -I hh1 $<
+preprocess.cmx: preprocess.ml
+	ocamlopt -c -I hh1 $<
+init.cmx: init.ml
+	ocamlopt -c -I hh1 $<
+dependency.cmx: dependency.ml
+	ocamlopt -c -I hh1 $<
+thf1hh1.cmx: thf1hh1.ml
+	ocamlopt -c -I hh1 $<
+features.cmx: features.ml
+	ocamlopt -c -I hh1 $<
+prepredict.cmx: prepredict.ml
+	ocamlopt -c -I hh1 $<
+write.cmx: write.ml
+	ocamlopt -c -I hh1 $<
+
+clean:
+	rm -f hh *cmx *cmi *_lexer.ml *_parse.ml *.o *.mli
+
+else
+
+all:
+	@echo "No OCaml installation found -- giving up on hh"
+
+endif

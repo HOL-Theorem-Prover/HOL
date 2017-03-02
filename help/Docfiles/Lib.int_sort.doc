@@ -7,7 +7,7 @@ Sorts a list of integers using the {<=} relation.
 
 \DESCRIBE
 The call {int_sort list} is equal to {sort (curry (op <=))}. That is,
-it is the specialization of {sort} to the usual notion of 
+it is the specialization of {sort} to the usual notion of
 less-than-or-equal on ML integers.
 
 \FAILURE

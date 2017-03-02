@@ -3,12 +3,12 @@
 signature inttoTacs =
 sig
 
-type conv = Abbrev.conv;
-type thm = Thm.thm;
-type term = Term.term;
-type hol_type = Term.hol_type;
-type tactic = Abbrev.tactic;
+type conv = Abbrev.conv
+type thm = Thm.thm
+type term = Term.term
+type hol_type = Term.hol_type
+type tactic = Abbrev.tactic
 
-val intto_CONV: conv;
+val intto_CONV: conv
 
-end;
+end

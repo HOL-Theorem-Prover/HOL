@@ -1,0 +1,35 @@
+INCLUDES = $(HOLDIR)/examples/l3-machine-code/common \
+           $(HOLDIR)/examples/l3-machine-code/arm/model \
+           $(HOLDIR)/examples/l3-machine-code/m0/model \
+           $(HOLDIR)/examples/l3-machine-code/arm/step \
+           $(HOLDIR)/examples/l3-machine-code/m0/step \
+           $(HOLDIR)/examples/l3-machine-code/arm/prog \
+           $(HOLDIR)/examples/l3-machine-code/m0/prog \
+           $(HOLDIR)/examples/l3-machine-code/arm/decompiler \
+           $(HOLDIR)/examples/l3-machine-code/m0/decompiler \
+           $(HOLDIR)/examples/machine-code/hoare-triple \
+           $(HOLDIR)/examples/machine-code/decompiler
+OPTIONS = QUIT_ON_FAILURE
+
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+all: $(TARGETS)
+.PHONY: all
+
+ifdef POLY
+HOLHEAP = local-hol-heap
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+
+BARE_THYS = $(HOLDIR)/examples/l3-machine-code/common/utilsLib \
+            $(HOLDIR)/examples/l3-machine-code/common/stateTheory \
+            $(HOLDIR)/examples/l3-machine-code/common/temporal_stateTheory \
+            $(HOLDIR)/examples/l3-machine-code/common/tripleLib \
+            $(HOLDIR)/examples/l3-machine-code/arm/prog/arm_progLib \
+            $(HOLDIR)/examples/l3-machine-code/m0/prog/m0_progLib \
+            $(HOLDIR)/examples/machine-code/decompiler/decompilerLib
+DEPS = $(patsubst %,%.uo,$(BARE_THYS))
+
+$(HOLHEAP): $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) -o $(HOLHEAP) $(BARE_THYS)
+
+endif

@@ -14,10 +14,10 @@ attempts to define the function in the logic. If this attempt is
 successful, the specification is derived from the definition. The
 derived specification is returned to the user, and also stored in the
 current theory. {Define} may be used to define abbreviations,
-recursive functions, and mutually recursive functions. An induction 
-theorem may be stored in the current theory as a by-product of 
-{Define}'s activity. This induction theorem follows the 
-recursion structure of the function, and may be useful when proving 
+recursive functions, and mutually recursive functions. An induction
+theorem may be stored in the current theory as a by-product of
+{Define}'s activity. This induction theorem follows the
+recursion structure of the function, and may be useful when proving
 properties of the function.
 
 {Define} takes as input a quotation representing a conjunction of
@@ -133,10 +133,10 @@ ML function {xDefine} should be used.
 {Define} fails if the name of the function being defined is not
 alphanumeric.
 
-{Define} fails if there are more free variables on the right hand 
-sides of the recursion equations than the left. 
+{Define} fails if there are more free variables on the right hand
+sides of the recursion equations than the left.
 
-{Define} fails if it cannot prove the termination of the 
+{Define} fails if it cannot prove the termination of the
 specified recursive function. In that case, one has to embark on the
 following multi-step process in order to get the same effect as if
 {Define} had succeeded: (1) construct the function and synthesize its
@@ -151,7 +151,7 @@ and (4) package everything up with an invocation of {tDefine}.
 We will give a number of examples that display the range of functions
 that may be defined with {Define}. First, we have a recursive function
 that uses "destructors" in the recursive call. Since {fact} is not
-primitive recursive, an induction theorem for {fact} is generated and 
+primitive recursive, an induction theorem for {fact} is generated and
 stored in the current theory.
 {
    Define `fact x = if x = 0 then 1 else x * fact(x-1)`;
@@ -211,9 +211,9 @@ induction theorem is generated in this case.
          !P h t. filter P (h::t) =
                   (if P h then h::filter P t else filter P t) : thm
 }
-{Define} may also be used to define mutually recursive functions. 
+{Define} may also be used to define mutually recursive functions.
 For example, we can define a datatype of propositions and a function for
-putting a proposition into negation normal form as follows.  
+putting a proposition into negation normal form as follows.
 First we define a datatype for boolean formulae ({prop}):
 {
    - Hol_datatype
@@ -320,8 +320,8 @@ less baggage---it depends only on {numLib} and {pairLib}.
 
 
 \SEEALSO
-bossLib.tDefine, bossLib.xDefine, TotalDefn.DefineSchema, bossLib.Hol_defn, 
-Defn.tgoal, Defn.tprove, bossLib.WF_REL_TAC, bossLib.recInduct, 
+bossLib.tDefine, bossLib.xDefine, TotalDefn.DefineSchema, bossLib.Hol_defn,
+Defn.tgoal, Defn.tprove, bossLib.WF_REL_TAC, bossLib.recInduct,
 bossLib.EVAL, bossLib.EVAL_TAC.
 
 \ENDDOC

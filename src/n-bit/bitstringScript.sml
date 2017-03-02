@@ -74,7 +74,7 @@ val rotate_def = Define`
     let l = LENGTH v in
     let x = m MOD l
     in
-      if x = 0 then v else field (x - 1) 0 v ++ field (l - 1) x v`;
+      if (l = 0) \/ (x = 0) then v else field (x - 1) 0 v ++ field (l - 1) x v`;
 
 val testbit_def = zDefine`
   testbit b v = (field b b v = [T])`;
@@ -136,15 +136,14 @@ val pad_left_extend = Q.store_thm("pad_left_extend",
    \\ Cases_on `n <= LENGTH l`
    >- lrw [listTheory.PAD_LEFT, DECIDE ``n <= l ==> (n - l = 0)``,
            Thm.CONJUNCT1 extend_def]
-   \\ Induct_on `n` \\ lrw [listTheory.PAD_LEFT]
+   \\ simp[listTheory.PAD_LEFT]
+   \\ Induct_on `n` \\ rw []
    \\ Cases_on `LENGTH l = n`
    \\ lrw [bitTheory.SUC_SUB,
            extend_cons |> Q.SPEC `0`
                        |> SIMP_RULE std_ss [Thm.CONJUNCT1 extend_def]]
    \\ `SUC n - LENGTH l = SUC (n - LENGTH l)` by decide_tac
-   \\ `LENGTH l < n` by decide_tac
-   \\ fs [extend_cons, listTheory.PAD_LEFT, listTheory.GENLIST_CONS,
-          DECIDE ``l < n ==> ~(n <= l : num)``]);
+   \\ simp [extend_cons, listTheory.GENLIST_CONS]);
 
 val extend = Q.store_thm("extend",
   `(!n v. zero_extend n v = extend F (n - LENGTH v) v) /\
@@ -226,6 +225,15 @@ val length_rev_count_list = Q.store_thm("length_rev_count_list",
 val length_w2v = Q.store_thm("length_w2v",
   `!w:'a word. LENGTH (w2v w) = dimindex(:'a)`,
   lrw [w2v_def]);
+
+val length_rotate = Q.store_thm("length_rotate",
+  `!v n. LENGTH (rotate v n) = LENGTH v`,
+  simp [rotate_def, LET_THM]
+  \\ srw_tac[][length_field]
+  \\ full_simp_tac (srw_ss()) [DECIDE ``n <> 0n ==> (SUC (n - 1) = n)``,
+                               DECIDE ``n:num < l ==> (n + (l - n) = l)``,
+                               arithmeticTheory.NOT_ZERO_LT_ZERO,
+                               arithmeticTheory.MOD_LESS])
 
 val el_rev_count_list = Q.store_thm("el_rev_count_list",
   `!n i. i < n ==> (EL i (rev_count_list n) = n - 1 - i)`,
@@ -311,11 +319,11 @@ val testbit = Q.store_thm("testbit",
 
 val testbit_geq_len = Q.store_thm("testbit_geq_len",
    `!v i. LENGTH v <= i ==> ~testbit i v`,
-   simp [testbit])
+   simp [testbit, LET_THM])
 
 val testbit_el = Q.store_thm("testbit_el",
    `!v i. i < LENGTH v ==> (testbit i v = EL (LENGTH v - 1 - i) v)`,
-   simp [testbit])
+   simp [testbit, LET_THM])
 
 val bit_v2w = Q.store_thm("bit_v2w",
   `!n v. word_bit n (v2w v : 'a word) = n < dimindex(:'a) /\ testbit n v`,
@@ -422,7 +430,7 @@ val field_concat_left = Q.store_thm("field_concat_left",
    `!h l a b.
        l <= h /\ LENGTH b <= l ==>
        (field h l (a ++ b) = field (h - LENGTH b) (l - LENGTH b) a)`,
-   rw [field_def, shiftr_def]
+   srw_tac [][field_def, shiftr_def]
    \\ imp_res_tac arithmeticTheory.LESS_EQUAL_ADD
    \\ pop_assum kall_tac
    \\ pop_assum SUBST_ALL_TAC
@@ -943,7 +951,7 @@ val ops_to_n2w = Q.store_thm("ops_to_n2w",
 
 val () = bossLib.export_rewrites
    ["length_w2v", "length_fixwidth", "length_field",
-    "length_bitify", "length_shiftr",
+    "length_bitify", "length_shiftr", "length_rotate",
     "v2w_w2v", "v2n_n2v", "v2w_n2v",
     "fixwidth_fixwidth", "fixwidth_id_imp"]
 

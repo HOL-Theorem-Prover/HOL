@@ -31,7 +31,7 @@ fun make_variant_list n s avoid [] = []
       end
 
 fun make_args_simple [] = []
-  | make_args_simple (ty :: tys) = 
+  | make_args_simple (ty :: tys) =
     let
       val arg0 = mk_var("M", ty);
       val args = make_variant_list 0 "f" [arg0] tys;
@@ -83,7 +83,7 @@ fun mk_type_quant_thms_tyinfo tyinfo = let
   val P_neg_tm = mk_abs (P_arg_tm, mk_neg (mk_comb (P_tm, P_arg_tm)))
 
   val thm0 = SPEC P_neg_tm forall_thm
-  val thm1 = AP_TERM boolSyntax.negation thm0 
+  val thm1 = AP_TERM boolSyntax.negation thm0
   val thm3 = CONV_RULE (BINOP_CONV (SIMP_CONV std_ss [])) thm1
   val thm4 = GEN P_tm thm3
 in
@@ -91,7 +91,7 @@ in
 end
 
 
-fun mk_type_exists_thm_tyinfo tyinfo = 
+fun mk_type_exists_thm_tyinfo tyinfo =
   snd (mk_type_quant_thms_tyinfo tyinfo)
 
 
@@ -124,7 +124,7 @@ fun mk_type_rewrites_tyinfo tyinfo = let
 
   val thms_dist = case (distinct_of tyinfo) of
       NONE => []
-    | SOME thm_dist0 => let 
+    | SOME thm_dist0 => let
         val thms_dist1 = CONJUNCTS thm_dist0
         val thms_dist = thms_dist1 @ List.map GSYM thms_dist1
       in thms_dist end
@@ -164,8 +164,8 @@ fun mk_case_cong_thm_tyinfo tyinfo = let
   val constr = constructors_of tyinfo
   val M_eq = mk_eq (input_arg, input_arg')
   fun mk_imp args c c' cr = let
-     val t0 = list_mk_icomb (c, args) 
-     val t1 = list_mk_icomb (c', args) 
+     val t0 = list_mk_icomb (c, args)
+     val t1 = list_mk_icomb (c', args)
      val t2 = mk_eq (t0, t1)
      val u0 = list_mk_icomb (cr, args)
      val u1 = mk_eq (input_arg', u0)
@@ -174,12 +174,12 @@ fun mk_case_cong_thm_tyinfo tyinfo = let
   in
     t4
   end
-  val imps = List.map (fn (((args, c), (_, c')), cr) => 
+  val imps = List.map (fn (((args, c), (_, c')), cr) =>
      mk_imp args c c' cr)
      (zip (zip case_args case_args') constr)
 
 
-  val t3 = boolSyntax.list_mk_imp  (M_eq::imps, t2) 
+  val t3 = boolSyntax.list_mk_imp  (M_eq::imps, t2)
   val t4 = list_mk_forall ([input_arg, input_arg']@(List.map snd case_args)@(List.map snd case_args'), t3)
 
   val forall_thm = mk_type_forall_thm_tyinfo tyinfo
@@ -207,7 +207,7 @@ fun mk_case_rand_thm_tyinfo tyinfo = let
   val t2a = mk_comb (const, t1)
 
   val case_args1 = List.map (fn (args, c) =>
-     list_mk_abs (args, mk_comb (const, list_mk_comb (c, args)))) 
+     list_mk_abs (args, mk_comb (const, list_mk_comb (c, args))))
      case_args
   val t2b = list_mk_icomb (case_c, [input_arg] @ case_args1)
 
@@ -244,7 +244,7 @@ fun mk_case_rator_thm_tyinfo tyinfo = let
   val t3a = mk_icomb (t2, const)
 
   val case_args1 = List.map (fn (args, c) =>
-     list_mk_abs (args, mk_comb (inst_ty (list_mk_comb (c, args)), const))) 
+     list_mk_abs (args, mk_comb (inst_ty (list_mk_comb (c, args)), const)))
      case_args
   val t3b = list_mk_icomb (case_c, [input_arg] @ case_args1)
 
@@ -279,7 +279,7 @@ fun mk_case_abs_thm_tyinfo tyinfo = let
   val t2a = mk_abs (const, t1)
 
   val case_args1 = List.map (fn (args, c) =>
-     list_mk_abs (args, mk_abs (const, mk_comb (inst_ty (list_mk_comb (c, args)), const)))) 
+     list_mk_abs (args, mk_abs (const, mk_comb (inst_ty (list_mk_comb (c, args)), const))))
      case_args
   val t2b = list_mk_icomb (case_c, [input_arg] @ case_args1)
 
@@ -303,14 +303,14 @@ end
 
 fun lift_case_const_CONV stop_consts rand_thms = let
   val conv = Ho_Rewrite.GEN_REWRITE_CONV I rand_thms
-in (fn t => let 
-  val thm = conv t 
-  val (c, args) = strip_comb t 
+in (fn t => let
+  val thm = conv t
+  val (c, args) = strip_comb t
 in
   if (List.length args > 1 andalso List.exists (same_const c) stop_consts) then raise UNCHANGED else
   thm
-end handle HOL_ERR _ => raise UNCHANGED) end 
-  
+end handle HOL_ERR _ => raise UNCHANGED) end
+
 
 fun lift_cases_typeinfos_ss til = let
    val rand_thms = Lib.mapfilter mk_case_rand_thm_tyinfo til
@@ -318,11 +318,11 @@ fun lift_cases_typeinfos_ss til = let
    val abs_thms = Lib.mapfilter mk_case_abs_thm_tyinfo til
    val consts = Lib.mapfilter case_const_of til
 
-   val conv_rand = lift_case_const_CONV consts rand_thms 
+   val conv_rand = lift_case_const_CONV consts rand_thms
    val conv_rand_ss = simpLib.std_conv_ss {
       name = "lift_case_const_CONV",
       pats = [``f x``],
-      conv = conv_rand}                                
+      conv = conv_rand}
 
    val rewr_ss = simpLib.rewrites (abs_thms @ rator_thms)
 in
@@ -340,30 +340,30 @@ fun lift_cases_stateful_ss () = lift_cases_typeinfos_ss (TypeBase.elts ())
 
 fun unlift_case_const_CONV stop_consts rand_thms = let
   val conv = Rewrite.GEN_REWRITE_CONV I empty_rewrites rand_thms
-in (fn t => let 
-  val thm = conv t 
+in (fn t => let
+  val thm = conv t
   val (c, args) = strip_comb (rhs (concl thm))
 in
   if (List.length args > 1 andalso List.exists (same_const c) stop_consts) then raise UNCHANGED else
   thm
-end handle HOL_ERR _ => raise UNCHANGED) end 
-  
+end handle HOL_ERR _ => raise UNCHANGED) end
+
 fun unlift_cases_typeinfos_ss til = let
    val rand_thms = List.map GSYM (Lib.mapfilter mk_case_rand_thm_tyinfo til)
    val rator_thms = List.map GSYM (Lib.mapfilter mk_case_rator_thm_tyinfo til)
    val abs_thms = List.map GSYM (Lib.mapfilter mk_case_abs_thm_tyinfo til)
    val consts = Lib.mapfilter case_const_of til
 
-   val conv_rand = unlift_case_const_CONV consts rand_thms 
+   val conv_rand = unlift_case_const_CONV consts rand_thms
    val conv_rand_ss = simpLib.std_conv_ss {
       name = "unlift_case_const_CONV",
       pats = [``f x``],
-      conv = conv_rand}                                
+      conv = conv_rand}
 
    val conv_rator_ss = simpLib.std_conv_ss {
       name = "unlift_case_const_CONV",
       pats = [``f x``],
-      conv = Rewrite.GEN_REWRITE_CONV I empty_rewrites rator_thms}                                
+      conv = Rewrite.GEN_REWRITE_CONV I empty_rewrites rator_thms}
 
    val rewr_ss = simpLib.rewrites abs_thms
 in
@@ -406,7 +406,7 @@ fun case_cong_stateful_ss () = case_cong_typeinfos_ss (TypeBase.elts ())
 
 
 fun expand_type_quants_typeinfos_ss til =
-  rewrites (flatten (List.map (fn (x, y) => [x, y]) (Lib.mapfilter 
+  rewrites (flatten (List.map (fn (x, y) => [x, y]) (Lib.mapfilter
      mk_type_quant_thms_tyinfo til)))
 
 fun expand_type_quants_ss tyL = expand_type_quants_typeinfos_ss (tyinfos_of_tys tyL)
@@ -420,7 +420,7 @@ fun expand_type_quants_stateful_ss () = expand_type_quants_typeinfos_ss (TypeBas
 
 fun cases_to_top_RULE thm = let
   val input_thmL = BODY_CONJUNCTS thm
-  val (input_eqL, input_restL) = partition (fn thm => is_eq (concl thm)) input_thmL 
+  val (input_eqL, input_restL) = partition (fn thm => is_eq (concl thm)) input_thmL
 
   fun process_eq eq_thm = let
      val free_vars_lhs = free_vars (lhs (concl eq_thm));
@@ -464,7 +464,7 @@ fun cases_to_top_RULE thm = let
         | SOME eq_thms => process_all acc (eq_thms @ thms))
 
   val processed_eq_thms = process_all [] input_eqL
-  val all_thms = processed_eq_thms @ input_restL   
+  val all_thms = processed_eq_thms @ input_restL
 in
   LIST_CONJ (List.map GEN_ALL all_thms)
 end

@@ -14,7 +14,7 @@ returns a list of rewrite rules corresponding to the types. The list
 typically  contains theorems about the distinctness and injectivity of
 constructors, the definition of the 'case' constant introduced at the
 time the type was defined, and any extra rewrites coming from the use of
-records. 
+records.
 
 \FAILURE
 If {s} is not the name of a declared datatype.
@@ -25,7 +25,7 @@ If {s} is not the name of a declared datatype.
 
 > val it =
     [|- (!v f. case v f [] = v) /\ !v f a0 a1. case v f (a0::a1) = f a0 a1,
-     |- !a1 a0. ~([] = a0::a1), 
+     |- !a1 a0. ~([] = a0::a1),
      |- !a1 a0. ~(a0::a1 = []),
      |- !a0 a1 a0' a1'. (a0::a1 = a0'::a1') = (a0 = a0') /\ (a1 = a1')]
 

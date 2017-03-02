@@ -9,7 +9,7 @@ Make a tag suitable for use by {mk_oracle_thm}.
 tag, oracle, theorem.
 
 \DESCRIBE
-In order to construct a tag usable by {mk_oracle_thm}, one uses {read}, 
+In order to construct a tag usable by {mk_oracle_thm}, one uses {read},
 which takes a string and makes it into a tag.
 
 \FAILURE

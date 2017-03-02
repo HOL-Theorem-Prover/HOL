@@ -121,7 +121,7 @@ SRW_TAC [][] THENL [
   Cases_on `tx` THEN SRW_TAC [][] THEN
   Q.PAT_ASSUM `walkstar s1 (Var X) = walkstar s1 Y` MP_TAC
   THEN SRW_TAC [][] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `vwalk X n'' = Const c` ["X"] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `vwalk _ n'' = Const c` THEN
   `vwalk s n'' = Const c` by METIS_TAC [vwalk_FUPDATE_var] THEN
   Q.SPECL_THEN [`n''`,`s`] MP_TAC
     (Q.INST[`sx`|->`s1`] (UNDISCH vwalk_SUBMAP)) THEN
@@ -261,7 +261,7 @@ val vars_measure = Q.store_thm(
 `v ∈ vars t ∧ (∀w. t ≠ Var w) ∧ wfs s ⇒
  measure (pair_count o (walk* s)) (Var v) t`,
 Induct_on `t` THEN SRW_TAC [][] THEN
-Q.MATCH_ASSUM_RENAME_TAC `v ∈ vars tt` [] THEN
+Q.MATCH_ASSUM_RENAME_TAC `v ∈ vars tt` THEN
 Q.PAT_ASSUM `wfs s` ASSUME_TAC THEN
 Cases_on `tt` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
 FULL_SIMP_TAC (srw_ss()++ARITH_ss) [measure_thm])
@@ -294,13 +294,13 @@ Q.PAT_ASSUM `wfs s` ASSUME_TAC THEN
 IMP_RES_TAC walk_to_var_NOT_FDOM THEN
 FULL_SIMP_TAC (srw_ss()) [NOT_FDOM_vwalk] THEN
 ASM_SIMP_TAC (srw_ss()) [Once unify_def] THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `walk s X = Pair c1 c2` ["X"] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `walk s _ = Pair c1 c2` THEN
   (oc_subterm_neq |> CONTRAPOS |>
    Q.INST [`v`|->`n`,`t`|->`Pair c1 c2`] |>
    MP_TAC) THEN
   ASM_SIMP_TAC (srw_ss()) [] )
 THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `walk s X = Pair c1 c2` ["X"] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `walk s _ = Pair c1 c2` THEN
   (oc_subterm_neq |> CONTRAPOS |>
    Q.INST [`v`|->`n`,`t`|->`Pair c1 c2`] |>
    MP_TAC) THEN
@@ -308,8 +308,8 @@ THEN1 (
 THEN1 (
   FULL_SIMP_TAC (srw_ss()) [] THEN
   `wfs sx` by METIS_TAC [unify_unifier] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `walk s t1 = Pair t1a t1d` [] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `walk s t2 = Pair t2a t2d` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `walk s t1 = Pair t1a t1d` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `walk s t2 = Pair t2a t2d` THEN
   (unify_mgu |> Q.SPECL [`s`,`t1a`,`t2a`,`sx`,`s2`] |> MP_TAC) THEN
   SRW_TAC [][] )
 THEN1 (

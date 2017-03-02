@@ -21,4 +21,4 @@ sig
  val PABS_ELIM_CONV   : conv
  val PABS_INTRO_CONV  : term -> conv
 
-end;
+end

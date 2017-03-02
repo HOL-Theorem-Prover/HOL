@@ -21,4 +21,3 @@ sig
   val parse_fraction : string * locn.locn -> fracinfo
 
 end
-

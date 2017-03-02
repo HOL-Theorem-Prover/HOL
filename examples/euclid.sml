@@ -31,7 +31,7 @@ val divides_def =
 
 val prime_def =
  Define
-   `prime p = ~(p=1) /\ !x. x divides p ==> (x=1) \/ (x=p)`;
+   `prime p = p<>1 /\ !x. x divides p ==> (x=1) \/ (x=p)`;
 
 (*---------------------------------------------------------------------------*)
 (* A sequence of basic theorems about the "divides" relation.                *)
@@ -40,59 +40,57 @@ val prime_def =
 val DIVIDES_0 = store_thm
  ("DIVIDES_0",
   ``!x. x divides 0``,
-  METIS_TAC [divides_def,MULT_CLAUSES]);
+  metis_tac [divides_def,MULT_CLAUSES]);
 
 val DIVIDES_ZERO = store_thm
  ("DIVIDES_ZERO",
   ``!x. 0 divides x = (x = 0)``,
-  METIS_TAC [divides_def,MULT_CLAUSES]);
+  metis_tac [divides_def,MULT_CLAUSES]);
 
 val DIVIDES_ONE = store_thm
  ("DIVIDES_ONE",
   ``!x. x divides 1 = (x = 1)``,
-  METIS_TAC [divides_def,MULT_CLAUSES,MULT_EQ_1]);
+  metis_tac [divides_def,MULT_CLAUSES,MULT_EQ_1]);
 
 val DIVIDES_REFL = store_thm
  ("DIVIDES_REFL",
   ``!x. x divides x``,
-  METIS_TAC [divides_def,MULT_CLAUSES]);
+  metis_tac [divides_def,MULT_CLAUSES]);
 
 val DIVIDES_TRANS = store_thm
  ("DIVIDES_TRANS",
   ``!a b c. a divides b /\ b divides c ==> a divides c``,
-  METIS_TAC [divides_def,MULT_ASSOC]);
+  metis_tac [divides_def,MULT_ASSOC]);
 
 val DIVIDES_ADD = store_thm
 ("DIVIDES_ADD",
  ``!d a b. d divides a /\ d divides b ==> d divides (a + b)``,
- METIS_TAC[divides_def,LEFT_ADD_DISTRIB]);
+ metis_tac[divides_def,LEFT_ADD_DISTRIB]);
 
 val DIVIDES_SUB = store_thm
  ("DIVIDES_SUB",
   ``!d a b. d divides a /\ d divides b ==> d divides (a - b)``,
-  METIS_TAC [divides_def,LEFT_SUB_DISTRIB]);
+  metis_tac [divides_def,LEFT_SUB_DISTRIB]);
 
 val DIVIDES_ADDL = store_thm
  ("DIVIDES_ADDL",
   ``!d a b. d divides a /\ d divides (a + b) ==> d divides b``,
-  METIS_TAC [ADD_SUB,ADD_SYM,DIVIDES_SUB]);
+  metis_tac [ADD_SUB,ADD_SYM,DIVIDES_SUB]);
 
 val DIVIDES_LMUL = store_thm
  ("DIVIDES_LMUL",
   ``!d a x. d divides a ==> d divides (x * a)``,
-  METIS_TAC [divides_def,MULT_ASSOC,MULT_SYM]);
+  metis_tac [divides_def,MULT_ASSOC,MULT_SYM]);
 
 val DIVIDES_RMUL = store_thm
  ("DIVIDES_RMUL",
   ``!d a x. d divides a ==> d divides (a * x)``,
-  METIS_TAC [MULT_SYM,DIVIDES_LMUL]);
+  metis_tac [MULT_SYM,DIVIDES_LMUL]);
 
 val DIVIDES_LE = store_thm
  ("DIVIDES_LE",
   ``!m n. m divides n ==> m <= n \/ (n = 0)``,
-  RW_TAC arith_ss  [divides_def]
-     THEN Cases_on `x`
-     THEN RW_TAC arith_ss  [MULT_CLAUSES]);
+  rw  [divides_def] >> rw[]);
 
 (*---------------------------------------------------------------------------*)
 (* Various proofs of the same formula                                        *)
@@ -101,39 +99,40 @@ val DIVIDES_LE = store_thm
 val DIVIDES_FACT = store_thm
  ("DIVIDES_FACT",
   ``!m n. 0 < m /\ m <= n ==> m divides (FACT n)``,
-  RW_TAC arith_ss  [LESS_EQ_EXISTS]
-   THEN Induct_on `p`
-   THEN RW_TAC arith_ss  [FACT,ADD_CLAUSES]
-   THENL [Cases_on `m`, ALL_TAC]
-   THEN METIS_TAC [FACT, DECIDE ``!x. ~(x < x)``,
+  rw  [LESS_EQ_EXISTS]
+   >> Induct_on `p`
+   >> rw  [FACT,ADD_CLAUSES]
+   >| [Cases_on `m`, ALL_TAC]
+   >> metis_tac [FACT, DECIDE ``!x. ~(x < x)``,
                    DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]);
 
 val DIVIDES_FACT = prove
  (``!m n. 0 < m /\ m <= n ==> m divides (FACT n)``,
-  RW_TAC arith_ss  [LESS_EQ_EXISTS]
-   THEN Induct_on `p`
-   THEN RW_TAC arith_ss  [FACT,ADD_CLAUSES]
-   THEN METIS_TAC [FACT, DECIDE ``!x. ~(x < x)``, num_CASES,
+  `!m p. 0 < m ==> m divides FACT (m + p)`
+     suffices_by metis_tac[LESS_EQ_EXISTS]
+   >> Induct_on `p`
+   >> rw  [FACT,ADD_CLAUSES]
+   >> metis_tac [FACT, DECIDE ``!x. ~(x < x)``, num_CASES,
                     DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]);
 
 val DIVIDES_FACT = prove
  (``!m n. 0 < m /\ m <= n ==> m divides (FACT n)``,
-  RW_TAC arith_ss  [LESS_EQ_EXISTS]
-   THEN Induct_on `p`
-   THEN METIS_TAC [FACT, DECIDE ``!x. ~(x < x)``, num_CASES,
+  rw  [LESS_EQ_EXISTS]
+   >> Induct_on `p`
+   >> metis_tac [FACT, DECIDE ``!x. ~(x < x)``, num_CASES,
                    DIVIDES_RMUL,DIVIDES_LMUL,DIVIDES_REFL,ADD_CLAUSES]);
 
 
 val DIVIDES_FACT = prove
 (``!m n. 0 < m /\ m <= n ==> m divides (FACT n)``,
 Induct_on `n - m`
- THEN RW_TAC arith_ss  [] THENL
- [`m = n`         by DECIDE_TAC THEN
-  `?k. m = SUC k` by METIS_TAC[num_CASES,prim_recTheory.LESS_REFL]
-     THEN METIS_TAC[FACT,DIVIDES_RMUL,DIVIDES_REFL],
-  `0 < n`         by DECIDE_TAC THEN
-  `?k. n = SUC k` by METIS_TAC [num_CASES,prim_recTheory.LESS_REFL]
-   THEN RW_TAC arith_ss  [FACT, DIVIDES_RMUL]]);
+ >> rw  [] >|
+ [`m = n`         by rw[] >>
+  `?k. m = SUC k` by (Cases_on `m` >> fs[])
+     >> metis_tac[FACT,DIVIDES_RMUL,DIVIDES_REFL],
+  `0 < n`         by rw[] >>
+  `?k. n = SUC k` by (Cases_on `n` >> fs[])
+   >> rw  [FACT, DIVIDES_RMUL]]);
 
 
 (*---------------------------------------------------------------------------*)
@@ -143,24 +142,24 @@ Induct_on `n - m`
 val NOT_PRIME_0 = store_thm
  ("NOT_PRIME_0",
   ``~prime 0``,
-  RW_TAC arith_ss  [prime_def,DIVIDES_0]);
+  rw  [prime_def,DIVIDES_0]);
 
 val NOT_PRIME_1 = store_thm
  ("NOT_PRIME_1",
   ``~prime 1``,
-  RW_TAC arith_ss  [prime_def]);
+  rw  [prime_def]);
 
 val PRIME_2 = store_thm
  ("PRIME_2",
   ``prime 2``,
-  RW_TAC arith_ss  [prime_def] THEN
-  METIS_TAC [DIVIDES_LE, DIVIDES_ZERO,
+  rw  [prime_def] >>
+  metis_tac [DIVIDES_LE, DIVIDES_ZERO,
              DECIDE``~(2=1) /\ ~(2=0) /\ (x<=2 = (x=0) \/ (x=1) \/ (x=2))``]);
 
 val PRIME_POS = store_thm
  ("PRIME_POS",
   ``!p. prime p ==> 0<p``,
-  Cases THEN RW_TAC arith_ss [NOT_PRIME_0]);
+  Cases >> rw [NOT_PRIME_0]);
 
 (*---------------------------------------------------------------------------*)
 (* Every number has a prime factor, except for 1. The proof proceeds by a    *)
@@ -177,22 +176,22 @@ val PRIME_FACTOR = store_thm
  ("PRIME_FACTOR",
   ``!n. ~(n = 1) ==> ?p. prime p /\ p divides n``,
   completeInduct_on `n`
-   THEN RW_TAC arith_ss  []
-   THEN Cases_on `prime n` THENL
-   [METIS_TAC [DIVIDES_REFL],
-    `?x. x divides n /\ ~(x=1) /\ ~(x=n)` by METIS_TAC[prime_def] THEN
-    METIS_TAC [LESS_OR_EQ, PRIME_2,
+   >> rw  []
+   >> Cases_on `prime n` >|
+   [metis_tac [DIVIDES_REFL],
+    `?x. x divides n /\ x<>1 /\ x<>n` by metis_tac[prime_def] >>
+    metis_tac [LESS_OR_EQ, PRIME_2,
                DIVIDES_LE, DIVIDES_TRANS, DIVIDES_0]]);
 
 (*---------------------------------------------------------------------------*)
-(* In the following proof, METIS_TAC automatically considers cases on        *)
+(* In the following proof, metis_tac automatically considers cases on        *)
 (* whether n is prime or not.                                                *)
 (*---------------------------------------------------------------------------*)
 
 val PRIME_FACTOR = prove
- (``!n. ~(n = 1) ==> ?p. prime p /\ p divides n``,
-  completeInduct_on `n` THEN
-  METIS_TAC [DIVIDES_REFL,prime_def,LESS_OR_EQ, PRIME_2,
+ (``!n. n<>1 ==> ?p. prime p /\ p divides n``,
+  completeInduct_on `n` >>
+  metis_tac [DIVIDES_REFL,prime_def,LESS_OR_EQ, PRIME_2,
              DIVIDES_LE, DIVIDES_TRANS, DIVIDES_0]);
 
 
@@ -209,11 +208,11 @@ val PRIME_FACTOR = prove
 val EUCLID = store_thm
  ("EUCLID",
   ``!n. ?p. n < p /\ prime p``,
-  SPOSE_NOT_THEN STRIP_ASSUME_TAC
-   THEN MP_TAC (SPEC ``FACT n + 1`` PRIME_FACTOR)
-   THEN RW_TAC arith_ss  [FACT_LESS, DECIDE ``~(x=0) = 0<x``]
-   THEN METIS_TAC [DIVIDES_FACT, DIVIDES_ADDL, DIVIDES_ONE,
-                   NOT_PRIME_1, NOT_LESS, PRIME_POS]);
+  spose_not_then strip_assume_tac
+   >> mp_tac (SPEC ``FACT n + 1`` PRIME_FACTOR)
+   >> rw  [FACT_LESS, DECIDE ``~(x=0) = 0<x``]
+   >> metis_tac [DIVIDES_FACT, DIVIDES_ADDL, DIVIDES_ONE,
+                 NOT_PRIME_1, NOT_LESS, PRIME_POS]);
 
 
 (*---------------------------------------------------------------------------*)
@@ -223,18 +222,16 @@ val EUCLID = store_thm
 (*---------------------------------------------------------------------------*)
 
 val EUCLID_AGAIN = prove (``!n. ?p. n < p /\ prime p``,
-CCONTR_TAC
-THEN
-   `?n. !p. n < p ==> ~prime p`  by METIS_TAC[]              THEN
-   `~(FACT n + 1 = 1)`           by RW_TAC arith_ss [FACT_LESS,
-                                    DECIDE ``~(x=0) = 0<x``] THEN
+   CCONTR_TAC >>
+   `?n. !p. n < p ==> ~prime p`  by metis_tac[]              >>
+   `~(FACT n + 1 = 1)`           by rw [FACT_LESS,
+                                    DECIDE ``~(x=0) = 0<x``] >>
    `?p. prime p /\
-        p divides (FACT n + 1)`  by METIS_TAC [PRIME_FACTOR] THEN
-   `0 < p`                       by METIS_TAC [PRIME_POS]    THEN
-   `p <= n`                      by METIS_TAC [NOT_LESS]     THEN
-   `p divides FACT n`            by METIS_TAC [DIVIDES_FACT] THEN
-   `p divides 1`                 by METIS_TAC [DIVIDES_ADDL] THEN
-   `p = 1`                       by METIS_TAC [DIVIDES_ONE]  THEN
-   `~prime p`                    by METIS_TAC [NOT_PRIME_1]
-THEN
-METIS_TAC[]);
+        p divides (FACT n + 1)`  by metis_tac [PRIME_FACTOR] >>
+   `0 < p`                       by metis_tac [PRIME_POS]    >>
+   `p <= n`                      by metis_tac [NOT_LESS]     >>
+   `p divides FACT n`            by metis_tac [DIVIDES_FACT] >>
+   `p divides 1`                 by metis_tac [DIVIDES_ADDL] >>
+   `p = 1`                       by metis_tac [DIVIDES_ONE]  >>
+   `~prime p`                    by metis_tac [NOT_PRIME_1]  >>
+   metis_tac[]);

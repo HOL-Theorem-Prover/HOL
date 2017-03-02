@@ -35,7 +35,7 @@ fun mk_sum_case (f, g, s) =
          (inst [alpha |-> r, beta |-> df, gamma |-> dg] sum_case_tm, [s, f, g])
    end
 
-val monop = HolKernel.syntax_fns "sum" 1 HolKernel.dest_monop HolKernel.mk_monop
+val monop = HolKernel.syntax_fns1 "sum"
 
 val (isl_tm, mk_isl, dest_isl, is_isl) = monop "ISL"
 val (isr_tm, mk_isr, dest_isr, is_isr) = monop "ISR"
@@ -43,22 +43,24 @@ val (outl_tm, mk_outl, dest_outl, is_outl) = monop "OUTL"
 val (outr_tm, mk_outr, dest_outr, is_outr) = monop "OUTR"
 
 val (inl_tm, mk_inl, dest_inl, is_inl) =
-   HolKernel.syntax_fns "sum" 1
-      (fn tm1 => fn e => fn t =>
-          (HolKernel.dest_monop tm1 e t, snd (dest_sum (type_of t))))
-      (fn tm => fn (t, ty) =>
-          Term.mk_comb
-             (Term.inst [Type.alpha |-> type_of t, Type.beta |-> ty] tm, t))
-      "INL"
+   HolKernel.syntax_fns
+     {n = 1,
+      dest = fn tm1 => fn e => fn t =>
+               (HolKernel.dest_monop tm1 e t, snd (dest_sum (type_of t))),
+      make = fn tm => fn (t, ty) =>
+               Term.mk_comb
+                 (Term.inst [Type.alpha |-> type_of t, Type.beta |-> ty] tm, t)}
+     "sum" "INL"
 
 val (inr_tm, mk_inr, dest_inr, is_inr) =
-   HolKernel.syntax_fns "sum" 1
-      (fn tm1 => fn e => fn t =>
-          (HolKernel.dest_monop tm1 e t, fst (dest_sum (type_of t))))
-      (fn tm => fn (t, ty) =>
-          Term.mk_comb
-             (Term.inst [Type.alpha |-> ty, Type.beta |-> type_of t] tm, t))
-      "INR"
+   HolKernel.syntax_fns
+     {n = 1,
+      dest = fn tm1 => fn e => fn t =>
+               (HolKernel.dest_monop tm1 e t, fst (dest_sum (type_of t))),
+      make = fn tm => fn (t, ty) =>
+               Term.mk_comb
+                 (Term.inst [Type.alpha |-> ty, Type.beta |-> type_of t] tm, t)}
+     "sum" "INR"
 
 (*---------------------------------------------------------------------------*)
 (* Lifting sums                                                              *)

@@ -6,7 +6,7 @@
 Breaks an implication into antecedent and consequent.
 
 \DESCRIBE
-If {M} is a term with the form {t1 ==> t2}, then {dest_imp_only M} 
+If {M} is a term with the form {t1 ==> t2}, then {dest_imp_only M}
 returns {(t1,t2)}.
 
 \FAILURE

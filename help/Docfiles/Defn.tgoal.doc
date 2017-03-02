@@ -3,7 +3,7 @@
 \TYPE {tgoal : defn -> proofs}
 
 \SYNOPSIS
-Set up a termination proof
+Set up a termination proof.
 
 \KEYWORDS
 termination, goalstack.
@@ -17,16 +17,16 @@ goalstack operations.
 
 \FAILURE
 {tgoal defn} fails if {defn} represents a non-recursive or primitive
-recursive function. 
+recursive function.
 
 
 
 \EXAMPLE
-{ 
-- val qsort_defn = 
+{
+- val qsort_defn =
     Hol_defn "qsort"
        `(qsort ___ [] = []) /\
-        (qsort ord (x::rst) = 
+        (qsort ord (x::rst) =
             APPEND (qsort ord (FILTER ($~ o ord x) rst))
               (x :: qsort ord (FILTER (ord x) rst)))`;
 

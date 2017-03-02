@@ -108,7 +108,7 @@ new_constant("access_violation", ``:arm_state -> bool``);
 val seqT_def = Define`  (* new seqT *)
   (seqT: 'a M -> ('a -> 'b M) -> 'b M) s f =
    \y. case s y of Error e => Error e
-                | ValueState z t => 
+                | ValueState z t =>
                      (
                        if (access_violation t)
                           then (ValueState ARB t)

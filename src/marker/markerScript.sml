@@ -126,4 +126,3 @@ val label_def = new_definition(
   ``((lab:label) :- (argument:bool)) = argument``);
 
 val _ = export_theory();
-

@@ -67,15 +67,19 @@ in
   fun xable_string s = s
 
   fun mk_xable file =
-      if Process.isSuccess (systeml ["chmod", "a+x", file]) then file
+    let
+      val r = systeml ["chmod", "a+x", file]
+    in
+      if Process.isSuccess r then r
       else if FileSys.access (file,[FileSys.A_EXEC]) then
           (* if we can execute it, then continue with a warning *)
           (* NB: MoSML docs say FileSys.access uses real uid/gid, not effective uid/gid,
              so this test may be bogus if we are setuid.  This is unlikely(!). *)
           (print ("Non-fatal warning: couldn't set world execute permission on "^file^",\n  but continuing anyway since at least the current user has execute permission.\n");
-           file)
+           OS.Process.success)
       else (print ("unable to set execute permission on "^file^".\n");
-            raise Fail "mk_xable")
+            OS.Process.failure)
+    end
 
 
 fun normPath s = Path.toString(Path.fromString s)
@@ -91,6 +95,8 @@ val MOSMLDIR = ""
 val HAVE_BASIS2002 = false
 val OS = ""
 val POLY = ""
+val POLYC = ""
+val POLY_VERSION = 0
 val POLYMLLIBDIR = ""
 val POLY_LDFLAGS = []
 val POLY_LDFLAGS_STATIC = []
@@ -103,6 +109,7 @@ val version = ""
 val ML_SYSNAME = ""
 val release = ""
 val DOT_PATH = ""
+val DEFAULT_STATE = fullPath [HOLDIR, "bin", "hol.state"]
 
 val isUnix = true
 local val cast : 'a -> int = Obj.magic

@@ -542,7 +542,7 @@ local
       (fn ((xs, s), acc) => acc @ xs @ ["(assert " ^ s ^ ")\n"]) [] smtlibs
   in
     (acc, [
-      "(set-logic AUFBVNIRA)\n",
+      (* "(set-logic AUFBVNIRA)\n", *)
       "(set-info :source |Automatically generated from HOL4 by SmtLib.goal_to_SmtLib.\n",
       "Copyright (c) 2011 Tjark Weber. All rights reserved.|)\n",
       "(set-info :smt-lib-version 2.0)\n"

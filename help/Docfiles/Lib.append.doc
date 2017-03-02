@@ -6,10 +6,10 @@
 Curry
 
 \SYNOPSIS
-Curried form of list append
+Curried form of list append.
 
 \DESCRIBE
-The function {append} is a curried form of the standard operation for 
+The function {append} is a curried form of the standard operation for
 appending two ML lists.
 
 \FAILURE

@@ -3142,7 +3142,7 @@ val LOOKUP_AUX_RWR = prove(``
 	(LOOKUP_AUX ((name1,ACL2_USER)::a) (name2,ACL2_USER_CL) = LOOKUP_AUX a (name2,ACL2_USER_CL)) /\
 	(LOOKUP_AUX ((name1,ACL2_USER)::a) (name2,ACL2_USER) = LOOKUP_AUX a (name2,ACL2_USER))``,
 	RW_TAC arith_ss [LOOKUP_AUX_def,ACL2_CL_def,ACL2_USER_def,ACL_USER_CL_def] THEN
-	METIS_TAC []);	
+	METIS_TAC []);
 
 val CHECK_def = Define `CHECK (x,y,z) = ~(z = "") /\ ~(x = "ACL2-PKG-WITNESS")`;
 

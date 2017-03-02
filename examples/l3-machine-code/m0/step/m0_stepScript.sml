@@ -6,7 +6,7 @@ open HolKernel boolLib bossLib
 
 open lcsymtacs utilsLib
 open wordsLib blastLib updateTheory
-open state_transformerTheory m0Theory
+open state_transformerTheory alignmentTheory m0Theory
 
 val _ = new_theory "m0_step"
 
@@ -14,9 +14,6 @@ val _ = new_theory "m0_step"
 
 val _ = List.app (fn f => f ())
    [numLib.prefer_num, wordsLib.prefer_word, wordsLib.guess_lengths]
-
-infix \\
-val op \\ = op THEN;
 
 (* ------------------------------------------------------------------------ *)
 
@@ -361,56 +358,36 @@ val bit_count_lt_1 = Q.store_thm("bit_count_lt_1",
 
 (* ------------------------------------------------------------------------ *)
 
-val Align_slice = Q.prove(
-   `!n a : 'a word. Align (a, 2 ** n) = (dimindex(:'a) - 1 '' n) a`,
-   strip_tac
-     \\ Cases
-     \\ lrw [Align_def, wordsTheory.word_slice_n2w,
-              bitTheory.SLICE_THM, bitTheory.BITS_THM2,
-             DECIDE ``0 < n ==> (SUC (n - 1) = n)``]
-     \\ lfs [wordsTheory.dimword_def]
-     )
+val Align = Q.store_thm("Align",
+   `(!w. Align (w, 1) = align 0 w) /\
+    (!w. Align (w, 2) = align 1 w) /\
+    (!w. Align (w, 4) = align 2 w)`,
+    simp [m0Theory.Align_def, alignmentTheory.align_w2n]
+    )
 
-val slice_all = Q.prove(
-   `!a:'a word. (dimindex(:'a) - 1 '' 0) a = a`,
-   simp [wordsTheory.WORD_SLICE_BITS_THM, wordsTheory.WORD_ALL_BITS])
-
-val Align = Theory.save_thm ("Align",
-   (REWRITE_RULE [slice_all] o numLib.REDUCE_RULE o Drule.LIST_CONJ)
-     (List.map (fn t => Q.SPEC t Align_slice) [`0`,`1`,`2`,`3`]))
-
-val Aligned = Q.store_thm ("Aligned",
-   `(!a : word32. Aligned (a, 1)) /\
-    (!a : word32. Aligned (a, 2) = ~word_lsb a) /\
-    (!a : word32. Aligned (a, 4) = ((1 >< 0) a = 0w:word2)) /\
-    (!a : word8. Aligned (a, 4) = ((1 >< 0) a = 0w:word2))`,
-   lrw [Aligned_def, Align] \\ blastLib.BBLAST_TAC
-   )
-
-val Aligned_plus = Q.store_thm("Aligned_plus",
-   `(!w: word32. Aligned (w + 2w, 2) = Aligned (w, 2)) /\
-    (!w: word32. Aligned (w + 4w, 2) = Aligned (w, 2)) /\
-    (!w: word32. Aligned (w + 4w, 4) = Aligned (w, 4)) /\
-    (!w x: word32. Aligned (w - 4w * x, 4) = Aligned (w, 4)) /\
-    (!w x: word32. Aligned (w + 4w * x, 4) = Aligned (w, 4))`,
-   rw [Aligned] \\ blastLib.BBLAST_TAC
-   )
+val Aligned = Q.store_thm("Aligned",
+   `(!w. Aligned (w, 1) = aligned 0 w) /\
+    (!w. Aligned (w, 2) = aligned 1 w) /\
+    (!w. Aligned (w, 4) = aligned 2 w)`,
+    simp [m0Theory.Aligned_def, Align, alignmentTheory.aligned_def,
+          boolTheory.EQ_SYM_EQ]
+    )
 
 val Aligned_concat4 = Q.store_thm("Aligned_concat4",
    `!p a: word8 b: word8 c: word8 d: word8.
-      Aligned (if p then a @@ b @@ c @@ d else d @@ c @@ b @@ a, 4) =
-      Aligned (if p then d else a, 4)`,
-   lrw [Aligned] \\ blastLib.BBLAST_TAC
+      aligned 2 (if p then a @@ b @@ c @@ d else d @@ c @@ b @@ a) =
+      aligned 2 (if p then d else a)`,
+   lrw [alignmentTheory.aligned_extract] \\ blastLib.BBLAST_TAC
    )
 
 val Aligned_SP = utilsLib.ustore_thm("Aligned_SP",
-   `Aligned (sp:word32, 4) ==> (sp + 4w * a && 0xFFFFFFFCw = sp + 4w * a)`,
-   simp [Aligned]
+   `aligned 2 (sp:word32) ==> (sp + 4w * a && 0xFFFFFFFCw = sp + 4w * a)`,
+   simp [alignmentTheory.aligned_extract]
    \\ blastLib.BBLAST_TAC
    )
 
 val Aligned_Branch9 = utilsLib.ustore_thm("Aligned_Branch9",
-   `Aligned (w:word32, 2) ==>
+   `aligned 1 (w:word32) ==>
     (((31 >< 1)
         (w +
          sw2sw (v2w [x0; x1; x2; x3; x4; x5; x6; x7; F]: word9)))
@@ -418,12 +395,12 @@ val Aligned_Branch9 = utilsLib.ustore_thm("Aligned_Branch9",
       w +
       v2w [x0; x0; x0; x0; x0; x0; x0; x0; x0; x0; x0; x0; x0; x0; x0; x0;
            x0; x0; x0; x0; x0; x0; x0; x0; x1; x2; x3; x4; x5; x6; x7; F])`,
-   simp [Aligned]
+   simp [alignmentTheory.aligned_extract]
    \\ blastLib.BBLAST_TAC
    )
 
 val Aligned_Branch12 = utilsLib.ustore_thm("Aligned_Branch12",
-   `Aligned (w:word32, 2) ==>
+   `aligned 1 (w:word32) ==>
     (((31 >< 1)
         (w +
          sw2sw (v2w [x0; x1; x2; x3; x4; x5; x6; x7; x8; x9; x10; F]: word12)))
@@ -431,12 +408,12 @@ val Aligned_Branch12 = utilsLib.ustore_thm("Aligned_Branch12",
       w +
       v2w [x0; x0; x0; x0; x0; x0; x0; x0; x0; x0; x0; x0; x0; x0; x0; x0;
            x0; x0; x0; x0; x0; x1; x2; x3; x4; x5; x6; x7; x8; x9; x10; F])`,
-   simp [Aligned]
+   simp [alignmentTheory.aligned_extract]
    \\ blastLib.BBLAST_TAC
    )
 
 val Aligned_Branch_Wide6 = utilsLib.ustore_thm("Aligned_Branch_Wide6",
-   `Aligned (w:word32, 2) ==>
+   `aligned 1 (w:word32) ==>
     (((31 >< 1)
         (w +
          sw2sw ((v2w [x0]:word1) @@ (v2w [x1]:word1) @@ (v2w [x2]:word1) @@
@@ -448,12 +425,12 @@ val Aligned_Branch_Wide6 = utilsLib.ustore_thm("Aligned_Branch_Wide6",
       v2w [x0; x0; x0; x0; x0; x0; x0; x0; x0; x0; x0; x0; x1; x2; x3; x4;
            x5; x6; x7; x8; x9; x10; x11; x12; x13; x14; x15; x16; x17; x18;
            x19; F])`,
-   simp [Aligned]
+   simp [alignmentTheory.aligned_extract]
    \\ blastLib.BBLAST_TAC
    )
 
 val Aligned_Branch_Wide10 = utilsLib.ustore_thm("Aligned_Branch_Wide10",
-   `Aligned (w:word32, 2) ==>
+   `aligned 1 (w:word32) ==>
     (((31 >< 1)
         (w +
          sw2sw ((v2w [x0]:word1) @@ ~(v2w [x1a] ?? v2w [x1b] : word1) @@
@@ -466,7 +443,7 @@ val Aligned_Branch_Wide10 = utilsLib.ustore_thm("Aligned_Branch_Wide10",
       v2w [x0; x0; x0; x0; x0; x0; x0; x0; x1a = x1b; x2a = x2b; x3; x4; x5;
            x6; x7; x8; x9; x10; x11; x12; x13; x14; x15; x16; x17; x18; x19;
            x20; x21; x22; x23; F])`,
-   simp [Aligned]
+   simp [alignmentTheory.aligned_extract]
    \\ blastLib.BBLAST_TAC
    )
 
@@ -479,103 +456,39 @@ val Aligned_BranchEx = utilsLib.ustore_thm("Aligned_BranchEx",
 *)
 
 val Aligned_BranchLink = utilsLib.ustore_thm("Aligned_BranchLink",
-   `Aligned (w:word32, 2) ==>
+   `aligned 1 (w:word32) ==>
     (((31 >< 1) (w + 4w) : 31 word @@ (1w: word1)) = (w + 4w) !! 1w)`,
-   simp [Aligned]
+   simp [alignmentTheory.aligned_extract]
    \\ blastLib.BBLAST_TAC
    )
 
 val Aligned_BranchLinkEx = utilsLib.ustore_thm("Aligned_BranchLinkEx",
-   `Aligned (w:word32, 2) ==>
+   `aligned 1 (w:word32) ==>
     (((31 >< 1) (w + 4w - 2w) : 31 word @@ (1w: word1)) = (w + 2w) !! 1w)`,
-   simp [Aligned]
+   simp [alignmentTheory.aligned_extract]
    \\ blastLib.BBLAST_TAC
    )
 
 val tm = Term.subst [``b0:bool`` |-> boolSyntax.F] (bitstringSyntax.mk_vec 32 0)
 
 val Aligned_Branch = Q.store_thm("Aligned_Branch",
-   `(Aligned (pc:word32, 2) ==> Aligned (pc + 4w + ^tm, 2)) = T`,
-   rw [Aligned]
+   `(aligned 1 (pc:word32) ==> aligned 1 (pc + 4w + ^tm)) = T`,
+   rw [alignmentTheory.aligned_extract]
    \\ blastLib.FULL_BBLAST_TAC
    )
 
 val Aligned_LoadStore = Q.store_thm("Aligned_LoadStore",
-   `Aligned (w: 31 word @@ (0w: word1), 2)`,
-   rw [Aligned]
+   `aligned 1 (w: 31 word @@ (0w: word1))`,
+   rw [alignmentTheory.aligned_extract]
    \\ blastLib.FULL_BBLAST_TAC
    )
 
 val Aligned4_base_pc = Q.store_thm("Aligned4_base_pc",
-   `Aligned
-       (Align (pc, 4) +
-        w2w (v2w [b7; b6; b5; b4; b3; b2; b1; b0; F; F] : word10): word32, 4)`,
-   simp [Aligned, Align]
+   `aligned 2
+       (align 2 pc +
+        w2w (v2w [b7; b6; b5; b4; b3; b2; b1; b0; F; F] : word10): word32)`,
+   simp [alignmentTheory.aligned_extract, alignmentTheory.align_def]
    \\ blastLib.FULL_BBLAST_TAC
-   )
-
-(* ------------------------------------------------------------------------ *)
-
-val BIT_lem = Q.prove(
-   `(!x. NUMERAL (BIT2 x) = 2 * (x + 1)) /\
-    (!x. NUMERAL (BIT1 x) = 2 * x + 1) /\
-    (!x. NUMERAL (BIT1 (BIT1 x)) = 4 * x + 3) /\
-    (!x. NUMERAL (BIT1 (BIT2 x)) = 4 * (x + 1) + 1) /\
-    (!x. NUMERAL (BIT2 (BIT1 x)) = 4 * (x + 1)) /\
-    (!x. NUMERAL (BIT2 (BIT2 x)) = 4 * (x + 1) + 2)`,
-   REPEAT strip_tac
-   \\ CONV_TAC (Conv.LHS_CONV
-         (REWRITE_CONV [arithmeticTheory.BIT1, arithmeticTheory.BIT2,
-                        arithmeticTheory.NUMERAL_DEF]))
-   \\ DECIDE_TAC
-   )
-
-val Aligned_eq = Q.prove(
-   `(!a b. (Aligned (a: word32, 4) = Aligned (b: word32, 4)) =
-           (~a ' 0 /\ ~a ' 1 = ~b ' 0 /\ ~b ' 1)) /\
-    (!a b. (Aligned (a: word32, 2) = Aligned (b: word32, 2)) =
-           (a ' 0 = b ' 0))`,
-   lrw [Aligned]
-   \\ blastLib.BBLAST_TAC
-   )
-
-val Aligned_numeric = Q.store_thm("Aligned_numeric",
-   `(!x. Aligned (0w: word32, 4)) /\
-    (!x. Aligned (0w: word32, 2)) /\
-    (!x. Aligned (n2w (NUMERAL (BIT2 (BIT1 x))): word32, 4)) /\
-    (!x. Aligned (n2w (NUMERAL (BIT2 x)): word32, 2)) /\
-    (!x y f. Aligned (y + n2w (NUMERAL (BIT1 (BIT1 (f x)))): word32, 4) =
-             Aligned (y + 3w, 4)) /\
-    (!x y. Aligned (y + n2w (NUMERAL (BIT1 (BIT2 x))): word32, 4) =
-           Aligned (y + 1w, 4)) /\
-    (!x y. Aligned (y + n2w (NUMERAL (BIT2 (BIT1 x))): word32, 4) =
-           Aligned (y, 4)) /\
-    (!x y. Aligned (y + n2w (NUMERAL (BIT2 (BIT2 x))): word32, 4) =
-           Aligned (y + 2w, 4)) /\
-    (!x y f. Aligned (y - n2w (NUMERAL (BIT1 (BIT1 (f x)))): word32, 4) =
-             Aligned (y - 3w, 4)) /\
-    (!x y. Aligned (y - n2w (NUMERAL (BIT1 (BIT2 x))): word32, 4) =
-           Aligned (y - 1w, 4)) /\
-    (!x y. Aligned (y - n2w (NUMERAL (BIT2 (BIT1 x))): word32, 4) =
-           Aligned (y, 4)) /\
-    (!x y. Aligned (y - n2w (NUMERAL (BIT2 (BIT2 x))): word32, 4) =
-           Aligned (y - 2w, 4)) /\
-    (!x y f. Aligned (y + n2w (NUMERAL (BIT1 (f x))): word32, 2) =
-             Aligned (y + 1w, 2)) /\
-    (!x y f. Aligned (y - n2w (NUMERAL (BIT1 (f x))): word32, 2) =
-             Aligned (y - 1w, 2)) /\
-    (!x y. Aligned (y + n2w (NUMERAL (BIT2 x)): word32, 2) = Aligned (y, 2)) /\
-    (!x y. Aligned (y - n2w (NUMERAL (BIT2 x)): word32, 2) = Aligned (y, 2))`,
-   REPEAT strip_tac
-   \\ (CONV_TAC (LHS_CONV (RAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [BIT_lem]))))
-       ORELSE CONV_TAC (RAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [BIT_lem]))))
-   \\ rewrite_tac [Aligned_eq, GSYM wordsTheory.word_mul_n2w,
-                   GSYM wordsTheory.word_add_n2w]
-   \\ rewrite_tac [Aligned]
-   \\ TRY (markerLib.PAT_ABBREV_TAC (HOLset.empty Term.compare)
-              ``q = n2w x + 1w : word32``)
-   \\ TRY (Q.ABBREV_TAC `r = n2w (f x) : word32`)
-   \\ blastLib.BBLAST_TAC
    )
 
 (* ------------------------------------------------------------------------ *)

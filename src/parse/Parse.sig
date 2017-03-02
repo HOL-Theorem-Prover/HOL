@@ -33,10 +33,14 @@ signature Parse = sig
                              Name : string,
                              Assoc : associativity} -> unit
 
+  val temp_thytype_abbrev : KernelSig.kernelname * hol_type -> unit
+  val thytype_abbrev : KernelSig.kernelname * hol_type -> unit
   val temp_type_abbrev : string * hol_type -> unit
   val type_abbrev : string * hol_type -> unit
   val temp_disable_tyabbrev_printing : string -> unit
   val disable_tyabbrev_printing : string -> unit
+  val remove_type_abbrev : string -> unit
+  val temp_remove_type_abbrev : string -> unit
 
   (* Parsing terms *)
 
@@ -105,6 +109,7 @@ signature Parse = sig
   val bring_to_front_overload : string -> {Name: string, Thy: string} -> unit
   val clear_overloads_on : string -> unit
   val remove_ovl_mapping : string -> {Name:string, Thy:string} -> unit
+  val gen_remove_ovl_mapping : string -> term -> unit
   val add_record_field : string * term -> unit
   val add_record_fupdate : string * term -> unit
 
@@ -157,6 +162,7 @@ signature Parse = sig
   val temp_bring_to_front_overload : string -> {Name:string,Thy:string} -> unit
   val temp_clear_overloads_on : string -> unit
   val temp_remove_ovl_mapping : string -> {Name:string, Thy:string} -> unit
+  val temp_gen_remove_ovl_mapping : string -> term -> unit
 
   val temp_add_record_field : string * term -> unit
   val temp_add_record_fupdate : string * term -> unit

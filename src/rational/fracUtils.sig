@@ -12,4 +12,4 @@ sig
 	val extract_frac_fun : term list -> term -> (term * term * term) list
 
 	val INT_GT0_CONV : term -> thm
-end;
+end

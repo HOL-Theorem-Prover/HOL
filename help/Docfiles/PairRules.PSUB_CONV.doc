@@ -34,7 +34,7 @@ conversion on variables and constants.  That is, if {"t"} is a variable or
 constant, then {PSUB_CONV c "t"} returns {|- t = t}.
 
 \FAILURE
-{PSUB_CONV c tm} fails if {tm} is a paired abstraction {"\p.t"} and the 
+{PSUB_CONV c tm} fails if {tm} is a paired abstraction {"\p.t"} and the
 conversion {c} fails when applied to {t},
 or if {tm} is an application {"t1 t2"} and the
 conversion {c} fails when applied to either {t1} or {t2}.  The function

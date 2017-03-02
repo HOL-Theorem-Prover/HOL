@@ -46,8 +46,12 @@ subgoals and justifications. These are pushed onto the goal stack and
 justification stack, respectively, to form a new proof state. Several
 preceding proof states are saved and can be returned to if a mistake is made
 in the proof.  The goal stack is divided into levels, a new level being
-created each time a tactic is successfully applied to give new subgoals.  The
-subgoals of the current level may be considered in any order.
+created each time a tactic is successfully applied to give new subgoals.
+Alternatively a list-tactic can process the entire list of goals of the current
+level to change that level (rather than creating a new level).
+The subgoals of the current level may be considered in any order.
+Levels of the goal stack may be collapsed so that subgoals of a previous level
+appear as part of of the current level.
 
 If a tactic solves the current goal (returns an empty subgoal list), then
 its justification is used to prove a corresponding theorem. This theorem is
@@ -66,6 +70,7 @@ saved.
 proofManagerLib.set_goal, proofManagerLib.restart,
 proofManagerLib.backup,proofManagerLib.restore, proofManagerLib.save,
 proofManagerLib.set_backup,proofManagerLib.expand, proofManagerLib.expandf,
+proofManagerLib.expand_list, proofManagerLib.flatn,
 proofManagerLib.p,proofManagerLib.top_thm, proofManagerLib.top_goal.
 
 \ENDDOC

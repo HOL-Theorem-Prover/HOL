@@ -21,6 +21,7 @@ sig
    val apfst : ('a -> 'b) -> 'a * 'c -> 'b * 'c
    val append : 'a list -> 'a list -> 'a list
    val appi : (int -> 'a -> unit) -> 'a list -> unit
+   val apnth : ('a -> 'a) -> int -> 'a list -> 'a list
    val apsnd : ('a -> 'b) -> 'c * 'a -> 'c * 'b
    val assert : ('a -> bool) -> 'a -> 'a
    val assert_exn : ('a -> bool) -> 'a -> exn -> 'a

@@ -1,0 +1,57 @@
+.PHONY: all
+
+FILES_CMX=lib.cmx fusion.cmx basics.cmx printer.cmx preterm.cmx hl_parser.cmx equal.cmx bool.cmx drule.cmx tactics.cmx simp.cmx theorems.cmx canon.cmx fol.cmx follist.cmx meson.cmx hh_symbols.cmx features_dt.cmx hh_tac.cmx hh_write.cmx
+
+EXTRA_CLEANS = $(FILES_CMX) $(patsubst %.cmx,%.cmi,$(FILES_CMX)) $(patsubst %.cmx,%.o,$(FILES_CMX))
+
+ifneq($(which ocamlopt),)
+
+all: $(FILES_CMX)
+
+lib.cmx: lib.ml
+	ocamlopt -c $<
+fusion.cmx: fusion.ml
+	ocamlopt -c $<
+basics.cmx: basics.ml
+	ocamlopt -c $<
+printer.cmx: printer.ml
+	ocamlopt -c $<
+preterm.cmx: preterm.ml
+	ocamlopt -c $<
+hl_parser.cmx: hl_parser.ml
+	ocamlopt -c $<
+equal.cmx: equal.ml
+	ocamlopt -c $<
+bool.cmx: bool.ml
+	ocamlopt -c $<
+drule.cmx: drule.ml
+	ocamlopt -c $<
+tactics.cmx: tactics.ml
+	ocamlopt -c $<
+simp.cmx: simp.ml
+	ocamlopt -c $<
+theorems.cmx: theorems.ml
+	ocamlopt -c $<
+canon.cmx: canon.ml
+	ocamlopt -c $<
+fol.cmx: fol.ml
+	ocamlopt -c $<
+follist.cmx: follist.ml
+	ocamlopt -c $<
+meson.cmx: meson.ml
+	ocamlopt -c $<
+hh_symbols.cmx: hh_symbols.ml
+	ocamlopt -c $<
+features_dt.cmx: features_dt.ml
+	ocamlopt -c $<
+hh_tac.cmx: hh_tac.ml
+	ocamlopt -c $<
+hh_write.cmx: hh_write.ml
+	ocamlopt -c $<
+
+else
+
+all:
+	@echo "No OCaml detected -- giving up"
+
+endif

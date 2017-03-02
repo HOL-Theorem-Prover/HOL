@@ -1,7 +1,6 @@
 signature SharingTables =
 sig
 
-
   structure Map : Binarymap
   type id = {Thy : string, Other : string}
   datatype shared_type = TYV of string
@@ -49,5 +48,4 @@ sig
                           termtable_nm : string} ->
                          termtable -> unit
 
-
-end;
+end

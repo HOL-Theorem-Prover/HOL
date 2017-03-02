@@ -12,12 +12,8 @@ val _ = new_theory "x64_step"
 
 (* ------------------------------------------------------------------------ *)
 
-val () = (numLib.prefer_num ()
-          ; wordsLib.prefer_word ()
-          ; wordsLib.guess_lengths ())
-
-infix \\
-val op \\ = op THEN;
+val () =
+   (numLib.prefer_num (); wordsLib.prefer_word (); wordsLib.guess_lengths ())
 
 (* ------------------------------------------------------------------------ *)
 
@@ -30,7 +26,6 @@ val NextStateX64_0 = utilsLib.ustore_thm("NextStateX64_0",
   `(s.exception = NoException) ==>
    (x64_decode (FST (x64_fetch s)) = Zfull_inst (p, ast, strm1)) /\
    (20 - LENGTH strm1 = len) /\
-   (checkIcache len s = ((), s)) /\
    (!s. Run ast s = f s) /\
    (f (s with RIP := s.RIP + n2w len) = ((), s1)) /\
    (s1.exception = s.exception) ==>
@@ -41,7 +36,6 @@ val NextStateX64 = utilsLib.ustore_thm("NextStateX64",
   `(s.exception = NoException) ==>
    (x64_decode (FST (x64_fetch s)) = Zfull_inst (p, ast, strm1)) /\
    (20 - LENGTH strm1 = len) /\
-   (checkIcache len s = ((), s)) /\
    (!s. Run ast s = f x s) /\
    (f x (s with RIP := s.RIP + n2w len) = ((), s1)) /\
    (s1.exception = s.exception) ==>
@@ -51,120 +45,83 @@ val NextStateX64 = utilsLib.ustore_thm("NextStateX64",
 (* ------------------------------------------------------------------------ *)
 
 val read_mem16_def = Lib.with_flag (Feedback.emit_MESG, false) Define`
-   read_mem16 (m: word64 -> word8 option) a =
-     case (m a, m (a + 1w)) of
-        (SOME v1, SOME v2) => SOME (v2 @@ v1)
-      | _ => NONE`;
+   read_mem16 (m: word64 -> word8) a = m (a + 1w) @@ m a`
 
 val read_mem32_def = Lib.with_flag (Feedback.emit_MESG, false) Define`
-   read_mem32 (m: word64 -> word8 option) a =
-     case (m a, m (a + 1w), m (a + 2w), m (a + 3w)) of
-        (SOME v1, SOME v2, SOME v3, SOME v4) => SOME (v4 @@ v3 @@ v2 @@ v1)
-      | _ => NONE`;
+   read_mem32 (m: word64 -> word8) a =
+   m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m a`
 
 val read_mem64_def = Lib.with_flag (Feedback.emit_MESG, false) Define`
-   read_mem64 (m: word64 -> word8 option) a =
-     case (m a, m (a + 1w), m (a + 2w), m (a + 3w),
-           m (a + 4w), m (a + 5w), m (a + 6w), m (a + 7w)) of
-        (SOME v1, SOME v2, SOME v3, SOME v4,
-         SOME v5, SOME v6, SOME v7, SOME v8) =>
-            SOME (v8 @@ v7 @@ v6 @@ v5 @@ v4 @@ v3 @@ v2 @@ v1)
-      | _ => NONE`;
+   read_mem64 (m: word64 -> word8) a =
+   m (a + 7w) @@ m (a + 6w) @@ m (a + 5w) @@ m (a + 4w) @@
+   m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m a`
 
 val write_mem16_def = Define`
-   write_mem16 (m: word64 -> word8 option) a (v: word16) =
-     (a + 1w =+ SOME ((15 >< 8) v))
-        ((a =+ SOME ((7 >< 0) v)) m)`;
+   write_mem16 (m: word64 -> word8) a (v: word16) =
+     (a + 1w =+ (15 >< 8) v)
+        ((a =+ (7 >< 0) v) m)`;
 
 val write_mem32_def = Define`
-   write_mem32 (m: word64 -> word8 option) a (v: word32) =
-     (a + 3w =+ SOME ((31 >< 24) v))
-        ((a + 2w =+ SOME ((23 >< 16) v))
-           ((a + 1w =+ SOME ((15 >< 8) v))
-              ((a =+ SOME ((7 >< 0) v)) m)))`;
+   write_mem32 (m: word64 -> word8) a (v: word32) =
+     (a + 3w =+ (31 >< 24) v)
+        ((a + 2w =+ (23 >< 16) v)
+           ((a + 1w =+ (15 >< 8) v)
+              ((a =+ (7 >< 0) v) m)))`;
 
 val write_mem64_def = Define`
-   write_mem64 (m: word64 -> word8 option) a (v: word64) =
-     (a + 7w =+ SOME ((63 >< 56) v))
-        ((a + 6w =+ SOME ((55 >< 48) v))
-           ((a + 5w =+ SOME ((47 >< 40) v))
-              ((a + 4w =+ SOME ((39 >< 32) v))
-                 ((a + 3w =+ SOME ((31 >< 24) v))
-                    ((a + 2w =+ SOME ((23 >< 16) v))
-                       ((a + 1w =+ SOME ((15 >< 8) v))
-                          ((a =+ SOME ((7 >< 0) v)) m)))))))`;
+   write_mem64 (m: word64 -> word8) a (v: word64) =
+     (a + 7w =+ (63 >< 56) v)
+        ((a + 6w =+ (55 >< 48) v)
+           ((a + 5w =+ (47 >< 40) v)
+              ((a + 4w =+ (39 >< 32) v)
+                 ((a + 3w =+ (31 >< 24) v)
+                    ((a + 2w =+ (23 >< 16) v)
+                       ((a + 1w =+ (15 >< 8) v)
+                          ((a =+ (7 >< 0) v) m)))))))`;
 
 val mem16_rwt = ustore_thm("mem16_rwt",
-   `(read_mem16 s.MEM a = SOME v) ==> (mem16 a s = (v, s))`,
-   Cases_on `s.MEM a`
-   \\ Cases_on `s.MEM (a + 1w)`
-   \\ simp [mem16_def, mem8_def, read_mem16_def]
+   `(read_mem16 s.MEM a = v) ==> (mem16 a s = (v, s))`,
+   simp [mem16_def, mem8_def, read_mem16_def]
    )
 
 val mem32_rwt = ustore_thm("mem32_rwt",
-   `(read_mem32 s.MEM a = SOME v) ==> (mem32 a s = (v, s))`,
-   Cases_on `s.MEM a`
-   \\ Cases_on `s.MEM (a + 1w)`
-   \\ Cases_on `s.MEM (a + 2w)`
-   \\ Cases_on `s.MEM (a + 3w)`
-   \\ simp [mem32_def, mem16_def, mem8_def, read_mem32_def]
+   `(read_mem32 s.MEM a = v) ==> (mem32 a s = (v, s))`,
+   simp [mem32_def, mem16_def, mem8_def, read_mem32_def]
    \\ blastLib.BBLAST_TAC
    )
 
 val mem64_rwt = ustore_thm("mem64_rwt",
-   `(read_mem64 s.MEM a = SOME v) ==> (mem64 a s = (v, s))`,
-   Cases_on `s.MEM a`
-   \\ Cases_on `s.MEM (a + 1w)`
-   \\ Cases_on `s.MEM (a + 2w)`
-   \\ Cases_on `s.MEM (a + 3w)`
-   \\ Cases_on `s.MEM (a + 4w)`
-   \\ Cases_on `s.MEM (a + 5w)`
-   \\ Cases_on `s.MEM (a + 6w)`
-   \\ Cases_on `s.MEM (a + 7w)`
-   \\ simp [mem64_def, mem32_def, mem16_def, mem8_def, read_mem64_def]
+   `(read_mem64 s.MEM a = v) ==> (mem64 a s = (v, s))`,
+   simp [mem64_def, mem32_def, mem16_def, mem8_def, read_mem64_def]
    \\ blastLib.BBLAST_TAC
    )
 
 val write'mem16_rwt = ustore_thm("write'mem16_rwt",
-   `(read_mem16 s.MEM a = SOME wv) ==>
+   `(read_mem16 s.MEM a = wv) ==>
     (write'mem16 (d, a) s = ((), s with MEM := write_mem16 s.MEM a d))`,
-   Cases_on `s.MEM a`
-   \\ Cases_on `s.MEM (a + 1w)`
-   \\ simp [combinTheory.APPLY_UPDATE_THM,
-            blastLib.BBLAST_PROVE ``a <> a + 1w: word64``,
-            write'mem16_def, write'mem8_def, write_mem16_def, read_mem16_def]
+   simp [combinTheory.APPLY_UPDATE_THM,
+         blastLib.BBLAST_PROVE ``a <> a + 1w: word64``,
+         write'mem16_def, write'mem8_def, write_mem16_def, read_mem16_def]
    )
 
 val write'mem32_rwt = ustore_thm("write'mem32_rwt",
-   `(read_mem32 s.MEM a = SOME wv) ==>
+   `(read_mem32 s.MEM a = wv) ==>
     (write'mem32 (d, a) s = ((), s with MEM := write_mem32 s.MEM a d))`,
-   Cases_on `s.MEM a`
-   \\ Cases_on `s.MEM (a + 1w)`
-   \\ Cases_on `s.MEM (a + 2w)`
-   \\ Cases_on `s.MEM (a + 3w)`
-   \\ simp [combinTheory.APPLY_UPDATE_THM,
-            blastLib.BBLAST_PROVE ``a <> a + 1w: word64``,
-            blastLib.BBLAST_PROVE ``a <> a + 2w: word64``,
-            blastLib.BBLAST_PROVE ``a <> a + 3w: word64``,
-            write'mem32_def, write'mem16_def, write'mem8_def,
-            write_mem32_def, read_mem32_def]
+   simp [combinTheory.APPLY_UPDATE_THM,
+         blastLib.BBLAST_PROVE ``a <> a + 1w: word64``,
+         blastLib.BBLAST_PROVE ``a <> a + 2w: word64``,
+         blastLib.BBLAST_PROVE ``a <> a + 3w: word64``,
+         write'mem32_def, write'mem16_def, write'mem8_def,
+         write_mem32_def, read_mem32_def]
    \\ srw_tac [wordsLib.WORD_EXTRACT_ss] []
    )
 
 val write'mem64_rwt = ustore_thm("write'mem64_rwt",
-   `(read_mem64 s.MEM a = SOME wv) ==>
+   `(read_mem64 s.MEM a = wv) ==>
     (write'mem64 (d, a) s = ((), s with MEM := write_mem64 s.MEM a d))`,
    simp [write'mem64_def, write'mem32_def, write'mem16_def,
          write_mem64_def, read_mem64_def]
    \\ simp_tac (srw_ss()++wordsLib.WORD_EXTRACT_ss) []
-   \\ Cases_on `s.MEM a`
-   \\ Cases_on `s.MEM (a + 1w)`
-   \\ Cases_on `s.MEM (a + 2w)`
-   \\ Cases_on `s.MEM (a + 3w)`
-   \\ Cases_on `s.MEM (a + 4w)`
-   \\ Cases_on `s.MEM (a + 5w)`
-   \\ Cases_on `s.MEM (a + 6w)`
-   \\ Cases_on `s.MEM (a + 7w)`
    \\ ASM_REWRITE_TAC [optionTheory.NOT_NONE_SOME, optionTheory.option_case_def]
    \\ simp [combinTheory.APPLY_UPDATE_THM,
             blastLib.BBLAST_PROVE ``a <> a + 1w: word64``,
@@ -178,53 +135,37 @@ val write'mem64_rwt = ustore_thm("write'mem64_rwt",
    )
 
 val read_mem16 = Q.store_thm("read_mem16",
-   `!m a v.
-      (read_mem16 m a = SOME v) =
-      (m a = SOME ((7 >< 0) v)) /\
-      (m (a + 1w) = SOME ((15 ><  8) v))`,
+   `!m a v. (read_mem16 m a = v) =
+            (m a = (7 >< 0) v) /\ (m (a + 1w) = (15 ><  8) v)`,
    REPEAT strip_tac
-   \\ Cases_on `m a`
-   \\ Cases_on `m (a + 1w)`
    \\ simp [read_mem16_def]
    \\ blastLib.BBLAST_TAC
    )
 
 val read_mem32 = Q.store_thm("read_mem32",
    `!m a v.
-      (read_mem32 m a = SOME v) =
-      (m a = SOME ((7 >< 0) v)) /\
-      (m (a + 1w) = SOME ((15 ><  8) v)) /\
-      (m (a + 2w) = SOME ((23 >< 16) v)) /\
-      (m (a + 3w) = SOME ((31 >< 24) v))`,
+      (read_mem32 m a = v) =
+      (m a = (7 >< 0) v) /\
+      (m (a + 1w) = (15 ><  8) v) /\
+      (m (a + 2w) = (23 >< 16) v) /\
+      (m (a + 3w) = (31 >< 24) v)`,
    REPEAT strip_tac
-   \\ Cases_on `m a`
-   \\ Cases_on `m (a + 1w)`
-   \\ Cases_on `m (a + 2w)`
-   \\ Cases_on `m (a + 3w)`
    \\ simp [read_mem32_def]
    \\ blastLib.BBLAST_TAC
    )
 
 val read_mem64 = Q.store_thm("read_mem64",
    `!m a v.
-      (read_mem64 m a = SOME v) =
-      (m a = SOME ((7 >< 0) v)) /\
-      (m (a + 1w) = SOME ((15 ><  8) v)) /\
-      (m (a + 2w) = SOME ((23 >< 16) v)) /\
-      (m (a + 3w) = SOME ((31 >< 24) v)) /\
-      (m (a + 4w) = SOME ((39 >< 32) v)) /\
-      (m (a + 5w) = SOME ((47 >< 40) v)) /\
-      (m (a + 6w) = SOME ((55 >< 48) v)) /\
-      (m (a + 7w) = SOME ((63 >< 56) v))`,
+      (read_mem64 m a = v) =
+      (m a = (7 >< 0) v) /\
+      (m (a + 1w) = (15 ><  8) v) /\
+      (m (a + 2w) = (23 >< 16) v) /\
+      (m (a + 3w) = (31 >< 24) v) /\
+      (m (a + 4w) = (39 >< 32) v) /\
+      (m (a + 5w) = (47 >< 40) v) /\
+      (m (a + 6w) = (55 >< 48) v) /\
+      (m (a + 7w) = (63 >< 56) v)`,
    REPEAT strip_tac
-   \\ Cases_on `m a`
-   \\ Cases_on `m (a + 1w)`
-   \\ Cases_on `m (a + 2w)`
-   \\ Cases_on `m (a + 3w)`
-   \\ Cases_on `m (a + 4w)`
-   \\ Cases_on `m (a + 5w)`
-   \\ Cases_on `m (a + 6w)`
-   \\ Cases_on `m (a + 7w)`
    \\ simp [read_mem64_def]
    \\ blastLib.BBLAST_TAC
    )

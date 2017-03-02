@@ -30,7 +30,7 @@ val untouched_refl = store_thm(
 
 
 val similarity_implies_equal_mode_thm = store_thm(
-    "similarity_implies_equal_mode_thm", 
+    "similarity_implies_equal_mode_thm",
     ``! g s1 s2. (similar g s1 s2) ==> (ARM_MODE s1 = ARM_MODE s2)``,
     EVAL_TAC
       THEN RW_TAC (srw_ss()) []
@@ -39,7 +39,7 @@ val similarity_implies_equal_mode_thm = store_thm(
 
 
 val similarity_implies_equal_av_thm = store_thm(
-    "similarity_implies_equal_av_thm", 
+    "similarity_implies_equal_av_thm",
     ``! g s1 s2. (similar g s1 s2) ==> (access_violation s1 = access_violation s2)``,
     EVAL_TAC
       THEN RW_TAC (srw_ss()) []);
@@ -47,11 +47,11 @@ val similarity_implies_equal_av_thm = store_thm(
 
 val keep_mode_lem = store_thm(
     "keep_mode_lem",
-    ``!m f s s' x. 
+    ``!m f s s' x.
       (ARM_MODE s = m)        ==>
       (f s = ValueState x s') ==>
       (s.psrs = s'.psrs)
-     ==> 
+     ==>
       (ARM_MODE s' = m)``,
      NTAC 5 STRIP_TAC THEN EVAL_TAC THEN METIS_TAC []);
 
@@ -61,13 +61,13 @@ val untouched_av_on_coprocessor_update_lem = store_thm(
      "untouched_av_on_coprocessor_update_lem",
      ``!s gst. (mmu_requirements s gst) ==>
        (access_violation s =
-        access_violation ((arm_state_coprocessors_fupd 
-(Coprocessors_state_fupd (coproc_state_cp15_fupd (\cp15. cp15 with <| 
+        access_violation ((arm_state_coprocessors_fupd
+(Coprocessors_state_fupd (coproc_state_cp15_fupd (\cp15. cp15 with <|
 SCR := scr |>)))) s))``,
      (NTAC 2 STRIP_TAC)
-        THEN (`mmu_requirements ( (arm_state_coprocessors_fupd 
-(Coprocessors_state_fupd (coproc_state_cp15_fupd (\cp15. cp15 with <| 
-SCR := scr |>)))) s) gst = mmu_requirements s gst` by RW_TAC 
+        THEN (`mmu_requirements ( (arm_state_coprocessors_fupd
+(Coprocessors_state_fupd (coproc_state_cp15_fupd (\cp15. cp15 with <|
+SCR := scr |>)))) s) gst = mmu_requirements s gst` by RW_TAC
 (srw_ss()) [mmu_requirements_def])
         THEN REPEAT STRIP_TAC
         THEN RES_TAC
@@ -103,26 +103,26 @@ val reflex_priv_mode_similar_thm = store_thm(
 
 
 val reflex_priv_mode_constraints_thm = store_thm("reflex_priv_mode_constraints_thm",
-              `` reflexive_comp  priv_mode_constraints (assert_mode 16w)``, 
+              `` reflexive_comp  priv_mode_constraints (assert_mode 16w)``,
                 RW_TAC (srw_ss()) [reflexive_comp_def,priv_mode_constraints_v1_def,assert_mode_def]);
 
 val reflex_priv_mode_constraints_v2_thm = store_thm("reflex_priv_mode_constraints_v2_thm",
-              `` reflexive_comp  priv_mode_constraints_v2 (assert_mode 16w)``, 
+              `` reflexive_comp  priv_mode_constraints_v2 (assert_mode 16w)``,
                 RW_TAC (srw_ss()) [reflexive_comp_def,priv_mode_constraints_v1_def, reflex_priv_mode_constraints_thm,priv_mode_constraints_v2_def,assert_mode_def] THEN FULL_SIMP_TAC (srw_ss()) []);
 
 val reflex_priv_mode_constraints_v2a_thm = store_thm("reflex_priv_mode_constraints_v2a_thm",
-              `` reflexive_comp  priv_mode_constraints_v2a (assert_mode 16w)``, 
+              `` reflexive_comp  priv_mode_constraints_v2a (assert_mode 16w)``,
                 RW_TAC (srw_ss()) [reflexive_comp_def,priv_mode_constraints_v1_def, reflex_priv_mode_constraints_thm,priv_mode_constraints_v2a_def,assert_mode_def] THEN FULL_SIMP_TAC (srw_ss()) []);
 
 
 
-val trans_priv_mode_constraints_thm = 
+val trans_priv_mode_constraints_thm =
     store_thm("trans_priv_mode_constraints_thm",
 	      ``trans_fun priv_mode_constraints``,
 	      RW_TAC (srw_ss()) [LET_DEF, trans_fun_def,priv_mode_constraints_def]
-		     THEN RW_TAC (srw_ss()) [] THEN 
+		     THEN RW_TAC (srw_ss()) [] THEN
 		     FULL_SIMP_TAC (srw_ss()) [get_base_vector_table_def,ARM_MODE_def,ARM_READ_CPSR_def]);
-	
+
 val reflex_priv_mode_similar_thm = store_thm(
     "reflex_priv_mode_similar_thm",
     ``refl_rel priv_mode_similar``,
@@ -143,7 +143,7 @@ val reflex_empty_sim_thm = store_thm(
 
 val reflex_strict_unt_thm = store_thm(
    "reflex_strict_unt_thm",
-   ``!u. reflexive_comp strict_unt (assert_mode u)``, 
+   ``!u. reflexive_comp strict_unt (assert_mode u)``,
    RW_TAC (srw_ss()) [reflexive_comp_def, strict_unt_def,assert_mode_def]);
 
 val strict_unt_and_priv_mode_constraints_v2_lem = store_thm(
@@ -156,7 +156,7 @@ val strict_unt_and_priv_mode_constraints_v2a_lem = store_thm(
     ``strict_unt g a b ==> priv_mode_constraints_v2a g b c ==>  priv_mode_constraints_v2a g a c``,
     RW_TAC (srw_ss()) [strict_unt_def, priv_mode_constraints_v2a_def, priv_mode_constraints_v1_def, ARM_MODE_def, ARM_READ_CPSR_def, LET_DEF, vector_table_address_def, get_base_vector_table_def, get_pc_value_def] THEN FULL_SIMP_TAC (srw_ss()) []);
 
-val trans_strict_unt_thm = 
+val trans_strict_unt_thm =
     store_thm("trans_strict_unt_thm",
 	      ``trans_fun strict_unt``,
 	      RW_TAC (srw_ss()) [LET_DEF, trans_fun_def, strict_unt_def]
@@ -165,11 +165,11 @@ val trans_strict_unt_thm =
 
 val reflex_empty_unt_thm = store_thm(
    "reflex_empty_unt_thm",
-   ``!u. reflexive_comp empty_unt (assert_mode u)``, 
+   ``!u. reflexive_comp empty_unt (assert_mode u)``,
    RW_TAC (srw_ss()) [reflexive_comp_def, empty_unt_def,assert_mode_def]);
 
 
-val trans_empty_unt_thm = 
+val trans_empty_unt_thm =
     store_thm("trans_empty_unt_thm",
 	      ``trans_fun empty_unt``,
 	      RW_TAC (srw_ss()) [LET_DEF, trans_fun_def, empty_unt_def]
@@ -180,7 +180,7 @@ val strict_unt_lem = store_thm(
     ``! COMP.
         preserve_relation_mmu COMP (assert_mode u) (assert_mode u) strict_unt empty_sim
     ==> preserve_relation_mmu COMP (assert_mode u) (assert_mode u) empty_unt empty_sim``,
-    RW_TAC (srw_ss()) [empty_unt_def, strict_unt_def, preserve_relation_mmu_def] 
+    RW_TAC (srw_ss()) [empty_unt_def, strict_unt_def, preserve_relation_mmu_def]
       THEN SPEC_ASSUM_TAC (``!g s1 s2. X``, [``g:word32``, ``s1:arm_state``, ``s2:arm_state``])
       THEN METIS_TAC []);
 
@@ -189,7 +189,7 @@ val gen_strict_unt_lem = store_thm(
     ``! COMP.
         (!u. preserve_relation_mmu COMP (assert_mode u) (assert_mode u) strict_unt empty_sim)
     ==> (!u. preserve_relation_mmu COMP (assert_mode u) (assert_mode u) empty_unt empty_sim)``,
-    RW_TAC (srw_ss()) [empty_unt_def, strict_unt_def, preserve_relation_mmu_def] 
+    RW_TAC (srw_ss()) [empty_unt_def, strict_unt_def, preserve_relation_mmu_def]
       THEN SPEC_ASSUM_TAC (``!g s1 s2. X``, [``g:word32``, ``s1:arm_state``, ``s2:arm_state``])
       THEN METIS_TAC []);
 
@@ -197,7 +197,7 @@ val gen_strict_unt_lem = store_thm(
 val empty_extras_lem = store_thm(
     "empty_extras_lem",
     ``! COMP.
-       preserve_relation_mmu COMP (assert_mode 16w) (assert_mode 16w) priv_mode_constraints priv_mode_similar 
+       preserve_relation_mmu COMP (assert_mode 16w) (assert_mode 16w) priv_mode_constraints priv_mode_similar
      = preserve_relation_mmu COMP (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim``,
     STRIP_TAC THEN EQ_TAC
       THENL[ RW_TAC (srw_ss()) [LET_DEF, preserve_relation_mmu_def, assert_mode_def, empty_unt_def, empty_sim_def]
@@ -227,7 +227,7 @@ val fixed_flags_empty_lem = store_thm(
                           THEN ` ((s2.psrs (0,CPSR)).I ⇔ (s1.psrs (0,CPSR)).I) ∧ ((s2.psrs (0,CPSR)).F ⇔ (s1.psrs (0,CPSR)).F)` by FULL_SIMP_TAC (srw_ss()) [similar_def]
                           THEN UNDISCH_ALL_TAC
                           THEN RW_TAC (srw_ss()) []
-                          THEN Cases_on `ARM_MODE s2 = 16w` 
+                          THEN Cases_on `ARM_MODE s2 = 16w`
                           THEN FULL_SIMP_TAC (srw_ss()) [],
                        RW_TAC (srw_ss()) [preserve_relation_mmu_def, fixed_flags_def, empty_sim_def]
                           THEN SPEC_ASSUM_TAC (``!g s1 s2. X``, [``g:word32``, ``s1:arm_state``, ``s2:arm_state``])
@@ -236,7 +236,7 @@ val fixed_flags_empty_lem = store_thm(
               RW_TAC (srw_ss()) [preserve_relation_mmu_def, fixed_flags_def, empty_sim_def]
                 THEN SPEC_ASSUM_TAC (``!xI g s1 s2. X``, [``(((s1:arm_state).psrs(0,CPSR)):ARMpsr).I``, ``g:word32``, ``s1:arm_state``, ``s2:arm_state``])
                 THEN ` ((s2.psrs (0,CPSR)).I ⇔ (s1.psrs (0,CPSR)).I) ∧ ((s2.psrs (0,CPSR)).F ⇔ (s1.psrs (0,CPSR)).F)` by FULL_SIMP_TAC (srw_ss()) [similar_def]
-                THEN UNDISCH_ALL_TAC 
+                THEN UNDISCH_ALL_TAC
                 THEN RW_TAC (srw_ss()) []
                 THEN Cases_on `ARM_MODE s2 = 16w`
                 THEN FULL_SIMP_TAC (srw_ss()) []]);
@@ -260,7 +260,7 @@ val fix_flags_lem = store_thm(
                           THEN ` ((s2.psrs (0,CPSR)).I ⇔ (s1.psrs (0,CPSR)).I) ∧ ((s2.psrs (0,CPSR)).F ⇔ (s1.psrs (0,CPSR)).F)` by FULL_SIMP_TAC (srw_ss()) [similar_def]
                           THEN UNDISCH_ALL_TAC
                           THEN RW_TAC (srw_ss()) []
-                          THEN Cases_on `ARM_MODE s2 = 16w` 
+                          THEN Cases_on `ARM_MODE s2 = 16w`
                           THEN FULL_SIMP_TAC (srw_ss()) [],
                        RW_TAC (srw_ss()) [preserve_relation_mmu_def, fixed_flags_def, fix_flags_def]
                           THEN SPEC_ASSUM_TAC (``!g s1 s2. X``, [``g:word32``, ``s1:arm_state``, ``s2:arm_state``])
@@ -269,7 +269,7 @@ val fix_flags_lem = store_thm(
               RW_TAC (srw_ss()) [preserve_relation_mmu_def, fixed_flags_def, fix_flags_def]
                 THEN SPEC_ASSUM_TAC (``!xI g s1 s2. X``, [``(((s1:arm_state).psrs(0,CPSR)):ARMpsr).I``, ``g:word32``, ``s1:arm_state``, ``s2:arm_state``])
                 THEN ` ((s2.psrs (0,CPSR)).I ⇔ (s1.psrs (0,CPSR)).I) ∧ ((s2.psrs (0,CPSR)).F ⇔ (s1.psrs (0,CPSR)).F)` by FULL_SIMP_TAC (srw_ss()) [similar_def]
-                THEN UNDISCH_ALL_TAC 
+                THEN UNDISCH_ALL_TAC
                 THEN RW_TAC (srw_ss()) []
                 THEN Cases_on `ARM_MODE s2 = 16w`
                 THEN FULL_SIMP_TAC (srw_ss()) []]);
@@ -303,7 +303,7 @@ val extras_lem3 = store_thm(
            /\ (preserve_relation_mmu (A) (assert_mode u) (assert_mode u) strict_unt empty_sim)
            /\ (preserve_relation_mmu (A) (assert_mode 16w) (assert_mode 16w) priv_mode_constraints priv_mode_similar)
            /\ (preserve_relation_mmu (A) (assert_mode 16w) (assert_mode 16w) priv_mode_constraints (fix_flags xI xF priv_mode_similar))
-           /\ (preserve_relation_mmu (A) (assert_mode 16w) (assert_mode 16w) empty_unt (fix_flags xI xF empty_sim)))``, 
+           /\ (preserve_relation_mmu (A) (assert_mode 16w) (assert_mode 16w) empty_unt (fix_flags xI xF empty_sim)))``,
     RW_TAC (srw_ss()) [gen_strict_unt_lem, empty_extras_lem, fix_flags_lem] THEN METIS_TAC [gen_strict_unt_lem, empty_extras_lem, fix_flags_lem]);
 
 
@@ -318,23 +318,23 @@ val extras_lem4 = store_thm(
     RW_TAC (srw_ss()) [strict_unt_lem, empty_extras_lem, fix_flags_lem] THEN METIS_TAC [strict_unt_lem, empty_extras_lem, fix_flags_lem]);
 
 
- val comb_monot_thm = store_thm("comb_monot_thm", 
-	       ``!a:(arm_state -> bool). comb a a a``,  
-	       RW_TAC (srw_ss()) [comb_def]); 
+ val comb_monot_thm = store_thm("comb_monot_thm",
+	       ``!a:(arm_state -> bool). comb a a a``,
+	       RW_TAC (srw_ss()) [comb_def]);
 
-val preserve_relation_comb_thm = 
-    store_thm ("preserve_relation_comb_thm", 
-	       ``! a b c d f  uf uy.  
-	      preserve_relation_mmu  f d b uf uy 
-	      ==> 
-	      comb a b c ==> 
-	      preserve_relation_mmu  f d c uf uy``, 
-	       RW_TAC (srw_ss()) [preserve_relation_mmu_def,comb_def]  
-		      THEN PAT_ASSUM ``∀g s1 s2. X``  
-		      (fn thm => ASSUME_TAC (SPECL [``g:bool[32]``, 
-						    ``s1:arm_state``, ``s2:arm_state``] thm)) 
-    THEN RES_TAC 
-	 THEN RW_TAC (srw_ss()) []);  
+val preserve_relation_comb_thm =
+    store_thm ("preserve_relation_comb_thm",
+	       ``! a b c d f  uf uy.
+	      preserve_relation_mmu  f d b uf uy
+	      ==>
+	      comb a b c ==>
+	      preserve_relation_mmu  f d c uf uy``,
+	       RW_TAC (srw_ss()) [preserve_relation_mmu_def,comb_def]
+		      THEN PAT_ASSUM ``∀g s1 s2. X``
+		      (fn thm => ASSUME_TAC (SPECL [``g:bool[32]``,
+						    ``s1:arm_state``, ``s2:arm_state``] thm))
+    THEN RES_TAC
+	 THEN RW_TAC (srw_ss()) []);
 
 
 val global_aligned_word_readable_lem = store_thm(
@@ -359,7 +359,7 @@ val seqT_preserves_relation_comb_thm =
           (preserve_relation_mmu_abs  f2 (assert_mode k) (comb_inv) uf uy) ==>
           (preserve_relation_mmu  (f1 >>= (f2)) (assert_mode k) comb_inv uf uy)
 ``,
-    (RW_TAC (srw_ss()) [seqT_def,constT_def,preserve_relation_mmu_def,preserve_relation_mmu_abs_def,trans_fun_def]) 
+    (RW_TAC (srw_ss()) [seqT_def,constT_def,preserve_relation_mmu_def,preserve_relation_mmu_abs_def,trans_fun_def])
     THEN (UNDISCH_ALL_TAC
        THEN REPEAT (CASE_TAC THEN FULL_SIMP_TAC (srw_ss()) []))
     THENL [UNDISCH_ALL_TAC
@@ -433,7 +433,7 @@ val equal_mem_lem = store_thm(
     `` !s1 s2 g (addr:bool[32]) is_write.
        (similar g s1 s2)       ==>
        (mmu_requirements s1 g) ==>
-       (mmu_requirements s2 g) 
+       (mmu_requirements s2 g)
     ==>
        ((s1.memory addr) = (s2.memory addr))
      \/
@@ -460,10 +460,10 @@ val equal_mem_lem = store_thm(
 
 val stay_similar_lem = store_thm(
     "stay_similar_lem",
-    ``!s1 s2 g addr x. 
+    ``!s1 s2 g addr x.
       (mmu_requirements s1 g) ==>
-      (mmu_requirements s2 g) ==> 
-      (similar g s1 s2) 
+      (mmu_requirements s2 g) ==>
+      (similar g s1 s2)
      ==> ((similar g (s1 with accesses updated_by CONS (MEM_READ addr)) (s2 with accesses updated_by CONS (MEM_READ addr)))
      /\  (similar g (s1 with accesses updated_by CONS (MEM_WRITE addr x)) (s2 with accesses updated_by CONS (MEM_WRITE addr x))))``,
      NTAC 8 STRIP_TAC
@@ -479,17 +479,17 @@ val stay_similar_lem = store_thm(
         THEN FULL_SIMP_TAC (srw_ss()) [LET_DEF]
         THEN `mmu_requirements_pure s1 g` by FULL_SIMP_TAC (srw_ss()) [mmu_requirements_simp]
         THEN `mmu_requirements_pure s2 g` by FULL_SIMP_TAC (srw_ss()) [mmu_requirements_simp]
-        THEN MP_TAC same_setup_same_rights_lem 
-        THEN STRIP_TAC 
+        THEN MP_TAC same_setup_same_rights_lem
+        THEN STRIP_TAC
         THEN RES_TAC
         THEN FULL_SIMP_TAC (srw_ss()) [equal_user_register_def]
         THEN METIS_TAC []);
 
 val keep_mode_on_accesses_update_lem = store_thm(
     "keep_mode_on_accesses_update_lem",
-    ``!m s addr x. 
-      (ARM_MODE s = m) 
-     ==> 
+    ``!m s addr x.
+      (ARM_MODE s = m)
+     ==>
         (ARM_MODE (s with accesses updated_by CONS (MEM_READ addr)) = m) /\
         (ARM_MODE (s with accesses updated_by CONS (MEM_WRITE addr x)) = m)``,
      NTAC 4  STRIP_TAC THEN EVAL_TAC);
@@ -510,25 +510,25 @@ val read_mem1_mode_thm = store_thm(
 val read_mem1_similar_thm = store_thm (
     "read_mem1_similar_thm",
     ``!addr. keep_similar_relation (read_mem1 <|proc:=0|> addr) (assert_mode 16w) empty_sim``,
-    PURE_ONCE_REWRITE_TAC [keep_similar_relation_def] 
+    PURE_ONCE_REWRITE_TAC [keep_similar_relation_def]
        THEN NTAC 8 STRIP_TAC
        THEN Cases_on `read_mem1 <|proc:=0|> addr s1`
        THEN Cases_on `read_mem1 <|proc:=0|> addr s2`
        THEN FULL_SIMP_TAC (srw_ss()) [empty_sim_def]
        THENL [FULL_SIMP_TAC (srw_ss()) [read_mem1_def, writeT_def, readT_def,  seqT_def]
-                 THEN (`b = (s1 with accesses updated_by CONS (MEM_READ addr))` by 
+                 THEN (`b = (s1 with accesses updated_by CONS (MEM_READ addr))` by
                             (Cases_on `access_violation (s1 with accesses updated_by CONS (MEM_READ addr))`
                                THEN FULL_SIMP_TAC (srw_ss()) []))
-                 THEN (`b' = (s2 with accesses updated_by CONS (MEM_READ addr))` by 
+                 THEN (`b' = (s2 with accesses updated_by CONS (MEM_READ addr))` by
                             (Cases_on `access_violation (s2 with accesses updated_by CONS (MEM_READ addr))`
                                THEN FULL_SIMP_TAC (srw_ss()) []))
                  THEN ASSUME_TAC (SPECL [``s1:arm_state``, ``s2:arm_state``, ``g:word32``, ``addr:word32``, ``F``] equal_mem_lem)
                  THEN RES_TAC
                  THENL [`similar g b b'  = similar g s1 s2` by METIS_TAC [stay_similar_lem]
-                           THEN Cases_on `access_violation (s2 with accesses updated_by CONS (MEM_READ addr))` 
-                           THEN Cases_on `access_violation (s1 with accesses updated_by CONS (MEM_READ addr))` 
+                           THEN Cases_on `access_violation (s2 with accesses updated_by CONS (MEM_READ addr))`
+                           THEN Cases_on `access_violation (s1 with accesses updated_by CONS (MEM_READ addr))`
                            THEN FULL_SIMP_TAC (srw_ss()) []
-                           THEN RES_TAC 
+                           THEN RES_TAC
                            THEN FULL_SIMP_TAC (srw_ss()) [similar_def,arm_stepTheory.ARM_MODE_def, arm_stepTheory.ARM_READ_CPSR_def]
                            THEN METIS_TAC [],
                         ASSUME_TAC (SPECL [``addr:word32``, ``x:word8``, ``s1:arm_state``, ``g:word32``] mmu_requirement_accesses_update_lem)
@@ -542,13 +542,13 @@ val read_mem1_similar_thm = store_thm (
                            THEN FULL_SIMP_TAC (srw_ss()) []
                            THEN METIS_TAC [stay_similar_lem, keep_mode_on_accesses_update_lem]],
               FULL_SIMP_TAC (srw_ss()) [read_mem1_def, similar_def, seqT_def, writeT_def, readT_def]
-                 THEN Cases_on `access_violation (s2 with accesses updated_by CONS (MEM_READ addr))` 
+                 THEN Cases_on `access_violation (s2 with accesses updated_by CONS (MEM_READ addr))`
                  THEN FULL_SIMP_TAC (srw_ss()) [],
               FULL_SIMP_TAC (srw_ss()) [read_mem1_def, similar_def, seqT_def, writeT_def, readT_def]
-                 THEN Cases_on `access_violation (s1 with accesses updated_by CONS (MEM_READ addr))` 
+                 THEN Cases_on `access_violation (s1 with accesses updated_by CONS (MEM_READ addr))`
                  THEN FULL_SIMP_TAC (srw_ss()) [],
               FULL_SIMP_TAC (srw_ss()) [read_mem1_def, similar_def, seqT_def, writeT_def, readT_def]
-                 THEN Cases_on `access_violation (s1 with accesses updated_by CONS (MEM_READ addr))` 
+                 THEN Cases_on `access_violation (s1 with accesses updated_by CONS (MEM_READ addr))`
                  THEN FULL_SIMP_TAC (srw_ss()) []]);
 
 
@@ -592,7 +592,7 @@ val write_mem1_ut_thm = store_thm (
        THEN Cases_on `g=guest1`
        THEN Cases_on `g=guest2`
        THEN ASSUME_TAC you_and_me_thm
-       THEN FULL_SIMP_TAC (srw_ss()) [] 
+       THEN FULL_SIMP_TAC (srw_ss()) []
        THEN FIRST_PROVE
             [ASSUME_TAC (SPECL [``s:arm_state``, ``s with accesses updated_by CONS (MEM_WRITE addr data)``] trivially_untouched_mmu_setup_lem)
                 THEN FULL_SIMP_TAC (srw_ss()) []
@@ -606,7 +606,7 @@ val write_mem1_ut_thm = store_thm (
                 THEN CASE_TAC
                 THEN RW_TAC (srw_ss()) [untouched_def, LET_DEF]
                 THEN (RW_TAC (srw_ss()) []
-                      THEN EVAL_TAC 
+                      THEN EVAL_TAC
                       THEN RW_TAC (srw_ss()) [inequal_by_inequalities])]);
 
 
@@ -699,7 +699,7 @@ val write_mem_pmc_thm = store_thm(
                  THEN IMP_RES_TAC forT_preserves_user_relation_thm
                  THEN (REPEAT (PAT_ASSUM ``!l h. X`` (fn th => ASSUME_TAC (SPECL [``0:num``, ``(LENGTH (value:word8 list) - 1):num``] th))))
                  THEN (REPEAT (PAT_ASSUM ``!x. X`` (fn th => IMP_RES_TAC th)))
-                 THEN (REPEAT (PAT_ASSUM ``~X`` (fn th => IMP_RES_TAC th)))        
+                 THEN (REPEAT (PAT_ASSUM ``~X`` (fn th => IMP_RES_TAC th)))
                  THEN IMP_RES_TAC seqT_preserves_relation_uu_thm]);
 
 
@@ -733,7 +733,7 @@ val branch_to_thm = save_thm("branch_to_thm", MATCH_MP extras_lem branch_to_empt
 val write_monitor_empty_thm = store_thm(
     "write_monitor_empty_thm",
     ``!u. preserve_relation_mmu (write_monitor <|proc:=0|> vl) (assert_mode u) (assert_mode u) empty_unt empty_sim``,
-    RW_TAC (srw_ss()) [write_monitor_def, writeT_def, preserve_relation_mmu_def, untouched_def, assert_mode_def, ARM_MODE_def, ARM_READ_CPSR_def, similar_def, equal_user_register_def, empty_unt_def, empty_sim_def] 
+    RW_TAC (srw_ss()) [write_monitor_def, writeT_def, preserve_relation_mmu_def, untouched_def, assert_mode_def, ARM_MODE_def, ARM_READ_CPSR_def, similar_def, equal_user_register_def, empty_unt_def, empty_sim_def]
       THEN FULL_SIMP_TAC (srw_ss()) []
       THEN ASSUME_TAC (SPECL [``s1:arm_state``, ``s1 with monitors := (vl:ExclusiveMonitors)``, ``g:word32``] trivially_untouched_av_lem)
       THEN ASSUME_TAC (SPECL [``s2:arm_state``, ``s2 with monitors := (vl:ExclusiveMonitors)``, ``g:word32``] trivially_untouched_av_lem)
@@ -746,7 +746,7 @@ val write_monitor_thm = save_thm("write_monitor_thm", MATCH_MP extras_lem write_
 val clear_event_register_empty_thm = store_thm(
     "clear_event_register_empty_thm",
     ``!u. preserve_relation_mmu (clear_event_register <|proc:=0|>) (assert_mode u) (assert_mode u) empty_unt empty_sim``,
-    RW_TAC (srw_ss()) [clear_event_register_def, writeT_def, preserve_relation_mmu_def, untouched_def, assert_mode_def, ARM_MODE_def, ARM_READ_CPSR_def, similar_def, equal_user_register_def, empty_unt_def, empty_sim_def] 
+    RW_TAC (srw_ss()) [clear_event_register_def, writeT_def, preserve_relation_mmu_def, untouched_def, assert_mode_def, ARM_MODE_def, ARM_READ_CPSR_def, similar_def, equal_user_register_def, empty_unt_def, empty_sim_def]
       THEN FULL_SIMP_TAC (srw_ss()) []
       THEN ASSUME_TAC (SPECL [``s1:arm_state``, ``s1 with event_register updated_by (0=+ F)``, ``g:word32``] trivially_untouched_av_lem)
       THEN ASSUME_TAC (SPECL [``s2:arm_state``, ``s2 with event_register updated_by (0=+ F)``, ``g:word32``] trivially_untouched_av_lem)
@@ -760,7 +760,7 @@ val clear_event_register_thm = save_thm("clear_event_register_thm", MATCH_MP ext
 val wait_for_interrupt_empty_thm = store_thm(
     "wait_for_interrupt_empty_thm",
     ``!u. preserve_relation_mmu (wait_for_interrupt <|proc:=0|>) (assert_mode u) (assert_mode u) empty_unt empty_sim``,
-    RW_TAC (srw_ss()) [wait_for_interrupt_def, writeT_def, preserve_relation_mmu_def, untouched_def, assert_mode_def, ARM_MODE_def, ARM_READ_CPSR_def, similar_def, equal_user_register_def, empty_unt_def, empty_sim_def] 
+    RW_TAC (srw_ss()) [wait_for_interrupt_def, writeT_def, preserve_relation_mmu_def, untouched_def, assert_mode_def, ARM_MODE_def, ARM_READ_CPSR_def, similar_def, equal_user_register_def, empty_unt_def, empty_sim_def]
       THEN FULL_SIMP_TAC (srw_ss()) []
       THEN ASSUME_TAC (SPECL [``s1:arm_state``, ``s1 with interrupt_wait updated_by (0=+ T)``, ``g:word32``] trivially_untouched_av_lem)
       THEN ASSUME_TAC (SPECL [``s2:arm_state``, ``s2 with interrupt_wait updated_by (0=+ T)``, ``g:word32``] trivially_untouched_av_lem)
@@ -775,7 +775,7 @@ val wait_for_interrupt_thm = save_thm("wait_for_interrupt_thm", MATCH_MP extras_
 val send_event_empty_thm = store_thm(
     "send_event_empty_thm",
     ``!u. preserve_relation_mmu (send_event <|proc:=0|>) (assert_mode u) (assert_mode u) empty_unt empty_sim``,
-    RW_TAC (srw_ss()) [send_event_def, writeT_def, preserve_relation_mmu_def, untouched_def, assert_mode_def, ARM_MODE_def, ARM_READ_CPSR_def, similar_def, equal_user_register_def, empty_unt_def, empty_sim_def] 
+    RW_TAC (srw_ss()) [send_event_def, writeT_def, preserve_relation_mmu_def, untouched_def, assert_mode_def, ARM_MODE_def, ARM_READ_CPSR_def, similar_def, equal_user_register_def, empty_unt_def, empty_sim_def]
       THEN FULL_SIMP_TAC (srw_ss()) []
       THEN ASSUME_TAC (SPECL [``s1:arm_state``, ``s1 with event_register := K T``, ``g:word32``] trivially_untouched_av_lem)
       THEN ASSUME_TAC (SPECL [``s2:arm_state``, ``s2 with event_register := K T``, ``g:word32``] trivially_untouched_av_lem)
@@ -859,10 +859,10 @@ val little_mode_mix_upgrade = store_thm(
     "little_mode_mix_upgrade",
     ``!A inv1 uf uy.
       (   preserve_relation_mmu (A) inv1 (assert_mode 16w)   uf uy
-       \/ preserve_relation_mmu (A) inv1 (comb_mode 16w 27w) uf uy 	
+       \/ preserve_relation_mmu (A) inv1 (comb_mode 16w 27w) uf uy
        \/ preserve_relation_mmu (A) inv1 (comb_mode 16w 23w) uf uy
        \/ preserve_relation_mmu (A) inv1 (comb_mode 16w 17w) uf uy
-       \/ preserve_relation_mmu (A) inv1 (comb_mode 16w 18w) uf uy)	
+       \/ preserve_relation_mmu (A) inv1 (comb_mode 16w 18w) uf uy)
        ==>
           preserve_relation_mmu (A) inv1 little_mode_mix uf uy``,
     RW_TAC (srw_ss()) [preserve_relation_mmu_def, assert_mode_def, comb_mode_def, little_mode_mix_def]

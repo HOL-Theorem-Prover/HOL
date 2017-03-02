@@ -7,11 +7,13 @@ sig
    val QCONV                 : conv -> conv
    val REWR_CONV             : thm -> conv
    val HO_REWR_CONV          : thm -> conv
+   val REWR_CONV_A           : thm -> conv
    val LAND_CONV             : conv -> conv
    val RAND_CONV             : conv -> conv
    val RATOR_CONV            : conv -> conv
    val ABS_CONV              : conv -> conv
    val COMB_CONV             : conv -> conv
+   val COMB2_CONV            : conv * conv -> conv
    val FORK_CONV             : conv * conv -> conv
    val BINOP_CONV            : conv -> conv
    val EVERY_DISJ_CONV       : conv -> conv
@@ -107,6 +109,8 @@ sig
    val AC_CONV               : thm * thm -> conv
    val GSYM                  : thm -> thm
    val RENAME_VARS_CONV      : string list -> conv
+   val PAT_CONV              : term -> conv -> conv
    val PRINT_CONV            : conv
    val MAP_THM               : conv -> thm -> thm
+   val PATH_CONV             : string -> conv -> conv
 end

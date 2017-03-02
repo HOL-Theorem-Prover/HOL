@@ -8,11 +8,11 @@ All theory elements matching a given term.
 \DESCRIBE
 An invocation {matcher pm [thy1,...,thyn] M} collects all elements
 of the theory segments {thy1},...,{thyn} that have a subterm {N} such
-that {pm M} does not fail (raise an exception) when applied to {N}. 
-Thus {matcher} potentially traverses all subterms of all theorems in 
+that {pm M} does not fail (raise an exception) when applied to {N}.
+Thus {matcher} potentially traverses all subterms of all theorems in
 all the listed theories in its search for `matches'.
 
-If the list of theory segments is empty, then all currently loaded 
+If the list of theory segments is empty, then all currently loaded
 segments are examined. The string {"-"} may be used to designate
 the current theory segment.
 
@@ -60,5 +60,5 @@ Never fails, but may return an empty list.
 Usually, {pm} will be a pattern-matcher, but it need not be.
 
 \SEEALSO
-DB.match, DB.apropos, DB.matchp, DB.find.
+DB.match, DB.apropos, DB.matchp, DB.find, holyHammer.hh.
 \ENDDOC

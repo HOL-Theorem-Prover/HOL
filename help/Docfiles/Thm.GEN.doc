@@ -36,7 +36,7 @@ the derivation of the theorem {x=T |- !x. x=T}, which is clearly invalid.
    - try (GEN (Term `x:bool`)) t;
    Exception raised at Thm.GEN:
    variable occurs free in hypotheses
-   ! Uncaught exception: 
+   ! Uncaught exception:
    ! HOL_ERR
 }
 

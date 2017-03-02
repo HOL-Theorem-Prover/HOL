@@ -23,4 +23,13 @@ sig
   val derive_nonschematic_inductive_relations : term -> thm
   val prove_monotonicity_hyps : monoset -> thm -> thm
 
-end;
+  (* tools *)
+  val variants         : term list -> term list -> term list
+  val HALF_BETA_EXPAND : term list -> thm -> thm
+  val make_definitions : string -> thm -> thm
+  val canonicalize_clauses : term list -> thm
+  val unschematize_clauses : term list -> term list * term list
+  val check_definition     : term list -> locn.locn list -> term -> term
+  val generalize_schematic_variables :  term list -> thm -> thm
+
+end

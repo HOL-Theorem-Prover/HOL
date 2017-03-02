@@ -12,7 +12,7 @@ pair
 Splits a goal by eliminating one outermost connective.
 
 \DESCRIBE
-Given a goal {(A,t)}, {PSTRIP_TAC} removes one outermost occurrence of one of 
+Given a goal {(A,t)}, {PSTRIP_TAC} removes one outermost occurrence of one of
 the connectives {!}, {==>}, {~} or {/\} from the conclusion of the goal {t}.
 If {t} is a universally quantified term, then {STRIP_TAC} strips off the
 quantifier. Note that {PSTRIP_TAC} will strip off paired quantifications.

@@ -8,7 +8,7 @@ TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 all: $(TARGETS) selftest.exe
 .PHONY: all
 
-selftest.exe : selftest.uo numSimps.uo
+selftest.exe : selftest.uo numSimps.uo Gen_arith.uo Arith.uo
 	HOLMOSMLC -o $@ $<
 
 GenRelNorm.uo: GenRelNorm.sml $(BOOLLIB)

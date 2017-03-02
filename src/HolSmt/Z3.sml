@@ -44,8 +44,33 @@ structure Z3 = struct
       " -smt2 -file:"
       (Lib.K is_sat_file)
 
+  fun parse_Z3_version fname =
+    let
+      val instrm = TextIO.openIn fname
+      val s = TextIO.inputAll instrm before TextIO.closeIn instrm
+    in
+      List.last (String.tokens Char.isSpace s)
+    end
+
+  val Z3version =
+      case OS.Process.getEnv "HOL4_Z3_EXECUTABLE" of
+          NONE => "0"
+        | SOME p =>
+          let
+            val outfile = OS.FileSys.tmpName()
+            val _ = OS.Process.system (p ^ " -version > " ^ outfile)
+          in
+            parse_Z3_version outfile
+          end
+
+  val doproofs =
+      if String.sub(Z3version, 0) = #"2" then true
+      else if String.sub(Z3version, 0) = #"0" then false
+      else
+        (Feedback.HOL_MESG ("Can't replay proofs with Z3 v"^Z3version); false)
+
   (* Z3 (Linux/Unix), SMT-LIB file format, with proofs *)
-  val Z3_SMT_Prover =
+  val Z3_SMT_Prover = if not doproofs then Z3_SMT_Oracle else
     mk_Z3_fun "Z3_SMT_Prover"
       (fn goal =>
         let

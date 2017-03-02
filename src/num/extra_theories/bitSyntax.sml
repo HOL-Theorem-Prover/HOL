@@ -3,17 +3,10 @@ struct
 
 open Abbrev HolKernel bitTheory
 
-val monop =
-   HolKernel.syntax_fns "bit" 1 HolKernel.dest_monop (Lib.curry Term.mk_comb)
-
-val binop =
-   HolKernel.syntax_fns "bit" 2 HolKernel.dest_binop HolKernel.mk_binop
-
-val triop =
-   HolKernel.syntax_fns "bit" 3 HolKernel.dest_triop HolKernel.mk_triop
-
-val quadop =
-   HolKernel.syntax_fns "bit" 4 HolKernel.dest_quadop HolKernel.mk_quadop
+val monop = HolKernel.syntax_fns1 "bit"
+val binop = HolKernel.syntax_fns2 "bit"
+val triop = HolKernel.syntax_fns3 "bit"
+val quadop = HolKernel.syntax_fns4 "bit"
 
 val (log2_tm,mk_log2,dest_log2,is_log2) = monop "LOG2"
 val (bit_tm,mk_bit,dest_bit,is_bit)     = binop "BIT"

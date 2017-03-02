@@ -25,4 +25,4 @@ val   rule_induct :
          Thm.thm ->            (* induction theorem (strong or regular) *)
 	 Abbrev.tactic         (* sets up induction *)
 
-end;
+end

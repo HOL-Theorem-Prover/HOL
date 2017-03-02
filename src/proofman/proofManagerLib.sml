@@ -84,12 +84,28 @@ fun expand tac =
     top_proof())
   handle e => Raise e;
 
+fun expand_listf ltac =
+   (say "OK..\n";
+    the_proofs := Manager.hd_opr (Manager.expand_listf ltac) (proofs());
+    top_proof())
+  handle e => Raise e;
+
+fun expand_list ltac =
+   (say "OK..\n";
+    the_proofs := Manager.hd_opr (Manager.expand_list ltac) (proofs());
+    top_proof())
+  handle e => Raise e;
+
 fun expandv (s,tac) =
    (say "OK..\n";
     the_proofs := Manager.hd_opr (Manager.expandv (s,tac)) (proofs());
     top_proof())
   handle e => Raise e;
 
+val elt = expand_list ;
+fun eall tac = expand_list (Tactical.ALLGOALS tac) ;
+fun eta tac = expand_list (Tactical.TRYALL tac) ;
+fun enth tac i = expand_list (Tactical.NTH_GOAL tac i) ;
 val e = expand;
 val et = expandv;
 
@@ -104,6 +120,10 @@ fun p () = Manager.hd_proj I (proofs())
           raise mk_HOL_ERR "proofManagerLib" "p" "")
 
 val status = proofs;
+
+fun flatn i =
+  (the_proofs := Manager.hd_opr (Manager.flatn i) (proofs());
+   top_proof());
 
 fun rotate i =
   (the_proofs := Manager.hd_opr (Manager.rotate i) (proofs());
