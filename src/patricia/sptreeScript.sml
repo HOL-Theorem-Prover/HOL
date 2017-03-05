@@ -68,6 +68,8 @@ val insert_def = tzDefine "insert" `
      else BS t1 a' (insert ((k - 1) DIV 2) a t2))
 ` (WF_REL_TAC `measure FST` >> simp[DIV_LT_X]);
 
+val insert_ind = theorem "insert_ind";
+
 val mk_BN_def = Define `
   (mk_BN LN LN = LN) /\
   (mk_BN t1 t2 = BN t1 t2)`;
@@ -1185,21 +1187,36 @@ val map_insert = store_thm("map_insert",
     DECIDE_TAC)>>
   fs[map_def])
 
+val insert_insert = store_thm("insert_insert",
+  ``!x1 x2 v1 v2 t.
+      insert x1 v1 (insert x2 v2 t) =
+      if x1 = x2 then insert x1 v1 t else insert x2 v2 (insert x1 v1 t)``,
+  rpt strip_tac
+  \\ qspec_tac (`x1`,`x1`)
+  \\ qspec_tac (`v1`,`v1`)
+  \\ qspec_tac (`t`,`t`)
+  \\ qspec_tac (`v2`,`v2`)
+  \\ qspec_tac (`x2`,`x2`)
+  \\ recInduct insert_ind \\ rpt strip_tac \\
+    (Cases_on `k = 0` \\ fs [] THEN1
+     (once_rewrite_tac [insert_def] \\ fs [] \\ rw []
+      THEN1 (once_rewrite_tac [insert_def] \\ fs [])
+      \\ once_rewrite_tac [insert_def] \\ fs [] \\ rw [])
+    \\ once_rewrite_tac [insert_def] \\ fs [] \\ rw []
+    \\ simp [Once insert_def]
+    \\ once_rewrite_tac [EQ_SYM_EQ]
+    \\ simp [Once insert_def]
+    \\ Cases_on `x1` \\ fs [ADD1]
+    \\ Cases_on `k` \\ fs [ADD1]
+    \\ rw [] \\ fs [EVEN_ADD]
+    \\ fs [GSYM ODD_EVEN]
+    \\ fs [EVEN_EXISTS,ODD_EXISTS] \\ rpt BasicProvers.var_eq_tac
+    \\ fs [ADD1,DIV_MULT|>ONCE_REWRITE_RULE[MULT_COMM],
+                MULT_DIV|>ONCE_REWRITE_RULE[MULT_COMM]]));
+
 val insert_shadow = store_thm("insert_shadow",
-  ``!t a b c.
-  insert a b (insert a c t) = insert a b t``,
-  completeInduct_on`a`>>
-  Induct>>
-  simp[Once insert_def]>>
-  rw[]>>
-  simp[Once insert_def]>>
-  simp[Once insert_def,SimpRHS]>>
-  `(a-1) DIV 2 < a` by
-    (`0 < (2:num)` by fs[] >>
-    imp_res_tac DIV_LT_X>>
-    first_x_assum match_mp_tac>>
-    DECIDE_TAC)>>
-  metis_tac[])
+  ``!t a b c. insert a b (insert a c t) = insert a b t``,
+  once_rewrite_tac [insert_insert] \\ simp []);
 
 (* the sub-map relation, a partial order *)
 
