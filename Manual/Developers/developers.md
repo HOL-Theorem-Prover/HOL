@@ -8,7 +8,7 @@ numbersections: yes
 
 This manual attempts to provide documentation for people wishing to develop HOL4, a process that will likely involve frequent re-compilations or rebuilds of the core sources.
 
-As *per* [the standard installation instructions](http://hol-theorem-prover.org/InstallKananaskis.html), once one has an SML installation, there are two stages to the process of building HOL4:
+As *per* [the standard installation instructions](http://hol-theorem-prover.org/#get), once one has an SML installation, there are two stages to the process of building HOL4:
 
 1.  The first step is the *configuration* of the system (see [Configuration](#configuration) below).
     This is achieved with the command
