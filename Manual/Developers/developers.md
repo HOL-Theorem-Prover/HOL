@@ -34,6 +34,8 @@ As *per* [the standard installation instructions](http://hol-theorem-prover.org/
            Hol built successfully.
 
     Repeated calls to `build` should complete quickly: theorem-proving work will not be redone unnecessarily.
+    The building of the theory graph can be slow however, and this *does* happen with every invocation of `build` by default.
+    To avoid this use `build`’s `--nograph` option.
 
 # Configuration
 
