@@ -5,20 +5,13 @@ Get the HOL sources from SourceForge at http://hol.sourceforge.net
 
 You will also need either:
 
-the Moscow ML compiler (version 2.01) from
-
-     http://www.itu.dk/~sestoft/mosml.html
-
-or Poly/ML, from
+Poly/ML, from
 
      http://www.polyml.org
 
-Windows users can also build the system by running a self-installing
-executable (available from the above http://hol.sourceforge.net).  To
-do this,
+or, the Moscow ML compiler (version 2.01) from
 
-   1.  Ensure that Moscow ML is installed first
-   2.  Run the executable and follow the on-screen instructions.
+     http://www.itu.dk/~sestoft/mosml.html
 
 The instructions that follow are how to build from sources, on any of
 the supported operating systems.
@@ -27,7 +20,22 @@ the supported operating systems.
 Building the HOL system
 -----------------------
 
-A. [Moscow ML:] First, install Moscow ML. This is usually
+A. [Poly/ML:] Install the latest version of Poly/ML.  Note that you
+   will not be able to use the HolBddLib example with this
+   implementation.
+
+   You must ensure that your dynamic library loading picks up
+   libpolyml.so and libpolymain.so.  If these files are in /usr/lib,
+   you will not have to change anything, but other locations may
+   require further system configuration (typically done by setting the
+   LD_LIBRARY_PATH environment variable).  A sample LD_LIBRARY_PATH
+   initialisation command (in a file such as ~/.bashrc) might be
+
+       declare -x LD_LIBRARY_PATH=/usr/local/lib:$HOME/lib
+
+   Do not use the --with-portable option.
+
+   [Moscow ML:] First, install Moscow ML. This is usually
    straightforward. The directory where it lives will be called
    <mosml-dir> in the following.
 
@@ -52,21 +60,6 @@ A. [Moscow ML:] First, install Moscow ML. This is usually
      set for you by the latest self-installing executable available
      from the Moscow ML home-page.
 
-   [Poly/ML:] Install the latest version of Poly/ML.  Note that you
-   will not be able to use the HolBddLib example with this
-   implementation.
-
-   You must ensure that your dynamic library loading picks up
-   libpolyml.so and libpolymain.so.  If these files are in /usr/lib,
-   you will not have to change anything, but other locations may
-   require further system configuration (typically done by setting the
-   LD_LIBRARY_PATH environment variable).  A sample LD_LIBRARY_PATH
-   initialisation command (in a file such as ~/.bashrc) might be
-
-       declare -x LD_LIBRARY_PATH=/usr/local/lib:$HOME/lib
-
-   Do not use the --with-portable option.
-
 B. Unpack HOL with the commands
 
        gunzip release.tar.gz; tar xf release.tar
@@ -79,8 +72,8 @@ B. Unpack HOL with the commands
 
 C. In the HOL directory (<hol-dir>), type
 
-       [Moscow ML:] mosml < tools/smart-configure.sml
        [Poly/ML:]   poly < tools/smart-configure.sml
+       [Moscow ML:] mosml < tools/smart-configure.sml
 
    This should guess some configuration options, and then build some
    of HOL's support tools.  If this appears to work correctly, proceed
@@ -89,8 +82,8 @@ C. In the HOL directory (<hol-dir>), type
    If smart-configure guesses the options incorrectly, then you will
    need to provide them yourself. Do this by creating a file called
 
-       [Moscow ML:] config-override in <hol-dir>
        [Poly/ML:]   poly-includes.ML in <hol-dir>/tools-poly
+       [Moscow ML:] config-override in <hol-dir>
 
    In this file provide ML bindings for as many of the values that
    were incorrectly guessed by smart-configure.sml.  For example, if
@@ -105,11 +98,14 @@ C. In the HOL directory (<hol-dir>), type
    path to the poly executable.
 
    The valid values for OS are "linux", "unix", "solaris", "macosx"
-   and "winNT".  If you are on a unix operating system that is not
+   and "winNT". If you are on a unix operating system that is not
    Linux or Solaris, it is OK to just put "unix"; however, this will
    imply that the robdd library will not be usable (it currently only
-   builds on linux and solaris).  "winNT" stands in for all versions
-   of "Windows NT", "Windows 2000", "Windows XP" and "Windows Vista".
+   builds on linux and solaris). "winNT" stands in for all versions of
+   "Windows NT", "Windows 2000", "Windows XP" and "Windows Vista", and
+   only works for Moscow ML on Windows. If you are building with
+   Poly/ML on Windows, (via Cygwin or the Linux sub-system), then
+   don’t use "winNT" value.
 
    It's possible that in order to get the muddy library to build, you
    will need to change the binding for GNUMAKE, which is made in the
@@ -124,20 +120,14 @@ C. In the HOL directory (<hol-dir>), type
 
 D. Now perform the following shell command:
 
-       [Moscow ML:] <hol-dir>/bin/build
-       [Poly/ML:]   <hol-dir>/bin/build
+       <hol-dir>/bin/build
 
    This builds the system. In case of difficulty, the configuration
    can be gone through by hand, by starting the ML interpreter and
-   stepping through [Moscow ML:] tools/configure.sml, [Poly/ML:]
-   tools-poly/configure.sml by hand.  Similarly, the execution of
-   build.sml can also be stepped through in the interpreter. This can
-   be somewhat time-consuming, but will help pinpoint any problems.
-
-   On Windows, the system ends up creating two copies of every object
-   file.  To save space there, you can use the -small option, but this
-   has the disadvantage of forcing any subsequent builds to rebuild
-   everything, regardless of where changes might have occurred.
+   stepping through [Poly/ML:] tools-poly/configure.sml [Moscow ML:]
+   tools/configure.sml, by hand. Similarly, the execution of build.sml
+   can also be stepped through in the interpreter. This can be
+   somewhat time-consuming, but will help pinpoint any problems.
 
 E. If bin/build completes (it takes a while!), successfully, you are
    done. From <hol-dir> you can now access
@@ -152,8 +142,8 @@ E. If bin/build completes (it takes a while!), successfully, you are
        src/                 * System sources
        examples/            * Examples of the use of the system
 
-   On Windows the hol scripts additionally include a .bat extension,
-   and Holmake has a .exe extension.
+   On Windows under Moscow ML, the hol scripts additionally include a
+   .bat extension, and Holmake has a .exe extension.
 
    At this point, the system is build in <hol-dir> and cannot easily
    be moved to other locations. In other words, you should unpack HOL
@@ -187,12 +177,12 @@ Dealing with failure
 
 * Alternatively, use the github issues web-page at
 
-      http://github.com/mn200/HOL/issues
+      http://github.com/HOL-Theorem-Prover/HOL/issues
 
   and submit a description of the problem.
 
 * If a build attempt fails for some reason, you should attempt to invoke
 
-      bin/build -cleanAll
+      bin/build cleanAll
 
   from <hol-dir> before a new build attempt.
