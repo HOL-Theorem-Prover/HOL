@@ -250,16 +250,26 @@ val wfG_rePEG = Q.store_thm("wfG_rePEG",
   \\ CONV_TAC(LAND_CONV EVAL) \\ rw[]
   \\ rpt(rw[Once wfpeg_cases,wfpeg_Top,wfpeg_Alt,wfpeg_Concat,wfpeg_Star,wfpeg_Atom]));
 
+val add_loc_def = Define`
+  add_loc c = (c,(locn 0 0 0,locn 0 0 0))`;
+
+val parse_regexp_def = Define`
+  parse_regexp s =
+    case peg_exec rePEG rePEG.start (MAP add_loc s) [] done failed
+    of Result (SOME ([],SOME r)) => SOME r | _ => NONE`;
 
 (*
 val _ = computeLib.add_persistent_funs ["pegexec.peg_nt_thm"]
 
-val r = EVAL ``peg_exec rePEG rePEG.start "\\d" [] done failed``
-val r = EVAL ``peg_exec rePEG rePEG.start "\\(" [] done failed``
-val r = EVAL ``peg_exec rePEG rePEG.start ".\\d" [] done failed``
-val r = EVAL ``peg_exec rePEG rePEG.start "(ab)" [] done failed``
-val r = EVAL ``peg_exec rePEG rePEG.start "(ab)*ab*" [] done failed``
-val r = EVAL ``peg_exec rePEG rePEG.start "a|b*c|d" [] done failed``
+val r = EVAL ``parse_regexp "\\d"``
+val r = EVAL ``parse_regexp "\\("``
+val r = EVAL ``parse_regexp ".\\d"``
+val r = EVAL ``parse_regexp "(ab)"``
+val r = EVAL ``parse_regexp "(ab"``
+val r = EVAL ``parse_regexp "(ab)*ab*"``
+val r = EVAL ``parse_regexp "a|b*c|d"``
+val r = EVAL ``parse_regexp "a|[aoeu]"``
+val r = EVAL ``parse_regexp "a|[aoe]u"``
 *)
 
 val _ = export_theory();
