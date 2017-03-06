@@ -30,7 +30,7 @@ val float_lt = Q.store_thm ("float_lt",
   rw [float_less_than_def, float_compare_def, float_is_finite_def,
       float_value_def]
   \\ rw []
-  )
+  );
 
 val float_le = Q.store_thm ("float_le",
   `!x y. float_is_finite x /\ float_is_finite y ==>
@@ -39,7 +39,7 @@ val float_le = Q.store_thm ("float_le",
       float_value_def]
   \\ rw [realTheory.REAL_LT_IMP_LE,
          realLib.REAL_ARITH ``~(a < b : real) /\ a <> b ==> ~(a <= b)``]
-  )
+  );
 
 val float_gt = Q.store_thm ("float_gt",
   `!x y. float_is_finite x /\ float_is_finite y ==>
@@ -49,7 +49,7 @@ val float_gt = Q.store_thm ("float_gt",
   \\ rw [realLib.REAL_ARITH ``a < b : real ==> ~(a > b)``,
          realLib.REAL_ARITH ``~(a < b : real) /\ a <> b ==> a > b``,
          realLib.REAL_ARITH ``~(a > a : real)``]
-  )
+  );
 
 val float_ge = Q.store_thm ("float_ge",
   `!x y. float_is_finite x /\ float_is_finite y ==>
@@ -59,7 +59,7 @@ val float_ge = Q.store_thm ("float_ge",
   \\ rw [realLib.REAL_ARITH ``a < b : real ==> ~(a >= b)``,
          realLib.REAL_ARITH ``~(a < b : real) /\ a <> b ==> a >= b``,
          realLib.REAL_ARITH ``a >= a : real``]
-  )
+  );
 
 val float_eq = Q.store_thm ("float_eq",
   `!x y. float_is_finite x /\ float_is_finite y ==>
@@ -67,13 +67,13 @@ val float_eq = Q.store_thm ("float_eq",
   rw [float_equal_def, float_compare_def, float_is_finite_def,
       float_value_def]
   \\ rw [realLib.REAL_ARITH ``a < b : real ==> a <> b``]
-  )
+  );
 
 val float_eq_refl = Q.store_thm ("float_eq_refl",
   `!x. float_equal x x = ~float_is_nan x`,
   rw [float_equal_def, float_is_nan_def, float_compare_def, float_is_finite_def,
       float_value_def]
-  )
+  );
 
 
 (* ------------------------------------------------------------------------
@@ -101,7 +101,7 @@ val is_closest_exits = Q.store_thm("is_closest_exits",
                      abs (float_to_real e - x))` mp_tac
   \\ simp []
   \\ REAL_ARITH_TAC
-  )
+  );
 
 val closest_is_everything = Q.store_thm("closest_is_everything",
   `!p s x. FINITE s ==> s <> EMPTY ==>
@@ -110,17 +110,17 @@ val closest_is_everything = Q.store_thm("closest_is_everything",
   rw [closest_such_def]
   \\ SELECT_ELIM_TAC
   \\ metis_tac [is_closest_exits]
-  )
+  );
 
 val closest_in_set = Q.store_thm("closest_in_set",
   `!p s x. FINITE s ==> s <> EMPTY ==> closest_such p s x IN s`,
   metis_tac [closest_is_everything, is_closest_def]
-  )
+  );
 
 val closest_is_closest = Q.store_thm("closest_is_closest",
   `!p s x. FINITE s ==> s <> EMPTY ==> is_closest s x (closest_such p s x)`,
   metis_tac [closest_is_everything]
-  )
+  );
 
 (* ------------------------------------------------------------------------
 
@@ -129,32 +129,32 @@ val closest_is_closest = Q.store_thm("closest_is_closest",
 val finite_word_cross = Q.prove(
    `FINITE (univ (:word1) CROSS univ (:'t word) CROSS univ (:'w word))`,
    metis_tac [pred_setTheory.FINITE_CROSS, wordsTheory.WORD_FINITE]
-   )
+   );
 
 val inj_float_to_tuple = Q.prove(
   `INJ (\x. ((x.Sign, x.Significand), x.Exponent))
      (univ (:('t, 'w) float))
      (univ (:word1) CROSS univ (:'t word) CROSS univ (:'w word))`,
    rw [pred_setTheory.INJ_DEF, float_component_equality]
-   )
+   );
 
 val float_finite = Q.store_thm("float_finite",
   `FINITE (univ (:('t, 'w) float))`,
   metis_tac [pred_setTheory.FINITE_INJ, inj_float_to_tuple, finite_word_cross]
-  )
+  );
 
 val is_finite_finite = Q.store_thm("is_finite_finite",
   `FINITE {a | float_is_finite a}`,
   metis_tac [pred_setTheory.SUBSET_FINITE, float_finite,
              pred_setTheory.SUBSET_UNIV]
-  )
+  );
 
 val is_finite_nonempty = Q.store_thm("is_finite_nonempty",
   `{a | float_is_finite a} <> EMPTY`,
   rw [pred_setTheory.EXTENSION]
   \\ qexists_tac `float_plus_zero (:'a # 'b)`
   \\ simp [binary_ieeeTheory.zero_properties]
-  )
+  );
 
 val is_finite_closest = Q.store_thm("is_finite_closest",
   `!p x. float_is_finite (closest_such p {a | float_is_finite a} x)`,
@@ -162,7 +162,7 @@ val is_finite_closest = Q.store_thm("is_finite_closest",
   \\ `closest_such p {a | float_is_finite a} x IN {a | float_is_finite a}`
   by metis_tac [closest_in_set, is_finite_finite, is_finite_nonempty]
   \\ fs []
-  )
+  );
 
 (* ------------------------------------------------------------------------
 
@@ -173,7 +173,7 @@ val REAL_ABS_INV = Q.prove(
   gen_tac
   \\ Cases_on `x = 0r`
   \\ simp [REAL_INV_0, REAL_ABS_0, ABS_INV]
-  )
+  );
 
 val REAL_ABS_DIV = Q.prove(
   `!x y. abs (x / y) = abs x / abs y`,
@@ -182,7 +182,7 @@ val REAL_ABS_DIV = Q.prove(
 val REAL_LE_LDIV2 = Q.prove(
   `!x y z. 0r < z ==> (x / z <= y / z <=> x <= y)`,
   simp [REAL_LE_LDIV_EQ, REAL_DIV_RMUL, REAL_POS_NZ]
-  )
+  );
 
 val REAL_POW_LE_1 = Q.prove(
   `!n x. 1r <= x ==> 1 <= x pow n`,
@@ -191,7 +191,7 @@ val REAL_POW_LE_1 = Q.prove(
   \\ Ho_Rewrite.GEN_REWRITE_TAC LAND_CONV [GSYM REAL_MUL_LID]
   \\ match_mp_tac REAL_LE_MUL2
   \\ simp []
-  )
+  );
 
 val REAL_POW_MONO = Q.prove(
   `!m n x. 1r <= x /\ m <= n ==> x pow m <= x pow n`,
@@ -200,7 +200,7 @@ val REAL_POW_MONO = Q.prove(
   \\ Ho_Rewrite.GEN_REWRITE_TAC LAND_CONV [GSYM REAL_MUL_RID]
   \\ metis_tac [REAL_LE_LMUL_IMP, REAL_POW_LE_1, POW_POS, REAL_LE_TRANS,
                 REAL_LE_01]
-  )
+  );
 
 val exponent_le = Q.prove(
   `!e : 'a word. e <> -1w ==> (w2n e <= UINT_MAX (:'a) - 1)`,
@@ -208,7 +208,7 @@ val exponent_le = Q.prove(
     [wordsTheory.WORD_NEG_1, wordsTheory.UINT_MAX_def, wordsTheory.word_T_def]
   \\ Cases
   \\ simp []
-  )
+  );
 
 val float_to_real_finite = Q.store_thm("float_to_real_finite",
   `!x : ('t, 'w) float.
@@ -271,13 +271,13 @@ val float_to_real_finite = Q.store_thm("float_to_real_finite",
   \\ match_mp_tac (realLib.REAL_ARITH ``(x:real) <= 1 ==> (1 + x <= 2)``)
   \\ simp [REAL_LE_LDIV_EQ, REAL_OF_NUM_POW, GSYM wordsTheory.dimword_def,
            wordsTheory.w2n_lt, DECIDE ``a < n ==> a + 1n <= n``]
-  )
+  );
 
 val float_to_real_threshold = Q.store_thm("float_to_real_threshold",
   `!x : ('t, 'w) float.
      float_is_finite x ==> (abs (float_to_real x) < threshold (:'t # 'w))`,
   metis_tac [REAL_LET_TRANS, float_to_real_finite, largest_lt_threshold]
-  )
+  );
 
 (* ------------------------------------------------------------------------
      Lifting up of rounding to nearest
@@ -297,7 +297,7 @@ val bound_at_worst_lemma = Q.prove(
                          pred_setTheory.GSPEC_ETA]
         |> CONJUNCT2)
   \\ simp [pred_setTheory.SPECIFICATION]
-  )
+  );
 
 val error_at_worst_lemma = Q.store_thm("error_at_worst_lemma",
   `!a : ('t, 'w) float x.
@@ -315,14 +315,14 @@ val error_is_zero = Q.store_thm("error_is_zero",
         |> SIMP_RULE (srw_ss())
              [REAL_ABS_0, REAL_ARITH ``abs x <= 0 = (x = 0r)``])
   \\ simp [float_to_real_threshold]
-  )
+  );
 
 (* ------------------------------------------------------------------------ *)
 
 val lem = Q.prove(
   `!a b. 0 < b /\ b < a ==> 1 < a / b : real`,
   simp [realTheory.REAL_LT_RDIV_EQ]
-  )
+  );
 
 val lem2 = Q.prove(
   `!n x. 0r < n /\ n <= n * x ==> 1 <= x`,
@@ -332,7 +332,7 @@ val lem2 = Q.prove(
   \\ fs [realTheory.REAL_NOT_LE,
          GSYM (ONCE_REWRITE_RULE [REAL_MUL_COMM] realTheory.REAL_LT_RDIV_EQ),
          realTheory.REAL_DIV_REFL, realTheory.REAL_POS_NZ]
-  )
+  );
 
 val error_bound_lemma1 = Q.prove(
   `!fracw x.
@@ -365,7 +365,7 @@ val error_bound_lemma1 = Q.prove(
   by imp_res_tac realTheory.REAL_LE_TRANS
   \\ metis_tac [binary_ieeeTheory.zero_lt_twopow, REAL_MUL_COMM, lem2,
                 realTheory.real_lt]
-  )
+  );
 
 (* ------------------------------------------------------------------------ *)
 
@@ -392,7 +392,7 @@ val error_bound_lemma2 = Q.prove(
   >- (qexists_tac `n` \\ fs [])
   \\ qexists_tac `SUC n`
   \\ fs []
-  )
+  );
 
 (* ------------------------------------------------------------------------ *)
 
@@ -411,7 +411,7 @@ val error_bound_lemma3 = Q.prove(
      )
   \\ metis_tac
        [ABS_NEG, REAL_NEG_SUB, REAL_ARITH ``a - (b - c) = (c + a:real) - b``]
-  )
+  );
 
 (* ------------------------------------------------------------------------ *)
 
@@ -423,7 +423,7 @@ val two_pow_over_pre = Q.prove(
           realTheory.REAL_DIV_LMUL_CANCEL
           |> Q.SPECL [`2 pow n`, `2`, `1`]
           |> SIMP_RULE (srw_ss()) []]
-   )
+   );
 
 val error_bound_lemma4 = Q.prove(
   `!x. 1r <= x /\ x < 2 /\ 1 < dimindex (:'w) ==>
@@ -453,7 +453,7 @@ val error_bound_lemma4 = Q.prove(
   \\ rfs [float_to_real_def, GSYM realTheory.REAL_OF_NUM_POW, two_pow_over_pre,
           realTheory.REAL_DIV_REFL, wordsTheory.INT_MAX_def,
           wordsTheory.INT_MIN_LT_DIMWORD, DECIDE ``0 < x ==> x <> 0n``]
-  )
+  );
 
 (* ------------------------------------------------------------------------ *)
 
@@ -482,7 +482,7 @@ val error_bound_lemma5 = Q.prove(
                  REAL_ARITH ``abs (-2 - x) = abs (2 - -x)``,
                  REAL_ARITH ``abs (-1 * y - x) = abs (y - -x)``])
   \\ rfs [DECIDE ``0 < x ==> x <> 0n``, wordsTheory.ZERO_LT_INT_MAX]
-  )
+  );
 
 (* ------------------------------------------------------------------------ *)
 
@@ -495,7 +495,7 @@ val lem = Q.prove(
   rw [realTheory.REAL_INV_1OVER, realTheory.mult_ratr, realTheory.mult_ratl,
       realTheory.REAL_EQ_RDIV_EQ, GSYM realTheory.POW_ADD,
       realTheory.REAL_DIV_REFL]
-  )
+  );
 
 val error_bound_lemma6 = Q.prove(
   `!expw fracw x.
@@ -538,14 +538,14 @@ val error_bound_lemma6 = Q.prove(
          |> GSYM
          |> ONCE_REWRITE_RULE [REAL_MUL_COMM]
          ]
-  )
+  );
 
 (* ------------------------------------------------------------------------ *)
 
 val lem = Q.prove(
   `!n. &(2 * 2 ** n) = 2 * 2 pow n`,
   simp [realTheory.REAL_OF_NUM_POW]
-  )
+  );
 
 val error_bound_lemma7 = Q.prove(
   `!x. 0 <= x /\ x < inv (2 pow (bias (:'w) - 1)) /\ 1 < dimindex (:'w) ==>
@@ -581,7 +581,7 @@ val error_bound_lemma7 = Q.prove(
   \\ simp [Once realTheory.ABS_SUB]
   \\ rfs [realTheory.mult_rat, realTheory.mult_ratl, Once realTheory.div_ratl,
           realTheory.REAL_DIV_RMUL_CANCEL, lem]
-  )
+  );
 
 (* ------------------------------------------------------------------------ *)
 
@@ -610,7 +610,7 @@ val error_bound_lemma8 = Q.prove(
                  DECIDE ``0 < x ==> x <> 0n``, wordsTheory.ZERO_LT_INT_MAX,
                  REAL_ARITH ``abs (y - -x) = abs (-1 * y - x)``])
   \\ rfs [DECIDE ``0 < x ==> x <> 0n``, wordsTheory.ZERO_LT_INT_MAX]
-  )
+  );
 
 (* ------------------------------------------------------------------------ *)
 
@@ -625,7 +625,7 @@ val float_to_real_scale_up = Q.prove(
                                   Significand := f : 't word |>)`,
   simp [float_to_real_def, REAL_POW_ADD, real_div,
         AC REAL_MUL_ASSOC REAL_MUL_COMM]
-  )
+  );
 
 val float_to_real_scale_down = Q.prove(
   `!s e f k.
@@ -648,7 +648,7 @@ val float_to_real_scale_down = Q.prove(
   \\ simp [SIMP_CONV (srw_ss()) [] ``a + b + -b : 'a word``,
            REAL_MUL_ASSOC, realTheory.mult_ratr, REAL_MUL_LINV, POW_NZ,
            REAL_ARITH ``inv a * b * c * a * d = (inv a * a) * b * c * d``]
-  )
+  );
 
 (* ------------------------------------------------------------------------ *)
 
@@ -657,7 +657,7 @@ val two_times_bias_lt = Q.prove(
    simp [wordsTheory.INT_MAX_def, wordsTheory.INT_MAX_def,
          GSYM wordsTheory.dimword_twice_INT_MIN,
          DECIDE ``1n < n ==> 0 < n - 1``]
-  )
+  );
 
 val int_min_bias_plus1 = Q.prove(
   `INT_MIN (:'a) = INT_MAX (:'a) + 1`,
@@ -672,7 +672,7 @@ val lem = Q.prove(
   \\ simp [wordsTheory.UINT_MAX_def, wordsTheory.ZERO_LT_INT_MAX,
            DECIDE ``0n < a ==> 0 < 2 * a``, wordsTheory.dimword_twice_INT_MIN]
   \\ simp [wordsTheory.INT_MAX_def]
-  )
+  );
 
 val lem2 = Q.prove(
   `!a b c d : real. 0 < b /\ 0 <= c /\ a < b * c /\ b <= d ==> a < c * d`,
@@ -688,7 +688,7 @@ val lem2 = Q.prove(
           |> Q.SPECL [`0`, `c`, `0`, `p`]
           |> SIMP_RULE (srw_ss()) []]
   \\ simp [REAL_ARITH ``0 <= c /\ a < b ==> a < b + c : real``]
-  )
+  );
 
 val error_bound_big1 = Q.prove(
   `!x k. 2 pow k <= abs x /\ abs x < 2 pow SUC k /\
@@ -792,7 +792,7 @@ val error_bound_big1 = Q.prove(
                wordsTheory.INT_MAX_LT_DIMWORD, prim_recTheory.LESS_NOT_EQ
                ]
      )
-  )
+  );
 
 val error_bound_big = Q.prove(
   `!k x.
@@ -807,7 +807,7 @@ val suc_bias_lt_dimword = Q.prove(
   `1 < dimindex (:'a) ==> bias (:'a) + 1 < dimword (:'a)`,
   simp [wordsTheory.INT_MAX_def, wordsTheory.dimword_twice_INT_MIN,
         DECIDE ``0n < n ==> (n - 1 + 1 = n)``]
-  )
+  );
 
 val error_bound_small1 = Q.prove(
   `!x k. inv (2 pow SUC k) <= abs x /\ abs x < inv (2 pow k) /\
@@ -876,7 +876,7 @@ val error_bound_small1 = Q.prove(
   by simp [REAL_MUL_ASSOC, REAL_MUL_RINV, REAL_POS_NZ]
   \\ simp [REAL_POW_LT, REAL_SUB_LDISTRIB, REAL_POS_NZ, REAL_INV_MUL]
   \\ NO_STRIP_FULL_SIMP_TAC (srw_ss()) [AC REAL_MUL_ASSOC REAL_MUL_COMM]
-  )
+  );
 
 val REAL_LE_INV2 = Q.prove(
   `!x y. 0 < x /\ x <= y ==> inv y <= inv x`,
@@ -916,7 +916,7 @@ val lem = Q.prove(
   \\ simp [GSYM (CONJUNCT2 pow)]
   \\ match_mp_tac REAL_POW_MONO
   \\ simp []
-  )
+  );
 
 val threshold_gt1 = Q.prove(
   `1 < dimindex (:'w) ==> 1 < threshold (:'t # 'w)`,
@@ -934,7 +934,7 @@ val threshold_gt1 = Q.prove(
   \\ `2n <= n` by simp [Abbr `n`, wordsTheory.INT_MIN_def]
   \\ `0n < m` by simp [Abbr `m`, wordsTheory.INT_MIN_def]
   \\ simp [lem]
-  )
+  );
 
 val error_bound_small = Q.prove(
   `!k x.
@@ -961,7 +961,7 @@ val error_bound_small = Q.prove(
   \\ conj_tac
   >- (match_mp_tac REAL_LE_INV2 \\ simp [REAL_POW_LE_1])
   \\ simp [realTheory.REAL_INV_1OVER, threshold_gt1]
-  )
+  );
 
 (* ------------------------------------------------------------------------ *)
 
@@ -970,7 +970,7 @@ val lem = Q.prove(
   srw_tac [wordsLib.WORD_BIT_EQ_ss] []
   \\ qexists_tac `1`
   \\ simp [wordsTheory.word_index]
-  )
+  );
 
 val error_bound_tiny = Q.prove(
   `!x. abs x < inv (2 pow (bias (:'w) - 1)) /\ 1 < dimindex (:'w) ==>
@@ -1003,7 +1003,7 @@ val error_bound_tiny = Q.prove(
   \\ CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [GSYM (EVAL ``2r pow 0``)]))
   \\ match_mp_tac REAL_POW_MONO
   \\ simp []
-  )
+  );
 
 (* -------------------------------------------------------------------------
    Stronger versions not requiring exact location of the interval.
@@ -1016,7 +1016,7 @@ val lem = Q.prove(
       DECIDE ``1 < n ==> (SUC (n - 2) = n - 1)``,
       realTheory.REAL_DIV_RMUL
       ]
-  )
+  );
 
 val error_bound_norm_strong = Q.prove(
   `!x j.
@@ -1092,7 +1092,7 @@ val error_bound_norm_strong = Q.prove(
          |> Q.SPECL [`2 pow n`, `a`, `1`]
          |> SIMP_RULE (srw_ss()) []
         ]
-  )
+  );
 
 (* -------------------------------------------------------------------------
    "1 + Epsilon" property (relative error bounding).
@@ -1104,7 +1104,7 @@ val bias_imp_dimindex = Q.prove(
   \\ spose_not_then assume_tac
   \\ `dimindex (:'a) = 1` by simp [DECIDE ``0n < n /\ ~(1 < n) ==> (n = 1)``]
   \\ fs []
-  )
+  );
 
 val lem = Q.prove(
   `!n : num. n + SUC (n - 1) <= 2 ** n`,
@@ -1132,12 +1132,12 @@ val THRESHOLD_MUL_LT = Q.prove(
      )
   \\ match_mp_tac REAL_POW_MONO
   \\ simp [lem]
-  )
+  );
 
 val lem = Q.prove(
   `!a b c:real. 0 < b ==> ((a / b) * c = a * (c / b))`,
   rw [realTheory.mult_ratl, realTheory.mult_ratr]
-  )
+  );
 
 val LT_THRESHOLD_LT_POW_INV = Q.prove(
   `!x. 1 < dimindex (:'w) ==> x < threshold (:'t # 'w) ==>
@@ -1152,7 +1152,7 @@ val LT_THRESHOLD_LT_POW_INV = Q.prove(
   \\ match_mp_tac (REAL_ARITH ``0r < a /\ 0r < b ==> a - b < a``)
   \\ `0r < &(2 * dimword (:'t))` by simp [DECIDE ``0n < n ==> 0 < 2 * n``]
   \\ simp [realTheory.REAL_LT_RDIV_0]
-  )
+  );
 
 val real_pos_in_binade = Q.prove(
   `!x. normalizes (:'t # 'w) x /\ 0 <= x ==>
@@ -1199,7 +1199,7 @@ val real_pos_in_binade = Q.prove(
   by metis_tac [REAL_POW_MONO, REAL_ARITH ``1 <= 2r``]
   \\ full_simp_tac std_ss
        [REAL_LT_RDIV, REAL_POW_LT, REAL_ARITH ``0 < 2r``, real_lte]
-  )
+  );
 
 val real_neg_in_binade = Q.prove(
   `!x. normalizes (:'t # 'w) x /\ 0 <= ~x ==>
@@ -1216,7 +1216,7 @@ val real_in_binade = Q.prove(
   \\ Cases_on `0 <= x`
   \\ asm_simp_tac arith_ss [abs, real_neg_in_binade, real_pos_in_binade,
                             REAL_ARITH ``~(0r <= x) ==> 0 <= ~x``]
-  )
+  );
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1232,7 +1232,7 @@ val inv_le = Q.prove(
   `!a b. 0 < a /\ 0 < b ==> (inv a <= inv b = b <= a)`,
   rw [realTheory.REAL_INV_1OVER, realTheory.REAL_LE_LDIV_EQ,
       realTheory.mult_ratl, realTheory.REAL_LE_RDIV_EQ]
-  )
+  );
 
 val relative_bound_lem = Q.prove(
   `!x j. x <> 0 ==>
@@ -1244,13 +1244,13 @@ val relative_bound_lem = Q.prove(
   \\ match_mp_tac realTheory.REAL_LT_MUL
   \\ simp_tac std_ss [realTheory.REAL_POW_LT, realTheory.REAL_LT_INV_EQ,
                       REAL_ARITH ``0 < 2r``]
-  )
+  );
 
 val inv_mul = Q.prove(
   `!a b. a <> 0 /\ b <> 0 ==> (inv (a * inv b) = b / a)`,
   rw [realTheory.REAL_INV_MUL, realTheory.REAL_INV_NZ, realTheory.REAL_INV_INV]
   \\ simp [realTheory.REAL_INV_1OVER, realTheory.mult_ratl]
-  )
+  );
 
 val relative_error_zero = Q.prove(
   `!x. (x = 0) ==>
@@ -1265,7 +1265,7 @@ val relative_error_zero = Q.prove(
   \\ match_mp_tac error_is_zero
   \\ qexists_tac `float_plus_zero (:'t # 'w)`
   \\ simp [binary_ieeeTheory.zero_to_real, binary_ieeeTheory.zero_properties]
-  )
+  );
 
 val relative_error = Q.store_thm ("relative_error",
   `!x. normalizes (:'t # 'w) x ==>
@@ -1319,7 +1319,7 @@ val relative_error = Q.store_thm ("relative_error",
             REAL_ARITH ``x * (float_to_real qq * inv x) =
                          (x * inv x) * float_to_real qq``]
      )
-  )
+  );
 
 (* -------------------------------------------------------------------------
    Ensure that the result is actually finite.
@@ -1331,7 +1331,7 @@ val float_round_finite = Q.store_thm ("float_round_finite",
   rw [float_round_def, round_def, binary_ieeeTheory.zero_properties,
       REAL_ARITH ``abs x < y = ~(x <= ~y) /\ ~(x >= y)``,
       REWRITE_RULE [pred_setTheory.GSPEC_ETA] is_finite_closest]
-  )
+  );
 
 val float_value_finite = Q.prove(
   `!a. float_is_finite a ==> (float_value a = Float (float_to_real a))`,
@@ -1340,7 +1340,7 @@ val float_value_finite = Q.prove(
   \\ `float s e f = <| Sign := s; Exponent := e; Significand := f |>`
   by simp [float_component_equality]
   \\ simp [binary_ieeeTheory.float_tests, float_value_def]
-  )
+  );
 
 (* -------------------------------------------------------------------------
    Lifting of arithmetic operations.
@@ -1375,7 +1375,7 @@ val float_sub = Q.store_thm ("float_sub",
      float_to_real a - float_to_real b +
      error (:'t # 'w) (float_to_real a - float_to_real b))`,
   lift_tac
-  )
+  );
 
 val float_mul = Q.store_thm ("float_mul",
   `!a b : ('t, 'w) float.
@@ -1414,7 +1414,7 @@ val float_div_finite = save_thm ("float_div_finite",
   |> MATCH_MP (DECIDE ``(a /\ b /\ c /\ d ==> e /\ f) ==>
                         (a /\ b /\ c /\ d ==> e)``)
   |> Q.GENL [`b`, `a`]
-  )
+  );
 
 (*-----------------------*)
 
@@ -1442,7 +1442,7 @@ val float_add_relative = Q.store_thm ("float_add_relative",
           (float_to_real (float_add roundTiesToEven a b) =
            (float_to_real a + float_to_real b) * (1 + e))`,
   relative_tac
-  )
+  );
 
 val float_sub_relative = Q.store_thm ("float_sub_relative",
   `!a b : ('t, 'w) float.
@@ -1453,7 +1453,7 @@ val float_sub_relative = Q.store_thm ("float_sub_relative",
           (float_to_real (float_sub roundTiesToEven a b) =
            (float_to_real a - float_to_real b) * (1 + e))`,
   relative_tac
-  )
+  );
 
 val float_mul_relative = Q.store_thm ("float_mul_relative",
   `!a b : ('t, 'w) float.
@@ -1464,7 +1464,7 @@ val float_mul_relative = Q.store_thm ("float_mul_relative",
           (float_to_real (float_mul roundTiesToEven a b) =
            (float_to_real a * float_to_real b) * (1 + e))`,
   relative_tac
-  )
+  );
 
 val float_div_relative = Q.store_thm ("float_div_relative",
   `!a b : ('t, 'w) float.
@@ -1475,7 +1475,7 @@ val float_div_relative = Q.store_thm ("float_div_relative",
           (float_to_real (float_div roundTiesToEven a b) =
            (float_to_real a / float_to_real b) * (1 + e))`,
   relative_tac
-  )
+  );
 
 (* ------------------------------------------------------------------------- *)
 
