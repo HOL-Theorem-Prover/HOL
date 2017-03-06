@@ -84,12 +84,14 @@ val OrM_def = Define‘
 val charset_char_def = Define`
   charset_char c = Chset (Charset (n2w (ORD c)) 0w 0w 0w)`;
 val uncharset_char_def = Define`
-  (uncharset_char (Chset (Charset w _ _ _)) = CHR (w2n w)) ∧
+  (uncharset_char (Chset (Charset w _ _ _)) = CHR (w2n (w && 255w))) ∧
   (uncharset_char _ = CHR 0)`;
 val uncharset_char_charset_char = Q.store_thm("uncharset_char_charset_char[simp]",
   `uncharset_char (charset_char c) = c`,
   rw[charset_char_def,uncharset_char_def]
-  \\ srw_tac[wordsLib.WORD_ss][]
+  \\ once_rewrite_tac[wordsTheory.WORD_AND_COMM]
+  \\ `255n = 2 ** 8 - 1` by simp[] \\ pop_assum SUBST1_TAC
+  \\ srw_tac[wordsLib.WORD_ss][wordsTheory.WORD_AND_EXP_SUB1]
   \\ qspec_then`c`strip_assume_tac stringTheory.ORD_BOUND
   \\ rw[stringTheory.CHR_ORD]);
 
