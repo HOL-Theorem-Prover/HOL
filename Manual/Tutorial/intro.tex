@@ -75,8 +75,9 @@ Chapter~\ref{ML}.
 $ pwd
 /home/mn200/hol
 $ ls -F
-COPYRIGHT  bin/  examples/  INSTALL  src/
-README     doc/  help/      sigobj/  tools/
+CONTRIBUTORS    README          doc/            sigobj/         tools/
+COPYRIGHT       bin/            examples/       src/            tools-poly/
+INSTALL         developers/     help/           std.prelude
 \end{verbatim}
 \end{session}
 
@@ -84,11 +85,10 @@ Now you will need to rebuild \HOL{} from the sources.\footnote{It is
   possible that pre-built systems may soon be available from the
   web-page mentioned above.}
 
-Before beginning you must have a current version of Moscow~ML or
-Poly/ML\footnote{Poly/ML cannot be used with HOL on Windows.}.
+Before beginning you must have a current version of Poly/ML or Moscow~ML.\footnote{We recommend using Poly/ML on all operating systems, but it requires Cygwin or the Windows Linux sub-system on Windows.}
 In the case of Moscow~ML, you must have at least version 2.01.
-Moscow~ML is available on the web from \url{http://mosml.org}.
 Poly/ML is available from \url{http://polyml.org}.
+Moscow~ML is available on the web from \url{http://mosml.org}.
 
 When working with Poly/ML, the installation must ensure that dynamic library loading (typically done by setting the \texttt{LD\_LIBRARY\_PATH} environment variable) picks up \texttt{libpolyml.so} and \texttt{libpolymain.so}.
 If these files are in \texttt{/usr/lib}, nothing will need to be changed, but other locations may require further system configuration.
@@ -160,16 +160,12 @@ In other words, you should unpack HOL in the location/directory where you wish t
 \subsection{Overriding \texttt{smart-configure}}
 \label{sec:editting-configure}
 
-If \texttt{smart-configure} is unable to guess correct values for the
-various parameters (\texttt{holdir}, \texttt{OS} \etc) then you can
-create a file called to provide correct values.  With Moscow~ML, this
-should be \texttt{config-override} in the root directory of the HOL
-distribution.  With Poly/ML, this should be \texttt{poly-includes.ML}
-in the \texttt{tools-poly} directory. In this file, specify the
-correct value for the appropriate parameter by providing an ML binding
-for it.  All variables except \texttt{dynlib\_available} must be given
-a string as a possible value, while \texttt{dynlib\_available} must be
-either \texttt{true} or \texttt{false}.  So, one might write
+If \texttt{smart-configure} is unable to guess correct values for the various parameters (\texttt{holdir}, \texttt{OS} \etc) then you can create a file called to provide correct values.
+With Poly/ML, this should be \texttt{poly-includes.ML} in the \texttt{tools-poly} directory.
+With Moscow~ML, this should be \texttt{config-override} in the root directory of the HOL distribution.
+In this file, specify the correct value for the appropriate parameter by providing an ML binding for it.
+All variables except \texttt{dynlib\_available} must be given a string as a possible value, while \texttt{dynlib\_available} must be either \texttt{true} or \texttt{false}.
+So, one might write
 
 \begin{session}
 \begin{verbatim}
@@ -186,10 +182,10 @@ With this file in place, the \texttt{smart-configure} program will use
 the values specified there rather than those it attempts to calculate
 itself.  The value given for the \texttt{OS} variable must be one of
 \texttt{"unix"}, \texttt{"linux"}, \texttt{"solaris"},
-\texttt{"macosx"} or \texttt{"winNT"}.\footnote{The string
-  \texttt{"winNT"} is used for Microsoft Windows operating systems
-  that are at least as recent as Windows~NT.  This includes
-  Windows~2000, XP and Vista.}
+\texttt{"macosx"} or \texttt{"winNT"}.\footnote{%
+The string \texttt{"winNT"} is used for Microsoft Windows operating systems that are at least as recent as Windows~NT.
+This includes Windows~2000, XP, Vista, Windows~10 \textit{etc}.
+Do not use \texttt{"winNT"} when using Poly/ML \textit{via} Cygwin or the Linux sub-system.}
 
 In extreme circumstances it is possible to edit the file
 \texttt{tools/configure.sml} yourself to set configuration variables
@@ -204,13 +200,11 @@ The \texttt{holdir} value must be the name of the top-level directory
 listed in the first session above.  The \texttt{OS} value should be
 one of the strings specified in the accompanying comment.
 
+When working with Poly/ML, the \texttt{poly} string must be the path to the \texttt{poly} executable that begins an interactive \ML{} session.
+The \texttt{polymllibdir} must be a path to a directory that contains the file \texttt{libpolymain.a}.
 When working with Moscow~ML, the \texttt{mosmldir} value must be the
 name of the directory containing the Moscow~ML binaries
-(\texttt{mosmlc}, \texttt{mosml}, \texttt{mosmllex} etc).  When
-working with Poly/ML, the \texttt{poly} string must be the path to the
-\texttt{poly} executable that begins an interactive \ML{} session.
-The \texttt{polymllibdir} must be a path to a directory that contains
-the file \texttt{libpolymain.a}.
+(\texttt{mosmlc}, \texttt{mosml}, \texttt{mosmllex} etc).
 
 Subsequent values (\texttt{CC} and \texttt{GNUMAKE}) are needed for
 ``optional'' components of the system.  The first gives a string
