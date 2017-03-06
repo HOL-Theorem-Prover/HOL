@@ -268,7 +268,7 @@ val float_to_real_finite = Q.store_thm("float_to_real_finite",
   \\ match_mp_tac REAL_LE_MUL2
   \\ simp [REAL_POW_MONO, exponent_le, REAL_LE_SUB_LADD]
   \\ simp_tac std_ss [GSYM REAL_ADD_ASSOC, REAL_DIV_ADD]
-  \\ match_mp_tac (realLib.REAL_ARITH ``x <= 1 ==> (1 + x <= 2)``)
+  \\ match_mp_tac (realLib.REAL_ARITH ``(x:real) <= 1 ==> (1 + x <= 2)``)
   \\ simp [REAL_LE_LDIV_EQ, REAL_OF_NUM_POW, GSYM wordsTheory.dimword_def,
            wordsTheory.w2n_lt, DECIDE ``a < n ==> a + 1n <= n``]
   )
@@ -467,7 +467,7 @@ val error_bound_lemma5 = Q.prove(
          ((e = n2w (bias (:'w))) \/ (e = n2w (INT_MIN (:'w))) /\ (f = 0w))`,
   gen_tac
   \\ DISCH_TAC
-  \\ SUBGOAL_THEN ``1 <= x /\ x < 2 /\ 1 < dimindex (:'w) \/
+  \\ SUBGOAL_THEN ``1 <= (x:real) /\ x < 2 /\ 1 < dimindex (:'w) \/
                     1 <= ~x /\ ~x < 2 /\ 1 < dimindex (:'w)``
        (DISJ_CASES_THEN
           (Q.X_CHOOSE_THEN `e` (Q.X_CHOOSE_THEN `f` assume_tac) o
@@ -528,7 +528,7 @@ val error_bound_lemma6 = Q.prove(
        |> Q.SPEC `2 pow (2 ** (expw - 1) - 2)`
        |> SIMP_RULE (srw_ss()) [GSYM realTheory.POW_ABS]
       ]
-  \\ `1 < 2 ** (expw - 1)`
+  \\ `1n < 2 ** (expw - 1)`
   by metis_tac [EVAL ``2n ** 0``, bitTheory.TWOEXP_MONO,
                  DECIDE ``1n < n ==> 0 < n - 1``]
   \\ fs [realTheory.REAL_SUB_LDISTRIB, realTheory.REAL_MUL_ASSOC, real_div, lem,
@@ -887,7 +887,7 @@ val lem = Q.prove(
          2 pow (n - 1) < 2 pow (2 * n - 1) - 2 pow (2 * n - 2) / &(4 * m)`,
   rw [realTheory.REAL_LT_SUB_LADD]
   \\ `1 < 4 * m /\ 0 < 4 * m` by decide_tac
-  \\ `!x y. x < y = x * &(4 * m) < y * &(4 * m)`
+  \\ `!x y:real. x < y = x * &(4 * m) < y * &(4 * m)`
   by metis_tac [realTheory.REAL_LT_RMUL,
                 SIMP_CONV (srw_ss()) [] ``0r < &(4 * m)``]
   \\ pop_assum (fn th => once_rewrite_tac [th])
@@ -1012,7 +1012,7 @@ val error_bound_tiny = Q.prove(
 val lem = Q.prove(
   `!n. 1 < n ==> (2 * inv (2 pow (n - 1)) = inv (2 pow (n - 2)))`,
   rw [realTheory.REAL_INV_1OVER, realTheory.REAL_EQ_RDIV_EQ,
-      REAL_ARITH ``2 * a * b = a * (2 * b)``, GSYM (CONJUNCT2 pow),
+      REAL_ARITH ``2 * (a:real) * b = a * (2 * b)``, GSYM (CONJUNCT2 pow),
       DECIDE ``1 < n ==> (SUC (n - 2) = n - 1)``,
       realTheory.REAL_DIV_RMUL
       ]
@@ -1135,7 +1135,7 @@ val THRESHOLD_MUL_LT = Q.prove(
   )
 
 val lem = Q.prove(
-  `!a b c. 0 < b ==> ((a / b) * c = a * (c / b))`,
+  `!a b c:real. 0 < b ==> ((a / b) * c = a * (c / b))`,
   rw [realTheory.mult_ratl, realTheory.mult_ratr]
   )
 
@@ -1150,7 +1150,7 @@ val LT_THRESHOLD_LT_POW_INV = Q.prove(
            two_pow_over_pre, wordsTheory.ZERO_LT_INT_MAX,
            realTheory.REAL_LT_LMUL]
   \\ match_mp_tac (REAL_ARITH ``0r < a /\ 0r < b ==> a - b < a``)
-  \\ `0 < &(2 * dimword (:'t))` by simp [DECIDE ``0n < n ==> 0 < 2 * n``]
+  \\ `0r < &(2 * dimword (:'t))` by simp [DECIDE ``0n < n ==> 0 < 2 * n``]
   \\ simp [realTheory.REAL_LT_RDIV_0]
   )
 
