@@ -145,7 +145,7 @@ val rePEG_def = Define‘
               c <- c_m ;
               rep <- rep_m ;
               case rep of
-                  Or l => return (Or (c::l))
+                  Or (l::ls) => return (Or (c::l::ls))
                 | _ => return c
             od));
 
