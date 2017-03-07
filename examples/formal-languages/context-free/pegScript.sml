@@ -464,4 +464,9 @@ val peg0_tok = store_thm(
   ``peg0 G (tok P f) = F``,
   simp[Once peg0_cases])
 
+val peg0_pegf = store_thm(
+  "peg0_pegf[simp]",
+  ``peg0 G (pegf s f) = peg0 G s``,
+  simp[pegf_def])
+
 val _ = export_theory()
