@@ -536,7 +536,7 @@ val single_sub_thm = prove(
   \\ `dimword (:'a) - 1 - n < dimword (:'a)` by DECIDE_TAC
   \\ ASM_SIMP_TAC std_ss [w2n_n2w,word_1comp_n2w] \\ DECIDE_TAC);
 
-val mw_sub_lemma = prove(
+val mw_sub_lemma = store_thm("mw_sub_lemma",
   ``!xs ys c (zs:'a word list) d.
       (mw_sub xs ys c = (zs,d)) /\ (LENGTH xs = LENGTH ys) ==>
       (mw2n zs + mw2n ys + dimwords (LENGTH xs) (:'a) * b2n d =
