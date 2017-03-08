@@ -433,7 +433,7 @@ in
          (add_string "struct" >> add_newline >>
           block CONSISTENT 0
             (add_string ("val _ = if !Globals.print_thy_loads then \
-                         \print \"Loading "^
+                         \TextIO.print \"Loading "^
                          Thry name^" ... \" else ()") >> add_newline >>
              add_string "open Type Term Thm" >> add_newline >>
              add_string "infixr -->" >> add_newline >>
@@ -460,7 +460,7 @@ in
              pr_thydata term_to_string name thydata >>
              pr_psl struct_ps)) >>
          add_break(0,0) >>
-         add_string "val _ = if !Globals.print_thy_loads then print \
+         add_string "val _ = if !Globals.print_thy_loads then TextIO.print \
                     \\"done\\n\" else ()" >> add_newline >>
          add_string ("val _ = Theory.load_complete \""^String.toString name^
                     "\"") >>
