@@ -29,7 +29,6 @@ val pp_sig_hook = ref (fn () => ());
 val concat = String.concat;
 val sort = Lib.sort (fn s1:string => fn s2 => s1<=s2);
 val psort = Lib.sort (fn (s1:string,_:Thm.thm) => fn (s2,_:Thm.thm) => s1<=s2);
-val thid_sort = Lib.sort (fn (s1:string,_,_) => fn (s2,_,_) => s1<=s2);
 fun thm_atoms acc th = Term.all_atomsl (Thm.concl th :: Thm.hyp th) acc
 
 fun thml_atoms thlist acc =
@@ -273,9 +272,11 @@ end
 fun pp_struct info_record = let
   open Term Thm
   val {theory as (name,i1,i2), parents=parents0,
-       thydata = (thydata_tms, thydata),
+       thydata = (thydata_tms, thydata), mldeps,
        axioms,definitions,theorems,types,constants,struct_ps} = info_record
-  val parents1 = filter (fn (s,_,_) => not ("min"=s)) parents0
+  val parents1 =
+      List.mapPartial (fn (s,_,_) => if "min"=s then NONE else SOME (Thry s))
+                      parents0
   val thml = axioms@definitions@theorems
   val all_term_atoms_set =
       thml_atoms (map #2 thml) empty_tmset |> Term.all_atomsl thydata_tms
@@ -301,7 +302,7 @@ fun pp_struct info_record = let
         [] => nothing
       |  _ =>
          block CONSISTENT 0
-               (add_string ("(*  Parents *)") >>
+               (add_string ("(* Parents and ML dependencies *)") >>
                 add_newline >>
                 add_string "local open " >>
                 block INCONSISTENT 0
@@ -444,8 +445,8 @@ in
              add_newline >>
              add_string"fun V s q = mk_var(s,q)" >> add_newline >>
              add_string"val U     = mk_vartype" >>  add_newline >>
-             pblock ("Parents", add_string o pparent,
-                     thid_sort parents1) >>
+             pblock ("Parents", add_string,
+                     Listsort.sort String.compare parents1 @ mldeps) >>
              add_newline >>
              pp_incorporate_upto_types theory parents0 types >> add_newline >>
              output_idtable "idvector" idtable >>
