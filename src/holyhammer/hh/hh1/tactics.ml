@@ -32,7 +32,7 @@ let null_meta = (([]:term list),null_inst);;
 type goal = (string * thm) list * term;;
 
 let equals_goal ((a,w):goal) ((a',w'):goal) =
-  forall2 (fun (s,th) (s',th') -> s = s' & equals_thm th th') a a' & w = w';;
+  forall2 (fun (s,th) (s',th') -> s = s' && equals_thm th th') a a' && w = w';;
 
 
 

@@ -39,7 +39,7 @@ type fol_goal =
     let memory = ref [] in
     fun (gg,(insts,offset,size) as input) ->
       if exists (fun (_,(insts',_,size')) ->
-                     insts = insts' & (size <= size' or !meson_depth))
+                     insts = insts' && (size <= size' || !meson_depth))
           (!memory)
       then failwith "cachecont"
       else memory := input::(!memory); f input;;
@@ -110,14 +110,14 @@ type fol_goal =
      (fun r -> cont (snd r) (meson_single_expand loffset r state)) rules;;
 
   (* ----------------------------------------------------------------------- *)
-  (* Try expansion and continuation call with ancestor or initial rule.      *)
+  (* Try expansion and continuation call with ancestor || initial rule.      *)
   (* ----------------------------------------------------------------------- *)
 
   let meson_expand rules ((g,ancestors),((insts,offset,size) as tup)) cont =
     let pr = fst g in
     let newancestors = insertan insts g ancestors in
     let newstate = (g,newancestors),tup in
-    try if !meson_prefine & pr > 0 then failwith "meson_expand" else
+    try if !meson_prefine && pr > 0 then failwith "meson_expand" else
         let arules = assoc pr ancestors in
         meson_expand_cont 0 arules newstate cont
     with Cut -> failwith "meson_expand" | Failure _ ->
@@ -140,7 +140,7 @@ type fol_goal =
               (cacheconts(fun (gs,(newinsts,newoffset,newsize)) ->
                  let locin,globin = separate_insts offset pinsts newinsts in
                  let g' = Subgoal(g,gs,apprule,offset,locin) in
-                 if globin = insts & gs = [] then
+                 if globin = insts && gs = [] then
                    try cont(g',(globin,newoffset,size))
                    with Failure _ -> raise Cut
                  else
@@ -181,7 +181,7 @@ type fol_goal =
       expand_goal maxdep (g,([],2 * offinc,maxinf)) cont;;
 
   (* ----------------------------------------------------------------------- *)
-  (* With iterative deepening of inferences or depth.                        *)
+  (* With iterative deepening of inferences || depth.                        *)
   (* ----------------------------------------------------------------------- *)
 
   let solve_goal rules incdepth min max incsize =
@@ -214,7 +214,7 @@ type fol_goal =
 
   let fol_of_hol_clauses =
     let eqt (a1,(b1,c1)) (a2, (b2,c2)) =
-     ((a1 = a2) & (b1 = b2) & (Fusion.equals_thm c1 c2)) in
+     ((a1 = a2) && (b1 = b2) && (Fusion.equals_thm c1 c2)) in
     fun thms ->
       let rawrules = itlist (fun x -> union' eqt (fol_of_hol_clause x)) thms [] in
       let prs = setify (map (fun x -> fst (snd (fst x))) rawrules) in

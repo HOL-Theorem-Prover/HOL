@@ -73,7 +73,7 @@ let prioritize_overload ty =
   do_list
    (fun (s,gty) ->
       try let _,(n,t) = find
-            (fun (s',(n,t)) -> s' = s & mem ty (map fst (type_match gty t [])))
+            (fun (s',(n,t)) -> s' = s && mem ty (map fst (type_match gty t [])))
             (!the_interface) in
           overload_interface(s,mk_var(n,t))
       with Failure _ -> ())
@@ -287,7 +287,7 @@ let type_of_pretype,term_of_preterm,retypecheck =
 
   let rec istrivial ptm env x = function
     |Stv y as t ->
-        y = x or defined env y & istrivial ptm env x (apply env y)
+        y = x || defined env y && istrivial ptm env x (apply env y)
     |Ptycon(f,args) as t when exists (istrivial ptm env x) args ->
         failwith (string_of_ty_error env ptm)
     |(Ptycon _ | Utv _) -> false
@@ -298,7 +298,7 @@ let type_of_pretype,term_of_preterm,retypecheck =
     |[] -> env
     |(ty1,ty2,_)::oth when ty1 = ty2 -> unify env oth
     |(Ptycon(f,fargs),Ptycon(g,gargs),ptm)::oth ->
-        if f = g & length fargs = length gargs
+        if f = g && length fargs = length gargs
         then unify env (map2 (fun x y -> x,y,ptm) fargs gargs @ oth)
         else failwith (string_of_ty_error env ptm)
     |(Stv x,t,ptm)::oth ->
@@ -324,8 +324,8 @@ let type_of_pretype,term_of_preterm,retypecheck =
         let ty' = Ptycon("num",[]) in
         t,[],unify (Some ptm) uenv ty' ty
     |Varp(s,_) ->
-        warn (s <> "" & isnum s) "Non-numeral begins with a digit";
-          if not(is_hidden s) & can get_generic_type s then
+        warn (s <> "" && isnum s) "Non-numeral begins with a digit";
+          if not(is_hidden s) && can get_generic_type s then
             let pty = pretype_instance(get_generic_type s) in
             let ptm = Constp(s,pty) in
             ptm,[],unify (Some ptm) uenv pty ty
@@ -391,7 +391,7 @@ let type_of_pretype,term_of_preterm,retypecheck =
     | Constp(s,ty) -> let tys = solve env ty in
           try let _,(c',_) = find
                 (fun (s',(c',ty')) ->
-                   s = s' & can (unify None env (pretype_instance ty')) ty)
+                   s = s' && can (unify None env (pretype_instance ty')) ty)
                 (!the_interface) in
               pmk_cv(c',tys)
           with Failure _ -> Constp(s,tys)
