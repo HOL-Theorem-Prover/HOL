@@ -1,6 +1,7 @@
 OPTIONS=QUIT_ON_FAILURE
 
-TARGETS = $(patsubst %.sml,%.uo,$(wildcard *.sml))
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 
 all: $(TARGETS)
 .PHONY: all

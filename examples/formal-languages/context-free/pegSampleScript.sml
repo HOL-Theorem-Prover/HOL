@@ -16,7 +16,7 @@ val _ = Hol_datatype `
 
 val ty = ty_antiq ``:(tok, string, expr) pegsym``
 val lift_number_def = Define`
-  lift_number (Number n) = XN n
+  lift_number (Number n,l) = XN n
 `;
 
 val nrule = ``tok (λt. case t of Number n => T | _ => F) lift_number : ^ty``
@@ -70,15 +70,15 @@ end
 val result1 = save_thm(
   "result1",
   time EVAL ``peg_exec ^G (nt (INL "expr") I)
-                      [Number 1; Plus; Number 2; Times; Number 4] []
+                      (map_loc [Number 1; Plus; Number 2; Times; Number 4] 0) []
                       done failed``)
 
 (* As of 5a18cdc17ff, takes 1.983s (ugh) *)
 val result2 = save_thm(
   "result2",
   time EVAL ``peg_exec ^G (nt (INL "expr") I)
-                      [Number 1; Plus; Number 2; Times; Number 4;
-                       Times; LParen; Number 3; Plus; Number 1; RParen]
+                      (map_loc [Number 1; Plus; Number 2; Times; Number 4;
+                       Times; LParen; Number 3; Plus; Number 1; RParen] 0)
                       [] done failed``)
 
 val G_def = zDefine`G = <| start := nt (INL "expr") I; rules := ^rules |>`
@@ -103,9 +103,10 @@ val _ = computeLib.add_persistent_funs ["Grules"]
 val result2' = save_thm(
   "result2'",
   time EVAL ``peg_exec G (nt (INL "expr") I)
-                      [Number 1; Plus; Number 2; Times; Number 4;
-                       Times; LParen; Number 3; Plus; Number 1; RParen]
+                      (map_loc [Number 1; Plus; Number 2; Times; Number 4;
+                       Times; LParen; Number 3; Plus; Number 1; RParen] 0)
                       [] done failed``)
 
 
 val _ = export_theory()
+

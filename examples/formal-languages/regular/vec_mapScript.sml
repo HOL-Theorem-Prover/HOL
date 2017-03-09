@@ -10,13 +10,13 @@ val _ = temp_tight_equality ();
 
 val every_case_tac = BasicProvers.EVERY_CASE_TAC;
 
-val alist_to_vec_def = 
- Define 
+val alist_to_vec_def =
+ Define
   `(alist_to_vec l default 0 max = []) ∧
    (alist_to_vec [] default (SUC n) max = default :: alist_to_vec [] default n max) ∧
    (alist_to_vec ((x,y)::t) default (SUC n) max =
     if SUC n ≤ max then
-       if x = max - SUC n then 
+       if x = max - SUC n then
           y :: alist_to_vec t default n max
        else if x < max - SUC n then
          alist_to_vec t default (SUC n) max
@@ -36,32 +36,32 @@ val alist_to_vec_correct = Q.prove (
   LENGTH v = cur ∧
   (!n x. n < cur ∧ ALOOKUP l (max - cur + n) = SOME x ⇒ EL n v = x) ∧
   (!n. n < cur ∧ ALOOKUP l (max - cur + n) = NONE ⇒  EL n v = default)`,
- ho_match_mp_tac alist_to_vec_ind 
- >> rw [alist_to_vec_def] 
- >> `transitive $<=` by srw_tac [ARITH_ss] [transitive_def] 
- >> rw [] 
+ ho_match_mp_tac alist_to_vec_ind
+ >> rw [alist_to_vec_def]
+ >> `transitive $<=` by srw_tac [ARITH_ss] [transitive_def]
+ >> rw []
  >> full_simp_tac (srw_ss()++ARITH_ss) [SORTED_EQ]
  >> Cases_on `n` >> rw [EL_CONS] >> fs []
-    >- (FIRST_X_ASSUM match_mp_tac >> rw [] 
+    >- (FIRST_X_ASSUM match_mp_tac >> rw []
         >> `max − SUC cur <> max + SUC n' − SUC cur` by decide_tac
-        >> `max + SUC n' - SUC cur = max + n' − cur` by decide_tac 
+        >> `max + SUC n' - SUC cur = max + n' − cur` by decide_tac
         >> metis_tac[])
-    >- (FIRST_X_ASSUM match_mp_tac >> rw [] 
+    >- (FIRST_X_ASSUM match_mp_tac >> rw []
         >> `max − SUC cur <> max + SUC n' − SUC cur` by decide_tac
-        >> `max + SUC n' - SUC cur = max + n' − cur` by decide_tac 
+        >> `max + SUC n' - SUC cur = max + n' − cur` by decide_tac
         >> metis_tac[])
-    >- (ntac 2 (pop_assum mp_tac) >> rw [] 
-        >> imp_res_tac ALOOKUP_MEM 
-        >> `MEM (max − SUC cur) (MAP FST l)` by (rw[MEM_MAP] >> metis_tac[FST]) 
-        >> res_tac 
-        >> full_simp_tac (srw_ss()++ARITH_ss) []) 
-    >- (FIRST_X_ASSUM match_mp_tac >> rw [] 
-        >> full_simp_tac (srw_ss()++ARITH_ss) [] 
-        >> `max + SUC n' − SUC cur  = max + n' − cur` by decide_tac 
+    >- (ntac 2 (pop_assum mp_tac) >> rw []
+        >> imp_res_tac ALOOKUP_MEM
+        >> `MEM (max − SUC cur) (MAP FST l)` by (rw[MEM_MAP] >> metis_tac[FST])
+        >> res_tac
+        >> full_simp_tac (srw_ss()++ARITH_ss) [])
+    >- (FIRST_X_ASSUM match_mp_tac >> rw []
+        >> full_simp_tac (srw_ss()++ARITH_ss) []
+        >> `max + SUC n' − SUC cur  = max + n' − cur` by decide_tac
         >> metis_tac[])
-    >- (FIRST_X_ASSUM match_mp_tac >> rw [] 
-        >> full_simp_tac (srw_ss()++ARITH_ss) [] 
-        >> `max + SUC n' − SUC cur = max + n' − cur` by decide_tac 
+    >- (FIRST_X_ASSUM match_mp_tac >> rw []
+        >> full_simp_tac (srw_ss()++ARITH_ss) []
+        >> `max + SUC n' − SUC cur = max + n' − cur` by decide_tac
         >> metis_tac[])
 );
 
@@ -97,7 +97,7 @@ val dense_alist_to_vec_correct = Q.prove (
  `!h0 x. h0 + SUC x = x + SUC h0` by decide_tac >>
  full_simp_tac bool_ss []);
 
-val dense_alist_to_vec_thm = Q.store_thm 
+val dense_alist_to_vec_thm = Q.store_thm
 ("dense_alist_to_vec_thm",
  `!l n. MAP FST l = COUNT_LIST (LENGTH l) ∧ n < LENGTH l
         ⇒

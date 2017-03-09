@@ -460,7 +460,7 @@ val SUM_ALL_CONG = store_thm(
 
 val _ = computeLib.add_persistent_funs ["sum_case_def", "INL_11", "INR_11",
                                         "sum_distinct", "sum_distinct1",
-                                        "SUM_ALL_def",
+                                        "SUM_ALL_def", "SUM_MAP_def",
                                         "OUTL", "OUTR", "ISL", "ISR"]
 
 local open OpenTheoryMap

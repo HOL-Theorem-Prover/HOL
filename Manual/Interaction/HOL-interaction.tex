@@ -18,7 +18,10 @@
 
 \maketitle
 
-\newenvironment{code}{\begin{quote}\begin{alltt}\small}{\end{alltt}\end{quote}}
+\newenvironment{code}{\begin{quote}%
+\begin{alltt}\small}{%
+\end{alltt}%
+\end{quote}}
 \newenvironment{enum}{\begin{enumerate}
 \setlength{\itemsep}{-\parsep}
 }{\end{enumerate}}
@@ -34,23 +37,23 @@ minimum knowledge needed to start using HOL4. The aim is to give a
 concise description of the basics in a format usable as a beginners'
 reference manual.
 \begin{enum}
-\item[~] Section \ref{interaction}:~~Interaction with HOL4 (via emacs or xemacs)
+\item[~] Section \ref{interaction}:~~Interaction with HOL4 (via emacs)
 \item[~] Section \ref{search}:~~Searching for theorems and theories
 \item[~] Section \ref{tactics}:~~Common proof tactics
 \item[~] Section \ref{reading}:~~Further reading and general advice
 \end{enum}
 The text assumes that the reader has HOL4 installed. You can download and install HOL4 following the instructions on \url{https://hol-theorem-prover.org}.
 
-\mysec{Interaction with HOL4 (via emacs or xemacs)\label{interaction}}
+\mysec{Interaction with HOL4 (via emacs)\label{interaction}}
 
 Michael Norrish has written an emacs script which makes interaction
-with HOL easy. To install the script add the following line to your {\tt
-.emacs} file with {\tt <path>} replaced with the full path to your HOL4
+with HOL easy. To install the script add the following line to your emacs initialisation file ({\tt
+.emacs} or \texttt{.emacs.d/init.el}) with {\tt <path>} replaced with the full path to your HOL4
 installation.
 \begin{code}
 (load "<path>/HOL/tools/hol-mode")
 \end{code}
-I recommend adding the following (by Chun Tian) to the {\tt .emacs} file
+I recommend adding the following (by Chun Tian) to the same file
 in order to turn off automatic indentation for the SML mode.
 \begin{code}
 (defun my-sml-mode-hook ()
@@ -59,8 +62,9 @@ in order to turn off automatic indentation for the SML mode.
 
 (add-hook 'sml-mode-hook 'my-sml-mode-hook)
 \end{code}
-To make emacs highlight the active region, also add the following line
-to your {\tt .emacs} file, if it is not already there.
+
+If your version of emacs does not highlight the active region, also add the following line
+to your initialisation file:
 \begin{code}
 (transient-mark-mode 1)
 \end{code}
@@ -87,13 +91,15 @@ The HOL window should look something like this:
 
 \mysubsec{Copying input into HOL4 (Opening a theory)\label{copy}}
 
-\begin{enum}
-\item Select text by pressing {\tt C-space} at one end of the text.
-\item Copy the region into HOL4 by pressing {\tt M-h M-r} at the other
-  end. (You can also use drag the mouse to select text to be sent to
-  HOL.)
-\end{enum}
-For example, pressing {\tt C-space} then {\tt M-h M-r} around the following line
+First, make sure you know how to select text in emacs. Either:
+\begin{itemize}
+\item Move the cursor while holding the shift key; or
+\item Hit \texttt{C-space}, and then move the cursor normally; or
+\item Use the mouse (hold the primary button and drag)
+\end{itemize}
+
+To copy and paste the selected region into the HOL session press {\tt M-h~M-r}.
+For example, selecting the following line, and then pressing {\tt M-h M-r}
 \begin{code}
 open arithmeticTheory listTheory;
 \end{code}
@@ -110,20 +116,20 @@ Most HOL4 proofs are constructed using an interactive \emph{goal
   stack} and then put together using the ML function {\tt prove}
 (Section~\ref{prove1}, \ref{prove2}). To start the goal stack:
 \begin{enum}
-\item Write a goal, \eg{} {\tt `!n{.}~n < n + 1`}, (we write $\forall$ as {\tt !} in HOL4).
+\item Write a goal, \eg{} {\tt `!n{.}~n~<~n~+~1`}, (we can write $\forall$ as {\tt !} in HOL4).
 \item Move the cursor inside the back-quotes ({\tt `}).
-\item Press {\tt M-h g} to push the goal onto the goal stack.
+\item Press {\tt M-h~g} to push the goal onto the goal stack.
 \end{enum}
 The HOL4 window should look something like this:
 \begin{code}
-- > val it =
-    Proof manager status: 1 proof.
-    1. Incomplete:
-         Initial goal:
-         !n. n < n + 1
+> val it =
+     Proof manager status: 1 proof.
+  1. Incomplete goalstack:
+       Initial goal:
+       \(\forall\)n. n < n + 1
 
-     : proofs
-- > val it = () : unit
+   : proofs
+> val it = () : unit
 \end{code}
 
 \mysubsec{Applying a tactic\label{apply}}
@@ -132,24 +138,24 @@ Make progress in a proof using \emph{proof tactics}.
 
 \begin{enum}
 \item Write the name of a tactic, \eg{} {\tt decide\_tac},~see Section~\ref{tactics} for more tactics
-\item Press {\tt C-space} at one end of the text.
-\item Move the cursor to the other end of the text.
-\item Press {\tt M-h e} to apply the tactic.
+\item Select the text of the tactic
+\item Press {\tt M-h~e} to apply the tactic.
 \end{enum}
 A tactic makes HOL4 update the current goal. The HOL4 window will either
 display the new goal(s) or print:
 \begin{code}
     Initial goal proved.
-    |- !n. n < n + 1 : goalstack
+    |- \(\forall\)n. n < n + 1 : goalstack
 \end{code}
 You can undo the effect of the applied tactic by pressing {\tt M-h b}. Press {\tt M-h p} to view the current goal.
+To go all the way back to the start of the proof (to restart), press \texttt{M-h~R}.
 
 \mysubsec{Ending a goal-oriented proof}
 
 One can pop goals off the goal stack by pressing {\tt M-h d}, which gives:
 \begin{code}
-- - OK..
-> val it = There are currently no proofs. : proofs
+> OK..
+val it = There are currently no proofs. : proofs
 \end{code}
 
 \mysubsec{Saving the resulting theorem\label{prove1}}
@@ -160,10 +166,10 @@ One can use {\tt prove} to store the result of a proof (called a
 \begin{code}
 val LESS_ADD_1 = Q.prove({`} !n. n < n + 1 {`},decide_tac);
 \end{code}
-When the above line is copied into HOL4 (using {\tt C-space} then
+When the above line is copied into HOL4 (using text-selection then
 {\tt M-h M-r}, as described in Section~\ref{copy}), HOL4 responds with:
 \begin{code}
-- > val LESS_ADD_1 = |- !n. n < n + 1 : thm
+> val LESS_ADD_1 = |- !n. n < n + 1 : thm
 \end{code}
 
 \mysubsec{Saving proofs based on multiple tactics\label{prove2}}
@@ -186,8 +192,7 @@ val LESS_EQ_MULT = Q.prove(
   >- (asm_simp_tac bool_ss [MULT]
       >> decide_tac]));
 \end{code}
-Copy the above into HOL4 using {\tt C-space} then
-{\tt M-h M-r}, as in Section~\ref{copy}.
+Copy the above into HOL4 using text-selection, and then {\tt M-h M-r}, as in Section~\ref{copy}.
 
 \newcommand{\itemz}[2]{\texttt{#1}\; &-\;\; \textrm{#2}}
 \newcommand{\itemy}[2]{#1&\quad\quad&#2\\}
@@ -359,8 +364,8 @@ numbers, \eg{} {\tt\small decide\_tac} solves:
 
 Goals that contain top-level universal quantifiers ({\tt !x.}),
 implication ({\tt ==>}) or conjunction ({\tt \conj{}}) are often
-taken apart using {\tt\small REPEAT STRIP\_TAC} or just {\tt\small
-  STRIP\_TAC}, \eg{} the goal {\tt\small `!x{.}~(!z{.}~x < h z) ==> ?y{.}~f x = y`}
+taken apart using {\tt\small rpt strip\_tac} or just {\tt\small
+  strip\_tac}, \eg{} the goal {\tt\small `!x{.}~(!z{.}~x < h z) ==> ?y{.}~f x = y`}
 becomes the following. (Assumptions are written under the line.)
 \begin{code}
     ?y. f x = y
@@ -371,8 +376,8 @@ becomes the following. (Assumptions are written under the line.)
 \mysubsec{Existential quantifiers}
 
 Goals that have a top-level existential quantifier can be given a
-witness using {\tt \small Q.EXISTS\_TAC}, \eg{} {\tt \small
-  Q.EXISTS\_TAC `1`} applied to goal {\tt \small ?n{.}~!k{.}~n * k = k}
+witness using {\tt \small qexists\_tac}, \eg{} {\tt \small
+  qexists\_tac `1`} applied to goal {\tt \small ?n{.}~!k{.}~n * k = k}
 produces goal {\tt \small !k{.}~1 * k = k}.
 
 \mysubsec{Rewrites}
@@ -423,6 +428,7 @@ Here {\tt x} can be any variable with a recursively defined type,
 Section~\ref{definition}.  One can start a complete (or strong)
 induction over the natural number {\tt\small n} using {\tt\small
   completeInduct\_on `n`}.
+As with \texttt{Cases\_on} one can also induct on terms (\eg, \texttt{\small Induct\_on~`hi~-~lo`}), though these proofs can be harder to carry out.
 
 \mysubsec{Case splits}
 
@@ -449,7 +455,8 @@ It is often useful to start a mini-proof inside a larger proof, \eg{} for the go
       0 < n
 \end{code}
 we might want to prove {\tt\small h n = g n} assuming {\tt\small 0 <
-  n}.  We can start such a subproof by typing {\tt\small `h n = g n`
+  n}.
+We can start such a subproof by typing {\tt\small `h n = g n`
   by ALL\_TAC}.\footnote{You can also use the emacs binding {\tt\small
     M-h M-s} with the cursor inside the sub-goal.} The new goal stack:
 \begin{code}

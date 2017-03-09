@@ -2,8 +2,9 @@
 (*    Tests                                                                  *)
 (*---------------------------------------------------------------------------*)
 
-load "regexpLib";
-open regexpLib;
+app load ["regexpLib", "Interval"];
+
+open regexpLib Interval;
 
 fun matcher q = #matchfn(regexpLib.matcher SML (Regexp_Type.fromQuote q));
 fun dom q = Regexp_Match.domBrz (Regexp_Type.fromQuote q);
@@ -208,89 +209,6 @@ val date_matcher = time matcher
 ; 
 
 (*---------------------------------------------------------------------------*)
-(* Numeric intervals are introduced with \i{lo,hi}                           *)
-(*---------------------------------------------------------------------------*)
-
-fun unsigned_width_256 (n:IntInf.int) = 
- if n < 0 then raise ERR "unsigned_width_256" "negative number" else
- if n < 256 then 1
- else 1 + unsigned_width_256 (n div 256);
-
-fun signed_width_256 (n:IntInf.int) = 
-  let fun fus k acc = 
-       let val lo = ~(IntInf.pow(2,k-1))
-           val hi = IntInf.pow(2,k-1) - 1
-       in if lo <= n andalso n <= hi
-            then acc
-            else fus (k+8) (acc+1)
-       end
- in fus 8 1
- end;
-
-(*---------------------------------------------------------------------------*)
-(* bytes_of i w lays out i into w bytes                                      *)
-(*---------------------------------------------------------------------------*)
-
-fun byte_me i = Word8.fromInt (IntInf.toInt i);
-fun inf_byte w = IntInf.fromInt(Word8.toInt w);
-
-val bytes_of = 
- let val eight = Word.fromInt 8
-     val mask = 0xFF:IntInf.int
-     fun step i n =
-      if n=1 then [byte_me i]
-      else
-        let val a = IntInf.andb(i,mask)
-            val j = IntInf.~>>(i,eight)
-       in byte_me a::step j (n-1)
-       end
-  in
-   step
- end
-
-fun lsb_signed i   = bytes_of i (signed_width_256 i);
-fun msb_signed i   = rev (lsb_signed i);
-fun lsb_unsigned i = bytes_of i (unsigned_width_256 i);
-fun msb_unsigned i = rev (lsb_unsigned i);
-
-fun lsb_num_of wlist : IntInf.int = 
- let fun value [] = 0
-      | value (h::t) = h + 256 * value t
- in value (map inf_byte wlist)
- end;
-
-fun lsb_int_of wlist = 
- let fun value [] = 0
-       | value (h::t) = h + 256 * value t
-     val (A,a) = Lib.front_last wlist
-     val wlist' = map inf_byte A @ [IntInf.fromInt(Word8.toIntX a)]
- in value wlist'
- end;
-
-fun msb_num_of wlist = lsb_num_of (rev wlist);
-fun msb_int_of wlist = lsb_int_of (rev wlist);
-
-val byte2char = Char.chr o Word8.toInt;
-val char2byte = Word8.fromInt o Char.ord;
-
-val string2num = lsb_num_of o map char2byte o String.explode;
-val string2int = lsb_int_of o map char2byte o String.explode;
-
-(*---------------------------------------------------------------------------*)
-(* Puts int out in LSB                                                       *)
-(*---------------------------------------------------------------------------*)
-
-fun int2string w n =
- let val blist = bytes_of (IntInf.fromInt n) w
- in String.implode (map byte2char blist)
- end;
-
-fun int2string_msb w n =
- let val blist = bytes_of (IntInf.fromInt n) w
- in String.implode (map byte2char (rev blist))
- end;
-
-(*---------------------------------------------------------------------------*)
 (* Test ranges over natural numbers                                          *)
 (*---------------------------------------------------------------------------*)
 
@@ -485,8 +403,9 @@ val match_1800        = matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59
 val match_1801        = matcher `\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}`;
 val match_1801_packed = 
  matcher `\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}`;
-val match_1802        = matcher `\i{0,9999,LSB}\i{0,3599,LSB}`;
-val match_1803        = matcher `\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
+val match_1802    = matcher `\i{0,9999,LSB}\i{0,3599,LSB}.{4}`;
+val test_1802_alt = matcher `\i{0,9999}\i{0,3599}\k{0}{4}`;
+val match_1803    = matcher `\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
 
 fun prod [] l2 = []
   | prod (h::t) l2 = map (strcat h) l2 @ prod t l2;

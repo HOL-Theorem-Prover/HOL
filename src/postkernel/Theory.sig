@@ -40,6 +40,7 @@ sig
   val current_axioms     : unit -> (string * thm) list
   val current_theorems   : unit -> (string * thm) list
   val current_definitions : unit -> (string * thm) list
+  val current_ML_deps    : unit -> string list
 
 (* Support for persistent theories *)
 
@@ -105,6 +106,9 @@ sig
 (* Changing internal bindings of ML-level names to theory objects *)
 
   val set_MLname         : string -> string -> unit
+
+(* recording a dependency of the theory on an ML module *)
+  val add_ML_dependency  : string -> unit
 
 (* For internal use *)
 

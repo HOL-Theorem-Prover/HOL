@@ -136,13 +136,25 @@ val myDatatype =
           fn s => (log_type
                      (String.extract (s, w, SOME (String.size s - w - 1)))
                    ; s ^ "\n")) o
-       Feedback.trace ("Theory.save_thm_reporting", 0) o
-       Lib.with_flag (Datatype.big_record_size, 30))
+       Feedback.trace ("Theory.save_thm_reporting", 0))
        Datatype.astHol_datatype
    end
 
+val l3_big_record_size = 28 (* HOL default is 20 *)
+
 (* Record type *)
-fun Record (n, l) = myDatatype [(n, ParseDatatype.Record l)]
+fun Record (n, l) =
+   ( if l3_big_record_size < List.length l
+       then Feedback.HOL_WARNING "Import" "Record"
+              ("Defining big record type; size " ^ Int.toString (List.length l))
+     else ()
+   ; Lib.with_flag (Datatype.big_record_size, l3_big_record_size)
+       myDatatype [(n, ParseDatatype.Record l)]
+   )
+
+fun NoBigRecord (n, l) =
+  Lib.with_flag (Datatype.big_record_size, List.length l + 1)
+    myDatatype [(n, ParseDatatype.Record l)]
 
 (* Algebraic type *)
 val Construct = myDatatype o List.map (I ## ParseDatatype.Constructors)

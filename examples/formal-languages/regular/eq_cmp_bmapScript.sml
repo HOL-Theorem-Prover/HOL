@@ -28,16 +28,16 @@
 (*---------------------------------------------------------------------------*)
 
 open HolKernel Parse boolLib bossLib lcsymtacs;
-open optionTheory listTheory pred_setTheory comparisonTheory 
+open optionTheory listTheory pred_setTheory comparisonTheory
      balanced_mapTheory finite_mapTheory;
-     
+
 fun pat_elim q = Q.PAT_ASSUM q (K ALL_TAC);
 
 val SET_EQ_THM = Q.prove
 (`!s1 s2. (s1 = s2) = !x. s1 x = s2 x`,
  METIS_TAC [EXTENSION,IN_DEF]);
 
-val LENGTH_NIL_SYM = 
+val LENGTH_NIL_SYM =
    GEN_ALL (CONV_RULE (LHS_CONV SYM_CONV) (SPEC_ALL LENGTH_NIL));
 
 val list_ss = list_ss ++ rewrites [LENGTH_NIL, LENGTH_NIL_SYM];
@@ -46,35 +46,35 @@ val set_ss = list_ss ++ pred_setLib.PRED_SET_ss ++ rewrites [SET_EQ_THM,IN_DEF]
 
 val _ = new_theory "eq_cmp_bmap";
 
-val eq_cmp_def = 
+val eq_cmp_def =
  Define
   `eq_cmp cmp = good_cmp cmp /\ !x y. (cmp x y = Equal) <=> (x=y)`;
 
-val [frange_def,fdom_def] = 
+val [frange_def,fdom_def] =
  TotalDefn.multiDefine
    `(fdom cmp bmap   = {a | ?x. lookup cmp a bmap = SOME x}) /\
     (frange cmp bmap = {x | ?a. lookup cmp a bmap = SOME x})`;
 
-val bmap_of_list_def = 
+val bmap_of_list_def =
   Define
-   `bmap_of_list cmp (fmap:'a|->'b) list = 
+   `bmap_of_list cmp (fmap:'a|->'b) list =
         FOLDR (\k bmap. balanced_map$insert cmp k (fmap ' k) bmap)
               Tip list`;
 
-val fdom_bmap_def = 
+val fdom_bmap_def =
  Define
    `bmap_of cmp fmap = bmap_of_list cmp fmap (SET_TO_LIST (FDOM fmap))`;
 
 val bmap_of_def = Q.prove
-(`bmap_of cmp fmap = 
+(`bmap_of cmp fmap =
         FOLDR (\k bmap. balanced_map$insert cmp k (fmap ' k) bmap)
               Tip
               (SET_TO_LIST (FDOM fmap))`,
  metis_tac [bmap_of_list_def, fdom_bmap_def]);
 
 val invariant_insert_list = Q.prove
-(`!(list:'a list) fmap cmp. 
-   good_cmp cmp ==> 
+(`!(list:'a list) fmap cmp.
+   good_cmp cmp ==>
    invariant cmp (FOLDR (\k bmap. balanced_map$insert cmp k (fmap ' k) bmap) Tip list)`,
 Induct >> rw [invariant_def] >> metis_tac [insert_thm])
 
@@ -95,8 +95,8 @@ val eq_cmp_keyset = Q.store_thm
 
 val eq_cmp_lookup_thm = Q.store_thm
 ("eq_cmp_lookup_thm",
- `!bmap cmp. 
-    invariant cmp bmap /\ eq_cmp cmp 
+ `!bmap cmp.
+    invariant cmp bmap /\ eq_cmp cmp
    ==>
        !x. lookup cmp x bmap = FLOOKUP (to_fmap cmp bmap) {x}`,
  rw [] >> `good_cmp cmp` by metis_tac [eq_cmp_def]
@@ -111,8 +111,8 @@ rw [insert_thm,lookup_thm,FLOOKUP_UPDATE]
  >> metis_tac [good_cmp_def,comparison_distinct]);
 
 val lookup_insert_notequal = Q.prove
-(`!bmap a b y. 
-     good_cmp cmp /\ invariant cmp bmap /\ 
+(`!bmap a b y.
+     good_cmp cmp /\ invariant cmp bmap /\
      ((cmp a b = Less) \/ (cmp a b = Greater))
     ==> (lookup cmp b (insert cmp a y bmap) = lookup cmp b bmap)`,
 rw [insert_thm,lookup_thm,FLOOKUP_UPDATE]
@@ -120,18 +120,18 @@ rw [insert_thm,lookup_thm,FLOOKUP_UPDATE]
  >> metis_tac [good_cmp_def,comparison_distinct]);
 
 val lookup_insert_thm = Q.store_thm
-("lookup_insert_thm",   
- `!bmap a b y. 
+("lookup_insert_thm",
+ `!bmap a b y.
      good_cmp cmp /\ invariant cmp bmap
-    ==> 
-     (lookup cmp b (insert cmp a y bmap) = 
+    ==>
+     (lookup cmp b (insert cmp a y bmap) =
         if cmp a b = Equal
           then SOME y
           else lookup cmp b bmap)`,
  metis_tac [lookup_insert_equal,lookup_insert_notequal,comparison_nchotomy]);
 
 val lookup_bmap_of_list = Q.prove
-(`!list fmap x. 
+(`!list fmap x.
    eq_cmp cmp /\ MEM x list
    ==>
     (lookup cmp x (bmap_of_list cmp fmap list) = SOME (fmap ' x))`,
@@ -141,7 +141,7 @@ Induct >> rw [bmap_of_list_def] >> `good_cmp cmp` by metis_tac [eq_cmp_def]
      >> metis_tac [eq_cmp_def]));
 
 val lookup_bmap_of_list_notin = Q.prove
-(`!list fmap x. 
+(`!list fmap x.
    eq_cmp cmp /\ ~MEM x list
    ==>
     (lookup cmp x (bmap_of_list cmp fmap list) = NONE)`,
@@ -152,11 +152,11 @@ Induct >> rw [bmap_of_list_def] >> `good_cmp cmp` by metis_tac [eq_cmp_def]
 
 val lookup_bmap_of = Q.store_thm
 ("lookup_bmap_of",
- `!list fmap x. 
-   eq_cmp cmp 
+ `!list fmap x.
+   eq_cmp cmp
    ==>
-    (lookup cmp x (bmap_of cmp fmap) = 
-       if x IN FDOM fmap 
+    (lookup cmp x (bmap_of cmp fmap) =
+       if x IN FDOM fmap
           then SOME (fmap ' x)
           else NONE)`,
 metis_tac [fdom_bmap_def,lookup_bmap_of_list,lookup_bmap_of_list_notin,
@@ -182,17 +182,17 @@ val FLOOKUP_MAP_KEYS = Q.prove
  Induct >> rw [map_keys_fupdate,FLOOKUP_UPDATE]);
 
 val to_fmap_empty = Q.prove
-(`!(bmap:('a,'b)balanced_map) (cmp:'a->'a->cpn). 
+(`!(bmap:('a,'b)balanced_map) (cmp:'a->'a->cpn).
      good_cmp cmp ==> (FLOOKUP (to_fmap cmp bmap) {} = NONE)`,
-Induct >> rw [to_fmap_def,FLOOKUP_UPDATE,FLOOKUP_FUNION,key_set_def,EXTENSION] 
+Induct >> rw [to_fmap_def,FLOOKUP_UPDATE,FLOOKUP_FUNION,key_set_def,EXTENSION]
        >> metis_tac [good_cmp_thm])
 
 val to_fmap_two = Q.prove
-(`!(bmap:('a,'b)balanced_map) (cmp:'a->'a->cpn) a b s. 
-     eq_cmp cmp /\ a IN s /\ b IN s /\ ~(a=b) ==> 
+(`!(bmap:('a,'b)balanced_map) (cmp:'a->'a->cpn) a b s.
+     eq_cmp cmp /\ a IN s /\ b IN s /\ ~(a=b) ==>
       (FLOOKUP (to_fmap cmp bmap) s = NONE)`,
 Induct >> rw [to_fmap_def,FLOOKUP_UPDATE,FLOOKUP_FUNION,key_set_def,EXTENSION,
-              eq_cmp_def,GSYM IMP_DISJ_THM] 
+              eq_cmp_def,GSYM IMP_DISJ_THM]
        >- metis_tac []
        >- (BasicProvers.CASE_TAC >> metis_tac[eq_cmp_def,NOT_SOME_NONE]));
 
@@ -202,10 +202,10 @@ Induct >> rw [MAP_KEYS_FEMPTY,map_keys_fupdate,FLOOKUP_UPDATE,FLOOKUP_FUNION]);
 
 val flookup_map_keys_two = Q.prove
 (`!fmap a b s.
-     ~(a=b) /\ a IN s /\ b IN s 
+     ~(a=b) /\ a IN s /\ b IN s
        ==>
       (FLOOKUP (MAP_KEYS (λx. {x}) fmap) s = NONE)`,
-Induct 
+Induct
   >> rw [MAP_KEYS_FEMPTY,map_keys_fupdate,FLOOKUP_UPDATE]
   >> `FLOOKUP (MAP_KEYS (λx. {x}) fmap) s = NONE` by metis_tac[]
   >> rw[]
@@ -230,7 +230,7 @@ val fmap_bmap = Q.store_thm
 
 val fdom_insert = Q.store_thm
 ("fdom_insert",
- `!bmap cmp k v. 
+ `!bmap cmp k v.
       eq_cmp cmp /\
       invariant cmp bmap
      ==>

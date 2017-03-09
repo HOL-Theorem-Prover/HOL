@@ -1,7 +1,7 @@
 open HolKernel Parse boolLib bossLib
 open boolSimps
-
 open grammarTheory finite_mapTheory
+open locationTheory
 
 val _ = new_theory "peg"
 
@@ -13,10 +13,10 @@ val _ = new_theory "peg"
 
 val _ = Hol_datatype `pegsym =
     empty of 'c
-  | any of ('a -> 'c)
-  | tok of ('a -> bool) => ('a -> 'c)
+  | any of (('a # locs) -> 'c)
+  | tok of ('a -> bool) => (('a # locs) -> 'c)
   | nt of 'b inf => ('c -> 'c)
-  | seq of pegsym => pegsym => ('c -> 'c -> 'c)
+  | seq of pegsym => pegsym => ('c  -> 'c -> 'c)
   | choice of pegsym => pegsym => ('c + 'c -> 'c)
   | rpt of pegsym => ('c list -> 'c)
   | not of pegsym => 'c
@@ -26,7 +26,7 @@ val _ = Hol_datatype`
   peg = <| start : ('a,'b,'c) pegsym ;
            rules : 'b inf |-> ('a,'b,'c) pegsym |>
 `
-
+(* Option type should be replaced with sum type (loc. for NONE *)
 val (peg_eval_rules, peg_eval_ind, peg_eval_cases) = Hol_reln`
   (∀s c. peg_eval G (s, empty c) (SOME(s, c))) ∧
   (∀n r s f c.
@@ -37,8 +37,8 @@ val (peg_eval_rules, peg_eval_ind, peg_eval_cases) = Hol_reln`
        peg_eval G (s, nt n f) NONE) ∧
   (∀h t f. peg_eval G (h::t, any f) (SOME (t, f h))) ∧
   (∀f. peg_eval G ([], any f) NONE) ∧
-  (∀e t P f. P e ⇒ peg_eval G (e::t, tok P f) (SOME(t, f e))) ∧
-  (∀e t P f. ¬P e ⇒ peg_eval G (e::t, tok P f) NONE) ∧
+  (∀e t P f. P (FST e) ⇒ peg_eval G (e::t, tok P f) (SOME(t, f e))) ∧
+  (∀e t P f. ¬P (FST e) ⇒ peg_eval G (e::t, tok P f) NONE) ∧
   (∀P f. peg_eval G ([], tok P f) NONE) ∧
   (∀e s c. peg_eval G (s, e) NONE ⇒ peg_eval G (s, not e c) (SOME(s,c))) ∧
   (∀e s s' c. peg_eval G (s, e) (SOME s') ⇒ peg_eval G (s, not e c) NONE)  ∧
@@ -99,7 +99,6 @@ val peg_deterministic = store_thm(
   HO_MATCH_MP_TAC peg_eval_strongind' THEN SRW_TAC [][] THEN
   ONCE_REWRITE_TAC [peg_eval_cases] THEN SRW_TAC [][]);
 
-open lcsymtacs
 (* Lemma 3.3 *)
 val peg_badrpt = store_thm(
   "peg_badrpt",
@@ -375,7 +374,7 @@ val peg_eval_tok_NONE = save_thm(
 
 val peg_eval_tok_SOME = store_thm(
   "peg_eval_tok_SOME",
-  ``peg_eval G (i0, tok P f) (SOME (i,r)) ⇔ ∃h. P h ∧ i0 = h::i ∧ r = f h``,
+  ``peg_eval G (i0, tok P f) (SOME (i,r)) ⇔ ∃h. P (FST h) ∧ i0 = h::i ∧ r = f h``,
   simp[Once peg_eval_cases] >> metis_tac[]);
 
 val peg_eval_empty = store_thm(
@@ -428,5 +427,46 @@ val peg_eval_list = Q.store_thm(
         peg_eval G (i0, e) (SOME (i1, rh)) ∧
         peg_eval_list G (i1, e) (i, rt) ∧ r = rh::rt)`,
   simp[Once peg_eval_cases, SimpLHS] >> metis_tac[]);
+
+val pegfail_empty = store_thm(
+  "pegfail_empty[simp]",
+  ``pegfail G (empty r) = F``,
+  simp[Once peg0_cases]);
+
+val peg0_empty = store_thm(
+  "peg0_empty[simp]",
+  ``peg0 G (empty r) = T``,
+  simp[Once peg0_cases]);
+
+val peg0_not = store_thm(
+  "peg0_not[simp]",
+  ``peg0 G (not s r) ⇔ pegfail G s``,
+  simp[Once peg0_cases, SimpLHS]);
+
+val peg0_choice = store_thm(
+  "peg0_choice[simp]",
+  ``peg0 G (choice s1 s2 f) ⇔ peg0 G s1 ∨ pegfail G s1 ∧ peg0 G s2``,
+  simp[Once peg0_cases, SimpLHS]);
+
+val peg0_choicel = store_thm(
+  "peg0_choicel[simp]",
+  ``(peg0 G (choicel []) = F) ∧
+    (peg0 G (choicel (h::t)) ⇔ peg0 G h ∨ pegfail G h ∧ peg0 G (choicel t))``,
+  simp[choicel_def])
+
+val peg0_seq = store_thm(
+  "peg0_seq[simp]",
+  ``peg0 G (seq s1 s2 f) ⇔ peg0 G s1 ∧ peg0 G s2``,
+  simp[Once peg0_cases, SimpLHS])
+
+val peg0_tok = store_thm(
+  "peg0_tok[simp]",
+  ``peg0 G (tok P f) = F``,
+  simp[Once peg0_cases])
+
+val peg0_pegf = store_thm(
+  "peg0_pegf[simp]",
+  ``peg0 G (pegf s f) = peg0 G s``,
+  simp[pegf_def])
 
 val _ = export_theory()

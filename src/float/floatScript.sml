@@ -513,8 +513,7 @@ val BOUND_AT_WORST_LEMMA = Q.prove (
 val ERROR_AT_WORST_LEMMA = Q.prove (
   `!a x. abs x < threshold float_format /\ Finite a ==>
          abs (error x) <= abs (Val a - x)`,
-  rewrite_tac
-    [ISFINITE, Val, error, BOUND_AT_WORST_LEMMA, Val, DEFLOAT_FLOAT_ROUND])
+  rewrite_tac [ISFINITE, Val, error, BOUND_AT_WORST_LEMMA, DEFLOAT_FLOAT_ROUND])
 
 val ERROR_IS_ZERO = Q.store_thm ("ERROR_IS_ZERO",
   `!a x. Finite a /\ (Val a = x) ==> (error x = 0)`,
