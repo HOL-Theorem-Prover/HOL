@@ -1,13 +1,22 @@
-structure ParseExtras :> ParseExtras =
+structure boolpp :> boolpp =
 struct
 
-open Parse HolKernel boolSyntax
+open Parse HolKernel
 
-fun tight_equality() = set_fixity "=" (Infix(NONASSOC, 450))
-fun temp_tight_equality() = temp_set_fixity "=" (Infix(NONASSOC, 450))
-
-fun loose_equality () = set_fixity "=" (Infix(NONASSOC, 100))
-fun temp_loose_equality () = temp_set_fixity "=" (Infix(NONASSOC, 100))
+fun dest_cond tm =
+  let
+    val (f, args) = strip_comb tm
+    val {Thy,Name,...} = dest_thy_const f
+      handle HOL_ERR _ =>
+             raise mk_HOL_ERR "boolpp" "dest_cond" "Not even a const at head"
+  in
+    if Thy = "bool" andalso Name = "COND" then
+      case args of
+          [gd, th, el] => (gd,th,el)
+        | _ => raise mk_HOL_ERR "boolpp" "dest_cond" "Wrong number of arguments"
+    else
+      raise mk_HOL_ERR "boolpp" "dest_cond" "Not a COND-term"
+  end
 
 fun condprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm = let
   open term_pp_types smpp
@@ -63,5 +72,8 @@ in
     (doguard false (g,t) >> add_break(1,0) >> doelse e) >>
   doparen ")"
 end
+
+val _ = term_grammar.userSyntaxFns.register_userPP
+          {name = "bool.COND", code = condprinter}
 
 end

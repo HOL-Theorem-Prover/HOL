@@ -1331,7 +1331,6 @@ val pretty_printer_list =
 val use_holfoot_pp = ref true
 val _ = Feedback.register_btrace ("use holfoot_pp", use_holfoot_pp);
 
-
 fun trace_user_printer (up:term_grammar.userprinter) =
    (fn GS => fn sys => fn ppfns => fn gravs => fn d => fn pps => fn t =>
    if (!use_holfoot_pp) then
@@ -1344,7 +1343,12 @@ fun trace_user_printer (up:term_grammar.userprinter) =
 
 val pretty_printer_list_trace = map (fn (s, t, p) =>
    (s, t, trace_user_printer p)) pretty_printer_list
+val _ = app (fn (s,_,c) = term_grammar.userSyntaxFns.register_userPP
+                            {name = s, code = c})
+            pretty_printer_list_trace
 
+fun aup (s,pat,code) =
+   (add_ML_dependency "holfoot_pp_print"; add_user_printer(s,pat))
 
 fun temp_add_holfoot_pp () =
    (map temp_add_user_printer pretty_printer_list_trace;
@@ -1355,7 +1359,7 @@ fun temp_remove_holfoot_pp () =
     print "HOLFOOT pretty printing deactivated!\n");
 
 fun add_holfoot_pp_quiet () =
-   (map add_user_printer pretty_printer_list_trace;());
+   (map aup pretty_printer_list_trace;());
 
 fun add_holfoot_pp () =
     (add_holfoot_pp_quiet();

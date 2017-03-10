@@ -70,6 +70,7 @@ fun tmdelta_terms (d:user_delta) =
       OVERLOAD_ON (_,t) => [t]
     | IOVERLOAD_ON (_, t) => [t]
     | GRMOVMAP (_, t) => [t]
+    | ADD_UPRINTER {pattern,...} => [pattern]
     | _ => []
 
 val tmdeltal_terms = List.foldl (fn (d, acc) => tmdelta_terms d @ acc) []
