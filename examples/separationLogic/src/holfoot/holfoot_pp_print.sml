@@ -1343,7 +1343,7 @@ fun trace_user_printer (up:term_grammar.userprinter) =
 
 val pretty_printer_list_trace = map (fn (s, t, p) =>
    (s, t, trace_user_printer p)) pretty_printer_list
-val _ = app (fn (s,_,c) = term_grammar.userSyntaxFns.register_userPP
+val _ = app (fn (s,_,c) => term_grammar.userSyntaxFns.register_userPP
                             {name = s, code = c})
             pretty_printer_list_trace
 
