@@ -1936,12 +1936,12 @@ Constant & Overloaded symbol & Strength & Associativity \\ \hline
 {\small\verb+int_lt+} &{\small\verb+<+}  & 450 & non \\
 {\small\verb+int_add+} &{\small\verb%+%} & 500 & left \\
 {\small\verb+int_sub+} &{\small\verb%-%} & 500 & left \\
-{\small\verb+int_neg+} &{\small\verb%~%} & 900 & trueprefix \\
 {\small\verb+int_mul+} &{\small\verb%*%} & 600 & left \\
 {\small\verb%/%} & & 600 & left \\
 {\small\verb+%+} & & 650 & left \\
 {\small\verb+int_exp+} &{\small\verb%**%} & 700 & right \\
-{\small\verb+int_of_num+} &{\small\verb%&%} & & prefix \\
+{\small\verb+int_of_num+} &{\small\verb%&%} & 900 & prefix \\
+{\small\verb+int_neg+} &{\small\verb%~%} & 900 & prefix \\
 \end{tabular}}
 \end{center}
 
@@ -1987,11 +1987,11 @@ Constant & Overloaded symbol & Strength & Associativity \\ \hline
 {\small\verb+rat_les+} &{\small\verb+<+}  & 450 & non \\
 {\small\verb+rat_add+} &{\small\verb%+%} & 500 & left \\
 {\small\verb+rat_sub+} &{\small\verb%-%} & 500 & left \\
-{\small\verb+rat_ainv+} &{\small\verb%~%} & 900 & trueprefix \\
 {\small\verb+rat_minv+} & & & \\
 {\small\verb+rat_mul+} &{\small\verb%*%} & 600 & left \\
 {\small\verb+rat_div+} &{\small\verb%/%} & 600 & left \\
-{\small\verb+rat_of_num+} &{\small\verb%&%} & & \\
+{\small\verb+rat_ainv+} &{\small\verb%~%} & 900 & prefix \\
+{\small\verb+rat_of_num+} &{\small\verb%&%} & 900 & prefix \\
 \end{tabular}}
 \end{center}
 
@@ -2032,11 +2032,11 @@ Constant & Overloaded symbol & Strength & Associativity \\ \hline
 {\small\verb+real_lt+} &{\small\verb+<+}  & 450 & non \\
 {\small\verb+real_add+} &{\small\verb%+%} & 500 & left \\
 {\small\verb+real_sub+} &{\small\verb%-%} & 500 & left \\
-{\small\verb+real_neg+} &{\small\verb%~%} & 900 & trueprefix \\
 {\small\verb+real_mul+} &{\small\verb%*%} & 600 & left \\
 {\small\verb+real_div+} & {\small\verb%/%} & 600 & left \\
 {\small\verb+pow+} & &700 & right \\
-{\small\verb+real_of_num+} &{\small\verb%&%} & & prefix \\
+{\small\verb+real_of_num+} &{\small\verb%&%} & 900 & prefix \\
+{\small\verb+real_neg+} &{\small\verb%~%} & 900 & prefix \\
 \end{tabular}}
 \end{center}
 

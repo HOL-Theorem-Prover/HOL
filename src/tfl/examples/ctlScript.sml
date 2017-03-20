@@ -2,9 +2,10 @@
      CTL as a concrete datatype, and valuations. From Daryl Stewart.
  ---------------------------------------------------------------------------*)
 
-app load ["stringTheory", "pred_setTheory", "bossLib"];
+open HolKernel Parse boolLib bossLib
+open pred_setTheory stringTheory
 
-open bossLib;
+val _ = new_theory "ctl"
 
 fun mkMySuffix s prec = add_rule
     {term_name = s, fixity = Suffix prec,
@@ -13,7 +14,7 @@ fun mkMySuffix s prec = add_rule
      block_style = (AroundSamePrec, (PP.INCONSISTENT, 0))};
 
 fun mkMyPrefix s prec = add_rule
-    {term_name = s, fixity = TruePrefix prec,
+    {term_name = s, fixity = Prefix prec,
      pp_elements = [TOK s, HardSpace 1],
      paren_style = OnlyIfNecessary,
      block_style = (AroundSamePrec, (PP.INCONSISTENT, 0))};
@@ -31,9 +32,6 @@ fun mkMyInfix s prec = mkMyInfixAlias s s prec;
  * Create the theory.                                                        *
  *---------------------------------------------------------------------------*)
 
-val _ = new_theory "CTL";
-
-
 (*---------------------------------------------------------------------------*
  * Comments from notes from [1] Model Checking and Modular Verification      *
  * (Grumberg and Long) ACMTransactions on Programming Languages and Systems  *
@@ -42,7 +40,7 @@ val _ = new_theory "CTL";
  *---------------------------------------------------------------------------*)
 
 val _ = bossLib.Hol_datatype
-    `state_formula 
+    `state_formula
           = TRUE
           | FALSE
           | REG of 'a
@@ -77,13 +75,13 @@ val _ = mkMyPrefix "FU"    255;
 val _ = mkMyPrefix "G"     255;
 val _ = mkMyInfix  "U"     270;
 val _ = mkMyInfix  "R"     270;
-val _ = mkMyPrefix "X"     255; 
+val _ = mkMyPrefix "X"     255;
 
 (*---------------------------------------------------------------------------
      Things can look slightly ambiguous:
 
-       Term `A X STATE TRUE FAILS` 
-         = 
+       Term `A X STATE TRUE FAILS`
+         =
        Term`A ((X (STATE TRUE)) FAILS)`
  ---------------------------------------------------------------------------*)
 
@@ -175,17 +173,17 @@ val IS_ACTL_def = Define `IS_ACTL f = ACTLSTAR_STATE f /\ IS_CTL f`;
 val _ = Hol_datatype
   `STRUCTURE = <| states      : 'state -> bool;
                   states0     : 'state -> bool;
-                  atoms       : 'atom  -> bool;
-                  valids      : 'state -> 'atom -> bool;
+                  atoms       : 'varatom  -> bool;
+                  valids      : 'state -> 'varatom -> bool;
                   transitions : 'state # 'state -> bool;
                   fairSets    : ('state -> bool) # ('state -> bool) -> bool
                 |>`;
 
 
 val wfSTRUCTURE_def = Define
-`wfSTRUCTURE (M: ('state,'atom) STRUCTURE) 
- = (M.states0 SUBSET M.states) /\ 
-   (!P Q. (P,Q) IN M.fairSets ==> P SUBSET M.states /\ Q SUBSET M.states) /\ 
+`wfSTRUCTURE (M: ('state,'atom) STRUCTURE)
+ = (M.states0 SUBSET M.states) /\
+   (!P Q. (P,Q) IN M.fairSets ==> P SUBSET M.states /\ Q SUBSET M.states) /\
    (!s. s IN M.states ==> (M.valids s) SUBSET M.atoms)`;
 
 (*---------------------------------------------------------------------------*
@@ -205,7 +203,7 @@ val STATE_NO_def = Define `PATH(Sn) STATE_NO n = Sn n`;
 
 val IS_PATH_IN_def = Define
     `(PI:'state Path) IS_PATH_IN  (M:('state,'atom)STRUCTURE)
-       = (PI STATE_NO 0) IN M.states /\ 
+       = (PI STATE_NO 0) IN M.states /\
          !n. ((PI STATE_NO n), (PI STATE_NO (n+1))) IN M.transitions`;
 
 
@@ -226,7 +224,7 @@ val IS_FAIR_PATH_IN_def = Define
     `(PI:'state Path) IS_FAIR_PATH_IN  (M:('state,'atom)STRUCTURE)
       = (PI IS_PATH_IN M) /\
         !P Q. (P,Q) IN M.fairSets
-              ==> ~(((INF PI) INTER P) = {}) 
+              ==> ~(((INF PI) INTER P) = {})
               ==> ~(((INF PI) INTER Q) = {})`;
 
 (*---------------------------------------------------------------------------*
@@ -241,20 +239,19 @@ val FROM_def = Define `PI FROM n = PATH(\x. PI STATE_NO (n+x))`;
 (* Definition 5: Satisfaction of formulae.                                   *)
 (*---------------------------------------------------------------------------*)
 
-val SAT_defn = 
- Defn.Hol_defn 
-  "SAT"
+val SAT_defn =
+ tDefine "SAT"
    `(STATESAT ((M:('s,'a)STRUCTURE), s:'s) (TRUE:'a state_formula) = T)
  /\ (STATESAT (M,s) FALSE      = F)
- /\ (STATESAT (M,s) (REG a)    = ?PI. (PI STATE_NO 0 = s) /\ 
-                                      (PI IS_FAIR_PATH_IN M) /\ 
-                                      (a IN (valids M s))) 
+ /\ (STATESAT (M,s) (REG a)    = ?PI. (PI STATE_NO 0 = s) /\
+                                      (PI IS_FAIR_PATH_IN M) /\
+                                      (a IN (valids M s)))
  /\ (STATESAT (M,s)  ~f        = ~STATESAT (M,s) f)
  /\ (STATESAT (M,s) (f1 \/ f2) = STATESAT (M,s) f1 \/ STATESAT (M,s) f2)
  /\ (STATESAT (M,s) (f1 /\ f2) = STATESAT (M,s) f1 /\ STATESAT (M,s) f2)
  /\ (STATESAT (M,s) (E g1)     = ?PI. (PI IS_FAIR_PATH_IN M) /\
                                       (PI STATE_NO 0 = s) /\ PATHSAT(M,PI) g1)
- /\ (STATESAT (M,s) (A g1)     = !PI. (PI IS_FAIR_PATH_IN M) /\ 
+ /\ (STATESAT (M,s) (A g1)     = !PI. (PI IS_FAIR_PATH_IN M) /\
                                       (PI STATE_NO 0 = s) ==> PATHSAT(M,PI) g1)
 
  /\ (PATHSAT (M,PI) (STATE f1) = STATESAT (M, PI STATE_NO 0) f1)
@@ -264,20 +261,17 @@ val SAT_defn =
  /\ (PATHSAT (M,PI) (X g1)     = PATHSAT (M, PI FROM 1) g1)
  /\ (PATHSAT (M,PI) (FU g1)    = ?k. k >= 0 /\ PATHSAT (M,(PI FROM k)) g1)
  /\ (PATHSAT (M,PI) (G g1)     = !i. i>=0 ==> PATHSAT (M,PI FROM i) g1)
- /\ (PATHSAT (M,PI) (g1 U g2)  = ?k. k>=0 /\ PATHSAT (M,PI FROM k) g2 /\ 
+ /\ (PATHSAT (M,PI) (g1 U g2)  = ?k. k>=0 /\ PATHSAT (M,PI FROM k) g2 /\
                                      !j. 0<=j/\j<k ==> PATHSAT(M,PI FROM j) g1)
- /\ (PATHSAT (M,PI) (g1 R g2)  = !j. j>=0  
+ /\ (PATHSAT (M,PI) (g1 R g2)  = !j. j>=0
                                      ==> (!i. i<j ==> ~PATHSAT(M,PI FROM i) g1)
-                                     ==> PATHSAT(M,PI FROM j) g2)`;
-
+                                     ==> PATHSAT(M,PI FROM j) g2)`
 (*---------------------------------------------------------------------------
        Trivial termination proof ... the built-in termination
        prover should really get this.
  ---------------------------------------------------------------------------*)
+ (WF_REL_TAC `measure (\s. case s of
+                               INL (x,y) => state_formula_size (\v.0) y
+                             | INR (x,y) => path_formula_size (\v.0) y)`);
 
-val (SAT_eqns, SAT_ind) =
- Defn.tprove(SAT_defn,
-    Q.EXISTS_TAC `measure \s. sum_case
-                     (\(x,y). state_formula_size (\v.0) y)
-                     (\(x,y). path_formula_size (\v.0) y) s`
-     THEN TotalDefn.TC_SIMP_TAC [] []);
+val _ = export_theory()

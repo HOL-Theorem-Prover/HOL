@@ -3091,7 +3091,7 @@ NONASSOC   : associativity
 Infixl     : int -> fixity
 Infixr     : int -> fixity
 Infix      : associativity * int -> fixity
-TruePrefix : int -> fixity
+Prefix     : int -> fixity
 Closefix   : fixity
 Suffix     : int -> fixity
 fixity     : string -> fixity
@@ -3157,7 +3157,7 @@ for lifting theorems.
 define_quotient_types :
         {types: {name: string, equiv: thm} list,
          defs: {def_name: string, fname: string,
-                func: Term.term, fixity: Parse.fixity} list,
+                func: Term.term, fixity: Parse.fixity option} list,
          tyop_equivs : thm list,
          tyop_quotients : thm list,
          tyop_simps : thm list,
@@ -5289,37 +5289,37 @@ equivalence theorems for these,
 We specify the constants that are to be lifted:
 \begin{verbatim}
 - val defs = [{def_name="OVAR_def", fname="OVAR",
-               func= (--`OVAR1`--), fixity=Prefix},
+               func= (--`OVAR1`--), fixity=NONE},
               {def_name="OBJ_def", fname="OBJ",
-               func= (--`OBJ1`--), fixity=Prefix},
+               func= (--`OBJ1`--), fixity=NONE},
               {def_name="INVOKE_def", fname="INVOKE",
-               func= (--`INVOKE1`--), fixity=Prefix},
+               func= (--`INVOKE1`--), fixity=NONE},
               {def_name="UPDATE_def", fname="UPDATE",
-               func= (--`UPDATE1`--), fixity=Prefix},
+               func= (--`UPDATE1`--), fixity=NONE},
               {def_name="SIGMA_def", fname="SIGMA",
-               func= (--`SIGMA1`--), fixity=Prefix},
+               func= (--`SIGMA1`--), fixity=NONE},
               {def_name="HEIGHT_def", fname="HEIGHT",
-               func= (--`HEIGHT1`--), fixity=Prefix},
+               func= (--`HEIGHT1`--), fixity=NONE},
               {def_name="FV_def", fname="FV",
-               func= (--`FV1`--), fixity=Prefix},
+               func= (--`FV1`--), fixity=NONE},
               {def_name="SUB_def", fname="SUB",
-               func= (--`SUB1`--), fixity=Prefix},
+               func= (--`SUB1`--), fixity=NONE},
               {def_name="FV_subst_def", fname="FV_subst",
-               func= (--`FV_subst1`--), fixity=Prefix},
+               func= (--`FV_subst1`--), fixity=NONE},
               {def_name="SUBo_def", fname="SUBo",
                func= (--`SUB1o :^obj -> ^subs -> ^obj`--),
-               fixity=Infix(NONASSOC,150)},
+               fixity=SOME(Infix(NONASSOC,150))},
               {def_name="SUBd_def", fname="SUBd",
                func= (--`SUB1d :^dict -> ^subs -> ^dict`--),
-               fixity=Infix(NONASSOC,150)},
+               fixity=SOME(Infix(NONASSOC,150))},
               {def_name="SUBe_def", fname="SUBe",
                func= (--`SUB1e :^entry -> ^subs -> ^entry`--),
-               fixity=Infix(NONASSOC,150)},
+               fixity=SOME(Infix(NONASSOC,150))},
               {def_name="SUBm_def", fname="SUBm",
                func= (--`SUB1m :^method -> ^subs -> ^method`--),
-               fixity=Infix(NONASSOC,150)},
+               fixity=SOME(Infix(NONASSOC,150))},
               {def_name="vsubst_def", fname="/",
-               func= (--`$//`--), fixity=Infix(NONASSOC,150)},
+               func= (--`$//`--), fixity=SOME(Infix(NONASSOC,150))},
               ...
              ];
 \end{verbatim}
