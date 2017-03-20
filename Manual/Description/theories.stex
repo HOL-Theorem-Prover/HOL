@@ -3507,7 +3507,7 @@ Several different notions of a collection of elements are available in
 
 \subsection{Sets (\theoryimp{pred\_set})}
 \label{sec:theory-of-sets}
-\index{sets, the HOL theory of@sets, the \HOL{} theory of}
+\index{sets, the HOL theory of@sets, the \HOL{} theory of|(}
 
 An extensive development of set theory is available in the theory
 \theoryimp{pred\_set}. Sets are represented by functions of the type
@@ -3966,6 +3966,7 @@ if the trace variable with name \ml{pp\_unambiguous\_comprehensions}
 is set to \ml{1}.
 (If the same trace is set to \ml{2}, then the unambiguous notation will never be used.)
 \index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback!set comprehensions}
+\index{sets, the HOL theory of@sets, the \HOL{} theory of|)}
 
 \subsection{Multisets (\theoryimp{bag})}\label{multiset}
 
