@@ -1987,6 +1987,16 @@ GEN_TAC THEN Cases THEN SRW_TAC[] [MAP] THEN1 (
   SRW_TAC [] [] ) THEN
 PROVE_TAC[INJ_SUBSET, SUBSET_REFL, SUBSET_DEF, IN_UNION, IN_INSERT])
 
+(* this turns out to be more useful; in particular, INJ_MAP_EQ can't
+   be used as an introduction rule without explicit instantiation of
+   its beta type variable, which only appears in the assumption *)
+val INJ_MAP_EQ_IFF = store_thm(
+  "INJ_MAP_EQ_IFF",
+  ``!f l1 l2.
+      INJ f (set l1 UNION set l2) UNIV ==>
+      ((MAP f l1 = MAP f l2) <=> (l1 = l2))``,
+  rw[] >> EQ_TAC >- metis_tac[INJ_MAP_EQ] >> rw[])
+
 local open numLib in
 val CARD_LIST_TO_SET = Q.store_thm(
 "CARD_LIST_TO_SET",
