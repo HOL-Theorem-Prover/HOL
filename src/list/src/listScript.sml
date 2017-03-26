@@ -17,10 +17,11 @@
 (* ===================================================================== *)
 
 
-(*---------------------------------------------------------------------------*
- * Require ancestor theory structures to be present. The parents of list     *
- * are "arithmetic" and "pair".                                              *
- *---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    Require ancestor theory structures to be present. The parents of list
+    are "arithmetic", "pair", "pred_set" and those theories behind the
+    datatype definition library
+   ---------------------------------------------------------------------- *)
 
 local
   open arithmeticTheory pairTheory pred_setTheory Datatype
