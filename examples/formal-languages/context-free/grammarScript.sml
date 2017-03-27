@@ -48,8 +48,8 @@ val ptree_size_def = tDefine "ptree_size" `
   (ptree_size (Nd nt children) = 1 + SUM (MAP ptree_size children))
 `
 (WF_REL_TAC `measure (parsetree_size (K 1) (K 1))` THEN
-   Induct_on `children` 
-   THEN SRW_TAC [][definition "parsetree_size_def"] 
+   Induct_on `children`
+   THEN SRW_TAC [][definition "parsetree_size_def"]
    THEN1 DECIDE_TAC THEN
    RES_TAC THEN POP_ASSUM (Q.SPECL_THEN [`p_2`, `p_1'`, `p_1`] MP_TAC) THEN
    DECIDE_TAC)
@@ -257,7 +257,7 @@ val fringe_element = store_thm(
         ptree_fringe xpt = ip ++ [x] ++ is``,
   gen_tac >>
   `(∃tok l . pt = Lf (tok,l)) ∨ (∃sym ptl. pt = Nd sym ptl)`
-    by (Cases_on `pt` >> Cases_on `p` >> simp[] ) 
+    by (Cases_on `pt` >> Cases_on `p` >> simp[] )
   >- simp[APPEND_EQ_CONS] >>
   simp[] >> pop_assum (K ALL_TAC) >> rpt gen_tac >>
   simp[Once FLAT_EQ_APPEND] >>
@@ -323,7 +323,7 @@ val fringe_element = store_thm(
                      f2 = MAP ptree_fringe pt2 ∧
                      fp ++ [x] ++ fs = ptree_fringe ptx`
       by metis_tac [th,APPEND_ASSOC]) >>
-    Cases_on `sym` >> simp[] >>  
+    Cases_on `sym` >> simp[] >>
     map_every qexists_tac [`fp`, `fs`, `pt1`, `ptx`, `pt2`] >>
     simp[] >> rw[] >> fs[] ]);
 
