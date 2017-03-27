@@ -95,6 +95,41 @@ val complete_ptree_def = Define`
     valid_ptree G pt ∧ ptree_head pt = NT G.start ∧
     ∀t. t ∈ set (ptree_fringe pt) ⇒ isTOK t`
 
+val real_fringe_def = tDefine "real_fringe" `
+  (real_fringe (Lf t) = [t]) ∧
+  (real_fringe (Nd n ptl) = FLAT (MAP real_fringe ptl))
+` (WF_REL_TAC `measure ptree_size` >> Induct_on `ptl` >> dsimp[] >>
+   fs[] >> rpt strip_tac >> res_tac >> simp[]);
+val _ = export_rewrites ["real_fringe_def"]
+
+val MAP_TKI_11 = Q.store_thm(
+  "MAP_TKI_11[simp]",
+  ‘(MAP (TOK ## I) l1 = MAP (TOK ## I) l2) ⇔ (l1 = l2)’,
+  simp[listTheory.INJ_MAP_EQ_IFF,
+       pred_setTheory.INJ_DEF, pairTheory.FORALL_PROD]);
+
+val real_fringe_ind = theorem "real_fringe_ind"
+val ptree_fringe_real_fringe = Q.store_thm(
+  "ptree_fringe_real_fringe",
+  ‘∀pt. ptree_fringe pt = MAP FST (real_fringe pt)’,
+  ho_match_mp_tac real_fringe_ind >>
+  simp[pairTheory.FORALL_PROD, MAP_FLAT, MAP_MAP_o, combinTheory.o_ABS_R] >>
+  rpt strip_tac >> AP_TERM_TAC >> simp[MAP_EQ_f]);
+
+val LENGTH_real_fringe = Q.store_thm(
+  "LENGTH_real_fringe",
+  ‘∀pt. LENGTH (real_fringe pt) = LENGTH (ptree_fringe pt)’,
+  simp[ptree_fringe_real_fringe]);
+
+val real_fringe_NIL_ptree_fringe = Q.prove(
+  `∀pt. real_fringe pt = [] ⇔ ptree_fringe pt = []`,
+  simp[ptree_fringe_real_fringe]);
+
+val real_fringe_CONS_ptree_fringe = Q.prove(
+  `∀pt rest. real_fringe pt = (TOK t, l) :: rest ⇒
+             ∃rest'. ptree_fringe pt = TOK t :: rest'`,
+  simp[ptree_fringe_real_fringe]);
+
 val language_def = Define`
   language G =
    { ts | ∃pt. complete_ptree G pt ∧ ptree_fringe pt = MAP TOK ts }`
