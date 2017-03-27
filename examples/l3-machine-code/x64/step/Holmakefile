@@ -1,4 +1,5 @@
-INCLUDES = ../.. ../model
+INCLUDES = ../.. ../model \
+           $(HOLDIR)/examples/machine-code/hoare-triple
 CLINE_OPTIONS = --qof
 
 ifdef POLY
