@@ -130,6 +130,28 @@ val real_fringe_CONS_ptree_fringe = Q.prove(
              ∃rest'. ptree_fringe pt = TOK t :: rest'`,
   simp[ptree_fringe_real_fringe]);
 
+val valid_locs_def = tDefine "valid_locs" ‘
+  (valid_locs (Lf _) ⇔ T) ∧
+  (valid_locs (Nd (_, l) children) ⇔
+     l = merge_list_locs (MAP ptree_loc children) ∧
+     ∀pt. MEM pt children ⇒ valid_locs pt)’
+  (WF_REL_TAC ‘measure ptree_size’ >> simp[] >> Induct >> dsimp[] >>
+   rpt strip_tac >> res_tac >> simp[]);
+val _ = export_rewrites ["valid_locs_def"]
+
+val valid_lptree_def = Define `
+  valid_lptree G pt ⇔ valid_locs pt ∧ valid_ptree G pt
+`;
+
+val valid_lptree_thm = Q.store_thm(
+  "valid_lptree_thm[simp]",
+  ‘(valid_lptree G (Lf p) ⇔ T) ∧
+   (valid_lptree G (Nd (n, l) children) ⇔
+      l = merge_list_locs (MAP ptree_loc children) ∧
+      n ∈ FDOM G.rules ∧ MAP ptree_head children ∈ G.rules ' n ∧
+      ∀pt. MEM pt children ⇒ valid_lptree G pt)’,
+  simp[valid_lptree_def] >> metis_tac[]);
+
 val language_def = Define`
   language G =
    { ts | ∃pt. complete_ptree G pt ∧ ptree_fringe pt = MAP TOK ts }`
