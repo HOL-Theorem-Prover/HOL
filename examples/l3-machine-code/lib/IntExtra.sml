@@ -7,7 +7,7 @@ struct
    val toBinString = IntInf.fmt StringCvt.BIN
    val toHexString = IntInf.fmt StringCvt.HEX
 
-   val fromBool = fn true => 1 | false => 0
+   val fromBool = fn true => 1 | false => 0: IntInf.int
 
    local
       fun scanInt b s =

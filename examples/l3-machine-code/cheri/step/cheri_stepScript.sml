@@ -207,7 +207,6 @@ val st = ``s:cheri_state``
 val extract_conv = simpLib.SIMP_CONV (srw_ss()++wordsLib.WORD_EXTRACT_ss) []
 
 local
-  val access_update = op @ o ListPair.unzip o utilsLib.accessor_update_fns
   val datatype_thms =
     utilsLib.datatype_rewrites true "cheri"
       ["cheri_state", "cheri_state_brss__0", "cheri_state_brss__1",

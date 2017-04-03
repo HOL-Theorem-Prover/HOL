@@ -3,10 +3,14 @@ INCLUDES = ../../common ../../lib
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 
-ifeq ($(KERNELID),otknl)
-all: $(TARGETS)
+all: $(TARGETS) arm.ui
 .PHONY: all
+
+ifeq ($(KERNELID),otknl)
 arm-model.art: arm-model.thy arm.ot.art
 	opentheory info --article -o $@ $<
 arm.art: arm.otd
 endif
+
+arm.uo: ../../lib/assemblerLib.uo ../../lib/MutableMap16.uo arm.sml
+	$(HOLMOSMLC) -c -toplevel assemblerLib.uo MutableMap16.ui arm.sml

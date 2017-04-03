@@ -2,10 +2,9 @@
    Mutable Maps
    ------------------------------------------------------------------------- *)
 
-structure MutableMap :> MutableMap =
+functor MutableMap (val arrayBits : Word.word) :> Map =
 struct
 
-val arrayBits = 0w16
 val arraySize = IntInf.<< (1, arrayBits)
 val arrayMask = arraySize - 1
 
@@ -55,7 +54,7 @@ fun copyArray a = Array.tabulate (Array.length a, fn i => Array.sub (a, i))
 fun copy (Array a) = Array (copyArray a)
   | copy (Tree (s, d, t)) = Tree (s, d, Ptree.transform copyArray t)
 
-end (* structure MutableMap *)
+end (* functor MutableMap *)
 
 (*
 

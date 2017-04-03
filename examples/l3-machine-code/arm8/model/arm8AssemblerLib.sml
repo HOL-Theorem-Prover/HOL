@@ -4,9 +4,8 @@ struct
 open HolKernel boolLib bossLib
 
 local
-   open MutableMap arm8 assemblerLib
-in
-end
+   open arm8
+in end
 
 val ERR = Feedback.mk_HOL_ERR "arm8AssemblerLib"
 
@@ -239,7 +238,7 @@ end
 
 (* Testing - round-trip
 
-open MutableMap arm8AssemblerLib
+open arm8AssemblerLib
 
 local
    val hex = assemblerLib.hex

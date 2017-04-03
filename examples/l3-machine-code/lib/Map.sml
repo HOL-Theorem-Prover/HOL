@@ -1,8 +1,8 @@
 (* -------------------------------------------------------------------------
-   Pure (immutable) Maps
+   Map
    ------------------------------------------------------------------------- *)
 
-signature PureMap =
+signature Map =
 sig
    type 'a map
    val mkMap : IntInf.int option * 'a -> 'a map
