@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib
+open HolKernel Parse boolLib bossLib Tactical
 
 val _ = new_theory "imperative";
 
@@ -11,6 +11,19 @@ val _ = set_fixity "[=." (Infixl 500);
 
 val DefinitionOfRefinement = xDefine "bRefinement" 
 	`v [=. u = !(s:'a) (s':'b). u s s' ==> v s s'`
+;
+
+
+fun REFINEMENT_RULE th = 
+	(
+		BETA_RULE
+		(
+			GEN_ALL
+			(
+				PURE_ONCE_REWRITE_RULE [DefinitionOfRefinement] th
+			)
+		)
+	)
 ;
 
 val REFINEMENT_TAC = 
@@ -38,17 +51,41 @@ val REFINEMENT_TAC =
 				*)
 ;
 
-fun REFINEMENT_RULE th = 
+val _ = Define `abort = \(s:'a) (s':'b). T`;
+val _ = Define `magic = \(s:'a) (s':'b). F`;
+ 
+val _ = store_thm 
 	(
-		BETA_RULE
-		(
-			GEN_ALL
-			(
-				PURE_ONCE_REWRITE_RULE [DefinitionOfRefinement] th
-			)
-		)
+		"MAGIC_REFINES_ALL",
+		``  f [=. magic ``,
+		REFINEMENT_TAC
+			(* 
+				[
+				] |-
+					magic s s' ==> f s s'
+			*)	
+	THEN
+		EVAL_TAC
+			(* |- f [=. magic : thm *)
 	)
 ;
+	
+val _ = store_thm
+	(
+		"ALL_REFINE_ABORT",
+		``  abort [=. f ``,
+		REFINEMENT_TAC
+			(* 
+				[
+				] |-
+					f s s' ==> abort s s'
+			*)	
+	THEN
+		EVAL_TAC
+			(* |- abort [=. f : thm *)
+	)
+;
+
 
 val _ = Define `assign x e s s' = 
 			!y. 
@@ -65,8 +102,9 @@ val _ = Define `sc f g s s' = (? s'' . f s s'' /\ g s'' s' ) ` ;
 fun SWAPLR_RULE th =(PURE_ONCE_REWRITE_RULE [EQ_SYM_EQ] th);
 
 val	thmAbstractFunction =	
-	prove
+	store_thm
 	(	
+		"IMPERATIVE_FN_ABSTRACTION",
 		``!(t :'a -> 'b) (f :'a -> 'b).(t = (\(y :'a). f y)) <=> (!(y:'a).(t (y :'a) = f y)) ``,
 		(
 			(EVAL_TAC)
@@ -106,8 +144,9 @@ val	thmConditionalFunction =
 			``((c:'a->'b)(y:'a))``
 		]
 	in
-		prove
-		(
+		store_thm
+		(	
+			"IMPERATIVE_IFTHENELSE_FN",
 			goal,
 			(
 				(*	[
@@ -243,8 +282,13 @@ val REP_EVAL_TAC =
 	(EXHAUSTIVELY EVAL_TAC)
 ;
 
-val thmAcceptInPlace = UNDISCH (prove (``(v:bool) ==> (v <=> T)``,REP_EVAL_TAC));
-val thmRejectInPlace = UNDISCH (prove (``(~(v:bool)) ==> (v <=> F)``,REP_EVAL_TAC));
+val tautAcceptInPlace = store_thm ("V_IMP_V_EQ_TRUE",``(v:bool) ==> (v <=> T)``,REP_EVAL_TAC);
+val tautRejectInPlace = store_thm("NOTV_IMP_V_EQ_FALSE",``(~(v:bool)) ==> (v <=> F)``,REP_EVAL_TAC);
+val thmAcceptInPlace = UNDISCH (tautAcceptInPlace);
+val thmRejectInPlace = UNDISCH (tautRejectInPlace);
+
+val _ = save_thm("IMPERATIVE_ACCEPT_IN_PLACE",thmAcceptInPlace);
+val _ = save_thm("IMPERATIVE_REJECT_IN_PLACE",thmRejectInPlace);
 
 fun USE_CONTEXT (asl:term list) (th:thm) =   
 	if (null asl) then th else (UNDISCH (USE_CONTEXT (tl(asl)) th))
@@ -266,8 +310,9 @@ fun MAKE_IT_NO (th:thm)  =
 ;
 
 val	SPEC_EQ_THM = 
-	prove
+	store_thm
 	(
+		"IMPERATIVE_SPEC_EQ_THM",
 		``(!(s :'a) (s' :'b).(f :'a -> 'b -> 'c) s s' = (g :'a -> 'b -> 'c) s s') <=> (f = g)``,
 		(
 			(EQ_TAC THENL
@@ -352,9 +397,12 @@ val thmAbstractSpecification =
 			*)
 ;
 
+val _ = save_thm("PREDICATIVE_SPEC_EQ_THM",thmAbstractSpecification);
+
 val thmOnePointLemma=
-	prove
+	store_thm
 	(
+		"ONE_POINT_LEMMA",
 		`` (x = x) /\ (f x t ) <=> f x t``,
 		(
 			(EQ_TAC	THENL
@@ -389,7 +437,6 @@ val thmOnePointLemma=
 	)
 ;
 
-val th = save_thm("ONE_POINT_LEMMA",thmOnePointLemma);
 		
 val _ = Define `subs f x e s s'
               = (let s'' = \y. if x=y then e s else s y
@@ -444,8 +491,9 @@ val thmForwardSubstitution =
 								] thmOnePointLemma)
 						)
 	in
-		prove 
+		store_thm
 		(
+			"FORWARD_SUB",
 			``!f e x s s'. sc (assign x e) f s s' = subs f x e s s' ``,
 			(
 				(REPEAT STRIP_TAC) 
@@ -560,6 +608,5 @@ val thmForwardSubstitution =
 	end
 ;
 
-val th = save_thm("FORWARD_SUB",thmForwardSubstitution);
 
 val _ = export_theory();
