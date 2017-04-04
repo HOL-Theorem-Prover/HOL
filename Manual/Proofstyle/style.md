@@ -163,3 +163,12 @@ Furthermore note that HOL4 will not capture any of the already existing variable
     Q a b1 e
 
 Applying ```rename1 a = P b c d``` will fail since this would make the values ```b1 b2 b3``` indistinguishable from ```b c d```.
+
+# Concrete Tips
+
+- Don’t `open` modules in the middle of files.
+  Move all `open` declarations to the top of your script file.
+  This means that all libraries that the non-interactive session loads before script execution will also be loaded when the user interactively replays the session.
+
+- Don’t use `local-in-end` except on very small scales.
+  Large `local` blocks are very hard to cut-and-paste into.
