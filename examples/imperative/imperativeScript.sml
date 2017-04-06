@@ -13,7 +13,6 @@ val DefinitionOfRefinement = xDefine "bRefinement"
 	`v [=. u = !(s:'a) (s':'b). u s s' ==> v s s'`
 ;
 
-
 fun REFINEMENT_RULE th = 
 	(
 		BETA_RULE

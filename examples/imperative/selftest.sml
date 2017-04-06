@@ -25,20 +25,18 @@ we enable the HOL system to display all assumptions and data types currently in 
 
 \begin{lstlisting} % *)
 
-load "bossLib";
-open bossLib;
+(* load "stringTheory"; *)
+(* val _ = load "imperativeTheory"; *)
+open HolKernel Parse boolLib bossLib numSyntax listSyntax stringTheory arithmeticTheory
+open imperativeTheory ;
 
-load "stringSyntax";
-open stringSyntax;
-
-load "numSyntax";
-open numSyntax;
-
-load "listSyntax";
-open listSyntax;
+val _ = set_trace "Unicode" 0;
 
 val _ = show_types:=true;
 val _ = show_assums:=true;
+
+val OK = testutils.OK
+val die = testutils.die
 
 (* \end{lstlisting}
 
@@ -55,14 +53,6 @@ returns false.
 
 \begin{lstlisting} % *)
 
-load "imperativeTheory";
-open imperativeTheory;
-
-val _ = set_fixity "[=." (Infixl 500);
-
-val DefinitionOfRefinement = xDefine "bRefinement" 
-	`v [=. u = !(s:'a) (s':'b). u s s' ==> v s s'`
-;
 
 fun REFINEMENT_RULE th = 
 	(
@@ -70,7 +60,7 @@ fun REFINEMENT_RULE th =
 		(
 			GEN_ALL
 			(
-				PURE_ONCE_REWRITE_RULE [DefinitionOfRefinement] th
+				PURE_ONCE_REWRITE_RULE [imperativeTheory.bRefinement_def] th
 			)
 		)
 	)
@@ -82,7 +72,7 @@ val REFINEMENT_TAC =
 		]	|-
 				`\ s s' .v s s' [=. u 
 	*)
-	(PURE_ONCE_REWRITE_TAC [DefinitionOfRefinement])
+	(PURE_ONCE_REWRITE_TAC [imperativeTheory.bRefinement_def])
 				(*	[
 					]	|-
 							!s s'. u s s' ==> \ s s'. v s s'
@@ -111,7 +101,7 @@ The theory of imperative programming defines assignment as guaranteeing that the
  
 \begin{lstlisting} % *)
 
-let	val	
+val _ = let	val	
 		xForyImplies_sx_Is_es = 
 		(
 				EVAL_RULE (SPEC ``x:'a`` (EVAL_RULE (ASSUME ``assign x e s s'``)))
@@ -192,11 +182,9 @@ val REP_EVAL_TAC =
 	(EXHAUSTIVELY EVAL_TAC)
 ;
 
-val rhsProgRefinesLhsSpec = ``(\ (s:'a->num) (s':'a->num). (((s' (x:'a)) = 1 ) /\ ((s' (y:'a)) = 1))) [=. (sc (assign y (\ (s:'a->num).1)) (assign x (\ (s:'a->num).(s y))))``; 
-
-let	val	
+fun testRefinement rhsProgLhsSpec = let	val	
 		lemma = 
-	 		(UNDISCH_ALL (#1 (EQ_IMP_RULE (EVAL (mk_comb(mk_comb ((rand rhsProgRefinesLhsSpec),``s:'a->num``),``s':'a->num``))))))
+	 		(UNDISCH_ALL (#1 (EQ_IMP_RULE (EVAL (mk_comb(mk_comb ((rand rhsProgLhsSpec),``s:'a->num``),``s':'a->num``))))))
 						(*	[
 								sc (assign y (\s. 1)) (assign x (\s. s y)) s s'
 							]	|-
@@ -208,7 +196,7 @@ let	val
 	in
 		prove 
 		(
-			rhsProgRefinesLhsSpec,
+			rhsProgLhsSpec,
 			(
 				(REFINEMENT_TAC)
 						(*	[
@@ -303,7 +291,19 @@ let	val
 			)
 		)
 	end
-;
+
+val rhsProgRefinesLhsSpec = ``(\ (s:'a->num) (s':'a->num). (((s' (x:'a)) = 1 ) /\ ((s' (y:'a)) = 1))) [=. (sc (assign y (\ (s:'a->num).1)) (assign x (\ (s:'a->num).(s y))))``; 
+val badImplementation = ``(\ (s:'a->num) (s':'a->num). (((s' (x:'a)) = 1 ) /\ ((s' (y:'a)) = 2))) [=. (sc (assign y (\ (s:'a->num).1)) (assign x (\ (s:'a->num).(s y))))``; 
+
+val _ = testRefinement(rhsProgRefinesLhsSpec) handle HOL_ERR _ => die "rhsProgRefinesLhsSpec FAILED";
+val _ = OK();
+
+(* TODO: exception ExitOK;
+val _ = let
+	val _ = testRefinement(badImplementation) handle HOL_ERR _ => raise ExitOK();
+in
+  	die "FAILED TO DETECT BAD IMPLEMENTATION!"
+end handle ExitOK => OK() *)
 
 (* \end{lstlisting} % 
 
@@ -457,7 +457,8 @@ val GeneralSwap = let val
 			REP_EVAL_TAC
 		)
 	end
-;
+handle HOL_ERR _ => die "general swap FAILED";
+val _ = OK();
 
 (* \end{lstlisting}
 
@@ -465,8 +466,6 @@ In the special case where both variables are numbers, an algebraic method can be
 
 \begin{lstlisting} % *)
 
-load "arithmeticTheory";
-open arithmeticTheory;
 (*
 	need this for LESS_EQ_REFL, LESS_EQ_ADD_SUB, SUB_EQ_0, and ADD_0
 	
@@ -544,7 +543,8 @@ val NumericSwap = let val
 			(PROVE_TAC [LESS_EQ_REFL, LESS_EQ_ADD_SUB, SUB_EQ_0,ADD_0,lemma])
 		)
 	end
-;
+handle HOL_ERR _ => die "numeric swap FAILED";
+val _ = OK();
 
 (* \end{lstlisting}
 

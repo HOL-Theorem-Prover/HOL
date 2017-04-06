@@ -37,6 +37,7 @@ src/emit
 !src/emit/theory_tests
 !src/emit/theory_tests1
 !examples/dev
+!examples/imperative
 !src/quotient/examples/lambda
 !src/quotient/examples/sigma
 src/rational
