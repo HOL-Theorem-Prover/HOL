@@ -1,4 +1,4 @@
-(* SWAPPING.SML \lstset{language=ML,upquote=true}\begin{comment} % *)
+(* selftest.sml \lstset{language=ML,upquote=true}\begin{comment} % *)
 (* %
 \end{comment} % (*
 *)
@@ -17,10 +17,15 @@ Another way of looking at a deriviation is to treat the top-most goal as the roo
 from the root, and whenever the outermost sub-goals evaluates to true or false, it is a leaf.  
 Once we have evalauted sub-goal in such a manner, the corresponding terms from the trunk can be substituted.
 
-There are a number of libraries in HOL which makes this possible.  One library in particular,  known as `bossLib', 
+There are a number of libraries in HOL which make this possible.  One library in particular,  known as `bossLib', 
 provides a suite of basic automated proving tools.  A number of other libraries provide type syntaxes which make it
-possible to extends HOLs native data types to include numbers, strings and lists.We now load these libraries and open 
-them to make them public.    Finally, to get feedback about data types and proofs,
+possible to extends HOLs native data types to include numbers, strings and lists.
+We first load these libraries and open them to make them public.    
+
+Once the internal features of the bossLib structure are exposed to the HOL session, terms can now consist of expressions on strings, numbers and lists. 
+As per HOL recommendations, other libraries required by the test case should be open at the front of the file befor any other commands.
+
+Following this, flags can be set to tailor the environment to the users liking.  In the case of this file, to get feedback about data types and proofs,
 we enable the HOL system to display all assumptions and data types currently in use.
 
 \begin{lstlisting} % *)
@@ -28,7 +33,7 @@ we enable the HOL system to display all assumptions and data types currently in 
 (* load "stringTheory"; *)
 (* val _ = load "imperativeTheory"; *)
 open HolKernel Parse boolLib bossLib numSyntax listSyntax stringTheory arithmeticTheory
-open imperativeTheory ;
+open ptopTheory imperativeLib imperativeTheory ;
 
 val _ = set_trace "Unicode" 0;
 
@@ -40,64 +45,21 @@ val die = testutils.die
 
 (* \end{lstlisting}
 
-The internal features of the bossLib structure are now exposed to the HOL session. Terms can now consist of expressions on strings, numbers and lists. Types and assumptions will be echoed verbosely to the user console.
 
 \section{Theory of Imperative Programming by Example}
 
 The language of program refinement is that of logic: truth and falsehood. Truth, however, is a much loftier goal than the more practical
 problems faced by software engineers; to mistake program correctness for truth is philosophically invalid.  Rather, when we speak of truth 
-in a programming context, it is intended to refer to the two outcomes of the Turing Machine: either the machine halts and the problem is solved, 
-or the solution is not in the language of the machine.  We introduce the specifications $abort$ and $magic$, which we use when it is
-important to stress this interpretation of the logic.  Given any initial state and any final state, $abort$ returns true, while $magic$ 
-returns false.
-
-\begin{lstlisting} % *)
-
-
-fun REFINEMENT_RULE th = 
-	(
-		BETA_RULE
-		(
-			GEN_ALL
-			(
-				PURE_ONCE_REWRITE_RULE [imperativeTheory.bRefinement_def] th
-			)
-		)
-	)
-;
-
-val REFINEMENT_TAC = 
-	(*
-		[
-		]	|-
-				`\ s s' .v s s' [=. u 
-	*)
-	(PURE_ONCE_REWRITE_TAC [imperativeTheory.bRefinement_def])
-				(*	[
-					]	|-
-							!s s'. u s s' ==> \ s s'. v s s'
-				*)
-	THEN
-		(REPEAT GEN_TAC)	
-				(*	[
-					]	|-
-						 u s s'	 ==>  (\s s'. v s s') s s'
-				*)
-	THEN
-		(BETA_TAC)
-				(*	[
-					]	|-
-						 u s s'	 ==>  v s s'
-				*)
-;
-
-
-(* \end{lstlisting}
-
+in a programming context, it is intended to reflect whether a final state meets a logical specification given an initial state. 
+The ptopTheory defines two specifications $abort$ and $magic$, which we use when it is important to stress this interpretation of truth.  
+Given any initial state and any final state, $abort$ always returns true, while $magic$  always returns false.  
+Always returning true means there's no point going further -- the program has reached it's accepted limit.   
+Always returning false means that you have to continue, knowing that no matter what else you do, it won't be enough to satisfy the requirements. 
 
 section{Definition of Assignment }
 
-The theory of imperative programming defines assignment as guaranteeing that the value of a state-variable x in the next state $s'$ is equal to an expression evauated in the current state $s$.
+The ptopTheory defines assignment as guaranteeing that the value of a state-variable x in the next state $s'$ is equal to an expression evauated in the current state $s$.
+The following provides a test of this definition.
  
 \begin{lstlisting} % *)
 
@@ -166,21 +128,15 @@ Once a sub-goal has been converted into the form of an existing theorem, this ta
 
 \section{Sequential Composition}
 
-Sequential composition is made possible by using an existential specification.  Specifically, we assert that their exists an intermediate state, $s''$,  such that initial specification $f$ provides a path from $s$ to $s''$, and the final specification $g$ provides a path from $s''$ to $s'$.  As an example of how to use this, consider how the specification
+Sequential composition is made possible in ptopTheory by using an existential specification.  
+Specifically, we assert that there exists an intermediate state, $s''$,  such that initial specification $f$ provides a path from $s$ to $s''$, 
+and the final specification $g$ provides a path from $s''$ to $s'$.  As an example of how to use this, consider how the specification
 
-\[ x ' = 1 \and y ' = 1\]
+\[ s' x = 1 \and s' y = 1\]
 
 is satisfied by $y:=1;x:=y$. (here the semicolon is used to indicate sequential composition of two instructions).
  
 \begin{lstlisting} % *)
-
-fun EXHAUSTIVELY x = 
-	(REPEAT (CHANGED_TAC x))
-;
-
-val REP_EVAL_TAC = 
-	(EXHAUSTIVELY EVAL_TAC)
-;
 
 fun testRefinement rhsProgLhsSpec = let	val	
 		lemma = 
@@ -298,12 +254,10 @@ val badImplementation = ``(\ (s:'a->num) (s':'a->num). (((s' (x:'a)) = 1 ) /\ ((
 val _ = testRefinement(rhsProgRefinesLhsSpec) handle HOL_ERR _ => die "rhsProgRefinesLhsSpec FAILED";
 val _ = OK();
 
-(* TODO: exception ExitOK;
-val _ = let
-	val _ = testRefinement(badImplementation) handle HOL_ERR _ => raise ExitOK();
-in
-  	die "FAILED TO DETECT BAD IMPLEMENTATION!"
-end handle ExitOK => OK() *)
+fun shouldfail f x =
+  (f x ; die "FAILED!") handle HOL_ERR _ => OK()
+
+val _ = shouldfail testRefinement badImplementation;
 
 (* \end{lstlisting} % 
 
@@ -339,7 +293,8 @@ A useful function on state spaces is the swap command which is defined as:
 
 (s' x = s y /\ s' y = s x) 
 
-where s is free provided that s x and s y exist and are of the same type.  Without reducing the generality of the proofs, from this point on the examples instantiate variables $x$ and $y$ of  type $'a$ using strings (variable names).
+where s is free provided that s x and s y exist and are of the same type.  
+Without reducing the generality of the proofs, from this point on the examples use strings (variable names) to instantiate variables $x$ and $y$ of type $'a$ 
 
 We wish to show that provided $s x$, $s' x$, $s y$ and $s' y$ are the same type, the following are valid implementatons:
 
@@ -348,40 +303,10 @@ We wish to show that provided $s x$, $s' x$, $s y$ and $s' y$ are the same type,
 \item{using an algebraic method in the case where s x and s y are numeric}
 \end{enumerate}
 
-The proof benefits from a function that allows EVAL_TAC to be applied for a specific  list of values
+The proof benefits from a function EVAL_FOR_STATEVARS defined in imperativeLib that allows EVAL_TAC to be applied for every variable name.
 
-\begin{lstlisting} % *)
-
-fun EvaluateFor valList =
-	if(null valList) then 
-	(
-		(REPEAT DISCH_TAC) 
-		THEN
-		(REPEAT (FIRST_ASSUM (fn th => (CHANGED_TAC (SUBST_TAC [th]))) ))
-	)
-	else
-	(
-		(EVERY_ASSUM 
-			(fn th =>	let val instance = (SPECL [(hd valList)] th) 
-					in 
-					( 
-						(ASSUME_TAC instance) THEN 
-						(UNDISCH_TAC (concl instance))	THEN
-						(REP_EVAL_TAC)
- 					)
-					end
-			)
-		)
-		THEN
-		(
-			EvaluateFor (tl valList)
-		)
-	)
-;
-
-(* \end{lstlisting} 
-
-In the general case, we create a temporary variable and assign to it the value of one of the values to be swapped.  The first variable is then assigned the value of the other variable, and then the other variable in turn is assigned the value of the temporary variable.
+In the general case, we create a temporary variable and assign to it the value of one of the values to be swapped.  
+The first variable is then assigned the value of the other variable, and then the other variable in turn is assigned the value of the temporary variable.
 
 \begin{lstlisting} % *)
 
@@ -452,7 +377,7 @@ val GeneralSwap = let val
 		THEN
 			(REPEAT STRIP_TAC)	
 		THEN
-			(EvaluateFor [``"t"``,``"x"``,``"y"``])
+			(EVAL_FOR_STATEVARS [``"t"``,``"x"``,``"y"``])
 		THEN
 			REP_EVAL_TAC
 		)
@@ -538,7 +463,7 @@ val NumericSwap = let val
 		THEN
 			(REPEAT STRIP_TAC)	
 		THEN
-			(EvaluateFor [``"x"``,``"y"``])
+			(EVAL_FOR_STATEVARS [``"x"``,``"y"``])
 		THEN
 			(PROVE_TAC [LESS_EQ_REFL, LESS_EQ_ADD_SUB, SUB_EQ_0,ADD_0,lemma])
 		)
