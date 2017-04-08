@@ -32,7 +32,7 @@ we enable the HOL system to display all assumptions and data types currently in 
 
 (* load "stringTheory"; *)
 (* val _ = load "imperativeTheory"; *)
-open HolKernel Parse boolLib bossLib numSyntax listSyntax stringTheory arithmeticTheory
+open HolKernel Parse boolLib bossLib numSyntax listSyntax stringTheory arithmeticTheory;
 open ptopTheory imperativeLib imperativeTheory ;
 
 val _ = set_trace "Unicode" 0;
@@ -42,6 +42,23 @@ val _ = show_assums:=true;
 
 val OK = testutils.OK
 val die = testutils.die
+val tprint = testutils.tprint;
+
+fun test_fail blame f e = let
+  val res = (f e ; SOME "should fail!")
+              handle HolSatLib.SAT_cex _ => SOME "unexpected counterexample!"
+                   | HOL_ERR {origin_function,...} =>
+                       if origin_function = blame then
+                         NONE
+                       else
+                         SOME ("unexpected exception from " ^ origin_function)
+in
+  tprint ("Expecting failure: " );
+  case res of
+      NONE => OK()
+    | SOME s => die s
+end
+
 
 (* \end{lstlisting}
 
@@ -251,13 +268,12 @@ fun testRefinement rhsProgLhsSpec = let	val
 val rhsProgRefinesLhsSpec = ``(\ (s:'a->num) (s':'a->num). (((s' (x:'a)) = 1 ) /\ ((s' (y:'a)) = 1))) [=. (sc (assign y (\ (s:'a->num).1)) (assign x (\ (s:'a->num).(s y))))``; 
 val badImplementation = ``(\ (s:'a->num) (s':'a->num). (((s' (x:'a)) = 1 ) /\ ((s' (y:'a)) = 2))) [=. (sc (assign y (\ (s:'a->num).1)) (assign x (\ (s:'a->num).(s y))))``; 
 
+val _ = tprint ("some implementation refines given specification: " );
 val _ = testRefinement(rhsProgRefinesLhsSpec) handle HOL_ERR _ => die "rhsProgRefinesLhsSpec FAILED";
 val _ = OK();
 
-fun shouldfail f x =
-  (f x ; die "FAILED!") handle HOL_ERR _ => OK()
-
-val _ = shouldfail testRefinement badImplementation;
+val _ = tprint ("some implementation DOES NOT refine given specification: " );
+val _ = test_fail "ACCEPT_TAC" testRefinement badImplementation;
 
 (* \end{lstlisting} % 
 
@@ -310,6 +326,7 @@ The first variable is then assigned the value of the other variable, and then th
 
 \begin{lstlisting} % *)
 
+val _ = tprint ("swap is possible with introduction of temporary variable: " );
 val GeneralSwap = let val
 	conversion =	
 			PURE_ONCE_REWRITE_RULE [PREDICATIVE_SPEC_EQ_THM] 
@@ -396,6 +413,7 @@ In the special case where both variables are numbers, an algebraic method can be
 	
 *)
 
+val _ = tprint ("swap is possible for num type without need for temporary variable: " );
 val NumericSwap = let val
 		conversion =	
 			PURE_ONCE_REWRITE_RULE [PREDICATIVE_SPEC_EQ_THM] 
