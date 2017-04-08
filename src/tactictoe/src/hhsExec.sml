@@ -115,7 +115,7 @@ fun valid_tactic_of_sml s =
     (* val _ = load_sigl s *)
     val b = 
     exec_sml "tactic_of_sml" 
-    ("hhsExec.hhs_tactic := Tactical.VALID ( " ^ s ^ " )")
+    ("val _ = (hhsExec.hhs_tactic := Tactical.VALID ( " ^ s ^ " ))")
   in
     if b then !hhs_tactic else raise ERR "tactic_of_sml" s
   end
@@ -126,7 +126,8 @@ fun valid_tacticl_of_sml sl =
     val valid_sl = map mk_valid sl
     val b = 
       exec_sml "tacticl_of_sml" 
-      ("hhsExec.hhs_tacticl := [" ^ String.concatWith ", " valid_sl ^ "]")
+      ("val _ = (hhsExec.hhs_tacticl := [" ^ String.concatWith ", " valid_sl 
+       ^ "])")
   in
     if b then !hhs_tacticl else raise ERR "tacticl_of_sml" ""
   end
