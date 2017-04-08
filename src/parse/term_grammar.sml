@@ -1003,6 +1003,13 @@ fun check c =
 fun add_numeral_form G (c, stropt) =
   fupdate_numinfo (update_assoc (check c, stropt)) G
 
+structure userSyntaxFns = struct
+  val userPP_table = ref (Binarymap.mkDict String.compare)
+  fun register_userPP {name,code} =
+    userPP_table := Binarymap.insert(!userPP_table, name, code)
+  fun get_userPP nm = Binarymap.find(!userPP_table, nm)
+end
+
 fun add_delta ud G =
     case ud of
       GRULE r => add_rule r G
@@ -1028,6 +1035,15 @@ fun add_delta ud G =
     | ADD_NUMFORM cs => add_numeral_form G cs
     | CLR_OVL s =>
         fupdate_overload_info (#1 o Overload.remove_overloaded_form s) G
+    | ADD_UPRINTER {codename = s, pattern} =>
+      let
+        val code = userSyntaxFns.get_userPP s
+          handle Binarymap.NotFound =>
+                 raise ERROR "add_delta"
+                    ("No code named "^s^" registered for add user-printer")
+      in
+        add_user_printer (s,pattern,code) G
+      end
 
 fun add_deltas uds G = List.foldl (uncurry add_delta) G uds
 
@@ -1588,6 +1604,8 @@ fun user_delta_encode write_tm ud =
     case ud of
       ADD_NUMFORM (c,s) =>
         "AN" ^ CharData.encode c ^ OptionData.encode StringData.encode s
+    | ADD_UPRINTER{codename=s,pattern=tm} =>
+        "AUP" ^ StringData.encode s ^ StringData.encode (write_tm tm)
     | ASSOC_RESTR {binder,resbinder} =>
         "AR" ^ OptionData.encode StringData.encode binder ^
         StringData.encode resbinder
@@ -1617,6 +1635,9 @@ in
   (literal "AR" >>
    Coding.map (fn (b,rb) => ASSOC_RESTR {binder = b, resbinder = rb})
               (OptionData.reader StringData.reader >* StringData.reader)) ||
+  (literal "AUP" >>
+   Coding.map (fn (s,p) => ADD_UPRINTER {codename = s, pattern = p})
+              (StringData.reader >* Coding.map read_tm StringData.reader)) ||
   (literal "COV" >> Coding.map CLR_OVL StringData.reader) ||
   (literal "G" >> Coding.map GRULE grule_reader) ||
   (literal "L" >> Coding.map LRULE lspec_reader) ||

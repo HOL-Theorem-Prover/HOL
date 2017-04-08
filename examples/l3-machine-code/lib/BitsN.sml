@@ -12,14 +12,12 @@ struct
    datatype nbit = B of (IntInf.int * Nat.nat)
 
    fun size (B (_, s)) = s
+   val nativeSize = Nat.toNativeInt o size
 
    fun dim s = IntInf.<< (1, Word.fromLargeInt s)
-   fun pdim s = dim s - 1
-   fun BV (n, s) = B (IntInf.andb (n, pdim s), s)
+   fun mask s = dim s - 1
+   fun BV (n, s) = B (IntInf.andb (n, mask s), s)
 
-   fun UINT_MAX s = B (pdim s, s)
-   fun INT_MIN s = B (dim (s - 1), s)
-   fun INT_MAX s = B (pdim (s - 1), s)
    fun zero s = B (0, s)
    fun one s = B (1, s)
 
@@ -50,7 +48,19 @@ struct
          ; w
       end
 
-   fun resize i w = fromNat (toNat w, Nat.fromInt i)
+   val allow_resize = ref true
+
+   fun resize i (w as B (_, j)) =
+     let
+       val i' = Nat.fromNativeInt i
+     in
+       if i' = j
+         then w
+       else if !allow_resize
+         then fromNat (toNat w, i')
+       else raise Fail ("Tried to resize bits(" ^ Nat.toString j ^
+                        ") to bits(" ^ Int.toString i ^ ")")
+     end
 
    fun fromLit (s, i) =
       Option.map
@@ -67,17 +77,17 @@ struct
       let
          val w = Nat.- (Nat.suc h, l)
          val l =  Word.fromLargeInt l
-         val mask = pdim w
+         val m = mask w
       in
-         fn B (i, _) => B (IntInf.andb (mask, IntInf.~>> (i, l)), w)
+         fn B (i, _) => B (IntInf.andb (m, IntInf.~>> (i, l)), w)
       end
 
    fun bit (B (a, _), n) =
       IntInf.rem (IntInf.~>> (a, Word.fromLargeInt n), 2) = 1
    fun lsb (B (a, _)) = IntInf.rem (a, 2) = 1
-   fun msb a = bit (a, Nat.- (size a, Nat.one))
+   fun msb (a as B (_, s)) = bit (a, Nat.- (s, Nat.one))
 
-   fun neg (B (a, s)) = BV (IntInf.- (dim s, a), s)
+   fun neg (B (a, s)) = BV (IntInf.~ a, s)
 
    fun toInt a = if msb a then IntInf.~ (toUInt (neg a)) else toUInt a
 
@@ -156,15 +166,9 @@ struct
    fun concat [] = raise Fail "concat: empty"
      | concat l = let val r = List.rev l in List.foldl (op @@) (hd r) (tl r) end
 
-   fun replicate (a as B (_, s1), n) =
-      let
-         open Nat
-         val _ = zero < n orelse raise Fail "replicate must be > 0-bit"
-         val l = toList a
-         val m = pred s1
-      in
-         tabulate (s1 * n, fn i => List.nth (l, toNativeInt (m - i mod s1)))
-      end
+   fun replicate (a, n) =
+     List.foldl (op @@) a (List.tabulate (Nat.toNativeInt n - 1, fn _ => a))
+     handle General.Size => raise Fail "replicate must be > 0-bit"
 
    fun resize_replicate i = resize i o replicate
 
@@ -216,7 +220,7 @@ struct
 
    fun op >> (a as B (_, s), n) =
       if msb a
-         then fromInt (dim s - dim (s - IntInf.min (n, s)), s) || a >>+ n
+         then B (dim s - dim (s - IntInf.min (n, s)), s) || a >>+ n
       else a >>+ n
 
    fun op #>> (a as B (_, s), n) =
@@ -224,7 +228,7 @@ struct
          open Nat
          val x = n mod s
       in
-         if x = 0 then a else bits (pred x, zero) a @@ bits (pred s, x) a
+         if x = 0 then a else a << (s - x) || a >>+ x
       end
 
    fun op #<< (a as B (_, s), n) = let open Nat in a #>> (s - n mod s) end
@@ -237,11 +241,10 @@ struct
 
    fun op * (B (v1, _), B (v2, s)) = BV (IntInf.* (v1, v2), s)
    fun op + (B (v1, _), B (v2, s)) = BV (IntInf.+ (v1, v2), s)
+   fun op - (B (v1, _), B (v2, s)) = BV (IntInf.- (v1, v2), s)
 
    fun op ~ (B (a, s)) = BV (IntInf.notb a, s)
 
    fun abs a = if msb a then neg a else a
-
-   fun op - (a, b) = a + neg b
 
 end (* structure BitsN *)

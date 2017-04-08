@@ -241,13 +241,10 @@ val _ = overload_on ("~",  ``rat_ainv``);
 val _ = overload_on ("numeric_negate",  ``rat_ainv``);
 val _ = overload_on ("//",  ``rat_cons``);
 
-val _ = add_user_printer
-            ("(DecimalFractionPP.fraction{Thy=\"rat\",Division=\"rat_div\",\
-             \fromNum=\"rat_of_num\"})",
-             ``&(NUMERAL x) / &(NUMERAL y)``,
-             DecimalFractionPP.fraction{Thy="rat",Division="rat_div",
-                                        fromNum="rat_of_num"})
-
+local open ratPP in end
+val _ = add_ML_dependency "ratPP"
+val _ = add_user_printer ("rat.decimalfractions",
+                          ``&(NUMERAL x):rat / &(NUMERAL y):rat``)
 
 (*--------------------------------------------------------------------------
  *  RAT: thm
@@ -509,7 +506,7 @@ val RAT_DIV_CONG1 = store_thm("RAT_DIV_CONG1",
 	REWRITE_TAC[frac_div_def] THEN
 	REWRITE_TAC[RAT_MUL_CONG] );
 
-val RAT_DIV_CONG2 = store_thm("RAT_DIV_CONG2", 
+val RAT_DIV_CONG2 = store_thm("RAT_DIV_CONG2",
   ``!x y. ~(frac_nmr y = 0) ==>
     (abs_rat (frac_div x (rep_rat (abs_rat y))) = abs_rat (frac_div x y))``,
         REPEAT STRIP_TAC THEN

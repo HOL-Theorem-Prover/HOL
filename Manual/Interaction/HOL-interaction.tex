@@ -1,5 +1,7 @@
 \documentclass[a4paper,10pt]{article}
 
+\usepackage[T1]{fontenc}
+\usepackage{upquote}
 \usepackage{alltt}
 \usepackage{url}
 
@@ -29,6 +31,7 @@
 \renewcommand{\conj}{\(\begin{array}{c}\texttt{\bf\scriptsize/\textbackslash}\\[0.18em]\end{array}\)}
 \newcommand{\mysec}[1]{\section{\large #1}}
 \newcommand{\mysubsec}[1]{\subsection{\normalsize#1}}
+\newcommand{\sq}{\textasciigrave}
 
 \mysec{Introduction}
 
@@ -116,8 +119,8 @@ Most HOL4 proofs are constructed using an interactive \emph{goal
   stack} and then put together using the ML function {\tt prove}
 (Section~\ref{prove1}, \ref{prove2}). To start the goal stack:
 \begin{enum}
-\item Write a goal, \eg{} {\tt `!n{.}~n~<~n~+~1`}, (we can write $\forall$ as {\tt !} in HOL4).
-\item Move the cursor inside the back-quotes ({\tt `}).
+\item Write a goal, \eg{} {\tt \sq !n{.}~n~<~n~+~1\sq}, (we can write $\forall$ as {\tt !} in HOL4).
+\item Move the cursor inside the back-quotes ({\tt \sq}).
 \item Press {\tt M-h~g} to push the goal onto the goal stack.
 \end{enum}
 The HOL4 window should look something like this:
@@ -164,7 +167,7 @@ One can use {\tt prove} to store the result of a proof (called a
 \emph{theorem}), \eg{} the following stores the theorem $\forall n.\;n < n +
 1$ in an ML variable {\tt LESS\_ADD\_1}:
 \begin{code}
-val LESS_ADD_1 = Q.prove({`} !n. n < n + 1 {`},decide_tac);
+val LESS_ADD_1 = Q.prove(`!n. n < n + 1`, decide_tac);
 \end{code}
 When the above line is copied into HOL4 (using text-selection then
 {\tt M-h M-r}, as described in Section~\ref{copy}), HOL4 responds with:
@@ -174,7 +177,7 @@ When the above line is copied into HOL4 (using text-selection then
 
 \mysubsec{Saving proofs based on multiple tactics\label{prove2}}
 
-Suppose we have proved the goal {\tt `!n{.}~n <= n * n`} with the following tactics:
+Suppose we have proved the goal {\tt \sq !n{.}~n <= n * n\sq} with the following tactics:
 \begin{code}
 Induct_on `n`                   (* comment: induction on n  *)
 
@@ -186,11 +189,11 @@ Induct_on `n`                   (* comment: induction on n  *)
 Tactics can be pieced together for {\tt prove} using \ml{\gt\gt} and \ml{\gt-}. The \ml{\gt\gt} operator is an infix that composes tactics. Similarly, \ml{\gt-} \emph{tac} proves the first subgoal using \emph{tac}.
 \begin{code}
 val LESS_EQ_MULT = Q.prove(
-  {`} !n:num. n <= n * n {`},
+  `!n:num. n <= n * n`,
   Induct_on `n`
   >- decide_tac
   >- (asm_simp_tac bool_ss [MULT]
-      >> decide_tac]));
+      >> decide_tac));
 \end{code}
 Copy the above into HOL4 using text-selection, and then {\tt M-h M-r}, as in Section~\ref{copy}.
 
@@ -325,8 +328,8 @@ prints a list of theorems containing $n\; \texttt{\small DIV} \;m \leq k$ for so
   (|- !n. 0 < n ==> !k. k DIV n <= k, Thm))]
 \end{code}
 Try to write increasingly specific queries if the returned list is long, \eg{}
-{\tt\small DB.match [] {`}`n DIV m{`}`} returns a list of length 32. Note that {\tt\small DB.match [] {`}`DIV{`}`}
-does not work since {\tt\small DIV} is an infix operator, but {\tt\small DB.match [] {`}`\$DIV{`}`} works.
+{\tt\small DB.match [] \sq \sq n DIV m \sq \sq} returns a list of length 32. Note that {\tt\small DB.match [] \sq \sq DIV \sq \sq}
+does not work since {\tt\small DIV} is an infix operator, but {\tt\small DB.match [] \sq \sq \$DIV \sq \sq} works.
 
 \mysec{Common proof tactics\label{tactics}}
 
@@ -365,7 +368,7 @@ numbers, \eg{} {\tt\small decide\_tac} solves:
 Goals that contain top-level universal quantifiers ({\tt !x.}),
 implication ({\tt ==>}) or conjunction ({\tt \conj{}}) are often
 taken apart using {\tt\small rpt strip\_tac} or just {\tt\small
-  strip\_tac}, \eg{} the goal {\tt\small `!x{.}~(!z{.}~x < h z) ==> ?y{.}~f x = y`}
+  strip\_tac}, \eg{} the goal {\tt\small \sq !x{.}~(!z{.}~x < h z) ==> ?y{.}~f x = y\sq}
 becomes the following. (Assumptions are written under the line.)
 \begin{code}
     ?y. f x = y
@@ -377,7 +380,7 @@ becomes the following. (Assumptions are written under the line.)
 
 Goals that have a top-level existential quantifier can be given a
 witness using {\tt \small qexists\_tac}, \eg{} {\tt \small
-  qexists\_tac `1`} applied to goal {\tt \small ?n{.}~!k{.}~n * k = k}
+  qexists\_tac \sq 1\sq} applied to goal {\tt \small ?n{.}~!k{.}~n * k = k}
 produces goal {\tt \small !k{.}~1 * k = k}.
 
 \mysubsec{Rewrites}
@@ -422,29 +425,29 @@ and {\tt\small SRW\_TAC}.
 
 \mysubsec{Induction}
 
-Use the tactic {\tt\small Induct\_on `x`} to start an induction on {\tt\small x}.
+Use the tactic {\tt\small Induct\_on \sq x\sq} to start an induction on {\tt\small x}.
 Here {\tt x} can be any variable with a recursively defined type,
 \eg{} a natural number, a list or a {\tt\small TREE} as defined in
 Section~\ref{definition}.  One can start a complete (or strong)
 induction over the natural number {\tt\small n} using {\tt\small
-  completeInduct\_on `n`}.
-As with \texttt{Cases\_on} one can also induct on terms (\eg, \texttt{\small Induct\_on~`hi~-~lo`}), though these proofs can be harder to carry out.
+  completeInduct\_on \sq n\sq}.
+As with \texttt{Cases\_on} one can also induct on terms (\eg, \texttt{\small Induct\_on~\sq hi~-~lo\sq}), though these proofs can be harder to carry out.
 
 \mysubsec{Case splits}
 
-A goal can be split into cases using {\tt\small Cases\_on `x`}. The
+A goal can be split into cases using {\tt\small Cases\_on \sq x\sq}. The
 goal is split according to the constructors of the type of {\tt\small
   x}, \eg{} for the following goal
 \begin{code}
     !x. ~(x = []) ==> (x = HD x::TL x)
 \end{code}
-{\tt\small Cases\_on `x`} splits the goal into two:
+{\tt\small Cases\_on \sq x\sq} splits the goal into two:
 \begin{code}
     ~(h::t = []) ==> (h::t = HD (h::t)::TL (h::t))
 
     ~([] = []) ==> ([] = HD []::TL [])
 \end{code}
-Case splits on boolean expressions are also useful, \eg{} {\tt\small Cases\_on `n < 5`}.
+Case splits on boolean expressions are also useful, \eg{} {\tt\small Cases\_on \sq n < 5\sq}.
 
 \mysubsec{Subproofs}
 
@@ -456,7 +459,7 @@ It is often useful to start a mini-proof inside a larger proof, \eg{} for the go
 \end{code}
 we might want to prove {\tt\small h n = g n} assuming {\tt\small 0 <
   n}.
-We can start such a subproof by typing {\tt\small `h n = g n`
+We can start such a subproof by typing {\tt\small \sq h n = g n\sq
   by ALL\_TAC}.\footnote{You can also use the emacs binding {\tt\small
     M-h M-s} with the cursor inside the sub-goal.} The new goal stack:
 \begin{code}
@@ -469,11 +472,11 @@ We can start such a subproof by typing {\tt\small `h n = g n`
     ------------------------------------
       0 < n
 \end{code}
-If {\tt\small `h n = g n`} can be proved in one step, \eg{} using {\tt\small metis\_tac [MY\_LEMMA]}, then
-apply {\tt\small `h n = g n` by metis\_tac [MY\_LEMMA]} instead of
-{\tt\small `h n = g n` by ALL\_TAC}.  If the sub-goal requires
+If {\tt\small \sq h n = g n\sq} can be proved in one step, \eg{} using {\tt\small metis\_tac [MY\_LEMMA]}, then
+apply {\tt\small \sq h n = g n\sq \ by metis\_tac [MY\_LEMMA]} instead of
+{\tt\small \sq h n = g n\sq \ by ALL\_TAC}.  If the sub-goal requires
 multiple steps the tactic after the \texttt{by} will need to be
-parenthesised: {\tt\small`\textit{goal}` by ($\mathit{tac}_1$ \ml{\gt\gt}
+parenthesised: {\tt\small\sq\textit{goal}\sq \ by ($\mathit{tac}_1$ \ml{\gt\gt}
   $\mathit{tac}_2$ ...)}
 
 \mysubsec{Proof by contradiction}
@@ -481,7 +484,7 @@ parenthesised: {\tt\small`\textit{goal}` by ($\mathit{tac}_1$ \ml{\gt\gt}
 Use {\tt\small CCONTR\_TAC} to add the negation of the goal to the
 assumptions.  The task is then to prove that one of the assumptions of
 the goal is false. One can \eg{} add more assumptions using
-{\tt\small `...` by ALL\_TAC}, described above, until one assumption is the
+{\tt\small \sq...\sq \ by ALL\_TAC}, described above, until one assumption is the
 negation of another assumption (and then apply {\tt\small METIS\_TAC []}).
 
 \mysubsec{More tactics\label{html}}

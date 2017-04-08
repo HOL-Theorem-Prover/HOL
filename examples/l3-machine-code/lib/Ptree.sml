@@ -8,10 +8,10 @@ struct
 datatype 'a ptree =
      Empty
    | Leaf of IntInf.int * 'a
-   | Branch of IntInf.int * int * 'a ptree * 'a ptree
+   | Branch of IntInf.int * word * 'a ptree * 'a ptree
 
-fun bit (b, n) = IntInf.~>> (n, Word.fromInt b) mod 2 = 1
-fun mod_2exp (x, n) = IntInf.andb (n, IntInf.<< (1, Word.fromInt x) - 1)
+fun bit (b, n) = IntInf.~>> (n, b) mod 2 = 1
+fun mod_2exp (x, n) = IntInf.andb (n, IntInf.<< (1, x) - 1)
 fun mod_2exp_eq (x, a, b) = mod_2exp (x, IntInf.xorb (a, b)) = 0
 
 fun peek (Empty, _) = NONE
@@ -19,9 +19,9 @@ fun peek (Empty, _) = NONE
   | peek (Branch (_, m, l, r), k) = peek (if bit (m, k) then l else r, k)
 
 local
-   fun leastSetBit a = IntInf.log2 (IntInf.andb (a, ~a))
+   fun leastSetBit a = Word.fromInt (IntInf.log2 (IntInf.andb (a, ~a)))
    fun branching_bit (p0, p1) =
-      if p0 = p1 then 0 else leastSetBit (IntInf.xorb (p0, p1))
+      if p0 = p1 then 0w0 else leastSetBit (IntInf.xorb (p0, p1))
    fun join (p0, t0, p1, t1) =
       let
          val m = branching_bit (p0, p1)

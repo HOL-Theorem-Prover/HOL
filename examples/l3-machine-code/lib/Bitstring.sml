@@ -42,14 +42,7 @@ struct
 
    val fromNat = fromInt o Nat.toInt
 
-   val toInt =
-      let
-         fun iter (a, v) =
-            fn [] => a
-             | b :: t => iter (if b then a + v else a, 2 * v) t
-      in
-         iter (0, 1) o List.rev
-      end
+   val toInt = List.foldl (fn (true, v) => 2 * v + 1 | (false, v) => 2 * v) 0
 
    val toNat = Nat.fromInt o toInt
    val toNativeInt = IntInf.toInt o toInt

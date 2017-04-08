@@ -187,6 +187,11 @@ in
      strn "od" >> setbvs oldbvs))
 end
 
+val _ = term_grammar.userSyntaxFns.register_userPP {
+          name = "monadsyntax.print_monads",
+          code = print_monads
+        }
+
 fun syntax_actions al ar aup app =
   (al {block_info = (PP.CONSISTENT,0),
        cons = monadseq_special,
@@ -206,8 +211,11 @@ fun temp_add_monadsyntax () =
     syntax_actions temp_add_listform temp_add_rule temp_add_user_printer
                    temp_add_absyn_postprocessor
 
+fun aup (s, pat, code) = (add_ML_dependency "monadsyntax";
+                          add_user_printer (s, pat))
+
 fun add_monadsyntax () =
-    syntax_actions add_listform add_rule add_user_printer
+    syntax_actions add_listform add_rule aup
                    add_absyn_postprocessor
 
 

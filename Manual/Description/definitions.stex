@@ -432,25 +432,24 @@ previously discussed.  For example, to create a record type called
 The order in which the fields are entered is not significant. As well
 as defining the type (called {\tt person}), the datatype definition
 function also defines two other sets of constants.  These are the
-field access functions and functional update functions.  The field
-access functions have names of the form
-   $\langle$\textsl{record-type\/}$\rangle$\verb|_|$\langle$\textsl{field\/}$\rangle$.
+field access functions and functional update functions.
+
+\index{record types!field selection functions and notation}%
+The \textbf{field access functions} have names of the form
+$\langle$\textsl{record-type\/}$\rangle$\verb|_|$\langle$\textsl{field\/}$\rangle$.
 These functions can be used directly, or one can use standard field
 selection notation to access the values of a record's field.  Thus,
 one would write the expression: \holtxt{bob.employed} in order
 to return the value of {\tt bob}'s {\tt employed} field.  The
 alternative, \holtxt{person\_employed bob}, works, but would be
-printed using the first syntax, with the full-stop.\index{record types!field selection notation}
+printed using the first syntax, with the full-stop.
 
-The functional update functions are given the names
-\mbox{``$\langle$\textsl{record-type}$\rangle$\texttt{\_}$\langle$\textsl{field}$\rangle$\texttt{\_fupd}''}
-for each field in
-the type.  They take two arguments, a function and a record to be
-updated.  The function parameter is an endomorphism on the field type,
-so that the resulting record is the same as the original, except that
-the specified field has had the given function applied to it to
-generate the new value for that field.  They can be written with the
-keyword \texttt{with} and the \texttt{updated\_by} operator.  Thus
+\index{record types!field update functions}
+The \textbf{functional update functions} are given the names
+\mbox{``$\langle$\textsl{record-type}$\rangle$\texttt{\_}$\langle$\textsl{field}$\rangle$\texttt{\_fupd}''} for each field in the type.
+They take two arguments, a function and a record to be updated.
+The function parameter is an endomorphism on the field type, so that the resulting record is the same as the original, except that the specified field has had the given function applied to it to generate the new value for that field.
+They can be written with the keyword \texttt{with} and the \texttt{updated\_by} operator.  Thus
 %
 \begin{hol}
 \begin{verbatim}
@@ -461,10 +460,8 @@ keyword \texttt{with} and the \texttt{updated\_by} operator.  Thus
 is a record value identical to the \texttt{bob} except that the
 boolean value in the \texttt{employed} field has been inverted.
 
-Additionally, there is syntactic sugar available to let one write a
-record with one of its fields replaced by a specific value.  This is
-done by using the \holtxt{:=} operator instead of
-\holtxt{updated\_by}:
+Additionally, there is syntactic sugar available to let one write a record with one of its fields replaced by a specific value.
+This is done by using the \holtxt{:=} operator instead of \holtxt{updated\_by}:
 %
 \begin{hol}
 \begin{verbatim}
@@ -505,6 +502,7 @@ used in a chain of updates.
 
 \paragraph{Specifying record literals}
 
+\index{record types!record literals}%
 The parser accepts lists of field specifications between
 \holtxt{<|}-\holtxt{|>} pairs without the \holtxt{with} keyword.
 These translate to sequences of updates of an arbitrary value

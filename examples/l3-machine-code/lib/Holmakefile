@@ -1,8 +1,13 @@
-FILES = $(wildcard *.sml)
-TARGETS = $(patsubst %.sml,%.uo,$(FILES))
+TARGETS = $(patsubst %.sml,%.uo,$(wildcard *.sml))
 
 all: $(TARGETS)
 .PHONY: all
 
 FP64.uo: FP.uo
 FP32.uo: FP.uo
+
+MutableMap16.uo: Ptree.uo Map.uo MutableMapFunctor.uo MutableMap16.sml
+	$(HOLMOSMLC) -c Ptree.uo Map.ui MutableMapFunctor.ui MutableMap16.sml
+
+PureMap.uo: Ptree.uo Map.uo PureMap.sml
+	$(HOLMOSMLC) -c Ptree.uo Map.ui PureMap.sml

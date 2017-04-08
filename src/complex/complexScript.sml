@@ -154,13 +154,11 @@ val _ = overload_on ("-",  Term`$complex_sub`);
 val _ = overload_on (GrammarSpecials.decimal_fraction_special, ``complex_div``)
 val _ = overload_on ("/",  Term`complex_div`);
 
+local open complexPP in end
+val _ = add_ML_dependency "complexPP"
 val _ =
-    add_user_printer
-       ("(DecimalFractionPP.fraction{Thy=\"complex\",Division=\"complex_div\",\
-        \fromNum=\"complex_of_num\"})",
-        ``&(NUMERAL x) / &(NUMERAL y)``,
-        DecimalFractionPP.fraction{Thy="complex",Division="complex_div",
-                                   fromNum="complex_of_num"})
+    add_user_printer ("complex.decimalfractions",
+                      ``&(NUMERAL x) : complex / &(NUMERAL y)``)
 
 
 (*--------------------------------------------------------------------*)

@@ -27,6 +27,8 @@
 (define-prefix-command 'hol-unicode-U-map)
 (define-prefix-command 'hol-unicode-lparen-map)
 (define-prefix-command 'hol-unicode-rparen-map)
+(define-prefix-command 'hol-unicode-shift-map)
+(define-key global-map (kbd "C-S-f") 'hol-unicode-shift-map)
 (define-key global-map (kbd "C-S-p") 'hol-unicode-p-map)
 (define-key global-map (kbd "C-M-S-p") 'hol-unicode-P-map)
 (define-key global-map (kbd "C-M-|") 'hol-unicode-not-map)
@@ -170,3 +172,8 @@
 (define-key hol-unicode-rparen-map (kbd "C-M->") "⟫")
 (define-key hol-unicode-lparen-map (kbd "C-M-^") "⎡")
 (define-key hol-unicode-rparen-map (kbd "C-M-^") "⎤")
+
+; shift map
+(define-key hol-unicode-shift-map (kbd "a") "≫")
+(define-key hol-unicode-shift-map (kbd "l") "≪")
+(define-key hol-unicode-shift-map (kbd "r") "⋙")

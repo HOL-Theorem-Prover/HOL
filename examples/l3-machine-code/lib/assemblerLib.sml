@@ -7,6 +7,11 @@ struct
 
 open HolKernel boolLib bossLib
 
+local
+  open IntExtra Nat Set L3 Bitstring BitsN FP32 FP64 FPConvert
+in
+end
+
 (* Turns a quote `...` into a list of strings, removing comments *)
 local
    val compressNewlines =

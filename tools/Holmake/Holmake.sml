@@ -59,7 +59,7 @@ fun apply_updates fs v = List.foldl (fn (f,v) => #update f (warn,v)) v fs
 fun getcline args = let
   open GetOpt
 in
-  getOpt {argOrder = RequireOrder,
+  getOpt {argOrder = Permute,
           options = HM_Cline.option_descriptions,
           errFn = die}
          args

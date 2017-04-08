@@ -1152,15 +1152,8 @@ in
 end
 
 
-fun add_user_printer(name,pattern,pfn) = let
-in
-  update_grms "add_user_printer"
-              ("temp_add_user_printer",
-               String.concat ["(", quote name, ", ",
-                               minprint pattern, ", ",
-                              name, ")"]);
-  temp_add_user_printer(name, pattern, pfn)
-end;
+val add_user_printer =
+  mk_perm (fn (s,t) => [ADD_UPRINTER {codename=s,pattern=t}])
 
 fun remove_user_printer name = let
 in
