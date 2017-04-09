@@ -19,7 +19,8 @@ val hhs_prev_thy = ref ""
 val hhs_badstacl = ref []
 val hhs_stacfea = ref [] 
 val hhs_thmfea = ref []
-val hhs_debug = ref false
+val hhs_debug = ref false 
+(* there is also another debug_flag named hhs_debug_flag *)
 
 (* ----------------------------------------------------------------------
    Convert string tactics to tactics.

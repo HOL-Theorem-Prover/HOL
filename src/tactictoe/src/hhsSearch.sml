@@ -65,6 +65,7 @@ val predictor_glob = ref empty_predictor
 val symweight_glob = ref (dempty String.compare)
 val nfstfea_glob = ref 0
 val glob_timer = ref NONE
+val minimize_flag = ref true
 
 (* ----------------------------------------------------------------------
    Cache
@@ -383,8 +384,10 @@ fun close_proof cid pid =
   end
 
 (* ----------------------------------------------------------------------
-   Three different cases. Either a proof, a failure or a list of goal.
+   Three different cases. Either a proof, a failure or a list of goals.
    ---------------------------------------------------------------------- *)
+
+(* Give a value of 1.1 to Metis so that it is processed first *)
 
 exception METIS_PRED
 
@@ -395,10 +398,6 @@ fun add_metis_pred (g,pred) =
       val thmpred = thm_predict_timer (!thm_predictor_glob) g
       val stac = "metisTools.METIS_TAC [ " ^
                  String.concatWith " , " thmpred ^ " ]"
-      (*
-         slow should just give the direct sml function instead of
-         reparsing the string.
-      *)
       val tac = valid_tactic_of_sml stac handle _ => raise METIS_PRED
     in
       tacdict_glob := dadd stac tac (!tacdict_glob);
@@ -597,10 +596,6 @@ fun add_quote_aux sl = case sl of
     "`" ^ (rm_blank o rm_comment o unquote) s ^ "`" ^ " " ^ add_quote_aux m
   | "[" :: "HOLPP.QUOTE"  :: s :: "]" :: m =>
     "`" ^ (rm_blank o rm_comment o unquote) s ^ "`" ^ " " ^ add_quote_aux m
-  | "[" :: "HOLPP.QUOTE" :: "(" :: s :: ")" :: "]" :: m =>
-    "`" ^ (rm_blank o rm_comment o unquote) s ^ "`" ^ " " ^ add_quote_aux m
-  | "[" :: "HOLPP.QUOTE"  :: s :: "]" :: m =>
-    "`" ^ (rm_blank o rm_comment o unquote) s ^ "`" ^ " " ^ add_quote_aux m
   | a :: m => a ^ " " ^ add_quote_aux m
 
 fun add_quote stac = add_quote_aux (hhs_lex stac)
@@ -642,109 +637,218 @@ fun rm_prefix stac =
     map rm_one_prefix sl
   end
 
-fun simple_prettify_stac stac = 
+fun prettify1_stac stac = 
   (minspace_sl o rm_prefix o rm_fetch o add_quote) stac
-fun prettify_stac stac =
+fun prettify2_stac stac =
   (minspace_sl o hhs_lex o rm_fetch o add_quote) stac
 
-fun string_of_proof pid =
-  let
-    val prec = dfind pid (!finproofdict)
-               handle _ => raise ERR "string_of_proof" "node not found"
-    fun compare_gn ((gn1,_,_),(gn2,_,_)) = Int.compare (gn1,gn2)
-    val proofl = !(#proofl prec)
-    val new_proofl = dict_sort compare_gn proofl
+datatype Proof = 
+    Tactic of (string * goal)
+  | Then   of (Proof * Proof)
+  | Thenl  of (Proof * Proof list)
+
+(*
     fun is_single_token s = List.length (hhs_lex s) = 1
     fun par s = if is_single_token s
                 then prettify_stac s
                 else "(" ^ prettify_stac s ^ ")"
-  in
-    if pid = 0 andalso length new_proofl = 1 then
-      let
-        val (_,stac,cid) = hd new_proofl
-        val _ = pstep_counter := !pstep_counter + 1
-        val cont = string_of_proof cid
-      in
-        if cont = "" then prettify_stac stac else par stac ^ cont
-      end
-    else if length new_proofl = 0 then
-      ""
-    else if length new_proofl = 1 then
-      let val (_,stac,cid) = hd new_proofl in
-        pstep_counter := !pstep_counter + 1;
-        " THEN " ^ par stac ^ string_of_proof cid
-      end
-    else
-      let
-        fun f (_,stac,cid) =
-          (
-          pstep_counter := !pstep_counter + 1;
-          par stac ^ string_of_proof cid
-          )
-        val sl = map f new_proofl
-      in
-        " THENL [" ^ String.concatWith ", " sl ^ "]"
-      end
-  end
-
-fun simple_string_of_proof pid =
+*)
+fun proofl_of pid =
   let
     val prec = dfind pid (!finproofdict)
                handle _ => raise ERR "string_of_proof" "node not found"
     fun compare_gn ((gn1,_,_),(gn2,_,_)) = Int.compare (gn1,gn2)
     val proofl = !(#proofl prec)
     val new_proofl = dict_sort compare_gn proofl
+    fun f (gn,stac,cid) = 
+      let 
+        val g = Array.sub (#goalarr prec, gn)
+        val contl = proofl_of cid
+        val tac = Tactic (stac,g)
+      in
+        if null contl then tac
+        else if List.length contl = 1 then Then (tac, hd contl)
+        else Thenl (tac, contl)
+      end
   in
-    if pid = 0 andalso length new_proofl = 1 then
-      let
-        val (_,stac,cid) = hd new_proofl
-        val cont = simple_string_of_proof cid
-      in
-        simple_prettify_stac stac ^ cont
-      end
-    else if length new_proofl = 0 then
-      ""
-    else if length new_proofl = 1 then
-      let val (_,stac,cid) = hd new_proofl in
-        " THEN " ^ simple_prettify_stac stac ^ simple_string_of_proof cid
-      end
-    else
-      let
-        fun f (_,stac,cid) =
-          simple_prettify_stac stac ^ simple_string_of_proof cid
-        val sl = map f new_proofl
-      in
-        " THENL [" ^ String.concatWith ", " sl ^ "]"
-      end
+    map f new_proofl
   end
 
-fun hhs_reconstruct g =
-  let
-    val sproof = simple_string_of_proof 0
-    val sproof2 = string_of_proof 0
-    val tac    = (valid_tactic_of_sml sproof
-                 handle _ => valid_tactic_of_sml sproof2)
-                 handle _ => raise ERR "hhs_reconstruct" sproof2
-    val tac2   = valid_tactic_of_sml sproof2 
-                 handle _ => raise ERR "hhs_reconstruct" sproof2
+fun exact_effect stac1 stac2 g =
+  let 
+    val gl1 = SOME (fst (valid_tactic_of_sml stac1 g)) handle _ => NONE
+    val gl2 = SOME (fst (valid_tactic_of_sml stac2 g)) handle _ => NONE
   in
-    (
+    gl1 <> NONE andalso gl2 <> NONE andalso gl1 = gl2 
+  end
+
+fun is_proof stac g =
+  let 
+    val tim = 1.0
+    val gl1 = SOME (fst (timeOut tim (valid_tactic_of_sml stac) g)) 
+              handle _ => NONE
+  in
+    gl1 = SOME []
+  end
+
+fun is_effect stac g gl =
+  let 
+    val tim = Real.max (!hhs_tactic_time, !hhs_metis_time)
+    val gl1 = SOME (fst (timeOut tim (valid_tactic_of_sml stac) g)) 
+              handle _ => NONE
+  in
+    gl1 = SOME gl
+  end
+
+
+
+fun string_of_proof proof = case proof of
+    Tactic (s,_) => s
+  | Then (p1,p2) => string_of_proof p1 ^ " THEN " ^ string_of_proof p2
+  | Thenl (p,pl) => 
+    let 
+      val sl = map string_of_proof pl
+      val set = mk_fast_set String.compare sl
+    in
+      if length set = 1 
+      then string_of_proof p ^ " THEN " ^ hd set
+      else string_of_proof p ^ " THENL " ^ "[" ^ String.concatWith ", " sl ^ "]"
+    end 
+fun safe_string_of_proof proof = case proof of
+    Tactic (s,_) => "(" ^ s ^ ")"
+  | Then (p1,p2) => 
+    safe_string_of_proof p1 ^ " THEN " ^ safe_string_of_proof p2
+  | Thenl (p,pl) =>     
+    let 
+      val sl = map safe_string_of_proof pl
+      val set = mk_fast_set String.compare sl
+    in
+      if length set = 1 
+      then safe_string_of_proof p ^ " THEN " ^ "(" ^ hd set ^ ")"
+      else safe_string_of_proof p ^ " THENL " ^ 
+        "[" ^ String.concatWith ", " sl ^ "]"
+    end
+
+fun parse_list acc l opar obra olet ocur sl = case sl of
+    "{" :: m => parse_list ("{" :: acc) l opar obra olet (ocur + 1) m
+  | "}" :: m => parse_list ("}" :: acc) l opar obra olet (ocur - 1) m
+  | "let" :: m => parse_list ("let" :: acc) l opar obra (olet + 1) ocur m
+  | "end" :: m => parse_list ("end" :: acc) l opar obra (olet - 1) ocur m
+  | "(" :: m => parse_list ("(" :: acc) l (opar + 1) obra olet ocur m
+  | ")" :: m => parse_list (")" :: acc) l (opar - 1) obra olet ocur m 
+  | "[" :: m => parse_list ("[" :: acc) l opar (obra + 1) olet ocur m
+  | "]" :: m => 
+     if obra <= 1 andalso opar = 0 andalso olet = 0 andalso ocur = 0
+     then (rev (rev acc :: l), m)
+     else parse_list ("]" :: acc) l opar (obra - 1) olet ocur m 
+  | "," :: m => 
+     if obra <= 1 andalso opar = 0 andalso olet = 0 andalso ocur = 0
+     then parse_list [] (rev acc :: l) opar obra olet ocur m
+     else parse_list ("," :: acc) l opar obra olet ocur m
+  | a :: m => parse_list (a :: acc) l opar obra olet ocur m
+  | []     => raise ERR "parse_list" ""
+  
+fun parse_list_full sl = case sl of
+    "[" :: m => 
+    let val (eleml,nextl) = parse_list [] [] 0 1 0 0 m in
+      (map (String.concatWith " ") eleml, nextl)
+    end
+  | _ => raise ERR "parse_list_full" ""
+   
+fun decompose sl = case sl of
+    [] => []
+  | "[" :: m => 
+    let val (eleml,nextl) = parse_list_full sl in
+      (true, ([],eleml)) :: decompose nextl
+    end
+  | a :: m => (false, ([],[a])) :: decompose m
+  
+fun list_to_string sl = "[ " ^ String.concatWith " , " sl ^ " ]"
+  
+fun group_to_string l =
+  let fun to_string (b,(l1',l2')) =  
+    if b then list_to_string (l1' @ l2') else hd l2'
+  in
+    String.concatWith " " (map to_string l)
+  end
+  
+fun minimize_stac g gl pl l = case l of
+    [] => group_to_string pl
+  | (false,a) :: m => minimize_stac g gl (pl @ [(false,a)]) m
+  | (true,(l1,l2)) :: m => 
+    if null l2 
+    then minimize_stac g gl (pl @ [(true,(l1,l2))]) m
+    else 
+      let val new_stac = group_to_string  (pl @ [(true, (l1, tl l2))] @ m) in
+        if is_effect new_stac g gl 
+        then minimize_stac g gl pl ((true, (l1, tl l2)) :: m)
+        else minimize_stac g gl pl ((true, (l1 @ [hd l2], tl l2)) :: m)
+      end   
+        
+fun minimize_stac_full stac g =
+  let val gl = fst (valid_tactic_of_sml stac g) 
+    handle _ => raise ERR "minimize" stac
+  in
+    minimize_stac g gl [] (decompose (hhs_lex stac))
+  end       
+       
+fun minimize_tac proof = case proof of 
+    Tactic (s,g) => Tactic (minimize_stac_full s g,g)   
+  | Then (p1,p2) => Then (minimize_tac p1, minimize_tac p2)
+  | Thenl (p,pl) => Thenl (minimize_tac p, map minimize_tac pl)
+ 
+fun minimize_proof proof = case proof of
+    Tactic _ => proof
+  | Then (Tactic (_,g),p2) => 
+    let val s = safe_string_of_proof p2 in
+      if is_proof s g then p2 else proof
+    end
+  | Then (p1,p2) => Then (minimize_proof p1, minimize_proof p2)
+  | Thenl (p,pl) => Thenl (minimize_proof p, map minimize_proof pl)
+ 
+fun prettify_proof proof = case proof of
+    Tactic (s,g) =>
+    let 
+      val s1 = prettify1_stac s
+      val s2 = prettify2_stac s
+    in
+      if exact_effect s s1 g then Tactic (s1,g)
+      else if exact_effect s s2 g then Tactic (s2,g)
+      else Tactic (s,g)
+    end
+  | Then (p1,p2) => Then (prettify_proof p1, prettify_proof p2)
+  | Thenl (p,pl) => Thenl (prettify_proof p, map prettify_proof pl)
+
+fun hhs_reconstruct g proof =
+  let
+    val sproof = string_of_proof proof
+    val tac    = valid_tactic_of_sml sproof
+                 handle _ => raise ERR "hhs_reconstruct" sproof
+  in
     (
     ignore (Tactical.TAC_PROOF (g,tac));
     print (sproof ^ "\n");
     if !hhs_debug_flag then hhs_print (sproof ^ "\n") else ()
     )
-    handle _ =>
-    (
-      (
-      ignore (Tactical.TAC_PROOF (g,tac2));
-      print (sproof2 ^ "\n");
-      if !hhs_debug_flag then hhs_print (sproof2 ^ "\n") else ()
-      )
-      handle _ => raise ERR "hhs_reconstruct" sproof2
-      )
-    ) 
+    handle _ => raise ERR "hhs_reconstruct" sproof
   end
+  
+fun safe_hhs_reconstruct g proof =
+  hhs_reconstruct g proof handle _ => 
+  (
+  let
+    val sproof = safe_string_of_proof proof
+    val tac    = valid_tactic_of_sml sproof
+                 handle _ => raise ERR "safe_hhs_reconstruct" sproof
+  in
+    (
+    ignore (Tactical.TAC_PROOF (g,tac));
+    print (sproof ^ "\n");
+    if !hhs_debug_flag then hhs_print (sproof ^ "\n") else ()
+    )
+    handle _ => raise ERR "safe_hhs_reconstruct" sproof
+  end  
+  )
 
 fun end_search () =
   (
@@ -784,11 +888,24 @@ fun end_search () =
 
 fun imperative_search thm_predictor predictor nfstfea symweight tacdict g =
   (
-    init_search thm_predictor predictor nfstfea symweight tacdict g;
-    total_timer (node_create_timer root_create_wrap) g;
-    total_timer search_loop ();
-    if dmem 0 (!finproofdict) then hhs_reconstruct g else ();
-    end_search ()
+  init_search thm_predictor predictor nfstfea symweight tacdict g;
+  total_timer (node_create_timer root_create_wrap) g;
+  total_timer search_loop ();
+  if dmem 0 (!finproofdict) then 
+    let 
+      val proofl = proofl_of 0
+      val proof = 
+        if length proofl <> 1 
+        then raise ERR "imperative_search" "" 
+        else 
+          if !minimize_flag 
+          then (prettify_proof o minimize_proof o minimize_tac) (hd proofl)
+          else prettify_proof (hd proofl)
+    in
+      safe_hhs_reconstruct g proof
+    end
+  else ();
+  end_search ()
   )
 
 end (* struct *)
