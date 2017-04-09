@@ -7,9 +7,43 @@ struct
    ---------------------------------------------------------------------- *)
 
 open HolKernel boolLib Abbrev hhsTools hhsLog hhsTimeout hhsFeature hhsPredict
-hhsExec
+hhsExec hhsLexer
 
 val ERR = mk_HOL_ERR "hhsSearch"
+
+(*---------------------------------------------------------------------------
+   Removing comments
+ ----------------------------------------------------------------------------*)
+
+fun rm_comment_aux isq par acc charl = 
+  if isq then
+    case charl of
+      []                  => rev acc
+    | #"\\" :: #"\\" :: m => rm_comment_aux true 0 (#"\\" :: #"\\" :: acc) m
+    | #"\\" :: #"\"" :: m => rm_comment_aux true 0 (#"\"" :: #"\\" :: acc) m
+    | #"\"" :: m          => rm_comment_aux false 0 (#"\"" :: acc) m     
+    | a :: m              => rm_comment_aux true 0 (a :: acc) m     
+  else if par > 0 then
+    (
+    case charl of
+      []                => rev acc
+    | #"(" :: #"*" :: m => rm_comment_aux false (par + 1) acc m
+    | #"*" :: #")" :: m => rm_comment_aux false (par - 1) acc m     
+    | a :: m            => rm_comment_aux false par acc m     
+    )
+  else if par = 0 then
+    (
+    case charl of
+      []                => rev acc
+    | #"\"" :: m        => rm_comment_aux true 0 (#"\"" :: acc) m
+    | #"(" :: #"*" :: m => rm_comment_aux false 1 acc m
+    | #"*" :: #")" :: m => raise ERR "rm_comment" "negative_par" 
+    | a :: m            => rm_comment_aux false 0 (a :: acc) m     
+    )
+  else raise ERR "rm_comment_aux" (implode (rev acc) ^ " : " ^ implode charl)
+
+fun rm_comment s = implode (rm_comment_aux false 0 [] (explode s))
+
 
 (* ----------------------------------------------------------------------
    Exceptions
@@ -31,8 +65,6 @@ val predictor_glob = ref empty_predictor
 val symweight_glob = ref (dempty String.compare)
 val nfstfea_glob = ref 0
 val glob_timer = ref NONE
-
-
 
 (* ----------------------------------------------------------------------
    Cache
@@ -552,6 +584,27 @@ fun unquote s =
   then String.substring (s, 1, String.size s - 2)
   else raise ERR "unquote" ""
 
+fun add_quote_aux sl = case sl of
+    [] =>  ""
+  | [a] => a
+  | "(" :: "Parse.Type" :: "[" :: "HOLPP.QUOTE" :: "(" :: s :: ")" :: 
+    "]" :: ")" :: m => 
+    "``" ^ (rm_blank o rm_comment o unquote) s ^ "``" ^ " " ^ add_quote_aux m
+  | "(" :: "Parse.Term" :: "[" :: "HOLPP.QUOTE" :: "(" :: s :: ")" :: 
+    "]" :: ")" :: m => 
+    "``" ^ (rm_blank o rm_comment o unquote) s ^ "``" ^ " " ^ add_quote_aux m
+  | "[" :: "HOLPP.QUOTE" :: "(" :: s :: ")" :: "]" :: m =>
+    "`" ^ (rm_blank o rm_comment o unquote) s ^ "`" ^ " " ^ add_quote_aux m
+  | "[" :: "HOLPP.QUOTE"  :: s :: "]" :: m =>
+    "`" ^ (rm_blank o rm_comment o unquote) s ^ "`" ^ " " ^ add_quote_aux m
+  | "[" :: "HOLPP.QUOTE" :: "(" :: s :: ")" :: "]" :: m =>
+    "`" ^ (rm_blank o rm_comment o unquote) s ^ "`" ^ " " ^ add_quote_aux m
+  | "[" :: "HOLPP.QUOTE"  :: s :: "]" :: m =>
+    "`" ^ (rm_blank o rm_comment o unquote) s ^ "`" ^ " " ^ add_quote_aux m
+  | a :: m => a ^ " " ^ add_quote_aux m
+
+fun add_quote stac = add_quote_aux (hhs_lex stac)
+
 fun rm_fetch_aux sl = case sl of
     [] =>  ""
   | [a] => a
@@ -563,7 +616,7 @@ fun rm_fetch_aux sl = case sl of
     )
   | a :: m => a ^ " " ^ rm_fetch_aux m
 
-fun rm_fetch stac = rm_fetch_aux (String.tokens Char.isSpace stac)
+fun rm_fetch stac = rm_fetch_aux (hhs_lex stac)
  
 fun minspace_sl sl = case sl of
     [] =>  ""
@@ -577,7 +630,7 @@ fun minspace_sl sl = case sl of
 
 fun rm_prefix stac =
   let
-    val sl = String.tokens Char.isSpace stac
+    val sl = hhs_lex stac
     fun rm_one_prefix s =
       let
         val l = String.tokens (fn x => x = #".") s
@@ -589,7 +642,10 @@ fun rm_prefix stac =
     map rm_one_prefix sl
   end
 
-fun prettify_stac stac = (minspace_sl o rm_prefix o rm_fetch) stac
+fun simple_prettify_stac stac = 
+  (minspace_sl o rm_prefix o rm_fetch o add_quote) stac
+fun prettify_stac stac =
+  (minspace_sl o hhs_lex o rm_fetch o add_quote) stac
 
 fun string_of_proof pid =
   let
@@ -598,7 +654,7 @@ fun string_of_proof pid =
     fun compare_gn ((gn1,_,_),(gn2,_,_)) = Int.compare (gn1,gn2)
     val proofl = !(#proofl prec)
     val new_proofl = dict_sort compare_gn proofl
-    fun is_single_token s = List.length (String.tokens Char.isSpace s) = 1
+    fun is_single_token s = List.length (hhs_lex s) = 1
     fun par s = if is_single_token s
                 then prettify_stac s
                 else "(" ^ prettify_stac s ^ ")"
@@ -638,34 +694,29 @@ fun simple_string_of_proof pid =
     fun compare_gn ((gn1,_,_),(gn2,_,_)) = Int.compare (gn1,gn2)
     val proofl = !(#proofl prec)
     val new_proofl = dict_sort compare_gn proofl
-    fun is_single_token s = List.length (String.tokens Char.isSpace s) = 1
   in
     if pid = 0 andalso length new_proofl = 1 then
       let
         val (_,stac,cid) = hd new_proofl
         val cont = simple_string_of_proof cid
       in
-        prettify_stac stac ^ cont
+        simple_prettify_stac stac ^ cont
       end
     else if length new_proofl = 0 then
       ""
     else if length new_proofl = 1 then
       let val (_,stac,cid) = hd new_proofl in
-        " THEN " ^ prettify_stac stac ^ simple_string_of_proof cid
+        " THEN " ^ simple_prettify_stac stac ^ simple_string_of_proof cid
       end
     else
       let
         fun f (_,stac,cid) =
-          (
-          prettify_stac stac ^ simple_string_of_proof cid
-          )
+          simple_prettify_stac stac ^ simple_string_of_proof cid
         val sl = map f new_proofl
       in
         " THENL [" ^ String.concatWith ", " sl ^ "]"
       end
   end
-
-
 
 fun hhs_reconstruct g =
   let
