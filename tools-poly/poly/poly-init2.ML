@@ -92,35 +92,7 @@ fun findUo modPath [] = NONE
           findUo modPath rest
       end;
 
-fun lookup_holpath s =
-  if s = "HOLDIR" then SOME Systeml.HOLDIR
-  else NONE
-
-fun subst_pathvars modPath =
-  if size modPath > 0 andalso String.sub(modPath, 0) = #"$" then
-    if size modPath < 2 orelse String.sub(modPath, 1) <> #"(" then
-      die ("Bad occurrence of $ in mod-path "^modPath)
-    else
-      let
-        val (varname, rest) =
-            Substring.position ")" (Substring.extract(modPath, 2, NONE))
-        val varname = Substring.string varname
-      in
-        if Substring.size rest = 0 then
-          die ("No matching r-paren in "^modPath)
-        else
-          let
-            val rest = Substring.string
-                         (Substring.dropl (fn c => c = #"/")
-                                          (Substring.slice(rest,1,NONE)))
-          in
-            case lookup_holpath varname of
-                NONE => die ("No HOL path for variable "^varname^" in "^modPath)
-              | SOME p => OS.Path.concat(p,rest)
-          end
-      end
-  else modPath
-
+val _ = holpathdb.extend_db {vname = "HOLDIR", path = Systeml.HOLDIR}
 
 fun loadUo ps uo =
   let
@@ -131,8 +103,8 @@ fun loadUo ps uo =
     fun str f = ">" ^ f ^ "< -- " ^ String.concatWith " -- " ps
     fun loadOne f =
       (case OS.Path.ext f of
-         SOME "sml" => myuse f
-       | SOME "sig" => myuse f
+         SOME "sml" => myuse (holpathdb.subst_pathvars f)
+       | SOME "sig" => myuse (holpathdb.subst_pathvars f)
        | _ => load (uo::ps) f)
       handle
         OS.Path.InvalidArc => die ("Invalid arc exception in loading "^str f)
@@ -143,7 +115,7 @@ fun loadUo ps uo =
   end
 and load ps modPath =
   let
-    val modPath = subst_pathvars modPath
+    val modPath = holpathdb.subst_pathvars modPath
     val modName = OS.Path.file modPath
     fun l ext =
       case findUo (modPath ^ ext) ("."::(!loadPath)) of

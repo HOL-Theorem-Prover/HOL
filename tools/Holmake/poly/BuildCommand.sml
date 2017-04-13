@@ -11,6 +11,8 @@ fun x |> f = f x
 
 val default_holstate = Systeml.DEFAULT_STATE
 
+val _ = holpathdb.extend_db {vname = "HOLDIR", path = Systeml.HOLDIR}
+
 open HM_GraphBuildJ1
 
 datatype cmd_line = Mosml_compile of File list * string
@@ -138,6 +140,8 @@ fun poly_compile warn diag quietp file I deps = let
   fun mapthis (Unhandled _) = NONE
     | mapthis f = SOME (fromFileNoSuf f)
   val depMods = List.map (addPath I) (List.mapPartial mapthis deps)
+  fun usePathVars p = holpathdb.reverse_lookup {path = p}
+  val depMods = List.map usePathVars depMods
   val say = if quietp then (fn s => ())
             else (fn s => TextIO.output(TextIO.stdOut, s ^ "\n"))
   val _ = say ("HOLMOSMLC -c " ^ fromFile file)
@@ -151,7 +155,7 @@ case file of
      in
        TextIO.output (outUi, String.concatWith "\n" depMods);
        TextIO.output (outUi, "\n");
-       TextIO.output (outUi, filename ^ "\n");
+       TextIO.output (outUi, usePathVars filename ^ "\n");
        TextIO.closeOut outUi;
        finish_compilation warn depMods filename tgt
      end
@@ -163,7 +167,7 @@ case file of
      in
        TextIO.output (outUo, String.concatWith "\n" depMods);
        TextIO.output (outUo, "\n");
-       TextIO.output (outUo, addPath [] (fromFile file) ^ "\n");
+       TextIO.output (outUo, usePathVars (addPath [] (fromFile file)) ^ "\n");
        TextIO.closeOut outUo;
        (if OS.FileSys.access (modName ^ ".sig", []) then
           ()
