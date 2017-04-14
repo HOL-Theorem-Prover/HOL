@@ -111,7 +111,7 @@ This kernel can be selected by passing the `--otknl` option to `build`.
 When `build` runs, it choreographs its calls to `Holmake` by referring to a specified sequence of directories.
 By default this sequence is that specified in the file `tools/build-sequence`, which in turn refers to other files *via* `#include` directives.
 It is possible to provide a different sequence by using the `--seq` commandline option to `build`.
-Such sequences can be constructed more easily be referring to sequence fragments in the `tools/sequences` directory, and including these with `#include` commands.
+Such sequences can be constructed more easily by referring to sequence fragments in the `tools/sequences` directory, and including these with `#include` commands.
 The details of the required format for sequence files is spelled out in a comment at the head of the `tools/build-sequence` file.
 
 # Sources and Their Organisation {#sources}
