@@ -200,6 +200,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val opentheory = #opentheory (#core optv)
   val allfast = #fast (#core optv)
   val polynothol = #poly_not_hol optv
+  val relocbuild = #relocbuild optv orelse
+                   (case OS.Process.getEnv Systeml.build_after_reloc_envvar of
+                        SOME "1" => true
+                      | _ => false)
   val interactive_flag = #interactive (#core optv)
   val quiet_flag = #quiet (#core optv)
   val cmdl_HOLSTATE = #holstate optv
@@ -441,6 +445,12 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       | BR_ClineK((_,cline), k) => k warn (Systeml.systeml cline)
       | BR_Failed => false
 
+
+  fun system s =
+    Systeml.system_ps
+      (if relocbuild then Systeml.build_after_reloc_envvar ^ "=1 " ^ s
+       else s)
+
   val build_graph =
       if jobs = 1 then
         graphbuildj1 {
@@ -450,7 +460,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           outs = outs,
           keep_going = keep_going,
           quiet = quiet_flag,
-          hmenv = hmenv}
+          hmenv = hmenv,
+          system = system }
       else
         (fn ii => fn g =>
             multibuild.graphbuild { build_command = build_command,

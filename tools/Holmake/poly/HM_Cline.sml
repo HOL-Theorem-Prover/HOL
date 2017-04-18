@@ -7,7 +7,7 @@ type t = {
   polymllibdir : string option,
   poly_not_hol : bool,
   time_limit : Time.time option,
-  reloc_build : bool,
+  relocbuild : bool,
   core : HM_Core_Cline.t
 }
 
@@ -16,18 +16,18 @@ local
   fun makeUpdateT z = makeUpdate7 z
 in
 fun updateT z = let
-  fun from core holstate poly polymllibdir poly_not_hol reloc_build time_limit =
+  fun from core holstate poly polymllibdir poly_not_hol relocbuild time_limit =
     {core = core, holstate = holstate, poly = poly,
      polymllibdir = polymllibdir, poly_not_hol = poly_not_hol,
-     reloc_build = reloc_build, time_limit = time_limit}
-  fun from' time_limit reloc_build poly_not_hol polymllibdir poly holstate
+     relocbuild = relocbuild, time_limit = time_limit}
+  fun from' time_limit relocbuild poly_not_hol polymllibdir poly holstate
             core =
     {core = core, holstate = holstate, poly = poly,
      polymllibdir = polymllibdir, poly_not_hol = poly_not_hol,
-     reloc_build = reloc_build, time_limit = time_limit}
-  fun to f {core, holstate, poly, polymllibdir, poly_not_hol, reloc_build,
+     relocbuild = relocbuild, time_limit = time_limit}
+  fun to f {core, holstate, poly, polymllibdir, poly_not_hol, relocbuild,
             time_limit} =
-    f core holstate poly polymllibdir poly_not_hol reloc_build time_limit
+    f core holstate poly polymllibdir poly_not_hol relocbuild time_limit
 in
   makeUpdateT (from, from', to)
 end z
@@ -42,7 +42,7 @@ val default_options = {
   poly = NONE,
   polymllibdir = NONE,
   poly_not_hol = false,
-  reloc_build = false,
+  relocbuild = false,
   time_limit = NONE
 }
 
@@ -99,7 +99,7 @@ val poly_option_descriptions = [
                     resfn (fn (wn,t) => updateT t (U #poly_not_hol true) $$))},
   {help = "perform a relocation build", long = ["relocbuild"], short = "",
    desc = NoArg (fn () =>
-                    resfn (fn (_,t) => updateT t (U #reloc_build true) $$))},
+                    resfn (fn (_,t) => updateT t (U #relocbuild true) $$))},
   {help = "specify Poly/ML lib directory", long = ["polymllibdir"],
    short = "",
    desc = ReqArg (set_polymllibdir, "directory")},

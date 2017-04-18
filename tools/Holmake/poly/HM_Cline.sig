@@ -7,7 +7,7 @@ type t = {
   polymllibdir : string option,
   poly_not_hol : bool,
   time_limit : Time.time option,
-  reloc_build : bool,
+  relocbuild : bool,
   core : HM_Core_Cline.t
 }
 
