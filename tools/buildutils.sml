@@ -801,8 +801,10 @@ fun build_help graph =
 
 val delete_heaps =
     if Systeml.ML_SYSNAME = "poly" then
-      fn () => (safedelete (fullPath [HOLDIR, "bin", "hol.state"]);
-                safedelete (fullPath [HOLDIR, "bin", "hol.state0"]))
+      fn () =>
+         (safedelete (fullPath [HOLDIR, "bin", "hol.state"]);
+          safedelete (fullPath [HOLDIR, "bin", "hol.state0"]);
+          safedelete (fullPath [HOLDIR, "tools", "Holmake", "Systeml.sml"]))
     else fn () => ()
 
 

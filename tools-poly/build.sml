@@ -65,7 +65,9 @@ val Holmake = let
   end
 in
   buildutils.Holmake aug_systeml isSuccess
-                     (fn () => ("-j"^Int.toString jobcount) :: phase_extras())
+                     (fn () => ("-j"^Int.toString jobcount) ::
+                               ((if relocbuild then ["--relocbuild"] else []) @
+                                phase_extras()))
                      analysis do_selftests
 end
 
