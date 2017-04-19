@@ -358,17 +358,7 @@ end
 
 fun clean_forReloc {holheap} =
   if Systeml.ML_SYSNAME = "poly" then
-    let
-      val cdstream = OS.FileSys.openDir "."
-      fun to_delete f =
-        case toFile f of
-            UO _ => true
-          | UI _ => true
-          | _ => false
-    in
-      read_files cdstream to_delete quiet_remove;
-      case holheap of SOME s => quiet_remove s | _ => ()
-    end
+    case holheap of SOME s => quiet_remove s | _ => ()
   else ()
 
 exception DirNotFound

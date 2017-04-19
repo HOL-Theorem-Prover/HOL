@@ -55,7 +55,7 @@ fun is_heap_only() =
 fun graphbuildj1 static_info =
   let
     val {build_command, mosml_build_command, outs, keep_going,
-         quiet, hmenv} = static_info
+         quiet, hmenv, system} = static_info
     val {warn,diag,tgtfatal,info,...} = (outs : Holmake_tools.output_functions)
     fun build_graph incinfo g =
       let
@@ -122,7 +122,7 @@ fun graphbuildj1 static_info =
                                     (TextIO.output(TextIO.stdOut, c ^ "\n");
                                      TextIO.flushOut TextIO.stdOut)
                                   else ()
-                              val result = Systeml.system_ps c
+                              val result = system c
                               val res_b = OS.Process.isSuccess result
                             in
                               if not res_b andalso ignore_error
