@@ -12,16 +12,15 @@ struct
   val pidToWord  = Posix.Process.pidToWord
   type exit_status = Posix.Process.exit_status
 
-  type 'a job = {tag : string,
-                 command : string * string list,
-                 update : 'a * bool -> 'a}
+  type command = {executable: string, nm_args : string list, env : string list}
+  type 'a job = {tag : string, command : command, update : 'a * bool -> 'a}
   datatype 'a genjob_result =
            NoMoreJobs of 'a | NewJob of ('a job * 'a) | GiveUpAndDie of 'a
   type 'a workprovider = { initial : 'a, genjob : 'a -> 'a genjob_result }
 
   type 'a working_job = {
     tag : string,
-    command : string * string list,
+    command : command,
     update : 'a * bool -> 'a,
     starttime : Time.time,
     lastevent : Time.time,
@@ -154,6 +153,7 @@ struct
     let
       open Posix.Process Posix.IO
       val {tag, command, update} = j
+      val {executable,env,nm_args} = command
       val {infd=outinfd, outfd = outoutfd} = pipe()
       val {infd=errinfd, outfd = erroutfd} = pipe()
       val {infd=ininfd,  outfd = inoutfd} = pipe()
@@ -168,7 +168,7 @@ struct
                 List.app close [errinfd, erroutfd, outinfd, outoutfd,
                                 ininfd, inoutfd]
           in
-            exec command
+            exece(executable,nm_args,env)
           end
         | SOME pid =>
           let
@@ -189,11 +189,14 @@ struct
           end
     end
 
-  fun mk_shell_command s = ("/bin/sh", ["/bin/sh", "-c", s])
+  fun mk_shell_command {cline,extra_env} : command =
+    {executable = "/bin/sh", nm_args = ["/bin/sh", "-c", cline],
+     env = extra_env @ Posix.ProcEnv.environ()}
+  fun simple_shell s = mk_shell_command {cline = s, extra_env = []}
   fun shellcommand s =
     let
       open Posix.Process
-      val j :int job = {tag = s, command = mk_shell_command s, update = K 0}
+      val j :int job = {tag = s, command = simple_shell s, update = K 0}
       val wj = start_job j
       fun read pfx acc strm k =
         case TextIO.inputLine strm of
@@ -411,10 +414,7 @@ struct
               let
                 fun upd(clist, b) = fupdAlist t (fn (c,_) => (c,Done b)) clist
               in
-                NewJob ({tag = t,
-                         command = ("/bin/sh", ["/bin/sh", "-c", c]),
-                         update = upd},
-                        l)
+                NewJob ({tag = t, command = simple_shell c, update = upd}, l)
               end
         end
       val wl =

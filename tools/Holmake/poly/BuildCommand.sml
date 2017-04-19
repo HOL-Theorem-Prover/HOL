@@ -465,6 +465,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       else
         (fn ii => fn g =>
             multibuild.graphbuild { build_command = build_command,
+                                    relocbuild = relocbuild,
                                     mosml_build_command = mosml_build_command,
                                     warn = warn, tgtfatal = tgtfatal,
                                     keep_going = keep_going, diag = diag,

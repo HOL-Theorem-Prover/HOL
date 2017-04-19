@@ -22,7 +22,8 @@ fun graphbuild optinfo incinfo g =
   let
     val _ = OS.FileSys.mkDir loggingdir handle _ => ()
     val { build_command, mosml_build_command, warn, tgtfatal, diag,
-          keep_going, quiet, hmenv, jobs, info, time_limit } = optinfo
+          keep_going, quiet, hmenv, jobs, info, time_limit,
+          relocbuild } = optinfo
     val safetag = String.map (fn #"/" => #"-" | c => c)
     val monitor =
         MB_Monitor.new {info = info,
@@ -31,10 +32,12 @@ fun graphbuild optinfo incinfo g =
                         keep_going = keep_going,
                         time_limit = time_limit}
 
-    fun is_heap_only () =
-      case OS.Process.getEnv Systeml.build_after_reloc_envvar of
-          SOME "1" => true
-        | _ => false
+    val env =
+        (if relocbuild then [Systeml.build_after_reloc_envvar^"=1"] else []) @
+        Posix.ProcEnv.environ()
+    fun cline_to_command (s, args) = {executable = s, nm_args = args, env = env}
+    fun shell_command s =
+      {executable = "/bin/sh", nm_args = ["/bin/sh", "-c", s], env = env}
 
     fun genjob g =
       case find_runnable g of
@@ -73,9 +76,9 @@ fun graphbuild optinfo incinfo g =
                         let
                           fun update (g, b) = updnode (n, error b) g
                         in
-                          NewJob ({tag = target_s,
-                                   command = mk_shell_command c,
-                                   update = update}, updnode(n, Running) g)
+                          NewJob ({tag = target_s, command = shell_command c,
+                                   update = update},
+                                  updnode(n, Running) g)
                         end
                   end
                 | BuiltInCmd =>
@@ -99,7 +102,7 @@ fun graphbuild optinfo incinfo g =
                             diag ("New graph job for "^target_s^
                                   " with c/line: " ^ cline_str cline);
                             NewJob({tag = target_s,
-                                    command = cline,
+                                    command = cline_to_command cline,
                                     update = update}, updnode(n, Running) g)
                           end
                     val bc = build_command incinfo
@@ -131,7 +134,7 @@ fun graphbuild optinfo incinfo g =
                                     String.concatWith ", " ts)
                   end
           in
-            if is_heap_only() andalso not (#phony nI) andalso
+            if relocbuild andalso not (#phony nI) andalso
                List.all exists_readable (#target nI)
             then
               let
