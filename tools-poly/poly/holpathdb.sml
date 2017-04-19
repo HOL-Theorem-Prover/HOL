@@ -27,9 +27,11 @@ fun reverse_lookup {path} =
 fun extend_db {vname, path} =
   holpath_db := Binarymap.insert(!holpath_db, vname, path)
 
+fun warn s = TextIO.output(TextIO.stdErr, "WARNING: " ^ s ^ "\n")
+
 fun subst_pathvars modPath =
   let
-    fun die s = (TextIO.output(TextIO.stdErr, "WARNING: " ^ s ^ "\n"); modPath)
+    fun die s = (warn s; modPath)
   in
     if size modPath > 0 andalso String.sub(modPath, 0) = #"$" then
       if size modPath < 2 orelse String.sub(modPath, 1) <> #"(" then
@@ -56,5 +58,67 @@ fun subst_pathvars modPath =
         end
     else modPath
   end
+
+infix ++
+fun p1 ++ p2 = OS.Path.concat(p1,p2)
+
+fun check_insert(m,k,v) =
+  let
+    val _ =
+        case Binarymap.peek(m,k) of
+            NONE => ()
+          | SOME v' => warn((v ++ ".holpath") ^ " overrides value for "^
+                            k ^ " from " ^ (v' ++ ".holpath"))
+  in
+    Binarymap.insert(m,k,v)
+  end
+
+fun readVName d m =
+  let
+    val hp = d ++ ".holpath"
+    val istrm = TextIO.openIn hp
+    val m' =
+        case TextIO.inputLine istrm of
+            NONE => (warn (hp ^ " is empty"); m)
+          | SOME s =>
+            let
+              val sz = size s - 1
+              val nm = if String.sub(s,sz) = #"\n" then
+                         String.extract(s,0,SOME sz)
+                       else s
+            in
+              check_insert(m,nm,d)
+            end
+  in
+    TextIO.closeIn istrm;
+    m'
+  end handle IO.Io _ => m
+
+
+fun search_for_extensions gen dlist =
+  let
+    fun recurse acc visited dlist =
+      case dlist of
+          [] => acc
+        | d::ds =>
+          let
+            val acc' = readVName d acc
+            val pd = OS.Path.getParent d
+            val visited' = Binaryset.add(visited, d)
+            val new_ds =
+                List.filter (fn d => not (Binaryset.member(visited', d)))
+                            (pd :: gen d)
+            val dlist' = new_ds @ ds
+          in
+            recurse acc' visited' dlist'
+          end
+  in
+    Binarymap.foldl (fn (vnm,p,acc) => {vname=vnm,path=p} :: acc)
+                    []
+                    (recurse (Binarymap.mkDict String.compare)
+                             (Binaryset.empty String.compare)
+                             dlist)
+  end
+
 
 end (* struct *)

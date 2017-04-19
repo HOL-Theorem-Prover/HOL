@@ -255,7 +255,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         p "in end;")
      else
        (p ("val _ = PolyML.SaveState.loadState \"" ^
-           String.toString HOLSTATE ^ "\";\n")));
+           String.toString HOLSTATE ^ "\";\n");
+        p ("val _ = List.app holpathdb.extend_db" ^
+           "(holpathdb.search_for_extensions ReadHMF.find_includes " ^
+           "[OS.FileSys.getDir()])\n")));
     p ("val _ = List.map load [" ^
        String.concatWith "," (List.map (fn f => "\"" ^ f ^ "\"") files) ^
        "] handle x => ((case x of Fail s => print (s^\"\\n\") | _ => ()); \
@@ -473,9 +476,15 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                     time_limit = time_limit,
                                     quiet = quiet_flag, hmenv = hmenv,
                                     jobs = jobs } ii g |> interpret_graph)
+  fun extend_holpaths () =
+    List.app holpathdb.extend_db
+             (holpathdb.search_for_extensions
+                (fn s => [])
+                [OS.FileSys.getDir()])
+
 in
   {extra_impl_deps = [Unhandled HOLSTATE],
-   build_graph = build_graph}
+   build_graph = (fn arg => (extend_holpaths(); build_graph arg))}
 end
 
 end (* struct *)
