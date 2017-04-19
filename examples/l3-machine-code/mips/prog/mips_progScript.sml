@@ -46,15 +46,14 @@ val mips_LE_def = Define `mips_LE = mips_CONFIG F`
 val mips_BE_def = Define `mips_BE = mips_CONFIG T`
 
 val MIPS_PC_def = Define`
-   MIPS_PC pc =
-   mips_BranchDelay NONE * mips_PC pc * cond ((1 >< 0) pc = 0w: word2)`
+   MIPS_PC pc = mips_BranchDelay NONE * mips_PC pc * cond (aligned 2 pc)`
 
 (* ------------------------------------------------------------------------ *)
 
 val MIPS_PC_INTRO = Q.store_thm("MIPS_PC_INTRO",
    `SPEC m (p1 * MIPS_PC pc) code
            (p2 * mips_BranchDelay NONE * mips_PC pc') ==>
-    (((1 >< 0) pc = 0w: word2) ==> ((1 >< 0) pc' = 0w: word2)) ==>
+    (aligned 2 pc ==> aligned 2 pc') ==>
     SPEC m (p1 * MIPS_PC pc) code (p2 * MIPS_PC pc')`,
    REPEAT STRIP_TAC
    \\ FULL_SIMP_TAC std_ss

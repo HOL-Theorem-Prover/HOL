@@ -42,7 +42,8 @@ local
    val other_fns =
       [pairSyntax.fst_tm, pairSyntax.snd_tm, bitstringSyntax.v2w_tm,
        optionSyntax.is_some_tm] @
-      utilsLib.update_fns ``:mips_state``
+      utilsLib.update_fns ``:mips_state`` @
+      utilsLib.accessor_fns ``:CP0``
    val extra_fns =
       [wordsSyntax.sw2sw_tm, wordsSyntax.w2w_tm,
        wordsSyntax.word_add_tm, wordsSyntax.word_sub_tm,
@@ -383,17 +384,19 @@ val cond_0_7 = Q.prove(
    wordsLib.Cases_word_value \\ simp [])
 
 val mem_thms =
-   [AddressTranslation_def, LoadMemory_def,
-    StoreMemory_byte, storeWord_def, storeDoubleword_def,
-    Drule.UNDISCH StoreMemory_half, Drule.UNDISCH StoreMemory_word,
-    Drule.UNDISCH StoreMemory_doubleword,
-    PSIZE_def, ReverseEndian_def, BigEndianMem_def, BigEndianCPU_def,
+   [AddressTranslation_def, AdjustEndian_def, LoadMemory_def, ReadData_def,
+    Drule.UNDISCH (Drule.SPEC_ALL StoreMemory_byte),
+    storeWord_def, storeDoubleword_def,
+    Drule.UNDISCH_ALL StoreMemory_half, Drule.UNDISCH_ALL StoreMemory_word,
+    Drule.UNDISCH_ALL StoreMemory_doubleword,
+    ReverseEndian_def, BigEndianMem_def, BigEndianCPU_def,
     BYTE_def, HALFWORD_def, WORD_def, DOUBLEWORD_def,
     address_align, address_align2, cond_sign_extend, byte_address, extract_byte,
     wordsTheory.word_concat_0_0, wordsTheory.WORD_XOR_CLAUSES,
     cond_0_1, cond_0_3, cond_0_7,
     bitstringLib.v2w_n2w_CONV ``v2w [T] : word1``,
     bitstringLib.v2w_n2w_CONV ``v2w [F] : word1``,
+    EVAL ``((3w : word2) @@ (0w : word1)) : word3``,
     EVAL ``word_replicate 2 (0w: word1) : word2``,
     EVAL ``word_replicate 2 (1w: word1) : word2``,
     EVAL ``((1w:word1) @@ (0w:word2)) : word3``,
@@ -403,6 +406,7 @@ val mem_thms =
     EVAL ``word_replicate 3 (1w:word1) : word3``]
 
 val select_rule =
+   utilsLib.ALL_HYP_CONV_RULE (REWRITE_CONV [Aligned_thms]) o
    REWRITE_RULE
       [select_byte_le, select_byte_be, byte_address,
        SIMP_RULE (bool_ss++boolSimps.LET_ss) [] select_parts,
@@ -436,14 +440,14 @@ val memcntxts =
    List.map
       (fn l =>
          [``rt <> 0w:word5``,
-          ``~word_bit 0 ^addr``,
           ``~^st.exceptionSignalled``,
-          ``(1 >< 0) ^addr = 0w: word2``,
-          ``(1 >< 0) ^st.PC = 0w: word2``] @ l)
+          ``Aligned (^addr, 1w)``,
+          ``Aligned (^addr, 3w)``,
+          ``Aligned (^st.PC, 3w)``] @ l)
       memcntxts
 
 val dmemcntxts =
-   List.map (fn l => ``(2 >< 0) ^addr = 0w: word3`` :: l) memcntxts
+   List.map (fn l => ``Aligned (^addr, 7w)`` :: l) memcntxts
 
 (*
 fun merge_cases thms =
@@ -481,7 +485,7 @@ fun EVL l tm =
 
 fun store_rule thms =
    utilsLib.ALL_HYP_CONV_RULE
-     (SIMP_CONV std_ss (cond_rand_thms :: mem_thms @ thms))
+     (SIMP_CONV std_ss (Aligned_thms :: cond_rand_thms :: mem_thms @ thms))
 
 (*
 val UserMode_rule =
@@ -508,7 +512,8 @@ val loadWord =
       ``loadWord (link, base, rt, offset, unsigned)``
 
 val loadDoubleword =
-   ev ([loadDoubleword_def, double_aligned] @ mem_thms) dmemcntxts []
+   evr select_rule ([loadDoubleword_def, double_aligned] @ mem_thms)
+      dmemcntxts []
       ``loadDoubleword (link, base, rt, offset)``
 
 val LB  = EVL [loadByte] ``dfn'LB (base, rt, offset) ^st``
@@ -563,6 +568,7 @@ val SD =
    EVR (store_rule []) (dfn'SD_def :: mem_thms) dmemcntxts []
       ``dfn'SD (base, rt, offset)``
 
+(*
 val sc = List.map (fn l => ``^st.LLbit = SOME llbit`` :: l)
 
 val SC =
@@ -574,6 +580,7 @@ val SCD =
    EVR (COND_UPDATE_RULE o store_rule [])
        ([dfn'SCD_def, extract_word] @ mem_thms) (sc dmemcntxts) []
       ``dfn'SCD (base, rt, offset)``
+*)
 
 (* ------------------------------------------------------------------------- *)
 
@@ -813,8 +820,8 @@ val mips_patterns = List.map (I ## utilsLib.pattern)
     ("LL",      "TTFFFF__________________________"),
     ("LLD",     "TTFTFF__________________________"),
     ("LD",      "TTFTTT__________________________"),
-    ("SC",      "TTTFFF__________________________"),
-    ("SCD",     "TTTTFF__________________________"),
+ (* ("SC",      "TTTFFF__________________________"),
+    ("SCD",     "TTTTFF__________________________"), *)
     ("SD",      "TTTTTT__________________________"),
     ("ERET",    "FTFFFFTFFFFFFFFFFFFFFFFFFFFTTFFF")
    ]

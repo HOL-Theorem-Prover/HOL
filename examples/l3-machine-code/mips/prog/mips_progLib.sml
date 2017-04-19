@@ -530,11 +530,7 @@ local
 in
    val mips_pc_intro_rule =
       Conv.CONV_RULE
-         (Conv.LAND_CONV
-             (REWRITE_CONV [mips_stepTheory.Aligned_numeric]
-          (*                mips_stepTheory.Aligned_cond]
-              THENC utilsLib.WGROUND_CONV
-              THENC REWRITE_CONV [boolTheory.EXCLUDED_MIDDLE] *))
+         (Conv.LAND_CONV (REWRITE_CONV [alignmentTheory.aligned_numeric])
           THENC (Conv.REWR_CONV
                      (Thm.CONJUNCT1 (Drule.SPEC_ALL boolTheory.IMP_CLAUSES))
                  ORELSEC MOVE_COND_CONV)
@@ -549,13 +545,13 @@ in
       Conv.CONV_RULE
         (stateLib.PRE_COND_CONV
            (SIMP_CONV (bool_ss++boolSimps.CONJ_ss)
-              [mips_stepTheory.Aligned_numeric])) o
+              [alignmentTheory.aligned_numeric])) o
       helperLib.MERGE_CONDS_RULE
    val spec_join_rule = helperLib.SPEC_COMPOSE_RULE o Lib.list_of_pair
 end
 
- val split_BranchDelay = stateLib.split_cond true dest_BranchDelay
- val split_exception = stateLib.split_cond false dest_mips_PC
+val split_BranchDelay = stateLib.split_cond true dest_BranchDelay
+val split_exception = stateLib.split_cond false dest_mips_PC
 
 fun mips_spec_hex2 s =
    List.map mips_pc_intro_rule
