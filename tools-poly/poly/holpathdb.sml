@@ -67,8 +67,10 @@ fun check_insert(m,k,v) =
     val _ =
         case Binarymap.peek(m,k) of
             NONE => ()
-          | SOME v' => warn((v ++ ".holpath") ^ " overrides value for "^
-                            k ^ " from " ^ (v' ++ ".holpath"))
+          | SOME v' => if v' <> v then
+                         warn((v ++ ".holpath") ^ " overrides value for "^
+                              k ^ " from " ^ (v' ++ ".holpath"))
+                       else ()
   in
     Binarymap.insert(m,k,v)
   end
