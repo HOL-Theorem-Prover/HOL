@@ -180,6 +180,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                    outs = outs,
                                    keep_going = keep_going,
                                    quiet = quiet_flag,
+                                   system = Systeml.system_ps,
                                    hmenv = hmenv}
 in
   {extra_impl_deps = if nob2002 then []
