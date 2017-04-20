@@ -133,6 +133,9 @@ in
   p ("val _ = PolyML.SaveState.loadState \"" ^ String.toString base ^ "\"\n");
   p ("  handle e => die (General.exnMessage e)");
   p ("val heapname = \""^outputheap^"\";");
+  p ("val _ = List.app holpathdb.extend_db\n");
+  p ("(holpathdb.search_for_extensions ReadHMF.find_includes\n");
+  p ("[OS.FileSys.getDir()]);\n");
   p "local";
   p hloadstr;
   p printstr;
