@@ -31,6 +31,9 @@ in
      \             OS.Process.exit OS.Process.failure)");
   gen1 "Loading" "load";
   gen1 "Using" "use";
+  p ("val _ = List.app holpathdb.extend_db\n\
+     \  (holpathdb.search_for_extensions ReadHMF.find_includes\n\
+     \    [OS.FileSys.getDir()])");
   p ("load1 (Globals.HOLDIR ++ \"src\" ++ \"TeX\" ++ \"holindex\")");
   app (fn thy => p ("load1 \"" ^ String.toString thy ^ "\"")) theories;
   app (fn ml => p ("use1 \"" ^
@@ -47,7 +50,8 @@ in
   let val res = Systeml.systeml [Systeml.POLY ^ "c", "-o", exe, tmpnm]
   in
     if OS.Process.isSuccess res then OS.Process.exit res
-    else die "Compilation of Poly/ML code failed"
+    else (OS.FileSys.rename {new = "mkscript.debug", old = tmpnm};
+          die "Compilation of Poly/ML code failed")
   end
 end
 
