@@ -9,9 +9,9 @@ fun lookup_holpath {vname = s} = Binarymap.peek(!holpath_db, s)
 fun reverse_lookup {path} =
   let
     fun split vnm p0 p =
-      "$(" ^ vnm ^ ")" ^ String.extract(p, size p0, NONE)
+      "$(" ^ vnm ^ ")/" ^ String.extract(p, size p0 + 1, NONE)
     fun foldthis (vnm, p, acc) =
-      if String.isPrefix p path then
+      if String.isPrefix (p^"/") path then
         case acc of
             NONE => SOME (size p, split vnm p path)
           | SOME (sz', p') => if size p > sz' then
