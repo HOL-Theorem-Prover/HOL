@@ -824,6 +824,13 @@ file to \"use\" first."
   (interactive)
   (send-raw-string-to-hol "proofManagerLib.restore()" hol-echo-commands-p t))
 
+(defun hol-print-info ()
+  "Show some information about the currently running HOL and the settings of hol-mode."
+  (interactive)
+  (send-raw-string-to-hol
+   (concat "print_current_hol_status" "\""
+     hol-executable "\" \"" holmake-executable "\" ();") hol-echo-commands-p t))
+
 (defun hol-user-save-backup ()
   "Saves the current status of the proof for later backups to this point."
   (interactive)
@@ -2211,6 +2218,9 @@ second is to show the new term.
                      :button (:toggle
                               . (and (boundp 'hol-bare-p)
                                      hol-bare-p))))
+
+(define-key global-map [menu-bar hol-menu hol-process hol-show-info]
+   '("Show HOL information" . hol-print-info))
 
 (define-key global-map [menu-bar hol-menu hol-process hol-exe]
    '("Set HOL executable" . hol-set-executable))
