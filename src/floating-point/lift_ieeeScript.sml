@@ -1346,15 +1346,44 @@ val float_value_finite = Q.prove(
    Lifting of arithmetic operations.
    ------------------------------------------------------------------------- *)
 
+val finite_not = Q.prove(
+  `!a. float_is_finite a ==> ~float_is_infinite a /\ ~float_is_nan a`,
+  strip_tac
+  \\ Cases_on `float_value a`
+  \\ simp [float_is_finite_def, float_is_infinite_def, float_is_nan_def]
+  )
+
+val zero_le_ulp = Q.prove(
+  `0 <= ulp (:'t # 'w)`,
+  simp [ulp_def, ULP_def])
+
+val round_zero =
+  binary_ieeeTheory.round_roundTiesToEven_is_zero
+  |> Q.SPEC `0`
+  |> SIMP_RULE (srw_ss()) [zero_le_ulp]
+
 val lift_tac =
   rpt gen_tac
   \\ strip_tac
   \\ full_simp_tac (srw_ss()++realSimps.real_SS)
        [float_value_finite, error_def, float_round_finite, normalizes_def,
         float_add_def, float_sub_def, float_mul_def, float_div_def,
+        float_sqrt_def, float_mul_add_def, float_mul_sub_def,
         binary_ieeeTheory.float_is_zero_to_real]
-  \\ rw [float_round_def, binary_ieeeTheory.float_is_zero_to_real,
-         binary_ieeeTheory.zero_to_real]
+  \\ rw [float_round_def, finite_not,
+         binary_ieeeTheory.float_is_zero_to_real,
+         binary_ieeeTheory.zero_to_real, binary_ieeeTheory.zero_properties]
+
+val lift_tac2 =
+  lift_tac
+  >- fs [real_to_float_def, float_round_finite]
+  >- (assume_tac round_zero \\ fs [binary_ieeeTheory.zero_to_real])
+  >- (assume_tac round_zero \\ fs [binary_ieeeTheory.zero_to_real])
+  >- (assume_tac round_zero \\ fs [binary_ieeeTheory.zero_to_real])
+  >- (assume_tac round_zero \\ fs [binary_ieeeTheory.zero_to_real])
+  \\ rw [real_to_float_def, float_round_def, finite_not,
+         binary_ieeeTheory.float_is_zero_to_real,
+         binary_ieeeTheory.zero_to_real, binary_ieeeTheory.zero_properties]
 
 val float_add = Q.store_thm ("float_add",
   `!a b : ('t, 'w) float.
@@ -1397,24 +1426,57 @@ val float_div = Q.store_thm ("float_div",
      error (:'t # 'w) (float_to_real a / float_to_real b))`,
   lift_tac)
 
+val float_sqrt = Q.store_thm ("float_sqrt",
+  `!a : ('t, 'w) float.
+    float_is_finite a /\ (a.Sign = 0w) /\
+    abs (sqrt (float_to_real a)) < threshold (:'t # 'w) ==>
+    float_is_finite (float_sqrt roundTiesToEven a) /\
+    (float_to_real (float_sqrt roundTiesToEven a) =
+     sqrt (float_to_real a) + error (:'t # 'w) (sqrt (float_to_real a)))`,
+  lift_tac)
+
+val float_mul_add = Q.store_thm ("float_mul_add",
+  `!a b c : ('t, 'w) float.
+    float_is_finite a /\ float_is_finite b /\ float_is_finite c /\
+    abs (float_to_real a * float_to_real b + float_to_real c) <
+    threshold (:'t # 'w) ==>
+    float_is_finite (float_mul_add roundTiesToEven a b c) /\
+    (float_to_real (float_mul_add roundTiesToEven a b c) =
+     float_to_real a * float_to_real b + float_to_real c +
+     error (:'t # 'w) (float_to_real a * float_to_real b + float_to_real c))`,
+  lift_tac2)
+
+val float_mul_sub = Q.store_thm ("float_mul_add",
+  `!a b c : ('t, 'w) float.
+    float_is_finite a /\ float_is_finite b /\ float_is_finite c /\
+    abs (float_to_real a * float_to_real b - float_to_real c) <
+    threshold (:'t # 'w) ==>
+    float_is_finite (float_mul_sub roundTiesToEven a b c) /\
+    (float_to_real (float_mul_sub roundTiesToEven a b c) =
+     float_to_real a * float_to_real b - float_to_real c +
+     error (:'t # 'w) (float_to_real a * float_to_real b - float_to_real c))`,
+  lift_tac2)
+
 (*-----------------------*)
 
+fun try_gen q th = Q.GEN q th handle HOL_ERR _ => th
+
 val finite_rule =
-   Q.GENL [`b`, `a`] o
-   MATCH_MP (DECIDE ``(a /\ b /\ c ==> d /\ e) ==> (a /\ b /\ c ==> d)``) o
+   Q.GEN `a` o try_gen `b` o try_gen `c` o
+   MATCH_MP (DECIDE ``(X ==> a /\ b) ==> (X ==> a)``) o
    Drule.SPEC_ALL
 
 val float_add_finite = save_thm ("float_add_finite", finite_rule float_add)
 val float_sub_finite = save_thm ("float_sub_finite", finite_rule float_sub)
 val float_mul_finite = save_thm ("float_mul_finite", finite_rule float_mul)
+val float_div_finite = save_thm ("float_div_finite", finite_rule float_div)
+val float_sqrt_finite = save_thm ("float_sqrt_finite", finite_rule float_sqrt)
 
-val float_div_finite = save_thm ("float_div_finite",
-  float_div
-  |> Drule.SPEC_ALL
-  |> MATCH_MP (DECIDE ``(a /\ b /\ c /\ d ==> e /\ f) ==>
-                        (a /\ b /\ c /\ d ==> e)``)
-  |> Q.GENL [`b`, `a`]
-  );
+val float_mul_add_finite = save_thm ("float_mul_add_finite",
+  finite_rule float_mul_add)
+
+val float_mul_sub_finite = save_thm ("float_mul_sub_finite",
+  finite_rule float_mul_sub)
 
 (*-----------------------*)
 
@@ -1423,15 +1485,20 @@ val relative_tac =
   \\ strip_tac
   \\ conj_tac
   >- fs [normalizes_def, float_add_finite, float_sub_finite, float_mul_finite,
-         float_div_finite]
+         float_div_finite, float_sqrt_finite, float_mul_add_finite,
+         float_mul_sub_finite]
   \\ imp_res_tac relative_error
   \\ qexists_tac `e`
   \\ full_simp_tac (srw_ss()++realSimps.real_SS)
        [float_value_finite, error_def, float_round_finite, normalizes_def,
         float_add_def, float_sub_def, float_mul_def, float_div_def,
+        float_sqrt_def, float_mul_add_def, float_mul_sub_def,
         binary_ieeeTheory.float_is_zero_to_real]
-  \\ rw [float_round_def, binary_ieeeTheory.float_is_zero_to_real,
-         binary_ieeeTheory.zero_to_real]
+  \\ rw [float_round_def, binary_ieeeTheory.float_is_zero_to_real, finite_not,
+         binary_ieeeTheory.zero_to_real, binary_ieeeTheory.zero_properties]
+  \\ rw [real_to_float_def, float_round_def, finite_not,
+         binary_ieeeTheory.float_is_zero_to_real,
+         binary_ieeeTheory.zero_to_real, binary_ieeeTheory.zero_properties]
 
 val float_add_relative = Q.store_thm ("float_add_relative",
   `!a b : ('t, 'w) float.
@@ -1474,6 +1541,41 @@ val float_div_relative = Q.store_thm ("float_div_relative",
       ?e. abs e <= 1 / 2 pow (dimindex (:'t) + 1) /\
           (float_to_real (float_div roundTiesToEven a b) =
            (float_to_real a / float_to_real b) * (1 + e))`,
+  relative_tac
+  );
+
+val float_sqrt_relative = Q.store_thm ("float_sqrt_relative",
+  `!a : ('t, 'w) float.
+      float_is_finite a /\ (a.Sign = 0w) /\
+      normalizes (:'t # 'w) (sqrt (float_to_real a)) ==>
+      float_is_finite (float_sqrt roundTiesToEven a) /\
+      ?e. abs e <= 1 / 2 pow (dimindex (:'t) + 1) /\
+          (float_to_real (float_sqrt roundTiesToEven a) =
+           (sqrt (float_to_real a) * (1 + e)))`,
+  relative_tac
+  );
+
+val float_mul_add_relative = Q.store_thm ("float_mul_add_relative",
+  `!a b c : ('t, 'w) float.
+      float_is_finite a /\ float_is_finite b /\ float_is_finite c /\
+      normalizes (:'t # 'w)
+        (float_to_real a * float_to_real b + float_to_real c) ==>
+      float_is_finite (float_mul_add roundTiesToEven a b c) /\
+      ?e. abs e <= 1 / 2 pow (dimindex (:'t) + 1) /\
+          (float_to_real (float_mul_add roundTiesToEven a b c) =
+           (float_to_real a * float_to_real b + float_to_real c) * (1 + e))`,
+  relative_tac
+  );
+
+val float_mul_sub_relative = Q.store_thm ("float_mul_sub_relative",
+  `!a b c : ('t, 'w) float.
+      float_is_finite a /\ float_is_finite b /\ float_is_finite c /\
+      normalizes (:'t # 'w)
+        (float_to_real a * float_to_real b - float_to_real c) ==>
+      float_is_finite (float_mul_sub roundTiesToEven a b c) /\
+      ?e. abs e <= 1 / 2 pow (dimindex (:'t) + 1) /\
+          (float_to_real (float_mul_sub roundTiesToEven a b c) =
+           (float_to_real a * float_to_real b - float_to_real c) * (1 + e))`,
   relative_tac
   );
 
