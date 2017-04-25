@@ -4713,9 +4713,9 @@ val WORD_FINITE = Q.store_thm("WORD_FINITE",
   \\ STRIP_TAC
   THEN1 SIMP_TAC std_ss [SUBSET_DEF,IN_UNIV,GSPECIFICATION,ranged_word_nchotomy]
   \\ Q.SPEC_TAC (`dimword (:'a)`,`k`)
-  \\ Induct \\ `{n2w n | n < 0} = {}` by ALL_TAC
+  \\ Induct \\ sg `{n2w n | n < 0} = {}`
   \\ ASM_SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,NOT_IN_EMPTY,FINITE_EMPTY]
-  \\ `{n2w n | n < SUC k} = n2w k INSERT {n2w n | n < k}` by ALL_TAC
+  \\ sg `{n2w n | n < SUC k} = n2w k INSERT {n2w n | n < k}`
   \\ ASM_SIMP_TAC std_ss [FINITE_INSERT]
   \\ ASM_SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,NOT_IN_EMPTY,IN_INSERT]
   \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC

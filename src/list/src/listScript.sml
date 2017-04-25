@@ -772,10 +772,10 @@ val APPEND_11_LENGTH = save_thm ("APPEND_11_LENGTH",
            DISCH_TAC
            THEN `~((l1 = l1') /\ (l2 = l2'))` by PROVE_TAC[]
            THEN ASM_REWRITE_TAC[]
-           THEN Tactical.REVERSE
-              (`~(LENGTH (l1 ++ l2) = LENGTH (l1' ++ l2'))` by ALL_TAC) THEN1 PROVE_TAC[]
+           THEN `~(LENGTH (l1 ++ l2) = LENGTH (l1' ++ l2'))`
+             suffices_by PROVE_TAC[]
            THEN FULL_SIMP_TAC arith_ss [LENGTH_APPEND]
-     ) THEN PROVE_TAC[APPEND_LENGTH_EQ])))
+     ) THEN PROVE_TAC[APPEND_LENGTH_EQ])));
 
 
 val APPEND_EQ_SELF = store_thm(

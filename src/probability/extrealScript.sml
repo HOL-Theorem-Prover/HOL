@@ -2064,7 +2064,8 @@ val EXTREAL_SUM_IMAGE_INTER_ELIM = store_thm
   ++ MATCH_MP_TAC FINITE_INDUCT
   ++ RW_TAC std_ss [INTER_EMPTY, INSERT_INTER, EXTREAL_SUM_IMAGE_THM, DELETE_NON_ELEMENT]
   ++ Cases_on `e IN s'`
-  >> (`~ (e IN (s INTER s'))` by RW_TAC std_ss [IN_INTER, DELETE_NON_ELEMENT]
+  >> (sg `~ (e IN (s INTER s'))` ++
+      RW_TAC std_ss [IN_INTER, DELETE_NON_ELEMENT]
       ++ FULL_SIMP_TAC std_ss [INTER_FINITE, EXTREAL_SUM_IMAGE_THM, DELETE_NON_ELEMENT]
       ++ FULL_SIMP_TAC std_ss [IN_INSERT]
       ++ METIS_TAC [IN_INTER, DELETE_NON_ELEMENT])
@@ -2103,8 +2104,8 @@ val EXTREAL_SUM_IMAGE_MONO_SET = store_thm
   ++ `t = s UNION (t DIFF s)` by RW_TAC std_ss [UNION_DIFF]
   ++ `FINITE (t DIFF s)` by RW_TAC std_ss [FINITE_DIFF]
   ++ `DISJOINT s (t DIFF s)`
-      by (`DISJOINT s (t DIFF s)` by RW_TAC std_ss [DISJOINT_DEF, IN_DIFF, EXTENSION,
-      	 	      	      	     GSPECIFICATION, NOT_IN_EMPTY, IN_INTER]
+      by (RW_TAC std_ss [DISJOINT_DEF, IN_DIFF, EXTENSION,
+      	 	      	 GSPECIFICATION, NOT_IN_EMPTY, IN_INTER]
           ++ METIS_TAC [])
   ++ `EXTREAL_SUM_IMAGE f t = EXTREAL_SUM_IMAGE f s + EXTREAL_SUM_IMAGE f (t DIFF s)`
        by METIS_TAC [EXTREAL_SUM_IMAGE_DISJOINT_UNION]
@@ -2255,9 +2256,9 @@ val EXTREAL_SUM_IMAGE_COUNT = store_thm
   ++ `{2:num} DELETE 1 = {2}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING]
   ++ `{3:num} DELETE 2 = {3}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING]
   ++ `{4:num} DELETE 3 = {4}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING]
-  ++ `{2:num; 3} DELETE 1 = {2;3}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING]
-  ++ `{3:num; 4} DELETE 2 = {3;4}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING]
-  ++ `{2:num; 3; 4} DELETE 1 = {2;3;4}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING]
+  ++ `{2:num; 3} DELETE 1 = {2;3}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING, IN_INSERT]
+  ++ `{3:num; 4} DELETE 2 = {3;4}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING, IN_INSERT]
+  ++ `{2:num; 3; 4} DELETE 1 = {2;3;4}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING, IN_INSERT]
   ++ `{1:num; 2} DELETE 0 = {1;2}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING, IN_INSERT]
   ++ `{1:num; 2; 3} DELETE 0 = {1;2;3}` by RW_TAC real_ss [EXTENSION, IN_DELETE,IN_SING,IN_INSERT]
   ++ `{1:num; 2; 3; 4} DELETE 0 = {1;2;3;4}`
@@ -3899,7 +3900,9 @@ val COUNTABLE_ENUM_Q = store_thm
   ++ `Q_set = (Q_set DIFF {x}) UNION {x}` by (RW_TAC std_ss [DIFF_DEF,UNION_DEF,EXTENSION,GSPECIFICATION,IN_SING] ++ METIS_TAC [])
   ++ `(IMAGE (\u. if u = x then e else f u) Q_set) = (IMAGE (\u. if u = x then e else f u) (Q_set DIFF {x})) UNION (IMAGE (\u. if u = x then e else f u) {x})` by METIS_TAC [IMAGE_UNION]
   ++ `IMAGE (\u. if u = x then e else f u) {x} = {e}` by RW_TAC std_ss [IMAGE_DEF,EXTENSION,GSPECIFICATION,IN_SING]
-  ++ `IMAGE (\u. if u = x then e else f u) (Q_set DIFF {x}) = IMAGE f Q_set` by RW_TAC std_ss [IMAGE_DEF,EXTENSION,GSPECIFICATION,DIFF_DEF,IN_UNION,IN_SING]
+  ++ `IMAGE (\u. if u = x then e else f u) (Q_set DIFF {x}) = IMAGE f Q_set`
+        by (RW_TAC std_ss [IMAGE_DEF,EXTENSION,GSPECIFICATION,DIFF_DEF,IN_UNION,
+                           IN_SING] ++ METIS_TAC[])
   ++ `(IMAGE f Q_set) = (IMAGE f (Q_set DIFF {x})) UNION (IMAGE f {x})` by METIS_TAC [IMAGE_UNION]
   ++ `IMAGE f {x} = {f y}` by RW_TAC std_ss [IMAGE_DEF,EXTENSION,GSPECIFICATION,IN_SING]
   ++ `IMAGE f Q_set = (IMAGE f (Q_set DIFF {x})) UNION {f y}` by METIS_TAC []

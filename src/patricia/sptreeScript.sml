@@ -509,8 +509,8 @@ val lookup_delete = store_thm(
                                 else lookup k1 t``,
   Induct >> simp[delete_def, lookup_def]
   >> rw [lookup_def,lookup_mk_BN,lookup_mk_BS]
-  >> `(k1 - 1) DIV 2 <> (k2 - 1) DIV 2`
-        by simp[DIV2_EQ_DIV2, EVEN_PRE]
+  >> sg `(k1 - 1) DIV 2 <> (k2 - 1) DIV 2`
+  >> simp[DIV2_EQ_DIV2, EVEN_PRE]
   >> fs [] >> CCONTR_TAC >> fs [] >> srw_tac [] []
   >> fs [EVEN_ODD] >> imp_res_tac ODD_IMP_NOT_ODD);
 
