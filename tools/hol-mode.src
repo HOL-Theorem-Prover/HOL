@@ -1169,6 +1169,16 @@ argument N, sets the trace to that value in particular."
   (interactive)
   (hol-toggle-var "Globals.show_assums"))
 
+(defun hol-toggle-show-tags()
+  "Toggles the global show_tags variable."
+  (interactive)
+  (hol-toggle-var "Globals.show_tags"))
+
+(defun hol-toggle-show-axioms()
+  "Toggles the global show_axioms variable."
+  (interactive)
+  (hol-toggle-var "Globals.show_axioms"))
+
 (defun hol-toggle-quietdec ()
   "Toggles quiet declarations in the interactive system."
   (interactive)
@@ -2103,6 +2113,12 @@ second is to show the new term.
 
 (define-key global-map [menu-bar hol-menu hol-printing show-assums]
    '("Show assumptions" . hol-toggle-show-assums))
+
+(define-key global-map [menu-bar hol-menu hol-printing show-tags]
+   '("Show tags" . hol-toggle-show-tags))
+
+(define-key global-map [menu-bar hol-menu hol-printing show-axioms]
+   '("Show axioms" . hol-toggle-show-axioms))
 
 (define-key global-map [menu-bar hol-menu hol-printing show-num-types]
    '("Show numeral types" . hol-toggle-show-numeral-types))
