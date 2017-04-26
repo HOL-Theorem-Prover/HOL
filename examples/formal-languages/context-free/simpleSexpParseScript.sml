@@ -887,13 +887,13 @@ val peg_eval_print_nt = Q.store_thm("peg_eval_print_nt",
     \\ disj1_tac
     \\ first_x_assum match_mp_tac
     \\ fs[stoppers_def] )
-  >- cheat (*
   >- (
     rw[print_nt_def]
     \\ reverse every_case_tac \\ fs[]
     \\ TRY pairarg_tac \\ fs[] \\ rw[]
     >- (
       fs[pnt_def]
+      \\ Cases_on`strl` \\ fs[] \\ rw[]
       \\ rw[peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,peg_eval_choicel_CONS,
             pnt_def,peg_eval_seq_SOME,peg_eval_seq_NONE,
             peg_eval_tok_NONE,peg_eval_tok_SOME,stringTheory.isDigit_def,
@@ -914,8 +914,12 @@ val peg_eval_print_nt = Q.store_thm("peg_eval_print_nt",
       \\ imp_res_tac print_nt_sexp0_no_leading_space
       \\ rw[Once peg_eval_list]
       \\ rw[peg_eval_tok_NONE,peg_eval_tok_SOME]
-      \\ Cases_on`z` \\ fs[] )
+      \\ Cases_on`t` \\ fs[]
+      \\ once_rewrite_tac[rich_listTheory.CONS_APPEND]
+      \\ rewrite_tac[listTheory.APPEND_ASSOC]
+      \\ rw[])
     \\ fs[option_sequence_SOME] \\ rw[]
+    \\ Cases_on`strl` \\ fs[] \\ rw[]
     \\ rw[pnt_def,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,peg_eval_choicel_CONS]
     \\ Cases_on`NULL ls` \\ fs[]
     >- (
@@ -942,7 +946,6 @@ val peg_eval_print_nt = Q.store_thm("peg_eval_print_nt",
     \\ rw[pnt_def]
     \\ first_x_assum match_mp_tac
     \\ rw[stoppers_def] )
-  *)
   >- (
     rw[print_nt_def] \\ fs[]
     \\ match_mp_tac peg_eval_sexp_sexp0
