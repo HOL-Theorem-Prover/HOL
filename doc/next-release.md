@@ -39,6 +39,11 @@ New examples:
 Incompatibilities:
 ------------------
 
+*   The behaviour of the `by` and `suffices_by` tactics has changed.
+    Previously, a tactic of the form `` `term quotation` by tac`` allowed `tac` to fail to prove the sub-goal of the term quotation.
+    (The result would then be two or more sub-goals, where the first few of these correspond to the state of trying to prove the term quotation after applying `tac`.)
+    This is no longer the case: if `tac` does not prove the new sub-goal then the overall tactic fails.
+
 *   The type of the “system printer” used by user-defined pretty-printers to pass control back to the default printer has changed.
     This function now gets passed an additional parameter corresponding to whether or not the default printer should treat the term to be printed as if it were in a binding position or not.
     (This `binderp` parameter is in addition to the parameters indicating the “depth” of the printing, and the precedence gravities.)

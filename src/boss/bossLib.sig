@@ -121,6 +121,7 @@ sig
   val by             : term quotation * tactic -> tactic   (* infix *)
   val suffices_by    : term quotation * tactic -> tactic   (* infix *)
   val sg             : term quotation -> tactic
+  val subgoal        : term quotation -> tactic
   val cheat          : tactic
   val kall_tac       : 'a -> tactic
 
