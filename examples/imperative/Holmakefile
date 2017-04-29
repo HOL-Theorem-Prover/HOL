@@ -3,7 +3,10 @@ TARGETS0 = $(patsubst %Theory.sml,,$(THYFILES))
 TARGETS = $(patsubst %.sml,%.uo,$(TARGETS0))
 
 .PHONY: all
-all: $(TARGETS) selftest.exe
+all: $(TARGETS) selftest.exe reflectOnFailure.exe
 
 selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+reflectOnFailure.exe: reflectOnFailure.uo
 	$(HOLMOSMLC) -o $@ $<

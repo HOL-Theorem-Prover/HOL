@@ -1,18 +1,14 @@
 (* Interactive mode: 
 load "tautLib";
-load "stringTheory";
-load "numTheory";
 load "ptopTheory";
 load "imperativeLib";
 load "imperativeTheory";
+load "testutils";
 *)
-open HolKernel Parse boolLib bossLib numSyntax listSyntax stringTheory arithmeticTheory;
+open HolKernel Parse boolLib bossLib ;
 open tautLib ptopTheory imperativeLib imperativeTheory ;
 
 val _ = set_trace "Unicode" 0;
-
-val _ = show_types:=true;
-val _ = show_assums:=true;
 
 val OK = testutils.OK
 val die = testutils.die
@@ -106,11 +102,11 @@ val _ = tprint ("some implementation refines given specification: " );
 
 val _ = let val proveSo = (
 		prove(
-			assumeAensureH( 
-				(DECL_STATEVARS ``v:'a`` statevars), 
-				(LHSrefinedbyRHS (theSpec)  (goodImplementation) )
+			(assumeAensureH  
+				(DECL_STATEVARS ``v:'a`` statevars)
+				(LHSrefinedbyRHS theSpec  goodImplementation )
 			),
-			theTac (statevars)
+			(theTac statevars)
 		);
 		NONE
 	)
@@ -174,87 +170,76 @@ val altTac2 = (
 	)
 );
 
+(* 
+altTac1 and altTac2 deal with the fact that the counter proof is an existential conjunction instead of a universal implication.
+The idea is to next augment the prover to extract the REAL spec of the given program. 
+The proof would proceed by then instantiating s' by a function in terms of s so that the final spec matches the theorem
+provers assertions. 
+Finally, we need to provide a witness for s that proves the original specification is violated.
+*)
+
 fun altTac statevars = (
 	altTac1
 THEN
-	(EVAL_FOR_STATEVARS statevars ) 
-THEN 
-	REP_EVAL_TAC
-THEN
 	altTac2
+THEN
+	(EXISTS_TAC ``\(v:'a). ( if (x:'a)=v then 1 else ( ( \(v':'a).0) (v) ) )``)
+THEN
+	(EXISTS_TAC ``\(v':'a).0``)
+THEN
+	(GEN_TAC THEN (REPEAT STRIP_TAC) THEN REP_EVAL_TAC)
+THEN
+	(REWRITE_TAC [SPECL [``1``,``0``] simpleTruthForgettableName3])
+THEN
+	(UNDISCH_TAC `` (x :'a) <> (y :'a) ``)
+THEN
+	(REWRITE_TAC [SPECL [``1``,``0``] simpleTruthForgettableName4]) 
+THEN 
+	DISCH_TAC 
+THEN 
+	EVAL_TAC
 );
 	
-(*
-testIt (DECL_STATEVARS ``v:'a`` statevars) false;
 
-e (theTac statevars);
-
-(* e ((EVAL_FOR_STATEVARS statevars) THEN REP_EVAL_TAC); *)
-
-e  (EXISTS_TAC ``\(v:'a). ( if (x:'a)=v then 1 else ( ( \(v':'a).0) (v) ) )``);
-e  (EXISTS_TAC ``\(v':'a).0``);
-
-e (GEN_TAC THEN (REPEAT STRIP_TAC) THEN REP_EVAL_TAC);
-
-e (REWRITE_TAC [SPECL [``1``,``0``] simpleTruthForgettableName3]);
-
-e (CHANGED_TAC REP_EVAL_TAC);
-
-e (UNDISCH_TAC ``  (x :'a) <> (y :'a)``);
-e ((REWRITE_TAC [SPECL [``1``,``0``] simpleTruthForgettableName4]) THEN DISCH_TAC THEN EVAL_TAC);
+(* 
+With the preliminarie out of the way, we can now proceed with the counter-example
 *)
-(*val matchMeToo = (let val gl = ( strip_exists (#2(top_goal())) ) in 
-	mk_abs ( (hd(#1(gl))), (mk_abs ( hd(tl(#1(gl))), (#2(gl)) ) )
-*)
-(* val _ = let 
-	val asl = (DECL_STATEVARS ``v:'a`` statevars)
-in
-	prove(
-		mk_imp( list_mk_conj(asl), 
-			mk_icomb(mk_icomb(REFINEMENT_RATOR,lhsSpec),goodImplementation)
-		),
-		(theTac statevars)
-	)
-end;
-*)
-
 
 val _ = let val proveSo = (
 		prove(
-			assumeAensureH( 
-				(DECL_STATEVARS ``v:'a`` statevars), 
-				(LHSrefinedbyRHS (theSpec)  (disputedmplementation) )
+			(assumeAensureH 
+				(DECL_STATEVARS ``v:'a`` statevars)
+				(LHSrefinedbyRHS theSpec  disputedImplementation)
 			),
-			theTac (statevars)
+			(theTac statevars)
 		);
 		NONE
 	)
 	handle 
 		HOL_ERR _ => SOME "refinement not proven"
 in case proveSo of
-      NONE => OK()
+      NONE => (die "expected failure but refinement was proven" )
      | SOME s => ( 
-     		tprint s;		
 		let val proveOtherwise = (
 			prove(
-				assumeAensureH( 
-					(DECL_STATEVARS ``v:'a`` statevars), 
-					(LHSnotrefinedbyRHS (theSpec)  (disputedmplementation) )
+				(assumeAensureH 
+					(DECL_STATEVARS ``v:'a`` statevars) 
+					(LHSnotrefinedbyRHS theSpec  disputedImplementation )
 				),
-				altTac (statevars)
+				((theTac statevars) THEN (altTac statevars))
 			);
 			NONE	
 		)
 		handle 
 			HOL_ERR _ => SOME "refinement not disproven"
-	in case proveOtherwise of
-      		NONE => OK()
-     		| SOME s => (
-			tprint s(* die s *);	
-			tprint "still a work in progress"
-		)
-	end
+		in case proveOtherwise of
+      			NONE => (tprint  "refinement has been disproven" )
+     			| SOME s => (
+					tprint s(* die s *)	
+				)
+		end
 	)
- end;
+end;
 
+val _ = OK();
 
