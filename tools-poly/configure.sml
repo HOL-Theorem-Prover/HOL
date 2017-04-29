@@ -271,8 +271,7 @@ let
   val sigfile = fullPath [holdir, "tools", "Holmake", "Systeml.sig"]
   val uifile = fullPath [holdir, "sigobj", "Systeml.ui"]
   fun to_sigobj s = bincopy s (fullPath [holdir, "sigobj", Path.file s])
-  val uifile_content =
-      fullPath [holdir, "sigobj", "Systeml.sig"] ^ "\n"
+  val uifile_content = "$(HOLDIR)/sigobj/Systeml.sig\n"
 in
   if not (canread uifile) orelse
      Time.>(modTime sigfile, modTime uifile) orelse

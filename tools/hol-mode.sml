@@ -150,4 +150,28 @@ fun emacs_hol_mode_loaded () =
   "VectorSlice", "Vector", "Word8Array", "Word8ArraySlice",
   "Word8Vector", "Word8VectorSlice", "Word8", "Word"] @ (Meta.loaded());
 
-end
+fun print_hol_mode_loaded () =
+let
+   val loaded = emacs_hol_mode_loaded();
+   val sorted_loaded = sort (fn s1 => fn s2 => String.< (s1, s2)) loaded
+   val _ = print "\n\n";
+   val _ = print_header "-" "Loaded Modules";
+   val _ = List.map (fn t => (print "  ";print t; print "\n")) sorted_loaded
+   val _ = print "\n";
+in
+   ()
+end;
+
+fun print_current_hol_status hol_ex holmake_ex () = let
+  val _ = HOL_Interactive.print_banner()
+  val _ = print "\n";
+  val _ = (print "Hol executable    : "; print hol_ex; print "\n");
+  val _ = (print "Holmake executable: "; print holmake_ex; print "\n");
+  val _ = (print "Holdir            : "; print HOLDIR; print "\n");
+  val _ = print_current_load_paths();
+  val _ = print_hol_mode_loaded();
+in
+  ()
+end;
+
+end;

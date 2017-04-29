@@ -44,21 +44,6 @@ val OK = testutils.OK
 val die = testutils.die
 val tprint = testutils.tprint;
 
-fun test_fail blame f e = let
-  val res = (f e ; SOME "should fail!")
-              handle HolSatLib.SAT_cex _ => SOME "unexpected counterexample!"
-                   | HOL_ERR {origin_function,...} =>
-                       if origin_function = blame then
-                         NONE
-                       else
-                         SOME ("unexpected exception from " ^ origin_function)
-in
-  tprint ("Expecting failure: " );
-  case res of
-      NONE => OK()
-    | SOME s => die s
-end
-
 
 (* \end{lstlisting}
 
@@ -266,14 +251,11 @@ fun testRefinement rhsProgLhsSpec = let	val
 	end
 
 val rhsProgRefinesLhsSpec = ``(\ (s:'a->num) (s':'a->num). (((s' (x:'a)) = 1 ) /\ ((s' (y:'a)) = 1))) [=. (sc (assign y (\ (s:'a->num).1)) (assign x (\ (s:'a->num).(s y))))``; 
-val badImplementation = ``(\ (s:'a->num) (s':'a->num). (((s' (x:'a)) = 1 ) /\ ((s' (y:'a)) = 2))) [=. (sc (assign y (\ (s:'a->num).1)) (assign x (\ (s:'a->num).(s y))))``; 
 
 val _ = tprint ("some implementation refines given specification: " );
 val _ = testRefinement(rhsProgRefinesLhsSpec) handle HOL_ERR _ => die "rhsProgRefinesLhsSpec FAILED";
 val _ = OK();
 
-val _ = tprint ("some implementation DOES NOT refine given specification: " );
-val _ = test_fail "ACCEPT_TAC" testRefinement badImplementation;
 
 (* \end{lstlisting} % 
 

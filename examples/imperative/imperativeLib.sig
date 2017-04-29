@@ -12,6 +12,10 @@ sig
 
 	val APPLY_DEFINITIONS_TAC : thm list -> tactic
 
+	val REFINEMENT_RATOR : term
+
+	val REFINEMENT_NOT_RATOR : term
+
 	val REFINEMENT_RULE : thm -> thm
 
 	val REFINEMENT_TAC : tactic
@@ -31,4 +35,6 @@ sig
 	val MAKE_IT_NO  : thm -> tactic
 
 	val EVAL_FOR_STATEVARS : term list -> tactic
+
+	val DECL_STATEVARS : term -> term list -> term list
 end;

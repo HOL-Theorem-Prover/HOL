@@ -6,6 +6,10 @@ structure Map = OpenTheoryMap.Map
 
 val ERR = Feedback.mk_HOL_ERR "Logging"
 
+fun uptodate_const Thy Name =
+  Theory.uptodate_term (Term.prim_mk_const {Thy=Thy,Name=Name})
+  handle Feedback.HOL_ERR {origin_function="prim_mk_const",...} => false
+
 val verbosity = ref 0
 val _ = Feedback.register_trace("opentheory logging",verbosity,5)
 
@@ -214,7 +218,7 @@ val (log_term, log_thm, log_clear,
     open Term Feedback
     val _ = let
       val {Thy,Name,Ty} = dest_thy_const tm
-      val Name = if Theory.uptodate_term tm then Name else strip_old Name
+      val Name = if uptodate_const Thy Name then Name else strip_old Name
       val _ = log_const {Thy=Thy,Name=Name}
       val _ = log_type Ty
       val _ = log_command "constTerm"
@@ -327,7 +331,7 @@ val (log_term, log_thm, log_clear,
       val th1 = SEL_RULE th
       val (l,r) = dest_comb(concl th1)
       val {Thy,Name,...} = dest_thy_const c
-      val Name = if Theory.uptodate_term c then Name else strip_old Name
+      val Name = if uptodate_const Thy Name then Name else strip_old Name
       val th2 = mk_proof_thm (Def_const_prf({Thy=Thy,Name=Name},r)) ([],mk_eq(c,r))
       val defs = th2 :: defs
       val th = CONV_RULE BETA_CONV (EQ_MP (AP_TERM l (SYM th2)) th1)

@@ -29,9 +29,20 @@ fun APPLY_DEFINITIONS_TAC definitions =
 		(BETA_TAC)
 ;
 
-fun REFINEMENT_RULE th = APPLY_DEFINITIONS_TO_THEOREM [ptopTheory.bRefinement_def] th ;
+(*
+val REFINEMENT_RATOR = rator(rator(``u [=. v``));
 
-val REFINEMENT_TAC = APPLY_DEFINITIONS_TAC [ptopTheory.bRefinement_def];
+val REFINEMENT_NOT_RATOR = rator(rator(``u [<>. v``));
+*)
+
+val REFINEMENT_RATOR = ``$[=.``;
+
+val REFINEMENT_NOT_RATOR = ``$[<>.``;
+
+fun REFINEMENT_RULE th = APPLY_DEFINITIONS_TO_THEOREM [ptopTheory.bRefinement_def,ptopTheory.bRefinementNot_def] th ;
+
+val REFINEMENT_TAC = APPLY_DEFINITIONS_TAC [ptopTheory.bRefinement_def, ptopTheory.bRefinementNot_def];
+
 
 fun SWAPLR_RULE th =(PURE_ONCE_REWRITE_RULE [EQ_SYM_EQ] th);
 
@@ -87,6 +98,45 @@ fun EVAL_FOR_STATEVARS valList =
 			EVAL_FOR_STATEVARS (tl valList)
 		)
 	)
+;
+
+fun DISTINCT_STATEVARS (boundVarAndType: term) (disjList: term) (asl : term list) =
+	if( is_disj(disjList) ) then (
+		let val lhsRhs = (dest_disj(disjList)) in 
+			let val asm = mk_forall ( boundVarAndType, ( mk_imp ( #2(lhsRhs), (mk_neg (#1(lhsRhs)) )  )  ) ) in
+				DISTINCT_STATEVARS boundVarAndType (#1(lhsRhs)) (asm :: asl)
+			end
+		end
+	) else
+		asl
+;
+
+fun DECL_NEXT_DISJLIST (boundVarAndType:term) (stateVars: term list) (disjList: term) =
+	if(null stateVars) then (
+		disjList
+	) else (
+		DECL_NEXT_DISJLIST boundVarAndType (tl stateVars) ( mk_disj ( disjList, (mk_eq ( boundVarAndType, (hd stateVars) ) ) ) )
+	)
+;
+
+fun DECL_DISJLIST (boundVarAndType:term) (stateVars: term list) =
+	if (null stateVars) then ( 
+		mk_eq (boundVarAndType,boundVarAndType )
+	) else (
+		DECL_NEXT_DISJLIST boundVarAndType (tl stateVars) ( mk_eq( boundVarAndType, (hd stateVars) ) )
+	)
+;
+
+fun DECL_STATEVARS (boundVarAndType : term) ( stateVars : term list) = 
+	let val disjList = (DECL_DISJLIST boundVarAndType stateVars)
+	in (	
+		if (null stateVars) then ( 
+			[]
+		) else (
+			DISTINCT_STATEVARS boundVarAndType disjList [ ( mk_forall (boundVarAndType,disjList) ) ]
+		)
+	) 
+	end
 ;
 
 end

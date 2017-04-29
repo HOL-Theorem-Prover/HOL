@@ -159,11 +159,7 @@ val	thmConditionalFunction =
 								(
 									BETA_RULE
 									(
-										SPECL [
-											``\rhs.((((t:'a->'b) (y:'a)) = rhs )) ``,
-											``(a:'a -> bool) (y: 'a)``,``((b:'a->'b) (y:'a))``, 
-											``((c:'a->'b)(y:'a))``
-										] (INST_TYPE [
+										SPECL specializedTerm1 (INST_TYPE [
 											alpha |-> ``:'b ``, beta |->``:bool``
 										] COND_RAND)
 									)
@@ -182,11 +178,7 @@ val	thmConditionalFunction =
 										(
 											BETA_RULE 
 											(
-												SPECL 
-												[	``t:'a->'b``,
-													``\ (y:'a).(if (a:'a->bool) y then (b:'a->'b) y 
-																		else (c:'a->'b) y)``
-												] thmAbstractFunction
+												SPECL specializedTerm0 thmAbstractFunction
 											)
 										)
 									))

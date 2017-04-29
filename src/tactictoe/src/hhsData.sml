@@ -31,7 +31,10 @@ fun read_data thyl =
     val out_error = hhs_cat_dir ^ "/record_error"
     val hhsl = String.concatWith " " (map hhs_recname thyl)
     val hhtl = String.concatWith " " (map hht_recname thyl)
-    val cmd = String.concatWith " " ["cat",hhsl,hhtl,">",out,"2>",out_error]
+    val head = hhs_record_dir ^ "/" ^ "a_head"
+    val foot = hhs_record_dir ^ "/" ^ "a_foot"
+    val cmd = 
+      String.concatWith " " ["cat",head,hhsl,hhtl,foot,">",out,"2>",out_error]
     val _ = OS.Process.system cmd
     val _ = use out
     val r = (!hhs_read_list, !hht_read_list)

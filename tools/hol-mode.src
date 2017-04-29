@@ -824,6 +824,13 @@ file to \"use\" first."
   (interactive)
   (send-raw-string-to-hol "proofManagerLib.restore()" hol-echo-commands-p t))
 
+(defun hol-print-info ()
+  "Show some information about the currently running HOL and the settings of hol-mode."
+  (interactive)
+  (send-raw-string-to-hol
+   (concat "print_current_hol_status" "\""
+     hol-executable "\" \"" holmake-executable "\" ();") hol-echo-commands-p t))
+
 (defun hol-user-save-backup ()
   "Saves the current status of the proof for later backups to this point."
   (interactive)
@@ -1161,6 +1168,16 @@ argument N, sets the trace to that value in particular."
   "Toggles the global show_assums variable."
   (interactive)
   (hol-toggle-var "Globals.show_assums"))
+
+(defun hol-toggle-show-tags()
+  "Toggles the global show_tags variable."
+  (interactive)
+  (hol-toggle-var "Globals.show_tags"))
+
+(defun hol-toggle-show-axioms()
+  "Toggles the global show_axioms variable."
+  (interactive)
+  (hol-toggle-var "Globals.show_axioms"))
 
 (defun hol-toggle-quietdec ()
   "Toggles quiet declarations in the interactive system."
@@ -2097,6 +2114,12 @@ second is to show the new term.
 (define-key global-map [menu-bar hol-menu hol-printing show-assums]
    '("Show assumptions" . hol-toggle-show-assums))
 
+(define-key global-map [menu-bar hol-menu hol-printing show-tags]
+   '("Show tags" . hol-toggle-show-tags))
+
+(define-key global-map [menu-bar hol-menu hol-printing show-axioms]
+   '("Show axioms" . hol-toggle-show-axioms))
+
 (define-key global-map [menu-bar hol-menu hol-printing show-num-types]
    '("Show numeral types" . hol-toggle-show-numeral-types))
 
@@ -2211,6 +2234,9 @@ second is to show the new term.
                      :button (:toggle
                               . (and (boundp 'hol-bare-p)
                                      hol-bare-p))))
+
+(define-key global-map [menu-bar hol-menu hol-process hol-show-info]
+   '("Show HOL information" . hol-print-info))
 
 (define-key global-map [menu-bar hol-menu hol-process hol-exe]
    '("Set HOL executable" . hol-set-executable))

@@ -10,12 +10,17 @@ val ERR = mk_HOL_ERR "tactictoe"
    Global references (local to the file)
    ---------------------------------------------------------------------- *)
 
+val timeout = ref 5.0
+fun set_timeout r = timeout := r 
+
 val max_select_pred = ref 0
 val hhs_metis_npred = ref 0
 val hhs_prev_thy = ref ""
 val hhs_badstacl = ref []
 val hhs_stacfea = ref [] 
 val hhs_thmfea = ref []
+val hhs_debug = ref false 
+(* there is also another debug_flag named hhs_debug_flag *)
 
 (* ----------------------------------------------------------------------
    Convert string tactics to tactics.
@@ -68,7 +73,7 @@ fun set_parameters () =
   hhs_depthpen    := 0.8;
   hhs_widthpen_flag := true;
   hhs_widthpen := 0.8;
-  hhs_search_time := Time.fromReal 5.0;
+  hhs_search_time := Time.fromReal (!timeout);
   hhs_tactic_time := 0.02;
   (* metis *)
   hhs_metis_npred := 16;
@@ -76,7 +81,7 @@ fun set_parameters () =
   )
 
 (* ----------------------------------------------------------------------
-   Dealing with theorems dependencies
+   Theorems dependencies
    ---------------------------------------------------------------------- *)
 
 fun thm_of_did (thy,n) =
@@ -116,6 +121,8 @@ fun hhs_dep_of thm =
    Main function
    ---------------------------------------------------------------------- *)
 
+fun debug s = if !hhs_debug then print (s ^ "\n") else ()
+
 fun main_tactictoe term =
   let
     (* global initialization *)
@@ -124,15 +131,18 @@ fun main_tactictoe term =
        if cthy <> !hhs_prev_thy
        then 
          (
-         print ("\nInitialize tactictoe: " ^ cthy);
+         print ("<<Initialize tactictoe: " ^ cthy ^ " ...");
          init_prev ();
+         print (" done>>" ^ "\n");
          hhs_prev_thy := cthy
          ) 
        else ()
     (* local initialization *)
+    val _ = debug "local"
     val _ = set_parameters ()
     val (stacfea, thmfea) = (!hhs_stacfea, !hhs_thmfea)
-    (* mainly for metis *)
+    (* metis *)
+    val _ = debug "metis"
     fun compare_first ((a1,_),(a2,_)) = String.compare (a1,a2)
     val thmfea_short =
       if !hhs_metis_flag 
@@ -143,13 +153,18 @@ fun main_tactictoe term =
     val thmfea_dep = 
     mapfilter (fn (a,b) => (a, b, hhs_dep_of (thm_of_string a))) thmfea_short
     (* learning *)
+    val _ = debug "learning"
     val nfeav = length stacfea
     val (symweight, symweight_time) = hhs_add_time learn_tfidf stacfea
     (* selection of tactics *)
+    val _ = debug "tactic selection"
     val (seltacticl, seltime) = 
       hhs_add_time (knn_ext (!max_select_pred) thmfea) (fea_of_goal ([],term))
+    (* mk_tacdict *)
+    val _ = debug "mk_tacdict"
     val (tacdict, tactime) = hhs_add_time fast_mk_tacdict seltacticl
     (* selection of theorems for metis *)
+    val _ = debug "theorem selection"
     val (metispred, metispredtime) = 
       if !hhs_metis_flag 
       then hhs_add_time (tknn_ext (!max_select_pred) thmfea_dep) 
@@ -160,6 +175,7 @@ fun main_tactictoe term =
     val metisfea0 = filter (fn (x,_,_) => dmem x metisdict) thmfea_dep
     val metisfea1 = map (fn (a,b,c) => (rename_thm a,b)) metisfea0
     (* selection of feature vectors *)
+    val _ = debug "feature vector selection"
     val stacfea1 = filter (fn (x,_) => dmem x tacdict) stacfea
     val (stacfea2, knn_sort_time) = 
       let
@@ -198,6 +214,7 @@ fun main_tactictoe term =
         metisfea1 (fea_of_goal g))
       else []
   in
+    debug "Search ...";
     (* searching *)
     imperative_search thm_predictor stac_predictor 
       nfeav symweight tacdict ([],term)
@@ -215,14 +232,6 @@ fun tactictoe term =
     (true andalso exec_sml "metis_test" "metisTools.METIS_TAC []")
   ; 
   main_tactictoe term
-  )
-
-fun safe_tactictoe term = 
-  (
-  PolyML.SaveState.saveState "savestate_tactictoe";
-  hhs_prev_thy := "";
-  tactictoe term;
-  PolyML.SaveState.loadState "savestate_tactictoe"
   )
 
 end (* struct *)

@@ -6,7 +6,7 @@ open HolKernel boolLib bossLib
 
 open utilsLib
 open wordsLib blastLib
-open mipsTheory
+open alignmentTheory mipsTheory
 
 val _ = new_theory "mips_step"
 
@@ -25,15 +25,9 @@ val exceptionSignalled_id = Q.prove(
    `!s. ~s.exceptionSignalled ==> (s with exceptionSignalled := F = s)`,
    lrw [mips_state_component_equality])
 
-val LoadMemory_ARB_CCA = Q.prove(
-   `!s cca len paddr vaddr iord.
-       LoadMemory (cca, len, paddr, vaddr, iord) s =
-       LoadMemory (ARB, len, paddr, vaddr, iord) s`,
-   lrw [LoadMemory_def])
-
 val tac =
    lrw [NextStateMIPS_def, Next_def, AddressTranslation_def,
-        exceptionSignalled_id, LoadMemory_ARB_CCA]
+        exceptionSignalled_id]
    \\ Cases_on `(Run (Decode w) s).BranchTo`
    \\ Cases_on `(Run (Decode w) s).BranchDelay`
    \\ TRY (Cases_on `x`)
@@ -372,6 +366,18 @@ val double_aligned = Theory.save_thm("double_aligned",
    |> Drule.UNDISCH
    )
 
+val Aligned_thms = Q.store_thm("Aligned_thms",
+  `(!w. Aligned (w, 1w) = aligned 1 w) /\
+   (!w: word64. ~word_bit 0 w = aligned 1 w) /\
+   (!w. Aligned (w, 3w) = aligned 2 w) /\
+   (!w: word64. ((1 >< 0) w = 0w: word2) = aligned 2 w) /\
+   (!w. Aligned (w, 7w) = aligned 3 w) /\
+   (!w: word64. ((2 >< 0) w = 0w: word3) = aligned 3 w)
+   `,
+  rw [Aligned_def, alignmentTheory.aligned_bitwise_and]
+  \\ blastLib.BBLAST_TAC
+  )
+
 (* ------------------------------------------------------------------------ *)
 
 (* ------
@@ -424,9 +430,7 @@ val StoreMemory =
    |> Drule.SPEC_ALL
    |> Conv.CONV_RULE (Conv.X_FUN_EQ_CONV st)
    |> Thm.SPEC st
-   |> Conv.RIGHT_CONV_RULE
-        (PairedLambda.GEN_BETA_CONV
-         THENC utilsLib.NCONV 3 PairedLambda.let_CONV)
+   |> Conv.RIGHT_CONV_RULE PairedLambda.GEN_BETA_CONV
 
 val ls_thm =
    wordsLib.WORD_DECIDE ``!a b:'a word. a <=+ b /\ b <=+ a = (a = b)``
@@ -454,20 +458,28 @@ val ls_lem3 =
      ``((2 >< 0) (a: word64) = (b: word3)) /\ (w2w b + 3w = c) ==>
        ((0xFFFFFFFFFFFFFFF8w && a) + c = a + 3w)``
 
+val ls_lem4 =
+   blastLib.BBLAST_PROVE
+     ``0xFFFFFFFFFFFFFFF8w && (a ?? w2w (b : word3)) =
+       0xFFFFFFFFFFFFFFF8w && a : word64``
+
 val StoreMemory_byte = Q.store_thm("StoreMemory_byte",
-   `!s CCA MemElem pAddr vAddr IorD.
-       StoreMemory (CCA,0w,MemElem,pAddr,vAddr,IorD) s =
-       s with MEM :=
-          let a = (2 >< 0) pAddr: word3 in
-          let b = if BigEndianMem s then a ?? 7w else a in
-          let c = 8 * w2n b in
-            (pAddr =+ (7 + c >< c) MemElem) s.MEM`,
-   REPEAT strip_tac
-   \\ rewrite_tac
-        [StoreMemory, ls_lem, ls_thm, wordsTheory.w2w_0, wordsTheory.WORD_ADD_0]
-   \\ wordsLib.Cases_on_word_value `(2 >< 0) pAddr: word3`
-   \\ asm_simp_tac (srw_ss()) [ls_lem, ls_lem0]
-   \\ lrw []
+   `!s MemElem vAddr.
+       ~s.exceptionSignalled ==>
+       (StoreMemory (0w,0w,F,MemElem,vAddr,F) s =
+        (T, s with
+            <|LLbit := NONE;
+              MEM :=
+                let a = (2 >< 0) vAddr: word3 in
+                let b = if BigEndianMem s then a ?? 7w else a in
+                let c = 8 * w2n b in
+                  (vAddr =+ (7 + c >< c) MemElem) s.MEM|>))`,
+   rpt strip_tac
+   \\ asm_simp_tac (srw_ss())
+        [StoreMemory, AddressTranslation_def, AdjustEndian_def, WriteData_def,
+         ls_lem, ls_thm, ls_lem4, wordsTheory.w2w_0, wordsTheory.WORD_ADD_0]
+   \\ wordsLib.Cases_on_word_value `(2 >< 0) vAddr: word3`
+   \\ lrw [ls_lem, ls_lem0, ls_lem4]
    )
 
 val ls_thm2 =
@@ -476,23 +488,29 @@ val ls_thm2 =
         (a <=+ b /\ b <=+ a + 1w = (a = b) \/ (a + 1w = b))``
 
 val StoreMemory_half = Q.store_thm("StoreMemory_half",
-   `~word_bit 0 pAddr ==>
-    (StoreMemory (CCA,1w,MemElem,pAddr,vAddr,IorD) s =
-     s with MEM :=
-       let a = (2 >< 0) pAddr: word3 in
-          if BigEndianMem s then
-             let b = 8 * w2n (a ?? 6w) in
-               (pAddr + 1w =+ (7 + b >< b) MemElem)
-                 ((pAddr =+ (15 + b >< 8 + b) MemElem) s.MEM)
-          else
-             let b = 8 * w2n a in
-               (pAddr =+ (7 + b >< b) MemElem)
-                 ((pAddr + 1w =+ (15 + b >< 8 + b) MemElem) s.MEM))`,
-   strip_tac
-   \\ asm_simp_tac bool_ss [StoreMemory, ls_thm2]
-   \\ `~word_bit 0 (((2 >< 0) pAddr) : word3)` by asm_rewrite_tac [bit_0_2_0]
-   \\ wordsLib.Cases_on_word_value `(2 >< 0) pAddr: word3`
-   \\ fs [ls_lem, ls_lem0, ls_lem1]
+   `Aligned (vAddr,1w) ==> ~s.exceptionSignalled ==>
+    (StoreMemory (1w,1w,T,MemElem,vAddr,F) s =
+     (T,
+      s with
+       <|LLbit := NONE;
+         MEM :=
+           let a = (2 >< 0) vAddr: word3 in
+              if BigEndianMem s then
+                 let b = 8 * w2n (a ?? 6w) in
+                   (vAddr + 1w =+ (7 + b >< b) MemElem)
+                     ((vAddr =+ (15 + b >< 8 + b) MemElem) s.MEM)
+              else
+                 let b = 8 * w2n a in
+                   (vAddr + 1w =+ (15 + b >< 8 + b) MemElem)
+                     ((vAddr =+ (7 + b >< b) MemElem) s.MEM)|>))`,
+   rpt strip_tac
+   \\ asm_simp_tac (srw_ss())
+        [StoreMemory, AddressTranslation_def, AdjustEndian_def, WriteData_def,
+         ls_thm2]
+   \\ `~word_bit 0 (((2 >< 0) vAddr) : word3)`
+   by (fs [Aligned_def] \\ blastLib.FULL_BBLAST_TAC)
+   \\ wordsLib.Cases_on_word_value `(2 >< 0) vAddr: word3`
+   \\ fs [ls_lem, ls_lem0, ls_lem1, ls_lem4]
    \\ asm_simp_tac (srw_ss()) []
    \\ lrw []
    )
@@ -504,29 +522,33 @@ val ls_thm3 =
         (a = b) \/ (a + 1w = b) \/ (a + 2w = b) \/ (a + 3w = b))``
 
 val StoreMemory_word = Q.store_thm("StoreMemory_word",
-   `((1 >< 0) pAddr = 0w:word2) ==>
-    (StoreMemory (CCA,3w,MemElem,pAddr,pAddr,IorD) s =
-     s with MEM :=
-       let a = (2 >< 0) pAddr: word3 in
-          if BigEndianMem s then
-             let b = 8 * w2n (a ?? 4w) in
-               (pAddr + 3w =+ (7 + b >< b) MemElem)
-                 ((pAddr + 2w =+ (15 + b >< 8 + b) MemElem)
-                    ((pAddr + 1w =+ (23 + b >< 16 + b) MemElem)
-                       ((pAddr =+ (31 + b >< 24 + b) MemElem) s.MEM)))
-          else
-             let b = 8 * w2n a in
-               (pAddr =+ (7 + b >< b) MemElem)
-                 ((pAddr + 1w =+ (15 + b >< 8 + b) MemElem)
-                    ((pAddr + 2w =+ (23 + b >< 16 + b) MemElem)
-                       ((pAddr + 3w =+ (31 + b >< 24 + b) MemElem)
-                          s.MEM))))`,
-   strip_tac
-   \\ `(1 >< 0) (((2 >< 0) pAddr) : word3) = 0w: word2`
-   by asm_rewrite_tac [bit_1_0_2_0]
-   \\ asm_simp_tac bool_ss [StoreMemory, ls_thm3]
-   \\ wordsLib.Cases_on_word_value `(2 >< 0) pAddr: word3`
-   \\ fs [ls_lem, ls_lem0, ls_lem1, ls_lem2, ls_lem3]
+   `Aligned (vAddr,3w) ==> ~s.exceptionSignalled ==>
+    (StoreMemory (3w,3w,T,MemElem,vAddr,F) s =
+     (T,
+      s with
+       <|LLbit := NONE;
+         MEM :=
+           let a = (2 >< 0) vAddr: word3 in
+              if BigEndianMem s then
+                 let b = 8 * w2n (a ?? 4w) in
+                   (vAddr + 3w =+ (7 + b >< b) MemElem)
+                     ((vAddr + 2w =+ (15 + b >< 8 + b) MemElem)
+                        ((vAddr + 1w =+ (23 + b >< 16 + b) MemElem)
+                           ((vAddr =+ (31 + b >< 24 + b) MemElem) s.MEM)))
+              else
+                 let b = 8 * w2n a in
+                   (vAddr + 3w =+ (31 + b >< 24 + b) MemElem)
+                     ((vAddr + 2w =+ (23 + b >< 16 + b) MemElem)
+                        ((vAddr + 1w =+ (15 + b >< 8 + b) MemElem)
+                           ((vAddr =+ (7 + b >< b) MemElem) s.MEM)))|>))`,
+   rpt strip_tac
+   \\ `(1 >< 0) (((2 >< 0) vAddr) : word3) = 0w: word2`
+   by (fs [Aligned_def] \\ blastLib.FULL_BBLAST_TAC)
+   \\ asm_simp_tac (srw_ss())
+        [StoreMemory, AddressTranslation_def, AdjustEndian_def, WriteData_def,
+         ls_thm3]
+   \\ wordsLib.Cases_on_word_value `(2 >< 0) vAddr: word3`
+   \\ fs [ls_lem, ls_lem0, ls_lem1, ls_lem2, ls_lem3, ls_lem4]
    \\ asm_simp_tac (srw_ss()) []
    \\ lrw []
    )
@@ -536,30 +558,37 @@ val ls_thm4 =
       ``((a:word3) = 0w:word3) ==> (a <=+ b /\ b <=+ a + 7w)``
 
 val StoreMemory_doubleword = Q.store_thm("StoreMemory_doubleword",
-   `((2 >< 0) pAddr = 0w:word3) ==>
-    (StoreMemory (CCA,7w,MemElem,pAddr,vAddr,IorD) s =
-     s with MEM :=
-          if BigEndianMem s then
-            (pAddr + 7w =+ (7 >< 0) MemElem)
-              ((pAddr + 6w =+ (15 >< 8) MemElem)
-                 ((pAddr + 5w =+ (23 >< 16) MemElem)
-                    ((pAddr + 4w =+ (31 >< 24) MemElem)
-                        ((pAddr + 3w =+ (39 >< 32) MemElem)
-                          ((pAddr + 2w =+ (47 >< 40) MemElem)
-                             ((pAddr + 1w =+ (55 >< 48) MemElem)
-                                ((pAddr =+ (63 >< 56) MemElem) s.MEM)))))))
-          else
-            (pAddr =+ (7 >< 0) MemElem)
-              ((pAddr + 1w =+ (15 >< 8) MemElem)
-                 ((pAddr + 2w =+ (23 >< 16) MemElem)
-                    ((pAddr + 3w =+ (31 >< 24) MemElem)
-                        ((pAddr + 4w =+ (39 >< 32) MemElem)
-                          ((pAddr + 5w =+ (47 >< 40) MemElem)
-                             ((pAddr + 6w =+ (55 >< 48) MemElem)
-                                ((pAddr + 7w =+ (63 >< 56) MemElem)
-                                    s.MEM))))))))`,
-   asm_simp_tac bool_ss [StoreMemory, ls_thm4]
-   \\ lrw [ls_lem, ls_lem0, ls_lem1, ls_lem2, ls_lem3]
+   `Aligned (vAddr,7w) ==> ~s.exceptionSignalled ==>
+    (StoreMemory (7w,7w,T,MemElem,vAddr,F) s =
+     (T,
+      s with
+       <|LLbit := NONE;
+         MEM :=
+           if BigEndianMem s then
+             (vAddr + 7w =+ (7 >< 0) MemElem)
+               ((vAddr + 6w =+ (15 >< 8) MemElem)
+                  ((vAddr + 5w =+ (23 >< 16) MemElem)
+                     ((vAddr + 4w =+ (31 >< 24) MemElem)
+                         ((vAddr + 3w =+ (39 >< 32) MemElem)
+                           ((vAddr + 2w =+ (47 >< 40) MemElem)
+                              ((vAddr + 1w =+ (55 >< 48) MemElem)
+                                 ((vAddr =+ (63 >< 56) MemElem) s.MEM)))))))
+           else
+             (vAddr + 7w =+ (63 >< 56) MemElem)
+               ((vAddr + 6w =+ (55 >< 48) MemElem)
+                  ((vAddr + 5w =+ (47 >< 40) MemElem)
+                     ((vAddr + 4w =+ (39 >< 32) MemElem)
+                        ((vAddr + 3w =+ (31 >< 24) MemElem)
+                           ((vAddr + 2w =+ (23 >< 16) MemElem)
+                              ((vAddr + 1w =+ (15 >< 8) MemElem)
+                                 ((vAddr =+ (7 >< 0) MemElem) s.MEM)))))))|>))`,
+   rpt strip_tac
+   \\ `(2 >< 0) vAddr = 0w: word3`
+   by (fs [Aligned_def] \\ blastLib.FULL_BBLAST_TAC)
+   \\ asm_simp_tac (srw_ss())
+        [StoreMemory, AddressTranslation_def, AdjustEndian_def, WriteData_def,
+         ls_thm4]
+   \\ lrw [ls_lem, ls_lem0, ls_lem1, ls_lem2, ls_lem3, ls_lem4]
    )
 
 (* ------------------------------------------------------------------------ *)
@@ -567,34 +596,12 @@ val StoreMemory_doubleword = Q.store_thm("StoreMemory_doubleword",
 val cond_update_memory = Q.store_thm("cond_update_memory",
    `(!a: word64 b x0 x1 x2 x3 m.
        (if b then
-          (a =+ x0) ((a + 1w =+ x1) ((a + 2w =+ x2) ((a + 3w =+ x3) m)))
-        else m) =
-       (a =+ (if b then x0 else m a))
-         ((a + 1w =+ (if b then x1 else m (a + 1w)))
-           ((a + 2w =+ (if b then x2 else m (a + 2w)))
-             ((a + 3w =+ (if b then x3 else m (a + 3w))) m)))) /\
-    (!a: word64 b x0 x1 x2 x3 m.
-       (if b then
           (a + 3w =+ x0) ((a + 2w =+ x1) ((a + 1w =+ x2) ((a =+ x3) m)))
         else m) =
        (a + 3w =+ (if b then x0 else m (a + 3w)))
          ((a + 2w =+ (if b then x1 else m (a + 2w)))
            ((a + 1w =+ (if b then x2 else m (a + 1w)))
              ((a =+ (if b then x3 else m a)) m)))) /\
-    (!a: word64 b x0 x1 x2 x3 x4 x5 x6 x7 m.
-       (if b then
-          (a =+ x0) ((a + 1w =+ x1) ((a + 2w =+ x2) ((a + 3w =+ x3)
-            ((a + 4w =+ x4) ((a + 5w =+ x5) ((a + 6w =+ x6)
-              ((a + 7w =+ x7) m)))))))
-        else m) =
-       (a =+ (if b then x0 else m a))
-         ((a + 1w =+ (if b then x1 else m (a + 1w)))
-           ((a + 2w =+ (if b then x2 else m (a + 2w)))
-             ((a + 3w =+ (if b then x3 else m (a + 3w)))
-               ((a + 4w =+ (if b then x4 else m (a + 4w)))
-                 ((a + 5w =+ (if b then x5 else m (a + 5w)))
-                   ((a + 6w =+ (if b then x6 else m (a + 6w)))
-                     ((a + 7w =+ (if b then x7 else m (a + 7w))) m)))))))) /\
     (!a: word64 b x0 x1 x2 x3 x4 x5 x6 x7 m.
        (if b then
           (a + 7w =+ x0) ((a + 6w =+ x1) ((a + 5w =+ x2) ((a + 4w =+ x3)
@@ -643,70 +650,6 @@ val branch_delay = Q.store_thm("branch_delay",
         (if b then x else y) + 4w = (if b then x + 4w else y + 4w)) /\
     (!x. x + 4w + 4w = x + 8w)`,
    rw [] \\ fs [])
-
-val BIT_lem = Q.prove(
-   `(!x. NUMERAL (BIT2 x) = 2 * (x + 1)) /\
-    (!x. NUMERAL (BIT1 x) = 2 * x + 1) /\
-    (!x. NUMERAL (BIT1 (BIT1 x)) = 4 * x + 3) /\
-    (!x. NUMERAL (BIT1 (BIT2 x)) = 4 * (x + 1) + 1) /\
-    (!x. NUMERAL (BIT2 (BIT1 x)) = 4 * (x + 1)) /\
-    (!x. NUMERAL (BIT2 (BIT2 x)) = 4 * (x + 1) + 2)`,
-   REPEAT strip_tac
-   \\ CONV_TAC (Conv.LHS_CONV
-         (REWRITE_CONV [arithmeticTheory.BIT1, arithmeticTheory.BIT2,
-                        arithmeticTheory.NUMERAL_DEF]))
-   \\ DECIDE_TAC
-   )
-
-val Aligned_eq = Q.prove(
-   `!a b. (((1 >< 0) (a: word64) = 0w:word2) =
-           ((1 >< 0) (b: word64) = 0w:word2)) =
-          (~a ' 0 /\ ~a ' 1 = ~b ' 0 /\ ~b ' 1)`,
-   blastLib.BBLAST_TAC
-   )
-
-val Aligned_numeric = Q.store_thm("Aligned_numeric",
-   `((1 >< 0) (0w: word64) = 0w:word2) /\
-    (!x. ((1 >< 0) (n2w (NUMERAL (BIT2 (BIT1 x))): word64) = 0w:word2)) /\
-    (!x y f.
-         ((1 >< 0) (y + n2w (NUMERAL (BIT1 (BIT1 (f x)))): word64) = 0w:word2) =
-         ((1 >< 0) (y + 3w) = 0w:word2)) /\
-    (!x y. ((1 >< 0) (y + n2w (NUMERAL (BIT1 (BIT2 x))): word64) = 0w:word2) =
-           ((1 >< 0) (y + 1w) = 0w:word2)) /\
-    (!x y. ((1 >< 0) (y + n2w (NUMERAL (BIT2 (BIT1 x))): word64) = 0w:word2) =
-           ((1 >< 0) (y) = 0w:word2)) /\
-    (!x y. ((1 >< 0) (y + n2w (NUMERAL (BIT2 (BIT2 x))): word64) = 0w:word2) =
-           ((1 >< 0) (y + 2w) = 0w:word2)) /\
-    (!x y f.
-         ((1 >< 0) (y - n2w (NUMERAL (BIT1 (BIT1 (f x)))): word64) = 0w:word2) =
-         ((1 >< 0) (y - 3w) = 0w:word2)) /\
-    (!x y. ((1 >< 0) (y - n2w (NUMERAL (BIT1 (BIT2 x))): word64) = 0w:word2) =
-           ((1 >< 0) (y - 1w) = 0w:word2)) /\
-    (!x y. ((1 >< 0) (y - n2w (NUMERAL (BIT2 (BIT1 x))): word64) = 0w:word2) =
-           ((1 >< 0) (y) = 0w:word2)) /\
-    (!x y. ((1 >< 0) (y - n2w (NUMERAL (BIT2 (BIT2 x))): word64) = 0w:word2) =
-           ((1 >< 0) (y - 2w) = 0w:word2))`,
-   Q.ABBREV_TAC `z = ((1 >< 0) : word64 -> word2)`
-   \\ REPEAT strip_tac
-   \\ CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [BIT_lem]))
-   \\ Q.UNABBREV_TAC `z`
-   \\ rewrite_tac [Aligned_eq, GSYM wordsTheory.word_mul_n2w,
-                   GSYM wordsTheory.word_add_n2w]
-   \\ TRY (markerLib.PAT_ABBREV_TAC (HOLset.empty Term.compare)
-              ``q = n2w x + 1w : word64``)
-   \\ TRY (Q.ABBREV_TAC `r = n2w (f x) : word64`)
-   \\ blastLib.BBLAST_TAC
-   )
-
-(* Simplify alignment condition for exception calls
-
-val Aligned_cond = Q.store_thm("Aligned_cond",
-   `!a: 34 word b:word30 c d.
-       ((1 >< 0) ((a @@ if d then b else c): word64) = 0w: word2) =
-       d /\ ((1 >< 0) b = 0w: word2) \/ ~d /\ ((1 >< 0) c = 0w: word2)`,
-   rw [] \\ blastLib.BBLAST_TAC
-   )
-*)
 
 (* ------------------------------------------------------------------------ *)
 

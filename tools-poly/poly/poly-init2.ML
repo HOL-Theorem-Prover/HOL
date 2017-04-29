@@ -92,6 +92,8 @@ fun findUo modPath [] = NONE
           findUo modPath rest
       end;
 
+val _ = holpathdb.extend_db {vname = "HOLDIR", path = Systeml.HOLDIR}
+
 fun loadUo ps uo =
   let
     val i = TextIO.openIn uo
@@ -101,8 +103,8 @@ fun loadUo ps uo =
     fun str f = ">" ^ f ^ "< -- " ^ String.concatWith " -- " ps
     fun loadOne f =
       (case OS.Path.ext f of
-         SOME "sml" => myuse f
-       | SOME "sig" => myuse f
+         SOME "sml" => myuse (holpathdb.subst_pathvars f)
+       | SOME "sig" => myuse (holpathdb.subst_pathvars f)
        | _ => load (uo::ps) f)
       handle
         OS.Path.InvalidArc => die ("Invalid arc exception in loading "^str f)
@@ -113,6 +115,7 @@ fun loadUo ps uo =
   end
 and load ps modPath =
   let
+    val modPath = holpathdb.subst_pathvars modPath
     val modName = OS.Path.file modPath
     fun l ext =
       case findUo (modPath ^ ext) ("."::(!loadPath)) of
