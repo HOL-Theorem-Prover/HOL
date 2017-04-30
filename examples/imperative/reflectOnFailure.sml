@@ -235,7 +235,7 @@ in case proveSo of
 		in case proveOtherwise of
       			NONE => (tprint  "refinement has been disproven" )
      			| SOME s => (
-					tprint s(* die s *)	
+					die s	
 				)
 		end
 	)
