@@ -1,12 +1,13 @@
 (* Interactive mode: 
 load "tautLib";
+load "schneiderUtils";
 load "ptopTheory";
 load "imperativeLib";
 load "imperativeTheory";
 load "testutils";
 *)
 open HolKernel Parse boolLib bossLib ;
-open tautLib ptopTheory imperativeLib imperativeTheory ;
+open tautLib schneiderUtils ptopTheory imperativeLib imperativeTheory ;
 
 val _ = set_trace "Unicode" 0;
 
@@ -31,12 +32,27 @@ val simpleTruthForgettableName3 = prove(
 		(if x = x' then (1 = z) else (0 = z'))))
 	``,(METIS_TAC [])
 );
+
 val simpleTruthForgettableName4 = prove(
 	``!(z:num) (z':num)(v:bool).( 
 		((~v) ==> ( (if v then z else z' ) <> z) )
 	<=> 
 		( (~v) ==>(z' <> z ) ))
 	``,(METIS_TAC [])
+);
+
+val simpleTruthForgettableName5 = prove(``(f :'a -> 'a -> bool) (s :'a) (s' :'a) ==> ?(s' :'a) (s :'a). f s s'``,
+	(DISCH_TAC THEN (EXISTS_TAC ``(s':'a)``) THEN (EXISTS_TAC ``s:'a``) THEN UNDISCH_ALL_TAC THEN REP_EVAL_TAC)
+);
+
+val simpleTruthForgettableName6 = prove(``(f :'a -> 'a -> bool) (s :'a) (s' :'a) ==> ?(S' :'a->'a) (s :'a). f s (S' s)``,
+	(DISCH_TAC THEN (EXISTS_TAC ``\(s:'a).(s':'a)``) THEN (EXISTS_TAC ``s:'a``) THEN UNDISCH_ALL_TAC THEN REP_EVAL_TAC)
+);
+
+val simpleTruthForgettableName7 = prove(``(f :'a -> 'a -> bool) (s :'a) (s' :'a) ==> !(f :'a -> 'a -> bool).
+              (?(s' :'a) (s :'a). f s s') <=>
+              ?(S' :'a -> 'a) (s :'a). f s (S' s)``,
+		(DISCH_TAC THEN GEN_TAC THEN METIS_TAC [simpleTruthForgettableName5,simpleTruthForgettableName6])
 );
 
 (* 
@@ -124,7 +140,7 @@ Can we provide an certainty to the user that the result is because their program
 that our test was flawed?
 *)
 
-val _ = tprint ("sometimes refinement is not proven: " );
+val _ = tprint ("sometimes refinement is not proven: DON'T PANIC... " );
 
 val disputedImplementation = ``(sc (assign y (\ (s:'a->num).(s x))) (assign x (\ (s:'a->num).1 )))``;
 
@@ -161,14 +177,36 @@ val altTac2 = (
 			(let val
 				P = mk_abs( hd(#1(Px)), mk_abs( hd (tl(#1(Px))), (#2(Px)) ) )
 			in 
-				(REWRITE_TAC	[BETA_RULE (SPEC P (INST_TYPE [alpha |-> ``:'a->num``,beta |-> ``:'a->num``] 
+				REWRITE_TAC	[BETA_RULE (SPEC P (INST_TYPE [alpha |-> ``:'a->num``,beta |-> ``:'a->num``] 
 								SWAP_EXISTS_THM))] 
 						goal
-				)
 		  	end)
 		end)
 	)
 );
+
+val parameterizeSPrime = (
+		EVAL_RULE ( SPECL [``t:'a``,``t:'a``,``\(s:'a) (s':'a).T``] (GEN_ALL simpleTruthForgettableName7) ) 
+);
+
+val parameterizeSPrimeTac = (
+	fn goal:((term list) * term) => (
+		(let val
+				Pxy =( strip_exists(#2(goal)) )
+	 	in 
+			(let val
+				P = mk_abs( hd(tl(#1(Pxy))), mk_abs( hd (#1(Pxy)), (#2(Pxy)) ) )
+			in 
+				REWRITE_TAC 	[ (EVAL_RULE (
+							SPEC P (INST_TYPE [ alpha |-> type_of((hd(#1(Pxy))))] parameterizeSPrime) 
+						  ) )
+						]
+						goal
+			end)
+		end)
+	)
+);
+
 
 (* 
 altTac1 and altTac2 deal with the fact that the counter proof is an existential conjunction instead of a universal implication.
@@ -178,12 +216,16 @@ provers assertions.
 Finally, we need to provide a witness for s that proves the original specification is violated.
 *)
 
-fun altTac statevars = (
+val findRealSpecTac = (
 	altTac1
 THEN
 	altTac2
 THEN
-	(EXISTS_TAC ``\(v:'a). ( if (x:'a)=v then 1 else ( ( \(v':'a).0) (v) ) )``)
+	(parameterizeSPrimeTac)
+);
+
+fun applyWitnessTac statevars = (
+	(EXISTS_TAC ``\(s:'a->num) (v:'a). ( if (x:'a)=v then 1 else ( s (v) ) )``)
 THEN
 	(EXISTS_TAC ``\(v':'a).0``)
 THEN
@@ -226,14 +268,20 @@ in case proveSo of
 					(DECL_STATEVARS ``v:'a`` statevars) 
 					(LHSnotrefinedbyRHS theSpec  disputedImplementation )
 				),
-				((theTac statevars) THEN (altTac statevars))
+				(
+					(theTac statevars) 	
+				THEN 
+					(findRealSpecTac)
+				THEN 
+					(applyWitnessTac statevars)
+				)
 			);
 			NONE	
 		)
 		handle 
 			HOL_ERR _ => SOME "refinement not disproven"
 		in case proveOtherwise of
-      			NONE => (tprint  "refinement has been disproven" )
+      			NONE => (tprint  "...RELAX: refinement has been disproven" )
      			| SOME s => (
 					die s	
 				)
@@ -243,3 +291,6 @@ end;
 
 val _ = OK();
 
+(* Interactive Mode 
+  set_goal ((DECL_STATEVARS ``v:'a`` statevars), (LHSnotrefinedbyRHS theSpec  disputedImplementation ));
+*)
