@@ -7,7 +7,7 @@ load "imperativeTheory";
 load "testutils";
 *)
 open HolKernel Parse boolLib bossLib ;
-open tautLib schneiderUtils ptopTheory imperativeLib imperativeTheory ;
+open tautLib ptopTheory imperativeLib imperativeTheory ;
 
 val _ = set_trace "Unicode" 0;
 
