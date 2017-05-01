@@ -41,12 +41,21 @@ val simpleTruthForgettableName4 = prove(
 	``,(METIS_TAC [])
 );
 
+val UNDISCH_HD_TAC= (
+	fn goal:((term list) * term) => (
+		if(null (#1(goal)) ) then
+			(ALL_TAC goal)
+		else
+			(UNDISCH_TAC (hd(#1(goal))) goal)
+	)
+);
+
 val simpleTruthForgettableName5 = prove(``(f :'a -> 'a -> bool) (s :'a) (s' :'a) ==> ?(s' :'a) (s :'a). f s s'``,
-	(DISCH_TAC THEN (EXISTS_TAC ``(s':'a)``) THEN (EXISTS_TAC ``s:'a``) THEN UNDISCH_ALL_TAC THEN REP_EVAL_TAC)
+	(DISCH_TAC THEN (EXISTS_TAC ``(s':'a)``) THEN (EXISTS_TAC ``s:'a``) THEN (EXHAUSTIVELY UNDISCH_HD_TAC) THEN REP_EVAL_TAC)
 );
 
 val simpleTruthForgettableName6 = prove(``(f :'a -> 'a -> bool) (s :'a) (s' :'a) ==> ?(S' :'a->'a) (s :'a). f s (S' s)``,
-	(DISCH_TAC THEN (EXISTS_TAC ``\(s:'a).(s':'a)``) THEN (EXISTS_TAC ``s:'a``) THEN UNDISCH_ALL_TAC THEN REP_EVAL_TAC)
+	(DISCH_TAC THEN (EXISTS_TAC ``\(s:'a).(s':'a)``) THEN (EXISTS_TAC ``s:'a``) THEN (EXHAUSTIVELY UNDISCH_HD_TAC) THEN REP_EVAL_TAC)
 );
 
 val simpleTruthForgettableName7 = prove(``(f :'a -> 'a -> bool) (s :'a) (s' :'a) ==> !(f :'a -> 'a -> bool).
