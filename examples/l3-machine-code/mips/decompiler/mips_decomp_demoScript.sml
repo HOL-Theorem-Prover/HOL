@@ -8,21 +8,21 @@ fun mips_decompile_code s =
   List.map mips.encodeInstruction o helperLib.quote_to_strings
 
 val (test1_cert, test1_def) = mips_decompile_code "test1"
-  `ori $1, $0, 10
-   bne $1, $0, 0xFFFF
-   daddiu $1, $1, 0xFFFF`
+  `ori $r1, $r0, 10
+   bne $r1, $r0, 0x3FFFC
+   daddiu $r1, $r1, 0xFFFF`
 
 val (test2_cert, test2_def) = mips_decompile_code "test2"
-  `ori $1, $0, 10
-   beq $1, $0, 1
+  `ori $r1, $r0, 10
+   beq $r1, $r0, 4
    nop`
 
 (* These decompile under the assumption that arithmetic exceptions do not
    occur *)
 
 val (test3_cert, test3_def) = mips_decompile_code "test3"
-  `dadd $1, $2, $3
-   dmult $1, $3`
+  `dadd $r1, $r2, $r3
+   dmult $r1, $r3`
 
 val () = computeLib.add_funs [test1_def, test2_def, test3_def]
 
