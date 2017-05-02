@@ -510,9 +510,12 @@ val MLA_MUL = Count.apply prove(
     \\ ABBREV_TAC `cpsr = CPSR_READ psr`
     \\ ABBREV_TAC `nbs = DECODE_MODE ((4 >< 0) cpsr)`
     \\ ABBREV_TAC `w = MLA_MUL_DUR (REG_READ6 reg nbs ((11 >< 8) ireg))`
-    \\ `(x.inp = inp) /\ (x.state = ^arm6state) /\
-        (<|state := x0.state; inp := inp|> = x0)`
-    by SIMP_TAC (std_ss++STATE_INP_ss) [Abbr`x`,Abbr`x0`,SINIT_def]
+    \\ sg `(x.inp = inp) /\ (x.state = ^arm6state) /\
+           (<|state := x0.state; inp := inp|> = x0)`
+       THENL [
+         SIMP_TAC (std_ss++STATE_INP_ss) [Abbr`x`,Abbr`x0`,SINIT_def],
+         ALL_TAC
+       ]
     \\ ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++SIZES_ss) [num2exception_thm,
          SUC2NUM STATE_ARM_def,ABS_ARM6_def,SMPL_ARM6_def,PACK_def,IMM_LEN_def,
          SUC2NUM IMM_ARM6_def,MAP_STRM_def,COMBINE_def,SMPL_EXC_ARM6_def,
