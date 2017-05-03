@@ -483,8 +483,8 @@ val IMP_X64_SPEC_LEMMA = prove(
       SPEC_1 X64_MODEL p {} q SEP_F``,
   REWRITE_TAC [X64_SPEC_1_SEMANTICS] \\ REPEAT STRIP_TAC
   \\ `p (x64_2set' y s)` by METIS_TAC []
-  \\ `X64_NEXT_REL (seq 0) (seq (SUC 0))` by ALL_TAC THEN1
-   (`?x. X64_NEXT_REL (seq 0) x` by ALL_TAC THEN1
+  \\ `X64_NEXT_REL (seq 0) (seq (SUC 0))` by
+   (`?x. X64_NEXT_REL (seq 0) x` by
       (RES_TAC \\ Q.EXISTS_TAC `v'`
        \\ ASM_SIMP_TAC std_ss [X64_NEXT_REL_def]
        \\ Q.EXISTS_TAC `seq 0` \\ ASM_SIMP_TAC std_ss []
@@ -699,7 +699,7 @@ val zBYTE_MEMORY_ANY_C_INSERT = prove(
   \\ IMP_RES_TAC (GEN_ALL IN_zBYTE_MEMORY_ANY_SET)
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET,DIFF_INSERT,DIFF_EMPTY]
   \\ REWRITE_TAC [DELETE_zBYTE_MEMORY_ANY_SET,APPLY_UPDATE_THM]
-  \\ `~(zMem a (SOME (w,zDATA_PERM e)) b IN zBYTE_MEMORY_ANY_SET (df DELETE a) g e c)` by ALL_TAC
+  \\ sg `~(zMem a (SOME (w,zDATA_PERM e)) b IN zBYTE_MEMORY_ANY_SET (df DELETE a) g e c)`
   \\ SIMP_TAC std_ss [zBYTE_MEMORY_ANY_SET_def,GSPECIFICATION,IN_DELETE,x64_el_11]
   \\ FULL_SIMP_TAC std_ss [zBYTE_MEMORY_ANY_SET_def,EXTENSION,GSPECIFICATION,IN_DELETE,IN_INSERT]
   \\ METIS_TAC []);
@@ -816,7 +816,7 @@ val zMEMORY_INSERT = store_thm("zMEMORY_INSERT",
   \\ `~(a IN zMEMORY_DOMAIN (df DELETE a)) /\
       ~(a+1w IN zMEMORY_DOMAIN (df DELETE a)) /\
       ~(a+2w IN zMEMORY_DOMAIN (df DELETE a)) /\
-      ~(a+3w IN zMEMORY_DOMAIN (df DELETE a))` by ALL_TAC THEN1
+      ~(a+3w IN zMEMORY_DOMAIN (df DELETE a))` by
    (SIMP_TAC std_ss [zMEMORY_DOMAIN_def,GSPECIFICATION,IN_BIGUNION,
         IN_DELETE,EXTENSION,IN_INSERT,NOT_IN_EMPTY]
     \\ IMP_RES_TAC not_aligned
@@ -848,10 +848,10 @@ val zM_LEMMA = prove(
   REPEAT STRIP_TAC
   \\ IMP_RES_TAC (SIMP_RULE std_ss [IN_INSERT] (Q.INST [`df`|->`{a}`] zMEMORY_INSERT))
   \\ ASM_SIMP_TAC std_ss []
-  \\ `({a} DELETE a) = {}` by ALL_TAC THEN1
+  \\ `({a} DELETE a) = {}` by
     SIMP_TAC std_ss [EXTENSION,IN_INSERT,IN_DELETE,NOT_IN_EMPTY]
   \\ ASM_SIMP_TAC std_ss []
-  \\ REVERSE (`zMEMORY {} f = emp` by ALL_TAC)
+  \\ REVERSE (sg `zMEMORY {} f = emp`)
   \\ ASM_SIMP_TAC std_ss [SEP_CLAUSES]
   \\ SIMP_TAC std_ss [zMEMORY_def,zBYTE_MEMORY_def,zBYTE_MEMORY_ANY_def,zBYTE_MEMORY_ANY_SET_def]
   \\ SIMP_TAC std_ss [FUN_EQ_THM] \\ SIMP_TAC std_ss [emp_def]
@@ -955,7 +955,7 @@ val zMEMORY64_INSERT = store_thm("zMEMORY64_INSERT",
   \\ `zMEMORY64_DOMAIN df =
         a INSERT (a+1w) INSERT (a+2w) INSERT (a+3w) INSERT
         (a+4w) INSERT (a+5w) INSERT (a+6w) INSERT (a+7w) INSERT
-        zMEMORY64_DOMAIN (df DELETE a)` by ALL_TAC THEN1
+        zMEMORY64_DOMAIN (df DELETE a)` by
    (FULL_SIMP_TAC std_ss [zMEMORY64_DOMAIN_def]
     \\ `{{b; b + 1w; b + 2w; b + 3w; b+4w; b+5w; b+6w; b+7w} | (b && 7w = 0w) /\ b IN df} =
         {a; a + 1w; a + 2w; a + 3w; a+4w; a+5w; a+6w; a+7w} INSERT
@@ -982,7 +982,7 @@ val zMEMORY64_INSERT = store_thm("zMEMORY64_INSERT",
       ~(a+4w IN zMEMORY64_DOMAIN (df DELETE a)) /\
       ~(a+5w IN zMEMORY64_DOMAIN (df DELETE a)) /\
       ~(a+6w IN zMEMORY64_DOMAIN (df DELETE a)) /\
-      ~(a+7w IN zMEMORY64_DOMAIN (df DELETE a))` by ALL_TAC THEN1
+      ~(a+7w IN zMEMORY64_DOMAIN (df DELETE a))` by
    (SIMP_TAC std_ss [zMEMORY64_DOMAIN_def,GSPECIFICATION,IN_BIGUNION,
         IN_DELETE,EXTENSION,IN_INSERT,NOT_IN_EMPTY]
     \\ IMP_RES_TAC not_aligned
@@ -1014,10 +1014,10 @@ val zM64_LEMMA = prove(
   REPEAT STRIP_TAC
   \\ IMP_RES_TAC (SIMP_RULE std_ss [IN_INSERT] (Q.INST [`df`|->`{a}`] zMEMORY64_INSERT))
   \\ ASM_SIMP_TAC std_ss []
-  \\ `({a} DELETE a) = {}` by ALL_TAC THEN1
+  \\ `({a} DELETE a) = {}` by
     SIMP_TAC std_ss [EXTENSION,IN_INSERT,IN_DELETE,NOT_IN_EMPTY]
   \\ ASM_SIMP_TAC std_ss []
-  \\ REVERSE (`zMEMORY64 {} f = emp` by ALL_TAC)
+  \\ REVERSE (sg `zMEMORY64 {} f = emp`)
   \\ ASM_SIMP_TAC std_ss [SEP_CLAUSES]
   \\ SIMP_TAC std_ss [zMEMORY64_def,zBYTE_MEMORY_def,zBYTE_MEMORY_ANY_def,zBYTE_MEMORY_ANY_SET_def]
   \\ SIMP_TAC std_ss [FUN_EQ_THM] \\ SIMP_TAC std_ss [emp_def]
@@ -1158,8 +1158,8 @@ val zCODE_SET_INSERT = store_thm("zCODE_SET_INSERT",
   \\ ASM_SIMP_TAC std_ss [DIFF_INSERT,DIFF_EMPTY]
   \\ Q.ABBREV_TAC `a1 = zMem e (SOME (f e,{Zread; Zwrite; Zexecute})) T`
   \\ Q.ABBREV_TAC `a2 = BIGUNION (IMAGE X64_INSTR {(a,[f a]) | a IN df})`
-  \\ REVERSE (`~(a1 IN a2)` by ALL_TAC)
-  THEN1 (SIMP_TAC std_ss [EXTENSION,IN_INSERT,IN_DELETE] \\ METIS_TAC [])
+  \\ `~(a1 IN a2)` suffices_by
+  (STRIP_TAC THEN SIMP_TAC std_ss [EXTENSION,IN_INSERT,IN_DELETE] \\ METIS_TAC [])
   \\ Q.UNABBREV_TAC `a1` \\ Q.UNABBREV_TAC `a2`
   \\ ASM_SIMP_TAC std_ss [IN_IMAGE,IN_BIGUNION]
   \\ SIMP_TAC std_ss [METIS_PROVE [] ``e \/ b = ~e ==> b``,GSPECIFICATION]
@@ -1237,8 +1237,8 @@ val SPLIT_CODE_SEQ = prove(
   ``SPEC X64_MODEL p ((a,x::xs) INSERT s) q =
     SPEC X64_MODEL p ((a+1w,xs) INSERT (a,[x]) INSERT s) q``,
   SIMP_TAC std_ss [progTheory.SPEC_def,X64_MODEL_def]
-  \\ `CODE_POOL X64_INSTR ((a + 0x1w,xs) INSERT (a,[x]) INSERT s) =
-      CODE_POOL X64_INSTR ((a,x::xs) INSERT s)` by ALL_TAC
+  \\ sg `CODE_POOL X64_INSTR ((a + 0x1w,xs) INSERT (a,[x]) INSERT s) =
+      CODE_POOL X64_INSTR ((a,x::xs) INSERT s)`
   \\ ASM_SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [progTheory.CODE_POOL_def]
   \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> ((\s. s = x) = (\s. s = y))``)
@@ -1254,8 +1254,8 @@ val X64_SPEC_EXLPODE_CODE_LEMMA = store_thm("X64_SPEC_EXLPODE_CODE_LEMMA",
         SPEC X64_MODEL p ({ (a + n2w n, [EL n xs]) | n | n < LENGTH xs } UNION s) q``,
   Q.SPEC_TAC (`a`,`a`) \\ Q.SPEC_TAC (`xs`,`xs`) \\ REVERSE Induct THEN1
    (ASM_SIMP_TAC std_ss [SPLIT_CODE_SEQ] \\ REPEAT STRIP_TAC
-    \\ `{(a + n2w n,[EL n (h::xs)]) | n | n < LENGTH (h::xs)} =
-        {(a + 0x1w + n2w n,[EL n xs]) | n | n < LENGTH xs} UNION {(a,[h])}` by ALL_TAC
+    \\ sg `{(a + n2w n,[EL n (h::xs)]) | n | n < LENGTH (h::xs)} =
+        {(a + 0x1w + n2w n,[EL n xs]) | n | n < LENGTH xs} UNION {(a,[h])}`
     \\ ASM_SIMP_TAC std_ss [INSERT_UNION_EQ,UNION_EMPTY,GSYM UNION_ASSOC]
     \\ SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,IN_UNION,IN_INSERT,NOT_IN_EMPTY]
     \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC THENL [
@@ -1271,8 +1271,8 @@ val X64_SPEC_EXLPODE_CODE_LEMMA = store_thm("X64_SPEC_EXLPODE_CODE_LEMMA",
     ASM_SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,NOT_IN_EMPTY,LENGTH]
   \\ ASM_SIMP_TAC std_ss [UNION_EMPTY]
   \\ SIMP_TAC std_ss [progTheory.SPEC_def,X64_MODEL_def]
-  \\ `CODE_POOL X64_INSTR ((a,[]) INSERT s) =
-      CODE_POOL X64_INSTR (s)` by ALL_TAC
+  \\ sg `CODE_POOL X64_INSTR ((a,[]) INSERT s) =
+      CODE_POOL X64_INSTR (s)`
   \\ ASM_SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [progTheory.CODE_POOL_def]
   \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> ((\s. s = x) = (\s. s = y))``)
@@ -1289,9 +1289,9 @@ val CODE_POOL_INSERT_INSERT = store_thm("CODE_POOL_INSERT_INSERT",
   \\ SIMP_TAC std_ss []
   \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> !s. (s = x) = (s = y)``)
   \\ SIMP_TAC std_ss [IMAGE_INSERT,BIGUNION_INSERT]
-  \\ REVERSE (`!xs a ys. X64_INSTR (a,xs ++ ys) =
-             X64_INSTR (a,xs) UNION X64_INSTR (a + n2w (LENGTH xs),ys)` by ALL_TAC)
-  THEN1 (ASM_SIMP_TAC std_ss [AC UNION_ASSOC UNION_COMM])
+  \\ `!xs a ys. X64_INSTR (a,xs ++ ys) =
+             X64_INSTR (a,xs) UNION X64_INSTR (a + n2w (LENGTH xs),ys)` suffices_by
+  (STRIP_TAC THEN ASM_SIMP_TAC std_ss [AC UNION_ASSOC UNION_COMM])
   \\ Induct
   \\ ASM_SIMP_TAC std_ss [APPEND,X64_INSTR_def,UNION_EMPTY,LENGTH,WORD_ADD_0]
   \\ SIMP_TAC std_ss [RW1[ADD_COMM]ADD1,GSYM word_add_n2w,WORD_ADD_ASSOC]
@@ -1303,9 +1303,9 @@ val SPEC_X64_MERGE_CODE = store_thm("SPEC_X64_MERGE_CODE",
     SPEC X64_MODEL p ((a1,xs++ys) INSERT s) q``,
   Q.SPEC_TAC (`a2`,`a2`) \\ SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [SPEC_def,X64_MODEL_def]
-  \\ REVERSE (`CODE_POOL X64_INSTR
+  \\ REVERSE (sg `CODE_POOL X64_INSTR
        ((a1,xs) INSERT (a1 + n2w (LENGTH xs),ys) INSERT s) =
-       CODE_POOL X64_INSTR ((a1,xs ++ ys) INSERT s)` by ALL_TAC)
+       CODE_POOL X64_INSTR ((a1,xs ++ ys) INSERT s)`)
   \\ FULL_SIMP_TAC std_ss [CODE_POOL_INSERT_INSERT]);
 
 val SPEC_X64_MERGE_CODE_REV = store_thm("SPEC_X64_MERGE_CODE_REV",
@@ -1314,9 +1314,9 @@ val SPEC_X64_MERGE_CODE_REV = store_thm("SPEC_X64_MERGE_CODE_REV",
     SPEC X64_MODEL p ((a1,xs) INSERT (a2,ys) INSERT s) q``,
   Q.SPEC_TAC (`a2`,`a2`) \\ SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [SPEC_def,X64_MODEL_def]
-  \\ REVERSE (`CODE_POOL X64_INSTR
+  \\ REVERSE (sg `CODE_POOL X64_INSTR
        ((a1,xs) INSERT (a1 + n2w (LENGTH xs),ys) INSERT s) =
-       CODE_POOL X64_INSTR ((a1,xs ++ ys) INSERT s)` by ALL_TAC)
+       CODE_POOL X64_INSTR ((a1,xs ++ ys) INSERT s)`)
   \\ FULL_SIMP_TAC std_ss [CODE_POOL_INSERT_INSERT]);
 
 
@@ -1464,7 +1464,7 @@ val SPEC_X64_RUN_CODE_HEAP_AUX = prove(
   \\ ONCE_REWRITE_TAC [STAR_COMM]
   \\ FULL_SIMP_TAC std_ss [X64_SPEC_CODE]
   \\ FULL_SIMP_TAC std_ss [zCODE_SET_def]
-  \\ `{(a + n2w n,[EL n xs]) | n | n < LENGTH xs} = {(a,[f a]) | a IN df}` by ALL_TAC
+  \\ sg `{(a + n2w n,[EL n xs]) | n | n < LENGTH xs} = {(a,[f a]) | a IN df}`
   \\ FULL_SIMP_TAC std_ss []
   \\ POP_ASSUM MP_TAC \\ POP_ASSUM (K ALL_TAC)
   \\ Q.SPEC_TAC (`df`,`df`) \\ Q.SPEC_TAC (`a`,`a`)
@@ -1473,12 +1473,11 @@ val SPEC_X64_RUN_CODE_HEAP_AUX = prove(
   \\ FULL_SIMP_TAC std_ss [SEP_ARRAY_def,one_STAR]
   \\ SIMP_TAC std_ss [Once fun2set_def]
   \\ FULL_SIMP_TAC (srw_ss()) [] \\ REPEAT STRIP_TAC
-  \\ `fun2set (f,df) DELETE (a,f a) = fun2set (f,df DELETE a)` by ALL_TAC
-  THEN1 (FULL_SIMP_TAC (srw_ss()) [EXTENSION,fun2set_def] \\ METIS_TAC [PAIR_EQ])
+  \\ `fun2set (f,df) DELETE (a,f a) = fun2set (f,df DELETE a)` by (FULL_SIMP_TAC (srw_ss()) [EXTENSION,fun2set_def] \\ METIS_TAC [PAIR_EQ])
   \\ FULL_SIMP_TAC std_ss [] \\ RES_TAC
-  \\ REVERSE (`{(a + n2w n,[EL n (f a::xs)]) | n | n < SUC (LENGTH xs)} =
-      (a,[f a]) INSERT {(a + 0x1w + n2w n,[EL n xs]) | n | n < LENGTH xs}` by ALL_TAC)
-  THEN1 (FULL_SIMP_TAC (srw_ss()) [EXTENSION] \\ METIS_TAC [])
+  \\ `{(a + n2w n,[EL n (f a::xs)]) | n | n < SUC (LENGTH xs)} =
+      (a,[f a]) INSERT {(a + 0x1w + n2w n,[EL n xs]) | n | n < LENGTH xs}` suffices_by
+  (STRIP_TAC THEN FULL_SIMP_TAC (srw_ss()) [EXTENSION] \\ METIS_TAC [])
   \\ FULL_SIMP_TAC (srw_ss()) [EXTENSION]
   \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC THEN1
    (Cases_on `n` THEN1 FULL_SIMP_TAC (srw_ss()) []

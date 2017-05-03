@@ -103,11 +103,11 @@ val ppc2set''_11 = prove(
   \\ `?r' m' st'. y' = (r',m',st')` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC bool_ss [PAIR_EQ] THENL [
     `?a. ~(a IN r = a IN r')` by METIS_TAC [EXTENSION]
-    \\ `~((?x. pReg a x IN ppc2set'' y s) = (?x. pReg a x IN ppc2set'' y' s'))` by ALL_TAC,
+    \\ sg `~((?x. pReg a x IN ppc2set'' y s) = (?x. pReg a x IN ppc2set'' y' s'))`,
     `?a. ~(a IN m = a IN m')` by METIS_TAC [EXTENSION]
-    \\ `~((?x. pMem a x IN ppc2set'' y s) = (?x. pMem a x IN ppc2set'' y' s'))` by ALL_TAC,
+    \\ sg `~((?x. pMem a x IN ppc2set'' y s) = (?x. pMem a x IN ppc2set'' y' s'))`,
     `?a. ~(a IN st = a IN st')` by METIS_TAC [EXTENSION]
-    \\ `~((?x. pStatus a x IN ppc2set'' y s) = (?x. pStatus a x IN ppc2set'' y' s'))` by ALL_TAC]
+    \\ sg `~((?x. pStatus a x IN ppc2set'' y s) = (?x. pStatus a x IN ppc2set'' y' s'))`]
   \\ REPEAT (FULL_SIMP_TAC bool_ss [IN_ppc2set] \\ METIS_TAC [])
   \\ Q.PAT_X_ASSUM `ppc2set'' _ _  = ppc2set'' _ _` (K ALL_TAC)
   \\ FULL_SIMP_TAC bool_ss [IN_ppc2set] \\ METIS_TAC []);
@@ -385,8 +385,7 @@ val pBYTE_MEMORY_INSERT = store_thm("pBYTE_MEMORY_INSERT",
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET,DIFF_INSERT,DIFF_EMPTY]
   \\ REWRITE_TAC [DELETE_pBYTE_MEMORY_SET,APPLY_UPDATE_THM]
   \\ REWRITE_TAC [EXTENSION,IN_INSERT,IN_DELETE]
-  \\ REVERSE (`~(pMem a (SOME w) IN pBYTE_MEMORY_SET (df DELETE a) g)` by ALL_TAC)
-  THEN1 METIS_TAC []
+  \\ `~(pMem a (SOME w) IN pBYTE_MEMORY_SET (df DELETE a) g)` suffices_by METIS_TAC []
   \\ SIMP_TAC std_ss [pBYTE_MEMORY_SET_def,GSPECIFICATION,IN_DELETE,ppc_el_11]);
 
 val pBYTE_MEMORY_INTRO = store_thm("pBYTE_MEMORY_INTRO",
