@@ -981,8 +981,8 @@ val write_cpsr_E_IFM_thm = store_thm(
     "write_cpsr_E_IFM_thm",
     ``preserve_relation_mmu (write_cpsr <|proc := 0|> (cpsr with <|E := something; I := xI; F := xF; M := 16w|>)) (assert_mode 16w) (assert_mode 16w) empty_unt (fix_flags xI xF empty_sim)``,
     Q.ABBREV_TAC `cpsr2 = (cpsr with E := something)`
-      THEN `cpsr with <|E := something; M := 16w; I := xI; F := xF|> = (cpsr2) with <|M := 16w; I := xI; F := xF|>` by Q.UNABBREV_TAC `cpsr2`
-      THEN FULL_SIMP_TAC (srw_ss()) []
+      THEN `cpsr with <|E := something; M := 16w; I := xI; F := xF|> = (cpsr2) with <|M := 16w; I := xI; F := xF|>` by (Q.UNABBREV_TAC `cpsr2`
+      THEN FULL_SIMP_TAC (srw_ss()) [])
       THEN FULL_SIMP_TAC (srw_ss()) [write_cpsr_thm]);
 val _ = add_to_simplist  write_cpsr_E_IFM_thm;
 
@@ -990,8 +990,8 @@ val write_cpsr_IT_IFM_thm = store_thm(
     "write_cpsr_IT_IFM_thm",
     ``preserve_relation_mmu (write_cpsr <|proc := 0|> (cpsr with <|IT := something; I := xI; F := xF; M := 16w|>)) (assert_mode 16w) (assert_mode 16w) empty_unt (fix_flags xI xF empty_sim)``,
     Q.ABBREV_TAC `cpsr2 = (cpsr with IT := something)`
-      THEN `cpsr with <|IT := something; M := 16w; I := xI; F := xF|> = (cpsr2) with <|M := 16w; I := xI; F := xF|>` by Q.UNABBREV_TAC `cpsr2`
-      THEN FULL_SIMP_TAC (srw_ss()) []
+      THEN `cpsr with <|IT := something; M := 16w; I := xI; F := xF|> = (cpsr2) with <|M := 16w; I := xI; F := xF|>` by (Q.UNABBREV_TAC `cpsr2`
+                                         THEN FULL_SIMP_TAC (srw_ss()) [])
       THEN FULL_SIMP_TAC (srw_ss()) [write_cpsr_thm]);
 val _ = add_to_simplist  write_cpsr_IT_IFM_thm;
 
@@ -1000,8 +1000,8 @@ val write_cpsr_GE_IFM_thm = store_thm(
     "write_cpsr_GE_IFM_thm",
     ``preserve_relation_mmu (write_cpsr <|proc := 0|> (cpsr with <|GE := something; I := xI; F := xF; M := 16w|>)) (assert_mode 16w) (assert_mode 16w) empty_unt (fix_flags xI xF empty_sim)``,
     Q.ABBREV_TAC `cpsr2 = (cpsr with GE := something)`
-      THEN `cpsr with <|GE := something; M := 16w; I := xI; F := xF|> = (cpsr2) with <|M := 16w; I := xI; F := xF|>` by Q.UNABBREV_TAC `cpsr2`
-      THEN FULL_SIMP_TAC (srw_ss()) []
+      THEN `cpsr with <|GE := something; M := 16w; I := xI; F := xF|> = (cpsr2) with <|M := 16w; I := xI; F := xF|>`
+        by (Q.UNABBREV_TAC `cpsr2` THEN FULL_SIMP_TAC (srw_ss()) [])
       THEN FULL_SIMP_TAC (srw_ss()) [write_cpsr_thm]);
 val _ = add_to_simplist  write_cpsr_GE_IFM_thm;
 
@@ -1010,8 +1010,8 @@ val write_cpsr_Q_IFM_thm = store_thm(
     "write_cpsr_Q_IFM_thm",
     ``preserve_relation_mmu (write_cpsr <|proc := 0|> (cpsr with <|Q := something; I := xI; F := xF; M := 16w|>)) (assert_mode 16w) (assert_mode 16w) empty_unt (fix_flags xI xF empty_sim)``,
     Q.ABBREV_TAC `cpsr2 = (cpsr with Q := something)`
-      THEN `cpsr with <|Q := something; M := 16w; I := xI; F := xF|> = (cpsr2) with <|M := 16w; I := xI; F := xF|>` by Q.UNABBREV_TAC `cpsr2`
-      THEN FULL_SIMP_TAC (srw_ss()) []
+      THEN `cpsr with <|Q := something; M := 16w; I := xI; F := xF|> = (cpsr2) with <|M := 16w; I := xI; F := xF|>`
+        by (Q.UNABBREV_TAC `cpsr2` THEN FULL_SIMP_TAC (srw_ss()) [])
       THEN FULL_SIMP_TAC (srw_ss()) [write_cpsr_thm]);
 val _ = add_to_simplist  write_cpsr_Q_IFM_thm;
 
@@ -1021,8 +1021,8 @@ val write_cpsr_J_T_IFM_thm = store_thm(
     "write_cpsr_J_T_IFM_thm",
     ``preserve_relation_mmu (write_cpsr <|proc := 0|> (cpsr with <|J := j; I := xI; F := xF;  T := t; M := 16w|>)) (assert_mode 16w) (assert_mode 16w) empty_unt (fix_flags xI xF empty_sim)``,
     Q.ABBREV_TAC `cpsr2 = (cpsr with <|J := j; T := t|>)`
-      THEN `cpsr with <|J := j; T := t; M := 16w; I := xI; F := xF|> = (cpsr2) with <|M := 16w; I := xI; F := xF|>` by Q.UNABBREV_TAC `cpsr2`
-      THEN FULL_SIMP_TAC (srw_ss()) []
+      THEN `cpsr with <|J := j; T := t; M := 16w; I := xI; F := xF|> = (cpsr2) with <|M := 16w; I := xI; F := xF|>`
+              by (Q.UNABBREV_TAC `cpsr2` THEN FULL_SIMP_TAC (srw_ss()) [])
       THEN FULL_SIMP_TAC (srw_ss()) [write_cpsr_thm]);
 val _ = add_to_simplist  write_cpsr_J_T_IFM_thm;
 
@@ -1031,8 +1031,8 @@ val write_cpsr_flags_IFM_thm = store_thm(
     "write_cpsr_flags_IFM_thm",
     ``preserve_relation_mmu (write_cpsr <|proc := 0|> (cpsr with <|N := n; Z := z; C := c; V := v; I := xI; F := xF; M := 16w|>)) (assert_mode 16w) (assert_mode 16w) empty_unt (fix_flags xI xF empty_sim)``,
     Q.ABBREV_TAC `cpsr2 = (cpsr with <|N := n; Z := z; C := c; V := v|>)`
-      THEN `cpsr with <|N := n; Z := z; C := c; V := v; M := 16w; I := xI; F := xF|> = (cpsr2) with <|M := 16w; I := xI; F := xF|>` by Q.UNABBREV_TAC `cpsr2`
-      THEN FULL_SIMP_TAC (srw_ss()) []
+      THEN `cpsr with <|N := n; Z := z; C := c; V := v; M := 16w; I := xI; F := xF|> = (cpsr2) with <|M := 16w; I := xI; F := xF|>`
+             by (Q.UNABBREV_TAC `cpsr2` THEN FULL_SIMP_TAC (srw_ss()) [])
       THEN FULL_SIMP_TAC (srw_ss()) [write_cpsr_thm]);
 val _ = add_to_simplist  write_cpsr_flags_IFM_thm;
 
@@ -1041,8 +1041,8 @@ val write_cpsr_all_components_thm = store_thm(
     "write_cpsr_all_components_thm",
     ``preserve_relation_mmu (write_cpsr <|proc := 0|> (cpsr with <|N:=n; Z:=z; C:=c; V:=v; Q:=q; IT:=it; J:=j; GE:=ge; E:=e; T:=t; I := xI; F := xF; M := 16w|>)) (assert_mode 16w) (assert_mode 16w) empty_unt (fix_flags xI xF empty_sim)``,
     Q.ABBREV_TAC `cpsr2 = (cpsr with <|N:=n; Z:=z; C:=c; V:=v; Q:=q; IT:=it; J:=j; GE:=ge; E:=e; T:=t|>)`
-      THEN `cpsr with <|N:=n; Z:=z; C:=c; V:=v; Q:=q; IT:=it; J:=j; GE:=ge; E:=e; T:=t; I := xI; F := xF; M := 16w|> = (cpsr2) with <|M := 16w; I := xI; F := xF|>` by Q.UNABBREV_TAC `cpsr2`
-      THEN FULL_SIMP_TAC (srw_ss()) []
+      THEN `cpsr with <|N:=n; Z:=z; C:=c; V:=v; Q:=q; IT:=it; J:=j; GE:=ge; E:=e; T:=t; I := xI; F := xF; M := 16w|> = (cpsr2) with <|M := 16w; I := xI; F := xF|>`
+             by (Q.UNABBREV_TAC `cpsr2` THEN FULL_SIMP_TAC (srw_ss()) [])
       THEN FULL_SIMP_TAC (srw_ss()) [write_cpsr_thm]);
 val _ = add_to_simplist  write_cpsr_all_components_thm;
 
@@ -1959,7 +1959,8 @@ val cpsr_write_by_instr_simp_rel_lem = store_thm(
 val _ = g `preserve_relation_mmu
   (write_cpsr <|proc := 0|> (^cpsr_write_by_instr_components_complete)) (assert_mode 16w) (assert_mode 16w) empty_unt (fix_flags xI xF empty_sim)`;
 val _ = e (Q.ABBREV_TAC `cpsr2 = ^cpsr_write_by_instr_components_without_IFM`);
-val _ = e(`^cpsr_write_by_instr_components_complete = (cpsr2) with <|I:= xI; F:= xF; M := 16w|>` by Q.UNABBREV_TAC `cpsr2` THEN FULL_SIMP_TAC (srw_ss()) []);
+val _ = e(`^cpsr_write_by_instr_components_complete = (cpsr2) with <|I:= xI; F:= xF; M := 16w|>` by (Q.UNABBREV_TAC `cpsr2` THEN FULL_SIMP_TAC (srw_ss()) []) THEN
+          FULL_SIMP_TAC (srw_ss()) []);
 val _ = go_on 1;
 val write_cpsr_by_instruction_all_components_thm = save_thm(
    "write_cpsr_by_instruction_all_components_thm", top_thm());
