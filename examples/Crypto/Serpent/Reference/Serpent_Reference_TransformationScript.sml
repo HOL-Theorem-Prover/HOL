@@ -1035,11 +1035,11 @@ val invLT_LT_cancel = Q.store_thm(
  `w ' i = selParity w [i]` by RW_TAC std_ss [selParity_def,boolXor_def] THEN
  FULL_SIMP_TAC arith_ss [transform_inv2_w128] THEN
  `ALL_EL (\x. x < 128) (transCompose LTFun invLTFun i)`
-   by FULL_SIMP_TAC arith_ss [GSYM Res_def,transCompose_def] THENL [
-    `!i. i < 128 ==> ALL_EL (\x. x < 128) (Res i)`
-       by METIS_TAC [Res_fact] THEN
-    FULL_SIMP_TAC arith_ss [],
-    `ALL_EL (\x. x < 128) [i]` by RW_TAC list_ss [ALL_EL] THEN
-    RW_TAC arith_ss [LTFun_invLTFun_fact,selParity_eq2]]);
+   by (FULL_SIMP_TAC arith_ss [GSYM Res_def,transCompose_def] THEN
+       `!i. i < 128 ==> ALL_EL (\x. x < 128) (Res i)`
+         by METIS_TAC [Res_fact] THEN
+       FULL_SIMP_TAC arith_ss []) THEN
+ `ALL_EL (\x. x < 128) [i]` by RW_TAC list_ss [ALL_EL] THEN
+ RW_TAC arith_ss [LTFun_invLTFun_fact,selParity_eq2]);
 
 val _ = export_theory();
