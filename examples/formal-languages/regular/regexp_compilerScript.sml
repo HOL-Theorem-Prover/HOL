@@ -6,6 +6,8 @@ open optionTheory pairTheory relationTheory arithmeticTheory
      finite_mapTheory vec_mapTheory charsetTheory regexpTheory
 ;
 
+val _ = Parse.bring_to_front_overload "ALPHABET" {Thy="charset64",Name="ALPHABET"};
+val _ = Parse.bring_to_front_overload "alphabet_size" {Thy="charset64",Name="alphabet_size"};
 val _ = numLib.prefer_num();
 
 fun pat_elim q = Q.PAT_X_ASSUM q (K ALL_TAC);
