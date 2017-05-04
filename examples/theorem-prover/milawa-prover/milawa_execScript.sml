@@ -696,8 +696,7 @@ val MR_ev_VARS = prove(
   THEN1 (METIS_TAC []) THEN1 (METIS_TAC [])
   THEN1
    (POP_ASSUM MP_TAC \\ SIMP_TAC std_ss [MAP_MAP_o,o_DEF]
-    \\ `(\x. term_vars (SND x)) = (\(x':string,y). term_vars y)` by ALL_TAC
-    THEN1 (FULL_SIMP_TAC std_ss [FUN_EQ_THM] \\ Cases \\ FULL_SIMP_TAC std_ss [])
+    \\ `(\x. term_vars (SND x)) = (\(x':string,y). term_vars y)` by (FULL_SIMP_TAC std_ss [FUN_EQ_THM] \\ Cases \\ FULL_SIMP_TAC std_ss [])
     \\ FULL_SIMP_TAC std_ss [MEM_FILTER] \\ METIS_TAC [])
   \\ Cases_on `z` \\ FULL_SIMP_TAC std_ss []
   \\ METIS_TAC []) |> CONJUNCT2 |> SIMP_RULE std_ss [AND_IMP_INTRO];
@@ -1051,17 +1050,15 @@ val term2term_Let = prove(
   \\ Q.ABBREV_TAC `xs2 = (MAP Sym (free_vars (term2t x)))`
   \\ Q.ABBREV_TAC `xs3 = (ISORT (\x y. getSym x <= getSym y) (FILTER
                  (\x. ~MEM x xs1) (REMOVE_DUPLICATES xs2)))`
-  \\ `MAP ((\a. t2term a) o mVar o getSym) xs3 = MAP Var (MAP getSym xs3)` by ALL_TAC
-  THEN1 (SIMP_TAC std_ss [MAP_MAP_o,o_DEF,t2term_def])
+  \\ `MAP ((\a. t2term a) o mVar o getSym) xs3 = MAP Var (MAP getSym xs3)` by (SIMP_TAC std_ss [MAP_MAP_o,o_DEF,t2term_def])
   \\ FULL_SIMP_TAC std_ss []
-  \\ `MAP (getSym o Sym o FST o (\(x',y). (x',term2t y))) ts = MAP FST ts` by ALL_TAC
-  THEN1 (SIMP_TAC std_ss [MAP_MAP_o,o_DEF,t2term_def,getSym_def]
+  \\ `MAP (getSym o Sym o FST o (\(x',y). (x',term2t y))) ts = MAP FST ts` by (SIMP_TAC std_ss [MAP_MAP_o,o_DEF,t2term_def,getSym_def]
          \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
          \\ SIMP_TAC std_ss [] \\ CONV_TAC (DEPTH_CONV ETA_CONV)
          \\ SIMP_TAC std_ss [])
   \\ FULL_SIMP_TAC std_ss []
   \\ `MAP ((\a. t2term a) o SND o (\(x',y). (x',term2t y))) ts =
-      MAP term2term (MAP SND ts)` by ALL_TAC THEN1
+      MAP term2term (MAP SND ts)` by
         (SIMP_TAC std_ss [MAP_MAP_o,o_DEF,t2term_def,getSym_def]
          \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
          \\ SIMP_TAC std_ss [term2term_def])
@@ -1071,9 +1068,9 @@ val term2term_Let = prove(
   \\ Q.LIST_EXISTS_TAC [`sl2`,`ok1`]
   \\ `FUNION (VarBind (MAP getSym xs3 ++ MAP FST ts)
                (MAP (\v. a ' v) (MAP getSym xs3) ++ sl2)) a =
-      FUNION (VarBind (MAP FST ts) sl2) a` by ALL_TAC THEN1
+      FUNION (VarBind (MAP FST ts) sl2) a` by
    (FULL_SIMP_TAC std_ss [VarBind_def,REVERSE_APPEND]
-    \\ `LENGTH (REVERSE (MAP FST ts)) = LENGTH (REVERSE sl2)` by ALL_TAC THEN1
+    \\ `LENGTH (REVERSE (MAP FST ts)) = LENGTH (REVERSE sl2)` by
        (IMP_RES_TAC MR_evl_LENGTH
         \\ FULL_SIMP_TAC std_ss [LENGTH_REVERSE,LENGTH_MAP])
     \\ IMP_RES_TAC VarBindAux_APPEND
@@ -1165,8 +1162,7 @@ val MEM_free_vars_let2t = prove(
   SIMP_TAC std_ss [let2t_def,LET_DEF,free_vars_def,MAP_APPEND,FLAT_APPEND]
   \\ SIMP_TAC std_ss [MEM_APPEND]
   \\ FULL_SIMP_TAC std_ss [MAP_MAP_o,o_DEF]
-  \\ `(\x. free_vars (SND x)) = (\(x:string,y). free_vars y)` by ALL_TAC
-  THEN1 (FULL_SIMP_TAC std_ss [FUN_EQ_THM,pairTheory.FORALL_PROD])
+  \\ `(\x. free_vars (SND x)) = (\(x:string,y). free_vars y)` by (FULL_SIMP_TAC std_ss [FUN_EQ_THM,pairTheory.FORALL_PROD])
   \\ FULL_SIMP_TAC std_ss []
   \\ Cases_on `MEM "SPECIAL-VAR-FOR-OR" (FLAT (MAP (\(x,y). free_vars y) ts))`
   \\ FULL_SIMP_TAC std_ss []
@@ -1273,7 +1269,7 @@ val term2term_Or = prove(
   \\ Q.EXISTS_TAC `a |+ ("SPECIAL-VAR-FOR-OR",s)` \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [FDOM_FUPDATE,FAPPLY_FUPDATE_THM,IN_INSERT]
   \\ STRIP_TAC \\ Cases_on `y = "SPECIAL-VAR-FOR-OR"` \\ FULL_SIMP_TAC std_ss []
-  \\ STRIP_TAC \\ `F` by ALL_TAC \\ FULL_SIMP_TAC std_ss []
+  \\ STRIP_TAC \\ sg `F` \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [term_vars_def,MEM_free_vars_or2t]
   \\ FULL_SIMP_TAC std_ss [MEM_FLAT,MEM_MAP]
   \\ `term2t h::MAP (\a. term2t a) t = MAP (\a. term2t a) (h::t)` by FULL_SIMP_TAC std_ss [MAP]
@@ -1550,8 +1546,7 @@ val MilawaTrue_Sym = prove(
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 10)
   \\ POP_ASSUM (MP_TAC o SPEC_ALL)
   \\ Q.PAT_ABBREV_TAC `orrr = Or x1 x2` \\ STRIP_TAC
-  \\ `formula_ok ctxt (formula_sub [("X1",x);("X2",x);("Y1",y);("Y2",x)] orrr)` by ALL_TAC
-  THEN1 (Q.UNABBREV_TAC `orrr` \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
+  \\ `formula_ok ctxt (formula_sub [("X1",x);("X2",x);("Y1",y);("Y2",x)] orrr)` by (Q.UNABBREV_TAC `orrr` \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 7)
   \\ REPEAT (Q.PAT_X_ASSUM `!xx.bbb` (K ALL_TAC))
   \\ Q.UNABBREV_TAC `orrr` \\ POP_ASSUM MP_TAC
@@ -1570,8 +1565,7 @@ val MilawaTrue_TRANS = store_thm("MilawaTrue_TRANS",
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 10)
   \\ POP_ASSUM (MP_TAC o SPEC_ALL)
   \\ Q.PAT_ABBREV_TAC `orrr = Or x1 x2` \\ STRIP_TAC
-  \\ `formula_ok ctxt (formula_sub [("X1",y);("X2",y);("Y1",x);("Y2",z)] orrr)` by ALL_TAC
-  THEN1 (Q.UNABBREV_TAC `orrr` \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
+  \\ `formula_ok ctxt (formula_sub [("X1",y);("X2",y);("Y1",x);("Y2",z)] orrr)` by (Q.UNABBREV_TAC `orrr` \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 7)
   \\ REPEAT (Q.PAT_X_ASSUM `!xx.bbb` (K ALL_TAC))
   \\ Q.UNABBREV_TAC `orrr` \\ POP_ASSUM MP_TAC
@@ -1593,8 +1587,7 @@ val MilawaTrue_IF1 = prove(
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 10)
   \\ POP_ASSUM (MP_TAC o SPEC_ALL)
   \\ Q.PAT_ABBREV_TAC `orrr = Or x1 x2` \\ STRIP_TAC
-  \\ `formula_ok ctxt (formula_sub [("X",e1);("Y",e2);("Z",e3)] orrr)` by ALL_TAC
-  THEN1 (Q.UNABBREV_TAC `orrr` \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
+  \\ `formula_ok ctxt (formula_sub [("X",e1);("Y",e2);("Z",e3)] orrr)` by (Q.UNABBREV_TAC `orrr` \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 7)
   \\ REPEAT (Q.PAT_X_ASSUM `!xx.bbb` (K ALL_TAC))
   \\ Q.UNABBREV_TAC `orrr` \\ POP_ASSUM MP_TAC
@@ -1635,8 +1628,7 @@ val MilawaTrue_Not_Equal = prove(
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 10)
   \\ POP_ASSUM (MP_TAC o SPEC_ALL)
   \\ Q.PAT_ABBREV_TAC `orrr = Or x1 x2` \\ STRIP_TAC
-  \\ `formula_ok ctxt (formula_sub [("X1",x);("X2",x);("Y1",y);("Y2",z)] orrr)` by ALL_TAC
-  THEN1 (Q.UNABBREV_TAC `orrr` \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
+  \\ `formula_ok ctxt (formula_sub [("X1",x);("X2",x);("Y1",y);("Y2",z)] orrr)` by (Q.UNABBREV_TAC `orrr` \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 7)
   \\ REPEAT (Q.PAT_X_ASSUM `!xx.bbb` (K ALL_TAC))
   \\ Q.UNABBREV_TAC `orrr` \\ POP_ASSUM MP_TAC
@@ -1661,8 +1653,7 @@ val MilawaTrue_Not_Equal_COMM = prove(
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 10)
   \\ POP_ASSUM (MP_TAC o SPEC_ALL)
   \\ Q.PAT_ABBREV_TAC `orrr = Or x1 x2` \\ STRIP_TAC
-  \\ `formula_ok ctxt (formula_sub [("X1",x);("X2",x);("Y1",y);("Y2",x)] orrr)` by ALL_TAC
-  THEN1 (Q.UNABBREV_TAC `orrr` \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
+  \\ `formula_ok ctxt (formula_sub [("X1",x);("X2",x);("Y1",y);("Y2",x)] orrr)` by (Q.UNABBREV_TAC `orrr` \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 7)
   \\ REPEAT (Q.PAT_X_ASSUM `!xx.bbb` (K ALL_TAC))
   \\ Q.UNABBREV_TAC `orrr` \\ POP_ASSUM MP_TAC
@@ -1687,8 +1678,7 @@ val MilawaTrue_AX2 = prove(
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 10)
   \\ POP_ASSUM (MP_TAC o SPEC_ALL)
   \\ Q.PAT_ABBREV_TAC `orrr = Or xx1 xx2` \\ STRIP_TAC
-  \\ `formula_ok ctxt (formula_sub [("X1",x1);("X2",x2);("Y1",y1);("Y2",y2)] orrr)` by ALL_TAC
-  THEN1 (Q.UNABBREV_TAC `orrr` \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
+  \\ `formula_ok ctxt (formula_sub [("X1",x1);("X2",x2);("Y1",y1);("Y2",y2)] orrr)` by (Q.UNABBREV_TAC `orrr` \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 7)
   \\ REPEAT (Q.PAT_X_ASSUM `!xx.bbb` (K ALL_TAC))
   \\ Q.UNABBREV_TAC `orrr` \\ POP_ASSUM MP_TAC
@@ -1709,8 +1699,7 @@ val MilawaTrue_AX4 = prove(
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 10)
   \\ POP_ASSUM (MP_TAC o SPEC_ALL)
   \\ Q.PAT_ABBREV_TAC `orrr = Or x1 x2` \\ STRIP_TAC
-  \\ `formula_ok ctxt (formula_sub [("X",x);("Y",y)] orrr)` by ALL_TAC
-  THEN1 (Q.UNABBREV_TAC `orrr` \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
+  \\ `formula_ok ctxt (formula_sub [("X",x);("Y",y)] orrr)` by (Q.UNABBREV_TAC `orrr` \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 7)
   \\ REPEAT (Q.PAT_X_ASSUM `!xx.bbb` (K ALL_TAC))
   \\ Q.UNABBREV_TAC `orrr` \\ POP_ASSUM MP_TAC
@@ -1730,8 +1719,7 @@ val MilawaTrue_AX5 = prove(
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 10)
   \\ POP_ASSUM (MP_TAC o SPEC_ALL)
   \\ Q.PAT_ABBREV_TAC `orrr = Or x1 x2` \\ STRIP_TAC
-  \\ `formula_ok ctxt (formula_sub [("X",x);("Y",y)] orrr)` by ALL_TAC
-  THEN1 (Q.UNABBREV_TAC `orrr` \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
+  \\ `formula_ok ctxt (formula_sub [("X",x);("Y",y)] orrr)` by (Q.UNABBREV_TAC `orrr` \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 7)
   \\ REPEAT (Q.PAT_X_ASSUM `!xx.bbb` (K ALL_TAC))
   \\ Q.UNABBREV_TAC `orrr` \\ POP_ASSUM MP_TAC
@@ -1751,8 +1739,7 @@ val MilawaTrue_AX5 = prove(
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 10)
   \\ POP_ASSUM (MP_TAC o SPEC_ALL)
   \\ Q.PAT_ABBREV_TAC `orrr = Or x1 x2` \\ STRIP_TAC
-  \\ `formula_ok ctxt (formula_sub [("X",x);("Y",y)] orrr)` by ALL_TAC
-  THEN1 (Q.UNABBREV_TAC `orrr` \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
+  \\ `formula_ok ctxt (formula_sub [("X",x);("Y",y)] orrr)` by (Q.UNABBREV_TAC `orrr` \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 7)
   \\ REPEAT (Q.PAT_X_ASSUM `!xx.bbb` (K ALL_TAC))
   \\ Q.UNABBREV_TAC `orrr` \\ POP_ASSUM MP_TAC
@@ -1811,8 +1798,7 @@ val MilawaTrue_IF2 = prove(
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 10)
   \\ POP_ASSUM (MP_TAC o SPEC_ALL)
   \\ Q.PAT_ABBREV_TAC `orrr = Or x1 x2` \\ STRIP_TAC
-  \\ `formula_ok ctxt (formula_sub [("X",e1);("Y",e2);("Z",e3)] orrr)` by ALL_TAC
-  THEN1 (Q.UNABBREV_TAC `orrr` \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
+  \\ `formula_ok ctxt (formula_sub [("X",e1);("Y",e2);("Z",e3)] orrr)` by (Q.UNABBREV_TAC `orrr` \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
   \\ IMP_RES_TAC (MilawaTrue_rules |> CONJUNCTS |> el 7)
   \\ REPEAT (Q.PAT_X_ASSUM `!xx.bbb` (K ALL_TAC))
   \\ Q.UNABBREV_TAC `orrr` \\ POP_ASSUM MP_TAC
@@ -1971,8 +1957,8 @@ val MAP_FunVarBind_LEMMA = store_thm("MAP_FunVarBind_LEMMA",
        ZIP (params,MAP mConst args))``,
   Induct \\ Cases_on `args` \\ SIMP_TAC (srw_ss()) [LENGTH,ADD1,FunVarBind_def]
   \\ SIMP_TAC std_ss [APPLY_UPDATE_THM] \\ REPEAT STRIP_TAC
-  \\ `MAP (\v. (v,mConst (if h' = v then h else FunVarBind params t v)))
-      params = MAP (\v. (v,mConst (FunVarBind params t v))) params` by ALL_TAC
+  \\ sg `MAP (\v. (v,mConst (if h' = v then h else FunVarBind params t v)))
+      params = MAP (\v. (v,mConst (FunVarBind params t v))) params`
   \\ SIMP_TAC std_ss [MAP_EQ,EVERY_MEM] \\ FULL_SIMP_TAC std_ss [] \\ METIS_TAC []);
 
 val inst_term_EQ_term_sub = prove(
@@ -2327,7 +2313,7 @@ val M_ev_IMP_R_ev_lemma = prove(goal,
   THEN1
    (SIMP_TAC std_ss [f2func_def]
     \\ `~(fc = "DEFINE") /\ ~(fc = "PRINT") /\
-        ~(fc = "ERROR") /\ ~(fc = "FUNCALL")` by ALL_TAC THEN1
+        ~(fc = "ERROR") /\ ~(fc = "FUNCALL")` by
      (REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [EVERY_DEF,fake_ftbl_entries_def])
     \\ FULL_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [runtime_inv_def,FDOM_DOMSUB,DOMSUB_FAPPLY_THM,IN_DELETE]
@@ -2342,12 +2328,12 @@ val M_ev_IMP_R_ev_lemma = prove(goal,
   THEN1
    (SIMP_TAC std_ss [f2func_def]
     \\ `~(name = "DEFINE") /\ ~(name = "PRINT") /\
-        ~(name = "ERROR") /\ ~(name = "FUNCALL")` by ALL_TAC THEN1
+        ~(name = "ERROR") /\ ~(name = "FUNCALL")` by
      (REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [EVERY_DEF,fake_ftbl_entries_def])
     \\ FULL_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [EVERY_DEF]
     \\ `~(name = "NOT") /\ ~(name = "ORDP") /\
-        ~(name = "RANK") /\ ~(name = "ORD<")` by ALL_TAC THEN1 METIS_TAC []
+        ~(name = "RANK") /\ ~(name = "ORD<")` by METIS_TAC []
     \\ ONCE_REWRITE_TAC [MR_ev_cases] \\ ASM_SIMP_TAC (srw_ss()) []
     \\ FULL_SIMP_TAC (srw_ss()) []
     \\ Q.PAT_X_ASSUM `term2t r = exp` (ASSUME_TAC o GSYM)
