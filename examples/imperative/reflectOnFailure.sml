@@ -1,5 +1,6 @@
 (* Interactive mode: 
 load "tautLib";
+load "schneiderUtils";
 load "ptopTheory";
 load "imperativeLib";
 load "imperativeTheory";
@@ -18,8 +19,8 @@ val tprint = testutils.tprint;
 The examples created in this folder were produced interactively without the assistance of heavy-duty solvers such as HOLyHAMMER.
 Producing proofs interactively helps a novice learner to see HOL in action, but it is time-consuming.  On occasion, 
 the presence of quantifiers or non-boolean types can cause obvious transformations to be overlooked.  In these case, the
-use of the built-in provers is a great time-saver.  By restating these in terms of BOOLEAN data-types, HOLs database of theorems 
-can be summoned by form alone to direct the progress of the proof. The resuting theorems can be tailored to one's one purposes
+use of the built-in provers is a great time-saver.  By restating simple truths in terms of BOOLEAN data-types, HOLs database of theorems 
+can be summoned by form alone to direct the progress of the proof. The resulting theorems can be tailored to one's own purposes
 using INST_TYPE, SPECL and REWRITEs
 *)
 val simpleTruthForgettableName1 = TAUT_PROVE (``!(a:bool) (b:bool). (  (~ (a       ==> b) ) <=> (   a  /\  ~ b  ) )``);
@@ -31,6 +32,7 @@ val simpleTruthForgettableName3 = prove(
 		(if x = x' then (1 = z) else (0 = z'))))
 	``,(METIS_TAC [])
 );
+
 val simpleTruthForgettableName4 = prove(
 	``!(z:num) (z':num)(v:bool).( 
 		((~v) ==> ( (if v then z else z' ) <> z) )
@@ -39,15 +41,31 @@ val simpleTruthForgettableName4 = prove(
 	``,(METIS_TAC [])
 );
 
+val UNDISCH_HD_TAC= (POP_ASSUM MP_TAC);
+
+val simpleTruthForgettableName5 = prove(``(f :'a -> 'a -> bool) (s :'a) (s' :'a) ==> ?(s' :'a) (s :'a). f s s'``,
+	(DISCH_TAC THEN (EXISTS_TAC ``(s':'a)``) THEN (EXISTS_TAC ``s:'a``) THEN (REPEAT UNDISCH_HD_TAC) THEN REP_EVAL_TAC)
+);
+
+val simpleTruthForgettableName6 = prove(``(f :'a -> 'a -> bool) (s :'a) (s' :'a) ==> ?(S' :'a->'a) (s :'a). f s (S' s)``,
+	(DISCH_TAC THEN (EXISTS_TAC ``\(s:'a).(s':'a)``) THEN (EXISTS_TAC ``s:'a``) THEN (REPEAT UNDISCH_HD_TAC) THEN REP_EVAL_TAC)
+);
+
+val simpleTruthForgettableName7 = prove(``(f :'a -> 'a -> bool) (s :'a) (s' :'a) ==> !(f :'a -> 'a -> bool).
+              (?(s' :'a) (s :'a). f s s') <=>
+              ?(S' :'a -> 'a) (s :'a). f s (S' s)``,
+		(DISCH_TAC THEN GEN_TAC THEN METIS_TAC [simpleTruthForgettableName5,simpleTruthForgettableName6])
+);
+
 (* 
-Here the program is defined.  We introduce as many variables/contants of type ``:'a`` as we need. 
+Here the program is defined.  We introduce as many variables/constants of type ``:'a`` as we need. 
 The logic assumes that the free-variables named explicity here are distinct from one another.
 *)
 val statevars = [``x``,``y``,``t``];
 
 (* 
 Another axiom of the logic is that for any free statespace variables of type ```:'a`` above, there are at least as 
-many state-spaces are there are constants of type ``:b``. 
+many state-spaces as there are constants of type ``:b``. 
 
 The left-hand spec pairs these states up and returns true if either the input state does not apply, or the output
 state exhibits a correct response for the input.
@@ -56,8 +74,8 @@ val theSpec = ``(\ (s:'a->num) (s':'a->num). (((s' (x:'a)) = 1 ) /\ ((s' (y:'a))
 
 (* 
 A program is written using commands defined in ptopScript.sml.  
-Each of these commands is associated with a behavioral specification.
-A good implementation is one in which the behaviours result in the correct final response.
+Each of these commands is associated with a behavioural specification.
+A good implementation is one in which the behaviour results in the correct final response.
 *)
 val goodImplementation = ``(sc (assign y (\ (s:'a->num).1)) (assign x (\ (s:'a->num).(s y ))))``; 
 
@@ -120,11 +138,11 @@ in case proveSo of
 (* 
 If we made it here, then there is no more work to be done.
 But what if we didn't.  If the proof fails, we cannot be certain that we have disproved refinement.
-Can we provide an certainty to the user that the result is because their program has a bug, and not 
+Can we provide certainty to the user that the result is because their program has a bug, and not 
 that our test was flawed?
 *)
 
-val _ = tprint ("sometimes refinement is not proven: " );
+val _ = tprint ("sometimes refinement is not proven: DON'T PANIC... " );
 
 val disputedImplementation = ``(sc (assign y (\ (s:'a->num).(s x))) (assign x (\ (s:'a->num).1 )))``;
 
@@ -161,29 +179,55 @@ val altTac2 = (
 			(let val
 				P = mk_abs( hd(#1(Px)), mk_abs( hd (tl(#1(Px))), (#2(Px)) ) )
 			in 
-				(REWRITE_TAC	[BETA_RULE (SPEC P (INST_TYPE [alpha |-> ``:'a->num``,beta |-> ``:'a->num``] 
+				REWRITE_TAC	[BETA_RULE (SPEC P (INST_TYPE [alpha |-> ``:'a->num``,beta |-> ``:'a->num``] 
 								SWAP_EXISTS_THM))] 
 						goal
-				)
 		  	end)
 		end)
 	)
 );
 
+val parameterizeSPrime = (
+		EVAL_RULE ( SPECL [``t:'a``,``t:'a``,``\(s:'a) (s':'a).T``] (GEN_ALL simpleTruthForgettableName7) ) 
+);
+
+val parameterizeSPrimeTac = (
+	fn goal:((term list) * term) => (
+		(let val
+				Pxy =( strip_exists(#2(goal)) )
+	 	in 
+			(let val
+				P = mk_abs( hd(tl(#1(Pxy))), mk_abs( hd (#1(Pxy)), (#2(Pxy)) ) )
+			in 
+				REWRITE_TAC 	[ (EVAL_RULE (
+							SPEC P (INST_TYPE [ alpha |-> type_of((hd(#1(Pxy))))] parameterizeSPrime) 
+						  ) )
+						]
+						goal
+			end)
+		end)
+	)
+);
+
+
 (* 
 altTac1 and altTac2 deal with the fact that the counter proof is an existential conjunction instead of a universal implication.
 The idea is to next augment the prover to extract the REAL spec of the given program. 
-The proof would proceed by then instantiating s' by a function in terms of s so that the final spec matches the theorem
-provers assertions. 
+The proof would proceed by then instantiating s' by the suggested function in terms of s so that the final spec matches the theorem
+prover's assertions. 
 Finally, we need to provide a witness for s that proves the original specification is violated.
 *)
 
-fun altTac statevars = (
+val findRealSpecTac = (
 	altTac1
 THEN
 	altTac2
 THEN
-	(EXISTS_TAC ``\(v:'a). ( if (x:'a)=v then 1 else ( ( \(v':'a).0) (v) ) )``)
+	(parameterizeSPrimeTac)
+);
+
+fun applyWitnessTac statevars = (
+	(EXISTS_TAC ``\(s:'a->num) (v:'a). ( if (x:'a)=v then 1 else ( s (v) ) )``)
 THEN
 	(EXISTS_TAC ``\(v':'a).0``)
 THEN
@@ -202,7 +246,7 @@ THEN
 	
 
 (* 
-With the preliminarie out of the way, we can now proceed with the counter-example
+With the preliminaries out of the way, we can now proceed with the counter-example
 *)
 
 val _ = let val proveSo = (
@@ -226,16 +270,22 @@ in case proveSo of
 					(DECL_STATEVARS ``v:'a`` statevars) 
 					(LHSnotrefinedbyRHS theSpec  disputedImplementation )
 				),
-				((theTac statevars) THEN (altTac statevars))
+				(
+					(theTac statevars) 	
+				THEN 
+					(findRealSpecTac)
+				THEN 
+					(applyWitnessTac statevars)
+				)
 			);
 			NONE	
 		)
 		handle 
 			HOL_ERR _ => SOME "refinement not disproven"
 		in case proveOtherwise of
-      			NONE => (tprint  "refinement has been disproven" )
+      			NONE => (tprint  "...RELAX: refinement has been disproven" )
      			| SOME s => (
-					tprint s(* die s *)	
+					die s	
 				)
 		end
 	)
@@ -243,3 +293,6 @@ end;
 
 val _ = OK();
 
+(* Interactive Mode 
+  set_goal ((DECL_STATEVARS ``v:'a`` statevars), (LHSnotrefinedbyRHS theSpec  disputedImplementation ));
+*)
