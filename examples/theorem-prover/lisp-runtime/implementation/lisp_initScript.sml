@@ -17,7 +17,7 @@ infix \\
 val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
-fun SUBGOAL q = REVERSE (q by ALL_TAC)
+fun SUBGOAL q = REVERSE (sg q)
 
 val FORALL_EXISTS = METIS_PROVE [] ``(!x. P x ==> Q) = ((?x. P x) ==> Q)``
 val IMP_IMP = METIS_PROVE [] ``b /\ (c ==> d) ==> ((b ==> c) ==> d)``
@@ -92,7 +92,7 @@ val one_fun2set_IMP = prove(
   ``(one (a,x) * p) (fun2set (g,dg DIFF xs)) ==>
     p (fun2set (g,dg DIFF (a INSERT xs))) /\ a IN dg``,
   SIMP_TAC std_ss [one_fun2set,IN_DIFF]
-  \\ `dg DIFF (a INSERT xs) = dg DIFF xs DELETE a` by ALL_TAC
+  \\ sg `dg DIFF (a INSERT xs) = dg DIFF xs DELETE a`
   \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [EXTENSION,IN_DIFF,IN_INSERT,IN_DELETE]
   \\ METIS_TAC []);
@@ -290,7 +290,7 @@ val mc_full_init_thm = prove(
   SIMP_TAC std_ss [LET_DEF,lisp_init_def]
   \\ ONCE_REWRITE_TAC [ref_stack_space_above_ADD]
   \\ `sp + 0xE4w + 0x4w + n2w (4 * (sl + 6 + 1)) =
-      sp + 0x100w + 4w * n2w (sl + 1)` by ALL_TAC THEN1
+      sp + 0x100w + 4w * n2w (sl + 1)` by
     (FULL_SIMP_TAC std_ss [word_arith_lemma1,word_mul_n2w,LEFT_ADD_DISTRIB]
      \\ Q.SPEC_TAC (`4*sl`,`x`) \\ FULL_SIMP_TAC std_ss [AC ADD_COMM ADD_ASSOC])
   \\ FULL_SIMP_TAC std_ss [STAR_ASSOC] \\ REPEAT STRIP_TAC
@@ -376,7 +376,7 @@ val mc_full_init_thm = prove(
     \\ `f (sp + 0x58w) = w2w (c3')` by SEP_READ_TAC
     \\ ASM_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [WORD_ADD_ASSOC,word_arith_lemma4]
-    \\ `sp + 0xE4w + n2w (4 * (sl + 6 + 1)) = sp + n2w sl << 2 + 0x100w` by ALL_TAC THEN1
+    \\ `sp + 0xE4w + n2w (4 * (sl + 6 + 1)) = sp + n2w sl << 2 + 0x100w` by
      (SIMP_TAC std_ss [GSYM ADD_ASSOC,LEFT_ADD_DISTRIB,WORD_MUL_LSL]
       \\ SIMP_TAC bool_ss [GSYM word_add_n2w,GSYM word_mul_n2w,DECIDE ``256 = 0x1C + 0xE4:num``]
       \\ FULL_SIMP_TAC std_ss [AC WORD_ADD_COMM WORD_ADD_ASSOC])
@@ -410,4 +410,3 @@ val _ = save_thm("mc_full_init_thm",mc_full_init_thm);
 
 
 val _ = export_theory();
-
