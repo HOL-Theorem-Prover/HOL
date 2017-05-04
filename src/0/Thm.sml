@@ -26,6 +26,8 @@ infix 5 |-> ;
 
 val kernelid = "stdknl"
 
+fun to_kt th = th ;
+
 (*---------------------------------------------------------------------------
        Exception handling
  ---------------------------------------------------------------------------*)
@@ -1297,3 +1299,5 @@ fun save_dep thy (th as (THM(t,h,c))) =
 
 
 end (* Thm *)
+
+structure KT_Thm = Thm ;

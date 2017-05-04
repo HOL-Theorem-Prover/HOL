@@ -4,6 +4,8 @@ sig
   include FinalTerm where type hol_type = KernelTypes.hol_type
                           and type term = KernelTypes.term
 
+  val to_kt          : term -> term
+  val push_clos      : term -> term
   val termsig        : KernelTypes.holty KernelSig.symboltable
 
   val lazy_beta_conv : term -> term
