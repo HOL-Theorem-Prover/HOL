@@ -117,6 +117,73 @@ in
   thm2
 end
 
+fun mk_case_pred_elim_thm_tyinfo_gen or_flag tyinfo = let
+  val (body_tm, input_arg, case_args, P_tm) = let
+    val case_c = case_const_of tyinfo;
+    val (arg_tyL, base_ty) = strip_fun (type_of case_c);
+
+    val input_arg = mk_var("M", hd arg_tyL);
+    fun aux res n avoid ty = let
+      val b = variant avoid (mk_var("f"^Int.toString n, ty))
+    in
+      (b :: res, n+1, b::avoid)
+    end;
+    val (case_args', _, avoid) = foldl (fn (ty, (res, n, avoid)) =>
+      aux res n avoid ty) ([], 0, [input_arg]) (tl arg_tyL)
+    val case_args = List.rev case_args'
+    val P_tm = variant avoid (mk_var ("P", base_ty --> bool))
+
+    val t1 = list_mk_icomb (case_c, [input_arg] @ case_args)
+
+    val t2 = mk_comb(P_tm, t1)
+  in (t2, input_arg, case_args, P_tm) end
+
+  val expand_thm = let
+    val nchotomy_thm = nchotomy_of tyinfo;
+    val true_expand_thm = GSYM (EQT_INTRO (SPEC input_arg nchotomy_thm))
+    val thm_base = if or_flag then
+        GSYM (CONJUNCT1 (SPEC body_tm AND_CLAUSES))
+      else
+        GSYM (CONJUNCT1 (SPEC body_tm IMP_CLAUSES))
+    val thm1 = CONV_RULE (RHS_CONV (RATOR_CONV (RAND_CONV (K true_expand_thm)))) thm_base
+  in thm1 end
+
+  val simp_thm = CONV_RULE (RHS_CONV (SIMP_CONV (std_ss ++ boolSimps.CONJ_ss) [DISJ_IMP_THM, RIGHT_AND_OVER_OR, GSYM LEFT_EXISTS_AND_THM, GSYM LEFT_FORALL_IMP_THM, FORALL_AND_THM, case_def_of tyinfo])) expand_thm
+
+  val result = GENL (P_tm :: input_arg :: case_args) simp_thm
+in
+  result
+end
+
+val mk_case_pred_elim_thm_tyinfo_or =
+    mk_case_pred_elim_thm_tyinfo_gen true
+
+val mk_case_pred_elim_thm_tyinfo_and =
+    mk_case_pred_elim_thm_tyinfo_gen false
+
+
+fun mk_case_eq_elim_thm_tyinfo_gen or_flag tyinfo = let
+  val base_thm = mk_case_pred_elim_thm_tyinfo_gen or_flag tyinfo
+  val (args, _) = strip_forall (concl base_thm)
+  val base_ty = hd (fst (strip_fun (type_of (hd args))))
+
+  val (r_tm, P_tm) = let
+    val r_tm = variant args (mk_var ("r", base_ty))
+    val rr_tm = variant args (mk_var ("rr", base_ty))
+    val P_tm = mk_abs (rr_tm, mk_eq (rr_tm, r_tm))
+  in (r_tm, P_tm) end
+
+  val result = CONV_RULE (DEPTH_CONV BETA_CONV) (GEN r_tm (SPEC P_tm base_thm))
+in
+  result
+end
+
+val mk_case_eq_elim_thm_tyinfo_or =
+    mk_case_eq_elim_thm_tyinfo_gen true
+
+val mk_case_eq_elim_thm_tyinfo_and =
+    mk_case_eq_elim_thm_tyinfo_gen false
+
 
 fun mk_type_rewrites_tyinfo tyinfo = let
   val thm_def0 = case_def_of tyinfo;
@@ -412,6 +479,28 @@ fun expand_type_quants_typeinfos_ss til =
 fun expand_type_quants_ss tyL = expand_type_quants_typeinfos_ss (tyinfos_of_tys tyL)
 
 fun expand_type_quants_stateful_ss () = expand_type_quants_typeinfos_ss (TypeBase.elts ())
+
+
+
+fun elim_case_eq_or_typeinfos_ss til =
+  rewrites (Lib.mapfilter mk_case_eq_elim_thm_tyinfo_or til)
+
+fun elim_case_eq_or_ss tyL = elim_case_eq_or_typeinfos_ss
+  (tyinfos_of_tys tyL)
+
+fun elim_case_eq_or_stateful_ss tyL = elim_case_eq_or_typeinfos_ss
+  (TypeBase.elts ())
+
+
+fun elim_case_eq_and_typeinfos_ss til =
+  rewrites (Lib.mapfilter mk_case_eq_elim_thm_tyinfo_and til)
+
+fun elim_case_eq_and_ss tyL = elim_case_eq_and_typeinfos_ss
+  (tyinfos_of_tys tyL)
+
+fun elim_case_eq_and_stateful_ss tyL = elim_case_eq_and_typeinfos_ss
+  (TypeBase.elts ())
+
 
 
 (******************************************************************************)
