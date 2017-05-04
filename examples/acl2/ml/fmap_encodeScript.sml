@@ -96,7 +96,7 @@ val uniqs_eq = prove(``!a. FINITE a ==> (uniqs a = uniql (SET_TO_LIST a))``,
     METIS_TAC [SET_TO_LIST_IN_MEM, FINITE_INSERT]);
 
 val uniql_eq = prove(``!x. uniql x = uniqs (set x)``,
-    RW_TAC std_ss [uniql_def, uniqs_def, IN_LIST_TO_SET]);
+    RW_TAC std_ss [uniql_def, uniqs_def]);
 
 val uniql_filter = prove(``!x. uniql x ==> uniql (FILTER P x)``,
     METIS_TAC [MEM_FILTER, uniql_def]);
@@ -104,7 +104,7 @@ val uniql_filter = prove(``!x. uniql x ==> uniql (FILTER P x)``,
 val uniq_double = prove(``!a. uniql a ==> (uniql (SET_TO_LIST (set a)))``,
     Induct THEN
     RW_TAC std_ss [uniql_def, SET_TO_LIST_THM, LIST_TO_SET_THM, FINITE_EMPTY,
-            MEM_SET_TO_LIST, MEM, NOT_IN_EMPTY, FINITE_LIST_TO_SET, IN_INSERT, IN_LIST_TO_SET]);
+            MEM_SET_TO_LIST, MEM, NOT_IN_EMPTY, FINITE_LIST_TO_SET, IN_INSERT]);
 
 val uniql_empty = prove(``uniql []``, RW_TAC std_ss [MEM, uniql_def]);
 
@@ -124,7 +124,7 @@ val length_filter = prove(``!a P. LENGTH (FILTER P a) <= LENGTH a``,
 
 val seteq_mem = prove(``!l1 l2. (set l1 = set l2) ==> (?h. MEM h l1 /\ MEM h l2) \/ (l1 = []) /\ (l2 = [])``,
    Induct THEN RW_TAC std_ss [LENGTH, MEM, LIST_TO_SET_THM, LIST_TO_SET_EQ_EMPTY] THEN
-   METIS_TAC [IN_LIST_TO_SET, IN_INSERT]);
+   METIS_TAC [IN_INSERT]);
 
 val l2m_update = prove(``!l h. uniql l /\ MEM h l ==> (L2M l = L2M l |+ h)``,
     Induct THEN TRY Cases THEN TRY (Cases_on `h'`) THEN RW_TAC std_ss [MEM,L2M] THEN RW_TAC std_ss [FUPDATE_EQ] THEN
@@ -243,7 +243,7 @@ val MEM_M2L_PAIR = prove(``!x y. MEM y (M2L x) = (FST y) IN FDOM x /\ (SND y = x
 
 val SET_M2L_FUPDATE = store_thm("SET_M2L_FUPDATE",
     ``!x y. set (M2L (x |+ y)) = set (y :: M2L (x \\ FST y))``,
-    RW_TAC std_ss [SET_EQ_SUBSET, SUBSET_DEF, LIST_TO_SET_THM, IN_INSERT, IN_LIST_TO_SET, MEM_M2L_PAIR, MEM] THEN
+    RW_TAC std_ss [SET_EQ_SUBSET, SUBSET_DEF, LIST_TO_SET_THM, IN_INSERT, MEM_M2L_PAIR, MEM] THEN
     TRY (Cases_on `x'`) THEN TRY (Cases_on `y`) THEN Cases_on `q = q'` THEN
     FULL_SIMP_TAC std_ss [FDOM_FUPDATE, IN_INSERT, FAPPLY_FUPDATE, FDOM_DOMSUB, IN_DELETE, DOMSUB_FAPPLY, DOMSUB_FAPPLY_NEQ, NOT_EQ_FAPPLY]);
 
@@ -337,8 +337,8 @@ val M2L_L2M_SETEQ = store_thm("M2L_L2M_SETEQ",
     Induct THEN RW_TAC std_ss [L2M, M2L_def, fold_FEMPTY, SETEQ_def,MEM] THEN
     IMP_RES_TAC uniql_cons THEN
     Cases_on `x' = h` THEN Cases_on `MEM x' x` THEN Cases_on `x'` THEN
-    RW_TAC std_ss [GSYM M2L_def,GSYM IN_LIST_TO_SET, SET_M2L_FUPDATE] THEN
-    RW_TAC std_ss [IN_LIST_TO_SET, MEM, MEM_M2L, FDOM_DOMSUB, DOMSUB_FAPPLY_THM, IN_DELETE, FDOM_L2M, L2M_APPLY] THEN
+    RW_TAC std_ss [GSYM M2L_def, SET_M2L_FUPDATE] THEN
+    RW_TAC std_ss [MEM, MEM_M2L, FDOM_DOMSUB, DOMSUB_FAPPLY_THM, IN_DELETE, FDOM_L2M, L2M_APPLY] THEN
     METIS_TAC [lemma1,pairTheory.PAIR, L2M_APPLY, uniql_def]);
 
 (*****************************************************************************)
@@ -399,7 +399,7 @@ val FILTER_SET = store_thm("FILTER_SET",
 
 val PERM_S2L_L2S = store_thm("PERM_S2L_L2S",
     ``!l. ALL_DISTINCT l ==> PERM (SET_TO_LIST (set l)) l``,
-    REPEAT (RW_TAC std_ss [PERM_DEF, FILTER_SET, FINITE_LIST_TO_SET, RFILTER_EQ_NIL, IN_LIST_TO_SET, ALL_DISTINCT_THM]));
+    REPEAT (RW_TAC std_ss [PERM_DEF, FILTER_SET, FINITE_LIST_TO_SET, RFILTER_EQ_NIL, ALL_DISTINCT_THM]));
 
 val NO_MEM_EMPTY = prove(``!l. (!x. ¬(MEM x l)) = (l = [])``,
     Induct THEN RW_TAC std_ss [MEM] THEN METIS_TAC []);
@@ -490,7 +490,7 @@ val SORTSET_SORT = prove(``!l R. (antisymmetric R \/ irreflexive R) /\ transitiv
     METIS_TAC [PERM_S2L_L2S, PERM_DISTINCT, PERM_TRANS, PERM_SYM]);
 
 val PERM_S2L_L2S_EQ = prove(``!l1 l2. SETEQ l1 l2 ==> PERM (SET_TO_LIST (set l1)) (SET_TO_LIST (set l2))``,
-    RW_TAC std_ss [PERM_DEF, FILTER_SET, FINITE_LIST_TO_SET,IN_LIST_TO_SET,SETEQ_def]);
+    RW_TAC std_ss [PERM_DEF, FILTER_SET, FINITE_LIST_TO_SET, SETEQ_def]);
 
 val PERM_SETEQ = store_thm("PERM_SETEQ",
     ``!l1 l2. PERM l1 l2 ==> SETEQ l1 l2``,
@@ -500,7 +500,7 @@ val PERM_SETEQ = store_thm("PERM_SETEQ",
 
 val SETEQ_THM = store_thm("SETEQ_THM",
     ``!l1 l2. SETEQ l1 l2 = (set l1 = set l2)``,
-    RW_TAC std_ss [pred_setTheory.EXTENSION, SETEQ_def, IN_LIST_TO_SET]);
+    RW_TAC std_ss [pred_setTheory.EXTENSION, SETEQ_def]);
 
 val SORTSET_EQ = prove(``!l1 l2 R. SORTS sort R /\ (irreflexive R \/ antisymmetric R) /\ transitive R /\ SETEQ l1 l2 ==> (SORTSET sort R l1 = SORTSET sort R l2)``,
     RW_TAC std_ss [SORTSET_def, SORTS_DEF] THEN
@@ -1451,7 +1451,7 @@ val INSERT_SET = store_thm("INSERT_SET",
               (set (insert R (x,y) l) = (x,y) INSERT (set l DIFF {z | FST z = x}))``,
     Induct THEN REPEAT (Cases ORELSE GEN_TAC) THEN RW_TAC std_ss [insert_def, LIST_TO_SET_THM, EMPTY_DIFF, INSERT_DIFF, ALL_DISTINCT, MAP] THEN
     IMP_RES_TAC SORTED_EQ THEN
-    RW_TAC (std_ss ++ pred_setLib.PRED_SET_ss) [INSERT_DEF, DIFF_DEF, SET_EQ_SUBSET,SUBSET_DEF, LIST_TO_SET_THM, insert_def, IN_LIST_TO_SET, MEM_MAP] THEN
+    RW_TAC (std_ss ++ pred_setLib.PRED_SET_ss) [INSERT_DEF, DIFF_DEF, SET_EQ_SUBSET,SUBSET_DEF, LIST_TO_SET_THM, insert_def, MEM_MAP] THEN
     IMP_RES_TAC MEM_INSERT THEN
     FULL_SIMP_TAC (std_ss ++ pred_setLib.PRED_SET_ss) [MEM_MAP, INSERT_INSERTS] THEN
     TRY (Cases_on `x'`) THEN FULL_SIMP_TAC std_ss [] THENL [
@@ -1466,7 +1466,7 @@ val M2L_RWR = prove(``!x y. MEM x (M2L y) = FST x IN FDOM y /\ (SND x = y ' (FST
 
 val SET_M2L_DOMSUB = store_thm("SET_M2L_DOMSUB",
     ``!m x. set (M2L (m \\ x)) = set (M2L m) DIFF {z | FST z = x}``,
-    RW_TAC std_ss [SET_EQ_SUBSET, SUBSET_DEF, IN_DIFF, IN_LIST_TO_SET, M2L_RWR, FDOM_DOMSUB, IN_DELETE, DOMSUB_FAPPLY_THM] THEN
+    RW_TAC std_ss [SET_EQ_SUBSET, SUBSET_DEF, IN_DIFF, M2L_RWR, FDOM_DOMSUB, IN_DELETE, DOMSUB_FAPPLY_THM] THEN
     FULL_SIMP_TAC (std_ss ++ PRED_SET_ss) []);
 
 
