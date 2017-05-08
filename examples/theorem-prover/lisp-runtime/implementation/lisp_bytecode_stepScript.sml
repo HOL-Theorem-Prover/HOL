@@ -40,8 +40,8 @@ val zLISP_BYTECODE_def = Define `
 
 val SPEC_PULL_EXISTS = prove(
   ``(?x. SPEC m p c (q x)) ==> SPEC m p c (SEP_EXISTS x. q x)``,
-  REPEAT STRIP_TAC \\ REVERSE (`SEP_IMP (q x) ((SEP_EXISTS x. q x))` by ALL_TAC)
-  THEN1 (IMP_RES_TAC SPEC_WEAKEN)
+  REPEAT STRIP_TAC \\ `SEP_IMP (q x) ((SEP_EXISTS x. q x))` suffices_by
+  (STRIP_TAC THEN IMP_RES_TAC SPEC_WEAKEN)
   \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS_THM] \\ METIS_TAC []);
 
 val SPEC_REMOVE_POST = prove(
@@ -84,8 +84,7 @@ val code_abbrevs_def = Define `
 
 val SPEC_CODE_ABBREV = prove(
   ``SPEC m p (c INSERT d) q ==> !d2. d SUBSET d2 ==> SPEC m p (c INSERT d2) q``,
-  REPEAT STRIP_TAC \\ REVERSE (`(c INSERT d2) = (c INSERT d) UNION d2` by ALL_TAC)
-  THEN1 METIS_TAC [SPEC_ADD_CODE]
+  REPEAT STRIP_TAC \\ `(c INSERT d2) = (c INSERT d) UNION d2` suffices_by METIS_TAC [SPEC_ADD_CODE]
   \\ FULL_SIMP_TAC std_ss [EXTENSION,IN_INSERT,IN_UNION,SUBSET_DEF] \\ METIS_TAC []);
 
 val (_,_,sts,_) = prog_x64Lib.x64_tools
@@ -279,7 +278,7 @@ val ADDRESS_LEMMA = prove(
       INST_TYPE [``:'a``|->``:32``,``:'b``|->``:64``] sw2sw_def
       |> SIMP_RULE (std_ss++SIZES_ss) [] |> GSYM]
   \\ `p1 + k - p2 < 2**31 /\ (p1 + k - p2) < 4294967296` by (SIMP_TAC std_ss [] \\ DECIDE_TAC)
-  \\ `n2w (p1 + k - p2) <+ 0x80000000w:word32` by ALL_TAC THEN1
+  \\ `n2w (p1 + k - p2) <+ 0x80000000w:word32` by
          (FULL_SIMP_TAC (std_ss++SIZES_ss) [word_lo_n2w])
   \\ IMP_RES_TAC sw2sw_2compl \\ ASM_SIMP_TAC std_ss []
   \\ IMP_RES_TAC (Q.SPEC `64` IGNORE_SIGN_EXTEND)
@@ -516,7 +515,7 @@ val code_mem_BOUND = prove(
   \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `BC_CODE ((r =+ SOME h) q,r + bc_length h)`)
   \\ FULL_SIMP_TAC std_ss [code_ptr_def,ADD_ASSOC] \\ REPEAT STRIP_TAC
   \\ RES_TAC \\ SIMP_TAC std_ss [code_mem_def,APPLY_UPDATE_THM]
-  \\ `0 < bc_length h` by ALL_TAC THEN1
+  \\ `0 < bc_length h` by
        (Cases_on `h` \\ EVAL_TAC \\ Cases_on `l` \\ EVAL_TAC)
   \\ `~(r = n)` by DECIDE_TAC \\ FULL_SIMP_TAC std_ss []);
 
@@ -524,7 +523,7 @@ val code_length_LESS = prove(
   ``!bs. (code_mem (WRITE_CODE (BC_CODE ((\x. NONE),0)) bs) p = SOME x) ==>
          p < code_length bs``,
   REPEAT STRIP_TAC \\ CCONTR_TAC \\ Q.PAT_X_ASSUM `xx = yy` MP_TAC
-  \\ `code_ptr (BC_CODE ((\x. NONE),0)) + code_length bs <= p` by ALL_TAC THEN1
+  \\ `code_ptr (BC_CODE ((\x. NONE),0)) + code_length bs <= p` by
         (FULL_SIMP_TAC std_ss [code_ptr_def] \\ DECIDE_TAC)
   \\ IMP_RES_TAC code_mem_BOUND \\ ASM_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [code_mem_def]);
@@ -983,7 +982,7 @@ val X64_LISP_iSTEP_CONST_SYM_PART2 = prove(
   \\ `?k. (LIST_FIND 0 s (INIT_SYMBOLS ++ sym) = SOME k) /\ k < 536870912 /\
       ?dx. (one_byte_list (p + 0x17w)
               ([0x41w; 0xB8w] ++ IMMEDIATE32 (n2w (8 * THE (LIST_FIND 0 s ((INIT_SYMBOLS ++ sym))) + 3))))
-          (fun2set (d,dd DIFF dx))` by ALL_TAC THEN1
+          (fun2set (d,dd DIFF dx))` by
    (IMP_RES_TAC code_heap_IMP \\ POP_ASSUM (K ALL_TAC)
     \\ FULL_SIMP_TAC std_ss [bc_symbols_ok_def]
     \\ `?k. (LIST_FIND 0 s (INIT_SYMBOLS ++ sym) = SOME k) /\
@@ -1006,7 +1005,7 @@ val X64_LISP_iSTEP_CONST_SYM_PART2 = prove(
   \\ HO_MATCH_MP_TAC SPEC_PULL_EXISTS \\ Q.EXISTS_TAC `w0n`
   \\ REPEAT (HO_MATCH_MP_TAC SPEC_PULL_EXISTS \\ EX_TAC)
   \\ Q.PAT_ABBREV_TAC `ii = lisp_inv zzz zzzz zzzzzz`
-  \\ `ii` by ALL_TAC THEN1
+  \\ `ii` by
    (Q.UNABBREV_TAC `ii` \\ FULL_SIMP_TAC std_ss [lisp_inv_def]
     \\ Q.EXISTS_TAC `H_DATA (INR (n2w (THE (LIST_FIND 0 s (INIT_SYMBOLS ++ sym)))))`
     \\ REPEAT EX_TAC \\ FULL_SIMP_TAC std_ss []
@@ -1110,7 +1109,7 @@ val X64_LISP_iSTEP = store_thm("X64_LISP_iSTEP",
          lisp_inv_def,IS_TRUE_def,SEP_CLAUSES,SPEC_REFL,SPEC_FALSE_PRE])
   \\ FULL_SIMP_TAC std_ss []
   \\ POP_ASSUM MP_TAC \\ MATCH_MP_TAC zLISP_BYTECODE_MOVE_CODE \\ REPEAT STRIP_TAC
-  \\ `~(bc1.code p1 = NONE)` by ALL_TAC THEN1 (FULL_SIMP_TAC std_ss [])
+  \\ `~(bc1.code p1 = NONE)` by (FULL_SIMP_TAC std_ss [])
   \\ POP_ASSUM MP_TAC \\ MATCH_MP_TAC zLISP_BYTECODE_PC_BOUND
   \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ `bc_ref (p1,syms) xx = bc_ref (p1,syms) (THE (bc1.code p1))` by

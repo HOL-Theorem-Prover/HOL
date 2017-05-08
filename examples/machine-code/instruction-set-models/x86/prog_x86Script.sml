@@ -393,8 +393,8 @@ val IMP_X86_SPEC_LEMMA = prove(
       SPEC X86_MODEL p {} q``,
   REWRITE_TAC [X86_SPEC_SEMANTICS] \\ REPEAT STRIP_TAC
   \\ `p (x86_2set' y s)` by METIS_TAC []
-  \\ `X86_NEXT_REL (seq 0) (seq (SUC 0))` by ALL_TAC THEN1
-   (`?x. X86_NEXT_REL (seq 0) x` by ALL_TAC THEN1
+  \\ `X86_NEXT_REL (seq 0) (seq (SUC 0))` by
+   (`?x. X86_NEXT_REL (seq 0) x` by
       (RES_TAC \\ Q.EXISTS_TAC `v'`
        \\ ASM_SIMP_TAC std_ss [X86_NEXT_REL_def]
        \\ Q.EXISTS_TAC `seq 0` \\ ASM_SIMP_TAC std_ss []
@@ -594,7 +594,7 @@ val xBYTE_MEMORY_ANY_C_INSERT = prove(
   \\ IMP_RES_TAC (GEN_ALL IN_xBYTE_MEMORY_ANY_SET)
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET,DIFF_INSERT,DIFF_EMPTY]
   \\ REWRITE_TAC [DELETE_xBYTE_MEMORY_ANY_SET,APPLY_UPDATE_THM]
-  \\ `~(xMem a (SOME (w,xDATA_PERM e)) b IN xBYTE_MEMORY_ANY_SET (df DELETE a) g e c)` by ALL_TAC
+  \\ sg `~(xMem a (SOME (w,xDATA_PERM e)) b IN xBYTE_MEMORY_ANY_SET (df DELETE a) g e c)`
   \\ SIMP_TAC std_ss [xBYTE_MEMORY_ANY_SET_def,GSPECIFICATION,IN_DELETE,x86_el_11]
   \\ FULL_SIMP_TAC std_ss [xBYTE_MEMORY_ANY_SET_def,EXTENSION,GSPECIFICATION,IN_DELETE,IN_INSERT]
   \\ METIS_TAC []);
@@ -659,7 +659,7 @@ val xM_LEMMA = prove(
   ONCE_REWRITE_TAC [EQ_SYM_EQ]
   \\ SIMP_TAC std_ss [xM_def,xMEMORY_def,xBYTE_MEMORY_def]
   \\ REPEAT STRIP_TAC
-  \\ `xMEMORY_DOMAIN {a} = {a;a+1w;a+2w;a+3w}` by ALL_TAC THEN1
+  \\ `xMEMORY_DOMAIN {a} = {a;a+1w;a+2w;a+3w}` by
    (SIMP_TAC std_ss [xMEMORY_DOMAIN_def,IN_INSERT,NOT_IN_EMPTY]
     \\ `{{b; b + 1w; b + 2w; b + 3w} | ALIGNED b /\ (b = a)} =
         {{a; a + 1w; a + 2w; a + 3w}}` by
@@ -674,7 +674,7 @@ val xM_LEMMA = prove(
   \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [ALIGNED_INTRO]
   \\ IMP_RES_TAC (RW [ALIGNED_INTRO] EXISTS_ADDR30)
   \\ FULL_SIMP_TAC std_ss [ADDR30_ADDR32]
-  \\ `!f. xBYTE_MEMORY_ANY F {} (xMEMORY_FUNC f) = emp` by ALL_TAC
+  \\ sg `!f. xBYTE_MEMORY_ANY F {} (xMEMORY_FUNC f) = emp`
   \\ ASM_SIMP_TAC std_ss [SEP_CLAUSES,WORD_ADD_0]
   \\ SIMP_TAC std_ss [xBYTE_MEMORY_ANY_def,SEP_EXISTS,SEP_EQ_def]
   \\ SIMP_TAC std_ss [xBYTE_MEMORY_ANY_SET_def,NOT_IN_EMPTY,EXTENSION,GSPECIFICATION,emp_def]);
@@ -723,7 +723,7 @@ val xMEMORY_INSERT = prove(
   \\ `~(a IN xMEMORY_DOMAIN (df DELETE a)) /\
       ~(a+1w IN xMEMORY_DOMAIN (df DELETE a)) /\
       ~(a+2w IN xMEMORY_DOMAIN (df DELETE a)) /\
-      ~(a+3w IN xMEMORY_DOMAIN (df DELETE a))` by ALL_TAC THEN1
+      ~(a+3w IN xMEMORY_DOMAIN (df DELETE a))` by
    (SIMP_TAC std_ss [xMEMORY_DOMAIN_def,GSPECIFICATION,IN_BIGUNION,
         IN_DELETE,EXTENSION,IN_INSERT,NOT_IN_EMPTY]
     \\ IMP_RES_TAC NOT_ALIGNED
@@ -855,9 +855,9 @@ val WORD_FINITE = store_thm("WORD_FINITE",
    (SIMP_TAC std_ss [SUBSET_DEF,IN_UNIV,GSPECIFICATION]
     \\ Cases_word \\ Q.EXISTS_TAC `n` \\ ASM_SIMP_TAC std_ss [])
   \\ Q.SPEC_TAC (`dimword (:'a)`,`k`)
-  \\ Induct \\ `{n2w n | n < 0} = {}` by ALL_TAC
+  \\ Induct \\ sg `{n2w n | n < 0} = {}`
   \\ ASM_SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,NOT_IN_EMPTY,FINITE_EMPTY]
-  \\ `{n2w n | n < SUC k} = n2w k INSERT {n2w n | n < k}` by ALL_TAC
+  \\ sg `{n2w n | n < SUC k} = n2w k INSERT {n2w n | n < k}`
   \\ ASM_SIMP_TAC std_ss [FINITE_INSERT]
   \\ ASM_SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,NOT_IN_EMPTY,IN_INSERT]
   \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
@@ -905,8 +905,8 @@ val xCODE_SET_INSERT = store_thm("xCODE_SET_INSERT",
   \\ ASM_SIMP_TAC std_ss [DIFF_INSERT,DIFF_EMPTY]
   \\ Q.ABBREV_TAC `a1 = xMem e (SOME (f e,{Xread; Xwrite; Xexecute})) T`
   \\ Q.ABBREV_TAC `a2 = BIGUNION (IMAGE X86_INSTR {(a,[f a],T) | a IN df})`
-  \\ REVERSE (`~(a1 IN a2)` by ALL_TAC)
-  THEN1 (SIMP_TAC std_ss [EXTENSION,IN_INSERT,IN_DELETE] \\ METIS_TAC [])
+  \\ `~(a1 IN a2)` suffices_by
+  (STRIP_TAC THEN SIMP_TAC std_ss [EXTENSION,IN_INSERT,IN_DELETE] \\ METIS_TAC [])
   \\ Q.UNABBREV_TAC `a1` \\ Q.UNABBREV_TAC `a2`
   \\ ASM_SIMP_TAC std_ss [IN_IMAGE,IN_BIGUNION]
   \\ SIMP_TAC std_ss [METIS_PROVE [] ``e \/ b = ~e ==> b``,GSPECIFICATION]
@@ -969,8 +969,8 @@ val SPLIT_CODE_SEQ = prove(
   ``SPEC X86_MODEL p ((a,x::xs,T) INSERT s) q =
     SPEC X86_MODEL p ((a+1w,xs,T) INSERT (a,[x],T) INSERT s) q``,
   SIMP_TAC std_ss [progTheory.SPEC_def,X86_MODEL_def]
-  \\ `CODE_POOL X86_INSTR ((a + 0x1w,xs,T) INSERT (a,[x],T) INSERT s) =
-      CODE_POOL X86_INSTR ((a,x::xs,T) INSERT s)` by ALL_TAC
+  \\ sg `CODE_POOL X86_INSTR ((a + 0x1w,xs,T) INSERT (a,[x],T) INSERT s) =
+      CODE_POOL X86_INSTR ((a,x::xs,T) INSERT s)`
   \\ ASM_SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [progTheory.CODE_POOL_def]
   \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> ((\s. s = x) = (\s. s = y))``)
@@ -986,8 +986,8 @@ val X86_SPEC_EXLPODE_CODE_LEMMA = prove(
         SPEC X86_MODEL p ({ (a + n2w n, [EL n xs], T) | n| n < LENGTH xs } UNION s) q``,
   Q.SPEC_TAC (`a`,`a`) \\ Q.SPEC_TAC (`xs`,`xs`) \\ REVERSE Induct THEN1
    (ASM_SIMP_TAC std_ss [SPLIT_CODE_SEQ] \\ REPEAT STRIP_TAC
-    \\ `{(a + n2w n,[EL n (h::xs)],T) | n | n < LENGTH (h::xs)} =
-        {(a + 0x1w + n2w n,[EL n xs],T) | n | n < LENGTH xs} UNION {(a,[h],T)}` by ALL_TAC
+    \\ sg `{(a + n2w n,[EL n (h::xs)],T) | n | n < LENGTH (h::xs)} =
+        {(a + 0x1w + n2w n,[EL n xs],T) | n | n < LENGTH xs} UNION {(a,[h],T)}`
     \\ ASM_SIMP_TAC std_ss [INSERT_UNION_EQ,UNION_EMPTY,GSYM UNION_ASSOC]
     \\ SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,IN_UNION,IN_INSERT,NOT_IN_EMPTY]
     \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC THENL [
@@ -1003,8 +1003,8 @@ val X86_SPEC_EXLPODE_CODE_LEMMA = prove(
     ASM_SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,NOT_IN_EMPTY,LENGTH]
   \\ ASM_SIMP_TAC std_ss [UNION_EMPTY]
   \\ SIMP_TAC std_ss [progTheory.SPEC_def,X86_MODEL_def]
-  \\ `CODE_POOL X86_INSTR ((a,[],T) INSERT s) =
-      CODE_POOL X86_INSTR (s)` by ALL_TAC
+  \\ sg `CODE_POOL X86_INSTR ((a,[],T) INSERT s) =
+      CODE_POOL X86_INSTR (s)`
   \\ ASM_SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [progTheory.CODE_POOL_def]
   \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> ((\s. s = x) = (\s. s = y))``)

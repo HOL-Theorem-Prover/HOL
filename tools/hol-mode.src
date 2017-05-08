@@ -1297,9 +1297,10 @@ second is to show the new term.
 
 (Loads the BasicProvers module if not already loaded.)"
   (interactive "P")
-  (let ((tactic (if p "suffices_by" "by")))
+  (let ((tactic (if p "Tactical.Q_TAC Tactic.SUFF_TAC"
+                      "(fn q => BasicProvers.byA(q,ALL_TAC))")))
     (send-string-to-hol
-     (format "proofManagerLib.e (BasicProvers.%s(`%s`,ALL_TAC))"
+     (format "proofManagerLib.e (%s `%s`)"
              tactic
              (hol-term-at-point)))))
 

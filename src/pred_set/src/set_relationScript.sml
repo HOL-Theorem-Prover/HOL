@@ -453,7 +453,7 @@ val acyclic_rrestrict = Q.store_thm ("acyclic_rrestrict",
 `!r s. acyclic r ==> acyclic (rrestrict r s)`,
 SRW_TAC [] [rrestrict_def] THEN
 `r = {(x,y) | (x,y) IN r /\ x IN s /\ y IN s} UNION r`
-        by SRW_TAC [] [UNION_DEF, rextension] THEN
+        by SRW_TAC [] [UNION_DEF, rextension, EQ_IMP_THM] THEN
 METIS_TAC [acyclic_union]);
 
 val acyclic_irreflexive = Q.store_thm ("acyclic_irreflexive",
@@ -838,7 +838,7 @@ val acyclic_WF = Q.store_thm ("acyclic_WF",
 `FINITE s /\ acyclic r /\ domain r SUBSET s /\ range r SUBSET s ==>
  WF (reln_to_rel r)`,
 REPEAT STRIP_TAC THEN
-`(REL_RESTRICT (reln_to_rel r) s) = (reln_to_rel r)` by ALL_TAC THEN1 (
+`(REL_RESTRICT (reln_to_rel r) s) = (reln_to_rel r)` by (
   FULL_SIMP_TAC std_ss [SUBSET_DEF, in_domain, in_range,
                         GSYM LEFT_FORALL_IMP_THM, FUN_EQ_THM,
                         REL_RESTRICT_DEF, reln_to_rel_app] THEN
@@ -1737,9 +1737,7 @@ SRW_TAC [] [] THEN
      SRW_TAC [] [nth_min_def, get_min_def] THEN
      `{x' | x' IN s' /\ (x', x) IN r'} = {}` by METIS_TAC [CARD_EQ_0] THEN
      FULL_SIMP_TAC (srw_ss()) [] THEN
-     `mins = {x}` by ALL_TAC THENL
-     [ALL_TAC,
-      SRW_TAC [] [SING_DEF]] THEN
+     `mins = {x}` suffices_by SRW_TAC [] [] THEN
      FULL_SIMP_TAC (srw_ss()) [minimal_elements_def] THEN
      Q.UNABBREV_TAC `mins` THEN
      FULL_SIMP_TAC (srw_ss()) [EXTENSION, linear_order_def, SUBSET_DEF] THEN

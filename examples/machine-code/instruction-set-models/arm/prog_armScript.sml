@@ -130,13 +130,13 @@ val arm2set''_11 = prove(
   \\ `?r' m' st' cp' ud'. y' = (r',m',st',cp',ud')` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC bool_ss [PAIR_EQ] THENL [
     `?a. ~(a IN r = a IN r')` by METIS_TAC [EXTENSION]
-    \\ `~((?x. aReg a x IN arm2set'' y s) = (?x. aReg a x IN arm2set'' y' s'))` by ALL_TAC,
+    \\ sg `~((?x. aReg a x IN arm2set'' y s) = (?x. aReg a x IN arm2set'' y' s'))`,
     `?a. ~(a IN m = a IN m')` by METIS_TAC [EXTENSION]
-    \\ `~((?x. aMem a x IN arm2set'' y s) = (?x. aMem a x IN arm2set'' y' s'))` by ALL_TAC,
+    \\ sg `~((?x. aMem a x IN arm2set'' y s) = (?x. aMem a x IN arm2set'' y' s'))`,
     `?a. ~(a IN st = a IN st')` by METIS_TAC [EXTENSION]
-    \\ `~((?x. aStatus a x IN arm2set'' y s) = (?x. aStatus a x IN arm2set'' y' s'))` by ALL_TAC,
-    `~((?x. aCPSR_Reg x IN arm2set'' y s) = (?x. aCPSR_Reg x IN arm2set'' y' s'))` by ALL_TAC,
-    `~((?x. aUndef x IN arm2set'' y s) = (?x. aUndef x IN arm2set'' y' s'))` by ALL_TAC]
+    \\ sg `~((?x. aStatus a x IN arm2set'' y s) = (?x. aStatus a x IN arm2set'' y' s'))`,
+    sg `~((?x. aCPSR_Reg x IN arm2set'' y s) = (?x. aCPSR_Reg x IN arm2set'' y' s'))`,
+    sg `~((?x. aUndef x IN arm2set'' y s) = (?x. aUndef x IN arm2set'' y' s'))`]
   \\ REPEAT (FULL_SIMP_TAC bool_ss [IN_arm2set] \\ METIS_TAC [])
   \\ Q.PAT_X_ASSUM `arm2set'' _ _ = arm2set'' _ _` (K ALL_TAC)
   \\ FULL_SIMP_TAC bool_ss [IN_arm2set] \\ METIS_TAC []);
@@ -459,8 +459,7 @@ val aBYTE_MEMORY_INSERT = store_thm("aBYTE_MEMORY_INSERT",
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET,DIFF_INSERT,DIFF_EMPTY]
   \\ REWRITE_TAC [DELETE_aBYTE_MEMORY_SET,APPLY_UPDATE_THM]
   \\ REWRITE_TAC [EXTENSION,IN_INSERT,IN_DELETE]
-  \\ REVERSE (`~(aMem a w IN aBYTE_MEMORY_SET (df DELETE a) g)` by ALL_TAC)
-  THEN1 METIS_TAC []
+  \\ `~(aMem a w IN aBYTE_MEMORY_SET (df DELETE a) g)` suffices_by METIS_TAC []
   \\ SIMP_TAC std_ss [aBYTE_MEMORY_SET_def,GSPECIFICATION,IN_DELETE,arm_el_11]);
 
 val aBYTE_MEMORY_INTRO = store_thm("aBYTE_MEMORY_INTRO",

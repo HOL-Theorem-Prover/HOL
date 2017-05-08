@@ -1320,7 +1320,7 @@ fun SEP_F_TAC (hs,goal) = let
     val (q,ss) = first_filter qs
     val goal1 = subst ss q
     in Q.PAT_X_ASSUM [ANTIQUOTE i] (MP_TAC o RW1 [GSYM markerTheory.Abbrev_def] o SUBST_INST ss)
-       THEN [ANTIQUOTE goal1] by ALL_TAC THEN1
+       THEN [ANTIQUOTE goal1] by
          (Q.PAT_X_ASSUM [ANTIQUOTE fs] MP_TAC THEN SIMP_TAC (std_ss++star_ss) [SEP_CLAUSES])
        THEN POP_ASSUM (fn th => CONV_TAC (RATOR_CONV (REWRITE_CONV [th])))
        THEN CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [markerTheory.Abbrev_def])) end
@@ -1363,7 +1363,7 @@ fun SEP_W_TAC (hs,goal) = let
           replace x y :: ys handle HOL_ERR _ => y :: replace_in_list (x,ys)
     val goal = list_mk_star (foldr replace_in_list qs zs) (type_of (hd qs))
     val goal = mk_comb(goal,subst [f|->up] (cdr x))
-    in ([ANTIQUOTE goal] by ALL_TAC THEN1 SEP_WRITE_TAC) end handle Empty => ALL_TAC
+    in ([ANTIQUOTE goal] by SEP_WRITE_TAC) end handle Empty => ALL_TAC
   in EVERY (map get_tac xs) (hs,goal) end;
 
 fun SEP_R_TAC (hs,goal) = let

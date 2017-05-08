@@ -117,7 +117,7 @@ val BC_ONLY_COMPILE_LEMMA = prove(
   STRIP_TAC \\ IMP_RES_TAC BC_REFINES_ONLY_COMPILE
   \\ ASM_SIMP_TAC std_ss [] \\ POP_ASSUM (K ALL_TAC)
   \\ FULL_SIMP_TAC std_ss [BC_ONLY_COMPILE_def]
-  \\ `BC_ev_fun ([],sexp2term exp,bc1) = (code,a2,p2,bc0)` by ALL_TAC THEN1
+  \\ `BC_ev_fun ([],sexp2term exp,bc1) = (code,a2,p2,bc0)` by
       (FULL_SIMP_TAC std_ss [BC_ev_fun_def,BC_EV_HILBERT_LEMMA,MAP,REVERSE_DEF,BC_REFINES_def])
   \\ FULL_SIMP_TAC std_ss [LET_DEF,WRITE_BYTECODE_code_end]
   \\ IMP_RES_TAC BC_ev_fun_CONSTS \\ FULL_SIMP_TAC std_ss []
@@ -173,11 +173,11 @@ val iSTEP_iRETURN = prove(
            (fn th => ONCE_REWRITE_TAC [GSYM th])
       \\ SIMP_TAC std_ss [BC_COMPILE_def,LET_DEF,LENGTH_MAP]
       \\ Q.ABBREV_TAC `bcA = BC_STORE_COMPILED bc (getSym fname) (bc.code_end,LENGTH (sexp2list formals))`
-      \\ `BC_JUMPS_OK bcA` by ALL_TAC THEN1
+      \\ `BC_JUMPS_OK bcA` by
        (Q.UNABBREV_TAC `bcA`
         \\ FULL_SIMP_TAC (srw_ss()) [BC_STORE_COMPILED_def,BC_JUMPS_OK_def,bc_inv_def]
         \\ EVAL_TAC \\ SIMP_TAC std_ss [])
-      \\ `BC_CODE_OK bcA` by ALL_TAC THEN1
+      \\ `BC_CODE_OK bcA` by
        (Q.UNABBREV_TAC `bcA`
         \\ FULL_SIMP_TAC (srw_ss()) [BC_STORE_COMPILED_def,BC_CODE_OK_def,bc_inv_def]
         \\ EVAL_TAC \\ SIMP_TAC std_ss []
@@ -196,7 +196,7 @@ val BC_ONLY_COMPILE_THM = prove(
         ([s],0,[],bc8) /\ (bc8.code 0 = SOME iRETURN) /\
       BC_REFINES (fns2,io2) bc8 /\ bc_inv bc8 /\ (ok8 = bc8.ok)``,
   REPEAT STRIP_TAC
-  \\ `BC_JUMPS_OK bc1` by ALL_TAC THEN1
+  \\ `BC_JUMPS_OK bc1` by
    (FULL_SIMP_TAC std_ss [bc_inv_def,BC_JUMPS_OK_def]
     \\ EVAL_TAC \\ SIMP_TAC std_ss [])
   \\ `?code a2 p2 bc0. BC_ev T (sexp2term exp,[],bc1.code_end,bc1) (code,a2,p2,bc0)` by METIS_TAC [BC_ev_TOTAL,PAIR]
@@ -327,7 +327,7 @@ val main_loop_final = let
     \\ Q.EXISTS_TAC `output`
     \\ FULL_SIMP_TAC (srw_ss()) [bc_state_tree_def,flat_alist_def,list2sexp_def,
          APPLY_UPDATE_THM,EVAL ``WRITE_CODE NO_CODE [iRETURN]``]
-    \\ `!h. 0 < LENGTH (bc_ref (0,[]) h)` by ALL_TAC THEN1
+    \\ `!h. 0 < LENGTH (bc_ref (0,[]) h)` by
          (Cases \\ EVAL_TAC \\ Cases_on `l` \\ EVAL_TAC)
     \\ EVAL_TAC \\ ASM_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,GSPECIFICATION])

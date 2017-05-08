@@ -577,7 +577,7 @@ val lisp_parse_thm = prove(
       \\ `~(HD (parse_stack (h::t) ++ xs ++ ys) = Sym "NIL") /\
           ~(HD (parse_stack (h::t) ++ xs ++ ys) = Sym "QUOTE") /\
           ~isVal (HD (parse_stack (h::t) ++ xs ++ ys)) /\
-          ~(parse_stack (h::t) ++ xs ++ ys = [])` by ALL_TAC THEN1
+          ~(parse_stack (h::t) ++ xs ++ ys = [])` by
             (Cases_on `h` \\ FULL_SIMP_TAC (srw_ss())
                  [parse_stack_def,APPEND,isVal_def,READ_L_STORE_def])
       \\ ASM_SIMP_TAC std_ss [])
@@ -598,7 +598,7 @@ val lisp_parse_thm = prove(
       \\ `~(LENGTH xs <= x) /\ x < LENGTH xs + LENGTH ys` by DECIDE_TAC
       \\ ASM_SIMP_TAC std_ss [UPDATE_NTH_APPEND]
       \\ ASM_SIMP_TAC std_ss [APPEND_ASSOC]
-      \\ `lisp_parse_mem_inv x5 ((x =+ exp) mem) (LENGTH xs + LENGTH ys) amnt (UPDATE_NTH x exp xs) ys` by ALL_TAC THEN1
+      \\ `lisp_parse_mem_inv x5 ((x =+ exp) mem) (LENGTH xs + LENGTH ys) amnt (UPDATE_NTH x exp xs) ys` by
        (FULL_SIMP_TAC std_ss [lisp_parse_mem_inv_def,LENGTH_APPEND,
           LENGTH_UPDATE_NTH,FUN_EQ_THM,APPLY_UPDATE_THM,EL_UPDATE_NTH]
         \\ METIS_TAC [])
@@ -610,7 +610,7 @@ val lisp_parse_thm = prove(
       \\ ASM_SIMP_TAC std_ss [] \\ SIMP_TAC std_ss [LENGTH_UPDATE_NTH]
       \\ METIS_TAC [LIST_UPDATE_NTH_def])
     \\ REPEAT STRIP_TAC
-    \\ `lisp_parse_mem_inv (Dot (Val x) (Dot exp x5)) ((x =+ exp) mem) xbp amnt xs ys` by ALL_TAC THEN1
+    \\ `lisp_parse_mem_inv (Dot (Val x) (Dot exp x5)) ((x =+ exp) mem) xbp amnt xs ys` by
      (FULL_SIMP_TAC std_ss [lisp_parse_mem_inv_def]
       \\ FULL_SIMP_TAC std_ss [ok_mem_sexp_def]
       \\ REVERSE (REPEAT STRIP_TAC)
@@ -628,7 +628,7 @@ val lisp_parse_thm = prove(
       \\ ONCE_REWRITE_TAC [lisp_parse_def]
       \\ ONCE_REWRITE_TAC [lisp_parse_pre_def]
       \\ SIMP_TAC (srw_ss()) [LET_DEF,HD,SExp_distinct,TL,NOT_CONS_NIL]
-      \\ `remove_parse_stack (parse_stack [] ++ xs ++ ys) = xs ++ ys` by ALL_TAC THEN1
+      \\ `remove_parse_stack (parse_stack [] ++ xs ++ ys) = xs ++ ys` by
             FULL_SIMP_TAC std_ss [remove_parse_stack_thm,GSYM APPEND_ASSOC]
       \\ FULL_SIMP_TAC std_ss [parse_stack_def,APPEND,LET_DEF,lisp_syntaxerr_def]
       \\ Q.EXISTS_TAC `[]` \\ SIMP_TAC std_ss [LIST_UPDATE_NTH_def] \\ METIS_TAC [])
@@ -659,13 +659,13 @@ val lisp_parse_thm = prove(
         ~(HD (parse_stack (h::t) ++ xs ++ ys) = Sym "CONS") /\
         ~(HD (parse_stack (h::t) ++ xs ++ ys) = Sym "CAR") /\
         ~(HD (parse_stack (h::t) ++ xs ++ ys) = Sym "CDR") /\
-        ~(parse_stack (h::t) = [])` by ALL_TAC THEN1
+        ~(parse_stack (h::t) = [])` by
       (Cases_on `h` \\ FULL_SIMP_TAC (srw_ss()) [HD,
          parse_stack_def,APPEND,isVal_def,READ_L_CONS_def])
     \\ ASM_SIMP_TAC (srw_ss()) [LET_DEF,HD,SExp_distinct,TL,
          NOT_CONS_NIL,parse_task_def,lisp_syntaxerr_def]
     \\ `HD (parse_stack (h::t) ++ xs ++ ys)::TL (parse_stack (h::t) ++ xs ++ ys) =
-        parse_stack (h::t) ++ xs ++ ys` by ALL_TAC THEN1
+        parse_stack (h::t) ++ xs ++ ys` by
       (Cases_on `parse_stack (h::t)` \\ FULL_SIMP_TAC std_ss [HD,TL,APPEND])
     \\ ASM_SIMP_TAC std_ss [remove_parse_stack_thm,GSYM APPEND_ASSOC]
     \\ Q.EXISTS_TAC `[]` \\ ASM_SIMP_TAC std_ss [LIST_UPDATE_NTH_def])
@@ -677,7 +677,7 @@ val lisp_parse_thm = prove(
   \\ ASM_SIMP_TAC std_ss [getINPUT_REPLACE_INPUT_IO,next_token1_def,next_token2_def]
   \\ `?cs3 z1 z2. next_token cs = ((z1,z2),cs3)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss []
-  \\ `~(parse_stack s = [])` by ALL_TAC THEN1
+  \\ `~(parse_stack s = [])` by
    (Cases_on `s` \\ SIMP_TAC std_ss [parse_stack_def,NOT_CONS_NIL]
     \\ Cases_on `h` \\ SIMP_TAC std_ss [parse_stack_def,NOT_CONS_NIL,APPEND])
   \\ Cases_on `z2 = Val 0` \\ FULL_SIMP_TAC (srw_ss()) [parse_task2_def]
@@ -780,7 +780,7 @@ val lisp_string2sexp_thm = prove(
   \\ FULL_SIMP_TAC std_ss [IO_INPUT_LEMMA,NOT_CONS_NIL,CONS_11,TL,HD,getVal_def]
   \\ Q.ABBREV_TAC `zs = (DROP amnt (LIST_UPDATE_NTH xs2
                         (GENLIST (\a. Sym "NIL") amnt) ++ x5::x4::x3::x2::x1::xs))`
-  \\ `zs = x5::x4::x3::x2::x1::xs` by ALL_TAC THEN1
+  \\ `zs = x5::x4::x3::x2::x1::xs` by
    (`amnt = LENGTH (LIST_UPDATE_NTH xs2 (GENLIST (\a. Sym "NIL") amnt))` by
               ASM_SIMP_TAC std_ss [LENGTH_LIST_UPDATE_NTH,LENGTH_GENLIST]
     \\ Q.UNABBREV_TAC `zs` \\ POP_ASSUM (fn th => SIMP_TAC std_ss [Once th])

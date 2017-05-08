@@ -28,11 +28,12 @@ val DIV_FACT = store_thm("DIV_FACT",
                         THEN Cases_on `divides p (SUC n)` THENL[
                           EXISTS_TAC (Term `SUC n`) THEN ARW[],
                           IMP_RES_TAC P_EUCLIDES THEN TRY (PROVE_TAC[])
-                            THEN `0 < n` by ALL_TAC
+                            THEN sg `0 < n`
                             THENL [
                               Cases_on `n=0` THEN ARW[]
-                                THEN `~(divides p (FACT 0))` by REWRITE_TAC[FACT_def, ONE]
-                                THEN PROVE_TAC[],
+                                THEN `~(divides p (FACT 0))`
+                                 by (REWRITE_TAC[FACT_def, ONE]
+                                       THEN PROVE_TAC[]),
                               RES_TAC THEN EXISTS_TAC (Term `k:num`) THEN ARW[]
                             ]
                         ]

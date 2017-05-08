@@ -171,15 +171,15 @@ val X86_SPEC_COMPOSE_CODE = store_thm("X86_SPEC_COMPOSE_CODE",
   SIMP_TAC std_ss [AND_IMP_INTRO] \\ ONCE_REWRITE_TAC [CONJ_COMM]
   \\ SIMP_TAC std_ss [GSYM AND_IMP_INTRO] \\ STRIP_TAC
   \\ ASM_SIMP_TAC std_ss [SPEC_def,X86_MODEL_def]
-  \\ `CODE_POOL X86_INSTR ((a,xs ++ ys,w) INSERT c) =
-      CODE_POOL X86_INSTR ((a,xs,w) INSERT (a + n2w (LENGTH xs),ys,w) INSERT c)` by ALL_TAC
+  \\ sg `CODE_POOL X86_INSTR ((a,xs ++ ys,w) INSERT c) =
+      CODE_POOL X86_INSTR ((a,xs,w) INSERT (a + n2w (LENGTH xs),ys,w) INSERT c)`
   \\ ASM_SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [CODE_POOL_def]
   \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> ((\s. s = x) = (\s. s = y))``)
   \\ SIMP_TAC std_ss [IMAGE_INSERT,BIGUNION_INSERT]
-  \\ REVERSE (`!xs a ys. X86_INSTR (a,xs ++ ys,w) =
-             X86_INSTR (a,xs,w) UNION X86_INSTR (a + n2w (LENGTH xs),ys,w)` by ALL_TAC)
-  THEN1 (ASM_SIMP_TAC std_ss [AC UNION_ASSOC UNION_COMM])
+  \\ `!xs a ys. X86_INSTR (a,xs ++ ys,w) =
+             X86_INSTR (a,xs,w) UNION X86_INSTR (a + n2w (LENGTH xs),ys,w)` suffices_by
+  (STRIP_TAC THEN ASM_SIMP_TAC std_ss [AC UNION_ASSOC UNION_COMM])
   \\ POP_ASSUM (K ALL_TAC) \\ Induct
   \\ ASM_SIMP_TAC std_ss [APPEND,X86_INSTR_def,UNION_EMPTY,LENGTH,WORD_ADD_0]
   \\ SIMP_TAC std_ss [RW1[ADD_COMM]ADD1,GSYM word_add_n2w,WORD_ADD_ASSOC]

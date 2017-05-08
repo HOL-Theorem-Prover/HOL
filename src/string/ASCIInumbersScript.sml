@@ -137,8 +137,8 @@ val s2n_n2s = Q.store_thm("s2n_n2s",
       (s2n b c2n (n2s b n2c n) = n)`,
   SRW_TAC [] [s2n_def, n2s_def, MAP_MAP_o]
   \\ `MAP (c2n o n2c) (n2l b n) = n2l b n`
-  by MATCH_MP_TAC MAP_ID
-  \\ SRW_TAC [ARITH_ss] [l2n_n2l]
+        suffices_by SRW_TAC [ARITH_ss] [l2n_n2l]
+  \\ MATCH_MP_TAC MAP_ID \\ simp[]
   \\ `!x. ($> b) x ==> (\x. c2n (n2c x) = x) x` by METIS_TAC [GREATER_DEF]
   \\ IMP_RES_TAC EVERY_MONOTONIC
   \\ POP_ASSUM MATCH_MP_TAC

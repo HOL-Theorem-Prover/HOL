@@ -183,7 +183,7 @@ Tactical.REVERSE (Cases_on `?x. PMATCH_ROW_COND p g i x`) THEN (
 ) THEN
 DISJ2_TAC THEN
 `IS_SOME (some x. PMATCH_ROW_COND p g i x) /\
- IS_SOME (some x. PMATCH_ROW_COND p' g' i x)` by ALL_TAC THEN1 (
+ IS_SOME (some x. PMATCH_ROW_COND p' g' i x)` by (
   ASM_SIMP_TAC std_ss [some_IS_SOME] THEN
   PROVE_TAC[]
 ) THEN
@@ -355,7 +355,7 @@ val PMATCH_ROW_EXTEND_INPUT = store_thm ("PMATCH_ROW_EXTEND_INPUT",
 REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC std_ss [PMATCH_ROW_def] THEN
 `IS_SOME (some x. PMATCH_ROW_COND p' (\x. g (f' (p' x)) (f x)) v' x) =
- IS_SOME (some x. PMATCH_ROW_COND p (g (f' v')) v x)` by ALL_TAC THEN1 (
+ IS_SOME (some x. PMATCH_ROW_COND p (g (f' v')) v x)` by (
    ASM_SIMP_TAC std_ss [some_IS_SOME, PMATCH_ROW_COND_def] THEN
    METIS_TAC[]
 ) THEN
@@ -378,7 +378,7 @@ val PMATCH_ROW_REMOVE_FUN_VAR = store_thm ("PMATCH_ROW_REMOVE_FUN_VAR",
 REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC std_ss [PMATCH_ROW_def] THEN
 `IS_SOME (some x. PMATCH_ROW_COND p' (\x. g (f x)) v' x) =
- IS_SOME (some x. PMATCH_ROW_COND p g v x)` by ALL_TAC THEN1 (
+ IS_SOME (some x. PMATCH_ROW_COND p g v x)` by (
    ASM_SIMP_TAC std_ss [some_IS_SOME, PMATCH_ROW_COND_def] THEN
    METIS_TAC[]
 ) THEN
@@ -474,16 +474,14 @@ val PMATCH_ROWS_DROP_REDUNDANT_TRIVIAL_SOUNDNESS_EQUIV = store_thm ("PMATCH_ROWS
   (PMATCH_EQUIV_ROWS v rows (TAKE (SUC n) rows))``,
 
 REPEAT STRIP_TAC THEN
-Tactical.REVERSE (`PMATCH_EQUIV_ROWS v (TAKE (SUC n) rows ++ DROP (SUC n) rows) (TAKE (SUC n) rows)` by ALL_TAC) THEN1 (
-   FULL_SIMP_TAC list_ss []
-) THEN
+`PMATCH_EQUIV_ROWS v (TAKE (SUC n) rows ++ DROP (SUC n) rows)
+                     (TAKE (SUC n) rows)`
+   suffices_by FULL_SIMP_TAC list_ss [] THEN
 
 SIMP_TAC std_ss [PMATCH_EQUIV_ROWS_def, PMATCH_APPEND_SEM] THEN
 SIMP_TAC list_ss [] THEN
 
-Tactical.REVERSE (`?r. MEM r (TAKE (SUC n) rows) /\ IS_SOME (r v)` by ALL_TAC) THEN1 (
-  METIS_TAC[]
-) THEN
+`?r. MEM r (TAKE (SUC n) rows) /\ IS_SOME (r v)` suffices_by METIS_TAC[] THEN
 Q.EXISTS_TAC `EL n (TAKE (SUC n) rows)` THEN
 ASM_SIMP_TAC list_ss [rich_listTheory.MEM_TAKE, rich_listTheory.EL_MEM,
   listTheory.LENGTH_TAKE, rich_listTheory.EL_TAKE]);
@@ -829,7 +827,7 @@ REPEAT STRIP_TAC THENL [
   Q.PAT_X_ASSUM `!i'. _` (MP_TAC o Q.SPEC `SUC i'`) THEN
   FULL_SIMP_TAC list_ss [PMATCH_ROW_REDUNDANT_SUC],
 
-  `(i'=0) \/ (?i''. (i' = SUC i''))` by ALL_TAC THENL [
+  sg `(i'=0) \/ (?i''. (i' = SUC i''))` THENL [
      Cases_on `i'` THEN SIMP_TAC std_ss [],
     FULL_SIMP_TAC list_ss [],
     ALL_TAC
@@ -872,7 +870,7 @@ Induct_on `rows` THEN1 (
 ) THEN
 CONV_TAC (RENAME_VARS_CONV ["row"]) THEN
 REPEAT STRIP_TAC THEN
-`?i infos'. infos = i::infos'` by ALL_TAC THEN1 (
+`?i infos'. infos = i::infos'` by (
   Cases_on `infos` THEN
   FULL_SIMP_TAC list_ss [IS_REDUNDANT_ROWS_INFO_def]
 ) THEN
@@ -1091,8 +1089,8 @@ Cases_on `EL i rows v` THEN1 (
   FULL_SIMP_TAC list_ss []
 ) THEN
 FULL_SIMP_TAC list_ss [EXISTS_MEM] THEN
-Tactical.REVERSE (`?j. j < i /\ (EL j rows = e)` by ALL_TAC) THEN1 (
-  Q.EXISTS_TAC `j` THEN
+`?j. j < i /\ (EL j rows = e)` suffices_by (
+  STRIP_TAC THEN Q.EXISTS_TAC `j` THEN
   ASM_SIMP_TAC std_ss [] THEN
   Cases_on `e v` THEN FULL_SIMP_TAC std_ss []
 ) THEN

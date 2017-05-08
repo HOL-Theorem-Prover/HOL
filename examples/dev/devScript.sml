@@ -30,6 +30,7 @@ open HolKernel Parse boolLib bossLib metisLib;
 * Open theories
 ******************************************************************************)
 open composeTheory;
+val op by = BasicProvers.byA
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)

@@ -4172,10 +4172,10 @@ val EXTREAL_SUP_FUN_SEQ_IMAGE = store_thm
   ++ `?y. (!n. y n IN P) /\ (!n. y n <= y (SUC n)) /\ (sup (IMAGE y UNIV) = sup P)`
       by METIS_TAC [EXTREAL_SUP_SEQ]
   ++ Q.EXISTS_TAC `(\n. @r. (r IN P') /\ (f r  = y n))`
-  ++ `(\n. f (@r. r IN P' /\ (f r = y n))) = y` by RW_TAC std_ss [FUN_EQ_THM]
-  >> (SELECT_ELIM_TAC
-      ++ RW_TAC std_ss []
-      ++ METIS_TAC [IN_IMAGE])
+  ++ `(\n. f (@r. r IN P' /\ (f r = y n))) = y`
+        by (RW_TAC std_ss [FUN_EQ_THM] ++ SELECT_ELIM_TAC
+            ++ RW_TAC std_ss []
+            ++ METIS_TAC [IN_IMAGE])
   ++ ASM_SIMP_TAC std_ss []
   ++ RW_TAC std_ss []
   >> (SELECT_ELIM_TAC

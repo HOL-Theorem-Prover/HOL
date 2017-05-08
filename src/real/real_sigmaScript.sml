@@ -660,10 +660,10 @@ val REAL_SUM_IMAGE_MONO_SET = store_thm
   RW_TAC std_ss []
   ++ `t = s UNION (t DIFF s)` by RW_TAC std_ss [UNION_DIFF]
   ++ `FINITE (t DIFF s)` by RW_TAC std_ss [FINITE_DIFF]
-  ++ `DISJOINT s (t DIFF s)` by (`DISJOINT s (t DIFF s)`
-      by RW_TAC std_ss [DISJOINT_DEF,IN_DIFF,EXTENSION,GSPECIFICATION,
-      	 	        NOT_IN_EMPTY,IN_INTER]
-         ++ METIS_TAC [])
+  ++ `DISJOINT s (t DIFF s)` by (
+        RW_TAC std_ss [DISJOINT_DEF,IN_DIFF,EXTENSION,GSPECIFICATION,
+      	 	       NOT_IN_EMPTY,IN_INTER] >>
+        METIS_TAC [])
   ++ `REAL_SUM_IMAGE f t = REAL_SUM_IMAGE f s + REAL_SUM_IMAGE f (t DIFF s)`
       by METIS_TAC [REAL_SUM_IMAGE_DISJOINT_UNION]
   ++ POP_ORW

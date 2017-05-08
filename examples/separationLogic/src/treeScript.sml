@@ -318,7 +318,7 @@ SIMP_TAC (srw_ss()) [MAX_DEPTH_def, MIN_DEPTH_def,
 		  DEPTH_THM, MIN_SET_THM, MAX_SET_THM, NULL_EQ] THEN
 
 `!tL:'a tree list. ~(tL = []) ==> ((FINITE (BIGUNION (set (MAP DEPTH tL)))) /\
- ~((BIGUNION (set (MAP DEPTH tL))) = EMPTY))` by ALL_TAC THEN1 (
+ ~((BIGUNION (set (MAP DEPTH tL))) = EMPTY))` by (
    Cases_on `tL` THEN
    SIMP_TAC list_ss [BIGUNION_INSERT, EMPTY_UNION, NOT_DEPTH_EMPTY,
                     FINITE_UNION, FINITE_DEPTH, FINITE_BIGUNION_EQ,
@@ -590,7 +590,7 @@ HO_MATCH_MP_TAC tree_INDUCT THEN
 ASM_SIMP_TAC list_ss [LIST_TO_TREE_def, TREE_TO_LIST_THM,
    NARY_REWRITE, tree_11] THEN
 REPEAT STRIP_TAC THEN
-`?x. tL = [x]` by ALL_TAC THEN1 (
+`?x. tL = [x]` by (
    Cases_on `tL` THEN
    FULL_SIMP_TAC list_ss [LENGTH_NIL]
 ) THEN

@@ -210,7 +210,7 @@ val ref_cheney_d = prove(
 
 fun UPDATE_ref_addr_prove (c,tm) = prove(tm,
   Cases_word \\ Cases_word \\ REPEAT STRIP_TAC
-  \\ c by ALL_TAC \\ ASM_SIMP_TAC bool_ss[APPLY_UPDATE_THM]
+  \\ sg c \\ ASM_SIMP_TAC bool_ss[APPLY_UPDATE_THM]
   \\ Cases_on `x` \\ FULL_SIMP_TAC bool_ss []
   \\ CCONTR_TAC \\ FULL_SIMP_TAC bool_ss [valid_address_def]
   \\ Q.PAT_X_ASSUM `n' < dimword (:32)` ASSUME_TAC
@@ -401,7 +401,7 @@ val ref_cheney_step_thm = prove(
   \\ FULL_SIMP_TAC bool_ss [PAIR_EQ]
   \\ Q.PAT_X_ASSUM `getDATA (DATA (ax,ay,ad,ad1)) = (ax,ay,ad,ad1)` (K ALL_TAC)
   \\ `{ax} SUBSET0 DR0 (ICUT (b,e) m) /\ {ay} SUBSET0 DR0 (ICUT (b,e) m)` by
-   (`{ax;ay} SUBSET0 D1(CUT(i,j)m)` by ALL_TAC THENL [
+   (sg `{ax;ay} SUBSET0 D1(CUT(i,j)m)` THENL [
       FULL_SIMP_TAC bool_ss [SUBSET0_DEF,IN_INSERT,SUBSET_DEF,NOT_IN_EMPTY]
       \\ FULL_SIMP_TAC bool_ss [IN_DEF,D1_def,CUT_def,cheney_inv_def]
       \\ `RANGE(i,j)i` by (REWRITE_TAC [RANGE_def] \\ DECIDE_TAC)
@@ -755,8 +755,7 @@ val arm_collect_lemma = prove(
   \\ Q.PAT_X_ASSUM ` !i. i <+ a - 24w ==> (xs2 i = xs3 i)` (ASSUME_TAC o GSYM)
   \\ `~(b = 0) /\ ~(b + l = 0)` by
     (Q.UNABBREV_TAC `b` \\ Cases_on `u` \\ FULL_SIMP_TAC std_ss [LET_DEF,ok_state_def] \\ DECIDE_TAC)
-  \\ `(a + 4w <+ ref_addr a 1) /\ (xs3 (a+4w) = ref_addr a (b + l))` by ALL_TAC
-  THEN1 FULL_SIMP_TAC (std_ss++WORD_ss) [roots_in_mem_def,ZIP,ref_field_def]
+  \\ `(a + 4w <+ ref_addr a 1) /\ (xs3 (a+4w) = ref_addr a (b + l))` by FULL_SIMP_TAC (std_ss++WORD_ss) [roots_in_mem_def,ZIP,ref_field_def]
   \\ REWRITE_TAC [GSYM CONJ_ASSOC]
   \\ STRIP_TAC THEN1 METIS_TAC [roots_in_mem_carry_over]
   \\ REVERSE STRIP_TAC THENL [
@@ -846,8 +845,7 @@ val arm_alloc_aux2_lemma = prove(
       FULL_SIMP_TAC std_ss [ref_addr_def,MULT_CLAUSES,GSYM ADD1,
         GSYM WORD_ADD_ASSOC,word_add_n2w,AC ADD_ASSOC ADD_COMM]
   \\ ASM_SIMP_TAC std_ss []
-  \\ `a <+ ref_addr a 1 /\ a - 24w <+ ref_addr a 1` by ALL_TAC
-  THEN1 (FULL_SIMP_TAC std_ss [roots_in_mem_def,APPEND,word_arith_lemma1,word_arith_lemma2,ZIP]
+  \\ `a <+ ref_addr a 1 /\ a - 24w <+ ref_addr a 1` by (FULL_SIMP_TAC std_ss [roots_in_mem_def,APPEND,word_arith_lemma1,word_arith_lemma2,ZIP]
     \\ FULL_SIMP_TAC std_ss [word_arith_lemma3,word_arith_lemma4,WORD_ADD_0])
   \\ `ref_cheney (m,l+l+1) (a,x,xs2,xs2)` by METIS_TAC [lemma]
   \\ `ref_cheney ((i =+ DATA (x1,x2,y1,y2)) m,l+l+1) (a,x,xs1,xs1)` by
@@ -869,7 +867,7 @@ val arm_alloc_aux2_lemma = prove(
   \\ Q.ABBREV_TAC `xxx = ZIP ([i; x2; x3; x4; x5; x6],[y1; y2; y3; y4; y5; y6]) ++
        [(q,0w,F); (e,0w,F)]`
   \\ SIMP_TAC std_ss [GSYM CONJ_ASSOC]
-  \\ `roots_in_mem xxx (a,a - 24w,xs2)` by ALL_TAC THEN1
+  \\ `roots_in_mem xxx (a,a - 24w,xs2)` by
      (Q.UNABBREV_TAC `xxx` \\ Q.UNABBREV_TAC `xs2`
       \\ FULL_SIMP_TAC std_ss [roots_in_mem_def,APPLY_UPDATE_THM,word_arith_lemma1,word_arith_lemma2,APPEND,ZIP]
       \\ FULL_SIMP_TAC std_ss [word_arith_lemma3,word_arith_lemma4,WORD_ADD_0]
@@ -878,7 +876,7 @@ val arm_alloc_aux2_lemma = prove(
            RW [WORD_ADD_0] (Q.SPECL [`v`,`0w`] WORD_EQ_ADD_LCANCEL),n2w_11,WORD_EQ_ADD_LCANCEL]
       \\ `~(i = 0)` by (FULL_SIMP_TAC std_ss [ok_state_def,LET_DEF] \\ Cases_on `u` \\ DECIDE_TAC)
       \\ ASM_SIMP_TAC std_ss [ref_field_def])
-  \\ `roots_in_mem xxx (a,a - 24w,xs1)` by ALL_TAC THEN1
+  \\ `roots_in_mem xxx (a,a - 24w,xs1)` by
      (Q.UNABBREV_TAC `xxx` \\ Q.UNABBREV_TAC `xs1`
       \\ FULL_SIMP_TAC std_ss [roots_in_mem_def,APPLY_UPDATE_THM,word_arith_lemma1,word_arith_lemma2,APPEND,ZIP]
       \\ IMP_RES_TAC LO_IMP_ref_addr
@@ -1078,7 +1076,7 @@ val ch_word_alloc = prove(
   \\ REWRITE_TAC [GSYM ALIGNED_def]
   \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ ASM_SIMP_TAC std_ss []
   \\ MATCH_MP_TAC (METIS_PROVE [] ``Q ==> (P ==> Q)``)
-  \\ `ch_mem (i,e,rs,rs2,l,u,m) (a,x,xs1)` by ALL_TAC THENL [
+  \\ sg `ch_mem (i,e,rs,rs2,l,u,m) (a,x,xs1)` THENL [
     FULL_SIMP_TAC bool_ss [ch_mem_def,ch_word_def,CONS_11]
     \\ `ref_cheney (m,l+l+1) (a,x,xs1,xs1)` by (Q.UNABBREV_TAC `xs1`
         \\ Cases_on `a = 0w` THEN1 FULL_SIMP_TAC (std_ss++WORD_ss) [w2n_n2w]
@@ -1124,7 +1122,7 @@ val ch_arm_alloc = store_thm("ch_arm_alloc",
   \\ `?i' e' rs' l'' u' m'. cheney_alloc (i,e,rs,l,u,m) (SND t1, SND t2) = (i',e',rs',l'',u',m')` by METIS_TAC [PAIR]
   \\ `l' = l` by METIS_TAC [ch_inv_def] \\ FULL_SIMP_TAC bool_ss []
   \\ FULL_SIMP_TAC bool_ss [MAP,FST,SND]
-  \\ `not_full_heap (i,e,rs,l,u,m)` by ALL_TAC THEN1
+  \\ `not_full_heap (i,e,rs,l,u,m)` by
    (`?i5 e5 c5 l5 u5 m5. cheney_alloc_gc (i,e,rs,l,u,m) = (i5,e5,c5,l5,u5,m5)` by METIS_TAC [PAIR]
     \\ IMP_RES_TAC cheney_alloc_gc_spec
     \\ FULL_SIMP_TAC std_ss [not_full_heap_def] \\ DECIDE_TAC)
@@ -1421,7 +1419,7 @@ val ch_tree_IMP_ch_arm = prove(
   \\ `ok_state (i,v + l,
        [FST (heap_el a v1); FST (heap_el a v2); FST (heap_el a v3);
         FST (heap_el a v4); FST (heap_el a v5); FST (heap_el a v6)],l,u,
-          build_map (k,b,a,m))` by ALL_TAC THEN1
+          build_map (k,b,a,m))` by
    (SIMP_TAC std_ss [ok_state_def,LET_DEF]
     \\ Q.UNABBREV_TAC `v`
     \\ Q.ABBREV_TAC `v = if u then 1 + l else 1`

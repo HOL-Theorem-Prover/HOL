@@ -105,7 +105,7 @@ val TRIPLE_TERM_TAILREC = Q.prove(
        \\ fs []
        \\ REPEAT strip_tac
        \\ fs []
-       \\ REVERSE (`q' /\ (?n. ~g (FUNPOW f n x)) = q'` by all_tac)
+       \\ REVERSE (sg `q' /\ (?n. ~g (FUNPOW f n x)) = q'`)
        \\ fs []
        \\ Cases_on `q'`
        \\ fs []
@@ -123,7 +123,7 @@ val TRIPLE_TERM_TAILREC = Q.prove(
        \\ fs []
        \\ REPEAT strip_tac
        \\ fs []
-       \\ REVERSE (`q' /\ (?n. ~g (FUNPOW f n x)) = q'` by all_tac)
+       \\ REVERSE (sg `q' /\ (?n. ~g (FUNPOW f n x)) = q'`)
        \\ fs []
        \\ Cases_on `q'`
        \\ fs []
@@ -136,8 +136,7 @@ val TRIPLE_TERM_TAILREC = Q.prove(
    \\ res_tac
    \\ once_rewrite_tac [WHILE]
    \\ fs []
-   \\ `(?n. ~g (FUNPOW f n (f x))) = (?n. ~g (FUNPOW f n x))` by all_tac
-   >- (REPEAT strip_tac
+   \\ `(?n. ~g (FUNPOW f n (f x))) = (?n. ~g (FUNPOW f n x))` by (REPEAT strip_tac
        \\ eq_tac
        \\ REPEAT strip_tac
        >- (qexists_tac `SUC n'` \\ fs [FUNPOW])

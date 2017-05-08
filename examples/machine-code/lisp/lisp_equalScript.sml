@@ -223,7 +223,7 @@ val arm_eq_loop_spec_lemma = prove(
     \\ Q.PAT_X_ASSUM `!x. bbb`
         (MP_TAC o Q.SPECL [`r`,`d`,`e`,`m`,`m (r7 - 8w:word32)`,`m (r7 - 4w:word32)`,`r5`,`r6`,`r7 - 8w`])
     \\ FULL_SIMP_TAC std_ss [GSYM WORD_SUB_PLUS,word_add_n2w,MAX_XDEPTH_def]
-    \\ REVERSE (`MAX_ADDRESSES (r7 - 8w) (q::MAP FST t) SUBSET e` by ALL_TAC) THENL [
+    \\ REVERSE (sg `MAX_ADDRESSES (r7 - 8w) (q::MAP FST t) SUBSET e`) THENL [
       ASM_SIMP_TAC bool_ss [ALIGNED_INTRO] \\ STRIP_TAC
       \\ ONCE_REWRITE_TAC [ALIGNED_MOD_4]
       \\ ASM_SIMP_TAC std_ss [WORD_ADD_0,WORD_SUB_RZERO,AC CONJ_ASSOC CONJ_COMM]
@@ -235,8 +235,7 @@ val arm_eq_loop_spec_lemma = prove(
       \\ REPEAT STRIP_TAC
       \\ FULL_SIMP_TAC std_ss [WORD_MULT_CLAUSES,LENGTH,n2w_SUC,WORD_SUB_PLUS]
       \\ Q.EXISTS_TAC `i` \\ REWRITE_TAC [WORD_SUB_ADD,WORD_ADD_SUB]
-      \\ REVERSE (`MAX_XDEPTH (q::MAP FST t) <= MAX_XDEPTH (y::q::MAP FST t)` by ALL_TAC)
-      THEN1 DECIDE_TAC
+      \\ `MAX_XDEPTH (q::MAP FST t) <= MAX_XDEPTH (y::q::MAP FST t)` suffices_by DECIDE_TAC
       \\ CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [MAX_XDEPTH_def]))
       \\ SIMP_TAC std_ss [MAX_DEF]]
 ,
@@ -268,7 +267,7 @@ val arm_eq_loop_spec_lemma = prove(
     \\ ASM_SIMP_TAC std_ss [LENGTH,ADD1]
     \\ `MAX_XDEPTH (x1::x2::MAP FST ys) < 4294967296` by METIS_TAC [LESS_EQ_LESS_TRANS,MAX_XDEPTH_DOT]
     \\ ASM_SIMP_TAC std_ss []
-    \\ `MAX_ADDRESSES (r7 + 8w) (x1::x2::MAP FST ys) SUBSET e` by ALL_TAC
+    \\ sg `MAX_ADDRESSES (r7 + 8w) (x1::x2::MAP FST ys) SUBSET e`
     THENL [
       MATCH_MP_TAC SUBSET_TRANS
       \\ Q.EXISTS_TAC `MAX_ADDRESSES r7 (XDot x1 x2::MAP FST ys)`
@@ -277,16 +276,14 @@ val arm_eq_loop_spec_lemma = prove(
       \\ REPEAT STRIP_TAC
       \\ FULL_SIMP_TAC std_ss [WORD_MULT_CLAUSES,LENGTH,n2w_SUC,WORD_SUB_PLUS,WORD_ADD_SUB]
       \\ Q.EXISTS_TAC `i` \\ REWRITE_TAC []
-      \\ REVERSE (`MAX_XDEPTH (x1::x2::MAP FST ys) <= MAX_XDEPTH (XDot x1 x2::MAP FST ys)` by ALL_TAC)
-      THEN1 DECIDE_TAC \\ METIS_TAC [MAX_XDEPTH_DOT],
+      \\ `MAX_XDEPTH (x1::x2::MAP FST ys) <= MAX_XDEPTH (XDot x1 x2::MAP FST ys)` suffices_by DECIDE_TAC \\ METIS_TAC [MAX_XDEPTH_DOT],
       ASM_SIMP_TAC std_ss []
       \\ `r7 IN MAX_ADDRESSES r7 (XDot x1 x2::MAP FST ys)` by
        (SIMP_TAC std_ss [IN_DEF,MAX_ADDRESSES_def]
         \\ Q.EXISTS_TAC `2 * LENGTH (MAP FST ys)`
         \\ SIMP_TAC std_ss [LENGTH,n2w_SUC,WORD_MULT_CLAUSES,WORD_SUB_PLUS,WORD_ADD_SUB]
         \\ SIMP_TAC std_ss [MULT_ASSOC,word_mul_n2w,WORD_SUB_ADD]
-        \\ REVERSE (`LENGTH (MAP FST ys) + 1 < MAX_XDEPTH (XDot x1 x2::MAP FST ys)` by ALL_TAC)
-        THEN1 DECIDE_TAC
+        \\ `LENGTH (MAP FST ys) + 1 < MAX_XDEPTH (XDot x1 x2::MAP FST ys)` suffices_by DECIDE_TAC
         \\ SIMP_TAC std_ss [MAX_XDEPTH_def,XDEPTH_def,ADD1,LENGTH]
         \\ DISJ1_TAC \\ DECIDE_TAC)
       \\ `r7 + 4w IN MAX_ADDRESSES r7 (XDot x1 x2::MAP FST ys)` by
@@ -295,15 +292,14 @@ val arm_eq_loop_spec_lemma = prove(
         \\ SIMP_TAC std_ss [LENGTH,n2w_SUC,WORD_MULT_CLAUSES,WORD_SUB_PLUS,WORD_ADD_SUB]
         \\ SIMP_TAC std_ss [MULT_ASSOC,word_mul_n2w,WORD_SUB_ADD,LEFT_ADD_DISTRIB,GSYM word_add_n2w]
         \\ SIMP_TAC std_ss [WORD_ADD_ASSOC,WORD_SUB_ADD]
-        \\ REVERSE (`LENGTH (MAP FST ys) + 1 < MAX_XDEPTH (XDot x1 x2::MAP FST ys)` by ALL_TAC)
-        THEN1 DECIDE_TAC
+        \\ `LENGTH (MAP FST ys) + 1 < MAX_XDEPTH (XDot x1 x2::MAP FST ys)` suffices_by DECIDE_TAC
         \\ SIMP_TAC std_ss [MAX_XDEPTH_def,XDEPTH_def,ADD1,LENGTH]
         \\ DISJ1_TAC \\ DECIDE_TAC)
       \\ `~(r7 IN d) /\ ~(r7 + 4w IN d)` by METIS_TAC [SUBSET_DEF,EXTENSION,IN_INTER,NOT_IN_EMPTY]
       \\ ASM_SIMP_TAC std_ss [word_tree2_IGNORE_WRITE]
-      \\ REVERSE (`lisp_stack ((x2,y2)::ys)
-         (r7 + 8w,(r7 + 4w =+ m (r4 + 4w)) ((r7 =+ m (r3 + 4w)) m),d,e)` by ALL_TAC)
-      THEN1 (ASM_SIMP_TAC std_ss [APPLY_UPDATE_THM] \\ METIS_TAC [SUBSET_DEF])
+      \\ `lisp_stack ((x2,y2)::ys)
+         (r7 + 8w,(r7 + 4w =+ m (r4 + 4w)) ((r7 =+ m (r3 + 4w)) m),d,e)` suffices_by
+      (STRIP_TAC THEN ASM_SIMP_TAC std_ss [APPLY_UPDATE_THM] \\ METIS_TAC [SUBSET_DEF])
       \\ ASM_SIMP_TAC std_ss [lisp_stack_def,word_arith_lemma1,word_arith_lemma2,word_arith_lemma3,word_arith_lemma4,word_arith_lemma5,WORD_ADD_0]
       \\ STRIP_TAC THEN1 METIS_TAC [SUBSET_DEF]
       \\ STRIP_TAC THEN1 METIS_TAC [SUBSET_DEF]
@@ -771,8 +767,8 @@ val lisp_inv_equal = store_thm("lisp_inv_equal",
     \\ Q.PAT_X_ASSUM `!x. bbb ==> (f5 x = ft x)` MATCH_MP_TAC
     \\ `16 * limit < 2 ** 32` by (SIMP_TAC std_ss [] \\ DECIDE_TAC)
     \\ IMP_RES_TAC (RW [EXTENSION,NOT_IN_EMPTY,IN_INTER] heap_half_DISJOINT)
-    \\ REVERSE (`x IN {b + 0x4w | b IN bb}` by ALL_TAC)
-    THEN1 (Cases_on `u` \\ REWRITE_TAC [] \\ METIS_TAC [SUBSET_DEF])
+    \\ `x IN {b + 0x4w | b IN bb}` suffices_by
+    (STRIP_TAC THEN Cases_on `u` \\ REWRITE_TAC [] \\ METIS_TAC [SUBSET_DEF])
     \\ ASM_SIMP_TAC std_ss [GSPECIFICATION,GSYM WORD_EQ_SUB_RADD])
   \\ IMP_RES_TAC lisp_x_or \\ ASM_SIMP_TAC std_ss []
   \\ REPEAT STRIP_TAC \\ METIS_TAC [WORD_ADD_SUB]);
