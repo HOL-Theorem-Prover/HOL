@@ -48,6 +48,22 @@ Incompatibilities:
 
            val op by = BasicProvers.byA
 
+    If one wanted to fix possibly broken occurrences to use the new semantics, the following Perl script might be helpful (it was used to adjust the core HOL sources):
+
+           $/ = "\n\n";
+
+           while (<>) {
+               s/(`[^`]+`)(\s*)by(\s*)(ALL_TAC|all_tac)(\s*)(>-|THEN1)/\1 by/g;
+               s/(Tactical\.)?REVERSE(\s*)\((`[^`]+`)(\s*)by(\s*)(ALL_TAC|all_tac)(\s*)\)(\s*)(THEN1|>-)(\s*)\(/\3 suffices_by\8(STRIP_TAC THEN /g;
+               s/(Tactical\.)?REVERSE(\s*)\((`[^`]+`)(\s*)by(\s*)(ALL_TAC|all_tac)(\s*)\)(\s*)(THEN1|>-)(\s*)/\3 suffices_by /g;
+               s/(`[^`]+`)(\s*)by(\s*)(ALL_TAC|all_tac)(\s*)/sg \1\5/g;
+               print;
+           }
+
+    If the above is called `byfix.pl` (for example), then a reasonable invocation would be
+
+           perl -i byfix.pl *Script.sml
+
 *   The type of the “system printer” used by user-defined pretty-printers to pass control back to the default printer has changed.
     This function now gets passed an additional parameter corresponding to whether or not the default printer should treat the term to be printed as if it were in a binding position or not.
     (This `binderp` parameter is in addition to the parameters indicating the “depth” of the printing, and the precedence gravities.)
