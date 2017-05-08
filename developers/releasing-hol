@@ -193,7 +193,6 @@ find . -name '.gitignore' -delete
 
 echo
 
-mv bin/README ../bin-README
 if [ $ML = "mosml" ]
 then
     /bin/rm tools/Holmake/*.{uo,ui} tools/hol-mode.el
@@ -207,9 +206,8 @@ then
     (cd help/src-sml ; ../../bin/Holmake cleanAll)
 fi
 
-/bin/rm -f bin/*
-
-mv ../bin-README bin/README
+cd bin
+/bin/ls -A1 | egrep -v '(hol.ML|noninterhol.ML|README)' | xargs /bin/rm
 
 cd /tmp
 
