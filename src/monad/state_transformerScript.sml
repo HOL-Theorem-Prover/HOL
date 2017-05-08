@@ -144,9 +144,6 @@ val MWHILE_DEF = new_specification(
 (* Theorems.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val op++ = op THEN
-val op|| = op ORELSE
-val op>> = op THEN1
 val Suff = Q_TAC SUFF_TAC
 val Know = Q_TAC KNOW_TAC
 val FUN_EQ_TAC = CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV)
@@ -156,7 +153,7 @@ val UNIT_CURRY = store_thm
   ("UNIT_CURRY",
    ``UNIT = CURRY I``,
    REWRITE_TAC [CURRY_DEF, UNIT_DEF, FUN_EQ_THM, combinTheory.I_THM]
-    ++ BETA_TAC ++ REWRITE_TAC []) ;
+    >> BETA_TAC >> REWRITE_TAC []) ;
 
 val MCOMP_ALT = store_thm
   ("MCOMP_ALT",
@@ -222,34 +219,34 @@ val BIND_LEFT_UNIT = store_thm
   ("BIND_LEFT_UNIT",
    ``!(k:'a->'b->'c#'b) x. BIND (UNIT x) k = k x``,
    REPEAT STRIP_TAC
-   ++ MATCH_MP_TAC EQ_EXT
-   ++ REWRITE_TAC [BIND_DEF, UNIT_DEF, o_DEF]
-   ++ CONV_TAC (DEPTH_CONV BETA_CONV)
-   ++ REWRITE_TAC [UNCURRY_DEF]);
+   >> MATCH_MP_TAC EQ_EXT
+   >> REWRITE_TAC [BIND_DEF, UNIT_DEF, o_DEF]
+   >> CONV_TAC (DEPTH_CONV BETA_CONV)
+   >> REWRITE_TAC [UNCURRY_DEF]);
 
 val UNIT_UNCURRY = store_thm
   ("UNIT_UNCURRY",
    ``!(s:'a#'b). UNCURRY UNIT s = s``,
    REWRITE_TAC [UNCURRY_VAR, UNIT_DEF]
-   ++ CONV_TAC (DEPTH_CONV BETA_CONV)
-   ++ REWRITE_TAC [PAIR]);
+   >> CONV_TAC (DEPTH_CONV BETA_CONV)
+   >> REWRITE_TAC [PAIR]);
 
 val BIND_RIGHT_UNIT = store_thm
   ("BIND_RIGHT_UNIT",
    ``!(k:'a->'b#'a). BIND k UNIT = k``,
    REPEAT STRIP_TAC
-   ++ MATCH_MP_TAC EQ_EXT
-   ++ REWRITE_TAC [BIND_DEF, UNIT_UNCURRY, o_DEF]
-   ++ CONV_TAC (DEPTH_CONV BETA_CONV)
-   ++ REWRITE_TAC []);
+   >> MATCH_MP_TAC EQ_EXT
+   >> REWRITE_TAC [BIND_DEF, UNIT_UNCURRY, o_DEF]
+   >> CONV_TAC (DEPTH_CONV BETA_CONV)
+   >> REWRITE_TAC []);
 
 val BIND_ASSOC = store_thm
   ("BIND_ASSOC",
    ``!(k:'a->'b#'a) (m:'b->'a->'c#'a) (n:'c->'a->'d#'a).
        BIND k (\a. BIND (m a) n) = BIND (BIND k m) n``,
    REWRITE_TAC [BIND_DEF, UNCURRY_VAR, o_DEF]
-   ++ CONV_TAC (DEPTH_CONV BETA_CONV)
-   ++ REWRITE_TAC []);
+   >> CONV_TAC (DEPTH_CONV BETA_CONV)
+   >> REWRITE_TAC []);
 
 val MMAP_ID = store_thm
   ("MMAP_ID",
@@ -275,7 +272,7 @@ val EXT_o_JOIN = store_thm
 val MMAP_JOIN = store_thm
   ("MMAP_JOIN",
    ``!f. MMAP f o JOIN = JOIN o MMAP (MMAP f:('a->'b#'a)->('a->'c#'a))``,
-   REWRITE_TAC [GSYM EXT_JM] ++ REWRITE_TAC [MMAP_EXT, EXT_o_JOIN]) ;
+   REWRITE_TAC [GSYM EXT_JM] >> REWRITE_TAC [MMAP_EXT, EXT_o_JOIN]) ;
 
 val JOIN_UNIT = store_thm
   ("JOIN_UNIT",
@@ -291,7 +288,7 @@ val JOIN_MAP_JOIN = store_thm
   ("JOIN_MAP_JOIN",
    ``JOIN o MMAP JOIN = ((JOIN o JOIN)
        :('a -> ('a -> ('a -> 'b # 'a) # 'a) # 'a) -> 'a -> 'b # 'a)``,
-   REWRITE_TAC [GSYM EXT_JM] ++ REWRITE_TAC [JOIN_EXT, GSYM EXT_o_JOIN]) ;
+   REWRITE_TAC [GSYM EXT_JM] >> REWRITE_TAC [JOIN_EXT, GSYM EXT_o_JOIN]) ;
 
 val JOIN_MAP = store_thm
   ("JOIN_MAP",
@@ -302,25 +299,25 @@ val FST_o_UNIT = store_thm
   ("FST_o_UNIT",
    ``!x. FST o UNIT x = K x``,
    FUN_EQ_TAC
-   ++ REWRITE_TAC [o_THM, UNIT_DEF, K_THM]
-   ++ BETA_TAC
-   ++ REWRITE_TAC [FST]);
+   >> REWRITE_TAC [o_THM, UNIT_DEF, K_THM]
+   >> BETA_TAC
+   >> REWRITE_TAC [FST]);
 
 val SND_o_UNIT = store_thm
   ("SND_o_UNIT",
    ``!x. SND o UNIT x = I``,
    FUN_EQ_TAC
-   ++ REWRITE_TAC [o_THM, UNIT_DEF, I_THM]
-   ++ BETA_TAC
-   ++ REWRITE_TAC [SND]);
+   >> REWRITE_TAC [o_THM, UNIT_DEF, I_THM]
+   >> BETA_TAC
+   >> REWRITE_TAC [SND]);
 
 val FST_o_MMAP = store_thm
   ("FST_o_MMAP",
    ``!f g. FST o MMAP f g = f o FST o g``,
    FUN_EQ_TAC
-   ++ REWRITE_TAC [MMAP_DEF, BIND_DEF, UNCURRY, o_THM, UNIT_DEF]
-   ++ BETA_TAC
-   ++ REWRITE_TAC [FST]);
+   >> REWRITE_TAC [MMAP_DEF, BIND_DEF, UNCURRY, o_THM, UNIT_DEF]
+   >> BETA_TAC
+   >> REWRITE_TAC [FST]);
 
 val sequence_nil = store_thm("sequence_nil",
   ``sequence [] = UNIT []``,
@@ -342,10 +339,10 @@ val mapM_cons = store_thm("mapM_cons",
 (*
 val BIND_CONG = Q.store_thm
 ("BIND_CONG",
- `!a b c d. 
+ `!a b c d.
    (a = c) /\
    (!x y s. (c s = (x,y)) ==> (b x y = d x y))
-    ==> 
+    ==>
    (BIND a b = BIND c d)`,
  SRW_TAC [] [BIND_DEF,pairTheory.UNCURRY_VAR,combinTheory.o_DEF,FUN_EQ_THM]
   THEN FIRST_ASSUM MATCH_MP_TAC
@@ -365,4 +362,3 @@ val _ = adjoin_to_theory
 (* ------------------------------------------------------------------------- *)
 
 val _ = export_theory ();
-
