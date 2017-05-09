@@ -653,5 +653,38 @@ val branch_delay = Q.store_thm("branch_delay",
 
 (* ------------------------------------------------------------------------ *)
 
+val cond_word2 = Q.store_thm("cond_word2",
+  `(if w = 0w : word2 then a
+    else if w = 1w then b
+    else if w = 2w then c
+    else if w = 3w then d else e) =
+   (if w = 0w then a
+    else if w = 1w then b
+    else if w = 2w then c
+    else d)`,
+  wordsLib.Cases_on_word_value `w`
+  \\ simp []
+  )
+
+val cond_word3 = Q.store_thm("cond_word3",
+  `(if w = 0w : word3 then a
+    else if w = 1w then b
+    else if w = 2w then c
+    else if w = 3w then d
+    else if w = 4w then e
+    else if w = 5w then f
+    else if w = 6w then g
+    else if w = 7w then h else i) =
+   (if w = 0w then a
+    else if w = 1w then b
+    else if w = 2w then c
+    else if w = 3w then d
+    else if w = 4w then e
+    else if w = 5w then f
+    else if w = 6w then g
+    else h)`,
+  wordsLib.Cases_on_word_value `w`
+  \\ simp []
+  )
 
 val () = export_theory ()
