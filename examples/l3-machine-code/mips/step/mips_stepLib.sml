@@ -251,7 +251,7 @@ val fpEV = EVC
    dfn'MOVT_def, dfn'MOVT_D_def, dfn'MOVT_S_def,
    dfn'MOVN_D_def, dfn'MOVN_S_def, dfn'MOVZ_D_def, dfn'MOVZ_S_def,
    dfn'DMFC1_def, dfn'DMTC1_def, dfn'MFC1_def, dfn'MTC1_def,
-   dfn'C_fmt_D_def, dfn'C_fmt_S_def,
+   dfn'C_cond_D_def, dfn'C_cond_S_def,
    dfn'CEIL_L_D_def, dfn'CEIL_L_S_def, dfn'CEIL_W_D_def, dfn'CEIL_W_S_def,
    dfn'FLOOR_L_D_def, dfn'FLOOR_L_S_def, dfn'FLOOR_W_D_def, dfn'FLOOR_W_S_def,
    dfn'ROUND_L_D_def, dfn'ROUND_L_S_def, dfn'ROUND_W_D_def, dfn'ROUND_W_S_def,
@@ -371,54 +371,14 @@ val ERET =
      [dfn'ERET_def, KernelMode_def]
      [[``^st.CP0.Status.EXL``, ``^st.BranchDelay = NONE``]] [] ``dfn'ERET``
 
-val BC1F = jEV ``dfn'BC1F imm``
-val BC1FL = jEV ``dfn'BC1FL imm``
-val BC1T = jEV ``dfn'BC1T imm``
-val BC1TL = jEV ``dfn'BC1TL imm``
+val BC1F = jEV ``dfn'BC1F (imm, cc)``
+val BC1FL = jEV ``dfn'BC1FL (imm, cc)``
+val BC1T = jEV ``dfn'BC1T (imm, cc)``
+val BC1TL = jEV ``dfn'BC1TL (imm, cc)``
 
 (* ------------------------------------------------------------------------- *)
 
 (* Load/Store thms and tools *)
-
-val cond_0_1 = Q.prove(
-   `!w: word1 a b c.
-       (if w = 0w then a else if w = 1w then b else c) =
-       (if w = 0w then a else b)`,
-   wordsLib.Cases_word_value \\ simp [])
-
-val cond_0_3 = Q.prove(
-   `!w: word2 a b c d e.
-       (if w = 0w then a
-        else if w = 1w then b
-        else if w = 2w then c
-        else if w = 3w then d
-        else e) =
-       (if w = 0w then a
-        else if w = 1w then b
-        else if w = 2w then c
-        else d)`,
-   wordsLib.Cases_word_value \\ simp [])
-
-val cond_0_7 = Q.prove(
-   `!w: word3 a b c d e f g h i.
-       (if w = 0w then a
-        else if w = 1w then b
-        else if w = 2w then c
-        else if w = 3w then d
-        else if w = 4w then e
-        else if w = 5w then f
-        else if w = 6w then g
-        else if w = 7w then h
-        else i) =
-       (if w = 0w then a
-        else if w = 1w then b
-        else if w = 2w then c
-        else if w = 3w then d
-        else if w = 4w then e
-        else if w = 5w then f
-        else if w = 6w then g
-        else h)`,
-   wordsLib.Cases_word_value \\ simp [])
 
 val mem_thms =
    [AddressTranslation_def, AdjustEndian_def, LoadMemory_def, ReadData_def,
@@ -430,7 +390,7 @@ val mem_thms =
     BYTE_def, HALFWORD_def, WORD_def, DOUBLEWORD_def,
     address_align, address_align2, cond_sign_extend, byte_address, extract_byte,
     wordsTheory.word_concat_0_0, wordsTheory.WORD_XOR_CLAUSES,
-    cond_0_1, cond_0_3, cond_0_7,
+    cond_word1, cond_word2, cond_word3,
     bitstringLib.v2w_n2w_CONV ``v2w [T] : word1``,
     bitstringLib.v2w_n2w_CONV ``v2w [F] : word1``,
     EVAL ``((3w : word2) @@ (0w : word1)) : word3``,
@@ -642,8 +602,8 @@ val SQRT_S = fpEV ``dfn'SQRT_S (fd, fs)``
 val SUB_D = fpEV ``dfn'SUB_D (fd, fs, ft)``
 val SUB_S = fpEV ``dfn'SUB_S (fd, fs, ft)``
 
-val C_fmt_D = fpEV ``dfn'C_fmt_D (fs, ft, c)``
-val C_fmt_S = fpEV ``dfn'C_fmt_S (fs, ft, c)``
+val C_cond_D = fpEV ``dfn'C_cond_D (fs, ft, cnd, cc)``
+val C_cond_S = fpEV ``dfn'C_cond_S (fs, ft, cnd, cc)``
 
 val CEIL_L_D = fpEV ``dfn'CEIL_L_D (fd, fs)``
 val CEIL_L_S = fpEV ``dfn'CEIL_L_S (fd, fs)``
@@ -941,10 +901,10 @@ val mips_patterns = List.map (I ## utilsLib.pattern)
     ("SCD",      "TTTTFF__________________________"), *)
     ("SD",       "TTTTTT__________________________"),
     ("ERET",     "FTFFFFTFFFFFFFFFFFFFFFFFFFFTTFFF"),
-    ("BC1F",     "FTFFFTFTFFFFFFFF________________"),
-    ("BC1T",     "FTFFFTFTFFFFFFFT________________"),
-    ("BC1FL",    "FTFFFTFTFFFFFFTF________________"),
-    ("BC1TL",    "FTFFFTFTFFFFFFTT________________"),
+    ("BC1F",     "FTFFFTFTFFF___FF________________"),
+    ("BC1T",     "FTFFFTFTFFF___FT________________"),
+    ("BC1FL",    "FTFFFTFTFFF___TF________________"),
+    ("BC1TL",    "FTFFFTFTFFF___TT________________"),
     ("ADD.S",    "FTFFFTTFFFF_______________FFFFFF"),
     ("SUB.S",    "FTFFFTTFFFF_______________FFFFFT"),
     ("MUL.S",    "FTFFFTTFFFF_______________FFFFTF"),
@@ -965,7 +925,7 @@ val mips_patterns = List.map (I ## utilsLib.pattern)
     ("MOVT.S",   "FTFFFTTFFFF___FT__________FTFFFT"),
     ("MOVZ.S",   "FTFFFTTFFFF_______________FTFFTF"),
     ("MOVN.S",   "FTFFFTTFFFF_______________FTFFTT"),
-    ("C.fmt.S",  "FTFFFTTFFFF__________FFFFFTTF___"),
+    ("C.cond.S", "FTFFFTTFFFF_____________FFTTF___"),
     ("ADD.D",    "FTFFFTTFFFT_______________FFFFFF"),
     ("SUB.D",    "FTFFFTTFFFT_______________FFFFFT"),
     ("MUL.D",    "FTFFFTTFFFT_______________FFFFTF"),
@@ -986,7 +946,7 @@ val mips_patterns = List.map (I ## utilsLib.pattern)
     ("MOVT.D",   "FTFFFTTFFFT___FT__________FTFFFT"),
     ("MOVZ.D",   "FTFFFTTFFFT_______________FTFFTF"),
     ("MOVN.D",   "FTFFFTTFFFT_______________FTFFTT"),
-    ("C.fmt.D",  "FTFFFTTFFFT__________FFFFFTTF___"),
+    ("C.cond.D", "FTFFFTTFFFT_____________FFTTF___"),
     ("CVT.S.D",  "FTFFFTTFFFTFFFFF__________TFFFFF"),
     ("CVT.S.W",  "FTFFFTTFTFFFFFFF__________TFFFFF"),
     ("CVT.S.L",  "FTFFFTTFTFTFFFFF__________TFFFFF"),
