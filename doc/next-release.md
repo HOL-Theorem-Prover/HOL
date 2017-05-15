@@ -64,6 +64,20 @@ Incompatibilities:
 
            perl -i byfix.pl *Script.sml
 
+    If one’s workflow was to write things like
+
+           `subgoal` by ALL_TAC THEN1 (tac1 THEN tac2 THEN ...)
+
+    and the same workflow makes
+
+           `subgoal` by (tac1 THEN tac2 THEN ...)
+
+    difficult (perhaps because the flow calls for cutting and pasting the `... by ALL_TAC` sub-string), we recommend
+
+           sg `subgoal` THEN1 (tac1 THEN tac2 THEN ...)
+
+    where ``sg `subgoal` `` has the same effect as the old `` `subgoal` by ALL_TAC``.
+
 *   The type of the “system printer” used by user-defined pretty-printers to pass control back to the default printer has changed.
     This function now gets passed an additional parameter corresponding to whether or not the default printer should treat the term to be printed as if it were in a binding position or not.
     (This `binderp` parameter is in addition to the parameters indicating the “depth” of the printing, and the precedence gravities.)
