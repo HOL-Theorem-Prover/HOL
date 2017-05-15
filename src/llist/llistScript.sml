@@ -216,18 +216,16 @@ val LTL_HD_11 = Q.store_thm ("LTL_HD_11",
   ASM_SIMP_TAC std_ss [LTL_HD_LNIL, LTL_HD_LCONS]) ;
 
 val LHD_THM = store_thm(
-  "LHD_THM",
+  "LHD_THM[simp,compute]",
   ``(LHD LNIL = NONE) /\ (!h t. LHD (LCONS h t) = SOME h)``,
   SRW_TAC [][LHDTL_CONS_THM] THEN
   SRW_TAC [][LHD, LNIL, llist_repabs', lrep_ok_rules]);
-val _ = export_rewrites ["LHD_THM"]
 
 val LTL_THM = store_thm(
-  "LTL_THM",
+  "LTL_THM[simp,compute]",
   ``(LTL LNIL = NONE) /\ (!h t. LTL (LCONS h t) = SOME t)``,
   SRW_TAC [][LHDTL_CONS_THM] THEN
   SRW_TAC [][LTL, LNIL, llist_repabs', lrep_ok_rules, LHD]);
-val _ = export_rewrites ["LTL_THM"]
 
 val LCONS_NOT_NIL = store_thm(
   "LCONS_NOT_NIL",
@@ -811,6 +809,12 @@ val LHD_LAPPEND = Q.store_thm("LHD_LAPPEND",
   `LHD (LAPPEND l1 l2) = if l1 = LNIL then LHD l2 else LHD l1`,
   qspec_then`l1`FULL_STRUCT_CASES_TAC llist_CASES >> rw[])
 
+val LTL_LAPPEND = Q.store_thm("LTL_LAPPEND",
+  `LTL (LAPPEND l1 l2) = if l1 = LNIL then LTL l2
+                         else SOME (LAPPEND (THE (LTL l1)) l2)`,
+  qspec_then`l1`FULL_STRUCT_CASES_TAC llist_CASES >> rw[]);
+
+
 val LTAKE_LAPPEND1 = Q.store_thm("LTAKE_LAPPEND1",
   `!n l1 l2. IS_SOME (LTAKE n l1) ==> (LTAKE n (LAPPEND l1 l2) = LTAKE n l1)`,
   Induct >> rw[LTAKE_THM] >>
@@ -1038,13 +1042,28 @@ val fromList_def = Define`
 `;
 val _ = export_rewrites ["fromList_def"]
 
+val fromList_EQ_LNIL = Q.store_thm(
+  "fromList_EQ_LNIL[simp]",
+  `(fromList l = LNIL) <=> (l = [])`,
+  Cases_on `l` >> simp[]);
+
+val LHD_fromList = Q.store_thm(
+  "LHD_fromList",
+  `LHD (fromList l) = if NULL l then NONE else SOME (HD l)`,
+  Cases_on `l` >> simp[]);
+
+val LTL_fromList = Q.store_thm(
+  "LTL_fromList",
+  `LTL (fromList l) = if NULL l then NONE else SOME (fromList (TL l))`,
+  Cases_on `l` >> simp[]);
+
 val LFINITE_fromList = store_thm(
   "LFINITE_fromList",
   ``!l. LFINITE (fromList l)``,
   Induct THEN ASM_SIMP_TAC (srw_ss()) []);
 
 val LLENGTH_fromList = store_thm(
-  "LLENGTH_fromList",
+  "LLENGTH_fromList[simp]",
   ``!l. LLENGTH (fromList l) = SOME (LENGTH l)``,
   Induct THEN ASM_SIMP_TAC (srw_ss()) []);
 
@@ -2333,14 +2352,14 @@ val LPREFIX_APPEND = Q.store_thm("LPREFIX_APPEND",
     simp[rich_listTheory.EL_APPEND1] >> NO_TAC) >>
   TRY (
     imp_res_tac LTAKE_IMP_LDROP >> rw[] >>
-    simp[LNTH_LAPPEND,LLENGTH_fromList] >>
+    simp[LNTH_LAPPEND] >>
     NO_TAC) >>
   `LTAKE (LENGTH x) l2 = SOME x` by (
     imp_res_tac LTAKE_TAKE_LESS >>
     rpt(first_x_assum(qspec_then`LENGTH x`mp_tac)) >>
     simp[rich_listTheory.TAKE_APPEND1] ) >>
   pop_assum(strip_assume_tac o MATCH_MP LTAKE_IMP_LDROP) >>
-  rw[LNTH_LAPPEND,LLENGTH_fromList]);
+  rw[LNTH_LAPPEND]);
 
 val LFINITE_LDROP_APPEND1 = Q.prove(
   `!l. LFINITE l ==>
@@ -2508,6 +2527,62 @@ val LMAP_LGENLIST = Q.store_thm(
   `LMAP f (LGENLIST g limopt) = LGENLIST (f o g) limopt`,
   simp[LNTH_EQ, LNTH_LGENLIST] >>
   Cases_on `limopt` >> simp[] >> rw[]);
+
+(* ----------------------------------------------------------------------
+    LREPEAT : 'a list -> 'a llist
+
+    Infinite repetitions of the argument.  If it's [], then the result is
+    [||]
+   ---------------------------------------------------------------------- *)
+
+val LREPEAT_def = zDefine`
+  LREPEAT l = if NULL l then [||]
+              else LGENLIST (\n. EL (n MOD LENGTH l) l) NONE
+`;
+
+(* couldn't figure out the right bisimulation to get this out via
+   LLIST_BISIMULATION
+*)
+val LREPEAT_thm = Q.store_thm(
+  "LREPEAT_thm",
+  `LREPEAT l = LAPPEND (fromList l) (LREPEAT l)`,
+  rw[LREPEAT_def] >- (Cases_on `l` >> fs[]) >>
+  `0 < LENGTH l /\ l <> []` by (Cases_on `l` >> fs[]) >>
+  simp[LNTH_EQ] >> Induct >>
+  simp[LNTH, LHD_LAPPEND, LHD_fromList, LTL_LAPPEND, LTL_fromList,
+       LNTH_LGENLIST, LNTH_LAPPEND, LNTH_fromList] >>
+  rw[] >> Cases_on `l` >> fs[] >>
+  `!m n. m <= n ==> ((n + 1) MOD (m + 1) = (n - m) MOD (m + 1))`
+     suffices_by
+       metis_tac[arithmeticTheory.ADD1, DECIDE ``~(x < y) <=> y <= x``] >>
+  rpt (pop_assum kall_tac) >>
+  rpt strip_tac >>
+  fs[arithmeticTheory.LESS_EQ_EXISTS] >>
+  metis_tac[arithmeticTheory.ADD_COMM, arithmeticTheory.ADD_ASSOC,
+            DECIDE ``0 < x + 1``, arithmeticTheory.ADD_MODULUS])
+
+val LREPEAT_NIL = Q.store_thm(
+  "LREPEAT_NIL[simp,compute]",
+  `LREPEAT [] = LNIL`,
+  simp[LREPEAT_def]);
+
+val LREPEAT_EQ_LNIL = Q.store_thm(
+  "LREPEAT_EQ_LNIL[simp]",
+  `((LREPEAT l = LNIL) <=> (l = [])) /\
+   ((LNIL = LREPEAT l) <=> (l = []))`,
+  Cases_on `l` >> simp[] >> conj_tac >> simp[Once LREPEAT_thm])
+
+val LHD_LREPEAT = Q.store_thm(
+  "LHD_LREPEAT[simp,compute]",
+  `LHD (LREPEAT l) = LHD (fromList l)`,
+  Cases_on `l = []` >> simp[] >> simp[Once LREPEAT_thm, LHD_LAPPEND]);
+
+val LTL_LREPEAT = Q.store_thm(
+  "LTL_LREPEAT[simp,compute]",
+  `LTL (LREPEAT l) = OPTION_MAP (\t. LAPPEND t (LREPEAT l)) (LTL (fromList l))`,
+  Cases_on `l = []` >> simp[] >> simp[Once LREPEAT_thm, LTL_LAPPEND] >>
+  Cases_on `l` >> fs[]);
+
 
 (* --------------------------------------------------------------------------
    Update TypeBase
