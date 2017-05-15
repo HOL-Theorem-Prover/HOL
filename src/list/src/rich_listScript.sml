@@ -76,6 +76,7 @@ val ELL = DEF0`
 val REPLICATE = DEF0`
    (REPLICATE 0 x = []) /\
    (REPLICATE (SUC n) x = CONS x (REPLICATE n x))`;
+val _ = export_rewrites ["REPLICATE"]
 
 val SCANL = DEF0`
    (SCANL f (e: 'b) [] = [e]) /\
