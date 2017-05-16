@@ -46,3 +46,4 @@ src/rational
 src/datatype/inftree
 !examples/hfs
 src/search
+!examples/CCS
