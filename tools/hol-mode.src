@@ -986,21 +986,13 @@ region instead. With prefix ARG prompt for a file-name to load."
   (if hol-bare-p (concat hol-executable ".bare")
                  hol-executable))
 
-(defun hol (niceness)
+(defun hol ()
   "Runs a HOL session in a comint window.
 With a numeric prefix argument, runs it niced to that level
 or at level 10 with a bare prefix. "
-  (interactive "P")
+  (interactive)
   (let* ((hol-was-ok (hol-buffer-ok hol-buffer-name))
-         (niceval (cond ((null niceness) 0)
-                        ((listp niceness) 0)
-                        (t (prefix-numeric-value niceness))))
-         (holname (format "HOL(n:%d)" niceval))
-         (buf (cond ((> niceval 0)
-                     (make-comint holname "nice" nil
-                                  (format "-%d" niceval)
-                                  (hol-executable-with-bare)))
-                    (t (make-comint "HOL" (hol-executable-with-bare))))))
+         (buf (make-comint "HOL" (hol-executable-with-bare))))
     (setq hol-buffer-name (buffer-name buf))
     (switch-to-buffer buf)
     (setq comint-prompt-regexp "^- ")
@@ -1030,32 +1022,32 @@ or at level 10 with a bare prefix. "
    (display-buffer hol-buffer-name));
 
 
-(defun hol-vertical (niceness)
+(defun hol-vertical ()
   "Runs a HOL session after splitting the window"
-  (interactive "P")
+  (interactive)
   (split-window-vertically)
   (other-window 1)
-  (hol ())
+  (hol)
   (other-window -1))
 
-(defun hol-horizontal (niceness)
+(defun hol-horizontal ()
   "Runs a HOL session after splitting the window"
-  (interactive "P")
+  (interactive)
   (split-window-horizontally)
   (other-window 1)
-  (hol ())
+  (hol)
   (other-window -1))
 
-(defun hol-new-frame (niceness)
+(defun hol-new-frame ()
   "Runs a HOL session in a new frame"
-  (interactive "P")
+  (interactive)
   (let* ((curframe (selected-frame))
          (oldtop (cdr (assoc 'top (frame-parameters))))
          (oldleft (cdr (assoc 'left (frame-parameters))))
          (newframe (make-frame)))
     (set-frame-position newframe (+ oldleft 500) oldtop) ; disgusting
     (select-frame newframe)
-    (hol niceness)
+    (hol)
     (select-frame-set-input-focus curframe)))
 
 (defvar hol-new-buffer-style hol-new-buffer-style-default)
@@ -1082,7 +1074,7 @@ or at level 10 with a bare prefix. "
          (style (intern style-str))
          (starter (cdr (assoc style hol-new-buffer-style-alist))))
     (setq hol-new-buffer-style style)
-    (funcall starter nil)
+    (funcall starter)
     (if (region-active-p)
         (copy-region-as-hol-definition-quietly (region-beginning) (region-end))
       (copy-region-as-hol-definition-quietly (point-min) (point-max)))))
