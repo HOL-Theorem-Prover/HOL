@@ -1067,7 +1067,7 @@ region instead. With prefix ARG prompt for a file-name to load."
                      t
                      nil
                      nil
-                     hol-new-buffer-style
+                     (symbol-name hol-new-buffer-style)
                      t))
          (style (intern style-str))
          (starter (cdr (assoc style hol-new-buffer-style-alist))))
