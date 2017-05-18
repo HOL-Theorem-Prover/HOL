@@ -35,6 +35,16 @@
   :group 'hol
   :type '(file :must-match t))
 
+(defcustom hol-new-buffer-style-default 'new-frame
+  "Default style for creating new HOL buffers. Possible values are
+new-frame (create in a new-frame); horizontal (create in a new buffer
+that is horizontally adjacent and to the right); and vertical (create in
+a new buffer that is vertically adjacent and below)."
+  :group 'hol
+  :type '(choice (const new-frame :tag "new-frame")
+                 (const horizontal :tag "horizontal")
+                 (const vertical :tag "vertical")))
+
 (defun hol-set-executable (filename)
   "*Set hol executable variable to be NAME."
   (interactive "fHOL executable: ")
@@ -555,10 +565,10 @@ variable before and after the region is sent."
 
 
 
-(defun copy-region-as-hol-definition-quitely (start end arg)
+(defun copy-region-as-hol-definition-quietly (start end)
    (interactive "r\np")
    (hol-toggle-quiet-quietdec)
-   (copy-region-as-hol-definition start end arg)
+   (copy-region-as-hol-definition start end 0)
    (hol-toggle-quiet-quietdec))
 
 
@@ -1036,6 +1046,46 @@ or at level 10 with a bare prefix. "
   (hol ())
   (other-window -1))
 
+(defun hol-new-frame (niceness)
+  "Runs a HOL session in a new frame"
+  (interactive "P")
+  (let* ((curframe (selected-frame))
+         (oldtop (cdr (assoc 'top (frame-parameters))))
+         (oldleft (cdr (assoc 'left (frame-parameters))))
+         (newframe (make-frame)))
+    (set-frame-position newframe (+ oldleft 500) oldtop) ; disgusting
+    (select-frame newframe)
+    (hol niceness)
+    (select-frame-set-input-focus curframe)))
+
+(defvar hol-new-buffer-style hol-new-buffer-style-default)
+
+(setq hol-new-buffer-style-alist
+      '((horizontal . hol-horizontal)
+        (vertical . hol-vertical)
+        (new-frame . hol-new-frame)))
+
+(defun hol-with-region ()
+  "Starts a HOL session and pastes selected region into it. If there is no active region, pastes whole buffer."
+  (interactive)
+  (let* ((style-str (completing-read
+                     (concat "HOL buffer position ("
+                             (symbol-name hol-new-buffer-style)
+                             "): ")
+                     '("horizontal" "vertical" "new-frame")
+                     nil
+                     t
+                     nil
+                     nil
+                     hol-new-buffer-style
+                     t))
+         (style (intern style-str))
+         (starter (cdr (assoc style hol-new-buffer-style-alist))))
+    (setq hol-new-buffer-style style)
+    (funcall starter nil)
+    (if (region-active-p)
+        (copy-region-as-hol-definition-quietly (region-beginning) (region-end))
+      (copy-region-as-hol-definition-quietly (point-min) (point-max)))))
 
 (defun run-program (filename niceness)
   "Runs a PROGRAM in a comint window, with a given (optional) NICENESS."
@@ -1857,8 +1907,8 @@ second is to show the new term.
 (define-key hol-map "\M-f" 'forward-hol-tactic)
 (define-key hol-map "\M-b" 'backward-hol-tactic)
 (define-key hol-map "\M-r" 'copy-region-as-hol-definition)
-(define-key hol-map "\C-r" 'copy-region-as-hol-definition-quitely)
-(define-key hol-map "\M-q" 'copy-region-as-hol-definition-real-quitely)
+(define-key hol-map "\C-r" 'copy-region-as-hol-definition-quietly)
+(define-key hol-map "\M-q" 'copy-region-as-hol-definition-real-quietly)
 (define-key hol-map "\M-t" 'hol-toggle-show-times)
 (define-key hol-map "\M-s" 'hol-subgoal-tactic)
 (define-key hol-map "\M-v" 'hol-scroll-down)
@@ -1873,6 +1923,7 @@ second is to show the new term.
 (define-key hol-map "g"    'hol-do-goal)
 (define-key hol-map "G"    'hol-do-goaltree)
 (define-key hol-map "h"    'hol)
+(define-key hol-map "H"    'hol-with-region)
 (define-key hol-map "\M-m" 'holmake)
 (define-key hol-map "4"    'hol-display)
 (define-key hol-map "3"    'hol-horizontal)
@@ -2222,7 +2273,7 @@ second is to show the new term.
    '("Send string to HOL" . interactive-send-string-to-hol))
 
 (define-key global-map [menu-bar hol-menu hol-process hol-send-region-quietly]
-   '("Send region to HOL - hide non-errors" . copy-region-as-hol-definition-quitely))
+   '("Send region to HOL - hide non-errors" . copy-region-as-hol-definition-quietly))
 
 (define-key global-map [menu-bar hol-menu hol-process hol-send-region]
    '("Send region to HOL" . copy-region-as-hol-definition))
