@@ -2528,6 +2528,27 @@ val LMAP_LGENLIST = Q.store_thm(
   simp[LNTH_EQ, LNTH_LGENLIST] >>
   Cases_on `limopt` >> simp[] >> rw[]);
 
+val LGENLIST_EQ_CONS = Q.store_thm(
+  "LGENLIST_EQ_CONS",
+  `(LGENLIST f NONE = h:::t) <=>
+     (h = f 0) /\ (t = LGENLIST (f o (+) 1) NONE)`,
+  simp[LGENLIST_def] >> simp[SimpLHS, Once LUNFOLD] >>
+  `!m. LUNFOLD (\n. SOME (n + 1, f n)) m =
+       LUNFOLD (\n. SOME (n + 1, f(n + m))) 0` suffices_by metis_tac[] >>
+  gen_tac >> simp[Once LLIST_STRONG_BISIMULATION] >>
+  qexists_tac `\l1 l2. ?k m.
+    (l1 = LUNFOLD (\n. SOME (n + 1, f n)) (m + k)) /\
+    (l2 = LUNFOLD (\n. SOME (n + 1, f (n + m))) k)` >> simp[] >> conj_tac
+  >- metis_tac[arithmeticTheory.ADD_CLAUSES] >>
+  dsimp[] >> rpt gen_tac >> disj2_tac >>
+  qspec_then `LUNFOLD (\n. SOME (n + 1, f n)) (k + m)` strip_assume_tac
+    llist_CASES >> simp[]
+  >- fs[Once LUNFOLD] >>
+  pop_assum mp_tac >>
+  simp[SimpL ``$==>``, Once LUNFOLD] >> rw[] >>
+  map_every qexists_tac [`k+1`, `m`] >> simp[] >>
+  simp[Once LUNFOLD, SimpLHS]);
+
 (* ----------------------------------------------------------------------
     LREPEAT : 'a list -> 'a llist
 
@@ -2540,26 +2561,38 @@ val LREPEAT_def = zDefine`
               else LGENLIST (\n. EL (n MOD LENGTH l) l) NONE
 `;
 
-(* couldn't figure out the right bisimulation to get this out via
-   LLIST_BISIMULATION
-*)
+val LGENLIST_CHUNK_GENLIST = Q.store_thm(
+  "LGENLIST_CHUNK_GENLIST",
+  `LGENLIST f NONE =
+     LAPPEND (fromList (GENLIST f n)) (LGENLIST (f o (+) n) NONE)`,
+  simp[Once LLIST_STRONG_BISIMULATION] >>
+  qexists_tac `\l1 l2. ?m n.
+    (l1 = LGENLIST (f o (+) m) NONE) /\
+    (l2 = LAPPEND (fromList (GENLIST (f o (+) m) n))
+                  (LGENLIST (f o $+ (m + n)) NONE))` >>
+  simp[] >> conj_tac
+  >- (map_every qexists_tac [`0`, `n`] >>
+      `$+ 0 = I` by simp[FUN_EQ_THM] >> simp[]) >>
+  dsimp[] >> qx_genl_tac [`m`, `n`] >>
+  disj2_tac >>
+  Q.SPEC_THEN `LGENLIST (f o $+ m) NONE` strip_assume_tac llist_CASES >>
+  fs[LGENLIST_EQ_CONS] >> rw[] >>
+  map_every qexists_tac [`m + 1`] >> simp[combinTheory.o_DEF] >>
+  Cases_on `n` >> simp[]
+  >- (simp[LGENLIST_EQ_CONS] >> qexists_tac `0` >> simp[combinTheory.o_DEF]) >>
+  rename [`SUC k`] >> qexists_tac `k` >> simp[listTheory.GENLIST_CONS] >>
+  simp[combinTheory.o_DEF, arithmeticTheory.ADD1]);
+
 val LREPEAT_thm = Q.store_thm(
   "LREPEAT_thm",
   `LREPEAT l = LAPPEND (fromList l) (LREPEAT l)`,
   rw[LREPEAT_def] >- (Cases_on `l` >> fs[]) >>
   `0 < LENGTH l /\ l <> []` by (Cases_on `l` >> fs[]) >>
-  simp[LNTH_EQ] >> Induct >>
-  simp[LNTH, LHD_LAPPEND, LHD_fromList, LTL_LAPPEND, LTL_fromList,
-       LNTH_LGENLIST, LNTH_LAPPEND, LNTH_fromList] >>
-  rw[] >> Cases_on `l` >> fs[] >>
-  `!m n. m <= n ==> ((n + 1) MOD (m + 1) = (n - m) MOD (m + 1))`
-     suffices_by
-       metis_tac[arithmeticTheory.ADD1, DECIDE ``~(x < y) <=> y <= x``] >>
-  rpt (pop_assum kall_tac) >>
-  rpt strip_tac >>
-  fs[arithmeticTheory.LESS_EQ_EXISTS] >>
-  metis_tac[arithmeticTheory.ADD_COMM, arithmeticTheory.ADD_ASSOC,
-            DECIDE ``0 < x + 1``, arithmeticTheory.ADD_MODULUS])
+  qmatch_abbrev_tac `LGENLIST f NONE = LAPPEND (fromList l) _` >>
+  `(l = GENLIST f (LENGTH l)) /\ (f = f o (+) (LENGTH l))`
+     suffices_by metis_tac[LGENLIST_CHUNK_GENLIST] >>
+  simp[Abbr`f`, combinTheory.o_DEF] >>
+  simp[listTheory.LIST_EQ_REWRITE])
 
 val LREPEAT_NIL = Q.store_thm(
   "LREPEAT_NIL[simp,compute]",
@@ -2583,6 +2616,10 @@ val LTL_LREPEAT = Q.store_thm(
   Cases_on `l = []` >> simp[] >> simp[Once LREPEAT_thm, LTL_LAPPEND] >>
   Cases_on `l` >> fs[]);
 
+val LLENGTH_LREPEAT = Q.store_thm(
+  "LLENGTH_LREPEAT",
+  `LLENGTH (LREPEAT l) = if NULL l then SOME 0 else NONE`,
+  rw[LREPEAT_def])
 
 (* --------------------------------------------------------------------------
    Update TypeBase
