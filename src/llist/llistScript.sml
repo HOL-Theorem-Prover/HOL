@@ -2439,7 +2439,7 @@ val numopt_BISIMULATION = Q.store_thm(
      ?R. R mopt nopt /\
          !m n. R m n ==>
                (m = SOME 0) /\ (n = SOME 0) \/
-               m <> SOME 0 /\ n <> SOME 0 /\ (m = n) /\
+               m <> SOME 0 /\ n <> SOME 0 /\
                R (OPTION_MAP PRE m) (OPTION_MAP PRE n)`,
   simp[EQ_IMP_THM, FORALL_AND_THM] >> conj_tac
   >- (gen_tac >> qexists_tac `(=)` >> simp[]) >>
