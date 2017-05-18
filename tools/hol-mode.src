@@ -987,9 +987,7 @@ region instead. With prefix ARG prompt for a file-name to load."
                  hol-executable))
 
 (defun hol ()
-  "Runs a HOL session in a comint window.
-With a numeric prefix argument, runs it niced to that level
-or at level 10 with a bare prefix. "
+  "Runs a HOL session in a comint window."
   (interactive)
   (let* ((hol-was-ok (hol-buffer-ok hol-buffer-name))
          (buf (make-comint "HOL" (hol-executable-with-bare))))
