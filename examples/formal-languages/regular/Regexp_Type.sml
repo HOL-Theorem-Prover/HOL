@@ -1291,7 +1291,7 @@ fun create_regexps intlist nbytes =
  let val intervalL = intervals intlist
      val _ = stdOut_print("Number of sub-intervals: "
                           ^Int.toString (length intervalL)^"\n")
-     fun int_bytes i = bytes_of i nbytes
+     fun int_bytes i = bytes_of (IntInf.fromInt i) nbytes
      val intervalL_bytes = map (map int_bytes) intervalL
      val intervalL_regexp = Or (map crunch_interval intervalL_bytes)
 
@@ -1318,9 +1318,9 @@ fun sub_intervals intlist nbytes order =
  end
 
 fun icat w shift i =
- let val shiftw = Word.fromInt shift
+ let val shiftw = Word.fromInt (IntInf.toInt shift)
      val shifted = IntInf.<<(w,shiftw)
-     val x = clear_top_bits shift (IntInf.fromInt i)
+     val x = clear_top_bits shift i
  in
    IntInf.orb(shifted,x)
  end
@@ -1330,7 +1330,7 @@ fun icatlist w [] = w
 
 fun bits_width pelt =
   case pelt
-   of Pad i => i
+   of Pad i => IntInf.toInt i
     | Span (lo,hi) =>
        if lo > hi
          then raise ERR "find_width" "malformed interval (lo > hi)"
@@ -1361,16 +1361,19 @@ fun add_padding iwlist =
        | add [(Pad _,_)] = raise ERR "add_padding" "padding but no interval?"
        | add [] = []
  in
-   add iwlist
+    add (List.map (Lib.I ## IntInf.fromInt) iwlist)
  end;
 
 fun interval_width_string (p,w) =
- let open String Int
+ let open String IntInf
      fun ivl_str (Pad n)     = concat  ["padding: "]
        | ivl_str (Span(i,j)) = concat  ["interval: (",toString i,",",toString j,") ; "]
   in
-   String.concat [ivl_str p, "width in bits: ", toString w]
+   String.concat [ivl_str p, "width in bits: ", Int.toString w]
   end;
+
+fun intinf_upto lo hi =
+  List.map IntInf.fromInt (upto (IntInf.toInt lo) (IntInf.toInt hi))
 
 fun pack_intervals list =
  let val iwlist = map (fn x => (x,bits_width x)) list
@@ -1389,12 +1392,12 @@ fun pack_intervals list =
       List.concat
         (List.map (fn a => List.map (icat a width) B) A)
      fun iter W [] = W
-       | iter W (((lo,hi),width)::t) = iter (step W width (upto lo hi)) t
+       | iter W (((lo,hi),width)::t) = iter (step W width (intinf_upto lo hi)) t
  in
    case iwlist'
    of [] => raise ERR "pack_intervals" "supposedly unreachable!"
     | ((lo,hi),_)::t =>
-      let val intlist = iter (upto lo hi) t
+      let val intlist = List.map IntInf.toInt (iter (intinf_upto lo hi) t)
           val _ = stdOut_print ("Cardinality of specified interval: "
                                 ^Int.toString (length intlist)^"\n")
       in
