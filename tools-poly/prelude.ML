@@ -203,10 +203,6 @@ in
     ; List.app Meta.fakeload ["PP", "PolyML", "Posix"]
     ; Globals.interactive := true
     ; Parse.current_backend := Parse.interactive_ppbackend ()
-    ; term_pp_prefix := "``"
-    ; term_pp_suffix := "``"
-    ; type_pp_prefix := "``"
-    ; type_pp_suffix := "``"
     ; Feedback.set_trace "pp_annotations" 1
     ; PolyML.use (HOLDIR ++ "tools" ++ "check-intconfig.sml")
     )
