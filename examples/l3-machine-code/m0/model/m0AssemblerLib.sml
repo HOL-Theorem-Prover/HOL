@@ -8,9 +8,8 @@ struct
 open HolKernel boolLib bossLib
 
 local
-   open MutableMap m0 assemblerLib
-in
-end
+   open m0
+in end
 
 val ERR = Feedback.mk_HOL_ERR "m0AssemblerLib"
 

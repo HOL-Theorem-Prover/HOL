@@ -64,7 +64,4 @@ in
   doparen ")"
 end
 
-val cond_t = mk_cond (mk_var("p", bool), mk_var("q", alpha), mk_var("r", alpha))
-val _ = temp_add_user_printer ("COND", cond_t, condprinter)
-
 end

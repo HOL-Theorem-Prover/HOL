@@ -428,7 +428,7 @@ val BC_ev_TOTAL_LEMMA = prove(
          \\ METIS_TAC [BC_JUMPS_OK_BC_ADD_CONST])
   THEN1 (ONCE_REWRITE_TAC [BC_ev_cases] \\ ASM_SIMP_TAC (srw_ss()) [BC_return_def])
   THEN1 (`!a q. ?y1 y2 y3 bc1.
-            BC_evl (l,a,q,bc) (y1,y2,y3,bc1) /\ BC_JUMPS_OK bc1` by ALL_TAC THEN1
+            BC_evl (l,a,q,bc) (y1,y2,y3,bc1) /\ BC_JUMPS_OK bc1` by
           (REPEAT STRIP_TAC \\ MATCH_MP_TAC IMP_BC_evl_EXISTS \\ ASM_SIMP_TAC std_ss []
            \\ REPEAT STRIP_TAC \\ Q.PAT_X_ASSUM `!tttt.bbb` MATCH_MP_TAC
            \\ ASM_SIMP_TAC std_ss [term_depth_def]
@@ -452,7 +452,7 @@ val BC_ev_TOTAL_LEMMA = prove(
          \\ `term_depth t1 < 1 + term_depth t' + term_depth t0 + term_depth t1` by DECIDE_TAC
          \\ RES_TAC \\ METIS_TAC [])
   THEN1 (`?y1 y2 y3 bc1.
-            BC_evl (l,a,q,bc) (y1,y2,y3,bc1) /\ BC_JUMPS_OK bc1` by ALL_TAC THEN1
+            BC_evl (l,a,q,bc) (y1,y2,y3,bc1) /\ BC_JUMPS_OK bc1` by
           (REPEAT STRIP_TAC \\ MATCH_MP_TAC IMP_BC_evl_EXISTS \\ ASM_SIMP_TAC std_ss []
            \\ REPEAT STRIP_TAC \\ Q.PAT_X_ASSUM `!tttt.bbb` MATCH_MP_TAC
            \\ ASM_SIMP_TAC std_ss [term_depth_def]
@@ -465,7 +465,7 @@ val BC_ev_TOTAL_LEMMA = prove(
          \\ FULL_SIMP_TAC std_ss [EXISTS_PROD] \\ Q.PAT_X_ASSUM `!tt.bbb` MATCH_MP_TAC
          \\ FULL_SIMP_TAC std_ss [term_depth_def,MAP,SUM_def]
          \\ `!l. (MAP (\(x':string,y). term_depth y) l) =
-                 (MAP (\a. term_depth a) (MAP SND l))` by ALL_TAC THEN1
+                 (MAP (\a. term_depth a) (MAP SND l))` by
           (Induct \\ FULL_SIMP_TAC std_ss [MAP]
            \\ Cases \\ FULL_SIMP_TAC std_ss [MAP])
          \\ FULL_SIMP_TAC std_ss [])
@@ -509,12 +509,12 @@ val BC_ev_TOTAL_LEMMA = prove(
       \\ `term_depth h < 10 + term_depth h` by DECIDE_TAC
       \\ FULL_SIMP_TAC std_ss [EXISTS_PROD] \\ METIS_TAC [])
     \\ ONCE_REWRITE_TAC [BC_ev_cases] \\ SIMP_TAC (srw_ss()) []
-    \\ `term_depth (And (h'::t')) < term_depth (And (h::h'::t'))` by ALL_TAC THEN1
+    \\ `term_depth (And (h'::t')) < term_depth (And (h::h'::t'))` by
          (FULL_SIMP_TAC std_ss [term_depth_def,MAP,SUM_def,ZERO_LT_term_depth])
     \\ ONCE_REWRITE_TAC [BC_ev_cases] \\ SIMP_TAC (srw_ss()) []
-    \\ `term_depth h < term_depth (And (h::h'::t'))` by ALL_TAC THEN1
+    \\ `term_depth h < term_depth (And (h::h'::t'))` by
          (FULL_SIMP_TAC std_ss [term_depth_def,MAP,SUM_def] \\ DECIDE_TAC)
-    \\ `term_depth (Const (Sym "NIL")) < term_depth (And (h::h'::t'))` by ALL_TAC THEN1
+    \\ `term_depth (Const (Sym "NIL")) < term_depth (And (h::h'::t'))` by
          (FULL_SIMP_TAC std_ss [term_depth_def,MAP,SUM_def] \\ DECIDE_TAC)
     \\ FULL_SIMP_TAC std_ss [PULL_EXISTS_CONJ]
     \\ Q.PAT_X_ASSUM `BC_JUMPS_OK bc` (fn th => ASSUME_TAC th THEN ASSUME_TAC (RW [BC_JUMPS_OK_def] th))
@@ -1424,7 +1424,7 @@ val BC_ONLY_COMPILE_compiled_instr_length = prove(
     ((BC_ONLY_COMPILE (syms,body,bc)).ok = bc.ok)``,
   STRIP_TAC \\ SIMP_TAC std_ss [BC_ONLY_COMPILE_def]
   \\ FULL_SIMP_TAC std_ss [LET_DEF]
-  \\ `BC_JUMPS_OK bc` by ALL_TAC THEN1
+  \\ `BC_JUMPS_OK bc` by
        (POP_ASSUM MP_TAC \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [])
   \\ `?new_code a2 q2 bcB. BC_ev_fun (syms,body,bc) = (new_code,a2,q2,bcB)` by METIS_TAC [PAIR]
   \\ IMP_RES_TAC BC_ev_fun_CONSTS
@@ -1488,7 +1488,7 @@ val BC_REFINES_ONLY_COMPILE = store_thm("BC_REFINES_ONLY_COMPILE",
   \\ ASM_SIMP_TAC std_ss [BC_ONLY_COMPILE_def,LET_DEF,WRITE_BYTECODE_code_end]
   \\ MATCH_MP_TAC (GEN_ALL BC_SUBSTATE_BYTECODE_OK) \\ Q.EXISTS_TAC `bc7`
   \\ ASM_SIMP_TAC std_ss []
-  \\ `BC_SUBSTATE bc7 (BC_ONLY_COMPILE (syms,body,bc7))` by ALL_TAC THEN1
+  \\ `BC_SUBSTATE bc7 (BC_ONLY_COMPILE (syms,body,bc7))` by
         ASM_SIMP_TAC std_ss [BC_SUBSTATE_ONLY_COMPILE]
   \\ POP_ASSUM MP_TAC
   \\ FULL_SIMP_TAC std_ss [BC_ONLY_COMPILE_def,LET_DEF,WRITE_BYTECODE_code_end]);
@@ -1524,7 +1524,7 @@ val BC_REFINES_COMPILE = store_thm("BC_REFINES_COMPILE",
   \\ FULL_SIMP_TAC std_ss [LET_DEF]
   \\ `?new_code a2 q2 bcB. BC_ev_fun (syms,body,bcA) = (new_code,a2,q2,bcB)` by METIS_TAC [PAIR]
   \\ ASM_SIMP_TAC (srw_ss()) [NOT_CONS_NIL,WRITE_BYTECODE_code_end]
-  \\ REPEAT STRIP_TAC \\ `BC_JUMPS_OK bcA` by ALL_TAC THEN1
+  \\ REPEAT STRIP_TAC \\ `BC_JUMPS_OK bcA` by
    (Q.UNABBREV_TAC `bcA`
     \\ FULL_SIMP_TAC (srw_ss()) [BC_JUMPS_OK_def,BC_STORE_COMPILED_def,BC_CODE_OK_def])
   \\ IMP_RES_TAC BC_ev_fun_IMP
@@ -1889,7 +1889,7 @@ val BC_ev_lemma = prove(goal,
     \\ Q.PAT_X_ASSUM `!env.bbb` (MP_TAC o
          Q.SPECL [`a'`,`z_code`,`a3`,`stack`,`p + iLENGTH bc.instr_length (x_code ++ [jnil] ++ y_code ++ [jump])`,`r`,`rs`,`ret`,`p2`,`bc2`,`bc0`,`bc8`])
     \\ ASM_SIMP_TAC std_ss []
-    \\ `q2 + bc.instr_length jump = p + iLENGTH bc.instr_length (x_code ++ [jnil] ++ y_code ++ [jump])` by ALL_TAC THEN1
+    \\ `q2 + bc.instr_length jump = p + iLENGTH bc.instr_length (x_code ++ [jnil] ++ y_code ++ [jump])` by
           (IMP_RES_TAC BC_ev_LENGTH
            \\ SIMP_TAC std_ss [iLENGTH_APPEND,iLENGTH_def]
            \\ NTAC 3 (POP_ASSUM MP_TAC)
@@ -1932,7 +1932,7 @@ val BC_ev_lemma = prove(goal,
     \\ Q.ABBREV_TAC `jnil = iJNIL (q2 + bc.instr_length jump)`
     \\ Q.PAT_X_ASSUM `!env.bbb` (MP_TAC o
          Q.SPECL [`a'`,`y_code`,`a2'`,`stack`,`p + iLENGTH bc.instr_length (x_code ++ [jnil])`,`r`,`rs`,`ret`,`q2`,`bc1`,`bc2`,`bc8`])
-    \\ `q1 + bc.instr_length jnil = p + iLENGTH bc.instr_length (x_code ++ [jnil])` by ALL_TAC THEN1
+    \\ `q1 + bc.instr_length jnil = p + iLENGTH bc.instr_length (x_code ++ [jnil])` by
           (IMP_RES_TAC BC_ev_LENGTH
            \\ ASM_SIMP_TAC std_ss [iLENGTH_APPEND,iLENGTH_def] \\ DECIDE_TAC)
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
@@ -2010,9 +2010,8 @@ val BC_ev_lemma = prove(goal,
       \\ FULL_SIMP_TAC std_ss []) \\ ASM_SIMP_TAC std_ss []
     \\ MATCH_MP_TAC IMP_IMP
     \\ STRIP_TAC THEN1
-     (`DROP (LENGTH ys) (MAP (\x. ssTEMP) (REVERSE sl) ++ a') = a'` by ALL_TAC THEN1
-       (`LENGTH ys = LENGTH (MAP (\x. ssTEMP) (REVERSE sl))` by
-           ALL_TAC THEN1 ASM_SIMP_TAC std_ss [LENGTH_MAP,LENGTH_REVERSE]
+     (`DROP (LENGTH ys) (MAP (\x. ssTEMP) (REVERSE sl) ++ a') = a'` by
+       (`LENGTH ys = LENGTH (MAP (\x. ssTEMP) (REVERSE sl))` by ASM_SIMP_TAC std_ss [LENGTH_MAP,LENGTH_REVERSE]
         \\ METIS_TAC [rich_listTheory.BUTFIRSTN_LENGTH_APPEND])
       \\ IMP_RES_TAC BC_ev_LENGTH \\ FULL_SIMP_TAC std_ss []
       \\ IMP_RES_TAC BC_SUBSTATE_BYTECODE \\ FULL_SIMP_TAC std_ss []
@@ -2097,8 +2096,7 @@ val BC_ev_lemma = prove(goal,
     \\ ASM_SIMP_TAC std_ss [term_distinct,func_distinct,term_11,func_11,LENGTH_REVERSE,LENGTH]
     \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [CONTAINS_BYTECODE_APPEND,
          LENGTH,LENGTH_APPEND,ADD_ASSOC,SUBMAP_REFL]
-    \\ `DROP (LENGTH args) (MAP (\x. ssTEMP) args ++ a') = a'` by ALL_TAC
-    THEN1 (METIS_TAC [rich_listTheory.BUTFIRSTN_LENGTH_APPEND,LENGTH_MAP,LENGTH_REVERSE])
+    \\ `DROP (LENGTH args) (MAP (\x. ssTEMP) args ++ a') = a'` by (METIS_TAC [rich_listTheory.BUTFIRSTN_LENGTH_APPEND,LENGTH_MAP,LENGTH_REVERSE])
     \\ ASM_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [BC_return_code_def,LENGTH,iLENGTH_def,APPEND]
     \\ Q.EXISTS_TAC `bc7` \\ ASM_SIMP_TAC std_ss []
@@ -2144,8 +2142,7 @@ val BC_ev_lemma = prove(goal,
       \\ Q.PAT_X_ASSUM `!fc params.bbb` (MP_TAC o Q.SPECL [`fc`,`params`,`exp`])
       \\ ASM_SIMP_TAC std_ss []
       \\ SIMP_TAC std_ss [PULL_EXISTS_IMP,PULL_FORALL_IMP,GSYM AND_IMP_INTRO]
-      \\ `DROP (LENGTH (el:term list)) (MAP (\x. ssTEMP) (REVERSE args) ++ a') = a'` by ALL_TAC
-      THEN1 (METIS_TAC [rich_listTheory.BUTFIRSTN_LENGTH_APPEND,LENGTH_MAP,LENGTH_REVERSE])
+      \\ `DROP (LENGTH (el:term list)) (MAP (\x. ssTEMP) (REVERSE args) ++ a') = a'` by (METIS_TAC [rich_listTheory.BUTFIRSTN_LENGTH_APPEND,LENGTH_MAP,LENGTH_REVERSE])
       \\ ASM_SIMP_TAC std_ss [AND_IMP_INTRO]
       (* \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1 METIS_TAC [SUBMAP_DEF] *)
       \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [CONTAINS_BYTECODE_APPEND]
@@ -2175,8 +2172,7 @@ val BC_ev_lemma = prove(goal,
           \\ `BC_SUBSTATE bc7 bc8` by BC_SUBSTATE_TAC
           \\ `bc7.instr_length = bc.instr_length` by METIS_TAC [BC_ev_LENGTH,BC_SUBSTATE_def]
           \\ `bc8.instr_length = bc.instr_length` by METIS_TAC [BC_ev_LENGTH,BC_SUBSTATE_def]
-          \\ `FUN_LOOKUP bc8.compiled fc = FUN_LOOKUP bc.compiled fc` by ALL_TAC
-          THEN1 (METIS_TAC [BC_SUBSTATE_def,NOT_SOME_NONE])
+          \\ `FUN_LOOKUP bc8.compiled fc = FUN_LOOKUP bc.compiled fc` by (METIS_TAC [BC_SUBSTATE_def,NOT_SOME_NONE])
           \\ FULL_SIMP_TAC std_ss [BC_call_def,BC_call_aux_def,CONTAINS_BYTECODE_def]
           \\ FULL_SIMP_TAC std_ss [] \\ IMP_RES_TAC BC_SUBSTATE_IMP
           \\ REPEAT STRIP_TAC \\ REPEAT (MATCH_MP_TAC RTC_SINGLE)
@@ -2271,7 +2267,7 @@ val BC_ev_lemma = prove(goal,
     \\ SIMP_TAC std_ss [APPEND_ASSOC]
     \\ REVERSE (Cases_on `padding = 0`) THEN1
      (`LENGTH stack1 <= LENGTH el /\
-       (padding + LENGTH stack1 = LENGTH el)` by ALL_TAC THEN1
+       (padding + LENGTH stack1 = LENGTH el)` by
          (Q.UNABBREV_TAC `padding` \\ POP_ASSUM MP_TAC
           \\ REPEAT (POP_ASSUM (K ALL_TAC)) \\ DECIDE_TAC)
       \\ ONCE_REWRITE_TAC [RTC_CASES_RTC_TWICE]
@@ -2562,8 +2558,7 @@ val BC_ev_lemma = prove(goal,
     \\ ASM_SIMP_TAC std_ss [term_distinct,func_distinct,term_11,func_11,LENGTH_REVERSE,LENGTH]
     \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [CONTAINS_BYTECODE_APPEND,
          LENGTH,LENGTH_APPEND,ADD_ASSOC,SUBMAP_REFL,MAP]
-    \\ `DROP 3 ([ssTEMP; ssTEMP; ssTEMP] ++ a') = a'` by ALL_TAC
-    THEN1 FULL_SIMP_TAC std_ss [DROP_def,APPEND,DROP_0]
+    \\ `DROP 3 ([ssTEMP; ssTEMP; ssTEMP] ++ a') = a'` by FULL_SIMP_TAC std_ss [DROP_def,APPEND,DROP_0]
     \\ FULL_SIMP_TAC std_ss [REVERSE_DEF,APPEND]
     \\ REVERSE (Cases_on `getSym fc NOTIN FDOM fns`)
     \\ FULL_SIMP_TAC std_ss [add_def_NOP,SUBMAP_REFL] THEN1
@@ -2594,7 +2589,7 @@ val BC_ev_lemma = prove(goal,
     \\ FULL_SIMP_TAC std_ss [add_def_FUPDATE]
     \\ `?bc5. BC_COMPILE (getSym fc,MAP getSym (sexp2list formals),sexp2term body,bc7) = bc5` by METIS_TAC []
     \\ Q.EXISTS_TAC `bc5`
-    \\ `fns SUBMAP fns |+ (getSym fc,MAP getSym (sexp2list formals),sexp2term body)` by ALL_TAC THEN1
+    \\ `fns SUBMAP fns |+ (getSym fc,MAP getSym (sexp2list formals),sexp2term body)` by
          (FULL_SIMP_TAC std_ss [SUBMAP_DEF,FDOM_FUPDATE,FAPPLY_FUPDATE_THM,IN_INSERT]
           \\ METIS_TAC []) \\ ASM_SIMP_TAC std_ss []
     \\ REVERSE (REPEAT STRIP_TAC) THEN1
@@ -2619,7 +2614,7 @@ val BC_ev_lemma = prove(goal,
     \\ REVERSE (Cases_on `ret`)
     \\ FULL_SIMP_TAC std_ss [RTC_REFL,iLENGTH_def,BC_return_code_def,APPEND_NIL]
     \\ MATCH_MP_TAC BC_return_code_thm \\ ASM_SIMP_TAC std_ss []
-    \\ `BC_SUBSTATE bc7 bc5` by ALL_TAC THEN1
+    \\ `BC_SUBSTATE bc7 bc5` by
       (FULL_SIMP_TAC std_ss [BC_REFINES_def]
        \\ Q.PAT_X_ASSUM `xxx = FDOM fns` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
        \\ FULL_SIMP_TAC std_ss [GSPECIFICATION]
@@ -3167,7 +3162,7 @@ val sexp2sexp_thm = store_thm("sexp2sexp_thm",
     \\ REPEAT (MATCH_MP_TAC LSIZE_CAR_LESS ORELSE MATCH_MP_TAC LSIZE_CDR_LESS)
     \\ FULL_SIMP_TAC std_ss [LSIZE_def] \\ DECIDE_TAC)
   \\ FULL_SIMP_TAC std_ss [term2sexp_def,func2sexp_def,APPEND,list2sexp_def,sfix_def]
-  \\ `~MEM (getSym a) reserved_names` by ALL_TAC
+  \\ sg `~MEM (getSym a) reserved_names`
   \\ FULL_SIMP_TAC std_ss [term2sexp_def,func2sexp_def,APPEND,list2sexp_def,sfix_def]
   \\ Cases_on `a` THEN1 EVAL_TAC THEN1 EVAL_TAC
   \\ FULL_SIMP_TAC std_ss [getSym_def]

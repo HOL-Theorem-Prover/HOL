@@ -5121,7 +5121,7 @@ METIS_TAC [inj_countable, num_cross_countable]);
 val union_countable = Q.store_thm ("union_countable",
 `!s t. countable s /\ countable t ==> countable (s UNION t)`,
 RWTAC [] THEN
-`!x. x IN {s; t} ==> countable x` by RWTAC [] THEN
+`!x. x IN {s; t} ==> countable x` by ASM_SIMP_TAC (srw_ss() ++ DNF_ss) [] THEN
 `FINITE {s; t}` by RWTAC [] THEN
 `s UNION t = BIGUNION {s; t}`
           by (RWTAC [EXTENSION, IN_UNION, IN_BIGUNION] THEN
@@ -5302,7 +5302,7 @@ val FINITE_INTER = store_thm ("FINITE_INTER",
   FINITE (s1 INTER s2)``,
 
 REPEAT GEN_TAC THEN
-`((s1 INTER s2) SUBSET s1) /\ ((s1 INTER s2) SUBSET s2)` by ALL_TAC THEN1 (
+`((s1 INTER s2) SUBSET s1) /\ ((s1 INTER s2) SUBSET s2)` by (
    SIMP_TAC bool_ss [SUBSET_DEF, IN_INTER]
 ) THEN
 METIS_TAC[SUBSET_FINITE]);

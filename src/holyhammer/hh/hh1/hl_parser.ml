@@ -130,7 +130,7 @@ let lex =
          String.make 1 (Char.chr(int_of_string(a^b^c))),rst
     | _ -> failwith "lex:unrecognized OCaml-style escape in string" in
   let stringchar =
-      some (fun i -> i <> "\\" & i <> "\"")
+      some (fun i -> i <> "\\" && i <> "\"")
   || (a "\\" ++ escapecode >> snd) in
   let string = a "\"" ++ many stringchar ++ a "\"" >>
         (fun ((_,s),_) -> "\""^implode s^"\"") in
@@ -140,7 +140,7 @@ let lex =
   let rec tokens i =
     try let (t,rst) = simptoken i in
         if t = !comment_token then
-          (many (fun i -> if i <> [] & hd i <> "\n" then 1,tl i
+          (many (fun i -> if i <> [] && hd i <> "\n" then 1,tl i
                           else raise Noparse) ++ tokens >> snd) rst
         else
           let toks,rst1 = tokens rst in t::toks,rst1
@@ -266,13 +266,14 @@ let parse_preterm =
   let rec pairwise r l =
     match l with
       [] -> true
-    | h::t -> forall (r h) t & pairwise r t in
+    | h::t -> forall (r h) t && pairwise r t in
   let rec pfrees ptm acc =
     match ptm with
       Varp(v,pty) ->
-        if v = "" & pty = dpty then acc
-        else if can get_const_type v or can num_of_string v
-                or exists (fun (w,_) -> v = w) (!the_interface) then acc
+        if v = "" && pty = dpty then acc
+        else 
+          if (let open Pervasives in 
+             can get_const_type v || can num_of_string v || exists (fun (w,_) -> v = w) (!the_interface)) then acc
         else insert ptm acc
     | Constp(_,_) -> acc
     | Combp(p1,p2) -> pfrees p1 (pfrees p2 acc)
@@ -324,7 +325,8 @@ let parse_preterm =
     let evs =
       let fvs = pfrees fabs []
       and bvs = pfrees babs [] in
-      if length fvs <= 1 or bvs = [] then fvs
+      if (let open Pervasives in length fvs <= 1 || bvs = []) 
+      then fvs
       else intersect fvs bvs in
     pmk_setcompr (fabs,evs,babs) in
   let rec mk_precedence infxs prs inp =
@@ -354,8 +356,8 @@ let parse_preterm =
   let pretype = parse_pretype
   and string inp =
     match inp with
-      Ident s::rst when String.length s >= 2 &
-                        String.sub s 0 1 = "\"" &
+      Ident s::rst when String.length s >= 2 &&
+                        String.sub s 0 1 = "\"" &&
                         String.sub s (String.length s - 1) 1 = "\""
        -> String.sub s 1 (String.length s - 2),rst
     | _ -> raise Noparse
@@ -388,7 +390,9 @@ let parse_preterm =
   and identifier =
     function
        ((Ident s):: rest) ->
-        if can get_infix_status s or is_prefix s or parses_as_binder s
+        if 
+          let open Pervasives in 
+          (can get_infix_status s || is_prefix s || parses_as_binder s)
         then raise Noparse else s,rest
       | _ -> raise Noparse
   and binder =

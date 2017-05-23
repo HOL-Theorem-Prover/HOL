@@ -17,10 +17,11 @@
 (* ===================================================================== *)
 
 
-(*---------------------------------------------------------------------------*
- * Require ancestor theory structures to be present. The parents of list     *
- * are "arithmetic" and "pair".                                              *
- *---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    Require ancestor theory structures to be present. The parents of list
+    are "arithmetic", "pair", "pred_set" and those theories behind the
+    datatype definition library
+   ---------------------------------------------------------------------- *)
 
 local
   open arithmeticTheory pairTheory pred_setTheory Datatype
@@ -771,10 +772,10 @@ val APPEND_11_LENGTH = save_thm ("APPEND_11_LENGTH",
            DISCH_TAC
            THEN `~((l1 = l1') /\ (l2 = l2'))` by PROVE_TAC[]
            THEN ASM_REWRITE_TAC[]
-           THEN Tactical.REVERSE
-              (`~(LENGTH (l1 ++ l2) = LENGTH (l1' ++ l2'))` by ALL_TAC) THEN1 PROVE_TAC[]
+           THEN `~(LENGTH (l1 ++ l2) = LENGTH (l1' ++ l2'))`
+             suffices_by PROVE_TAC[]
            THEN FULL_SIMP_TAC arith_ss [LENGTH_APPEND]
-     ) THEN PROVE_TAC[APPEND_LENGTH_EQ])))
+     ) THEN PROVE_TAC[APPEND_LENGTH_EQ])));
 
 
 val APPEND_EQ_SELF = store_thm(
@@ -1985,6 +1986,16 @@ GEN_TAC THEN Cases THEN SRW_TAC[] [MAP] THEN1 (
   FIRST_X_ASSUM (MATCH_MP_TAC o MP_CANON) THEN
   SRW_TAC [] [] ) THEN
 PROVE_TAC[INJ_SUBSET, SUBSET_REFL, SUBSET_DEF, IN_UNION, IN_INSERT])
+
+(* this turns out to be more useful; in particular, INJ_MAP_EQ can't
+   be used as an introduction rule without explicit instantiation of
+   its beta type variable, which only appears in the assumption *)
+val INJ_MAP_EQ_IFF = store_thm(
+  "INJ_MAP_EQ_IFF",
+  ``!f l1 l2.
+      INJ f (set l1 UNION set l2) UNIV ==>
+      ((MAP f l1 = MAP f l2) <=> (l1 = l2))``,
+  rw[] >> EQ_TAC >- metis_tac[INJ_MAP_EQ] >> rw[])
 
 local open numLib in
 val CARD_LIST_TO_SET = Q.store_thm(

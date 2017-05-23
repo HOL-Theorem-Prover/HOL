@@ -31,7 +31,6 @@ sig
 
   type grammar
 
-
   val grule_toks : grule -> string list
   val grule_name : grule -> string
 
@@ -66,6 +65,12 @@ sig
   type absyn_postprocessor = grammar -> Absyn.absyn -> Absyn.absyn
   type AbPTME = Absyn.absyn -> Parse_supportENV.preterm_in_env
   type preterm_processor = grammar -> AbPTME -> AbPTME
+
+  structure userSyntaxFns :
+    sig
+      val register_userPP : { name : string, code : userprinter } -> unit
+      val get_userPP : string -> userprinter
+    end
 
   val absyn_postprocessors :
       grammar -> (string * absyn_postprocessor) list

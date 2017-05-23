@@ -45,7 +45,7 @@ let rec fold_apps fn bnd tm sofar =
 
 let funtys_of_tm tm =
   let mergel l = setify (List.concat l) in
-  let tys tm = map type_of (find_terms (fun x -> is_var x or is_const x) tm) in
+  let tys tm = map type_of (find_terms (fun x -> is_var x || is_const x) tm) in
   let rec funtypes t =
     if is_vartype t then [] else
     let (s, l) = dest_type t in
@@ -130,7 +130,7 @@ let name2pairsconjs acc (name, th) =
 let conjregex = Str.regexp "_conjunct";;
 let best_name l =
   if List.length l = 1 then List.hd l else
-  let notnew = List.filter (fun s -> String.length s < 6 or String.sub s 0 6 <> "NEWDEP") l in
+  let notnew = List.filter (fun s -> String.length s < 6 || String.sub s 0 6 <> "NEWDEP") l in
   let l = if List.length notnew > 0 then notnew else l in
   let nodash = List.filter (fun s -> s <> "-") l in
   let l = if List.length nodash > 0 then nodash else l in

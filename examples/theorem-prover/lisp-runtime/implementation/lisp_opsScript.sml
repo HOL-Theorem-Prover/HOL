@@ -2130,7 +2130,7 @@ val X64_LISP_R_ELIM = let
     \\ POP_ASSUM (K ALL_TAC)
     \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `1w`)
     \\ REPEAT STRIP_TAC \\ AUTO_EXISTS_TAC \\ ASM_SIMP_TAC std_ss []
-    \\ `EL 0 (UPDATE_NTH 0 r1 ds) = r1` by ALL_TAC THEN1
+    \\ `EL 0 (UPDATE_NTH 0 r1 ds) = r1` by
       (FULL_SIMP_TAC std_ss [lisp_inv_def]
        \\ Cases_on `ds` \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1]
        \\ ASM_SIMP_TAC std_ss [UPDATE_NTH_def,EL,HD])

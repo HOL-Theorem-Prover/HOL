@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib simpLib
-open testutils boolSimps
+open testutils boolSimps BackchainingLib
 
 val _ = Portable.catch_SIGINT()
 

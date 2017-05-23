@@ -13,7 +13,26 @@ datatype single_rule = IR of int * associativity * string
 val ERR = mk_HOL_ERR "type_pp" "pp_type";
 
 val avoid_unicode = ref (Systeml.OS = "winNT")
-val _ = register_btrace("PP.avoid_unicode", avoid_unicode)
+local
+  open Globals
+  fun ascii_delims () =
+    List.app (fn r => r := "``") [type_pp_prefix, type_pp_suffix,
+                                  term_pp_prefix, term_pp_suffix]
+  fun unicode_delims () =
+    if get_tracefn "Unicode" () >= 1 handle HOL_ERR _ => true then
+      (List.app (fn r => r := UnicodeChars.ldquo)
+                [type_pp_prefix, term_pp_prefix];
+       List.app (fn r => r := UnicodeChars.rdquo)
+                [type_pp_suffix, term_pp_suffix])
+    else ()
+  fun avoidset i = if i = 0 then (unicode_delims(); avoid_unicode := false)
+                   else (ascii_delims(); avoid_unicode := true)
+  fun avoidget () = if !avoid_unicode then 1 else 0
+in
+
+val _ = register_ftrace("PP.avoid_unicode", (avoidget, avoidset), 1)
+val _ = avoidset (avoidget())
+end
 
 
 val pp_num_types = ref true

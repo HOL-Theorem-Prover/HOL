@@ -2156,8 +2156,8 @@ val restrict_domain_partition = Q.prove (
  every_case_tac >>
  rw [] >>
  fs [restrict_set_def] >>
- `h = NONE ∨ ?h'. h = SOME h'` by Cases_on `h` >>
- `l = NONE ∨ ?l'. l = SOME l'` by Cases_on `l` >>
+ `h = NONE ∨ ?h'. h = SOME h'` by (Cases_on `h` >> simp[]) >>
+ `l = NONE ∨ ?l'. l = SOME l'` by (Cases_on `l` >> simp[]) >>
  fs [option_cmp_def, option_cmp2_def, SUBMAP_DEF, EXTENSION, FDOM_DRESTRICT, FLOOKUP_DEF,
      DRESTRICT_DEF, FAPPLY_FUPDATE_THM] >>
  fmrw [] >>

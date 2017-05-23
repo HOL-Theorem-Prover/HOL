@@ -5,12 +5,11 @@
 structure x64AssemblerLib :> x64AssemblerLib =
 struct
 
-open HolKernel boolLib bossLib
+open HolKernel boolLib bossLib wordsSyntax
 
 local
-   open MutableMap x64 assemblerLib wordsSyntax
-in
-end
+   open x64
+in end
 
 val ERR = Feedback.mk_HOL_ERR "x64AssemblerLib"
 

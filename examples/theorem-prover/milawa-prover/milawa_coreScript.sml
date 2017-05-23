@@ -154,7 +154,7 @@ val is_eof_F_IMP = prove(
   \\ FULL_SIMP_TAC std_ss [LET_DEF]
   \\ Q.ABBREV_TAC `str2 = SND (read_while (\x. x <> #"\n") t "")`
   \\ Q.PAT_X_ASSUM `!x.bbb` (MP_TAC o Q.SPECL [`str2`,`str1`])
-  \\ `LENGTH str2 <= LENGTH t` by ALL_TAC THEN1
+  \\ `LENGTH str2 <= LENGTH t` by
        (Q.UNABBREV_TAC `str2` \\ FULL_SIMP_TAC std_ss [LENGTH_SND_read_while])
   \\ FULL_SIMP_TAC std_ss [] \\ MATCH_MP_TAC IMP_IMP
   \\ STRIP_TAC THEN1 (EVAL_TAC \\ DECIDE_TAC)

@@ -10,6 +10,10 @@ sig
 
    datatype nbit = B of (IntInf.int * Nat.nat)
 
+   val BV: IntInf.int * Nat.nat -> nbit
+
+   val allow_resize: bool ref
+
    val compare: nbit * nbit -> order
    val signedCompare: nbit * nbit -> order
 
@@ -59,9 +63,6 @@ sig
    val @@ : nbit * nbit -> nbit
    val || : nbit * nbit -> nbit
    val ~ : nbit -> nbit
-   val INT_MAX: Nat.nat -> nbit
-   val INT_MIN: Nat.nat -> nbit
-   val UINT_MAX: Nat.nat -> nbit
    val abs: nbit -> nbit
    val bit: nbit * Nat.nat -> bool
    val bitFieldInsert: Nat.nat * Nat.nat -> nbit * nbit -> nbit
@@ -75,13 +76,14 @@ sig
    val min: nbit * nbit -> nbit
    val mod: nbit * nbit -> nbit
    val msb: nbit -> bool
+   val nativeSize: nbit -> int
    val neg: nbit -> nbit
    val one: Nat.nat -> nbit
    val quot: nbit * nbit -> nbit
    val rem: nbit * nbit -> nbit
    val replicate: nbit * Nat.nat -> nbit
-   val resize: IntInf.int -> nbit -> nbit
-   val resize_replicate: IntInf.int -> nbit * Nat.nat -> nbit
+   val resize: int -> nbit -> nbit
+   val resize_replicate: int -> nbit * Nat.nat -> nbit
    val reverse: nbit -> nbit
    val signExtend: Nat.nat -> nbit -> nbit
    val size: nbit -> Nat.nat

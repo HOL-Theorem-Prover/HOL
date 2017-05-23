@@ -11,6 +11,8 @@ fun x |> f = f x
 
 val default_holstate = Systeml.DEFAULT_STATE
 
+val _ = holpathdb.extend_db {vname = "HOLDIR", path = Systeml.HOLDIR}
+
 open HM_GraphBuildJ1
 
 datatype cmd_line = Mosml_compile of File list * string
@@ -138,6 +140,8 @@ fun poly_compile warn diag quietp file I deps = let
   fun mapthis (Unhandled _) = NONE
     | mapthis f = SOME (fromFileNoSuf f)
   val depMods = List.map (addPath I) (List.mapPartial mapthis deps)
+  fun usePathVars p = holpathdb.reverse_lookup {path = p}
+  val depMods = List.map usePathVars depMods
   val say = if quietp then (fn s => ())
             else (fn s => TextIO.output(TextIO.stdOut, s ^ "\n"))
   val _ = say ("HOLMOSMLC -c " ^ fromFile file)
@@ -151,7 +155,7 @@ case file of
      in
        TextIO.output (outUi, String.concatWith "\n" depMods);
        TextIO.output (outUi, "\n");
-       TextIO.output (outUi, filename ^ "\n");
+       TextIO.output (outUi, usePathVars filename ^ "\n");
        TextIO.closeOut outUi;
        finish_compilation warn depMods filename tgt
      end
@@ -163,7 +167,7 @@ case file of
      in
        TextIO.output (outUo, String.concatWith "\n" depMods);
        TextIO.output (outUo, "\n");
-       TextIO.output (outUo, addPath [] (fromFile file) ^ "\n");
+       TextIO.output (outUo, usePathVars (addPath [] (fromFile file)) ^ "\n");
        TextIO.closeOut outUo;
        (if OS.FileSys.access (modName ^ ".sig", []) then
           ()
@@ -196,6 +200,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val opentheory = #opentheory (#core optv)
   val allfast = #fast (#core optv)
   val polynothol = #poly_not_hol optv
+  val relocbuild = #relocbuild optv orelse
+                   (case OS.Process.getEnv Systeml.build_after_reloc_envvar of
+                        SOME "1" => true
+                      | _ => false)
   val interactive_flag = #interactive (#core optv)
   val quiet_flag = #quiet (#core optv)
   val cmdl_HOLSTATE = #holstate optv
@@ -247,7 +255,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         p "in end;")
      else
        (p ("val _ = PolyML.SaveState.loadState \"" ^
-           String.toString HOLSTATE ^ "\";\n")));
+           String.toString HOLSTATE ^ "\";\n");
+        p ("val _ = List.app holpathdb.extend_db" ^
+           "(holpathdb.search_for_extensions ReadHMF.find_includes " ^
+           "[OS.FileSys.getDir()])\n")));
     p ("val _ = List.map load [" ^
        String.concatWith "," (List.map (fn f => "\"" ^ f ^ "\"") files) ^
        "] handle x => ((case x of Fail s => print (s^\"\\n\") | _ => ()); \
@@ -437,6 +448,12 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       | BR_ClineK((_,cline), k) => k warn (Systeml.systeml cline)
       | BR_Failed => false
 
+
+  fun system s =
+    Systeml.system_ps
+      (if relocbuild then Systeml.build_after_reloc_envvar ^ "=1 " ^ s
+       else s)
+
   val build_graph =
       if jobs = 1 then
         graphbuildj1 {
@@ -446,10 +463,12 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           outs = outs,
           keep_going = keep_going,
           quiet = quiet_flag,
-          hmenv = hmenv}
+          hmenv = hmenv,
+          system = system }
       else
         (fn ii => fn g =>
             multibuild.graphbuild { build_command = build_command,
+                                    relocbuild = relocbuild,
                                     mosml_build_command = mosml_build_command,
                                     warn = warn, tgtfatal = tgtfatal,
                                     keep_going = keep_going, diag = diag,
@@ -457,9 +476,15 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                     time_limit = time_limit,
                                     quiet = quiet_flag, hmenv = hmenv,
                                     jobs = jobs } ii g |> interpret_graph)
+  fun extend_holpaths () =
+    List.app holpathdb.extend_db
+             (holpathdb.search_for_extensions
+                (fn s => [])
+                [OS.FileSys.getDir()])
+
 in
   {extra_impl_deps = [Unhandled HOLSTATE],
-   build_graph = build_graph}
+   build_graph = (fn arg => (extend_holpaths(); build_graph arg))}
 end
 
 end (* struct *)

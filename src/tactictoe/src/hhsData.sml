@@ -17,62 +17,31 @@ val ERR = mk_HOL_ERR "hhsData"
    ---------------------------------------------------------------------- *)
 val hhs_read_list = ref []
 val hht_read_list = ref []
+val hhs_cat_dir = HOLDIR ^ "/src/tactictoe/in"
 
-fun read_hhs thyname = 
-  let 
-    val file = hhs_record_dir ^ "/" ^ thyname ^ "HHS"
-    val _ = hhs_read_list := []; 
-    val _ = use file; 
-    val r = !hhs_read_list
+fun cmd_in_dir dir cmd =
+  OS.Process.system ("cd " ^ dir ^ "; " ^ cmd);
+
+fun hhs_recname thyname = hhs_record_dir ^ "/" ^ thyname ^ "HHS"
+fun hht_recname thyname = hhs_record_dir ^ "/" ^ thyname ^ "HHT"
+
+fun read_data thyl =
+  let
+    val out = hhs_cat_dir ^ "/record"
+    val out_error = hhs_cat_dir ^ "/record_error"
+    val hhsl = String.concatWith " " (map hhs_recname thyl)
+    val hhtl = String.concatWith " " (map hht_recname thyl)
+    val head = hhs_record_dir ^ "/" ^ "a_head"
+    val foot = hhs_record_dir ^ "/" ^ "a_foot"
+    val cmd = 
+      String.concatWith " " ["cat",head,hhsl,hhtl,foot,">",out,"2>",out_error]
+    val _ = OS.Process.system cmd
+    val _ = use out
+    val r = (!hhs_read_list, !hht_read_list)
   in
     hhs_read_list := [];
-    r
-  end
-
-fun read_hht thyname = 
-  let 
-    val file = hhs_record_dir ^ "/" ^ thyname ^ "HHT"
-    val _ = hhs_read_list := []; 
-    val _ = use file; 
-    val r = !hht_read_list
-  in
     hht_read_list := [];
     r
   end
 
-fun read_hhs_error thyname =
-  (
-  read_hhs thyname
-  handle Io _ => 
-    (
-    if mem thyname ["sat","bool","min","basicSize","integer_word"] 
-    then () 
-    else print ("  warning: read_hhs_error " ^ thyname)
-    ;
-    []
-    )
-  )
-
-fun read_hht_error thyname =
-  (
-  read_hht thyname
-  handle Io _ => 
-    (
-    if mem thyname ["sat","bool","min","basicSize","integer_word"] 
-    then () 
-    else print ("  warning: read_hht_error " ^ thyname)
-    ;
-    []
-    )
-  )
-
-fun read_data thyl =
-  let
-    val l1 = map read_hhs_error thyl
-    val l2 = map read_hht_error thyl
-  in
-    (List.concat l1, List.concat l2)
-  end
-
 end (* struct *)
-

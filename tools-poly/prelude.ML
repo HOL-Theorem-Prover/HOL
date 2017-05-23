@@ -199,18 +199,10 @@ in
   val () =
     ( hol_use ("help" ++ "src-sml") "Database"
     ; hol_use ("tools-poly" ++ "poly") "Help"
-    ; List.app (hol_use ("tools" ++ "Holmake"))
-        ["regexpMatch", "parse_glob", "internal_functions",
-         "Holdep_tokens", "Holdep", "Holmake_tools", "Holmake_types",
-         "ReadHMF"]
     ; PolyML.use (HOLDIR ++ "tools" ++ "makefile-includes.ML")
     ; List.app Meta.fakeload ["PP", "PolyML", "Posix"]
     ; Globals.interactive := true
     ; Parse.current_backend := Parse.interactive_ppbackend ()
-    ; term_pp_prefix := "``"
-    ; term_pp_suffix := "``"
-    ; type_pp_prefix := "``"
-    ; type_pp_suffix := "``"
     ; Feedback.set_trace "pp_annotations" 1
     ; PolyML.use (HOLDIR ++ "tools" ++ "check-intconfig.sml")
     )
@@ -236,3 +228,6 @@ in
 end
 
 val _ = HOL_Interactive.toggle_quietdec ()
+val _ = List.app holpathdb.extend_db
+                 (holpathdb.search_for_extensions ReadHMF.find_includes
+                                                  [OS.FileSys.getDir()])

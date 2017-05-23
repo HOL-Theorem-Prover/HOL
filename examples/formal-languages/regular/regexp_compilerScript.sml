@@ -231,8 +231,8 @@ val Brz_norm = Q.prove
    (Brz seen worklist acc d = Brz seen worklist acc (rdepth seen worklist acc))`,
   METIS_TAC [Brz_monotone,rdepth_thm]);
 
-val Brz_determ = Q.prove
-(`!d1 d2 seen worklist acc.
+val Brz_determ = Q.store_thm("Brz_determ",
+ `!d1 d2 seen worklist acc.
     IS_SOME(Brz seen worklist acc d1) /\ IS_SOME(Brz seen worklist acc d2)
        ==> (Brz seen worklist acc d1 = Brz seen worklist acc d2)`,
   METIS_TAC [Brz_norm]);

@@ -19,6 +19,24 @@ in
                handle e => OS.Process.exit OS.Process.failure
 end;
 
+val _ = let
+  infix ++
+  val op ++ = OS.Path.concat
+  fun hol_use p s =
+    let
+      val nm = Systeml.HOLDIR ++ p ++ s
+    in
+      use (nm ^ ".sig")
+    ; use (nm ^ ".sml")
+    end
+in
+  List.app (hol_use ("tools" ++ "Holmake"))
+           ["regexpMatch", "parse_glob", "internal_functions",
+            "Holdep_tokens", "Holdep", "Holmake_tools", "Holmake_types",
+            "ReadHMF"]
+end;
+
+
 local
    val rebuild_heaps_var = Systeml.build_after_reloc_envvar
    infix ++

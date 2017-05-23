@@ -30,6 +30,11 @@
 
 val _ = HOL_Interactive.toggle_quietdec();
 
+fun die s =
+  (TextIO.output(TextIO.stdErr, s ^ "\n");
+   TextIO.flushOut TextIO.stdErr;
+   OS.Process.exit OS.Process.failure)
+
 val HTML_DIR   = Path.toString(Path.fromString(Path.concat
                     (Globals.HOLDIR,"help/theorygraph")));
 val SIGOBJ_DIR = Path.toString(Path.fromString(Path.concat
@@ -225,5 +230,8 @@ val _ = print " done\n";
 
 (* The following works on Unix with dot version 1.10.2003xxxxxxx *)
 
-
-gen_map_file DOTPATH ancs (Path.concat(HTML_DIR, "theories"));
+gen_map_file DOTPATH ancs (Path.concat(HTML_DIR, "theories"))
+    handle _ =>
+      die ("Failed to call gen_map_file on dot="^DOTPATH^" targeting "^
+           Path.concat(HTML_DIR, "theories"))
+;

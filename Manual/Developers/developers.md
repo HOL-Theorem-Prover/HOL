@@ -8,7 +8,7 @@ numbersections: yes
 
 This manual attempts to provide documentation for people wishing to develop HOL4, a process that will likely involve frequent re-compilations or rebuilds of the core sources.
 
-As *per* [the standard installation instructions](http://hol-theorem-prover.org/InstallKananaskis.html), once one has an SML installation, there are two stages to the process of building HOL4:
+As *per* [the standard installation instructions](http://hol-theorem-prover.org/#get), once one has an SML installation, there are two stages to the process of building HOL4:
 
 1.  The first step is the *configuration* of the system (see [Configuration](#configuration) below).
     This is achieved with the command
@@ -34,6 +34,8 @@ As *per* [the standard installation instructions](http://hol-theorem-prover.org/
            Hol built successfully.
 
     Repeated calls to `build` should complete quickly: theorem-proving work will not be redone unnecessarily.
+    The building of the theory graph can be slow however, and this *does* happen with every invocation of `build` by default.
+    To avoid this use `build`’s `--nograph` option.
 
 # Configuration
 
@@ -60,14 +62,14 @@ We might attempt to create a shell-script containing the calls to `mosmlc`, but 
 
 # Build
 
-The standard options to build are described in its help documentation, which is accessible by invoking `build –help` (but not `build help` because this builds the HOL documentation).
+The standard options to build are described in its help documentation, which is accessible by invoking `build --help` (or `build -h`, or `build -?`, but not `build help` because this builds the HOL documentation).
 The file containing this information about options is located at `tools/buildhelp.txt`.
 
 The most frequently used options to build are those to do with “selftest” level, and the selection of kernel.
 
 ## Regression Testing
 
-The build program’s `-selftest` option can be given as is (in which case the selftest level is 1), or followed by a positive number, which gives the selftest level explicitly.
+The build program’s `--selftest` option can be given as is (in which case the selftest level is 1), or followed by a positive number, which gives the selftest level explicitly.
 The higher the number, the more regression tests are executed.
 Developers are expected to categorise their tests so that those at level 1 will complete quickly, those at level 2 will execute in moderate time, and those at level 3 can take as long as is necessary.[^selftestnote]
 As this document is written (late 2015), there are no regression tests that require a level greater than 3.
@@ -94,22 +96,22 @@ There are currently three kernels that can be built to underlie a HOL installati
 The *standard kernel* uses a de\ Bruijn representation for terms, with bound variables represented as numbers.
 Free variables are represented as a pair of name and type.
 This kernel also implements explicit substitutions internally, allowing for efficient call-by-value execution with tools such as `EVAL`.
-This kernel is the default choice, and can be explicitly selected by passing the `-stdknl` option to `build`.
+This kernel is the default choice, and can be explicitly selected by passing the `--stdknl` option to `build`.
 
 The *experimental kernel* uses name-type pairs for all sorts of variables.
 This means that the functions `mk_abs` and `dest_abs` operate in constant time.
 (In the standard kernel, these functions must switch between de\ Bruijn indices and free variables in the body when called, making them run in time linear in the size of the body.)
-The experimental kernel can be selected by passing the `-expk` option to `build`.
+The experimental kernel can be selected by passing the `--expk` option to `build`.
 
 The *OpenTheory kernel* is based on the experimental kernel, but adds proof-logging to the primitive inference rules so that OpenTheory theory packages can be exported from HOL.
-This kernel can be selected by passing the `-otknl` option to `build`.
+This kernel can be selected by passing the `--otknl` option to `build`.
 
 ## Build Sequences
 
 When `build` runs, it choreographs its calls to `Holmake` by referring to a specified sequence of directories.
 By default this sequence is that specified in the file `tools/build-sequence`, which in turn refers to other files *via* `#include` directives.
-It is possible to provide a different sequence by using the `-seq` commandline option to `build`.
-Such sequences can be constructed more easily be referring to sequence fragments in the `tools/sequences` directory, and including these with `#include` commands.
+It is possible to provide a different sequence by using the `--seq` commandline option to `build`.
+Such sequences can be constructed more easily by referring to sequence fragments in the `tools/sequences` directory, and including these with `#include` commands.
 The details of the required format for sequence files is spelled out in a comment at the head of the `tools/build-sequence` file.
 
 # Sources and Their Organisation {#sources}
@@ -137,8 +139,8 @@ Unless otherwise noted, they are built by the configuration process.
 `Holmake`
 :   The user-facing tool for building HOL developments.
     Use of this tool is described in the Description manual.
-    The `tools/Holmake` directory contains most of the sources, but the Poly/ML version has sources in `tools-poly/Holmake` as well.
-    Sharing between the two code-bases is entirely done at the leaf level; the top-level drivers are different, implemented in files called `Holmake.sml` in the respective directories.
+    The `tools/Holmake` directory contains almost all of the sources, but the Poly/ML-specific implementation of the `Systeml` module (on top of which everything else in the system is built) is in `tools-poly/Holmake`.
+    The Poly/ML specific code implementing concurrent `Holmake` is in `tools/Holmake/poly`.
 
 `mllex`
 :   The tool from SML/NJ.
@@ -157,7 +159,19 @@ Unless otherwise noted, they are built by the configuration process.
 
 `tools-poly/poly`
 :   Implementations of `Binarymap`, `Binaryset`, `Listsort` and `Help` (from the Moscow\ ML library) so that these libraries can be used in Poly/ML.
-    Also a definition of `load` in `poly-init2.ML`, so that “object code” and its dependencies can be automatically loaded into running sessions.
+    These implementations are all `use`-d in `poly-init.ML`.
+    That file also provides an implementation of a structure called `Mosml`, which provides a simple way of calling a shell command-line and getting back the string of that command’s output.
+
+    In `poly-init2.ML`, there is a definition of `load`, which implements the functionality that automatically loads “object code” and dependencies into running sessions.
+    The `poly-init2.ML` file also `use`-s `poly-init.ML`.
+    Calls are made to `use "poly-init2.ML"` in the construction of the first HOL heap (`hol.state0`), and in the scripts generated by `Holmake` run before that heap is built.
+    These calls ensure that `load` is available to interactive and non-interactive uses thereafter.
+
+    The module `holpathdb` implements a very simple mapping from “environment variables” to paths.
+    These environment variables are used by `load` to let “object files” list dependencies without having to use absolute paths.
+    This file is `use`-d in, and so made available by, `poly-init.ML`.
+    Subsequently, there needs to be a call made to initialise the database with an entry for the `HOLDIR` key.
+    This is done in `Holmake` within `poly/BuildCommand.sml`, and also within `poly-init2.ML` (for interactive use).
 
 `tools/sequences`
 :   Build sequence files.

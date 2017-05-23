@@ -524,8 +524,7 @@ val mc_add_thm = prove(
   \\ SIMP_TAC std_ss [GSYM word_add_n2w,WORD_ADD_SUB]
   \\ ONCE_REWRITE_TAC [mc_add_loop_def]
   \\ SIMP_TAC (srw_ss()) [LET_DEF,w2n_n2w,word_add_n2w]
-  \\ `~((dimword(:'a) <= (LENGTH ys + 1) MOD dimword(:'a)))` by ALL_TAC
-  THEN1 (fs[])
+  \\ `~((dimword(:'a) <= (LENGTH ys + 1) MOD dimword(:'a)))` by (fs[])
   \\ FULL_SIMP_TAC std_ss []
   \\ (mc_add_loop1_thm |> Q.SPECL [`xs1`,`ys`,`zs`,`[]`,`[]`,`[]`,
          `xs2`,`[]`,`zs2`,`r8`,`r9`,`F`] |> SIMP_RULE std_ss [EVAL ``b2w F``]
@@ -540,13 +539,13 @@ val mc_add_thm = prove(
   \\ `?zs1 zs3 zs4. (zs = zs1 ++ zs3 ++ zs4) /\
         (LENGTH zs1 = LENGTH xs1) /\
         (LENGTH zs3 = LENGTH xs2) /\
-        (LENGTH zs4 = LENGTH qs3)` by ALL_TAC THEN1
+        (LENGTH zs4 = LENGTH qs3)` by
    (IMP_RES_TAC LENGTH_mw_add
-    \\ `LENGTH xs1 <= LENGTH zs` by ALL_TAC THEN1
+    \\ `LENGTH xs1 <= LENGTH zs` by
           (FULL_SIMP_TAC std_ss [LENGTH_APPEND] \\ DECIDE_TAC)
     \\ IMP_RES_TAC LESS_EQ_LENGTH \\ FULL_SIMP_TAC std_ss []
     \\ Q.EXISTS_TAC `xs1'` \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND]
-    \\ `LENGTH xs2 <= LENGTH xs2'` by ALL_TAC THEN1
+    \\ `LENGTH xs2 <= LENGTH xs2'` by
           (FULL_SIMP_TAC std_ss [LENGTH_APPEND] \\ DECIDE_TAC)
     \\ IMP_RES_TAC LESS_EQ_LENGTH \\ FULL_SIMP_TAC std_ss []
     \\ Q.LIST_EXISTS_TAC [`xs1''`,`xs2''`]
@@ -858,12 +857,12 @@ val mc_sub_thm = prove(
   \\ FULL_SIMP_TAC std_ss [LET_DEF]
   \\ `?zs1 zs3. (zs = zs1 ++ zs3) /\
         (LENGTH zs1 = LENGTH xs1) /\
-        (LENGTH zs3 = LENGTH xs2)` by ALL_TAC THEN1
+        (LENGTH zs3 = LENGTH xs2)` by
      (IMP_RES_TAC LENGTH_mw_sub \\ FULL_SIMP_TAC std_ss []
       \\ `LENGTH qs1 <= LENGTH zs` by DECIDE_TAC
       \\ IMP_RES_TAC LESS_EQ_LENGTH \\ FULL_SIMP_TAC std_ss []
       \\ Q.LIST_EXISTS_TAC [`xs1'`,`xs2'`] \\ FULL_SIMP_TAC std_ss []
-      \\ `LENGTH (xs1' ++ xs2') = LENGTH (qs1 ++ qs2)` by ALL_TAC
+      \\ sg `LENGTH (xs1' ++ xs2') = LENGTH (qs1 ++ qs2)`
       \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND] \\ DECIDE_TAC)
   \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC]
   \\ SEP_I_TAC "mc_sub_loop1" \\ POP_ASSUM MP_TAC
@@ -1170,10 +1169,10 @@ val mc_single_mul_add_thm = prove(
   \\ assume_tac ZERO_LT_dimword
   \\ qmatch_assum_abbrev_tac`0n < k` \\ pop_assum kall_tac
   \\ FULL_SIMP_TAC std_ss [ADD_ASSOC]
-  \\ `n'' * n''' DIV k + b2n (k <= n + (n'' * n''') MOD k) =
-      (n + n'' * n''') DIV k` by ALL_TAC \\ FULL_SIMP_TAC std_ss []
+  \\ sg `n'' * n''' DIV k + b2n (k <= n + (n'' * n''') MOD k) =
+      (n + n'' * n''') DIV k` \\ FULL_SIMP_TAC std_ss []
   \\ Q.SPEC_TAC (`n'' * n'''`,`l`) \\ STRIP_TAC
-  \\ `(n + l) DIV k = l DIV k + (n + l MOD k) DIV k` by ALL_TAC THEN1
+  \\ `(n + l) DIV k = l DIV k + (n + l MOD k) DIV k` by
    (SIMP_TAC std_ss [Once ADD_COMM]
     \\ STRIP_ASSUME_TAC (SIMP_RULE bool_ss [PULL_FORALL] DIVISION
          |> Q.SPECL [`k`,`l`] |> UNDISCH_ALL |> ONCE_REWRITE_RULE [CONJ_COMM])
@@ -1323,8 +1322,7 @@ val mc_mul_pass_thm = prove(
   \\ ONCE_REWRITE_TAC [SNOC_INTRO |> Q.INST [`xs2`|->`[]`] |> REWRITE_RULE [APPEND_NIL]]
   \\ `((LENGTH ys1 + (LENGTH ys + 1)) = (LENGTH (SNOC h' ys1) + LENGTH ys)) /\
       ((LENGTH ys1 + 1) = (LENGTH (SNOC h' ys1))) /\
-      ((LENGTH zs1 + 1) = LENGTH (SNOC q zs1))` by ALL_TAC
-  THEN1 (FULL_SIMP_TAC std_ss [LENGTH_SNOC] \\ DECIDE_TAC)
+      ((LENGTH zs1 + 1) = LENGTH (SNOC q zs1))` by (FULL_SIMP_TAC std_ss [LENGTH_SNOC] \\ DECIDE_TAC)
   \\ FULL_SIMP_TAC std_ss []
   \\ SEP_I_TAC "mc_mul_pass" \\ POP_ASSUM MP_TAC
   \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
@@ -1368,19 +1366,17 @@ val mc_mul_thm = prove(
   \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
   THEN1 (FULL_SIMP_TAC (srw_ss()) [RIGHT_ADD_DISTRIB] \\ fs [])
   \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss []
-  \\ `LENGTH (mw_mul_pass h ys zs 0x0w) = LENGTH ys + 1` by ALL_TAC
-  THEN1 (FULL_SIMP_TAC std_ss [LENGTH_mw_mul_pass])
+  \\ `LENGTH (mw_mul_pass h ys zs 0x0w) = LENGTH ys + 1` by (FULL_SIMP_TAC std_ss [LENGTH_mw_mul_pass])
   \\ Cases_on `mw_mul_pass h ys zs 0x0w`
   \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1]
   \\ `n2w (LENGTH (zs1 ++ zs:'a word list) + 1) + -0x1w * n2w (LENGTH (ys:'a word list)) =
-      n2w (LENGTH (SNOC h'' zs1)):'a word` by ALL_TAC THEN1
+      n2w (LENGTH (SNOC h'' zs1)):'a word` by
    (FULL_SIMP_TAC std_ss [WORD_SUB_LEMMA,LENGTH,LENGTH_APPEND]
     \\ `LENGTH zs1 + LENGTH ys + 1 = (LENGTH zs1 + 1) + LENGTH ys` by DECIDE_TAC
     \\ ASM_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [GSYM word_add_n2w,WORD_ADD_SUB]
     \\ FULL_SIMP_TAC std_ss [word_add_n2w,LENGTH_SNOC,ADD1])
-  \\ `n2w (LENGTH xs1) + 0x1w = n2w (LENGTH (SNOC h xs1)):'a word` by ALL_TAC
-  THEN1 (FULL_SIMP_TAC std_ss [word_add_n2w,LENGTH_SNOC,ADD1])
+  \\ `n2w (LENGTH xs1) + 0x1w = n2w (LENGTH (SNOC h xs1)):'a word` by (FULL_SIMP_TAC std_ss [word_add_n2w,LENGTH_SNOC,ADD1])
   \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND]
   \\ ONCE_REWRITE_TAC [SNOC_INTRO |> Q.INST [`xs2`|->`[]`] |> REWRITE_RULE [APPEND_NIL]]
@@ -1460,8 +1456,7 @@ val mc_imul_thm = prove(
   THEN1 (fs [LENGTH_APPEND,X_LT_DIV])
   \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss []
   \\ `LENGTH qs1 < dimword (:'a)` by (FULL_SIMP_TAC (srw_ss()) [] \\ DECIDE_TAC)
-  \\ `LENGTH (mw_mul xs ys (MAP (\x. 0x0w) ys)) < dimword (:'a)` by ALL_TAC
-  THEN1 (FULL_SIMP_TAC (srw_ss()) [LENGTH_mw_mul,LENGTH_MAP,X_LT_DIV] \\ DECIDE_TAC)
+  \\ `LENGTH (mw_mul xs ys (MAP (\x. 0x0w) ys)) < dimword (:'a)` by (FULL_SIMP_TAC (srw_ss()) [LENGTH_mw_mul,LENGTH_MAP,X_LT_DIV] \\ DECIDE_TAC)
   \\ ASSUME_TAC mc_fix_thm \\ SEP_I_TAC "mc_fix" \\ POP_ASSUM MP_TAC
   \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
   THEN1 (fs [LENGTH_mw_mul])
@@ -1518,7 +1513,7 @@ val mc_single_div_thm = prove(
   \\ Cases_on `y` \\ Cases_on `n` \\ FULL_SIMP_TAC (srw_ss()) [WORD_LO,DIV_LT_X]
   \\ FULL_SIMP_TAC std_ss [MULT_CLAUSES]
   \\ SIMP_TAC std_ss [Once ADD_COMM] \\ SIMP_TAC std_ss [Once MULT_COMM]
-  \\ `w2n x2 < dimword(:'a)` by ALL_TAC THEN1
+  \\ `w2n x2 < dimword(:'a)` by
    (ASSUME_TAC (w2n_lt |> Q.SPEC `x2`)
     \\ FULL_SIMP_TAC (srw_ss()) [])
   \\ FULL_SIMP_TAC std_ss [MULT_LEMMA]
@@ -1662,7 +1657,7 @@ val mc_calc_d_thm = prove(
   \\ first_x_assum (qspecl_then [`l-1`,`n-1`] mp_tac)
   \\ match_mp_tac IMP_IMP \\ conj_tac THEN1
    (fs [] \\ Cases_on `v1` \\ fs [word_mul_n2w]
-    \\ `2 * n' < dimword (:'a)` by all_tac
+    \\ sg `2 * n' < dimword (:'a)`
     \\ fs [] \\ Cases_on `n` \\ fs [EXP]
     \\ fs [word_msb_n2w]
     \\ fs [bitTheory.BIT_def,bitTheory.BITS_THM2]
@@ -2160,7 +2155,7 @@ val mc_adjust_aux_thm = prove(
   \\ POP_ASSUM MP_TAC
   \\ Q.MATCH_ASSUM_RENAME_TAC `LENGTH (ys1 ++ y::ys) < dimword (:'a)`
   \\ STRIP_TAC
-  \\ `n2w (LENGTH (ys1 ++ y::ys)) <> n2w (LENGTH ys1):'a word` by ALL_TAC THEN1
+  \\ `n2w (LENGTH (ys1 ++ y::ys)) <> n2w (LENGTH ys1):'a word` by
    (FULL_SIMP_TAC std_ss [LENGTH_APPEND]
     \\ `LENGTH ys1 < dimword(:'a)` by DECIDE_TAC
     \\ FULL_SIMP_TAC std_ss [n2w_11,LENGTH,ADD1])
@@ -2199,7 +2194,7 @@ val mc_div_adjust_thm = prove(
   \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [mw_div_adjust_def] \\ fs []
   \\ SIMP_TAC std_ss [GSYM mw_mul_by_single2_thm]
   \\ `mw_cmp_alt zs (mw_mul_by_single2 r6 r7 ys 0x0w 0x0w) NONE =
-      mw_cmp zs (mw_mul_by_single2 r6 r7 ys 0x0w 0x0w)` by ALL_TAC THEN1
+      mw_cmp zs (mw_mul_by_single2 r6 r7 ys 0x0w 0x0w)` by
    (MATCH_MP_TAC (GSYM mw_cmp_alt_thm)
     \\ SIMP_TAC std_ss [mw_mul_by_single2_thm,LENGTH_mw_mul_by_single]
     \\ FULL_SIMP_TAC std_ss [LENGTH_mw_mul_by_single,LENGTH_FRONT,
@@ -2480,7 +2475,7 @@ val mc_div_loop_thm = prove(
       (EL (LENGTH zs1 + 1 + LENGTH ys - 2) (zs1 ++ x::zs ++ zs2) =
        LAST (BUTLAST (x::zs))) /\
       (EL (LENGTH zs1 + 1 + LENGTH ys - 1) (zs1 ++ x::zs ++ zs2) =
-       LAST (x::zs))` by ALL_TAC THEN1
+       LAST (x::zs))` by
    (`(LENGTH zs1 + 1 + LENGTH ys - 3 = LENGTH zs1 + (LENGTH (x::zs) - 3)) /\
      (LENGTH zs1 + 1 + LENGTH ys - 2 = LENGTH zs1 + (LENGTH (x::zs) - 2)) /\
      (LENGTH zs1 + 1 + LENGTH ys - 1 = LENGTH zs1 + (LENGTH (x::zs) - 1)) /\
@@ -2490,7 +2485,7 @@ val mc_div_loop_thm = prove(
          GSYM APPEND_ASSOC,rich_listTheory.EL_APPEND1]
     \\ `(x::zs = []) \/ ?t1 t2. x::zs = SNOC t1 t2` by METIS_TAC [SNOC_CASES]
     \\ FULL_SIMP_TAC (srw_ss()) [ADD1]
-    \\ `LENGTH ys = LENGTH t2` by ALL_TAC THEN1
+    \\ `LENGTH ys = LENGTH t2` by
      (`LENGTH (x::zs) = LENGTH (t2 ++ [t1])` by METIS_TAC []
       \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND,LENGTH,ADD1])
     \\ FULL_SIMP_TAC std_ss [EL_LENGTH,RW [SNOC_APPEND] FRONT_SNOC]
@@ -2514,12 +2509,11 @@ val mc_div_loop_thm = prove(
   \\ `mw_div_guess
         (LAST (x::zs)::LAST (FRONT (x::zs))::
              LAST (FRONT (FRONT (x::zs)))::REVERSE (FRONT (FRONT (FRONT (x::zs)))))
-        (LAST ys1::LAST (FRONT ys1)::REVERSE (FRONT (FRONT ys1))) = guess` by ALL_TAC
-  THEN1
+        (LAST ys1::LAST (FRONT ys1)::REVERSE (FRONT (FRONT ys1))) = guess` by
    (Q.UNABBREV_TAC `guess`
     \\ MATCH_MP_TAC (METIS_PROVE [] ``(x1 = x2) /\ (y1 = y2) ==> (f x1 y1 = f x2 y2)``)
     \\ Tactical.REVERSE STRIP_TAC THEN1
-     (`LENGTH ys1 = LENGTH ys` by ALL_TAC THEN1
+     (`LENGTH ys1 = LENGTH ys` by
        (Q.UNABBREV_TAC `ys1`
         \\ FULL_SIMP_TAC std_ss [LENGTH_FRONT,LENGTH_mw_mul_by_single,GSYM LENGTH_NIL]
         \\ DECIDE_TAC)
@@ -2532,7 +2526,7 @@ val mc_div_loop_thm = prove(
       \\ DECIDE_TAC)
     \\ `(x::zs = []) \/ ?t1 t2. x::zs = SNOC t1 t2` by METIS_TAC [SNOC_CASES]
     THEN1 FULL_SIMP_TAC (srw_ss()) [ADD1] \\ ASM_SIMP_TAC std_ss []
-    \\ `LENGTH ys = LENGTH t2` by ALL_TAC THEN1
+    \\ `LENGTH ys = LENGTH t2` by
      (`LENGTH (x::zs) = LENGTH (SNOC t1 t2)` by METIS_TAC []
       \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_APPEND,LENGTH,ADD1])
     \\ FULL_SIMP_TAC std_ss [EL_LENGTH,RW [SNOC_APPEND] FRONT_SNOC]
@@ -2562,9 +2556,9 @@ val mc_div_loop_thm = prove(
   \\ FULL_SIMP_TAC std_ss []
   \\ `LUPDATE adj (LENGTH (zs1 ++ x::zs) - 1) (zs1 ++
         FST (mw_sub (x::zs) (mw_mul_by_single2 d adj ys 0x0w 0x0w) T) ++
-        zs2) = zs1 ++ SNOC adj (FRONT sub) ++ zs2` by ALL_TAC THEN1
+        zs2) = zs1 ++ SNOC adj (FRONT sub) ++ zs2` by
    (FULL_SIMP_TAC std_ss [mw_mul_by_single2_thm]
-    \\ `LENGTH sub = LENGTH (x::zs)` by ALL_TAC THEN1
+    \\ `LENGTH sub = LENGTH (x::zs)` by
      (Q.UNABBREV_TAC `sub`
       \\ Cases_on `mw_sub (x::zs) (mw_mul_by_single adj ys1) T`
       \\ IMP_RES_TAC LENGTH_mw_sub \\ FULL_SIMP_TAC std_ss [LENGTH])
@@ -2580,7 +2574,7 @@ val mc_div_loop_thm = prove(
   \\ FULL_SIMP_TAC std_ss [APPEND_ASSOC,APPEND]
   \\ SEP_I_TAC "mc_div_loop" \\ POP_ASSUM MP_TAC
   \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
-   (`(LENGTH (FRONT sub) = LENGTH ys)` by ALL_TAC THEN1
+   (`(LENGTH (FRONT sub) = LENGTH ys)` by
       (Q.UNABBREV_TAC `sub`
        \\ Cases_on `mw_sub (x::zs) (mw_mul_by_single adj ys1) T`
        \\ FULL_SIMP_TAC std_ss []
@@ -2655,8 +2649,7 @@ val mc_mul_by_single_thm = prove(
   \\ ONCE_REWRITE_TAC [SNOC_INTRO |> Q.INST [`xs2`|->`[]`] |> REWRITE_RULE [APPEND_NIL]]
   \\ `((LENGTH xs1 + (LENGTH xs + 1)) = (LENGTH (SNOC h' xs1) + LENGTH xs)) /\
       ((LENGTH xs1 + 1) = (LENGTH (SNOC h' xs1))) /\
-      ((LENGTH zs1 + 1) = LENGTH (SNOC q zs1))` by ALL_TAC
-  THEN1 (FULL_SIMP_TAC std_ss [LENGTH_SNOC] \\ DECIDE_TAC)
+      ((LENGTH zs1 + 1) = LENGTH (SNOC q zs1))` by (FULL_SIMP_TAC std_ss [LENGTH_SNOC] \\ DECIDE_TAC)
   \\ FULL_SIMP_TAC std_ss []
   \\ SEP_I_TAC "mc_mul_by_single" \\ POP_ASSUM MP_TAC
   \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
@@ -2714,7 +2707,7 @@ val mc_top_two_thm = prove(
   \\ FULL_SIMP_TAC std_ss [mc_single_mul_thm]
   \\ Cases_on `single_mul_add x h k1 0w`
   \\ FULL_SIMP_TAC std_ss [LET_DEF,SNOC_INTRO]
-  \\ `(LENGTH ys1 + 1) = (LENGTH (SNOC h ys1))` by ALL_TAC THEN1
+  \\ `(LENGTH ys1 + 1) = (LENGTH (SNOC h ys1))` by
        FULL_SIMP_TAC (srw_ss()) [word_add_n2w,ADD1]
   \\ FULL_SIMP_TAC std_ss [word_add_n2w]
   \\ `LENGTH ys <= l-1` by fs []
@@ -2817,8 +2810,7 @@ val mc_copy_over_thm = prove(
   \\ rpt STRIP_TAC
   \\ `(zs0 = []) \/ ?x l. zs0 = SNOC x l` by METIS_TAC [SNOC_CASES]
   \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1,LENGTH_SNOC]
-  \\ `LENGTH xs0 + 1 < dimword (:'a) /\ LENGTH xs0 < dimword (:'a)` by ALL_TAC
-  THEN1 (FULL_SIMP_TAC std_ss [LENGTH_SNOC,LENGTH_APPEND] \\ DECIDE_TAC)
+  \\ `LENGTH xs0 + 1 < dimword (:'a) /\ LENGTH xs0 < dimword (:'a)` by (FULL_SIMP_TAC std_ss [LENGTH_SNOC,LENGTH_APPEND] \\ DECIDE_TAC)
   \\ ONCE_REWRITE_TAC [mc_copy_over_def,mc_copy_over_pre_def]
   \\ FULL_SIMP_TAC std_ss [n2w_11,ZERO_LT_dimword]
   \\ FULL_SIMP_TAC std_ss [GSYM word_add_n2w,WORD_ADD_SUB,LET_DEF]
@@ -3061,16 +3053,14 @@ val mc_div_thm = prove(
       \\ DECIDE_TAC)
     \\ ASM_SIMP_TAC std_ss [mc_div_def,mc_div_pre_def,LET_DEF,WORD_LO,
            w2n_n2w, mw_ok_mw_fix_ID,n2w_11,ZERO_LT_dimword,LENGTH_NIL]
-    \\ `?zs1 zs2. (zs = zs1 ++ zs2) /\ (LENGTH zs1 = LENGTH ys)` by ALL_TAC
-    THEN1 (MATCH_MP_TAC LESS_EQ_LENGTH \\ DECIDE_TAC)
+    \\ `?zs1 zs2. (zs = zs1 ++ zs2) /\ (LENGTH zs1 = LENGTH ys)` by (MATCH_MP_TAC LESS_EQ_LENGTH \\ DECIDE_TAC)
     \\ POP_ASSUM (ASSUME_TAC o GSYM)
     \\ FULL_SIMP_TAC std_ss []
     \\ `LENGTH zs1 ≤ l − 1` by fs []
     \\ ASSUME_TAC mc_mul_zero_thm \\ SEP_I_TAC "mc_mul_zero"
     \\ POP_ASSUM MP_TAC \\ FULL_SIMP_TAC std_ss []
     \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss []
-    \\ `?zs3 zs4. (zs1 = zs3 ++ zs4) /\ (LENGTH zs3 = LENGTH xs)` by ALL_TAC
-    THEN1 (MATCH_MP_TAC LESS_EQ_LENGTH \\ DECIDE_TAC)
+    \\ `?zs3 zs4. (zs1 = zs3 ++ zs4) /\ (LENGTH zs3 = LENGTH xs)` by (MATCH_MP_TAC LESS_EQ_LENGTH \\ DECIDE_TAC)
     \\ FULL_SIMP_TAC std_ss [MAP_APPEND,GSYM APPEND_ASSOC]
     \\ ASSUME_TAC (mc_copy_over_thm |>
           Q.SPECL [`xs`,`MAP (\x.0w) (zs3:'a word list)`,`[]`,
@@ -3082,8 +3072,7 @@ val mc_div_thm = prove(
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
     THEN1 (fs [])
     \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss []
-    \\ `LENGTH (zs3 ++ zs4) - LENGTH xs = LENGTH zs4` by ALL_TAC
-    THEN1 FULL_SIMP_TAC std_ss [LENGTH_APPEND]
+    \\ `LENGTH (zs3 ++ zs4) - LENGTH xs = LENGTH zs4` by FULL_SIMP_TAC std_ss [LENGTH_APPEND]
     \\ FULL_SIMP_TAC std_ss [mw_fix_REPLICATE,mw_ok_mw_fix_ID]
     \\ ASM_SIMP_TAC std_ss [LENGTH_APPEND,LENGTH_REPLICATE,GSYM LENGTH_NIL]
     \\ ASM_SIMP_TAC std_ss [MAP_K_0,APPEND_11]
@@ -3115,13 +3104,10 @@ val mc_div_thm = prove(
     THEN1 FULL_SIMP_TAC std_ss [GSYM LENGTH_NIL,LENGTH_REVERSE]
     \\ FULL_SIMP_TAC std_ss [APPEND,LUPDATE_def,LENGTH]
     \\ Q.EXISTS_TAC `t ++ zs2`
-    \\ `LENGTH (mw_fix [r]) = if r = 0w then 0 else 1` by ALL_TAC
-    THEN1 (EVAL_TAC \\ SRW_TAC [] [] \\ EVAL_TAC)
+    \\ `LENGTH (mw_fix [r]) = if r = 0w then 0 else 1` by (EVAL_TAC \\ SRW_TAC [] [] \\ EVAL_TAC)
     \\ `LENGTH (REVERSE qs) = LENGTH (h::t)` by FULL_SIMP_TAC std_ss []
-    \\ `LENGTH (zs1 ++ zs2) = SUC (LENGTH (t ++ zs2))` by ALL_TAC
-    THEN1 (FULL_SIMP_TAC std_ss [LENGTH,LENGTH_REVERSE,LENGTH_APPEND] \\ DECIDE_TAC)
-    \\ `LENGTH (t ++ zs2) <> 0` by ALL_TAC
-    THEN1 (FULL_SIMP_TAC std_ss [LENGTH,LENGTH_REVERSE,LENGTH_APPEND] \\ DECIDE_TAC)
+    \\ `LENGTH (zs1 ++ zs2) = SUC (LENGTH (t ++ zs2))` by (FULL_SIMP_TAC std_ss [LENGTH,LENGTH_REVERSE,LENGTH_APPEND] \\ DECIDE_TAC)
+    \\ `LENGTH (t ++ zs2) <> 0` by (FULL_SIMP_TAC std_ss [LENGTH,LENGTH_REVERSE,LENGTH_APPEND] \\ DECIDE_TAC)
     \\ FULL_SIMP_TAC std_ss []
     \\ Cases_on `r = 0w` \\ FULL_SIMP_TAC std_ss [HD,NOT_CONS_NIL,TL]
     \\ fs [])
@@ -3135,7 +3121,7 @@ val mc_div_thm = prove(
   \\ `1 < dimword (:'a) /\ ~(LENGTH ys < 1) /\ 0 < LENGTH ys` by DECIDE_TAC
   \\ ASM_SIMP_TAC std_ss [mc_div_def,mc_div_pre_def,LET_DEF,WORD_LO,
        w2n_n2w,n2w_11,word_arith_lemma2]
-  \\ `(LAST ys <> 0w) /\ (EL (LENGTH ys - 1) ys = LAST ys)` by ALL_TAC THEN1
+  \\ `(LAST ys <> 0w) /\ (EL (LENGTH ys - 1) ys = LAST ys)` by
    (FULL_SIMP_TAC std_ss [mw_ok_def]
     \\ `(ys = []) \/ ?y ys2. ys = SNOC y ys2` by METIS_TAC [SNOC_CASES]
     \\ FULL_SIMP_TAC std_ss [LENGTH_SNOC,LAST_SNOC]
@@ -3164,7 +3150,7 @@ val mc_div_thm = prove(
   \\ FULL_SIMP_TAC std_ss [LENGTH_mw_mul_by_single]
   \\ `LENGTH xs + 1 < dimword (:'a)` by DECIDE_TAC \\ FULL_SIMP_TAC std_ss [w2n_n2w]
   \\ `LUPDATE 0x0w (LENGTH xs + 1) (mw_mul_by_single d xs ++ z2::zs2) =
-      xs1 ++ zs2` by ALL_TAC THEN1
+      xs1 ++ zs2` by
    (`LENGTH xs + 1 = LENGTH (mw_mul_by_single d xs)` by
        FULL_SIMP_TAC std_ss [LENGTH_mw_mul_by_single]
     \\ ASM_SIMP_TAC std_ss [LUPDATE_LENGTH]
@@ -3177,12 +3163,12 @@ val mc_div_thm = prove(
   \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [HD,TL]
   \\ `n2w (LENGTH xs) - n2w (LENGTH ys) + 0x2w:'a word =
-      n2w (LENGTH xs1 - LENGTH ys)` by ALL_TAC THEN1
+      n2w (LENGTH xs1 - LENGTH ys)` by
    (Q.UNABBREV_TAC `xs1`
     \\ FULL_SIMP_TAC std_ss [word_arith_lemma2,word_add_n2w,LENGTH_APPEND,
           LENGTH_mw_mul_by_single,LENGTH] \\ AP_TERM_TAC \\ DECIDE_TAC)
   \\  FULL_SIMP_TAC std_ss []
-  \\ `LENGTH xs + 2 = LENGTH xs1` by ALL_TAC THEN1
+  \\ `LENGTH xs + 2 = LENGTH xs1` by
    (Q.UNABBREV_TAC `xs1`
     \\ FULL_SIMP_TAC std_ss [LENGTH_mw_mul_by_single,LENGTH_APPEND,LENGTH]
     \\ DECIDE_TAC)
@@ -3211,8 +3197,8 @@ val mc_div_thm = prove(
     \\ fs [LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB])
   \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [TL,HD,NOT_CONS_NIL]
-  \\ `(LENGTH rs1 = LENGTH ys) /\ (LENGTH qs1 = LENGTH ts1)` by ALL_TAC THEN1
-   (`LENGTH ys = LENGTH (FRONT (mw_mul_by_single d ys))` by ALL_TAC THEN1
+  \\ `(LENGTH rs1 = LENGTH ys) /\ (LENGTH qs1 = LENGTH ts1)` by
+   (`LENGTH ys = LENGTH (FRONT (mw_mul_by_single d ys))` by
      (FULL_SIMP_TAC std_ss [LENGTH_FRONT,GSYM LENGTH_NIL,
         LENGTH_mw_mul_by_single] \\ DECIDE_TAC)
     \\ FULL_SIMP_TAC std_ss [] \\ MATCH_MP_TAC LENGTH_mw_div_aux
@@ -3252,7 +3238,7 @@ val mc_div_thm = prove(
   \\ FULL_SIMP_TAC std_ss [LENGTH_REVERSE]
   \\ Q.ABBREV_TAC `tt = mw_fix (REVERSE x1) ++
        REPLICATE (LENGTH x1 - LENGTH (mw_fix (REVERSE x1))) 0x0w`
-  \\ `LENGTH tt = LENGTH rs1` by ALL_TAC THEN1
+  \\ `LENGTH tt = LENGTH rs1` by
    (Q.UNABBREV_TAC `tt`
     \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND,LENGTH_REPLICATE]
     \\ `LENGTH (mw_fix (REVERSE x1)) <= LENGTH (REVERSE x1)` by
@@ -3285,7 +3271,7 @@ val mc_div_thm = prove(
     \\ unabbrev_all_tac \\ fs [])
   \\ STRIP_TAC \\ NTAC 3 (POP_ASSUM MP_TAC)
   \\ FULL_SIMP_TAC std_ss [LENGTH_REVERSE,APPEND_11]
-  \\ `LENGTH (mw_fix (REVERSE x1)) < dimword (:'a)` by ALL_TAC THEN1
+  \\ `LENGTH (mw_fix (REVERSE x1)) < dimword (:'a)` by
       (`LENGTH (mw_fix (REVERSE x1)) <= LENGTH (REVERSE x1)` by
           FULL_SIMP_TAC std_ss [LENGTH_mw_fix]
        \\ FULL_SIMP_TAC std_ss [LENGTH_REVERSE] \\ DECIDE_TAC)
@@ -3654,7 +3640,7 @@ val mc_idiv_thm = prove(
   \\ `LENGTH xs < dimword (:'a) DIV 2 /\ LENGTH ys < dimword (:'a) DIV 2` by DECIDE_TAC
   \\ `LENGTH zs < dimword (:'a)` by (FULL_SIMP_TAC (srw_ss()) [X_LT_DIV] \\ DECIDE_TAC)
   \\ IMP_RES_TAC mc_length \\ FULL_SIMP_TAC std_ss []
-  \\ `mw2n ys <> 0` by ALL_TAC THEN1
+  \\ `mw2n ys <> 0` by
    (SIMP_TAC std_ss [GSYM mw_fix_NIL]
     \\ FULL_SIMP_TAC std_ss [mw_ok_mw_fix_ID])
   \\ `?res mod c. (mw_div xs ys = (res,mod,c))` by METIS_TAC [PAIR]
@@ -3693,7 +3679,7 @@ val mc_idiv_thm = prove(
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
     THEN1 (FULL_SIMP_TAC std_ss [GSYM LENGTH_NIL,X_LT_DIV] \\ fs [])
     \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss []
-    \\ `LENGTH ys = LENGTH (FST (mw_sub ys mod T))` by ALL_TAC THEN1
+    \\ `LENGTH ys = LENGTH (FST (mw_sub ys mod T))` by
      (Cases_on `mw_sub ys mod T` \\ IMP_RES_TAC LENGTH_mw_sub
       \\ FULL_SIMP_TAC std_ss [])
     \\ ASM_SIMP_TAC std_ss []
@@ -3703,11 +3689,9 @@ val mc_idiv_thm = prove(
     \\ match_mp_tac IMP_IMP \\ strip_tac THEN1 fs []
     \\ strip_tac \\ FULL_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [GSYM mw_subv_def]
-    \\ `mw_subv ys (mw_fix mod) = mw_subv ys mod` by ALL_TAC
-    THEN1 (SIMP_TAC std_ss [mw_subv_def,mw_sub_mw_fix])
+    \\ `mw_subv ys (mw_fix mod) = mw_subv ys mod` by (SIMP_TAC std_ss [mw_subv_def,mw_sub_mw_fix])
     \\ FULL_SIMP_TAC std_ss []
-    \\ `LENGTH (mw_subv ys mod) <= LENGTH ys` by ALL_TAC
-    THEN1 (MATCH_MP_TAC LENGTH_mw_subv \\ FULL_SIMP_TAC std_ss [])
+    \\ `LENGTH (mw_subv ys mod) <= LENGTH ys` by (MATCH_MP_TAC LENGTH_mw_subv \\ FULL_SIMP_TAC std_ss [])
     \\ `LENGTH (mw_subv ys mod) < dimword (:'a)` by DECIDE_TAC
     \\ ASM_SIMP_TAC std_ss [mc_idiv_mod_header_thm]
     \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND_11]
@@ -3839,7 +3823,7 @@ val mc_to_dec_thm = prove(
   \\ ONCE_REWRITE_TAC [mc_to_dec_def,mc_to_dec_pre_def]
   \\ SIMP_TAC std_ss [LET_DEF]
   \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ STRIP_TAC
-  \\ `c1` by ALL_TAC \\ FULL_SIMP_TAC std_ss []
+  \\ sg `c1` \\ FULL_SIMP_TAC std_ss []
   THEN1 (Cases_on `LENGTH (mw_fix (REVERSE qs)) = 0` \\ FULL_SIMP_TAC std_ss [])
   \\ SIMP_TAC std_ss [Once EQ_SYM_EQ]
   \\ IMP_RES_TAC mc_simple_div1_thm
@@ -3849,8 +3833,7 @@ val mc_to_dec_thm = prove(
   \\ FULL_SIMP_TAC std_ss [LENGTH_REVERSE] \\ STRIP_TAC
   \\ `LENGTH (mw_fix (REVERSE qs)) <= LENGTH (REVERSE qs)` by
         METIS_TAC [LENGTH_mw_fix]
-  \\ `LENGTH (mw_fix (REVERSE qs)) < dimword (:'a)` by ALL_TAC
-  THEN1 (FULL_SIMP_TAC std_ss [LENGTH_REVERSE] \\ DECIDE_TAC)
+  \\ `LENGTH (mw_fix (REVERSE qs)) < dimword (:'a)` by (FULL_SIMP_TAC std_ss [LENGTH_REVERSE] \\ DECIDE_TAC)
   \\ FULL_SIMP_TAC std_ss [n2w_11,ZERO_LT_dimword]
   \\ FULL_SIMP_TAC std_ss [LENGTH_NIL]
   \\ Cases_on `mw_fix (REVERSE qs) = []` \\ FULL_SIMP_TAC std_ss [LENGTH]

@@ -428,5 +428,45 @@ val peg_eval_list = Q.store_thm(
         peg_eval_list G (i1, e) (i, rt) ∧ r = rh::rt)`,
   simp[Once peg_eval_cases, SimpLHS] >> metis_tac[]);
 
-val _ = export_theory()
+val pegfail_empty = store_thm(
+  "pegfail_empty[simp]",
+  ``pegfail G (empty r) = F``,
+  simp[Once peg0_cases]);
 
+val peg0_empty = store_thm(
+  "peg0_empty[simp]",
+  ``peg0 G (empty r) = T``,
+  simp[Once peg0_cases]);
+
+val peg0_not = store_thm(
+  "peg0_not[simp]",
+  ``peg0 G (not s r) ⇔ pegfail G s``,
+  simp[Once peg0_cases, SimpLHS]);
+
+val peg0_choice = store_thm(
+  "peg0_choice[simp]",
+  ``peg0 G (choice s1 s2 f) ⇔ peg0 G s1 ∨ pegfail G s1 ∧ peg0 G s2``,
+  simp[Once peg0_cases, SimpLHS]);
+
+val peg0_choicel = store_thm(
+  "peg0_choicel[simp]",
+  ``(peg0 G (choicel []) = F) ∧
+    (peg0 G (choicel (h::t)) ⇔ peg0 G h ∨ pegfail G h ∧ peg0 G (choicel t))``,
+  simp[choicel_def])
+
+val peg0_seq = store_thm(
+  "peg0_seq[simp]",
+  ``peg0 G (seq s1 s2 f) ⇔ peg0 G s1 ∧ peg0 G s2``,
+  simp[Once peg0_cases, SimpLHS])
+
+val peg0_tok = store_thm(
+  "peg0_tok[simp]",
+  ``peg0 G (tok P f) = F``,
+  simp[Once peg0_cases])
+
+val peg0_pegf = store_thm(
+  "peg0_pegf[simp]",
+  ``peg0 G (pegf s f) = peg0 G s``,
+  simp[pegf_def])
+
+val _ = export_theory()

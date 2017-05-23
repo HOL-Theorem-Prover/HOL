@@ -1102,6 +1102,87 @@ val bottom_properties = Q.store_thm("bottom_properties",
    tac
    )
 
+val float_is_zero = Q.store_thm("float_is_zero",
+   `!x. float_is_zero x = (x.Exponent = 0w) /\ (x.Significand = 0w)`,
+   rw [float_is_zero_def, float_value_def, float_to_real_def, sign_not_zero,
+       realLib.REAL_ARITH ``0 <= x ==> 1 + x <> 0r``,
+       realTheory.REAL_LE_DIV, realTheory.REAL_LT_IMP_LE])
+
+val float_is_finite = Q.store_thm("float_is_finite",
+  `!x. float_is_finite x =
+       float_is_normal x \/ float_is_subnormal x \/ float_is_zero x`,
+  rw [float_is_finite_def, float_is_normal_def, float_is_subnormal_def,
+      float_is_zero, float_value_def]
+  \\ Cases_on `x.Exponent = 0w`
+  \\ Cases_on `x.Significand = 0w`
+  \\ fs []
+  )
+
+val float_cases_finite = Q.store_thm("float_cases_finite",
+  `!x. float_is_nan x \/ float_is_infinite x \/ float_is_finite x`,
+  rw [float_is_nan_def, float_is_infinite_def, float_is_finite_def]
+  \\ Cases_on `float_value x`
+  \\ fs []
+  )
+
+val float_distinct_finite = Q.store_thm("float_distinct_finite",
+  `!x. ~(float_is_nan x /\ float_is_infinite x) /\
+       ~(float_is_nan x /\ float_is_finite x) /\
+       ~(float_is_infinite x /\ float_is_finite x)`,
+  rw [float_is_nan_def, float_is_infinite_def, float_is_finite_def]
+  \\ Cases_on `float_value x`
+  \\ fs []
+  )
+
+val float_cases = Q.store_thm("float_cases",
+  `!x. float_is_nan x \/ float_is_infinite x \/ float_is_normal x \/
+       float_is_subnormal x \/ float_is_zero x`,
+  metis_tac [float_cases_finite, float_is_finite]
+  )
+
+val float_is_distinct = Q.store_thm("float_is_distinct",
+  `!x. ~(float_is_nan x /\ float_is_infinite x) /\
+       ~(float_is_nan x /\ float_is_normal x) /\
+       ~(float_is_nan x /\ float_is_subnormal x) /\
+       ~(float_is_nan x /\ float_is_zero x) /\
+       ~(float_is_infinite x /\ float_is_normal x) /\
+       ~(float_is_infinite x /\ float_is_subnormal x) /\
+       ~(float_is_infinite x /\ float_is_zero x) /\
+       ~(float_is_normal x /\ float_is_subnormal x) /\
+       ~(float_is_normal x /\ float_is_zero x) /\
+       ~(float_is_subnormal x /\ float_is_zero x)`,
+  rw []
+  \\ TRY (metis_tac [float_is_finite, float_distinct_finite])
+  \\ fs [float_is_normal_def, float_is_subnormal_def, float_is_zero]
+  \\ Cases_on `x.Exponent = 0w`
+  \\ Cases_on `x.Exponent = -1w`
+  \\ Cases_on `x.Significand = 0w`
+  \\ fs []
+  )
+
+val float_infinities = Q.store_thm("float_infinities",
+  `!x. float_is_infinite x =
+       (x = float_plus_infinity (:'t # 'w)) \/
+       (x = float_minus_infinity (:'t # 'w))`,
+  strip_tac
+  \\ Q.ISPEC_THEN `x : ('t, 'w) float` strip_assume_tac float_cases_finite
+  \\ TRY (metis_tac [float_distinct_finite, infinity_properties])
+  \\ Cases_on `float_value x`
+  \\ Cases_on `x.Exponent = -1w`
+  \\ Cases_on `x.Significand = 0w`
+  \\ fs [float_is_infinite_def, float_value_def,
+         float_plus_infinity_def, float_minus_infinity_def,
+         float_negate_def, float_component_equality]
+  \\ wordsLib.Cases_on_word_value `x.Sign`
+  \\ simp []
+  )
+
+val float_infinities_distinct = Q.store_thm("float_infinities_distinct",
+  `!x. ~((x = float_plus_infinity (:'t # 'w)) /\
+         (x = float_minus_infinity (:'t # 'w)))`,
+  simp [float_plus_infinity_def, float_minus_infinity_def,
+        float_negate_def, float_component_equality]
+  )
 (* ------------------------------------------------------------------------ *)
 
 val float_to_real_negate = Q.store_thm("float_to_real_negate",
@@ -1328,12 +1409,6 @@ val float_is_zero_to_real_imp =
    |> Thm.EQ_IMP_RULE
    |> fst
    |> Drule.GEN_ALL
-
-val float_is_zero = Q.store_thm("float_is_zero",
-   `!x. float_is_zero x = (x.Exponent = 0w) /\ (x.Significand = 0w)`,
-   rw [float_is_zero_def, float_value_def, float_to_real_def, sign_not_zero,
-       realLib.REAL_ARITH ``0 <= x ==> 1 + x <> 0r``,
-       realTheory.REAL_LE_DIV, realTheory.REAL_LT_IMP_LE])
 
 val pos_subnormal = Q.prove(
    `!a b n. 0 <= 2 / 2 pow a * (&n / 2 pow b)`,
@@ -3214,6 +3289,14 @@ val threshold = Q.store_thm("threshold",
        &(2 EXP INT_MAX (:'w))`,
    tac [realTheory.REAL_INV_1OVER, realTheory.mult_ratl, arithmeticTheory.EXP]
    )
+
+val largest_lt_threshold = Q.store_thm("largest_lt_threshold",
+  `largest (:'t # 'w) < threshold (:'t # 'w)`,
+  rw [largest, threshold, realTheory.REAL_LT_RDIV, realTheory.REAL_LT_LMUL,
+      realLib.REAL_ARITH ``a - b < a - c = c < b : real``,
+      realTheory.REAL_LT_RDIV_EQ, realTheory.REAL_LT_LDIV_EQ,
+      realTheory.mult_ratl]
+  )
 
 val float_tests = Q.store_thm("float_tests",
    `(!s e f.

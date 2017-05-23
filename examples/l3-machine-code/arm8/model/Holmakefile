@@ -1,1 +1,10 @@
 INCLUDES = ../../common ../../lib
+
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) arm8.ui
+.PHONY: all
+
+arm8.uo: ../../lib/assemblerLib.uo ../../lib/MutableMap16.uo arm8.sml
+	$(HOLMOSMLC) -c -toplevel assemblerLib.uo MutableMap16.ui arm8.sml

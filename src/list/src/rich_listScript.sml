@@ -76,6 +76,7 @@ val ELL = DEF0`
 val REPLICATE = DEF0`
    (REPLICATE 0 x = []) /\
    (REPLICATE (SUC n) x = CONS x (REPLICATE n x))`;
+val _ = export_rewrites ["REPLICATE"]
 
 val SCANL = DEF0`
    (SCANL f (e: 'b) [] = [e]) /\
@@ -2554,7 +2555,7 @@ val SEG_REVERSE = Q.store_thm ("SEG_REVERSE",
       THEN SUBST1_TAC SEG_lem THEN SUBST1_TAC lem THEN REFL_TAC
    end);
 
-val LENGTH_REPLICATE = Q.store_thm ("LENGTH_REPLICATE",
+val LENGTH_REPLICATE = Q.store_thm ("LENGTH_REPLICATE[simp]",
    `!n x. LENGTH (REPLICATE n x) = n`,
    INDUCT_TAC THEN ASM_REWRITE_TAC [REPLICATE, LENGTH]);
 
@@ -3024,7 +3025,7 @@ val TAKE_EL_SNOC = Q.store_thm("TAKE_EL_SNOC",
    THEN1 (rw[EL_LENGTH_SNOC,TAKE_SNOC,TAKE_APPEND1,EL_APPEND1,EL_APPEND2,
              TAKE_APPEND2]
           THEN FULL_SIMP_TAC arith_ss [])
-   THEN `n < LENGTH ls` by FULL_SIMP_TAC arith_ss [ADD1]
+   THEN `n < LENGTH ls` by FULL_SIMP_TAC arith_ss [ADD1, LENGTH_SNOC]
    THEN rw[TAKE_SNOC,TAKE_APPEND1,EL_APPEND1]
    THEN FULL_SIMP_TAC arith_ss [ADD1, LENGTH_SNOC, TAKE_APPEND1, SNOC_APPEND])
 

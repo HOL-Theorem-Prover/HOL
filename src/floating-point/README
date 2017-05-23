@@ -9,6 +9,10 @@ floating-point arithmetic operations.
    ``:('t, 'w) float``, where ``:'t`` and ``:'w`` represent the sizes of the
    significand and exponent respectively.
 
+ * lift_ieeeTheory and lift_machine_ieeeTheory
+
+   Error bound theorems for some roundTiesToEven floating-point operations.
+
  * binary_ieeeSyntax
 
    Syntax support for binary_ieeeTheory.

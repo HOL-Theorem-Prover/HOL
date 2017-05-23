@@ -4241,4 +4241,8 @@ val _ = TeX_notation {hol="<=/=>", TeX = ("\\HOLTokenNotEquiv{}",2)}
 val _ = TeX_notation {hol=UChar.not_iff,
                       TeX = ("\\HOLTokenNotEquiv{}",2)}
 
+local open boolpp in end
+val _ = add_ML_dependency "boolpp"
+val _ = add_user_printer ("bool.COND", ``COND gd tr fl``)
+
 val _ = export_theory();

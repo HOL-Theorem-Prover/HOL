@@ -153,6 +153,8 @@ val spose_not_then    = BasicProvers.SPOSE_NOT_THEN
 
 val op by             = BasicProvers.by; (* infix 8 by *)
 val op suffices_by    = BasicProvers.suffices_by
+val sg                = BasicProvers.sg
+val subgoal           = BasicProvers.subgoal
 
 val CASE_TAC          = BasicProvers.CASE_TAC;
 

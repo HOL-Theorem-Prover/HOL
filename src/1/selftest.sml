@@ -401,11 +401,13 @@ val _ = app tpp [
 ]
 
 open testutils
-val test = tpp_expected
+val condprinter_test = tpp_expected
              |> Lib.with_flag (linewidth,!Globals.linewidth)
              |> unicode_off
              |> raw_backend
-val _ = app test [
+val test = condprinter_test
+val condprinter_tests =
+    [
       {input = "if oless e1 e2 /\\ oless x y /\\ foobabbbbbbb\n\
                \then p /\\ q /\\ r /\\ ppppp xxxx yyyyy\n\
                \else if (e1 = e2) /\\ k1 <> k2\n\
@@ -428,7 +430,8 @@ val _ = app test [
                 \else if (e1 = e2) /\\ k1 <> k2 then T\n\
                 \else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2 then T\n\
                 \else F"}
-]
+  ]
+val _ = app condprinter_test condprinter_tests
 
 val _ = let
   open testutils
@@ -831,7 +834,10 @@ in
     | _ => die "FAILED"
 end
 
+val _ = if List.all substtest tests then ()
+        else die "Substitution test failed"
 
-
-val _ = Process.exit (if List.all substtest tests then Process.success
-                      else Process.failure)
+val _ = print "Testing cond-printer after set_grammar_ancestry\n"
+val _ = set_trace "PP.avoid_unicode" 1
+val _ = set_grammar_ancestry ["bool"]
+val _ = app condprinter_test condprinter_tests

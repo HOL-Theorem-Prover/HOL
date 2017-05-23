@@ -291,9 +291,9 @@ qmatch_abbrev_tac
  qmatch_assum_abbrev_tac `z ∈ (c|q→x|)` >>
  `f##(z)° :- f@@x → f@@q -:ens_cat (homs c)` by (
    match_mp_tac morf_maps_to >>
-   fsrw_tac [][hom_def] ) >>
- fsrw_tac [][maps_to_in_def,IsTypedFun_def,HasFunType_def] >>
- fsrw_tac [][]) >>
+   fsrw_tac [][hom_def] >>
+   fsrw_tac [][maps_to_in_def,IsTypedFun_def,HasFunType_def]) >>
+ fsrw_tac [][] >> fsrw_tac [][maps_to_in_def,IsTypedFun_def,HasFunType_def]) >>
 `∀x. x ∈ l ⇒ n x ∈ i` by (
   srw_tac [][Abbr`n`,Abbr`i`,Abbr`l`,hom_def] >>
   match_mp_tac maps_to_comp >>
@@ -318,8 +318,8 @@ imp_res_tac IsTypedFunTypedGraphFun >>
 `TypedGraphFun (l,s) h ≈> q -: ens_cat (homs c)` by (
   fsrw_tac [][Abbr`q`,Abbr`s`,maps_to_in_def] ) >>
 srw_tac [][] >>
-`TypedGraphFun (l,i) n ≈> TypedGraphFun (i,j) h -:ens_cat (homs c)` by (
-  srw_tac [][] ) >>
+sg `TypedGraphFun (l,i) n ≈> TypedGraphFun (i,j) h -:ens_cat (homs c)` >>
+srw_tac [][] >>
 unabbrev_all_tac >>
 fsrw_tac [][ComposeTypedFun_def,compose_def,restrict_def] >>
 srw_tac [][ComposeFun_def] >>

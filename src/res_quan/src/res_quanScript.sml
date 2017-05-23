@@ -18,15 +18,6 @@ open HolKernel Parse boolLib combinTheory pred_setTheory BasicProvers;
 val _ = new_theory "res_quan";
 
 type thm = Thm.thm
-infix THEN THENL;
-
-infixr 0 ++ << || THENC ORELSEC ORELSER ##;
-infix 1 >>;
-
-val op++ = op THEN;
-val op<< = op THENL;
-val op|| = op ORELSE;
-val op>> = op THEN1;
 
 (* --------------------------------------------------------------------- *)
 (* Definitions to support restricted abstractions and quantifications    *)
@@ -170,18 +161,18 @@ val RES_EXISTS_UNIQUE_UNIV = store_thm
    ``!(p : 'a -> bool). RES_EXISTS_UNIQUE UNIV p = $?! p``,
    RW_TAC bool_ss [RES_EXISTS_UNIQUE, RES_EXISTS_UNIV, IN_UNIV,
                    RES_FORALL_UNIV, EXISTS_UNIQUE_DEF]
-   ++ KNOW_TAC ``$? (p:'a->bool) = ?x. p x`` >> RW_TAC bool_ss [ETA_AX]
-   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
-   ++ PROVE_TAC []);
+   >> KNOW_TAC ``$? (p:'a->bool) = ?x. p x`` >- RW_TAC bool_ss [ETA_AX]
+   >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
+   >> PROVE_TAC []);
 
 val RES_EXISTS_UNIQUE_NULL = store_thm
   ("RES_EXISTS_UNIQUE_NULL",
    ``!(p : 'a -> bool) m. RES_EXISTS_UNIQUE p (\x. m) = ((?x. p = {x}) /\ m)``,
    RW_TAC bool_ss [RES_EXISTS_UNIQUE, RES_EXISTS_NULL, NOT_IN_EMPTY,
                    RES_FORALL_NULL, EXISTS_UNIQUE_DEF, EXTENSION, IN_SING]
-   ++ RW_TAC bool_ss [RES_EXISTS, RES_FORALL]
-   ++ Cases_on `m`
-   ++ PROVE_TAC []);
+   >> RW_TAC bool_ss [RES_EXISTS, RES_FORALL]
+   >> Cases_on `m`
+   >> PROVE_TAC []);
 
 val RES_EXISTS_UNIQUE_ALT = store_thm
   ("RES_EXISTS_UNIQUE_ALT",

@@ -900,11 +900,10 @@ val mode_mix_const_upgrade = store_thm(
        ==>
           preserve_relation_mmu (A) mode_mix mode_mix uf uy``,
     RW_TAC (srw_ss()) [preserve_relation_mmu_def, assert_mode_def, comb_mode_def, mode_mix_def]
-       THEN `(similar g s1 s2) ==> (ARM_MODE s1 = ARM_MODE s2)` by
-            EVAL_TAC
-               THEN RW_TAC (srw_ss()) []
-               THEN SPEC_ASSUM_TAC (``!(ii:iiid). X``, [``<|proc:=0|>``])
-               THEN FULL_SIMP_TAC (srw_ss()) []
+       THEN `(similar g s1 s2) ==> (ARM_MODE s1 = ARM_MODE s2)`
+              by (EVAL_TAC THEN RW_TAC (srw_ss()) [])
+       THEN SPEC_ASSUM_TAC (``!(ii:iiid). X``, [``<|proc:=0|>``])
+       THEN FULL_SIMP_TAC (srw_ss()) []
        THEN RW_TAC (srw_ss()) []
        THEN METIS_TAC []);
 
@@ -927,5 +926,3 @@ val little_mode_mix_comb_16_thm = store_thm(
 
 
 val _ = export_theory();
-
-

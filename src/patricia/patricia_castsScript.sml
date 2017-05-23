@@ -189,7 +189,7 @@ val l2n_11 = store_thm("l2n_11",
       ((l2n b (l1 ++ [1]) = l2n b (l2 ++ [1])) = (l1 = l2))`,
   REPEAT STRIP_TAC \\ EQ_TAC \\ SRW_TAC [] []
     \\ MATCH_MP_TAC LIST_EQ
-    \\ `LENGTH l1 = LENGTH l2` by ALL_TAC
+    \\ sg `LENGTH l1 = LENGTH l2`
     \\ SRW_TAC [] []
     >| [
       SPOSE_NOT_THEN STRIP_ASSUME_TAC

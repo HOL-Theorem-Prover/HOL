@@ -365,7 +365,8 @@ val dLGH_dSUB = Q.store_thm("dLGH_dSUB",
 `!t x y. dLGH([y |-> dVAR x]t) = dLGH t`,
 RW_TAC arith_ss [dSUB] THEN
  `!t i x y. dLGH (Inst i (Abst i y t) (dVAR x)) = dLGH t`
-  by Induct THEN RW_TAC arith_ss [Inst,Abst,dLGH]);
+  suffices_by simp[] THEN
+Induct THEN RW_TAC arith_ss [Inst,Abst,dLGH]);
 
 val dLGH_Abst = Q.store_thm("dLGH_Abst",
 `!t x i. dLGH(Abst i x t) = dLGH t`,

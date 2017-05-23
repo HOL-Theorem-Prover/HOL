@@ -8,7 +8,7 @@ struct
 open HolKernel boolLib bossLib
 
 local
-   open MutableMap arm assemblerLib
+   open arm assemblerLib
 in
 end
 

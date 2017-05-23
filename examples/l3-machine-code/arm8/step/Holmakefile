@@ -5,7 +5,7 @@ ifdef POLY
 HOLHEAP = arm8-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
-BARE_THYS = ../model/arm8Lib ../../lib/MutableMap ../model/arm8 ../model/arm8AssemblerLib
+BARE_THYS = ../model/arm8Lib ../model/arm8AssemblerLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))

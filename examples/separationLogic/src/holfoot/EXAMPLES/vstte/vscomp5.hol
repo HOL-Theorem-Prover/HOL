@@ -124,7 +124,7 @@ fun amortized_queue_printer GS backend (sys_raw : term_pp_types.sysprinter) (ppf
     )
   end;
 
-val _ = add_user_printer ("amortized_list_printer", ``x:'a set``, amortized_queue_printer);
+val _ = temp_add_user_printer ("amortized_list_printer", ``x:'a set``, amortized_queue_printer);
 
 
 (******************************************)
