@@ -2,10 +2,12 @@ open HolKernel Parse boolLib bossLib
 
 val _ = new_theory "location";
 
-val _ = Hol_datatype `
+val _ = Datatype `
  locn = <| row : num;  col : num; offset : num |>`;
 
-val _ = type_abbrev ("locs", ``:locn # locn``);
+val _ = Datatype `
+  locs = Locs locn locn
+`
 
 val default_loc_def = Define`
   default_loc = <| row := 1; col := 1; offset := 0 |>`;
@@ -14,10 +16,11 @@ val start_loc_def = Define`
   start_loc = (default_loc,default_loc)`;
 
 val unknown_loc_def = Define`
-  unknown_loc = (<| row := 0; col := 0; offset := 0 |>,
-                 <| row := 0; col := 0; offset := 0 |>)`;
+  unknown_loc = Locs <| row := 0; col := 0; offset := 0 |>
+                     <| row := 0; col := 0; offset := 0 |>`;
 val merge_locs_def = Define`
-  merge_locs (l1 :locn, l2 : locn) (l3 : locn, l4 : locn) = (l1, l4)`;
+  merge_locs (Locs l1 l2) (Locs l3 l4) = Locs l1 l4
+`;
 
 val merge_list_locs_def = Define`
   (merge_list_locs [] = unknown_loc) /\
@@ -29,9 +32,10 @@ val merge_list_locs_def = Define`
 
 val map_loc_def = Define`
   (map_loc [] _ = []) /\
-  (map_loc (h :: t) n = (h, (<| row := n; col := 0; offset := 0 |>,
-                             <| row := n; col := 1; offset := 0 |>)) ::
-                        map_loc t (n+1))     `;
+  (map_loc (h :: t) n =
+    (h, Locs <| row := n; col := 0; offset := 0 |>
+             <| row := n; col := 1; offset := 0 |>) :: map_loc t (n+1))
+`;
 
 
 val merge_locs_assoc = Q.store_thm(
