@@ -253,7 +253,7 @@ val wfG_rePEG = Q.store_thm("wfG_rePEG",
   \\ rpt(rw[Once wfpeg_cases,wfpeg_Top,wfpeg_Alt,wfpeg_Concat,wfpeg_Star,wfpeg_Atom]));
 
 val add_loc_def = Define`
-  add_loc c = (c,(locn 0 0 0,locn 0 0 0))`;
+  add_loc c = (c, Locs (locn 0 0 0) (locn 0 0 0))`;
 
 val parse_regexp_def = Define`
   parse_regexp s =
