@@ -25,7 +25,7 @@ fun add_peg_compset cs =
    List.app (computeLib.add_datatype_info cs o valOf o TypeBase.fetch)
     [``:('a,'b)grammar$symbol``
     ,``:('a,'b)grammar``
-    ,``:('a,'b)parsetree``
+    ,``:('a,'b,'locs)parsetree``
     ,``:('a,'b,'c)pegsym``
     ,``:('a,'b,'c)peg``
     ,``:('a,'b,'c)kont``
