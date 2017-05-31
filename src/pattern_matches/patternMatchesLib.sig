@@ -3,6 +3,10 @@ sig
   include Abbrev
   type ssfrag = simpLib.ssfrag
 
+  (********************************)
+  (* parsing                      *)
+  (********************************)
+
   (* ENABLE_PMATCH_CASES() turns on parsing for
      PMATCH style case expressions. After calling it
      expressions like `case ... of ...` are not parsed
@@ -11,89 +15,105 @@ sig
      via `dtcase ... of ...`. *)
   val ENABLE_PMATCH_CASES : unit -> unit
 
-  (********************************)
-  (* eliminating select           *)
-  (********************************)
-
-  (* PMATCH leads to selects consisting of
-     conjunctions that determine the value of one
-     component of the variable. An example is
-
-     @x. SND (SND x = ..) /\ (FST x = ..) /\ (FST (SND x) = ..)
-
-     by resorting these conjunctions, one can
-     easily derive a form
-
-     @x. x = ..
-
-     and therefore eliminate the select operator.
-     This is done by the following conversion + ssfrag. *)
-  val ELIM_FST_SND_SELECT_CONV : conv
-  val elim_fst_snd_select_ss : ssfrag
-
 
   (********************************)
-  (* convert between              *)
-  (* case and pmatch              *)
+  (* Naming conventions           *)
   (********************************)
 
-  (* without proof convert a case to a pmatch expression.
-     If the flag is set, optimise the result by
-     introducing wildcards reordering rows ... *)
-  val case2pmatch : bool -> term -> term
+  (* Many PMATCH related tools need to prove various forms of
+     preconditions, in particular they need to prove that certain
+     patterns are injective or don't overlap. For this they need
+     information about the used constructors, in particular
+     injectivity theorems about the used constructors and theorems
+     about the distinctiveness of constructors. For most conversions
+     there are therefore 4 forms:
 
-  (* convert a pmatch expression to a case expression.
-     Fails, if the pmatch expression uses guards or
-     non-constructor patterns. *)
-  val pmatch2case : term -> term
+     XXX_CONV : conv
 
-  (* The following conversions call
-     case2pmatch and pmatch2case and
-     afterwards prove the equivalence of
-     the result. *)
-  val PMATCH_INTRO_CONV : conv
-  val PMATCH_INTRO_CONV_NO_OPTIMISE : conv
-  val PMATCH_ELIM_CONV : conv
+     uses a default set of theorem for proving preconditions enriched
+     with information from TypeBase.
+
+     XXX_CONV_GEN : ssfrag list -> conv
+
+     additionally uses the given list of ssfrags for proving preconditions.
+
+     XXX_ss : ssfrag
+
+     uses the default set + the simplifier using it as a callback to prove
+     preconditions.
+
+     XXX_ss_GEN : ssfrag list -> ssfrag
+
+     uses additionally the given list of ssfrags.
+  *)
+
+
+  (********************************)
+  (* Normalise PMATCH-terms       *)
+  (********************************)
+
+  (* remove unused pattern variables *)
+  val PMATCH_CLEANUP_PVARS_CONV : conv
+
+  (* Use same variable names for pattern, guard and rhs *)
+  val PMATCH_FORCE_SAME_VARS_CONV : conv
+
+  (* Rename pattern variables unused in guard and rhs into
+     wildcards. *)
+  val PMATCH_INTRO_WILDCARDS_CONV : conv
+
+  (* Enforce each pattern to have the same number of columns, i.e.
+     explicit elements of a top-level tuple. *)
+  val PMATCH_EXPAND_COLS_CONV : conv
+
+  (* A combination of the normalisations above. *)
+  val PMATCH_NORMALISE_CONV : conv
+  val PMATCH_NORMALISE_ss : simpLib.ssfrag
+
+  (********************************)
+  (* Evaluate PMATCH-terms        *)
+  (********************************)
+
+  (* PMATCH_CLEANUP_CONV removes rows that can't match,
+     removes all rows after the first matching row and
+     evaluates the whole expression in case the first row matches. *)
+  val PMATCH_CLEANUP_CONV : conv
+  val PMATCH_CLEANUP_CONV_GEN : ssfrag list -> conv
+
+  val PMATCH_CLEANUP_GEN_ss : ssfrag list -> ssfrag
+  val PMATCH_CLEANUP_ss : ssfrag
+
+  (* PMATCH_SIMP_COLS_CONV partially evaluates columns that all contain
+     either the same constructor or a variable. *)
+  val PMATCH_SIMP_COLS_CONV : conv
+  val PMATCH_SIMP_COLS_CONV_GEN : ssfrag list -> conv
+
+  (* A combination of PMATCH_CLEANUP_CONV and PMATCH_SIMP_COLS_CONV *)
+  val PMATCH_FAST_SIMP_CONV : conv
+  val PMATCH_FAST_SIMP_CONV_GEN : ssfrag list -> conv
+  val PMATCH_FAST_SIMP_GEN_ss : ssfrag list -> ssfrag
+  val PMATCH_FAST_SIMP_ss : ssfrag
 
 
   (********************************)
   (* simplify PMATCH-terms        *)
   (********************************)
 
-  (* There are various ways of simplifying
-     PMATCH. One can e.g. remove redundant rows
-     or partially evaluate it. The conversion
-     PMATCH_SIMP_CONV does this. *)
-  val PMATCH_SIMP_CONV : conv
-
-  (* There is also a more generic version that
-     allows to provide extra ssfrags. This might
-     be handy, if the PMATCH contains functions
-     not known by the default methods. *)
-  val PMATCH_SIMP_CONV_GEN : ssfrag list -> conv
-
-  (* corresponding ssfrags *)
-  val PMATCH_SIMP_GEN_ss : ssfrag list -> ssfrag
-  val PMATCH_SIMP_ss : ssfrag
-
-  (* PMATCH_SIMP_CONV consists of various
-     component conversions. These can be used
-     independently as well. *)
+  (* Remove easily detectable redundant rows *)
   val PMATCH_REMOVE_FAST_REDUNDANT_CONV : conv
   val PMATCH_REMOVE_FAST_REDUNDANT_CONV_GEN : ssfrag list -> conv
 
-  val PMATCH_REMOVE_SUBSUMED_CONV : bool -> conv
-  val PMATCH_REMOVE_SUBSUMED_CONV_GEN : bool -> ssfrag list -> conv
+  (* Remove easily detectable subsumed rows *)
+  val PMATCH_REMOVE_FAST_SUBSUMED_CONV : bool -> conv
+  val PMATCH_REMOVE_FAST_SUBSUMED_CONV_GEN : bool -> ssfrag list -> conv
 
-  val PMATCH_CLEANUP_PVARS_CONV : conv
-
-  val PMATCH_CLEANUP_CONV : conv
-  val PMATCH_CLEANUP_CONV_GEN : ssfrag list -> conv
-
-  val PMATCH_SIMP_COLS_CONV : conv
-  val PMATCH_SIMP_COLS_CONV_GEN : ssfrag list -> conv
-
-  val PMATCH_EXPAND_COLS_CONV : conv
+  (* Full simplification of PMATCH expressions:
+     normalise, partially evaluate rows and columns and
+     try to remove redundant and subsumed rows. *)
+  val PMATCH_SIMP_CONV : conv
+  val PMATCH_SIMP_CONV_GEN : ssfrag list -> conv
+  val PMATCH_SIMP_GEN_ss : ssfrag list -> ssfrag
+  val PMATCH_SIMP_ss : ssfrag
 
 
   (********************************)
@@ -117,7 +137,12 @@ sig
   val PMATCH_REMOVE_GUARDS_ss : ssfrag
 
 
+  (********************************)
+  (* extending input              *)
+  (********************************)
 
+  val PMATCH_EXTEND_INPUT_CONV_GEN : ssfrag list -> term -> conv
+  val PMATCH_EXTEND_INPUT_CONV : term -> conv
 
   (********************************)
   (* removing PMATCH-terms        *)
@@ -136,18 +161,25 @@ sig
      around a PMATCH such that the term is of type
      bool. This term is then expanded into a big
      conjunction. For each case of the pattern match,
-     one conjunct is created. *)
-  val PMATCH_LIFT_BOOL_CONV : conv
+     one conjunct is created.
+
+     If the flag "check_exh" is is set to true, the
+     conversion tries to prove the exhaustiveness of
+     the expanded pattern match. This is slow, but if
+     successful allows to eliminate the last
+     generated conjunct.
+  *)
+  val PMATCH_LIFT_BOOL_CONV : bool -> conv
 
   (* There is also a more generic version that
      allows to provide extra ssfrags. This might
      be handy, if the PMATCH contains functions
      not known by the default methods. *)
-  val PMATCH_LIFT_BOOL_CONV_GEN : ssfrag list -> conv
+  val PMATCH_LIFT_BOOL_CONV_GEN : ssfrag list -> bool -> conv
 
   (* corresponding ssfrags *)
-  val PMATCH_LIFT_BOOL_GEN_ss : ssfrag list -> ssfrag
-  val PMATCH_LIFT_BOOL_ss : ssfrag
+  val PMATCH_LIFT_BOOL_GEN_ss : ssfrag list -> bool -> ssfrag
+  val PMATCH_LIFT_BOOL_ss : bool -> ssfrag
 
   (* A special case of lifting are function definitions,
      which use PMATCH. In order to use such definitions
@@ -157,6 +189,29 @@ sig
      PMATCH. This is automated by the following rules. *)
   val PMATCH_TO_TOP_RULE_GEN : ssfrag list -> rule
   val PMATCH_TO_TOP_RULE : rule
+
+  (********************************)
+  (* convert between              *)
+  (* case and pmatch              *)
+  (********************************)
+
+  (* without proof convert a case to a pmatch expression.
+     If the flag is set, optimise the result by
+     introducing wildcards reordering rows ... *)
+  val case2pmatch : bool -> term -> term
+
+  (* convert a pmatch expression to a case expression.
+     Fails, if the pmatch expression uses guards or
+     non-constructor patterns. *)
+  val pmatch2case : term -> term
+
+  (* The following conversions call
+     case2pmatch and pmatch2case and
+     afterwards prove the equivalence of
+     the result. *)
+  val PMATCH_INTRO_CONV : conv
+  val PMATCH_INTRO_CONV_NO_OPTIMISE : conv
+  val PMATCH_ELIM_CONV : conv
 
 
   (*************************************)
@@ -249,7 +304,7 @@ sig
       from its info. It fails, if no exhaustiveness
       information is available. The result should
       be an exhaustive match, which is equivalent to
-      the input `t`. If you need a prove, use
+      the input `t`. If you need a proof, use
       PMATCH_COMPLETE_CONV and similar functions instead
       of this syntactic one. *)
   val extend_possibly_missing_patterns : term -> pmatch_info -> term
@@ -387,24 +442,84 @@ sig
     thm -> int -> tactic -> thm
 
   val IS_REDUNDANT_ROWS_INFO_SHOW_ROW_IS_REDUNDANT_set_goal :
-    thm -> int -> Manager.proof
+    thm -> int -> proofManagerLib.proofs
 
 
   (*-----------------------*)
   (* Exhaustiveness        *)
   (*-----------------------*)
 
-  (* One can easily use a redundant rows info to
-     show that a pattern match is exhaustive. This
-     is done in the form of a consequence conversion.
-     So the user has to take care of a precondition (which is
-     ideally true) *)
+  (* A IS_REDUNDANT_ROW_INFO theorem contains already
+     information, whether the pattern match is exhaustive.
 
-  val PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV : ConseqConv.conseq_conv;
+     IS_REDUNDANT_ROWS_INFO_TO_PMATCH_IS_EXHAUSTIVE extracts
+     this information in the form of an implication. Ideally,
+     the precondition is ~F, but the user has to check. *)
 
-  val PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV_GEN :
+  val IS_REDUNDANT_ROWS_INFO_TO_PMATCH_IS_EXHAUSTIVE : thm -> thm
+
+  (* For convenience this is combined with the computation of the
+     IS_REDUNDANT_ROWS_INFO. So given a PMATCH term, the following
+     functions compute an implication, whose conclusion is the
+     exhaustiveness of the PMATCH. *)
+
+  val PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK : term -> thm
+  val PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_GEN :
+     ssfrag list -> term -> thm
+  val PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_FULLGEN :
      constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
-     ssfrag list -> ConseqConv.conseq_conv;
+     (ssfrag list * conv option) -> term -> thm
+
+  (* One can usually even derive an equality.  *)
+
+  val PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK : term -> thm
+  val PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_GEN :
+     ssfrag list -> term -> thm
+  val PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK_FULLGEN :
+     constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+     (ssfrag list * conv option) -> term -> thm
+
+
+  (* Computing the IS_REDUNDANT_ROWS_INFO takes time and
+      is often not necessary. Many pattern matches contain
+      for example and catch-all pattern as the last row.
+      The following functions try to compute the redundancy
+      fast by searching such rows. If they succeed they result
+      in a theorem of the form
+
+      EHX_STATEMENT = T
+
+      or
+
+      EHX_STATEMENT = F
+
+      So, this time, there is an equation, not an implication
+      and the right-hand-side is always T or F.
+   *)
+   val PMATCH_IS_EXHAUSTIVE_FAST_CHECK : term -> thm
+   val PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GEN : ssfrag list -> term -> thm
+
+
+   (* Both methods can be combined to combine the speed of
+      the fast version with the power of the slow one.
+
+      There are two versions of this, one resulting in an
+      equation and one resulting in an implication. The
+      equation one is suitable, if one just wants yes/no
+      answers, the implicational one to analyse what is missing
+      to make the pattern match exhaustive. *)
+
+   val PMATCH_IS_EXHAUSTIVE_CHECK : term -> thm
+   val PMATCH_IS_EXHAUSTIVE_CHECK_GEN : ssfrag list -> term -> thm
+   val PMATCH_IS_EXHAUSTIVE_CHECK_FULLGEN :
+      constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+      (ssfrag list * conv option) -> term -> thm
+
+   val PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK : term -> thm
+   val PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_GEN : ssfrag list -> term -> thm
+   val PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_FULLGEN :
+      constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+      (ssfrag list * conv option) -> term -> thm
 
 
    (* More interesting than just computing whether a PMATCH
@@ -432,6 +547,17 @@ sig
      column_heuristic -> bool -> ssfrag
 
 
+   (* Versions with suffix "WITH_EXH_PROOF" return a theorem stating
+      that the resulting case split is exhaustive is returned as well.
+      In case the original case split is already exhaustive, no
+      conversion theorem is returned. However a theorem stating that the
+      original case split is exhaustive is still computed. *)
+   val PMATCH_COMPLETE_CONV_WITH_EXH_PROOF : bool -> (term -> (thm option * thm))
+
+   val PMATCH_COMPLETE_CONV_GEN_WITH_EXH_PROOF : ssfrag list ->
+     constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+     bool -> (term -> (thm option * thm))
+
   (*-----------------------*)
   (* Show nchotomy         *)
   (*-----------------------*)
@@ -450,5 +576,75 @@ sig
     ssfrag list -> constrFamiliesLib.pmatch_compile_db ->
     column_heuristic -> ConseqConv.conseq_conv
 
+
+  (********************************)
+  (* General Lifting              *)
+  (********************************)
+
+  (* One can also lift to arbitrary levels. This requires forcing the
+     lifted case expression to be exhaustive though.  Therefore,
+     PMATCH_COMPLETE_CONV is used internally and a compilation database
+     and a column heuristic are needed. Similarly to lifting, there is
+     also a version that returns an exhaustiveness statement of the
+     result. *)
+
+  val PMATCH_LIFT_CONV : conv
+
+  val PMATCH_LIFT_CONV_GEN : ssfrag list ->
+     constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+     conv
+
+  val PMATCH_LIFT_CONV_WITH_EXH_PROOF : term -> (thm * thm)
+
+  val PMATCH_LIFT_CONV_GEN_WITH_EXH_PROOF : ssfrag list ->
+     constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+     term -> (thm * thm)
+
+
+  (********************************)
+  (* Flattening                   *)
+  (********************************)
+
+  (* Flattening tries to flatten nested PMATCH case expressions into a
+     single one. It needs to enforce exhaustiveness. Therefore a
+     compilation database and a column heuristic are needed.  The
+     additional flag states whether lifting should be attempted.  If
+     set to false, only nested PMATCH expressions directly at the top
+     of the rhs of a row are considered for flattening. Otherwise,
+     lifting is attempted. *)
+
+  val PMATCH_FLATTEN_CONV_GEN : ssfrag list ->
+     constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+     bool -> conv
+
+  val PMATCH_FLATTEN_CONV : bool -> conv
+
+  val PMATCH_FLATTEN_GEN_ss : ssfrag list ->
+     constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+     bool -> ssfrag
+
+  val PMATCH_FLATTEN_ss : bool -> ssfrag
+
+  (********************************)
+  (* eliminating select           *)
+  (********************************)
+
+  (* PMATCH leads to selects consisting of
+     conjunctions that determine the value of one
+     component of the variable. An example is
+
+     @x. SND (SND x = ..) /\ (FST x = ..) /\ (FST (SND x) = ..)
+
+     by resorting these conjunctions, one can
+     easily derive a form
+
+     @x. x = ..
+
+     and therefore eliminate the select operator.
+     This is done by the following conversion + ssfrag.
+     These are used internally by the pattern matches
+     infrastructure. *)
+  val ELIM_FST_SND_SELECT_CONV : conv
+  val elim_fst_snd_select_ss : ssfrag
 
 end

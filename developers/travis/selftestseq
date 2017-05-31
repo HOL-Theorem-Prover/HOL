@@ -8,6 +8,7 @@ src/res_quan/src
 src/quotient/src
 src/n-bit
 src/bag
+src/llist
 !examples/ind_def
 !examples/lambda/basics
 !examples/formal-languages

@@ -86,6 +86,7 @@ sig
 
   val clean_dir : {extra_cleans: string list} -> unit
   val clean_depdir : {depdirname : string} -> bool
+  val clean_forReloc : {holheap : string option} -> unit
 
   structure hmdir : sig
     type t
@@ -107,6 +108,9 @@ sig
 
   val process_hypat_options :
       string -> {noecho : bool, ignore_error : bool, command : string}
+
+  (* nicely format a list of makefile targets *)
+  val target_string : string list -> string
 
   val maybe_recurse :
       {warn: string -> unit,

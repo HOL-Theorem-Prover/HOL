@@ -186,29 +186,29 @@ RW_TAC arith_ss [int_mod] THEN ARW [INT_SUB_LDISTRIB] THEN
  ARW [] THEN
 `(a * (b / c) * c) % c = 0` by METIS_TAC [INT_MOD_COMMON_FACTOR] THEN
 `(a * b - a * (b / c) * c) / c = a * b / c - a * (b / c) * c / c`
- by ARW [INT_SUB_CALCULATE, INT_ADD_DIV]
-THENL [`~(a * (b / c) * c) % c = 0` by METIS_TAC [mode_Lemma1] THEN
-  ARW [INT_ADD_DIV] THEN ARW [INT_NEG_LMUL, INT_DIV_RMUL],
-  ARW [INT_DIV_RMUL] THEN ARW [INT_SUB_RDISTRIB] THEN
-  ARW [INT_SUB_CALCULATE] THEN
-  `~(a * b / c * c + ~(a * (b / c) * c)) =
-   ~(a * b / c * c) - ( ~(a * (b / c) * c))` by ARW [INT_SUB_LNEG] THEN
-  ARW [] THEN ARW [INT_SUB_RNEG] THEN ARW [INT_ADD_ASSOC] THEN
-  `a * b + ~(a * (b / c) * c) + ~(a * b / c * c) + a * (b / c) * c =
-   a * b + (~(a * (b / c) * c) + ~(a * b / c * c) + a * (b / c) * c)`
-  by METIS_TAC [INT_ADD_ASSOC] THEN ARW [] THEN
-  `~(a * (b / c) * c) + ~(a * b / c * c) + a * (b / c) * c =
-   ~(a * (b / c) * c) + (~(a * b / c * c) + a * (b / c) * c)`
-  by METIS_TAC [INT_ADD_ASSOC] THEN ARW [] THEN
-  `~(a * (b / c) * c) + (~(a * b / c * c) + a * (b / c) * c) =
-  (~(a * b / c * c) + a * (b / c) * c) + ~(a * (b / c) * c)`
-  by METIS_TAC [INT_ADD_COMM] THEN ARW [] THEN
-  `~(a * b / c * c) + a * (b / c) * c + ~(a * (b / c) * c) =
-   ~(a * b / c * c) + (a * (b / c) * c + ~(a * (b / c) * c))`
-  by METIS_TAC [INT_ADD_ASSOC] THEN ARW [] THEN
-  `a * (b / c) * c + ~(a * (b / c) * c) = 0` by METIS_TAC [INT_ADD_RINV] THEN
-  ARW [] THEN
-  METIS_TAC [INT_ADD_RID]]);
+ by (ARW [INT_SUB_CALCULATE, INT_ADD_DIV] THEN
+     `~(a * (b / c) * c) % c = 0` by METIS_TAC [mode_Lemma1] THEN
+     ARW [INT_ADD_DIV] THEN ARW [INT_NEG_LMUL, INT_DIV_RMUL]) THEN
+ARW [INT_DIV_RMUL] THEN ARW [INT_SUB_RDISTRIB] THEN
+ARW [INT_SUB_CALCULATE] THEN
+`~(a * b / c * c + ~(a * (b / c) * c)) =
+ ~(a * b / c * c) - ( ~(a * (b / c) * c))` by ARW [INT_SUB_LNEG] THEN
+ARW [] THEN ARW [INT_SUB_RNEG] THEN ARW [INT_ADD_ASSOC] THEN
+`a * b + ~(a * (b / c) * c) + ~(a * b / c * c) + a * (b / c) * c =
+ a * b + (~(a * (b / c) * c) + ~(a * b / c * c) + a * (b / c) * c)`
+by METIS_TAC [INT_ADD_ASSOC] THEN ARW [] THEN
+`~(a * (b / c) * c) + ~(a * b / c * c) + a * (b / c) * c =
+ ~(a * (b / c) * c) + (~(a * b / c * c) + a * (b / c) * c)`
+by METIS_TAC [INT_ADD_ASSOC] THEN ARW [] THEN
+`~(a * (b / c) * c) + (~(a * b / c * c) + a * (b / c) * c) =
+(~(a * b / c * c) + a * (b / c) * c) + ~(a * (b / c) * c)`
+by METIS_TAC [INT_ADD_COMM] THEN ARW [] THEN
+`~(a * b / c * c) + a * (b / c) * c + ~(a * (b / c) * c) =
+ ~(a * b / c * c) + (a * (b / c) * c + ~(a * (b / c) * c))`
+by METIS_TAC [INT_ADD_ASSOC] THEN ARW [] THEN
+`a * (b / c) * c + ~(a * (b / c) * c) = 0` by METIS_TAC [INT_ADD_RINV] THEN
+ARW [] THEN
+METIS_TAC [INT_ADD_RID]);
 
 val piu1_def = Define `piu1 x = (iu1 x) % 65537`;
 val piu2_def = Define `piu2 x = (iu2 x) % 65537`;
@@ -368,10 +368,11 @@ val wmul_Lemma2 = Q.store_thm
  `Num ($& 65537) = 65537` by METIS_TAC [NUM_OF_INT] THEN
  `0 < Num x` by METIS_TAC [] THEN
  `Num x < 65537` by METIS_TAC [] THEN
- `decode (Num x) MOD 65536 = decode (Num x)` by RES_TAC THENL [
-   `decode (Num x) < 65536n` by METIS_TAC [decode_Lemma1] THEN
-   METIS_TAC [LESS_MOD],
-   ARW [decode_Lemma2, INT_OF_NUM]]);
+ `decode (Num x) MOD 65536 = decode (Num x)`
+    by (RES_TAC THEN
+        `decode (Num x) < 65536n` by METIS_TAC [decode_Lemma1] THEN
+        METIS_TAC [LESS_MOD]) THEN
+ ARW [decode_Lemma2, INT_OF_NUM]);
 
 val wmul_Theorem = Q.store_thm
 ("wmul_Theorem",

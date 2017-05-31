@@ -23,13 +23,13 @@ struct
    val toWord = Word.fromLargeInt o toInt
    val fromLit = Option.map fromInt o IntExtra.fromLit
 
-   val fromBool = fn true => 1 | false => 0
+   val fromBool = fn true => 1 | false => 0: IntInf.int
 
    val compare = IntInf.compare
 
-   val zero = 0
-   val one = 1
-   val two = 2
+   val zero = 0: IntInf.int
+   val one = 1: IntInf.int
+   val two = 2: IntInf.int
 
    val log2 = IntInf.fromInt o IntInf.log2
    fun pow (x, y) = IntInf.pow (x, IntInf.toInt y)

@@ -304,4 +304,22 @@ fun read fname env =
              Binarymap.mkDict String.compare)
             (empty_condstate, init_buf fname)
 
+fun readlist e vref =
+  map dequote (tokenize (perform_substitution e [VREF vref]))
+
+fun find_includes dirname =
+  let
+    val hm_fname = OS.Path.concat(dirname, "Holmakefile")
+  in
+    if OS.FileSys.access(hm_fname, [OS.FileSys.A_READ]) then
+      let
+        val (e, _, _) = read hm_fname (base_environment())
+        val raw_incs = readlist e "INCLUDES" @ readlist e "PRE_INCLUDES"
+      in
+        map (fn p => OS.Path.mkAbsolute {path = p, relativeTo = dirname})
+            raw_incs
+      end
+    else []
+  end
+
 end (* struct *)

@@ -98,6 +98,12 @@ fun push_in_stk f (arg,(th,stk)) =
       end
 ;
 
+fun push_skip_stk f (arg,(th,stk)) =
+      let val (tha,thb,mka) = Mk_comb th in
+      (tha, Zrand{Rator=(Lib.C mka,true,(thb,f arg)), Ctx=stk})
+      end
+;
+
 fun push_lam_in_stk (th, stk) =
       let val (_,thb,mkl) = Mk_abs th in
       (thb, Zabs{Bvar=try_eta o mkl, Ctx=stk})

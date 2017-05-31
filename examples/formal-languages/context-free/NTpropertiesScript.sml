@@ -141,15 +141,15 @@ val nullableML_nullable = store_thm(
 
 
 val ptree_NTs_def = tDefine "ptree_NTs" `
-  (ptree_NTs (Lf l) = case l of NT N => {N} | _ => ∅) ∧
-  (ptree_NTs (Nd n subs) = n INSERT BIGUNION (IMAGE ptree_NTs (set subs)))
+  (ptree_NTs (Lf (l,_)) = case l of NT N => {N} | _ => ∅) ∧
+  (ptree_NTs (Nd (n,_) subs) = n INSERT BIGUNION (IMAGE ptree_NTs (set subs)))
 `
   (WF_REL_TAC `measure ptree_size` >> Induct_on `subs` >> simp[] >> fs[] >>
    rpt strip_tac >> res_tac >> asimp[])
 
 val ptree_rptfree_def = tDefine "ptree_rptfree" `
   ptree_rptfree (Lf _) = T ∧
-  ptree_rptfree (Nd N subs) =
+  ptree_rptfree (Nd (N,_) subs) =
     ∀s. MEM s subs ⇒ ptree_rptfree s ∧ N ∉ ptree_NTs s
 `
   (WF_REL_TAC `measure ptree_size` >> Induct_on `subs` >> simp[] >> fs[] >>
@@ -173,11 +173,15 @@ val ptree_nullableML = store_thm(
             valid_ptree G pt ∧ ptree_rptfree pt ⇒
             nullableML G sn [ptree_head pt]``,
   HO_MATCH_MP_TAC grammarTheory.ptree_ind >>
-  simp[nullableML_def, ptree_NTs_def, ptree_rptfree_def] >>
+  strip_tac >- (rw[] >> Cases_on`pt` >> fs[]) >>
   qx_gen_tac `subs` >> strip_tac >> dsimp[] >>
-  dsimp[FLAT_EQ_NIL, listTheory.MEM_MAP] >> map_every qx_gen_tac [`N`, `sn`] >>
-  strip_tac >> simp[EXTENSION] >> qexists_tac `MAP ptree_head subs` >> simp[] >>
-  simp[Once nullableML_by_singletons] >> dsimp[listTheory.MEM_MAP]);
+  dsimp[FLAT_EQ_NIL, listTheory.MEM_MAP] >> 
+  map_every qx_gen_tac [`N`, `sn`] >> Cases_on `N` >>
+  simp[nullableML_def, ptree_NTs_def, ptree_rptfree_def] >>
+  strip_tac >> simp[EXTENSION] >> 
+  qexists_tac `MAP ptree_head subs` >> simp[] >>
+  simp[Once nullableML_by_singletons] >> dsimp[listTheory.MEM_MAP] >>
+  rw[] >> res_tac >> rw[]);
 
 val rptfree_subtree = store_thm(
   "rptfree_subtree",
@@ -186,10 +190,14 @@ val rptfree_subtree = store_thm(
          ∃pt'. ptree_rptfree pt' ∧ ptree_head pt' = NT N ∧
                ptree_fringe pt' = [] ∧ valid_ptree G pt'``,
   HO_MATCH_MP_TAC grammarTheory.ptree_ind >>
+  strip_tac >- (rw[] >> Cases_on`pt` >> fs[]) >>
   simp[ptree_rptfree_def, ptree_NTs_def] >> qx_gen_tac `subs` >> strip_tac >>
-  dsimp[listTheory.MEM_MAP, FLAT_EQ_NIL] >> conj_tac
-  >- (strip_tac >> qexists_tac `Nd N subs` >>
-      dsimp[ptree_rptfree_def, FLAT_EQ_NIL, listTheory.MEM_MAP]) >>
+  dsimp[listTheory.MEM_MAP, FLAT_EQ_NIL] >> 
+  NTAC 2 strip_tac >> 
+  Cases_on `pt` >>
+  fs[ptree_rptfree_def, FLAT_EQ_NIL, listTheory.MEM_MAP,ptree_NTs_def]  
+  >-(qexists_tac `Nd (N, unknown_loc) subs` >>
+  fs[ptree_rptfree_def, FLAT_EQ_NIL, listTheory.MEM_MAP] >> metis_tac[]) >>
   metis_tac[]);
 
 val rptfree_nullable_ptrees_possible = store_thm(
@@ -198,19 +206,22 @@ val rptfree_nullable_ptrees_possible = store_thm(
          ∃pt'. valid_ptree G pt' ∧ ptree_head pt' = ptree_head pt ∧
                ptree_fringe pt' = [] ∧ ptree_rptfree pt'``,
   HO_MATCH_MP_TAC grammarTheory.ptree_ind >>
+  strip_tac >- (rw[] >> Cases_on`pt` >> fs[]) >>
   dsimp[FLAT_EQ_NIL, listTheory.MEM_MAP] >>
   map_every qx_gen_tac [`subs`, `N`] >> rpt strip_tac >>
+  Cases_on `N` >> fs[] >>
   `∃subs'. MAP ptree_head subs' = MAP ptree_head subs ∧
            ∀p. MEM p subs' ⇒
                  valid_ptree G p ∧ ptree_fringe p = [] ∧
                  ptree_rptfree p`
-    by (qpat_x_assum `MAP ptree_head subs ∈ G.rules ' N` (K ALL_TAC) >>
+    by (
+    qpat_x_assum `MAP ptree_head subs ∈ G.rules ' q` (K ALL_TAC) >>
         Induct_on `subs` >- (rpt strip_tac >> qexists_tac `[]` >> simp[]) >>
         dsimp[] >> qx_gen_tac `h` >> rpt strip_tac >> fs[] >>
         qexists_tac `pt'::subs'` >> dsimp[]) >>
-  Cases_on `∃pt. MEM pt subs' ∧ N ∈ ptree_NTs pt`
+  Cases_on `∃pt. MEM pt subs' ∧ q ∈ ptree_NTs pt`
   >- (fs[] >> metis_tac[rptfree_subtree]) >>
-  fs[] >> qexists_tac `Nd N subs'` >>
+  fs[] >> qexists_tac `Nd (q,r) subs'` >>
   dsimp[ptree_rptfree_def, FLAT_EQ_NIL, listTheory.MEM_MAP] >> metis_tac[])
 
 val nullable_nullableML = store_thm(
@@ -220,7 +231,7 @@ val nullable_nullableML = store_thm(
   ntac 2 strip_tac >> qx_gen_tac `a` >> strip_tac >>
   `nullable G [a]` by res_tac >>
   `derives G [a] []` by fs[nullable_def] >>
-  qspecl_then [`Lf a`, `[]`] mp_tac ptrees_derive_extensible >> simp[] >>
+  qspecl_then [`Lf (a, unknown_loc)`, `[]`] mp_tac ptrees_derive_extensible >> simp[] >>
   disch_then (qxchl [`pt`] strip_assume_tac) >>
   `∃pt'. ptree_rptfree pt' ∧ ptree_head pt' = ptree_head pt ∧
          ptree_fringe pt' = [] ∧ valid_ptree G pt'`
@@ -253,7 +264,7 @@ val IN_firstSet = store_thm(
               ptree_fringe pt = TOK t :: rest``,
   simp[firstSet_def] >>
   metis_tac [grammarTheory.ptrees_derive_extensible
-               |> Q.SPECL [`Lf sym`, `TOK t :: rest`]
+               |> Q.SPECL [`Lf (sym,unknown_loc)`, `TOK t :: rest`]
                |> SIMP_RULE (srw_ss()) []]);
 
 val derives_preserves_leading_toks = store_thm(
@@ -461,25 +472,28 @@ val firstSet_nts_derive = store_thm(
     ∃Ns. ALL_DISTINCT Ns ∧ nts_derive G Ns tk ∧ HD Ns = N``,
   strip_tac >> pop_assum (strip_assume_tac o MATCH_MP IN_firstSet) >>
   rpt (pop_assum mp_tac) >> map_every qid_spec_tac [`N`, `rest`, `pt`] >>
-  ho_match_mp_tac ptree_ind >> simp[] >> rpt strip_tac >>
+  ho_match_mp_tac ptree_ind >> simp[] >> rpt strip_tac
+  >- (rw[] >> Cases_on`pt` >> fs[]) >>
+  Cases_on `pt` >> fs[] >>
   imp_res_tac heads_give_first >> rveq >> fs[DISJ_IMP_THM, FORALL_AND_THM] >>
   `nullable G (MAP ptree_head p)`
     by (dsimp[nullable_alltrees, MEM_MAP] >>
         full_simp_tac (srw_ss() ++ boolSimps.DNF_ss) [MEM_MAP, FLAT_EQ_NIL] >>
         metis_tac[]) >>
-  Cases_on `ptree_head sym`
-  >- (qexists_tac `[s]` >> simp[] >> Cases_on `sym` >> fs[] >> metis_tac[]) >>
-  fs[] >> asm_match `nts_derive G Ns tk` >>
-  Cases_on `MEM s Ns`
-  >- (pop_assum (qxchl [`Ns0`, `Ns1`] strip_assume_tac o
+  Cases_on `sym` >> Cases_on `p'` >> fs[]
+  >- (qexists_tac `[N]` >> simp[] >> metis_tac[]) >>
+  Cases_on `MEM N Ns`
+  >- (
+    pop_assum (qxchl [`Ns0`, `Ns1`] strip_assume_tac o
                  MATCH_MP MEM_last_strip) >>
-      `nts_derive G (s::Ns1) tk`
+      `nts_derive G (N::Ns1) tk`
         by (match_mp_tac (GEN_ALL nts_derive_APPEND_E) >> simp[] >>
             fs[] >> qexists_tac `Ns0` >>
             RULE_ASSUM_TAC (REWRITE_RULE[GSYM APPEND_ASSOC, APPEND]) >>
             simp[]) >>
-      qexists_tac `s::Ns1` >> simp[] >> fs[ALL_DISTINCT_APPEND]) >>
-  qexists_tac `s::Ns` >> simp[] >> Cases_on `Ns` >> fs[] >> metis_tac[]);
+      qexists_tac `N::Ns1` >> simp[] >> fs[ALL_DISTINCT_APPEND]
+      ) >>
+  qexists_tac `N::Ns` >> simp[] >> Cases_on `Ns` >> fs[] >> metis_tac[]);
 
 val firstSet_singleton = store_thm(
   "firstSet_singleton",

@@ -244,6 +244,11 @@ in
   list_mk_comb(ant', [submap, abs])
 end
 in
+val num_ty = num_ty
+val int_ty = let val () = new_type ("int", 0)
+             in
+               mk_thy_type{Thy = thy, Tyop = "int", Args = []}
+             end
 val _ =
     case Lib.total (VALID (HO_MATCH_MP_TAC th)) ([], goal) of
       SOME ([([],subgoal)],_) => if aconv subgoal expected then OK()
@@ -396,11 +401,13 @@ val _ = app tpp [
 ]
 
 open testutils
-val test = tpp_expected
+val condprinter_test = tpp_expected
              |> Lib.with_flag (linewidth,!Globals.linewidth)
              |> unicode_off
              |> raw_backend
-val _ = app test [
+val test = condprinter_test
+val condprinter_tests =
+    [
       {input = "if oless e1 e2 /\\ oless x y /\\ foobabbbbbbb\n\
                \then p /\\ q /\\ r /\\ ppppp xxxx yyyyy\n\
                \else if (e1 = e2) /\\ k1 <> k2\n\
@@ -423,7 +430,8 @@ val _ = app test [
                 \else if (e1 = e2) /\\ k1 <> k2 then T\n\
                 \else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2 then T\n\
                 \else F"}
-]
+  ]
+val _ = app condprinter_test condprinter_tests
 
 val _ = let
   open testutils
@@ -792,6 +800,44 @@ val _ = dolvtests("LVTermNetFunctor",
                   LVTermNetFunctorApplied.PrintMap.insert,
                   LVTermNetFunctorApplied.PrintMap.match)
 
+(* set up overloading situation with < and + overloaded to num and int *)
+val thy = current_theory()
+val ilt = (new_constant("ilt", int_ty --> (int_ty --> bool));
+           mk_thy_const{Thy = thy, Name = "ilt",
+                        Ty = int_ty --> (int_ty --> bool)})
+val _ = overload_on("<", ilt)
 
-val _ = Process.exit (if List.all substtest tests then Process.success
-                      else Process.failure)
+val _ = set_fixity "+" (Infixl 500)
+val _ = set_fixity "<" (Infix(NONASSOC, 450))
+
+val nplus = (new_constant("nplus", num_ty --> (num_ty --> num_ty));
+             mk_thy_const{Thy = thy, Name = "nplus",
+                          Ty = num_ty --> (num_ty --> num_ty)})
+val _ = overload_on("+", nplus)
+
+val iplus = (new_constant("iplus", int_ty --> (int_ty --> int_ty));
+             mk_thy_const{Thy = thy, Name = "iplus",
+                          Ty = int_ty --> (int_ty --> int_ty)})
+val _ = overload_on("+", iplus)
+
+val _ = tprint "Checking error message on x + y < T parse (w/ints around)"
+val ptie = TermParse.preterm (term_grammar()) (type_grammar()) `x + y < T`
+val res = let
+  open errormonad Preterm
+  infix >- >>
+  val checked =
+      ptie >- (fn pt => typecheck_phase1 NONE pt >> overloading_resolution pt)
+in
+  case checked Pretype.Env.empty of
+      Error (OvlNoType(s,_), _) => if s = "<" orelse s = "+" then OK()
+                                   else die "FAILED"
+    | _ => die "FAILED"
+end
+
+val _ = if List.all substtest tests then ()
+        else die "Substitution test failed"
+
+val _ = print "Testing cond-printer after set_grammar_ancestry\n"
+val _ = set_trace "PP.avoid_unicode" 1
+val _ = set_grammar_ancestry ["bool"]
+val _ = app condprinter_test condprinter_tests

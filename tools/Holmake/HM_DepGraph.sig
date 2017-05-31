@@ -8,6 +8,7 @@ sig
   eqtype node
   datatype command = NoCmd | SomeCmd of string | BuiltInCmd
   type 'a nodeInfo = { target : 'a, status : target_status,
+                       phony : bool,
                        command : command, seqnum : int,
                        dependencies : (node * string) list }
   val nodeInfo_toString : ('a -> string) -> 'a nodeInfo -> string

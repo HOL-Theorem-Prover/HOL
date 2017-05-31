@@ -554,8 +554,7 @@ val SND_SND_SND_funcall_IMP = store_thm("SND_SND_SND_funcall_IMP",
   \\ `!res. R_ap (Funcall,Sym f::xs,ARB,k,io,ok) res =
             (res = (FST res, FST (SND res), FST (SND (SND res)),F))` by METIS_TAC [R_ap_F_11,pairTheory.PAIR]
   \\ FULL_SIMP_TAC std_ss [PAIR_LEMMA]
-  \\ `?result:SExp # (string |-> string list # term) # string # bool. ~SND (SND (SND result))` by ALL_TAC
-  THEN1 (Q.EXISTS_TAC `(ARB,ARB,ARB,F)` \\ EVAL_TAC)
+  \\ `?result:SExp # (string |-> string list # term) # string # bool. ~SND (SND (SND result))` by (Q.EXISTS_TAC `(ARB,ARB,ARB,F)` \\ EVAL_TAC)
   \\ METIS_TAC []);
 
 val _ = export_theory();

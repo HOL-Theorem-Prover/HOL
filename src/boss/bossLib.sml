@@ -105,6 +105,7 @@ local open sumTheory pred_setTheory
 in
 
 val QI_ss = quantHeuristicsLib.QUANT_INST_ss [std_qp]
+val SQI_ss = quantHeuristicsLib.SIMPLE_QUANT_INST_ss
 val pure_ss = pureSimps.pure_ss
 val bool_ss = boolSimps.bool_ss
 val std_ss = numLib.std_ss ++ PMATCH_SIMP_ss
@@ -152,6 +153,8 @@ val spose_not_then    = BasicProvers.SPOSE_NOT_THEN
 
 val op by             = BasicProvers.by; (* infix 8 by *)
 val op suffices_by    = BasicProvers.suffices_by
+val sg                = BasicProvers.sg
+val subgoal           = BasicProvers.subgoal
 
 val CASE_TAC          = BasicProvers.CASE_TAC;
 

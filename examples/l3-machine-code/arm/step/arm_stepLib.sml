@@ -3073,7 +3073,8 @@ val BitFieldExtract_rwt =
       ``dfn'BitFieldExtract (U, d, n, lsb, widthminus1)``
 
 val BitFieldClearOrInsert_rwt =
-   regEV [`d`] [dfn'BitFieldClearOrInsert_def] [[``d <> 15w: word4``]] []
+   regEV [`d`] [dfn'BitFieldClearOrInsert_def, field_insert]
+     [[``d <> 15w: word4``]] []
       ``dfn'BitFieldClearOrInsert (d, n, lsb, msb)``
 
 (* Add a few more multiplies and SIMD instructions *)
@@ -3879,9 +3880,7 @@ val CPSRWriteByInstr =
                    (PSR_CONV
                     THENC COND_T_CONV
                              (PairedLambda.let_CONV
-                              THENC RAND_CONV
-                                      (DATATYPE_CONV
-                                       THENC PairedLambda.let_CONV)
+                              THENC RAND_CONV DATATYPE_CONV
                               THENC PairedLambda.let_CONV
                               THENC DATATYPE_CONV
                               THENC utilsLib.INST_REWRITE_CONV [IsSecure]
@@ -3894,8 +3893,7 @@ val CPSRWriteByInstr =
           THENC PairedLambda.let_CONV
           THENC COND_T_CONV
                    (Conv.RAND_CONV
-                      (PairedLambda.let_CONV
-                       THENC REWRITE_CONV [PSR_FLAGS]
+                      (REWRITE_CONV [PSR_FLAGS]
                        THENC COND_UPDATE2_CONV [])
                     THENC PairedLambda.let_CONV
                     THENC DATATYPE_CONV

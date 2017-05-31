@@ -70,14 +70,13 @@ fun load_sigl stac = app load (sigl_of_stac stac)
 (* ----------------------------------------------------------------------
    Execute strings as sml code
    ---------------------------------------------------------------------- *)
-
 fun exec_sml file s =
   let
     val path = hhs_code_dir ^ "/" ^ file
     val oc = TextIO.openOut path
     fun os s = TextIO.output (oc,s)
   in
-    os s;
+    os ("val _ = (" ^ s ^ ")");
     TextIO.closeOut oc;
     ((QUse.use path; true) handle _ => (hhs_log file s; false))
   end
@@ -87,10 +86,10 @@ fun exec_sml file s =
    ---------------------------------------------------------------------- *)
 
 fun is_thm s =
-  exec_sml "is_thm" ("val _ = Thm.dest_thm (" ^ s ^ ")")
+  exec_sml "is_thm" ("Thm.dest_thm (" ^ s ^ ")")
 
 fun is_tactic s =
-  exec_sml "is_tactic" ("val _ = Tactical.VALID (" ^ s ^ ")")
+  exec_sml "is_tactic" ("Tactical.VALID (" ^ s ^ ")")
 
 val hhs_bool = ref false
   
@@ -126,7 +125,8 @@ fun valid_tacticl_of_sml sl =
     val valid_sl = map mk_valid sl
     val b = 
       exec_sml "tacticl_of_sml" 
-      ("hhsExec.hhs_tacticl := [" ^ String.concatWith ", " valid_sl ^ "]")
+      ("hhsExec.hhs_tacticl := [" ^ String.concatWith ", " valid_sl 
+       ^ "]")
   in
     if b then !hhs_tacticl else raise ERR "tacticl_of_sml" ""
   end

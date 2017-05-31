@@ -215,6 +215,9 @@ val PMATCH_ROW_COND_EX_gtm = inst ty_var_subst PMATCH_ROW_COND_EX_tm;
 val PMATCH_tm = PC "PMATCH"
 val PMATCH_gtm = inst ty_var_subst PMATCH_tm
 
+val PMATCH_IS_EXHAUSTIVE_tm = PC "PMATCH_IS_EXHAUSTIVE"
+val PMATCH_IS_EXHAUSTIVE_gtm = inst ty_var_subst PMATCH_IS_EXHAUSTIVE_tm
+
 fun FRESH_TY_VARS_RULE thm =
   INST_TYPE ty_var_subst thm
 
@@ -259,7 +262,7 @@ fun mk_PMATCH_ROW (p_t, g_t, r_t) =
 fun mk_pabs_from_vars vars tl = case vars of
       []  => let
                val uv =
-                   variant (free_varsl tl) (mk_var("uv", oneSyntax.one_ty))
+                   variant (free_varsl tl) (mk_var("_uv", oneSyntax.one_ty))
              in
                fn t => mk_abs (uv, t)
              end
@@ -300,25 +303,32 @@ fun mk_PMATCH_ROW_PABS_WILDCARDS vars (p_t, g_t, r_t) = let
     val (pm_s, p_s) = MULTIPLE_FV p_t
     val grd_s = FVL [g_t, r_t] pm_s
 
-    val mk_wc = mk_wildcard_gen (HOLset.listItems
-      (HOLset.union (grd_s, p_s)))
+    val avoid = HOLset.listItems (HOLset.union (grd_s, p_s))
+    val mk_wc = mk_wildcard_gen avoid
+    val mk_var = mk_var_gen "v" avoid
 
-    fun apply (v, (vars', subst)) = (
-      if (not (HOLset.member (grd_s, v)) andalso
-          not (varname_starts_with_uscore v)) then let
-        val v' = mk_wc (type_of v)
+    fun apply (v, (vars', subst)) = let
+      val should_be_uc = not (HOLset.member (grd_s, v))
+      val is_uc = varname_starts_with_uscore v
+    in
+      if (should_be_uc = is_uc) then
+         (v::vars', subst)
+      else let
+        val v' = if should_be_uc then
+          mk_wc (type_of v) else mk_var (type_of v)
       in
         (v'::vars', (v |-> v')::subst)
-      end else
-         (v::vars', subst)
-    )
+      end
+    end
 
     val (vars'_rev, subst) = List.foldl apply ([], []) vars
     val vars' = List.rev vars'_rev
     val p_t' = Term.subst subst p_t
-    val use_wc = not (List.null subst)
+    val g_t' = Term.subst subst g_t
+    val r_t' = Term.subst subst r_t
+    val changed_wc = not (List.null subst)
   in
-    (use_wc, mk_PMATCH_ROW_PABS vars' (p_t', g_t, r_t))
+    (changed_wc, mk_PMATCH_ROW_PABS vars' (p_t', g_t', r_t'))
   end
 
 
@@ -383,7 +393,6 @@ in
   TRANS thm0 thm1
 end handle HOL_ERR _ => raise UNCHANGED
 
-
 fun PMATCH_ROW_INTRO_WILDCARDS_CONV row = let
   val (vars_tm, p_t, g_t, r_t) = dest_PMATCH_ROW_ABS row
   val vars = pairSyntax.strip_pair vars_tm
@@ -433,16 +442,16 @@ end
 fun is_PMATCH t = can dest_PMATCH t
 
 fun dest_PATLIST_COLS v ps = let
-  fun split_pat p = let
+  fun split_pat (p, (m, l)) = let
     val (vars_tm, pt) = pairSyntax.dest_pabs p
     val vars = pairSyntax.strip_pair vars_tm
-    val pts = pairSyntax.strip_pair pt
+    val ps = pairSyntax.strip_pair pt
+    val m' = length ps
   in
-    List.map (fn x => (vars, x)) pts
+    (Int.max (m, m'), (vars, pt, ps, m')::l)
   end
-  val rows' = map split_pat ps
+  val (col_no, rows') = foldl split_pat (0, []) ps
 
-  val col_no = length (hd rows')
   fun aux acc v col_no = if (col_no <= 1) then List.rev (v::acc) else (
     let
        val (v1, v2) = pairSyntax.dest_pair v handle HOL_ERR _ =>
@@ -452,6 +461,14 @@ fun dest_PATLIST_COLS v ps = let
     end
   )
 
+  fun final_process ((vars, pt, ps, cols), l) =
+  let
+    val ps' = if (cols = col_no) then ps else aux [] pt col_no
+  in
+    (List.map (fn p => (vars, p)) ps')::l
+  end
+
+  val rows'' = foldl final_process [] rows'
   val vs = aux [] v col_no
 
   fun get_cols acc vs rows = case vs of
@@ -462,7 +479,8 @@ fun dest_PATLIST_COLS v ps = let
       in
         get_cols ((v, col)::acc) vs' rows'
       end
-  val cols = get_cols [] vs rows'
+
+  val cols = get_cols [] vs rows''
 in
   cols
 end handle Empty => failwith "dest_PATLIST_COLS"
@@ -497,6 +515,42 @@ val PMATCH_FORCE_SAME_VARS_CONV =
 
 val PMATCH_INTRO_WILDCARDS_CONV =
   PMATCH_ROWS_CONV PMATCH_ROW_INTRO_WILDCARDS_CONV
+
+(* Introduce fresh variables *)
+(*
+
+val t = ``case f x of
+  | (x, z, SUC l) when cond z => gggg l x
+  | x.| (x, z, _) => g2
+  | y.| (y, z, _) => g2
+  | (ff a, _, _) => a`` *)
+
+fun PMATCH_INTRO_GENVARS t = let
+  fun add_to_subst (s_intro, s_elim) nt =
+  if (is_var nt orelse exists (aconv nt o #redex) s_intro) then
+     (s_intro, s_elim)
+  else let
+     val nv = genvar (type_of nt)
+  in
+    ((nt |-> nv)::s_intro, (nv |-> nt)::s_elim)
+  end
+
+  val (v, rows) = dest_PMATCH t
+  val (s_intro, s_elim) = add_to_subst ([], []) v
+
+  fun add_row (r, (s_intro, s_elim)) = let
+    val (pt, gt, rt) = dest_PMATCH_ROW r
+    val (s_intro, s_elim) = add_to_subst (s_intro, s_elim) pt
+    val (s_intro, s_elim) = add_to_subst (s_intro, s_elim) gt
+    val (s_intro, s_elim) = add_to_subst (s_intro, s_elim) rt
+  in
+    (s_intro, s_elim)
+  end
+
+  val (s_intro, s_elim) = foldl add_row (s_intro, s_elim) rows
+in
+  (subst s_intro t, s_elim)
+end
 
 
 (***********************************************)
@@ -658,6 +712,35 @@ fun PMATCH_ROW_COND_EX_ELIM_CONV t = let
 in
   thm5
 end
+
+
+(***********************************************)
+(* EXHAUSTIVE                                  *)
+(***********************************************)
+
+fun mk_PMATCH_IS_EXHAUSTIVE v rows = let
+  val rows_ty = let
+    val ty0 = type_of PMATCH_IS_EXHAUSTIVE_tm
+    val (arg_tys, _) = wfrecUtils.strip_fun_type  ty0
+  in el 2 arg_tys end
+
+  val ty_subst = match_type rows_ty (type_of rows)
+  val b_tm = inst ty_subst PMATCH_IS_EXHAUSTIVE_tm
+  val t1 = mk_comb (b_tm, v)
+  val t2 = mk_comb (t1, rows)
+in
+  t2
+end
+
+fun dest_PMATCH_IS_EXHAUSTIVE t = let
+  val (f, args) = strip_comb t
+  val _ = if (same_const f PMATCH_IS_EXHAUSTIVE_tm) andalso (List.length args = 2) then () else failwith "dest_PMATCH_IS_EXHAUSTIVE"
+  val (l, _) = listSyntax.dest_list (el 2 args)
+in
+  (el 1 args, l)
+end
+
+fun is_PMATCH_IS_EXHAUSTIVE t = can dest_PMATCH_IS_EXHAUSTIVE t
 
 
 (***********************************************)

@@ -28,13 +28,9 @@ val _ = new_theory "poset";
 (* Helpful proof tools                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-infixr 0 ++ << || THENC ORELSEC ORELSER ##;
-infix 1 >>;
+infixr 0 >> >|
+infix 1 >-;
 
-val op ++ = op THEN;
-val op << = op THENL;
-val op >> = op THEN1;
-val op || = op ORELSE;
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
 val REVERSE = Tactical.REVERSE;
@@ -135,19 +131,19 @@ val poset_trans = store_thm
   ("poset_trans",
    ``!s r x y z.
        poset (s,r) /\ s x /\ s y /\ s z /\ r x y /\ r y z ==> r x z``,
-   RW_TAC bool_ss [poset_def] ++ RES_TAC);
+   RW_TAC bool_ss [poset_def] >> RES_TAC);
 
 val lub_pred = store_thm
   ("lub_pred",
    ``!s r p x. lub (s,r) (\j. s j /\ p j) x = lub (s,r) p x``,
    RW_TAC bool_ss [lub_def]
-   ++ PROVE_TAC []);
+   >> PROVE_TAC []);
 
 val glb_pred = store_thm
   ("glb_pred",
    ``!s r p x. glb (s,r) (\j. s j /\ p j) x = glb (s,r) p x``,
    RW_TAC bool_ss [glb_def]
-   ++ PROVE_TAC []);
+   >> PROVE_TAC []);
 
 val complete_up = store_thm
   ("complete_up",
@@ -163,25 +159,25 @@ val complete_top = store_thm
   ("complete_top",
    ``!p : 'a poset. poset p /\ complete p ==> ?x. top p x``,
    GEN_TAC
-   ++ Know `?s r. p = (s,r)` >> pair_cases_tac
-   ++ STRIP_TAC
-   ++ RW_TAC bool_ss [complete_def]
-   ++ Q.PAT_X_ASSUM `!p. X p` (MP_TAC o Q.SPEC `\x. T`)
-   ++ RW_TAC bool_ss [lub_def]
-   ++ Q.EXISTS_TAC `x`
-   ++ RW_TAC bool_ss [top_def]);
+   >> Know `?s r. p = (s,r)` >- pair_cases_tac
+   >> STRIP_TAC
+   >> RW_TAC bool_ss [complete_def]
+   >> Q.PAT_X_ASSUM `!p. X p` (MP_TAC o Q.SPEC `\x. T`)
+   >> RW_TAC bool_ss [lub_def]
+   >> Q.EXISTS_TAC `x`
+   >> RW_TAC bool_ss [top_def]);
 
 val complete_bottom = store_thm
   ("complete_bottom",
    ``!p : 'a poset. poset p /\ complete p ==> ?x. bottom p x``,
    GEN_TAC
-   ++ Know `?s r. p = (s,r)` >> pair_cases_tac
-   ++ STRIP_TAC
-   ++ RW_TAC bool_ss [complete_def]
-   ++ Q.PAT_X_ASSUM `!p. X p` (MP_TAC o Q.SPEC `\x. T`)
-   ++ RW_TAC bool_ss [glb_def]
-   ++ Q.EXISTS_TAC `x'`
-   ++ RW_TAC bool_ss [bottom_def]);
+   >> Know `?s r. p = (s,r)` >- pair_cases_tac
+   >> STRIP_TAC
+   >> RW_TAC bool_ss [complete_def]
+   >> Q.PAT_X_ASSUM `!p. X p` (MP_TAC o Q.SPEC `\x. T`)
+   >> RW_TAC bool_ss [glb_def]
+   >> Q.EXISTS_TAC `x'`
+   >> RW_TAC bool_ss [bottom_def]);
 
 (* ------------------------------------------------------------------------- *)
 (* Pointwise lifting of posets                                               *)
@@ -196,53 +192,53 @@ val complete_pointwise = store_thm
   ("complete_pointwise",
    ``!p t. complete p ==> complete (pointwise_lift t p)``,
    GEN_TAC
-   ++ Know `?s r. p = (s,r)` >> pair_cases_tac
-   ++ STRIP_TAC
-   ++ RW_TAC bool_ss [complete_def, pointwise_lift_def] <<
+   >> Know `?s r. p = (s,r)` >- pair_cases_tac
+   >> STRIP_TAC
+   >> RW_TAC bool_ss [complete_def, pointwise_lift_def] >|
    [Know
     `!y.
        t y ==>
        ?l. lub (s,r) (\z. ?f. (!x. t x ==> s (f x)) /\ c f /\ (f y = z)) l`
-    >> RW_TAC bool_ss []
-    ++ DISCH_THEN
+    >- RW_TAC bool_ss []
+    >> DISCH_THEN
        (MP_TAC o CONV_RULE (QUANT_CONV RIGHT_IMP_EXISTS_CONV THENC SKOLEM_CONV))
-    ++ RW_TAC bool_ss [lub_def, function_def]
-    ++ Q.EXISTS_TAC `l`
-    ++ CONJ_TAC >> METIS_TAC []
-    ++ CONJ_TAC >> METIS_TAC []
-    ++ CONV_TAC (DEPTH_CONV UNPRIME_CONV)
-    ++ RW_TAC bool_ss []
-    ++ Q.PAT_X_ASSUM `!y. t y ==> P y /\ Q y /\ R y` (MP_TAC o Q.SPEC `x`)
-    ++ RW_TAC bool_ss []
-    ++ POP_ASSUM MATCH_MP_TAC
-    ++ CONJ_TAC >> METIS_TAC []
-    ++ RW_TAC bool_ss []
-    ++ Q.PAT_X_ASSUM `!y. P y ==> !x. Q x y` (MP_TAC o Q.SPEC `f`)
-    ++ MATCH_MP_TAC (PROVE [] ``(y ==> z) /\ x ==> ((x ==> y) ==> z)``)
-    ++ CONJ_TAC >> METIS_TAC []
-    ++ METIS_TAC [],
+    >> RW_TAC bool_ss [lub_def, function_def]
+    >> Q.EXISTS_TAC `l`
+    >> CONJ_TAC >- METIS_TAC []
+    >> CONJ_TAC >- METIS_TAC []
+    >> CONV_TAC (DEPTH_CONV UNPRIME_CONV)
+    >> RW_TAC bool_ss []
+    >> Q.PAT_X_ASSUM `!y. t y ==> P y /\ Q y /\ R y` (MP_TAC o Q.SPEC `x`)
+    >> RW_TAC bool_ss []
+    >> POP_ASSUM MATCH_MP_TAC
+    >> CONJ_TAC >- METIS_TAC []
+    >> RW_TAC bool_ss []
+    >> Q.PAT_X_ASSUM `!y. P y ==> !x. Q x y` (MP_TAC o Q.SPEC `f`)
+    >> MATCH_MP_TAC (PROVE [] ``(y ==> z) /\ x ==> ((x ==> y) ==> z)``)
+    >> CONJ_TAC >- METIS_TAC []
+    >> METIS_TAC [],
     Know
     `!y.
        t y ==>
        ?l. glb (s,r) (\z. ?f. (!x. t x ==> s (f x)) /\ c f /\ (f y = z)) l`
-    >> RW_TAC bool_ss []
-    ++ DISCH_THEN
+    >- RW_TAC bool_ss []
+    >> DISCH_THEN
        (MP_TAC o CONV_RULE (QUANT_CONV RIGHT_IMP_EXISTS_CONV THENC SKOLEM_CONV))
-    ++ RW_TAC bool_ss [glb_def, function_def]
-    ++ Q.EXISTS_TAC `l`
-    ++ CONJ_TAC >> METIS_TAC []
-    ++ CONJ_TAC >> METIS_TAC []
-    ++ CONV_TAC (DEPTH_CONV UNPRIME_CONV)
-    ++ RW_TAC bool_ss []
-    ++ Q.PAT_X_ASSUM `!y. t y ==> P y /\ Q y /\ R y` (MP_TAC o Q.SPEC `x`)
-    ++ RW_TAC bool_ss []
-    ++ POP_ASSUM MATCH_MP_TAC
-    ++ CONJ_TAC >> METIS_TAC []
-    ++ RW_TAC bool_ss []
-    ++ Q.PAT_X_ASSUM `!y. P y ==> !x. Q x y` (MP_TAC o Q.SPEC `f'`)
-    ++ MATCH_MP_TAC (PROVE [] ``(y ==> z) /\ x ==> ((x ==> y) ==> z)``)
-    ++ CONJ_TAC >> METIS_TAC []
-    ++ METIS_TAC []]);
+    >> RW_TAC bool_ss [glb_def, function_def]
+    >> Q.EXISTS_TAC `l`
+    >> CONJ_TAC >- METIS_TAC []
+    >> CONJ_TAC >- METIS_TAC []
+    >> CONV_TAC (DEPTH_CONV UNPRIME_CONV)
+    >> RW_TAC bool_ss []
+    >> Q.PAT_X_ASSUM `!y. t y ==> P y /\ Q y /\ R y` (MP_TAC o Q.SPEC `x`)
+    >> RW_TAC bool_ss []
+    >> POP_ASSUM MATCH_MP_TAC
+    >> CONJ_TAC >- METIS_TAC []
+    >> RW_TAC bool_ss []
+    >> Q.PAT_X_ASSUM `!y. P y ==> !x. Q x y` (MP_TAC o Q.SPEC `f'`)
+    >> MATCH_MP_TAC (PROVE [] ``(y ==> z) /\ x ==> ((x ==> y) ==> z)``)
+    >> CONJ_TAC >- METIS_TAC []
+    >> METIS_TAC []]);
 
 (*
 val lub_pointwise_push = store_thm
@@ -252,10 +248,10 @@ val lub_pointwise_push = store_thm
        lub p
        (\y. ?f. (carrier (pointwise_lift t p) f /\ c f) /\ (y = f x)) (l x)``,
    GEN_TAC
-   ++ Know `?s r. p = (s,r)` >> pair_cases_tac
-   ++ STRIP_TAC
-   ++ RW_TAC bool_ss [lub_def, pointwise_lift_def, carrier_def]
-   ++ METIS_TAC []
+   >> Know `?s r. p = (s,r)` >- pair_cases_tac
+   >> STRIP_TAC
+   >> RW_TAC bool_ss [lub_def, pointwise_lift_def, carrier_def]
+   >> METIS_TAC []
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -305,9 +301,9 @@ val lfp_unique = store_thm
 	poset p /\ lfp p f x /\ lfp p f x' ==>
 	(x = x')``,
    GEN_TAC
-   ++ Know `?s r. p = (s,r)` >> pair_cases_tac
-   ++ STRIP_TAC
-   ++ RW_TAC bool_ss [poset_def, lfp_def]);
+   >> Know `?s r. p = (s,r)` >- pair_cases_tac
+   >> STRIP_TAC
+   >> RW_TAC bool_ss [poset_def, lfp_def]);
 
 val gfp_unique = store_thm
   ("gfp_unique",
@@ -315,9 +311,9 @@ val gfp_unique = store_thm
 	poset p /\ gfp p f x /\ gfp p f x' ==>
 	(x = x')``,
    GEN_TAC
-   ++ Know `?s r. p = (s,r)` >> pair_cases_tac
-   ++ STRIP_TAC
-   ++ RW_TAC bool_ss [poset_def, gfp_def]);
+   >> Know `?s r. p = (s,r)` >- pair_cases_tac
+   >> STRIP_TAC
+   >> RW_TAC bool_ss [poset_def, gfp_def]);
 
 (* ------------------------------------------------------------------------- *)
 (* The Knaster-Tarski theorem                                                *)
@@ -329,43 +325,43 @@ val knaster_tarski_lfp = store_thm
        poset p /\ complete p /\ function (carrier p) (carrier p) f /\
        monotonic p f ==> ?x. lfp p f x``,
    RW_TAC bool_ss []
-   ++ Know `?x. top p x` >> PROVE_TAC [complete_top]
-   ++ Know `?s r. p = (s,r)` >> pair_cases_tac
-   ++ RW_TAC bool_ss []
-   ++ FULL_SIMP_TAC bool_ss [function_def, carrier_def]
-   ++ Q.UNDISCH_TAC `complete (s,r)`
-   ++ SIMP_TAC bool_ss [complete_def]
-   ++ DISCH_THEN (MP_TAC o CONJUNCT2 o Q.SPEC `\x : 'a. r ((f x) : 'a) x`)
-   ++ DISCH_THEN (Q.X_CHOOSE_THEN `k` ASSUME_TAC)
-   ++ Q.EXISTS_TAC `k`
-   ++ Know `s k /\ s (f k)` >> PROVE_TAC [glb_def]
-   ++ STRIP_TAC
-   ++ ASM_SIMP_TAC bool_ss [lfp_def]
-   ++ MATCH_MP_TAC (PROVE [] ``(x ==> y) /\ x ==> x /\ y``)
-   ++ REPEAT STRIP_TAC
-   >> (Q.PAT_X_ASSUM `glb X Y Z` MP_TAC ++ ASM_SIMP_TAC bool_ss [glb_def])
-   ++ MATCH_MP_TAC poset_antisym
-   ++ Q.EXISTS_TAC `s`
-   ++ Q.EXISTS_TAC `r`
-   ++ ASM_SIMP_TAC bool_ss []
-   ++ MATCH_MP_TAC (PROVE [] ``x /\ (x ==> y) ==> x /\ y``)
-   ++ CONJ_TAC
-   << [Q.PAT_X_ASSUM `glb X Y Z` MP_TAC
-       ++ ASM_SIMP_TAC bool_ss [glb_def]
-       ++ DISCH_THEN (CONJUNCTS_THEN2 ASSUME_TAC MATCH_MP_TAC)
-       ++ RW_TAC bool_ss []
-       ++ MATCH_MP_TAC poset_trans
-       ++ Q.EXISTS_TAC `s`
-       ++ METIS_TAC [monotonic_def],
+   >> Know `?x. top p x` >- PROVE_TAC [complete_top]
+   >> Know `?s r. p = (s,r)` >- pair_cases_tac
+   >> RW_TAC bool_ss []
+   >> FULL_SIMP_TAC bool_ss [function_def, carrier_def]
+   >> Q.UNDISCH_TAC `complete (s,r)`
+   >> SIMP_TAC bool_ss [complete_def]
+   >> DISCH_THEN (MP_TAC o CONJUNCT2 o Q.SPEC `\x : 'a. r ((f x) : 'a) x`)
+   >> DISCH_THEN (Q.X_CHOOSE_THEN `k` ASSUME_TAC)
+   >> Q.EXISTS_TAC `k`
+   >> Know `s k /\ s (f k)` >- PROVE_TAC [glb_def]
+   >> STRIP_TAC
+   >> ASM_SIMP_TAC bool_ss [lfp_def]
+   >> MATCH_MP_TAC (PROVE [] ``(x ==> y) /\ x ==> x /\ y``)
+   >> REPEAT STRIP_TAC
+   >- (Q.PAT_X_ASSUM `glb X Y Z` MP_TAC >> ASM_SIMP_TAC bool_ss [glb_def])
+   >> MATCH_MP_TAC poset_antisym
+   >> Q.EXISTS_TAC `s`
+   >> Q.EXISTS_TAC `r`
+   >> ASM_SIMP_TAC bool_ss []
+   >> MATCH_MP_TAC (PROVE [] ``x /\ (x ==> y) ==> x /\ y``)
+   >> CONJ_TAC
+   >| [Q.PAT_X_ASSUM `glb X Y Z` MP_TAC
+       >> ASM_SIMP_TAC bool_ss [glb_def]
+       >> DISCH_THEN (CONJUNCTS_THEN2 ASSUME_TAC MATCH_MP_TAC)
+       >> RW_TAC bool_ss []
+       >> MATCH_MP_TAC poset_trans
+       >> Q.EXISTS_TAC `s`
+       >> METIS_TAC [monotonic_def],
        STRIP_TAC
-       ++ Q.PAT_X_ASSUM `glb X Y Z` MP_TAC
-       ++ ASM_SIMP_TAC bool_ss [glb_def]
-       ++ DISCH_THEN MATCH_MP_TAC
-       ++ Know `s (f (f k))` >> PROVE_TAC []
-       ++ RW_TAC bool_ss []
-       ++ Q.PAT_X_ASSUM `monotonic X Y`
+       >> Q.PAT_X_ASSUM `glb X Y Z` MP_TAC
+       >> ASM_SIMP_TAC bool_ss [glb_def]
+       >> DISCH_THEN MATCH_MP_TAC
+       >> Know `s (f (f k))` >- PROVE_TAC []
+       >> RW_TAC bool_ss []
+       >> Q.PAT_X_ASSUM `monotonic X Y`
           (MATCH_MP_TAC o REWRITE_RULE [monotonic_def])
-       ++ PROVE_TAC []]);
+       >> PROVE_TAC []]);
 
 val knaster_tarski_gfp = store_thm
   ("knaster_tarski_gfp",
@@ -373,43 +369,43 @@ val knaster_tarski_gfp = store_thm
        poset p /\ complete p /\ function (carrier p) (carrier p) f /\
        monotonic p f ==> ?x. gfp p f x``,
    RW_TAC bool_ss []
-   ++ Know `?x. bottom p x` >> PROVE_TAC [complete_bottom]
-   ++ Know `?s r. p = (s,r)` >> pair_cases_tac
-   ++ RW_TAC bool_ss []
-   ++ FULL_SIMP_TAC bool_ss [function_def, carrier_def]
-   ++ Q.UNDISCH_TAC `complete (s,r)`
-   ++ SIMP_TAC bool_ss [complete_def]
-   ++ DISCH_THEN (MP_TAC o CONJUNCT1 o Q.SPEC `\x : 'a. r x ((f x) : 'a)`)
-   ++ DISCH_THEN (Q.X_CHOOSE_THEN `k` ASSUME_TAC)
-   ++ Q.EXISTS_TAC `k`
-   ++ Know `s k /\ s (f k)` >> PROVE_TAC [lub_def]
-   ++ STRIP_TAC
-   ++ ASM_SIMP_TAC bool_ss [gfp_def]
-   ++ MATCH_MP_TAC (PROVE [] ``(x ==> y) /\ x ==> x /\ y``)
-   ++ REPEAT STRIP_TAC
-   >> (Q.PAT_X_ASSUM `lub X Y Z` MP_TAC ++ ASM_SIMP_TAC bool_ss [lub_def])
-   ++ MATCH_MP_TAC poset_antisym
-   ++ Q.EXISTS_TAC `s`
-   ++ Q.EXISTS_TAC `r`
-   ++ ASM_SIMP_TAC bool_ss []
-   ++ MATCH_MP_TAC (PROVE [] ``y /\ (y ==> x) ==> x /\ y``)
-   ++ CONJ_TAC
-   << [Q.PAT_X_ASSUM `lub X Y Z` MP_TAC
-       ++ ASM_SIMP_TAC bool_ss [lub_def]
-       ++ DISCH_THEN (CONJUNCTS_THEN2 ASSUME_TAC MATCH_MP_TAC)
-       ++ RW_TAC bool_ss []
-       ++ MATCH_MP_TAC poset_trans
-       ++ Q.EXISTS_TAC `s`
-       ++ METIS_TAC [monotonic_def],
+   >> Know `?x. bottom p x` >- PROVE_TAC [complete_bottom]
+   >> Know `?s r. p = (s,r)` >- pair_cases_tac
+   >> RW_TAC bool_ss []
+   >> FULL_SIMP_TAC bool_ss [function_def, carrier_def]
+   >> Q.UNDISCH_TAC `complete (s,r)`
+   >> SIMP_TAC bool_ss [complete_def]
+   >> DISCH_THEN (MP_TAC o CONJUNCT1 o Q.SPEC `\x : 'a. r x ((f x) : 'a)`)
+   >> DISCH_THEN (Q.X_CHOOSE_THEN `k` ASSUME_TAC)
+   >> Q.EXISTS_TAC `k`
+   >> Know `s k /\ s (f k)` >- PROVE_TAC [lub_def]
+   >> STRIP_TAC
+   >> ASM_SIMP_TAC bool_ss [gfp_def]
+   >> MATCH_MP_TAC (PROVE [] ``(x ==> y) /\ x ==> x /\ y``)
+   >> REPEAT STRIP_TAC
+   >- (Q.PAT_X_ASSUM `lub X Y Z` MP_TAC >> ASM_SIMP_TAC bool_ss [lub_def])
+   >> MATCH_MP_TAC poset_antisym
+   >> Q.EXISTS_TAC `s`
+   >> Q.EXISTS_TAC `r`
+   >> ASM_SIMP_TAC bool_ss []
+   >> MATCH_MP_TAC (PROVE [] ``y /\ (y ==> x) ==> x /\ y``)
+   >> CONJ_TAC
+   >| [Q.PAT_X_ASSUM `lub X Y Z` MP_TAC
+       >> ASM_SIMP_TAC bool_ss [lub_def]
+       >> DISCH_THEN (CONJUNCTS_THEN2 ASSUME_TAC MATCH_MP_TAC)
+       >> RW_TAC bool_ss []
+       >> MATCH_MP_TAC poset_trans
+       >> Q.EXISTS_TAC `s`
+       >> METIS_TAC [monotonic_def],
        STRIP_TAC
-       ++ Q.PAT_X_ASSUM `lub X Y Z` MP_TAC
-       ++ ASM_SIMP_TAC bool_ss [lub_def]
-       ++ DISCH_THEN MATCH_MP_TAC
-       ++ Know `s (f (f k))` >> PROVE_TAC []
-       ++ RW_TAC bool_ss []
-       ++ Q.PAT_X_ASSUM `monotonic X Y`
+       >> Q.PAT_X_ASSUM `lub X Y Z` MP_TAC
+       >> ASM_SIMP_TAC bool_ss [lub_def]
+       >> DISCH_THEN MATCH_MP_TAC
+       >> Know `s (f (f k))` >- PROVE_TAC []
+       >> RW_TAC bool_ss []
+       >> Q.PAT_X_ASSUM `monotonic X Y`
           (MATCH_MP_TAC o REWRITE_RULE [monotonic_def])
-       ++ PROVE_TAC []]);
+       >> PROVE_TAC []]);
 
 val knaster_tarski = store_thm
   ("knaster_tarski",

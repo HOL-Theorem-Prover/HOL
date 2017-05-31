@@ -559,6 +559,11 @@ val DIMINDEX_LT =
   (GEN_ALL o CONJUNCT2 o SPEC_ALL o SIMP_RULE bool_ss [DIMINDEX_GT_0] o
    Q.SPEC `^WL`) DIVISION
 
+val dimword_twice_INT_MIN = Q.store_thm("dimword_twice_INT_MIN",
+  `dimword(:'a) = 2 * INT_MIN (:'a)`,
+  simp [INT_MIN_def, GSYM (CONJUNCT2 arithmeticTheory.EXP),
+        DECIDE ``0n < a ==> (SUC (a - 1) = a)``, DIMINDEX_GT_0, dimword_def])
+
 val EXISTS_HB = save_thm("EXISTS_HB",
   PROVE [DIMINDEX_GT_0,LESS_ADD_1,ADD1,ADD] ``?m. ^WL = SUC m``)
 
@@ -883,7 +888,7 @@ val word_lsb_n2w = Q.store_thm("word_lsb_n2w",
   SIMP_TAC fcp_ss [word_lsb_def,n2w_def,DIMINDEX_GT_0,BIT0_ODD])
 
 val word_msb_n2w = Q.store_thm("word_msb_n2w",
-  `!n. word_msb ((n2w n):'a word)  = BIT ^HB n`,
+  `!n. word_msb ((n2w n):'a word) = BIT ^HB n`,
   SIMP_TAC (fcp_ss++ARITH_ss) [word_msb_def,n2w_def,DIMINDEX_GT_0])
 
 val word_msb_n2w_numeric = Q.store_thm(
@@ -1063,6 +1068,16 @@ val w2n_minus1 = Q.store_thm("w2n_minus1",
    simp [WORD_NEG_1, word_T_def, w2n_n2w, UINT_MAX_def]
    )
 
+val w2n_plus1 = Q.store_thm("w2n_plus1",
+  `!a: 'a word.
+     w2n a + 1 = if a = UINT_MAXw then dimword(:'a) else w2n (a + 1w)`,
+  rw [w2n_minus1, DECIDE ``0n < a ==> (a - 1 + 1 = a)``]
+  \\ strip_assume_tac (Q.SPEC `a` ranged_word_nchotomy)
+  \\ simp [word_add_n2w]
+  \\ full_simp_tac std_ss [WORD_NEG_1, word_T_def]
+  \\ fs [BOUND_ORDER, UINT_MAX_def]
+  )
+
 val WORD_ss =
   rewrites [word_1comp_def,word_and_def,word_or_def,word_xor_def,
     word_nand_def,word_nor_def,word_xnor_def,word_0,word_T]
@@ -1209,6 +1224,16 @@ val WORD_AND_EXP_SUB1 = Q.store_thm("WORD_AND_EXP_SUB1",
     \\ Cases_on `i < SUC n`
     \\ SRW_TAC [ARITH_ss] [BITS_ZERO, MIN_DEF, BIT_def, BITS_COMP_THM2,
          GSYM BITS_ZERO3])
+
+val word_msb_add_word_L = Q.store_thm("word_msb_add_word_L",
+  `!a: 'a word. word_msb (a + INT_MINw) = ~word_msb a`,
+  Cases
+  \\ fs [word_L_def, word_add_n2w, dimword_twice_INT_MIN, word_msb_n2w_numeric]
+  \\ Cases_on `INT_MIN (:'a) <= n`
+  \\ simp []
+  \\ imp_res_tac arithmeticTheory.LESS_EQUAL_ADD
+  \\ simp []
+  )
 
 (* -------------------------------------------------------------------------
     Bit field operations : theorems
@@ -3488,15 +3513,19 @@ val TWO_COMP_NEG = Q.store_thm("TWO_COMP_NEG",
       \\ ASM_SIMP_TAC arith_ss [BITS_THM,SUC_SUB,EXP_1,LESS_DIV_EQ_ZERO]])
 
 val TWO_COMP_POS_NEG = Q.store_thm("TWO_COMP_POS_NEG",
-  `!a:'a word. ~((^HB = 0) \/ (a = 0w) \/ (a = word_L)) ==>
-     (~word_msb a = word_msb (word_2comp a))`,
+  `!a:'a word.
+     a <> 0w /\ a <> word_L ==> (~word_msb a = word_msb (word_2comp a))`,
   REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
-    >- METIS_TAC [TWO_COMP_POS]
-    \\ METIS_TAC [WORD_NEG_L,WORD_NEG_EQ,WORD_NEG_NEG,TWO_COMP_NEG])
-
-val TWO_COMP_NEG_POS = METIS_PROVE [TWO_COMP_POS_NEG]
-  ``!a:'a word. ~((^HB = 0) \/ (a = 0w) \/ (a = word_L)) ==>
-     (word_msb a = ~word_msb (word_2comp a))``
+  >- METIS_TAC [TWO_COMP_POS]
+  \\ `^HB <> 0`
+  by (spose_not_then assume_tac
+      \\ `dimindex(:'a) = 1n`
+      by metis_tac [DIMINDEX_GT_0, DECIDE ``0 < i /\ (i - 1 = 0n) ==> (i = 1)``]
+      \\ strip_assume_tac (Q.SPEC `a` ranged_word_nchotomy)
+      \\ fs [word_L_def, INT_MIN_def, dimword_def]
+      \\ rfs []
+      \\ fs [])
+  \\ METIS_TAC [WORD_NEG_L,WORD_NEG_EQ,WORD_NEG_NEG,TWO_COMP_NEG])
 
 val WORD_0_POS = Q.store_thm("WORD_0_POS",
   `~word_msb 0w`, REWRITE_TAC [word_msb_n2w,BIT_ZERO])
@@ -4684,9 +4713,9 @@ val WORD_FINITE = Q.store_thm("WORD_FINITE",
   \\ STRIP_TAC
   THEN1 SIMP_TAC std_ss [SUBSET_DEF,IN_UNIV,GSPECIFICATION,ranged_word_nchotomy]
   \\ Q.SPEC_TAC (`dimword (:'a)`,`k`)
-  \\ Induct \\ `{n2w n | n < 0} = {}` by ALL_TAC
+  \\ Induct \\ sg `{n2w n | n < 0} = {}`
   \\ ASM_SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,NOT_IN_EMPTY,FINITE_EMPTY]
-  \\ `{n2w n | n < SUC k} = n2w k INSERT {n2w n | n < k}` by ALL_TAC
+  \\ sg `{n2w n | n < SUC k} = n2w k INSERT {n2w n | n < k}`
   \\ ASM_SIMP_TAC std_ss [FINITE_INSERT]
   \\ ASM_SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,NOT_IN_EMPTY,IN_INSERT]
   \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC

@@ -121,12 +121,12 @@ fu! HOLExpand()
 endf
 
 fu! HOLSubgoal()
-  keepjumps normal iproofManagerLib.expand(
+  keepjumps normal iproofManagerLib.expand(sg(
   silent normal p
   if search(s:delim.'by'.s:delim.'\_.*','cW')
     silent keepjumps normal vG$"_d
   en
-  silent keepjumps normal G$a by ALL_TAC)
+  silent keepjumps normal G$a))
 endf
 
 fu! HOLSuffices()

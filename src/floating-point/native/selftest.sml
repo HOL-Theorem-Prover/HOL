@@ -26,8 +26,9 @@ in
               (s_tf s, wordsSyntax.mk_n2w (numLib.term_of_int e, w),
                wordsSyntax.mk_n2w (numLib.term_of_int f, t))
       in
+         mk_float_some_nan (Term.mk_var ("fp_op", mk_fp_op_ty (t, w))) ::
          List.map (fn f => f itself)
-            [mk_float_some_nan, mk_float_plus_zero, mk_float_minus_zero,
+            [ mk_float_plus_zero, mk_float_minus_zero,
              mk_float_plus_min, mk_float_top, mk_float_bottom,
              mk_float_plus_infinity, mk_float_minus_infinity] @
          List.map mk_lit

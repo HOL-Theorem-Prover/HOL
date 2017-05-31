@@ -31,17 +31,17 @@ val BINOMIAL_DEF1 = store_thm("BINOMIAL_DEF1",
                         Cases_on `a` THEN REWRITE_TAC[BINOMIAL]);
 
 val BINOMIAL_DEF2 = store_thm("BINOMIAL_DEF2",
-			Term `!a b. a < b ==> (binomial a b = 0)`,
+                        Term `!a b. a < b ==> (binomial a b = 0)`,
                         Induct_on `a` THEN Cases_on `b`
                         THEN REWRITE_TAC[BINOMIAL] THEN ARW[]);
 
 val BINOMIAL_DEF3 = store_thm("BINOMIAL_DEF3",
-			Term `!a. binomial a a = 1`,
+                        Term `!a. binomial a a = 1`,
                         Induct_on `a` THEN REWRITE_TAC[BINOMIAL]
                         THEN ARW[BINOMIAL_DEF2]);
 
 val BINOMIAL_DEF4 = store_thm("BINOMIAL_DEF4",
-			Term `!a b. binomial (SUC a) (SUC b)
+                        Term `!a b. binomial (SUC a) (SUC b)
                                        =
                                     binomial a (SUC b) + binomial a b`,
                         REWRITE_TAC[BINOMIAL]);
@@ -57,26 +57,21 @@ Induct_on `b`
       THENL [
         REWRITE_TAC[BINOMIAL_DEF3,FACT,ADD_CLAUSES,MULT_CLAUSES],
         `SUC a + SUC b = SUC (SUC a + b)` by ARW[ADD_CLAUSES]
-            THEN ASM_REWRITE_TAC[BINOMIAL_DEF4,RIGHT_ADD_DISTRIB]
-             THEN `binomial (SUC a + b) (SUC b) * (FACT (SUC a) * FACT (SUC b))
-                    =
-                   (binomial (a + SUC b) (SUC b) * (FACT a * FACT (SUC b)))
-                   * SUC a`
-               by REWRITE_TAC[FACT_def,ADD_CLAUSES]
-             THENL [
-               PROVE_TAC[MULT_ASSOC,MULT_SYM],
-               ASM_REWRITE_TAC[]
-                 THEN `binomial (SUC a + b) b * (FACT (SUC a) * FACT (SUC b))
-                         =
-                       (binomial (SUC a + b) b * (FACT (SUC a) * FACT b))
-                        * SUC b`
-                   by REWRITE_TAC[FACT_def,ADD_CLAUSES]
-                 THENL [
-                   PROVE_TAC[MULT_ASSOC,MULT_SYM],
-                   ASM_REWRITE_TAC
-                      [ADD_CLAUSES,SYM(SPEC_ALL LEFT_ADD_DISTRIB),FACT_def]
-                 ]
-             ]
+          THEN ASM_REWRITE_TAC[BINOMIAL_DEF4,RIGHT_ADD_DISTRIB]
+          THEN `binomial (SUC a + b) (SUC b) * (FACT (SUC a) * FACT (SUC b))
+                 =
+                (binomial (a + SUC b) (SUC b) * (FACT a * FACT (SUC b)))
+                * SUC a`
+             by (REWRITE_TAC[FACT_def,ADD_CLAUSES]
+                          THEN PROVE_TAC[MULT_ASSOC,MULT_SYM])
+          THEN ASM_REWRITE_TAC[]
+          THEN `binomial (SUC a + b) b * (FACT (SUC a) * FACT (SUC b))
+                      =
+                (binomial (SUC a + b) b * (FACT (SUC a) * FACT b)) * SUC b`
+             by (REWRITE_TAC[FACT_def,ADD_CLAUSES]
+                   THEN PROVE_TAC[MULT_ASSOC,MULT_SYM])
+          THEN ASM_REWRITE_TAC
+                 [ADD_CLAUSES,SYM(SPEC_ALL LEFT_ADD_DISTRIB),FACT_def]
       ]
   ]
 );
@@ -119,7 +114,7 @@ Induct_on `n`
        THEN MP_TAC (Q.SPECL[`n`,`0`] SUMMATION_SHIFT)
        THEN DISCH_THEN (fn th => REWRITE_TAC [th])
        THEN BETA_TAC
-       THEN `(a * a EXP n
+       THEN sg `(a * a EXP n
              + (summation 1 n
                  (\k. a * (binomial n k * (a EXP (n - k) * b EXP k)))
              + (summation (SUC 0) n
@@ -130,7 +125,7 @@ Induct_on `n`
              (a * a EXP n
              + (summation 1 n
                  (\k. binomial (SUC n) k * (a EXP (SUC n - k) * b EXP k))
-             + b * b EXP n))` by ALL_TAC
+             + b * b EXP n))`
        THENL [
         ARW[]
           THEN RW_TAC bool_ss [ONE, SUMMATION_ADD]

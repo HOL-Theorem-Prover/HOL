@@ -905,6 +905,32 @@ val field32 = Q.store_thm("field32",
     \\ srw_tac [wordsLib.WORD_EXTRACT_ss] []
     )
 
+val fixwidth_w2v = Q.prove(
+  `!w : 'a word. fixwidth (dimindex (:'a)) (w2v w) = w2v w`,
+  simp [])
+
+val field_insert = Q.store_thm("field_insert",
+  `!msb lsb a : word32 b : word32.
+     v2w (field_insert msb lsb (field (msb - lsb) 0 (w2v a)) (w2v b)) : word32 =
+     bit_field_insert msb lsb a b`,
+  simp [bitstringTheory.field_insert_def, wordsTheory.bit_field_insert_def]
+  \\ once_rewrite_tac [GSYM fixwidth_w2v]
+  \\ simp_tac (bool_ss++fcpLib.FCP_ss)
+       [GSYM bitstringTheory.word_modify_v2w, bitstringTheory.v2w_w2v,
+        wordsTheory.WORD_MODIFY_BIT]
+  \\ simp [fixwidth_w2v]
+  \\ rw []
+  \\ `(?p. p + lsb = i)` by metis_tac [arithmeticTheory.LESS_EQ_ADD_EXISTS]
+  \\ pop_assum (SUBST_ALL_TAC o GSYM)
+  \\ fs []
+  \\ `?q. q + (lsb + p) = msb`
+  by metis_tac [arithmeticTheory.LESS_EQ_ADD_EXISTS]
+  \\ pop_assum (SUBST_ALL_TAC o GSYM)
+  \\ `SUC (p + q) - (q + 1) = p` by decide_tac
+  \\ simp [bitstringTheory.testbit, bitstringTheory.el_field,
+           bitstringTheory.el_w2v]
+  )
+
 (* ------------------------------------------------------------------------ *)
 
 val get_bytes = Q.store_thm("get_bytes",

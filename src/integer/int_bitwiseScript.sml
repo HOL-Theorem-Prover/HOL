@@ -228,8 +228,8 @@ val int_bit_equiv = store_thm("int_bit_equiv",
                                               LENGTH (q':bool list)`)
          \\ fs [DECIDE ``~(m+n<n) /\ ~(m+n<m:num)``])
   \\ srw_tac [] []
-  \\ REVERSE (`LENGTH q' = LENGTH q` by ALL_TAC)
-  THEN1 (fs [] \\ match_mp_tac LIST_EQ
+  \\ `LENGTH q' = LENGTH q` suffices_by
+  (STRIP_TAC THEN fs [] \\ match_mp_tac LIST_EQ
          \\ fs [] \\ rpt strip_tac
          \\ first_x_assum (mp_tac o Q.SPEC `x`)
          \\ fs [])

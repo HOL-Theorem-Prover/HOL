@@ -17,6 +17,8 @@ open monadsyntax
 
 val _ = new_theory "contMonad";
 
+val _ = temp_add_monadsyntax()
+
 val _ = Datatype`Cont = Cont ((α -> β) -> β)`
 
 val runCont_def = Define`runCont (Cont f) = f`

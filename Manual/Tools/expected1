@@ -45,10 +45,10 @@ val it =
 
      MEM p l \(\Rightarrow\) \(\exists\)i. i < LENGTH l \(\land\) (p = EL i l)
 > ``3 <> 4``;
-val it = ``3 \(\ne\) 4``: term
+val it = \mbox{\textrm{``}}3 \(\ne\) 4\mbox{\textrm{''}}: term
 > type_of ``[]``;
 <<HOL message: inventing new type variable names: 'a>>
-val it = ``:\(\alpha\) list``: hol_type
+val it = \mbox{\textrm{``}}:\(\alpha\) list\mbox{\textrm{''}}: hol_type
 \end{session}
 > 3 +
 4;
@@ -80,7 +80,7 @@ Term`p /\bs{} q ==>
      r`
 
 > t;
-val it = ``p \(\land\) q \(\Rightarrow\) r``: term
+val it = \mbox{\textrm{``}}p \(\land\) q \(\Rightarrow\) r\mbox{\textrm{''}}: term
 
 Term`p /\bs{} q ==>
      r`;
@@ -106,3 +106,6 @@ strip_tac);
 val foo = |- p \(\land\) q \(\Rightarrow\) p: thm
 > foo;
 val it = |- p \(\land\) q \(\Rightarrow\) p: thm
+x /\bs{} y
+\(\alpha\) list
+:'a list

@@ -1,36 +1,22 @@
 val _ = PolyML.SaveState.loadState "../../../bin/hol.state";
 
 val _ = load "regexpLib";
-open Lib
+
+open Lib regexpMisc;
 
 val justifyDefault = regexpLib.SML;
-
-fun succeed() = OS.Process.terminate OS.Process.success
-fun fail()    = OS.Process.terminate OS.Process.failure;
-
-fun stdOut_print s = let open TextIO in output(stdOut,s); flushOut stdOut end;
-fun stdErr_print s = let open TextIO in output(stdErr,s); flushOut stdErr end;
-
-fun spread s [] = []
-  | spread s [x] = [x]
-  | spread s (h::t) = h::s::spread s t;
-
-fun spreadln s k n [] = []
-  | spreadln s k n [x] = [x]
-  | spreadln s k n (h::t) =
-      if n <= 0
-        then h::s::"\n  "::spreadln s k k t
-        else h::s::spreadln s k (n-1) t;
 
 fun bool_to_C true = 1
   | bool_to_C false = 0;
 
-fun arrayString intList =
- String.concat
-   (("{"::spread "," (map Int.toString intList)) @ ["}"]);
+fun finalsString list =
+ let val spreadList = spreadln {sep=",", ln="\n  ", width=31} (map Int.toString list)
+ in
+   String.concat ("{" :: spreadList @ ["}"])
+ end;
 
 fun array256String intList =
- let val spreadList = spreadln "," 31 31 (map Int.toString intList)
+ let val spreadList = spreadln {sep=",", ln="\n   ", width=31} (map Int.toString intList)
  in
    String.concat ("{":: spreadList @ ["}"])
  end
@@ -46,14 +32,17 @@ fun Cfile name quote (_,finals,table) =
      val finals = map bool_to_C finals
  in String.concat
  ["/*---------------------------------------------------------------------------\n",
-  " * -- DFA ", name, " is the compiled form of regexp\n",
-  " * --\n",
-  " * --   ", quote, "\n",
+  " * DFA ", name, " is the compiled form of regexp\n",
+  " *\n",
+  " *    ", quote, "\n",
+  " * \n",
+  " * Number of states in DFA: ",Int.toString nstates, "\n",
+  " *\n",
   " *---------------------------------------------------------------------------*/\n",
   "\n",
-  "int ACCEPTING_",name," [", Int.toString nstates,"] = ",arrayString finals, ";\n",
+  "int ACCEPTING_",name," [", Int.toString nstates,"] =\n ",finalsString finals, ";\n",
   "\n",
-  "unsigned long DELTA_",name," [",Int.toString nstates,"] [256] = \n",
+  "unsigned long DELTA_",name," [",Int.toString nstates,"] [256] = \n ",
   twoDarrayString table,
   "\n\n",
   "int match_",name,"(unsigned char *s, int len) {\n",
@@ -79,36 +68,36 @@ fun deconstruct {certificate, final, matchfn, start, table} =
 (* Map to C and write to stdOut                                              *)
 (*---------------------------------------------------------------------------*)
 
-fun quote_to_C justify name q =
- let val regexp = Regexp_Type.fromString q
-     val _ = stdErr_print "Parsed regexp, now constructing DFA (can take time) ... "
+fun string_to_C justify name s =
+ let val regexp = Regexp_Type.fromString s
+     val _ = stdErr_print "Parsed regexp, now constructing DFA ... "
      val result = regexpLib.matcher justify regexp
-     val _ = stdErr_print "done. Generating C file.\n"
+     val _ = stdErr_print "done. Generating C.\n"
      val (start,finals,table) = deconstruct result
-     val Cstring = Cfile name q (start,finals,table)
+     val Cstring = Cfile name s (start,finals,table)
  in
    stdOut_print Cstring
- ; succeed()
+ ; regexpMisc.succeed()
  end
 
 (*---------------------------------------------------------------------------*)
-(* Parse, transform, write to C files.                                    *)
+(* Parse, transform, write out C.                                            *)
 (*---------------------------------------------------------------------------*)
 
-fun parse_args args =
+fun parse_args () =
  let fun printHelp() = stdErr_print
           ("Usage: regexp2c [-dfagen (HOL | SML)] <name> <quotation>\n")
-     val fail = fn () => (printHelp(); fail())
- in case args
-     of ["-dfagen","SML",name,quote] => (regexpLib.SML,name,quote)
-      | ["-dfagen","HOL",name,quote] => (regexpLib.HOL,name,quote)
-      | [name,quote] => (justifyDefault, name,quote)
-      | otherwise => fail()
+ in case CommandLine.arguments()
+     of ["-dfagen","SML",name,string] => SOME (regexpLib.SML,name,string)
+      | ["-dfagen","HOL",name,string] => SOME (regexpLib.HOL,name,string)
+      | [name,string] => SOME(justifyDefault, name,string)
+      | otherwise     => (printHelp(); NONE)
  end
 
 fun main () =
  let val _ = stdErr_print "regexp2c: \n"
-     val (justify,name,quote) = parse_args(CommandLine.arguments())
- in
-   quote_to_C justify name quote
+ in case parse_args()
+    of NONE => regexpMisc.fail()
+     | SOME (justify,name,string) => string_to_C justify name string
  end;
+

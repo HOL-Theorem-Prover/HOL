@@ -16,24 +16,24 @@ exception DuplicateTarget
 type node = int
 datatype command = NoCmd | SomeCmd of string | BuiltInCmd
 type 'a nodeInfo = { target : 'a, status : target_status,
-                     command : command,
+                     command : command, phony : bool,
                      seqnum : int,
                      dependencies : (node * string) list  }
 
-fun lift {target,status,command,dependencies,seqnum} =
+fun lift {target,status,command,dependencies,seqnum,phony} =
   {target = [target], status = status, command = command,
-   dependencies = dependencies, seqnum = seqnum}
+   dependencies = dependencies, seqnum = seqnum, phony = phony}
 
 fun setStatus s (nI: 'a nodeInfo) : 'a nodeInfo =
   let
-    val {target,command,status,dependencies,seqnum} = nI
+    val {target,command,status,dependencies,seqnum,phony} = nI
   in
     {target = target, status = s, command = command, seqnum = seqnum,
-     dependencies = dependencies}
+     dependencies = dependencies, phony = phony}
   end
 
-fun addTarget tgt {target,command,status,dependencies,seqnum} =
-  {target = tgt :: target, status = status, command = command,
+fun addTarget tgt {target,command,status,dependencies,seqnum,phony} =
+  {target = tgt :: target, status = status, command = command, phony = phony,
    dependencies = dependencies, seqnum = seqnum}
 
 val node_compare = Int.compare
@@ -176,9 +176,11 @@ val node_toString = Int.toString
 
 fun nodeInfo_toString tstr (nI : 'a nodeInfo) =
   let
-    val {target,status,command,dependencies,seqnum} = nI
+    val {target,status,command,dependencies,seqnum,phony} = nI
   in
-    tstr target ^ "(" ^ Int.toString seqnum ^ ") " ^ status_toString status ^ " : " ^
+    tstr target ^ (if phony then "[PHONY]" else "") ^
+    "(" ^ Int.toString seqnum ^ ") " ^
+    status_toString status ^ " : " ^
     (case command of
          SomeCmd s => s
        | BuiltInCmd => "<handled by Holmake>"

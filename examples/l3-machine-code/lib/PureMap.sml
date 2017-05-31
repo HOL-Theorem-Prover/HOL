@@ -2,7 +2,7 @@
    Pure Maps
    ------------------------------------------------------------------------- *)
 
-structure PureMap :> PureMap =
+structure PureMap :> Map =
 struct
 
 val arrayBits = 0w16

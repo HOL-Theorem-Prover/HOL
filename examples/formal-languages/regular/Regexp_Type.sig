@@ -1,8 +1,9 @@
-signature Regexp_Type = 
+signature Regexp_Type =
 sig
- type charset = bool vector
 
- datatype regexp 
+ type charset = IntInf.int
+
+ datatype regexp
     = Chset of charset
     | Cat of regexp * regexp
     | Star of regexp
@@ -17,11 +18,12 @@ sig
  val charset_full    : charset
  val charset_mem     : char -> charset -> bool
  val charset_of      : char list -> charset
- val els             : charset -> int list
+ val charset_elts    : charset -> char list
+
+ val charset_insert  : char -> charset -> charset
  val charset_sing    : char -> charset
  val charset_union   : charset -> charset -> charset
  val charset_diff    : charset -> charset -> charset
- val charset_insert  : char -> charset -> charset
  val charset_compare : charset * charset -> order
 
  val regexp_compare : regexp * regexp -> order
@@ -45,14 +47,19 @@ sig
 
  datatype direction = MSB | LSB
 
- datatype tree 
+ datatype packelt
+   = Span of IntInf.int * IntInf.int
+   | Pad of IntInf.int;
+
+ datatype tree
    = Ap of string * tree list
    | Cset of charset
    | Ident of char
    | Power of tree * int
    | Range of tree * int option * int option
-   | Interval of IntInf.int * IntInf.int * direction 
-   | Pack of (IntInf.int * IntInf.int) list
+   | Interval of IntInf.int * IntInf.int * direction
+   | Const of IntInf.int * direction
+   | Pack of packelt list
 
  val tree_parse        : substring -> tree list * substring
  val substring_to_tree : substring -> tree
@@ -63,5 +70,9 @@ sig
  val fromSubstring : substring -> regexp
  val fromString    : string -> regexp
  val fromQuote     : 'a frag list -> regexp
+
+ val pp_regexp     : HOLPP.ppstream -> regexp -> unit
+ val print_regexp  : regexp -> unit
+ val println_regexp  : regexp -> unit
 
 end

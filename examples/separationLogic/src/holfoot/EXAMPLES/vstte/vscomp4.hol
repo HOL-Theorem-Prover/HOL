@@ -12,7 +12,7 @@
 (******************************************************************************)
 
 (* load the libries
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/hfheader.sml")
 *)
 
 val _ = HOL_Interactive.toggle_quietdec();
@@ -105,7 +105,7 @@ val isConsistent_TAC =
 
     (* simplify and instantiate loop invariant*)
     SIMP_TAC std_ss [GSYM ADD1, IS_CONSISTENT_BOARD_REC___REWRITE] THEN
-    REPEAT STRIP_TAC THEN 
+    REPEAT STRIP_TAC THEN
     Q.EXISTS_TAC `data` THEN Q.EXISTS_TAC `LENGTH data` THEN
 
     (* generate VCs *)
@@ -124,19 +124,19 @@ val isConsistent_TAC =
 (* holfoot_set_goal_procedures file ["search"] *)
 val search_TAC =
     (*run automation *)
-    HF_SOLVE_TAC THEN 
+    HF_SOLVE_TAC THEN
     REPEAT STRIP_TAC THENL [
        (* while loop *)
        CONV_TAC SWAP_EXISTS_CONV THEN
        Q.EXISTS_TAC `LENGTH data1 + LENGTH data2` THEN
-       xHF_SOLVE_TAC [add_rewrites [REPLACE_ELEMENT_APPEND2]] THEN
+       xHF_SOLVE_TAC [add_rewrites [LUPDATE_APPEND2]] THEN
        REPEAT STRIP_TAC THENL [
           (* is consistent *)
           `?data2_hd data2_tl. data2 = data2_hd::data2_tl` by
               (Cases_on `data2` THEN FULL_SIMP_TAC list_ss []) THEN
-          Q.EXISTS_TAC `data1 ++ [i_const]` THEN 
+          Q.EXISTS_TAC `data1 ++ [i_const]` THEN
           Q.EXISTS_TAC `data2_tl` THEN
-          ASM_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF] THEN
+          ASM_SIMP_TAC list_ss [LUPDATE_def] THEN
           HF_VC_SOLVE_TAC THEN HF_VC_TAC THEN
           CONJ_TAC THENL [
              FULL_SIMP_TAC (list_ss++CONJ_ss) [GSYM ADD1] THEN
@@ -145,11 +145,11 @@ val search_TAC =
                 MATCH_MP_TAC IS_CONSISTENT_BOARD_REC___JUST_FIRSTN_MP THEN
                 Q.EXISTS_TAC `data1 ++ i_const::data2_tl` THEN
                 ASM_SIMP_TAC list_ss [FIRSTN_APPEND2, GSYM ADD1],
-               
+
                 FULL_SIMP_TAC arith_ss [GSYM APPEND_ASSOC, APPEND]
              ],
 
-             
+
              FULL_SIMP_TAC (list_ss++CONJ_ss) [GSYM ADD1] THEN
              REPEAT STRIP_TAC THEN
              Cases_on `i' < i_const` THEN1 (
@@ -157,8 +157,8 @@ val search_TAC =
              ) THEN
              `i' = i_const` by DECIDE_TAC THEN
              FULL_SIMP_TAC arith_ss [GSYM APPEND_ASSOC, APPEND] THEN
-             Q.PAT_ASSUM `!data3'. X` (MP_TAC o Q.SPECL [`data3`]) THEN
-             Q.PAT_ASSUM `LENGTH data2' = X` ASSUME_TAC THEN
+             Q.PAT_X_ASSUM `!data3'. X` (MP_TAC o Q.SPECL [`data3`]) THEN
+             Q.PAT_X_ASSUM `LENGTH data2' = X` ASSUME_TAC THEN
              FULL_SIMP_TAC arith_ss [] THEN
              STRIP_TAC THEN
              Q.EXISTS_TAC `pp` THEN
@@ -175,17 +175,17 @@ val search_TAC =
           Q.EXISTS_TAC `LENGTH data1` THEN
           ASM_SIMP_TAC arith_ss [] THEN
           REPEAT STRIP_TAC THEN
-          Q.PAT_ASSUM `~(IS_CONSISTENT_BOARD_REC X X Y)` MP_TAC THEN
-          SIMP_TAC std_ss [] THEN 
+          Q.PAT_X_ASSUM `~(IS_CONSISTENT_BOARD_REC X X Y)` MP_TAC THEN
+          SIMP_TAC std_ss [] THEN
           MATCH_MP_TAC IS_CONSISTENT_BOARD_REC___JUST_FIRSTN_MP THEN
           Q.EXISTS_TAC `data1 ++ i_const::data3` THEN
           Cases_on `data2` THEN (
-             FULL_SIMP_TAC list_ss [REPLACE_ELEMENT_DEF,
+             FULL_SIMP_TAC list_ss [LUPDATE_def,
                FIRSTN_APPEND2, GSYM ADD1]
           )
     ],
 
-    
+
     (* at the very end *)
     Q.EXISTS_TAC `data1` THEN
     Q.EXISTS_TAC `data2_h::data2_t` THEN
@@ -195,7 +195,7 @@ val search_TAC =
     `?data3_hd data3_tl. data3 = data3_hd :: data3_tl` by ALL_TAC THEN1 (
         Cases_on `data3` THEN FULL_SIMP_TAC list_ss []
     ) THEN
-    Q.PAT_ASSUM `!i' data3'. X i' data3'` (MP_TAC o Q.SPECL [
+    Q.PAT_X_ASSUM `!i' data3'. X i' data3'` (MP_TAC o Q.SPECL [
        `data3_hd`, `data3_tl`]) THEN
     FULL_SIMP_TAC list_ss [GSYM ADD1]
 ]
@@ -213,9 +213,8 @@ val find_TAC =
 
 
 
-(* put everything together (12 s) *)       
+(* put everything together (12 s) *)
 val final_thm = holfoot_tac_verify_spec file NONE
                    [("isConsistent", isConsistent_TAC),
                     ("search",       search_TAC),
                     ("find",         find_TAC)];
-

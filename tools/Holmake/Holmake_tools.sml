@@ -337,6 +337,7 @@ fun read_files ds P action =
       (if P nextfile then action nextfile else ();
        read_files ds P action)
 
+fun quiet_remove s = OS.FileSys.remove s handle e => ()
 
 fun clean_dir {extra_cleans} = let
   val cdstream = OS.FileSys.openDir "."
@@ -350,11 +351,15 @@ fun clean_dir {extra_cleans} = let
           (case OS.Path.ext s of SOME "art" => true | _ => false)
       | ART _ => true
       | _ => false
-  fun quiet_remove s = OS.FileSys.remove s handle e => ()
 in
   read_files cdstream to_delete quiet_remove;
   app quiet_remove extra_cleans
 end
+
+fun clean_forReloc {holheap} =
+  if Systeml.ML_SYSNAME = "poly" then
+    case holheap of SOME s => quiet_remove s | _ => ()
+  else ()
 
 exception DirNotFound
 fun clean_depdir {depdirname} = let
@@ -461,6 +466,25 @@ in
   recurse (false, false, ss)
 end
 
+local
+  fun split p = let val {base, ext} = OS.Path.splitBaseExt p in (base, ext) end
+in
+  fun target_string l =
+    let
+      val (names, e) = ListPair.unzip (List.map split l)
+      val exts = List.mapPartial (fn x => x) e
+      val n = List.length exts
+    in
+      case names of
+         [] => ""
+       | [_] => List.hd l
+       | h :: t => if List.all (fn x => x = h) t andalso List.length e = n
+                     then if n = 2 andalso String.isSuffix "Theory" h
+                            then h
+                          else h ^ ".{" ^ String.concatWith "," exts ^ "}"
+                   else String.concatWith " " l
+    end
+end
 
 type include_info = {includes : string list, preincludes : string list }
 type 'dir holmake_dirinfo = {visited : hmdir.t Binaryset.set, includes : 'dir list,
@@ -591,7 +615,8 @@ fun generate_all_plausible_targets warn first_target =
           fun not_a_dot f = not (String.isPrefix "." f)
           fun ok_file f =
               case (toFile f) of
-                  SIG _ => true
+                  SIG (Theory _) => false
+                | SIG _ => true
                 | SML (Script s) =>
                   (case OS.Path.ext s of
                        SOME "art" => false
@@ -602,6 +627,7 @@ fun generate_all_plausible_targets warn first_target =
                                 ") can't include '.' characters");
                           false)
                      | NONE => true)
+                | SML (Theory _) => false
                 | SML _ => true
                 | _ => false
           val src_files = find_files cds (fn s => ok_file s andalso not_a_dot s)

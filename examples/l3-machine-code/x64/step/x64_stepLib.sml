@@ -616,7 +616,7 @@ val Zxchg_rwts =
 val () = setEvConv (Conv.DEPTH_CONV wordsLib.SIZES_CONV)
 
 fun div_assums d rax rdx v =
-  [``w2n ^v <> 0``, ``~(^d <= (w2n ^rax * ^d + w2n ^rdx) DIV w2n ^v)``]
+  [``w2n ^v <> 0``, ``~(^d <= (w2n ^rdx * ^d + w2n ^rax) DIV w2n ^v)``]
 
 fun div_tms n =
   let

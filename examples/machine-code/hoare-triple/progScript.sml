@@ -59,7 +59,7 @@ val RUN_thm = store_thm("RUN_thm",
 
 val RUN_EQ_SPEC = store_thm("RUN_EQ_SPEC",
   ``!x. RUN x p q = SPEC x p {} q``,
-  INIT_TAC \\ `CODE_POOL instr {} = emp` by ALL_TAC
+  INIT_TAC \\ sg `CODE_POOL instr {} = emp`
   \\ ASM_REWRITE_TAC [SEP_CLAUSES,SPEC_def]
   \\ REWRITE_TAC [FUN_EQ_THM,CODE_POOL_def,IMAGE_EMPTY,BIGUNION_EMPTY,emp_def]);
 
@@ -138,7 +138,8 @@ val SPEC_COMBINE = store_thm("SPEC_COMBINE",
 val SPEC_SUBSET_CODE = store_thm("SPEC_SUBSET_CODE",
   ``!x p c q. SPEC x p c q ==> !c'. c SUBSET c' ==> SPEC x p c' q``,
   REPEAT STRIP_TAC \\ FULL_SIMP_TAC bool_ss [SUBSET_DEF]
-  \\ `c' = c UNION c'` by FULL_SIMP_TAC bool_ss [EXTENSION,IN_UNION]
+  \\ `c' = c UNION c'`
+       by (FULL_SIMP_TAC bool_ss [EXTENSION,IN_UNION] \\ METIS_TAC[])
   \\ METIS_TAC [SPEC_ADD_CODE]);
 
 val SPEC_REFL = store_thm("SPEC_REFL",

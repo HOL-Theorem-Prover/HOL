@@ -765,9 +765,14 @@ fun parse_with_goal t (asms, g) =
 
 fun Q_TAC0 tyopt (tac : term -> tactic) q (g as (asl,w)) =
   let
+    open Parse
     val ctxt = free_varsl (w::asl)
-    val s = TermParse.ctxt_termS (Parse.term_grammar()) (Parse.type_grammar())
-                                 tyopt ctxt q
+    val ab =
+        case tyopt of
+            NONE => Absyn
+          | SOME ty =>
+            fn q => Absyn.TYPED(locn.Loc_None, Absyn q, Pretype.fromType ty)
+    val s = TermParse.prim_ctxt_termS ab (term_grammar()) ctxt q
   in
     case seq.cases s of
         NONE => raise ERR "Q_TAC" "No parse for quotation"

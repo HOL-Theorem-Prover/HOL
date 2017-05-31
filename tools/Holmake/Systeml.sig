@@ -43,6 +43,7 @@ sig
   val build_log_dir : string
   val build_log_file : string
   val make_log_file : string
+  val build_after_reloc_envvar : string
 
   (* canonical source of version information *)
   val release : string

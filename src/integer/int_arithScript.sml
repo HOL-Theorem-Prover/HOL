@@ -586,9 +586,9 @@ val gcdthm2 = store_thm(
           PROVE_TAC [th, INT_LDISTRIB, INT_MUL_RID]) THEN
     POP_ASSUM (fn th =>
       `b + ~(b * (q * &m)) = b * (p * &a)` by
-          MP_TAC th THEN
-          SIMP_TAC bool_ss [GSYM eq_move_left_left] THEN
-          SIMP_TAC bool_ss [INT_ADD_COMM]) THEN
+          (MP_TAC th THEN
+           SIMP_TAC bool_ss [GSYM eq_move_left_left] THEN
+           SIMP_TAC bool_ss [INT_ADD_COMM])) THEN
     POP_ASSUM (fn th =>
       `&a * (b * p) = b + ~(b * (q * &m))` by
          (REWRITE_TAC [th] THEN

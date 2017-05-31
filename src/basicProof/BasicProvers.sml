@@ -333,7 +333,7 @@ fun labrhs t = (* term is a possibly labelled equality *)
  in if is_eq t then rhs t else rhs (#2 (dest_label t))
  end;
 
-fun (q by tac) (g as (asl,w)) = let
+fun by0 k (q, tac) (g as (asl,w)) = let
   val a = trace ("syntax_error", 0) Parse.Absyn q
   open errormonad
   val (goal_pt, finisher) =
@@ -355,10 +355,17 @@ fun (q by tac) (g as (asl,w)) = let
                         (free_varsl (w::asl))))
                  Pretype.Env.empty
 in
-  SUBGOAL_THEN tm finisher THEN1 tac
+  SUBGOAL_THEN tm finisher THEN1 (tac THEN k)
 end (asl, w)
 
-fun (q suffices_by tac) = Q_TAC SUFF_TAC q THEN1 tac
+val op by = by0 NO_TAC
+val byA = by0 ALL_TAC
+
+fun (q suffices_by tac) = Q_TAC SUFF_TAC q THEN1 (tac THEN NO_TAC)
+
+fun subgoal q = Q.SUBGOAL_THEN q STRIP_ASSUME_TAC
+val sg = subgoal
+
 
 infix on
 fun ((ttac:thm->tactic) on (q:term frag list, tac:tactic)) : tactic =

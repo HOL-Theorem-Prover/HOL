@@ -3,12 +3,12 @@
 (******************************************************************************)
 
 (* load the libries
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/hfheader.sml")
 *)
 
 HOL_Interactive.toggle_quietdec();
 
-open treeTheory generalHelpersTheory rich_listTheory pred_setTheory ConseqConv 
+open treeTheory generalHelpersTheory rich_listTheory pred_setTheory ConseqConv
      listTheory sortingTheory boolSimps;
 
 HOL_Interactive.toggle_quietdec();
@@ -18,38 +18,42 @@ HOL_Interactive.toggle_quietdec();
 (* Some useful REWRITES                                                       *)
 (******************************************************************************)
 
-val BIN_SEARCH_TREE_SET_def = Define 
+val BIN_SEARCH_TREE_SET_def = Define
   `(BIN_SEARCH_TREE_SET leaf keys = (keys = EMPTY)) /\
-   (BIN_SEARCH_TREE_SET (node [k] [t1; t2]) keys = 
+   (BIN_SEARCH_TREE_SET (node [k] [t1; t2]) keys =
        ?k1 k2. (keys = k INSERT (k1 UNION k2)) /\
                (!k':num. k' IN k1 ==> k' < k) /\
                (!k':num. k' IN k2 ==> k' > k) /\
                (BIN_SEARCH_TREE_SET t1 k1) /\
                (BIN_SEARCH_TREE_SET t2 k2)) /\
    (BIN_SEARCH_TREE_SET _ _ = F)`;
-    
+
 val BIN_SEARCH_TREE_SET_THM = prove (
  ``(BIN_SEARCH_TREE_SET leaf keys = (keys = EMPTY)) /\
-   (BIN_SEARCH_TREE_SET (node v tL) keys = 
-       ?k t1 t2 k1 k2. 
+   (BIN_SEARCH_TREE_SET (node v tL) keys =
+       ?k t1 t2 k1 k2.
                (v = [k]) /\ (tL = [t1;t2]) /\
                (keys = k INSERT (k1 UNION k2)) /\
                (!k':num. k' IN k1 ==> k' < k) /\
                (!k':num. k' IN k2 ==> k' > k) /\
                (BIN_SEARCH_TREE_SET t1 k1) /\
                (BIN_SEARCH_TREE_SET t2 k2))``,
+let
+  fun cases_tac q = Cases_on q THEN SIMP_TAC list_ss [BIN_SEARCH_TREE_SET_def]
+in
 
-SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_def] THEN
-Cases_on `v` THEN SIMP_TAC list_ss [BIN_SEARCH_TREE_SET_def] THEN
-Cases_on `t` THEN SIMP_TAC list_ss [BIN_SEARCH_TREE_SET_def] THEN
-Cases_on `tL` THEN SIMP_TAC list_ss [BIN_SEARCH_TREE_SET_def] THEN
-Cases_on `t` THEN SIMP_TAC list_ss [BIN_SEARCH_TREE_SET_def] THEN
-Cases_on `t'` THEN SIMP_TAC list_ss [BIN_SEARCH_TREE_SET_def]);
+cases_tac `v` THEN
+cases_tac `tL` THEN
+cases_tac `t'` THEN
+cases_tac `t''` THEN
+cases_tac `t`
+end);
+
 
 
 val BIN_SEARCH_TREE_SET_BIN_THM = prove (
  ``(BIN_SEARCH_TREE_SET leaf keys = (keys = EMPTY)) /\
-   (BIN_SEARCH_TREE_SET (node [k] [t1; t2]) keys = 
+   (BIN_SEARCH_TREE_SET (node [k] [t1; t2]) keys =
        ?k1 k2. (keys = k INSERT (k1 UNION k2)) /\
                (!k':num. k' IN k1 ==> k' < k) /\
                (!k':num. k' IN k2 ==> k' > k) /\
@@ -60,13 +64,13 @@ SIMP_TAC list_ss [BIN_SEARCH_TREE_SET_THM]);
 
 val BIN_SEARCH_TREE_SET_BIN_REWRITE = prove (
  ``(BIN_SEARCH_TREE_SET leaf keys = (keys = EMPTY)) /\
-   (BIN_SEARCH_TREE_SET (node [k] [t1; t2]) keys = 
+   (BIN_SEARCH_TREE_SET (node [k] [t1; t2]) keys =
        ?k1 k2. (keys = k INSERT (k1 UNION k2)) /\
                (!k':num. k' IN k1 ==> k' < k) /\
                (!k':num. k' IN k2 ==> k' > k) /\
                ~(k IN k1) /\ ~(k IN k2) /\
                (!k. ~(k IN k1) \/ ~(k IN k2)) /\
-               (!k k'. k IN k1 /\ k' IN k2 ==> k < k') /\ 
+               (!k k'. k IN k1 /\ k' IN k2 ==> k < k') /\
                (BIN_SEARCH_TREE_SET t1 k1) /\
                (BIN_SEARCH_TREE_SET t2 k2))``,
 
@@ -215,7 +219,7 @@ val search_tree_delete_TAC =
       SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_THM] THEN
       FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_REWRITE] THEN
       Q.EXISTS_TAC `k1` THEN
-      ASM_SIMP_TAC std_ss [] THEN      
+      ASM_SIMP_TAC std_ss [] THEN
       REPEAT STRIP_TAC THEN
       MAP_EVERY Q.EXISTS_TAC [`k1 DELETE k_const'`, `k2`] THEN
       ASM_SIMP_TAC std_ss [IN_DELETE, EXTENSION, IN_INSERT, IN_UNION] THEN
@@ -291,7 +295,7 @@ val search_tree_lookup_TAC =
    HF_ELIM_COMMENTS_TAC THEN
    REPEAT CONJ_TAC THENL [
       SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_def, NOT_IN_EMPTY],
-      
+
       REPEAT STRIP_TAC THEN
       FULL_SIMP_TAC std_ss [BIN_SEARCH_TREE_SET_BIN_REWRITE, IN_INSERT],
 
@@ -318,7 +322,7 @@ val search_tree_to_list___rec_TAC =
       HF_VC_TAC THEN
       FULL_SIMP_TAC list_ss [BIN_SEARCH_TREE_SET_def, SORTED_DEF]
    ) THEN
-   Q.PAT_ASSUM `BIN_SEARCH_TREE_SET X Y` (STRIP_ASSUME_TAC o REWRITE_RULE [BIN_SEARCH_TREE_SET_BIN_REWRITE]) THEN
+   Q.PAT_X_ASSUM `BIN_SEARCH_TREE_SET X Y` (STRIP_ASSUME_TAC o REWRITE_RULE [BIN_SEARCH_TREE_SET_BIN_REWRITE]) THEN
    Q.EXISTS_TAC `k2` THEN ASM_REWRITE_TAC[] THEN
    HF_CONTINUE_TAC THEN
    REPEAT STRIP_TAC THEN
@@ -330,8 +334,8 @@ val search_tree_to_list___rec_TAC =
    `transitive (($<):num -> num -> bool)` by ALL_TAC THEN1 (
       SIMP_TAC arith_ss [relationTheory.transitive_def]
    ) THEN
-   REPEAT (Q.PAT_ASSUM `LIST_TO_SET x = y` (ASSUME_TAC o GSYM)) THEN
-   FULL_SIMP_TAC std_ss [IN_LIST_TO_SET] THEN
+   REPEAT (Q.PAT_X_ASSUM `LIST_TO_SET x = y` (ASSUME_TAC o GSYM)) THEN
+   FULL_SIMP_TAC std_ss [] THEN
    MATCH_MP_TAC SORTED_APPEND THEN
    FULL_SIMP_TAC std_ss [MEM_APPEND, MEM, RIGHT_AND_OVER_OR, DISJ_IMP_THM, FORALL_AND_THM,
       arithmeticTheory.GREATER_DEF] THEN
@@ -388,7 +392,7 @@ val search_tree_delete_min2_TAC =
       REPEAT STRIP_TAC THENL [
          Tactical.REVERSE (
            `(t_const_dta INSERT k2) DELETE t_const_dta = k2` by ALL_TAC) THEN1 (
-             ASM_REWRITE_TAC[]          
+             ASM_REWRITE_TAC[]
          ) THEN
          SIMP_TAC (std_ss++EQUIV_EXTRACT_ss++CONJ_ss) [EXTENSION, IN_INSERT, IN_DELETE] THEN
          CCONTR_TAC THEN
@@ -423,7 +427,7 @@ val search_tree_delete_min2_TAC =
       REPEAT (POP_ASSUM (K ALL_TAC)) THEN
       HF_CONTINUE_TAC THEN
       REPEAT STRIP_TAC THEN
-      Q.PAT_ASSUM `BIN_SEARCH_TREE_SET X keys` (
+      Q.PAT_X_ASSUM `BIN_SEARCH_TREE_SET X keys` (
            STRIP_ASSUME_TAC o ONCE_REWRITE_RULE [BIN_SEARCH_TREE_SET_BIN_REWRITE]) THEN
       Q.EXISTS_TAC `k1` THEN ASM_REWRITE_TAC[] THEN
       HF_CONTINUE_TAC THEN
@@ -436,6 +440,9 @@ val search_tree_delete_min2_TAC =
 
          ASM_SIMP_TAC std_ss [IN_INSERT, IN_UNION],
 
+         `mk < k` by METIS_TAC[] THEN
+         DECIDE_TAC,
+
          FULL_SIMP_TAC std_ss [IN_INSERT, IN_UNION] THEN
          RES_TAC THEN DECIDE_TAC
       ],
@@ -443,7 +450,7 @@ val search_tree_delete_min2_TAC =
 
       (*main program*)
       HF_CONTINUE_TAC THEN
-      Q.PAT_ASSUM `BIN_SEARCH_TREE_SET X keys` (
+      Q.PAT_X_ASSUM `BIN_SEARCH_TREE_SET X keys` (
            STRIP_ASSUME_TAC o ONCE_REWRITE_RULE [BIN_SEARCH_TREE_SET_BIN_REWRITE]) THEN
       Q.EXISTS_TAC `k1` THEN ASM_SIMP_TAC std_ss [] THEN
       HF_CONTINUE_TAC THEN
@@ -456,6 +463,9 @@ val search_tree_delete_min2_TAC =
 
          ASM_SIMP_TAC std_ss [IN_INSERT, IN_UNION],
 
+         `mk < k` by METIS_TAC[] THEN
+         DECIDE_TAC,
+
          FULL_SIMP_TAC std_ss [IN_INSERT, IN_UNION] THEN
          RES_TAC THEN DECIDE_TAC
       ]
@@ -464,7 +474,7 @@ val search_tree_delete_min2_TAC =
 (* holfoot_set_goal_procedures file2 ["search_tree_lookup"] *)
 val search_tree_lookup2_TAC =
    HF_CONTINUE_TAC THEN
-   HF_STEP_TAC 1 THEN 
+   HF_STEP_TAC 1 THEN
    SIMP_TAC (std_ss++CONJ_ss) [LEFT_AND_OVER_OR, DISJ_IMP_THM, FORALL_AND_THM,
       IN_INSERT, NOT_IN_EMPTY, BOOL_TO_NUM_REWRITE] THEN
    HF_CONTINUE_TAC THEN
@@ -496,9 +506,3 @@ val search_tree_lookup2_TAC =
 val _ = holfoot_tac_verify_spec file2 NONE [
    ("search_tree_delete_min",    search_tree_delete_min2_TAC),
    ("search_tree_lookup",        search_tree_lookup2_TAC)];
-
-
-
-
-
-

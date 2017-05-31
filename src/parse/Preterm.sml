@@ -362,7 +362,6 @@ fun to_term (tm : preterm) : term in_env =
  *                                                                           *
  *---------------------------------------------------------------------------*)
 
-exception phase1_exn of locn.locn * string * hol_type
 (* In earlier stages, the base_type of any overloaded preterms will have been
    become more instantiated through the process of type inference.  This
    first phase of resolving overloading removes those operators that are
@@ -443,7 +442,7 @@ fun remove_overloading_phase1 ptm =
 end (* local *)
 
 
-fun remove_overloading ptm = let
+val remove_overloading : preterm -> preterm seqM = let
   open seqmonad Term
   infix >- >> ++
   fun unify t1 t2 = fromErr (Pretype.unify t1 t2)
@@ -492,11 +491,17 @@ fun remove_overloading ptm = let
           else ()
 *)
 in
-  fromErr (remove_overloading_phase1 ptm) >- recurse
+  recurse
 end
 
+(* this version loses the sequence/lazy-list backtracking of the parse *)
 fun do_overloading_removal ptm =
-  seqmonad.toError (OvlFail, locn.Loc_Unknown) (remove_overloading ptm)
+  let
+    open errormonad
+  in
+    remove_overloading_phase1 ptm >-
+    (seqmonad.toError (OvlFail, locn.Loc_Unknown) o remove_overloading)
+  end
 
 fun report_ovl_ambiguity b env =
   (* b is true if multiple resolutions weren't possible *)
@@ -530,19 +535,19 @@ fun remove_elim_magics ptm =
   | Pattern _ => ptm
 
 
-fun overloading_resolution0 (ptm : preterm) : (preterm * bool) errM =
+fun overloading_resolution (ptm : preterm) : (preterm * bool) errM =
   errormonad.lift
     (fn (t,b) => (remove_elim_magics t, b))
     (do_overloading_removal ptm)
 
-fun overloading_resolution ptm =
-    overloading_resolution0 ptm
-    handle phase1_exn(l,s,ty) =>
-           (tcheck_say (locn.toString l ^ ": " ^ s);
-            raise ERRloc "overloading_resolution" l s)
-
 fun overloading_resolutionS ptm =
-  seqmonad.lift remove_elim_magics (remove_overloading ptm)
+  let
+    open seqmonad
+  in
+    lift
+      remove_elim_magics
+      (fromErr (remove_overloading_phase1 ptm) >- remove_overloading)
+  end
 
 (*---------------------------------------------------------------------------
  * Type inference for HOL terms. Looks ugly because of error messages, but is
@@ -556,7 +561,7 @@ fun is_atom (Var _) = return true
   | is_atom (t as Comb{Rator,Rand,...}) =
     let
       fun isnum t0 =
-        lift Literal.is_numeral (overloading_resolution0 t0 >- (to_term o #1))
+        lift Literal.is_numeral (overloading_resolution t0 >- (to_term o #1))
     in
       isnum t >-
       (fn b =>
@@ -577,10 +582,10 @@ local
   open errormonad
   infix ++?
   fun smashTm ptm =
-    smash (overloading_resolution0 ptm >- (to_term o #1))
+    smash (overloading_resolution ptm >- (to_term o #1))
   fun isAtom ptm = smash (is_atom ptm)
 in
-fun TC printers = let
+fun typecheck_phase1 printers = let
   val (ptm, pty) =
       case printers of
         SOME (x,y) => let
@@ -665,20 +670,7 @@ in
 end
 end (* local *)
 
-fun typecheck_phase1 pfns ptm =
-    TC pfns ptm
-    handle phase1_exn(l,s,ty) => let
-           in
-             case pfns of
-               NONE => (tcheck_say s; raise ERRloc "typecheck" l s)
-             | SOME (_, typ) =>
-               let
-                 val s' = String.concat [s, "Wanted it to have type:  ",
-                                         typ ty, "\n"]
-               in
-                 (tcheck_say s'; raise ERRloc "typecheck" l s')
-               end
-           end
+val TC = typecheck_phase1
 
 (* ---------------------------------------------------------------------- *)
 (* function to do the equivalent of strip_conj, but where the "conj" is   *)
@@ -852,20 +844,10 @@ fun typecheck pfns ptm0 =
   in
     lift remove_case_magic
          (TC pfns ptm0 >>
-          overloading_resolution0 ptm0 >-                    (fn (ptm,b) =>
+          overloading_resolution ptm0 >-                     (fn (ptm,b) =>
           report_ovl_ambiguity b >> to_term ptm)) >-         (fn t =>
          fn e => errormonad.Some(e, !post_process_term t))
   end
-  handle phase1_exn(l,s,ty) =>
-           case pfns of
-             NONE => (tcheck_say (locn.toString l ^ ": " ^ s);
-                      raise ERRloc "typecheck" l s)
-           | SOME (_, typ) =>
-             (tcheck_say
-                  (String.concat [locn.toString l, ": ", s,
-                                  "Wanted it to have type:  ",
-                                  typ ty, "\n"]);
-              raise ERRloc "typecheck" l s)
 
 fun typecheckS ptm =
   let

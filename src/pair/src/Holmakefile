@@ -6,7 +6,7 @@ all: $(TARGETS) selftest.exe
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-ifeq ($(KERNELID),-otknl)
+ifeq ($(KERNELID),otknl)
 all: poset.ot.art pair.ot.art
 
 pair.art: pair.otd

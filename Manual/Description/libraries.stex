@@ -744,7 +744,7 @@ is internally represented as
 Where infixes appear between their arguments, prefixes appear before theirs.
 This might initially appear to be the same thing as happens with normal function application where the symbol on the left simply has no fixity: is $f$ in $f(x)$ not acting as a prefix?
 Actually though, in a term such as $f(x)$, where $f$ and $x$ do not have fixities, the syntax is treated as if there is an invisible infix function application between the two tokens: $f\cdot{}x$.
-This infix operator binds tightly, so that when one writes $f\,x + y$, the parse is $(f\cdot{}x) + y$.\footnote{There are tighter infix operators: the dot in field selection causes $f\,x.fld$ to parse as $f\cdot(x.fld)$.\index{record types!field selection notation}}
+This infix operator binds tightly, so that when one writes $f\,x + y$, the parse is $(f\cdot{}x) + y$.\footnote{There are tighter infix operators: the dot in field selection causes $f\,x.fld$ to parse as $f\cdot(x.fld)$.\index{record types!field selection functions and notation}}
 It is then useful to allow for genuine prefixes so that operators can live at different precedence levels than function application.
 An example of this is \verb+~+, logical negation.
 This is a prefix with lower precedence than function application.
@@ -3254,6 +3254,10 @@ Also provided is a theory of polynomials, in \theoryimp{polyTheory}.
 A decision procedure for linear arithmetic on the real numbers
 is also provided by \ml{realLib}, under the name \ml{REAL\_ARITH\_CONV}
 and \ml{REAL\_ARITH\_TAC}.
+
+\section{Pattern Matches Library---\texttt{patternMatchesLib}}\label{sec:PatternMatchesLib}
+\input{PatternMatchesLib.tex}
+
 
 \section{Bit Vector Library---\texttt{wordsLib}}
 

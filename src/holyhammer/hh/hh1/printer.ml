@@ -86,7 +86,7 @@ let unparse_as_prefix,parse_as_prefix,is_prefix,prefixes =
 
 let unparse_as_infix,parse_as_infix,get_infix_status,infixes =
   let cmp (s,(x,a)) (t,(y,b)) =
-     x < y or x = y & a > b or x = y & a = b & s < t in
+     x < y || x = y && a > b || x = y && a = b && s < t in
   let infix_list = ref ([]:(string * (int * string)) list) in
   (fun n     -> infix_list := filter (o ((<>) n) fst) (!infix_list)),
   (fun (n,d) -> infix_list := sort cmp
@@ -195,14 +195,14 @@ let install_user_printer,delete_user_printer,try_user_printer =
 let pp_print_term =
   let reverse_interface (s0,ty0) =
     if not(!reverse_interface_mapping) then s0 else
-    try fst(find (fun (s,(s',ty)) -> s' = s0 & can (type_match ty ty0) [])
+    try fst(find (fun (s,(s',ty)) -> s' = s0 && can (type_match ty ty0) [])
                  (!the_interface))
     with Failure _ -> s0 in
   let dEST_BINARY c tm =
     try let il,r = dest_comb tm in
         let i,l = dest_comb il in
-        if i = c or
-           (is_const i & is_const c &
+        if i = c ||
+           (is_const i && is_const c &&
             reverse_interface(dest_const i) = reverse_interface(dest_const c))
         then l,r else fail()
     with Failure _ -> failwith "DEST_BINARY"
@@ -220,22 +220,22 @@ let pp_print_term =
     | _ -> failwith "bool_of_term" in
   let code_of_term t =
     let f,tms = strip_comb t in
-    if not(is_const f & fst(dest_const f) = "ASCII")
-       or not(length tms = 8) then failwith "code_of_term"
+    if not(is_const f && fst(dest_const f) = "ASCII")
+       || not(length tms = 8) then failwith "code_of_term"
     else
        itlist (fun b f -> if b then 1 + 2 * f else 2 * f)
               (map bool_of_term (rev tms)) 0 in
   let rec dest_clause tm =
     let pbod = snd(strip_exists(body(body tm))) in
     let s,args = strip_comb pbod in
-    if name_of s = "_UNGUARDED_PATTERN" & length args = 2 then
+    if name_of s = "_UNGUARDED_PATTERN" && length args = 2 then
       [rand(rator(hd args));rand(rator(hd(tl args)))]
-    else if name_of s = "_GUARDED_PATTERN" & length args = 3 then
+    else if name_of s = "_GUARDED_PATTERN" && length args = 3 then
       [rand(rator(hd args)); hd(tl args); rand(rator(hd(tl(tl args))))]
     else failwith "dest_clause" in
   let rec dest_clauses tm =
     let s,args = strip_comb tm in
-    if name_of s = "_SEQPATTERN" & length args = 2 then
+    if name_of s = "_SEQPATTERN" && length args = 2 then
       dest_clause (hd args)::dest_clauses(hd(tl args))
     else [dest_clause tm] in
   fun fmt ->
@@ -258,10 +258,10 @@ let pp_print_term =
       let s0 = name_of hop
       and ty0 = type_of hop in
       let s = reverse_interface (s0,ty0) in
-      try if s = "EMPTY" & is_const tm & args = [] then
+      try if s = "EMPTY" && is_const tm && args = [] then
           pp_print_string fmt "{}" else fail()
       with Failure _ ->
-      try if s = "UNIV" & !typify_universal_set & is_const tm & args = [] then
+      try if s = "UNIV" && !typify_universal_set && is_const tm && args = [] then
             let ty = fst(dest_fun_ty(type_of tm)) in
             (pp_print_string fmt "(:";
              pp_print_type fmt ty;
@@ -270,7 +270,7 @@ let pp_print_term =
       with Failure _ ->
       try if s <> "INSERT" then fail() else
           let mems,oth = splitlist (dest_binary "INSERT") tm in
-          if is_const oth & fst(dest_const oth) = "EMPTY" then
+          if is_const oth && fst(dest_const oth) = "EMPTY" then
             (pp_print_string fmt "{";
              print_term_sequence ", " 14 mems;
              pp_print_string fmt "}")
@@ -286,9 +286,9 @@ let pp_print_term =
           print_term 0 fabs;
           pp_print_string fmt " | ";
           (let fvs = frees fabs and bvs = frees babs in
-           if not(!print_unambiguous_comprehensions) &
+           if not(!print_unambiguous_comprehensions) &&
               set_eq evs
-               (if (length fvs <= 1 or bvs = []) then fvs
+               (if (length fvs <= 1 || bvs = []) then fvs
                 else intersect fvs bvs)
            then ()
            else (print_term_sequence "," 14 evs;
@@ -320,7 +320,7 @@ let pp_print_term =
                         (n_den +/ (mod_num n_num n_den))))) in
         pp_print_string fmt("#"^s_num^(if n_den = Int 1 then "" else ".")^s_den)
       with Failure _ -> try
-        if s <> "_MATCH" or length args <> 2 then failwith "" else
+        if s <> "_MATCH" || length args <> 2 then failwith "" else
         let cls = dest_clauses(hd(tl args)) in
         (if prec = 0 then () else pp_print_string fmt "(";
          pp_open_hvbox fmt 0;
@@ -332,7 +332,7 @@ let pp_print_term =
          pp_close_box fmt ();
          if prec = 0 then () else pp_print_string fmt ")")
       with Failure _ -> try
-        if s <> "_FUNCTION" or length args <> 1 then failwith "" else
+        if s <> "_FUNCTION" || length args <> 1 then failwith "" else
         let cls = dest_clauses(hd args) in
         (if prec = 0 then () else pp_print_string fmt "(";
          pp_open_hvbox fmt 0;
@@ -342,7 +342,7 @@ let pp_print_term =
          pp_close_box fmt ();
          if prec = 0 then () else pp_print_string fmt ")")
       with Failure _ ->
-      if s = "COND" & length args = 3 then
+      if s = "COND" && length args = 3 then
         (if prec = 0 then () else pp_print_string fmt "(";
          pp_open_hvbox fmt (-1);
          pp_print_string fmt "if ";
@@ -355,24 +355,24 @@ let pp_print_term =
          print_term 0 (hd(tl(tl args)));
          pp_close_box fmt ();
          if prec = 0 then () else pp_print_string fmt ")")
-      else if is_prefix s & length args = 1 then
+      else if is_prefix s && length args = 1 then
         (if prec = 1000 then pp_print_string fmt "(" else ();
          pp_print_string fmt s;
-         (if isalnum s or
-           s = "--" &
-           length args = 1 &
+         (if isalnum s ||
+           s = "--" &&
+           length args = 1 &&
            (try let l,r = dest_comb(hd args) in
                 let s0 = name_of l and ty0 = type_of l in
-                reverse_interface (s0,ty0) = "--" or
+                reverse_interface (s0,ty0) = "--" ||
                 mem (fst(dest_const l)) ["real_of_num"; "int_of_num"]
-            with Failure _ -> false) or
-           s = "~" & length args = 1 & is_neg(hd args)
+            with Failure _ -> false) ||
+           s = "~" && length args = 1 && is_neg(hd args)
           then pp_print_string fmt " " else ());
          print_term 999 (hd args);
          if prec = 1000 then pp_print_string fmt ")" else ())
-      else if parses_as_binder s & length args = 1 & is_gabs (hd args) then
+      else if parses_as_binder s && length args = 1 && is_gabs (hd args) then
         print_binder prec tm
-      else if can get_infix_status s & length args = 2 then
+      else if can get_infix_status s && length args = 2 then
         let bargs =
           if aRIGHT s then
             let tms,tmt = splitlist (dEST_BINARY hop) tm in tms@[tmt]
@@ -396,8 +396,8 @@ let pp_print_term =
                            print_term newprec x) (tl bargs);
          if newprec <= prec then pp_print_string fmt ")" else ();
          pp_close_box fmt ())
-      else if (is_const hop or is_var hop) & args = [] then
-        let s' = if parses_as_binder s or can get_infix_status s or is_prefix s
+      else if (is_const hop || is_var hop) && args = [] then
+        let s' = if parses_as_binder s || can get_infix_status s || is_prefix s
                  then "("^s^")" else s in
         pp_print_string fmt s'
       else
@@ -431,7 +431,7 @@ let pp_print_term =
             let v,t = dest_gabs tm in
             let vs,bod = collectvs t in (true,v)::vs,bod
           else [],tm
-        else if is_comb tm & name_of(rator tm) = s then
+        else if is_comb tm && name_of(rator tm) = s then
           if is_abs(rand tm) then
             let v,t = dest_abs(rand tm) in
             let vs,bod = collectvs t in (false,v)::vs,bod

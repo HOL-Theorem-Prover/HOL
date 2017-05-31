@@ -1,4 +1,4 @@
-signature regexpLib = 
+signature regexpLib =
 sig
 
   include Abbrev
@@ -8,14 +8,14 @@ sig
 
   datatype evaluator = HOL | SML
 
-  val matcher : evaluator 
+  val matcher : evaluator
                   -> regexp
-                  -> {table:int vector vector, 
-                      start:int, 
-                      final:bool vector, 
+                  -> {table:int vector vector,
+                      start:int,
+                      final:bool vector,
                       matchfn : string -> bool,
                       certificate: thm option}
 
-  val dfa_by_proof : string * 'a frag list -> thm
+  val dfa_by_proof : string * regexp -> thm
 
 end

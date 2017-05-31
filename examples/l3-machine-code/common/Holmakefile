@@ -6,7 +6,7 @@ TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 all: $(TARGETS)
 .PHONY: all
 
-ifeq ($(KERNELID),-otknl)
+ifeq ($(KERNELID),otknl)
 all: triple.ot.art machine-code-hoare-logic-state-unint.art
 
 machine-code-hoare-logic-state-unint.art: machine-code-hoare-logic-state-unint.thy state.ot.art temporal_state.ot.art

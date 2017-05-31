@@ -39,6 +39,45 @@ New examples:
 Incompatibilities:
 ------------------
 
+*   The behaviour of the `by` and `suffices_by` tactics has changed.
+    Previously, a tactic of the form `` `term quotation` by tac`` allowed `tac` to fail to prove the sub-goal of the term quotation.
+    (The result would then be two or more sub-goals, where the first few of these correspond to the state of trying to prove the term quotation after applying `tac`.)
+    This is no longer the case: if `tac` does not prove the new sub-goal then the overall tactic fails.
+
+    The old implementation of `by` is available under the name `BasicProvers.byA`, so it is possible to revert to the old behaviour with the following declaration at the head of one’s script file:
+
+           val op by = BasicProvers.byA
+
+    If one wanted to fix possibly broken occurrences to use the new semantics, the following Perl script might be helpful (it was used to adjust the core HOL sources):
+
+           $/ = "\n\n";
+
+           while (<>) {
+               s/(`[^`]+`)(\s*)by(\s*)(ALL_TAC|all_tac)(\s*)(>-|THEN1)/\1 by/g;
+               s/(Tactical\.)?REVERSE(\s*)\((`[^`]+`)(\s*)by(\s*)(ALL_TAC|all_tac)(\s*)\)(\s*)(THEN1|>-)(\s*)\(/\3 suffices_by\8(STRIP_TAC THEN /g;
+               s/(Tactical\.)?REVERSE(\s*)\((`[^`]+`)(\s*)by(\s*)(ALL_TAC|all_tac)(\s*)\)(\s*)(THEN1|>-)(\s*)/\3 suffices_by /g;
+               s/(`[^`]+`)(\s*)by(\s*)(ALL_TAC|all_tac)(\s*)/sg \1\5/g;
+               print;
+           }
+
+    If the above is called `byfix.pl` (for example), then a reasonable invocation would be
+
+           perl -i byfix.pl *Script.sml
+
+    If one’s workflow was to write things like
+
+           `subgoal` by ALL_TAC THEN1 (tac1 THEN tac2 THEN ...)
+
+    and the same workflow makes
+
+           `subgoal` by (tac1 THEN tac2 THEN ...)
+
+    difficult (perhaps because the flow calls for cutting and pasting the `... by ALL_TAC` sub-string), we recommend
+
+           sg `subgoal` THEN1 (tac1 THEN tac2 THEN ...)
+
+    where ``sg `subgoal` `` has the same effect as the old `` `subgoal` by ALL_TAC``.
+
 *   The type of the “system printer” used by user-defined pretty-printers to pass control back to the default printer has changed.
     This function now gets passed an additional parameter corresponding to whether or not the default printer should treat the term to be printed as if it were in a binding position or not.
     (This `binderp` parameter is in addition to the parameters indicating the “depth” of the printing, and the precedence gravities.)
@@ -64,16 +103,28 @@ Incompatibilities:
     This fragment does smart things with terms involving (natural number) `MOD`, allowing, for example, something like `((7 + y) * 100 + 5 * (z MOD 6)) MOD 6` to simplify to `((1 + y) * 4 + 5 * z) MOD 6`.
     If this breaks existing proofs in a script file, the fragment can be removed (for the rest of the execution of the script) with the command
 
-        val _ = diminish_srw_ss ["MOD_ss"]
+           val _ = diminish_srw_ss ["MOD_ss"]
 
 *   The rewrites `listTheory.TAKE_def` and `listTheory.DROP_def` have been removed from the standard stateful simpset.
     These rewrites introduce conditional expressions that are often painful to work with.
     Other more specific rewrites have been added to the simpset in their place.
     If the old behaviour is desired in a script file, the following will restore it
 
-        val _ = augment_srw_ss
-                 [rewrites [listTheory.DROP_def, listTheory.TAKE_def]]
+           val _ = augment_srw_ss
+                    [rewrites [listTheory.DROP_def, listTheory.TAKE_def]]
 
+*   The command-line options to the `build` tool have changed in some of their details.
+    The standard usage by most users, which is to simply type `build` with no options at all, behaves as it did previously.
+    For details on the options that are now handled, see the output of `build -h`.
+
+*   The associativity and precedence level of the finite-map composition operators (of which there are three: `f_o_f`, `f_o` and `o_f`) have been changed to match that of normal function composition (infix `o`, or `∘`), which is a right-associative infix at precedence level 800.
+    This level is tighter than exponentiation, multiplication and addition.
+    This also matches the syntactic details for relation composition (which is written `O`, or `∘ᵣ`).
+    If this causes problems within a script file, the old behaviour can be restored with, for example:
+
+           val _ = set_fixity "o_f" (Infixl 500)
+
+    This call will change the grammar used in all descendant theories as well; if the change is wanted only for the current script, use `temp_set_fixity` instead.
 
 * * * * *
 

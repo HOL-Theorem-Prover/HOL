@@ -541,7 +541,7 @@ val mc_sexp2sexp_loop_lemma = prove(
   \\ `LSIZE (CDR x2) < LSIZE x2 /\
       LSIZE (CAR (CDR x2)) < LSIZE x2 /\
       LSIZE (CAR (CDR (CDR x2))) < LSIZE x2 /\
-      LSIZE (CAR (CDR (CDR (CDR x2)))) < LSIZE x2` by ALL_TAC THEN1
+      LSIZE (CAR (CDR (CDR (CDR x2)))) < LSIZE x2` by
    (Cases_on `x2` \\ FULL_SIMP_TAC std_ss [isVal_def,isSym_def,CDR_def,LSIZE_def]
     \\ REPEAT STRIP_TAC
     \\ REPEAT (MATCH_MP_TAC CAR_LESS_SUC ORELSE MATCH_MP_TAC CDR_LESS_SUC)
@@ -583,7 +583,7 @@ val mc_sexp2sexp_loop_lemma = prove(
         (mc_sexp2sexp_loop (Sym "LIST",x1,list2sexp zs,
            push_list_fun (REVERSE (sexp2list x3)) ++ Sym "CONSP"::x::xs) =
          mc_sexp2sexp_loop (Sym "T",Sym "NIL",
-           list2sexp (x::MAP (\a. sexp2sexp a) (sexp2list x3) ++ zs),xs))` by ALL_TAC THEN1
+           list2sexp (x::MAP (\a. sexp2sexp a) (sexp2list x3) ++ zs),xs))` by
      (REPEAT STRIP_TAC
       \\ `EVERY (\x. LSIZE x < LSIZE x2) (sexp2list x3)` by METIS_TAC [LSIZE_EVERY_sexp2list]
       \\ POP_ASSUM MP_TAC
@@ -609,7 +609,7 @@ val mc_sexp2sexp_loop_lemma = prove(
       \\ SIMP_TAC std_ss [GSYM list2sexp_def]
       \\ ASM_SIMP_TAC std_ss [] \\ ASM_SIMP_TAC std_ss [list2sexp_def,APPEND])
   \\ Cases_on `CAR (CAR x2) = Sym "LAMBDA"` \\ ASM_SIMP_TAC std_ss [] THEN1
-   (`LSIZE (CAR (CDR (CDR (CAR x2)))) < LSIZE x2` by ALL_TAC THEN1
+   (`LSIZE (CAR (CDR (CDR (CAR x2)))) < LSIZE x2` by
       (Cases_on `x2` \\ FULL_SIMP_TAC std_ss [isVal_def,isSym_def,CDR_def,LSIZE_def,CAR_def]
        \\ REPEAT STRIP_TAC
        \\ REPEAT (MATCH_MP_TAC CAR_LESS_SUC ORELSE MATCH_MP_TAC CDR_LESS_SUC)
@@ -622,7 +622,7 @@ val mc_sexp2sexp_loop_lemma = prove(
     \\ FULL_SIMP_TAC std_ss [GSYM list2sexp_def,APPEND_NIL])
   \\ Cases_on `CAR x2 = Sym "COND"` \\ ASM_SIMP_TAC std_ss [] THEN1
    (FULL_SIMP_TAC std_ss [GSYM list2sexp_def]
-    \\ REVERSE (`!x1 x3 xs x zs.
+    \\ `!x1 x3 xs x zs.
         LSIZE x3 < LSIZE x2 ==>
         (mc_sexp2sexp_loop_pre (Sym "COND",x1,list2sexp zs,
            push_list_fun (REVERSE (sexp2list x3)) ++
@@ -637,8 +637,7 @@ val mc_sexp2sexp_loop_lemma = prove(
          mc_sexp2sexp_loop (Sym "T",Sym "NIL",
            list2sexp (Sym "COND"::
               MAP (\a. list2sexp [sexp2sexp (CAR a); sexp2sexp (CAR (CDR a))])
-                (sexp2list x3) ++ zs),xs))` by ALL_TAC) THEN1
-     (Q.PAT_X_ASSUM `LSIZE (CDR x2) < LSIZE x2` ASSUME_TAC
+                (sexp2list x3) ++ zs),xs))` suffices_by (STRIP_TAC THEN Q.PAT_X_ASSUM `LSIZE (CDR x2) < LSIZE x2` ASSUME_TAC
       \\ FULL_SIMP_TAC std_ss [list2sexp_def,APPEND_NIL])
     \\ NTAC 6 STRIP_TAC
     \\ `EVERY (\x. LSIZE x < LSIZE x2) (sexp2list x3)` by METIS_TAC [LSIZE_EVERY_sexp2list]
@@ -693,7 +692,7 @@ val mc_sexp2sexp_loop_lemma = prove(
          mc_sexp2sexp_loop (Sym "T",Sym "NIL",
            list2sexp [CAR x2; list2sexp (MAP (\a. list2sexp
               [sfix (CAR a); sexp2sexp (CAR (CDR a))]) (sexp2list x3) ++ zs);
-              sexp2sexp (CAR (CDR (CDR x2)))],xs))` by ALL_TAC THEN1
+              sexp2sexp (CAR (CDR (CDR x2)))],xs))` by
      (NTAC 6 STRIP_TAC
       \\ `EVERY (\x. LSIZE x < LSIZE x2) (sexp2list x3)` by METIS_TAC [LSIZE_EVERY_sexp2list]
       \\ POP_ASSUM MP_TAC \\ POP_ASSUM MP_TAC
@@ -1231,14 +1230,14 @@ val REPLACE_CODE_RW = prove(
   SIMP_TAC std_ss [GSYM WRITE_CODE_APPEND]
   \\ MP_TAC (Q.SPECL [`y_code`,`WRITE_CODE (WRITE_CODE code x_code) [x]`,`code_ptr code + code_length x_code`,`y`] REPLACE_CODE_WRITE_CODE)
   \\ FULL_SIMP_TAC std_ss [code_ptr_WRITE_CODE]
-  \\ `0 < code_length [x]` by ALL_TAC THEN1
+  \\ `0 < code_length [x]` by
         (Cases_on `x` \\ EVAL_TAC \\ Cases_on `l` \\ EVAL_TAC)
   \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ AP_THM_TAC \\ AP_TERM_TAC
   \\ Cases_on `WRITE_CODE code x_code`
   \\ Cases_on `p` \\ Cases_on `code` \\ Cases_on `p`
   \\ FULL_SIMP_TAC std_ss [WRITE_CODE_def,REPLACE_CODE_def,code_ptr_def]
-  \\ `r' + code_length x_code = r` by ALL_TAC
+  \\ sg `r' + code_length x_code = r`
   \\ FULL_SIMP_TAC std_ss [UPDATE_EQ]
   \\ `code_ptr (WRITE_CODE (BC_CODE (q',r')) x_code) = code_ptr (BC_CODE (q,r))` by METIS_TAC []
   \\ FULL_SIMP_TAC std_ss [code_ptr_def,code_ptr_WRITE_CODE]);
@@ -1252,7 +1251,7 @@ val code_mem_WRITE_CODE_LESS = store_thm("code_mem_WRITE_CODE_LESS",
   \\ ONCE_REWRITE_TAC [GSYM (EVAL ``[x] ++ ys``)]
   \\ SIMP_TAC std_ss [GSYM WRITE_CODE_APPEND]
   \\ REPEAT STRIP_TAC
-  \\ `i < code_ptr (WRITE_CODE code [h])` by ALL_TAC THEN1
+  \\ `i < code_ptr (WRITE_CODE code [h])` by
    (Cases_on `code` \\ Cases_on `p`
     \\ FULL_SIMP_TAC std_ss [WRITE_CODE_def,code_ptr_def] \\ DECIDE_TAC)
   \\ RES_TAC \\ ASM_SIMP_TAC std_ss []
@@ -1267,7 +1266,7 @@ val code_mem_WRITE_CODE = prove(
    (SIMP_TAC std_ss [APPEND,code_length_def]
     \\ ONCE_REWRITE_TAC [GSYM (EVAL ``[x] ++ ys``)]
     \\ SIMP_TAC std_ss [GSYM WRITE_CODE_APPEND]
-    \\ `code_ptr code < code_ptr (WRITE_CODE code [y])` by ALL_TAC THEN1
+    \\ `code_ptr code < code_ptr (WRITE_CODE code [y])` by
      (Cases_on `code` \\ Cases_on `p`
       \\ FULL_SIMP_TAC std_ss [WRITE_CODE_def,code_ptr_def]
       \\ Cases_on `y` \\ EVAL_TAC \\ Cases_on `l` \\ EVAL_TAC)
@@ -3647,7 +3646,7 @@ val mc_loop_lemma = prove(
     \\ SIMP_TAC std_ss [LET_DEF,SExp_11,SExp_distinct,isSym_def,prim2sym_def,mc_primitive_def]
     \\ ASM_SIMP_TAC std_ss [term2sexp_guard_lemma,NOT_isFun_IMP_guard]
     \\ `(CDR (term2sexp (App fc xs)) = list2sexp (MAP term2sexp xs)) /\
-        (CAR (term2sexp (App fc xs)) = HD (func2sexp fc))` by ALL_TAC THEN1
+        (CAR (term2sexp (App fc xs)) = HD (func2sexp fc))` by
       (Cases_on `fc` \\ FULL_SIMP_TAC std_ss [term2sexp_def,isFun_def,
         func2sexp_def,APPEND,list2sexp_def,CDR_def,CAR_def,ETA_AX,HD])
     \\ ASM_SIMP_TAC std_ss [mc_length_thm,LENGTH_MAP,CAR_def,CDR_def,NOT_CONS_NIL,
@@ -3830,10 +3829,10 @@ val mc_loop_lemma = prove(
     \\ SIMP_TAC std_ss [code_mem_WRITE_CODE]
     \\ Q.PAT_ABBREV_TAC `jnil = iJNIL (xxx + yyy)`
     \\ `x_code ++ jnil::(y_code ++ iJUMP 0::z_code) =
-        (x_code ++ jnil::y_code) ++ iJUMP 0::z_code` by ALL_TAC THEN1
+        (x_code ++ jnil::y_code) ++ iJUMP 0::z_code` by
       (FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND])
     \\ Q.PAT_ABBREV_TAC `l = code_length x_code + xxx`
-    \\ `l = code_length (x_code ++ jnil::y_code) + code_ptr code` by ALL_TAC THEN1
+    \\ `l = code_length (x_code ++ jnil::y_code) + code_ptr code` by
      (Q.UNABBREV_TAC `l` \\ Q.UNABBREV_TAC `jnil`
       \\ SIMP_TAC std_ss [code_length_APPEND,code_length_def]
       \\ ONCE_REWRITE_TAC [bc_length_iJUMP]
@@ -4024,7 +4023,7 @@ val mc_loop_lemma = prove(
     \\ FULL_SIMP_TAC (srw_ss()) [isQuote_def,isDot_def,CAR_def,CDR_def,isVal_def,LISP_TEST_EQ_T]
     \\ Q.PAT_ABBREV_TAC `foo1 = (BC_is_reserved_name xx = Sym "NIL")`
     \\ Q.PAT_ABBREV_TAC `foo2 = (BC_is_reserved_name xx = Val 0)`
-    \\ `~foo1 /\ foo2` by ALL_TAC THEN1
+    \\ `~foo1 /\ foo2` by
       (Q.UNABBREV_TAC `foo1` \\ Q.UNABBREV_TAC `foo2` \\ EVAL_TAC)
     \\ Q.UNABBREV_TAC `foo1` \\ Q.UNABBREV_TAC `foo2`
     \\ ASM_SIMP_TAC (srw_ss()) [mc_is_reserved_name_thm]
@@ -4395,7 +4394,7 @@ val bc_inv_WRITE_BYTECODE = prove(
          \\ METIS_TAC []) \\ FULL_SIMP_TAC (srw_ss()) [WRITE_BYTECODE_code_end]
   \\ SIMP_TAC std_ss [WRITE_BYTECODE_def,iLENGTH_def] \\ REPEAT STRIP_TAC
   \\ `bc_inv (WRITE_BYTECODE bc bc.code_end [h] with
-        code_end := bc.code_end + iLENGTH bc.instr_length [h])` by ALL_TAC THEN1
+        code_end := bc.code_end + iLENGTH bc.instr_length [h])` by
    (FULL_SIMP_TAC (srw_ss()) [BC_CODE_OK_def,WRITE_BYTECODE_def,iLENGTH_def,
       APPLY_UPDATE_THM,bc_inv_def] \\ REPEAT STRIP_TAC
     THEN1 (Cases_on `h'` \\ EVAL_TAC \\ Cases_on `l` \\ EVAL_TAC)
@@ -4423,7 +4422,7 @@ val mc_only_compile_lemma = prove(
   \\ Q.SPEC_TAC (`sexp2term body`,`bbody`) \\ STRIP_TAC
   \\ ASM_SIMP_TAC std_ss [mc_rev_sfix_append_thm,APPEND_NIL]
   \\ SIMP_TAC std_ss [EVAL ``a2sexp []``,BC_ev_fun_def] \\ STRIP_TAC
-  \\ `BC_JUMPS_OK bc` by ALL_TAC THEN1
+  \\ `BC_JUMPS_OK bc` by
     (FULL_SIMP_TAC std_ss [bc_inv_def,BC_JUMPS_OK_def]
      \\ EVAL_TAC \\ SIMP_TAC std_ss [])
   \\ Q.ABBREV_TAC `ps = MAP getSym (sexp2list params)`
@@ -4466,7 +4465,7 @@ val mc_only_compile_thm = prove(
   \\ FULL_SIMP_TAC std_ss [bc_state_tree_WRITE_BYTECODE,bc_state_tree_code_end]
   \\ `bc_length = bc.instr_length` by METIS_TAC [bc_inv_def]
   \\ FULL_SIMP_TAC std_ss [WRITE_CODE_EQ_WRITE_BYTECODE]
-  \\ `BC_JUMPS_OK bc` by ALL_TAC THEN1
+  \\ `BC_JUMPS_OK bc` by
     (FULL_SIMP_TAC std_ss [bc_inv_def,BC_JUMPS_OK_def,BC_CODE_OK_def])
   \\ Q.ABBREV_TAC `ps = MAP getSym (sexp2list params)`
   \\ `?y. BC_ev T (sexp2term body,MAP ssVAR (REVERSE ps),bc.code_end,bc) y` by METIS_TAC [BC_ev_TOTAL,bc_inv_def]

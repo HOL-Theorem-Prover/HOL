@@ -19,8 +19,9 @@ theorems of the form:
 
 \FAILURE
 {LAND_CONV c tm} fails if {tm} is not an application where the rator
-of the application is in turn another application, or if {tm} has this
-form but the conversion {c} fails when applied to the term {t2}. The
+of the application is in turn another application, as {f t1 t2},
+or if {tm} has this form but the conversion {c}
+fails when applied to the term {t1}. The
 function returned by {LAND_CONV c} may also fail if the ML function
 {c:term->thm} is not, in fact, a conversion (i.e. a function that maps
 a term {t} to a theorem {|- t = t'}).
@@ -34,5 +35,5 @@ a term {t} to a theorem {|- t = t'}).
 
 \SEEALSO
 Conv.ABS_CONV, Conv.BINOP_CONV, Conv.RAND_CONV, Conv.RATOR_CONV,
-numLib.REDUCE_CONV.
+numLib.REDUCE_CONV, Conv.LHS_CONV.
 \ENDDOC

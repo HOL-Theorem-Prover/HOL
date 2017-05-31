@@ -283,15 +283,15 @@ Cases_on `x = f k v` THENL [
      DOMSUB_FAPPLY_THM] THEN
    `(\k'. ((k' = k) \/ k' IN FDOM b) /\
            (f k v = f k' ((if k' = k then v else b ' k')))) =
-           k INSERT (\k'. (k' IN FDOM b /\ ~(k' = k)) /\ (f k v = f k' (b ' k')))` by ALL_TAC THEN1 (
+           k INSERT (\k'. (k' IN FDOM b /\ ~(k' = k)) /\ (f k v = f k' (b ' k')))` by (
      SIMP_TAC std_ss [EXTENSION, IN_INSERT, IN_ABS] THEN
      GEN_TAC THEN Cases_on `x' = k` THEN ASM_REWRITE_TAC[]
    ) THEN
    ASM_REWRITE_TAC [] THEN POP_ASSUM (K ALL_TAC) THEN
    Q.ABBREV_TAC `ks = (\k'. (k' IN FDOM b /\ k' <> k) /\ (f k v = f k' (b ' k')))` THEN
-   `FINITE ks` by ALL_TAC THEN1 (
-      Tactical.REVERSE (`ks = ks INTER FDOM b` by ALL_TAC) THEN1 (
-         ONCE_ASM_REWRITE_TAC[] THEN
+   `FINITE ks` by (
+      `ks = ks INTER FDOM b` suffices_by (
+         STRIP_TAC THEN ONCE_ASM_REWRITE_TAC[] THEN
          MATCH_MP_TAC FINITE_INTER THEN
 	 REWRITE_TAC[FDOM_FINITE]
       ) THEN
@@ -299,7 +299,7 @@ Cases_on `x = f k v` THENL [
       SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_ABS] THEN
       PROVE_TAC[]
    ) THEN
-   `~(k IN ks)` by ALL_TAC THEN1 (
+   `~(k IN ks)` by (
       Q.UNABBREV_TAC `ks` THEN
       SIMP_TAC std_ss [IN_ABS]
    ) THEN
@@ -324,9 +324,9 @@ SIMP_TAC std_ss [BAG_OF_FMAP, BAG_IN, BAG_INN] THEN
 `!X. (X >= (1:num)) = ~(X = 0)` by bossLib.DECIDE_TAC THEN
 ONCE_ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
 REPEAT GEN_TAC THEN
-`FINITE (\k. k IN FDOM b /\ (x = f k (b ' k)))` by ALL_TAC THEN1 (
+`FINITE (\k. k IN FDOM b /\ (x = f k (b ' k)))` by (
    `(\k. k IN FDOM b /\ (x = f k (b ' k))) =
-    (\k. k IN FDOM b /\ (x = f k (b ' k))) INTER (FDOM b)` by ALL_TAC THEN1 (
+    (\k. k IN FDOM b /\ (x = f k (b ' k))) INTER (FDOM b)` by (
       SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_ABS] THEN
       METIS_TAC[]
    ) THEN

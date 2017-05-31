@@ -6,7 +6,7 @@ all: $(TARGETS) selftest.exe
 selftest.exe: selftest.uo stringSyntax.uo stringLib.uo stringTheory.uo $(dprot $(SIGOBJ)/term_pp.uo)
 	$(HOLMOSMLC) -o $@ $<
 
-ifeq ($(KERNELID),-otknl)
+ifeq ($(KERNELID),otknl)
 all: string.ot.art string_num.ot.art ASCIInumbers.ot.art
 endif
 

@@ -157,7 +157,8 @@ val test = matcher `(.*111.*)&~((.*01)|1*)`;
  
 val test_1800 = matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999}`;
 val test_1801 = matcher `\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}`;
-val test_1802 = matcher `\i{0,9999}\i{0,3599}`;
+val test_1802 = matcher `\i{0,9999}\i{0,3599}.{4}`;
+val test_1802_alt = matcher `\i{0,9999}\i{0,3599}\k{0}{4}`;
 val test_1803 = matcher `\i{0,12}\i{0,16}\i{0,999}\i{0,999}\i{0,999}`;
 
 val test_18xx = matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999}\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}\i{0,9999}\i{0,3599}\i{0,12}\i{0,16}\i{0,999}\i{0,999}\i{0,999}`;
@@ -170,7 +171,6 @@ val test_18xx = matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17
 (* Timing tests for search-only                                              *)
 (*---------------------------------------------------------------------------*)
 
-(*
 val regexpEval = computeLib.CBV_CONV (regexpLib.regexp_compset());
 
 fun test_dom q = 
@@ -180,6 +180,7 @@ fun test_dom q =
     ;()
  end;
 
+(*
 val _ = 
  List.app (fn q => (test_dom q; ()))
   [`1`,
@@ -198,18 +199,10 @@ val _ =
   ];
 
 print "\nDONE.\n"
-*)
 
-(*---------------------------------------------------------------------------*)
-(* Caution! Extremely slow when doing deduction                              *)
-(*---------------------------------------------------------------------------*)
-(*
-val test = matcher `\w{1,20}`;
-  not(test "")
-andalso test "a" 
-andalso test "foobar"
-andalso test "fo12_obar_567abcdef"
-andalso test "fo12_obar_567abcdefg"
-andalso not(test "fo12_obar_567abcdefgh");
-*)
+test_dom `\w{1,6}`;    (* 35.1s *)
+test_dom `\w{1,10}`;   (* 127s *)
+test_dom `\w{1,15}`;   (* 508s *)
+test_dom `\w{1,20}`;   (* 1221s *)
 
+*)

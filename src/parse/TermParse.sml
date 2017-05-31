@@ -439,21 +439,28 @@ in
     preterm g tyg q >- ctxt_preterm_to_term pprinters tyopt fvs
   end
 
+  fun prim_ctxt_termS mk_absyn g fvs q =
+    let
+      open seqmonad
+      fun givetypes pt = give_types_to_fvs fvs [] pt handle UNCHANGED => pt
+      val pt_S = q |> mk_absyn
+                   |> absyn_to_preterm g
+                   |> fromErr
+                   |> lift givetypes
+    in
+      seq.map #2 ((pt_S >- Preterm.typecheckS) Pretype.Env.empty)
+    end
+
   fun ctxt_termS g tyg tyopt =
     let
-      val ph1 = case tyopt of
-                    NONE => preterm g tyg
-                  | SOME ty => typed_preterm g tyg ty
-      open seqmonad
+      val mk_absyn =
+          case tyopt of
+              NONE => absyn g tyg
+            | SOME ty =>
+              fn q =>
+                 Absyn.TYPED(locn.Loc_None, absyn g tyg q, Pretype.fromType ty)
     in
-      fn fvs => fn q =>
-         let
-           open seqmonad
-           fun givetypes pt = give_types_to_fvs fvs [] pt handle UNCHANGED => pt
-           val pt_S = lift givetypes (fromErr (ph1 q))
-         in
-           seq.map #2 ((pt_S >- Preterm.typecheckS) Pretype.Env.empty)
-         end
+      prim_ctxt_termS mk_absyn g
     end
 
 end (* local *)

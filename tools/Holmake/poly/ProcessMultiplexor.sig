@@ -1,9 +1,8 @@
 signature ProcessMultiplexor =
 sig
 
-  type 'a job = {tag : string,
-                 command : string * string list,
-                 update : 'a * bool -> 'a}
+  type command = {executable: string, nm_args : string list, env : string list}
+  type 'a job = {tag : string, command : command, update : 'a * bool -> 'a}
   type jobkey = Posix.ProcEnv.pid * string
   type exit_status = Posix.Process.exit_status
   datatype 'a genjob_result =
@@ -27,7 +26,7 @@ sig
                      'a worklist
 
   val do_work : ('a worklist * monitor) -> 'a
-  val mk_shell_command : string -> string * string list
+  val mk_shell_command : {cline: string, extra_env: string list} -> command
   val shell_commands : monitor -> string list * int ->
                        (string * bool) list
 

@@ -7,7 +7,7 @@ all: $(TARGETS) selftest.exe
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-ifeq ($(KERNELID),-otknl)
+ifeq ($(KERNELID),otknl)
 all: sum.ot.art
 
 sum.art: sum.otd

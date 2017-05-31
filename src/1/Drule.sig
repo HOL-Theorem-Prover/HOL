@@ -54,6 +54,9 @@ sig
   val UNDISCH_ALL      : thm -> thm
   val SPEC_ALL         : thm -> thm
   val PROVE_HYP        : thm -> thm -> thm
+  val REORDER_ANTS_MOD : (term list -> term list) -> (thm -> thm) -> thm -> thm
+  val REORDER_ANTS     : (term list -> term list) -> thm -> thm
+  val MODIFY_CONS      : (thm -> thm) -> thm -> thm
   val CONJ_PAIR        : thm -> thm * thm
   val LIST_CONJ        : thm list -> thm
   val CONJ_LIST        : int -> thm -> thm list

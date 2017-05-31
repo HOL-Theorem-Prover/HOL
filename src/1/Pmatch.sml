@@ -386,7 +386,10 @@ fun mk_case0_heu (heu : pmatch_heuristic) ty_info ty_match FV range_ty =
                            " is a bad pattern (of var type?)")
      in
      if exists Literal.is_pure_literal col0 (* col0 has a literal *) then
-       let val other_var = fresh_var pty
+       let val is_lit_col = all (fn t => Literal.is_literal t orelse is_var t) col0
+           val _ = if is_lit_col then () else
+                   mk_case_fail "case expression mixes literals with non-literals."
+           val other_var = fresh_var pty
            val constructors = rev (mk_set (rev (filter (not o is_var) col0)))
                               @ [other_var]
            val arb = mk_arb range_ty
@@ -653,14 +656,13 @@ local fun dest tybase (pat,rhs) =
           in if is_eq exp
              then let val (v,e) = dest_eq exp
                       val fvs = free_vars v
-                      val pat0 = if is_var v then subst [v |-> e] pat
-                                             else e (* fails if pat ~= v *)
                       (* val theta = fst (Term.match_term v e) handle HOL_ERR _ => [] *)
                   in if null (subtract fvs patvars) andalso null (free_vars e)
+                        andalso is_var v
                         (* andalso null_intersection fvs (free_vars (hd rhsides)) *)
                      then flatten
                             (map (dest tybase)
-                               (zip [pat0, pat] rhsides))
+                               (zip [subst [v |-> e] pat, pat] rhsides))
                      else [(pat,rhs)]
                   end
              else let val fvs = free_vars exp

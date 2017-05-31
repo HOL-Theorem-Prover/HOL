@@ -2,9 +2,10 @@ open HolKernel boolLib bossLib Parse stringTheory arithmeticTheory
      finite_mapTheory pred_setTheory bagTheory pairTheory relationTheory
      prim_recTheory apply_piTheory ntermTheory nsubstTheory nwalkTheory
      nwalkstarTheory nomsetTheory listTheory dis_setTheory ramanaLib
-     monadsyntax ntermLib
+     ntermLib
 
 val _ = new_theory "nunifDef"
+val _ = monadsyntax.temp_add_monadsyntax()
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
 
 val nvR_update = Q.prove(

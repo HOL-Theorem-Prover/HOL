@@ -2,12 +2,12 @@
 (* Interactive access to the compiler                                        *)
 (*---------------------------------------------------------------------------*)
 
-app load ["ANF", "wordsLib", "pairLib", "wordsTheory", "finite_mapTheory", 
-          "preARMSyntax", "preARMTheory", "ARMCompositionTheory", 
+app load ["ANF", "wordsLib", "pairLib", "wordsTheory", "finite_mapTheory",
+          "preARMSyntax", "preARMTheory", "ARMCompositionTheory",
           "ILTheory", "rulesTheory", "mechReasoning"];
 
 quietdec := true;
-open Portable Assem wordsTheory ANF pairTheory pairLib listTheory 
+open Portable Assem wordsTheory ANF pairTheory pairLib listTheory
      arithmeticTheory whileTheory wordsLib PairedLambda mechReasoning;
 quietdec := false;
 
@@ -23,11 +23,9 @@ block_style = (AroundEachPhrase, (INCONSISTENT, 0))};
 *)
 (*
 val _ = add_rule{term_name   = "COND",
-fixity      = TruePrefix 70,
+fixity      = Prefix 70,
 pp_elements = [PPBlock([TOK "if", BreakSpace(1,2), TM, BreakSpace(1,0),TOK "then"], (CONSISTENT, 0)),
 	       BreakSpace(1,2), TM, BreakSpace(1,0), TOK "else", BreakSpace(1,2)],
 paren_style = Always,
 block_style = (AroundEachPhrase, (CONSISTENT, 0))};
 *)
-
-

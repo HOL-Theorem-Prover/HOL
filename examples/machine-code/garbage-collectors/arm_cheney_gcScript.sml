@@ -212,7 +212,7 @@ val ref_cheney_d = store_thm("ref_cheney_d",
 
 fun UPDATE_ref_addr_prove (c,tm) = prove(tm,
   Cases \\ Cases_word \\ REPEAT STRIP_TAC
-  \\ c by ALL_TAC \\ ASM_REWRITE_TAC [APPLY_UPDATE_THM]
+  \\ sg c \\ ASM_REWRITE_TAC [APPLY_UPDATE_THM]
   \\ FULL_SIMP_TAC std_ss [ref_addr_def,EVAL ``1=0``,word_add_n2w,valid_address_def,
       w2n_n2w,n2w_11,WORD_LO]
   \\ Q.PAT_X_ASSUM `n < dimword (:32)` ASSUME_TAC
@@ -401,7 +401,7 @@ val ref_cheney_step_thm = prove(
   \\ FULL_SIMP_TAC bool_ss [PAIR_EQ]
   \\ Q.PAT_X_ASSUM `getDATA (DATA (ax,ay,ad)) = (ax,ay,ad)` (K ALL_TAC)
   \\ `{ax} SUBSET0 DR0 (ICUT (b,e) m) /\ {ay} SUBSET0 DR0 (ICUT (b,e) m)` by
-   (`{ax;ay} SUBSET0 D1(CUT(i,j)m)` by ALL_TAC THENL [
+   (sg `{ax;ay} SUBSET0 D1(CUT(i,j)m)` THENL [
       FULL_SIMP_TAC bool_ss [SUBSET0_DEF,IN_INSERT,SUBSET_DEF,NOT_IN_EMPTY]
       \\ FULL_SIMP_TAC bool_ss [IN_DEF,D1_def,CUT_def,cheney_inv_def]
       \\ `RANGE(i,j)i` by (REWRITE_TAC [RANGE_def] \\ DECIDE_TAC)
@@ -747,8 +747,7 @@ val arm_collect_lemma = store_thm("arm_collect_lemma",
   \\ Q.PAT_X_ASSUM ` !i. i <+ a - 24w ==> (xs2 i = xs3 i)` (ASSUME_TAC o GSYM)
   \\ `~(b = 0) /\ ~(b + l = 0)` by
     (Q.UNABBREV_TAC `b` \\ Cases_on `u` \\ FULL_SIMP_TAC std_ss [LET_DEF,ok_state_def] \\ DECIDE_TAC)
-  \\ `(a + 4w <+ ref_addr a 1) /\ (xs3 (a+4w) = ref_addr a (b + l))` by ALL_TAC
-  THEN1 FULL_SIMP_TAC (std_ss++WORD_ss) [roots_in_mem_def]
+  \\ `(a + 4w <+ ref_addr a 1) /\ (xs3 (a+4w) = ref_addr a (b + l))` by FULL_SIMP_TAC (std_ss++WORD_ss) [roots_in_mem_def]
   \\ REWRITE_TAC [GSYM CONJ_ASSOC]
   \\ STRIP_TAC THEN1 METIS_TAC [roots_in_mem_carry_over]
   \\ REVERSE STRIP_TAC THENL [

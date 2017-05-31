@@ -67,6 +67,7 @@ sig
   val list_ss         : simpset
   val srw_ss          : unit -> simpset
   val QI_ss           : ssfrag
+  val SQI_ss          : ssfrag
   val ARITH_ss        : ssfrag            (* arithmetic d.p. + some rewrites *)
   val old_ARITH_ss    : ssfrag
   val type_rws        : hol_type -> thm list
@@ -119,6 +120,8 @@ sig
   val spose_not_then : (thm -> tactic) -> tactic
   val by             : term quotation * tactic -> tactic   (* infix *)
   val suffices_by    : term quotation * tactic -> tactic   (* infix *)
+  val sg             : term quotation -> tactic
+  val subgoal        : term quotation -> tactic
   val cheat          : tactic
   val kall_tac       : 'a -> tactic
 

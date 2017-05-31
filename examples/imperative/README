@@ -1,0 +1,37 @@
+Interactive Proofs of Programs
+------------------------------
+
+Author: Stephen Motty
+Supervisor: Theodore Norvell
+Publisher: Memorial University Of Newfoundland
+
+Original Publication Date: October 19, 2010
+
+In his work "A Practical Theory of Programming", Dr. Eric Hehner proposed that 
+programs can be treated as mathematical objects. Thus proofs of programs are 
+simply mathematical proofs and software that handles proofs in various areas 
+of mathematics such as HOL4/Kananaskis can be used for verification that 
+programs meet their specifications. 
+
+In this directory:
+- ptopScript.sml presents logical definitions for commands such as assignment, 
+  and sequential composition. It also provides a definition of software 
+  refinement.
+- imperativeLib.sml provides some proof tactics that are useful proving 
+  refinement of a logical specification by a program. Programs can be written 
+  using any of imperative commands defined in ptopTheory
+- imperativeScript.sml uses tactics to prove laws such as the forwardSubstition
+  law
+- selftest.sml demonstrates the theory as it applies to verifying the 
+  correctness of two programs that swap x for y
+- reflectOnFailure.sml demonstrates how the theory detects potential bugs
+  and the process involved in disproving refinement
+
+This example provides updated software originally discused at 2010 NECEC
+conference. NECEC 2010 is a forum where professionals in electrical, 
+electronic and computer engineering as well as information technologies can 
+present their work to the growing technical community within the province. 
+The conference focuses on technical concepts, innovations and implementations.
+The original paper can be obtained from the online archive:
+
+http://necec.engr.mun.ca/ocs2010/viewabstract.php?id=32

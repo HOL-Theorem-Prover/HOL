@@ -239,6 +239,16 @@ problematic. Therefore, the simplifier and Metis are used to prove
 the validity of the explicitly given instantiations. This succeeds
 only for simple examples.
 
+\subsection{Simple Quantifier Heuristics}
+
+The full quantifier heuristics described above are powerful and very flexible.
+However, they are sometimes slow.
+The unwind library\footnote{see \texttt{src/simp/src/Unwind.sml}} on the other hand is limited, but fast.
+The simple version of the quantifier heuristics fills the gap in the middle.
+They just search for gap guesses without any free variables.
+Moreover, slow operations like recombining or automatically looking up datatype information is omitted.
+As a result, the conversion \texttt{SIMPLE\_QUANT\_INSTANTIATE\_CONV} (and corresponding \texttt{SIMPLE\_QUANT\_INST\_ss}) is nearly as fast as the corresponding unwind conversions.
+However, it supports more complicated syntax. Moreover, there is support for quantifiers, pairs, list and much more. 
 
 \subsection{Quantifier Heuristic Parameters}\label{quantHeu-subsec-qps}
 

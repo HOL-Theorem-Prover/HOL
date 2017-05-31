@@ -182,40 +182,7 @@ end;
  * Set parameters for parsing and help.                                      *
  *---------------------------------------------------------------------------*)
 
-local
-  fun try_remove f = ((OS.FileSys.remove f) handle OS.SysErr _ => ())
-  fun has_dq file =
-    let
-      val istrm = TextIO.openIn file
-      fun loop() =
-        case TextIO.input1 istrm of
-          NONE => false
-        | SOME #"`" => true
-        | SOME _ => loop()
-    in
-      loop() before TextIO.closeIn istrm
-    end handle IO.Io _ => false
-  infix ++
-  val op ++ = OS.Path.concat
-  fun unquote_to file1 file2 =
-    Systeml.systeml [HOLDIR ++ "bin" ++ "unquote", file1, file2];
-in
-  fun use s =
-    if has_dq s then
-      let
-        val filename = OS.FileSys.tmpName()
-      in
-        (if OS.Process.isSuccess (unquote_to s filename) then
-           (PolyML.use filename; OS.FileSys.remove filename)
-         else
-           ( TextIO.output
-               (TextIO.stdOut, ("Failed to translate file: " ^ s ^ "\n"))
-           ; raise Fail "use"
-           ))
-        handle e => (try_remove filename; raise e)
-      end
-    else PolyML.use s
-end; (* local *)
+val use = QUse.use
 
 local
   infix ++
@@ -232,18 +199,10 @@ in
   val () =
     ( hol_use ("help" ++ "src-sml") "Database"
     ; hol_use ("tools-poly" ++ "poly") "Help"
-    ; List.app (hol_use ("tools" ++ "Holmake"))
-        ["regexpMatch", "parse_glob", "internal_functions",
-         "Holdep_tokens", "Holdep", "Holmake_tools", "Holmake_types",
-         "ReadHMF"]
     ; PolyML.use (HOLDIR ++ "tools" ++ "makefile-includes.ML")
     ; List.app Meta.fakeload ["PP", "PolyML", "Posix"]
     ; Globals.interactive := true
     ; Parse.current_backend := Parse.interactive_ppbackend ()
-    ; term_pp_prefix := "``"
-    ; term_pp_suffix := "``"
-    ; type_pp_prefix := "``"
-    ; type_pp_suffix := "``"
     ; Feedback.set_trace "pp_annotations" 1
     ; PolyML.use (HOLDIR ++ "tools" ++ "check-intconfig.sml")
     )
@@ -269,3 +228,6 @@ in
 end
 
 val _ = HOL_Interactive.toggle_quietdec ()
+val _ = List.app holpathdb.extend_db
+                 (holpathdb.search_for_extensions ReadHMF.find_includes
+                                                  [OS.FileSys.getDir()])

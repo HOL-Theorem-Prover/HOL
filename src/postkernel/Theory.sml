@@ -264,7 +264,27 @@ val empty_datamap : ThyDataMap = Binarymap.mkDict String.compare
 type segment = {thid    : thyid,                               (* unique id  *)
                 facts   : (string * thmkind) list,  (* stored ax,def,and thm *)
                 thydata : ThyDataMap,                   (* extra theory data *)
-                adjoin  : thy_addon list}              (*  extras for export *)
+                adjoin  : thy_addon list,              (*  extras for export *)
+                mldeps  : string HOLset.set}
+local
+  open FunctionalRecordUpdate
+  fun seg_mkUp z = makeUpdate5 z
+in
+  fun update_seg z = let
+    fun from adjoin facts mldeps thid thydata =
+      {adjoin=adjoin, facts=facts, mldeps=mldeps, thid=thid, thydata=thydata}
+    (* fields in reverse order to above *)
+    fun from' thydata thid mldeps facts adjoin =
+      {adjoin=adjoin, facts=facts, mldeps=mldeps, thid=thid, thydata=thydata}
+    fun to f {adjoin, facts, mldeps, thid, thydata} =
+      f adjoin facts mldeps thid thydata
+  in
+    seg_mkUp (from, from', to)
+  end z
+  val U = U
+  val $$ = $$
+end (* local *)
+
 
 
 (*---------------------------------------------------------------------------*
@@ -276,7 +296,8 @@ type segment = {thid    : thyid,                               (* unique id  *)
  *---------------------------------------------------------------------------*)
 
 fun fresh_segment s :segment = {thid=new_thyid s,  facts=[],  adjoin=[],
-                               thydata = empty_datamap};
+                               thydata = empty_datamap,
+                               mldeps = HOLset.empty String.compare};
 
 
 local val CT = ref (fresh_segment "scratch")
@@ -326,8 +347,8 @@ in
  fun current_axioms() = map drop_pthmkind (thy_axioms (theCT()))
  fun current_theorems() = map drop_pthmkind (thy_theorems (theCT()))
  fun current_definitions() = map drop_pthmkind (thy_defns (theCT()))
+ fun current_ML_deps() = HOLset.listItems (#mldeps (theCT()))
 end;
-
 
 (*---------------------------------------------------------------------------*
  * Is a segment empty?                                                       *
@@ -361,13 +382,17 @@ local fun pluck1 x L =
          NONE => p::l
        | SOME ((_,f'),l') => p::l'
 in
-fun add_fact (th as (s,_)) {thid, facts,adjoin,thydata} =
-    {facts= overwrite th facts, thid=thid, adjoin=adjoin,thydata=thydata} before
+fun add_fact (th as (s,_)) (seg : segment) =
+    update_seg seg (U #facts (overwrite th (#facts seg))) $$
+      before
     call_hooks (TheoryDelta.NewBinding s)
 end;
 
-fun new_addon a {thid, facts, adjoin, thydata} =
-    {adjoin = a::adjoin, facts=facts, thid=thid, thydata=thydata};
+fun new_addon a (s as {adjoin, ...} : segment) =
+  update_seg s (U #adjoin (a::adjoin)) $$
+
+fun add_ML_dep s (seg as {mldeps, ...} : segment) =
+  update_seg seg (U #mldeps (HOLset.add(mldeps, s))) $$
 
 local fun plucky x L =
        let fun get [] A = NONE
@@ -376,12 +401,12 @@ local fun plucky x L =
        in get L []
        end
 in
-fun set_MLbind (s1,s2) (rcd as {thid, facts, adjoin, thydata}) =
+fun set_MLbind (s1,s2) (seg as {facts, ...} : segment) =
     case plucky s1 facts of
       NONE => (WARN "set_MLbind" (Lib.quote s1^" not found in current theory");
-               rcd)
+               seg)
     | SOME (X,(_,b),Y) =>
-      {facts=X@((s2,b)::Y), adjoin=adjoin,thid=thid, thydata=thydata}
+      update_seg seg (U #facts (X@((s2,b)::Y))) $$
 end;
 
 (*---------------------------------------------------------------------------
@@ -398,9 +423,8 @@ fun del_type (name,thyname) thy =
 fun del_const (name,thyname) thy =
     (Term.prim_delete_const {Thy = thyname, Name = name} ; thy)
 
-fun del_binding name {thid,facts,adjoin,thydata} =
-  {facts = filter (fn (s, _) => not(s=name)) facts, thid=thid, adjoin=adjoin,
-   thydata = thydata};
+fun del_binding name (s as {facts,...} : segment) =
+  update_seg s (U #facts (filter (fn (s, _) => not(s=name)) facts)) $$;
 
 (*---------------------------------------------------------------------------
    Clean out the segment. Note: this clears out the segment, and the
@@ -410,7 +434,8 @@ fun del_binding name {thid,facts,adjoin,thydata} =
 
 fun zap_segment s (thy : segment) =
     (Type.del_segment s; Term.del_segment s;
-     {adjoin=[], facts=[],thid= #thid thy, thydata = empty_datamap})
+     {adjoin=[], facts=[],thid= #thid thy, thydata = empty_datamap,
+      mldeps = HOLset.empty String.compare})
 
 (*---------------------------------------------------------------------------
        Wrappers for functions that alter the segment.
@@ -424,6 +449,7 @@ in
   fun add_axiomCT(r,ax) = inCT add_fact (Nonce.dest r, Axiom(r,ax))
   fun add_defnCT(s,def) = inCT add_fact (s,  Defn def)
   fun add_thmCT(s,th)   = inCT add_fact (s,  Thm th)
+  val add_ML_dependency = inCT add_ML_dep
 
   fun delete_type n     = (inCT del_type  (n,CTname());
                            call_hooks
@@ -527,19 +553,20 @@ and uptodate_axioms [] = true
       Lib.all (uptodate_term o Thm.concl o Lib.C Lib.assoc axs) rlist
     end handle HOL_ERR _ => false
 
-fun scrub_ax {thid,facts,adjoin,thydata} =
+fun scrub_ax (s as {facts,...} : segment) =
    let fun check (_, Thm _ ) = true
          | check (_, Defn _) = true
          | check (_, Axiom(_,th)) = uptodate_term (Thm.concl th)
    in
-      {thid=thid, adjoin=adjoin, facts=List.filter check facts, thydata=thydata}
+      update_seg s (U #facts (List.filter check facts)) $$
    end
 
-fun scrub_thms {thid,facts,adjoin, thydata} =
+fun scrub_thms (s as {facts,...}: segment) =
    let fun check (_, Axiom _) = true
          | check (_, Thm th ) = uptodate_thm th
          | check (_, Defn th) = uptodate_thm th
-   in {thid=thid, adjoin=adjoin, facts=List.filter check facts, thydata=thydata}
+   in
+     update_seg s (U #facts (List.filter check facts)) $$
    end
 
 fun scrub () = makeCT (scrub_thms (scrub_ax (theCT())))
@@ -700,7 +727,7 @@ struct
         NONE => raise ERR "write_data_update"
                           ("No operations defined for "^thydataty)
       | SOME {merge,read,write,terms} => let
-          val {thydata,thid,adjoin,facts} = theCT()
+          val (s as {thydata,...}) = theCT()
           open Binarymap
           fun updatemap inmap = let
             val newdata =
@@ -713,8 +740,7 @@ struct
             insert(inmap,thydataty,newdata)
           end
         in
-          makeCT {thydata = updatemap thydata, thid=thid, adjoin=adjoin,
-                  facts=facts}
+          makeCT (update_seg s (U #thydata (updatemap thydata)) $$)
         end
 
   fun set_theory_data {thydataty,data} =
@@ -722,15 +748,17 @@ struct
         NONE => raise ERR "set_theory_data"
                           ("No operations defined for "^thydataty)
       | SOME{read,write,...} => let
-          val {thydata,thid,adjoin,facts} = theCT()
+          val (s as {thydata,...}) = theCT()
           open Binarymap
         in
-          makeCT {thydata = insert(thydata, thydataty, Loaded data),
-                  thid = thid, adjoin = adjoin, facts = facts}
+          makeCT
+            (update_seg s
+                        (U #thydata (insert(thydata, thydataty, Loaded data)))
+                        $$)
         end
 
   fun temp_encoded_update {thy, thydataty, data, read = tmread} = let
-    val {thydata, thid, adjoin, facts} = theCT()
+    val (s as {thydata, thid, ...}) = theCT()
     open Binarymap
     fun updatemap inmap = let
       val baddecode = ERR "temp_encoded_update"
@@ -751,18 +779,18 @@ struct
     in
       insert(inmap, thydataty, newdata)
     end
-in
-  if thy = thyid_name thid then
-    makeCT {thydata = updatemap thydata, thid=thid, facts=facts, adjoin=adjoin}
-  else let
+  in
+    if thy = thyid_name thid then
+      makeCT (update_seg s (U #thydata (updatemap thydata)) $$)
+    else let
       val newsubmap =
           case peek (!allthydata, thy) of
-            NONE => updatemap empty_datamap
-          | SOME dm => updatemap dm
+              NONE => updatemap empty_datamap
+            | SOME dm => updatemap dm
     in
       allthydata := insert(!allthydata, thy, newsubmap)
     end
-end
+  end
 
 fun update_pending (m,r) thydataty = let
   open Binarymap
@@ -786,9 +814,9 @@ fun update_pending (m,r) thydataty = let
   val _ = allthydata := Binarymap.foldl foldthis
                                         (Binarymap.mkDict String.compare)
                                         (!allthydata)
-  val {thid,facts,adjoin,thydata} = theCT()
+  val (seg as {thydata,...}) = theCT()
 in
-  makeCT {thid=thid,facts=facts,adjoin=adjoin,thydata = update1 thydata}
+  makeCT (update_seg seg (U #thydata (update1 thydata)) $$)
 end
 
 fun 'a new {thydataty, merge, read, write, terms} = let
@@ -874,7 +902,7 @@ local
 in
 fun export_theory () = let
   val _ = call_hooks (TheoryDelta.ExportTheory (current_theory()))
-  val {thid,facts,adjoin,thydata} = scrubCT()
+  val {thid,facts,adjoin,thydata,mldeps,...} = scrubCT()
   val concat = String.concat
   val thyname = thyid_name thid
   val name = thyname^"Theory"
@@ -912,7 +940,8 @@ fun export_theory () = let
        definitions = D,
        theorems = T,
        struct_ps = struct_ps,
-       thydata = mungethydata thydata}
+       thydata = mungethydata thydata,
+       mldeps = HOLset.listItems mldeps}
   fun filtP s = not (Lexis.ok_sml_identifier s) andalso
                 not (is_temp_binding s)
  in

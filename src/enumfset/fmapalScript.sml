@@ -452,10 +452,11 @@ val ORL_MEM_FST	= maybe_thm ("ORL_MEM_FST",
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [MEM]
 ,P_PGEN_TAC ``g:'a,h:'b`` THEN SRW_TAC [] [] THENL
-[`~MEM (g,q) l` by MATCH_MP_TAC (CONJUNCT1 ORL_NOT_MEM) THEN
- Q.EXISTS_TAC `cmp` THEN Q.EXISTS_TAC `h` THEN AR
-,`~MEM (g,y) l` by MATCH_MP_TAC (CONJUNCT1 ORL_NOT_MEM) THEN
- Q.EXISTS_TAC `cmp` THEN Q.EXISTS_TAC `h` THEN AR
+[`~MEM (g,q) l`
+   by (MATCH_MP_TAC (CONJUNCT1 ORL_NOT_MEM) THEN
+       Q.EXISTS_TAC `cmp` THEN Q.EXISTS_TAC `h` THEN AR)
+,`~MEM (g,y) l` by (MATCH_MP_TAC (CONJUNCT1 ORL_NOT_MEM) THEN
+                    Q.EXISTS_TAC `cmp` THEN Q.EXISTS_TAC `h` THEN AR)
 ,IMP_RES_TAC ORL_TL THEN `p = p` by REFL_TAC THEN RES_TAC
 ]]);
 
@@ -1522,10 +1523,11 @@ SRW_TAC [] [fmap_EXT, OU_EMPTY, FDOM_OFU, FAPPLY_OFU, LESS_ALL]);
 
 val FEMPTY_OFU = maybe_thm ("FEMPTY_OFU",
 ``!cmp f:'a|->'b. OFU cmp FEMPTY f = f``,
-SRW_TAC []
- [fmap_EXT, EMPTY_OU, FDOM_OFU, FAPPLY_OFU] THEN
-  `~LESS_ALL cmp x (FDOM f)` by SRW_TAC [] [LESS_ALL]
-  THEN1 (Q.EXISTS_TAC `x` THEN SRW_TAC [] [toto_refl]) THEN AR);
+SRW_TAC [] [fmap_EXT, EMPTY_OU, FDOM_OFU, FAPPLY_OFU] THEN
+`~LESS_ALL cmp x (FDOM f)`
+ by (SRW_TAC [] [LESS_ALL] THEN
+     Q.EXISTS_TAC `x` THEN SRW_TAC [] [toto_refl]) THEN
+AR);
 
 val LESS_ALL_OFU = maybe_thm ("LESS_ALL_OFU",
 ``!cmp x u:'a|->'b v:'a|->'b. LESS_ALL cmp x (FDOM (OFU cmp u v)) <=>
@@ -2208,7 +2210,7 @@ val fmap_CONS = maybe_thm ("fmap_CONS",
 SRW_TAC [] [fmap, FUPDATE_LIST_SNOC, FAPPLY_FUPDATE_THM]);
 
 val o_f_FUPDATE_ALT = maybe_thm ("o_f_FUPDATE_ALT",
-``!f:'b->'c fm:'a|->'b k v. f o_f fm |+ (k,v) = (f o_f fm) |+ (k,f v)``,
+``!f:'b->'c fm:'a|->'b k v. f o_f (fm |+ (k,v)) = (f o_f fm) |+ (k,f v)``,
 REPEAT GEN_TAC THEN
 REWRITE_TAC [fmap_EXT, FDOM_o_f, FDOM_FUPDATE] THEN
 GEN_TAC THEN REWRITE_TAC [IN_INSERT, FAPPLY_FUPDATE_THM, o_f_FAPPLY] THEN

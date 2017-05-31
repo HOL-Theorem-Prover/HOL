@@ -7,7 +7,7 @@ infix \\
 val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
-fun SUBGOAL q = REVERSE (q by ALL_TAC)
+fun SUBGOAL q = REVERSE (sg q)
 fun ALPHA_TAC s = let
   fun my_alpha_conv tm =
     ALPHA_CONV (mk_var(s,type_of (fst(dest_abs tm)))) tm
@@ -280,14 +280,14 @@ val abs_gc_thm = store_thm("abs_gc_thm",
   \\ Q.SPEC_TAC (`x'`,`q`) \\ Q.SPEC_TAC (`tt`,`t`)
   \\ HO_MATCH_MP_TAC gc_reachable_ind \\ REPEAT STRIP_TAC THEN1 SET_TAC
   \\ FULL_SIMP_TAC std_ss [SET_TRANSLATE_def]
-  \\ `h2' ' (f q') = (ADDR_MAP f xs,d)` by ALL_TAC THEN1
+  \\ `h2' ' (f q') = (ADDR_MAP f xs,d)` by
     (Q.PAT_X_ASSUM `!d. d IN FDOM h ==> bb` (MP_TAC o GSYM o Q.SPEC `q'`)
      \\ `?xs2 d2. h2' ' (f q') = (xs2,d2)` by METIS_TAC [PAIR]
      \\ ASM_SIMP_TAC std_ss [PAIR_TRANSLATE_def]
      \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
      \\ ASM_SIMP_TAC std_ss [ADDR_MAP_ADDR_MAP])
   \\ `ADDR_SET (ADDR_MAP f xs) SUBSET POINTERS h2' x` by METIS_TAC [set_SUBSET_POINTERS]
-  \\ `f q IN ADDR_SET (ADDR_MAP f xs)` by ALL_TAC THEN1
+  \\ `f q IN ADDR_SET (ADDR_MAP f xs)` by
       (FULL_SIMP_TAC std_ss [SET_TRANSLATE_MAP,SET_TRANSLATE_def]
        \\ FULL_SIMP_TAC std_ss [FUN_EQ_THM]) \\ SET_TAC);
 
@@ -698,7 +698,7 @@ val move_thm = store_thm("move_thm",
   CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [gc_inv_THM]))
   \\ REVERSE (Cases_on `x`) THEN1
    (SIMP_TAC std_ss [rel_move_def] \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
-    \\ `ADDR_SET [H_DATA a] = {}` by ALL_TAC \\ ASM_SIMP_TAC std_ss [full_heap_REFL]
+    \\ sg `ADDR_SET [H_DATA a] = {}` \\ ASM_SIMP_TAC std_ss [full_heap_REFL]
     \\ ASM_SIMP_TAC std_ss [ADDR_SET_def,SUBSET_DEF,MEM,NOT_IN_EMPTY,ADDR_MAP_def,
           heap_address_distinct,EXTENSION,UNION_EMPTY,CUT_EMPTY] \\ SET_TAC)
   \\ SIMP_TAC std_ss [ADDR_SET_THM,INSERT_SUBSET,EMPTY_SUBSET]
@@ -719,9 +719,9 @@ val move_thm = store_thm("move_thm",
   \\ STRIP_TAC
   \\ Q.LIST_EXISTS_TAC [`h |+ (j,h ' n) \\ n`,`(n =+ j) ((j =+ n) f)`] \\ ASM_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [APPLY_UPDATE_THM,ADDR_SET_THM,IN_INSERT,NOT_IN_EMPTY]
-  \\ `full_heap j (j + y + 1) ((j =+ H_BLOCK (x,y,d)) ((n =+ H_REF j) m))` by ALL_TAC THEN1
+  \\ `full_heap j (j + y + 1) ((j =+ H_BLOCK (x,y,d)) ((n =+ H_REF j) m))` by
     (Q.PAT_X_ASSUM `~(n = j)` (fn th => REWRITE_TAC [MATCH_MP UPDATE_COMMUTES (GSYM th)])
-     \\ `~(RANGE(j,j+y+1)n)` by ALL_TAC THEN1
+     \\ `~(RANGE(j,j+y+1)n)` by
       (REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [IN_DEF,R0,D0,DR0,EMP_RANGE_def,
          getLENGTH_def,ADD_ASSOC,heap_element_distinct])
      \\ MATCH_MP_TAC full_heap_RANGE \\ ASM_SIMP_TAC std_ss []
@@ -768,7 +768,7 @@ val move_thm = store_thm("move_thm",
   \\ REPEAT (Q.PAT_X_ASSUM `~(RANGE(xx,yy)df)` (K ALL_TAC))
   \\ `!k. RANGE (i,j + y + 1) k /\ ~RANGE (i,j) k  ==> RANGE (j,j + y + 1) k` by RANGE_TAC
   \\ `D0 (CUT (i,j + y + 1) ((j =+ H_BLOCK (x,y,d)) m)) =
-       j INSERT D0 (CUT (i,j) m)` by ALL_TAC THEN1
+       j INSERT D0 (CUT (i,j) m)` by
      (FULL_SIMP_TAC std_ss [EXTENSION,IN_INSERT]
       \\ FULL_SIMP_TAC std_ss [IN_DEF,D0,CUT_EQ,APPLY_UPDATE_THM,EMP_RANGE_def,IN_DEF]
       \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC THEN1
@@ -845,7 +845,7 @@ val EQ_RANGE_full_heap = store_thm("EQ_RANGE_full_heap",
   THEN1 (IMP_RES_TAC EQ_RANGE_IMP_EQ_RANGE \\ RES_TAC \\ ASM_SIMP_TAC std_ss [])
   \\ FULL_SIMP_TAC std_ss [EMP_RANGE_def,IN_DEF]
   \\ REPEAT STRIP_TAC \\ RES_TAC
-  \\ REVERSE (`k IN RANGE (b,e)` by ALL_TAC) THEN1 METIS_TAC [EQ_RANGE_def]
+  \\ `k IN RANGE (b,e)` suffices_by METIS_TAC [EQ_RANGE_def]
   \\ FULL_SIMP_TAC std_ss [RANGE_def,IN_DEF] \\ DECIDE_TAC);
 
 val EQ_RANGE_CUT = store_thm("EQ_RANGE_CUT",
@@ -922,7 +922,7 @@ val gc_step_lemma = store_thm("gc_step_lemma",
   \\ ASM_SIMP_TAC std_ss []
   \\ `i IN FDOM h /\ (h ' i = (xs,n,d))` by METIS_TAC [gc_inv_def,
        ref_heap_mem_def, heap_element_distinct,heap_element_11,PAIR_EQ]
-    \\ `i IN (UNIV DIFF D0 (CUT (b,i) m))` by ALL_TAC THEN1
+    \\ `i IN (UNIV DIFF D0 (CUT (b,i) m))` by
       (FULL_SIMP_TAC std_ss [IN_DIFF,IN_UNIV]
        \\ FULL_SIMP_TAC std_ss [IN_DEF,D0,CUT_EQ,heap_element_11] \\ RANGE_TAC)
     \\ `ADDR_SET xs SUBSET POINTERS h (UNIV DIFF D0 (CUT (b,i) m))`
@@ -971,7 +971,7 @@ val gc_step_thm = store_thm("gc_step_thm",
        MP_TAC (Q.INST [`xs2`|->`xs3`,`j2`|->`j3`,`m2`|->`m3`,`c`|->`c3`]
                (helperLib.MATCH_INST (SPEC_ALL move_list_thm) (concl th))))
   \\ ASM_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
-  \\ `CUT (i + n + 1,j) m = CUT (i + n + 1,j) m3` by ALL_TAC THEN1
+  \\ `CUT (i + n + 1,j) m = CUT (i + n + 1,j) m3` by
     (FULL_SIMP_TAC std_ss [gc_inv_def,abs_gc_inv_def,LET_DEF]
      \\ `!k. i + n + 1 <= k ==> b <= k` by DECIDE_TAC
      \\ FULL_SIMP_TAC std_ss [FUN_EQ_THM,CUT_def,RANGE_def] \\ SET_TAC)
@@ -983,12 +983,12 @@ val gc_step_thm = store_thm("gc_step_thm",
   \\ FULL_SIMP_TAC std_ss [gc_inv_def,CUT_UPDATE]
   \\ ASM_SIMP_TAC std_ss [APPLY_UPDATE_THM]
   \\ `i IN D0 (CUT (b,i + n + 1) m3) /\
-      (m3 i = H_BLOCK (xs,n,d))` by ALL_TAC THEN1
+      (m3 i = H_BLOCK (xs,n,d))` by
      (`!k. k < i + n + 1 ==> k < j` by DECIDE_TAC
       \\ FULL_SIMP_TAC std_ss []
       \\ `CUT (b,i+n+1) m3 = CUT (b,i+n+1) m` by
           (FULL_SIMP_TAC std_ss [CUT_def,RANGE_def] \\ SET_TAC)
-      \\ `(CUT(b,i+n+1)m3) i = H_BLOCK (xs,n,d)` by ALL_TAC THEN1
+      \\ `(CUT(b,i+n+1)m3) i = H_BLOCK (xs,n,d)` by
              (FULL_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC std_ss [CUT_EQ,IN_DEF])
       \\ FULL_SIMP_TAC std_ss [IN_DEF,D0,CUT_EQ,heap_element_11])
   \\ REVERSE STRIP_TAC
@@ -1084,7 +1084,7 @@ val ok_full_heap_IMP = store_thm("ok_full_heap_IMP",
   \\ IMP_RES_TAC ok_heap_IMP \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [CUT_EMPTY]
   THEN1 (Q.PAT_X_ASSUM `!k.bb` MATCH_MP_TAC \\ RANGE_TAC)
-  THEN1 (`part_heap i e2 m 0` by ALL_TAC THEN1
+  THEN1 (`part_heap i e2 m 0` by
         (MATCH_MP_TAC part_heap_EMP_RANGE \\ FULL_SIMP_TAC std_ss [EMP_RANGE_def,IN_DEF]
          \\ REPEAT STRIP_TAC \\ `~RANGE (b2,i) k` by RANGE_TAC \\ RES_TAC)
       \\ IMP_RES_TAC part_heap_TRANS \\ Q.EXISTS_TAC `t` \\ FULL_SIMP_TAC std_ss []
@@ -1126,7 +1126,7 @@ val gc_thm = store_thm("gc_thm",
   \\ Q.PAT_X_ASSUM `r3 = ADDR_MAP f3 roots` MP_TAC
   \\ REPEAT (Q.PAT_X_ASSUM `r3 = ADDR_MAP xx roots` (K ALL_TAC)) \\ STRIP_TAC
   \\ FULL_SIMP_TAC std_ss []
-  \\ `f3 o f3 = I` by ALL_TAC THEN1
+  \\ `f3 o f3 = I` by
       (FULL_SIMP_TAC std_ss [gc_inv_def]
        \\ IMP_RES_TAC ok_heap_IMP \\ IMP_RES_TAC abs_steps_thm
        \\ FULL_SIMP_TAC std_ss [abs_gc_inv_def,LET_DEF,gc_inv_def])
@@ -1143,7 +1143,7 @@ val gc_thm = store_thm("gc_thm",
        \\ FULL_SIMP_TAC std_ss [SET_TRANSLATE_MAP,SET_TRANSLATE_def]
        \\ FULL_SIMP_TAC std_ss [FUN_EQ_THM] \\ SET_TAC)
   \\ IMP_RES_TAC gc_exec_thm \\ ASM_SIMP_TAC std_ss []
-  \\ `full_heap b i4 (CUT (b,i4) m4)` by ALL_TAC THEN1
+  \\ `full_heap b i4 (CUT (b,i4) m4)` by
     (MATCH_MP_TAC full_heap_IGNORE \\ Q.EXISTS_TAC `m4`
      \\ ASM_SIMP_TAC std_ss [CUT_def])
   \\ FULL_SIMP_TAC std_ss [ok_full_heap_def] \\ REPEAT STRIP_TAC
@@ -1266,7 +1266,7 @@ val spilt_move_thm = prove(
   ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ REVERSE (Cases_on `x`)
   \\ SIMP_TAC std_ss [rel_move_def,split_move_def,ADDR_APPLY_def]
   \\ Cases_on `m n` \\ ASM_SIMP_TAC (srw_ss()) [] \\ STRIP_TAC THEN1
-   (`memF m e (n - e) = H_REF n'` by ALL_TAC THEN1
+   (`memF m e (n - e) = H_REF n'` by
      (FULL_SIMP_TAC std_ss [memF_def]
       \\ `n < e + e /\ 0 < e /\ (n - e + e = n)` by RANGE_TAC
       \\ ASM_SIMP_TAC std_ss [BLOCK_APPLY_def])
@@ -1274,7 +1274,7 @@ val spilt_move_thm = prove(
   \\ `?xs n d. p = (xs,n,d)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC (srw_ss()) [LET_DEF]
   \\ `n < e + e /\ 0 < e /\ (n - e + e = n) /\ j < e /\ ~(n = j)` by RANGE_TAC
-  \\ `memF m e (n - e) = H_BLOCK (ADDR_MAP (\a. a - e) xs,n',d)` by ALL_TAC THEN1
+  \\ `memF m e (n - e) = H_BLOCK (ADDR_MAP (\a. a - e) xs,n',d)` by
    (ASM_SIMP_TAC std_ss [memF_def]
     \\ ASM_SIMP_TAC std_ss [BLOCK_APPLY_def])
   \\ ASM_SIMP_TAC (srw_ss()) [DECIDE ``j <= j + n + 1``]
@@ -1314,7 +1314,7 @@ val spilt_gc_step_thm = prove(
   \\ Q.PAT_X_ASSUM `!x.bb` (K ALL_TAC)
   \\ `i < e` by RANGE_TAC
   \\ `~(e <= i)` by RANGE_TAC
-  \\ `memT m e i i = H_BLOCK (ADDR_MAP (\a. a - e) xs,n,d)` by ALL_TAC THEN1
+  \\ `memT m e i i = H_BLOCK (ADDR_MAP (\a. a - e) xs,n,d)` by
    (ASM_SIMP_TAC std_ss [memT_def] \\ Cases_on `m i`
     \\ FULL_SIMP_TAC (srw_ss()) [isBLOCK_def,getBLOCK_def,BLOCK_APPLY_def])
   \\ ASM_SIMP_TAC std_ss [getBLOCK_def,GSYM CONJ_ASSOC]
@@ -1592,7 +1592,7 @@ val lisp_x_gc_thm = store_thm("lisp_x_gc_thm",
   \\ FULL_SIMP_TAC std_ss [ADDR_MAP_TWICE,EL_ADDR_MAP]
   \\ `?r. EL k roots = r` by METIS_TAC []
   \\ ASM_SIMP_TAC std_ss []
-  \\ `ADDR_SET (ADDR_MAP (\a. a + e) [r]) SUBSET gc_reachable (h1,ADDR_MAP (\a. a + e) roots)` by ALL_TAC THEN1
+  \\ `ADDR_SET (ADDR_MAP (\a. a + e) [r]) SUBSET gc_reachable (h1,ADDR_MAP (\a. a + e) roots)` by
    (REVERSE (Cases_on `r`)
     \\ SIMP_TAC std_ss [ADDR_MAP_def,ADDR_SET_THM,EMPTY_SUBSET,INSERT_SUBSET]
     \\ SIMP_TAC std_ss [IN_DEF] \\ ONCE_REWRITE_TAC [gc_reachable_cases] \\ DISJ1_TAC
@@ -1608,7 +1608,7 @@ val lisp_x_gc_thm = store_thm("lisp_x_gc_thm",
   THEN1 (SIMP_TAC std_ss [lisp_x_def,ADDR_APPLY_EQ_DATA])
   \\ SIMP_TAC std_ss [lisp_x_def] \\ REPEAT STRIP_TAC
   \\ ASM_SIMP_TAC (srw_ss()) [ADDR_APPLY_def]
-  \\ `(k' + e) IN FDOM h1 /\ (h1 ' (k' + e) = (ADDR_MAP (\a. a + e) [ax; ay],0,()))` by ALL_TAC THEN1
+  \\ `(k' + e) IN FDOM h1 /\ (h1 ' (k' + e) = (ADDR_MAP (\a. a + e) [ax; ay],0,()))` by
    (Q.PAT_X_ASSUM `ok_full_heap (h1,ADDR_MAP (\a. a + e) roots) xxx` MP_TAC
     \\ SIMP_TAC std_ss [ok_full_heap_def] \\ REPEAT STRIP_TAC
     \\ FULL_SIMP_TAC std_ss [ref_heap_mem_def]
@@ -1617,16 +1617,16 @@ val lisp_x_gc_thm = store_thm("lisp_x_gc_thm",
     \\ Cases_on `k' + e IN FDOM h1` \\ ASM_SIMP_TAC (srw_ss()) [])
   \\ FULL_SIMP_TAC std_ss [ADDR_MAP_def,INSERT_SUBSET,EMPTY_SUBSET,ADDR_SET_THM]
   \\ FULL_SIMP_TAC std_ss [FDOM_DRESTRICT,IN_INTER]
-  \\ `h1 ' (k' + e) = PAIR_TRANSLATE f (h2 ' (f (k' + e)))` by ALL_TAC THEN1
+  \\ `h1 ' (k' + e) = PAIR_TRANSLATE f (h2 ' (f (k' + e)))` by
    (RES_TAC \\ POP_ASSUM MP_TAC
     \\ SIMP_TAC std_ss [DRESTRICT_DEF,FDOM_DRESTRICT,IN_INTER] \\ METIS_TAC [])
   \\ FULL_SIMP_TAC std_ss []
   \\ Q.PAT_X_ASSUM `f o f = I` ASSUME_TAC
   \\ FULL_SIMP_TAC std_ss [PAIR_TRANSLATE_FLIP]
   \\ FULL_SIMP_TAC std_ss [PAIR_TRANSLATE_def,ADDR_MAP_TWICE]
-  \\ `(f (k' + e)) IN FDOM h2` by ALL_TAC THEN1
+  \\ `(f (k' + e)) IN FDOM h2` by
     (FULL_SIMP_TAC std_ss [EXTENSION,SET_TRANSLATE_def,IN_INTER] \\ RES_TAC)
-  \\ `m2 (f (k' + e)) = H_BLOCK (h2 ' (f (k' + e)))` by ALL_TAC THEN1
+  \\ `m2 (f (k' + e)) = H_BLOCK (h2 ' (f (k' + e)))` by
     (FULL_SIMP_TAC std_ss [ok_full_heap_def,ref_heap_mem_def])
   \\ POP_ASSUM MP_TAC
   \\ ASM_SIMP_TAC std_ss [ADDR_MAP_THM,MAP] \\ STRIP_TAC

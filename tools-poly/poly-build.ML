@@ -9,6 +9,7 @@ fun useC f =
      use ("../tools/Holmake/" ^ f ^ ".sml"))
 
 val _ = use "Holmake/Systeml.sml";
+val _ = useC "GetOpt";
 val _ = useC "Holdep_tokens";
 val _ = useC "Holdep";
 val _ = useC "Holmake_tools"
@@ -17,6 +18,9 @@ val _ = useC "parse_glob"
 val _ = useC "internal_functions"
 val _ = useC "Holmake_types"
 val _ = useC "ReadHMF"
+val _ = use "../tools/buildcline_dtype.sml"
+val _ = use "../tools/Holmake/FunctionalRecordUpdate.sml"
+val _ = useC "../buildcline"
 val _ = use "../tools/buildutils.sig";
 val _ = use "../tools/buildutils.sml";
 val _ = use "build.sml";

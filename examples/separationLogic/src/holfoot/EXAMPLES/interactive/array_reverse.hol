@@ -3,7 +3,7 @@
 (******************************************************************************)
 
 (* load the libries
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/hfheader.sml")
 *)
 
 val _ = HOL_Interactive.toggle_quietdec();
@@ -24,15 +24,15 @@ val reverse1_TAC =
   HF_SOLVE_TAC THEN
   REPEAT STRIP_TAC THENL [
      HF_VC_TAC THEN
-     ASM_SIMP_TAC (arith_ss++boolSimps.LIFT_COND_ss) [COND_EXPAND_IMP, EL_REPLACE_ELEMENT,
-         LENGTH_REPLACE_ELEMENT],
+     ASM_SIMP_TAC (arith_ss++boolSimps.LIFT_COND_ss) [COND_EXPAND_IMP, EL_LUPDATE,
+         LENGTH_LUPDATE],
 
      Q.EXISTS_TAC `data` THEN
      HF_SOLVE_TAC THEN
      HF_VC_TAC THEN
      ASM_SIMP_TAC (arith_ss++boolSimps.LIFT_COND_ss) [COND_EXPAND_IMP] THEN
      REPEAT STRIP_TAC THEN
-     `(n_const = 2*i_const) /\ (x' = i_const)` by DECIDE_TAC THEN
+     `(n_const = 2*i_const) /\ (x = i_const)` by DECIDE_TAC THEN
      ASM_SIMP_TAC arith_ss []
   ];
 
@@ -65,12 +65,12 @@ val reverse3_TAC =
      HF_VC_TAC THEN
      ASM_SIMP_TAC (arith_ss++boolSimps.LIFT_COND_ss) [COND_EXPAND_IMP] THEN
      REPEAT STRIP_TAC THEN
-     `(x'' = old_i) /\ (n_const = 2 * old_i)` by DECIDE_TAC THEN
+     `(x' = old_i) /\ (n_const = 2 * old_i)` by DECIDE_TAC THEN
      ASM_SIMP_TAC arith_ss [],
 
      HF_VC_TAC THEN
      ASM_SIMP_TAC (arith_ss++boolSimps.LIFT_COND_ss) [COND_EXPAND_IMP,
-         EL_REPLACE_ELEMENT, LENGTH_REPLACE_ELEMENT],
+         EL_LUPDATE, LENGTH_LUPDATE],
 
      HF_VC_TAC THEN
      REPEAT STRIP_TAC THEN
@@ -93,12 +93,12 @@ val reverse4_TAC =
      HF_VC_TAC THEN
      `old_j − (old_i + 1) = LENGTH data - 2` by DECIDE_TAC THEN
      FULL_SIMP_TAC list_ss [MIN_EQ] THEN
-     Q.PAT_ASSUM `1 <= LENGTH data` MP_TAC THEN
+     Q.PAT_X_ASSUM `1 <= LENGTH data` MP_TAC THEN
      REPEAT (POP_ASSUM (K ALL_TAC)) THEN
 
-     CONSEQ_REWRITE_TAC ([LIST_EQ], [], []) THEN     
-     ASM_SIMP_TAC arith_ss [LENGTH_DROP, LENGTH_REVERSE, LENGTH_REPLACE_ELEMENT,
-        EL_BUTFIRSTN, EL_REVERSE, LENGTH_TAKE, EL_REPLACE_ELEMENT,
+     CONSEQ_REWRITE_TAC ([LIST_EQ], [], []) THEN
+     ASM_SIMP_TAC arith_ss [LENGTH_DROP, LENGTH_REVERSE, LENGTH_LUPDATE,
+        EL_BUTFIRSTN, EL_REVERSE, LENGTH_TAKE, EL_LUPDATE,
         EL_FIRSTN] THEN
      REPEAT STRIP_TAC THENL [
         `PRE (1 - x) = 0` by DECIDE_TAC THEN
@@ -129,13 +129,13 @@ val reverse5_TAC =
      `old_j − (old_i + 1) =  LENGTH data - 2` by DECIDE_TAC THEN
      `old_j − old_i = LENGTH data - 1` by DECIDE_TAC THEN
      ASM_REWRITE_TAC[] THEN
-     Q.PAT_ASSUM `MIN 1 X = 1` MP_TAC THEN
+     Q.PAT_X_ASSUM `MIN 1 X = 1` MP_TAC THEN
      REPEAT (POP_ASSUM (K ALL_TAC)) THEN
-     SIMP_TAC arith_ss [MIN_EQ, BUTFIRSTN_BUTFIRSTN, LENGTH_REPLACE_ELEMENT,
+     SIMP_TAC arith_ss [MIN_EQ, BUTFIRSTN_BUTFIRSTN, LENGTH_LUPDATE,
         LENGTH_REVERSE] THEN
-     CONSEQ_REWRITE_TAC ([LIST_EQ], [], []) THEN     
-     ASM_SIMP_TAC arith_ss [LENGTH_DROP, LENGTH_REVERSE, LENGTH_REPLACE_ELEMENT,
-        EL_BUTFIRSTN, EL_REVERSE, LENGTH_TAKE, EL_REPLACE_ELEMENT,
+     CONSEQ_REWRITE_TAC ([LIST_EQ], [], []) THEN
+     ASM_SIMP_TAC arith_ss [LENGTH_DROP, LENGTH_REVERSE, LENGTH_LUPDATE,
+        EL_BUTFIRSTN, EL_REVERSE, LENGTH_TAKE, EL_LUPDATE,
         EL_FIRSTN, MIN_EQ] THEN
      REPEAT STRIP_TAC THENL [
         `PRE (1 - x) = 0` by DECIDE_TAC THEN
@@ -164,5 +164,3 @@ val _ = holfoot_tac_verify_spec file NONE
                  ("reverse3", reverse3_TAC),
                  ("reverse4", reverse4_TAC),
                  ("reverse5", reverse5_TAC)];
-
-

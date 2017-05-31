@@ -180,6 +180,8 @@ sig
   val time_to_string: time -> string
   val dest_time: time -> {sec : Arbnum.num, usec : Arbnum.num}
   val time_lt: time -> time -> bool
+  val time_max : time * time -> time
+  val time_maxl : time list -> time
   val time : ('a -> 'b) -> 'a -> 'b
 
   val getEnv: string -> string option

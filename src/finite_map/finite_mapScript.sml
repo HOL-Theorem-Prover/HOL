@@ -1095,7 +1095,7 @@ val f_o_f_DEF = new_specification
   ("f_o_f_DEF", ["f_o_f"],
    CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) f_o_f_lemma);
 
-val _ = set_fixity "f_o_f" (Infixl 500);
+val _ = set_fixity "f_o_f" (Infixr 800);
 
 val f_o_f_FEMPTY_1 = Q.store_thm
 ("f_o_f_FEMPTY_1",
@@ -1124,7 +1124,7 @@ val o_f_DEF = new_specification
   ("o_f_DEF", ["o_f"],
    CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) o_f_lemma);
 
-val _ = set_fixity "o_f" (Infixl 500);
+val _ = set_fixity "o_f" (Infixr 800);
 
 val o_f_FDOM = Q.store_thm
 ("o_f_FDOM",
@@ -1322,10 +1322,10 @@ val FLOOKUP_FUN_FMAP = Q.store_thm(
          Composition of finite map and function
  ---------------------------------------------------------------------------*)
 
-val f_o_DEF = new_infixl_definition
+val f_o_DEF = new_infixr_definition
 ("f_o_DEF",
 Term`$f_o (f:('b,'c)fmap) (g:'a->'b)
-      = f f_o_f (FUN_FMAP g { x | g x IN FDOM f})`, 500);
+      = f f_o_f (FUN_FMAP g { x | g x IN FDOM f})`, 800);
 
 val FDOM_f_o = Q.store_thm
 ("FDOM_f_o",
@@ -1343,24 +1343,24 @@ SRW_TAC[][f_o_DEF])
 val _ = export_rewrites["f_o_FEMPTY"]
 
 val f_o_FUPDATE = store_thm(
-"f_o_FUPDATE",
-``!fm k v g.
-  FINITE {x | g x IN FDOM fm} /\
-  FINITE {x | (g x = k)} ==>
-(fm |+ (k,v) f_o g = FMERGE (combin$C K) (fm f_o g) (FUN_FMAP (K v) {x | g x = k}))``,
-SRW_TAC[][] THEN
-`FINITE {x | (g x = k) \/ g x IN FDOM fm}` by (
- REPEAT (POP_ASSUM MP_TAC) THEN
- Q.MATCH_ABBREV_TAC `FINITE s1 ==> FINITE s2 ==> FINITE s` THEN
- Q_TAC SUFF_TAC `s = s1 UNION s2` THEN1 SRW_TAC[][] THEN
- UNABBREV_ALL_TAC THEN
- SRW_TAC[][EXTENSION,EQ_IMP_THM] THEN
- SRW_TAC[][]) THEN
-SRW_TAC[][GSYM fmap_EQ_THM] THEN1 (
-  SRW_TAC[][EXTENSION,EQ_IMP_THM] THEN
-  SRW_TAC[][] ) THEN
-SRW_TAC[][FMERGE_DEF,FUN_FMAP_DEF,f_o_DEF,f_o_f_DEF
-,FAPPLY_FUPDATE_THM])
+  "f_o_FUPDATE",
+  ``!fm k v g.
+    FINITE {x | g x IN FDOM fm} /\
+    FINITE {x | (g x = k)} ==>
+      ((fm |+ (k,v)) f_o g =
+       FMERGE (combin$C K) (fm f_o g) (FUN_FMAP (K v) {x | g x = k}))``,
+  SRW_TAC[][] THEN
+  `FINITE {x | (g x = k) \/ g x IN FDOM fm}` by (
+     REPEAT (POP_ASSUM MP_TAC) THEN
+     Q.MATCH_ABBREV_TAC `FINITE s1 ==> FINITE s2 ==> FINITE s` THEN
+     Q_TAC SUFF_TAC `s = s1 UNION s2` THEN1 SRW_TAC[][] THEN
+     UNABBREV_ALL_TAC THEN
+     SRW_TAC[][EXTENSION,EQ_IMP_THM] THEN
+     SRW_TAC[][]) THEN
+  SRW_TAC[][GSYM fmap_EQ_THM] THEN1 (
+    SRW_TAC[][EXTENSION,EQ_IMP_THM] THEN
+    SRW_TAC[][]) THEN
+  SRW_TAC[][FMERGE_DEF,FUN_FMAP_DEF,f_o_DEF,f_o_f_DEF ,FAPPLY_FUPDATE_THM])
 
 val FAPPLY_f_o = Q.store_thm
 ("FAPPLY_f_o",
@@ -1387,6 +1387,12 @@ val FINITE_PRED_11 = Q.store_thm
      POP_ASSUM MP_TAC THEN SRW_TAC [][GSPEC_F]
    ]
  ]);
+
+val f_o_ASSOC = Q.store_thm(
+  "f_o_ASSOC",
+  `(!x y. (g x = g y) <=> (x = y)) /\ (!x y. (h x = h y) <=> (x = y)) ==>
+   ((f f_o g) f_o h = f f_o (g o h))`,
+  simp[FDOM_f_o, FINITE_PRED_11, FAPPLY_f_o, fmap_EXT])
 
 (* ----------------------------------------------------------------------
     Domain subtraction (at a single point)
@@ -1489,14 +1495,11 @@ val DOMSUB_COMMUTES = store_thm(
 
 val o_f_FUPDATE = store_thm(
   "o_f_FUPDATE",
-  ``f o_f (fm |+ (k,v)) = (f o_f (fm \\ k)) |+ (k, f v)``,
-  SRW_TAC [][GSYM fmap_EQ_THM]
+  ``f o_f (fm |+ (k,v)) = (f o_f fm) |+ (k, f v)``,
+  SRW_TAC [][fmap_EXT]
   THENL [
-    SRW_TAC [][pred_setTheory.EXTENSION] THEN PROVE_TAC [],
-    SRW_TAC [][GSYM fmap_EQ_THM, o_f_FAPPLY],
-    Cases_on `x = k` THEN
-    SRW_TAC [][GSYM fmap_EQ_THM, o_f_FAPPLY, NOT_EQ_FAPPLY,
-               DOMSUB_FAPPLY_NEQ]
+    SRW_TAC [][o_f_FAPPLY, FDOM_o_f],
+    SRW_TAC [][FAPPLY_FUPDATE_THM]
   ]);
 val _ = export_rewrites ["o_f_FUPDATE"]
 
@@ -2640,7 +2643,7 @@ val DRESTRICT_SUBSET = store_thm("DRESTRICT_SUBSET",
 
 val f_o_f_FUPDATE_compose = store_thm("f_o_f_FUPDATE_compose",
   ``!f1 f2 k x v. x NOTIN FDOM f1 /\ x NOTIN FRANGE f2 ==>
-    (f1 |+ (x,v) f_o_f f2 |+ (k,x) = (f1 f_o_f f2) |+ (k,v))``,
+    ((f1 |+ (x,v)) f_o_f (f2 |+ (k,x)) = (f1 f_o_f f2) |+ (k,v))``,
   rw[GSYM fmap_EQ_THM,f_o_f_DEF,FAPPLY_FUPDATE_THM] >>
   simp[] >> rw[] >> fs[] >> rw[EXTENSION] >>
   fs[IN_FRANGE] >> rw[]

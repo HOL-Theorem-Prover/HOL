@@ -253,7 +253,7 @@ local
    val extract_v2w_cor = Q.prove(
      `!h l v.
         (LENGTH v <= dimindex(:'a)) /\ (dimindex(:'b) = SUC h - l) /\
-        dimindex(:'b) < dimindex(:'a) ==>
+        dimindex(:'b) <= dimindex(:'a) ==>
         ((h >< l) (v2w v : 'a word) : 'b word =
          v2w (fixwidth (dimindex(:'b)) (shiftr v l)))`,
      qm [bitstringTheory.extract_v2w, bitstringTheory.field_def])
@@ -279,14 +279,14 @@ in
               |> (Conv.LHS_CONV (Conv.REWR_CONV dim_b_thm)
                   THENC numLib.REDUCE_CONV)
               |> Drule.EQT_ELIM
-         val lt_thm =
-            numSyntax.mk_less (dim_b, dim_a)
+         val le_thm =
+            numSyntax.mk_leq (dim_b, dim_a)
               |> (Conv.FORK_CONV (Conv.REWR_CONV dim_b_thm,
                                   Conv.REWR_CONV dim_a_thm)
                   THENC numLib.REDUCE_CONV)
               |> Drule.EQT_ELIM
          val thm = Drule.MATCH_MP extract_v2w_cor
-                     (Drule.LIST_CONJ [len_thm, width_thm, lt_thm])
+                     (Drule.LIST_CONJ [len_thm, width_thm, le_thm])
       in
          (Conv.REWR_CONV thm
           THENC Conv.RAND_CONV (Conv.RAND_CONV shiftr_CONV)

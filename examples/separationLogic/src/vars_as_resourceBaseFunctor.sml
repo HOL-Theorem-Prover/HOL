@@ -229,7 +229,7 @@ val var_res_prove_RWL = [
       bagTheory.BAG_INSERT_NOT_EMPTY,
       ELIM_UNCURRY,
       LIST_TO_SET_THM,
-      SUBSET_REFL, IN_LIST_TO_SET,
+      SUBSET_REFL, (* IN_LIST_TO_SET, *)
       VAR_RES_IS_STACK_IMPRECISE___ALTERNATIVE_DEF];
 
    fun var_res_prove_CONV_GEN () =

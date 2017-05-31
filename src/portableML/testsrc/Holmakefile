@@ -1,10 +1,10 @@
 ifneq($(OS),winNT)
 
-INCLUDES = $(HOLDIR)/developers
+INCLUDES = $(HOLDIR)/tools/unicode-grep
 
 .PHONY: all
 
 all:
-	$(protect $(HOLDIR)/developers/unicode-grep) $(protect $(HOLDIR)/src)
+	$(protect $(HOLDIR)/tools/unicode-grep/unicode-grep) $(protect $(HOLDIR)/src)
 
 endif

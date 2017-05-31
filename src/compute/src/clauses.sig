@@ -21,6 +21,8 @@ sig
     | Abs of 'a dterm
 
   val is_skip : 'a * 'b fterm -> bool
+  val partition_skip : int option -> (term * 'b fterm) list ->
+                       (term * 'b fterm) list * (term * 'b fterm) list
   val inst_type_dterm : (hol_type,hol_type) subst * 'a dterm -> 'a dterm
 
 

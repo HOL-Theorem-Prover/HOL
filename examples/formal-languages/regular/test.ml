@@ -2,10 +2,24 @@
 (*    Tests                                                                  *)
 (*---------------------------------------------------------------------------*)
 
-load "regexpLib";
-open regexpLib;
+app load ["regexpLib", "Interval"];
+
+open regexpLib Interval;
 
 fun matcher q = #matchfn(regexpLib.matcher SML (Regexp_Type.fromQuote q));
+fun dom q = Regexp_Match.domBrz (Regexp_Type.fromQuote q);
+
+val _ = 
+let fun pp2polypp (ppfn: PP.ppstream -> 'a -> unit) =
+     let fun f pps x = Parse.respect_width_ref Globals.linewidth ppfn pps x
+                       handle e => Raise e
+     in
+       fn depth => fn printArgTypes => fn e:'a =>
+        PolyML.PrettyString (PP.pp_to_string (!Globals.linewidth) f e)
+     end
+ in 
+   PolyML.addPrettyPrinter (pp2polypp Regexp_Type.pp_regexp)
+ end;
 
 val test = matcher `foobar`;
  not (test "fo2b") 
@@ -129,153 +143,94 @@ val test = matcher `(.*111.*)&~((.*01)|1*)`;
 val test = matcher `[\010\016-\235]*`;
 
 val ilist = [0x59, 0x55, 0x56, 0x34, 0x4d, 0x50, 0x45, 0x47, 0x32,
-0x20, 0x57, 0x31, 0x39, 0x32, 0x30, 0x20, 0x48, 0x31, 0x30, 0x38,
-0x30, 0x20, 0x46, 0x35, 0x30, 0x3a, 0x31, 0x20, 0x49, 0x70, 0x20,
-0x41, 0x31, 0x3a, 0x31, 0x0a, 0x46, 0x52, 0x41, 0x4d, 0x45, 0x0a,
-0x22, 0x23, 0x22, 0x23, 0x22, 0x21, 0x20, 0x1e, 0x20, 0x1e, 0x1c,
-0x1e, 0x20, 0x1f, 0x23, 0x23, 0x25, 0x22, 0x21, 0x25, 0x20, 0x20,
-0x22, 0x22, 0x23, 0x1f, 0x21, 0x22, 0x21, 0x27, 0x28, 0x27, 0x29,
-0x2d, 0x34, 0x30, 0x35, 0x33, 0x35, 0x51, 0x87, 0xb9, 0xbc, 0xbf,
-0xbb, 0x9c, 0x87, 0x84, 0x7d, 0x79, 0x7f, 0x8d, 0x94, 0xa4, 0xae,
-0xb0, 0xb3, 0xb3, 0xb2, 0xb1, 0xad, 0xb4, 0xab, 0xb5, 0xb4, 0xaa,
-0xb3, 0xb1, 0xa7, 0xac, 0xb5, 0xb6, 0xb3, 0xa8, 0xac, 0xac, 0xb0,
-0xbe, 0xbc, 0xbb, 0xc9, 0xbe, 0xb3, 0xa3, 0x99, 0x91, 0x8e, 0x82,
-0x8c, 0x85, 0x82, 0x8b, 0x85, 0x87, 0x9c, 0x99, 0xa5, 0xb3, 0xb2,
-0xb4, 0xb9, 0xaf, 0xb7, 0xa8, 0xb0, 0xac, 0xaa, 0xab, 0xb5, 0xb9,
-0xc2, 0xbd, 0xbf, 0xb8, 0xb1, 0xb9, 0xb0, 0xb3, 0xba, 0xbf, 0xc3,
-0xc8, 0xc5, 0xc7, 0xc9, 0xcd, 0xc8, 0xd0, 0xc8, 0xc5, 0xc9, 0xc3,
-0xc8, 0xca, 0xc2, 0xc8, 0xca, 0xcc, 0xcd, 0xc4, 0xc4, 0xc1, 0xb9,
-0xb5, 0xb9, 0xb5, 0xb4, 0xb6, 0xb3, 0xb8, 0xbb, 0xaf, 0xb4, 0xae,
-0xae, 0xb1, 0xb0, 0xae, 0xa8, 0xac, 0xa0, 0x99, 0x9c, 0x90, 0x99,
-0x9c, 0x9c, 0x9d, 0x90, 0x9d, 0x9a, 0x9f, 0x9e, 0x99, 0x96, 0x8f,
-0x95, 0x95, 0x8b, 0x8e, 0x88, 0x90, 0x92, 0x94, 0x95, 0x9a, 0x99,
-0x95, 0x8d, 0x91, 0x9a, 0x97, 0x95, 0xa1, 0xa6, 0x9f, 0xa2, 0xaa,
-0xa2, 0x9f, 0xa2, 0xac, 0xad, 0xa9, 0xa9, 0xab, 0xb1, 0xab, 0x9e,
-0x9f, 0x9d, 0x9d, 0x96, 0xa7, 0x9c, 0x9f, 0x9f, 0x90, 0x99, 0x95,
-0x9c, 0x9f, 0x9e, 0xa9, 0x9e, 0xa4, 0xa6, 0xa4, 0xa8, 0xa6, 0xac,
-0xb0, 0xae, 0xac, 0xb1, 0xb3, 0xbc, 0xb8, 0xb9, 0xbb, 0xb9, 0xb6,
-0xbc, 0xc2, 0xc4, 0xc3, 0xcc, 0xcd, 0xcd, 0xd2, 0xd3, 0xc9, 0xc6,
-0xd1, 0xd3, 0xd1, 0xd4, 0xca, 0xc8, 0xc5, 0xbb, 0xbc, 0xba, 0xc0,
-0xc2, 0xbd, 0xac, 0xa9, 0xb9, 0xb4, 0xac, 0xa5, 0xa7, 0x9d, 0xa3,
-0xa8, 0xa1, 0xa5, 0xa1, 0x9b, 0xa1, 0x9a, 0x9f, 0x8e, 0x95, 0xa3,
-0x93, 0xa1, 0xa6, 0x9c, 0xae, 0xaa, 0xa4, 0xa4, 0xab, 0xab, 0xa4,
-0xa2, 0xa7, 0xa5, 0x9e, 0xa8, 0xa2, 0xa9, 0xb4, 0xb1, 0xab, 0xa8,
-0xa6, 0xa5, 0xa6, 0xac, 0xaa, 0xb3, 0xbc, 0xb8, 0xb9, 0xb1, 0xbf,
-0xc4, 0xc5, 0xc7, 0xca, 0xcc, 0xd1, 0xd3, 0xcd, 0xca, 0xcd, 0xcc,
-0xca, 0xca, 0xc7, 0xcd, 0xd3, 0xcf, 0xd5, 0xdb, 0xd0, 0xd3, 0xd6,
-0xd2, 0xd3, 0xcb, 0xcb, 0xca, 0xc6, 0xbf, 0xbb, 0xc0, 0xbe, 0xba,
-0xb8, 0xb0, 0xb2, 0xb6, 0xb4, 0xb4, 0xb6, 0xbb, 0xb8, 0xb7, 0xba,
-0xc1, 0xba, 0xbc, 0xb0, 0xae, 0xb0, 0xb2, 0xb2, 0xb3, 0xba, 0xaa,
-0xa2, 0x92, 0x92, 0x91, 0x88, 0x80, 0x7b, 0x8e, 0x88, 0x86, 0x8c,
-0x8b, 0x92, 0x91, 0x8d, 0x89, 0x86, 0x84, 0x78, 0x77, 0x80, 0x75,
-0x76, 0x78, 0x72, 0x6e, 0x6b, 0x7c, 0x85, 0x8f, 0x86, 0x94, 0x9c,
-0xa4, 0xa4, 0xa8, 0xa8, 0xab, 0xad, 0xb7, 0xb4, 0xb1, 0xb7, 0xbb,
-0xbe, 0xba, 0xb9, 0xaf, 0xa6, 0x99, 0x96, 0x83, 0x81, 0x7b, 0x77,
-0x7a, 0x86, 0x88, 0x91, 0x9a, 0x9e, 0xa3, 0xa5, 0xb5, 0xb8, 0xb9,
-0xb9, 0xbc, 0xc5, 0xc3, 0xc6, 0xc9, 0xc8, 0xcd, 0xcf, 0xd1, 0xd1,
-0xd3, 0xd1, 0xd4, 0xce, 0xcf, 0xcf, 0xc9, 0xc5, 0xc7, 0xca, 0xc3,
-0xca, 0xce, 0xce, 0xd4, 0xcf, 0xca, 0xd1, 0xd5];
+ 0x20, 0x57, 0x31, 0x39, 0x32, 0x30, 0x20, 0x48, 0x31, 0x30, 0x38,
+ 0x30, 0x20, 0x46, 0x35, 0x30, 0x3a, 0x31, 0x20, 0x49, 0x70, 0x20,
+ 0x41, 0x31, 0x3a, 0x31, 0x0a, 0x46, 0x52, 0x41, 0x4d, 0x45, 0x0a,
+ 0x22, 0x23, 0x22, 0x23, 0x22, 0x21, 0x20, 0x1e, 0x20, 0x1e, 0x1c,
+ 0x1e, 0x20, 0x1f, 0x23, 0x23, 0x25, 0x22, 0x21, 0x25, 0x20, 0x20,
+ 0x22, 0x22, 0x23, 0x1f, 0x21, 0x22, 0x21, 0x27, 0x28, 0x27, 0x29,
+ 0x2d, 0x34, 0x30, 0x35, 0x33, 0x35, 0x51, 0x87, 0xb9, 0xbc, 0xbf,
+ 0xbb, 0x9c, 0x87, 0x84, 0x7d, 0x79, 0x7f, 0x8d, 0x94, 0xa4, 0xae,
+ 0xb0, 0xb3, 0xb3, 0xb2, 0xb1, 0xad, 0xb4, 0xab, 0xb5, 0xb4, 0xaa,
+ 0xb3, 0xb1, 0xa7, 0xac, 0xb5, 0xb6, 0xb3, 0xa8, 0xac, 0xac, 0xb0,
+ 0xbe, 0xbc, 0xbb, 0xc9, 0xbe, 0xb3, 0xa3, 0x99, 0x91, 0x8e, 0x82,
+ 0x8c, 0x85, 0x82, 0x8b, 0x85, 0x87, 0x9c, 0x99, 0xa5, 0xb3, 0xb2,
+ 0xb4, 0xb9, 0xaf, 0xb7, 0xa8, 0xb0, 0xac, 0xaa, 0xab, 0xb5, 0xb9,
+ 0xc2, 0xbd, 0xbf, 0xb8, 0xb1, 0xb9, 0xb0, 0xb3, 0xba, 0xbf, 0xc3,
+ 0xc8, 0xc5, 0xc7, 0xc9, 0xcd, 0xc8, 0xd0, 0xc8, 0xc5, 0xc9, 0xc3,
+ 0xc8, 0xca, 0xc2, 0xc8, 0xca, 0xcc, 0xcd, 0xc4, 0xc4, 0xc1, 0xb9,
+ 0xb5, 0xb9, 0xb5, 0xb4, 0xb6, 0xb3, 0xb8, 0xbb, 0xaf, 0xb4, 0xae,
+ 0xae, 0xb1, 0xb0, 0xae, 0xa8, 0xac, 0xa0, 0x99, 0x9c, 0x90, 0x99,
+ 0x9c, 0x9c, 0x9d, 0x90, 0x9d, 0x9a, 0x9f, 0x9e, 0x99, 0x96, 0x8f,
+ 0x95, 0x95, 0x8b, 0x8e, 0x88, 0x90, 0x92, 0x94, 0x95, 0x9a, 0x99,
+ 0x95, 0x8d, 0x91, 0x9a, 0x97, 0x95, 0xa1, 0xa6, 0x9f, 0xa2, 0xaa,
+ 0xa2, 0x9f, 0xa2, 0xac, 0xad, 0xa9, 0xa9, 0xab, 0xb1, 0xab, 0x9e,
+ 0x9f, 0x9d, 0x9d, 0x96, 0xa7, 0x9c, 0x9f, 0x9f, 0x90, 0x99, 0x95,
+ 0x9c, 0x9f, 0x9e, 0xa9, 0x9e, 0xa4, 0xa6, 0xa4, 0xa8, 0xa6, 0xac,
+ 0xb0, 0xae, 0xac, 0xb1, 0xb3, 0xbc, 0xb8, 0xb9, 0xbb, 0xb9, 0xb6,
+ 0xbc, 0xc2, 0xc4, 0xc3, 0xcc, 0xcd, 0xcd, 0xd2, 0xd3, 0xc9, 0xc6,
+ 0xd1, 0xd3, 0xd1, 0xd4, 0xca, 0xc8, 0xc5, 0xbb, 0xbc, 0xba, 0xc0,
+ 0xc2, 0xbd, 0xac, 0xa9, 0xb9, 0xb4, 0xac, 0xa5, 0xa7, 0x9d, 0xa3,
+ 0xa8, 0xa1, 0xa5, 0xa1, 0x9b, 0xa1, 0x9a, 0x9f, 0x8e, 0x95, 0xa3,
+ 0x93, 0xa1, 0xa6, 0x9c, 0xae, 0xaa, 0xa4, 0xa4, 0xab, 0xab, 0xa4,
+ 0xa2, 0xa7, 0xa5, 0x9e, 0xa8, 0xa2, 0xa9, 0xb4, 0xb1, 0xab, 0xa8,
+ 0xa6, 0xa5, 0xa6, 0xac, 0xaa, 0xb3, 0xbc, 0xb8, 0xb9, 0xb1, 0xbf,
+ 0xc4, 0xc5, 0xc7, 0xca, 0xcc, 0xd1, 0xd3, 0xcd, 0xca, 0xcd, 0xcc,
+ 0xca, 0xca, 0xc7, 0xcd, 0xd3, 0xcf, 0xd5, 0xdb, 0xd0, 0xd3, 0xd6,
+ 0xd2, 0xd3, 0xcb, 0xcb, 0xca, 0xc6, 0xbf, 0xbb, 0xc0, 0xbe, 0xba,
+ 0xb8, 0xb0, 0xb2, 0xb6, 0xb4, 0xb4, 0xb6, 0xbb, 0xb8, 0xb7, 0xba,
+ 0xc1, 0xba, 0xbc, 0xb0, 0xae, 0xb0, 0xb2, 0xb2, 0xb3, 0xba, 0xaa,
+ 0xa2, 0x92, 0x92, 0x91, 0x88, 0x80, 0x7b, 0x8e, 0x88, 0x86, 0x8c,
+ 0x8b, 0x92, 0x91, 0x8d, 0x89, 0x86, 0x84, 0x78, 0x77, 0x80, 0x75,
+ 0x76, 0x78, 0x72, 0x6e, 0x6b, 0x7c, 0x85, 0x8f, 0x86, 0x94, 0x9c,
+ 0xa4, 0xa4, 0xa8, 0xa8, 0xab, 0xad, 0xb7, 0xb4, 0xb1, 0xb7, 0xbb,
+ 0xbe, 0xba, 0xb9, 0xaf, 0xa6, 0x99, 0x96, 0x83, 0x81, 0x7b, 0x77,
+ 0x7a, 0x86, 0x88, 0x91, 0x9a, 0x9e, 0xa3, 0xa5, 0xb5, 0xb8, 0xb9,
+ 0xb9, 0xbc, 0xc5, 0xc3, 0xc6, 0xc9, 0xc8, 0xcd, 0xcf, 0xd1, 0xd1,
+ 0xd3, 0xd1, 0xd4, 0xce, 0xcf, 0xcf, 0xc9, 0xc5, 0xc7, 0xca, 0xc3,
+ 0xca, 0xce, 0xce, 0xd4, 0xcf, 0xca, 0xd1, 0xd5];
 
 test (String.implode (map Char.chr ilist));
 
+val date_matcher = time matcher 
+   `(201\d|202[0-5])-([1-9]|1[0-2])-([1-9]|[1-2]\d|3[0-1]) (1?\d|2[0-3]):(\d|[1-5]\d):(\d|[1-5]\d)`;
 
-(*---------------------------------------------------------------------------*)
-(* Numeric intervals are introduced with \i{lo,hi}                           *)
-(*---------------------------------------------------------------------------*)
-
-fun unsigned_width_256 (n:IntInf.int) = 
- if n < 0 then raise ERR "unsigned_width_256" "negative number" else
- if n < 256 then 1
- else 1 + unsigned_width_256 (n div 256);
-
-fun signed_width_256 (n:IntInf.int) = 
-  let fun fus k acc = 
-       let val lo = ~(IntInf.pow(2,k-1))
-           val hi = IntInf.pow(2,k-1) - 1
-       in if lo <= n andalso n <= hi
-            then acc
-            else fus (k+8) (acc+1)
-       end
- in fus 8 1
- end;
-
-(*---------------------------------------------------------------------------*)
-(* bytes_of i w lays out i into w bytes                                      *)
-(*---------------------------------------------------------------------------*)
-
-fun byte_me i = Word8.fromInt (IntInf.toInt i);
-fun inf_byte w = IntInf.fromInt(Word8.toInt w);
-
-val bytes_of = 
- let val eight = Word.fromInt 8
-     val mask = 0xFF:IntInf.int
-     fun step i n =
-      if n=1 then [byte_me i]
-      else
-        let val a = IntInf.andb(i,mask)
-            val j = IntInf.~>>(i,eight)
-       in byte_me a::step j (n-1)
-       end
-  in
-   step
- end
-
-fun lsb_signed i   = bytes_of i (signed_width_256 i);
-fun lsb_unsigned i = bytes_of i (unsigned_width_256 i);
-fun msb_signed i   = rev (lsb_signed i);
-fun msb_unsigned i = rev (lsb_unsigned i);
-
-fun lsb_num_of wlist : IntInf.int = 
- let fun value [] = 0
-      | value (h::t) = h + 256 * value t
- in value (map inf_byte wlist)
- end;
-
-fun lsb_int_of wlist = 
- let fun value [] = 0
-       | value (h::t) = h + 256 * value t
-     val (A,a) = Lib.front_last wlist
-     val wlist' = map inf_byte A @ [IntInf.fromInt(Word8.toIntX a)]
- in value wlist'
- end;
-
-fun msb_num_of wlist = lsb_num_of (rev wlist);
-fun msb_int_of wlist = lsb_int_of (rev wlist);
-
-val byte2char = Char.chr o Word8.toInt;
-val char2byte = Word8.fromInt o Char.ord;
-
-val string2num = lsb_num_of o map char2byte o String.explode;
-val string2int = lsb_int_of o map char2byte o String.explode;
-
-fun num2string w n =
- let val blist = bytes_of (IntInf.fromInt n) w
- in String.implode (map byte2char blist)
- end;
+  date_matcher "2016-5-21 20:23:24"
+  andalso 
+  date_matcher "2010-12-1 0:0:0"
+  andalso 
+  date_matcher "2019-1-22 11:11:11"
+  andalso 
+  date_matcher "2016-5-21 20:23:24"
+  andalso 
+  not (date_matcher "20162107-501-2100 20000:23000:")
+  andalso 
+  not (date_matcher "foo-bar-baz")
+; 
 
 (*---------------------------------------------------------------------------*)
 (* Test ranges over natural numbers                                          *)
 (*---------------------------------------------------------------------------*)
 
 val test = matcher `\i{0,17999}`;
-val nlist = map (num2string 2) (upto 0 17999);
+val nlist = map (int2string 2) (upto 0 17999);
 Lib.all (equal true) (map test nlist);
-Lib.all (equal false) (map (test o num2string 2) (upto 18000 21212));
+Lib.all (equal false) (map (test o int2string 2) (upto 18000 21212));
 
 val test = matcher `\i{1,17999}`;
-val nlist = map (num2string 2) (upto 1 17999);
+val nlist = map (int2string 2) (upto 1 17999);
 Lib.all (equal true) (map test nlist);
-Lib.all (equal false) (map (test o num2string 2) [~1,0,18000]);
+Lib.all (equal false) (map (test o int2string 2) [~1,0,18000]);
 
 val test = matcher `\i{0,2500000}`;
-Lib.all (equal true) (map (test o num2string 3) (upto 0 2500000));
-Lib.all (equal false) (map (test o num2string 3) (upto 2500001 2502999));
+Lib.all (equal true) (map (test o int2string 3) (upto 0 2500000));
+Lib.all (equal false) (map (test o int2string 3) (upto 2500001 2502999));
 
 val test = matcher `\i{17999,2500000}`;
-val nlist = map (num2string 3) (upto 17999 2500000);
+val nlist = map (int2string 3) (upto 17999 2500000);
 Lib.all (equal true) (map test nlist);
-Lib.all (equal false) (map (test o num2string 3) (upto 0 17998));
-Lib.all (equal false) (map (test o num2string 3) (upto 2500001 2502999));
+Lib.all (equal false) (map (test o int2string 3) (upto 0 17998));
+Lib.all (equal false) (map (test o int2string 3) (upto 2500001 2502999));
 
 (*---------------------------------------------------------------------------*)
 (* Test ranges over integers                                                 *)
@@ -283,75 +238,124 @@ Lib.all (equal false) (map (test o num2string 3) (upto 2500001 2502999));
 
 val test = matcher `\i{~4,0}`;
 signed_width_256 ~4 = 1;
-Lib.all (equal true) (map (test o num2string 1) (upto ~4 0));
-Lib.all (equal false) (map (test o num2string 1) [~5, ~6, ~64, 1, 2, 3, 4]);
+Lib.all (equal true) (map (test o int2string 1) (upto ~4 0));
+Lib.all (equal false) (map (test o int2string 1) [~5, ~6, ~64, 1, 2, 3, 4]);
 
 val test = matcher `\i{~90,0}`;
 signed_width_256 ~90 = 1;
-Lib.all (equal true) (map (test o num2string 1) (upto ~90 0));
-Lib.all (equal false) (map (test o num2string 1) (upto ~128 ~91));
-Lib.all (equal false) (map (test o num2string 1) (upto 1 127));
+Lib.all (equal true) (map (test o int2string 1) (upto ~90 0));
+Lib.all (equal false) (map (test o int2string 1) (upto ~128 ~91));
+Lib.all (equal false) (map (test o int2string 1) (upto 1 127));
 
 val test = matcher `\i{~90,90}`;
 signed_width_256 ~90 = 1;
-Lib.all (equal true) (map (test o num2string 1) (upto ~90 90));
-Lib.all (equal false) (map (test o num2string 1) (upto ~128 ~91));
-Lib.all (equal false) (map (test o num2string 1) (upto 91 127));
+Lib.all (equal true) (map (test o int2string 1) (upto ~90 90));
+Lib.all (equal false) (map (test o int2string 1) (upto ~128 ~91));
+Lib.all (equal false) (map (test o int2string 1) (upto 91 127));
 
 val test = matcher `\i{~180,0}`;
 signed_width_256 ~180 = 2;
-Lib.all (equal true) (map (test o num2string 2) (upto ~180 0));
-Lib.all (equal false) (map (test o num2string 2) (upto ~32768 ~181));
-Lib.all (equal false) (map (test o num2string 2) (upto 181 1027));
+Lib.all (equal true) (map (test o int2string 2) (upto ~180 0));
+Lib.all (equal false) (map (test o int2string 2) (upto ~32768 ~181));
+Lib.all (equal false) (map (test o int2string 2) (upto 181 1027));
 
 val test = matcher `\i{~180,180}`;
 signed_width_256 ~180 = 2;
-Lib.all (equal true) (map (test o num2string 2) (upto ~180 180));
-Lib.all (equal false) (map (test o num2string 2) [~181,181,192,18000,~1888]);
+Lib.all (equal true) (map (test o int2string 2) (upto ~180 180));
+Lib.all (equal false) (map (test o int2string 2) [~181,181,192,18000,~1888]);
 
 val test = matcher `\i{~2500000,2500000}`;
 signed_width_256 ~2500000 = 3;
-Lib.all (equal true) (map (test o num2string 3) (upto ~2500000 2500000));
-Lib.all (equal false) (map (test o num2string 3) 
+Lib.all (equal true) (map (test o int2string 3) (upto ~2500000 2500000));
+Lib.all (equal false) (map (test o int2string 3) 
                       [~2500001,~2500001, 2500001,2500002,2599999]);
 
 val test = matcher `\i{~3,300}`;
 signed_width_256 300 = 2;
-Lib.all (equal true) (map (test o num2string 2) (upto ~3 300));
-Lib.all (equal false) (map (test o num2string 2) (upto ~300 ~4));
-Lib.all (equal false) (map (test o num2string 2) (upto 301 16534));
+Lib.all (equal true) (map (test o int2string 2) (upto ~3 300));
+Lib.all (equal false) (map (test o int2string 2) (upto ~300 ~4));
+Lib.all (equal false) (map (test o int2string 2) (upto 301 16534));
 
 val test = matcher `\i{~3,800}`;
 signed_width_256 800 = 2;
-Lib.all (equal true) (map (test o num2string 2) (upto ~3 800));
-Lib.all (equal false) (map (test o num2string 2) (upto ~12000 ~4));
-Lib.all (equal false) (map (test o num2string 2) (upto 801 16534));
+Lib.all (equal true) (map (test o int2string 2) (upto ~3 800));
+Lib.all (equal false) (map (test o int2string 2) (upto ~12000 ~4));
+Lib.all (equal false) (map (test o int2string 2) (upto 801 16534));
 
 val test = matcher `\i{~17999,0}`;
 signed_width_256 ~17999 = 2;
-Lib.all (equal true) (map (test o num2string 2) (upto ~17999 0));
-Lib.all (equal false) (map (test o num2string 2) (upto ~34000 ~18000));
-Lib.all (equal false) (map (test o num2string 2) (upto 1 18000));
+Lib.all (equal true) (map (test o int2string 2) (upto ~17999 0));
+Lib.all (equal false) (map (test o int2string 2) (upto ~34000 ~18000));
+Lib.all (equal false) (map (test o int2string 2) (upto 1 18000));
 
 val test = matcher `\i{~17999,~123}`;
 signed_width_256 ~17999 = 2;
-Lib.all (equal true) (map (test o num2string 2) (upto ~17999 ~123));
-Lib.all (equal false) (map (test o num2string 2) (upto ~34000 ~18000));
-Lib.all (equal false) (map (test o num2string 2) (upto ~122 ~1));
-Lib.all (equal false) (map (test o num2string 2) (upto ~122 1000));
+Lib.all (equal true) (map (test o int2string 2) (upto ~17999 ~123));
+Lib.all (equal false) (map (test o int2string 2) (upto ~34000 ~18000));
+Lib.all (equal false) (map (test o int2string 2) (upto ~122 ~1));
+Lib.all (equal false) (map (test o int2string 2) (upto ~122 1000));
 
 val test = matcher `\i{~116535,~23}`;
 signed_width_256 ~116535 = 3;
-Lib.all (equal true) (map (test o num2string 3) (upto ~116535 ~23));
-Lib.all (equal false) (map (test o num2string 3) (upto ~119999 ~116536));
-Lib.all (equal false) (map (test o num2string 3) (upto ~122 ~1));
-Lib.all (equal false) (map (test o num2string 3) (upto ~122 1000));
+Lib.all (equal true) (map (test o int2string 3) (upto ~116535 ~23));
+Lib.all (equal false) (map (test o int2string 3) (upto ~119999 ~116536));
+Lib.all (equal false) (map (test o int2string 3) (upto ~122 ~1));
+Lib.all (equal false) (map (test o int2string 3) (upto ~122 1000));
 
 (*---------------------------------------------------------------------------*)
 (* Test numeric constants                                                    *)
 (*---------------------------------------------------------------------------*)
 
 val test = matcher `\k{23}`;
+true = test (int2string 1 23);
+equal false (test (int2string 1 22));
+Lib.all (equal false) (map (test o int2string 1) (upto 0 22));
+Lib.all (equal false) (map (test o int2string 1) (upto 24 255));
+
+val test = matcher `\k{~23}`;
+test (int2string 1 ~23);
+false = test (int2string 1 ~22);
+Lib.all (equal false) (map (test o int2string 1) (upto ~22 0));
+Lib.all (equal false) (map (test o int2string 1) (upto 1 127));
+Lib.all (equal false) (map (test o int2string 1) (upto ~128 ~24));
+
+val test = matcher `\k{~128}`;
+signed_width_256 ~128;
+test (int2string 1 ~128);
+equal false (test (int2string 1 ~22));
+equal false (test (int2string 1 22));;
+Lib.all (equal false) (map (test o int2string 1) (upto ~22 127));
+Lib.all (equal false) (map (test o int2string 1) (upto ~127 ~24));
+
+val test = matcher `\k{116535}`;
+3 = signed_width_256 116535;
+equal true (test (int2string 3 116535));
+equal false (test (int2string 3 ~22));
+equal false (test (int2string 3 22));;
+Lib.all (equal false) (map (test o int2string 3) (upto ~22 116534));
+Lib.all (equal false) (map (test o int2string 3) (upto ~127 ~24));
+
+val test = matcher `\k{~116535}`;
+signed_width_256 ~116535;
+equal true (test (int2string 3 ~116535));
+equal false (test (int2string 3 ~22));
+equal false (test (int2string 3 22));;
+equal false (test (int2string 3 ~116536));
+equal false (test (int2string 3 ~116537));
+equal false (test (int2string 3 ~116538));
+Lib.all (equal false) (map (test o int2string 3) (upto ~22 127));
+Lib.all (equal false) (map (test o int2string 3) (upto ~127 ~24));
+
+val test = matcher `\k{~116535,MSB}`;
+3 = signed_width_256 ~116535;
+equal true (test (int2string_msb 3 ~116535));
+equal false (test (int2string_msb 3 ~22));
+equal false (test (int2string_msb 3 22));;
+equal false (test (int2string_msb 3 ~116536));
+equal false (test (int2string 3 ~116537));
+equal false (test (int2string 3 ~116538));
+Lib.all (equal false) (map (test o int2string 3) (upto ~22 127));
+Lib.all (equal false) (map (test o int2string 3) (upto ~127 ~24));
 
 (*---------------------------------------------------------------------------*)
 (* CANBUS GPS message format. Taken from                                     *)
@@ -395,10 +399,13 @@ val test = matcher `\k{23}`;
  * VDOP (positional accuracy) Byte 6, 7 (LSB, MSB) 0 ... 999 "m" (0.1 m)
  *)
  
-val test_1800 = matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}`;
-val test_1801 = matcher `\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}`;
-val test_1802 = matcher `\i{0,9999,LSB}\i{0,3599,LSB}`;
-val test_1803 = matcher `\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
+val match_1800        = matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}`;
+val match_1801        = matcher `\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}`;
+val match_1801_packed = 
+ matcher `\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}`;
+val match_1802    = matcher `\i{0,9999,LSB}\i{0,3599,LSB}.{4}`;
+val test_1802_alt = matcher `\i{0,9999}\i{0,3599}\k{0}{4}`;
+val match_1803    = matcher `\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
 
 fun prod [] l2 = []
   | prod (h::t) l2 = map (strcat h) l2 @ prod t l2;
@@ -408,55 +415,115 @@ fun PROD [] = []
   | PROD (h::t) = prod h (PROD t);
 
 (*---------------------------------------------------------------------------*)
-(* 58 trillion strings to test exhaustively. Slightly unfeasible as written. *)
+(* 58 trillion strings to match exhaustively. Slightly unfeasible as written. *)
 (* Could be done one-at-a-time, I suppose.                                   *)
 (*---------------------------------------------------------------------------*)
 (*
 Lib.all (equal true)
- (map test_1800 
+ (map match_1800 
    (PROD 
-     [map (num2string 1) (upto 1 31),
-      map (num2string 1) (upto 1 12),
-      map (num2string 1) (upto 0 99),
-      map (num2string 1) (upto 0 23),
-      map (num2string 1) (upto 0 59),
-      map (num2string 1) (upto 0 59),
-      map (num2string 2) (upto 0 17999)]));
+     [map (int2string 1) (upto 1 31),
+      map (int2string 1) (upto 1 12),
+      map (int2string 1) (upto 0 99),
+      map (int2string 1) (upto 0 23),
+      map (int2string 1) (upto 0 59),
+      map (int2string 1) (upto 0 59),
+      map (int2string 2) (upto 0 17999)]));
 *)
 
 Lib.all (equal true)
- (map test_1800 
+ (map match_1800 
    (PROD 
-     [map (num2string 1) (upto 1 10),
-      map (num2string 1) (upto 1 10),
-      map (num2string 1) (upto 0 9),
-      map (num2string 1) (upto 0 9),
-      map (num2string 1) (upto 0 9),
-      map (num2string 1) (upto 0 9),
-      map (num2string 2) (upto 0 9)]));
+     [map (int2string 1) (upto 1 10),
+      map (int2string 1) (upto 1 10),
+      map (int2string 1) (upto 0 9),
+      map (int2string 1) (upto 0 9),
+      map (int2string 1) (upto 0 9),
+      map (int2string 1) (upto 0 9),
+      map (int2string 2) (upto 0 9)]));
 
-val test_18xx_disjunctive = matcher 
+val match_18xx_disjunctive = matcher 
  `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}|\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}|\i{0,9999,LSB}\i{0,3599,LSB}|\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
 
-val test_18xx_concat = matcher 
+val match_18xx_concat = matcher 
  `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}\i{0,9999,LSB}\i{0,3599,LSB}\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
 
-fun deconstruct {certificate, final, matchfn,start, table} = 
- let fun toList V = List.map (curry Vector.sub V) (upto 0 (Vector.length V - 1))
- in (start, toList final, toList (Vector.map toList table))
+fun unsigned_width_bits (n:IntInf.int) = 
+ if n < 0 then raise ERR "unsigned_width_bits" "negative number" else
+ if n < 2 then 1
+ else 1 + unsigned_width_bits (n div 2);
+
+fun signed_width_bits (n:IntInf.int) = 
+  let fun fus bits = 
+       let val N = IntInf.pow(2,bits-1)
+       in if ~N <= n andalso n <= N-1 then bits else fus (bits+1)
+       end
+ in fus 0
  end;
 
-val (a,b,c) = deconstruct test_1800;
-val (a,b,c) = deconstruct test_1801;
-val (a,b,c) = deconstruct test_1802;
-val (a,b,c) = deconstruct test_1803;
-val (a,b,c) = deconstruct test_18xx_concat;
+fun find_width (lo,hi) = 
+ if lo > hi 
+  then raise ERR "find_width" "malformed interval (lo > hi)"
+ else
+ if lo < 0 andalso hi < 0 
+    then signed_width_bits lo else
+ if lo < 0 andalso hi >= 0 
+    then Int.max(signed_width_bits lo, signed_width_bits hi)
+ else  (* lo and hi both non-negative *)
+   unsigned_width_bits hi;
 
+map find_width [(0,63),(~32,31),(35,60),(~12,27)];
+
+val allones = IntInf.notb(IntInf.fromInt 0);
+
+(*---------------------------------------------------------------------------*)
+(* Clear top (all but rightmost width) bits in w                             *)
+(*---------------------------------------------------------------------------*)
+
+fun clear_top_bits width w = 
+ let open IntInf
+     val mask = notb(<<(allones,Word.fromInt(width)))
+ in andb(w,mask)
+ end
+
+fun clear_bot_bits width w = 
+ let open IntInf
+ in ~>>(w,Word.fromInt width)
+ end
+
+fun sign_extend w width = 
+ let open IntInf
+ in if ~>>(w,Word.fromInt (width - 1)) = 1
+  then (* signed *)
+     orb(w,IntInf.<<(allones,Word.fromInt width))
+  else w
+ end
+
+fun icat w shift i = 
+ let val shiftw = Word.fromInt shift
+     val shifted = IntInf.<<(w,shiftw)
+     val x = clear_top_bits shift (IntInf.fromInt i)
+ in 
+   IntInf.orb(shifted,x)
+ end
+
+val test = icat (icat (icat 63 6 31) 6 45) 6 ~1;
+
+matcher `\p{(~180,180)(0,59)}`;
+
+matcher `\p{(0,63)(~32,31)(35,60)(~12,27)}`;
+
+matcher `\p{(0,1)(0,2)(0,3)(~1,1)}`
+
+map find_width [(0,1),(0,2),(0,3),(~1,1)];
+
+matcher `\p{(0,7)(0,1)(0,15)}`
+matcher `\p{(1,5)(0,1)(0,15)}`
+matcher `\p{(1,5)(0,1)(0,15)}\i{0,999}`;
 
 (*---------------------------------------------------------------------------*)
 (* Hard cases for Brzozowski? These seem to take exponential time.           *)
 (*---------------------------------------------------------------------------*)
-
 (*
 time matcher `\w{1,20}`; 
 time matcher `\w{1,50}`; 
@@ -464,17 +531,87 @@ time matcher `\w{1,75}`;
 time matcher `\w{1,100}`;
 time matcher `\w{1,200}`;
 
-fun dom q = Regexp_Match.domBrz (Regexp_Type.fromQuote q);
-time dom `\w{20}`;
-time dom `\w{50}`;
-time dom `\w{75}`;
-time dom `\w{100}`;
-time dom `\w{200}`;
+set_trace "regexp-compiler" 0;;
 
-time dom `\w{1,20}`;  (* 0.052 s *)
-time dom `\w{1,50}`;  (* 0.73600s *)
-time dom `\w{1,75}`;  (* 2.784s *)
-time dom `\w{1,100}`; (* 6.912s *)
-time dom `\w{1,200}`; (* 62 s *)
+dom `\w{20}`;
+dom `\w{50}`;
+dom `\w{75}`;
+dom `\w{100}`;
+dom `\w{200}`;
+
+dom `\w{1,20}`;  (* 256: 0.02s ; 0.12s ; 128: 0.052s *)
+dom `\w{1,50}`;  (* 256: 0.14s ; 1.8s  ; 128: 0.73600s *)
+dom `\w{1,75}`;  (* 256: 0.37s ; 6.2s  ; 128: 2.784s *)
+dom `\w{1,100}`; (* 256: 0.72s ; 13.6s ; 128: 6.912s *)
+dom `\w{1,200}`; (* 256: 4.4s  ; 123s  ; 128: 62 s *)
+dom `\w{1,300}`; (* 256: 12.8s *)
+dom `\w{1,400}`; (* 256: 28.2s *)
+dom `\w{1,500}`; (* 256: 55.5ss *)
+
+(*---------------------------------------------------------------------------*)
+(* packed intervals                                                          *)
+(*---------------------------------------------------------------------------*)
+
+dom `\p{(0,5)(0,3)(3,5)}`;
+(* 0.002s. 1 byte needed *)
+
+dom `\p{(0,5)(0,63)(0,127)}`;  (* Weird regexp generated *)
+(* 7.5s. 2 bytes needed. 1 interval *)
+(* 8.5s. 2 bytes needed. 1 interval *)
+(* 8.7s. 2 bytes needed. 442371 intervals  (smallest total size) *)
+(* 0.52s. 2 bytes needed. 49152 elements; 3911 nodes in regexp *)
+(* 0.068s. ditto the rest *)
+
+dom `\p{(0,127)(0,63)(0,5)}`;    (* Another weird regexp generated *)
+(* 1.3s. 2 bytes. 8192 intervals *)
+(* 0.17s. 2 bytes. 192 intervals *)
+(* 0.29s. 2 bytes. 442944 intervals (smallest total size) *)
+(* 0.384s. 2 bytes needed. 49152 elements; 4035 nodes in regexp *)
+
+dom `\p{(0,360)(0,59).{1}}`;
+dom `\p{(0,360)(0,59)(1,1)}`;
+dom `\p{(0,360).{1}(0,59)}`;
+dom `\p{.{1}(0,360)(0,59)}`;
+
+dom `\p{(~180,180)(0,59)(0,0)}`;
+(* 0.12s. 2 bytes needed. 361 intervals *)
+(* 0.08s. 2 bytes needed. 120 intervals *)
+(* 0.15s. 2 bytes needed. 195300 intervals (smallest total size) *)
+(* 0.039s. 2 bytes needed. 21660 elements; 2403 nodes in regexp *)
+
+dom `\p{(0,59)(~180,180).{1}}`;
+(* 3.4s. 2 bytes needed. 61 intervals *)
+(* 4.9s. 2 bytes needed. 61 intervals *)
+(* 3.5s. 2 bytes needed. 195,123 intervals (smallest total size) *)
+(* 0.012s. 2 bytes needed. 21660 elements;  2449 nodes in regexp *)
+
+dom `\p{(0,41)(0,127)(0,255),(0,0),(0,0),(0,0)}`;
+dom `\p{(0,41)(0,127)(0,255),(0,7)}`;
+dom `\p{(0,41)(0,127)(0,255).{3}}`;
+(* 12.2s. 3 bytes. 79464 intervals generated *)
+(* 11.5s. 5376 intervals *)
+(* 263s. 168 intervals *)
+(* 228s. 16,515,576 intervals (smallest total size) *)
+(* 5.1s. 1,376,256 elements; 161923 nodes in regexp *)
+
+dom `\p{(0,41)(0,42)(0,43)(0,48)}`;
+(* 56s. 3 bytes. 79464 intervals generated *)
+(* 113s 3 bytes. 26,080,059 intervals generated *)
+(* 34.3s. 3 bytes. 3,893,736 elements ;  2,216,899 nodes in regexp *)
+
+dom `\p{(0,63)(0,42)(0,63)(0,63)}`;
+(* 261s. 3 bytes, 11,272,192 elements in set, 33,993,813 nodes in regexp *)
+
+dom `(201\d|202[0-5])-([1-9]|1[0-2])-([1-9]|[1-2]\d|3[0-1]) (1?\d|2[0-3]):(\d|[1-5]\d):(\d|[1-5]\d)`;
+(* 0.25s; 24 states *)
+
+dom `\[\{"time":"\d{13}(:\d{3})?","\w{1,20}":\{("\w{1,25}":"\w{1,30}",?)+\}\}\]`;
+(* 119 states; 0.68s *)
+
+dom `\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}`;
+(* 14 states ; 0.46s *)
+(* 13 states ; 0.54s *)
+(* 0.27s. 195,300 intervals *)
+(* 0.17s. 21660 elements; 2403 nodes in regexp *)
 
 *)
