@@ -1473,7 +1473,7 @@ val nel_proj = prove(
   SRW_TAC [ARITH_ss][proj_def, nel_nlist_of] THEN
   POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `l` THEN Induct_on `i` THEN
   SRW_TAC [][] THENL [
-    Cases_on `l` THEN FULL_SIMP_TAC (srw_ss()) [nel_def, ndrop_def, nhd_def],
+    FULL_SIMP_TAC (srw_ss()) [nel_def, ndrop_def, nhd_def],
     Cases_on `l` THEN1 SRW_TAC [][nel_def, ndrop_0, nhd_def] THEN
     SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []
   ]);
