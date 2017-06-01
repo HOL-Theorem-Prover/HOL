@@ -31,8 +31,8 @@ fun satisfy_in_envs consts tms (tm1,envs) =
   end;
 
 fun satisfyl_in_envs consts tms1 tms2 envs =
-    seq_iterate (satisfy_in_envs consts (seq_of_list tms2))
-    (seq_of_list tms1,envs);
+    seq_iterate (satisfy_in_envs consts (seq_of_list tms1))
+    (seq_of_list tms2,envs);
 
 fun satisfy consts tms1 tms2 =
     seq_hd (satisfyl_in_envs consts tms1 tms2 (seq_single []))
@@ -63,7 +63,7 @@ fun satisfy1 (consts,facts) gl =
       val facts' = map (snd o strip_forall) facts
       fun choose choices v =
         deref_tmenv choices v handle HOL_ERR _ => mk_select(v,T)
-      val choices = satisfy (union consts (free_vars gl)) goals facts'
+      val choices = satisfy (union consts (free_vars gl)) facts' goals
   in map (choose choices) gvars
   end;
 
