@@ -408,6 +408,10 @@ val mw_fix_LENGTH_ZERO = prove(
   ``!xs. (LENGTH (mw_fix xs) = 0) = (mw2n xs = 0)``,
   FULL_SIMP_TAC std_ss [LENGTH_NIL,mw_fix_NIL]);
 
+val mw_fix_NIL = prove(
+  ``!xs. (mw_fix xs = []) = (mw2n xs = 0)``,
+  FULL_SIMP_TAC std_ss [LENGTH_NIL,mw_fix_NIL]);
+
 val mw_fix_EQ_n2mw =
   Q.SPEC `mw_fix xs` mw_ok_IMP_EXISTS_n2mw |> RW [mw_ok_mw_fix] |> GEN_ALL;
 
@@ -3043,7 +3047,7 @@ val mw_to_dec_def = tDefine "mw_to_dec" `
   \\ `0x0w <+ 10w` by FULL_SIMP_TAC (srw_ss()) [WORD_LO]
   \\ IMP_RES_TAC mw_simple_div_thm
   \\ FULL_SIMP_TAC (srw_ss()) [REVERSE_REVERSE,mw2n_mw_fix]
-  \\ FULL_SIMP_TAC std_ss [DIV_LT_X,mw_fix_LENGTH_ZERO]
+  \\ FULL_SIMP_TAC std_ss [DIV_LT_X,mw_fix_NIL]
   \\ Q.PAT_X_ASSUM `10 < dimword (:'a)` ASSUME_TAC
   \\ FULL_SIMP_TAC std_ss [DIV_EQ_X,NOT_LESS]
   \\ DECIDE_TAC);
@@ -3071,7 +3075,7 @@ val mw_to_dec_thm = store_thm("mw_to_dec_thm",
   \\ IMP_RES_TAC mw2n_k2mw \\ FULL_SIMP_TAC (srw_ss()) [w2n_n2w]
   \\ Q.PAT_X_ASSUM `10 < dimword (:'a)` ASSUME_TAC \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [PULL_FORALL,AND_IMP_INTRO]
-  \\ FULL_SIMP_TAC std_ss [mw_fix_LENGTH_ZERO]
+  \\ FULL_SIMP_TAC std_ss [mw_fix_NIL]
   \\ ONCE_REWRITE_TAC [num_to_dec_string_unroll]
   \\ `(k DIV 10 = 0) = k < 10` by FULL_SIMP_TAC std_ss [DIV_EQ_X,NOT_LESS]
   \\ FULL_SIMP_TAC std_ss []
@@ -3509,6 +3513,7 @@ val single_div_full_thm = store_thm("single_div_full_thm",
   \\ fs [] \\ fs [single_div_def]
   \\ Cases_on `x2` \\ Cases_on `x1` \\ Cases_on `y` \\ fs [mw2n_def]
   \\ rw [] \\ match_mp_tac HD_eq_n2w_mw2n \\ fs []
+  \\ conj_tac >- (strip_tac \\ fs[])
   \\ rpt (qpat_assum `_ = mw2n _` (fn th => fs [GSYM th]))
   \\ fs [DIV_LT_X] \\ fs [dimword_def]
   \\ match_mp_tac LESS_TRANS
