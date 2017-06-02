@@ -1324,7 +1324,7 @@ val LAMl_ALPHA = store_thm(
        (LAMl vs M = LAMl vs' (M ISUB REVERSE (ZIP(MAP VAR vs', vs))))``,
   Induct THENL [
     SRW_TAC [][] THEN
-    Cases_on `vs'` THEN FULL_SIMP_TAC (srw_ss()) [ISUB_def],
+    FULL_SIMP_TAC (srw_ss()) [ISUB_def],
     SRW_TAC [][] THEN
     Cases_on `vs'` THEN
     FULL_SIMP_TAC (srw_ss()) [DISJ_IMP_THM, FORALL_AND_THM] THEN
@@ -1350,7 +1350,6 @@ val FRESH_lists = store_thm(
        FINITE s ==> ?l'. ALL_DISTINCT l' /\ DISJOINT (LIST_TO_SET l') s /\
                          (LENGTH l' = n)``,
   Induct THEN SRW_TAC [][] THENL [
-    Q.EXISTS_TAC `[]` THEN SRW_TAC [][],
     RES_TAC THEN
     Q_TAC (NEW_TAC "z") `LIST_TO_SET l' UNION s` THEN
     Q.EXISTS_TAC `z::l'` THEN
@@ -2100,7 +2099,6 @@ val collect_standard_reductions = prove(
             (first s' = FOLDL APP (first s) args0) /\
             (last s' = FOLDL APP (last s) args)``,
   Induct THEN SRW_TAC [][] THENL [
-    `args = []` by FULL_SIMP_TAC (srw_ss()) [listTheory.LENGTH_NIL] THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC [],
     FULL_SIMP_TAC (srw_ss()) [listTheory.LENGTH_CONS] THEN VAR_EQ_TAC THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN

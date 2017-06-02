@@ -1280,10 +1280,8 @@ val WEAK_SF_SEM___sf_tree_len_SUBTREE_THM = prove (
          Induct_on `t` THENL [
             SIMP_TAC list_ss [ALL_DISJOINT_def] THEN
             REPEAT STRIP_TAC THEN
-            Cases_on `fL` THEN FULL_SIMP_TAC list_ss [] THEN
 
             Q.EXISTS_TAC `DRESTRICT h {GET_DSV_VALUE (DS_EXPRESSION_EVAL s e2)}` THEN
-            Q.EXISTS_TAC `[]` THEN
 
             ASM_SIMP_TAC list_ss [ALL_DISJOINT_def, SUBMAP_DEF, DRESTRICT_DEF,
                IN_INTER, IN_SING, GSYM fmap_EQ_THM, EXTENSION, FDOM_FEMPTY, NOT_IN_EMPTY,

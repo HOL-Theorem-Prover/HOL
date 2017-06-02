@@ -2518,7 +2518,7 @@ val mc_div_loop_thm = prove(
         \\ FULL_SIMP_TAC std_ss [LENGTH_FRONT,LENGTH_mw_mul_by_single,GSYM LENGTH_NIL]
         \\ DECIDE_TAC)
       \\ `(ys1 = []) \/ ?t1 t2. ys1 = SNOC t1 t2` by METIS_TAC [SNOC_CASES]
-      \\ FULL_SIMP_TAC (srw_ss()) [ADD1,GSYM LENGTH_NIL] THEN1 `F` by DECIDE_TAC
+      \\ FULL_SIMP_TAC (srw_ss()) [ADD1]
       \\ FULL_SIMP_TAC std_ss [EL_LENGTH,RW [SNOC_APPEND] FRONT_SNOC]
       \\ `(t2 = []) \/ ?t3 t4. t2 = SNOC t3 t4` by METIS_TAC [SNOC_CASES]
       \\ FULL_SIMP_TAC (srw_ss()) [EL_LENGTH,RW [SNOC_APPEND] FRONT_SNOC,
@@ -3261,7 +3261,7 @@ val mc_div_thm = prove(
   \\ Q.MATCH_ASSUM_RENAME_TAC `l5 ≤ l6 + LENGTH x1`
   \\ MP_TAC (mc_copy_down_thm |> Q.SPECL [`tt`,`REVERSE qs1`,`zs2`,`l6-1`])
   \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
-   (fs [GSYM LENGTH_NIL]
+   (full_simp_tac std_ss [GSYM LENGTH_NIL]
     \\ Cases_on `LENGTH x1` \\ fs []
     \\ Cases_on `n` \\ fs []
     \\ fs [ADD1,GSYM ADD_ASSOC]
@@ -3276,7 +3276,7 @@ val mc_div_thm = prove(
           FULL_SIMP_TAC std_ss [LENGTH_mw_fix]
        \\ FULL_SIMP_TAC std_ss [LENGTH_REVERSE] \\ DECIDE_TAC)
   \\ FULL_SIMP_TAC std_ss [n2w_11,LENGTH_NIL]
-  \\ fs [GSYM LENGTH_NIL] \\ rfs []
+  \\ full_simp_tac std_ss [GSYM LENGTH_NIL] \\ rfs []
   \\ rpt (disch_then (assume_tac))
   \\ Cases_on `LENGTH x1` \\ fs []
   \\ Cases_on `n` \\ fs []
@@ -3717,7 +3717,7 @@ val mc_idiv_thm = prove(
     \\ Cases_on`dimindex(:'a) < 2` \\ fs[X_LT_DIV,LEFT_ADD_DISTRIB]
     >- (
       `dimindex(:'a) = 1` by fs[DIMINDEX_GT_0]
-      \\ fs[dimword_def] )
+      \\ full_simp_tac (std_ss++ARITH_ss)[dimword_def,GSYM LENGTH_NIL] )
     \\ Cases_on `LENGTH (mw_fix res) = 0` \\ FULL_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND_11,
          LENGTH_APPEND,LENGTH_REPLICATE] \\ fs [])
@@ -3730,7 +3730,7 @@ val mc_idiv_thm = prove(
     \\ SIMP_TAC (srw_ss()) [word_lsl_n2w,b2w_def,b2n_def,mc_header_def]
     \\ rw[]
     \\ `dimindex(:'a) = 1` by fs[DIMINDEX_GT_0]
-    \\ fs[dimword_def])
+    \\ full_simp_tac (std_ss++ARITH_ss) [dimword_def,GSYM LENGTH_NIL])
   \\ SIMP_TAC std_ss [GSYM APPEND_ASSOC]
   \\ Q.ABBREV_TAC `ts1 = REPLICATE (LENGTH res - LENGTH (mw_fix res)) 0x0w ++ zs2`
   \\ ASSUME_TAC (mc_add1_thm |> GEN_ALL)

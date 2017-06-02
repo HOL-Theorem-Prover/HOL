@@ -212,7 +212,7 @@ val MAP_CONG2 = prove(
 
 val LENGTH_MAPS3 = prove(
   `!l x f g. ~NULL l ==> (LENGTH (SNOC x (TL l)) = LENGTH l)`,
-  RW_TAC list_ss [rich_listTheory.LENGTH_SNOC,LENGTH_TL,LENGTH_NULL]);
+  Cases THEN simp[]);
 
 val MAP_LDM_MEMOP = prove(
   `!y n. MAP MEMOP (MOVE_DOUT y (GENLIST (\t. (f t,b1,b2,F,b3,g t)) n)) =
