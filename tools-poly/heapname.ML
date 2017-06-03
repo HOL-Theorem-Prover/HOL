@@ -24,8 +24,8 @@ val _ = let
   end
 in
   app appthis ["regexpMatch", "parse_glob", "internal_functions",
-               "Holdep_tokens", "Holdep", "Holmake_tools", "Holmake_types",
-               "ReadHMF"]
+               "Holdep_tokens", "mosml/FNameToUnquotedDeps", "Holdep",
+               "Holmake_tools", "Holmake_types", "ReadHMF"]
 end;
 
 fun warn s = (TextIO.output(TextIO.stdErr, s ^ "\n");

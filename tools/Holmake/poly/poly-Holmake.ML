@@ -17,6 +17,7 @@ val _ = use "../Systeml.sig"
 val _ = use "../../../tools-poly/Holmake/Systeml.sml";
 
 val _ = useC "Holdep_tokens";
+val _ = useC "mosml/FNameToUnquotedDeps";
 val _ = useC "Holdep";
 
 val _ = useC "regexpMatch";

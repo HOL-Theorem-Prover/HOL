@@ -11,6 +11,7 @@ fun useC f =
 val _ = use "Holmake/Systeml.sml";
 val _ = useC "GetOpt";
 val _ = useC "Holdep_tokens";
+val _ = useC "mosml/FNameToUnquotedDeps";
 val _ = useC "Holdep";
 val _ = useC "Holmake_tools"
 val _ = useC "regexpMatch"

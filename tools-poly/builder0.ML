@@ -36,7 +36,8 @@ val _ = let
 in
   List.app (hol_use ("tools" ++ "Holmake"))
            ["regexpMatch", "parse_glob", "internal_functions",
-            "Holdep_tokens", "Holdep", "Holmake_tools", "Holmake_types",
+            "Holdep_tokens", "mosml/FNameToUnquotedDeps", "Holdep",
+            "Holmake_tools", "Holmake_types",
             "ReadHMF"]
 end;
 
