@@ -22,6 +22,9 @@ end;
 val _ = let
   infix ++
   val op ++ = OS.Path.concat
+  fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
+               TextIO.flushOut TextIO.stdErr;
+               OS.Process.exit OS.Process.failure)
   fun hol_use p s =
     let
       val nm = Systeml.HOLDIR ++ p ++ s
@@ -29,6 +32,7 @@ val _ = let
       use (nm ^ ".sig")
     ; use (nm ^ ".sml")
     end
+    handle e => die ("Compilation failure: "^General.exnMessage e)
 in
   List.app (hol_use ("tools" ++ "Holmake"))
            ["regexpMatch", "parse_glob", "internal_functions",
