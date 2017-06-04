@@ -564,26 +564,32 @@ val regexp_compareW_trans = Q.store_thm
    (regexp_compareW (zip l2 l3) = Less)
     ==>
    (regexp_compareW (zip l1 l3) = Less)`,
- recInduct regexp_compareW_ind_thm >> rw[]
-  >- full_simp_tac list_ss [regexp_compareW_thm,comparison_distinct]
-  >- (Cases_on `p_1` >> Cases_on `p_2`
-        >> rw[] >> imp_res_tac cons_eq_zip
-        >> fs [zip_def,regexp_compareW_thm]
-        >> rw_tac list_ss []
-        >> Cases_on `l3` >> fs [zip_def]
-        >> Cases_on `h` >> fs [zip_def,regexp_compareW_thm]
-           >- (every_case_tac >> rw[] >>
-               metis_tac [charset_cmp_eq,charset_cmp_strict,charset_cmp_trans,
-                          comparison_distinct])
-           >- (rfs[]
-               >> pop_assum (mp_tac o
-                  Q.SPECL [`r::r0::t1`, `r'::r0'::t2`, `r''::r0''::t`])
-               >> rw[zip_def])
-           >- (rfs[]
-               >> pop_assum (mp_tac o
-                  Q.SPECL [`r::t1`, `r'::t2`, `r''::t`])
-               >> rw[zip_def])
-        >- (every_case_tac >> fs [] >> rw []
+ recInduct regexp_compareW_ind_thm
+  >> rw_tac set_ss []
+     >- metis_tac [zip_eq_nil,regexp_compareW_thm,comparison_distinct]
+  >> imp_res_tac cons_eq_zip
+  >> ntac 2 (pop_assum SUBST_ALL_TAC)
+  >> Cases_on `p_1`
+  >> Cases_on `p_2`
+  >> full_simp_tac list_ss [regexp_distinct, fetch "-" "regexp_11"]
+  >> Induct_on `l3`
+  >> rw_tac list_ss []
+  >> Cases_on `h`
+  >> full_simp_tac set_ss [zip_def,regexp_compareW_thm]
+  >> rw_tac std_ss []
+     >- (every_case_tac
+          >> rw_tac set_ss []
+          >> metis_tac [charset_cmp_eq,charset_cmp_strict,charset_cmp_trans,
+                       comparison_distinct])
+     >- (qpat_x_assum `$!M`
+          (mp_tac o Q.SPECL [`r::r0::t1`, `r'::r0'::t2`, `r''::r0''::l3`])
+          >> rw_tac list_ss [zip_def])
+     >- (qpat_x_assum `$!M`
+           (mp_tac o Q.SPECL [`r::t1`, `r'::t2`, `r''::l3`])
+           >> rw_tac list_ss [zip_def])
+     >- (every_case_tac
+          >> full_simp_tac list_ss []
+	  >> rw_tac list_ss []
              >- metis_tac [len_cmp_good,good_cmp_thm,comparison_distinct]
              >- (imp_res_tac len_cmp_length
                   >> rw_tac list_ss [Once (GSYM zip_append)]
@@ -603,8 +609,9 @@ val regexp_compareW_trans = Q.store_thm
              >- metis_tac [len_cmp_good,good_cmp_thm,comparison_distinct]
              >- metis_tac [len_cmp_good,good_cmp_thm,comparison_distinct]
              >- metis_tac [len_cmp_good,good_cmp_thm,comparison_distinct])
-        >- (pop_assum (mp_tac o Q.SPECL [`r::t1`, `r'::t2`, `r''::t`])
-             >> rw[zip_def]))
+     >- (qpat_x_assum `$!M`
+          (mp_tac o Q.SPECL [`r::t1`, `r'::t2`, `r''::l3`])
+          >> rw_tac list_ss [zip_def])
 );
 
 val regexp_compare_trans = Q.store_thm
@@ -620,6 +627,52 @@ val regexp_compare_trans = Q.store_thm
    >> Q.EXISTS_TAC `[s]`
    >> rw[zip_def]);
 
+val regexp_compareW_trans_eq = Q.store_thm
+("regexp_compareW_trans_eq",
+ `!plist l1 l2 l3.
+   (LENGTH l1 = LENGTH l2) /\ (LENGTH l2 = LENGTH l3) /\
+   (plist = zip l1 l2) /\
+   (regexp_compareW plist = Less) /\
+   (regexp_compareW (zip l2 l3) = Equal)
+    ==>
+   (regexp_compareW (zip l1 l3) = Less)`,
+ recInduct regexp_compareW_ind_thm
+  >> rw_tac set_ss []
+     >- metis_tac [zip_eq_nil,regexp_compareW_thm,comparison_distinct]
+  >> imp_res_tac cons_eq_zip
+  >> ntac 2 (pop_assum SUBST_ALL_TAC)
+  >> Cases_on `p_1`
+  >> Cases_on `p_2`
+  >> full_simp_tac list_ss [regexp_distinct, fetch "-" "regexp_11"]
+  >> Induct_on `l3`
+  >> rw_tac list_ss []
+  >> Cases_on `h`
+  >> full_simp_tac set_ss [zip_def,regexp_compareW_thm]
+  >> rw_tac std_ss []
+     >- (every_case_tac >> rw[] >>
+          metis_tac [charset_cmp_eq,charset_cmp_strict,comparison_distinct])
+     >- (qpat_x_assum `$!M`
+           (mp_tac o
+               Q.SPECL [`r::r0::t1`, `r'::r0'::t2`, `r''::r0''::l3`])
+           >> rw_tac list_ss [zip_def])
+     >- (qpat_x_assum `$!M` (mp_tac o Q.SPECL [`r::t1`, `r'::t2`, `r''::l3`])
+          >> rw_tac list_ss [zip_def])
+     >- (every_case_tac
+          >> full_simp_tac set_ss []
+          >> rw_tac set_ss []
+             >- (imp_res_tac len_cmp_length >> full_simp_tac arith_ss [])
+             >- (imp_res_tac len_cmp_length
+                  >> rw_tac list_ss [Once (GSYM zip_append)]
+	          >> first_x_assum match_mp_tac
+	          >> qexists_tac `l' ++ t2`
+	          >> metis_tac [LENGTH_APPEND,zip_append])
+             >- metis_tac [len_cmp_good,good_cmp_thm,comparison_distinct]
+             >- metis_tac [len_cmp_good,good_cmp_thm,comparison_distinct])
+     >- (qpat_x_assum `$!M` (mp_tac o Q.SPECL [`r::t1`, `r'::t2`, `r''::l3`])
+            >> rw_tac list_ss [zip_def])
+);
+
+(*
 val regexp_compareW_trans_eq = Q.store_thm
 ("regexp_compareW_trans_eq",
  `!plist l1 l2 l3.
@@ -657,6 +710,7 @@ val regexp_compareW_trans_eq = Q.store_thm
         >- (pop_assum (mp_tac o Q.SPECL [`r::t1`, `r'::t2`, `r''::t`])
              >> rw[zip_def]))
 );
+*)
 
 val regexp_compare_trans_eq = Q.store_thm
 ("regexp_compare_trans",
@@ -1875,8 +1929,10 @@ val _ = export_theory();
                   = regexp_lang (Cat (Chset (charset_union cs1 cs2)) (Charset cs3))`;
 
 val regexp_lang_or2 = Q.prove
-(`!cs1 cs2 cs3. regexp_lang (Or [Chset cs1 ; Chset cs2]) = regexp_lang (Chset (charset_union cs1 cs2))`,
-rw_tac set_ss [SET_EQ_THM, regexp_lang_thm,charset_mem_union,EQ_IMP_THM]
+(`!cs1 cs2 cs3. 
+     regexp_lang (Or [Chset cs1 ; Chset cs2]) =
+     regexp_lang (Chset (charset_union cs1 cs2))`,
+ rw_tac set_ss [SET_EQ_THM, regexp_lang_thm,charset_mem_union,EQ_IMP_THM]
  >> metis_tac[]);
 
 *)

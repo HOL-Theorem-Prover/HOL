@@ -407,6 +407,7 @@ val match_1802    = matcher `\i{0,9999,LSB}\i{0,3599,LSB}.{4}`;
 val test_1802_alt = matcher `\i{0,9999}\i{0,3599}\k{0}{4}`;
 val match_1803    = matcher `\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
 
+(*
 fun prod [] l2 = []
   | prod (h::t) l2 = map (strcat h) l2 @ prod t l2;
 
@@ -418,7 +419,7 @@ fun PROD [] = []
 (* 58 trillion strings to match exhaustively. Slightly unfeasible as written. *)
 (* Could be done one-at-a-time, I suppose.                                   *)
 (*---------------------------------------------------------------------------*)
-(*
+
 Lib.all (equal true)
  (map match_1800 
    (PROD 
@@ -448,83 +449,10 @@ val match_18xx_disjunctive = matcher
 val match_18xx_concat = matcher 
  `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}\i{0,9999,LSB}\i{0,3599,LSB}\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
 
-fun unsigned_width_bits (n:IntInf.int) = 
- if n < 0 then raise ERR "unsigned_width_bits" "negative number" else
- if n < 2 then 1
- else 1 + unsigned_width_bits (n div 2);
-
-fun signed_width_bits (n:IntInf.int) = 
-  let fun fus bits = 
-       let val N = IntInf.pow(2,bits-1)
-       in if ~N <= n andalso n <= N-1 then bits else fus (bits+1)
-       end
- in fus 0
- end;
-
-fun find_width (lo,hi) = 
- if lo > hi 
-  then raise ERR "find_width" "malformed interval (lo > hi)"
- else
- if lo < 0 andalso hi < 0 
-    then signed_width_bits lo else
- if lo < 0 andalso hi >= 0 
-    then Int.max(signed_width_bits lo, signed_width_bits hi)
- else  (* lo and hi both non-negative *)
-   unsigned_width_bits hi;
-
-map find_width [(0,63),(~32,31),(35,60),(~12,27)];
-
-val allones = IntInf.notb(IntInf.fromInt 0);
-
-(*---------------------------------------------------------------------------*)
-(* Clear top (all but rightmost width) bits in w                             *)
-(*---------------------------------------------------------------------------*)
-
-fun clear_top_bits width w = 
- let open IntInf
-     val mask = notb(<<(allones,Word.fromInt(width)))
- in andb(w,mask)
- end
-
-fun clear_bot_bits width w = 
- let open IntInf
- in ~>>(w,Word.fromInt width)
- end
-
-fun sign_extend w width = 
- let open IntInf
- in if ~>>(w,Word.fromInt (width - 1)) = 1
-  then (* signed *)
-     orb(w,IntInf.<<(allones,Word.fromInt width))
-  else w
- end
-
-fun icat w shift i = 
- let val shiftw = Word.fromInt shift
-     val shifted = IntInf.<<(w,shiftw)
-     val x = clear_top_bits shift (IntInf.fromInt i)
- in 
-   IntInf.orb(shifted,x)
- end
-
-val test = icat (icat (icat 63 6 31) 6 45) 6 ~1;
-
-matcher `\p{(~180,180)(0,59)}`;
-
-matcher `\p{(0,63)(~32,31)(35,60)(~12,27)}`;
-
-matcher `\p{(0,1)(0,2)(0,3)(~1,1)}`
-
-map find_width [(0,1),(0,2),(0,3),(~1,1)];
-
-matcher `\p{(0,7)(0,1)(0,15)}`
-matcher `\p{(1,5)(0,1)(0,15)}`
-matcher `\p{(1,5)(0,1)(0,15)}\i{0,999}`;
-
 (*---------------------------------------------------------------------------*)
 (* Hard cases for Brzozowski? These seem to take exponential time.           *)
 (*---------------------------------------------------------------------------*)
-(*
+
 time matcher `\w{1,20}`; 
 time matcher `\w{1,50}`; 
 time matcher `\w{1,75}`; 
@@ -551,6 +479,22 @@ dom `\w{1,500}`; (* 256: 55.5ss *)
 (*---------------------------------------------------------------------------*)
 (* packed intervals                                                          *)
 (*---------------------------------------------------------------------------*)
+
+map interval_bit_width [(0,63),(~32,31),(35,60),(~12,27)];
+
+val test = int_cat (int_cat (int_cat 63 6 31) 6 45) 6 ~1;
+
+matcher `\p{(~180,180)(0,59)}`;
+
+matcher `\p{(0,63)(~32,31)(35,60)(~12,27)}`;
+
+matcher `\p{(0,1)(0,2)(0,3)(~1,1)}`
+
+map interval_bit_width [(0,1),(0,2),(0,3),(~1,1)];
+
+matcher `\p{(0,7)(0,1)(0,15)}`
+matcher `\p{(1,5)(0,1)(0,15)}`
+matcher `\p{(1,5)(0,1)(0,15)}\i{0,999}`;
 
 dom `\p{(0,5)(0,3)(3,5)}`;
 (* 0.002s. 1 byte needed *)
@@ -585,7 +529,7 @@ dom `\p{(0,59)(~180,180).{1}}`;
 (* 3.5s. 2 bytes needed. 195,123 intervals (smallest total size) *)
 (* 0.012s. 2 bytes needed. 21660 elements;  2449 nodes in regexp *)
 
-dom `\p{(0,41)(0,127)(0,255),(0,0),(0,0),(0,0)}`;
+dom `\p{(0,41)(0,127)(0,255)(0,0)(0,0)(0,0)}`;
 dom `\p{(0,41)(0,127)(0,255),(0,7)}`;
 dom `\p{(0,41)(0,127)(0,255).{3}}`;
 (* 12.2s. 3 bytes. 79464 intervals generated *)
