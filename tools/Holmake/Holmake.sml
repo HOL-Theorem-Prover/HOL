@@ -35,8 +35,6 @@ val HOLDIR0 = Systeml.HOLDIR;
 val DEPDIR = ".HOLMK";
 val LOGDIR = ".hollogs";
 
-val SYSTEML = Systeml.systeml
-
 (**** get_dependencies *)
 (* figures out whether or not a dependency file is a suitable place to read
    information about current target or not, and then either does so, or makes
