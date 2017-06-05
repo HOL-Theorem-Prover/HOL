@@ -361,8 +361,8 @@ val _ =
     compile [] "HM_Core_Cline.sml";
     compile [] "Holdep_tokens.sig";
     compile [] "Holdep_tokens.sml";
+    compile [] "FNameToUnquotedDeps.sig";
     FileSys.chDir "mosml";
-    compile ["-I", ".."] "FNameToUnquotedDeps.sig";
     compile ["-I", ".."] "FNameToUnquotedDeps.sml";
     FileSys.chDir "..";
     compile [] "holdeptool.sml";

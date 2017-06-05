@@ -79,8 +79,11 @@ List.app (hol_use ("tools-poly" ++ "poly"))
          ["Binaryset", "Binarymap", "Listsort"];
 List.app (hol_use ("tools" ++ "Holmake"))
          ["regexpMatch", "parse_glob", "internal_functions",
-          "Holdep_tokens", "mosml/FNameToUnquotedDeps", "Holdep",
-          "Holmake_tools", "Holmake_types", "ReadHMF"];
+          "Holdep_tokens"];
+use (HOLDIR ++ "tools" ++ "Holmake" ++ "FNameToUnquotedDeps.sig");
+use (HOLDIR ++ "tools" ++ "Holmake" ++ "mosml" ++ "FNameToUnquotedDeps.sml");
+List.app (hol_use ("tools" ++ "Holmake"))
+         ["Holdep", "Holmake_tools", "Holmake_types", "ReadHMF"];
 
 fun findUo [] _ = NONE
   | findUo (search::rest) modPath =

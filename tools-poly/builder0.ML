@@ -25,20 +25,24 @@ val _ = let
   fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
                TextIO.flushOut TextIO.stdErr;
                OS.Process.exit OS.Process.failure)
+  fun myuse s =
+    use s
+    handle e => die (s ^ ": compilation failure: "^General.exnMessage e)
   fun hol_use p s =
     let
       val nm = Systeml.HOLDIR ++ p ++ s
     in
-      use (nm ^ ".sig")
-    ; use (nm ^ ".sml")
+      myuse (nm ^ ".sig")
+    ; myuse (nm ^ ".sml")
     end
-    handle e => die ("Compilation failure: "^General.exnMessage e)
 in
   List.app (hol_use ("tools" ++ "Holmake"))
            ["regexpMatch", "parse_glob", "internal_functions",
-            "Holdep_tokens", "mosml/FNameToUnquotedDeps", "Holdep",
-            "Holmake_tools", "Holmake_types",
-            "ReadHMF"]
+            "Holdep_tokens"] ;
+  List.app (myuse o (fn s => (Systeml.HOLDIR ++ "tools" ++ "Holmake" ++ s)))
+           ["FNameToUnquotedDeps.sig", "mosml/FNameToUnquotedDeps.sml"] ;
+  List.app (hol_use ("tools" ++ "Holmake"))
+                    ["Holdep", "Holmake_tools", "Holmake_types", "ReadHMF"]
 end;
 
 
