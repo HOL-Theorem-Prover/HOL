@@ -547,6 +547,10 @@ val word_0_w2i = Q.store_thm("word_0_w2i",
   `w2i 0w = 0`,
   SRW_TAC [] [i2w_def, w2i_def])
 
+val w2i_eq_0 = Q.store_thm("w2i_eq_0",
+  `!w : 'a word. (w2i w = 0) = (w = 0w)`,
+  SRW_TAC [] [i2w_def, w2i_def])
+
 (* ------------------------------------------------------------------------- *)
 
 val DIV_POS = Q.prove(
