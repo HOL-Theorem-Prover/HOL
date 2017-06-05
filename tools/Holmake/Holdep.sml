@@ -119,8 +119,15 @@ fun encode_for_HOLMKfile {tgt, deps} =
       escape_space tgt ^ ": " ^
       String.concat (spacify (rev ("\n" :: escape_spaces deps)))
 
+fun uqfname_holdep fname =
+  let
+    val reader = QFRead.fileToReader fname
+  in
+    Holdep_tokens.reader_deps (fname, reader)
+  end
+
 fun read {assumes, includes, srcext, objext, filename} = let
-  val mentions = FNameToUnquotedDeps.uqfname_holdep (addExt filename srcext)
+  val mentions = uqfname_holdep (addExt filename srcext)
   val curr_dir = Path.dir filename
   val outrcd = {assumes = assumes, includes = includes}
   val (targetname, res0) = beginentry objext (manglefilename filename)

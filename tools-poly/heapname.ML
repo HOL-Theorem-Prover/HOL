@@ -34,9 +34,8 @@ val _ = let
 in
   app appthis ["regexpMatch", "parse_glob", "internal_functions",
                "Holdep_tokens"] ;
-  myuse hmakedir "FNameToUnquotedDeps.sig";
-  myuse hmakedir ("mosml" ++ "FNameToUnquotedDeps.sml");
-  app appthis ["Holdep", "Holmake_tools", "Holmake_types", "ReadHMF"]
+  myuse hmakedir "QuoteFilter.sml";
+  app appthis ["QFRead", "Holdep", "Holmake_tools", "Holmake_types", "ReadHMF"]
 end;
 
 fun warn s = (TextIO.output(TextIO.stdErr, s ^ "\n");

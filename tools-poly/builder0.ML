@@ -39,10 +39,9 @@ in
   List.app (hol_use ("tools" ++ "Holmake"))
            ["regexpMatch", "parse_glob", "internal_functions",
             "Holdep_tokens"] ;
-  List.app (myuse o (fn s => (Systeml.HOLDIR ++ "tools" ++ "Holmake" ++ s)))
-           ["FNameToUnquotedDeps.sig", "mosml/FNameToUnquotedDeps.sml"] ;
+  myuse (Systeml.HOLDIR ++ "tools" ++ "Holmake" ++ "QuoteFilter.sml") ;
   List.app (hol_use ("tools" ++ "Holmake"))
-                    ["Holdep", "Holmake_tools", "Holmake_types", "ReadHMF"]
+           ["QFRead", "Holdep", "Holmake_tools", "Holmake_types", "ReadHMF"]
 end;
 
 

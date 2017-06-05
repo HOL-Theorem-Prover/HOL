@@ -30,7 +30,7 @@ val (instream, outstream) =
                           " [<inputfile> <outputfile>]\n");
             exit failure)
 
-open filter.UserDeclarations
+open QuoteFilter.UserDeclarations
 val state as QFS args =
     newstate ((fn s => TextIO.output(outstream, s)),
               (fn () => TextIO.flushOut outstream))
@@ -40,16 +40,13 @@ val state as QFS args =
    Kenn Heinrich who helped me see the light with respect to this code *)
 
 fun loop() = let
-  val lexer = filter.makeLexer (read_from_stream instream) state
+  val lexer = QuoteFilter.makeLexer (read_from_stream instream) state
 in
   lexer()
-  handle Interrupt => (let open filter.UserDeclarations
-                       in
-                         #comdepth args := 0;
-                         #pardepth args := 0;
-                         #antiquote args := false;
-                         loop()
-                       end)
+  handle Interrupt => (#comdepth args := 0;
+                       #pardepth args := 0;
+                       #antiquote args := false;
+                       loop())
 end
 
 val _ = loop()

@@ -354,6 +354,10 @@ val _ =
        systeml (pfx @ b2002comp @ extras @ [srcobj])
      end
   in
+    systeml [mllex, "QuoteFilter"];
+    compile [] "QuoteFilter.sml";
+    compile [] "QFRead.sig";
+    compile [] "QFRead.sml";
     compile [] "FunctionalRecordUpdate.sml";
     compile [] "GetOpt.sig";
     compile [] "GetOpt.sml";
@@ -361,10 +365,6 @@ val _ =
     compile [] "HM_Core_Cline.sml";
     compile [] "Holdep_tokens.sig";
     compile [] "Holdep_tokens.sml";
-    compile [] "FNameToUnquotedDeps.sig";
-    FileSys.chDir "mosml";
-    compile ["-I", ".."] "FNameToUnquotedDeps.sml";
-    FileSys.chDir "..";
     compile [] "holdeptool.sml";
     compile [] "mosml_holdeptool.sml";
     link{extras = [], srcobj = "mosml_holdeptool.uo",

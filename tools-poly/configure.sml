@@ -382,14 +382,17 @@ val _ = work_in_dir
           (fn () => (systeml [lexer, "yacc.lex"];
                      polyc_compile "poly-mlyacc.ML" "mlyacc.exe"))
 
+(* Holmake *)
+val _ = work_in_dir
+          "Holmake" (fullPath [HOLDIR, "tools", "Holmake", "poly"])
+          (fn () => (OS.FileSys.chDir "..";
+                     systeml [lexer, "QuoteFilter"] ;
+                     OS.FileSys.chDir "poly";
+                     polyc_compile "poly-Holmake.ML" hmakebin))
+
 (* unquote - the quotation filter *)
 val _ = work_in_dir "unquote." qfdir
-                    (fn () => (systeml [lexer, "filter"];
-                               polyc_compile "poly-unquote.ML" qfbin))
-
-(* Holmake *)
-val _ = work_in_dir "Holmake" (fullPath [HOLDIR, "tools", "Holmake", "poly"])
-                    (fn () => polyc_compile "poly-Holmake.ML" hmakebin)
+                    (fn () => (polyc_compile "poly-unquote.ML" qfbin))
 
 (* holdeptool *)
 val _ = work_in_dir "holdeptool" (fullPath [HOLDIR, "tools", "Holmake"])

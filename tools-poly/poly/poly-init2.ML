@@ -4,7 +4,9 @@ val _ = use "poly/poly-init.ML";
 val _ = use "../tools/Holmake/Systeml.sig";
 val _ = use "Holmake/Systeml.sml"
 
-val _ = use "../tools/quote-filter/filter.sml";
+val _ = use "../tools/Holmake/QuoteFilter.sml";
+val _ = use "../tools/Holmake/QFRead.sig";
+val _ = use "../tools/Holmake/QFRead.sml";
 val _ = use "poly/quse.sig";
 val _ = use "poly/quse.sml";
 

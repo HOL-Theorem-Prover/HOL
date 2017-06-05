@@ -17,8 +17,8 @@ val _ = use "../Systeml.sig"
 val _ = use "../../../tools-poly/Holmake/Systeml.sml";
 
 val _ = useC "Holdep_tokens";
-val _ = use "../FNameToUnquotedDeps.sig";
-val _ = useS "mosml/FNameToUnquotedDeps";
+val _ = useS "QuoteFilter";
+val _ = useC "QFRead";
 val _ = useC "Holdep";
 
 val _ = useC "regexpMatch";
