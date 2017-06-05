@@ -11,6 +11,7 @@ fun useC f =
 val _ = use "Holmake/Systeml.sml";
 val _ = useC "GetOpt";
 val _ = useC "Holdep_tokens";
+val _ = useC "HM_SimpleBuffer";
 val _ = use "../tools/Holmake/QuoteFilter.sml";
 val _ = useC "QFRead";
 val _ = useC "Holdep";

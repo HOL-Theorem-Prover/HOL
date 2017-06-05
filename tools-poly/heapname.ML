@@ -33,7 +33,7 @@ val _ = let
   end
 in
   app appthis ["regexpMatch", "parse_glob", "internal_functions",
-               "Holdep_tokens"] ;
+               "Holdep_tokens", "HM_SimpleBuffer"] ;
   myuse hmakedir "QuoteFilter.sml";
   app appthis ["QFRead", "Holdep", "Holmake_tools", "Holmake_types", "ReadHMF"]
 end;

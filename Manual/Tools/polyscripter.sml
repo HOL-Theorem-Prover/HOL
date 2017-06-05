@@ -12,50 +12,10 @@ fun lnumdie linenum extra exn =
 
 val outputPrompt = ref ">"
 
-fun mkBuffer () = let
-  val buf = ref ([] : string list)
-  fun push s = buf := s :: !buf
-  fun read () = let
-    val contents = String.concat (List.rev (!buf))
-  in
-    buf := [contents];
-    contents
-  end
-  fun reset() = buf := []
-in
-  (push, read, reset)
-end;
-
-use "../../tools/quote-filter/filter.sml";
-
-val (QBpush, QBread, QBreset) = mkBuffer()
-val qstate = filter.UserDeclarations.newstate(QBpush, fn () => ())
-
-fun readFromString s =
-  let
-    val sz = size s
-    val i = ref 0
-    fun read _ =
-      if !i < sz then str (String.sub(s, !i)) before i := !i + 1
-      else ""
-  in
-    read
-  end
-
-fun quote s =
-  (QBreset() ; filter.makeLexer (readFromString s) qstate ();
-   QBread())
+val quote = QFRead.fromString
 
 fun quoteFile lnum fname =
-  let
-    val instrm = TextIO.openIn fname handle e => lnumdie lnum "" e
-  in
-    QBreset() ;
-    filter.makeLexer (fn n => TextIO.input instrm) qstate ();
-    TextIO.closeIn instrm;
-    QBread()
-  end
-
+  QFRead.inputFile fname handle e => lnumdie lnum "" e
 
 datatype lbuf =
          LB of {
@@ -88,24 +48,25 @@ in
   doit
 end
 
-fun compiler (obufPush, obufRD, obufRST) handler infn = let
-  fun record_error {message,...} = PolyML.prettyPrint(obufPush,70) message
-  fun rpt acc =
-    (obufRST();
-     PolyML.compiler(infn,
-                     [PolyML.Compiler.CPErrorMessageProc record_error,
-                      PolyML.Compiler.CPOutStream obufPush]) ()
-     handle e => handler (obufRD()) e;
-     if obufRD() = "" then String.concat (List.rev acc)
-     else rpt (obufRD() :: acc))
-in
-  rpt []
-end
+fun compiler {push = obufPush, read = obufRD, reset = obufRST} handler infn =
+  let
+    fun record_error {message,...} = PolyML.prettyPrint(obufPush,70) message
+    fun rpt acc =
+      (obufRST();
+       PolyML.compiler(infn,
+                       [PolyML.Compiler.CPErrorMessageProc record_error,
+                        PolyML.Compiler.CPOutStream obufPush]) ()
+       handle e => handler (obufRD()) e;
+       if obufRD() = "" then String.concat (List.rev acc)
+       else rpt (obufRD() :: acc))
+  in
+    rpt []
+  end
 
 fun silentUse lnum s =
   let
     val filecontents = quoteFile lnum s
-    val buf = mkBuffer()
+    val buf = HM_SimpleBuffer.mkBuffer()
   in
     compiler buf (lnumdie 1) (mkLex filecontents)
   end
@@ -245,7 +206,8 @@ val getIndent =
   (Substring.string ## Substring.string)
     o Substring.splitl spaceNotNL o Substring.full
 
-fun process_line umap (obuf as (_, _, obRST)) origline lbuf = let
+fun process_line umap obuf origline lbuf = let
+  val {reset = obRST, ...} = obuf
   val (ws,line) = getIndent origline
   val indent = String.size ws
   val oPsize = size (!outputPrompt)
@@ -292,9 +254,9 @@ in
       val e = String.substring(line, assertcmdsz, size line - assertcmdsz - 1)
                               (* for \n at end *)
       val _ = compiler obuf (lnumdie (linenum lbuf))
-                       (mkLex ("val _ = if (" ^ quote e ^ ") then () " ^
-                               "else die \"Assertion failed: line " ^
-                               Int.toString (linenum lbuf) ^ "\";"))
+                (QFRead.stringToReader ("val _ = if (" ^ e ^ ") then () " ^
+                                        "else die \"Assertion failed: line " ^
+                                        Int.toString (linenum lbuf) ^ "\";"))
       val _ = advance lbuf
     in
       ("", NONE)
@@ -322,7 +284,7 @@ in
       val input = getRest (indent + 1) [firstline]
       val _ = compiler obuf
                        (lnumdie (linenum lbuf))
-                       (mkLex (quote (inputpfx ^ input)))
+                       (QFRead.stringToReader (inputpfx ^ input))
     in
       (ws ^ umunge umap input, NONE)
     end
@@ -336,7 +298,7 @@ in
       val (firstline, indent) = (String.extract(line, 3, NONE), 10)
       val input = getRest (indent + 1) [firstline]
       val _ = compiler obuf (lnumdie (linenum lbuf))
-                       (mkLex (quote ("``" ^ pfx ^ input ^ "``")))
+                       (QFRead.stringToReader ("``" ^ pfx ^ input ^ "``"))
     in
       (ws ^ umunge umap input, NONE)
     end
@@ -352,7 +314,8 @@ in
     let
       val firstline = String.extract(line, 3, NONE)
       val input = getRest 3 [firstline]
-      val raw_output = compiler obuf (lnumdie (linenum lbuf)) (mkLex (quote input))
+      val raw_output = compiler obuf (lnumdie (linenum lbuf))
+                                (QFRead.stringToReader input)
     in
       ("", SOME (transformOutput umap ws raw_output))
     end
@@ -360,7 +323,8 @@ in
     let
       val firstline = String.extract(line, 4, NONE)
       val input = getRest 4 [firstline]
-      val _ = compiler obuf (lnumdie (linenum lbuf)) (mkLex (quote input))
+      val _ = compiler obuf (lnumdie (linenum lbuf))
+                       (QFRead.stringToReader input)
     in
       ("", NONE)
     end
@@ -368,7 +332,8 @@ in
     let
       val firstline = String.extract(line, 3, NONE)
       val input = getRest 3 [firstline]
-      val _ = compiler obuf (lnumdie (linenum lbuf)) (mkLex (quote input))
+      val _ = compiler obuf (lnumdie (linenum lbuf))
+                       (QFRead.stringToReader input)
       fun removeNL s = String.substring(s, 0, size s - 1)
     in
       (ws ^ ">" ^ removeNL (umunge umap input), SOME (!elision_string1))
@@ -378,7 +343,7 @@ in
       val firstline = String.extract(line, 3, NONE)
       val input = getRest 3 [firstline]
       fun handle_exn extra exn = raise Fail (extra ^ General.exnMessage exn)
-      val raw_output = compiler obuf handle_exn (mkLex (quote input))
+      val raw_output = compiler obuf handle_exn (QFRead.stringToReader input)
                        handle Fail s => "Exception- " ^ s ^ " raised\n"
     in
       (ws ^ ">" ^ umunge umap input, SOME (transformOutput umap ws raw_output))
@@ -388,7 +353,8 @@ in
       val _ = obRST()
       val firstline = String.extract(line, 2, NONE)
       val input = getRest 2 [firstline]
-      val raw_output = compiler obuf (lnumdie (linenum lbuf)) (mkLex (quote input))
+      val raw_output = compiler obuf (lnumdie (linenum lbuf))
+                                (QFRead.stringToReader input)
     in
       (ws ^ ">" ^ umunge umap input, SOME (transformOutput umap ws raw_output))
     end
@@ -434,7 +400,7 @@ fun main () =
             [] => Binarymap.mkDict String.compare
           | [name] => read_umap name
           | _ => die (usage())
-    val (obuf as (obPush, _, _)) = mkBuffer()
+    val (obuf as {push = obPush, ...}) = HM_SimpleBuffer.mkBuffer()
     val _ = Feedback.ERR_outstream := obPush
     val _ = Feedback.WARNING_outstream := obPush
     val _ = Feedback.MESG_outstream := obPush
