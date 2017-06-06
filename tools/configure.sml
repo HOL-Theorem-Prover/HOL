@@ -354,6 +354,12 @@ val _ =
        systeml (pfx @ b2002comp @ extras @ [srcobj])
      end
   in
+    systeml [mllex, "QuoteFilter"];
+    compile [] "QuoteFilter.sml";
+    compile [] "HM_SimpleBuffer.sig";
+    compile [] "HM_SimpleBuffer.sml";
+    compile [] "QFRead.sig";
+    compile [] "QFRead.sml";
     compile [] "FunctionalRecordUpdate.sml";
     compile [] "GetOpt.sig";
     compile [] "GetOpt.sml";
@@ -365,8 +371,8 @@ val _ =
     compile [] "mosml_holdeptool.sml";
     link{extras = [], srcobj = "mosml_holdeptool.uo",
          tgt = fullPath[holdir, "bin", "holdeptool.exe"]};
-    compile [] "Holdep.sig";
-    compile [] "Holdep.sml";
+    compile ["-I", "mosml"] "Holdep.sig";
+    compile ["-I", "mosml"] "Holdep.sml";
     compile [] "regexpMatch.sig";
     compile [] "regexpMatch.sml";
     compile [] "parse_glob.sig";
@@ -453,10 +459,12 @@ val _ = let
   val target = "build.sml"
   val bin    = fullPath [holdir, "bin/build"]
   val b2002p = if have_basis2002 then [] else ["basis2002.ui"]
+  val command =
+      [compiler, "-o", bin, "-I", holmakedir,
+       "-I", Path.concat(holmakedir, "mosml")] @
+      b2002p @ [target]
 in
-  if Process.isSuccess
-         (systeml ([compiler, "-o", bin, "-I", holmakedir] @ b2002p @ [target]))
-  then ()
+  if Process.isSuccess (systeml command) then ()
   else (print "*** Failed to build build executable.\n";
         Process.exit Process.failure) ;
   FileSys.remove (fullPath [holdir,"tools/build.ui"]);

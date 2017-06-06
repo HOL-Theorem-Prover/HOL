@@ -119,34 +119,18 @@ fun encode_for_HOLMKfile {tgt, deps} =
       escape_space tgt ^ ": " ^
       String.concat (spacify (rev ("\n" :: escape_spaces deps)))
 
-fun scanFile {fname,actualfname} = let
-  open Holdep_tokens
-  val is = TextIO.openIn actualfname
-in
-  stream_deps (fname, is) before TextIO.closeIn is
-end
+fun uqfname_holdep fname =
+  let
+    val reader = QFRead.fileToReader fname
+  in
+    Holdep_tokens.reader_deps (fname, reader)
+  end
 
 fun read {assumes, includes, srcext, objext, filename} = let
-  open OS.FileSys Systeml
-  val op ^ = Path.concat
-  val unquote = xable_string(Systeml.HOLDIR ^ "bin" ^ "unquote")
-  val file0 = addExt filename srcext
-  val actualfile =
-      if access (unquote, [A_EXEC]) then let
-          val newname = tmpName()
-        in
-          if Process.isSuccess (Systeml.systeml [unquote, file0, newname]) then
-            newname
-          else file0
-        end
-      else file0
-  val mentions = scanFile {actualfname = actualfile, fname = file0}
-  val _        = if actualfile <> file0 then
-                   FileSys.remove actualfile handle _ => ()
-                 else ()
+  val mentions = uqfname_holdep (addExt filename srcext)
   val curr_dir = Path.dir filename
   val outrcd = {assumes = assumes, includes = includes}
-  val (targetname, res0) = beginentry objext (manglefilename filename);
+  val (targetname, res0) = beginentry objext (manglefilename filename)
   val res = Binaryset.foldl
               (fn (s, acc) => outname outrcd curr_dir (manglefilename s, acc))
               res0

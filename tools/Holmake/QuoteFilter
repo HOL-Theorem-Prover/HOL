@@ -83,7 +83,7 @@ type lexresult = (string * int)
 
 fun eof arg = ("", 0)
 %%
-%structure filter
+%structure QuoteFilter
 %s string comment qcomment tmcomment tycomment tyquote tmquote quote ANTIQ;
 %arg (UserDeclarations.QFS {output_stream, flush, comdepth, pardepth, antiquote, row, rowstart});
 %full

@@ -264,7 +264,6 @@ val FOLDL_cong = Q.store_thm("FOLDL_cong",
       (!i x. i < LENGTH l ==> (f x (EL i l) = g x (EL i r))) ==>
       (FOLDL f a l = FOLDL g b r)`,
    Induct \\ lrw []
-   >- metis_tac [listTheory.LENGTH_NIL, listTheory.FOLDL]
    \\ Cases_on `r` \\ lfs []
    \\ metis_tac [prim_recTheory.LESS_0, listTheory.EL, listTheory.HD,
                  listTheory.EL_restricted, arithmeticTheory.LESS_MONO_EQ]

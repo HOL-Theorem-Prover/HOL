@@ -15,17 +15,27 @@ exception Interrupt = SML90.Interrupt;
 
 val _ = let
   infix ++
+  fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
+               TextIO.flushOut TextIO.stdErr;
+               Process.exit Process.failure)
   fun p1 ++ p2 = Path.concat (p1,p2)
+  fun myuse p s =
+    let val fullnm = p ++ s
+    in
+      use (p ++ s)
+      handle e => die (fullnm ^ ": compilation failure: "^General.exnMessage e)
+    end
+  val hmakedir = HOLDIR ++ "tools" ++ "Holmake"
   fun appthis s = let
-    val nm = HOLDIR ++ "tools" ++ "Holmake" ++ s
   in
-    use (nm ^ ".sig");
-    use (nm ^ ".sml")
+    myuse hmakedir (s ^ ".sig");
+    myuse hmakedir (s ^ ".sml")
   end
 in
   app appthis ["regexpMatch", "parse_glob", "internal_functions",
-               "Holdep_tokens", "Holdep", "Holmake_tools", "Holmake_types",
-               "ReadHMF"]
+               "Holdep_tokens", "HM_SimpleBuffer"] ;
+  myuse hmakedir "QuoteFilter.sml";
+  app appthis ["QFRead", "Holdep", "Holmake_tools", "Holmake_types", "ReadHMF"]
 end;
 
 fun warn s = (TextIO.output(TextIO.stdErr, s ^ "\n");

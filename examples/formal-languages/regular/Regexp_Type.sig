@@ -49,7 +49,7 @@ sig
 
  datatype packelt
    = Span of IntInf.int * IntInf.int
-   | Pad of IntInf.int;
+   | Pad of Int.int;
 
  datatype tree
    = Ap of string * tree list

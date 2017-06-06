@@ -6,7 +6,7 @@ structure x64_stepLib :> x64_stepLib =
 struct
 
 open HolKernel boolLib bossLib
-open utilsLib x64Lib x64Theory x64_stepTheory
+open updateLib utilsLib x64Lib x64Theory x64_stepTheory
 
 structure Parse =
 struct
@@ -386,6 +386,12 @@ val SignExtension_rwt =
        [`s1` |-> ``Z32``, `s2` |-> ``Z64``]]
       ``SignExtension (w, s1, s2)``
 
+val SignExtension64_rwt =
+   EV (SignExtension64_def :: SignExtension_rwt) []
+      [[`sz` |-> ``Z8 (b)``], [`sz` |-> ``Z16``],
+       [`sz` |-> ``Z32``], [`sz` |-> ``Z64``]]
+      ``SignExtension64 (w, sz)``
+
 (* ------------------------------------------------------------------------ *)
 
 val rm =
@@ -407,7 +413,8 @@ val r_rm =
     [`ds` |-> ``Zr_rm (r1, Zm (SOME (scale, ix), ZregBase r2, d))``]]
     : utilsLib.cover
 
-val src_dst = utilsLib.augment (`size`, sizes)
+local
+  val l =
   ([[`ds` |-> ``Zrm_i (Zr r, i)``],
     [`ds` |-> ``Zrm_i (Zm (NONE, ZnoBase, d), i)``],
     [`ds` |-> ``Zrm_i (Zm (NONE, ZripBase, d), i)``],
@@ -423,8 +430,12 @@ val src_dst = utilsLib.augment (`size`, sizes)
     [`ds` |-> ``Zrm_r (Zm (SOME (scale, ix), ZripBase, d), r)``],
     [`ds` |-> ``Zrm_r (Zm (SOME (scale, ix), ZregBase r1, d), r2)``]] @ r_rm)
     : utilsLib.cover
+in
+  val src_dst = utilsLib.augment (`size`, sizes) l
+  val src_dst_not8 = utilsLib.augment (`size`, tl sizes) l
+end
 
-val lea = utilsLib.augment (`size`, sizes) (tl r_rm) : utilsLib.cover
+val lea = utilsLib.augment (`size`, tl sizes) (tl r_rm) : utilsLib.cover
 
 val extends =
  (* 8 -> 16, 32, 64 *)
@@ -438,6 +449,7 @@ val extends =
     (utilsLib.augment (`size`, [List.nth(sizes, 2)]) r_rm)
 
 val rm_cases = utilsLib.augment (`size`, sizes) rm
+val rm_cases_not8 = utilsLib.augment (`size`, tl sizes) rm
 
 (* ------------------------------------------------------------------------ *)
 
@@ -446,6 +458,15 @@ val rm_cases = utilsLib.augment (`size`, sizes) rm
 val data_hyp_rule =
    List.map (utilsLib.ALL_HYP_CONV_RULE
                 (INST_REWRITE_CONV EA_rwt THENC DATATYPE_CONV))
+
+val flags_override_rule =
+   List.map
+    (CONV_RULE
+       (Conv.DEPTH_CONV
+         (updateLib.OVERRIDE_UPDATES_CONV ``:Zeflags -> bool option``
+           (SIMP_CONV (srw_ss()) []))))
+
+val cond_update_rule = List.map (Conv.CONV_RULE COND_UPDATE_CONV)
 
 (*
 val is_some_hyp_rule =
@@ -456,9 +477,7 @@ val is_some_hyp_rule =
           ``IS_SOME (x: 'a word option)``)
 *)
 
-val cond_update_rule = List.map (Conv.CONV_RULE COND_UPDATE_CONV)
-
-val _ = addThms [dfn'Znop_def]
+val Znop_rwt = EV [dfn'Znop_def] [] [] ``dfn'Znop n``
 
 val Zcmc_rwt =
    EV [dfn'Zcmc_def, CF_def, write'CF_def, Cflag_rwt, write'Eflag_rwt] [] []
@@ -479,7 +498,6 @@ val Zbinop_rwts =
    EV ([dfn'Zbinop_def, read_dest_src_ea_def] @
        ea_Zsrc_rwt @ ea_Zdest_rwt @ EA_rwt) [] src_dst
       ``dfn'Zbinop (bop, size, ds)``
-   |> data_hyp_rule
    |> addThms
 
 val Zcall_imm_rwts =
@@ -532,15 +550,14 @@ val Zloop_rwts =
 val Zmonop_rwts =
    EV ([dfn'Zmonop_def] @ ea_Zrm_rwt @ EA_rwt) [] rm_cases
       ``dfn'Zmonop (mop, size, rm)``
-   |> data_hyp_rule
    |> addThms
 
 val Zmov_rwts =
    EV ([dfn'Zmov_def] @
        ea_Zsrc_rwt @ ea_Zdest_rwt @ read_cond_rwts @ EA_rwt @ write'EA_rwt)
-       [] (utilsLib.augment (`c`, conds) src_dst)
+       [] (utilsLib.augment (`c`, Lib.butlast conds) src_dst_not8 @
+           utilsLib.augment (`c`, [``Z_ALWAYS``]) src_dst)
       ``dfn'Zmov (c, size, ds)``
-   |> data_hyp_rule
    (* |> is_some_hyp_rule *)
    |> cond_update_rule
    |> addThms
@@ -550,7 +567,6 @@ val Zmovzx_rwts =
       ea_Zsrc_rwt @ ea_Zdest_rwt @ EA_rwt @ write'EA_rwt)
        [] extends
       ``dfn'Zmovzx (size, ds, size2)``
-   |> data_hyp_rule
    |> addThms
 
 val Zmovsx_rwts =
@@ -558,7 +574,6 @@ val Zmovsx_rwts =
        SignExtension_rwt @ ea_Zsrc_rwt @ ea_Zdest_rwt @ EA_rwt @ write'EA_rwt)
       [] extends
       ``dfn'Zmovsx (size, ds, size2)``
-   |> data_hyp_rule
    |> addThms
 
 val Zmul_rwts =
@@ -566,7 +581,33 @@ val Zmul_rwts =
         word_mul_thms, word_mul_top] @
        ea_Zrm_rwt @ EA_rwt @ write'EA_rwt) [] rm_cases
       ``dfn'Zmul (size, rm)``
-   |> data_hyp_rule
+   |> addThms
+
+val Zimul_rwts =
+   EV ([dfn'Zimul_def, erase_eflags, value_width_def, Zsize_width_def,
+        write'CF_def, write'OF_def, write'Eflag_rwt, word_thms,
+        integer_wordTheory.word_mul_i2w] @
+       SignExtension64_rwt @ ea_Zrm_rwt @ EA_rwt @ write'EA_rwt) [] rm_cases
+      ``dfn'Zimul (size, rm)``
+   |> flags_override_rule
+   |> addThms
+
+val Zimul2_rwts =
+   EV ([dfn'Zimul2_def, erase_eflags, value_width_def, Zsize_width_def,
+        write'CF_def, write'OF_def, write'Eflag_rwt, word_thms,
+        integer_wordTheory.word_mul_i2w] @ SignExtension64_rwt @ ea_Zrm_rwt @
+       EA_rwt @ write'EA_rwt) [] rm_cases_not8
+      ``dfn'Zimul2 (size, d, rm)``
+   |> flags_override_rule
+   |> addThms
+
+val Zimul3_rwts =
+   EV ([dfn'Zimul3_def, erase_eflags, value_width_def, Zsize_width_def,
+        write'CF_def, write'OF_def, write'Eflag_rwt, word_thms,
+        integer_wordTheory.word_mul_i2w] @ SignExtension64_rwt @ ea_Zrm_rwt @
+       EA_rwt @ write'EA_rwt) [] rm_cases_not8
+      ``dfn'Zimul3 (size, d, rm, imm)``
+   |> flags_override_rule
    |> addThms
 
 val Zpop_rwts =
@@ -615,58 +656,62 @@ val Zxchg_rwts =
 
 val () = setEvConv (Conv.DEPTH_CONV wordsLib.SIZES_CONV)
 
-fun div_assums d rax rdx v =
-  [``w2n ^v <> 0``, ``~(^d <= (w2n ^rdx * ^d + w2n ^rax) DIV w2n ^v)``]
+val div_ev =
+   EV ([dfn'Zdiv_def, dfn'Zidiv_def, erase_eflags, value_width_def,
+        Zsize_width_def, word_thms, wordsTheory.w2n_w2w,
+        utilsLib.map_conv EVAL
+          [``256 / 2i``, ``65536 / 2i``, ``4294967296 / 2i``,
+           ``18446744073709551616 / 2i``],
+        wordsTheory.w2n_eq_0, integer_wordTheory.w2i_eq_0] @
+       SignExtension64_rwt @ ea_Zrm_rwt @ EA_rwt @ write'EA_rwt)
 
-fun div_tms n =
+fun avoid_error_rule th =
   let
-    val ty = fcpSyntax.mk_int_numeric_type n
-    val wty = wordsSyntax.mk_int_word_type n
-    fun mask x = case n of
-                    8  => ``^x && 0xFFw``
-                  | 16 => ``^x && 0xFFFFw``
-                  | 32 => ``^x && 0xFFFFFFFFw``
-                  | _ => x
-    val rax = mask ``s.REG RAX``
-    val rdx = mask ``s.REG RDX``
-    val r = mask ``s.REG r``
-    val v = Term.mk_var ("v", wty)
-    val f = div_assums (eval (wordsSyntax.mk_dimword ty)) rax rdx
+    val ths = th |> rhsc
+                 |> boolSyntax.dest_cond
+                 |> #1
+                 |> boolSyntax.strip_disj
+                 |> List.map (Thm.ASSUME o boolSyntax.mk_neg)
   in
-    f v @ f r
+    REWRITE_RULE ths th
   end
 
-val div_ev =
-   EV ([dfn'Zdiv_def, erase_eflags, value_width_def, Zsize_width_def,
-        wordsTheory.w2n_w2w] @ ea_Zrm_rwt @ EA_rwt @ write'EA_rwt)
-
 val Zdiv_rwts =
-  div_ev [List.concat (List.map div_tms [8, 16, 32, 64])] (tl rm_cases)
+  div_ev [] (tl rm_cases)
       ``dfn'Zdiv (size, rm)``
-   |> data_hyp_rule
+   |> List.map avoid_error_rule
+   |> addThms
+
+val Zidiv_rwts =
+  div_ev [] (tl rm_cases)
+      ``dfn'Zidiv (size, rm)``
+   |> List.map avoid_error_rule
    |> addThms
 
 val Zdiv_byte_reg_rwts_1 =
-  div_ev [div_tms 8] [] ``dfn'Zdiv (Z8 T, Zr r)``
-   |> data_hyp_rule
+  div_ev [] [] ``dfn'Zdiv (Z8 T, Zr r)``
+   |> List.map avoid_error_rule
    |> addThms
 
-val tms =
-  let
-    val l = [``RAX``, ``RCX``, ``RDX``, ``RBX``]
-  in
-    List.map (div_assums ``256n`` ``s.REG RAX && 255w`` ``s.REG RDX && 255w``)
-      (List.map (fn r => ``s.REG ^r >>> 8 && 255w``) l @
-       List.map (fn r => ``s.REG ^r && 255w``) l)
-    |> List.concat
-  end
+val Zidiv_byte_reg_rwts_1 =
+  div_ev [] [] ``dfn'Zidiv (Z8 T, Zr r)``
+   |> List.map avoid_error_rule
+   |> addThms
 
 val Zdiv_byte_reg_rwts_2 =
-  div_ev [tms]
+  div_ev []
    [[`r` |-> ``RAX``], [`r` |-> ``RCX``], [`r` |-> ``RDX``], [`r` |-> ``RBX``],
     [`r` |-> ``RSP``], [`r` |-> ``RBP``], [`r` |-> ``RSI``], [`r` |-> ``RDI``]]
       ``dfn'Zdiv (Z8 F, Zr r)``
-   |> data_hyp_rule
+   |> List.map avoid_error_rule
+   |> addThms
+
+val Zidiv_byte_reg_rwts_2 =
+  div_ev []
+   [[`r` |-> ``RAX``], [`r` |-> ``RCX``], [`r` |-> ``RDX``], [`r` |-> ``RBX``],
+    [`r` |-> ``RSP``], [`r` |-> ``RBP``], [`r` |-> ``RSI``], [`r` |-> ``RDI``]]
+      ``dfn'Zidiv (Z8 F, Zr r)``
+   |> List.map avoid_error_rule
    |> addThms
 
 (* ------------------------------------------------------------------------ *)

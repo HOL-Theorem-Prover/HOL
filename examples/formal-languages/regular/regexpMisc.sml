@@ -22,4 +22,12 @@ fun spreadln {sep:string, ln:string, width:int} =
   spr width
  end;
 
+fun bigUpto b t =
+ let open IntInf
+     val one = IntInf.fromInt 1
+     fun up i A = if i > t then A else up (i + one) (i :: A)
+ in
+    List.rev (up b [])
+ end;
+
 end

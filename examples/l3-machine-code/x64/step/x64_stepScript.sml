@@ -391,7 +391,18 @@ val word_thms = Q.store_thm("word_thms",
     (!a: word64. (31 >< 0) (~(a && 0xFFFFFFFFw)) = ~a && 0xFFFFFFFFw) /\
     (!b. (7 >< 0) (v2w [b] : word64) = v2w [b] : word8) /\
     (!b. 255w && (v2w [b] : word64) = v2w [b] : word64) /\
-    (!b. 0xFF00w && (v2w [b] : word64) << 8 = (v2w [b] << 8) : word64)
+    (!b. 0xFF00w && (v2w [b] : word64) << 8 = (v2w [b] << 8) : word64) /\
+    (!a: word8. (7 >< 0) (w2w a : word64) = a) /\
+    (!a: word16.
+       sw2sw (((15 >< 0) (w2w a : word64)) : word16) = sw2sw a : word64) /\
+    (!a: word32.
+       sw2sw (((31 >< 0) (w2w a : word64)) : word32) = sw2sw a : word64) /\
+    (!a: word8. (w2w a = 0w : word64) = (a = 0w)) /\
+    (!a: word16. (w2w a = 0w : word64) = (a = 0w)) /\
+    (!a: word32. (w2w a = 0w : word64) = (a = 0w)) /\
+    (!a: word8. (sw2sw a = 0w : word64) = (a = 0w)) /\
+    (!a: word16. (sw2sw a = 0w : word64) = (a = 0w)) /\
+    (!a: word32. (sw2sw a = 0w : word64) = (a = 0w))
    `,
    rw [] \\ blastLib.BBLAST_TAC
    );

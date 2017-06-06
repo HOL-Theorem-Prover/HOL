@@ -10,4 +10,6 @@ sig
  val spreadln : {sep:string, ln:string, width:int}
                 -> string list -> string list
 
+ val bigUpto : IntInf.int -> IntInf.int -> IntInf.int list
+
 end
