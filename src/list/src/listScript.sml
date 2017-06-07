@@ -3509,9 +3509,21 @@ val lupdate_append2 = Q.store_thm ("lupdate_append2",
    `!v l1 x l2 l3. LUPDATE v (LENGTH l1) (l1++[x]++l2) = l1++[v]++l2`,
    Induct_on `l1` >> rw [LUPDATE_def])
 
+val HD_REVERSE = store_thm ("HD_REVERSE",
+  ``!x. x <> [] ==> (HD (REVERSE x) = LAST x)``,
+  REPEAT strip_tac >>
+  Induct_on `x` THEN1 fs[] >>
+  rw[LAST_DEF] >>
+  Cases_on `REVERSE x` THEN1 fs[] >>
+  fs[]);
+
 val LAST_REVERSE = Q.store_thm("LAST_REVERSE",
    `!ls. ls <> [] ==> (LAST (REVERSE ls) = HD ls)`,
    Induct >> simp [])
+
+val NOT_NIL_EQ_LENGTH_NOT_0 = store_thm ( "NOT_NIL_EQ_LENGTH_NOT_0",
+  ``x <> [] <=> (0 < LENGTH x)``,
+  Cases_on `x` >> rw[]);
 
 val last_drop = Q.store_thm ("last_drop",
   `!l n. n < LENGTH l ==> (LAST (DROP n l) = LAST l)`,

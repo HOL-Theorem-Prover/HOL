@@ -1204,20 +1204,6 @@ val DIV_thm5 = store_thm( "DIV_thm5",
   ``0 < b /\ a - q*b < b ==> (q >= a DIV b)``,
   rw[GREATER_EQ] >> rw[DIV_LE_X] >> srw_tac[ARITH_ss][]);
 
-(* lists *)
-
-val NOT_NIL_EQ_LENGTH_NOT_0 = store_thm ( "NOT_NIL_EQ_LENGTH_NOT_0",
-  ``x <> [] <=> (0 < LENGTH x)``,
-  Cases_on `x` >> lrw[]);
-
-val HD_REVERSE = store_thm ("HD_REVERSE",
-  ``!x. x <> [] ==> (HD (REVERSE x) = LAST x)``,
-  REPEAT strip_tac >>
-  Induct_on `x` THEN1 fs[] >>
-  rw[LAST_DEF] >>
-  Cases_on `REVERSE x` THEN1 fs[] >>
-  fs[]);
-
 (* word & multiWord general *)
 
 val NOT_0w_bis = store_thm("NOT_0w_bis",
