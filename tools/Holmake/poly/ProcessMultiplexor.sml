@@ -351,10 +351,11 @@ struct
                 OS.IO.poll(map #1 polls, SOME (Time.fromMilliseconds 100))
             fun foldthis (pi, (acc as (cmds, wl),didio)) =
               let
-                val pd = OS.IO.infoToPollDesc pi
+                val iod = OS.IO.pollToIODesc (OS.IO.infoToPollDesc pi)
               in
-                case assoc1 pd polls of
-                    NONE => raise Fail "Couldn't find poll-data in assoc1"
+                case List.find (fn (pd,_) => iod = OS.IO.pollToIODesc pd) polls
+                 of
+                    NONE => raise Fail "Couldn't find poll-data in List.find"
                   | SOME (_, (chan, wj)) =>
                     let
                       val s = TextIO.input (wjstrm chan wj)
