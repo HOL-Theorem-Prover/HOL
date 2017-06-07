@@ -28,7 +28,7 @@ struct
     List.foldl (fn (kv,acc) => env_extend kv acc) (base_environment()) alist
   end
 
-  fun debug_info cline = let
+  fun debug_info (cline : HM_Cline.t) = let
     val POLYMLLIBDIR =
         case #polymllibdir cline of NONE => POLYMLLIBDIR0 | SOME s => s
   in

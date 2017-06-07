@@ -10,8 +10,6 @@ structure FileSys = OS.FileSys
 val DEFAULT_OVERLAY = "Overlay.ui"
 
 fun normPath s = OS.Path.toString(OS.Path.fromString s)
-fun itlist f L base =
-   let fun it [] = base | it (a::rst) = f a (it rst) in it L end;
 fun itstrings f [] = raise Fail "itstrings: empty list"
   | itstrings f [x] = x
   | itstrings f (h::t) = f h (itstrings f t);
@@ -673,7 +671,6 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
                  includes = includes, fname = fromFile arg}
     handle Holdep.Holdep_Error s =>
              (warn "Holdep failed: s"; raise HolDepFailed)
-         | Interrupt => raise Interrupt
          | e => (warn ("Holdep exception: "^General.exnMessage e);
                  raise HolDepFailed)
   fun myopen s =
