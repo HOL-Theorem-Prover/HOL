@@ -1324,6 +1324,13 @@ val insert_thm = Q.store_thm ("insert_thm",
      rw [] >>
      metis_tac [FUPDATE_COMMUTES, cmp_thms, to_fmap_key_set, key_set_cmp_thm]));
 
+val lookup_insert = Q.store_thm("lookup_insert",
+  `good_cmp cmp ∧ invariant cmp t ⇒
+   lookup cmp k (insert cmp k' v t) =
+   if cmp k k' = Equal then SOME v else lookup cmp k t`,
+  rw[] \\ rw[lookup_thm,insert_thm,FLOOKUP_UPDATE] \\
+  metis_tac[key_set_eq,comparisonTheory.cmp_thms]);
+
 val insertR_thm = Q.store_thm ("insertR_thm",
 `∀t.
   good_cmp cmp ∧
