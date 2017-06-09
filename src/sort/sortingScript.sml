@@ -968,6 +968,14 @@ val SORTED_FILTER = store_thm("SORTED_FILTER",
   first_x_assum(qspec_then`P`mp_tac) >> rw[] >>
   rfs[SORTED_EQ] >> fs[MEM_FILTER])
 
+val ALL_DISTINCT_SORTED_WEAKEN = Q.store_thm("ALL_DISTINCT_SORTED_WEAKEN",
+  `!R R' ls. (!x y. MEM x ls /\ MEM y ls /\ x <> y ==> (R x y <=> R' x y)) /\
+        ALL_DISTINCT ls /\ SORTED R ls ==> SORTED R' ls`,
+  gen_tac \\ ho_match_mp_tac SORTED_IND \\ rw[]
+  \\ pop_assum mp_tac
+  \\ simp_tac(srw_ss())[SORTED_DEF]
+  \\ metis_tac[]);
+
 (*Perm theorems for the simplication*)
 
 (* was PERM_FUN_APPEND but this name is used again lower down *)

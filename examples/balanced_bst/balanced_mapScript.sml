@@ -1324,6 +1324,13 @@ val insert_thm = Q.store_thm ("insert_thm",
      rw [] >>
      metis_tac [FUPDATE_COMMUTES, cmp_thms, to_fmap_key_set, key_set_cmp_thm]));
 
+val lookup_insert = Q.store_thm("lookup_insert",
+  `good_cmp cmp ∧ invariant cmp t ⇒
+   lookup cmp k (insert cmp k' v t) =
+   if cmp k k' = Equal then SOME v else lookup cmp k t`,
+  rw[] \\ rw[lookup_thm,insert_thm,FLOOKUP_UPDATE] \\
+  metis_tac[key_set_eq,comparisonTheory.cmp_thms]);
+
 val insertR_thm = Q.store_thm ("insertR_thm",
 `∀t.
   good_cmp cmp ∧
@@ -2519,6 +2526,33 @@ val toAscList_thm = Q.store_thm ("toAscList_thm",
  strip_tac >>
  qspecl_then [`cmp`, `[]`, `t`] mp_tac toAscList_helper >>
  simp [toAscList_def, lift_key_def]);
+
+(* some useful specialisations of the above theorem *)
+
+val MAP_FST_toAscList = Q.store_thm("MAP_FST_toAscList",
+  `good_cmp cmp ∧ invariant cmp t ⇒
+   SORTED (λx y. cmp x y = Less) (MAP FST (toAscList t)) ∧
+   FDOM (to_fmap cmp t) = IMAGE (key_set cmp) (set (MAP FST (toAscList t)))`,
+  rw[] \\ imp_res_tac toAscList_thm
+  >- (
+    qmatch_goalsub_abbrev_tac`SORTED R` \\
+    imp_res_tac comparisonTheory.good_cmp_trans \\
+    `transitive R` by (
+      fs[relationTheory.transitive_def,FORALL_PROD,Abbr`R`] \\
+      metis_tac[] ) \\
+    rw[sorted_map] \\
+    rw[Abbr`R`,relationTheory.inv_image_def,LAMBDA_PROD] ) \\
+  fs[Once EXTENSION,lift_key_def,MEM_MAP,EXISTS_PROD,FORALL_PROD,FLOOKUP_DEF] \\
+  metis_tac[]);
+
+val MEM_toAscList = Q.store_thm("MEM_toAscList",
+  `good_cmp cmp ∧ invariant cmp t ∧ MEM (k,v) (toAscList t) ⇒
+   FLOOKUP (to_fmap cmp t) (key_set cmp k) = SOME v`,
+  rw[] \\
+  imp_res_tac toAscList_thm \\
+  `(key_set cmp k,v) ∈ lift_key cmp (set (toAscList t))`
+  by (simp_tac std_ss [lift_key_def] \\ simp[EXISTS_PROD] \\ metis_tac[])
+  \\ rfs[]);
 
 val compare_good_cmp = Q.store_thm ("compare_good_cmp",
 `!cmp1 cmp2. good_cmp cmp1 ∧ good_cmp cmp2 ⇒ good_cmp (compare cmp1 cmp2)`,
