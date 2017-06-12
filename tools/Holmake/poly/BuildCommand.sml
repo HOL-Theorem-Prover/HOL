@@ -264,6 +264,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
        "] handle x => ((case x of Fail s => print (s^\"\\n\") | _ => ()); \
        \OS.Process.exit OS.Process.failure);");
     p "__end-of-file__";
+    p ("echo \"Completed load of "^result^"\"");
+    p ("exit 0");
     TextIO.closeOut out;
     Systeml.mk_xable result;
     OS.Process.success
