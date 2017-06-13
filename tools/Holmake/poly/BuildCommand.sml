@@ -242,6 +242,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         (TextIO.output (out, s); TextIO.output (out, "\n"))
   in
     p "#!/bin/sh";
+    p ("set -e");
     p (protect(POLY) ^ " -q --gcthreads=1 " ^
        String.concatWith " " (envlist "POLY_CLINE_OPTIONS") ^
        " <<'__end-of-file__'");
