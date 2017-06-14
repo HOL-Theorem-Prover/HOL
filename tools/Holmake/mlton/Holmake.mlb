@@ -1,5 +1,4 @@
 $(SML_LIB)/basis/basis.mlb
-$(SML_LIB)/basis/mlton.mlb
 ../../../tools-poly/poly/polytools-basic.mlb
 ../hmcore.mlb
 ../HM_Core_Cline.sig
