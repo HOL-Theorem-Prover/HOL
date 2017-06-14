@@ -566,7 +566,7 @@ variable before and after the region is sent."
 
 
 (defun copy-region-as-hol-definition-quietly (start end)
-   (interactive "r\np")
+   (interactive "r\n")
    (hol-toggle-quiet-quietdec)
    (copy-region-as-hol-definition start end 0)
    (hol-toggle-quiet-quietdec))
