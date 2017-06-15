@@ -9,7 +9,95 @@ open Lib Feedback regexpMisc WordOps Interval;
 
 val ERR = mk_HOL_ERR "Regexp_Type";
 
-type charset = IntInf.int;
+(*---------------------------------------------------------------------------*)
+(* Alphabet                                                                  *)
+(*---------------------------------------------------------------------------*)
+
+val alphabet_size = 256;
+val alphabetN = List.tabulate (alphabet_size,I)
+val alphabet = map Char.chr alphabetN;
+
+type w64 = LargeWord.word;
+
+(*---------------------------------------------------------------------------*)
+(* Charsets                                                                  *)
+(*---------------------------------------------------------------------------*)
+
+type charset = w64 * w64 * w64 * w64;
+
+val charset_empty : charset = (0wx0,0wx0,0wx0,0wx0);
+fun charset_compl (u1,u2,u3,u4) : charset =
+ let open LargeWord
+ in (notb u1, notb u2, notb u3, notb u4)
+ end;
+ 
+val charset_full : charset = charset_compl charset_empty;
+
+fun charset_union (u1,u2,u3,u4) (v1,v2,v3,v4) : charset =
+ let open LargeWord
+ in (orb (u1,v1), orb (u2,v2), orb (u3,v3), orb (u4,v4))
+ end;
+
+fun charset_inter (u1,u2,u3,u4) (v1,v2,v3,v4) =
+ let open LargeWord
+ in (andb (u1,v1), andb (u2,v2), andb (u3,v3), andb (u4,v4))
+ end;
+
+fun charset_diff cs1 cs2 = charset_inter cs1 (charset_compl cs2);
+
+fun setbit n w =
+ let val one: w64 = LargeWord.<< (0wx1,Word.fromInt n)
+ in LargeWord.orb(w,one)
+ end
+
+val table256 =
+ let val sing64 = List.map (C setbit 0wx0) (upto 0 63)
+ in Vector.fromList
+     (List.map (fn w => (w,0wx0,0wx0,0wx0):charset) sing64 @
+      List.map (fn w => (0wx0,w,0wx0,0wx0):charset) sing64 @
+      List.map (fn w => (0wx0,0wx0,w,0wx0):charset) sing64 @
+      List.map (fn w => (0wx0,0wx0,0wx0,w):charset) sing64)
+ end;
+
+fun charset_mem c ((w1,w2,w3,w4):charset) =
+ let val i = Char.ord c
+     val (s1,s2,s3,s4) = Vector.sub(table256,i)
+     val (word,sing) =
+        if i < 64 then (w1,s1) else
+        if i < 128 then (w2,s2) else
+        if i < 192 then (w3,s3) else (w4,s4)
+ in
+   LargeWord.andb(word,sing) <> 0wx0
+ end
+
+fun charset_elts cs = filter (C charset_mem cs) alphabet;
+
+fun charset_insert c cset =
+  charset_union (Vector.sub(table256,Char.ord c)) cset;
+
+fun charset_of clist = itlist charset_insert clist charset_empty;
+
+fun charset_sing c = charset_of [c];
+
+fun charset_compare ((u1,u2,u3,u4),(v1,v2,v3,v4)) =
+ let open LargeWord
+ in case compare(u1,v1)
+     of LESS => LESS
+      | GREATER => GREATER
+      | EQUAL =>
+    case compare (u2,v2)
+     of LESS => LESS
+      | GREATER => GREATER
+      | EQUAL =>
+    case compare (u3,v3)
+     of LESS => LESS
+      | GREATER => GREATER
+      | EQUAL => compare (u4,v4)
+ end;
+
+(*---------------------------------------------------------------------------*)
+(* regexp datatype                                                           *)
+(*---------------------------------------------------------------------------*)
 
 datatype regexp
    = Chset of charset
@@ -22,16 +110,10 @@ fun And (r1,r2) = Neg(Or[Neg r1,Neg r2]);
 fun Diff (r1,r2) = And(r1,Neg r2);
 
 (*---------------------------------------------------------------------------*)
-(* Alphabet                                                                  *)
-(*---------------------------------------------------------------------------*)
-
-val alphabet_size = 256;
-val alphabetN = List.tabulate (alphabet_size,I)
-val alphabet = map Char.chr alphabetN;
-
-(*---------------------------------------------------------------------------*)
 (* Character sets represented as (256-bit) bigints.                          *)
 (*---------------------------------------------------------------------------*)
+(*
+type charset = IntInf.int;
 
 val charset_empty = WordOps.allzero;
 
@@ -65,6 +147,7 @@ fun charset_diff cs1 cs2 = IntInf.andb(cs1,IntInf.notb cs2)
 (*---------------------------------------------------------------------------*)
 
 val charset_compare = IntInf.compare;
+*)
 
 (*---------------------------------------------------------------------------*)
 (* Common charsets                                                           *)
@@ -73,7 +156,9 @@ val charset_compare = IntInf.compare;
 val charset_digit = charset_of (String.explode"0123456789");
 val charset_alpha = charset_of
   (String.explode "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
-val charset_alphanum = charset_insert #"_" (charset_union charset_digit charset_alpha);
+val charset_alphanum =
+  charset_insert #"_"
+      (charset_union charset_digit charset_alpha);
 val charset_whitespace = charset_of (String.explode" \n\r\t\f");
 
 fun charset_string cset =
