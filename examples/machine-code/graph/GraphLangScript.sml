@@ -10,6 +10,8 @@ open m0_decompTheory lcsymtacs;
 
 infix \\ val op \\ = op THEN;
 
+val op by = BasicProvers.byA
+
 val RW1 = ONCE_REWRITE_RULE;
 val RW = REWRITE_RULE;
 
