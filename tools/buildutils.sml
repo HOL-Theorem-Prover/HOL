@@ -799,30 +799,66 @@ fun build_help graph =
    else ()
  end
 
-fun cleanMiniSat () =
+fun cleanDirP P d =
   let
-    val d = fullPath [HOLDIR, "src", "HolSat", "sat_solvers", "minisat"]
     val dstrm = OS.FileSys.openDir d
-    fun getDotOs acc =
+    fun getPs acc =
       case OS.FileSys.readDir dstrm of
           NONE => (OS.FileSys.closeDir dstrm; acc)
-        | SOME f => if String.isSuffix ".o" f then getDotOs (f::acc)
-                    else getDotOs acc
-    val dotOs = getDotOs []
+        | SOME f => if P f then getPs (f::acc)
+                    else getPs acc
+    val Ps = getPs []
   in
-    List.app (fn s => safedelete (fullPath [d, s])) dotOs ;
-    safedelete (fullPath [d, "minisat"])
+    List.app (fn s => safedelete (fullPath [d, s])) Ps
   end
 
-val delete_heaps =
-    if Systeml.ML_SYSNAME = "poly" then
-      fn () =>
-         (safedelete (fullPath [HOLDIR, "bin", "hol.state"]);
-          safedelete (fullPath [HOLDIR, "bin", "hol.state0"]);
-          safedelete (fullPath [HOLDIR, "tools", "Holmake", "Systeml.sml"]);
-          cleanMiniSat())
-    else fn () => ()
 
+
+val delete_heaps = let
+  fun fpH s = fullPath ([HOLDIR] @ s)
+  fun cleanHolSat () =
+    let
+      val msd = fpH ["src", "HolSat", "sat_solvers", "minisat"]
+      val zd = fpH ["src", "HolSat", "sat_solvers", "zc2hs"]
+    in
+      cleanDirP (String.isSuffix ".o") msd;
+      safedelete (fullPath [msd, "minisat"]);
+      cleanDirP (String.isSuffix ".o") zd;
+      safedelete (fullPath [zd, "zc2hs"])
+    end
+  fun cleanBin() =
+    let
+      val d = fpH ["bin"]
+    in
+      List.app (fn s => safedelete (fullPath [d,s])) [
+        "build",
+        "buildheap",
+        "heapname",
+        "hol.state",
+        "hol.state0",
+        "holdeptool.exe",
+        "mkmunge.exe",
+        "unquote"
+      ]
+    end
+  fun ocamljunk s =
+    String.isSuffix ".cmi" s orelse String.isSuffix ".cmx" s orelse
+    String.isSuffix ".o" s
+in
+  if Systeml.ML_SYSNAME = "poly" then
+    fn () =>
+       (safedelete (fpH ["tools", "Holmake", "Systeml.sml"]);
+        safedelete (fpH ["tools", "mlyacc", "src", "mlyacc.exe"]);
+        safedelete (fpH ["tools", "mllex", "mllexe.exe"]);
+        cleanBin();
+        cleanHolSat();
+        cleanDirP (String.isSuffix ".exe") (fpH ["help", "src-sml"]);
+        List.app (fn s => cleanDirP ocamljunk
+                                    (fpH (["src", "holyhammer", "hh"] @ s)))
+                 [[], ["hh1"]]
+       )
+    else fn () => ()
+end
 
 fun process_cline () =
     case get_cline () of
