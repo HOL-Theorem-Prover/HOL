@@ -2,6 +2,7 @@
 
 ifneq ($(which ocamlopt),)
 
+INCLUDES = hh1
 HH2_CMX=toolbox.cmx hh_parse.cmx hh_lexer.cmx read.cmx predict.cmx preprocess.cmx init.cmx \
 dependency.cmx thf1hh1.cmx features.cmx prepredict.cmx write.cmx
 
@@ -13,7 +14,7 @@ hh1/hh_symbols.cmx hh1/features_dt.cmx hh1/hh_tac.cmx hh1/hh_write.cmx
 
 ALL_CMX=$(HL_CMX) $(HH2_CMX)
 
-EXTRA_CLEANS = $(HH2_CMX) $(patsubst %.cmx,%.cmi,$(HH2_CMX)) $(patsubst %.cmx,%.o,$(HH2_CMX)) hh_parse.ml hh_lexer.ml
+EXTRA_CLEANS = $(HH2_CMX) $(patsubst %.cmx,%.cmi,$(HH2_CMX)) $(patsubst %.cmx,%.o,$(HH2_CMX)) hh_parse.ml hh_lexer.ml main.cmi main.cmx main.o hh
 
 
 
@@ -53,9 +54,6 @@ prepredict.cmx: prepredict.ml features.cmi predict.cmi
 	ocamlopt -c -I hh1 $<
 write.cmx: write.ml hh_parse.cmi thf1hh1.cmi dependency.cmi
 	ocamlopt -c -I hh1 $<
-
-clean:
-	rm -f hh *cmx *cmi *_lexer.ml *_parse.ml *.o *.mli
 
 else
 
