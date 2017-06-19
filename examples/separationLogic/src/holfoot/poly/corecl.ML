@@ -15,7 +15,7 @@ let
      val is = TextIO.openIn ifile
      val os = TextIO.openOut ofile
 
-     open filter.UserDeclarations
+     open QuoteFilter.UserDeclarations
      val state as QFS args =
         QFS {output_stream=(fn s => TextIO.output(os, s)),
              comdepth=ref 0,
@@ -26,10 +26,10 @@ let
              rowstart=ref 0};
 
      fun loop() = let
-       val lexer = filter.makeLexer (read_from_stream is) state
+       val lexer = QuoteFilter.makeLexer (read_from_stream is) state
      in
        lexer()
-       handle Interrupt => (let open filter.UserDeclarations
+       handle Interrupt => (let open QuoteFilter.UserDeclarations
                          in
                            #comdepth args := 0;
                            #pardepth args := 0;
