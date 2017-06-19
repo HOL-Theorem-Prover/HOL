@@ -799,12 +799,28 @@ fun build_help graph =
    else ()
  end
 
+fun cleanMiniSat () =
+  let
+    val d = fullPath [HOLDIR, "src", "HolSat", "sat_solvers", "minisat"]
+    val dstrm = OS.FileSys.openDir d
+    fun getDotOs acc =
+      case OS.FileSys.readDir dstrm of
+          NONE => (OS.FileSys.closeDir dstrm; acc)
+        | SOME f => if String.isSuffix ".o" f then getDotOs (f::acc)
+                    else getDotOs acc
+    val dotOs = getDotOs []
+  in
+    List.app (fn s => safedelete (fullPath [d, s])) dotOs ;
+    safedelete (fullPath [d, "minisat"])
+  end
+
 val delete_heaps =
     if Systeml.ML_SYSNAME = "poly" then
       fn () =>
          (safedelete (fullPath [HOLDIR, "bin", "hol.state"]);
           safedelete (fullPath [HOLDIR, "bin", "hol.state0"]);
-          safedelete (fullPath [HOLDIR, "tools", "Holmake", "Systeml.sml"]))
+          safedelete (fullPath [HOLDIR, "tools", "Holmake", "Systeml.sml"]);
+          cleanMiniSat())
     else fn () => ()
 
 
