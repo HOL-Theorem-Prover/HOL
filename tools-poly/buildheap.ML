@@ -160,8 +160,8 @@ in
         val getTime = OS.FileSys.modTime o findMod
         fun foldthis (modname, t0) = time_max(t0, getTime modname)
       in
-        OS.FileSys.setTime (outputheap,
-                            SOME (foldl foldthis (getTime (hd objs)) (tl objs)))
+        OS.FileSys.setTime
+          (outputheap, SOME (foldl foldthis (OS.FileSys.modTime base) objs))
       end
     | SOME s =>
       warn ("Ignoring strange value (" ^ s ^ ") for " ^

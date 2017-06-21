@@ -399,6 +399,13 @@ local
           | "arm_prog$arm_CPSR_IT" => K "it"
           | "arm_prog$arm_CPSR_M" => K "mode"
           | "arm_prog$arm_CPSR_psr'rst" => K "psr_other"
+          | "arm_prog$arm_SPSR_abt" => K "spsr_abt"
+          | "arm_prog$arm_SPSR_fiq" => K "spsr_fiq"
+          | "arm_prog$arm_SPSR_hyp" => K "spsr_hyp"
+          | "arm_prog$arm_SPSR_irq" => K "spsr_irq"
+          | "arm_prog$arm_SPSR_mon" => K "spsr_mon"
+          | "arm_prog$arm_SPSR_svc" => K "spsr_svc"
+          | "arm_prog$arm_SPSR_und" => K "spsr_und"
           | "arm_prog$arm_FP_FPSCR_N" => K "fp_n"
           | "arm_prog$arm_FP_FPSCR_Z" => K "fp_z"
           | "arm_prog$arm_FP_FPSCR_C" => K "fp_c"
@@ -451,7 +458,8 @@ local
    val aligned_cond_rand =
      utilsLib.mk_cond_rand_thms [``aligned n : 'a word -> bool``]
    val cnv = REWRITE_CONV [alignmentTheory.aligned_numeric, aligned_cond_rand,
-                           arm_progTheory.Aligned_Branch]
+                           arm_progTheory.Aligned_Branch,
+                           alignmentTheory.aligned_align]
    val arm_PC_bump_intro =
       SPEC_IMP_RULE o
       Conv.CONV_RULE (Conv.LAND_CONV cnv) o

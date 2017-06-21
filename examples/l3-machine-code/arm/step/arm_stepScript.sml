@@ -1214,11 +1214,6 @@ val CurrentInstrSet_rwt = Theory.save_thm("CurrentInstrSet_rwt",
 
 (* ------------------------------------------------------------------------ *)
 
-val unit_state_cond = Q.store_thm("unit_state_cond",
-   `!b s1 s2. (if b then ((), s1: arm_state) else ((), s2)) =
-              ((), if b then s1 else s2)`,
-   rw [])
-
 val merge_cond = Theory.save_thm("merge_cond",
    METIS_PROVE []
      ``(if x then a:'a else if y then a else b) = (if x \/ y then a else b)``)

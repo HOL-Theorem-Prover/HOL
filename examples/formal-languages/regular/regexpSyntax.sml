@@ -139,12 +139,12 @@ fun bitlist_to_bitvector tm =
  end
 *)
 
+val charset_tm = prim_mk_const{Thy="charset",Name="Charset"}
+
 (*---------------------------------------------------------------------------*)
 (* Lift and drop charsets between ML and HOL                                 *)
 (*---------------------------------------------------------------------------*)
-
-val charset_tm = prim_mk_const{Thy="charset",Name="Charset"}
-
+(*
 val (chop4,join4) =
  let open IntInf
      val exp2_64 = pow(2,64)
@@ -163,7 +163,6 @@ val (chop4,join4) =
   (chop4,join4)
  end;
 
-val charset_to_term = (* IntInf.int -> ``:charset`` *)
  let val num = IntInf.toInt
  in fn cset =>
     let open wordsSyntax
@@ -190,7 +189,34 @@ fun term_to_charset tm = (* ``:charset`` -> IntInf.int *)
              end
         else raise ERR "term_to_charset" "expected Charset _ _ _ _"
    | other => raise ERR "term_to_charset" "expected Charset _ _ _ _"
+*)
 
+val charset_to_term = (* w64*w64*w64*w64 -> ``:charset`` *)
+ let val num = Arbnum.fromLargeInt o LargeWord.toLargeInt
+ in fn (v1,v2,v3,v4) =>
+    let open wordsSyntax
+        val v1tm = mk_wordi(num v1,64)
+        val v2tm = mk_wordi(num v2,64)
+        val v3tm = mk_wordi(num v3,64)
+        val v4tm = mk_wordi(num v4,64)
+    in list_mk_comb(charset_tm,[v1tm,v2tm,v3tm,v4tm])
+    end
+ end;
+
+fun term_to_charset tm = (* ``:charset`` -> w64*w64*w64*w64 *)
+ case strip_comb tm
+  of (const,[v1tm,v2tm,v3tm,v4tm]) =>
+      if same_const const charset_tm
+        then let open wordsSyntax
+                 val inf = LargeWord.fromLargeInt o Arbnum.toLargeInt
+                 val v1 = inf (dest_word_literal v1tm)
+                 val v2 = inf (dest_word_literal v2tm)
+                 val v3 = inf (dest_word_literal v3tm)
+                 val v4 = inf (dest_word_literal v4tm)
+             in (v1,v2,v3,v4)
+             end
+        else raise ERR "term_to_charset" "expected Charset _ _ _ _"
+   | other => raise ERR "term_to_charset" "expected Charset _ _ _ _"
 
 (*---------------------------------------------------------------------------*)
 (* Build a regexp term from an ML regexp expression                          *)

@@ -135,7 +135,10 @@ fun graphbuild optinfo incinfo g =
                   end
           in
             if relocbuild andalso not (#phony nI) andalso
-               List.all exists_readable (#target nI)
+               List.all exists_readable (#target nI) andalso
+               #seqnum nI = 0
+               (* necessary to avoid dropping out of a multi-command execution
+                  part way through *)
             then
               let
                 val _ = diag ("May not need to rebuild "^target_s)

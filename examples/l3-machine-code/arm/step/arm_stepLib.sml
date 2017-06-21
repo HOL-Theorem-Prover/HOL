@@ -1947,6 +1947,8 @@ local
      ("ANDS (imm)",("ArithLogicImmediate", [xF 0, xF 1, xF 2, xT 3])),
      ("EORS (imm)",("ArithLogicImmediate", [xF 0, xF 1, xT 2, xT 3])),
      ("SUBS (imm)",("ArithLogicImmediate", [xF 0, xT 1, xF 2, xT 3])),
+     ("SUBS (pc,imm)",("ArithLogicImmediate",
+        [xF 0, xT 1, xF 2, xT 3, xT 8, xT 9, xT 10, xT 11])),
      ("RSBS (imm)",("ArithLogicImmediate", [xF 0, xT 1, xT 2, xT 3])),
      ("ADDS (imm)",("ArithLogicImmediate", [xT 0, xF 1, xF 2, xT 3])),
      ("ADCS (imm)",("ArithLogicImmediate", [xT 0, xF 1, xT 2, xT 3])),
@@ -2839,8 +2841,8 @@ local
                EV ([R_rwt, arm_stepTheory.R_x_not_pc,
                    DataProcessing, DataProcessingALU_def,
                    AddWithCarry, wordsTheory.FST_ADD_WITH_CARRY,
-                   ArithmeticOpcode_def, PC_rwt, IncPC_rwt, cond_rand_thms,
-                   unit_state_cond] @ wr) [] [[`opc` |-> opc]]
+                   ArithmeticOpcode_def, PC_rwt, IncPC_rwt, cond_rand_thms] @
+                   wr) [] [[`opc` |-> opc]]
                   ``DataProcessing (opc, setflags, d, n, imm32_c)``
             end
             |> List.map
@@ -2999,17 +3001,17 @@ val MoveHalfword_rwt =
 (* ---------------------------- *)
 
 val Multiply32_rwt =
-   regEV [`d`] [dfn'Multiply32_def, unit_state_cond]
+   regEV [`d`] [dfn'Multiply32_def]
       [[``n <> 15w: word4``, ``m <> 15w: word4``]] []
       ``dfn'Multiply32 (setflags, d, n, m)``
 
 val MultiplyAccumulate_rwt =
-   regEV [`d`] [dfn'MultiplyAccumulate_def, unit_state_cond]
+   regEV [`d`] [dfn'MultiplyAccumulate_def]
       [[``n <> 15w: word4``, ``m <> 15w: word4``, ``a <> 15w: word4``]] []
       ``dfn'MultiplyAccumulate (setflags, d, n, m, a)``
 
 val MultiplyLong_rwt =
-   regEV [`dhi: word4`, `dlo: word4`] [dfn'MultiplyLong_def, unit_state_cond]
+   regEV [`dhi: word4`, `dlo: word4`] [dfn'MultiplyLong_def]
       [[``dhi <> 15w: word4``, ``dlo <> 15w: word4``,
         ``n <> 15w: word4``, ``m <> 15w: word4``]] (TF `signed`)
       ``dfn'MultiplyLong (accumulate, signed, setflags, dhi, dlo, n, m)``
@@ -4004,10 +4006,109 @@ val ReturnFromException_le_rwts =
                              ASSUME ``^st.CPSR.M <> 16w``]))
    |> addThms
 
+val CPSR_lem = Q.prove(
+  `GoodMode m ==> m <> 16w ==> m <> 31w ==>
+   ((if m = 17w then (a, s)
+     else if m = 18w then (b, s)
+     else if m = 19w then (c, s)
+     else if m = 22w then (d, s)
+     else if m = 23w then (e, s)
+     else if m = 26w then (f, s)
+     else if m = 27w then (g, s)
+     else h) =
+    (if m = 17w then a
+     else if m = 18w then b
+     else if m = 19w then c
+     else if m = 22w then d
+     else if m = 23w then e
+     else if m = 26w then f
+     else g, s))`,
+  rw [GoodMode_def]
+  ) |> UNDISCH_ALL
+
+val CPSR_it = Q.prove(
+  `((if m = 17w : word5 then (7 >< 2) a.IT : word6
+     else if m = 18w then (7 >< 2) b.IT
+     else if m = 19w then (7 >< 2) c.IT
+     else if m = 22w then (7 >< 2) d.IT
+     else if m = 23w then (7 >< 2) e.IT
+     else if m = 26w then (7 >< 2) f.IT
+     else (7 >< 2) g.IT) @@
+    (if m = 17w then (1 >< 0) a.IT : word2
+     else if m = 18w then (1 >< 0) b.IT
+     else if m = 19w then (1 >< 0) c.IT
+     else if m = 22w then (1 >< 0) d.IT
+     else if m = 23w then (1 >< 0) e.IT
+     else if m = 26w then (1 >< 0) f.IT
+     else (1 >< 0) g.IT)) =
+    (if m = 17w then a
+     else if m = 18w then b
+     else if m = 19w then c
+     else if m = 22w then d
+     else if m = 23w then e
+     else if m = 26w then f
+     else g).IT`,
+  rw [] \\ fs [] \\ blastLib.BBLAST_TAC)
+
+val SPSR_rwt = EV [SPSR_def, BadMode, CPSR_lem] [] [] ``SPSR`` |> hd
+
+val reg'PSR = utilsLib.mk_reg_thm "arm" "PSR"
+
+local
+  val l =
+    reg'PSR
+    |> SPEC_ALL
+    |> utilsLib.rhsc
+    |> HolKernel.strip_binop (Lib.total wordsSyntax.dest_word_concat)
+  fun mk_v n a = Term.mk_var ("v" ^ Int.toString n, Term.type_of a)
+  val tm =
+    List.foldr
+      (fn (t, (a, n)) => (wordsSyntax.mk_word_concat (mk_v n t, a), n + 1))
+      (mk_v 0 (List.last l), 1) (Lib.butlast l) |> fst
+in
+  val bits2625 = blastLib.BBLAST_PROVE ``(26 >< 25) ^tm = v10``
+  val bits1916 = blastLib.BBLAST_PROVE ``(19 >< 16) ^tm = v7``
+  val bits1510 = blastLib.BBLAST_PROVE ``(15 >< 10) ^tm = v6``
+  val bits40 = blastLib.BBLAST_PROVE ``(4 >< 0) ^tm = v0``
+  val bit0_word1 = blastLib.BBLAST_CONV ``(v2w [b] : word1) ' 0``
+end
+
+val concat_bit_lo = Q.prove(
+  `n < dimindex(:'b) /\ n <  dimindex(:'c) /\
+   FINITE (univ(:'a)) /\ FINITE (univ(:'b)) ==>
+   ((((a : 'a word) @@ (b : 'b word)) : 'c word) ' n = b ' n)`,
+  srw_tac [wordsLib.WORD_BIT_EQ_ss] [fcpTheory.index_sum]
+  )
+
+val concat_bit_hi = Q.prove(
+  `dimindex(:'b) <= n /\ n <  dimindex(:'c) /\
+   n < dimindex(:'a) + dimindex (:'b) /\
+   FINITE (univ(:'a)) /\ FINITE (univ(:'b)) ==>
+   ((((a : 'a word) @@ (b : 'b word)) : 'c word) ' n =
+    a ' (n - dimindex(:'b)))`,
+  srw_tac [wordsLib.WORD_BIT_EQ_ss] [fcpTheory.index_sum]
+  )
+
+val SUBS_PC_rwt =
+   EV [dfn'ArithLogicImmediate_def, utilsLib.SET_RULE DataProcessingPC_def,
+       utilsLib.SET_RULE CurrentModeIsUserOrSystem_def, CurrentModeIsHyp,
+       BadMode, CurrentInstrSet_rwt, ARMExpandImm_C_rwt, ExpandImm_C_rwt,
+       R_rwt, DataProcessingALU_def, SPSR_rwt, CPSRWriteByInstr_exn_return,
+       AddWithCarry, wordsTheory.FST_ADD_WITH_CARRY, reg'PSR,
+       hd (tl BranchWritePC_rwt)]
+      [[``^st.CPSR.M <> 16w``, ``^st.CPSR.M <> 31w``]] []
+     ``dfn'ArithLogicImmediate
+         (2w, T, 15w, n, ^(bitstringSyntax.mk_vec 12 0))``
+   |> List.map (utilsLib.FULL_CONV_RULE
+                  (DATATYPE_CONV
+                   THENC SIMP_CONV (std_ss++wordsLib.SIZES_ss)
+                           [concat_bit_lo, concat_bit_hi, bit0_word1,
+                            bits2625, bits1916, bits1510, bits40, CPSR_it]))
+   |> addThms
+
 val MoveToRegisterFromSpecial_cpsr_rwts =
-   EV [dfn'MoveToRegisterFromSpecial_def, write'R_rwt,
-       arm_stepTheory.R_x_not_pc, utilsLib.mk_reg_thm "arm" "PSR",
-       CurrentModeIsUserOrSystem_def, BadMode, IncPC_rwt] [] []
+   EV [dfn'MoveToRegisterFromSpecial_def, write'R_rwt, BadMode, IncPC_rwt,
+       arm_stepTheory.R_x_not_pc, reg'PSR, CurrentModeIsUserOrSystem_def] [] []
       ``dfn'MoveToRegisterFromSpecial (F, d)``
    |> addThms
 
