@@ -486,7 +486,7 @@ datatype monop =
    | Element
    | FP32To64
    | FP64To32
-   | FPAbs of int * bool
+   | FPAbs of int
    | FPAdd of int
    | FPCmp of int
    | FPDiv of int
@@ -503,7 +503,7 @@ datatype monop =
    | FPMul of int
    | FPMulAdd of int
    | FPMulSub of int
-   | FPNeg of int * bool
+   | FPNeg of int
    | FPSqrt of int
    | FPSub of int
    | FPToInt of int
@@ -968,11 +968,9 @@ in
        | Difference => mk_difference
        | Drop => mk_drop
        | Element => mk_element
-       | FPAbs (32, old) =>
-           if old then fp32Syntax.mk_fp_abs1985 else fp32Syntax.mk_fp_abs
-       | FPAbs (64, old) =>
-           if old then fp64Syntax.mk_fp_abs1985 else fp64Syntax.mk_fp_abs
-       | FPAbs (i, _) => raise ERR "Mop" ("FPAbs " ^ Int.toString i)
+       | FPAbs 32 => fp32Syntax.mk_fp_abs
+       | FPAbs 64 => fp64Syntax.mk_fp_abs
+       | FPAbs i => raise ERR "Mop" ("FPAbs " ^ Int.toString i)
        | FPIsFinite 32 => fp32Syntax.mk_fp_isFinite
        | FPIsFinite 64 => fp64Syntax.mk_fp_isFinite
        | FPIsFinite i => raise ERR "Mop" ("FPIsFinite " ^ Int.toString i)
@@ -985,11 +983,9 @@ in
        | FPIsSubnormal 32 => fp32Syntax.mk_fp_isSubnormal
        | FPIsSubnormal 64 => fp64Syntax.mk_fp_isSubnormal
        | FPIsSubnormal i => raise ERR "Mop" ("FPIsSubnormal " ^ Int.toString i)
-       | FPNeg (32, old) =>
-           if old then fp32Syntax.mk_fp_negate1985 else fp32Syntax.mk_fp_negate
-       | FPNeg (64, old) =>
-           if old then fp64Syntax.mk_fp_negate1985 else fp64Syntax.mk_fp_negate
-       | FPNeg (i, _) => raise ERR "Mop" ("FPNeg " ^ Int.toString i)
+       | FPNeg 32 => fp32Syntax.mk_fp_negate
+       | FPNeg 64 => fp64Syntax.mk_fp_negate
+       | FPNeg i => raise ERR "Mop" ("FPNeg " ^ Int.toString i)
        | FP32To64 => machine_ieeeSyntax.mk_fp32_to_fp64
        | Flat => listSyntax.mk_flat
        | Fst => pairSyntax.mk_fst

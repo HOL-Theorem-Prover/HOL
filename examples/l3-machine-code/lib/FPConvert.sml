@@ -1,5 +1,7 @@
 structure FPConvert :> FPConvert =
 struct
-  val fp32_to_fp64 = FP64.fromLargeReal IEEEReal.TO_NEAREST o FP32.toLargeReal
-  fun fp64_to_fp32 (m, w) = FP32.fromLargeReal m (FP64.toLargeReal w)
+  fun err s = raise Fail (s ^ ": not supported")
+
+  fun fp32_to_fp64 _ = err "fp32_to_fp64"
+  fun fp64_to_fp32 _ = err "fp64_to_fp32"
 end (* FPConvert *)

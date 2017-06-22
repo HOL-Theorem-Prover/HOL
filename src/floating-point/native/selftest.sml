@@ -26,7 +26,7 @@ in
               (s_tf s, wordsSyntax.mk_n2w (numLib.term_of_int e, w),
                wordsSyntax.mk_n2w (numLib.term_of_int f, t))
       in
-         mk_float_some_nan (Term.mk_var ("fp_op", mk_fp_op_ty (t, w))) ::
+         mk_float_some_qnan (Term.mk_var ("fp_op", mk_fp_op_ty (t, w))) ::
          List.map (fn f => f itself)
             [ mk_float_plus_zero, mk_float_minus_zero,
              mk_float_plus_min, mk_float_top, mk_float_bottom,
@@ -68,7 +68,7 @@ fun ok_result1 tm =
 fun ok_result2 tm =
    is_float_plus_infinity tm orelse
    is_float_minus_infinity tm orelse
-   is_float_some_nan tm orelse
+   is_float_some_qnan tm orelse
    Lib.can dest_floating_point tm
 
 fun ok_order_result tm =
@@ -98,7 +98,7 @@ fun test_monops ty =
                  in
                     if ok_result1 r orelse ok_result2 r orelse
                        Lib.mem name ["float_negate", "float_abs"] andalso
-                       is_float_some_nan a
+                       is_float_some_qnan a
                        then print "."
                     else ( print "\n"
                          ; print_thm e1
@@ -151,9 +151,9 @@ fun test_binops ty =
                                    let
                                       val e2 = native_eval tm
                                       val not_native_ok =
-                                         is_float_some_nan a orelse
-                                         is_float_some_nan b orelse
-                                         is_float_some_nan r orelse
+                                         is_float_some_qnan a orelse
+                                         is_float_some_qnan b orelse
+                                         is_float_some_qnan r orelse
                                          has_tags ["native_ieee"] e2 orelse
                                          has_tags ["DISK_THM", "native_ieee"] e2
                                    in
@@ -210,8 +210,8 @@ fun test_orderings ty =
                              let
                                 val e2 = native_eval tm
                                 val not_native_ok =
-                                   is_float_some_nan a orelse
-                                   is_float_some_nan b orelse
+                                   is_float_some_qnan a orelse
+                                   is_float_some_qnan b orelse
                                    has_tags ["native_ieee"] e2 orelse
                                    has_tags ["DISK_THM", "native_ieee"] e2
                              in

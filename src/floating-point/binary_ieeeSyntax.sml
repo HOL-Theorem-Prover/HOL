@@ -182,7 +182,7 @@ val (roundTiesToEven_tm, roundTowardPositive_tm, roundTowardNegative_tm,
      roundTowardZero_tm) =
    Lib.quadruple_of_list (TypeBase.constructors_of ``:binary_ieee$rounding``)
 
-val (LT_tm, GT_tm, EQ_tm, UN_tm) =
+val (LT_tm, EQ_tm, GT_tm, UN_tm) =
    Lib.quadruple_of_list
       (TypeBase.constructors_of ``:binary_ieee$float_compare``)
 
@@ -264,8 +264,8 @@ val (float_bottom_tm, mk_float_bottom, dest_float_bottom, is_float_bottom) =
 val (float_minus_min_tm, mk_float_minus_min, dest_float_minus_min,
      is_float_minus_min) = monop "float_minus_min"
 
-val (float_some_nan_tm, mk_float_some_nan, dest_float_some_nan,
-     is_float_some_nan) = monop "float_some_nan"
+val (float_some_qnan_tm, mk_float_some_qnan, dest_float_some_qnan,
+     is_float_some_qnan) = monop "float_some_qnan"
 
 val (largest_tm, mk_largest, dest_largest, is_largest) = monop "largest"
 
@@ -363,8 +363,8 @@ val (_, mk_int_float_bottom, dest_int_float_bottom, is_int_float_bottom) =
 val (_, mk_int_float_minus_min, dest_int_float_minus_min,
      is_int_float_minus_min) = tw_monop "float_minus_min"
 
-val (_, mk_int_float_some_nan, dest_int_float_some_nan,
-     is_int_float_some_nan) = tw_monop "float_some_nan"
+val (_, mk_int_float_some_qnan, dest_int_float_some_qnan,
+     is_int_float_some_qnan) = tw_monop "float_some_qnan"
 
 val (_, mk_int_largest, dest_int_largest, is_int_largest) = tw_monop "largest"
 

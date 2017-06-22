@@ -705,7 +705,7 @@ end
    to one of
 
       ``float_round mode toneg (ra + rb)``
-      ``float_some_nan (:10 # 5)``
+      ``float_some_qnan (:10 # 5)``
       ``float_plus_infinity (:10 # 5)``
       ``float_minus_infinity (:10 # 5)``
 

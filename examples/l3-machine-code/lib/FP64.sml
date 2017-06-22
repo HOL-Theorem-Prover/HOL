@@ -33,8 +33,6 @@ struct
        in
          BitsN.concat l
        end
-     val toLargeReal = R.toLarge o fromBits
-     fun fromLargeReal m r = toBits (R.fromLarge m r)
    end
 
    val posInf = toBits R.posInf
@@ -59,7 +57,6 @@ struct
 
    fun fromInt (m, i) = toBits (withMode m R.fromLargeInt i)
    val fromString = Option.map toBits o R.fromString
-   val toString = R.fmt StringCvt.EXACT o fromBits
 
    val isNan = R.isNan o fromBits
    val isFinite = R.isFinite o fromBits
@@ -76,42 +73,8 @@ struct
      val sign_bit = BitsN.#>> (BitsN.B (1, IntInf.fromInt size), 1)
      val comp_sign_bit = BitsN.~ sign_bit
    in
-     (* native versions - could be IEEE:1985 or IEEE:2008 *)
      val abs = fpOp0 R.abs
      val neg = fpOp0 R.~
-
-     (* IEEE754:1985 says that the sign bit of a NaN is left unchanged *)
-     fun abs1985 x =
-       let
-         val r = fromBits x
-       in
-         if R.isNan r then x else toBits (R.abs r)
-       end
-
-     (* IEEE754:2008 says that the sign bit of a NaN is cleared *)
-     fun abs2008 x =
-       let
-         val r = fromBits x
-       in
-         if R.isNan r then BitsN.&& (x, comp_sign_bit) else toBits (R.abs r)
-       end
-
-     (* IEEE754:1985 says that the sign bit of a NaN is left unchanged *)
-     fun neg1985 x =
-       let
-         val r = fromBits x
-       in
-         if R.isNan r then x else toBits (R.~ r)
-       end
-
-     (* IEEE754:2008 says that the sign bit of a NaN is flipped *)
-     fun neg2008 x =
-       let
-         val r = fromBits x
-       in
-         if R.isNan r then BitsN.?? (x, sign_bit) else toBits (R.~ r)
-       end
-
      val sqrt = fpOp1 R.Math.sqrt
 
      val add = fpOp2 R.+

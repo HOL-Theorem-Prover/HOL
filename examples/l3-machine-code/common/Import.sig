@@ -13,7 +13,7 @@ sig
      | Element
      | FP32To64
      | FP64To32
-     | FPAbs of int * bool
+     | FPAbs of int
      | FPAdd of int
      | FPCmp of int
      | FPDiv of int
@@ -30,7 +30,7 @@ sig
      | FPMul of int
      | FPMulAdd of int
      | FPMulSub of int
-     | FPNeg of int * bool
+     | FPNeg of int
      | FPSqrt of int
      | FPSub of int
      | FPToInt of int
