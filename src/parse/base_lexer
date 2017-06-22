@@ -46,9 +46,9 @@
    fun eof (st:extrastate) = let
      val comment = !(#incommentp st) <> 0
      val ok = not comment andalso List.null (#2 (!(#stracc st)))
-     val loc = Loc ((case (ok, !(#rcopt st)) of
-                        (false, SOME a) => LocA a
-                      | _ => LocPEnd (#nf st)), LocPEnd (#nf st))
+     val loc = locn.locp (case !(#rcopt st) of
+                              SOME a => LocA a |
+                              _ => LocPEnd (#nf st))
    in
      if ok then (BT_EOI, loc)
      else raise LEX_ERR
