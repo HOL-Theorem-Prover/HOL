@@ -31,7 +31,6 @@ sig
    val UN_tm: term
    val ULP_tm: term
    val float_abs_tm: term
-   val float_abs1985_tm: term
    val float_add_tm: term
    val float_bottom_tm: term
    val float_compare_tm: term
@@ -56,7 +55,6 @@ sig
    val float_mul_add_tm: term
    val float_mul_sub_tm: term
    val float_negate_tm: term
-   val float_negate1985_tm: term
    val float_plus_infinity_tm: term
    val float_plus_min_tm: term
    val float_plus_zero_tm: term
@@ -101,7 +99,6 @@ sig
    val dest_ULP: term -> term
    val dest_float: term -> term
    val dest_float_abs: term -> term
-   val dest_float_abs1985: term -> term
    val dest_float_add: term -> term * term * term
    val dest_float_bottom: term -> term
    val dest_float_compare: term -> term * term
@@ -126,7 +123,6 @@ sig
    val dest_float_mul_add: term -> term * term * term * term
    val dest_float_mul_sub: term -> term * term * term * term
    val dest_float_negate: term -> term
-   val dest_float_negate1985: term -> term
    val dest_float_plus_infinity: term -> term
    val dest_float_plus_min: term -> term
    val dest_float_plus_zero: term -> term
@@ -164,7 +160,6 @@ sig
    val is_ULP: term -> bool
    val is_float: term -> bool
    val is_float_abs: term -> bool
-   val is_float_abs1985: term -> bool
    val is_float_add: term -> bool
    val is_float_bottom: term -> bool
    val is_float_compare: term -> bool
@@ -189,7 +184,6 @@ sig
    val is_float_mul_add: term -> bool
    val is_float_mul_sub: term -> bool
    val is_float_negate: term -> bool
-   val is_float_negate1985: term -> bool
    val is_float_plus_infinity: term -> bool
    val is_float_plus_min: term -> bool
    val is_float_plus_zero: term -> bool
@@ -228,7 +222,6 @@ sig
    val mk_ULP: term -> term
    val mk_float: term -> term
    val mk_float_abs: term -> term
-   val mk_float_abs1985: term -> term
    val mk_float_add: term * term * term -> term
    val mk_float_bottom: term -> term
    val mk_float_compare: term * term -> term
@@ -253,7 +246,6 @@ sig
    val mk_float_mul_add: term * term * term * term -> term
    val mk_float_mul_sub: term * term * term * term -> term
    val mk_float_negate: term -> term
-   val mk_float_negate1985: term -> term
    val mk_float_plus_infinity: term -> term
    val mk_float_plus_min: term -> term
    val mk_float_plus_zero: term -> term

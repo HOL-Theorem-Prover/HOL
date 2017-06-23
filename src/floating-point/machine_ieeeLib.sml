@@ -384,9 +384,7 @@ in
         val fp_to_int_def = mk_fp_to_int fp fp_to_float fp_ty float_ty
         val fp_sqrt_def = lift1 (fp ^ "_sqrt", "float_sqrt")
         val fp_negate_def = lift1 (fp ^ "_negate", "float_negate")
-        val fp_negate1985_def = lift1 (fp ^ "_negate1985", "float_negate1985")
         val fp_abs_def = lift1 (fp ^ "_abs", "float_abs")
-        val fp_abs1985_def = lift1 (fp ^ "_abs1985", "float_abs1985")
         val fp_isnan_def = lift1b (fp ^ "_isNan", "float_is_nan")
         val fp_isintegral_def =
            lift1b (fp ^ "_isIntegral", "float_is_integral")
@@ -437,7 +435,7 @@ in
          fp_bottom_def, float_to_fp_fp_to_float, fp_to_float_float_to_fp] @
         (List.concat o List.map (fn th => [monop th, monop_n2w th]))
            [fp_to_real_def, fp_to_int_def, fp_abs_def, fp_negate_def,
-            fp_abs1985_def, fp_negate1985_def, fp_isnan_def,
+            fp_isnan_def,
             fp_isintegral_def, fp_iszero_def, fp_isnormal_def,
             fp_issubnormal_def, fp_isfinite_def, fp_isinfinite_def,
             fp_roundToIntegral_def, fp_sqrt_def] @

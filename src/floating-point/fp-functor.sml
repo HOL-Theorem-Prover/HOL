@@ -26,8 +26,6 @@ struct
    val quadop = HolKernel.syntax_fns4 thy o pre
 
    val (fp_abs_tm, mk_fp_abs, dest_fp_abs, is_fp_abs) = monop "abs"
-   val (fp_abs1985_tm, mk_fp_abs1985, dest_fp_abs1985, is_fp_abs1985) =
-      monop "abs1985"
    val (fp_add_tm, mk_fp_add, dest_fp_add, is_fp_add) = triop "add"
    val fp_bottom_tm = const "bottom"
    val (fp_div_tm, mk_fp_div, dest_fp_div, is_fp_div) = triop "div"
@@ -65,8 +63,6 @@ struct
    val fp_negzero_tm = const "negZero"
    val (fp_negate_tm, mk_fp_negate, dest_fp_negate, is_fp_negate) =
       monop "negate"
-   val (fp_negate1985_tm, mk_fp_negate1985, dest_fp_negate1985,
-        is_fp_negate1985) = monop "negate1985"
    val fp_posinf_tm = const "posInf"
    val fp_posmin_tm = const "posMin"
    val fp_poszero_tm = const "posZero"

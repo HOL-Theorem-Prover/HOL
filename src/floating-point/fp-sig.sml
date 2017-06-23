@@ -4,7 +4,6 @@ sig
 
     val float_to_fp_tm : term
     val fp_abs_tm : term
-    val fp_abs1985_tm : term
     val fp_add_tm : term
     val fp_bottom_tm : term
     val fp_compare_tm : term
@@ -25,7 +24,6 @@ sig
     val fp_mul_add_tm : term
     val fp_mul_sub_tm : term
     val fp_negate_tm : term
-    val fp_negate1985_tm : term
     val fp_neginf_tm : term
     val fp_negmin_tm : term
     val fp_negzero_tm : term
@@ -44,7 +42,6 @@ sig
 
     val mk_float_to_fp : term -> term
     val mk_fp_abs : term -> term
-    val mk_fp_abs1985 : term -> term
     val mk_fp_add : term * term * term -> term
     val mk_fp_compare : term * term -> term
     val mk_fp_div : term * term * term -> term
@@ -64,7 +61,6 @@ sig
     val mk_fp_mul_add : term * term * term * term -> term
     val mk_fp_mul_sub : term * term * term * term -> term
     val mk_fp_negate : term -> term
-    val mk_fp_negate1985 : term -> term
     val mk_fp_roundToIntegral : term * term -> term
     val mk_fp_sqrt : term * term -> term
     val mk_fp_sub : term * term * term -> term
@@ -76,7 +72,6 @@ sig
 
     val is_float_to_fp : term -> bool
     val is_fp_abs : term -> bool
-    val is_fp_abs1985 : term -> bool
     val is_fp_add : term -> bool
     val is_fp_compare : term -> bool
     val is_fp_div : term -> bool
@@ -96,7 +91,6 @@ sig
     val is_fp_mul_add : term -> bool
     val is_fp_mul_sub : term -> bool
     val is_fp_negate : term -> bool
-    val is_fp_negate1985 : term -> bool
     val is_fp_roundToIntegral : term -> bool
     val is_fp_sqrt : term -> bool
     val is_fp_sub : term -> bool
@@ -108,7 +102,6 @@ sig
 
     val dest_float_to_fp : term -> term
     val dest_fp_abs : term -> term
-    val dest_fp_abs1985 : term -> term
     val dest_fp_add : term -> term * term * term
     val dest_fp_compare : term -> term * term
     val dest_fp_div : term -> term * term * term
@@ -128,7 +121,6 @@ sig
     val dest_fp_mul_add : term -> term * term * term * term
     val dest_fp_mul_sub : term -> term * term * term * term
     val dest_fp_negate : term -> term
-    val dest_fp_negate1985 : term -> term
     val dest_fp_roundToIntegral : term -> term * term
     val dest_fp_sqrt : term -> term * term
     val dest_fp_sub : term -> term * term * term

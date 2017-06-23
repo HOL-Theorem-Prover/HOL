@@ -229,15 +229,8 @@ val (float_is_integral_tm, mk_float_is_integral, dest_float_is_integral,
 val (float_negate_tm, mk_float_negate, dest_float_negate, is_float_negate) =
    monop "float_negate"
 
-val (float_negate1985_tm, mk_float_negate1985, dest_float_negate1985,
-     is_float_negate1985) =
-   monop "float_negate1985"
-
 val (float_abs_tm, mk_float_abs, dest_float_abs, is_float_abs) =
    monop "float_abs"
-
-val (float_abs1985_tm, mk_float_abs1985, dest_float_abs1985, is_float_abs1985) =
-   monop "float_abs1985"
 
 val (float_plus_infinity_tm, mk_float_plus_infinity, dest_float_plus_infinity,
      is_float_plus_infinity) = monop "float_plus_infinity"
