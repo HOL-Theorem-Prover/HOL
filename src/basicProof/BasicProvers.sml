@@ -333,6 +333,11 @@ fun labrhs t = (* term is a possibly labelled equality *)
  in if is_eq t then rhs t else rhs (#2 (dest_label t))
  end;
 
+fun qlinenum q =
+  case q |> qbuf.new_buffer |> qbuf.current |> #2 of
+      locn.Loc(locn.LocA(line, _), _) => SOME (line+1)
+    | _ => NONE
+
 fun by0 k (q, tac) (g as (asl,w)) = let
   val a = trace ("syntax_error", 0) Parse.Absyn q
   open errormonad
@@ -354,14 +359,32 @@ fun by0 k (q, tac) (g as (asl,w)) = let
                         (SOME bool)
                         (free_varsl (w::asl))))
                  Pretype.Env.empty
+  fun mk_errmsg () =
+    case qlinenum q of
+        SOME l => " on line "^Int.toString l
+      | NONE => ": "^term_to_string tm
 in
-  SUBGOAL_THEN tm finisher THEN1 (tac THEN k)
-end (asl, w)
+  (SUBGOAL_THEN tm finisher THEN1 (tac THEN k)) g
+   handle HOL_ERR _ =>
+    raise ERR "by" ("by's tactic failed to prove subgoal"^mk_errmsg())
+end
 
 val op by = by0 NO_TAC
 val byA = by0 ALL_TAC
 
-fun (q suffices_by tac) = Q_TAC SUFF_TAC q THEN1 (tac THEN NO_TAC)
+fun (q suffices_by tac) g =
+  (Q_TAC SUFF_TAC q THEN1 (tac THEN NO_TAC)) g
+  handle e as HOL_ERR {origin_function,...} =>
+         if origin_function = "Q_TAC" then raise e
+         else
+           case qlinenum q of
+               SOME l => raise ERR "suffices_by"
+                               ("suffices_by's tactic failed to prove goal on \
+                                \line "^Int.toString l)
+             | NONE => raise ERR "suffices_by"
+                             "suffices_by's tactic failed to prove goal"
+
+
 
 fun subgoal q = Q.SUBGOAL_THEN q STRIP_ASSUME_TAC
 val sg = subgoal
