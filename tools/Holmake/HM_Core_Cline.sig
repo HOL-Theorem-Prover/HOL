@@ -29,6 +29,7 @@ type t = {
 
 val default_core_options : t
 val fupd_jobs : (int -> int) -> (t -> t)
+val fupd_includes : (string list -> string list) -> (t -> t)
 
 type 'a cline_result =
      { update: (string -> unit) * 'a -> 'a, hmakefile : string option,

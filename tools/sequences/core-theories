@@ -47,3 +47,4 @@ src/boss
 # Up to this point is needed for hol (which loads bossLib).
 # (Maybe unwind could be omitted).
 [poly]bin/hol
+!tools/Holmake/tests/Iflag

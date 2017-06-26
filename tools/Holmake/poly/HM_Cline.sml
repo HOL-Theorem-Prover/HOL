@@ -35,7 +35,7 @@ val U = U
 val $$ = $$
 end (* local *)
 
-
+fun fupd_core f t = updateT t (U #core (f (#core t))) $$
 val default_options = {
   core = HM_Core_Cline.default_core_options,
   holstate = NONE,

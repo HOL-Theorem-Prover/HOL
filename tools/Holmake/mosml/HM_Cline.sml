@@ -35,8 +35,9 @@ val default_options = {
   mosmldir = NONE,
   core = HM_Core_Cline.fupd_jobs (fn _ => 1) HM_Core_Cline.default_core_options
 }
+fun fupd_core f t = updateT t (U #core (f (#core t))) $$
 
-
+(* this fupdcore function is used internally to build command-line options *)
 fun fupdcore f x =
   let
     val {update = u, hmakefile, no_hmf} = f x

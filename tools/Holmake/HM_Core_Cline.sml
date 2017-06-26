@@ -57,6 +57,7 @@ val $$ = $$
 end (* local *)
 
 fun fupd_jobs f t = updateT t (U #jobs (f (#jobs t))) $$
+fun fupd_includes f t = updateT t (U #includes (f (#includes t))) $$
 
 type t = {
   debug : bool,

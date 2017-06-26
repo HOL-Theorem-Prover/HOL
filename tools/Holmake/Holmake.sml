@@ -63,16 +63,16 @@ in
          args
 end
 
-val (cline_options, targets) = getcline (CommandLine.arguments())
+val (master_cline_options, targets) = getcline (CommandLine.arguments())
 
 val (cline_hmakefile, cline_nohmf) =
     List.foldl (fn (f,(hmf,nohmf)) =>
                    ((case #hmakefile f of NONE => hmf | SOME s => SOME s),
                     nohmf orelse #no_hmf f))
                (NONE,false)
-               cline_options
+               master_cline_options
 
-fun get_hmf_cline () =
+fun get_hmf_cline_updates () =
   let
     val hmakefile =
         case cline_hmakefile of
@@ -92,7 +92,7 @@ fun get_hmf_cline () =
               warn ("Unused c/line options in makefile: "^
                     String.concatWith " " hmf_rest)
   in
-    HM_Cline.default_options |> apply_updates hmf_options
+    hmf_options
   end
 
 fun chattiness_level switches =
@@ -102,10 +102,14 @@ fun chattiness_level switches =
     | (_, _, true) => 0
     | _ => 1
 
-val option_value = get_hmf_cline() |> apply_updates cline_options
+val option_value =
+    HM_Cline.default_options |> apply_updates (get_hmf_cline_updates())
+                             |> apply_updates master_cline_options
 val coption_value = #core option_value
 val usepfx =
-  #jobs (#core (HM_Cline.default_options |> apply_updates cline_options)) = 1
+  #jobs (#core
+           (HM_Cline.default_options |> apply_updates master_cline_options)) =
+  1
 
 (* things that need to be read out of the first Holmakefile, and which will
    govern the behaviour even when recursing into other directories that may
@@ -117,6 +121,13 @@ val do_logging_flag = #do_logging coption_value
 val no_lastmakercheck = #no_lastmaker_check coption_value
 val show_usage = #help coption_value
 val cline_additional_includes = #includes coption_value
+
+(* make the cline includes = [] so that these are only looked at once
+   (when the cline_additional_includes value is folded into dirinfo values
+   and eventually used in hm_recur).
+*)
+val pass_option_value =
+    HM_Cline.fupd_core (HM_Core_Cline.fupd_includes (fn _ => [])) option_value
 
 fun has_clean [] = false
   | has_clean (h::t) =
@@ -163,7 +174,8 @@ fun Holmake dirinfo cline_additional_includes targets : res = let
   val {dir, visited = visiteddirs} = dirinfo
   val _ = OS.FileSys.chDir (hmdir.toAbsPath dir)
 
-  val option_value = get_hmf_cline() |> apply_updates cline_options
+  val option_value =
+      pass_option_value |> apply_updates (get_hmf_cline_updates())
   val coption_value = #core option_value
 
   val allfast = #fast coption_value
