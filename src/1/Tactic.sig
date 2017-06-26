@@ -30,6 +30,7 @@ sig
   val ID_SPEC_TAC           : term -> tactic
   val EXISTS_TAC            : term -> tactic
   val exists_tac            : term -> tactic
+  val ID_EX_TAC             : tactic
   val GSUBST_TAC            : ((term,term) Lib.subst -> term -> term)
                                -> thm list -> tactic
   val SUBST_TAC             : thm list -> tactic

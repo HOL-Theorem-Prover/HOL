@@ -216,7 +216,7 @@ val dDEG_dABS_dLAMBDA = Q.store_thm("dDEG_dABS_dLAMBDA",
        (dDEG u = 0)`,
 RW_TAC arith_ss [dLAMBDA]
   THEN Q.X_CHOOSE_TAC `x` (Q.SPEC `t:'a dB` FRESH_VAR)
-  THEN Q.ID_EX_TAC THEN Q.EXISTS_TAC `Inst 0 t (dVAR x)`
+  THEN ID_EX_TAC THEN Q.EXISTS_TAC `Inst 0 t (dVAR x)`
   THEN RW_TAC arith_ss [dWT,dWT_Inst,dDEG_Inst,dDEG_Abst_Inst,GSYM LESS_EQ_0]);
 
 val Backwards = Q.store_thm("Backwards",

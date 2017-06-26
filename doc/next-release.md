@@ -128,6 +128,8 @@ Incompatibilities:
 
     This call will change the grammar used in all descendant theories as well; if the change is wanted only for the current script, use `temp_set_fixity` instead.
 
+*   The tactic `ID_EX_TAC` has been moved from module `Q` to `Tactic`.
+
 * * * * *
 
 <div class="footer">

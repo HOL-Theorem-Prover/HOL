@@ -165,12 +165,6 @@ fun EXISTS_TAC q (g as (asl, w)) =
 
 fun LIST_EXISTS_TAC qL = EVERY (map EXISTS_TAC qL)
 
-fun ID_EX_TAC(g as (_,w)) =
-  Tactic.EXISTS_TAC (fst(dest_exists w)
-                     handle HOL_ERR _ =>
-                       raise ERR "ID_EX_TAC" "goal not an exists") g;
-
-
 fun REFINE_EXISTS_TAC q (asl, w) = let
   val (qvar, body) = dest_exists w
   val ctxt = free_varsl (w::asl)

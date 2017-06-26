@@ -324,6 +324,12 @@ fun EXISTS_TAC t : tactic =
       handle HOL_ERR _ => raise ERR "EXISTS_TAC" ""
 val exists_tac = EXISTS_TAC
 
+fun ID_EX_TAC(g as (_,w)) =
+  EXISTS_TAC (fst(dest_exists w)
+              handle HOL_ERR _ => raise ERR "ID_EX_TAC" "goal not an exists") g;
+
+
+
 (*---------------------------------------------------------------------------*
  * Substitution                                                              *
  *                                                                           *

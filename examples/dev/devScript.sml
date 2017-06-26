@@ -333,7 +333,7 @@ val ITE = store_thm("ITE",
     REPEAT (PAT_X_ASSUM ``!(t:num). X`` kill)
     THEN `ITE (SAFE_DEV e) (SAFE_DEV f) (SAFE_DEV g) (load,inp,done,out)`
               by (ONCE_REWRITE_TAC [ITE_def]
-                   THEN REPEAT Q.ID_EX_TAC
+                   THEN REPEAT ID_EX_TAC
                    THEN ASM_REWRITE_TAC [])
     THEN IMP_RES_TAC SAFE_ITE
     , (* end of proof of SAFE_DEV *)
