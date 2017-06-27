@@ -257,7 +257,7 @@ fun x64_pop (s,r,v) = save_thm("x64_pop_" ^ s,let
     \\ IMP_RES_TAC stack_ok_POP
     \\ FULL_SIMP_TAC (std_ss++star_ss) [zR_def])
   val th = MP th lemma
-  val th = th |> Q.GENL (rev [`rsp`,`top`,`dm`,`m`])
+  val th = th |> Q.GENL [`rsp`,`top`,`dm`,`m`]
               |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
   val (th,goal) = SPEC_STRENGTHEN_RULE th
     ``zPC p * zR ^r ^v * zSTACK (base,stack) * cond (stack <> [])``
@@ -389,7 +389,7 @@ fun x64_push (s,r,v) = save_thm("x64_push_" ^ s,let
     \\ POP_ASSUM (STRIP_ASSUME_TAC o SPEC v)
     \\ FULL_SIMP_TAC (std_ss++star_ss) [zR_def])
   val th = MP th lemma
-  val th = th |> Q.GENL (rev [`rsp`,`top`,`dm`,`m`])
+  val th = th |> Q.GENL [`rsp`,`top`,`dm`,`m`]
               |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
   val (th,goal) = SPEC_STRENGTHEN_RULE th
     ``zPC p * zR ^r ^v * zSTACK (base,stack)``
@@ -446,7 +446,7 @@ val x64_call_imm_spec_1 = save_thm("x64_call_imm_spec_1",let
     \\ POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `p+6w`)
     \\ FULL_SIMP_TAC (std_ss++star_ss) [zR_def])
   val th = MP th lemma
-  val th = th |> Q.GENL (rev [`rsp`,`top`,`dm`,`m`])
+  val th = th |> Q.GENL [`rsp`,`top`,`dm`,`m`]
               |> SIMP_RULE std_ss [SPEC_1_PRE_EXISTS]
   val (th,goal) = SPEC_STRENGTHEN_RULE th
     ``zPC p * zSTACK (base,stack)``
@@ -483,7 +483,7 @@ val x64_call_imm = save_thm("x64_call_imm",let
     \\ POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `p+6w`)
     \\ FULL_SIMP_TAC (std_ss++star_ss) [zR_def])
   val th = MP th lemma
-  val th = th |> Q.GENL (rev [`rsp`,`top`,`dm`,`m`])
+  val th = th |> Q.GENL [`rsp`,`top`,`dm`,`m`]
               |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
   val (th,goal) = SPEC_STRENGTHEN_RULE th
     ``zPC p * zSTACK (base,stack)``
@@ -519,7 +519,7 @@ fun x64_call (s,r,v) = save_thm("x64_call_" ^ s,let
     \\ POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `p+3w`)
     \\ FULL_SIMP_TAC (std_ss++star_ss) [zR_def])
   val th = MP th lemma
-  val th = th |> Q.GENL (rev [`rsp`,`top`,`dm`,`m`])
+  val th = th |> Q.GENL [`rsp`,`top`,`dm`,`m`]
               |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
   val (th,goal) = SPEC_STRENGTHEN_RULE th
     ``zPC p * zR ^r ^v * zSTACK (base,stack)``
@@ -611,7 +611,7 @@ val x64_pops = save_thm("x64_pops",let
     \\ IMP_RES_TAC stack_ok_POPS
     \\ FULL_SIMP_TAC (std_ss++star_ss) [zR_def])
   val th = MP th lemma
-  val th = th |> Q.GENL (rev [`rsp`,`top`,`dm`,`m`])
+  val th = th |> Q.GENL [`rsp`,`top`,`dm`,`m`]
               |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
   val (th,goal) = SPEC_STRENGTHEN_RULE th
     ``zPC p * zSTACK (base,stack) * ~zS * cond (k <= LENGTH stack /\ k < 2 ** 28)``
@@ -650,7 +650,7 @@ val x64_ret_spec_1 = save_thm("x64_ret_spec_1",let
     \\ IMP_RES_TAC stack_ok_POP
     \\ FULL_SIMP_TAC (std_ss++star_ss) [zR_def])
   val th = MP th lemma
-  val th = th |> Q.GENL (rev [`rsp`,`top`,`dm`,`m`])
+  val th = th |> Q.GENL [`rsp`,`top`,`dm`,`m`]
               |> SIMP_RULE std_ss [SPEC_1_PRE_EXISTS]
   val (th,goal) = SPEC_STRENGTHEN_RULE th
     ``zPC p * zSTACK (base,stack) * cond (stack <> [])``
@@ -678,7 +678,7 @@ val x64_ret = save_thm("x64_ret",let
     \\ IMP_RES_TAC stack_ok_POP
     \\ FULL_SIMP_TAC (std_ss++star_ss) [zR_def])
   val th = MP th lemma
-  val th = th |> Q.GENL (rev [`rsp`,`top`,`dm`,`m`])
+  val th = th |> Q.GENL [`rsp`,`top`,`dm`,`m`]
               |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
   val (th,goal) = SPEC_STRENGTHEN_RULE th
     ``zPC p * zSTACK (base,stack) * cond (stack <> [])``
@@ -803,7 +803,7 @@ val x64_el_r0_r8 = save_thm("x64_el_r0_r8",let
     \\ IMP_RES_TAC stack_ok_EL
     \\ FULL_SIMP_TAC (std_ss++star_ss) [zR_def])
   val th = MP th lemma
-  val th = th |> Q.GENL (rev [`rsp`,`top`,`dm`,`m`])
+  val th = th |> Q.GENL [`rsp`,`top`,`dm`,`m`]
               |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
   val (th,goal) = SPEC_STRENGTHEN_RULE th
     ``zPC p * zR 0x8w r8 * zR 0x0w r0 * zSTACK (base,stack) * cond (^pre)``
@@ -835,7 +835,7 @@ val x64_lupdate_r0_r8 = save_thm("x64_lupdate_r0_r8",let
     \\ IMP_RES_TAC stack_ok_EL
     \\ FULL_SIMP_TAC (std_ss++star_ss) [zR_def])
   val th = MP th lemma
-  val th = th |> Q.GENL (rev [`rsp`,`top`,`dm`,`m`])
+  val th = th |> Q.GENL [`rsp`,`top`,`dm`,`m`]
               |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
   val (th,goal) = SPEC_STRENGTHEN_RULE th
     ``zPC p * zR 0x8w r8 * zR 0x0w r0 * zSTACK (base,stack) * cond (^pre)``
@@ -904,7 +904,7 @@ val x64_el_r0_imm = save_thm("x64_el_r0_imm",let
     \\ IMP_RES_TAC stack_ok_EL_VAR
     \\ FULL_SIMP_TAC (std_ss++star_ss) [zR_def])
   val th = MP th lemma
-  val th = th |> Q.GENL (rev [`rsp`,`top`,`dm`,`m`])
+  val th = th |> Q.GENL [`rsp`,`top`,`dm`,`m`]
               |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
   val (th,goal) = SPEC_STRENGTHEN_RULE th
     ``zPC p * zR 0x0w r0 * zSTACK (base,stack) * cond (^pre)``
@@ -946,7 +946,7 @@ val x64_lupdate_r0_imm = save_thm("x64_lupdate_r0_imm",let
     \\ IMP_RES_TAC stack_ok_EL_VAR
     \\ FULL_SIMP_TAC (std_ss++star_ss) [zR_def])
   val th = MP th lemma
-  val th = th |> Q.GENL (rev [`rsp`,`top`,`dm`,`m`])
+  val th = th |> Q.GENL [`rsp`,`top`,`dm`,`m`]
               |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
   val (th,goal) = SPEC_STRENGTHEN_RULE th
     ``zPC p * zR 0x0w r0 * zSTACK (base,stack) * cond (^pre)``

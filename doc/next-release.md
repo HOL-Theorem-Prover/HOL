@@ -130,6 +130,9 @@ Incompatibilities:
 
 *   The tactic `ID_EX_TAC` has been moved from module `Q` to `Tactic`.
 
+*   The tactic `Q.GENL` now processes its list of arguments (corresponding to variable names) in the same way as `GENL`.
+    If one writes ``Q.GENL [`a`, `b`, `c`] th``, the result will be a theorem with conclusion `!a b c. <concl-of-th>`, rather than `!c b a. <concl-of-th>`.
+
 * * * * *
 
 <div class="footer">

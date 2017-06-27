@@ -482,7 +482,7 @@ val peg_eval_sexp_sexp0 = Q.store_thm("peg_eval_sexp_sexp0",
   \\ rw[Ntimes pnt_def 2,Ntimes peg_eval_NT_SOME 2,FDOM_sexpPEG,sexpPEG_applied,
         ignoreR_def,ignoreL_def,peg_eval_seq_SOME,PULL_EXISTS,peg_eval_rpt]
   \\ qspec_then`str++rst`(mp_tac o Q.GEN`a`)
-       (Q.ISPECL[`isSpace`,`sexpPEG`](Q.GENL[`G`,`P`]peg_eval_list_tok_nil))
+       (Q.ISPECL[`isSpace`,`sexpPEG`](Q.GENL[`P`,`G`]peg_eval_list_tok_nil))
   \\ disch_then(qspec_then`ARB`mp_tac)
   \\ impl_tac
   >- (
@@ -492,7 +492,7 @@ val peg_eval_sexp_sexp0 = Q.store_thm("peg_eval_sexp_sexp0",
   \\ first_assum(part_match_exists_tac(hd o strip_conj) o concl) \\ simp[]
   \\ first_assum(part_match_exists_tac(hd o strip_conj) o concl) \\ simp[]
   \\ qspec_then`rst`(mp_tac o Q.GEN`a`)
-       (Q.ISPECL[`isSpace`,`sexpPEG`](Q.GENL[`G`,`P`]peg_eval_list_tok_nil))
+       (Q.ISPECL[`isSpace`,`sexpPEG`](Q.GENL[`P`,`G`]peg_eval_list_tok_nil))
   \\ disch_then(qspec_then`ARB`mp_tac)
   \\ impl_tac >- (CCONTR_TAC \\ fs[])
   \\ strip_tac

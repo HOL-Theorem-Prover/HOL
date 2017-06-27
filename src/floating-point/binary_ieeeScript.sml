@@ -587,7 +587,7 @@ val div_twopow =
    realTheory.eq_rat
    |> Q.INST [`y` |-> `2 pow n`, `v` |-> `2 pow n`]
    |> SIMP_RULE (srw_ss()) []
-   |> Q.GENL [`u`, `x`, `n`]
+   |> Q.GENL [`n`, `x`, `u`]
 
 val div_le = Q.prove(
    `!a b c. 0r < a ==> (b / a <= c / a = b <= c)`,
@@ -616,7 +616,7 @@ val mul_cancel =
    |> Drule.SPEC_ALL
    |> Q.INST [`b` |-> `1`]
    |> SIMP_RULE (srw_ss()) []
-   |> Q.GENL [`c`, `a`]
+   |> Q.GENL [`a`, `c`]
 
 val ge2 = Q.prove(
    `dimindex(:'a) <> 1 ==> 2 <= dimindex (:'a)`,
@@ -661,7 +661,7 @@ val prod_ge2 =
    realTheory.REAL_LE_MUL2
    |> Q.SPECL [`2`, `a`, `1`, `b`]
    |> SIMP_RULE (srw_ss()) []
-   |> Q.GENL [`b`, `a`]
+   |> Q.GENL [`a`, `b`]
 
 val le1 = Q.prove(
    `!x y. 0 < y /\ x <= y ==> x / y <= 1r`,
@@ -733,7 +733,7 @@ val le_mult =
    |> SIMP_RULE bool_ss [boolTheory.AND_IMP_INTRO, realTheory.REAL_POS_NZ,
                          realTheory.REAL_DIV_REFL]
    |> ONCE_REWRITE_RULE [realTheory.REAL_MUL_COMM]
-   |> Q.GENL [`y`, `x`]
+   |> Q.GENL [`x`, `y`]
 
 (* |- !x y. x < 1 /\ 0 < y ==> y * x < y *)
 val lt_mult =
@@ -743,7 +743,7 @@ val lt_mult =
    |> SIMP_RULE bool_ss [boolTheory.AND_IMP_INTRO, realTheory.REAL_POS_NZ,
                          realTheory.REAL_DIV_REFL]
    |> ONCE_REWRITE_RULE [realTheory.REAL_MUL_COMM]
-   |> Q.GENL [`y`, `x`]
+   |> Q.GENL [`x`, `y`]
 
 (*  |- !x y. 1 < y /\ 0 < x ==> x < y * x  *)
 val gt_mult =
@@ -752,7 +752,7 @@ val gt_mult =
    |> Q.DISCH `1 < y`
    |> SIMP_RULE bool_ss [boolTheory.AND_IMP_INTRO, realTheory.REAL_POS_NZ,
                          realTheory.REAL_DIV_REFL]
-   |> Q.GENL [`y`, `x`]
+   |> Q.GENL [`x`, `y`]
 
 val exp_id = Q.prove(
   `!a b. 1 < a ==> ((a EXP b = a) = (b = 1))`,
@@ -2162,7 +2162,7 @@ val float_to_real_11_right =
    |> Drule.SPEC_ALL
    |> Q.DISCH `~float_is_zero y`
    |> SIMP_RULE bool_ss []
-   |> Q.GENL [`y`, `x`]
+   |> Q.GENL [`x`, `y`]
 
 (* |- !x y. ~float_is_zero x ==>
             ((float_to_real x = float_to_real y) <=> (x = y))

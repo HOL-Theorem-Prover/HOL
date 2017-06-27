@@ -2640,7 +2640,7 @@ val mlt_dominates_thm2 = store_thm(
   `~(x <= II)`
     by (strip_tac >>
         `x = II` by simp[SUB_BAG_ANTISYM] >> rw[] >>
-        qspecl_then [`SET_OF_BAG y`, `SET_OF_BAG II`, `R`] mp_tac
+        qspecl_then [`R`, `SET_OF_BAG II`, `SET_OF_BAG y`] mp_tac
            (Q.GENL [`R`, `X`, `Y`] dominates_SUBSET) >> simp[] >>
         fs[SUB_BAG_SET] >> qx_gen_tac `e` >> Cases_on `BAG_IN e II` >>
         simp[] >> metis_tac[relationTheory.WF_NOT_REFL]) >>

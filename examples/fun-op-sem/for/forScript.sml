@@ -997,7 +997,7 @@ val LTE_SUM =
   arithmeticTheory.LESS_EQ_EXISTS
   |> Q.SPECL[`A`,`B`]
   |> CONV_RULE(RAND_CONV(RAND_CONV(ALPHA_CONV``C:num``)))
-  |> Q.GENL[`B`,`A`]
+  |> Q.GENL[`A`,`B`]
 
 val LT_SUM = Q.prove(
  `∀A:num B. A < B ⇒ ∃C. B = A+C ∧ C > 0`,
@@ -1441,7 +1441,7 @@ val simple_sem_t_reln_ind = save_thm("simple_sem_t_reln_ind",
   simple_sem_t_reln_ind
     |> REWRITE_RULE [GSYM DOWNARROWe_def, GSYM DOWNARROWt_def]
     |> Q.SPEC `P` |> UNDISCH_ALL
-    |> Q.SPECL [`s`,`t`,`r`] |> Q.GENL [`r`,`s`,`t`]
+    |> Q.SPECL [`s`,`t`,`r`] |> Q.GENL [`t`,`s`,`r`]
     |> DISCH_ALL |> Q.GEN `P` |> Q.SPEC `\s t r. P (t,s) r`
     |> SIMP_RULE std_ss [] |> Q.GEN `P`
     |> SPEC_ALL
@@ -1476,7 +1476,7 @@ val lemma2 = prove(
 val sample_cases_thm = save_thm("sample_cases_thm",
   simple_sem_t_reln_cases
   |> Q.SPECL [`s`,`t`,`res`]
-  |> Q.GENL (rev [`s`,`t`,`res`])
+  |> Q.GENL [`s`,`t`,`res`]
   |> ONCE_REWRITE_RULE [lemma]
   |> REWRITE_RULE [lemma2])
 

@@ -283,4 +283,11 @@ val _ = List.app tactest [
            ``SUC x < f (j:int) ==> x < x``)])
     ]
 
+val _ = tprint "Q.GENL variable order"
+val vnms = ASSUME ``!x:'a y:'a z:'a. P x y z``
+              |> SPEC_ALL
+              |> Q.GENL [`x`, `y`, `z`]
+              |> concl |> strip_forall |> #1 |> map (#1 o dest_var)
+val _ = if vnms = ["x", "y", "z"] then OK() else die "FAILED!"
+
 val _ = Process.exit Process.success;

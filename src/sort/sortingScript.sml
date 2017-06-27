@@ -322,7 +322,7 @@ end
 
 val PERM_IND = save_thm("PERM_IND", remove_eq_asm perm_ind)
 
-val PERM_MONO' = PERM_MONO |> SPEC_ALL |> Q.GENL [`l2`, `l1`, `x`]
+val PERM_MONO' = PERM_MONO |> SPEC_ALL |> Q.GENL [`x`, `l1`, `l2`]
 
 val PERM_SWAP_AT_FRONT = store_thm(
   "PERM_SWAP_AT_FRONT",
@@ -343,7 +343,7 @@ val PERM_SWAP_AT_FRONT = save_thm( "PERM_SWAP_AT_FRONT",
 *)
 
 val PERM_SWAP = PERM_SWAP_AT_FRONT |> EQ_IMP_RULE |> #2
-                                   |> Q.GENL [`l2`, `l1`, `y`, `x`]
+                                   |> Q.GENL [`x`, `y`, `l1`, `l2`]
 
 val PERM_NILNIL = prove(``PERM [][]``, SRW_TAC[][])
 
