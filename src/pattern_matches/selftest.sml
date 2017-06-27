@@ -64,7 +64,9 @@ in
     ()
 end;
 
-fun print_term' t = (print "``"; print (ppstring pp_term t); print "``");
+fun print_term' t = (print UnicodeChars.ldquo;
+                     print (ppstring pp_term t);
+                     print UnicodeChars.rdquo);
 fun print_thm' t = print (ppstring pp_thm t);
 
 val test_term_thm_gen = test_gen print_term' print_thm' print_term'

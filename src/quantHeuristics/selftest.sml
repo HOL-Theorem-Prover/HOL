@@ -14,9 +14,10 @@ val _ = Parse.current_backend := PPBackEnd.vt100_terminal;
 fun test_conv s conv do_stop quiet (t, r_opt) =
 let
     open PPBackEnd Parse
-    val _ = print (if quiet then "``" else "Testing "^s^" ``");
+    val lq = UnicodeChars.ldquo
+    val _ = print (if quiet then lq else "Testing "^s^" "^lq);
     val _ = print_term t;
-    val _ = print ("``\n   ");
+    val _ = print (UnicodeChars.rdquo ^ "\n   ");
     val ct = Timer.startCPUTimer();
     val thm_opt = SOME (conv t) handle Interrupt => raise Interrupt
                                      | _ => NONE;
