@@ -9,6 +9,7 @@
 !!examples/miller/ho_prover
 !!examples/miller/miller
 !!examples/ARM_security_properties
+!examples/fun-op-sem/lprefix_lub
 ## !!examples/fun-op-sem  works only with the standard kernel
 
 # Crypto examples
