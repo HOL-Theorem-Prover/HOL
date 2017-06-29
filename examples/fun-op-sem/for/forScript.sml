@@ -360,6 +360,25 @@ val type_weakening_t = Q.prove (
  rw [EXTENSION] >>
  metis_tac [SUBSET_DEF, NOT_SOME_NONE, SOME_11, type_weakening_e, INSERT_SUBSET]);
 
+val r_cases_eq = prove_case_eq_thm {
+  case_def = definition "r_case_def",
+  nchotomy = theorem "r_nchotomy"
+};
+
+val pair_cases_eq = Q.prove(
+  ‘(pair_CASE p f = v) ⇔ ∃q r. p = (q,r) ∧ v = f q r’,
+  Cases_on `p` >> simp[] >> metis_tac[]);
+
+val bool_cases_eq = Q.prove(
+  ‘(if p then q else r) = v ⇔ p /\ q = v ∨ ¬p ∧ r = v’,
+  Cases_on `p` >> simp[]);
+
+val sem_e_succeeds = Q.store_thm(
+  "sem_e_succeeds",
+  (* would make this an automatic rewrite except it might break old proofs *)
+  ‘sem_e s0 e ≠ (Rbreak, s) ∧ sem_e s0 e ≠ (Rtimeout, s)’,
+  metis_tac[sem_e_res]);
+
 (* Have to use sem_t_ind, and not type_t_ind or t_induction. This is different
  * from small-step-based type soundness *)
 val type_sound_t = Q.prove (
@@ -403,42 +422,30 @@ val type_sound_t = Q.prove (
      rpt (pop_assum (qspec_then `s1.clock` mp_tac)) >>
      rw [state_rw] >>
      rw [] >>
+     rename [‘r_CASE r'’] >>
      reverse (Cases_on `r'`) >>
+     fs [] >- metis_tac[sem_e_res] >>
+     rename [‘if i = 0 then _ else _’] >> Cases_on `i = 0` >>
      fs [] >>
-     Cases_on `i = 0` >>
-     fs []
-     >- metis_tac [sem_e_res]
-     >- metis_tac [sem_e_res] >>
-     `type_t T (FDOM s1''.store) t`
-              by (rw [] >>
-                  match_mp_tac type_weakening_t >>
-                  metis_tac [sem_e_store, sem_t_store, SUBSET_TRANS, state_rw]) >>
-     res_tac >>
-     fs [] >>
-     Cases_on `r'` >>
-     rw [] >>
-     fs [] >>
-     rw [] >>
-     `type_e (FDOM s1'''.store) e2`
-              by (rw [] >>
-                  match_mp_tac type_weakening_e >>
-                  metis_tac [sem_e_store, sem_t_store, SUBSET_TRANS, state_rw]) >>
-     imp_res_tac type_sound_e >>
-     first_x_assum (qspec_then `s1'''.store` mp_tac) >>
-     rw [] >>
-     pop_assum (qspec_then `s1'''.clock` mp_tac) >>
-     rw [state_rw] >>
-     rw [] >>
-     Cases_on `r'` >>
-     rw [] >>
-     fs []
-     >- (first_x_assum match_mp_tac >>
-         qexists_tac `s` >>
-         rw [] >>
-         imp_res_tac sem_e_store >>
-         imp_res_tac sem_t_store >>
-         metis_tac [SUBSET_TRANS]) >>
-     metis_tac [sem_e_res]));
+     dsimp[r_cases_eq, pair_cases_eq, sem_e_succeeds, bool_cases_eq] >>
+     rename [‘sem_e s0 gd = (Rval gv, s1)’, ‘sem_t s1 body = (Rval _, _)’] >>
+     `type_t T (FDOM s1.store) body`
+        by (match_mp_tac type_weakening_t >>
+            metis_tac [sem_e_store, sem_t_store, SUBSET_TRANS, state_rw]) >>
+     first_x_assum (first_assum o mp_then.mp_then (mp_then.Pos hd) mp_tac) >>
+     simp[] >> strip_tac >> rename [‘sem_t s1 body = (body_r, s2)’] >>
+     Cases_on ‘body_r’ >> fs[] >>
+     rename [‘sem_t s1 body = (Rval bi, s2)’, ‘For gd post body’] >>
+     `type_e (FDOM s2.store) post`
+          by (match_mp_tac type_weakening_e >>
+              metis_tac [sem_e_store, sem_t_store, SUBSET_TRANS, state_rw]) >>
+     qspecl_then [‘FDOM s2.store’, ‘post’, ‘s2.store’, ‘s2.clock’]
+             mp_tac type_sound_e >> simp[state_rw] >> strip_tac >>
+     rename [‘For gd post body’, ‘sem_e s2 post = (pr, s3)’] >>
+     Cases_on ‘pr’ >> fs[sem_e_succeeds] >> Cases_on ‘s3.clock = 0’ >> simp[] >>
+     fs[] >> first_x_assum irule >> qexists_tac ‘s’ >> simp[] >>
+     imp_res_tac sem_e_store >> imp_res_tac sem_t_store >>
+     metis_tac[SUBSET_TRANS]));
 
 (* A type checked program does not Crash. *)
 
@@ -912,8 +919,8 @@ val sem_t_imp_simple_sem_t_reln = save_thm ("sem_t_imp_simple_sem_t_reln",sem_t_
 
 (* simple_sem_t_reln implies there exists a clock for sem_t that does not timeout *)
 
-val inst_1 = qpat_assum`∀c'.∃c. A= (FST r,B)` (qspec_then`c'` assume_tac)
-fun inst_2 q = qpat_assum`∀c'.∃c. A= B` (qspec_then q assume_tac)
+val inst_1 = qpat_x_assum`∀c'.∃c. A= (FST r,B)` (qspec_then`c'` assume_tac)
+fun inst_2 q = qpat_x_assum`∀c'.∃c. A= B` (qspec_then q assume_tac)
 
 val simple_sem_t_reln_imp_sem_t = Q.prove(
 `∀s t r.
@@ -1041,7 +1048,7 @@ val sem_t_clock_inc = Q.prove(
     metis_tac[arithmeticTheory.LESS_EQ_ADD_SUB])
 end
 
-val _ = save_thm ("sem_t_clock_inc", sem_t_clock_inc |> SIMP_RULE std_ss [FORALL_PROD])
+val _ = save_thm ("sem_t_clock_inc", sem_t_clock_inc |> SIMP_RULE std_ss [FORALL_PROD]);
 
 (* If current clock times out, everything below it timesout *)
 val sem_t_clock_dec = Q.prove(
@@ -1052,13 +1059,15 @@ val sem_t_clock_dec = Q.prove(
   rw[]>>CCONTR_TAC>>
   Cases_on`sem_t (s with clock:=c) t`>>Cases_on`q`>>fs[]>>
   imp_res_tac sem_t_clock_inc>>fs[]>>
-  imp_res_tac LTE_SUM>>first_x_assum(qspec_then`C` assume_tac)>>rfs[]>>
-  qpat_assum`s.clock=A` (SUBST_ALL_TAC o SYM)>>fs[clock_rm])
+  imp_res_tac LTE_SUM>>
+  rename [‘s.clock = c0 + cdelta’] >>
+  first_x_assum(qspec_then`cdelta` assume_tac)>>rfs[]>>
+  qpat_x_assum`s.clock=A` (SUBST_ALL_TAC o SYM)>>fs[clock_rm]);
 
 (* Functional big step divergence *)
 val sem_t_div_def = Define`
   sem_t_div s t ⇔
-  (∀c. FST (sem_t (s with clock:=c) t) = Rtimeout)`
+  (∀c. FST (sem_t (s with clock:=c) t) = Rtimeout)`;
 
 val clock_rm_simp_tac =
     fs[GSYM big_sem_correct_lem3]>>
@@ -1079,7 +1088,7 @@ val simple_sem_t_div_sem_t_div = Q.prove(
   imp_res_tac sem_t_imp_simple_sem_t_reln>>fs[]>>
   imp_res_tac simple_sem_t_reln_ignores_clock>>
   pop_assum(qspec_then`s.clock` assume_tac)>>fs[clock_rm]>>
-  metis_tac[])
+  metis_tac[]);
 
 val sem_t_div_simple_sem_t_div = Q.prove(
  `∀s t.
@@ -1110,8 +1119,9 @@ val sem_t_div_simple_sem_t_div = Q.prove(
       `r.clock ≤ c'` by DECIDE_TAC>>
       imp_res_tac LTE_SUM>>
       imp_res_tac sem_t_clock_inc>>fs[]>>
-      pop_assum(qspec_then`C` assume_tac)>>fs[]>>
-      first_x_assum(qspec_then`c+C`mp_tac)>>fs[]>>rw[])
+      rename [‘¬(cdelta + r.clock ≤ r.clock)’] >>
+      pop_assum(qspec_then`cdelta` assume_tac)>>fs[]>>
+      first_x_assum(qspec_then`c+cdelta`mp_tac)>>fs[]>>rw[])
   >-
     (fs[METIS_PROVE [] `` A ∨ B ⇔ ¬A ⇒ B``]>>rw[]>>
     Cases_on`sem_e s e`>>Cases_on`q`>>fs[]>>
@@ -1149,10 +1159,11 @@ val sem_t_div_simple_sem_t_div = Q.prove(
       `r'.clock ≤ c'` by DECIDE_TAC>>
       imp_res_tac LTE_SUM>>
       imp_res_tac sem_t_clock_inc>>fs[]>>
-      pop_assum(qspec_then`C+1` assume_tac)>>fs[]>>
-      last_x_assum(qspec_then`c+(C+1)`mp_tac)>>fs[]>>
+      rename [‘¬(cdelta + r'.clock ≤ r'.clock)’] >>
+      pop_assum(qspec_then`cdelta+1` assume_tac)>>fs[]>>
+      last_x_assum(qspec_then`c+(cdelta+1)`mp_tac)>>fs[]>>
       fs[STOP_def,dec_clock_def]>>
-      `r'.clock + (C+1)-1 = r'.clock + C` by DECIDE_TAC>>fs[])
+      `r'.clock + (cdelta+1)-1 = r'.clock + cdelta` by DECIDE_TAC>>fs[]);
 
 val simple_sem_t_div_iff_sem_t_div = Q.prove(
 `∀s t.
@@ -1160,7 +1171,7 @@ val simple_sem_t_div_iff_sem_t_div = Q.prove(
   simple_sem_t_div s t`,
   metis_tac[sem_t_div_simple_sem_t_div,simple_sem_t_div_sem_t_div])
 
-val _ = save_thm("simple_sem_t_div_iff_sem_t_div",simple_sem_t_div_iff_sem_t_div|>REWRITE_RULE[sem_t_div_def])
+val _ = save_thm("simple_sem_t_div_iff_sem_t_div",simple_sem_t_div_iff_sem_t_div|>REWRITE_RULE[sem_t_div_def]);
 
 (* We can transfer the type soundness proof from FBS directly *)
 val reln_type_soundness = Q.prove(
@@ -1388,11 +1399,11 @@ val pb_reln_to_reln = prove(``
   pop_assum mp_tac>>
   pbrsem_tac>>rw[]>>
   TRY(semttac>>metis_tac[abort_def])>>
-  qpat_assum`pb_sem_t_size_reln A B (Forn 2 _ _ _ _) _` mp_tac>>
+  qpat_x_assum`pb_sem_t_size_reln A B (Forn 2 _ _ _ _) _` mp_tac>>
   pbrsem_tac>>rw[]>>fs[]>>
   `h' < h' +1 +1` by DECIDE_TAC>>
   TRY(semttac>>metis_tac[abort_def])>>
-  qpat_assum`pb_sem_t_size_reln A B (Forn 3 _ _ _ _) _` mp_tac>>
+  qpat_x_assum`pb_sem_t_size_reln A B (Forn 3 _ _ _ _) _` mp_tac>>
   pbrsem_tac>>rw[]>>fs[]>>
   `h' < h' +2 +1` by DECIDE_TAC>>
   `h' < h'+(h''+1+1+1)+1` by DECIDE_TAC>>

@@ -188,6 +188,29 @@ val sem_e_possible_var_name = prove(
   \\ REPEAT STRIP_TAC \\ SRW_TAC [] []
   \\ fs [] \\ DECIDE_TAC);
 
+val r_cases_eq = prove_case_eq_thm {
+  case_def = forTheory.r_case_def,
+  nchotomy = forTheory.r_nchotomy
+};
+
+val pair_cases_eq = Q.prove(
+  ‘(pair_CASE p f = v) ⇔ ∃q r. p = (q,r) ∧ v = f q r’,
+  Cases_on `p` >> simp[] >> metis_tac[]);
+
+val bool_cases_eq = Q.prove(
+  ‘(if p then q else r) = v ⇔ p /\ q = v ∨ ¬p ∧ r = v’,
+  Cases_on `p` >> simp[]);
+
+val option_cases_eq = Q.prove(
+  ‘(option_CASE opt n s = v) ⇔
+     opt = NONE ∧ n = v ∨ ∃sv. opt = SOME sv ∧ s sv = v’,
+  Cases_on ‘opt’ >> simp[]);
+
+val store_var_clock = Q.store_thm(
+  "store_var_clock[simp]",
+  ‘(store_var v n s).clock = s.clock’,
+  simp[store_var_def]);
+
 local val fs = fsrw_tac[] in
 val comp_exp_correct = prove(
   ``!e s t n res s1.
@@ -203,63 +226,70 @@ val comp_exp_correct = prove(
                   exp_max e < LENGTH k /\ LENGTH k < LENGTH n /\
                   FLOOKUP t.store k = SOME v ==>
                   FLOOKUP t1.store k = SOME v)``,
-  Induct \\ fs [sem_e_def,comp_exp_def,sem_t_def,store_var_def]
-  \\ REPEAT STRIP_TAC
-  THEN1
-   (Cases_on `FLOOKUP s'.store s` \\ fs [] \\ SRW_TAC [] []
-    \\ IMP_RES_TAC FLOOKUP_SUBMAP \\ fs []
-    \\ IMP_RES_TAC possible_var_name_IMP_SUBMAP \\ fs []
-    \\ fs [FLOOKUP_DEF,SUBMAP_DEF,FAPPLY_FUPDATE_THM]
-    \\ SRW_TAC [] [])
-  \\ TRY (IMP_RES_TAC possible_var_name_IMP_SUBMAP \\ fs []
-          \\ fs [FLOOKUP_DEF,SUBMAP_DEF,FAPPLY_FUPDATE_THM]
-          \\ SRW_TAC [] [] \\ fs [] \\ NO_TAC)
-  THEN1
-   (Cases_on `sem_e s e` \\ Cases_on `q` \\ fs [sem_e_break]
-    \\ Cases_on `sem_e r e'` \\ Cases_on `q` \\ fs [sem_e_break]
-    \\ fs [exp_max_def]
-    \\ FIRST_X_ASSUM (MP_TAC o Q.SPEC `r`)
-    \\ FIRST_X_ASSUM (MP_TAC o Q.SPECL [`s`,`t`,`n`])
-    \\ `exp_max e < STRLEN n /\
-        exp_max e' < STRLEN n /\
-        exp_max e' < STRLEN (STRCAT n "'")` by
-            (fs [MAX_LESS]  \\ DECIDE_TAC)
-    \\ fs [] \\ REPEAT STRIP_TAC \\ fs []
-    \\ POP_ASSUM (MP_TAC o Q.SPECL [`t1`,`STRCAT n "'"`])
-    \\ `possible_var_name (STRCAT n "'") r.store` by ALL_TAC THEN1
-     (fs [possible_var_name_def]
-      \\ REPEAT STRIP_TAC
-      \\ FIRST_X_ASSUM (MP_TAC o Q.SPEC `SUC n'`)
-      \\ FULL_SIMP_TAC std_ss [rich_listTheory.REPLICATE,
-           APPEND,GSYM APPEND_ASSOC])
-    \\ fs [] \\ REPEAT STRIP_TAC \\ fs []
-    \\ Q.MATCH_ASSUM_RENAME_TAC `s1.store SUBMAP t2.store`
-    \\ `FLOOKUP t2.store n = SOME i` by (FIRST_X_ASSUM MATCH_MP_TAC \\ fs [])
-    \\ fs [] \\ SRW_TAC [] []
-    \\ `possible_var_name n r'.store` by
-          IMP_RES_TAC sem_e_possible_var_name
-    THEN1 (MATCH_MP_TAC possible_var_name_IMP_SUBMAP \\ fs [])
-    \\ fs [FLOOKUP_DEF,FAPPLY_FUPDATE_THM]
-    \\ Cases_on `k = n` \\ fs []
-    \\ `v = t1.store ' k` by (SRW_TAC [] [] \\ METIS_TAC [MAX_LESS])
-    \\ POP_ASSUM (fn th => SIMP_TAC std_ss [th])
-    \\ FIRST_X_ASSUM MATCH_MP_TAC
-    \\ fs [MAX_LESS]
-    \\ REVERSE (REPEAT STRIP_TAC) THEN1 DECIDE_TAC
-    \\ IMP_RES_TAC sem_e_possible_var_name)
-  THEN1
-   (FIRST_X_ASSUM (MP_TAC o Q.SPEC `s'`)
-    \\ Cases_on `sem_e s' e` \\ Cases_on `q` \\ fs [sem_e_break]
-    \\ SRW_TAC [] [] \\ fs [exp_max_def,MAX_LESS]
-    \\ FIRST_X_ASSUM (MP_TAC o Q.SPECL [`t`,`n`])
-    \\ fs [] \\ REPEAT STRIP_TAC \\ fs []
-    \\ REPEAT STRIP_TAC
-    \\ fs [SUBMAP_DEF,FAPPLY_FUPDATE_THM,FLOOKUP_DEF]
-    \\ REPEAT STRIP_TAC \\ fs []
-    \\ SRW_TAC [] [] \\ fs []
-    \\ fs [possible_var_name_def]
-    \\ REPEAT STRIP_TAC
-    \\ SRW_TAC [] [] \\ fs [] \\ DECIDE_TAC));
+  Induct
+  >- (rpt gen_tac >> rename [‘Var vnm’] >>
+      simp[sem_e_def, comp_exp_def, sem_t_def, option_cases_eq] >> csimp[] >>
+      rpt strip_tac >> rpt BasicProvers.VAR_EQ_TAC >>
+      imp_res_tac FLOOKUP_SUBMAP >> simp[store_var_def] >>
+      imp_res_tac possible_var_name_IMP_SUBMAP >>
+      simp[FLOOKUP_DEF, FAPPLY_FUPDATE_THM] >> rw[])
+  >- (rpt gen_tac >> rename [‘Num n’] >>
+      simp[sem_e_def, comp_exp_def, sem_t_def] >> rw[] >>
+      simp[store_var_def] >>
+      imp_res_tac possible_var_name_IMP_SUBMAP >>
+      simp[FLOOKUP_DEF, FAPPLY_FUPDATE_THM] >> rw[])
+  >- (rpt gen_tac >> rename [‘Add e1 e2’] >>
+      simp[sem_e_def, SimpL “$==>”, pair_cases_eq, r_cases_eq] >>
+      rpt strip_tac >> fs[] >>
+      rpt BasicProvers.VAR_EQ_TAC >> fs[] >>
+      fs[exp_max_def, MAX_LESS] >>
+      dsimp[sem_t_def, comp_exp_def, pair_cases_eq, r_cases_eq] >>
+      rename [‘sem_e s1 e1 = (Rval n1, s2)’, ‘sem_e s2 e2 = (Rval n2, s3)’] >>
+      first_x_assum
+        (fn th =>
+            mp_then.mp_then (mp_then.Pos hd) mp_tac th
+                            (ASSUME “sem_e s1 e1 = (Rval n1, s2)”)) >>
+      simp[] >>
+      rpt (disch_then (first_assum o mp_then.mp_then (mp_then.Pos hd) mp_tac))>>
+      disch_then (qx_choose_then ‘t1’ strip_assume_tac) >> simp[] >>
+      rename1 ‘possible_var_name n s2.store’ >>
+      ‘possible_var_name (STRCAT n "'") s2.store’
+        by (fs[possible_var_name_def] >> rpt strip_tac >>
+            rename [‘STRCAT (STRCAT nm "'") (REPLICATE c #"'")’] >>
+            first_x_assum (qspec_then ‘SUC c’ mp_tac) >>
+            simp[] >>
+            full_simp_tac bool_ss [GSYM APPEND_ASSOC, APPEND]) >>
+      pop_assum mp_tac >>
+      first_x_assum (disch_then o mp_then.mp_then mp_then.Any mp_tac) >>
+      simp[] >>
+      rpt (disch_then (first_assum o mp_then.mp_then (mp_then.Pos hd) mp_tac))>>
+      disch_then (qx_choose_then ‘t2’ strip_assume_tac) >> simp[] >>
+      simp[sem_e_def, pair_cases_eq, r_cases_eq, option_cases_eq] >>
+      dsimp[] >> rw[]
+      >- (simp[store_var_def] >>
+          irule possible_var_name_IMP_SUBMAP >> simp[] >>
+          metis_tac[sem_e_possible_var_name])
+      >- simp[store_var_def, FLOOKUP_DEF]
+      >- metis_tac[sem_e_possible_var_name]
+      >- (simp[store_var_def] >>
+          rename [‘FLOOKUP (t2.store |+ (n, _)) k = SOME _’] >>
+          ‘k ≠ n’ by (strip_tac >> fs[]) >>
+          simp[FLOOKUP_UPDATE] >> first_x_assum irule >> simp[] >>
+          metis_tac[sem_e_possible_var_name]))
+  >- (rpt gen_tac >> rename [‘Assign v e’] >>
+      simp[sem_e_def, SimpL “$==>”, pair_cases_eq, r_cases_eq] >>
+      rw[] >> fs[sem_e_break, exp_max_def, MAX_LESS] >>
+      dsimp[comp_exp_def, sem_t_def, pair_cases_eq, r_cases_eq] >>
+      simp[sem_e_def, pair_cases_eq, r_cases_eq, option_cases_eq] >>
+      first_x_assum (first_assum o mp_then.mp_then (mp_then.Pos hd) mp_tac) >>
+      simp[] >>
+      disch_then (first_assum o mp_then.mp_then (mp_then.Pos hd) mp_tac) >>
+      disch_then (first_assum o mp_then.mp_then (mp_then.Pos hd) mp_tac) >>
+      simp[] >> strip_tac >> simp[store_var_def] >> rw[] >>
+      fs[SUBMAP_DEF, FAPPLY_FUPDATE_THM, FLOOKUP_DEF] >> rw[] >> fs[] >>
+      fs[possible_var_name_def] >> rpt strip_tac >>
+      BasicProvers.VAR_EQ_TAC >>
+      full_simp_tac (srw_ss() ++ ARITH_ss) []))
 end
 
 val phase2_subset_def = Define `
@@ -708,7 +738,7 @@ val phase3_lemma = prove(
            (xs ++ [JmpIf (Reg w) (LENGTH xs + 2 + LENGTH (phase3 0 0 t1))] ++
             phase3 (LENGTH xs + 1) b t1 ++ [Jmp gg] ++
             phase3 (LENGTH xs + 2 + LENGTH (phase3 0 0 t1)) b t2 ++ ys) =
-           Jmp gg)` by ALL_TAC THEN1
+           Jmp gg)` by
       (ONCE_REWRITE_TAC [LENGTH_phase3] \\ fs []
        \\ REPEAT STRIP_TAC THEN1 DECIDE_TAC
        \\ MATCH_MP_TAC EL_LEMMA
@@ -824,7 +854,7 @@ val phase3_pres = store_thm("phase3_pres",
   THEN1 METIS_TAC []
   THEN1
    (fs [asm_semantics_def]
-    \\ REVERSE (`!c. ?s. sem_a (a_state (phase3 0 0 t) c) = (Rtimeout,s)` by ALL_TAC)
+    \\ REVERSE (sg `!c. ?s. sem_a (a_state (phase3 0 0 t) c) = (Rtimeout,s)`)
     THEN1 (fs [] \\ SRW_TAC [] []
            \\ FIRST_X_ASSUM (MP_TAC o Q.SPEC `c`) \\ fs [])
     \\ REPEAT STRIP_TAC
@@ -1014,7 +1044,7 @@ val pb_sem_t_reln_IMP_phase1 = Q.store_thm("pb_sem_t_reln_IMP_phase1",
         \\ metis_tac [DECIDE ``h' < h' + (h + 1 + 1) + 1n``])
       \\ fs [abort_def,is_rval_def,pb_sem_t_reln_Forn2]
       \\ imp_res_tac sem_e_reln_not \\ fs[pb_sem_t_reln_Forn3]
-      \\ qpat_assum `pb_sem_t_size_reln h s'' _ (Ter r)` mp_tac
+      \\ qpat_x_assum `pb_sem_t_size_reln h s'' _ (Ter r)` mp_tac
       \\ bp_size_step_tac \\ fs [] \\ reverse (rw [Loop_def])
       THEN1 (rpt disj2_tac \\ Cases_on `r` \\ fs [abort_def])
       \\ disj1_tac
@@ -1022,13 +1052,16 @@ val pb_sem_t_reln_IMP_phase1 = Q.store_thm("pb_sem_t_reln_IMP_phase1",
       \\ rpt (pop_assum mp_tac \\ match_mp_tac IMP_IMP \\ conj_tac THEN1 decide_tac)
       \\ rw [] \\ fs [phase1_def,Loop_def])
     \\ ntac 4 (bp_step_tac \\ fs [] \\ rw [sem_e_reln_Num])
-    \\ disj1_tac \\ qexists_tac `Ter r`
-    \\ Cases_on `r` \\ fs [is_rval_def,abort_def,pb_sem_t_reln_Forn2]
+    \\ disj1_tac \\ rename [‘abort T (Ter result)’] >> qexists_tac `Ter result`
+    \\ Cases_on `result` \\ fs [is_rval_def,abort_def,pb_sem_t_reln_Forn2]
     \\ metis_tac [DECIDE ``n<n+1n+1``])
   THEN1 (* For eval of exp fails *)
-   (Cases_on `r` \\ fs [abort_def,Loop_def]
+   (rename [‘abort F (Ter result)’] >> Cases_on `result` \\
+    fs [abort_def,Loop_def]
     \\ ntac 3 (bp_step_tac \\ fs [] \\ rw [sem_e_reln_Num])
-    \\ disj1_tac \\ qexists_tac `Ter (q,r')` \\ fs []
+    \\ disj1_tac >>
+    rename [‘sem_e_reln s0 e0 (r,s)’] >>
+    qexists_tac `Ter (r,s)` \\ fs []
     \\ fs [pb_sem_t_reln_Forn2,abort_def]
     \\ imp_res_tac sem_e_reln_not\\ fs []));
 end

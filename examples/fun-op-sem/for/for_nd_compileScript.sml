@@ -180,6 +180,16 @@ val store_var_def = Define `
 
 val sem_e_def = sem_e_def |> REWRITE_RULE [GSYM store_var_def]
 
+val r_cases_eq = prove_case_eq_thm {
+  case_def = for_nd_semTheory.r_case_def,
+  nchotomy = for_nd_semTheory.r_nchotomy
+};
+
+val pair_cases_eq = Q.prove(
+  ‘(pair_CASE p f = v) ⇔ ∃q r. p = (q,r) ∧ v = f q r’,
+  Cases_on `p` >> simp[] >> metis_tac[]);
+val rveq = rpt BasicProvers.VAR_EQ_TAC
+
 val sem_e_possible_var_name = prove(
   ``!e s i r.
       (sem_e s e = (Rval i,r)) /\ exp_max e < STRLEN k ==>
@@ -189,28 +199,24 @@ val sem_e_possible_var_name = prove(
   THEN1
    (fs [permute_pair_def]
     \\ Cases_on `oracle_get s.non_det_o` \\ fs [LET_DEF]
-    \\ Cases_on `q` \\ fs []
-    THEN1
-     (FIRST_X_ASSUM (Q.SPEC_THEN `s with <| io_trace := s.io_trace ++ [INR T]; non_det_o := r'|>`MP_TAC)
-      \\ Cases_on `sem_e (s with <| io_trace := s.io_trace ++ [INR T]; non_det_o := r'|>) e'` \\ fs []
-      \\ FIRST_X_ASSUM (MP_TAC o Q.SPEC `r''`)
-      \\ ect \\ fs [exp_max_def,MAX_LESS,unpermute_pair_def])
-    \\ Q.PAT_ASSUM `!x. bbb` MP_TAC
-    \\ FIRST_X_ASSUM (MP_TAC o Q.SPEC `s with <| io_trace := s.io_trace ++ [INR F]; non_det_o := r'|>`)
-    \\ Cases_on `sem_e (s with <| io_trace := s.io_trace ++ [INR F]; non_det_o := r'|>) e` \\ fs []
-    \\ REPEAT STRIP_TAC
-    \\ FIRST_X_ASSUM (MP_TAC o Q.SPEC `r'':state`)
-    \\ ect \\ fs [exp_max_def,MAX_LESS,unpermute_pair_def])
+    \\ rename [‘oracle_get s.non_det_o = (b,bo)’]
+    \\ Cases_on `b` >> fs [] (* 2 subgoals *)
+    \\ fs[r_cases_eq, pair_cases_eq, unpermute_pair_def, exp_max_def,
+          MAX_LESS] >> rveq >>
+    rpt (first_x_assum
+           (first_assum o mp_then.mp_then (mp_then.Pos hd) mp_tac)) >>
+    simp[])
   \\ SRW_TAC [] [] \\ fs [exp_max_def,MAX_LESS,getchar_def]
-  \\ ect \\ fs [LET_DEF] \\ SRW_TAC [] []
-  \\ FIRST_X_ASSUM (fn th => MP_TAC (Q.SPEC `s'` th) THEN
-                             MP_TAC (Q.SPEC `s` th)) \\ fs []
-  \\ fs [store_var_def,possible_var_name_def]
-  \\ REPEAT STRIP_TAC \\ SRW_TAC [] []
-  \\ fs [] \\ DECIDE_TAC);
+  \\ ect \\ fs [LET_DEF] \\ SRW_TAC [] [store_var_def] >>
+  first_x_assum (first_assum o mp_then.mp_then (mp_then.Pos hd) mp_tac) >>
+  simp[] >>
+  simp[possible_var_name_def] >>
+  rpt strip_tac >> SRW_TAC [] [] >>
+  fs []);
 
-val comp_exp_correct = prove(
-  ``!e s t n res s1.
+val comp_exp_correct = store_thm(
+  "comp_exp_correct",
+  “!e s t n res s1.
       sem_e s e = (res,s1) /\ res <> Rfail /\
       possible_var_name n s.store /\
       s.store SUBMAP t.store /\ (t.clock = s.clock) /\
@@ -228,7 +234,7 @@ val comp_exp_correct = prove(
            (!k v. possible_var_name k s.store /\
                   exp_max e < LENGTH k /\ LENGTH k < LENGTH n /\
                   FLOOKUP t.store k = SOME v ==>
-                  FLOOKUP t1.store k = SOME v)``,
+                  FLOOKUP t1.store k = SOME v)”,
   Induct \\ fs [sem_e_def,comp_exp_def,sem_t_def,store_var_def]
   \\ REPEAT STRIP_TAC
   THEN1
@@ -255,7 +261,7 @@ val comp_exp_correct = prove(
             (fs [MAX_LESS]  \\ DECIDE_TAC)
     \\ fs [] \\ REPEAT STRIP_TAC \\ fs [FILTER_APPEND_DISTRIB] \\ rfs []
     \\ POP_ASSUM (MP_TAC o Q.SPECL [`t1`,`STRCAT n "'"`])
-    \\ `possible_var_name (STRCAT n "'") r.store` by ALL_TAC THEN1
+    \\ `possible_var_name (STRCAT n "'") r.store` by
      (fs [possible_var_name_def]
       \\ REPEAT STRIP_TAC
       \\ FIRST_X_ASSUM (MP_TAC o Q.SPEC `SUC n'`)
@@ -854,7 +860,7 @@ val phase3_aux_thm = store_thm("phase3_aux_thm",
            (xs ++ [JmpIf (Reg w) (LENGTH xs + 2 + LENGTH (phase3_aux 0 t1 0))] ++
             phase3_aux (LENGTH xs + 1) t1 b ++ [Jmp gg] ++
             phase3_aux (LENGTH xs + 2 + LENGTH (phase3_aux 0 t1 0)) t2 b ++ ys) =
-           Jmp gg)` by ALL_TAC THEN1
+           Jmp gg)` by
       (ONCE_REWRITE_TAC [LENGTH_phase3_aux] \\ fs []
        \\ REPEAT STRIP_TAC THEN1 DECIDE_TAC
        \\ MATCH_MP_TAC EL_LEMMA
@@ -997,9 +1003,9 @@ val phase3_pres = store_thm("phase3_pres",
     \\ Cases_on `q` \\ fs [] \\ SRW_TAC [] []
     \\ fs [s_with_clock_def,init_st_def,a_state_def])
   \\ RES_TAC
-  \\ `!c. FILTER ISL (SND (sem_t (init_st c (K F) input) t)).io_trace =
+  \\ sg `!c. FILTER ISL (SND (sem_t (init_st c (K F) input) t)).io_trace =
           FILTER ISL (SND (sem_a (a_state (phase3 t) c
-              input))).state.io_trace` by all_tac \\ fs []
+              input))).state.io_trace` \\ fs []
   \\ rw [] \\ first_x_assum (qspec_then `c` mp_tac) \\ rw []
   \\ qspecl_then [`(init_st c (K F) input)`,`t`] mp_tac phase3_correct
   \\ Cases_on `sem_t (init_st c (K F) input) t` \\ fs []
