@@ -4124,4 +4124,87 @@ val mc_iop_thm = store_thm("mc_iop_thm",
     \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [mwi_op_def]
     \\ fs[mwi_divmod_alt_def] ));
 
+(* An example which uses recursion that is not tail-recursion:
+   tail-recursive components are defined as usual; however,
+   non-tail-recursive functions must be defined using tDefine and the
+   precondition is to be defined separately but closely following the
+   structure of the original function *)
+
+val (mc_fac_init_def, _,
+     mc_fac_init_pre_def, _) =
+  tailrec_define "mc_fac_init" ``
+    (\(l:num,r1).
+      if r1 <+ 2w then
+        (let r0 = 0w:'a word in
+         let r2 = 0w:'a word in
+         let r3 = 0w in
+         let cond = T in
+           (INR (l,r0,r1,r2,r3),cond))
+      else
+        (let r0 = 1w:'a word in
+         let r2 = r1 - 1w in
+         let r3 = r1 - 2w in
+         let cond = T in
+           (INR (l,r0,r1,r2,r3),cond)))
+     :num # α word -> (num # α word + num # α word # α word # α word #
+      α word) # bool``
+
+val (mc_fac_final_def, _,
+     mc_fac_final_pre_def, _) =
+  tailrec_define "mc_fac_final" ``
+    (\(l:num,r1,r2).
+       let r1 = r1 + r2 in
+       let cond = T in
+         (INR (l,r1),cond))
+     :num # α word # α word -> (num # α word # α word + num # α word) # bool``
+
+val mc_fac_def = tDefine "mc_fac" `
+  mc_fac (l:num,r1:'a word) =
+    let l0 = l in
+    let (l,r0,r1,r2,r3) = mc_fac_init (l:num,r1:'a word) in
+    let l = MIN l l0 in
+      if r0 = 0w then (l,r1) else
+        let r1 = r2 in
+        if l = 0 then (l,r1) else
+        let ((r2,r3),(l,r1)) = ((r2,r3),mc_fac (l-1,r1)) in
+        let l = MIN l l0 in
+        let r2 = r1 in
+        let r1 = r3 in
+        if l = 0 then (l,r1) else
+        let (r2,(l,r1)) = (r2,mc_fac (l-1,r1)) in
+        let (l,r1) = mc_fac_final (l,r1,r2) in
+          (l,r1)`
+  (WF_REL_TAC `measure FST` \\ rw []);
+
+val mc_fac_pre_def = tDefine "mc_fac_pre" `
+  mc_fac_pre (l:num,r1:'a word) =
+    let l0 = l in
+    let cond = mc_fac_init_pre (l:num,r1:'a word) in
+    let (l,r0,r1,r2,r3) = mc_fac_init (l:num,r1:'a word) in
+    let l = MIN l l0 in
+      if r0 = 0w then F else
+        let r1 = r2 in
+        if l = 0 then F else
+        let cond = (mc_fac_pre (l-1,r1) /\ cond) in
+        let ((r2,r3),(l,r1)) = ((r2,r3),mc_fac (l-1,r1)) in
+        let l = MIN l l0 in
+        let r2 = r1 in
+        let r1 = r3 in
+        if l = 0 then F else
+        let cond = (mc_fac_pre (l-1,r1) /\ cond) in
+        let cond = (mc_fac_final_pre (l,r1,r2) /\ cond) in
+        let (l,r1) = mc_fac_final (l,r1,r2) in
+          cond`
+  (WF_REL_TAC `measure FST` \\ rw []);
+
+val (mc_use_fac_def, _,
+     mc_use_fac_pre_def, _) =
+  tailrec_define "mc_use_fac" ``
+    (\(l:num,r1).
+       let cond = mc_fac_pre (l-1,r1) in
+       let (l,r1) = mc_fac (l-1,r1) in
+       let r0 = r1 in
+         (INR (l,r0),cond))
+     :num # α word -> (num # α word + num # α word) # bool``
+
 val _ = export_theory();
