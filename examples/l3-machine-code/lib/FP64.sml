@@ -8,6 +8,12 @@ struct
    structure R = Real
    structure P = PackRealLittle (* must be little-endian structure *)
 
+   type ieee_flags = {DivideByZero: bool,
+                      InvalidOp: bool,
+                      Overflow: bool,
+                      Precision: bool,
+                      Underflow: bool}
+
    local
      val bytes = Word8Vector.length (P.toBytes R.posInf)
    in
@@ -39,6 +45,8 @@ struct
    val negInf = toBits R.negInf
    val posZero = toBits (Option.valOf (R.fromString "0.0"))
    val negZero = toBits (Option.valOf (R.fromString "-0.0"))
+   val qNan = BitsN.fromInt (0x7FF8000000000000, 64)
+   val sNan = BitsN.fromInt (0x7FF0000000000001, 64)
 
    fun withMode m f x =
      let
@@ -61,11 +69,22 @@ struct
    val isNan = R.isNan o fromBits
    val isFinite = R.isFinite o fromBits
    val isNormal = R.isNormal o fromBits
+   fun isSignallingNan a = isNan a andalso not (BitsN.bit (a, 51))
    fun isSubnormal a = R.class (fromBits a) = IEEEReal.SUBNORMAL
+   fun isIntegral a =
+     let
+       val r = fromBits a
+     in
+       R.isFinite r andalso R.== (R.realTrunc r, r)
+     end
 
    local
+     val dummy_flags =
+       {DivideByZero = false, InvalidOp = false, Overflow = false,
+        Precision = false, Underflow = false}
      fun fromBits2 (a, b) = (fromBits a, fromBits b)
-     fun fpOp from f (m, a) = (toBits o withMode m f o from) a
+     fun fpOp from f (m, a) =
+       ((fn a => (dummy_flags, toBits a)) o withMode m f o from) a
      fun fpOp0 f = toBits o f o fromBits
      val fpOp1 = fpOp fromBits
      val fpOp2 = fpOp fromBits2
@@ -92,6 +111,11 @@ struct
      val mul_add = fpOp3 R.*+
      val mul_sub = fpOp3 R.*-
 
+     val roundToIntegral =
+       fn (IEEEReal.TO_NEGINF, a) => fpOp0 R.realFloor a
+        | (IEEEReal.TO_POSINF, a) => fpOp0 R.realCeil a
+        | (IEEEReal.TO_ZERO, a) => fpOp0 R.realTrunc a
+        | (IEEEReal.TO_NEAREST, a) => fpOp0 R.realRound a
    end
 
 end (* functor FP *)

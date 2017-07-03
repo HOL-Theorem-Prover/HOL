@@ -21,9 +21,11 @@ sig
      | FPFromInt of int
      | FPGe of int
      | FPGt of int
+     | FPIsIntegral of int
      | FPIsFinite of int
      | FPIsNan of int
      | FPIsNormal of int
+     | FPIsSignallingNan of int
      | FPIsSubnormal of int
      | FPLe of int
      | FPLt of int
@@ -31,6 +33,7 @@ sig
      | FPMulAdd of int
      | FPMulSub of int
      | FPNeg of int
+     | FPRoundToIntegral of int
      | FPSqrt of int
      | FPSub of int
      | FPToInt of int
@@ -179,6 +182,10 @@ sig
    val NEGZERO64 : Term.term
    val POSZERO32 : Term.term
    val POSZERO64 : Term.term
+   val QUIETNAN32 : Term.term
+   val QUIETNAN64 : Term.term
+   val SIGNALNAN32 : Term.term
+   val SIGNALNAN64 : Term.term
 
    val Call : string * ParseDatatype.pretype * Term.term -> Term.term
    val Const : string * ParseDatatype.pretype -> Term.term

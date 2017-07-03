@@ -92,10 +92,12 @@ val float_is_finite_def = Define`
          Float _ => T
        | _ => F`
 
+val is_integral_def = Define `is_integral r = ?n. abs r = &(n:num)`
+
 val float_is_integral_def = Define`
    float_is_integral (x: ('t, 'w) float) =
       case float_value x of
-         Float r => ?n. abs r = &(n:num)
+         Float r => is_integral r
        | _ => F`
 
 (* ------------------------------------------------------------------------
@@ -963,7 +965,8 @@ val float_sets = Q.store_thm("float_sets",
 val tac =
    rw [float_is_nan_def, float_is_normal_def, float_is_subnormal_def,
        float_is_finite_def, float_is_infinite_def, float_is_zero_def,
-       float_is_integral_def, float_values, some_nan_components]
+       float_is_integral_def, is_integral_def, float_values,
+       some_nan_components]
    \\ rw [float_plus_infinity_def, float_minus_infinity_def,
           float_plus_zero_def, float_minus_zero_def, float_top_def,
           float_bottom_def, float_some_qnan_def, float_plus_min_def,

@@ -44,6 +44,7 @@ sig
    val float_is_integral_tm: term
    val float_is_nan_tm: term
    val float_is_normal_tm: term
+   val float_is_signalling_tm: term
    val float_is_subnormal_tm: term
    val float_is_zero_tm: term
    val float_less_equal_tm: term
@@ -112,6 +113,7 @@ sig
    val dest_float_is_integral: term -> term
    val dest_float_is_nan: term -> term
    val dest_float_is_normal: term -> term
+   val dest_float_is_signalling: term -> term
    val dest_float_is_subnormal: term -> term
    val dest_float_is_zero: term -> term
    val dest_float_less_equal: term -> term * term
@@ -173,6 +175,7 @@ sig
    val is_float_is_integral: term -> bool
    val is_float_is_nan: term -> bool
    val is_float_is_normal: term -> bool
+   val is_float_is_signalling: term -> bool
    val is_float_is_subnormal: term -> bool
    val is_float_is_zero: term -> bool
    val is_float_less_equal: term -> bool
@@ -235,6 +238,7 @@ sig
    val mk_float_is_integral: term -> term
    val mk_float_is_nan: term -> term
    val mk_float_is_normal: term -> term
+   val mk_float_is_signalling: term -> term
    val mk_float_is_subnormal: term -> term
    val mk_float_is_zero: term -> term
    val mk_float_less_equal: term * term -> term

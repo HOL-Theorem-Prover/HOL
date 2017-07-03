@@ -206,6 +206,11 @@ val POSZERO32 = fp32Syntax.fp_poszero_tm
 val NEGZERO64 = fp64Syntax.fp_negzero_tm
 val POSZERO64 = fp64Syntax.fp_poszero_tm
 
+val QUIETNAN32  = LW (0x7FC00000, 32)
+val SIGNALNAN32 = LW (0x7F800001, 32)
+val QUIETNAN64  = LW (0x7FF8000000000000, 64)
+val SIGNALNAN64 = LW (0x7FF0000000000001, 64)
+
 (* ------------------------------------------------------------------------ *)
 
 (* Function call *)
@@ -494,9 +499,11 @@ datatype monop =
    | FPFromInt of int
    | FPGe of int
    | FPGt of int
+   | FPIsIntegral of int
    | FPIsFinite of int
    | FPIsNan of int
    | FPIsNormal of int
+   | FPIsSignallingNan of int
    | FPIsSubnormal of int
    | FPLe of int
    | FPLt of int
@@ -504,6 +511,7 @@ datatype monop =
    | FPMulAdd of int
    | FPMulSub of int
    | FPNeg of int
+   | FPRoundToIntegral of int
    | FPSqrt of int
    | FPSub of int
    | FPToInt of int
@@ -740,6 +748,8 @@ local
             | FPGt 64 => fp64Syntax.fp_greaterThan_tm
             | FPGe 32 => fp32Syntax.fp_greaterEqual_tm
             | FPGe 64 => fp64Syntax.fp_greaterEqual_tm
+            | FPRoundToIntegral 32 => fp32Syntax.fp_roundToIntegral_tm
+            | FPRoundToIntegral 64 => fp64Syntax.fp_roundToIntegral_tm
             | FPSqrt 32 => fp32Syntax.fp_sqrt_tm
             | FPSqrt 64 => fp64Syntax.fp_sqrt_tm
             | FPToInt 32 => fp32Syntax.fp_to_int_tm
@@ -971,6 +981,9 @@ in
        | FPAbs 32 => fp32Syntax.mk_fp_abs
        | FPAbs 64 => fp64Syntax.mk_fp_abs
        | FPAbs i => raise ERR "Mop" ("FPAbs " ^ Int.toString i)
+       | FPIsIntegral 32 => fp32Syntax.mk_fp_isIntegral
+       | FPIsIntegral 64 => fp64Syntax.mk_fp_isIntegral
+       | FPIsIntegral i => raise ERR "Mop" ("FPIsIntegral " ^ Int.toString i)
        | FPIsFinite 32 => fp32Syntax.mk_fp_isFinite
        | FPIsFinite 64 => fp64Syntax.mk_fp_isFinite
        | FPIsFinite i => raise ERR "Mop" ("FPIsFinite " ^ Int.toString i)
@@ -983,6 +996,10 @@ in
        | FPIsSubnormal 32 => fp32Syntax.mk_fp_isSubnormal
        | FPIsSubnormal 64 => fp64Syntax.mk_fp_isSubnormal
        | FPIsSubnormal i => raise ERR "Mop" ("FPIsSubnormal " ^ Int.toString i)
+       | FPIsSignallingNan 32 => fp32Syntax.mk_fp_isSignallingNan
+       | FPIsSignallingNan 64 => fp64Syntax.mk_fp_isSignallingNan
+       | FPIsSignallingNan i =>
+           raise ERR "Mop" ("FPIsSignallingNaN " ^ Int.toString i)
        | FPNeg 32 => fp32Syntax.mk_fp_negate
        | FPNeg 64 => fp64Syntax.mk_fp_negate
        | FPNeg i => raise ERR "Mop" ("FPNeg " ^ Int.toString i)

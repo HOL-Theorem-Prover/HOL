@@ -208,6 +208,9 @@ val (float_value_tm, mk_float_value, dest_float_value, is_float_value) =
 val (float_is_nan_tm, mk_float_is_nan, dest_float_is_nan, is_float_is_nan) =
    monop "float_is_nan"
 
+val (float_is_signalling_tm, mk_float_is_signalling, dest_float_is_signalling,
+     is_float_is_signalling) = monop "float_is_signalling"
+
 val (float_is_infinite_tm, mk_float_is_infinite, dest_float_is_infinite,
      is_float_is_infinite) = monop "float_is_infinite"
 

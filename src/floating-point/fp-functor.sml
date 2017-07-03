@@ -45,6 +45,8 @@ struct
    val (fp_isNan_tm, mk_fp_isNan, dest_fp_isNan, is_fp_isNan) = monop "isNan"
    val (fp_isNormal_tm, mk_fp_isNormal, dest_fp_isNormal, is_fp_isNormal) =
       monop "isNormal"
+   val (fp_isSignallingNan_tm, mk_fp_isSignallingNan, dest_fp_isSignallingNan,
+        is_fp_isSignallingNan) = monop "isSignallingNan"
    val (fp_isSubnormal_tm, mk_fp_isSubnormal, dest_fp_isSubnormal,
         is_fp_isSubnormal) = monop "isSubnormal"
    val (fp_isZero_tm, mk_fp_isZero, dest_fp_isZero, is_fp_isZero) =

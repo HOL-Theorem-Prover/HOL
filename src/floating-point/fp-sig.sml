@@ -16,6 +16,7 @@ sig
     val fp_isIntegral_tm : term
     val fp_isNan_tm : term
     val fp_isNormal_tm : term
+    val fp_isSignallingNan_tm : term
     val fp_isSubnormal_tm : term
     val fp_isZero_tm : term
     val fp_lessEqual_tm : term
@@ -52,6 +53,7 @@ sig
     val mk_fp_isInfinite : term -> term
     val mk_fp_isIntegral : term -> term
     val mk_fp_isNan : term -> term
+    val mk_fp_isSignallingNan : term -> term
     val mk_fp_isNormal : term -> term
     val mk_fp_isSubnormal : term -> term
     val mk_fp_isZero : term -> term
@@ -81,7 +83,7 @@ sig
     val is_fp_isFinite : term -> bool
     val is_fp_isInfinite : term -> bool
     val is_fp_isIntegral : term -> bool
-    val is_fp_isNan : term -> bool
+    val is_fp_isSignallingNan : term -> bool
     val is_fp_isNormal : term -> bool
     val is_fp_isSubnormal : term -> bool
     val is_fp_isZero : term -> bool
@@ -113,6 +115,7 @@ sig
     val dest_fp_isIntegral : term -> term
     val dest_fp_isNan : term -> term
     val dest_fp_isNormal : term -> term
+    val dest_fp_isSignallingNan : term -> term
     val dest_fp_isSubnormal : term -> term
     val dest_fp_isZero : term -> term
     val dest_fp_lessEqual : term -> term * term
