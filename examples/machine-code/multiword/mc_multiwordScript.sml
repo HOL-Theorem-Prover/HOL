@@ -4201,7 +4201,7 @@ val (mc_use_fac_def, _,
      mc_use_fac_pre_def, _) =
   tailrec_define "mc_use_fac" ``
     (\(l:num,r1).
-       let cond = mc_fac_pre (l-1,r1) in
+       let cond = mc_fac_pre (l-1,r1) /\ l <> 0 in
        let (l,r1) = mc_fac (l-1,r1) in
        let r0 = r1 in
          (INR (l,r0),cond))
