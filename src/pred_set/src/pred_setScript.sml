@@ -5421,7 +5421,7 @@ RWTAC [] THEN
 METIS_TAC []);
 
 (* an alternative definition from util_probTheory *)
-val countable_alt = store_thm ("countable_alt",
+val COUNTABLE_ALT = store_thm ("COUNTABLE_ALT",
   ``countable s = ?f. !x : 'a. x IN s ==> ?n :num. f n = x``,
     EQ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -5445,14 +5445,14 @@ val countable_alt = store_thm ("countable_alt",
 val COUNTABLE_SUBSET = store_thm (* from util_prob *)
   ("COUNTABLE_SUBSET",
    ``!s t. s SUBSET t /\ countable t ==> countable s``,
-   RW_TAC std_ss [countable_alt, SUBSET_DEF]
+   RW_TAC std_ss [COUNTABLE_ALT, SUBSET_DEF]
    >> Q.EXISTS_TAC `f`
    >> PROVE_TAC []);
 
 val finite_countable = store_thm (* from util_prob *)
   ("finite_countable",
    ``!s. FINITE s ==> countable s``,
-   REWRITE_TAC [countable_alt]
+   REWRITE_TAC [COUNTABLE_ALT]
    >> HO_MATCH_MP_TAC FINITE_INDUCT
    >> RW_TAC std_ss [NOT_IN_EMPTY]
    >> Q.EXISTS_TAC `\n. if n = 0 then e else f (n - 1)`
@@ -5470,7 +5470,7 @@ val COUNTABLE_COUNT = store_thm (* from util_prob *)
 val COUNTABLE_NUM = store_thm (* from util_prob *)
   ("COUNTABLE_NUM",
    ``!s :num -> bool. countable s``,
-   RW_TAC std_ss [countable_alt]
+   RW_TAC std_ss [COUNTABLE_ALT]
    >> Q.EXISTS_TAC `I`
    >> RW_TAC std_ss [combinTheory.I_THM]);
 
@@ -5712,7 +5712,7 @@ val INFINITE_EXPLICIT_ENUMERATE = store_thm (* from util_prob *)
 val BIJ_NUM_COUNTABLE = store_thm (* from util_prob *)
   ("BIJ_NUM_COUNTABLE",
    ``!s. (?f :num -> 'a. BIJ f UNIV s) ==> countable s``,
-   RW_TAC std_ss [countable_alt, BIJ_DEF, SURJ_DEF, IN_UNIV]
+   RW_TAC std_ss [COUNTABLE_ALT, BIJ_DEF, SURJ_DEF, IN_UNIV]
    >> PROVE_TAC []);
 
 (** enumerate functions as BIJ from univ(:num) to countable sets, from util_prob *)
@@ -5729,7 +5729,7 @@ val COUNTABLE_ALT_BIJ = store_thm (* from util_prob *)
    ``!s. countable s = FINITE s \/ BIJ (enumerate s) UNIV s``,
    rpt STRIP_TAC
    >> REVERSE EQ_TAC >- PROVE_TAC [finite_countable, BIJ_NUM_COUNTABLE]
-   >> RW_TAC std_ss [countable_alt]
+   >> RW_TAC std_ss [COUNTABLE_ALT]
    >> Cases_on `FINITE s` >- PROVE_TAC []
    >> RW_TAC std_ss [GSYM ENUMERATE]
    >> MATCH_MP_TAC BIJ_INJ_SURJ
@@ -5749,7 +5749,7 @@ val COUNTABLE_ENUM = store_thm (* from util_prob *)
    RW_TAC std_ss []
    >> REVERSE EQ_TAC
    >- (NTAC 2 (RW_TAC std_ss [countable_EMPTY])
-       >> RW_TAC std_ss [countable_alt]
+       >> RW_TAC std_ss [COUNTABLE_ALT]
        >> Q.EXISTS_TAC `f`
        >> RW_TAC std_ss [IN_IMAGE, IN_UNIV]
        >> PROVE_TAC [])
