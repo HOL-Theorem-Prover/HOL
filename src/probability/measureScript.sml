@@ -482,7 +482,7 @@ val SIGMA_ALGEBRA_ALT = store_thm
           f IN (UNIV -> (subsets a)) ==> BIGUNION (IMAGE f UNIV) IN (subsets a))``,
    RW_TAC std_ss [sigma_algebra_def]
    >> EQ_TAC
-   >- (RW_TAC std_ss [countable_def, IN_FUNSET, IN_UNIV]
+   >- (RW_TAC std_ss [countable_alt, IN_FUNSET, IN_UNIV]
        >> Q.PAT_X_ASSUM `!c. P c ==> Q c` MATCH_MP_TAC
        >> REVERSE (RW_TAC std_ss [IN_IMAGE, SUBSET_DEF, IN_UNIV])
        >- PROVE_TAC []

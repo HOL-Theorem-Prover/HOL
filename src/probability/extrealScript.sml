@@ -3481,7 +3481,7 @@ val Q_COUNTABLE = store_thm
   RW_TAC std_ss [Q_set_def]
   >> MATCH_MP_TAC COUNTABLE_UNION
   >> CONJ_TAC
-  >- (RW_TAC std_ss [countable_def]
+  >- (RW_TAC std_ss [countable_alt]
       >> MP_TAC NUM_2D_BIJ_NZ_INV
       >> RW_TAC std_ss []
       >> Q.EXISTS_TAC `(\(a,b). &a/(&b)) o f`
@@ -3494,7 +3494,7 @@ val Q_COUNTABLE = store_thm
       >> `?y. f y = (a,b)` by METIS_TAC [lt_imp_ne,extreal_of_num_def,extreal_lt_eq]
       >> Q.EXISTS_TAC `y`
       >> RW_TAC real_ss [])
-  >> RW_TAC std_ss [countable_def]
+  >> RW_TAC std_ss [countable_alt]
   >> MP_TAC NUM_2D_BIJ_NZ_INV
   >> RW_TAC std_ss []
   >> Q.EXISTS_TAC `(\(a,b). -(&a/(&b))) o f`
@@ -3915,7 +3915,7 @@ val COUNTABLE_ENUM_Q = store_thm
 
 val CROSS_COUNTABLE_UNIV = store_thm
  ("CROSS_COUNTABLE_UNIV", ``countable (UNIV:num->bool CROSS UNIV:num->bool)``,
-  RW_TAC std_ss [countable_def]
+  RW_TAC std_ss [countable_alt]
   >> `?(f :num -> num # num). BIJ f UNIV (UNIV CROSS UNIV)` by METIS_TAC [NUM_2D_BIJ_INV]
   >> Q.EXISTS_TAC `f`
   >> RW_TAC std_ss []

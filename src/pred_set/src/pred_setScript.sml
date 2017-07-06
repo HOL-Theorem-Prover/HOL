@@ -5419,6 +5419,28 @@ Q.EXISTS_TAC `f o f'` THEN
 RWTAC [] THEN
 METIS_TAC []);
 
+(* an alternative definition from util_probTheory *)
+val countable_alt = store_thm ("countable_alt",
+  ``countable s = ?f. !x : 'a. x IN s ==> ?n :num. f n = x``,
+    EQ_TAC (* 2 sub-goals here *)
+ >| [ (* goal 1 (of 2) *)
+      REWRITE_TAC [countable_surj] \\
+      rpt STRIP_TAC >- RW_TAC std_ss [NOT_IN_EMPTY] \\
+      Q.EXISTS_TAC `f` \\
+      POP_ASSUM MP_TAC \\
+      REWRITE_TAC [SURJ_DEF] >> METIS_TAC [],
+      (* goal 2 (of 2) *)
+      rpt STRIP_TAC \\
+      ASSUME_TAC num_countable \\
+      `countable (IMAGE f (UNIV :num set))` by PROVE_TAC [image_countable] \\
+      ASSUME_TAC (INST_TYPE [``:'a`` |-> ``:num``] IN_UNIV) \\
+      Know `s SUBSET (IMAGE f (UNIV :num set))` >| (* 2 sub-goals here *)
+      [ (* goal 2.1 (of 2) *)
+        REWRITE_TAC [SUBSET_DEF, IN_IMAGE] \\
+        rpt STRIP_TAC >> PROVE_TAC [],
+        (* goal 2.2 (of 2) *)
+        PROVE_TAC [subset_countable] ] ]);
+
 val finite_countable = Q.store_thm ("finite_countable",
 `!s. FINITE s ==> countable s`,
 HO_MATCH_MP_TAC FINITE_INDUCT THEN
