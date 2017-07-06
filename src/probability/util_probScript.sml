@@ -326,46 +326,6 @@ val BIGUNION_PAIR = store_thm
    RW_TAC std_ss [EXTENSION, IN_BIGUNION, IN_UNION, IN_INSERT, NOT_IN_EMPTY]
    >> PROVE_TAC []);
 
-val BIJ_NUM_COUNTABLE = store_thm
-  ("BIJ_NUM_COUNTABLE",
-   ``!s. (?f : num -> 'a. BIJ f UNIV s) ==> countable s``,
-   RW_TAC std_ss [countable_alt, BIJ_DEF, SURJ_DEF, IN_UNIV]
-   >> PROVE_TAC []);
-
-val COUNTABLE_BIGUNION = store_thm
-  ("COUNTABLE_BIGUNION",
-   ``!c.
-       countable c /\ (!s. s IN c ==> countable s) ==> countable (BIGUNION c)``,
-   RW_TAC std_ss [countable_alt]
-   >> POP_ASSUM
-      (MP_TAC o CONV_RULE (DEPTH_CONV RIGHT_IMP_EXISTS_CONV THENC SKOLEM_CONV))
-   >> MP_TAC NUM_2D_BIJ_INV
-   >> RW_TAC std_ss []
-   >> Q.EXISTS_TAC `(\ (a : num, b : num). f'' (f a) b) o f'`
-   >> RW_TAC std_ss [IN_BIGUNION]
-   >> Q.PAT_X_ASSUM `!x. P x ==> ?y. Q x y` (MP_TAC o Q.SPEC `s`)
-   >> RW_TAC std_ss []
-   >> Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `f (n : num)`)
-   >> RW_TAC std_ss []
-   >> POP_ASSUM (MP_TAC o Q.SPEC `x`)
-   >> RW_TAC std_ss []
-   >> Q.PAT_X_ASSUM `BIJ f' X Y` MP_TAC
-   >> RW_TAC std_ss [BIJ_DEF, SURJ_DEF, IN_UNIV, IN_CROSS]
-   >> POP_ASSUM (MP_TAC o Q.SPEC `(n, n')`)
-   >> RW_TAC std_ss []
-   >> Q.EXISTS_TAC `y`
-   >> RW_TAC std_ss [o_THM]);
-
-val COUNTABLE_UNION = store_thm
-  ("COUNTABLE_UNION",
-   ``!s t. countable s /\ countable t ==> countable (s UNION t)``,
-   RW_TAC std_ss [GSYM BIGUNION_PAIR]
-   >> MATCH_MP_TAC COUNTABLE_BIGUNION
-   >> (RW_TAC std_ss [IN_INSERT, NOT_IN_EMPTY]
-       >> RW_TAC std_ss [])
-   >> MATCH_MP_TAC finite_countable
-   >> RW_TAC std_ss [FINITE_INSERT, FINITE_EMPTY]);
-
 val ENUMERATE = store_thm
   ("ENUMERATE",
    ``!s. (?f : num -> 'a. BIJ f UNIV s) = BIJ (enumerate s) UNIV s``,
@@ -557,7 +517,7 @@ val COUNTABLE_ENUM = store_thm
    ``!c. countable c = (c = {}) \/ (?f : num -> 'a. c = IMAGE f UNIV)``,
    RW_TAC std_ss []
    >> REVERSE EQ_TAC
-   >- (NTAC 2 (RW_TAC std_ss [COUNTABLE_EMPTY])
+   >- (NTAC 2 (RW_TAC std_ss [countable_EMPTY])
        >> RW_TAC std_ss [countable_alt]
        >> Q.EXISTS_TAC `f`
        >> RW_TAC std_ss [IN_IMAGE, IN_UNIV]

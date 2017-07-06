@@ -5461,11 +5461,6 @@ val finite_countable = store_thm (* from util_prob *)
    >> Q.EXISTS_TAC `SUC n`
    >> RW_TAC std_ss [SUC_SUB1]);
 
-val COUNTABLE_EMPTY = store_thm (* from util_prob *)
-  ("COUNTABLE_EMPTY",
-   ``countable {}``,
-   PROVE_TAC [finite_countable, FINITE_EMPTY]);
-
 val COUNTABLE_COUNT = store_thm (* from util_prob *)
   ("COUNTABLE_COUNT",
    ``!n. countable (count n)``,
@@ -5577,6 +5572,12 @@ val inj_image_countable_IFF = store_thm(
   ``INJ f s (IMAGE f s) ==> (countable (IMAGE f s) <=> countable s)``,
   SRW_TAC[][EQ_IMP_THM, image_countable] THEN
   METIS_TAC[countable_def, INJ_COMPOSE]);
+
+val BIJ_NUM_COUNTABLE = store_thm (* from util_prob *)
+  ("BIJ_NUM_COUNTABLE",
+   ``!s. (?f :num -> 'a. BIJ f UNIV s) ==> countable s``,
+   RW_TAC std_ss [countable_alt, BIJ_DEF, SURJ_DEF, IN_UNIV]
+   >> PROVE_TAC []);
 
 val pow_no_surj = Q.store_thm ("pow_no_surj",
 `!s. ~?f. SURJ f s (POW s)`,

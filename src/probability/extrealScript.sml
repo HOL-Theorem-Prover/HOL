@@ -3479,7 +3479,7 @@ val Q_not_infty = store_thm
 val Q_COUNTABLE = store_thm
   ("Q_COUNTABLE", ``countable Q_set``,
   RW_TAC std_ss [Q_set_def]
-  >> MATCH_MP_TAC COUNTABLE_UNION
+  >> MATCH_MP_TAC union_countable
   >> CONJ_TAC
   >- (RW_TAC std_ss [countable_alt]
       >> MP_TAC NUM_2D_BIJ_NZ_INV
@@ -3856,7 +3856,7 @@ val COUNTABLE_ENUM_Q = store_thm
    ``!c. countable c = (c = {}) \/ (?f:extreal->'a. c = IMAGE f Q_set)``,
   RW_TAC std_ss []
   >> REVERSE EQ_TAC
-  >- (NTAC 2 (RW_TAC std_ss [COUNTABLE_EMPTY])
+  >- (NTAC 2 (RW_TAC std_ss [countable_EMPTY])
       >> RW_TAC std_ss [image_countable, Q_COUNTABLE])
   >> REVERSE (RW_TAC std_ss [COUNTABLE_ALT])
   >- (DISJ2_TAC
@@ -3928,9 +3928,9 @@ val CROSS_COUNTABLE_LEMMA1 = store_thm
   >> Q.PAT_X_ASSUM `FINITE s` MP_TAC
   >> Q.SPEC_TAC (`s`, `s`)
   >> HO_MATCH_MP_TAC FINITE_INDUCT
-  >> RW_TAC std_ss [] >- METIS_TAC [CROSS_EMPTY,COUNTABLE_EMPTY]
+  >> RW_TAC std_ss [] >- METIS_TAC [CROSS_EMPTY, countable_EMPTY]
   >> RW_TAC std_ss [CROSS_EQNS]
-  >> MATCH_MP_TAC COUNTABLE_UNION
+  >> MATCH_MP_TAC union_countable
   >> RW_TAC std_ss []
   >> RW_TAC std_ss [image_countable]);
 
