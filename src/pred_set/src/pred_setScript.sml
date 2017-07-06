@@ -51,6 +51,7 @@ in
 end
 
 (* from util_prob *)
+fun K_TAC _ = ALL_TAC;
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
 
@@ -5573,12 +5574,6 @@ val inj_image_countable_IFF = store_thm(
   SRW_TAC[][EQ_IMP_THM, image_countable] THEN
   METIS_TAC[countable_def, INJ_COMPOSE]);
 
-val BIJ_NUM_COUNTABLE = store_thm (* from util_prob *)
-  ("BIJ_NUM_COUNTABLE",
-   ``!s. (?f :num -> 'a. BIJ f UNIV s) ==> countable s``,
-   RW_TAC std_ss [countable_alt, BIJ_DEF, SURJ_DEF, IN_UNIV]
-   >> PROVE_TAC []);
-
 val pow_no_surj = Q.store_thm ("pow_no_surj",
 `!s. ~?f. SURJ f s (POW s)`,
 RWTAC [SURJ_DEF, POW_DEF, METIS_PROVE [] ``a \/ b = ~a ==> b``] THEN
@@ -5659,6 +5654,129 @@ val countable_Uprod = store_thm(
   "countable_Uprod",
   ``countable univ(:'a # 'b) <=> countable univ(:'a) /\ countable univ(:'b)``,
   SIMP_TAC (srw_ss()) [CROSS_UNIV, cross_countable_IFF]);
+
+val EXPLICIT_ENUMERATE_MONO = store_thm (* from util_prob *)
+  ("EXPLICIT_ENUMERATE_MONO",
+   ``!n s. FUNPOW REST n s SUBSET s``,
+   Induct >- RW_TAC std_ss [FUNPOW, SUBSET_DEF]
+   >> RW_TAC std_ss [FUNPOW_SUC]
+   >> PROVE_TAC [SUBSET_TRANS, REST_SUBSET]);
+
+val EXPLICIT_ENUMERATE_NOT_EMPTY = store_thm (* from util_prob *)
+  ("EXPLICIT_ENUMERATE_NOT_EMPTY",
+   ``!n s. INFINITE s ==> ~(FUNPOW REST n s = {})``,
+   REWRITE_TAC []
+   >> Induct >- (RW_TAC std_ss [FUNPOW] >> PROVE_TAC [FINITE_EMPTY])
+   >> RW_TAC std_ss [FUNPOW]
+   >> Q.PAT_X_ASSUM `!s. P s` (MP_TAC o Q.SPEC `REST s`)
+   >> PROVE_TAC [FINITE_REST_EQ]);
+
+val INFINITE_EXPLICIT_ENUMERATE = store_thm (* from util_prob *)
+  ("INFINITE_EXPLICIT_ENUMERATE",
+   ``!s. INFINITE s ==> INJ (\n :num. CHOICE (FUNPOW REST n s)) UNIV s``,
+   RW_TAC std_ss [INJ_DEF, IN_UNIV]
+   >- (Suff `CHOICE (FUNPOW REST n s) IN FUNPOW REST n s`
+       >- PROVE_TAC [SUBSET_DEF, EXPLICIT_ENUMERATE_MONO]
+       >> RW_TAC std_ss [GSYM CHOICE_DEF, EXPLICIT_ENUMERATE_NOT_EMPTY])
+   >> rpt (POP_ASSUM MP_TAC)
+   >> Q.SPEC_TAC (`s`, `s`)
+   >> Q.SPEC_TAC (`n'`, `y`)
+   >> Q.SPEC_TAC (`n`, `x`)
+   >> (Induct >> Cases) >|
+   [PROVE_TAC [],
+    rpt STRIP_TAC
+    >> Suff `~(CHOICE (FUNPOW REST 0 s) IN FUNPOW REST (SUC n) s)`
+    >- (RW_TAC std_ss []
+        >> MATCH_MP_TAC CHOICE_DEF
+        >> PROVE_TAC [EXPLICIT_ENUMERATE_NOT_EMPTY])
+    >> POP_ASSUM K_TAC
+    >> RW_TAC std_ss [FUNPOW]
+    >> Suff `~(CHOICE s IN REST s)`
+    >- PROVE_TAC [SUBSET_DEF, EXPLICIT_ENUMERATE_MONO]
+    >> PROVE_TAC [CHOICE_NOT_IN_REST],
+    rpt STRIP_TAC
+    >> POP_ASSUM (ASSUME_TAC o ONCE_REWRITE_RULE [EQ_SYM_EQ])
+    >> Suff `~(CHOICE (FUNPOW REST 0 s) IN FUNPOW REST (SUC x) s)`
+    >- (RW_TAC std_ss []
+        >> MATCH_MP_TAC CHOICE_DEF
+        >> PROVE_TAC [EXPLICIT_ENUMERATE_NOT_EMPTY])
+    >> POP_ASSUM K_TAC
+    >> RW_TAC std_ss [FUNPOW]
+    >> Suff `~(CHOICE s IN REST s)`
+    >- PROVE_TAC [SUBSET_DEF, EXPLICIT_ENUMERATE_MONO]
+    >> PROVE_TAC [CHOICE_NOT_IN_REST],
+    RW_TAC std_ss [FUNPOW]
+    >> Q.PAT_X_ASSUM `!y. P y` (MP_TAC o Q.SPECL [`n`, `REST s`])
+    >> PROVE_TAC [FINITE_REST_EQ]]);
+
+val BIJ_NUM_COUNTABLE = store_thm (* from util_prob *)
+  ("BIJ_NUM_COUNTABLE",
+   ``!s. (?f :num -> 'a. BIJ f UNIV s) ==> countable s``,
+   RW_TAC std_ss [countable_alt, BIJ_DEF, SURJ_DEF, IN_UNIV]
+   >> PROVE_TAC []);
+
+(** enumerate functions as BIJ from univ(:num) to countable sets, from util_prob *)
+val enumerate_def = new_definition ("enumerate_def",
+  ``enumerate s = @f :num -> 'a. BIJ f UNIV s``);
+
+val ENUMERATE = store_thm (* from util_prob *)
+  ("ENUMERATE",
+   ``!s. (?f :num -> 'a. BIJ f UNIV s) = BIJ (enumerate s) UNIV s``,
+   RW_TAC std_ss [boolTheory.EXISTS_DEF, enumerate_def]);
+
+val COUNTABLE_ALT_BIJ = store_thm (* from util_prob *)
+  ("COUNTABLE_ALT_BIJ",
+   ``!s. countable s = FINITE s \/ BIJ (enumerate s) UNIV s``,
+   rpt STRIP_TAC
+   >> REVERSE EQ_TAC >- PROVE_TAC [finite_countable, BIJ_NUM_COUNTABLE]
+   >> RW_TAC std_ss [countable_alt]
+   >> Cases_on `FINITE s` >- PROVE_TAC []
+   >> RW_TAC std_ss [GSYM ENUMERATE]
+   >> MATCH_MP_TAC BIJ_INJ_SURJ
+   >> REVERSE CONJ_TAC
+   >- (Know `~(s = {})` >- PROVE_TAC [FINITE_EMPTY]
+       >> RW_TAC std_ss [GSYM MEMBER_NOT_EMPTY]
+       >> Q.EXISTS_TAC `\n. if f n IN s then f n else x`
+       >> RW_TAC std_ss [SURJ_DEF, IN_UNIV]
+       >> PROVE_TAC [])
+   >> MP_TAC (Q.SPEC `s` INFINITE_EXPLICIT_ENUMERATE)
+   >> RW_TAC std_ss []
+   >> PROVE_TAC []);
+
+val COUNTABLE_ENUM = store_thm (* from util_prob *)
+  ("COUNTABLE_ENUM",
+   ``!c. countable c = (c = {}) \/ (?f :num -> 'a. c = IMAGE f UNIV)``,
+   RW_TAC std_ss []
+   >> REVERSE EQ_TAC
+   >- (NTAC 2 (RW_TAC std_ss [countable_EMPTY])
+       >> RW_TAC std_ss [countable_alt]
+       >> Q.EXISTS_TAC `f`
+       >> RW_TAC std_ss [IN_IMAGE, IN_UNIV]
+       >> PROVE_TAC [])
+   >> REVERSE (RW_TAC std_ss [COUNTABLE_ALT_BIJ])
+   >- (DISJ2_TAC
+       >> Q.EXISTS_TAC `enumerate c`
+       >> POP_ASSUM MP_TAC
+       >> RW_TAC std_ss [IN_UNIV, IN_IMAGE, BIJ_DEF, SURJ_DEF, EXTENSION]
+       >> PROVE_TAC [])
+   >> POP_ASSUM MP_TAC
+   >> Q.SPEC_TAC (`c`, `c`)
+   >> HO_MATCH_MP_TAC FINITE_INDUCT
+   >> RW_TAC std_ss []
+   >- (DISJ2_TAC
+       >> Q.EXISTS_TAC `K e`
+       >> RW_TAC std_ss [EXTENSION, IN_SING, IN_IMAGE, IN_UNIV, combinTheory.K_THM])
+   >> DISJ2_TAC
+   >> Q.EXISTS_TAC `\n. num_CASE n e f`
+   >> RW_TAC std_ss [IN_INSERT, IN_IMAGE, EXTENSION, IN_UNIV]
+   >> EQ_TAC >|
+   [RW_TAC std_ss [] >|
+    [Q.EXISTS_TAC `0`
+     >> RW_TAC std_ss [num_case_def],
+     Q.EXISTS_TAC `SUC x'`
+     >> RW_TAC std_ss [num_case_def]],
+    RW_TAC std_ss [] >>
+    METIS_TAC [num_case_def, TypeBase.nchotomy_of ``:num``]]);
 
 (* END countability theorems *)
 

@@ -3858,11 +3858,11 @@ val COUNTABLE_ENUM_Q = store_thm
   >> REVERSE EQ_TAC
   >- (NTAC 2 (RW_TAC std_ss [countable_EMPTY])
       >> RW_TAC std_ss [image_countable, Q_COUNTABLE])
-  >> REVERSE (RW_TAC std_ss [COUNTABLE_ALT])
+  >> REVERSE (RW_TAC std_ss [COUNTABLE_ALT_BIJ])
   >- (DISJ2_TAC
       >> `countable Q_set` by RW_TAC std_ss [Q_COUNTABLE]
       >> `~(FINITE Q_set)` by RW_TAC std_ss [Q_INFINITE]
-      >> (MP_TAC o Q.SPEC `Q_set`) (INST_TYPE [alpha |-> ``:extreal``] COUNTABLE_ALT)
+      >> (MP_TAC o Q.SPEC `Q_set`) (INST_TYPE [alpha |-> ``:extreal``] COUNTABLE_ALT_BIJ)
       >> RW_TAC std_ss []
       >> (MP_TAC o Q.SPECL [`enumerate Q_set`,`UNIV`,`Q_set`]) (INST_TYPE [alpha |-> ``:num``, ``:'b`` |-> ``:extreal``] BIJ_INV)
       >> (MP_TAC o Q.SPECL [`enumerate c`,`UNIV`,`c`]) (INST_TYPE [alpha |-> ``:num``, ``:'b`` |-> ``:'a``] BIJ_INV)
@@ -3953,8 +3953,8 @@ val CROSS_COUNTABLE = store_thm
   RW_TAC std_ss []
   >> Cases_on `FINITE s` >- METIS_TAC [CROSS_COUNTABLE_LEMMA1]
   >> Cases_on `FINITE t` >- METIS_TAC [CROSS_COUNTABLE_LEMMA2]
-  >> `BIJ (enumerate s) UNIV s` by METIS_TAC [COUNTABLE_ALT]
-  >> `BIJ (enumerate t) UNIV t` by METIS_TAC [COUNTABLE_ALT]
+  >> `BIJ (enumerate s) UNIV s` by METIS_TAC [COUNTABLE_ALT_BIJ]
+  >> `BIJ (enumerate t) UNIV t` by METIS_TAC [COUNTABLE_ALT_BIJ]
   >> Q.ABBREV_TAC `f = enumerate s`
   >> Q.ABBREV_TAC `g = enumerate t`
   >> `s CROSS t = IMAGE (\(x,y). (f x,g y)) (UNIV CROSS UNIV)`

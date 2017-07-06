@@ -489,7 +489,7 @@ val SIGMA_ALGEBRA_ALT = store_thm
        >> Q.EXISTS_TAC `f`
        >> RW_TAC std_ss []
        >> PROVE_TAC [])
-   >> RW_TAC std_ss [COUNTABLE_ALT]
+   >> RW_TAC std_ss [COUNTABLE_ALT_BIJ]
    >- PROVE_TAC [ALGEBRA_FINITE_UNION]
    >> Q.PAT_X_ASSUM `!f. P f` (MP_TAC o Q.SPEC `\n. enumerate c n`)
    >> RW_TAC std_ss' [IN_UNIV, IN_FUNSET]
@@ -1543,7 +1543,7 @@ val SIGMA_ALGEBRA = store_thm
    >> EQ_TAC >- PROVE_TAC []
    >> RW_TAC std_ss []
    >> Q.PAT_X_ASSUM `!c. P c` (MP_TAC o Q.SPEC `{s; t}`)
-   >> RW_TAC std_ss [COUNTABLE_ALT, FINITE_INSERT, FINITE_EMPTY, SUBSET_DEF,
+   >> RW_TAC std_ss [COUNTABLE_ALT_BIJ, FINITE_INSERT, FINITE_EMPTY, SUBSET_DEF,
                      BIGUNION_PAIR, IN_INSERT, NOT_IN_EMPTY]
    >> PROVE_TAC []);
 
