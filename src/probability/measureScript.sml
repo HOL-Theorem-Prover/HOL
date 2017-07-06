@@ -2300,7 +2300,7 @@ val MEASUBABLE_BIGUNION_LEMMA = store_thm
    >> REVERSE CONJ_TAC
    >- (Q.PAT_X_ASSUM `!c. countable c /\ c SUBSET subsets b ==> BIGUNION c IN subsets b`
            MATCH_MP_TAC
-       >> RW_TAC std_ss [COUNTABLE_IMAGE, SUBSET_DEF, IN_IMAGE]
+       >> RW_TAC std_ss [image_countable, SUBSET_DEF, IN_IMAGE]
        >> Suff `(\x''. x'' IN subsets b) (@x''. x'' IN subsets b /\ (PREIMAGE f x'' = x'))`
        >- RW_TAC std_ss []
        >> MATCH_MP_TAC SELECT_ELIM_THM
@@ -2409,7 +2409,7 @@ val MEASURABLE_SIGMA = store_thm
 	   >> RW_TAC std_ss []
            >> Q.PAT_X_ASSUM `!c. countable c /\ c SUBSET subsets a ==>
 	         BIGUNION c IN subsets a` MATCH_MP_TAC
-           >> RW_TAC std_ss [COUNTABLE_IMAGE, SUBSET_DEF, IN_IMAGE]
+           >> RW_TAC std_ss [image_countable, SUBSET_DEF, IN_IMAGE]
 	   >> PROVE_TAC [],
 	   PROVE_TAC []])
    >> RW_TAC std_ss [SUBSET_DEF, GSPECIFICATION]);
@@ -2766,7 +2766,7 @@ val MEASURABLE_POW_TO_POW_IMAGE = store_thm
 	     		(IMAGE f (m_space m), POW(IMAGE f (m_space m)))``,
    REPEAT STRIP_TAC
    >> (MP_TAC o Q.SPECL [`m`,`f`,`UNIV`]) MEASURABLE_RANGE_REDUCE
-   >> ASM_SIMP_TAC std_ss [UNIV_NEQ_EMPTY, INTER_UNIV, MEASURABLE_POW_TO_POW]);
+   >> ASM_SIMP_TAC std_ss [UNIV_NOT_EMPTY, INTER_UNIV, MEASURABLE_POW_TO_POW]);
 
 val MEASURE_SPACE_SUBSET = store_thm
   ("MEASURE_SPACE_SUBSET",
@@ -2977,7 +2977,7 @@ val SIGMA_ALGEBRA_FN_BIGINTER = store_thm
   >> `BIGUNION (IMAGE (\u. space a DIFF u) (IMAGE f UNIV)) IN subsets a`
         by (Q.PAT_X_ASSUM `!c. M ==> BIGUNION c IN subsets a` (MATCH_MP_TAC)
             >> RW_TAC std_ss []
-	    >- (MATCH_MP_TAC COUNTABLE_IMAGE
+	    >- (MATCH_MP_TAC image_countable
             	>> RW_TAC std_ss [COUNTABLE_ENUM]
             	>> Q.EXISTS_TAC `f`
             	>> RW_TAC std_ss [])
@@ -3113,7 +3113,7 @@ val BIGUNION_IMAGE_Q = store_thm
             ==> BIGUNION (IMAGE f Q_set) IN subsets a``,
    RW_TAC std_ss [SIGMA_ALGEBRA, IN_FUNSET, IN_UNIV, SUBSET_DEF]
    >> Q.PAT_X_ASSUM `!c. countable c /\ P c ==> Q c` MATCH_MP_TAC
-   >> RW_TAC std_ss [COUNTABLE_IMAGE, IN_IMAGE,Q_COUNTABLE]
+   >> RW_TAC std_ss [image_countable, IN_IMAGE, Q_COUNTABLE]
    >> METIS_TAC []);
 
 

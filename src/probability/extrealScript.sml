@@ -3857,7 +3857,7 @@ val COUNTABLE_ENUM_Q = store_thm
   RW_TAC std_ss []
   >> REVERSE EQ_TAC
   >- (NTAC 2 (RW_TAC std_ss [COUNTABLE_EMPTY])
-      >> RW_TAC std_ss [COUNTABLE_IMAGE,Q_COUNTABLE])
+      >> RW_TAC std_ss [image_countable, Q_COUNTABLE])
   >> REVERSE (RW_TAC std_ss [COUNTABLE_ALT])
   >- (DISJ2_TAC
       >> `countable Q_set` by RW_TAC std_ss [Q_COUNTABLE]
@@ -3932,7 +3932,7 @@ val CROSS_COUNTABLE_LEMMA1 = store_thm
   >> RW_TAC std_ss [CROSS_EQNS]
   >> MATCH_MP_TAC COUNTABLE_UNION
   >> RW_TAC std_ss []
-  >> RW_TAC std_ss [COUNTABLE_IMAGE]);
+  >> RW_TAC std_ss [image_countable]);
 
 val CROSS_COUNTABLE_LEMMA2 = store_thm
   ("CROSS_COUNTABLE_LEMMA2", ``!s. countable s /\ countable t /\ FINITE t
@@ -3946,7 +3946,7 @@ val CROSS_COUNTABLE_LEMMA2 = store_thm
 	        >> RW_TAC std_ss [])
             >> RW_TAC std_ss [] >- RW_TAC std_ss []
             >> RW_TAC std_ss [])
-  >> METIS_TAC [COUNTABLE_IMAGE,CROSS_COUNTABLE_LEMMA1]);
+  >> METIS_TAC [image_countable, CROSS_COUNTABLE_LEMMA1]);
 
 val CROSS_COUNTABLE = store_thm
  ("CROSS_COUNTABLE", ``!s. countable s /\ countable t ==> countable (s CROSS t)``,
@@ -3974,7 +3974,7 @@ val CROSS_COUNTABLE = store_thm
      	    >> Cases_on `x'`
 	    >> RW_TAC std_ss []
 	    >> FULL_SIMP_TAC std_ss [BIJ_DEF,SURJ_DEF,INJ_DEF,IN_UNIV])
-  >> METIS_TAC [CROSS_COUNTABLE_UNIV,COUNTABLE_IMAGE]);
+  >> METIS_TAC [CROSS_COUNTABLE_UNIV, image_countable]);
 
 val open_interval_def = Define
     `open_interval a b = {x | a < x /\ x < b}`;
@@ -3998,6 +3998,6 @@ val COUNTABLE_RATIONAL_INTERVALS = store_thm
 	 >> Q.EXISTS_TAC `x'`
 	 >> Cases_on `x'`
 	 >> FULL_SIMP_TAC std_ss [PAIR_EQ,EXTENSION])
-  >> METIS_TAC [CROSS_COUNTABLE,Q_COUNTABLE,COUNTABLE_IMAGE]);
+  >> METIS_TAC [CROSS_COUNTABLE,Q_COUNTABLE, image_countable]);
 
 val _ = export_theory();

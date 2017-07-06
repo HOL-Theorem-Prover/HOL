@@ -5441,24 +5441,47 @@ val countable_alt = store_thm ("countable_alt",
         (* goal 2.2 (of 2) *)
         PROVE_TAC [subset_countable] ] ]);
 
-val finite_countable = Q.store_thm ("finite_countable",
-`!s. FINITE s ==> countable s`,
-HO_MATCH_MP_TAC FINITE_INDUCT THEN
-RWTAC [countable_def] THEN
-FSTAC [INJ_DEF, IN_UNIV] THEN
-Q.EXISTS_TAC `\x. if x IN s then f x else SUC (MAX_SET (IMAGE f s))` THEN
-RWTAC [] THEN
-`IMAGE f s <> {}` by (CCONTR_TAC THEN FSTAC [IMAGE_DEF])
-THENL [
-  `MAX_SET (IMAGE f s) IN IMAGE f s /\
-   (f x <= MAX_SET (IMAGE f s))`
-       by METIS_TAC [MAX_SET_DEF, IMAGE_FINITE, IN_IMAGE] THEN
-  METIS_TAC [DECIDE ``~(SUC x <= x)``],
-  `MAX_SET (IMAGE f s) IN IMAGE f s /\
-   (f y <= MAX_SET (IMAGE f s))`
-          by METIS_TAC [MAX_SET_DEF, IMAGE_FINITE, IN_IMAGE] THEN
-     METIS_TAC [DECIDE ``!x. ~(SUC x <= x)``]
-]);
+val COUNTABLE_SUBSET = store_thm (* from util_prob *)
+  ("COUNTABLE_SUBSET",
+   ``!s t. s SUBSET t /\ countable t ==> countable s``,
+   RW_TAC std_ss [countable_alt, SUBSET_DEF]
+   >> Q.EXISTS_TAC `f`
+   >> PROVE_TAC []);
+
+val finite_countable = store_thm (* from util_prob *)
+  ("finite_countable",
+   ``!s. FINITE s ==> countable s``,
+   REWRITE_TAC [countable_alt]
+   >> HO_MATCH_MP_TAC FINITE_INDUCT
+   >> RW_TAC std_ss [NOT_IN_EMPTY]
+   >> Q.EXISTS_TAC `\n. if n = 0 then e else f (n - 1)`
+   >> RW_TAC std_ss [IN_INSERT] >- PROVE_TAC []
+   >> Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
+   >> RW_TAC std_ss []
+   >> Q.EXISTS_TAC `SUC n`
+   >> RW_TAC std_ss [SUC_SUB1]);
+
+val COUNTABLE_EMPTY = store_thm (* from util_prob *)
+  ("COUNTABLE_EMPTY",
+   ``countable {}``,
+   PROVE_TAC [finite_countable, FINITE_EMPTY]);
+
+val COUNTABLE_COUNT = store_thm (* from util_prob *)
+  ("COUNTABLE_COUNT",
+   ``!n. countable (count n)``,
+   PROVE_TAC [FINITE_COUNT, finite_countable]);
+
+val COUNTABLE_NUM = store_thm (* from util_prob *)
+  ("COUNTABLE_NUM",
+   ``!s :num -> bool. countable s``,
+   RW_TAC std_ss [countable_alt]
+   >> Q.EXISTS_TAC `I`
+   >> RW_TAC std_ss [combinTheory.I_THM]);
+
+val COUNTABLE_IMAGE_NUM = store_thm (* from util_prob *)
+  ("COUNTABLE_IMAGE_NUM",
+   ``!f :num -> 'a. !s. countable (IMAGE f s)``,
+   PROVE_TAC [COUNTABLE_NUM, image_countable]);
 
 open numpairTheory
 
