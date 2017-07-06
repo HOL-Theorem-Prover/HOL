@@ -330,12 +330,6 @@ val IN_o = store_thm
    ``!x f s. x IN (s o f) = f x IN s``,
    RW_TAC std_ss [SPECIFICATION, o_THM]);
 
-val IMAGE_I = store_thm
-  ("IMAGE_I",
-   ``IMAGE I = I``,
-  RW_TAC std_ss [FUN_EQ_THM]
-  >> METIS_TAC [SPECIFICATION,IN_IMAGE,I_THM]);
-
 val IN_PROD_SETS = store_thm
   ("IN_PROD_SETS",
    ``!s a b. s IN prod_sets a b = ?t u. (s = t CROSS u) /\ t IN a /\ u IN b``,
@@ -344,52 +338,6 @@ val IN_PROD_SETS = store_thm
    >> RW_TAC std_ss []
    >> Q.EXISTS_TAC `(t, u)`
    >> RW_TAC std_ss []);
-
-val RES_BIJ_ALT = store_thm
-  ("RES_BIJ_ALT",
-   ``!f s t. BIJ f s t = f IN (s -> t) /\ (!y :: t. ?!x :: s. y = f x)``,
-   RW_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, RES_EXISTS_UNIQUE_ALT]
-   >> RESQ_TAC
-   >> RW_TAC std_ss [IN_FUNSET, IN_DFUNSET, GSYM CONJ_ASSOC]
-   >> Know `!a b c. (a ==> (b = c)) ==> (a /\ b = a /\ c)` >- PROVE_TAC []
-   >> DISCH_THEN MATCH_MP_TAC
-   >> REPEAT (STRIP_TAC ORELSE EQ_TAC) >|
-   [PROVE_TAC [],
-    Q.PAT_X_ASSUM `!x. P x`
-    (fn th =>
-     MP_TAC (Q.SPEC `(f:'a->'b) x` th)
-     >> MP_TAC (Q.SPEC `(f:'a->'b) y` th))
-    >> Cond >- PROVE_TAC []
-    >> STRIP_TAC
-    >> Cond >- PROVE_TAC []
-    >> STRIP_TAC
-    >> PROVE_TAC [],
-    PROVE_TAC [],
-    PROVE_TAC []]);
-
-val BIJ_FINITE_SUBSET = store_thm
-  ("BIJ_FINITE_SUBSET",
-   ``!(f : num -> 'a) s t.
-       BIJ f UNIV s /\ FINITE t /\ t SUBSET s ==>
-       ?N. !n. N <= n ==> ~(f n IN t)``,
-   RW_TAC std_ss []
-   >> POP_ASSUM MP_TAC
-   >> POP_ASSUM MP_TAC
-   >> Q.SPEC_TAC (`t`, `t`)
-   >> HO_MATCH_MP_TAC FINITE_INDUCT
-   >> RW_TAC std_ss [EMPTY_SUBSET, NOT_IN_EMPTY, INSERT_SUBSET, IN_INSERT]
-   >> Know `?!k. f k = e`
-   >- (Q.PAT_X_ASSUM `BIJ a b c` MP_TAC
-       >> RW_TAC std_ss [RES_BIJ_ALT, RES_EXISTS_UNIQUE_UNIV, RES_FORALL]
-       >> PROVE_TAC [])
-   >> CONV_TAC (DEPTH_CONV EXISTS_UNIQUE_CONV)
-   >> RW_TAC std_ss []
-   >> RES_TAC
-   >> Q.EXISTS_TAC `MAX N (SUC k)`
-   >> RW_TAC std_ss [MAX_LE_X]
-   >> STRIP_TAC
-   >> Know `n = k` >- PROVE_TAC []
-   >> DECIDE_TAC);
 
 val NUM_2D_BIJ_SMALL_SQUARE = store_thm
   ("NUM_2D_BIJ_SMALL_SQUARE",

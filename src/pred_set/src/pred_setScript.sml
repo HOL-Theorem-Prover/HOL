@@ -1582,6 +1582,12 @@ val IMAGE_I = store_thm("IMAGE_I[simp]",
   ``IMAGE I s = s``,
   full_simp_tac(srw_ss())[EXTENSION]);
 
+val IMAGE_II = store_thm (* from util_prob *)
+  ("IMAGE_II",
+   ``IMAGE I = I``,
+  RW_TAC std_ss [FUN_EQ_THM]
+  >> METIS_TAC [SPECIFICATION, IN_IMAGE, combinTheory.I_THM]);
+
 val o_THM = combinTheory.o_THM;
 
 val IMAGE_COMPOSE =
@@ -2975,6 +2981,32 @@ val BIJ_FINITE = store_thm(
     `!s. FINITE s ==> !f t. BIJ f s t ==> FINITE t` THEN1 METIS_TAC [] THEN
   Induct_on `FINITE s` THEN SRW_TAC[][BIJ_EMPTY, BIJ_INSERT] THEN
   METIS_TAC [FINITE_DELETE]);
+
+val BIJ_FINITE_SUBSET = store_thm (* from util_prob *)
+  ("BIJ_FINITE_SUBSET",
+   ``!(f : num -> 'a) s t.
+       BIJ f UNIV s /\ FINITE t /\ t SUBSET s ==>
+       ?N. !n. N <= n ==> ~(f n IN t)``,
+   RW_TAC std_ss []
+   >> POP_ASSUM MP_TAC
+   >> POP_ASSUM MP_TAC
+   >> Q.SPEC_TAC (`t`, `t`)
+   >> HO_MATCH_MP_TAC FINITE_INDUCT
+   >> RW_TAC std_ss [EMPTY_SUBSET, NOT_IN_EMPTY, INSERT_SUBSET, IN_INSERT]
+   >> Know `?!k. f k = e`
+   >- ( Q.PAT_X_ASSUM `BIJ a b c` MP_TAC \\
+        RW_TAC std_ss [BIJ_ALT] \\
+        ASSUME_TAC (INST_TYPE [``:'a`` |-> ``:num``] IN_UNIV) \\
+        PROVE_TAC [] )
+   >> CONV_TAC (DEPTH_CONV EXISTS_UNIQUE_CONV)
+   >> RW_TAC std_ss []
+   >> RES_TAC
+   >> Q.EXISTS_TAC `MAX N (SUC k)`
+   >> `!m n k. MAX m n <= k = m <= k /\ n <= k` by RW_TAC arith_ss [MAX_DEF]
+   >> RW_TAC std_ss []
+   >> STRIP_TAC
+   >> Know `n = k` >- PROVE_TAC []
+   >> DECIDE_TAC);
 
 val FINITE_BIJ = store_thm (* from util_prob *)
   ("FINITE_BIJ",
@@ -6084,7 +6116,7 @@ val PREIMAGE_DIFF = store_thm
 val PREIMAGE_I = store_thm
   ("PREIMAGE_I",
    ``PREIMAGE I = I``,
-  METIS_TAC [EXTENSION,IN_PREIMAGE, combinTheory.I_THM]);
+  METIS_TAC [EXTENSION, IN_PREIMAGE, combinTheory.I_THM]);
 
 val PREIMAGE_K = store_thm
   ("PREIMAGE_K",
