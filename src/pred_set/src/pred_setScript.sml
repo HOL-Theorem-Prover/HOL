@@ -54,6 +54,9 @@ end
 fun K_TAC _ = ALL_TAC;
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
+val Cond =
+    MATCH_MP_TAC (PROVE [] ``!a b c. a /\ (b ==> c) ==> ((a ==> b) ==> c)``) \\
+    CONJ_TAC;
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory.						*)
@@ -2051,6 +2054,43 @@ val BIJ_INJ_SURJ = store_thm
  >> CONJ_TAC >- PROVE_TAC []
  >> PROVE_TAC [SURJ_IMP_INJ]);
 
+val BIJ_ALT = store_thm (* from util_prob *)
+  ("BIJ_ALT",
+  ``!f s t. BIJ f s t = f IN (FUNSET s t) /\ (!y. y IN t ==> ?!x. x IN s /\ (y = f x))``,
+    RW_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, EXISTS_UNIQUE_ALT]
+ >> RW_TAC std_ss [IN_FUNSET, IN_DFUNSET, GSYM CONJ_ASSOC]
+ >> Know `!a b c. (a ==> (b = c)) ==> (a /\ b = a /\ c)` >- PROVE_TAC []
+ >> DISCH_THEN MATCH_MP_TAC
+ >> REPEAT (STRIP_TAC ORELSE EQ_TAC) (* 4 sub-goals here *)
+ >| [ (* goal 1 (of 4) *)
+      PROVE_TAC [],
+      (* goal 2 (of 4) *)
+      Q.PAT_X_ASSUM `!x. P x`
+	(fn th =>
+	    MP_TAC (Q.SPEC `(f :'a-> 'b) x` th) \\
+	    MP_TAC (Q.SPEC `(f:'a->'b) y` th)) \\
+	    Cond >- PROVE_TAC [] \\
+	    STRIP_TAC \\
+	    Cond >- PROVE_TAC [] \\
+	    STRIP_TAC >> PROVE_TAC [],
+      (* goal 3 (of 4) *)
+      PROVE_TAC [],
+      (* goal 4 (of 4) *)
+      PROVE_TAC [] ]);
+
+val BIJ_INSERT_IMP = store_thm (* from util_prob *)
+  ("BIJ_INSERT_IMP",
+  ``!f e s t.
+       ~(e IN s) /\ BIJ f (e INSERT s) t ==>
+       ?u. (f e INSERT u = t) /\ ~(f e IN u) /\ BIJ f s u``,
+    RW_TAC std_ss [BIJ_ALT]
+ >> Q.EXISTS_TAC `t DELETE f e`
+ >> FULL_SIMP_TAC std_ss [IN_FUNSET, INSERT_DELETE, ELT_IN_DELETE, IN_INSERT,
+			  DISJ_IMP_THM]
+ >> SIMP_TAC std_ss [IN_DELETE]
+ >> REPEAT STRIP_TAC (* 3 sub-goals here *)
+ >> METIS_TAC [IN_INSERT]);
+
 (* ===================================================================== *)
 (* Left and right inverses.						 *)
 (* ===================================================================== *)
@@ -2157,9 +2197,10 @@ METIS_TAC []);
 
 val BIJ_INSERT = store_thm(
   "BIJ_INSERT",
-  ``BIJ f (e INSERT s) t <=>
+  ``!f e s t. BIJ f (e INSERT s) t <=>
       e NOTIN s /\ f e IN t /\ BIJ f s (t DELETE f e) \/
       e IN s /\ BIJ f s t``,
+  REPEAT GEN_TAC THEN
   Cases_on `e IN s` THEN1
     (SRW_TAC [][ABSORPTION |> SPEC_ALL |> EQ_IMP_RULE |> #1]) THEN
   SRW_TAC [][] THEN SRW_TAC [][BIJ_IFF_INV] THEN EQ_TAC THENL [
@@ -2935,6 +2976,29 @@ val BIJ_FINITE = store_thm(
   Induct_on `FINITE s` THEN SRW_TAC[][BIJ_EMPTY, BIJ_INSERT] THEN
   METIS_TAC [FINITE_DELETE]);
 
+val FINITE_BIJ = store_thm (* from util_prob *)
+  ("FINITE_BIJ",
+  ``!f s t. FINITE s /\ BIJ f s t ==> FINITE t /\ (CARD s = CARD t)``,
+    Suff `!s. FINITE s ==> !f t. BIJ f s t ==> FINITE t /\ (CARD s = CARD t)`
+ >- PROVE_TAC []
+ >> HO_MATCH_MP_TAC FINITE_INDUCT
+ >> CONJ_TAC
+ >- ( RW_TAC std_ss [BIJ_ALT, FINITE_EMPTY, CARD_EMPTY, IN_FUNSET, NOT_IN_EMPTY,
+		     EXISTS_UNIQUE_ALT] \\ (* 2 sub-goals here, same tacticals *)
+      FULL_SIMP_TAC std_ss [NOT_IN_EMPTY] \\
+      `t = {}` by RW_TAC std_ss [EXTENSION, NOT_IN_EMPTY] \\
+      RW_TAC std_ss [FINITE_EMPTY, CARD_EMPTY] )
+ >> NTAC 7 STRIP_TAC
+ >> MP_TAC (Q.SPECL [`f`, `e`, `s`, `t`] BIJ_INSERT_IMP)
+ >> ASM_REWRITE_TAC []
+ >> STRIP_TAC
+ >> Know `FINITE u` >- PROVE_TAC []
+ >> STRIP_TAC
+ >> CONJ_TAC >- PROVE_TAC [FINITE_INSERT]
+ >> Q.PAT_X_ASSUM `f e INSERT u = t` (fn th => RW_TAC std_ss [SYM th])
+ >> RW_TAC std_ss [CARD_INSERT]
+ >> PROVE_TAC []);
+
 val FINITE_BIJ_CARD_EQ = Q.store_thm
 ("FINITE_BIJ_CARD_EQ",
  `!S. FINITE S ==> !t f. BIJ f S t /\ FINITE t ==> (CARD S = CARD t)`,
@@ -3082,6 +3146,24 @@ val COUNT_11 = store_thm(
              arithmeticTheory.LESS_EQ_REFL,
              arithmeticTheory.LESS_EQUAL_ANTISYM]);
 val _ = export_rewrites ["COUNT_11"]
+
+val FINITE_BIJ_COUNT = store_thm (* from util_prob *)
+  ("FINITE_BIJ_COUNT",
+   ``!s. FINITE s = ?c n. BIJ c (count n) s``,
+   RW_TAC std_ss []
+   >> REVERSE EQ_TAC >- PROVE_TAC [FINITE_COUNT, FINITE_BIJ]
+   >> Q.SPEC_TAC (`s`, `s`)
+   >> HO_MATCH_MP_TAC FINITE_INDUCT
+   >> RW_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, NOT_IN_EMPTY]
+   >- (Q.EXISTS_TAC `c`
+       >> Q.EXISTS_TAC `0`
+       >> RW_TAC std_ss [COUNT_ZERO, NOT_IN_EMPTY])
+   >> Q.EXISTS_TAC `\m. if m = n then e else c m`
+   >> Q.EXISTS_TAC `SUC n`
+   >> Know `!x. x IN count n ==> ~(x = n)`
+   >- RW_TAC arith_ss [IN_COUNT]
+   >> RW_TAC std_ss [COUNT_SUC, IN_INSERT]
+   >> PROVE_TAC []);
 
 (* =====================================================================*)
 (* Infiniteness								*)
@@ -5422,8 +5504,9 @@ METIS_TAC []);
 
 (* an alternative definition from util_probTheory *)
 val COUNTABLE_ALT = store_thm ("COUNTABLE_ALT",
-  ``countable s = ?f. !x : 'a. x IN s ==> ?n :num. f n = x``,
-    EQ_TAC (* 2 sub-goals here *)
+  ``!s. countable s = ?f. !x : 'a. x IN s ==> ?n :num. f n = x``,
+    GEN_TAC
+ >> EQ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       REWRITE_TAC [countable_surj] \\
       rpt STRIP_TAC >- RW_TAC std_ss [NOT_IN_EMPTY] \\

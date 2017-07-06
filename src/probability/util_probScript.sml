@@ -431,8 +431,8 @@ val PREIMAGE_CROSS = store_thm
        PREIMAGE (FST o f) a INTER PREIMAGE (SND o f) b``,
    RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_CROSS, IN_INTER, o_THM]);
 
-val BIJ_ALT = store_thm
-  ("BIJ_ALT",
+val RES_BIJ_ALT = store_thm
+  ("RES_BIJ_ALT",
    ``!f s t. BIJ f s t = f IN (s -> t) /\ (!y :: t. ?!x :: s. y = f x)``,
    RW_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, RES_EXISTS_UNIQUE_ALT]
    >> RESQ_TAC
@@ -466,7 +466,7 @@ val BIJ_FINITE_SUBSET = store_thm
    >> RW_TAC std_ss [EMPTY_SUBSET, NOT_IN_EMPTY, INSERT_SUBSET, IN_INSERT]
    >> Know `?!k. f k = e`
    >- (Q.PAT_X_ASSUM `BIJ a b c` MP_TAC
-       >> RW_TAC std_ss [BIJ_ALT, RES_EXISTS_UNIQUE_UNIV, RES_FORALL]
+       >> RW_TAC std_ss [RES_BIJ_ALT, RES_EXISTS_UNIQUE_UNIV, RES_FORALL]
        >> PROVE_TAC [])
    >> CONV_TAC (DEPTH_CONV EXISTS_UNIQUE_CONV)
    >> RW_TAC std_ss []
@@ -610,68 +610,6 @@ val PREIMAGE_REAL_COMPL4 = store_thm
   ("PREIMAGE_REAL_COMPL4", ``!c:real. COMPL {x | x < c} = {x | c <= x}``,
   RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION]
   >> RW_TAC real_ss [GSPECIFICATION,GSYM real_lte,SPECIFICATION]);
-
-val DELETE_THEN_INSERT = store_thm
-  ("DELETE_THEN_INSERT",
-   ``!s. !x :: s. x INSERT (s DELETE x) = s``,
-   RESQ_TAC
-   >> RW_TAC std_ss [INSERT_DELETE]);
-
-val BIJ_INSERT = store_thm
-  ("BIJ_INSERT",
-   ``!f e s t.
-       ~(e IN s) /\ BIJ f (e INSERT s) t ==>
-       ?u. (f e INSERT u = t) /\ ~(f e IN u) /\ BIJ f s u``,
-   RW_TAC std_ss [BIJ_ALT]
-   >> Q.EXISTS_TAC `t DELETE f e`
-   >> FULL_SIMP_TAC std_ss [IN_FUNSET, DELETE_THEN_INSERT, ELT_IN_DELETE, IN_INSERT,
-              DISJ_IMP_THM]
-   >> RESQ_TAC
-   >> SIMP_TAC std_ss [IN_DELETE]
-   >> REPEAT STRIP_TAC
-   >> METIS_TAC [IN_INSERT]);
-
-val FINITE_BIJ = store_thm
-  ("FINITE_BIJ",
-   ``!f s t. FINITE s /\ BIJ f s t ==> FINITE t /\ (CARD s = CARD t)``,
-   Suff `!s. FINITE s ==> !f t. BIJ f s t ==> FINITE t /\ (CARD s = CARD t)`
-   >- PROVE_TAC []
-   >> HO_MATCH_MP_TAC FINITE_INDUCT
-   >> CONJ_TAC >-
-	(RW_TAC std_ss [BIJ_ALT, FINITE_EMPTY, CARD_EMPTY, IN_FUNSET, NOT_IN_EMPTY]
-	 >> RESQ_TAC
-	 >> FULL_SIMP_TAC std_ss [NOT_IN_EMPTY]
-	 >> `t = {}`
-		by RW_TAC std_ss [EXTENSION, NOT_IN_EMPTY]
-	 >> RW_TAC std_ss [FINITE_EMPTY, CARD_EMPTY])
-   >> NTAC 7 STRIP_TAC
-   >> MP_TAC (Q.SPECL [`f`, `e`, `s`, `t`] BIJ_INSERT)
-   >> ASM_REWRITE_TAC []
-   >> STRIP_TAC
-   >> Know `FINITE u` >- PROVE_TAC []
-   >> STRIP_TAC
-   >> CONJ_TAC >- PROVE_TAC [FINITE_INSERT]
-   >> Q.PAT_X_ASSUM `f e INSERT u = t` (fn th => RW_TAC std_ss [SYM th])
-   >> RW_TAC std_ss [CARD_INSERT]
-   >> PROVE_TAC []);
-
-val FINITE_BIJ_COUNT = store_thm
-  ("FINITE_BIJ_COUNT",
-   ``!s. FINITE s = ?c n. BIJ c (count n) s``,
-   RW_TAC std_ss []
-   >> REVERSE EQ_TAC >- PROVE_TAC [FINITE_COUNT, FINITE_BIJ]
-   >> Q.SPEC_TAC (`s`, `s`)
-   >> HO_MATCH_MP_TAC FINITE_INDUCT
-   >> RW_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, NOT_IN_EMPTY]
-   >- (Q.EXISTS_TAC `c`
-       >> Q.EXISTS_TAC `0`
-       >> RW_TAC std_ss [COUNT_ZERO, NOT_IN_EMPTY])
-   >> Q.EXISTS_TAC `\m. if m = n then e else c m`
-   >> Q.EXISTS_TAC `SUC n`
-   >> Know `!x. x IN count n ==> ~(x = n)`
-   >- RW_TAC arith_ss [IN_COUNT]
-   >> RW_TAC std_ss [COUNT_SUC, IN_INSERT]
-   >> PROVE_TAC []);
 
 val GBIGUNION_IMAGE = store_thm
   ("GBIGUNION_IMAGE",
