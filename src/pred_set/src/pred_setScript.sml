@@ -3772,6 +3772,12 @@ val BIGUNION_SING = Q.store_thm
   SIMP_TAC bool_ss [EXTENSION, IN_BIGUNION, IN_INSERT, NOT_IN_EMPTY] THEN
   SIMP_TAC bool_ss [GSYM EXTENSION]);
 
+val BIGUNION_PAIR = store_thm (* from util_prob *)
+  ("BIGUNION_PAIR",
+   ``!s t. BIGUNION {s; t} = s UNION t``,
+   RW_TAC std_ss [EXTENSION, IN_BIGUNION, IN_UNION, IN_INSERT, NOT_IN_EMPTY]
+   >> PROVE_TAC []);
+
 val BIGUNION_UNION = Q.store_thm
 ("BIGUNION_UNION",
  `!s1 s2. BIGUNION (s1 UNION s2) = (BIGUNION s1) UNION (BIGUNION s2)`,
@@ -6013,6 +6019,104 @@ val in_max_set = Q.store_thm ("in_max_set",
  SRW_TAC [] []);
 
 (* end CakeML lemmas *)
+
+(*---------------------------------------------------------------------------*)
+(* PREIMAGE lemmas from util_probTheory                                      *)
+(*---------------------------------------------------------------------------*)
+
+val PREIMAGE_def = new_definition (
+   "PREIMAGE_def", ``PREIMAGE f s = {x | f x IN s}``);
+
+val PREIMAGE_ALT = store_thm
+  ("PREIMAGE_ALT",
+  ``!f s. PREIMAGE f s = s o f``,
+    Know `!x f s. x IN (s o f) = f x IN s`
+ >- RW_TAC std_ss [SPECIFICATION, combinTheory.o_THM]
+ >> RW_TAC std_ss [PREIMAGE_def, EXTENSION, GSPECIFICATION]);
+
+val IN_PREIMAGE = store_thm
+  ("IN_PREIMAGE",
+   ``!f s x. x IN PREIMAGE f s = f x IN s``,
+   RW_TAC std_ss [PREIMAGE_def, GSPECIFICATION]);
+
+val PREIMAGE_EMPTY = store_thm
+  ("PREIMAGE_EMPTY",
+   ``!f. PREIMAGE f {} = {}``,
+   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, NOT_IN_EMPTY]);
+
+val PREIMAGE_UNIV = store_thm
+  ("PREIMAGE_UNIV",
+   ``!f. PREIMAGE f UNIV = UNIV``,
+   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_UNIV]);
+
+val PREIMAGE_COMPL = store_thm
+  ("PREIMAGE_COMPL",
+   ``!f s. PREIMAGE f (COMPL s) = COMPL (PREIMAGE f s)``,
+   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_COMPL]);
+
+val PREIMAGE_UNION = store_thm
+  ("PREIMAGE_UNION",
+   ``!f s t. PREIMAGE f (s UNION t) = PREIMAGE f s UNION PREIMAGE f t``,
+   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_UNION]);
+
+val PREIMAGE_INTER = store_thm
+  ("PREIMAGE_INTER",
+   ``!f s t. PREIMAGE f (s INTER t) = PREIMAGE f s INTER PREIMAGE f t``,
+   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_INTER]);
+
+val PREIMAGE_BIGUNION = store_thm
+  ("PREIMAGE_BIGUNION",
+   ``!f s. PREIMAGE f (BIGUNION s) = BIGUNION (IMAGE (PREIMAGE f) s)``,
+   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_BIGUNION_IMAGE]
+   >> RW_TAC std_ss [IN_BIGUNION]
+   >> PROVE_TAC []);
+
+val PREIMAGE_COMP = store_thm
+  ("PREIMAGE_COMP",
+   ``!f g s. PREIMAGE f (PREIMAGE g s) = PREIMAGE (g o f) s``,
+   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, o_THM]);
+
+val PREIMAGE_DIFF = store_thm
+  ("PREIMAGE_DIFF",
+   ``!f s t. PREIMAGE f (s DIFF t) = PREIMAGE f s DIFF PREIMAGE f t``,
+   RW_TAC std_ss [Once EXTENSION, IN_PREIMAGE, IN_DIFF]);
+
+val PREIMAGE_I = store_thm
+  ("PREIMAGE_I",
+   ``PREIMAGE I = I``,
+  METIS_TAC [EXTENSION,IN_PREIMAGE, combinTheory.I_THM]);
+
+val PREIMAGE_K = store_thm
+  ("PREIMAGE_K",
+   ``!x s. PREIMAGE (K x) s = if x IN s then UNIV else {}``,
+   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, combinTheory.K_THM, IN_UNIV, NOT_IN_EMPTY]);
+
+val PREIMAGE_DISJOINT = store_thm
+  ("PREIMAGE_DISJOINT",
+   ``!f s t. DISJOINT s t ==> DISJOINT (PREIMAGE f s) (PREIMAGE f t)``,
+   RW_TAC std_ss [DISJOINT_DEF, GSYM PREIMAGE_INTER, PREIMAGE_EMPTY]);
+
+val PREIMAGE_SUBSET = store_thm
+  ("PREIMAGE_SUBSET",
+   ``!f s t. s SUBSET t ==> PREIMAGE f s SUBSET PREIMAGE f t``,
+   RW_TAC std_ss [SUBSET_DEF, PREIMAGE_def, GSPECIFICATION]);
+
+val PREIMAGE_CROSS = store_thm
+  ("PREIMAGE_CROSS",
+   ``!f a b.
+       PREIMAGE f (a CROSS b) =
+       PREIMAGE (FST o f) a INTER PREIMAGE (SND o f) b``,
+   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_CROSS, IN_INTER, o_THM]);
+
+val PREIMAGE_COMPL_INTER = store_thm
+  ("PREIMAGE_COMPL_INTER", ``!f t sp. PREIMAGE f (COMPL t) INTER sp = sp DIFF (PREIMAGE f t)``,
+  RW_TAC std_ss [COMPL_DEF]
+  >> MP_TAC (REWRITE_RULE [PREIMAGE_UNIV] (Q.SPECL [`f`,`UNIV`,`t`] PREIMAGE_DIFF))
+  >> STRIP_TAC
+  >> `(PREIMAGE f (UNIV DIFF t)) INTER sp = (UNIV DIFF PREIMAGE f t) INTER sp` by METIS_TAC []
+  >> METIS_TAC [DIFF_INTER,INTER_UNIV]);
+
+(* end PREIMAGE lemmas *)
 
 val _ = export_rewrites
     [

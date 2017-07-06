@@ -318,13 +318,6 @@ val NUM_2D_BIJ_NZ_ALT2_INV = store_thm
        (((UNIV : num -> bool) DIFF {0}) CROSS ((UNIV : num -> bool) DIFF {0}))``,
    PROVE_TAC [NUM_2D_BIJ_NZ_ALT2, BIJ_SYM]);
 
-val BIGUNION_PAIR = store_thm
-  ("BIGUNION_PAIR",
-   ``!s t. BIGUNION {s; t} = s UNION t``,
-   RW_TAC std_ss [EXTENSION, IN_BIGUNION, IN_UNION, IN_INSERT, NOT_IN_EMPTY]
-   >> PROVE_TAC []);
-
-val PREIMAGE_def = Define `PREIMAGE f s = {x | f x IN s}`;
 val prod_sets_def = Define `prod_sets a b = {s CROSS t | s IN a /\ t IN b}`;
 
 val K_PARTIAL = store_thm
@@ -337,83 +330,11 @@ val IN_o = store_thm
    ``!x f s. x IN (s o f) = f x IN s``,
    RW_TAC std_ss [SPECIFICATION, o_THM]);
 
-val PREIMAGE_ALT = store_thm
-  ("PREIMAGE_ALT",
-   ``!f s. PREIMAGE f s = s o f``,
-   RW_TAC std_ss [PREIMAGE_def, EXTENSION, GSPECIFICATION, IN_o]);
-
-val IN_PREIMAGE = store_thm
-  ("IN_PREIMAGE",
-   ``!f s x. x IN PREIMAGE f s = f x IN s``,
-   RW_TAC std_ss [PREIMAGE_def, GSPECIFICATION]);
-
-val PREIMAGE_EMPTY = store_thm
-  ("PREIMAGE_EMPTY",
-   ``!f. PREIMAGE f {} = {}``,
-   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, NOT_IN_EMPTY]);
-
-val PREIMAGE_UNIV = store_thm
-  ("PREIMAGE_UNIV",
-   ``!f. PREIMAGE f UNIV = UNIV``,
-   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_UNIV]);
-
-val PREIMAGE_COMPL = store_thm
-  ("PREIMAGE_COMPL",
-   ``!f s. PREIMAGE f (COMPL s) = COMPL (PREIMAGE f s)``,
-   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_COMPL]);
-
-val PREIMAGE_UNION = store_thm
-  ("PREIMAGE_UNION",
-   ``!f s t. PREIMAGE f (s UNION t) = PREIMAGE f s UNION PREIMAGE f t``,
-   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_UNION]);
-
-val PREIMAGE_INTER = store_thm
-  ("PREIMAGE_INTER",
-   ``!f s t. PREIMAGE f (s INTER t) = PREIMAGE f s INTER PREIMAGE f t``,
-   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_INTER]);
-
-val PREIMAGE_BIGUNION = store_thm
-  ("PREIMAGE_BIGUNION",
-   ``!f s. PREIMAGE f (BIGUNION s) = BIGUNION (IMAGE (PREIMAGE f) s)``,
-   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_BIGUNION_IMAGE]
-   >> RW_TAC std_ss [IN_BIGUNION]
-   >> PROVE_TAC []);
-
-val PREIMAGE_COMP = store_thm
-  ("PREIMAGE_COMP",
-   ``!f g s. PREIMAGE f (PREIMAGE g s) = PREIMAGE (g o f) s``,
-   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, o_THM]);
-
-val PREIMAGE_DIFF = store_thm
-  ("PREIMAGE_DIFF",
-   ``!f s t. PREIMAGE f (s DIFF t) = PREIMAGE f s DIFF PREIMAGE f t``,
-   RW_TAC std_ss [Once EXTENSION, IN_PREIMAGE, IN_DIFF]);
-
-val PREIMAGE_I = store_thm
-  ("PREIMAGE_I",
-   ``PREIMAGE I = I``,
-  METIS_TAC [EXTENSION,IN_PREIMAGE, I_THM]);
-
 val IMAGE_I = store_thm
   ("IMAGE_I",
    ``IMAGE I = I``,
   RW_TAC std_ss [FUN_EQ_THM]
   >> METIS_TAC [SPECIFICATION,IN_IMAGE,I_THM]);
-
-val PREIMAGE_K = store_thm
-  ("PREIMAGE_K",
-   ``!x s. PREIMAGE (K x) s = if x IN s then UNIV else {}``,
-   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, K_THM, IN_UNIV, NOT_IN_EMPTY]);
-
-val PREIMAGE_DISJOINT = store_thm
-  ("PREIMAGE_DISJOINT",
-   ``!f s t. DISJOINT s t ==> DISJOINT (PREIMAGE f s) (PREIMAGE f t)``,
-   RW_TAC std_ss [DISJOINT_DEF, GSYM PREIMAGE_INTER, PREIMAGE_EMPTY]);
-
-val PREIMAGE_SUBSET = store_thm
-  ("PREIMAGE_SUBSET",
-   ``!f s t. s SUBSET t ==> PREIMAGE f s SUBSET PREIMAGE f t``,
-   RW_TAC std_ss [SUBSET_DEF, PREIMAGE_def, GSPECIFICATION]);
 
 val IN_PROD_SETS = store_thm
   ("IN_PROD_SETS",
@@ -423,13 +344,6 @@ val IN_PROD_SETS = store_thm
    >> RW_TAC std_ss []
    >> Q.EXISTS_TAC `(t, u)`
    >> RW_TAC std_ss []);
-
-val PREIMAGE_CROSS = store_thm
-  ("PREIMAGE_CROSS",
-   ``!f a b.
-       PREIMAGE f (a CROSS b) =
-       PREIMAGE (FST o f) a INTER PREIMAGE (SND o f) b``,
-   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_CROSS, IN_INTER, o_THM]);
 
 val RES_BIJ_ALT = store_thm
   ("RES_BIJ_ALT",
@@ -582,14 +496,6 @@ val finite_enumeration_of_sets_has_max_non_empty = store_thm
    >- (Q.PAT_X_ASSUM `!s. FINITE s ==> P` (MP_TAC o Q.SPEC `s DELETE {}`)
        >> RW_TAC std_ss [FINITE_DELETE, IN_INSERT, IN_DELETE])
    >> METIS_TAC [IN_INSERT]);
-
-val PREIMAGE_COMPL_INTER = store_thm
-  ("PREIMAGE_COMPL_INTER", ``!f t sp. PREIMAGE f (COMPL t) INTER sp = sp DIFF (PREIMAGE f t)``,
-  RW_TAC std_ss [COMPL_DEF]
-  >> MP_TAC (REWRITE_RULE [PREIMAGE_UNIV] (Q.SPECL [`f`,`UNIV`,`t`] PREIMAGE_DIFF))
-  >> STRIP_TAC
-  >> `(PREIMAGE f (UNIV DIFF t)) INTER sp = (UNIV DIFF PREIMAGE f t) INTER sp` by METIS_TAC []
-  >> METIS_TAC [DIFF_INTER,INTER_UNIV]);
 
 val PREIMAGE_REAL_COMPL1 = store_thm
   ("PREIMAGE_REAL_COMPL1", ``!c:real. COMPL {x | c < x} = {x | x <= c}``,
