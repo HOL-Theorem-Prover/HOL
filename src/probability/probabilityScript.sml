@@ -383,7 +383,7 @@ val EVENTS_COUNTABLE_INTER = store_thm
    >> RW_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
    >> MATCH_MP_TAC EVENTS_COUNTABLE_UNION
    >> Q.PAT_X_ASSUM `c SUBSET events p` MP_TAC
-   >> RW_TAC std_ss [COUNTABLE_IMAGE, SUBSET_DEF, IN_IMAGE]
+   >> RW_TAC std_ss [image_countable, SUBSET_DEF, IN_IMAGE]
    >> PROVE_TAC [EVENTS_COMPL]);
 
 val ABS_PROB = store_thm
@@ -506,7 +506,7 @@ val PROB_COUNTABLY_SUBADDITIVE = store_thm
    >- (MATCH_MP_TAC PROB_INCREASING_UNION
        >> RW_TAC std_ss [IN_FUNSET, IN_UNIV] >|
        [MATCH_MP_TAC EVENTS_COUNTABLE_UNION
-        >> RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, COUNTABLE_IMAGE,
+        >> RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, image_countable,
                           COUNTABLE_COUNT]
         >> PROVE_TAC [],
         RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_IMAGE, IN_COUNT]
@@ -538,7 +538,7 @@ val PROB_COUNTABLY_SUBADDITIVE = store_thm
    >> MATCH_MP_TAC PROB_SUBADDITIVE
    >> RW_TAC std_ss [] >- PROVE_TAC []
    >> MATCH_MP_TAC EVENTS_COUNTABLE_UNION
-   >> RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_COUNT, COUNTABLE_IMAGE,
+   >> RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_COUNT, image_countable,
                      COUNTABLE_COUNT]
    >> PROVE_TAC []);
 
@@ -779,7 +779,7 @@ val PROB_DISCRETE_EVENTS = store_thm
   >> `FINITE {{x} | x IN s}`
       by (Suff `{{x} | x IN s} = IMAGE (\x. {x}) s` >- METIS_TAC [IMAGE_FINITE,SUBSET_FINITE]
           >> RW_TAC std_ss [EXTENSION,GSPECIFICATION,IN_IMAGE])
-  >> METIS_TAC [EVENTS_COUNTABLE_UNION,FINITE_COUNTABLE]);
+  >> METIS_TAC [EVENTS_COUNTABLE_UNION,finite_countable]);
 
 val PROB_DISCRETE_EVENTS_COUNTABLE = store_thm
 ("PROB_DISCRETE_EVENTS_COUNTABLE",``!p. prob_space p /\ countable (p_space p) /\
@@ -794,7 +794,7 @@ val PROB_DISCRETE_EVENTS_COUNTABLE = store_thm
       by (RW_TAC std_ss [SUBSET_DEF,GSPECIFICATION] >> METIS_TAC [SUBSET_DEF])
   >> `countable {{x} | x IN s}`
       by (Suff `{{x} | x IN s} = IMAGE (\x. {x}) s`
-  >- METIS_TAC [COUNTABLE_IMAGE,COUNTABLE_SUBSET]
+  >- METIS_TAC [image_countable, COUNTABLE_SUBSET]
           >> RW_TAC std_ss [EXTENSION,GSPECIFICATION,IN_IMAGE])
   >> METIS_TAC [EVENTS_COUNTABLE_UNION]);
 

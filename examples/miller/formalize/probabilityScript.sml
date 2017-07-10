@@ -408,7 +408,7 @@ val EVENTS_COUNTABLE_INTER = store_thm
    ++ RW_TAC std_ss [COMPL_BIGINTER]
    ++ MATCH_MP_TAC EVENTS_COUNTABLE_UNION
    ++ Q.PAT_X_ASSUM `c SUBSET events p` MP_TAC
-   ++ RW_TAC std_ss [COUNTABLE_IMAGE, SUBSET_DEF, IN_IMAGE]
+   ++ RW_TAC std_ss [image_countable, SUBSET_DEF, IN_IMAGE]
    ++ PROVE_TAC [EVENTS_COMPL]);
 
 val ABS_PROB = store_thm
@@ -544,7 +544,7 @@ val PROB_COUNTABLY_SUBADDITIVE = store_thm
    >> (MATCH_MP_TAC PROB_INCREASING_UNION
        ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV] <<
        [MATCH_MP_TAC EVENTS_COUNTABLE_UNION
-        ++ RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, COUNTABLE_IMAGE,
+        ++ RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, image_countable,
                           COUNTABLE_COUNT]
         ++ PROVE_TAC [],
         PSET_TAC []
@@ -577,7 +577,7 @@ val PROB_COUNTABLY_SUBADDITIVE = store_thm
    ++ MATCH_MP_TAC PROB_SUBADDITIVE
    ++ RW_TAC std_ss [] >> PROVE_TAC []
    ++ MATCH_MP_TAC EVENTS_COUNTABLE_UNION
-   ++ RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_COUNT, COUNTABLE_IMAGE,
+   ++ RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_COUNT, image_countable,
                      COUNTABLE_COUNT]
    ++ PROVE_TAC []);
 

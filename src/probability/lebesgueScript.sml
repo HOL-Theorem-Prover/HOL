@@ -2444,7 +2444,7 @@ val pos_fn_integral_disjoint_sets_sum = store_thm
   >>  `~(e IN s)` by METIS_TAC [DELETE_NON_ELEMENT]
   >> `DISJOINT (a e) (BIGUNION (IMAGE a s))`
        by (RW_TAC std_ss [DISJOINT_BIGUNION,IN_IMAGE] >> METIS_TAC [])
-  >> `countable (IMAGE a s)` by METIS_TAC [COUNTABLE_IMAGE,FINITE_COUNTABLE]
+  >> `countable (IMAGE a s)` by METIS_TAC [image_countable, finite_countable]
   >> `(IMAGE a s) SUBSET measurable_sets m`
        by (RW_TAC std_ss [SUBSET_DEF,IMAGE_DEF,GSPECIFICATION]
 	   >> METIS_TAC [])
@@ -3862,7 +3862,7 @@ val finite_prod_measure_space_POW = store_thm
   >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA, subsets_def]
   >> POP_ASSUM MATCH_MP_TAC
   >> CONJ_TAC
-  >- (MATCH_MP_TAC FINITE_COUNTABLE >> MATCH_MP_TAC IMAGE_FINITE
+  >- (MATCH_MP_TAC finite_countable >> MATCH_MP_TAC IMAGE_FINITE
       >> (MP_TAC o Q.ISPEC `(s1 :'a -> bool) CROSS (s2 :'b -> bool)`) SUBSET_FINITE
       >> RW_TAC std_ss [FINITE_CROSS]
       >> POP_ASSUM MATCH_MP_TAC
@@ -4032,7 +4032,7 @@ val finite_prod_measure_space_POW3 = store_thm
   >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA, subsets_def]
   >> POP_ASSUM MATCH_MP_TAC
   >> CONJ_TAC
-  >- (MATCH_MP_TAC FINITE_COUNTABLE >> MATCH_MP_TAC IMAGE_FINITE
+  >- (MATCH_MP_TAC finite_countable >> MATCH_MP_TAC IMAGE_FINITE
       >> (MP_TAC o
           Q.ISPEC `(s1 :'a -> bool) CROSS ((s2 :'b -> bool) CROSS (s3:'c -> bool))`)
   		SUBSET_FINITE
