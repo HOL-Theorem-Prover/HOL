@@ -397,13 +397,13 @@ val EVENTS_BERN_COUNTABLE = store_thm
        ++ RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_SING])
    ++ Rewr'
    ++ MATCH_MP_TAC EVENTS_COUNTABLE_UNION
-   ++ RW_TAC std_ss [PROB_SPACE_BERN, SUBSET_DEF, COUNTABLE_IMAGE, IN_IMAGE]
+   ++ RW_TAC std_ss [PROB_SPACE_BERN, SUBSET_DEF, image_countable, IN_IMAGE]
    ++ PROVE_TAC [EVENTS_BERN_SING]);
 
 val EVENTS_BERN_FINITE = store_thm
   ("EVENTS_BERN_FINITE",
    ``!c. FINITE c ==> c IN events bern``,
-   PROVE_TAC [EVENTS_BERN_COUNTABLE, FINITE_COUNTABLE]);
+   PROVE_TAC [EVENTS_BERN_COUNTABLE, finite_countable]);
 
 val PROB_BERN_SING = store_thm
   ("PROB_BERN_SING",
@@ -443,7 +443,7 @@ val PROB_BERN_FINITE = store_thm
 val PROB_BERN_COUNTABLE = store_thm
   ("PROB_BERN_COUNTABLE",
    ``!c. countable c ==> (prob bern c = 0)``,
-   RW_TAC std_ss [COUNTABLE_ALT, BIJ_DEF, SURJ_DEF, INJ_DEF, IN_UNIV]
+   RW_TAC std_ss [COUNTABLE_ALT_BIJ, BIJ_DEF, SURJ_DEF, INJ_DEF, IN_UNIV]
    >> PROVE_TAC [PROB_BERN_FINITE]
    ++ Suff
       `prob bern o (\x. {enumerate c x}) sums 0 /\
@@ -719,7 +719,7 @@ val EVENTS_BERN_PREFIX_COVER = store_thm
    ``!c. BIGUNION (IMAGE prefix_set c) IN events bern``,
    RW_TAC std_ss []
    ++ MATCH_MP_TAC EVENTS_COUNTABLE_UNION
-   ++ RW_TAC std_ss [COUNTABLE_IMAGE, COUNTABLE_BOOL_LIST, PROB_SPACE_BERN,
+   ++ RW_TAC std_ss [image_countable, COUNTABLE_BOOL_LIST, PROB_SPACE_BERN,
                      SUBSET_DEF, IN_IMAGE]
    ++ RW_TAC std_ss [EVENTS_BERN_PREFIX_SET]);
 
@@ -784,7 +784,7 @@ val INDEP_FN_PROB_PRESERVING = store_thm
        !s t.
          s IN IMAGE prefix_set c /\ t IN IMAGE prefix_set c /\ ~(s = t) ==>
          DISJOINT s t`
-   >> (CONJ_TAC >> RW_TAC std_ss [COUNTABLE_IMAGE, COUNTABLE_BOOL_LIST]
+   >> (CONJ_TAC >> RW_TAC std_ss [image_countable, COUNTABLE_BOOL_LIST]
        ++ RW_TAC std_ss [IN_IMAGE, o_THM]
        ++ MP_TAC
           (Q.SPECL [`c`, `prefix_set x`, `prefix_set x'`]
@@ -875,7 +875,7 @@ val INDEP_FN_STRONG = store_thm
        !s t.
          s IN IMAGE prefix_set c /\ t IN IMAGE prefix_set c /\ ~(s = t) ==>
          DISJOINT s t`
-   >> (CONJ_TAC >> RW_TAC std_ss [COUNTABLE_IMAGE, COUNTABLE_BOOL_LIST]
+   >> (CONJ_TAC >> RW_TAC std_ss [image_countable, COUNTABLE_BOOL_LIST]
        ++ RW_TAC std_ss [IN_IMAGE, o_THM]
        ++ MP_TAC
           (Q.SPECL [`c`, `prefix_set x''`, `prefix_set x'''`]
@@ -1003,7 +1003,7 @@ val INDEP_FN_UNIT = store_thm
    BasicProvers.NORM_TAC std_ss
    [indep_fn_def, GSPECIFICATION, FST_o_UNIT, SND_o_UNIT,
     IN_MEASURABLE, PREIMAGE_I, PREIMAGE_K, EVENTS_BERN_BASIC, I_THM]
-   >> RW_TAC std_ss [range_def, IMAGE_K, COUNTABLE_EMPTY, COUNTABLE_SING]
+   >> RW_TAC std_ss [range_def, IMAGE_K, countable_EMPTY, COUNTABLE_SING]
    ++ Q.EXISTS_TAC `{[]}`
    ++ RW_TAC std_ss [IN_SING, prefix_cover_def, IMAGE_INSERT, IMAGE_EMPTY,
                      prefix_set_def, BIGUNION_INSERT, BIGUNION_EMPTY,
@@ -1113,7 +1113,7 @@ val PREFIX_COVER_APPEND = store_thm
       (Q.ISPEC
        `IMAGE (\l. BIGUNION (IMAGE (prefix_set o APPEND l) (cf l))) c`
        COUNTABLE_DISJOINT_ENUM)
-   ++ RW_TAC std_ss [COUNTABLE_IMAGE, COUNTABLE_BOOL_LIST]
+   ++ RW_TAC std_ss [image_countable, COUNTABLE_BOOL_LIST]
    ++ POP_ASSUM MP_TAC
    ++ Know
    `!s t.
@@ -1157,7 +1157,7 @@ val PREFIX_COVER_APPEND = store_thm
        ++ STRIP_TAC >> RW_TAC std_ss [EVENTS_BERN_EMPTY]
        ++ RW_TAC std_ss []
        ++ MATCH_MP_TAC EVENTS_COUNTABLE_UNION
-       ++ RW_TAC std_ss [PROB_SPACE_BERN, SUBSET_DEF, COUNTABLE_IMAGE,
+       ++ RW_TAC std_ss [PROB_SPACE_BERN, SUBSET_DEF, image_countable,
                          COUNTABLE_BOOL_LIST, IN_IMAGE, o_THM]
        ++ RW_TAC std_ss [EVENTS_BERN_PREFIX_SET])
    ++ Know
@@ -1251,7 +1251,7 @@ val PREFIX_COVER_APPEND = store_thm
    >> RW_TAC std_ss [EVENTS_BERN_PREFIX_SET, PROB_BERN_STL_HALFSPACE]
    ++ MATCH_MP_TAC EVENTS_COUNTABLE_UNION
    ++ RW_TAC std_ss [PROB_SPACE_BERN, COUNTABLE_BOOL_LIST, SUBSET_DEF, IN_IMAGE,
-                     COUNTABLE_IMAGE, o_THM]
+                     image_countable, o_THM]
    ++ RW_TAC std_ss [EVENTS_BERN_PREFIX_SET]);
 
 val INDEP_FN_BIND = store_thm
@@ -1267,7 +1267,7 @@ val INDEP_FN_BIND = store_thm
        (INST_TYPE [alpha |-> ``:num -> bool``, beta |-> alpha, gamma |-> beta]
         RANGE_BIND)
     ++ MATCH_MP_TAC COUNTABLE_BIGUNION
-    ++ CONJ_TAC >> RW_TAC std_ss [COUNTABLE_IMAGE]
+    ++ CONJ_TAC >> RW_TAC std_ss [image_countable]
     ++ RW_TAC std_ss [IN_IMAGE, o_THM]
     ++ RW_TAC std_ss [],
     RW_TAC bool_ss [BIND_DEF, o_ASSOC]
@@ -1631,7 +1631,7 @@ val PROB_BERN_BIND_FINITE = store_thm
    >> (MATCH_MP_TAC PROB_ADDITIVE
        ++ RW_TAC std_ss [PROB_SPACE_BERN, o_THM] <<
        [MATCH_MP_TAC EVENTS_COUNTABLE_UNION
-        ++ RW_TAC std_ss [PROB_SPACE_BERN, COUNTABLE_IMAGE, COUNTABLE_COUNT,
+        ++ RW_TAC std_ss [PROB_SPACE_BERN, image_countable, COUNTABLE_COUNT,
                           SUBSET_DEF, IN_IMAGE, o_THM]
         ++ MATCH_MP_TAC EVENTS_INTER
         ++ Q.SPEC_TAC (`$= (c x')`, `q`)
@@ -1731,7 +1731,7 @@ val INDEP_FN_ENUM_RANGE = store_thm
        f IN indep_fn ==>
        (?c : num -> 'a. BIJ c UNIV (range (FST o f))) \/
        (?c n. BIJ c (count n) (range (FST o f)))``,
-   REVERSE (RW_TAC std_ss [indep_fn_def, GSPECIFICATION, COUNTABLE_ALT])
+   REVERSE (RW_TAC std_ss [indep_fn_def, GSPECIFICATION, COUNTABLE_ALT_BIJ])
    >> PROVE_TAC []
    ++ PROVE_TAC [FINITE_BIJ_COUNT]);
 
@@ -2234,7 +2234,7 @@ val PREFIX_COVER_STAR = store_thm
                          IN_DISJOINT, IN_BIGUNION_IMAGE]
        >> (MATCH_MP_TAC EVENTS_COUNTABLE_UNION
            ++ RW_TAC std_ss [PROB_SPACE_BERN, COUNTABLE_BOOL_LIST,
-                             COUNTABLE_IMAGE, SUBSET_DEF, IN_IMAGE]
+                             image_countable, SUBSET_DEF, IN_IMAGE]
            ++ RW_TAC std_ss [EVENTS_BERN_PREFIX_SET])
        ++ CCONTR_TAC
        ++ POP_ASSUM (MP_TAC o REWRITE_RULE [DE_MORGAN_THM])
@@ -2269,7 +2269,7 @@ val PREFIX_COVER_STAR = store_thm
    ++ RW_TAC std_ss [PROB_SPACE_BERN, IN_FUNSET, IN_UNIV, o_THM,
                      GSPECIFICATION, IN_BIGUNION_IMAGE] <<
    [MATCH_MP_TAC SIGMA_ALGEBRA_COUNTABLE_UNION
-    ++ RW_TAC std_ss [COUNTABLE_BOOL_LIST, COUNTABLE_IMAGE, SUBSET_DEF,
+    ++ RW_TAC std_ss [COUNTABLE_BOOL_LIST, image_countable, SUBSET_DEF,
                       IN_IMAGE, EVENTS_SIGMA_ALGEBRA, PROB_SPACE_BERN]
     ++ RW_TAC std_ss [EVENTS_BERN_PREFIX_SET],
     RW_TAC std_ss [DISJOINT_ALT, IN_BIGUNION_IMAGE]
@@ -2313,7 +2313,7 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
    >> (RW_TAC std_ss [COUNTABLE_IMAGE_NUM, PROB_SPACE_BERN, SUBSET_DEF,
                       IN_IMAGE, IN_UNIV, GDEST]
        ++ MATCH_MP_TAC EVENTS_COUNTABLE_UNION
-       ++ RW_TAC std_ss [COUNTABLE_IMAGE, PROB_SPACE_BERN, SUBSET_DEF,
+       ++ RW_TAC std_ss [image_countable, PROB_SPACE_BERN, SUBSET_DEF,
                          COUNTABLE_BOOL_LIST, IN_IMAGE]
        ++ RW_TAC std_ss [EVENTS_BERN_PREFIX_SET])
    ++ RW_TAC std_ss [probably_def, probably_bern_def]
@@ -2407,8 +2407,8 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
       ++ MATCH_MP_TAC EVENTS_DIFF
       ++ RW_TAC std_ss [PROB_SPACE_BERN]
       ++ MATCH_MP_TAC EVENTS_COUNTABLE_UNION
-      ++ RW_TAC std_ss [PROB_SPACE_BERN, FINITE_COUNTABLE, FINITE_COUNT,
-                        COUNTABLE_IMAGE, SUBSET_DEF, IN_IMAGE]
+      ++ RW_TAC std_ss [PROB_SPACE_BERN, finite_countable, FINITE_COUNT,
+                        image_countable, SUBSET_DEF, IN_IMAGE]
       ++ RW_TAC std_ss [])
    ++ STRIP_TAC
    ++ CONJ_TAC
@@ -2456,7 +2456,7 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
    ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap o SYM)
    ++ MP_TAC (Q.ISPEC `IMAGE prefix_set (ca a)` COUNTABLE_DISJOINT_ENUM)
    ++ Cond
-   >> (RW_TAC std_ss [COUNTABLE_IMAGE, COUNTABLE_BOOL_LIST]
+   >> (RW_TAC std_ss [image_countable, COUNTABLE_BOOL_LIST]
        ++ PROVE_TAC [PREFIX_COVER_DISJOINT])
    ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, IN_INSERT, IN_IMAGE]
    ++ RW_TAC std_ss []
@@ -2678,7 +2678,7 @@ val PROB_WHILE_WITNESS_COUNTABLE_RANGE = store_thm
    ++ Q.EXISTS_TAC
       `FST (ARB : 'a # (num -> bool)) INSERT
        BIGUNION (IMAGE (\n. range (FST o FUNPOW (UNCURRY b) n o UNIT a)) UNIV)`
-   ++ REVERSE (RW_TAC bool_ss [COUNTABLE_INSERT, SUBSET_DEF, IN_INSERT,
+   ++ REVERSE (RW_TAC bool_ss [countable_INSERT, SUBSET_DEF, IN_INSERT,
                                IN_BIGUNION_IMAGE, IN_UNIV])
    >> (MATCH_MP_TAC COUNTABLE_BIGUNION
        ++ RW_TAC bool_ss [IN_IMAGE, IN_UNIV, COUNTABLE_IMAGE_NUM]
@@ -2779,7 +2779,7 @@ val PROB_WHILE_WITNESS_MEASURABLE_FST = store_thm
        ++ RW_TAC std_ss [PROB_SPACE_BERN]
        ++ MATCH_MP_TAC EVENTS_COUNTABLE_UNION
        ++ RW_TAC std_ss [PROB_SPACE_BERN, COUNTABLE_COUNT, SUBSET_DEF,
-                         IN_IMAGE, IN_UNIV, COUNTABLE_IMAGE]
+                         IN_IMAGE, IN_UNIV, image_countable]
        ++ RW_TAC std_ss [])
    ++ Know
       `{x | FST (FUNPOW (UNCURRY b) m (a,x)) IN s} =
@@ -2878,7 +2878,7 @@ val PROB_WHILE_WITNESS_MEASURABLE_SND = store_thm
        ++ RW_TAC std_ss [PROB_SPACE_BERN]
        ++ MATCH_MP_TAC EVENTS_COUNTABLE_UNION
        ++ RW_TAC std_ss [PROB_SPACE_BERN, COUNTABLE_COUNT, SUBSET_DEF,
-                         IN_IMAGE, IN_UNIV, COUNTABLE_IMAGE]
+                         IN_IMAGE, IN_UNIV, image_countable]
        ++ RW_TAC std_ss [])
    ++ Know
       `{x | SND (FUNPOW (UNCURRY b) m (a,x)) IN s} =
@@ -3382,7 +3382,7 @@ val PROBABLY_RES_FORALL = store_thm
    ++ Rewr
    ++ Know `BIGUNION (IMAGE (\x. COMPL {s | m x s}) p) IN events bern`
    >> (MATCH_MP_TAC EVENTS_COUNTABLE_UNION
-        ++ RW_TAC std_ss [PROB_SPACE_BERN, COUNTABLE_IMAGE, SUBSET_DEF,
+        ++ RW_TAC std_ss [PROB_SPACE_BERN, image_countable, SUBSET_DEF,
                           IN_IMAGE]
         ++ MATCH_MP_TAC EVENTS_COMPL
         ++ RW_TAC std_ss [PROB_SPACE_BERN])
@@ -3392,7 +3392,7 @@ val PROBABLY_RES_FORALL = store_thm
    ++ Know `!a : real. (a = 0) ==> (1 - a = 1)` >> REAL_ARITH_TAC
    ++ DISCH_THEN MATCH_MP_TAC
    ++ MATCH_MP_TAC PROB_COUNTABLY_ZERO
-   ++ RW_TAC std_ss [PROB_SPACE_BERN, COUNTABLE_IMAGE, IN_IMAGE, SUBSET_DEF]
+   ++ RW_TAC std_ss [PROB_SPACE_BERN, image_countable, IN_IMAGE, SUBSET_DEF]
    >> RW_TAC std_ss [EVENTS_COMPL, PROB_SPACE_BERN]
    ++ RW_TAC std_ss [PROB_COMPL, PROB_SPACE_BERN]
    ++ REAL_ARITH_TAC);
@@ -3658,10 +3658,10 @@ val PROB_BERN_BIND_COUNTABLE = store_thm
        prob bern (p o FST o BIND f g)``,
    RW_TAC std_ss []
    ++ Know `countable (range (FST o f))`
-   >> (RW_TAC std_ss [countable_def]
+   >> (RW_TAC std_ss [COUNTABLE_ALT]
        ++ Q.EXISTS_TAC `c`
        ++ PROVE_TAC [])
-   ++ RW_TAC std_ss [COUNTABLE_ALT]
+   ++ RW_TAC std_ss [COUNTABLE_ALT_BIJ]
    >> ((MP_TAC o
         Q.ISPEC `range (FST o (f : (num -> bool) -> 'b # (num -> bool)))`)
        FINITE_BIJ_COUNT
@@ -3862,7 +3862,7 @@ val PROB_BERN_BIND_EQ = store_thm
    ++ Know `countable (range (FST o f1) UNION range (FST o f2))`
    >> (REPEAT (Q.PAT_X_ASSUM `X IN indep_fn` MP_TAC)
        ++ RW_TAC std_ss [indep_fn_def, COUNTABLE_UNION, GSPECIFICATION])
-   ++ RW_TAC std_ss [countable_def, IN_UNION, DISJ_IMP_THM, FORALL_AND_THM]
+   ++ RW_TAC std_ss [COUNTABLE_ALT, IN_UNION, DISJ_IMP_THM, FORALL_AND_THM]
    ++ MP_TAC (Q.SPECL [`p`, `f1`, `g1`, `f`] PROB_BERN_BIND_COUNTABLE)
    ++ Cond >> RW_TAC std_ss []
    ++ RW_TAC std_ss [SUMS_EQ]
@@ -4515,7 +4515,7 @@ val PROB_TERMINATES_HART_LEMMA = store_thm
    >> (RW_TAC std_ss [GBIGUNION_IMAGE]
        ++ MATCH_MP_TAC EVENTS_COUNTABLE_UNION
        ++ RW_TAC std_ss [PROB_SPACE_BERN, SUBSET_DEF, IN_IMAGE, COUNTABLE_NUM,
-                         IN_UNIV, COUNTABLE_IMAGE]
+                         IN_UNIV, image_countable]
        ++ Suff `{s | ~c (FST (prob_while_cut c b n a s))} =
                 {x | ~c x} o FST o prob_while_cut c b n a`
        >> RW_TAC std_ss [INDEP_FN_FST_EVENTS, INDEP_FN_PROB_WHILE_CUT]
@@ -4957,7 +4957,7 @@ val PROB_TERMINATES_MORGAN = store_thm
                           IN_BIGUNION_IMAGE, IN_o, o_THM, GSPECIFICATION] <<
        [MATCH_MP_TAC EVENTS_COUNTABLE_UNION
         ++ RW_TAC std_ss [PROB_SPACE_BERN, IN_IMAGE, COUNTABLE_NUM, IN_UNIV,
-                          COUNTABLE_IMAGE, SUBSET_DEF]
+                          image_countable, SUBSET_DEF]
         ++ RW_TAC std_ss [PROB_SPACE_BERN, INDEP_FN_FST_EVENTS,
                           INDEP_FN_PROB_WHILE_CUT],
         PROVE_TAC []])

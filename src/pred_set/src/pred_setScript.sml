@@ -3179,24 +3179,6 @@ val COUNT_11 = store_thm(
              arithmeticTheory.LESS_EQUAL_ANTISYM]);
 val _ = export_rewrites ["COUNT_11"]
 
-val FINITE_BIJ_COUNT = store_thm (* from util_prob *)
-  ("FINITE_BIJ_COUNT",
-   ``!s. FINITE s = ?c n. BIJ c (count n) s``,
-   RW_TAC std_ss []
-   >> REVERSE EQ_TAC >- PROVE_TAC [FINITE_COUNT, FINITE_BIJ]
-   >> Q.SPEC_TAC (`s`, `s`)
-   >> HO_MATCH_MP_TAC FINITE_INDUCT
-   >> RW_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, NOT_IN_EMPTY]
-   >- (Q.EXISTS_TAC `c`
-       >> Q.EXISTS_TAC `0`
-       >> RW_TAC std_ss [COUNT_ZERO, NOT_IN_EMPTY])
-   >> Q.EXISTS_TAC `\m. if m = n then e else c m`
-   >> Q.EXISTS_TAC `SUC n`
-   >> Know `!x. x IN count n ==> ~(x = n)`
-   >- RW_TAC arith_ss [IN_COUNT]
-   >> RW_TAC std_ss [COUNT_SUC, IN_INSERT]
-   >> PROVE_TAC []);
-
 (* =====================================================================*)
 (* Infiniteness								*)
 (* =====================================================================*)

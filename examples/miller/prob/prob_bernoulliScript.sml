@@ -108,7 +108,7 @@ val PROB_TERMINATES_BERNOULLI = store_thm
                          PROB_SPACE_BERN, INDEP_FN_PROB_WHILE_CUT, o_THM] <<
        [MATCH_MP_TAC EVENTS_COUNTABLE_UNION
         ++ RW_TAC std_ss [PROB_SPACE_BERN, SUBSET_DEF, IN_UNIV, COUNTABLE_NUM,
-                          IN_IMAGE, COUNTABLE_IMAGE]
+                          IN_IMAGE, image_countable]
         ++ Know
            `{s |
              ISR (FST (prob_while_cut

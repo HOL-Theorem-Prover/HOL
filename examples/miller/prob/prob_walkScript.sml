@@ -120,7 +120,7 @@ val EVENTS_BERN_RANDOM_LURCHES = store_thm
        events bern``,
    RW_TAC std_ss [GBIGUNION_IMAGE]
    ++ MATCH_MP_TAC EVENTS_COUNTABLE_UNION
-   ++ RW_TAC std_ss [PROB_SPACE_BERN, COUNTABLE_NUM, COUNTABLE_IMAGE,
+   ++ RW_TAC std_ss [PROB_SPACE_BERN, COUNTABLE_NUM, image_countable,
                      SUBSET_DEF, IN_IMAGE, IN_UNIV]
    ++ Suff
       `{s | FST (prob_while_cut ($< 0) random_lurch n a s) = 0} =
