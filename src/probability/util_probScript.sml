@@ -48,27 +48,11 @@ val EQ_T_IMP = store_thm
    ``!x. x = T ==> x``,
    PROVE_TAC []);
 
-val EQ_SUBSET_SUBSET = store_thm
-  ("EQ_SUBSET_SUBSET",
-   ``!(s : 'a -> bool) t. (s = t) ==> s SUBSET t /\ t SUBSET s``,
-   RW_TAC std_ss [SUBSET_DEF, EXTENSION]);
-
-val IN_EQ_UNIV_IMP = store_thm
-  ("IN_EQ_UNIV_IMP",
-   ``!s. (s = UNIV) ==> !v. (v : 'a) IN s``,
-   RW_TAC std_ss [IN_UNIV]);
-
 (* ------------------------------------------------------------------------- *)
 (* bool theory subtypes.                                                     *)
 (* ------------------------------------------------------------------------- *)
 
 (* Subtype definitions *)
-
-val FUNSET_def = Define
-  `FUNSET (P:'a->bool) (Q:'b->bool) = \f. !x. x IN P ==> f x IN Q`;
-
-val DFUNSET_def = Define
-  `DFUNSET (P:'a->bool) (Q:'a->'b->bool) = \f. !x. x IN P ==> f x IN Q x`;
 
 val _ = add_infix("->", 250, HOLgrammars.RIGHT);
 
@@ -80,67 +64,16 @@ val _ = overload_on
 val pair_def = Define
   `pair (X : 'a -> bool) (Y : 'b -> bool) = \ (x, y). x IN X /\ y IN Y`;
 
-val IN_FUNSET = store_thm
-  ("IN_FUNSET",
-   ``!(f:'a->'b) P Q. f IN (P -> Q) = !x. x IN P ==> f x IN Q``,
-   RW_TAC std_ss [SPECIFICATION, FUNSET_def]);
-
-val IN_DFUNSET = store_thm
-  ("IN_DFUNSET",
-   ``!(f:'a->'b) (P:'a->bool) Q. f IN (P --> Q) = !x. x IN P ==> f x IN Q x``,
-   RW_TAC std_ss [SPECIFICATION, DFUNSET_def]);
-
 val IN_PAIR = store_thm
   ("IN_PAIR",
    ``!(x : 'a # 'b) X Y. x IN pair X Y = FST x IN X /\ SND x IN Y``,
    Cases
    >> RW_TAC std_ss [pair_def, SPECIFICATION]);
 
-val FUNSET_THM = store_thm
-  ("FUNSET_THM",
-   ``!s t (f:'a->'b) x. f IN (s -> t) /\ x IN s ==> f x IN t``,
-    RW_TAC std_ss [IN_FUNSET] >> PROVE_TAC []);
-
-val UNIV_FUNSET_UNIV = store_thm
-  ("UNIV_FUNSET_UNIV",
-   ``((UNIV : 'a -> bool) -> (UNIV : 'b -> bool)) = UNIV``,
-   RW_TAC std_ss [EXTENSION,IN_UNIV,IN_FUNSET]);
-
-val FUNSET_DFUNSET = store_thm
-  ("FUNSET_DFUNSET",
-   ``!(x : 'a -> bool) (y : 'b -> bool). (x -> y) = (x --> K y)``,
-   RW_TAC std_ss [EXTENSION,GSPECIFICATION, IN_FUNSET, IN_DFUNSET, K_DEF]);
-
 val PAIR_UNIV = store_thm
   ("PAIR_UNIV",
    ``pair UNIV UNIV = (UNIV : 'a # 'b -> bool)``,
    RW_TAC std_ss [EXTENSION,GSPECIFICATION, IN_PAIR, IN_UNIV]);
-
-val SUBSET_INTER = store_thm
-  ("SUBSET_INTER",
-   ``!(s : 'a -> bool) t u.
-   s SUBSET (t INTER u) = s SUBSET t /\ s SUBSET u``,
-   RW_TAC std_ss [SUBSET_DEF, IN_INTER]
-   >> PROVE_TAC []);
-
-val K_SUBSET = store_thm
-  ("K_SUBSET",
-   ``!x y. K x SUBSET y = ~x \/ (UNIV SUBSET y)``,
-   RW_TAC std_ss [K_DEF, SUBSET_DEF, IN_UNIV]
-   >> RW_TAC std_ss [SPECIFICATION]
-   >> PROVE_TAC []);
-
-val SUBSET_K = store_thm
-  ("SUBSET_K",
-   ``!x y. x SUBSET K y = (x SUBSET EMPTY) \/ y``,
-   RW_TAC std_ss [K_DEF, SUBSET_DEF, NOT_IN_EMPTY]
-   >> RW_TAC std_ss [SPECIFICATION]
-   >> PROVE_TAC []);
-
-val SUBSET_THM = store_thm
-  ("SUBSET_THM",
-   ``!(P : 'a -> bool) Q. P SUBSET Q ==> (!x. x IN P ==> x IN Q)``,
-    RW_TAC std_ss [SUBSET_DEF]);
 
 val PAIRED_BETA_THM = store_thm
   ("PAIRED_BETA_THM",
@@ -148,16 +81,6 @@ val PAIRED_BETA_THM = store_thm
    STRIP_TAC
    >> Cases
    >> RW_TAC std_ss []);
-
-val EMPTY_FUNSET = store_thm
-  ("EMPTY_FUNSET",
-   ``!s. ({} -> s) = (UNIV : ('a -> 'b) -> bool)``,
-   RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_FUNSET, NOT_IN_EMPTY, IN_UNIV]);
-
-val FUNSET_EMPTY = store_thm
-  ("FUNSET_EMPTY",
-   ``!s (f : 'a -> 'b). f IN (s -> {}) = (s = {})``,
-   RW_TAC std_ss [IN_FUNSET, NOT_IN_EMPTY, EXTENSION,GSPECIFICATION]);
 
 val MAX_LE_X = store_thm
   ("MAX_LE_X",
@@ -291,164 +214,6 @@ val countable_def = Define
   `countable s = ?f. !x : 'a. x IN s ==> ?n : num. f n = x`;
 
 val enumerate_def = Define `enumerate s = @f : num -> 'a. BIJ f UNIV s`;
-
-val schroeder_close_def = Define
-  `schroeder_close f s x = ?n. x IN FUNPOW (IMAGE f) n s`;
-
-val SCHROEDER_CLOSE = store_thm
-  ("SCHROEDER_CLOSE",
-   ``!f s. x IN schroeder_close f s = ?n. x IN FUNPOW (IMAGE f) n s``,
-   RW_TAC std_ss [SPECIFICATION, schroeder_close_def]);
-
-val SCHROEDER_CLOSED = store_thm
-  ("SCHROEDER_CLOSED",
-   ``!f s. IMAGE f (schroeder_close f s) SUBSET schroeder_close f s``,
-   RW_TAC std_ss [SCHROEDER_CLOSE, IN_IMAGE, SUBSET_DEF]
-   >> Q.EXISTS_TAC `SUC n`
-   >> RW_TAC std_ss [FUNPOW_SUC, IN_IMAGE]
-   >> PROVE_TAC []);
-
-val SCHROEDER_CLOSE_SUBSET = store_thm
-  ("SCHROEDER_CLOSE_SUBSET",
-   ``!f s. s SUBSET schroeder_close f s``,
-   RW_TAC std_ss [SCHROEDER_CLOSE, IN_IMAGE, SUBSET_DEF]
-   >> Q.EXISTS_TAC `0`
-   >> RW_TAC std_ss [FUNPOW]);
-
-val SCHROEDER_CLOSE_SET = store_thm
-  ("SCHROEDER_CLOSE_SET",
-   ``!f s t. f IN (s -> s) /\ t SUBSET s ==> schroeder_close f t SUBSET s``,
-   RW_TAC std_ss [SCHROEDER_CLOSE, SUBSET_DEF, IN_FUNSET]
-   >> POP_ASSUM MP_TAC
-   >> Q.SPEC_TAC (`x`, `x`)
-   >> Induct_on `n` >- RW_TAC std_ss [FUNPOW]
-   >> RW_TAC std_ss [FUNPOW_SUC, IN_IMAGE]
-   >> PROVE_TAC []);
-
-val SCHROEDER_BERNSTEIN_AUTO = store_thm
-  ("SCHROEDER_BERNSTEIN_AUTO",
-   ``!s t. t SUBSET s /\ (?f. INJ f s t) ==> ?g. BIJ g s t``,
-   RW_TAC std_ss [INJ_DEF]
-   >> Q.EXISTS_TAC `\x. if x IN schroeder_close f (s DIFF t) then f x else x`
-   >> Know `s DIFF schroeder_close f (s DIFF t) SUBSET t`
-   >- (RW_TAC std_ss [SUBSET_DEF, IN_DIFF]
-       >> Suff `~(x IN s DIFF t)` >- RW_TAC std_ss [IN_DIFF]
-       >> PROVE_TAC [SCHROEDER_CLOSE_SUBSET, SUBSET_DEF])
-   >> Know `schroeder_close f (s DIFF t) SUBSET s`
-   >- (MATCH_MP_TAC SCHROEDER_CLOSE_SET
-       >> RW_TAC std_ss [SUBSET_DEF, IN_DIFF, IN_FUNSET]
-       >> PROVE_TAC [SUBSET_DEF])
-   >> Q.PAT_X_ASSUM `t SUBSET s` MP_TAC
-   >> RW_TAC std_ss [SUBSET_DEF, IN_DIFF]
-   >> RW_TAC std_ss [BIJ_DEF]
-   >- (BasicProvers.NORM_TAC std_ss [INJ_DEF] >|
-       [PROVE_TAC [SCHROEDER_CLOSED, SUBSET_DEF, IN_IMAGE],
-        PROVE_TAC [SCHROEDER_CLOSED, SUBSET_DEF, IN_IMAGE]])
-   >> RW_TAC std_ss [SURJ_DEF]
-   >> REVERSE (Cases_on `x IN schroeder_close f (s DIFF t)`) >- PROVE_TAC []
-   >> POP_ASSUM MP_TAC
-   >> RW_TAC std_ss [SCHROEDER_CLOSE]
-   >> Cases_on `n` >- (POP_ASSUM MP_TAC >> RW_TAC std_ss [FUNPOW, IN_DIFF])
-   >> POP_ASSUM MP_TAC
-   >> RW_TAC std_ss [FUNPOW_SUC, IN_IMAGE]
-   >> Q.EXISTS_TAC `x'`
-   >> POP_ASSUM MP_TAC
-   >> Q.SPEC_TAC (`n'`, `n`)
-   >> CONV_TAC FORALL_IMP_CONV
-   >> REWRITE_TAC [GSYM SCHROEDER_CLOSE]
-   >> RW_TAC std_ss []);
-
-val INJ_IMAGE_BIJ = store_thm
-  ("INJ_IMAGE_BIJ",
-   ``!s f. (?t. INJ f s t) ==> BIJ f s (IMAGE f s)``,
-   RW_TAC std_ss [INJ_DEF, BIJ_DEF, SURJ_DEF, IN_IMAGE]
-   >> PROVE_TAC []);
-
-val BIJ_SYM_IMP = store_thm
-  ("BIJ_SYM_IMP",
-   ``!s t. (?f. BIJ f s t) ==> (?g. BIJ g t s)``,
-   RW_TAC std_ss [BIJ_DEF, SURJ_DEF, INJ_DEF]
-   >> Suff `?(g : 'b -> 'a). !x. x IN t ==> g x IN s /\ (f (g x) = x)`
-   >- (Strip
-       >> Q.EXISTS_TAC `g`
-       >> RW_TAC std_ss []
-       >> PROVE_TAC [])
-   >> POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [boolTheory.EXISTS_DEF])
-   >> RW_TAC std_ss []
-   >> Q.EXISTS_TAC `\x. @y. y IN s /\ (f y = x)`
-   >> RW_TAC std_ss []);
-
-val BIJ_SYM = store_thm
-  ("BIJ_SYM",
-   ``!s t. (?f. BIJ f s t) = (?g. BIJ g t s)``,
-   PROVE_TAC [BIJ_SYM_IMP]);
-
-val BIJ_TRANS = store_thm
-  ("BIJ_TRANS",
-   ``!s t u.
-       (?f. BIJ f s t) /\ (?g. BIJ g t u) ==> (?h : 'a -> 'b. BIJ h s u)``,
-   RW_TAC std_ss []
-   >> Q.EXISTS_TAC `g o f`
-   >> PROVE_TAC [BIJ_COMPOSE]);
-
-val SCHROEDER_BERNSTEIN = store_thm
-  ("SCHROEDER_BERNSTEIN",
-   ``!s t. (?f. INJ f s t) /\ (?g. INJ g t s) ==> (?h. BIJ h s t)``,
-   Strip
-   >> MATCH_MP_TAC (INST_TYPE [``:'c`` |-> ``:'a``] BIJ_TRANS)
-   >> Q.EXISTS_TAC `IMAGE g t`
-   >> CONJ_TAC >|
-   [MATCH_MP_TAC SCHROEDER_BERNSTEIN_AUTO
-    >> CONJ_TAC
-    >- (POP_ASSUM MP_TAC
-        >> RW_TAC std_ss [INJ_DEF, SUBSET_DEF, IN_IMAGE]
-        >> PROVE_TAC [])
-    >> Q.EXISTS_TAC `g o f`
-    >> rpt (POP_ASSUM MP_TAC)
-    >> RW_TAC std_ss [INJ_DEF, SUBSET_DEF, IN_IMAGE, o_DEF]
-    >> PROVE_TAC [],
-    MATCH_MP_TAC BIJ_SYM_IMP
-    >> Q.EXISTS_TAC `g`
-    >> PROVE_TAC [INJ_IMAGE_BIJ]]);
-
-val SURJ_IMP_INJ = store_thm
-  ("SURJ_IMP_INJ",
-   ``!s t. (?f. SURJ f s t) ==> (?g. INJ g t s)``,
-   RW_TAC std_ss [SURJ_DEF, INJ_DEF]
-   >> Suff `?g. !x. x IN t ==> g x IN s /\ (f (g x) = x)`
-   >- PROVE_TAC []
-   >> Q.EXISTS_TAC `\y. @x. x IN s /\ (f x = y)`
-   >> POP_ASSUM MP_TAC
-   >> RW_TAC std_ss [boolTheory.EXISTS_DEF]);
-
-val BIJ_INJ_SURJ = store_thm
-  ("BIJ_INJ_SURJ",
-   ``!s t. (?f. INJ f s t) /\ (?g. SURJ g s t) ==> (?h. BIJ h s t)``,
-   Strip
-   >> MATCH_MP_TAC SCHROEDER_BERNSTEIN
-   >> CONJ_TAC >- PROVE_TAC []
-   >> PROVE_TAC [SURJ_IMP_INJ]);
-
-val BIJ_INV = store_thm
-  ("BIJ_INV", ``!f s t. BIJ f s t ==>
-       ?g.
-         BIJ g t s /\
-         (!x. x IN s ==> ((g o f) x = x)) /\
-         (!x. x IN t ==> ((f o g) x = x))``,
-   RW_TAC std_ss []
-   >> FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, o_THM]
-   >> POP_ASSUM
-      (MP_TAC o
-       CONV_RULE
-       (DEPTH_CONV RIGHT_IMP_EXISTS_CONV
-        THENC SKOLEM_CONV
-        THENC REWRITE_CONV [EXISTS_DEF]
-        THENC DEPTH_CONV BETA_CONV))
-   >> Q.SPEC_TAC (`@y. !x. x IN t ==> y x IN s /\ (f (y x) = x)`, `g`)
-   >> RW_TAC std_ss []
-   >> Q.EXISTS_TAC `g`
-   >> RW_TAC std_ss []
-   >> PROVE_TAC []);
 
 val NUM_2D_BIJ = store_thm
   ("NUM_2D_BIJ",
@@ -630,41 +395,10 @@ val COUNTABLE_UNION = store_thm
    >> MATCH_MP_TAC FINITE_COUNTABLE
    >> RW_TAC std_ss [FINITE_INSERT, FINITE_EMPTY]);
 
-val FINITE_INJ = store_thm
-  ("FINITE_INJ",
-   ``!f s t. INJ f s t /\ FINITE t ==> FINITE s``,
-   STRIP_TAC
-   >> Suff `!t. FINITE t ==> !s. INJ f s t ==> FINITE s`
-   >- PROVE_TAC []
-   >> HO_MATCH_MP_TAC FINITE_INDUCT
-   >> RW_TAC std_ss [INJ_EMPTY, FINITE_EMPTY]
-   >> REVERSE (Cases_on `?x. x IN s /\ (f x = e)`)
-   >- (Q.PAT_X_ASSUM `!s. P s` MATCH_MP_TAC
-       >> Q.PAT_X_ASSUM `INJ f p q` MP_TAC
-       >> RW_TAC std_ss [INJ_DEF, IN_INSERT]
-       >> PROVE_TAC [])
-   >> POP_ASSUM MP_TAC
-   >> STRIP_TAC
-   >> Suff `FINITE (s DELETE x)` >- PROVE_TAC [FINITE_DELETE]
-   >> Q.PAT_X_ASSUM `!s. P s` MATCH_MP_TAC
-   >> Q.PAT_X_ASSUM `INJ f p q` MP_TAC
-   >> RW_TAC std_ss [INJ_DEF, IN_INSERT, IN_DELETE]
-   >> PROVE_TAC []);
-
-val INFINITE_INJ = store_thm
-  ("INFINITE_INJ",
-   ``!f s t. INJ f s t /\ INFINITE s ==> INFINITE t``,
-   PROVE_TAC [FINITE_INJ]);
-
 val ENUMERATE = store_thm
   ("ENUMERATE",
    ``!s. (?f : num -> 'a. BIJ f UNIV s) = BIJ (enumerate s) UNIV s``,
    RW_TAC std_ss [boolTheory.EXISTS_DEF, enumerate_def]);
-
-val FINITE_REST = store_thm
-  ("FINITE_REST",
-   ``!s. FINITE (REST s) = FINITE s``,
-   RW_TAC std_ss [REST_DEF, FINITE_DELETE]);
 
 val EXPLICIT_ENUMERATE_MONO = store_thm
   ("EXPLICIT_ENUMERATE_MONO",
@@ -680,7 +414,7 @@ val EXPLICIT_ENUMERATE_NOT_EMPTY = store_thm
    >> Induct >- (RW_TAC std_ss [FUNPOW] >> PROVE_TAC [FINITE_EMPTY])
    >> RW_TAC std_ss [FUNPOW]
    >> Q.PAT_X_ASSUM `!s. P s` (MP_TAC o Q.SPEC `REST s`)
-   >> PROVE_TAC [FINITE_REST]);
+   >> PROVE_TAC [FINITE_REST_EQ]);
 
 val INFINITE_EXPLICIT_ENUMERATE = store_thm
   ("INFINITE_EXPLICIT_ENUMERATE",
@@ -718,7 +452,7 @@ val INFINITE_EXPLICIT_ENUMERATE = store_thm
     >> PROVE_TAC [CHOICE_NOT_IN_REST],
     RW_TAC std_ss [FUNPOW]
     >> Q.PAT_X_ASSUM `!y. P y` (MP_TAC o Q.SPECL [`n`, `REST s`])
-    >> PROVE_TAC [FINITE_REST]]);
+    >> PROVE_TAC [FINITE_REST_EQ]]);
 
 val COUNTABLE_ALT = store_thm
   ("COUNTABLE_ALT",
@@ -737,22 +471,6 @@ val COUNTABLE_ALT = store_thm
        >> PROVE_TAC [])
    >> MP_TAC (Q.SPEC `s` INFINITE_EXPLICIT_ENUMERATE)
    >> RW_TAC std_ss []
-   >> PROVE_TAC []);
-
-val DISJOINT_COUNT = store_thm
-  ("DISJOINT_COUNT",
-   ``!f.
-       (!m n : num. ~(m = n) ==> DISJOINT (f m) (f n)) ==>
-       (!n. DISJOINT (f n) (BIGUNION (IMAGE f (count n))))``,
-   RW_TAC arith_ss [DISJOINT_DEF, EXTENSION, IN_INTER, NOT_IN_EMPTY,
-                    IN_BIGUNION, IN_IMAGE, IN_COUNT]
-   >> REVERSE (Cases_on `x IN f n`) >- PROVE_TAC []
-   >> RW_TAC std_ss []
-   >> REVERSE (Cases_on `x IN s`) >- PROVE_TAC []
-   >> RW_TAC std_ss []
-   >> REVERSE (Cases_on `x' < n`) >- PROVE_TAC []
-   >> RW_TAC std_ss []
-   >> Know `~(x':num = n)` >- DECIDE_TAC
    >> PROVE_TAC []);
 
 val PREIMAGE_def = Define `PREIMAGE f s = {x | f x IN s}`;
@@ -778,18 +496,6 @@ val IN_PREIMAGE = store_thm
   ("IN_PREIMAGE",
    ``!f s x. x IN PREIMAGE f s = f x IN s``,
    RW_TAC std_ss [PREIMAGE_def, GSPECIFICATION]);
-
-val IN_BIGUNION_IMAGE = store_thm
-  ("IN_BIGUNION_IMAGE",
-   ``!f s y. y IN BIGUNION (IMAGE f s) = ?x. x IN s /\ y IN f x``,
-   RW_TAC std_ss [EXTENSION, IN_BIGUNION, IN_IMAGE]
-   >> PROVE_TAC []);
-
-val IN_BIGINTER_IMAGE = store_thm
-  ("IN_BIGINTER_IMAGE",
-   ``!x f s. x IN BIGINTER (IMAGE f s) = (!y. y IN s ==> x IN f y)``,
-   RW_TAC std_ss [IN_BIGINTER, IN_IMAGE]
-   >> PROVE_TAC []);
 
 val PREIMAGE_EMPTY = store_thm
   ("PREIMAGE_EMPTY",
@@ -859,43 +565,6 @@ val PREIMAGE_SUBSET = store_thm
    ``!f s t. s SUBSET t ==> PREIMAGE f s SUBSET PREIMAGE f t``,
    RW_TAC std_ss [SUBSET_DEF, PREIMAGE_def, GSPECIFICATION]);
 
-val SUBSET_ADD = store_thm
-  ("SUBSET_ADD",
-   ``!f n d.
-       (!n. f n SUBSET f (SUC n)) ==>
-       f n SUBSET f (n + d)``,
-   RW_TAC std_ss []
-   >> Induct_on `d` >- RW_TAC arith_ss [SUBSET_REFL]
-   >> RW_TAC std_ss [ADD_CLAUSES]
-   >> MATCH_MP_TAC SUBSET_TRANS
-   >> Q.EXISTS_TAC `f (n + d)`
-   >> RW_TAC std_ss []);
-
-val DISJOINT_DIFFS = store_thm
-  ("DISJOINT_DIFFS",
-   ``!f m n.
-       (!n. f n SUBSET f (SUC n)) /\
-       (!n. g n = f (SUC n) DIFF f n) /\ ~(m = n) ==>
-       DISJOINT (g m) (g n)``,
-   RW_TAC std_ss []
-   >> Know `SUC m <= n \/ SUC n <= m` >- DECIDE_TAC
-   >> REWRITE_TAC [LESS_EQ_EXISTS]
-   >> STRIP_TAC >|
-   [Know `f (SUC m) SUBSET f n` >- PROVE_TAC [SUBSET_ADD]
-    >> RW_TAC std_ss [DISJOINT_DEF, EXTENSION, IN_INTER,
-                      NOT_IN_EMPTY, IN_DIFF, SUBSET_DEF]
-    >> PROVE_TAC [],
-    Know `f (SUC n) SUBSET f m` >- PROVE_TAC [SUBSET_ADD]
-    >> RW_TAC std_ss [DISJOINT_DEF, EXTENSION, IN_INTER,
-                      NOT_IN_EMPTY, IN_DIFF, SUBSET_DEF]
-    >> PROVE_TAC []]);
-
-val IMAGE_IMAGE = store_thm
-  ("IMAGE_IMAGE",
-   ``!f g s. IMAGE f (IMAGE g s) = IMAGE (f o g) s``,
-   RW_TAC std_ss [EXTENSION, IN_IMAGE, o_THM]
-   >> PROVE_TAC []);
-
 val IN_PROD_SETS = store_thm
   ("IN_PROD_SETS",
    ``!s a b. s IN prod_sets a b = ?t u. (s = t CROSS u) /\ t IN a /\ u IN b``,
@@ -911,12 +580,6 @@ val PREIMAGE_CROSS = store_thm
        PREIMAGE f (a CROSS b) =
        PREIMAGE (FST o f) a INTER PREIMAGE (SND o f) b``,
    RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_CROSS, IN_INTER, o_THM]);
-
-val FUNSET_INTER = store_thm
-  ("FUNSET_INTER",
-   ``!a b c. (a -> b INTER c) = (a -> b) INTER (a -> c)``,
-   RW_TAC std_ss [EXTENSION, IN_FUNSET, IN_INTER]
-   >> PROVE_TAC []);
 
 val UNIV_NEQ_EMPTY = store_thm
   ("UNIV_NEQ_EMPTY",
@@ -970,17 +633,6 @@ val COUNTABLE_ENUM = store_thm
     RW_TAC std_ss [] >>
     METIS_TAC [num_case_def, TypeBase.nchotomy_of ``:num``]]
     );
-
-val BIGUNION_IMAGE_UNIV = store_thm
-  ("BIGUNION_IMAGE_UNIV",
-   ``!f N.
-       (!n. N <= n ==> (f n = {})) ==>
-       (BIGUNION (IMAGE f UNIV) = BIGUNION (IMAGE f (count N)))``,
-   RW_TAC std_ss [EXTENSION, IN_BIGUNION, IN_IMAGE, IN_UNIV, IN_COUNT,
-                  NOT_IN_EMPTY]
-   >> REVERSE EQ_TAC >- PROVE_TAC []
-   >> RW_TAC std_ss []
-   >> PROVE_TAC [NOT_LESS]);
 
 val BIJ_ALT = store_thm
   ("BIJ_ALT",
@@ -1134,59 +786,6 @@ val finite_enumeration_of_sets_has_max_non_empty = store_thm
        >> RW_TAC std_ss [FINITE_DELETE, IN_INSERT, IN_DELETE])
    >> METIS_TAC [IN_INSERT]);
 
-val SUBSET_INTER1 = store_thm
-  ("SUBSET_INTER1",
-   ``!s t. s SUBSET t ==> (s INTER t = s)``,
-   RW_TAC std_ss [EXTENSION,GSPECIFICATION,SUBSET_DEF, IN_INTER]
-   >> PROVE_TAC []);
-
-val SUBSET_INTER2 = store_thm
-  ("SUBSET_INTER2",
-   ``!s t. s SUBSET t ==> (t INTER s = s)``,
-   RW_TAC std_ss [EXTENSION,GSPECIFICATION,SUBSET_DEF, IN_INTER]
-   >> PROVE_TAC []);
-
-val DIFF_DIFF_SUBSET = store_thm
-  ("DIFF_DIFF_SUBSET", ``!s t. (t SUBSET s) ==> (s DIFF (s DIFF t) = t)``,
-  RW_TAC std_ss [DIFF_DEF,IN_INTER,EXTENSION,GSPECIFICATION,SUBSET_DEF]
-  >> EQ_TAC >- RW_TAC std_ss []
-  >> RW_TAC std_ss []);
-
-val BIGINTER_SUBSET = store_thm
-  ("BIGINTER_SUBSET", ``!sp s. (!t. t IN s ==> t SUBSET sp)  /\ (~(s = {}))
-                       ==> (BIGINTER s) SUBSET sp``,
-  RW_TAC std_ss [SUBSET_DEF,IN_BIGINTER]
-  >> `?u. u IN s` by METIS_TAC [CHOICE_DEF]
-  >> METIS_TAC []);
-
-val DIFF_BIGINTER1 = store_thm
-  ("DIFF_BIGINTER1",
-    ``!sp s. sp DIFF (BIGINTER s) = BIGUNION (IMAGE (\u. sp DIFF u) s)``,
-  SRW_TAC [][EXTENSION]
-  >> EQ_TAC >- METIS_TAC [IN_DIFF]
-  >> RW_TAC std_ss []
-  >> METIS_TAC []);
-
-val DIFF_BIGINTER = store_thm
-   ("DIFF_BIGINTER", ``!sp s. (!t. t IN s ==> t SUBSET sp)  /\ (~(s = {}))
-         ==> ( BIGINTER s = sp DIFF (BIGUNION (IMAGE (\u. sp DIFF u) s)) )``,
-  RW_TAC std_ss []
-  >> `(BIGINTER s SUBSET sp)` by RW_TAC std_ss [BIGINTER_SUBSET]
-  >> ASSUME_TAC (Q.SPECL [`sp`,`s`] DIFF_BIGINTER1)
-  >> `sp DIFF (sp DIFF (BIGINTER s)) = (BIGINTER s)` by RW_TAC std_ss [DIFF_DIFF_SUBSET]
-  >> METIS_TAC []);
-
-val DIFF_INTER = store_thm
-  ("DIFF_INTER", ``!s t g. (s DIFF t) INTER g = s INTER g DIFF t``,
-  RW_TAC std_ss [DIFF_DEF,INTER_DEF,EXTENSION]
-  >> RW_TAC std_ss [GSPECIFICATION]
-  >> EQ_TAC >- RW_TAC std_ss [] >> RW_TAC std_ss []);
-
-val DIFF_INTER2 = store_thm
-  ("DIFF_INTER2", ``!s t. s DIFF (t INTER s) = s DIFF t``,
-  RW_TAC std_ss [DIFF_DEF,INTER_DEF,EXTENSION]
-  >> RW_TAC std_ss [GSPECIFICATION,LEFT_AND_OVER_OR]);
-
 val PREIMAGE_COMPL_INTER = store_thm
   ("PREIMAGE_COMPL_INTER", ``!f t sp. PREIMAGE f (COMPL t) INTER sp = sp DIFF (PREIMAGE f t)``,
   RW_TAC std_ss [COMPL_DEF]
@@ -1205,7 +804,6 @@ val PREIMAGE_REAL_COMPL2 = store_thm
   RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION]
   >> RW_TAC real_ss [GSPECIFICATION,GSYM real_lt,SPECIFICATION]);
 
-
 val PREIMAGE_REAL_COMPL3 = store_thm
   ("PREIMAGE_REAL_COMPL3", ``!c:real. COMPL {x | x <= c} = {x | c < x}``,
   RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION]
@@ -1215,11 +813,6 @@ val PREIMAGE_REAL_COMPL4 = store_thm
   ("PREIMAGE_REAL_COMPL4", ``!c:real. COMPL {x | x < c} = {x | c <= x}``,
   RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION]
   >> RW_TAC real_ss [GSPECIFICATION,GSYM real_lte,SPECIFICATION]);
-
-val ELT_IN_DELETE = store_thm
-  ("ELT_IN_DELETE",
-   ``!x s. ~(x IN (s DELETE x))``,
-   RW_TAC std_ss [IN_DELETE]);
 
 val DELETE_THEN_INSERT = store_thm
   ("DELETE_THEN_INSERT",
@@ -1287,17 +880,6 @@ val GBIGUNION_IMAGE = store_thm
   ("GBIGUNION_IMAGE",
    ``!s p n. {s | ?n. p s n} = BIGUNION (IMAGE (\n. {s | p s n}) UNIV)``,
    RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGUNION_IMAGE, IN_UNIV]);
-
-val DISJOINT_ALT = store_thm
-  ("DISJOINT_ALT",
-   ``!s t. DISJOINT s t = !x. x IN s ==> ~(x IN t)``,
-   RW_TAC std_ss [IN_DISJOINT]
-   >> PROVE_TAC []);
-
-val DISJOINT_DIFF = store_thm
- ("DISJOINT_DIFF", ``!s t. DISJOINT t (s DIFF t) /\ DISJOINT (s DIFF t) t``,
-  RW_TAC std_ss [EXTENSION, DISJOINT_DEF, IN_INTER, NOT_IN_EMPTY, IN_DIFF]
-  >> METIS_TAC []);
 
 val COUNTABLE_COUNT = store_thm
   ("COUNTABLE_COUNT",
