@@ -51,27 +51,6 @@ val Cond =
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val countable_def = Define
-  `countable s = ?f. !x : 'a. x IN s ==> ?n : num. f n = x`;
-
-val pscountable_countable = store_thm(
-  "pscountable_countable",
-  ``pred_set$countable = extra_pred_set$countable``,
-  SRW_TAC [][countable_def, pred_setTheory.countable_def, FUN_EQ_THM] THEN
-  EQ_TAC THEN STRIP_TAC THEN1
-    (IMP_RES_TAC inj_surj THEN SRW_TAC [][] THEN METIS_TAC [SURJ_DEF]) THEN
-  Q.EXISTS_TAC `\x. @n. f n = x` THEN ASM_SIMP_TAC (srw_ss())[INJ_DEF] THEN
-  MAP_EVERY Q.X_GEN_TAC [`e1`, `e2`] THEN STRIP_TAC THEN
-  SELECT_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC [] THEN
-  Q.X_GEN_TAC `u` THEN STRIP_TAC THEN
-  SELECT_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC [] THEN
-  Q.X_GEN_TAC `v` THEN REPEAT STRIP_TAC THEN SRW_TAC [][]);
-
-val enumerate_def = Define `enumerate s = @f : num -> 'a. BIJ f UNIV s`;
-
-val schroeder_close_def = Define
-  `schroeder_close f s x = ?n. x IN FUNPOW (IMAGE f) n s`;
-
 val IMAGE2_def = Define `IMAGE2 f s t = {f x y | x IN s /\ y IN t}`;
 
 val UNIONL_def = Define `(UNIONL [] = {})
@@ -104,8 +83,6 @@ val _ = save_thm ("list_elts_ind", list_elts_ind);
 val set_def = Define `set p s = s SUBSET p`;
 
 val nonempty_def = Define `nonempty s = ~(s = {})`;
-
-val PREIMAGE_def = Define `PREIMAGE f s = {x | f x IN s}`;
 
 val range_def = Define `range f = IMAGE f UNIV`;
 
@@ -703,87 +680,6 @@ val CARD_LESS = store_thm
    ++ Simplify [SPECIFICATION]
    ++ DECIDE_TAC);
 
-val FINITE_COUNTABLE = store_thm
-  ("FINITE_COUNTABLE",
-   ``!s. FINITE s ==> countable s``,
-   REWRITE_TAC [countable_def]
-   ++ HO_MATCH_MP_TAC FINITE_INDUCT
-   ++ RW_TAC std_ss [NOT_IN_EMPTY]
-   ++ Q.EXISTS_TAC `\n. if n = 0 then e else f (n - 1)`
-   ++ RW_TAC std_ss [IN_INSERT] >> PROVE_TAC []
-   ++ Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
-   ++ RW_TAC std_ss []
-   ++ Q.EXISTS_TAC `SUC n`
-   ++ RW_TAC std_ss [SUC_SUB1]);
-
-val BIJ_NUM_COUNTABLE = store_thm
-  ("BIJ_NUM_COUNTABLE",
-   ``!s. (?f : num -> 'a. BIJ f UNIV s) ==> countable s``,
-   RW_TAC std_ss [countable_def, BIJ_DEF, SURJ_DEF, IN_UNIV]
-   ++ PROVE_TAC []);
-
-val SCHROEDER_CLOSE = store_thm
-  ("SCHROEDER_CLOSE",
-   ``!f s. x IN schroeder_close f s = ?n. x IN FUNPOW (IMAGE f) n s``,
-   RW_TAC std_ss [SPECIFICATION, schroeder_close_def]);
-
-val SCHROEDER_CLOSED = store_thm
-  ("SCHROEDER_CLOSED",
-   ``!f s. IMAGE f (schroeder_close f s) SUBSET schroeder_close f s``,
-   RW_TAC std_ss [SCHROEDER_CLOSE, IN_IMAGE, SUBSET_DEF]
-   ++ Q.EXISTS_TAC `SUC n`
-   ++ RW_TAC std_ss [FUNPOW_SUC, IN_IMAGE]
-   ++ PROVE_TAC []);
-
-val SCHROEDER_CLOSE_SUBSET = store_thm
-  ("SCHROEDER_CLOSE_SUBSET",
-   ``!f s. s SUBSET schroeder_close f s``,
-   RW_TAC std_ss [SCHROEDER_CLOSE, IN_IMAGE, SUBSET_DEF]
-   ++ Q.EXISTS_TAC `0`
-   ++ RW_TAC std_ss [FUNPOW]);
-
-val SCHROEDER_CLOSE_SET = store_thm
-  ("SCHROEDER_CLOSE_SET",
-   ``!f s t. f IN (s -> s) /\ t SUBSET s ==> schroeder_close f t SUBSET s``,
-   RW_TAC std_ss [SCHROEDER_CLOSE, SUBSET_DEF, IN_FUNSET]
-   ++ POP_ASSUM MP_TAC
-   ++ Q.SPEC_TAC (`x`, `x`)
-   ++ Induct_on `n` >> RW_TAC std_ss [FUNPOW]
-   ++ RW_TAC std_ss [FUNPOW_SUC, IN_IMAGE]
-   ++ PROVE_TAC []);
-
-val SCHROEDER_BERNSTEIN_AUTO = store_thm
-  ("SCHROEDER_BERNSTEIN_AUTO",
-   ``!s t. t SUBSET s /\ (?f. INJ f s t) ==> ?g. BIJ g s t``,
-   RW_TAC std_ss [INJ_DEF]
-   ++ Q.EXISTS_TAC `\x. if x IN schroeder_close f (s DIFF t) then f x else x`
-   ++ Know `s DIFF schroeder_close f (s DIFF t) SUBSET t`
-   >> (RW_TAC std_ss [SUBSET_DEF, IN_DIFF]
-       ++ Suff `~(x IN s DIFF t)` >> RW_TAC std_ss [IN_DIFF]
-       ++ PROVE_TAC [SCHROEDER_CLOSE_SUBSET, SUBSET_DEF])
-   ++ Know `schroeder_close f (s DIFF t) SUBSET s`
-   >> (MATCH_MP_TAC SCHROEDER_CLOSE_SET
-       ++ RW_TAC std_ss [SUBSET_DEF, IN_DIFF, IN_FUNSET]
-       ++ PROVE_TAC [SUBSET_DEF])
-   ++ Q.PAT_X_ASSUM `t SUBSET s` MP_TAC
-   ++ RW_TAC std_ss [SUBSET_DEF, IN_DIFF]
-   ++ RW_TAC std_ss [BIJ_DEF]
-   >> (BasicProvers.NORM_TAC std_ss [INJ_DEF]
-       ++ PROVE_TAC [SCHROEDER_CLOSED, SUBSET_DEF, IN_IMAGE])
-   ++ RW_TAC std_ss [SURJ_DEF]
-   ++ REVERSE (Cases_on `x IN schroeder_close f (s DIFF t)`) >> PROVE_TAC []
-   ++ POP_ASSUM MP_TAC
-   ++ RW_TAC std_ss [SCHROEDER_CLOSE]
-   ++ Cases_on `n` >> (POP_ASSUM MP_TAC ++ RW_TAC std_ss [FUNPOW, IN_DIFF])
-   ++ POP_ASSUM MP_TAC
-   ++ RW_TAC std_ss [FUNPOW_SUC, IN_IMAGE]
-   ++ Q.EXISTS_TAC `x'`
-   ++ POP_ASSUM MP_TAC
-   ++ Q.SPEC_TAC (`n'`, `n`)
-   ++ CONV_TAC FORALL_IMP_CONV
-   ++ REWRITE_TAC [GSYM SCHROEDER_CLOSE]
-   ++ RW_TAC std_ss []);
-
 val INJ_IMAGE_BIJ = store_thm
   ("INJ_IMAGE_BIJ",
    ``!s f. (?t. INJ f s t) ==> BIJ f s (IMAGE f s)``,
@@ -918,25 +814,6 @@ val INFINITE_EXPLICIT_ENUMERATE = store_thm
     RW_TAC std_ss [FUNPOW]
     ++ Q.PAT_X_ASSUM `!y. P y` (MP_TAC o Q.SPECL [`n`, `REST s`])
     ++ PROVE_TAC [FINITE_REST]]);
-
-val COUNTABLE_ALT = store_thm
-  ("COUNTABLE_ALT",
-   ``!s. countable s = FINITE s \/ BIJ (enumerate s) UNIV s``,
-   Strip
-   ++ REVERSE EQ_TAC >> PROVE_TAC [FINITE_COUNTABLE, BIJ_NUM_COUNTABLE]
-   ++ RW_TAC std_ss [countable_def]
-   ++ Cases_on `FINITE s` >> PROVE_TAC []
-   ++ RW_TAC std_ss [GSYM ENUMERATE]
-   ++ MATCH_MP_TAC BIJ_INJ_SURJ
-   ++ REVERSE CONJ_TAC
-   >> (Know `~(s = {})` >> PROVE_TAC [FINITE_EMPTY]
-       ++ RW_TAC std_ss [GSYM MEMBER_NOT_EMPTY]
-       ++ Q.EXISTS_TAC `\n. if f n IN s then f n else x`
-       ++ RW_TAC std_ss [SURJ_DEF, IN_UNIV]
-       ++ PROVE_TAC [])
-   ++ MP_TAC (Q.SPEC `s` INFINITE_EXPLICIT_ENUMERATE)
-   ++ RW_TAC std_ss []
-   ++ PROVE_TAC []);
 
 val DIFF_ALT = store_thm
   ("DIFF_ALT",
@@ -1194,14 +1071,6 @@ val BIGUNION_PAIR = store_thm
    RW_TAC std_ss [EXTENSION, IN_BIGUNION, IN_UNION, IN_INSERT, NOT_IN_EMPTY]
    ++ PROVE_TAC []);
 
-val COUNTABLE_IMAGE = store_thm
-  ("COUNTABLE_IMAGE",
-   ``!s f. countable s ==> countable (IMAGE f s)``,
-   RW_TAC std_ss [countable_def, IN_IMAGE]
-   ++ Q.EXISTS_TAC `f o f'`
-   ++ RW_TAC std_ss [o_THM]
-   ++ PROVE_TAC []);
-
 val PREIMAGE_IMAGE = store_thm
   ("PREIMAGE_IMAGE",
    ``!f s. s SUBSET PREIMAGE f (IMAGE f s)``,
@@ -1235,18 +1104,6 @@ val DISJOINT_COUNT = store_thm
    ++ Know `~(x':num = n)` >> DECIDE_TAC
    ++ PROVE_TAC []);
 
-val COUNTABLE_NUM = store_thm
-  ("COUNTABLE_NUM",
-   ``!s : num -> bool. countable s``,
-   RW_TAC std_ss [countable_def]
-   ++ Q.EXISTS_TAC `I`
-   ++ RW_TAC std_ss [I_THM]);
-
-val COUNTABLE_IMAGE_NUM = store_thm
-  ("COUNTABLE_IMAGE_NUM",
-   ``!f : num -> 'a. !s. countable (IMAGE f s)``,
-   PROVE_TAC [COUNTABLE_NUM, COUNTABLE_IMAGE]);
-
 val BIJ_IMAGE = store_thm
   ("BIJ_IMAGE",
    ``!f s t. BIJ f s t ==> (t = IMAGE f s)``,
@@ -1264,46 +1121,6 @@ val FUNSET_INTER = store_thm
    ``!a b c. (a -> b INTER c) = (a -> b) INTER (a -> c)``,
    RW_TAC std_ss [EXTENSION, IN_FUNSET, IN_INTER]
    ++ PROVE_TAC []);
-
-val COUNTABLE_EMPTY = store_thm
-  ("COUNTABLE_EMPTY",
-   ``countable {}``,
-   PROVE_TAC [FINITE_COUNTABLE, FINITE_EMPTY]);
-
-val COUNTABLE_ENUM = store_thm
-  ("COUNTABLE_ENUM",
-   ``!c. countable c = (c = {}) \/ (?f : num -> 'a. c = IMAGE f UNIV)``,
-   RW_TAC std_ss []
-   ++ REVERSE EQ_TAC
-   >> (NTAC 2 (RW_TAC std_ss [COUNTABLE_EMPTY])
-       ++ RW_TAC std_ss [countable_def]
-       ++ Q.EXISTS_TAC `f`
-       ++ RW_TAC std_ss [IN_IMAGE, IN_UNIV]
-       ++ PROVE_TAC [])
-   ++ REVERSE (RW_TAC std_ss [COUNTABLE_ALT])
-   >> (DISJ2_TAC
-       ++ Q.EXISTS_TAC `enumerate c`
-       ++ POP_ASSUM MP_TAC
-       ++ RW_TAC std_ss [IN_UNIV, IN_IMAGE, BIJ_DEF, SURJ_DEF, EXTENSION]
-       ++ PROVE_TAC [])
-   ++ POP_ASSUM MP_TAC
-   ++ Q.SPEC_TAC (`c`, `c`)
-   ++ HO_MATCH_MP_TAC FINITE_INDUCT
-   ++ RW_TAC std_ss []
-   >> (DISJ2_TAC
-       ++ Q.EXISTS_TAC `K e`
-       ++ RW_TAC std_ss [EXTENSION, IN_SING, IN_IMAGE, IN_UNIV, K_THM])
-   ++ DISJ2_TAC
-   ++ Q.EXISTS_TAC `\n. num_CASE n e f`
-   ++ RW_TAC std_ss [IN_INSERT, IN_IMAGE, EXTENSION, IN_UNIV]
-   ++ EQ_TAC <<
-   [RW_TAC std_ss [] <<
-    [Q.EXISTS_TAC `0`
-     ++ RW_TAC std_ss [num_case_def],
-     Q.EXISTS_TAC `SUC x'`
-     ++ RW_TAC std_ss [num_case_def]],
-    RW_TAC std_ss [] ++
-    METIS_TAC [num_case_def, TypeBase.nchotomy_of ``:num``]]);
 
 val BIGUNION_IMAGE_UNIV = store_thm
   ("BIGUNION_IMAGE_UNIV",
@@ -1416,7 +1233,7 @@ val COUNTABLE_BIGUNION = store_thm
   ("COUNTABLE_BIGUNION",
    ``!c.
        countable c /\ (!s. s IN c ==> countable s) ==> countable (BIGUNION c)``,
-   RW_TAC std_ss [countable_def]
+   RW_TAC std_ss [COUNTABLE_ALT]
    ++ POP_ASSUM
       (MP_TAC o CONV_RULE (DEPTH_CONV RIGHT_IMP_EXISTS_CONV THENC SKOLEM_CONV))
    ++ MP_TAC NUM_2D_BIJ_INV
@@ -1443,15 +1260,8 @@ val COUNTABLE_UNION = store_thm
    ++ MATCH_MP_TAC COUNTABLE_BIGUNION
    ++ (RW_TAC std_ss [IN_INSERT, NOT_IN_EMPTY]
        ++ RW_TAC std_ss [])
-   ++ MATCH_MP_TAC FINITE_COUNTABLE
+   ++ MATCH_MP_TAC finite_countable
    ++ RW_TAC std_ss [FINITE_INSERT, FINITE_EMPTY]);
-
-val COUNTABLE_SUBSET = store_thm
-  ("COUNTABLE_SUBSET",
-   ``!s t. s SUBSET t /\ countable t ==> countable s``,
-   RW_TAC std_ss [countable_def, SUBSET_DEF]
-   ++ Q.EXISTS_TAC `f`
-   ++ PROVE_TAC []);
 
 val COUNTABLE_BOOL_LIST = store_thm
   ("COUNTABLE_BOOL_LIST",
@@ -1469,7 +1279,7 @@ val COUNTABLE_BOOL_LIST = store_thm
    ++ MATCH_MP_TAC COUNTABLE_BIGUNION
    ++ RW_TAC std_ss [COUNTABLE_IMAGE_NUM, IN_IMAGE, IN_UNIV]
    ++ Induct_on `x`
-   >> (RW_TAC std_ss [countable_def, IN_PREIMAGE, IN_SING, LENGTH_NIL]
+   >> (RW_TAC std_ss [COUNTABLE_ALT, IN_PREIMAGE, IN_SING, LENGTH_NIL]
        ++ Q.EXISTS_TAC `K []`
        ++ RW_TAC std_ss [K_THM])
    ++ Know
@@ -1482,7 +1292,7 @@ val COUNTABLE_BOOL_LIST = store_thm
        ++ PROVE_TAC [])
    ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
    ++ MATCH_MP_TAC COUNTABLE_UNION
-   ++ RW_TAC std_ss [COUNTABLE_IMAGE]);
+   ++ RW_TAC std_ss [image_countable]);
 
 val INTER_BIGUNION = store_thm
   ("INTER_BIGUNION",
@@ -1552,7 +1362,7 @@ val COUNTABLE_DISJOINT_ENUM = store_thm
          f IN (UNIV -> ({} INSERT c)) /\
          (BIGUNION c = BIGUNION (IMAGE f UNIV)) /\
          (!m n. ~(m = n) ==> DISJOINT (f m) (f n))``,
-   RW_TAC std_ss [COUNTABLE_ALT]
+   RW_TAC std_ss [COUNTABLE_ALT_BIJ]
    >> (MP_TAC (Q.SPEC `c` FINITE_DISJOINT_ENUM)
        ++ RW_TAC std_ss [])
    ++ Q.EXISTS_TAC `enumerate c`
@@ -1589,12 +1399,12 @@ val FINITE_BOOL = store_thm
 val COUNTABLE_BOOL = store_thm
   ("COUNTABLE_BOOL",
    ``!s : bool -> bool. countable s``,
-   PROVE_TAC [FINITE_COUNTABLE, FINITE_BOOL]);
+   PROVE_TAC [finite_countable, FINITE_BOOL]);
 
 val COUNTABLE_SING = store_thm
   ("COUNTABLE_SING",
    ``!x. countable {x}``,
-   PROVE_TAC [FINITE_COUNTABLE, FINITE_SING]);
+   PROVE_TAC [finite_countable, FINITE_SING]);
 
 val ALWAYS_IN_RANGE = store_thm
   ("ALWAYS_IN_RANGE",
@@ -1692,33 +1502,6 @@ val DISJOINT_ALT = store_thm
   ("DISJOINT_ALT",
    ``!s t. DISJOINT s t = !x. x IN s ==> ~(x IN t)``,
    RW_TAC std_ss [IN_DISJOINT]
-   ++ PROVE_TAC []);
-
-val COUNTABLE_INSERT = save_thm(
-  "COUNTABLE_INSERT",
-  REWRITE_RULE [pscountable_countable] pred_setTheory.countable_INSERT)
-
-val COUNTABLE_COUNT = store_thm
-  ("COUNTABLE_COUNT",
-   ``!n. countable (count n)``,
-   PROVE_TAC [FINITE_COUNT, FINITE_COUNTABLE]);
-
-val FINITE_BIJ_COUNT = store_thm
-  ("FINITE_BIJ_COUNT",
-   ``!s. FINITE s = ?c n. BIJ c (count n) s``,
-   RW_TAC std_ss []
-   ++ REVERSE EQ_TAC >> PROVE_TAC [FINITE_COUNT, FINITE_BIJ]
-   ++ Q.SPEC_TAC (`s`, `s`)
-   ++ HO_MATCH_MP_TAC FINITE_INDUCT
-   ++ RW_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, NOT_IN_EMPTY]
-   >> (Q.EXISTS_TAC `c`
-       ++ Q.EXISTS_TAC `0`
-       ++ RW_TAC std_ss [COUNT_ZERO, NOT_IN_EMPTY])
-   ++ Q.EXISTS_TAC `\m. if m = n then e else c m`
-   ++ Q.EXISTS_TAC `SUC n`
-   ++ Know `!x. x IN count n ==> ~(x = n)`
-   >> RW_TAC arith_ss [IN_COUNT]
-   ++ RW_TAC std_ss [COUNT_SUC, IN_INSERT]
    ++ PROVE_TAC []);
 
 val GCOMPL = store_thm

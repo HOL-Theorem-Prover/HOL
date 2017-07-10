@@ -393,14 +393,14 @@ val SIGMA_ALGEBRA_ALT = store_thm
           f IN (UNIV -> a) ==> BIGUNION (IMAGE f UNIV) IN a)``,
    RW_TAC std_ss [sigma_algebra_def]
    ++ EQ_TAC
-   >> (RW_TAC std_ss [countable_def, IN_FUNSET, IN_UNIV]
+   >> (RW_TAC std_ss [COUNTABLE_ALT, IN_FUNSET, IN_UNIV]
        ++ Q.PAT_X_ASSUM `!c. P c ==> Q c` MATCH_MP_TAC
        ++ Reverse (RW_TAC std_ss [IN_IMAGE, SUBSET_DEF, IN_UNIV])
        >> PROVE_TAC []
        ++ Q.EXISTS_TAC `f`
        ++ RW_TAC std_ss []
        ++ PROVE_TAC [])
-   ++ RW_TAC std_ss [COUNTABLE_ALT]
+   ++ RW_TAC std_ss [COUNTABLE_ALT_BIJ]
    >> PROVE_TAC [ALGEBRA_FINITE_UNION]
    ++ Q.PAT_X_ASSUM `!f. P f` (MP_TAC o Q.SPEC `\n. enumerate c n`)
    ++ RW_TAC std_ss' [IN_UNIV, IN_FUNSET]
@@ -1404,7 +1404,7 @@ val SIGMA_ALGEBRA = store_thm
    ++ EQ_TAC >> PROVE_TAC []
    ++ RW_TAC std_ss []
    ++ Q.PAT_X_ASSUM `!c. P c` (MP_TAC o Q.SPEC `{s; t}`)
-   ++ RW_TAC std_ss [COUNTABLE_ALT, FINITE_INSERT, FINITE_EMPTY, SUBSET_DEF,
+   ++ RW_TAC std_ss [COUNTABLE_ALT_BIJ, FINITE_INSERT, FINITE_EMPTY, SUBSET_DEF,
                      BIGUNION_PAIR, IN_INSERT, NOT_IN_EMPTY]
    ++ PROVE_TAC []);
 
@@ -1443,7 +1443,7 @@ val MEASURABLE_SIGMA = store_thm
     ++ RW_TAC std_ss [sigma_algebra_def]
     ++ POP_ASSUM MATCH_MP_TAC
     ++ RW_TAC std_ss [SUBSET_DEF, IN_IMAGE]
-    ++ PROVE_TAC [COUNTABLE_IMAGE]]);
+    ++ PROVE_TAC [image_countable]]);
 
 val MEASURABLE_SUBSET = store_thm
   ("MEASURABLE_SUBSET",
