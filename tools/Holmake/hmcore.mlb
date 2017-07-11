@@ -7,8 +7,6 @@ mlton/PolyML.sml
 Holdep_tokens.sig
 Holdep_tokens.sml
 QuoteFilter.sml
-HM_SimpleBuffer.sig
-HM_SimpleBuffer.sml
 QFRead.sig
 QFRead.sml
 Holdep.sig

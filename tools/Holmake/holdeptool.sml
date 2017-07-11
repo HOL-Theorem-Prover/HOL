@@ -21,7 +21,7 @@ fun main() = let
       case CommandLine.arguments() of
           [] => stream_deps ("<stdin>", TextIO.stdIn)
         | ["-h"] => usage ok
-        | [fname] => (file_deps fname
+        | [fname] => (reader_deps (fname, QFRead.fileToReader fname)
                       handle LEX_ERROR s => diewith("Lexical error: " ^ s)
                            | e => diewith ("Exception: "^General.exnMessage e))
         | _ => usage die

@@ -39,15 +39,18 @@ fun main() = let
    Kenn Heinrich who helped me see the light with respect to this code *)
 
   open QuoteFilter.UserDeclarations
-  val state as QFS args =
-      newstate ((fn s => TextIO.output(outstream, s)),
-                (fn () => TextIO.flushOut outstream))
+  val state as QFS args = newstate()
+  val lexer = QuoteFilter.makeLexer (read_from_stream instream) state
 
-  fun loop() = let
-    val lexer = QuoteFilter.makeLexer (read_from_stream instream) state
-  in
-    lexer() handle Interrupt => (resetstate state; loop())
-  end
+  fun lexopt () =
+    case lexer() of
+        "" => NONE
+      | s => SOME s
+
+  fun loop() =
+    case (lexopt() handle Interrupt => (resetstate state; SOME "")) of
+        NONE => ()
+      | SOME s => (TextIO.output(outstream, s); loop())
 in
   loop();
   TextIO.closeOut outstream;

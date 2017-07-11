@@ -356,8 +356,6 @@ val _ =
   in
     systeml [mllex, "QuoteFilter"];
     compile [] "QuoteFilter.sml";
-    compile [] "HM_SimpleBuffer.sig";
-    compile [] "HM_SimpleBuffer.sml";
     compile [] "QFRead.sig";
     compile [] "QFRead.sml";
     compile [] "FunctionalRecordUpdate.sml";

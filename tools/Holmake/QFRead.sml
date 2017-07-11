@@ -1,46 +1,61 @@
 structure QFRead :> QFRead =
 struct
 
-open HM_SimpleBuffer
 fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
              OS.Process.exit OS.Process.failure)
 fun exndie e = die ("Exception raised " ^ General.exnMessage e)
 
-fun inputFile fname =
+fun exhaust_lexer (read, close) =
   let
-    val {push, read, ...} = mkBuffer()
-    val instrm = TextIO.openIn fname handle e => exndie e
-    val qstate = QuoteFilter.UserDeclarations.newstate(push, fn () => ())
+    fun recurse acc =
+      case read () of
+          "" => (close(); String.concat (List.rev acc))
+        | s => recurse (s::acc)
   in
-    QuoteFilter.makeLexer (fn n => TextIO.input instrm) qstate ();
-    TextIO.closeIn instrm;
-    read()
+    recurse []
   end
 
-fun fromString s =
+fun file_to_lexer fname =
   let
-    val {push, read, ...} = mkBuffer()
-    val qstate = QuoteFilter.UserDeclarations.newstate(push, fn () => ())
+    val instrm = TextIO.openIn fname handle e => exndie e
+    val qstate = QuoteFilter.UserDeclarations.newstate()
+    val read = QuoteFilter.makeLexer (fn n => TextIO.input instrm) qstate
+  in
+    (read, (fn () => TextIO.closeIn instrm))
+  end
+
+fun string_to_lexer s =
+  let
+    val qstate = QuoteFilter.UserDeclarations.newstate()
     val sr = ref s
     fun str_read _ = (!sr before sr := "")
+    val read = QuoteFilter.makeLexer str_read qstate
   in
-    QuoteFilter.makeLexer str_read qstate ();
-    read()
+    (read, (fn () => ()))
   end
 
-fun mkReaderEOF s = let
+fun inputFile fname = exhaust_lexer (file_to_lexer fname)
+fun fromString s = exhaust_lexer (string_to_lexer s)
+
+fun mkReaderEOF (read, close) = let
   val i = ref 0
-  val sz = size s
+  val s = ref ""
+  val sz = ref 0
+  val eofp = ref false
+  fun pull () = (s := read(); sz := size (!s); i := 0;
+                 if !sz = 0 then (eofp := true; close()) else ())
+  val _ = pull()
   fun doit () =
-    if !i < sz then SOME (String.sub(s,!i)) before i := !i + 1
-    else NONE
-  fun eof () = !i = sz
+    if !eofp then NONE
+    else if !i < !sz then SOME (String.sub(!s,!i)) before i := !i + 1
+    else (pull(); doit())
+  fun eof () = !eofp
 in
   (doit, eof)
 end
 
-fun fileToReaderEOF fname = mkReaderEOF (inputFile fname)
+fun fileToReaderEOF fname = mkReaderEOF (file_to_lexer fname)
 fun fileToReader fname = #1 (fileToReaderEOF fname)
-fun stringToReader s = #1 (mkReaderEOF (fromString s))
+fun stringToReader s = #1 (mkReaderEOF (string_to_lexer s))
 
 end

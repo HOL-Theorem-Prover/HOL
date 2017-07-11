@@ -5,6 +5,9 @@ use "../../tools-poly/poly/Binaryset.sig";
 use "../../tools-poly/poly/Binaryset.sml";
 use "Holdep_tokens.sig";
 use "Holdep_tokens.sml";
+use "QuoteFilter.sml";
+use "QFRead.sig";
+use "QFRead.sml";
 use "holdeptool.sml";
 
 val main = holdeptool.main

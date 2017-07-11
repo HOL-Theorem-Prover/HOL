@@ -31,23 +31,21 @@ val (instream, outstream) =
             exit failure)
 
 open QuoteFilter.UserDeclarations
-val state as QFS args =
-    newstate ((fn s => TextIO.output(outstream, s)),
-              (fn () => TextIO.flushOut outstream))
+val state as QFS args = newstate ()
 
 
 (* with many thanks to Ken Friis Larsen, Peter Sestoft, Claudio Russo and
    Kenn Heinrich who helped me see the light with respect to this code *)
+val lexer = QuoteFilter.makeLexer (read_from_stream instream) state
+fun lexopt() =
+  case lexer () of
+      "" => NONE
+    | s => SOME s
 
-fun loop() = let
-  val lexer = QuoteFilter.makeLexer (read_from_stream instream) state
-in
-  lexer()
-  handle Interrupt => (#comdepth args := 0;
-                       #pardepth args := 0;
-                       #antiquote args := false;
-                       loop())
-end
+fun loop() =
+  case (lexopt() handle Interrupt => (resetstate state; SOME "")) of
+      NONE => ()
+    | SOME s => (TextIO.output(outstream, s); TextIO.flushOut outstream; loop())
 
 val _ = loop()
 val _ = TextIO.closeOut outstream

@@ -18,7 +18,6 @@ val _ = use "../../../tools-poly/Holmake/Systeml.sml";
 
 val _ = useC "Holdep_tokens";
 val _ = useS "QuoteFilter";
-val _ = useC "HM_SimpleBuffer";
 val _ = useC "QFRead";
 val _ = useC "Holdep";
 
