@@ -40,17 +40,17 @@ fun main() = let
 
   open QuoteFilter.UserDeclarations
   val state as QFS args = newstate()
-  val lexer = QuoteFilter.makeLexer (read_from_stream instream) state
-
-  fun lexopt () =
-    case lexer() of
-        "" => NONE
-      | s => SOME s
 
   fun loop() =
-    case (lexopt() handle Interrupt => (resetstate state; SOME "")) of
-        NONE => ()
-      | SOME s => (TextIO.output(outstream, s); loop())
+    let
+      val lexer = QuoteFilter.makeLexer (read_from_stream instream) state
+      fun coreloop () =
+        case lexer() of
+            "" => ()
+          | s => (TextIO.output(outstream, s); coreloop())
+    in
+      coreloop() handle Interrupt => (resetstate state; loop())
+    end
 in
   loop();
   TextIO.closeOut outstream;

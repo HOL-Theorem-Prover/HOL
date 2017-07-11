@@ -36,16 +36,17 @@ val state as QFS args = newstate ()
 
 (* with many thanks to Ken Friis Larsen, Peter Sestoft, Claudio Russo and
    Kenn Heinrich who helped me see the light with respect to this code *)
-val lexer = QuoteFilter.makeLexer (read_from_stream instream) state
-fun lexopt() =
-  case lexer () of
-      "" => NONE
-    | s => SOME s
-
 fun loop() =
-  case (lexopt() handle Interrupt => (resetstate state; SOME "")) of
-      NONE => ()
-    | SOME s => (TextIO.output(outstream, s); TextIO.flushOut outstream; loop())
+  let
+    val lexer = QuoteFilter.makeLexer (read_from_stream instream) state
+    fun coreloop () =
+      case lexer() of
+          "" => ()
+        | s => (TextIO.output(outstream, s); TextIO.flushOut outstream;
+                coreloop())
+  in
+    coreloop() handle Interrupt => (resetstate state; loop())
+  end
 
 val _ = loop()
 val _ = TextIO.closeOut outstream
