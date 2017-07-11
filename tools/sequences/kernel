@@ -26,6 +26,7 @@ src/proofman
 !tools/Holmake/tests/holdep
 !tools/Holmake/tests/nullary_tgt
 !tools/Holmake/tests/phony_tgt
+!tools/Holmake/tests/quote-filter
 [poly]!tools/Holmake/tests/cheatspotting
 [poly]!tools/Holmake/tests/depchain_heap/
 [poly]!tools/Holmake/tests/depchain_heap/dir2
