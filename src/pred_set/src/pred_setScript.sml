@@ -1872,6 +1872,12 @@ val INJ_IMAGE_BIJ = store_thm (* from util_prob *)
    RW_TAC std_ss [INJ_DEF, BIJ_DEF, SURJ_DEF, IN_IMAGE]
    >> PROVE_TAC []);
 
+val INJ_BIJ_SUBSET = store_thm (* from cardinalTheory *)
+  ("INJ_BIJ_SUBSET",
+  ``s0 SUBSET s /\ INJ f s t ==> BIJ f s0 (IMAGE f s0)``,
+    SIMP_TAC std_ss [SUBSET_DEF, INJ_DEF, IMAGE_SURJ, BIJ_DEF, IN_IMAGE]
+ >> METIS_TAC []);
+
 val BIJ_SYM_IMP = store_thm (* from util_prob *)
   ("BIJ_SYM_IMP",
    ``!s t. (?f. BIJ f s t) ==> (?g. BIJ g t s)``,
