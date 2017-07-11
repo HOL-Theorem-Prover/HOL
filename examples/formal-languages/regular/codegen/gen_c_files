@@ -1,0 +1,42 @@
+## Generate C files
+
+../regexp2dfa C test1 'foobar' > test1.c
+../regexp2dfa C test2 '\d*' > test2.c
+../regexp2dfa C test3 '\w{1,20}' > test3.c
+../regexp2dfa C test4 '.*1' > test4.c
+../regexp2dfa C test5 '[0-9]' > test5.c
+../regexp2dfa C test6 '[0-9]*' > test6.c
+../regexp2dfa C test7 '(.*1)(12)*' > test7.c
+../regexp2dfa C test8 'b*|b*(a|ab*a)b*' > test8.c
+../regexp2dfa C test9 'b*ab*ab*' > test9.c
+../regexp2dfa C test10 '[]*|.|..|...' > test10.c
+../regexp2dfa C test11 '.|(ab)*|(ba)*' > test11.c
+../regexp2dfa C test12 '~((.*aa.*)|(.*bb.*))' > test12.c
+../regexp2dfa C test13 '(.*00.*)&~(.*01)' > test13.c
+../regexp2dfa C test14 '(.*111.*)&~((.*01)|1*)' > test14.c
+../regexp2dfa C test15 '[\010\016-\235]*' > test15.c
+../regexp2dfa C test16 '\i{0,17999}' > test16.c
+../regexp2dfa C test17 '\i{1,17999}' > test17.c
+../regexp2dfa C test18 '\i{0,2500000}' > test18.c
+../regexp2dfa C test19 '\i{17999,2500000}' > test19.c
+../regexp2dfa C test20 '\i{~4,0}' > test20.c
+../regexp2dfa C test21 '\i{~90,0}' > test21.c
+../regexp2dfa C test22 '\i{~90,90}' > test22.c
+../regexp2dfa C test23 '\i{~180,0}' > test23.c
+../regexp2dfa C test24 '\i{~180,180}' > test24.c
+../regexp2dfa C test25 '\i{~2500000,2500000}' > test25.c
+../regexp2dfa C test26 '\i{~3,300}' > test26.c
+../regexp2dfa C test27 '\i{~3,800}' > test27.c
+../regexp2dfa C test28 '\i{~17999,0}' > test28.c
+../regexp2dfa C test29 '\i{~17999,~123}' > test29.c
+../regexp2dfa C test30 '\i{~116535,~23}' > test30.c
+../regexp2dfa C test31 '\k{23}' > test31.c
+../regexp2dfa C test1800 '\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}' > test1800.c
+../regexp2dfa C test1801 '\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}' > test1801.c
+../regexp2dfa C test1801_packed '\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}' > test1801_packed.c
+../regexp2dfa C test1802 '\i{0,9999,LSB}\i{0,3599,LSB}.{4}' > test1802.c
+../regexp2dfa C test1803 '\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}' > test1803.c
+../regexp2dfa C test18xx_disj '\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}|\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}|\i{0,9999,LSB}\i{0,3599,LSB}|\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}' > test18xx_disj.c
+../regexp2dfa C test18xx_concat '\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}\i{0,9999,LSB}\i{0,3599,LSB}\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}' > test18xx_concat.c
+../regexp2dfa C date '(201\d|202[0-5])-([1-9]|1[0-2])-([1-9]|[1-2]\d|3[0-1]) (1?\d|2[0-3]):(\d|[1-5]\d):(\d|[1-5]\d)' > date.c
+../regexp2dfa C time '\{"time":"\d{13}:\d{3}","\w{1,20}":\{("\w{1,25}":"\w{1,30}",?)+\}\}' > time.c

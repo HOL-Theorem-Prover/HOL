@@ -10,7 +10,9 @@ single interface---available for compiling regexps to DFAs.
   1. HOL proof
   2. SML code with no proofs generated
 
-Both are available through regexpLib.
+Both are available through loading regexpLib into HOL4. There is also
+a standalone executable "regexp2dfa" that generates state machines to
+std_out in a variety of programming languages.
 
 
 Concrete syntax of regular expressions
@@ -114,9 +116,8 @@ charset{Script,Theory}.
 
 regexp{Script,Theory}.
 
-   * HOL theory of regexps, and regexp compilation to DFAs. The
-     Regexp_Match code has been (mostly) hand-translated from this
-     theory.
+   * HOL theory of regexps. Much of the Regexp_Match code has been
+     hand-translated from this theory.
 
 eq_cmp_bmap{Script,Theory}
 
@@ -150,16 +151,16 @@ test.{hol,ml}
    * Examples of the application of the compiler/DFA evaluator, with,
      and without, proofs.
 
-regexp2c
+regexp2dfa
 
-   * Command-line tool for generating C programs from regexps. See
-     C-test/gen_files for invocation examples.
+   * Command-line tool for generating programs (C,Java,ML) from regexps. See
+     codegen/gen_files for invocation examples.
 
-C-test
+codegen
 
-   * Directory of examples demonstrating generation of C-code from regexps.  
-     Contents: gen_files (shell script; just run it with
-     ./gen_files and C files will be created).
+   * Directory of examples demonstrating generation of code from
+     regexps.  Contents: gen_files (shell script; just run it with
+     ./gen_files and files will be created in a variety of languages).
 
 
 Status.
@@ -195,3 +196,18 @@ Feb 13. 2017.
 * Revised packed interval syntax \p{e_1 ... e_n} to get rid of superfluous
   commas between elements, and to incorporate support for padding.
 
+July 1, 2017
+
+* Converted ML implementation of charsets to
+  word64#word64#word64#word64 in order to better align with the HOL
+  formalization.
+
+* Replaced regexp2{c,java,ml} by an all-inclusive regexp2dfa. Added options
+  for theorem generation and Ada. The usage message looks like
+
+    regexp2dfa: 
+    Usage: regexp2dfa [-dfagen (HOL | SML)] (Ada | C | Java | ML | Thm) <name> '<regexp>'
+
+* Updated syntax for some examples.
+
+* codegen/gen_files split out into separate file generators for each language.

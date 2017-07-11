@@ -1,8 +1,8 @@
 signature Regexp_Type =
 sig
 
- type charset = LargeWord.word * LargeWord.word * LargeWord.word * LargeWord.word
-(* type charset = IntInf.int *)
+ type w64 = Word64.word
+ type charset =  w64 * w64 * w64 * w64
 
  datatype regexp
     = Chset of charset

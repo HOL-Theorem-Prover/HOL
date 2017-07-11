@@ -1,0 +1,45 @@
+## Generate THM files
+
+echo "Some of these take a very long time and might run your machine out of memory!!"
+
+../regexp2dfa -dfagen HOL thm thm1 'foobar' > thm.1
+../regexp2dfa -dfagen HOL thm thm2 '\d*' > thm.2
+../regexp2dfa -dfagen HOL thm thm3a '\w{1,5}' > thm.3a
+../regexp2dfa -dfagen HOL thm thm3b '\w{1,10}' > thm.3b
+../regexp2dfa -dfagen HOL thm thm4 '.*1' > thm.4
+../regexp2dfa -dfagen HOL thm thm5 '[0-9]' > thm.5
+../regexp2dfa -dfagen HOL thm thm6 '[0-9]*' > thm.6
+../regexp2dfa -dfagen HOL thm thm7 '(.*1)(12)*' > thm.7
+../regexp2dfa -dfagen HOL thm thm8 'b*|b*(a|ab*a)b*' > thm.8
+../regexp2dfa -dfagen HOL thm thm9 'b*ab*ab*' > thm.9
+../regexp2dfa -dfagen HOL thm thm10 '[]*|.|..|...' > thm.10
+../regexp2dfa -dfagen HOL thm thm11 '.|(ab)*|(ba)*' > thm.11
+../regexp2dfa -dfagen HOL thm thm12 '~((.*aa.*)|(.*bb.*))' > thm.12
+../regexp2dfa -dfagen HOL thm thm13 '(.*00.*)&~(.*01)' > thm.13
+../regexp2dfa -dfagen HOL thm thm14 '(.*111.*)&~((.*01)|1*)' > thm.14
+../regexp2dfa -dfagen HOL thm thm15 '[\010\016-\235]*' > thm.15
+../regexp2dfa -dfagen HOL thm thm16 '\i{0,17999}' > thm.16
+../regexp2dfa -dfagen HOL thm thm17 '\i{1,17999}' > thm.17
+../regexp2dfa -dfagen HOL thm thm18 '\i{0,2500000}' > thm.18
+../regexp2dfa -dfagen HOL thm thm19 '\i{17999,2500000}' > thm.19
+../regexp2dfa -dfagen HOL thm thm20 '\i{~4,0}' > thm.20
+../regexp2dfa -dfagen HOL thm thm21 '\i{~90,0}' > thm.21
+../regexp2dfa -dfagen HOL thm thm22 '\i{~90,90}' > thm.22
+../regexp2dfa -dfagen HOL thm thm23 '\i{~180,0}' > thm.23
+../regexp2dfa -dfagen HOL thm thm24 '\i{~180,180}' > thm.24
+../regexp2dfa -dfagen HOL thm thm25 '\i{~2500000,2500000}' > thm.25
+../regexp2dfa -dfagen HOL thm thm26 '\i{~3,300}' > thm.26
+../regexp2dfa -dfagen HOL thm thm27 '\i{~3,800}' > thm.27
+../regexp2dfa -dfagen HOL thm thm28 '\i{~17999,0}' > thm.28
+../regexp2dfa -dfagen HOL thm thm29 '\i{~17999,~123}' > thm.29
+../regexp2dfa -dfagen HOL thm thm30 '\i{~116535,~23}' > thm.30
+../regexp2dfa -dfagen HOL thm thm31 '\k{23}' > thm.31
+../regexp2dfa -dfagen HOL thm thm1800 '\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}' > thm.1800
+../regexp2dfa -dfagen HOL thm thm1801 '\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}' > thm.1801
+../regexp2dfa -dfagen HOL thm thm1801_packed '\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}' > thm.1801_packed
+../regexp2dfa -dfagen HOL thm thm1802 '\i{0,9999,LSB}\i{0,3599,LSB}.{4}' > thm.1802
+../regexp2dfa -dfagen HOL thm thm1803 '\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}' > thm.1803
+../regexp2dfa -dfagen HOL thm thm18xx_disj '\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}|\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}|\i{0,9999,LSB}\i{0,3599,LSB}|\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}' > thm.18xx_disj
+../regexp2dfa -dfagen HOL thm thm18xx_concat '\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}\i{0,9999,LSB}\i{0,3599,LSB}\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}' > thm.18xx_concat
+../regexp2dfa -dfagen HOL thm date '(201\d|202[0-5])-([1-9]|1[0-2])-([1-9]|[1-2]\d|3[0-1]) (1?\d|2[0-3]):(\d|[1-5]\d):(\d|[1-5]\d)' > date
+../regexp2dfa -dfagen HOL thm time '\{"time":"\d{13}:\d{3}","\w{1,20}":\{("\w{1,25}":"\w{1,30}",?)+\}\}' > thm.time

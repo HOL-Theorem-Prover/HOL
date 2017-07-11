@@ -672,46 +672,6 @@ val regexp_compareW_trans_eq = Q.store_thm
             >> rw_tac list_ss [zip_def])
 );
 
-(*
-val regexp_compareW_trans_eq = Q.store_thm
-("regexp_compareW_trans_eq",
- `!plist l1 l2 l3.
-   (LENGTH l1 = LENGTH l2) /\ (LENGTH l2 = LENGTH l3) /\
-   (plist = zip l1 l2) /\
-   (regexp_compareW plist = Less) /\
-   (regexp_compareW (zip l2 l3) = Equal)
-    ==>
-   (regexp_compareW (zip l1 l3) = Less)`,
- recInduct regexp_compareW_ind_thm >> rw[]
-  >- (full_simp_tac list_ss [regexp_compareW_thm,comparison_distinct])
-  >- (Cases_on `p_1` >> Cases_on `p_2`
-        >> rw[] >> imp_res_tac cons_eq_zip
-        >> fs [zip_def,regexp_compareW_thm]
-        >> rw_tac list_ss []
-        >> Cases_on `l3` >> fs [zip_def]
-        >> Cases_on `h` >> fs [zip_def,regexp_compareW_thm]
-        >- (every_case_tac >> rw[] >>
-            metis_tac [charset_cmp_eq,charset_cmp_strict,comparison_distinct])
-        >- (rfs[] >> pop_assum (mp_tac o
-               Q.SPECL [`r::r0::t1`, `r'::r0'::t2`, `r''::r0''::t`])
-             >> rw[zip_def])
-        >- (rfs[] >>
-            pop_assum (mp_tac o Q.SPECL [`r::t1`, `r'::t2`, `r''::t`])
-             >> rw[zip_def])
-        >- (every_case_tac >> fs [] >> rw []
-             >- (imp_res_tac len_cmp_length >> full_simp_tac arith_ss [])
-             >- (imp_res_tac len_cmp_length >>
-                 rw_tac list_ss [Once (GSYM zip_append)] >>
-                 first_x_assum match_mp_tac >>
-                 qexists_tac `l' ++ t2` >>
-                 metis_tac [LENGTH_APPEND,zip_append])
-             >- metis_tac [len_cmp_good,good_cmp_thm,comparison_distinct]
-             >- metis_tac [len_cmp_good,good_cmp_thm,comparison_distinct])
-        >- (pop_assum (mp_tac o Q.SPECL [`r::t1`, `r'::t2`, `r''::t`])
-             >> rw[zip_def]))
-);
-*)
-
 val regexp_compare_trans_eq = Q.store_thm
 ("regexp_compare_trans",
  `!r s u. (regexp_compare r s = Less) /\ (regexp_compare s u = Equal)
@@ -1788,7 +1748,7 @@ Cases_on `h = h'` THEN RW_TAC list_ss [] THENL
          Cases_on `M` THEN FULL_SIMP_TAC list_ss [])
     THEN METIS_TAC []]]);
 
-val sorted_qsort_id = Q.prove
+val sorted_sort_id = Q.prove
 (`!L. SORTED regexp_leq L ==> (mergesort regexp_leq L = L)`,
  RW_TAC list_ss [] THEN
  `PERM L (mergesort regexp_leq L)`
@@ -1826,7 +1786,7 @@ recInduct is_normalized_ind
     THEN RW_TAC list_ss [build_star_def],
   FULL_SIMP_TAC list_ss [EVERY_MEM] THEN RW_TAC list_ss [map_id_lem]
     THEN RW_TAC list_ss [build_or_def,LET_THM,flatten_or_id,Empty_def,
-                 sorted_qsort_id,merge_charsets_id,remove_dups_id]
+                 sorted_sort_id,merge_charsets_id,remove_dups_id]
     THEN CASE_TAC THENL [FULL_SIMP_TAC arith_ss [LENGTH],ALL_TAC]
     THEN Cases_on`t` THENL [FULL_SIMP_TAC arith_ss [LENGTH],ALL_TAC]
     THEN CASE_TAC THEN RW_TAC list_ss []
@@ -1925,7 +1885,8 @@ REPEAT CONJ_TAC
 
 val _ = export_theory();
 
-(* g `!cs1 cs2 cs3. regexp_lang (Cat (Or [Chset cs1 ; Chset cs2]) (Chset cs3))
+(*
+g `!cs1 cs2 cs3. regexp_lang (Cat (Or [Chset cs1 ; Chset cs2]) (Chset cs3))
                   = regexp_lang (Cat (Chset (charset_union cs1 cs2)) (Charset cs3))`;
 
 val regexp_lang_or2 = Q.prove

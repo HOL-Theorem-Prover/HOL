@@ -75,10 +75,10 @@ val charset_full_thm = save_thm
 val words4_bit_def =
  Define
    `words4_bit c (Charset w1 w2 w3 w4) =
-       if c < 64 then word_bit c w4 else
-       if c < 128 then word_bit (c-64) w3 else
-       if c < 192 then word_bit (c-128) w2
-       else word_bit (c-192) w1`
+       if c < 64 then word_bit c w1 else
+       if c < 128 then word_bit (c-64) w2 else
+       if c < 192 then word_bit (c-128) w3
+       else word_bit (c-192) w4`
 ;
 
 val charset_mem_def =
@@ -104,11 +104,32 @@ val charset_sing_def =
  Define
   `charset_sing c =
      let n = ORD c
-     in if n < 64  then Charset 0w 0w 0w (1w << n) else
-        if n < 128 then Charset 0w 0w (1w << (n-64)) 0w else
-        if n < 192 then Charset 0w (1w << (n-128)) 0w 0w
-        else Charset (1w << (n-192)) 0w 0w 0w`
+     in if n < 64  then Charset (1w << n) 0w 0w 0w else
+        if n < 128 then Charset 0w (1w << (n-64)) 0w 0w else
+        if n < 192 then Charset 0w 0w (1w << (n-128)) 0w
+        else Charset 0w 0w 0w (1w << (n-192))`
 ;
+
+val charset_insert_def =
+ Define
+   `charset_insert c cset = charset_union (charset_sing c) cset`;
+
+(*
+
+val sanity_check = Q.prove
+(`!c cset. charset_mem (ORD c) (charset_insert c cset)`,
+ rw_tac list_ss [charset_mem_def,charset_insert_def, charset_sing_def,
+                 alphabet_size_def,ORD_BOUND,LET_THM]
+ >> Cases_on `cset`
+ >> rw_tac list_ss [charset_union_def, words4_bit_def]
+ >> ASSUME_TAC (SPEC_ALL ORD_BOUND)
+ >> full_simp_tac list_ss [charset_empty_def]
+ >> rw_tac list_ss []
+ >> rpt (pop_assum mp_tac)
+ >> srw_tac [WORD_ss, WORD_EXTRACT_ss, WORD_BIT_EQ_ss] [])
+
+*)
+
 
 val charset_cmp_def =
  Define

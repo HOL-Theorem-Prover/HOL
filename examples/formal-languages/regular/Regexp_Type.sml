@@ -17,41 +17,37 @@ val alphabet_size = 256;
 val alphabetN = List.tabulate (alphabet_size,I)
 val alphabet = map Char.chr alphabetN;
 
-type w64 = LargeWord.word;
-
 (*---------------------------------------------------------------------------*)
 (* Charsets                                                                  *)
 (*---------------------------------------------------------------------------*)
 
+type w64 = Word64.word;
 type charset = w64 * w64 * w64 * w64;
 
 val charset_empty : charset = (0wx0,0wx0,0wx0,0wx0);
+
 fun charset_compl (u1,u2,u3,u4) : charset =
- let open LargeWord
+ let open Word64
  in (notb u1, notb u2, notb u3, notb u4)
  end;
  
 val charset_full : charset = charset_compl charset_empty;
 
 fun charset_union (u1,u2,u3,u4) (v1,v2,v3,v4) : charset =
- let open LargeWord
+ let open Word64
  in (orb (u1,v1), orb (u2,v2), orb (u3,v3), orb (u4,v4))
  end;
 
 fun charset_inter (u1,u2,u3,u4) (v1,v2,v3,v4) =
- let open LargeWord
+ let open Word64
  in (andb (u1,v1), andb (u2,v2), andb (u3,v3), andb (u4,v4))
  end;
 
 fun charset_diff cs1 cs2 = charset_inter cs1 (charset_compl cs2);
 
-fun setbit n w =
- let val one: w64 = LargeWord.<< (0wx1,Word.fromInt n)
- in LargeWord.orb(w,one)
- end
-
-val table256 =
- let val sing64 = List.map (C setbit 0wx0) (upto 0 63)
+val sing_charsets =
+ let fun setbit n = Word64.<< (0wx1,Word.fromInt n)
+     val sing64 = List.map setbit (upto 0 63)
  in Vector.fromList
      (List.map (fn w => (w,0wx0,0wx0,0wx0):charset) sing64 @
       List.map (fn w => (0wx0,w,0wx0,0wx0):charset) sing64 @
@@ -61,26 +57,26 @@ val table256 =
 
 fun charset_mem c ((w1,w2,w3,w4):charset) =
  let val i = Char.ord c
-     val (s1,s2,s3,s4) = Vector.sub(table256,i)
+     val (s1,s2,s3,s4) = Vector.sub(sing_charsets,i)
      val (word,sing) =
         if i < 64 then (w1,s1) else
         if i < 128 then (w2,s2) else
         if i < 192 then (w3,s3) else (w4,s4)
  in
-   LargeWord.andb(word,sing) <> 0wx0
+   Word64.andb(word,sing) <> 0wx0
  end
 
-fun charset_elts cs = filter (C charset_mem cs) alphabet;
-
 fun charset_insert c cset =
-  charset_union (Vector.sub(table256,Char.ord c)) cset;
+  charset_union (Vector.sub(sing_charsets,Char.ord c)) cset;
+
+fun charset_elts cs = filter (C charset_mem cs) alphabet;
 
 fun charset_of clist = itlist charset_insert clist charset_empty;
 
 fun charset_sing c = charset_of [c];
 
 fun charset_compare ((u1,u2,u3,u4),(v1,v2,v3,v4)) =
- let open LargeWord
+ let open Word64
  in case compare(u1,v1)
      of LESS => LESS
       | GREATER => GREATER
@@ -1265,7 +1261,7 @@ fun crunch_interval ibytes =
 
 fun create_regexps intlist nbytes =
  let val intervalL = intervals intlist
-     val _ = stdOut_print("Number of sub-intervals: "
+     val _ = stdErr_print("Number of sub-intervals: "
                           ^Int.toString (length intervalL)^"\n")
      fun int_bytes i = bytes_of i nbytes
      val intervalL_bytes = map (map int_bytes) intervalL
@@ -1289,7 +1285,7 @@ fun sub_intervals intlist nbytes order =
                         (PolyML.objSize r3, r3)
      val nregexp = hd sorted
  in
-    stdOut_print ("Size of regexp: "^Int.toString (fst nregexp)^"\n")
+    stdErr_print ("Size of regexp: "^Int.toString (fst nregexp)^"\n")
   ; snd nregexp
  end
 
@@ -1325,7 +1321,7 @@ fun pack_intervals list =
              raise ERR "pack_intervals" "empty list input"
 	     else ()
      val iwlist = map (fn x => (x,bits_width x)) list
-     val _ = stdOut_print ("Packed interval.\n  "^
+     val _ = stdErr_print ("Packed interval.\n  "^
                String.concat (spread "\n  " (map interval_width_string iwlist))
                 ^ "\n")
      val nbits = sum (map snd iwlist)
@@ -1334,10 +1330,10 @@ fun pack_intervals list =
                      else raise ERR "pack_intervals"
                          "subcomponent widths do not sum to a multiple of 8"
                   end
-     val _ = stdOut_print ("Number of bytes needed: "^Int.toString nbytes^"\n")
+     val _ = stdErr_print ("Number of bytes needed: "^Int.toString nbytes^"\n")
      val piwlist = add_padding iwlist
      val intlist = interval_list_cat [] piwlist
-     val _ = stdOut_print ("Cardinality of specified interval: "
+     val _ = stdErr_print ("Cardinality of specified interval: "
                            ^Int.toString (length intlist)^"\n")
  in
    if Lib.all (fn i => zero <= i andalso i <= two_five_five) intlist

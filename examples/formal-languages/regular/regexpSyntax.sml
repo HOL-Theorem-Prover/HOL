@@ -192,7 +192,7 @@ fun term_to_charset tm = (* ``:charset`` -> IntInf.int *)
 *)
 
 val charset_to_term = (* w64*w64*w64*w64 -> ``:charset`` *)
- let val num = Arbnum.fromLargeInt o LargeWord.toLargeInt
+ let val num = Arbnum.fromLargeInt o Word64.toLargeInt
  in fn (v1,v2,v3,v4) =>
     let open wordsSyntax
         val v1tm = mk_wordi(num v1,64)
@@ -208,7 +208,7 @@ fun term_to_charset tm = (* ``:charset`` -> w64*w64*w64*w64 *)
   of (const,[v1tm,v2tm,v3tm,v4tm]) =>
       if same_const const charset_tm
         then let open wordsSyntax
-                 val inf = LargeWord.fromLargeInt o Arbnum.toLargeInt
+                 val inf = Word64.fromLargeInt o Arbnum.toLargeInt
                  val v1 = inf (dest_word_literal v1tm)
                  val v2 = inf (dest_word_literal v2tm)
                  val v3 = inf (dest_word_literal v3tm)

@@ -1,0 +1,42 @@
+## Generate Ada files
+
+../regexp2dfa Ada test1 'foobar' > test1.adb
+../regexp2dfa Ada test2 '\d*' > test2.adb
+../regexp2dfa Ada test3 '\w{1,20}' > test3.adb
+../regexp2dfa Ada test4 '.*1' > test4.adb
+../regexp2dfa Ada test5 '[0-9]' > test5.adb
+../regexp2dfa Ada test6 '[0-9]*' > test6.adb
+../regexp2dfa Ada test7 '(.*1)(12)*' > test7.adb
+../regexp2dfa Ada test8 'b*|b*(a|ab*a)b*' > test8.adb
+../regexp2dfa Ada test9 'b*ab*ab*' > test9.adb
+../regexp2dfa Ada test10 '[]*|.|..|...' > test10.adb
+../regexp2dfa Ada test11 '.|(ab)*|(ba)*' > test11.adb
+../regexp2dfa Ada test12 '~((.*aa.*)|(.*bb.*))' > test12.adb
+../regexp2dfa Ada test13 '(.*00.*)&~(.*01)' > test13.adb
+../regexp2dfa Ada test14 '(.*111.*)&~((.*01)|1*)' > test14.adb
+../regexp2dfa Ada test15 '[\010\016-\235]*' > test15.adb
+../regexp2dfa Ada test16 '\i{0,17999}' > test16.adb
+../regexp2dfa Ada test17 '\i{1,17999}' > test17.adb
+../regexp2dfa Ada test18 '\i{0,2500000}' > test18.adb
+../regexp2dfa Ada test19 '\i{17999,2500000}' > test19.adb
+../regexp2dfa Ada test20 '\i{~4,0}' > test20.adb
+../regexp2dfa Ada test21 '\i{~90,0}' > test21.adb
+../regexp2dfa Ada test22 '\i{~90,90}' > test22.adb
+../regexp2dfa Ada test23 '\i{~180,0}' > test23.adb
+../regexp2dfa Ada test24 '\i{~180,180}' > test24.adb
+../regexp2dfa Ada test25 '\i{~2500000,2500000}' > test25.adb
+../regexp2dfa Ada test26 '\i{~3,300}' > test26.adb
+../regexp2dfa Ada test27 '\i{~3,800}' > test27.adb
+../regexp2dfa Ada test28 '\i{~17999,0}' > test28.adb
+../regexp2dfa Ada test29 '\i{~17999,~123}' > test29.adb
+../regexp2dfa Ada test30 '\i{~116535,~23}' > test30.adb
+../regexp2dfa Ada test31 '\k{23}' > test31.adb
+../regexp2dfa Ada test1800 '\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}' > test1800.adb
+../regexp2dfa Ada test1801 '\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}' > test1801.adb
+../regexp2dfa Ada test1801_packed '\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}' > test1801_packed.adb
+../regexp2dfa Ada test1802 '\i{0,9999,LSB}\i{0,3599,LSB}.{4}' > test1802.adb
+../regexp2dfa Ada test1803 '\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}' > test1803.adb
+../regexp2dfa Ada test18xx_disj '\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}|\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}|\i{0,9999,LSB}\i{0,3599,LSB}|\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}' > test18xx_disj.adb
+../regexp2dfa Ada test18xx_concat '\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}\i{0,9999,LSB}\i{0,3599,LSB}\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}' > test18xx_concat.adb
+../regexp2dfa Ada date '(201\d|202[0-5])-([1-9]|1[0-2])-([1-9]|[1-2]\d|3[0-1]) (1?\d|2[0-3]):(\d|[1-5]\d):(\d|[1-5]\d)' > date.adb
+../regexp2dfa Ada time '\{"time":"\d{13}:\d{3}","\w{1,20}":\{("\w{1,25}":"\w{1,30}",?)+\}\}' > time.adb

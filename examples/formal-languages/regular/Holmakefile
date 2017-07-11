@@ -6,14 +6,10 @@ TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 
 all: $(TARGETS) mustbuild
 
-mustbuild: regexp2c regexp2java regexp2ml regexpLib.uo
+mustbuild: regexp2dfa regexpLib.uo
 .PHONY: mustbuild all
 
-EXTRA_CLEANS = regexp2c.o regexp2java.o regexp2ml.o regexp2c regexp2java regexp2ml
+EXTRA_CLEANS = regexp2dfa.o regexp2dfa
 
-regexp2c : regexp2c.sml Regexp_Match.uo regexpSyntax.uo regexp_compilerTheory.uo regexpLib.uo
-	$(POLYC) -o regexp2c regexp2c.sml
-regexp2java : regexp2java.sml Regexp_Match.uo regexpSyntax.uo regexp_compilerTheory.uo regexpLib.uo
-	$(POLYC) -o regexp2java regexp2java.sml
-regexp2ml : regexp2ml.sml Regexp_Match.uo regexpSyntax.uo regexp_compilerTheory.uo regexpLib.uo
-	$(POLYC) -o regexp2ml regexp2ml.sml
+regexp2dfa : regexp2dfa.sml Regexp_Match.uo regexpSyntax.uo regexp_compilerTheory.uo regexpLib.uo
+	$(POLYC) -o regexp2dfa regexp2dfa.sml

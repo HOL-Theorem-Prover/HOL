@@ -206,11 +206,12 @@ fun dfa_by_proof (name,r) =
      val finals_def = Define `^finals_var = ^finals`
      val table_def = Define `^table_var = ^table`
      val start_def = Define `^start_var = ^start`
-     val thm' = SIMP_RULE std_ss
-                 [GSYM finals_def, GSYM table_def, GSYM start_def]
-                thm
+     val thm' = CONV_RULE (BINDER_CONV
+                  (LHS_CONV (REWRITE_CONV [GSYM finals_def, GSYM table_def, GSYM start_def])))
+		  thm
+     val thm'' = LIST_CONJ [thm',table_def, finals_def, start_def]
  in
-   save_thm(name^"_regexp_compilation",thm')
+   save_thm(name^"_regexp_compilation",thm'')
  end;
 
 
