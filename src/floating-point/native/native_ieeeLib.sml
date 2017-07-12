@@ -1,8 +1,20 @@
+(* -------------------------------------------------------------------------
+   Conversions for evaluating some 64-bit (double precision) IEEE-754
+   operations. They can be enabled in EVAL with
+
+    > set_trace "native IEEE" 1;
+
+   Calculations are perfromed in hardware using SML's Real and Math
+   structures and the theorems are produced using Thm.mk_oracle_thm.
+
+   NOTE: Poly/ML 5.5's multiply isn't fully IEEE compliant on 64-bit machines,
+         so the results should not be fully trusted.
+   ------------------------------------------------------------------------- *)
 structure native_ieeeLib :> native_ieeeLib =
 struct
 
 open HolKernel Parse boolLib bossLib
-open realLib wordsLib binary_ieeeLib binary_ieeeSyntax
+open wordsLib binary_ieeeLib binary_ieeeSyntax fp64Syntax
 
 structure Parse =
 struct
@@ -20,21 +32,6 @@ val ERR = Feedback.mk_HOL_ERR "native_ieeeLib"
    ------------------------------------------------------------------------- *)
 
 val n256 = Arbnum.fromInt 256
-val irealwidth = 8 * PackRealBig.bytesPerElem
-val realwidth = Arbnum.fromInt irealwidth
-val native_ty =
-  binary_ieeeSyntax.mk_ifloat_ty
-    (Real.precision - 1, irealwidth - Real.precision)
-val () = binary_ieeeLib.is_native := (fn ty => ty = native_ty)
-
-val native_itself =
-   (boolSyntax.mk_itself o pairSyntax.mk_prod o binary_ieeeSyntax.dest_float_ty)
-      native_ty
-
-val native_plus_infinity_tm =
-  binary_ieeeSyntax.mk_float_plus_infinity native_itself
-val native_minus_infinity_tm =
-  binary_ieeeSyntax.mk_float_minus_infinity native_itself
 
 local
    val byte =  Word8.fromInt o Arbnum.toInt
@@ -73,6 +70,9 @@ end
    realToWord
    ------------------------------------------------------------------------- *)
 
+val irealwidth = 8 * PackRealBig.bytesPerElem
+val realwidth = Arbnum.fromInt irealwidth
+
 fun wordToReal tm =
    let
       val (v, n) = wordsSyntax.dest_mod_word_literal tm
@@ -89,48 +89,58 @@ fun realToWord r = wordsSyntax.mk_word (realToNum r, realwidth)
    ------------------------------------------------------------------------- *)
 
 local
-   val exponent = irealwidth - Real.precision
-   val signval = Arbnum.pow (Arbnum.two, Arbnum.fromInt (irealwidth - 1))
-   val expval = Arbnum.pow (Arbnum.two, Arbnum.fromInt exponent)
-   val manval = Arbnum.pow (Arbnum.two, Arbnum.fromInt (Real.precision - 1))
-   fun odd n = Arbnum.mod (n, Arbnum.two) = Arbnum.one
+  val native_ty =
+    binary_ieeeSyntax.mk_ifloat_ty
+      (Real.precision - 1, irealwidth - Real.precision)
+  val native_itself =
+    (boolSyntax.mk_itself o pairSyntax.mk_prod o
+     binary_ieeeSyntax.dest_float_ty) native_ty
+  val native_plus_infinity_tm =
+    binary_ieeeSyntax.mk_float_plus_infinity native_itself
+  val native_minus_infinity_tm =
+    binary_ieeeSyntax.mk_float_minus_infinity native_itself
+  val exponent = irealwidth - Real.precision
+  val signval = Arbnum.pow (Arbnum.two, Arbnum.fromInt (irealwidth - 1))
+  val expval = Arbnum.pow (Arbnum.two, Arbnum.fromInt exponent)
+  val manval = Arbnum.pow (Arbnum.two, Arbnum.fromInt (Real.precision - 1))
+  fun odd n = Arbnum.mod (n, Arbnum.two) = Arbnum.one
 in
-   fun floatToReal tm =
-      let
-         val ((t, w), (s, e, f)) = binary_ieeeSyntax.triple_of_float tm
-         val _ = t + 1 = Real.precision andalso w = exponent orelse
-                 raise ERR "floatToReal" "size mismatch"
-      in
-         numToReal
-            (Arbnum.+ (if s then signval else Arbnum.zero,
-                       Arbnum.+ (Arbnum.* (e, manval), f)))
-      end
-      handle e as HOL_ERR {origin_function = "dest_floating_point", ...} =>
-         if Term.type_of tm = native_ty
-            then if binary_ieeeSyntax.is_float_plus_infinity tm
-                    then Real.posInf
-                 else if binary_ieeeSyntax.is_float_minus_infinity tm
-                    then Real.negInf
-                 else raise e
-         else raise ERR "floatToReal" "not native float type"
-   fun realToFloat r =
-      case Real.class r of
-         IEEEReal.INF => if Real.signBit r then native_minus_infinity_tm
-                         else native_plus_infinity_tm
-       | IEEEReal.NAN => raise ERR "realToFloat" "NaN"
-       | _ =>
-           let
-              val n = realToNum r
-              val (e, f) = Arbnum.divmod (n, manval)
-              val (s, e) = Arbnum.divmod (e, expval)
-           in
-              binary_ieeeSyntax.float_of_triple
-                ((Real.precision - 1, exponent), (odd s, e, f))
-           end
+  fun floatToReal tm =
+    let
+       val ((t, w), (s, e, f)) = binary_ieeeSyntax.triple_of_float tm
+       val _ = t + 1 = Real.precision andalso w = exponent orelse
+               raise ERR "floatToReal" "size mismatch"
+    in
+       numToReal
+          (Arbnum.+ (if s then signval else Arbnum.zero,
+                     Arbnum.+ (Arbnum.* (e, manval), f)))
+    end
+    handle e as HOL_ERR {origin_function = "dest_floating_point", ...} =>
+       if Term.type_of tm = native_ty
+          then if binary_ieeeSyntax.is_float_plus_infinity tm
+                  then Real.posInf
+               else if binary_ieeeSyntax.is_float_minus_infinity tm
+                  then Real.negInf
+               else raise e
+       else raise ERR "floatToReal" "not native float type"
+  fun realToFloat r =
+    case Real.class r of
+       IEEEReal.INF => if Real.signBit r then native_minus_infinity_tm
+                       else native_plus_infinity_tm
+     | IEEEReal.NAN => raise ERR "realToFloat" "NaN"
+     | _ =>
+         let
+            val n = realToNum r
+            val (e, f) = Arbnum.divmod (n, manval)
+            val (s, e) = Arbnum.divmod (e, expval)
+         in
+            binary_ieeeSyntax.float_of_triple
+              ((Real.precision - 1, exponent), (odd s, e, f))
+         end
 end
 
 (* -------------------------------------------------------------------------
-   liftNative
+   Native conversions
    ------------------------------------------------------------------------- *)
 
 fun withRounding tm f x =
@@ -152,112 +162,66 @@ fun withRounding tm f x =
 
 fun mk_native_ieee_thm th = Thm.mk_oracle_thm "native_ieee" ([], th)
 
-fun liftNative1 f dst (tm: term) =
-   case Lib.total dst tm of
-      SOME (mode, a) =>
-        (case Lib.total floatToReal a of
-            SOME ra =>
-               withRounding mode
-                 (fn ra =>
-                    mk_native_ieee_thm
-                       (boolSyntax.mk_eq (tm, realToFloat (f ra)))) ra
-          | _ => raise ERR "liftNative1" "failed to convert to native reals")
-    | NONE => raise ERR "liftNative1" ""
+fun mk_native tm r =
+  if Real.isNan r then raise ERR "mk_native" "result is NaN"
+  else mk_native_ieee_thm (boolSyntax.mk_eq (tm, realToWord r))
 
-fun liftNative2 f dst (tm: term) =
-   case Lib.total dst tm of
-      SOME (mode, a, b) =>
-        (case (Lib.total floatToReal a, Lib.total floatToReal b) of
-            (SOME ra, SOME rb) =>
-               withRounding mode
-                 (fn (ra, rb) =>
-                    mk_native_ieee_thm
-                       (boolSyntax.mk_eq (tm, realToFloat (f (ra, rb)))))
-                 (ra, rb)
-          | _ => raise ERR "liftNative2" "failed to convert to native reals")
-    | NONE => raise ERR "liftNative2" ""
+val wordToReal' = Lib.total wordToReal
 
-fun liftNative3 f dst (tm: term) =
-   case Lib.total dst tm of
-      SOME (mode, a, b, c) =>
-        (case (Lib.total floatToReal a,
-               Lib.total floatToReal b,
-               Lib.total floatToReal c) of
-            (SOME ra, SOME rb, SOME rc) =>
-               withRounding mode
-                 (fn (ra, rb, rc) =>
-                    mk_native_ieee_thm
-                       (boolSyntax.mk_eq (tm, realToFloat (f (ra, rb, rc)))))
-                 (ra, rb, rc)
-          | _ => raise ERR "liftNative2" "failed to convert to native reals")
-    | NONE => raise ERR "liftNative2" ""
+fun lift1 f dst tm =
+  case Lib.total dst tm of
+     SOME (mode, a) =>
+       (case wordToReal' a of
+           SOME ra => withRounding mode (mk_native tm o f) ra
+         | _ => raise ERR "lift1" "failed to convert to native real")
+   | NONE => raise ERR "lift1" ""
 
-fun liftNativeOrder f dst (tm: term) =
-   case Lib.total dst tm of
-      SOME (a, b) =>
-        (case (Lib.total floatToReal a, Lib.total floatToReal b) of
-            (SOME ra, SOME rb) =>
-                mk_native_ieee_thm (boolSyntax.mk_eq (tm, f (ra, rb)))
-          | _ => raise ERR "liftNativeOrder"
-                           "failed to convert to native reals")
-    | NONE => raise ERR "liftNativeOrder" ""
+fun lift2 f dst tm =
+  case Lib.total dst tm of
+     SOME (mode, a, b) =>
+       (case (wordToReal' a, wordToReal' b) of
+           (SOME ra, SOME rb) =>
+             withRounding mode (mk_native tm o f) (ra, rb)
+         | _ => raise ERR "lift2" "failed to convert to native reals")
+   | NONE => raise ERR "lif2" ""
 
-(* -------------------------------------------------------------------------
-   Native conversions
-   ------------------------------------------------------------------------- *)
+fun liftOrder f dst tm =
+  case Lib.total dst tm of
+     SOME (a, b) =>
+       (case (wordToReal' a, wordToReal' b) of
+           (SOME ra, SOME rb) =>
+               mk_native_ieee_thm (boolSyntax.mk_eq (tm, f (ra, rb)))
+         | _ => raise ERR "liftNativeOrder"
+                          "failed to convert to native reals")
+   | NONE => raise ERR "liftNativeOrder" ""
 
-val () = binary_ieeeLib.native_float_sqrt_CONV :=
-   liftNative1 Math.sqrt binary_ieeeSyntax.dest_float_sqrt
-
-val () = binary_ieeeLib.native_float_add_CONV :=
-   liftNative2 Real.+ binary_ieeeSyntax.dest_float_add
-
-val () = binary_ieeeLib.native_float_sub_CONV :=
-   liftNative2 Real.- binary_ieeeSyntax.dest_float_sub
-
-(**************************************************************
- NOTE: Poly/ML 5.5's multiply isn't fully IEEE compliant on 64-bit machines,
-       which results in some selftest failures
- **************************************************************)
-val () = binary_ieeeLib.native_float_mul_CONV :=
-   liftNative2 Real.* binary_ieeeSyntax.dest_float_mul
-
-val () = binary_ieeeLib.native_float_div_CONV :=
-   liftNative2 Real./ binary_ieeeSyntax.dest_float_div
-
-val () = binary_ieeeLib.native_float_mul_add_CONV :=
-   liftNative3 Real.*+ binary_ieeeSyntax.dest_float_mul_add
-
-val () = binary_ieeeLib.native_float_mul_sub_CONV :=
-   liftNative3 Real.*- binary_ieeeSyntax.dest_float_mul_sub
-
-fun mk_b true = boolSyntax.T
-  | mk_b false = boolSyntax.F
-
-val () = binary_ieeeLib.native_float_less_than_CONV :=
-   liftNativeOrder (mk_b o Real.<) binary_ieeeSyntax.dest_float_less_than
-
-val () = binary_ieeeLib.native_float_less_equal_CONV :=
-   liftNativeOrder (mk_b o Real.<=) binary_ieeeSyntax.dest_float_less_equal
-
-val () = binary_ieeeLib.native_float_greater_than_CONV :=
-   liftNativeOrder (mk_b o Real.>) binary_ieeeSyntax.dest_float_greater_than
-
-val () = binary_ieeeLib.native_float_greater_equal_CONV :=
-   liftNativeOrder (mk_b o Real.>=) binary_ieeeSyntax.dest_float_greater_equal
-
-val () = binary_ieeeLib.native_float_equal_CONV :=
-   liftNativeOrder (mk_b o Real.==) binary_ieeeSyntax.dest_float_equal
-
-val mk_float_compare =
-   fn IEEEReal.LESS      => binary_ieeeSyntax.LT_tm
+val float_compare =
+  (fn IEEEReal.LESS      => binary_ieeeSyntax.LT_tm
     | IEEEReal.EQUAL     => binary_ieeeSyntax.EQ_tm
     | IEEEReal.GREATER   => binary_ieeeSyntax.GT_tm
-    | IEEEReal.UNORDERED => binary_ieeeSyntax.UN_tm
+    | IEEEReal.UNORDERED => binary_ieeeSyntax.UN_tm) o Real.compareReal
 
-val () = binary_ieeeLib.native_float_compare_CONV :=
-   liftNativeOrder (mk_float_compare o Real.compareReal)
-      binary_ieeeSyntax.dest_float_compare
+val mk_b = fn true => boolSyntax.T | _ => boolSyntax.F
+
+val () =
+  ( machine_ieeeTheory.sqrt_CONV := lift1 Math.sqrt fp64Syntax.dest_fp_sqrt
+  ; machine_ieeeTheory.add_CONV := lift2 Real.+ fp64Syntax.dest_fp_add
+  ; machine_ieeeTheory.sub_CONV := lift2 Real.- fp64Syntax.dest_fp_sub
+  ; machine_ieeeTheory.mul_CONV := lift2 Real.* fp64Syntax.dest_fp_mul
+  ; machine_ieeeTheory.div_CONV := lift2 Real./ fp64Syntax.dest_fp_div
+  ; machine_ieeeTheory.compare_CONV :=
+      liftOrder float_compare fp64Syntax.dest_fp_compare
+  ; machine_ieeeTheory.eq_CONV :=
+      liftOrder (mk_b o Real.==) fp64Syntax.dest_fp_equal
+  ; machine_ieeeTheory.lt_CONV :=
+      liftOrder (mk_b o Real.<) fp64Syntax.dest_fp_lessThan
+  ; machine_ieeeTheory.le_CONV :=
+      liftOrder (mk_b o Real.<=) fp64Syntax.dest_fp_lessEqual
+  ; machine_ieeeTheory.gt_CONV :=
+      liftOrder (mk_b o Real.>)  fp64Syntax.dest_fp_greaterThan
+  ; machine_ieeeTheory.ge_CONV :=
+      liftOrder (mk_b o Real.>=) fp64Syntax.dest_fp_greaterEqual
+  )
 
 (* ------------------------------------------------------------------------ *)
 

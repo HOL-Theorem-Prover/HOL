@@ -82,7 +82,8 @@ in
    val nTy = mkTy (SOME "num", "num")
    val bTy = mkTy (SOME "min", "bool")
    val rTy = mkTy (SOME "binary_ieee", "rounding")
-   val oTy = mkTy (SOME "binary_ieee", "compare")
+   val oTy = mkTy (SOME "binary_ieee", "float_compare")
+   val fTy = mkTy (SOME "binary_ieee", "flags")
    val cTy = mkTy (SOME "string", "char")
    val sTy = mkListTy cTy
    val vTy = mkListTy bTy
@@ -164,6 +165,8 @@ val Construct = myDatatype o List.map (I ## ParseDatatype.Constructors)
 fun mk_local_const (n, ty) =
    Term.mk_thy_const {Ty = ty, Thy = Theory.current_theory (), Name = n}
 
+fun mk_ieee_const n = Term.prim_mk_const {Name = n, Thy = "binary_ieee"}
+
 (* Literals *)
 
 (* Unit *)
@@ -205,6 +208,16 @@ val NEGZERO32 = fp32Syntax.fp_negzero_tm
 val POSZERO32 = fp32Syntax.fp_poszero_tm
 val NEGZERO64 = fp64Syntax.fp_negzero_tm
 val POSZERO64 = fp64Syntax.fp_poszero_tm
+
+val NEGMIN32 = fp32Syntax.fp_negmin_tm
+val POSMIN32 = fp32Syntax.fp_posmin_tm
+val NEGMIN64 = fp64Syntax.fp_negmin_tm
+val POSMIN64 = fp64Syntax.fp_posmin_tm
+
+val NEGMAX32 = fp32Syntax.fp_bottom_tm
+val POSMAX32 = fp32Syntax.fp_top_tm
+val NEGMAX64 = fp64Syntax.fp_bottom_tm
+val POSMAX64 = fp64Syntax.fp_top_tm
 
 val QUIETNAN32  = LW (0x7FC00000, 32)
 val SIGNALNAN32 = LW (0x7F800001, 32)
@@ -365,7 +378,16 @@ end
 
 (* Record destructor *)
 
-fun Dest (f, ty, tm) = Call (typeName (Term.type_of tm) ^ "_" ^ f, ty, tm)
+fun flag s tm = Term.mk_comb (mk_ieee_const ("flags_" ^ s), tm)
+
+fun Dest (f, ty, tm) =
+  case f of
+     "DivideByZero" => flag "DivideByZero" tm
+   | "InvalidOp" => flag "InvalidOp" tm
+   | "Overflow" => flag "Overflow" tm
+   | "Precision" => flag "Precision" tm
+   | "Underflow" => flag "Underflow" tm
+   | _ => Call (typeName (Term.type_of tm) ^ "_" ^ f, ty, tm)
 
 (* Record update *)
 
@@ -378,7 +400,14 @@ fun Rupd (f, tm) =
    let
       val (rty, fty) = pairSyntax.dest_prod (Term.type_of tm)
       val typ = Type.--> (Type.--> (fty, fty), Type.--> (rty, rty))
-      val fupd = mk_local_const (typeName rty ^ "_" ^ f ^ "_fupd", typ)
+      val name = typeName rty ^ "_" ^ f ^ "_fupd"
+      val fupd = case f of
+                    "DivideByZero" => mk_ieee_const name
+                  | "InvalidOp" => mk_ieee_const name
+                  | "Overflow" => mk_ieee_const name
+                  | "Precision" => mk_ieee_const name
+                  | "Underflow" => mk_ieee_const name
+                  | _ => mk_local_const (name, typ)
       val (x, d) = smart_dest_pair tm
    in
       Term.list_mk_comb (fupd, [combinSyntax.mk_K_1 (d, Term.type_of d), x])
@@ -493,8 +522,10 @@ datatype monop =
    | FP64To32
    | FPAbs of int
    | FPAdd of int
+   | FPAdd_ of int
    | FPCmp of int
    | FPDiv of int
+   | FPDiv_ of int
    | FPEq of int
    | FPFromInt of int
    | FPGe of int
@@ -508,12 +539,17 @@ datatype monop =
    | FPLe of int
    | FPLt of int
    | FPMul of int
+   | FPMul_ of int
    | FPMulAdd of int
+   | FPMulAdd_ of int
    | FPMulSub of int
+   | FPMulSub_ of int
    | FPNeg of int
    | FPRoundToIntegral of int
    | FPSqrt of int
+   | FPSqrt_ of int
    | FPSub of int
+   | FPSub_ of int
    | FPToInt of int
    | Flat
    | Fst
@@ -752,6 +788,8 @@ local
             | FPRoundToIntegral 64 => fp64Syntax.fp_roundToIntegral_tm
             | FPSqrt 32 => fp32Syntax.fp_sqrt_tm
             | FPSqrt 64 => fp64Syntax.fp_sqrt_tm
+            | FPSqrt_ 32 => fp32Syntax.fp_sqrt_with_flags_tm
+            | FPSqrt_ 64 => fp64Syntax.fp_sqrt_with_flags_tm
             | FPToInt 32 => fp32Syntax.fp_to_int_tm
             | FPToInt 64 => fp64Syntax.fp_to_int_tm
             | FPFromInt 32 => fp32Syntax.int_to_fp_tm
@@ -759,16 +797,28 @@ local
             | FP64To32 => machine_ieeeSyntax.fp64_to_fp32_tm
             | FPAdd 32 => fp32Syntax.fp_add_tm
             | FPAdd 64 => fp64Syntax.fp_add_tm
+            | FPAdd_ 32 => fp32Syntax.fp_add_with_flags_tm
+            | FPAdd_ 64 => fp64Syntax.fp_add_with_flags_tm
             | FPDiv 32 => fp32Syntax.fp_div_tm
             | FPDiv 64 => fp64Syntax.fp_div_tm
+            | FPDiv_ 32 => fp32Syntax.fp_div_with_flags_tm
+            | FPDiv_ 64 => fp64Syntax.fp_div_with_flags_tm
             | FPMul 32 => fp32Syntax.fp_mul_tm
             | FPMul 64 => fp64Syntax.fp_mul_tm
+            | FPMul_ 32 => fp32Syntax.fp_mul_with_flags_tm
+            | FPMul_ 64 => fp64Syntax.fp_mul_with_flags_tm
             | FPSub 32 => fp32Syntax.fp_sub_tm
             | FPSub 64 => fp64Syntax.fp_sub_tm
+            | FPSub_ 32 => fp32Syntax.fp_sub_with_flags_tm
+            | FPSub_ 64 => fp64Syntax.fp_sub_with_flags_tm
             | FPMulAdd 32 => fp32Syntax.fp_mul_add_tm
             | FPMulAdd 64 => fp64Syntax.fp_mul_add_tm
+            | FPMulAdd_ 32 => fp32Syntax.fp_mul_add_with_flags_tm
+            | FPMulAdd_ 64 => fp64Syntax.fp_mul_add_with_flags_tm
             | FPMulSub 32 => fp32Syntax.fp_mul_sub_tm
             | FPMulSub 64 => fp64Syntax.fp_mul_sub_tm
+            | FPMulSub_ 32 => fp32Syntax.fp_mul_sub_with_flags_tm
+            | FPMulSub_ 64 => fp64Syntax.fp_mul_sub_with_flags_tm
             | _ => raise ERR "mk_fp_op" ""
          val l = mk_vars (fst (HolKernel.strip_fun (Term.type_of ftm)))
          val p = pairSyntax.list_mk_pair l

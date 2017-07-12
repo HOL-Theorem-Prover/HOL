@@ -15,8 +15,10 @@ sig
      | FP64To32
      | FPAbs of int
      | FPAdd of int
+     | FPAdd_ of int
      | FPCmp of int
      | FPDiv of int
+     | FPDiv_ of int
      | FPEq of int
      | FPFromInt of int
      | FPGe of int
@@ -30,12 +32,17 @@ sig
      | FPLe of int
      | FPLt of int
      | FPMul of int
+     | FPMul_ of int
      | FPMulAdd of int
+     | FPMulAdd_ of int
      | FPMulSub of int
+     | FPMulSub_ of int
      | FPNeg of int
      | FPRoundToIntegral of int
      | FPSqrt of int
+     | FPSqrt_ of int
      | FPSub of int
+     | FPSub_ of int
      | FPToInt of int
      | Flat
      | Fst
@@ -131,14 +138,16 @@ sig
    val tDef :
       string * Term.term * Term.term * Term.term * Tactic.tactic -> Theory.thm
 
-   val bTy : ParseDatatype.pretype
-   val iTy : ParseDatatype.pretype
-   val nTy : ParseDatatype.pretype
-   val rTy : ParseDatatype.pretype
-   val cTy : ParseDatatype.pretype
-   val sTy : ParseDatatype.pretype
-   val uTy : ParseDatatype.pretype
-   val vTy : ParseDatatype.pretype
+   val bTy : ParseDatatype.pretype (* bool *)
+   val cTy : ParseDatatype.pretype (* char *)
+   val fTy : ParseDatatype.pretype (* IEEE flags *)
+   val iTy : ParseDatatype.pretype (* int *)
+   val nTy : ParseDatatype.pretype (* num *)
+   val oTy : ParseDatatype.pretype (* IEEE ordering *)
+   val rTy : ParseDatatype.pretype (* IEEE rounding *)
+   val sTy : ParseDatatype.pretype (* string *)
+   val uTy : ParseDatatype.pretype (* unit/one *)
+   val vTy : ParseDatatype.pretype (* bit-string *)
 
    val CTy : string -> ParseDatatype.pretype
    val VTy : string -> ParseDatatype.pretype
@@ -182,6 +191,14 @@ sig
    val NEGZERO64 : Term.term
    val POSZERO32 : Term.term
    val POSZERO64 : Term.term
+   val NEGMIN32 : Term.term
+   val NEGMIN64 : Term.term
+   val POSMIN32 : Term.term
+   val POSMIN64 : Term.term
+   val NEGMAX32 : Term.term
+   val NEGMAX64 : Term.term
+   val POSMAX32 : Term.term
+   val POSMAX64 : Term.term
    val QUIETNAN32 : Term.term
    val QUIETNAN64 : Term.term
    val SIGNALNAN32 : Term.term

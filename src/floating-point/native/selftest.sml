@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib bossLib
-open intLib native_ieeeLib binary_ieeeSyntax machine_ieeeTheory
+open intLib binary_ieeeSyntax binary_ieeeLib machine_ieeeTheory
 open testutils
 
 (*
@@ -44,9 +44,6 @@ val round_constants =
 val round_constants =
    [roundTiesToEven_tm, roundTowardZero_tm]
 
-fun lcf_eval tm = Feedback.trace ("native ieee", 0) EVAL tm
-fun native_eval tm = Feedback.trace ("native ieee", 1) EVAL tm
-
 fun has_tags tags thm =
    case Tag.dest_tag (Thm.tag thm) of
       (ts, []) => Lib.set_eq ts tags
@@ -65,11 +62,16 @@ fun ok_result1 tm =
      | NONE => false) orelse
    is_ground_real tm
 
+fun ok_float tm =
+  is_float_plus_infinity tm orelse
+  is_float_minus_infinity tm orelse
+  is_float_some_qnan tm orelse
+  Lib.can dest_floating_point tm
+
 fun ok_result2 tm =
-   is_float_plus_infinity tm orelse
-   is_float_minus_infinity tm orelse
-   is_float_some_qnan tm orelse
-   Lib.can dest_floating_point tm
+   case Lib.total pairSyntax.dest_pair tm of
+      SOME (_, t) => ok_float t
+    | NONE => ok_float tm
 
 fun ok_order_result tm =
    tm = boolSyntax.T orelse
@@ -93,7 +95,7 @@ fun test_monops ty =
                  let
                     val tm =
                        monop a handle e as HOL_ERR _ => (pr_term a; raise e)
-                    val e1 = lcf_eval tm
+                    val e1 = EVAL tm
                     val r = rhs (concl e1)
                  in
                     if ok_result1 r orelse ok_result2 r orelse
@@ -110,6 +112,7 @@ fun test_monops ty =
          ("float_abs", mk_float_abs),
          ("float_value", mk_float_value),
          ("float_is_nan", mk_float_is_nan),
+         ("float_is_signalling", mk_float_is_signalling),
          ("float_is_infinite", mk_float_is_infinite),
          ("float_is_finite", mk_float_is_finite),
          ("float_is_normal", mk_float_is_normal),
@@ -122,7 +125,6 @@ fun test_monops ty =
 fun test_binops ty =
    let
       val cs = float_constants ty
-      val is_native = ty = native_ty
    in
       print "\nChecking type: "
     ; print_type ty
@@ -144,31 +146,10 @@ fun test_binops ty =
                                            ; pr_term b
                                            ; raise e
                                            )
-                                val e1 = lcf_eval tm
+                                val e1 = EVAL tm
                                 val r = rhs (concl e1)
                              in
-                                if is_native then
-                                   let
-                                      val e2 = native_eval tm
-                                      val not_native_ok =
-                                         is_float_some_qnan a orelse
-                                         is_float_some_qnan b orelse
-                                         is_float_some_qnan r orelse
-                                         has_tags ["native_ieee"] e2 orelse
-                                         has_tags ["DISK_THM", "native_ieee"] e2
-                                   in
-                                      if Thm.concl e1 = Thm.concl e2 andalso
-                                         not_native_ok
-                                         then print "."
-                                      else ( print "\n"
-                                           ; print_thm e1
-                                           ; print "\n\n"
-                                           ; print_thm e2
-                                           ; print "\n\n"
-                                           ; die "test_binops failed"
-                                           )
-                                   end
-                                else if ok_result2 r
+                                if ok_result2 r
                                    then print "."
                                 else ( print "\n"
                                      ; print_thm e1
@@ -185,7 +166,6 @@ fun test_binops ty =
 fun test_orderings ty =
    let
       val cs = float_constants ty
-      val is_native = ty = native_ty
    in
       print "\nChecking type: "
     ; print_type ty
@@ -203,30 +183,10 @@ fun test_orderings ty =
                                      ; pr_term b
                                      ; raise e
                                      )
-                          val e1 = lcf_eval tm
+                          val e1 = EVAL tm
                           val r = rhs (concl e1)
                        in
-                          if is_native then
-                             let
-                                val e2 = native_eval tm
-                                val not_native_ok =
-                                   is_float_some_qnan a orelse
-                                   is_float_some_qnan b orelse
-                                   has_tags ["native_ieee"] e2 orelse
-                                   has_tags ["DISK_THM", "native_ieee"] e2
-                             in
-                                if Thm.concl e1 = Thm.concl e2 andalso
-                                   not_native_ok
-                                   then print "."
-                                else ( print "\n"
-                                     ; print_thm e1
-                                     ; print "\n\n"
-                                     ; print_thm e2
-                                     ; print "\n\n"
-                                     ; die "test_orderings failed"
-                                     )
-                             end
-                          else if ok_order_result r
+                          if ok_order_result r
                              then print "."
                           else ( print "\n"
                                ; print_thm e1
@@ -255,12 +215,6 @@ val () = test_orderings ``:half``
 val () = test_monops ``:single``
 val () = test_binops ``:single``
 val () = test_orderings ``:single``
-
-(*
-val () = test_monops native_ty
-val () = test_binops native_ty
-val () = test_orderings native_ty
-*)
 
 val elapsed = Timer.checkRealTimer tt;
 

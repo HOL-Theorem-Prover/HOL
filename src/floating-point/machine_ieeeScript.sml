@@ -9,18 +9,16 @@ val () = new_theory "machine_ieee";
 
 local
    val mtch = DB.match [Theory.current_theory()] o Thm.concl
-in
    fun get_thm_name thm =
       case mtch thm of
          [((_, name), _)] => (thm, name)
        | _ => raise Feedback.mk_HOL_ERR "machine_ieee" "get_thm_name" ""
+in
+  fun mk_machine (x as (_, y, _, _)) =
+    (List.map get_thm_name o
+     (if y = 52 then (* native *) fn l => List.drop (l, 11) else Lib.I) o
+     machine_ieeeLib.mk_fp_encoding) x
 end
-
-(*
-    | l => (PolyML.prettyPrint
-              (print, 80) (PolyML.prettyRepresentation ((thm, l), 80))
-            ; raise Feedback.mk_HOL_ERR "machine_ieee" "get_thm_name" "")
-*)
 
 (* 16-bit, 32-bit and 64-bit encodings *)
 
@@ -28,9 +26,8 @@ val thms =
    [("fp16", 10, 5, SOME "half"),
     ("fp32", 23, 8, SOME "single"),
     ("fp64", 52, 11, SOME "double")]
-   |> List.map machine_ieeeLib.mk_fp_encoding
+   |> List.map mk_machine
    |> List.concat
-   |> List.map get_thm_name
    |> (fn l =>
          let
             val (thms, names) = ListPair.unzip l
@@ -59,41 +56,50 @@ val fp64_to_fp32_def = Define`
 
 (* ------------------------------------------------------------------------ *)
 
-(* Testing:
-
-open binary_ieeeLib machine_ieeeTheory
-
-time EVAL ``fp32_add roundTiesToEven 0x0123456w 0x98765432w``
-time EVAL ``fp32_mul roundTiesToEven 0x0123456w 0x98765432w``
-
-Count.apply EVAL
-  ``fp32_mul roundTiesToEven (real_to_fp32 roundTiesToEven (1 / 2))
-                             (real_to_fp32 roundTiesToEven (1 / 3))
-    :> fp32_to_real``
-
-Count.apply EVAL
-  ``fp64_mul roundTiesToEven (real_to_fp64 roundTiesToEven (1 / 2))
-                             (real_to_fp64 roundTiesToEven (1 / 3))
-    :> fp64_to_real``
-
-Count.apply EVAL ``real_to_fp64 roundTiesToEven (1 / 6) :> fp64_to_real``
-
-(* 0.05 v 9.3s *)
-
-Count.apply EVAL
-   ``float_add roundTiesToEven
-        <|Sign := 0w; Exponent := 15w; Significand := 524288w|>
-        <|Sign := 0w; Exponent := 15w; Significand := 262144w|> :
-        (23, 8) float``
-
-(* 0.05 v 87.1s *)
-
-Count.apply EVAL
-   ``float_add roundTiesToEven
-        <|Sign := 0w; Exponent := 251w; Significand := 8388607w|>
-        <|Sign := 0w; Exponent := 251w; Significand := 4194303w|> :
-        (23, 8) float``
-
-*)
+val () = Theory.quote_adjoin_to_theory
+`val sqrt_CONV: Conv.conv ref
+val add_CONV: Conv.conv ref
+val sub_CONV: Conv.conv ref
+val mul_CONV: Conv.conv ref
+val div_CONV: Conv.conv ref
+val compare_CONV: Conv.conv ref
+val eq_CONV: Conv.conv ref
+val lt_CONV: Conv.conv ref
+val le_CONV: Conv.conv ref
+val gt_CONV: Conv.conv ref
+val ge_CONV: Conv.conv ref`
+`val native_eval = ref false(* off by default *)
+val () = Feedback.register_btrace ("native IEEE", native_eval)
+val sqrt_CONV = ref Conv.NO_CONV
+val add_CONV = ref Conv.NO_CONV
+val sub_CONV = ref Conv.NO_CONV
+val mul_CONV = ref Conv.NO_CONV
+val div_CONV = ref Conv.NO_CONV
+val compare_CONV = ref Conv.NO_CONV
+val eq_CONV = ref Conv.NO_CONV
+val lt_CONV = ref Conv.NO_CONV
+val le_CONV = ref Conv.NO_CONV
+val gt_CONV = ref Conv.NO_CONV
+val ge_CONV = ref Conv.NO_CONV
+fun native cnv1 s =
+  let
+    val cnv2 = Rewrite.PURE_REWRITE_CONV [DB.fetch "machine_ieee" ("fp64_" ^  s)]
+  in
+    fn tm => (if !native_eval then !cnv1 else cnv2) tm
+  end
+fun mk s = Term.prim_mk_const {Name = "fp64_" ^ s, Thy = "machine_ieee"}
+val () = computeLib.add_convs
+  [(mk "sqrt", 2, native sqrt_CONV "sqrt"),
+   (mk "add", 3, native add_CONV "add"),
+   (mk "sub", 3, native sub_CONV "sub"),
+   (mk "mul", 3, native mul_CONV "mul"),
+   (mk "div", 3, native div_CONV "div"),
+   (mk "compare", 2, native compare_CONV "compare"),
+   (mk "equal", 2, native eq_CONV "equal"),
+   (mk "lessThan", 2, native lt_CONV "lessThan"),
+   (mk "lessEqual", 2, native le_CONV "lessEqual"),
+   (mk "greaterThan", 2, native gt_CONV "greaterThan"),
+   (mk "greaterEqual", 2, native ge_CONV "greaterEqual")
+  ]`
 
 val () = export_theory ()

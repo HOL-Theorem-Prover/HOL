@@ -4,6 +4,7 @@ sig
    type term = Term.term
 
    val float_value_ty: hol_type
+   val flags_ty: hol_type
    val rounding_ty: hol_type
    val float_compare_ty: hol_type
 

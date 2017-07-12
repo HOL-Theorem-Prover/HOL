@@ -1,6 +1,5 @@
 open HolKernel Parse boolLib bossLib;
 open mips_decompLib
-open native_ieeeLib
 
 val () = new_theory "mips_decomp_demo";
 

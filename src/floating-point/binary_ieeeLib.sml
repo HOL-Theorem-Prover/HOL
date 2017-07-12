@@ -1,3 +1,9 @@
+(* ------------------------------------------------------------------------
+   Conversions for evaluating IEEE-754 operations.
+   The evaluation of rounding (to zero and nearest) uses a certification
+   approach, with calculations performed over rational numbers at the ML level.
+   (Rounding to +/-INF is not currently supported.)
+   ------------------------------------------------------------------------ *)
 structure binary_ieeeLib :> binary_ieeeLib =
 struct
 
@@ -231,6 +237,7 @@ end
 
 val float_datatype_rwts =
    #rewrs (TypeBase.simpls_of ``:('a, 'b) float``) @
+   #rewrs (TypeBase.simpls_of ``:flags``) @
    #rewrs (TypeBase.simpls_of ``:rounding``)
 
 val FLOAT_DATATYPE_CONV =
@@ -642,6 +649,20 @@ in
       cnv tm handle PlusMinusZero _ => raise ERR "round_CONV" "+/- 0"
 end
 
+(* -------------------------------------------------------------------------
+   float_round_with_flags_CONV
+   ------------------------------------------------------------------------- *)
+
+val float_round_with_flags_CONV =
+  Conv.REWR_CONV binary_ieeeTheory.float_round_with_flags_def
+  THENC Conv.RAND_CONV REAL_REDUCE_CONV
+  THENC Conv.PATH_CONV "lrr"
+          (REAL_REDUCE_CONV
+           THENC FLOAT_DATATYPE_CONV
+           THENC REWRITE_CONV [binary_ieeeTheory.float_components]
+           THENC wordsLib.WORD_EVAL_CONV
+           THENC float_round_CONV)
+
 (* ------------------------------------------------------------------------
    infinity_intro_CONV - if possible, convert ground FP term to
                          float_plus_infinity or float_minus_infinity
@@ -846,115 +867,44 @@ local
                   (Conv.RAND_CONV float_compare_CONV))))
       THENC FLOAT_COMPARE_CONV
 in
-   val float_compare_CONV = float_compare_CONV
-   val float_equal_CONV =
+   val compare_CONV = float_compare_CONV
+   val equal_CONV =
       Conv.REWR_CONV binary_ieeeTheory.float_equal_def THENC cnv1
-   val float_less_than_CONV =
+   val less_than_CONV =
       Conv.REWR_CONV binary_ieeeTheory.float_less_than_def THENC cnv1
-   val float_less_equal_CONV =
+   val less_equal_CONV =
       Conv.REWR_CONV binary_ieeeTheory.float_less_equal_def THENC cnv2
-   val float_greater_than_CONV =
+   val greater_than_CONV =
       Conv.REWR_CONV binary_ieeeTheory.float_greater_than_def THENC cnv1
-   val float_greater_equal_CONV =
+   val greater_equal_CONV =
       Conv.REWR_CONV binary_ieeeTheory.float_greater_equal_def THENC cnv2
 end
-
-(* -------------------------------------------------------------------------
-   lcf_or_native_conv
-   ------------------------------------------------------------------------- *)
-
-val native_eval = ref false (* off by default *)
-val () = Feedback.register_btrace ("native ieee", native_eval)
-
-val is_native = ref (fn _ => false)
-
-fun lcf_or_native_conv0 (get_ty, lcf_conv: conv, native_conv: conv ref) =
-   fn tm =>
-      if !native_eval andalso !is_native (get_ty tm)
-         then (!native_conv) tm (* doesn't cover NaN cases *)
-              handle HOL_ERR _ => lcf_conv tm
-      else lcf_conv tm
-
-fun lcf_or_native_conv (lcf_conv, native_conv) =
-   let
-      val rnd_conv =
-         REAL_REDUCE_CONV
-         THENC Conv.RATOR_CONV
-                  (Conv.RAND_CONV
-                      (FLOAT_DATATYPE_CONV THENC wordsLib.WORD_EVAL_CONV))
-         THENC float_round_CONV
-      val cnv = lcf_conv THENC TRY_CONV rnd_conv
-   in
-      lcf_or_native_conv0 (Term.type_of, cnv, native_conv)
-   end
-
-fun lcf_or_native_order_conv (lcf_conv, native_conv) =
-   lcf_or_native_conv0 (Term.type_of o Term.rand, lcf_conv, native_conv)
-
-(* Stubs for native evaluation *)
-
-val native_float_sqrt_CONV = ref Conv.NO_CONV
-val native_float_add_CONV = ref Conv.NO_CONV
-val native_float_sub_CONV = ref Conv.NO_CONV
-val native_float_mul_CONV = ref Conv.NO_CONV
-val native_float_div_CONV = ref Conv.NO_CONV
-val native_float_mul_add_CONV = ref Conv.NO_CONV
-val native_float_mul_sub_CONV = ref Conv.NO_CONV
-val native_float_less_than_CONV = ref Conv.NO_CONV
-val native_float_less_equal_CONV = ref Conv.NO_CONV
-val native_float_greater_than_CONV = ref Conv.NO_CONV
-val native_float_greater_equal_CONV = ref Conv.NO_CONV
-val native_float_equal_CONV = ref Conv.NO_CONV
-val native_float_compare_CONV = ref Conv.NO_CONV
-
-(* Evaluation conversions *)
-
-val add_CONV = lcf_or_native_conv (float_add_CONV, native_float_add_CONV)
-val sub_CONV = lcf_or_native_conv (float_sub_CONV, native_float_sub_CONV)
-val mul_CONV = lcf_or_native_conv (float_mul_CONV, native_float_mul_CONV)
-val div_CONV = lcf_or_native_conv (float_div_CONV, native_float_div_CONV)
-
-(* the following could benefit from a more efficient LCF custom conversion *)
-
-val sqrt_CONV =
-   lcf_or_native_conv
-      (Conv.REWR_CONV binary_ieeeTheory.float_sqrt_def THENC EVAL,
-       native_float_sqrt_CONV)
-
-val mul_add_CONV =
-   lcf_or_native_conv
-      (Conv.REWR_CONV binary_ieeeTheory.float_mul_add_def THENC EVAL,
-       native_float_mul_add_CONV)
-
-val mul_sub_CONV =
-   lcf_or_native_conv
-      (Conv.REWR_CONV binary_ieeeTheory.float_mul_sub_def THENC EVAL,
-       native_float_mul_sub_CONV)
-
-val compare_CONV =
-   lcf_or_native_order_conv (float_compare_CONV, native_float_compare_CONV)
-
-val equal_CONV =
-   lcf_or_native_order_conv (float_equal_CONV, native_float_equal_CONV)
-
-val less_than_CONV =
-   lcf_or_native_order_conv (float_less_than_CONV, native_float_less_than_CONV)
-
-val less_equal_CONV =
-   lcf_or_native_order_conv
-      (float_less_equal_CONV, native_float_less_equal_CONV)
-
-val greater_than_CONV =
-   lcf_or_native_order_conv
-      (float_greater_than_CONV, native_float_greater_than_CONV)
-
-val greater_equal_CONV =
-   lcf_or_native_order_conv
-      (float_greater_equal_CONV, native_float_greater_equal_CONV)
 
 (* ------------------------------------------------------------------------
    Add rewrites and conversions to compsets
    ------------------------------------------------------------------------ *)
+
+(* Evaluation conversions *)
+
+fun round_after cnv = cnv THENC TRY_CONV float_round_with_flags_CONV
+
+val add_CONV = round_after float_add_CONV
+val sub_CONV = round_after float_sub_CONV
+val mul_CONV = round_after float_mul_CONV
+val div_CONV =
+  round_after
+    (float_div_CONV THENC wordsLib.WORD_EVAL_CONV THENC REAL_REDUCE_CONV)
+
+(* the following could benefit from a more efficient LCF custom conversion *)
+
+val sqrt_CONV =
+  round_after (Conv.REWR_CONV binary_ieeeTheory.float_sqrt_def THENC EVAL)
+
+val mul_add_CONV =
+  round_after (Conv.REWR_CONV binary_ieeeTheory.float_mul_add_def THENC EVAL)
+
+val mul_sub_CONV =
+  round_after (Conv.REWR_CONV binary_ieeeTheory.float_mul_sub_def THENC EVAL)
 
 val ieee_rewrites =
    let
@@ -970,7 +920,8 @@ val ieee_rewrites =
        sr0 float_top_def, float_plus_min_def, float_minus_min_def,
        float_minus_zero, sr [float_top_def, float_negate_def] float_bottom_def,
        float_components, float_round_to_integral_compute, float_to_int_def,
-       real_to_float_def
+       real_to_float_def, float_is_signalling_def, check_for_signalling_def,
+       clear_flags_def, invalidop_flags_def, dividezero_flags_def
        ] @
       List.take (Drule.CONJUNCTS float_values, 3) @ float_datatype_rwts
    end

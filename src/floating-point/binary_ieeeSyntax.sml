@@ -14,6 +14,9 @@ val float_value_ty =
 val rounding_ty =
    Type.mk_thy_type {Thy = "binary_ieee", Tyop = "rounding", Args = []}
 
+val flags_ty =
+   Type.mk_thy_type {Thy = "binary_ieee", Tyop = "flags", Args = []}
+
 val float_compare_ty =
    Type.mk_thy_type {Thy = "binary_ieee", Tyop = "float_compare", Args = []}
 
