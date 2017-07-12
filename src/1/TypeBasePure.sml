@@ -669,7 +669,9 @@ fun fetch tbase ty =
         val matches = List.mapPartial (check_match ty) matches0
         val sorted = Listsort.sort (measure_cmp fst) matches
       in
-        SOME (#2 (hd sorted))
+        case sorted of
+            [] => NONE
+          | (_, tyi) :: _ => SOME tyi
       end
 
 

@@ -14,6 +14,8 @@ in
   ()
 end
 
+val Datatype = Datatype.Datatype
+
 fun primrec_test ty = let
   val rcd = {nchotomy = TypeBase.nchotomy_of ty,
              case_def = TypeBase.case_def_of ty}
@@ -360,5 +362,18 @@ val _ =
   of
     NONE => OK()
   | _ => die "FAILED!";
+
+
+val _ = tprint "Testing overriding calls in mutual recursive style";
+val _ = quiet_warnings (fn () =>
+           (Datatype`a2 = A num ; b = B 'a`;
+            Datatype`a2 = A num ; b = B 'a `;
+            Datatype `foo = Foo`;
+            Datatype`a = A ; b = B `;
+            Datatype`a2 = A ; b = B `;
+            Datatype`a2 = A ; b2 = B `;
+            Datatype `foo = Foo`)) () handle _ => die "FAILED!"
+val _ = OK()
+
 
 val _ = Process.exit Process.success;
