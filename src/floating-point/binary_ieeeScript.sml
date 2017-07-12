@@ -3398,7 +3398,7 @@ val largest_is_top = Q.store_thm("largest_is_top",
          |> Q.SPECL [`n`, `1`]
          |> REWRITE_RULE [arithmeticTheory.EXP_1]]
   \\ `2 < dimword(:'w)` by simp [DECIDE ``1 < n /\ n <> 2 ==> 2n < n``]
-  \\ `UINT_MAXw − 1w <> 0w : 'w word` by simp []
+  \\ `UINT_MAXw - 1w <> 0w : 'w word` by simp []
   \\ asm_simp_tac std_ss [largest, float_top_def, float_to_real]
   \\ simp_tac std_ss [wordsTheory.word_T_def]
   \\ simp [realTheory.REAL_EQ_LDIV_EQ, DECIDE ``0n < n ==> n <> 0``,
