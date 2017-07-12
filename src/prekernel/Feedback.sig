@@ -23,6 +23,9 @@ sig
     val format_MESG       : string -> string
     val format_WARNING    : string -> string -> string -> string
 
+    val quiet_warnings    : ('a -> 'b) -> ('a -> 'b)
+    val quiet_messages    : ('a -> 'b) -> ('a -> 'b)
+
     val ERR_to_string     : (error_record -> string) ref
     val MESG_to_string    : (string -> string) ref
     val WARNING_to_string : (string -> string -> string -> string) ref

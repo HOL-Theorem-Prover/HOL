@@ -68,6 +68,9 @@ val ERR_outstream     = ref (out TextIO.stdErr)
 val MESG_outstream    = ref (out TextIO.stdOut)
 val WARNING_outstream = ref (out TextIO.stdOut)
 
+fun quiet_warnings f = Portable.with_flag (emit_WARNING, false) f
+fun quiet_messages f = Portable.with_flag (emit_MESG, false) f
+
 (*---------------------------------------------------------------------------*
  * Formatting and output for exceptions, messages, and warnings.             *
  *---------------------------------------------------------------------------*)
