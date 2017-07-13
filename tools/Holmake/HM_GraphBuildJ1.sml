@@ -3,7 +3,7 @@ struct
 
 open Holmake_tools
 
-type build_command = include_info -> buildcmds -> File -> bool
+type build_command = HM_DepGraph.t -> include_info -> buildcmds -> File -> bool
 type mosml_build_command =
      Holmake_types.env ->
      {noecho : bool, ignore_error : bool, command : string} ->
@@ -19,24 +19,21 @@ type 'optv buildinfo_t = {
   SIGOBJ : string
 }
 
-fun extract_thypart s = (* <....>Theory.sml *)
-  String.substring(s, 0, String.size s - 10)
-
 fun fail (outs : Holmake_tools.output_functions) g =
   let
     open HM_DepGraph
-    val pr_sl = String.concatWith " "
+    fun pr s = s
     val {diag,tgtfatal,...} = outs
   in
     case List.filter (fn (_,nI) => #status nI <> Succeeded) (listNodes g) of
         [] => raise Fail "No failing nodes in supposedly failed graph"
       | ns =>
         let
-          fun str (n,nI) = node_toString n ^ ": " ^ nodeInfo_toString pr_sl nI
+          fun str (n,nI) = node_toString n ^ ": " ^ nodeInfo_toString pr nI
           fun failed_nocmd (_, nI) =
             #status nI = Failed andalso #command nI = NoCmd
           val ns' = List.filter failed_nocmd ns
-          fun nI_target (_, nI) = String.concatWith " " (#target nI)
+          fun nI_target (_, nI) = #target nI
         in
           diag ("Failed nodes: \n" ^ String.concatWith "\n" (map str ns));
           if not (null ns') then
@@ -61,7 +58,7 @@ fun graphbuildj1 static_info =
       let
         open HM_DepGraph
         val _ = diag "Entering HMGBJ1.build_graph"
-        val bc = build_command incinfo
+        val bc = build_command g incinfo
         fun recurse retval g =
           case find_runnable g of
               NONE => (case List.find (fn (_,ni) => #status ni = Failed)
@@ -69,11 +66,11 @@ fun graphbuildj1 static_info =
                         of
                            NONE => retval
                          | SOME _ => fail outs g)
-            | SOME (n, nI) =>
+            | SOME (n, nI : string nodeInfo) =>
               let
                 val deps = map #2 (#dependencies nI)
                 val depfs = map toFile deps
-                val target_s = target_string (#target nI)
+                val target_s = #target nI
                 fun k res =
                   let
                     val g = updnode(n, if res then Succeeded else Failed) g
@@ -84,30 +81,21 @@ fun graphbuildj1 static_info =
                   end
                 fun stdprocess () =
                   case #command nI of
-                      BuiltInCmd =>
-                      (diag("J1Build: Running built-in command on " ^
-                            String.concatWith " " (#target nI));
-                       case #target nI of
-                           [f] =>
-                           (case toFile f of
-                                UI c => k (bc (Compile depfs) (SIG c))
-                              | UO c => k (bc (Compile depfs) (SML c))
-                              | ART (RawArticle s) =>
-                                  k (bc (BuildArticle(s,depfs))
-                                        (SML (Script s)))
-                              | ART (ProcessedArticle s) =>
-                                  k (bc (ProcessArticle s) (ART (RawArticle s)))
-                              | _ => raise Fail ("bg tgt = " ^ f))
-                         | [thyfile, _] =>
-                           let
-                             val thyname = extract_thypart thyfile
-                           in
-                             k (bc (BuildScript(thyname, depfs))
-                                   (SML (Script thyname)))
-                           end
-                         | ts =>
-                           raise Fail ("implicit bg targets: " ^
-                                       String.concatWith ", " ts))
+                      BuiltInCmd BIC_Compile =>
+                      (diag("J1Build: Running built-in compile on " ^
+                            #target nI);
+                       case toFile (#target nI) of
+                           UI c => k (bc (Compile depfs) (SIG c))
+                         | UO c => k (bc (Compile depfs) (SML c))
+                         | ART (RawArticle s) =>
+                           k (bc (BuildArticle(s,depfs))
+                                 (SML (Script s)))
+                         | ART (ProcessedArticle s) =>
+                           k (bc (ProcessArticle s) (ART (RawArticle s)))
+                         | _ => raise Fail ("bg tgt = " ^ #target nI))
+                    | BuiltInCmd (BIC_BuildScript thyname) =>
+                        k (bc (BuildScript(thyname, depfs))
+                              (SML (Script thyname)))
                     | SomeCmd c =>
                       let
                         val hypargs as {noecho,ignore_error,command=c} =
@@ -127,24 +115,21 @@ fun graphbuildj1 static_info =
                             in
                               if not res_b andalso ignore_error
                               then
-                                (warn ("[" ^ hd (#target nI) ^
-                                       "] Error (ignored)");
+                                (warn ("[" ^ #target nI ^ "] Error (ignored)");
                                  k true)
                               else k res_b
                             end
                       end
                     | NoCmd => k true
               in
-                if is_heap_only() andalso not (#phony nI) andalso
-                   List.all exists_readable (#target nI)
+                if not (#phony nI) andalso exists_readable (#target nI) andalso
+                   #seqnum nI = 0
                 then
                   let
                     val _ = diag ("May not need to rebuild "^target_s)
                   in
                     case List.find
-                           (fn (_, d) =>
-                               List.exists (fn tgt => forces_update_of(d,tgt))
-                                           (#target nI))
+                           (fn (_, d) => forces_update_of(d,#target nI))
                            (#dependencies nI)
                      of
                         NONE => (diag ("Can skip work on "^target_s); k true)

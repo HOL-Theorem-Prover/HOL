@@ -6,12 +6,11 @@ type wp = HM_DepGraph.t workprovider
 
 datatype buildresult =
          BR_OK
-       | BR_ClineK of ((string * string list) *
-                       ((string -> unit) -> OS.Process.status -> bool))
+       | BR_ClineK of { cline : string * string list,
+                        job_kont : (string -> unit) -> OS.Process.status ->
+                                   bool,
+                        other_nodes : HM_DepGraph.node list }
        | BR_Failed
-
-fun extract_thypart s = (* <....>Theory.sml *)
-  String.substring(s, 0, String.size s - 10)
 
 infix ++
 fun p1 ++ p2 = OS.Path.concat(p1, p2)
@@ -52,11 +51,11 @@ fun graphbuild optinfo incinfo g =
             val depfs = map (toFile o #2) (#dependencies nI)
             val _ = #status nI = Pending orelse
                     raise Fail "runnable not pending"
-            val target_s = target_string (#target nI)
+            val target_s = #target nI
             fun stdprocess() =
               case #command nI of
                   NoCmd => genjob (updnode (n,Succeeded) g)
-                | SomeCmd c =>
+                | cmd as SomeCmd c =>
                   let
                     val hypargs as {noecho,ignore_error,command=c} =
                         process_hypat_options c
@@ -74,68 +73,80 @@ fun graphbuild optinfo incinfo g =
                           k (error (OS.Process.isSuccess r) = Succeeded) g
                       | NONE =>
                         let
-                          fun update (g, b) = updnode (n, error b) g
+                          val others = find_nodes_by_command g cmd
+                          val _ = diag ("Found nodes " ^
+                                        String.concatWith ", "
+                                           (map node_toString others) ^
+                                        " with duplicate commands")
+                          fun updall (g, st) =
+                            List.foldl (fn (n, g) => updnode (n, st) g)
+                                       g
+                                       (n::others)
+                          fun update (g, b) = updall (g, error b)
                         in
                           NewJob ({tag = target_s, command = shell_command c,
                                    update = update},
-                                  updnode(n, Running) g)
+                                  updall(g, Running))
                         end
                   end
-                | BuiltInCmd =>
+                | BuiltInCmd bic =>
                   let
+                    val _ = diag ("Setting up for target >" ^ target_s ^
+                                  "< with bic " ^ bic_toString bic)
                     fun bresk bres g =
                       case bres of
                           BR_OK => k true g
                         | BR_Failed => k false g
-                        | BR_ClineK(cline, jobk) =>
+                        | BR_ClineK{cline, job_kont, other_nodes} =>
                           let
                             fun b2res b = if b then OS.Process.success
                                           else OS.Process.failure
+                            fun updall s g =
+                              List.foldl (fn (n,g) => updnode(n,s) g) g
+                                         (n::other_nodes)
                             fun update (g, b) =
-                              if jobk (fn s => ()) (b2res b) then
-                                updnode(n, Succeeded) g
+                              if job_kont (fn s => ()) (b2res b) then
+                                updall Succeeded g
                               else
-                                updnode(n, Failed) g
+                                updall Failed g
                             fun cline_str (c,l) = "["^c^"] " ^
                                                   String.concatWith " " l
                           in
                             diag ("New graph job for "^target_s^
                                   " with c/line: " ^ cline_str cline);
+                            diag ("Other nodes are: "^
+                                  String.concatWith ", "
+                                        (map node_toString other_nodes));
                             NewJob({tag = target_s,
                                     command = cline_to_command cline,
-                                    update = update}, updnode(n, Running) g)
+                                    update = update},
+                                   updall Running g)
                           end
-                    val bc = build_command incinfo
-                    val _ = diag ("Handling builtin command for "^target_s)
+                    val bc = build_command g incinfo
+                    val _ = diag ("Handling builtin command " ^
+                                  bic_toString bic ^ " for "^target_s)
                   in
-                    case #target nI of
-                        [f] => (case toFile f of
-                                    UI c => bresk (bc (Compile depfs) (SIG c)) g
-                                  | UO c => bresk (bc (Compile depfs) (SML c)) g
-                                  | ART (RawArticle s) =>
-                                      bresk (bc (BuildArticle(s,depfs))
-                                                (SML (Script s)))
-                                            g
-                                  | ART (ProcessedArticle s) =>
-                                      bresk (bc (ProcessArticle s)
-                                                (ART (RawArticle s)))
-                                            g
-                                  | _ => raise Fail ("bg tgt = " ^ f))
-                      | [thyfile, _] =>
-                        let
-                          val thyname = extract_thypart thyfile
-                        in
+                    case bic of
+                        BIC_Compile =>
+                        (case toFile target_s of
+                             UI c => bresk (bc (Compile depfs) (SIG c)) g
+                           | UO c => bresk (bc (Compile depfs) (SML c)) g
+                           | ART (RawArticle s) =>
+                               bresk (bc (BuildArticle(s,depfs))
+                                         (SML (Script s)))
+                                     g
+                           | ART (ProcessedArticle s) =>
+                               bresk (bc (ProcessArticle s)
+                                         (ART (RawArticle s)))
+                                     g
+                           | _ => raise Fail ("bg tgt = " ^ target_s))
+                      | BIC_BuildScript thyname =>
                           bresk (bc (BuildScript(thyname, depfs))
                                     (SML (Script thyname)))
                                 g
-                        end
-                      | ts =>
-                        raise Fail ("implicit bg targets: " ^
-                                    String.concatWith ", " ts)
                   end
           in
-            if relocbuild andalso not (#phony nI) andalso
-               List.all exists_readable (#target nI) andalso
+            if not (#phony nI) andalso exists_readable (#target nI) andalso
                #seqnum nI = 0
                (* necessary to avoid dropping out of a multi-command execution
                   part way through *)
@@ -144,9 +155,7 @@ fun graphbuild optinfo incinfo g =
                 val _ = diag ("May not need to rebuild "^target_s)
               in
                 case List.find
-                       (fn (_, d) =>
-                           List.exists (fn tgt => forces_update_of(d,tgt))
-                                       (#target nI))
+                       (fn (_, d) => forces_update_of(d,#target nI))
                        (#dependencies nI)
                  of
                     NONE => (diag ("Can skip work on "^target_s);

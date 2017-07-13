@@ -186,7 +186,8 @@ end
 fun list_delete x [] = []
   | list_delete x (y::ys) = if x = y then ys else y :: list_delete x ys
 
-type build_command = {preincludes : string list, includes : string list} ->
+type build_command = HM_DepGraph.t ->
+                     {preincludes : string list, includes : string list} ->
                      Holmake_tools.buildcmds ->
                      File -> bool
 
@@ -272,7 +273,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     OS.Process.success
   end handle IO.Io _ => OS.Process.failure
 
-  fun build_command (ii as {preincludes,includes}) c arg = let
+  fun build_command g (ii as {preincludes,includes}) c arg = let
     val include_flags = preincludes @ includes
     val overlay_stringl = case actual_overlay of NONE => [] | SOME s => [s]
     exception CompileFailed
@@ -286,7 +287,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       val scriptui = script^".ui"
       (* first thing to do is to create the Script.uo file *)
       val b =
-          case build_command ii (Compile deps) scriptsml_file of
+          case build_command g ii (Compile deps) scriptsml_file of
               BR_OK => true
             | BR_Failed => false
             | BR_ClineK _ => raise Fail "Compilation resulted in commandline"
@@ -305,7 +306,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     in
         ((script,[scriptuo,scriptui,script]), objectfiles)
     end
-    fun run_script (script, intermediates) objectfiles expected_results =
+    fun run_script g (script, intermediates) objectfiles expected_results =
       if isSuccess (poly_link true script (List.map OS.Path.base objectfiles))
       then let
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
@@ -332,8 +333,20 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                           false))
                      expected_results
           end
+        val script_part =
+            if String.isSuffix "Script" script then
+              String.substring(script, 0, size script - 6)
+            else raise Fail "Invariant failure in run_script"
+        val other_nodes = let
+          open HM_DepGraph
+        in
+          diag ("Looking for other nodes with buildscript "^script);
+          find_nodes_by_command g
+              (BuiltInCmd (BIC_BuildScript script_part))
+        end
       in
-        BR_ClineK ((script, cline), cont)
+        BR_ClineK { cline = (script, cline), job_kont = cont,
+                    other_nodes = other_nodes }
       end
       else
         (warn ("Failed to build script file, "^script^"\n"); BR_Failed)
@@ -356,7 +369,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           let
             val (scriptetc,objectfiles) = setup_script s deps []
           in
-            run_script scriptetc objectfiles [s^"Theory.sml", s^"Theory.sig"]
+            run_script g scriptetc objectfiles [s^"Theory.sml", s^"Theory.sig"]
           end
         | BuildArticle (s0, deps) =>
           let
@@ -372,7 +385,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             val ((script,inters),objectfiles) =
                 setup_script s deps loggingextras
           in
-            run_script (script,fromFile fakescript_f :: inters) objectfiles [s]
+            run_script g (script,fromFile fakescript_f :: inters) objectfiles
+                       [s]
           end
         | ProcessArticle s =>
           let
@@ -385,7 +399,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                  ["/bin/sh", "-c",
                   "opentheory info --article -o " ^ art ^ " " ^ raw_art])
           in
-            BR_ClineK (cline, (fn _ => OS.Process.isSuccess))
+            BR_ClineK {cline = cline, job_kont = (fn _ => OS.Process.isSuccess),
+                       other_nodes = []}
           end
     end handle CompileFailed => BR_Failed
              | FileNotFound  => BR_Failed
@@ -426,17 +441,17 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     end
   val jobs = #jobs (#core optv)
   open HM_DepGraph
-  val pr_sl = String.concatWith " "
+  fun pr s = s
   fun interpret_graph g =
     case List.filter (fn (_,nI) => #status nI <> Succeeded) (listNodes g) of
         [] => OS.Process.success
       | ns =>
         let
-          fun str (n,nI) = node_toString n ^ ": " ^ nodeInfo_toString pr_sl nI
+          fun str (n,nI) = node_toString n ^ ": " ^ nodeInfo_toString pr nI
           fun failed_nocmd (_, nI) =
             #status nI = Failed andalso #command nI = NoCmd
           val ns' = List.filter failed_nocmd ns
-          fun nI_target (_, nI) = String.concatWith " " (#target nI)
+          fun nI_target (_, nI) = #target nI
         in
           diag ("Failed nodes: \n" ^ String.concatWith "\n" (map str ns));
           if not (null ns') then
@@ -448,7 +463,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   fun interpret_bres bres =
     case bres of
         BR_OK => true
-      | BR_ClineK((_,cline), k) => k warn (Systeml.systeml cline)
+      | BR_ClineK{cline = (_,cl), job_kont = k, ...} =>
+          k warn (Systeml.systeml cl)
       | BR_Failed => false
 
 
@@ -459,15 +475,16 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
 
   val build_graph =
       if jobs = 1 then
-        graphbuildj1 {
-          build_command = (fn ii => fn cmds => fn f =>
-                              build_command ii cmds f |> interpret_bres),
-          mosml_build_command = mosml_build_command,
-          outs = outs,
-          keep_going = keep_going,
-          quiet = quiet_flag,
-          hmenv = hmenv,
-          system = system }
+        (fn ii => fn g =>
+            graphbuildj1 {
+              build_command = (fn g => fn ii => fn cmds => fn f =>
+                                  build_command g ii cmds f |> interpret_bres),
+              mosml_build_command = mosml_build_command,
+              outs = outs,
+              keep_going = keep_going,
+              quiet = quiet_flag,
+              hmenv = hmenv,
+              system = system } ii g)
       else
         (fn ii => fn g =>
             multibuild.graphbuild { build_command = build_command,

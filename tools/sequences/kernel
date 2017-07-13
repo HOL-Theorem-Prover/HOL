@@ -30,4 +30,5 @@ src/proofman
 [poly]!tools/Holmake/tests/cheatspotting
 [poly]!tools/Holmake/tests/depchain_heap/
 [poly]!tools/Holmake/tests/depchain_heap/dir2
+!tools/Holmake/tests/coproduct
 !src/1/theory_tests

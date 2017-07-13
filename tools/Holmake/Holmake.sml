@@ -466,6 +466,11 @@ fun no_full_extra_rule tgt =
 val done_some_work = ref false
 open HM_DepGraph
 
+fun is_script s =
+  case toFile s of
+      SML (Script _) => true
+    | _ => false
+
 fun build_depgraph cdset incinfo target g0 : (t * node) = let
   val pdep = primary_dependent target
   val target_s = fromFile target
@@ -512,10 +517,14 @@ in
               not (null unbuilt_deps) orelse
               List.exists (fn d => d forces_update_of target_s)
                           (fromFile pdep :: map fromFile secondaries)
+          val bic = case toFile target_s of
+                        SML (Theory s) => BIC_BuildScript s
+                      | SIG (Theory s) => BIC_BuildScript s
+                      | _ => BIC_Compile
         in
             add_node {target = target_s, seqnum = 0, phony = false,
                       status = if needs_building then Pending else Succeeded,
-                      command = BuiltInCmd,
+                      command = BuiltInCmd bic,
                       dependencies = depnodes } g2
         end
       else
@@ -534,8 +543,34 @@ in
                 in
                   (g, addF d n::secnodes)
                 end
+              fun depfoldthis (s, (starp, deps)) =
+                if s <> "" andalso String.sub(s,0) = #"*" andalso
+                   is_script s
+                   (* is_script returns true for, e.g., *boolScript.sml *)
+                then
+                  if isSome starp then
+                    die ("Multiple starred script dependencies for "^target_s)
+                  else
+                    let
+                      val s = String.extract(s,1,NONE)
+                    in
+                      (SOME s, s :: deps)
+                    end
+                else (starp, s::deps)
+              val (starred_dep, dependencies) =
+                  if null commands then
+                    List.foldr depfoldthis (NONE, []) dependencies
+                  else (NONE, dependencies)
+
+              val more_deps =
+                  case starred_dep of
+                      NONE => []
+                    | SOME s =>
+                        get_implicit_dependencies incinfo (SML(Theory s))
+
               val (g1, depnodes) =
-                  List.foldl foldthis (g0, []) (map toFile dependencies)
+                  List.foldl foldthis (g0, [])
+                             (more_deps @ map toFile dependencies)
 
               val unbuilt_deps =
                   List.filter (fn (n,_) => let val stat = nstatus g1 n
@@ -544,12 +579,14 @@ in
                                            end)
                               depnodes
               val is_phony = isPHONY target_s
-              val needs_building =
+              val needs_building_by_deps_existence =
                   (not (OS.FileSys.access(target_s, [])) orelse
                    not (null unbuilt_deps) orelse
                    List.exists (fn d => d forces_update_of target_s)
                                dependencies orelse
-                   is_phony) andalso
+                   is_phony)
+              val needs_building =
+                  needs_building_by_deps_existence andalso
                   not (null commands)
               val status = if needs_building then Pending else Succeeded
               fun foldthis (c, (depnode, seqnum, g)) =
@@ -576,9 +613,25 @@ in
                   (g, #1 (hd lastnodelist))
                 end
               else
-                add_node {target = target_s, seqnum = 0, phony = is_phony,
-                          status = status, command = NoCmd,
-                          dependencies = depnodes} g1
+                case starred_dep of
+                    NONE =>
+                    add_node {target = target_s, seqnum = 0, phony = is_phony,
+                              status = status, command = NoCmd,
+                              dependencies = depnodes} g1
+                  | SOME scr =>
+                    (case toFile scr of
+                         SML (Script s) =>
+                         let
+                           val updstatus =
+                               if needs_building_by_deps_existence then Pending
+                               else Succeeded
+                         in
+                           add_node {target = target_s, seqnum = 0,
+                                     phony = false, status = updstatus,
+                                     command = BuiltInCmd (BIC_BuildScript s),
+                                     dependencies = depnodes} g1
+                         end
+                       | _ => die "Invariant failure in build_depgraph")
             end
 end
 
@@ -671,9 +724,9 @@ fun no_action_cont tgts ii =
     open HM_DepGraph
     val ii = add_sigobj ii
     val g = create_graph tgts ii
-    val pr_sl = String.concatWith " "
+    fun pr s = s
     fun str (n,ni) =
-      "{" ^ node_toString n ^ "}: " ^ nodeInfo_toString pr_sl ni ^ "\n"
+      "{" ^ node_toString n ^ "}: " ^ nodeInfo_toString pr ni ^ "\n"
   in
     List.app (print o str) (listNodes g);
     true

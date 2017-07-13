@@ -269,6 +269,13 @@ in
   |    _       => Unhandled s0
 end
 
+fun extract_theory slist =
+  case slist of
+      [] => NONE
+    | s :: rest => (case toFile s of
+                        SML (Theory thy) => SOME thy
+                      | _ => extract_theory rest)
+
 fun codeToString c =
   case c of
     Theory s => s ^ "Theory"

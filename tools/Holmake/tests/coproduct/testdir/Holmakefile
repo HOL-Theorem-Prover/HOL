@@ -1,0 +1,5 @@
+CLINE_OPTIONS = --holstate=$(HOLDIR)/bin/hol.state0
+
+foo: *simpleScript.sml
+
+EXTRA_CLEANS = foo

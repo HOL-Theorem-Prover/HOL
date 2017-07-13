@@ -59,6 +59,10 @@ fun rtrunc n s =
 fun polish0 tag =
   if String.isSuffix "Theory" tag then
     String.substring(tag,0,String.size tag - 6)
+  else if String.isSuffix "Theory.sig" tag then
+    String.substring(tag,0,String.size tag - 10)
+  else if String.isSuffix "Theory.sml" tag then
+    String.substring(tag,0,String.size tag - 10)
   else tag
 
 fun truncate width s =
@@ -85,6 +89,11 @@ fun polish s = StringCvt.padRight #" " 16 (truncate 16 (polish0 s))
 val cheat_string = "Saved CHEAT _"
 val oracle_string = "Saved ORACLE thm _"
 val used_cheat_string = "(used CHEAT)"
+
+fun delsml_sfx s =
+  if String.isSuffix ".sml" s orelse String.isSuffix ".sig" s then
+    String.substring(s, 0, size s - 4)
+  else s
 
 fun new {info,warn,genLogFile,keep_going,time_limit} =
   let
@@ -123,14 +132,16 @@ fun new {info,warn,genLogFile,keep_going,time_limit} =
           ((fn s => ()), "\r", ttydisplay_map, green, red, boldyellow, dim,
            CLR_EOL)
         else
-          ((fn s => info ("Starting work on " ^ s)), "", (fn () => ()),
+          ((fn s => info ("Starting work on " ^ delsml_sfx s)), "",
+           (fn () => ()),
            id, id, id, id, "")
     fun stdhandle tag f =
       case Binarymap.peek (!monitor_map, tag) of
           NONE => (warn ("Lost monitor info for "^tag); NONE)
         | SOME info => f info
     fun taginfo tag colour s =
-      info (infopfx ^ StringCvt.padRight #" " (79 - String.size s) tag ^
+      info (infopfx ^
+            StringCvt.padRight #" " (79 - String.size s) (delsml_sfx tag) ^
             colour s ^ CLR_EOL)
     fun monitor msg =
       case msg of

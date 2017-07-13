@@ -83,6 +83,7 @@ sig
   val exists_readable : string -> bool
   val generate_all_plausible_targets :
       (string -> unit) -> string option -> File list
+  val extract_theory : string list -> string option
 
   val clean_dir : {extra_cleans: string list} -> unit
   val clean_depdir : {depdirname : string} -> bool

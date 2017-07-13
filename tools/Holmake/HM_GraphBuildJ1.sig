@@ -3,7 +3,8 @@ sig
 
   type include_info = Holmake_tools.include_info
   type File = Holmake_tools.File
-  type build_command = include_info -> Holmake_tools.buildcmds -> File -> bool
+  type build_command =
+       HM_DepGraph.t -> include_info -> Holmake_tools.buildcmds -> File -> bool
   type mosml_build_command =
        Holmake_types.env ->
        {noecho : bool, ignore_error : bool, command : string} ->
