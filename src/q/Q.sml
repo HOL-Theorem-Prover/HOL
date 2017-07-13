@@ -361,36 +361,52 @@ fun redex_map f {redex,residue} = {redex = f redex, residue = residue}
 (* needs to be eta-expanded so that the possible HOL_ERRs are raised
    when applied to a goal, not before, thereby letting FIRST_ASSUM catch
    the exception *)
-fun wholeterm_rename_helper {pat,fvs_set,ERR} tm g = let
-  val ((tmtheta0, _), (tytheta, _)) =
-      raw_match [] fvs_set pat tm ([],[])
-      handle HOL_ERR _ => raise ERR "No match"
+fun wholeterm_rename_helper {pats,fvs_set,ERR,kont} tm g = let
+  fun do_one_pat pat =
+    let
+      val ((tmtheta0, _), (tytheta, _)) =
+          raw_match [] fvs_set pat tm ([],[])
+          handle HOL_ERR _ => raise ERR "No match"
+      val rename_tac =
+          tmtheta0 |> strip_uscore_bindings |> map (redex_map (inst tytheta))
+                   |> make_rename_tac
+    in
+      rename_tac THEN kont
+    end g
+  fun test_parses patseq =
+    case seq.cases patseq of
+        NONE => raise ERR "No match"
+      | SOME (pat, rest) => do_one_pat pat handle HOL_ERR _ => test_parses rest
 in
-  tmtheta0 |> strip_uscore_bindings |> map (redex_map (inst tytheta))
-           |> make_rename_tac
-end g
+  test_parses pats
+end
 
-(* these functions should probably be using raw_match_term in order to
-   handle the variables that are only allowed to be bound to themselves *)
-fun MATCH_RENAME_TAC q (g as (asl,t)) = let
-  val fvs = free_varsl(t::asl)
-  val pat = Parse.parse_in_context fvs q
+val Absyn = Parse.Absyn
+val term_grammar = Parse.term_grammar
+
+
+fun kMATCH_RENAME_TAC q k (g as (_, t)) = let
+  val ctxt = goal_ctxt g
+  fun mkA q = Absyn.TYPED(locn.Loc_None, Absyn q, Pretype.fromType bool)
+  val pat_parses = TermParse.prim_ctxt_termS mkA (term_grammar()) ctxt q
 in
   wholeterm_rename_helper
-    {pat=pat, ERR = ERR "MATCH_RENAME_TAC",
-     fvs_set = HOLset.fromList Term.compare fvs}
+    {pats=pat_parses, ERR = ERR "MATCH_RENAME_TAC", kont = k,
+     fvs_set = HOLset.fromList Term.compare ctxt}
     t
 end g
 
+fun MATCH_RENAME_TAC q = kMATCH_RENAME_TAC q ALL_TAC
+
 fun kMATCH_ASSUM_RENAME_TAC q k (g as (asl,t)) = let
-  val fvs = free_varsl(t::asl)
-  val pat = Parse.parse_in_context fvs q
+  val ctxt = free_varsl(t::asl)
+  val pats = TermParse.prim_ctxt_termS Absyn (term_grammar()) ctxt q
 in
   FIRST_ASSUM (fn th =>
     wholeterm_rename_helper
-      {pat=pat, ERR = ERR "MATCH_ASSUM_RENAME_TAC",
-       fvs_set = HOLset.fromList Term.compare fvs}
-      (concl th) THEN k)
+      {pats=pats, ERR = ERR "MATCH_ASSUM_RENAME_TAC", kont = k,
+       fvs_set = HOLset.fromList Term.compare ctxt}
+      (concl th))
 end g
 
 fun MATCH_ASSUM_RENAME_TAC q = kMATCH_ASSUM_RENAME_TAC q ALL_TAC
@@ -398,8 +414,8 @@ fun MATCH_ASSUM_RENAME_TAC q = kMATCH_ASSUM_RENAME_TAC q ALL_TAC
 (* needs to be eta-expanded so that the possible HOL_ERRs are raised
    when applied to a goal, not before, thereby letting FIRST_ASSUM catch
    the exception *)
-fun subterm_helper make_tac k {thetasz,ERR,pat,fvs_set} t g = let
-  fun test (bvs, subt) =
+fun subterm_helper make_tac k {ERR,pats,fvs_set} t g = let
+  fun test (pat, thetasz) (bvs, subt) =
       case Lib.total (fn t => raw_match [] fvs_set pat t ([],[])) subt of
           SOME ((theta0, _), (tytheta,_)) =>
           let
@@ -414,22 +430,31 @@ fun subterm_helper make_tac k {thetasz,ERR,pat,fvs_set} t g = let
             else Lib.total (make_tac theta THEN k) g
           end
         | NONE => NONE
+  fun find_pats patseq =
+    case seq.cases patseq of
+        NONE => raise ERR "No matching sub-term found"
+      | SOME (patsz, rest) =>
+        (case gen_find_term (test patsz) t of
+             SOME tacresult => tacresult
+           | NONE => find_pats rest)
 in
-  case gen_find_term test t of
-      SOME tacresult => tacresult
-    | NONE => raise ERR "No matching sub-term found"
+  find_pats pats
 end
 
 fun prep_rename q nm (asl, t) = let
   val ERR = ERR nm
   val fvs = free_varsl (t::asl)
-  val pat = Parse.parse_in_context fvs q
+  val pats = TermParse.prim_ctxt_termS Absyn (term_grammar()) fvs q
   val fvs_set = HOLset.fromList Term.compare fvs
-  val patfvs = free_vars pat
-  val pat_binds =
-      filter (fn v => not (mem v fvs) andalso isnt_uscore_var v) patfvs
+  fun mapthis pat = let
+    val patfvs = free_vars pat
+    val pat_binds =
+        filter (fn v => not (mem v fvs) andalso isnt_uscore_var v) patfvs
+  in
+    (pat, length pat_binds)
+  end
 in
-  {ERR = ERR, pat = pat, fvs_set = fvs_set, thetasz = length pat_binds}
+  {ERR = ERR, pats = seq.map mapthis pats, fvs_set = fvs_set}
 end
 
 fun kMATCH_GOALSUB_RENAME_TAC q k (g as (asl, t)) =
@@ -463,7 +488,7 @@ fun RENAME1_TAC q =
 fun coreRENAME_TAC qs k =
   let
     fun kRENAME1 q k =
-      (MATCH_RENAME_TAC q THEN k) ORELSE kMATCH_ASSUM_RENAME_TAC q k ORELSE
+      kMATCH_RENAME_TAC q k ORELSE kMATCH_ASSUM_RENAME_TAC q k ORELSE
       kMATCH_GOALSUB_RENAME_TAC q k ORELSE kMATCH_ASMSUB_RENAME_TAC q k
     fun recurse qs =
       case qs of

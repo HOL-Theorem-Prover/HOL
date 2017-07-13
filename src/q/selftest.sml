@@ -290,4 +290,38 @@ val vnms = ASSUME ``!x:'a y:'a z:'a. P x y z``
               |> concl |> strip_forall |> #1 |> map (#1 o dest_var)
 val _ = if vnms = ["x", "y", "z"] then OK() else die "FAILED!"
 
+val _ = tprint "Q.MATCH_RENAME_TAC on overloads"
+val foo1_def = new_definition("foo1_def", ``foo1 x y z = (x ==> y /\ z)``);
+val foo2_def = new_definition("foo2_def", ``foo2 x y z = (x ==> y \/ z)``);
+val _ = overload_on("foo", ``foo1``);
+val _ = overload_on("foo", ``foo2``);
+
+val th = TAC_PROOF(([], ``foo1 F x y``),
+               Q.MATCH_RENAME_TAC `foo F a b` >>
+               REWRITE_TAC [foo1_def]) handle HOL_ERR _ => die "FAILED!"
+val _ = OK()
+
+val _ = tprint "Q.RENAME1 on overloads"
+val th = TAC_PROOF(([], ``?v. foo1 v x y``),
+                   Q.RENAME1_TAC `foo _ a b` >>
+                   Q.EXISTS_TAC `F` >>
+                   REWRITE_TAC [foo1_def]) handle HOL_ERR _ => die "FAILED!"
+val _ = OK()
+
+val _ = tprint "Q.kRENAME_TAC(1)"
+val th = TAC_PROOF (([``foo1 a b c``, ``foo2 d e f``], ``?x y z. foo1 x y z``),
+                    Q.kRENAME_TAC [`foo u v w`]
+                                  (MAP_EVERY Q.EXISTS_TAC [`u`, `v`, `w`] THEN
+                                   FIRST_ASSUM ACCEPT_TAC))
+                   handle HOL_ERR _ => die "FAILED!"
+val _ = OK()
+
+val _ = tprint "Q.kRENAME_TAC(2)"
+val th = TAC_PROOF (([``foo2 a b c``, ``foo1 d e f``], ``?x y z. foo1 x y z``),
+                    Q.kRENAME_TAC [`foo u v w`]
+                                  (MAP_EVERY Q.EXISTS_TAC [`u`, `v`, `w`] THEN
+                                   FIRST_ASSUM ACCEPT_TAC))
+                   handle HOL_ERR _ => die "FAILED!"
+val _ = OK()
+
 val _ = Process.exit Process.success;
