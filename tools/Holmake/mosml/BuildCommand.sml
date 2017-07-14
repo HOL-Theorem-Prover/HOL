@@ -57,7 +57,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   in
     SYSTEML (MOSMLCOMP::args)
   end
-  fun build_command (ii as {preincludes,includes}) c arg = let
+  fun build_command g (ii as {preincludes,includes}) c arg = let
     val include_flags = includify (preincludes @ includes)
     exception CompileFailed
     exception FileNotFound
@@ -124,7 +124,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           val scriptui = script^".ui"
           open Process
           (* first thing to do is to create the Script.uo file *)
-          val b = build_command ii (Compile deps) scriptsml_file
+          val b = build_command g ii (Compile deps) scriptsml_file
           val _ = b orelse raise CompileFailed
           val _ = print ("Linking "^scriptuo^
                          " to produce theory-builder executable\n")
