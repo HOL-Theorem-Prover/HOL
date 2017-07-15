@@ -1772,6 +1772,8 @@ val _ = set_fixity "RSUBSET" (Infix(NONASSOC, 450));
 val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="RSUBSET"},name=(["Relation"],"subrelation")}
 val _ = Unicode.unicode_version {u = UnicodeChars.subset ^ UnicodeChars.sub_r,
                                  tmnm = "RSUBSET"}
+val _ = TeX_notation { hol = UnicodeChars.subset ^ UnicodeChars.sub_r,
+                       TeX = ("\\HOLTokenRSubset{}", 1) }
 
 val irreflexive_RSUBSET = store_thm(
   "irreflexive_RSUBSET",
@@ -1800,6 +1802,8 @@ val RUNION_ASSOC = store_thm(
 
 val _ = Unicode.unicode_version {u = UnicodeChars.union ^ UnicodeChars.sub_r,
                                  tmnm = "RUNION"}
+val _ = TeX_notation { hol = UnicodeChars.union ^ UnicodeChars.sub_r,
+                       TeX = ("\\HOLTokenRUnion{}", 1) }
 
 (* ----------------------------------------------------------------------
     relational intersection
@@ -1812,6 +1816,8 @@ val _ = set_fixity "RINTER" (Infixl 600)
 val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="RINTER"},name=(["Relation"],"intersect")}
 val _ = Unicode.unicode_version {u = UnicodeChars.inter ^ UnicodeChars.sub_r,
                                  tmnm = "RINTER"}
+val _ = TeX_notation { hol = UnicodeChars.inter ^ UnicodeChars.sub_r,
+                       TeX = ("\\HOLTokenRInter{}", 1) }
 
 val RINTER_COMM = store_thm(
   "RINTER_COMM",
