@@ -53,6 +53,8 @@ val events_def = Define `events = measurable_sets`;
 
 val prob_def = Define `prob = measure`;
 
+val prob_preserving_def = Define `prob_preserving = measure_preserving`;
+
 val prob_space_def = Define
   `prob_space p = measure_space p /\ (measure p (p_space p) = 1)`;
 
@@ -60,6 +62,15 @@ val indep_def = Define
   `indep p a b =
    a IN events p /\ b IN events p /\
    (prob p (a INTER b) = prob p a * prob p b)`;
+
+val indep_families_def = Define `
+    indep_families p q r = !s t. s IN q /\ t IN r ==> indep p s t`;
+
+val indep_function_def = Define `
+    indep_function p =
+   {f |
+    indep_families p (IMAGE (PREIMAGE (FST o f)) UNIV)
+    (IMAGE (PREIMAGE (SND o f)) (events p))}`;
 
 val probably_def = Define `probably p e = (e IN events p) /\ (prob p e = 1)`;
 
@@ -230,6 +241,79 @@ val PROB_INDEP = store_thm
 val PSPACE = store_thm
 ("PSPACE", ``!a b c. p_space (a, b, c) = a``,
   RW_TAC std_ss [p_space_def, m_space_def]);
+
+val PROB_PRESERVING = store_thm (
+   "PROB_PRESERVING",
+  ``!p1 p2.
+       prob_preserving p1 p2 =
+       {f |
+        f IN measurable (p_space p1, events p1) (p_space p2, events p2) /\
+        measure_space p1 /\ measure_space p2 /\
+        !s. s IN events p2 ==> (prob p1 ((PREIMAGE f s) INTER (p_space p1)) = prob p2 s)}``,
+    REPEAT GEN_TAC
+ >> REWRITE_TAC [EXTENSION]
+ >> GEN_TAC
+ >> REWRITE_TAC [GSPECIFICATION]
+ >> BETA_TAC
+ >> REWRITE_TAC [PAIR_EQ]
+ >> RW_TAC std_ss [prob_preserving_def, events_def, prob_def, p_space_def]
+ >> RW_TAC std_ss [IN_MEASURE_PRESERVING]);
+
+val PROB_PRESERVING_SUBSET = store_thm (
+   "PROB_PRESERVING_SUBSET",
+  ``!p1 p2 a.
+       prob_space p1 /\ prob_space p2 /\
+       (events p2 = subsets (sigma (p_space p2) a)) ==>
+       prob_preserving p1 (p_space p2, a, prob p2) SUBSET
+       prob_preserving p1 p2``,
+    RW_TAC std_ss [prob_space_def, prob_preserving_def, prob_def, events_def, p_space_def]
+ >> MATCH_MP_TAC MEASURE_PRESERVING_SUBSET
+ >> ASM_REWRITE_TAC []);
+
+val PROB_PRESERVING_LIFT = store_thm (
+   "PROB_PRESERVING_LIFT",
+  ``!p1 p2 a f.
+       prob_space p1 /\ prob_space p2 /\
+       (events p2 = subsets (sigma (p_space p2) a)) /\
+       f IN prob_preserving p1 (p_space p2, a, prob p2) ==>
+       f IN prob_preserving p1 p2``,
+    RW_TAC std_ss [prob_space_def, prob_preserving_def, prob_def, events_def, p_space_def]
+ >> MATCH_MP_TAC MEASURE_PRESERVING_LIFT
+ >> Q.EXISTS_TAC `a`
+ >> ASM_REWRITE_TAC []);
+
+val PROB_PRESERVING_UP_LIFT = store_thm (
+   "PROB_PRESERVING_UP_LIFT",
+  ``!p1 p2 f.
+       prob_space p1 /\
+       f IN prob_preserving (p_space p1, a, prob p1) p2 /\
+       sigma_algebra (p_space p1, events p1) /\
+       a SUBSET events p1 ==>
+       f IN prob_preserving p1 p2``,
+    RW_TAC std_ss [prob_space_def, prob_preserving_def, prob_def, events_def, p_space_def]
+ >> MATCH_MP_TAC MEASURE_PRESERVING_UP_LIFT
+ >> ASM_REWRITE_TAC []);
+
+val PROB_PRESERVING_UP_SUBSET = store_thm (
+   "PROB_PRESERVING_UP_SUBSET",
+  ``!p1 p2.
+       prob_space p1 /\
+       a SUBSET events p1 /\
+       sigma_algebra (p_space p1, events p1) ==>
+       prob_preserving (p_space p1, a, prob p1) p2 SUBSET prob_preserving p1 p2``,
+    RW_TAC std_ss [prob_space_def, prob_preserving_def, prob_def, events_def, p_space_def]
+ >> MATCH_MP_TAC MEASURE_PRESERVING_UP_SUBSET
+ >> ASM_REWRITE_TAC []);
+
+val PROB_PRESERVING_UP_SIGMA = store_thm (
+   "PROB_PRESERVING_UP_SIGMA",
+  ``!p1 p2 a.
+       prob_space p1 /\
+       (events p1 = subsets (sigma (p_space p1) a)) ==>
+       prob_preserving (p_space p1, a, prob p1) p2 SUBSET prob_preserving p1 p2``,
+    RW_TAC std_ss [prob_space_def, prob_preserving_def, prob_def, events_def, p_space_def]
+ >> MATCH_MP_TAC MEASURE_PRESERVING_UP_SIGMA
+ >> ASM_REWRITE_TAC []);
 
 val EVENTS = store_thm
 ("EVENTS", ``!a b c. events (a, b, c) = b``,
