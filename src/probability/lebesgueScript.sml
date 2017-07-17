@@ -23,8 +23,6 @@ open HolKernel Parse boolLib bossLib arithmeticTheory realTheory prim_recTheory
 val _ = new_theory "lebesgue";
 
 val REVERSE = Tactical.REVERSE;
-infixr >> >|
-infix 1 >-
 
 val S_TAC = rpt (POP_ASSUM MP_TAC) >> rpt RESQ_STRIP_TAC;
 val Strip = S_TAC;
@@ -3837,7 +3835,8 @@ val measure_space_finite_prod_measure_POW2 = store_thm
       ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_UNION, IN_PREIMAGE]]);
 
 val finite_prod_measure_space_POW = store_thm
- ("finite_prod_measure_space_POW", ``!s1 s2 u v. FINITE s1 /\ FINITE s2  ==>
+  ("finite_prod_measure_space_POW",
+  ``!s1 s2 u v. FINITE s1 /\ FINITE s2  ==>
           (prod_measure_space (s1, POW s1, u) (s2, POW s2, v) =
           (s1 CROSS s2, POW (s1 CROSS s2), prod_measure (s1, POW s1, u) (s2, POW s2, v)))``,
   RW_TAC std_ss [prod_measure_space_def, m_space_def, subsets_def, EXTENSION, subsets_def,
@@ -3845,16 +3844,16 @@ val finite_prod_measure_space_POW = store_thm
 	        IN_CROSS, GSPECIFICATION]
   >> RW_TAC std_ss [GSYM EXTENSION]
   >> EQ_TAC
-  >- (RW_TAC std_ss []
-      >> Q.PAT_X_ASSUM `!s. P ==> x IN s` (MP_TAC o Q.SPEC `POW (s1 CROSS s2)`)
-      >> RW_TAC std_ss [IN_POW, SUBSET_DEF, IN_CROSS, POW_SIGMA_ALGEBRA]
-      >> Suff `(!x''. (?x'. (x'',T) = (\(s,t). (s CROSS t,
-            	   (!x. x IN s ==> x IN s1) /\ !x. x IN t ==> x IN s2))
+  >- (RW_TAC std_ss [] \\ (* 2 sub-goals here, same tacticals *)
+      (Q.PAT_X_ASSUM `!s. P ==> x IN s` (MP_TAC o Q.SPEC `POW (s1 CROSS s2)`)
+       >> RW_TAC std_ss [IN_POW, SUBSET_DEF, IN_CROSS, POW_SIGMA_ALGEBRA]
+       >> Suff `(!x''. (?x'. (x'',T) = (\(s,t). (s CROSS t,
+                              (!x. x IN s ==> x IN s1) /\ !x. x IN t ==> x IN s2))
               		x') ==> !x. x IN x'' ==> FST x IN s1 /\ SND x IN s2)` >- METIS_TAC []
-      >> RW_TAC std_ss []
-      >> Cases_on `x'''`
-      >> FULL_SIMP_TAC std_ss []
-      >> METIS_TAC [IN_CROSS])
+        >> RW_TAC std_ss []
+        >> Cases_on `x'''`
+        >> FULL_SIMP_TAC std_ss []
+        >> METIS_TAC [IN_CROSS] ))
   >> RW_TAC std_ss []
   >> `x = BIGUNION (IMAGE (\a. {a}) x)`
     by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_SING])
@@ -4001,7 +4000,8 @@ val measure_space_finite_prod_measure_POW3 = store_thm
   >> RW_TAC std_ss [EXTENSION,IN_PREIMAGE,IN_UNION]);
 
 val finite_prod_measure_space_POW3 = store_thm
- ("finite_prod_measure_space_POW3",``!s1 s2 s3 u v w.
+  ("finite_prod_measure_space_POW3",
+  ``!s1 s2 s3 u v w.
          FINITE s1 /\ FINITE s2 /\ FINITE s3 ==>
          (prod_measure_space3 (s1,POW s1,u) (s2,POW s2,v) (s3,POW s3,w) =
           (s1 CROSS (s2 CROSS s3),POW (s1 CROSS (s2 CROSS s3)),
@@ -4011,19 +4011,19 @@ val finite_prod_measure_space_POW3 = store_thm
 	        IN_CROSS, GSPECIFICATION]
   >> RW_TAC std_ss [GSYM EXTENSION]
   >> EQ_TAC
-  >- (RW_TAC std_ss []
-      >> Q.PAT_X_ASSUM `!s. P ==> x IN s` (MP_TAC o Q.SPEC `POW (s1 CROSS (s2 CROSS s3))`)
-      >> RW_TAC std_ss [IN_POW, SUBSET_DEF, IN_CROSS, POW_SIGMA_ALGEBRA]
-      >> Suff `(!x''. (?x'. (x'',T) =
+  >- (RW_TAC std_ss [] \\ (* 3 sub-goals here, same tacticals *)
+      (Q.PAT_X_ASSUM `!s. P ==> x IN s` (MP_TAC o Q.SPEC `POW (s1 CROSS (s2 CROSS s3))`)
+       >> RW_TAC std_ss [IN_POW, SUBSET_DEF, IN_CROSS, POW_SIGMA_ALGEBRA]
+       >> Suff `(!x''. (?x'. (x'',T) =
                (\(s,t,u'). (s CROSS (t CROSS u'),
                (!x. x IN s ==> x IN s1) /\ (!x. x IN t ==> x IN s2) /\
                 !x. x IN u' ==> x IN s3)) x') ==>
 	        !x. x IN x'' ==> FST x IN s1 /\ FST (SND x) IN s2 /\ SND (SND x) IN s3)`
-      >- METIS_TAC []
-      >> RW_TAC std_ss []
-      >> Cases_on `x'''` >> Cases_on `r`
-      >> FULL_SIMP_TAC std_ss []
-      >> METIS_TAC [IN_CROSS])
+       >- METIS_TAC []
+       >> RW_TAC std_ss []
+       >> Cases_on `x'''` >> Cases_on `r`
+       >> FULL_SIMP_TAC std_ss []
+       >> METIS_TAC [IN_CROSS] ))
   >> RW_TAC std_ss []
   >> `x = BIGUNION (IMAGE (\a. {a}) x)`
     by (ONCE_REWRITE_TAC [EXTENSION]
