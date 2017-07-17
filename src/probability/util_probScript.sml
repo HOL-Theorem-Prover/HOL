@@ -13,15 +13,11 @@ val _ = new_theory "util_prob";
 val S_TAC = rpt (POP_ASSUM MP_TAC) >> rpt RESQ_STRIP_TAC;
 val Strip = S_TAC;
 
-infixr >> >|
-infix 1 >-
-
 fun K_TAC _ = ALL_TAC;
 val KILL_TAC = POP_ASSUM_LIST K_TAC;
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-
 
 val Cond =
   MATCH_MP_TAC (PROVE [] ``!a b c. a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
@@ -819,12 +815,12 @@ val SUMINF_ADD = store_thm
        summable f /\ summable g ==>
        summable (\n. f n + g n) /\
        (suminf f + suminf g = suminf (\n. f n + g n))``,
-   RW_TAC std_ss []
-   >> Know `f sums suminf f /\ g sums suminf g` >- PROVE_TAC [SUMMABLE_SUM]
+    RW_TAC std_ss []
+ >> ( Know `f sums suminf f /\ g sums suminf g` >- PROVE_TAC [SUMMABLE_SUM]
    >> STRIP_TAC
    >> Know `(\n. f n + g n) sums (suminf f + suminf g)`
    >- RW_TAC std_ss [SER_ADD]
-   >> RW_TAC std_ss [SUMS_EQ]);
+   >> RW_TAC std_ss [SUMS_EQ] ));
 
 val SUMINF_2D = store_thm
   ("SUMINF_2D",
