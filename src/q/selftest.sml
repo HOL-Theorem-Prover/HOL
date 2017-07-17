@@ -324,4 +324,12 @@ val th = TAC_PROOF (([``foo2 a b c``, ``foo1 d e f``], ``?x y z. foo1 x y z``),
                    handle HOL_ERR _ => die "FAILED!"
 val _ = OK()
 
+val _ = tprint "PAT_ABBREV_TAC respects Parse.hide"
+val _ = new_definition ("gh431_def", ``gh431 x = ~x``);
+val _ = hide "gh431"
+val th = (Q.PAT_ABBREV_TAC `gh431 = T` THEN Q.UNABBREV_TAC `gh431` THEN
+          REWRITE_TAC [])
+         ([], ``p /\ T = p``) handle HOL_ERR _ => die "FAILED\n"
+val _ = OK()
+
 val _ = Process.exit Process.success;

@@ -104,7 +104,8 @@ in
          open HOLset
          val (l, r) = dest_eq eq
          val rvs = FVL [r] empty_tmset
-         val l' = variant (listItems(union(fv_set, rvs))) l
+         val l' = gen_variant Parse.is_constname ""
+                              (listItems(union(fv_set, rvs))) l
          fun matchr t =
            case raw_match [] fv_set r t ([],[]) of
                ((tmsub, _), (tysub, _)) => (tmsub, tysub)
