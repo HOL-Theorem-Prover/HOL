@@ -332,4 +332,46 @@ val th = (Q.PAT_ABBREV_TAC `gh431 = T` THEN Q.UNABBREV_TAC `gh431` THEN
          ([], ``p /\ T = p``) handle HOL_ERR _ => die "FAILED\n"
 val _ = OK()
 
+val _ = new_definition ("gh425a_def", ``gh425a a = a``);
+val _ = new_definition ("gh425b_def", ``gh425b p = (p ==> T)``);
+val _ = overload_on ("gh425", ``gh425a``);
+val _ = overload_on ("gh425", ``gh425b``);
+val buf = ref ([] : string list)
+fun app s = buf := s :: !buf
+fun testquiet f x =
+  (buf := [];
+   let val result =
+           (Lib.with_flag (Feedback.MESG_outstream, app) o
+            Lib.with_flag (Feedback.ERR_outstream, app) o
+            Lib.with_flag (Feedback.WARNING_outstream, app) o
+            Lib.with_flag (Globals.interactive, true)) f x
+       val _ =
+           null (!buf) orelse
+           die ("\n  FAILED : buf contains " ^ String.concatWith "\n" (!buf))
+   in
+     result
+   end);
+
+val _ = tprint "(Interactive) PAT_ASSUM quiet about tyvar guesses(1)"
+val (sgs, _) = testquiet
+                 (Q.PAT_X_ASSUM `gh425a (g x)` mp_tac)
+                 ([``gh425a (f T) : bool``], ``p /\ q``)
+val _ = case sgs of
+            [([], t)] => if aconv t ``gh425a (f T) ==> p /\ q`` then OK()
+                         else die "\nFAILED - Incorrect result"
+          | _ => die "\nFAILED - Incorrect result"
+
+val _ = tprint "(Interactive) PAT_ASSUM quiet about tyvar guesses(2)"
+val (sgs, _) = testquiet
+                 (Q.PAT_X_ASSUM `gh245 (g x)` mp_tac)
+                 ([``gh425a (f T) : bool``], ``p /\ q``)
+val _ = OK()
+
+val _ = tprint "(Interactive) PAT_ASSUM quiet about tyvar guesses(3)"
+val (sgs, _) = testquiet
+                 (Q.PAT_X_ASSUM `gh245 x` mp_tac)
+                 ([``gh425b (f T) : bool``], ``p /\ q``)
+val _ = OK()
+
+
 val _ = Process.exit Process.success;

@@ -205,8 +205,14 @@ let val ctxt = free_varsl (w::asl)
 in Tactic.UNDISCH_TAC asm g
 end;
 
-fun PAT_ASSUM q ttac = QTY_TAC bool (fn t => Tactical.PAT_ASSUM t ttac) q
-fun PAT_X_ASSUM q ttac = QTY_TAC bool (fn t => Tactical.PAT_X_ASSUM t ttac) q
+fun PAT_ASSUM q ttac =
+  Q_TAC0 {traces = [("notify type variable guesses", 0)]} (SOME bool)
+         (fn t => Tactical.PAT_ASSUM t ttac)
+         q
+fun PAT_X_ASSUM q ttac =
+  Q_TAC0 {traces = [("notify type variable guesses", 0)]} (SOME bool)
+         (fn t => Tactical.PAT_X_ASSUM t ttac)
+         q
 
 fun SUBGOAL_THEN q ttac =
   QTY_TAC Type.bool (fn t => Tactical.SUBGOAL_THEN t ttac) q
