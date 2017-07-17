@@ -272,8 +272,7 @@ local
 
   val rewrites = [GSYM INT_INJ, GSYM INT_LT, GSYM INT_LE,
                   GREATER_DEF, GREATER_EQ, GSYM INT_ADD,
-                  GSYM INT_MUL, INT, INT_NUM_COND, INT_NUM_EVEN,
-                  INT_NUM_ODD, Num_lemma]
+                  GSYM INT_MUL, INT, INT_NUM_COND, Num_lemma]
   val p_var = mk_var("p", num)
   val q_var = mk_var("q", num)
   fun elim_div_mod0 exp t = let
@@ -365,7 +364,8 @@ in
 
 val nat_rewrites =
     [arithmeticTheory.LEFT_ADD_DISTRIB, arithmeticTheory.RIGHT_ADD_DISTRIB,
-     arithmeticTheory.MAX_DEF, arithmeticTheory.MIN_DEF]
+     arithmeticTheory.MAX_DEF, arithmeticTheory.MIN_DEF,
+     arithmeticTheory.ODD_EXISTS, arithmeticTheory.EVEN_EXISTS]
 
 val dealwith_nats = let
   val phase1 =

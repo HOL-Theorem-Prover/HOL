@@ -92,6 +92,7 @@ val terms_to_test =
    T ("NDIV3", Term`?!n. 2 < n /\ (n DIV 2 = 1)`),
    T ("KXSDIV1", Term`!n. ~(n = 0) /\ EVEN n ==> (n - 2) DIV 2 < n`),
    T ("KXSDIV2", Term`!n. ~(n = 0) /\ ~EVEN n ==> (n - 1) DIV 2 < n`),
+   T ("ECODD1", ``!n. ODD n ==> ~ODD (n - 1)``),
    T ("simp_divides1", ``!x. 0 < x /\ 2 int_divides x ==> 1 < x``),
    T ("simp_divides2", ``!x. 0 <= x /\ ~(2 int_divides x) ==> 1 <= x``),
    T ("sub_zero_coeff", Term`!x y:int. 0 < x ==> y - x < y`),
