@@ -488,6 +488,15 @@ that \holmake{} knows how to build itself, then the make-file's
 commands and dependencies take precedence, and only they will be
 executed.
 
+In addition, it is possible to indicate that the built-in process of generating theory files from script files generates side products.
+This is done by writing a command-less rule of the form
+\begin{alltt}
+   target : *thyScript.sml
+\end{alltt}
+where an asterisk character precedes the name of the script file.
+This indicates that the action of executing the code in \texttt{thyScript.sml} will not only generate the usual \texttt{thyTheory.sig} and \texttt{thyTheory.sml} files, but also the file \texttt{target}.
+If \holmake{} is asked to build any of these three files, and any is absent or out of date with respect to \texttt{thyScript.sml} (or any other dependency), then the code in \texttt{thyScript.sml} will be run.
+
 If a command-line is preceded by a hyphen (\verb!-!) character, then
 the rest of the line is executed, but its error-code is ignored.
 (Normally, a command-line raising an error will cause \holmake{} to
