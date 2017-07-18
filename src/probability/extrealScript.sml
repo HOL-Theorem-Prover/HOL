@@ -28,9 +28,6 @@ val _ = new_theory "extreal";
 (* Helpful proof tools                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-infixr >> >|
-infix 1 >-
-
 val S_TAC = rpt (POP_ASSUM MP_TAC) >> rpt RESQ_STRIP_TAC;
 val Strip = S_TAC;
 
@@ -1126,28 +1123,29 @@ val add_ldistrib_pos = store_thm
   >> FULL_SIMP_TAC real_ss [GSYM real_lt,GSYM real_lte]
   >> METIS_TAC [REAL_LE_ANTISYM,REAL_LT_ADD,REAL_LT_IMP_LE,REAL_LT_IMP_NE,
                 REAL_LT_LE,REAL_ADD_LDISTRIB]);
+
 val add_ldistrib_neg = store_thm
   ("add_ldistrib_neg",
-   ``!x y z. y <= 0 /\ z <= 0 ==> (x * (y + z) = x * y + x * z)``,
-  Cases >> Cases >> Cases
-  >> RW_TAC real_ss [extreal_add_def,extreal_mul_def,extreal_le_def,
-                     extreal_of_num_def,real_lt,REAL_LT_ANTISYM,
-                     REAL_LE_ANTISYM,REAL_ADD_LID,REAL_ADD_RID,REAL_LT_LE]
-  >> FULL_SIMP_TAC real_ss [GSYM real_lt,GSYM real_lte,REAL_ADD_LDISTRIB]
-  >> Cases_on `0 < r` >- RW_TAC std_ss []
-  >> Cases_on `0 < r'` >- RW_TAC std_ss []
-  >> `r < 0 /\ r' < 0` by METIS_TAC [real_lte,REAL_LT_LE]
-  >> METIS_TAC [REAL_LT_ADD2,REAL_ADD_LID,REAL_LT_IMP_NE,REAL_LT_ANTISYM]);
+  ``!x y z. y <= 0 /\ z <= 0 ==> (x * (y + z) = x * y + x * z)``,
+    Cases >> Cases >> Cases (* 27 sub-goals here *)
+ >> RW_TAC real_ss [extreal_add_def, extreal_mul_def, extreal_le_def,
+                    extreal_of_num_def, real_lt, REAL_LT_ANTISYM,
+                    REAL_LE_ANTISYM, REAL_ADD_LID, REAL_ADD_RID, REAL_LT_LE] (* 17 goals left *)
+ >> FULL_SIMP_TAC real_ss [GSYM real_lt, GSYM real_lte, REAL_ADD_LDISTRIB] (* 4 goals left *)
+ >> ( Cases_on `0 < r` >- RW_TAC std_ss [] \\
+      Cases_on `0 < r'` >- RW_TAC std_ss [] \\
+      `r < 0 /\ r' < 0` by METIS_TAC [real_lte, REAL_LT_LE] \\
+      METIS_TAC [REAL_LT_ADD2, REAL_ADD_LID, REAL_LT_IMP_NE, REAL_LT_ANTISYM] ));
 
 val add_ldistrib_normal = store_thm
   ("add_ldistrib_normal",
    ``!x y z. (y <> PosInf /\ z <> PosInf) \/ (y <> NegInf /\ z <> NegInf)
          ==> (Normal x * (y + z) = Normal x * y + Normal x * z)``,
   RW_TAC std_ss [] >> Cases_on `y` >> Cases_on `z`
-  >> RW_TAC std_ss [extreal_add_def]
-  >> Cases_on `x=0`
-  >- METIS_TAC [extreal_of_num_def,mul_lzero,add_lzero]
-  >> RW_TAC std_ss [extreal_mul_def,extreal_add_def,REAL_ADD_LDISTRIB]);
+  >> RW_TAC std_ss [extreal_add_def] (* 8 sub-goals here, same tacticals *)
+  >> ( Cases_on `x=0`
+       >- METIS_TAC [extreal_of_num_def,mul_lzero,add_lzero]
+       >> RW_TAC std_ss [extreal_mul_def,extreal_add_def,REAL_ADD_LDISTRIB] ));
 
 val add_ldistrib_normal2 = store_thm
   ("add_ldistrib_normal2",
@@ -1162,9 +1160,9 @@ val add_rdistrib_normal = store_thm
           ((y + z) * Normal x = y * Normal x + z * Normal x)``,
   RW_TAC std_ss [] >> Cases_on `y` >> Cases_on `z`
   >> RW_TAC std_ss [extreal_add_def]
-  >> Cases_on `x=0`
-  >- METIS_TAC [extreal_of_num_def,mul_rzero,add_rzero]
-  >> RW_TAC std_ss [extreal_mul_def,extreal_add_def,REAL_ADD_RDISTRIB]);
+  >> ( Cases_on `x=0`
+       >- METIS_TAC [extreal_of_num_def,mul_rzero,add_rzero]
+       >> RW_TAC std_ss [extreal_mul_def,extreal_add_def,REAL_ADD_RDISTRIB] ));
 
 val add_rdistrib_normal2 = store_thm
   ("add_rdistrib_normal2",
@@ -3864,8 +3862,10 @@ val COUNTABLE_ENUM_Q = store_thm
       >> `~(FINITE Q_set)` by RW_TAC std_ss [Q_INFINITE]
       >> (MP_TAC o Q.SPEC `Q_set`) (INST_TYPE [alpha |-> ``:extreal``] COUNTABLE_ALT_BIJ)
       >> RW_TAC std_ss []
-      >> (MP_TAC o Q.SPECL [`enumerate Q_set`,`UNIV`,`Q_set`]) (INST_TYPE [alpha |-> ``:num``, ``:'b`` |-> ``:extreal``] BIJ_INV)
-      >> (MP_TAC o Q.SPECL [`enumerate c`,`UNIV`,`c`]) (INST_TYPE [alpha |-> ``:num``, ``:'b`` |-> ``:'a``] BIJ_INV)
+      >> (MP_TAC o Q.SPECL [`enumerate Q_set`,`UNIV`,`Q_set`])
+		(INST_TYPE [alpha |-> ``:num``, ``:'b`` |-> ``:extreal``] BIJ_INV)
+      >> (MP_TAC o Q.SPECL [`enumerate c`,`UNIV`,`c`])
+		(INST_TYPE [alpha |-> ``:num``, ``:'b`` |-> ``:'a``] BIJ_INV)
       >> RW_TAC std_ss []
       >> Q.EXISTS_TAC `(enumerate c) o g'`
       >> RW_TAC std_ss [IMAGE_DEF,EXTENSION,GSPECIFICATION]
@@ -3886,31 +3886,36 @@ val COUNTABLE_ENUM_Q = store_thm
       >> EQ_TAC
       >- (RW_TAC std_ss [] >> Q.EXISTS_TAC `0` >> METIS_TAC [NUM_IN_Q])
       >> RW_TAC std_ss [])
-  >>  DISJ2_TAC
-  >> ASSUME_TAC (Q.SPECL [`f:extreal->'a`,`Q_set`,`IMAGE f Q_set`] (INST_TYPE [alpha |-> ``:extreal``,``:'b`` |-> ``:'a``] INFINITE_INJ))
+  >> DISJ2_TAC
+  >> ASSUME_TAC (Q.SPECL [`f:extreal->'a`,`Q_set`,`IMAGE f Q_set`]
+			 (INST_TYPE [alpha |-> ``:extreal``,``:'b`` |-> ``:'a``] INFINITE_INJ))
   >> `~(INJ f Q_set (IMAGE f Q_set))` by METIS_TAC [MONO_NOT,Q_INFINITE]
   >> FULL_SIMP_TAC std_ss [INJ_DEF] >- METIS_TAC [IN_IMAGE]
   >> Q.EXISTS_TAC `(\u. if u=x then e else f u)`
-  >> `Q_set = (Q_set DIFF {x}) UNION {x}` by (RW_TAC std_ss [DIFF_DEF,UNION_DEF,EXTENSION,GSPECIFICATION,IN_SING] >> METIS_TAC [])
-  >> `(IMAGE (\u. if u = x then e else f u) Q_set) = (IMAGE (\u. if u = x then e else f u) (Q_set DIFF {x})) UNION (IMAGE (\u. if u = x then e else f u) {x})` by METIS_TAC [IMAGE_UNION]
-  >> `IMAGE (\u. if u = x then e else f u) {x} = {e}` by RW_TAC std_ss [IMAGE_DEF,EXTENSION,GSPECIFICATION,IN_SING]
+  >> `Q_set = (Q_set DIFF {x}) UNION {x}`
+	by (RW_TAC std_ss [DIFF_DEF,UNION_DEF,EXTENSION,GSPECIFICATION,IN_SING] >> METIS_TAC [])
+  >> `(IMAGE (\u. if u = x then e else f u) Q_set) =
+	(IMAGE (\u. if u = x then e else f u) (Q_set DIFF {x})) UNION
+	(IMAGE (\u. if u = x then e else f u) {x})`
+	by METIS_TAC [IMAGE_UNION]
+  >> `IMAGE (\u. if u = x then e else f u) {x} = {e}`
+	by RW_TAC std_ss [IMAGE_DEF,EXTENSION,GSPECIFICATION,IN_SING]
   >> `IMAGE (\u. if u = x then e else f u) (Q_set DIFF {x}) = IMAGE f Q_set`
-        by (RW_TAC std_ss [IMAGE_DEF,EXTENSION,GSPECIFICATION,DIFF_DEF,IN_UNION,
-                           IN_SING] >> METIS_TAC[])
-  >> `(IMAGE f Q_set) = (IMAGE f (Q_set DIFF {x})) UNION (IMAGE f {x})` by METIS_TAC [IMAGE_UNION]
+        by ( RW_TAC std_ss [IMAGE_DEF,EXTENSION,GSPECIFICATION,DIFF_DEF,IN_UNION,IN_SING] \\
+             METIS_TAC[] )
+  >> `IMAGE f Q_set = (IMAGE f (Q_set DIFF {x})) UNION (IMAGE f {x})` by METIS_TAC [IMAGE_UNION]
   >> `IMAGE f {x} = {f y}` by RW_TAC std_ss [IMAGE_DEF,EXTENSION,GSPECIFICATION,IN_SING]
   >> `IMAGE f Q_set = (IMAGE f (Q_set DIFF {x})) UNION {f y}` by METIS_TAC []
-  >> `{f y} SUBSET IMAGE f (Q_set DIFF {x})` by ( RW_TAC std_ss [SUBSET_DEF,IN_IMAGE,IN_SING] >> Q.EXISTS_TAC `y` >> RW_TAC std_ss [IN_DIFF,IN_SING])
+  >> `{f y} SUBSET IMAGE f (Q_set DIFF {x})`
+	by ( RW_TAC std_ss [SUBSET_DEF,IN_IMAGE,IN_SING] >> Q.EXISTS_TAC `y` \\
+	     RW_TAC std_ss [IN_DIFF,IN_SING] )
   >> `IMAGE f Q_set = IMAGE f (Q_set DIFF {x})` by METIS_TAC [SUBSET_UNION_ABSORPTION,UNION_COMM]
   >> `IMAGE (\u. if u = x then e else f u) (Q_set DIFF {x}) = IMAGE f (Q_set DIFF {x})`
-     by (RW_TAC std_ss [IMAGE_DEF,EXTENSION,GSPECIFICATION,DIFF_DEF,IN_SING]
-       	        >> EQ_TAC
-                >- (RW_TAC std_ss []
-         	    >> Q.EXISTS_TAC `u`
-       		    >> RW_TAC std_ss [])
-       		>> RW_TAC std_ss []
-       		>> Q.EXISTS_TAC `x''`
-       		>> RW_TAC std_ss [])
+     by (RW_TAC std_ss [IMAGE_DEF,EXTENSION,GSPECIFICATION,DIFF_DEF,IN_SING] \\
+	      ( EQ_TAC >- ( RW_TAC std_ss [] >> Q.EXISTS_TAC `u` >> RW_TAC std_ss [] )
+		>> RW_TAC std_ss []
+		>> Q.EXISTS_TAC `x''`
+		>> RW_TAC std_ss [] ))
   >> METIS_TAC [INSERT_SING_UNION,UNION_COMM]);
 
 val CROSS_COUNTABLE_UNIV = store_thm
