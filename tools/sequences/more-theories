@@ -6,8 +6,8 @@ src/TeX
 !src/TeX/theory_tests/proj1paper
 !examples/RSA
 !examples/zipper
-src/sort
 src/string
+src/sort
 !src/string/theorytesting
 !src/tfl/examples
 !examples/STE

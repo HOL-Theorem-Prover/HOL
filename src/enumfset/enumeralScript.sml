@@ -12,6 +12,9 @@ open totoTheory bossLib listTheory;
 
 val _ = new_theory "enumeral";
 
+val cpn_nchotomy = TypeBase.nchotomy_of ``:ordering``
+val _ = temp_type_abbrev ("cpn", ``:ordering``)
+
 (* "enumeral" for "enumerated finite set", wordplay on "NUMERAL" *)
 
 (* My habitual abbreviations: *)
