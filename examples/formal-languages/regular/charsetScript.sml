@@ -3,6 +3,7 @@ open arithmeticTheory listTheory optionTheory rich_listTheory
      pairTheory comparisonTheory stringTheory;
 
 local open numSyntax Regexp_Type in end;
+val comparison_distinct = TypeBase.distinct_of ``:ordering``
 
 val _ = new_theory "charset";
 

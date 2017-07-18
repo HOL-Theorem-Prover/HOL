@@ -23,6 +23,8 @@ val set_ss = list_ss ++ pred_setLib.PRED_SET_ss ++ rewrites [SET_EQ_THM,IN_DEF]
 
 val _ = new_theory "regexp_compiler";
 
+val comparison_distinct = TypeBase.distinct_of ``:ordering``
+
 val eq_cmp_regexp_compare = Q.prove
 (`eq_cmp regexp_compare`,
  metis_tac [eq_cmp_def, regexp_compare_good,regexp_compare_eq]);
@@ -1111,7 +1113,7 @@ val invariant_ffoldr_inst =
       |> INST_TYPE [beta |-> ``:unit``, gamma |-> beta]
 
 val left_to_right_alt = Q.prove
-(`eq_cmp (cmp:'b->'b->cpn)
+(`eq_cmp (cmp:'b->'b->ordering)
    ==>
    !(list :('a # unit) list) (bset :'b oset) x f.
       invariant cmp bset /\
@@ -1170,8 +1172,8 @@ val mem_oin_inst =
 val fdom_oimage = Q.store_thm
 ("fdom_image",
  `!aset:'a oset.
-     eq_cmp (cmp1:'a->'a->cpn) /\
-     eq_cmp (cmp2:'b->'b->cpn) /\ invariant cmp1 aset
+     eq_cmp (cmp1:'a->'a->ordering) /\
+     eq_cmp (cmp2:'b->'b->ordering) /\ invariant cmp1 aset
     ==> (fdom cmp2 (oimage cmp2 f aset) = {f x | oin cmp1 x aset})`,
 simp_tac set_ss
    [oimage_def,map_keys_def,balanced_mapTheory.fromList_def,fdom_def,
@@ -1199,8 +1201,8 @@ val fdom_oimage_rw =
 
 val fdom_oimage_insert = Q.prove
 (`!bset a f cmp1 cmp2.
-    eq_cmp (cmp1:'a->'a->cpn) /\
-     eq_cmp (cmp2:'b->'b->cpn) /\ invariant cmp1 bset
+    eq_cmp (cmp1:'a->'a->ordering) /\
+     eq_cmp (cmp2:'b->'b->ordering) /\ invariant cmp1 bset
          ==> (fdom cmp2 (oimage cmp2 f (oinsert cmp1 a bset))
                =
               ((f a) INSERT fdom cmp2 (oimage cmp2 f bset)))`,
@@ -2138,4 +2140,3 @@ val Brzozowski_partial_eval_256 = save_thm
 (* val _ = EmitTeX.tex_theory"-"; *)
 
 val _ = export_theory();
-

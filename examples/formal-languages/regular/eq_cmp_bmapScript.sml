@@ -32,6 +32,8 @@ open optionTheory listTheory pred_setTheory comparisonTheory
      balanced_mapTheory finite_mapTheory;
 
 fun pat_elim q = Q.PAT_ASSUM q (K ALL_TAC);
+val comparison_distinct = TypeBase.distinct_of ``:ordering``
+val comparison_nchotomy = TypeBase.nchotomy_of ``:ordering``
 
 val SET_EQ_THM = Q.prove
 (`!s1 s2. (s1 = s2) = !x. s1 x = s2 x`,
@@ -182,13 +184,13 @@ val FLOOKUP_MAP_KEYS = Q.prove
  Induct >> rw [map_keys_fupdate,FLOOKUP_UPDATE]);
 
 val to_fmap_empty = Q.prove
-(`!(bmap:('a,'b)balanced_map) (cmp:'a->'a->cpn).
+(`!(bmap:('a,'b)balanced_map) (cmp:'a->'a->ordering).
      good_cmp cmp ==> (FLOOKUP (to_fmap cmp bmap) {} = NONE)`,
 Induct >> rw [to_fmap_def,FLOOKUP_UPDATE,FLOOKUP_FUNION,key_set_def,EXTENSION]
        >> metis_tac [good_cmp_thm])
 
 val to_fmap_two = Q.prove
-(`!(bmap:('a,'b)balanced_map) (cmp:'a->'a->cpn) a b s.
+(`!(bmap:('a,'b)balanced_map) (cmp:'a->'a->ordering) a b s.
      eq_cmp cmp /\ a IN s /\ b IN s /\ ~(a=b) ==>
       (FLOOKUP (to_fmap cmp bmap) s = NONE)`,
 Induct >> rw [to_fmap_def,FLOOKUP_UPDATE,FLOOKUP_FUNION,key_set_def,EXTENSION,
