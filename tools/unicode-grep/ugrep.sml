@@ -89,7 +89,8 @@ fun do_dirstream qp dname ds sofar wlist =
           let
             val fullp = OS.Path.concat(dname, fname)
           in
-            if OS.FileSys.isDir fullp then recurse sofar (fullp::dworklist)
+            if OS.FileSys.isLink fullp then recurse sofar dworklist
+            else if OS.FileSys.isDir fullp then recurse sofar (fullp::dworklist)
             else
               let
                 val {base,ext} = OS.Path.splitBaseExt fname
