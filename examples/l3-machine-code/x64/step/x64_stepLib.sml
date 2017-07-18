@@ -294,12 +294,6 @@ val write'EA_rwt_r = List.map (Q.INST [`wv` |-> `v`]) write'EA_rwt
 
 (* ------------------------------------------------------------------------ *)
 
-val write_logical_eflags_rwt =
-   EV ([write_logical_eflags_def, FlagUnspecified_rwt,
-        write_PF_rwt, write'CF_def, write'OF_def, write'Eflag_rwt] @
-       write_SF_rwt @ write_ZF_rwt) [] (mapl (`size`, sizes))
-      ``write_logical_eflags (size, w)``
-
 val write_arith_eflags_except_CF_OF_rwt =
    EV ([write_arith_eflags_except_CF_OF_def, FlagUnspecified_rwt,
         write_PF_rwt] @ write_SF_rwt @ write_ZF_rwt) [] (mapl (`size`, sizes))
@@ -309,6 +303,11 @@ val write_arith_eflags_rwt =
    EV ([write_arith_eflags_def, write'CF_def, write'OF_def, write'Eflag_rwt] @
        write_arith_eflags_except_CF_OF_rwt) [] (mapl (`size`, sizes))
       ``write_arith_eflags (size, r, carry, overflow)``
+
+val write_logical_eflags_rwt =
+   EV ([write_logical_eflags_def, write'CF_def, write'OF_def, write'Eflag_rwt] @
+       write_arith_eflags_rwt) [] (mapl (`size`, sizes))
+      ``write_logical_eflags (size, w)``
 
 val () = setEvConv (Conv.DEPTH_CONV (wordsLib.WORD_BIT_INDEX_CONV true))
 
