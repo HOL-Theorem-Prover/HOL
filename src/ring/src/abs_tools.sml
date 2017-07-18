@@ -61,7 +61,7 @@ fun Define q =
   end;
 
 (*
-fun gg flist = set_goal(get_assums(),--flist--);
+fun gg flist = set_goal(get_assums(),Term flist);
 fun g0 flist = set_goal(get_assums(),flist);
 *)
 

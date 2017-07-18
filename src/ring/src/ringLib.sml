@@ -5,10 +5,8 @@ struct
   app load ["ringNormTheory", "quote", "computeLib"];
 *)
 
-open HolKernel Parse boolLib prelimTheory quoteTheory quote computeLib;
-
-infix ORELSE THEN THENL THENC o |->;
-infixr -->;
+open HolKernel Parse boolLib ternaryComparisonsTheory quoteTheory quote
+     computeLib;
 
 fun RING_ERR function message =
     HOL_ERR{origin_structure = "ringLib",
@@ -172,7 +170,7 @@ fun dest_ring_thm thm =
 (* Building and storing the conversions *)
 
 val initial_thms =
-  map lazyfy_thm [ COND_CLAUSES, AND_CLAUSES, NOT_CLAUSES, compare_def ];
+  map lazyfy_thm [ COND_CLAUSES, AND_CLAUSES, NOT_CLAUSES, ordering_case_def ];
 
 
 val lib_thms =

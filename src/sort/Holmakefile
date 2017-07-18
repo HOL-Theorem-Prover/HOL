@@ -7,6 +7,9 @@ ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 all: $(ARTFILES)
 
+ternaryComparisons.art: ternaryComparisons.otd
+
+
 hol4-sort-unint.art: hol4-sort-unint.thy $(ARTFILES)
 	opentheory info --article -o $@ $<
 

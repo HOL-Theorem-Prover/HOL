@@ -12,7 +12,7 @@ open abs_tools;
 
 val _ = new_theory "canonical";
 
-open prelimTheory quoteTheory;
+open ternaryComparisonsTheory quoteTheory;
 
 val sr = --`sr:'a semi_ring`--;
 val _ = set_assums [ --`is_semi_ring ^sr`-- ];
@@ -32,6 +32,8 @@ val { plus_sym, plus_assoc, mult_sym, mult_assoc, distr_left,
 
 (* useful tacs *)
 val APP_DIFF = REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC);
+val compare_def = ordering_CASE
+val _ = temp_overload_on ("compare", ``ordering_CASE``)
 fun ARW_TAC l = BasicProvers.RW_TAC bool_ss
     ([ mult_one_left, mult_one_right,
        plus_zero_left, plus_zero_right,
@@ -223,11 +225,11 @@ Induct_on `x` THEN Induct_on `y` THEN REPEAT GEN_TAC THEN
 Cases_on `list_compare index_compare l' l` THEN
 ARW_TAC [ interp_m_def, interp_cs_def, canonical_sum_merge_def,
 	  ics_aux_ok, interp_m_ok, distr_left,mult_assoc, plus_assoc ] THEN
+simpLib.FULL_SIMP_TAC (srw_ss()) [] THEN
+ARW_TAC [] THEN
 TRY (POP_ASSUM (SUBST1_TAC o REWRITE_RULE[compare_list_index])) THEN
 APP_DIFF THEN
 PROVE_TAC[plus_permute,plus_rotate]);
-
-
 
 val monom_insert_ok = asm_store_thm
     ("monom_insert_ok",
@@ -236,9 +238,10 @@ val monom_insert_ok = asm_store_thm
 Induct_on `s` THEN REPEAT GEN_TAC THEN
 Cases_on `list_compare index_compare l' l` THEN
 ARW_TAC [ interp_cs_def, ics_aux_ok, interp_m_ok, distr_left, plus_assoc,
-	  monom_insert_def ] THEN APP_DIFF THEN
+	  monom_insert_def ] THEN
+simpLib.FULL_SIMP_TAC (srw_ss()) [] THEN
+APP_DIFF THEN
 PROVE_TAC [plus_sym, compare_list_index]);
-
 
 val varlist_insert_ok = asm_store_thm
     ("varlist_insert_ok",
@@ -247,9 +250,10 @@ val varlist_insert_ok = asm_store_thm
 Induct_on `s` THEN REPEAT GEN_TAC THEN
 Cases_on `list_compare index_compare l' l` THEN
 ARW_TAC [ interp_cs_def, ics_aux_ok, interp_m_ok, distr_left, plus_assoc,
-	  varlist_insert_def ] THEN APP_DIFF THEN
+	  varlist_insert_def ] THEN
+simpLib.FULL_SIMP_TAC (srw_ss()) [] THEN
+APP_DIFF THEN
 PROVE_TAC [plus_sym, compare_list_index]);
-
 
 val canonical_sum_scalar_ok =asm_store_thm
     ("canonical_sum_scalar_ok",
@@ -281,8 +285,6 @@ ARW_TAC [ interp_cs_def, interp_m_ok, mult_assoc, distr_right, ics_aux_ok,
 	  canonical_sum_scalar3_def ] THEN APP_DIFF THEN
 PROVE_TAC[mult_permute]);
 
-
-
 val canonical_sum_prod_ok = asm_store_thm
     ("canonical_sum_prod_ok",
      Term` ! vm x y.
@@ -292,8 +294,6 @@ Induct_on `x` THEN
 ARW_TAC [ interp_cs_def, mult_assoc, distr_left, ics_aux_ok, interp_m_ok,
 	  canonical_sum_prod_def, canonical_sum_scalar2_ok,
 	  canonical_sum_scalar3_ok, canonical_sum_merge_ok]);
-
-
 
 val canonical_sum_simplify_ok = asm_store_thm
     ("canonical_sum_simplify_ok",
@@ -308,12 +308,12 @@ ARW_TAC [ canonical_sum_simplify_def,
 
 (* semi-ring normalization *)
 
-val _ = Hol_datatype
+val _ = Datatype
  ` spolynom =
-     SPvar of index
-   | SPconst of 'a
-   | SPplus of spolynom => spolynom
-   | SPmult of spolynom => spolynom `;
+     SPvar index
+   | SPconst 'a
+   | SPplus spolynom spolynom
+   | SPmult spolynom spolynom `;
 
 val spolynom_normalize_def = Define `
    (spolynom_normalize (SPvar i) = (Cons_varlist [i] Nil_monom))

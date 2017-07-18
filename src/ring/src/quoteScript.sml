@@ -5,7 +5,7 @@ infix THEN THENL;
 
 val _ = new_theory "quote";
 
-open prelimTheory;
+open ternaryComparisonsTheory;
 
 
 val _ = Hol_datatype
