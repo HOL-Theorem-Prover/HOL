@@ -38,7 +38,8 @@ val good_cmp_thm = Q.store_thm ("good_cmp_thm",
 val cmp_thms = save_thm ("cmp_thms", LIST_CONJ [comparison_distinct, comparison_case_def, comparison_nchotomy, good_cmp_def])
 
 val _ = overload_on ("option_cmp", ``option_compare``);
-val option_cmp_def = ternaryComparisonsTheory.option_compare_def
+val option_cmp_def = save_thm("option_cmp_def",
+  ternaryComparisonsTheory.option_compare_def)
 
 val option_cmp2_def = Define`
   (option_cmp2 cmp NONE NONE = Equal) /\
@@ -51,19 +52,31 @@ val list_cmp_def = ternaryComparisonsTheory.list_compare_def
 val list_cmp_ind = ternaryComparisonsTheory.list_compare_ind
 
 val _ = overload_on ("pair_cmp", ``pair_compare``)
-val pair_cmp_def = ternaryComparisonsTheory.pair_compare_def
+val pair_cmp_def = save_thm(
+  "pair_cmp_def",
+  PART_MATCH lhs ternaryComparisonsTheory.pair_compare_def
+     ``pair_cmp c1 c2 (FST x, SND x) (FST y, SND y)``
+     |> REWRITE_RULE [pairTheory.PAIR]);
 
 val _ = overload_on ("bool_cmp", ``bool_compare``)
-val bool_cmp_def = ternaryComparisonsTheory.bool_compare_def
+val bool_cmp_def = save_thm(
+  "bool_cmp_def",
+  ternaryComparisonsTheory.bool_compare_def)
 
 val _ = overload_on ("num_cmp", ``num_compare``)
-val num_cmp_def = ternaryComparisonsTheory.num_compare_def
+val num_cmp_def = save_thm(
+  "num_cmp_def",
+  ternaryComparisonsTheory.num_compare_def)
 
 val _ = overload_on ("char_cmp", ``char_compare``);
-val char_cmp_def = ternaryComparisonsTheory.char_compare_def
+val char_cmp_def = save_thm(
+  "char_cmp_def",
+  ternaryComparisonsTheory.char_compare_def);
 
 val _ = overload_on ("string_cmp", ``string_compare``);
-val string_cmp_def = ternaryComparisonsTheory.string_compare_def
+val string_cmp_def = save_thm(
+  "string_cmp_def",
+  ternaryComparisonsTheory.string_compare_def)
 (* relationship to toto *)
 
 val TotOrd_imp_good_cmp = store_thm("TotOrder_imp_good_cmp",

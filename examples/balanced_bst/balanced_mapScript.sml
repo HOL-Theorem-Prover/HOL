@@ -1036,6 +1036,7 @@ val doubleR_thm = Q.prove (
       key_set cmp k ≠ key_set cmp k''`
                    by metis_tac [key_set_eq, cmp_thms] >>
      metis_tac [FUPDATE_COMMUTES, FUNION_ASSOC]));
+val _ = print "Proved doubleR_thm\n";
 
 val rotateR_thm = Q.prove (
 `!k v l r cmp.
@@ -1055,6 +1056,7 @@ val rotateR_thm = Q.prove (
   >- fs [size_def] >>
   rw [size_def, rotateR_def] >>
   metis_tac [singleR_thm, doubleR_thm, ADD_COMM, NOT_ZERO_LT_ZERO, GREATER_DEF]);
+val _ = print "Proved rotateR_thm\n";
 
 val balanceL_balL = Q.prove (
 `!k v l r cmp.
@@ -1079,6 +1081,7 @@ val balanceL_balL = Q.prove (
  fs [invariant_def, doubleR_def, bin_def, size_def] >>
  imp_res_tac structure_size_thm >>
  rw []);
+val _ = print "Proved balanceL_balL\n";
 
 val balanceL_thm = Q.prove (
 `!k v l r cmp.
@@ -1330,6 +1333,8 @@ val lookup_insert = Q.store_thm("lookup_insert",
    if cmp k k' = Equal then SOME v else lookup cmp k t`,
   rw[] \\ rw[lookup_thm,insert_thm,FLOOKUP_UPDATE] \\
   metis_tac[key_set_eq,comparisonTheory.cmp_thms]);
+
+val comparison_distinct = TypeBase.distinct_of ``:ordering``
 
 val insertR_thm = Q.store_thm ("insertR_thm",
 `∀t.
@@ -1913,6 +1918,7 @@ val trim_thm = Q.prove (
  fs [flookup_thm, key_ordered_to_fmap, restrict_set_def, option_cmp_def, option_cmp2_def] >>
  rfs [key_ordered_to_fmap] >>
  metis_tac [cmp_thms, key_set_eq, key_set_cmp_thm, to_fmap_key_set]);
+val _ = print "Proved trim_thm\n";
 
 val link_balanced_lem1 = Q.prove (
 `!r rz l.
@@ -2051,6 +2057,7 @@ val link_thm = Q.prove (
      fs [invariant_eq, size_def]
      >- metis_tac [link_balanced_lem3, structure_size_thm, ADD_ASSOC] >>
      to_fmap_tac));
+val _ = print "Proved link_thm\n"
 
 val filter_lt_help_thm = Q.prove (
 `!cmp bound t.
@@ -2081,6 +2088,7 @@ val filter_lt_help_thm = Q.prove (
      fs [invariant_eq] >>
      rw [restrict_domain_def, restrict_set_def, option_cmp2_def, option_cmp_def] >>
      to_fmap_tac));
+val _ = print "Proved filter_lt_help_thm\n"
 
 val filterLt_thm = Q.prove (
 `!cmp bound t.
@@ -2099,6 +2107,7 @@ val filterLt_thm = Q.prove (
      fs [FLOOKUP_DEF] >>
      metis_tac [to_fmap_key_set]) >>
  rw [restrict_domain_def, restrict_set_def, option_cmp2_def, option_cmp_def]);
+val _ = print "Proved filterLt_thm\n";
 
 val filter_gt_help_thm = Q.prove (
 `!cmp bound t.
@@ -2129,6 +2138,7 @@ val filter_gt_help_thm = Q.prove (
      fs [invariant_eq] >>
      rw [restrict_domain_def, restrict_set_def, option_cmp2_def, option_cmp_def] >>
      to_fmap_tac));
+val _ = print "Proved filter_gt_help_thm\n";
 
 val filterGt_thm = Q.prove (
 `!cmp bound t.
@@ -2147,6 +2157,7 @@ val filterGt_thm = Q.prove (
      fs [FLOOKUP_DEF] >>
      metis_tac [to_fmap_key_set]) >>
  rw [restrict_domain_def, restrict_set_def, option_cmp2_def, option_cmp_def]);
+val _ = print "Proved filterGt_thm\n";
 
 val restrict_domain_partition = Q.prove (
 `!cmp x l h t1 t2.
@@ -2169,6 +2180,7 @@ val restrict_domain_partition = Q.prove (
      DRESTRICT_DEF, FAPPLY_FUPDATE_THM] >>
  fmrw [] >>
  metis_tac [cmp_thms, EXTENSION, key_set_eq]);
+val _ = print "Proved restrict_domain_partition\n";
 
 val restrict_domain_union_swap = Q.prove (
 ` good_cmp cmp
@@ -2189,6 +2201,7 @@ val restrict_domain_union_swap = Q.prove (
  every_case_tac >>
  rw [] >>
  metis_tac [cmp_thms, key_set_eq]);
+val _ = print "Proved restrict_domain_union_swap\n"
 
 val restrict_domain_extend = Q.prove (
 ` good_cmp cmp ∧
@@ -2209,6 +2222,7 @@ val restrict_domain_extend = Q.prove (
  every_case_tac >>
  rw [FLOOKUP_DEF] >>
  metis_tac [cmp_thms, key_set_eq, key_set_cmp_thm, to_fmap_key_set]);
+val _ = print "Proved restrict_domain_extend\n";
 
 val restrict_domain_combine = Q.prove (
 ` good_cmp cmp ∧
@@ -2225,6 +2239,7 @@ val restrict_domain_combine = Q.prove (
  Cases_on `bhi` >>
  fs [restrict_set_def, option_cmp2_def, option_cmp_def, FLOOKUP_DEF] >>
  metis_tac [key_set_eq, cmp_thms, to_fmap_key_set, key_set_cmp_thm]);
+val _ = print "Proved restrict_domain_combine\n";
 
 val bounded_all_def = Define `
 (bounded_all cmp lk hk Tip ⇔ T) ∧
@@ -2616,6 +2631,8 @@ val compare_thm1 = Q.prove (
      qexists_tac `q'` >>
      rw [] >>
      metis_tac [cmp_thms]));
+val _ = print "Proved compare_thm1";
+
 
 val NONE_lem = Q.prove (
 `x = NONE ⇔ ¬?y. x = SOME y`,
@@ -2647,6 +2664,7 @@ val strict_sorted_unique = Q.prove (
  Cases_on `h` >>
  fs [] >>
  res_tac);
+val _ = print "Proved strict_sorted_unique\n"
 
 val strict_sorted_eq_el = Q.prove (
 `!cmp l m n.
@@ -2680,6 +2698,7 @@ val strict_sorted_eq_el = Q.prove (
      Cases_on `EL (PRE m) l` >>
      fs [] >>
      metis_tac [cmp_thms]));
+val _ = print "Proved strict_sorted_eq_el\n";
 
 val compare_lem2 = Q.prove (
 `!cmp1 cmp2 n l1 l2.
@@ -2800,6 +2819,7 @@ val compare_lem2 = Q.prove (
                       fs [] >>
                       metis_tac [cmp_thms]) >>
          metis_tac [cmp_thms])));
+val _ = print "Proved compare_lem2\n";
 
 val compare_thm2 = Q.prove (
 `!cmp1 cmp2 t1 t2.
@@ -2853,6 +2873,7 @@ val compare_thm2 = Q.prove (
      Cases_on `EL n l2` >>
      fs [] >>
      metis_tac [good_cmp_def, pair_cmp_good]));
+val _ = print "Proved compare_thm2\n";
 
 val compare_thm = Q.store_thm ("compare_thm",
 `!cmp1 cmp2 t1 t2.
