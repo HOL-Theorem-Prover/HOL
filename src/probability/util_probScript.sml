@@ -802,8 +802,8 @@ val SUM_LT = store_thm
        >> RW_TAC arith_ss [])
    >> RW_TAC arith_ss []);
 
-val SUM_CONST = store_thm
-  ("SUM_CONST",
+val SUM_CONST_R = store_thm
+  ("SUM_CONST_R",
    ``!n r. sum (0,n) (K r) = &n * r``,
    Induct >- RW_TAC real_ss [sum]
    >> RW_TAC bool_ss [sum, ADD1, K_THM, GSYM REAL_ADD, REAL_ADD_RDISTRIB]
@@ -812,7 +812,7 @@ val SUM_CONST = store_thm
 val SUMS_ZERO = store_thm
   ("SUMS_ZERO",
    ``(K 0) sums 0``,
-   RW_TAC real_ss [sums, SEQ, SUM_CONST, abs, REAL_SUB_REFL, REAL_LE_REFL]);
+   RW_TAC real_ss [sums, SEQ, SUM_CONST_R, abs, REAL_SUB_REFL, REAL_LE_REFL]);
 
 val SUMINF_ADD = store_thm
   ("SUMINF_ADD",
@@ -1021,7 +1021,7 @@ val SUMINF_2D = store_thm
    >> CONJ_TAC
    >- (MATCH_MP_TAC SUM_LT
        >> RW_TAC arith_ss [])
-   >> RW_TAC std_ss [SUM_ADD, GSYM K_PARTIAL, SUM_CONST]
+   >> RW_TAC std_ss [SUM_ADD, GSYM K_PARTIAL, SUM_CONST_R]
    >> Know `!x:real. & M * (x / & M) = x`
    >- (RW_TAC std_ss [real_div]
        >> Suff `(& M * inv (& M)) * x = x`

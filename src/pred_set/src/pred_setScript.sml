@@ -3037,6 +3037,11 @@ val FINITE_BIJ = store_thm (* from util_prob *)
  >> RW_TAC std_ss [CARD_INSERT]
  >> PROVE_TAC []);
 
+val FINITE_BIJ_CARD = store_thm
+  ("FINITE_BIJ_CARD",
+   ``!f s t. FINITE s /\ BIJ f s t ==> (CARD s = CARD t)``,
+    PROVE_TAC [FINITE_BIJ]);
+
 val FINITE_BIJ_CARD_EQ = Q.store_thm
 ("FINITE_BIJ_CARD_EQ",
  `!S. FINITE S ==> !t f. BIJ f S t /\ FINITE t ==> (CARD S = CARD t)`,
