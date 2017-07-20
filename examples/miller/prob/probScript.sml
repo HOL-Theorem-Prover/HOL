@@ -312,9 +312,6 @@ val PROB_PRESERVING_BERN_SUBSET = store_thm
    >- ( MATCH_MP_TAC IN_SIGMA >> RES_TAC )
    >- REWRITE_TAC [MEASURE_SPACE_BERN] >| (* 2 goals left *)
    [ (* goal 1 (of 2) *)
-     POP_ASSUM K_TAC \\
-     Q.PAT_X_ASSUM `x IN P` K_TAC \\
-     Q.PAT_X_ASSUM `!s. P` K_TAC \\
      REWRITE_TAC [measure_space_def, m_space_def, measurable_sets_def] \\
      ASM_REWRITE_TAC [SPACE_SUBSETS_PROB_ALGEBRA] \\
      CONJ_TAC >| (* 2 sub-goals here *)
@@ -323,17 +320,20 @@ val PROB_PRESERVING_BERN_SUBSET = store_thm
        REWRITE_TAC [positive_def, measure_def, measurable_sets_def] \\
        RW_TAC std_ss [PROB_BERN_ALGEBRA, PROB_ALGEBRA_EMPTY],
        (* goal 1.2 (of 2) *)
+       KILL_TAC \\
        MP_TAC PROB_MEASURE_COUNTABLY_ADDITIVE \\
        REWRITE_TAC [countably_additive_def, measure_def, measurable_sets_def] \\
-       KILL_TAC \\
        RW_TAC std_ss [] >> RES_TAC \\
        Q.PAT_X_ASSUM `prob_measure o f sums P` MP_TAC \\
        Q.PAT_X_ASSUM `!f. P /\ Q /\ R ==> X` K_TAC \\
        REWRITE_TAC [sums] \\
        IMP_RES_TAC PROB_BERN_ALGEBRA >> POP_ORW \\
-       ASSUME_TAC (Q.GEN `n` (Q.SPEC `f (n:num)` PROB_BERN_ALGEBRA)) \\        
-       cheat ],
-     (* goal 2 (of 1) *)
+       ASSUME_TAC (Q.GEN `n` (Q.SPEC `f (n:num)` PROB_BERN_ALGEBRA)) \\
+       FULL_SIMP_TAC std_ss [IN_FUNSET, IN_UNIV] \\
+       REWRITE_TAC [o_DEF] \\
+       Q.ABBREV_TAC `limit = prob_measure (BIGUNION (IMAGE f univ(:num)))` \\
+       FULL_SIMP_TAC std_ss [] ],
+     (* goal 2 (of 2) *)
      PROVE_TAC [PROB_BERN_ALGEBRA] ]);
 
 val PROB_PRESERVING_BERN_LIFT = store_thm
