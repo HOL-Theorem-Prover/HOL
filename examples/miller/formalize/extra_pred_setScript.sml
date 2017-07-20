@@ -86,8 +86,6 @@ val nonempty_def = Define `nonempty s = ~(s = {})`;
 
 val range_def = Define `range f = IMAGE f UNIV`;
 
-val prod_sets_def = Define `prod_sets a b = {s CROSS t | s IN a /\ t IN b}`;
-
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)
 (* ------------------------------------------------------------------------- *)
@@ -96,11 +94,6 @@ val IN_o = store_thm
   ("IN_o",
    ``!x f s. x IN (s o f) = f x IN s``,
    RW_TAC std_ss [SPECIFICATION, o_THM]);
-
-val COMPL_EMPTY = store_thm
-  ("COMPL_EMPTY",
-   ``COMPL {} = UNIV``,
-   RW_TAC std_ss [EXTENSION, IN_COMPL, NOT_IN_EMPTY, IN_UNIV]);
 
 val UNION_DEF_ALT = store_thm
   ("UNION_DEF_ALT",
@@ -362,6 +355,7 @@ val DELETE_THEN_INSERT = store_thm
    RESQ_TAC
    ++ R_TAC [INSERT_DELETE]);
 
+(* change name and move to pred_setTheory *)
 val BIJ_INSERT = store_thm
   ("BIJ_INSERT",
    ``!f e s t.
@@ -376,29 +370,6 @@ val BIJ_INSERT = store_thm
    ++ AR_TAC [IN_DELETE, IN_INSERT]
    ++ REPEAT STRIP_TAC
    ++ METIS_TAC []);
-
-val FINITE_BIJ = store_thm
-  ("FINITE_BIJ",
-   ``!f s t. FINITE s /\ BIJ f s t ==> FINITE t /\ (CARD s = CARD t)``,
-   Suff `!s. FINITE s ==> !f t. BIJ f s t ==> FINITE t /\ (CARD s = CARD t)`
-   >> ho_PROVE_TAC []
-   ++ HO_MATCH_MP_TAC FINITE_INDUCT
-   ++ CONJ_TAC >> R_TAC [BIJ_ALT, FINITE_EMPTY, CARD_EMPTY]
-   ++ NTAC 7 STRIP_TAC
-   ++ MP_TAC (Q.SPECL [`f`, `e`, `s`, `t`] BIJ_INSERT)
-   ++ R_TAC []
-   ++ STRIP_TAC
-   ++ Know `FINITE u` >> PROVE_TAC []
-   ++ STRIP_TAC
-   ++ CONJ_TAC >> PROVE_TAC [FINITE_INSERT]
-   ++ Q.PAT_X_ASSUM `f e INSERT u = t` (fn th => R_TAC [SYM th])
-   ++ R_TAC [CARD_INSERT]
-   ++ ho_PROVE_TAC []);
-
-val FINITE_BIJ_CARD = store_thm
-  ("FINITE_BIJ_CARD",
-   ``!f s t. FINITE s /\ BIJ f s t ==> (CARD s = CARD t)``,
-   ho_PROVE_TAC [FINITE_BIJ]);
 
 val FINITE_MAXIMAL = store_thm
   ("FINITE_MAXIMAL",
@@ -1436,22 +1407,6 @@ val RANGE_BIND = store_thm
    RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION_IMAGE, range_def, IN_IMAGE, IN_UNIV,
                   o_THM, BIND_DEF, UNCURRY]
    ++ PROVE_TAC [FST, SND]);
-
-val IN_PROD_SETS = store_thm
-  ("IN_PROD_SETS",
-   ``!s a b. s IN prod_sets a b = ?t u. (s = t CROSS u) /\ t IN a /\ u IN b``,
-   RW_TAC std_ss [prod_sets_def, GSPECIFICATION, UNCURRY]
-   ++ EQ_TAC >> PROVE_TAC []
-   ++ RW_TAC std_ss []
-   ++ Q.EXISTS_TAC `(t, u)`
-   ++ RW_TAC std_ss []);
-
-val PREIMAGE_CROSS = store_thm
-  ("PREIMAGE_CROSS",
-   ``!f a b.
-       PREIMAGE f (a CROSS b) =
-       PREIMAGE (FST o f) a INTER PREIMAGE (SND o f) b``,
-   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_CROSS, IN_INTER, o_THM]);
 
 val GEMPTY = store_thm
   ("GEMPTY",

@@ -809,6 +809,11 @@ val SUM_CONST = store_thm
    >> RW_TAC bool_ss [sum, ADD1, K_THM, GSYM REAL_ADD, REAL_ADD_RDISTRIB]
    >> RW_TAC real_ss []);
 
+val SUMS_ZERO = store_thm
+  ("SUMS_ZERO",
+   ``(K 0) sums 0``,
+   RW_TAC real_ss [sums, SEQ, SUM_CONST, abs, REAL_SUB_REFL, REAL_LE_REFL]);
+
 val SUMINF_ADD = store_thm
   ("SUMINF_ADD",
    ``!f g.
