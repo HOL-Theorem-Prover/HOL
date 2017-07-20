@@ -359,7 +359,7 @@ val _ = remove (fullPath [hmakedir, "Parser.grm.sig"]);
 val _ = remove (fullPath [hmakedir, "Parser.grm.sml"]);
 
 
-fun polyc_compile s tgt =
+fun polyc_compile0 s tgt =
   let
     val cline = POLYC ^ " -o " ^ tgt ^ " " ^ s
   in
@@ -367,20 +367,45 @@ fun polyc_compile s tgt =
     system_ps cline
   end
 
+fun mlton_compile mltonp mlbfile_opt s tgt =
+  case mlbfile_opt of
+      NONE => polyc_compile0 s tgt
+    | SOME mlbfile_d =>
+      let
+        val {dir=mlbdir,file=mlbfile} = OS.Path.splitDirFile mlbfile_d
+        val {base=mlbbase, ...} = OS.Path.splitBaseExt mlbfile
+        val tgt_f = OS.Path.file tgt
+        val _ = tgt_f = mlbbase orelse
+                die ("stem of mlb-file "^mlbfile_d^
+                     " doesn't match file of target: "^ tgt)
+        val cline = mltonp ^ " " ^ mlbfile_d
+        val generated_file =
+            OS.Path.joinDirFile {dir = mlbdir, file = mlbbase}
+      in
+        echov cline ;
+        system_ps cline ;
+        OS.FileSys.rename{old = generated_file, new = tgt}
+      end
+
+val polyc_compile =
+    case MLTON of
+        NONE => (fn _ => polyc_compile0)
+      | SOME p => mlton_compile p
+
 fun work_in_dir tgtname d f =
   (echo ("Making " ^ tgtname); FileSys.chDir d; f(); FileSys.chDir cdir)
-    handle _ => die ("Failed to make "^tgtname)
+    handle e => die ("Failed to make "^tgtname^" ("^General.exnMessage e^")")
 
 (* mllex *)
 val _ = work_in_dir "mllex"
           lexdir
-          (fn () => polyc_compile "poly-mllex.ML" "mllex.exe")
+          (fn () => polyc_compile NONE "poly-mllex.ML" "mllex.exe")
 
 (* mlyacc *)
 val _ = work_in_dir
           "mlyacc" yaccdir
           (fn () => (systeml [lexer, "yacc.lex"];
-                     polyc_compile "poly-mlyacc.ML" "mlyacc.exe"))
+                     polyc_compile NONE "poly-mlyacc.ML" "mlyacc.exe"))
 
 (* Holmake *)
 val _ = work_in_dir
@@ -388,33 +413,35 @@ val _ = work_in_dir
           (fn () => (OS.FileSys.chDir "..";
                      systeml [lexer, "QuoteFilter"] ;
                      OS.FileSys.chDir "poly";
-                     polyc_compile "poly-Holmake.ML" hmakebin))
+                     polyc_compile (SOME "../mlton/Holmake.mlb")
+                                   "poly-Holmake.ML" hmakebin))
 
 (* unquote - the quotation filter *)
 val _ = work_in_dir "unquote." qfdir
-                    (fn () => (polyc_compile "poly-unquote.ML" qfbin))
+                    (fn () => (polyc_compile NONE "poly-unquote.ML" qfbin))
 
 (* holdeptool *)
 val _ = work_in_dir "holdeptool" (fullPath [HOLDIR, "tools", "Holmake"])
                     (fn () =>
-                        polyc_compile
+                        polyc_compile NONE
                           "poly-holdeptool.ML"
                           (fullPath [HOLDIR, "bin", "holdeptool.exe"]))
 
 (* build *)
 val _ = work_in_dir "build" toolsdir
-                    (fn () => polyc_compile "poly-build.ML" buildbin)
+                    (fn () => polyc_compile (SOME "../tools/build.mlb")
+                                            "poly-build.ML" buildbin)
 
 (* heapname *)
 val _ = work_in_dir
           "heapname" toolsdir
-          (fn () => polyc_compile "heapname.ML"
+          (fn () => polyc_compile NONE "heapname.ML"
                                         (fullPath [HOLDIR,"bin","heapname"]))
 
 (* buildheap *)
 val _ = work_in_dir
           "buildheap" toolsdir
-          (fn () => polyc_compile "buildheap.ML"
+          (fn () => polyc_compile NONE "buildheap.ML"
                                         (fullPath [HOLDIR, "bin", "buildheap"]))
 
 end (* local *)
