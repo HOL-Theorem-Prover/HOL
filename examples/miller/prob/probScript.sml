@@ -196,6 +196,12 @@ val SIGMA_ALGEBRA_BERN = store_thm
 	by REWRITE_TAC [subset_class_def, SPACE_PROB_ALGEBRA, SUBSET_UNIV]
    >> RW_TAC std_ss [bern_def, SIGMA_ALGEBRA_SIGMA]);
 
+val SIGMA_PROB_ALGEBRA = store_thm
+  ("SIGMA_PROB_ALGEBRA", ``sigma_algebra (sigma (space prob_algebra) (subsets prob_algebra))``,
+   `subset_class (space prob_algebra) (subsets prob_algebra)`
+	by REWRITE_TAC [subset_class_def, SPACE_PROB_ALGEBRA, SUBSET_UNIV]
+   >> RW_TAC std_ss [SIGMA_ALGEBRA_SIGMA]);
+
 val PROB_BERN_ALGEBRA = store_thm
   ("PROB_BERN_ALGEBRA",
    ``!l. l IN (subsets prob_algebra) ==> (prob bern l = prob_measure l)``,
@@ -228,40 +234,43 @@ val PROB_BERN_PREFIX_SET = store_thm
    RW_TAC std_ss [PROB_ALGEBRA_PREFIX_SET, PROB_BERN_ALGEBRA,
                   PROB_MEASURE_PREFIX_SET]);
 
+val MEASURABLE_PREMEASURABLE_BERN = store_thm
+  ("MEASURABLE_PREMEASURABLE_BERN",
+  ``measurable (p_space bern, events bern) (p_space bern, events bern) =
+ premeasurable (p_space bern, events bern) (p_space bern, events bern)``,
+    PROVE_TAC [SIGMA_ALGEBRA_BERN, MEASURABLE_IS_PREMEASURABLE]);
+
 val MEASURABLE_BERN_SUBSET = store_thm
   ("MEASURABLE_BERN_SUBSET",
-   ``measurable prob_algebra prob_algebra
+   ``premeasurable prob_algebra prob_algebra
       SUBSET
      measurable (p_space bern, events bern) (p_space bern, events bern)``,
-   RW_TAC std_ss [EVENTS_BERN]
+   REWRITE_TAC [MEASURABLE_PREMEASURABLE_BERN]
+   >> RW_TAC std_ss [EVENTS_BERN]
    >> MATCH_MP_TAC SUBSET_TRANS
-   >> Q.EXISTS_TAC `measurable (sigma (space prob_algebra) (subsets prob_algebra)) prob_algebra`
-   >> CONJ_TAC >- PROVE_TAC [MEASURABLE_UP_SIGMA, space_def, subsets_def]
-   >> Know `p_space bern = space prob_algebra`
-   >- ( MP_TAC bern_def >> RW_TAC std_ss  [sigma_def, PAIR_EQ] )
-   >> Rewr
-   >> Know `(space prob_algebra, subsets (sigma (space prob_algebra) (subsets prob_algebra))) =
-	    (sigma (space prob_algebra) (subsets prob_algebra))`
-   >- REWRITE_TAC [sigma_def, subsets_def, PAIR_EQ]
-   >> Rewr
-   >> REWRITE_TAC [MEASURABLE_SUBSET]);
+   >> Q.EXISTS_TAC `premeasurable (sigma (space prob_algebra) (subsets prob_algebra)) prob_algebra`
+   >> CONJ_TAC >- PROVE_TAC [PREMEASURABLE_UP_SIGMA, space_def, subsets_def]
+   >> REWRITE_TAC [SPACE_BERN]
+   >> REWRITE_TAC [SIGMA_REDUCE]
+   >> MP_TAC SIGMA_PROB_ALGEBRA
+   >> REWRITE_TAC [PREMEASURABLE_SUBSET]);
 
 val MEASURABLE_BERN_LIFT = store_thm
   ("MEASURABLE_BERN_LIFT",
    ``!f.
-       f IN measurable prob_algebra prob_algebra ==>
+       f IN premeasurable prob_algebra prob_algebra ==>
        f IN measurable (p_space bern, events bern) (p_space bern, events bern)``,
    PROVE_TAC [MEASURABLE_BERN_SUBSET, SUBSET_DEF]);
 
 val MEASURABLE_BERN_STL = store_thm
   ("MEASURABLE_BERN_STL",
    ``stl IN measurable (p_space bern, events bern) (p_space bern, events bern)``,
-   PROVE_TAC [MEASURABLE_BERN_LIFT, MEASURABLE_PROB_ALGEBRA_STL]);
+   PROVE_TAC [MEASURABLE_BERN_LIFT, PREMEASURABLE_PROB_ALGEBRA_STL]);
 
 val MEASURABLE_BERN_SCONS = store_thm
   ("MEASURABLE_BERN_SCONS",
    ``!b. scons b IN measurable (p_space bern, events bern) (p_space bern, events bern)``,
-   PROVE_TAC [MEASURABLE_BERN_LIFT, MEASURABLE_PROB_ALGEBRA_SCONS]);
+   PROVE_TAC [MEASURABLE_BERN_LIFT, PREMEASURABLE_PROB_ALGEBRA_SCONS]);
 
 val EVENTS_BERN_STL = store_thm
   ("EVENTS_BERN_STL",
@@ -307,34 +316,11 @@ val PROB_PRESERVING_BERN_SUBSET = store_thm
    >> Know `subset_class (space prob_algebra) (subsets prob_algebra)`
    >- ( REWRITE_TAC [subset_class_def, SPACE_PROB_ALGEBRA, SUBSET_UNIV] )
    >> RW_TAC std_ss [SUBSET_DEF, PROB_PRESERVING, GSPECIFICATION, EVENTS, PROB, SPACE_BERN,
-                     EVENTS_BERN, IN_MEASURABLE, p_space_def, m_space_def, space_def,
-		     SIGMA_ALGEBRA_SIGMA, SPACE_SUBSETS_PROB_ALGEBRA] (* 4 sub-goals here *)
-   >- ( MATCH_MP_TAC IN_SIGMA >> RES_TAC )
-   >- REWRITE_TAC [MEASURE_SPACE_BERN] >| (* 2 goals left *)
-   [ (* goal 1 (of 2) *)
-     REWRITE_TAC [measure_space_def, m_space_def, measurable_sets_def] \\
-     ASM_REWRITE_TAC [SPACE_SUBSETS_PROB_ALGEBRA] \\
-     CONJ_TAC >| (* 2 sub-goals here *)
-     [ (* goal 1.1 (of 2) *)
-       MP_TAC PROB_MEASURE_POSITIVE \\
-       REWRITE_TAC [positive_def, measure_def, measurable_sets_def] \\
-       RW_TAC std_ss [PROB_BERN_ALGEBRA, PROB_ALGEBRA_EMPTY],
-       (* goal 1.2 (of 2) *)
-       KILL_TAC \\
-       MP_TAC PROB_MEASURE_COUNTABLY_ADDITIVE \\
-       REWRITE_TAC [countably_additive_def, measure_def, measurable_sets_def] \\
-       RW_TAC std_ss [] >> RES_TAC \\
-       Q.PAT_X_ASSUM `prob_measure o f sums P` MP_TAC \\
-       Q.PAT_X_ASSUM `!f. P /\ Q /\ R ==> X` K_TAC \\
-       REWRITE_TAC [sums] \\
-       IMP_RES_TAC PROB_BERN_ALGEBRA >> POP_ORW \\
-       ASSUME_TAC (Q.GEN `n` (Q.SPEC `f (n:num)` PROB_BERN_ALGEBRA)) \\
-       FULL_SIMP_TAC std_ss [IN_FUNSET, IN_UNIV] \\
-       REWRITE_TAC [o_DEF] \\
-       Q.ABBREV_TAC `limit = prob_measure (BIGUNION (IMAGE f univ(:num)))` \\
-       FULL_SIMP_TAC std_ss [] ],
-     (* goal 2 (of 2) *)
-     PROVE_TAC [PROB_BERN_ALGEBRA] ]);
+                     EVENTS_BERN, IN_PREMEASURABLE, p_space_def, m_space_def, space_def,
+		     SIGMA_ALGEBRA_SIGMA, SPACE_SUBSETS_PROB_ALGEBRA] (* 3 goals here *)
+   >- PROVE_TAC [SIGMA_PROB_ALGEBRA, SIGMA_ALGEBRA_ALGEBRA]
+   >- (MATCH_MP_TAC IN_SIGMA >> PROVE_TAC [])
+   >> PROVE_TAC [PROB_BERN_ALGEBRA]);
 
 val PROB_PRESERVING_BERN_LIFT = store_thm
   ("PROB_PRESERVING_BERN_LIFT",
@@ -569,7 +555,8 @@ val PROB_PRESERVING_BERN_MIRROR = store_thm
 val MEASURABLE_BERN_MIRROR = store_thm
   ("MEASURABLE_BERN_MIRROR",
   ``mirror IN measurable (p_space bern, events bern) (p_space bern, events bern)``,
-   MP_TAC PROB_PRESERVING_BERN_MIRROR
+   REWRITE_TAC [MEASURABLE_PREMEASURABLE_BERN]
+   >> MP_TAC PROB_PRESERVING_BERN_MIRROR
    >> RW_TAC std_ss [PROB_PRESERVING, GSPECIFICATION]);
 
 val PROB_BERN_STL_HALFSPACE = store_thm
@@ -857,7 +844,7 @@ val PROB_BERN_PREFIX_SET_INTER_SDROP = store_thm
 
 val IN_MEASURABLE_BERN_BERN = store_thm
   ("IN_MEASURABLE_BERN_BERN",
-   ``!f. f IN  measurable (p_space bern,events bern) (p_space bern,events bern) =
+   ``!f. f IN measurable (p_space bern,events bern) (p_space bern,events bern) =
          f IN (p_space bern -> p_space bern) /\
         !s. s IN events bern ==> PREIMAGE f s IN events bern``,
    MP_TAC (REWRITE_RULE [SIGMA_ALGEBRA_BERN, space_def, subsets_def]
@@ -865,13 +852,22 @@ val IN_MEASURABLE_BERN_BERN = store_thm
 				  IN_MEASURABLE))
    >> RW_TAC std_ss [SPACE_BERN, SPACE_PROB_ALGEBRA, INTER_UNIV]);
 
+val IN_PREMEASURABLE_BERN_BERN = store_thm
+  ("IN_PREMEASURABLE_BERN_BERN",
+   ``!f. f IN premeasurable (p_space bern,events bern) (p_space bern,events bern) =
+         f IN (p_space bern -> p_space bern) /\
+        !s. s IN events bern ==> PREIMAGE f s IN events bern``,
+   REWRITE_TAC [SYM MEASURABLE_PREMEASURABLE_BERN]
+   >> REWRITE_TAC [IN_MEASURABLE_BERN_BERN]);
+
 val INDEP_FN_PROB_PRESERVING = store_thm
   ("INDEP_FN_PROB_PRESERVING",
    ``!f. f IN indep_fn ==> (SND o f) IN prob_preserving bern bern``,
-   RW_TAC std_ss [indep_fn_def, PROB_PRESERVING, GSPECIFICATION, MEASURE_SPACE_BERN]
+   RW_TAC std_ss [indep_fn_def, IN_PROB_PRESERVING, GSPECIFICATION,
+		  MEASURABLE_PREMEASURABLE_BERN]
    >> REWRITE_TAC [space_def, subsets_def, SPACE_BERN, SPACE_PROB_ALGEBRA, INTER_UNIV]
    >> Know `PREIMAGE (SND o f) s IN (events bern)`
-   >- ( PROVE_TAC [IN_MEASURABLE_BERN_BERN] )
+   >- PROVE_TAC [IN_PREMEASURABLE_BERN_BERN]
    >> STRIP_TAC
    >> MP_TAC (Q.ISPEC `IMAGE prefix_set c` COUNTABLE_DISJOINT_ENUM)
    >> Know
@@ -954,7 +950,7 @@ val SIGMA_ALGEBRA_UNIV = store_thm
 
 val IN_MEASURABLE_BERN_UNIV = store_thm
   ("IN_MEASURABLE_BERN_UNIV",
-   ``!f. f IN  measurable (p_space bern,events bern) (UNIV, UNIV) =
+   ``!f. f IN measurable (p_space bern, events bern) (UNIV, UNIV) =
          f IN (p_space bern -> UNIV) /\ !s. PREIMAGE f s IN events bern``,
    GEN_TAC
    >> REWRITE_TAC [REWRITE_RULE [SIGMA_ALGEBRA_BERN, space_def, subsets_def]
@@ -970,7 +966,8 @@ val PROB_PRESERVING_BERN = store_thm (
    ``!f. f IN prob_preserving bern bern =
          f IN measurable (p_space bern, events bern) (p_space bern, events bern) /\
         !s. s IN events bern ==> (prob bern (PREIMAGE f s) = prob bern s)``,
-   GEN_TAC
+   REWRITE_TAC [MEASURABLE_PREMEASURABLE_BERN]
+   >> GEN_TAC
    >> RW_TAC std_ss [GSPECIFICATION, ISPECL [``bern``, ``bern``] PROB_PRESERVING]
    >> REWRITE_TAC [MEASURE_SPACE_BERN]
    >> EQ_TAC (* 2 sub-goals here *)

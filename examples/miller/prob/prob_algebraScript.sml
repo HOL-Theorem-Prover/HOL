@@ -71,10 +71,19 @@ val IN_PREMEASURABLE = store_thm
 		(!s. s IN subsets b ==> (PREIMAGE f s) INTER (space a) IN subsets a)``,
    RW_TAC std_ss [premeasurable_def, GSPECIFICATION]);
 
-val MEASURABLE_PREMEASURABLE = store_thm
-  ("MEASURABLE_PREMEASURABLE", ``!f a b. f IN measurable a b ==> f IN premeasurable a b``,
+val MEASURABLE_IMP_PREMEASURABLE = store_thm
+  ("MEASURABLE_IMP_PREMEASURABLE", ``!f a b. f IN measurable a b ==> f IN premeasurable a b``,
    rpt GEN_TAC
-   >> RW_TAC std_ss [measurable_def, premeasurable_def, GSPECIFICATION, SIGMA_ALGEBRA_ALGEBRA]);
+   >> RW_TAC std_ss [measurable_def, premeasurable_def, GSPECIFICATION,
+		     SIGMA_ALGEBRA_ALGEBRA]);
+
+val MEASURABLE_IS_PREMEASURABLE = store_thm
+  ("MEASURABLE_IS_PREMEASURABLE",
+  ``!a b. sigma_algebra a /\ sigma_algebra b ==> (measurable a b = premeasurable a b)``,
+   rpt STRIP_TAC
+   >> RW_TAC std_ss [EXTENSION, measurable_def, premeasurable_def, GSPECIFICATION]
+   >> IMP_RES_TAC SIGMA_ALGEBRA_ALGEBRA
+   >> METIS_TAC []);
 
 val PREMEASURABLE_SIGMA = store_thm
   ("PREMEASURABLE_SIGMA",
@@ -83,7 +92,7 @@ val PREMEASURABLE_SIGMA = store_thm
        (!s. s IN b ==> (PREIMAGE f s) INTER (space a) IN subsets a) ==>
        f IN premeasurable a (sigma sp b)``,
    rpt STRIP_TAC
-   >> MATCH_MP_TAC MEASURABLE_PREMEASURABLE
+   >> MATCH_MP_TAC MEASURABLE_IMP_PREMEASURABLE
    >> RW_TAC std_ss [MEASURABLE_SIGMA]);
 
 val PREMEASURABLE_SUBSET = store_thm
@@ -335,20 +344,6 @@ val PROB_PRESERVING_UP_SUBSET = store_thm (
     RW_TAC std_ss [PROB_PRESERVING_UP_LIFT, SUBSET_DEF]
  >> MATCH_MP_TAC PROB_PRESERVING_UP_LIFT
  >> PROVE_TAC [SUBSET_DEF]);
-
-val MEASURE_PRESERVING_UP_SIGMA = store_thm
-  ("MEASURE_PRESERVING_UP_SIGMA",
-   ``!m1 m2 a.
-	measure_space m1 /\
-       (measurable_sets m1 = subsets (sigma (m_space m1) a)) ==>
-       measure_preserving (m_space m1, a, measure m1) m2 SUBSET measure_preserving m1 m2``,
-   RW_TAC std_ss [MEASURE_PRESERVING_UP_LIFT, SUBSET_DEF]
-   >> MATCH_MP_TAC MEASURE_PRESERVING_UP_LIFT
-   >> ASM_REWRITE_TAC [SIGMA_SUBSET_SUBSETS, SIGMA_REDUCE]
-   >> FULL_SIMP_TAC std_ss [IN_MEASURE_PRESERVING, IN_MEASURABLE, m_space_def,
-      		    	    measurable_sets_def]
-   >> MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA
-   >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA, space_def, subsets_def]);
 
 val PROB_PRESERVING_UP_SIGMA = store_thm (
    "PROB_PRESERVING_UP_SIGMA",
