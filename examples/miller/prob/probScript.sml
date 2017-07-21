@@ -942,12 +942,6 @@ val INDEP_FN_PROB_PRESERVING = store_thm
    >> Rewr
    >> RW_TAC std_ss [PROB_BERN_PREFIX_SET_INTER_SDROP, PREIMAGE_ALT]);
 
-val SIGMA_ALGEBRA_UNIV = store_thm
-  ("SIGMA_ALGEBRA_UNIV",
-   ``sigma_algebra (univ(:'a), univ(:'a set))``,
-   REWRITE_TAC [sigma_algebra_def, algebra_def, subsets_def, space_def, subset_class_def]
-   >> RW_TAC std_ss [IN_UNIV, SUBSET_UNIV]);
-
 val IN_MEASURABLE_BERN_UNIV = store_thm
   ("IN_MEASURABLE_BERN_UNIV",
    ``!f. f IN measurable (p_space bern, events bern) (UNIV, UNIV) =
@@ -959,7 +953,7 @@ val IN_MEASURABLE_BERN_UNIV = store_thm
    >> EQ_TAC
    >- RW_TAC std_ss [IN_UNIV, SPACE_BERN, SPACE_PROB_ALGEBRA, INTER_UNIV]
    >> RW_TAC std_ss [SPACE_BERN, SPACE_PROB_ALGEBRA, INTER_UNIV]
-   >> REWRITE_TAC [SIGMA_ALGEBRA_UNIV]);
+   >> REWRITE_TAC [UNIV_SIGMA_ALGEBRA]);
 
 val PROB_PRESERVING_BERN = store_thm (
    "PROB_PRESERVING_BERN",
@@ -1124,7 +1118,7 @@ val INDEP_FN_UNIT = store_thm
    BasicProvers.NORM_TAC std_ss
    [indep_fn_def, GSPECIFICATION, FST_o_UNIT, SND_o_UNIT,
     IN_MEASURABLE, PREIMAGE_I, PREIMAGE_K, EVENTS_BERN_BASIC, I_THM,
-    SIGMA_ALGEBRA_BERN, SIGMA_ALGEBRA_UNIV, IN_FUNSET, space_def, subsets_def,
+    SIGMA_ALGEBRA_BERN, UNIV_SIGMA_ALGEBRA, IN_FUNSET, space_def, subsets_def,
     SPACE_BERN, SPACE_PROB_ALGEBRA, INTER_UNIV, PREIMAGE_ALT, IN_UNIV]
    >- ( RW_TAC std_ss [range_def, UNIT_DEF, o_ABS_R] \\
         Suff `IMAGE (\s. x) univ(:num set) = {x}`
@@ -1143,7 +1137,7 @@ val INDEP_FN_SDEST = store_thm
    ``sdest IN indep_fn``,
    RW_TAC bool_ss [indep_fn_def, GSPECIFICATION, FST_o_SDEST, SND_o_SDEST,
                    IN_MEASURABLE, PREIMAGE_ALT, EVENTS_BERN_STL, EVENTS_BERN_SHD,
-                   COUNTABLE_BOOL, SIGMA_ALGEBRA_UNIV, SIGMA_ALGEBRA_BERN,
+                   COUNTABLE_BOOL, UNIV_SIGMA_ALGEBRA, SIGMA_ALGEBRA_BERN,
 		   space_def, subsets_def, SPACE_BERN_UNIV, IN_FUNSET, IN_UNIV, INTER_UNIV]
    >> Q.EXISTS_TAC `{[T]; [F]}`
    >> RW_TAC bool_ss [IN_INSERT, NOT_IN_EMPTY, prefix_cover_def,
@@ -1411,7 +1405,7 @@ val INDEP_FN_BIND = store_thm
          POP_ASSUM (ASSUME_TAC o (REWRITE_RULE [space_def, subsets_def])) \\
          POP_ASSUM MATCH_MP_TAC \\
          RW_TAC std_ss [SIGMA_ALGEBRA_BERN] )
-    >> REWRITE_TAC [SIGMA_ALGEBRA_UNIV]
+    >> REWRITE_TAC [UNIV_SIGMA_ALGEBRA]
     >> CONJ_TAC
     >- RW_TAC std_ss [SUBSET_DEF, IN_CROSS, IN_UNIV, range_def, IN_IMAGE, o_THM,
 		      space_def, IN_FUNSET]
@@ -2895,7 +2889,7 @@ val PROB_WHILE_WITNESS_MEASURABLE_FST = store_thm
    ``!c b (a : 'a).
        (!a. b a IN indep_fn) ==>
        FST o prob_while_witness c b a IN measurable (p_space bern, events bern) (UNIV, UNIV)``,
-   RW_TAC std_ss [IN_MEASURABLE, IN_UNIV, SIGMA_ALGEBRA_UNIV, SIGMA_ALGEBRA_BERN,
+   RW_TAC std_ss [IN_MEASURABLE, IN_UNIV, UNIV_SIGMA_ALGEBRA, SIGMA_ALGEBRA_BERN,
 		 space_def, subsets_def, SPACE_BERN_UNIV, INTER_UNIV, IN_FUNSET]
    >> Know
       `PREIMAGE (FST o prob_while_witness c b a) s =
