@@ -1579,15 +1579,6 @@ val PROB_MEASURE_COUNTABLY_ADDITIVE = store_thm
  >> MATCH_MP_TAC SER_0
  >> RW_TAC std_ss [o_THM, PROB_MEASURE_BASIC]);
 
-val PROB_MEASURE_MEASURE_SPACE = store_thm
-  ("PROB_MEASURE_MEASURE_SPACE",
-  ``measure_space (space prob_algebra, subsets prob_algebra, prob_measure)``,
-    REWRITE_TAC [measure_space_def, m_space_def, measurable_sets_def]
- >> ASSUME_TAC SPACE_SUBSETS_PROB_ALGEBRA
- >> ASM_REWRITE_TAC [PROB_MEASURE_POSITIVE,
-		     PROB_MEASURE_COUNTABLY_ADDITIVE]
- >> cheat);
-
 val PROB_EMBED_PREFIX_SET = store_thm
   ("PROB_EMBED_PREFIX_SET",
    ``!l. prob_embed [l] = prefix_set l``,
@@ -1729,15 +1720,14 @@ val PROB_MEASURE_SDROP = store_thm
    Induct >- RW_TAC std_ss' [sdrop_def, o_DEF, I_THM]
    >> RW_TAC bool_ss [sdrop_def, o_ASSOC, PROB_MEASURE_STL, PROB_ALGEBRA_SDROP]);
 
-(*
 val PROB_PRESERVING_PROB_ALGEBRA_STL = store_thm
   ("PROB_PRESERVING_PROB_ALGEBRA_STL",
   ``stl IN prob_preserving (space prob_algebra, subsets prob_algebra, prob_measure)
 			   (space prob_algebra, subsets prob_algebra, prob_measure)``,
     ASSUME_TAC SPACE_SUBSETS_PROB_ALGEBRA
  >> RW_TAC std_ss [PROB_PRESERVING, GSPECIFICATION, EVENTS, PROB,
-                   MEASURABLE_PROB_ALGEBRA_STL, PREIMAGE_ALT,
-		   PROB_MEASURE_MEASURE_SPACE, p_space_def, m_space_def]
+                   PREMEASURABLE_PROB_ALGEBRA_STL, PREIMAGE_ALT,
+		   p_space_def, m_space_def]
  >> ASSUME_TAC SPACE_PROB_ALGEBRA
  >> POP_ORW
  >> RW_TAC std_ss [PROB_MEASURE_STL, INTER_UNIV]);
@@ -1749,12 +1739,11 @@ val PROB_PRESERVING_PROB_ALGEBRA_SDROP = store_thm
 		       (space prob_algebra, subsets prob_algebra, prob_measure)``,
     ASSUME_TAC SPACE_SUBSETS_PROB_ALGEBRA
  >> RW_TAC std_ss [PROB_PRESERVING, GSPECIFICATION, EVENTS, PROB,
-                   MEASURABLE_PROB_ALGEBRA_SDROP, PREIMAGE_ALT,
-                   PROB_MEASURE_MEASURE_SPACE, p_space_def, m_space_def]
+                   PREMEASURABLE_PROB_ALGEBRA_SDROP, PREIMAGE_ALT,
+                   p_space_def, m_space_def]
  >> ASSUME_TAC SPACE_PROB_ALGEBRA
  >> POP_ORW
  >> RW_TAC std_ss [PROB_MEASURE_SDROP, INTER_UNIV]);
-*)
 
 val MIRROR_MIRROR = store_thm
   ("MIRROR_MIRROR",
@@ -1784,10 +1773,10 @@ val PREIMAGE_MIRROR_TLS = store_thm
    >> RW_TAC std_ss [MIRROR_SCONS, PROB_EMBED_APPEND, IN_UNION, PROB_EMBED_TLS]
    >> PROVE_TAC []);
 
-val MEASURABLE_PROB_ALGEBRA_MIRROR = store_thm
-  ("MEASURABLE_PROB_ALGEBRA_MIRROR",
-  ``mirror IN measurable prob_algebra prob_algebra``,
-    RW_TAC std_ss [IN_MEASURABLE, IN_PROB_ALGEBRA, (* HERE *)
+val PREMEASURABLE_PROB_ALGEBRA_MIRROR = store_thm
+  ("PREMEASURABLE_PROB_ALGEBRA_MIRROR",
+  ``mirror IN premeasurable prob_algebra prob_algebra``,
+    RW_TAC std_ss [IN_PREMEASURABLE, IN_PROB_ALGEBRA, PROB_ALGEBRA_ALGEBRA,
 		   IN_FUNSET, IN_UNIV, INTER_UNIV, SPACE_PROB_ALGEBRA]
  >> Suff
       `!b.
@@ -1808,8 +1797,8 @@ val MEASURABLE_PROB_ALGEBRA_MIRROR = store_thm
 val PROB_ALGEBRA_MIRROR = store_thm
   ("PROB_ALGEBRA_MIRROR",
   ``!p. p o mirror IN (subsets prob_algebra) = p IN (subsets prob_algebra)``,
-    MP_TAC MEASURABLE_PROB_ALGEBRA_MIRROR
- >> RW_TAC std_ss [IN_MEASURABLE, PREIMAGE_ALT, INTER_UNIV, SPACE_PROB_ALGEBRA]
+    MP_TAC PREMEASURABLE_PROB_ALGEBRA_MIRROR
+ >> RW_TAC std_ss [IN_PREMEASURABLE, PREIMAGE_ALT, INTER_UNIV, SPACE_PROB_ALGEBRA]
  >> REVERSE EQ_TAC >- PROVE_TAC []
  >> POP_ASSUM (MP_TAC o Q.SPEC `p o mirror`)
  >> RW_TAC std_ss [GSYM o_ASSOC, MIRROR_o_MIRROR, I_o_ID]);
@@ -1840,7 +1829,6 @@ val PROB_MEASURE_MIRROR = store_thm
    >> RW_TAC std_ss [REAL_ADD_LDISTRIB, PROB_PREMEASURE_TLS]
    >> REAL_ARITH_TAC);
 
-(*
 val PROB_PRESERVING_PROB_ALGEBRA_MIRROR = store_thm
   ("PROB_PRESERVING_PROB_ALGEBRA_MIRROR",
    ``mirror IN
@@ -1848,12 +1836,11 @@ val PROB_PRESERVING_PROB_ALGEBRA_MIRROR = store_thm
 		     (space prob_algebra, subsets prob_algebra, prob_measure)``,
     ASSUME_TAC SPACE_SUBSETS_PROB_ALGEBRA
  >> RW_TAC std_ss [PROB_PRESERVING, GSPECIFICATION, EVENTS, PROB,
-                   MEASURABLE_PROB_ALGEBRA_MIRROR, PREIMAGE_ALT,
-		   PROB_MEASURE_MEASURE_SPACE, p_space_def, m_space_def]
+                   PREMEASURABLE_PROB_ALGEBRA_MIRROR, PREIMAGE_ALT,
+		   p_space_def, m_space_def]
  >> ASSUME_TAC SPACE_PROB_ALGEBRA
  >> POP_ORW
  >> RW_TAC std_ss [PROB_MEASURE_MIRROR, INTER_UNIV]);
-*)
 
 val PREIMAGE_SHD_SING = store_thm
   ("PREIMAGE_SHD_SING",
