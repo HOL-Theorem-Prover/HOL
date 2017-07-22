@@ -37,6 +37,8 @@ fun PURE_MATCH_MP f x = MP (PART_MATCH (rand o rator) f (concl x)) x;
 (* seem to need a tripartite equivalent of illegitimate REWR cpn_case_def
    (to avoid searching the whole term with REWRITE_CONV) *)
 
+val cpn_case_def = TypeBase.case_def_of ``:ordering``;
+
 val [LESS_REWR, EQUAL_REWR, GREATER_REWR] = CONJUNCTS cpn_case_def;
 
 (* LESS_REWR = |- !v0 v1 v2.
