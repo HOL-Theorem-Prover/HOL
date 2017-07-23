@@ -605,7 +605,7 @@ val INDEP_FUNCTION_BERN_UNIT = store_thm
    ``!x. UNIT x IN indep_function bern``,
    BasicProvers.NORM_TAC std_ss
     [indep_function_def, GSPECIFICATION, FST_o_UNIT, SND_o_UNIT,
-     PREIMAGE_I, IMAGE_I, I_THM, indep_families_def, IN_IMAGE,
+     PREIMAGE_I, IMAGE_II, I_THM, indep_families_def, IN_IMAGE,
      IN_UNIV, PREIMAGE_K, INDEP_EMPTY, PROB_SPACE_BERN, PREIMAGE_ALT]
    >> REWRITE_TAC [SYM (REWRITE_RULE [SPACE_PROB_ALGEBRA] SPACE_BERN)]
    >> MATCH_MP_TAC INDEP_SPACE
@@ -3897,7 +3897,7 @@ val PROB_BERN_BIND_COUNTABLE = store_thm
        >> (MP_TAC o
            Q.SPECL [`c'`, `n`, `count n`, `s`] o
            INST_TYPE [alpha |-> ``:num``])
-          BIJ_INSERT
+          BIJ_INSERT_NOTIN
        >> Cond >- RW_TAC arith_ss [IN_COUNT]
        >> RW_TAC std_ss []
        >> Q.PAT_X_ASSUM `!x. P x` MP_TAC
@@ -4060,7 +4060,7 @@ val PROB_BERN_BIND_EQ = store_thm
    RW_TAC std_ss []
    >> Know `countable (range (FST o f1) UNION range (FST o f2))`
    >- (REPEAT (Q.PAT_X_ASSUM `X IN indep_fn` MP_TAC)
-       >> RW_TAC std_ss [indep_fn_def, COUNTABLE_UNION, GSPECIFICATION])
+       >> RW_TAC std_ss [indep_fn_def, union_countable, GSPECIFICATION])
    >> RW_TAC std_ss [COUNTABLE_ALT, IN_UNION, DISJ_IMP_THM, FORALL_AND_THM]
    >> MP_TAC (Q.SPECL [`p`, `f1`, `g1`, `f`] PROB_BERN_BIND_COUNTABLE)
    >> Cond >- RW_TAC std_ss []

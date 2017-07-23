@@ -689,7 +689,7 @@ val CARD_WITNESS = store_thm
       `?w.
          w IN gset (mult_group (p * q)) /\ ((w MOD p, w MOD q) = (v MOD p, 1))`
    >- (Q.PAT_X_ASSUM `BIJ f s t` MP_TAC
-       >> Simplify [BIJ_ALT]
+       >> Simplify [BIJ_ALT_RES]
        >> DISCH_THEN (MP_TAC o Q_RESQ_SPEC `(v MOD p, 1)` o CONJUNCT2)
        >> Simplify [RES_EXISTS_UNIQUE]
        >> Strip

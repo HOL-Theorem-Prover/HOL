@@ -427,7 +427,7 @@ val CHINESE_REMAINDER_WITNESS = store_thm
      R_TAC [MULT_GROUP_OP]
      ++ Suff `(x * y) MOD q = (x * y) MOD (p * q) MOD q` >> R_TAC []
      ++ R_TAC [MOD_MULT_MOD]],
-    R_TAC [BIJ_ALT]
+    R_TAC [BIJ_ALT_RES]
     ++ DISCH_THEN K_TAC
     ++ S_TAC
     ++ POP_ASSUM MP_TAC

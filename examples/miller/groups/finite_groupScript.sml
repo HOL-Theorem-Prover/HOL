@@ -254,7 +254,7 @@ val ELT_SUBGROUP_ISO = store_thm
   ("ELT_SUBGROUP_ISO",
    ``!G :: finite_group. !g :: gset G.
        gpow G g IN group_iso (add_group (gord G g)) (elt_subgroup G g)``,
-   R_TAC [IN_GROUP_ISO, ELT_SUBGROUP_HOMO, BIJ_ALT, IN_FUNSET,
+   R_TAC [IN_GROUP_ISO, ELT_SUBGROUP_HOMO, BIJ_ALT_RES, IN_FUNSET,
           ELT_SUBGROUP_SET]
    >> S_TAC >- ho_PROVE_TAC []
    >> POP_ASSUM MP_TAC
