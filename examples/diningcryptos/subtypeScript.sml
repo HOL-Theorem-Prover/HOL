@@ -50,10 +50,10 @@ val IN_EQ_UNIV_IMP = store_thm
 
 (* Subtype definitions *)
 
+val _ = add_infix("->", 250, HOLgrammars.RIGHT);
+
 val _ = overload_on
   ("->", ``FUNSET:('a->bool) -> ('b->bool) -> (('a->'b)->bool)``);
-val _ = set_fixity "->" (Infixr 700)
-
 val _ = overload_on
   ("-->", ``DFUNSET : ('a->bool) -> ('a->'b->bool) -> (('a->'b)->bool)``);
 
