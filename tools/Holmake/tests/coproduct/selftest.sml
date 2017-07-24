@@ -12,32 +12,45 @@ fun present n = OS.FileSys.access(n, [OS.FileSys.A_READ])
 
 fun delete n = OS.FileSys.remove n handle SysErr _ => ()
 
-val _ = hm "Cleaning" ["cleanAll"]
-           (fn () => List.all (not o present)
-                              ["foo", "simpleTheory.sig", "simpleTheory.sml"])
+fun testscenario hm =
+  let
+  in
+    hm "Cleaning" ["cleanAll"]
+       (fn () => List.all (not o present)
+                          ["foo", "simpleTheory.sig", "simpleTheory.sml"]);
+    hm "Default make builds foo" [] (fn () => present "foo");
+    hm "Cleaning" ["cleanAll"]
+       (fn () => List.all (not o present)
+                          ["foo", "simpleTheory.sig", "simpleTheory.sml"]);
+    hm "Explicit make foo builds all" ["foo"]
+       (fn () => List.all present ["foo", "simpleTheory.sig",
+                                   "simpleTheory.sml"]);
 
-val _ = hm "Default make builds foo" [] (fn () => present "foo")
+    delete "simpleTheory.sml";
 
-val _ = delete "simpleTheory.sml"
+    hm "rm thy.sml; build; no change" []
+       (fn () => not (present "simpleTheory.sml"));
 
-val _ = hm "rm thy.sml; build; no change" []
-           (fn () => not (present "simpleTheory.sml"))
+    hm "rm thy.sml; build foo; no change" ["foo"]
+       (fn () => not (present "simpleTheory.sml"));
 
-val _ = hm "rm thy.sml; build foo; no change" ["foo"]
-           (fn () => not (present "simpleTheory.sml"))
+    hm "rm thy.sml; build thy.sig; no change" ["simpleTheory.sig"]
+       (fn () => not (present "simpleTheory.sml"));
 
-val _ = hm "rm thy.sml; build thy.sig; no change" ["simpleTheory.sig"]
-           (fn () => not (present "simpleTheory.sml"))
+    hm "rm thy.sml; build thy.sml; builds it" ["simpleTheory.sml"]
+       (fn () => present "simpleTheory.sml");
 
-val _ = hm "rm thy.sml; build thy.sml; builds it" ["simpleTheory.sml"]
-           (fn () => present "simpleTheory.sml")
+    delete "simpleTheory.sml";
+    hm "rm thy.sml; build thy.sig thy.sml; builds it"
+       ["simpleTheory.sig", "simpleTheory.sml"]
+       (fn () => present "simpleTheory.sml");
 
-val _ = delete "simpleTheory.sml"
-val _ = hm "rm thy.sml; build thy.sig thy.sml; builds it"
-           ["simpleTheory.sig", "simpleTheory.sml"]
-           (fn () => present "simpleTheory.sml")
+    delete "simpleTheory.sml";
+    hm "rm thy.sml; build thy.sml thy.sig; builds it"
+       ["simpleTheory.sml", "simpleTheory.sig"]
+       (fn () => present "simpleTheory.sml")
+end
 
-val _ = delete "simpleTheory.sml"
-val _ = hm "rm thy.sml; build thy.sml thy.sig; builds it"
-           ["simpleTheory.sml", "simpleTheory.sig"]
-           (fn () => present "simpleTheory.sml")
+val _ = testscenario hm
+val _ = testscenario
+          (fn s => fn tgts => fn f => hm (s^" (-j1)") ("-j1"::tgts) f)
