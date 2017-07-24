@@ -17,6 +17,11 @@ fun crush extra w s =
   end
 
 fun tprint s = print (crush " ...  " 77 s)
+
+fun tadd s =
+  (for_se 1 (UTF8.size s) (fn _ => print "\008");
+   print s)
+
 fun checkterm pfx s =
   case OS.Process.getEnv "TERM" of
       NONE => s
@@ -33,7 +38,10 @@ val red = checkterm "\027[31m"
 val dim = checkterm "\027[2m"
 
 val really_die = ref true;
-fun die s = (print (boldred s ^ "\n"); (if (!really_die) then OS.Process.exit OS.Process.failure else raise (Fail ("DIE:" ^ s))));
+fun die s =
+  (tadd (boldred s ^ "\n");
+   if (!really_die) then OS.Process.exit OS.Process.failure
+   else raise (Fail ("DIE:" ^ s)))
 fun OK () = print (boldgreen "OK" ^ "\n")
 
 fun unicode_off f = Feedback.trace ("Unicode", 0) f

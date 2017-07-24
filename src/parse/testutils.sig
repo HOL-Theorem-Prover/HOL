@@ -6,6 +6,7 @@ val really_die : bool ref
 val OK : unit -> unit
 val die : string -> 'a
 val tprint : string -> unit
+val tadd : string -> unit
 val tpp : string -> unit
 val tpp_expected : {testf:string->string,input:string,output:string} -> unit
 val standard_tpp_message : string -> string
