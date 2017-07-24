@@ -70,6 +70,7 @@ val poly = ""
 val polyc = NONE : string option
 val polymllibdir = "";
 val DOT_PATH = "";
+val MLTON = SOME "";
 
 val _ = let
   val override = "tools-poly/poly-includes.ML"
@@ -248,7 +249,7 @@ val DOT_PATH = if DOT_PATH = "" then "/usr/bin/dot" else DOT_PATH;
 
 val dynlib_available = false;
 
-val MLTON = which "mlton";
+val MLTON = if MLTON = SOME "" then which "mlton" else MLTON;
 
 print "\n";
 

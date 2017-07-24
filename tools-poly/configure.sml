@@ -372,6 +372,10 @@ fun mlton_compile mltonp mlbfile_opt s tgt =
       NONE => polyc_compile0 s tgt
     | SOME mlbfile_d =>
       let
+        val _ = print ("Using mlton to compile "^mlbfile_d^"\n")
+        val _ = print "  (this can be overridden with 'val MLTON = NONE;'\
+                      \ (without single-quotes)\n\
+                      \   in tools-poly/poly-includes.ML)\n"
         val {dir=mlbdir,file=mlbfile} = OS.Path.splitDirFile mlbfile_d
         val {base=mlbbase, ...} = OS.Path.splitBaseExt mlbfile
         val tgt_f = OS.Path.file tgt
