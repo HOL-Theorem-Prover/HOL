@@ -22,7 +22,7 @@ quietdec := true;
 open HolKernel Parse boolLib bossLib realTheory realLib
      formalizeUseful subtypeTheory extra_numTheory transcTheory
      pred_setTheory arithmeticTheory seqTheory combinTheory pairTheory
-     extra_pred_setTheory extra_boolTheory
+     extra_pred_setTheory extra_boolTheory real_sigmaTheory
      sumTheory limTheory listTheory rich_listTheory;
 
 (* interactive mode
