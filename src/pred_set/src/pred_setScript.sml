@@ -2103,6 +2103,12 @@ val BIJ_INSERT_IMP = store_thm (* from util_prob *)
  >> REPEAT STRIP_TAC (* 3 sub-goals here *)
  >> METIS_TAC [IN_INSERT]);
 
+val BIJ_IMAGE = store_thm (* from miller *)
+  ("BIJ_IMAGE",
+   ``!f s t. BIJ f s t ==> (t = IMAGE f s)``,
+   RW_TAC std_ss [BIJ_DEF, SURJ_DEF, EXTENSION, IN_IMAGE]
+   >> PROVE_TAC []);
+
 (* ===================================================================== *)
 (* Left and right inverses.						 *)
 (* ===================================================================== *)
@@ -3036,6 +3042,11 @@ val FINITE_BIJ = store_thm (* from util_prob *)
  >> Q.PAT_X_ASSUM `f e INSERT u = t` (fn th => RW_TAC std_ss [SYM th])
  >> RW_TAC std_ss [CARD_INSERT]
  >> PROVE_TAC []);
+
+val FINITE_BIJ_CARD = store_thm
+  ("FINITE_BIJ_CARD",
+   ``!f s t. FINITE s /\ BIJ f s t ==> (CARD s = CARD t)``,
+    PROVE_TAC [FINITE_BIJ]);
 
 val FINITE_BIJ_CARD_EQ = Q.store_thm
 ("FINITE_BIJ_CARD_EQ",
@@ -6135,6 +6146,18 @@ val PREIMAGE_COMPL_INTER = store_thm
   >> STRIP_TAC
   >> `(PREIMAGE f (UNIV DIFF t)) INTER sp = (UNIV DIFF PREIMAGE f t) INTER sp` by METIS_TAC []
   >> METIS_TAC [DIFF_INTER,INTER_UNIV]);
+
+val PREIMAGE_IMAGE = store_thm (* from miller *)
+  ("PREIMAGE_IMAGE",
+   ``!f s. s SUBSET PREIMAGE f (IMAGE f s)``,
+   RW_TAC std_ss [SUBSET_DEF, IN_PREIMAGE, IN_IMAGE]
+   >> PROVE_TAC []);
+
+val IMAGE_PREIMAGE = store_thm (* from miller *)
+  ("IMAGE_PREIMAGE",
+   ``!f s. IMAGE f (PREIMAGE f s) SUBSET s``,
+   RW_TAC std_ss [SUBSET_DEF, IN_PREIMAGE, IN_IMAGE]
+   >> PROVE_TAC []);
 
 (* end PREIMAGE lemmas *)
 
