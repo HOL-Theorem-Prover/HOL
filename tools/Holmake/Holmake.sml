@@ -471,6 +471,11 @@ fun is_script s =
       SML (Script _) => true
     | _ => false
 
+fun de_script s =
+  case toFile s of
+      SML (Script s) => SOME s
+    | _ => NONE
+
 fun build_depgraph cdset incinfo target g0 : (t * node) = let
   val pdep = primary_dependent target
   val target_s = fromFile target
@@ -566,7 +571,10 @@ in
                   case starred_dep of
                       NONE => []
                     | SOME s =>
-                        get_implicit_dependencies incinfo (SML(Theory s))
+                        get_implicit_dependencies
+                          incinfo
+                          (SML(Theory (valOf (de_script s))))
+                          handle Option => die "more_deps invariant failure"
 
               val (g1, depnodes) =
                   List.foldl foldthis (g0, [])

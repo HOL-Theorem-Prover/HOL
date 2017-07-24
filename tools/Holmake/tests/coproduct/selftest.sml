@@ -17,8 +17,10 @@ fun testscenario hm =
   in
     hm "Cleaning" ["cleanAll"]
        (fn () => List.all (not o present)
-                          ["foo", "simpleTheory.sig", "simpleTheory.sml"]);
-    hm "Default make builds foo" [] (fn () => present "foo");
+                          ["foo", "bar", "master",
+                           "simpleTheory.sig", "simpleTheory.sml"]);
+    hm "Default make builds foo/bar/master" []
+       (fn () => List.all present ["foo", "bar", "master"]);
     hm "Cleaning" ["cleanAll"]
        (fn () => List.all (not o present)
                           ["foo", "simpleTheory.sig", "simpleTheory.sml"]);
