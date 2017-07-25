@@ -8,10 +8,19 @@ sig
   include Abbrev
 
   val PAT_X_ASSUM		: term -> thm_tactic -> tactic
+  val qpat_x_assum		: term quotation -> thm_tactic -> tactic
+  val Q_GENL			: Q.tmquote list -> thm -> thm
   val fix			: Q.tmquote list -> tactic
   val set			: Q.tmquote list -> tactic
   val take			: Q.tmquote list -> tactic
   val //			: tactic -> tactic
+  val Know			: Q.tmquote -> tactic
+  val Suff			: Q.tmquote -> tactic
+  val K_TAC			: 'a -> tactic
+  val KILL_TAC			: tactic
+  val wrap			: 'a -> 'a list
+  val PRINT_TAC			: string -> tactic
+  val COUNT_TAC			: tactic -> tactic
 
   val add_rules_for_ccs_terms	: unit -> unit
   val remove_rules_for_ccs_terms: unit -> unit

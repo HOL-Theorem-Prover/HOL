@@ -1,0 +1,26 @@
+INCLUDES = $(HOLDIR)/examples/set-theory/hol_sets
+OPTIONS = QUIT_ON_FAILURE
+EXTRA_CLEANS = heap munge.exe
+
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+ifdef POLY
+HOLHEAP = heap
+OBJNAMES = pairTheory sumTheory relationTheory pred_setTheory set_relationTheory \
+	listTheory arithmeticTheory prim_recTheory
+DEPS = $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(OBJNAMES))
+
+all: $(HOLHEAP)
+
+$(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/bin/hol.state0)
+	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES)
+endif
+
+all: $(TARGETS)
+
+#ifeq ($(KERNELID),otknl)
+#all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+#endif
+
+.PHONY: all

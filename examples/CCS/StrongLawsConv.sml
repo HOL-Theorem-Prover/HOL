@@ -3,13 +3,13 @@
  * Copyright 2016-2017  University of Bologna   (Author: Chun Tian)
  *)
 
-structure StrongLawsLib :> StrongLawsLib =
+structure StrongLawsConv :> StrongLawsConv =
 struct
 
 open HolKernel Parse boolLib bossLib;
 open prim_recTheory arithmeticTheory numTheory numLib;
-open stringLib PFset_conv IndDefRules listSyntax;
-open CCSLib CCSTheory CCSSyntax CCSSimps;
+open PFset_conv IndDefRules listSyntax stringLib;
+open CCSLib CCSTheory CCSSyntax CCSConv;
 open StrongEQTheory StrongEQLib StrongLawsTheory;
 
 infixr 0 S_THENC S_ORELSEC;
@@ -25,7 +25,7 @@ fun STRONG_SUM_ASSOC_CONV tm = let
 in
     if is_sum b then
 	let val (b1, b2) = args_sum b;
-	    val thm = SPECL [a, b1, b2] STRONG_SUM_ASSOC_L;
+	    val thm = ISPECL [a, b1, b2] STRONG_SUM_ASSOC_L;
 	    val thm' = STRONG_SUM_ASSOC_CONV (rhs_tm thm)
 	in
 	    S_TRANS thm thm'
@@ -33,10 +33,10 @@ in
     else if is_sum a then
 	let val thm'' = STRONG_SUM_ASSOC_CONV a
 	in
-	    SPEC b (MATCH_MP STRONG_EQUIV_SUBST_SUM_R thm'')
+	    ISPEC b (MATCH_MP STRONG_EQUIV_SUBST_SUM_R thm'')
 	end
     else
-	SPEC tm STRONG_EQUIV_REFL
+	ISPEC tm STRONG_EQUIV_REFL
 end;
 
 (* Conversion for the application of STRONG_SUM_IDENT(_L/R). *)
@@ -46,9 +46,9 @@ fun STRONG_SUM_NIL_CONV tm =
 	val (t1, t2) = args_sum tm
     in
 	if is_nil t1 then
-	    SPEC t2 STRONG_SUM_IDENT_L
+	    ISPEC t2 STRONG_SUM_IDENT_L
 	else if is_nil t2 then
-	    SPEC t1 STRONG_SUM_IDENT_R
+	    ISPEC t1 STRONG_SUM_IDENT_R
 	else
 	    failwith "STRONG_SUM_NIL_CONV"
     end
@@ -70,24 +70,24 @@ in
 		in 
 		    if (null l2) then
 			if (null l1) then
-			    SPEC h STRONG_SUM_IDEMP
+			    ISPEC h STRONG_SUM_IDEMP
 			else
 			    let val y = hd l1
 			    in
-				S_TRANS (SPECL [y, h, h] STRONG_SUM_ASSOC_R)
-					(SPEC y (MP (SPECL [mk_sum (h, h), h] STRONG_EQUIV_SUBST_SUM_R)
-						    (SPEC h STRONG_SUM_IDEMP)))
+				S_TRANS (ISPECL [y, h, h] STRONG_SUM_ASSOC_R)
+					(ISPEC y (MP (ISPECL [mk_sum (h, h), h] STRONG_EQUIV_SUBST_SUM_R)
+						    (ISPEC h STRONG_SUM_IDEMP)))
 			    end
 		    else
 			let val thm1 = 
 				if (null l1) then
 				    S_TRANS (S_SYM (STRONG_SUM_ASSOC_CONV
 							(mk_sum (mk_sum (h, hd l2), h))))
-					    (SPECL [h, hd l2] STRONG_SUM_MID_IDEMP)
+					    (ISPECL [h, hd l2] STRONG_SUM_MID_IDEMP)
 				else
 				    S_TRANS (S_SYM (STRONG_SUM_ASSOC_CONV
 							(mk_sum (mk_sum (mk_sum (hd l1, h), hd l2), h))))
-					    (SPECL [hd l1, h, hd l2] STRONG_LEFT_SUM_MID_IDEMP)
+					    (ISPECL [hd l1, h, hd l2] STRONG_LEFT_SUM_MID_IDEMP)
 			in
 			    S_TRANS thm1 (STRONG_SUM_ASSOC_CONV (snd (args_thm thm1)))
 			end
@@ -95,7 +95,7 @@ in
 	    else
 		let val thm' = STRONG_FIND_IDEMP tm' t
 		in  
-		    SPEC h (MATCH_MP STRONG_EQUIV_SUBST_SUM_R thm')
+		    ISPEC h (MATCH_MP STRONG_EQUIV_SUBST_SUM_R thm')
 		end
 	end
 end;
@@ -124,33 +124,33 @@ fun STRONG_RESTR_ELIM_CONV tm =
       let val (P, L) = args_restr tm
       in
 	  if (is_nil P) then
-	      SPEC L STRONG_RESTR_NIL
+	      ISPEC L STRONG_RESTR_NIL
 	  else if (is_sum P) then
 	      let val (P1, P2) = args_sum P in
-		  SPECL [P1, P2, L] STRONG_RESTR_SUM
+		  ISPECL [P1, P2, L] STRONG_RESTR_SUM
 	      end
 	  else if (is_prefix P) then
 	      let val (u, P') = args_prefix P in
 		  if (is_tau u) then
-		      SPECL [P', L] STRONG_RESTR_PREFIX_TAU
+		      ISPECL [P', L] STRONG_RESTR_PREFIX_TAU
 		  else
 		      let val l = arg_action u;
 			  val thm = Label_IN_CONV l L
 		      in
 			  if (rconcl thm = ``T``) then
-			      SPEC P' (MP (SPECL [l, L] STRONG_RESTR_PR_LAB_NIL)
-					  (DISJ1 (EQT_ELIM thm) ``COMPL ^l IN ^L``))
+			      ISPEC P' (MP (ISPECL [l, L] STRONG_RESTR_PR_LAB_NIL)
+					  (DISJ1 (EQT_ELIM thm) ``COMPL_LAB ^l IN ^L``))
 			  else
-			      let val thmc = REWRITE_RHS_RULE [COMPL_LAB_def] (REFL ``COMPL ^l``);
+			      let val thmc = REWRITE_RHS_RULE [COMPL_LAB_def] (REFL ``COMPL_LAB ^l``);
 				  val thm' = Label_IN_CONV (rconcl thmc) L
 			      in
 				  if (rconcl thm' = ``T``) then
-				      SPEC P' (MP (ONCE_REWRITE_RULE [COMPL_LAB_def]
-							(SPECL [l, L] STRONG_RESTR_PR_LAB_NIL))
+				      ISPEC P' (MP (ONCE_REWRITE_RULE [COMPL_LAB_def]
+							(ISPECL [l, L] STRONG_RESTR_PR_LAB_NIL))
 						  (DISJ2 ``^l IN ^L`` (EQT_ELIM thm')))
 				  else
-				      SPEC P' (MP (ONCE_REWRITE_RULE [COMPL_LAB_def]
-							(SPECL [l, L] STRONG_RESTR_PREFIX_LABEL))
+				      ISPEC P' (MP (ONCE_REWRITE_RULE [COMPL_LAB_def]
+							(ISPECL [l, L] STRONG_RESTR_PREFIX_LABEL))
 						  (CONJ (EQF_ELIM thm) (EQF_ELIM thm')))
 			      end
 		      end
@@ -173,10 +173,10 @@ fun STRONG_RELAB_ELIM_CONV tm =
       let val (P, rf) = args_relab tm
       in
 	  if (is_nil P) then
-	      SPEC rf STRONG_RELAB_NIL
+	      ISPEC rf STRONG_RELAB_NIL
 	  else if (is_sum P) then
 	      let val (P1, P2) = args_sum P in
-		  SPECL [P1, P2, rf] STRONG_RELAB_SUM
+		  ISPECL [P1, P2, rf] STRONG_RELAB_SUM
 	      end
 	  else if (is_prefix P) then
 	      let val (u, P') = args_prefix P
@@ -189,7 +189,7 @@ fun STRONG_RELAB_ELIM_CONV tm =
 		  val thm_act' = RELAB_EVAL_CONV (rconcl thm_act)
 	      in
 		  ONCE_REWRITE_RULE [TRANS thm_act thm_act']
-				    (SPECL [u, P', labl] STRONG_RELAB_PREFIX)
+				    (ISPECL [u, P', labl] STRONG_RELAB_PREFIX)
 	      end
 	  else
 	      failwith "STRONG_RELAB_ELIM_CONV"
@@ -236,8 +236,8 @@ fun STRONG_PAR_NIL_CONV tm =
   if is_par tm then
       let val (P, Q) = args_par tm
       in
-	  if is_nil P then SPEC Q STRONG_PAR_IDENT_L
-	  else if is_nil Q then SPEC P STRONG_PAR_IDENT_R
+	  if is_nil P then ISPEC Q STRONG_PAR_IDENT_L
+	  else if is_nil Q then ISPEC P STRONG_PAR_IDENT_R
 	  else 
 	      failwith "STRONG_PAR_NIL_CONV"
       end
@@ -251,9 +251,9 @@ fun STRONG_NIL_SUM_PAR_CONV tm =
       let val (P, Q) = args_par tm
       in
 	  if is_nil P then
-	      SPEC Q STRONG_PAR_IDENT_L
+	      ISPEC Q STRONG_PAR_IDENT_L
 	  else if is_nil Q then
-	      SPEC P STRONG_PAR_IDENT_R
+	      ISPEC P STRONG_PAR_IDENT_R
 	  else
 	      failwith "STRONG_NIL_SUM_PAR_CONV"
       end
@@ -261,9 +261,9 @@ fun STRONG_NIL_SUM_PAR_CONV tm =
       let val (P, Q) = args_sum tm
       in
 	  if is_nil P then
-	      SPEC Q STRONG_SUM_IDENT_L
+	      ISPEC Q STRONG_SUM_IDENT_L
 	  else if is_nil Q then
-	      SPEC P STRONG_SUM_IDENT_R
+	      ISPEC P STRONG_SUM_IDENT_R
 	  else
 	      failwith "STRONG_NIL_SUM_PAR_CONV"
       end
@@ -276,10 +276,10 @@ fun PREFIX_EXTRACT tm = let
     val (opr, opd) = dest_comb tm;
     val (act, proc) = args_prefix opd
 in 
-    if (opr = ``PREF_ACT``) then
-	SPECL [act, proc] PREF_ACT_def
-    else if (opr = ``PREF_PROC``) then
-	SPECL [act, proc] PREF_PROC_def
+    if opr = mk_const ("PREF_ACT", type_of opr) then
+	ISPECL [act, proc] PREF_ACT_def
+    else if opr = mk_const ("PREF_PROC", type_of opr) then
+	ISPECL [act, proc] PREF_PROC_def
     else
 	failwith "PREFIX_EXTRACT"
 end;
@@ -306,7 +306,8 @@ fun ALL_SYNC_CONV f n1 f' n2 =
 fun STRONG_PAR_SUM_CONV tm = let
     fun comp_fun tm =
       let val thm = REWRITE_RHS_RULE [CCS_SIGMA_def] ((DEPTH_CONV BETA_CONV) tm);
-	  val thm' = REWRITE_RHS_RULE [INV_SUC_EQ, NOT_SUC, SUC_NOT, PREF_ACT_def, PREF_PROC_def]
+	  val thm' = REWRITE_RHS_RULE [INV_SUC_EQ, NOT_SUC, SUC_NOT,
+				       PREF_ACT_def, PREF_PROC_def]
 				      ((DEPTH_CONV BETA_CONV) (rconcl thm))
       in TRANS thm thm' end;
     val (ls1, ls2) = (fn (x, y) => (flat_sum x, flat_sum y)) (args_par tm)
@@ -330,7 +331,7 @@ fun STRONG_PAR_SUM_CONV tm = let
     and thm_sync = ALL_SYNC_CONV f n1 f' n2;
     val thmt =
 	REWRITE_RULE [thmc1, thmc2, thm_sync]
-		     (MATCH_MP (SPECL [f, n1, f', n2] STRONG_PAR_LAW)
+		     (MATCH_MP (ISPECL [f, n1, f', n2] STRONG_EXPANSION_LAW)
 			       (CONJ thmp1 thmp2))
 in
     if is_prefix P1 then
@@ -356,22 +357,22 @@ end;
    particular case of two prefixed agents in parallel. *)
 fun STRONG_PAR_PREFIX_CONV (u, P) (v, Q) =
   if is_tau u andalso is_tau v then
-      SPECL [P, Q] STRONG_PAR_TAU_TAU
+      ISPECL [P, Q] STRONG_PAR_TAU_TAU
   else
       if is_tau u then
-	  SPECL [P, v, Q] STRONG_PAR_TAU_PREF
+	  ISPECL [P, v, Q] STRONG_PAR_TAU_PREF
       else if is_tau v then
-	  SPECL [u, P, Q] STRONG_PAR_PREF_TAU
+	  ISPECL [u, P, Q] STRONG_PAR_PREF_TAU
       else
 	  let val [l1, l2] = map arg_action [u, v];
 	      val thmc = REWRITE_RHS_RULE [COMPL_LAB_def] (REFL ``^l1 = COMPL ^l2``)
 	  in
 	      if (rconcl thmc = ``T``) then (* synchronization between l1 and l2 *)
-		  SPECL [P, Q] (MP (SPECL [l1, l2] STRONG_PAR_PREF_SYNCR)
+		  ISPECL [P, Q] (MP (ISPECL [l1, l2] STRONG_PAR_PREF_SYNCR)
 				   (EQT_ELIM thmc))
 	      else (* no synchronization between l1 and l2 *)
 		  let val thm_lab = TRANS thmc (Label_EQ_CONV (rconcl thmc)) in  
-		      SPECL [P, Q] (MP (SPECL [l1, l2] STRONG_PAR_PREF_NO_SYNCR)
+		      ISPECL [P, Q] (MP (ISPECL [l1, l2] STRONG_PAR_PREF_NO_SYNCR)
 				       (EQF_ELIM thm_lab))
 		  end
 	  end;
@@ -414,7 +415,7 @@ val STRONG_EXP_THM_CONV =
 fun STRONG_REC_UNF_CONV rtm =
   if is_rec rtm then
       let val (X, E) = args_rec rtm in
-	  REWRITE_RULE [CCS_Subst_def] (SPECL [X, E] STRONG_UNFOLDING)
+	  REWRITE_RULE [CCS_Subst_def] (ISPECL [X, E] STRONG_UNFOLDING)
       end
   else
       failwith "STRONG_REC_UNF_CONV: no recursive terms";
@@ -423,7 +424,7 @@ fun STRONG_REC_UNF_CONV rtm =
 fun STRONG_REC_FOLD_CONV rtm =
   if is_rec rtm then
       let val (X, E) = args_rec rtm in
-	  S_SYM (REWRITE_RULE [CCS_Subst_def] (SPECL [X, E] STRONG_UNFOLDING))
+	  S_SYM (REWRITE_RULE [CCS_Subst_def] (ISPECL [X, E] STRONG_UNFOLDING))
       end
   else
       failwith "STRONG_REC_FOLD_CONV: no recursive terms";
@@ -453,3 +454,5 @@ val [STRONG_SUM_IDEMP_TAC,
 val STRONG_EXP_THM_TAC = S_LHS_CONV_TAC STRONG_EXP_THM_CONV;
 
 end (* struct *)
+
+(* last updated: Jun 18, 2017 *)
