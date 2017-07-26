@@ -322,7 +322,8 @@ fun mk_prec_matrix G = let
           insert ((left,true), right) PM_EQUAL;
           insert ((left,true), separator) PM_EQUAL;
           insert ((separator,true), separator) PM_EQUAL;
-          insert ((separator,true), right) PM_EQUAL
+          insert ((separator,true), right) PM_EQUAL;
+          insert ((separator,false), right) PM_EQUAL
         end
       in
         app process rlist
@@ -609,13 +610,17 @@ fun mk_ruledb (G:grammar) = let
           val sep = TOK (first_tok (#separator r))
           val nil_pattern =   [ldelim, rdelim]
           val singleton_pat = [ldelim, TM, rdelim]
+          val singletonsep_pat = [ldelim, TM, sep, rdelim]
           val doubleton_pat = [ldelim, TM, sep, TM, rdelim]
+          val doubletonsep_pat = [ldelim, TM, sep, TM, sep, rdelim]
           val insert = Polyhash.insert table
           val summary = listfix_rule {cons = #cons r, nilstr = #nilstr r}
         in
           insert (nil_pattern, summary);
           insert (singleton_pat, summary);
-          insert (doubleton_pat, summary)
+          insert (singletonsep_pat, summary);
+          insert (doubleton_pat, summary);
+          insert (doubletonsep_pat, summary)
         end
       in
         app process rlist
@@ -953,6 +958,7 @@ fun parse_term (G : grammar) typeparser = let
                 case (List.nth(interior, 1)) of TOK x => x | _ => fail()
             fun list_ok [] = raise Fail "list_ok: shouldn't happen"
               | list_ok [TM] = true
+              | list_ok [TM, TOK s] = s = poss_sep
               | list_ok (TOK _::_) = false
               | list_ok (TM :: TOK s :: rest) = s = poss_sep andalso
                                                 list_ok rest

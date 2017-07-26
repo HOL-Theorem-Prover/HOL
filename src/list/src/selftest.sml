@@ -3,6 +3,24 @@ open ListConv1
 
 open testutils
 
+fun parsetest(s, l) =
+  let
+    fun toN i = numSyntax.mk_numeral (Arbnum.fromInt i)
+    val _ = tprint ("Parsing "^s)
+    val res = Parse.Term [QUOTE s]
+    val l_t = listSyntax.mk_list(map toN l, numSyntax.num)
+  in
+    if aconv res l_t then OK() else die "FAILED!"
+  end
+
+val _ = List.app parsetest [
+      ("[]:num list", []),
+      ("[1]", [1]), ("[1;]", [1]),
+      ("[1;2]", [1,2]), ("[1;2;]", [1,2]),
+      ("[1;2;3]", [1,2,3]), ("[1; 2; 3;]", [1,2,3]), ("[1; 2 ; 3 ; ]", [1,2,3]),
+      ("[ 1 ;   2 ; 3 ; 4 ; ]", [1,2,3,4])
+    ]
+
 datatype 'a exnsum = Some of 'a | Exn of exn
 fun total f x = Some (f x) handle Interrupt => raise Interrupt | e => Exn e
 
