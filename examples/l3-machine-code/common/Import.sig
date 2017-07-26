@@ -128,6 +128,7 @@ sig
 
    val start : string -> unit
    val finish : int -> unit
+   val ieee_underflow_before : bool ref
 
    val Construct : (string * ParseDatatype.constructor list) list -> unit
    val NoBigRecord : string * ParseDatatype.field list -> unit
