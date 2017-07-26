@@ -1,10 +1,29 @@
 (*
 app load ["bossLib", "metisLib", "arithmeticTheory", "pred_setTheory",
-	  "pred_setLib", "stringLib",          "listTheory", "state_transformerTheory", "probabilityTheory", 	  "formalizeUseful", "combinTheory", "pairTheory", "realTheory", 	  "realLib", "extra_boolTheory", "jrhUtils", "extra_pred_setTheory", "extra_listTheory",	  "realSimps", "extra_realTheory", "measureTheory", "numTheory", 	  "simpLib", "seqTheory", "subtypeTheory", "transcTheory", 	  "limTheory", "stringTheory", "rich_listTheory", "stringSimps", 	  "listSimps", "lebesgueTheory", "informationTheory",	  "extra_stringTheory", "extra_stringLib", "leakageTheory", "leakageLib",
+	  "pred_setLib", "stringLib",
+          "listTheory", "state_transformerTheory", "probabilityTheory",
+ 	  "formalizeUseful", "combinTheory", "pairTheory", "realTheory",
+ 	  "realLib", "extra_boolTheory", "jrhUtils", "extra_pred_setTheory", "extra_listTheory",
+	  "realSimps", "extra_realTheory", "measureTheory", "numTheory",
+ 	  "simpLib", "seqTheory", "subtypeTheory", "transcTheory",
+ 	  "limTheory", "stringTheory", "rich_listTheory", "stringSimps",
+ 	  "listSimps", "lebesgueTheory", "informationTheory",
+	  "extra_stringTheory", "extra_stringLib", "leakageTheory", "leakageLib",
 	  "wordsTheory", "wordsLib"];
-*)open HolKernel Parse boolLib bossLib metisLib arithmeticTheory pred_setTheory
-     pred_setLib stringLib     listTheory state_transformerTheory     probabilityTheory formalizeUseful extra_numTheory combinTheory     pairTheory realTheory realLib extra_boolTheory jrhUtils     extra_pred_setTheory realSimps extra_realTheory measureTheory numTheory     simpLib seqTheory subtypeTheory extra_listTheory     transcTheory limTheory stringTheory rich_listTheory stringSimps listSimps     lebesgueTheory informationTheory extra_stringTheory extra_stringLib leakageTheory
+*)
+
+open HolKernel Parse boolLib bossLib metisLib arithmeticTheory pred_setTheory
+     pred_setLib stringLib
+     listTheory state_transformerTheory
+     probabilityTheory formalizeUseful extra_numTheory combinTheory
+     pairTheory realTheory realLib extra_boolTheory jrhUtils
+     extra_pred_setTheory realSimps extra_realTheory measureTheory numTheory
+     simpLib seqTheory subtypeTheory extra_listTheory
+     transcTheory limTheory stringTheory rich_listTheory stringSimps listSimps
+     lebesgueTheory informationTheory extra_stringTheory extra_stringLib leakageTheory
      leakageLib wordsTheory wordsLib;
+
+open real_sigmaTheory;
 
 val _ = new_theory "basic_leakage_examples";
 
@@ -43,10 +62,10 @@ val lem4 = prove
 	    >> (ONCE_REWRITE_TAC [FUN_EQ_THM]
 		++ SPOSE_NOT_THEN STRIP_ASSUME_TAC
 		++ Cases_on `n1 = n2`
-		>> (Q.PAT_ASSUM `!x. (if x = "h2" then m1 else (if x = "h1" then n1 else 0)) =
+		>> (Q.PAT_X_ASSUM `!x. (if x = "h2" then m1 else (if x = "h1" then n1 else 0)) =
 				     (if x = "h2" then m2 else (if x = "h1" then n2 else 0))`
 		    (MP_TAC o Q.SPEC `"h2"`) ++ RW_TAC std_ss [])
-	        ++ Q.PAT_ASSUM `!x. (if x = "h2" then m1 else (if x = "h1" then n1 else 0)) =
+	        ++ Q.PAT_X_ASSUM `!x. (if x = "h2" then m1 else (if x = "h1" then n1 else 0)) =
 				     (if x = "h2" then m2 else (if x = "h1" then n2 else 0))`
 		    (MP_TAC o Q.SPEC `"h1"`) ++ SRW_TAC [] [])
 	    ++ RW_TAC std_ss []);
@@ -60,10 +79,10 @@ val lem5 = prove
 	    >> (ONCE_REWRITE_TAC [FUN_EQ_THM]
 		++ SPOSE_NOT_THEN STRIP_ASSUME_TAC
 		++ Cases_on `n2=0`
-		>> (Q.PAT_ASSUM `!x. (if x = "h2" then m1 else 0) =
+		>> (Q.PAT_X_ASSUM `!x. (if x = "h2" then m1 else 0) =
 				     (if x = "h2" then m2 else (if x = "h1" then n2 else 0))`
 		    (MP_TAC o Q.SPEC `"h2"`) ++ RW_TAC std_ss [])
-	        ++ Q.PAT_ASSUM `!x. (if x = "h2" then m1 else 0) =
+	        ++ Q.PAT_X_ASSUM `!x. (if x = "h2" then m1 else 0) =
 				     (if x = "h2" then m2 else (if x = "h1" then n2 else 0))`
 		    (MP_TAC o Q.SPEC `"h1"`) ++ SRW_TAC [] [])
 	    ++ RW_TAC std_ss []);
@@ -77,9 +96,9 @@ val lem6 = prove
 	    >> (ONCE_REWRITE_TAC [FUN_EQ_THM]
 		++ SPOSE_NOT_THEN STRIP_ASSUME_TAC
 		++ Cases_on `n = 0`
-		>> (Q.PAT_ASSUM `!x. (if x = "h2" then m else (if x = "h1" then n else 0)) = 0`
+		>> (Q.PAT_X_ASSUM `!x. (if x = "h2" then m else (if x = "h1" then n else 0)) = 0`
 		    (MP_TAC o Q.SPEC `"h2"`) ++ RW_TAC std_ss [])
-	        ++ Q.PAT_ASSUM `!x. (if x = "h2" then m else (if x = "h1" then n else 0)) = 0`
+	        ++ Q.PAT_X_ASSUM `!x. (if x = "h2" then m else (if x = "h1" then n else 0)) = 0`
 		    (MP_TAC o Q.SPEC `"h1"`) ++ SRW_TAC [] [])
 	    ++ RW_TAC std_ss []);
 

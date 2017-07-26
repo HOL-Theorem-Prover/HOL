@@ -80,8 +80,8 @@ val mono_convergent_def = Define
 (* ************************************************************************* *)
 (* ************************************************************************* *)
 
-val IN_BOREL_MEASURABLE = store_thm
-  ("IN_BOREL_MEASURABLE",
+val in_borel_measurable = store_thm
+  ("in_borel_measurable",
    ``!f s. f IN borel_measurable s =
 	   sigma_algebra s /\
 	   (!s'. s' IN subsets (sigma UNIV (IMAGE (\a. {x | x <= a}) UNIV)) ==>
@@ -98,7 +98,7 @@ val borel_measurable_const = store_thm
   ("borel_measurable_const",
    ``!s c. sigma_algebra s ==>
 	   (\x. c) IN borel_measurable s``,
-   RW_TAC std_ss [IN_BOREL_MEASURABLE]
+   RW_TAC std_ss [in_borel_measurable]
    >> Cases_on `c IN s'`
    >- (`PREIMAGE (\x. c) s' INTER space s = space s`
 	by RW_TAC std_ss [Once EXTENSION, IN_INTER, IN_PREIMAGE]
@@ -115,7 +115,7 @@ val borel_measurable_indicator = store_thm
   ("borel_measurable_indicator",
    ``!s a. sigma_algebra s /\ a IN subsets s ==>
 	   indicator_fn a IN borel_measurable s``,
-   RW_TAC std_ss [indicator_fn_def, IN_BOREL_MEASURABLE]
+   RW_TAC std_ss [indicator_fn_def, in_borel_measurable]
    >> Cases_on `1 IN s'`
    >- (Cases_on `0 IN s'`
        >- (`PREIMAGE (\x. (if x IN a then 1 else 0)) s' INTER space s = space s`
@@ -144,7 +144,7 @@ val borel_measurable_le_iff = store_thm
 	!f. f IN borel_measurable (m_space m, measurable_sets m) =
 	    (!a. {w | w IN m_space m /\ f w <= a} IN measurable_sets m)``,
    NTAC 3 STRIP_TAC >> EQ_TAC
-   >- (RW_TAC std_ss [IN_BOREL_MEASURABLE, subsets_def, space_def]
+   >- (RW_TAC std_ss [in_borel_measurable, subsets_def, space_def]
        >> POP_ASSUM (MP_TAC o REWRITE_RULE [PREIMAGE_def] o Q.SPEC `{b | b <= a}`)
        >> RW_TAC std_ss [GSPECIFICATION]
        >> `{x | f x <= a} INTER m_space m =
