@@ -9,6 +9,12 @@ struct
 open HolKernel Parse boolLib bossLib;
 open CCSLib CCSTheory CCSSyntax stringTheory;
 
+structure Parse = struct
+  open Parse
+  val (Type, Term) = parse_from_grammars CCSTheory.CCS_grammars
+end
+open Parse
+
 (******************************************************************************)
 (*									      *)
 (*	Conversion for computing the transitions of a pure CCS agent	      *)

@@ -10,129 +10,64 @@ open HolKernel Parse boolLib bossLib;
 open PFset_conv computeLib;
 open CCSLib CCSTheory;
 
+structure Parse = struct
+  open Parse
+  val (Type, Term) = parse_from_grammars CCSTheory.CCS_grammars
+end
+open Parse
+
 (******************************************************************************)
 (*									      *)
 (*	    Auxiliary ML functions for dealing with CCS syntax		      *)
 (*									      *)
 (******************************************************************************)
 
+val name   = prim_mk_const {Name="name",   Thy="CCS"};
+val coname = prim_mk_const {Name="coname", Thy="CCS"};
+val tau    = prim_mk_const {Name="tau",    Thy="CCS"};
+val NIL    = prim_mk_const {Name="nil",    Thy="CCS"};
+val restr  = prim_mk_const {Name="restr",  Thy="CCS"};
+
 (* Define the destructors related to the constructors of the type Label. *)
 fun args_label l = let
     val (opn, s) = dest_comb l
 in
-    if opn = mk_const ("name", type_of opn) orelse
-       opn = mk_const ("coname", type_of opn)
+    if same_const opn name orelse
+       same_const opn coname
     then (opn, s)
     else failwith "term not a CCS label"
 end;
 
-fun arg_name l = let
-    val (opn, s) = dest_comb l
-in
-    if opn = mk_const ("name", type_of opn)
-    then s
-    else failwith "term not a CCS name"
-end;
-
-fun arg_coname l = let
-    val (opn, s) = dest_comb l
-in
-    if opn = mk_const ("coname", type_of opn)
-    then s
-    else failwith "term not a CCS co-name"
-end;
-
-(* Define the destructors related to the constructors of the type Action. *)
-fun arg_action u = let
-    val (opn, l) = dest_comb u
-in 
-    if opn = mk_const ("label", type_of opn)
-    then l
-    else failwith "term not a CCS action(label)"
-end;
-
-(* Define the destructor related to the operator COMPL. *)
-fun arg_compl l = let
-    val (opn, x) = dest_comb l
-in
-    if opn = mk_const ("COMPL_ACT", type_of opn)
-    then x
-    else failwith "term not complement of a CCS label"
-end;
-
-(* Define the destructor related to the type Relabelling. *)
-fun arg_relabelling rf = let
-    val (opn, strl) = dest_comb rf
-in
-    if opn = mk_const ("RELAB", type_of opn)
-    then strl
-    else failwith "term not a CCS relabelling"
-end;
-
-(* Define the destructors related to the constructors of the type CCS. *)
-fun arg_ccs_var tm = let
-    val (opn, X) = dest_comb tm
-in
-    if opn = mk_const ("var", type_of opn)
-    then X
-    else failwith "term not a CCS variable"
-end;
-
-fun args_prefix tm = let
-    val (opn, [u, P]) = strip_comb tm
-in 
-    if opn = mk_const ("prefix", type_of opn)
-    then (u, P)
-    else failwith "term not CCS prefix"
-end;
-
-fun args_sum tm = let
-    val (opn, [P1, P2]) = strip_comb tm
-in
-    if opn = mk_const ("sum", type_of opn)
-    then (P1, P2)
-    else failwith "term not CCS summation"
-end;
-
-fun args_par tm = let
-    val (opn, [P1, P2]) = strip_comb tm
-in
-    if opn = mk_const ("par", type_of opn)
-    then (P1, P2)
-    else failwith "term not CCS parallel"
-end;
+val (_, _, arg_name, _)		= HolKernel.syntax_fns1 "CCS" "name";
+val (_, _, arg_coname, _)	= HolKernel.syntax_fns1 "CCS" "coname";
+val (_, _, arg_action, _)	= HolKernel.syntax_fns1 "CCS" "label";
+val (_, _, arg_compl, _)	= HolKernel.syntax_fns1 "CCS" "COMPL_ACT";
+val (_, _, arg_relabelling, _)	= HolKernel.syntax_fns1 "CCS" "RELAB";
+val (_, _, arg_ccs_var, _)	= HolKernel.syntax_fns1 "CCS" "var";
+val (_, _, args_prefix, _)	= HolKernel.syntax_fns2 "CCS" "prefix";
+val (_, _, args_sum, _)		= HolKernel.syntax_fns2 "CCS" "sum";
+val (_, _, args_par, _)		= HolKernel.syntax_fns2 "CCS" "par";
+val (_, _, args_restr, _)	= HolKernel.syntax_fns2 "CCS" "restr";
 
 fun args_restr tm = let
     val (opn, [lset, P]) = strip_comb tm
 in
-    if opn = mk_const ("restr", type_of opn)
-    then (P, lset)
-    else failwith "term not CCS restriction"
+    if same_const opn restr then
+	(P, lset)
+    else
+	failwith "term not CCS restriction"
 end;
 
-fun args_relab tm = let
-    val (opn, [P, f]) = strip_comb tm
-in
-    if opn = mk_const ("relab", type_of opn)
-    then (P, f)
-    else failwith "term not CCS relabelling"
-end; 
-
-fun args_rec tm = let
-    val (opn, [X, E]) = strip_comb tm
-in
-    if opn = mk_const ("rec", type_of opn)
-    then (X, E)
-    else failwith "term not CCS recursion"
-end;
+val (_, _, args_relab, _)	= HolKernel.syntax_fns2 "CCS" "relab";
+val (_, _, args_rec, _)		= HolKernel.syntax_fns2 "CCS" "rec";
 
 (* Define predicates related to the destructors above. *)
 val is_name		= can arg_name;
 val is_coname		= can arg_coname;
 val is_label		= can arg_action;
-fun is_tau u		= (u = mk_const ("tau", type_of u));
+fun is_tau u		= same_const u tau;
 val is_compl		= can arg_compl;
-fun is_nil tm		= (tm = mk_const ("nil", type_of tm));
+fun is_nil tm		= same_const tm NIL;
 val is_ccs_var		= can arg_ccs_var;
 val is_prefix		= can args_prefix;
 val is_sum		= can args_sum;
@@ -213,13 +148,13 @@ fun Label_EQ_CONV lab_eq = let
 in
     if (op1 = op2) then
 	let val thm = EVAL_CONV ``^s1 = ^s2`` in
-	    if op1 = mk_const ("name", type_of op1) then
+	    if same_const op1 name then
 		TRANS (ISPECL [s1, s2] (CONJUNCT1 Label_11)) thm
 	    else
 		TRANS (ISPECL [s1, s2] (CONJUNCT2 Label_11)) thm
 	end
-    else if op1 = mk_const ("name", type_of op1) andalso
-	    op2 = mk_const ("coname", type_of op2) then (* not (op1 = op2) *)
+    else if same_const op1 name andalso
+	    same_const op2 coname then (* not (op1 = op2) *)
 	ISPECL [s1, s2] Label_not_eq (* (op1 = "coname") & (op2 = "name") *)
     else
 	ISPECL [s1, s2] Label_not_eq'
@@ -246,12 +181,12 @@ in
 	    and thm = Label_EQ_CONV ``^l1 = ^l2``
 	in
 	    if (op1 = op2) then
-		if op1 = mk_const ("name", type_of op1) then
+		if same_const op1 name then
 		    TRANS (ISPECL [``name ^s1``, ``name ^s2``] Action_11) thm
 		else
 		    TRANS (ISPECL [``coname ^s1``, ``coname ^s2``] Action_11) thm
-	    else if op1 = mk_const ("name", type_of op1) andalso
-		    op2 = mk_const ("coname", type_of op2) then (* not (op1 = op2) *)
+	    else if same_const op1 name andalso
+		    same_const op2 coname then (* not (op1 = op2) *)
 		TRANS (ISPECL [``name ^s1``, ``coname ^s2``] Action_11)
 		      (ISPECL [s1, s2] Label_not_eq)
 	    else (* (op1 = "coname") & (op2 = "name") *)
