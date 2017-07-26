@@ -6,6 +6,14 @@ val tprint = testutils.tprint
 val OK = testutils.OK
 val die = testutils.die
 
+val _ = tprint "Preterm free variables 1"
+val fvs = Preterm.ptfvs (Parse.Preterm`\x. x`)
+val _ = if null fvs then OK() else die "FAILED!\n"
+
+val _ = tprint "Preterm free variables 2"
+val fvs = Preterm.ptfvs (Parse.Preterm`\x:bool. x`)
+val _ = if null fvs then OK() else die "FAILED!\n"
+
 fun substtest (M, x, N, result) = let
 in
   tprint("Testing ["^term_to_string M^"/"^term_to_string x^"] ("^
