@@ -1,9 +1,9 @@
 INCLUDES = $(HOLDIR)/examples/set-theory/hol_sets
 OPTIONS = QUIT_ON_FAILURE
-EXTRA_CLEANS = heap munge.exe
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+EXTRA_CLEANS = heap munge.exe selftest.exe $(patsubst %Theory.uo,%Theory.html,$(TARGETS))
 
 ifdef POLY
 HOLHEAP = heap
