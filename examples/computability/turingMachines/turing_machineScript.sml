@@ -307,12 +307,14 @@ EVAL ``(RUN 3
 (* unary addition machine *)
 EVAL ``(RUN 10
    <| state := 0;
-      prog := FEMPTY |++ [((0,Z),(0,R)); ((0,O),(1,Wr0)); ((1,Z),(1,R)); ((1,O),(2,Wr0)) ] ;
+        prog := FEMPTY |++ [((0,Z),(1,Wr1)); ((0,O),(0,R));
+                            ((1,Z),(2,L)); ((1,O),(1,R));
+                            ((2,O),(3,Wr0)) ] ;
       tape_l := [];
       tape_h := Z;
-      tape_r := [Z];
+      tape_r := [];
       time := 1 |>
-      [Z;Z;Z;O;Z;Z])``;
+      [O;O;O;Z;O;O])``;
 
 
 type_of ``(SET_TO_LIST (FDOM (<| state := 0;
@@ -450,7 +452,12 @@ EVAL `` FULL_DECODE_TM 4185``;
 type_of ``recfn f 1``;
 
 
-val UPDATE_TM_NUM_def = Define `updn [s;actn;tmn] =
+val updn_def = Define `(updn [] = 0) ∧ (updn [x] = tri x) ∧
+   (updn [x;y] = if y = 0 then tri x
+                 else if y = 1 then tri (x + 2) + 2
+                 else if y = 2 then tri x
+                 else nB (y = 3) * tri x) ∧
+ (updn [s;actn;tmn] =
   let tape = (nsnd tmn) in
   let tl = (nfst tape) in
   let th = ((nsnd tape) MOD 2) in
@@ -469,7 +476,8 @@ val UPDATE_TM_NUM_def = Define `updn [s;actn;tmn] =
               s *, ((th + (2 * tl)) *, ((2 * ((tr-1) DIV 2)) + 1))
           else
               s *, ((th + (2 * tl)) *, (2 * (tr DIV 2)))
-      else tmn
+      else tmn) ∧
+       (updn (s::actn::tmn::a::b) = updn [s;actn;tmn])
 `;
 
 (* Perform action an move to state *)
@@ -589,10 +597,10 @@ rpt strip_tac  >> fs[MOD_2] >> `~(EVEN n)` by metis_tac[EVEN_AND_ODD] >> rw[] );
 val UPDATE_TM_NUM_act0_lem = Q.store_thm ("UPDATE_TM_NUM_act0_lem",
 `∀ s tmn actn. (actn = 0) ==>  (updn [s;actn;tmn] =
 FULL_ENCODE_TM (UPDATE_ACT_S_TM (NUM_TO_STATE s) (NUM_TO_ACT actn) (FULL_DECODE_TM tmn)))`,
-REWRITE_TAC [UPDATE_TM_NUM_def] >> rpt strip_tac >>
+REWRITE_TAC [updn_def] >> rpt strip_tac >>
  (* actn = 0*)
     simp[NUM_TO_ACT_def] >>
-        rw[FULL_DECODE_TM_def] >> rw[FULL_ENCODE_TM_def]
+        rw[FULL_DECODE_TM_def,FULL_ENCODE_TM_def]
         >- ( rw[UPDATE_ACT_S_TM_def] >> EVAL_TAC)
         >> rw[ENCODE_TM_TAPE_def]
         >- ( rw[UPDATE_ACT_S_TM_def] >> rw[DECODE_TM_TAPE_def]
@@ -601,18 +609,18 @@ REWRITE_TAC [UPDATE_TM_NUM_def] >> rpt strip_tac >>
                 simp[ENCODE_DECODE_thm ] >>
 `ODD (nsnd (nsnd tmn))` by metis_tac[EVEN_OR_ODD] >>
 fs[ODD_DIV_2_lem] )
-        >> `(UPDATE_ACT_S_TM (NUM_TO_STATE s) Wr0
+        >> (`(UPDATE_ACT_S_TM (NUM_TO_STATE s) Wr0
                              <|state := NUM_TO_STATE (nfst tmn);
              tape_l := FST (DECODE_TM_TAPE (nsnd tmn));
              tape_h := FST (SND (DECODE_TM_TAPE (nsnd tmn)));
-             tape_r := SND (SND (DECODE_TM_TAPE (nsnd tmn)))|>).tape_h = Z` by fs[WRITE_0_HEAD_lem]
+             tape_r := SND (SND (DECODE_TM_TAPE (nsnd tmn)))|>).tape_h = Z` by fs[WRITE_0_HEAD_lem] >> rfs[])
 );
 
 
 val UPDATE_TM_NUM_act1_lem = Q.store_thm ("UPDATE_TM_NUM_act1_lem",
 `∀ s tmn actn. (actn = 1) ==>  (updn [s;actn;tmn] =
 FULL_ENCODE_TM (UPDATE_ACT_S_TM (NUM_TO_STATE s) (NUM_TO_ACT actn) (FULL_DECODE_TM tmn)))`,
-REWRITE_TAC [UPDATE_TM_NUM_def] >> rpt strip_tac >>
+REWRITE_TAC [updn_def] >> rpt strip_tac >>
 simp[NUM_TO_ACT_def] >>
      rw[FULL_DECODE_TM_def] >> rw[FULL_ENCODE_TM_def]
      >- ( rw[UPDATE_ACT_S_TM_def] >> EVAL_TAC)
@@ -661,7 +669,7 @@ val UPDATE_TM_NUM_act2_lem = Q.store_thm ("UPDATE_TM_NUM_act2_lem",
     (actn = 2) ==>
     (updn [s;actn;tmn] =
        FULL_ENCODE_TM (UPDATE_ACT_S_TM (NUM_TO_STATE s) (NUM_TO_ACT actn) (FULL_DECODE_TM tmn)))`,
-REWRITE_TAC [UPDATE_TM_NUM_def] >> rpt strip_tac >>
+REWRITE_TAC [updn_def] >> rpt strip_tac >>
 simp[NUM_TO_ACT_def, FULL_DECODE_TM_def, FULL_ENCODE_TM_def, UPDATE_ACT_S_TM_def] >>
 rw[] >- (fs[])
 >- (`~EVEN (nfst (nsnd tmn))` by metis_tac[MOD_2, DECIDE ``0n <> 1``] >>
@@ -700,7 +708,7 @@ val UPDATE_TM_NUM_act3_lem = Q.store_thm ("UPDATE_TM_NUM_act3_lem",
     (actn = 3) ==>
     (updn [s;actn;tmn] =
        FULL_ENCODE_TM (UPDATE_ACT_S_TM (NUM_TO_STATE s) (NUM_TO_ACT actn) (FULL_DECODE_TM tmn)))`,
-REWRITE_TAC [UPDATE_TM_NUM_def] >> rpt strip_tac >>
+REWRITE_TAC [updn_def] >> rpt strip_tac >>
 simp[NUM_TO_ACT_def, FULL_DECODE_TM_def, FULL_ENCODE_TM_def, UPDATE_ACT_S_TM_def] >>
 rw[] >- (fs[SND_SND_DECODE_TM_TAPE])
 >- (simp[ENCODE_TM_TAPE_def, ENCODE_DECODE_thm] >>
@@ -788,10 +796,171 @@ primrec_nfst,primrec_nsnd
 *)
 
 
+val primrec_updn_lem1 = Q.store_thm("primrec_updn_lem1",
+`s ⊗ ((tl − 1) DIV 2) ⊗ (2 * (th + 2 * tr) + 1) =
+s ⊗ (pr_div [((pr2 $-) [tl; 1]); 2]) ⊗ ( (pr2 (+)) [(pr2 $*) [2; ((pr2 (+)) [th;((pr2 $*) [2; tr])])] ;1] )`,
+EVAL_TAC)
+
+
+val MULT2_def = Define `MULT2 x = 2*x`;
+
+
+val pr_up_case1_def = Define`pr_up_case1 x =
+        Cn (pr2 $*,) [ proj 0;Cn (pr2 $*,) [proj 2;Cn (pr1 MULT2) [proj 4]] ] x`
+
+val pr_up_case1_thm = Q.store_thm("pr_up_case1_thm",
+`∀ x. ((proj 0 x) *, (proj 2 x) *, (2 * (proj 4 x)) ) = (Cn (pr2 $*,) [ proj 0;Cn (pr2 $*,) [proj 2;Cn (pr1 MULT2) [proj 4]] ] x)`,
+strip_tac >> rfs[MULT2_def] )
+
+val pr_up_case2_def = Define`pr_up_case2 x =
+        Cn (pr2 $*,) [ proj 0;Cn (pr2 $*,) [proj 2;Cn (succ) [Cn (pr1 MULT2) [proj 4]] ] ] x`
+
+val pr_up_case3_def = Define`pr_up_case3 x =
+        Cn (pr2 $*,) [ proj 0;Cn (pr2 $*,) [Cn (pr1 DIV2) [Cn (pr1 PRE) [proj 2]];
+        Cn (succ) [Cn (pr1 MULT2) [Cn (pr2 (+)) [proj 3; Cn (pr1 MULT2) [proj 4]]]] ] ] x`
+
+val pr_up_case4_def = Define`pr_up_case4 x =
+        Cn (pr2 $*,) [ proj 0;Cn (pr2 $*,) [Cn (pr1 DIV2) [proj 2];
+        Cn (pr1 MULT2) [Cn (pr2 (+)) [proj 3; Cn (pr1 MULT2) [proj 4]]] ] ] x`
+
+val pr_up_case5_def = Define`pr_up_case5 x =
+        Cn (pr2 $*,) [ proj 0;Cn (pr2 $*,) [Cn (pr2 (+)) [proj 3;Cn (pr1 MULT2) [proj 2]];
+        Cn (succ) [Cn (pr1 MULT2) [Cn (pr1 DIV2) [Cn (pr1 PRE) [proj 4]]]] ] ] x`
+
+val pr_up_case6_def = Define`pr_up_case6 x =
+        Cn (pr2 $*,) [ proj 0;Cn (pr2 $*,) [Cn (pr2 (+)) [proj 3;Cn (pr1 MULT2) [proj 2]];
+       Cn (pr1 MULT2) [Cn (pr1 DIV2) [proj 4]]]  ] x`
+
+
+
+
+EVAL ``6 *, 4 *, 22``;
+
+EVAL ``pr_up_case1 [6;1;4;1;11]``;
+
+EVAL ``tri 0``;
+
+LET_THM;
+
+updn_def;
+
+npair_def;
+
+val _ = overload_on ("onef", ``K 1 : num list -> num``)
+
+val _ = overload_on ("twof", ``K 2 : num list -> num``)
+
+val _ = overload_on ("threef", ``K 3 : num list -> num``)
+
+val nB_cond_elim = prove(
+``nB p * x + nB (~p) * y = if p then x else y``,
+Cases_on `p` >> simp[]);
+
+
+
+EVAL `` Cn
+           (pr_cond (Cn pr_eq [proj 1;zerof] ) (pr_up_case1) (
+                 pr_cond (Cn pr_eq [proj 1; onef] ) (pr_up_case2) (
+                     pr_cond (Cn pr_eq [proj 1; twof] ) (
+                         pr_cond (Cn pr_eq [Cn (pr_mod) [proj 2;twof];onef]) (pr_up_case3) (pr_up_case4) ) (
+                         pr_cond (Cn pr_eq [proj 1;threef]) (
+                             pr_cond (Cn pr_eq [Cn (pr_mod) [proj 4;twof];onef]) (pr_up_case5) (pr_up_case6) )
+                                 (Cn (pr2 npair) [proj 2; Cn (pr2 (+)) [proj 3;Cn (pr1 MULT2) [proj 4] ] ] )  ) )  )  )
+           [proj 0;proj 1; Cn (pr1 nfst) [Cn (pr1 nsnd) [proj 2]] ;
+            Cn (pr_mod) [Cn (pr1 nsnd) [ Cn (pr1 nsnd) [proj 2]];twof];
+            Cn (pr1 DIV2) [Cn (pr1 nsnd) [ Cn (pr1 nsnd) [proj 2]]] ] [x;y]`` 
+      |> SIMP_RULE (srw_ss()) [DECIDE ``x <= y /\ y <= x <=> (x:num = y)``, nB_cond_elim]
+
+
+val updn_zero_thm = Q.store_thm ("updn_zero_thm",
+`∀ x. updn [x;0] = updn [x]`,
+strip_tac >> fs[updn_def])
+
+val updn_two_lem_1 = Q.store_thm("updn_two_lem_1",
+`∀ x. ((x <> []) ∧ (LENGTH x <= 2)) ==> ( ∃ h. (x = [h])) ∨  (∃ h t. (x = [h;t]))`,
+rpt strip_tac >>  Cases_on `x` >- fs[] >> Cases_on `t` >- fs[] >> Cases_on `t'` >- fs[] >> rfs[] );
+
+EVAL ``10::[]``;
+
+val updn_three_lem_1 = Q.store_thm("updn_three_lem_1",
+`∀ x.  ¬(LENGTH x <= 2) ==> (∃ a b c. (x = [a;b;c]) ) ∨ (∃ a b c d e. (x = (a::b::c::d::e) ) )`,
+rpt strip_tac >>  Cases_on `x` >- fs[] >> Cases_on `t` >- fs[] >> Cases_on `t'` >- fs[] >> rfs[] >> strip_tac >> Cases_on `t` >- fs[] >> fs[] );
+
 (*
+
+val prim_rec_updn = Q.store_thm ("prim_rec_updn",
+ `updn  = Cn
+   (pr_cond (Cn pr_eq [proj 1;zerof] ) (pr_up_case1) (
+    pr_cond (Cn pr_eq [proj 1; onef] ) (pr_up_case2) (
+    pr_cond (Cn pr_eq [proj 1; twof] ) (
+      pr_cond (Cn pr_eq [Cn (pr_mod) [proj 2;twof];onef]) (pr_up_case3) (pr_up_case4) ) (
+    pr_cond (Cn pr_eq [proj 1;threef]) (
+      pr_cond (Cn pr_eq [Cn (pr_mod) [proj 4;twof];onef]) (pr_up_case5) (pr_up_case6) )
+    (Cn (pr2 npair) [proj 2; Cn (pr2 (+)) [proj 3;Cn (pr1 MULT2) [proj 4] ] ] )  ) )  )  )
+ [proj 0;proj 1; Cn (pr1 nfst) [Cn (pr1 nsnd) [proj 2]] ;
+  Cn (pr_mod) [Cn (pr1 nsnd) [ Cn (pr1 nsnd) [proj 2]];twof];
+  Cn (pr1 DIV2) [Cn (pr1 nsnd) [ Cn (pr1 nsnd) [proj 2]]] ]  `,
+rw[Cn_def,FUN_EQ_THM]
+  >>  fs[pr_up_case1_def,pr_up_case2_def,pr_up_case3_def,pr_up_case4_def,pr_up_case5_def,pr_up_case6_def] >> rw[]
+  >- ( rw[proj_def,updn_def,updn_zero_thm,updn_three_lem_1]
+    >- EVAL_TAC
+    >- rfs[]
+    >-( EVAL_TAC >> `(∃h. x = [h]) ∨ (∃h t. x = [h;t])` by simp[updn_two_lem_1]
+      >- (rw[updn_def])
+      >- (rfs[updn_def,updn_zero_thm] >> `proj 1 x = t` by fs[] >> fs[] )
+           )
+    >- (`(∃ a b c. x = [a;b;c]) ∨ (∃ a b c d e. x = (a::b::c::d::e))` by simp[updn_three_lem_1]
+      >- (`proj 1 x = b` by fs[] >> fs[] >> fs[updn_def,MULT2_def,DIV2_def] )
+      >-  fs[updn_def,MULT2_def,DIV2_def] )
+     )
+  >- ( fs[proj_def,updn_def,updn_zero_thm,pr_up_case2_def] >> rw[]
+    >- (rfs[])
+    >- (rfs[])
+    >- (EVAL_TAC >> `(∃h. x = [h]) ∨ (∃h t. x = [h;t])` by simp[updn_two_lem_1]
+      >-(fs[])
+      >-(rfs[updn_def,updn_zero_thm] >> fs[])
+            )
+    >- (`(∃ a b c. x = [a;b;c]) ∨ (∃ a b c d e. x = (a::b::c::d::e))` by simp[updn_three_lem_1]
+      >-(fs[updn_def,MULT2_def,DIV2_def])
+      >-(fs[updn_def,MULT2_def,DIV2_def])
+            )
+     )
+  >- ( fs[proj_def,updn_def,updn_zero_thm,pr_up_case3_def] >> rw[]
+    >-(rfs[])
+    >-(rfs[])
+    >-(EVAL_TAC >> `(∃h. x = [h]) ∨ (∃h t. x = [h;t])` by simp[updn_two_lem_1]
+      >-(fs[])
+      >-(rfs[updn_def,updn_zero_thm] >> fs[] >> `nfst (nsnd 0) = 0 ` by EVAL_TAC >> fs[])
+      )
+    >-(`(∃ a b c. x = [a;b;c]) ∨ (∃ a b c d e. x = (a::b::c::d::e))` by simp[updn_three_lem_1]
+      >-(fs[updn_def,MULT2_def,DIV2_def])
+      >-(fs[updn_def,MULT2_def,DIV2_def]))
+     )
+  >- (fs[proj_def,updn_def,updn_zero_thm,pr_up_case4_def] >> rw[]
+    >- (rfs[])
+    >- (rfs[])
+    >- (EVAL_TAC >> `(∃h. x = [h]) ∨ (∃h t. x = [h;t])` by simp[updn_two_lem_1]
+      >-(fs[])
+      >- (rfs[updn_def,updn_zero_thm] >> fs[] ) )
+    >- (`(∃ a b c. x = [a;b;c]) ∨ (∃ a b c d e. x = (a::b::c::d::e))` by simp[updn_three_lem_1]
+      >-(fs[updn_def,MULT2_def,DIV2_def])
+      >-(fs[updn_def,MULT2_def,DIV2_def])))
+  >- (fs[proj_def,updn_def,updn_zero_thm,pr_up_case4_def] >> rw[]
+    >- (rfs[])
+    >- (rfs[])
+    >- (EVAL_TAC >> `(∃h. x = [h]) ∨ (∃h t. x = [h;t])` by simp[updn_two_lem_1]
+      >- (fs[updn_def])
+      >- (fs[] >> `nsnd (nsnd 0) = 0` by EVAL_TAC >> fs[]))
+    >- ())
+  >- ()
+  >- ()
+  )
+
+
 val UPDATE_TM_NUM_PRIMREC = store_thm("UPDATE_TM_NUM_PRIMREC",
 `primrec updn 3`,
-SRW_TAC [][UPDATE_TM_NUM_def,primrec_rules] );
+SRW_TAC [][updn_def,primrec_rules] );
+
 *)
 
 (*   TODO   *)
