@@ -3,32 +3,26 @@
  * Copyright 2016-2017  University of Bologna   (Author: Chun Tian)
  *)
 
-structure CCSSimps :> CCSSimps =
+structure CCSConv :> CCSConv =
 struct
 
 open HolKernel Parse boolLib bossLib;
-open IndDefRules;
-open CCSLib CCSTheory CCSSyntax;
+open CCSLib CCSTheory CCSSyntax stringTheory;
+
+structure Parse = struct
+  open Parse
+  val (Type, Term) = parse_from_grammars CCSTheory.CCS_grammars
+end
+open Parse
 
 (******************************************************************************)
-(*                                                                            *)
-(*        Conversion for computing the transitions of a pure CCS agent        *)
-(*                                                                            *)
+(*									      *)
+(*	Conversion for computing the transitions of a pure CCS agent	      *)
+(*									      *)
 (******************************************************************************)
-
-(* Old tactics for proofs about the transition relation TRANS.
-
-   NOT RECOMMENDED. NOTES:
-   - PAR3_TAC has different effects with (MATCH_MP_TAC PAR3),
-   - RESTR_TAC has different effects with (MATCH_MP_TAC RESTR).
- *)
-val [PREFIX_TAC, SUM1_TAC, SUM2_TAC,
-     PAR1_TAC, PAR2_TAC, PAR3_TAC,
-     RESTR_TAC, RELAB_TAC, REC_TAC] = map RULE_TAC (CONJUNCTS TRANS_rules);
 
 (* Source Level Debugging in Poly/ML
 
- trace true;
  PolyML.Compiler.debug := true;
  open PolyML.Debug;
  breakIn "CCS_TRANS_CONV";
@@ -96,7 +90,7 @@ fun CCS_TRANS_CONV tm =
   else if is_prefix tm then
       let val (u, P) = args_prefix tm
       in
-	  SPECL [u, P] TRANS_PREFIX_EQ
+	  ISPECL [u, P] TRANS_PREFIX_EQ
       end
 
 (* case 3: sum *)
@@ -105,7 +99,7 @@ fun CCS_TRANS_CONV tm =
 	  val thm1 = CCS_TRANS_CONV P1
 	  and thm2 = CCS_TRANS_CONV P2
       in
-	  REWRITE_RULE [thm1, thm2] (SPECL [P1, P2] TRANS_SUM_EQ')
+	  REWRITE_RULE [thm1, thm2] (ISPECL [P1, P2] TRANS_SUM_EQ')
       end
 
 (* case 4: restr *)
@@ -124,7 +118,9 @@ fun CCS_TRANS_CONV tm =
 			    extr_acts (tl actl) L
 			else
 			    let	val thmlc = Label_IN_CONV 
-					      (rconcl (REWRITE_CONV [COMPL_LAB_def] ``COMPL ^l``)) L
+					      (rconcl
+						(REWRITE_CONV [COMPL_LAB_def] ``COMPL ^l``))
+					      L
 			    in
 				if (rconcl thmlc = ``T``) then
 				    extr_acts (tl actl) L
@@ -151,7 +147,9 @@ fun CCS_TRANS_CONV tm =
 	  else
 	      let val dl = strip_disj (rconcl thm);
 		  val actl = map (snd o dest_eq o hd o strip_conj o hd o strip_disj) dl;
-		  val actl_not = extr_acts actl L
+		  val actl_not = extr_acts actl L;
+		  val tau = mk_const ("tau", type_of (hd actl));
+		  val U = mk_var ("u", type_of (hd actl));
 	      in
 		  if (null actl_not) then
 		      prove (``!u E. TRANS ^tm u E = F``,
@@ -164,23 +162,23 @@ fun CCS_TRANS_CONV tm =
 	IMP_RES_TAC thm >|
 	(list_apply_tac
 	  (fn a => CHECK_ASSUME_TAC
-		     (REWRITE_RULE [ASSUME ``u = tau``, Action_distinct]
+		     (REWRITE_RULE [ASSUME ``u = ^tau``, Action_distinct]
 				   (ASSUME ``u = ^a``))) actl),
 	(* goal 1.2 *)
 	IMP_RES_TAC thm >|
 	(list_apply_tac
-	  (fn a => ASSUME_TAC (REWRITE_RULE [ASSUME ``u = label l``, Action_11]
+	  (fn a => ASSUME_TAC (REWRITE_RULE [ASSUME ``^U = label l``, Action_11]
 					    (ASSUME ``u = ^a``)) \\
 		   CHECK_ASSUME_TAC
 		     (REWRITE_RULE [ASSUME ``l = ^(arg_action a)``,
 				    Label_IN_CONV (arg_action a) L]
-				   (ASSUME ``~(l:Label IN ^L)``)) \\
+				   (ASSUME ``~(l IN ^L)``)) \\
 		   CHECK_ASSUME_TAC
 		     (REWRITE_RULE [ASSUME ``l = ^(arg_action a)``, COMPL_LAB_def,
 				    Label_IN_CONV
 					(rconcl (REWRITE_CONV [COMPL_LAB_def]
 							      ``COMPL ^(arg_action a)``)) L]
-				   (ASSUME ``~((COMPL l:Label) IN ^L)``))) actl) ],
+				   (ASSUME ``~((COMPL_LAB l) IN ^L)``))) actl) ],
       (* goal 2 *)
       REWRITE_TAC [] ])
 (****************************************************************** Q. E. D. **)
@@ -190,7 +188,8 @@ fun CCS_TRANS_CONV tm =
 				if (null (tl lp)) then
 				    mk_conj (``u = ^u``, ``E = ^(mk_restr (p, L))``)
 				else
-				    mk_disj (mk_conj (``u = ^u``, ``E = ^(mk_restr (p, L))``),
+				    mk_disj (mk_conj (``u = ^u``,
+						      ``E = ^(mk_restr (p, L))``),
 					     build_disj (tl lp) L)
 			    end;
 			  val lp = map (list2_pair o f)
@@ -198,7 +197,9 @@ fun CCS_TRANS_CONV tm =
 						   mem ((snd o dest_eq o hd o strip_conj
 								       o hd o strip_disj) c)
 						       actl_not) dl);
-			  val dsjt = build_disj lp L
+			  val dsjt = build_disj lp L;
+			  val (u, p) = hd lp;
+			  val tau = mk_const ("tau", type_of u);
 		      in
 			  prove (``!u E. TRANS ^tm u E = ^dsjt``,
 (** PROOF BEGIN ***************************************************************)
@@ -208,38 +209,38 @@ fun CCS_TRANS_CONV tm =
       [ (* goal 1.1 *)
 	IMP_RES_TAC thm >|
 	(list_apply_tac
-	  (fn a => CHECK_ASSUME_TAC (REWRITE_RULE [ASSUME ``u = tau``, Action_distinct]
+	  (fn a => CHECK_ASSUME_TAC (REWRITE_RULE [ASSUME ``u = ^tau``, Action_distinct]
 						  (ASSUME ``u = ^a``)) \\
 		   ASM_REWRITE_TAC []) actl),
-	(* goal 1.2 *)        
+	(* goal 1.2 *)	
 	IMP_RES_TAC thm >|
 	(list_apply_tac
 	  (fn a => if is_tau a then
-	  	       ASSUME_TAC (REWRITE_RULE [ASSUME ``u = label l``, Action_11]
+	  	       ASSUME_TAC (REWRITE_RULE [ASSUME ``^U = label l``, Action_11]
 						(ASSUME ``u = ^a``)) \\
 		       ASM_REWRITE_TAC []
 		   else
-		       ASSUME_TAC (REWRITE_RULE [ASSUME ``u = label l``, Action_11]
+		       ASSUME_TAC (REWRITE_RULE [ASSUME ``^U = label l``, Action_11]
 						(ASSUME ``u = ^a``)) \\
 		       CHECK_ASSUME_TAC
-		         (REWRITE_RULE [ASSUME ``l = ^(arg_action a)``,
+			 (REWRITE_RULE [ASSUME ``l = ^(arg_action a)``,
 					Label_IN_CONV (arg_action a) L]
-				       (ASSUME ``~(l:Label IN ^L)``)) \\
+				       (ASSUME ``~(l IN ^L)``)) \\
 		       CHECK_ASSUME_TAC
-		         (REWRITE_RULE
+			 (REWRITE_RULE
 			      [ASSUME ``l = ^(arg_action a)``, COMPL_LAB_def,
 			       Label_IN_CONV
 				 (rconcl (REWRITE_CONV [COMPL_LAB_def] ``COMPL ^(arg_action a)``)) L]
-			      (ASSUME ``~((COMPL l:Label) IN ^L)``)) \\
+			      (ASSUME ``~((COMPL_LAB l) IN ^L)``)) \\
 		       ASM_REWRITE_TAC []) actl) ],
       (* goal 2 *)
       STRIP_TAC >|
       (list_apply_tac
-        (fn (a, P) =>
+	(fn (a, P) =>
 	    REWRITE_TAC [ASSUME ``u = ^a``,
 			 ASSUME ``E = restr ^L ^P``] \\
 	    MATCH_MP_TAC RESTR \\
-            (if is_tau a then
+	    (if is_tau a then
 		 ASM_REWRITE_TAC [thm]
 	     else
 		 EXISTS_TAC (arg_action a) \\
@@ -247,7 +248,7 @@ fun CCS_TRANS_CONV tm =
 		     [thm, COMPL_LAB_def,
 		      Label_IN_CONV (arg_action a) L,
 		      Label_IN_CONV (rconcl (REWRITE_CONV [COMPL_LAB_def]
-						``COMPL ^(arg_action a)``)) L]))
+							  ``COMPL ^(arg_action a)``)) L]))
 	lp) ]) (* prove *)
 (****************************************************************** Q. E. D. **)
 		      end (* let: build_disj *)
@@ -288,14 +289,17 @@ fun CCS_TRANS_CONV tm =
 		    let val (u, p) = hd rlp
 		    in
 			if (null (tl rlp)) then
-			    mk_conj (``u = ^u``, ``E = ^(mk_relab (p, rf))``)
+			    mk_conj (``u = ^u``,
+				     ``E = ^(mk_relab (p, rf))``)
 			else
-			    mk_disj (mk_conj (``u = ^u``, ``E = ^(mk_relab (p, rf))``),
+			    mk_disj (mk_conj (``u = ^u``,
+					      ``E = ^(mk_relab (p, rf))``),
 				     build_disj_relab (tl rlp) rf)
 		    end;
 		  val dl = strip_disj (rconcl thm);
 		  val actl = map (snd o dest_eq o hd o strip_conj) dl
 		  and labl = arg_relabelling rf;
+		  val U = mk_var ("u", type_of (hd actl));
 		  val thml = relab_act actl labl;
 		  val rlp = combine (map rconcl thml, map (snd o list2_pair o f) dl);
 		  val disjt = build_disj_relab rlp rf
@@ -309,20 +313,20 @@ fun CCS_TRANS_CONV tm =
       IMP_RES_TAC TRANS_RELAB \\
       IMP_RES_TAC thm >|
       (list_apply_tac
-        (fn (a, thm_act) =>
-            REWRITE_TAC [REWRITE_RULE [ASSUME ``u' = ^a``, thm_act]
+	(fn (a, thm_act) =>
+	    REWRITE_TAC [REWRITE_RULE [ASSUME ``u' = ^a``, thm_act]
 			    (REWRITE_RULE [SYM (ASSUME ``RELAB ^labl = RELAB labl``)]
-				(ASSUME ``u = relabel (Apply_Relab labl) u'``))] \\
+					  (ASSUME ``^U = relabel (Apply_Relab labl) u'``))] \\
 	    ASM_REWRITE_TAC [])
 	(combine (actl, thml))),
       (* goal 2 (of 2) *)
       STRIP_TAC >|
       (list_apply_tac 
-        (fn ((a, P), thm_act) =>
-            REWRITE_TAC [ONCE_REWRITE_RULE [SYM thm_act]
+	(fn ((a, P), thm_act) =>
+	    REWRITE_TAC [ONCE_REWRITE_RULE [SYM thm_act]
 					   (ASSUME ``u = ^a``),
 			 ASSUME ``E = relab ^P ^rf``] \\
-	    RELAB_TAC \\
+	    MATCH_MP_TAC RELABELING \\
 	    REWRITE_TAC [thm])
 	(combine (rlp, thml))) ])
 (****************************************************************** Q. E. D. **)
@@ -351,9 +355,10 @@ fun CCS_TRANS_CONV tm =
 	    end;
 	  fun build_disj_tau _ [] = ``F``
 	    | build_disj_tau  p syncl = let
-		val (_, p') = hd syncl
+		val (u, p') = hd syncl;
+		val tau = mk_const ("tau", type_of u);
 	    in
-		mk_disj (mk_conj (``u = tau``, ``E = ^(mk_par (p, p'))``),
+		mk_disj (mk_conj (``u = ^tau``, ``E = ^(mk_par (p, p'))``),
 			 build_disj_tau p (tl syncl))
 	    end;
 	  fun act_sync [] _ = []
@@ -370,7 +375,7 @@ fun CCS_TRANS_CONV tm =
 		if (null syncl) then
 		    act_sync (tl dl1) dl2
 		else
-                    act :: (act_sync (tl dl1) dl2)
+		    act :: (act_sync (tl dl1) dl2)
 	    end;
 	  fun build_sync dl1 dl2 =
 	    let val (act, p) = hd dl1;
@@ -416,12 +421,12 @@ fun CCS_TRANS_CONV tm =
       DISCH_TAC \\
       IMP_RES_TAC TRANS_PAR >| (* 3 sub-goals here *)
       [ IMP_RES_TAC thm1,
-        IMP_RES_TAC thm2 >> ASM_REWRITE_TAC [],
-        IMP_RES_TAC thm1 ],
+	IMP_RES_TAC thm2 >> ASM_REWRITE_TAC [],
+	IMP_RES_TAC thm1 ],
       (* goal 2 (of 2) *)
       STRIP_TAC >|
       (list_apply_tac
-        (fn a => ASM_REWRITE_TAC [] >> PAR2_TAC \\
+	(fn a => ASM_REWRITE_TAC [] >> MATCH_MP_TAC PAR2 \\
 		 REWRITE_TAC [GEN_ALL thm2]) actl2) ])
 (****************************************************************** Q. E. D. **)
 	      end
@@ -438,12 +443,12 @@ fun CCS_TRANS_CONV tm =
       DISCH_TAC \\
       IMP_RES_TAC TRANS_PAR >|
       [ IMP_RES_TAC thm1 >> ASM_REWRITE_TAC [],
-        IMP_RES_TAC thm2,
-        IMP_RES_TAC thm2 ],
+	IMP_RES_TAC thm2,
+	IMP_RES_TAC thm2 ],
       (* goal 2 (of 2) *)
       STRIP_TAC >|
       (list_apply_tac
-	(fn a => ASM_REWRITE_TAC [] >> PAR1_TAC \\
+	(fn a => ASM_REWRITE_TAC [] >> MATCH_MP_TAC PAR1 \\
 		 REWRITE_TAC [GEN_ALL thm1]) actl1) ])
 (****************************************************************** Q. E. D. **)
 	      end
@@ -463,18 +468,18 @@ fun CCS_TRANS_CONV tm =
       DISCH_TAC \\
       IMP_RES_TAC TRANS_PAR >| (* 3 sub-goals here *)
       [ IMP_RES_TAC thm1 >> ASM_REWRITE_TAC [],
-        IMP_RES_TAC thm2 >> ASM_REWRITE_TAC [],
-        IMP_RES_TAC thm1 \\
-        IMP_RES_TAC thm2 >|
-        (list_apply_tac
+	IMP_RES_TAC thm2 >> ASM_REWRITE_TAC [],
+	IMP_RES_TAC thm1 \\
+	IMP_RES_TAC thm2 >|
+	(list_apply_tac
 	  (fn a =>
 	      if is_tau (hd actl1) then
 	      	  IMP_RES_TAC Action_distinct_label
-              else
+	      else
 		  let val eq = REWRITE_RULE [REWRITE_RULE [Action_11]
 							  (ASSUME ``label l = ^(hd actl1)``),
 					     COMPL_LAB_def]
-					    (ASSUME ``label (COMPL l:Label) = ^a``)
+					    (ASSUME ``label (COMPL_LAB l) = ^a``)
 		  in
 		      CHECK_ASSUME_TAC
 			  (REWRITE_RULE [eq] (Action_EQ_CONV (concl eq)))
@@ -482,17 +487,17 @@ fun CCS_TRANS_CONV tm =
       (* goal 2 (of 2) *)
       STRIP_TAC >| (* as many as the number of the summands *)
       (list_apply_tac
-	(fn a => ASM_REWRITE_TAC [] >> PAR1_TAC \\
+	(fn a => ASM_REWRITE_TAC [] >> MATCH_MP_TAC PAR1 \\
 		 REWRITE_TAC [GEN_ALL thm1]) actl1) @ 
       (list_apply_tac
-	(fn a => ASM_REWRITE_TAC [] >> PAR2_TAC \\
+	(fn a => ASM_REWRITE_TAC [] >> MATCH_MP_TAC PAR2 \\
 		 REWRITE_TAC [GEN_ALL thm2]) actl2) @
       (list_apply_tac
-        (fn a => ASM_REWRITE_TAC [] \\
+	(fn a => ASM_REWRITE_TAC [] \\
 		 MATCH_MP_TAC PAR3 \\
 		 EXISTS_TAC (arg_action a) \\
 		 REWRITE_TAC [COMPL_LAB_def, GEN_ALL thm1, GEN_ALL thm2])
-        (act_sync dl1 dl2)) ])
+	(act_sync dl1 dl2)) ])
 (****************************************************************** Q. E. D. **)
 		  else
 		      prove (``!u E. TRANS ^tm u E = ^(mk_disj (disj_nosync, disj_sync))``,
@@ -503,22 +508,22 @@ fun CCS_TRANS_CONV tm =
       DISCH_TAC \\
       IMP_RES_TAC TRANS_PAR >| (* 3 sub-goals here *)
       [ IMP_RES_TAC thm1 >> ASM_REWRITE_TAC [],
-        IMP_RES_TAC thm2 >> ASM_REWRITE_TAC [],
-        IMP_RES_TAC thm1 >> IMP_RES_TAC thm2 >> ASM_REWRITE_TAC [] ],
+	IMP_RES_TAC thm2 >> ASM_REWRITE_TAC [],
+	IMP_RES_TAC thm1 >> IMP_RES_TAC thm2 >> ASM_REWRITE_TAC [] ],
       (* goal 2 (of 2) *)
       STRIP_TAC >| (* as many as the number of the summands *)
       (list_apply_tac (* goal 2.1 *)
-	(fn a => ASM_REWRITE_TAC [] >> PAR1_TAC \\
+	(fn a => ASM_REWRITE_TAC [] >> MATCH_MP_TAC PAR1 \\
 		 REWRITE_TAC [GEN_ALL thm1]) actl1) @
       (list_apply_tac (* goal 2.2 *)
-	(fn a => ASM_REWRITE_TAC [] >> PAR2_TAC \\
+	(fn a => ASM_REWRITE_TAC [] >> MATCH_MP_TAC PAR2 \\
 		 REWRITE_TAC [GEN_ALL thm2]) actl2) @
       (list_apply_tac (* goal 2.3 *)
 	(fn a => ASM_REWRITE_TAC [] \\
 		 MATCH_MP_TAC PAR3 \\
 		 EXISTS_TAC (arg_action a) \\
 		 REWRITE_TAC [COMPL_LAB_def, GEN_ALL thm1, GEN_ALL thm2])
-        (act_sync dl1 dl2)) ])
+	(act_sync dl1 dl2)) ])
 (****************************************************************** Q. E. D. **)
 	      end (* val [dl1, dl2] *)
       end (* fun build_disj1 *)
@@ -545,9 +550,9 @@ fun CCS_TRANS tm =
 end; (* local *)
 
 (******************************************************************************)
-(*                                                                            *)
-(*                       Test cases for CCS_TRANS_CONV                        *)
-(*                                                                            *)
+(*									      *)
+(*		       Test cases for CCS_TRANS_CONV			      *)
+(*									      *)
 (******************************************************************************)
 (*
 
@@ -609,26 +614,26 @@ end; (* local *)
 
  7. CCS_TRANS_CONV
 	``rec "VM" (In "coin"..(In "ask-esp"..rec "VM1" (Out "esp-coffee"..var "VM") +
-			        In "ask-am"..rec "VM2" (Out "am-coffee"..var "VM")))``
+				In "ask-am"..rec "VM2" (Out "am-coffee"..var "VM")))``
 
    |- ∀u E.
      rec "VM1"
        (Out "esp-coffee"
-        ..
-        rec "VM"
-          (In "coin"
-           ..
-           (In "ask-esp"..rec "VM1" (Out "esp-coffee"..var "VM") +
-            In "ask-am"..rec "VM2" (Out "am-coffee"..var "VM"))))
+	..
+	rec "VM"
+	  (In "coin"
+	   ..
+	   (In "ask-esp"..rec "VM1" (Out "esp-coffee"..var "VM") +
+	    In "ask-am"..rec "VM2" (Out "am-coffee"..var "VM"))))
      --u->
      E ⇔
      (u = Out "esp-coffee") ∧
      (E =
       rec "VM"
-        (In "coin"
-         ..
-         (In "ask-esp"..rec "VM1" (Out "esp-coffee"..var "VM") +
-          In "ask-am"..rec "VM2" (Out "am-coffee"..var "VM"))))
+	(In "coin"
+	 ..
+	 (In "ask-esp"..rec "VM1" (Out "esp-coffee"..var "VM") +
+	  In "ask-am"..rec "VM2" (Out "am-coffee"..var "VM"))))
  *)
 
 end (* struct *)
