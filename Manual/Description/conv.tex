@@ -1,5 +1,5 @@
 \chapter{Conversions}
-\label{avra_conv}
+\label{avra-conv}
 
 A {\it conversion\/} in \HOL\ is a rule that maps a term to a theorem
 expressing the equality of that term to some other term.  An example is the
@@ -51,7 +51,7 @@ application-specific\index{conversions!application specific}
 conversions to be found in some of the libraries.  (Of those provided,
 some are derived and some, like \ml{BETA\_CONV} are taken as
 axiomatic\footnote{A list of the axiomatic rules was supplied in
-  Section~\ref{avra_standard}.}.)  In addition, \HOL\ provides a
+  Section~\ref{rules}.}.)  In addition, \HOL\ provides a
 collection of \ML\ functions enabling users to define new conversions
 (as well as new rules and tactics) as functions of existing ones.
 Some of these are described in Sections~\ref{avra1} and~\ref{avra2}.
@@ -64,7 +64,7 @@ Conversions such as \ml{BETA\_CONV}\index{beta-conversion, in HOL
   theorem}\index{theorems, in HOL logic@theorems, in \HOL\ logic!rules
   inexpressible as}\index{conversions!as families of equations}
 represent infinite families of equations\footnote{This was also
-  mentioned in Section~\ref{avra_standard}.}. They are particularly
+  mentioned in Section~\ref{rules}.}. They are particularly
 useful in cases in which it is impossible to state, within the logic,
 a single axiom or theorem instantiable to every equation in a
 family\index{families of inferences, in HOL logic@families of
@@ -132,7 +132,7 @@ Term either not a numeral or zero
 
 Another application of conversions, related to the first, is in the
 implementation of the existing rewriting tools, \ml{REWRITE\_CONV}
-(Section~\ref{avra3}), \ml{REWRITE\_RULE} (Section~\ref{avra_rewrite})
+(Section~\ref{avra3}), \ml{REWRITE\_RULE} (Section~\ref{sec:rewriting})
 and \ml{REWRITE\_TAC} (Chapter~\ref{tactics-and-tacticals}), which are
 central to theorem proving in \HOL.  This use is explained in
 Section~\ref{avra3}, both as an example and because users may have
@@ -429,7 +429,7 @@ converts the conclusion of a goal using $c$. \ml{CONV\_RULE} is defined by:
 \end{verbatim}\end{hol}
 
 \noindent (The validation of \ml{CONV\_TAC} also
-uses \ml{EQ\_MP}\footnote{For \ml{EQ\_MP}, see ~\ref{avra_eq_mp}.}.)
+uses \ml{EQ\_MP}\footnote{For \ml{EQ\_MP}, see ~\ref{sec:eqmp}.}.)
 For example, the built-in rule \ml{BETA\_RULE} reduces some
 of the $\beta$-redex subterms of a term.
 
