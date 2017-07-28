@@ -672,26 +672,6 @@ val BIJ_TRANS = store_thm
    >> Q.EXISTS_TAC `g o f`
    >> PROVE_TAC [BIJ_COMPOSE]);
 
-val SCHROEDER_BERNSTEIN = store_thm
-  ("SCHROEDER_BERNSTEIN",
-   ``!s t. (?f. INJ f s t) /\ (?g. INJ g t s) ==> (?h. BIJ h s t)``,
-   Strip
-   >> MATCH_MP_TAC (INST_TYPE [``:'c`` |-> ``:'a``] BIJ_TRANS)
-   >> Q.EXISTS_TAC `IMAGE g t`
-   >> CONJ_TAC >|
-   [MATCH_MP_TAC SCHROEDER_BERNSTEIN_AUTO
-    >> CONJ_TAC
-    >- (POP_ASSUM MP_TAC
-        >> RW_TAC std_ss [INJ_DEF, SUBSET_DEF, IN_IMAGE]
-        >> PROVE_TAC [])
-    >> Q.EXISTS_TAC `g o f`
-    >> rpt (POP_ASSUM MP_TAC)
-    >> RW_TAC std_ss [INJ_DEF, SUBSET_DEF, IN_IMAGE, o_DEF]
-    >> PROVE_TAC [],
-    MATCH_MP_TAC BIJ_SYM_IMP
-    >> Q.EXISTS_TAC `g`
-    >> PROVE_TAC [INJ_IMAGE_BIJ]]);
-
 val SURJ_IMP_INJ = store_thm
   ("SURJ_IMP_INJ",
    ``!s t. (?f. SURJ f s t) ==> (?g. INJ g t s)``,
@@ -701,14 +681,6 @@ val SURJ_IMP_INJ = store_thm
    >> Q.EXISTS_TAC `\y. @x. x IN s /\ (f x = y)`
    >> POP_ASSUM MP_TAC
    >> RW_TAC std_ss [boolTheory.EXISTS_DEF]);
-
-val BIJ_INJ_SURJ = store_thm
-  ("BIJ_INJ_SURJ",
-   ``!s t. (?f. INJ f s t) /\ (?g. SURJ g s t) ==> (?h. BIJ h s t)``,
-   Strip
-   >> MATCH_MP_TAC SCHROEDER_BERNSTEIN
-   >> CONJ_TAC >- PROVE_TAC []
-   >> PROVE_TAC [SURJ_IMP_INJ]);
 
 val ENUMERATE = store_thm
   ("ENUMERATE",
