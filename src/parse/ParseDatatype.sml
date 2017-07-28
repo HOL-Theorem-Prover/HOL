@@ -24,19 +24,7 @@ val ERRloc = Feedback.mk_HOL_ERRloc "ParseDatatype";
 
 open Portable Lib;
 
-datatype pretype
-   = dVartype of string
-   | dTyop of {Tyop : string, Thy : string option, Args : pretype list}
-   | dAQ of Type.hol_type
-
-type field = string * pretype
-type constructor = string * pretype list
-
-datatype datatypeForm
-   = Constructors of constructor list
-   | Record of field list
-
-type AST = string * datatypeForm
+open ParseDatatype_dtype
 
 fun pretypeToType pty =
   case pty of
@@ -238,33 +226,11 @@ fun optscan tok qb =
         (tok',_) => if tok = tok' then (qbuf.advance qb; qb)
                     else qb
 
-fun parse_form G qb =
-    case pdtok_of qb of
-      (_,base_tokens.BT_Ident "<|",_) => Record (parse_record_defn G qb)
-    | _ => Constructors (sepby1 "|" (parse_phrase G) qb)
-
-fun parse_G G qb = let
-  val tyname = ident qb
-  val () = scan "=" qb
-in
-  (tyname, parse_form G qb)
-end
-
 fun fragtoString (QUOTE s) = s
   | fragtoString (ANTIQUOTE _) = " ^... "
 
 fun quotetoString [] = ""
   | quotetoString (x::xs) = fragtoString x ^ quotetoString xs
-
-fun parse0 G q = let
-  val strm = qbuf.new_buffer q
-  val result = sepby1 ";" (parse_G G) strm
-in
-  case qbuf.current strm of
-    (base_tokens.BT_EOI,_) => result
-  | (_,locn) => raise ERRloc "parse" locn
-                             "Parse failed"
-end
 
 fun parse_harg G qb =
   case qbuf.current qb of
@@ -303,11 +269,11 @@ in
   (constr_id, parse_hargs G qb)
 end
 
-fun parse_hform G qb =
+fun parse_form G phrase_p qb =
     case pdtok_of qb of
       (_,base_tokens.BT_Ident "<|",_) => Record (parse_record_defn G qb)
     | _ => Constructors (qb |> optscan (base_tokens.BT_Ident "|")
-                            |> sepby1 "|" (parse_hphrase G))
+                            |> sepby1 "|" (phrase_p G))
 
 fun extract_tynames q =
   let
@@ -348,36 +314,46 @@ fun extract_tynames q =
     next_decl []
   end
 
-fun parse_HG G qb = let
+fun parse_g G phrase_p qb = let
   val tyname = ident qb
   val () = scan "=" qb
 in
-  (tyname, parse_hform G qb)
+  (tyname, parse_form G phrase_p qb)
 end
 
 fun hide_tynames q G0 =
   List.foldl (uncurry type_grammar.hide_tyop) G0 (extract_tynames q)
 
-fun parse G0 q =
+fun termsepby1 s p qb =
   let
-    val G = hide_tynames q G0
+    val res1 = p qb
+    fun recurse acc =
+      case qbuf.current qb of
+          (base_tokens.BT_Ident t, locn) =>
+            if t = s then (qbuf.advance qb; eof_or_continue acc)
+            else List.rev acc
+        | _ => List.rev acc
+    and eof_or_continue acc =
+      case qbuf.current qb of
+          (base_tokens.BT_EOI, _) => List.rev acc
+        | _ => recurse (p qb :: acc)
   in
-    parse0 G0 q
+    recurse [res1]
   end
 
-fun hparse G0 q = let
+fun core_parse G0 phrase_p q = let
   val G = hide_tynames q G0
-  val strm = qbuf.new_buffer q
-  val result = sepby1 ";" (parse_HG G) strm
-  val qb = optscan (base_tokens.BT_Ident ";") strm
+  val qb = qbuf.new_buffer q
+  val result = termsepby1 ";" (parse_g G phrase_p) qb
 in
   case qbuf.current qb of
       (base_tokens.BT_EOI,_) => result
-    | (_,locn) => raise ERRloc "parse" locn
-                        "Parse failed"
+    | (t,locn) => raise ERRloc "parse" locn
+                        ("Parse failed looking at "^base_tokens.toString t)
 end
 
-
+fun parse G0 = core_parse G0 parse_phrase
+fun hparse G0 = core_parse G0 parse_hphrase
 
 
 end

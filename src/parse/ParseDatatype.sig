@@ -1,21 +1,11 @@
 signature ParseDatatype =
 sig
 
- datatype pretype =
-   dVartype of string
- | dTyop of {Tyop : string, Thy : string option, Args : pretype list}
- | dAQ of Type.hol_type
 
+ datatype pretype = datatype ParseDatatype_dtype.pretype
+ datatype datatypeForm = datatype ParseDatatype_dtype.datatypeForm
+ type AST = ParseDatatype_dtype.AST
  val pretypeToType : pretype -> Type.hol_type
-
- type field       = string * pretype
- type constructor = string * pretype list
-
- datatype datatypeForm =
-   Constructors of constructor list
- | Record of field list
-
- type AST = string * datatypeForm
 
  val parse : type_grammar.grammar -> Type.hol_type Portable.quotation ->
              AST list

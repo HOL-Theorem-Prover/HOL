@@ -32,6 +32,23 @@ val _ = Hol_datatype `type5 = foo of num | bar of 'a`;
 
 val _ = map primrec_test [``:type1``, ``:type4``, ``:'a type5``]
 
+fun parse_eq (nm, fs, q1, q2) =
+  let
+    val _ = tprint nm
+  in
+    if List.all (fn f => f q1 = f q2) fs then OK() else die "FAILED"
+  end
+
+val pf = ParseDatatype.hparse (type_grammar())
+val oldpf = ParseDatatype.parse (type_grammar())
+
+val _ = List.app parse_eq [
+      ("parse 1 (leading pipe)",[pf,oldpf], `C = | foo | bar`, `C = foo | bar`),
+      ("parse 2 (trailing semi 1)", [pf,oldpf], `C = foo ;`, `C = foo`),
+      ("parse 3 (trailing semi 2)", [pf,oldpf],
+       `C = foo | bar ; D = baz | qux ;`, `C = foo | bar ; D = baz | qux`)
+    ]
+
 
 val _ = Hol_datatype `foo = NIL | CONS of 'a => foo`;
 val _ = Hol_datatype `list = NIL | :: of 'a => list`;
