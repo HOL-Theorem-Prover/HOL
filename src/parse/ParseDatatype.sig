@@ -5,6 +5,8 @@ sig
  datatype pretype = datatype ParseDatatype_dtype.pretype
  datatype datatypeForm = datatype ParseDatatype_dtype.datatypeForm
  type AST = ParseDatatype_dtype.AST
+ type field = ParseDatatype_dtype.field
+ type constructor = ParseDatatype_dtype.constructor
  val pretypeToType : pretype -> Type.hol_type
 
  val parse : type_grammar.grammar -> Type.hol_type Portable.quotation ->
