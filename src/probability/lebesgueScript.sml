@@ -126,7 +126,7 @@ val pos_simple_fn_integral_present = store_thm
 		(BIGUNION (IMAGE c k) = m_space m))``,
    RW_TAC std_ss []
    >> `?p n. BIJ p (count n) (s CROSS s')`
-	by FULL_SIMP_TAC std_ss [GSYM FINITE_BIJ_COUNT, pos_simple_fn_def, FINITE_CROSS]
+	by FULL_SIMP_TAC std_ss [GSYM FINITE_BIJ_COUNT_EQ, pos_simple_fn_def, FINITE_CROSS]
    >> `?p'. BIJ p' (s CROSS s') (count n) /\
 	    (!x. x IN (count n) ==> ((p' o p) x = x)) /\
 	    (!x. x IN (s CROSS s') ==> ((p o p') x = x))`
@@ -621,7 +621,7 @@ val pos_simple_fn_max = store_thm
 	?s'' a'' x''. pos_simple_fn m (\x. max (f x) (g x)) s'' a'' x''``,
   RW_TAC std_ss []
   >> `?p n. BIJ p (count n) (s CROSS s')`
-      by FULL_SIMP_TAC std_ss [GSYM FINITE_BIJ_COUNT, pos_simple_fn_def, FINITE_CROSS]
+      by FULL_SIMP_TAC std_ss [GSYM FINITE_BIJ_COUNT_EQ, pos_simple_fn_def, FINITE_CROSS]
   >> `?p'. BIJ p' (s CROSS s') (count n) /\ (!x. x IN (count n) ==> ((p' o p) x = x)) /\
       (!x. x IN (s CROSS s') ==> ((p o p') x = x))` by (MATCH_MP_TAC BIJ_INV >> RW_TAC std_ss [])
   >> Q.EXISTS_TAC `IMAGE p' (s CROSS s')`
@@ -3136,7 +3136,7 @@ val finite_space_integral_reduce = store_thm
               ==> (integral m f = finite_space_integral m f)``,
   REPEAT STRIP_TAC
   >> `?c1 n. BIJ c1 (count n) (IMAGE f (m_space m))`
-       by RW_TAC std_ss [GSYM FINITE_BIJ_COUNT, IMAGE_FINITE]
+       by RW_TAC std_ss [GSYM FINITE_BIJ_COUNT_EQ, IMAGE_FINITE]
   >> `?c. !i. (i IN count n ==> (c1 i = Normal (c i)))`
        by (Q.EXISTS_TAC `(\i. @r. c1 i = Normal r)`
 	   >> RW_TAC std_ss []
@@ -3286,7 +3286,7 @@ val finite_support_integral_reduce = store_thm
               ==> (integral m f = finite_space_integral m f)``,
   REPEAT STRIP_TAC
   >> `?c1 n. BIJ c1 (count n) (IMAGE f (m_space m))`
-       by RW_TAC std_ss [GSYM FINITE_BIJ_COUNT]
+       by RW_TAC std_ss [GSYM FINITE_BIJ_COUNT_EQ]
   >> `?c. !i. (i IN count n ==> (c1 i = Normal (c i)))`
        by (Q.EXISTS_TAC `(\i. @r. c1 i = Normal r)`
 	   >> RW_TAC std_ss []
@@ -3439,7 +3439,7 @@ val finite_space_POW_integral_reduce = store_thm
         by (RW_TAC std_ss [IN_MEASURABLE_BOREL,IN_FUNSET,IN_UNIV,space_def,subsets_def]
 	    >- FULL_SIMP_TAC std_ss [measure_space_def]
 	    >> METIS_TAC [INTER_SUBSET,IN_POW])
-  >> `?c n. BIJ c (count n) (m_space m)` by RW_TAC std_ss [GSYM FINITE_BIJ_COUNT]
+  >> `?c n. BIJ c (count n) (m_space m)` by RW_TAC std_ss [GSYM FINITE_BIJ_COUNT_EQ]
   >> `FINITE (count n)` by RW_TAC std_ss [FINITE_COUNT]
   >> `?x. !i. (i IN count n ==> (f (c i) = Normal (x i)))`
        by (Q.EXISTS_TAC `(\i. @r. f (c i) = Normal r)`

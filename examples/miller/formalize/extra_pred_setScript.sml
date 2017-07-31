@@ -1025,25 +1025,7 @@ val COUNTABLE_BIGUNION = store_thm
   ("COUNTABLE_BIGUNION",
    ``!c.
        countable c /\ (!s. s IN c ==> countable s) ==> countable (BIGUNION c)``,
-   RW_TAC std_ss [COUNTABLE_ALT]
-   >> POP_ASSUM
-      (MP_TAC o CONV_RULE (DEPTH_CONV RIGHT_IMP_EXISTS_CONV THENC SKOLEM_CONV))
-   >> MP_TAC NUM_2D_BIJ_INV
-   >> RW_TAC std_ss []
-   >> Q.EXISTS_TAC `(\ (a : num, b : num). f'' (f a) b) o f'`
-   >> RW_TAC std_ss [IN_BIGUNION]
-   >> Q.PAT_X_ASSUM `!x. P x ==> ?y. Q x y` (MP_TAC o Q.SPEC `s`)
-   >> RW_TAC std_ss []
-   >> Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `f (n : num)`)
-   >> RW_TAC std_ss []
-   >> POP_ASSUM (MP_TAC o Q.SPEC `x`)
-   >> RW_TAC std_ss []
-   >> Q.PAT_X_ASSUM `BIJ f' X Y` MP_TAC
-   >> RW_TAC std_ss [BIJ_DEF, SURJ_DEF, IN_UNIV, IN_CROSS]
-   >> POP_ASSUM (MP_TAC o Q.SPEC `(n, n')`)
-   >> RW_TAC std_ss []
-   >> Q.EXISTS_TAC `y`
-   >> RW_TAC std_ss [o_THM]);
+   PROVE_TAC [bigunion_countable]);
 
 val COUNTABLE_BOOL_LIST = store_thm
   ("COUNTABLE_BOOL_LIST",
@@ -1262,26 +1244,6 @@ val BIGUNION_IMAGE_INSIDE = store_thm
        BIGUNION (IMAGE (BIGUNION o IMAGE f o g) s)``,
    SET_EQ_TAC
    >> RW_TAC std_ss [IN_BIGUNION_IMAGE, o_THM]
-   >> PROVE_TAC []);
-
-(* NOTE: there's already a FINITE_BIJ_COUNT in pred_setTheory with different variable names,
-   but probScript here is very sensible to variable names in FINITE_BIJ_COUNT *)
-val FINITE_BIJ_COUNT = store_thm
-  ("FINITE_BIJ_COUNT",
-   ``!s. FINITE s = ?c n. BIJ c (count n) s``,
-   RW_TAC std_ss []
-   >> REVERSE EQ_TAC >- PROVE_TAC [FINITE_COUNT, FINITE_BIJ]
-   >> Q.SPEC_TAC (`s`, `s`)
-   >> HO_MATCH_MP_TAC FINITE_INDUCT
-   >> RW_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, NOT_IN_EMPTY]
-   >- (Q.EXISTS_TAC `c`
-       >> Q.EXISTS_TAC `0`
-       >> RW_TAC std_ss [COUNT_ZERO, NOT_IN_EMPTY])
-   >> Q.EXISTS_TAC `\m. if m = n then e else c m`
-   >> Q.EXISTS_TAC `SUC n`
-   >> Know `!x. x IN count n ==> ~(x = n)`
-   >- RW_TAC arith_ss [IN_COUNT]
-   >> RW_TAC std_ss [COUNT_SUC, IN_INSERT]
    >> PROVE_TAC []);
 
 val GCOMPL = store_thm

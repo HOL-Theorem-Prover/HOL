@@ -3631,31 +3631,27 @@ val FINITE_INDUCT' =
 val NOT_IN_COUNT = Q.prove (`~ (m IN count m)`,
   REWRITE_TAC [IN_COUNT, LESS_REFL]) ;
 
+val FINITE_BIJ_COUNT_EQ = store_thm
+  ("FINITE_BIJ_COUNT_EQ",
+   ``!s. FINITE s = ?c n. BIJ c (count n) s``,
+   RW_TAC std_ss []
+   >> REVERSE EQ_TAC >- PROVE_TAC [FINITE_COUNT, FINITE_BIJ]
+   >> Q.SPEC_TAC (`s`, `s`)
+   >> HO_MATCH_MP_TAC FINITE_INDUCT
+   >> RW_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, NOT_IN_EMPTY]
+   >- (Q.EXISTS_TAC `c`
+       >> Q.EXISTS_TAC `0`
+       >> RW_TAC std_ss [COUNT_ZERO, NOT_IN_EMPTY])
+   >> Q.EXISTS_TAC `\m. if m = n then e else c m`
+   >> Q.EXISTS_TAC `SUC n`
+   >> Know `!x. x IN count n ==> ~(x = n)`
+   >- RW_TAC arith_ss [IN_COUNT]
+   >> RW_TAC std_ss [COUNT_SUC, IN_INSERT]
+   >> PROVE_TAC []);
+
 val FINITE_BIJ_COUNT = Q.store_thm ("FINITE_BIJ_COUNT",
   `!s. FINITE s ==> ?f b. BIJ f (count b) s`,
-  GEN_TAC THEN HO_MATCH_MP_TAC FINITE_INDUCT' THEN
-  REPEAT STRIP_TAC THEN1
-    (REWRITE_TAC [BIJ_EMPTY] THEN Q.EXISTS_TAC `0` THEN
-      REWRITE_TAC [COUNT_ZERO]) THEN
-  Q.EXISTS_TAC `\n. if n = b then e else f n` THEN
-  Q.EXISTS_TAC `SUC b` THEN
-  REWRITE_TAC [IN_INSERT, COUNT_SUC, BIJ_DEF, INJ_DEF, SURJ_DEF] THEN
-  BETA_TAC THEN
-  RULE_L_ASSUM_TAC (CONJUNCTS o REWRITE_RULE [BIJ_DEF, INJ_DEF, SURJ_DEF]) THEN
-  REPEAT CONJ_TAC THEN REPEAT GEN_TAC THEN
-  REPEAT COND_CASES_TAC THEN REPEAT BasicProvers.VAR_EQ_TAC THEN
-  REWRITE_TAC [NOT_IN_COUNT] THEN REPEAT STRIP_TAC THEN
-  REPEAT BasicProvers.VAR_EQ_TAC THEN
-  TRY (FIRST_X_ASSUM (fn tha => FIRST_X_ASSUM (fn thb =>
-    let val th = MATCH_MP thb tha in
-      REWRITE_TAC [th] THEN RULE_ASSUM_TAC (REWRITE_RULE [th]) end)) THEN
-      FIRST_ASSUM CONTR_TAC)
-  THENL [ RES_TAC,
-    Q.EXISTS_TAC `b` THEN REWRITE_TAC [],
-    RES_TAC THEN Q.EXISTS_TAC `y` THEN ASM_REWRITE_TAC [] THEN
-    COND_CASES_TAC THEN
-    (REFL_TAC ORELSE REPEAT BasicProvers.VAR_EQ_TAC) THEN
-    IMP_RES_TAC NOT_IN_COUNT]) ;
+   RW_TAC std_ss [FINITE_BIJ_COUNT_EQ]);
 
 fun drop_forall th = if is_forall (concl th) then [] else [th] ;
 

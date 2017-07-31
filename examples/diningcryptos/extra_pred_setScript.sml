@@ -386,35 +386,6 @@ val BIJ_INSERT = store_thm
    >> REPEAT STRIP_TAC
    >> METIS_TAC [IN_INSERT]);
 
-val FINITE_BIJ = store_thm
-  ("FINITE_BIJ",
-   ``!f s t. FINITE s /\ BIJ f s t ==> FINITE t /\ (CARD s = CARD t)``,
-   Suff `!s. FINITE s ==> !f t. BIJ f s t ==> FINITE t /\ (CARD s = CARD t)`
-   >- PROVE_TAC []
-   >> HO_MATCH_MP_TAC FINITE_INDUCT
-   >> CONJ_TAC >-
-	(RW_TAC std_ss [BIJ_ALT, FINITE_EMPTY, CARD_EMPTY, IN_FUNSET, NOT_IN_EMPTY]
-	 >> RESQ_TAC
-	 >> FULL_SIMP_TAC std_ss [NOT_IN_EMPTY]
-	 >> `t = {}`
-		by RW_TAC std_ss [EXTENSION, NOT_IN_EMPTY]
-	 >> RW_TAC std_ss [FINITE_EMPTY, CARD_EMPTY])
-   >> NTAC 7 STRIP_TAC
-   >> MP_TAC (Q.SPECL [`f`, `e`, `s`, `t`] BIJ_INSERT)
-   >> ASM_REWRITE_TAC []
-   >> STRIP_TAC
-   >> Know `FINITE u` >- PROVE_TAC []
-   >> STRIP_TAC
-   >> CONJ_TAC >- PROVE_TAC [FINITE_INSERT]
-   >> Q.PAT_X_ASSUM `f e INSERT u = t` (fn th => RW_TAC std_ss [SYM th])
-   >> RW_TAC std_ss [CARD_INSERT]
-   >> PROVE_TAC []);
-
-val FINITE_BIJ_CARD = store_thm
-  ("FINITE_BIJ_CARD",
-   ``!f s t. FINITE s /\ BIJ f s t ==> (CARD s = CARD t)``,
-   PROVE_TAC [FINITE_BIJ]);
-
 val FINITE_MAXIMAL = store_thm
   ("FINITE_MAXIMAL",
    ``!f s. FINITE s /\ ~(s = {}) ==> ?x :: s. !y :: s. (f y:num) <= f x``,
@@ -1452,35 +1423,6 @@ val BIGUNION_IMAGE_INSIDE = store_thm
        BIGUNION (IMAGE (BIGUNION o IMAGE f o g) s)``,
    SET_EQ_TAC
    >> RW_TAC std_ss [IN_BIGUNION_IMAGE, o_THM]
-   >> PROVE_TAC []);
-
-val DISJOINT_ALT = store_thm
-  ("DISJOINT_ALT",
-   ``!s t. DISJOINT s t = !x. x IN s ==> ~(x IN t)``,
-   RW_TAC std_ss [IN_DISJOINT]
-   >> PROVE_TAC []);
-
-val COUNTABLE_COUNT = store_thm
-  ("COUNTABLE_COUNT",
-   ``!n. countable (count n)``,
-   PROVE_TAC [FINITE_COUNT, FINITE_COUNTABLE]);
-
-val FINITE_BIJ_COUNT = store_thm
-  ("FINITE_BIJ_COUNT",
-   ``!s. FINITE s = ?c n. BIJ c (count n) s``,
-   RW_TAC std_ss []
-   >> REVERSE EQ_TAC >- PROVE_TAC [FINITE_COUNT, FINITE_BIJ]
-   >> Q.SPEC_TAC (`s`, `s`)
-   >> HO_MATCH_MP_TAC FINITE_INDUCT
-   >> RW_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, NOT_IN_EMPTY]
-   >- (Q.EXISTS_TAC `c`
-       >> Q.EXISTS_TAC `0`
-       >> RW_TAC std_ss [COUNT_ZERO, NOT_IN_EMPTY])
-   >> Q.EXISTS_TAC `\m. if m = n then e else c m`
-   >> Q.EXISTS_TAC `SUC n`
-   >> Know `!x. x IN count n ==> ~(x = n)`
-   >- RW_TAC arith_ss [IN_COUNT]
-   >> RW_TAC std_ss [COUNT_SUC, IN_INSERT]
    >> PROVE_TAC []);
 
 val GCOMPL = store_thm

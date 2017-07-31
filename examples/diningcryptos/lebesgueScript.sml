@@ -346,7 +346,7 @@ val pos_simple_fn_integral_present = store_thm
 		(!i. 0 <= z i) /\ (!i. 0 <= z' i))``,
    RW_TAC std_ss []
    >> `?p n. BIJ p (count n) (s CROSS s')`
-	by FULL_SIMP_TAC std_ss [GSYM FINITE_BIJ_COUNT, pos_simple_fn_def, FINITE_CROSS]
+	by FULL_SIMP_TAC std_ss [GSYM FINITE_BIJ_COUNT_EQ, pos_simple_fn_def, FINITE_CROSS]
    >> `?p'. BIJ p' (s CROSS s') (count n) /\
 	    (!x. x IN (count n) ==> ((p' o p) x = x)) /\
 	    (!x. x IN (s CROSS s') ==> ((p o p') x = x))`
@@ -2546,7 +2546,7 @@ val finite_space_integral_reduce = store_thm
 		(integral m f =
 		 finite_space_integral m f)``,
    REPEAT STRIP_TAC
-   >> `?c n. BIJ c (count n) (IMAGE f (m_space m))` by RW_TAC std_ss [GSYM FINITE_BIJ_COUNT, IMAGE_FINITE]
+   >> `?c n. BIJ c (count n) (IMAGE f (m_space m))` by RW_TAC std_ss [GSYM FINITE_BIJ_COUNT_EQ, IMAGE_FINITE]
    >> `pos_simple_fn m (pos_part f)
 	(count n) (\i. PREIMAGE f {c i} INTER m_space m) (\i. if 0 <= c i then c i else 0) /\
 	pos_simple_fn m (neg_part f)
@@ -2823,7 +2823,7 @@ val finite_space_POW_integral_reduce = store_thm
    >> `f IN borel_measurable (m_space m, measurable_sets m)`
 	by (Q.PAT_X_ASSUM `P = Q` (MP_TAC o GSYM)
 	    >> RW_TAC std_ss [borel_measurable_le_iff, IN_POW, SUBSET_DEF, GSPECIFICATION])
-   >> `?c n. BIJ c (count n) (m_space m)` by RW_TAC std_ss [GSYM FINITE_BIJ_COUNT]
+   >> `?c n. BIJ c (count n) (m_space m)` by RW_TAC std_ss [GSYM FINITE_BIJ_COUNT_EQ]
    >> `pos_simple_fn m (pos_part f)
 	(count n) (\i. {c i}) (\i. if 0 <= f(c i) then f(c i) else 0) /\
 	pos_simple_fn m (neg_part f)
