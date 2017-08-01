@@ -13,16 +13,6 @@ val PP_ERR = mk_HOL_ERR "term_pp";
 val dest_pair = sdest_binop (",", "pair") (PP_ERR "dest_pair" "");
 val is_pair = Lib.can dest_pair;
 
-fun mk_pair (fst,snd) = let
-  val fsty = type_of fst
-  val sndty = type_of snd
-  val commaty = fsty --> sndty -->
-                mk_thy_type{Tyop="prod",Thy="pair",Args=[fsty,sndty]}
-  val c = mk_thy_const{Name=",", Thy="pair", Ty = commaty}
-in
-  list_mk_comb(c,[fst,snd])
-end;
-
 fun isSuffix s1 s2 = (* s1 is a suffix of s2 *) let
   val ss = Substring.full s2
   val (pref, suff) = Substring.position s1 ss
@@ -297,14 +287,6 @@ in
     List.exists (fn t => can (match_term t) tm) actual_ops
 end
 
-datatype bvar
-    = Simple of term
-    | Restricted of {Bvar : term, Restrictor : term}
-
-fun bv2term (Simple t) = t
-  | bv2term (Restricted {Bvar,...}) = Bvar
-
-
 fun str_unicode_ok s = CharVector.all Char.isPrint s
 
 fun oi_strip_comb' oinfo t =
@@ -375,8 +357,6 @@ val _ = register_btrace ("pp_bigrecs", prettyprint_bigrecs)
 
 val pp_print_firstcasebar = ref false
 val _ = register_btrace ("PP.print_firstcasebar", pp_print_firstcasebar)
-
-fun decdepth n = if n < 0 then n else n - 1
 
 val unfakeconst = Option.map #fake o GrammarSpecials.dest_fakeconst_name
 
@@ -491,147 +471,19 @@ fun pp_term (G : grammar) TyG backend = let
     | SOME p => p < vscons_prec
 
   val uprinters = user_printers G
-  val printers_exist = Net.size uprinters > 0
+  val printers_exist = FCNet.size uprinters > 0
 
-  (* This code will print paired abstractions "properly" only if
-        1. the term has a constant in the right place, and
-        2. that constant maps to the name "UNCURRY" in the overloading map.
-     These conditions are checked in the call to grammar_name.
+  val my_dest_abs = term_pp_utils.pp_dest_abs G
+  val my_is_abs = term_pp_utils.pp_is_abs G
 
-     We might vary this.  In particular, in 2., we could check to see
-     name "UNCURRY" maps to a term (looking at the overload map in the
-     reverse direction).
-
-     Another option again might be to look to see if the term is a
-     constant whose real name is UNCURRY, and if this term also maps
-     to the name UNCURRY.  This last used to be the actual
-     implementation, but it's hard to do this in the changed world
-     (since r6355) of "syntactic patterns" because of the way
-     overloading resolution can create fake constants (concealing true
-     names) before this code gets a chance to run.
-
-     The particular choice made above means that the printer does the
-     'right thing'
-       (prints `(\(x,y). x /\ y)` as `pair$UNCURRY (\x y. x /\ y)`)
-     if given a paired abstraction to print wrt an "earlier" grammar,
-     such boolTheory.bool_grammars. *)
-
-  fun my_dest_abs tm =
-      case dest_term tm of
-        LAMB p => p
-      | COMB(Rator,Rand) => let
-          val _ =
-              grammar_name G Rator = SOME "UNCURRY" orelse
-              raise PP_ERR "my_dest_abs" "term not an abstraction"
-          val (v1, body0) = my_dest_abs Rand
-          val (v2, body) = my_dest_abs body0
-        in
-          (mk_pair(v1, v2), body)
-        end
-      | _ => raise PP_ERR "my_dest_abs" "term not an abstraction"
-
-  fun my_is_abs tm = can my_dest_abs tm
-  fun my_strip_abs tm = let
-    fun recurse acc t = let
-      val (v, body) = my_dest_abs t
-    in
-      recurse (v::acc) body
-    end handle HOL_ERR _ => (List.rev acc, t)
-  in
-    recurse [] tm
-  end
-
-  (* allow any constant that overloads to the string "LET" to be treated as
-     a let. *)
-  fun is_let0 n tm = let
-    val (let_tm,f_tm) = dest_comb(rator tm)
-  in
-    grammar_name G let_tm = SOME "LET" andalso
-    (length (#1 (my_strip_abs f_tm)) >= n orelse is_let0 (n + 1) f_tm)
-  end handle HOL_ERR _ => false
-  val is_let = is_let0 1
+  fun dest_vstruct bndr res t =
+    term_pp_utils.dest_vstruct G {binder = bndr, restrictor = res} t
 
 
 
-  fun dest_vstruct bnder res t =
-      case bnder of
-        NONE => let
-        in
-          case (Lib.total my_dest_abs t, res) of
-            (SOME (bv, body), _) => (Simple bv, body)
-          | (NONE, NONE) =>
-               raise PP_ERR "dest_vstruct" "term not an abstraction"
-          | (NONE, SOME s) => let
-            in
-              case dest_term t of
-                COMB (Rator, Rand) => let
-                in
-                  case dest_term Rator of
-                    COMB(rator1, rand1) =>
-                    if has_name G s rator1 andalso my_is_abs Rand then let
-                        val (bv, body) = my_dest_abs Rand
-                      in
-                        (Restricted{Bvar = bv, Restrictor = rand1}, body)
-                      end
-                    else raise PP_ERR "dest_vstruct" "term not an abstraction"
-                  | _ => raise PP_ERR "dest_vstruct" "term not an abstraction"
-                end
-              | _ => raise PP_ERR "dest_vstruct" "term not an abstraction"
-            end
-        end
-      | SOME s => let
-        in
-          case (dest_term t) of
-            COMB(Rator,Rand) => let
-            in
-              if has_name G s Rator andalso my_is_abs Rand then let
-                  val (bv, body) = my_dest_abs Rand
-                in
-                  (Simple bv, body)
-                end
-              else
-                case res of
-                  NONE => raise PP_ERR "dest_vstruct" "term not an abstraction"
-                | SOME s => let
-                  in
-                    case (dest_term Rator) of
-                      COMB(rator1, rand1) =>
-                      if has_name G s rator1 andalso my_is_abs Rand then let
-                          val (bv, body) = my_dest_abs Rand
-                        in
-                            (Restricted{Bvar = bv, Restrictor = rand1}, body)
-                        end
-                      else
-                        raise PP_ERR "dest_vstruct" "term not an abstraction"
-                    | _ =>
-                      raise PP_ERR "dest_vstruct" "term not an abstraction"
-                  end
-            end
-          | _ => raise PP_ERR "dest_vstruct" "term not an abstraction"
-        end
+  fun strip_vstructs bndr res tm =
+    term_pp_utils.strip_vstructs G {binder = bndr, restrictor = res} tm
 
-
-  fun strip_vstructs bnder res tm = let
-    fun strip acc t = let
-      val (bvar, body) = dest_vstruct bnder res t
-    in
-      strip (bvar::acc) body
-    end handle HOL_ERR _ => (List.rev acc, t)
-  in
-    strip [] tm
-  end
-
-  fun strip_nvstructs bnder res n tm = let
-    fun strip n acc tm =
-        if n <= 0 then (List.rev acc, tm)
-        else let
-            val (bvar, body) = dest_vstruct bnder res tm
-          in
-            strip (n - 1) (bvar :: acc) body
-          end
-  in
-    strip n [] tm
-  end
 
   datatype comb_posn = RatorCP | RandCP | NoCP
 
@@ -648,8 +500,8 @@ fun pp_term (G : grammar) TyG backend = let
          fun sysprint { gravs = (pg,lg,rg), binderp, depth} tm =
            full_pr_term binderp showtypes showtypes_v ppfns combpos tm
                         pg lg rg depth
-         fun test (pat,_,_) = can (match_term pat) tm
-         val candidates = filter test (Net.match tm uprinters)
+         fun test (pat,_,_) = FCNet.can_match_term pat tm
+         val candidates = filter test (FCNet.match tm uprinters)
          fun printwith f = f (TyG, G)
                              backend sysprint ppfns
                              (pgrav, lgrav, rgrav)
@@ -1243,7 +1095,6 @@ fun pp_term (G : grammar) TyG backend = let
         | _ => false
       val addparens = add_l orelse add_r
 
-
       val (f, args) = strip_comb tm
       val comb_show_type = comb_show_type(f,args)
       val prec = Prec(comb_prec, fnapp_special)
@@ -1489,67 +1340,6 @@ fun pp_term (G : grammar) TyG backend = let
         end
     end
 
-    fun pr_let0 tm = let
-      fun find_base acc tm =
-        if is_let tm then let
-          val (let_tm, args) = strip_comb tm
-        in
-          find_base (List.nth(args, 1)::acc) (hd args)
-        end
-        else (acc, tm)
-      fun pr_leteq (bv, tm2) = let
-        val (args, rhs_t) = strip_vstructs NONE NONE tm2
-        val fnarg_bvars = List.concat (map (free_vars o bv2term) args)
-        val bvfvs = free_vars (bv2term bv)
-      in
-        block INCONSISTENT 2
-              (record_bvars bvfvs (pr_vstruct bv) >>
-               spacep true >>
-               record_bvars fnarg_bvars
-                  (pr_list pr_vstruct (spacep true) args >>
-                   spacep (not (null args)) >>
-                   add_string "=" >> spacep true >>
-                   block INCONSISTENT 2
-                     (pr_term rhs_t Top Top Top (decdepth depth)))) >>
-        return bvfvs
-      end
-      val (values, abstr) = find_base [] tm
-      val (varnames, body) =
-          strip_nvstructs NONE NONE (length values) abstr
-      val name_value_pairs = ListPair.zip (varnames, values)
-      val bodyletp = is_let body
-      fun record_bvars new =
-          (* overriding term_pp_utils's version; this one has a different type also *)
-          getbvs >- (fn old => setbvs (HOLset.addList(old,new)))
-    in
-      (* put a block around the "let ... in" phrase *)
-      block CONSISTENT 0
-            (add_string "let" >> add_string " " >>
-             (* put a block around the variable bindings *)
-             block INCONSISTENT 0
-               (mappr_list pr_leteq (add_string " " >> add_string "and" >>
-                                     spacep true)
-                           name_value_pairs >-
-                (return o List.concat)) >-
-             record_bvars >>
-             (if bodyletp then (spacep true >> add_string "in")
-              else nothing)) >>
-     spacep true >>
-     (if bodyletp then pr_let0 body
-      else add_string "in" >> add_break(1,2) >>
-           pr_term body RealTop RealTop RealTop (decdepth depth))
-    end
-
-    fun pr_let lgrav rgrav tm = let
-      val addparens = lgrav <> RealTop orelse rgrav <> RealTop
-    in
-      getbvs >- (fn oldbvs =>
-      pbegin addparens >>
-      block CONSISTENT 0 (pr_let0 tm) >>
-      pend addparens >>
-      setbvs oldbvs)
-    end
-
     fun print_ty_antiq tm = let
       val ty = parse_type.dest_ty_antiq tm
     in
@@ -1730,8 +1520,6 @@ fun pp_term (G : grammar) TyG backend = let
                 end handle HOL_ERR _ => fail
               else fail
 
-
-
           fun is_atom tm = is_const tm orelse is_var tm
           fun pr_atomf (f,args) = let
             (* the tm, Rator and Rand bindings that we began with are
@@ -1778,10 +1566,9 @@ fun pp_term (G : grammar) TyG backend = let
           in
             case candidate_rules of
               NONE =>
-              if is_let tm then pr_let lgrav rgrav tm
-              else let
-                in
-                  case restr_binder of
+              let
+              in
+                case restr_binder of
                     NONE => pr_comb tm Rator Rand
                   | SOME NONE =>
                     if isSome restr_binder_rule then pr_abs tm
@@ -1794,7 +1581,7 @@ fun pp_term (G : grammar) TyG backend = let
                                         f = f} args Rand
                     else
                       pr_comb tm Rator Rand
-                end
+              end
             | SOME crules0 => let
                 fun suitable_rule rule =
                     case rule of
@@ -1930,9 +1717,6 @@ fun pp_term (G : grammar) TyG backend = let
                    end handle CaseConversionFailed => fail)
                 | _ => fail
               else fail) |||
-
-          (* let expressions *)
-          (fn () => if is_let tm then pr_let lgrav rgrav tm else fail) |||
 
           (fn _ => if showtypes_v then
                      if const_is_ambiguous f then

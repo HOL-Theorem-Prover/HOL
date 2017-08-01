@@ -328,8 +328,12 @@ val _ = if s = "('a -> 'b) "^ct()^"$option" then OK()
 end
 
 
-val _ = app tpp ["let x = T in x /\\ y",
+val _ = app tpp ["(if P then q else r) s",
+                 "(if P then q else r) s t",
+                 "f ((if P then q else r) s t u)",
+                 "let x = T in x /\\ y",
                  "(let x = T in \\y. x /\\ y) p",
+                 "let x = p and y = x in x /\\ y",
                  "f ($/\\ p)",
                  "(((p /\\ q) /\\ r) /\\ s) /\\ t",
                  "!x. P (x /\\ y)",

@@ -70,7 +70,8 @@ fun grule_name ({term_name, ...}:grule) = term_name
 type overload_info = Overload.overload_info
 
 type ('a,'b) printer_info =
-  (term * string * ('a,'b) term_pp_types.userprinter) Net.net * string Binaryset.set
+  (term * string * ('a,'b) term_pp_types.userprinter) FCNet.t *
+  string Binaryset.set
 type special_info = {type_intro : string,
                      lambda : string list,
                      endbinding : string,
@@ -199,8 +200,8 @@ in
   if Binaryset.member(keyset,k) then let
       fun foldthis (t,nm,f) (olddata,newnet) =
           if nm = k then (SOME (t,f), newnet)
-          else (olddata, Net.insert(t,(t,nm,f)) newnet)
-      val (data, newnet) = Net.itnet foldthis net (NONE, Net.empty)
+          else (olddata, FCNet.insert(t,(t,nm,f)) newnet)
+      val (data, newnet) = FCNet.itnet foldthis net (NONE, FCNet.empty)
       val newkeys = Binaryset.delete(keyset, k)
     in
       (GCONS (update_G g (U #user_printers (newnet,newkeys)) $$),
@@ -211,7 +212,8 @@ end
 
 fun add_user_printer (k,pat,v) g = let
   val (g', _) = remove_user_printer k g
-  fun upd (net,keys) = (Net.insert(pat, (pat,k,v)) net, Binaryset.add(keys, k))
+  fun upd (net,keys) =
+    (FCNet.insert(pat, (pat,k,v)) net, Binaryset.add(keys, k))
 in
   fupdate_user_printers upd g'
 end
@@ -424,7 +426,7 @@ val stdhol : grammar =
                restr_binders = [], res_quanop = "::"},
    numeral_info = [],
    overload_info = Overload.null_oinfo,
-   user_printers = (Net.empty, Binaryset.empty String.compare),
+   user_printers = (FCNet.empty, Binaryset.empty String.compare),
    absyn_postprocessors = [],
    preterm_processors =
      Binarymap.mkDict (pair_compare(String.compare, Int.compare))
@@ -1091,9 +1093,9 @@ end
 fun merge_user_printers (n1,ks1) (n2,_) = let
   fun foldthis (tm,k,f) (n,ks) =
       if Binaryset.member(ks,k) then (n,ks)
-      else (Net.insert(tm,(tm,k,f)) n, Binaryset.add(ks, k))
+      else (FCNet.insert(tm,(tm,k,f)) n, Binaryset.add(ks, k))
 in
-   Net.itnet foldthis n2 (n1,ks1)
+   FCNet.itnet foldthis n2 (n1,ks1)
 end
 
 fun alist_merge al1 al2 = let
@@ -1346,7 +1348,7 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
     fun pr (pat,nm,f) =
         (tmprint G pstrm pat; add_string ("       ->  "^nm))
   in
-    if Net.size printers = 0 then ()
+    if FCNet.size printers = 0 then ()
     else
       (add_newline();
        add_string "User printing functions:";
@@ -1354,7 +1356,7 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
        add_string "  ";
        begin_block INCONSISTENT 0;
        pr_list pr (fn () => ()) (fn () => add_newline())
-               (Net.itnet cons printers []);
+               (FCNet.itnet cons printers []);
        end_block())
   end
 in
@@ -1678,5 +1680,30 @@ val grammar_rule_reader =
     (literal "C" >> many rrule_reader >- (return o CLOSEFIX)) ||
     (literal "L" >> many lspec_reader >- (return o LISTRULE))
 
+
+fun debugprint G tm =
+  let
+    open HolKernel
+    val pr = debugprint G
+    val map = List.map
+  in
+    case dest_term tm of
+        VAR (s,_) => s
+      | CONST {Name,Thy,...} =>
+        Thy ^ "$" ^ Name ^ "<" ^
+        (case grammar_name G tm of NONE => "" | SOME s => s) ^ ">"
+      | COMB _ =>
+        let
+          val (f, args) = strip_comb tm
+        in
+          "(" ^ pr f ^ " " ^ String.concatWith " " (map pr args) ^ ")"
+        end
+      | LAMB _ =>
+        let
+          val (vs, bod) = strip_abs tm
+        in
+          "(\\" ^ String.concatWith " " (map pr vs) ^ ". " ^ pr bod ^ ")"
+        end
+  end
 
 end; (* struct *)

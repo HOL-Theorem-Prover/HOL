@@ -4244,5 +4244,6 @@ val _ = TeX_notation {hol=UChar.not_iff,
 local open boolpp in end
 val _ = add_ML_dependency "boolpp"
 val _ = add_user_printer ("bool.COND", ``COND gd tr fl``)
+val _ = add_user_printer ("bool.LET", ``LET f x``)
 
 val _ = export_theory();

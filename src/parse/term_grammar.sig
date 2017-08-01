@@ -60,7 +60,7 @@ sig
   val remove_user_printer :
     string -> grammar -> (grammar * (term * userprinter) option)
   val user_printers :
-    grammar -> (term * string * userprinter)Net.net
+    grammar -> (term * string * userprinter)FCNet.t
 
   type absyn_postprocessor = grammar -> Absyn.absyn -> Absyn.absyn
   type AbPTME = Absyn.absyn -> Parse_supportENV.preterm_in_env
@@ -201,5 +201,7 @@ sig
   val fixity_reader : fixity Coding.reader
   val grule_encode : grule -> string
   val grule_reader : grule Coding.reader
+
+  val debugprint : grammar -> term -> string
 
 end
