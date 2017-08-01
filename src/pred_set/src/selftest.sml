@@ -18,8 +18,7 @@ in
   true
 end;
 
-val _ =
-    app testutils.tpp [
+val tpp_cases = [
       "{}",
       "0",
       "{x | x < 10}",
@@ -28,8 +27,15 @@ val _ =
       "{x + y | x > 6}",
       "{x + y | x | x < y}",
       "{(case x of 0 => y | SUC n => y + n) | y > 3}",
-      "{x | x < (case y of 0 => 3 | SUC n => 2)}"
+      "{x | x < (case y of 0 => 3 | SUC n => 2)}",
+      "univ(:'a)",
+      "univ(:num)",
+      "univ(:num) x"
     ]
+
+val _ = app testutils.tpp tpp_cases
+
+val _ = (trace ("Univ pretty-printing", 0) testutils.tpp) "UNIV"
 
 val _ = temp_add_rule {
           fixity = Closefix,
@@ -80,6 +86,11 @@ end
 val feq_def = new_definition("feq_def", ``feq f x y = (f x = f y)``);
 val _ = temp_overload_on("equiv_class", ``\R s x. {y | y IN s /\ R x y}``);
 val _ = testutils.tpp "equiv_class (feq f) s x"
+
+val _ = set_grammar_ancestry ["pred_set"]
+val _ = print "Setting grammar ancestry to be [\"pred_set\"]\n"
+val _ = set_trace "PP.avoid_unicode" 1
+val _ = List.app testutils.tpp tpp_cases
 
 val _ =
     Process.exit

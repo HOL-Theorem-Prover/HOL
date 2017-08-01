@@ -356,20 +356,15 @@ val _ = set_fixity "univ" (Prefix 2200)
 
 val _ = overload_on (UnicodeChars.universal_set, ``\x:'a itself. UNIV: 'a set``)
 val _ = set_fixity UnicodeChars.universal_set (Prefix 2200)
+(* the overloads above are only for parsing; printing for this is handled
+   with a user-printer.  (Otherwise the fact that the x is not bound in the
+   abstraction produces ARB terms.)  To turn printing off, we overload the
+   same pattern to "" *)
+val _ = overload_on ("", “\x:'a itself. UNIV : 'a set”)
+local open pred_setpp in end
+val _ = add_ML_dependency "pred_setpp"
+val _ = add_user_printer ("pred_set.UNIV", ``UNIV:'a set``)
 
-fun univ_printer (tyg, tmg) backend printer ppfns gravs depth tm = let
-  open smpp infix >>
-  val ppfns = ppfns : term_pp_types.ppstream_funs
-  val (elty, _) = dom_rng (type_of tm)
-  val itself_t = Term.inst [alpha |-> elty] boolSyntax.the_value
-  val U = if get_tracefn "Unicode" () = 1 then UnicodeChars.universal_set
-          else "univ"
-in
-  #add_string ppfns U >>
-  printer {gravs = gravs, depth = depth, binderp = false} itself_t
-end
-
-val _ = temp_add_user_printer("UNIVprinter", ``UNIV: 'a set``, univ_printer)
 val _ = TeX_notation {hol = "univ", TeX = ("\\ensuremath{\\cal{U}}", 1)}
 val _ = TeX_notation {hol = UnicodeChars.universal_set,
                       TeX = ("\\ensuremath{\\cal{U}}", 1)}
@@ -1745,7 +1740,7 @@ val INJ_SUBSET = store_thm(
 ``!f s t s0 t0. INJ f s t /\ s0 SUBSET s /\ t SUBSET t0 ==> INJ f s0 t0``,
 SRW_TAC[][INJ_DEF,SUBSET_DEF])
 
-val INJ_IMAGE = Q.store_thm ("INJ_IMAGE", 
+val INJ_IMAGE = Q.store_thm ("INJ_IMAGE",
   `INJ f s t ==> INJ f s (IMAGE f s)`,
   REWRITE_TAC [INJ_DEF, IN_IMAGE] THEN
   REPEAT DISCH_TAC THEN ASM_REWRITE_TAC [] THEN
@@ -2130,7 +2125,7 @@ val LINV_OPT_THM = Q.store_thm ("LINV_OPT_THM",
   `(LINV_OPT f s y = SOME x) ==> x IN s /\ (f x = y)`,
   REWRITE_TAC [LINV_OPT_def, IN_IMAGE'] THEN COND_CASES_TAC THEN
   REWRITE_TAC [optionTheory.SOME_11, optionTheory.NOT_NONE_SOME] THEN
-  RULE_ASSUM_TAC (BETA_RULE o 
+  RULE_ASSUM_TAC (BETA_RULE o
     Ho_Rewrite.ONCE_REWRITE_RULE [GSYM SELECT_THM]) THEN
   DISCH_TAC THEN BasicProvers.VAR_EQ_TAC THEN FIRST_ASSUM ACCEPT_TAC) ;
 
@@ -2253,16 +2248,16 @@ val RINV_DEF = Q.store_thm ("RINV_DEF",
 val SURJ_INJ_INV = store_thm(
   "SURJ_INJ_INV",
   ``SURJ f s t ==> ?g. INJ g t s /\ !y. y IN t ==> (f (g y) = y)``,
-  REWRITE_TAC [IMAGE_SURJ] THEN 
+  REWRITE_TAC [IMAGE_SURJ] THEN
   DISCH_TAC THEN Q.EXISTS_TAC `THE o LINV_OPT f s` THEN
-  BasicProvers.VAR_EQ_TAC THEN REPEAT STRIP_TAC 
+  BasicProvers.VAR_EQ_TAC THEN REPEAT STRIP_TAC
   THENL [
   irule INJ_COMPOSE THEN Q.EXISTS_TAC `IMAGE SOME s` THEN
     REWRITE_TAC [INJ_LINV_OPT_IMAGE] THEN REWRITE_TAC [INJ_DEF, IN_IMAGE] THEN
     REPEAT STRIP_TAC THEN REPEAT BasicProvers.VAR_EQ_TAC THEN
     FULL_SIMP_TAC std_ss [optionTheory.THE_DEF],
   ASM_REWRITE_TAC [LINV_OPT_def, combinTheory.o_THM, optionTheory.THE_DEF] THEN
-    RULE_ASSUM_TAC (Ho_Rewrite.REWRITE_RULE 
+    RULE_ASSUM_TAC (Ho_Rewrite.REWRITE_RULE
       [IN_IMAGE', GSYM SELECT_THM, BETA_THM]) THEN ASM_REWRITE_TAC [] ]) ;
 
 (* ===================================================================== *)
@@ -3117,7 +3112,7 @@ val INJ_CARD_IMAGE = Q.store_thm ("INJ_CARD_IMAGE",
     (irule IMAGE_FINITE THEN FIRST_ASSUM ACCEPT_TAC) THEN
   ASM_REWRITE_TAC [IN_IMAGE] THEN
   RULE_L_ASSUM_TAC (CONJUNCTS o REWRITE_RULE [INJ_INSERT]) THEN
-  REVERSE COND_CASES_TAC THEN1 
+  REVERSE COND_CASES_TAC THEN1
     (RES_TAC THEN ASM_REWRITE_TAC [INV_SUC_EQ]) THEN
   FIRST_X_ASSUM CHOOSE_TAC THEN
   RULE_L_ASSUM_TAC CONJUNCTS THEN RES_TAC THEN
@@ -3127,9 +3122,9 @@ val INJ_CARD = Q.store_thm
 ("INJ_CARD",
  `!(f:'a->'b) s t. INJ f s t /\ FINITE t ==> CARD s <= CARD t`,
   REPEAT GEN_TAC THEN
-  DISCH_THEN (fn th => ASSUME_TAC (MATCH_MP FINITE_INJ th) THEN 
+  DISCH_THEN (fn th => ASSUME_TAC (MATCH_MP FINITE_INJ th) THEN
     ASSUME_TAC (CONJUNCT1 th) THEN
-    IMP_RES_TAC (GSYM INJ_CARD_IMAGE) THEN 
+    IMP_RES_TAC (GSYM INJ_CARD_IMAGE) THEN
     ASSUME_TAC (CONJUNCT2 th)) THEN
   ASM_REWRITE_TAC [] THEN
   irule CARD_SUBSET THEN1 FIRST_ASSUM ACCEPT_TAC THEN
