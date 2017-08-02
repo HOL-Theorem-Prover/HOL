@@ -1,6 +1,13 @@
 open HolKernel boolLib Parse PFset_conv
 open pred_setSimps
 
+val _ = let
+  open testutils
+in
+  tpp_expected {testf = standard_tpp_message, input = "UNIV 3",
+                output = UnicodeChars.universal_set ^ "(:num) 3"}
+end
+
 val _ = set_trace "Unicode" 0
 val padr = StringCvt.padRight #" "
 val padl = StringCvt.padLeft #" "

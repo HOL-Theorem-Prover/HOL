@@ -1,27 +1,17 @@
 structure ProvideUnicode :> ProvideUnicode =
 struct
 
-structure UChar = UnicodeChars
-
 open HolKernel Feedback
 
 open term_grammar
 
 type term = Term.term
-type gopns = {prefer_form_with_tok : {term_name:string, tok:string} -> unit,
-              setG : grammar -> unit,
-              overload_on : (string * term) -> unit,
-              remove_termtok : {term_name:string,tok:string} -> unit,
-              master_unicode_switch : bool}
-type urule = {u:string list, term_name : string,
-              newrule : term_grammar.grule,
-              oldtok : string option}
 
-datatype stored_data =
-         RuleUpdate of urule
+datatype uni_version =
+         RuleUpdate of {newrule : term_grammar.grule}
        | OverloadUpdate of { u : string, ts : term list }
 
-(* This stored data record encodes a number of different options for
+(* This uni_version type encodes a number of different options for
    the way in which a Unicode string can be an alternative for a
    syntactic form.
 
@@ -32,11 +22,6 @@ datatype stored_data =
    If it's a OverloadUpdate{u,ts} then u is to be put in as an
    additional overload from u to the terms ts.
 *)
-
-val term_table = ref ([] : stored_data list)
-fun stored_data () = !term_table
-fun record_data d = term_table := d :: !term_table
-
 
 fun getrule G term_name = let
   fun tok_of0 es =
@@ -124,41 +109,10 @@ in
   get_rule_data NONE (rules G)
 end
 
-
-fun constid t = let
-  val {Name,Thy,Ty} = dest_thy_const t
-in
-  {Name = Name, Thy = Thy}
-end
-
 fun sd_to_deltas sd =
   case sd of
-      RuleUpdate {u,term_name,newrule = r,oldtok} => [GRULE r]
+      RuleUpdate {newrule = r} => [GRULE r]
     | OverloadUpdate{u,ts} => map (fn t => OVERLOAD_ON(u,t)) ts
-
-fun enable_one g0 sd = add_deltas (sd_to_deltas sd) g0
-
-fun remove_uoverload G s =
-    #1 (term_grammar.mfupdate_overload_info
-            (Overload.remove_overloaded_form s)
-            G)
-
-
-fun disable_one G sd =
-    case sd of
-      RuleUpdate{u,term_name,newrule,oldtok} => let
-      in
-        G |> remove_form_with_toklist {toklist = u, term_name = term_name}
-          |> (case oldtok of
-                NONE => (fn g => g)
-              | SOME s =>
-                prefer_form_with_tok { tok = s, term_name = term_name})
-      end
-    | OverloadUpdate{u,ts} => remove_uoverload G u
-
-fun new_action switch G a =
-  (if switch then enable_one G a else G) before
-  record_data a
 
 fun mk_unicode_version {u,tmnm} G = let
   val oi = term_grammar.overload_info G
@@ -171,111 +125,9 @@ fun mk_unicode_version {u,tmnm} G = let
                                      ("No data for term with name "^tmnm)
           | SOME ops => OverloadUpdate{u = u, ts = #actual_ops ops}
         end
-      | SOME(f,s) => RuleUpdate{u = [u],term_name = tmnm, newrule = f u,
-                                oldtok = SOME s}
+      | SOME(f,s) => RuleUpdate{newrule = f u}
 in
-  (sd, sd_to_deltas sd)
+  sd_to_deltas sd
 end
-
-fun temp_uadd_rule switch rule G = new_action switch G (RuleUpdate rule)
-
-fun temp_uoverload_on switch (s, t) G =
-    new_action switch G (OverloadUpdate { u = s, ts = [t]})
-
-datatype ThyUpdateInfo = UV of {u:string,tmnm:string}
-                       | RULE of urule
-                       | OVL of string * term
-
-fun encode tmwrite tui = let
-  open Coding
-in
-  case tui of
-    UV {u,tmnm} => "U" ^ StringData.encode u ^ StringData.encode tmnm
-  | RULE {u,term_name,newrule,oldtok} =>
-      "R" ^ StringData.encode term_name ^ StringData.encodel u ^ "R" ^
-      grule_encode newrule ^ OptionData.encode StringData.encode oldtok
-  | OVL (s,tm) => "O" ^ StringData.encode s ^ StringData.encode (tmwrite tm)
-end
-
-fun reader tmread = let
-  open Coding
-  infix >> >- >-> >* ||
-  fun mkrule (((tn,u),delta),oldtok) =
-      RULE {u = u, term_name = tn, newrule = delta, oldtok = oldtok}
-in
-  (literal "U" >> map (fn (u,tm) => UV {u=u,tmnm=tm})
-                      (StringData.reader >* StringData.reader)) ||
-  (literal "R" >>
-   map mkrule (StringData.reader >* many StringData.reader >*
-               (literal "R" >> term_grammar.grule_reader) >*
-               (OptionData.reader StringData.reader))) ||
-  (literal "O" >> map OVL (StringData.reader >* map tmread StringData.reader))
-end
-
-fun tui_terms tui =
-  case tui of
-      OVL (_, tm) => [tm]
-    | _ => []
-val tuil_terms = List.foldl (fn (tui,acc) => tui_terms tui @ acc) []
-
-open LoadableThyData
-val (mk,dest) =
-    new {merge = op@,
-         read = (fn rtm => Coding.lift (Coding.many (reader rtm))),
-         terms = tuil_terms,
-         write = (fn wtm => String.concat o map (encode wtm)),
-         thydataty = "unicodedata"}
-
-fun update value =
-    write_data_update {data= mk[value], thydataty = "unicodedata"}
-
-val record_updateinfo = update
-
-fun uadd_rule switch rule G = let
-in
-  temp_uadd_rule switch rule G before
-  update (RULE rule)
-
-end
-
-fun uoverload_on switch st G = let
-in
-  temp_uoverload_on switch st G before
-  update (OVL st)
-end
-
-
-fun enable_all G = List.foldl (fn (a,G) => enable_one G a)
-                              G
-                              (List.rev (!term_table))
-fun disable_all G = List.foldl (fn (a,G) => disable_one G a) G (!term_table)
-
-fun apply_thydata switch thyname G = let
-  fun apply1 (up,G) =
-      case up of
-        UV p =>
-        let
-          val (sd, uds) = mk_unicode_version p G
-        in
-          record_data sd;
-          if switch then term_grammar.add_deltas uds G else G
-        end
-      | RULE r => temp_uadd_rule switch r G
-      | OVL st => temp_uoverload_on switch st G
-in
-  case segment_data {thy = thyname, thydataty = "unicodedata"} of
-    NONE => G
-  | SOME data => let
-    in
-      case dest data of
-        NONE => (Feedback.HOL_WARNING "Parse.Unicode" "apply_thydata"
-                                      ("Couldn't decode data for theory \""^
-                                       String.toString thyname^ "\"");
-                 G)
-      | SOME l => List.foldl apply1 G l
-    end
-end
-
-
 
 end (* struct *)
