@@ -160,11 +160,23 @@ fun trfp_get (TRFP {get, ...}) = get ()
 
 fun ref2trfp r = TRFP {get = (fn () => !r), set = (fn i => r := i)}
 
-type trace_record = {value: tracefns, default: int, maximum: int}
+type trace_record = {
+  aliases : string list,
+  value: tracefns,
+  default: int,
+  maximum: int
+}
 
-val trace_map = ref (Binarymap.mkDict String.compare)
+datatype TI = TR of trace_record | ALIAS of string
 
-fun find_record n = Binarymap.peek (!trace_map, n)
+val trace_map =
+    ref (Binarymap.mkDict String.compare : (string,TI)Binarymap.dict)
+
+fun find_record n =
+  case Binarymap.peek (!trace_map, n) of
+      NONE => NONE
+    | SOME (TR tr) => SOME tr
+    | SOME (ALIAS a) => find_record a
 
 val WARN = HOL_WARNING "Feedback"
 
@@ -176,9 +188,39 @@ fun register_trace (nm, r, max) =
           | SOME _ =>
              WARN "register_trace" ("Replacing a trace with name " ^ quote nm)
          ; trace_map := Binarymap.insert
-                          (!trace_map, nm, {value = ref2trfp r,
-                                            default = !r,
-                                            maximum = max}))
+                          (!trace_map, nm, TR {value = ref2trfp r, default = !r,
+                                               aliases = [], maximum = max}))
+
+fun register_alias_trace {original, alias} =
+  if original = alias then
+    WARN "register_alias_trace" "original and alias are equal; doing nothing"
+  else
+    case find_record original of
+        NONE => raise ERR "register_alias_trace"
+                    ("Original trace: \""^original^"\" doesn't exist")
+      | SOME {aliases,maximum,default,value} =>
+        let
+          val aliases' =
+              if List.exists (fn s => s = alias) aliases then aliases
+              else alias::aliases
+          val rcd = {aliases = aliases', maximum = maximum, default = default,
+                     value = value}
+          val record_alias = Binarymap.insert(!trace_map, original, TR rcd)
+          val mk_alias = Binarymap.insert(record_alias, alias, ALIAS original)
+        in
+          case Binarymap.peek (record_alias, alias) of
+              NONE => ()
+            | SOME (ALIAS a) =>
+                if a = original then ()
+                else WARN "register_alias_trace"
+                          ("Replacing existing alias binding for \""^
+                           alias ^ "\" |-> \"" ^ a ^"\"")
+            | SOME (TR _) =>
+                raise ERR "register_alias_trace"
+                      ("Cannot replace existing genuine trace info for \""^
+                       alias^"\"");
+          trace_map := mk_alias
+        end
 
 fun register_ftrace (nm, (get, set), max) =
    let
@@ -193,9 +235,9 @@ fun register_ftrace (nm, (get, set), max) =
                               ("Replacing a trace with name " ^ quote nm)
             ; trace_map :=
                   Binarymap.insert
-                     (!trace_map, nm, {value = TRFP {get = get, set = set},
-                                       default = default,
-                                       maximum = max}))
+                     (!trace_map, nm, TR {value = TRFP {get = get, set = set},
+                                          default = default, aliases = [],
+                                          maximum = max}))
    end
 
 fun register_btrace (nm, bref) =
@@ -206,18 +248,21 @@ fun register_btrace (nm, bref) =
     ; trace_map :=
         Binarymap.insert
             (!trace_map, nm,
-             {value = TRFP {get = (fn () => if !bref then 1 else 0),
-                            set = (fn i => bref := (i > 0))},
-              default = if !bref then 1 else 0,
-              maximum = 1}))
+             TR {value = TRFP {get = (fn () => if !bref then 1 else 0),
+                               set = (fn i => bref := (i > 0))},
+                 default = if !bref then 1 else 0, aliases = [],
+                 maximum = 1}))
 
 fun traces () =
    let
-      fun foldthis (n, {value, default = d, maximum}, acc) =
-         {name = n,
-          trace_level = trfp_get value,
-          default = d,
-          max = maximum} :: acc
+      fun foldthis (n, ti, acc) =
+        case ti of
+            ALIAS _ => acc
+          | TR {value, default = d, maximum, aliases} =>
+            {name = n, aliases = aliases,
+             trace_level = trfp_get value,
+             default = d,
+             max = maximum} :: acc
    in
       Binarymap.foldr foldthis [] (!trace_map)
    end
@@ -247,8 +292,12 @@ fun reset_trace nm =
     | NONE => registered_err "reset_trace" nm
 
 fun reset_traces () =
-   Binarymap.app (fn (_, {value, default, ...}) => trfp_set value default)
-                 (!trace_map)
+  let
+    fun reset (TR{value,default,...}) = trfp_set value default
+      | reset (ALIAS _) = ()
+  in
+    Binarymap.app (reset o #2) (!trace_map)
+  end
 
 fun current_trace nm =
    case find_record nm of
