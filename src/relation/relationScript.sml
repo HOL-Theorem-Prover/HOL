@@ -1754,7 +1754,8 @@ val O_DEF = new_definition(
 val _ = set_fixity "O" (Infixr 800)
 val _ = Unicode.unicode_version {u = UTF8.chr 0x2218 ^ UnicodeChars.sub_r,
                                  tmnm = "O"}
-
+val _ = TeX_notation { hol = UTF8.chr 0x2218 ^ UnicodeChars.sub_r,
+                       TeX = ("\\HOLTokenRCompose{}", 1) }
 
 val inv_O = store_thm(
   "inv_O",
