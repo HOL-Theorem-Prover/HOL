@@ -326,6 +326,9 @@ val IN_UNIV =
      GEN_TAC THEN PURE_REWRITE_TAC [UNIV_DEF,SPECIFICATION] THEN
      CONV_TAC BETA_CONV THEN ACCEPT_TAC TRUTH);
 val _ = export_rewrites ["IN_UNIV"]
+val UNIV_applied = save_thm(
+  "UNIV_applied[simp]",
+  REWRITE_RULE[SPECIFICATION] IN_UNIV);
 
 val UNIV_NOT_EMPTY =
     store_thm
