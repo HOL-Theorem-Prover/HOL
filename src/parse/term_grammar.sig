@@ -68,8 +68,12 @@ sig
 
   structure userSyntaxFns :
     sig
-      val register_userPP : { name : string, code : userprinter } -> unit
-      val get_userPP : string -> userprinter
+      type 'a getter = string -> 'a
+      type 'a setter = {name : string, code : 'a} -> unit
+      val register_userPP : userprinter setter
+      val get_userPP : userprinter getter
+      val get_absynPostProcessor : absyn_postprocessor getter
+      val register_absynPostProcessor : absyn_postprocessor setter
     end
 
   val absyn_postprocessors :

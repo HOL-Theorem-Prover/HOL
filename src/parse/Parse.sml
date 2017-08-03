@@ -860,12 +860,8 @@ in
   the_term_grammar := new_absyn_postprocessor x (!the_term_grammar)
 end
 
-fun add_absyn_postprocessor (x as (nm,_)) = let
-in
-  temp_add_absyn_postprocessor x;
-  update_grms "add_absyn_postprocessor"
-              ("temp_add_absyn_postprocessor", "(" ^ quote nm ^ ", " ^ nm ^ ")")
-end
+val add_absyn_postprocessor =
+  mk_perm (fn s => [ADD_ABSYN_POSTP {codename = s}])
 
 fun temp_remove_absyn_postprocessor s =
   let

@@ -70,6 +70,7 @@ datatype user_delta =
        | MOVE_OVLPOSN of {frontp : bool, skid : skid}
        | ADD_NUMFORM of char * string option
        | ADD_UPRINTER of {codename: string, pattern : Term.term}
+       | ADD_ABSYN_POSTP of {codename: string}
 
 
 end

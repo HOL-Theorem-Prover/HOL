@@ -1006,10 +1006,19 @@ fun add_numeral_form G (c, stropt) =
   fupdate_numinfo (update_assoc (check c, stropt)) G
 
 structure userSyntaxFns = struct
-  val userPP_table = ref (Binarymap.mkDict String.compare)
-  fun register_userPP {name,code} =
-    userPP_table := Binarymap.insert(!userPP_table, name, code)
-  fun get_userPP nm = Binarymap.find(!userPP_table, nm)
+  type 'a getter = string -> 'a
+  type 'a setter = {name : string, code : 'a} -> unit
+  type 'a t = 'a getter * 'a setter
+  fun mk_table () =
+    let
+      val tab = ref (Binarymap.mkDict String.compare)
+    in
+      ((fn s => Binarymap.find(!tab, s)),
+       (fn {name,code} => tab := Binarymap.insert(!tab, name, code)))
+    end
+  val (get_userPP, register_userPP) = mk_table() : userprinter t
+  val (get_absynPostProcessor, register_absynPostProcessor) =
+      mk_table() : absyn_postprocessor t
 end
 
 fun add_delta ud G =
@@ -1045,6 +1054,16 @@ fun add_delta ud G =
                     ("No code named "^s^" registered for add user-printer")
       in
         add_user_printer (s,pattern,code) G
+      end
+    | ADD_ABSYN_POSTP {codename} =>
+      let
+        val code = userSyntaxFns.get_absynPostProcessor codename
+          handle Binarymap.NotFound =>
+                 raise ERROR "add_delta"
+                       ("No code named "^codename^
+                        " registered for add absyn-postprocessor")
+      in
+        new_absyn_postprocessor (codename, code) G
       end
 
 fun add_deltas uds G = List.foldl (uncurry add_delta) G uds
@@ -1604,7 +1623,8 @@ val skid_reader =
 
 fun user_delta_encode write_tm ud =
     case ud of
-      ADD_NUMFORM (c,s) =>
+      ADD_ABSYN_POSTP {codename} => "AAPP" ^ StringData.encode codename
+    | ADD_NUMFORM (c,s) =>
         "AN" ^ CharData.encode c ^ OptionData.encode StringData.encode s
     | ADD_UPRINTER{codename=s,pattern=tm} =>
         "AUP" ^ StringData.encode s ^ StringData.encode (write_tm tm)
@@ -1631,6 +1651,8 @@ fun user_delta_encode write_tm ud =
 
 fun user_delta_reader read_tm = let
 in
+  (literal "AAPP" >>
+   Coding.map (fn s => ADD_ABSYN_POSTP {codename = s}) StringData.reader) ||
   (literal "AN" >>
    Coding.map ADD_NUMFORM
      (CharData.reader >* OptionData.reader StringData.reader)) ||
