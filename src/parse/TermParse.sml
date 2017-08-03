@@ -61,76 +61,6 @@ fn q => let
    end
 end;
 
-(* ----------------------------------------------------------------------
-    absyn_phase2
-
-    Moderately disgusting.  Hacks about with the absyn structure in order
-    to handle let-expressions (and maybe other things).
-   ---------------------------------------------------------------------- *)
-
-(* if it can see the LHS (t1) as a pair or single variable then, creates an
-   pair of form (vstruct_of t1, t2).
-   Otherwise, the LHS should be an application (because it's OK to write
-   things like  “let f x1 x2 = body in t”), so returns pair
-      (VIDENT "f", (\x1 x2. t2))
-*)
-fun reform_def (t1, t2) =
- (Absyn.to_vstruct t1, t2)
-  handle HOL_ERR _ =>
-   let open Absyn
-       val (f, args) = strip_app t1
-       val newlocn = locn.Loc_Near (locn_of_absyn t2) (*TODO:not quite right*)
-       val newrhs =
-           List.foldr (fn (a,body) => LAM(newlocn,to_vstruct a,body)) t2 args
-   in
-     (to_vstruct f, newrhs)
-   end
-
-fun munge_let binding_term body = let
-  open Absyn
-  fun strip_and pt A =
-      case pt of
-        APP(_,APP(_,IDENT(_,andstr),t1),t2) => if andstr = and_special then
-                                                 strip_and t1 (strip_and t2 A)
-                                               else pt::A
-      | _ => pt::A
-  val binding_clauses = strip_and binding_term []
-  fun is_eq tm = case tm of APP(_,APP(_,IDENT (_,"="), _), _) => true
-                          | _ => false
-  fun dest_eq (APP(_,APP(_,IDENT (_,"="), t1), t2)) = (t1, t2)
-    | dest_eq t = raise Fail (locn.toString (locn_of_absyn t)^
-                              ":\n(pre-)term not an equality")
-  val _ = List.all is_eq binding_clauses
-          orelse raise ERRORloc "Term" (locn_of_absyn binding_term)
-                                "let with non-equality"
-  val (L,R) = ListPair.unzip (map (reform_def o dest_eq) binding_clauses)
-  val binding_locn = locn.Loc_Near (locn_of_absyn binding_term)
-                      (*:TODO:not quite right*)
-  val central_locn = locn.Loc_Near (locn_of_absyn body) (*TODO:not quite right*)
-  val central_abstraction =
-      List.foldr (fn (v,M) => LAM(central_locn,v,M)) body L
-in
-  List.foldl (fn(arg, b) => APP(central_locn,
-                                APP(binding_locn,IDENT (binding_locn,"LET"),b),
-                                arg))
-             central_abstraction
-             R
-end
-
-fun absyn_phase2 t0 = let
-  open Absyn
-  fun let_remove f (APP(_,APP(_,IDENT _, t1), t2)) = munge_let (f t1) (f t2)
-    | let_remove _ _ = raise Fail "Can't happen"
-  val t1 =
-      traverse (fn APP(_,APP(_,IDENT (_,letstr), _), _) => letstr = let_special
-                 | otherwise => false) let_remove t0
-  val _ =
-    traverse (fn IDENT(_,andstr) => andstr = and_special | _ => false)
-    (fn _ => fn t => raise ERRORloc "Term" (locn_of_absyn t)
-                                    "Invalid use of reserved word and") t1
-in
-  t1
-end
 
 
 (* ----------------------------------------------------------------------
@@ -159,7 +89,7 @@ fun absyn tmg tyg = let
                (* isolate this computation so that precedence conflicts
                   only get detected/reported once *)
 in
-  fn q => q |> phase1 |> absyn_phase2 |> absyn_postprocess tmg
+  fn q => q |> phase1 |> absyn_postprocess tmg
 end
 
 (* ----------------------------------------------------------------------
