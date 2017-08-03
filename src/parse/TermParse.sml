@@ -68,30 +68,22 @@ end;
     to handle let-expressions (and maybe other things).
    ---------------------------------------------------------------------- *)
 
-fun to_vstruct t = let
-  open Absyn
-  fun ultimately s (IDENT (_, s'))      = (s = s')
-    | ultimately s (TYPED (_, t', _))   = ultimately s t'
-    | ultimately s _ = false
-in
-  case t of
-    IDENT (locn,s)    => VIDENT (locn,s)
-  | TYPED (locn,t,ty) => VTYPED(locn,to_vstruct t, ty)
-  | AQ (locn,x)       => VAQ (locn,x)
-  | APP(locn,APP(_,comma, t1), t2) =>
-      if ultimately "," comma then VPAIR(locn,to_vstruct t1, to_vstruct t2)
-      else raise Fail ("term "^locn.toString locn^" not suitable as varstruct")
-  | t => raise Fail ("term "^locn.toString (locn_of_absyn t)^" not suitable as varstruct")
-end
-
+(* if it can see the LHS (t1) as a pair or single variable then, creates an
+   pair of form (vstruct_of t1, t2).
+   Otherwise, the LHS should be an application (because it's OK to write
+   things like  “let f x1 x2 = body in t”), so returns pair
+      (VIDENT "f", (\x1 x2. t2))
+*)
 fun reform_def (t1, t2) =
- (to_vstruct t1, t2)
-  handle Fail _ =>
+ (Absyn.to_vstruct t1, t2)
+  handle HOL_ERR _ =>
    let open Absyn
        val (f, args) = strip_app t1
        val newlocn = locn.Loc_Near (locn_of_absyn t2) (*TODO:not quite right*)
-       val newrhs = List.foldr (fn (a,body) => LAM(newlocn,to_vstruct a,body)) t2 args
-   in (to_vstruct f, newrhs)
+       val newrhs =
+           List.foldr (fn (a,body) => LAM(newlocn,to_vstruct a,body)) t2 args
+   in
+     (to_vstruct f, newrhs)
    end
 
 fun munge_let binding_term body = let
@@ -175,15 +167,6 @@ end
    ---------------------------------------------------------------------- *)
 
 local open Parse_support Absyn
-  fun to_vstruct t =
-      case t of
-        APP(l, APP(_, IDENT (_, ","), t1), t2) => VPAIR(l, to_vstruct t1,
-                                                        to_vstruct t2)
-      | AQ p => VAQ p
-      | IDENT p  => VIDENT p
-      | TYPED(l, t, pty) => VTYPED(l, to_vstruct t, pty)
-      | _ => raise ERRORloc "Term" (locn_of_absyn t)
-                            "Bad variable-structure"
 in
   fun absyn_to_preterm_in_env TmG t = let
     val oinfo = term_grammar.overload_info TmG
