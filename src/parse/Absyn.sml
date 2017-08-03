@@ -16,6 +16,17 @@ open Absyn_dtype
         Useful absyn operations.
  ---------------------------------------------------------------------------*)
 
+fun traverse applyp f t = let
+  val traverse = traverse applyp f
+in
+  if applyp t then f traverse t
+  else case t of
+    APP(locn,t1,t2)   => APP(locn,traverse t1, traverse t2)
+  | LAM(locn,vs,t)    => LAM(locn,vs, traverse t)
+  | TYPED(locn,t,pty) => TYPED(locn,traverse t, pty)
+  | allelse           => allelse
+end
+
 fun atom_name tm = fst(dest_var tm handle HOL_ERR _ => dest_const tm);
 
 val dest_pair = sdest_binop (",", "pair") (ERR "dest_pair" "");

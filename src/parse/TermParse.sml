@@ -125,19 +125,6 @@ in
              R
 end
 
-fun traverse applyp f t = let
-  open Absyn
-  val traverse = traverse applyp f
-in
-  if applyp t then f traverse t
-  else case t of
-    APP(locn,t1,t2)   => APP(locn,traverse t1, traverse t2)
-  | LAM(locn,vs,t)    => LAM(locn,vs, traverse t)
-  | TYPED(locn,t,pty) => TYPED(locn,traverse t, pty)
-  | allelse           => allelse
-end
-
-
 fun absyn_phase2 t0 = let
   open Absyn
   fun let_remove f (APP(_,APP(_,IDENT _, t1), t2)) = munge_let (f t1) (f t2)
