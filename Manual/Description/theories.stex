@@ -1312,6 +1312,7 @@ series of theories. Also available are theories of $n$-bit words
 (numbers modulo $2^n$), floating point and fixed point numbers.
 
 \subsection{Natural numbers}
+\label{sec:arithmetic}
 
 The natural numbers are developed in a series of theories:
 \theoryimp{num}, \theoryimp{prim\_rec}, \theoryimp{arithmetic}, and

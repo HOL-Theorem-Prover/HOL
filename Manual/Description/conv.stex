@@ -14,9 +14,11 @@ by semantically equivalent terms.
 
 The \ML\ type of conversions is \ml{conv}:
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
 type conv = term -> thm
-\end{verbatim}\end{hol}
+\end{verbatim}
+\end{hol}
 
 \noindent For example, \ml{BETA\_CONV}\index{BETA_CONV@\ml{BETA\_CONV}}
 is an \ML\ function of type \ml{conv} (\ie\ a conversion) that
@@ -278,13 +280,15 @@ structure of the whole term.  This is so even though the whole term is
 reduced, and the subterm at top level could be reduced:
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{alltt}
+\begin{session}
+\begin{alltt}
 >> BETA_CONV ``(\z. x + y + z) 3``;
 
 >> BETA_CONV ``(\w. w) 3``;
 
 >> REPEATC BETA_CONV ``(\z. x + y + z) ((\w. w) 3)``;
-\end{alltt}\end{session}
+\end{alltt}
+\end{session}
 
 To produce, from a conversion $c$, a conversion that applies $c$ to every
 subterm of a term, the function \ml{DEPTH\_CONV} can be applied to $c$:
@@ -310,22 +314,26 @@ repeatedly applying $c$ to each subterm until no longer applicable.
 This helps with the two problems thus far:
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{alltt}
+\begin{session}
+\begin{alltt}
 >> DEPTH_CONV BETA_CONV ``(((\x. (\y. (\z. x + y + z))) 1) 2) 3``;
 
 >> DEPTH_CONV BETA_CONV ``(\z. x + y + z) ((\w. w) 3)``;
-\end{alltt}\end{session}
+\end{alltt}
+\end{session}
 
 It may happen, however,
 that the result of such a conversion still contains subterms
 that could themselves be reduced at top level. For example:
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{alltt}
+\begin{session}
+\begin{alltt}
 >> val t = ``(\f. \x. f x) (\n. n + 1)``;
 
 >> DEPTH_CONV BETA_CONV t;
-\end{alltt}\end{session}
+\end{alltt}
+\end{session}
 
 \noindent The function \ml{TOP\_DEPTH\_CONV}
  does more
@@ -345,9 +353,11 @@ study the \ML\ definitions near the end of this section.}
 
 \noindent Thus:
 
-\begin{session}\begin{alltt}
+\begin{session}
+\begin{alltt}
 >> TOP_DEPTH_CONV BETA_CONV t;
-\end{alltt}\end{session}
+\end{alltt}
+\end{session}
 
 Finally, the simpler function \ml{ONCE\_DEPTH\_CONV} is provided:
 
@@ -355,17 +365,20 @@ Finally, the simpler function \ml{ONCE\_DEPTH\_CONV} is provided:
 \index{ONCE_DEPTH_CONV@\ml{ONCE\_DEPTH\_CONV}|pin}
 \begin{verbatim}
    ONCE_DEPTH_CONV : conv -> conv
-\end{verbatim}\end{holboxed}
+\end{verbatim}
+\end{holboxed}
 
 \noindent $\ml{ONCE\_DEPTH\_CONV}\ c\ t$ applies $c$ once to the first
 term (and only the first term)
 on which it succeeds in a top-down traversal:
 
-\begin{session}\begin{alltt}
+\begin{session}
+\begin{alltt}
 >> ONCE_DEPTH_CONV BETA_CONV t;
 
 >> ONCE_DEPTH_CONV BETA_CONV ``(\x. (\n. n + 1) x)``;
-\end{alltt}\end{session}
+\end{alltt}
+\end{session}
 
 The equational theorems returned by conversions are not always
 useful in equational form.  To make the results more useful for theorem
@@ -388,9 +401,11 @@ $\ml{|-}\ t\ml{=}t'$.
 $\ml{CONV\_TAC}\ c$ is a tactic that
 converts the conclusion of a goal using $c$. \ml{CONV\_RULE} is defined by:
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    fun CONV_RULE c th = EQ_MP (c (concl th)) th
-\end{verbatim}\end{hol}
+\end{verbatim}
+\end{hol}
 
 \noindent (The validation of \ml{CONV\_TAC} also
 uses \ml{EQ\_MP}\footnote{For \ml{EQ\_MP}, see ~\ref{sec:eqmp}.}.)
@@ -405,15 +420,18 @@ of the $\beta$-redex subterms of a term.
 
 \noindent It is defined by:
 
-\begin{hol}\begin{verbatim}
-   let BETA_RULE = CONV_RULE(DEPTH_CONV BETA_CONV)
-\end{verbatim}\end{hol}
+\begin{hol}
+\begin{verbatim}
+  val BETA_RULE = CONV_RULE(DEPTH_CONV BETA_CONV)
+\end{verbatim}
+\end{hol}
 
 \noindent The search invoked by \ml{BETA\_RULE}
 is adequate for some purposes but not others; for example,
 the first use shown below but not the second:
 
-\begin{session}\begin{alltt}
+\begin{session}
+\begin{alltt}
 >> BETA_RULE (ASSUME ``(((\x. (\y. (\z. x + y + z))) 1) 2) 3 < 10``);
 
 >> val th = ASSUME ``NEXT = ^t``;
@@ -421,18 +439,21 @@ the first use shown below but not the second:
 >> BETA_RULE th;
 
 >> BETA_RULE (BETA_RULE th);
-\end{alltt}\end{session}
+\end{alltt}
+\end{session}
 
 \noindent A more powerful
 $\beta$-reduction rule
 that used the second  search strategy could be defined as shown below
 (this is not built into \HOL).
 
-\begin{session}\begin{alltt}
+\begin{session}
+\begin{alltt}
 >> val TOP_BETA_RULE = CONV_RULE (TOP_DEPTH_CONV BETA_CONV);
 
 >> TOP_BETA_RULE th;
-\end{alltt}\end{session}
+\end{alltt}
+\end{session}
 
 \ml{TOP\_DEPTH\_CONV} is the traversal
 strategy used by the \HOL\ rewriting tools described in Section~\ref{avra3}.
@@ -479,14 +500,18 @@ intuitively, to:
 \index{ORELSEC@\ml{ORELSEC}}
 \begin{alltt}
    \m{c\sb{1}} ORELSEC \m{c\sb{2}} ORELSEC \m{\ldots} ORELSEC \m{c\sb{n}}
-\end{alltt}\end{hol}
+\end{alltt}
+\end{hol}
 
 \noindent It is defined by:
 
-\begin{hol}\begin{verbatim}
-   fun FIRST_CONV cl t =
-       itlist $ORELSEC cl NO_CONV t handle HOL_ERR _ => failwith `FIRST_CONV`;;
-\end{verbatim}\end{hol}
+\begin{hol}
+\begin{verbatim}
+   fun FIRST_CONV [] tm = NO_CONV tm
+     | FIRST_CONV (c :: rst) tm =
+         c tm handle HOL_ERR _ => FIRST_CONV rst tm
+\end{verbatim}
+\end{hol}
 
 The conversion \ml{ALL\_CONV} is an identity for \ml{THENC},\index{THENC@\ml{THENC}} useful
 in building functions.
@@ -519,10 +544,13 @@ intuitively, to:
 
 \noindent It is defined by:
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    fun EVERY_CONV cl t =
-       itlist $THENC cl ALL_CONV t handle HOL_ERR _ => failwith `EVERY_CONV`
-\end{verbatim}\end{hol}
+       List.foldr (op THENC) ALL_CONV cl t
+         handle HOL_ERR _ => raise ERR "EVERY_CONV" ""
+\end{verbatim}
+\end{hol}
 
 The operator \ml{CHANGED\_CONV} converts one conversion to another that
 fails on arguments that it cannot change.
@@ -552,7 +580,8 @@ $\ml{TRY\_CONV}\ c\ t$  also evaluates to $\ml{|-}\ t\ml{=}t'$. If
 $c\ t$ fails, then $\ml{TRY\_CONV}\ c\ t$ evaluates
 to  $\ml{|-}\ t\ml{=}t$. \ml{TRY\_CONV} is implemented by:
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    fun TRY_CONV c = c ORELSEC ALL_CONV
 \end{verbatim}\end{hol}
 
@@ -567,7 +596,7 @@ immediate subterms of a term. These use the \ML\ functions:
 \index{MK_COMB@\ml{MK\_COMB}|pin}
 \index{MK_ABS@\ml{MK\_ABS}|pin}
 \begin{verbatim}
-   MK_COMB : thm # thm -> thm
+   MK_COMB : thm * thm -> thm
    MK_ABS  : thm -> thm
 \end{verbatim}\end{holboxed}
 
@@ -605,7 +634,8 @@ $c\;\;u$\ $=$\ \ml{|- }$u$\ml{=}$u'$.
 \noindent \ml{SUB\_CONV} is implemented\index{conversions!implementation of, in ML@implementation of, in \ML|(} in terms of
 \ml{MK\_COMB} and \ml{MK\_ABS}:
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    fun SUB_CONV c t =
        if is_comb t then
           (let val (rator, rand) = dest_comb t in
@@ -640,15 +670,20 @@ $c$; \ml{RAND\_CONV}$\ c$ converts the operand of an application; and
 of these are useful for applying conversions to particular subterms.
 These are implemented by:
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    fun RATOR_CONV c t =
-    (let val (rator, rand) = dest_comb t in
-     MK_COMB (c rator, REFL rand) end) handle HOL_ERR _ => failwith `RATOR_CONV`
+     let val (rator, rand) = dest_comb t
+     in
+       MK_COMB (c rator, REFL rand)
+     end
 
    fun ABS_CONV c t =
-    (let val (bv, body) = dest_abs t;
-         val bodyth = c body in
-     MK_ABS (GEN bv bodyth) end) handle HOL_ERR _ => failwith `ABS_CONV`
+     let val (bv, body) = dest_abs t;
+         val bodyth = c body
+     in
+       MK_ABS (GEN bv bodyth)
+   end
 \end{verbatim}\end{hol}
 
 \noindent The following
@@ -657,7 +692,8 @@ is an example session illustrating these immediate subterm conversions
 actually parses as $\ml{+}\ t_1\ t_2$).
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{alltt}
+\begin{session}
+\begin{alltt}
 >> val t = ``(\x.x + 1) m + (\x. x + 2) n``;
 
 >> RAND_CONV BETA_CONV t;
@@ -704,10 +740,9 @@ general interest are listed here.
 
 The conversion:
 
-
 \begin{holboxed}\index{PAIRED_BETA_CONV@\ml{PAIRED\_BETA\_CONV}|pin}
 \begin{verbatim}
-   PAIRED_BETA_CONV : conv
+   pairLib.PAIRED_BETA_CONV : conv
 \end{verbatim}\end{holboxed}
 
 \noindent does
@@ -716,20 +751,23 @@ tuples.
 
 Given the term:
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    ``(\(x1, ... ,xn).t) (t1, ... ,tn)``
 \end{verbatim}\end{hol}
 
 \noindent \ml{PAIRED\_BETA\_CONV} proves that:
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    |- (\(x1, ... ,xn). t[x1,...,xn]) (t1, ... ,tn)  =  t[t1, ... ,tn]
 \end{verbatim}\end{hol}
 
 \noindent The conversion works for arbitrarily nested tuples.  For example:
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{alltt}
+\begin{session}
+\begin{alltt}
 >>__ load "pairLib";
 >>__ open pairLib;
 >> PAIRED_BETA_CONV ``(\((a,b),(c,d)). [a;b;c;d]) ((1,2),(3,4))``;
@@ -741,7 +779,7 @@ The conversion:
 
 \begin{holboxed}\index{ADD_CONV@\ml{ADD\_CONV}|pin}
 \begin{verbatim}
-   ADD_CONV : conv
+   reduceLib.ADD_CONV : conv
 \end{verbatim}\end{holboxed}
 
 \noindent does addition by formal proof.
@@ -751,9 +789,10 @@ returns the theorem {\small\verb%|- %}$n\ $\ml{+}$\ m\ $\ml{=}$\  s$,
 where $s$ is the numeral denoting the sum of $n$ and $m$.  For example:
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{alltt}
->>__ load "Arithconv";
->>__ open Arithconv;
+\begin{session}
+\begin{alltt}
+>>__ load "reduceLib";
+>>__ open reduceLib;
 >> ADD_CONV ``1 + 2``;
 
 >> ADD_CONV ``0 + 1000``;
@@ -761,26 +800,13 @@ where $s$ is the numeral denoting the sum of $n$ and $m$.  For example:
 >> ADD_CONV ``101 + 102``;
 \end{alltt}\end{session}
 
-The next conversion decides the equality of natural number
-constants.
-
-\begin{holboxed}\index{num_EQ_CONV@\ml{num\_EQ\_CONV}|pin}
-\begin{verbatim}
-   num_EQ_CONV : conv
-\end{verbatim}\end{holboxed}
-
-\noindent If $n$ and $m$ are terms constructed from numeral constants
-and the successor function \ml{SUC}, then:
-{\small\verb%num_EQ_CONV "%}$n$\ml{=}$m$\ml{"}
-returns:
-
-\begin{hol}\begin{alltt}
-   |- (\(n\)=\(m\)) = T   \(\mbox{if \(n\) and \(m\) represent the same number}\)
-   |- (\(n\)=\(m\)) = F   \(\mbox{if \(n\) and \(m\) represent different numbers}\)
-\end{alltt}\end{hol}
-
-\noindent In addition, {\small\verb%num_EQ_CONV "%}$t\ $\ml{=}$\ t$\ml{"}
-returns: {\small\verb%|- (%}$t$\ml{=}$t${\small\verb%) = T%}
+For more general arithmetic, the conversion \ml{REDUCE\_CONV}\index{REDUCE_CONV@\ml{REDUCE\_CONV}} handles all of the operators in the theory of natural number arithmetic (see Section~\ref{sec:arithmetic}):
+\begin{session}
+\begin{alltt}
+>> REDUCE_CONV ``2 * 3``;
+>> REDUCE_CONV ``2 ** 3 + 101 MOD 6``;
+\end{alltt}
+\end{session}
 
 \subsection{List processing conversions}
 
@@ -797,22 +823,27 @@ There are two useful built-in conversions for lists:
 \ml{LENGTH\_CONV} computes the length of a list.
 A call to:
 
-\begin{hol}\begin{alltt}
-   LENGTH_CONV "LENGTH[\(t\sb{1}\);\(\ldots\);\(t\sb{n}\)]"
-\end{alltt}\end{hol}
+\begin{hol}
+\begin{alltt}
+   LENGTH_CONV ``LENGTH[\(t\sb{1}\);\(\ldots\);\(t\sb{n}\)]``
+\end{alltt}
+\end{hol}
 
 \noindent generates the theorem:
 
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
    |- LENGTH [\(t\sb{1}\);\(\ldots\);\(t\sb{n}\)] = n
-\end{alltt}\end{hol}
+\end{alltt}
+\end{hol}
 
 The other conversion, \ml{list\_EQ\_CONV}, proves or disproves the
 equality of two lists, given
 a conversion for deciding the equality of elements.
 A call to:
 
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
    list_EQ_CONV \(conv\) "[\(u\sb{1}\);\(\ldots\);\(u\sb{n}\)] = [\(v\sb{1}\);\(\ldots\);\(v\sb{m}\)]"
 \end{alltt}\end{hol}
 
@@ -834,55 +865,6 @@ for any $1\leq i \leq m$.
 {\small\verb%|- (%}$u_i$\ml{=}$v_i$\ml{)=T} for $1\leq i \leq n$.
 \end{myenumerate}
 
-\subsection{Simplifying {\tt let}-terms}\label{let-terms}
-\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL\ logic!simplification of}
-
-A conversion for reducing {\tt let}-terms is now provided.
-
-\begin{holboxed}\index{let_CONV@\ml{let\_CONV}|pin}
-\begin{verbatim}
-   let_CONV : conv
-\end{verbatim}\end{holboxed}
-
-\noindent Given a term:
-
-\begin{hol}\begin{alltt}
-   "let \(v\sb{1}\) = \(t\sb{1}\) and \(\cdots\) and \(v\sb{n}\) = \(t\sb{n}\) in \(t[v\sb{1},\ldots,v\sb{n}]\)"
-\end{alltt}\end{hol}
-
-\noindent \ml{let\_CONV} proves that:
-
-\begin{hol}\begin{alltt}
-   |- let \(v\sb{1}\) = \(t\sb{1}\) and \(\cdots\) and \(v\sb{n}\) = \(t\sb{n}\) in \(t[v\sb{1},\ldots,v\sb{n}]\)  =  \(t[t\sb{1},\ldots,t\sb{n}]\)
-\end{alltt}\end{hol}
-
-\noindent The \ml{$v_i$}'s can take any one of the following forms:
-
-\begin{myenumerate}
-\item Variables:    \ml{x} etc.
-\item Tuples:   \ml{(x,y)}, \ml{(a,b,c)}, \ml{((a,b),(c,d))} etc.
-\item Applications: \ml{f (x,y) z}, \ml{f x} etc.
-\end{myenumerate}
-
-\noindent Variables are just substituted for. With tuples, the substitution is
-done component-wise, and function applications are effectively
-rewritten in the body of the {\tt let}-term.
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{alltt}
->> let_CONV ``let x = 1 in x + y``;
-
->> let_CONV ``let (x,y) = (1,2) in x + y``;
-
->> let_CONV ``let f x = 1 and f y = 2 in (f 10) + (f 20)``;
-
->> let_CONV ``let f x = x + 1 and g x = x + 2 in f(g(f(g 0)))``;
-
->> CONV_RULE (DEPTH_CONV ADD_CONV) it;
-
->> let_CONV ``let f x y = x + y in f 1``;  (* NB: partial application *)
-\end{alltt}\end{session}
-
 \subsection{Skolemization}\index{Skolemization}
 
 Two conversions are provided for a higher-order version of
@@ -899,7 +881,8 @@ The conversion
 \noindent takes a variable parameter, \ml{$f$} say, and
 proves:
 
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
    |- (!\(x\sb{1}\) \(\ldots\) \(x\sb{n}\). ?\(y\). \(t[x\sb{1},\ldots,x\sb{n},y]\)  =  (?\(f\). !\(x\sb{1}\) \(\ldots\) \(x\sb{n}\). \(t[x\sb{1},\ldots,x\sb{n},f x\sb{1}\ldots x\sb{n}]\)
 \end{alltt}\end{hol}
 
@@ -908,32 +891,29 @@ proves:
 Note that when $n=\ml{0}$, this
 is equivalent to alpha-conversion:
 
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
   |- (?\(y\). \(t[y]\)) = (?\(f\). \(t[f]\))
 \end{alltt}\end{hol}
 
 \noindent and that the conversion fails if there is already a free
 variable \ml{$f$} of the appropriate type in the input term. For example:
 
-\begin{hol}\begin{alltt}
-  X_SKOLEM_CONV "f:num->*" "!n:num. ?x:*. x = (f n)"
-\end{alltt}\end{hol}
+\begin{session}
+\begin{alltt}
+>>+ X_SKOLEM_CONV “f:num->'a” “!n:num. ?x:*. x = (f n)”;
+\end{alltt}\end{session}
 
 \noindent will fail.  The conversion \ml{SKOLEM\_CONV} is
 like \ml{X\_SKOLEM\_CONV}, except that it
 uses a primed variant of the name of the existentially quantified variable
 as the name of the skolem function it introduces.  For example:
 
-\begin{hol}\begin{alltt}
-  SKOLEM_CONV "!x. ?y. P x y"
-\end{alltt}\end{hol}
-
-\noindent proves that:
-
-\begin{hol}\begin{alltt}
-  |- ?y. !x. P x (y x)
-\end{alltt}\end{hol}
-
+\begin{session}
+\begin{alltt}
+>> SKOLEM_CONV “!x. ?y. P x y”;
+\end{alltt}
+\end{session}
 
 \subsection{Quantifier movement conversions}
 \index{quantifiers!conversions for}
