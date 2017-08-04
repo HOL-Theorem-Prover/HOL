@@ -1897,7 +1897,7 @@ val INDEP_FN_ENUM_RANGE = store_thm
        (?c n. BIJ c (count n) (range (FST o f)))``,
    REVERSE (RW_TAC std_ss [indep_fn_def, GSPECIFICATION, COUNTABLE_ALT_BIJ])
    >- PROVE_TAC []
-   >> PROVE_TAC [FINITE_BIJ_COUNT]);
+   >> PROVE_TAC [FINITE_BIJ_COUNT_EQ]);
 
 (* |- ∀s. s ∈ events bern ⇒ (prob bern (COMPL s) = 1 − prob bern s) *)
 val PROB_COMPL_BERN = save_thm
@@ -3863,7 +3863,7 @@ val PROB_BERN_BIND_COUNTABLE = store_thm
    >> RW_TAC std_ss [COUNTABLE_ALT_BIJ]
    >- ((MP_TAC o
         Q.ISPEC `range (FST o (f : (num -> bool) -> 'b # (num -> bool)))`)
-       FINITE_BIJ_COUNT
+       FINITE_BIJ_COUNT_EQ
        >> RW_TAC std_ss []
        >> MP_TAC (Q.SPECL [`p`, `f`, `g`, `c'`, `n`] PROB_BERN_BIND_FINITE)
        >> RW_TAC std_ss []
