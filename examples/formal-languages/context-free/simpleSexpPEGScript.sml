@@ -6,7 +6,7 @@ val _ = new_theory "simpleSexpPEG";
 
 val tokeq_def = Define`tokeq t = tok ((=) t) (K (SX_SYM [t]))`
 val grabWS_def = Define`
-  grabWS s = rpt (tok isSpace ARB) (K ARB) ~> s
+  grabWS s = rpt (tok isSpace (K arb_sexp)) (K arb_sexp) ~> s
 `;
 
 val peg0_tokeq = store_thm(
@@ -22,13 +22,48 @@ val replace_nil_def= Define`
   (replace_nil x y = x)
 `;
 
+(* have to use these versions of choicel and pegf below because the
+   versions from pegTheory use ARB in their definitions.
+   Logically, the ARBs are harmless, but they completely mess with the
+   CakeML translator.
+*)
+val choicel_def = Define`
+  choicel [] = not (empty arb_sexp) arb_sexp ∧
+  choicel (h::t) = choice h (choicel t) (λs. case s of INL x => x | INR y => y)
+`;
+
+val pegf_def = Define`pegf sym f = seq sym (empty arb_sexp) (λl1 l2. f l1)`;
+
+val peg_eval_choicel_NIL = store_thm(
+  "peg_eval_choicel_NIL[simp]",
+  ``peg_eval G (i0, choicel []) x = (x = NONE)``,
+  simp[choicel_def, Once peg_eval_cases]);
+
+val peg_eval_choicel_CONS = store_thm(
+  "peg_eval_choicel_CONS",
+  ``∀x. peg_eval G (i0, choicel (h::t)) x ⇔
+          peg_eval G (i0, h) x ∧ x <> NONE ∨
+          peg_eval G (i0,h) NONE ∧ peg_eval G (i0, choicel t) x``,
+  simp[choicel_def, SimpLHS, Once peg_eval_cases] >>
+  simp[pairTheory.FORALL_PROD, optionTheory.FORALL_OPTION]);
+
+val peg0_choicel = store_thm(
+  "peg0_choicel[simp]",
+  ``(peg0 G (choicel []) = F) ∧
+    (peg0 G (choicel (h::t)) ⇔ peg0 G h ∨ pegfail G h ∧ peg0 G (choicel t))``,
+  simp[choicel_def])
+
+val peg0_pegf = store_thm(
+  "peg0_pegf[simp]",
+  ``peg0 G (pegf s f) = peg0 G s``,
+  simp[pegf_def])
 
 val sexpPEG_def = zDefine`
   sexpPEG : (char, sexpNT, sexp) peg = <|
     start := pnt sxnt_sexp ;
     rules :=
     FEMPTY |++
-    [(mkNT sxnt_sexp, pnt sxnt_WSsexp <~ rpt (tok isSpace ARB) (K ARB));
+    [(mkNT sxnt_sexp, pnt sxnt_WSsexp <~ rpt (tok isSpace (K arb_sexp)) (K arb_sexp));
      (mkNT sxnt_sexp0,
       choicel [
         pnt sxnt_sexpnum ;
@@ -54,7 +89,7 @@ val sexpPEG_def = zDefine`
             SX_CONS
      ]);
      (mkNT sxnt_WSsexp,
-      rpt (tok isSpace ARB) (K ARB) ~> pnt sxnt_sexp0);
+      rpt (tok isSpace (K arb_sexp)) (K arb_sexp) ~> pnt sxnt_sexp0);
      (mkNT sxnt_sexpnum,
         seq (pnt sxnt_digit)
             (rpt (pnt sxnt_digit)
