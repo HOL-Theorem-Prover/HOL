@@ -3,8 +3,14 @@ use "../src/portableML/GetOpt.sig";
 use "../src/portableML/GetOpt.sml";
 use "../tools-poly/poly/Binaryset.sig";
 use "../tools-poly/poly/Binaryset.sml";
+use "../tools-poly/poly/Binarymap.sig";
+use "../tools-poly/poly/Binarymap.sml";
 use "../tools/Holmake/Systeml.sig";
 use "../tools-poly/Holmake/Systeml.sml";
+use "../tools-poly/poly/holpathdb.sig";
+use "../tools-poly/poly/holpathdb.sml";
+
+val _ = holpathdb.extend_db {vname = "HOLDIR", path = Systeml.HOLDIR}
 
 infix |>
 fun x |> f = f x
@@ -97,6 +103,7 @@ fun load1 (S as {worklist, alreadySeen, acc}) (src,s) =
             | SOME line =>
               let
                 val newfile = String.substring(line, 0, size line - 1)
+                                  |> holpathdb.subst_pathvars
               in
                 recurse ((s ^ ":" ^ Int.toString lnum, newfile) :: acc)
                         (lnum + 1)
