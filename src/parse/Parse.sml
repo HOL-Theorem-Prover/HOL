@@ -663,18 +663,6 @@ fun temp_set_associativity (i,a) = let in
    term_grammar_changed := true
  end
 
-
-local open term_grammar
-in
-
-fun relToString TM = "TM"
-  | relToString (TOK s) = "TOK "^quote s
-end
-
-fun rellistToString [] = ""
-  | rellistToString [x] = relToString x
-  | rellistToString (x::xs) = relToString x ^ ", " ^ rellistToString xs
-
 fun block_infoToString (Portable.CONSISTENT, n) =
         "(Portable.CONSISTENT, "^Int.toString n^")"
   | block_infoToString (Portable.INCONSISTENT, n) =
@@ -690,25 +678,6 @@ fun BlockStyleToString AroundSameName = "AroundSameName"
   | BlockStyleToString AroundSamePrec = "AroundSamePrec"
   | BlockStyleToString AroundEachPhrase = "AroundEachPhrase"
   | BlockStyleToString NoPhrasing = "NoPhrasing"
-
-
-fun ppToString pp =
-  case pp
-   of PPBlock(ppels, bi) =>
-      "PPBlock(["^pplistToString ppels^"], "^ block_infoToString bi^")"
-    | EndInitialBlock bi => "EndInitialBlock "^block_infoToString bi
-    | BeginFinalBlock bi => "BeginFinalBlock "^block_infoToString bi
-    | HardSpace n => "HardSpace "^Int.toString n^""
-    | BreakSpace(n,m) => "BreakSpace("^Int.toString n^", "^Int.toString m^")"
-    | RE rel => relToString rel
-    | _ => raise Fail "Don't want to print out First or Last TM values"
-and
-    pplistToString [] = ""
-  | pplistToString [x] = ppToString x
-  | pplistToString (x::xs) = ppToString x ^ ", " ^ pplistToString xs
-
-
-
 
 
 (*---------------------------------------------------------------------------*)
