@@ -24,7 +24,10 @@ val assoc_reader =
       (literal "N" >> return NONASSOC)
     end
 
-datatype rule_element = TOK of string | TM
+datatype rule_element =
+         TOK of string
+       | TM
+       | ListTM of {nilstr:string,cons:string,sep:string}
 type block_info = Portable.break_style * int
 
 datatype pp_element =
@@ -34,6 +37,12 @@ datatype pp_element =
        | HardSpace of int
        | BreakSpace of (int * int)
        | RE of rule_element
+       | ListForm of {
+           separator : pp_element list,
+           block_info: block_info,
+           cons      : string,
+           nilstr    : string
+         }
        | LastTM
        | FirstTM   (* these last two only used internally *)
 

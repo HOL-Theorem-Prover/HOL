@@ -2,7 +2,8 @@ structure term_pp :> term_pp =
 struct
 
 open Portable HolKernel term_grammar
-     HOLtokens HOLgrammars GrammarSpecials;
+     HOLtokens HOLgrammars GrammarSpecials
+     PrecAnalysis
 
 val PP_ERR = mk_HOL_ERR "term_pp";
 
@@ -607,12 +608,49 @@ fun pp_term (G : grammar) TyG backend = let
               | RE (TOK s) => (tok_string s >> recurse (es, args))
               | RE TM => (pr_term (hd args) Top Top Top (decdepth depth) >>
                           recurse (es, tl args))
+              | RE (ListTM _) => raise Fail "term_pp - encountered (RE ListTM)"
               | FirstTM => (pr_term (hd args) cprec lprec cprec (decdepth depth) >>
                             recurse (es, tl args))
               | LastTM => (pr_term (hd args) cprec cprec rprec (decdepth depth) >>
                            recurse (es, tl args))
               | EndInitialBlock _ => raise Fail "term_pp - encountered EIB"
               | BeginFinalBlock _ => raise Fail "term_pp - encountered BFB"
+              | ListForm lspec =>
+                  (pr_lspec lspec (hd args) >> recurse (es, tl args))
+          end
+      and pr_lspec (r as {nilstr, cons, block_info,...}) t =
+          let
+            val sep = #separator r
+            val rdelim = #rightdelim r
+            val ldelim = #leftdelim r
+            val (consistency, breakspacing) = block_info
+            (* list will never be empty *)
+            fun pr_list tm = let
+              fun lrecurse depth tm = let
+                val (_, args) = strip_comb tm
+                val head = hd args
+                val tail = List.nth(args, 1)
+              in
+                if depth = 0 then add_string "..."
+                else if has_name_by_parser G nilstr tail then
+                  (* last element *)
+                  pr_term head Top Top Top (decdepth depth)
+                else let
+                in
+                  pr_term head Top Top Top (decdepth depth) >>
+                  recurse (sep, []) >>
+                  lrecurse (decdepth depth) tail
+                end
+              end
+            in
+              recurse (ldelim, []) >>
+              block consistency breakspacing (lrecurse depth t) >>
+              recurse (rdelim, []) >> return ()
+            end
+          in
+            if has_name_by_parser G nilstr t then
+              recurse (ldelim, []) >> recurse (rdelim, []) >> return ()
+            else pr_list t
           end
     in
       recurse (els, args)
@@ -1521,18 +1559,18 @@ fun pp_term (G : grammar) TyG backend = let
               else fail
 
           fun is_atom tm = is_const tm orelse is_var tm
-          fun pr_atomf (f,args) = let
+          fun pr_atomf (f,args0) = let
             (* the tm, Rator and Rand bindings that we began with are
                overridden by the f and args values that may be the product of
                oi_strip_comb.*)
             val fname = atom_name f
-            val tm = list_mk_comb (f, args)
+            val tm = list_mk_comb (f, args0)
             val Rator = rator tm
-            val (args,Rand) = front_last args
+            val (args,Rand) = front_last args0
             val candidate_rules =
                 Option.map (List.filter (is_unicode_ok_rule o #3))
                            (lookup_term fname)
-            fun is_list (r as {nilstr, cons, ...}:listspec) tm =
+            fun is_list (r as {nilstr, cons}) tm =
                 has_name_by_parser G nilstr tm orelse
                 (is_comb tm andalso
                  let
@@ -1563,6 +1601,22 @@ fun pp_term (G : grammar) TyG backend = let
                     | otherwise => NONE
                   end
                 else NONE
+            fun check_rrec_args f rrec args =
+              let
+                val rels = f (rule_elements (#elements rrec))
+                fun recurse rels args =
+                  case (rels, args) of
+                      ([], []) => true
+                    | ([], _) => false
+                    | (TM :: rrest, _ :: arest) => recurse rrest arest
+                    | (TOK _ :: rrest, _) => recurse rrest args
+                    | (_, []) => false
+                    | (ListTM {nilstr,cons,...} :: rrest, a :: arest)  =>
+                        is_list {nilstr=nilstr,cons=cons} a andalso
+                        recurse rrest arest
+              in
+                recurse rels args
+              end
           in
             case candidate_rules of
               NONE =>
@@ -1586,24 +1640,25 @@ fun pp_term (G : grammar) TyG backend = let
                 fun suitable_rule rule =
                     case rule of
                       INFIX(STD_infix(rrlist, _)) =>
-                      numTMs (rule_elements (#elements (hd rrlist))) + 1 =
-                      length args
+                        check_rrec_args mkrels_infix (hd rrlist) args0
                     | INFIX RESQUAN_OP => raise Fail "Can't happen 90212"
                     | PREFIX (STD_prefix list) =>
-                      numTMs (rule_elements (#elements (hd list))) =
-                      length args
+                        check_rrec_args mkrels_prefix (hd list) args0
                     | PREFIX (BINDER _) => my_is_abs Rand andalso
                                            length args = 0
                     | SUFFIX (STD_suffix list) =>
-                      numTMs (rule_elements (#elements (hd list))) =
-                      length args
+                        check_rrec_args mkrels_suffix (hd list) args0
                     | SUFFIX Type_annotation => raise Fail "Can't happen 90210"
                     | CLOSEFIX list =>
-                      numTMs (rule_elements (#elements (hd list))) - 1 =
-                      length args
+                        check_rrec_args mkrels_closefix (hd list) args0
                     | INFIX (FNAPP _) => raise Fail "Can't happen 90211"
                     | INFIX VSCONS => raise Fail "Can't happen 90213"
-                    | LISTRULE list => is_list (hd list) tm
+                    | LISTRULE list =>
+                      let
+                        val {nilstr, cons, ...} = hd list
+                      in
+                        is_list {nilstr=nilstr,cons=cons} tm
+                      end
                 val crules = List.filter (suitable_rule o #3) crules0
                 fun is_lrule (LISTRULE _) = true | is_lrule _ = false
                 val first_nonlist = List.find (not o is_lrule o #3) crules

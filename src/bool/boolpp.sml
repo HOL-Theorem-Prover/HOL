@@ -247,7 +247,7 @@ in
              R
 end
 
-fun let_processor G t0 = let
+fun let_processor0 G t0 = let
   open Absyn GrammarSpecials
   fun let_remove f (APP(_,APP(_,IDENT _, t1), t2)) = munge_let (f t1) (f t2)
     | let_remove _ _ = raise Fail "Can't happen"
@@ -260,6 +260,28 @@ fun let_processor G t0 = let
                                     "Invalid use of reserved word and") t1
 in
   t1
+end
+
+fun let_processor G t = let
+  open Absyn GrammarSpecials
+  fun nilcheck (APP (_, IDENT (_, nilstr), body)) = nilstr = letnil_special
+    | nilcheck _ = false
+  fun conspresent (APP (_, APP (_, APP (_, IDENT(_, constr), eq1), eqs), bod)) =
+         constr = letcons_special
+    | conspresent _ = false
+  fun foldcons (a, bod) =
+    case a of
+        APP (l1, APP (l2, IDENT(_, constr), eq1), eqs) =>
+          if constr = letcons_special then
+            APP (l1, APP (l2, IDENT(l2, let_special), eq1), foldcons(eqs, bod))
+          else raise ERRORloc "let_processor" l1 "Mal-formed LET"
+      | IDENT(loc, nilstr) =>
+          if nilstr = letnil_special then bod
+          else raise ERRORloc "let_processor" loc "Mal-formed LET"
+      | _ => raise ERRORloc "let_processor" (locn_of_absyn a) "Mal-formed LET"
+in
+  traverse conspresent
+           (fn _ => fn a => let_processor0 G (foldcons (dest_app a))) t
 end
 
 val _ = term_grammar.userSyntaxFns.register_absynPostProcessor

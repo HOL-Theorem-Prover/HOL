@@ -233,6 +233,88 @@ val _ = app test [("abc", [Ident "abc"]),
                                                 fracpart = ai 3}])
                   ]
 
+val g0 = term_grammar.stdhol;
+local
+  open term_grammar term_grammar_dtype
+  fun mTOK s = RE (HOLgrammars.TOK s)
+  val mTM = RE HOLgrammars.TM
+in
+val cond_g =
+    add_rule {
+        term_name   = "COND",
+        fixity      = Prefix 70,
+        pp_elements = [PPBlock([mTOK "if", BreakSpace(1,2), mTM,
+                                BreakSpace(1,0),
+                                mTOK "then"], (CONSISTENT, 0)),
+                       BreakSpace(1,2), mTM, BreakSpace(1,0),
+                       mTOK "else", BreakSpace(1,2)],
+        paren_style = OnlyIfNecessary,
+        block_style = (AroundEachPhrase, (CONSISTENT, 0))} g0
+val let_g =
+    add_rule { pp_elements = [ListForm {
+                                 leftdelim = [mTOK "let"],
+                                 rightdelim = [mTOK "in"],
+                                 separator = [mTOK ";"],
+                                 cons = GrammarSpecials.letcons_special,
+                                 nilstr = GrammarSpecials.letnil_special,
+                                 block_info = (INCONSISTENT, 0)
+                             }],
+               term_name = GrammarSpecials.let_special,
+               paren_style = OnlyIfNecessary, fixity = Prefix 8,
+               block_style = (AroundEachPhrase, (CONSISTENT, 0))} g0
+end
+
+fun find_named_rule nm g =
+  let
+    open term_grammar_dtype term_grammar
+  in
+    List.map
+      (fn PREFIX (STD_prefix rrs) =>
+          List.filter (fn rr => #term_name rr = nm) rrs
+      | _ => [])
+      (grammar_rules g) |> List.concat
+  end
+
+val _ = tprint "term_grammar.rule_elements (COND)"
+val cond_rule = hd (find_named_rule "COND" cond_g)
+val cond_rels = term_grammar.rule_elements (#elements cond_rule)
+val _ = let
+  open HOLgrammars
+in
+  if cond_rels = [TOK "if", TM, TOK "then", TM, TOK "else"] then OK()
+  else die "FAILED"
+end
+
+val _ = tprint "PrecAnalysis.rule_equalities (COND)"
+val cond_eqns = PrecAnalysis.rule_equalities cond_rule
+val _ = if Lib.set_eq cond_eqns [("if", true, "then"), ("then", true, "else")]
+        then OK()
+        else die "FAILED"
+
+val _ = tprint "term_grammar.rule_elements (LET)"
+val let_rule = hd (find_named_rule GrammarSpecials.let_special let_g)
+val let_rels = term_grammar.rule_elements (#elements let_rule)
+val _ = let
+  open HOLgrammars GrammarSpecials
+in
+  if let_rels =
+     [ListTM{nilstr=letnil_special, cons=letcons_special, left="let",
+             right="in"}]
+  then OK ()
+  else die "FAILED"
+end
+
+val _ = tprint "PrecAnalysis.rule_equalities (LET)"
+val let_eqns = PrecAnalysis.rule_equalities let_rule
+val _ = if Lib.set_eq let_eqns
+                      [("let", true, ";"), (";", true, ";"), (";", true, "in"),
+                       ("let", false, "in"), ("let", true, "in")]
+        then OK()
+        else die "FAILED"
+
+val _ = tprint "term_grammar.rules_for (LET)"
+val let_rules = term_grammar.rules_for let_g "LET"
+val _ = if length let_rules = 1 then OK() else die "FAILED"
 
 (*
 

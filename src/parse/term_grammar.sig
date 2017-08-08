@@ -16,6 +16,8 @@ sig
 
   val rule_elements  : pp_element list -> rule_element list
   val pp_elements_ok : pp_element list -> bool
+  val first_rtok : rule_element list -> string
+  val first_tok : pp_element list -> string
 
   val reltoString    : rule_element -> string
 
@@ -126,12 +128,6 @@ sig
   val associate_restriction : grammar ->
                               {binder : string option,
                                resbinder : string} -> grammar
-
-  val compatible_listrule : grammar
-                             -> {separator : string,
-                                 leftdelim : string,
-                                 rightdelim : string}
-                             -> {cons : string, nilstr : string} option
 
   val grammar_tokens : grammar -> string list
   val rule_tokens : grammar -> grammar_rule -> string list

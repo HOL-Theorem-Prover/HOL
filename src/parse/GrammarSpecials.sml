@@ -4,6 +4,8 @@ struct
   val fnapp_special = "_ fnapp"
   val bracket_special = "_ bracket"
   val let_special = " _ let"
+  val letcons_special = " _ letcons"
+  val letnil_special = " _ letnil"
   val and_special = " _ and"
   val fakeconst_special = " _ fakeconst"
 
