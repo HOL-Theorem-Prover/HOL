@@ -24,10 +24,11 @@ val assoc_reader =
       (literal "N" >> return NONASSOC)
     end
 
+type mini_lspec = {nilstr:string,cons:string,sep:string}
 datatype rule_element =
          TOK of string
        | TM
-       | ListTM of {nilstr:string,cons:string,sep:string}
+       | ListTM of mini_lspec
 type block_info = Portable.break_style * int
 
 datatype pp_element =

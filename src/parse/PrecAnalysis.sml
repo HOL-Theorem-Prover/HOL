@@ -4,6 +4,7 @@ struct
 open HOLgrammars term_grammar_dtype
 
 type lspec = listspec
+type rel = HOLgrammars.rule_element
 
 fun listfld_tok ppels =
   case ppels of
@@ -54,5 +55,133 @@ fun mkrels_suffix rels = TM :: rels
 fun mkrels_prefix rels = rels @ [TM]
 fun mkrels_closefix rels = rels
 
+fun check_for_listreductions check rels =
+  let
+    val rev = List.rev
+    fun recurse A left_opt sep_opt p rels =
+      (* left_opt is candidate left-delimiter, sep_opt candidate separator
+         Invariant:
+           left_opt = SOME l ==> TOK l was seen earlier as candidate leftdelim
+           sep_opt = SOME s ==>
+             ?l. left_opt = SOME l /\ TOK s followed a TM after the l was
+                 seen and there have been no other TOKs seen since, and
+                 check(l,s) = NONE
+           (p <=> last thing seen was TM)
+       *)
+      case rels of
+          [] => rev A
+        | [TM] => rev A
+        | [TOK tk1] => (* tk1 may end a list *)
+          let
+          in
+            case sep_opt of
+                SOME s =>
+                   (case check(s, tk1) of
+                        NONE =>
+                        (case check(valOf left_opt, tk1) of
+                             NONE => rev A
+                           | SOME lp =>
+                               rev ((valOf left_opt, tk1, lp) :: A))
+                      | SOME lp => rev ((s,tk1,lp)::A))
+              | NONE =>
+                   (case left_opt of
+                        NONE => rev A
+                      | SOME l => (case check(l,tk1) of
+                                       NONE => rev A
+                                     | SOME lp => rev ((l,tk1,lp) :: A)))
+          end
+        | TOK tk1 :: TM :: rest =>
+          let
+          in
+            case sep_opt of
+                SOME s =>
+                   (if s = tk1 andalso p then
+                      recurse A left_opt sep_opt true rest
+                    else
+                      case check (valOf left_opt, tk1) of
+                          NONE =>
+                          (case check (s, tk1) of
+                               NONE =>
+                                 if p then
+                                   recurse A (SOME s) (SOME tk1) true rest
+                                 else
+                                   recurse A (SOME tk1) NONE true rest
+                             | SOME lp =>
+                                 recurse ((s,tk1,lp)::A) (SOME tk1) NONE
+                                         true rest)
+                        | SOME lp => recurse ((valOf left_opt, tk1, lp)::A)
+                                             (SOME tk1) NONE true rest)
+              | NONE =>
+                  (case left_opt of
+                       NONE => recurse A (SOME tk1) NONE true rest
+                     | SOME l =>
+                         (case check (l, tk1) of
+                              NONE => if p then
+                                        recurse A left_opt (SOME tk1) true rest
+                                      else
+                                        recurse A (SOME tk1) NONE true rest
+                            | SOME lp =>
+                                recurse ((l,tk1,lp)::A) (SOME tk1) NONE
+                                        true rest))
+          end
+        | TOK tk1 :: TOK tk2 :: rest =>
+            (case sep_opt of
+                 SOME s =>
+                   if s = tk1 andalso p then
+                     case check (valOf left_opt, tk2) of
+                         NONE =>
+                         (case check(tk1,tk2) of
+                              NONE => recurse A (SOME tk2) NONE false rest
+                            | SOME lp =>
+                                recurse ((tk1,tk2,lp)::A) (SOME tk2) NONE
+                                        false rest)
+                       | SOME lp =>
+                          recurse ((valOf left_opt, tk2, lp)::A)
+                                  (SOME tk2) NONE false rest
+                   else
+                     (case check(s,tk1) of
+                         NONE =>
+                         if p then
+                           case check(s,tk2) of
+                               NONE =>
+                               (case check (tk1,tk2) of
+                                    NONE => recurse A (SOME tk2) NONE false rest
+                                  | SOME lp =>
+                                    recurse ((tk1,tk2,lp)::A) (SOME tk2)
+                                            NONE false rest)
+                             | SOME lp =>
+                               (* s is the left, tk1 is the sep, tk2 right *)
+                               recurse ((s,tk2,lp)::A) (SOME tk2) NONE false
+                                       rest
+                         else
+                           (case check (tk1,tk2) of
+                                    NONE => recurse A (SOME tk2) NONE false rest
+                                  | SOME lp =>
+                                    recurse ((tk1,tk2,lp)::A) (SOME tk2)
+                                            NONE false rest)
+                       | SOME lp =>
+                            recurse ((s,tk1,lp)::A) (SOME tk1) NONE
+                                    false (TOK tk2 :: rest))
+               | NONE => (* no sep *)
+                 let
+                   val A' = case check(tk1,tk2) of
+                                NONE => A
+                              | SOME lp => (tk1,tk2,lp) :: A
+                 in
+                   case left_opt of
+                      NONE => recurse A' (SOME tk2) NONE false rest
+                    | SOME l =>
+                      (case check(l,tk1) of
+                           NONE => recurse A' (SOME tk2) NONE false rest
+                         | SOME lp =>
+                             recurse ((l,tk1,lp)::A') (SOME tk2) NONE false
+                                     rest)
+                 end)
+        | TM :: rest => (* p must be false as two TMs in a row is impossible *)
+            recurse A left_opt sep_opt true rest
+        | _ => raise Fail "check_for_listreductions: impossible rhs"
+  in
+    recurse [] NONE NONE false rels
+  end
 
 end

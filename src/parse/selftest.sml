@@ -316,6 +316,17 @@ val _ = tprint "term_grammar.rules_for (LET)"
 val let_rules = term_grammar.rules_for let_g "LET"
 val _ = if length let_rules = 1 then OK() else die "FAILED"
 
+fun check (s1,s2) =
+  case (s1,s2) of
+      ("let", "in") => SOME 1
+    | ("in", "end") => SOME 2
+    | _ => NONE
+val _ = tprint "PrecAnalysis.check_for_listreductions 1"
+
+val f = PrecAnalysis.check_for_listreductions check
+val result = f [TOK "let", TM, TOK "in" TM]
+val _ = if result = [("let", "in", 1)] then OK() else die "FAILED"
+
 (*
 
 full test including backgrounds
