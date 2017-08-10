@@ -234,10 +234,11 @@ val _ = app test [("abc", [Ident "abc"]),
                   ]
 
 val g0 = term_grammar.stdhol;
+fun mTOK s = term_grammar_dtype.RE (HOLgrammars.TOK s)
+val mTM = term_grammar_dtype.RE HOLgrammars.TM
+
 local
   open term_grammar term_grammar_dtype
-  fun mTOK s = RE (HOLgrammars.TOK s)
-  val mTM = RE HOLgrammars.TM
 in
 val cond_g =
     add_rule {
@@ -251,18 +252,17 @@ val cond_g =
         paren_style = OnlyIfNecessary,
         block_style = (AroundEachPhrase, (CONSISTENT, 0))} g0
 val let_g =
-    add_rule { pp_elements = [ListForm {
-                                 leftdelim = [mTOK "let"],
-                                 rightdelim = [mTOK "in"],
+    add_rule { pp_elements = [mTOK "let",
+                              ListForm {
                                  separator = [mTOK ";"],
                                  cons = GrammarSpecials.letcons_special,
                                  nilstr = GrammarSpecials.letnil_special,
-                                 block_info = (INCONSISTENT, 0)
-                             }],
+                                 block_info = (INCONSISTENT, 0)},
+                              mTOK "in"],
                term_name = GrammarSpecials.let_special,
                paren_style = OnlyIfNecessary, fixity = Prefix 8,
                block_style = (AroundEachPhrase, (CONSISTENT, 0))} g0
-end
+end;
 
 fun find_named_rule nm g =
   let
@@ -273,7 +273,7 @@ fun find_named_rule nm g =
           List.filter (fn rr => #term_name rr = nm) rrs
       | _ => [])
       (grammar_rules g) |> List.concat
-  end
+  end;
 
 val _ = tprint "term_grammar.rule_elements (COND)"
 val cond_rule = hd (find_named_rule "COND" cond_g)
@@ -283,13 +283,13 @@ val _ = let
 in
   if cond_rels = [TOK "if", TM, TOK "then", TM, TOK "else"] then OK()
   else die "FAILED"
-end
+end;
 
 val _ = tprint "PrecAnalysis.rule_equalities (COND)"
 val cond_eqns = PrecAnalysis.rule_equalities cond_rule
 val _ = if Lib.set_eq cond_eqns [("if", true, "then"), ("then", true, "else")]
         then OK()
-        else die "FAILED"
+        else die "FAILED";
 
 val _ = tprint "term_grammar.rule_elements (LET)"
 val let_rule = hd (find_named_rule GrammarSpecials.let_special let_g)
@@ -298,22 +298,29 @@ val _ = let
   open HOLgrammars GrammarSpecials
 in
   if let_rels =
-     [ListTM{nilstr=letnil_special, cons=letcons_special, left="let",
-             right="in"}]
+     [TOK"let", ListTM{nilstr=letnil_special, cons=letcons_special, sep=";"},
+      TOK "in"]
   then OK ()
   else die "FAILED"
-end
+end;
+
+fun prlist eqns =
+  "[" ^ String.concatWith ", "
+         (map (fn (s1,b,s2) => "(\"" ^ s1 ^ "\"," ^ Bool.toString b ^ ",\"" ^
+                               s2 ^"\")")
+              eqns) ^ "]";
 
 val _ = tprint "PrecAnalysis.rule_equalities (LET)"
 val let_eqns = PrecAnalysis.rule_equalities let_rule
 val _ = if Lib.set_eq let_eqns
                       [("let", true, ";"), (";", true, ";"), (";", true, "in"),
-                       ("let", false, "in"), ("let", true, "in")]
+                       ("let", false, "in"), ("let", true, "in"),
+                       (";", false, "in")]
         then OK()
-        else die "FAILED"
+        else die ("FAILED\n  got: "^prlist let_eqns);
 
 val _ = tprint "term_grammar.rules_for (LET)"
-val let_rules = term_grammar.rules_for let_g "LET"
+val let_rules = term_grammar.rules_for let_g GrammarSpecials.let_special
 val _ = if length let_rules = 1 then OK() else die "FAILED"
 
 fun check (s1,s2) =
@@ -321,11 +328,26 @@ fun check (s1,s2) =
       ("let", "in") => SOME 1
     | ("in", "end") => SOME 2
     | _ => NONE
-val _ = tprint "PrecAnalysis.check_for_listreductions 1"
 
 val f = PrecAnalysis.check_for_listreductions check
-val result = f [TOK "let", TM, TOK "in" TM]
-val _ = if result = [("let", "in", 1)] then OK() else die "FAILED"
+
+val _ = tprint "PrecAnalysis.check_for_listreductions 1"
+val result = let open term_grammar_dtype in
+               f [TOK "let", TM, TOK "in", TM]
+             end
+val _ = if result = [("let", "in", 1)] then OK() else die "FAILED";
+
+val _ = tprint "PrecAnalysis.check_for_listreductions 2"
+val result = let open term_grammar_dtype in
+               f [TOK "let", TM, TOK ";", TOK "in", TM]
+             end
+val _ = if result = [("let", "in", 1)] then OK() else die "FAILED";
+
+val _ = tprint "PrecAnalysis.check_for_listreductions 3"
+val result = let open term_grammar_dtype in
+               f [TOK "let", TM, TOK ";", TM, TOK "in", TM]
+             end
+val _ = if result = [("let", "in", 1)] then OK() else die "FAILED";
 
 (*
 

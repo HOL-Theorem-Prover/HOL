@@ -134,6 +134,7 @@ sig
 
   val add_binder : {term_name:string,tok:string} -> grammar -> grammar
   val add_listform : grammar -> listspec -> grammar
+  val listform_to_rule : listspec -> grule
 
   val fixityToString : fixity -> string
   val add_rule : grule -> grammar -> grammar

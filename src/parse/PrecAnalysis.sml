@@ -5,6 +5,10 @@ open HOLgrammars term_grammar_dtype
 
 type lspec = listspec
 type rel = HOLgrammars.rule_element
+type mlsp = HOLgrammars.mini_lspec
+
+infix |>
+fun (x |> f) = f x
 
 fun listfld_tok ppels =
   case ppels of
@@ -164,17 +168,26 @@ fun check_for_listreductions check rels =
                                     false (TOK tk2 :: rest))
                | NONE => (* no sep *)
                  let
-                   val A' = case check(tk1,tk2) of
-                                NONE => A
-                              | SOME lp => (tk1,tk2,lp) :: A
+                   val f = case check(tk1,tk2) of
+                                NONE => (fn A => A)
+                              | SOME lp => (fn A => (tk1,tk2,lp) :: A)
                  in
                    case left_opt of
-                      NONE => recurse A' (SOME tk2) NONE false rest
+                      NONE => recurse (f A) (SOME tk2) NONE false rest
                     | SOME l =>
                       (case check(l,tk1) of
-                           NONE => recurse A' (SOME tk2) NONE false rest
+                           NONE =>
+                           if p then (* tk1 might be sep and tk2 rdelim *)
+                             case check(l,tk2) of
+                                 NONE =>
+                                   recurse (f A) (SOME tk2) NONE false rest
+                               | SOME lp =>
+                                   recurse ((l,tk2,lp)::A) (SOME tk2) NONE false
+                                           rest
+                           else
+                             recurse (f A) (SOME tk2) NONE false rest
                          | SOME lp =>
-                             recurse ((l,tk1,lp)::A') (SOME tk2) NONE false
+                             recurse (f ((l,tk1,lp)::A)) (SOME tk2) NONE false
                                      rest)
                  end)
         | TM :: rest => (* p must be false as two TMs in a row is impossible *)
@@ -182,6 +195,69 @@ fun check_for_listreductions check rels =
         | _ => raise Fail "check_for_listreductions: impossible rhs"
   in
     recurse [] NONE NONE false rels
+  end
+
+fun rev2 (l1, l2, c) = (List.rev l1, List.rev l2, c)
+fun c1 x (l1, l2, c) = (x::l1, l2, c)
+fun c2 x (l1, l2, c) = (l1, x::l2, c)
+fun inc (l1, l2, c) = (l1, l2, c + 1)
+fun ap1 f (x,y,z) = (f x, y, z)
+
+fun remove_listrels lsps rels =
+  let
+    fun recurse (A as (outrels, listbits, tmc)) lsps rels =
+      case lsps of
+          [] => ap1 (fn l => l @ rels) (rev2 A)
+        | (ld,rd,lsp:mini_lspec)::more_lsps =>
+          (case rels of
+               TM :: rrest => recurse (A |> inc |> c1 TM) lsps rrest
+             | (rel as TOK tk) :: more_rels =>
+                 if tk <> ld then recurse (c1 rel A) lsps more_rels
+                 else (* tk = ld *)
+                   let
+                     val {sep,...} = lsp
+                   in
+                     case more_rels of
+                         TOK tk' :: later_rels =>
+                           if tk' = rd then
+                             recurse
+                               (A |> c1 rel |> c1 TM |> c2 (lsp,[]))
+                               more_lsps
+                               more_rels
+                           else
+                             (* probably an error; can't be sep as no TM first*)
+                             recurse (c1 rel A) more_lsps more_rels
+                       | TM :: (inter_rels as (TOK sep' :: later_rels)) =>
+                           if sep = sep' then
+                             consume_list
+                               (A |> c1 rel |> c1 TM |> inc) (lsp, [#3 A]) rd
+                               more_lsps later_rels
+                           else if sep' = rd then
+                             recurse
+                               (A |> c1 TM |> c1 (TOK sep') |> inc
+                                  |> c2 (lsp, [#3 A]))
+                               more_lsps inter_rels
+                           else (* probably an error *)
+                             recurse (A |> c1 rel |> c1 TM |> inc)
+                                     lsps
+                                     inter_rels
+                       | _ => raise Fail "remove_listrels: malformed RHS"
+                   end
+             | _ => raise Fail "remove_listrels: malformed RHS(2)")
+    and consume_list A (curr as (lsp, idxs)) rdelim lsps rels =
+        case rels of
+            [] => (* probably an error *) rev2 (A |> c2 (lsp, List.rev idxs))
+          | TM :: rest => consume_list (A |> inc) (lsp, #3 A :: idxs)
+                                       rdelim lsps rest
+          | TOK t :: rest =>
+            if t = rdelim then
+              recurse (A |> c2 (lsp, List.rev idxs)) lsps rels
+            else (* it's assumed to be the sep *)
+              consume_list A curr rdelim lsps rest
+          | _ => raise Fail "consume_list: malformed RHS"
+    val (x, y, _) = recurse ([], [], 0) lsps rels
+  in
+    (x,y)
   end
 
 end

@@ -834,40 +834,41 @@ in
   G0 Gmerge [(SOME 0, PREFIX (BINDER [BinderString binfo]))]
 end
 
-fun add_listform G lrule = let
-  val {separator, leftdelim, rightdelim, cons, nilstr, ...} = lrule
-  val contending_tstamps = map #1 (rules_for G cons @ rules_for G nilstr)
-  val new_tstamp = List.foldl Int.max 0 contending_tstamps + 1
-  fun ok_el e =
-      case e of
-        EndInitialBlock _ => false
-      | BeginFinalBlock _ => false
-      | RE TM => false
-      | LastTM => false
-      | FirstTM => false
-      | _ => true
-  fun check_els els =
-      case List.find (not o ok_el) els of
-        NONE => ()
-      | SOME s => raise GrammarError "Invalid pp_element in listform"
-  fun is_tok (RE (TOK _)) = true
-    | is_tok _ = false
-  fun one_tok pps =
-    if length (List.filter is_tok pps) = 1 then ()
-    else raise GrammarError "Must have exactly one TOK in listform elements"
-  val _ = app check_els [separator, leftdelim, rightdelim]
-  val els =
-      leftdelim @ [ListForm { separator = separator,
-                              block_info = #block_info lrule,
-                              cons = cons, nilstr = nilstr}] @
-      rightdelim
-  val rule =
-      {term_name = "", elements = els, timestamp = new_tstamp,
-       block_style = (AroundEachPhrase, #block_info lrule),
-       paren_style = OnlyIfNecessary}
-in
-  G Gmerge [(NONE, CLOSEFIX [rule])]
-end
+fun listform_to_rule lform =
+  let
+    val {separator, leftdelim, rightdelim, cons, nilstr, ...} = lform
+    val binfo = #block_info lform
+    fun ok_el e =
+        case e of
+          EndInitialBlock _ => false
+        | BeginFinalBlock _ => false
+        | RE TM => false
+        | LastTM => false
+        | FirstTM => false
+        | _ => true
+    fun check_els els =
+        case List.find (not o ok_el) els of
+          NONE => ()
+        | SOME s => raise GrammarError "Invalid pp_element in listform"
+    fun is_tok (RE (TOK _)) = true
+      | is_tok _ = false
+    fun one_tok pps =
+      if length (List.filter is_tok pps) = 1 then ()
+      else raise GrammarError "Must have exactly one TOK in listform elements"
+    val _ = app check_els [separator, leftdelim, rightdelim]
+    val _ = app one_tok [separator, leftdelim, rightdelim]
+    val els =
+        leftdelim @ [ListForm { separator = separator,
+                                block_info = binfo,
+                                cons = cons, nilstr = nilstr}] @
+        rightdelim
+  in
+    {term_name = "", pp_elements = els, fixity = Closefix,
+     block_style = (AroundEachPhrase, binfo),
+     paren_style = OnlyIfNecessary}
+  end
+
+fun add_listform G lrule = add_rule (listform_to_rule lrule) G
 
 fun rename_to_fixity_field
       {rule_fixity,term_name,pp_elements,paren_style, block_style} =
