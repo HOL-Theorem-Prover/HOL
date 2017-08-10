@@ -155,14 +155,14 @@ val _ = TeX_notation {hol = UChar.neg, TeX = ("\\HOLTokenNeg{}",1)}
    the pretty-printer handles these specially.  These declarations are only
    for the parser's benefit. *)
 val _ = add_rule {
-      pp_elements = [ListForm {
-                       leftdelim = [TOK "let"],
-                       rightdelim = [TOK "in"],
+      pp_elements = [TOK "let",
+                     ListForm {
                        separator = [TOK ";"],
                        cons = GrammarSpecials.letcons_special,
                        nilstr = GrammarSpecials.letnil_special,
                        block_info = (INCONSISTENT, 0)
-                     }],
+                     },
+                     TOK "in"],
       term_name = GrammarSpecials.let_special,
       paren_style = OnlyIfNecessary, fixity = Prefix 8,
       block_style = (AroundEachPhrase, (CONSISTENT, 0))};

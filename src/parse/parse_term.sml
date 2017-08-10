@@ -988,7 +988,7 @@ fun parse_term (G : grammar) typeparser = let
         fun CCOMB((x,locn),y) = (COMB(y,x),locn.between (#2 y) locn)
         fun process_lspinfos A i lspis args =
           case lspis of
-              [] => List.rev A
+              [] => List.revAppend(A,args)
             | ({cons,nilstr,...}, is) :: more_lsps =>
               let
                 fun mk_list [] = ((VAR nilstr,rlocn), rlocn)
