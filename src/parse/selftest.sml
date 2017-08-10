@@ -275,6 +275,18 @@ fun find_named_rule nm g =
       (grammar_rules g) |> List.concat
   end;
 
+val _ = tprint "term_grammar.grammar_tokens (LET)"
+val _ =
+    let val result = term_grammar.grammar_tokens let_g
+    in
+      if Lib.set_eq result
+                    ["\\", "|>", "<|", ")", "(", ".", ":", "updated_by",
+                     ":=", "with", "let", "in", ";"]
+      then OK()
+      else die ("\nFAILED ["^
+                String.concatWith "," (map (fn s => "\""^s^"\"") result) ^ "]")
+    end;
+
 val _ = tprint "term_grammar.rule_elements (COND)"
 val cond_rule = hd (find_named_rule "COND" cond_g)
 val cond_rels = term_grammar.rule_elements (#elements cond_rule)
@@ -323,31 +335,50 @@ val _ = tprint "term_grammar.rules_for (LET)"
 val let_rules = term_grammar.rules_for let_g GrammarSpecials.let_special
 val _ = if length let_rules = 1 then OK() else die "FAILED"
 
+val lsp1 = {nilstr="lnil",cons="lcons",sep=";"}
+val lsp2 = {nilstr="lnil2",cons="lcons2",sep=";;"}
 fun check (s1,s2) =
   case (s1,s2) of
-      ("let", "in") => SOME 1
-    | ("in", "end") => SOME 2
+      ("let", "in") => SOME lsp1
+    | ("in", "end") => SOME lsp2
     | _ => NONE
 
 val f = PrecAnalysis.check_for_listreductions check
 
+open term_grammar_dtype GrammarSpecials
 val _ = tprint "PrecAnalysis.check_for_listreductions 1"
-val result = let open term_grammar_dtype in
-               f [TOK "let", TM, TOK "in", TM]
-             end
-val _ = if result = [("let", "in", 1)] then OK() else die "FAILED";
+val input = [TOK "let", TM, TOK "in", TM]
+val result = f input
+val _ = if result = [("let", "in", lsp1)] then OK() else die "FAILED";
+
+val _ = tprint "PrecAnalysis.remove_listrels 1"
+val remove_result = PrecAnalysis.remove_listrels result input
+val _ = if remove_result = ([TOK "let", TM, TOK "in", TM], [(lsp1, [0])])
+        then OK()
+        else die "FAILED";
 
 val _ = tprint "PrecAnalysis.check_for_listreductions 2"
-val result = let open term_grammar_dtype in
-               f [TOK "let", TM, TOK ";", TOK "in", TM]
-             end
-val _ = if result = [("let", "in", 1)] then OK() else die "FAILED";
+val input = [TOK "let", TM, TOK ";", TOK "in", TM]
+val result = f input
+val _ = if result = [("let", "in", lsp1)] then OK() else die "FAILED";
+
+val _ = tprint "PrecAnalysis.remove_listrels 2"
+val remove_result = PrecAnalysis.remove_listrels result input
+val _ = if remove_result = ([TOK "let", TM, TOK "in", TM], [(lsp1, [0])])
+        then OK()
+        else die "FAILED";
 
 val _ = tprint "PrecAnalysis.check_for_listreductions 3"
-val result = let open term_grammar_dtype in
-               f [TOK "let", TM, TOK ";", TM, TOK "in", TM]
-             end
-val _ = if result = [("let", "in", 1)] then OK() else die "FAILED";
+val input = [TOK "let", TM, TOK ";", TM, TOK "in", TM]
+val result = f input
+val _ = if result = [("let", "in", lsp1)] then OK() else die "FAILED";
+
+val _ = tprint "PrecAnalysis.remove_listrels 3"
+val remove_result = PrecAnalysis.remove_listrels result input
+val _ = if remove_result = ([TOK "let", TM, TOK "in", TM], [(lsp1, [0,1])])
+        then OK()
+        else die "FAILED";
+
 
 (*
 

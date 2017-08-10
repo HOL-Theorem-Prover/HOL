@@ -483,7 +483,7 @@ local
   fun specials_from_elm [] = ok
     | specials_from_elm ((TOK x)::xs) = add x >> specials_from_elm xs
     | specials_from_elm (TM::xs) = specials_from_elm xs
-    | specials_from_elm (ListTM _::xs) = specials_from_elm xs
+    | specials_from_elm (ListTM {sep,...}::xs) = add sep >> specials_from_elm xs
   val mmap = (fn f => fn args => mmap f args >> ok)
   fun rule_specials G r = let
     val rule_specials = rule_specials G

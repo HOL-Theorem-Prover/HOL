@@ -234,8 +234,7 @@ fun remove_listrels lsps rels =
                                more_lsps later_rels
                            else if sep' = rd then
                              recurse
-                               (A |> c1 TM |> c1 (TOK sep') |> inc
-                                  |> c2 (lsp, [#3 A]))
+                               (A |> c1 rel |> c1 TM |> inc |> c2 (lsp, [#3 A]))
                                more_lsps inter_rels
                            else (* probably an error *)
                              recurse (A |> c1 rel |> c1 TM |> inc)

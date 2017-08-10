@@ -544,13 +544,13 @@ fun listTM_delimiters rels =
 fun de_listTM rels = map (fn ListTM _ => TM | x => x) rels
 
 fun infix_rule (rels, nm) =
-  (mkrels_infix rels, RealRule(rsInfix, nm))
+  (mkrels_infix (de_listTM rels), RealRule(rsInfix, nm))
 fun prefix_rule (rels,nm) =
-  (mkrels_prefix rels, RealRule(rsPrefix, nm))
+  (mkrels_prefix (de_listTM rels), RealRule(rsPrefix, nm))
 fun closefix_rule (rels,nm) =
-  (mkrels_closefix rels, RealRule(rsClosefix, nm))
+  (mkrels_closefix (de_listTM rels), RealRule(rsClosefix, nm))
 fun suffix_rule (rels,nm) =
-  (mkrels_suffix rels, RealRule(rsSuffix, nm))
+  (mkrels_suffix (de_listTM rels), RealRule(rsSuffix, nm))
 
 fun mk_ruledb (G:grammar) = let
   val Grules = term_grammar.grammar_rules G
