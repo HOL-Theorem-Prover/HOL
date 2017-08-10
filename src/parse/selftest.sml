@@ -262,6 +262,12 @@ val let_g =
                term_name = GrammarSpecials.let_special,
                paren_style = OnlyIfNecessary, fixity = Prefix 8,
                block_style = (AroundEachPhrase, (CONSISTENT, 0))} g0
+val lf_g = add_listform g0
+            { block_info = (CONSISTENT, 0),
+              separator = [mTOK ";", BreakSpace(1,0)],
+              leftdelim = [mTOK "["],
+              rightdelim= [mTOK "]"],
+              nilstr = "NIL", cons = "CONS"}
 end;
 
 fun find_named_rule nm g =
@@ -378,6 +384,14 @@ val remove_result = PrecAnalysis.remove_listrels result input
 val _ = if remove_result = ([TOK "let", TM, TOK "in", TM], [(lsp1, [0,1])])
         then OK()
         else die "FAILED";
+
+
+val _ = tprint "Printing empty list form"
+val result = PP.pp_to_string 70
+              (term_pp.pp_term lf_g type_grammar.min_grammar
+                               PPBackEnd.raw_terminal)
+              (Term.mk_var("NIL", Type.alpha)) handle _ => die "EXN-FAILED"
+val _ = if result = "[]" then OK() else die ("FAILED - got >" ^ result ^"<");
 
 
 (*

@@ -210,7 +210,8 @@ fun remove_listrels lsps rels =
           [] => ap1 (fn l => l @ rels) (rev2 A)
         | (ld,rd,lsp:mini_lspec)::more_lsps =>
           (case rels of
-               TM :: rrest => recurse (A |> inc |> c1 TM) lsps rrest
+               [] => rev2 A
+             | TM :: rrest => recurse (A |> inc |> c1 TM) lsps rrest
              | (rel as TOK tk) :: more_rels =>
                  if tk <> ld then recurse (c1 rel A) lsps more_rels
                  else (* tk = ld *)
