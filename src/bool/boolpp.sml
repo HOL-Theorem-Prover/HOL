@@ -266,8 +266,13 @@ fun let_processor G t = let
   open Absyn GrammarSpecials
   fun nilcheck (APP (_, IDENT (_, nilstr), body)) = nilstr = letnil_special
     | nilcheck _ = false
-  fun conspresent (APP (_, APP (_, APP (_, IDENT(_, constr), eq1), eqs), bod)) =
-         constr = letcons_special
+  fun conspresent (APP (_,
+                        APP (_, IDENT (_, letstr),
+                             APP (_,
+                                  APP(_, IDENT(_, constr), eq1),
+                                  eqs)),
+                        bod)) =
+         constr = letcons_special andalso letstr = let_special
     | conspresent _ = false
   fun foldcons (a, bod) =
     case a of
@@ -279,9 +284,16 @@ fun let_processor G t = let
           if nilstr = letnil_special then bod
           else raise ERRORloc "let_processor" loc "Mal-formed LET"
       | _ => raise ERRORloc "let_processor" (locn_of_absyn a) "Mal-formed LET"
+  fun let_args tf a = let
+    val (fx, y) = dest_app a
+    val (_, x) = dest_app fx
+  in
+    (tf x, tf y)
+  end
 in
-  traverse conspresent
-           (fn _ => fn a => let_processor0 G (foldcons (dest_app a))) t
+  traverse
+    conspresent
+    (fn tf => fn a => let_processor0 G (foldcons (let_args tf a))) t
 end
 
 val _ = term_grammar.userSyntaxFns.register_absynPostProcessor
