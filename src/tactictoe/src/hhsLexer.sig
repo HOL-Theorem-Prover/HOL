@@ -11,5 +11,6 @@ sig
 
   val hhs_lex_blank : string -> string list
   val hhs_lex : string -> string list
-
+  val rm_comment : string -> string
+  
 end

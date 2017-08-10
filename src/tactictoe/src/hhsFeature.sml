@@ -1,10 +1,9 @@
-(* ===================================================================== *)
-(* FILE          : hhsFeature.sml                                         *)
-(* DESCRIPTION   : Functions for computing different features for terms, *)
-(* thm and goals.                                                        *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck        *)
-(* DATE          : 2016                                                  *)
-(* ===================================================================== *)
+(* =========================================================================  *)
+(* FILE          : hhsFeature.sml                                             *)
+(* DESCRIPTION   : Features for machine learning on terms                     *)
+(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
+(* DATE          : 2017                                                       *)
+(* ========================================================================== *)
 
 structure hhsFeature :> hhsFeature =
 struct
@@ -13,7 +12,8 @@ open HolKernel boolLib Abbrev hhsTools
 
 val ERR = mk_HOL_ERR "hhsFeature"
 
-val hhs_hofea_flag = ref false
+val hhs_hofea_flag = ref true
+val hhs_notopfea_flag = ref false
 
 fun save_time rf f x =
   let
@@ -155,7 +155,7 @@ val mk_set_time = ref 0.0
 val subterm_time = ref 0.0
 *)
 
-val hhs_notopfea_flag = ref false
+
 
 fun fea_of_term tm =
   let 

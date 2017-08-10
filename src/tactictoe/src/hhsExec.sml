@@ -1,149 +1,120 @@
+(* ========================================================================== *)
+(* FILE          : hhsExec.sml                                                *)
+(* DESCRIPTION   : Execute SML strings                                        *)
+(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
+(* DATE          : 2017                                                       *)
+(* ========================================================================== *)
+
 structure hhsExec :> hhsExec = 
 struct
 
-open HolKernel Abbrev hhsLog hhsLexer hhsTools
+open HolKernel Abbrev hhsTools
 
 val ERR = mk_HOL_ERR "hhsExec"
 
-(* ----------------------------------------------------------------------
-   Finding not loaded signatures used in string-tactics 
-   ---------------------------------------------------------------------- *)
+(* -----------------------------------------------------------------------------
+   Global references
+   -------------------------------------------------------------------------- *)
 
-(* This code lead to inconsistencies in the files. *)
-(*
-fun split_sl s pl sl = case sl of
-    []     => raise ERR "split_sl" (String.concatWith " " (rev pl))
-  | a :: m => if a = s 
-              then (rev pl, m) 
-              else split_sl s (a :: pl) m 
+val hhs_bool_glob = ref false
+val hhs_tacticl_glob = ref []
+val hhs_string_glob = ref ""
 
-fun is_quoted s = 
-  let val x = hd (explode s) in x = #"`" orelse x = #"\"" end
-  handle _ => false
-
-fun is_number s = all Char.isDigit (explode s)
-
-(* either real numbers or already prefixed *)
-fun includes_dot s = mem #"." (explode s)
-
-val operator_sml_list =
-  ["op", "if", "then", "else", "val", "fun",
-   "structure", "signature", "struct", "sig", "open",
-   "infix", "infixl", "infixr", "andalso", "orelse",
-   "and", "datatype", "type", "where", ":", ":>",
-   "let", "in", "end", "while", "do",
-   "local","=>","case","of","_","|","fn","handle"]
-
-fun is_reserved_sml s =
-  is_number s orelse 
-  mem s ["[","(",",",")","]","{","}",";"] orelse 
-  mem s operator_sml_list orelse
-  is_quoted s orelse 
-  s = "#" orelse 
-  ((hd (explode s) = #"#" andalso hd (tl (explode s)) = #"\"") 
-  handle _=> false)
-
-(* all signatures have the form let open in or theory.name *)
-fun find_sig sl =
-  case sl of
-    [] => []
-  | "let" :: "open" :: m =>
-    let val (al,ml) = split_sl "in" [] m in
-      al @ find_sig ml
-    end
-  | "(" :: "DB.fetch" :: a :: _ :: ")" :: m =>
-     if rm_squote a = current_theory () orelse rm_squote a = "-"
-     then find_sig m
-     else (rm_squote a ^ "Theory") :: find_sig m
-  | a :: m =>
-    if is_reserved_sml a then find_sig m
-    else
-    if mem #"." (explode a) andalso 
-       not (is_number (hd (String.tokens (fn x => x = #".") a))) 
-    then hd (String.tokens (fn x => x = #".") a) :: find_sig m
-    else find_sig m
-
-fun sigl_of_stac stac = mk_fast_set String.compare ((find_sig o hhs_lex) stac) 
-
-fun load_sigl stac = app load (sigl_of_stac stac)
-*)
-(* ----------------------------------------------------------------------
+(* -----------------------------------------------------------------------------
    Execute strings as sml code
-   ---------------------------------------------------------------------- *)
+   -------------------------------------------------------------------------- *)
+
 fun exec_sml file s =
   let
-    val path = hhs_code_dir ^ "/" ^ file
+    val path = HOLDIR ^ "/src/tactictoe/code/" ^ file
     val oc = TextIO.openOut path
     fun os s = TextIO.output (oc,s)
   in
-    os ("val _ = (" ^ s ^ ")");
+    os s;
     TextIO.closeOut oc;
-    ((QUse.use path; true) handle _ => (hhs_log file s; false))
+    ((QUse.use path; true) handle _ => false)
   end
 
-(* ----------------------------------------------------------------------
+(* -----------------------------------------------------------------------------
    Tests
-   ---------------------------------------------------------------------- *)
+   -------------------------------------------------------------------------- *)
 
 fun is_thm s =
-  exec_sml "is_thm" ("Thm.dest_thm (" ^ s ^ ")")
+  exec_sml "is_thm" ("val _ = Thm.dest_thm (" ^ s ^ ")")
 
 fun is_tactic s =
-  exec_sml "is_tactic" ("Tactical.VALID (" ^ s ^ ")")
+  exec_sml "is_tactic" ("val _ = Tactical.VALID (" ^ s ^ ")")
 
-val hhs_bool = ref false
-  
 fun is_pointer_eq s1 s2 =
   let 
     val b = exec_sml "is_pointer_eq" 
-      ("hhsExec.hhs_bool := PolyML.pointerEq (" ^ s1 ^ "," ^ s2 ^ ")")
+              ("val _ = hhsExec.hhs_bool_glob := PolyML.pointerEq (" ^ 
+               s1 ^ "," ^ s2 ^ ")")
   in
-    b andalso (!hhs_bool)
+    b andalso (!hhs_bool_glob)
   end
 
-(* ----------------------------------------------------------------------
+(* -----------------------------------------------------------------------------
    Read tactics
-   ---------------------------------------------------------------------- *)
+   -------------------------------------------------------------------------- *)
 
-val MY_TAC: tactic = fn (g: goal) => ([g], hd)
-val hhs_tactic = ref (MY_TAC) (* doesn't matter what the tactic is *)
-val hhs_tacticl = ref []
-
-fun valid_tactic_of_sml s =
-  let 
-    (* val _ = load_sigl s *)
-    val b = 
-    exec_sml "tactic_of_sml" 
-    ("hhsExec.hhs_tactic := Tactical.VALID ( " ^ s ^ " )")
+fun tactic_of_sml s =
+  let
+    val b = exec_sml "tactic_of_sml" 
+    ("val _ = hhsExec.hhs_tacticl_glob := [Tactical.VALID ( " ^ s ^ " )]")
   in
-    if b then !hhs_tactic else raise ERR "tactic_of_sml" s
+    if b then hd (!hhs_tacticl_glob) else raise ERR "tactic_of_sml" s
   end
 
-fun valid_tacticl_of_sml sl =
+fun tacticl_of_sml sl =
   let 
     fun mk_valid s = "Tactical.VALID ( " ^ s ^ " )"
-    val valid_sl = map mk_valid sl
-    val b = 
-      exec_sml "tacticl_of_sml" 
-      ("hhsExec.hhs_tacticl := [" ^ String.concatWith ", " valid_sl 
-       ^ "]")
+    val tacticl = "[" ^ String.concatWith ", " (map mk_valid sl) ^ "]"
+    val b = exec_sml "tacticl_of_sml" 
+              ("val _ = hhsExec.hhs_tacticl_glob := " ^ tacticl)
   in
-    if b then !hhs_tacticl else raise ERR "tacticl_of_sml" ""
+    if b then !hhs_tacticl_glob
+      else raise ERR "tacticl_of_sml" (String.concatWith " " sl)
   end
 
+(* -----------------------------------------------------------------------------
+   Read string
+   -------------------------------------------------------------------------- *)
 
-(* ----------------------------------------------------------------------
-   Read theorem names
-   ---------------------------------------------------------------------- *)
-
-val hhs_thm = ref ""
-
-fun thmname_of_sml thm_sml =
-  let val b = 
-    exec_sml "rec_thm" 
-    ("hhsExec.hhs_thm := hhsGen.name_of_thm " ^ "(" ^ thm_sml ^ ")")
+fun string_of_sml s =
+  let 
+    val b = exec_sml "string_of_sml" 
+              ("val _ = hhsExec.hhs_string_glob := (" ^ s ^ " )")
   in
-    if b then !hhs_thm else raise ERR " _loop" "thm"
+    if b then !hhs_string_glob else raise ERR "string_of_sml" s
   end
+  
+  
+(* ---------------------------------------------------------------------------
+   Finding the types of an expression.
+   -------------------------------------------------------------------------- *)
+
+val type_cache = ref (dempty String.compare)
+
+
+fun type_of_sml s = 
+  if dmem s (!type_cache) then dfind s (!type_cache) else
+    let 
+      val file = tactictoe_dir ^ "/code/sml_type_of_out"
+      val cmd = "PolyML.print ( " ^ s ^ " );"
+      val b   = hhsRedirect.hide file (exec_sml "sml_type_of") cmd
+    in
+      if b 
+      then 
+        let 
+          val sl = hhsLexer.hhs_lex (last (readl file))
+          val (_,tyl) = split_sl ":" sl
+          val ty = String.concatWith " " tyl
+        in
+          (type_cache := dadd s ty (!type_cache); ty)
+        end
+      else (debug ("Error: type_of_sml: " ^ s); raise ERR "type_of_sml" s)
+    end
+
 
 end (* struct *)
