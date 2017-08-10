@@ -7,6 +7,9 @@ open Portable HolKernel term_grammar
 
 val PP_ERR = mk_HOL_ERR "term_pp";
 
+fun PRINT s = print (s ^ "\n")
+fun LEN l = Int.toString (length l)
+
 (*---------------------------------------------------------------------------
    Miscellaneous syntax stuff.
  ---------------------------------------------------------------------------*)
@@ -291,7 +294,7 @@ fun has_name_by_parser G s tm = let
   val oinfo = term_grammar.overload_info G
 in
   case Overload.info_for_name oinfo s of
-    NONE => false
+    NONE => (case Lib.total dest_var tm of SOME(vnm,_) => s = vnm | _ => false)
   | SOME {actual_ops,...} =>
     List.exists (fn t => can (match_term t) tm) actual_ops
 end
@@ -598,6 +601,8 @@ fun pp_term (G : grammar) TyG backend = let
 
        Returns the unused args *)
     fun print_ellist fopt (lprec, cprec, rprec) (els, args : term list) = let
+      (*val _ = PRINT ("print_ellist: "^Int.toString (length els)^" elements; "^
+                     Int.toString (length args)^" args") *)
       fun onetok acc [] = acc
         | onetok NONE (RE (TOK s) :: rest) = onetok (SOME s) rest
         | onetok (SOME _) (RE (TOK s) :: rest) = NONE
@@ -611,6 +616,8 @@ fun pp_term (G : grammar) TyG backend = let
           case els of
             [] => return args
           | (e :: es) => let
+              (* val _ = PRINT ("print_ellist.recurse.cons: "^
+                             Int.toString (length args) ^ " args") *)
             in
               case e of
                 PPBlock(more_els, (sty, ind)) =>
@@ -633,6 +640,8 @@ fun pp_term (G : grammar) TyG backend = let
           end
       and pr_lspec (r as {nilstr, cons, block_info,...}) t =
           let
+            (*val _ = PRINT ("pr_lspec: "^debugprint G t^" {nilstr=\""^nilstr^
+                           "\"}") *)
             val sep = #separator r
             val (consistency, breakspacing) = block_info
             (* list will never be empty *)
@@ -661,7 +670,8 @@ fun pp_term (G : grammar) TyG backend = let
             else pr_list t
           end
     in
-      recurse (els, args)
+      recurse (els, args) (* before
+      PRINT "print_ellist terminated" *)
     end
 
 
@@ -1186,8 +1196,8 @@ fun pp_term (G : grammar) TyG backend = let
         else var_ann tm s
     in
       case nilrule of
-        SOME els => print_ellist NONE (Top,Top,Top) (els, []) >>
-                    return ()
+        SOME els => (* PRINT ("Found a nil-rule for "^n^"\n"); *)
+                    print_ellist NONE (Top,Top,Top) (els, [tm]) >> return ()
       | NONE => let
           (* if only rule is a list form rule and we've got to here, it
              will be a rule allowing this to the cons part of a list form.
@@ -1538,12 +1548,20 @@ fun pp_term (G : grammar) TyG backend = let
                overridden by the f and args values that may be the product of
                oi_strip_comb.*)
             val fname = atom_name f
+            (* val _ = PRINT ("pr_atomf: "^fname^" and "^
+                           Int.toString (length args0) ^ " args") *)
             val tm = list_mk_comb (f, args0)
             val Rator = rator tm
             val (args,Rand) = front_last args0
             val candidate_rules =
                 Option.map (List.filter (is_unicode_ok_rule o #3))
                            (lookup_term fname)
+            (* val _ = PRINT ("pr_atomf: "^
+                           (case candidate_rules of
+                               NONE => "NONE rules"
+                             | SOME l =>
+                                 Int.toString (length l)^ " candidate rules"))
+            *)
             fun is_list (r as {nilstr, cons}) tm =
                 has_name_by_parser G nilstr tm orelse
                 (is_comb tm andalso
@@ -1551,7 +1569,7 @@ fun pp_term (G : grammar) TyG backend = let
                    val (t0, tail) = dest_comb tm
                  in
                    is_list r tail andalso is_comb t0 andalso
-                   has_name G cons (rator t0)
+                   has_name_by_parser G cons (rator t0)
                  end)
             val restr_binder =
                 find_partial (fn (b,s) => if s=fname then SOME b else NONE)
@@ -1578,6 +1596,8 @@ fun pp_term (G : grammar) TyG backend = let
             fun check_rrec_args f rrec args =
               let
                 val rels = f (rule_elements (#elements rrec))
+                (* val _ = PRINT ("check_rrec_args: " ^ LEN rels ^ " rels; " ^
+                               LEN args ^ " args") *)
                 fun recurse rels args =
                   case (rels, args) of
                       ([], []) => true
@@ -1612,28 +1632,58 @@ fun pp_term (G : grammar) TyG backend = let
               end
             | SOME crules0 =>
               let
-                fun suitable_rule rule =
+                datatype ruletype = Norm of (int * grammar_rule)
+                                  | List of pp_element list
+                fun suitable_rule (prec, _, rule) =
                     case rule of
-                      INFIX(STD_infix(rrlist, _)) =>
-                        check_rrec_args mkrels_infix (hd rrlist) args0
+                       INFIX(STD_infix(rrlist, _)) =>
+                         if check_rrec_args mkrels_infix (hd rrlist) args0 then
+                           SOME (Norm(prec, rule))
+                         else NONE
                      | INFIX RESQUAN_OP => raise Fail "Can't happen 90212"
                      | PREFIX (STD_prefix list) =>
-                       check_rrec_args mkrels_prefix (hd list) args0
-                     | PREFIX (BINDER _) => my_is_abs Rand andalso
-                                            length args = 0
+                         if check_rrec_args mkrels_prefix (hd list) args0 then
+                           SOME (Norm (prec, rule))
+                         else NONE
+                     | PREFIX (BINDER _) =>
+                         if my_is_abs Rand andalso length args = 0 then
+                           SOME (Norm(prec, rule))
+                         else NONE
                      | SUFFIX (STD_suffix list) =>
-                       check_rrec_args mkrels_suffix (hd list) args0
+                         if check_rrec_args mkrels_suffix (hd list) args0 then
+                           SOME (Norm(prec, rule))
+                         else NONE
                      | SUFFIX Type_annotation => raise Fail "Can't happen 90210"
                      | CLOSEFIX list =>
-                       check_rrec_args mkrels_closefix (hd list) args0
+                       let
+                         (* val _ = PRINT "suitable_rule: closefix check" *)
+                         val r = hd list
+                         fun res0() =
+                             if check_rrec_args mkrels_closefix r args0 then
+                               SOME (Norm(prec, rule))
+                             else NONE
+                       in
+                         if #term_name r = "" then
+                           (* (PRINT ("rule term-name is empty - testing " ^
+                                   debugprint G tm); *)
+                           case find_lspec (#elements r) of
+                             SOME {nilstr,cons,...} =>
+                               if is_list {nilstr=nilstr,cons=cons} tm then
+                                 SOME (List (#elements r))
+                               else res0()
+                            | NONE => res0()(* ) *)
+                         else res0()
+                       end
                      | INFIX (FNAPP _) => raise Fail "Can't happen 90211"
                      | INFIX VSCONS => raise Fail "Can't happen 90213"
               in
-                case List.filter (suitable_rule o #3) crules0 of
-                    (prec,_,rule) :: _ =>
+                case List.mapPartial suitable_rule crules0 of
+                    Norm (prec,rule) :: _ =>
                       pr_comb_with_rule
                         rule
                         {fprec = prec, fname=fname, f=f} args Rand
+                  | List els :: _ =>
+                      (print_ellist NONE (Top,Top,Top) (els, [tm]) >> return ())
                   | [] => pr_comb tm Rator Rand
               end
           end (* pr_atomf *)

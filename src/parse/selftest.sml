@@ -385,13 +385,57 @@ val _ = if remove_result = ([TOK "let", TM, TOK "in", TM], [(lsp1, [0,1])])
         then OK()
         else die "FAILED";
 
+val mk_var = Term.mk_var
+val mk_comb = Term.mk_comb
+val bool = Type.bool
+val alpha = Type.alpha
+val CONS_t = mk_var("CONS", bool --> (bool --> bool))
+val NIL_t = mk_var("NIL", bool)
+fun mk_list0 n c =
+  let
+    fun recurse cs =
+      case cs of
+          [] => n
+        | x::xs => mk_comb(mk_comb(c, mk_var(str x,bool)), recurse xs)
+  in
+    fn s => recurse (String.explode s)
+  end
 
-val _ = tprint "Printing empty list form"
-val result = PP.pp_to_string 70
-              (term_pp.pp_term lf_g type_grammar.min_grammar
-                               PPBackEnd.raw_terminal)
-              (Term.mk_var("NIL", Type.alpha)) handle _ => die "EXN-FAILED"
-val _ = if result = "[]" then OK() else die ("FAILED - got >" ^ result ^"<");
+val mk_list = mk_list0 NIL_t CONS_t;
+
+fun tmprint g =
+  PP.pp_to_string 70
+      (term_pp.pp_term g type_grammar.min_grammar PPBackEnd.raw_terminal);
+
+fun tpp msg expected g t =
+  let
+    val _ = tprint msg
+    val result = tmprint g t
+  in
+    if result = expected then OK()
+    else die ("FAILED - got >" ^ result ^"<")
+  end
+
+val _ = tpp "Printing empty list form (var)" "[]" lf_g NIL_t
+val _ = tpp "Printing CONS-list form [x] (var)" "[x]" lf_g (mk_list "x")
+val _ = tpp "Printing CONS-list form [x;y] (var)" "[x; y]" lf_g (mk_list "xy")
+
+val cCONS_t =
+    Term.prim_new_const {Thy = "min", Name = "CONS"} (bool --> (bool --> bool))
+val cNIL_t = Term.prim_new_const {Thy = "min", Name = "NIL"} bool
+val cmk_list = mk_list0 cNIL_t cCONS_t
+
+val _ = tpp "Printing nil (const, no overload)" "min$NIL" lf_g cNIL_t
+
+val lfco_g = lf_g |> term_grammar.fupdate_overload_info
+                       (Overload.add_overloading ("NIL", cNIL_t))
+                  |> term_grammar.fupdate_overload_info
+                       (Overload.add_overloading ("CONS", cCONS_t));
+
+val _ = tpp "Printing nil (const, overload)" "[]" lfco_g cNIL_t
+val _ = tpp "Printing CONS-list [x] (const, overload)" "[x]"
+            lfco_g (cmk_list "x")
+
 
 
 (*
