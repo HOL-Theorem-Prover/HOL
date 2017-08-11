@@ -398,8 +398,7 @@ fun node_create_gl tactime gl pid =
            add_pred) 
       gl
     val predlist1 = map snd predlist0
-    (* Ordering the goals: hardest first. 
-       Warning: METIS cancels the ordering of the goals *)
+    (* Warning: adding metis cancels the ordering of the goals *)
     val pending0 = number_list 0 predlist1
     val pending1 = map (fn (gn,pred) => (gn, (snd o hd) pred)) pending0
     fun compare_score ((_,r1),(_,r2)) = Real.compare (r2,r1)

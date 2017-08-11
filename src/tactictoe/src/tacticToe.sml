@@ -241,7 +241,10 @@ fun main_tactictoe goal =
     (* preselection *)
     val goalfea = fea_of_goal goal       
     val (stacsymweight, stacfeav, tacdict) = select_stacfeav goalfea
-    val (thmsymweight, thmfeav) = select_thmfeav goalfea
+    val (thmsymweight, thmfeav) = 
+      if !hhs_metis_flag 
+      then select_thmfeav goalfea 
+      else (dempty String.compare, [])
     (* fast predictors *)
     fun stacpredictor g =
       stacknn stacsymweight (!max_select_pred) stacfeav (fea_of_goal g)
@@ -272,13 +275,20 @@ fun eval_tactictoe goal =
     let
       val _ = debug "Start evaluation"
       val _ = init_tactictoe ()
-      val _ = erase_file main_error_file
       val r = hhsRedirect.hide main_error_file main_tactictoe goal 
     in
       debug_eval_status r;
       debug "End evaluation"
     end
   else ()
+ 
+fun tactictoe goal =
+  let
+    val _ = init_tactictoe ()
+    val r = hhsRedirect.hide main_error_file main_tactictoe goal 
+  in
+    print_proof_status r
+  end
  
 (* ----------------------------------------------------------------------
    Predicting only the next tactic based on some distance measure.
