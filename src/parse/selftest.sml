@@ -391,17 +391,21 @@ val bool = Type.bool
 val alpha = Type.alpha
 val CONS_t = mk_var("CONS", bool --> (bool --> bool))
 val NIL_t = mk_var("NIL", bool)
-fun mk_list0 n c =
+fun mk_list00 elty n c tmlist =
   let
-    fun recurse cs =
-      case cs of
-          [] => n
-        | x::xs => mk_comb(mk_comb(c, mk_var(str x,bool)), recurse xs)
+    fun recurse ts =
+      case ts of
+          [] => Term.inst [alpha |-> elty] n
+        | x::xs => mk_comb(mk_comb(Term.inst [alpha |-> elty] c, x),
+                           recurse xs)
   in
-    fn s => recurse (String.explode s)
+    recurse tmlist
   end
 
-val mk_list = mk_list0 NIL_t CONS_t;
+fun mk_list0 elty n c s =
+  mk_list00 elty n c (map (fn c => mk_var(str c, elty)) (String.explode s))
+
+val mk_list = mk_list0 bool NIL_t CONS_t;
 
 fun tmprint g =
   PP.pp_to_string 70
@@ -413,7 +417,7 @@ fun tpp msg expected g t =
     val result = tmprint g t
   in
     if result = expected then OK()
-    else die ("FAILED - got >" ^ result ^"<")
+    else die ("\nFAILED - got >" ^ result ^"<")
   end
 
 val _ = tpp "Printing empty list form (var)" "[]" lf_g NIL_t
@@ -423,7 +427,7 @@ val _ = tpp "Printing CONS-list form [x;y] (var)" "[x; y]" lf_g (mk_list "xy")
 val cCONS_t =
     Term.prim_new_const {Thy = "min", Name = "CONS"} (bool --> (bool --> bool))
 val cNIL_t = Term.prim_new_const {Thy = "min", Name = "NIL"} bool
-val cmk_list = mk_list0 cNIL_t cCONS_t
+val cmk_list = mk_list0 bool cNIL_t cCONS_t
 
 val _ = tpp "Printing nil (const, no overload)" "min$NIL" lf_g cNIL_t
 
@@ -435,6 +439,112 @@ val lfco_g = lf_g |> term_grammar.fupdate_overload_info
 val _ = tpp "Printing nil (const, overload)" "[]" lfco_g cNIL_t
 val _ = tpp "Printing CONS-list [x] (const, overload)" "[x]"
             lfco_g (cmk_list "x")
+
+(* listform, const, overload, nil overloaded again (as EMPTY is in pred_set) *)
+val lfcono_g =
+    lfco_g |> term_grammar.fupdate_overload_info
+                 (Overload.add_overloading ("altNIL", cNIL_t))
+
+val _ = tpp "Printing nil (const, double-overload)" "[x]" lfcono_g
+            (cmk_list "x")
+
+val cINS_t = Term.prim_new_const{Thy = "min", Name = "INS"}
+                       (alpha --> (alpha --> bool) --> (alpha --> bool))
+val cEMP_t = Term.prim_new_const{Thy = "min", Name = "EMP"} (alpha --> bool)
+fun add_setlistform g =
+  term_grammar.add_listform g {
+      block_info = (CONSISTENT, 0),
+      separator = [mTOK ";", BreakSpace(1,0)],
+      leftdelim = [mTOK "{"],
+      rightdelim= [mTOK "}"],
+      nilstr = "EMP", cons = "INS"}
+    |> term_grammar.fupdate_overload_info
+         (Overload.add_overloading ("EMP", cEMP_t))
+    |> term_grammar.fupdate_overload_info
+         (Overload.add_overloading ("INS", cINS_t))
+
+val lfcop_g = g0 |> add_setlistform
+
+
+val pbmk_list = mk_list0 bool cEMP_t cINS_t
+fun ptpp msg exp t = tpp msg exp lfcop_g t
+
+val _ = ptpp "Printing INS-list {x} (const, overload, polymorphic inst)" "{x}"
+             (pbmk_list "x")
+
+val _ = ptpp "Printing INS-list {x;y} (const, overload, polymorphic inst)"
+             "{x; y}"
+             (pbmk_list "xy")
+
+val fx = mk_comb(mk_var("f", alpha --> bool), mk_var("x", alpha))
+val y = mk_var("y", bool)
+val bINS = Term.inst[alpha |-> bool] cINS_t
+val bEMP = Term.inst[alpha |-> bool] cEMP_t
+val l = mk_comb(mk_comb(bINS, fx), mk_comb(mk_comb(bINS, y), bEMP))
+val _ = ptpp "Printing INS-list {f x;y} (const, overload, polymorphic inst)"
+             "{f x; y}"
+
+val lfcopuo_g = (* as before + Unicode-ish overload on EMP *)
+  lfcop_g
+   |> term_grammar.fupdate_overload_info
+       (Overload.add_overloading ("∅", cEMP_t))
+val _ = tpp "Printing INS-list (Unicode EMP) {x;y}" "{x; y}"
+            lfcopuo_g (pbmk_list "xy")
+
+
+
+val add_infixINS =
+  term_grammar.add_rule {
+         block_style = (AroundEachPhrase, (INCONSISTENT, 0)),
+         fixity = Parse.Infixr 490,
+         term_name = "INS",
+         pp_elements = [HardSpace 1, mTOK "INSERT", BreakSpace(1,0)],
+         paren_style = OnlyIfNecessary}
+
+val lf_infixfirst_cop = g0 |> add_infixINS |> add_setlistform
+val lf_copinfix_g = (* list first + infix INS *)
+  g0 |> add_setlistform |> add_infixINS
+fun get_stamps g =
+  let
+    open term_grammar_dtype
+    val rules = term_grammar.rules_for g "INS"
+    fun stamp fxty =
+      Option.map #1
+                 (List.find (fn (_, GRULE {fixity,...}) => fixity = fxty
+                               | _ => false)
+                            rules)
+  in
+    {c = stamp Closefix, i = stamp (Infix(RIGHT, 490))}
+  end
+fun optionToString f NONE = "NONE"
+  | optionToString f (SOME x) = "SOME("^f x^")"
+fun recordic {i,c} = "i="^optionToString Int.toString i^"; "^
+                     "c="^optionToString Int.toString c
+
+val _ = tprint "infix INS first grule timestamps"
+val ic as {c, i} = get_stamps lf_infixfirst_cop
+val _ = case ic of
+            {i = SOME i0, c = SOME c0} =>
+              if i0 < c0 then OK()
+              else die ("\n FAILED: "^recordic ic)
+          | _ => die ("\n FAILED: "^recordic ic)
+
+val _ = tprint "infix INS second grule timestamps"
+val ic as {c, i} = get_stamps lf_copinfix_g
+val _ = case ic of
+            {i = SOME i0, c = SOME c0} =>
+              if c0 < i0 then OK()
+              else die ("\n FAILED: "^recordic ic)
+          | _ => die ("\n FAILED: "^recordic ic)
+
+val _ = tpp "Printing INS-list (w/infix INS first) {x}" "{x}"
+            lf_infixfirst_cop (pbmk_list "x")
+
+
+val _ = tpp "Printing INS-list (w/infix INS second) {x}" "x INSERT {}"
+            lf_copinfix_g (pbmk_list "x")
+
+
 
 
 

@@ -124,7 +124,8 @@ datatype grammar = GCONS of
    overload_info : overload_info,
    user_printers : (type_grammar.grammar * grammar, grammar) printer_info,
    absyn_postprocessors : (string * postprocessor) list,
-   preterm_processors : (string*int,ptmprocessor) Binarymap.dict
+   preterm_processors : (string*int,ptmprocessor) Binarymap.dict,
+   next_timestamp : int
    }
 and postprocessor = AbPP of grammar -> Absyn.absyn -> Absyn.absyn
 and ptmprocessor = PtmP of grammar -> prmP0 -> prmP0
@@ -151,6 +152,7 @@ fun grammar_rules (GCONS G) = map #2 (#rules G)
 fun rules (GCONS G) = (#rules G)
 fun absyn_postprocessors0 (GCONS g) = #absyn_postprocessors g
 fun absyn_postprocessors g = map (apsnd destAbPP) (absyn_postprocessors0 g)
+fun gnext_timestamp (GCONS g) = #next_timestamp g
 
 fun preterm_processor (GCONS g) k =
   Option.map destPtmP (Binarymap.peek(#preterm_processors g, k))
@@ -158,27 +160,27 @@ fun preterm_processor (GCONS g) k =
 
 (* fupdates *)
 open FunctionalRecordUpdate
-fun gcons_mkUp z = makeUpdate7 z
+fun gcons_mkUp z = makeUpdate8 z
 fun update_G z = let
   fun from rules specials numeral_info overload_info user_printers
-           absyn_postprocessors preterm_processors =
+           absyn_postprocessors preterm_processors next_timestamp =
     {rules = rules, specials = specials, numeral_info = numeral_info,
      overload_info = overload_info, user_printers = user_printers,
      absyn_postprocessors = absyn_postprocessors,
-     preterm_processors = preterm_processors}
+     preterm_processors = preterm_processors, next_timestamp = next_timestamp}
   (* fields in reverse order to above *)
-  fun from' preterm_processors absyn_postprocessors user_printers
+  fun from' next_timestamp preterm_processors absyn_postprocessors user_printers
             overload_info numeral_info specials rules =
     {rules = rules, specials = specials, numeral_info = numeral_info,
      overload_info = overload_info, user_printers = user_printers,
      absyn_postprocessors = absyn_postprocessors,
-     preterm_processors = preterm_processors }
+     preterm_processors = preterm_processors, next_timestamp = next_timestamp }
   (* first order *)
   fun to f {rules, specials, numeral_info,
             overload_info, user_printers, absyn_postprocessors,
-            preterm_processors} =
+            preterm_processors, next_timestamp} =
     f rules specials numeral_info overload_info user_printers
-      absyn_postprocessors preterm_processors
+      absyn_postprocessors preterm_processors next_timestamp
 in
   gcons_mkUp (from, from', to)
 end z
@@ -205,6 +207,9 @@ fun mfupdate_user_printers f (GCONS g) = let
 in
   (GCONS (update_G g (U #user_printers new_uprinters) $$), result)
 end
+
+fun inc_timestamp (GCONS g) =
+  GCONS (update_G g (U #next_timestamp (#next_timestamp g + 1)) $$)
 
 fun grammar_name G tm = let
   val oinfo = overload_info G
@@ -469,7 +474,8 @@ val stdhol : grammar =
    user_printers = (FCNet.empty, Binaryset.empty String.compare),
    absyn_postprocessors = [],
    preterm_processors =
-     Binarymap.mkDict (pair_compare(String.compare, Int.compare))
+     Binarymap.mkDict (pair_compare(String.compare, Int.compare)),
+   next_timestamp = 1
    }
 
 fun first_tok [] = raise Fail "Shouldn't happen: term_grammar.first_tok"
@@ -803,8 +809,7 @@ fun add_rule {term_name = s : string, fixity = f, pp_elements,
               paren_style, block_style} G0 = let
   val _ =  pp_elements_ok pp_elements orelse
                  raise GrammarError "token list no good"
-  val contending_tstamps = map #1 (rules_for G0 s)
-  val new_tstamp = List.foldl Int.max 0 contending_tstamps + 1
+  val new_tstamp = gnext_timestamp G0
   val rr = {term_name = s, elements = pp_elements, timestamp = new_tstamp,
             paren_style = paren_style, block_style = block_style}
   val new_rule =
@@ -821,17 +826,16 @@ fun add_rule {term_name = s : string, fixity = f, pp_elements,
         | _ => raise ERROR "add_rule" "Rules for binders must have one TOK only"
 
 in
-  G0 Gmerge [new_rule]
+  inc_timestamp (G0 Gmerge [new_rule])
 end
 
 fun add_grule G0 r = G0 Gmerge [r]
 
 fun add_binder {term_name,tok} G0 = let
-  val contending_tstamps = map #1 (rules_for G0 term_name)
   val binfo = {term_name = term_name, tok = tok,
-               timestamp = List.foldl Int.max 0 contending_tstamps + 1}
+               timestamp = gnext_timestamp G0 }
 in
-  G0 Gmerge [(SOME 0, PREFIX (BINDER [BinderString binfo]))]
+  inc_timestamp (G0 Gmerge [(SOME 0, PREFIX (BINDER [BinderString binfo]))])
 end
 
 fun listform_to_rule lform =
@@ -913,24 +917,24 @@ fun set_mapped_fixity {term_name,tok,fixity} G =
 
 
 fun prefer_form_with_tok (r as {term_name,tok}) G0 = let
-  val contending_timestamps = map #1 (rules_for G0 term_name)
-  val newstamp = List.foldl Int.max 0 contending_timestamps + 1
+  val newstamp = gnext_timestamp G0
 in
-  fupdate_rules
-  (fupdate_rulelist
-   (fupdate_rule_by_termtok r
+  G0 |> fupdate_rules
+         (fupdate_rulelist
+            (fupdate_rule_by_termtok r
                             (update_rr_tstamp newstamp)
-                            (update_b_tstamp newstamp))) G0
+                            (update_b_tstamp newstamp)))
+     |> inc_timestamp
 end
 
 fun prefer_form_with_toklist (r as {term_name,toklist}) G = let
-  val contending_timestamps = map #1 (rules_for G term_name)
-  val t' = List.foldl Int.max 0 contending_timestamps + 1
+  val t' = gnext_timestamp G
 in
   G |> fupdate_rules (fupdate_rulelist
                         (fupdate_rule_by_termtoklist r
                                                      (update_rr_tstamp t')
                                                      (update_b_tstamp t')))
+    |> inc_timestamp
 end
 
 
@@ -1141,7 +1145,8 @@ in
          absyn_postprocessors = alist_merge (absyn_postprocessors0 G1)
                                             (absyn_postprocessors0 G2),
          preterm_processors =
-           bmap_merge (#preterm_processors g1) (#preterm_processors g2)}
+           bmap_merge (#preterm_processors g1) (#preterm_processors g2),
+         next_timestamp = Int.max(#next_timestamp g1, #next_timestamp g2)}
 end
 
 (* ----------------------------------------------------------------------

@@ -286,7 +286,11 @@ exception DoneExit
 fun symbolic s = HOLsym (String.sub(s,String.size(s)-1));
 
 (* term tm can be seen to have name s according to grammar G *)
-fun has_name G s tm = (grammar_name G tm = SOME s)
+fun has_name G s tm =
+  grammar_name G tm = SOME s orelse
+  (case dest_term tm of
+       VAR(s', _) => s' = s
+     | _ => false)
 
 (* term tm might be the product of parsing name s -
    weaker than has_name *)
@@ -298,6 +302,36 @@ in
   | SOME {actual_ops,...} =>
     List.exists (fn t => can (match_term t) tm) actual_ops
 end
+
+(* use of has_name_by_parser for nilstr allows for scenario where you have a
+   chain of cons-like things, and cons does indeed want to print as the cons
+   string, but the bottom nil equivalent would prefer to print some other way
+   (perhaps with Unicode).
+   In this scenario (e.g., in pred_sets, where EMPTY is the bottom of the
+   list-form, but is overloaded to the Unicode symbol for empty set as well
+   as the string "EMPTY"), you probably still want the list-form.
+*)
+fun is_list G (r as {nilstr, cons}) tm =
+  has_name_by_parser G nilstr tm orelse
+  (is_comb tm andalso
+   let
+     val (conshd, tail) = dest_comb tm
+   in
+     is_comb conshd andalso
+     has_name G cons (rator conshd) andalso
+     is_list G r tail
+   end)
+
+(*
+val is_list = fn G => fn (r as {nilstr,cons}) => fn tm =>
+              let
+                val b = is_list G r tm
+              in
+                PRINT ("is_list{nilstr=\""^nilstr^"\",cons=\""^cons^"\"}" ^
+                       debugprint G tm ^ " --> " ^ Bool.toString b);
+                b
+              end
+*)
 
 fun str_unicode_ok s = CharVector.all Char.isPrint s
 
@@ -601,7 +635,8 @@ fun pp_term (G : grammar) TyG backend = let
 
        Returns the unused args *)
     fun print_ellist fopt (lprec, cprec, rprec) (els, args : term list) = let
-      (*val _ = PRINT ("print_ellist: "^Int.toString (length els)^" elements; "^
+      (*
+      val _ = PRINT ("print_ellist: "^Int.toString (length els)^" elements; "^
                      Int.toString (length args)^" args") *)
       fun onetok acc [] = acc
         | onetok NONE (RE (TOK s) :: rest) = onetok (SOME s) rest
@@ -640,7 +675,7 @@ fun pp_term (G : grammar) TyG backend = let
           end
       and pr_lspec (r as {nilstr, cons, block_info,...}) t =
           let
-            (*val _ = PRINT ("pr_lspec: "^debugprint G t^" {nilstr=\""^nilstr^
+            (* val _ = PRINT ("pr_lspec: "^debugprint G t^" {nilstr=\""^nilstr^
                            "\"}") *)
             val sep = #separator r
             val (consistency, breakspacing) = block_info
@@ -1556,21 +1591,13 @@ fun pp_term (G : grammar) TyG backend = let
             val candidate_rules =
                 Option.map (List.filter (is_unicode_ok_rule o #3))
                            (lookup_term fname)
-            (* val _ = PRINT ("pr_atomf: "^
+            (* val _ = PRINT ("pr_atomf: "^debugprint G tm^", "^
                            (case candidate_rules of
-                               NONE => "NONE rules"
+                               NONE => "rules = NONE"
                              | SOME l =>
-                                 Int.toString (length l)^ " candidate rules"))
-            *)
-            fun is_list (r as {nilstr, cons}) tm =
-                has_name_by_parser G nilstr tm orelse
-                (is_comb tm andalso
-                 let
-                   val (t0, tail) = dest_comb tm
-                 in
-                   is_list r tail andalso is_comb t0 andalso
-                   has_name_by_parser G cons (rator t0)
-                 end)
+                                 Int.toString (length l)^ " candidate rules"))*)
+
+
             val restr_binder =
                 find_partial (fn (b,s) => if s=fname then SOME b else NONE)
                              restr_binders
@@ -1606,7 +1633,7 @@ fun pp_term (G : grammar) TyG backend = let
                     | (TOK _ :: rrest, _) => recurse rrest args
                     | (_, []) => false
                     | (ListTM {nilstr,cons,...} :: rrest, a :: arest)  =>
-                        is_list {nilstr=nilstr,cons=cons} a andalso
+                        is_list G {nilstr=nilstr,cons=cons} a andalso
                         recurse rrest arest
               in
                 recurse rels args
@@ -1664,14 +1691,14 @@ fun pp_term (G : grammar) TyG backend = let
                              else NONE
                        in
                          if #term_name r = "" then
-                           (* (PRINT ("rule term-name is empty - testing " ^
+                           ((* PRINT ("rule term-name is empty - testing " ^
                                    debugprint G tm); *)
                            case find_lspec (#elements r) of
                              SOME {nilstr,cons,...} =>
-                               if is_list {nilstr=nilstr,cons=cons} tm then
+                               if is_list G {nilstr=nilstr,cons=cons} tm then
                                  SOME (List (#elements r))
                                else res0()
-                            | NONE => res0()(* ) *)
+                            | NONE => res0()  )
                          else res0()
                        end
                      | INFIX (FNAPP _) => raise Fail "Can't happen 90211"
@@ -1683,7 +1710,8 @@ fun pp_term (G : grammar) TyG backend = let
                         rule
                         {fprec = prec, fname=fname, f=f} args Rand
                   | List els :: _ =>
-                      (print_ellist NONE (Top,Top,Top) (els, [tm]) >> return ())
+                      ((* PRINT "printing a List rule"; *)
+                       print_ellist NONE (Top,Top,Top) (els, [tm]) >> return ())
                   | [] => pr_comb tm Rator Rand
               end
           end (* pr_atomf *)
