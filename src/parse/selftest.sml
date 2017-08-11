@@ -418,7 +418,7 @@ fun tpp msg expected g t =
   in
     if result = expected then OK()
     else die ("\nFAILED - got >" ^ result ^"<")
-  end
+  end handle e => die ("EXN-FAILED: "^General.exnMessage e)
 
 val _ = tpp "Printing empty list form (var)" "[]" lf_g NIL_t
 val _ = tpp "Printing CONS-list form [x] (var)" "[x]" lf_g (mk_list "x")
@@ -544,7 +544,8 @@ val _ = tpp "Printing INS-list (w/infix INS first) {x}" "{x}"
 val _ = tpp "Printing INS-list (w/infix INS second) {x}" "x INSERT {}"
             lf_copinfix_g (pbmk_list "x")
 
-
+val _ = tpp "Printing applied EMPTY: {} x" "{} x" lf_infixfirst_cop
+            (mk_comb(cEMP_t, mk_var("x", alpha)))
 
 
 
