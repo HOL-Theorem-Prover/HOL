@@ -67,7 +67,7 @@ fun tokenize_stac sl =
         let val (body,cont) = split_level (rep_open_by_close a) sl in
           (false,String.concatWith " " body) :: tokenize_stac cont
         end
-    else (not (hhsUnfold.is_reserved_aux a), a) :: tokenize_stac (tl sl)
+    else (not (is_reserved a), a) :: tokenize_stac (tl sl)
   end
  
 fun type_tokenl tokenl =

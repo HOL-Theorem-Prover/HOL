@@ -1,5 +1,5 @@
 (* ========================================================================== *)
-(* FILE          : tacticToe.sml                                              *)
+(* FILE          : hhsSearch.sml                                              *)
 (* DESCRIPTION   : A* search algorithm for TacticToe.                         *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
 (* DATE          : 2017                                                       *)
@@ -9,7 +9,7 @@ structure hhsSearch :> hhsSearch =
 struct
 
 open HolKernel boolLib Abbrev hhsTools hhsTimeout hhsFeature hhsPredict
-hhsExec hhsLexer hhsPrettify hhsTacticgen hhsData
+hhsExec hhsLexer hhsMinimize hhsTacticgen hhsData hhsLearn
 
 val ERR = mk_HOL_ERR "hhsSearch"
 
@@ -32,9 +32,6 @@ val distdict_glob = ref (dempty goal_compare)
 val thmpredictor_glob = ref (fn g => [])
 val stacpredictor_glob = ref empty_predictor
 val glob_timer = ref NONE
-val hhs_minimize_flag = ref true
-val succ_cthy_dict = ref (dempty String.compare)
-val succ_glob_dict = ref (dempty String.compare)
 
 (* --------------------------------------------------------------------------
    Cache
@@ -52,14 +49,9 @@ val stacgoal_cache = ref (dempty stacgoal_compare)
    Options
    -------------------------------------------------------------------------- *)
 
-val hhs_search_time = ref (Time.fromReal 0.0)
-val hhs_tactic_time = ref 0.0
 val hhs_cache_flag  = ref false
-val hhs_metis_time = ref 0.0
-val hhs_succrate_flag = ref false
 val hhs_astar_flag = ref false
 val hhs_timedepth_flag = ref false
-val hhs_selflearn_flag = ref false
 
 (* --------------------------------------------------------------------------
    Debugging
@@ -73,11 +65,6 @@ fun string_of_predentry ((stac,_,_,_),score) =
 fun string_of_pred pred =
   "[" ^ String.concatWith "," (map string_of_predentry pred) ^ "]"
 
-val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
-
-val metis_chat = ref 0
-val meson_chat = ref 0
-
 (* --------------------------------------------------------------------------
    Checking time taken by the predictions
    -------------------------------------------------------------------------- *)
@@ -87,24 +74,14 @@ val thmpredict_time = ref 0.0
 val infstep_time = ref 0.0
 val node_create_time = ref 0.0
 val node_find_time = ref 0.0
-val total_time = ref 0.0
+val tot_time = ref 0.0
 
-fun save_time time_ref f x =
-  let
-    val rt = Timer.startRealTimer ()
-    val r = f x
-    val time = Timer.checkRealTimer rt
-  in
-    time_ref := (!time_ref) + (Time.toReal time);
-    r
-  end
-
-val predict_timer = save_time predict_time
-val thmpredict_timer = save_time thmpredict_time
-val infstep_timer = save_time infstep_time
-fun node_create_timer f x = save_time node_create_time f x
-val node_find_timer = save_time node_find_time
-fun total_timer f x = save_time total_time f x
+val predict_timer = total_time predict_time
+val thmpredict_timer = total_time thmpredict_time
+val infstep_timer = total_time infstep_time
+fun node_create_timer f x = total_time node_create_time f x
+val node_find_timer = total_time node_find_time
+fun total_timer f x = total_time tot_time f x
 
 (* ----------------------------------------------------------------------
    A*-heurisitic
@@ -138,24 +115,14 @@ fun estimate_distance (depth,timedepth) (g,pred) =
           (if !hhs_timedepth_flag then timedepth else Real.fromInt depth)
         val heuristic = 
           if g1 = g 
-            then 0.0
-          else if !hhs_astar_flag 
+          then 0.0
+          else 
+            if !hhs_astar_flag 
             then astar (dempty goal_compare) g1 
-            else 1.0
+            else 0.0
         val _ = width_coeff := (!width_coeff) +
                 (if !hhs_timedepth_flag then (!hhs_tactic_time) else 1.0)
-        val final_score =
-          if !hhs_succrate_flag
-          then
-            let 
-              val (succ,try) = dfind stac (!succ_glob_dict)
-              (* starting value of 10 over 1 *)
-              val inv_succrate = 
-                Real.fromInt (10 + try) / Real.fromInt (succ + 1)
-            in
-              inv_succrate * (cost + heuristic)
-            end
-          else cost + heuristic
+        val final_score = inv_succrate stac * (cost + heuristic)
       in
         (lbl,final_score)
       end
@@ -202,10 +169,8 @@ fun root_create goal pred =
     debug "root_create";
     debug ("  goals: " ^
           String.concatWith "," (map string_of_goal [goal]));
-    (*
     debug ("  predictions: " ^
           String.concatWith "," (map (string_of_pred o (first_n 2)) [pred]));
-    *)
     proofdict := dadd selfid selfrec (!proofdict)
   end
 
@@ -280,64 +245,33 @@ fun node_save pid =
 
 exception OtherError
 
-fun count_try stac = 
-  let 
-    val (succ1,try1) = dfind stac (!succ_cthy_dict) handle _ => (0,0)
-    val (succ2,try2) = dfind stac (!succ_glob_dict) handle _ => (0,0)
-  in
-    succ_cthy_dict := dadd stac (succ1,try1 + 1) (!succ_cthy_dict);
-    succ_glob_dict := dadd stac (succ2,try2 + 1) (!succ_glob_dict)
-  end
-  
-fun count_succ stac = 
-  let 
-    val (succ1,try1) = dfind stac (!succ_cthy_dict) handle _ => (0,0)
-    val (succ2,try2) = dfind stac (!succ_glob_dict) handle _ => (0,0)
-  in
-    succ_cthy_dict := dadd stac (succ1 + 1,try1) (!succ_cthy_dict);
-    succ_glob_dict := dadd stac (succ2 + 1,try2) (!succ_glob_dict)
-  end
- 
-fun apply_stac bmetis pardict trydict_unref stac g =
+fun update_cache k v =
+  if !hhs_cache_flag then stacgoal_cache := dadd k v (!stacgoal_cache) else ()
+
+fun apply_stac pardict trydict_unref stac g =
   let
     val _ = count_try stac (* doesn't work with metis *)
-    val tactic_time = if bmetis then !hhs_metis_time else !hhs_tactic_time
     val _ = stac_counter := !stac_counter + 1
     val _ = debug ("  " ^ int_to_string (!stac_counter) ^ " " ^ stac)
     val tac = dfind stac (!tacdict_glob) 
-      handle _ => 
-        (debug ("SNH: apply_stac:" ^ stac); raise ERR "apply_stac" stac)
-    val gl =
-      if !hhs_cache_flag then
-        if dmem (stac,g) (!stacgoal_cache)
-        then
-          case dfind (stac,g) (!stacgoal_cache) of
-            NONE => raise OtherError
-          | SOME cache_gl => cache_gl
-        else
-          let val r = fst (timeOut tactic_time (TC_OFF tac) g) in
-            stacgoal_cache := dadd (stac,g) (SOME r) (!stacgoal_cache);
-            r
-          end
-      else fst (timeOut tactic_time (TC_OFF tac) g)
+              handle _ => (debug ("SNH: apply_stac:" ^ stac); 
+                           raise ERR "apply_stac" stac)
+    val glo = dfind (stac,g) (!stacgoal_cache) handle _ => app_tac tac g
+    val new_glo =
+      case glo of
+        NONE => NONE
+      | SOME gl =>
+      (
+      if mem g gl orelse exists (fn x => dmem x pardict) gl then NONE
+      else if dmem gl trydict_unref then NONE
+      else SOME gl
+      )
   in
-    if mem g gl orelse exists (fn x => dmem x pardict) gl
-      then (debug ("  tacloop"); NONE)
-    else if dmem gl trydict_unref
-      then (debug ("  tacparallel"); NONE)
-    else (debug ("  tacsuccess"); SOME gl)
+    update_cache (stac,g) new_glo;
+    new_glo
   end
-  handle TacTimeOut =>
-     (
-     if !hhs_cache_flag
-     then stacgoal_cache := dadd (stac,g) NONE (!stacgoal_cache)
-     else ();
-     debug ("  tactimeout"); NONE
-     )
-       | OtherError => NONE
-       | _ => (debug "apply_stac: other error"; NONE)
 
-fun apply_next_stac bmetis pid =
+fun apply_next_stac pid =
   let
     val prec = dfind pid (!proofdict)
     val gn = hd (! (#pending prec))
@@ -349,7 +283,7 @@ fun apply_next_stac bmetis pid =
     val ((stac,_,_,_),_) = hd pred
       handle _ => raise ERR "apply_next_stac" "empty pred"
   in
-    infstep_timer (apply_stac bmetis pardict trydict_unref stac) goal
+    infstep_timer (apply_stac pardict trydict_unref stac) goal
   end
 
 (* ----------------------------------------------------------------------
@@ -378,7 +312,6 @@ fun node_find () =
     else
       let
         val (pid,score) = hd l2
-        val bmetis = score < 0.0
         val prec = dfind pid (!proofdict)
         val gn = hd (! (#pending prec))
         val goal = Array.sub (#goalarr prec, gn)
@@ -387,7 +320,7 @@ fun node_find () =
         debug (
           "node_find " ^ int_to_string pid ^ " " ^ 
           stac ^ " " ^ Real.toString score);
-        (bmetis,pid)
+        pid
       end
   end
 
@@ -509,7 +442,7 @@ fun init_search thmpredictor stacpredictor tacdict distdict g =
     val _ = infstep_time := 0.0
     val _ = node_find_time := 0.0
     val _ = node_create_time := 0.0
-    val _ = total_time := 0.0
+    val _ = tot_time := 0.0
     val _ = glob_timer   := SOME (Timer.startRealTimer ())
     val _ = pid_counter  := 0
     val _ = stac_counter := 0
@@ -536,10 +469,10 @@ fun get_next_pred pid =
 
 fun search_step () =
   let
-    val (bmetis,pid) = node_find_timer node_find ()
+    val pid = node_find_timer node_find ()
     val prec = dfind pid (!proofdict)
     val trydict = #trydict prec
-    val (glo,tactime) = add_time (apply_next_stac bmetis) pid
+    val (glo,tactime) = add_time apply_next_stac pid
   in
     case glo of
       NONE    => get_next_pred pid
@@ -596,7 +529,7 @@ fun end_search () =
   debug_proof ("  infstep : " ^ int_to_string (!stac_counter));
   debug_proof ("  nodes   : " ^ int_to_string (!pid_counter));
   debug_proof ("  maxdepth: " ^ int_to_string (!max_depth_mem));
-  debug_proof ("Time: " ^ Real.toString (!total_time));
+  debug_proof ("Time: " ^ Real.toString (!tot_time));
   debug_proof ("  inferstep time: " ^ Real.toString (!infstep_time));
   debug_proof ("  node_find time: " ^ Real.toString (!node_find_time));
   debug_proof ("  node_crea time: " ^ Real.toString (!node_create_time));
@@ -608,12 +541,14 @@ fun end_search () =
   stacgoal_cache := dempty stacgoal_compare;
   goalpred_cache := dempty goal_compare
   )
- 
+
 (* ---------------------------------------------------------------------------
-   Recording successful tactics from its search.
+   Self learning
    -------------------------------------------------------------------------- *)
 
-fun selflearn proof = case proof of 
+val hhs_selflearn_flag = ref false
+
+fun selflearn_aux proof = case proof of 
     Tactic (stac,g) => 
       (
       let 
@@ -625,8 +560,18 @@ fun selflearn proof = case proof of
       end
       handle _ => debug ("  " ^ stac)
       )
-  | Then (p1,p2) => (selflearn p1; selflearn p2)
-  | Thenl (p,pl) => (selflearn p; app selflearn pl)
+  | Then (p1,p2) => (selflearn_aux p1; selflearn_aux p2)
+  | Thenl (p,pl) => (selflearn_aux p; app selflearn_aux pl)
+
+fun selflearn proof =
+  if !hhs_selflearn_flag 
+  then
+    (
+    debug "Starting selflearn";
+    selflearn_aux proof;
+    debug "End selflearn"
+    )
+  else ()
 
 
 fun imperative_search thmpredictor stacpredictor tacdict distdict g =
@@ -635,40 +580,24 @@ fun imperative_search thmpredictor stacpredictor tacdict distdict g =
   total_timer (node_create_timer root_create_wrap) g;
   let 
     val r = total_timer search_loop ()
-    val _ = debug ("End search loop")
+    val _ = debug "End search loop"
     val sproof_status = case r of
       Proof _  =>
-       (if dmem 0 (!finproofdict) then
-          let 
-            val proofl = proofl_of 0
-            val proof = 
-              if length proofl <> 1 
-              then (debug "SNH: imperative_search1"; 
-                    raise ERR "imperative_search" "")
-              else 
-                (
-                debug "Starting selflearn";
-                if !hhs_selflearn_flag then selflearn (hd proofl) else ();
-                debug "End selflearn";
-                debug "Starting minimization";
-                if !hhs_minimize_flag 
-                then 
-                  (prettify_proof o minimize_proof o minimize_tac) (hd proofl)
-                else prettify_proof (hd proofl)
-                )
-            val sproof = 
-              (
-              debug "End minimization";
-              debug "Starting reconstruction";
-              safe_hhs_reconstruct g proof
-              )
-          in
-            debug "End reconstruction";
-            Proof sproof
-          end
-       else (debug "SNH: imperative_search2"; raise ERR "imperative_search" "")
-       )
-     | _ => r
+      (
+      if dmem 0 (!finproofdict) then
+        let 
+          val proofl = proofl_of 0
+          val proof = 
+            if length proofl <> 1 
+            then (debug "SNH1"; raise ERR "imperative_search" "")
+            else (selflearn (hd proofl); minimize (hd proofl)) 
+          val sproof = reconstruct g proof
+        in
+          Proof sproof
+        end
+      else (debug "SNH2"; raise ERR "imperative_search" "")
+      )
+    | _ => r
   in
     end_search ();
     sproof_status

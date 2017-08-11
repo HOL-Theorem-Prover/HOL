@@ -17,15 +17,27 @@ type fea_t = string list
 type feav_t = (lbl_t * fea_t)
 
 (* --------------------------------------------------------------------------
+   Global parameters
+   -------------------------------------------------------------------------- *)
+
+val hhs_tactic_time = ref 0.0
+val hhs_search_time = ref (Time.fromReal 0.0)
+
+(* --------------------------------------------------------------------------
    Directories
    -------------------------------------------------------------------------- *)
 
 val tactictoe_dir   = HOLDIR ^ "/src/tactictoe"
 val hhs_feature_dir = tactictoe_dir ^ "/features"
+val hhs_tacfea_dir  = hhs_feature_dir ^ "/tactic"
 val hhs_code_dir    = tactictoe_dir ^ "/code"
 val hhs_search_dir  = tactictoe_dir ^ "/search_log"
 val hhs_predict_dir = tactictoe_dir ^ "/predict"
 val hhs_record_dir  = tactictoe_dir ^ "/record_log"
+val hhs_open_dir  = tactictoe_dir ^ "/open"
+val hhs_succrate_dir = tactictoe_dir ^ "/succrate"
+
+fun mkDir_err dir = OS.FileSys.mkDir dir handle _ => ()
 
 (* --------------------------------------------------------------------------
     Dictionaries shortcuts
@@ -44,7 +56,34 @@ val dlist      = Redblackmap.listItems
    References
    -------------------------------------------------------------------------- *)
 
+
+
+
+
 fun incr x = x := (!x) + 1
+
+(* --------------------------------------------------------------------------
+   Reserved tokens
+   -------------------------------------------------------------------------- *)
+
+val reserved_dict =
+  dnew String.compare
+  (map (fn x => (x,()))
+  ["op", "if", "then", "else", "val", "fun",
+   "structure", "signature", "struct", "sig", "open",
+   "infix", "infixl", "infixr", "andalso", "orelse",
+   "and", "datatype", "type", "where", ":", ";" , ":>",
+   "let", "in", "end", "while", "do",
+   "local","=>","case","of","_","|","fn","handle","raise","#",
+   "[","(",",",")","]","{","}"])
+
+fun is_string s = String.sub (s,0) = #"\"" handle _ => false
+fun is_number s = Char.isDigit (String.sub (s,0)) handle _ => false
+fun is_chardef s = String.substring (s,0,2) = "#\"" handle _ => false
+
+fun is_reserved s =
+  dmem s reserved_dict orelse
+  is_number s orelse is_string s orelse is_chardef s
 
 (* --------------------------------------------------------------------------
    List
@@ -251,6 +290,11 @@ fun export_feav s =
    String
    -------------------------------------------------------------------------- *)
 
+fun drop_sig s = 
+  if last (explode s) = #"."
+  then s
+  else last (String.fields (fn x => x = #".") s)
+
 fun rm_last_n_string n s =
   let 
     val l = explode s
@@ -259,7 +303,8 @@ fun rm_last_n_string n s =
     implode (first_n (m - n) l)
   end
 
-fun filename_of s = last (String.tokens (fn x => x = #"/") s)
+fun filename_of s = last (String.tokens (fn x => x = #"/") s) 
+  handle _ => raise ERR "filename_of" s
 
 fun split_sl_aux s pl sl = case sl of
     []     => raise ERR "split_sl_aux" ""

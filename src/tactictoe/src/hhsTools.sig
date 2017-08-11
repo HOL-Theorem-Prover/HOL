@@ -7,6 +7,9 @@ sig
   type fea_t = string list
   type feav_t = (lbl_t * fea_t)
   
+  val hhs_search_time    : Time.time ref
+  val hhs_tactic_time    : real ref
+  
   val hhs_badstacl : string list ref
   val hhs_stacfea  : feav_t list ref
   val hhs_ddict    : (goal, feav_t list) Redblackmap.dict ref
@@ -15,12 +18,23 @@ sig
   
   val tactictoe_dir   : string
   val hhs_feature_dir : string
+  val hhs_tacfea_dir  : string
   val hhs_code_dir    : string
   val hhs_search_dir  : string
   val hhs_predict_dir : string
   val hhs_record_dir  : string
+  val hhs_open_dir    : string
+  val hhs_succrate_dir : string
+  
+  val mkDir_err : string -> unit
 
   val incr   : int ref -> unit
+  
+  val is_string   : string -> bool
+  val is_number   : string -> bool
+  val is_chardef  : string -> bool
+  val is_reserved : string -> bool
+  val drop_sig : string -> string
  
   val dfind  : 'a -> ('a, 'b) Redblackmap.dict -> 'b
   val dmem   : 'a -> ('a, 'b) Redblackmap.dict -> bool

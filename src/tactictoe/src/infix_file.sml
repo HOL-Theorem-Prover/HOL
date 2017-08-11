@@ -1,10 +1,3 @@
-(* ========================================================================== *)
-(* FILE          : infix_file.sml                                             *)
-(* DESCRIPTION   : Declaration of infix operators used in hhsInfix.sml        *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
-(* DATE          : 2017                                                       *)
-(* ========================================================================== *)
-
 infix 0 hhs_infixl0_open hhs_infixl0_close;
 infix 1 hhs_infixl1_open hhs_infixl1_close;
 infix 2 hhs_infixl2_open hhs_infixl2_close;

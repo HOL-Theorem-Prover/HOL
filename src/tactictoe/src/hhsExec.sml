@@ -8,7 +8,7 @@
 structure hhsExec :> hhsExec = 
 struct
 
-open HolKernel Abbrev hhsTools
+open HolKernel Abbrev hhsTools hhsTimeout
 
 val ERR = mk_HOL_ERR "hhsExec"
 
@@ -78,6 +78,31 @@ fun tacticl_of_sml sl =
   end
 
 (* -----------------------------------------------------------------------------
+   Apply tactics
+   -------------------------------------------------------------------------- *)
+
+val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
+
+fun app_tac tac g = 
+  SOME (fst (timeOut (!hhs_tactic_time) (TC_OFF tac) g))
+
+fun rec_stac stac g =
+  let val tac = tactic_of_sml stac in
+    SOME (fst (timeOut (2.0 * (!hhs_tactic_time)) (TC_OFF tac) g))
+  end
+  handle _ => NONE
+
+fun rec_sproof stac g =
+  let 
+    val tac = tactic_of_sml stac
+    val tim = 2.0 * (Time.toReal (!hhs_search_time))
+  in
+    SOME (fst (timeOut tim (TC_OFF tac) g))
+  end
+  handle _ => NONE
+ 
+ 
+(* -----------------------------------------------------------------------------
    Read string
    -------------------------------------------------------------------------- *)
 
@@ -91,11 +116,10 @@ fun string_of_sml s =
   
   
 (* ---------------------------------------------------------------------------
-   Finding the types of an expression.
+   Finding the type of an expression.
    -------------------------------------------------------------------------- *)
 
 val type_cache = ref (dempty String.compare)
-
 
 fun type_of_sml s = 
   if dmem s (!type_cache) then dfind s (!type_cache) else

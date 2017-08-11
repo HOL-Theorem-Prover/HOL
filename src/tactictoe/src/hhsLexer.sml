@@ -8,7 +8,7 @@
 structure hhsLexer :> hhsLexer =
 struct
 
-open HolKernel boolLib
+open HolKernel boolLib hhsTools
 
 val ERR = mk_HOL_ERR "hhsLexer"
 
@@ -138,8 +138,16 @@ fun reg_tquote sl = case sl of
   | "#" :: "\"" :: a :: "\"" :: m => ("#\"" ^ a ^ "\"") :: reg_tquote m
   | "\"" :: a :: "\"" :: m => ("\"" ^ a ^ "\"") :: reg_tquote m
   | "\"" :: "\"" :: m => ("\"" ^ "\"") :: reg_tquote m
-  | a :: "." :: m => reg_dot [] sl
-  | a :: m => a :: reg_tquote m
+  | a :: m => 
+    (
+    if (is_reserved a andalso not (is_number a)) orelse null m 
+    then a :: reg_tquote m
+    else 
+      if (hd m) = "." 
+      then reg_dot [] sl 
+      else a :: reg_tquote m 
+    )
+    
 and reg_dot acc sl = case sl of
     [] => raise ERR "reg_dot" ""
   | a :: "." :: m => reg_dot ("." :: a :: acc) m

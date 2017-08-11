@@ -1,6 +1,6 @@
 signature hhsQuote =
 sig
 
-  val quoteString : string -> string
+  val unquoteString : string -> string
 
 end

@@ -14,7 +14,6 @@ sig
   | SException   of string
   val all_files : unit -> string list
   val hhs_rewrite : string -> unit
-  val is_reserved_aux : string -> bool
   
   val open_struct : 
   (string, stack_t) Redblackmap.dict list -> string -> (string * stack_t) list

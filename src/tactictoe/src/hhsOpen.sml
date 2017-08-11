@@ -16,7 +16,7 @@ val ERR = mk_HOL_ERR "hhsOpen"
 (* Maybe all exceptions are constructors *)
 fun gencode_values s =
   let
-    val dir = tactictoe_dir ^ "/open/" ^ s
+    val dir = hhs_open_dir ^ "/" ^ s
     val file1 = dir ^ "/code_values.sml"
     val file2 = dir ^ "/values"
     val file3 = dir ^ "/constructors"
@@ -55,7 +55,7 @@ fun gencode_values s =
 
 fun all_values s = 
   let 
-    val dir = tactictoe_dir ^ "/open/" ^ s
+    val dir = hhs_open_dir ^ "/" ^ s
     val hide_file = dir ^ "/hide_values"
     val cmd1 = "cd " ^ dir
     val cmd2 = (HOLDIR ^ "/bin/hol") ^ " < code_values.sml"
@@ -72,7 +72,7 @@ fun all_values s =
 
 fun gencode_structures s =
   let
-    val dir = HOLDIR ^ "/src/tactictoe/open/" ^ s
+    val dir = hhs_open_dir ^ "/" ^ s
     val file1 = dir ^ "/code_structures.sml"
     val file2 = dir ^ "/structures"
     val structl = rev (String.tokens (fn x => x = #".") s)
@@ -106,7 +106,7 @@ fun gencode_structures s =
 
 fun all_structures s = 
   let 
-    val dir = HOLDIR ^ "/src/tactictoe/open/" ^ s
+    val dir = hhs_open_dir ^ "/" ^ s
     val hide_file = dir ^ "/hide_structures"
     val cmd1 = "cd " ^ dir
     val cmd2 = (HOLDIR ^ "/bin/hol") ^ " < code_structures.sml"

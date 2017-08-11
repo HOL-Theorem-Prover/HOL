@@ -17,6 +17,10 @@ sig
   val tacticl_of_sml   : string list -> tactic list
   val string_of_sml    : string -> string
   
+  val app_tac    : tactic -> goal -> goal list option
+  val rec_stac   : string -> goal -> goal list option
+  val rec_sproof : string -> goal -> goal list option
+  
   val type_of_sml      : string -> string
 
 end

@@ -10,9 +10,12 @@ struct
 
 open HolKernel boolLib Abbrev
 hhsSearch hhsTools hhsLexer hhsExec hhsFeature hhsPredict hhsData hhsInfix
-hhsRedirect hhsFeature hhsTacticgen
+hhsRedirect hhsFeature hhsTacticgen hhsLearn hhsMinimize
 
 val ERR = mk_HOL_ERR "tacticToe"
+
+(* turn on evaluation here *)
+val hhs_eval_flag = ref false
 
 val init_error_file = tactictoe_dir ^ "/code/init_error"
 val main_error_file = tactictoe_dir ^ "/code/main_error"
@@ -23,7 +26,7 @@ val hide_error_file = tactictoe_dir ^ "/code/hide_error"
    ---------------------------------------------------------------------- *)
 
 val timeout = ref 5.0
-fun set_timeout r = timeout := r 
+fun set_timeout r = timeout := r
 
 val max_select_pred = ref 0
 val hhs_metis_npred = ref 0
@@ -75,10 +78,10 @@ fun add_cthy_mdict () =
 fun init_prev () =
   let
     val thyl = ancestry (current_theory ())
-    val succratel = read_succ thyl
+    val succratel = import_succrate thyl
     val _ = succ_cthy_dict := dempty String.compare
     val _ = succ_glob_dict := dnew String.compare succratel
-    val (stacfea,t) = add_time read_fea thyl
+    val (stacfea,t) = add_time import_feav thyl
     val _ = mdict_glob := dempty String.compare
     val _ = app add_thy_mdict thyl
   in
@@ -99,11 +102,12 @@ fun set_parameters () =
   (* predicting *)
   max_select_pred := 500;
   (* searching *)
+  hhs_cache_flag := true;
+  set_timeout 5.0;
   hhs_search_time := Time.fromReal (!timeout);
   hhs_tactic_time := 0.02;
   hhs_astar_flag := false;
-  hhs_timedepth_flag := false;
-  hhs_cache_flag := true;
+  hhs_timedepth_flag := false; 
   (* learning *)
   hhs_ortho_flag := false;
   hhs_selflearn_flag := false;
@@ -111,11 +115,10 @@ fun set_parameters () =
   (* tactic generation *)
   hhs_mutate_flag := false;
   hhs_metis_flag := (false andalso 
-                    exec_sml "metis_test" "metisTools.METIS_TAC []");
+                     exec_sml "metis_test" "metisTools.METIS_TAC []");
   hhs_metis_npred := 8;
-  hhs_metis_time := 0.02;
   (* result *)
-  hhs_minimize_flag := true
+  hhs_minimize_flag := false
   )
 
 (* ----------------------------------------------------------------------
@@ -255,23 +258,27 @@ fun print_proof_status r = case r of
  | ProofTimeOut   => print ("Proof status: Time Out\n")
  | Proof s        => print (s ^ "\n")
 
-fun print_eval_status r = 
+fun debug_eval_status r = 
   case r of
     ProofError     => debug_proof "Error: print_eval_status\n"
   | ProofSaturated => debug_proof "Proof status: Saturated\n"
   | ProofTimeOut   => debug_proof "Proof status: Time Out\n"
   | Proof s        => debug_proof ("Proof found: " ^ s ^ "\n")
 
+
 fun eval_tactictoe goal =
-  let
-    val _ = print "Start evaluation\n"
-    val _ = init_tactictoe ()
-    val _ = erase_file main_error_file
-    val r = hhsRedirect.hide main_error_file main_tactictoe goal 
-  in
-    print_eval_status r;
-    print "End evaluation\n"
-  end
+  if !hhs_eval_flag
+  then
+    let
+      val _ = debug "Start evaluation"
+      val _ = init_tactictoe ()
+      val _ = erase_file main_error_file
+      val r = hhsRedirect.hide main_error_file main_tactictoe goal 
+    in
+      debug_eval_status r;
+      debug "End evaluation"
+    end
+  else ()
  
 (* ----------------------------------------------------------------------
    Predicting only the next tactic based on some distance measure.
@@ -314,14 +321,12 @@ fun next_tac n goal =
     val rl = rev (try_tac tacdict memdict n goal stacl)
     (* printing tactics *)
     fun f (stac,_,g,gl) =
-      let val s = hide hide_error_file (hhsPrettify.pretty_stac stac g) gl in
+      let val s = hide hide_error_file (pretty_stac stac g) gl in
         print (s ^ "\n")
       end
-  in  
+  in
     app f rl
   end
 
-
-  
 
 end (* struct *)

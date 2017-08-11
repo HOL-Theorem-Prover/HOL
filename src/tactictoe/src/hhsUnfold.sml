@@ -168,34 +168,7 @@ val replace_special_time = ref 0.0
 val replace_id_time = ref 0.0
 
 (* --------------------------------------------------------------------------
-   Reserved tokens
-   -------------------------------------------------------------------------- *)
-
-val reserved_dict =
-  dnew String.compare
-  (map (fn x => (x,()))
-  ["op", "if", "then", "else", "val", "fun",
-   "structure", "signature", "struct", "sig", "open",
-   "infix", "infixl", "infixr", "andalso", "orelse",
-   "and", "datatype", "type", "where", ":", ";" , ":>",
-   "let", "in", "end", "while", "do",
-   "local","=>","case","of","_","|","fn","handle","raise","#",
-   "[","(",",",")","]","{","}"])
-
-fun is_string s = String.sub (s,0) = #"\"" handle _ => false
-fun is_number s = Char.isDigit (String.sub (s,0)) handle _ => false
-fun is_chardef s = String.substring (s,0,2) = "#\"" handle _ => false
-
-val is_reserved_time = ref 0.0
-
-fun is_reserved_aux s =
-  dmem s reserved_dict orelse
-  is_number s orelse is_string s orelse is_chardef s
-
-fun is_reserved s = total_time is_reserved_time is_reserved_aux s
-
-(* --------------------------------------------------------------------------
-   Default PolyML values:
+   poly
    val l = map (fn (a,b) => a) (#allVal (PolyML.globalNameSpace) ());
    -------------------------------------------------------------------------- *)
 
@@ -276,21 +249,19 @@ fun split_endtype sl = split_endval_aux is_endtype 0 [] sl
 
 
 (* --------------------------------------------------------------------------
-   Extract pattern and identifiers
+   Extract pattern and identifiers.
    -------------------------------------------------------------------------- *)
 
 fun extract_pattern s sl =
   let 
     val (head,l2) = split_level s sl 
-    handle _ => raise ERR "extract_pattern" (String.concatWith " " sl)
+    handle _ => raise ERR "extract_pattern" 
+                (s ^ ": " ^ (String.concatWith " " sl))
     val (body,cont) = split_endval l2
   in
     (head,body,cont)
   end
 
-(* --------------------------------------------------------------------------
-   Extract open calls
-   -------------------------------------------------------------------------- *)
 
 fun extract_open_aux libl sl = case sl of
     [] => (rev libl,[])
@@ -304,7 +275,7 @@ fun extract_open sl = extract_open_aux [] sl
 fun extract_infix inf_constr l =
   if l = [] then raise ERR "extract_infix" "" else
   let 
-    val (a,m) = (hd l,tl l) 
+    val (a,m) = (hd l,tl l)
     val (n,sl) = if is_number a then (string_to_int a, m) else (0,l)
     val (body,cont) = extract_open sl
     fun f n s = (s, inf_constr n)
@@ -319,7 +290,6 @@ fun extract_infix inf_constr l =
    functions with side effects (export_rewrites) which can be unfolded.
    -------------------------------------------------------------------------- *)
 
-fun drop_sig s = last (String.tokens (fn x => x = #".") s)
 fun sig_of s = hd (String.tokens (fn x => x = #".") s)
 
 val store_thm_list =
@@ -557,8 +527,6 @@ fun replace_struct stack id =
      then () 
      else print_warning ("structure: " ^ id); [id])
 
-
-
 fun stack_find stack id = case stack of
     []        => NONE
   | dict :: m => (SOME (dfind id dict) handle _ => stack_find m id)
@@ -612,8 +580,6 @@ fun modified_program p = case p of
             ["let","val","tactictoe_tac1","="] @ tac1 @
             ["val","tactictoe_tac2","=","hhsPrerecord.hhs_prerecord",
              mlquote name,"(",stac2,")"] @
-            ["val","_","=","hhsRecord.record_theorems", 
-             mlquote (current_theory ())] @
             ["in","tactictoe_tac2","ORELSE","tactictoe_tac1","end"] @
           [")"]
           @ modified_program cont
@@ -920,7 +886,7 @@ fun change_dir2 file =
     let 
       val name = String.extract (file, String.size HOLDIR, NONE)
       val hol_par = String.concatWith "/" 
-        (butlast (String.tokens (fn x => x = #"/") file))
+        (butlast (String.fields (fn x => x = #"/") HOLDIR))
     in
       (hol_par ^ "/HOL_COPY" ^ name)
     end
@@ -949,15 +915,7 @@ fun output_header cthy =
 val export_file = tactictoe_dir ^ "/exported"
 
 fun output_foot cthy file = 
-  (
-  os ("\nval _ = hhsRecord.end_thy " ^ mlquote cthy);
-  os ("\n;" ^
-      "\nlet val oc = " ^
-      "\n  TextIO.openAppend " ^ mlquote export_file ^ 
-      "\nin" ^
-      "\n  TextIO.output (oc, " ^ mlquote file ^ " ^ \"\\n\")" ^
-      "\nend;")
-  )
+  os ("\nval _ = hhsRecord.end_thy " ^ mlquote cthy)
 
 fun clean_unfold cthy =
   let
@@ -980,7 +938,6 @@ fun start_unfold_thy cthy =
   open_time := 0.0; 
   replace_special_time := 0.0;
   replace_id_time := 0.0;
-  is_reserved_time := 0.0;
   push_time := 0.0
   )
 
@@ -992,7 +949,6 @@ fun end_unfold_thy cthy n =
     val _ = append_endline file (int_to_string n ^ " proofs extracted")
     val _ = print (int_to_string n ^ " proofs extracted\n")
     val _  = g "  Push" (!push_time)
-    val _  = g "  Is reserved" (!is_reserved_time)
     val _  = g "  Open" (!open_time)
     val _  = g "  Replace special" (!replace_special_time)
     val _  = g "  Replace id" (!replace_id_time)
@@ -1010,7 +966,7 @@ fun hhs_rewrite file =
         val file_out = change_dir2 file
         val sl = readl file
         val s1 = rm_endline (rm_comment (String.concatWith " " sl))
-        val s2 = hhsQuote.quoteString s1
+        val s2 = hhsQuote.unquoteString s1
         val sl3 = hhs_lex s2
         val p0 = sketch sl3
         val basis_dict = dnew String.compare (map protect basis)
@@ -1042,27 +998,16 @@ end (* struct *)
 
 (* ---------------------------------------------------------------------------
   
+  rlwrap hol
   
   (* Start *)
-  rlwrap hol
   load "hhsUnfold";
-  hhsTools.erase_file (hhsTools.tactictoe_dir ^ "/exported");
+  open hhsTools;
   open hhsUnfold;
   val l = all_files ();
+  mkDir_err hhs_record_dir;
+  mkDir_err hhs_open_dir;
   app hhs_rewrite l;
-  
-  (* Restart *)
-  load "hhsUnfold";
-  open hhsUnfold;
-  val l = all_files ();
-  val exported = hhsTools.readl (hhsTools.tactictoe_dir ^ "/exported");
-  val non_exported = filter (fn x => not (mem x exported)) l;
-  app hhs_rewrite non_exported;
-  
-  todo:
-  - structures
-  - recursive function
-  - detection of state-modifying tactics: warning.
-  - types (g:goal).
-  - pattern matching. (* case *)                        
+  (* To be relaunch after one success: get rid of String.ui error*)
+             
   --------------------------------------------------------------------------- *)
