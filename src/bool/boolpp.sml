@@ -181,7 +181,7 @@ fun letprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
       block PP.CONSISTENT 0
         (add_string "let" >> add_break(1,2) >>
          pr_list pr_letandseq
-                 (add_string " " >> add_string ";" >> add_break (1, 0))
+                 (add_string " " >> add_string ";" >> add_break (1, 2))
                  andbindings >>
          add_break(1,0) >>
          add_string "in" >> add_break(1,2) >>
