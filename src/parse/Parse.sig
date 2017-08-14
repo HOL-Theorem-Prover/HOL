@@ -251,6 +251,9 @@ signature Parse = sig
   val BeginFinalBlock  : block_info -> pp_element
   val EndInitialBlock  : block_info -> pp_element
   val PPBlock          : pp_element list * block_info -> pp_element
+  val ListForm         : {separator:pp_element list, cons : string,
+                          nilstr : string, block_info : block_info} ->
+                         pp_element
 
   val OnlyIfNecessary  : ParenStyle
   val ParoundName      : ParenStyle

@@ -6,6 +6,8 @@ sig
   val vs_cons_special : string
   val resquan_special : string
   val let_special : string
+  val letcons_special : string
+  val letnil_special : string
   val and_special : string
   val fakeconst_special : string
   val mk_fakeconst_name :

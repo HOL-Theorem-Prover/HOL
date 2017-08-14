@@ -154,13 +154,18 @@ val _ = TeX_notation {hol = UChar.neg, TeX = ("\\HOLTokenNeg{}",1)}
 (* prettyprinting information here for "let" and "and" is completely ignored;
    the pretty-printer handles these specially.  These declarations are only
    for the parser's benefit. *)
-val _ = add_rule {term_name   = GrammarSpecials.let_special,
-                  fixity = Prefix 8,
-                  pp_elements = [TOK "let", BreakSpace(1,0), TM,
-                                 BreakSpace(1, 0), TOK "in",
-                                 BreakSpace(1, 0)],
-                  paren_style = OnlyIfNecessary,
-                  block_style = (AroundEachPhrase, (INCONSISTENT, 0))};
+val _ = add_rule {
+      pp_elements = [TOK "let",
+                     ListForm {
+                       separator = [TOK ";"],
+                       cons = GrammarSpecials.letcons_special,
+                       nilstr = GrammarSpecials.letnil_special,
+                       block_info = (INCONSISTENT, 0)
+                     },
+                     TOK "in"],
+      term_name = GrammarSpecials.let_special,
+      paren_style = OnlyIfNecessary, fixity = Prefix 8,
+      block_style = (AroundEachPhrase, (CONSISTENT, 0))};
 
 val _ = add_rule {term_name = GrammarSpecials.and_special,
                   fixity = Infixl 9,
