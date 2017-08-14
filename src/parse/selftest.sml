@@ -547,6 +547,12 @@ val _ = tpp "Printing INS-list (w/infix INS second) {x}" "x INSERT {}"
 val _ = tpp "Printing applied EMPTY: {} x" "{} x" lf_infixfirst_cop
             (mk_comb(cEMP_t, mk_var("x", alpha)))
 
+val _ = tpp "Printing applied non-empty 1: {x} y" "{x} y" lf_infixfirst_cop
+            (mk_comb(pbmk_list "x", mk_var("y", bool)))
+
+val _ = tpp "Printing applied non-empty 2: {x; y} z" "{x; y} z"
+            lf_infixfirst_cop
+            (mk_comb(pbmk_list "xy", mk_var("z", bool)))
 
 
 (*

@@ -297,10 +297,16 @@ fun has_name G s tm =
 fun has_name_by_parser G s tm = let
   val oinfo = term_grammar.overload_info G
 in
-  case Overload.info_for_name oinfo s of
-    NONE => (case Lib.total dest_var tm of SOME(vnm,_) => s = vnm | _ => false)
-  | SOME {actual_ops,...} =>
-    List.exists (fn t => can (match_term t) tm) actual_ops
+  case dest_term tm of
+      VAR(vnm, _) => vnm = s orelse
+                     (case dest_fakeconst_name vnm of
+                          SOME{fake,...} => fake = s
+                        | NONE => false)
+    | _ =>
+      (case Overload.info_for_name oinfo s of
+           NONE => false
+         | SOME {actual_ops,...} =>
+             List.exists (fn t => can (match_term t) tm) actual_ops)
 end
 
 (* use of has_name_by_parser for nilstr allows for scenario where you have a
@@ -635,9 +641,10 @@ fun pp_term (G : grammar) TyG backend = let
 
        Returns the unused args *)
     fun print_ellist fopt (lprec, cprec, rprec) (els, args : term list) = let
-      (*
-      val _ = PRINT ("print_ellist: "^Int.toString (length els)^" elements; "^
-                     Int.toString (length args)^" args") *)
+      (* val _ = PRINT
+                 ("print_ellist: "^Int.toString (length els)^" elements; "^
+                  " args = [" ^
+                  String.concatWith ", " (map (debugprint G) args) ^ "]") *)
       fun onetok acc [] = acc
         | onetok NONE (RE (TOK s) :: rest) = onetok (SOME s) rest
         | onetok (SOME _) (RE (TOK s) :: rest) = NONE
@@ -676,7 +683,7 @@ fun pp_term (G : grammar) TyG backend = let
       and pr_lspec (r as {nilstr, cons, block_info,...}) t =
           let
             (* val _ = PRINT ("pr_lspec: "^debugprint G t^" {nilstr=\""^nilstr^
-                           "\"}") *)
+                           "\"}")*)
             val sep = #separator r
             val (consistency, breakspacing) = block_info
             (* list will never be empty *)
@@ -684,6 +691,8 @@ fun pp_term (G : grammar) TyG backend = let
               fun lrecurse depth tm = let
                 val (_, args) = strip_comb tm
                 val head = hd args
+                  handle Empty => raise Fail ("pr_list empty list with t = "^
+                                              debugprint G t)
                 val tail = List.nth(args, 1)
               in
                 if depth = 0 then add_string "..."
@@ -1217,6 +1226,7 @@ fun pp_term (G : grammar) TyG backend = let
          Otherwise, the presence of a rule with our name n in it, is a
          probable indication that our name will need a $ printed out in
          front of it. *)
+      (* val _ = PRINT ("pr_sole_name: "^debugprint G tm) *)
       fun check_rule rule =
         case rule of
           CLOSEFIX [{elements,...}] =>
@@ -1231,7 +1241,7 @@ fun pp_term (G : grammar) TyG backend = let
         else var_ann tm s
     in
       case nilrule of
-        SOME els => (* PRINT ("Found a nil-rule for "^n^"\n"); *)
+        SOME els => (* (PRINT ("Found a nil-rule for "^n); *)
                     print_ellist NONE (Top,Top,Top) (els, [tm]) >> return ()
       | NONE => let
           (* if only rule is a list form rule and we've got to here, it
@@ -1595,7 +1605,8 @@ fun pp_term (G : grammar) TyG backend = let
                            (case candidate_rules of
                                NONE => "rules = NONE"
                              | SOME l =>
-                                 Int.toString (length l)^ " candidate rules"))*)
+                                 Int.toString (length l)^ " candidate rules"))
+            *)
 
 
             val restr_binder =
@@ -1623,8 +1634,11 @@ fun pp_term (G : grammar) TyG backend = let
             fun check_rrec_args f rrec args =
               let
                 val rels = f (rule_elements (#elements rrec))
-                (* val _ = PRINT ("check_rrec_args: " ^ LEN rels ^ " rels; " ^
-                               LEN args ^ " args") *)
+                (*val _ = PRINT ("check_rrec_args: rels = [" ^
+                               String.concatWith ", " (map reltoString rels) ^
+                               "]; args = [" ^
+                               String.concatWith ", " (map (debugprint G) args)^
+                               "]")*)
                 fun recurse rels args =
                   case (rels, args) of
                       ([], []) => true
@@ -1685,21 +1699,19 @@ fun pp_term (G : grammar) TyG backend = let
                        let
                          (* val _ = PRINT "suitable_rule: closefix check" *)
                          val r = hd list
-                         fun res0() =
-                             if check_rrec_args mkrels_closefix r args0 then
-                               SOME (Norm(prec, rule))
-                             else NONE
                        in
                          if #term_name r = "" then
                            ((* PRINT ("rule term-name is empty - testing " ^
-                                   debugprint G tm); *)
-                           case find_lspec (#elements r) of
-                             SOME {nilstr,cons,...} =>
-                               if is_list G {nilstr=nilstr,cons=cons} tm then
-                                 SOME (List (#elements r))
-                               else res0()
-                            | NONE => res0()  )
-                         else res0()
+                               debugprint G tm); *)
+                            case find_lspec (#elements r) of
+                                SOME {nilstr,cons,...} =>
+                                if is_list G {nilstr=nilstr,cons=cons} tm then
+                                  SOME (List (#elements r))
+                                else NONE
+                              | NONE => NONE)
+                         else if check_rrec_args mkrels_closefix r args0 then
+                           SOME (Norm(prec, rule))
+                         else NONE
                        end
                      | INFIX (FNAPP _) => raise Fail "Can't happen 90211"
                      | INFIX VSCONS => raise Fail "Can't happen 90213"
@@ -1712,7 +1724,9 @@ fun pp_term (G : grammar) TyG backend = let
                   | List els :: _ =>
                       ((* PRINT "printing a List rule"; *)
                        print_ellist NONE (Top,Top,Top) (els, [tm]) >> return ())
-                  | [] => pr_comb tm Rator Rand
+                  | [] => (*(PRINT "No suitable rules, printing with pr_comb";*)
+                      pr_comb tm Rator Rand
+                      (* before PRINT "Finished pr_comb") *)
               end
           end (* pr_atomf *)
           fun maybe_pr_atomf () =
