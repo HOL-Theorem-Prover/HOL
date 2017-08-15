@@ -16,6 +16,8 @@ sig
 
   val rule_elements  : pp_element list -> rule_element list
   val pp_elements_ok : pp_element list -> bool
+  val first_rtok : rule_element list -> string
+  val first_tok : pp_element list -> string
 
   val reltoString    : rule_element -> string
 
@@ -127,17 +129,12 @@ sig
                               {binder : string option,
                                resbinder : string} -> grammar
 
-  val compatible_listrule : grammar
-                             -> {separator : string,
-                                 leftdelim : string,
-                                 rightdelim : string}
-                             -> {cons : string, nilstr : string} option
-
   val grammar_tokens : grammar -> string list
   val rule_tokens : grammar -> grammar_rule -> string list
 
   val add_binder : {term_name:string,tok:string} -> grammar -> grammar
   val add_listform : grammar -> listspec -> grammar
+  val listform_to_rule : listspec -> grule
 
   val fixityToString : fixity -> string
   val add_rule : grule -> grammar -> grammar

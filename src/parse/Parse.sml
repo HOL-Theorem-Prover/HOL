@@ -759,7 +759,7 @@ fun inferior_overload_on p =
   (make_overload_on Overload.add_inferior_overloading p;
    GrammarDeltas.record_tmdelta (IOVERLOAD_ON p))
 
-fun add_listform0 x = [LRULE x]
+fun add_listform0 x = [GRULE (listform_to_rule x)]
 val temp_add_listform = mk_temp add_listform0
 val add_listform = mk_perm add_listform0
 

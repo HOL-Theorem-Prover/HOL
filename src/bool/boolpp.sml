@@ -127,21 +127,32 @@ fun letprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
     fun pbegin b = if b then add_string "(" else nothing
     fun pend b = if b then add_string ")" else nothing
     fun spacep b = if b then add_break(1, 0) else nothing
-
-    fun pr_let0 tm = let
-      fun find_base acc tm =
-        if is_let tm then let
-          val (let_tm, args) = strip_comb tm
-        in
-          find_base (List.nth(args, 1)::acc) (hd args)
-        end
-        else (acc, tm)
-      fun pr_leteq (bv, tm2) = let
-        val (args, rhs_t) = strip_vstructs {binder=NONE,restrictor=NONE} tm2
-        val fnarg_bvars = List.concat (map (free_vars o bv2term) args)
-        val bvfvs = free_vars (bv2term bv)
+    fun find_base acc tm =
+      if is_let tm then let
+        val (let_tm, args) = strip_comb tm
       in
-        block PP.INCONSISTENT 2
+        find_base (List.nth(args, 1)::acc) (hd args)
+      end
+      else (acc, tm)
+
+    fun strip_let acc tm =
+      if is_let tm then
+        let
+          val (values, abstr) = find_base [] tm
+          val (varnames, body) = strip_nvstructs (length values) abstr
+          val name_value_pairs = ListPair.zip (varnames, values)
+        in
+          strip_let (name_value_pairs :: acc) body
+        end
+      else (List.rev acc, tm)
+    val (andbindings, body) = strip_let [] tm
+
+    fun pr_leteq (bv, tm2) = let
+      val (args, rhs_t) = strip_vstructs {binder=NONE,restrictor=NONE} tm2
+      val fnarg_bvars = List.concat (map (free_vars o bv2term) args)
+      val bvfvs = free_vars (bv2term bv)
+    in
+      block PP.INCONSISTENT 2
           (record_bvars bvfvs (pr_vstruct bv) >>
            spacep true >>
            record_bvars fnarg_bvars
@@ -150,33 +161,31 @@ fun letprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
               add_string "=" >> spacep true >>
               block PP.INCONSISTENT 2 (syspr (Top, Top, Top) rhs_t))) >>
         return bvfvs
-      end
-      val (values, abstr) = find_base [] tm
-      val (varnames, body) = strip_nvstructs (length values) abstr
-      val name_value_pairs = ListPair.zip (varnames, values)
-      val bodyletp = is_let body
-      fun record_bvars new =
-        (* overriding term_pp_utils's version; this one has a different type
-           also *)
-        getbvs >- (fn old => setbvs (HOLset.addList(old,new)))
-    in
-      (* put a block around the "let ... in" phrase *)
-      block PP.CONSISTENT 0
-        (add_string "let" >> add_string " " >>
-         (* put a block around the variable bindings *)
-         block PP.INCONSISTENT 0
+    end
+
+    fun record_bvars new =
+      (* overriding term_pp_utils's version; this one has a different type
+         also *)
+      getbvs >- (fn old => setbvs (HOLset.addList(old,new)))
+
+    fun pr_letandseq nvpairs =
+      block PP.INCONSISTENT 0
            (mappr_list pr_leteq
                        (add_string " " >> add_string "and" >> spacep true)
-                       name_value_pairs >-
-            (return o List.concat)) >-
-         record_bvars >>
-         (if bodyletp then (spacep true >> add_string "in")
-          else nothing)) >>
-       spacep true >>
-       (if bodyletp then pr_let0 body
-        else add_string "in" >> add_break(1,2) >>
-             syspr (RealTop, RealTop, RealTop) body)
-    end
+                       nvpairs >-
+           (return o List.concat)) >-
+           record_bvars
+
+    fun pr_let0 tm =
+      (* put a block around the "let ... in" phrase *)
+      block PP.CONSISTENT 0
+        (add_string "let" >> add_break(1,2) >>
+         pr_list pr_letandseq
+                 (add_string " " >> add_string ";" >> add_break (1, 2))
+                 andbindings >>
+         add_break(1,0) >>
+         add_string "in" >> add_break(1,2) >>
+         syspr (RealTop, RealTop, RealTop) body)
 
     fun pr_let lgrav rgrav tm = let
       val addparens = lgrav <> RealTop orelse rgrav <> RealTop
@@ -247,7 +256,7 @@ in
              R
 end
 
-fun let_processor G t0 = let
+fun let_processor0 G t0 = let
   open Absyn GrammarSpecials
   fun let_remove f (APP(_,APP(_,IDENT _, t1), t2)) = munge_let (f t1) (f t2)
     | let_remove _ _ = raise Fail "Can't happen"
@@ -260,6 +269,40 @@ fun let_processor G t0 = let
                                     "Invalid use of reserved word and") t1
 in
   t1
+end
+
+fun let_processor G t = let
+  open Absyn GrammarSpecials
+  fun nilcheck (APP (_, IDENT (_, nilstr), body)) = nilstr = letnil_special
+    | nilcheck _ = false
+  fun conspresent (APP (_,
+                        APP (_, IDENT (_, letstr),
+                             APP (_,
+                                  APP(_, IDENT(_, constr), eq1),
+                                  eqs)),
+                        bod)) =
+         constr = letcons_special andalso letstr = let_special
+    | conspresent _ = false
+  fun foldcons (a, bod) =
+    case a of
+        APP (l1, APP (l2, IDENT(_, constr), eq1), eqs) =>
+          if constr = letcons_special then
+            APP (l1, APP (l2, IDENT(l2, let_special), eq1), foldcons(eqs, bod))
+          else raise ERRORloc "let_processor" l1 "Mal-formed LET"
+      | IDENT(loc, nilstr) =>
+          if nilstr = letnil_special then bod
+          else raise ERRORloc "let_processor" loc "Mal-formed LET"
+      | _ => raise ERRORloc "let_processor" (locn_of_absyn a) "Mal-formed LET"
+  fun let_args tf a = let
+    val (fx, y) = dest_app a
+    val (_, x) = dest_app fx
+  in
+    (tf x, tf y)
+  end
+in
+  traverse
+    conspresent
+    (fn tf => fn a => let_processor0 G (foldcons (let_args tf a))) t
 end
 
 val _ = term_grammar.userSyntaxFns.register_absynPostProcessor

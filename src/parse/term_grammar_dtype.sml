@@ -39,7 +39,6 @@ datatype grammar_rule =
        | SUFFIX of suffix_rule
        | INFIX of infix_rule
        | CLOSEFIX of rule_record list
-       | LISTRULE of listspec list
 
 datatype fixity =
          Infix of associativity * int
@@ -57,7 +56,6 @@ type grule = {term_name : string,
 type skid = string * {Name:string, Thy:string}
 datatype user_delta =
          GRULE of grule
-       | LRULE of listspec
        | RMTMTOK of {term_name : string, tok : string}
        | RMTMNM of string
        | RMTOK of string

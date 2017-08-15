@@ -103,7 +103,6 @@ fun getrule G term_name = let
           | CLOSEFIX _ => get_rule_data tf_opt rest
              (* only support single token overloads and a closefix form must
                 involve two tokens at once *)
-          | LISTRULE _ => get_rule_data tf_opt rest (* likewise *)
         end
 in
   get_rule_data NONE (rules G)
