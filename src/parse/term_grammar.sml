@@ -838,7 +838,7 @@ in
   inc_timestamp (G0 Gmerge [(SOME 0, PREFIX (BINDER [BinderString binfo]))])
 end
 
-fun listform_to_rule lform =
+fun listform_to_rule (lform : listspec) =
   let
     val {separator, leftdelim, rightdelim, cons, nilstr, ...} = lform
     val binfo = #block_info lform
