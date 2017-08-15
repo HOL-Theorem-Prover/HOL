@@ -580,7 +580,7 @@ fun modified_program p = case p of
             ["let","val","tactictoe_tac1","="] @ tac1 @
             ["val","tactictoe_tac2","=","hhsPrerecord.hhs_prerecord",
              mlquote name,"(",stac2,")"] @
-            ["in","tactictoe_tac2","ORELSE","tactictoe_tac1","end"] @
+            ["in","hhsOnline.try_tac","tactictoe_tac2","tactictoe_tac1","end"] @
           [")"]
           @ modified_program cont
         end

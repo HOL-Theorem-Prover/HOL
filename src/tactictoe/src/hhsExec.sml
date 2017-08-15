@@ -8,7 +8,7 @@
 structure hhsExec :> hhsExec = 
 struct
 
-open HolKernel Abbrev hhsTools hhsTimeout
+open HolKernel Abbrev boolLib hhsTools hhsTimeout
 
 val ERR = mk_HOL_ERR "hhsExec"
 
@@ -19,6 +19,7 @@ val ERR = mk_HOL_ERR "hhsExec"
 val hhs_bool_glob = ref false
 val hhs_tacticl_glob = ref []
 val hhs_string_glob = ref ""
+val hhs_goal_glob = ref ([],F)
 
 (* -----------------------------------------------------------------------------
    Execute strings as sml code
@@ -85,6 +86,7 @@ val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
 
 fun app_tac tac g = 
   SOME (fst (timeOut (!hhs_tactic_time) (TC_OFF tac) g))
+  handle _ => NONE
 
 fun rec_stac stac g =
   let val tac = tactic_of_sml stac in
@@ -109,12 +111,23 @@ fun rec_sproof stac g =
 fun string_of_sml s =
   let 
     val b = exec_sml "string_of_sml" 
-              ("val _ = hhsExec.hhs_string_glob := (" ^ s ^ " )")
+      ("val _ = hhsExec.hhs_string_glob := (" ^ s ^ " )")
   in
     if b then !hhs_string_glob else raise ERR "string_of_sml" s
   end
-  
-  
+
+(* -----------------------------------------------------------------------------
+   Read goal
+   -------------------------------------------------------------------------- *)
+
+fun goal_of_sml s =
+  let 
+    val b = exec_sml "goal_of_sml" 
+      ("val _ = hhsExec.hhs_goal_glob := (" ^ s ^ " )")
+  in
+    if b then !hhs_goal_glob else raise ERR "goal_of_sml" s
+  end
+ 
 (* ---------------------------------------------------------------------------
    Finding the type of an expression.
    -------------------------------------------------------------------------- *)
@@ -139,6 +152,9 @@ fun type_of_sml s =
         end
       else (debug ("Error: type_of_sml: " ^ s); raise ERR "type_of_sml" s)
     end
+
+
+  
 
 
 end (* struct *)

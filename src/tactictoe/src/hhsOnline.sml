@@ -40,14 +40,21 @@ fun name_of_thm thm =
   end
   handle _ => save_tactictoe_thm thm 
 
-fun fetch_thm s reps =
+val fetch_thm_time = ref 0.0
+
+fun fetch_thm_aux s reps =
   let 
-    val file = 
-    tactictoe_dir ^ "/record_log/" ^ current_theory () ^ "/fetch_thm"
+    val file = hhs_record_dir ^ "/" ^ current_theory () ^ "/fetch_thm"
   in
     hhsRedirect.hide (file ^ "_hidden") 
       string_of_sml ("hhsOnline.name_of_thm " ^ s)
     handle _ => (if reps = "" then (append_file file s; s) else reps)
   end
+  
+val fetch_thm = total_time fetch_thm_time fetch_thm_aux
+  
+fun try_tac tac1 tac2 g = 
+  tac1 g handle _ => (debug_record "Error: recording"; tac2 g)
+    
     
 end (* struct *)

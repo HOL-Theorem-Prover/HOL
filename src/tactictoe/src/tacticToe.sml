@@ -14,7 +14,6 @@ hhsRedirect hhsFeature hhsTacticgen hhsLearn hhsMinimize
 
 val ERR = mk_HOL_ERR "tacticToe"
 
-(* turn on evaluation here *)
 val hhs_eval_flag = ref false
 
 val init_error_file = tactictoe_dir ^ "/code/init_error"
@@ -161,9 +160,9 @@ fun init_tactictoe () =
     if !hhs_previous_theory <> cthy
     then 
      (
-     debug ("Initialize tactictoe in theory " ^ cthy ^ "...\n");
+     print ("Initialize tactictoe in theory " ^ cthy ^ "...\n");
      init_prev ();   
-     debug ("  loading " ^ int_to_string (length (!hhs_stacfea)) ^ " " ^
+     print ("  loading " ^ int_to_string (dlength (!hhs_stacfea)) ^ " " ^
             "stacfeav.\n");
      hhs_previous_theory := cthy
      ) 
@@ -218,12 +217,13 @@ fun select_thmfeav goalfea =
   
 fun select_stacfeav goalfea =
   let 
+    val stacfeav_org = dlist (!hhs_stacfea)
     val _ = debug "learn_tfidf"
-    val stacsymweight = learn_tfidf (!hhs_stacfea)
+    val stacsymweight = learn_tfidf stacfeav_org
     (* selecting neighbors *)
     val _ = debug "stacknn_ext"
     val (l0, seltime) = 
-      add_time (stacknn_ext (!max_select_pred) (!hhs_stacfea)) goalfea
+      add_time (stacknn_ext (!max_select_pred) stacfeav_org) goalfea
     (* selecting descendants *)
     val l1 = List.concat (map (descendant_of_feav (!hhs_ddict)) l0)
     val l2 = mk_sameorder_set feav_compare l1
@@ -285,7 +285,7 @@ fun eval_tactictoe goal =
 fun tactictoe goal =
   let
     val _ = init_tactictoe ()
-    val r = hhsRedirect.hide main_error_file main_tactictoe goal 
+    val r = main_tactictoe goal 
   in
     print_proof_status r
   end
@@ -299,9 +299,8 @@ fun try_tac tacdict memdict n goal stacl = case stacl of
   | stac :: m => 
     let 
       val tac = dfind stac tacdict
-      val ro = (SOME (add_time (hhsTimeout.timeOut 0.1 tac) goal)) 
-               handle _ => NONE 
-      
+      val ro = (SOME (add_time (hhsTimeout.timeOut 1.0 tac) goal)) 
+        handle _ => NONE   
     in
       case ro of 
         NONE => try_tac tacdict memdict n goal m

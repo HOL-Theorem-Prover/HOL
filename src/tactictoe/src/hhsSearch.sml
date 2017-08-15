@@ -166,10 +166,10 @@ fun root_create goal pred =
       timedepth = 0.0
       }
   in
-    debug "root_create";
-    debug ("  goals: " ^
+    debug_search "root_create";
+    debug_search ("  goals: " ^
           String.concatWith "," (map string_of_goal [goal]));
-    debug ("  predictions: " ^
+    debug_search ("  predictions: " ^
           String.concatWith "," (map (string_of_pred o (first_n 2)) [pred]));
     proofdict := dadd selfid selfrec (!proofdict)
   end
@@ -214,12 +214,12 @@ fun node_create tactime parid parstac pargn parg goallist
       timedepth = partimedepth + tactime
     }
   in
-    debug ("node_create " ^ int_to_string selfid ^
+    debug_search ("node_create " ^ int_to_string selfid ^
            " child of " ^ int_to_string parid ^
            " by " ^ parstac ^
            " in " ^ Real.toString (#timedepth selfrec) ^ " sec");
-    debug ("  goals: " ^ String.concatWith "," (map string_of_goal goallist));
-    debug ("  predictions: " ^
+    debug_search ("  goals: " ^ String.concatWith "," (map string_of_goal goallist));
+    debug_search ("  predictions: " ^
        String.concatWith "," (map (string_of_pred o (first_n 2)) predlist));
     proofdict := dadd selfid selfrec (!proofdict);
     selfid
@@ -227,13 +227,13 @@ fun node_create tactime parid parstac pargn parg goallist
 
 fun node_delete pid =
   (
-  debug ("node_delete " ^ int_to_string pid);
+  debug_search ("node_delete " ^ int_to_string pid);
   proofdict := drem pid (!proofdict)
   )
 
 fun node_save pid =
   (
-  debug ("node_save " ^ int_to_string pid);
+  debug_search ("node_save " ^ int_to_string pid);
   let val prec = dfind pid (!proofdict) in
     finproofdict := dadd pid prec (!finproofdict)
   end
@@ -246,13 +246,15 @@ fun node_save pid =
 exception OtherError
 
 fun update_cache k v =
-  if !hhs_cache_flag then stacgoal_cache := dadd k v (!stacgoal_cache) else ()
+  if !hhs_cache_flag 
+  then stacgoal_cache := dadd k v (!stacgoal_cache) 
+  else ()
 
 fun apply_stac pardict trydict_unref stac g =
   let
     val _ = count_try stac (* doesn't work with metis *)
     val _ = stac_counter := !stac_counter + 1
-    val _ = debug ("  " ^ int_to_string (!stac_counter) ^ " " ^ stac)
+    val _ = debug_search ("  " ^ int_to_string (!stac_counter) ^ " " ^ stac)
     val tac = dfind stac (!tacdict_glob) 
               handle _ => (debug ("SNH: apply_stac:" ^ stac); 
                            raise ERR "apply_stac" stac)

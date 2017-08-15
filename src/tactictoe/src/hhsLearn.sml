@@ -45,7 +45,7 @@ fun orthogonalize (lbl as (_,t,g,gl),fea) =
   if !hhs_ortho_flag 
   then
     let 
-      val feavectl = stacknn_ext 20 (!hhs_stacfea) fea
+      val feavectl = stacknn_ext 20 (dlist (!hhs_stacfea)) fea
       val stacl    = map (#1 o fst) feavectl
     in
       find_better_stac lbl stacl

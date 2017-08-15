@@ -29,7 +29,6 @@ val hhs_search_time = ref (Time.fromReal 0.0)
 
 val tactictoe_dir   = HOLDIR ^ "/src/tactictoe"
 val hhs_feature_dir = tactictoe_dir ^ "/features"
-val hhs_tacfea_dir  = hhs_feature_dir ^ "/tactic"
 val hhs_code_dir    = tactictoe_dir ^ "/code"
 val hhs_search_dir  = tactictoe_dir ^ "/search_log"
 val hhs_predict_dir = tactictoe_dir ^ "/predict"
@@ -51,14 +50,13 @@ fun daddl kvl m = Redblackmap.insertList (m,kvl)
 val dempty     = Redblackmap.mkDict
 val dnew       = Redblackmap.fromList
 val dlist      = Redblackmap.listItems
+val dlength    = Redblackmap.numItems
+val dapp       = Redblackmap.app
+fun dkeys d    = map fst (dlist d)
 
 (* --------------------------------------------------------------------------
    References
    -------------------------------------------------------------------------- *)
-
-
-
-
 
 fun incr x = x := (!x) + 1
 
@@ -145,6 +143,24 @@ fun fold_left f l orig = case l of
     [] => orig
   | a :: m => let val new_orig = f a orig in fold_left f m new_orig end
 
+fun list_diff l1 l2 = filter (fn x => not (mem x l2)) l1  
+
+fun topo_sort graph =
+  let val (topl,downl) = List.partition (fn (x,xl) => null xl) graph in
+    case (topl,downl) of
+    ([],[]) => []
+  | ([],_)  => raise ERR "topo_sort" "loop or missing nodes"
+  | _       =>
+    let 
+      val topl' = List.map fst topl 
+      val graph' = List.map (fn (x,xl) => (x,list_diff xl topl')) downl
+    in
+      topl' @ topo_sort graph'
+    end
+  end
+
+
+
 
 (* ---------------------------------------------------------------------------
    Reals
@@ -164,7 +180,7 @@ fun goal_compare ((asm1,w1), (asm2,w2)) =
 fun string_of_goal (asm,w) =
   let 
     val mem = !show_types
-    val _   = show_types := true
+    val _   = show_types := false
     val s   = 
       (if asm = [] 
          then "[]" 
@@ -180,10 +196,13 @@ fun string_of_goal (asm,w) =
    Feature vectors
    -------------------------------------------------------------------------- *)
 
-fun lbl_compare ((stac1,_,g1,_),(stac2,_,g2,_)) =
-  let val r = String.compare (stac1,stac2) in
-    if r = EQUAL then goal_compare (g1,g2) else r
+fun cpl_compare cmp1 cmp2 ((a1,a2),(b1,b2)) =
+  let val r = cmp1 (a1,b1) in
+    if r = EQUAL then cmp2 (a2,b2) else r
   end
+
+fun lbl_compare ((stac1,_,g1,_),(stac2,_,g2,_)) =
+  cpl_compare String.compare goal_compare ((stac1,g1),(stac2,g2))
 
 fun feav_compare ((lbl1,_),(lbl2,_)) = lbl_compare (lbl1,lbl2)
 
@@ -216,6 +235,20 @@ fun readl path =
   in
     (TextIO.closeIn file; l3)
   end
+
+fun readl_empty path =
+  let
+    val file = TextIO.openIn path
+    fun loop file = case TextIO.inputLine file of
+        SOME line => line :: loop file
+      | NONE => []
+    val l1 = loop file
+    fun rm_last_char s = String.substring (s,0,String.size s - 1)
+    val l2 = map rm_last_char l1 (* removing end line *)
+  in
+    (TextIO.closeIn file; l2)
+  end
+
 
 fun write_file file s = 
   let val oc = TextIO.openOut file in
@@ -263,11 +296,12 @@ fun print_endline s = print (s ^ "\n")
 
 val hhs_debug_flag = ref false
 
-fun debug s =
-  if !hhs_debug_flag
-  then append_endline (hhs_search_dir ^ "/debug/" ^ current_theory ()) s
-  else ()
-  
+fun debug s = 
+  append_endline (hhs_search_dir ^ "/debug/" ^ current_theory ()) s
+
+fun debug_search s =
+  append_endline (hhs_search_dir ^ "/search/" ^ current_theory ()) s
+
 fun debug_proof s =
   append_endline (hhs_search_dir ^ "/proof/" ^ current_theory ()) s
 
@@ -281,10 +315,10 @@ fun debug_replay s =
     append_endline file s
   end  
 
-fun export_feav s =
-  let val file = hhs_feature_dir ^ "/" ^ current_theory () in
+fun debug_record s =
+  let val file = hhs_record_dir ^ "/" ^ current_theory () ^ "/record_err" in
     append_endline file s
-  end 
+  end  
 
 (* --------------------------------------------------------------------------
    String
@@ -313,6 +347,12 @@ fun split_sl_aux s pl sl = case sl of
               else split_sl_aux s (a :: pl) m 
 
 fun split_sl s sl = split_sl_aux s [] sl
+
+fun rpt_split_sl s sl = 
+  let val (a,b) = split_sl s sl handle _ => (sl,[]) 
+  in
+    if null b then [a] else a :: rpt_split_sl s b 
+  end
 
 
 fun split_level_aux i s pl sl = case sl of
@@ -354,34 +394,42 @@ fun split_string s1 s2 =
    -------------------------------------------------------------------------- *)
 
 val hhs_badstacl = ref []
-val hhs_stacfea = ref []
-val hhs_ddict = ref (dempty goal_compare)
+val hhs_cthyfea  = ref []
+val hhs_stacfea  = ref (dempty lbl_compare)
+val hhs_ddict    = ref (dempty goal_compare)
 
-fun update_ddict (feav as ((_,_,g,_),_)) =
+fun update_ddict (lbl,fea) =
   let 
-    val oldv = dfind g (!hhs_ddict) handle _ => [] 
-    val newv = feav :: oldv
+    val oldv = dfind (#3 lbl) (!hhs_ddict) handle _ => [] 
+    val newv = (lbl,fea) :: oldv
   in
-    hhs_ddict := dadd g newv (!hhs_ddict)
+    hhs_ddict := dadd (#3 lbl) newv (!hhs_ddict)
   end
+
+fun clean_feadata () =
+  (
+  hhs_stacfea := dempty lbl_compare;
+  hhs_cthyfea := []; 
+  hhs_ddict := dempty goal_compare
+  )
 
 fun init_stacfea_ddict feavl =
   (
-  hhs_stacfea := mk_fast_set feav_compare feavl;
+  hhs_stacfea := dnew lbl_compare feavl;
+  hhs_cthyfea := []; 
   hhs_ddict := dempty goal_compare;
-  app update_ddict (!hhs_stacfea)
+  dapp update_ddict (!hhs_stacfea)
   )
 
-fun update_stacfea_ddict (feav as ((_,_,g,_),_)) =
-  if exists (fn x => feav_compare (feav,x) = EQUAL) (!hhs_stacfea) 
-  then ()
-  else 
-    let 
-      val oldv = dfind g (!hhs_ddict) handle _ => [] 
-      val newv = feav :: oldv
-    in
-      hhs_stacfea := feav :: (!hhs_stacfea);
-      hhs_ddict := dadd g newv (!hhs_ddict)
-    end
+fun update_stacfea_ddict (lbl,fea) =
+  if dmem lbl (!hhs_stacfea) then () else
+  let 
+    val oldv = dfind (#3 lbl) (!hhs_ddict) handle _ => [] 
+    val newv = (lbl,fea) :: oldv
+  in
+    hhs_stacfea := dadd lbl fea (!hhs_stacfea);
+    hhs_cthyfea := (lbl,fea) :: (!hhs_cthyfea);
+    hhs_ddict := dadd (#3 lbl) newv (!hhs_ddict)
+  end
 
 end (* struct *)

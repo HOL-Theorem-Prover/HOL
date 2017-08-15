@@ -10,7 +10,7 @@ structure hhsPrerecord :> hhsPrerecord =
 struct
 
 open HolKernel boolLib hhsTools hhsLexer hhsData hhsNumber hhsExtract hhsUnfold 
-hhsTimeout
+hhsTimeout hhsData hhsOnline
 
 val ERR = mk_HOL_ERR "hhsPrerecord"
 
@@ -25,8 +25,6 @@ fun tactic_msg msg stac g =
   debug_replay ("Tactic " ^ msg ^ ": " ^ stac); 
   debug_replay ("  on " ^ string_of_goal g)
   )
-
-fun tactic_err msg stac g = (tactic_msg msg stac g; raise ERR "hhs_record" "")
 
 fun proof_msg f_debug prefix msg thmname qtac final_stac =
   (
@@ -54,7 +52,6 @@ val n_tactic_parse_glob = ref 0
 val n_tactic_replay_glob = ref 0
 
 val tactic_time = ref 0.0
-val feature_time = ref 0.0
 val save_time = ref 0.0
 val record_time = ref 0.0
   
@@ -67,6 +64,7 @@ val replay_time = ref 0.0
 
 fun reset_profiling () =
   (
+  fetch_thm_time := 0.0;
   tactic_time := 0.0;
   feature_time := 0.0;
   save_time := 0.0;
@@ -91,6 +89,7 @@ fun mk_summary cthy =
     f (!n_replay_glob) "proofs replayed";
     f (!n_tactic_parse_glob) "tactic parsed";
     f (!n_tactic_replay_glob) "tactic replayed";
+    g "  Fetch thm" (!fetch_thm_time);
     g "  Parse" (!hide_time);
     g "    Hide" (!hide_time - !mkfinal_time);
     g "    Number" (!number_time);
@@ -104,8 +103,10 @@ fun mk_summary cthy =
   end
 
 (* --------------------------------------------------------------------------
-   Replaying a tactic. Change the error to be catchable by ORELSE.
+   Replaying a tactic.
    -------------------------------------------------------------------------- *)
+
+fun tactic_err msg stac g = (tactic_msg msg stac g; raise ERR "hhs_record" "")
 
 fun hhs_record_aux (tac,stac) g =
   let
@@ -178,19 +179,16 @@ fun hhs_prerecord_aux thmname qtac goal =
     (* save_hht cthy thmname goal; *)
     case (!success_flag) of 
       SOME x => x 
-    | NONE => raise ERR "FAIL_TAC" ""
+    | NONE => raise ERR "" ""
   end
 
 fun hhs_prerecord thmname qtac goal = 
   (
-  print (thmname ^ "\n");
   debug_proof thmname; 
+  debug_search thmname;
   debug thmname;
   (tacticToe.eval_tactictoe goal handle _ => debug "Error: eval_tactictoe");
-  (
-  hhs_prerecord_aux thmname qtac goal 
-  handle _ => (debug "Error: recording failed"; raise ERR "FAIL_TAC" "") 
-  )
+  hhs_prerecord_aux thmname qtac goal
   )
   
 end (* struct *)
