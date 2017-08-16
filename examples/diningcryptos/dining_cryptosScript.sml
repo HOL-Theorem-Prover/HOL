@@ -26,7 +26,7 @@ open metisLib arithmeticTheory pred_setTheory pred_setLib
      pairTheory realTheory realLib extra_boolTheory jrhUtils
      extra_pred_setTheory realSimps extra_realTheory numTheory
      simpLib seqTheory subtypeTheory
-     transcTheory limTheory stringTheory stringSimps 
+     transcTheory limTheory stringTheory stringSimps
      informationTheory extra_stringTheory leakageTheory
      extra_stringLib;
 

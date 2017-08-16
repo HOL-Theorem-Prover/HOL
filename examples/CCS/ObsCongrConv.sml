@@ -74,7 +74,7 @@ fun OC_TOP_DEPTH_CONV (c: conv) t =
 (* Define the function OC_SUBST for substitution in OBS_CONGR terms. *)
 fun OC_SUBST thm tm = let
     val (ti, ti') = args_thm thm
-in 
+in
     if (tm = ti) then thm
     else if is_prefix tm then
 	let val (u, t) = args_prefix tm;
@@ -117,7 +117,7 @@ end;
 fun OC_LHS_SUBST1_TAC thm :tactic =
   fn (asl, w) => let
       val (opt, t1, t2) = args_equiv w
-  in 
+  in
       if (opt = ``OBS_CONGR``) then
 	  let val thm' = OC_SUBST thm t1;
 	      val (t1', t') = args_thm thm' (* t1' = t1 *)
@@ -154,7 +154,7 @@ fun OC_RHS_SUBST_TAC thmlist =
 
 (* The tactic OC_SUBST1_TAC (OC_SUBST_TAC) substitutes a (list of) theorem(s)
    in both sides of an observation congruence. *)
-fun OC_SUBST1_TAC thm = 
+fun OC_SUBST1_TAC thm =
     OC_LHS_SUBST1_TAC thm
  >> OC_RHS_SUBST1_TAC thm;
 
@@ -185,7 +185,7 @@ fun TAU1_CONV tm =
 	  else
 	      failwith "TAU1_CONV"
       end
-  else 
+  else
       failwith "TAU1_CONV";
 
 (* Conversion for the application of the tau-law TAU2:

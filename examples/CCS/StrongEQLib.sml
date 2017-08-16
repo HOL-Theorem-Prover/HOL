@@ -70,7 +70,7 @@ fun S_LHS_CONV_TAC (c :conv) :tactic =
   end;
 
 fun S_RHS_CONV_TAC (c :conv) :tactic =
-  fn (asl, w) => let 
+  fn (asl, w) => let
       val (opt, t1, t2) = args_equiv w
   in
       if (opt = ``STRONG_EQUIV``) then

@@ -204,7 +204,7 @@ val OC_RESTR_PR_LAB_NIL = save_thm (
               (Q.SPECL [`l`, `L`] STRONG_RESTR_PR_LAB_NIL))))
            (SPECL [``restr (L :'b Label set) (prefix (label l) E)``, ``nil``]
                   STRONG_IMP_OBS_CONGR)));
- 
+
 (* Prove OC_RESTR_PREFIX_LABEL:
    |- !l L.
        ~l IN L /\ ~(COMPL l) IN L ==>

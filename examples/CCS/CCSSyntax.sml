@@ -176,7 +176,7 @@ in
     else
 	let val l1 = arg_action u1 (* u1, u2 are both labels *)
 	    and l2 = arg_action u2;
-	    val (op1, s1) = args_label l1 
+	    val (op1, s1) = args_label l1
 	    and (op2, s2) = args_label l2
 	    and thm = Label_EQ_CONV ``^l1 = ^l2``
 	in

@@ -77,7 +77,7 @@ fun OC_LHS_CONV_TAC (c :conv) :tactic =
 fun OC_RHS_CONV_TAC (c :conv) :tactic =
   fn (asl, w) => let
       val (opt, t1, t2) = args_equiv w
-  in 
+  in
       if (opt = ``OBS_CONGR``) then
 	  let val thm = c t2;
 	      val (t2', t'') = args_thm thm (* t2' = t2 *)
