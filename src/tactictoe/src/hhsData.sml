@@ -84,6 +84,7 @@ fun mk_graph feavl =
 val sep = "$"
 val csep = #"$"
 fun is_sep c = c = csep
+val line_sep = "__SEP__"
 
 fun contain_sep s = mem csep (explode s) orelse mem #"\n" (explode s)
 
@@ -148,17 +149,17 @@ fun export_feav feavl =
       os stac;
       os (Real.toString tim);
       os (log_goal g);
-      os "";
+      os line_sep;
       app (os o log_goal) gl;
-      os "";
+      os line_sep;
       os (String.concatWith sep fea);
-      os ""
+      os line_sep
       )
   in
     app (os o log_ty) tysort;
-    os "";
+    os line_sep;
     app (os o log_tm) tmsort;
-    os "";
+    os line_sep;
     app log_feav feavl;
     TextIO.closeOut oc
   end
@@ -207,9 +208,11 @@ fun read_graph (tyl,tml) =
     (!type_graph,!term_graph)
   end
 
-fun read_init ll = case ll of
+exception EmptyThy
+
+fun read_init thy ll = case ll of
     l1 :: l2 :: m => (l1,l2,m)
-  | _ => raise ERR "read_ll" ""
+  | _ => (print "Empty theory"; raise EmptyThy)
 
 fun read_feavl ll = case ll of
     [stac,ts,gs] :: gsl :: [fea] :: m => 
@@ -222,8 +225,8 @@ fun read_feav thy =
   let
     val sl = readl_empty (hhs_feature_dir ^ "/" ^ thy)
              handle _ => (print_endline ("File not found:" ^ thy); [])
-    val sll = rpt_split_sl "" sl
-    val (tyl,tml,cont) = read_init sll
+    val sll = rpt_split_sl line_sep sl
+    val (tyl,tml,cont) = read_init thy sll
     val (_,term_graph) = read_graph (tyl,tml)
     fun lookup_tm ns = dfind (string_to_int ns) term_graph
     val feavsl = read_feavl cont
@@ -236,8 +239,13 @@ fun read_feav thy =
   in
     map parse_feav feavsl
   end
+  handle EmptyThy => []
 
-fun import_feav thyl = List.concat (map read_feav thyl)
+fun import_feav thyl = 
+  (
+  print_endline "Importing feature vectors";
+  List.concat (map read_feav thyl)
+  )
 
 
 end (* struct *)

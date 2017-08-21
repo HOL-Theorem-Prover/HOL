@@ -870,27 +870,25 @@ fun unfold in_flag stack program = case program of
    Main call
    -------------------------------------------------------------------------- *)
 
-fun change_dir1 file =
-  if String.isPrefix HOLDIR file then 
-    let 
-      val suffix = last (String.tokens (fn x => x = #"/") file)
-      val cthy = String.substring (suffix, 0, 
-        String.size suffix - String.size "Script.sml")
-    in
-      (tactictoe_dir ^ "/theories/" ^ suffix, cthy) 
-    end
-  else raise ERR "change_dir1" file
+fun extract_thy file =
+  let 
+    val suffix = last (String.tokens (fn x => x = #"/") file)
+    val cthy = String.substring (suffix, 0, 
+      String.size suffix - String.size "Script.sml")
+  in
+    cthy
+  end
 
-fun change_dir2 file =
-  if String.isPrefix HOLDIR file then 
-    let 
-      val name = String.extract (file, String.size HOLDIR, NONE)
-      val hol_par = String.concatWith "/" 
-        (butlast (String.fields (fn x => x = #"/") HOLDIR))
-    in
-      (hol_par ^ "/HOL_COPY" ^ name)
-    end
-  else raise ERR "change_dir" file
+fun change_dir file =
+  let 
+    val l = String.fields (fn x => x = #"/") file
+    fun f s = 
+      if s = "HOL" then "HOL_COPY" else
+      if s = "cakeml" then "cakeml_COPY" else
+      s
+  in
+    String.concatWith "/" (map f l)
+  end
 
 val oc = ref TextIO.stdOut
 fun os s = TextIO.output (!oc, s)
@@ -911,8 +909,6 @@ fun output_header cthy =
   os ("open hhsOnline;\n");
   os ("\nval _ = hhsRecord.start_thy " ^ mlquote cthy)
   )
-
-val export_file = tactictoe_dir ^ "/exported"
 
 fun output_foot cthy file = 
   os ("\nval _ = hhsRecord.end_thy " ^ mlquote cthy)
@@ -957,13 +953,13 @@ fun end_unfold_thy cthy n =
   end
 
 fun hhs_rewrite file = 
-  let val (_,cthy) = change_dir1 file in
+  let val cthy = extract_thy file in
     if cthy = "bool" then () 
     else
       let
         val _ = print (cthy ^ "\n")
         val _ = start_unfold_thy cthy
-        val file_out = change_dir2 file
+        val file_out = change_dir file
         val sl = readl file
         val s1 = rm_endline (rm_comment (String.concatWith " " sl))
         val s2 = hhsQuote.unquoteString s1
@@ -994,6 +990,27 @@ fun all_files () =
     readl file
   end
 
+fun all_cakeml_files () =
+  let 
+    val file = tactictoe_dir ^ "/code/theory_list"
+    val cmd0 = "find /home/tgauthier/cakeml -name \"*Theory.uo\" > " ^ file
+    val cmd1 = "sed -i 's/Theory.uo/Script.sml/' " ^ file
+  in
+    ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1));
+    readl file
+  end
+
+fun all_examples_files () =
+  let 
+    val file = tactictoe_dir ^ "/code/theory_list"
+    val cmd0 = "find /home/tgauthier/HOL/examples -name \"*Theory.uo\" > " ^ file
+    val cmd1 = "sed -i 's/Theory.uo/Script.sml/' " ^ file
+  in
+    ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1));
+    readl file
+  end
+
+
 end (* struct *)
 
 (* ---------------------------------------------------------------------------
@@ -1004,10 +1021,16 @@ end (* struct *)
   load "hhsUnfold";
   open hhsTools;
   open hhsUnfold;
-  val l = all_files ();
+  open hhsOpen;
+  val l = all_examples_files () @ all_cakeml_files ();
   mkDir_err hhs_record_dir;
   mkDir_err hhs_open_dir;
   app hhs_rewrite l;
   (* To be relaunch after one success: get rid of String.ui error*)
+  
+  find "/home/tgauthier/cakeml" -name "*Theory.uo" > cakemluo
+  sed -i 's/Theory.uo/Script.sml/' cakemluo
+  
+  sed 's/a/b/g' alla
              
   --------------------------------------------------------------------------- *)

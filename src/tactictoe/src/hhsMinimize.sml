@@ -39,6 +39,11 @@ fun unquote s =
   then String.substring (s, 1, String.size s - 2)
   else raise ERR "unquote" s
 
+fun is_blank c =
+  c = #" " orelse c = #"\n" orelse c = #"\t"
+
+fun rm_blank s = implode (filter (not o is_blank) (explode s))
+
 fun add_quote_aux sl = case sl of
     [] =>  ""
   | [a] => a

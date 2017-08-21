@@ -152,6 +152,17 @@ fun extract_subterms s =
     else raise ERR "extract_subterms" s
   end
 
+fun reprint s =
+  let val propll = hhs_propl_all_of s in
+    if List.length propll = 1
+    then
+      case List.find is_print_prop (hd propll) of
+      SOME p => SOME (string_of_pretty ((dest_print_prop p) 80))
+    | NONE   => NONE
+    else raise ERR "reprint" s
+  end
+
+
 fun is_infix s = String.isPrefix "hhs_infix" (hd (hhs_lex s))
 
 fun is_infix_tree tree = case tree of

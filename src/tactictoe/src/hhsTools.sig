@@ -14,6 +14,7 @@ sig
   val hhs_stacfea  : (lbl_t, fea_t) Redblackmap.dict ref
   val hhs_cthyfea  : feav_t list ref
   val hhs_ddict    : (goal, feav_t list) Redblackmap.dict ref
+  val hhs_ndict    : (string, int) Redblackmap.dict ref
   
   val clean_feadata : unit -> unit
   val init_stacfea_ddict : feav_t list -> unit
@@ -88,7 +89,6 @@ sig
   val print_endline : string -> unit
   val total_time : real ref -> ('a -> 'b) -> 'a -> 'b
   
-  val hhs_debug_flag : bool ref
   val debug : string -> unit
   val debug_search : string -> unit
   val debug_proof  : string -> unit

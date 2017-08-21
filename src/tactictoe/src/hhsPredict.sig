@@ -22,4 +22,7 @@ sig
   val thmknn_ext :
     int -> (string * fea_t * string list) list -> fea_t -> string list
 
+  val thmmepo_ext :
+    int -> (string * fea_t * string list) list -> fea_t -> string list
+
 end

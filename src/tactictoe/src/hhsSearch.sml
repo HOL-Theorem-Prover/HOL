@@ -310,7 +310,7 @@ fun node_find () =
     val l2 = dict_sort compare_score l1
   in
     if null l2
-    then (debug "nonexttac"; raise NoNextTac)
+    then (debug_search "nonexttac"; raise NoNextTac)
     else
       let
         val (pid,score) = hd l2
@@ -319,7 +319,7 @@ fun node_find () =
         val goal = Array.sub (#goalarr prec, gn)
         val ((stac,_,_,_),_) = hd (Array.sub (#predarr prec, gn))
       in
-        debug (
+        debug_search (
           "node_find " ^ int_to_string pid ^ " " ^ 
           stac ^ " " ^ Real.toString score);
         pid
@@ -559,7 +559,7 @@ fun selflearn_aux proof = case proof of
       in
         save_lbl lbl
       end
-      handle _ => debug ("  " ^ stac)
+      handle _ => debug_search ("  " ^ stac)
       )
   | Then (p1,p2) => (selflearn_aux p1; selflearn_aux p2)
   | Thenl (p,pl) => (selflearn_aux p; app selflearn_aux pl)
@@ -568,12 +568,13 @@ fun selflearn proof =
   if !hhs_selflearn_flag 
   then
     (
-    debug "Starting selflearn";
+    debug_search "Starting selflearn";
     selflearn_aux proof;
-    debug "End selflearn"
+    debug_search "End selflearn"
     )
   else ()
 
+fun debug_err s = (debug s; raise ERR "" "")
 
 fun imperative_search thmpredictor stacpredictor tacdict distdict g =
   (
@@ -581,22 +582,22 @@ fun imperative_search thmpredictor stacpredictor tacdict distdict g =
   total_timer (node_create_timer root_create_wrap) g;
   let 
     val r = total_timer search_loop ()
-    val _ = debug "End search loop"
+    val _ = debug_search "End search loop"
     val sproof_status = case r of
       Proof _  =>
       (
       if dmem 0 (!finproofdict) then
         let 
-          val proofl = proofl_of 0
+          val proofl = proofl_of 0 handle _ => debug_err "SNH0"
           val proof = 
             if length proofl <> 1 
-            then (debug "SNH1"; raise ERR "imperative_search" "")
+            then debug_err "SNH1"
             else (selflearn (hd proofl); minimize (hd proofl)) 
           val sproof = reconstruct g proof
         in
           Proof sproof
         end
-      else (debug "SNH2"; raise ERR "imperative_search" "")
+      else debug_err "SNH2"
       )
     | _ => r
   in

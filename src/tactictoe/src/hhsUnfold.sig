@@ -13,6 +13,8 @@ sig
   | SConstructor of string
   | SException   of string
   val all_files : unit -> string list
+  val all_cakeml_files : unit -> string list
+  val all_examples_files : unit -> string list
   val hhs_rewrite : string -> unit
   
   val open_struct : 

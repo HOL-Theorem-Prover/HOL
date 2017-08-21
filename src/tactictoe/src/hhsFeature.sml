@@ -13,7 +13,9 @@ open HolKernel boolLib Abbrev hhsTools
 val ERR = mk_HOL_ERR "hhsFeature"
 
 val hhs_hofea_flag = ref true
-val hhs_notopfea_flag = ref false
+(* top features are slow to produce and print *)
+val hhs_notopfea_flag = ref true 
+  
 
 fun save_time rf f x =
   let
@@ -91,17 +93,20 @@ fun zeroed_type ty =
       else s :: (List.concat (map zeroed_type Args))
     end
 
+fun string_of_const tm =
+  let val {Thy,Name,Ty} = dest_thy_const tm in
+    Thy ^ "." ^ Name ^ ".c"
+  end
+
+
 fun zeroed_term tm =
   if is_var tm then "A"
-  else if is_const tm then 
-    let val {Thy,Name,Ty} = dest_thy_const tm in
-      Thy ^ "." ^ Name ^ ".c"
-    end
+  else if is_const tm then string_of_const tm
   else if is_comb tm then
     "(" ^ zeroed_term (rator tm) ^ " " ^ zeroed_term (rand tm) ^ ")"
   else if is_abs tm then
     let val (v,t) = dest_abs tm in
-      "(Abs" ^ " " ^ zeroed_term t ^ ")"
+      "(Abs " ^ zeroed_term t ^ ")"
     end
   else raise ERR "zeroed_term" ""
 
@@ -146,34 +151,26 @@ and binder_top s (v,tm) =
    "(" ^ s ^ " " ^ string_of_top tm ^ ")"
   )
 
-(*
-val all_types_time = ref 0.0
-val zeroed_type_time = ref 0.0
-val atoms_time = ref 0.0
-val zeroed_term_time = ref 0.0
-val mk_set_time = ref 0.0
-val subterm_time = ref 0.0
-*)
-
-
-
 fun fea_of_term tm =
   let 
     val varl           = find_terms is_var tm
     val varl_sl        = map (fst o dest_var) varl
+    val constl         = find_terms is_var tm
+    val const_sl       = map string_of_const constl
     val typel          = all_types tm
     val type_sl        = List.concat (map zeroed_type typel)
     val (tml, top_tml) = atoms_of_term tm
     val top_tml'       = if !hhs_notopfea_flag then [] else top_tml
     val _              = top_sl := []
-    val toptml_sl      = map string_of_top top_tml'
+    val toptml_sl      = map string_of_top top_tml' (* modifies top_sl *)
     val subterml       = List.concat (map subterms_of_term tml)
     val subterm_sl     = map zeroed_term subterml
   in
     filter (fn x => x <> "P" andalso 
                     x <> "A" andalso
                     x <> "T") 
-    (mk_string_set (type_sl @ varl_sl @ (!top_sl) @ toptml_sl @ subterm_sl))
+    (mk_string_set 
+       (type_sl @ varl_sl @ const_sl @ (!top_sl) @ toptml_sl @ subterm_sl))
   end
 
 (*---------------------------------------------------------------------------

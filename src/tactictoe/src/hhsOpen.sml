@@ -24,6 +24,7 @@ fun gencode_values s =
     val structl = rev (String.tokens (fn x => x = #".") s)
     val code_values =
     [
+    "load " ^ (mlquote "lprefix_lubTheory") ^ ";",
     "load " ^ mlquote (last structl) ^ ";",
     "val tactictoe_it = List.map #1 (#allVal (PolyML.globalNameSpace) ());",
     "val _  = app PolyML.Compiler.forgetValue tactictoe_it;",
@@ -57,8 +58,9 @@ fun all_values s =
   let 
     val dir = hhs_open_dir ^ "/" ^ s
     val hide_file = dir ^ "/hide_values"
-    val cmd1 = "cd " ^ dir
-    val cmd2 = (HOLDIR ^ "/bin/hol") ^ " < code_values.sml"
+    val file = dir ^ "/code_values.sml"
+    val cmd1 = "cd /home/tgauthier/cakeml"
+    val cmd2 = (HOLDIR ^ "/bin/hol") ^ " < " ^ file
     val cmd = cmd1 ^ "; " ^ cmd2
   in
     gencode_values s;
@@ -79,6 +81,7 @@ fun gencode_structures s =
     val loads = mlquote (last structl)
     val code_structures =
     [
+    "load " ^ (mlquote "lprefix_lubTheory") ^ ";",
     "load " ^ loads ^ ";",
     "fun tactictoe_writel file sl =",
     "  let val oc = TextIO.openOut file in",
@@ -108,8 +111,9 @@ fun all_structures s =
   let 
     val dir = hhs_open_dir ^ "/" ^ s
     val hide_file = dir ^ "/hide_structures"
-    val cmd1 = "cd " ^ dir
-    val cmd2 = (HOLDIR ^ "/bin/hol") ^ " < code_structures.sml"
+    val file = dir ^ "/code_structures.sml"
+    val cmd1 = "cd /home/tgauthier/cakeml"
+    val cmd2 = (HOLDIR ^ "/bin/hol") ^ " < " ^ file
     val cmd = cmd1 ^ "; " ^ cmd2
   in
     gencode_structures s;

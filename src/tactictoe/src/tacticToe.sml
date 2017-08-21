@@ -14,8 +14,6 @@ hhsRedirect hhsFeature hhsTacticgen hhsLearn hhsMinimize
 
 val ERR = mk_HOL_ERR "tacticToe"
 
-val hhs_eval_flag = ref false
-
 val init_error_file = tactictoe_dir ^ "/code/init_error"
 val main_error_file = tactictoe_dir ^ "/code/main_error"
 val hide_error_file = tactictoe_dir ^ "/code/hide_error"
@@ -30,7 +28,7 @@ fun set_timeout r = timeout := r
 val max_select_pred = ref 0
 val hhs_metis_npred = ref 0
 val hhs_previous_theory = ref ""
-val mdict_glob = ref (dempty String.compare)
+
 
 (* ----------------------------------------------------------------------
    Parse string tactic to HOL tactic.
@@ -54,6 +52,8 @@ fun mk_tacdict tacticl =
    Initialization
    ---------------------------------------------------------------------- *)
 
+val mdict_glob = ref (dempty String.compare)
+
 fun add_thy_mdict thy =
   let
     fun f (name,thm) =
@@ -62,17 +62,6 @@ fun add_thy_mdict thy =
   in
     app f (DB.thms thy)
   end
-  
-fun add_cthy_mdict () =
-  let
-    val cthy = current_theory ()
-    fun f (name,thm) =
-      mdict_glob := 
-        dadd (cthy ^ "Theory." ^ name) 
-               (fea_of_goal (dest_thm thm)) (!mdict_glob)
-  in
-    app f (DB.thms cthy)
-  end
 
 fun init_prev () =
   let
@@ -80,13 +69,16 @@ fun init_prev () =
     val succratel = import_succrate thyl
     val _ = succ_cthy_dict := dempty String.compare
     val _ = succ_glob_dict := dnew String.compare succratel
+    val _ = debug ("Reading success rates: " ^ 
+                   int_to_string (dlength succ_glob_dict))
     val (stacfea,t) = add_time import_feav thyl
     val _ = mdict_glob := dempty String.compare
+    val _ = debug ("Reading feature vectors: " ^ Real.toString t ^ " " ^
+                   int_to_string (length stacfea));
     val _ = app add_thy_mdict thyl
+    val _ = debug ("Reading theorems: " ^ int_to_string (dlength (!mdict)))
   in
     hide init_error_file QUse.use (tactictoe_dir ^ "/src/infix_file.sml");
-    debug ("Reading feature vectors: " ^ Real.toString t ^ " " ^
-           int_to_string (length stacfea));
     hhs_badstacl := [];
     init_stacfea_ddict stacfea
   end
@@ -95,9 +87,10 @@ fun init_prev () =
    Parameters
    ---------------------------------------------------------------------- *)
 
+val hhs_eval_flag = ref false
+
 fun set_parameters () =
   (
-  hhs_debug_flag := true;
   (* predicting *)
   max_select_pred := 500;
   (* searching *)
@@ -214,6 +207,44 @@ fun select_thmfeav goalfea =
   in
     (thmsymweight,feav1)
   end
+
+fun add_thy_dict dict thy =
+  let fun f (name,thm) =
+    dict := dadd (thy ^ "Theory." ^ name) (fea_of_goal (dest_thm thm)) (!dict)
+  in
+    app f (DB.thms thy)
+  end
+
+fun init_all () =
+  let 
+    val dict = ref (dempty String.compare)
+    val thyl = current_theory () :: ancestry (current_theory ())
+  in
+    app (add_thy_dict dict) thyl;
+    !dict
+  end
+
+fun predict_ext n goal = 
+  let 
+    val goalfea = fea_of_goal goal
+    val thmfeav = dlist (init_all ())
+    val thmfeavdep = 
+      (mapfilter (fn (a,b) => (a, b, hhs_dep_of a))) thmfeav
+  in
+    (thmknn_ext n thmfeavdep) goalfea
+  end
+
+fun metis_n n goal =
+  let 
+    val l = predict_thm n goal
+    val l1 = map thm_of_string l
+  in
+    METIS_TAC l1 goal
+  end
+
+(* make translate function *)
+
+(* call external prover function *)
   
 fun select_stacfeav goalfea =
   let 
@@ -268,9 +299,14 @@ fun debug_eval_status r =
   | ProofTimeOut   => debug_proof "Proof status: Time Out\n"
   | Proof s        => debug_proof ("Proof found: " ^ s ^ "\n")
 
+val thy_errorl = 
+  String.tokens Char.isSpace
+  ("blast integer_word bit sptree words numeral_bit int_bitwise" ^ " " ^ 
+   "ASCIInumbers basis_emit bitstring patricia_casts patricia" ^ " " ^ 
+   "numposrep alignment")
 
 fun eval_tactictoe goal =
-  if !hhs_eval_flag
+  if !hhs_eval_flag andalso mem (current_theory ()) thy_errorl
   then
     let
       val _ = debug "Start evaluation"
@@ -284,8 +320,8 @@ fun eval_tactictoe goal =
  
 fun tactictoe goal =
   let
-    val _ = init_tactictoe ()
-    val r = main_tactictoe goal 
+    val _ = hhsRedirect.hide init_error_file init_tactictoe ()
+    val r = hhsRedirect.hide main_error_file main_tactictoe goal 
   in
     print_proof_status r
   end

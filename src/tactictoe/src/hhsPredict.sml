@@ -99,6 +99,35 @@ fun thmknn symweight n feal fea_o =
     first_n n l2
   end    
 
+
+(* --------------------------------------------------------------------------
+   External executables
+   -------------------------------------------------------------------------- *)
+
+fun cmd_in_dir dir cmd =
+  OS.Process.system ("cd " ^ dir ^ "; " ^ cmd)
+ 
+fun bin_predict n predictor =
+  let
+    val predict_dir = HOLDIR ^ "/src/holyhammer/predict" 
+    val predict_cmd = String.concatWith " "
+      [predict_dir ^ "/predict",
+      "syms","dep","seq","-n",int_to_string n,"-p",predictor,
+      "<","csyms",">","predict_out","2> predict_error"]
+  in
+    cmd_in_dir hhs_predict_dir predict_cmd
+  end
+
+fun mepo_predict n predictor =
+  let
+    val predict_dir = HOLDIR ^ "/src/holyhammer/predict" 
+    val predict_cmd = String.concatWith " "
+      [predict_dir ^ "/mepo/mepo3","0","syms","dep",int_to_string n,"seq",
+       "<","csyms",">","predict_out","2> predict_error"]
+  in
+    cmd_in_dir hhs_predict_dir predict_cmd
+  end
+
 (* --------------------------------------------------------------------------
    External tactic predictions
    -------------------------------------------------------------------------- *)
@@ -184,23 +213,6 @@ fun export_knn dir stacfea feag =
     print_seq (dir ^ "/seq") feavl;
     print_csyms (dir ^ "/csyms") csyms;
     print_syms (dir ^ "/syms") feavl
-  end
-
-fun cmd_in_dir dir cmd =
-  OS.Process.system ("cd " ^ dir ^ "; " ^ cmd)
- 
-fun bin_predict n predictor =
-  let
-    val predict_cmd =
-      "../../holyhammer/predict/predict" ^ 
-      " syms dep seq -n" ^
-      " " ^ int_to_string n ^ 
-      " -p " ^ predictor ^
-      " < csyms" ^
-      " > predict_out" ^
-      " 2> predict_error"
-  in
-    cmd_in_dir hhs_predict_dir predict_cmd
   end
 
 fun read_predictions () = 
@@ -312,8 +324,7 @@ fun tread_predictions () =
   end
 
 fun thmknn_ext n thmfeal feag =
-  if thmfeal = [] then []
-  else
+  if null thmfeal then [] else
     (
     fea_counter := 0;
     fea_dict    := dempty String.compare;
@@ -321,7 +332,20 @@ fun thmknn_ext n thmfeal feag =
     thm_dict    := dempty String.compare;
     unthm_dict  := dempty String.compare;
     texport_knn hhs_predict_dir thmfeal feag;
-    bin_predict n "knn";
+    ignore (bin_predict n "knn");
+    tread_predictions ()
+    )
+
+fun thmmepo_ext n thmfeal feag =
+  if null thmfeal then [] else
+    (
+    fea_counter := 0;
+    fea_dict    := dempty String.compare;
+    thm_counter := 0;
+    thm_dict    := dempty String.compare;
+    unthm_dict  := dempty String.compare;
+    texport_knn hhs_predict_dir thmfeal feag;
+    ignore (mepo_predict n);
     tread_predictions ()
     )
 

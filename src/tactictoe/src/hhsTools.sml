@@ -73,7 +73,7 @@ val reserved_dict =
    "and", "datatype", "type", "where", ":", ";" , ":>",
    "let", "in", "end", "while", "do",
    "local","=>","case","of","_","|","fn","handle","raise","#",
-   "[","(",",",")","]","{","}"])
+   "[","(",",",")","]","{","}","..."])
 
 fun is_string s = String.sub (s,0) = #"\"" handle _ => false
 fun is_number s = Char.isDigit (String.sub (s,0)) handle _ => false
@@ -294,8 +294,6 @@ fun print_endline s = print (s ^ "\n")
    Debugging and exporting feature vectors
    -------------------------------------------------------------------------- *)
 
-val hhs_debug_flag = ref false
-
 fun debug s = 
   append_endline (hhs_search_dir ^ "/debug/" ^ current_theory ()) s
 
@@ -396,7 +394,8 @@ fun split_string s1 s2 =
 val hhs_badstacl = ref []
 val hhs_cthyfea  = ref []
 val hhs_stacfea  = ref (dempty lbl_compare)
-val hhs_ddict    = ref (dempty goal_compare)
+val hhs_ddict = ref (dempty goal_compare)
+val hhs_ndict = ref (dempty String.compare)
 
 fun update_ddict (lbl,fea) =
   let 
@@ -410,7 +409,8 @@ fun clean_feadata () =
   (
   hhs_stacfea := dempty lbl_compare;
   hhs_cthyfea := []; 
-  hhs_ddict := dempty goal_compare
+  hhs_ddict := dempty goal_compare;
+  hhs_ndict := dempty String.compare
   )
 
 fun init_stacfea_ddict feavl =
@@ -418,18 +418,23 @@ fun init_stacfea_ddict feavl =
   hhs_stacfea := dnew lbl_compare feavl;
   hhs_cthyfea := []; 
   hhs_ddict := dempty goal_compare;
+  hhs_ndict := 
+    count_dict (dempty String.compare) 
+    (map (#1 o fst) (dlist (!hhs_stacfea)))
+  ;
   dapp update_ddict (!hhs_stacfea)
   )
 
-fun update_stacfea_ddict (lbl,fea) =
+fun update_stacfea_ddict (feav as (lbl,fea)) =
   if dmem lbl (!hhs_stacfea) then () else
   let 
     val oldv = dfind (#3 lbl) (!hhs_ddict) handle _ => [] 
-    val newv = (lbl,fea) :: oldv
+    val newv = feav :: oldv
   in
     hhs_stacfea := dadd lbl fea (!hhs_stacfea);
-    hhs_cthyfea := (lbl,fea) :: (!hhs_cthyfea);
-    hhs_ddict := dadd (#3 lbl) newv (!hhs_ddict)
+    hhs_cthyfea := feav :: (!hhs_cthyfea);
+    hhs_ddict := dadd (#3 lbl) newv (!hhs_ddict);
+    hhs_ndict := count_dict (!hhs_ndict) [(#1 lbl)]
   end
 
 end (* struct *)
