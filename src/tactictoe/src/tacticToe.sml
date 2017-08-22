@@ -208,6 +208,7 @@ fun select_thmfeav goalfea =
     (thmsymweight,feav1)
   end
 
+(* small holyhammer *)
 fun add_thy_dict dict thy =
   let fun f (name,thm) =
     dict := dadd (thy ^ "Theory." ^ name) (fea_of_goal (dest_thm thm)) (!dict)

@@ -16,16 +16,14 @@ val hhs_hofea_flag = ref true
 (* top features are slow to produce and print *)
 val hhs_notopfea_flag = ref true 
   
-
-fun save_time rf f x =
-  let
-    val rt = Timer.startRealTimer ()
-    val r = f x
-    val time = Timer.checkRealTimer rt
-    val _ = rf := (!rf) + Time.toReal time
-  in
-    r
-  end
+fun size_of_term t =
+       if is_abs t
+    then let val (v,t') = dest_abs t in 1 + size_of_term t' end
+  else if is_comb t
+    then let val (t1,t2) = dest_comb t in size_of_term t1 + size_of_term t2 end
+  else if is_var t orelse is_const t
+    then 1
+  else raise ERR "size_of_term" ""
 
 fun gen_all t = list_mk_forall ((free_vars_lr t),t)
 
@@ -152,26 +150,35 @@ and binder_top s (v,tm) =
   )
 
 fun fea_of_term tm =
-  let 
-    val varl           = find_terms is_var tm
-    val varl_sl        = map (fst o dest_var) varl
-    val constl         = find_terms is_var tm
-    val const_sl       = map string_of_const constl
-    val typel          = all_types tm
-    val type_sl        = List.concat (map zeroed_type typel)
-    val (tml, top_tml) = atoms_of_term tm
-    val top_tml'       = if !hhs_notopfea_flag then [] else top_tml
-    val _              = top_sl := []
-    val toptml_sl      = map string_of_top top_tml' (* modifies top_sl *)
-    val subterml       = List.concat (map subterms_of_term tml)
-    val subterm_sl     = map zeroed_term subterml
-  in
-    filter (fn x => x <> "P" andalso 
-                    x <> "A" andalso
-                    x <> "T") 
-    (mk_string_set 
-       (type_sl @ varl_sl @ const_sl @ (!top_sl) @ toptml_sl @ subterm_sl))
-  end
+  if size_of_term tm > 2000
+  then
+    let 
+      val constl         = find_terms is_const tm
+      val const_sl       = map string_of_const constl
+    in
+      mk_string_set const_sl
+    end
+  else
+    let 
+      val varl           = find_terms is_var tm
+      val varl_sl        = map (fst o dest_var) varl
+      val constl         = find_terms is_const tm
+      val const_sl       = map string_of_const constl
+      val typel          = all_types tm
+      val type_sl        = List.concat (map zeroed_type typel)
+      val (tml, top_tml) = atoms_of_term tm
+      val top_tml'       = if !hhs_notopfea_flag then [] else top_tml
+      val _              = top_sl := []
+      val toptml_sl      = map string_of_top top_tml' (* modifies top_sl *)
+      val subterml       = List.concat (map subterms_of_term tml)
+      val subterm_sl     = map zeroed_term subterml
+    in
+      filter (fn x => x <> "P" andalso 
+                      x <> "A" andalso
+                      x <> "T") 
+      (mk_string_set 
+         (type_sl @ varl_sl @ const_sl @ (!top_sl) @ toptml_sl @ subterm_sl))
+    end
 
 (*---------------------------------------------------------------------------
  * Produce goal features.

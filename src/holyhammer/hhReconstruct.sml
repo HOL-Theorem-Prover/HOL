@@ -98,13 +98,6 @@ fun read_lemmas atp_out =
     map (split_name o hh_unescape o unsquotify) l'
   end
 
-fun atp_lemmas (atp_status,atp_out) =
-  let val s = read_status atp_status in
-    if s = "Theorem"
-    then (s, (read_lemmas atp_out))
-    else (s, [])
-  end
-
 exception Status of string
 
 fun atp_lemmas_exn (atp_status,atp_out) =
@@ -142,7 +135,10 @@ fun pp_lemmas_aux ppstrm lemmas =
          add_string "]";
        end_block())
     fun pp_lemma (thy,name) =
-      add_string (String.concatWith " " ["fetch", quote thy, quote name])
+      if thy = current_theory () 
+      then add_string 
+             (String.concatWith " " ["DB.fetch", quote thy, quote name])
+      else add_string (thy ^ "Theory." ^ name)
   in
     begin_block INCONSISTENT 0;
     add_string "val lemmas = ";
@@ -204,28 +200,6 @@ fun minimize_lemmas lemmas cj =
 fun reconstruct (atp_status,atp_out) cj =
   let val lemmas = atp_lemmas_exn (atp_status,atp_out) in
     if !minimize_flag then minimize_lemmas lemmas cj else pp_lemmas lemmas
-  end
-
-fun reconstructl atpfilel cj =
-  let
-    val lemmasl = map atp_lemmas atpfilel
-    val proofl = filter (fn (x,_) => x = "Theorem") lemmasl
-  in
-   if null proofl
-   then
-     let val s = if all (fn x => x = "Unknown") (map fst lemmasl)
-                 then "Unknown"
-                 else hd (filter (fn x => x <> "Unknown") (map fst lemmasl))
-     in
-       raise Status s
-     end
-   else
-      let
-        fun cmp l1 l2 = length l1 < length l2
-        val lemmas = hd (sort cmp (map snd proofl))
-      in
-        if !minimize_flag then minimize_lemmas lemmas cj else pp_lemmas lemmas
-      end
   end
 
 
