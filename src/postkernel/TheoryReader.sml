@@ -261,18 +261,9 @@ fun read_thydata path =
     (TextIO.closeIn file; l)
   end
 
-fun load_thydata thyname =
+fun load_thydata thyname path =
   let
-    val loadPath_mem = !loadPath
-    val sigobj_path = OS.Path.concat (HOLDIR,"sigobj")
-    val _ = if mem HOLDIR (!loadPath) orelse mem sigobj_path (!loadPath)
-            then ()
-            else loadPath := sigobj_path :: !loadPath
-    val path_uo = valOf (findMod (thyname ^ "Theory"))
-    val _ = loadPath := loadPath_mem
-    val path_dat = OS.Path.joinBaseExt
-      {base = OS.Path.base path_uo, ext = SOME "dat"}
-    val l0 = read_thydata path_dat
+    val l0 = read_thydata path
     val l1 = load_theory_and_parents l0
     val l2 = load_incorporate_types thyname l1
     val (idvector,l3) = load_idvector l2

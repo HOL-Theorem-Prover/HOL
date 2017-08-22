@@ -274,16 +274,16 @@ fun pp_struct info_record = let
 
   fun pr_bind(s, th) = let
     val (tg, asl, w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
+    val addsbl = pr_list add_string (add_break(1,2)) nothing
   in
     if is_temp_binding s then fn _ => ()
     else
-      block INCONSISTENT 2
-        (
-        add_string "val">> add_break(1,0) >>
-        add_string ("op "^ s) >> add_break(1,0) >>
-        add_string "=" >> add_break(1,0) >>
-        add_string ("find " ^ mlquote s)
-        )
+      (* this rigmarole is necessary to allow ML bindings where the name is
+         a datatype constructor or an infix, or both *)
+      block CONSISTENT 0
+        (block INCONSISTENT 0 (addsbl ["fun","op",s,"_","=","()"]) >>
+         add_break(1,0) >>
+         block INCONSISTENT 0 (addsbl ["val","op",s,"=","TDB.find",mlquote s]))
   end
 
   val bind_theorems =
@@ -301,7 +301,9 @@ fun pp_struct info_record = let
   fun pr_psl l =
        block CONSISTENT 0
          (pr_list pr_ps nothing (add_newline >> add_newline) l)
-
+  val cwd = holpathdb.reverse_lookup {path=OS.FileSys.getDir()}
+  val datfile =
+      mlquote (OS.Path.concat(cwd, name ^ "Theory.dat"))
 in
   block CONSISTENT 0
       (add_string (String.concatWith " "
@@ -323,10 +325,16 @@ in
              pblock (add_string,
                Listsort.sort String.compare parents1 @ mldeps) >>
              add_newline >> add_newline >>
-             add_string
-             ("val thydata = TheoryReader.load_thydata " ^ mlquote name) >>
-             add_newline >>
-             add_string ("fun find s = Redblackmap.find (thydata,s)") >>
+             block CONSISTENT 0
+               (add_string "structure TDB = struct" >> add_break(1,2) >>
+                add_string "val thydata = " >> add_break(1,4) >>
+                block INCONSISTENT 0 (
+                  add_string "TheoryReader.load_thydata" >> add_break (1,2) >>
+                  add_string (mlquote name) >> add_break (1,2) >>
+                  add_string ("(holpathdb.subst_pathvars "^datfile^")")) >>
+                add_break(1,2) >>
+                add_string ("fun find s = Redblackmap.find (thydata,s)") >>
+                add_break(1,0) >> add_string "end") >>
              jump () >>
              bind_theorems >>
              add_newline >>

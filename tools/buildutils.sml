@@ -624,7 +624,6 @@ in
   case Path.ext file of
     SOME"ui"     => idtransfer true df
   | SOME"uo"     => idtransfer true df
-  | SOME"dat"    => idtransfer true df
   | SOME"so"     => idtransfer true df   (* for dynlibs *)
   | SOME"xable"  => idtransfer true df   (* for executables *)
   | SOME"sig"    => (idtransfer false df; augmentSRCFILES (Path.base file))

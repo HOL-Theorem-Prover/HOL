@@ -2,6 +2,8 @@ $(SML_LIB)/basis/basis.mlb
 ../../tools-poly/poly/polytools-basic.mlb
 $(SML_LIB)/basis/mlton.mlb
 Systeml.sig
+holpathdb.sig
+holpathdb.sml
 mlton/PolyML.sml
 ../../tools-poly/Holmake/Systeml.sml
 Holdep_tokens.sig
