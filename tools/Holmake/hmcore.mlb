@@ -21,6 +21,7 @@ internal_functions.sig
 internal_functions.sml
 tailbuffer.sig
 tailbuffer.sml
+Holmake_tools_dtype.sml
 Holmake_tools.sig
 Holmake_tools.sml
 Holmake_types.sig

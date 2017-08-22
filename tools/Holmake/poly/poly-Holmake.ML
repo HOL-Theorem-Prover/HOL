@@ -16,18 +16,9 @@ fun useS f = use ("../" ^ f ^ ".sml")
 val _ = use "../Systeml.sig"
 val _ = use "../../../tools-poly/Holmake/Systeml.sml";
 
-val _ = useC "Holdep_tokens";
-val _ = useS "QuoteFilter";
-val _ = useC "QFRead";
-val _ = useC "Holdep";
+val _ = use "../hmcore.ML";
 
-val _ = useC "regexpMatch";
-val _ = useC "parse_glob";
-val _ = useC "internal_functions";
 val _ = useC "tailbuffer";
-val _ = useC "Holmake_tools";
-val _ = useC "Holmake_types";
-val _ = useC "ReadHMF";
 val _ = useC "GetOpt";
 val _ = useS "FunctionalRecordUpdate";
 val _ = useC "HM_Core_Cline";
