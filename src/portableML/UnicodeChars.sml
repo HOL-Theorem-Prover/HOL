@@ -160,6 +160,8 @@ val lsr = U 0x22D9
 val rol = U 0x21C6
 val ror = U 0x21C4
 
+val doubleplus = U 0x29FA
+
 fun isAlpha s = let
   val ((_, i), _) = valOf (UTF8.getChar s)
 in
