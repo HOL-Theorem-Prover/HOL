@@ -68,7 +68,8 @@
 \newcommand\vbar{\mid}
 \newcommand\turn{\ \vdash\ } % FIXME: "\ " results in extra space
 \newcommand\hilbert{\varepsilon}
-\newcommand\eqdef{\ \equiv\ }
+\providecommand\eqdef{\ \equiv\ }
+\renewcommand\eqdef{\ \equiv\ }
 
 \newcommand\natnums{\mbox{${\sf N}\!\!\!\!{\sf N}$}}
 \newcommand\bools{\mbox{${\sf T}\!\!\!\!{\sf T}$}}
@@ -116,7 +117,8 @@
 % Abbreviations for particular mathematical constants etc.
 % ---------------------------------------------------------------------
 
-\newcommand\T{\con{T}}
+\providecommand{\T}{\con{T}}
+\renewcommand{\T}{\con{T}}
 \newcommand\F{\con{F}}
 \newcommand\OneOne{\con{One\_One}}
 \newcommand\OntoSubset{\con{Onto\_Subset}}

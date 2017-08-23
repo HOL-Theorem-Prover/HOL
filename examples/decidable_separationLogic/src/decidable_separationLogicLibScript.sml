@@ -384,7 +384,7 @@ Induct_on `n` THENL [
       GEN_TAC THEN
       `!e1:'a e2 e3 e4 l l'.
          PERM (e1::e2::l) (e3::e4::l') =
-         PERM (e2::e1::l) (e4::e3::l')` suffices_by (STRIP_TAC THEN 
+         PERM (e2::e1::l) (e4::e3::l')` suffices_by (STRIP_TAC THEN
          METIS_TAC[PERM_MONO]
       ) THEN
       POP_ASSUM (fn thm => ALL_TAC) THEN

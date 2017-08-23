@@ -21,7 +21,7 @@ val lfilter_map_thm = Q.store_thm ("lfilter_map_thm",
 
  (*
 val _ = Datatype `
-  io_result = 
+  io_result =
   | Terminate ('a list)
   | Diverge ('a llist)
   | Crash`;
@@ -77,7 +77,7 @@ val osmall_sem_def = Define `
       sem.unload s = io_list) ∧
   (osmall_sem sem p (Diverge io_trace) ⇔
     ?oracle.
-      (!s. step_rel sem (sem.load oracle p) s ⇒ sem.step s ≠ NONE) ∧ 
+      (!s. step_rel sem (sem.load oracle p) s ⇒ sem.step s ≠ NONE) ∧
       lprefix_lub {fromList (sem.unload s) | s | step_rel sem (sem.load oracle p) s} io_trace) ∧
   (osmall_sem sem p Crash ⇔
     ?oracle s.
@@ -99,11 +99,11 @@ val is_prefix_pres = Q.prove (
  metis_tac [IS_PREFIX_TRANS]);
 
 val small_chain_def = Define `
-  small_chain sem_s oracle p = 
+  small_chain sem_s oracle p =
     {fromList (sem_s.unload s) | s | step_rel sem_s (sem_s.load oracle p) s}`;
 
 val fbs_chain_def = Define `
-  fbs_chain sem_f oracle p = 
+  fbs_chain sem_f oracle p =
     {fromList (sem_f.get_oracle_events (FST (eval_with_clock sem_f k (sem_f.init_st oracle) p))) | k | T}`;
 
 val small_chain_thm = Q.prove (
@@ -138,7 +138,7 @@ val small_chain_thm = Q.prove (
 
 val fbs_chain_thm = Q.prove (
 `!sem_f oracle p.
-  (!k1 k2 p. k1 ≤ k2 ⇒ 
+  (!k1 k2 p. k1 ≤ k2 ⇒
     sem_f.get_oracle_events (FST (eval_with_clock sem_f k1 (sem_f.init_st oracle) p)) ≼
     sem_f.get_oracle_events (FST (eval_with_clock sem_f k2 (sem_f.init_st oracle) p)))
   ⇒
@@ -217,22 +217,22 @@ val equiv_lprefix_chain_sym = Q.prove (
 val osmall_fbs_equiv = Q.store_thm ("osmall_fbs_equiv",
 `!sem_f sem_s.
   (∀s1 s2. sem_s.step s1 = SOME s2 ⇒ sem_s.unload s1 ≼ sem_s.unload s2) ∧
-  (!oracle k1 k2 p. k1 ≤ k2 ⇒ 
+  (!oracle k1 k2 p. k1 ≤ k2 ⇒
     sem_f.get_oracle_events (FST (eval_with_clock sem_f k1 (sem_f.init_st oracle) p)) ≼
     sem_f.get_oracle_events (FST (eval_with_clock sem_f k2 (sem_f.init_st oracle) p))) ∧
   (?f.
      unbounded f ∧
-     !oracle c p st. 
-       eval_with_clock sem_f c (sem_f.init_st oracle) p = (st, Timeout) ⇒ 
+     !oracle c p st.
+       eval_with_clock sem_f c (sem_f.init_st oracle) p = (st, Timeout) ⇒
        ?tr. f c ≤ LENGTH tr ∧ tr ≠ [] ∧ HD tr = sem_s.load oracle p ∧ check_trace sem_s.step tr ∧
             sem_f.get_oracle_events st = sem_s.unload (LAST tr)) ∧
-  (!oracle c p st r. 
-    eval_with_clock sem_f c (sem_f.init_st oracle) p = (st,r) ∧ r ≠ Timeout ⇒ 
+  (!oracle c p st r.
+    eval_with_clock sem_f c (sem_f.init_st oracle) p = (st,r) ∧ r ≠ Timeout ⇒
     ?r'. step_rel sem_s (sem_s.load oracle p) r' ∧ sem_s.step r' = NONE ∧
          (r = Error ⇔ ~sem_s.is_result r') ∧
          (r ≠ Error ⇒ sem_f.get_oracle_events st = sem_s.unload r'))
   ⇒
-  !p r. 
+  !p r.
     ofbs_sem sem_f p r ⇔ osmall_sem sem_s p r`,
  rw [] >>
  Cases_on `r` >>
@@ -349,12 +349,12 @@ val osmall_fbs_equiv2 = Q.store_thm ("osmall_fbs_equiv2",
     sem_f.get_oracle_events (FST (eval_with_clock sem_f k1 (sem_f.init_st oracle) p)) ≼
     sem_f.get_oracle_events (FST (eval_with_clock sem_f k2 (sem_f.init_st oracle) p))) ∧
   (!oracle c p.
-    SND (eval_with_clock sem_f c (sem_f.init_st oracle) p) = Timeout ⇒ 
+    SND (eval_with_clock sem_f c (sem_f.init_st oracle) p) = Timeout ⇒
     sem_f.get_clock (FST (eval_with_clock sem_f c (sem_f.init_st oracle) p)) = 0) ∧
   (?f.
      unbounded f ∧
      !oracle c p st r.
-       eval_with_clock sem_f c (sem_f.init_st oracle) p = (st, r) ⇒ 
+       eval_with_clock sem_f c (sem_f.init_st oracle) p = (st, r) ⇒
        ?tr. f (c - sem_f.get_clock st) ≤ LENGTH tr  ∧ tr ≠ [] ∧ HD tr = sem_s.load oracle p ∧ check_trace sem_s.step tr ∧
             same_result sem_f sem_s (st, r) (LAST tr))
   ⇒

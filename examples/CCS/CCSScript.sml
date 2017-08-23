@@ -19,7 +19,7 @@ val _ = new_theory "CCS";
    co-names (`out`) (complement of names) *)
 val _ = Datatype `Label = name 'b | coname 'b`;
 
-(* Define structural induction on labels   
+(* Define structural induction on labels
    |- ∀P. (∀s. P (name s)) ∧ (∀s. P (coname s)) ⇒ ∀L. P L
  *)
 val Label_induction = TypeBase.induction_of ``:'b Label``;
@@ -57,7 +57,7 @@ val _ = overload_on ("In", ``\a. label (name a)``);
 val _ = overload_on ("Out", ``\a. label (coname a)``);
 
 (* Define structural induction on actions
-   |- ∀P. P tau ∧ (∀L. P (label L)) ⇒ ∀A. P A 
+   |- ∀P. P tau ∧ (∀L. P (label L)) ⇒ ∀A. P A
  *)
 val Action_induction = TypeBase.induction_of ``:'b Action``;
 
@@ -92,7 +92,7 @@ val COMPL_LAB_def = Define `(COMPL_LAB (name (s :'b)) = (coname s)) /\
 val _ = overload_on ("COMPL", ``COMPL_LAB``);
 val _ = export_rewrites ["COMPL_LAB_def"];
 
-val coname_COMPL = store_thm ("coname_COMPL", 
+val coname_COMPL = store_thm ("coname_COMPL",
   ``!(s :'b). coname s = COMPL (name s)``,
     REWRITE_TAC [COMPL_LAB_def]);
 
@@ -304,11 +304,11 @@ val CCS_Subst_def = Define `
 				      (CCS_Subst E2 E' X)) /\
    (CCS_Subst (restr L E)  E' X = restr L (CCS_Subst E E' X)) /\
    (CCS_Subst (relab E f)  E' X = relab   (CCS_Subst E E' X) f) /\
-   (CCS_Subst (var Y)      E' X = if (Y = X) then E' else (var Y)) /\ 
+   (CCS_Subst (var Y)      E' X = if (Y = X) then E' else (var Y)) /\
    (CCS_Subst (rec Y E)    E' X = if (Y = X) then (rec Y E)
 					     else (rec Y (CCS_Subst E E' X)))`;
 
-(* Note that in the rec clause, if Y = X then all occurrences of Y in E are X 
+(* Note that in the rec clause, if Y = X then all occurrences of Y in E are X
    and bound, so there exist no free variables X in E to be replaced with E'.
    Hence, the term rec Y E is returned. *)
 
@@ -333,7 +333,7 @@ val (TRANS_rules, TRANS_ind, TRANS_cases) = Hol_reln `
     (!E l E1 E' E2.
 		 TRANS E (label l) E1 /\ TRANS E' (label (COMPL l)) E2
 	     ==> TRANS (par E E') tau (par E1 E2)) /\			(* PAR3 (COM) *)
-    (!E u E' l L. 
+    (!E u E' l L.
 		 TRANS E u E' /\ ((u = tau) \/
 				  ((u = label l) /\ (~(l IN L)) /\ (~((COMPL l) IN L))))
 	     ==> TRANS (restr L E) u (restr L E')) /\			(* RESTR *)
@@ -424,7 +424,7 @@ val SUM_cases = save_thm (
    "SUM_cases", EQ_IMP_LR SUM_cases_EQ);
 
 val TRANS_SUM_EQ = store_thm ("TRANS_SUM_EQ",
-  ``!E E' u E''. TRANS (sum E E') u E'' = TRANS E u E'' \/ TRANS E' u E''``, 
+  ``!E E' u E''. TRANS (sum E E') u E'' = TRANS E u E'' \/ TRANS E' u E''``,
     REPEAT GEN_TAC
  >> EQ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -439,7 +439,7 @@ val TRANS_SUM_EQ = store_thm ("TRANS_SUM_EQ",
 (* for CCS_TRANS_CONV *)
 val TRANS_SUM_EQ' = store_thm (
    "TRANS_SUM_EQ'",
-  ``!E1 E2 u E. TRANS (sum E1 E2) u E = TRANS E1 u E \/ TRANS E2 u E``, 
+  ``!E1 E2 u E. TRANS (sum E1 E2) u E = TRANS E1 u E \/ TRANS E2 u E``,
     REWRITE_TAC [TRANS_SUM_EQ]);
 
 val TRANS_SUM = save_thm (
@@ -503,7 +503,7 @@ val TRANS_SUM_NIL_EQ = store_thm (
       IMP_RES_TAC NIL_NO_TRANS,
       (* goal 2 (of 2) *)
       DISCH_TAC \\
-      MATCH_MP_TAC SUM1 >> ASM_REWRITE_TAC [] ]);   
+      MATCH_MP_TAC SUM1 >> ASM_REWRITE_TAC [] ]);
 
 (* |- ∀E u E'. E + nil --u-> E' ⇒ E --u-> E' *)
 val TRANS_SUM_NIL = save_thm ("TRANS_SUM_NIL", EQ_IMP_LR TRANS_SUM_NIL_EQ);
@@ -593,7 +593,7 @@ val RESTR_cases = save_thm ("RESTR_cases", EQ_IMP_LR RESTR_cases_EQ);
 
 val TRANS_RESTR_EQ = store_thm ("TRANS_RESTR_EQ",
   ``!E L u E'.
-     TRANS (restr L E) u E' = 
+     TRANS (restr L E) u E' =
      (?E'' l. (E' = restr L E'') /\ TRANS E u E'' /\
 	      ((u = tau) \/ ((u = label l) /\ ~(l IN L) /\ ~((COMPL l) IN L))))``,
   let val a1 = ASSUME ``(u :'b Action) = tau``
@@ -685,7 +685,7 @@ val RESTR_LABEL_NO_TRANS = store_thm ("RESTR_LABEL_NO_TRANS",
 	CHECK_ASSUME_TAC
 	  (REWRITE_RULE [ASSUME ``(u :'b Action) = tau``, Action_distinct]
 			(ASSUME ``(u :'b Action) = label l``)),
-	(* goal 2.2 *)        
+	(* goal 2.2 *)
 	IMP_RES_TAC TRANS_PREFIX \\
 	CHECK_ASSUME_TAC
 	  (MP (REWRITE_RULE
@@ -701,7 +701,7 @@ val RELAB_cases = save_thm ("RELAB_cases", EQ_IMP_LR RELAB_cases_EQ);
 
 val TRANS_RELAB_EQ = store_thm ("TRANS_RELAB_EQ",
   ``!E rf u E'. TRANS (relab E rf) u E' =
-		(?u' E''. (u = relabel rf u') /\ 
+		(?u' E''. (u = relabel rf u') /\
 			  (E' = relab E'' rf) /\ TRANS E u' E'')``,
     REPEAT GEN_TAC
  >> EQ_TAC (* 2 sub-goals here *)

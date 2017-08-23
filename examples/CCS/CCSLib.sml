@@ -125,7 +125,7 @@ val REWRITE_RHS_RULE =
 
 (* Tactic for rewriting only the right-hand side on an equation once. *)
 val ONCE_REWRITE_RHS_TAC =
-    GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites; 
+    GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites;
 
 (* Tactic for rewriting only the right-hand side on an equation. *)
 val REWRITE_RHS_TAC =

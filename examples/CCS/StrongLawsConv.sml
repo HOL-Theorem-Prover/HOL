@@ -67,7 +67,7 @@ in
 	in
 	    if (mem h t) then
 		let val (l1, l2) = FIND_SMD [] h [] tm'
-		in 
+		in
 		    if (null l2) then
 			if (null l1) then
 			    ISPEC h STRONG_SUM_IDEMP
@@ -79,7 +79,7 @@ in
 						    (ISPEC h STRONG_SUM_IDEMP)))
 			    end
 		    else
-			let val thm1 = 
+			let val thm1 =
 				if (null l1) then
 				    S_TRANS (S_SYM (STRONG_SUM_ASSOC_CONV
 							(mk_sum (mk_sum (h, hd l2), h))))
@@ -94,7 +94,7 @@ in
 		end
 	    else
 		let val thm' = STRONG_FIND_IDEMP tm' t
-		in  
+		in
 		    ISPEC h (MATCH_MP STRONG_EQUIV_SUBST_SUM_R thm')
 		end
 	end
@@ -158,8 +158,8 @@ fun STRONG_RESTR_ELIM_CONV tm =
 	  else
 	      failwith "STRONG_RESTR_ELIM_CONV"
       end
-  else	       
-      failwith "STRONG_RESTR_ELIM_CONV"; 
+  else
+      failwith "STRONG_RESTR_ELIM_CONV";
 
 (******************************************************************************)
 (*                                                                            *)
@@ -238,7 +238,7 @@ fun STRONG_PAR_NIL_CONV tm =
       in
 	  if is_nil P then ISPEC Q STRONG_PAR_IDENT_L
 	  else if is_nil Q then ISPEC P STRONG_PAR_IDENT_R
-	  else 
+	  else
 	      failwith "STRONG_PAR_NIL_CONV"
       end
   else
@@ -275,7 +275,7 @@ fun STRONG_NIL_SUM_PAR_CONV tm =
 fun PREFIX_EXTRACT tm = let
     val (opr, opd) = dest_comb tm;
     val (act, proc) = args_prefix opd
-in 
+in
     if opr = mk_const ("PREF_ACT", type_of opr) then
 	ISPECL [act, proc] PREF_ACT_def
     else if opr = mk_const ("PREF_PROC", type_of opr) then
@@ -294,7 +294,7 @@ fun ALL_SYNC_CONV f n1 f' n2 =
       val c2 = TRANS c1 (SIMPLIFY_CONV (rconcl c1));
       val c3 = TRANS c2 (REWRITE_CONV [SYNC_def] (rconcl c2));
       val c4 = TRANS c3 (SIMPLIFY_CONV (rconcl c3));
-      val c5 = TRANS c4 (REWRITE_CONV [LABEL_def, COMPL_LAB_def, Action_distinct_label,  
+      val c5 = TRANS c4 (REWRITE_CONV [LABEL_def, COMPL_LAB_def, Action_distinct_label,
                                        Label_distinct, Label_distinct', Label_11]
 				      (rconcl c4))
   in
@@ -336,12 +336,12 @@ fun STRONG_PAR_SUM_CONV tm = let
 in
     if is_prefix P1 then
 	let val thma' = S_SUBST (STRONG_SUM_ASSOC_CONV P2) ``par ^P1 ^P2``
-	in 
+	in
 	    S_TRANS thma' (REWRITE_LHS_RULE [thm1, thm2] thmt)
 	end
     else if is_prefix P2 then
 	let val thma' = S_SUBST (STRONG_SUM_ASSOC_CONV P1) ``par ^P1 ^P2``
-	in 
+	in
 	    S_TRANS thma' (REWRITE_LHS_RULE [thm1, thm2] thmt)
 	end
     else
@@ -371,7 +371,7 @@ fun STRONG_PAR_PREFIX_CONV (u, P) (v, Q) =
 		  ISPECL [P, Q] (MP (ISPECL [l1, l2] STRONG_PAR_PREF_SYNCR)
 				   (EQT_ELIM thmc))
 	      else (* no synchronization between l1 and l2 *)
-		  let val thm_lab = TRANS thmc (Label_EQ_CONV (rconcl thmc)) in  
+		  let val thm_lab = TRANS thmc (Label_EQ_CONV (rconcl thmc)) in
 		      ISPECL [P, Q] (MP (ISPECL [l1, l2] STRONG_PAR_PREF_NO_SYNCR)
 				       (EQF_ELIM thm_lab))
 		  end
@@ -442,7 +442,7 @@ val [STRONG_SUM_IDEMP_TAC,
      STRONG_RELAB_ELIM_TAC,
      STRONG_RESTR_ELIM_TAC,
      STRONG_PAR_ELIM_TAC,
-     STRONG_REC_UNF_TAC] = map (S_LHS_CONV_TAC o S_DEPTH_CONV)  
+     STRONG_REC_UNF_TAC] = map (S_LHS_CONV_TAC o S_DEPTH_CONV)
                                 [STRONG_SUM_IDEMP_CONV,
                                  STRONG_SUM_NIL_CONV,
                                  STRONG_RELAB_ELIM_CONV,

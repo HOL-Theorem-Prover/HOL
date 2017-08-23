@@ -117,7 +117,7 @@ fun CCS_TRANS_CONV tm =
 			if (rconcl thml = ``T``) then
 			    extr_acts (tl actl) L
 			else
-			    let	val thmlc = Label_IN_CONV 
+			    let	val thmlc = Label_IN_CONV
 					      (rconcl
 						(REWRITE_CONV [COMPL_LAB_def] ``COMPL ^l``))
 					      L
@@ -212,7 +212,7 @@ fun CCS_TRANS_CONV tm =
 	  (fn a => CHECK_ASSUME_TAC (REWRITE_RULE [ASSUME ``u = ^tau``, Action_distinct]
 						  (ASSUME ``u = ^a``)) \\
 		   ASM_REWRITE_TAC []) actl),
-	(* goal 1.2 *)	
+	(* goal 1.2 *)
 	IMP_RES_TAC thm >|
 	(list_apply_tac
 	  (fn a => if is_tau a then
@@ -321,7 +321,7 @@ fun CCS_TRANS_CONV tm =
 	(combine (actl, thml))),
       (* goal 2 (of 2) *)
       STRIP_TAC >|
-      (list_apply_tac 
+      (list_apply_tac
 	(fn ((a, P), thm_act) =>
 	    REWRITE_TAC [ONCE_REWRITE_RULE [SYM thm_act]
 					   (ASSUME ``u = ^a``),
@@ -488,7 +488,7 @@ fun CCS_TRANS_CONV tm =
       STRIP_TAC >| (* as many as the number of the summands *)
       (list_apply_tac
 	(fn a => ASM_REWRITE_TAC [] >> MATCH_MP_TAC PAR1 \\
-		 REWRITE_TAC [GEN_ALL thm1]) actl1) @ 
+		 REWRITE_TAC [GEN_ALL thm1]) actl1) @
       (list_apply_tac
 	(fn a => ASM_REWRITE_TAC [] >> MATCH_MP_TAC PAR2 \\
 		 REWRITE_TAC [GEN_ALL thm2]) actl2) @

@@ -67,7 +67,7 @@ val STRONG_SUM_IDEMP = store_thm (
       DISJ2_TAC \\
       EXISTS_TAC ``E :('a, 'b) CCS`` \\
       REWRITE_TAC [],
-      (* goal 2 (of 2) *)  
+      (* goal 2 (of 2) *)
       PURE_ONCE_REWRITE_TAC [STRONG_BISIM] \\
       BETA_TAC \\
       REPEAT STRIP_TAC >| (* 4 sub-goals here *)
@@ -118,12 +118,12 @@ val STRONG_SUM_COMM = store_thm (
 	ASM_REWRITE_TAC [],
 	(* goal 2.3 (of 4) *)
 	EXISTS_TAC ``E1' :('a, 'b) CCS`` \\
-	ASM_REWRITE_TAC [REWRITE_RULE [ASSUME ``E = sum E1 E2``] 
+	ASM_REWRITE_TAC [REWRITE_RULE [ASSUME ``E = sum E1 E2``]
 				      (ASSUME ``TRANS E u E1'``),
 			 TRANS_COMM_EQ],
 	(* goal 2.4 (of 4) *)
 	EXISTS_TAC ``E2' :('a, 'b) CCS`` \\
-	ASM_REWRITE_TAC [REWRITE_RULE [ASSUME ``E' = sum E2 E1``] 
+	ASM_REWRITE_TAC [REWRITE_RULE [ASSUME ``E' = sum E2 E1``]
 				      (ASSUME ``TRANS E' u E2'``),
 			 TRANS_COMM_EQ] ] ]);
 
@@ -253,7 +253,7 @@ val STRONG_PAR_IDENT_R = store_thm (
 	  PURE_ONCE_ASM_REWRITE_TAC [] \\
 	  MATCH_MP_TAC PAR1 \\
 	  ASSUME_TAC (REWRITE_RULE [ASSUME ``E' :('a, 'b) CCS = E''``]
-				   (ASSUME ``TRANS E' u E2``)) \\    
+				   (ASSUME ``TRANS E' u E2``)) \\
 	  PURE_ONCE_ASM_REWRITE_TAC [],
 	  (* goal 2.2.2 (of 2) *)
 	  EXISTS_TAC ``E2 :('a, 'b) CCS`` \\
@@ -339,7 +339,7 @@ val STRONG_PAR_COMM = store_thm (
 val STRONG_PAR_IDENT_L = save_thm (
    "STRONG_PAR_IDENT_L",
     GEN_ALL
-       (S_TRANS (SPECL [``nil``, ``E :('a, 'b) CCS``] STRONG_PAR_COMM) 
+       (S_TRANS (SPECL [``nil``, ``E :('a, 'b) CCS``] STRONG_PAR_COMM)
 		(SPEC ``E :('a, 'b) CCS`` STRONG_PAR_IDENT_R)));
 
 val STRONG_PAR_ASSOC = store_thm (
@@ -440,9 +440,9 @@ val STRONG_PAR_ASSOC = store_thm (
 	      (* goal 2.1.3.2.2 (of 2) *)
 	      take [`E1`, `E1'''`, `E2'`] >> ASM_REWRITE_TAC [] ],
 	    (* goal 2.1.3.3 (of 3) *)
-	    IMP_RES_TAC Action_distinct_label ] ], 
+	    IMP_RES_TAC Action_distinct_label ] ],
 	 (* goal 2.2 (of 2) *)
-	 ASSUME_TAC (REWRITE_RULE [ASSUME ``E' = par E1(par E2 E3)``] 
+	 ASSUME_TAC (REWRITE_RULE [ASSUME ``E' = par E1(par E2 E3)``]
 				  (ASSUME ``TRANS E' u E2'``)) \\
 	 IMP_RES_TAC TRANS_PAR >| (* 3 sub-goals here *)
 	 [ (* goal 2.2.1 (of 3) *)
@@ -517,14 +517,14 @@ val STRONG_PAR_ASSOC = store_thm (
 
 val STRONG_PAR_PREF_TAU = store_thm (
    "STRONG_PAR_PREF_TAU",
-      ``!(u :'b Action) E E'. 
+      ``!(u :'b Action) E E'.
 	 STRONG_EQUIV (par (prefix u E) (prefix tau E'))
 		      (sum (prefix u (par E (prefix tau E')))
 			   (prefix tau (par (prefix u E) E')))``,
     REPEAT GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
-       ``\x y. (x = y) \/ 
+       ``\x y. (x = y) \/
 	      (?(u' :'b Action) E1 E2. (x = par (prefix u' E1) (prefix tau E2)) /\
 				       (y = sum (prefix u' (par E1 (prefix tau E2)))
 						(prefix tau (par (prefix u' E1) E2))))``
@@ -635,10 +635,10 @@ val STRONG_PAR_PREF_NO_SYNCR = store_thm (
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
        ``\x y. (x = y) \/
-	       (?(l1 :'b Label) l2 E1 E2. ~(l1 = COMPL l2) /\  
+	       (?(l1 :'b Label) l2 E1 E2. ~(l1 = COMPL l2) /\
 	       (x = par (prefix (label l1) E1) (prefix (label l2) E2)) /\
-	       (y = sum (prefix (label l1) (par E1 (prefix (label l2) E2))) 
-			(prefix (label l2) (par (prefix (label l1) E1) E2))))`` 
+	       (y = sum (prefix (label l1) (par E1 (prefix (label l2) E2)))
+			(prefix (label l2) (par (prefix (label l1) E1) E2))))``
  >> CONJ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       BETA_TAC \\
@@ -667,7 +667,7 @@ val STRONG_PAR_PREF_NO_SYNCR = store_thm (
 	  MATCH_MP_TAC SUM2 >> IMP_RES_TAC TRANS_PREFIX >> ASM_REWRITE_TAC [PREFIX],
 	  (* goal 2.3.3 (of 3) *)
 	  IMP_RES_TAC TRANS_PAR_NO_SYNCR \\
-	  ASSUME_TAC (REWRITE_RULE [ASSUME ``(u :'b Action) = tau``] 
+	  ASSUME_TAC (REWRITE_RULE [ASSUME ``(u :'b Action) = tau``]
 		      (ASSUME ``TRANS (par (prefix (label l1) E1)
 					   (prefix (label l2) E2)) u E1'``)) \\
 	  RES_TAC ],
@@ -675,7 +675,7 @@ val STRONG_PAR_PREF_NO_SYNCR = store_thm (
 	EXISTS_TAC ``E2' :('a, 'b) CCS`` \\
 	ASM_REWRITE_TAC [] \\
 	ASSUME_TAC (REWRITE_RULE
-			[ASSUME ``E' = sum 
+			[ASSUME ``E' = sum
 			     (prefix (label l1) (par E1 (prefix (label l2) E2)))
 			     (prefix (label l2) (par (prefix (label l1) E1) E2))``]
 		     (ASSUME ``TRANS E' u E2'``)) \\
@@ -695,21 +695,21 @@ val STRONG_PAR_PREF_NO_SYNCR = store_thm (
  *)
 val STRONG_PAR_PREF_SYNCR = store_thm (
    "STRONG_PAR_PREF_SYNCR",
-       ``!(l :'b Label) l'. 
-	 (l = COMPL l') ==>	 
+       ``!(l :'b Label) l'.
+	 (l = COMPL l') ==>
 	 (!E E'.
-	   STRONG_EQUIV 
+	   STRONG_EQUIV
 	   (par (prefix (label l) E) (prefix (label l') E'))
 	   (sum
 	    (sum (prefix (label l) (par E (prefix (label l') E')))
 		 (prefix (label l') (par (prefix (label l) E) E')))
-	    (prefix tau (par E E'))))``,    
+	    (prefix tau (par E E'))))``,
     REPEAT STRIP_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
        ``\x y. (x = y) \/
-	      (?(l1 :'b Label) l2 E1 E2. 
-	       (l1 = COMPL l2) /\    
+	      (?(l1 :'b Label) l2 E1 E2.
+	       (l1 = COMPL l2) /\
 	       (x = par (prefix (label l1) E1) (prefix (label l2) E2)) /\
 	       (y = sum
 		    (sum (prefix (label l1) (par E1 (prefix (label l2) E2)))
@@ -824,8 +824,8 @@ val STRONG_RESTR_SUM = store_thm (
 	[ (* goal 1.1.1 (of 2) *)
 	  ASM_REWRITE_TAC [] >> MATCH_MP_TAC SUM1 \\
 	  MATCH_MP_TAC RESTR \\
-	  REWRITE_TAC [REWRITE_RULE [ASSUME ``(u :'b Action) = tau``] 
-		       (ASSUME ``TRANS E u E''``)], 
+	  REWRITE_TAC [REWRITE_RULE [ASSUME ``(u :'b Action) = tau``]
+		       (ASSUME ``TRANS E u E''``)],
 	  (* goal 1.1.2 (of 2) *)
 	  ASM_REWRITE_TAC [] >> MATCH_MP_TAC SUM2 \\
 	  MATCH_MP_TAC RESTR \\
@@ -862,7 +862,7 @@ val STRONG_RESTR_SUM = store_thm (
 	  MATCH_MP_TAC RESTR \\
 	  EXISTS_TAC ``l: 'b Label`` >> ASM_REWRITE_TAC [] \\
 	  MATCH_MP_TAC SUM1 \\
-	  REWRITE_TAC [REWRITE_RULE [ASSUME ``(u :'b Action) = label l``] 
+	  REWRITE_TAC [REWRITE_RULE [ASSUME ``(u :'b Action) = label l``]
 		      (ASSUME ``TRANS E u E''``)] ],
 	(* goal 2.2 (of 2) *)
 	IMP_RES_TAC TRANS_RESTR >| (* 2 sub-goals here *)
@@ -937,7 +937,7 @@ val STRONG_RESTR_PR_LAB_NIL = store_thm (
  >> DISCH_TAC
  >> GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
- >> EXISTS_TAC ``\(x :('a, 'b) CCS) (y :('a, 'b) CCS). 
+ >> EXISTS_TAC ``\(x :('a, 'b) CCS) (y :('a, 'b) CCS).
 		    (?l' L' E'. ((l' IN L') \/ ((COMPL l') IN L')) /\
 				 (x = restr L' (prefix (label l') E')) /\
 				 (y = nil))``
@@ -979,9 +979,9 @@ val STRONG_RESTR_PREFIX_LABEL = store_thm (
 			   (prefix (label l) (restr L E)))``,
     REPEAT STRIP_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
- >> EXISTS_TAC 
+ >> EXISTS_TAC
        ``\x y. (x = y) \/
-	      (?l' L' E'. ~(l' IN L') /\ ~((COMPL l') IN L') /\ 
+	      (?l' L' E'. ~(l' IN L') /\ ~((COMPL l') IN L') /\
 			  (x = restr L' (prefix (label l') E')) /\
 			  (y = prefix (label l') (restr L' E')))``
  >> CONJ_TAC (* 2 sub-goals here *)
@@ -1009,8 +1009,8 @@ val STRONG_RESTR_PREFIX_LABEL = store_thm (
 	IMP_RES_TAC TRANS_RESTR >| (* 2 sub-goals here *)
 	[ (* goal 2.3.1 (of 2) *)
 	  IMP_RES_TAC TRANS_PREFIX \\
-	  CHECK_ASSUME_TAC 
-	    (REWRITE_RULE [ASSUME ``(u :'b Action) = tau``, Action_distinct] 
+	  CHECK_ASSUME_TAC
+	    (REWRITE_RULE [ASSUME ``(u :'b Action) = tau``, Action_distinct]
 			  (ASSUME ``(u :'b Action) = label l'``)),
 	  (* goal 2.3.2 (of 2) *)
 	  IMP_RES_TAC TRANS_PREFIX \\
@@ -1061,7 +1061,7 @@ val STRONG_RELAB_NIL = store_thm (
  *)
 val STRONG_RELAB_SUM = store_thm (
    "STRONG_RELAB_SUM",
-  ``!E E' rf. STRONG_EQUIV (relab (sum E E') rf) (sum (relab E rf) (relab E' rf))``,  
+  ``!E E' rf. STRONG_EQUIV (relab (sum E E') rf) (sum (relab E rf) (relab E' rf))``,
     REPEAT GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [PROPERTY_STAR]
  >> REPEAT STRIP_TAC (* 2 sub-goals *)
@@ -1093,8 +1093,8 @@ val STRONG_RELAB_PREFIX = store_thm (
 		      (prefix (relabel (RELAB labl) u) (relab E (RELAB labl)))``,
     REPEAT GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
- >> EXISTS_TAC 
-       ``\x y. (x = y) \/ (?u' E'. (x = relab (prefix u' E') (RELAB labl)) /\  
+ >> EXISTS_TAC
+       ``\x y. (x = y) \/ (?u' E'. (x = relab (prefix u' E') (RELAB labl)) /\
 				   (y = prefix (relabel (RELAB labl) u')
 					       (relab E' (RELAB labl))))``
  >> CONJ_TAC (* 2 sub-goals here *)
@@ -1166,7 +1166,7 @@ val STRONG_UNFOLDING = store_thm (
 	(* goal 2.4 (of 4) *)
 	EXISTS_TAC ``E2 :('a, 'b) CCS`` \\
 	ASM_REWRITE_TAC
-	 [REWRITE_RULE [ASSUME ``E' = CCS_Subst E'' (rec Y E'') Y``]  
+	 [REWRITE_RULE [ASSUME ``E' = CCS_Subst E'' (rec Y E'') Y``]
 		 (ASSUME ``TRANS E' u E2``), TRANS_REC_EQ] ] ]);
 
 (* Prove the theorem STRONG_PREF_REC_EQUIV:
@@ -1175,17 +1175,17 @@ val STRONG_UNFOLDING = store_thm (
 val STRONG_PREF_REC_EQUIV = store_thm (
    "STRONG_PREF_REC_EQUIV",
       ``!(u :'b Action) s v.
-	 STRONG_EQUIV  
-	 (prefix u (rec s (prefix v (prefix u (var s))))) 
+	 STRONG_EQUIV
+	 (prefix u (rec s (prefix v (prefix u (var s)))))
 	 (rec s (prefix u (prefix v (var s))))``,
     REPEAT GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
- >> EXISTS_TAC 
-     ``\x y. 
-	(?u' v' s'.  
-	  (x = prefix u' (rec s' (prefix v' (prefix u' (var s'))))) /\ 
-	  (y = rec s' (prefix u' (prefix v' (var s')))) \/ 
-	  (x = rec s' (prefix v' (prefix u' (var s')))) /\ 
+ >> EXISTS_TAC
+     ``\x y.
+	(?u' v' s'.
+	  (x = prefix u' (rec s' (prefix v' (prefix u' (var s'))))) /\
+	  (y = rec s' (prefix u' (prefix v' (var s')))) \/
+	  (x = rec s' (prefix v' (prefix u' (var s')))) /\
 	  (y = prefix v' (rec s' (prefix u' (prefix v' (var s'))))))``
  >> CONJ_TAC (* 2 sub-goals *)
  >| [ (* goal 1 (of 2) *)
@@ -1196,7 +1196,7 @@ val STRONG_PREF_REC_EQUIV = store_thm (
       BETA_TAC \\
       REPEAT STRIP_TAC >| (* 4 sub-goals *)
       [ (* goal 2.1 (of 4) *)
-	ASSUME_TAC (REWRITE_RULE 
+	ASSUME_TAC (REWRITE_RULE
 	       [ASSUME ``E = prefix u' (rec s' (prefix v' (prefix u' (var s'))))``]
 	       (ASSUME ``TRANS E u E1``)) \\
 	IMP_RES_TAC TRANS_PREFIX \\
@@ -1221,7 +1221,7 @@ val STRONG_PREF_REC_EQUIV = store_thm (
 	  (* goal 2.2.2 (of 2) *)
 	  take [`u`, `v'`, `s'`] \\
 	  ASM_REWRITE_TAC
-	    [REWRITE_RULE [ASSUME ``u': 'b Action = u``]  
+	    [REWRITE_RULE [ASSUME ``u': 'b Action = u``]
 	       (ASSUME ``E2 = prefix v' (rec s' (prefix u' (prefix v' (var s'))))``)] ],
 	(* goal 2.3 (of 4) *)
 	ASSUME_TAC (REWRITE_RULE
@@ -1265,7 +1265,7 @@ val STRONG_REC_ACT2 = store_thm (
 	 (?s' u'.
 	  (x = rec s' (prefix u' (prefix u' (var s')))) /\
 	  (y = rec s' (prefix u' (var s'))) \/
-	  (x = prefix u' (rec s' (prefix u' (prefix u' (var s'))))) /\ 
+	  (x = prefix u' (rec s' (prefix u' (prefix u' (var s'))))) /\
 	  (y = rec s' (prefix u' (var s'))))``
  >> CONJ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -1320,7 +1320,7 @@ val STRONG_REC_ACT2 = store_thm (
 	  ASM_REWRITE_TAC [] ],
 	(* goal 2.4 (of 4) *)
 	ASSUME_TAC (REWRITE_RULE [ASSUME ``E' = rec s' (prefix u' (var s'))``,
-				  TRANS_REC_EQ, CCS_Subst_def] 
+				  TRANS_REC_EQ, CCS_Subst_def]
 				 (ASSUME ``TRANS E' u E2``)) \\
 	IMP_RES_TAC TRANS_PREFIX \\
 	EXISTS_TAC ``rec s' (prefix u' (prefix u' (var s')))`` \\
@@ -1435,7 +1435,7 @@ val [SYNC_BASE, SYNC_INDUCT] =
 val ALL_SYNC_def = Define `
    (ALL_SYNC f 0 f' m = SYNC (PREF_ACT (f 0)) (PREF_PROC (f 0)) f' m) /\
    (ALL_SYNC f (SUC n) f' m =
-	 sum (ALL_SYNC f n f' m) 
+	 sum (ALL_SYNC f n f' m)
 	     (SYNC (PREF_ACT (f (SUC n))) (PREF_PROC (f (SUC n))) f' m)) `;
 
 val [ALL_SYNC_BASE, ALL_SYNC_INDUCT] =
@@ -1494,7 +1494,7 @@ val SIGMA_TRANS_THM_EQ = store_thm (
 	STRIP_TAC >| (* 2 sub-goals here *)
 	[ (* goal 2.1.1 (of 2) *)
 	  STRIP_ASSUME_TAC
-		(MATCH_MP (EQ_IMP_LR (ASSUME ``!f u E. TRANS (SIGMA f n) u E = 
+		(MATCH_MP (EQ_IMP_LR (ASSUME ``!f u E. TRANS (SIGMA f n) u E =
 						(?k. k <= n /\ TRANS (f k) u E)``))
 			  (ASSUME ``TRANS (SIGMA f n) u E``)) \\
 	  IMP_RES_TAC LESS_EQ_LESS_EQ_SUC \\
@@ -1532,7 +1532,7 @@ val SYNC_TRANS_THM_EQ = store_thm (
     Induct_on `m` (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       REPEAT GEN_TAC \\
-      REWRITE_TAC [LESS_EQ_0, SYNC_BASE] \\ 
+      REWRITE_TAC [LESS_EQ_0, SYNC_BASE] \\
       COND_CASES_TAC >| (* 2 sub-goals here *)
       [ (* goal 1.1 (of 2) *)
 	REWRITE_TAC [NIL_NO_TRANS] \\
@@ -1572,13 +1572,13 @@ val SYNC_TRANS_THM_EQ = store_thm (
 	    ASM_REWRITE_TAC [PREFIX] ],
 	  (* goal 1.2.2 (of 2) *)
 	  REWRITE_TAC [NIL_NO_TRANS] \\
-	  STRIP_TAC \\ 
+	  STRIP_TAC \\
 	  ASSUME_TAC
 	    (REWRITE_RULE [ASSUME ``j = (0 :num)``,
 			   ASSUME ``PREF_ACT ((f: num -> ('a, 'b) CCS) 0) = label L``]
 		(ASSUME ``PREF_ACT ((f: num -> ('a, 'b) CCS) j) = label (COMPL l)``)) \\
 	  IMP_RES_TAC Action_11 \\
-	  CHECK_ASSUME_TAC 
+	  CHECK_ASSUME_TAC
 		(REWRITE_RULE [ ASSUME ``L = COMPL (l :'b Label)``, COMPL_COMPL_LAB,
 				ASSUME ``L': 'b Label = l`` ]
 			(ASSUME ``~(L' = COMPL (L: 'b Label))``)) ] ],
@@ -1714,10 +1714,10 @@ val ALL_SYNC_TRANS_THM_EQ = store_thm (
 	 TRANS (ALL_SYNC f n f' m) u E =
 	 (?k k' l.
 	   k <= n /\ k' <= m /\
-	   (PREF_ACT (f k) = label l) /\ 
+	   (PREF_ACT (f k) = label l) /\
 	   (PREF_ACT (f' k') = label (COMPL l)) /\
 	   (u = tau) /\
-	   (E = par (PREF_PROC (f k)) (PREF_PROC (f' k'))))``, 
+	   (E = par (PREF_PROC (f k)) (PREF_PROC (f' k'))))``,
     Induct_on `n` (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       REPEAT GEN_TAC \\
@@ -1747,7 +1747,7 @@ val ALL_SYNC_TRANS_THM_EQ = store_thm (
 	[ (* goal 2.1.1 (of 2) *)
 	  STRIP_ASSUME_TAC
 	   (MATCH_MP
-	     (EQ_IMP_LR 
+	     (EQ_IMP_LR
 	       (ASSUME ``!m f f' u E.
 		      TRANS (ALL_SYNC f n f' m) u E =
 		      (?k k' l.
@@ -1756,7 +1756,7 @@ val ALL_SYNC_TRANS_THM_EQ = store_thm (
 			(PREF_ACT (f' k') = label (COMPL l)) /\
 			(u = tau) /\
 			(E = par (PREF_PROC (f k)) (PREF_PROC (f' k'))))``))
-	     (ASSUME ``TRANS (ALL_SYNC f n f' m) u E``)) \\  
+	     (ASSUME ``TRANS (ALL_SYNC f n f' m) u E``)) \\
 	  IMP_RES_TAC LESS_EQ_LESS_EQ_SUC \\
 	  take [`k`, `k'`, `l`] >> ASM_REWRITE_TAC [],
 	  (* goal 2.1.2 (of 2) *)
@@ -1792,7 +1792,7 @@ val ALL_SYNC_TRANS_THM_EQ = store_thm (
        k ≤ n ∧ k' ≤ m ∧ (PREF_ACT (f k) = label l) ∧
        (PREF_ACT (f' k') = label (COMPL l)) ∧ (u = τ) ∧
        (E = PREF_PROC (f k) || PREF_PROC (f' k')):
- *)  
+ *)
 val ALL_SYNC_TRANS_THM = save_thm (
    "ALL_SYNC_TRANS_THM",
     EQ_IMP_LR ALL_SYNC_TRANS_THM_EQ);
@@ -1832,7 +1832,7 @@ val STRONG_EXPANSION_LAW = store_thm (
 	      (sum
 	       (SIGMA (\i. prefix (PREF_ACT (f1 i))
 				  (par (PREF_PROC (f1 i)) (SIGMA f2 m2))) n1)
-	       (SIGMA (\j. prefix (PREF_ACT(f2 j))  
+	       (SIGMA (\j. prefix (PREF_ACT(f2 j))
 				  (par (SIGMA f1 n1) (PREF_PROC (f2 j)))) m2))
 	      (ALL_SYNC f1 n1 f2 m2)))``
  >> CONJ_TAC (* 2 sub-goals here *)
@@ -1866,15 +1866,15 @@ val STRONG_EXPANSION_LAW = store_thm (
 	  PURE_ONCE_REWRITE_TAC [SIGMA_TRANS_THM_EQ] \\
 	  BETA_TAC \\
 	  IMP_RES_TAC SIGMA_TRANS_THM \\
-	  EXISTS_TAC ``k: num`` \\ 
+	  EXISTS_TAC ``k: num`` \\
 	  STRIP_ASSUME_TAC
 	    (REWRITE_RULE [Is_Prefix_def]
-		(MATCH_MP (ASSUME ``!(i: num). i <= n1 ==> Is_Prefix (f1 i)``) 
+		(MATCH_MP (ASSUME ``!(i: num). i <= n1 ==> Is_Prefix (f1 i)``)
 			  (ASSUME ``(k: num) <= n1``))) \\
 	  ASSUME_TAC
 	    (REWRITE_RULE [ASSUME ``(f1: num -> ('a, 'b) CCS) k = prefix u' E''``]
 			  (ASSUME ``TRANS ((f1: num -> ('a, 'b) CCS) k) u E1'``)) \\
-	  IMP_RES_TAC TRANS_PREFIX \\ 
+	  IMP_RES_TAC TRANS_PREFIX \\
 	  ASM_REWRITE_TAC [PREF_ACT_def, PREF_PROC_def, PREFIX],
 	  (* goal 3.2 (of 3) *)
 	  MATCH_MP_TAC SUM1 \\
@@ -1882,7 +1882,7 @@ val STRONG_EXPANSION_LAW = store_thm (
 	  PURE_ONCE_REWRITE_TAC [SIGMA_TRANS_THM_EQ] \\
 	  BETA_TAC \\
 	  IMP_RES_TAC SIGMA_TRANS_THM \\
-	  EXISTS_TAC ``k: num`` \\ 
+	  EXISTS_TAC ``k: num`` \\
 	  STRIP_ASSUME_TAC
 	    (REWRITE_RULE [Is_Prefix_def]
 		(MATCH_MP (ASSUME ``!(j :num). j <= m2 ==> Is_Prefix (f2 j)``)
@@ -1918,7 +1918,7 @@ val STRONG_EXPANSION_LAW = store_thm (
 	ASM_REWRITE_TAC [] \\
 	ASSUME_TAC
 	 (REWRITE_RULE
-	  [ASSUME ``E' = sum (sum (SIGMA 
+	  [ASSUME ``E' = sum (sum (SIGMA
 				   (\i:num. prefix (PREF_ACT (f1 i))
 					      (par (PREF_PROC (f1 i)) (SIGMA f2 m2))) n1)
 				  (SIGMA
@@ -1928,11 +1928,11 @@ val STRONG_EXPANSION_LAW = store_thm (
 	  (ASSUME ``TRANS E' u E2``)) \\
 	IMP_RES_TAC TRANS_SUM >| (* 2 sub-goals here *)
 	[ (* goal 4.1 (of 2) *)
-	  IMP_RES_TAC 
+	  IMP_RES_TAC
 	    (SPECL [``SIGMA (\i:num. prefix (PREF_ACT (f1 i))
-				       (par (PREF_PROC (f1 i)) (SIGMA f2 m2))) n1``, 
+				       (par (PREF_PROC (f1 i)) (SIGMA f2 m2))) n1``,
 		    ``SIGMA (\j:num. prefix (PREF_ACT (f2 j))
-				       (par (SIGMA f1 n1) (PREF_PROC (f2 j)))) m2``, 
+				       (par (SIGMA f1 n1) (PREF_PROC (f2 j)))) m2``,
 		    ``u: 'b Action``,
 		    ``E2 :('a, 'b) CCS``] TRANS_SUM) >| (* 2 subgoals *)
 	  [ (* goal 4.1.1 (of 2) *)
@@ -1945,7 +1945,7 @@ val STRONG_EXPANSION_LAW = store_thm (
 	    IMP_RES_TAC TRANS_PREFIX \\
 	    STRIP_ASSUME_TAC
 	     (REWRITE_RULE [Is_Prefix_def]
-		(MATCH_MP (ASSUME ``!(i: num). i <= n1 ==> Is_Prefix (f1 i)``) 
+		(MATCH_MP (ASSUME ``!(i: num). i <= n1 ==> Is_Prefix (f1 i)``)
 			  (ASSUME ``(k: num) <= n1``))) \\
 	    ASM_REWRITE_TAC [] \\
 	    MATCH_MP_TAC PAR1 \\

@@ -206,9 +206,9 @@ val OBS_CONGR_WEAK_TRANS = store_thm ((* NEW *)
                /\        /\       /\            ||
                |         ||       ||            ||
               !u         u        u             \/
-               |         ||       ||            
+               |         ||       ||
                E   ~~c   E'  ~~c  E''   ==>   E ~~c E'' (goal)
-            ||  ||     |  ||      |             
+            ||  ||     |  ||      |
             ||   u     u  ||      |             /\
             u   ||     |   u     !u             ||
             ||  \/     \/ ||      |             ||
@@ -534,7 +534,7 @@ val OBS_CONGR_SUBST_RESTR = store_thm (
       [ (* goal 2.1 (of 2) *)
         RES_TAC \\
         ASSUME_TAC
-          (MATCH_MP WEAK_RESTR_tau 
+          (MATCH_MP WEAK_RESTR_tau
 		    (REWRITE_RULE [ASSUME ``(u :'b Action) = tau``]
 				  (ASSUME ``WEAK_TRANS E u E1``))) \\
         EXISTS_TAC ``restr (L :'b Label set) E1`` \\

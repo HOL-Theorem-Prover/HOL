@@ -30,7 +30,7 @@ fun charset_compl (u1,u2,u3,u4) : charset =
  let open Word64
  in (notb u1, notb u2, notb u3, notb u4)
  end;
- 
+
 val charset_full : charset = charset_compl charset_empty;
 
 fun charset_union (u1,u2,u3,u4) (v1,v2,v3,v4) : charset =
