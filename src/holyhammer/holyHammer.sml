@@ -32,22 +32,21 @@ fun clean_cache () = dict_cache := dempty (list_compare String.compare)
  ----------------------------------------------------------------------------*)
 
 datatype prover = Eprover | Z3
-
 fun name_of atp = case atp of
     Eprover => "eprover"
   | Z3 => "z3"
 
 datatype predictor = KNN | Mepo
-
-val timeout_glob = ref 5
 val predictor_glob = ref (thmknn_ext)
-
-fun set_minimization b = minimize_flag := b
-fun set_timeout n = timeout_glob := n
 fun set_predictor pred = case pred of
     KNN  => predictor_glob := thmknn_ext
   | Mepo => predictor_glob := thmmepo_ext
-   
+
+val timeout_glob = ref 5
+fun set_timeout n = timeout_glob := n
+
+fun set_minimization b = minimize_flag := b
+
 (*---------------------------------------------------------------------------
    Directories
  ----------------------------------------------------------------------------*)
@@ -55,7 +54,6 @@ fun set_predictor pred = case pred of
 val hh_dir = HOLDIR ^ "/src/holyhammer"
 val hh_bin_dir = HOLDIR ^ "/src/holyhammer/hh"
 val provers_dir = hh_dir ^ "/provers"
-val scripts_dir = hh_dir ^ "/scripts"
 fun thy_dir_of atp = hh_dir ^ "/theories" ^ "_" ^ name_of atp
 
 fun prover_files atp = 
@@ -66,7 +64,6 @@ fun out_of_prover atp =
 
 fun status_of_prover atp =
   provers_dir ^ "/" ^ name_of atp ^ "_files" ^ "/" ^ name_of atp ^ "_status"
-
 
 (* ----------------------------------------------------------------------
    Predicting theorems

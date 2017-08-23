@@ -70,13 +70,13 @@ fun init_prev () =
     val _ = succ_cthy_dict := dempty String.compare
     val _ = succ_glob_dict := dnew String.compare succratel
     val _ = debug ("Reading success rates: " ^ 
-                   int_to_string (dlength succ_glob_dict))
+                   int_to_string (dlength (!succ_glob_dict)))
     val (stacfea,t) = add_time import_feav thyl
     val _ = mdict_glob := dempty String.compare
     val _ = debug ("Reading feature vectors: " ^ Real.toString t ^ " " ^
                    int_to_string (length stacfea));
     val _ = app add_thy_mdict thyl
-    val _ = debug ("Reading theorems: " ^ int_to_string (dlength (!mdict)))
+    val _ = debug ("Reading theorems: " ^ int_to_string (dlength (!mdict_glob)))
   in
     hide init_error_file QUse.use (tactictoe_dir ^ "/src/infix_file.sml");
     hhs_badstacl := [];
@@ -207,46 +207,7 @@ fun select_thmfeav goalfea =
   in
     (thmsymweight,feav1)
   end
-
-(* small holyhammer *)
-fun add_thy_dict dict thy =
-  let fun f (name,thm) =
-    dict := dadd (thy ^ "Theory." ^ name) (fea_of_goal (dest_thm thm)) (!dict)
-  in
-    app f (DB.thms thy)
-  end
-
-fun init_all () =
-  let 
-    val dict = ref (dempty String.compare)
-    val thyl = current_theory () :: ancestry (current_theory ())
-  in
-    app (add_thy_dict dict) thyl;
-    !dict
-  end
-
-fun predict_ext n goal = 
-  let 
-    val goalfea = fea_of_goal goal
-    val thmfeav = dlist (init_all ())
-    val thmfeavdep = 
-      (mapfilter (fn (a,b) => (a, b, hhs_dep_of a))) thmfeav
-  in
-    (thmknn_ext n thmfeavdep) goalfea
-  end
-
-fun metis_n n goal =
-  let 
-    val l = predict_thm n goal
-    val l1 = map thm_of_string l
-  in
-    METIS_TAC l1 goal
-  end
-
-(* make translate function *)
-
-(* call external prover function *)
-  
+ 
 fun select_stacfeav goalfea =
   let 
     val stacfeav_org = dlist (!hhs_stacfea)
