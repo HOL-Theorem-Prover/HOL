@@ -1569,6 +1569,6 @@ val STRONG_IMP_WEAK_EQUIV = store_thm (
  >> ASM_REWRITE_TAC []);
 
 val _ = export_theory ();
-val _ = DB.html_theory "WeakEQ";
+val _ = Hol_pp.html_theory "WeakEQ";
 
 (* last updated: Jun 18, 2017 *)

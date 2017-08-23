@@ -41,6 +41,21 @@ sig
    -> ppstream
    -> unit
 
+ val pp_thydata
+   : {theory      : string*Arbnum.num*Arbnum.num,
+      parents     : (string*Arbnum.num*Arbnum.num) list,
+      types       : (string*int) list,
+      constants   : (string*hol_type) list,
+      axioms      : (string * thm) list,
+      definitions : (string * thm) list,
+      theorems    : (string * thm) list,
+      struct_ps   : (ppstream -> unit) option list,
+      mldeps      : string list,
+      thydata     : Term.term list *
+                    (string,(Term.term -> string) -> string)Binarymap.dict}
+   -> ppstream
+   -> unit
+
  val temp_binding : string -> string
  val is_temp_binding : string -> bool
  val dest_temp_binding : string -> string

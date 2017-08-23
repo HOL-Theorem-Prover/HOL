@@ -397,6 +397,6 @@ val TAU3_EQUIV = save_thm ("TAU3_EQUIV",
     OBS_CONGR_IMP_WEAK_EQUIV_RULE TAU3);
 
 val _ = export_theory ();
-val _ = DB.html_theory "ObsCongrLaws";
+val _ = Hol_pp.html_theory "ObsCongrLaws";
 
 (* last updated: Jun 20, 2017 *)

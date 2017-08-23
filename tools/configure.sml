@@ -377,6 +377,7 @@ val _ =
     compile [] "parse_glob.sml";
     compile [] "internal_functions.sig";
     compile [] "internal_functions.sml";
+    compile [] "Holmake_tools_dtype.sml";
     compile [] "Holmake_tools.sig";
     compile [] "Holmake_tools.sml";
     compile [] "Holmake_types.sig";

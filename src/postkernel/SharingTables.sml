@@ -60,6 +60,23 @@ in
   out "end;"; nl()
 end
 
+fun theoryout_idtable pps (idtable : idtable) = let
+  val out = PP.add_string pps
+  fun nl() = PP.add_newline pps
+  val idlist = List.rev (#idlist idtable)
+  fun print_id {Thy, Other} = out (Lib.mlquote Thy^ " " ^ Lib.mlquote Other)
+  fun print_ids [] = ()
+    | print_ids [id] = print_id id
+    | print_ids (id::ids) = (print_id id; out ","; PP.add_break pps (1,0);
+                             print_ids ids)
+in
+  out "[";
+  PP.begin_block pps PP.INCONSISTENT 0;
+  print_ids idlist;
+  PP.end_block pps;
+  out "]"
+end
+
 (* ----------------------------------------------------------------------
     Types
    ---------------------------------------------------------------------- *)
@@ -151,6 +168,28 @@ in
   PP.end_block pps;
   out "]"; nl(); out "end"; nl()
 end
+
+fun theoryout_typetable pps (tytable : typetable) = let
+  val out = PP.add_string pps
+  fun nl() = PP.add_newline pps
+  fun output_shtype shty =
+      case shty of
+        TYV s => out ("TYV "^ Lib.mlquote s)
+      | TYOP args =>
+        out ("TYOP "^ String.concatWith " " (map Int.toString args))
+  fun output_shtypes [] = ()
+    | output_shtypes [x] = output_shtype x
+    | output_shtypes (x::xs) = (output_shtype x; out ",";
+                                PP.add_break pps (1,0);
+                                output_shtypes xs)
+in
+  out "[";
+  PP.begin_block pps PP.INCONSISTENT 0;
+  output_shtypes (List.rev (#tylist tytable));
+  PP.end_block pps;
+  out "]"
+end
+
 
 (* ----------------------------------------------------------------------
     Terms
@@ -279,13 +318,28 @@ in
   out "end"; nl()
 end;
 
-
-(* ----------------------------------------------------------------------
-    Theorems
-   ---------------------------------------------------------------------- *)
-
-
-
-
-
+fun theoryout_termtable pps (tmtable: termtable) = let
+  val out = PP.add_string pps
+  fun nl() = PP.add_newline pps
+  fun its x = Int.toString x
+  fun ipair_string (x,y) = its x ^ " " ^ its y
+  fun output_shtm shtm =
+      case shtm of
+        TMV (s, tyn) => out ("TMV " ^ Lib.mlquote s ^ " " ^ its tyn)
+      | TMC p        => out ("TMC " ^ ipair_string p)
+      | TMAp p       => out ("TMAp " ^ ipair_string p)
+      | TMAbs p      => out ("TMAbs " ^ ipair_string p)
+  fun output_shtms [] = ()
+    | output_shtms [t] = output_shtm t
+    | output_shtms (t::ts) = (output_shtm t; out (",");
+                              PP.add_break pps (1, 0);
+                              output_shtms ts)
+in
+  out ("[");
+  PP.begin_block pps PP.INCONSISTENT 0;
+  output_shtms (List.rev (#termlist tmtable));
+  PP.end_block pps;
+  out ("]")
 end;
+
+end; (* struct *)

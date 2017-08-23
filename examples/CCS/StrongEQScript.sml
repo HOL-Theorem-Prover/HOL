@@ -642,6 +642,6 @@ val STRONG_BISIM_UPTO = new_definition ((* NEW *)
 		 ?E1. TRANS E u E1 /\ (STRONG_EQUIV O Bsm O STRONG_EQUIV) E1 E2)))``);
 
 val _ = export_theory ();
-val _ = DB.html_theory "StrongEQ";
+val _ = Hol_pp.html_theory "StrongEQ";
 
 (* last updated: Jun 20, 2017 *)

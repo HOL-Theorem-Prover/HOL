@@ -594,6 +594,6 @@ val STRONG_IMP_OBS_CONGR = store_thm (
       Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC [] ]);
 
 val _ = export_theory ();
-val _ = DB.html_theory "ObsCongr";
+val _ = Hol_pp.html_theory "ObsCongr";
 
 (* last updated: Jun 20, 2017 *)

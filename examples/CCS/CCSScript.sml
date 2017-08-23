@@ -794,6 +794,6 @@ val (WEAK_TRACE_rules, WEAK_TRACE_ind, WEAK_TRACE_cases) = Hol_reln `
 	      WEAK_TRACE E2 l2 E3 ==> WEAK_TRACE E1 (l1 ++ l2) E3)`;
 
 val _ = export_theory ();
-val _ = DB.html_theory "CCS";
+val _ = Hol_pp.html_theory "CCS";
 
 (* last updated: May 14, 2017 *)

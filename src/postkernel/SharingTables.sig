@@ -31,6 +31,7 @@ sig
                          int * (idtable * typetable * termtable)
 
   val output_idtable : Portable.ppstream -> string -> idtable -> unit
+  val theoryout_idtable    : Portable.ppstream -> idtable -> unit
 
   val build_type_vector : id Vector.vector -> shared_type list ->
                           Type.hol_type Vector.vector
@@ -38,7 +39,7 @@ sig
   val output_typetable : Portable.ppstream ->
                          {idtable_nm : string, tytable_nm : string} ->
                          typetable -> unit
-
+  val theoryout_typetable    : Portable.ppstream -> typetable -> unit
 
   val build_term_vector : id Vector.vector -> Type.hol_type Vector.vector ->
                           shared_term list -> Term.term Vector.vector
@@ -47,5 +48,7 @@ sig
                          {idtable_nm : string, tytable_nm : string,
                           termtable_nm : string} ->
                          termtable -> unit
+
+  val theoryout_termtable    : Portable.ppstream -> termtable -> unit
 
 end

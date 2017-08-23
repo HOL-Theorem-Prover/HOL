@@ -63,6 +63,8 @@ fun polish0 tag =
     String.substring(tag,0,String.size tag - 10)
   else if String.isSuffix "Theory.sml" tag then
     String.substring(tag,0,String.size tag - 10)
+  else if String.isSuffix "Theory.dat" tag then
+    String.substring(tag,0,String.size tag - 10)
   else tag
 
 fun truncate width s =
@@ -92,6 +94,8 @@ val used_cheat_string = "(used CHEAT)"
 
 fun delsml_sfx s =
   if String.isSuffix ".sml" s orelse String.isSuffix ".sig" s then
+    String.substring(s, 0, size s - 4)
+  else if String.isSuffix "Theory.dat" s then
     String.substring(s, 0, size s - 4)
   else s
 

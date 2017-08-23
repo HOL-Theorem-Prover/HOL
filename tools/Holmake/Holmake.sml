@@ -370,6 +370,7 @@ fun get_implicit_dependencies incinfo (f: File) : File list = let
   fun requires_exec (SML (Theory _)) = true
     | requires_exec (SIG (Theory _)) = true
     | requires_exec (ART (RawArticle _)) = true
+    | requires_exec (DAT _) = true
     | requires_exec _                = false
 in
   if requires_exec f then let
@@ -525,6 +526,7 @@ in
           val bic = case toFile target_s of
                         SML (Theory s) => BIC_BuildScript s
                       | SIG (Theory s) => BIC_BuildScript s
+                      | DAT s => BIC_BuildScript s
                       | _ => BIC_Compile
         in
             add_node {target = target_s, seqnum = 0, phony = false,
