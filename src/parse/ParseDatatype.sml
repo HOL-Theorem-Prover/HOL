@@ -142,6 +142,7 @@ in
           in
             (adv, BT_Ident idstr, locn')
           end
+        else if String.isPrefix "=>" s then consume_n 2 (qb,s,locn)
         else if cmem c0 "()[]" then consume_n 1 (qb,s,locn)
         else if String.isPrefix "<|" s then consume_n 2 (qb,s,locn)
         else if String.isPrefix "|>" s then consume_n 2 (qb,s,locn)
@@ -200,9 +201,27 @@ in
   recurse [i1]
 end
 
+fun termsepby1 s term p qb =
+  let
+    val res1 = p qb
+    fun recurse acc =
+      case pdtok_of qb of
+          (adv, base_tokens.BT_Ident t, locn) =>
+            if t = s then (adv(); term_or_continue acc)
+            else List.rev acc
+        | _ => List.rev acc
+    and term_or_continue acc =
+      case pdtok_of qb of
+          (_, tok, _) => if tok = term then List.rev acc
+                         else recurse (p qb :: acc)
+  in
+    recurse [res1]
+  end
+
 fun parse_record_defn G qb = let
   val () = scan "<|" qb
-  val result = sepby1 ";" (parse_record_fld G) qb
+  val result =
+      termsepby1 ";" (base_tokens.BT_Ident "|>") (parse_record_fld G) qb
   val () = scan "|>" qb
 in
   result
@@ -324,27 +343,11 @@ end
 fun hide_tynames q G0 =
   List.foldl (uncurry type_grammar.hide_tyop) G0 (extract_tynames q)
 
-fun termsepby1 s p qb =
-  let
-    val res1 = p qb
-    fun recurse acc =
-      case qbuf.current qb of
-          (base_tokens.BT_Ident t, locn) =>
-            if t = s then (qbuf.advance qb; eof_or_continue acc)
-            else List.rev acc
-        | _ => List.rev acc
-    and eof_or_continue acc =
-      case qbuf.current qb of
-          (base_tokens.BT_EOI, _) => List.rev acc
-        | _ => recurse (p qb :: acc)
-  in
-    recurse [res1]
-  end
 
 fun core_parse G0 phrase_p q = let
   val G = hide_tynames q G0
   val qb = qbuf.new_buffer q
-  val result = termsepby1 ";" (parse_g G phrase_p) qb
+  val result = termsepby1 ";" base_tokens.BT_EOI (parse_g G phrase_p) qb
 in
   case qbuf.current qb of
       (base_tokens.BT_EOI,_) => result

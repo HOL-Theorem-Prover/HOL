@@ -15,10 +15,10 @@ sig
 (*---------------------------------------------------------------------------
   Grammar we're parsing is:
 
-      G            ::=  id "=" <form> (";" id "=" <form>)*
+      G            ::=  id "=" <form> (";" id "=" <form>)* ";"?
       form         ::=  <phrase> ( "|" <phrase> ) *  |  <record_defn>
       phrase       ::=  id  | id "of" <ptype> ( "=>" <ptype> ) *
-      record_defn  ::=  "<|"  <idtype_pairs> "|>"
+      record_defn  ::=  "<|"  <idtype_pairs> ";"? "|>"
       idtype_pairs ::=  id ":" <type> | id : <type> ";" <idtype_pairs>
       ptype        ::=  <type> | "(" <type> ")"
 
@@ -32,7 +32,7 @@ val hparse : type_grammar.grammar -> Type.hol_type Portable.quotation ->
 
 (* The grammar for hparse is:
 
-   G        ::= id "=" <form> (";" id "=" <form>)*
+   G        ::= id "=" <form> (";" id "=" <form>)* ";"?
    form     ::= "|"? <phrase> ( "|" <phrase> )* | <record_defn>
    phrase   ::= id <typarg>*
    typarg   ::= atomic-typ | "(" <type> ")"
