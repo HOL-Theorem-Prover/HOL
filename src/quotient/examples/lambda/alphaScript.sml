@@ -469,8 +469,7 @@ val ALPHA1_term_pos = store_thm
                   REWRITE_TAC[]
                   THEN REPEAT STRIP_TAC
                   THEN FIRST (map (fn th => ASM_REWRITE_TAC[]
-                                            THEN (MATCH_MP_TAC th
-                                                  handle _ => ALL_TAC)
+                                            THEN TRY (MATCH_MP_TAC th)
                                             THEN ASM_REWRITE_TAC[th]
                                             THEN NO_TAC)
                                   (CONJUNCTS ALPHA1_rules_sat))
