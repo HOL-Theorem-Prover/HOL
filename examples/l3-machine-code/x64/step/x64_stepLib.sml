@@ -201,7 +201,8 @@ val erase_eflags =
 (* ------------------------------------------------------------------------ *)
 
 val ea_Zrm_rwt =
-   EV [ea_Zrm_def, ea_index_def, ea_base_def, wordsTheory.WORD_ADD_0] []
+   EV [ea_Zrm_def, mem_addr_def, ea_index_def, ea_base_def,
+       wordsTheory.WORD_ADD_0] []
       [[`rm` |-> ``Zr r``],
        [`rm` |-> ``Zm (NONE, ZnoBase, d)``],
        [`rm` |-> ``Zm (NONE, ZripBase, d)``],
@@ -253,7 +254,7 @@ val ea_Zimm_rm_rwt =
        [`irm` |-> ``Zrm (Zm (SOME (scale, inx), ZnoBase, d))``],
        [`irm` |-> ``Zrm (Zm (SOME (scale, inx), ZripBase, d))``],
        [`irm` |-> ``Zrm (Zm (SOME (scale, inx), ZregBase r, d))``]]
-      ``ea_Zimm_rm (size, irm)``
+      ``ea_Zimm_rm (irm)``
 
 (* ------------------------------------------------------------------------ *)
 

@@ -1,6 +1,7 @@
 open HolKernel boolLib bossLib lcsymtacs finite_mapSyntax
 open ASCIInumbersTheory simpleSexpTheory
-open simpleSexpPEGTheory pegTheory pegexecTheory
+open pegTheory pegexecTheory;
+open simpleSexpPEGTheory
 
 val _ = new_theory"simpleSexpParse"
 
@@ -483,7 +484,7 @@ val peg_eval_sexp_sexp0 = Q.store_thm("peg_eval_sexp_sexp0",
         ignoreR_def,ignoreL_def,peg_eval_seq_SOME,PULL_EXISTS,peg_eval_rpt]
   \\ qspec_then`str++rst`(mp_tac o Q.GEN`a`)
        (Q.ISPECL[`isSpace`,`sexpPEG`](Q.GENL[`P`,`G`]peg_eval_list_tok_nil))
-  \\ disch_then(qspec_then`ARB`mp_tac)
+  \\ disch_then(qspec_then`K arb_sexp`mp_tac)
   \\ impl_tac
   >- (
     spose_not_then strip_assume_tac
@@ -493,7 +494,7 @@ val peg_eval_sexp_sexp0 = Q.store_thm("peg_eval_sexp_sexp0",
   \\ first_assum(part_match_exists_tac(hd o strip_conj) o concl) \\ simp[]
   \\ qspec_then`rst`(mp_tac o Q.GEN`a`)
        (Q.ISPECL[`isSpace`,`sexpPEG`](Q.GENL[`P`,`G`]peg_eval_list_tok_nil))
-  \\ disch_then(qspec_then`ARB`mp_tac)
+  \\ disch_then(qspec_then`K arb_sexp`mp_tac)
   \\ impl_tac >- (CCONTR_TAC \\ fs[])
   \\ strip_tac
   \\ first_assum(part_match_exists_tac(hd o strip_conj) o concl) \\ simp[]);

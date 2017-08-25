@@ -83,7 +83,9 @@ val gt_CONV = ref Conv.NO_CONV
 val ge_CONV = ref Conv.NO_CONV
 fun native cnv1 s =
   let
-    val cnv2 = Rewrite.PURE_REWRITE_CONV [DB.fetch "machine_ieee" ("fp64_" ^  s)]
+    val cnv2 =
+      Conv.QCHANGED_CONV
+        (Rewrite.PURE_REWRITE_CONV [DB.fetch "machine_ieee" ("fp64_" ^  s)])
   in
     fn tm => (if !native_eval then !cnv1 else cnv2) tm
   end

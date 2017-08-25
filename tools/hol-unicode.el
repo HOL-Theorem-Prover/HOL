@@ -87,9 +87,12 @@
 (define-key hol-unicode-subscript-map "r" "ᵣ")
 (define-key hol-unicode-subscript-map "t" "ₜ")
 
-(define-key hol-unicode-superscript-map "1" "¹")
-(define-key hol-unicode-superscript-map "2" "²")
-(define-key hol-unicode-superscript-map "3" "³")
+(define-key hol-unicode-superscript-map "1"
+  (lambda () (interactive) (insert "¹")))
+(define-key hol-unicode-superscript-map "2"
+  (lambda () (interactive) (insert "²")))
+(define-key hol-unicode-superscript-map "3"
+  (lambda () (interactive) (insert "³")))
 (define-key hol-unicode-superscript-map "4" "⁴")
 (define-key hol-unicode-superscript-map "5" "⁵")
 (define-key hol-unicode-superscript-map "6" "⁶")

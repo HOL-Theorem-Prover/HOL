@@ -155,6 +155,12 @@ fun eq (Var{Name=Name,Ty=Ty,...})                  (Var{Name=Name',Ty=Ty',...}) 
                   = eq Ptm Ptm'
   | eq  _                                           _                                             = false
 
+fun isolate_var ptv =
+  case ptv of
+      Constrained{Ptm,...} => isolate_var Ptm
+    | Var _ => ptv
+    | _ => raise ERR "ptfvs" "Mal-formed abstraction"
+
 fun ptfvs pt =
     case pt of
         Var _ => [pt]
@@ -169,7 +175,7 @@ fun ptfvs pt =
                 op_union eq (ptfvs Rator) (ptfvs r)
             | _ => op_union eq (ptfvs Rator) (ptfvs r)
         end
-      | Abs{Bvar,Body,...} => op_set_diff eq (ptfvs Body) [Bvar]
+      | Abs{Bvar,Body,...} => op_set_diff eq (ptfvs Body) [isolate_var Bvar]
       | Constrained{Ptm,...} => ptfvs Ptm
       | _ => []
 

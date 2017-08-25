@@ -51,8 +51,7 @@ signature Parse = sig
   (* Parsing terms *)
 
   val post_process_term: (term -> term) ref
-  val add_absyn_postprocessor :
-      (string * term_grammar.absyn_postprocessor) -> unit
+  val add_absyn_postprocessor : string -> unit
   val temp_add_absyn_postprocessor :
       (string * term_grammar.absyn_postprocessor) -> unit
   val temp_remove_absyn_postprocessor :
@@ -252,6 +251,9 @@ signature Parse = sig
   val BeginFinalBlock  : block_info -> pp_element
   val EndInitialBlock  : block_info -> pp_element
   val PPBlock          : pp_element list * block_info -> pp_element
+  val ListForm         : {separator:pp_element list, cons : string,
+                          nilstr : string, block_info : block_info} ->
+                         pp_element
 
   val OnlyIfNecessary  : ParenStyle
   val ParoundName      : ParenStyle

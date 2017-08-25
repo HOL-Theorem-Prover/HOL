@@ -65,16 +65,21 @@ val valid_sexp_def = Define`
   (valid_sexp s ⇔ T)`;
 val _ = export_rewrites["valid_first_symchar_def","valid_symchar_def","valid_symbol_def","valid_sexp_def"];
 
+val arb_sexp_def = Define`arb_sexp = SX_NUM 0`;
+
 val destSXNUM_def = Define`
-  destSXNUM (SX_NUM n) = n
+  destSXNUM (SX_NUM n) = n ∧
+  destSXNUM _ = 0
 `;
 
 val destSXSYM_def = Define`
-  destSXSYM (SX_SYM s) = s
+  destSXSYM (SX_SYM s) = s ∧
+  destSXSYM _ = ""
 `;
 
 val destSXCONS_def = Define`
-  destSXCONS (SX_CONS a d) = (a,d)
+  destSXCONS (SX_CONS a d) = (a,d) ∧
+  destSXCONS _ = (arb_sexp, arb_sexp)
 `;
 
 val strip_sxcons_def = Define`
@@ -337,7 +342,7 @@ val ptree_sexp_def = Define`
          do x <- ptree_sexpsym s; return (SX_SYM x) od ++
          do x <- ptree_sexpnum s; return (SX_NUM x) od ++
          do x <- ptree_sexpstr s; return (SX_STR x) od
-     | [Lf (TK#"'",_) ;w] => ptree_WSsexp w 
+     | [Lf (TK#"'",_) ;w] => ptree_WSsexp w
      | [Lf (TK#"(",_) ; s; g; Lf (TK#")",_) ] =>
          do
            ptree_grabWS g;

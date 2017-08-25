@@ -15,4 +15,20 @@ sig
                   (term_pp_types.printing_info,'a) smpp.t
   val get_gspec : (term_pp_types.printing_info,bool) smpp.t
 
+  val decdepth : int -> int
+  val pp_dest_abs : term_grammar.grammar -> term -> term * term
+  val pp_is_abs : term_grammar.grammar -> term -> bool
+
+  datatype bvar = datatype term_pp_utils_dtype.bvar
+  val bv2term : bvar -> term
+
+  val dest_vstruct :
+      term_grammar.grammar ->
+      {binder : string option, restrictor : string option} ->
+      term -> bvar * term
+  val strip_vstructs :
+      term_grammar.grammar ->
+      {binder : string option, restrictor : string option} ->
+      term -> bvar list * term
+
 end

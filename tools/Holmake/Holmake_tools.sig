@@ -1,28 +1,10 @@
 signature Holmake_tools =
 sig
 
-  datatype CodeType =
-           Theory of string
-         | Script of string
-         | Other of string
-
-  datatype ArticleType =
-           RawArticle of string
-         | ProcessedArticle of string
-
-  datatype File =
-           SML of CodeType
-         | SIG of CodeType
-         | UO of CodeType
-         | UI of CodeType
-         | ART of ArticleType
-         | Unhandled of string
-
-  (* file lists are dependencies *)
-  datatype buildcmds = Compile of File list
-                     | BuildScript of string * File list
-                     | BuildArticle of string * File list
-                     | ProcessArticle of string
+  datatype CodeType = datatype Holmake_tools_dtype.CodeType
+  datatype ArticleType = datatype Holmake_tools_dtype.ArticleType
+  datatype File = datatype Holmake_tools_dtype.File
+  datatype buildcmds = datatype Holmake_tools_dtype.buildcmds
 
   (* simple list things *)
   val member : ''a -> ''a list -> bool

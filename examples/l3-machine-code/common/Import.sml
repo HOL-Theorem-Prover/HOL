@@ -379,6 +379,10 @@ end
 (* Record destructor *)
 
 fun flag s tm = Term.mk_comb (mk_ieee_const ("flags_" ^ s), tm)
+val ieee_underflow_before = ref false
+fun underflow () =
+  "Underflow_" ^ (if !ieee_underflow_before then "Before" else "After") ^
+  "Rounding"
 
 fun Dest (f, ty, tm) =
   case f of
@@ -386,7 +390,7 @@ fun Dest (f, ty, tm) =
    | "InvalidOp" => flag "InvalidOp" tm
    | "Overflow" => flag "Overflow" tm
    | "Precision" => flag "Precision" tm
-   | "Underflow" => flag "Underflow" tm
+   | "Underflow" => flag (underflow()) tm
    | _ => Call (typeName (Term.type_of tm) ^ "_" ^ f, ty, tm)
 
 (* Record update *)
@@ -406,7 +410,8 @@ fun Rupd (f, tm) =
                   | "InvalidOp" => mk_ieee_const name
                   | "Overflow" => mk_ieee_const name
                   | "Precision" => mk_ieee_const name
-                  | "Underflow" => mk_ieee_const name
+                  | "Underflow" =>
+                      mk_ieee_const ("flags_" ^ underflow() ^ "_fupd")
                   | _ => mk_local_const (name, typ)
       val (x, d) = smart_dest_pair tm
    in

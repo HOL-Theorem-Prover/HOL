@@ -63,6 +63,7 @@ sig
    val float_sqrt_tm: term
    val float_round_tm: term
    val float_round_to_integral_tm: term
+   val float_round_with_flags_tm: term
    val float_sign_tm: term
    val float_significand_tm: term
    val float_some_qnan_tm: term
@@ -131,6 +132,8 @@ sig
    val dest_float_plus_zero: term -> term
    val dest_float_round: term -> term * term * term * hol_type * hol_type
    val dest_float_round_to_integral: term -> term * term
+   val dest_float_round_with_flags:
+         term -> term * term * term * hol_type * hol_type
    val dest_float_sign: term -> term
    val dest_float_significand: term -> term
    val dest_float_some_qnan: term -> term
@@ -193,6 +196,7 @@ sig
    val is_float_plus_zero: term -> bool
    val is_float_round: term -> bool
    val is_float_round_to_integral: term -> bool
+   val is_float_round_with_flags: term -> bool
    val is_float_sign: term -> bool
    val is_float_significand: term -> bool
    val is_float_some_qnan: term -> bool
@@ -256,6 +260,8 @@ sig
    val mk_float_plus_zero: term -> term
    val mk_float_round: term * term * term * hol_type * hol_type -> term
    val mk_float_round_to_integral: term * term -> term
+   val mk_float_round_with_flags:
+         term * term * term * hol_type * hol_type -> term
    val mk_float_sign: term -> term
    val mk_float_significand: term -> term
    val mk_float_some_qnan: term -> term

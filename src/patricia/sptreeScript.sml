@@ -411,6 +411,58 @@ val FINITE_domain = store_thm(
   ``FINITE (domain t)``,
   Induct_on `t` >> simp[]);
 
+val DIV2 = DIVISION |> Q.SPEC ‘2’ |> REWRITE_RULE [DECIDE “0 < 2”]
+
+val even_lem = Q.prove(
+  ‘EVEN k /\ k <> 0 ==> (2 * ((k - 1) DIV 2) + 2 = k)’,
+  qabbrev_tac ‘k0 = k - 1’  >>
+  strip_tac >> ‘k = k0 + 1’ by simp[Abbr‘k0’] >>
+  pop_assum SUBST_ALL_TAC >> qunabbrev_tac ‘k0’ >>
+  fs[EVEN_ADD] >>
+  assume_tac (Q.SPEC ‘k0’ DIV2) >>
+  map_every qabbrev_tac [‘q = k0 DIV 2’, ‘r = k0 MOD 2’] >>
+  markerLib.RM_ALL_ABBREVS_TAC >>
+  fs[EVEN_ADD, EVEN_MULT] >>
+  ‘(r = 0) \/ (r = 1)’ by simp[] >> fs[])
+
+val odd_lem = Q.prove(
+  ‘~EVEN k /\ k <> 0 ==> (2 * ((k - 1) DIV 2) + 1 = k)’,
+  qabbrev_tac ‘k0 = k - 1’  >>
+  strip_tac >> ‘k = k0 + 1’ by simp[Abbr‘k0’] >>
+  pop_assum SUBST_ALL_TAC >> qunabbrev_tac ‘k0’ >>
+  fs[EVEN_ADD] >>
+  assume_tac (Q.SPEC ‘k0’ DIV2) >>
+  map_every qabbrev_tac [‘q = k0 DIV 2’, ‘r = k0 MOD 2’] >>
+  markerLib.RM_ALL_ABBREVS_TAC >>
+  fs[EVEN_ADD, EVEN_MULT] >>
+  ‘(r = 0) \/ (r = 1)’ by simp[] >> fs[])
+
+val size_insert = Q.store_thm(
+  "size_insert",
+  ‘!k v m. size (insert k v m) = if k IN domain m then size m else size m + 1’,
+  ho_match_mp_tac insert_ind >> rpt conj_tac >> simp[] >>
+  rpt strip_tac >> simp[Once insert_def]
+  >- rw[]
+  >- rw[]
+  >- (Cases_on ‘k = 0’ >> simp[] >> fs[] >> Cases_on ‘EVEN k’ >> fs[]
+      >- (‘!n. k <> 2 * n + 1’ by (rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]) >>
+          qabbrev_tac ‘k2 = (k - 1) DIV 2’ >>
+          `k = 2 * k2 + 2` suffices_by rw[] >>
+          simp[Abbr‘k2’, even_lem]) >>
+      ‘!n. k <> 2 * n + 2’ by (rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]) >>
+      qabbrev_tac ‘k2 = (k - 1) DIV 2’ >>
+      ‘k = 2 * k2 + 1’ suffices_by rw[] >>
+      simp[Abbr‘k2’, odd_lem])
+  >- (Cases_on ‘k = 0’ >> simp[] >> fs[] >> Cases_on ‘EVEN k’ >> fs[]
+      >- (‘!n. k <> 2 * n + 1’ by (rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]) >>
+          qabbrev_tac ‘k2 = (k - 1) DIV 2’ >>
+          ‘k = 2 * k2 + 2’ suffices_by rw[] >>
+          simp[Abbr‘k2’, even_lem]) >>
+      ‘!n. k <> 2 * n + 2’ by (rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]) >>
+      qabbrev_tac ‘k2 = (k - 1) DIV 2’ >>
+      ‘k = 2 * k2 + 1’ suffices_by rw[] >>
+      simp[Abbr‘k2’, odd_lem]))
+
 val lookup_fromList = store_thm(
   "lookup_fromList",
   ``lookup n (fromList l) = if n < LENGTH l then SOME (EL n l)

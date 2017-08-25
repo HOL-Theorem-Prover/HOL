@@ -20,28 +20,8 @@ in
 end;
 
 val _ = let
-  infix ++
-  val op ++ = OS.Path.concat
-  fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
-               TextIO.flushOut TextIO.stdErr;
-               OS.Process.exit OS.Process.failure)
-  fun myuse s =
-    use s
-    handle e => die (s ^ ": compilation failure: "^General.exnMessage e)
-  fun hol_use p s =
-    let
-      val nm = Systeml.HOLDIR ++ p ++ s
-    in
-      myuse (nm ^ ".sig")
-    ; myuse (nm ^ ".sml")
-    end
 in
-  List.app (hol_use ("tools" ++ "Holmake"))
-           ["regexpMatch", "parse_glob", "internal_functions",
-            "Holdep_tokens"] ;
-  myuse (Systeml.HOLDIR ++ "tools" ++ "Holmake" ++ "QuoteFilter.sml") ;
-  List.app (hol_use ("tools" ++ "Holmake"))
-           ["QFRead", "Holdep", "Holmake_tools", "Holmake_types", "ReadHMF"]
+  use "../tools/Holmake/hmcore.ML"
 end;
 
 

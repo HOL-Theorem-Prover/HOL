@@ -17,6 +17,11 @@ fun crush extra w s =
   end
 
 fun tprint s = print (crush " ...  " 77 s)
+
+fun tadd s =
+  (for_se 1 (UTF8.size s) (fn _ => print "\008");
+   print s)
+
 fun checkterm pfx s =
   case OS.Process.getEnv "TERM" of
       NONE => s
@@ -33,7 +38,10 @@ val red = checkterm "\027[31m"
 val dim = checkterm "\027[2m"
 
 val really_die = ref true;
-fun die s = (print (boldred s ^ "\n"); (if (!really_die) then OS.Process.exit OS.Process.failure else raise (Fail ("DIE:" ^ s))));
+fun die s =
+  (tadd (boldred s ^ "\n");
+   if (!really_die) then OS.Process.exit OS.Process.failure
+   else raise (Fail ("DIE:" ^ s)))
 fun OK () = print (boldgreen "OK" ^ "\n")
 
 fun unicode_off f = Feedback.trace ("Unicode", 0) f
@@ -62,7 +70,7 @@ fun tppw width {input=s,output,testf} = let
   val t = Parse.Term [QUOTE s]
   val res = Portable.pp_to_string width Parse.pp_term t
 in
-  if res = output then OK() else die ("FAILED!\n  Saw: >|" ^ res ^ "|<")
+  if res = output then OK() else die ("\n  FAILED!  Saw: >|" ^ res ^ "|<")
 end
 fun tpp s = tppw (!linewidth) {input=s,output=s,testf=standard_tpp_message}
 

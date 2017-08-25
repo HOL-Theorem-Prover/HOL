@@ -1,1 +1,11 @@
 CLINE_OPTIONS = --no_overlay
+
+all: holpathdb.uo holpathdb.ui
+
+holpathdb.uo: holpathdb.ui
+
+holpathdb.sig: $(dprot $(HOLDIR)/tools/Holmake/holpathdb.sig)
+	$(CP) $< $@
+
+holpathdb.sml: $(dprot $(HOLDIR)/tools/Holmake/holpathdb.sml)
+	$(CP) $< $@

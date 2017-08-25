@@ -155,6 +155,15 @@ fun remove_nsubgoals s =
     else NONE
   end
 
+fun delete_suffixNL sfx s =
+  if String.isSuffix (sfx ^ "\n") s then
+    String.extract(s, 0, SOME (size s - (size sfx + 1))) ^ "\n"
+        |> deleteTrailingWhiteSpace
+  else s
+
+fun remove_colonthm s =
+  s |> delete_suffixNL "thm" |> delete_suffixNL ":"
+
 fun shorten_longmetis s =
   let
     open Substring
@@ -206,6 +215,18 @@ val getIndent =
   (Substring.string ## Substring.string)
     o Substring.splitl spaceNotNL o Substring.full
 
+fun dropLWS s =
+  s |> Substring.full |> Substring.dropl Char.isSpace |> Substring.string
+
+fun strip_for_thm s =
+  let
+    val s0 = if String.isPrefix "val it =" s then
+               String.extract(s, 9, NONE) |> dropLWS
+             else s
+  in
+    remove_colonthm s0
+  end
+
 fun process_line umap obuf origline lbuf = let
   val {reset = obRST, ...} = obuf
   val (ws,line) = getIndent origline
@@ -217,9 +238,7 @@ fun process_line umap obuf origline lbuf = let
       val handlePromptSize =
         if userPromptSize > oPsize then
           fn i => fn s =>
-             if i < userPromptSize then
-               s |> Substring.full |> Substring.dropl Char.isSpace
-                 |> Substring.string
+             if i < userPromptSize then dropLWS s
              else
                String.extract(s, userPromptSize - oPsize, NONE)
         else
@@ -260,6 +279,19 @@ in
       val _ = advance lbuf
     in
       ("", NONE)
+    end
+  else if String.isPrefix "##thm" line then
+    let
+      val thm_name = String.extract(line, 5, NONE) |> dropLWS
+      val raw_output = compiler obuf (lnumdie (linenum lbuf))
+                                (QFRead.stringToReader (thm_name ^ " :Thm.thm"))
+      val output = transformOutput umap ws (strip_for_thm raw_output)
+                        |> addIndent "  " 
+                        |> deleteTrailingWhiteSpace 
+                        |> (fn s => "  " ^ s)
+      val _ = advance lbuf
+    in
+      (ws ^ umunge umap thm_name, SOME output)
     end
   else if String.isPrefix "##eval" line then
     let

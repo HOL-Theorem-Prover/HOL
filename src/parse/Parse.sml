@@ -582,69 +582,18 @@ end
 structure Unicode =
 struct
 
-  fun temp_set_term_grammar tmg = temp_set_grammars(type_grammar(), tmg)
-
-  val master_unicode_switch = ref true
-  fun lift0 f = temp_set_term_grammar (f (term_grammar()))
-  fun lift f x = lift0 (f (!master_unicode_switch) x)
-  fun uoverload_on r = lift ProvideUnicode.uoverload_on r
-  fun temp_uoverload_on r = lift ProvideUnicode.temp_uoverload_on r
-
+  structure UChar = UnicodeChars
   fun unicode_version r =
     let
       open ProvideUnicode
-      val (sd, uds) = mk_unicode_version r (term_grammar())
+      val uds = mk_unicode_version r (term_grammar())
     in
-      record_data sd;
-      record_updateinfo (UV r);
-      if !master_unicode_switch then apply_udeltas uds else ();
+      apply_udeltas uds;
       List.app GrammarDeltas.record_tmdelta uds
     end
 
   fun temp_unicode_version r =
-    let
-      val (sd, uds) = ProvideUnicode.mk_unicode_version r (term_grammar())
-    in
-      ProvideUnicode.record_data sd;
-      if !master_unicode_switch then apply_udeltas uds else ()
-    end
-
-  structure UChar = UnicodeChars
-
-  fun bare_lambda() =
-      temp_set_term_grammar (fupdate_specials (fupd_lambda (fn _ => ["\\"]))
-                                              (term_grammar()))
-
-  fun unicode_lambda () =
-      temp_set_term_grammar (fupdate_specials (fupd_lambda (cons UChar.lambda))
-                                              (term_grammar()))
-
-  fun traceset n = if n = 0 then
-                     if !master_unicode_switch then
-                       (master_unicode_switch := false;
-                        set_trace "Greek tyvars" 0;
-                        bare_lambda();
-                        lift0 ProvideUnicode.disable_all)
-                     else ()
-                   else if not (!master_unicode_switch) then
-                     (master_unicode_switch := true;
-                      set_trace "Greek tyvars" 1;
-                      unicode_lambda();
-                      lift0 ProvideUnicode.enable_all)
-                   else ()
-  fun traceget () = if !master_unicode_switch then 1 else 0
-
-  val _ = register_ftrace ("Unicode", (traceget, traceset), 1)
-  val _ = unicode_lambda()
-
-  val _ = traceset 1
-
-  val _ = Theory.register_hook
-              ("Parse.ProvideUnicode",
-               (fn TheoryDelta.TheoryLoaded s =>
-                   Feedback.trace("Parse.unicode_trace_off_complaints",0)
-                                 (lift ProvideUnicode.apply_thydata) s
-                 | _ => ()))
+    ProvideUnicode.mk_unicode_version r (term_grammar()) |> apply_udeltas
 
 end
 
@@ -714,18 +663,6 @@ fun temp_set_associativity (i,a) = let in
    term_grammar_changed := true
  end
 
-
-local open term_grammar
-in
-
-fun relToString TM = "TM"
-  | relToString (TOK s) = "TOK "^quote s
-end
-
-fun rellistToString [] = ""
-  | rellistToString [x] = relToString x
-  | rellistToString (x::xs) = relToString x ^ ", " ^ rellistToString xs
-
 fun block_infoToString (Portable.CONSISTENT, n) =
         "(Portable.CONSISTENT, "^Int.toString n^")"
   | block_infoToString (Portable.INCONSISTENT, n) =
@@ -741,25 +678,6 @@ fun BlockStyleToString AroundSameName = "AroundSameName"
   | BlockStyleToString AroundSamePrec = "AroundSamePrec"
   | BlockStyleToString AroundEachPhrase = "AroundEachPhrase"
   | BlockStyleToString NoPhrasing = "NoPhrasing"
-
-
-fun ppToString pp =
-  case pp
-   of PPBlock(ppels, bi) =>
-      "PPBlock(["^pplistToString ppels^"], "^ block_infoToString bi^")"
-    | EndInitialBlock bi => "EndInitialBlock "^block_infoToString bi
-    | BeginFinalBlock bi => "BeginFinalBlock "^block_infoToString bi
-    | HardSpace n => "HardSpace "^Int.toString n^""
-    | BreakSpace(n,m) => "BreakSpace("^Int.toString n^", "^Int.toString m^")"
-    | RE rel => relToString rel
-    | _ => raise Fail "Don't want to print out First or Last TM values"
-and
-    pplistToString [] = ""
-  | pplistToString [x] = ppToString x
-  | pplistToString (x::xs) = ppToString x ^ ", " ^ pplistToString xs
-
-
-
 
 
 (*---------------------------------------------------------------------------*)
@@ -788,47 +706,27 @@ val unicode_off_but_unicode_act_complaint = ref true
 val _ = register_btrace("Parse.unicode_trace_off_complaints",
                         unicode_off_but_unicode_act_complaint)
 
-fun make_add_rule uaction gr = let
-  val uni_on = get_tracefn "Unicode" () > 0
-  val toks = grule_toks gr
-in
-  if List.exists includes_unicode toks then let
-    in
-      if uni_on orelse not (!unicode_off_but_unicode_act_complaint) then ()
-      else HOL_WARNING "Parse" "temp_add_rule"
-                       "Adding a Unicode-ish rule without Unicode trace \
-                       \being true";
-      the_term_grammar := uaction uni_on {
-        u = toks, term_name = grule_name gr,
-        newrule = gr,
-        oldtok = NONE
-      } (term_grammar());
-      term_grammar_changed := true
-    end
-  else let
-    in
-      the_term_grammar := term_grammar.add_delta (GRULE gr) (!the_term_grammar);
-      term_grammar_changed := true
-    end
-end handle GrammarError s => raise ERROR "add_rule" ("Grammar error: "^s)
+fun make_add_rule gr =
+  let
+  in
+    the_term_grammar := term_grammar.add_delta (GRULE gr) (!the_term_grammar);
+    term_grammar_changed := true
+  end handle GrammarError s => raise ERROR "add_rule" ("Grammar error: "^s)
 
-fun core_udprocess f uact k x =
+fun core_udprocess f k x =
   let
     val uds = f x
     fun apply_one ud =
       case ud of
-          GRULE gr => make_add_rule uact gr
+          GRULE gr => make_add_rule gr
         | _ => apply_udeltas [ud]
   in
     List.app apply_one uds ;
     k uds
   end
 
-fun mk_temp f =
-  core_udprocess f ProvideUnicode.temp_uadd_rule (fn uds => ())
-fun mk_perm f =
-  core_udprocess f ProvideUnicode.uadd_rule
-                 (List.app GrammarDeltas.record_tmdelta)
+fun mk_temp f = core_udprocess f (fn uds => ())
+fun mk_perm f = core_udprocess f (List.app GrammarDeltas.record_tmdelta)
 
 fun remove_termtok0 r = [RMTMTOK r]
 val temp_remove_termtok = mk_temp remove_termtok0
@@ -845,38 +743,23 @@ fun temp_add_infix(s, prec, associativity) =
 fun add_infix (s, prec, associativity) =
   add_rule (standard_spacing s (Infix(associativity, prec)))
 
-fun make_overload_on add uaction (s, t) = let
-  val uni_on = get_tracefn "Unicode" () > 0
-in
-  if includes_unicode s then
-    (if not uni_on andalso !unicode_off_but_unicode_act_complaint then
-       HOL_WARNING "Parse" "overload_on"
-                   "Adding a Unicode-ish rule without Unicode trace \
-                   \being true"
-     else
-       term_grammar_changed := true;
-     uaction (s,t))
-  else
-    (the_term_grammar := fupdate_overload_info
-                             (add (s, t))
-                             (term_grammar());
-     term_grammar_changed := true)
-end
+fun make_overload_on add (s, t) =
+  (the_term_grammar := fupdate_overload_info (add (s, t)) (term_grammar());
+   term_grammar_changed := true)
 
 val temp_overload_on =
-    make_overload_on Overload.add_overloading Unicode.temp_uoverload_on
+    make_overload_on Overload.add_overloading
 val temp_inferior_overload_on =
     make_overload_on Overload.add_inferior_overloading
-                          Unicode.temp_uoverload_on
 
 fun overload_on p =
-  (make_overload_on Overload.add_overloading Unicode.uoverload_on p ;
+  (make_overload_on Overload.add_overloading p ;
    GrammarDeltas.record_tmdelta (OVERLOAD_ON p))
 fun inferior_overload_on p =
-  (make_overload_on Overload.add_inferior_overloading Unicode.uoverload_on p;
+  (make_overload_on Overload.add_inferior_overloading p;
    GrammarDeltas.record_tmdelta (IOVERLOAD_ON p))
 
-fun add_listform0 x = [LRULE x]
+fun add_listform0 x = [GRULE (listform_to_rule x)]
 val temp_add_listform = mk_temp add_listform0
 val add_listform = mk_perm add_listform0
 
@@ -946,12 +829,8 @@ in
   the_term_grammar := new_absyn_postprocessor x (!the_term_grammar)
 end
 
-fun add_absyn_postprocessor (x as (nm,_)) = let
-in
-  temp_add_absyn_postprocessor x;
-  update_grms "add_absyn_postprocessor"
-              ("temp_add_absyn_postprocessor", "(" ^ quote nm ^ ", " ^ nm ^ ")")
-end
+val add_absyn_postprocessor =
+  mk_perm (fn s => [ADD_ABSYN_POSTP {codename = s}])
 
 fun temp_remove_absyn_postprocessor s =
   let

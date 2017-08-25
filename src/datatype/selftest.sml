@@ -32,7 +32,6 @@ val _ = Hol_datatype `type5 = foo of num | bar of 'a`;
 
 val _ = map primrec_test [``:type1``, ``:type4``, ``:'a type5``]
 
-
 val _ = Hol_datatype `foo = NIL | CONS of 'a => foo`;
 val _ = Hol_datatype `list = NIL | :: of 'a => list`;
 val _ = Hol_datatype `void = Void`;

@@ -70,6 +70,7 @@ val poly = ""
 val polyc = NONE : string option
 val polymllibdir = "";
 val DOT_PATH = "";
+val MLTON = SOME "";
 
 val _ = let
   val override = "tools-poly/poly-includes.ML"
@@ -128,6 +129,28 @@ in
                     OS.Process.exit OS.Process.failure)
   else "winNT"
 end
+
+fun which arg =
+  let
+    open OS.FileSys
+    val sepc = if OS = "winNT" then #";" else #":"
+    fun check p =
+      let
+        val fname = OS.Path.concat(p, arg)
+      in
+        if access (fname, [A_READ, A_EXEC]) then SOME fname else NONE
+      end
+  in
+    case OS.Process.getEnv "PATH" of
+        SOME path =>
+        let
+          val paths = (if OS = "winNT" then ["."] else []) @
+                      String.fields (fn c => c = sepc) path
+        in
+          findpartial check paths
+        end
+      | NONE => if OS = "winNT" then check "." else NONE
+  end
 
 val polyinstruction =
     "Please write file tools-poly/poly-includes.ML to specify it \
@@ -226,6 +249,8 @@ val DOT_PATH = if DOT_PATH = "" then "/usr/bin/dot" else DOT_PATH;
 
 val dynlib_available = false;
 
+val MLTON = if MLTON = SOME "" then which "mlton" else MLTON;
+
 print "\n";
 
 fun verdict (prompt, value) =
@@ -249,6 +274,7 @@ verdict ("polyc", polyc);
 verdict ("polymllibdir", polymllibdir);
 verdict ("holdir", holdir);
 verdict ("DOT_PATH", DOT_PATH);
+optverdict ("MLTON", MLTON);
 
 print "\nConfiguration will begin with above values.  If they are wrong\n";
 print "press Control-C.\n\n";

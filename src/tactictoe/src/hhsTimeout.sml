@@ -1,18 +1,9 @@
-(* ----------------------------------------------------------------------
-   Timeout. Re-using part of isabelle Library. (Thanks Makarius)
-   ---------------------------------------------------------------------- *)
-
-(* modified now 
-val polyml_folder = "/home/gauthier/polyml.5.5.1"
-val pure_folder = "/home/gauthier/Isabelle2013-2/src/Pure"
-(* exceptions *)
-use (pure_folder ^ "/" ^ "General/exn.ML");
-*)
-(* multithreading *)
-(*
-use (pure_folder ^ "/" ^ "ML-Systems/multithreading.ML");
-use (pure_folder ^ "/" ^ "ML-Systems/multithreading_polyml.ML");
-*)
+(* ========================================================================== *)
+(* FILE          : hhsTimeout.sml                                             *)
+(* DESCRIPTION   : Timing out PolyML functions                               *)
+(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
+(* DATE          : 2017                                                       *)
+(* ========================================================================== *)
 
 structure hhsTimeout :> hhsTimeout =
 struct
@@ -24,14 +15,14 @@ datatype 'a result = Res of 'a | Exn of exn;
 fun capture f x = Res (f x) handle e => Exn e
                                  
 fun release (Res y) = y
-  | release (Exn _) = raise TacTimeOut
+  | release (Exn x) = raise x
 
 open Thread;
 
 fun timeLimit time f x =
   let
     val result_ref = ref NONE
-    val short_time = (Time.fromReal (Time.toReal time / 20.0))
+    val short_time = Time.fromReal 0.000001
     val worker =
       let 
         fun worker_call () = result_ref := SOME (capture f x)
@@ -74,8 +65,3 @@ fun timeLimit time f x =
 fun timeOut t f x = timeLimit (Time.fromReal t) f x
 
 end
-
-(* 
-  fun loop () = (OS.Process.sleep (Time.fromReal 1.0));
-  val _ = timeLimit (Time.fromReal 1.0) loop ();
-*)

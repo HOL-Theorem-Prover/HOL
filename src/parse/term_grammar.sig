@@ -16,6 +16,8 @@ sig
 
   val rule_elements  : pp_element list -> rule_element list
   val pp_elements_ok : pp_element list -> bool
+  val first_rtok : rule_element list -> string
+  val first_tok : pp_element list -> string
 
   val reltoString    : rule_element -> string
 
@@ -60,7 +62,7 @@ sig
   val remove_user_printer :
     string -> grammar -> (grammar * (term * userprinter) option)
   val user_printers :
-    grammar -> (term * string * userprinter)Net.net
+    grammar -> (term * string * userprinter)FCNet.t
 
   type absyn_postprocessor = grammar -> Absyn.absyn -> Absyn.absyn
   type AbPTME = Absyn.absyn -> Parse_supportENV.preterm_in_env
@@ -68,8 +70,12 @@ sig
 
   structure userSyntaxFns :
     sig
-      val register_userPP : { name : string, code : userprinter } -> unit
-      val get_userPP : string -> userprinter
+      type 'a getter = string -> 'a
+      type 'a setter = {name : string, code : 'a} -> unit
+      val register_userPP : userprinter setter
+      val get_userPP : userprinter getter
+      val get_absynPostProcessor : absyn_postprocessor getter
+      val register_absynPostProcessor : absyn_postprocessor setter
     end
 
   val absyn_postprocessors :
@@ -123,17 +129,12 @@ sig
                               {binder : string option,
                                resbinder : string} -> grammar
 
-  val compatible_listrule : grammar
-                             -> {separator : string,
-                                 leftdelim : string,
-                                 rightdelim : string}
-                             -> {cons : string, nilstr : string} option
-
   val grammar_tokens : grammar -> string list
   val rule_tokens : grammar -> grammar_rule -> string list
 
   val add_binder : {term_name:string,tok:string} -> grammar -> grammar
   val add_listform : grammar -> listspec -> grammar
+  val listform_to_rule : listspec -> grule
 
   val fixityToString : fixity -> string
   val add_rule : grule -> grammar -> grammar
@@ -201,5 +202,7 @@ sig
   val fixity_reader : fixity Coding.reader
   val grule_encode : grule -> string
   val grule_reader : grule Coding.reader
+
+  val debugprint : grammar -> term -> string
 
 end

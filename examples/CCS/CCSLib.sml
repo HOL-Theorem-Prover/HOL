@@ -9,9 +9,9 @@ struct
 open HolKernel Parse boolLib bossLib;
 
 (******************************************************************************)
-(*                                                                            *)
-(*            Backward compatibility and utility tactic/tacticals             *)
-(*                                                                            *)
+(*									      *)
+(*      Backward compatibility and utility tactic/tacticals (2017/07/16)      *)
+(*									      *)
 (******************************************************************************)
 
 local
@@ -22,18 +22,53 @@ in
     (* Backward compatibility with Kananaskis 11 *)
     val PAT_X_ASSUM = PAT_X_ASSUM;
     val qpat_x_assum = qpat_x_assum;
-
-    (* Tacticals for better expressivity *)
-    fun fix  ts = MAP_EVERY Q.X_GEN_TAC ts;	(* from HOL Light *)
-    fun set  ts = MAP_EVERY Q.ABBREV_TAC ts;	(* from HOL mizar mode *)
-    fun take ts = MAP_EVERY Q.EXISTS_TAC ts;	(* from HOL mizar mode *)
-    val op // = op REPEAT			(* from Matita *)
 end;
 
+(** Q.GENL generalises in wrong order #428, fixed on June 27, 2017 *)
+fun Q_GENL qs th = List.foldr (fn (q, th) => Q.GEN q th) th qs;
+
+(* Tacticals for better expressivity *)
+fun fix  ts = MAP_EVERY Q.X_GEN_TAC ts;		(* from HOL Light *)
+fun set  ts = MAP_EVERY Q.ABBREV_TAC ts;	(* from HOL mizar mode *)
+fun take ts = MAP_EVERY Q.EXISTS_TAC ts;	(* from HOL mizar mode *)
+val op // = op REPEAT				(* from Matita *)
+val Know = Q_TAC KNOW_TAC;			(* from util_prob *)
+val Suff = Q_TAC SUFF_TAC;			(* from util_prob *)
+fun K_TAC _ = ALL_TAC;				(* from util_prob *)
+val KILL_TAC = POP_ASSUM_LIST K_TAC;		(* from util_prob *)
+fun wrap a = [a];
+
+fun PRINT_TAC s gl =				(* from cardinalTheory *)
+  (print ("** " ^ s ^ "\n"); ALL_TAC gl);
+
+fun COUNT_TAC tac g =				(* from Konrad Slind *)
+   let val res as (sg, _) = tac g
+       val _ = print ("subgoals" ^ Int.toString (List.length sg) ^ "\n")
+   in res end;
+
+(* signatures:
+
+  val PAT_X_ASSUM		: term -> thm_tactic -> tactic
+  val qpat_x_assum		: term quotation -> thm_tactic -> tactic
+  val Q_GENL			: Q.tmquote list -> thm -> thm
+  val fix			: Q.tmquote list -> tactic
+  val set			: Q.tmquote list -> tactic
+  val take			: Q.tmquote list -> tactic
+  val //			: tactic -> tactic
+  val Know			: Q.tmquote -> tactic
+  val Suff			: Q.tmquote -> tactic
+  val K_TAC			: 'a -> tactic
+  val KILL_TAC			: tactic
+  val wrap			: 'a -> 'a list
+  val PRINT_TAC			: string -> tactic
+  val COUNT_TAC			: tactic -> tactic
+
+   end of signatures *)
+
 (******************************************************************************)
-(*                                                                            *)
-(*                      Minimal grammar support for CCS                       *)
-(*                                                                            *)
+(*									      *)
+(*		      Minimal grammar support for CCS			      *)
+(*									      *)
 (******************************************************************************)
 
 fun add_rules_for_ccs_terms () = let
@@ -70,9 +105,9 @@ in
 end;
 
 (******************************************************************************)
-(*                                                                            *)
-(*         Basic rules and tactics for particular forms of rewriting          *)
-(*                                                                            *)
+(*									      *)
+(*	 Basic rules and tactics for particular forms of rewriting	      *)
+(*									      *)
 (******************************************************************************)
 
 (* Rule for rewriting only the right-hand side on an equation once. *)
@@ -90,7 +125,7 @@ val REWRITE_RHS_RULE =
 
 (* Tactic for rewriting only the right-hand side on an equation once. *)
 val ONCE_REWRITE_RHS_TAC =
-    GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites; 
+    GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites;
 
 (* Tactic for rewriting only the right-hand side on an equation. *)
 val REWRITE_RHS_TAC =

@@ -24,19 +24,7 @@ val ERRloc = Feedback.mk_HOL_ERRloc "ParseDatatype";
 
 open Portable Lib;
 
-datatype pretype
-   = dVartype of string
-   | dTyop of {Tyop : string, Thy : string option, Args : pretype list}
-   | dAQ of Type.hol_type
-
-type field = string * pretype
-type constructor = string * pretype list
-
-datatype datatypeForm
-   = Constructors of constructor list
-   | Record of field list
-
-type AST = string * datatypeForm
+open ParseDatatype_dtype
 
 fun pretypeToType pty =
   case pty of
@@ -154,6 +142,7 @@ in
           in
             (adv, BT_Ident idstr, locn')
           end
+        else if String.isPrefix "=>" s then consume_n 2 (qb,s,locn)
         else if cmem c0 "()[]" then consume_n 1 (qb,s,locn)
         else if String.isPrefix "<|" s then consume_n 2 (qb,s,locn)
         else if String.isPrefix "|>" s then consume_n 2 (qb,s,locn)
@@ -212,9 +201,27 @@ in
   recurse [i1]
 end
 
+fun termsepby1 s term p qb =
+  let
+    val res1 = p qb
+    fun recurse acc =
+      case pdtok_of qb of
+          (adv, base_tokens.BT_Ident t, locn) =>
+            if t = s then (adv(); term_or_continue acc)
+            else List.rev acc
+        | _ => List.rev acc
+    and term_or_continue acc =
+      case pdtok_of qb of
+          (_, tok, _) => if tok = term then List.rev acc
+                         else recurse (p qb :: acc)
+  in
+    recurse [res1]
+  end
+
 fun parse_record_defn G qb = let
   val () = scan "<|" qb
-  val result = sepby1 ";" (parse_record_fld G) qb
+  val result =
+      termsepby1 ";" (base_tokens.BT_Ident "|>") (parse_record_fld G) qb
   val () = scan "|>" qb
 in
   result
@@ -238,33 +245,11 @@ fun optscan tok qb =
         (tok',_) => if tok = tok' then (qbuf.advance qb; qb)
                     else qb
 
-fun parse_form G qb =
-    case pdtok_of qb of
-      (_,base_tokens.BT_Ident "<|",_) => Record (parse_record_defn G qb)
-    | _ => Constructors (sepby1 "|" (parse_phrase G) qb)
-
-fun parse_G G qb = let
-  val tyname = ident qb
-  val () = scan "=" qb
-in
-  (tyname, parse_form G qb)
-end
-
 fun fragtoString (QUOTE s) = s
   | fragtoString (ANTIQUOTE _) = " ^... "
 
 fun quotetoString [] = ""
   | quotetoString (x::xs) = fragtoString x ^ quotetoString xs
-
-fun parse0 G q = let
-  val strm = qbuf.new_buffer q
-  val result = sepby1 ";" (parse_G G) strm
-in
-  case qbuf.current strm of
-    (base_tokens.BT_EOI,_) => result
-  | (_,locn) => raise ERRloc "parse" locn
-                             "Parse failed"
-end
 
 fun parse_harg G qb =
   case qbuf.current qb of
@@ -303,11 +288,11 @@ in
   (constr_id, parse_hargs G qb)
 end
 
-fun parse_hform G qb =
+fun parse_form G phrase_p qb =
     case pdtok_of qb of
       (_,base_tokens.BT_Ident "<|",_) => Record (parse_record_defn G qb)
     | _ => Constructors (qb |> optscan (base_tokens.BT_Ident "|")
-                            |> sepby1 "|" (parse_hphrase G))
+                            |> sepby1 "|" (phrase_p G))
 
 fun extract_tynames q =
   let
@@ -348,36 +333,30 @@ fun extract_tynames q =
     next_decl []
   end
 
-fun parse_HG G qb = let
+fun parse_g G phrase_p qb = let
   val tyname = ident qb
   val () = scan "=" qb
 in
-  (tyname, parse_hform G qb)
+  (tyname, parse_form G phrase_p qb)
 end
 
 fun hide_tynames q G0 =
   List.foldl (uncurry type_grammar.hide_tyop) G0 (extract_tynames q)
 
-fun parse G0 q =
-  let
-    val G = hide_tynames q G0
-  in
-    parse0 G0 q
-  end
 
-fun hparse G0 q = let
+fun core_parse G0 phrase_p q = let
   val G = hide_tynames q G0
-  val strm = qbuf.new_buffer q
-  val result = sepby1 ";" (parse_HG G) strm
-  val qb = optscan (base_tokens.BT_Ident ";") strm
+  val qb = qbuf.new_buffer q
+  val result = termsepby1 ";" base_tokens.BT_EOI (parse_g G phrase_p) qb
 in
   case qbuf.current qb of
       (base_tokens.BT_EOI,_) => result
-    | (_,locn) => raise ERRloc "parse" locn
-                        "Parse failed"
+    | (t,locn) => raise ERRloc "parse" locn
+                        ("Parse failed looking at "^base_tokens.toString t)
 end
 
-
+fun parse G0 = core_parse G0 parse_phrase
+fun hparse G0 = core_parse G0 parse_hphrase
 
 
 end

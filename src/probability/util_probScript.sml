@@ -802,12 +802,17 @@ val SUM_LT = store_thm
        >> RW_TAC arith_ss [])
    >> RW_TAC arith_ss []);
 
-val SUM_CONST = store_thm
-  ("SUM_CONST",
+val SUM_CONST_R = store_thm
+  ("SUM_CONST_R",
    ``!n r. sum (0,n) (K r) = &n * r``,
    Induct >- RW_TAC real_ss [sum]
    >> RW_TAC bool_ss [sum, ADD1, K_THM, GSYM REAL_ADD, REAL_ADD_RDISTRIB]
    >> RW_TAC real_ss []);
+
+val SUMS_ZERO = store_thm
+  ("SUMS_ZERO",
+   ``(K 0) sums 0``,
+   RW_TAC real_ss [sums, SEQ, SUM_CONST_R, abs, REAL_SUB_REFL, REAL_LE_REFL]);
 
 val SUMINF_ADD = store_thm
   ("SUMINF_ADD",
@@ -1016,7 +1021,7 @@ val SUMINF_2D = store_thm
    >> CONJ_TAC
    >- (MATCH_MP_TAC SUM_LT
        >> RW_TAC arith_ss [])
-   >> RW_TAC std_ss [SUM_ADD, GSYM K_PARTIAL, SUM_CONST]
+   >> RW_TAC std_ss [SUM_ADD, GSYM K_PARTIAL, SUM_CONST_R]
    >> Know `!x:real. & M * (x / & M) = x`
    >- (RW_TAC std_ss [real_div]
        >> Suff `(& M * inv (& M)) * x = x`
@@ -1158,5 +1163,57 @@ val MINIMAL_EXISTS = store_thm
    REWRITE_TAC [MINIMAL_EXISTS0, boolTheory.EXISTS_DEF]
    >> CONV_TAC (DEPTH_CONV BETA_CONV)
    >> REWRITE_TAC [GSYM minimal_def]);
+
+val MINIMAL_EXISTS_IMP = store_thm
+  ("MINIMAL_EXISTS_IMP",
+   ``!P. (?n : num. P n) ==> ?m. (P m /\ !n. n < m ==> ~P n)``,
+   PROVE_TAC [MINIMAL_EXISTS]);
+
+val MINIMAL_EQ_IMP = store_thm
+  ("MINIMAL_EQ_IMP",
+   ``!m p. (p m) /\ (!n. n < m ==> ~p n) ==> (m = minimal p)``,
+   RW_TAC std_ss []
+   >> MP_TAC (Q.SPEC `p` MINIMAL_EXISTS)
+   >> Know `?n. p n` >- PROVE_TAC []
+   >> RW_TAC std_ss []
+   >> Suff `~(m < minimal p) /\ ~(minimal p < m)` >- DECIDE_TAC
+   >> PROVE_TAC []);
+
+val MINIMAL_SUC = store_thm
+  ("MINIMAL_SUC",
+   ``!n p.
+       (SUC n = minimal p) /\ p (SUC n) =
+       ~p 0 /\ (n = minimal (p o SUC)) /\ p (SUC n)``,
+   RW_TAC std_ss []
+   >> EQ_TAC >|
+   [RW_TAC std_ss [] >|
+    [Know `0 < SUC n` >- DECIDE_TAC
+     >> PROVE_TAC [MINIMAL_EXISTS],
+     MATCH_MP_TAC MINIMAL_EQ_IMP
+     >> RW_TAC std_ss [o_THM]
+     >> Know `SUC n' < SUC n` >- DECIDE_TAC
+     >> PROVE_TAC [MINIMAL_EXISTS]],
+    RW_TAC std_ss []
+    >> MATCH_MP_TAC MINIMAL_EQ_IMP
+    >> RW_TAC std_ss []
+    >> Cases_on `n` >- RW_TAC std_ss []
+    >> Suff `~((p o SUC) n')` >- RW_TAC std_ss [o_THM]
+    >> Know `n' < minimal (p o SUC)` >- DECIDE_TAC
+    >> PROVE_TAC [MINIMAL_EXISTS]]);
+
+val MINIMAL_EQ = store_thm
+  ("MINIMAL_EQ",
+   ``!p m. p m /\ (m = minimal p) = p m /\ (!n. n < m ==> ~p n)``,
+   RW_TAC std_ss []
+   >> REVERSE EQ_TAC >- PROVE_TAC [MINIMAL_EQ_IMP]
+   >> RW_TAC std_ss []
+   >> Know `?n. p n` >- PROVE_TAC []
+   >> RW_TAC std_ss [MINIMAL_EXISTS]);
+
+val MINIMAL_SUC_IMP = store_thm
+  ("MINIMAL_SUC_IMP",
+   ``!n p.
+       p (SUC n) /\ ~p 0 /\ (n = minimal (p o SUC)) ==> (SUC n = minimal p)``,
+   PROVE_TAC [MINIMAL_SUC]);
 
 val _ = export_theory ();

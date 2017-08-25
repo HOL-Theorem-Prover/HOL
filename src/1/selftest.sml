@@ -6,6 +6,14 @@ val tprint = testutils.tprint
 val OK = testutils.OK
 val die = testutils.die
 
+val _ = tprint "Preterm free variables 1"
+val fvs = Preterm.ptfvs (Parse.Preterm`\x. x`)
+val _ = if null fvs then OK() else die "FAILED!\n"
+
+val _ = tprint "Preterm free variables 2"
+val fvs = Preterm.ptfvs (Parse.Preterm`\x:bool. x`)
+val _ = if null fvs then OK() else die "FAILED!\n"
+
 fun substtest (M, x, N, result) = let
 in
   tprint("Testing ["^term_to_string M^"/"^term_to_string x^"] ("^
@@ -320,8 +328,15 @@ val _ = if s = "('a -> 'b) "^ct()^"$option" then OK()
 end
 
 
-val _ = app tpp ["let x = T in x /\\ y",
+val _ = app tpp ["(if P then q else r) s",
+                 "(if P then q else r) s t",
+                 "f ((if P then q else r) s t u)",
+                 "let x = T in x /\\ y",
+                 "let x = (let y = T in y /\\ F) in x \\/ z",
                  "(let x = T in \\y. x /\\ y) p",
+                 "let x = p and y = x in x /\\ y",
+                 "let x = T ; y = F in x /\\ y",
+                 "let x = T ; y = F and z = T in x /\\ y \\/ z",
                  "f ($/\\ p)",
                  "(((p /\\ q) /\\ r) /\\ s) /\\ t",
                  "!x. P (x /\\ y)",

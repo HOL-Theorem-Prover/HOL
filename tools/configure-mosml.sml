@@ -186,7 +186,7 @@ val dynlib_available = (load "Dynlib"; true) handle _ => false;
 
 print "\n";
 
-val DOT_PATH = "/usr/bin/dot"
+val DOT_PATH = "";
 
 val _ = let
   val override = Path.concat(holdir, "config-override")
@@ -197,7 +197,7 @@ in
   else ()
 end;
 
-
+val DOT_PATH = if DOT_PATH = "" then "/usr/bin/dot" else DOT_PATH;
 
 fun verdict (prompt, value) =
     (print (StringCvt.padRight #" " 20 (prompt^":"));
