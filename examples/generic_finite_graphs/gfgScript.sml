@@ -7,9 +7,9 @@ val _ = new_theory "gfg";
 val _ = ParseExtras.tight_equality()
 
 val _ = Datatype‘
-  gfg = <| nodeInfo : 'a spt ;
-           followers : ('e # num) list spt ;
-           preds : ('e # num) list spt ;
+  gfg = <| nodeInfo : α spt ;
+           followers : (ε # num) list spt ;
+           preds : (ε # num) list spt ;
            next : num
         |>’;
 

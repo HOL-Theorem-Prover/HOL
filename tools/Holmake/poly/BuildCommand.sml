@@ -138,6 +138,7 @@ fun poly_compile warn diag quietp file I deps = let
   val _ = diag ("Writing "^fromFile file^" with dependencies: " ^
                 String.concatWith ", " (map fromFile deps))
   fun mapthis (Unhandled _) = NONE
+    | mapthis (DAT _) = NONE
     | mapthis f = SOME (fromFileNoSuf f)
   val depMods = List.map (addPath I) (List.mapPartial mapthis deps)
   fun usePathVars p = holpathdb.reverse_lookup {path = p}

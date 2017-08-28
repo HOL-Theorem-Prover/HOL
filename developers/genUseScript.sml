@@ -7,8 +7,8 @@ use "../tools-poly/poly/Binarymap.sig";
 use "../tools-poly/poly/Binarymap.sml";
 use "../tools/Holmake/Systeml.sig";
 use "../tools-poly/Holmake/Systeml.sml";
-use "../tools-poly/poly/holpathdb.sig";
-use "../tools-poly/poly/holpathdb.sml";
+use "../tools/Holmake/holpathdb.sig";
+use "../tools/Holmake/holpathdb.sml";
 
 val _ = holpathdb.extend_db {vname = "HOLDIR", path = Systeml.HOLDIR}
 

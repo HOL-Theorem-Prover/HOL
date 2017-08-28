@@ -843,7 +843,7 @@ end (* struct *)
  *         PRINTING THEORIES OUT AS ML STRUCTURES AND SIGNATURES.            *
  *---------------------------------------------------------------------------*)
 
-fun theory_out width f ostrm =
+fun theory_out f ostrm =
  let val ppstrm = Portable.mk_ppstream
                     {consumer = Portable.outputc ostrm,
                      linewidth=75, flush = fn () => Portable.flush_out ostrm}
@@ -949,13 +949,15 @@ fun export_theory () = let
      [] =>
      (let val ostrm1 = Portable.open_out(concat["./",name,".sig"])
           val ostrm2 = Portable.open_out(concat["./",name,".sml"])
+          val ostrm3 = Portable.open_out(concat["./",name,".dat"])
           val time_now = total_cpu (Timer.checkCPUTimer Globals.hol_clock)
           val time_since = Time.-(time_now, !new_theory_time)
           val tstr = Lib.time_to_string time_since
       in
         mesg ("Exporting theory "^Lib.quote thyname^" ... ");
-        theory_out 85 (TheoryPP.pp_sig (!pp_thm) sigthry) ostrm1;
-        theory_out 75 (TheoryPP.pp_struct structthry) ostrm2;
+        theory_out (TheoryPP.pp_sig (!pp_thm) sigthry) ostrm1;
+        theory_out (TheoryPP.pp_struct structthry) ostrm2;
+        theory_out (TheoryPP.pp_thydata structthry) ostrm3;
         mesg "done.\n";
         if !report_times then
           (mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^ " to build\n");

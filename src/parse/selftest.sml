@@ -554,6 +554,51 @@ val _ = tpp "Printing applied non-empty 2: {x; y} z" "{x; y} z"
             lf_infixfirst_cop
             (mk_comb(pbmk_list "xy", mk_var("z", bool)))
 
+open ParseDatatype
+val _ = tprint
+val ASTL_toString =
+    ParseDatatype_dtype.list_toString ParseDatatype_dtype.toString
+val mintyg = type_grammar.min_grammar
+val vbool = dTyop{Tyop = "bool", Thy = SOME "min", Args = []}
+fun pdparse s = parse mintyg [QUOTE s]
+fun hdparse s = hparse mintyg [QUOTE s]
+
+fun pdtest (nm, s,expected) =
+  let
+    val _ = tprint (nm ^ ": " ^ s)
+    val res = (if nm = "p" then pdparse else hdparse) s
+  in
+    if res = expected then OK()
+    else die ("FAILED:\n  "^ASTL_toString res)
+  end
+infix -=>
+
+fun vty1 -=> vty2 = dTyop{Tyop = "fun", Thy = SOME "min", Args = [vty1,vty2]}
+fun recop s = dTyop{Thy = NONE, Tyop = s, Args = []}
+val expected1 = [("ty", Constructors [("Cons", [vbool])])]
+val expected2 = [("ty", Constructors [("Cons1", [vbool]),
+                                      ("Cons2", [vbool, vbool -=> vbool])])]
+val expected3 = [("ty", Record [("fld1", vbool), ("fld2", vbool -=> vbool)])]
+fun listnm nm =
+  [(nm, Constructors[("N", []), ("C",[dVartype "'a", recop "ty"])])]
+val expected4 = listnm "ty"
+val expected5 = [("C", Constructors[("foo", []), ("bar",[])])]
+val _ = List.app pdtest [
+  ("p", "ty = Cons of bool;", expected1),
+  ("h", "ty = Cons bool;", expected1),
+  ("h", "ty = Cons1 bool | Cons2 bool (bool -> bool);", expected2),
+  ("h", "ty = <| fld1 : bool ; fld2 : bool -> bool |>;", expected3),
+  ("h", "ty = <| fld1 : bool ; fld2 : bool -> bool; |>;", expected3),
+  ("h", "ty= <|fld1:bool;fld2:bool->bool; |>;", expected3),
+  ("h", "ty = N | C 'a ty;", expected4),
+  ("p", "ty = N | C of 'a => ty", expected4),
+  ("h", "ty=N|C 'a ty;", expected4),
+  ("h", "ty=N|C 'a ty", expected4),
+  ("h", "ty= <|fld1:bool;fld2:bool->bool; |>;ty2=N|C 'a ty",
+   expected3 @ listnm "ty2"),
+  ("h", "C = | foo | bar", expected5)
+]
+
 
 (*
 

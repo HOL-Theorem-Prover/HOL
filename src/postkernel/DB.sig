@@ -3,11 +3,10 @@ sig
 
  type term = Term.term
  type thm = Thm.thm
- type theory = Hol_pp.theory
+ datatype theory = datatype DB_dtype.theory
+ datatype class = datatype DB_dtype.class
+ type data = DB_dtype.data
 
- datatype class = Thm | Axm | Def
-
- type data = (string * string) * (thm * class)
 
   val thy         : string -> data list
   val fetch       : string -> string -> thm
@@ -30,23 +29,8 @@ sig
   val apropos_in  : term -> data list -> data list
   val listDB      : unit -> data list
 
-  val data_list_to_string : data list -> string
-  val print_apropos       : term -> unit
-  val print_find          : string -> unit
-  val print_match         : string list -> term -> unit
-
 
   val dest_theory  : string -> theory
-  val print_theory : string -> unit
-
-  val print_theory_to_file      : string -> string -> unit
-  val print_theory_to_outstream : string -> TextIO.outstream -> unit
-  val export_theory_as_docfiles : string -> unit
-
-  val pp_theory_as_html         : PP.ppstream -> string -> unit
-  val print_theory_as_html      : string -> string -> unit
-  val html_theory               : string -> unit
-
   val bindl : string -> (string * thm * class) list -> unit
 
   val CT : unit -> (string, (string, data list) Redblackmap.dict *
