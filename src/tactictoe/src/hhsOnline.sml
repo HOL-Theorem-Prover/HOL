@@ -12,6 +12,8 @@ open HolKernel boolLib Abbrev hhsTools hhsExec
 
 val ERR = mk_HOL_ERR "hhsOnline"
 
+val hhs_time_flag = ref false
+
 val thm_counter = ref 0
 
 fun string_db_fetch thy name =
@@ -52,9 +54,20 @@ fun fetch_thm_aux s reps =
   end
   
 val fetch_thm = total_time fetch_thm_time fetch_thm_aux
-  
-fun try_tac tac1 tac2 g = 
+
+fun try_tac tac1 tac2 g =
   tac1 g handle _ => (debug_record "Error: recording"; tac2 g)
-    
-    
+
+(* Change hhsUnfold at the same time
+fun try_tac s tac1 tac2 g =
+  if not (!hhs_time_flag) 
+  then tac1 g handle _ => (debug_record "Error: recording"; tac2 g)
+  else 
+    let val (r,t) = add_time tac2 g in
+      debug_proof s;
+      debug_proof ("original proof time: " ^ Real.toString t);
+      r
+    end
+*)
+
 end (* struct *)

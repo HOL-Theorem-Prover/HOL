@@ -18,6 +18,7 @@ val init_error_file = tactictoe_dir ^ "/code/init_error"
 val main_error_file = tactictoe_dir ^ "/code/main_error"
 val hide_error_file = tactictoe_dir ^ "/code/hide_error"
 
+
 (* ----------------------------------------------------------------------
    Local references
    ---------------------------------------------------------------------- *)
@@ -28,7 +29,7 @@ fun set_timeout r = timeout := r
 val max_select_pred = ref 0
 val hhs_metis_npred = ref 0
 val hhs_previous_theory = ref ""
-
+val small_eval_flag = ref false
 
 (* ----------------------------------------------------------------------
    Parse string tactic to HOL tactic.
@@ -38,7 +39,7 @@ fun mk_tacdict tacticl =
   let 
     val (_,goodl) = partition (fn x => mem x (!hhs_badstacl)) tacticl
     fun read_stac x = (x, tactic_of_sml x)
-      handle _ => (print ("Bad tactic: " ^ x ^ "\n");
+      handle _ => (debug ("Warning: bad tactic: " ^ x ^ "\n");
                    hhs_badstacl := x :: (!hhs_badstacl);
                    raise ERR "mk_tacdict" "")
     val l = combine (goodl, tacticl_of_sml goodl)
@@ -66,16 +67,15 @@ fun add_thy_mdict thy =
 fun init_prev () =
   let
     val thyl = ancestry (current_theory ())
-    val succratel = import_succrate thyl
+    val succratel = debug_t "Reading success rates" import_succrate thyl
     val _ = succ_cthy_dict := dempty String.compare
     val _ = succ_glob_dict := dnew String.compare succratel
-    val _ = debug ("Reading success rates: " ^ 
+    val _ = debug ("  success rates: " ^ 
                    int_to_string (dlength (!succ_glob_dict)))
-    val (stacfea,t) = add_time import_feav thyl
+    val stacfea = debug_t "Reading feature vectors" import_feavl thyl
     val _ = mdict_glob := dempty String.compare
-    val _ = debug ("Reading feature vectors: " ^ Real.toString t ^ " " ^
-                   int_to_string (length stacfea));
-    val _ = app add_thy_mdict thyl
+    val _ = debug ("  feature vectors: " ^ int_to_string (length stacfea));
+    val _ = if !hhs_metis_flag then app add_thy_mdict thyl else ()
     val _ = debug ("Reading theorems: " ^ int_to_string (dlength (!mdict_glob)))
   in
     hide init_error_file QUse.use (tactictoe_dir ^ "/src/infix_file.sml");
@@ -87,7 +87,7 @@ fun init_prev () =
    Parameters
    ---------------------------------------------------------------------- *)
 
-val hhs_eval_flag = ref false
+val hhs_eval_flag = ref true
 
 fun set_parameters () =
   (
@@ -95,7 +95,6 @@ fun set_parameters () =
   max_select_pred := 500;
   (* searching *)
   hhs_cache_flag := true;
-  set_timeout 5.0;
   hhs_search_time := Time.fromReal (!timeout);
   hhs_tactic_time := 0.02;
   hhs_astar_flag := false;
@@ -110,29 +109,41 @@ fun set_parameters () =
                      exec_sml "metis_test" "metisTools.METIS_TAC []");
   hhs_metis_npred := 8;
   (* result *)
-  hhs_minimize_flag := false
+  hhs_minimize_flag := false;
+  hhs_prettify_flag := false
   )
 
 (* ----------------------------------------------------------------------
    Theorems dependencies
    ---------------------------------------------------------------------- *)
 
-fun thm_of_did (thy,n) =
+val did_cache = ref (dempty (cpl_compare String.compare Int.compare))
+
+fun load_did_cache thy =
   let
     val thml = DB.thms thy
-    fun find_number x =
-      if (Dep.depnumber_of o Dep.depid_of o Tag.dep_of o Thm.tag o snd) x = n
-      then x
-      else raise ERR "find_number" ""
+    fun f (name,thm) = 
+      let 
+        val fullname = thy ^ "Theory." ^ name
+        val n = (Dep.depnumber_of o Dep.depid_of o Tag.dep_of o Thm.tag) thm
+      in
+        did_cache := dadd (thy,n) fullname (!did_cache)
+      end
   in
-    (thy ^ "Theory." ^ fst (tryfind find_number thml)
-    handle _ => raise ERR "thm_of_depid" "Not found")
-  end
+    app f thml  
+  end 
+
+fun thm_of_did (did as (thy,n)) =
+  (
+  dfind did (!did_cache) 
+  handle _ => (load_did_cache thy; dfind did (!did_cache))
+  )
+  handle _ => raise ERR "thm_of_did" "Not found"
 
 fun thm_of_string s =
   let val (a,b) = split_string "Theory." s in DB.fetch a b end
 
-fun hhs_dep_of s =
+fun depl_of s =
   let 
     val thm = thm_of_string s
     val dl = (Dep.depidl_of o Tag.dep_of o Thm.tag) thm
@@ -152,13 +163,14 @@ fun init_tactictoe () =
   in
     if !hhs_previous_theory <> cthy
     then 
-     (
-     print ("Initialize tactictoe in theory " ^ cthy ^ "...\n");
-     init_prev ();   
-     print ("  loading " ^ int_to_string (dlength (!hhs_stacfea)) ^ " " ^
-            "stacfeav.\n");
-     hhs_previous_theory := cthy
-     ) 
+      let 
+        val _ = debug_t ("init_tactictoe " ^ cthy) init_prev ()
+        val ns = int_to_string (dlength (!hhs_stacfea))
+      in  
+        debug (ns ^ " feature vectors");
+        print_endline ("Loading " ^ ns ^ " feature vectors");
+        hhs_previous_theory := cthy
+      end
     else ();
     debug "set_parameters";
     set_parameters ()
@@ -194,37 +206,45 @@ fun string_of_feav ((stac,_,g,gl),_) =
   String.concatWith "," (map string_of_goal gl)
 
 fun select_thmfeav goalfea =
-  let 
-    val _ = debug "theorem selection"
-    val _ = add_thy_mdict (current_theory ()) 
-    val thmfeav = dlist (!mdict_glob)
-    val thmsymweight = learn_tfidf thmfeav  
-    val thmfeavdep = mapfilter (fn (a,b) => (a, b, hhs_dep_of a)) thmfeav
-    val thml = thmknn_ext (!max_select_pred) thmfeavdep goalfea
-    val pdict = dnew String.compare (map (fn x => (x,())) thml) 
-    val feav0 = filter (fn (x,_,_) => dmem x pdict) thmfeavdep
-    val feav1 = map (fn (a,b,c) => (a,b)) feav0
-  in
-    (thmsymweight,feav1)
-  end
- 
+  if !hhs_metis_flag 
+  then
+    let 
+      val _ = debug "theorem selection"
+      val _ = add_thy_mdict (current_theory ()) 
+      val thmfeav = dlist (!mdict_glob)
+      val thmsymweight = learn_tfidf thmfeav  
+      val thmfeavdep = mapfilter (fn (a,b) => (a, b, depl_of a)) thmfeav
+      val thml = thmknn_ext (!max_select_pred) thmfeavdep goalfea
+      val pdict = dnew String.compare (map (fn x => (x,())) thml) 
+      val feav0 = filter (fn (x,_,_) => dmem x pdict) thmfeavdep
+      val feav1 = map (fn (a,b,c) => (a,b)) feav0
+    in
+      (thmsymweight,feav1)
+    end
+  else (dempty Int.compare, [])
+  
+fun select_desc l =
+   let
+     val l1 = List.concat (map (descendant_of_feav (!hhs_ddict)) l)
+     val l2 = mk_sameorder_set feav_compare l1
+   in
+     first_n (!max_select_pred) l2
+   end
+
 fun select_stacfeav goalfea =
   let 
     val stacfeav_org = dlist (!hhs_stacfea)
-    val _ = debug "learn_tfidf"
-    val stacsymweight = learn_tfidf stacfeav_org
+    (* computing tfidf *)
+    val stacsymweight = debug_t "learn_tfidf" learn_tfidf stacfeav_org
     (* selecting neighbors *)
-    val _ = debug "stacknn_ext"
-    val (l0, seltime) = 
-      add_time (stacknn_ext (!max_select_pred) stacfeav_org) goalfea
+    val l0 = debug_t "stacknn_ext" 
+      (stacknn_ext (!max_select_pred) stacfeav_org) goalfea
     (* selecting descendants *)
-    val l1 = List.concat (map (descendant_of_feav (!hhs_ddict)) l0)
-    val l2 = mk_sameorder_set feav_compare l1
-    val l3 = first_n (!max_select_pred) l2
+    val l1 = debug_t "select_desc" select_desc l0
     (* parsing selected tactics *)
-    val _ = debug "mk_tacdict"
-    val (tacdict, tactime) = add_time mk_tacdict (map (#1 o fst) l3)
-    val stacfeav = filter (fn ((stac,_,_,_),_) => dmem stac tacdict) l3 
+    val tacdict = debug_t "mk_tacdict" mk_tacdict (map (#1 o fst) l1)
+    (* filtering readable tactics *)
+    val stacfeav = filter (fn ((stac,_,_,_),_) => dmem stac tacdict) l1
   in
     (stacsymweight, stacfeav, tacdict)
   end
@@ -234,81 +254,101 @@ fun main_tactictoe goal =
     (* preselection *)
     val goalfea = fea_of_goal goal       
     val (stacsymweight, stacfeav, tacdict) = select_stacfeav goalfea
-    val (thmsymweight, thmfeav) = 
-      if !hhs_metis_flag 
-      then select_thmfeav goalfea 
-      else (dempty String.compare, [])
+    val (thmsymweight, thmfeav) = select_thmfeav goalfea
     (* fast predictors *)
     fun stacpredictor g =
       stacknn stacsymweight (!max_select_pred) stacfeav (fea_of_goal g)
     fun thmpredictor g = 
       map fst (thmknn thmsymweight (!hhs_metis_npred) thmfeav (fea_of_goal g))
   in
-    debug "Search ...";
-    imperative_search thmpredictor stacpredictor tacdict (!hhs_ddict) goal
+    debug_t "Search" 
+       (imperative_search thmpredictor stacpredictor tacdict (!hhs_ddict)) 
+       goal
   end
 
 fun print_proof_status r = case r of
-   ProofError     => print ("Proof status: Error\n")
- | ProofSaturated => print ("Proof status: Saturated\n")
- | ProofTimeOut   => print ("Proof status: Time Out\n")
- | Proof s        => print (s ^ "\n")
+   ProofError     => print_endline "Proof status: Error\n"
+ | ProofSaturated => print_endline "Proof status: Saturated\n"
+ | ProofTimeOut   => print_endline "Proof status: Time Out\n"
+ | Proof s        => print_endline s
 
 fun debug_eval_status r = 
   case r of
-    ProofError     => debug_proof "Error: print_eval_status\n"
-  | ProofSaturated => debug_proof "Proof status: Saturated\n"
-  | ProofTimeOut   => debug_proof "Proof status: Time Out\n"
-  | Proof s        => debug_proof ("Proof found: " ^ s ^ "\n")
+    ProofError     => debug_proof "Error: print_eval_status"
+  | ProofSaturated => debug_proof "Proof status: Saturated"
+  | ProofTimeOut   => debug_proof "Proof status: Time Out"
+  | Proof s        => debug_proof ("Proof found: " ^ s)
 
-val thy_errorl = 
-  String.tokens Char.isSpace
-  ("blast integer_word bit sptree words numeral_bit int_bitwise" ^ " " ^ 
-   "ASCIInumbers basis_emit bitstring patricia_casts patricia" ^ " " ^ 
-   "numposrep alignment")
-
+(* integer_words return errors hopefully no other *)
 fun eval_tactictoe goal =
-  if !hhs_eval_flag andalso mem (current_theory ()) thy_errorl
+  if !hhs_eval_flag andalso 
+    not (
+      mem (current_theory ())
+      ["integer_word","word_simp","wordSem","labProps",
+       "data_to_word_memoryProof","word_to_stackProof"]
+        )
   then
     let
-      val _ = debug "Start evaluation"
       val _ = init_tactictoe ()
       val r = hhsRedirect.hide main_error_file main_tactictoe goal 
     in
-      debug_eval_status r;
-      debug "End evaluation"
+      debug_eval_status r
     end
   else ()
  
 fun tactictoe goal =
   let
-    val _ = hhsRedirect.hide init_error_file init_tactictoe ()
+    val _ = init_tactictoe ()
     val r = hhsRedirect.hide main_error_file main_tactictoe goal 
   in
     print_proof_status r
   end
+
+(*
+val l1 = ["gcd","seq","poly","llist","set_relation"];
+val l2 = map (fn x => x ^ "Theory") l1;
+app load l2;
+load "hhsTools";
+open hhsTools;
+val l3 = map (length o DB.thms) l1;
+sum_int l3;
+*)
  
 (* ----------------------------------------------------------------------
    Predicting only the next tactic based on some distance measure.
    ---------------------------------------------------------------------- *)
 
-fun try_tac tacdict memdict n goal stacl = case stacl of
-    [] => []
+fun try_tac tacdict memdict n goal stacl = 
+   if n <= 0 then () else
+   case stacl of
+    [] => ()
   | stac :: m => 
     let 
+      fun p s = (print_endline ("  " ^ s))
       val tac = dfind stac tacdict
       val ro = (SOME (add_time (hhsTimeout.timeOut 1.0 tac) goal)) 
         handle _ => NONE   
     in
       case ro of 
-        NONE => try_tac tacdict memdict n goal m
+        NONE => (try_tac tacdict memdict (n-1) goal m)
       | SOME ((gl,_),t) =>
         let 
           val lbl = (stac,t,goal,gl)
         in
           if dmem gl memdict
-          then try_tac tacdict memdict n goal m
-          else lbl :: (try_tac tacdict (dadd gl lbl memdict) (n-1) goal m)
+          then (try_tac tacdict memdict (n-1) goal m)
+          else 
+            (
+            if gl = []
+            then (print_endline stac; p "SOLVED")
+            else 
+              (
+              if mem goal gl 
+                then () 
+                else (print_endline stac; app (p o string_of_goal) gl);
+              try_tac tacdict (dadd gl lbl memdict) (n-1) goal m
+              )
+            )
         end
     end
     
@@ -325,14 +365,9 @@ fun next_tac n goal =
     val stacl = map (#1 o fst) (stac_predictor goal)
     (* executing tactics *)
     val memdict = dempty (list_compare goal_compare)
-    val rl = rev (try_tac tacdict memdict n goal stacl)
     (* printing tactics *)
-    fun f (stac,_,g,gl) =
-      let val s = hide hide_error_file (pretty_stac stac g) gl in
-        print (s ^ "\n")
-      end
   in
-    app f rl
+    try_tac tacdict memdict n goal stacl
   end
 
 

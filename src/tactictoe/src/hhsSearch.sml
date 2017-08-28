@@ -166,11 +166,11 @@ fun root_create goal pred =
       timedepth = 0.0
       }
   in
-    debug_search "root_create";
-    debug_search ("  goals: " ^
+    debug_search "Root";
+    debug_search ("  goal: " ^
           String.concatWith "," (map string_of_goal [goal]));
-    debug_search ("  predictions: " ^
-          String.concatWith "," (map (string_of_pred o (first_n 2)) [pred]));
+    debug_search ("  pred: \n  " ^
+       String.concatWith ",\n  " (map (string_of_pred o (first_n 2)) [pred]));
     proofdict := dadd selfid selfrec (!proofdict)
   end
 
@@ -214,13 +214,13 @@ fun node_create tactime parid parstac pargn parg goallist
       timedepth = partimedepth + tactime
     }
   in
-    debug_search ("node_create " ^ int_to_string selfid ^
-           " child of " ^ int_to_string parid ^
-           " by " ^ parstac ^
-           " in " ^ Real.toString (#timedepth selfrec) ^ " sec");
-    debug_search ("  goals: " ^ String.concatWith "," (map string_of_goal goallist));
+    debug_search 
+       ("Node " ^ int_to_string selfid ^ int_to_string parid ^
+        Real.toString (#timedepth selfrec));
+    debug_search 
+       ("  goals: " ^ String.concatWith "," (map string_of_goal goallist));
     debug_search ("  predictions: " ^
-       String.concatWith "," (map (string_of_pred o (first_n 2)) predlist));
+       String.concatWith ",\n  " (map (string_of_pred o (first_n 2)) predlist));
     proofdict := dadd selfid selfrec (!proofdict);
     selfid
   end
@@ -254,7 +254,6 @@ fun apply_stac pardict trydict_unref stac g =
   let
     val _ = count_try stac (* doesn't work with metis *)
     val _ = stac_counter := !stac_counter + 1
-    val _ = debug_search ("  " ^ int_to_string (!stac_counter) ^ " " ^ stac)
     val tac = dfind stac (!tacdict_glob) 
               handle _ => (debug ("SNH: apply_stac:" ^ stac); 
                            raise ERR "apply_stac" stac)
@@ -319,9 +318,8 @@ fun node_find () =
         val goal = Array.sub (#goalarr prec, gn)
         val ((stac,_,_,_),_) = hd (Array.sub (#predarr prec, gn))
       in
-        debug_search (
-          "node_find " ^ int_to_string pid ^ " " ^ 
-          stac ^ " " ^ Real.toString score);
+        debug_search ("Find " ^ int_to_string pid ^ " " ^ Real.toString score ^
+          "\n  " ^ stac);
         pid
       end
   end
@@ -559,19 +557,14 @@ fun selflearn_aux proof = case proof of
       in
         save_lbl lbl
       end
-      handle _ => debug_search ("  " ^ stac)
+      handle _ => debug_search ("Error: selflearn: " ^ stac)
       )
   | Then (p1,p2) => (selflearn_aux p1; selflearn_aux p2)
   | Thenl (p,pl) => (selflearn_aux p; app selflearn_aux pl)
 
 fun selflearn proof =
   if !hhs_selflearn_flag 
-  then
-    (
-    debug_search "Starting selflearn";
-    selflearn_aux proof;
-    debug_search "End selflearn"
-    )
+  then debug_t "selflearn" selflearn_aux proof
   else ()
 
 fun debug_err s = (debug s; raise ERR "" "")
@@ -593,7 +586,7 @@ fun imperative_search thmpredictor stacpredictor tacdict distdict g =
             if length proofl <> 1 
             then debug_err "SNH1"
             else (selflearn (hd proofl); minimize (hd proofl)) 
-          val sproof = reconstruct g proof
+          val sproof = debug_t "reconstruct" reconstruct g proof
         in
           Proof sproof
         end

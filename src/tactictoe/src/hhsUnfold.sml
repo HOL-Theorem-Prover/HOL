@@ -906,7 +906,6 @@ val infix_decl = tactictoe_dir ^ "/src/infix_file.sml"
 fun output_header cthy = 
   (
   app os (bare_readl infix_decl);
-  os ("open hhsOnline;\n");
   os ("\nval _ = hhsRecord.start_thy " ^ mlquote cthy)
   )
 
@@ -1013,24 +1012,51 @@ fun all_examples_files () =
 
 end (* struct *)
 
+
 (* ---------------------------------------------------------------------------
+  screen -s cakeml
+  cd cakeml/compiler/backend/proofs
+  /home/thibault/big/HOL/bin/Holmake
+  PATH=$PATH:"$HOME/HOL/bin"
+  cd /home/thibault/big
+  sh link_sigobj.sh
+  cd HOL/src/tactictoe/src
+  /home/thibault/big/HOL/bin/Holmake
   
-  rlwrap hol
-  
-  (* Start *)
+  rlwrap ../HOL/bin/hol
+
   load "hhsUnfold";
   open hhsTools;
   open hhsUnfold;
-  open hhsOpen;
+
+  fun all_cakeml_files () =
+  let 
+    val file = tactictoe_dir ^ "/code/theory_list"
+    val cmd0 = "find /home/thibault/big/cakeml -name \"*Theory.uo\" > " ^ file
+    val cmd1 = "sed -i 's/Theory.uo/Script.sml/' " ^ file
+  in
+    ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1));
+    readl file
+  end;
+
+fun all_examples_files () =
+  let 
+    val file = tactictoe_dir ^ "/code/theory_list"
+    val cmd0 = "find /home/thibault/big/HOL/examples -name \"*Theory.uo\" > " ^ file
+    val cmd1 = "sed -i 's/Theory.uo/Script.sml/' " ^ file
+  in
+    ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1));
+    readl file
+  end;
+
+  
+
+
   val l = all_examples_files () @ all_cakeml_files ();
   mkDir_err hhs_record_dir;
   mkDir_err hhs_open_dir;
   app hhs_rewrite l;
-  (* To be relaunch after one success: get rid of String.ui error*)
+
   
-  find "/home/tgauthier/cakeml" -name "*Theory.uo" > cakemluo
-  sed -i 's/Theory.uo/Script.sml/' cakemluo
-  
-  sed 's/a/b/g' alla
              
   --------------------------------------------------------------------------- *)

@@ -13,7 +13,7 @@ open HolKernel boolLib Abbrev
 val ERR = mk_HOL_ERR "hhsTools"
 
 type lbl_t = (string * real * goal * goal list)
-type fea_t = string list
+type fea_t = int list
 type feav_t = (lbl_t * fea_t)
 
 (* --------------------------------------------------------------------------
@@ -167,6 +167,7 @@ fun topo_sort graph =
    -------------------------------------------------------------------------- *)
 
 fun sum_real l = case l of [] => 0.0 | a :: m => a + sum_real m
+fun sum_int l = case l of [] => 0 | a :: m => a + sum_int m
 
 fun average_real l = sum_real l / Real.fromInt (length l)
 
@@ -296,6 +297,15 @@ fun print_endline s = print (s ^ "\n")
 
 fun debug s = 
   append_endline (hhs_search_dir ^ "/debug/" ^ current_theory ()) s
+
+fun debug_t s f x = 
+  let 
+    val _ = debug s
+    val (r,t) = add_time f x
+    val _ = debug ("  " ^ Real.toString t)
+  in
+    r
+  end
 
 fun debug_search s =
   append_endline (hhs_search_dir ^ "/search/" ^ current_theory ()) s

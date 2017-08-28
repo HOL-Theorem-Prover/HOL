@@ -33,9 +33,10 @@ fun add_metis tacdict thmpredictor (g,pred) =
       val stac = "metisTools.METIS_TAC [ " ^ String.concatWith " , " 
         (map f thml) ^ " ]"
       val tac = tactic_of_sml stac
+      val score = if null pred then 0.0 else snd (hd pred) 
     in
       tacdict := dadd stac tac (!tacdict);
-      (g, ((stac,0.0,([],F),[]),~ 1.0) :: pred)
+      (g, ((stac,0.0,([],F),[]), score) :: pred)
     end
     handle _ => (g,pred)
   else (g,pred)

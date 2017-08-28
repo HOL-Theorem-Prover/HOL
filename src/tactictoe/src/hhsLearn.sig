@@ -4,7 +4,7 @@ sig
   include Abbrev
   
   type lbl_t = (string * real * goal * goal list)
-  type fea_t = string list
+  type fea_t = int list
   type feav_t = (lbl_t * fea_t)
   
   val hhs_ortho_flag : bool ref

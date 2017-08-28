@@ -85,7 +85,7 @@ fun zeroed_type ty =
   else
     let 
       val {Args,Thy,Tyop} = dest_thy_type ty
-      val s = Thy ^ "." ^ Tyop ^ ".t"
+      val s = Tyop ^ "." ^ Thy ^ ".t"
     in
       if null Args then [s]
       else s :: (List.concat (map zeroed_type Args))
@@ -93,7 +93,7 @@ fun zeroed_type ty =
 
 fun string_of_const tm =
   let val {Thy,Name,Ty} = dest_thy_const tm in
-    Thy ^ "." ^ Name ^ ".c"
+    Name ^ "." ^ Thy ^ ".c"
   end
 
 
@@ -187,13 +187,26 @@ fun fea_of_term tm =
 fun string_of_goal (asl,w) =
   String.concatWith "\n" (map term_to_string (w :: asl))
 
+local
+   open Char String
+in
+   fun hash_fea s =
+     let
+        fun hsh (i, A) s =
+           hsh (i + 1, (A * 263 + ord (sub (s, i))) mod 792606555396977) s
+           handle Subscript => A
+     in
+        hsh (0,0) s
+     end
+end
+
 fun fea_of_goal (asl,w) = 
   let 
     val asl_sl1 = List.concat (map fea_of_term asl)
     val asl_sl2 = map (fn x => x ^ ".h") asl_sl1
     val w_sl   = map (fn x => x ^ ".w") (fea_of_term w)
   in
-    mk_string_set (w_sl @ asl_sl2)
+    mk_fast_set Int.compare (map hash_fea (mk_string_set (w_sl @ asl_sl2)))
   end
   handle _ => raise ERR "fea_of_goal" (string_of_goal (asl,w))
     

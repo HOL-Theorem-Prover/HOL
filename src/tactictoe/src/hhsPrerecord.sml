@@ -138,6 +138,7 @@ fun hhs_prerecord_aux thmname qtac goal =
         val s2 = total_time number_time number_stac qtac
         val ostac = hhs_lex s2
         val l2 = total_time extract_time hhs_extract s2
+        val _  = debug_proof ("Original tactic number: " ^ int_to_string (length l2))
         val _  = n_tactic_parse_glob := (!n_tactic_parse_glob) + length l2;
         val l3 = map (fn x => (x, drop_numbering x)) l2
         fun mk_reps (x,y) =
@@ -178,16 +179,18 @@ fun hhs_prerecord_aux thmname qtac goal =
     );
     (* save_hht cthy thmname goal; *)
     case (!success_flag) of 
-      SOME x => x 
+      SOME x => x
     | NONE => raise ERR "" ""
   end
 
 fun hhs_prerecord thmname qtac goal = 
   (
+  debug_proof "";
   debug_proof thmname; 
   debug_search thmname;
   debug thmname;
-  (tacticToe.eval_tactictoe goal handle _ => debug "Error: eval_tactictoe");
+  (tacticToe.eval_tactictoe goal handle _ => debug ("Error: eval_tactictoe"))
+  ;
   hhs_prerecord_aux thmname qtac goal
   )
   

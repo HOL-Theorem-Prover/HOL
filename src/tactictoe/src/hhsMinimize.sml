@@ -13,6 +13,7 @@ open HolKernel boolLib Abbrev hhsTools hhsExec hhsLexer hhsTimeout
 val ERR = mk_HOL_ERR "hhsMinimize"
 
 val hhs_minimize_flag = ref false
+val hhs_prettify_flag = ref false
 
 (* --------------------------------------------------------------------------
    Tests
@@ -31,8 +32,10 @@ fun is_proof stac g = (rec_sproof stac g = SOME [])
 fun is_effect stac g gl = (rec_stac stac g = SOME gl)
 
 (*----------------------------------------------------------------------------
-  Requoting terms
-  ----------------------------------------------------------------------------*)
+  Requoting terms. 
+  Does not work with the new lexer. 
+  Should be applied just before printing.
+  ----------------------------------------------------------------------------
 
 fun unquote s =
   if String.sub (s,0) = #"\"" andalso String.sub (s,String.size s - 1) = #"\""
@@ -61,6 +64,7 @@ and dquote_cont s m =
 and cont sl = (hd sl) ^ " " ^ add_quote_aux (tl sl)
 
 fun add_quote stac = add_quote_aux (hhs_lex stac)
+*)
  
 (*----------------------------------------------------------------------------
   Minimizing the space between parentheses
@@ -95,9 +99,9 @@ fun rm_prefix stac =
   end
 
 fun prettify1_stac stac = 
-  (minspace_sl o rm_prefix o add_quote) stac
+  (minspace_sl o rm_prefix) stac
 fun prettify2_stac stac =
-  (minspace_sl o hhs_lex o add_quote) stac
+  (minspace_sl o hhs_lex) stac
 
 (*----------------------------------------------------------------------------
   Pretty-printing the abstract tree of the proof.
@@ -121,9 +125,9 @@ fun prettify_proof proof = case proof of
   | Then (p1,p2) => Then (prettify_proof p1, prettify_proof p2)
   | Thenl (p,pl) => Thenl (prettify_proof p, map prettify_proof pl)
 
-
+(* only works after a call to add_proofpar *)
 fun string_of_proof proof = case proof of
-    Tactic (s,_) => "(" ^ s ^ ")"
+    Tactic (s,_) => s
   | Then (p1,p2) => string_of_proof p1 ^ " THEN " ^ string_of_proof p2
   | Thenl (p,pl) =>     
     let 
@@ -131,7 +135,7 @@ fun string_of_proof proof = case proof of
       val set = mk_fast_set String.compare sl
     in
       if length set = 1 
-      then string_of_proof p ^ " THEN " ^ "(" ^ hd set ^ ")"
+      then string_of_proof p ^ " THEN " ^ hd set
       else string_of_proof p ^ " THENL " ^ 
         "[" ^ String.concatWith ", " sl ^ "]"
     end
@@ -204,38 +208,67 @@ fun minimize_proof proof = case proof of
   | Then (p1,p2) => Then (minimize_proof p1, minimize_proof p2)
   | Thenl (p,pl) => Thenl (minimize_proof p, map minimize_proof pl)
 
-fun minimize proof = 
-  let val new_proof =
-    if !hhs_minimize_flag 
-    then 
-      (
-      debug "Starting minimization";
-      minimize_proof (minimize_tac proof) before debug "End minimization"
-      )
-    else proof
-  in
-    prettify_proof new_proof
-  end
+fun prettify_proof_wrap p =
+  if !hhs_prettify_flag then 
+    (
+    debug "Starting prettification";
+    prettify_proof p before debug "End prettification"
+    )
+  else p
+
+fun minimize_proof_wrap p =
+  if !hhs_minimize_flag then 
+    (
+    debug "Starting minimization";
+    minimize_proof (minimize_tac p) before debug "End minimization"
+    )
+  else p
+
+fun is_infix s = String.isPrefix "hhs_infix" s 
+
+fun should_par i sl = case sl of
+    []     => false
+  | a :: m => if is_infix a andalso i <= 0
+                then true
+              else if mem a ["let","local","struct","(","[","{"]
+                then should_par (i + 1) m
+              else if mem a ["end",")","]","}"]
+                then should_par (i - 1) m
+              else should_par i m
+ 
+fun add_tacpar s = if should_par 0 (hhs_lex s) then "(" ^ s ^ ")"  else s
+
+fun add_proofpar proof = case proof of
+    Tactic (s,g) => Tactic (add_tacpar s,g)
+  | Then (p1,p2) => Then   (add_proofpar p1,add_proofpar p2)
+  | Thenl (p,pl) => Thenl  (add_proofpar p,map add_proofpar pl)
+
+fun minimize p = 
+  (prettify_proof_wrap o minimize_proof_wrap o add_proofpar) p
 
 (*----------------------------------------------------------------------------
   Reconstructing the proof.
   ----------------------------------------------------------------------------*)
 
+fun proof_length proof = case proof of
+  Tactic (s,g) => 1
+| Then (p1,p2) => proof_length p1 + proof_length p2
+| Thenl (p,pl) => proof_length p + sum_int (map proof_length pl)
+
 fun reconstruct g proof =          
   let
-    val _ = debug "Starting reconstruction"
     val sproof = string_of_proof proof
     val tac    = tactic_of_sml sproof
-                 handle _ => raise ERR "reconstruct: tactic_of_sml: " sproof
+      handle _ => raise ERR "reconstruct" sproof
     val tim = 2.0 * (Time.toReal (!hhs_search_time))
-  in
-    ignore (timeOut tim Tactical.TAC_PROOF (g,tac)) 
-    handle _ => 
-      (debug ("Error: reconstruct" ^ sproof); raise ERR "reconstruct" sproof)
-    ;
-    debug "End reconstruction";
+    val (_,new_tim) = add_time (timeOut tim Tactical.TAC_PROOF) (g,tac)
+      handle _ => 
+        (debug ("Error: reconstruct: " ^ sproof);
+         raise ERR "reconstruct" sproof)
+  in 
+    debug ("proof length: " ^ int_to_string (proof_length proof));
+    debug ("proof time: " ^ Real.toString new_tim);
     sproof
   end
-  
 
 end (* struct *)

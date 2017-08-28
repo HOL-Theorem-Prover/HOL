@@ -46,7 +46,7 @@ fun start_thy cthy =
   )
 
 (*---------------------------------------------------------------------------
-  Short summary of tactic recording
+  Short summary of tactic recording. Exporting feature vectors.
   ---------------------------------------------------------------------------*)
 
 fun end_thy cthy = 
@@ -56,7 +56,7 @@ fun end_thy cthy =
     fun f i s = append_endline file (int_to_string i ^ " " ^ s) 
     fun g s r = append_endline file (s ^ ": " ^ Real.toString r)
     val _ = if !hhs_eval_flag then export_succrate cthy else ()
-    val (_,t) = add_time export_feav (!hhs_cthyfea)
+    val (_,t) = add_time (export_feavl cthy) (!hhs_cthyfea)
   in 
     mk_summary cthy;
     g "export" t

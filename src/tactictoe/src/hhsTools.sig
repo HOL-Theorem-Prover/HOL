@@ -4,7 +4,7 @@ sig
   include Abbrev
   
   type lbl_t = (string * real * goal * goal list)
-  type fea_t = string list
+  type fea_t = int list
   type feav_t = (lbl_t * fea_t)
   
   val hhs_search_time    : Time.time ref
@@ -57,7 +57,8 @@ sig
   val number_list : int -> 'a list -> (int * 'a) list
 
   val sum_real : real list -> real
-
+  val sum_int : int list -> int
+  
   val mk_fast_set : ('a * 'a -> order) -> 'a list -> 'a list
   val mk_sameorder_set : ('a * 'a -> order) -> 'a list -> 'a list
   val dict_sort   : ('a * 'a -> order) -> 'a list -> 'a list
@@ -90,6 +91,7 @@ sig
   val total_time : real ref -> ('a -> 'b) -> 'a -> 'b
   
   val debug : string -> unit
+  val debug_t : string -> ('a -> 'b) -> 'a -> 'b
   val debug_search : string -> unit
   val debug_proof  : string -> unit
   val debug_parse  : string -> unit

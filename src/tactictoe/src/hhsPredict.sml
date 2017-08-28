@@ -20,7 +20,7 @@ val ERR = mk_HOL_ERR "hhsPredict"
 fun learn_tfidf feavl = 
   let
     val syms      = List.concat (map snd feavl)
-    val dict      = count_dict (dempty String.compare) syms
+    val dict      = count_dict (dempty Int.compare) syms
     val n         = length feavl
     fun f (fea,freq) = 
       Math.ln (Real.fromInt n) - Math.ln (Real.fromInt freq)
@@ -56,8 +56,7 @@ fun knn_self_distance symweight fea =
 fun knn_distance symweight dict_o fea_p =
   let 
     val fea     = inter_dict dict_o fea_p
-    fun wf s    = dfind s symweight 
-      handle _ => raise ERR "knn_distance" s
+    fun wf n    = dfind n symweight handle _ => raise ERR "knn_distance" ""
     val weightl = map wf fea
   in
     pow6_dist weightl
@@ -70,12 +69,11 @@ fun knn_distance symweight dict_o fea_p =
 (* A label can be predicted multiple times *)
 fun pre_knn symweight feal fea_o =
   let 
-    val dict_o = dnew String.compare (map (fn x => (x,())) fea_o)
+    val dict_o = dnew Int.compare (map (fn x => (x,())) fea_o)
     fun dist (lbl,fea_p) = (lbl, knn_distance symweight dict_o fea_p)
     fun compare0 ((_,x),(_,y)) = Real.compare (y,x)
     val l0 = map dist feal
     val l1 = dict_sort compare0 l0
-    val memdict = dempty String.compare
   in
     l1
   end
@@ -133,19 +131,7 @@ fun mepo_predict n predictor =
    -------------------------------------------------------------------------- *)
 
 (* Renaming label and features *)
-val fea_counter = ref 0
-val fea_dict    = ref (dempty String.compare)
-
-fun name_fea fea = 
-  dfind fea (!fea_dict) 
-  handle _ =>
-    let 
-      val named_fea = mlquote (int_to_string (!fea_counter))
-    in
-      fea_dict := dadd fea named_fea (!fea_dict);
-      incr fea_counter;
-      named_fea
-    end
+fun name_fea fea = mlquote (int_to_string fea)
 
 val feav_counter = ref 0
 val feav_dict    = ref (dempty feav_compare)
@@ -229,8 +215,6 @@ fun stacknn_ext n stacfea feag =
   if null stacfea then []
   else
     (
-    fea_counter := 0;
-    fea_dict    := dempty String.compare;
     feav_counter := 0;
     feav_dict    := dempty feav_compare;
     ifeav_dict   := dempty String.compare;
@@ -326,8 +310,6 @@ fun tread_predictions () =
 fun thmknn_ext n thmfeal feag =
   if null thmfeal then [] else
     (
-    fea_counter := 0;
-    fea_dict    := dempty String.compare;
     thm_counter := 0;
     thm_dict    := dempty String.compare;
     unthm_dict  := dempty String.compare;
@@ -339,8 +321,6 @@ fun thmknn_ext n thmfeal feag =
 fun thmmepo_ext n thmfeal feag =
   if null thmfeal then [] else
     (
-    fea_counter := 0;
-    fea_dict    := dempty String.compare;
     thm_counter := 0;
     thm_dict    := dempty String.compare;
     unthm_dict  := dempty String.compare;

@@ -56,9 +56,12 @@ fun is_sep c =
   c = #"(" orelse c = #")" orelse c = #"[" orelse c = #"]" orelse
   c = #"{" orelse c = #"}" orelse c = #"," orelse c = #";"
 
+fun is_seps s = mem s ["(",")","[","]","{","}",",",";"]
+
+fun is_dot c = c = #"."
+
 fun is_sml_id #"_" = true
   | is_sml_id #"'" = true
-  | is_sml_id #"." = true
   | is_sml_id ch = Char.isAlphaNum ch
 
 fun in_string str =
@@ -100,7 +103,7 @@ fun lex_helper acc charl = case charl of
     (
     if is_blank a
       then lex_helper acc m
-    else if is_sep a
+    else if is_sep a orelse is_dot a
       then lex_helper (Char.toString a :: acc) m
     else if is_sml_id a
       then
@@ -123,7 +126,16 @@ fun reg_char l = case l of
                      else "#" :: reg_char (s :: m)
                      )                    
   | a :: m        => a :: reg_char m
-  
-fun hhs_lex s = reg_char (lex_helper [] (explode s))
+
+fun some_acc acc = 
+  if null acc then [] else [String.concatWith "." (rev acc)]
+
+fun reg_dot acc l = case l of
+    [] => some_acc acc
+  | "." :: "." :: "." :: m => some_acc acc @ ["..."] @ reg_dot [] m
+  | "." :: b :: m          => reg_dot (b :: acc) m
+  | a :: m                 => some_acc acc @ reg_dot [a] m
+   
+fun hhs_lex s = reg_dot [] (reg_char (lex_helper [] (explode s)))
 
 end (* struct *)
