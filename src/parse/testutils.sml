@@ -49,7 +49,8 @@ fun raw_backend f =
     Lib.with_flag (Parse.current_backend, PPBackEnd.raw_terminal) f
 
 local
-  val pfxsize = size "Testing printing of `` ..."
+  val pfxsize = size "Testing printing of ..." + 3
+    (* 3 for quotations marks and an extra space *)
 in
 fun standard_tpp_message s = let
   fun trunc s = if size s + pfxsize > 62 then let
@@ -61,7 +62,7 @@ fun standard_tpp_message s = let
   fun pretty s = s |> String.translate (fn #"\n" => "\\n" | c => str c)
                    |> trunc
 in
-  "Testing printing of `"^pretty s^"`"
+  "Testing printing of "^UnicodeChars.lsquo ^ pretty s ^ UnicodeChars.rsquo
 end
 end (* local *)
 
