@@ -33,6 +33,19 @@ val isWeakWithOrder_def = Define
 val isWeakAlterA_def =
     Define `isWeakAlterA A = ?ord. isWeakWithOrder A ord`;
 
+val FINITE_LEMM = store_thm
+  ("FINITE_LEMM",
+  ``!aut. FINITE aut.alphabet ∧ FINITE aut.states ∧ isValidAlterA aut
+       ==> (!q. q ∈ aut.states ==> FINITE (aut.trans q))``,
+  rpt strip_tac
+  >> `aut.trans q ⊆ ((POW aut.alphabet) × (POW aut.states))` by (
+      fs[isValidAlterA_def] >> simp[SUBSET_DEF] >> rpt strip_tac
+        >- (Cases_on `x` >> metis_tac[IN_POW,FST])
+        >- (Cases_on `x` >> metis_tac[IN_POW,SND])
+  )
+  >> metis_tac[FINITE_CROSS, FINITE_POW,PSUBSET_DEF,PSUBSET_FINITE]
+  );
+
 (*
    RUNs over the alternating automaton
 *)
