@@ -814,3 +814,4 @@ val GBA_CORRECT = store_thm
    metis_tac[WAA_IN_GBA, GBA_IN_WAA,SET_EQ_SUBSET]
   );
 
+val _ = export_theory()
