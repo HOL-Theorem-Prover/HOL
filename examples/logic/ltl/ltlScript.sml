@@ -314,7 +314,6 @@ val ltl_lang_def = Define
    EXAMPLES
 *)
 
-
 val W1_def = Define `W1 = WORD (\x. {x})`;
 
 val EX_1 = store_thm
@@ -331,6 +330,49 @@ val EX_4 = store_thm
   ("EX4",``!x. ?y. MODELS (suff W1 x) (U (VAR x) (VAR y))``,
    simp [MODELS_def, suff_def, at_def, W1_def] >> rpt strip_tac
      >> exists_tac ``0`` >> simp[]
+  );
+
+(* Full LTL *)
+
+val _ = Datatype`
+  full_ltl_frml
+  = F_VAR 'a
+  | F_CONJ full_ltl_frml full_ltl_frml
+  | F_NEG full_ltl_frml
+  | F_X full_ltl_frml
+  | F_U full_ltl_frml full_ltl_frml`;
+
+val FLTL_MODELS_def =
+    Define
+      `(FLTL_MODELS w (F_VAR a) = (a ∈ (at w 0)))
+    /\ (FLTL_MODELS w (F_CONJ f1 f2) = (FLTL_MODELS w f1) /\ (FLTL_MODELS w f2))
+    /\ (FLTL_MODELS w (F_NEG f) = ~(FLTL_MODELS w f))
+    /\ (FLTL_MODELS w (F_X f) = (FLTL_MODELS (suff w 1) f))
+    /\ (FLTL_MODELS w (F_U f1 f2) =
+        ?n. (FLTL_MODELS (suff w n) f2) /\ !i. (i < n) ==> (FLTL_MODELS (suff w i) f1))`;
+
+val NNF_def = Define`
+    (NNF (F_VAR a) = VAR a)
+  ∧ (NNF (F_CONJ f1 f2) = CONJ (NNF f1) (NNF f2))
+  ∧ (NNF (F_NEG (F_VAR a)) = N_VAR a)
+  ∧ (NNF (F_NEG (F_CONJ f1 f2)) = DISJ (NNF (F_NEG f1)) (NNF (F_NEG f2)))
+  ∧ (NNF (F_NEG (F_NEG f)) =  NNF f)
+  ∧ (NNF (F_NEG (F_X f)) = X (NNF (F_NEG f)))
+  ∧ (NNF (F_NEG (F_U f1 f2)) = R (NNF (F_NEG f1)) (NNF (F_NEG f2)))
+  ∧ (NNF (F_X f) = X (NNF f))
+  ∧ (NNF (F_U f1 f2) = U (NNF f1) (NNF f2))`;
+
+val NNF_NEG_LEMM = store_thm
+  ("NNF_NEG_LEMM",
+   ``!f w. MODELS w (NNF (F_NEG f)) = ~MODELS w (NNF f)``,
+   Induct_on `f` >> fs[MODELS_def, NNF_def]
+  );
+
+val NNF_THM = store_thm
+  ("NNF_THM",
+   ``!f w. FLTL_MODELS w f = MODELS w (NNF f)``,
+   Induct_on `f` >> fs[FLTL_MODELS_def, MODELS_def, NNF_def]
+   >> metis_tac[NNF_NEG_LEMM]
   );
 
 val _ = export_theory();
