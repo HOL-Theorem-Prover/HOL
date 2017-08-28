@@ -32,11 +32,6 @@ val _ = Datatype`
 
 val _ = add_numeral_form(#"s", SOME "SX_NUM")
 val _ = overload_on ("nil", ``SX_SYM "nil"``)
-val _ = add_listform { block_info = (PP.INCONSISTENT, 0),
-                       cons = "SX_CONS", leftdelim = [Parse.TOK "⦇"],
-                       nilstr = "nil", rightdelim = [Parse.TOK "⦈"],
-                       separator = [Parse.TOK ";", BreakSpace(1,0)]}
-
 val _ = add_rule { block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0)),
                    fixity = Closefix,
                    paren_style = OnlyIfNecessary,
@@ -44,7 +39,10 @@ val _ = add_rule { block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0)),
                                   Parse.TOK "•", BreakSpace(1, 0), TM,
                                   Parse.TOK "⦈"],
                    term_name = "SX_CONS" }
-
+val _ = add_listform { block_info = (PP.INCONSISTENT, 0),
+                       cons = "SX_CONS", leftdelim = [Parse.TOK "⦇"],
+                       nilstr = "nil", rightdelim = [Parse.TOK "⦈"],
+                       separator = [Parse.TOK ";", BreakSpace(1,0)]}
 
 val _ = overload_on ("’", ``λs. ⦇ SX_SYM "quote" ; s ⦈``)
 
