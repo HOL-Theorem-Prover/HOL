@@ -573,7 +573,7 @@ val REPL_LEMM_1 = store_thm
            >> `h (b 0) ⊆ run.V (1+j)` by fs[]
            >> metis_tac[SUBSET_DEF]
         )
-     >- (Induct_on `i` >> fs[]
+     >- (rename [‘b (i + 2) ∈ run.E _’] >> Induct_on `i` >> fs[]
           >- (fs[infBranchOf_def, run_restr_def, run_restr_E_def, run_restr_V_def]
               >> `b (1 + 1) ∈ run.E (j + 1, b 1)` suffices_by simp[]
               >> `b (1 + 1) ∈
