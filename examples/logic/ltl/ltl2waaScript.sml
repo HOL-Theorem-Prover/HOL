@@ -37,46 +37,50 @@ Induct_on `f` >> fs[trans_def, char_def, SUBSET_DEF,d_conj_def] >> rpt strip_tac
 
 val TRANS_TEMPDNF_LEMM = store_thm
   ("TRANS_TEMPDNF_LEMM",
-   ``!a s Σ f. ((a,s) ∈ trans Σ f)
-        ==> (?e t a'. (s = BIGUNION t) /\ (e ∈ tempDNF f)
-                   /\ (a = BIGINTER a')
-                   /\ (!t'. t' ∈ t
-                          ==> ?q a''. a'' ∈ a' /\ q ∈ e /\ (a'',t') ∈ trans Σ q)
-                   /\ (!q. q ∈ e
-                          ==> ?t' a''. a'' ∈ a' /\ (t' ∈ t) /\ (a'',t') ∈ trans Σ q))``,
+   “!a s Σ f.
+      ((a,s) ∈ trans Σ f) ==>
+      ?e t a'. (s = BIGUNION t) /\ (e ∈ tempDNF f)
+               /\ (a = BIGINTER a')
+               /\ (!t'. t' ∈ t ==>
+                        ?q a''. a'' ∈ a' /\ q ∈ e /\ (a'',t') ∈ trans Σ q)
+               /\ !q. q ∈ e ==>
+                      ?t' a''. a'' ∈ a' /\ (t' ∈ t) /\ (a'',t') ∈ trans Σ q”,
    Induct_on `f` >> fs[trans_def, tempDNF_def,BIGUNION,SUBSET_DEF] >> rpt strip_tac
     >- (qexists_tac `{{}}` >> qexists_tac `{char Σ a}` >> fs[])
     >- (qexists_tac `{{}}` >> qexists_tac `{Σ DIFF char Σ a}` >> fs[])
     >- (dsimp[] >> metis_tac[])
     >- (dsimp[] >> metis_tac[])
-    >- (fs[d_conj_def]
+    >- (fs[d_conj_def] >>
+        rename [‘(a1,e1) ∈ trans Σ f1’, ‘a = a1 ∩ a2’, ‘(a2,e2) ∈ trans Σ f2’]
         >> `∃e t a'.
-               (e1 = {x | ∃s. s ∈ t ∧ x ∈ s}) ∧ e ∈ tempDNF f ∧
+               (e1 = {x | ∃s. s ∈ t ∧ x ∈ s}) ∧ e ∈ tempDNF f1 ∧
                (a1 = BIGINTER a') ∧
                (∀t'.
                  t' ∈ t ⇒ ∃q a''. a'' ∈ a' ∧ q ∈ e ∧ (a'',t') ∈ trans Σ q) ∧
                ∀q. q ∈ e ⇒ ∃t' a''. a'' ∈ a' ∧ t' ∈ t ∧ (a'',t') ∈ trans Σ q`
            by metis_tac[]
-        >> `∃e t a'.
-               (e2 = {x | ∃s. s ∈ t ∧ x ∈ s}) ∧ e ∈ tempDNF f' ∧
-               (a2 = BIGINTER a') ∧
-               (∀t'.
-                 t' ∈ t ⇒ ∃q a''. a'' ∈ a' ∧ q ∈ e ∧ (a'',t') ∈ trans Σ q) ∧
-               ∀q. q ∈ e ⇒ ∃t' a''. a'' ∈ a' ∧ t' ∈ t ∧ (a'',t') ∈ trans Σ q`
+        >> `∃e' t' a''.
+               (e2 = {x | ∃s. s ∈ t' ∧ x ∈ s}) ∧ e' ∈ tempDNF f2 ∧
+               (a2 = BIGINTER a'') ∧
+               (∀tt.
+                 tt ∈ t' ⇒ ∃q aa. aa ∈ a'' ∧ q ∈ e' ∧ (aa,tt) ∈ trans Σ q) ∧
+               ∀q. q ∈ e' ⇒ ∃tt aa. aa ∈ a'' ∧ tt ∈ t' ∧ (aa,tt) ∈ trans Σ q`
            by metis_tac[]
        >> qexists_tac `e ∪ e'` >> fs[] >> qexists_tac `t ∪ t'`
        >> dsimp[] >> fs[] >> rpt strip_tac
        >> qexists_tac `a' ∪ a''`
        >> qexists_tac `e` >> qexists_tac `e'` >> fs[]
        >> fs[UNION_DEF] >> rpt strip_tac
-         >- (`∃q a''. a'' ∈ a' ∧ q ∈ e ∧ (a'',t'') ∈ trans Σ q`
-              by metis_tac[]
-              >> `∃q a'''.
+         >- (rename1 ‘t'' ∈ t’ >>
+             `∃q a''. a'' ∈ a' ∧ q ∈ e ∧ (a'',t'') ∈ trans Σ q`
+                by metis_tac[] >>
+             `∃q a'''.
                     ((a''' ∈ a') ∨ (a''' ∈ a'')) ∧ q ∈ e ∧
                     (a''',t'') ∈ trans Σ q` suffices_by metis_tac[]
               >> qexists_tac `q` >> qexists_tac `a'''` >> fs[])
-         >- (`∃q a'''. a''' ∈ a'' ∧ q ∈ e' ∧ (a''',t'') ∈ trans Σ q`
-              by metis_tac[]
+         >- (rename1 ‘t'' ∈ t'’ >>
+             `∃q a'''. a''' ∈ a'' ∧ q ∈ e' ∧ (a''',t'') ∈ trans Σ q`
+                by metis_tac[]
               >> `∃q a'''.
                     ((a''' ∈ a') ∨ (a''' ∈ a'')) ∧ q ∈ e' ∧
                     (a''',t'') ∈ trans Σ q` suffices_by metis_tac[]
@@ -917,11 +921,13 @@ val RUN_FOR_DISJ_LEMM2 = store_thm
 
 val REPL_IN_0 = store_thm
   ("REPL_IN_0",
-   ``!r w f f' f1 f2 a p. runForAA (ltl2waa_free_alph (POW (props f')) f) r w
-                  /\ (a, r.V 1) ∈ trans (POW (props f')) (p)
-                  /\ at w 0 ∈ a
-                  /\ {p} ∈ tempDNF p
-               ==> ?r'. runForAA (ltl2waa_free_alph (POW (props f')) (p)) r' w``,
+   ``!r w f f' f1 f2 a p.
+       runForAA (ltl2waa_free_alph (POW (props f')) f) r w
+       /\ (a, r.V 1) ∈ trans (POW (props f')) (p)
+       /\ at w 0 ∈ a
+       /\ {p} ∈ tempDNF p
+     ==>
+       ?r'. runForAA (ltl2waa_free_alph (POW (props f')) (p)) r' w``,
    rpt strip_tac >> fs[runForAA_def]
    >> `?r'. validAARunFor (ltl2waa_free_alph (POW (props f')) (p)) r' w
       /\ (∀b x. infBranchOf r' b ∧ branchFixP b x
@@ -983,7 +989,7 @@ val REPL_IN_0 = store_thm
                           >> `0 + 1 = 1` by simp[]
                           >> `b (0 + 1) ∈ r.V 1` by metis_tac[]
                           >> fs[])
-                      >- (fs[infBranchOf_def]
+                      >- (fs[infBranchOf_def] >> rename [‘b (i + 2) ∈ r.E _’]
                           >> `b (i + 1 + 1) ∈ r.E(i+1, b (i+1))` suffices_by simp[]
                           >> `~(i + 1 = 0)` by simp[] >> metis_tac[]
                           )
