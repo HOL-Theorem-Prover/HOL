@@ -328,6 +328,84 @@ val BRANCH_SUFF_LEMM = store_thm
        )
   );
 
+(* reachable states *)
+
+val nStepReachable_def = Define`
+   (nStepReachable trans init 0 = init)
+ ∧ (nStepReachable trans init (SUC i) =
+     {s | ?a qs s'. (a, qs) ∈ trans s' ∧ s' ∈ nStepReachable trans init i
+           ∧ s ∈ qs})`;
+
+val reachable_def = Define`
+  (reachable trans init = {s | ?n. s ∈ nStepReachable trans init n })`;
+
+val reachableRel_def = Define`
+  reachableRel aut =
+     { (s, s') | s ∈ reachable aut.trans {s'}
+                   ∧ s ∈ aut.states ∧ s' ∈ aut.states}`;
+
+val REACHABLE_LEMM = store_thm
+  ("REACHABLE_LEMM",
+   ``!aut x. isValidAlterA aut ∧ (x ∈ aut.states)
+            ==> (reachable aut.trans {x} ⊆ aut.states)``,
+   rpt strip_tac
+   >> `!n. nStepReachable aut.trans {x} n ⊆ aut.states` by (
+       Induct_on `n` >> fs[nStepReachable_def]
+       >> simp[SUBSET_DEF] >> rpt strip_tac
+       >> metis_tac[isValidAlterA_def,SUBSET_DEF]
+   )
+   >> simp[reachable_def,SUBSET_DEF] >> rpt strip_tac
+   >> metis_tac[SUBSET_DEF]
+  );
+
+val WAA_REACH_IS_PO = store_thm
+  ("WAA_REACH_IS_PO",
+   ``!aut. isWeakAlterA aut ∧ isValidAlterA aut
+             ==> isWeakWithOrder aut (reachableRel aut)``,
+   fs[isWeakAlterA_def] >> simp[isWeakWithOrder_def] >> rpt strip_tac
+    >- (fs[partial_order_def] >> rpt strip_tac
+        >- (simp[reachableRel_def,domain_def,SUBSET_DEF] >> rpt strip_tac)
+        >- (simp[reachableRel_def,range_def,SUBSET_DEF] >> rpt strip_tac)
+        >- (simp[reachableRel_def,transitive_def] >> rpt strip_tac
+            >> fs[reachable_def] >> qexists_tac `n + n'`
+            >> `!j1 j2 p q r.
+                  p ∈ nStepReachable aut.trans {q} j1 ∧
+                  r ∈ nStepReachable aut.trans {p} j2
+                  ==> r ∈ nStepReachable aut.trans {q} (j1 + j2)` by (
+                 Induct_on `j2` >> rpt strip_tac >> fs[nStepReachable_def]
+                 >> `r ∈ nStepReachable aut.trans {q} (SUC (j1 + j2))`
+                    suffices_by metis_tac[SUC_ADD_SYM,ADD_COMM]
+                 >> simp[nStepReachable_def] >> metis_tac[]
+             )
+            >> metis_tac[ADD_COMM]
+           )
+        >- (fs[reflexive_def,reachableRel_def,reachable_def] >> rpt strip_tac
+            >> qexists_tac `0` >> fs[nStepReachable_def]
+           )
+        >- (fs[antisym_def,reachableRel_def,reachable_def] >> rpt strip_tac
+            >> `!i p q. p ∈ aut.states ∧ q ∈ aut.states
+        ∧ p ∈ nStepReachable aut.trans {q} i ==> (p,q) ∈ ord` by (
+                 Induct_on `i` >> rpt strip_tac
+                  >- fs[reflexive_def,nStepReachable_def]
+                  >- (fs[nStepReachable_def]
+                      >> `s' ∈ aut.states` by (
+                           `s' ∈ reachable aut.trans {q}`
+                            by (simp[reachable_def] >> metis_tac[])
+                          >> metis_tac[SUBSET_DEF,REACHABLE_LEMM])
+                      >> `(s',q) ∈ ord` by metis_tac[]
+                      >> fs[transitive_def] >> metis_tac[]
+                     )
+             )
+            >> metis_tac[]
+           )
+       )
+    >- (fs[reachableRel_def,reachable_def] >> strip_tac
+          >- (qexists_tac `SUC 0` >> simp[nStepReachable_def] >> metis_tac[])
+          >- (fs[isValidAlterA_def] >> metis_tac[SUBSET_DEF])
+       )
+  );
+
+
 (*
   restricting a run to a subset of its initial states
 *)
