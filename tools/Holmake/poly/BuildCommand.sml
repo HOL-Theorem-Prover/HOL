@@ -6,6 +6,12 @@ structure FileSys = OS.FileSys
 structure Path = OS.Path
 structure Process = OS.Process
 
+infix ++
+fun p1 ++ p2 = Path.concat(p1,p2)
+val SIGOBJ = Systeml.HOLDIR ++ "sigobj"
+
+
+
 infix |>
 fun x |> f = f x
 
@@ -85,12 +91,12 @@ fun addPath I file =
     file
   else let
       val p = List.find (fn p =>
-                            FileSys.access (Path.concat (p, file ^ ".ui"), []))
+                            FileSys.access (p ++ (file ^ ".ui"), []))
                         (FileSys.getDir() :: I)
     in
       case p of
-           NONE => OS.Path.concat (OS.FileSys.getDir(), file)
-         | SOME p => OS.Path.concat (p, file)
+           NONE => OS.FileSys.getDir() ++ file
+         | SOME p => p ++ file
     end;
 
 fun time_max(t1,t2) = if Time.<(t1,t2) then t2 else t1
@@ -302,17 +308,21 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       val objectfiles =
         if polynothol then
           objectfiles0
-        else if interactive_flag then "holmake_interactive.uo" :: objectfiles0
-        else "holmake_not_interactive.uo" :: objectfiles0
+        else if interactive_flag then
+          (SIGOBJ ++ "holmake_interactive.uo") :: objectfiles0
+        else (SIGOBJ ++ "holmake_not_interactive.uo") :: objectfiles0
     in
         ((script,[scriptuo,scriptui,script]), objectfiles)
     end
     fun run_script g (script, intermediates) objectfiles expected_results =
-      if isSuccess (poly_link true script (List.map OS.Path.base objectfiles))
-      then let
+      let
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
         val _ = app safedelete expected_results
-        val cline = [fullPath [OS.FileSys.getDir(), script]]
+        val useScript = fullPath [HOLDIR, "bin", "buildheap"]
+        val cline = useScript::
+                    (if polynothol then "--poly" else
+                     "--holstate="^HOLSTATE)::
+                    objectfiles
         fun cont wn res =
           let
             val _ =
@@ -346,11 +356,9 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
               (BuiltInCmd (BIC_BuildScript script_part))
         end
       in
-        BR_ClineK { cline = (script, cline), job_kont = cont,
+        BR_ClineK { cline = (useScript, cline), job_kont = cont,
                     other_nodes = other_nodes }
       end
-      else
-        (warn ("Failed to build script file, "^script^"\n"); BR_Failed)
   in
     let
     in

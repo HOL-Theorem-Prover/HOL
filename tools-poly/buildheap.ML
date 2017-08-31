@@ -1,6 +1,47 @@
-val _ = PolyML.Compiler.prompt1 := "";
-val _ = PolyML.Compiler.prompt2 := "";
-val _ = PolyML.print_depth 0;
+val _ = use "poly/poly-init2.ML";
+structure BasicIO = SML90;
+exception Interrupt = SML90.Interrupt
+
+val _ = use "../tools/Holmake/Systeml.sig"
+val _ = use "Holmake/Systeml.sml";
+
+val _ = use "../tools/Holmake/hmcore.ML";
+val _ = use "../tools/Holmake/GetOpt.sig";
+val _ = use "../tools/Holmake/GetOpt.sml";
+val _ = use "../tools/Holmake/FunctionalRecordUpdate.sml";
+
+val SIGOBJ = OS.Path.concat(Systeml.HOLDIR, "sigobj")
+datatype option_record = OR of {
+  all_forced : bool,
+  base_state : string option,
+  forced_objs : string list,
+  help : bool,
+  output : string option,
+  quietp : bool,
+  repl : bool
+}
+
+local
+  open FunctionalRecordUpdate
+  fun makeUpdateT z = makeUpdate7 z
+in
+fun updateT z = let
+  fun from all_forced base_state forced_objs help output quietp repl =
+    {all_forced = all_forced, base_state = base_state,
+     forced_objs = forced_objs, help = help, output = output, quietp = quietp,
+     repl = repl}
+  fun from' repl quietp output help forced_objs base_state all_forced =
+    {all_forced = all_forced, base_state = base_state,
+     forced_objs = forced_objs, help = help, output = output, quietp = quietp,
+     repl = repl}
+  fun to f {all_forced, base_state, forced_objs, help, output, quietp, repl} =
+    f all_forced base_state forced_objs help output quietp repl
+in
+  makeUpdateT (from, from', to)
+end z
+val U = U
+val $$ = $$
+end (* FRU local *)
 
 local
 open TextIO
@@ -9,74 +50,55 @@ fun warn s = (output(stdErr, s ^ "\n"); flushOut stdErr)
 fun die (s:string) : 'a = (warn s; OS.Process.exit OS.Process.failure)
 end
 
+fun mk_quiet (OR r) = OR (updateT r (U #quietp true) $$);
+
+local
+  open GetOpt
+ fun mkBoolT sel = NoArg (fn () => fn (OR r) => OR (updateT r (U sel true) $$))
+ fun setStringOpt argnm sel =
+   ReqArg ((fn s => fn (OR r) => OR (updateT r (U sel (SOME s)) $$)), argnm)
+ val setBaseNone =
+     NoArg (fn () => fn (OR r) => OR (updateT r (U #base_state NONE) $$))
+ val ConsForced =
+   ReqArg ((fn s => fn (OR r) =>
+               OR (updateT r (U #forced_objs (#forced_objs r @ [s])) $$)),
+           "file.uo")
+in
+val cline_opts = [
+  {help = "force all object files", long = [], short = "F",
+   desc = mkBoolT #all_forced},
+  {help = "force file (will load before others)", long = [], short = "f",
+   desc = ConsForced},
+  {help = "show this message", long = ["help"], short = "h?",
+   desc = mkBoolT #help},
+  {help = "load holstate as base", long = ["holstate"], short = "b",
+   desc = setStringOpt "filename" #base_state},
+  {help = "output heap name", long = [], short = "o",
+   desc = setStringOpt "filename" #output},
+  {help = "use poly as base", long = ["poly"], short = "",
+   desc = setBaseNone},
+  {help = "reduce verbosity", long = ["quiet"], short = "q",
+   desc = mkBoolT #quietp},
+  {help = "start REPL after loading", long = ["repl"], short = "",
+   desc = mkBoolT #repl}
+]
+val initial_cline = OR {all_forced = false,
+                        base_state = SOME Systeml.DEFAULT_STATE,
+                        forced_objs = [],
+                        help = false,
+                        output = NONE,
+                        quietp = false,
+                        repl = false}
+end
+
 fun member s [] = false
   | member s (h::t) = s = h orelse member s t
 
 fun fullPath ps = List.foldl (fn (p,acc) => OS.Path.concat(acc,p))
                              (hd ps) (tl ps);
-use "../tools/Holmake/Systeml.sig";
-use "Holmake/Systeml.sml";
-open Systeml;
 
-val defaultbase = Systeml.DEFAULT_STATE
-
-fun usage() =
-    (warn "Usage:";
-     warn ("  " ^ CommandLine.name() ^
-           " [-F] [-q] [-b baseheap] [-o outputheap] ([-f] obj)* ...\n");
-     die ("  -F to make all objects forced (use with care!)\n\
-          \  -f before an object to force inclusion even though path looks \
-          \odd\n\
-          \  -q for minimal output (quiet mode)\n\
-          \\n\
-          \  Default output heap is a.out\n\
-          \  Default base heap is "^defaultbase))
-
-fun update nm NONE newval = SOME newval
-  | update nm (SOME _) _ =
-    (warn ("Duplicate argument for "^nm); usage())
-
-fun read_cline() = let
-  val args = CommandLine.arguments()
-  val _ = null args andalso usage()
-  fun recurse args (objs, output, base, seenF, quietp) =
-      case args of
-        [] => (List.rev objs, output, base, quietp)
-      | ["-o"] => usage()
-      | ["-b"] => usage()
-      | ["-f"] => usage()
-      | "-F"::rest => recurse rest (objs, output, base, true, quietp)
-      | "-q" :: rest => recurse rest (objs, output, base, seenF, true)
-      | "-o"::oarg::rest =>
-          recurse rest
-                  (objs, update "output heap" output oarg, base, seenF, quietp)
-      | "-b"::barg::rest =>
-          recurse rest
-                  (objs, output, update "base heap" base barg, seenF, quietp)
-      | "-f"::obj::rest =>
-          recurse rest ((obj,true)::objs, output, base, seenF, quietp)
-      | obj::rest =>
-          recurse rest ((obj,seenF)::objs, output, base, seenF, quietp)
-in
-  recurse args ([], NONE, NONE, false, false)
-end
 
 fun mkAbs p = OS.Path.mkAbsolute {relativeTo = OS.FileSys.getDir(), path = p}
-
-infix ++
-val op ++ = OS.Path.concat
-fun hol_use p s =
-  let
-    val nm = HOLDIR ++ p ++ s
-  in
-    use (nm ^ ".sig")
-  ; use (nm ^ ".sml")
-  end;
-
-exception Interrupt = SML90.Interrupt;
-List.app (hol_use ("tools-poly" ++ "poly"))
-         ["Binaryset", "Binarymap", "Listsort"];
-val _ = use "../tools/Holmake/hmcore.ML";
 
 fun findUo [] _ = NONE
   | findUo (search::rest) modPath =
@@ -95,59 +117,22 @@ fun findUo [] _ = NONE
 fun check_objpath die incs (p, b) =
   if b then ()
   else
-    if member (OS.Path.dir p) incs then ()
+    if member (OS.Path.dir p) (SIGOBJ::incs) then ()
     else die ("Object file "^p^" has suspicious path; use -f to override")
 
 fun time_max (t1, t2) = if Time.<(t1,t2) then t2 else t1
 
-fun create_heap qp findMod (objs, outputheap0, base0) = let
+fun create_heap qp findMod (objs, outputheap) = let
   open Systeml TextIO
-  val ofile = OS.FileSys.tmpName()
-  val ostrm = openOut ofile
-  fun p s = output(ostrm, s ^ "\n")
-  val original_die = die
-  fun die s =
-      if qp then OS.Process.exit OS.Process.failure
-      else original_die s
-  val (diestr,hloadstr,printstr) =
-      if qp then
-        ("fun die s = OS.Process.exit OS.Process.failure;",
-         "fun hload s = load s;",
-         "fun print s = ();")
-      else
-        ("fun die s = (TextIO.output(TextIO.stdErr, s ^ \"\\n\"); \
-         \OS.Process.exit OS.Process.failure)",
-         "fun hload s = (print (\"Loading \"^s^\"\\n\"); load s);",
-         "\n")
-  fun system_ps s =
-      if OS.Process.isSuccess (Systeml.system_ps s) then ()
-      else die ("*** Failed to execute\n  "^s^"\nsuccessfully")
-  val outputheap = mkAbs outputheap0
-  val base = mkAbs base0
+  val p = if qp then fn s => () else fn s => print (s ^ "\n")
+  fun hload obj = (p ("Loading "^obj); load obj)
+                  handle e => die ("Loading "^obj^": "^General.exnMessage e)
 in
-  p diestr;
-  p ("val _ = PolyML.SaveState.loadState \"" ^ String.toString base ^ "\"\n");
-  p ("  handle e => die (General.exnMessage e)");
-  p ("val heapname = \""^outputheap^"\";");
-  p ("val _ = List.app holpathdb.extend_db\n");
-  p ("(holpathdb.search_for_extensions ReadHMF.find_includes\n");
-  p ("[OS.FileSys.getDir()]);\n");
-  p "local";
-  p hloadstr;
-  p printstr;
-  p "val _ = print \"\\n\";";
-  p ("val _ = List.map hload [" ^
-     String.concatWith "," (map (fn f => "\"" ^ String.toString f ^ "\"") objs) ^
-     "] handle x => ((case x of Fail s => print (s^\"\\n\") | _ => ()); OS.Process.exit OS.Process.failure);");
-  p "in";
-  p ("val _ = PolyML.SaveState.saveChild(\""^ outputheap ^
-     "\", List.length (PolyML.SaveState.showHierarchy()))");
-  p ("val _ = print \"Exported "^outputheap^"\\n\"");
-  p ("val _ = OS.Process.exit OS.Process.success");
-  p ("end");
-  closeOut ostrm;
-  system_ps (Systeml.POLY ^ " -q < " ^ ofile);
-  case OS.Process.getEnv Systeml.build_after_reloc_envvar of
+  app hload objs;
+  PolyML.SaveState.saveChild
+    (outputheap, length (PolyML.SaveState.showHierarchy()));
+  p ("Exported "^outputheap^"\n");
+  (case OS.Process.getEnv Systeml.build_after_reloc_envvar of
       NONE => ()
     | SOME "1" =>
       let
@@ -155,18 +140,61 @@ in
         fun foldthis (modname, t0) = time_max(t0, getTime modname)
       in
         OS.FileSys.setTime
-          (outputheap, SOME (foldl foldthis (OS.FileSys.modTime base) objs))
+          (outputheap, SOME (foldl foldthis Time.zeroTime objs))
       end
     | SOME s =>
       warn ("Ignoring strange value (" ^ s ^ ") for " ^
-            Systeml.build_after_reloc_envvar)
+            Systeml.build_after_reloc_envvar));
+  OS.Process.exit OS.Process.success
 end
 
+fun maybe_check_load (obj,_) = load obj
 
-
+fun fix s =
+  let
+    open OS.Path
+    val {base,ext} = splitBaseExt s
+  in
+    case ext of
+        SOME "uo" => base
+      | _ => s
+  end
 
 fun main() = let
-  val (objs0, cloutput, clbase, qp) = read_cline()
+  val usage_header =
+    "Usage:\n  " ^ CommandLine.name() ^ " [options] obj1.uo obj2.uo ...\n\n\
+    \Object files can be provided with .uo suffixes or not. If they are not\n\
+    \present, they will be assumed.\n\n\
+    \If a -o option is provided, a heap containing the context generated\n\
+    \by loading/executing the .uo files will be dumped. Otherwise, the files\n\
+    \are loaded solely for their side effects.\n\n\
+    \If a --holstate option is not given, the operation will be with respect\n\
+    \to the core HOL state that contains bossLib, lists and sets.\n\n\
+    \Forcing a file means that it will be loaded even though it is in a\n\
+    \directory not included in the current directory's Holmakefile's INCLUDES\n\
+    \specifications.\n\n\
+    \Options:"
+  val usage =
+      GetOpt.usageInfo {header = usage_header,
+                        options = cline_opts}
+  val (cline_upds, objs0) =
+      GetOpt.getOpt {argOrder = GetOpt.Permute, options = cline_opts,
+                     errFn = die}
+                    (CommandLine.arguments())
+  val OR options = List.foldl (fn (f, opts) => f opts) initial_cline cline_upds
+  val {quietp = qp, output, base_state, all_forced, forced_objs, ...} = options
+  val {repl, help, ...} = options
+  val _ = not help orelse (print usage; OS.Process.exit OS.Process.success)
+  val _ =
+      case (repl, output) of
+          (true, SOME _) =>
+            die "Can't simultaneously dump output and start REPL"
+        | _ => ()
+  fun force s = (fix s, true)
+  fun unforce s = (fix s, false)
+  val forced_objs = map force forced_objs
+  val objs = if all_forced then forced_objs @ map force objs0
+             else forced_objs @ map unforce objs0
   val warn = if qp then (fn s => ()) else warn
   val original_die = die
   fun die s = if qp then OS.Process.exit OS.Process.failure else original_die s
@@ -182,19 +210,22 @@ fun main() = let
                  (warn "[bogus Holmakefile in current directory - ignoring it]";
                   [])
       else []
-  val _ = List.app (check_objpath die ("" :: "." :: allincs)) objs0
-  val output = case cloutput of
-                   NONE => "a.out"
-                 | SOME s => s
-  val base = case clbase of
-               NONE => defaultbase
-             | SOME s => s
+  val _ = List.app (check_objpath die ("" :: "." :: allincs)) objs
   val search_these = "." :: OS.Path.concat(Systeml.HOLDIR, "sigobj") :: allincs
   fun findmod s =
     case findUo search_these (s ^ ".uo") of
         NONE => die ("In "^OS.FileSys.getDir()^": couldn't find "^s^".uo\n\
                      \After searching: " ^ String.concatWith ", " search_these)
       | SOME p => p
+  val _ = case base_state of
+              NONE => ()
+            | SOME f => PolyML.SaveState.loadState f
 in
-  create_heap qp findmod (map #1 objs0, output, base)
+  case output of
+      SOME s => create_heap qp findmod (map #1 objs, s)
+    | NONE =>
+      (List.app maybe_check_load objs;
+       if repl then PolyML.shell()
+       else ();
+       OS.Process.exit OS.Process.success)
 end
