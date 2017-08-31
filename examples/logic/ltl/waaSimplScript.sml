@@ -1,5 +1,7 @@
 open HolKernel Parse bossLib boolLib pairTheory relationTheory set_relationTheory pred_setTheory arithmeticTheory
 
+open relationTheory
+
 open alterATheory
 
 val _ = new_theory "waaSimpl"
@@ -687,10 +689,17 @@ val MERGE_REACH_LEMM2 = store_thm
       )
   );
 
+val HELPER = store_thm
+  ("HELPER",
+   ``!R a b c. R^* a b ∧ R^* b c ==> R^* a c``,
+   rpt strip_tac >> metis_tac[RTC_TRANSITIVE,transitive_def]
+  );
+
+
 val MERGE_PO_LEMM = store_thm
   ("MERGE_PO_LEMM",
   ``!aut x y. isValidAlterA aut ∧ equivalentStates aut.final aut.trans x y
-            ∧ x ∈ aut.states ∧ y ∈ aut.states
+            ∧ x ∈ aut.states ∧ y ∈ aut.states ∧ ~(y = x)
       ∧ partial_order (rrestrict (rel_to_reln (reachRel aut)) aut.states)
              aut.states
       ==> (let mergedAut = mergeState x aut
@@ -701,37 +710,150 @@ val MERGE_PO_LEMM = store_thm
   >> simp[partial_order_def,reachableRel_def,mergeState_def] >> rpt strip_tac
    >- (fs[domain_def,SUBSET_DEF,rel_to_reln_def,rrestrict_def] >> rpt strip_tac)
    >- (fs[range_def,SUBSET_DEF,rel_to_reln_def,rrestrict_def] >> rpt strip_tac)
-   >- (fs[reln_rel_conv_thms,RTC_TRANSITIVE,reachRel_def,rrestrict_def]
-       >> qabbrev_tac `R = (REL_RESTRICT (oneStep (mergeState x aut))^*
-                                         (mergeState x aut).states)`
-       >> `!x y z. R x y ∧ R y z ==> R x z` suffices_by rw[transitive_def]
-
-   >- (rw[reln_rel_conv_thms] >> simp[RREFL_EXP_def,RUNION] >> fs[]
-
-
-   >- (fs[antisym_def,rel_to_reln_def]
-       >> `∀x' y'. oneStep^* x' y' ==> (oneStep^* y' x' ⇒ (x' = y'))`
-            suffices_by metis_tac[]
-       >> HO_MATCH_MP_TAC RTC_INDUCT >> strip_tac
-         >- (POP_ASSUM mp_tac
-             >> `!x. oneStep^* x x ⇒ (x = x)` suffices_by metis_tac[]
-             >> HO_MATCH_MP_TAC RTC_INDUCT >> rpt strip_tac
-            )
-         >- (`!x1 x2. oneStep x1 x2
-                ==> !y. (oneStep^* y x2 ==> (x2 = y))
-                   ==> oneStep^* y x1 ==> (x1 = y)` suffices_by metis_tac[]
-             >> rpt gen_tac >> strip_tac 
-             >> HO_MATCH_MP_TAC RTC_INDUCT
-
-            
-        )
-
-)
-
-
-)
-
-
+   >- (fs[reachRel_def,rrestrict_def,transitive_def]
+       >> rpt strip_tac >> fs[rel_to_reln_def]
+       >> metis_tac[HELPER])
+   >- (fs[reflexive_def, rrestrict_def, rel_to_reln_def, reachRel_def])
+   >- (fs[antisym_def,rel_to_reln_def,rrestrict_def] >> rpt strip_tac
+       >> qabbrev_tac `s_new =
+                         @s. s ∈ aut.states ∧ s ≠ x ∧
+                              equivalentStates aut.final aut.trans s x`
+       >> Cases_on `x' = s_new` >> Cases_on `y' = s_new` >> fs[]
+       >- (`reachRel aut y' s_new` by (
+             `let mergedAut = mergeState x aut
+              in
+                  ∀q1 q2.
+                   reachRel mergedAut q1 q2 ⇒
+                   (q1 =
+                    @s.
+                         s ∈ aut.states ∧ s ≠ x ∧
+                         equivalentStates aut.final aut.trans s x) ∨
+                   reachRel aut q1 q2`
+                by (HO_MATCH_MP_TAC MERGE_REACH_LEMM
+                     >> metis_tac[EQUIV_STATES_SYMM])
+                >> fs[] >> metis_tac[]
+          )
+          >> `s_new ∈ aut.states` by metis_tac[EQUIV_STATES_SYMM]
+          >> `y' ∈ aut.states` by (
+                 Cases_on `aut` >> fs[mergeState_def]
+                 >> `y' ∈
+                       (ALTER_A (f DIFF {x}) (IMAGE (replaceState x s_new) f0)
+                       (replaceState x s_new f1) f2 (replaceBy f3 x s_new)).states`
+                 by metis_tac[EQUIV_STATES_SYMM]
+                 >> fs[]
+          )
+          >> `reachRel aut s_new y' \/ reachRel aut x y'` by (
+                `let
+                     mergedAut = mergeState x aut and
+                     s_new =
+                     @s.
+                          s ∈ aut.states ∧ s ≠ x ∧
+                          equivalentStates aut.final aut.trans s x
+                 in
+                     ∀v.
+                      reachRel mergedAut s_new v ⇒
+                      reachRel aut s_new v ∨ reachRel aut x v`
+                   by (HO_MATCH_MP_TAC MERGE_REACH_LEMM2 >> metis_tac[])
+                 >> fs[] >> metis_tac[])
+             >- (fs[partial_order_def, antisym_def] >> metis_tac[])
+             >- (Cases_on `x = y'`
+                 >- (rw[] >> Cases_on `aut` >> fs[mergeState_def]
+                     >> `x ∈
+                 (ALTER_A (f DIFF {x}) (IMAGE (replaceState x s_new) f0)
+                 (replaceState x s_new f1) f2 (replaceBy f3 x s_new)).states`
+                        by metis_tac[EQUIV_STATES_SYMM]
+                     >> fs[])
+                 >- (rw[] >> `reachRel aut y' x ⇔ reachRel aut y' s_new` by (
+                          metis_tac[EQUIV_REACH_LEMM,EQUIV_STATES_SYMM]
+                    )
+                    >> fs[partial_order_def,antisym_def]
+                    >> metis_tac[]
+                    )
+                )
+          )
+       >- (`reachRel aut x' s_new` by (
+             `let mergedAut = mergeState x aut
+              in
+                  ∀q1 q2.
+                   reachRel mergedAut q1 q2 ⇒
+                   (q1 =
+                    @s.
+                         s ∈ aut.states ∧ s ≠ x ∧
+                         equivalentStates aut.final aut.trans s x) ∨
+                   reachRel aut q1 q2`
+                by (HO_MATCH_MP_TAC MERGE_REACH_LEMM
+                     >> metis_tac[EQUIV_STATES_SYMM])
+                >> fs[] >> metis_tac[]
+          )
+          >> `s_new ∈ aut.states` by metis_tac[EQUIV_STATES_SYMM]
+          >> `x' ∈ aut.states` by (
+                 Cases_on `aut` >> fs[mergeState_def]
+                 >> `x' ∈
+                       (ALTER_A (f DIFF {x}) (IMAGE (replaceState x s_new) f0)
+                       (replaceState x s_new f1) f2 (replaceBy f3 x s_new)).states`
+                 by metis_tac[EQUIV_STATES_SYMM]
+                 >> fs[]
+          )
+          >> `reachRel aut s_new x' \/ reachRel aut x x'` by (
+                `let
+                     mergedAut = mergeState x aut and
+                     s_new =
+                     @s.
+                          s ∈ aut.states ∧ s ≠ x ∧
+                          equivalentStates aut.final aut.trans s x
+                 in
+                     ∀v.
+                      reachRel mergedAut s_new v ⇒
+                      reachRel aut s_new v ∨ reachRel aut x v`
+                   by (HO_MATCH_MP_TAC MERGE_REACH_LEMM2 >> metis_tac[])
+                 >> fs[] >> metis_tac[])
+             >- (fs[partial_order_def, antisym_def] >> metis_tac[])
+             >- (Cases_on `x = x'`
+                 >- (rw[] >> Cases_on `aut` >> fs[mergeState_def]
+                     >> `x ∈
+                 (ALTER_A (f DIFF {x}) (IMAGE (replaceState x s_new) f0)
+                 (replaceState x s_new f1) f2 (replaceBy f3 x s_new)).states`
+                        by metis_tac[EQUIV_STATES_SYMM]
+                     >> fs[])
+                 >- (rw[] >> `reachRel aut x' x ⇔ reachRel aut x' s_new` by (
+                          metis_tac[EQUIV_REACH_LEMM,EQUIV_STATES_SYMM]
+                    )
+                    >> fs[partial_order_def,antisym_def]
+                    >> metis_tac[]
+                    )
+                )
+          )
+       >- (`reachRel aut x' y'
+          ∧ reachRel aut y' x'` by (
+            `let mergedAut = mergeState x aut
+             in
+                 ∀q1 q2.
+                  reachRel mergedAut q1 q2 ⇒
+                  (q1 =
+                   @s.
+                        s ∈ aut.states ∧ s ≠ x ∧
+                        equivalentStates aut.final aut.trans s x) ∨
+                  reachRel aut q1 q2` by
+              (HO_MATCH_MP_TAC MERGE_REACH_LEMM >> metis_tac[EQUIV_STATES_SYMM])
+           >> fs[] >> metis_tac[])
+          >> fs[partial_order_def,antisym_def]
+          >> `x' ∈ aut.states ∧ y' ∈ aut.states` by (
+               Cases_on `aut` >> fs[mergeState_def]
+               >> strip_tac
+                 >- (`x' ∈
+                 (ALTER_A (f DIFF {x}) (IMAGE (replaceState x s_new) f0)
+                 (replaceState x s_new f1) f2 (replaceBy f3 x s_new)).states`
+                       by metis_tac[EQUIV_STATES_SYMM]
+                     >> fs[])
+                 >- (`y' ∈
+                 (ALTER_A (f DIFF {x}) (IMAGE (replaceState x s_new) f0)
+                 (replaceState x s_new f1) f2 (replaceBy f3 x s_new)).states`
+                       by metis_tac[EQUIV_STATES_SYMM] >> fs[])
+           )
+          >> metis_tac[]
+          )
+      )
+  );
 
 val MERGE_IS_WEAK = store_thm
   ("MERGE_IS_WEAK",
