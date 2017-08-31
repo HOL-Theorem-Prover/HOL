@@ -358,6 +358,19 @@ val equivalentStates_def = Define`
   equivalentStates final trans s s' =
             (trans s = trans s') ∧ (s ∈ final = s' ∈ final)`;
 
+val EQUIV_STATES_SYMM = store_thm
+  ("EQUIV_STATES_SYMM",
+   ``!f t x y. equivalentStates f t x y = equivalentStates f t y x``,
+   metis_tac[equivalentStates_def]
+  );
+
+val EQUIV_STATES_REFL = store_thm
+  ("EQUIV_STATES_SYMM",
+  ``!f t x. equivalentStates f t x x``,
+   metis_tac[equivalentStates_def]
+  );
+
+
 val replaceSingleTrans_def = Define`
   replaceSingleTrans s s' (a,e) =
             if s ∈ e
@@ -381,40 +394,40 @@ val REPL_STATE_LEMM = store_thm
 val replaceBy_def = Define`
   replaceBy trans s s' q = IMAGE (replaceSingleTrans s s') (trans q)`;
 
-val REPLACE_TRANS_REACHABLE_LEMM = store_thm
-  ("REPLACE_TRANS_LEMM",
-   ``!f trans a b s. equivalentStates f trans a b ∧ ~(a ∈ s)
-      ==> ((reachable (replaceBy trans a b) s) =
-           replaceState a b (reachable trans s))``
-   rpt strip_tac
-   >> `!n. (replaceState a b (nStepReachable trans s n)
-            = nStepReachable (replaceBy trans a b) s n)` by (
-         Induct_on `n` >> rw[SET_EQ_SUBSET, SUBSET_DEF] >> rpt strip_tac
-         >> fs[nStepReachable_def,replaceState_def]
-          >- metis_tac[]
-          >- (Cases_on `∃a' qs s'.
-                   (a',qs) ∈ trans s' ∧ s' ∈ nStepReachable trans s n ∧ a ∈ qs`
-              >> fs[] >> metis_tac[]
-               >- (qexists_tac `a'` >> qexists_tac `qs`
-                   >> qexists_tac `b` >> fs[] >> fs[replaceBy_def,EXISTS_PROD]
+(* val REPLACE_TRANS_REACHABLE_LEMM = store_thm *)
+(*   ("REPLACE_TRANS_LEMM", *)
+(*    ``!f trans a b s. equivalentStates f trans a b ∧ ~(a ∈ s) *)
+(*       ==> ((reachable (replaceBy trans a b) s) = *)
+(*            replaceState a b (reachable trans s))`` *)
+(*    rpt strip_tac *)
+(*    >> `!n. (replaceState a b (nStepReachable trans s n) *)
+(*             = nStepReachable (replaceBy trans a b) s n)` by ( *)
+(*          Induct_on `n` >> rw[SET_EQ_SUBSET, SUBSET_DEF] >> rpt strip_tac *)
+(*          >> fs[nStepReachable_def,replaceState_def] *)
+(*           >- metis_tac[] *)
+(*           >- (Cases_on `∃a' qs s'. *)
+(*                    (a',qs) ∈ trans s' ∧ s' ∈ nStepReachable trans s n ∧ a ∈ qs` *)
+(*               >> fs[] >> metis_tac[] *)
+(*                >- (qexists_tac `a'` >> qexists_tac `qs` *)
+(*                    >> qexists_tac `b` >> fs[] >> fs[replaceBy_def,EXISTS_PROD] *)
                    
-                   >> fs[replaceSingleTrans_def] >
-)
-`s' ∈ nStepReachable (replaceBy trans a b) s n` by metis_tac[]
-              >> qexists_tac `a'` >> qexists_tac `qs` >> qexists_tac `s'`
-              >> simp[replaceBy_def]
-              >> fs[EXISTS_PROD] >> qexists_tac `a'` >> qexists_tac `qs`
-              >> simp[replaceSingleTrans_def] >> 
-)
+(*                    >> fs[replaceSingleTrans_def] > *)
+(* ) *)
+(* `s' ∈ nStepReachable (replaceBy trans a b) s n` by metis_tac[] *)
+(*               >> qexists_tac `a'` >> qexists_tac `qs` >> qexists_tac `s'` *)
+(*               >> simp[replaceBy_def] *)
+(*               >> fs[EXISTS_PROD] >> qexists_tac `a'` >> qexists_tac `qs` *)
+(*               >> simp[replaceSingleTrans_def] >>  *)
+(* ) *)
 
-)
+(* ) *)
 
-rw[SET_EQ_SUBSET] >> rpt strip_tac >> fs[reachable_def, replaceBy_def]
-  >> fs[equivalentStates_def,SUBSET_DEF] >> rpt strip_tac
-  >> qexists_tac `n`
-   >- (Induct_on `n`)
+(* rw[SET_EQ_SUBSET] >> rpt strip_tac >> fs[reachable_def, replaceBy_def] *)
+(*   >> fs[equivalentStates_def,SUBSET_DEF] >> rpt strip_tac *)
+(*   >> qexists_tac `n` *)
+(*    >- (Induct_on `n`) *)
 
-)
+(* ) *)
 
 
 val mergeState_def = Define`
@@ -527,19 +540,194 @@ val replace_ord_def = Define`
 (* ) *)
 (* ) *)
 
+val oneStep_def = Define`
+  oneStep aut = \x y. ?a qs. (a,qs) ∈ aut.trans y ∧ x ∈ qs ∧ y ∈ aut.states`;
+
+val reachRel_def = Define`
+  reachRel aut = (oneStep aut)^*`;
+
+val EQUIV_REACH_LEMM = store_thm
+  ("EQUIV_REACH_LEMM",
+   ``!aut x y. x ∈ aut.states ∧ y ∈ aut.states
+              ∧ equivalentStates aut.final aut.trans x y ==>
+         (!v. ~(x = v) ∧ ~(y = v)
+              ==> ((reachRel aut) v x = (reachRel aut) v y))``,
+   `!aut x y. x ∈ aut.states ∧ y ∈ aut.states
+            ∧ equivalentStates aut.final aut.trans x y ==>
+         (!v. ~(x = v) ∧ ~(y = v)
+              ==> ((reachRel aut) v x ==> (reachRel aut) v y))`
+         suffices_by metis_tac[EQUIV_STATES_SYMM]
+    >> gen_tac >> fs[reachRel_def]
+    >> simp[RTC_eq_NRC]
+    >> `∀n x y.
+         x ∈ aut.states ∧ y ∈ aut.states
+         ∧ equivalentStates aut.final aut.trans x y ⇒
+         ∀v.
+         x ≠ v ∧ y ≠ v ⇒
+         NRC (oneStep aut) n v x ⇒ NRC (oneStep aut) n v y` suffices_by metis_tac[]
+    >> Induct_on `n`
+      >- (rpt strip_tac >> fs[NRC])
+      >- (rpt strip_tac >> fs[NRC_SUC_RECURSE_LEFT]
+          >> `oneStep aut z y` by (
+               fs[oneStep_def,equivalentStates_def]
+               >> qexists_tac `a` >> qexists_tac `qs`
+               >> fs[] >> metis_tac[]
+           )
+          >> metis_tac[]
+         )
+  );
+
+val MERGE_REACH_LEMM = store_thm
+  ("MERGE_REACH_LEMM",
+  ``!aut x y. isValidAlterA aut ∧ equivalentStates aut.final aut.trans y x
+          ∧ x ∈ aut.states ∧ y ∈ aut.states ∧ ~(x = y)
+          ==> let mergedAut = mergeState x aut
+              in !q1 q2. (reachRel mergedAut) q1 q2
+                 ==>
+                ((q1 = @s. s ∈ aut.states ∧ ~(s = x)
+                   ∧ equivalentStates aut.final aut.trans s x)
+                 \/ (reachRel aut) q1 q2)``,
+  rpt strip_tac >> fs[reachRel_def]
+  >> HO_MATCH_MP_TAC RTC_INDUCT_RIGHT1 >> rpt strip_tac
+  >> fs[rel_to_reln_def]
+  >> qabbrev_tac `s_new = @s.
+          s ∈ aut.states ∧ s ≠ x ∧ equivalentStates aut.final aut.trans s x`
+  >> Cases_on `q1 = s_new` >> fs[]
+  >> `?q3. (oneStep aut) q3 q2' ∧ equivalentStates aut.final aut.trans q2 q3`
+      suffices_by (
+        rpt strip_tac >> Cases_on `q1 = q2` >> Cases_on `q1 = q3`
+        >> rw[]
+          >- (`(oneStep aut) q1 q2'` suffices_by metis_tac[RTC_SUBSET]
+              >> fs[] >> Cases_on `aut` >> fs[mergeState_def,oneStep_def] >> fs[]
+              >> rpt (POP_ASSUM mp_tac) >> rw[] >> fs[] >> rw[]
+                >- (fs[replaceBy_def] >> Cases_on `x'` >> fs[replaceSingleTrans_def]
+                    >> rw[] >> Cases_on `x ∈ r` >> fs[] >> rw[]
+                     >- (qexists_tac `a` >> qexists_tac `r` >> fs[])
+                     >- metis_tac[]
+                   )
+                >- metis_tac[]
+             )
+          >- (`q2 ∈ aut.states ∧ q3 ∈ aut.states` by (
+                 fs[oneStep_def,isValidAlterA_def] >> Cases_on `aut`
+                 >> fs[mergeState_def] >> rw[]
+                 >> Cases_on `∃s. s ∈ f ∧ s ≠ x ∧ equivalentStates f1 f3 s x`
+                 >> fs[replaceBy_def]
+                   >- (Cases_on `x'` >> fs[replaceSingleTrans_def]
+                       >> Cases_on `x ∈ r` >> fs[] >> rw[IN_DIFF, IN_UNION]
+                       >> `s_new ∈ f` by metis_tac[]
+                       >> metis_tac[IN_DIFF,IN_UNION,IN_SING,SUBSET_DEF]
+                      )
+                   >- metis_tac[IN_DIFF,IN_UNION,IN_SING,SUBSET_DEF]
+                   >- metis_tac[IN_DIFF,IN_UNION,IN_SING,SUBSET_DEF]
+                   >- metis_tac[IN_DIFF,IN_UNION,IN_SING,SUBSET_DEF]
+             )
+            >> `(oneStep aut)^* q1 q3` by metis_tac[EQUIV_REACH_LEMM,reachRel_def]
+            >> metis_tac[RTC_CASES_RTC_TWICE,RTC_SUBSET]
+             )
+  )
+  >> fs[] >> Cases_on `aut` >> fs[mergeState_def,oneStep_def] >> fs[]
+  >> rpt (POP_ASSUM mp_tac) >> rw[] >> fs[]
+    >- (fs[replaceBy_def] >> Cases_on `x'` >> fs[replaceSingleTrans_def]
+        >> Cases_on `x ∈ r` >> fs[]
+        >> rw[] >> fs[IN_UNION] >> metis_tac[EQUIV_STATES_REFL]
+       )
+    >- metis_tac[]
+  );
+
+val MERGE_REACH_LEMM2 = store_thm
+  ("MERGE_REACH_LEMM2",
+   ``!aut v x y. isValidAlterA aut ∧ equivalentStates aut.final aut.trans x y
+               ∧ x ∈ aut.states ∧ y ∈ aut.states ∧ ~(y = x)
+         ==> let mergedAut = mergeState x aut
+                 and s_new = @s. s ∈ aut.states ∧ s ≠ x ∧
+                                 equivalentStates aut.final aut.trans s x
+             in !v. reachRel mergedAut s_new v
+                    ==> reachRel aut s_new v \/ reachRel aut x v``,
+   rpt strip_tac >> fs[]
+   >> qabbrev_tac `s_new = @s.
+                         s ∈ aut.states ∧ s ≠ x ∧
+                         equivalentStates aut.final aut.trans s x`
+   >> fs[reachRel_def] >> gen_tac
+   >> `!m n. (oneStep (mergeState x aut))^* m n ⇒ (m = s_new)
+                   ==> (oneStep aut)^* m n ∨ (oneStep aut)^* x n`
+       suffices_by metis_tac[]
+   >> HO_MATCH_MP_TAC RTC_INDUCT_RIGHT1 >> rpt strip_tac >> rw[]
+   >> (Cases_on `n = m`
+        >- (`(oneStep aut) m n' ∨ (oneStep aut) x n'`
+             suffices_by metis_tac[RTC_SUBSET]
+             >> fs[] >> Cases_on `aut` >> fs[mergeState_def,oneStep_def]
+             >> fs[] >> rpt (POP_ASSUM mp_tac) >> rw[] >> fs[]
+               >- (fs[replaceBy_def] >> Cases_on `x'` >> fs[replaceSingleTrans_def]
+                   >> Cases_on `x ∈ r` >> fs[]
+                   >> rw[] >> fs[IN_UNION] >> metis_tac[]
+                  )
+               >- metis_tac[]
+           )
+        >- (`reachRel aut n n'` by (
+               fs[reachRel_def]
+               >> `reachRel (mergeState x aut) n n'` by
+                   (fs[reachRel_def] >> metis_tac[RTC_SUBSET])
+               >> qunabbrev_tac `m`
+               >> `reachRel aut n n'` suffices_by metis_tac[reachRel_def]
+               >> `(let mergedAut = mergeState x aut
+                    in
+                        ∀q1 q2.
+                         reachRel mergedAut q1 q2 ⇒
+                         (q1 =
+                          @s.
+                               s ∈ aut.states ∧ s ≠ x ∧
+                               equivalentStates aut.final aut.trans s x) ∨
+                         reachRel aut q1 q2)`
+                  by (HO_MATCH_MP_TAC MERGE_REACH_LEMM
+                      >> metis_tac[EQUIV_STATES_SYMM])
+              >> fs[] >> metis_tac[]
+              )
+            >> fs[reachRel_def] >> metis_tac[RTC_CASES_RTC_TWICE]
+           )
+      )
+  );
+
 val MERGE_PO_LEMM = store_thm
   ("MERGE_PO_LEMM",
-  ``!aut x. isValidAlterA aut ∧ x ∈ aut.states
-      ∧ partial_order (reachableRel aut) aut.states
+  ``!aut x y. isValidAlterA aut ∧ equivalentStates aut.final aut.trans x y
+            ∧ x ∈ aut.states ∧ y ∈ aut.states
+      ∧ partial_order (rrestrict (rel_to_reln (reachRel aut)) aut.states)
+             aut.states
       ==> (let mergedAut = mergeState x aut
-          in partial_order (reachableRel mergedAut) mergedAut.states)``,
+          in partial_order (rrestrict (rel_to_reln (reachRel mergedAut))
+                                       mergedAut.states)
+                           mergedAut.states)``,
   rpt strip_tac >> fs[]
   >> simp[partial_order_def,reachableRel_def,mergeState_def] >> rpt strip_tac
-   >- (fs[domain_def,SUBSET_DEF] >> rpt strip_tac)
-   >- (fs[range_def,SUBSET_DEF] >> rpt strip_tac)
-   >- (simp[transitive_def] >> rpt strip_tac >> simp[reachable_def]
-       >> Cases_on `aut` >> simp[mergeState_def] >> fs[mergeState_def]
+   >- (fs[domain_def,SUBSET_DEF,rel_to_reln_def,rrestrict_def] >> rpt strip_tac)
+   >- (fs[range_def,SUBSET_DEF,rel_to_reln_def,rrestrict_def] >> rpt strip_tac)
+   >- (fs[reln_rel_conv_thms,RTC_TRANSITIVE,reachRel_def,rrestrict_def]
+       >> qabbrev_tac `R = (REL_RESTRICT (oneStep (mergeState x aut))^*
+                                         (mergeState x aut).states)`
+       >> `!x y z. R x y ∧ R y z ==> R x z` suffices_by rw[transitive_def]
+
+   >- (rw[reln_rel_conv_thms] >> simp[RREFL_EXP_def,RUNION] >> fs[]
+
+
+   >- (fs[antisym_def,rel_to_reln_def]
+       >> `∀x' y'. oneStep^* x' y' ==> (oneStep^* y' x' ⇒ (x' = y'))`
+            suffices_by metis_tac[]
+       >> HO_MATCH_MP_TAC RTC_INDUCT >> strip_tac
+         >- (POP_ASSUM mp_tac
+             >> `!x. oneStep^* x x ⇒ (x = x)` suffices_by metis_tac[]
+             >> HO_MATCH_MP_TAC RTC_INDUCT >> rpt strip_tac
+            )
+         >- (`!x1 x2. oneStep x1 x2
+                ==> !y. (oneStep^* y x2 ==> (x2 = y))
+                   ==> oneStep^* y x1 ==> (x1 = y)` suffices_by metis_tac[]
+             >> rpt gen_tac >> strip_tac 
+             >> HO_MATCH_MP_TAC RTC_INDUCT
+
+            
+        )
+
 )
+
 
 )
 
