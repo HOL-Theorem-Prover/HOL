@@ -585,6 +585,35 @@ val foldi_def = Define`
        foldi f (i + inc) (f i a (foldi f (i + 2 * inc) acc t1)) t2)
 `;
 
+val mapi0_def = Define`
+  (mapi0 f i LN = LN) /\
+  (mapi0 f i (LS a) = LS (f i a)) /\
+  (mapi0 f i (BN t1 t2) =
+   let inc = lrnext i in
+     mk_BN (mapi0 f (i + 2 * inc) t1) (mapi0 f (i + inc) t2)) /\
+  (mapi0 f i (BS t1 a t2) =
+   let inc = lrnext i in
+     mk_BS (mapi0 f (i + 2 * inc) t1) (f i a) (mapi0 f (i + inc) t2))
+`;
+val _ = export_rewrites ["mapi0_def"]
+val mapi_def = Define`mapi f pt = mapi0 f 0 pt`;
+
+
+(*val mapi0_foldi = Q.store_thm(
+  "mapi0_foldi",
+  `mapi0 f i pt = foldi (\n v (i,acc_pt). (insert n (f i v) acc_pt
+*)
+
+(*
+        (1,b)                 18
+       /                     /
+  (0,a)       (4,d)        10    42
+       \     /               \  /
+        (2,c)                 26
+             \                  \
+              (6,e)              58
+*)
+
 val lrnext212 = prove(
   ``(lrnext (2 * m + 1) = 2 * lrnext m) /\
     (lrnext (2 * m + 2) = 2 * lrnext m)``,
@@ -1395,5 +1424,63 @@ val lookup_filter_v = store_thm("lookup_filter_v",
 val wf_filter_v = store_thm("wf_filter_v",
   ``!t f. wf t ==> wf (filter_v f t)``,
   Induct \\ rw [filter_v_def, wf_def, mk_BN_thm, mk_BS_thm] \\ fs []);
+
+val wf_mk_BN = Q.store_thm(
+  "wf_mk_BN",
+  `wf t1 /\ wf t2 ==> wf (mk_BN t1 t2)`,
+  map_every Cases_on [`t1`, `t2`] >> simp[mk_BN_def, wf_def])
+
+val wf_mk_BS = Q.store_thm(
+  "wf_mk_BS",
+  `wf t1 /\ wf t2 ==> wf (mk_BS t1 a t2)`,
+  map_every Cases_on [`t1`, `t2`] >> simp[mk_BS_def, wf_def])
+
+val wf_mapi = Q.store_thm(
+  "wf_mapi",
+  `wf (mapi f pt)`,
+  simp[mapi_def] >>
+  `!n. wf (mapi0 f n pt)` suffices_by simp[] >> Induct_on `pt` >>
+  simp[wf_def, wf_mk_BN, wf_mk_BS]);
+
+val ALOOKUP_MAP_lemma = Q.prove(
+  `ALOOKUP (MAP (\kv. (FST kv, f (FST kv) (SND kv))) al) n =
+   OPTION_MAP (\v. f n v) (ALOOKUP al n)`,
+  Induct_on `al` >> simp[pairTheory.FORALL_PROD] >> rw[]);
+
+val lookup_mk_BN = Q.store_thm(
+  "lookup_mk_BN",
+  ‘lookup i (mk_BN t1 t2) =
+    if i = 0 then NONE
+    else lookup ((i - 1) DIV 2) (if EVEN i then t1 else t2)’,
+  map_every Cases_on [‘t1’, ‘t2’] >> simp[mk_BN_def, lookup_def]);
+
+val MAP_foldi = Q.store_thm(
+  "MAP_foldi",
+  `!n acc. MAP f (foldi (\k v a. (k,v)::a) n acc pt) =
+             foldi (\k v a. (f (k,v)::a)) n (MAP f acc) pt`,
+  Induct_on `pt` >> simp[foldi_def]);
+
+
+(*
+val mapi_Alist = Q.store_thm(
+  "mapi_Alist",
+  `mapi f pt =
+    fromAList (MAP (\kv. (FST kv,f (FST kv) (SND kv))) (toAList pt))`,
+  simp[spt_eq_thm, wf_mapi, wf_fromAList, lookup_fromAList] >>
+  simp[mapi_def, ALOOKUP_MAP_lemma] >>
+  `!n i j. lookup n (mapi0 f i pt) =
+           ALOOKUP (MAP (\kv. (FST kv, f (FST kv + i) (SND kv)))
+                        (foldi (\k v a. (k,v)::a) 0 [] pt)) n`
+     suffices_by simp[] >>
+  Induct_on `pt` >>
+  >- simp[lookup_def, toAList_def, foldi_def]
+  >- (simp[lookup_def, toAList_def, foldi_def] >> rpt strip_tac >>
+      COND_CASES_TAC >> simp[])
+  >- (simp[lookup_def, lookup_mk_BN, foldi_def] >>
+
+  simp[mapi0_def, toAList_def, foldi_def, fromAList_def, Once insert_def,
+       mk_BN_def, ALOOKUP_MAP_lemma, lookup_def] >> rpt strip_tac >>
+  >- (
+*)
 
 val _ = export_theory();
