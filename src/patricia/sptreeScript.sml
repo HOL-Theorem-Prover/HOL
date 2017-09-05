@@ -645,7 +645,7 @@ val lrlemma2 = prove(
      by decide_tac >> simp[lrnext212])
 
 val spt_acc_eqn = Q.store_thm("spt_acc_eqn",
-  `∀k i. spt_acc i k = lrnext i * k + i`,
+  `!k i. spt_acc i k = lrnext i * k + i`,
   ho_match_mp_tac bit_induction
   \\ rw[]
   >- rw[spt_acc_def]
@@ -663,7 +663,7 @@ val spt_acc_eqn = Q.store_thm("spt_acc_eqn",
     \\ simp[lrlemma2]));
 
 val spt_acc_0 = Q.store_thm("spt_acc_0",
-  `∀k. spt_acc 0 k = k`, rw[spt_acc_eqn,lrnext_thm]);
+  `!k. spt_acc 0 k = k`, rw[spt_acc_eqn,lrnext_thm]);
 
 val set_foldi_keys = store_thm(
   "set_foldi_keys",
@@ -698,7 +698,7 @@ val _ = export_rewrites ["mapi0_def"]
 val mapi_def = Define`mapi f pt = mapi0 f 0 pt`;
 
 val lookup_mapi0 = Q.store_thm("lookup_mapi0",
-  `∀pt i k.
+  `!pt i k.
    lookup k (mapi0 f i pt) =
    case lookup k pt of NONE => NONE
    | SOME v => SOME (f (spt_acc i k) v)`,
