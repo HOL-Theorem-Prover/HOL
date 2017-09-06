@@ -22,11 +22,12 @@ open CoreKernel;
     between the two.
    ---------------------------------------------------------------------- *)
 
-infix ++ && |-> THEN THEN1 THENL THEN_LT THENC ORELSE ORELSE_LT ORELSEC
+infix ++ && |-> THEN THENL THEN_LT THENC ORELSE ORELSE_LT ORELSEC
   THEN_TCL ORELSE_TCL ?> |>
+infix THEN1
 
 (* infixes for THEN shorthands *)
-infix >> >- >| \\ >>>
+infix >> >- >| \\ >>> >>- ??
 
 infixr ## $;
 infixr 3 -->;
