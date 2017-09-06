@@ -18,8 +18,6 @@ struct
 
 
 open HolKernel Parse boolLib;
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
-infixr -->;
 
 (* --------------------------------------------------------------------- *)
 (* Need conditional rewriting.                                           *)
@@ -546,34 +544,6 @@ val UNIFY_VARS_TAC :tactic =
                  (mapfilter (SYM o (test ((pairf dest_var dest_var)
                                           o dest_eq o concl))) thms));
 
-
-fun choplist a b =
-   case a
-   of [] =>
-        ([],b)
-    | (h::t) =>
-        let val (c,d) = choplist t (tl b) in
-            ((hd b)::c, d)
-        end;
-
-
-infix THEN1;
-
-fun tac1 THEN1 tac2 = fn g =>
-    let val (gl1,p1) = tac1 g
-    in
-    case gl1
-    of [] =>
-         (gl1,p1)
-     | (g1::gl1') =>
-         let val (gl2,p2) = tac2 g1
-         in
-         (gl2@gl1', (fn ths => let val (ths1,ths2) = choplist gl2 ths in
-                                    p1 ((p2 ths1) :: ths2)
-                               end))
-         end
-    end
-    handle _ => failwith "THEN1";
 
 fun EVERY1 tacl =
     case tacl
