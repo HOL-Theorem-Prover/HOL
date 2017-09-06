@@ -8,4 +8,6 @@ val fileToReaderEOF : string -> ((unit -> char option) * (unit -> bool))
 val fromString : string -> string
 val stringToReader : string -> (unit -> char option)
 
+val streamToReader : TextIO.instream -> (unit -> char option)
+
 end

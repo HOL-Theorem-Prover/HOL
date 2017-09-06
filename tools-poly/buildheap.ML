@@ -14,6 +14,7 @@ val SIGOBJ = OS.Path.concat(Systeml.HOLDIR, "sigobj")
 datatype option_record = OR of {
   all_forced : bool,
   base_state : string option,
+  debug : bool,
   forced_objs : string list,
   help : bool,
   output : string option,
@@ -23,19 +24,20 @@ datatype option_record = OR of {
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate7 z
+  fun makeUpdateT z = makeUpdate8 z
 in
 fun updateT z = let
-  fun from all_forced base_state forced_objs help output quietp repl =
-    {all_forced = all_forced, base_state = base_state,
+  fun from all_forced base_state debug forced_objs help output quietp repl =
+    {all_forced = all_forced, base_state = base_state, debug = debug,
      forced_objs = forced_objs, help = help, output = output, quietp = quietp,
      repl = repl}
-  fun from' repl quietp output help forced_objs base_state all_forced =
-    {all_forced = all_forced, base_state = base_state,
+  fun from' repl quietp output help forced_objs debug base_state all_forced =
+    {all_forced = all_forced, base_state = base_state, debug = debug,
      forced_objs = forced_objs, help = help, output = output, quietp = quietp,
      repl = repl}
-  fun to f {all_forced, base_state, forced_objs, help, output, quietp, repl} =
-    f all_forced base_state forced_objs help output quietp repl
+  fun to f {all_forced, base_state, debug, forced_objs, help, output, quietp,
+            repl} =
+    f all_forced base_state debug forced_objs help output quietp repl
 in
   makeUpdateT (from, from', to)
 end z
@@ -65,6 +67,8 @@ local
            "file.uo")
 in
 val cline_opts = [
+  {help = "provide debug output", long = ["dbg"], short = "",
+   desc = mkBoolT #debug},
   {help = "force all object files", long = [], short = "F",
    desc = mkBoolT #all_forced},
   {help = "force file (will load before others)", long = [], short = "f",
@@ -84,6 +88,7 @@ val cline_opts = [
 ]
 val initial_cline = OR {all_forced = false,
                         base_state = SOME Systeml.DEFAULT_STATE,
+                        debug = false,
                         forced_objs = [],
                         help = false,
                         output = NONE,
@@ -160,6 +165,160 @@ fun fix s =
       | _ => s
   end
 
+fun printOut s =
+  (TextIO.output(TextIO.stdOut, s); TextIO.flushOut TextIO.stdOut)
+val prompt1 = PolyML.Compiler.prompt1
+val prompt2 = PolyML.Compiler.prompt2
+val timing = PolyML.Compiler.timing
+fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, startExec,
+                   endExec} =
+  let
+    (* This is used as the main read-eval-print loop.  It is also invoked
+       by running code that has been compiled with the debug option on
+       when it stops at a breakpoint.  In that case debugEnv contains an
+       environment formed from the local variables.  This is placed in front
+       of the normal top-level environment. *)
+
+    (* Don't use the end_of_stream because it may have been set by typing
+       EOT to the command we were running. *)
+    val endOfFile    = ref false;
+    val realDataRead = ref false;
+    val lastWasEol   = ref true;
+    val cgen = QFRead.streamToReader TextIO.stdIn
+
+    (* Each character typed is fed into the compiler but leading
+       blank lines result in the prompt remaining as firstPrompt until
+       significant characters are typed. *)
+    fun readin cgen () : char option =
+      let
+        val () =
+            if isInteractive andalso !lastWasEol (* Start of line *) then
+              if !realDataRead then
+                printOut (!prompt2)
+              else printOut (!prompt1)
+            else ();
+      in
+        case cgen() of
+            NONE => (endOfFile := true; NONE)
+         |   SOME #"\n" => ( lastWasEol := true; SOME #"\n" )
+         |   SOME ch =>
+             (
+               lastWasEol := false;
+               if ch <> #" " then realDataRead := true else ();
+               SOME ch
+             )
+      end; (* readin *)
+
+    (* Remove all buffered but unread input. *)
+    fun flushInput () =
+      case TextIO.canInput(TextIO.stdIn, 1) of
+          SOME 1 => (TextIO.inputN(TextIO.stdIn, 1); flushInput())
+       |   _ => (* No input waiting or we're at EOF. *) ()
+
+    val polyCompiler = PolyML.compiler
+    fun readEvalPrint () : unit =
+      let
+        (* If we have executed a deeply recursive function the stack
+           will have extended to be very large. It's better to reduce
+           the stack if we can. This is RISKY. Each function checks on
+           entry that the stack has sufficient space for everything it
+           will allocate and assumes the stack will not shrink. It's
+           unlikely that any of the functions here will have asked for
+           very much but as a precaution we allow for an extra 8k
+           words. *)
+
+        fun shrink_stack (newsize : int) : unit =
+          RunCall.run_call1 RuntimeCalls.POLY_SYS_shrink_stack newsize
+        val () = shrink_stack 8000
+        val _ = diag "At top of readEvalPrint"
+      in
+        realDataRead := false;
+                (* Compile and then run the code. *)
+        let
+          val startCompile = Timer.startCPUTimer()
+
+          (* Compile a top-level declaration/expression. *)
+          val code = let
+            open PolyML.Compiler
+          in
+            polyCompiler (readin cgen , [CPNameSpace nameSpace,
+                                         CPOutStream TextIO.print])
+          end
+              (* Don't print any times if this raises an exception. *)
+              handle exn as Fail s =>
+                        (
+                            printOut(s ^ "\n");
+                            flushInput();
+                            lastWasEol := true;
+                            PolyML.Exception.reraise exn
+                        )
+
+          val endCompile = Timer.checkCPUTimer startCompile
+
+          (* Run the code *)
+          val startRun = Timer.startCPUTimer()
+          val () = startExec() (* Enable any debugging *)
+          (* Run the code and capture any exception (temporarily). *)
+          val finalResult = (code(); NONE) handle exn => SOME exn
+          val () = endExec() (* Turn off debugging *)
+          (* Print the times if required. *)
+          val endRun = Timer.checkCPUTimer startRun
+          val () =
+              if !timing
+              then printOut(
+                  concat["Timing - compile: ",
+                         Time.fmt 1 (#usr endCompile + #sys endCompile),
+                         " run: ", Time.fmt 1 (#usr endRun + #sys endRun), "\n"]
+                 )
+              else ()
+        in
+          case finalResult of
+              NONE => () (* No exceptions raised. *)
+           |   SOME exn => (* Report exceptions in running code. *)
+               let
+                 open PolyML PolyML.Exception PolyML.Compiler
+                 val exLoc =
+                     case exceptionLocation exn of
+                         NONE => []
+                      |   SOME loc => [ContextLocation loc]
+               in
+                 PolyML.prettyPrint(TextIO.print, !lineLength)
+                   (PrettyBlock(0, false, [],
+                                [
+                                  PrettyBlock(0, false, exLoc,
+                                              [PrettyString "Exception-"]),
+                                  PrettyBreak(1, 3),
+                                  prettyRepresentation(exn, ! printDepth),
+                                  PrettyBreak(1, 3),
+                                  PrettyString "raised"
+                   ]));
+                 PolyML.Exception.reraise exn
+               end
+        end
+      end; (* readEvalPrint *)
+
+    fun handledLoop () : unit =
+      (
+        (* Process a single top-level command. *)
+        readEvalPrint()
+        handle Thread.Thread.Interrupt =>
+               (* Allow ^C to terminate the debugger and raise Interrupt in
+                  the called program. *)
+               if exitOnError then OS.Process.exit OS.Process.failure
+               else ()
+           |   _ =>
+               if exitOnError then OS.Process.exit OS.Process.failure else ();
+                (* Exit if we've seen end-of-file or we're in the debugger
+                   and we've run "continue". *)
+        if !endOfFile orelse exitLoop() then ()
+        else handledLoop ()
+      )
+  in
+    handledLoop ()
+  end
+
+
+
 fun main() = let
   val usage_header =
     "Usage:\n  " ^ CommandLine.name() ^ " [options] obj1.uo obj2.uo ...\n\n\
@@ -183,7 +342,8 @@ fun main() = let
                     (CommandLine.arguments())
   val OR options = List.foldl (fn (f, opts) => f opts) initial_cline cline_upds
   val {quietp = qp, output, base_state, all_forced, forced_objs, ...} = options
-  val {repl, help, ...} = options
+  val {repl, help, debug, ...} = options
+  val diag = if debug then (fn s => warn ("DIAG: "^s)) else (fn s => ())
   val _ = not help orelse (print usage; OS.Process.exit OS.Process.success)
   val _ =
       case (repl, output) of
@@ -195,6 +355,7 @@ fun main() = let
   val forced_objs = map force forced_objs
   val objs = if all_forced then forced_objs @ map force objs0
              else forced_objs @ map unforce objs0
+  val _ = diag ("#objs = "^Int.toString (length objs))
   val warn = if qp then (fn s => ()) else warn
   val original_die = die
   fun die s = if qp then OS.Process.exit OS.Process.failure else original_die s
@@ -210,6 +371,7 @@ fun main() = let
                  (warn "[bogus Holmakefile in current directory - ignoring it]";
                   [])
       else []
+  val _ = diag ("allincs = ["^String.concatWith ", " allincs ^"]")
   val _ = List.app (check_objpath die ("" :: "." :: allincs)) objs
   val search_these = "." :: OS.Path.concat(Systeml.HOLDIR, "sigobj") :: allincs
   fun findmod s =
@@ -218,14 +380,24 @@ fun main() = let
                      \After searching: " ^ String.concatWith ", " search_these)
       | SOME p => p
   val _ = case base_state of
-              NONE => ()
-            | SOME f => PolyML.SaveState.loadState f
+              NONE => diag "Not loading a base state"
+            | SOME f => (diag ("About to load base-state "^f);
+                         PolyML.SaveState.loadState f)
 in
   case output of
       SOME s => create_heap qp findmod (map #1 objs, s)
     | NONE =>
       (List.app maybe_check_load objs;
-       if repl then PolyML.shell()
+       if repl then
+         (print "Starting REPL\n";
+          PolyML.print_depth 100;
+          (* PolyML.shell() *)
+          topLevel diag {startExec = fn () => (),
+                         endExec = fn () => (),
+                         exitLoop = fn () => false,
+                         exitOnError = false,
+                         isInteractive = true,
+                         nameSpace = PolyML.globalNameSpace} )
        else ();
        OS.Process.exit OS.Process.success)
-end
+end handle e => die ("Uncaught exception: "^General.exnMessage e)
