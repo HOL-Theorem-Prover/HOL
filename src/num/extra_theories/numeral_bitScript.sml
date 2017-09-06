@@ -12,11 +12,6 @@ open arithmeticTheory numeralTheory bitTheory
 
 val _ = new_theory "numeral_bit";
 
-infix \\ >- >|
-val op \\ = op THEN;
-val op >- = op THEN1;
-val op >| = op THENL;
-
 (* ------------------------------------------------------------------------- *)
 
 val BIT1n =
