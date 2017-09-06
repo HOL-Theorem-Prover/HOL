@@ -28,9 +28,6 @@ val _ = new_theory "poset";
 (* Helpful proof tools                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-infixr 0 >> >|
-infix 1 >-;
-
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
 val REVERSE = Tactical.REVERSE;
