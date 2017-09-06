@@ -1,4 +1,4 @@
-open HolKernel Parse bossLib boolLib pairTheory pred_setTheory
+open HolKernel Parse bossLib boolLib pairTheory pred_setTheory arithmeticTheory relationTheory
 
 open wordTheory generalHelpersTheory
 
@@ -90,6 +90,55 @@ val GBA_ACC_LEMM = store_thm
              >> metis_tac[])
         >> metis_tac[PSUBSET_DEF, PSUBSET_FINITE]
        )
+  );
+
+val GBA_FINITE_LEMM = store_thm
+  ("GBA_FINITE_LEMM",
+   ``!aut. FINITE aut.states ∧ FINITE aut.alphabet ∧ isValidGBA aut ==>
+       !q. q ∈ aut.states ==> FINITE (aut.trans q)``,
+   rpt strip_tac
+   >> `aut.trans q ⊆ ((POW aut.alphabet) × aut.states)` by (
+       fs[isValidGBA_def] >> simp[SUBSET_DEF] >> rpt strip_tac
+         >- (Cases_on `x` >> metis_tac[IN_POW,FST])
+         >- (Cases_on `x` >> metis_tac[IN_POW,SND])
+   )
+   >> metis_tac[FINITE_CROSS,FINITE_POW,PSUBSET_DEF,PSUBSET_FINITE]
+  );
+
+val GBA_RUN_LEMM = store_thm
+  ("GBA_RUN_LEMM",
+   ``!aut f w. isValidGBA aut ∧ isValidGBARunFor aut (GBA_RUN f) w
+      ==> !i. f i ∈ aut.states``,
+   rpt gen_tac >> strip_tac >> Induct_on `i`
+   >> fs[isValidGBARunFor_def,isValidGBA_def]
+    >- metis_tac[SUBSET_DEF]
+    >- (rw[SUC_ONE_ADD] >> metis_tac[])
+  );
+
+(*
+  reachable states
+*)
+
+val stepGBA_def = Define`
+  stepGBA aut = \x y. ?a. (a,y) ∈ aut.trans x ∧ x ∈ aut.states`;
+
+val reachableFromGBA_def = Define`
+  reachableFromGBA aut = (stepGBA aut)^*`;
+
+val reachableFromSetGBA_def = Define`
+  reachableFromSetGBA aut s = { y | ?x. reachableFromGBA aut x y ∧ x ∈ s }`;
+
+val REACHABLE_GBA_LEMM = store_thm
+  ("REACHABLE_GBA_LEMM",
+  ``!aut q1 q2. isValidGBA aut ∧ reachableFromGBA aut q1 q2 ∧ q1 ∈ aut.states
+    ==> q2 ∈ aut.states``,
+  gen_tac
+  >> `isValidGBA aut ==> !q1 q2. reachableFromGBA aut q1 q2
+        ==> q1 ∈ aut.states ==> q2 ∈ aut.states`
+     suffices_by metis_tac[]
+  >> strip_tac >> simp[reachableFromGBA_def]
+  >> HO_MATCH_MP_TAC RTC_INDUCT >> rpt strip_tac >> fs[]
+  >> fs[stepGBA_def,isValidGBA_def] >> metis_tac[]
   );
 
 val _ = export_theory();
