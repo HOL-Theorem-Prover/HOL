@@ -328,6 +328,21 @@ fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, startExec,
     handledLoop ()
   end
 
+(* Set up a handler for SIGINT if that is currently set to SIG_DFL.
+   If a handler has been set up by an initialisation function don't
+   replace it. *)
+fun sigint_handler() =
+  let
+    open Signal
+  in
+    case signal(2, SIG_IGN) of
+        SIG_IGN => ()
+     |  SIG_DFL =>
+        (signal(2, SIG_HANDLE (fn _ => Thread.Thread.broadcastInterrupt())); ())
+     |  oldHandle => (signal(2, oldHandle); ())
+  end;
+
+
 fun main() = let
   val usage_header =
     "Usage:\n  " ^ CommandLine.name() ^ " [options] obj1.uo obj2.uo ...\n\n\
@@ -411,7 +426,7 @@ in
        if repl then
          (diag "Starting REPL";
           PolyML.print_depth 100;
-          (* PolyML.shell() *)
+          sigint_handler();
           topLevel diag {startExec = fn () => (),
                          endExec = fn () => (),
                          exitLoop = fn () => false,
