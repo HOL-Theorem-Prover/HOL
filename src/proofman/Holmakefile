@@ -26,7 +26,7 @@ DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
        $(dprot $(SIGOBJ)/type_grammar.uo) \
        $(dprot $(HOLDIR)/bin/buildheap)
 
-UOARGS = $(protect $(SIGOBJ)/boolLib) proofManagerLib History goalstack
+UOARGS = $(protect $(SIGOBJ)/boolLib) proofManagerLib History goalStack
 
 EXTRA_CLEANS = $(TARGET)
 
