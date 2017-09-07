@@ -251,29 +251,9 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   in
     p "#!/bin/sh";
     p ("set -e");
-    p (protect(POLY) ^ " -q --gcthreads=1 " ^
-       String.concatWith " " (envlist "POLY_CLINE_OPTIONS") ^
-       " <<'__end-of-file__'");
-    (if polynothol then
-       (p "local";
-        p "val dir = OS.FileSys.getDir();";
-        p ("val _ = OS.FileSys.chDir (OS.Path.concat (\"" ^
-                    String.toString Systeml.HOLDIR ^ "\", \"tools-poly\"));");
-        p "val _ = use \"poly/poly-init2.ML\";";
-        p "val _ = OS.FileSys.chDir dir;";
-        p "in end;")
-     else
-       (p ("val _ = PolyML.SaveState.loadState \"" ^
-           String.toString HOLSTATE ^ "\";\n");
-        p ("val _ = List.app holpathdb.extend_db" ^
-           "(holpathdb.search_for_extensions ReadHMF.find_includes " ^
-           "[OS.FileSys.getDir()])\n")));
-    p ("val _ = List.map load [" ^
-       String.concatWith "," (List.map (fn f => "\"" ^ f ^ "\"") files) ^
-       "] handle x => ((case x of Fail s => print (s^\"\\n\") | _ => ()); \
-       \OS.Process.exit OS.Process.failure);");
-    p "__end-of-file__";
-    p ("echo \"Completed load of "^result^"\"");
+    p (protect(fullPath [HOLDIR, "bin", "buildheap"]) ^ " --gcthreads=1 " ^
+       (if polynothol then "--poly" else "--holstate="^protect(HOLSTATE)) ^
+       " " ^ String.concatWith " " (map protect files));
     p ("exit 0");
     TextIO.closeOut out;
     Systeml.mk_xable result;
