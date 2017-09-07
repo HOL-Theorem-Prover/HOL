@@ -342,6 +342,21 @@ fun sigint_handler() =
      |  oldHandle => (signal(2, oldHandle); ())
   end;
 
+fun polyprettify s =
+  let
+    val ss = Substring.full s
+    val (pfx,sfx) = Substring.position "Debug options:\n" ss
+    fun isNewline c = c = #"\n"
+    fun indent ss = "  " ^ Substring.string ss ^ "\n"
+    val pfx_fields = Substring.fields isNewline pfx
+    val sfx_fields = Substring.fields isNewline sfx
+    val sfx_str =
+        case sfx_fields of
+            [] => ""
+          | h::t => Substring.string h ^ "\n" ^ String.concat (map indent t)
+  in
+    "\nPoly/ML options:\n" ^ String.concat (map indent pfx_fields) ^ sfx_str
+  end
 
 fun main() = let
   val usage_header =
@@ -361,7 +376,8 @@ fun main() = let
     \Options:"
   val usage =
       GetOpt.usageInfo {header = usage_header,
-                        options = cline_opts}
+                        options = cline_opts} ^
+      polyprettify (PolyML.rtsArgumentHelp())
   val (cline_upds, objs0) =
       GetOpt.getOpt {argOrder = GetOpt.Permute, options = cline_opts,
                      errFn = die}
