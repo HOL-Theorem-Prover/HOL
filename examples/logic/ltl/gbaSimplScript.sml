@@ -260,6 +260,19 @@ val REPL_AT_LEMM = store_thm
    >> rpt strip_tac >> rw[EQ_IMP_THM] >> metis_tac[]
   );
 
+val REPL_AT_LEMM2 = store_thm
+  ("REPL_AT_LEMM2",
+  ``!aT t x y. t ∈ aT
+  ==> ?t2. t2 ∈ (replaceAccTrans x y aT)
+  ∧ !q1 a q2. (q1,a,q2) ∈ t2
+       ==> ?q3 q4. (q1 = replaceState x y q3) ∧ (q2 = replaceState x y q4)
+                 ∧ (q3,a,q4) ∈ t``,
+  rpt strip_tac >> fs[replaceAccTrans_def]
+  >> qexists_tac
+     `{(replaceState x y q1, a, replaceState x y q2) | (q1,a,q2) ∈ t}`
+  >> rpt strip_tac >> fs[] >> metis_tac[]
+  );
+
 val equivalentStates_def = Define`
   equivalentStates aT trans q1 q2 =
      (trans q1 = trans q2)
@@ -279,6 +292,16 @@ val mergeState_def = Define`
               alph
       else (GBA s i t aT alph)`;
 
+val un_merged_run_def = Define`
+  un_merged_run word aT x_old x_new init trans f i =
+           if i = 0
+           then (if f 0 ∈ init then f 0 else x_old)
+           else (if ?a. (a,f i) ∈ trans (f (i - 1)) ∧ at word (i-1) ∈ a
+                  ∧ (!a2. (f i = x_new) ∧ (a2,x_old) ∈ trans (f (i-1))
+                  ∧ (at word (i-1) ∈ a2) ==>
+                  !T. T ∈ aT ==>
+                      ((f (i-1),a2,x_old) ∈ T ==> (f (i-1),a,f i) ∈ T))
+                 then f i else x_old)`;
 
 (* val MERGE_IS_CORRECT = store_thm *)
 (*   ("MERGE_IS_CORRECT", *)
@@ -370,8 +393,7 @@ val mergeState_def = Define`
 (*                  ) *)
 (*             ) *)
 (*         ) *)
-(*      >- (qexists_tac `r` >> simp[isGBARunFor_def] *)
-(*          >> `word_range x ⊆ aut.alphabet` by ( *)
+(*      >- (`word_range x ⊆ aut.alphabet` by ( *)
 (*               Cases_on `aut` >> fs[mergeState_def] >> POP_ASSUM mp_tac *)
 (*               >> Cases_on `∃q'. q' ∈ f ∧ q' ≠ q ∧ equivalentStates f2 f1 q' q` *)
 (*               >> simp[]) *)
@@ -379,20 +401,239 @@ val mergeState_def = Define`
 (*                  ∧ equivalentStates aut.accTrans aut.trans q' q` *)
 (*          >> rpt strip_tac *)
 (*           >- (fs[isGBARunFor_def,isValidGBARunFor_def] >> Cases_on `aut` *)
+(*               >> rename[`GBA states i t aT alph`] *)
 (*               >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac *)
 (*               >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac *)
 (*               >> RULE_ASSUM_TAC(SIMP_RULE (srw_ss())[mergeState_def]) *)
 (*               >> rpt strip_tac *)
 (*               >> qabbrev_tac *)
-(*                   `s_new = @p. p ∈ f ∧ p ≠ q ∧ equivalentStates f2 f1 p q` *)
+(*                   `s_new = @p. p ∈ states ∧ p ≠ q ∧ equivalentStates aT t p q` *)
+(*               >> `s_new ∈ states ∧ ~(s_new = q) ∧ equivalentStates aT t s_new q` *)
+(*                   by (qunabbrev_tac `s_new` >> fs[] >> metis_tac[]) *)
 (*               >> fs[] *)
 (*               >> qabbrev_tac *)
-(*                   `newGBA = GBA (f DIFF {q}) (replaceStateSet q s_new f0) *)
-(*                      (λm. {(a,replaceState q s_new n) | (a,n) ∈ f1 m}) *)
-(*                        (replaceAccTrans q s_new f2) f3` *)
+(*                   `newGBA = GBA (states DIFF {q}) (replaceStateSet q s_new i) *)
+(*                      (λm. {(a,replaceState q s_new n) | (a,n) ∈ t m}) *)
+(*                        (replaceAccTrans q s_new aT) alph` *)
 (*               >> `isValidGBARunFor newGBA r x` by metis_tac[] *)
 (*               >> POP_ASSUM mp_tac >> Cases_on `r` >> simp[isValidGBARunFor_def] *)
 (*               >> rpt strip_tac *)
-(*                >- (qunabbrev_tac `newGBA` >> fs[replaceStateSet_def] *)
-(*                    >> Cases_on `q ∈ f0` >> fs[equivalentStates_def]) *)
+(*               >> qexists_tac `GBA_RUN (un_merged_run x aT q s_new i t f)` *)
+(*               >> rpt strip_tac *)
+(*                >- (simp[isValidGBARunFor_def,un_merged_run_def] >> rpt strip_tac *)
+(*                   >- (Cases_on `f 0 ∈ i` >> fs[] >> qunabbrev_tac `newGBA` *)
+(*                       >> fs[replaceStateSet_def] >> metis_tac[] *)
+(*                      ) *)
+(*                   >- (rename[`n = 0`] *)
+(*                       >> `∃a. (a,f (n + 1)) ∈ newGBA.trans (f n) ∧ at x n ∈ a` *)
+(*                           by metis_tac[] *)
+(*                       >> rpt strip_tac *)
+(*                       >> Cases_on ` *)
+(*                           ∃a. (a,f (n + 1)) ∈ t (f n) ∧ at x n ∈ a ∧ *)
+(*                            ∀a2. *)
+(*                             (f (n + 1) = s_new) ∧ (a2,q) ∈ t (f n) *)
+(*                             ∧ at x n ∈ a2 ⇒ *)
+(*                             ∀T. T ∈ aT ⇒ (f n,a2,q) ∈ T ⇒ (f n,a,s_new) ∈ T` *)
+(*                       >> Cases_on `n = 0` >> simp[] *)
+(*                        >- (Cases_on `f 0 ∈ i` >> fs[] *)
+(*                            >- metis_tac[] *)
+(*                            >- (qunabbrev_tac `newGBA` >> fs[replaceStateSet_def] *)
+(*                                >> `f 0 = s_new` by (Cases_on `q ∈ i` >> fs[]) *)
+(*                                >> fs[equivalentStates_def] >> metis_tac[]) *)
+(*                           ) *)
+(*                        >- (Cases_on *)
+(*                             `∃a. (a,f n) ∈ t (f (n − 1)) ∧ at x (n − 1) ∈ a ∧ *)
+(*                               ∀a2. *)
+(*                               (f n = s_new) ∧ (a2,q) ∈ t (f (n − 1)) *)
+(*                               ∧ at x (n − 1) ∈ a2 ⇒ ∀T. T ∈ aT ⇒ *)
+(*                                 (f (n − 1),a2,q) ∈ T ⇒ (f (n − 1),a,s_new) ∈ T` *)
+(*                            >- metis_tac[] *)
+(*                            >- (simp[] >> qunabbrev_tac `newGBA` *)
+(*                               >> fs[replaceStateSet_def,replaceState_def] *)
+(*                               >> `f n = s_new` by ( *)
+(*                                first_x_assum (qspec_then `n-1` mp_tac) >> simp[] *)
+(*                                >> rpt strip_tac >> metis_tac[]) *)
+(*                               >> fs[equivalentStates_def] >> rw[] *)
+(*                               >> metis_tac[]) *)
+(*                           ) *)
+(*                        >- (Cases_on `f 0 ∈ i` >> fs[] *)
+(*                            >- (qunabbrev_tac `newGBA` >> fs[replaceStateSet_def] *)
+(*                                >> fs[replaceState_def] >> Cases_on `n' = q` *)
+(*                                >> metis_tac[]) *)
+(*                            >- (qunabbrev_tac `newGBA` >> fs[replaceStateSet_def] *)
+(*                                >> fs[replaceState_def,equivalentStates_def] *)
+(*                                >> `f 0 = s_new` by (Cases_on `q ∈ i` >> fs[]) *)
+(*                                >> Cases_on `n' = q` *)
+(*                                >> metis_tac[]) *)
+(*                           ) *)
+(*                        >- (Cases_on *)
+(*                             `∃a. (a,f n) ∈ t (f (n − 1)) ∧ at x (n − 1) ∈ a ∧ *)
+(*                               ∀a2. *)
+(*                               (f n = s_new) ∧ (a2,q) ∈ t (f (n − 1)) *)
+(*                               ∧ at x (n − 1) ∈ a2 ⇒ ∀T. T ∈ aT ⇒ *)
+(*                                 (f (n − 1),a2,q) ∈ T ⇒ (f (n − 1),a,s_new) ∈ T` *)
+(*                             >- (simp[] >> qunabbrev_tac `newGBA` *)
+(*                                 >> fs[replaceStateSet_def,replaceState_def] *)
+(*                                 >> Cases_on `n' = q` >> fs[] >> metis_tac[] *)
+(*                                ) *)
+(*                             >- (simp[] >> fs[] >> qunabbrev_tac `newGBA` *)
+(*                                 >> fs[replaceStateSet_def,replaceState_def] *)
+(*                                 >> `f n = s_new` by ( *)
+(*                                      first_x_assum (qspec_then `n-1` mp_tac) *)
+(*                                      >> simp[] >> rpt strip_tac >> metis_tac[]) *)
+(*                                 >> fs[equivalentStates_def] >> rw[] *)
+(*                                 >> metis_tac[]) *)
+(*                           ) *)
+(*                      ) *)
+(*                   ) *)
+(*                >- (qabbrev_tac `newRun = un_merged_run x aT q s_new i t f` *)
+(*                    >> qabbrev_tac `aut = GBA states i t aT alph` *)
+(*                     >> `!T. T ∈ aut.accTrans *)
+(*                          ==> (!i. ?a j. i <= j ∧ (newRun j, a, newRun (j+1)) ∈ T *)
+(*                                ∧ (a, newRun (j+1)) ∈ aut.trans (newRun j) *)
+(*                                ∧ at x j ∈ a)` suffices_by metis_tac[GBA_ACC_LEMM] *)
+(*                     >> `isAcceptingGBARunFor newGBA (GBA_RUN f) x` by ( *)
+(*                         qunabbrev_tac `aut` >> fs[mergeState_def] *)
+(*                         >> metis_tac[]) *)
+(*                     >> `!T. T ∈ newGBA.accTrans *)
+(*                          ==> (!i. ?a j. i <= j ∧ (f j, a, f (j+1)) ∈ T *)
+(*                                ∧ (a, f (j+1)) ∈ newGBA.trans (f j) *)
+(*                                ∧ at x j ∈ a)` by metis_tac[GBA_ACC_LEMM] *)
+(*                     >> rpt strip_tac *)
+(*                     >> `∃t2. t2 ∈ replaceAccTrans q s_new aT ∧ *)
+(*                          ∀q1 a q2. *)
+(*                           (q1,a,q2) ∈ t2 ⇒ *)
+(*                             ?q3 q4. (q1 = replaceState q s_new q3) *)
+(*                                   ∧ (q2 = replaceState q s_new q4) *)
+(*                                   ∧ ((q3,a,q4) ∈ T')` by ( *)
+(*                         imp_res_tac REPL_AT_LEMM2 >> qunabbrev_tac `aut` *)
+(*                         >> fs[] >> metis_tac[]) *)
+(*                     >> first_x_assum (qspec_then `t2` mp_tac) *)
+(*                     >> `t2 ∈ newGBA.accTrans` *)
+(*                            by (qunabbrev_tac `newGBA` >> fs[]) *)
+(*                     >> simp[] >> rpt strip_tac *)
+(*                     >> first_x_assum (qspec_then `i'` mp_tac) >> rpt strip_tac *)
+(*                     >> rename[`n <= j`] >> qexists_tac `a` >> qexists_tac `j` *)
+(*                     >> fs[] >> strip_tac *)
+(*                      >- (`!p. (f p, a, f (p+1)) ∈ t2 *)
+(*                                 ==> (newRun p,a,newRun (p+1)) ∈ T'` by ( *)
+(*                            Induct_on `p` >> fs[] >> rpt strip_tac *)
+(*                            >> qunabbrev_tac `newRun` >> fs[un_merged_run_def] *)
+(*                             >- (Cases_on `f 0 ∈ i` >> simp[] *)
+(*                              >- (Cases_on `∃a'. (a',f 1) ∈ t (f 0) ∧ at x 0 ∈ a' *)
+(*                                   ∧ ∀a2. (f 1 = s_new) ∧ (a2,q) ∈ t (f 0) *)
+(*                                   ∧ at x 0 ∈ a2 ⇒ ∀T. T ∈ aT ⇒ *)
+(*                                   (f 0,a2,q) ∈ T ⇒ (f 0,a',s_new) ∈ T` *)
+(*                               >- (simp[] >> fs[] >> ) *)
+
+(* ) *)
+
+
+(* ) *)
+
+
+(* qunabbrev_tac `newRun` >> simp[un_merged_run_def] *)
+(*                          >>  *)
+
+
+
+(* ) *)
+
+
+
+
+
+(*                     >> `!j. (newRun j = f j) \/ (newRun j = q)` by ( *)
+(*                         strip_tac >> qunabbrev_tac `newRun` *)
+(*                         >> fs[un_merged_run_def] >> metis_tac[] *)
+(*                     ) *)
+(*                     >> strip_tac *)
+(*                      >- (first_x_assum (qspec_then `f j` mp_tac) *)
+(*                          >> strip_tac >> first_x_assum (qspec_then `a` mp_tac) *)
+(*                          >> strip_tac *)
+(*                          >> first_x_assum (qspec_then `f (j+1)` mp_tac) *)
+(*                          >> simp[] >> strip_tac *)
+(*                          >> `q3 = newRun j` by ( *)
+(*                               qunabbrev_tac `newRun` >> fs[un_merged_run_def] *)
+(*                               >> fs[replaceState_def] >> Cases_on `q3=q` >> fs[] *)
+(*                               >> Cases_on `j=0` >> simp[] *)
+
+(* ) *)
+
+(*  >> Cases_on `q3 = q` *)
+(*                          >> Cases_on `q4 = q` >> fs[replaceState_def] *)
+(*                        >- (`(s_new,a,s_new) ∈ T'` suffices_by ( *)
+(*                             qunabbrev_tac `newRun` >> fs[un_merged_run_def] *)
+(*                             >> simp[] >> strip_tac >>  *)
+
+(* )) *)
+
+
+(*                      >- (qunabbrev_tac `newRun` >> qunabbrev_tac `aut` *)
+(*                       >> simp[un_merged_run_def] >> fs[replaceState_def] *)
+(*                       >> fs[equivalentStates_def] *)
+(*                       >> Cases_on `~(f j = s_new)` >> simp[] *)
+(*                        >- (qunabbrev_tac `newGBA` >> fs[] *)
+(*                            >> first_x_assum (qspec_then `f j` mp_tac) *)
+(*                            >> strip_tac >> first_x_assum (qspec_then `a` mp_tac) *)
+(*                            >> strip_tac >> first_x_assum (qspec_then `f (j+1)` mp_tac) *)
+(*                            >> simp[] >> rpt strip_tac >> Cases_on `q3 = q` *)
+(*                            >> fs[] >> rw[] *)
+(*                             >- (Cases_on `n' = q` >> fs[] *)
+(*                               >- (fs[replaceAccTrans_def,replaceState_def] *)
+(*                                   >>  *)
+
+(* ) *)
+(* ) *)
+
+(*                            >> Cases_on `j = 0` >> simp[] *)
+(*                             >- (Cases_on `f 0 ∈ i` >> fs[] *)
+(*                              >- (Cases_on `q3 = q` >> Cases_on `q4 = q` *)
+(*                                  >> simp[] >> rw[] *)
+(*                                   >- (Cases_on `n' = q` >> rw[] *)
+(*                                    >- (`(f 0,a,n') ∈ T'` by metis_tac[] *)
+(*                                        >> metis_tac[] *)
+(* ) *)
+(* ) *)
+(* ) *)
+(* ) *)
+(*                             >- (simp[] >> Cases_on `f 0 ∈ i` >> simp[] *)
+(*                               >- ( *)
+
+(* ) *)
+(* ) *)
+(* ) *)
+
+(*                       >> simp[] >> first_x_assum (qspec_then `f j` mp_tac) *)
+(*                       >> strip_tac >> first_x_assum (qspec_then `a` mp_tac) *)
+(*                       >> strip_tac >> first_x_assum (qspec_then `f (j+1)` mp_tac) *)
+(*                       >> simp[] >> strip_tac >> fs[replaceState_def] *)
+(*                       >> fs[equivalentStates_def] *)
+(*                       >> Cases_on `~(f j = q)` >> simp[] *)
+(*                        >- (Cases_on `j = 0` >> simp[] >>  *)
+
+
+(*                           ) *)
+
+
+(*                       >> Cases_on `q3 = q` >> Cases_on `q4 = q` >> simp[] *)
+(*                        >- (`(a,q) ∈ t s_new` by ( *)
+(*                             fs[isValidGBA_def] *)
+
+(* ) *)
+
+
+
+
+(* fs[equivalentStates_def] *)
+(*                            >> Cases_on ) *)
+
+
+(*                       >> Cases_on `j = 0` *)
+(*                       >> Cases_on `∃a. (a,f j) ∈ t (f (j − 1)) ∧ at x (j − 1) ∈ a` *)
+(*                       >> Cases_on `∃a'. (a',f (j+1)) ∈ t (f j) ∧ at x j ∈ a'` *)
+(*                       >> rw[] >> fs[replaceState_def] >>  *)
+(*                          >- () *)
+(* ) *)
+(* ) *)
 (* ) *)
