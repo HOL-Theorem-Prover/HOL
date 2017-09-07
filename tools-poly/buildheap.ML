@@ -18,6 +18,7 @@ datatype option_record = OR of {
   debug : bool,
   forced_objs : string list,
   help : bool,
+  mktex : bool,
   output : string option,
   quietp : bool,
   repl : bool
@@ -25,20 +26,22 @@ datatype option_record = OR of {
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate8 z
+  fun makeUpdateT z = makeUpdate9 z
 in
 fun updateT z = let
-  fun from all_forced base_state debug forced_objs help output quietp repl =
+  fun from all_forced base_state debug forced_objs help mktex output quietp
+           repl =
     {all_forced = all_forced, base_state = base_state, debug = debug,
-     forced_objs = forced_objs, help = help, output = output, quietp = quietp,
-     repl = repl}
-  fun from' repl quietp output help forced_objs debug base_state all_forced =
+     forced_objs = forced_objs, help = help, mktex = mktex, output = output,
+     quietp = quietp, repl = repl}
+  fun from' repl quietp output mktex help forced_objs debug base_state
+            all_forced =
     {all_forced = all_forced, base_state = base_state, debug = debug,
-     forced_objs = forced_objs, help = help, output = output, quietp = quietp,
-     repl = repl}
-  fun to f {all_forced, base_state, debug, forced_objs, help, output, quietp,
-            repl} =
-    f all_forced base_state debug forced_objs help output quietp repl
+     forced_objs = forced_objs, help = help, mktex = mktex, output = output,
+     quietp = quietp, repl = repl}
+  fun to f {all_forced, base_state, debug, forced_objs, help, mktex, output,
+            quietp, repl} =
+    f all_forced base_state debug forced_objs help mktex output quietp repl
 in
   makeUpdateT (from, from', to)
 end z
@@ -78,7 +81,9 @@ val cline_opts = [
    desc = mkBoolT #help},
   {help = "load holstate as base", long = ["holstate"], short = "b",
    desc = setStringOpt "filename" #base_state},
-  {help = "output heap name", long = [], short = "o",
+  {help = "make TeX munger", long = ["mktex"], short = "",
+   desc = mkBoolT #mktex},
+  {help = "output heap/munger name", long = [], short = "o",
    desc = setStringOpt "filename" #output},
   {help = "use poly as base", long = ["poly"], short = "",
    desc = setBaseNone},
@@ -93,6 +98,7 @@ val initial_cline = OR {all_forced = false,
                         debug = false,
                         forced_objs = [],
                         help = false,
+                        mktex = false,
                         output = NONE,
                         quietp = false,
                         repl = false}
