@@ -86,8 +86,9 @@ val cline_opts = [
   {help = "start REPL after loading", long = ["repl"], short = "",
    desc = mkBoolT #repl}
 ]
+val heapname = ref (SOME Systeml.DEFAULT_STATE)
 val initial_cline = OR {all_forced = false,
-                        base_state = SOME Systeml.DEFAULT_STATE,
+                        base_state = !heapname,
                         debug = false,
                         forced_objs = [],
                         help = false,
@@ -153,7 +154,17 @@ in
   OS.Process.exit OS.Process.success
 end
 
-fun maybe_check_load (obj,_) = load obj
+fun maybe_check_load (obj,_) =
+  let
+    open OS.Path
+    val {base,ext} = splitBaseExt obj
+  in
+    case ext of
+        SOME "sml" => QUse.use obj
+      | SOME "ML" => QUse.use obj
+      | NONE => load obj
+      | _ => die ("Not sure what to do with 'object file': "^obj)
+  end
 
 fun fix s =
   let
@@ -184,7 +195,7 @@ fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, startExec,
     val endOfFile    = ref false;
     val realDataRead = ref false;
     val lastWasEol   = ref true;
-    val cgen = QFRead.streamToReader TextIO.stdIn
+    val cgen = QFRead.streamToReader true TextIO.stdIn
 
     (* Each character typed is fed into the compiler but leading
        blank lines result in the prompt remaining as firstPrompt until
@@ -317,13 +328,13 @@ fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, startExec,
     handledLoop ()
   end
 
-
-
 fun main() = let
   val usage_header =
     "Usage:\n  " ^ CommandLine.name() ^ " [options] obj1.uo obj2.uo ...\n\n\
     \Object files can be provided with .uo suffixes or not. If they are not\n\
-    \present, they will be assumed.\n\n\
+    \present, they will be assumed. \"Object\" files may also be .sml/.ML\n\
+    \files which will be used directly (without any dependency analysis being\n\
+    \done).\n\n\
     \If a -o option is provided, a heap containing the context generated\n\
     \by loading/executing the .uo files will be dumped. Otherwise, the files\n\
     \are loaded solely for their side effects.\n\n\
@@ -372,24 +383,33 @@ fun main() = let
                   [])
       else []
   val _ = diag ("allincs = ["^String.concatWith ", " allincs ^"]")
-  val _ = List.app (check_objpath die ("" :: "." :: allincs)) objs
-  val search_these = "." :: OS.Path.concat(Systeml.HOLDIR, "sigobj") :: allincs
-  fun findmod s =
-    case findUo search_these (s ^ ".uo") of
-        NONE => die ("In "^OS.FileSys.getDir()^": couldn't find "^s^".uo\n\
-                     \After searching: " ^ String.concatWith ", " search_these)
-      | SOME p => p
   val _ = case base_state of
-              NONE => diag "Not loading a base state"
+              NONE => (diag "Not loading a base state"; heapname := NONE)
             | SOME f => (diag ("About to load base-state "^f);
+                         heapname := SOME f;
                          PolyML.SaveState.loadState f)
 in
   case output of
-      SOME s => create_heap qp findmod (map #1 objs, s)
+      SOME s =>
+      let
+        val _ = List.app (check_objpath die ("" :: "." :: allincs)) objs
+        val search_these =
+            "." :: OS.Path.concat(Systeml.HOLDIR, "sigobj") :: allincs
+        fun findmod s =
+          case findUo search_these (s ^ ".uo") of
+              NONE => die ("In "^OS.FileSys.getDir()^": couldn't find "^s^
+                           ".uo\n\
+                           \After searching: " ^
+                           String.concatWith ", " search_these)
+            | SOME p => p
+      in
+        heapname := SOME s;
+        create_heap qp findmod (map #1 objs, s)
+      end
     | NONE =>
       (List.app maybe_check_load objs;
        if repl then
-         (print "Starting REPL\n";
+         (diag "Starting REPL";
           PolyML.print_depth 100;
           (* PolyML.shell() *)
           topLevel diag {startExec = fn () => (),

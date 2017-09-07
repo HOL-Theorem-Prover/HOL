@@ -23,7 +23,8 @@ DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
        $(dprot $(SIGOBJ)/Tactic.uo) \
        $(dprot $(SIGOBJ)/Tactical.uo) \
        $(dprot $(SIGOBJ)/ParseDatatype.uo) \
-       $(dprot $(SIGOBJ)/type_grammar.uo)
+       $(dprot $(SIGOBJ)/type_grammar.uo) \
+       $(dprot $(HOLDIR)/bin/buildheap)
 
 UOARGS = $(protect $(SIGOBJ)/boolLib) proofManagerLib History goalstack
 

@@ -520,21 +520,17 @@ val _ =
       val _ = echo "Generating bin/hol."
       val target      = fullPath [holdir, "bin", "hol.bare"]
       val target_boss = fullPath [holdir, "bin", "hol"]
-      val hol0_heap   = "-i " ^ protect(fullPath[HOLDIR,"bin", "hol.state0"])
+      val hol0_heap   = protect(fullPath[HOLDIR,"bin", "hol.state0"])
       val hol_heapcalc=
-          String.concatWith " " [
-            "--gcthreads=1", "-i",
             "$(" ^ protect(fullPath[HOLDIR,"bin","heapname"]) ^ ")"
-          ]
-      val prelude = ["prelude.ML"]
-      val prelude2 = prelude @ ["prelude2.ML"]
+      fun TP s = protect(fullPath[HOLDIR, "tools-poly", s])
+      val prelude = ["Arbint", "Arbrat", TP "prelude.ML"]
+      val prelude2 = prelude @ [TP "prelude2.ML"]
    in
       (* "unquote" scripts use the unquote executable to provide nice
          handling of double-backquote characters *)
-      emit_hol_unquote_script target hol0_heap prelude;
-      emit_hol_unquote_script target_boss hol_heapcalc prelude2;
-      emit_hol_script (target ^ ".noquote") hol0_heap prelude;
-      emit_hol_script (target_boss ^ ".noquote") hol_heapcalc prelude2
+      emit_hol_script target hol0_heap prelude;
+      emit_hol_script target_boss hol_heapcalc prelude2
    end
 
 val _ = print "\nFinished configuration!\n"

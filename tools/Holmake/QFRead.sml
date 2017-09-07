@@ -35,9 +35,9 @@ fun string_to_lexer s =
     (read, (fn () => ()))
   end
 
-fun stream_to_lexer strm =
+fun stream_to_lexer isscriptp strm =
   let
-    val qstate = QuoteFilter.UserDeclarations.newstate()
+    val qstate = QuoteFilter.UserDeclarations.newstate isscriptp
     val read = QuoteFilter.makeLexer (fn n => TextIO.input strm) qstate
   in
     (read, (fn () => ()))
@@ -66,6 +66,6 @@ end
 fun fileToReaderEOF fname = mkReaderEOF (file_to_lexer fname)
 fun fileToReader fname = #1 (fileToReaderEOF fname)
 fun stringToReader s = #1 (mkReaderEOF (string_to_lexer s))
-fun streamToReader strm = #1 (mkReaderEOF (stream_to_lexer strm))
+fun streamToReader b strm = #1 (mkReaderEOF (stream_to_lexer b strm))
 
 end
