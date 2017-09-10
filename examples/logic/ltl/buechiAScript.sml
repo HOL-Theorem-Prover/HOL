@@ -15,8 +15,9 @@ val _ = Datatype
 val isValidGBA_def = Define`
   isValidGBA (A: ('s,'a) GBA) =
     (A.initial ⊆ A.states)
-    /\ (!s a d. (s ∈ A.states) /\ ((a, d) ∈ (A.trans s))
-                                  ==> (d ∈ A.states) ∧ (a ⊆ A.alphabet))`;
+        ∧ (!s a d. (s ∈ A.states) /\ ((a, d) ∈ (A.trans s))
+                                  ==> (d ∈ A.states) ∧ (a ⊆ A.alphabet))
+        ∧ (!q1 a q2 T. (q1,a,q2) ∈ T ∧ T ∈ A.accTrans ==> (a,q2) ∈ A.trans q1)`;
 
 val _ = Datatype` gba_run = GBA_RUN (num -> 's)`;
 

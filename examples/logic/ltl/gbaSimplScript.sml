@@ -73,7 +73,11 @@ val removeImplied_def = Define`
 
 val reduceTransSimpl_def = Define`
   reduceTransSimpl (GBA s i t aT a) =
-   GBA s i (removeImplied aT t) aT a`;
+   GBA s i (removeImplied aT t)
+    (IMAGE
+         (\s. {(e,a,e') | (e,a,e') ∈ s ∧ (a,e') ∈ (removeImplied aT t) e })
+         aT)
+    a`;
 
 val REDUCE_IS_VALID = store_thm
  ("REDUCE_IS_VALID",
@@ -117,9 +121,10 @@ val REDUCE_IS_CORRECT = store_thm
                  ==> (!i. ?a j. i <= j ∧ (f j, a, f (j+1)) ∈ T
                     ∧ (a, f (j+1)) ∈ aut.trans (f j)
                     ∧ at x j ∈ a)` by metis_tac[GBA_ACC_LEMM]
-             >> rpt strip_tac >> first_x_assum (qspec_then `T'` mp_tac)
+             >> rpt strip_tac
              >> rpt strip_tac >> Cases_on `aut` >> fs[reduceTransSimpl_def]
-             >> POP_ASSUM mp_tac >> simp[] >> rpt strip_tac
+             >> first_x_assum (qspec_then `s` mp_tac)
+             >> simp[] >> rpt strip_tac
              >> first_x_assum (qspec_then `i` mp_tac) >> rpt strip_tac
              >> rename [`GBA states init trans aT alph`]
              >> imp_res_tac TRANS_IMPLIES_MIN >> fs[]
@@ -134,6 +139,8 @@ val REDUCE_IS_CORRECT = store_thm
               >- (first_x_assum (qspec_then `(a,f(j+1))` mp_tac) >> fs[]
                   >> rpt strip_tac >> metis_tac[])
               >- metis_tac[]
+              >- metis_tac[]
+              >- metis_tac[SUBSET_DEF]
               >- metis_tac[]
               >- metis_tac[SUBSET_DEF]
             )
@@ -156,9 +163,27 @@ val REDUCE_IS_CORRECT = store_thm
                   ==> (!i. ?a j. i <= j ∧ (f j, a, f (j+1)) ∈ T
                         ∧ (a, f (j+1)) ∈ aut.trans (f j)
                         ∧ at x j ∈ a)` suffices_by metis_tac[GBA_ACC_LEMM]
-             >> rpt strip_tac >> first_x_assum (qspec_then `T'` mp_tac)
-             >> rpt strip_tac >> Cases_on `aut` >> fs[reduceTransSimpl_def]
-             >> POP_ASSUM mp_tac >> simp[] >> rpt strip_tac
+             >> rpt strip_tac
+             >> qabbrev_tac
+                 `realTrans = {(e,a,e') | (a,e') ∈
+                                          (reduceTransSimpl aut).trans e }`
+             >> first_x_assum (qspec_then `T' ∩ realTrans` mp_tac)
+             >> Cases_on `aut` >> fs[reduceTransSimpl_def]
+             >> qunabbrev_tac `realTrans`
+             >> simp[] >> rpt strip_tac >> fs[]
+             >> `∀i.
+                  ∃a j. i ≤ j ∧
+                  ((f j,a,f (j + 1)) ∈ T'
+                 ∧ (a,f (j + 1)) ∈ removeImplied f2 f1 (f j))
+                 ∧ (a,f (j + 1)) ∈ removeImplied f2 f1 (f j) ∧ at x j ∈ a`
+                by (
+                  `∃s.
+                (T' ∩ {(e,a,e') | (a,e') ∈ removeImplied f2 f1 e} =
+                 {(e,a,e') | (e,a,e') ∈ s ∧ (a,e') ∈ removeImplied f2 f1 e}) ∧
+                s ∈ f2` suffices_by fs[]
+                >> qexists_tac `T'` >> simp[SET_EQ_SUBSET,SUBSET_DEF]
+                >> rpt strip_tac >> metis_tac[]
+              )
              >> first_x_assum (qspec_then `i` mp_tac) >> rpt strip_tac
              >> fs[removeImplied_def] >> metis_tac[]
             )
@@ -184,6 +209,7 @@ val REDUCE_STATE_VALID = store_thm
     >- (qexists_tac `x` >> fs[reachableFromGBA_def]
         >> `stepGBA (GBA f f0 f1 f2 f3) s d` suffices_by metis_tac[RTC_CASES2]
         >> simp[stepGBA_def] >> metis_tac[])
+    >- metis_tac[]
     >- metis_tac[]
   );
 
