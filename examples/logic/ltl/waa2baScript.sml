@@ -51,7 +51,8 @@ gba_trans (waa : (α,β) ALTER_A) qs =
 
 val gba_accTrans_def = Define`
 gba_accTrans (waa : (β, α) ALTER_A)  =
-  let realTransitions = { (e,a,e') | (a,e') ∈ (gba_trans waa e) }
+  let realTransitions =
+       { (e,a,e') | (a,e') ∈ (gba_trans waa e) ∧ e ∈ POW waa.states }
   in { acc_cond waa f ∩ realTransitions | f | f ∈ waa.final}`;
 
 val waa2gba_def = Define`
@@ -318,6 +319,7 @@ val WAA2GBA_ISVALID = store_thm
                )
         )
      >- (fs[gba_accTrans_def] >> fs[])
+     >- (fs[gba_accTrans_def] >> fs[])
   );
 
 val waa2gba_gba_V_def = Define`
@@ -560,7 +562,13 @@ val WAA_IN_GBA = store_thm
                    (GBA (POW aut.states) aut.initial (gba_trans aut)
                         (gba_accTrans aut) aut.alphabet).trans
                    (waa2gba_gba_V run v' j)` by metis_tac[] >> fs[]
-               >> rpt strip_tac >> metis_tac[]
+               >> rpt strip_tac
+               >> `waa2gba_gba_V run v' j ∈ POW aut.states` by (
+                      `waa2gba_gba_V run v' j ⊆ run.V j` by fs[]
+                      >> fs[validAARunFor_def]
+                      >> metis_tac[IN_POW,SUBSET_TRANS]
+                  )
+               >> metis_tac[]
                 )
           >> `∀j. i ≤ j ⇒ f ∈ waa2gba_gba_V run v' (j + 1)` by metis_tac[]
           >> `!j. i <= j ==> f ∈ run.E (j+1, f)`
@@ -588,6 +596,7 @@ val WAA_IN_GBA = store_thm
               ∧ (waa2gba_gba_V run v' j, a, waa2gba_gba_V run v' (j + 1)) ∈ T'
           ∧ (a, waa2gba_gba_V run v' (j + 1)) ∈
                      (waa2gba aut).trans (waa2gba_gba_V run v' j)
+          ∧ (waa2gba_gba_V run v' j ∈ POW aut.states)
           ∧ at x j ∈ a`
                suffices_by (simp[waa2gba_def] >> metis_tac[])
                >> qexists_tac `i`
@@ -607,6 +616,9 @@ val WAA_IN_GBA = store_thm
                      >> simp[waa2gba_def] >> qunabbrev_tac `e`
                      >> metis_tac[SUBSET_TRANS,IN_POW,validAARunFor_def]
                     )
+                 >- (`waa2gba_gba_V run v' j ⊆ run.V j` by fs[]
+                     >> fs[validAARunFor_def]
+                     >> metis_tac[IN_POW,SUBSET_TRANS])
              )
        )
   );
@@ -785,7 +797,10 @@ val GBA_IN_WAA = store_thm
           by metis_tac[GBA_ACC_LEMM]
        >> fs[branchFixP_def]
        >> `?j. j >= i ∧ ~(b j = x')` suffices_by metis_tac[]
-       >> `!T. T ∈ {acc_cond aut f ∩ {(e',a,e) | (a,e) ∈ gba_trans aut e' } |
+       >> qabbrev_tac
+           `realTrans = {(e',a,e) | (a,e) ∈ gba_trans aut e'
+                                          ∧ e' ∈ POW aut.states}`
+       >> `!T. T ∈ {acc_cond aut f ∩ realTrans |
                     f | f ∈ aut.final } ==>
                       !i. ?a j. i <= j ∧ (f j, a, f (j +1)) ∈ T
                        ∧ (a, f (j+1)) ∈ (waa2gba aut).trans (f j)
@@ -798,7 +813,6 @@ val GBA_IN_WAA = store_thm
              )
              >> fs[]
        )
-       >> qabbrev_tac `realTrans = {(e',a,e) | (a,e) ∈ gba_trans aut e' }`
        >> first_x_assum (qspec_then `acc_cond aut x' ∩ realTrans` mp_tac)
        >> rpt strip_tac
        >> fs[]

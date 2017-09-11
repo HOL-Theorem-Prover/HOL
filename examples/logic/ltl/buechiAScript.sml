@@ -1,4 +1,4 @@
-open HolKernel Parse bossLib boolLib pairTheory pred_setTheory arithmeticTheory relationTheory
+open HolKernel Parse bossLib boolLib pairTheory pred_setTheory arithmeticTheory relationTheory set_relationTheory
 
 open wordTheory generalHelpersTheory
 
@@ -17,7 +17,8 @@ val isValidGBA_def = Define`
     (A.initial ⊆ A.states)
         ∧ (!s a d. (s ∈ A.states) /\ ((a, d) ∈ (A.trans s))
                                   ==> (d ∈ A.states) ∧ (a ⊆ A.alphabet))
-        ∧ (!q1 a q2 T. (q1,a,q2) ∈ T ∧ T ∈ A.accTrans ==> (a,q2) ∈ A.trans q1)`;
+        ∧ (!q1 a q2 T. (q1,a,q2) ∈ T ∧ T ∈ A.accTrans
+               ==> (q1 ∈ A.states ∧ (a,q2) ∈ A.trans q1))`;
 
 val _ = Datatype` gba_run = GBA_RUN (num -> 's)`;
 
@@ -93,6 +94,84 @@ val GBA_ACC_LEMM = store_thm
        )
   );
 
+val ACC_TRANS_LEMM = store_thm
+  ("ACC_TRANS_LEMM",
+   ``!aut r word. isAcceptingGBARunFor aut (GBA_RUN r) word
+     ∧ isValidGBA aut
+     ∧ FINITE aut.alphabet ∧ FINITE aut.states
+        ==> !T. T ∈ aut.accTrans
+              ==> (?q1 a q2. !i. ?j. i <= j ∧ (q1 = r j) ∧ (q2 = r (j+1))
+                                   ∧ (a,q2) ∈ aut.trans q1
+                                   ∧ at word j ∈ a)``,
+   rpt strip_tac
+   >> `FINITE T'` by (
+       fs[isValidGBA_def]
+       >> `T' ⊆ (aut.states × ((POW aut.alphabet) × aut.states))` by (
+           simp[SUBSET_DEF] >> rpt strip_tac
+           >> Cases_on `x` >> Cases_on `r'` >> simp[] >> metis_tac[IN_POW]
+       )
+   >> metis_tac[FINITE_POW,FINITE_CROSS,PSUBSET_DEF,PSUBSET_FINITE]
+   )
+   >> rename[`FINITE T1`]
+   >> `!i. ∃a j.
+        i ≤ j ∧ (r j,a,r (j + 1)) ∈ T1 ∧
+        (a,r (j + 1)) ∈ aut.trans (r j)
+        ∧ at word j ∈ a` by metis_tac[GBA_ACC_LEMM]
+   >> CCONTR_TAC >> fs[]
+   >> `?f. !q1 a q2 j.
+        ¬(f q1 a q2 ≤ j) ∨ q1 ≠ r j ∨ q2 ≠ r (j + 1) ∨
+        (a,q2) ∉ aut.trans q1 ∨ at word j ∉ a` by metis_tac[SKOLEM_THM]
+   >> qabbrev_tac `maxOcc = { f q1 a q2 | (q1,a,q2) ∈ T1 }`
+   >> `?x. x ∈
+        maximal_elements maxOcc
+        (rrestrict (rel_to_reln $<=) maxOcc)`
+       by (
+       `linear_order (rrestrict (rel_to_reln $<=) maxOcc) maxOcc` by (
+           fs[linear_order_def,rel_to_reln_def,rrestrict_def] >> rpt strip_tac
+            >- (fs[domain_def,SUBSET_DEF] >> rpt strip_tac >> metis_tac[])
+            >- (fs[range_def,SUBSET_DEF] >> rpt strip_tac >> metis_tac[])
+            >- fs[transitive_def]
+            >- fs[antisym_def]
+       )
+       >> HO_MATCH_MP_TAC finite_linear_order_has_maximal
+       >> rpt strip_tac
+        >- (qunabbrev_tac `maxOcc` >> fs[]
+            >> qabbrev_tac `f2 = λ(m,n,b). f m n b`
+            >> `FINITE {f2 x | x ∈ T1 }`
+               suffices_by (qunabbrev_tac `f2` >> rpt strip_tac
+                            >> `{(λ(m,n,b). f m n b) x | x ∈ T1}
+                              = {f q1 a q2 | (q1,a,q2) ∈ T1}` by (
+                                 simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
+                                 >- (Cases_on `x'` >> Cases_on `r'`
+                                     >> fs[] >> metis_tac[])
+                                 >- (qexists_tac `(q1,a,q2)` >> fs[])
+                             )
+                            >> metis_tac[])
+            >> metis_tac[IMAGE_FINITE, IMAGE_DEF])
+        >- fs[]
+        >- (qunabbrev_tac `maxOcc`
+            >> `~(T1 = {})` suffices_by (
+                 rpt strip_tac
+                 >> `?x. x ∈ T1` by fs[MEMBER_NOT_EMPTY]
+                 >> Cases_on `x` >> Cases_on `r'`
+                 >> `f q q' r'' ∈ {f q1 a q2 | (q1,a,q2) ∈ T1}` by (
+                     fs[IN_DEF] >> metis_tac[])
+                 >> metis_tac[MEMBER_NOT_EMPTY]
+             )
+            >> metis_tac[MEMBER_NOT_EMPTY]
+           )
+   )
+   >> first_x_assum (qspec_then `x + 1` mp_tac) >> rpt strip_tac
+   >> fs[maximal_elements_def,rrestrict_def,rel_to_reln_def]
+   >> qunabbrev_tac `maxOcc`
+   >> `¬(f (r j) a (r (j + 1)) ≤ j) ∨
+       (a,r (j + 1)) ∉ aut.trans (r j) ∨ at word j ∉ a` by fs[]
+   >> first_x_assum (qspec_then `f (r j) a (r (j + 1))` mp_tac)
+   >> POP_ASSUM mp_tac >> simp[] >> rpt strip_tac
+   >> metis_tac[]
+  );
+
+
 val GBA_FINITE_LEMM = store_thm
   ("GBA_FINITE_LEMM",
    ``!aut. FINITE aut.states ∧ FINITE aut.alphabet ∧ isValidGBA aut ==>
@@ -115,6 +194,8 @@ val GBA_RUN_LEMM = store_thm
     >- metis_tac[SUBSET_DEF]
     >- (rw[SUC_ONE_ADD] >> metis_tac[])
   );
+
+
 
 (*
   reachable states
