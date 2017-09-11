@@ -268,10 +268,13 @@ val word_sub_def = Define`
   word_sub (v:'a word) (w:'a word) = word_add v (word_2comp w)`
 
 val word_div_def = Define`
-  word_div (v: 'a word) (w: 'a word) = (n2w:num->'a word) (w2n v DIV w2n w)`
+  word_div (v: 'a word) (w: 'a word) = n2w (w2n v DIV w2n w): 'a word`
 
-val word_sdiv_def = Define`
-  word_sdiv a b =
+val word_mod_def = Define`
+  word_mod (v: 'a word) (w: 'a word) = n2w (w2n v MOD w2n w): 'a word`
+
+val word_quot_def = Define`
+  word_quot a b =
     if word_msb a then
       if word_msb b then
         word_div (word_2comp a) (word_2comp b)
@@ -283,13 +286,9 @@ val word_sdiv_def = Define`
       else
         word_div a b`
 
-val word_mod_def = Define`
-  word_mod (v:'a word) (w:'a word) =
-    n2w (w2n v MOD w2n w):'a word`
-
 (* 2's complement signed remainder (sign follows dividend) *)
-val word_srem_def = Define`
-  word_srem a b =
+val word_rem_def = Define`
+  word_rem a b =
     if word_msb a then
       if word_msb b then
         word_2comp (word_mod (word_2comp a) (word_2comp b))
@@ -300,26 +299,6 @@ val word_srem_def = Define`
         word_mod a (word_2comp b)
       else
         word_mod a b`
-
-(* 2's complement signed remainder (sign follows divisor), as in SMT-LIB *)
-val word_smod_def = Define`
-  word_smod s t =
-    let abs_s = if word_msb s then word_2comp s else s
-    and abs_t = if word_msb t then word_2comp t else t in
-    let u = word_mod abs_s abs_t in
-      if u = 0w then
-        u
-      else
-        if word_msb s then
-          if word_msb t then
-            word_2comp u
-          else
-            word_add (word_2comp u) t
-        else
-          if word_msb t then
-            word_add u t
-          else
-            u`
 
 val word_L2_def = Define `word_L2 = word_mul word_L word_L`
 
@@ -333,7 +312,7 @@ val () = List.app (fn (s, t) => Parse.overload_on (s, Parse.Term t))
 
 val () = add_infixes 600 HOLgrammars.LEFT
   [("//", `$word_div`),
-   ("/", `$word_sdiv`)]
+   ("/", `$word_quot`)]
 
 (* -------------------------------------------------------------------------
     Orderings : definitions
@@ -536,20 +515,17 @@ val ZERO_LT_dimword = Q.store_thm("ZERO_LT_dimword[simp]",
   `0 < dimword(:'a)`,
   SRW_TAC [][dimword_def])
 
-val dimword_IS_TWICE_INT_MIN = Q.store_thm(
-  "dimword_IS_TWICE_INT_MIN",
+val DIMINDEX_GT_0 = save_thm("DIMINDEX_GT_0[simp]",
+  PROVE [DECIDE ``!s. 1 <= s ==> 0 < s``,DIMINDEX_GE_1] ``0 < dimindex(:'a)``)
+
+val dimword_IS_TWICE_INT_MIN = Q.store_thm("dimword_IS_TWICE_INT_MIN",
   `dimword(:'a) = 2 * INT_MIN(:'a)`,
-  SRW_TAC [][dimword_def,INT_MIN_def] THEN
-  `0 < dimindex (:'a)` by (ASSUME_TAC DIMINDEX_GE_1 THEN DECIDE_TAC) THEN
-  Cases_on `dimindex(:'a)` THEN1 FULL_SIMP_TAC (srw_ss()) [] THEN
-  SRW_TAC [][EXP])
+  simp [INT_MIN_def, GSYM (CONJUNCT2 arithmeticTheory.EXP),
+        DECIDE ``0n < a ==> (SUC (a - 1) = a)``, DIMINDEX_GT_0, dimword_def])
 
 val dimword_sub_int_min = Q.store_thm("dimword_sub_int_min",
   `dimword(:'a) - INT_MIN(:'a) = INT_MIN(:'a)`,
   SRW_TAC [ARITH_ss] [dimword_IS_TWICE_INT_MIN])
-
-val DIMINDEX_GT_0 = save_thm("DIMINDEX_GT_0[simp]",
-  PROVE [DECIDE ``!s. 1 <= s ==> 0 < s``,DIMINDEX_GE_1] ``0 < dimindex(:'a)``)
 
 val ONE_LT_dimword = Q.store_thm("ONE_LT_dimword[simp]",
   `1 < dimword(:'a)`,
@@ -558,11 +534,6 @@ val ONE_LT_dimword = Q.store_thm("ONE_LT_dimword[simp]",
 val DIMINDEX_LT =
   (GEN_ALL o CONJUNCT2 o SPEC_ALL o SIMP_RULE bool_ss [DIMINDEX_GT_0] o
    Q.SPEC `^WL`) DIVISION
-
-val dimword_twice_INT_MIN = Q.store_thm("dimword_twice_INT_MIN",
-  `dimword(:'a) = 2 * INT_MIN (:'a)`,
-  simp [INT_MIN_def, GSYM (CONJUNCT2 arithmeticTheory.EXP),
-        DECIDE ``0n < a ==> (SUC (a - 1) = a)``, DIMINDEX_GT_0, dimword_def])
 
 val EXISTS_HB = save_thm("EXISTS_HB",
   PROVE [DIMINDEX_GT_0,LESS_ADD_1,ADD1,ADD] ``?m. ^WL = SUC m``)
@@ -1228,7 +1199,8 @@ val WORD_AND_EXP_SUB1 = Q.store_thm("WORD_AND_EXP_SUB1",
 val word_msb_add_word_L = Q.store_thm("word_msb_add_word_L",
   `!a: 'a word. word_msb (a + INT_MINw) = ~word_msb a`,
   Cases
-  \\ fs [word_L_def, word_add_n2w, dimword_twice_INT_MIN, word_msb_n2w_numeric]
+  \\ fs [word_L_def, word_add_n2w, dimword_IS_TWICE_INT_MIN,
+         word_msb_n2w_numeric]
   \\ Cases_on `INT_MIN (:'a) <= n`
   \\ simp []
   \\ imp_res_tac arithmeticTheory.LESS_EQUAL_ADD

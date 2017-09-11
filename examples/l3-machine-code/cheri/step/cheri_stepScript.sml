@@ -231,7 +231,7 @@ local
             wordsSyntax.sw2sw_tm, wordsSyntax.w2w_tm,
             wordsSyntax.word_add_tm, wordsSyntax.word_sub_tm,
             wordsSyntax.word_mul_tm,
-            wordsSyntax.word_srem_tm, wordsSyntax.word_sdiv_tm,
+            wordsSyntax.word_rem_tm, wordsSyntax.word_quot_tm,
             wordsSyntax.word_mod_tm, wordsSyntax.word_div_tm,
             wordsSyntax.word_lo_tm, wordsSyntax.word_lt_tm,
             wordsSyntax.word_ls_tm, wordsSyntax.word_le_tm,
