@@ -1,7 +1,3 @@
-val _ = PolyML.SaveState.loadState "../../../bin/hol.state";
-
-val _ = load "regexpLib";
-
 open Lib regexpMisc;
 
 val justifyDefault = regexpLib.SML;
@@ -357,3 +353,8 @@ fun main () =
        ; regexpMisc.succeed()
       end
 end;
+
+val _ = PolyML.export("regexp2dfa.o", main);
+val _ = Systeml.systeml
+          (["cc", "-o", "regexp2dfa", "regexp2dfa.o"] @ Systeml.POLY_LDFLAGS)
+val _ = OS.FileSys.remove "regexp2dfa.o"
