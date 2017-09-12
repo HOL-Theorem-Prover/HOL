@@ -63,7 +63,7 @@ in
            val number = PolyML.Compiler.compilerVersionNumber
          in
            (if number >= 560
-               then ["-lgmp", "-lstdc++", "-Wl,-no_pie", "-w"]
+               then ["-lstdc++", "-Wl,-rpath,"^polymllibdir, "-Wl,-no_pie"]
             else if number >= 551
                then ["-lpthread", "-lm", "-ldl", "-lstdc++", "-Wl,-no_pie"]
             else if number >= 550
