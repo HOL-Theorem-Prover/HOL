@@ -1049,14 +1049,9 @@ fun all_examples_files () =
     readl file
   end;
 
-  
-
-
   val l = all_examples_files () @ all_cakeml_files ();
   mkDir_err hhs_record_dir;
   mkDir_err hhs_open_dir;
   app hhs_rewrite l;
-
-  
              
   --------------------------------------------------------------------------- *)

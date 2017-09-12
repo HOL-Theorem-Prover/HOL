@@ -12,6 +12,8 @@ include Abbrev
   val n_tactic_replay_glob : int ref
 
   val reset_profiling : unit -> unit
+  val post_record : unit -> unit
+  
   val mk_summary: string -> unit
   
 end

@@ -8,8 +8,8 @@
 structure hhsData :> hhsData =
 struct
 
-open HolKernel boolLib Abbrev hhsTools hhsTimeout hhsExec hhsLearn
-SharingTables Portable
+open HolKernel boolLib Abbrev hhsTools hhsTimeout hhsExec hhsLearn 
+hhsMetis hhsPredict SharingTables Portable
 
 val ERR = mk_HOL_ERR "hhsData"
 
@@ -194,16 +194,22 @@ fun pp_feavl feavl =
 
 (*----------------------------------------------------------------------------
  * Saving one feature vector on memory
+   orelse (!hhs_noslowlbl_flag andalso t0 > !hhs_tactic_time) 
  *----------------------------------------------------------------------------*)
 
 val feature_time = ref 0.0
+val hhs_noslowlbl_flag = ref true
+
+fun metis_prove g =
+  !hhs_ortho_metis andalso !hhs_metis_flag andalso
+  solved_by_metis (!hhs_metis_npred) (!hhs_metis_time) g
 
 fun save_lbl (lbl0 as (stac0,t0,g0,gl0)) =
-  if mem g0 gl0 then () else
+  if mem g0 gl0 orelse metis_prove g0 then ()
+  else
     let
       val fea = total_time feature_time hhsFeature.fea_of_goal g0
-      val (lbl as (stac,t,g,gl)) = 
-        debug_t "orthogonalize" orthogonalize (lbl0,fea)
+      val (lbl as (stac,t,g,gl)) = orthogonalize (lbl0,fea)
       val feav = (lbl,fea)
     in
       update_stacfea_ddict feav
@@ -397,7 +403,8 @@ fun read_feavdatal thy =
   let
     val file = hhs_feature_dir ^ "/" ^ thy
     val l0 = lex_data file 
-      handle _ => (print_endline (thy ^ " is missing"); [])
+      handle _ => (print_endline (thy ^ " is missing");
+                   debug thy; [])
   in
     if l0 = [] 
     then []
@@ -417,11 +424,7 @@ fun read_feavdatal thy =
 fun read_feavdatal_no_min thy = 
   if mem thy ["min","bool"] then [] else read_feavdatal thy
  
-fun import_feavl thyl = 
-  (
-  debug "Importing feature vectors";
-  List.concat (map read_feavdatal_no_min thyl)
-  )
+fun import_feavl thyl = List.concat (map read_feavdatal_no_min thyl)
 
 (* test
 load "hhsData";

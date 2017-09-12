@@ -8,7 +8,7 @@
 structure hhsRecord :> hhsRecord =
 struct
 
-open HolKernel Abbrev hhsPrerecord hhsUnfold hhsTools hhsLearn hhsSearch tacticToe hhsData
+open HolKernel Abbrev hhsPrerecord hhsUnfold hhsTools hhsLearn hhsSearch tacticToe hhsData hhsMetis
 
 val ERR = mk_HOL_ERR "hhsRecord"
 
@@ -42,7 +42,10 @@ fun start_thy cthy =
   erase_file (hhs_record_dir ^ "/" ^ cthy ^ "/fetch_thm");  
   (* Evaluating success of tactics *)   
   mkDir_err hhs_succrate_dir;
-  erase_file (hhs_succrate_dir ^ "/" ^ cthy)
+  erase_file (hhs_succrate_dir ^ "/" ^ cthy);
+  (* Orthogonalization of theorems *)
+  mkDir_err hhs_mdict_dir;
+  erase_file (hhs_mdict_dir ^ "/" ^ cthy)
   )
 
 (*---------------------------------------------------------------------------
@@ -50,17 +53,12 @@ fun start_thy cthy =
   ---------------------------------------------------------------------------*)
 
 fun end_thy cthy = 
-  (
   let
-    val file = tactictoe_dir ^ "/record_log/" ^ cthy ^ "/summary"
-    fun f i s = append_endline file (int_to_string i ^ " " ^ s) 
-    fun g s r = append_endline file (s ^ ": " ^ Real.toString r)
-    val _ = if !hhs_eval_flag then export_succrate cthy else ()
-    val (_,t) = add_time (export_feavl cthy) (!hhs_cthyfea)
+    val _ = debug_t "export_succrate" export_succrate cthy
+    val _ = debug_t "export_feavl" (export_feavl cthy) (!hhs_cthyfea)
+    val _ = debug_t "export_mdict" export_mdict cthy
   in 
-    mk_summary cthy;
-    g "export" t
+    mk_summary cthy
   end
-  )
 
 end (* struct *)

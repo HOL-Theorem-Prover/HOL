@@ -7,27 +7,30 @@ sig
   type fea_t = int list
   type feav_t = (lbl_t * fea_t)
   
-  val hhs_search_time    : Time.time ref
-  val hhs_tactic_time    : real ref
+  val hhs_search_time : Time.time ref
+  val hhs_tactic_time : real ref
   
-  val hhs_badstacl : string list ref
-  val hhs_stacfea  : (lbl_t, fea_t) Redblackmap.dict ref
-  val hhs_cthyfea  : feav_t list ref
-  val hhs_ddict    : (goal, feav_t list) Redblackmap.dict ref
-  val hhs_ndict    : (string, int) Redblackmap.dict ref
+  val hhs_badstacl  : string list ref
+  val hhs_stacfea   : (lbl_t, fea_t) Redblackmap.dict ref
+  val hhs_cthyfea   : feav_t list ref
+  val hhs_ddict     : (goal, feav_t list) Redblackmap.dict ref
+  val hhs_ndict     : (string, int) Redblackmap.dict ref
+  val mdict_glob    : (string, fea_t) Redblackmap.dict ref
+  val negmdict_glob : (string, unit) Redblackmap.dict ref
   
   val clean_feadata : unit -> unit
   val init_stacfea_ddict : feav_t list -> unit
   val update_stacfea_ddict : feav_t -> unit
   
-  val tactictoe_dir   : string
-  val hhs_feature_dir : string
-  val hhs_code_dir    : string
-  val hhs_search_dir  : string
-  val hhs_predict_dir : string
-  val hhs_record_dir  : string
-  val hhs_open_dir    : string
+  val tactictoe_dir    : string
+  val hhs_feature_dir  : string
+  val hhs_code_dir     : string
+  val hhs_search_dir   : string
+  val hhs_predict_dir  : string
+  val hhs_record_dir   : string
+  val hhs_open_dir     : string
   val hhs_succrate_dir : string
+  val hhs_mdict_dir    : string
   
   val mkDir_err : string -> unit
 
@@ -105,6 +108,7 @@ sig
   val rpt_split_level : string -> string list -> string list list
   val split_string : string -> string -> (string * string)     
   
-  val fold_left : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b   
+  val fold_left : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
+
 
 end

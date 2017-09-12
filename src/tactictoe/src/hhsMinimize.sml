@@ -67,6 +67,28 @@ fun add_quote stac = add_quote_aux (hhs_lex stac)
 *)
  
 (*----------------------------------------------------------------------------
+  Externalizing local declaration
+  ----------------------------------------------------------------------------*)
+
+fun find_local_aux loc_acc acc sl = case sl of
+    [] => (rev loc_acc, rev acc)
+  | "let" :: m =>
+    let 
+      val (decl,cont0) = split_level "in" m
+      val (body,cont1) = split_level "end" cont0
+    in
+      if length body <> 1 
+      then raise ERR "find_local" ""
+      else find_local_aux (decl :: loc_acc) (hd body :: acc) cont1
+    end
+  | a :: m => find_local_aux loc_acc (a :: acc) m 
+ 
+fun find_local stac =
+  let val sl = hhs_lex stac in
+    find_local_aux [] [] sl
+  end
+
+(*----------------------------------------------------------------------------
   Minimizing the space between parentheses
   ----------------------------------------------------------------------------*)
  
@@ -84,6 +106,23 @@ fun minspace_sl sl = case sl of
   Removing module declaration
   ----------------------------------------------------------------------------*)
 
+fun is_infix_open s = 
+  String.isPrefix "hhs_infix" s andalso
+  String.isSuffix "open" s
+
+fun is_infix_close s = 
+  String.isPrefix "hhs_infix" s andalso
+  String.isSuffix "close" s
+
+(* rm_infix in the case of the global infix operators *)
+fun rm_infix sl = case sl of
+    [] => []
+  | a :: b :: c :: m => 
+    if is_infix_open a andalso is_infix_close c 
+    then b :: rm_infix m
+    else a :: rm_infix (b :: c :: m)
+  | a :: m => a :: rm_infix m 
+  
 fun rm_prefix stac =
   let
     val sl = hhs_lex stac
@@ -92,14 +131,16 @@ fun rm_prefix stac =
         val l = String.tokens (fn x => x = #".") s
         val s' = last l
       in
-        if List.length l = 1 orelse not (is_pointer_eq s s') then s else s'
+        if List.length l = 1 orelse not (is_pointer_eq s s') 
+        then s 
+        else s'
       end
   in
     map rm_one_prefix sl
   end
 
 fun prettify1_stac stac = 
-  (minspace_sl o rm_prefix) stac
+  (minspace_sl o rm_infix o rm_prefix) stac
 fun prettify2_stac stac =
   (minspace_sl o hhs_lex) stac
 
@@ -118,16 +159,43 @@ fun prettify_proof proof = case proof of
       val s1 = prettify1_stac s
       val s2 = prettify2_stac s
     in
-      if same_effect s s1 g then Tactic (s1,g)
-      else if same_effect s s2 g then Tactic (s2,g)
-      else Tactic (s,g)
+      if same_effect s s1 g then Tactic (s1,g) else Tactic (s2,g)
     end
   | Then (p1,p2) => Then (prettify_proof p1, prettify_proof p2)
   | Thenl (p,pl) => Thenl (prettify_proof p, map prettify_proof pl)
 
-(* only works after a call to add_proofpar *)
-fun string_of_proof proof = case proof of
-    Tactic (s,_) => s
+
+fun string_of_proof proof = 
+  let 
+    val decll_ref = ref []
+    fun loop proof = case proof of
+      Tactic (s,_) => 
+        let val (decll,news) = find_local s in
+          decll_ref := decll @ (!decll_ref);
+          minspace_sl news
+        end
+    | Then (p1,p2) => loop p1 ^ " THEN\n  " ^ loop p2
+    | Thenl (p,pl) =>     
+      let 
+        val sl = map loop pl
+        val set = mk_fast_set String.compare sl
+      in
+        if length set = 1 
+        then loop p ^ " THEN\n  " ^ hd set
+        else loop p ^ " THENL\n  [" ^ String.concatWith ",\n  " sl ^ "]"
+      end
+    val body = loop proof
+    val decll = mk_fast_set (list_compare String.compare) (!decll_ref)
+    val decls = map (String.concatWith " ") decll
+  in
+    if null decls 
+    then body 
+    else "let\n  " ^ 
+         String.concatWith "\n  " decls ^ "\nin\n  " ^ body ^ "\nend"  
+  end      
+
+fun safestring_of_proof proof = case proof of
+    Tactic (s,_) => "(" ^ s ^ ")"
   | Then (p1,p2) => string_of_proof p1 ^ " THEN " ^ string_of_proof p2
   | Thenl (p,pl) =>     
     let 
@@ -135,7 +203,7 @@ fun string_of_proof proof = case proof of
       val set = mk_fast_set String.compare sl
     in
       if length set = 1 
-      then string_of_proof p ^ " THEN " ^ hd set
+      then string_of_proof p ^ " THEN " ^ "(" ^ hd set ^ ")"
       else string_of_proof p ^ " THENL " ^ 
         "[" ^ String.concatWith ", " sl ^ "]"
     end
@@ -224,8 +292,9 @@ fun minimize_proof_wrap p =
     )
   else p
 
-fun is_infix s = String.isPrefix "hhs_infix" s 
 
+
+(*
 fun should_par i sl = case sl of
     []     => false
   | a :: m => if is_infix a andalso i <= 0
@@ -242,9 +311,9 @@ fun add_proofpar proof = case proof of
     Tactic (s,g) => Tactic (add_tacpar s,g)
   | Then (p1,p2) => Then   (add_proofpar p1,add_proofpar p2)
   | Thenl (p,pl) => Thenl  (add_proofpar p,map add_proofpar pl)
+*)
 
-fun minimize p = 
-  (prettify_proof_wrap o minimize_proof_wrap o add_proofpar) p
+fun minimize p = (prettify_proof_wrap o minimize_proof_wrap) p
 
 (*----------------------------------------------------------------------------
   Reconstructing the proof.
@@ -255,9 +324,8 @@ fun proof_length proof = case proof of
 | Then (p1,p2) => proof_length p1 + proof_length p2
 | Thenl (p,pl) => proof_length p + sum_int (map proof_length pl)
 
-fun reconstruct g proof =          
+fun reconstruct_aux g proof sproof =
   let
-    val sproof = string_of_proof proof
     val tac    = tactic_of_sml sproof
       handle _ => raise ERR "reconstruct" sproof
     val tim = 2.0 * (Time.toReal (!hhs_search_time))
@@ -266,9 +334,20 @@ fun reconstruct g proof =
         (debug ("Error: reconstruct: " ^ sproof);
          raise ERR "reconstruct" sproof)
   in 
-    debug ("proof length: " ^ int_to_string (proof_length proof));
-    debug ("proof time: " ^ Real.toString new_tim);
+    debug_proof ("proof length: " ^ int_to_string (proof_length proof));
+    debug_proof ("proof time: " ^ Real.toString new_tim);
     sproof
   end
 
+fun unsafe_reconstruct g proof =
+  reconstruct_aux g proof (string_of_proof proof)          
+
+fun safe_reconstruct g proof =
+  reconstruct_aux g proof (safestring_of_proof proof)
+
+fun reconstruct g proof = 
+  if !hhs_prettify_flag 
+  then (unsafe_reconstruct g proof handle _ => safe_reconstruct g proof)
+  else safe_reconstruct g proof
+  
 end (* struct *)

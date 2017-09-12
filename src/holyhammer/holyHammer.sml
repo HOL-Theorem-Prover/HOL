@@ -206,6 +206,10 @@ fun launch_parallel tim =
 fun reconstruct_atp atp cj =
   reconstruct (status_of_prover atp, out_of_prover atp) cj
 
+fun get_lemmas_atp atp = get_lemmas
+ (status_of_prover atp, out_of_prover atp)
+
+
 (*---------------------------------------------------------------------------
    Performs all previous steps with (experimentally) the best parameters.
  ----------------------------------------------------------------------------*)
@@ -234,7 +238,23 @@ fun hh term =
     val _ = translate_atp Z3
     val _ = launch_parallel (!timeout_glob)
   in
-    reconstruct_atp Eprover term handle _ => reconstruct_atp Z3 term
+    reconstruct_atp Eprover term 
+    handle _ => reconstruct_atp Z3 term
+  end
+
+fun hh_eval timeout term =
+  let
+    val premises128 = select_premises 128 term
+    val _ = export_problem Eprover premises128 term
+    val _ = translate_atp Eprover
+    val _ = launch_atp Eprover timeout
+    val lo = get_lemmas_atp Eprover
+    fun f (a,b) = a ^ "Theory." ^ b
+  in 
+    case lo of
+      NONE   => hhsTools.debug_proof ("Proof status: Time Out")
+    | SOME l => hhsTools.debug_proof 
+      ("Proof found: " ^ String.concatWith " " (map f l))
   end
 
 end

@@ -59,24 +59,26 @@ fun is_pointer_eq s1 s2 =
    Read tactics
    -------------------------------------------------------------------------- *)
 
-fun tactic_of_sml s =
-  let
-    val b = exec_sml "tactic_of_sml" 
-    ("val _ = hhsExec.hhs_tacticl_glob := [Tactical.VALID ( " ^ s ^ " )]")
-  in
-    if b then hd (!hhs_tacticl_glob) else raise ERR "tactic_of_sml" s
-  end
+val hhs_invalid_flag = ref false
 
 fun tacticl_of_sml sl =
   let 
-    fun mk_valid s = "Tactical.VALID ( " ^ s ^ " )"
+    fun mk_valid s = 
+      if !hhs_invalid_flag then s else "Tactical.VALID ( " ^ s ^ " )"
     val tacticl = "[" ^ String.concatWith ", " (map mk_valid sl) ^ "]"
-    val b = exec_sml "tacticl_of_sml" 
-              ("val _ = hhsExec.hhs_tacticl_glob := " ^ tacticl)
+    val programl =
+      [
+       "structure tactictoe_fake_struct = struct",
+       "  val _ = hhsExec.hhs_tacticl_glob := " ^ tacticl,
+       "end"
+      ]
+    val b = exec_sml "tacticl_of_sml" (String.concatWith "\n" programl)
   in
     if b then !hhs_tacticl_glob
-      else raise ERR "tacticl_of_sml" (String.concatWith " " sl)
+      else raise ERR "tacticl_of_sml" (String.concatWith " " (first_n 10 sl))
   end
+
+fun tactic_of_sml s = hd (tacticl_of_sml [s])
 
 (* -----------------------------------------------------------------------------
    Apply tactics
@@ -84,8 +86,8 @@ fun tacticl_of_sml sl =
 
 val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
 
-fun app_tac tac g = 
-  SOME (fst (timeOut (!hhs_tactic_time) (TC_OFF tac) g))
+fun app_tac tim tac g = 
+  SOME (fst (timeOut tim (TC_OFF tac) g))
   handle _ => NONE
 
 fun rec_stac stac g =
@@ -117,6 +119,21 @@ fun string_of_sml s =
   end
 
 (* -----------------------------------------------------------------------------
+   Read hh
+   -------------------------------------------------------------------------- *)
+
+val (hhs_hh_glob: (int -> term -> unit) ref) = 
+  ref (fn x => (fn y => ()))
+
+fun hh_of_sml () =
+  let 
+    val b = exec_sml "hh_of_sml" ("val _ = hhsExec.hhs_hh_glob := holyHammer.hh_eval")
+  in
+    if b then !hhs_hh_glob else raise ERR "hh_of_sml" ""
+  end
+
+
+(* -----------------------------------------------------------------------------
    Read goal
    -------------------------------------------------------------------------- *)
 
@@ -134,6 +151,15 @@ fun goal_of_sml s =
 
 val type_cache = ref (dempty String.compare)
 
+fun after_last_colon_aux acc charl = case charl of
+    #":" :: m => implode acc
+  | a :: m => after_last_colon_aux (a :: acc) m
+  | [] => raise ERR "after_last_colon" ""
+
+fun after_last_colon s = after_last_colon_aux [] (rev (explode s))
+ 
+fun drop_sig s = last (String.tokens (fn x => x = #".") s)
+  
 fun type_of_sml s = 
   if dmem s (!type_cache) then dfind s (!type_cache) else
     let 
@@ -144,13 +170,17 @@ fun type_of_sml s =
       if b 
       then 
         let 
-          val sl = hhsLexer.hhs_lex (last (readl file))
-          val (_,tyl) = split_sl ":" sl
-          val ty = String.concatWith " " tyl
+          val s = after_last_colon (String.concatWith " " (readl file))
+          val ty = String.concatWith " " (map drop_sig (hhsLexer.hhs_lex s))
         in
-          (type_cache := dadd s ty (!type_cache); ty)
+          (type_cache := dadd s (SOME ty) (!type_cache); SOME ty)
         end
-      else (debug ("Error: type_of_sml: " ^ s); raise ERR "type_of_sml" s)
+      else 
+        (
+        debug ("Error: type_of_sml: " ^ s); 
+        type_cache := dadd s NONE (!type_cache);
+        NONE
+        )
     end
 
 

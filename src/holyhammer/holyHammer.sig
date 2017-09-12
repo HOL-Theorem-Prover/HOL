@@ -24,6 +24,7 @@ sig
   val hh_eprover        : term -> unit
   val hh_z3             : term -> unit
   val hh                : term -> unit (* eprover + z3 *)
+  val hh_eval           : int -> term -> unit 
   val clean_cache       : unit -> unit
   val set_timeout       : int -> unit
   val set_minimization  : bool -> unit

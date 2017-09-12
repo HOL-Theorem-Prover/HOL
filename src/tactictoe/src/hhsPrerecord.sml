@@ -10,9 +10,13 @@ structure hhsPrerecord :> hhsPrerecord =
 struct
 
 open HolKernel boolLib hhsTools hhsLexer hhsData hhsNumber hhsExtract hhsUnfold 
-hhsTimeout hhsData hhsOnline
+hhsTimeout hhsData hhsOnline tacticToe hhsPredict
 
 val ERR = mk_HOL_ERR "hhsPrerecord"
+
+val prev_proof = ref []
+val prev_topgoal = ref NONE
+val tactictoe_step_counter = ref 0
 
 (*----------------------------------------------------------------------------
  * Error messages
@@ -61,6 +65,7 @@ val exec_time = ref 0.0
 val mkfinal_time = ref 0.0
 val hide_time = ref 0.0
 val replay_time = ref 0.0
+val original_time = ref 0.0
 
 fun reset_profiling () =
   (
@@ -76,7 +81,11 @@ fun reset_profiling () =
   hide_time := 0.0;
   replay_time := 0.0;
   n_parse_glob := 0; n_replay_glob := 0;
-  n_tactic_parse_glob := 0; n_tactic_replay_glob := 0
+  n_tactic_parse_glob := 0; n_tactic_replay_glob := 0;
+  (* not part of profiling but is there for now *)
+  prev_proof := [];
+  prev_topgoal := NONE;
+  tactictoe_step_counter := 0
   )
 
 fun mk_summary cthy =
@@ -99,14 +108,24 @@ fun mk_summary cthy =
     g "    Record" (!record_time);
     g "    Save" (!save_time);
     g "    Tactic" (!tactic_time);
-    g "    Feature" (!feature_time)
+    g "    Feature" (!feature_time);
+    debug_proof ("Bad stac: " ^ (int_to_string (length (!hhs_badstacl))))
   end
 
 (* --------------------------------------------------------------------------
    Replaying a tactic.
    -------------------------------------------------------------------------- *)
 
-fun tactic_err msg stac g = (tactic_msg msg stac g; raise ERR "hhs_record" "")
+val stacset = ref (dempty String.compare)
+val newstac_flag = ref false
+
+fun update_stacset () =
+  let val l = map (#1 o fst) (dlist (!hhs_stacfea)) in 
+    stacset := dnew String.compare (map (fn x => (x,())) l) 
+  end
+  
+fun tactic_err msg stac g = 
+  (tactic_msg msg stac g; raise ERR "hhs_record" "")
 
 fun hhs_record_aux (tac,stac) g =
   let
@@ -114,9 +133,15 @@ fun hhs_record_aux (tac,stac) g =
       handle TacTimeOut => tactic_err "timed out" stac g
             | x         => raise x
   in
+    if not (!newstac_flag) 
+    then newstac_flag := dmem stac (!stacset)
+    else ()
+    ;
+    original_time := (!original_time) + t;
     tactic_time := (!tactic_time) + t;
     n_tactic_replay_glob := (!n_tactic_replay_glob) + 1;
     total_time save_time save_lbl (stac,t,g,gl);
+    prev_proof := (g,gl,v) :: !prev_proof;
     (gl,v)
   end
 
@@ -129,6 +154,10 @@ fun hhs_record (tac,stac) g =
 
 fun hhs_prerecord_aux thmname qtac goal = 
   let
+    val _ = prev_topgoal := SOME goal
+    val _ = original_time := 0.0
+    val _ = newstac_flag := false
+    val _ = update_stacset ()
     val success_flag = ref NONE
     val cthy = current_theory ()
     val final_stac_ref = ref ""
@@ -163,12 +192,14 @@ fun hhs_prerecord_aux thmname qtac goal =
     incr n_parse_glob;
     (
     let
-      val (gl,v) = 
-      total_time replay_time (hhsTimeout.timeOut 10.0 final_tac) goal
+      val (gl,v) =
+      total_time replay_time (hhsTimeout.timeOut 20.0 final_tac) goal
     in
       if gl = []
         then (
              success_flag := SOME (gl,v);
+             debug_proof ("Original proof time: " ^ 
+                          Real.toString (!original_time));
              n_replay_glob := (!n_replay_glob + 1)
              )
       else replay_msg "opened goals" thmname qtac final_stac         
@@ -183,14 +214,91 @@ fun hhs_prerecord_aux thmname qtac goal =
     | NONE => raise ERR "" ""
   end
 
+(* --------------------------------------------------------------------------
+   Adding intermediate goals as theorems in the database
+   -------------------------------------------------------------------------- *)
+
+fun strict_compare (t1,t2) =
+  if Portable.pointer_eq (t1,t2) then EQUAL
+  else if is_var t1 andalso is_var t2 then Term.compare (t1,t2)
+  else if is_var t1 then LESS
+  else if is_var t2 then GREATER
+  else if is_const t1 andalso is_const t2 then Term.compare (t1,t2)
+  else if is_const t1 then LESS
+  else if is_const t2 then GREATER
+  else if is_comb t1 andalso is_comb t2 then 
+    cpl_compare strict_compare strict_compare (dest_comb t1, dest_comb t2)
+  else if is_comb t1 then LESS
+  else if is_comb t2 then GREATER
+  else 
+    cpl_compare Term.compare strict_compare (dest_abs t1, dest_abs t2)
+
+fun strict_goal_compare ((asm1,w1), (asm2,w2)) =
+  list_compare strict_compare (w1 :: asm1, w2 :: asm2)
+
+fun save_tactictoe_step thm =
+  let 
+    val name = "tactictoe_step_" ^ 
+      int_to_string (!tactictoe_step_counter)
+  in
+    if uptodate_thm thm 
+    then (save_thm (name,thm); incr tactictoe_step_counter)
+    else ()
+  end
+
+fun tactictoe_prove proved (g,gl,v) =
+  let
+    val thml = map (fn x => dfind x (!proved)) gl
+    val thm = v thml
+    fun test x = goal_compare (dest_thm x, dest_thm thm) = EQUAL
+    val thyl = current_theory () :: ancestry (current_theory ())
+  in
+    proved := dadd g thm (!proved);
+    if null (DB.matchp test thyl)
+    then ()
+    else save_tactictoe_step thm
+  end
+
+fun add_prev_proof_aux proved l =
+  let
+    fun is_provable proved (g,gl,v) = all (fn x => dmem x (!proved)) gl
+    val (l0,l1) = List.partition (is_provable proved) l
+  in 
+    if null l0 then () else
+    (
+    ignore (mapfilter (tactictoe_prove proved) l0);
+    add_prev_proof_aux proved l1
+    )
+  end
+  
+fun add_prev_proof () =
+  if !hhs_recproof_flag andalso isSome (!prev_topgoal)
+  then
+    (
+    let val proved = ref (dempty strict_goal_compare) in
+      add_prev_proof_aux proved (!prev_proof);
+      if dmem (valOf (!prev_topgoal)) (!proved) 
+        then ()
+        else debug "Warning: prev_proof";
+      prev_proof := [];
+      prev_topgoal := NONE
+    end
+    )
+  else ()
+
+fun post_record () =
+  (
+  if !newstac_flag then debug_proof "Non-covered" else debug_proof "Covered";
+  (add_prev_proof () handle _ => debug "Error: add_prev_proof")
+  )
+
 fun hhs_prerecord thmname qtac goal = 
   (
-  debug_proof "";
-  debug_proof thmname; 
-  debug_search thmname;
-  debug thmname;
-  (tacticToe.eval_tactictoe goal handle _ => debug ("Error: eval_tactictoe"))
-  ;
+  post_record (); (* Todo doesn't record last goal *)
+  debug_proof ("\n" ^ thmname);
+  debug_search ("\n" ^ thmname);
+  debug ("\n" ^ thmname);
+  (eval_tactictoe goal handle _ => debug "Error: eval_tactictoe");
   hhs_prerecord_aux thmname qtac goal
   )
   

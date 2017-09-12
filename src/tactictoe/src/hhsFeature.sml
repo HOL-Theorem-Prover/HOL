@@ -15,15 +15,6 @@ val ERR = mk_HOL_ERR "hhsFeature"
 val hhs_hofea_flag = ref true
 (* top features are slow to produce and print *)
 val hhs_notopfea_flag = ref true 
-  
-fun size_of_term t =
-       if is_abs t
-    then let val (v,t') = dest_abs t in 1 + size_of_term t' end
-  else if is_comb t
-    then let val (t1,t2) = dest_comb t in size_of_term t1 + size_of_term t2 end
-  else if is_var t orelse is_const t
-    then 1
-  else raise ERR "size_of_term" ""
 
 fun gen_all t = list_mk_forall ((free_vars_lr t),t)
 
@@ -150,7 +141,7 @@ and binder_top s (v,tm) =
   )
 
 fun fea_of_term tm =
-  if size_of_term tm > 2000
+  if term_size tm > 2000
   then
     let 
       val constl         = find_terms is_const tm

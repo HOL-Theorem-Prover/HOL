@@ -107,6 +107,13 @@ fun atp_lemmas_exn (atp_status,atp_out) =
     else raise Status s
   end
 
+fun get_lemmas (atp_status,atp_out) =
+  let val s = read_status atp_status in
+    if s = "Theorem"
+    then SOME (read_lemmas atp_out)
+    else NONE
+  end
+
 (*---------------------------------------------------------------------------
    Pretty-printing for lemmas.
  ----------------------------------------------------------------------------*)

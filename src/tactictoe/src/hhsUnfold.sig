@@ -17,7 +17,7 @@ sig
   val all_examples_files : unit -> string list
   val hhs_rewrite : string -> unit
   
-  val open_struct : 
+  val open_struct :
   (string, stack_t) Redblackmap.dict list -> string -> (string * stack_t) list
 
   

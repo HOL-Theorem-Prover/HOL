@@ -9,7 +9,7 @@ structure hhsSearch :> hhsSearch =
 struct
 
 open HolKernel boolLib Abbrev hhsTools hhsTimeout hhsFeature hhsPredict
-hhsExec hhsLexer hhsMinimize hhsTacticgen hhsData hhsLearn
+hhsExec hhsLexer hhsMinimize hhsMetis hhsData hhsLearn
 
 val ERR = mk_HOL_ERR "hhsSearch"
 
@@ -28,10 +28,16 @@ fun empty_predictor (g:goal) = []
 val proofdict = ref (dempty Int.compare)
 val finproofdict = ref (dempty Int.compare)
 val tacdict_glob = ref (dempty String.compare)
-val distdict_glob = ref (dempty goal_compare)
+val minstepdict_glob = ref (dempty goal_compare)
 val thmpredictor_glob = ref (fn g => [])
 val stacpredictor_glob = ref empty_predictor
 val glob_timer = ref NONE
+
+(*
+val goaldepth_dict = ref (dempty goal_compare)
+val update_goaldepth (goal,depth) =
+  goaldepth_dict := dadd goal depth (!goaldepth_dict)
+*)
 
 (* --------------------------------------------------------------------------
    Cache
@@ -49,8 +55,11 @@ val stacgoal_cache = ref (dempty stacgoal_compare)
    Options
    -------------------------------------------------------------------------- *)
 
+val hhs_diag_flag = ref false
+val hhs_visited_flag = ref false
 val hhs_cache_flag  = ref false
 val hhs_astar_flag = ref false
+val hhs_astar_radius = ref 0
 val hhs_timedepth_flag = ref false
 
 (* --------------------------------------------------------------------------
@@ -74,6 +83,8 @@ val thmpredict_time = ref 0.0
 val infstep_time = ref 0.0
 val node_create_time = ref 0.0
 val node_find_time = ref 0.0
+val astar_time = ref 0.0
+val mutate_time = ref 0.0
 val tot_time = ref 0.0
 
 val predict_timer = total_time predict_time
@@ -81,47 +92,61 @@ val thmpredict_timer = total_time thmpredict_time
 val infstep_timer = total_time infstep_time
 fun node_create_timer f x = total_time node_create_time f x
 val node_find_timer = total_time node_find_time
+val astar_timer = total_time astar_time
+val mutate_timer = total_time mutate_time
 fun total_timer f x = total_time tot_time f x
 
 (* ----------------------------------------------------------------------
    A*-heurisitic
    ---------------------------------------------------------------------- *)
 
-fun list_min l = case l of 
-    [] => raise ERR "list_min" ""
-  | [a] => a
-  | a :: m => Real.min (a,list_min m)
+fun minstep_cache g = dfind g (!minstepdict_glob) 
+  handle _ => (debug "Error: minstep"; NONE)
 
-fun astar memdict g =
+fun firstPartial_n n l = 
+  if n <= 0 then [] else
+  case l of
+    [] => [] 
+  | NONE :: m => firstPartial_n n m
+  | SOME d :: m => d :: firstPartial_n (n-1) m
+
+fun average_real l = 
+  if null l
+  then (debug "Error: average_real"; 0.0)
+  else sum_real l / (Real.fromInt (length l))
+
+fun astar n g pred =
   let 
-    val newdict = dadd g () memdict
-    val l = dfind g (!distdict_glob)
-    fun f ((_,t,_,gl),_) = 
-      if exists (fn x => dmem x newdict) gl (* prevent loops *)
-      then 1000000.0
-      else 
-        (if !hhs_timedepth_flag then t else 1.0) + 
-        sum_real (map (astar newdict) gl)
+    val l0 = map (minstep_cache o #3 o fst) pred
+    val l1 = firstPartial_n n l0
   in
-    list_min (map f l)
-  end  
+    average_real l1
+  end
+
+val hhs_width_coeff = ref 1.0
 
 fun estimate_distance (depth,timedepth) (g,pred) =
   let
     val width_coeff = ref 0.0 
+    val global_heuristic =
+      if !hhs_astar_flag
+      then astar_timer (astar (!hhs_astar_radius) g) pred 
+      else 0.0
+       
     fun f (lbl as (stac,t,g1,gl1),_) =
       let
         val cost = (!width_coeff) + 
           (if !hhs_timedepth_flag then timedepth else Real.fromInt depth)
         val heuristic = 
-          if g1 = g 
-          then 0.0
-          else 
-            if !hhs_astar_flag 
-            then astar (dempty goal_compare) g1 
-            else 0.0
+          if !hhs_astar_flag then 
+            if g = g1
+            then (valOf (minstep_cache g) handle _ => global_heuristic)
+            else global_heuristic
+          else 0.0
         val _ = width_coeff := (!width_coeff) +
-                (if !hhs_timedepth_flag then (!hhs_tactic_time) else 1.0)
+                (if !hhs_timedepth_flag 
+                 then !hhs_tactic_time 
+                 else !hhs_width_coeff)
         val final_score = inv_succrate stac * (cost + heuristic)
       in
         (lbl,final_score)
@@ -157,6 +182,8 @@ fun root_create goal pred =
       parg     = NONE,
       goalarr  = Array.fromList [goal],
       predarr  = Array.fromList [pred],
+      predarrn = Array.fromList (map length [pred]),
+      width    = ref 0,
       pending  = ref [0],
       proofl   = ref [],
       children = ref [],
@@ -179,10 +206,12 @@ fun root_create_wrap g =
     (* Predictions *)
     val pred = (!stacpredictor_glob) g
     val (_,pred1) = 
-      (add_metis tacdict_glob thmpredictor_glob o 
-       add_mutate tacdict_glob o 
-       estimate_distance (0,0.0)) 
-       (g,pred)
+      (
+      add_accept tacdict_glob o
+      add_metis tacdict_glob thmpredictor_glob o 
+      estimate_distance (0,0.0)
+      ) 
+        (g,pred)
   in
     root_create g pred1
   end
@@ -192,10 +221,15 @@ fun node_create tactime parid parstac pargn parg goallist
   let
     val pardepth = #depth (dfind parid (!proofdict))
     val partimedepth = #timedepth (dfind parid (!proofdict))
+    (* for stats *)
     val _ = if pardepth + 1 > !max_depth_mem
             then max_depth_mem := pardepth + 1
             else ()
     val selfid = next_pid ()
+    (*
+    fun f g = update_goaldepth (g,pardepth + 1)
+    val _ = app f goallist
+    *)
     val selfrec =
     {
       selfid   = selfid,
@@ -205,6 +239,8 @@ fun node_create tactime parid parstac pargn parg goallist
       parg     = SOME parg,
       goalarr  = Array.fromList goallist,
       predarr  = Array.fromList predlist,
+      predarrn = Array.fromList (map length predlist),
+      width    = ref 0,
       pending  = ref pending,
       proofl   = ref [],
       children = ref [],
@@ -215,7 +251,7 @@ fun node_create tactime parid parstac pargn parg goallist
     }
   in
     debug_search 
-       ("Node " ^ int_to_string selfid ^ int_to_string parid ^
+       ("Node " ^ int_to_string selfid ^ " " ^ int_to_string parid ^ " " ^
         Real.toString (#timedepth selfrec));
     debug_search 
        ("  goals: " ^ String.concatWith "," (map string_of_goal goallist));
@@ -243,8 +279,6 @@ fun node_save pid =
    Application of a tactic.
    -------------------------------------------------------------------------- *)
 
-exception OtherError
-
 fun update_cache k v =
   if !hhs_cache_flag 
   then stacgoal_cache := dadd k v (!stacgoal_cache) 
@@ -252,12 +286,14 @@ fun update_cache k v =
 
 fun apply_stac pardict trydict_unref stac g =
   let
-    val _ = count_try stac (* doesn't work with metis *)
+    val tim = dfind stac (!stactime_dict) handle _ => (!hhs_tactic_time)
+    val _ = count_try stac
     val _ = stac_counter := !stac_counter + 1
     val tac = dfind stac (!tacdict_glob) 
               handle _ => (debug ("SNH: apply_stac:" ^ stac); 
                            raise ERR "apply_stac" stac)
-    val glo = dfind (stac,g) (!stacgoal_cache) handle _ => app_tac tac g
+    val glo = dfind (stac,g) (!stacgoal_cache) 
+              handle _ => app_tac tim tac g
     val new_glo =
       case glo of
         NONE => NONE
@@ -314,6 +350,7 @@ fun node_find () =
       let
         val (pid,score) = hd l2
         val prec = dfind pid (!proofdict)
+        val _ = incr (#width prec)
         val gn = hd (! (#pending prec))
         val goal = Array.sub (#goalarr prec, gn)
         val ((stac,_,_,_),_) = hd (Array.sub (#predarr prec, gn))
@@ -375,11 +412,13 @@ fun node_create_gl tactime gl pid =
     val prec = dfind pid (!proofdict)
     val gn = hd (! (#pending prec))
     val goal = Array.sub (#goalarr prec, gn)
-    val ((stac,_,_,_),_) = hd (Array.sub (#predarr prec, gn))
+    val prev_predl = Array.sub (#predarr prec, gn)
+    val prev_predn = Array.sub (#predarrn prec, gn)
+    val ((stac,_,_,_),_) = hd prev_predl
     val parchildren = #children prec
     val depth = #depth prec + 1
     val timedepth = #timedepth prec + tactime
-    (* Warning: cache have wrong estimates *)
+    
     fun add_pred g =
       if !hhs_cache_flag
       then
@@ -391,14 +430,23 @@ fun node_create_gl tactime gl pid =
           (g,r)
         end
       else (g, (!stacpredictor_glob) g)
+      
+    val width = 
+      if !hhs_visited_flag 
+        then !(#width prec)
+      else if !hhs_diag_flag 
+        then prev_predn - (length prev_predl)
+      else 0
+
     val predlist0 =
-      map (add_metis tacdict_glob thmpredictor_glob o 
-           add_mutate tacdict_glob o
-           (estimate_distance (depth,timedepth)) o 
-           add_pred) 
+      map (
+          add_accept tacdict_glob o
+          add_metis tacdict_glob thmpredictor_glob o 
+          estimate_distance (depth + width,timedepth) o 
+          add_pred
+          ) 
       gl
     val predlist1 = map snd predlist0
-    (* Warning: adding metis cancels the ordering of the goals *)
     val pending0 = number_list 0 predlist1
     val pending1 = map (fn (gn,pred) => (gn, (snd o hd) pred)) pending0
     fun compare_score ((_,r1),(_,r2)) = Real.compare (r2,r1)
@@ -429,32 +477,33 @@ fun node_create_empty tactime pid =
   end
 
 (* ---------------------------------------------------------------------------
-   Main search function. Modifies proofdict.
+   Search function. Modifies proofdict.
    -------------------------------------------------------------------------- *)
 
-fun init_search thmpredictor stacpredictor tacdict distdict g =
-  let
-    val _ = stacgoal_cache := dempty stacgoal_compare
-    val _ = goalpred_cache := dempty goal_compare
-    val _ = predict_time := 0.0
-    val _ = thmpredict_time := 0.0
-    val _ = infstep_time := 0.0
-    val _ = node_find_time := 0.0
-    val _ = node_create_time := 0.0
-    val _ = tot_time := 0.0
-    val _ = glob_timer   := SOME (Timer.startRealTimer ())
-    val _ = pid_counter  := 0
-    val _ = stac_counter := 0
-    val _ = max_depth_mem := 0
-    val _ = proofdict    := dempty Int.compare
-    val _ = finproofdict := dempty Int.compare
-    val _ = stacpredictor_glob := predict_timer stacpredictor
-    val _ = thmpredictor_glob := thmpredict_timer thmpredictor
-    val _ = tacdict_glob := tacdict
-    val _ = distdict_glob := distdict
-  in
-    ()
-  end
+fun init_search thmpredictor stacpredictor tacdict minstepdict g =
+  (
+  init_thml_glob ();
+  stactime_dict := dempty String.compare;
+  stacgoal_cache := dempty stacgoal_compare;
+  goalpred_cache := dempty goal_compare;
+  predict_time := 0.0;
+  thmpredict_time := 0.0;
+  infstep_time := 0.0;
+  node_find_time := 0.0;
+  node_create_time := 0.0;
+  tot_time := 0.0;
+  glob_timer := SOME (Timer.startRealTimer ());
+  pid_counter := 0;
+  stac_counter := 0;
+  max_depth_mem := 0;
+  astar_time := 0.0;
+  proofdict    := dempty Int.compare;
+  finproofdict := dempty Int.compare;
+  stacpredictor_glob := predict_timer stacpredictor;
+  thmpredictor_glob := thmpredict_timer thmpredictor;
+  tacdict_glob := tacdict;
+  minstepdict_glob := minstepdict
+  )
 
 fun get_next_pred pid =
   let
@@ -534,6 +583,8 @@ fun end_search () =
   debug_proof ("  node_crea time: " ^ Real.toString (!node_create_time));
   debug_proof ("    pred time: " ^ Real.toString (!predict_time));
   debug_proof ("    thmpred time: " ^ Real.toString (!thmpredict_time));
+  debug_proof ("    astar time: " ^ Real.toString (!astar_time));
+  debug_proof ("    mutate time: " ^ Real.toString (!mutate_time));
   proofdict    := dempty Int.compare;
   finproofdict := dempty Int.compare;
   tacdict_glob := dempty String.compare;
@@ -569,11 +620,15 @@ fun selflearn proof =
 
 fun debug_err s = (debug s; raise ERR "" "")
 
-fun imperative_search thmpredictor stacpredictor tacdict distdict g =
+(* ---------------------------------------------------------------------------
+   Main
+   -------------------------------------------------------------------------- *)
+
+fun imperative_search thmpredictor stacpredictor tacdict minstepdict goal =
   (
-  init_search thmpredictor stacpredictor tacdict distdict g;
-  total_timer (node_create_timer root_create_wrap) g;
-  let 
+  init_search thmpredictor stacpredictor tacdict minstepdict goal;
+  total_timer (node_create_timer root_create_wrap) goal;
+  let
     val r = total_timer search_loop ()
     val _ = debug_search "End search loop"
     val sproof_status = case r of
@@ -586,7 +641,7 @@ fun imperative_search thmpredictor stacpredictor tacdict distdict g =
             if length proofl <> 1 
             then debug_err "SNH1"
             else (selflearn (hd proofl); minimize (hd proofl)) 
-          val sproof = debug_t "reconstruct" reconstruct g proof
+          val sproof = debug_t "reconstruct" reconstruct goal proof
         in
           Proof sproof
         end

@@ -8,11 +8,14 @@
 structure hhsLearn :> hhsLearn =
 struct
 
-open HolKernel boolLib Abbrev hhsTools hhsPredict hhsExec hhsMinimize hhsTimeout
+open HolKernel boolLib Abbrev hhsTools hhsPredict hhsExec hhsMinimize 
+hhsTimeout hhsFeature hhsMetis
 
 val ERR = mk_HOL_ERR "hhsLearn"
 
 val hhs_ortho_flag = ref false
+val hhs_ortho_number = ref 20
+val hhs_ortho_metis = ref false
 val hhs_succrate_flag = ref false
 
 (*----------------------------------------------------------------------------
@@ -29,11 +32,17 @@ fun test_stac g gl stac =
   end
   handle _ => NONE
 
+fun thm_of_string s =
+  let val (a,b) = split_string "Theory." s in 
+    String.concatWith " " ["(","DB.fetch",mlquote a,mlquote b,")"] 
+  end
+
 fun orthogonalize (lbl as (ostac,t,g,gl),fea) =
   if !hhs_ortho_flag 
   then
     let
-      val feavectl = stacknn_ext 20 (dlist (!hhs_stacfea)) fea
+      val feavectl = debug_t "orthogonalize" 
+        stacknn_ext (!hhs_ortho_number) (dlist (!hhs_stacfea)) fea
       val stacl    = map (#1 o fst) feavectl
       val stacl2   = filter (fn x => not (x = ostac)) stacl
       val testl    = lbl :: (List.mapPartial (test_stac g gl) stacl2)
@@ -73,9 +82,7 @@ fun count_succ stac =
 fun inv_succrate stac =
   if !hhs_succrate_flag
   then
-    let 
-      val (succ,try) = dfind stac (!succ_glob_dict)
-    in
+    let val (succ,try) = dfind stac (!succ_glob_dict) in
       Real.fromInt (10 + try) / Real.fromInt (succ + 1)
     end
   else 1.0

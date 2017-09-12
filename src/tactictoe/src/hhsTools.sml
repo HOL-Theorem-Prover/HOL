@@ -27,14 +27,16 @@ val hhs_search_time = ref (Time.fromReal 0.0)
    Directories
    -------------------------------------------------------------------------- *)
 
-val tactictoe_dir   = HOLDIR ^ "/src/tactictoe"
-val hhs_feature_dir = tactictoe_dir ^ "/features"
-val hhs_code_dir    = tactictoe_dir ^ "/code"
-val hhs_search_dir  = tactictoe_dir ^ "/search_log"
-val hhs_predict_dir = tactictoe_dir ^ "/predict"
-val hhs_record_dir  = tactictoe_dir ^ "/record_log"
-val hhs_open_dir  = tactictoe_dir ^ "/open"
+val tactictoe_dir    = HOLDIR ^ "/src/tactictoe"
+val hhs_feature_dir  = tactictoe_dir ^ "/features"
+val hhs_code_dir     = tactictoe_dir ^ "/code"
+val hhs_search_dir   = tactictoe_dir ^ "/search_log"
+val hhs_predict_dir  = tactictoe_dir ^ "/predict"
+val hhs_record_dir   = tactictoe_dir ^ "/record_log"
+val hhs_open_dir     = tactictoe_dir ^ "/open"
 val hhs_succrate_dir = tactictoe_dir ^ "/succrate"
+val hhs_mdict_dir   = tactictoe_dir ^ "/mdict"
+
 
 fun mkDir_err dir = OS.FileSys.mkDir dir handle _ => ()
 
@@ -302,7 +304,7 @@ fun debug_t s f x =
   let 
     val _ = debug s
     val (r,t) = add_time f x
-    val _ = debug ("  " ^ Real.toString t)
+    val _ = debug (s ^ " " ^ Real.toString t)
   in
     r
   end
@@ -415,14 +417,6 @@ fun update_ddict (lbl,fea) =
     hhs_ddict := dadd (#3 lbl) newv (!hhs_ddict)
   end
 
-fun clean_feadata () =
-  (
-  hhs_stacfea := dempty lbl_compare;
-  hhs_cthyfea := []; 
-  hhs_ddict := dempty goal_compare;
-  hhs_ndict := dempty String.compare
-  )
-
 fun init_stacfea_ddict feavl =
   (
   hhs_stacfea := dnew lbl_compare feavl;
@@ -446,5 +440,28 @@ fun update_stacfea_ddict (feav as (lbl,fea)) =
     hhs_ddict := dadd (#3 lbl) newv (!hhs_ddict);
     hhs_ndict := count_dict (!hhs_ndict) [(#1 lbl)]
   end
+  
+(* --------------------------------------------------------------------------
+   Metis
+   -------------------------------------------------------------------------- *)
+
+val mdict_glob = ref (dempty String.compare)
+val negmdict_glob = ref (dempty String.compare)
+
+(* --------------------------------------------------------------------------
+   The following structures should 
+   be empty anyway at the start of the theory.
+   -------------------------------------------------------------------------- *)
+   
+fun clean_feadata () =
+  (
+  hhs_badstacl := [];
+  hhs_stacfea := dempty lbl_compare;
+  hhs_cthyfea := [];
+  hhs_ddict := dempty goal_compare;
+  hhs_ndict := dempty String.compare;
+  mdict_glob := dempty String.compare;
+  negmdict_glob := dempty String.compare
+  )
 
 end (* struct *)
