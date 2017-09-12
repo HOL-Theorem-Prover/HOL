@@ -1,4 +1,4 @@
-open HolKernel Parse bossLib boolLib pred_setTheory relationTheory set_relationTheory arithmeticTheory pairTheory
+open HolKernel Parse bossLib boolLib pred_setTheory relationTheory set_relationTheory arithmeticTheory pairTheory listTheory optionTheory
 
 val _ = new_theory "generalHelpers"
 
@@ -143,6 +143,10 @@ val FIXPOINT_EXISTS = store_thm
     >- (exists_tac ``0`` >> simp[FUNPOW] >> Induct_on `m` >> simp[FUNPOW])
   );
 
+val char_def = Define `char Σ p = { a | (a ∈ Σ) /\ (p ∈ a)}`;
+
+val char_neg_def = Define `char_neg Σ p = Σ DIFF (char Σ p)`;
+
 val d_conj_def = Define
   `d_conj d1 d2 = { (a1 ∩ a2, e1 ∪ e2) | ((a1,e1) ∈ d1) /\ ((a2,e2) ∈ d2)}`;
 
@@ -257,5 +261,20 @@ val D_CONJ_SET_LEMM2 = store_thm
      ==> (!q d. (q,d) ∈ s ==> ?a' e'. (a',e') ∈ d ∧ a ⊆ a' ∧ e' ⊆ e)``,
   rpt strip_tac >> metis_tac[D_CONJ_SET_LEMM]
   );
+
+val CAT_OPTIONS_def = Define`
+   (CAT_OPTIONS [] = [])
+ ∧ (CAT_OPTIONS (SOME v::ls) = v::(CAT_OPTIONS ls))
+ ∧ (CAT_OPTOINS (NONE::ls) = CAT_OPTIONS ls)`;
+
+val OPTION_TO_LIST_def = Define`
+    (OPTION_TO_LIST NONE = [])
+  ∧ (OPTION_TO_LIST (SOME l) = l)`;
+
+val LIST_INTER_def = Define`
+    (LIST_INTER [] ls = [])
+  ∧ (LIST_INTER (x::xs) ls = if MEM x ls
+                             then x::(LIST_INTER xs ls)
+                             else LIST_INTER xs ls)`;
 
 val _ = export_theory();
