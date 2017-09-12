@@ -15,3 +15,4 @@ src/llist
 !examples/formal-languages/context-free
 !examples/unification/triangular/first-order
 !examples/zipper
+!src/quotient/examples/lambda

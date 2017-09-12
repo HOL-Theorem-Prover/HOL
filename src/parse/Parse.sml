@@ -1013,6 +1013,18 @@ end;
   User changes to the printer and parser
   ----------------------------------------------------------------------*)
 
+fun constant_string_printer s : term_grammar.userprinter =
+  let
+    fun result (tyg, tmg) _ _ ppfns (pgr,lgr,rgr) depth tm =
+      let
+        val {add_string,...} = ppfns
+      in
+        add_string s
+      end
+  in
+    result
+  end
+
 fun temp_add_user_printer (name, pattern, pfn) = let
 in
   the_term_grammar :=

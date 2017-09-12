@@ -2923,16 +2923,12 @@ val LIST_ELEM_COUNT_MEM = Q.store_thm ("LIST_ELEM_COUNT_MEM",
 (*---------------------------------------------------------------------------*)
 
 local
-  val op>> = op Tactical.THEN
-  val op>- = op Tactical.THEN1
   val rw = SRW_TAC []
   val metis_tac = METIS_TAC
   val fs = FULL_SIMP_TAC (srw_ss())
   val rfs = REV_FULL_SIMP_TAC (srw_ss())
   val simp = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss)
   val decide_tac = numLib.DECIDE_TAC
-  val imp_res_tac = IMP_RES_TAC
-  val res_tac = RES_TAC
   open pred_setTheory open listTheory pairTheory;
 in
 

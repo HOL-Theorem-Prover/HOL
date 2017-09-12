@@ -53,13 +53,17 @@
 (global-set-key (kbd "C-S-r") "ρ")
 (global-set-key (kbd "C-S-s") "σ")
 (global-set-key (kbd "C-S-t") "τ")
+(global-set-key (kbd "C-S-x") "ξ")
 (define-key hol-unicode-p-map "h" "φ")
 (define-key hol-unicode-p-map "s" "ψ")
 
 (global-set-key (kbd "C-S-M-g") "Γ")
 (global-set-key (kbd "C-S-M-d") "Δ")
 (global-set-key (kbd "C-S-M-l") "Λ")
+(global-set-key (kbd "C-S-M-s") "Σ")
+(global-set-key (kbd "C-S-M-t") "Θ")
 (global-set-key (kbd "C-S-M-o") "Ω")
+(global-set-key (kbd "C-S-M-x") "Ξ")
 (define-key hol-unicode-P-map "i" "Π")
 (define-key hol-unicode-P-map "h" "Φ")
 (define-key hol-unicode-P-map "s" "Ψ")
@@ -163,6 +167,7 @@
 (define-key hol-unicode-U-map "u" "𝕌")
 (define-key hol-unicode-U-map "+" "⊎") ; U+228E "multiset union"
 (define-key hol-unicode-U-map "<" "⊌") ; U+228C called simply "multiset", used in HOL for FUNION
+(define-key hol-unicode-U-map "p" "Υ") ; Up-silon
 
 ; parenthesis map - for various forms of parenthesis
 (define-key hol-unicode-lparen-map (kbd "C-M-|") "⦇")

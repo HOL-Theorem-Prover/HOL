@@ -297,8 +297,10 @@ fun chop_at n frontacc l =
       [] => raise Fail "chop_at"
     | (h::t) => chop_at (n-1) (h::frontacc) t
 
-infix THEN1
-fun ((tac1:tactic) THEN1 (tac2:tactic)) (asl:term list,w:term) = let
+
+infix gTHEN1 (* "gentle" THEN1 : doesn't fail if the tactic for the
+                head goal doesn't completely solve the subgoal. *)
+fun ((tac1:tactic) gTHEN1 (tac2:tactic)) (asl:term list,w:term) = let
   val (subgoals, vf) = tac1 (asl,w)
 in
   case subgoals of
@@ -314,6 +316,7 @@ in
        end))
     end
 end
+
 
 fun eqTRANS new old = let
   (* allow for possibility that old might be labelled *)
@@ -364,7 +367,7 @@ fun by0 k (q, tac) (g as (asl,w)) = let
         SOME l => " on line "^Int.toString l
       | NONE => ": "^term_to_string tm
 in
-  (SUBGOAL_THEN tm finisher THEN1 (tac THEN k)) g
+  (SUBGOAL_THEN tm finisher gTHEN1 (tac THEN k)) g
    handle HOL_ERR _ =>
     raise ERR "by" ("by's tactic failed to prove subgoal"^mk_errmsg())
 end
@@ -373,7 +376,7 @@ val op by = by0 NO_TAC
 val byA = by0 ALL_TAC
 
 fun (q suffices_by tac) g =
-  (Q_TAC SUFF_TAC q THEN1 (tac THEN NO_TAC)) g
+  (Q_TAC SUFF_TAC q gTHEN1 (tac THEN NO_TAC)) g
   handle e as HOL_ERR {origin_function,...} =>
          if origin_function = "Q_TAC" then raise e
          else
@@ -395,7 +398,7 @@ fun ((ttac:thm->tactic) on (q:term frag list, tac:tactic)) : tactic =
   (fn (g as (asl:term list, w:term)) => let
     val tm = Parse.parse_in_context (free_varsl (w::asl)) q
   in
-    (SUBGOAL_THEN tm ttac THEN1 tac) g
+    (SUBGOAL_THEN tm ttac gTHEN1 tac) g
   end)
 
 (*===========================================================================*)

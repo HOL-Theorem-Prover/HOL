@@ -3176,23 +3176,30 @@ val INT_MOD_CALCULATE = save_thm(
   "INT_MOD_CALCULATE",
   LIST_CONJ [INT_MOD, INT_MOD_NEG, INT_NEGNEG, INT_INJ, INT_NEG_EQ0]);
 
-val INT_MOD_REDUCE = store_thm(
-  "INT_MOD_REDUCE",
-  Term`!m n. (0i % &(NUMERAL (BIT1 n)) = 0i) /\
-             (0i % &(NUMERAL (BIT2 n)) = 0i) /\
-             (&(NUMERAL m) % &(NUMERAL (BIT1 n)) =
-                &(NUMERAL m MOD NUMERAL (BIT1 n))) /\
-             (&(NUMERAL m) % &(NUMERAL (BIT2 n)) =
-                &(NUMERAL m MOD NUMERAL (BIT2 n))) /\
-             (x % &(NUMERAL (BIT1 n)) =
-                x - x / &(NUMERAL(BIT1 n)) *
-                      &(NUMERAL(BIT1 n))) /\
-             (x % &(NUMERAL (BIT2 n)) =
-                x - x / &(NUMERAL(BIT2 n)) *
-                      &(NUMERAL(BIT2 n)))`,
-  SIMP_TAC int_ss [INT_MOD_CALCULATE, BIT1, BIT2,
-                   NUMERAL_DEF, ALT_ZERO, ZERO_MOD, int_mod]);
-
+val INT_MOD_REDUCE = Q.store_thm("INT_MOD_REDUCE",
+  `!m n.
+     (0i % &(NUMERAL (BIT1 n)) = 0i) /\
+     (0i % &(NUMERAL (BIT2 n)) = 0i) /\
+     (0i % -&(NUMERAL (BIT1 n)) = 0i) /\
+     (0i % -&(NUMERAL (BIT2 n)) = 0i) /\
+     (&(NUMERAL m) % &(NUMERAL (BIT1 n)) = &(NUMERAL m MOD NUMERAL (BIT1 n))) /\
+     (&(NUMERAL m) % &(NUMERAL (BIT2 n)) = &(NUMERAL m MOD NUMERAL (BIT2 n))) /\
+     (&(NUMERAL m) % -&(NUMERAL (BIT1 n)) =
+        -(-&(NUMERAL m) % &(NUMERAL (BIT1 n)))) /\
+     (&(NUMERAL m) % -&(NUMERAL (BIT2 n)) =
+        -(-&(NUMERAL m) % &(NUMERAL (BIT2 n)))) /\
+     (x % &(NUMERAL (BIT1 n)) =
+        x - x / &(NUMERAL(BIT1 n)) * &(NUMERAL(BIT1 n))) /\
+     (x % &(NUMERAL (BIT2 n)) =
+        x - x / &(NUMERAL(BIT2 n)) * &(NUMERAL(BIT2 n))) /\
+     (x % -&(NUMERAL (BIT1 n)) =
+        (-x / &(NUMERAL(BIT1 n)) * &(NUMERAL(BIT1 n)) + x)) /\
+     (x % -&(NUMERAL (BIT2 n)) =
+        (-x / &(NUMERAL(BIT2 n)) * &(NUMERAL(BIT2 n)) + x))`,
+  SIMP_TAC int_ss
+    [INT_MOD_CALCULATE, BIT1, BIT2, NUMERAL_DEF, ALT_ZERO, ZERO_MOD, int_mod,
+     INT_NEG_0, INT_DIV_0, INT_MUL_LZERO, INT_SUB_RZERO, INT_NEG_SUB,
+     INT_SUB_RNEG]);
 
 
 val INT_REM_CALCULATE = save_thm(

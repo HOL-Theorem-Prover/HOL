@@ -137,6 +137,7 @@ signature Parse = sig
 
   val add_user_printer : (string * term) -> unit
   val remove_user_printer : string -> (term * term_grammar.userprinter) option
+  val constant_string_printer : string -> term_grammar.userprinter
 
  (* the following functions affect the grammar, but not so that the
     grammar exported to disk will be modified *)

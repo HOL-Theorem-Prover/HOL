@@ -1295,7 +1295,7 @@ printed out.  (That's assuming that quietdec is false to start with.)"
 (defun hol-db-match (tm)
   "Does a DB.match [] on the given TERM (given as a string, without quotes)."
   (interactive "sTerm to match on: ")
-  (send-raw-string-to-hol (format "DB.print_match [] (Term`%s`)" tm)
+  (send-raw-string-to-hol (format "Hol_pp.print_match [] (Term`%s`)" tm)
                           hol-echo-commands-p t))
 
 (defun hol-db-find (tm)

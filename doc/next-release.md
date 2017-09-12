@@ -133,6 +133,9 @@ Incompatibilities:
 *   The tactic `Q.GENL` now processes its list of arguments (corresponding to variable names) in the same way as `GENL`.
     If one writes ``Q.GENL [`a`, `b`, `c`] th``, the result will be a theorem with conclusion `!a b c. <concl-of-th>`, rather than `!c b a. <concl-of-th>`.
 
+*   The constant `words$word_sdiv` has been renamed to `words$word_quot` and `words$word_srem` has been renamed to `words$word_rem`.
+    The constant `words$word_smod` has been moved to `integer_word$word_smod` and has been given a simpler definition.  (There is also a new constant `integer_word$word_sdiv` whose definition differs from the old `words$word_sdiv`.)
+
 * * * * *
 
 <div class="footer">

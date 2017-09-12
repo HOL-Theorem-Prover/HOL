@@ -629,6 +629,8 @@ datatype binop =
    | Rep
    | Rol
    | Ror
+   | SDiv
+   | SMod
    | Splitl
    | Splitr
    | Sub
@@ -1176,10 +1178,12 @@ in
                       SOME numSyntax.mk_div, SOME intSyntax.mk_div)
       | Mod  => pick (SOME wordsSyntax.mk_word_mod, NONE,
                       SOME numSyntax.mk_mod, SOME intSyntax.mk_mod)
-      | Quot => pick (SOME wordsSyntax.mk_word_sdiv, NONE, NONE,
+      | Quot => pick (SOME wordsSyntax.mk_word_quot, NONE, NONE,
                       SOME intSyntax.mk_quot)
-      | Rem  => pick (SOME wordsSyntax.mk_word_srem, NONE, NONE,
+      | Rem  => pick (SOME wordsSyntax.mk_word_rem, NONE, NONE,
                       SOME intSyntax.mk_rem)
+      | SDiv => integer_wordSyntax.mk_word_sdiv
+      | SMod => integer_wordSyntax.mk_word_smod
       | Exp  => pick (NONE, NONE, SOME numSyntax.mk_exp, SOME intSyntax.mk_exp)
       | Lsl  => pickShift (wordsSyntax.mk_word_lsl_bv, wordsSyntax.mk_word_lsl,
                            bitstringSyntax.mk_shiftl)

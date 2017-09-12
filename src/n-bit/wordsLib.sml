@@ -362,8 +362,8 @@ local
       Q.SPEC `^Na` word_log2_n2w,
       word_1comp_n2w, word_or_n2w, word_xor_n2w, word_and_n2w,
       word_2comp_compute, word_nor_n2w, word_xnor_n2w, word_nand_n2w,
-      word_sub_def, word_div_def, word_sdiv_def, word_mod_def,
-      word_smod_def, word_srem_def, MOD_WL word_add_n2w, MOD_WL word_mul_n2w,
+      word_sub_def, word_div_def, word_quot_def, word_mod_def, word_rem_def,
+      MOD_WL word_add_n2w, MOD_WL word_mul_n2w,
       word_rol_bv_def, word_lsl_bv_def, word_lsr_bv_def, word_asr_bv_def,
       word_ror_bv_def, word_asr_compute, word_lsr_compute,
       Q.SPEC `^Na` word_lsl_compute, SHIFT_ZERO, Q.SPEC `^Na` word_ror_n2w,
@@ -460,8 +460,8 @@ local
       "word_asr_bv", "word_ror_bv", "word_rol_bv", "word_lo", "word_ls",
       "word_lt", "word_le", "saturate_n2w", "saturate_w2w", "saturate_add",
       "saturate_sub", "saturate_mul", "word_min", "word_max", "word_smin",
-      "word_smax", "word_abs", "word_div", "word_sdiv", "word_mod",
-      "word_smod", "word_srem", "word_sign_extend"]
+      "word_smax", "word_abs", "word_div", "word_quot", "word_mod", "word_rem",
+      "word_sign_extend"]
 
   val l2 =
      ["SBIT", "BIT", "BITS", "BITV", "SLICE",
@@ -2965,7 +2965,7 @@ val _ = Parse.post_process_term :=
 val operators =
    [("+", "word_add"), ("-", "word_sub"), ("numeric_negate", "word_2comp"),
     ("*", "word_mul"), ("<", "word_lt"), (">", "word_gt"),
-    ("<=", "word_le"), (">=", "word_ge"), ("/", "word_sdiv")]
+    ("<=", "word_le"), (">=", "word_ge"), ("/", "word_quot")]
 
 fun deprecate_word () =
   app (fn (opname, name) =>
