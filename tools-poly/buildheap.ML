@@ -16,6 +16,7 @@ datatype option_record = OR of {
   all_forced : bool,
   base_state : string option,
   debug : bool,
+  extra_data : string option,
   forced_objs : string list,
   help : bool,
   mktex : bool,
@@ -26,22 +27,23 @@ datatype option_record = OR of {
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate9 z
+  fun makeUpdateT z = makeUpdate10 z
 in
 fun updateT z = let
-  fun from all_forced base_state debug forced_objs help mktex output quietp
-           repl =
+  fun from all_forced base_state debug extra_data forced_objs help mktex output
+           quietp repl =
     {all_forced = all_forced, base_state = base_state, debug = debug,
-     forced_objs = forced_objs, help = help, mktex = mktex, output = output,
-     quietp = quietp, repl = repl}
-  fun from' repl quietp output mktex help forced_objs debug base_state
-            all_forced =
+     extra_data = extra_data, forced_objs = forced_objs, help = help,
+     mktex = mktex, output = output, quietp = quietp, repl = repl}
+  fun from' repl quietp output mktex help forced_objs extra_data debug
+            base_state all_forced =
     {all_forced = all_forced, base_state = base_state, debug = debug,
-     forced_objs = forced_objs, help = help, mktex = mktex, output = output,
-     quietp = quietp, repl = repl}
-  fun to f {all_forced, base_state, debug, forced_objs, help, mktex, output,
-            quietp, repl} =
-    f all_forced base_state debug forced_objs help mktex output quietp repl
+     extra_data = extra_data, forced_objs = forced_objs, help = help,
+     mktex = mktex, output = output, quietp = quietp, repl = repl}
+  fun to f {all_forced, base_state, debug, extra_data, forced_objs, help,
+            mktex, output, quietp, repl} =
+    f all_forced base_state debug extra_data forced_objs help mktex output
+      quietp repl
 in
   makeUpdateT (from, from', to)
 end z
@@ -73,6 +75,8 @@ in
 val cline_opts = [
   {help = "provide debug output", long = ["dbg"], short = "",
    desc = mkBoolT #debug},
+  {help = "pass 'extra data' to code", long = ["extra"], short = "",
+   desc = setStringOpt "data" #extra_data},
   {help = "force all object files", long = [], short = "F",
    desc = mkBoolT #all_forced},
   {help = "force file (will load before others)", long = [], short = "f",
@@ -96,6 +100,7 @@ val heapname = ref (SOME Systeml.DEFAULT_STATE)
 val initial_cline = OR {all_forced = false,
                         base_state = !heapname,
                         debug = false,
+                        extra_data = NONE,
                         forced_objs = [],
                         help = false,
                         mktex = false,
@@ -161,15 +166,15 @@ in
   OS.Process.exit OS.Process.success
 end
 
-fun maybe_check_load (obj,_) =
+fun maybe_check_load diag (obj,_) =
   let
     open OS.Path
     val {base,ext} = splitBaseExt obj
   in
     case ext of
-        SOME "sml" => QUse.use obj
-      | SOME "ML" => QUse.use obj
-      | NONE => load obj
+        SOME "sml" => (diag ("Using "^obj); QUse.use obj)
+      | SOME "ML" => (diag ("Using "^obj); QUse.use obj)
+      | NONE => (diag ("Loading "^obj); load obj)
       | _ => die ("Not sure what to do with 'object file': "^obj)
   end
 
@@ -199,6 +204,8 @@ fun polyprettify s =
     "\nPoly/ML options:\n" ^ String.concat (map indent pfx_fields) ^ sfx_str
   end
 
+val buildheap_extra_data = ref (NONE : string option)
+
 fun main() = let
   val usage_header =
     "Usage:\n  " ^ CommandLine.name() ^ " [options] obj1.uo obj2.uo ...\n\n\
@@ -225,7 +232,9 @@ fun main() = let
                     (CommandLine.arguments())
   val OR options = List.foldl (fn (f, opts) => f opts) initial_cline cline_upds
   val {quietp = qp, output, base_state, all_forced, forced_objs, ...} = options
-  val {repl, help, debug, ...} = options
+  val {repl, help, debug, extra_data, mktex, ...} = options
+  val _ = not (repl andalso mktex) orelse
+          die "Can't have --repl and --mktex simultaneously"
   val diag = if debug then (fn s => warn ("DIAG: "^s)) else (fn s => ())
   val _ = not help orelse (print usage; OS.Process.exit OS.Process.success)
   val _ =
@@ -255,14 +264,30 @@ fun main() = let
                   [])
       else []
   val _ = diag ("allincs = ["^String.concatWith ", " allincs ^"]")
-  val _ = case base_state of
-              NONE => (diag "Not loading a base state"; heapname := NONE)
-            | SOME f => (diag ("About to load base-state "^f);
-                         heapname := SOME f;
-                         PolyML.SaveState.loadState f)
+  val base_state = Option.map mkAbs base_state
+  val output = Option.map mkAbs output
+  val _ =
+      case base_state of
+          NONE => (diag "Not loading a base state"; heapname := NONE)
+        | SOME f => (diag ("About to load base-state "^f);
+                     heapname := SOME f;
+                     PolyML.SaveState.loadState f
+                     handle e => die ("Couldn't load HOL base-state "^f^": "^
+                                      General.exnMessage e))
+  val _ = buildheap_extra_data := extra_data
+  val _ = diag ("Buildheap extra now = " ^
+                (case !buildheap_extra_data of
+                     NONE => "NONE"
+                   | SOME s => "SOME(\"" ^ s ^"\")"))
+  val exts = holpathdb.search_for_extensions ReadHMF.find_includes
+                                             [OS.FileSys.getDir()]
+  fun print_ext{vname,path} = vname ^ " |-> " ^ path
+  val _ = diag ("holpathdb extensions: "^
+                String.concatWith ", " (map print_ext exts))
+  val _ = List.app holpathdb.extend_db exts
 in
-  case output of
-      SOME s =>
+  case (output, mktex) of
+      (SOME s, false) =>
       let
         val _ = List.app (check_objpath die ("" :: "." :: allincs)) objs
         val search_these =
@@ -278,18 +303,24 @@ in
         heapname := SOME s;
         create_heap qp findmod (map #1 objs, s)
       end
-    | NONE =>
-      (List.app maybe_check_load objs;
-       if repl then
-         (diag "Starting REPL";
-          PolyML.print_depth 100;
-          HOL_REPL.sigint_handler();
-          HOL_REPL.topLevel diag {startExec = fn () => (),
-                                  endExec = fn () => (),
-                                  exitLoop = fn () => false,
-                                  exitOnError = false,
-                                  isInteractive = true,
-                                  nameSpace = PolyML.globalNameSpace} )
-       else ();
-       OS.Process.exit OS.Process.success)
+    | _ =>
+      let
+      in
+        case (output, mktex) of
+            (SOME f, true) => buildheap_extra_data := SOME f
+          | _ => ();
+        List.app (maybe_check_load diag) objs;
+        if repl then
+          (diag "Starting REPL";
+           PolyML.print_depth 100;
+           HOL_REPL.sigint_handler();
+           HOL_REPL.topLevel diag {startExec = fn () => (),
+                                   endExec = fn () => (),
+                                   exitLoop = fn () => false,
+                                   exitOnError = false,
+                                   isInteractive = true,
+                                   nameSpace = PolyML.globalNameSpace} )
+        else ();
+        OS.Process.exit OS.Process.success
+      end
 end handle e => die ("Uncaught exception: "^General.exnMessage e)
