@@ -10,16 +10,18 @@ val _ = use "../tools/Holmake/GetOpt.sig";
 val _ = use "../tools/Holmake/GetOpt.sml";
 val _ = use "../tools/Holmake/FunctionalRecordUpdate.sml";
 val _ = use "holrepl.ML";
+val _ = use "execompile.ML";
 
 val SIGOBJ = OS.Path.concat(Systeml.HOLDIR, "sigobj")
 datatype option_record = OR of {
   all_forced : bool,
   base_state : string option,
   debug : bool,
+  defaultout : string option,
+  exe : string option,
   extra_data : string option,
   forced_objs : string list,
   help : bool,
-  mktex : bool,
   output : string option,
   quietp : bool,
   repl : bool
@@ -27,23 +29,25 @@ datatype option_record = OR of {
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate10 z
+  fun makeUpdateT z = makeUpdate11 z
 in
 fun updateT z = let
-  fun from all_forced base_state debug extra_data forced_objs help mktex output
-           quietp repl =
+  fun from all_forced base_state debug defaultout exe extra_data forced_objs
+           help output quietp repl =
     {all_forced = all_forced, base_state = base_state, debug = debug,
+     defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
-     mktex = mktex, output = output, quietp = quietp, repl = repl}
-  fun from' repl quietp output mktex help forced_objs extra_data debug
-            base_state all_forced =
+     output = output, quietp = quietp, repl = repl}
+  fun from' repl quietp output help forced_objs extra_data exe defaultout
+            debug base_state all_forced =
     {all_forced = all_forced, base_state = base_state, debug = debug,
+     defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
-     mktex = mktex, output = output, quietp = quietp, repl = repl}
-  fun to f {all_forced, base_state, debug, extra_data, forced_objs, help,
-            mktex, output, quietp, repl} =
-    f all_forced base_state debug extra_data forced_objs help mktex output
-      quietp repl
+     output = output, quietp = quietp, repl = repl}
+  fun to f {all_forced, base_state, debug, defaultout, exe, extra_data,
+            forced_objs, help, output, quietp, repl} =
+    f all_forced base_state debug defaultout exe extra_data forced_objs help
+      output quietp repl
 in
   makeUpdateT (from, from', to)
 end z
@@ -75,6 +79,10 @@ in
 val cline_opts = [
   {help = "provide debug output", long = ["dbg"], short = "",
    desc = mkBoolT #debug},
+  {help = "default outputname", long = ["defaultout"], short = "",
+   desc = setStringOpt "filename" #defaultout},
+  {help = "fn name to be executable's main", long = ["exe"], short = "",
+   desc = setStringOpt "fn-name" #exe},
   {help = "pass 'extra data' to code", long = ["extra"], short = "",
    desc = setStringOpt "data" #extra_data},
   {help = "force all object files", long = [], short = "F",
@@ -85,8 +93,6 @@ val cline_opts = [
    desc = mkBoolT #help},
   {help = "load holstate as base", long = ["holstate"], short = "b",
    desc = setStringOpt "filename" #base_state},
-  {help = "make TeX munger", long = ["mktex"], short = "",
-   desc = mkBoolT #mktex},
   {help = "output heap/munger name", long = [], short = "o",
    desc = setStringOpt "filename" #output},
   {help = "use poly as base", long = ["poly"], short = "",
@@ -100,10 +106,11 @@ val heapname = ref (SOME Systeml.DEFAULT_STATE)
 val initial_cline = OR {all_forced = false,
                         base_state = !heapname,
                         debug = false,
+                        defaultout = NONE,
+                        exe = NONE,
                         extra_data = NONE,
                         forced_objs = [],
                         help = false,
-                        mktex = false,
                         output = NONE,
                         quietp = false,
                         repl = false}
@@ -232,15 +239,14 @@ fun main() = let
                     (CommandLine.arguments())
   val OR options = List.foldl (fn (f, opts) => f opts) initial_cline cline_upds
   val {quietp = qp, output, base_state, all_forced, forced_objs, ...} = options
-  val {repl, help, debug, extra_data, mktex, ...} = options
-  val _ = not (repl andalso mktex) orelse
-          die "Can't have --repl and --mktex simultaneously"
+  val {repl, help, debug, extra_data, defaultout, exe, ...} = options
   val diag = if debug then (fn s => warn ("DIAG: "^s)) else (fn s => ())
   val _ = not help orelse (print usage; OS.Process.exit OS.Process.success)
+  val outrepl_error = "Can't simultaneously dump output and start REPL"
   val _ =
-      case (repl, output) of
-          (true, SOME _) =>
-            die "Can't simultaneously dump output and start REPL"
+      case (repl, output, defaultout) of
+          (true, SOME _, _) => die outrepl_error
+        | (true, _, SOME _) => die outrepl_error
         | _ => ()
   fun force s = (fix s, true)
   fun unforce s = (fix s, false)
@@ -266,6 +272,10 @@ fun main() = let
   val _ = diag ("allincs = ["^String.concatWith ", " allincs ^"]")
   val base_state = Option.map mkAbs base_state
   val output = Option.map mkAbs output
+  val output = case output of NONE => Option.map mkAbs defaultout | _ => output
+  val _ = case (output, exe) of
+              (NONE, SOME _) => die "Can't have exe without an output"
+            | _ => ()
   val _ =
       case base_state of
           NONE => (diag "Not loading a base state"; heapname := NONE)
@@ -286,8 +296,8 @@ fun main() = let
                 String.concatWith ", " (map print_ext exts))
   val _ = List.app holpathdb.extend_db exts
 in
-  case (output, mktex) of
-      (SOME s, false) =>
+  case (output, exe) of
+      (SOME s, NONE) =>
       let
         val _ = List.app (check_objpath die ("" :: "." :: allincs)) objs
         val search_these =
@@ -306,9 +316,6 @@ in
     | _ =>
       let
       in
-        case (output, mktex) of
-            (SOME f, true) => buildheap_extra_data := SOME f
-          | _ => ();
         List.app (maybe_check_load diag) objs;
         if repl then
           (diag "Starting REPL";
@@ -320,7 +327,11 @@ in
                                    exitOnError = false,
                                    isInteractive = true,
                                    nameSpace = PolyML.globalNameSpace} )
-        else ();
+        else
+          case exe of
+              SOME f => BuildHeap_EXE_Compile.exe_compile
+                          {fnname = f, output_exe = valOf output}
+            | _ => ();
         OS.Process.exit OS.Process.success
       end
 end handle e => die ("Uncaught exception: "^General.exnMessage e)
