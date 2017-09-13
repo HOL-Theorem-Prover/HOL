@@ -492,9 +492,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                 [OS.FileSys.getDir()])
 
 in
-  {extra_impl_deps = if relocbuild then []
-                     else if HOLSTATE = POLY then
-                       [Unhandled (fullPath [HOLDIR, "bin", "buildheap"])]
+  {extra_impl_deps = if relocbuild orelse HOLSTATE = POLY then []
                      else [Unhandled HOLSTATE],
    build_graph = (fn arg => (extend_holpaths(); build_graph arg))}
 end
