@@ -73,10 +73,10 @@ fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, startExec,
            unlikely that any of the functions here will have asked for
            very much but as a precaution we allow for an extra 8k
            words. *)
-
+        (*
         fun shrink_stack (newsize : int) : unit =
           RunCall.run_call1 RuntimeCalls.POLY_SYS_shrink_stack newsize
-        val () = shrink_stack 8000
+        val () = shrink_stack 8000 *)
         val _ = diag "At top of readEvalPrint"
       in
         realDataRead := false;
