@@ -71,6 +71,8 @@ in
             else ["-segprot", "POLY", "rwx", "rwx"]) @
            (if PolyML.architecture() = "I386" then ["-arch", "i386"] else [])
          end
+       else if sysname = "Linux" then
+         ["-lpthread", "-lgmp", "-lm", "-ldl", "-lstdc++", "-lgcc_s", "-lgcc"]
        else []
 end;
 
