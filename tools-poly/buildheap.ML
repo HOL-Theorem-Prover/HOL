@@ -13,20 +13,6 @@ val _ = use "holrepl.ML";
 val _ = use "execompile.ML";
 
 val SIGOBJ = OS.Path.concat(Systeml.HOLDIR, "sigobj")
-datatype option_record = OR of {
-  all_forced : bool,
-  base_state : string option,
-  debug : bool,
-  defaultout : string option,
-  exe : string option,
-  extra_data : string option,
-  forced_objs : string list,
-  help : bool,
-  output : string option,
-  quietp : bool,
-  repl : bool
-}
-
 local
   open FunctionalRecordUpdate
   fun makeUpdateT z = makeUpdate11 z
@@ -54,6 +40,25 @@ end z
 val U = U
 val $$ = $$
 end (* FRU local *)
+
+val heapname = ref (SOME Systeml.DEFAULT_STATE)
+
+structure BuildHeap_CLINE =
+struct
+
+datatype option_record = OR of {
+  all_forced : bool,
+  base_state : string option,
+  debug : bool,
+  defaultout : string option,
+  exe : string option,
+  extra_data : string option,
+  forced_objs : string list,
+  help : bool,
+  output : string option,
+  quietp : bool,
+  repl : bool
+}
 
 local
 open TextIO
@@ -102,7 +107,6 @@ val cline_opts = [
   {help = "start REPL after loading", long = ["repl"], short = "",
    desc = mkBoolT #repl}
 ]
-val heapname = ref (SOME Systeml.DEFAULT_STATE)
 val initial_cline = OR {all_forced = false,
                         base_state = !heapname,
                         debug = false,
@@ -213,7 +217,10 @@ fun polyprettify s =
 
 val buildheap_extra_data = ref (NONE : string option)
 
+end (* BuildHeap_CLINE struct *)
+
 fun main() = let
+  open BuildHeap_CLINE
   val usage_header =
     "Usage:\n  " ^ CommandLine.name() ^ " [options] obj1.uo obj2.uo ...\n\n\
     \Object files can be provided with .uo suffixes or not. If they are not\n\
@@ -334,4 +341,5 @@ in
             | _ => ();
         OS.Process.exit OS.Process.success
       end
-end handle e => die ("Uncaught exception: "^General.exnMessage e)
+end handle e =>
+           BuildHeap_CLINE.die ("Uncaught exception: "^General.exnMessage e)
