@@ -32,9 +32,13 @@ local
             PolyML.prettyRepresentation (l, d)])
 in
   val () =
-    ( if heapname <> Systeml.DEFAULT_STATE then
-        TextIO.output
-          (TextIO.stdOut, "[In non-standard heap: " ^ heapname ^ "]\n")
+    ( if !heapname <> SOME Systeml.DEFAULT_STATE then
+        let
+          val hnm = case !heapname of SOME s => s | NONE => "bare poly"
+        in
+          TextIO.output
+            (TextIO.stdOut, "[In non-standard heap: " ^ hnm ^ "]\n")
+        end
       else ()
     ; Feedback.set_trace "metis" 1
     ; Feedback.set_trace "meson" 1
