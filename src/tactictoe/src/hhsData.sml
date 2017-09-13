@@ -16,72 +16,6 @@ val ERR = mk_HOL_ERR "hhsData"
 fun uptodate_goal (asl,w) = all uptodate_term (w :: asl)
 fun uptodate_feav ((_,_,g,gl),_) = all uptodate_goal (g :: gl)
 
-(*----------------------------------------------------------------------------
- * Printing shared types (* to be removed when new version of HOL4 is out *)
- *----------------------------------------------------------------------------*)
-
-fun theoryout_idtable pps (idtable : idtable) = let
-  val out = PP.add_string pps
-  fun nl() = PP.add_newline pps
-  val idlist = List.rev (#idlist idtable)
-  fun print_id {Thy, Other} = out (Lib.mlquote Thy^ " " ^ Lib.mlquote Other)
-  fun print_ids [] = ()
-    | print_ids [id] = print_id id
-    | print_ids (id::ids) = (print_id id; out ","; PP.add_break pps (1,0);
-                             print_ids ids)
-in
-  out "[";
-  PP.begin_block pps PP.INCONSISTENT 0;
-  print_ids idlist;
-  PP.end_block pps;
-  out "]"
-end
-
-fun theoryout_typetable pps (tytable : typetable) = let
-  val out = PP.add_string pps
-  fun nl() = PP.add_newline pps
-  fun output_shtype shty =
-      case shty of
-        TYV s => out ("TYV "^ Lib.mlquote s)
-      | TYOP args =>
-        out ("TYOP "^ String.concatWith " " (map Int.toString args))
-  fun output_shtypes [] = ()
-    | output_shtypes [x] = output_shtype x
-    | output_shtypes (x::xs) = (output_shtype x; out ",";
-                                PP.add_break pps (1,0);
-                                output_shtypes xs)
-in
-  out "[";
-  PP.begin_block pps PP.INCONSISTENT 0;
-  output_shtypes (List.rev (#tylist tytable));
-  PP.end_block pps;
-  out "]"
-end
-
-fun theoryout_termtable pps (tmtable: termtable) = let
-  val out = PP.add_string pps
-  fun nl() = PP.add_newline pps
-  fun its x = Int.toString x
-  fun ipair_string (x,y) = its x ^ " " ^ its y
-  fun output_shtm shtm =
-      case shtm of
-        TMV (s, tyn) => out ("TMV " ^ Lib.mlquote s ^ " " ^ its tyn)
-      | TMC p        => out ("TMC " ^ ipair_string p)
-      | TMAp p       => out ("TMAp " ^ ipair_string p)
-      | TMAbs p      => out ("TMAbs " ^ ipair_string p)
-  fun output_shtms [] = ()
-    | output_shtms [t] = output_shtm t
-    | output_shtms (t::ts) = (output_shtm t; out (",");
-                              PP.add_break pps (1, 0);
-                              output_shtms ts)
-in
-  out ("[");
-  PP.begin_block pps PP.INCONSISTENT 0;
-  output_shtms (List.rev (#termlist tmtable));
-  PP.end_block pps;
-  out ("]")
-end
-
 (*---------------------------------------------------------------------------
  *  Print feature vectors
  *---------------------------------------------------------------------------*)
@@ -387,24 +321,11 @@ fun read_feavl lookup l = case l of
  * Importing feature vectors from disk
  *----------------------------------------------------------------------------*)
 
-fun lex_data path =
-  let
-    val file = TextIO.openIn path
-    fun loop file = case TextIO.inputLine file of
-        SOME line => hhsLexer.hhs_lex line @ loop file 
-           (* to be replaced by the lighter TheoryLexer.lex_thydata *)
-      | NONE => []
-    val l = loop file
-  in
-    (TextIO.closeIn file; l)
-  end
-
 fun read_feavdatal thy =
   let
     val file = hhs_feature_dir ^ "/" ^ thy
-    val l0 = lex_data file 
-      handle _ => (print_endline (thy ^ " is missing");
-                   debug thy; [])
+    val l0 = TheoryLexer.lex_thydata file 
+      handle _ => (print_endline (thy ^ " is missing"); debug thy; [])
   in
     if l0 = [] 
     then []

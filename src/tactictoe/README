@@ -8,4 +8,8 @@ Run in HOL:
   load "tactictoe"; 
   open tactictoe;
   tactictoe ``1+1=2``;
+  
+
+Developers' notes:
+  Keep up-to-date list of infix elements and binders in polyml.
 

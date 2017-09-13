@@ -2,14 +2,13 @@
 (* FILE          : hhsUnfold.sml                                              *)
 (* DESCRIPTION   : Partial unfolding of SML code.                             *)
 (*                 Produces SML strings re-usable in different context.       *)
+(*                 Recursive functions are not supported yet.                 *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
 (* DATE          : 2017                                                       *)
 (* ========================================================================== *)
 
 structure hhsUnfold :> hhsUnfold =
 struct
-
-(* Constructors and recursive functions are not supported *)
 
 open HolKernel Abbrev boolLib hhsLexer hhsTools hhsInfix hhsExec hhsOpen
 
@@ -168,7 +167,8 @@ val replace_special_time = ref 0.0
 val replace_id_time = ref 0.0
 
 (* --------------------------------------------------------------------------
-   poly
+   Poly/ML 5.7
+   rlwrap poly
    val l = map (fn (a,b) => a) (#allVal (PolyML.globalNameSpace) ());
    -------------------------------------------------------------------------- *)
 
@@ -246,7 +246,6 @@ fun split_endval_aux test opar acc sl =
 
 fun split_endval sl = split_endval_aux is_endval 0 [] sl
 fun split_endtype sl = split_endval_aux is_endtype 0 [] sl
-
 
 (* --------------------------------------------------------------------------
    Extract pattern and identifiers.
@@ -706,8 +705,6 @@ fun replace_spec sl = case sl of
    its arguments.
    -------------------------------------------------------------------------- *)  
 
-
-
 fun is_watch_name x = mem (drop_sig x) (store_thm_list @ name_thm_list)
 
 fun mk_fetch b = 
@@ -923,6 +920,7 @@ fun clean_unfold cthy =
 
 fun start_unfold_thy cthy =
   (
+  mkDir_err hhs_open_dir;
   n_store_thm := 0;
   name_number := 0;
   clean_unfold cthy;
@@ -938,25 +936,25 @@ fun start_unfold_thy cthy =
 
 fun end_unfold_thy cthy n =
   let
-    val file = tactictoe_dir ^ "/record_log/" ^ cthy ^ "/unfold_summary"
-    val _ = erase_file file
-    fun g s r = append_endline file (s ^ ": " ^ Real.toString r)
-    val _ = append_endline file (int_to_string n ^ " proofs extracted")
-    val _ = print (int_to_string n ^ " proofs extracted\n")
-    val _  = g "  Push" (!push_time)
-    val _  = g "  Open" (!open_time)
-    val _  = g "  Replace special" (!replace_special_time)
-    val _  = g "  Replace id" (!replace_id_time)
+    val unfold_dir = tactictoe_dir ^ "/" ^ cthy
+    val file  = unfold_dir ^ "/" ^ cthy
+    fun f s r = append_endline file (s ^ ": " ^ Real.toString (!r))
   in
-    ()
+    print_endline (int_to_string n ^ " proofs extracted");
+    mkDir_err unfold_dir;
+    erase_file file;
+    append_endline file (int_to_string n ^ " proofs extracted");
+    f "Push" push_time;
+    f "Open" open_time;
+    f "Replace special" replace_special_time;
+    f "Replace id" replace_id_time
   end
 
 fun hhs_rewrite file = 
   let val cthy = extract_thy file in
-    if cthy = "bool" then () 
-    else
+    if cthy = "bool" then () else
       let
-        val _ = print (cthy ^ "\n")
+        val _ = print (cthy ^ "\n");
         val _ = start_unfold_thy cthy
         val file_out = change_dir file
         val sl = readl file
@@ -977,10 +975,10 @@ fun hhs_rewrite file =
       end
   end
 
-fun all_files () =
+fun hol_scripts () =
   let 
-    val sigdir = HOLDIR ^ "/sigobj"
     val file = tactictoe_dir ^ "/code/theory_list"
+    val sigdir = HOLDIR ^ "/sigobj"
     val cmd0 = "cd " ^ sigdir
     val cmd1 = "readlink -f $(find -regex \".*[^/]Theory.sig\") > " ^ file
     val cmd2 = "sed -i 's/Theory.sig/Script.sml/g' " ^ file
@@ -989,31 +987,51 @@ fun all_files () =
     readl file
   end
 
-fun all_cakeml_files () =
+fun hol_examples_scripts () =
   let 
     val file = tactictoe_dir ^ "/code/theory_list"
-    val cmd0 = "find /home/tgauthier/cakeml -name \"*Theory.uo\" > " ^ file
+    val dir = HOLDIR ^ "/examples"
+    
+    val cmd0 = "find " ^ dir ^ " -name \"*Theory.uo\" > " ^ file
     val cmd1 = "sed -i 's/Theory.uo/Script.sml/' " ^ file
   in
     ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1));
     readl file
   end
 
-fun all_examples_files () =
+fun cakeml_scripts cakeml_dir =
   let 
     val file = tactictoe_dir ^ "/code/theory_list"
-    val cmd0 = "find /home/tgauthier/HOL/examples -name \"*Theory.uo\" > " ^ file
+    val cmd0 = "find " ^ cakeml_dir ^ " -name \"*Theory.uo\" > " ^ file
     val cmd1 = "sed -i 's/Theory.uo/Script.sml/' " ^ file
   in
     ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1));
     readl file
   end
-
 
 end (* struct *)
 
 
 (* ---------------------------------------------------------------------------
+HOL  
+  
+  rlwrap bin/hol
+  load "hhsUnfold";
+  open hhsTools;
+  open hhsUnfold;
+
+
+
+
+  val l = all_examples_files () @ all_cakeml_files ();
+  app hhs_rewrite l;
+             
+  --------------------------------------------------------------------------- *)
+  
+  
+(* ---------------------------------------------------------------------------
+CAKEML:
+
   screen -s cakeml
   cd cakeml/compiler/backend/proofs
   /home/thibault/big/HOL/bin/Holmake
@@ -1022,36 +1040,18 @@ end (* struct *)
   sh link_sigobj.sh
   cd HOL/src/tactictoe/src
   /home/thibault/big/HOL/bin/Holmake
-  
+ 
   rlwrap ../HOL/bin/hol
 
   load "hhsUnfold";
   open hhsTools;
   open hhsUnfold;
 
-  fun all_cakeml_files () =
-  let 
-    val file = tactictoe_dir ^ "/code/theory_list"
-    val cmd0 = "find /home/thibault/big/cakeml -name \"*Theory.uo\" > " ^ file
-    val cmd1 = "sed -i 's/Theory.uo/Script.sml/' " ^ file
-  in
-    ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1));
-    readl file
-  end;
 
-fun all_examples_files () =
-  let 
-    val file = tactictoe_dir ^ "/code/theory_list"
-    val cmd0 = "find /home/thibault/big/HOL/examples -name \"*Theory.uo\" > " ^ file
-    val cmd1 = "sed -i 's/Theory.uo/Script.sml/' " ^ file
-  in
-    ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1));
-    readl file
-  end;
+
 
   val l = all_examples_files () @ all_cakeml_files ();
-  mkDir_err hhs_record_dir;
-  mkDir_err hhs_open_dir;
   app hhs_rewrite l;
              
   --------------------------------------------------------------------------- *)
+  

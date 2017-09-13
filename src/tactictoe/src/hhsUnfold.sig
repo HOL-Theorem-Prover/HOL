@@ -12,9 +12,9 @@ sig
   | SValue       of string
   | SConstructor of string
   | SException   of string
-  val all_files : unit -> string list
-  val all_cakeml_files : unit -> string list
-  val all_examples_files : unit -> string list
+  val hol_scripts : unit -> string list
+  val hol_examples_scripts : unit -> string list
+  val cakeml_scripts : string -> string list
   val hhs_rewrite : string -> unit
   
   val open_struct :

@@ -13,7 +13,12 @@ open HolKernel boolLib hhsRedirect hhsTools
 
 val ERR = mk_HOL_ERR "hhsOpen"
 
-(* Maybe all exceptions are constructors *)
+(* Needed for cakeml
+"load " ^ (mlquote "lprefix_lubTheory") ^ ";",
+"load " ^ (mlquote "reg_allocTheory") ^ ";",
+val cmd1 = "cd /local/thibault/cakeml"
+*)
+
 fun gencode_values s =
   let
     val dir = hhs_open_dir ^ "/" ^ s
@@ -24,8 +29,6 @@ fun gencode_values s =
     val structl = rev (String.tokens (fn x => x = #".") s)
     val code_values =
     [
-    "load " ^ (mlquote "lprefix_lubTheory") ^ ";",
-    "load " ^ (mlquote "reg_allocTheory") ^ ";",
     "load " ^ mlquote (last structl) ^ ";",
     "val tactictoe_it = List.map #1 (#allVal (PolyML.globalNameSpace) ());",
     "val _  = app PolyML.Compiler.forgetValue tactictoe_it;",
@@ -60,9 +63,8 @@ fun all_values s =
     val dir = hhs_open_dir ^ "/" ^ s
     val hide_file = dir ^ "/hide_values"
     val file = dir ^ "/code_values.sml"
-    val cmd1 = "cd /local/thibault/cakeml"
     val cmd2 = (HOLDIR ^ "/bin/hol") ^ " < " ^ file
-    val cmd = cmd1 ^ "; " ^ cmd2
+    val cmd = cmd2
   in
     gencode_values s;
     ignore (hide hide_file OS.Process.system cmd);
@@ -82,8 +84,6 @@ fun gencode_structures s =
     val loads = mlquote (last structl)
     val code_structures =
     [
-    "load " ^ (mlquote "lprefix_lubTheory") ^ ";",
-    "load " ^ (mlquote "reg_allocTheory") ^ ";",
     "load " ^ loads ^ ";",
     "fun tactictoe_writel file sl =",
     "  let val oc = TextIO.openOut file in",
@@ -114,9 +114,8 @@ fun all_structures s =
     val dir = hhs_open_dir ^ "/" ^ s
     val hide_file = dir ^ "/hide_structures"
     val file = dir ^ "/code_structures.sml"
-    val cmd1 = "cd /local/thibault/cakeml"
     val cmd2 = (HOLDIR ^ "/bin/hol") ^ " < " ^ file
-    val cmd = cmd1 ^ "; " ^ cmd2
+    val cmd = cmd2
   in
     gencode_structures s;
     ignore (hide hide_file OS.Process.system cmd);
