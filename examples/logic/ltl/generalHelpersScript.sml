@@ -277,4 +277,36 @@ val LIST_INTER_def = Define`
                              then x::(LIST_INTER xs ls)
                              else LIST_INTER xs ls)`;
 
+val PSUBSET_WF = store_thm
+ ("PSUBSET_WF",
+  ``!d. FINITE d ==> WF (\s t. s ⊂ t ∧ s ⊆ d ∧ t ⊆ d)``,
+  rpt strip_tac
+  >> qabbrev_tac `r_reln = rel_to_reln (\s t. s ⊂ t ∧ s ⊆ d ∧ t ⊆ d)`
+  >> `transitive r_reln` by (
+      simp[transitive_def] >> rpt strip_tac >> qunabbrev_tac `r_reln`
+      >> fs[rel_to_reln_def] >> metis_tac[PSUBSET_TRANS]
+  )
+  >> `acyclic r_reln` by (
+      fs[acyclic_def] >> rpt strip_tac
+      >> `(x,x) ∈ r_reln` by metis_tac[transitive_tc]
+      >> qunabbrev_tac `r_reln` >> fs[rel_to_reln_def]
+  )
+  >> `domain r_reln ⊆ (POW d)` by (
+      qunabbrev_tac `r_reln` >> fs[domain_def,rel_to_reln_def]
+      >> simp[SUBSET_DEF] >> rpt strip_tac
+      >> metis_tac[SUBSET_DEF,IN_POW]
+  )
+  >> `range r_reln ⊆ (POW d)` by (
+      qunabbrev_tac `r_reln` >> fs[range_def,rel_to_reln_def]
+      >> simp[SUBSET_DEF] >> rpt strip_tac
+      >> metis_tac[SUBSET_DEF,IN_POW]
+  )
+  >> `(λs t. s ⊂ t ∧ s ⊆ d ∧ t ⊆ d) = reln_to_rel r_reln` by (
+      qunabbrev_tac `r_reln` >> fs[rel_to_reln_inv])
+  >> `FINITE (POW d)` by metis_tac[FINITE_POW]
+  >> `WF (reln_to_rel r_reln)` suffices_by fs[]
+  >> metis_tac[acyclic_WF]
+ );
+
+
 val _ = export_theory();

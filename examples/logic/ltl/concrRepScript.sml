@@ -75,6 +75,31 @@ val inAuto_def = Define`
   inAuto (concrAA g i aP) f =
         IS_SOME (findNode (\label. (SND label).frml = f) g)`;
 
+val IN_AUTO_FINITE = store_thm
+  ("IN_AUTO_FINITE",
+   ``!aut. FINITE {x | inAuto aut x }``,
+   rpt strip_tac
+   >> Cases_on `aut`
+   >> `{x | inAuto (concrAA g l l0) x }
+           ⊆ LIST_TO_SET (MAP ((\l. l.frml) o SND) (toAList g.nodeInfo))` by (
+       simp[SUBSET_DEF] >> rpt strip_tac
+       >> fs[inAuto_def,findNode_def]
+       >> Cases_on
+             `(OPTION_MAP FST
+               (FIND (λlabel. (SND label).frml = x) (toAList g.nodeInfo)))`
+       >> fs[IS_SOME_DEF,FIND_def]
+       >>
+
+
+)
+ >> Cases_on `aut`
+   >> simp[inAuto_def,findNode_def]
+   >> 
+
+
+)
+
+
 val addFrmlToAut_def = Define`
    (addFrmlToAut (concrAA g i aP) (U f1 f2) =
        if inAuto (concrAA g i aP) (U f1 f2)
