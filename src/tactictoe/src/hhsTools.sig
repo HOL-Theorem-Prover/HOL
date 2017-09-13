@@ -72,6 +72,9 @@ sig
     ('a, int) Redblackmap.dict -> 'a list -> ('a, int) Redblackmap.dict
    
   val goal_compare : (goal * goal) -> order
+  val strict_term_compare : (term * term) -> order
+  val strict_goal_compare : (goal * goal) -> order
+  
   val cpl_compare  : ('a * 'a -> order) -> ('b * 'b -> order) 
                      -> (('a * 'b) * ('a * 'b)) -> order
   val lbl_compare  : (lbl_t * lbl_t) -> order

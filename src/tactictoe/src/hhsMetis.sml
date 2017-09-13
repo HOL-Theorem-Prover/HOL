@@ -28,6 +28,9 @@ fun depnumber_of_thm thm =
 fun depidl_of_thm thm =
   (Dep.depidl_of o Tag.dep_of o Thm.tag) thm   
 
+fun thm_of_string s =
+  let val (a,b) = split_string "Theory." s in DB.fetch a b end
+
 val did_cache = ref (dempty (cpl_compare String.compare Int.compare))
 
 fun load_did_cache thy =
@@ -50,9 +53,6 @@ fun thm_of_did (did as (thy,n)) =
   handle _ => (load_did_cache thy; dfind did (!did_cache))
   )
   handle _ => raise ERR "thm_of_did" "Not found"
-
-fun thm_of_string s =
-  let val (a,b) = split_string "Theory." s in DB.fetch a b end
 
 fun dependency_of_thm s =
   mapfilter thm_of_did (depidl_of_thm (thm_of_string s))

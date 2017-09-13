@@ -8,7 +8,7 @@
 structure hhsTools :> hhsTools =
 struct
 
-open HolKernel boolLib Abbrev
+open HolKernel boolLib Abbrev Dep
 
 val ERR = mk_HOL_ERR "hhsTools"
 
@@ -177,9 +177,6 @@ fun average_real l = sum_real l / Real.fromInt (length l)
    Goal
    -------------------------------------------------------------------------- *)
 
-fun goal_compare ((asm1,w1), (asm2,w2)) =
-  list_compare Term.compare (w1 :: asm1, w2 :: asm2)
-
 fun string_of_goal (asm,w) =
   let 
     val mem = !show_types
@@ -196,13 +193,35 @@ fun string_of_goal (asm,w) =
   end
 
 (* --------------------------------------------------------------------------
-   Feature vectors
+   Comparisons
    -------------------------------------------------------------------------- *)
+
+fun goal_compare ((asm1,w1), (asm2,w2)) =
+  list_compare Term.compare (w1 :: asm1, w2 :: asm2)
 
 fun cpl_compare cmp1 cmp2 ((a1,a2),(b1,b2)) =
   let val r = cmp1 (a1,b1) in
     if r = EQUAL then cmp2 (a2,b2) else r
   end
+
+fun strict_term_compare (t1,t2) =
+  if Portable.pointer_eq (t1,t2) then EQUAL
+  else if is_var t1 andalso is_var t2 then Term.compare (t1,t2)
+  else if is_var t1 then LESS
+  else if is_var t2 then GREATER
+  else if is_const t1 andalso is_const t2 then Term.compare (t1,t2)
+  else if is_const t1 then LESS
+  else if is_const t2 then GREATER
+  else if is_comb t1 andalso is_comb t2 then 
+    cpl_compare strict_term_compare 
+      strict_term_compare (dest_comb t1, dest_comb t2)
+  else if is_comb t1 then LESS
+  else if is_comb t2 then GREATER
+  else 
+    cpl_compare Term.compare strict_term_compare (dest_abs t1, dest_abs t2)
+
+fun strict_goal_compare ((asm1,w1), (asm2,w2)) =
+  list_compare strict_term_compare (w1 :: asm1, w2 :: asm2)
 
 fun lbl_compare ((stac1,_,g1,_),(stac2,_,g2,_)) =
   cpl_compare String.compare goal_compare ((stac1,g1),(stac2,g2))
@@ -297,8 +316,8 @@ fun print_endline s = print (s ^ "\n")
    Debugging and exporting feature vectors
    -------------------------------------------------------------------------- *)
 
-fun debug s = 
-  append_endline (hhs_search_dir ^ "/debug/" ^ current_theory ()) s
+(* search_dir *)
+fun debug s = append_endline (hhs_search_dir ^ "/debug/" ^ current_theory ()) s
 
 fun debug_t s f x = 
   let 
@@ -315,20 +334,15 @@ fun debug_search s =
 fun debug_proof s =
   append_endline (hhs_search_dir ^ "/proof/" ^ current_theory ()) s
 
+(* record_dir *)
 fun debug_parse s =
-  let val file = hhs_record_dir ^ "/" ^ current_theory () ^ "/parse_err" in
-    append_endline file s
-  end
+  append_endline (hhs_record_dir ^ "/parse/" ^ current_theory ()) s
   
 fun debug_replay s =
-  let val file = hhs_record_dir ^ "/" ^ current_theory () ^ "/replay_err" in
-    append_endline file s
-  end  
-
+  append_endline (hhs_record_dir ^ "/replay/" ^ current_theory ()) s
+  
 fun debug_record s =
-  let val file = hhs_record_dir ^ "/" ^ current_theory () ^ "/record_err" in
-    append_endline file s
-  end  
+  append_endline (hhs_record_dir ^ "/record/" ^ current_theory ()) s
 
 (* --------------------------------------------------------------------------
    String
@@ -398,6 +412,20 @@ fun split_string s1 s2 =
   in
     (implode rl1, implode rl2)
   end
+
+(* --------------------------------------------------------------------------
+   Dependencies
+   -------------------------------------------------------------------------- *)
+
+
+
+
+
+
+
+
+
+
 
 (* --------------------------------------------------------------------------
    Globals

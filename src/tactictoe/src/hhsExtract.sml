@@ -12,8 +12,6 @@ open HolKernel boolLib hhsExec hhsLexer hhsTools
 
 val ERR = mk_HOL_ERR "hhsExtract"
 
-val pointer_cache_glob = ref (dempty String.compare)
-
 (*---------------------------------------------------------------------------
  * Extract tactics
  *---------------------------------------------------------------------------*)
@@ -162,7 +160,6 @@ fun reprint s =
     else raise ERR "reprint" s
   end
 
-
 fun is_infix s = String.isPrefix "hhs_infix" (hd (hhs_lex s))
 
 fun is_infix_tree tree = case tree of
@@ -183,26 +180,7 @@ fun is_recordable2 sno sl =
   mem "hhsNumber.hhs_fst" sl andalso 
   is_tactic sno
 
-(*  
-  dfind s (!pointer_cache_glob) handle _ =>
-  let val b =
-    mem #"." (explode s) andalso
-    (
-    is_pointer_eq s "Tactical.THEN" orelse
-    is_pointer_eq s "Tactical.ORELSE" orelse
-    is_pointer_eq s "Tactical.THEN1" orelse
-    is_pointer_eq s "Tactical.THENL" orelse
-    is_pointer_eq s "Tactical.REVERSE" orelse
-    is_pointer_eq s "Tactical.VALID" orelse
-    is_pointer_eq s "BasicProvers.by" orelse
-    is_pointer_eq s "BasicProvers.suffices_by" orelse
-    is_pointer_eq s "Tactical.EVERY"
-    )
- in
-   pointer_cache_glob := dadd s b (!pointer_cache_glob);
-   b
- end
-*)
+
 fun extract_tactics tree = case tree of
     HHSTACL (s, treel) =>
     if s = NONE then List.concat (map extract_tactics treel) else

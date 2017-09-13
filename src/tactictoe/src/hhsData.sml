@@ -66,11 +66,11 @@ fun pp_feavl feavl =
     val ((terml,termdict),(idtable,tytable,tmtable)) = 
       create_sharing_tables feavl
     
-    fun pp_sml_list pfun L =
+    fun pp_sml_list pfun l =
       block INCONSISTENT 0
         (
         add_string "[" >> add_break (0,0) >>
-        pr_list pfun (add_string ",") (add_break (1,0)) L >>
+        pr_list pfun (add_string ",") (add_break (1,0)) l >>
         add_break (0,0) >>
         add_string "]"
         )
@@ -82,11 +82,11 @@ fun pp_feavl feavl =
 
     fun pp_tmid tm = add_string (int_to_string (dfind tm termdict))
     fun pp_goal (asl,w) = pp_sml_list pp_tmid (w :: asl)
-    fun pp_goal_list L =
+    fun pp_goal_list l =
       block INCONSISTENT 0
         (
         add_string "START" >> add_break (1,0) >>
-        pr_list pp_goal nothing (add_break (1,0)) L >>
+        pr_list pp_goal nothing (add_break (1,0)) l >>
         add_break (1,0) >>
         add_string "END"
         )
@@ -359,9 +359,5 @@ val feavl = [mk_feav "WONDER_TAC" ([``1=1``],``1+1=2``),
 export_feavl "test" feavl;
 val new_feavl = import_feavl ["test"];
 *)
-
-
-
-
 
 end (* struct *)

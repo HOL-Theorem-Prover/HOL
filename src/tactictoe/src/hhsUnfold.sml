@@ -14,6 +14,18 @@ open HolKernel Abbrev boolLib hhsLexer hhsTools hhsInfix hhsExec hhsOpen
 
 val ERR = mk_HOL_ERR "hhsUnfold"
 
+(* --------------------------------------------------------------------------
+   Debugging
+   -------------------------------------------------------------------------- *)
+
+val cthy_glob = ref ""
+val hhs_unfold_dir = tactictoe_dir ^ "/unfold_log"
+fun debug_unfold s = append_endline (hhs_unfold_dir ^ "/" ^ !cthy_glob) s
+
+(* --------------------------------------------------------------------------
+   Program representation and stack
+   -------------------------------------------------------------------------- *)
+
 datatype stack_t =
     Protect 
   | Watch
@@ -39,14 +51,9 @@ datatype sketch_t =
   | SEnd    
   | In
 
-val extract_err_glob = ref (tactictoe_dir ^ "/extract_err_here")
-fun print_error s = append_file (!extract_err_glob) (s ^ "\n")
-fun print_warning s = append_file ((!extract_err_glob) ^ "_warning") (s ^ "\n")
-
 val (infix_glob : (string * infixity_t) list ref) = ref []
 val open_cache = ref []
 val cthy_stack_dict = ref (dempty String.compare)
-val cthy_glob = ref ""
 val name_number = ref 0
 fun incr x = x := (!x) + 1
 
@@ -54,7 +61,7 @@ fun hd_code_par2 m =
   (hd m = Code ("(",Protect) orelse hd m = Code ("{",Protect)) 
   handle _ => false
 fun hd_code_par m = 
-  hd m = Code ("(",Protect) handle _ => false
+  (hd m = Code ("(",Protect) handle _ => false)
 
 (* --------------------------------------------------------------------------
    Program extraction
@@ -68,10 +75,10 @@ fun original_program p = case p of
     [] => []
   | Open sl :: m    => ("open" :: sl) @ original_program m
   | Infix l :: m    => List.concat (map stringl_of_infix l) @ original_program m
-  | In :: m           => "in" :: original_program m 
-  | Start s :: m      => s :: original_program m
-  | End :: m          => "end" :: original_program m
-  | SEnd :: m => "end" :: original_program m
+  | In :: m         => "in" :: original_program m 
+  | Start s :: m    => s :: original_program m
+  | End :: m        => "end" :: original_program m
+  | SEnd :: m       => "end" :: original_program m
   | Code (a,_) :: m   => a :: original_program m
   | Pattern (s,head,sep,body) :: m => 
     s :: original_program head @ [sep] @ original_program body @ 
@@ -106,31 +113,33 @@ fun bare_body p = bbody_of 0 p
 
 (* after unfolding *)
 fun singleton s = [s]
+val space = mlquote " "
+
 fun replace_code1 st = case st of
     (_,Replace sl) => sl
   | (_,SReplace sl) => sl
   | (s,Protect)    => singleton s
-  | (s,Watch)      => (print_error ("replace_code: " ^ s); singleton s)
+  | (s,Watch)      => (debug_unfold ("replace_code: " ^ s); singleton s)
   | _              => raise ERR "replace_code" "should not happen"
 
-fun mlquotecat s = [mlquote s, "^",mlquote " ","^"] 
+fun mlquotecat s = [mlquote s,"^",space,"^"] 
 fun replace_code2 st = case st of
     (s,Replace sl) => 
     (
     if length sl = 1 andalso mem #"." (explode (hd sl)) 
     then mlquotecat (String.concatWith " " sl)
     else 
-    ["(","hhsOnline.fetch_thm",mlquote s,
-     mlquote (String.concatWith " " sl),")","^",mlquote " ","^"]
+    ["(","hhsRecord.fetch_thm",mlquote s,
+     mlquote (String.concatWith " " sl),")","^",space,"^"]
     )
   | (s,SReplace sl) => mlquotecat (String.concatWith " " sl)
-  | (s,Protect)    => mlquotecat s
-  | (s,Watch)      => 
+  | (s,Protect)     => mlquotecat s
+  | (s,Watch)       => 
     (
-    print_error ("replace_code2: " ^ s); 
-    ["(","hhsOnline.fetch_thm",mlquote s,mlquote "",")","^",mlquote " ","^"]
+    debug_unfold ("replace_code2: " ^ s); 
+    ["(","hhsRecord.fetch_thm",mlquote s,mlquote "",")","^",space,"^"]
     )
-  | _              => raise ERR "replace_code2" "should not happen"
+  | _ => raise ERR "replace_code2" "should not happen"
 
 (* forget "op" in a body that does not contains definitions *)
 fun replace_program f g p = case p of
@@ -185,10 +194,10 @@ val basis = String.tokens Char.isSpace
    Rebuild store_thm calls
    -------------------------------------------------------------------------- *)
 
-fun unquote s =
+fun rm_squote s =
   if String.sub (s,0) = #"\"" andalso String.sub (s,String.size s - 1) = #"\""
   then String.substring (s, 1, String.size s - 2)
-  else raise ERR "unquote" s
+  else raise ERR "rm_squote" s
 
 fun rm_last_char s = String.substring (s, 0, String.size s - 1)
 
@@ -213,13 +222,6 @@ fun is_endtype opar s =
    "infix", "infixl", "infixr",
    "and", "datatype", "type", "local", ";", ")","]","}"
    ]
-
-fun is_break s =
-  mem s [
-   "end", "in", "val", "fun",
-   "structure", "signature", "struct", "sig", "open",
-   "infix", "infixl", "infixr",
-   "and", "datatype", "type", "local","let",";"]
 
 (* Leaking of identifiers between patterns *)
 fun is_endval opar s =
@@ -261,7 +263,6 @@ fun extract_pattern s sl =
     (head,body,cont)
   end
 
-
 fun extract_open_aux libl sl = case sl of
     [] => (rev libl,[])
   | a :: m => 
@@ -284,12 +285,10 @@ fun extract_infix inf_constr l =
 
 (* ---------------------------------------------------------------------------
    Watching and replacing some special values:
-   functions calling save_thm (* not in Script *)
+   functions calling save_thm
    functions making a definitions
    functions with side effects (export_rewrites) which can be unfolded.
    -------------------------------------------------------------------------- *)
-
-fun sig_of s = hd (String.tokens (fn x => x = #".") s)
 
 val store_thm_list =
   ["store_thm","maybe_thm","Store_thm","asm_store_thm"]
@@ -366,7 +365,7 @@ fun extract_store_thm sl =
     val name = original_code (last namel)
   in
     if is_string name 
-    then SOME (rm_bbra_str (unquote name), namel, term, qtac, cont)
+    then SOME (rm_bbra_str (rm_squote name), namel, term, qtac, cont)
     else NONE
   end
   handle _ => NONE
@@ -387,7 +386,7 @@ fun extract_thmname sl =
     val name = original_code (last namel)
   in
     if is_string name 
-    then SOME (rm_bbra_str (unquote name),cont)
+    then SOME (rm_bbra_str (rm_squote name),cont)
     else NONE
   end
   handle _ => NONE
@@ -400,7 +399,7 @@ fun extract_recordname sl =
     val name = original_code (last (assoc [Code ("name",Protect)] ll1))
   in
     if is_string name 
-    then SOME (rm_bbra_str (unquote name),cont)
+    then SOME (rm_bbra_str (rm_squote name),cont)
     else NONE
   end
   handle _ => NONE
@@ -509,22 +508,16 @@ fun push_stackv in_flag (k,v) stack =
 fun push_stackvl in_flag stackvl stack = 
   total_time push_time (push_stackvl_aux in_flag stackvl) stack
 
-
-
 fun stack_find stack id = case stack of
     []        => NONE
   | dict :: m => (SOME (dfind id dict) handle _ => stack_find m id)
-  
-(* todo: shouldn't mix names of structures and values in the same stack 
-   because some structures are overwritten.
-*)  
+
 fun replace_struct stack id =
   case stack_find stack id of
     SOME (Structure full_id) => [full_id]
   | _ => 
-    (if mem #"." (explode id) 
-     then () 
-     else print_warning ("structure: " ^ id); [id])
+    (if mem #"." (explode id) then () 
+     else debug_unfold ("warning: replace_struct: " ^ id); [id])
 
 fun stack_find stack id = case stack of
     []        => NONE
@@ -539,13 +532,14 @@ fun replace_id stack id =
   | SOME (SException full_id) => SReplace [full_id]
   | SOME (Structure full_id) => SReplace [full_id]
   | _ => 
-    (if mem #"." (explode id) then () else print_error ("id: " ^ id); 
+    (if mem #"." (explode id) then () else debug_unfold ("id: " ^ id); 
     SReplace [id])
 
 fun let_in_end s head body id =
   ["let",s] @ head @ ["="] @ body @ ["in",id,"end"] 
 
 val n_store_thm = ref 0
+
 fun modified_program p = case p of
     [] => []
   | Open sl :: m    => ("open" :: sl) @ [";"] @ modified_program m
@@ -555,7 +549,7 @@ fun modified_program p = case p of
   | End :: m        => "end" :: modified_program m
   | SEnd :: m       => "end" :: modified_program m
   | Code (a,_) :: m =>
-    (
+    ( 
     if mem (drop_sig a) store_thm_list
        andalso
        hd_code_par m
@@ -571,15 +565,38 @@ fun modified_program p = case p of
             raise ERR "modified_program" (String.concatWith " " tac1)
           val stac2 = String.concatWith " " (tac2 @ [mlquote ""])
         in
-          [a,"("] @ 
-            original_program namel @ 
-          [","] @
-            original_program term @ 
+          [a,"("] @ original_program namel @ [","] @ original_program term @ 
           [","] @
             ["let","val","tactictoe_tac1","="] @ tac1 @
-            ["val","tactictoe_tac2","=","hhsPrerecord.hhs_prerecord",
+            ["val","tactictoe_tac2","=","hhsRecord.wrap_tactics_in",
              mlquote name,"(",stac2,")"] @
-            ["in","hhsOnline.try_tac","tactictoe_tac2","tactictoe_tac1","end"] @
+            ["in","hhsRecord.try_record_proof",
+             mlquote name,"tactictoe_tac2","tactictoe_tac1","end"] @
+          [")"]
+          @ modified_program cont
+        end
+    else
+       if mem (drop_sig a) prove_list andalso hd_code_par m
+    then
+      case extract_prove (tl m) of
+        NONE => a :: modified_program m
+      | SOME (term, qtac, cont) =>
+        let 
+          val name = "tactictoe_prove_" ^ (int_to_string (!n_store_thm))
+          val _ = incr n_store_thm
+          val tac1 = original_program qtac
+          val tac2 = replace_program2 (bare_body qtac) 
+            handle _ => 
+            raise ERR "modified_program" (String.concatWith " " tac1)
+          val stac2 = String.concatWith " " (tac2 @ [mlquote ""])
+        in
+          [a,"("] @ original_program term @  
+          [","] @
+            ["let","val","tactictoe_tac1","="] @ tac1 @
+            ["val","tactictoe_tac2","=","hhsRecord.wrap_tactics_in",
+             mlquote name,"(",stac2,")"] @
+            ["in","hhsRecord.try_record_proof",
+             mlquote name,"tactictoe_tac2","tactictoe_tac1","end"] @
           [")"]
           @ modified_program cont
         end
@@ -587,8 +604,7 @@ fun modified_program p = case p of
     )
   | Pattern (s,head,sep,body) :: m => 
     s :: modified_program head @ [sep] @ modified_program body @ 
-    (if mem s ["val","fun"] then [";"] else []) @
-    modified_program m
+    (if mem s ["val","fun"] then [";"] else []) @ modified_program m
 
 fun stackvl_of_value idl head body =
   let 
@@ -657,49 +673,7 @@ fun open_struct_aux stack s'=
   end
 
 fun open_struct stack s' = total_time open_time (open_struct_aux stack) s'
-          
-(* ---------------------------------------------------------------------------
-   Recording proofs and theorems produced by prove, tprove and 
-   TAC_PROOF by replacing them with a call to store_thm.
-   -------------------------------------------------------------------------- *)
 
-fun mk_prove qflag term tac =
-  let 
-    val name = "tactictoe_thm_" ^ int_to_string (!name_number)
-    val _    = incr name_number
-    val head = Code ("boolLib.store_thm", Watch)
-    val tm   = if qflag 
-               then map (Code o protect) ["Parse.Term","("] @ term @ 
-                    map (Code o protect) [")"] 
-               else term
-    val body = 
-      [Code ("(",Protect),Code (mlquote name,Protect),Code (",",Protect)] @
-      tm @
-      [Code (",",Protect)] @
-      tac @
-      [Code (")",Protect)]
-  in
-    head :: body
-  end
-  
-fun replace_err sl = 
-  print_error ("replace_spec: " ^ String.concatWith " " (first_n 10 sl))
-
-fun replace_spec sl = case sl of
-    [] => []
-  | Code (s, Watch) :: m =>
-    if mem (drop_sig s) prove_list andalso hd_code_par m
-    then 
-      (
-      case extract_prove (tl m) of
-        NONE => (replace_err (original_program sl); 
-                 Code (s, Watch) :: replace_spec m)
-      | SOME (term,tac,cont) => 
-        mk_prove (sig_of s = "Q") term tac @ replace_spec cont
-      )
-    else Code (s, Watch) :: replace_spec m
-  | a :: m => a :: replace_spec m
-  
 (* ---------------------------------------------------------------------------
    Functions for which we know how to extract the name of the theorem from
    its arguments.
@@ -707,7 +681,7 @@ fun replace_spec sl = case sl of
 
 fun is_watch_name x = mem (drop_sig x) (store_thm_list @ name_thm_list)
 
-fun mk_fetch b = 
+fun mk_fetch b =
   map (Code o protect) ["(","DB.fetch",mlquote (!cthy_glob),mlquote b,")"]
 
 fun replace_fetch l = case l of
@@ -745,7 +719,6 @@ fun protect_infix infixity l =
     else [s1,"("] @ l @ [")",s2]
   end
 
-          
 fun is_watch stack id = 
   let fun is_watch_local stack id = 
     case stack_find stack id of
@@ -784,13 +757,12 @@ fun fetch_theorems idl =
       if dmem id dict then (id,rep_fetch id)
       else if dmem (id ^ "_def") dict then (id,rep_fetch (id ^ "_def"))
       else if dmem (id ^ "_DEF") dict then (id,rep_fetch (id ^ "_DEF"))
-      else (print_error ("watch: " ^ id); (id,Watch))
+      else (debug_unfold ("watch: " ^ id); (id,Watch))
   in
     mapfilter f idl
   end
 
-fun dest_replace x = 
-  case x of 
+fun dest_replace x = case x of 
     Replace sl => sl
   | SReplace sl => sl
   | _ => raise ERR "dest_replace" ""
@@ -893,6 +865,13 @@ fun os s = TextIO.output (!oc, s)
 fun rm_endline s =
   let fun f c = if c = #"\n" then #" " else c in implode (map f (explode s)) end
 
+fun is_break s =
+  mem s [
+   "end", "in", "val", "fun",
+   "structure", "signature", "struct", "sig", "open",
+   "infix", "infixl", "infixr",
+   "and", "datatype", "type", "local","let",";"]
+
 fun print_sl sl = case sl of
     []     => () 
   | a :: m => (if is_break a then os ("\n" ^ a) else os (" " ^ a); 
@@ -902,52 +881,63 @@ val infix_decl = tactictoe_dir ^ "/src/infix_file.sml"
 
 fun output_header cthy = 
   (
+  (* Necessary because of cakeml auto-documentation. *)
+  app os 
+  [
+  "(* ========================================================================== *)\n",
+  "(* This file was modifed by TacticToe.                                        *)\n",
+  "(* ========================================================================== *)\n"
+  ];
   app os (bare_readl infix_decl);
-  os ("\nval _ = hhsRecord.start_thy " ^ mlquote cthy)
+  os "open hhsRecord;\n";
+  os ("val _ = hhsRecord.start_thy " ^ mlquote cthy)
   )
 
 fun output_foot cthy file = 
   os ("\nval _ = hhsRecord.end_thy " ^ mlquote cthy)
 
-fun clean_unfold cthy =
-  let
-    val log_dir = tactictoe_dir ^ "/record_log/" ^ cthy
-    val _ = OS.FileSys.mkDir log_dir handle _ => ()
-    val _ = extract_err_glob := log_dir ^ "/unfold"
-  in
-    erase_file (!extract_err_glob)
-  end
-
 fun start_unfold_thy cthy =
   (
+  cthy_glob := cthy;
   mkDir_err hhs_open_dir;
+  mkDir_err hhs_unfold_dir;
+  erase_file (hhs_unfold_dir ^ "/" ^ cthy);
+  (* statistics *)
   n_store_thm := 0;
   name_number := 0;
-  clean_unfold cthy;
-  cthy_glob := cthy;
-  infix_glob := overlay_infixity;
-  cthy_stack_dict := dnew String.compare (open_struct [] (cthy ^ "Theory"));
-  open_cache := [];
   open_time := 0.0; 
   replace_special_time := 0.0;
   replace_id_time := 0.0;
-  push_time := 0.0
+  push_time := 0.0;
+  (* initial stack *)
+  infix_glob := overlay_infixity;
+  cthy_stack_dict := dnew String.compare (open_struct [] (cthy ^ "Theory"));
+  (* cache *)
+  open_cache := []
   )
 
-fun end_unfold_thy cthy n =
-  let
-    val unfold_dir = tactictoe_dir ^ "/" ^ cthy
-    val file  = unfold_dir ^ "/" ^ cthy
-    fun f s r = append_endline file (s ^ ": " ^ Real.toString (!r))
+fun end_unfold_thy () =
+  let 
+    val n = !n_store_thm
+    fun f s r = debug_unfold (s ^ ": " ^ Real.toString (!r)) 
   in
     print_endline (int_to_string n ^ " proofs extracted");
-    mkDir_err unfold_dir;
-    erase_file file;
-    append_endline file (int_to_string n ^ " proofs extracted");
+    debug_unfold (int_to_string n ^ " proofs extracted");
     f "Push" push_time;
     f "Open" open_time;
     f "Replace special" replace_special_time;
     f "Replace id" replace_id_time
+  end
+
+fun unquoteString s =
+  let
+    val fin  = tactictoe_dir ^ "/code/quoteString1"
+    val fout = tactictoe_dir ^ "/code/quoteString2"
+    val cmd = HOLDIR ^ "/bin/unquote" ^ " " ^ fin ^ " " ^ fout   
+  in
+    writel fin [s]; 
+    ignore (OS.Process.system cmd);
+    String.concatWith " " (readl fout)
   end
 
 fun hhs_rewrite file = 
@@ -959,7 +949,7 @@ fun hhs_rewrite file =
         val file_out = change_dir file
         val sl = readl file
         val s1 = rm_endline (rm_comment (String.concatWith " " sl))
-        val s2 = hhsQuote.unquoteString s1
+        val s2 = unquoteString s1
         val sl3 = hhs_lex s2
         val p0 = sketch sl3
         val basis_dict = dnew String.compare (map protect basis)
@@ -971,7 +961,7 @@ fun hhs_rewrite file =
         print_sl sl5;
         output_foot cthy file;
         TextIO.closeOut (!oc);
-        end_unfold_thy cthy (!n_store_thm)
+        end_unfold_thy ()
       end
   end
 
@@ -1013,25 +1003,23 @@ end (* struct *)
 
 
 (* ---------------------------------------------------------------------------
-HOL  
+  HOL:  
+  
+  Should get the same version of HOL4 in HOL_COPY
   
   rlwrap bin/hol
   load "hhsUnfold";
   open hhsTools;
   open hhsUnfold;
-
-
-
-
-  val l = all_examples_files () @ all_cakeml_files ();
+  val l = hol_scripts ();
   app hhs_rewrite l;
              
   --------------------------------------------------------------------------- *)
   
   
 (* ---------------------------------------------------------------------------
-CAKEML:
-
+  CAKEML:
+  
   screen -s cakeml
   cd cakeml/compiler/backend/proofs
   /home/thibault/big/HOL/bin/Holmake
@@ -1042,16 +1030,10 @@ CAKEML:
   /home/thibault/big/HOL/bin/Holmake
  
   rlwrap ../HOL/bin/hol
-
   load "hhsUnfold";
   open hhsTools;
   open hhsUnfold;
-
-
-
-
   val l = all_examples_files () @ all_cakeml_files ();
-  app hhs_rewrite l;
-             
+  app hhs_rewrite l;         
   --------------------------------------------------------------------------- *)
   
