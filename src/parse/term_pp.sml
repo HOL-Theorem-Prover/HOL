@@ -1490,9 +1490,11 @@ fun pp_term (G : grammar) TyG backend = let
           fun add_prim_name() = add_ann_string (Thy ^ "$" ^ Name)
           fun with_type action = let
           in
-            pbegin true >>
-            action() >> add_string (" "^type_intro) >> doTy Ty >>
-            pend true
+            if Name = "the_value" andalso Thy = "bool" then action()
+            else
+              pbegin true >>
+              action() >> add_string (" "^type_intro) >> doTy Ty >>
+              pend true
           end
           val r = {Name = Name, Thy = Thy}
           fun normal_const () = let

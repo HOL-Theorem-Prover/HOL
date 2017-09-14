@@ -1,5 +1,3 @@
-val _ = PolyML.SaveState.loadState "../../bin/hol.state";
-
 val _ = use "../../tools-poly/prelude.ML";
 val _ = use "../../tools-poly/prelude2.ML";
 val _ = PolyML.print_depth 0;

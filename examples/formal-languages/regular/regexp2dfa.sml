@@ -1,7 +1,3 @@
-val _ = PolyML.SaveState.loadState "../../../bin/hol.state";
-
-val _ = load "regexpLib";
-
 open Lib regexpMisc;
 
 val justifyDefault = regexpLib.SML;

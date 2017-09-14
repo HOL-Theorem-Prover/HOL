@@ -1,6 +1,7 @@
 signature holyHammer =
 sig
 
+  include Abbrev
   datatype prover = Eprover | Z3
   datatype predictor = KNN | Mepo
    

@@ -10,7 +10,7 @@ src/lite
 src/refute
 src/simp/src
 src/metis
-src/holyhammer
+[poly]src/holyhammer
 src/meson/src
 src/IndDef
 src/basicProof
