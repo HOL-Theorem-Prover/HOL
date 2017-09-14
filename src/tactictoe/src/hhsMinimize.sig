@@ -1,7 +1,7 @@
 signature hhsMinimize =
 sig
 
-include Abbrev
+  include Abbrev
 
   datatype Proof = 
     Tactic of (string * goal)
@@ -11,7 +11,6 @@ include Abbrev
   val hhs_prettify_flag : bool ref
   val hhs_minimize_flag : bool ref
   val minimize : Proof -> Proof
-  
   val reconstruct : goal -> Proof -> string
 
 end
