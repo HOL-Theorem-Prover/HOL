@@ -400,7 +400,7 @@ fun rpt_split_level s sl =
 fun split_charl acc buf csm l1 l2 = 
   if csm = [] then (rev acc, l2) else
   case l2 of
-    []     => raise ERR "" ""
+    []     => raise ERR "split_charl" ""
   | a :: m => if hd csm = a 
               then split_charl acc (a :: buf) (tl csm) l1 m
               else split_charl (a :: (buf @ acc)) [] l1 l1 m  
@@ -411,6 +411,11 @@ fun split_string s1 s2 =
     val (rl1,rl2) = split_charl [] [] l1 l1 l2
   in
     (implode rl1, implode rl2)
+  end
+
+fun rm_prefix s2 s1 = 
+  let val (a,b) = split_string s1 s2 in
+    if a = "" then b else raise ERR "rm_prefix" (s2 ^ " " ^ s1)
   end
 
 (* --------------------------------------------------------------------------

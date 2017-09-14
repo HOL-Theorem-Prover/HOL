@@ -10,7 +10,7 @@ structure hhsRecord :> hhsRecord =
 struct
 
 open HolKernel boolLib hhsTools hhsLexer hhsData hhsNumber hhsExtract hhsUnfold 
-hhsTimeout hhsData tacticToe hhsPredict hhsExec
+hhsTimeout hhsData tacticToe hhsPredict hhsExec hhsMetis
 
 val ERR = mk_HOL_ERR "hhsRecord"
 
@@ -99,8 +99,7 @@ fun out_record_summary cthy =
     g "    Record" (!record_time);
     g "    Save" (!save_time);
     g "    Tactic" (!tactic_time);
-    g "    Feature" (!feature_time);
-    debug_proof ("Bad stac: " ^ (int_to_string (length (!hhs_badstacl))))
+    g "    Feature" (!feature_time)
   end
 
 (* --------------------------------------------------------------------------
@@ -142,9 +141,8 @@ fun record_tactic (tac,stac) g =
    Replaying a proof
    -------------------------------------------------------------------------- *)
 
-fun hhs_altac name qtac goal = 
+fun wrap_tactics_in name qtac goal = 
   let
-    val _ = start_record name goal
     val success_flag = ref NONE
     val cthy = current_theory ()
     val final_stac_ref = ref ""
@@ -260,12 +258,12 @@ fun add_prev_proof () =
  
 fun save_tactictoe_thm thm =
   let 
-    val name = "tactictoe_thm_" ^ int_to_string (!thm_counter)
-    val _    = incr thm_counter
+    val name = "tactictoe_thm_" ^ int_to_string (!tactictoe_thm_counter)
+    val _    = incr tactictoe_thm_counter
     val cthy = current_theory ()
   in
     ignore (save_thm (name,thm)); 
-    String.concatWith " " ["(","DB.fetch",mlquote thy,mlquote name,")"]
+    String.concatWith " " ["(","DB.fetch",mlquote cthy,mlquote name,")"]
   end
 
 fun depid_of_thm thm = (Dep.depid_of o Tag.dep_of o Thm.tag) thm
@@ -287,7 +285,7 @@ fun fetch_thm_aux s reps =
     handle _ => (if reps = "" then (debug_record ("fetch: " ^ s); s) else reps)
   end
   
-val fetch_thm = total_time fetch_thm_time fetch_thm_aux
+val fetch = total_time fetch_thm_time fetch_thm_aux
 
 (*----------------------------------------------------------------------------
   Tactical proofs hooks
@@ -310,7 +308,9 @@ fun end_record () =
   (add_prev_proof () handle _ => debug "Error: add_prev_proof")
   )
 
-fun try_record_proof tac1 tac2 name g =
+val hhs_record_flag = ref true
+
+fun try_record_proof name tac1 tac2 g =
   (
   start_record name g;
   let 
@@ -346,19 +346,20 @@ fun start_thy cthy =
   clean_feadata ();
   reset_profiling ();
   (* Proof search *)
-  clean_subdirl cthy hhs_search_dir ["debug","search","proof"]
+  clean_subdirl cthy hhs_search_dir ["debug","search","proof"];
   (* Features storage *)
-  clean_dir hhs_feature_dir;
-  clean_dir hhs_mdict_dir;
+  clean_dir cthy hhs_feature_dir;
+  clean_dir cthy hhs_mdict_dir;
   (* Tactic scripts recording *)
-  clean_subdirl cthy hhs_record_dir ["errors","summary"] 
+  clean_subdirl cthy hhs_record_dir ["parse","replay","record"] 
   )
 
 fun end_thy cthy = 
   (
   debug_t "export_feavl" (export_feavl cthy) (!hhs_cthyfea);
   debug_t "export_mdict" export_mdict cthy;
-  out_record_summary cthy
+  out_record_summary cthy;
+  debug_proof ("Bad stac: " ^ (int_to_string (length (!hhs_badstacl))))
   )
 
 end (* struct *)

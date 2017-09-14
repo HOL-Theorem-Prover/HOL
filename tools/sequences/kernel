@@ -16,6 +16,7 @@ src/opentheory
 (otknl)src/opentheory/logging
 src/bool
 #include sequences/holyhammer
+[poly]src/tactictoe/src
 src/1
 (otknl)src/opentheory/postbool
 src/proofman

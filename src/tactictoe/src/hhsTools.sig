@@ -109,7 +109,8 @@ sig
 
   val split_level : string -> string list -> (string list * string list)
   val rpt_split_level : string -> string list -> string list list
-  val split_string : string -> string -> (string * string)     
+  val split_string : string -> string -> (string * string)
+  val rm_prefix : string -> string -> string    
   
   val fold_left : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
 
