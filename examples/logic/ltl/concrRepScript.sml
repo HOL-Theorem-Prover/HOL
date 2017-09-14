@@ -1,8 +1,11 @@
-open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory
+open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory pred_setTheory
 
 open alterATheory sptreeTheory ltlTheory generalHelpersTheory
 
 val _ = new_theory "concrRep";
+
+val _ = monadsyntax.temp_add_monadsyntax();
+val _ = overload_on("monad_bind",``OPTION_BIND``);
 
 val _ = Datatype`
   nodeLabelAA = <| frml : α ltl_frml ;
@@ -71,34 +74,18 @@ val _ = Datatype`
                  neg : (α list) ;
                  sucs : (α ltl_frml) list |>`;
 
+val autoStates_def = Define`
+  autoStates (concrAA g i aP) =
+    MAP ((\l. l.frml) o SND) (toAList g.nodeInfo)`;
+
 val inAuto_def = Define`
-  inAuto (concrAA g i aP) f =
-        IS_SOME (findNode (\label. (SND label).frml = f) g)`;
+  inAuto aut f = MEM f (autoStates aut)`;
 
 val IN_AUTO_FINITE = store_thm
   ("IN_AUTO_FINITE",
-   ``!aut. FINITE {x | inAuto aut x }``,
-   rpt strip_tac
-   >> Cases_on `aut`
-   >> `{x | inAuto (concrAA g l l0) x }
-           ⊆ LIST_TO_SET (MAP ((\l. l.frml) o SND) (toAList g.nodeInfo))` by (
-       simp[SUBSET_DEF] >> rpt strip_tac
-       >> fs[inAuto_def,findNode_def]
-       >> Cases_on
-             `(OPTION_MAP FST
-               (FIND (λlabel. (SND label).frml = x) (toAList g.nodeInfo)))`
-       >> fs[IS_SOME_DEF,FIND_def]
-       >>
-
-
-)
- >> Cases_on `aut`
-   >> simp[inAuto_def,findNode_def]
-   >> 
-
-
-)
-
+   ``!aut. FINITE (LIST_TO_SET (autoStates aut))``,
+   rpt strip_tac >> metis_tac[FINITE_LIST_TO_SET]
+  );
 
 val addFrmlToAut_def = Define`
    (addFrmlToAut (concrAA g i aP) (U f1 f2) =
@@ -113,15 +100,104 @@ val addFrmlToAut_def = Define`
 val addEdgeToAut_def = Define`
   addEdgeToAut f (concrEdge pos neg sucs) (concrAA g i aP) =
     let sucIds = CAT_OPTIONS (MAP (\s. findNode (λ(n,l). l.frml = s) g) sucs)
-    in let nodeId = THE (findNode (λ(n,l). l.frml = f) g)
-    in let oldSucs = MAP FST (THE (lookup nodeId g.followers))
-    in let lstGrpId = (if oldSucs = [] then 0 else (HD oldSucs).edge_grp)
-    in let unfolded_edges =
-             MAP (\i. (<| edge_grp := lstGrpId + 1;
+    in do nodeId <- findNode (λ(n,l). l.frml = f) g;
+           oldSucPairs <- lookup nodeId g.followers ;
+           oldSucs <- SOME (MAP FST oldSucPairs);
+           lstGrpId <- SOME (if oldSucs = [] then 0 else (HD oldSucs).edge_grp) ;
+           unfolded_edges <- SOME
+             (MAP (\i. (<| edge_grp := lstGrpId + 1;
                           pos_lab := pos ;
-                          neg_lab := neg ; |>,i)) sucIds
-    in FOLDL (\a e. concrAA (addEdge nodeId e a.graph) i aP)
-             (concrAA g i aP) unfolded_edges`;
+                          neg_lab := neg ; |>,i)) sucIds);
+           FOLDR (\e a_opt. case a_opt of
+                          | NONE => NONE
+                          | SOME a =>
+                                 do newGraph <- addEdge nodeId e a.graph;
+                                    SOME (concrAA newGraph i aP)
+                                 od)
+                 (SOME (concrAA g i aP)) unfolded_edges
+        od`;
+
+val ADDFRML_LEMM = store_thm
+  ("ADDFRML_LEMM",
+   ``!a f. wfg a.graph ==>
+       (set (autoStates a) ⊆ set (autoStates (addFrmlToAut a f))
+      ∧ wfg (addFrmlToAut a f).graph)``,
+   simp[SUBSET_DEF] >> rpt strip_tac >> Cases_on `inAuto a f`
+   >> Cases_on `a`
+    >- (Cases_on `f` >> simp[addFrmlToAut_def])
+    >- (Cases_on `f` >> simp[addFrmlToAut_def,addNode_def]
+        >> `~(g.next ∈ domain g.nodeInfo)` by (
+             fs[wfg_def] >> metis_tac[]
+         )
+        >> fs[autoStates_def,insert_def] >> POP_ASSUM mp_tac
+        >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
+        >> rw[MEM_MAP] >> qexists_tac `y` >> fs[]
+        >> Cases_on `y` >> fs[]
+        >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
+        >> rw[MEM_toAList] >> Cases_on `q = g.next`
+        >> fs[lookup_insert]
+        >> (`lookup q g.nodeInfo = NONE` by metis_tac[lookup_NONE_domain]
+            >> rw[] >> fs[])
+       )
+    >- (Cases_on `f` >> simp[addFrmlToAut_def]
+        >> fs[wfg_def])
+    >- (Cases_on `f` >> simp[addFrmlToAut_def]
+        >> fs[])
+  );
+
+val ADDFRML_FOLDR_LEMM = store_thm
+  ("ADDFRML_FOLDR_LEMM",
+   ``!a fs. wfg a.graph ==>
+      (set (autoStates a) ⊆
+         set (autoStates (FOLDR (\f a. addFrmlToAut a f) a fs))
+         ∧ wfg (FOLDR (\f a. addFrmlToAut a f) a fs).graph)``,
+   gen_tac >> HO_MATCH_MP_TAC list_induction >> rpt strip_tac
+   >> fs[FOLDR]
+     >- (`set (autoStates (FOLDR (λf a. addFrmlToAut a f) a fs))
+           ⊆ set (autoStates (addFrmlToAut (FOLDR (λf a. addFrmlToAut a f) a fs) h))`
+         by metis_tac[ADDFRML_LEMM]
+         >> metis_tac[SUBSET_TRANS])
+     >- (metis_tac[ADDFRML_LEMM])
+  );
+
+val ADDEDGE_LEMM = store_thm
+  ("ADDEDGE_LEMM",
+   ``!a f e. case addEdgeToAut f e a of
+               | SOME newAut => (set (autoStates newAut) = set (autoStates a))
+               | NONE => T ``,
+   rpt strip_tac >> Cases_on `addEdgeToAut f e a`
+   >> fs[] >> Cases_on `e` >> Cases_on `a` >> fs[addEdgeToAut_def]
+   >> Induct_on `(MAP
+                      (λi.
+                           (<|edge_grp :=
+                            (if oldSucPairs = [] then 0
+                             else (HD (MAP FST oldSucPairs)).edge_grp) + 1;
+                            pos_lab := l; neg_lab := l0|>,i))
+                      (CAT_OPTIONS
+                           (MAP (λs. findNode (λ(n,l). l.frml = s) g) l1)))`
+    >> fs[] >> rpt strip_tac
+    >> Cases_on `l1` >> fs[CAT_OPTIONS_def]
+    >> first_x_assum (qspec_then `oldSucPairs` mp_tac) >> rpt strip_tac
+    >> first_x_assum (qspec_then `l` mp_tac) >> rpt strip_tac
+    >> first_x_assum (qspec_then `l0` mp_tac) >> rpt strip_tac
+    >> first_x_assum (qspec_then `g` mp_tac) >> rpt strip_tac
+    >> first_x_assum (qspec_then `t` mp_tac) >> simp[] >> rpt strip_tac
+    >> `v = MAP
+             (λi.
+                  (<|edge_grp :=
+                   (if oldSucPairs = [] then 0
+                    else (HD (MAP FST oldSucPairs)).edge_grp) + 1;
+                   pos_lab := l; neg_lab := l0|>,i))
+             (CAT_OPTIONS (MAP (λs. findNode (λ(n,l). l.frml = s) g) t))`
+       by (Cases_on `g` >> fs[MAP,CAT_OPTIONS_def]
+           >> Cases_on `findNode (λ(n,l). l.frml = h') (gfg s s0 s1 n)`
+           >> fs[CAT_OPTIONS_def]
+
+
+ )
+
+ )
+
 
 
 

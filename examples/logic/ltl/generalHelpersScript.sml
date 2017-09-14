@@ -1,4 +1,4 @@
-open HolKernel Parse bossLib boolLib pred_setTheory relationTheory set_relationTheory arithmeticTheory pairTheory listTheory optionTheory
+open HolKernel Parse bossLib boolLib pred_setTheory relationTheory set_relationTheory arithmeticTheory pairTheory listTheory optionTheory prim_recTheory
 
 val _ = new_theory "generalHelpers"
 
@@ -265,7 +265,7 @@ val D_CONJ_SET_LEMM2 = store_thm
 val CAT_OPTIONS_def = Define`
    (CAT_OPTIONS [] = [])
  ∧ (CAT_OPTIONS (SOME v::ls) = v::(CAT_OPTIONS ls))
- ∧ (CAT_OPTOINS (NONE::ls) = CAT_OPTIONS ls)`;
+ ∧ (CAT_OPTIONS (NONE::ls) = CAT_OPTIONS ls)`;
 
 val OPTION_TO_LIST_def = Define`
     (OPTION_TO_LIST NONE = [])
@@ -276,6 +276,7 @@ val LIST_INTER_def = Define`
   ∧ (LIST_INTER (x::xs) ls = if MEM x ls
                              then x::(LIST_INTER xs ls)
                              else LIST_INTER xs ls)`;
+
 
 val PSUBSET_WF = store_thm
  ("PSUBSET_WF",
@@ -308,5 +309,19 @@ val PSUBSET_WF = store_thm
   >> metis_tac[acyclic_WF]
  );
 
+val WF_LEMM = store_thm
+  ("WF_LEMM",
+   ``!P A b. (!k. A k ==> WF (P k))
+         ==> ((!k. A (b k)) ==> WF (λa a2. (b a = b a2) ∧ P (b a) a a2))``,
+   rpt strip_tac >> rw[WF_IFF_WELLFOUNDED] >> simp[wellfounded_def]
+    >> rpt strip_tac >> CCONTR_TAC >> fs[]
+    >> `∀n. b (f (SUC n)) = b (f n)` by metis_tac[]
+    >> `!n. b (f (SUC n)) = b (f 0)` by (Induct_on `n` >> fs[])
+    >> `!n. P (b (f (SUC n))) (f (SUC n)) (f n)` by metis_tac[]
+    >> `!n. P (b (f 0)) (f (SUC n)) (f n)` by metis_tac[]
+    >> `!n. P (b (f 0)) (f (SUC n)) (f n)` by metis_tac[]
+    >> `~wellfounded (P (b (f 0)))` by metis_tac[wellfounded_def]
+    >> metis_tac[WF_IFF_WELLFOUNDED]
+  );
 
 val _ = export_theory();
