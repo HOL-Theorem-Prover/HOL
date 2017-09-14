@@ -230,6 +230,7 @@ fun compare p =
 
 val empty_tmset = HOLset.empty compare
 fun term_eq t1 t2 = compare(t1,t2) = EQUAL
+fun fast_term_eq t1 t2 = Portable.pointer_eq (t1,t2)
 
 (* ----------------------------------------------------------------------
     All "atoms" (variables (bound or free) and constants).
