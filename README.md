@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/HOL-Theorem-Prover/HOL.svg?branch=master)](https://travis-ci.org/HOL-Theorem-Prover/HOL)
+
 This is the distribution directory for the Kananaskis release of HOL4.
 See http://hol-theorem-prover.org for online resources.
 
