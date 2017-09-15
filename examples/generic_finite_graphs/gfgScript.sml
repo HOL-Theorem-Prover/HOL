@@ -68,7 +68,8 @@ val addEdge_preserves_wfg = Q.store_thm(
     >- metis_tac[]
     >- (fs[INSERT_DEF,SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
           >> metis_tac[])
-    >- (fs[lookup_insert] >> Cases_on `k=i` >> fs[]
+    >- (rename[`lookup k _ = SOME nl`, `MEM (e',n) nl`]
+        >> fs[lookup_insert] >> Cases_on `k=i` >> fs[]
         >> Cases_on `MEM (e',n) followers_old` >> rw[] >> fs[MEM]
         >> metis_tac[]
        )
