@@ -108,12 +108,10 @@ val addEdgeToAut_def = Define`
              (MAP (\i. (<| edge_grp := lstGrpId + 1;
                           pos_lab := pos ;
                           neg_lab := neg ; |>,i)) sucIds);
-           FOLDR (\e a_opt. case a_opt of
-                          | NONE => NONE
-                          | SOME a =>
-                                 do newGraph <- addEdge nodeId e a.graph;
-                                    SOME (concrAA newGraph i aP)
-                                 od)
+           FOLDR (\e a_opt. do a <- a_opt ;
+                               newGraph <- addEdge nodeId e a.graph;
+                               SOME (concrAA newGraph i aP)
+                            od)
                  (SOME (concrAA g i aP)) unfolded_edges
         od`;
 
@@ -167,39 +165,44 @@ val ADDEDGE_LEMM = store_thm
                | NONE => T ``,
    rpt strip_tac >> Cases_on `addEdgeToAut f e a`
    >> fs[] >> Cases_on `e` >> Cases_on `a` >> fs[addEdgeToAut_def]
-   >> Induct_on `(MAP
-                      (λi.
-                           (<|edge_grp :=
-                            (if oldSucPairs = [] then 0
-                             else (HD (MAP FST oldSucPairs)).edge_grp) + 1;
-                            pos_lab := l; neg_lab := l0|>,i))
-                      (CAT_OPTIONS
-                           (MAP (λs. findNode (λ(n,l). l.frml = s) g) l1)))`
-    >> fs[] >> rpt strip_tac
-    >> Cases_on `l1` >> fs[CAT_OPTIONS_def]
-    >> first_x_assum (qspec_then `oldSucPairs` mp_tac) >> rpt strip_tac
-    >> first_x_assum (qspec_then `l` mp_tac) >> rpt strip_tac
-    >> first_x_assum (qspec_then `l0` mp_tac) >> rpt strip_tac
-    >> first_x_assum (qspec_then `g` mp_tac) >> rpt strip_tac
-    >> first_x_assum (qspec_then `t` mp_tac) >> simp[] >> rpt strip_tac
-    >> `v = MAP
-             (λi.
-                  (<|edge_grp :=
-                   (if oldSucPairs = [] then 0
-                    else (HD (MAP FST oldSucPairs)).edge_grp) + 1;
-                   pos_lab := l; neg_lab := l0|>,i))
-             (CAT_OPTIONS (MAP (λs. findNode (λ(n,l). l.frml = s) g) t))`
-       by (Cases_on `g` >> fs[MAP,CAT_OPTIONS_def]
-           >> Cases_on `findNode (λ(n,l). l.frml = h') (gfg s s0 s1 n)`
-           >> fs[CAT_OPTIONS_def]
-
-
- )
-
- )
-
-
-
-
+   >> rename[`concrAA g init aP`]
+   >> qabbrev_tac `M = (MAP
+                           (λi.
+                                (<|edge_grp :=
+                                 (if oldSucPairs = [] then 0
+                                  else (HD (MAP FST oldSucPairs)).edge_grp) + 1;
+                                 pos_lab := l; neg_lab := l0|>,i))
+                           (CAT_OPTIONS
+                                (MAP (λs. findNode (λ(n,l). l.frml = s) g) l1)))`
+   >> qabbrev_tac `doAddEdge =
+                         (λe a_opt.
+                             do
+                             a <- a_opt;
+                          newGraph <- addEdge nodeId e a.graph;
+                          SOME (concrAA newGraph init aP)
+                               od)`
+   >> `!xs. case FOLDR doAddEdge (SOME (concrAA g init aP)) xs of
+            | NONE => T
+            | SOME a => (set (autoStates a)
+                         = set (autoStates (concrAA g init aP)))`
+      by (Induct_on `xs` >> rpt strip_tac >> fs[]
+          >> Cases_on
+               `doAddEdge h (FOLDR doAddEdge (SOME (concrAA g init aP)) xs)`
+          >> fs[]
+          >> `~(FOLDR doAddEdge (SOME (concrAA g init aP)) xs = NONE)` by (
+               Cases_on `FOLDR doAddEdge (SOME (concrAA g init aP)) xs` >> fs[]
+               >> qunabbrev_tac `doAddEdge` >> Cases_on `h` >> fs[]
+           )
+          >> fs[] >> Cases_on `FOLDR doAddEdge (SOME (concrAA g init aP)) xs`
+          >> fs[] >> qunabbrev_tac `doAddEdge` >> Cases_on `h` >> fs[]
+          >> fs[addEdge_def] >> Cases_on `x'` >> simp[autoStates_def]
+          >> fs[] >> Cases_on `x''` >> fs[autoStates_def]
+          >> `g''.nodeInfo = g'.nodeInfo` suffices_by metis_tac[]
+          >> rw[]
+         )
+   >> first_x_assum (qspec_then `M` mp_tac) >> rpt strip_tac
+   >> Cases_on `FOLDR doAddEdge (SOME (concrAA g init aP)) M`
+   >> fs[] >> rw[]
+  );
 
 val _ = export_theory ();

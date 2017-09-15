@@ -1,6 +1,6 @@
-open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory relationTheory pred_setTheory prim_recTheory pairTheory
+open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory relationTheory pred_setTheory prim_recTheory pairTheory bagTheory
 
-open alterATheory sptreeTheory ltlTheory generalHelpersTheory concrRepTheory
+open alterATheory sptreeTheory ltlTheory generalHelpersTheory concrRepTheory ltl2waaTheory
 
 val _ = new_theory "concrltl2waa"
 
@@ -11,10 +11,74 @@ val tempDNF_concr_def = Define`
   ∧ (tempDNF_concr (CONJ f1 f2) =
        let tDNF1 = tempDNF_concr f1 in
            let tDNF2 = tempDNF_concr f2 in
-               FOLDL (\_ l. MAP (($++) l) tDNF2) [] tDNF1)
+               FOLDR (\l _. MAP (($++) l) tDNF2) [] tDNF1)
   ∧ (tempDNF_concr (X f)= [[X f]])
   ∧ (tempDNF_concr (U f1 f2) = [[U f1 f2]])
   ∧ (tempDNF_concr (R f1 f2) = [[R f1 f2]])`;
+
+val FOLDR_LEMM = store_thm
+  ("FOLDR_LEMM",
+  ``!m2 m1 p. MEM p (FOLDR (λq _. MAP ($++ q) m1) [] m2)
+  ==> (?l1 l2. (MEM l1 m1 ∧ MEM l2 m2) ∧ (p = (l2 ++ l1)))``,
+  Induct_on `m2` >> fs[]
+  >> rpt strip_tac >> fs[MEM_MAP] >> rw[] >> simp[EQ_IMP_THM]
+  >> rpt strip_tac >> metis_tac[]
+  );
+
+val FOLDR_LEMM2 = store_hm
+  ("FOLDR_LEMM2",
+   ``!m1 m2 l1 l2. MEM l1 m1 ∧ MEM l2 m2
+  ==> MEM (l1 ++ l2) (FOLDR (λl _. MAP ($++ l) m1) [] m2)``,
+   Induct_on `l1`
+    >- Induct_on `m2`
+       >> fs[] >> rpt strip_tac >> fs[MEM_MAP]
+    >- (Induct_on `m2` >> fs[])
+
+
+)
+
+
+val TEMPDNF_CONCR_LEMM = store_thm
+  ("TEMPDNF_CONCR_LEMM",
+   ``!f. set (MAP set (tempDNF_concr f)) = tempDNF f``,
+   Induct_on `f` >> simp[tempDNF_concr_def,tempDNF_def]
+   >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
+    >- (fs[MEM_MAP]
+        >> `∃l1 l2. (MEM l1 (tempDNF_concr f') ∧ MEM l2 (tempDNF_concr f))
+               ∧ (y = l2 ⧺ l1)` by (
+             HO_MATCH_MP_TAC FOLDR_LEMM >> fs[]
+         )
+        >> `set l1 ∈ tempDNF f'` by (
+             `set l1 ∈ set (MAP set (tempDNF_concr f'))` suffices_by fs[]
+             >> simp[MEM_MAP] >> metis_tac[]
+         )
+        >> `set l2 ∈ tempDNF f` by (
+             `set l2 ∈ set (MAP set (tempDNF_concr f))` suffices_by fs[]
+             >> simp[MEM_MAP] >> metis_tac[]
+         )
+        >> qexists_tac `set l2` >> qexists_tac `set l1` >> fs[]
+       )
+    >- (fs[MEM_MAP]
+        >> `?l1. (MEM l1 (tempDNF_concr f)) ∧ (set l1 = f'')` by (
+             `?l1. (MEM (set l1) (MAP set (tempDNF_concr f))) ∧ (set l1 = f'')`
+              suffices_by (fs[MEM_MAP] >> metis_tac[])
+             >> fs[SET_EQ_SUBSET] >> fs[SUBSET_DEF,MEM_MAP] >> metis_tac[]
+             )
+        >> `?l2. (MEM l2 (tempDNF_concr f')) ∧ (set l2 = f''')` by (
+             `?l2. (MEM (set l2) (MAP set (tempDNF_concr f'))) ∧ (set l2 = f''')`
+               suffices_by (fs[MEM_MAP] >> metis_tac[])
+             >> fs[SET_EQ_SUBSET] >> fs[SUBSET_DEF,MEM_MAP] >> metis_tac[]
+         )
+        >> qexists_tac `l2 ++ l1` >> fs[UNION_DEF]
+        >> rpt strip_tac >> fs[]
+          >- (simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> metis_tac[])
+          >- ()
+
+)
+
+
+)
+
 
 val props_concr_def = Define`
     (props_concr (VAR a) = [a])
@@ -122,36 +186,125 @@ val NNPT_WF = store_thm
    >> metis_tac[WF_SUBSET]
  );
 
-(* val expandAuto_def = Define` *)
-(*    (* (expandAuto φ = *) *)
-(*    (*    let initForms = tempDNF_concr φ *) *)
-(*    (*    in let a0 = concrAA empty [] (props_concr φ) *) *)
-(*    (*    in let a1 = FOLDL (\a s. addFrmlToAut a s) a0 (FLAT initForms) *) *)
-(*    (*    in let init_concr = *) *)
-(*    (*             MAP *) *)
-(*    (*                 (λ l. *) *)
-(*    (*                    MAP (\s. THE (findNode (λ(_,l). l.frml = s) a1.graph)) l) *) *)
-(*    (*                 initForms *) *)
-(*    (*    in let a_init = a1 with <| init := init_concr |> *) *)
-(*    (*    in expandAuto_step (FLAT initForms) a_init) *) *)
-(*  (expandAuto_step aut [] = SOME aut) *)
-(*  ∧ (expandAuto_step (concrAA g init aP) (f::fs)  = *)
-(*     if wfg g *)
-(*     then *)
-(*      let a1 = addFrmlToAut (concrAA g init aP) f *)
-(*      in let trans = trans_concr aP f *)
-(*      in let allSucs = FOLDR (\e pr. e.sucs ++ pr) [] trans *)
-(*      in let a2 = FOLDR (\p g. addFrmlToAut g p) a1 allSucs *)
-(*      in let a3 = *)
-(*             FOLDR (\e a_opt. case a_opt of *)
-(*                            | NONE => NONE *)
-(*                            | SOME a => addEdgeToAut f e a) *)
-(*                   (SOME a2) trans *)
-(*      in let restNodes = FILTER (\s. ~(inAuto (concrAA g init aP) s)) allSucs *)
-(*      in case a3 of *)
-(*          | NONE => NONE *)
-(*          | SOME aut => expandAuto_step aut (restNodes++fs) *)
-(*     else NONE )`; *)
+val list_to_bag_def = Define`
+  (list_to_bag [] = K 0)
+  ∧ (list_to_bag (x::xs) = (list_to_bag xs) ⊎ {|x|})`;
+
+val LST_TO_BAG_FINITE = store_thm
+  ("LST_TO_BAG_FINITE",
+  ``!l. FINITE_BAG (list_to_bag l)``,
+  simp[FINITE_BAG] >> Induct_on `l`
+   >- (fs[list_to_bag_def,EMPTY_BAG])
+   >- (rpt strip_tac >> simp[list_to_bag_def]
+       >> `P (list_to_bag l)` by metis_tac[]
+       >> `P (BAG_INSERT h (list_to_bag l))` by metis_tac[]
+       >> `P (EL_BAG h ⊎ (list_to_bag l))` by metis_tac[BAG_INSERT_UNION]
+       >> fs[EL_BAG] >> metis_tac[COMM_BAG_UNION]
+      )
+  );
+
+val LST_TO_BAG_APPEND_UNION = store_thm
+  ("LST_TO_BAG_APPEND_UNION",
+   ``!l k. list_to_bag (l ++ k) = list_to_bag l ⊎ list_to_bag k``,
+   gen_tac >> Induct_on `l`
+     >- (simp[list_to_bag_def] >> fs[EMPTY_BAG])
+     >- (simp[list_to_bag_def] >> rpt strip_tac
+         >> metis_tac[COMM_BAG_UNION,ASSOC_BAG_UNION])
+  );
+
+val IN_LST_TO_BAG = store_thm
+ ("IN_LST_TO_BAG",
+  ``!x l. (x ⋲ list_to_bag l) = (x ∈ set l)``,
+  gen_tac >> Induct_on `l`
+   >- (simp[list_to_bag_def] >> metis_tac[NOT_IN_EMPTY_BAG,EMPTY_BAG])
+   >- (rpt strip_tac >> simp[list_to_bag_def] >> metis_tac[])
+ );
+
+
+val expandAuto_def = Define`
+   (* (expandAuto φ = *)
+   (*    let initForms = tempDNF_concr φ *)
+   (*    in let a0 = concrAA empty [] (props_concr φ) *)
+   (*    in let a1 = FOLDL (\a s. addFrmlToAut a s) a0 (FLAT initForms) *)
+   (*    in let init_concr = *)
+   (*             MAP *)
+   (*                 (λ l. *)
+   (*                    MAP (\s. THE (findNode (λ(_,l). l.frml = s) a1.graph)) l) *)
+   (*                 initForms *)
+   (*    in let a_init = a1 with <| init := init_concr |> *)
+   (*    in expandAuto_step (FLAT initForms) a_init) *)
+ (expandAuto_step aut [] = SOME aut)
+ ∧ (expandAuto_step (concrAA g init aP) (f::fs)  =
+     let a1 = addFrmlToAut (concrAA g init aP) f
+     in let trans = trans_concr aP f
+     in let allSucs = FOLDR (\e pr. e.sucs ++ pr) [] trans
+     in let a2 = FOLDR (\p g. addFrmlToAut g p) a1 allSucs
+     in let a3 =
+            FOLDR
+                (\e a_opt. monad_bind a_opt (addEdgeToAut f e))
+                (SOME a2) trans
+     in let restNodes = FILTER (\s. ~(inAuto (concrAA g init aP) s)) allSucs
+     in case a3 of
+         | NONE => NONE
+         | SOME aut => expandAuto_step aut (restNodes++fs))`;
+  (WF_REL_TAC `inv_image
+               (mlt1 (\f1 f2. f1 ∈ tempSubForms f2 ∧ ~(f1 = f2)))
+               (list_to_bag o SND)`
+   >- (metis_tac[STRICT_TSF_WF,WF_mlt1])
+   >- (simp[mlt1_def,list_to_bag_def] >> rpt strip_tac
+       >> fs[LST_TO_BAG_FINITE] >> rpt strip_tac
+       >> qexists_tac `f`
+       >> qabbrev_tac
+           `newNodes = FILTER (λs. ¬inAuto (concrAA g init aP) s)
+                   (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr aP f))`
+       >> qexists_tac `list_to_bag newNodes`
+       >> qexists_tac `list_to_bag fs` >> fs[LST_TO_BAG_APPEND_UNION]
+       >> rpt strip_tac >> `f1 ∈ set newNodes` by metis_tac[IN_LST_TO_BAG]
+       >> qunabbrev_tac `newNodes` >> fs[MEM_FILTER]
+       >> fs[trans_concr_def]
+)
+
+
+(* ) *)
+
+
+(*   (WF_REL_TAC `inv_image *)
+(*                ((measure (CARD o tempSubfCl)) *)
+(*                     LEX ((λ(t,l) (t1,l2). *)
+(*                           ((CARD o tempSubfCl) t = (CARD o tempSubfCl) t1) *)
+(*                           ∧ (LENGTH t1 < LENGTH t) *)
+(*                           ∧ (LENGTH t1 <= (CARD o tempSubfCl) t)) *)
+(*                     LEX (measure LENGTH)))) *)
+(*                (λ(a,ls). ((autoStates a) ++ ls,(autoStates a) ++ ls,ls))` *)
+(*    >> rpt strip_tac >> qabbrev_tac `a0 = concrAA g init aP` *)
+(*    >> qabbrev_tac `a1 = addFrmlToAut a0 f` *)
+(*    >> qabbrev_tac ` *)
+(*         restnodes = FILTER (λs. ¬inAuto a0 s) *)
+(*                            (FOLDR (λe pr. e.sucs ++ pr) [] (trans_concr aP f)) *)
+(*                            ++ fs` *)
+(*    >> Cases_on `LENGTH ((autoStates aut) ++ restnodes) < *)
+(*                     LENGTH ((autoStates a0) ++ (f::fs))` >> fs[] *)
+(*    >> `autoStates aut ++ restnodes = autoStates a0 ++ [f] ++ fs` by ( *)
+(*         POP_ASSUM mp_tac >> simp[LENGTH] *)
+
+(* ) *)
+
+(*    >> rw[] *)
+
+(* ) *)
+
+
+
+
+
+
+
+
+
+
+
+
+
 (*   (WF_REL_TAC `λ(a,ls) (a2,ls2). *)
 (*                (tempSubfCl ((autoStates a) ++ ls) *)
 (*                 = tempSubfCl ((autoStates a2) ++ ls2)) *)

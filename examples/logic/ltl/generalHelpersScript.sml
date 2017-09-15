@@ -277,6 +277,12 @@ val LIST_INTER_def = Define`
                              then x::(LIST_INTER xs ls)
                              else LIST_INTER xs ls)`;
 
+(* val FOLDR_OPT_LEMM = store_thm *)
+(*   ("FOLDR_OPT_LEMM", *)
+(*    ``!f a_init_opt ls x. *)
+(*        (FOLDR (λe a_opt. monad_bind a_opt (f e)) a_init_opt ls = SOME x) *)
+(*        ==> ?a_init. (x = FOLDR f a_init ls) ∧ (a_init_opt = SOME a_init)``, *)
+(* ) *)
 
 val PSUBSET_WF = store_thm
  ("PSUBSET_WF",
@@ -309,6 +315,46 @@ val PSUBSET_WF = store_thm
   >> metis_tac[acyclic_WF]
  );
 
+val BOUNDED_INCR_WF_LEMM = store_thm
+  ("BOUNDED_INCR_WF_LEMM",
+   ``!b m n. WF (λ(i,j) (i1,j1).
+                  (b (i,j) = b (i1,j1))
+                  ∧ (i1 < i) ∧ (i <= b (i,j)))``,
+   rpt strip_tac >> rw[WF_IFF_WELLFOUNDED] >> simp[wellfounded_def]
+   >> rpt strip_tac >> CCONTR_TAC >> fs[]
+   >> `!n. b (FST (f n), SND (f n)) = b (FST (f 0), SND (f 0))` by (
+       Induct_on `n` >> first_x_assum (qspec_then `n` mp_tac) >> rpt strip_tac
+       >> fs[] >> Cases_on `f n` >> Cases_on `f (SUC n)`
+       >> fs[]
+   )
+   >> qabbrev_tac `B = b (FST (f 0),SND (f 0))`
+   >> `!n. (λ(i,j) (i1,j1). i1 < i ∧ i <= B) (f (SUC n)) (f n)` by (
+       rpt strip_tac >> rpt (first_x_assum (qspec_then `n` mp_tac))
+       >> rpt strip_tac >> Cases_on `f n` >> Cases_on `f (SUC n)`
+       >> fs[]
+   )
+   >> `!k. ?n. (FST (f n) > k)` by (
+       Induct_on `k`
+        >- (Cases_on `FST (f 0)` >> fs[]
+         >- (first_x_assum (qspec_then `0` mp_tac) >> rpt strip_tac
+             >> qexists_tac `SUC 0` >> Cases_on `f (SUC 0)` >> Cases_on `f 0`
+             >> fs[]
+            )
+         >- (qexists_tac `0` >> fs[])
+           )
+        >- (fs[] >> Cases_on `FST (f n) = SUC k`
+         >- (first_x_assum (qspec_then `n` mp_tac) >> rpt strip_tac
+             >> Cases_on `f (SUC n)` >> Cases_on `f n` >> fs[]
+             >> qexists_tac `SUC n` >> fs[]
+            )
+         >- (qexists_tac `n` >> fs[])
+           )
+   )
+   >> first_x_assum (qspec_then `B` mp_tac) >> rpt strip_tac
+   >> first_x_assum (qspec_then `n` mp_tac) >> rpt strip_tac
+   >> Cases_on `f (SUC n)` >> Cases_on `f n` >> fs[]
+  );
+
 val WF_LEMM = store_thm
   ("WF_LEMM",
    ``!P A b. (!k. A k ==> WF (P k))
@@ -323,5 +369,43 @@ val WF_LEMM = store_thm
     >> `~wellfounded (P (b (f 0)))` by metis_tac[wellfounded_def]
     >> metis_tac[WF_IFF_WELLFOUNDED]
   );
+
+(* val list_to_bag_def = Define` *)
+(*   (list_to_bag [] = K 0) *)
+(*   ∧ (list_to_bag (x::xs) = (list_to_bag xs) ⊎ {|x|})`; *)
+
+
+(* val WF_MULTISET = store_thm *)
+(*   ("WF_MULTISET", *)
+(*    ``!P. WF P ==> *)
+(*          WF (λl1 l2. ?xs fs x. (l1 = (fs ++ xs)) ∧ (l2 = (x::xs)) *)
+(*               ∧ (!f. MEM f fs ==> P f x))``, *)
+(*    rpt strip_tac >> rw[WF_IFF_WELLFOUNDED] >> simp[wellfounded_def] *)
+(*    >> rpt strip_tac >> CCONTR_TAC >> fs[] *)
+(*    >> `!n. (LENGTH (f (SUC n)) < LENGTH (f n)) *)
+(*         \/ (?xs fs x. (f (SUC n) = fs ⧺ xs) ∧ (f n = x::xs) *)
+(*              ∧ (∀f. ¬MEM f fs ∨ P f x) ∧ (~(fs = [])))` by ( *)
+(*        rpt strip_tac >> Cases_on `LENGTH (f (SUC n)) < LENGTH (f n)` >> fs[] *)
+(*        >> first_x_assum (qspec_then `n` mp_tac) >> rpt strip_tac *)
+(*        >> qexists_tac `xs` >> qexists_tac `fs` >> qexists_tac `x` *)
+(*        >> fs[] >> Cases_on `LENGTH fs = 0` >> fs[] *)
+(*    ) *)
+(*    >> `?k. !n. (k <= n) ==> *)
+(*         ∃xs fs x. *)
+(*         f (SUC n) = fs ⧺ xs ∧ f n = x::xs ∧ (∀f. ¬MEM f fs ∨ P f x) ∧ *)
+(*                                           fs ≠ []` by ( *)
+(*        CCONTR_TAC >> fs[] *)
+(*        >> `!k. ?n. k <= n ∧  LENGTH (f (SUC n)) < LENGTH (f n)` by metis_tac[] *)
+(*        >> `?g. !k. (k <= g k) ∧ LENGTH (f (SUC (g k))) < LENGTH (f (g k))` *)
+(*           by metis_tac[SKOLEM_THM] *)
+(*        >>  *)
+
+(* ) *)
+(*        >>  *)
+(* ) *)
+
+
+(* ) *)
+
 
 val _ = export_theory();
