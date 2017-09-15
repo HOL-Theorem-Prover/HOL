@@ -253,6 +253,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     p ("set -e");
     p (protect(fullPath [HOLDIR, "bin", "buildheap"]) ^ " --gcthreads=1 " ^
        (if polynothol then "--poly" else "--holstate="^protect(HOLSTATE)) ^
+       (if debug then "--dbg" else "") ^
        " " ^ String.concatWith " " (map protect files));
     p ("exit 0");
     TextIO.closeOut out;
@@ -300,9 +301,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         val _ = app safedelete expected_results
         val useScript = fullPath [HOLDIR, "bin", "buildheap"]
         val cline = useScript::
-                    (if polynothol then "--poly" else
-                     "--holstate="^HOLSTATE)::
-                    objectfiles
+                    (if polynothol then "--poly" else "--holstate="^HOLSTATE)::
+                    ((if debug then ["--dbg"] else []) @ objectfiles)
         fun cont wn res =
           let
             val _ =
