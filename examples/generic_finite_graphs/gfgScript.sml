@@ -42,6 +42,7 @@ val wfAdjacency_def = Define‘
      ∀k nl e n. lookup k adjmap = SOME nl ∧ MEM (e,n) nl ⇒
                 n ∈ domain adjmap’;
 
+
 val wfg_def = Define‘
   wfg g ⇔ (∀n. g.next ≤ n ⇒ n ∉ domain g.nodeInfo) ∧
            (domain g.followers = domain g.nodeInfo) ∧
@@ -67,13 +68,9 @@ val addEdge_preserves_wfg = Q.store_thm(
     >- metis_tac[]
     >- (fs[INSERT_DEF,SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
           >> metis_tac[])
-    >- (rw[] >> fs[lookup_insert] >> Cases_on `k=i` >> fs[]
-        >- (Cases_on `MEM (e',n) followers_old`
-          >- metis_tac[]
-          >- (`(e',n) = (e,s)` by (rw[] >> fs[MEM])
-              >> rw[] >> fs[])
-          )
-        >- (fs[] >> metis_tac[])
+    >- (fs[lookup_insert] >> Cases_on `k=i` >> fs[]
+        >> Cases_on `MEM (e',n) followers_old` >> rw[] >> fs[MEM]
+        >> metis_tac[]
        )
     >- metis_tac[]
     );
