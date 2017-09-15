@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib listTheory;
+open HolKernel Parse boolLib bossLib listTheory pred_setTheory;
 
 open sptreeTheory arithmeticTheory;
 
