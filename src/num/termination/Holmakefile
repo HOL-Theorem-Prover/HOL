@@ -25,7 +25,7 @@ all: $(HOLHEAP) selftest.exe
 # -F is reasonable here because all files will be in sigobj directory, so
 # dependency analysis will always find them.
 $(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/bin/hol.state0)
-	$(protect $(HOLDIR)/bin/buildheap) -F -o $@ -b $(protect $(HOLDIR)/bin/hol.state0) $(BARE_DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -F -o $@ -b $(protect $(HOLDIR)/bin/hol.state0) $(BARE_DEPS)
 else
 EXTRA_CLEANS = selftest.exe
 endif

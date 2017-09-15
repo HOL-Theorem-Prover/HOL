@@ -13,6 +13,7 @@ struct
       val MOSMLCOMP = fullPath [MOSMLDIR, "mosmlc"]
       val basis_string = if nob2002 then [] else [LIT " basis2002.ui"]
       val alist = [
+        ("DEBUG_FLAG", if #debug (#core cline) then [LIT "--dbg"] else []),
         ("MOSML_INCLUDES",
          [VREF "if $(findstring NO_SIGOBJ,$(OPTIONS)),,-I \
                                    \$(protect $(SIGOBJ))", LIT " "] @
