@@ -1687,3 +1687,6 @@ val RUN_WELLBEHAVED_MERGE = store_thm
 
 (* ) *)
 (* ) *)
+
+
+val _ = export_theory();

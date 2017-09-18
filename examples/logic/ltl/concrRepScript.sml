@@ -74,6 +74,12 @@ val _ = Datatype`
                  neg : (α list) ;
                  sucs : (α ltl_frml) list |>`;
 
+val concr2AbstractEdge_def = Define`
+  concr2AbstractEdge aP (concrEdge pos neg sucs) =
+       (FOLDR (\a sofar. (char (POW aP) a) ∩ sofar)
+          (FOLDR (\a sofar. (char_neg (POW aP) a) ∩ sofar) (POW aP) neg) pos
+       , set sucs)`;
+
 val autoStates_def = Define`
   autoStates (concrAA g i aP) =
     MAP ((\l. l.frml) o SND) (toAList g.nodeInfo)`;
@@ -97,6 +103,27 @@ val addFrmlToAut_def = Define`
        then (concrAA g i aP)
        else concrAA (addNode <| frml := f; is_final := F |> g) i aP)`;
 
+val ADDFRML_LEMM = store_thm
+  ("ADDFRML_LEMM",
+   ``!aut f. inAuto (addFrmlToAut aut f) f``,
+   rpt strip_tac >> Cases_on `inAuto aut f`
+    >- (Cases_on `f` >> Cases_on `aut` >> simp[addFrmlToAut_def])
+    >- (Cases_on `?f1 f2. f = U f1 f2` >> Cases_on `aut`
+        >- (fs[] >> rw[]
+            >> simp[addFrmlToAut_def,inAuto_def,autoStates_def,MEM_MAP]
+            >> simp[addNode_def,MEM_toAList]
+            >> qexists_tac `(g.next,<|frml := U f1 f2; is_final := T|>)`
+            >> fs[MEM_toAList]
+           )
+        >- (qabbrev_tac `el = (g.next,<|frml := f; is_final := F|>)`
+            >> Cases_on `f` >> fs[]
+            >> simp[addFrmlToAut_def,inAuto_def,autoStates_def,MEM_MAP]
+            >> simp[addNode_def,MEM_toAList]
+            >> qexists_tac `el` >> qunabbrev_tac `el` >> fs[MEM_toAList]
+           )
+       )
+  );
+
 val addEdgeToAut_def = Define`
   addEdgeToAut f (concrEdge pos neg sucs) (concrAA g i aP) =
     let sucIds = CAT_OPTIONS (MAP (\s. findNode (λ(n,l). l.frml = s) g) sucs)
@@ -115,8 +142,8 @@ val addEdgeToAut_def = Define`
                  (SOME (concrAA g i aP)) unfolded_edges
         od`;
 
-val ADDFRML_LEMM = store_thm
-  ("ADDFRML_LEMM",
+val ADDFRML_LEMM2 = store_thm
+  ("ADDFRML_LEMM2",
    ``!a f. wfg a.graph ==>
        (set (autoStates a) ⊆ set (autoStates (addFrmlToAut a f))
       ∧ wfg (addFrmlToAut a f).graph)``,
@@ -153,9 +180,24 @@ val ADDFRML_FOLDR_LEMM = store_thm
    >> fs[FOLDR]
      >- (`set (autoStates (FOLDR (λf a. addFrmlToAut a f) a fs))
            ⊆ set (autoStates (addFrmlToAut (FOLDR (λf a. addFrmlToAut a f) a fs) h))`
-         by metis_tac[ADDFRML_LEMM]
+         by metis_tac[ADDFRML_LEMM2]
          >> metis_tac[SUBSET_TRANS])
-     >- (metis_tac[ADDFRML_LEMM])
+     >- (metis_tac[ADDFRML_LEMM2])
+  );
+
+val ADDFRML_FOLDR_LEMM2 = store_thm
+  ("ADDFRML_FOLDR_LEMM2",
+   ``!a fs. wfg a.graph ==>
+       set fs ⊆ set (autoStates (FOLDR (λp g. addFrmlToAut g p) a fs))``,
+   Induct_on `fs` >> rpt strip_tac >> fs[] >> rpt strip_tac
+    >- metis_tac[ADDFRML_LEMM,inAuto_def]
+    >- (first_x_assum (qspec_then `a` mp_tac) >> simp[]
+        >> `!ls. wfg (FOLDR (λp g. addFrmlToAut g p) a ls).graph` by (
+             Induct_on `ls` >> fs[] >> rpt strip_tac
+             >> metis_tac[ADDFRML_LEMM2]
+         )
+        >> metis_tac[ADDFRML_LEMM2,SUBSET_TRANS]
+       )
   );
 
 val ADDEDGE_LEMM = store_thm
@@ -204,5 +246,36 @@ val ADDEDGE_LEMM = store_thm
    >> Cases_on `FOLDR doAddEdge (SOME (concrAA g init aP)) M`
    >> fs[] >> rw[]
   );
+
+val ADDEDGE_LEMM2 = store_thm
+  ("ADDEDGE_LEMM2",
+   ``!a f e. inAuto a f ==> IS_SOME (addEdgeToAut f e a)``,
+   rpt strip_tac >> Cases_on `e` >> Cases_on `a` >> fs[addEdgeToAut_def]
+   >> rw[IS_SOME_EXISTS] >> fs[inAuto_def,autoStates_def,MEM_MAP]
+   >> simp[findNode_def]
+   >> Q.HO_MATCH_ABBREV_TAC `?x nodeId. A nodeId ∧ P x nodeId`
+   >> `?nodeId. A nodeId ∧ ?x. P x nodeId`
+       suffices_by metis_tac[SWAP_EXISTS_THM]
+   >> qunabbrev_tac `P` >> qunabbrev_tac `A` >> fs[]
+   >> Cases_on `y` >> fs[MEM_toAList] >> qexists_tac `q`
+   >> rpt strip_tac
+    >- (qexists_tac `(q,r)` >> fs[FIND_def]
+        >> `!g1 a b. (lookup a g1.nodeInfo = SOME b)
+          ==> FIND (λ(n,l). l.frml = r.frml) (toAList g.nodeInfo) = SOME (q,r
+             
+
+        >> Induct_on `toAList g.nodeInfo`
+        >> rpt strip_tac
+         >- (`MEM (q,r) (toAList g.nodeInfo)` by fs[MEM_toAList]
+             >> rw[]
+             >> `MEM (q,r) []` by metis_tac[]
+             >> fs[MEM])
+         >- ()
+
+       )
+
+
+)
+
 
 val _ = export_theory ();
