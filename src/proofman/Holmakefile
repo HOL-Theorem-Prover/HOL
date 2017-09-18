@@ -30,7 +30,7 @@ UOARGS = $(protect $(SIGOBJ)/boolLib) proofManagerLib History goalStack
 EXTRA_CLEANS = $(TARGET)
 
 $(TARGET): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) --poly -o $@ $(UOARGS)
+	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) --poly -o $@ $(UOARGS)
 
 all: selftest.exe $(TARGET)
 .PHONY: all

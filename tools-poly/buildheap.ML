@@ -151,7 +151,7 @@ fun check_objpath die incs (p, b) =
 
 fun time_max (t1, t2) = if Time.<(t1,t2) then t2 else t1
 
-fun create_heap qp findMod (objs, outputheap) = let
+fun create_heap diag qp findMod (objs, outputheap) = let
   open Systeml TextIO
   val p = if qp then fn s => () else fn s => print (s ^ "\n")
   fun hload obj = (p ("Loading "^obj); load obj)
@@ -167,13 +167,16 @@ in
       let
         val getTime = OS.FileSys.modTime o findMod
         fun foldthis (modname, t0) = time_max(t0, getTime modname)
+        val mtime = foldl foldthis Time.zeroTime objs
       in
-        OS.FileSys.setTime
-          (outputheap, SOME (foldl foldthis Time.zeroTime objs))
+        diag ("Setting mod-time of heap to "^
+              Date.toString (Date.fromTimeLocal mtime));
+        OS.FileSys.setTime (outputheap, SOME mtime)
       end
     | SOME s =>
       warn ("Ignoring strange value (" ^ s ^ ") for " ^
             Systeml.build_after_reloc_envvar));
+  diag "Having built-heap, now exiting successfully";
   OS.Process.exit OS.Process.success
 end
 
@@ -318,7 +321,7 @@ in
             | SOME p => p
       in
         heapname := SOME s;
-        create_heap qp findmod (map #1 objs, s)
+        create_heap diag qp findmod (map #1 objs, s)
       end
     | _ =>
       let
@@ -339,6 +342,7 @@ in
               SOME f => BuildHeap_EXE_Compile.exe_compile
                           {fnname = f, output_exe = valOf output}
             | _ => ();
+        diag "Buildheap done; about to exit successfully";
         OS.Process.exit OS.Process.success
       end
 end handle e =>

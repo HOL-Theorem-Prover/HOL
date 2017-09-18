@@ -7,30 +7,33 @@ type 'a cline_result = { update : (string -> unit) * 'a -> 'a }
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate7 z
+  fun makeUpdateT z = makeUpdate8 z
 in
 fun updateT z = let
-  fun from build_theory_graph help jobcount kernelspec relocbuild selftest
+  fun from build_theory_graph debug help jobcount kernelspec relocbuild selftest
            seqname =
     {build_theory_graph = build_theory_graph,
+     debug = debug,
      help = help,
      jobcount = jobcount,
      kernelspec = kernelspec,
      relocbuild = relocbuild,
      selftest = selftest,
      seqname = seqname}
-  fun from' seqname selftest relocbuild kernelspec jobcount help
+  fun from' seqname selftest relocbuild kernelspec jobcount help debug
             build_theory_graph =
     {build_theory_graph = build_theory_graph,
+     debug = debug,
      help = help,
      jobcount = jobcount,
      kernelspec = kernelspec,
      relocbuild = relocbuild,
      selftest = selftest,
      seqname = seqname}
-  fun to f {build_theory_graph, help, jobcount, kernelspec, relocbuild,
+  fun to f {build_theory_graph, debug, help, jobcount, kernelspec, relocbuild,
             selftest, seqname} =
-    f build_theory_graph help jobcount kernelspec relocbuild selftest seqname
+    f build_theory_graph debug help jobcount kernelspec relocbuild selftest
+      seqname
 in
   makeUpdateT (from, from', to)
 end z
@@ -107,7 +110,8 @@ val cline_opt_descrs = [
            NONE => ()
          | SOME _ => wn "Multiple sequence specs; ignoring earlier spec(s)";
         updateT t (U #seqname (SOME "")) $$) })},
-
+  {help = "enable debugging output", long = ["dbg"], short = "d",
+   desc = mkBool #debug true},
   {help = "display help", long = ["help", "h"], short = "h?",
    desc = mkBool #help true},
   {help = "specify concurrency limit", long = [], short = "j",

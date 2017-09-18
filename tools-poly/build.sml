@@ -22,8 +22,9 @@ datatype phase = Initial | Bare | Full
     Analysing the command-line
    ---------------------------------------------------------------------- *)
 
-val {cmdline,build_theory_graph,do_selftests,SRCDIRS,jobcount,relocbuild} =
-    process_cline ()
+val cline_record = process_cline ()
+val {cmdline,build_theory_graph,selftest_level,...} = cline_record
+val {debug,jobcount,relocbuild,extra={SRCDIRS,...},...} = cline_record
 
 open Systeml;
 
@@ -36,7 +37,7 @@ fun phase_extras () =
 fun aug_systeml proc args = let
   open Posix.Process
   val env' =
-      "SELFTESTLEVEL="^Int.toString do_selftests :: Posix.ProcEnv.environ()
+      "SELFTESTLEVEL="^Int.toString selftest_level :: Posix.ProcEnv.environ()
 in
   case fork() of
     NONE => (exece(proc,proc::args,env')
@@ -67,8 +68,9 @@ in
   buildutils.Holmake aug_systeml isSuccess
                      (fn () => ("-j"^Int.toString jobcount) ::
                                ((if relocbuild then ["--relocbuild"] else []) @
+                                (if debug then ["--dbg"] else []) @
                                 phase_extras()))
-                     analysis do_selftests
+                     analysis selftest_level
 end
 
 (* create a symbolic link - Unix only *)
@@ -99,7 +101,7 @@ fun upload ((src, regulardir), target, symlink) =
              die ("OS error: "^s^" - "^
                   (case erropt of SOME s' => OS.errorMsg s'
                                 | _ => ""))
-    else if do_selftests >= regulardir then
+    else if selftest_level >= regulardir then
       print ("Self-test directory "^src^" built successfully.\n")
     else ()
 
@@ -113,7 +115,7 @@ fun buildDir symlink s =
   if #1 s = fullPath [HOLDIR, "bin/hol.bare"] then phase := Bare
   else if #1 s = fullPath [HOLDIR, "bin/hol"] then phase := Full
   else
-    (build_dir Holmake do_selftests s; upload(s,SIGOBJ,symlink))
+    (build_dir Holmake selftest_level s; upload(s,SIGOBJ,symlink))
 
 fun build_src symlink = List.app (buildDir symlink) SRCDIRS
 

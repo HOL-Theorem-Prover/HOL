@@ -12,6 +12,7 @@ struct
     val POLYMLLIBDIR =
         case #polymllibdir cline of NONE => POLYMLLIBDIR0 | SOME s => s
     val alist = [
+      ("DEBUG_FLAG", if #debug (#core cline) then [LIT "--dbg"] else []),
       ("ISIGOBJ", [VREF "if $(findstring NO_SIGOBJ,$(OPTIONS)),,$(SIGOBJ)"]),
       ("MOSML_INCLUDES", [VREF ("patsubst %,-I %,$(ISIGOBJ) \
                                 \ $(INCLUDES) $(PREINCLUDES)")]),
