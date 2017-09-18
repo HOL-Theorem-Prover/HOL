@@ -39,7 +39,7 @@ val hhs_norecprove_flag = ref false
 val hhs_nolet_flag      = ref false
 val hhs_noprove_flag    = ref true
 
-val hhs_eval_flag     = ref true
+val hhs_eval_flag     = ref false
 val hhs_seldesc_flag  = ref true
 val hhs_hh_flag       = ref false
 
@@ -101,6 +101,39 @@ fun set_parameters () =
     (load "holyHammer" handle _ => (); 
      exec_sml "hh_test" "holyHammer.eval_hh"))
   )
+
+fun set_more_parameters () =
+  (
+  (* predicting *)
+  max_select_pred := 500;
+  hhs_seldesc_flag := true;
+  (* searching *)
+  hhs_invalid_flag := false;
+  hhs_cache_flag := true;
+  hhs_diag_flag := true;
+  hhs_width_coeff := 1.0;
+  hhs_visited_flag := false;
+  hhs_search_time := Time.fromReal (!timeout);
+  hhs_tactic_time := 0.02;
+  hhs_astar_flag := false;
+  hhs_astar_radius := 1;
+  hhs_timedepth_flag := false;
+  (* metis *)
+  hhs_metis_flag := (
+    true andalso 
+    (load "metisTools" handle _ => (); 
+    exec_sml "metis_test" "metisTools.METIS_TAC")
+  );
+  hhs_metis_npred := 16;
+  hhs_metis_time := 0.1;
+  hhs_thmortho_flag := false;
+  (* result *)
+  hhs_minimize_flag := true;
+  hhs_prettify_flag := true
+  (* try holyhammer instead *)
+  )
+
+
 
 (* ----------------------------------------------------------------------
    Parse string tactic to HOL tactic. Quite slow because of 
@@ -370,6 +403,7 @@ val param_glob = ref (fn () => ())
 fun tactictoe goal =
   let
     val _ = init_tactictoe ()
+    val _ = hide init_error_file set_more_parameters ()
     val _ = (!param_glob) () 
     val r = hhsRedirect.hide main_error_file main_tactictoe goal 
   in

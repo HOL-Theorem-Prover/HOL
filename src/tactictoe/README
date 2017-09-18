@@ -1,15 +1,64 @@
-TacTicToe is a tactic-based prover.
+TacticToe is a tactic-based prover.
 
 It explores a proof trees by repeatly selecting tactics that are
 appropriate to solve the current goal.
-The selection relies on a machine learning algorithm on a data set of recorded human tactics in previous proofs.
+The selection relies on a machine learning algorithm on a data set 
+of recorded human tactics.
 
-Run in HOL:
-  load "tactictoe"; 
-  open tactictoe;
-  tactictoe ``1+1=2``;
+NOTES: (for the developers) 
+  Keep up-to-date infix tokens in hhsInfix.sml and 
+  polyml values in hhsUnfold.sml.
+
+INSTALL:
+
+1) Scripts modification: 
   
+  Rewrite scripts file and export them to src/tactictoe/scripts.
+  Generate copy_scripts.sh that allows you to copy the scripts to their
+  relative location.
+  
+  rlwrap bin/hol
+  load "hhsUnfold";
+  open hhsUnfold;
+  rewrite_hol_scripts (); (* takes about 30 minutes *)
 
-Developers' notes:
-  Keep up-to-date list of infix elements and binders in polyml.
+2) Recording tactics:
+  
+  Get a fresh copy HOL_RECORD (or choose a more convenient name)
+  of HOL with same commit "commit-number".
+  
+  # Go to the HOL_RECORD directory
+  cd HOL_RECORD 
+  
+  # Overwrite the scripts files with their modified version.
+  # Assume the relative location of the original HOL is ../HOL. 
+  sh ../HOL/src/tactictoe/src/copy_scripts.sh
+
+  # Copy tactictoe files to src/1. Allow to record early theories.
+  mv src/tactictoe/src/*.sml src/1
+  mv src/tactictoe/src/*.sig src/1
+  mv src/1/infix_file.sml src/tactictoe/src/infix_file.sml
+  
+  # Optional: If you want to add orthogonalization of tactics (usually better). 
+  # set the following files to true in src/1/tacticToe.sml.
+  
+    hhs_ortho_flag := true;
+    hhs_ortho_number := 20;
+    hhs_ortho_metis := true;
+  
+  # Build HOL_RECORD. Takes about 1 or 2 hours.
+  # The use of -j 1 may not be necessary.
+  bin/build -j 1
+
+3) Run TacticToe (in HOL_RECORD):
+  
+  rlwrap bin/hol
+  load "tacticToe";
+  open tacticToe;
+  tactictoe ([],``1+1=2``);
+  
+  Loading 7306 feature vectors
+  val it = fn: thm list -> metisTools.tactic 
+  SRW_TAC [] []
+
 
