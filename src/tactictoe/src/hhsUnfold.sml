@@ -130,21 +130,23 @@ fun replace_code2 st = case st of
     (s,Replace sl) => 
     (
     if length sl = 1 andalso mem #"." (explode (hd sl)) 
-    then sl
+    then mlquote_singleton (String.concatWith " " sl)
     else singleton (String.concatWith " " (record_fetch s sl))
     )
   | (s,SReplace sl) => mlquote_singleton (String.concatWith " " sl)
   | (s,Protect)     => mlquote_singleton s
-  | (s,Watch)       => (debug_unfold ("replace_code2: " ^ s); record_fetch s [])
+  | (s,Watch)       => (debug_unfold ("replace_code2: " ^ s);
+                       singleton (String.concatWith " " (record_fetch s []))
+                       )
   | _               => raise ERR "replace_code2" ""
 
 (* forget "op" in a body that does not contains definitions *)
 fun replace_program f g p = case p of
     [] => []
   | Code ("op",Protect) :: Code (_,SReplace sl) :: m => 
-    sl @ replace_program f g m
+    List.concat (map g sl) @ replace_program f g m
   | Code ("op",Protect) :: Code (_,Replace sl) :: m => 
-    sl @ replace_program f g m
+    List.concat (map g sl) @ replace_program f g m
   | Code ("op",Protect) :: Code (s,_) :: m => 
     (
     if mem #"." (explode s)
@@ -330,6 +332,8 @@ val watch_dict = dnew String.compare (map (fn x => (x,())) watch_list_init)
    Extract calls  
    -------------------------------------------------------------------------- *)
 
+val let_flag = ref false
+
 fun split_codelevel_aux i s pl program = case program of
     []     => raise ERR "split_codelevel_aux" 
       (s ^ " : " ^ (String.concatWith " " (original_program program)))
@@ -341,9 +345,12 @@ fun split_codelevel_aux i s pl program = case program of
     else if mem a ["end",")","]","}"]
       then split_codelevel_aux (i - 1) s (Code (a,tag) :: pl) m
     else split_codelevel_aux i s (Code (a,tag) :: pl) m
-  | x :: m => split_codelevel_aux i s (x :: pl) m
+  | x :: m => (let_flag := true; split_codelevel_aux i s (x :: pl) m)
+    (* raise an error on this line not to simulate buggy version 2
+       that has better results than v3 *)
   
-fun split_codelevel s sl = split_codelevel_aux 0 s [] sl
+fun split_codelevel s sl = 
+  (let_flag := false; split_codelevel_aux 0 s [] sl)
 
 fun rpt_split_codelevel s sl = 
   let val (a,b) = split_codelevel s sl handle _ => (sl,[]) 
@@ -356,39 +363,26 @@ fun original_code x = case x of
   | _ => raise ERR "original_code" ""
 
 fun extract_store_thm sl =
-  if !cthy_glob <> "arithmetic"
-  then
-    let  
-      val (body,cont) = split_codelevel ")" sl
-      val (namel,l0)  = split_codelevel "," body
-      val (term,qtac) = split_codelevel "," l0
-      val name = original_code (last namel)
-    in
-      if is_string name 
-      then SOME (rm_bbra_str (rm_squote name), namel, term, qtac, cont)
-      else NONE
-    end
-    handle _ => NONE
-  else
-    let  
-      val (body,cont) = split_codelevel ")" sl
-      val (namel,l0)  = split_codelevel "," body
-      val (term,qtac) = split_codelevel "," l0
-      val name = original_code (last namel)
-    in
-      if is_string name 
-      then SOME (rm_bbra_str (rm_squote name), namel, term, qtac, cont)
-      else NONE
-    end
+  let  
+    val (body,cont) = split_codelevel ")" sl
+    val lflag = !let_flag
+    val (namel,l0)  = split_codelevel "," body
+    val (term,qtac) = split_codelevel "," l0
+    val name = original_code (last namel)
+  in
+    if is_string name 
+    then SOME (rm_bbra_str (rm_squote name), namel, term, qtac, lflag, cont)
+    else NONE
+  end
 
 fun extract_prove sl =
   let  
     val (body,cont) = split_codelevel ")" sl
+    val lflag = !let_flag
     val (term,qtac) = split_codelevel "," body
   in
-    SOME (term, qtac, cont)
+    SOME (term,qtac,lflag,cont)
   end
-  handle _ => NONE
 
 fun extract_thmname sl =
   let  
@@ -553,6 +547,9 @@ val n_store_thm = ref 0
 
 fun smart_concat_aux sep n l = case l of
     [] => ""
+  | [a] => if n <= 0 orelse n + String.size a <= 75
+           then a
+           else "\n" ^ a
   | a :: m => 
     if n <= 0 orelse n + String.size a <= 75 
     then a ^ sep ^ smart_concat_aux sep (String.size a + n) m 
@@ -568,25 +565,28 @@ fun ppstring_stac qtac =
     String.concatWith " " ["(","String.concatWith",mlquote " ","\n",tac3,")"]
   end
 
-fun modified_program p = case p of
+fun modified_program inh p = case p of
     [] => []
-  | Open sl :: m    => ("open" :: sl) @ [";"] @ modified_program m
-  | Infix l :: m    => List.concat (map stringl_of_infix l) @ modified_program m
-  | In :: m         => "in" :: modified_program m 
-  | Start s :: m    => s :: modified_program m
-  | End :: m        => "end" :: modified_program m
-  | SEnd :: m       => "end" :: modified_program m
+  | Open sl :: m    => 
+    ("open" :: sl) @ [";"] @ modified_program inh m
+  | Infix l :: m    => 
+    List.concat (map stringl_of_infix l) @ modified_program inh m
+  | In :: m         => "in" :: modified_program inh m 
+  | Start s :: m    => s :: modified_program inh m
+  | End :: m        => "end" :: modified_program inh m
+  | SEnd :: m       => "end" :: modified_program inh m
   | Code (a,_) :: m =>
     ( 
-    if mem (drop_sig a) store_thm_list
-       andalso
-       hd_code_par m
-    then
+    if inh 
+      then a :: modified_program inh m
+    else if mem (drop_sig a) store_thm_list andalso hd_code_par m
+      then
       case extract_store_thm (tl m) of
-        NONE => a :: modified_program m
-      | SOME (name, namel, term, qtac, cont) =>
+        NONE => a :: modified_program inh m
+      | SOME (name,namel,term,qtac,lflag,cont) =>
         let 
           val _ = incr n_store_thm
+          val lflag_name = if lflag then "true" else "false"
           val tac1 = original_program qtac
           val tac2 = ppstring_stac qtac
         in
@@ -596,19 +596,19 @@ fun modified_program p = case p of
             ["val","tactictoe_tac2","=","hhsRecord.wrap_tactics_in",
              mlquote name,"\n",tac2] @
             ["in","hhsRecord.try_record_proof",
-             mlquote name,"tactictoe_tac2","tactictoe_tac1","end"] @
+             mlquote name,lflag_name,"tactictoe_tac2","tactictoe_tac1","end"] @
           [")"]
-          @ modified_program cont
+          @ modified_program inh cont
         end
-    else
-       if mem (drop_sig a) prove_list andalso hd_code_par m
-    then
+    else if mem (drop_sig a) prove_list andalso hd_code_par m
+      then
       case extract_prove (tl m) of
-        NONE => a :: modified_program m
-      | SOME (term, qtac, cont) =>
+        NONE => a :: modified_program inh m
+      | SOME (term,qtac,lflag,cont) =>
         let 
           val name = "tactictoe_prove_" ^ (int_to_string (!n_store_thm))
           val _ = incr n_store_thm
+          val lflag_name = if lflag then "true" else "false"
           val tac1 = original_program qtac
           val tac2 = ppstring_stac qtac
         in
@@ -618,15 +618,17 @@ fun modified_program p = case p of
             ["val","tactictoe_tac2","=","hhsRecord.wrap_tactics_in",
              mlquote name,"\n",tac2] @
             ["in","hhsRecord.try_record_proof",
-             mlquote name,"tactictoe_tac2","tactictoe_tac1","end"] @
+             mlquote name,lflag_name,"tactictoe_tac2","tactictoe_tac1","end"] @
           [")"]
-          @ modified_program cont
+          @ modified_program inh cont
         end
-    else a :: modified_program m
+    else a :: modified_program inh m
     )
   | Pattern (s,head,sep,body) :: m => 
-    s :: modified_program head @ [sep] @ modified_program body @ 
-    (if mem s ["val","fun"] then [";"] else []) @ modified_program m
+    s :: modified_program true head @ [sep] @ 
+    modified_program (s <> "val") body @ 
+    (if mem s ["val","fun"] then [";"] else []) @ 
+    modified_program false m
 
 fun stackvl_of_value idl head body =
   let 
@@ -970,7 +972,7 @@ fun rewrite_script file =
         val p0 = sketch sl3
         val basis_dict = dnew String.compare (map protect basis)
         val p2 = unfold 0 [basis_dict] p0
-        val sl5 = modified_program p2
+        val sl5 = modified_program false p2
       in
         if !n_store_thm = 0 then () else
         (
@@ -1031,10 +1033,8 @@ end (* struct *)
 
 (* ---------------------------------------------------------------------------
   HOL:  
-  
-  Should get the same version of HOL4 in HOL_COPY
-  
-  rlwrap bin/hol
+
+  rlwrap hol
   load "hhsUnfold";
   open hhsUnfold;
   rewrite_hol_scripts ();

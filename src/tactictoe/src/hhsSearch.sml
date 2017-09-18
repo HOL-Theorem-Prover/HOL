@@ -640,7 +640,7 @@ fun imperative_search thmpredictor stacpredictor tacdict minstepdict goal =
           val proof = 
             if length proofl <> 1 
             then debug_err "SNH1"
-            else (selflearn (hd proofl); minimize (hd proofl)) 
+            else (selflearn (hd proofl); minimize (hd proofl))
           val sproof = debug_t "reconstruct" reconstruct goal proof
         in
           Proof sproof

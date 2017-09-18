@@ -18,7 +18,6 @@ val init_error_file = tactictoe_dir ^ "/code/init_error"
 val main_error_file = tactictoe_dir ^ "/code/main_error"
 val hide_error_file = tactictoe_dir ^ "/code/hide_error"
 
-
 (* ----------------------------------------------------------------------
    References
    ---------------------------------------------------------------------- *)
@@ -26,8 +25,21 @@ val hide_error_file = tactictoe_dir ^ "/code/hide_error"
 val max_select_pred     = ref 0
 val hhs_previous_theory = ref ""
 
+val hhs_norecord_flag   = ref false
+val hhs_goalstep_flag   = ref false
+
+(* Evaluation after recording (cheat) *)
+val hhs_after_flag        = ref false
+val hhs_aftersmall_flag   = ref false
+val hhs_aftertac_flag     = ref false
+val hhs_aftertoken_flag   = ref false
+
+(* set following tags to true to simulate version 2 *)
+val hhs_norecprove_flag = ref false
+val hhs_nolet_flag      = ref false
+val hhs_noprove_flag    = ref true
+
 val hhs_eval_flag     = ref true
-val hhs_recproof_flag = ref false
 val hhs_seldesc_flag  = ref true
 val hhs_hh_flag       = ref false
 
@@ -49,9 +61,7 @@ fun one_in_n () =
   else true
 
 fun set_parameters () =
-  ( 
-  (* recording *)
-  hhs_recproof_flag := false;
+  (
   (* predicting *)
   max_select_pred := 500;
   hhs_seldesc_flag := true;
@@ -331,8 +341,10 @@ fun debug_eval_status r =
   | Proof s        => debug_proof ("Proof found:\n" ^ s)
 
 (* integer_words return errors hopefully no other *)
-fun eval_tactictoe goal =
-  if !hhs_hh_flag then 
+fun eval_tactictoe name goal =
+  if !hhs_noprove_flag andalso String.isPrefix "tactictoe_prove_" name
+    then ()
+  else if !hhs_hh_flag then 
     let val hh = hh_of_sml () in 
       hh 5 (list_mk_imp goal) handle _ => 
       debug_proof "Proof status: Error" 
@@ -343,7 +355,7 @@ fun eval_tactictoe goal =
         ["integer_word","word_simp","wordSem","labProps",
          "data_to_word_memoryProof","word_to_stackProof"])
     andalso 
-      one_in_n () 
+      one_in_n ()
   then
     let
       val _ = init_tactictoe ()

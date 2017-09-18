@@ -324,7 +324,7 @@ fun read_feavl lookup l = case l of
 fun read_feavdatal thy =
   let
     val file = hhs_feature_dir ^ "/" ^ thy
-    val l0 = TheoryLexer.lex_thydata file 
+    val l0 = hhsLexer.hhs_lex (String.concatWith " " (readl file)) 
       handle _ => (print_endline (thy ^ " is missing"); debug thy; [])
   in
     if l0 = [] 
