@@ -617,7 +617,7 @@ val expandAuto_def = tDefine "expandAuto"
   );
 
 val EXP_AUTO_WFG_AND_SOME = store_thm
-  ("EXP_AUTO_WFG",
+  ("EXP_AUTO_WFG_AND_SOME",
    ``!aut fs. wfg aut.graph
         ==> (?aut2. (expandAuto aut fs = SOME aut2)
               ∧ (wfg aut2.graph))``,
@@ -636,55 +636,58 @@ val EXP_AUTO_WFG_AND_SOME = store_thm
        Cases_on `inAuto (concrAA g init aP) f`
        >> Cases_on `f` >> fs[addFrmlToAut_def]
    )
-   >> `!ls. IS_SOME
+   >> `!ls fs. ?x.
          (FOLDR (λe a_opt. monad_bind a_opt (addEdgeToAut f e))
            (SOME
                 (FOLDR (λp g. addFrmlToAut g p)
                        (addFrmlToAut (concrAA g init aP) f)
-                       (FOLDR (λe pr. e.sucs ⧺ pr) [] ls))) ls)` by (
+                       fs)) ls = SOME x)
+         ∧ wfg x.graph ∧ inAuto x f` by (
        Induct_on `ls` >> fs[] >> rpt strip_tac
-       >> fs[IS_SOME_EXISTS] >> simp[addEdgeToAut_def]
-
-)
-
-
-
-
-
-
-   >> `(FOLDR (λp g. addFrmlToAut g p)
-           (addFrmlToAut (concrAA g init aP) f)
-           (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f)))
-
-`
-
-)
-
-
-
-val EXP_AUTO_NOT_NONE = store_thm
-  ("EXP_AUTO_NOT_NONE",
-   ``!aut fs. ?cA. (expandAuto aut fs  = SOME cA)``,
-   HO_MATCH_MP_TAC (theorem "expandAuto_ind")
-   >> rpt strip_tac >> fs[expandAuto_def]
-   >> `IS_SOME (FOLDR (λe a_opt. monad_bind a_opt (addEdgeToAut f e))
-               (SOME
-                    (FOLDR (λp g. addFrmlToAut g p)
-                           (addFrmlToAut (concrAA g init aP) f)
-                           (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f))))
-               (trans_concr f))` suffices_by (
-       rpt strip_tac >> fs[IS_SOME_EXISTS]
+        >- metis_tac[ADDFRML_FOLDR_LEMM]
+        >- (`set (autoStates (addFrmlToAut (concrAA g init aP) f))
+              ⊆ set (autoStates
+                         (FOLDR (λp g. addFrmlToAut g p)
+                                (addFrmlToAut (concrAA g init aP) f) fs'))`
+                by metis_tac[ADDFRML_FOLDR_LEMM]
+             >> simp[inAuto_def]
+             >> `MEM f (autoStates (addFrmlToAut (concrAA g init aP) f))`
+                 suffices_by metis_tac[SUBSET_DEF]
+             >> metis_tac[inAuto_def,ADDFRML_LEMM]
+           )
+        >- (simp[] >> Q.HO_MATCH_ABBREV_TAC `?x1. (?x2. P x1 x2) ∧ Q x1`
+            >> `?x2 x1. P x1 x2 ∧ Q x1` suffices_by metis_tac[]
+            >> qunabbrev_tac `P` >> qunabbrev_tac `Q`
+            >> first_x_assum (qspec_then `fs'` mp_tac) >> rpt strip_tac
+            >> simp[]
+            >> `∃a2. addEdgeToAut f h x = SOME a2 ∧ wfg a2.graph
+                  ∧ x.graph.nodeInfo = a2.graph.nodeInfo`
+                by metis_tac[ADDEDGE_LEMM2,IS_SOME_EXISTS]
+            >> simp[]
+            >> fs[inAuto_def] >> Cases_on `a2` >> Cases_on `x`
+            >> fs[autoStates_def]
+           )
    )
-   >> 
+   >> metis_tac[]
+  );
+
+val EXP_AUTO_REACHABLE = store_thm
+  ("EXP_AUTO_REACHABLE",
+   ``!aut fs. (expandAuto concrAut fs = SOME a2)
+         ==> (!x. x ∈ autoStates a2
+                  ==> reachRelFromSet aut
 )
 
+
+
+(* ) *)
 
 
 val expandAuto_init_def = Define`
   expandAuto_init φ =
     let initForms = tempDNF_concr φ
     in let a0 = concrAA empty [] (props_concr φ)
-    in let a1 = FOLDL (\a s. addFrmlToAut a s) a0 (FLAT initForms)
+    in let a1 = FOLDR (\s a. addFrmlToAut a s) a0 (FLAT initForms)
     in let init_concr =
            MAP
             (λl. CAT_OPTIONS
@@ -700,7 +703,21 @@ val EXP_WAA_CORRECT = store_thm
           | SOME concrA =>
             concr2AbstrAA concrA = removeStatesSimpl (ltl2waa φ)``,
    rpt strip_tac >> Cases_on `expandAuto_init φ` >> fs[]
-    >- (fs[expandAuto_init_def])
-)
+    >- (fs[expandAuto_init_def] >> POP_ASSUM mp_tac
+        >> Q.HO_MATCH_ABBREV_TAC `(expandAuto aut fs = NONE) ==> F`
+        >> `wfg aut.graph`
+             suffices_by metis_tac[EXP_AUTO_WFG_AND_SOME,NOT_SOME_NONE]
+        >> qunabbrev_tac `aut` >> fs[]
+        >> `wfg (concrAA empty [] (props_concr φ)).graph`
+             suffices_by metis_tac[ADDFRML_FOLDR_LEMM]
+        >> fs[empty_is_wfg]
+       )
+    >- (fs[expandAuto_init_def] >> Cases_on `x` >> simp[concr2AbstrAA_def]
+        >> simp[removeStatesSimpl_def,ltl2waa_def,ltl2waa_free_alph_def]
+        >> rpt strip_tac
+         >- (simp[reachRelFromSet_def] >> 
+
+simp[SET_EQ_SUBSET] >> strip_tac)
+ )
 
 

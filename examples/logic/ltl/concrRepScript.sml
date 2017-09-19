@@ -249,33 +249,91 @@ val ADDEDGE_LEMM = store_thm
 
 val ADDEDGE_LEMM2 = store_thm
   ("ADDEDGE_LEMM2",
-   ``!a f e. inAuto a f ==> IS_SOME (addEdgeToAut f e a)``,
+   ``!a f e. wfg a.graph ∧ inAuto a f
+        ==> (?a2. (addEdgeToAut f e a = SOME a2) ∧ wfg a2.graph
+          ∧ (a.graph.nodeInfo = a2.graph.nodeInfo))``,
    rpt strip_tac >> Cases_on `e` >> Cases_on `a` >> fs[addEdgeToAut_def]
    >> rw[IS_SOME_EXISTS] >> fs[inAuto_def,autoStates_def,MEM_MAP]
    >> simp[findNode_def]
-   >> Q.HO_MATCH_ABBREV_TAC `?x nodeId. A nodeId ∧ P x nodeId`
-   >> `?nodeId. A nodeId ∧ ?x. P x nodeId`
+   >> Q.HO_MATCH_ABBREV_TAC
+       `?x. (?nodeId. A nodeId ∧ ?oSP. P oSP x nodeId) ∧ Q x`
+   >> `?nodeId. A nodeId ∧ ?oSP x. P oSP x nodeId ∧ Q x`
        suffices_by metis_tac[SWAP_EXISTS_THM]
    >> qunabbrev_tac `P` >> qunabbrev_tac `A` >> fs[]
-   >> Cases_on `y` >> fs[MEM_toAList] >> qexists_tac `q`
-   >> rpt strip_tac
-    >- (qexists_tac `(q,r)` >> fs[FIND_def]
-        >> `!g1 a b. (lookup a g1.nodeInfo = SOME b)
-          ==> FIND (λ(n,l). l.frml = r.frml) (toAList g.nodeInfo) = SOME (q,r
-             
-
-        >> Induct_on `toAList g.nodeInfo`
-        >> rpt strip_tac
-         >- (`MEM (q,r) (toAList g.nodeInfo)` by fs[MEM_toAList]
-             >> rw[]
-             >> `MEM (q,r) []` by metis_tac[]
-             >> fs[MEM])
-         >- ()
-
+   >> `?q. (FIND (λ(n,l). l.frml = (SND y).frml) (toAList g.nodeInfo) = SOME q)
+         ∧ ((λ(n,l). l.frml = (SND y).frml) q)` by (
+       qabbrev_tac `P = (λ(n:num,l). l.frml = (SND y).frml)`
+       >> `P y` by (qunabbrev_tac `P` >> Cases_on `y` >> fs[])
+       >> metis_tac[FIND_LEMM]
+   )
+   >> Cases_on `q` >> rename[`_ = SOME (nId,frml)`]
+   >> qexists_tac `nId` >> rpt strip_tac
+    >- (qexists_tac `(nId,frml)` >> fs[])
+    >- (`nId ∈ domain g.followers` by (
+         `nId ∈ domain g.nodeInfo` suffices_by metis_tac[wfg_def]
+         >> `MEM (nId, frml) (toAList g.nodeInfo)` by metis_tac[FIND_LEMM2]
+         >> fs[MEM_toAList] >> metis_tac[domain_lookup]
        )
-
-
-)
-
+       >> fs[domain_lookup]
+       >> Q.HO_MATCH_ABBREV_TAC
+           `?x. FOLDR addSingleEdge a_init ls = SOME x ∧ Q x`
+       >> `!lab x. MEM (lab,x) ls ==> ?h. MEM (x,h) (toAList g.nodeInfo)` by (
+         rpt strip_tac >> qunabbrev_tac `ls` >> fs[MEM_MAP]
+         >> qabbrev_tac
+             `func = λs.
+                         OPTION_MAP FST
+                         (FIND (λ(n,l). l.frml = s) (toAList g.nodeInfo))`
+         >> `?a. MEM a l1 ∧ SOME x = func a` by metis_tac[CAT_OPTIONS_MAP_LEMM]
+         >> qunabbrev_tac `func` >> fs[]
+         >> `MEM z (toAList g.nodeInfo)` by metis_tac[FIND_LEMM2]
+         >> qexists_tac `SND z` >> fs[]
+       )
+       >> `!qs. (!lab x. MEM (lab,x) qs ==> ?h. MEM (x,h) (toAList g.nodeInfo))
+             ==> ?m. (FOLDR addSingleEdge a_init qs = SOME m)
+                   ∧ (g.nodeInfo = m.graph.nodeInfo)
+                   ∧ (wfg m.graph)` by (
+           Induct_on `qs` >> fs[]
+            >- (qunabbrev_tac `a_init` >> simp[])
+            >- (rpt strip_tac
+                >> `∀lab x. MEM (lab,x) qs ⇒ ∃h. MEM (x,h) (toAList g.nodeInfo)`
+                    by metis_tac[]
+                >> `∃m. (FOLDR addSingleEdge a_init qs = SOME m)
+                      ∧ (g.nodeInfo = m.graph.nodeInfo)
+                      ∧ (wfg m.graph)` by metis_tac[]
+                >> `?m2. (addSingleEdge h (SOME m) = SOME m2)
+                       ∧ (g.nodeInfo = m2.graph.nodeInfo)
+                       ∧ (wfg m2.graph)` suffices_by fs[]
+                >> qunabbrev_tac `addSingleEdge` >> Cases_on `h`
+                >> simp[]
+                >> `?nG. addEdge nId (q,r) m.graph = SOME nG` by (
+                     simp[addEdge_def]
+                     >> Q.HO_MATCH_ABBREV_TAC `?nG. P ∧ A nG`
+                     >> `P ∧ (P ==> ?nG. A nG)` suffices_by fs[]
+                     >> qunabbrev_tac `P` >> qunabbrev_tac `A`
+                     >> rpt strip_tac
+                      >- (`MEM (nId,frml) (toAList g.nodeInfo)`
+                             by metis_tac[FIND_LEMM2]
+                          >> fs[MEM_toAList,domain_lookup]
+                          >> metis_tac[]
+                         )
+                      >- (`∃h. MEM (r,h) (toAList g.nodeInfo)` by metis_tac[]
+                          >> fs[MEM_toAList,domain_lookup])
+                      >- (`nId ∈ domain m.graph.followers` by metis_tac[wfg_def]
+                          >> `?fol_o. lookup nId m.graph.followers = SOME fol_o`
+                             by metis_tac[domain_lookup]
+                          >> fs[]
+                         )
+                 )
+                >> qexists_tac `concrAA nG l' l0'` >> simp[]
+                >> `wfg nG` by metis_tac[addEdge_preserves_wfg]
+                >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
+                >> simp[addEdge_def] >> rpt strip_tac
+                >> Cases_on `m.graph` >> fs[gfg_fn_updates]
+                >> fs[gfg_component_equality]
+               )
+       )
+       >> qunabbrev_tac `Q` >> metis_tac[]
+       )
+  );
 
 val _ = export_theory ();

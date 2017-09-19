@@ -267,6 +267,15 @@ val CAT_OPTIONS_def = Define`
  ∧ (CAT_OPTIONS (SOME v::ls) = v::(CAT_OPTIONS ls))
  ∧ (CAT_OPTIONS (NONE::ls) = CAT_OPTIONS ls)`;
 
+val CAT_OPTIONS_MAP_LEMM = store_thm
+  ("CAT_OPTIONS_MAP_LEMM",
+   ``!i f ls. MEM i (CAT_OPTIONS (MAP f ls))
+  ==> ?x. MEM x ls ∧ (SOME i = f x)``,
+   Induct_on `ls` >> fs[CAT_OPTIONS_def,MAP]
+   >> rpt strip_tac >> Cases_on `IS_SOME (f h)`
+   >> fs[IS_SOME_EXISTS] >> rw[] >> fs[CAT_OPTIONS_def] >> metis_tac[]
+  );
+
 val OPTION_TO_LIST_def = Define`
     (OPTION_TO_LIST NONE = [])
   ∧ (OPTION_TO_LIST (SOME l) = l)`;
@@ -277,28 +286,54 @@ val LIST_INTER_def = Define`
                              then x::(LIST_INTER xs ls)
                              else LIST_INTER xs ls)`;
 
+val INDEX_FIND_LEMM = store_thm
+  ("INDEX_FIND_LEMM",
+   ``!P i ls. OPTION_MAP SND (INDEX_FIND i P ls)
+                            = OPTION_MAP SND (INDEX_FIND (SUC i) P ls)``,
+   gen_tac >> Induct_on `ls` >> fs[OPTION_MAP_DEF,INDEX_FIND_def]
+   >> Cases_on `P h`
+    >- fs[OPTION_MAP_DEF,INDEX_FIND_def]
+    >- metis_tac[]
+  );
+
 val FIND_LEMM = store_thm
   ("FIND_LEMM",
    ``!P x l. MEM x l ∧ P x
            ==> ?y. (FIND P l = SOME y) ∧ (P y)``,
   gen_tac >> Induct_on `l` >> rpt strip_tac >> fs[]
    >- (rw[] >> simp[FIND_def,INDEX_FIND_def])
-   >- (rw[] >> simp[FIND_def,INDEX_FIND_def]
-       >> Cases_on `P h` >> fs[FIND_def]
-       >> first_x_assum (qspec_then `x` mp_tac) >> simp[]
-       >> rpt strip_tac >> Cases_on `l`
-        >- (fs[INDEX_FIND_def])
+   >- (rw[]
+       >> `?y. (OPTION_MAP SND (INDEX_FIND 0 P (h::l)) = SOME y)
+             ∧ (P y)` suffices_by fs[FIND_def]
+       >> first_x_assum (qspec_then `x` mp_tac)
+       >> rpt strip_tac
+       >> `?y. (OPTION_MAP SND (INDEX_FIND 0 P l) = SOME y)
+             ∧ (P y)` by fs[FIND_def]
+       >> Cases_on `P h`
+        >- fs[INDEX_FIND_def]
+        >- (`∃y. (OPTION_MAP SND (INDEX_FIND 1 P l) = SOME y) ∧ P y`
+            suffices_by fs[INDEX_FIND_def]
+            >> qexists_tac `y` >> rpt strip_tac
+            >> metis_tac[INDEX_FIND_LEMM,DECIDE ``SUC 0 = 1``])
+      )
+  );
 
-
-       >> qexists_tac `y` >> simp[] >> qexists_tac `z`
-       >> fs[] >> Cases_on `l`
-       >> fs[INDEX_FIND_def] >>
-
-)
-
-  )
-
-
+val FIND_LEMM2 = store_thm
+  ("FIND_LEMM2",
+   ``!P x l. (FIND P l = SOME x) ==> (MEM x l)``,
+   gen_tac >> Induct_on `l` >> fs[FIND_def,INDEX_FIND_def]
+   >> rpt strip_tac >> Cases_on `P h` >> fs[] >> Cases_on `z`
+   >> fs[]
+   >> `OPTION_MAP SND (INDEX_FIND 0 P l) =
+                 OPTION_MAP SND (INDEX_FIND 1 P l)`
+      by metis_tac[INDEX_FIND_LEMM,DECIDE ``SUC 0 = 1``]
+   >> rw[]
+   >> `OPTION_MAP SND (INDEX_FIND 0 P l) = SOME r` by (
+       `OPTION_MAP SND (INDEX_FIND 1 P l) = SOME r` by fs[]
+       >> metis_tac[]
+   )
+   >> fs[]
+  );
 
 val PSUBSET_WF = store_thm
  ("PSUBSET_WF",

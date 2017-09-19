@@ -302,9 +302,20 @@ val REDUCE_TRANS_CORRECT = store_thm
   Remove unreachable states
 *)
 
+val oneStep_def = Define`
+  oneStep aut = \x y. ?a qs. (a,qs) ∈ aut.trans x ∧ y ∈ qs ∧ x ∈ aut.states`;
+
+val reachRel_def = Define`
+  reachRel aut = (oneStep aut)^*`;
+
+val reachRelFromSet_def = Define`
+  reachRelFromSet aut s = { y | ?x. reachRel aut x y ∧ x ∈ s }`;
+
 val removeStatesSimpl_def = Define`
   removeStatesSimpl (ALTER_A s i f a t) =
-            (ALTER_A (s ∩ reachable t (BIGUNION i)) i f a t)`;
+            (ALTER_A
+                 (s ∩ reachRelFromSet (ALTER_A s i f a t) (BIGUNION i))
+                 i f a t)`;
 
 val REDUCE_STATE_CORRECT = store_thm
   ("REDUCE_STATE_CORRECT",
@@ -313,26 +324,34 @@ val REDUCE_STATE_CORRECT = store_thm
      >- (qexists_tac `run` >> fs[runForAA_def] >> rpt strip_tac
           >- (simp[validAARunFor_def] >> rpt strip_tac
              >- (Cases_on `aut` >> fs[validAARunFor_def, removeStatesSimpl_def])
-             >- (Cases_on `aut` >> fs[validAARunFor_def, removeStatesSimpl_def]
-                 >> `!n. run.V n ⊆ reachable f3 (BIGUNION f0)` by (
+             >- ((* Cases_on `aut` >> fs[validAARunFor_def, removeStatesSimpl_def] *)
+                 `!n. run.V n ⊆ reachRelFromSet aut (BIGUNION aut.initial)`
+                      by (
                       Induct_on `n`
-                      >- (fs[reachable_def, nStepReachable_def]
+                      >- (fs[reachRel_def,reachRelFromSet_def]
                           >> simp[SUBSET_DEF] >> rpt strip_tac
-                          >> qexists_tac `0` >> simp[nStepReachable_def]
-                          >> metis_tac[]
+                          >> qexists_tac `x'` >> fs[RTC_REFL]
+                          >> fs[validAARunFor_def] >> metis_tac[]
                          )
-                      >- (simp[SUBSET_DEF,reachable_def] >> rpt strip_tac
-                          >> fs[reachable_def]
-                          >> `!x. x ∈ run.V n ==> ?n. x ∈ nStepReachable f3 (BIGUNION f0) n`
-                              by fs[SUBSET_DEF]
-                          >> first_x_assum (qspec_then `SUC n` mp_tac) >> rpt strip_tac
-                          >> first_x_assum (qspec_then `x'` mp_tac) >> rpt strip_tac
-                          >> fs[] >> `∃q'. x' ∈ run.E (n,q') ∧ q' ∈ run.V n` by fs[]
-                          >> `∃n. q' ∈ nStepReachable f3 (BIGUNION f0) n` by fs[]
-                          >> qexists_tac `SUC n'` >> simp[nStepReachable_def]
-                          >> metis_tac[]
+                      >- (fs[validAARunFor_def]
+                          >> fs[SUBSET_DEF,reachRelFromSet_def]
+                          >> rpt strip_tac >> fs[reachRel_def]
+                          >> `∃q'. x' ∈ run.E (n,q') ∧ q' ∈ run.V n`
+                              by metis_tac[DECIDE ``~(SUC n = 0)``
+                                          ,DECIDE ``SUC n -1 = n``]
+                          >> first_x_assum (qspec_then `q'` mp_tac) >> simp[]
+                          >> rpt strip_tac >> qexists_tac `x''` >> simp[]
+                          >> `oneStep aut q' x'`
+                                 suffices_by metis_tac[RTC_CASES2]
+                          >> simp[oneStep_def]
+                          >> `∃a. (a,run.E (n,q')) ∈ aut.trans q' ∧ at x n ∈ a`
+                              by metis_tac[]
+                          >> qexists_tac `a` >> qexists_tac `run.E (n,q')`
+                          >> simp[] >> metis_tac[SUBSET_DEF]
                          )
-                  ) >> fs[]
+                  )
+                  >> Cases_on `aut`
+                  >> fs[validAARunFor_def,removeStatesSimpl_def]
                 )
              >- (Cases_on `aut` >> fs[validAARunFor_def, removeStatesSimpl_def])
              >- (Cases_on `aut` >> fs[validAARunFor_def, removeStatesSimpl_def])
@@ -517,6 +536,8 @@ val replace_run_def = Define`
                  then replaceState x_old x_new (old_run.E (i,x_old))
                  else replaceState x_old x_new (old_run.E (i,q)))`;
 
+
+
 (* val replace_ord_def = Define` *)
 (*   replace_ord old_ord x x' = *)
 (*       { (s,s') | ~(s = x) ∧ ~(s' = x) ∧ (s,s') ∈ old_ord } *)
@@ -540,648 +561,648 @@ val replace_run_def = Define`
 (* ) *)
 (* ) *)
 
-val oneStep_def = Define`
-  oneStep aut = \x y. ?a qs. (a,qs) ∈ aut.trans y ∧ x ∈ qs ∧ y ∈ aut.states`;
 
-val reachRel_def = Define`
-  reachRel aut = (oneStep aut)^*`;
+(*change to new reach relation*)
 
-val EQUIV_REACH_LEMM = store_thm
-  ("EQUIV_REACH_LEMM",
-   ``!aut x y. x ∈ aut.states ∧ y ∈ aut.states
-              ∧ equivalentStates aut.final aut.trans x y ==>
-         (!v. ~(x = v) ∧ ~(y = v)
-              ==> ((reachRel aut) v x = (reachRel aut) v y))``,
-   `!aut x y. x ∈ aut.states ∧ y ∈ aut.states
-            ∧ equivalentStates aut.final aut.trans x y ==>
-         (!v. ~(x = v) ∧ ~(y = v)
-              ==> ((reachRel aut) v x ==> (reachRel aut) v y))`
-         suffices_by metis_tac[EQUIV_STATES_SYMM]
-    >> gen_tac >> fs[reachRel_def]
-    >> simp[RTC_eq_NRC]
-    >> `∀n x y.
-         x ∈ aut.states ∧ y ∈ aut.states
-         ∧ equivalentStates aut.final aut.trans x y ⇒
-         ∀v.
-         x ≠ v ∧ y ≠ v ⇒
-         NRC (oneStep aut) n v x ⇒ NRC (oneStep aut) n v y` suffices_by metis_tac[]
-    >> Induct_on `n`
-      >- (rpt strip_tac >> fs[NRC])
-      >- (rpt strip_tac >> fs[NRC_SUC_RECURSE_LEFT]
-          >> `oneStep aut z y` by (
-               fs[oneStep_def,equivalentStates_def]
-               >> qexists_tac `a` >> qexists_tac `qs`
-               >> fs[] >> metis_tac[]
-           )
-          >> metis_tac[]
-         )
-  );
+(* val EQUIV_REACH_LEMM = store_thm *)
+(*   ("EQUIV_REACH_LEMM", *)
+(*    ``!aut x y. x ∈ aut.states ∧ y ∈ aut.states *)
+(*               ∧ equivalentStates aut.final aut.trans x y ==> *)
+(*          (!v. ~(x = v) ∧ ~(y = v) *)
+(*               ==> ((reachRel aut) v x = (reachRel aut) v y))``, *)
+(*    `!aut x y. x ∈ aut.states ∧ y ∈ aut.states *)
+(*             ∧ equivalentStates aut.final aut.trans x y ==> *)
+(*          (!v. ~(x = v) ∧ ~(y = v) *)
+(*               ==> ((reachRel aut) v x ==> (reachRel aut) v y))` *)
+(*          suffices_by metis_tac[EQUIV_STATES_SYMM] *)
+(*     >> gen_tac >> fs[reachRel_def] *)
+(*     >> simp[RTC_eq_NRC] *)
+(*     >> `∀n x y. *)
+(*          x ∈ aut.states ∧ y ∈ aut.states *)
+(*          ∧ equivalentStates aut.final aut.trans x y ⇒ *)
+(*          ∀v. *)
+(*          x ≠ v ∧ y ≠ v ⇒ *)
+(*          NRC (oneStep aut) n v x ⇒ NRC (oneStep aut) n v y` suffices_by metis_tac[] *)
+(*     >> Induct_on `n` *)
+(*       >- (rpt strip_tac >> fs[NRC]) *)
+(*       >- (rpt strip_tac >> fs[NRC_SUC_RECURSE_LEFT] *)
+(*           >> `oneStep aut z y` by ( *)
+(*                fs[oneStep_def,equivalentStates_def] *)
+(*                >> qexists_tac `a` >> qexists_tac `qs` *)
+(*                >> fs[] >> metis_tac[] *)
+(*            ) *)
+(*           >> metis_tac[] *)
+(*          ) *)
+(*   ); *)
 
-val MERGE_REACH_LEMM = store_thm
-  ("MERGE_REACH_LEMM",
-  ``!aut x y. isValidAlterA aut ∧ equivalentStates aut.final aut.trans y x
-          ∧ x ∈ aut.states ∧ y ∈ aut.states ∧ ~(x = y)
-          ==> let mergedAut = mergeState x aut
-              in !q1 q2. (reachRel mergedAut) q1 q2
-                 ==>
-                ((q1 = @s. s ∈ aut.states ∧ ~(s = x)
-                   ∧ equivalentStates aut.final aut.trans s x)
-                 \/ (reachRel aut) q1 q2)``,
-  rpt strip_tac >> fs[reachRel_def]
-  >> HO_MATCH_MP_TAC RTC_INDUCT_RIGHT1 >> rpt strip_tac
-  >> fs[rel_to_reln_def]
-  >> qabbrev_tac `s_new = @s.
-          s ∈ aut.states ∧ s ≠ x ∧ equivalentStates aut.final aut.trans s x`
-  >> Cases_on `q1 = s_new` >> fs[]
-  >> `?q3. (oneStep aut) q3 q2' ∧ equivalentStates aut.final aut.trans q2 q3`
-      suffices_by (
-        rpt strip_tac >> Cases_on `q1 = q2` >> Cases_on `q1 = q3`
-        >> rw[]
-          >- (`(oneStep aut) q1 q2'` suffices_by metis_tac[RTC_SUBSET]
-              >> fs[] >> Cases_on `aut` >> fs[mergeState_def,oneStep_def] >> fs[]
-              >> rpt (POP_ASSUM mp_tac) >> rw[] >> fs[] >> rw[]
-                >- (fs[replaceBy_def] >> Cases_on `x'` >> fs[replaceSingleTrans_def]
-                    >> rw[] >> Cases_on `x ∈ r` >> fs[] >> rw[]
-                     >- (qexists_tac `a` >> qexists_tac `r` >> fs[])
-                     >- metis_tac[]
-                   )
-                >- metis_tac[]
-             )
-          >- (`q2 ∈ aut.states ∧ q3 ∈ aut.states` by (
-                 fs[oneStep_def,isValidAlterA_def] >> Cases_on `aut`
-                 >> fs[mergeState_def] >> rw[]
-                 >> Cases_on `∃s. s ∈ f ∧ s ≠ x ∧ equivalentStates f1 f3 s x`
-                 >> fs[replaceBy_def]
-                   >- (Cases_on `x'` >> fs[replaceSingleTrans_def]
-                       >> Cases_on `x ∈ r` >> fs[] >> rw[IN_DIFF, IN_UNION]
-                       >> `s_new ∈ f` by metis_tac[]
-                       >> metis_tac[IN_DIFF,IN_UNION,IN_SING,SUBSET_DEF]
-                      )
-                   >- metis_tac[IN_DIFF,IN_UNION,IN_SING,SUBSET_DEF]
-                   >- metis_tac[IN_DIFF,IN_UNION,IN_SING,SUBSET_DEF]
-                   >- metis_tac[IN_DIFF,IN_UNION,IN_SING,SUBSET_DEF]
-             )
-            >> `(oneStep aut)^* q1 q3` by metis_tac[EQUIV_REACH_LEMM,reachRel_def]
-            >> metis_tac[RTC_CASES_RTC_TWICE,RTC_SUBSET]
-             )
-  )
-  >> fs[] >> Cases_on `aut` >> fs[mergeState_def,oneStep_def] >> fs[]
-  >> rpt (POP_ASSUM mp_tac) >> rw[] >> fs[]
-    >- (fs[replaceBy_def] >> Cases_on `x'` >> fs[replaceSingleTrans_def]
-        >> Cases_on `x ∈ r` >> fs[]
-        >> rw[] >> fs[IN_UNION] >> metis_tac[EQUIV_STATES_REFL]
-       )
-    >- metis_tac[]
-  );
+(* val MERGE_REACH_LEMM = store_thm *)
+(*   ("MERGE_REACH_LEMM", *)
+(*   ``!aut x y. isValidAlterA aut ∧ equivalentStates aut.final aut.trans y x *)
+(*           ∧ x ∈ aut.states ∧ y ∈ aut.states ∧ ~(x = y) *)
+(*           ==> let mergedAut = mergeState x aut *)
+(*               in !q1 q2. (reachRel mergedAut) q1 q2 *)
+(*                  ==> *)
+(*                 ((q1 = @s. s ∈ aut.states ∧ ~(s = x) *)
+(*                    ∧ equivalentStates aut.final aut.trans s x) *)
+(*                  \/ (reachRel aut) q1 q2)``, *)
+(*   rpt strip_tac >> fs[reachRel_def] *)
+(*   >> HO_MATCH_MP_TAC RTC_INDUCT_RIGHT1 >> rpt strip_tac *)
+(*   >> fs[rel_to_reln_def] *)
+(*   >> qabbrev_tac `s_new = @s. *)
+(*           s ∈ aut.states ∧ s ≠ x ∧ equivalentStates aut.final aut.trans s x` *)
+(*   >> Cases_on `q1 = s_new` >> fs[] *)
+(*   >> `?q3. (oneStep aut) q3 q2' ∧ equivalentStates aut.final aut.trans q2 q3` *)
+(*       suffices_by ( *)
+(*         rpt strip_tac >> Cases_on `q1 = q2` >> Cases_on `q1 = q3` *)
+(*         >> rw[] *)
+(*           >- (`(oneStep aut) q1 q2'` suffices_by metis_tac[RTC_SUBSET] *)
+(*               >> fs[] >> Cases_on `aut` >> fs[mergeState_def,oneStep_def] >> fs[] *)
+(*               >> rpt (POP_ASSUM mp_tac) >> rw[] >> fs[] >> rw[] *)
+(*                 >- (fs[replaceBy_def] >> Cases_on `x'` >> fs[replaceSingleTrans_def] *)
+(*                     >> rw[] >> Cases_on `x ∈ r` >> fs[] >> rw[] *)
+(*                      >- (qexists_tac `a` >> qexists_tac `r` >> fs[]) *)
+(*                      >- metis_tac[] *)
+(*                    ) *)
+(*                 >- metis_tac[] *)
+(*              ) *)
+(*           >- (`q2 ∈ aut.states ∧ q3 ∈ aut.states` by ( *)
+(*                  fs[oneStep_def,isValidAlterA_def] >> Cases_on `aut` *)
+(*                  >> fs[mergeState_def] >> rw[] *)
+(*                  >> Cases_on `∃s. s ∈ f ∧ s ≠ x ∧ equivalentStates f1 f3 s x` *)
+(*                  >> fs[replaceBy_def] *)
+(*                    >- (Cases_on `x'` >> fs[replaceSingleTrans_def] *)
+(*                        >> Cases_on `x ∈ r` >> fs[] >> rw[IN_DIFF, IN_UNION] *)
+(*                        >> `s_new ∈ f` by metis_tac[] *)
+(*                        >> metis_tac[IN_DIFF,IN_UNION,IN_SING,SUBSET_DEF] *)
+(*                       ) *)
+(*                    >- metis_tac[IN_DIFF,IN_UNION,IN_SING,SUBSET_DEF] *)
+(*                    >- metis_tac[IN_DIFF,IN_UNION,IN_SING,SUBSET_DEF] *)
+(*                    >- metis_tac[IN_DIFF,IN_UNION,IN_SING,SUBSET_DEF] *)
+(*              ) *)
+(*             >> `(oneStep aut)^* q1 q3` by metis_tac[EQUIV_REACH_LEMM,reachRel_def] *)
+(*             >> metis_tac[RTC_CASES_RTC_TWICE,RTC_SUBSET] *)
+(*              ) *)
+(*   ) *)
+(*   >> fs[] >> Cases_on `aut` >> fs[mergeState_def,oneStep_def] >> fs[] *)
+(*   >> rpt (POP_ASSUM mp_tac) >> rw[] >> fs[] *)
+(*     >- (fs[replaceBy_def] >> Cases_on `x'` >> fs[replaceSingleTrans_def] *)
+(*         >> Cases_on `x ∈ r` >> fs[] *)
+(*         >> rw[] >> fs[IN_UNION] >> metis_tac[EQUIV_STATES_REFL] *)
+(*        ) *)
+(*     >- metis_tac[] *)
+(*   ); *)
 
-val MERGE_REACH_LEMM2 = store_thm
-  ("MERGE_REACH_LEMM2",
-   ``!aut v x y. isValidAlterA aut ∧ equivalentStates aut.final aut.trans x y
-               ∧ x ∈ aut.states ∧ y ∈ aut.states ∧ ~(y = x)
-         ==> let mergedAut = mergeState x aut
-                 and s_new = @s. s ∈ aut.states ∧ s ≠ x ∧
-                                 equivalentStates aut.final aut.trans s x
-             in !v. reachRel mergedAut s_new v
-                    ==> reachRel aut s_new v \/ reachRel aut x v``,
-   rpt strip_tac >> fs[]
-   >> qabbrev_tac `s_new = @s.
-                         s ∈ aut.states ∧ s ≠ x ∧
-                         equivalentStates aut.final aut.trans s x`
-   >> fs[reachRel_def] >> gen_tac
-   >> `!m n. (oneStep (mergeState x aut))^* m n ⇒ (m = s_new)
-                   ==> (oneStep aut)^* m n ∨ (oneStep aut)^* x n`
-       suffices_by metis_tac[]
-   >> HO_MATCH_MP_TAC RTC_INDUCT_RIGHT1 >> rpt strip_tac >> rw[]
-   >> (Cases_on `n = m`
-        >- (`(oneStep aut) m n' ∨ (oneStep aut) x n'`
-             suffices_by metis_tac[RTC_SUBSET]
-             >> fs[] >> Cases_on `aut` >> fs[mergeState_def,oneStep_def]
-             >> fs[] >> rpt (POP_ASSUM mp_tac) >> rw[] >> fs[]
-               >- (fs[replaceBy_def] >> Cases_on `x'` >> fs[replaceSingleTrans_def]
-                   >> Cases_on `x ∈ r` >> fs[]
-                   >> rw[] >> fs[IN_UNION] >> metis_tac[]
-                  )
-               >- metis_tac[]
-           )
-        >- (`reachRel aut n n'` by (
-               fs[reachRel_def]
-               >> `reachRel (mergeState x aut) n n'` by
-                   (fs[reachRel_def] >> metis_tac[RTC_SUBSET])
-               >> qunabbrev_tac `m`
-               >> `reachRel aut n n'` suffices_by metis_tac[reachRel_def]
-               >> `(let mergedAut = mergeState x aut
-                    in
-                        ∀q1 q2.
-                         reachRel mergedAut q1 q2 ⇒
-                         (q1 =
-                          @s.
-                               s ∈ aut.states ∧ s ≠ x ∧
-                               equivalentStates aut.final aut.trans s x) ∨
-                         reachRel aut q1 q2)`
-                  by (HO_MATCH_MP_TAC MERGE_REACH_LEMM
-                      >> metis_tac[EQUIV_STATES_SYMM])
-              >> fs[] >> metis_tac[]
-              )
-            >> fs[reachRel_def] >> metis_tac[RTC_CASES_RTC_TWICE]
-           )
-      )
-  );
+(* val MERGE_REACH_LEMM2 = store_thm *)
+(*   ("MERGE_REACH_LEMM2", *)
+(*    ``!aut v x y. isValidAlterA aut ∧ equivalentStates aut.final aut.trans x y *)
+(*                ∧ x ∈ aut.states ∧ y ∈ aut.states ∧ ~(y = x) *)
+(*          ==> let mergedAut = mergeState x aut *)
+(*                  and s_new = @s. s ∈ aut.states ∧ s ≠ x ∧ *)
+(*                                  equivalentStates aut.final aut.trans s x *)
+(*              in !v. reachRel mergedAut s_new v *)
+(*                     ==> reachRel aut s_new v \/ reachRel aut x v``, *)
+(*    rpt strip_tac >> fs[] *)
+(*    >> qabbrev_tac `s_new = @s. *)
+(*                          s ∈ aut.states ∧ s ≠ x ∧ *)
+(*                          equivalentStates aut.final aut.trans s x` *)
+(*    >> fs[reachRel_def] >> gen_tac *)
+(*    >> `!m n. (oneStep (mergeState x aut))^* m n ⇒ (m = s_new) *)
+(*                    ==> (oneStep aut)^* m n ∨ (oneStep aut)^* x n` *)
+(*        suffices_by metis_tac[] *)
+(*    >> HO_MATCH_MP_TAC RTC_INDUCT_RIGHT1 >> rpt strip_tac >> rw[] *)
+(*    >> (Cases_on `n = m` *)
+(*         >- (`(oneStep aut) m n' ∨ (oneStep aut) x n'` *)
+(*              suffices_by metis_tac[RTC_SUBSET] *)
+(*              >> fs[] >> Cases_on `aut` >> fs[mergeState_def,oneStep_def] *)
+(*              >> fs[] >> rpt (POP_ASSUM mp_tac) >> rw[] >> fs[] *)
+(*                >- (fs[replaceBy_def] >> Cases_on `x'` >> fs[replaceSingleTrans_def] *)
+(*                    >> Cases_on `x ∈ r` >> fs[] *)
+(*                    >> rw[] >> fs[IN_UNION] >> metis_tac[] *)
+(*                   ) *)
+(*                >- metis_tac[] *)
+(*            ) *)
+(*         >- (`reachRel aut n n'` by ( *)
+(*                fs[reachRel_def] *)
+(*                >> `reachRel (mergeState x aut) n n'` by *)
+(*                    (fs[reachRel_def] >> metis_tac[RTC_SUBSET]) *)
+(*                >> qunabbrev_tac `m` *)
+(*                >> `reachRel aut n n'` suffices_by metis_tac[reachRel_def] *)
+(*                >> `(let mergedAut = mergeState x aut *)
+(*                     in *)
+(*                         ∀q1 q2. *)
+(*                          reachRel mergedAut q1 q2 ⇒ *)
+(*                          (q1 = *)
+(*                           @s. *)
+(*                                s ∈ aut.states ∧ s ≠ x ∧ *)
+(*                                equivalentStates aut.final aut.trans s x) ∨ *)
+(*                          reachRel aut q1 q2)` *)
+(*                   by (HO_MATCH_MP_TAC MERGE_REACH_LEMM *)
+(*                       >> metis_tac[EQUIV_STATES_SYMM]) *)
+(*               >> fs[] >> metis_tac[] *)
+(*               ) *)
+(*             >> fs[reachRel_def] >> metis_tac[RTC_CASES_RTC_TWICE] *)
+(*            ) *)
+(*       ) *)
+(*   ); *)
 
-val MERGE_PO_LEMM = store_thm
-  ("MERGE_PO_LEMM",
-  ``!aut x y. isValidAlterA aut ∧ equivalentStates aut.final aut.trans x y
-            ∧ x ∈ aut.states ∧ y ∈ aut.states ∧ ~(y = x)
-      ∧ partial_order (rrestrict (rel_to_reln (reachRel aut)) aut.states)
-             aut.states
-      ==> (let mergedAut = mergeState x aut
-          in partial_order (rrestrict (rel_to_reln (reachRel mergedAut))
-                                       mergedAut.states)
-                           mergedAut.states)``,
-  rpt strip_tac >> fs[]
-  >> simp[partial_order_def,reachableRel_def,mergeState_def] >> rpt strip_tac
-   >- (fs[domain_def,SUBSET_DEF,rel_to_reln_def,rrestrict_def] >> rpt strip_tac)
-   >- (fs[range_def,SUBSET_DEF,rel_to_reln_def,rrestrict_def] >> rpt strip_tac)
-   >- (fs[reachRel_def,rrestrict_def,transitive_def]
-       >> rpt strip_tac >> fs[rel_to_reln_def]
-       >> metis_tac[RTC_TRANSITIVE])
-   >- (fs[reflexive_def, rrestrict_def, rel_to_reln_def, reachRel_def])
-   >- (fs[antisym_def,rel_to_reln_def,rrestrict_def] >> rpt strip_tac
-       >> qabbrev_tac `s_new =
-                         @s. s ∈ aut.states ∧ s ≠ x ∧
-                              equivalentStates aut.final aut.trans s x`
-       >> Cases_on `x' = s_new` >> Cases_on `y' = s_new` >> fs[]
-       >- (`reachRel aut y' s_new` by (
-             `let mergedAut = mergeState x aut
-              in
-                  ∀q1 q2.
-                   reachRel mergedAut q1 q2 ⇒
-                   (q1 =
-                    @s.
-                         s ∈ aut.states ∧ s ≠ x ∧
-                         equivalentStates aut.final aut.trans s x) ∨
-                   reachRel aut q1 q2`
-                by (HO_MATCH_MP_TAC MERGE_REACH_LEMM
-                     >> metis_tac[EQUIV_STATES_SYMM])
-                >> fs[] >> metis_tac[]
-          )
-          >> `s_new ∈ aut.states` by metis_tac[EQUIV_STATES_SYMM]
-          >> `y' ∈ aut.states` by (
-                 Cases_on `aut` >> fs[mergeState_def]
-                 >> `y' ∈
-                       (ALTER_A (f DIFF {x}) (IMAGE (replaceState x s_new) f0)
-                       (replaceState x s_new f1) f2 (replaceBy f3 x s_new)).states`
-                 by metis_tac[EQUIV_STATES_SYMM]
-                 >> fs[]
-          )
-          >> `reachRel aut s_new y' \/ reachRel aut x y'` by (
-                `let
-                     mergedAut = mergeState x aut and
-                     s_new =
-                     @s.
-                          s ∈ aut.states ∧ s ≠ x ∧
-                          equivalentStates aut.final aut.trans s x
-                 in
-                     ∀v.
-                      reachRel mergedAut s_new v ⇒
-                      reachRel aut s_new v ∨ reachRel aut x v`
-                   by (HO_MATCH_MP_TAC MERGE_REACH_LEMM2 >> metis_tac[])
-                 >> fs[] >> metis_tac[])
-             >- (fs[partial_order_def, antisym_def] >> metis_tac[])
-             >- (Cases_on `x = y'`
-                 >- (rw[] >> Cases_on `aut` >> fs[mergeState_def]
-                     >> `x ∈
-                 (ALTER_A (f DIFF {x}) (IMAGE (replaceState x s_new) f0)
-                 (replaceState x s_new f1) f2 (replaceBy f3 x s_new)).states`
-                        by metis_tac[EQUIV_STATES_SYMM]
-                     >> fs[])
-                 >- (rw[] >> `reachRel aut y' x ⇔ reachRel aut y' s_new` by (
-                          metis_tac[EQUIV_REACH_LEMM,EQUIV_STATES_SYMM]
-                    )
-                    >> fs[partial_order_def,antisym_def]
-                    >> metis_tac[]
-                    )
-                )
-          )
-       >- (`reachRel aut x' s_new` by (
-             `let mergedAut = mergeState x aut
-              in
-                  ∀q1 q2.
-                   reachRel mergedAut q1 q2 ⇒
-                   (q1 =
-                    @s.
-                         s ∈ aut.states ∧ s ≠ x ∧
-                         equivalentStates aut.final aut.trans s x) ∨
-                   reachRel aut q1 q2`
-                by (HO_MATCH_MP_TAC MERGE_REACH_LEMM
-                     >> metis_tac[EQUIV_STATES_SYMM])
-                >> fs[] >> metis_tac[]
-          )
-          >> `s_new ∈ aut.states` by metis_tac[EQUIV_STATES_SYMM]
-          >> `x' ∈ aut.states` by (
-                 Cases_on `aut` >> fs[mergeState_def]
-                 >> `x' ∈
-                       (ALTER_A (f DIFF {x}) (IMAGE (replaceState x s_new) f0)
-                       (replaceState x s_new f1) f2 (replaceBy f3 x s_new)).states`
-                 by metis_tac[EQUIV_STATES_SYMM]
-                 >> fs[]
-          )
-          >> `reachRel aut s_new x' \/ reachRel aut x x'` by (
-                `let
-                     mergedAut = mergeState x aut and
-                     s_new =
-                     @s.
-                          s ∈ aut.states ∧ s ≠ x ∧
-                          equivalentStates aut.final aut.trans s x
-                 in
-                     ∀v.
-                      reachRel mergedAut s_new v ⇒
-                      reachRel aut s_new v ∨ reachRel aut x v`
-                   by (HO_MATCH_MP_TAC MERGE_REACH_LEMM2 >> metis_tac[])
-                 >> fs[] >> metis_tac[])
-             >- (fs[partial_order_def, antisym_def] >> metis_tac[])
-             >- (Cases_on `x = x'`
-                 >- (rw[] >> Cases_on `aut` >> fs[mergeState_def]
-                     >> `x ∈
-                 (ALTER_A (f DIFF {x}) (IMAGE (replaceState x s_new) f0)
-                 (replaceState x s_new f1) f2 (replaceBy f3 x s_new)).states`
-                        by metis_tac[EQUIV_STATES_SYMM]
-                     >> fs[])
-                 >- (rw[] >> `reachRel aut x' x ⇔ reachRel aut x' s_new` by (
-                          metis_tac[EQUIV_REACH_LEMM,EQUIV_STATES_SYMM]
-                    )
-                    >> fs[partial_order_def,antisym_def]
-                    >> metis_tac[]
-                    )
-                )
-          )
-       >- (`reachRel aut x' y'
-          ∧ reachRel aut y' x'` by (
-            `let mergedAut = mergeState x aut
-             in
-                 ∀q1 q2.
-                  reachRel mergedAut q1 q2 ⇒
-                  (q1 =
-                   @s.
-                        s ∈ aut.states ∧ s ≠ x ∧
-                        equivalentStates aut.final aut.trans s x) ∨
-                  reachRel aut q1 q2` by
-              (HO_MATCH_MP_TAC MERGE_REACH_LEMM >> metis_tac[EQUIV_STATES_SYMM])
-           >> fs[] >> metis_tac[])
-          >> fs[partial_order_def,antisym_def]
-          >> `x' ∈ aut.states ∧ y' ∈ aut.states` by (
-               Cases_on `aut` >> fs[mergeState_def]
-               >> strip_tac
-                 >- (`x' ∈
-                 (ALTER_A (f DIFF {x}) (IMAGE (replaceState x s_new) f0)
-                 (replaceState x s_new f1) f2 (replaceBy f3 x s_new)).states`
-                       by metis_tac[EQUIV_STATES_SYMM]
-                     >> fs[])
-                 >- (`y' ∈
-                 (ALTER_A (f DIFF {x}) (IMAGE (replaceState x s_new) f0)
-                 (replaceState x s_new f1) f2 (replaceBy f3 x s_new)).states`
-                       by metis_tac[EQUIV_STATES_SYMM] >> fs[])
-           )
-          >> metis_tac[]
-          )
-      )
-  );
+(* val MERGE_PO_LEMM = store_thm *)
+(*   ("MERGE_PO_LEMM", *)
+(*   ``!aut x y. isValidAlterA aut ∧ equivalentStates aut.final aut.trans x y *)
+(*             ∧ x ∈ aut.states ∧ y ∈ aut.states ∧ ~(y = x) *)
+(*       ∧ partial_order (rrestrict (rel_to_reln (reachRel aut)) aut.states) *)
+(*              aut.states *)
+(*       ==> (let mergedAut = mergeState x aut *)
+(*           in partial_order (rrestrict (rel_to_reln (reachRel mergedAut)) *)
+(*                                        mergedAut.states) *)
+(*                            mergedAut.states)``, *)
+(*   rpt strip_tac >> fs[] *)
+(*   >> simp[partial_order_def,reachableRel_def,mergeState_def] >> rpt strip_tac *)
+(*    >- (fs[domain_def,SUBSET_DEF,rel_to_reln_def,rrestrict_def] >> rpt strip_tac) *)
+(*    >- (fs[range_def,SUBSET_DEF,rel_to_reln_def,rrestrict_def] >> rpt strip_tac) *)
+(*    >- (fs[reachRel_def,rrestrict_def,transitive_def] *)
+(*        >> rpt strip_tac >> fs[rel_to_reln_def] *)
+(*        >> metis_tac[RTC_TRANSITIVE]) *)
+(*    >- (fs[reflexive_def, rrestrict_def, rel_to_reln_def, reachRel_def]) *)
+(*    >- (fs[antisym_def,rel_to_reln_def,rrestrict_def] >> rpt strip_tac *)
+(*        >> qabbrev_tac `s_new = *)
+(*                          @s. s ∈ aut.states ∧ s ≠ x ∧ *)
+(*                               equivalentStates aut.final aut.trans s x` *)
+(*        >> Cases_on `x' = s_new` >> Cases_on `y' = s_new` >> fs[] *)
+(*        >- (`reachRel aut y' s_new` by ( *)
+(*              `let mergedAut = mergeState x aut *)
+(*               in *)
+(*                   ∀q1 q2. *)
+(*                    reachRel mergedAut q1 q2 ⇒ *)
+(*                    (q1 = *)
+(*                     @s. *)
+(*                          s ∈ aut.states ∧ s ≠ x ∧ *)
+(*                          equivalentStates aut.final aut.trans s x) ∨ *)
+(*                    reachRel aut q1 q2` *)
+(*                 by (HO_MATCH_MP_TAC MERGE_REACH_LEMM *)
+(*                      >> metis_tac[EQUIV_STATES_SYMM]) *)
+(*                 >> fs[] >> metis_tac[] *)
+(*           ) *)
+(*           >> `s_new ∈ aut.states` by metis_tac[EQUIV_STATES_SYMM] *)
+(*           >> `y' ∈ aut.states` by ( *)
+(*                  Cases_on `aut` >> fs[mergeState_def] *)
+(*                  >> `y' ∈ *)
+(*                        (ALTER_A (f DIFF {x}) (IMAGE (replaceState x s_new) f0) *)
+(*                        (replaceState x s_new f1) f2 (replaceBy f3 x s_new)).states` *)
+(*                  by metis_tac[EQUIV_STATES_SYMM] *)
+(*                  >> fs[] *)
+(*           ) *)
+(*           >> `reachRel aut s_new y' \/ reachRel aut x y'` by ( *)
+(*                 `let *)
+(*                      mergedAut = mergeState x aut and *)
+(*                      s_new = *)
+(*                      @s. *)
+(*                           s ∈ aut.states ∧ s ≠ x ∧ *)
+(*                           equivalentStates aut.final aut.trans s x *)
+(*                  in *)
+(*                      ∀v. *)
+(*                       reachRel mergedAut s_new v ⇒ *)
+(*                       reachRel aut s_new v ∨ reachRel aut x v` *)
+(*                    by (HO_MATCH_MP_TAC MERGE_REACH_LEMM2 >> metis_tac[]) *)
+(*                  >> fs[] >> metis_tac[]) *)
+(*              >- (fs[partial_order_def, antisym_def] >> metis_tac[]) *)
+(*              >- (Cases_on `x = y'` *)
+(*                  >- (rw[] >> Cases_on `aut` >> fs[mergeState_def] *)
+(*                      >> `x ∈ *)
+(*                  (ALTER_A (f DIFF {x}) (IMAGE (replaceState x s_new) f0) *)
+(*                  (replaceState x s_new f1) f2 (replaceBy f3 x s_new)).states` *)
+(*                         by metis_tac[EQUIV_STATES_SYMM] *)
+(*                      >> fs[]) *)
+(*                  >- (rw[] >> `reachRel aut y' x ⇔ reachRel aut y' s_new` by ( *)
+(*                           metis_tac[EQUIV_REACH_LEMM,EQUIV_STATES_SYMM] *)
+(*                     ) *)
+(*                     >> fs[partial_order_def,antisym_def] *)
+(*                     >> metis_tac[] *)
+(*                     ) *)
+(*                 ) *)
+(*           ) *)
+(*        >- (`reachRel aut x' s_new` by ( *)
+(*              `let mergedAut = mergeState x aut *)
+(*               in *)
+(*                   ∀q1 q2. *)
+(*                    reachRel mergedAut q1 q2 ⇒ *)
+(*                    (q1 = *)
+(*                     @s. *)
+(*                          s ∈ aut.states ∧ s ≠ x ∧ *)
+(*                          equivalentStates aut.final aut.trans s x) ∨ *)
+(*                    reachRel aut q1 q2` *)
+(*                 by (HO_MATCH_MP_TAC MERGE_REACH_LEMM *)
+(*                      >> metis_tac[EQUIV_STATES_SYMM]) *)
+(*                 >> fs[] >> metis_tac[] *)
+(*           ) *)
+(*           >> `s_new ∈ aut.states` by metis_tac[EQUIV_STATES_SYMM] *)
+(*           >> `x' ∈ aut.states` by ( *)
+(*                  Cases_on `aut` >> fs[mergeState_def] *)
+(*                  >> `x' ∈ *)
+(*                        (ALTER_A (f DIFF {x}) (IMAGE (replaceState x s_new) f0) *)
+(*                        (replaceState x s_new f1) f2 (replaceBy f3 x s_new)).states` *)
+(*                  by metis_tac[EQUIV_STATES_SYMM] *)
+(*                  >> fs[] *)
+(*           ) *)
+(*           >> `reachRel aut s_new x' \/ reachRel aut x x'` by ( *)
+(*                 `let *)
+(*                      mergedAut = mergeState x aut and *)
+(*                      s_new = *)
+(*                      @s. *)
+(*                           s ∈ aut.states ∧ s ≠ x ∧ *)
+(*                           equivalentStates aut.final aut.trans s x *)
+(*                  in *)
+(*                      ∀v. *)
+(*                       reachRel mergedAut s_new v ⇒ *)
+(*                       reachRel aut s_new v ∨ reachRel aut x v` *)
+(*                    by (HO_MATCH_MP_TAC MERGE_REACH_LEMM2 >> metis_tac[]) *)
+(*                  >> fs[] >> metis_tac[]) *)
+(*              >- (fs[partial_order_def, antisym_def] >> metis_tac[]) *)
+(*              >- (Cases_on `x = x'` *)
+(*                  >- (rw[] >> Cases_on `aut` >> fs[mergeState_def] *)
+(*                      >> `x ∈ *)
+(*                  (ALTER_A (f DIFF {x}) (IMAGE (replaceState x s_new) f0) *)
+(*                  (replaceState x s_new f1) f2 (replaceBy f3 x s_new)).states` *)
+(*                         by metis_tac[EQUIV_STATES_SYMM] *)
+(*                      >> fs[]) *)
+(*                  >- (rw[] >> `reachRel aut x' x ⇔ reachRel aut x' s_new` by ( *)
+(*                           metis_tac[EQUIV_REACH_LEMM,EQUIV_STATES_SYMM] *)
+(*                     ) *)
+(*                     >> fs[partial_order_def,antisym_def] *)
+(*                     >> metis_tac[] *)
+(*                     ) *)
+(*                 ) *)
+(*           ) *)
+(*        >- (`reachRel aut x' y' *)
+(*           ∧ reachRel aut y' x'` by ( *)
+(*             `let mergedAut = mergeState x aut *)
+(*              in *)
+(*                  ∀q1 q2. *)
+(*                   reachRel mergedAut q1 q2 ⇒ *)
+(*                   (q1 = *)
+(*                    @s. *)
+(*                         s ∈ aut.states ∧ s ≠ x ∧ *)
+(*                         equivalentStates aut.final aut.trans s x) ∨ *)
+(*                   reachRel aut q1 q2` by *)
+(*               (HO_MATCH_MP_TAC MERGE_REACH_LEMM >> metis_tac[EQUIV_STATES_SYMM]) *)
+(*            >> fs[] >> metis_tac[]) *)
+(*           >> fs[partial_order_def,antisym_def] *)
+(*           >> `x' ∈ aut.states ∧ y' ∈ aut.states` by ( *)
+(*                Cases_on `aut` >> fs[mergeState_def] *)
+(*                >> strip_tac *)
+(*                  >- (`x' ∈ *)
+(*                  (ALTER_A (f DIFF {x}) (IMAGE (replaceState x s_new) f0) *)
+(*                  (replaceState x s_new f1) f2 (replaceBy f3 x s_new)).states` *)
+(*                        by metis_tac[EQUIV_STATES_SYMM] *)
+(*                      >> fs[]) *)
+(*                  >- (`y' ∈ *)
+(*                  (ALTER_A (f DIFF {x}) (IMAGE (replaceState x s_new) f0) *)
+(*                  (replaceState x s_new f1) f2 (replaceBy f3 x s_new)).states` *)
+(*                        by metis_tac[EQUIV_STATES_SYMM] >> fs[]) *)
+(*            ) *)
+(*           >> metis_tac[] *)
+(*           ) *)
+(*       ) *)
+(*   ); *)
 
-val WAA_REACH_IS_PO__ = store_thm
-  ("WAA_REACH_IS_PO__",
-   ``!aut. isWeakAlterA aut ∧ isValidAlterA aut
-             ==> isWeakWithOrder aut
-                   (rrestrict (rel_to_reln (reachRel aut)) aut.states)``,
-   fs[isWeakAlterA_def] >> simp[isWeakWithOrder_def] >> rpt strip_tac
-    >- (fs[partial_order_def,rrestrict_def,rel_to_reln_def] >> rpt strip_tac
-        >- (simp[domain_def,SUBSET_DEF] >> rpt strip_tac)
-        >- (simp[range_def,SUBSET_DEF] >> rpt strip_tac)
-        >- (simp[transitive_def,reachRel_def] >> rpt strip_tac
-            >> metis_tac[RTC_TRANSITIVE])
-        >- fs[reflexive_def,reachRel_def]
-        >- (fs[antisym_def]
-            >> `!m n. m ∈ aut.states ∧ reachRel aut m n ==> n ∈ aut.states` by (
-                 fs[reachRel_def] >> HO_MATCH_MP_TAC RTC_lifts_invariants
-                 >> rpt strip_tac >> fs[oneStep_def]
-             )
-            >> `!m n. reachRel aut m n ==>
-                      m ∈ aut.states ==> (m,n) ∈ ord` by (
-                 fs[reachRel_def] >> HO_MATCH_MP_TAC RTC_INDUCT_RIGHT1
-                 >> strip_tac
-                   >- (rpt strip_tac >> fs[reflexive_def])
-                   >- (rpt strip_tac >> fs[] >> fs[oneStep_def]
-                      >> fs[transitive_def] >> metis_tac[])
-             )
-            >> rpt strip_tac
-            >> metis_tac[]
-           )
-       )
-    >- (simp[rrestrict_def,rel_to_reln_def,reachRel_def]
-        >> fs[isValidAlterA_def] >> strip_tac
-          >- (`(oneStep aut) s' s` suffices_by metis_tac[RTC_SUBSET]
-              >> simp[oneStep_def] >> metis_tac[]
-             )
-          >- (fs[isValidAlterA_def] >> metis_tac[SUBSET_DEF])
-       )
-  );
+(* val WAA_REACH_IS_PO__ = store_thm *)
+(*   ("WAA_REACH_IS_PO__", *)
+(*    ``!aut. isWeakAlterA aut ∧ isValidAlterA aut *)
+(*              ==> isWeakWithOrder aut *)
+(*                    (rrestrict (rel_to_reln (reachRel aut)) aut.states)``, *)
+(*    fs[isWeakAlterA_def] >> simp[isWeakWithOrder_def] >> rpt strip_tac *)
+(*     >- (fs[partial_order_def,rrestrict_def,rel_to_reln_def] >> rpt strip_tac *)
+(*         >- (simp[domain_def,SUBSET_DEF] >> rpt strip_tac) *)
+(*         >- (simp[range_def,SUBSET_DEF] >> rpt strip_tac) *)
+(*         >- (simp[transitive_def,reachRel_def] >> rpt strip_tac *)
+(*             >> metis_tac[RTC_TRANSITIVE]) *)
+(*         >- fs[reflexive_def,reachRel_def] *)
+(*         >- (fs[antisym_def] *)
+(*             >> `!m n. m ∈ aut.states ∧ reachRel aut m n ==> n ∈ aut.states` by ( *)
+(*                  fs[reachRel_def] >> HO_MATCH_MP_TAC RTC_lifts_invariants *)
+(*                  >> rpt strip_tac >> fs[oneStep_def] *)
+(*              ) *)
+(*             >> `!m n. reachRel aut m n ==> *)
+(*                       m ∈ aut.states ==> (m,n) ∈ ord` by ( *)
+(*                  fs[reachRel_def] >> HO_MATCH_MP_TAC RTC_INDUCT_RIGHT1 *)
+(*                  >> strip_tac *)
+(*                    >- (rpt strip_tac >> fs[reflexive_def]) *)
+(*                    >- (rpt strip_tac >> fs[] >> fs[oneStep_def] *)
+(*                       >> fs[transitive_def] >> metis_tac[]) *)
+(*              ) *)
+(*             >> rpt strip_tac *)
+(*             >> metis_tac[] *)
+(*            ) *)
+(*        ) *)
+(*     >- (simp[rrestrict_def,rel_to_reln_def,reachRel_def] *)
+(*         >> fs[isValidAlterA_def] >> strip_tac *)
+(*           >- (`(oneStep aut) s' s` suffices_by metis_tac[RTC_SUBSET] *)
+(*               >> simp[oneStep_def] >> metis_tac[] *)
+(*              ) *)
+(*           >- (fs[isValidAlterA_def] >> metis_tac[SUBSET_DEF]) *)
+(*        ) *)
+(*   ); *)
 
-val MERGE_IS_VALID = store_thm
-  ("MERGE_IS_VALID",
-   ``!aut x. isValidAlterA aut ∧ x ∈ aut.states
-               ==> isValidAlterA (mergeState x aut)``,
-   rpt strip_tac
-   >> Cases_on `∃s. s ∈ aut.states ∧ s ≠ x
-               ∧ equivalentStates aut.final aut.trans s x`
-     >- (Cases_on `aut` >> simp[mergeState_def] >> rpt strip_tac
-         >> qabbrev_tac `fullAuto =
-          ALTER_A (f DIFF {x})
-                  (IMAGE
-                       (replaceState x
-                         (@s. s ∈ f ∧ s ≠ x ∧ equivalentStates f1 f3 s x)) f0)
-                  (replaceState x (@s. s ∈ f ∧ s ≠ x ∧ equivalentStates f1 f3 s x)
-                                f1) f2
-                  (replaceBy f3 x (@s. s ∈ f ∧ s ≠ x ∧ equivalentStates f1 f3 s x))`
-         >> fs[] >> `isValidAlterA fullAuto` suffices_by metis_tac[]
-         >> simp[isValidAlterA_def] >> rpt strip_tac
-           >- (qunabbrev_tac `fullAuto` >> fs[IMAGE_DEF,replaceState_def]
-               >> fs[SUBSET_DEF] >> rpt strip_tac
-               >> `f0 ⊆ POW f` by fs[isValidAlterA_def]
-               >> Cases_on `x ∈ x''` >> fs[]
-                >- (rw[] >> fs[DIFF_DEF,UNION_DEF,IN_POW] >> rpt strip_tac
-                      >- (fs[SUBSET_DEF] >> rpt strip_tac
-                            >> metis_tac[IN_POW,SUBSET_DEF])
-                      >- metis_tac[]
-                      >- metis_tac[]
-                   )
-                >- (`f0 ⊆ POW f` by fs[isValidAlterA_def]
-                    >> fs[IN_POW,IN_DIFF,SUBSET_DEF] >> rpt strip_tac
-                    >> metis_tac[]
-                   )
-              )
-           >- (qunabbrev_tac `fullAuto` >> fs[IMAGE_DEF,replaceState_def]
-               >> fs[SUBSET_DEF] >> rpt strip_tac
-               >> `f1 ⊆ f` by fs[isValidAlterA_def]
-               >> Cases_on `x ∈ f1` >> fs[]
-               >> metis_tac[SUBSET_DEF]
-              )
-           >- (qunabbrev_tac `fullAuto` >> fs[IMAGE_DEF,replaceState_def]
-               >> fs[SUBSET_DEF,replaceBy_def] >> rpt strip_tac
-               >> Cases_on `x'` >> fs[replaceSingleTrans_def]
-               >> Cases_on `x ∈ r` >> fs[] >> rw[]
-                 >- (`r ⊆ f` by (fs[isValidAlterA_def] >> metis_tac[])
-                     >> Cases_on `x'' = x`
-                     >> fs[IN_DIFF,IN_UNION]
-                     >> metis_tac[SUBSET_DEF]
-                    )
-                 >- (`d ⊆ f` by (fs[isValidAlterA_def] >> metis_tac[])
-                     >> metis_tac[SUBSET_DEF]
-                    )
-                 >- (fs[IN_DIFF,IN_UNION] >> metis_tac[])
-                 >- metis_tac[]
-              )
-           >- (qunabbrev_tac `fullAuto` >> fs[isValidAlterA_def,replaceBy_def]
-               >> Cases_on `x'` >> fs[replaceSingleTrans_def]
-               >> `a = q` by (Cases_on `x ∈ r` >> fs[])
-               >> metis_tac[]
-              )
-        )
-     >- (`mergeState x aut = aut` by (
-            Cases_on `aut` >> simp[mergeState_def,COND_EXPAND]
-            >> fs[COND_EXPAND] >> metis_tac[]
-          ) >> metis_tac[]
-        )
-  );
+(* val MERGE_IS_VALID = store_thm *)
+(*   ("MERGE_IS_VALID", *)
+(*    ``!aut x. isValidAlterA aut ∧ x ∈ aut.states *)
+(*                ==> isValidAlterA (mergeState x aut)``, *)
+(*    rpt strip_tac *)
+(*    >> Cases_on `∃s. s ∈ aut.states ∧ s ≠ x *)
+(*                ∧ equivalentStates aut.final aut.trans s x` *)
+(*      >- (Cases_on `aut` >> simp[mergeState_def] >> rpt strip_tac *)
+(*          >> qabbrev_tac `fullAuto = *)
+(*           ALTER_A (f DIFF {x}) *)
+(*                   (IMAGE *)
+(*                        (replaceState x *)
+(*                          (@s. s ∈ f ∧ s ≠ x ∧ equivalentStates f1 f3 s x)) f0) *)
+(*                   (replaceState x (@s. s ∈ f ∧ s ≠ x ∧ equivalentStates f1 f3 s x) *)
+(*                                 f1) f2 *)
+(*                   (replaceBy f3 x (@s. s ∈ f ∧ s ≠ x ∧ equivalentStates f1 f3 s x))` *)
+(*          >> fs[] >> `isValidAlterA fullAuto` suffices_by metis_tac[] *)
+(*          >> simp[isValidAlterA_def] >> rpt strip_tac *)
+(*            >- (qunabbrev_tac `fullAuto` >> fs[IMAGE_DEF,replaceState_def] *)
+(*                >> fs[SUBSET_DEF] >> rpt strip_tac *)
+(*                >> `f0 ⊆ POW f` by fs[isValidAlterA_def] *)
+(*                >> Cases_on `x ∈ x''` >> fs[] *)
+(*                 >- (rw[] >> fs[DIFF_DEF,UNION_DEF,IN_POW] >> rpt strip_tac *)
+(*                       >- (fs[SUBSET_DEF] >> rpt strip_tac *)
+(*                             >> metis_tac[IN_POW,SUBSET_DEF]) *)
+(*                       >- metis_tac[] *)
+(*                       >- metis_tac[] *)
+(*                    ) *)
+(*                 >- (`f0 ⊆ POW f` by fs[isValidAlterA_def] *)
+(*                     >> fs[IN_POW,IN_DIFF,SUBSET_DEF] >> rpt strip_tac *)
+(*                     >> metis_tac[] *)
+(*                    ) *)
+(*               ) *)
+(*            >- (qunabbrev_tac `fullAuto` >> fs[IMAGE_DEF,replaceState_def] *)
+(*                >> fs[SUBSET_DEF] >> rpt strip_tac *)
+(*                >> `f1 ⊆ f` by fs[isValidAlterA_def] *)
+(*                >> Cases_on `x ∈ f1` >> fs[] *)
+(*                >> metis_tac[SUBSET_DEF] *)
+(*               ) *)
+(*            >- (qunabbrev_tac `fullAuto` >> fs[IMAGE_DEF,replaceState_def] *)
+(*                >> fs[SUBSET_DEF,replaceBy_def] >> rpt strip_tac *)
+(*                >> Cases_on `x'` >> fs[replaceSingleTrans_def] *)
+(*                >> Cases_on `x ∈ r` >> fs[] >> rw[] *)
+(*                  >- (`r ⊆ f` by (fs[isValidAlterA_def] >> metis_tac[]) *)
+(*                      >> Cases_on `x'' = x` *)
+(*                      >> fs[IN_DIFF,IN_UNION] *)
+(*                      >> metis_tac[SUBSET_DEF] *)
+(*                     ) *)
+(*                  >- (`d ⊆ f` by (fs[isValidAlterA_def] >> metis_tac[]) *)
+(*                      >> metis_tac[SUBSET_DEF] *)
+(*                     ) *)
+(*                  >- (fs[IN_DIFF,IN_UNION] >> metis_tac[]) *)
+(*                  >- metis_tac[] *)
+(*               ) *)
+(*            >- (qunabbrev_tac `fullAuto` >> fs[isValidAlterA_def,replaceBy_def] *)
+(*                >> Cases_on `x'` >> fs[replaceSingleTrans_def] *)
+(*                >> `a = q` by (Cases_on `x ∈ r` >> fs[]) *)
+(*                >> metis_tac[] *)
+(*               ) *)
+(*         ) *)
+(*      >- (`mergeState x aut = aut` by ( *)
+(*             Cases_on `aut` >> simp[mergeState_def,COND_EXPAND] *)
+(*             >> fs[COND_EXPAND] >> metis_tac[] *)
+(*           ) >> metis_tac[] *)
+(*         ) *)
+(*   ); *)
 
-val MERGE_IS_WEAK = store_thm
-  ("MERGE_IS_WEAK",
-   ``!aut x. isWeakAlterA aut ∧ x ∈ aut.states ∧ isValidAlterA aut
-           ∧ isValidAlterA (mergeState x aut)
-           ==> isWeakAlterA (mergeState x aut)``,
-   rpt strip_tac
-    >> `isWeakWithOrder aut (rrestrict (rel_to_reln (reachRel aut)) aut.states)`
-       by metis_tac[WAA_REACH_IS_PO__]
-    >> fs[isWeakWithOrder_def]
-    >> qabbrev_tac
-         `s_new = @s. s ∈ aut.states ∧ s ≠ x
-                      ∧ equivalentStates aut.final aut.trans s x`
-    >> Cases_on `∃s. s ∈ aut.states ∧ s ≠ x
-                      ∧ equivalentStates aut.final aut.trans s x`
-     >- (`s_new ∈ aut.states ∧ ~(s_new = x)
-          ∧ equivalentStates aut.final aut.trans s_new x` by metis_tac[]
-         >> `(let mergedAut = mergeState x aut
-              in partial_order
-                     (rrestrict (rel_to_reln (reachRel mergedAut))
-                                mergedAut.states) mergedAut.states)` by (
-                HO_MATCH_MP_TAC MERGE_PO_LEMM >> metis_tac[EQUIV_STATES_SYMM])
-         >> fs[] >> simp[isWeakAlterA_def,isWeakWithOrder_def]
-         >> qexists_tac `(rrestrict (rel_to_reln (reachRel (mergeState x aut)))
-                                    (mergeState x aut).states)`
-         >> simp[] >> rpt strip_tac >> fs[rrestrict_def,rel_to_reln_def]
-         >> fs[reachRel_def] >> strip_tac
-           >- (`oneStep (mergeState x aut) s'' s'`
-                 suffices_by metis_tac[RTC_SUBSET]
-               >> fs[oneStep_def] >> metis_tac[]
-              )
-           >- (fs[isValidAlterA_def] >> metis_tac[SUBSET_DEF])
-        )
-     >- (`mergeState x aut = aut` by (
-            Cases_on `aut` >> simp[mergeState_def,COND_EXPAND]
-            >> fs[COND_EXPAND] >> metis_tac[]
-        ) >> metis_tac[]
-        )
-  );
+(* val MERGE_IS_WEAK = store_thm *)
+(*   ("MERGE_IS_WEAK", *)
+(*    ``!aut x. isWeakAlterA aut ∧ x ∈ aut.states ∧ isValidAlterA aut *)
+(*            ∧ isValidAlterA (mergeState x aut) *)
+(*            ==> isWeakAlterA (mergeState x aut)``, *)
+(*    rpt strip_tac *)
+(*     >> `isWeakWithOrder aut (rrestrict (rel_to_reln (reachRel aut)) aut.states)` *)
+(*        by metis_tac[WAA_REACH_IS_PO__] *)
+(*     >> fs[isWeakWithOrder_def] *)
+(*     >> qabbrev_tac *)
+(*          `s_new = @s. s ∈ aut.states ∧ s ≠ x *)
+(*                       ∧ equivalentStates aut.final aut.trans s x` *)
+(*     >> Cases_on `∃s. s ∈ aut.states ∧ s ≠ x *)
+(*                       ∧ equivalentStates aut.final aut.trans s x` *)
+(*      >- (`s_new ∈ aut.states ∧ ~(s_new = x) *)
+(*           ∧ equivalentStates aut.final aut.trans s_new x` by metis_tac[] *)
+(*          >> `(let mergedAut = mergeState x aut *)
+(*               in partial_order *)
+(*                      (rrestrict (rel_to_reln (reachRel mergedAut)) *)
+(*                                 mergedAut.states) mergedAut.states)` by ( *)
+(*                 HO_MATCH_MP_TAC MERGE_PO_LEMM >> metis_tac[EQUIV_STATES_SYMM]) *)
+(*          >> fs[] >> simp[isWeakAlterA_def,isWeakWithOrder_def] *)
+(*          >> qexists_tac `(rrestrict (rel_to_reln (reachRel (mergeState x aut))) *)
+(*                                     (mergeState x aut).states)` *)
+(*          >> simp[] >> rpt strip_tac >> fs[rrestrict_def,rel_to_reln_def] *)
+(*          >> fs[reachRel_def] >> strip_tac *)
+(*            >- (`oneStep (mergeState x aut) s'' s'` *)
+(*                  suffices_by metis_tac[RTC_SUBSET] *)
+(*                >> fs[oneStep_def] >> metis_tac[] *)
+(*               ) *)
+(*            >- (fs[isValidAlterA_def] >> metis_tac[SUBSET_DEF]) *)
+(*         ) *)
+(*      >- (`mergeState x aut = aut` by ( *)
+(*             Cases_on `aut` >> simp[mergeState_def,COND_EXPAND] *)
+(*             >> fs[COND_EXPAND] >> metis_tac[] *)
+(*         ) >> metis_tac[] *)
+(*         ) *)
+(*   ); *)
 
-val RUN_WELLBEHAVED_MERGE = store_thm
-  ("RUN_WELLBEHAVED_MERGE",
-   ``!aut r w s x. runForAA aut r w ∧ s ∈ aut.states ∧ ~(s = x) ∧
-     equivalentStates aut.final aut.trans s x ∧ x ∈ aut.states
-     ∧ isWeakAlterA aut ∧ isValidAlterA aut ∧ FINITE aut.states
-      ==> ?r2. runForAA aut r2 w
-      ∧ !i. (s ∈ r2.V i) ∧ (x ∈ r2.V i) ==> (r2.E (i,s) = r2.E (i,x))``,
-   gen_tac >> gen_tac >> gen_tac
-   >> `∀ord s x. runForAA aut r w ∧ s ∈ aut.states ∧ s ≠ x ∧
-             equivalentStates aut.final aut.trans s x ∧ x ∈ aut.states ∧
-             isWeakWithOrder aut ord ∧ isValidAlterA aut ∧
-             FINITE aut.states
-             ∧ ((s,x) ∈ ord \/ (~((x,s) ∈ ord) ∧ ~((s,x) ∈ ord))) ⇒
-              ∃r2.
-              runForAA aut r2 w ∧
-              ∀i. s ∈ r2.V i ∧ x ∈ r2.V i ⇒ (r2.E (i,s) = r2.E (i,x))`
-       suffices_by (rpt strip_tac >> fs[isWeakAlterA_def]
-                    >> first_x_assum (qspec_then `ord` mp_tac)
-                    >> rpt strip_tac
-                    >> `(s,x) ∈ ord \/ (x,s) ∈ ord
-                    \/ (~((x,s) ∈ ord) ∧ ~((s,x) ∈ ord))` by metis_tac[]
-                    >> metis_tac[EQUIV_STATES_SYMM]
-                   )
-   >> rpt strip_tac
-   >> (`~((x,s) ∈ ord)` by
-              (fs[isWeakWithOrder_def,partial_order_def,antisym_def]
-              >> metis_tac[])
-        >> qabbrev_tac `new_run =
-             run_restr (r.V 0) (ALTERA_RUN r.V
-                              (λ(i,q). if (q = x) ∧ (s ∈ r.V i)
-                                       then r.E (i,s) else r.E (i,q)))`
-        >> `!i. new_run.V i ⊆ r.V i` by (
-             Induct_on `i`
-              >- (qunabbrev_tac `new_run` >> fs[run_restr_def,validAARunFor_def]
-                  >> fs[run_restr_V_def])
-              >- (simp[SUBSET_DEF] >> rpt strip_tac >> qunabbrev_tac `new_run`
-                  >> fs[run_restr_V_def,run_restr_def]
-                  >> Cases_on `(q = x) ∧ (s ∈ r.V i)` >> fs[]
-                  >> `s' ⊆ r.V (i + 1)`
-                      by metis_tac[runForAA_def,validAARunFor_def]
-                  >> metis_tac[SUC_ONE_ADD,ADD_COMM,SUBSET_DEF]
-                 )
-         )
-        >> qexists_tac `new_run` >> fs[runForAA_def]
-        >> `(validAARunFor aut new_run w
-           ∧ ((validAARunFor aut new_run w ==> acceptingAARun aut new_run))) ∧
-                 ∀i. s ∈ new_run.V i ∧ x ∈ new_run.V i ==>
-                   (new_run.E (i,s) = new_run.E (i,x))` suffices_by fs[]
-        >> rpt strip_tac
-         >- (simp[validAARunFor_def] >> rpt strip_tac
-          >- (qunabbrev_tac `new_run` >> fs[run_restr_def,run_restr_V_def]
-           >> metis_tac[validAARunFor_def])
-          >- metis_tac[SUBSET_TRANS,validAARunFor_def]
-          >- (`q ∈ r.V i` by metis_tac[SUBSET_DEF]
-              >> qunabbrev_tac `new_run` >> simp[run_restr_def,run_restr_E_def]
-              >> Cases_on `(q = x) ∧ (s ∈ r.V i)`
-               >- (fs[validAARunFor_def]
-                   >> `∃a. (a,r.E (i,s)) ∈ aut.trans s ∧ at w i ∈ a`
-                       by metis_tac[]
-                   >> qexists_tac `a` >> fs[]
-                   >> `(a,r.E (i,s)) ∈ aut.trans x`
-                        suffices_by fs[run_restr_def]
-                   >> metis_tac[equivalentStates_def]
-                  )
-               >- (fs[validAARunFor_def]
-                   >> `∃a. (a,r.E (i,q)) ∈ aut.trans q ∧ at w i ∈ a`
-                       by metis_tac[]
-                   >> qexists_tac `a` >> fs[]
-                   >> `(a,r.E(i,q)) ∈ aut.trans q` suffices_by fs[run_restr_def]
-                   >> metis_tac[]
-                  )
-             )
-          >- (simp[SUBSET_DEF] >> rpt strip_tac >> qunabbrev_tac `new_run`
-                >> fs[run_restr_def,run_restr_V_def,run_restr_E_def]
-                >> qabbrev_tac `fullRunV = \i.
-                    run_restr_V (r.V 0)
-                     (ALTERA_RUN r.V
-                       (λ(i,q).
-                         if (q = x) ∧ s ∈ r.V i
-                         then r.E (i,s) else r.E (i,q))) i`
-                >> fs[]
-                >> `q ∈ fullRunV i` by metis_tac[MEMBER_NOT_EMPTY] >> fs[]
-                >> `x' ∈ fullRunV (SUC i)`
-                   suffices_by metis_tac[SUC_ONE_ADD,ADD_COMM]
-                >> qunabbrev_tac `fullRunV` >> simp[run_restr_V_def]
-                >> Cases_on `(q = x) ∧ s ∈ r.V i` >> fs[]
-                >> metis_tac[]
-             )
-          >- (Cases_on `i=0` >> fs[] >> `q ∈ r.V i` by metis_tac[SUBSET_DEF]
-                >> qunabbrev_tac `new_run`
-                >> simp[]
-                >> `?j. i = SUC j` by (Cases_on `i` >> fs[])
-                >> rw[] >> fs[]
-                >> fs[run_restr_V_def,run_restr_def,run_restr_E_def]
-                >> metis_tac[]
-             )
-            )
-         >- (`∀b f. infBranchOf new_run b ∧ branchFixP b f
-              ⇒ f ∉ aut.final`
-               suffices_by metis_tac[BRANCH_ACC_LEMM,isWeakAlterA_def]
-             >> `∀b1 f1. infBranchOf r b1 ∧ branchFixP b1 f1
-                ⇒ f1 ∉ aut.final` by metis_tac[BRANCH_ACC_LEMM,isWeakAlterA_def]
-             >> rpt strip_tac >> fs[branchFixP_def]
-             >> Cases_on `(f = x) ∧ ((f = x) ==> ?j. i <= j ∧ s ∈ r.V j)`
-                >> fs[]
-               >- (`?j. i <= j ∧ s ∈ r.V j` by fs[]
-                  >> `!j. b j ∈ new_run.V j` by metis_tac[BRANCH_V_LEMM]
-                  >> fs[infBranchOf_def]
-                  >> `x ∈ new_run.E (j, x)` by (
-                       `b (j + 1) = x` by simp[]
-                       >> `b j = x` by simp[]
-                       >> `b (j + 1) ∈ new_run.E (j, b j)` by metis_tac[]
-                       >> metis_tac[]
-                  )
-                  >> qunabbrev_tac `new_run` >> POP_ASSUM mp_tac
-                  >> simp[run_restr_def, run_restr_E_def]
-                  >> `b j = x` by simp[]
-                  >> first_x_assum (qspec_then `j` mp_tac)
-                  >> simp[run_restr_def] >> rpt strip_tac
-                  >> fs[validAARunFor_def]
-                  >> `∃a. (a,r.E (j,s)) ∈ aut.trans s ∧ at w j ∈ a`
-                      by metis_tac[]
-                  >> metis_tac[isWeakWithOrder_def]
-                  )
-               >- (`infBranchSuffOf r i (\p. f)` by (
-                     simp[infBranchSuffOf_def] >> rpt strip_tac
-                      >- (`f ∈ new_run.V i`
-                           by metis_tac[BRANCH_V_LEMM, DECIDE ``i >= i``]
-                          >> metis_tac[SUBSET_DEF]
-                         )
-                      >- (fs[infBranchOf_def]
-                          >> `f ∈ new_run.E (i + p, f)` by (
-                              `b (i + p + 1) = f` by fs[]
-                              >> `b (i + p) = f` by fs[]
-                              >> metis_tac[])
-                          >> qunabbrev_tac `new_run`
-                          >> fs[run_restr_def, run_restr_E_def]
-                          >> metis_tac[MEMBER_NOT_EMPTY]
-                         )
-                    )
-                    >> qabbrev_tac `new_branch = \p:num. f`
-                    >> `∃b'. infBranchOf r b' ∧ ∀a. new_branch a = b' (a + i)`
-                        by metis_tac[BRANCH_SUFF_LEMM]
-                    >> rename[`infBranchOf r b'`]
-                    >> first_x_assum (qspec_then `b'` mp_tac) >> rpt strip_tac
-                    >> first_x_assum (qspec_then `f` mp_tac) >> simp[]
-                    >> qexists_tac `i` >> qunabbrev_tac `new_branch`
-                    >> rpt strip_tac >> fs[]
-                     >- metis_tac[DECIDE ``0 + i = i``]
-                     >- (`i <= m` by simp[]
-                         >> `?p. m = i + p` by metis_tac[LESS_EQ_EXISTS]
-                         >> metis_tac[ADD_COMM]
-                        )
-                  )
-               >- (`infBranchSuffOf r i (\p. f)` by (
-                          simp[infBranchSuffOf_def] >> rpt strip_tac
-                          >- (`f ∈ new_run.V i`
-                                by metis_tac[BRANCH_V_LEMM, DECIDE ``i >= i``]
-                              >> metis_tac[SUBSET_DEF]
-                             )
-                          >- (fs[infBranchOf_def] >> rw[]
-                              >> `f ∈ new_run.E (i + p, f)` by (
-                                   `b (i + p + 1) = f` by fs[]
-                                   >> `b (i + p) = f` by fs[]
-                                   >> metis_tac[])
-                       >> qunabbrev_tac `new_run`
-                       >> fs[run_restr_def, run_restr_E_def]
-                       >> metis_tac[MEMBER_NOT_EMPTY,DECIDE ``i <= i + p``]
-                             )
-                      )
-                   >> qabbrev_tac `new_branch = \p:num. f`
-                   >> `∃b'. infBranchOf r b' ∧ ∀j. new_branch j = b' (j + i)`
-                       by metis_tac[BRANCH_SUFF_LEMM]
-                   >> rename[`infBranchOf r b'`]
-                   >> first_x_assum (qspec_then `b'` mp_tac) >> rpt strip_tac
-                   >> first_x_assum (qspec_then `f` mp_tac) >> simp[]
-                   >> qexists_tac `i` >> qunabbrev_tac `new_branch`
-                   >> rpt strip_tac >> fs[]
-                    >- metis_tac[DECIDE ``i + 0 = i``]
-                    >- (`i <= m` by simp[]
-                        >> `?p. m = i + p` by metis_tac[LESS_EQ_EXISTS]
-                        >> metis_tac[]
-                       )
-                  )
-            )
-         >- (`s ∈ r.V i ∧ x ∈ r.V i` by metis_tac[SUBSET_DEF]
-             >> qunabbrev_tac `new_run` >> simp[SET_EQ_SUBSET,SUBSET_DEF]
-             >> rpt strip_tac >> fs[run_restr_def, run_restr_E_def]
-             >> metis_tac[MEMBER_NOT_EMPTY]
-            )
-      )
-  );
+(* val RUN_WELLBEHAVED_MERGE = store_thm *)
+(*   ("RUN_WELLBEHAVED_MERGE", *)
+(*    ``!aut r w s x. runForAA aut r w ∧ s ∈ aut.states ∧ ~(s = x) ∧ *)
+(*      equivalentStates aut.final aut.trans s x ∧ x ∈ aut.states *)
+(*      ∧ isWeakAlterA aut ∧ isValidAlterA aut ∧ FINITE aut.states *)
+(*       ==> ?r2. runForAA aut r2 w *)
+(*       ∧ !i. (s ∈ r2.V i) ∧ (x ∈ r2.V i) ==> (r2.E (i,s) = r2.E (i,x))``, *)
+(*    gen_tac >> gen_tac >> gen_tac *)
+(*    >> `∀ord s x. runForAA aut r w ∧ s ∈ aut.states ∧ s ≠ x ∧ *)
+(*              equivalentStates aut.final aut.trans s x ∧ x ∈ aut.states ∧ *)
+(*              isWeakWithOrder aut ord ∧ isValidAlterA aut ∧ *)
+(*              FINITE aut.states *)
+(*              ∧ ((s,x) ∈ ord \/ (~((x,s) ∈ ord) ∧ ~((s,x) ∈ ord))) ⇒ *)
+(*               ∃r2. *)
+(*               runForAA aut r2 w ∧ *)
+(*               ∀i. s ∈ r2.V i ∧ x ∈ r2.V i ⇒ (r2.E (i,s) = r2.E (i,x))` *)
+(*        suffices_by (rpt strip_tac >> fs[isWeakAlterA_def] *)
+(*                     >> first_x_assum (qspec_then `ord` mp_tac) *)
+(*                     >> rpt strip_tac *)
+(*                     >> `(s,x) ∈ ord \/ (x,s) ∈ ord *)
+(*                     \/ (~((x,s) ∈ ord) ∧ ~((s,x) ∈ ord))` by metis_tac[] *)
+(*                     >> metis_tac[EQUIV_STATES_SYMM] *)
+(*                    ) *)
+(*    >> rpt strip_tac *)
+(*    >> (`~((x,s) ∈ ord)` by *)
+(*               (fs[isWeakWithOrder_def,partial_order_def,antisym_def] *)
+(*               >> metis_tac[]) *)
+(*         >> qabbrev_tac `new_run = *)
+(*              run_restr (r.V 0) (ALTERA_RUN r.V *)
+(*                               (λ(i,q). if (q = x) ∧ (s ∈ r.V i) *)
+(*                                        then r.E (i,s) else r.E (i,q)))` *)
+(*         >> `!i. new_run.V i ⊆ r.V i` by ( *)
+(*              Induct_on `i` *)
+(*               >- (qunabbrev_tac `new_run` >> fs[run_restr_def,validAARunFor_def] *)
+(*                   >> fs[run_restr_V_def]) *)
+(*               >- (simp[SUBSET_DEF] >> rpt strip_tac >> qunabbrev_tac `new_run` *)
+(*                   >> fs[run_restr_V_def,run_restr_def] *)
+(*                   >> Cases_on `(q = x) ∧ (s ∈ r.V i)` >> fs[] *)
+(*                   >> `s' ⊆ r.V (i + 1)` *)
+(*                       by metis_tac[runForAA_def,validAARunFor_def] *)
+(*                   >> metis_tac[SUC_ONE_ADD,ADD_COMM,SUBSET_DEF] *)
+(*                  ) *)
+(*          ) *)
+(*         >> qexists_tac `new_run` >> fs[runForAA_def] *)
+(*         >> `(validAARunFor aut new_run w *)
+(*            ∧ ((validAARunFor aut new_run w ==> acceptingAARun aut new_run))) ∧ *)
+(*                  ∀i. s ∈ new_run.V i ∧ x ∈ new_run.V i ==> *)
+(*                    (new_run.E (i,s) = new_run.E (i,x))` suffices_by fs[] *)
+(*         >> rpt strip_tac *)
+(*          >- (simp[validAARunFor_def] >> rpt strip_tac *)
+(*           >- (qunabbrev_tac `new_run` >> fs[run_restr_def,run_restr_V_def] *)
+(*            >> metis_tac[validAARunFor_def]) *)
+(*           >- metis_tac[SUBSET_TRANS,validAARunFor_def] *)
+(*           >- (`q ∈ r.V i` by metis_tac[SUBSET_DEF] *)
+(*               >> qunabbrev_tac `new_run` >> simp[run_restr_def,run_restr_E_def] *)
+(*               >> Cases_on `(q = x) ∧ (s ∈ r.V i)` *)
+(*                >- (fs[validAARunFor_def] *)
+(*                    >> `∃a. (a,r.E (i,s)) ∈ aut.trans s ∧ at w i ∈ a` *)
+(*                        by metis_tac[] *)
+(*                    >> qexists_tac `a` >> fs[] *)
+(*                    >> `(a,r.E (i,s)) ∈ aut.trans x` *)
+(*                         suffices_by fs[run_restr_def] *)
+(*                    >> metis_tac[equivalentStates_def] *)
+(*                   ) *)
+(*                >- (fs[validAARunFor_def] *)
+(*                    >> `∃a. (a,r.E (i,q)) ∈ aut.trans q ∧ at w i ∈ a` *)
+(*                        by metis_tac[] *)
+(*                    >> qexists_tac `a` >> fs[] *)
+(*                    >> `(a,r.E(i,q)) ∈ aut.trans q` suffices_by fs[run_restr_def] *)
+(*                    >> metis_tac[] *)
+(*                   ) *)
+(*              ) *)
+(*           >- (simp[SUBSET_DEF] >> rpt strip_tac >> qunabbrev_tac `new_run` *)
+(*                 >> fs[run_restr_def,run_restr_V_def,run_restr_E_def] *)
+(*                 >> qabbrev_tac `fullRunV = \i. *)
+(*                     run_restr_V (r.V 0) *)
+(*                      (ALTERA_RUN r.V *)
+(*                        (λ(i,q). *)
+(*                          if (q = x) ∧ s ∈ r.V i *)
+(*                          then r.E (i,s) else r.E (i,q))) i` *)
+(*                 >> fs[] *)
+(*                 >> `q ∈ fullRunV i` by metis_tac[MEMBER_NOT_EMPTY] >> fs[] *)
+(*                 >> `x' ∈ fullRunV (SUC i)` *)
+(*                    suffices_by metis_tac[SUC_ONE_ADD,ADD_COMM] *)
+(*                 >> qunabbrev_tac `fullRunV` >> simp[run_restr_V_def] *)
+(*                 >> Cases_on `(q = x) ∧ s ∈ r.V i` >> fs[] *)
+(*                 >> metis_tac[] *)
+(*              ) *)
+(*           >- (Cases_on `i=0` >> fs[] >> `q ∈ r.V i` by metis_tac[SUBSET_DEF] *)
+(*                 >> qunabbrev_tac `new_run` *)
+(*                 >> simp[] *)
+(*                 >> `?j. i = SUC j` by (Cases_on `i` >> fs[]) *)
+(*                 >> rw[] >> fs[] *)
+(*                 >> fs[run_restr_V_def,run_restr_def,run_restr_E_def] *)
+(*                 >> metis_tac[] *)
+(*              ) *)
+(*             ) *)
+(*          >- (`∀b f. infBranchOf new_run b ∧ branchFixP b f *)
+(*               ⇒ f ∉ aut.final` *)
+(*                suffices_by metis_tac[BRANCH_ACC_LEMM,isWeakAlterA_def] *)
+(*              >> `∀b1 f1. infBranchOf r b1 ∧ branchFixP b1 f1 *)
+(*                 ⇒ f1 ∉ aut.final` by metis_tac[BRANCH_ACC_LEMM,isWeakAlterA_def] *)
+(*              >> rpt strip_tac >> fs[branchFixP_def] *)
+(*              >> Cases_on `(f = x) ∧ ((f = x) ==> ?j. i <= j ∧ s ∈ r.V j)` *)
+(*                 >> fs[] *)
+(*                >- (`?j. i <= j ∧ s ∈ r.V j` by fs[] *)
+(*                   >> `!j. b j ∈ new_run.V j` by metis_tac[BRANCH_V_LEMM] *)
+(*                   >> fs[infBranchOf_def] *)
+(*                   >> `x ∈ new_run.E (j, x)` by ( *)
+(*                        `b (j + 1) = x` by simp[] *)
+(*                        >> `b j = x` by simp[] *)
+(*                        >> `b (j + 1) ∈ new_run.E (j, b j)` by metis_tac[] *)
+(*                        >> metis_tac[] *)
+(*                   ) *)
+(*                   >> qunabbrev_tac `new_run` >> POP_ASSUM mp_tac *)
+(*                   >> simp[run_restr_def, run_restr_E_def] *)
+(*                   >> `b j = x` by simp[] *)
+(*                   >> first_x_assum (qspec_then `j` mp_tac) *)
+(*                   >> simp[run_restr_def] >> rpt strip_tac *)
+(*                   >> fs[validAARunFor_def] *)
+(*                   >> `∃a. (a,r.E (j,s)) ∈ aut.trans s ∧ at w j ∈ a` *)
+(*                       by metis_tac[] *)
+(*                   >> metis_tac[isWeakWithOrder_def] *)
+(*                   ) *)
+(*                >- (`infBranchSuffOf r i (\p. f)` by ( *)
+(*                      simp[infBranchSuffOf_def] >> rpt strip_tac *)
+(*                       >- (`f ∈ new_run.V i` *)
+(*                            by metis_tac[BRANCH_V_LEMM, DECIDE ``i >= i``] *)
+(*                           >> metis_tac[SUBSET_DEF] *)
+(*                          ) *)
+(*                       >- (fs[infBranchOf_def] *)
+(*                           >> `f ∈ new_run.E (i + p, f)` by ( *)
+(*                               `b (i + p + 1) = f` by fs[] *)
+(*                               >> `b (i + p) = f` by fs[] *)
+(*                               >> metis_tac[]) *)
+(*                           >> qunabbrev_tac `new_run` *)
+(*                           >> fs[run_restr_def, run_restr_E_def] *)
+(*                           >> metis_tac[MEMBER_NOT_EMPTY] *)
+(*                          ) *)
+(*                     ) *)
+(*                     >> qabbrev_tac `new_branch = \p:num. f` *)
+(*                     >> `∃b'. infBranchOf r b' ∧ ∀a. new_branch a = b' (a + i)` *)
+(*                         by metis_tac[BRANCH_SUFF_LEMM] *)
+(*                     >> rename[`infBranchOf r b'`] *)
+(*                     >> first_x_assum (qspec_then `b'` mp_tac) >> rpt strip_tac *)
+(*                     >> first_x_assum (qspec_then `f` mp_tac) >> simp[] *)
+(*                     >> qexists_tac `i` >> qunabbrev_tac `new_branch` *)
+(*                     >> rpt strip_tac >> fs[] *)
+(*                      >- metis_tac[DECIDE ``0 + i = i``] *)
+(*                      >- (`i <= m` by simp[] *)
+(*                          >> `?p. m = i + p` by metis_tac[LESS_EQ_EXISTS] *)
+(*                          >> metis_tac[ADD_COMM] *)
+(*                         ) *)
+(*                   ) *)
+(*                >- (`infBranchSuffOf r i (\p. f)` by ( *)
+(*                           simp[infBranchSuffOf_def] >> rpt strip_tac *)
+(*                           >- (`f ∈ new_run.V i` *)
+(*                                 by metis_tac[BRANCH_V_LEMM, DECIDE ``i >= i``] *)
+(*                               >> metis_tac[SUBSET_DEF] *)
+(*                              ) *)
+(*                           >- (fs[infBranchOf_def] >> rw[] *)
+(*                               >> `f ∈ new_run.E (i + p, f)` by ( *)
+(*                                    `b (i + p + 1) = f` by fs[] *)
+(*                                    >> `b (i + p) = f` by fs[] *)
+(*                                    >> metis_tac[]) *)
+(*                        >> qunabbrev_tac `new_run` *)
+(*                        >> fs[run_restr_def, run_restr_E_def] *)
+(*                        >> metis_tac[MEMBER_NOT_EMPTY,DECIDE ``i <= i + p``] *)
+(*                              ) *)
+(*                       ) *)
+(*                    >> qabbrev_tac `new_branch = \p:num. f` *)
+(*                    >> `∃b'. infBranchOf r b' ∧ ∀j. new_branch j = b' (j + i)` *)
+(*                        by metis_tac[BRANCH_SUFF_LEMM] *)
+(*                    >> rename[`infBranchOf r b'`] *)
+(*                    >> first_x_assum (qspec_then `b'` mp_tac) >> rpt strip_tac *)
+(*                    >> first_x_assum (qspec_then `f` mp_tac) >> simp[] *)
+(*                    >> qexists_tac `i` >> qunabbrev_tac `new_branch` *)
+(*                    >> rpt strip_tac >> fs[] *)
+(*                     >- metis_tac[DECIDE ``i + 0 = i``] *)
+(*                     >- (`i <= m` by simp[] *)
+(*                         >> `?p. m = i + p` by metis_tac[LESS_EQ_EXISTS] *)
+(*                         >> metis_tac[] *)
+(*                        ) *)
+(*                   ) *)
+(*             ) *)
+(*          >- (`s ∈ r.V i ∧ x ∈ r.V i` by metis_tac[SUBSET_DEF] *)
+(*              >> qunabbrev_tac `new_run` >> simp[SET_EQ_SUBSET,SUBSET_DEF] *)
+(*              >> rpt strip_tac >> fs[run_restr_def, run_restr_E_def] *)
+(*              >> metis_tac[MEMBER_NOT_EMPTY] *)
+(*             ) *)
+(*       ) *)
+(*   ); *)
+
+(*up to here should work with new reach rel*)
+
 
 (* val MERGE_STATE_CORRECT = store_thm *)
 (*   ("MERGE_STATE_CORRECT", *)
