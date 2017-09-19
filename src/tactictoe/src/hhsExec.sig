@@ -14,6 +14,7 @@ sig
   
   val is_thm           : string -> bool
   val is_tactic        : string -> bool
+  val is_string        : string -> bool
   val is_pointer_eq    : string -> string -> bool
   
   val hhs_invalid_flag : bool ref

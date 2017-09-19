@@ -292,9 +292,9 @@ fun start_record name goal =
   debug ("\n" ^ name);
   init_tactictoe (); (* necessary with hhs_after_flag *)
   start_stacset := create_stacset ();
-  if !hhs_aftertoken_flag 
-    then start_tokenset := create_tokenset ()
-    else ()
+  if !hhs_after_flag
+  then start_tokenset := create_tokenset ()
+  else ()
   ;
   (* recording goal steps *)
   goalstep_glob := [];
@@ -304,51 +304,96 @@ fun start_record name goal =
   else (eval_tactictoe name goal handle _ => debug "Error: eval_tactictoe")
   )
 
+fun filter_stacfea f dict =
+  (
+  debug (int_to_string (dlength dict));
+  init_stacfea_ddict [];
+  app update_stacfea_ddict (filter f (dlist dict));
+  debug (int_to_string (dlength (!hhs_stacfea)))
+  )
+
+val thm_cache = ref (dempty String.compare)
+fun is_thm_cache x = 
+  dfind x (!thm_cache) handle _ =>
+  let val b = is_thm x in
+    thm_cache := dadd x b (!thm_cache);
+    b
+  end
+  
+val string_cache = ref (dempty String.compare)
+fun is_string_cache x = 
+  dfind x (!string_cache) handle _ =>
+  let val b = is_string x in
+    string_cache := dadd x b (!string_cache);
+    b
+  end
+  
+val tactic_cache = ref (dempty String.compare)
+fun is_tactic_cache x = 
+  dfind x (!tactic_cache) handle _ =>
+  let val b = is_tactic x in
+    tactic_cache := dadd x b (!tactic_cache);
+    b
+  end    
+
+val mtoken_dict = ref (dempty String.compare)
+val mtactic_dict = ref (dempty String.compare)
+  
 fun end_record name g =
   let 
     val _ = debug "End record"
+    val _ = thm_cache := dempty String.compare
+    val _ = string_cache := dempty String.compare
+    val _ = tactic_cache := dempty String.compare
+    val _ = mtoken_dict := dempty String.compare
+    val _ = mtactic_dict := dempty String.compare
     val stacl = map #1 (!goalstep_glob)
     val goall = map #2 (!goalstep_glob)
+    fun is_true _ = true
+    
+    fun etest_wrap etest itest fea =
+      let 
+        fun itest_wrap itest x = 
+          if itest x 
+          then true 
+          else (mtoken_dict := dadd x () (!mtoken_dict); false)
+        val stac = ((#1 o fst) fea)
+        val l = hhs_lex stac 
+      in
+        if etest fea andalso all (itest_wrap itest) l
+        then true
+        else (mtactic_dict := dadd stac () (!mtactic_dict); false)  
+      end
+     
     fun f1 ((stac,_,x,_),_) = mem stac stacl andalso mem x goall
+    val ef1 = etest_wrap f1 is_true
     fun f2 ((stac,_,_,_),_) = dmem stac (!start_stacset)
-    fun f3 ((stac,_,_,_),_) = 
-      all (fn x => dmem x (!start_tokenset)) (hhs_lex stac)
+    val ef2 = etest_wrap f2 is_true
+    fun f3 x = dmem x (!start_tokenset)
+    val ef3 = etest_wrap is_true f3
+    fun f6 x = dmem x (!start_tokenset) orelse is_tactic_cache x
+    val ef6 = etest_wrap is_true f6
+    fun f7 x = dmem x (!start_tokenset) orelse 
+               is_thm_cache x orelse is_string_cache x
+    val ef7 = etest_wrap is_true f7       
+    fun f8 x = 
+      dmem x (!start_tokenset) orelse 
+      is_thm_cache x orelse is_string_cache x orelse is_tactic_cache x
+    val ef8 = etest_wrap is_true f8
+     
     val mem_hhs_stacfea = !hhs_stacfea
+    val dict = mem_hhs_stacfea
     val mem_hhs_cthyfea = !hhs_cthyfea
     val mem_hhs_ddict = !hhs_ddict
     val mem_hhs_ndict = !hhs_ndict
   in
-    (* slow *)
-    if !hhs_aftersmall_flag 
-      then 
-        (
-        debug (int_to_string (dlength (!hhs_stacfea)));
-        init_stacfea_ddict [];
-        app update_stacfea_ddict (filter f1 (dlist mem_hhs_stacfea));
-        debug (int_to_string (dlength (!hhs_stacfea)))
-        )
-      else ()
-    ;
-    if !hhs_aftertac_flag 
-      then
-        (
-        debug (int_to_string (dlength (!hhs_stacfea)));
-        init_stacfea_ddict [];
-        app update_stacfea_ddict (filter f2 (dlist mem_hhs_stacfea));
-        debug (int_to_string (dlength (!hhs_stacfea)))
-        )
-      else ()
-    ;
-    if !hhs_aftertoken_flag 
-      then
-        (
-        debug (int_to_string (dlength (!hhs_stacfea)));
-        init_stacfea_ddict [];
-        app update_stacfea_ddict (filter f3 (dlist mem_hhs_stacfea));
-        debug (int_to_string (dlength (!hhs_stacfea)))
-        )
-      else ()
-    ;
+    if !hhs_aftersmall_flag then filter_stacfea ef1 dict else ();
+    if !hhs_aftertac_flag then filter_stacfea ef2 dict else ();
+    if !hhs_aftertoken_flag then filter_stacfea ef3 dict else ();
+    if !hhs_aftertactic_flag then filter_stacfea ef6 dict else ();
+    if !hhs_afterall_flag then filter_stacfea ef7 dict else ();
+    if !hhs_afterall2_flag then filter_stacfea ef8 dict else ();
+    
     if !hhs_after_flag
     then (eval_tactictoe name g handle _ => debug "Error: eval_tactictoe")
     else ()
@@ -359,7 +404,11 @@ fun end_record name g =
         hhs_stacfea := mem_hhs_stacfea;
         hhs_cthyfea := mem_hhs_cthyfea;
         hhs_ddict := mem_hhs_ddict;
-        hhs_ndict := mem_hhs_ndict
+        hhs_ndict := mem_hhs_ndict;
+        debug ("mtactic_dict " ^ int_to_string (dlength (!mtactic_dict)));
+        app debug (map fst (dlist (!mtactic_dict)));
+        debug ("mtoken_dict " ^ int_to_string (dlength (!mtoken_dict)));
+        app debug (map fst (dlist (!mtoken_dict)))
         )
       else ()
     ;

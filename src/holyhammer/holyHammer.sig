@@ -18,14 +18,15 @@ sig
   val launch_atp        : prover -> int -> Process.status
   
   (* Reconstruct and minimize the proof using Metis *)
-  val reconstruct_atp   : prover -> term -> unit
+  val reconstruct_atp   : prover -> term -> tactic
   
   (* Main function and options *)
-  val hh_atp            : prover -> int -> int -> term -> unit
-  val hh_eprover        : term -> unit
-  val hh_z3             : term -> unit
-  val hh                : term -> unit (* eprover + z3 *)
-  val hh_eval           : int -> term -> unit 
+  val hh_atp            : prover -> int -> int -> term -> tactic
+  val hh_eprover        : term -> tactic
+  val hh_z3             : term -> tactic
+  val hh                : term -> tactic (* eprover + z3 *)
+  val hh_tac            : tactic
+  val hh_eval           : int -> term -> unit
   val clean_cache       : unit -> unit
   val set_timeout       : int -> unit
   val set_minimization  : bool -> unit

@@ -292,8 +292,6 @@ fun minimize_proof_wrap p =
     )
   else p
 
-
-
 (*
 fun should_par i sl = case sl of
     []     => false

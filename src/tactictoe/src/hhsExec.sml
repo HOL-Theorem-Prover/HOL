@@ -46,6 +46,9 @@ fun is_thm s =
 fun is_tactic s =
   exec_sml "is_tactic" ("val _ = Tactical.VALID (" ^ s ^ ")")
 
+fun is_string s = 
+  exec_sml "is_string" ("val _ = String.isPrefix (" ^ s ^ ")")
+
 fun is_pointer_eq s1 s2 =
   let 
     val b = exec_sml "is_pointer_eq" 

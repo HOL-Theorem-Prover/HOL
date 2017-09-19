@@ -106,9 +106,10 @@ fun select_premises n term =
     val d2 = ref (dempty (cpl_compare String.compare Int.compare))
     val (o1,o2) = dfind thyl (!dict_cache) handle _ =>
       (
-      print_endline "Initialization ...";
+      print "Initialization...";
       init_predictions d1 d2 thyl;
       dict_cache := dadd thyl (!d1,!d2) (!dict_cache);
+      print_endline " end";
       (!d1,!d2)
       )
     val _ = (d1 := o1; d2 := o2)
@@ -241,6 +242,8 @@ fun hh term =
     reconstruct_atp Eprover term 
     handle _ => reconstruct_atp Z3 term
   end
+
+fun hh_tac goal = (hh (list_mk_imp goal)) goal
 
 fun hh_eval timeout term =
   let

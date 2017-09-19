@@ -29,10 +29,15 @@ val hhs_norecord_flag   = ref false
 val hhs_goalstep_flag   = ref false
 
 (* Evaluation after recording (cheat) *)
-val hhs_after_flag        = ref false
-val hhs_aftersmall_flag   = ref false
-val hhs_aftertac_flag     = ref false
-val hhs_aftertoken_flag   = ref false
+val hhs_after_flag         = ref false
+val hhs_aftersmall_flag    = ref false
+val hhs_aftertac_flag      = ref false
+val hhs_aftertoken_flag    = ref false
+val hhs_afterthm_flag      = ref false
+val hhs_afterstring_flag   = ref false
+val hhs_aftertactic_flag   = ref false
+val hhs_afterall_flag      = ref false
+val hhs_afterall2_flag     = ref false
 
 (* set following tags to true to simulate version 2 *)
 val hhs_norecprove_flag = ref false

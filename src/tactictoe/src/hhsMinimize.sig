@@ -10,7 +10,9 @@ sig
 
   val hhs_prettify_flag : bool ref
   val hhs_minimize_flag : bool ref
+  val pretty_stac : string -> goal -> goal list -> string
   val minimize : Proof -> Proof
   val reconstruct : goal -> Proof -> string
-
+  
+  
 end

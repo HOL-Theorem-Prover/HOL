@@ -10,6 +10,11 @@ sig
   val hhs_aftersmall_flag : bool ref
   val hhs_aftertac_flag   : bool ref
   val hhs_aftertoken_flag : bool ref
+  val hhs_afterthm_flag   : bool ref
+  val hhs_afterstring_flag : bool ref
+  val hhs_aftertactic_flag : bool ref
+  val hhs_afterall_flag : bool ref
+  val hhs_afterall2_flag : bool ref
   
   val hhs_norecprove_flag : bool ref
   val hhs_norecord_flag   : bool ref
