@@ -22,7 +22,7 @@ val FUN_REL_def = Define‘
 
 val FUN_REL_COMB = Q.store_thm(
   "FUN_REL_COMB",
-  ‘(AB ===> CD) f g ∧ AB a b ⇒ CD (f a) (g b)’,
+  ‘(AB ===> CD) f g /\ AB a b ⇒ CD (f a) (g b)’,
   simp[FUN_REL_def]);
 
 val FUN_REL_ABS = Q.store_thm(

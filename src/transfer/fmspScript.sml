@@ -17,7 +17,7 @@ val FMSP_FDOM = Q.store_thm(
   simp[optionTheory.OPTREL_def]
   >- (fs[sptreeTheory.lookup_NONE_domain, finite_mapTheory.flookup_thm] >>
       fs[IN_DEF]) >>
-  ‘n ∈ domain sp’ by metis_tac[sptreeTheory.domain_lookup] >>
+  ‘n IN domain sp’ by metis_tac[sptreeTheory.domain_lookup] >>
   fs[IN_DEF, finite_mapTheory.flookup_thm])
 
 val FMSP_FEMPTY = Q.store_thm(
@@ -30,7 +30,7 @@ val FMSP_FUPDATE = Q.store_thm(
   ‘bi_unique AN ==>
      (FMSP AN BC ===> (AN ### BC) ===> FMSP AN BC)
        FUPDATE
-       (λsp (n,v). insert n v sp)’,
+       (\sp (n,v). insert n v sp)’,
   simp[FMSP_def, FUN_REL_def, PAIR_REL_def, pairTheory.FORALL_PROD] >>
   rpt strip_tac >>
   rename [‘FLOOKUP (fm |+ (k1,v)) k2’, ‘lookup m (insert n spv sp)’] >>
