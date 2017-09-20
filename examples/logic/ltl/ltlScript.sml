@@ -234,6 +234,13 @@ val TSF_TRANS_LEMM = store_thm
    >> Induct_on `z` >> dsimp[tempSubForms_def] >> metis_tac[]
   );
 
+(* val TSF_TRANS_LEMM2 = store_thm *)
+(*   ("TSF_TRANS_LEMM2", *)
+(*    ``!x y z. (x,y) ∈ TSF ∧ (y,z) ∈ TSF ==> (x,z) ∈ TSF``, *)
+   
+(* ) *)
+
+
 val TSF_TRANS = store_thm
   ("TSF_TRANS",
   ``!f. transitive (rrestrict TSF (tempSubForms f))``,

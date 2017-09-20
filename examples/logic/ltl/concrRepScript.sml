@@ -170,18 +170,49 @@ val ADDFRML_LEMM2 = store_thm
         >> fs[])
   );
 
+val ADDFRML_LEMM3 = store_thm
+  ("ADDFRML_LEMM3",
+   ``!a f. wfg a.graph ==>
+      (set (autoStates (addFrmlToAut a f)) = set (autoStates a) ∪ {f})``,
+   simp[SET_EQ_SUBSET] >> rpt strip_tac
+    >- (simp[SUBSET_DEF,UNION_DEF] >> rpt strip_tac
+        >> Cases_on `MEM x (autoStates a)` >> fs[] >> Cases_on `a`
+        >> `!q b. MEM q
+                 (autoStates
+                    (concrAA (addNode <|frml := f; is_final := b|> g) l l0))
+                 ==> ((q = f) \/ MEM q (autoStates (concrAA g l l0)))` by (
+             rpt strip_tac >> fs[autoStates_def,MEM_MAP] >> Cases_on `y`
+             >> fs[MEM_toAList] >> Cases_on `r.frml = f` >> fs[]
+             >> qexists_tac `(q',r)`
+             >> simp[] >> fs[MEM_toAList,addNode_def]
+             >> fs[lookup_insert] >> Cases_on `q' = g.next` >> fs[]
+             >> fs[theorem "nodeLabelAA_component_equality"]
+         )
+        >> Cases_on `MEM f (autoStates (concrAA g l l0))` >> fs[]
+        >> Cases_on `f` >> fs[addFrmlToAut_def,inAuto_def]
+        >> metis_tac[]
+       )
+    >- metis_tac[ADDFRML_LEMM2]
+    >- metis_tac[ADDFRML_LEMM,autoStates_def,inAuto_def,MEM]
+  );
+
 val ADDFRML_FOLDR_LEMM = store_thm
   ("ADDFRML_FOLDR_LEMM",
    ``!a fs. wfg a.graph ==>
-      (set (autoStates a) ⊆
+      (set (autoStates a) ∪ set fs =
          set (autoStates (FOLDR (\f a. addFrmlToAut a f) a fs))
          ∧ wfg (FOLDR (\f a. addFrmlToAut a f) a fs).graph)``,
-   gen_tac >> HO_MATCH_MP_TAC list_induction >> rpt strip_tac
+   gen_tac >> Induct_on `fs` >> rpt strip_tac
    >> fs[FOLDR]
-     >- (`set (autoStates (FOLDR (λf a. addFrmlToAut a f) a fs))
-           ⊆ set (autoStates (addFrmlToAut (FOLDR (λf a. addFrmlToAut a f) a fs) h))`
-         by metis_tac[ADDFRML_LEMM2]
-         >> metis_tac[SUBSET_TRANS])
+   >- (`set (autoStates (addFrmlToAut (FOLDR (λf a. addFrmlToAut a f) a fs) h))
+        = set (autoStates ((FOLDR (λf a. addFrmlToAut a f) a fs)))
+              ∪ {h}` by metis_tac[ADDFRML_LEMM3]
+       >> `set (autoStates a) ∪ (h INSERT (set fs))
+           = set (autoStates a) ∪ set fs  ∪ {h}`
+           suffices_by metis_tac[]
+       >> fs[INSERT_DEF,UNION_DEF] >> simp[SET_EQ_SUBSET,SUBSET_DEF]
+       >> rpt strip_tac >> metis_tac[]
+      )
      >- (metis_tac[ADDFRML_LEMM2])
   );
 
