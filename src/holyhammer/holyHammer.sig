@@ -24,7 +24,7 @@ sig
   val hh_atp            : prover -> int -> int -> term -> tactic
   val hh_eprover        : term -> tactic
   val hh_z3             : term -> tactic
-  val hh                : term -> tactic (* eprover + z3 *)
+  val holyhammer        : term -> tactic (* eprover + z3 *)
   val hh_tac            : tactic
   val hh_eval           : int -> term -> unit
   val clean_cache       : unit -> unit

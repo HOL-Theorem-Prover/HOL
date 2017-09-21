@@ -9,7 +9,7 @@
 structure hhsOpen :> hhsOpen =
 struct
 
-open HolKernel boolLib hhsRedirect hhsTools
+open HolKernel boolLib hhsTools
 
 val ERR = mk_HOL_ERR "hhsOpen"
 
@@ -61,13 +61,12 @@ fun gencode_values s =
 fun all_values s = 
   let 
     val dir = hhs_open_dir ^ "/" ^ s
-    val hide_file = dir ^ "/hide_values"
     val file = dir ^ "/code_values.sml"
     val cmd2 = (HOLDIR ^ "/bin/hol") ^ " < " ^ file
     val cmd = cmd2
   in
     gencode_values s;
-    ignore (hide hide_file OS.Process.system cmd);
+    ignore (hide_out OS.Process.system cmd);
     (
     readl (dir ^ "/values"), 
     readl (dir ^ "/constructors"), 
@@ -112,13 +111,12 @@ fun gencode_structures s =
 fun all_structures s = 
   let 
     val dir = hhs_open_dir ^ "/" ^ s
-    val hide_file = dir ^ "/hide_structures"
     val file = dir ^ "/code_structures.sml"
     val cmd2 = (HOLDIR ^ "/bin/hol") ^ " < " ^ file
     val cmd = cmd2
   in
     gencode_structures s;
-    ignore (hide hide_file OS.Process.system cmd);
+    ignore (hide_out OS.Process.system cmd);
     readl (dir ^ "/structures")
   end
 

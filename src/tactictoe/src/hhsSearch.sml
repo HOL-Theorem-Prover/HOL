@@ -32,6 +32,7 @@ val minstepdict_glob = ref (dempty goal_compare)
 val thmpredictor_glob = ref (fn g => [])
 val stacpredictor_glob = ref empty_predictor
 val glob_timer = ref NONE
+val hhs_unsafecache_flag = ref false
 
 (*
 val goaldepth_dict = ref (dempty goal_compare)
@@ -484,7 +485,10 @@ fun init_search thmpredictor stacpredictor tacdict minstepdict g =
   (
   init_thml_glob ();
   stactime_dict := dempty String.compare;
-  stacgoal_cache := dempty stacgoal_compare;
+  if !hhs_unsafecache_flag 
+    then ()
+    else stacgoal_cache := dempty stacgoal_compare
+  ;
   goalpred_cache := dempty goal_compare;
   predict_time := 0.0;
   thmpredict_time := 0.0;

@@ -33,6 +33,7 @@ sig
   val hhs_mdict_dir    : string
   
   val mkDir_err : string -> unit
+  val hide_out : ('a -> 'b) -> 'a -> 'b
 
   val incr   : int ref -> unit
   

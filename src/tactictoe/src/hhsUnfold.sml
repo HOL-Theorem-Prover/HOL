@@ -18,7 +18,7 @@ val ERR = mk_HOL_ERR "hhsUnfold"
    Debugging
    -------------------------------------------------------------------------- *)
 
-val cthy_glob = ref ""
+val cthy_glob = ref "scratch"
 val hhs_unfold_dir = tactictoe_dir ^ "/unfold_log"
 val hhs_scripts_dir = tactictoe_dir ^ "/scripts"
 fun debug_unfold s = append_endline (hhs_unfold_dir ^ "/" ^ !cthy_glob) s
@@ -48,8 +48,7 @@ datatype sketch_t =
   | Infix    of (string * infixity_t) list
   | Code     of string * stack_t
   | Start    of string
-  | End
-  | SEnd    
+  | End    
   | In
 
 val (infix_glob : (string * infixity_t) list ref) = ref []
@@ -79,7 +78,6 @@ fun original_program p = case p of
   | In :: m         => "in" :: original_program m 
   | Start s :: m    => s :: original_program m
   | End :: m        => "end" :: original_program m
-  | SEnd :: m       => "end" :: original_program m
   | Code (a,_) :: m   => a :: original_program m
   | Pattern (s,head,sep,body) :: m => 
     s :: original_program head @ [sep] @ original_program body @ 
@@ -90,8 +88,6 @@ fun bbody_of n p = case p of
   | Open _ :: m     => bbody_of n m 
   | Infix _ :: m    => bbody_of n m
   | In :: m         => bbody_of (n-1) m 
-  | Start "structure" :: m => bbody_of (n+1) m
-  | SEnd :: m => bbody_of (n-1) m
   | Start _ :: m    => 
     (if n = 0 then [Code ("(",Protect)] else []) @ bbody_of (n+1) m
   | End :: m        => 
@@ -565,19 +561,36 @@ fun ppstring_stac qtac =
     String.concatWith " " ["(","String.concatWith",mlquote " ","\n",tac3,")"]
   end
 
+fun load_list_loop sl = case sl of
+    []     => ["]"]
+  | [a]    => [mlquote a,"]"]
+  | a :: m => mlquote a :: "," :: load_list_loop m
+  
+fun load_list sl = "[" :: load_list_loop sl
+
+val interactive_flag = ref true
+
 fun modified_program inh p = case p of
     [] => []
   | Open sl :: m    => 
-    ("open" :: sl) @ [";"] @ modified_program inh m
+    (
+    if !interactive_flag
+    then []
+    else ["val","_","=","List.app","load"] @ load_list sl @ [";"]
+    )
+    @
+    ["open"] @ sl @ [";"] @
+    modified_program inh m
   | Infix l :: m    => 
     List.concat (map stringl_of_infix l) @ modified_program inh m
   | In :: m         => "in" :: modified_program inh m 
   | Start s :: m    => s :: modified_program inh m
   | End :: m        => "end" :: modified_program inh m
-  | SEnd :: m       => "end" :: modified_program inh m
   | Code (a,_) :: m =>
     ( 
-    if inh 
+    if !interactive_flag andalso a = "export_theory" 
+      then modified_program inh m
+    else if inh 
       then a :: modified_program inh m
     else if mem (drop_sig a) store_thm_list andalso hd_code_par m
       then
@@ -831,7 +844,6 @@ fun unfold in_flag stack program = case program of
   | Start s :: m => 
     Start s :: unfold in_flag (dempty String.compare :: stack) m    
   | End :: m    => End :: unfold (in_flag - 1) (tl stack) m
-  | SEnd :: m  => SEnd :: unfold in_flag (tl stack) m
   | Code ("op",_) :: Code (id,Undecided) :: m =>
     let val new_code = 
       if is_reserved id then Code (id,Protect)
@@ -901,6 +913,10 @@ fun output_header cthy =
   "(* This file was modifed by TacticToe.                                        *)\n",
   "(* ========================================================================== *)\n"
   ];
+  if !interactive_flag 
+  then os "load \"hhsRecord\";\n"
+  else ()
+  ;
   app os (bare_readl infix_decl);
   os "open hhsRecord;\n";
   os ("val _ = hhsRecord.start_thy " ^ mlquote cthy)
@@ -958,7 +974,10 @@ fun unquoteString s =
 val copy_scripts = tactictoe_dir ^ "/copy_scripts.sh"
 
 fun rewrite_script file = 
-  let val cthy = extract_thy file in
+  let 
+    val _ = interactive_flag := false
+    val cthy = extract_thy file
+  in
     if cthy = "bool" then () else
       let
         val _ = print (cthy ^ "\n");
@@ -1028,17 +1047,57 @@ fun cakeml_scripts cakeml_dir =
   end
 
 
+fun rm_ext s = #base (OS.Path.splitBaseExt s);
+  
+fun rw_script file =
+  let
+    val _ = interactive_flag := true
+    val cthy = extract_thy file
+    val _ = print_endline cthy
+    val file_out = rm_ext file ^ "_tactictoe.sml"
+    val sl = readl file
+    val s1 = rm_endline (rm_comment (String.concatWith " " sl))
+    val s2 = unquoteString s1
+    val sl3 = hhs_lex s2
+    val _ = start_unfold_thy cthy
+    val p0 = sketch sl3
+    val basis_dict = dnew String.compare (map protect basis)
+    val p2 = unfold 0 [basis_dict] p0
+    val sl5 = modified_program false p2
+  in
+    if !n_store_thm = 0 then () else
+    (
+    oc := TextIO.openOut file_out;
+    output_header cthy;
+    print_sl sl5;
+    output_foot cthy file;
+    TextIO.closeOut (!oc);
+    end_unfold_thy ()
+    )
+  end
+
+fun record_script file =
+  let 
+    val file_out = rm_ext file ^ "_tactictoe.sml"
+    val cmd = HOLDIR ^ "/bin/hol" ^ " < " ^ file_out
+  in 
+    rw_script file;
+    ignore (hide_out OS.Process.system cmd)
+  end
+  
+
+
 end (* struct *)
 
 
 (* ---------------------------------------------------------------------------
   HOL:  
-
+  
+  (* usually just before export () *)
   rlwrap hol
   load "hhsUnfold";
   open hhsUnfold;
-  rewrite_hol_scripts ();
-             
+  rewrite_hol_scripts ();         
   --------------------------------------------------------------------------- *)
   
   

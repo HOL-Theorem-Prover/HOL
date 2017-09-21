@@ -18,6 +18,7 @@ sig
   val hhs_visited_flag   : bool ref
   val hhs_width_coeff    : real ref
   val hhs_selflearn_flag : bool ref
+  val hhs_unsafecache_flag : bool ref
   
   val imperative_search   : 
     (goal -> string list) ->

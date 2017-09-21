@@ -106,15 +106,15 @@ fun select_premises n term =
     val d2 = ref (dempty (cpl_compare String.compare Int.compare))
     val (o1,o2) = dfind thyl (!dict_cache) handle _ =>
       (
-      print "Initialization...";
+      print_endline "Initialization...";
       init_predictions d1 d2 thyl;
       dict_cache := dadd thyl (!d1,!d2) (!dict_cache);
-      print_endline " end";
+      print_endline 
+        ("Caching " ^ int_to_string (dlength (!d1)) ^ " feature vectors");
       (!d1,!d2)
       )
     val _ = (d1 := o1; d2 := o2)
     val _ = init_predictions d1 d2 [cthy]
-    
     val thmfeav = dlist (!d1)
     val thmfeavdep = 
       map (fn (name,fea) => (name, fea, dep_of (!d2) name)) thmfeav
@@ -229,7 +229,7 @@ fun hh_eprover term = hh_atp Eprover (!timeout_glob) 128 term
 
 fun hh_z3 term = hh_atp Z3 (!timeout_glob) 32 term
 
-fun hh term = 
+fun holyhammer term = 
   let
     val premises32 = select_premises 32 term
     val premises128 = select_premises 128 term
@@ -243,7 +243,7 @@ fun hh term =
     handle _ => reconstruct_atp Z3 term
   end
 
-fun hh_tac goal = (hh (list_mk_imp goal)) goal
+fun hh_tac goal = (holyhammer (list_mk_imp goal)) goal
 
 fun hh_eval timeout term =
   let

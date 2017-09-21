@@ -8,7 +8,7 @@
 structure hhsTools :> hhsTools =
 struct
 
-open HolKernel boolLib Abbrev Dep
+open HolKernel boolLib Abbrev Dep hhsRedirect
 
 val ERR = mk_HOL_ERR "hhsTools"
 
@@ -37,6 +37,8 @@ val hhs_open_dir     = tactictoe_dir ^ "/open"
 val hhs_succrate_dir = tactictoe_dir ^ "/succrate"
 val hhs_mdict_dir   = tactictoe_dir ^ "/mdict"
 
+fun hide_out f x = 
+  hide_in_file (hhs_code_dir ^ "/" ^ current_theory () ^ "_hide_out") f x
 
 fun mkDir_err dir = OS.FileSys.mkDir dir handle _ => ()
 

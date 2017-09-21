@@ -198,7 +198,8 @@ fun minimize_lemmas l cj =
        print "Minimization...\n";
        let 
          val l1 = minimize_lemmas_loop [] l cj
-         val stac = hhsRedirect.hide (hhsTools.hhs_code_dir ^ "/pretty_hh")
+         val stac = 
+           hhsRedirect.hide_in_file (hhsTools.hhs_code_dir ^ "/hh_pretty")
            (stac_of_lemmas l1) cj;
        in
          print_endline stac;  
@@ -220,7 +221,8 @@ fun reconstruct (atp_status,atp_out) cj =
     val olemmas = get_lemmas (atp_status,atp_out)
   in
     case olemmas of 
-      NONE => (print_endline "No proof"; FAIL_TAC "holyhammer: prover")
+      NONE => (print_endline "holyhammer: time out"; 
+               FAIL_TAC "holyhammer: time out")
     | SOME lemmas =>
     let
       val l = map (fn (thy,nm) => ((thy,nm), fetch thy nm)) lemmas

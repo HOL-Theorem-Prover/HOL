@@ -46,9 +46,7 @@ INSTALL:
     hhs_ortho_metis := true;
   
   # Build HOL_RECORD. Takes about 1 or 2 hours. 
-  # The use of -j 1 is necessary. 
-  # Omitted it may cause clashes in the recording on shared files.
-  bin/build -j 1
+  bin/build
 
 3) Run TacticToe (in HOL_RECORD):
   

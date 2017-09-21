@@ -10,13 +10,9 @@ struct
 
 open HolKernel boolLib Abbrev
 hhsSearch hhsTools hhsLexer hhsExec hhsFeature hhsPredict hhsData hhsInfix
-hhsRedirect hhsFeature hhsMetis hhsLearn hhsMinimize
+hhsFeature hhsMetis hhsLearn hhsMinimize
 
 val ERR = mk_HOL_ERR "tacticToe"
-
-val init_error_file = tactictoe_dir ^ "/code/init_error"
-val main_error_file = tactictoe_dir ^ "/code/main_error"
-val hide_error_file = tactictoe_dir ^ "/code/hide_error"
 
 (* ----------------------------------------------------------------------
    References
@@ -27,6 +23,7 @@ val hhs_previous_theory = ref ""
 
 val hhs_norecord_flag   = ref false
 val hhs_goalstep_flag   = ref false
+val hhs_internalthm_flag = ref false
 
 (* Evaluation after recording (cheat) *)
 val hhs_after_flag         = ref false
@@ -71,6 +68,7 @@ fun set_parameters () =
   max_select_pred := 500;
   hhs_seldesc_flag := true;
   (* searching *)
+  hhs_unsafecache_flag := false;
   hhs_invalid_flag := false;
   hhs_cache_flag := true;
   hhs_diag_flag := false;
@@ -180,7 +178,7 @@ fun init_prev () =
     val _ = debug_t "init_mdict" init_mdict ()
     val _ = debug (int_to_string (dlength (!mdict_glob)))
   in
-    hide init_error_file QUse.use (tactictoe_dir ^ "/src/infix_file.sml");
+    hide_out QUse.use (tactictoe_dir ^ "/src/infix_file.sml");
     init_stacfea_ddict stacfea
   end
 
@@ -365,18 +363,22 @@ fun main_tactictoe goal =
        goal
   end
 
-fun print_proof_status r = case r of
-   ProofError     => print_endline "Proof status: Error\n"
- | ProofSaturated => print_endline "Proof status: Saturated\n"
- | ProofTimeOut   => print_endline "Proof status: Time Out\n"
- | Proof s        => print_endline s
+fun tactic_of_status r = case r of
+   ProofError     => 
+   (print_endline "tactictoe: error"; FAIL_TAC "tactictoe: error")
+ | ProofSaturated => 
+   (print_endline "tactictoe: saturated"; FAIL_TAC "tactictoe: saturated")
+ | ProofTimeOut   => 
+   (print_endline "tactictoe: time out"; FAIL_TAC "tactictoe: time out")
+ | Proof s        => 
+   (print_endline s; hide_out tactic_of_sml s)
 
 fun debug_eval_status r = 
   case r of
     ProofError     => debug_proof "Error: print_eval_status"
   | ProofSaturated => debug_proof "Proof status: Saturated"
   | ProofTimeOut   => debug_proof "Proof status: Time Out"
-  | Proof s        => debug_proof ("Proof found:\n" ^ s)
+  | Proof s        => debug_proof ("Proof found: " ^ s)
 
 (* integer_words return errors hopefully no other *)
 fun eval_tactictoe name goal =
@@ -384,20 +386,17 @@ fun eval_tactictoe name goal =
     then ()
   else if !hhs_hh_flag then 
     let val hh = hh_of_sml () in 
-      hh 5 (list_mk_imp goal) handle _ => 
-      debug_proof "Proof status: Error" 
+      hh 5 (list_mk_imp goal) handle _ => debug_proof "Proof status: Error" 
     end
   else if !hhs_eval_flag 
-    andalso 
-      not (mem (current_theory ())
-        ["integer_word","word_simp","wordSem","labProps",
-         "data_to_word_memoryProof","word_to_stackProof"])
-    andalso 
-      one_in_n ()
+    andalso not (mem (current_theory ())
+              ["integer_word","word_simp","wordSem","labProps",
+               "data_to_word_memoryProof","word_to_stackProof"])
+    andalso one_in_n ()
   then
     let
       val _ = init_tactictoe ()
-      val r = hhsRedirect.hide main_error_file main_tactictoe goal 
+      val r = hide_out main_tactictoe goal 
     in
       debug_eval_status r
     end
@@ -408,12 +407,14 @@ val param_glob = ref (fn () => ())
 fun tactictoe goal =
   let
     val _ = init_tactictoe ()
-    val _ = hide init_error_file set_more_parameters ()
+    val _ = hide_out set_more_parameters ()
     val _ = (!param_glob) () 
-    val r = hhsRedirect.hide main_error_file main_tactictoe goal 
+    val r = hide_out main_tactictoe goal
   in
-    print_proof_status r
+    tactic_of_status r
   end
+
+fun tt_tac goal = (tactictoe goal) goal
 
 (*
 val l1 = ["gcd","seq","poly","llist","set_relation"];
@@ -435,9 +436,10 @@ fun try_tac tacdict memdict n goal stacl =
     [] => ()
   | stac :: m => 
     let 
+      fun p0 s = print_endline s
       fun p s = (print_endline ("  " ^ s))
       val tac = dfind stac tacdict
-      val ro = (SOME (add_time (hhsTimeout.timeOut 1.0 tac) goal)) 
+      val ro = (SOME (add_time (hhsTimeout.timeOut 1.0 (hide_out tac)) goal)) 
         handle _ => NONE   
     in
       case ro of 
@@ -451,12 +453,11 @@ fun try_tac tacdict memdict n goal stacl =
           else 
             (
             if gl = []
-            then (print_endline stac; p "SOLVED")
+            then (p0 stac; p "SOLVED\n")
             else 
               (
-              if mem goal gl 
-                then () 
-                else (print_endline stac; app (p o string_of_goal) gl);
+              if mem goal gl then () 
+                else (p0 stac; app (p o string_of_goal) gl; p0 "");
               try_tac tacdict (dadd gl lbl memdict) (n-1) goal m
               )
             )
@@ -468,8 +469,8 @@ fun next_tac n goal =
     val _ = init_tactictoe ()
     (* preselection *)
     val goalfea = fea_of_goal goal       
-    val (stacsymweight, stacfeav, tacdict, _) = select_stacfeav goalfea
-    val (thmsymweight, thmfeav) = select_thmfeav goalfea
+    val (stacsymweight, stacfeav, tacdict, _) = 
+      hide_out select_stacfeav goalfea
     (* predicting *)
     fun stac_predictor g =
       stacknn stacsymweight (!max_select_pred) stacfeav (fea_of_goal g)

@@ -153,10 +153,8 @@ fun wrap_tactics_in name qtac goal =
         (final_stac, final_tac)
       end
       handle _ => parse_err name qtac (!final_stac_ref)
-    val hidden_file = hhs_code_dir ^ "/hidden"
     val (final_stac, final_tac)  =   
-      total_time hide_time (hhsRedirect.hide hidden_file
-       (total_time mkfinal_time mk_alttac)) qtac
+      total_time hide_time (hide_out (total_time mkfinal_time mk_alttac)) qtac
   in
     print (int_to_string (!n_tactic_parse_glob) ^ "\n");
     incr n_parse_glob;
@@ -255,12 +253,13 @@ fun name_of_thm thm =
   in
     String.concatWith " " ["(","DB.fetch",mlquote thy,mlquote name,")"]
   end
-  handle _ => save_tactictoe_thm thm 
+  handle e => if !hhs_internalthm_flag then save_tactictoe_thm thm else raise e
 
 fun fetch_thm_aux s reps =
-  let val file = hhs_code_dir ^ "/fetch_thm" in
-    hhsRedirect.hide file string_of_sml ("hhsRecord.name_of_thm " ^ s)
-    handle _ => (if reps = "" then (debug_record ("fetch: " ^ s); s) else reps)
+  let val file = hhs_code_dir ^ "/" ^ current_theory () ^ "_fetch_thm" in
+    hide_out string_of_sml ("hhsRecord.name_of_thm " ^ s)
+    handle _ => 
+    (if reps = "" then (debug_record ("fetch: " ^ s); s) else reps)
   end
   
 val fetch = total_time fetch_thm_time fetch_thm_aux

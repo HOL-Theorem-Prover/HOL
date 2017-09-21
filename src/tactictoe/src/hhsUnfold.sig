@@ -16,6 +16,8 @@ sig
   val hol_scripts : unit -> string list
   val hol_examples_scripts : unit -> string list
   val cakeml_scripts : string -> string list
+  val rw_script : string -> unit
+  val record_script : string -> unit
   val rewrite_script : string -> unit
   val rewrite_hol_scripts : unit -> unit
   

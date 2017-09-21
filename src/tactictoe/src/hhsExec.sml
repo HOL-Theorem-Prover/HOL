@@ -8,7 +8,7 @@
 structure hhsExec :> hhsExec = 
 struct
 
-open HolKernel Abbrev boolLib hhsTools hhsTimeout
+open HolKernel Abbrev boolLib hhsTools hhsTimeout Tactical
 
 val ERR = mk_HOL_ERR "hhsExec"
 
@@ -18,6 +18,7 @@ val ERR = mk_HOL_ERR "hhsExec"
 
 val hhs_bool_glob = ref false
 val hhs_tacticl_glob = ref []
+val hhs_tactic_glob = ref (FAIL_TAC "hhsExec")
 val hhs_string_glob = ref ""
 val hhs_goal_glob = ref ([],F)
 
@@ -27,27 +28,25 @@ val hhs_goal_glob = ref ([],F)
 
 fun exec_sml file s =
   let
-    val path = HOLDIR ^ "/src/tactictoe/code/" ^ file
+    val path = 
+      HOLDIR ^ "/src/tactictoe/code/" ^ current_theory () ^ "_" ^ file
     val oc = TextIO.openOut path
     fun os s = TextIO.output (oc,s)
   in
     os s;
     TextIO.closeOut oc;
-    ((QUse.use path; true) handle _ => false)
+    can QUse.use path
   end
 
 (* -----------------------------------------------------------------------------
    Tests
    -------------------------------------------------------------------------- *)
 
-fun is_thm s =
-  exec_sml "is_thm" ("val _ = Thm.dest_thm (" ^ s ^ ")")
+fun is_thm s = exec_sml "is_thm" ("val _ = Thm.dest_thm (" ^ s ^ ")")
 
-fun is_tactic s =
-  exec_sml "is_tactic" ("val _ = Tactical.VALID (" ^ s ^ ")")
+fun is_tactic s = exec_sml "is_tactic" ("val _ = Tactical.VALID (" ^ s ^ ")")
 
-fun is_string s = 
-  exec_sml "is_string" ("val _ = String.isPrefix (" ^ s ^ ")")
+fun is_string s = exec_sml "is_string" ("val _ = String.isPrefix (" ^ s ^ ")")
 
 fun is_pointer_eq s1 s2 =
   let 
@@ -64,10 +63,10 @@ fun is_pointer_eq s1 s2 =
 
 val hhs_invalid_flag = ref false
 
+fun mk_valid s = if !hhs_invalid_flag then s else "Tactical.VALID (" ^ s ^ ")"
+
 fun tacticl_of_sml sl =
-  let 
-    fun mk_valid s = 
-      if !hhs_invalid_flag then s else "Tactical.VALID ( " ^ s ^ " )"
+  let
     val tacticl = "[" ^ String.concatWith ", " (map mk_valid sl) ^ "]"
     val programl =
       [
@@ -81,8 +80,15 @@ fun tacticl_of_sml sl =
       else raise ERR "tacticl_of_sml" (String.concatWith " " (first_n 10 sl))
   end
 
-fun tactic_of_sml s = hd (tacticl_of_sml [s])
-
+fun tactic_of_sml s = 
+  let
+    val tactic = mk_valid s
+    val program = "val _ = hhsExec.hhs_tactic_glob := " ^ tactic
+    val b = exec_sml "tactic_of_sml" program
+  in
+    if b then !hhs_tactic_glob else raise ERR "tactic_of_sml" s
+  end
+  
 (* -----------------------------------------------------------------------------
    Apply tactics
    -------------------------------------------------------------------------- *)
@@ -168,7 +174,7 @@ fun type_of_sml s =
     let 
       val file = tactictoe_dir ^ "/code/sml_type_of_out"
       val cmd = "PolyML.print ( " ^ s ^ " );"
-      val b   = hhsRedirect.hide file (exec_sml "sml_type_of") cmd
+      val b   = exec_sml "sml_type_of" cmd
     in
       if b 
       then 
@@ -185,9 +191,6 @@ fun type_of_sml s =
         NONE
         )
     end
-
-
-  
 
 
 end (* struct *)

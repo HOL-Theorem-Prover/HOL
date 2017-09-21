@@ -5,6 +5,7 @@ sig
   
   val hhs_bool_glob    : bool ref
   val hhs_tacticl_glob : tactic list ref
+  val hhs_tactic_glob  : tactic ref
   val hhs_string_glob  : string ref
   val hhs_goal_glob    : goal ref
   val hhs_hh_glob      : (int -> term -> unit) ref
