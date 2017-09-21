@@ -514,11 +514,11 @@ local
      let
         val (l, ty) = listSyntax.dest_list t
      in
-        if ty = ``:num``
+        if ty = numSyntax.num
            then Lib.all is_hex_digit_literal l
-        else if ty = ``:char``
+        else if ty = stringSyntax.char_ty
            then Lib.all (Char.isHexDigit o stringSyntax.fromHOLchar) l
-        else if ty = ``:bool``
+        else if ty = Type.bool
            then Lib.all is_bool l
         else wordsSyntax.is_word_type ty
      end

@@ -459,7 +459,8 @@ local
 in
    val WGROUND_CONV =
       WALPHA_CONV
-      THENC Conv.DEPTH_CONV wordsLib.WORD_GROUND_CONV
+      THENC Conv.DEPTH_CONV (wordsLib.WORD_GROUND_CONV ORELSEC
+                             integer_wordLib.INT_WORD_GROUND_CONV)
       THENC Conv.DEPTH_CONV UINT_MAX_LOGIC_CONV
       THENC WALPHA_CONV
 end
