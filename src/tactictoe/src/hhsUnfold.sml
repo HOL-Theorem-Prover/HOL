@@ -22,6 +22,7 @@ val cthy_glob = ref "scratch"
 val hhs_unfold_dir = tactictoe_dir ^ "/unfold_log"
 val hhs_scripts_dir = tactictoe_dir ^ "/scripts"
 fun debug_unfold s = append_endline (hhs_unfold_dir ^ "/" ^ !cthy_glob) s
+val loadl_glob = ref []
 
 (* --------------------------------------------------------------------------
    Program representation and stack
@@ -575,12 +576,11 @@ fun modified_program inh p = case p of
   | Open sl :: m    => 
     (
     if !interactive_flag
-    then ["val","_","=","List.app","load"] @ load_list sl @ [";"]
-    else []
+    then loadl_glob := sl @ (!loadl_glob)
+    else ()
+    ;
+    ["open"] @ sl @ [";"] @ modified_program inh m
     )
-    @
-    ["open"] @ sl @ [";"] @
-    modified_program inh m
   | Infix l :: m    => 
     List.concat (map stringl_of_infix l) @ modified_program inh m
   | In :: m         => "in" :: modified_program inh m 
@@ -914,7 +914,12 @@ fun output_header cthy =
   "(* ========================================================================== *)\n"
   ];
   if !interactive_flag 
-  then os "load \"hhsRecord\";\n"
+  then 
+    (
+    os "load \"hhsRecord\";\n";
+    os ("List.app load " ^ String.concatWith " " (load_list (!loadl_glob))
+        ^ ";\n")
+    )
   else ()
   ;
   app os (bare_readl infix_decl);
@@ -1046,12 +1051,12 @@ fun cakeml_scripts cakeml_dir =
     readl file
   end
 
-
 fun rm_ext s = #base (OS.Path.splitBaseExt s);
   
 fun rw_script file =
   let
     val _ = interactive_flag := true
+    val _ = loadl_glob := []
     val cthy = extract_thy file
     val _ = print_endline cthy
     val file_out = rm_ext file ^ "_tactictoe.sml"
