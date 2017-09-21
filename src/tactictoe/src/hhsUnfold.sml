@@ -1078,11 +1078,12 @@ fun rw_script file =
 
 fun record_script file =
   let 
+    val _ = interactive_flag := true
     val file_out = rm_ext file ^ "_tactictoe.sml"
     val cmd = HOLDIR ^ "/bin/hol" ^ " < " ^ file_out
   in 
     rw_script file;
-    ignore (hide_out OS.Process.system cmd)
+    ignore (OS.Process.system cmd)
   end
   
 
