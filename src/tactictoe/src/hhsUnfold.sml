@@ -575,8 +575,8 @@ fun modified_program inh p = case p of
   | Open sl :: m    => 
     (
     if !interactive_flag
-    then []
-    else ["val","_","=","List.app","load"] @ load_list sl @ [";"]
+    then ["val","_","=","List.app","load"] @ load_list sl @ [";"]
+    else []
     )
     @
     ["open"] @ sl @ [";"] @
@@ -1077,8 +1077,7 @@ fun rw_script file =
   end
 
 fun record_script file =
-  let 
-    val _ = interactive_flag := true
+  let
     val file_out = rm_ext file ^ "_tactictoe.sml"
     val cmd = HOLDIR ^ "/bin/hol" ^ " < " ^ file_out
   in 
