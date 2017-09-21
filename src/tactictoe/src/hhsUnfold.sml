@@ -917,8 +917,10 @@ fun output_header cthy =
   then 
     (
     os "load \"hhsRecord\";\n";
-    os ("List.app load " ^ String.concatWith " " (load_list (!loadl_glob))
-        ^ ";\n")
+    os ("List.app load " ^ 
+      String.concatWith " " 
+        (mk_fast_set String.compare (load_list (!loadl_glob)))
+      ^ ";\n")
     )
   else ()
   ;
