@@ -10,7 +10,7 @@ structure hhsRecord :> hhsRecord =
 struct
 
 open HolKernel boolLib hhsTools hhsLexer hhsData hhsNumber hhsExtract hhsUnfold 
-hhsTimeout hhsData tacticToe hhsPredict hhsExec hhsMetis
+hhsTimeout hhsData tacticToe hhsPredict hhsExec hhsMetis hhsLearn
 
 val ERR = mk_HOL_ERR "hhsRecord"
 
@@ -105,12 +105,42 @@ fun out_record_summary cthy =
 
 fun set_irecord () = 
   (
+  (* recording *)
+  hhs_norecord_flag := false;
   hhs_eval_flag := false;
   hhs_internalthm_flag := false;
   hhs_norecprove_flag := false;
-  hhs_norecord_flag := false;
   hhs_nolet_flag := false;
-  hhs_goalstep_flag := false
+  hhs_goalstep_flag := false;
+  (* learning *)
+  hhs_noslowlbl_flag := false;
+  hhs_ortho_flag := false;
+  hhs_ortho_number := 20;
+  hhs_ortho_metis := false;
+  hhsSearch.hhs_selflearn_flag := false;
+  hhs_succrate_flag := false
+  (* export *)
+  hhs_thmortho_flag := false
+  )
+
+fun set_erecord () =
+  (
+  (* recording *)
+  hhs_norecord_flag := false;
+  hhs_eval_flag := true;
+  hhs_internalthm_flag := true;
+  hhs_norecprove_flag := true;
+  hhs_nolet_flag := true;
+  hhs_goalstep_flag := false;
+  (* learning *)
+  hhs_noslowlbl_flag := false;
+  hhs_ortho_flag := false;
+  hhs_ortho_number := 20;
+  hhs_ortho_metis := false;
+  hhs_selflearn_flag := false;
+  hhs_succrate_flag := false;
+  (* export *)
+  hhs_thmortho_flag := false
   )
 
 (* --------------------------------------------------------------------------
@@ -306,7 +336,7 @@ fun create_tokenset () =
 
 fun start_record name goal =
   (
-  init_tactictoe ();
+  if !hhs_eval_flag then init_tactictoe () else ();
   debug_proof ("\n" ^ name);
   debug_search ("\n" ^ name);
   debug ("\n" ^ name);

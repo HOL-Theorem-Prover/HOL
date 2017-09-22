@@ -1091,7 +1091,9 @@ fun record_script file =
     val cmd1 = HOLDIR ^ "/bin/hol" ^ " < " ^ basename
   in 
     rw_script file;
-    ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1))
+    if dir = "" 
+      then ignore (OS.Process.system cmd1)
+      else ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1))
   end
   
 end (* struct *)

@@ -54,22 +54,26 @@ fun set_timeout r = timeout := r
 val one_in_flag = ref true
 val one_in_value = ref 10
 val one_in_counter = ref 0
+val one_in_offset = ref 0
 fun one_in_n () =
   if !one_in_flag
   then 
-    let val b = (!one_in_counter) mod (!one_in_value) = 0 in
+    let val b = (!one_in_counter) mod (!one_in_value) = (!one_in_offset) in
       (incr one_in_counter; b)
     end
   else true
 
-fun set_parameters () =
+fun set_esearch () = 
   (
-  (* *)
-  hhs_stacpred_flag := false;
+  (* evaluating *)
+  one_in_flag := true;
+  one_in_value := 10;
+  one_in_offset := 0;
   (* predicting *)
   max_select_pred := 500;
   hhs_seldesc_flag := true;
   (* searching *)
+  timeout := 5.0;
   hhs_unsafecache_flag := false;
   hhs_invalid_flag := false;
   hhs_cache_flag := true;
@@ -80,34 +84,30 @@ fun set_parameters () =
   hhs_tactic_time := 0.02;
   hhs_astar_flag := false;
   hhs_astar_radius := 1;
-  hhs_timedepth_flag := false; 
-  (* learning *)
-  hhs_noslowlbl_flag := false; (* doesn't work *)
-  hhs_ortho_flag := false;
-  hhs_ortho_number := 20;
-  hhs_ortho_metis := false;
-  hhs_selflearn_flag := false;
-  hhs_succrate_flag := false;
+  hhs_timedepth_flag := false;
+  (* synthetizing *)
+  hhs_stacpred_flag := false;
   (* metis *)
-  hhs_metis_flag := (
-    true andalso 
+  hhs_metis_exec := 
     (load "metisTools" handle _ => (); 
      exec_sml "metis_test" "metisTools.METIS_TAC")
-  );
+  hhs_metis_flag := (true andalso (!hhs_metis_exec))
   hhs_metis_npred := 16;
   hhs_metis_time := 0.1;
   hhs_thmortho_flag := false;
+  (* holyhammer *)
+  hhs_hh_exec := 
+    (load "holyHammer" handle _ => (); 
+     exec_sml "hh_test" "holyHammer.eval_hh")
+  hhs_hh_flag := (false andalso (!hhs_hh_exec))
   (* result *)
   hhs_minimize_flag := false;
-  hhs_prettify_flag := false;
-  (* try holyhammer instead *)
-  hhs_hh_flag := (
-    false andalso 
-    (load "holyHammer" handle _ => (); 
-     exec_sml "hh_test" "holyHammer.eval_hh"))
-  )
-
-fun set_more_parameters () =
+  hhs_prettify_flag := false
+  ) 
+ 
+val set_isearch_hook = ref (fn () => ()) 
+    
+fun set_isearch () =
   (
   (* predicting *)
   max_select_pred := 500;
@@ -131,14 +131,12 @@ fun set_more_parameters () =
   );
   hhs_metis_npred := 16;
   hhs_metis_time := 0.1;
-  hhs_thmortho_flag := false;
+  (* holyhammer *)
   (* result *)
   hhs_minimize_flag := true;
-  hhs_prettify_flag := true
-  (* try holyhammer instead *)
+  hhs_prettify_flag := true;
+  set_isearch_hook ()
   )
-
-
 
 (* ----------------------------------------------------------------------
    Parse string tactic to HOL tactic. Quite slow because of 
@@ -203,9 +201,7 @@ fun init_tactictoe () =
         print_endline ("Loading " ^ ns ^ " feature vectors");
         hhs_previous_theory := cthy
       end
-    else ();
-    debug "set_parameters";
-    set_parameters ()
+    else ()
   end
 
 (* includes itself *)
@@ -386,31 +382,31 @@ fun debug_eval_status r =
 fun eval_tactictoe name goal =
   if !hhs_noprove_flag andalso String.isPrefix "tactictoe_prove_" name
     then ()
-  else if !hhs_hh_flag then 
-    let val hh = hh_of_sml () in 
-      hh 5 (list_mk_imp goal) handle _ => debug_proof "Proof status: Error" 
-    end
+  else 
   else if !hhs_eval_flag 
     andalso not (mem (current_theory ())
               ["integer_word","word_simp","wordSem","labProps",
                "data_to_word_memoryProof","word_to_stackProof"])
     andalso one_in_n ()
   then
-    let
-      val _ = init_tactictoe ()
-      val r = hide_out main_tactictoe goal 
-    in
-      debug_eval_status r
+    let val _ = hide_out set_esearch () in
+      if !hhs_hh_flag then 
+        let val hh = hh_of_sml () in 
+          hh 5 (list_mk_imp goal) handle _ => debug_proof "Proof status: Error" 
+        end
+      else
+        let val r = hide_out main_tactictoe goal in
+          debug_eval_status r
+        end
     end
   else ()
 
-val param_glob = ref (fn () => ())
+
  
 fun tactictoe goal =
   let
     val _ = init_tactictoe ()
-    val _ = hide_out set_more_parameters ()
-    val _ = (!param_glob) () 
+    val _ = hide_out set_isearch ()
     val r = hide_out main_tactictoe goal
   in
     tactic_of_status r
