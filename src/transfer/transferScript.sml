@@ -2,6 +2,7 @@ open HolKernel Parse boolLib bossLib;
 
 val _ = new_theory "transfer";
 
+(* uniqueness, which might also be termed injectivity *)
 val right_unique_def = Define‘
   right_unique (R : 'a -> 'b -> bool) <=>
     !a b1 b2. R a b1 /\ R a b2 ==> (b1 = b2)’;
@@ -11,6 +12,11 @@ val left_unique_def = Define‘
     !a1 a2 b. R a1 b /\ R a2 b ==> (a1 = a2)’;
 
 val bi_unique_def = Define‘bi_unique R <=> left_unique R /\ right_unique R’;
+
+(* totality or surjectivity *)
+val total_def = Define‘total (R : 'a -> 'b -> bool) <=> !x:'a. ?y. R x y’;
+val surj_def = Define‘surj (R : 'a -> 'b -> bool) <=> !y:'b. ?x. R x y’;
+val bitotal_def = Define‘bitotal (R : 'a -> 'b -> bool) <=> total R /\ surj R’;
 
 val _ =
     set_mapped_fixity {fixity = Infixr 490, term_name = "FUN_REL", tok = "===>"}
