@@ -17,6 +17,7 @@ val hhs_metis_flag  = ref false
 val hhs_metis_time  = ref 0.1
 val hhs_metis_npred = ref 16
 val hhs_thmortho_flag = ref false
+val hhs_stacpred_flag = ref false
 
 (* ----------------------------------------------------------------------
    Theorems dependencies
@@ -220,8 +221,88 @@ fun add_accept tacdict (g,pred) =
     handle _ => (g,pred)
   else (g,pred) 
   
-  
-  
+(* ---------------------------------------------------------------------------
+   Premise selection for other tactics
+   -------------------------------------------------------------------------- *)  
+
+val addpred_flag = ref false
+
+val thm_cache = ref (dempty String.compare)
+
+fun is_thm_cache s =
+  dfind s (!thm_cache) handle _ => 
+    let val b = is_thm s in
+      thm_cache := dadd s b (!thm_cache);
+      b
+    end 
   
 
+fun addpred thml l  = case l of
+    [] => []
+  | "[" :: m => 
+    let 
+      val (el,m) = split_level "]" m
+      val e = fst (split_level "," el) handle _ => el
+    in
+      (
+      if not (null thml) andalso is_thm_cache (String.concatWith " " e)
+      then 
+        (
+        addpred_flag := true; 
+        ["["] @ el @ [","] @ [String.concatWith "," thml] @ ["]"]
+        )
+      else ["["] @ el @ ["]"]
+      )
+      @
+      addpred thml m
+    end
+  | a :: m   => a :: addpred thml m
+
+fun install_stac tacdict stac =
+  if !addpred_flag then
+    let 
+      val tac = hhsTimeout.timeOut 1.0 tactic_of_sml stac handle e => 
+      (debug ("Error: addpred:" ^ stac); raise e)
+    in
+      tacdict := dadd stac tac (!tacdict)
+    end
+  else ()
+
+(* doesn't work with the empty list *)
+fun addpred_stac tacdict thmpredictor (g,pred) =
+  if !hhs_stacpred_flag then
+    let 
+      val (al,bl) = part_n 10 pred
+      val sl = map dbfetch_of_string ((!thmpredictor) g)
+      fun change_entry (lbl,score) =
+        let
+          val _ = addpred_flag := false
+          val stac = #1 lbl
+          val new_stac = String.concatWith " " (addpred sl (hhs_lex stac))
+          val _ = install_stac tacdict new_stac handle _ =>
+                  addpred_flag := false
+          val fake_lbl = 
+            (if !addpred_flag then new_stac else stac,0.0,([],F),[])
+          val _ =
+            if !addpred_flag 
+            then debug (stac ^ " ==>\n  " ^ new_stac)
+            else ()
+        in
+          (fake_lbl,score)
+        end
+    in
+      (g,map change_entry al @ bl)
+    end
+  else (g,pred) 
+  
+(* 
+val thml = ["arithmeticTheory.SUB_ADD"];
+
+val stac = "METIS_TAC [arithmeticTheory.SUB_ADD]";
+val l = hhsLexer.hhs_lex stac;
+
+val new_stac = String.concatWith " " (addpred thml l);
+*)
+
+  
 end

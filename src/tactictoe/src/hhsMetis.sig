@@ -10,6 +10,7 @@ include Abbrev
   val hhs_metis_time  : real ref
   val hhs_metis_npred : int ref
   val hhs_thmortho_flag : bool ref
+  val hhs_stacpred_flag : bool ref
   
   (* external predictions *)
   val dependency_of_thm : string -> string list
@@ -35,6 +36,11 @@ include Abbrev
     (string, tactic) Redblackmap.dict ref ->
     goal * (lbl_t * real) list -> 
     goal * (lbl_t * real) list
-
+  
+  val addpred_stac :
+    (string, tactic) Redblackmap.dict ref ->
+    (goal -> string list) ref -> 
+    goal * (lbl_t * real) list -> 
+    goal * (lbl_t * real) list
 
 end

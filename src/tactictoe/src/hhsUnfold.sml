@@ -300,6 +300,7 @@ val prove_list = ["prove","TAC_PROOF"]
 val watch_list_init = 
   store_thm_list @
   name_thm_list @
+  prove_list @
   ["tprove"] @
   ["store_definition",
    "zDefine","qDefine","bDefine","tDefine","xDefine","dDefine",
@@ -915,13 +916,11 @@ fun output_header cthy =
   ];
   if !interactive_flag 
   then 
-    (
-    os "load \"hhsRecord\";\n";
-    os ("List.app load " ^ 
-      String.concatWith " " 
-        (mk_fast_set String.compare (load_list (!loadl_glob)))
-      ^ ";\n")
-    )
+    let val sl = load_list (mk_fast_set String.compare (!loadl_glob)) in 
+      os "load \"hhsRecord\";\n";
+      os "hhsRecord.set_irecord ();\n";
+      os ("List.app load " ^ String.concatWith " " sl ^ ";\n")
+    end
   else ()
   ;
   app os (bare_readl infix_decl);
@@ -959,8 +958,8 @@ fun end_unfold_thy () =
     val n = !n_store_thm
     fun f s r = debug_unfold (s ^ ": " ^ Real.toString (!r)) 
   in
-    print_endline (int_to_string n ^ " proofs extracted");
-    debug_unfold (int_to_string n ^ " proofs extracted");
+    print_endline (int_to_string n ^ " proofs unfolded");
+    debug_unfold (int_to_string n ^ " proofs unfolded");
     f "Push" push_time;
     f "Open" open_time;
     f "Replace special" replace_special_time;
@@ -1086,14 +1085,15 @@ fun rw_script file =
 fun record_script file =
   let
     val file_out = rm_ext file ^ "_tactictoe.sml"
-    val cmd = HOLDIR ^ "/bin/hol" ^ " < " ^ file_out
+    val dir = #dir (OS.Path.splitDirFile file_out)
+    val basename = #file (OS.Path.splitDirFile file_out)
+    val cmd0 = "cd " ^ dir
+    val cmd1 = HOLDIR ^ "/bin/hol" ^ " < " ^ basename
   in 
     rw_script file;
-    ignore (OS.Process.system cmd)
+    ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1))
   end
   
-
-
 end (* struct *)
 
 

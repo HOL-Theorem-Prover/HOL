@@ -96,6 +96,13 @@ fun first_n n l =
   then []
   else hd l :: first_n (n - 1) (tl l)
 
+fun part_aux n acc l =
+  if n <= 0 orelse null l
+  then (rev acc,l)
+  else part_aux (n - 1) (hd l :: acc) (tl l)
+
+fun part_n n l = part_aux n [] l
+
 fun number_list start l = case l of 
     []      => []
   | a :: m  => (start,a) :: number_list (start + 1) m

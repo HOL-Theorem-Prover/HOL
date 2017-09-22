@@ -100,6 +100,20 @@ fun out_record_summary cthy =
   end
 
 (* --------------------------------------------------------------------------
+   Recording in interactive mode
+   -------------------------------------------------------------------------- *)
+
+fun set_irecord () = 
+  (
+  hhs_eval_flag := false;
+  hhs_internalthm_flag := false;
+  hhs_norecprove_flag := false;
+  hhs_norecord_flag := false;
+  hhs_nolet_flag := false;
+  hhs_goalstep_flag := false
+  )
+
+(* --------------------------------------------------------------------------
    Replaying a tactic.
    -------------------------------------------------------------------------- *)
 
@@ -253,16 +267,22 @@ fun name_of_thm thm =
   in
     String.concatWith " " ["(","DB.fetch",mlquote thy,mlquote name,")"]
   end
-  handle e => if !hhs_internalthm_flag then save_tactictoe_thm thm else raise e
+  handle e => 
+    if !hhs_internalthm_flag 
+    then save_tactictoe_thm thm 
+    else raise e
 
 fun fetch_thm_aux s reps =
   let val file = hhs_code_dir ^ "/" ^ current_theory () ^ "_fetch_thm" in
-    hide_out string_of_sml ("hhsRecord.name_of_thm " ^ s)
-    handle _ => 
-    (if reps = "" then (debug_record ("fetch: " ^ s); s) else reps)
+    if is_thm s
+    then hide_out string_of_sml ("hhsRecord.name_of_thm " ^ s) handle _ => s 
+    else (if reps = "" then (debug_record ("fetch: " ^ s); s) else reps)
   end
   
 val fetch = total_time fetch_thm_time fetch_thm_aux
+
+
+
 
 (*----------------------------------------------------------------------------
   Tactical proofs hooks
@@ -286,10 +306,10 @@ fun create_tokenset () =
 
 fun start_record name goal =
   (
+  init_tactictoe ();
   debug_proof ("\n" ^ name);
   debug_search ("\n" ^ name);
   debug ("\n" ^ name);
-  init_tactictoe (); (* necessary with hhs_after_flag *)
   start_stacset := create_stacset ();
   if !hhs_after_flag
   then start_tokenset := create_tokenset ()

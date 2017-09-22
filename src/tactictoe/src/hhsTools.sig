@@ -58,6 +58,7 @@ sig
   val dkeys : ('a, 'b) Redblackmap.dict -> 'a list
   
   val first_n : int -> 'a list -> 'a list
+  val part_n : int -> 'a list -> ('a list * 'a list)
   val number_list : int -> 'a list -> (int * 'a) list
 
   val sum_real : real list -> real

@@ -23,7 +23,7 @@ val hhs_previous_theory = ref ""
 
 val hhs_norecord_flag   = ref false
 val hhs_goalstep_flag   = ref false
-val hhs_internalthm_flag = ref false
+val hhs_internalthm_flag = ref true
 
 (* Evaluation after recording (cheat) *)
 val hhs_after_flag         = ref false
@@ -37,11 +37,11 @@ val hhs_afterall_flag      = ref false
 val hhs_afterall2_flag     = ref false
 
 (* set following tags to true to simulate version 2 *)
-val hhs_norecprove_flag = ref false
-val hhs_nolet_flag      = ref false
+val hhs_norecprove_flag = ref true
+val hhs_nolet_flag      = ref true
 val hhs_noprove_flag    = ref true
 
-val hhs_eval_flag     = ref false
+val hhs_eval_flag     = ref true
 val hhs_seldesc_flag  = ref true
 val hhs_hh_flag       = ref false
 
@@ -64,6 +64,8 @@ fun one_in_n () =
 
 fun set_parameters () =
   (
+  (* *)
+  hhs_stacpred_flag := false;
   (* predicting *)
   max_select_pred := 500;
   hhs_seldesc_flag := true;
@@ -71,7 +73,7 @@ fun set_parameters () =
   hhs_unsafecache_flag := false;
   hhs_invalid_flag := false;
   hhs_cache_flag := true;
-  hhs_diag_flag := false;
+  hhs_diag_flag := true;
   hhs_width_coeff := 1.0;
   hhs_visited_flag := false;
   hhs_search_time := Time.fromReal (!timeout);
@@ -88,7 +90,7 @@ fun set_parameters () =
   hhs_succrate_flag := false;
   (* metis *)
   hhs_metis_flag := (
-    false andalso 
+    true andalso 
     (load "metisTools" handle _ => (); 
      exec_sml "metis_test" "metisTools.METIS_TAC")
   );

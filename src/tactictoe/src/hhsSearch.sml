@@ -87,7 +87,9 @@ val node_find_time = ref 0.0
 val astar_time = ref 0.0
 val mutate_time = ref 0.0
 val tot_time = ref 0.0
+val stacpred_time = ref 0.0
 
+val stacpred_timer = total_time stacpred_time
 val predict_timer = total_time predict_time
 val thmpredict_timer = total_time thmpredict_time
 val infstep_timer = total_time infstep_time
@@ -96,6 +98,7 @@ val node_find_timer = total_time node_find_time
 val astar_timer = total_time astar_time
 val mutate_timer = total_time mutate_time
 fun total_timer f x = total_time tot_time f x
+
 
 (* ----------------------------------------------------------------------
    A*-heurisitic
@@ -210,6 +213,7 @@ fun root_create_wrap g =
       (
       add_accept tacdict_glob o
       add_metis tacdict_glob thmpredictor_glob o 
+      stacpred_timer (addpred_stac tacdict_glob thmpredictor_glob) o
       estimate_distance (0,0.0)
       ) 
         (g,pred)
@@ -443,6 +447,7 @@ fun node_create_gl tactime gl pid =
       map (
           add_accept tacdict_glob o
           add_metis tacdict_glob thmpredictor_glob o 
+          stacpred_timer (addpred_stac tacdict_glob thmpredictor_glob) o
           estimate_distance (depth + width,timedepth) o 
           add_pred
           ) 
@@ -501,6 +506,7 @@ fun init_search thmpredictor stacpredictor tacdict minstepdict g =
   stac_counter := 0;
   max_depth_mem := 0;
   astar_time := 0.0;
+  stacpred_time := 0.0;
   proofdict    := dempty Int.compare;
   finproofdict := dempty Int.compare;
   stacpredictor_glob := predict_timer stacpredictor;
@@ -589,6 +595,7 @@ fun end_search () =
   debug_proof ("    thmpred time: " ^ Real.toString (!thmpredict_time));
   debug_proof ("    astar time: " ^ Real.toString (!astar_time));
   debug_proof ("    mutate time: " ^ Real.toString (!mutate_time));
+  debug_proof ("    stacpred time: " ^ Real.toString (!stacpred_time));
   proofdict    := dempty Int.compare;
   finproofdict := dempty Int.compare;
   tacdict_glob := dempty String.compare;
