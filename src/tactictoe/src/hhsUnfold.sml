@@ -905,7 +905,7 @@ fun print_sl sl = case sl of
                
 val infix_decl = tactictoe_dir ^ "/src/infix_file.sml"
 
-fun output_header cthy = 
+fun output_header cthy file = 
   (
   (* Necessary because of cakeml auto-documentation. *)
   app os 
@@ -914,14 +914,19 @@ fun output_header cthy =
   "(* This file was modifed by TacticToe.                                        *)\n",
   "(* ========================================================================== *)\n"
   ];
+  os "load \"hhsRecord\";\n";
   if !interactive_flag 
   then 
-    let val sl = load_list (mk_fast_set String.compare (!loadl_glob)) in 
-      os "load \"hhsRecord\";\n";
+    let 
+      val temp = hhs_code_dir ^ "/" ^ cthy ^ "_holdep"
+      val cmd = HOLDIR ^ "/bin/holdeptool.exe " ^ file ^ " > " ^ temp 
+      val _ = OS.Process.system cmd
+      val sl = map mlquote (readl temp)
+    in
       os "hhsRecord.set_irecord ();\n";
-      os ("List.app load " ^ String.concatWith " " sl ^ ";\n")
+      os ("List.app load [" ^ String.concatWith ", " sl ^ "];\n")
     end
-  else ()
+  else os "hhsRecord.set_erecord ();\n"
   ;
   app os (bare_readl infix_decl);
   os "open hhsRecord;\n";
@@ -979,7 +984,7 @@ fun unquoteString s =
 
 val copy_scripts = tactictoe_dir ^ "/copy_scripts.sh"
 
-fun rewrite_script file = 
+fun erewrite_script file = 
   let 
     val _ = interactive_flag := false
     val cthy = extract_thy file
@@ -1002,7 +1007,7 @@ fun rewrite_script file =
         if !n_store_thm = 0 then () else
         (
         oc := TextIO.openOut file_out;
-        output_header cthy;
+        output_header cthy file;
         print_sl sl5;
         output_foot cthy file;
         TextIO.closeOut (!oc);
@@ -1025,10 +1030,10 @@ fun hol_scripts () =
     readl file
   end
 
-fun rewrite_hol_scripts () =
+fun erewrite_hol_scripts () =
   (
   erase_file copy_scripts;
-  app rewrite_script (hol_scripts ())
+  app erewrite_script (hol_scripts ())
   )
 
 fun hol_examples_scripts () =
@@ -1054,7 +1059,7 @@ fun cakeml_scripts cakeml_dir =
 
 fun rm_ext s = #base (OS.Path.splitBaseExt s);
   
-fun rw_script file =
+fun irewrite_script file =
   let
     val _ = interactive_flag := true
     val _ = loadl_glob := []
@@ -1074,7 +1079,7 @@ fun rw_script file =
     if !n_store_thm = 0 then () else
     (
     oc := TextIO.openOut file_out;
-    output_header cthy;
+    output_header cthy file;
     print_sl sl5;
     output_foot cthy file;
     TextIO.closeOut (!oc);
@@ -1082,7 +1087,7 @@ fun rw_script file =
     )
   end
 
-fun record_script file =
+fun irecord_script file =
   let
     val file_out = rm_ext file ^ "_tactictoe.sml"
     val dir = #dir (OS.Path.splitDirFile file_out)
@@ -1090,7 +1095,7 @@ fun record_script file =
     val cmd0 = "cd " ^ dir
     val cmd1 = HOLDIR ^ "/bin/hol" ^ " < " ^ basename
   in 
-    rw_script file;
+    irewrite_script file;
     if dir = "" 
       then ignore (OS.Process.system cmd1)
       else ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1))
@@ -1101,11 +1106,16 @@ end (* struct *)
 
 (* ---------------------------------------------------------------------------
   HOL:  
-  
-  (* usually just before export () *)
+
   rlwrap hol
   load "hhsUnfold";
   open hhsUnfold;
+  
+  record_script "complexScript.sml";
+  
+  
+  
+  
   rewrite_hol_scripts ();         
   --------------------------------------------------------------------------- *)
   

@@ -13,13 +13,13 @@ sig
   | SConstructor of string
   | SException   of string
   
-  val hol_scripts : unit -> string list
+  val hol_scripts          : unit -> string list
   val hol_examples_scripts : unit -> string list
-  val cakeml_scripts : string -> string list
-  val rw_script : string -> unit
-  val record_script : string -> unit
-  val rewrite_script : string -> unit
-  val rewrite_hol_scripts : unit -> unit
+  val cakeml_scripts       : string -> string list
+  val irewrite_script      : string -> unit
+  val irecord_script       : string -> unit
+  val erewrite_script      : string -> unit
+  val erewrite_hol_scripts : unit -> unit
   
   val open_struct : 
     (string, stack_t) Redblackmap.dict list -> string -> (string * stack_t) list

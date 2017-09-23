@@ -35,6 +35,8 @@ val hhs_afterstring_flag   = ref false
 val hhs_aftertactic_flag   = ref false
 val hhs_afterall_flag      = ref false
 val hhs_afterall2_flag     = ref false
+val hhs_afterthm2_flag     = ref false
+val hhs_afterthmthm_flag   = ref false
 
 (* set following tags to true to simulate version 2 *)
 val hhs_norecprove_flag = ref true
@@ -44,6 +46,9 @@ val hhs_noprove_flag    = ref true
 val hhs_eval_flag     = ref true
 val hhs_seldesc_flag  = ref true
 val hhs_hh_flag       = ref false
+
+val hhs_metis_exec = ref false
+val hhs_hh_exec = ref false
 
 (* ----------------------------------------------------------------------
    Parameters
@@ -62,6 +67,8 @@ fun one_in_n () =
       (incr one_in_counter; b)
     end
   else true
+
+
 
 fun set_esearch () = 
   (
@@ -89,17 +96,18 @@ fun set_esearch () =
   hhs_stacpred_flag := false;
   (* metis *)
   hhs_metis_exec := 
-    (load "metisTools" handle _ => (); 
-     exec_sml "metis_test" "metisTools.METIS_TAC")
-  hhs_metis_flag := (true andalso (!hhs_metis_exec))
+    ((load "metisTools" handle _ => ()); 
+     exec_sml "metis_test" "metisTools.METIS_TAC"
+    );
+  hhs_metis_flag := (true andalso (!hhs_metis_exec));
   hhs_metis_npred := 16;
   hhs_metis_time := 0.1;
   hhs_thmortho_flag := false;
   (* holyhammer *)
   hhs_hh_exec := 
     (load "holyHammer" handle _ => (); 
-     exec_sml "hh_test" "holyHammer.eval_hh")
-  hhs_hh_flag := (false andalso (!hhs_hh_exec))
+     exec_sml "hh_test" "holyHammer.eval_hh");
+  hhs_hh_flag := (false andalso (!hhs_hh_exec));
   (* result *)
   hhs_minimize_flag := false;
   hhs_prettify_flag := false
@@ -134,8 +142,7 @@ fun set_isearch () =
   (* holyhammer *)
   (* result *)
   hhs_minimize_flag := true;
-  hhs_prettify_flag := true;
-  set_isearch_hook ()
+  hhs_prettify_flag := true
   )
 
 (* ----------------------------------------------------------------------
@@ -170,7 +177,7 @@ fun mk_tacdict tacticl =
    
    ---------------------------------------------------------------------- *)
 
-fun init_prev () =
+fun import_ancestry () =
   let
     val thyl    = ancestry (current_theory ())
     val stacfea = debug_t "import_feavl" import_feavl thyl
@@ -182,10 +189,6 @@ fun init_prev () =
     init_stacfea_ddict stacfea
   end
 
-(* ----------------------------------------------------------------------
-   Main function
-   ---------------------------------------------------------------------- *)
-
 fun init_tactictoe () =
   let 
     val cthy = current_theory ()
@@ -194,15 +197,22 @@ fun init_tactictoe () =
     if !hhs_previous_theory <> cthy
     then 
       let 
-        val _ = debug_t ("init_tactictoe " ^ cthy) init_prev ()
+        val _ = debug_t ("init_tactictoe " ^ cthy) import_ancestry ()
         val ns = int_to_string (dlength (!hhs_stacfea))
+        val ms = int_to_string (dlength (!mdict_glob))
       in  
-        debug (ns ^ " feature vectors");
-        print_endline ("Loading " ^ ns ^ " feature vectors");
+        debug (ns ^ " tactic feature vectors");
+        debug (ns ^ " theorem feature vectors");
+        print_endline ("Loading " ^ ns ^ " tactic feature vectors");
+        print_endline ("Loading " ^ ms ^ " theorem feature vectors");
         hhs_previous_theory := cthy
       end
     else ()
   end
+
+(* ----------------------------------------------------------------------
+   Main function
+   ---------------------------------------------------------------------- *)
 
 (* includes itself *)
 fun descendant_of_feav_aux rlist rdict ddict (feav as ((stac,_,_,gl),_)) =
@@ -381,8 +391,7 @@ fun debug_eval_status r =
 (* integer_words return errors hopefully no other *)
 fun eval_tactictoe name goal =
   if !hhs_noprove_flag andalso String.isPrefix "tactictoe_prove_" name
-    then ()
-  else 
+    then () 
   else if !hhs_eval_flag 
     andalso not (mem (current_theory ())
               ["integer_word","word_simp","wordSem","labProps",

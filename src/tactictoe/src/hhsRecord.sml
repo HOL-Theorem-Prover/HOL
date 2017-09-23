@@ -118,7 +118,7 @@ fun set_irecord () =
   hhs_ortho_number := 20;
   hhs_ortho_metis := false;
   hhsSearch.hhs_selflearn_flag := false;
-  hhs_succrate_flag := false
+  hhs_succrate_flag := false;
   (* export *)
   hhs_thmortho_flag := false
   )
@@ -137,7 +137,7 @@ fun set_erecord () =
   hhs_ortho_flag := false;
   hhs_ortho_number := 20;
   hhs_ortho_metis := false;
-  hhs_selflearn_flag := false;
+  hhsSearch.hhs_selflearn_flag := false;
   hhs_succrate_flag := false;
   (* export *)
   hhs_thmortho_flag := false
@@ -311,9 +311,6 @@ fun fetch_thm_aux s reps =
   
 val fetch = total_time fetch_thm_time fetch_thm_aux
 
-
-
-
 (*----------------------------------------------------------------------------
   Tactical proofs hooks
   ----------------------------------------------------------------------------*)
@@ -429,19 +426,38 @@ fun end_record name g =
       dmem x (!start_tokenset) orelse 
       is_thm_cache x orelse is_string_cache x orelse is_tactic_cache x
     val ef8 = etest_wrap is_true f8
-     
+    fun f9 x = 
+      (
+      dmem x (!start_tokenset) orelse 
+      is_thm_cache x orelse 
+      (is_string_cache x andalso can (split_string "(*") x)
+      )
+    val ef9 = etest_wrap is_true f9
+    fun f10 x = 
+      (
+      dmem x (!start_tokenset) orelse 
+      is_thm_cache x orelse 
+        (
+        is_string_cache x andalso 
+        not (can (split_string "(*") x)
+        )
+      )
+    val ef10 = etest_wrap is_true f10
+    
     val mem_hhs_stacfea = !hhs_stacfea
     val dict = mem_hhs_stacfea
     val mem_hhs_cthyfea = !hhs_cthyfea
     val mem_hhs_ddict = !hhs_ddict
     val mem_hhs_ndict = !hhs_ndict
   in
-    if !hhs_aftersmall_flag then filter_stacfea ef1 dict else ();
-    if !hhs_aftertac_flag then filter_stacfea ef2 dict else ();
-    if !hhs_aftertoken_flag then filter_stacfea ef3 dict else ();
+    if !hhs_aftersmall_flag  then filter_stacfea ef1 dict else ();
+    if !hhs_aftertac_flag    then filter_stacfea ef2 dict else ();
+    if !hhs_aftertoken_flag  then filter_stacfea ef3 dict else ();
     if !hhs_aftertactic_flag then filter_stacfea ef6 dict else ();
-    if !hhs_afterall_flag then filter_stacfea ef7 dict else ();
-    if !hhs_afterall2_flag then filter_stacfea ef8 dict else ();
+    if !hhs_afterall_flag    then filter_stacfea ef7 dict else ();
+    if !hhs_afterall2_flag   then filter_stacfea ef8 dict else ();
+    if !hhs_afterthm2_flag   then filter_stacfea ef9 dict else ();
+    if !hhs_afterthmthm_flag then filter_stacfea ef10 dict else ();
     
     if !hhs_after_flag
     then (eval_tactictoe name g handle _ => debug "Error: eval_tactictoe")
@@ -470,6 +486,7 @@ fun end_record name g =
 
 fun try_record_proof name lflag tac1 tac2 g =
   let 
+    val _  = set_erecord () (* to be removed *)
     val b1 = !hhs_norecord_flag
     val b2 = 
       (!hhs_norecprove_flag andalso String.isPrefix "tactictoe_prove_" name)
@@ -479,7 +496,7 @@ fun try_record_proof name lflag tac1 tac2 g =
       then add_time tac2 g
       else
         (
-        let 
+        let        
            val _ = start_record name g
            val rt = add_time tac1 g
            val _ = end_record name g
