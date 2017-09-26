@@ -106,6 +106,21 @@ val _ = overload_on ("bar", ``\b. if b then T else F``)
 val _ = tpp "bar T"
 val _ = trace ("types", 1) tpp "if (b :bool) then (x :'a) else (y :'a)"
 
+(* pairLib conversions etc *)
+fun convtest (nm,conv,t,expected) =
+  let
+    val _ = tprint nm
+    val res = conv t
+  in
+    if aconv (rhs (concl res)) expected then OK() else die()
+  end
+val _ = List.app convtest [
+  ("PairRules.PBETA_CONV(1)", PairRules.PBETA_CONV,
+   “(\ (a:'a,b:'b). f (a,b) (c:'c) : 'd) x”, “(f:'a # 'b -> 'c -> 'd) x c”),
+  ("PairRules.PETA_CONV(1)", PairRules.PETA_CONV,
+   “(\ (a:'a,b:'b). f (a,b) : 'c)”, “f : 'a # 'b -> 'c”)
+]
+
 local open pairLib in
 val _ = print "*** new_specification with existential definition\n"
 val th = metisLib.METIS_PROVE[]``?x y z. x ==> z /\ z ==> y``;
