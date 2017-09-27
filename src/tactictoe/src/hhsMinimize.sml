@@ -122,7 +122,30 @@ fun rm_infix sl = case sl of
     then b :: rm_infix m
     else a :: rm_infix (b :: c :: m)
   | a :: m => a :: rm_infix m 
+
+fun rm_squote s =
+  if String.sub (s,0) = #"\"" andalso String.sub (s,String.size s - 1) = #"\""
+  then String.substring (s, 1, String.size s - 2)
+  else raise ERR "rm_squote" s
+
+fun rm_space_aux l = case l of
+    [] => [] 
+  | a :: m => if a = #" " then rm_space_aux m else l 
   
+fun rm_space s = implode (rm_space_aux (explode s))  
+
+fun requote sl = case sl of
+   [] => []
+  | "[" :: "QUOTE" :: s :: "]" :: m => 
+    if hhsTools.is_string s 
+    then ("`" ^ rm_space (rm_comment (rm_squote s)) ^ "`") :: requote m
+    else hd sl :: requote (tl sl)
+  | "Term" :: "[" :: "QUOTE" :: s :: "]" :: m => 
+    if hhsTools.is_string s 
+    then ("``" ^ rm_space (rm_comment (rm_squote s)) ^ "``") :: requote m
+    else hd sl :: requote (tl sl)
+  | a :: m => a :: requote m
+
 fun rm_prefix stac =
   let
     val sl = hhs_lex stac
@@ -143,6 +166,9 @@ fun prettify1_stac stac =
   (minspace_sl o rm_infix o rm_prefix) stac
 fun prettify2_stac stac =
   (minspace_sl o hhs_lex) stac
+
+(* May remove important information like #loc in terms *)
+fun comestic_stac stac = (minspace_sl o requote o hhs_lex) stac
 
 (*----------------------------------------------------------------------------
   Pretty-printing the abstract tree of the proof.

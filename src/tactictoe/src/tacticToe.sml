@@ -440,10 +440,15 @@ sum_int l3;
    Predicting only the next tactic based on some distance measure.
    ---------------------------------------------------------------------- *)
 
+fun string_stac stac g gl =
+  let val stac0 = pretty_stac stac g gl in
+    comestic_stac stac0
+  end
+
 fun try_tac tacdict memdict n goal stacl = 
    if n <= 0 then () else
    case stacl of
-    [] => ()
+    [] => print_endline "no more tactics"
   | stac :: m => 
     let 
       fun p0 s = print_endline s
@@ -463,11 +468,12 @@ fun try_tac tacdict memdict n goal stacl =
           else 
             (
             if gl = []
-            then (p0 stac; p "SOLVED\n")
+            then (p0 (hide_out (string_stac stac goal) gl); p "solved")
             else 
               (
               if mem goal gl then () 
-                else (p0 stac; app (p o string_of_goal) gl; p0 "");
+                else (p0 (hide_out (string_stac stac goal) gl); 
+                      app (p o string_of_goal) gl; p0 "");
               try_tac tacdict (dadd gl lbl memdict) (n-1) goal m
               )
             )
@@ -476,11 +482,11 @@ fun try_tac tacdict memdict n goal stacl =
     
 fun next_tac n goal =    
   let  
+    val _ = hide_out set_isearch ()
     val _ = init_tactictoe ()
     (* preselection *)
     val goalfea = fea_of_goal goal       
-    val (stacsymweight, stacfeav, tacdict, _) = 
-      hide_out select_stacfeav goalfea
+    val (stacsymweight,stacfeav,tacdict,_) = hide_out select_stacfeav goalfea
     (* predicting *)
     fun stac_predictor g =
       stacknn stacsymweight (!max_select_pred) stacfeav (fea_of_goal g)
