@@ -724,7 +724,7 @@ in
   (specials_to_toks, toks_to_specials)
 end
 
-fun parse_term (G : grammar) typeparser = let
+fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
   val Grules = grammar_rules G
   val {type_intro, lambda, endbinding, restr_binders, res_quanop} = specials G
   val num_info = numeral_info G
@@ -1526,13 +1526,15 @@ fun parse_term (G : grammar) typeparser = let
     topterm >-                      (fn top =>
     invstructp >-                   (fn invs =>
     doit (tt, top, invs))))
+  fun notBOS (Terminal BOS) = false
+    | notBOS _ = true
+
 in
   push ((Terminal BOS,locn.Loc_None), XXX) >> get_item >>
   mwhile (current_input >-
           (fn optt => if (isSome optt) then return true
                       else
-                        (topterm >- (fn t =>
-                         return (#1 (#1 t) <> Terminal BOS)))))
+                        topterm >- (fn t => return (notBOS (#1 (#1 t))))))
          basic_action
 end
 

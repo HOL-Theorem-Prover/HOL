@@ -215,22 +215,6 @@ in
   recurse [] t
 end
 
-fun strip_rbinop t = let
-  open Term
-  val (f, args) = strip_comb t
-  val _ = length args = 2 orelse raise ERR "foo" "foo"
-  val _ = is_atom f orelse raise ERR "foo" "foo"
-  fun recurse acc arg_t = let
-    val (f', args') = strip_comb arg_t
-  in
-    if length args' = 2 andalso f' = f then
-      recurse (hd args' :: acc) (hd (tl args'))
-    else List.rev(arg_t :: acc)
-  end
-in
-  (f, recurse [hd args] (hd (tl args)))
-end
-
 infix >>
 fun (f1 >> f2) pps = (f1 pps ; f2 pps)
 

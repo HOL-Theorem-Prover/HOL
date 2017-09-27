@@ -232,6 +232,11 @@ fun rev_assoc item =
       assc
    end
 
+fun op_assoc eq_func k l =
+  case l of
+      [] => raise ERR "op_assoc" "not found"
+    | (key,ob) :: rst => if eq_func k key then ob else op_assoc eq_func k rst
+
 (*---------------------------------------------------------------------------*)
 (* Topologically sort a list wrt partial order R.                            *)
 (*---------------------------------------------------------------------------*)

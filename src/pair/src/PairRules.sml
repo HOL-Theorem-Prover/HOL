@@ -241,7 +241,7 @@ val PBETA_CONV =
     (* possible.							*)
     fun find_CONV mask assl =
      let fun search m pthl =
-	  (true, (K (assoc m assl)))
+	  (true, (K (op_assoc aconv m assl)))
 	    handle HOL_ERR _
 	    => if is_comb m then
 	        let val (f,b) = dest_comb m
@@ -339,15 +339,18 @@ fun UNPBETA_CONV v tm =
 (* ------------------------------------------------------------------------- *)
 
 fun occs_in p t =  (* should use set operations for better speed *)
-  if is_vstruct p
-  then let fun check V tm =
-            if is_const tm then false else
-            if is_var tm then mem tm V else
-            if is_comb tm then check V (rand tm) orelse check V (rator tm) else
-            if is_abs tm then check (set_diff V [bvar tm]) (body tm)
-                         else raise ERR "occs_in" "malformed term"
-        in check (free_vars p) t
-       end
+  if is_vstruct p then
+    let
+      fun set_diff s v = HOLset.delete(s,v) handle HOLset.NotFound => s
+      fun check V tm =
+          if is_const tm then false else
+          if is_var tm then HOLset.member(V,tm) else
+          if is_comb tm then check V (rand tm) orelse check V (rator tm) else
+          if is_abs tm then check (set_diff V (bvar tm)) (body tm)
+          else raise ERR "occs_in" "malformed term"
+    in
+      check (FVL [p] empty_tmset) t
+    end
   else raise ERR "occs_in" "varstruct expected in first argument";
 
 fun PETA_CONV tm =
@@ -355,7 +358,7 @@ fun PETA_CONV tm =
      val (f,p') = dest_comb fp
      val x = genvar (type_of p)
  in
-   if p=p' andalso not (occs_in p f)
+   if aconv p p' andalso not (occs_in p f)
    then EXT (GEN x (PBETA_CONV (mk_comb(tm,x))))
    else failwith ""
  end

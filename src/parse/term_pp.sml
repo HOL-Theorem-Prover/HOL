@@ -815,7 +815,7 @@ fun pp_term (G : grammar) TyG backend = let
         | recurse acc ((Simple _)::_) = NONE
         | recurse acc (Restricted{Restrictor = t,...}::xs) = let
           in
-            if t = acc then recurse acc xs else NONE
+            if aconv t acc then recurse acc xs else NONE
           end
     in
       case vsl of
@@ -874,7 +874,7 @@ fun pp_term (G : grammar) TyG backend = let
       val is_a_real_numeral = (* i.e. doesn't need a suffix *)
           case info_for_name overload_info fromNum_str of
             NONE => false
-          | SOME oi => mem inj_t (#actual_ops oi)
+          | SOME oi => op_mem aconv inj_t (#actual_ops oi)
       val numeral_str = Arbnum.toString (Literal.dest_numeral tm)
       val sfx =
           if not is_a_real_numeral orelse !Globals.show_numeral_types then let
