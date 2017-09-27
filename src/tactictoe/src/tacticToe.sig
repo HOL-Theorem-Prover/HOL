@@ -31,6 +31,10 @@ sig
   
   val tactictoe : goal -> tactic 
   val tt_tac : tactic
-  val next_tac : int -> goal -> unit 
   
+  val next_tac_glob : tactic list ref
+  val next_tac_number : int ref
+  val next_tac : goal -> unit 
+  val next : int -> tactic
+
 end

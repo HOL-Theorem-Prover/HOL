@@ -54,6 +54,7 @@ val hh_only_flag = ref false
 
 fun hh_eval goal =
   let val (staco,t) = add_time (!hh_stac_glob) goal in
+    debug_proof ("hh_eval");
     debug_proof ("Time: " ^ Real.toString t);
     case staco of
       NONE      => debug_proof ("Proof status: Time Out")
@@ -138,11 +139,7 @@ fun set_isearch () =
   hhs_astar_radius := 1;
   hhs_timedepth_flag := false;
   (* metis *)
-  hhs_metis_flag := (
-    true andalso 
-    (load "metisTools" handle _ => (); 
-    exec_sml "metis_test" "metisTools.METIS_TAC")
-  );
+  hhs_metis_flag := (true andalso can load "metisTools");
   hhs_metis_npred := 16;
   hhs_metis_time := 0.1;
   (* holyhammer *)
@@ -151,8 +148,8 @@ fun set_isearch () =
   hhs_prettify_flag := true;
   (* holyhammer *)
   !set_isearch_hook ();
-  if !hh_stac_flag 
-  then (load "holyHammer"; update_hh_stac ()) 
+  if !hh_stac_flag
+  then (load "holyHammer"; update_hh_stac ())
   else ()
   )
 
@@ -407,7 +404,7 @@ fun eval_tactictoe name goal =
     andalso 
       not (!hhs_noprove_flag andalso String.isPrefix "tactictoe_prove_" name)
   then
-    let val _ = hide_out set_esearch () in
+    let val _ = set_esearch () in
       if !hh_only_flag 
         then hh_eval goal handle _ => debug_proof "Error: print_eval_status" 
       else
@@ -445,7 +442,18 @@ fun string_stac stac g gl =
     comestic_stac stac0
   end
 
-fun try_tac tacdict memdict n goal stacl = 
+val next_tac_glob = ref []
+val next_tac_number = ref 5
+fun next n = List.nth (!next_tac_glob,n)
+
+fun save_stac tac stac g gl =
+  (
+  next_tac_glob := !next_tac_glob @ [tac];
+  print_endline (hide_out (string_stac stac g) gl)
+  )
+
+(* TODO: timeout tactic_of_sml as it can loop *)
+fun try_tac tacdict memdict n goal stacl =
    if n <= 0 then () else
    case stacl of
     [] => print_endline "no more tactics"
@@ -454,36 +462,38 @@ fun try_tac tacdict memdict n goal stacl =
       fun p0 s = print_endline s
       fun p s = (print_endline ("  " ^ s))
       val tac = dfind stac tacdict
-      val ro = (SOME (add_time (hhsTimeout.timeOut 1.0 (hide_out tac)) goal)) 
-        handle _ => NONE   
+      val ro = SOME (hide_out (hhsTimeout.timeOut 1.0 tac) goal)
+               handle _ => NONE   
     in
       case ro of 
-        NONE => (try_tac tacdict memdict (n-1) goal m)
-      | SOME ((gl,_),t) =>
-        let 
-          val lbl = (stac,t,goal,gl)
-        in
+        NONE => (print "."; try_tac tacdict memdict n goal m)
+      | SOME (gl,_) =>
+        let val lbl = (stac,goal,gl) in
           if dmem gl memdict
-          then (try_tac tacdict memdict (n-1) goal m)
+          then (print "."; try_tac tacdict memdict n goal m)
           else 
             (
             if gl = []
-            then (p0 (hide_out (string_stac stac goal) gl); p "solved")
+            then (p0 ""; save_stac tac stac goal gl; p "solved")
             else 
               (
-              if mem goal gl then () 
-                else (p0 (hide_out (string_stac stac goal) gl); 
-                      app (p o string_of_goal) gl; p0 "");
-              try_tac tacdict (dadd gl lbl memdict) (n-1) goal m
+              if mem goal gl 
+                then 
+                  (print "."; try_tac tacdict (dadd gl lbl memdict) n goal m)
+                else (p0 "";
+                      save_stac tac stac goal gl;
+                      app (p o string_of_goal) gl;
+                      try_tac tacdict (dadd gl lbl memdict) (n-1) goal m)
               )
             )
         end
     end
     
-fun next_tac n goal =    
+fun next_tac goal =    
   let  
     val _ = hide_out set_isearch ()
     val _ = init_tactictoe ()
+    val _ = next_tac_glob := []
     (* preselection *)
     val goalfea = fea_of_goal goal       
     val (stacsymweight,stacfeav,tacdict,_) = hide_out select_stacfeav goalfea
@@ -495,7 +505,7 @@ fun next_tac n goal =
     val memdict = dempty (list_compare goal_compare)
     (* printing tactics *)
   in
-    try_tac tacdict memdict n goal stacl
+    try_tac tacdict memdict (!next_tac_number) goal stacl
   end
 
 

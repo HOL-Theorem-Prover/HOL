@@ -286,7 +286,8 @@ fun minimize_stac_g_gl stac g gl =
     minimize_stac g gl [] (decompose (hhs_lex stac))
   end     
 
-fun pretty_stac stac g gl = prettify1_stac (minimize_stac_g_gl stac g gl) 
+fun pretty_stac stac g gl = 
+  prettify1_stac (minimize_stac_g_gl stac g gl)
        
 fun minimize_tac proof = case proof of 
     Tactic (s,g) => Tactic (minimize_stac_full s g,g)   
