@@ -264,6 +264,19 @@ val _ =
     | _ => die "FAILED!"
 end (* local *)
 
+fun convtest (nm,conv,tm,expected) =
+  let
+    val _ = tprint nm
+    val res = conv tm
+  in
+    if aconv (rhs (concl res)) expected then OK()
+    else die "FAILED!"
+  end
+val _ = app convtest [
+  ("COND_CONV(1)", Conv.COND_CONV, “if b then (\x:'a. x) else (\y.y)”,
+   “(\a:'a.a)”)
+];
+
 val _ = tprint "Testing type-specific Unicode overload 1"
 val _ = set_trace "Unicode" 1
 val _ = overload_on (UnicodeChars.delta, ``$! :(('a -> 'b)->bool)->bool``)
