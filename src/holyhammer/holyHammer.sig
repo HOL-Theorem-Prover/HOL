@@ -27,7 +27,6 @@ sig
   val holyhammer        : term -> tactic (* eprover + z3 *)
   val hh_tac            : tactic
   val hh_stac           : goal -> string option
-  val hh_eval           : int -> term -> unit
   val clean_cache       : unit -> unit
   val set_timeout       : int -> unit
   val set_minimization  : bool -> unit
