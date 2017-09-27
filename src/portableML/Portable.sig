@@ -94,6 +94,7 @@ sig
   val null_intersection : ''a list -> ''a list -> bool
   val set_eq : ''a list -> ''a list -> bool
 
+  val op_assoc1 : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b option
   val op_mem : ('a -> 'a -> bool) -> 'a -> 'a list -> bool
   val op_insert : ('a -> 'a -> bool) -> 'a -> 'a list -> 'a list
   val op_mk_set : ('a -> 'a -> bool) -> 'a list -> 'a list

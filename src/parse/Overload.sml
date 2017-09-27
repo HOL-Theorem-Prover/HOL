@@ -401,7 +401,7 @@ fun strip_comb ((_, prmap): overload_info) namePred t = let
   fun rearrange (tmi, _, _, (orig, nm)) = let
     val (bvs,basepat) = strip_abs orig
     fun findarg v =
-        case List.find (fn {redex,residue} => redex = v) tmi of
+        case List.find (fn {redex,residue} => aconv redex v) tmi of
           NONE => mk_const("ARB", type_of v)
         | SOME i => #residue i
     val args = map findarg bvs

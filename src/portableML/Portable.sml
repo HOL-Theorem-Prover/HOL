@@ -373,6 +373,12 @@ fun set_eq S1 S2 = set_diff S1 S2 = [] andalso set_diff S2 S1 = []
  * Opaque type set operations                                                *
  *---------------------------------------------------------------------------*)
 
+fun op_assoc1 eq_func k alist =
+  case alist of
+      [] => NONE
+    | (k',v) :: rest => if eq_func k k' then SOME v
+                        else op_assoc1 eq_func k rest
+
 fun op_mem eq_func i = List.exists (eq_func i)
 
 fun op_insert eq_func =
