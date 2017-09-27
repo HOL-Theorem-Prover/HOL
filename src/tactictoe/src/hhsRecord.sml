@@ -134,13 +134,13 @@ fun set_erecord () =
   hhs_goalstep_flag := false;
   (* learning *)
   hhs_noslowlbl_flag := false;
-  hhs_ortho_flag := false;
+  hhs_ortho_flag := true;
   hhs_ortho_number := 20;
-  hhs_ortho_metis := false;
+  hhs_ortho_metis := true;
   hhsSearch.hhs_selflearn_flag := false;
   hhs_succrate_flag := false;
   (* export *)
-  hhs_thmortho_flag := false
+  hhs_thmortho_flag := true
   )
 
 (* --------------------------------------------------------------------------

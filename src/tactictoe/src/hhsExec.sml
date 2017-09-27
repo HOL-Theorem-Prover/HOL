@@ -113,8 +113,7 @@ fun rec_sproof stac g =
     SOME (fst (timeOut tim (TC_OFF tac) g))
   end
   handle _ => NONE
- 
- 
+
 (* -----------------------------------------------------------------------------
    Read string
    -------------------------------------------------------------------------- *)
@@ -131,16 +130,15 @@ fun string_of_sml s =
    Read hh
    -------------------------------------------------------------------------- *)
 
-val (hhs_hh_glob: (int -> term -> unit) ref) = 
-  ref (fn x => (fn y => ()))
+val (hh_stac_glob: (goal -> string option) ref) = ref (fn x => NONE)
 
-fun hh_of_sml () =
+fun update_hh_stac () =
   let 
-    val b = exec_sml "hh_of_sml" ("val _ = hhsExec.hhs_hh_glob := holyHammer.hh_eval")
+    val b = exec_sml "hh_stac_of_sml" 
+      ("val _ = hhsExec.hh_stac_glob := holyHammer.hh_stac")
   in
-    if b then !hhs_hh_glob else raise ERR "hh_of_sml" ""
+    if b then () else raise ERR "hh_stac_of_sml" ""
   end
-
 
 (* -----------------------------------------------------------------------------
    Read goal

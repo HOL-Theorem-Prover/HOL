@@ -11,6 +11,8 @@ include Abbrev
   val hhs_metis_npred : int ref
   val hhs_thmortho_flag : bool ref
   val hhs_stacpred_flag : bool ref
+  val hh_stac_flag : bool ref
+  
   
   (* external predictions *)
   val dependency_of_thm : string -> string list

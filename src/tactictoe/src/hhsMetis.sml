@@ -18,6 +18,7 @@ val hhs_metis_time  = ref 0.1
 val hhs_metis_npred = ref 16
 val hhs_thmortho_flag = ref false
 val hhs_stacpred_flag = ref false
+val hh_stac_flag  = ref false (* predict dependencies using holyhammer *)
 
 (* ----------------------------------------------------------------------
    Theorems dependencies
@@ -169,8 +170,16 @@ fun add_metis tacdict thmpredictor (g,pred) =
   if !hhs_metis_flag
   then
     let
-      val sl = !thmpredictor g
-      val stac = mk_metis_call sl
+      val stac = 
+        if !hh_stac_flag
+        then 
+          (
+          debug "calling holyhammer";
+          case (!hh_stac_glob) g of 
+            NONE => (debug "failure"; mk_metis_call ((!thmpredictor) g))
+          | SOME x => (debug "success"; x)
+          )
+        else mk_metis_call ((!thmpredictor) g)
       val _ = stactime_dict := dadd stac (!hhs_metis_time) (!stactime_dict)
       val tac = tactic_of_sml stac
       val score = if null pred then 0.0 else snd (hd pred) 

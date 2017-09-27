@@ -24,7 +24,8 @@ sig
   val hhs_norecord_flag    : bool ref
   val hhs_nolet_flag       : bool ref
   val hhs_goalstep_flag    : bool ref
-
+  
+  val set_isearch_hook : (unit -> unit) ref
   val init_tactictoe : unit -> unit
   val eval_tactictoe : string -> goal -> unit
   

@@ -45,14 +45,20 @@ val hhs_noprove_flag    = ref true
 
 val hhs_eval_flag     = ref true
 val hhs_seldesc_flag  = ref true
-val hhs_hh_flag       = ref false
 
-val hhs_metis_exec = ref false
-val hhs_hh_exec = ref false
+val hh_only_flag = ref false
 
 (* ----------------------------------------------------------------------
    Parameters
    ---------------------------------------------------------------------- *)
+
+fun hh_eval goal =
+  let val (staco,t) = add_time (!hh_stac_glob) goal in
+    debug_proof ("Time: " ^ Real.toString t);
+    case staco of
+      NONE      => debug_proof ("Proof status: Time Out")
+    | SOME stac => debug_proof ("Proof found: " ^ stac)
+  end
 
 val timeout = ref 5.0
 fun set_timeout r = timeout := r
@@ -67,8 +73,6 @@ fun one_in_n () =
       (incr one_in_counter; b)
     end
   else true
-
-
 
 fun set_esearch () = 
   (
@@ -95,19 +99,21 @@ fun set_esearch () =
   (* synthetizing *)
   hhs_stacpred_flag := false;
   (* metis *)
-  hhs_metis_exec := 
-    ((load "metisTools" handle _ => ()); 
-     exec_sml "metis_test" "metisTools.METIS_TAC"
-    );
-  hhs_metis_flag := (true andalso (!hhs_metis_exec));
+  hhs_metis_flag := (true andalso can load "metisTools");
   hhs_metis_npred := 16;
   hhs_metis_time := 0.1;
-  hhs_thmortho_flag := false;
+  hhs_thmortho_flag := true;
   (* holyhammer *)
-  hhs_hh_exec := 
-    (load "holyHammer" handle _ => (); 
-     exec_sml "hh_test" "holyHammer.eval_hh");
-  hhs_hh_flag := (false andalso (!hhs_hh_exec));
+  hh_only_flag := 
+    (
+    false andalso 
+    ((load "holyHammer"; update_hh_stac (); true) handle _ => false)
+    );
+  hh_stac_flag := 
+    (
+    false andalso 
+    ((load "holyHammer"; update_hh_stac (); true) handle _ => false)
+    );
   (* result *)
   hhs_minimize_flag := false;
   hhs_prettify_flag := false
@@ -142,7 +148,12 @@ fun set_isearch () =
   (* holyhammer *)
   (* result *)
   hhs_minimize_flag := true;
-  hhs_prettify_flag := true
+  hhs_prettify_flag := true;
+  (* holyhammer *)
+  !set_isearch_hook ();
+  if !hh_stac_flag 
+  then (load "holyHammer"; update_hh_stac ()) 
+  else ()
   )
 
 (* ----------------------------------------------------------------------
@@ -165,7 +176,6 @@ fun mk_tacdict tacticl =
 
 (* ----------------------------------------------------------------------
    Initialization
-   
    val succratel = 
       if !hhs_succrate_flag 
       then debug_t "import_succrate" import_succrate thyl
@@ -250,13 +260,12 @@ fun select_thmfeav goalfea =
       val _ = debug "theorem selection"
       val _ = debug_t "update_mdict" update_mdict (current_theory ())
       val thmfeav = dlist (!mdict_glob)
-      val thmsymweight = learn_tfidf thmfeav  
-      (* Some theorems can disappear so map is not enough here *)
+      val thmsymweight = learn_tfidf thmfeav
       val thmfeavdep = 
         debug_t "dependency_of_thm"
         (mapfilter (fn (a,b) => (a,b,dependency_of_thm a))) thmfeav
-      (* Orthogonalization and dependencies should be made to be
-         compatible but it's a bit hard *)
+      (* Some theorems might disappear so map is not enough here
+         Orthogonalization and dependencies are slightly contradictory *)
       val thml = thmknn_ext (!max_select_pred) thmfeavdep goalfea
       val pdict = dnew String.compare (map (fn x => (x,())) thml) 
       val feav0 = filter (fn (x,_,_) => dmem x pdict) thmfeavdep
@@ -390,28 +399,22 @@ fun debug_eval_status r =
 
 (* integer_words return errors hopefully no other *)
 fun eval_tactictoe name goal =
-  if !hhs_noprove_flag andalso String.isPrefix "tactictoe_prove_" name
-    then () 
-  else if !hhs_eval_flag 
+  if !hhs_eval_flag 
     andalso not (mem (current_theory ())
               ["integer_word","word_simp","wordSem","labProps",
                "data_to_word_memoryProof","word_to_stackProof"])
     andalso one_in_n ()
+    andalso 
+      not (!hhs_noprove_flag andalso String.isPrefix "tactictoe_prove_" name)
   then
     let val _ = hide_out set_esearch () in
-      if !hhs_hh_flag then 
-        let val hh = hh_of_sml () in 
-          hh 5 (list_mk_imp goal) handle _ => debug_proof "Proof status: Error" 
-        end
+      if !hh_only_flag 
+        then hh_eval goal handle _ => debug_proof "Error: print_eval_status" 
       else
-        let val r = hide_out main_tactictoe goal in
-          debug_eval_status r
-        end
+        let val r = hide_out main_tactictoe goal in debug_eval_status r end
     end
   else ()
 
-
- 
 fun tactictoe goal =
   let
     val _ = init_tactictoe ()

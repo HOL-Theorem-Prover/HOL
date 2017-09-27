@@ -217,9 +217,7 @@ fun minimize_lemmas l cj =
  ----------------------------------------------------------------------------*)
 
 fun reconstruct (atp_status,atp_out) cj =
-  let 
-    val olemmas = get_lemmas (atp_status,atp_out)
-  in
+  let val olemmas = get_lemmas (atp_status,atp_out) in
     case olemmas of 
       NONE => (print_endline "holyhammer: time out"; 
                FAIL_TAC "holyhammer: time out")
@@ -233,5 +231,19 @@ fun reconstruct (atp_status,atp_out) cj =
     end
   end
 
+fun string_of_lemma (thy,name) =
+  if thy = current_theory () 
+  then String.concatWith " " ["DB.fetch", quote thy, quote name]
+  else thy ^ "Theory." ^ name
+
+fun reconstruct_stac (atp_status,atp_out) cj =
+  let val olemmas = get_lemmas (atp_status,atp_out) in
+    case olemmas of 
+      NONE => NONE
+    | SOME lemmas =>
+    let val l = map string_of_lemma lemmas in
+      SOME ("metisTools.METIS_TAC [" ^ String.concatWith ", " l ^ "]")
+    end
+  end  
 
 end

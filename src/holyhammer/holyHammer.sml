@@ -207,6 +207,9 @@ fun launch_parallel tim =
 fun reconstruct_atp atp cj =
   reconstruct (status_of_prover atp, out_of_prover atp) cj
 
+fun reconstruct_atp_stac atp cj =
+  reconstruct_stac (status_of_prover atp, out_of_prover atp) cj
+
 fun get_lemmas_atp atp = get_lemmas
  (status_of_prover atp, out_of_prover atp)
 
@@ -243,21 +246,21 @@ fun holyhammer term =
     handle _ => reconstruct_atp Z3 term
   end
 
-fun hh_tac goal = (holyhammer (list_mk_imp goal)) goal
-
-fun hh_eval timeout term =
+fun hh_stac goal = 
   let
+    val term = list_mk_imp goal
+    val premises32 = select_premises 32 term
     val premises128 = select_premises 128 term
     val _ = export_problem Eprover premises128 term
     val _ = translate_atp Eprover
-    val _ = launch_atp Eprover timeout
-    val lo = get_lemmas_atp Eprover
-    fun f (a,b) = a ^ "Theory." ^ b
-  in 
-    case lo of
-      NONE   => hhsTools.debug_proof ("Proof status: Time Out")
-    | SOME l => hhsTools.debug_proof 
-      ("Proof found: " ^ String.concatWith " " (map f l))
+    val _ = export_problem Z3 premises32 term
+    val _ = translate_atp Z3
+    val _ = launch_parallel (!timeout_glob)
+  in
+    reconstruct_atp_stac Eprover term 
+    handle _ => reconstruct_atp_stac Z3 term
   end
+
+fun hh_tac goal = (holyhammer (list_mk_imp goal)) goal
 
 end

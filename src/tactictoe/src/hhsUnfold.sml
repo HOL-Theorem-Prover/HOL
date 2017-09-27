@@ -20,7 +20,7 @@ val ERR = mk_HOL_ERR "hhsUnfold"
 
 val hhs_unfold_dir = tactictoe_dir ^ "/unfold_log"
 val hhs_scripts_dir = tactictoe_dir ^ "/scripts"
-val loadl_glob = ref []
+val loadl_glob = ref [] (* not usable: missing a.b *)
 
 (* --------------------------------------------------------------------------
    Program representation and stack
@@ -52,8 +52,6 @@ datatype sketch_t =
 
 val (infix_glob : (string * infixity_t) list ref) = ref []
 val open_cache = ref []
-val name_number = ref 0
-fun incr x = x := (!x) + 1
 
 fun hd_code_par2 m = 
   (hd m = Code ("(",Protect) orelse hd m = Code ("{",Protect)) 
@@ -797,7 +795,7 @@ fun unfold in_flag stack program = case program of
         if mem s ["val","fun"]
         then
           if exists is_watch_tag fetch_body
-          then map watch [hd idl]
+          then map watch idl
           else
             if s = "val" 
             then stackvl_of_value idl new_head fetch_body
@@ -913,15 +911,22 @@ fun output_foot cthy file =
 
 fun start_unfold_thy cthy =
   (
+  print_endline cthy;
+  loadl_glob := [];
   cthy_unfold_glob := cthy;
   mkDir_err hhs_open_dir;
   mkDir_err hhs_unfold_dir;
   erase_file (hhs_unfold_dir ^ "/" ^ cthy);
-  mkDir_err hhs_scripts_dir;
-  erase_file (hhs_scripts_dir ^ "/" ^ cthy);
+  if not (!interactive_flag)
+  then   
+     (
+     mkDir_err hhs_scripts_dir;
+     erase_file (hhs_scripts_dir ^ "/" ^ cthy)
+     )
+  else ()
+  ;
   (* statistics *)
   n_store_thm := 0;
-  name_number := 0;
   open_time := 0.0; 
   replace_special_time := 0.0;
   replace_id_time := 0.0;
@@ -958,39 +963,48 @@ fun unquoteString s =
 
 val copy_scripts = tactictoe_dir ^ "/copy_scripts.sh"
 
+fun sketch_wrap file =
+  let
+    val sl = readl file
+    val s1 = rm_endline (rm_comment (String.concatWith " " sl))
+    val s2 = unquoteString s1
+    val sl3 = hhs_lex s2
+  in
+    sketch sl3
+  end
+
+fun unfold_wrap p =
+  let val basis_dict = dnew String.compare (map protect basis) in
+    unfold 0 [basis_dict] p
+  end
+
+(* ---------------------------------------------------------------------------
+   Evaluation version
+   -------------------------------------------------------------------------- *)
+
 fun erewrite_script file = 
-  let 
+  if extract_thy file = "bool" then () else
+  let
     val _ = interactive_flag := false
     val cthy = extract_thy file
     val _ = start_unfold_thy cthy
+    val local_file = rm_prefix file (HOLDIR ^ "/")
+    val file_out = hhs_scripts_dir ^ "/" ^ cthy
+    val p0 = sketch_wrap file
+    val p2 = unfold_wrap p0
+    val sl5 = modified_program false p2
   in
-    if cthy = "bool" then () else
-      let
-        val _ = print (cthy ^ "\n");
-        val local_file = rm_prefix file (HOLDIR ^ "/")
-        
-        val file_out = hhs_scripts_dir ^ "/" ^ cthy       
-        val sl = readl file
-        val s1 = rm_endline (rm_comment (String.concatWith " " sl))
-        val s2 = unquoteString s1
-        val sl3 = hhs_lex s2
-        val p0 = sketch sl3
-        val basis_dict = dnew String.compare (map protect basis)
-        val p2 = unfold 0 [basis_dict] p0
-        val sl5 = modified_program false p2
-      in
-        if !n_store_thm = 0 then () else
-        (
-        oc := TextIO.openOut file_out;
-        output_header cthy file;
-        print_sl sl5;
-        output_foot cthy file;
-        TextIO.closeOut (!oc);
-        end_unfold_thy ();
-        append_endline copy_scripts 
-          (String.concatWith " " ["cp",quote file_out,quote local_file])
-        )
-      end
+    if !n_store_thm = 0 then () else
+    (
+    oc := TextIO.openOut file_out;
+    output_header cthy file;
+    print_sl sl5;
+    output_foot cthy file;
+    TextIO.closeOut (!oc);
+    end_unfold_thy ();
+    append_endline copy_scripts 
+      (String.concatWith " " ["cp",quote file_out,quote local_file])
+    )
   end
 
 fun hol_scripts () =
@@ -1032,55 +1046,55 @@ fun cakeml_scripts cakeml_dir =
     readl file
   end
 
-fun rm_ext s = #base (OS.Path.splitBaseExt s);
-  
-fun irewrite_script file =
-  let
-    val _ = interactive_flag := true
-    val _ = loadl_glob := []
-    val cthy = extract_thy file
-    val _ = print_endline cthy
-    val file_out = rm_ext file ^ "_tactictoe.sml"
-    val sl = readl file
-    val s1 = rm_endline (rm_comment (String.concatWith " " sl))
-    val s2 = unquoteString s1
-    val sl3 = hhs_lex s2
-    val _ = start_unfold_thy cthy
-    val p0 = sketch sl3
-    val basis_dict = dnew String.compare (map protect basis)
-    val p2 = unfold 0 [basis_dict] p0
-    val sl5 = modified_program false p2
-  in
-    if !n_store_thm = 0 then () else
-    (
+(* ---------------------------------------------------------------------------
+   Interactive version
+   -------------------------------------------------------------------------- *)
+
+fun name_inter file = #base (OS.Path.splitBaseExt file) ^ "_tactictoe.sml"
+
+fun print_program cthy file sl =
+  if !n_store_thm = 0 then () else
+  let val file_out = name_inter file in
     oc := TextIO.openOut file_out;
     output_header cthy file;
-    print_sl sl5;
+    print_sl sl;
     output_foot cthy file;
-    TextIO.closeOut (!oc);
+    TextIO.closeOut (!oc)
+  end
+
+fun irewrite_script file =
+  if extract_thy file = "bool" then () else
+  let
+    val _ = interactive_flag := true
+    val cthy = extract_thy file
+    val _ = start_unfold_thy cthy
+    val p0 = sketch_wrap file
+    val p2 = unfold_wrap p0
+    val sl5 = modified_program false p2
+  in
+    print_program cthy file sl5;
     end_unfold_thy ()
-    )
   end
 
 fun irecord_script file =
-  let val file_out = rm_ext file ^ "_tactictoe.sml" in 
-    irewrite_script file;
-    run_hol file_out
-  end
+  (irewrite_script file; run_hol (name_inter file))
   
 end (* struct *)
 
-
 (* ---------------------------------------------------------------------------
   HOL:  
-
+  hol_scripts ();
+  
   rlwrap hol
   load "hhsUnfold";
   open hhsUnfold;
   
+  app irewrite_script (hol_scripts ());
+  app irecord_script (hol_scripts ());
+  
   irecord_script "/home/tgauthier/HOL/src/1/ConseqConvScript.sml";
   record_script "complexScript.sml";
-  erewrite_hol_scripts ();  
+  erewrite_hol_scripts ();
   --------------------------------------------------------------------------- *)
   
   
