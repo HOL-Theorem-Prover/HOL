@@ -6,6 +6,8 @@ sig
   type ('a,'b)subst = ('a,'b)Lib.subst
   type 'a set       = 'a HOLset.set
 
+  val equality      : term
+
   val type_of       : term -> hol_type
   val free_vars     : term -> term list
   val free_vars_lr  : term -> term list
