@@ -77,7 +77,23 @@ fun tpp s = tppw (!linewidth) {input=s,output=s,testf=standard_tpp_message}
 
 fun tpp_expected r = tppw (!linewidth) r
 
-
-
+fun convtest (nm,conv,tm,expected) =
+  let
+    open Term
+    val _ = tprint nm
+    val (l,r) = let
+      val (eql, r) = dest_comb (Thm.concl (conv tm))
+      val (eq, l) = dest_comb eql
+      val _ = assert (same_const equality) eq
+    in
+      (l,r)
+    end handle e =>
+               die ("Didn't get equality; rather exn "^ General.exnMessage e)
+  in
+    if aconv l tm then
+      if aconv r expected then OK()
+      else die ("Got: " ^ Parse.term_to_string r)
+    else die ("Conv result LHS = " ^ Parse.term_to_string l)
+  end
 
 end (* struct *)
