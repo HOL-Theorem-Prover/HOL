@@ -115,6 +115,7 @@ fun set_esearch () =
     false andalso 
     ((load "holyHammer"; update_hh_stac (); true) handle _ => false)
     );
+  hh_timeout := 120.0;
   (* result *)
   hhs_minimize_flag := false;
   hhs_prettify_flag := false
@@ -143,6 +144,7 @@ fun set_isearch () =
   hhs_metis_npred := 16;
   hhs_metis_time := 0.1;
   (* holyhammer *)
+  hh_timeout := 120.0;
   (* result *)
   hhs_minimize_flag := true;
   hhs_prettify_flag := true;

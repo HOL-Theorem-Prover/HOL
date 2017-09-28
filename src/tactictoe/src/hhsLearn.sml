@@ -24,7 +24,10 @@ val hhs_succrate_flag = ref false
 
 fun test_stac g gl stac =
   let val ((new_gl,_),t) = 
+    (
+    debug ("test_stac " ^ stac);
     add_time (timeOut (!hhs_tactic_time) (tactic_of_sml stac)) g
+    )
   in
     if all (fn x => mem x gl) new_gl 
     then SOME (stac,t,g,gl)
@@ -43,6 +46,7 @@ fun orthogonalize (lbl as (ostac,t,g,gl),fea) =
     let
       val feavectl = debug_t "orthogonalize" 
         stacknn_ext (!hhs_ortho_number) (dlist (!hhs_stacfea)) fea
+      val _ = debug (string_of_goal g)
       val stacl    = map (#1 o fst) feavectl
       val stacl2   = filter (fn x => not (x = ostac)) stacl
       val testl    = lbl :: (List.mapPartial (test_stac g gl) stacl2)

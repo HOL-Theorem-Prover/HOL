@@ -19,6 +19,7 @@ val hhs_metis_npred = ref 16
 val hhs_thmortho_flag = ref false
 val hhs_stacpred_flag = ref false
 val hh_stac_flag  = ref false (* predict dependencies using holyhammer *)
+val hh_timeout = ref 120.0
 
 (* ----------------------------------------------------------------------
    Theorems dependencies
@@ -175,9 +176,15 @@ fun add_metis tacdict thmpredictor (g,pred) =
         then 
           (
           debug "calling holyhammer";
-          case (!hh_stac_glob) g of 
-            NONE => (debug "failure"; mk_metis_call ((!thmpredictor) g))
-          | SOME x => (debug "success"; x)
+          case (hhsTimeout.timeOut (!hh_timeout) (!hh_stac_glob) g
+                handle _ => (
+                debug "Error: holyhammer";
+                debug (string_of_goal g); 
+                NONE))
+          of 
+            NONE => 
+            (debug "holyhammer: timeout"; mk_metis_call ((!thmpredictor) g))
+          | SOME x => (debug "holyhammer: proof found"; x)
           )
         else mk_metis_call ((!thmpredictor) g)
       val _ = stactime_dict := dadd stac (!hhs_metis_time) (!stactime_dict)

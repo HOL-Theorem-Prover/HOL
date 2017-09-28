@@ -125,6 +125,8 @@ fun set_irecord () =
 
 fun set_erecord () =
   (
+  if current_theory () = "integer_word" then () else 
+  (
   (* recording *)
   hhs_norecord_flag := false;
   hhs_eval_flag := true;
@@ -142,7 +144,7 @@ fun set_erecord () =
   (* export *)
   hhs_thmortho_flag := true
   )
-
+  )
 (* --------------------------------------------------------------------------
    Replaying a tactic.
    -------------------------------------------------------------------------- *)
@@ -486,7 +488,7 @@ fun end_record name g =
 
 fun try_record_proof name lflag tac1 tac2 g =
   let 
-    val _  = set_erecord () (* to be removed *)
+    val _  = set_erecord ()
     val b1 = !hhs_norecord_flag
     val b2 = 
       (!hhs_norecprove_flag andalso String.isPrefix "tactictoe_prove_" name)

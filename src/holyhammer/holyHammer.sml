@@ -86,10 +86,13 @@ fun init_predictions d1 d2 thyl =
       let 
         fun g thm = (Dep.depid_of o Tag.dep_of o Thm.tag) thm
         fun f (name,thm) =
-          let val fullname = thy ^ "Theory." ^ name in
-            d1 := dadd fullname (fea_of_goal (dest_thm thm)) (!d1);
-            d2 := dadd (g thm) fullname (!d2)
-          end
+          if uptodate_thm thm
+          then
+            let val fullname = thy ^ "Theory." ^ name in
+              d1 := dadd fullname (fea_of_goal (dest_thm thm)) (!d1);
+              d2 := dadd (g thm) fullname (!d2)
+            end
+          else ()
       in
         app f (DB.thms thy)
       end
@@ -232,7 +235,7 @@ fun hh_eprover term = hh_atp Eprover (!timeout_glob) 128 term
 
 fun hh_z3 term = hh_atp Z3 (!timeout_glob) 32 term
 
-fun holyhammer term = 
+fun holyhammer term =
   let
     val premises32 = select_premises 32 term
     val premises128 = select_premises 128 term
