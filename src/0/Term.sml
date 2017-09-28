@@ -57,6 +57,7 @@ in
   val imp_id = insert(termsig,{Name = "==>", Thy = "min"}, imp_ty)
 
   val eqc = Const (eq_id,eq_ty)
+  val equality = eqc
   val hil = Const (hil_id,hil_ty)
   val imp = Const (imp_id,imp_ty)
 end
