@@ -488,7 +488,6 @@ fun end_record name g =
 
 fun try_record_proof name lflag tac1 tac2 g =
   let 
-    val _  = set_erecord ()
     val b1 = !hhs_norecord_flag
     val b2 = 
       (!hhs_norecprove_flag andalso String.isPrefix "tactictoe_prove_" name)
