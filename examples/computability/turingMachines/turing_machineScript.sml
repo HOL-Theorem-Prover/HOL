@@ -1,5 +1,6 @@
 
 
+
 open HolKernel Parse boolLib bossLib finite_mapTheory;
 open recfunsTheory;
 open recursivefnsTheory;
@@ -1082,21 +1083,16 @@ Induct_on `p` >> simp[] )
 
 
 
-val tmstepf_def = tDefine "tmstepf" `tmstepf p args =
+val tmstepf_def = tDefine "tmstepf" `tmstepf p tmn =
      case OLEAST n. (NUM_TO_STATE (nfst n), CELL_NUM (nsnd n)) ∈ FDOM p of
-         NONE => ( case args of [tmn] => tmn
-                              | [] => 0
-                              | tmn::_::_ => tmn )
+         NONE => (tmn)
        | SOME n => let s = NUM_TO_STATE (nfst n) in
                        let sym = CELL_NUM (nsnd n) in
                    let (s',actn) = p ' (s,sym) in
-        ( case args of
-          [tmn] =>
-          if ((nfst tmn) = STATE_TO_NUM s) ∧ (((nsnd (nsnd tmn)) MOD 2) = NUM_CELL sym)
+        ( if ((nfst tmn) = STATE_TO_NUM s) ∧ (((nsnd (nsnd tmn)) MOD 2) = NUM_CELL sym)
           then updn [STATE_TO_NUM s'; ACT_TO_NUM actn; tmn]
-          else tmstepf (p \\ (s,sym)) [tmn]
-           | [] => 0
-           |  tmn::_::_ => tmn )` (WF_REL_TAC `measure (CARD o FDOM o FST)` >> simp[OLEAST_EQ_SOME] >>
+          else tmstepf (p \\ (s,sym)) tmn
+          )` (WF_REL_TAC `measure (CARD o FDOM o FST)` >> simp[OLEAST_EQ_SOME] >>
                      metis_tac[MEMBER_CARD]);
 
 
@@ -1433,8 +1429,8 @@ Cases_on `SND (p ' (tm.state,tm.tape_h))` >> fs[] >> Cases_on `tm.tape_l = []` >
 Cases_on `tm.tape_r = []` >> fs[ENCODE_TM_TAPE_def] )
 
 val tmstepf_update_equiv = Q.store_thm("tmstepf_update_equiv",
-`∀p nl tm. (nl = [FULL_ENCODE_TM tm ]) ==>
-        (tmstepf p nl = FULL_ENCODE_TM (UPDATE_TAPE (tm with prog := p) ))`,
+`∀p n tm. (n = ⟦tm⟧ ) ==>
+        (tmstepf p n = FULL_ENCODE_TM (UPDATE_TAPE (tm with prog := p) ))`,
 ho_match_mp_tac (theorem"tmstepf_ind") >> simp[OLEAST_EQ_SOME] >> rw[] >>
 pop_assum (assume_tac o CONV_RULE (HO_REWR_CONV npair_lem)) >> fs[] >> simp[Once tmstepf_def] >>
 Cases_on `OLEAST n. (NUM_TO_STATE (nfst n),CELL_NUM (nsnd n)) ∈ FDOM p`
@@ -1453,59 +1449,80 @@ Cases_on `OLEAST n. (NUM_TO_STATE (nfst n),CELL_NUM (nsnd n)) ∈ FDOM p`
     simp[ UPDATE_W_PROG_NIN_TM] )  )
  )
 
+val nsnd0 = EVAL ``nsnd 0``
 
 
-(*
+val nfst0 = EVAL ``nfst 0``
+
+
 val primrec_tmstepf_form = Q.store_thm("primrec_tmstepf_form",
-`λnl.  case nl of  [] => 0
-                 | [tmn] => if (nfst tmn = nfst k) ∧ (nsnd (nsnd tmn) MOD 2 = nsnd k) then
-                               updn [STATE_TO_NUM s; ACT_TO_NUM a; tmn]
-                            else tmstepf q [tmn]
-                 | tmn::v2::v3 => tmn =
- Cn (pr_cond (Cn pr_eq [proj 0; zerof] ) zerof
-    (pr_cond (Cn pr_eq [proj 1; zerof] ) (proj 0)
-    (pr_cond (Cn pr_eq [Cn (pr1 nfst) [proj 0] ; Cn (pr1 nfst) [k] ])
-      (Cn updn [Cn (pr1 STATE_TO_NUM) [s]; Cn (pr1 ACT_TO_NUM) [a] ; proj 0] )
-      (Cn tmstepf [q;[proj 0]])  ) ) )
-`,
-)
+`∀n.  (Cn (proj 0)  [pr_cond (Cn (pr2 $*)  [Cn pr_eq [Cn (pr1 nfst) [proj 0] ;
+       Cn (pr1 nfst) [K k] ];  Cn pr_eq [Cn pr_mod [Cn (pr1 nsnd) [Cn (pr1 nsnd) [proj 0]] ;twof];
+       Cn (pr1 nsnd) [K k] ] ] )
+      (Cn updn [K snum; K anum ; proj 0] )
+      (Cn (pr1 (tmstepf q)) [proj 0] ) ] ) [n] =
+      (λtmn. if (nfst tmn = nfst k) ∧ (nsnd (nsnd tmn) MOD 2 = nsnd k) then
+                       updn [snum; anum; tmn]
+                   else tmstepf q tmn
+                 ) n`,
+rw[Cn_def,FUN_EQ_THM] >> rw[pr_cond_def] )
 
 
+val primrec_of_tmstepf = Q.store_thm("primrec_of_tmstepf",
+`(primrec (pr1 (tmstepf q)) 1) ==> (primrec (Cn (proj 0)  [
+     pr_cond (Cn (pr2 $*)  [Cn pr_eq [Cn (pr1 nfst) [proj 0] ; Cn (pr1 nfst) [K k] ];
+               Cn pr_eq [Cn pr_mod [Cn (pr1 nsnd) [Cn (pr1 nsnd) [proj 0]] ;twof];
+               Cn (pr1 nsnd) [K k] ] ] )
+              (Cn updn [K snum; K anum ; proj 0] )
+              (Cn (pr1 (tmstepf q)) [proj 0]  )
+                        ] ) 1)`,
+strip_tac >> SRW_TAC [][primrec_rules] >> SRW_TAC [][pr_cond_def] >>
+       rpt ( MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules]) >> fs[UPDATE_TM_NUM_PRIMREC] );
 
-(* Works up to here  *)
 
+(*    SIMP_CONV(srw_ss())[pr_cond_def,nsnd0,nfst0] ``Cn (proj 0)  [
+        pr_cond (Cn (pr2 $* )  [Cn pr_eq [Cn (pr1 nfst) [proj 0] ; Cn (pr1 nfst) [K k] ];
+                               Cn pr_eq [Cn pr_mod [Cn (pr1 nsnd) [Cn (pr1 nsnd) [proj 0]] ;twof];
+                                         Cn (pr1 nsnd) [K k] ] ] )
+                    (Cn updn [K snum; K anum ; proj 0] )
+                    (Cn (tmstepf q) [proj 0]  )
+                ] []``   *)
 
-
-val primrec_tmstepf = Q.store_thm ("primerec_tmstepf"
-`primrec (λ nl. tmstepf p nl) 1`,
+val primrec_tmstepf = Q.store_thm ("primerec_tmstepf",
+`primrec (pr1 (tmstepf p) ) 1`,
  Induct_on `CARD (FDOM p)` >- (rpt strip_tac >>
   `FDOM p = {}` by metis_tac[FDOM_FINITE,CARD_EQ_0] >> fs[FDOM_EQ_EMPTY] >>
   rw[Once tmstepf_def] >> qmatch_abbrev_tac`primrec f 1` >>
   `f = proj 0` suffices_by simp[primrec_rules] >> simp[Abbr`f`,FUN_EQ_THM] >> Cases >>
-  simp[proj_def] )
-  >- (rpt strip_tac >> rw[Once tmstepf_def] >>
+  simp[proj_def] >> rw[Once tmstepf_def]  )
+    >- (rpt strip_tac >>  MATCH_MP_TAC primrec_pr1  >> rw[Once tmstepf_def] >>
       ` (OLEAST n.  (NUM_TO_STATE (nfst n),CELL_NUM (nsnd n)) ∈ FDOM p) <> NONE`
         by (DEEP_INTRO_TAC(whileTheory.OLEAST_INTRO) >> simp[] >>
             `FDOM p <> {}` by (strip_tac >> fs[]) >>
-            `∃a b. (a,b) IN FDOM p`  by metis_tac[SET_CASES,pairTheory.pair_CASES,IN_INSERT]
+            `∃a b. (a,b) IN FDOM p`  by metis_tac[SET_CASES,pairTheory.pair_CASES,IN_INSERT]>>
             qexists_tac`STATE_TO_NUM a *, NUM_CELL b` >> simp[] ) >>
       `∃k. (OLEAST n.  (NUM_TO_STATE (nfst n),CELL_NUM (nsnd n)) ∈ FDOM p) = SOME k`
       by metis_tac[optionTheory.option_CASES] >> simp[] >> fs[OLEAST_EQ_SOME] >>
-      `∃ s a. (p ' (NUM_TO_STATE (nfst k),CELL_NUM (nsnd k))) = (s,a)` 
+      `∃ s a. (p ' (NUM_TO_STATE (nfst k),CELL_NUM (nsnd k))) = (s,a)`
       by metis_tac[pairTheory.pair_CASES] >> simp[] >>
       `CARD (FDOM (p \\ (NUM_TO_STATE (nfst k),CELL_NUM (nsnd k)))) = v` by fs[] >>
       qabbrev_tac`q = p \\ (NUM_TO_STATE (nfst k),CELL_NUM (nsnd k))` >>
-      `primrec (λnl. tmstepf q nl) 1` by fs[] >> qmatch_abbrev_tac`primrec f 1` >>
-      `NUM_CELL (CELL_NUM (nsnd k)) = nsnd k` 
+      `primrec (pr1 (tmstepf q)) 1` by fs[] >>
+      `NUM_CELL (CELL_NUM (nsnd k)) = nsnd k`
       by metis_tac[npair_11,npair,CELL_NUM_LEM1,NUM_TO_CELL_TO_NUM] >> fs[] >>
-      ___
-    )
+      qabbrev_tac`snum = STATE_TO_NUM s` >> qabbrev_tac`anum = ACT_TO_NUM a` >>
+      qexists_tac`Cn (proj 0)  [
+     pr_cond (Cn (pr2 $*)  [Cn pr_eq [Cn (pr1 nfst) [proj 0] ; Cn (pr1 nfst) [K k] ];
+                            Cn pr_eq [Cn pr_mod [Cn (pr1 nsnd) [Cn (pr1 nsnd) [proj 0]] ;twof];
+                                      Cn (pr1 nsnd) [K k] ] ] )
+                 (Cn updn [K snum; K anum ; proj 0] )
+                 (Cn (pr1 (tmstepf q)) [proj 0]  )
+             ] ` >> fs[primrec_of_tmstepf,primrec_tmstepf_form]
+    )   )
 
-        )
 
 
-
-*)
+ (* Works up to here  *)
 
 
 
