@@ -10,7 +10,7 @@ structure hhsRecord :> hhsRecord =
 struct
 
 open HolKernel boolLib hhsTools hhsLexer hhsData hhsNumber hhsExtract hhsUnfold 
-hhsTimeout hhsData tacticToe hhsPredict hhsExec hhsMetis hhsLearn
+hhsTimeout hhsData tacticToe hhsPredict hhsExec hhsMetis hhsLearn hhsSetup
 
 val ERR = mk_HOL_ERR "hhsRecord"
 
@@ -100,52 +100,6 @@ fun out_record_summary cthy =
   end
 
 (* --------------------------------------------------------------------------
-   Recording in interactive mode
-   -------------------------------------------------------------------------- *)
-
-fun set_irecord () = 
-  (
-  (* recording *)
-  hhs_norecord_flag := false;
-  hhs_eval_flag := false;
-  hhs_internalthm_flag := false;
-  hhs_norecprove_flag := false;
-  hhs_nolet_flag := false;
-  hhs_goalstep_flag := false;
-  (* learning *)
-  hhs_noslowlbl_flag := false;
-  hhs_ortho_flag := false;
-  hhs_ortho_number := 20;
-  hhs_ortho_metis := false;
-  hhsSearch.hhs_selflearn_flag := false;
-  hhs_succrate_flag := false;
-  (* export *)
-  hhs_thmortho_flag := false
-  )
-
-fun set_erecord () =
-  (
-  if current_theory () = "integer_word" then () else 
-  (
-  (* recording *)
-  hhs_norecord_flag := false;
-  hhs_eval_flag := true;
-  hhs_internalthm_flag := true;
-  hhs_norecprove_flag := true;
-  hhs_nolet_flag := true;
-  hhs_goalstep_flag := false;
-  (* learning *)
-  hhs_noslowlbl_flag := false;
-  hhs_ortho_flag := true;
-  hhs_ortho_number := 20;
-  hhs_ortho_metis := true;
-  hhsSearch.hhs_selflearn_flag := false;
-  hhs_succrate_flag := false;
-  (* export *)
-  hhs_thmortho_flag := true
-  )
-  )
-(* --------------------------------------------------------------------------
    Replaying a tactic.
    -------------------------------------------------------------------------- *)
 
@@ -228,52 +182,6 @@ fun wrap_tactics_in name qtac goal =
     | NONE   => raise ERR "" ""
   end
 
-(* --------------------------------------------------------------------------
-   Recording intermediate goals as theorems in the database
-   -------------------------------------------------------------------------- *)
-
-fun save_tactictoe_step thm =
-  let 
-    val name = "tactictoe_step_" ^ int_to_string (!tactictoe_step_counter)
-  in
-    if uptodate_thm thm 
-    then (save_thm (name,thm); incr tactictoe_step_counter)
-    else ()
-  end
-
-fun tactictoe_prove proved (_,g,gl,v) =
-  let
-    val thml = map (fn x => dfind x (!proved)) gl
-    val thm = v thml
-    fun test x = goal_compare (dest_thm x, dest_thm thm) = EQUAL
-    val thyl = current_theory () :: ancestry (current_theory ())
-  in
-    proved := dadd g thm (!proved);
-    if null (DB.matchp test thyl)
-    then ()
-    else save_tactictoe_step thm
-  end
-
-fun save_goalstep_aux proved l =
-  let
-    fun is_provable proved (_,g,gl,v) = all (fn x => dmem x (!proved)) gl
-    val (l0,l1) = List.partition (is_provable proved) l
-  in 
-    if null l0 then () else
-    (
-    ignore (mapfilter (tactictoe_prove proved) l0);
-    save_goalstep_aux proved l1
-    )
-  end
-  
-fun save_goalstep g l =
-  if !hhs_goalstep_flag then
-    let val proved = ref (dempty strict_goal_compare) in
-      save_goalstep_aux proved l;
-      if dmem g (!proved) then () else debug "Warning: add_goalstep"
-    end
-  else ()
-
 (*----------------------------------------------------------------------------
   Globalizing theorems and create a new theorem if the value does not exists.
   ----------------------------------------------------------------------------*)
@@ -314,7 +222,7 @@ fun fetch_thm_aux s reps =
 val fetch = total_time fetch_thm_time fetch_thm_aux
 
 (*----------------------------------------------------------------------------
-  Tactical proofs hooks
+  For statistics on coverage.
   ----------------------------------------------------------------------------*)
 
 val start_stacset = ref (dempty String.compare)
@@ -333,6 +241,10 @@ fun create_tokenset () =
     dnew String.compare (map (fn x => (x,())) l) 
   end  
 
+(*----------------------------------------------------------------------------
+  Tactical proofs hooks
+  ----------------------------------------------------------------------------*)
+
 fun start_record name goal =
   (
   if !hhs_eval_flag then init_tactictoe () else ();
@@ -340,151 +252,13 @@ fun start_record name goal =
   debug_search ("\n" ^ name);
   debug ("\n" ^ name);
   start_stacset := create_stacset ();
-  if !hhs_after_flag
-  then start_tokenset := create_tokenset ()
-  else ()
-  ;
   (* recording goal steps *)
   goalstep_glob := [];
   (* evaluation *)
-  if !hhs_after_flag
-  then ()
-  else (eval_tactictoe name goal handle _ => debug "Error: eval_tactictoe")
+  (eval_tactictoe name goal handle _ => debug "Error: eval_tactictoe")
   )
-
-fun filter_stacfea f dict =
-  (
-  debug (int_to_string (dlength dict));
-  init_stacfea_ddict [];
-  app update_stacfea_ddict (filter f (dlist dict));
-  debug (int_to_string (dlength (!hhs_stacfea)))
-  )
-
-val thm_cache = ref (dempty String.compare)
-fun is_thm_cache x = 
-  dfind x (!thm_cache) handle _ =>
-  let val b = is_thm x in
-    thm_cache := dadd x b (!thm_cache);
-    b
-  end
   
-val string_cache = ref (dempty String.compare)
-fun is_string_cache x = 
-  dfind x (!string_cache) handle _ =>
-  let val b = is_string x in
-    string_cache := dadd x b (!string_cache);
-    b
-  end
-  
-val tactic_cache = ref (dempty String.compare)
-fun is_tactic_cache x = 
-  dfind x (!tactic_cache) handle _ =>
-  let val b = is_tactic x in
-    tactic_cache := dadd x b (!tactic_cache);
-    b
-  end    
-
-val mtoken_dict = ref (dempty String.compare)
-val mtactic_dict = ref (dempty String.compare)
-  
-fun end_record name g =
-  let 
-    val _ = debug "End record"
-    val _ = thm_cache := dempty String.compare
-    val _ = string_cache := dempty String.compare
-    val _ = tactic_cache := dempty String.compare
-    val _ = mtoken_dict := dempty String.compare
-    val _ = mtactic_dict := dempty String.compare
-    val stacl = map #1 (!goalstep_glob)
-    val goall = map #2 (!goalstep_glob)
-    fun is_true _ = true
-    
-    fun etest_wrap etest itest fea =
-      let 
-        fun itest_wrap itest x = 
-          if itest x 
-          then true 
-          else (mtoken_dict := dadd x () (!mtoken_dict); false)
-        val stac = ((#1 o fst) fea)
-        val l = hhs_lex stac 
-      in
-        if etest fea andalso all (itest_wrap itest) l
-        then true
-        else (mtactic_dict := dadd stac () (!mtactic_dict); false)  
-      end
-     
-    fun f1 ((stac,_,x,_),_) = mem stac stacl andalso mem x goall
-    val ef1 = etest_wrap f1 is_true
-    fun f2 ((stac,_,_,_),_) = dmem stac (!start_stacset)
-    val ef2 = etest_wrap f2 is_true
-    fun f3 x = dmem x (!start_tokenset)
-    val ef3 = etest_wrap is_true f3
-    fun f6 x = dmem x (!start_tokenset) orelse is_tactic_cache x
-    val ef6 = etest_wrap is_true f6
-    fun f7 x = dmem x (!start_tokenset) orelse 
-               is_thm_cache x orelse is_string_cache x
-    val ef7 = etest_wrap is_true f7       
-    fun f8 x = 
-      dmem x (!start_tokenset) orelse 
-      is_thm_cache x orelse is_string_cache x orelse is_tactic_cache x
-    val ef8 = etest_wrap is_true f8
-    fun f9 x = 
-      (
-      dmem x (!start_tokenset) orelse 
-      is_thm_cache x orelse 
-      (is_string_cache x andalso can (split_string "(*") x)
-      )
-    val ef9 = etest_wrap is_true f9
-    fun f10 x = 
-      (
-      dmem x (!start_tokenset) orelse 
-      is_thm_cache x orelse 
-        (
-        is_string_cache x andalso 
-        not (can (split_string "(*") x)
-        )
-      )
-    val ef10 = etest_wrap is_true f10
-    
-    val mem_hhs_stacfea = !hhs_stacfea
-    val dict = mem_hhs_stacfea
-    val mem_hhs_cthyfea = !hhs_cthyfea
-    val mem_hhs_ddict = !hhs_ddict
-    val mem_hhs_ndict = !hhs_ndict
-  in
-    if !hhs_aftersmall_flag  then filter_stacfea ef1 dict else ();
-    if !hhs_aftertac_flag    then filter_stacfea ef2 dict else ();
-    if !hhs_aftertoken_flag  then filter_stacfea ef3 dict else ();
-    if !hhs_aftertactic_flag then filter_stacfea ef6 dict else ();
-    if !hhs_afterall_flag    then filter_stacfea ef7 dict else ();
-    if !hhs_afterall2_flag   then filter_stacfea ef8 dict else ();
-    if !hhs_afterthm2_flag   then filter_stacfea ef9 dict else ();
-    if !hhs_afterthmthm_flag then filter_stacfea ef10 dict else ();
-    
-    if !hhs_after_flag
-    then (eval_tactictoe name g handle _ => debug "Error: eval_tactictoe")
-    else ()
-    ;
-    if !hhs_after_flag
-      then 
-        (
-        hhs_stacfea := mem_hhs_stacfea;
-        hhs_cthyfea := mem_hhs_cthyfea;
-        hhs_ddict := mem_hhs_ddict;
-        hhs_ndict := mem_hhs_ndict;
-        debug ("mtactic_dict " ^ int_to_string (dlength (!mtactic_dict)));
-        app debug (map fst (dlist (!mtactic_dict)));
-        debug ("mtoken_dict " ^ int_to_string (dlength (!mtoken_dict)));
-        app debug (map fst (dlist (!mtoken_dict)))
-        )
-      else ()
-    ;
-    if all (fn x => dmem x (!start_stacset)) stacl 
-    then debug_proof "Covered"
-    else debug_proof "Non-covered"
-    ;
-    (save_goalstep g (!goalstep_glob) handle _ => debug "Error: save_goalstep")
-  end
+fun end_record name g = debug "End record"
 
 fun try_record_proof name lflag tac1 tac2 g =
   let 

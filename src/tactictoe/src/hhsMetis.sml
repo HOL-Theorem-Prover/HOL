@@ -10,16 +10,9 @@ structure hhsMetis :> hhsMetis =
 struct
 
 open HolKernel boolLib Abbrev hhsTools hhsExec hhsLexer hhsFeature hhsPredict
+hhsSetup
 
 val ERR = mk_HOL_ERR "hhsMetis"
-
-val hhs_metis_flag  = ref false
-val hhs_metis_time  = ref 0.1
-val hhs_metis_npred = ref 16
-val hhs_thmortho_flag = ref false
-val hhs_stacpred_flag = ref false
-val hh_stac_flag  = ref false (* predict dependencies using holyhammer *)
-val hh_timeout = ref 120.0
 
 (* ----------------------------------------------------------------------
    Theorems dependencies
@@ -199,7 +192,8 @@ fun add_metis tacdict thmpredictor (g,pred) =
 
 
 (* ---------------------------------------------------------------------------
-   Add an accept call on top of the predictions.
+   Add an accept call on top of the predictions. 
+   (a lot of code for a negligable gain)  
    -------------------------------------------------------------------------- *)
 
 val thml_glob = ref (dempty goal_compare)

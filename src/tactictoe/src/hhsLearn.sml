@@ -9,14 +9,9 @@ structure hhsLearn :> hhsLearn =
 struct
 
 open HolKernel boolLib Abbrev hhsTools hhsPredict hhsExec hhsMinimize 
-hhsTimeout hhsFeature hhsMetis
+hhsTimeout hhsFeature hhsMetis hhsSetup
 
 val ERR = mk_HOL_ERR "hhsLearn"
-
-val hhs_ortho_flag = ref false
-val hhs_ortho_number = ref 20
-val hhs_ortho_metis = ref false
-val hhs_succrate_flag = ref false
 
 (*----------------------------------------------------------------------------
  * Orthogonalization
@@ -59,13 +54,14 @@ fun orthogonalize (lbl as (ostac,t,g,gl),fea) =
   else lbl
 
 (* ---------------------------------------------------------------------------
-   Success rates of each tactic.
+   Success rates of each tactic. To be removed.
    -------------------------------------------------------------------------- *)
 
 val succ_cthy_dict = ref (dempty String.compare)
 val succ_glob_dict = ref (dempty String.compare)
 
 fun count_try stac = 
+  if !hhs_succrate_flag then 
   let 
     val (succ1,try1) = dfind stac (!succ_cthy_dict) handle _ => (0,0)
     val (succ2,try2) = dfind stac (!succ_glob_dict) handle _ => (0,0)
@@ -73,8 +69,10 @@ fun count_try stac =
     succ_cthy_dict := dadd stac (succ1,try1 + 1) (!succ_cthy_dict);
     succ_glob_dict := dadd stac (succ2,try2 + 1) (!succ_glob_dict)
   end
+  else ()
   
 fun count_succ stac = 
+  if !hhs_succrate_flag then 
   let 
     val (succ1,try1) = dfind stac (!succ_cthy_dict) handle _ => (0,0)
     val (succ2,try2) = dfind stac (!succ_glob_dict) handle _ => (0,0)
@@ -82,6 +80,7 @@ fun count_succ stac =
     succ_cthy_dict := dadd stac (succ1 + 1,try1) (!succ_cthy_dict);
     succ_glob_dict := dadd stac (succ2 + 1,try2) (!succ_glob_dict)
   end
+  else ()
 
 fun inv_succrate stac =
   if !hhs_succrate_flag
@@ -92,7 +91,7 @@ fun inv_succrate stac =
   else 1.0
 
 (*----------------------------------------------------------------------------
- * I/O success rates
+ * I/O success rates. To be removed.
  *----------------------------------------------------------------------------*)
 
 val succrate_reader = ref []

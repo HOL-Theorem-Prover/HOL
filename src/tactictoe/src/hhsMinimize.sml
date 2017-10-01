@@ -8,12 +8,9 @@
 structure hhsMinimize :> hhsMinimize =
 struct
 
-open HolKernel boolLib Abbrev hhsTools hhsExec hhsLexer hhsTimeout
+open HolKernel boolLib Abbrev hhsTools hhsExec hhsLexer hhsTimeout hhsSetup
 
 val ERR = mk_HOL_ERR "hhsMinimize"
-
-val hhs_minimize_flag = ref false
-val hhs_prettify_flag = ref false
 
 (* --------------------------------------------------------------------------
    Tests

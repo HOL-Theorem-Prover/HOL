@@ -9,7 +9,7 @@ structure hhsData :> hhsData =
 struct
 
 open HolKernel boolLib Abbrev hhsTools hhsTimeout hhsExec hhsLearn 
-hhsMetis hhsPredict SharingTables Portable
+hhsMetis hhsPredict SharingTables Portable hhsSetup
 
 val ERR = mk_HOL_ERR "hhsData"
 
@@ -128,11 +128,9 @@ fun pp_feavl feavl =
 
 (*----------------------------------------------------------------------------
  * Saving one feature vector on memory
-   orelse (!hhs_noslowlbl_flag andalso t0 > !hhs_tactic_time) 
  *----------------------------------------------------------------------------*)
 
-val feature_time = ref 0.0
-val hhs_noslowlbl_flag = ref true
+val feature_time = ref 0.0 (* statistics *)
 
 fun metis_prove g =
   !hhs_ortho_metis andalso !hhs_metis_flag andalso

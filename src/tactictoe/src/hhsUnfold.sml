@@ -21,6 +21,7 @@ val ERR = mk_HOL_ERR "hhsUnfold"
 val hhs_unfold_dir = tactictoe_dir ^ "/unfold_log"
 val hhs_scripts_dir = tactictoe_dir ^ "/scripts"
 val loadl_glob = ref [] (* not usable: missing a.b *)
+val interactive_flag = ref true
 
 (* --------------------------------------------------------------------------
    Program representation and stack
@@ -565,8 +566,6 @@ fun load_list_loop sl = case sl of
   
 fun load_list sl = "[" :: load_list_loop sl
 
-val interactive_flag = ref true
-
 fun modified_program inh p = case p of
     [] => []
   | Open sl :: m    => 
@@ -895,11 +894,15 @@ fun output_header cthy file =
       val _ = OS.Process.system cmd
       val sl = map mlquote (readl temp)
     in
-      osn "hhsRecord.set_irecord ();";
+      osn "hhsSetup.set_irecord ();";
       osn "fun load_err s = load s handle _ => ();";
       osn ("List.app load_err [" ^ String.concatWith ", " sl ^ "];")
     end
-  else osn "hhsRecord.set_erecord ();"
+  else 
+    (
+    osn "hhsSetup.set_erecord ();";
+    osn "hhsSetup.set_esearch ();"
+    )
   ;
   app os (bare_readl infix_decl);
   os "open hhsRecord;\n";
@@ -1093,6 +1096,8 @@ end (* struct *)
   
   app irewrite_script (hol_scripts ());
   app irecord_script (hol_scripts ());
+  
+  irecord_script "/home/tgauthier/HOL/src/combin/combinScript.sml";
   
   irecord_script "/home/tgauthier/HOL/src/1/ConseqConvScript.sml";
   record_script "complexScript.sml";

@@ -1,6 +1,6 @@
 (* ========================================================================== *)
 (* FILE          : hhsSearch.sml                                              *)
-(* DESCRIPTION   : A* search algorithm for TacticToe.                         *)
+(* DESCRIPTION   : Search algorithm for TacticToe.                            *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
 (* DATE          : 2017                                                       *)
 (* ========================================================================== *)
@@ -9,7 +9,7 @@ structure hhsSearch :> hhsSearch =
 struct
 
 open HolKernel boolLib Abbrev hhsTools hhsTimeout hhsFeature hhsPredict
-hhsExec hhsLexer hhsMinimize hhsMetis hhsData hhsLearn
+hhsExec hhsLexer hhsMinimize hhsMetis hhsData hhsLearn hhsSetup
 
 val ERR = mk_HOL_ERR "hhsSearch"
 
@@ -21,7 +21,7 @@ exception SearchTimeOut
 exception NoNextTac
 
 (* -------------------------------------------------------------------------
-   Globals
+   Search references
    -------------------------------------------------------------------------- *)
 
 fun empty_predictor (g:goal) = []
@@ -32,7 +32,6 @@ val minstepdict_glob = ref (dempty goal_compare)
 val thmpredictor_glob = ref (fn g => [])
 val stacpredictor_glob = ref empty_predictor
 val glob_timer = ref NONE
-val hhs_unsafecache_flag = ref false
 
 (*
 val goaldepth_dict = ref (dempty goal_compare)
@@ -53,41 +52,25 @@ val goalpred_cache = ref (dempty goal_compare)
 val stacgoal_cache = ref (dempty stacgoal_compare)
 
 (* --------------------------------------------------------------------------
-   Options
-   -------------------------------------------------------------------------- *)
-
-val hhs_diag_flag = ref false
-val hhs_visited_flag = ref false
-val hhs_cache_flag  = ref false
-val hhs_astar_flag = ref false
-val hhs_astar_radius = ref 0
-val hhs_timedepth_flag = ref false
-
-(* --------------------------------------------------------------------------
    Debugging
    -------------------------------------------------------------------------- *)
 
 val stac_counter = ref 0
 
 fun string_of_predentry ((stac,_,_,_),score) =
-      "(" ^ stac ^ "," ^ Real.toString score ^ ")"
+  "(" ^ stac ^ "," ^ Real.toString score ^ ")"
 
 fun string_of_pred pred =
   "[" ^ String.concatWith "," (map string_of_predentry pred) ^ "]"
 
-(* --------------------------------------------------------------------------
-   Checking time taken by the predictions
-   -------------------------------------------------------------------------- *)
-
+val stacpred_time = ref 0.0
 val predict_time = ref 0.0
 val thmpredict_time = ref 0.0
 val infstep_time = ref 0.0
 val node_create_time = ref 0.0
 val node_find_time = ref 0.0
 val astar_time = ref 0.0
-val mutate_time = ref 0.0
 val tot_time = ref 0.0
-val stacpred_time = ref 0.0
 
 val stacpred_timer = total_time stacpred_time
 val predict_timer = total_time predict_time
@@ -96,13 +79,23 @@ val infstep_timer = total_time infstep_time
 fun node_create_timer f x = total_time node_create_time f x
 val node_find_timer = total_time node_find_time
 val astar_timer = total_time astar_time
-val mutate_timer = total_time mutate_time
 fun total_timer f x = total_time tot_time f x
 
-
-(* ----------------------------------------------------------------------
+fun reset_timers () =
+  (
+  stacpred_time := 0.0;
+  predict_time := 0.0;
+  thmpredict_time := 0.0;
+  infstep_time := 0.0;
+  node_create_time := 0.0;
+  node_find_time := 0.0;
+  astar_time := 0.0;
+  tot_time := 0.0
+  )
+  
+(* --------------------------------------------------------------------------
    A*-heurisitic
-   ---------------------------------------------------------------------- *)
+   -------------------------------------------------------------------------- *)
 
 fun minstep_cache g = dfind g (!minstepdict_glob) 
   handle _ => (debug "Error: minstep"; NONE)
@@ -126,8 +119,6 @@ fun astar n g pred =
   in
     average_real l1
   end
-
-val hhs_width_coeff = ref 1.0
 
 fun estimate_distance (depth,timedepth) (g,pred) =
   let
@@ -160,7 +151,7 @@ fun estimate_distance (depth,timedepth) (g,pred) =
   end
   
 (* --------------------------------------------------------------------------
-   Node creation and deletion done by these functions
+   Node creation and deletion
    -------------------------------------------------------------------------- *)
 
 val max_depth_mem = ref 0
@@ -329,7 +320,7 @@ fun apply_next_stac pid =
   end
 
 (* ----------------------------------------------------------------------
-   Searching for the next tactic to be applied
+   Searching for a node (goal list) to explore.      
    ---------------------------------------------------------------------- *)
 
 fun node_find () =
@@ -408,9 +399,9 @@ fun close_proof cid pid =
     else ()
   end
 
-(* ----------------------------------------------------------------------
+(* --------------------------------------------------------------------------
    Creating new nodes
-   ---------------------------------------------------------------------- *)
+   -------------------------------------------------------------------------- *)
 
 fun node_create_gl tactime gl pid =
   let
@@ -436,12 +427,7 @@ fun node_create_gl tactime gl pid =
         end
       else (g, (!stacpredictor_glob) g)
       
-    val width = 
-      if !hhs_visited_flag 
-        then !(#width prec)
-      else if !hhs_diag_flag 
-        then prev_predn - (length prev_predl)
-      else 0
+    val width = prev_predn - (length prev_predl)
 
     val predlist0 =
       map (
@@ -483,36 +469,33 @@ fun node_create_empty tactime pid =
   end
 
 (* ---------------------------------------------------------------------------
-   Search function. Modifies proofdict.
+   Search function. Modifies the proof state.
    -------------------------------------------------------------------------- *)
 
 fun init_search thmpredictor stacpredictor tacdict minstepdict g =
   (
-  init_thml_glob ();
-  stactime_dict := dempty String.compare;
-  if !hhs_unsafecache_flag 
-    then ()
-    else stacgoal_cache := dempty stacgoal_compare
-  ;
-  goalpred_cache := dempty goal_compare;
-  predict_time := 0.0;
-  thmpredict_time := 0.0;
-  infstep_time := 0.0;
-  node_find_time := 0.0;
-  node_create_time := 0.0;
-  tot_time := 0.0;
+  (* global time-out *)
   glob_timer := SOME (Timer.startRealTimer ());
+  (* theorems for ACCEPT_TAC *)
+  init_thml_glob (); 
+  (* flexible tactic time-out *)
+  stactime_dict := dempty String.compare;
+  (* caching *)
+  stacgoal_cache := dempty stacgoal_compare;
+  goalpred_cache := dempty goal_compare;
+  (* proof states *)
   pid_counter := 0;
-  stac_counter := 0;
-  max_depth_mem := 0;
-  astar_time := 0.0;
-  stacpred_time := 0.0;
   proofdict    := dempty Int.compare;
   finproofdict := dempty Int.compare;
+  (* easier access to values *)
   stacpredictor_glob := predict_timer stacpredictor;
   thmpredictor_glob := thmpredict_timer thmpredictor;
   tacdict_glob := tacdict;
-  minstepdict_glob := minstepdict
+  minstepdict_glob := minstepdict;
+  (* statistics *)
+  reset_timers ();
+  stac_counter := 0;
+  max_depth_mem := 0
   )
 
 fun get_next_pred pid =
@@ -594,7 +577,6 @@ fun end_search () =
   debug_proof ("    pred time: " ^ Real.toString (!predict_time));
   debug_proof ("    thmpred time: " ^ Real.toString (!thmpredict_time));
   debug_proof ("    astar time: " ^ Real.toString (!astar_time));
-  debug_proof ("    mutate time: " ^ Real.toString (!mutate_time));
   debug_proof ("    stacpred time: " ^ Real.toString (!stacpred_time));
   proofdict    := dempty Int.compare;
   finproofdict := dempty Int.compare;
@@ -606,8 +588,6 @@ fun end_search () =
 (* ---------------------------------------------------------------------------
    Self learning
    -------------------------------------------------------------------------- *)
-
-val hhs_selflearn_flag = ref false
 
 fun selflearn_aux proof = case proof of 
     Tactic (stac,g) => 

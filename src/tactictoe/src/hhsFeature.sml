@@ -12,9 +12,9 @@ open HolKernel boolLib Abbrev hhsTools
 
 val ERR = mk_HOL_ERR "hhsFeature"
 
-val hhs_hofea_flag = ref true
-(* top features are slow to produce and print *)
-val hhs_notopfea_flag = ref true 
+(* top features are slow to print *)
+val hofea_flag = ref true
+val notopfea_flag = ref true 
 
 fun gen_all t = list_mk_forall ((free_vars_lr t),t)
 
@@ -52,7 +52,7 @@ fun subterms tm =
   subterml := tm :: (!subterml);
   if is_var tm orelse is_const tm then () 
   else if is_comb tm then
-    if !hhs_hofea_flag then
+    if !hofea_flag then
       (subterms (rand tm); subterms (rator tm))
     else
       let val (oper,argl) = strip_comb tm in
@@ -158,7 +158,7 @@ fun fea_of_term tm =
       val typel          = all_types tm
       val type_sl        = List.concat (map zeroed_type typel)
       val (tml, top_tml) = atoms_of_term tm
-      val top_tml'       = if !hhs_notopfea_flag then [] else top_tml
+      val top_tml'       = if !notopfea_flag then [] else top_tml
       val _              = top_sl := []
       val toptml_sl      = map string_of_top top_tml' (* modifies top_sl *)
       val subterml       = List.concat (map subterms_of_term tml)
