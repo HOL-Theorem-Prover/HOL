@@ -32,7 +32,7 @@ opposite of {DISCH_TAC}:
 \COMMENTS
 In the typical use {v} is among the assumptions. If only a single
 assumption alpha-equivalent to {v}, but it is different from {v} then the
-action of {UNDISCH_TAC} can be seen as undischarging followeed by
+action of {UNDISCH_TAC} can be seen as undischarging followed by
 alpha-conversion.
 
 \SEEALSO
