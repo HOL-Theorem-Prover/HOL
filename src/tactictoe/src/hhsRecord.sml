@@ -114,8 +114,7 @@ fun record_tactic_aux (tac,stac) g =
   in
     tactic_time := (!tactic_time) + t;
     n_tactic_replay_glob := (!n_tactic_replay_glob) + 1;
-    total_time save_time save_lbl (stac,t,g,gl);
-    goalstep_glob := (stac,g,gl,v) :: !goalstep_glob;
+    goalstep_glob := ((stac,t,g,gl),v) :: !goalstep_glob;
     (gl,v)
   end
 
@@ -257,8 +256,18 @@ fun start_record name goal =
   (* evaluation *)
   (eval_tactictoe name goal handle _ => debug "Error: eval_tactictoe")
   )
-  
-fun end_record name g = debug "End record"
+
+(* ----------------------------------------------------------------------
+   Save the proof steps in the database. Includes orthogonalization.
+   ---------------------------------------------------------------------- *)
+
+fun end_record name g = 
+  let
+    val lbls = map fst (rev (!goalstep_glob))
+    val _ = debug ("Saving " ^ int_to_string (length lbls) ^ " labels")
+  in
+    app (save_lbl lbls) lbls
+  end
 
 fun try_record_proof name lflag tac1 tac2 g =
   let 

@@ -7,7 +7,8 @@ sig
   type fea_t = int list
   type feav_t = (lbl_t * fea_t)
  
-  val orthogonalize : feav_t -> lbl_t
+  val create_solved : lbl_t list -> (goal, int) Redblackmap.dict
+  val orthogonalize : lbl_t list -> feav_t -> lbl_t
   
   val succ_cthy_dict : (string,(int * int)) Redblackmap.dict ref
   val succ_glob_dict : (string,(int * int)) Redblackmap.dict ref

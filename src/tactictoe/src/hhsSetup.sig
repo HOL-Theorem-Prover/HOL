@@ -11,7 +11,8 @@ sig
   val hhs_ortho_flag   : bool ref
   val hhs_ortho_number : int ref
   val hhs_ortho_metis  : bool ref
-
+  val hhs_ortho_deep   : bool ref
+  
   val hhs_thmortho_flag : bool ref
 
   val hhs_selflearn_flag : bool ref

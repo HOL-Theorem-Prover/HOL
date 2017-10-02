@@ -29,6 +29,7 @@ val hhs_nolet_flag      = ref false
 val hhs_ortho_flag = ref false
 val hhs_ortho_number = ref 20
 val hhs_ortho_metis = ref false
+val hhs_ortho_deep = ref false
 
 val hhs_thmortho_flag = ref false
 
@@ -105,18 +106,18 @@ fun set_isearch () =
   (* predicting *)
   hhs_maxselect_pred := 500;
   (* searching (search time is not set to be easily modifiable) *)
-  hhs_tactic_time := 0.02;
-  hhs_cache_flag := true;
-  hhs_width_coeff := 1.0;
-  hhs_astar_flag := false;
-  hhs_astar_radius := 1;
+  hhs_tactic_time    := 0.02;
+  hhs_cache_flag     := true;
+  hhs_width_coeff    := 1.0;
+  hhs_astar_flag     := false;
+  hhs_astar_radius   := 1;
   hhs_timedepth_flag := false;
   (* metis + holyhammer + new arguments *)
-  hhs_metis_flag := (true andalso can load "metisTools");
+  hhs_metis_flag  := (true andalso can load "metisTools");
   hhs_metis_npred := 16;
-  hhs_metis_time := 0.1;
-  hh_stac_flag := false;
-  hh_timeout := 120.0;
+  hhs_metis_time  := 0.1;
+  hh_stac_flag    := false;
+  hh_timeout      := 120.0;
   hhs_stacpred_flag := false;
   (* result *)
   hhs_minimize_flag := true;
@@ -131,19 +132,19 @@ fun set_esearch () =
   (* predicting *)
   hhs_maxselect_pred := 500;
   (* searching *)
-  hhs_search_time := Time.fromReal 5.0;
-  hhs_tactic_time := 0.02;
-  hhs_cache_flag := true;
-  hhs_width_coeff := 1.0;
-  hhs_astar_flag := false;
-  hhs_astar_radius := 1;
+  hhs_search_time    := Time.fromReal 5.0;
+  hhs_tactic_time    := 0.02;
+  hhs_cache_flag     := true;
+  hhs_width_coeff    := 1.0;
+  hhs_astar_flag     := false;
+  hhs_astar_radius   := 1;
   hhs_timedepth_flag := false;
   (* metis + holyhammer + new arguments *)
-  hhs_metis_flag := (true andalso can load "metisTools");
-  hhs_metis_npred := 16;
-  hhs_metis_time := 0.1;
-  hh_stac_flag := (false andalso can_update_hh ());
-  hh_timeout := 120.0;
+  hhs_metis_flag    := (true andalso can load "metisTools");
+  hhs_metis_npred   := 16;
+  hhs_metis_time    := 0.1;
+  hh_stac_flag      := (false andalso can_update_hh ());
+  hh_timeout        := 120.0;
   hhs_stacpred_flag := false;
   (* result *)
   hhs_minimize_flag := false;
@@ -153,43 +154,45 @@ fun set_esearch () =
 fun set_irecord () = 
   (
   (* recording *)
-  hhs_norecord_flag := false;
+  hhs_norecord_flag    := false;
   hhs_internalthm_flag := false;
-  hhs_norecprove_flag := false;
-  hhs_nolet_flag := false;
+  hhs_norecprove_flag  := false;
+  hhs_nolet_flag       := false;
   (* learning *)
-  hhs_ortho_flag := false;
-  hhs_ortho_number := 20;
-  hhs_ortho_metis := false;
+  hhs_ortho_flag     := false;
+  hhs_ortho_number   := 20;
+  hhs_ortho_metis    := false;
+  hhs_ortho_deep     := false;
   hhs_selflearn_flag := false;
-  hhs_succrate_flag := false;
-  hhs_thmortho_flag := false;
+  hhs_succrate_flag  := false;
+  hhs_thmortho_flag  := false;
   (* evaluation *)
   hhs_eval_flag := false
   )
 
 fun set_erecord () =
   (
-  (* recording *)
+  (* recording (do not record integer_word) *)
   if current_theory () = "integer_word" 
   then hhs_norecord_flag := true 
   else hhs_norecord_flag := false
   ;
   hhs_internalthm_flag := true;
-  hhs_norecprove_flag := true;
-  hhs_nolet_flag := true;
+  hhs_norecprove_flag  := true;
+  hhs_nolet_flag       := true;
   (* learning *)
-  hhs_ortho_flag := true;
-  hhs_ortho_number := 20;
-  hhs_ortho_metis := true;
+  hhs_ortho_flag     := true;
+  hhs_ortho_number   := 20;
+  hhs_ortho_metis    := true;
+  hhs_ortho_deep     := false;
   hhs_selflearn_flag := false;
-  hhs_succrate_flag := false;
-  hhs_thmortho_flag := true;
+  hhs_succrate_flag  := false;
+  hhs_thmortho_flag  := true;
   (* evaluation *)
-  hhs_eval_flag := true;
+  hhs_eval_flag    := true;
   hhs_noprove_flag := true;
-  one_in_option := SOME (0,10);
-  hh_only_flag := (false andalso can_update_hh ())
+  one_in_option    := SOME (0,10);
+  hh_only_flag     := (false andalso can_update_hh ())
   )
 
 end (* struct *)

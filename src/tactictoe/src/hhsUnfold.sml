@@ -1092,13 +1092,12 @@ end (* struct *)
   load "hhsUnfold";
   open hhsUnfold;
   
-  erewrite_hol_scripts ()
-  
+  erewrite_hol_scripts ();
+
   app irewrite_script (hol_scripts ());
   app irecord_script (hol_scripts ());
   
-  irecord_script "/home/tgauthier/HOL/src/combin/combinScript.sml";
-  
+  irecord_script "/home/tgauthier/HOL/src/combin/combinScript.sml"; 
   irecord_script "/home/tgauthier/HOL/src/1/ConseqConvScript.sml";
   record_script "complexScript.sml";
   erewrite_hol_scripts ();

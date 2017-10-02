@@ -136,12 +136,12 @@ fun metis_prove g =
   !hhs_ortho_metis andalso !hhs_metis_flag andalso
   solved_by_metis (!hhs_metis_npred) (!hhs_metis_time) g
 
-fun save_lbl (lbl0 as (stac0,t0,g0,gl0)) =
+fun save_lbl lbls (lbl0 as (stac0,t0,g0,gl0)) =
   if mem g0 gl0 orelse metis_prove g0 then ()
   else
     let
       val fea = total_time feature_time hhsFeature.fea_of_goal g0
-      val (lbl as (stac,t,g,gl)) = orthogonalize (lbl0,fea)
+      val (lbl as (stac,t,g,gl)) = orthogonalize lbls (lbl0,fea)
       val feav = (lbl,fea)
     in
       update_stacfea_ddict feav

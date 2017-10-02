@@ -14,9 +14,42 @@ hhsTimeout hhsFeature hhsMetis hhsSetup
 val ERR = mk_HOL_ERR "hhsLearn"
 
 (*----------------------------------------------------------------------------
+ * Calculating the height of the proof tree needed to solve a goal 
+ * with respect to a list of labels.
+ *----------------------------------------------------------------------------*)
+
+fun update_solved_lvl psolved solved lvl lbls = 
+  let
+    fun f (_,_,g,gl) = 
+      if dmem g (!solved) 
+      then ()
+      else 
+        if all (fn x => dmem x psolved) gl
+        then solved := dadd g lvl (!solved)
+        else ()
+  in
+    app f lbls
+  end
+  
+fun update_solved_loop solved lvl lbls =
+  let val psolved = !solved in
+    update_solved_lvl psolved solved lvl lbls;
+    if dlength (!solved) <= dlength psolved 
+      then debug ("Maximal height: " ^ int_to_string (lvl - 1)) 
+      else update_solved_loop solved (lvl + 1) lbls
+  end
+  
+fun create_solved lbls =
+  let val solved = ref (dempty goal_compare) in
+    update_solved_loop solved 1 lbls;
+    !solved
+  end
+
+(*----------------------------------------------------------------------------
  * Orthogonalization
  *----------------------------------------------------------------------------*)
 
+(* todo : timeout tactic_of_sml as the construction of the tactic may loop *)
 fun test_stac g gl stac =
   let val ((new_gl,_),t) = 
     (
@@ -24,7 +57,7 @@ fun test_stac g gl stac =
     add_time (timeOut (!hhs_tactic_time) (tactic_of_sml stac)) g
     )
   in
-    if all (fn x => mem x gl) new_gl 
+    if all (fn x => mem x gl) new_gl
     then SOME (stac,t,g,gl)
     else NONE
   end
@@ -35,16 +68,28 @@ fun thm_of_string s =
     String.concatWith " " ["(","DB.fetch",mlquote a,mlquote b,")"] 
   end
 
-fun orthogonalize (lbl as (ostac,t,g,gl),fea) =
-  if !hhs_ortho_flag 
+fun orthogonalize lbls (lbl as (ostac,t,g,gl),fea) =
+  if !hhs_ortho_flag
   then
     let
-      val feavectl = debug_t "orthogonalize" 
-        stacknn_ext (!hhs_ortho_number) (dlist (!hhs_stacfea)) fea
+      val feavectl = stacknn_ext (!hhs_ortho_number) (dlist (!hhs_stacfea)) fea
       val _ = debug (string_of_goal g)
       val stacl    = map (#1 o fst) feavectl
       val stacl2   = filter (fn x => not (x = ostac)) stacl
-      val testl    = lbl :: (List.mapPartial (test_stac g gl) stacl2)
+      
+      val solved = create_solved lbls (* could be local or global labels *)
+      val ext_gl = 
+        if !hhs_ortho_deep andalso dmem g solved then 
+          let 
+            val n = dfind g solved 
+            fun is_shorter g' = dfind g' solved < n handle _ => false
+            val new_gl = filter is_shorter (dkeys solved)
+          in
+            mk_fast_set goal_compare (gl @ new_gl)
+          end
+        else gl
+      
+      val testl    = lbl :: (List.mapPartial (test_stac g ext_gl) stacl2)
       fun score x  = dfind (#1 x) (!hhs_ndict) handle _ => 0
       fun n_compare (x,y) = Int.compare (score y, score x) 
       val sortedl  = dict_sort n_compare testl
