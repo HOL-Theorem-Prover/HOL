@@ -78,7 +78,7 @@ fun pre_knn symweight feal fea_o =
     l1
   end
 
-(* returns sorted labels with scores *)    
+(* eliminate duplicates with the same tactic string *)    
 fun stacknn symweight n feal fea_o =
   let 
     val l1 = pre_knn symweight feal fea_o
@@ -211,6 +211,7 @@ fun read_predictions () =
     map unname_feav sl
   end
 
+(* actually produce repetitions    *)
 fun stacknn_ext n stacfea feag =
   if null stacfea then []
   else

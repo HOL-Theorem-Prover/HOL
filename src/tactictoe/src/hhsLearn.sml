@@ -72,15 +72,18 @@ fun orthogonalize lbls (lbl as (ostac,t,g,gl),fea) =
   if !hhs_ortho_flag
   then
     let
-      val feavectl = stacknn_ext (!hhs_ortho_number) (dlist (!hhs_stacfea)) fea
       val _ = debug (string_of_goal g)
-      val stacl    = map (#1 o fst) feavectl
-      val stacl2   = filter (fn x => not (x = ostac)) stacl
+      val feavectl = 
+        stacknn_ext (!hhs_ortho_number * 20) (dlist (!hhs_stacfea)) fea
       
-      val solved = create_solved lbls (* could be local or global labels *)
+      val prestacl = mk_sameorder_set String.compare (map (#1 o fst) feavectl)
+      val stacl = first_n (!hhs_ortho_number) prestacl
+      val stacl2 = filter (fn x => not (x = ostac)) stacl
+      val solved = create_solved lbls
+      
       val ext_gl = 
         if !hhs_ortho_deep andalso dmem g solved then 
-          let 
+          let      
             val n = dfind g solved 
             fun is_shorter g' = dfind g' solved < n handle _ => false
             val new_gl = filter is_shorter (dkeys solved)
