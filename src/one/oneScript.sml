@@ -40,8 +40,8 @@ end
 (*----------------------------------------------------------------------*)
 
 val EXISTS_ONE_REP = prove
-(--`?b:bool. (\b.b) b`--,
- EXISTS_TAC (--`T`--) THEN CONV_TAC BETA_CONV THEN ACCEPT_TAC TRUTH);
+(“?b:bool. (\b.b) b”,
+ EXISTS_TAC “T” THEN CONV_TAC BETA_CONV THEN ACCEPT_TAC TRUTH);
 
 (*---------------------------------------------------------------------------*)
 (* Use the type definition mechanism to introduce the new type.              *)
@@ -90,11 +90,11 @@ val one = store_thm("one[simp]",
  ---------------------------------------------------------------------------*)
 
 val one_Axiom = store_thm("one_Axiom",
-    --`!e:'a. ?!fn. fn one = e`--,
+    “!e:'a. ?!fn. fn one = e”,
     STRIP_TAC THEN
     CONV_TAC EXISTS_UNIQUE_CONV THEN
     STRIP_TAC THENL
-    [EXISTS_TAC (--`\(x:one).(e:'a)`--) THEN
+    [EXISTS_TAC “\(x:one).(e:'a)” THEN
      BETA_TAC THEN REFL_TAC,
      REPEAT STRIP_TAC THEN
      CONV_TAC FUN_EQ_CONV THEN

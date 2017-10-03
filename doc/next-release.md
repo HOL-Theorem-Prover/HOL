@@ -136,6 +136,9 @@ Incompatibilities:
 *   The constant `words$word_sdiv` has been renamed to `words$word_quot` and `words$word_srem` has been renamed to `words$word_rem`.
     The constant `words$word_smod` has been moved to `integer_word$word_smod` and has been given a simpler definition.  (There is also a new constant `integer_word$word_sdiv` whose definition differs from the old `words$word_sdiv`.)
 
+*   The `--` function for doing term-parsing (typically written as, *e.g.*, ``(--`p /\ q`--)``) has been removed so that the `--` name can be used as an infix set-difference operator.
+    We have long preferred either ``Term`p /\ q` ``, or ``` ``p /\ q`` ```, or `“p /\ q”` for invoking the term-parser.
+
 * * * * *
 
 <div class="footer">

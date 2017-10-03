@@ -176,41 +176,41 @@ fun hol2temporal t =
 
 
 
-fun temporal2hol truesig  = (--`\t:num.T`--)
-  | temporal2hol falsesig = (--`\t:num.F`--)
+fun temporal2hol truesig  = “\t:num.T”
+  | temporal2hol falsesig = “\t:num.F”
   | temporal2hol (var(x)) = mk_var{Name=x,Ty=(==`:num->bool`==)}
   | temporal2hol (neg f)  =
-	let val t = temporal2hol f in (--`\t:num. ~^t t`--) end
+	let val t = temporal2hol f in “\t:num. ~^t t” end
   | temporal2hol (conj(f1,f2)) =
 	let
 	   val t1 = temporal2hol f1
 	   val t2 = temporal2hol f2
-	 in (--`\t:num. ^t1 t /\ ^t2 t`--)
+	 in “\t:num. ^t1 t /\ ^t2 t”
 	end
   | temporal2hol (disj(f1,f2)) =
 	let
 	   val t1 = temporal2hol f1
 	   val t2 = temporal2hol f2
-	 in (--`\t:num. ^t1 t \/ ^t2 t`--)
+	 in “\t:num. ^t1 t \/ ^t2 t”
 	end
   | temporal2hol (imp(f1,f2)) =
 	let
 	   val t1 = temporal2hol f1
 	   val t2 = temporal2hol f2
-	 in (--`\t:num. ^t1 t ==> ^t2 t`--)
+	 in “\t:num. ^t1 t ==> ^t2 t”
 	end
   | temporal2hol (equ(f1,f2)) =
 	let
 	   val t1 = temporal2hol f1
 	   val t2 = temporal2hol f2
-	 in (--`\t:num. ^t1 t = ^t2 t`--)
+	 in “\t:num. ^t1 t = ^t2 t”
 	end
   | temporal2hol (ifte(f1,f2,f3)) =
 	let
 	   val t1 = temporal2hol f1
 	   val t2 = temporal2hol f2
 	   val t3 = temporal2hol f3
-	 in (--`\t:num. ^t1 t => ^t2 t | ^t3 t `--)
+	 in “\t:num. ^t1 t => ^t2 t | ^t3 t ”
 	end
   | temporal2hol (next f) =
 	mk_comb{Rator=NEXT,Rand=(temporal2hol f)}
@@ -636,7 +636,7 @@ fun tableau Phi =
 (* ------------------------------------------------------------------------------------	*)
 (* new_theory "ltltest";								*)
 (* new_parent "Omega_Automata";								*)
-(* TEMP_DEFS_CONV (--`ALWAYS (\t. (EVENTUAL a) t = a t \/ NEXT (EVENTUAL a) t) 0`--); 	*)
+(* TEMP_DEFS_CONV “ALWAYS (\t. (EVENTUAL a) t = a t \/ NEXT (EVENTUAL a) t) 0”; 	*)
 (* val it =										*)
 (*   |- ALWAYS (\t. EVENTUAL a t = a t \/ NEXT (EVENTUAL a) t) 0 =			*)
 (*      (?ell0 ell1 ell2 ell3 ell4.							*)
@@ -647,7 +647,7 @@ fun tableau Phi =
 (*        (ell3 = NEXT ell2) /\								*)
 (*        (ell4 = ALWAYS (\t. ell0 t = a t \/ ell3 t))) : thm				*)
 (* 											*)
-(* TEMP_DEFS_CONV (--`ALWAYS (EVENTUAL (\t. a t /\ PALWAYS b t)) 0`--);			*)
+(* TEMP_DEFS_CONV “ALWAYS (EVENTUAL (\t. a t /\ PALWAYS b t)) 0”;			*)
 (* val it =										*)
 (*   |- ALWAYS (EVENTUAL (\t. a t /\ PALWAYS b t)) 0 =					*)
 (*      (?ell0 ell1 ell2.								*)
@@ -681,7 +681,7 @@ fun MY_STRIP_TAC (asm,g) =
 
 
 val boolean_sig_ops = TAC_PROOF(
-	([],--`
+	([],“
 		? s_not s_and s_or s_imp s_equiv s_ifte.
 		     (!a b c.
 			( (s_not a) = \t:num. ~a t) /\
@@ -700,13 +700,13 @@ val boolean_sig_ops = TAC_PROOF(
 			(!t:num. (a t = b t)   = s_equiv a b t) /\
 			(!t:num. (if a t then b t else c t) = s_ifte a b c t)
 		     )
-	`--),
-	EXISTS_TAC (--`\a.\t:num.~a t`--)
-	THEN EXISTS_TAC (--`\a b.\t:num. a t /\ b t`--)
-	THEN EXISTS_TAC (--`\a b.\t:num. a t \/ b t`--)
-	THEN EXISTS_TAC (--`\a b.\t:num. a t ==> b t`--)
-	THEN EXISTS_TAC (--`\a b.\t:num. (a t):bool = b t`--)
-	THEN EXISTS_TAC (--`\a b c.\t:num. if a t then (b t):bool else c t`--)
+	”),
+	EXISTS_TAC “\a.\t:num.~a t”
+	THEN EXISTS_TAC “\a b.\t:num. a t /\ b t”
+	THEN EXISTS_TAC “\a b.\t:num. a t \/ b t”
+	THEN EXISTS_TAC “\a b.\t:num. a t ==> b t”
+	THEN EXISTS_TAC “\a b.\t:num. (a t):bool = b t”
+	THEN EXISTS_TAC “\a b c.\t:num. if a t then (b t):bool else c t”
 	THEN CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
 	THEN REPEAT GEN_TAC THEN REWRITE_TAC[])
 
@@ -760,13 +760,13 @@ fun TEMP_DEFS_CONV t =
 	    end
 	fun beta_conv t = rhs(concl ((QCONV (REPEATC (DEPTH_CONV BETA_CONV))) t))
 	val hdefs = map (fun_eta_conv o temporal2hol) defs
-	val hpt = mk_comb{Rator=(temporal2hol pt),Rand=(--`0`--)}
+	val hpt = mk_comb{Rator=(temporal2hol pt),Rand=“0”}
 	val hpt = beta_conv hpt
 	val hdefs = map beta_conv hdefs
 	val varnames = map lhs hdefs
 	val defterm = (list_mk_conj hdefs)
 	val tt = list_mk_exists(varnames,mk_conj{conj1 = hpt, conj2 = defterm})
-	val goal = ([],--`^t = ^tt`--) : goal
+	val goal = ([],“^t = ^tt”) : goal
 	(* ----------------------------------------------------------------------------	*)
 	(* Having constructed the goal, we define now the tactic that solves this goal.	*)
 	(* ----------------------------------------------------------------------------	*)
@@ -818,13 +818,13 @@ fun UNSAFE_TEMP_DEFS_CONV t =
 	    end
   fun beta_conv t = rhs(concl ((QCONV (REPEATC (DEPTH_CONV BETA_CONV))) t))
 	val hdefs = map (fun_eta_conv o temporal2hol) defs
-	val hpt = mk_comb{Rator=(temporal2hol pt),Rand=(--`0`--)}
+	val hpt = mk_comb{Rator=(temporal2hol pt),Rand=“0”}
 	val hpt = beta_conv hpt
 	val hdefs = map beta_conv hdefs
 	val varnames = map lhs hdefs
 	val defterm = (list_mk_conj hdefs)
 	val tt = list_mk_exists(varnames,mk_conj{conj1 = hpt, conj2 = defterm})
-	val goal = ([],--`^t = ^tt`--) : goal
+	val goal = ([],“^t = ^tt”) : goal
      in mk_thm goal
     end
 
@@ -902,7 +902,7 @@ fun LTL2OMEGA_CONV t =
 	fun def2omega def =
 	    if (is_prop def) then
 	    	let val {lhs=ell,rhs=phi} = dest_eq def
-		 in ((--`T`--),(--`!t:num. ^ell t = ^phi t`--),(--`T`--))
+		 in (“T”,“!t:num. ^ell t = ^phi t”,“T”)
 		end
 	    else
 		let val thm = ((PURE_REWRITE_CONV def2omega_thms) THENC
@@ -924,7 +924,7 @@ fun LTL2OMEGA_CONV t =
 	val trans_rel = list_mk_conj (map (fn (x,y,z) => #Body(dest_forall y)) omega_list)
 	val acceptance = list_mk_conj (map (fn (x,y,z) => z) omega_list)
 	val init_condition = mk_conj{conj1=init_cond, conj2=init_condition}
-	val trans_rel = mk_forall{Bvar=(--`t:num`--),Body=trans_rel}
+	val trans_rel = mk_forall{Bvar=“t:num”,Body=trans_rel}
 	val init_condition = simplify_conv init_condition
 	val trans_rel      = simplify_conv trans_rel
 	val acceptance     = simplify_conv acceptance
@@ -974,7 +974,7 @@ fun UNSAFE_LTL2OMEGA_CONV t =
 	fun def2omega def =
 	    if (is_prop def) then
 	    	let val {lhs=ell,rhs=phi} = dest_eq def
-		 in ((--`T`--),(--`!t:num. ^ell t = ^phi t`--),(--`T`--))
+		 in (“T”,“!t:num. ^ell t = ^phi t”,“T”)
 		end
 	    else
 		let val thm = ((PURE_REWRITE_CONV def2omega_thms) THENC
@@ -996,7 +996,7 @@ fun UNSAFE_LTL2OMEGA_CONV t =
 	val trans_rel = list_mk_conj (map (fn (x,y,z) => #Body(dest_forall y)) omega_list)
 	val acceptance = list_mk_conj (map (fn (x,y,z) => z) omega_list)
 	val init_condition = mk_conj{conj1=init_cond, conj2=init_condition}
-	val trans_rel = mk_forall{Bvar=(--`t:num`--),Body=trans_rel}
+	val trans_rel = mk_forall{Bvar=“t:num”,Body=trans_rel}
 	val init_condition = simplify_conv init_condition
 	val trans_rel      = simplify_conv trans_rel
 	val acceptance     = simplify_conv acceptance
@@ -1025,10 +1025,10 @@ fun UNSAFE_LTL2OMEGA_CONV t =
 (* universal quantification is assumed.							*)
 (* ------------------------------------------------------------------------------------	*)
 (* Example: 										*)
-(* val t = (--` (ALWAYS a t ==> EVENTUAL a t) /\ 					*)
+(* val t = “ (ALWAYS a t ==> EVENTUAL a t) /\ 					*)
 (* 	        (ALWAYS (EVENTUAL a) x ==> EVENTUAL (ALWAYS a) x) /\			*)
 (* 	        ( (\t. ~NEXT a t) = NEXT (\t. ~ a t) )					*)
-(*         `--);									*)
+(*         ”;									*)
 (* val it =										*)
 (*   |- (!t x.										*)
 (*        (ALWAYS a t ==> EVENTUAL a t) /\						*)
@@ -1147,12 +1147,12 @@ fun TEMP_NORMALIZE_CONV t =
 	  | close_all (x::vl) t = close_all vl (closure false x t)
 	val t = close_all num_vars t
 	val forall_always_thm = TAC_PROOF(
-		([],--`!P. (!n. P n) = ALWAYS P 0`--),
+		([],“!P. (!n. P n) = ALWAYS P 0”),
 		REWRITE_TAC[Temporal_LogicTheory.ALWAYS]
 		THEN BETA_TAC
 		THEN REWRITE_TAC[arithmeticTheory.ADD_CLAUSES]);
 	val exists_eventual_thm = TAC_PROOF(
-		([],--`!P. (?n. P n) = EVENTUAL P 0`--),
+		([],“!P. (?n. P n) = EVENTUAL P 0”),
 		REWRITE_TAC[Temporal_LogicTheory.EVENTUAL]
 		THEN BETA_TAC
 		THEN REWRITE_TAC[arithmeticTheory.ADD_CLAUSES]);
@@ -1229,8 +1229,8 @@ fun term2smv_string t =
   handle _=> 		      (* ------ signal evalutation ------------	*)
     (let val {Rator=f,Rand=x} = dest_comb t
       in if (is_var x) then #Name(dest_var f)
-	 else if (x=(--`0`--)) then #Name(dest_var f)
-	 else if ((rator x)=(--`SUC`--)) then
+	 else if (x=“0”) then #Name(dest_var f)
+	 else if ((rator x)=“SUC”) then
 		"next("^(#Name(dest_var f))^")"
 	 else #Name(dest_var f)
      end)
@@ -1430,9 +1430,9 @@ fun SMV_AUTOMATON_CONV automaton =
      val smv_program = genbuechi2smv_string automaton
      val proved = SMV_RUN smv_program
   in
-    if (proved) then mk_thm([],mk_eq{lhs=automaton,rhs=(--`F`--)})
+    if (proved) then mk_thm([],mk_eq{lhs=automaton,rhs=“F”})
     else
-      (NO_CONV (--`F`--))
+      (NO_CONV “F”)
   end;
 
 

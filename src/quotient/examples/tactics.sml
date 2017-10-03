@@ -181,8 +181,8 @@ val POP_TAC = POP_ASSUM (fn th => ALL_TAC);
 
 fun ETA_TAC v :tactic = fn (asl,gl) =>
       let val (t1,t2) = dest_eq gl;
-          val at1 = --`\^v.^t1 ^v`--;
-          val at2 = --`\^v.^t2 ^v`-- in
+          val at1 = “\^v.^t1 ^v”;
+          val at2 = “\^v.^t2 ^v” in
       ([(asl,mk_eq(at1,at2))],
        fn [thm] => TRANS (SYM(ETA_CONV at1)) (TRANS thm (ETA_CONV at2)))
       end;
@@ -201,8 +201,8 @@ val CHECK_TAC :tactic = fn (asl,gl) =>
       else failwith "CHECK_TAC";
 
 val FALSE_TAC :tactic = fn (asl,gl) =>
-      if exists (fn th => th = --`F`--) asl
-      then CONTR_TAC (ASSUME (--`F`--)) (asl,gl)
+      if exists (fn th => th = “F”) asl
+      then CONTR_TAC (ASSUME “F”) (asl,gl)
       else failwith "FALSE_TAC";
 
 fun MP_IMP_TAC imp_th :tactic = fn (asl,gl) =>
@@ -284,8 +284,8 @@ fun UNBETA_TAC x :tactic = fn (asl,gl) =>
 
 (*
 g `x < y`;
-e(UNBETA_TAC (--`x:num`--));
-e(UNBETA_TAC (--`y:num`--));
+e(UNBETA_TAC “x:num”);
+e(UNBETA_TAC “y:num”);
 *)
 (*
 val WELL_FOUNDED_NUM_TAC :tactic = fn (asl,gl) =>
@@ -320,8 +320,8 @@ let FORALL_IMP =
 
 %
 FORALL_IMP = - : (term -> thm -> thm)
-FORALL_IMP (--`n:num`--) (SPEC_ALL SUB_ADD);
-FORALL_IMP (--`n:num`--) (SPEC_ALL (ASSUME (--`!n:num. R n ==> Q n`--)));
+FORALL_IMP “n:num” (SPEC_ALL SUB_ADD);
+FORALL_IMP “n:num” (SPEC_ALL (ASSUME “!n:num. R n ==> Q n”));
 %
 
 let FORALL_IMP_TAC :tactic = fn (asl,gl) =>
@@ -388,7 +388,7 @@ val FORALL_SYM_CONV :conv = fn tm1 =>
       handle _ => failwith "FORALL_SYM_CONV";
 
 (*
-FORALL_SYM_CONV (--`!x y. x+y=z`--);
+FORALL_SYM_CONV “!x y. x+y=z”;
 *)
 
 

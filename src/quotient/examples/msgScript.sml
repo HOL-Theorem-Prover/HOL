@@ -75,12 +75,12 @@ val _ = save_thm("msg1_cases", msg1_cases);
 (* --------------------------------------------------------------------- *)
 
 val msgrel =
---`msgrel : msg1 -> msg1 -> bool`--;
+“msgrel : msg1 -> msg1 -> bool”;
 
-val msgrel_patterns = [--`^msgrel X Y`--];
+val msgrel_patterns = [“^msgrel X Y”];
 
 val msgrel_rules_tm =
---`
+“
 
        (* -------------------------------------------- *)
              (^msgrel (Crypt1 k (Decrypt1 k X)) X)                /\
@@ -118,7 +118,7 @@ val msgrel_rules_tm =
        (* -------------------------------------------- *) ==>
                           (^msgrel X Z))
 
-`--;
+”;
 
 val (msgrel_rules_sat,msgrel_ind_thm) =
     define_inductive_relations msgrel_patterns msgrel_rules_tm;
@@ -144,20 +144,20 @@ val [CD, DC, NONCE, MPAIR, CRYPT, DECRYPT, msgSYM, msgTRANS]
 
 val msgrel_REFL = store_thm
    ("msgrel_REFL",
-    (--`!X. msgrel X X`--),
+    “!X. msgrel X X”,
     Induct
     THEN RW_TAC std_ss [msgrel_rules_sat]
    );
 
 val msgrel_SYM = store_thm
    ("msgrel_SYM",
-    (--`!X Y. msgrel X Y ==> msgrel Y X`--),
+    “!X Y. msgrel X Y ==> msgrel Y X”,
     REWRITE_TAC [msgSYM]
    );
 
 val msgrel_TRANS = store_thm
    ("msgrel_TRANS",
-    (--`!X Y Z. msgrel X Y /\ msgrel Y Z ==> msgrel X Z`--),
+    “!X Y Z. msgrel X Y /\ msgrel Y Z ==> msgrel X Z”,
     PROVE_TAC [msgTRANS]
    );
 
@@ -181,7 +181,7 @@ val freenonces1_def = Define
 
 val freenonces_RSP = store_thm
    ("freenonces_RSP",
-    (--`!V W. msgrel V W ==> (freenonces1 V = freenonces1 W)`--),
+    “!V W. msgrel V W ==> (freenonces1 V = freenonces1 W)”,
     rule_induct msgrel_ind_thm
     THEN REPEAT STRIP_TAC
     THEN RW_TAC std_ss [freenonces1_def]
@@ -202,7 +202,7 @@ val freeleft1_def = Define
 
 val freeleft_RSP = store_thm
    ("freeleft_RSP",
-    (--`!V W. msgrel V W ==> msgrel (freeleft1 V) (freeleft1 W)`--),
+    “!V W. msgrel V W ==> msgrel (freeleft1 V) (freeleft1 W)”,
     rule_induct msgrel_strong_ind
     THEN REPEAT STRIP_TAC
     THEN RW_TAC std_ss[freeleft1_def,msgrel_REFL,msgrel_SYM]
@@ -224,7 +224,7 @@ val freeright1_def = Define
 
 val freeright_RSP = store_thm
    ("freeright_RSP",
-    (--`!V W. msgrel V W ==> msgrel (freeright1 V) (freeright1 W)`--),
+    “!V W. msgrel V W ==> msgrel (freeright1 V) (freeright1 W)”,
     rule_induct msgrel_strong_ind
     THEN REPEAT STRIP_TAC
     THEN RW_TAC std_ss[freeright1_def,msgrel_REFL,msgrel_SYM]
@@ -247,7 +247,7 @@ val is_nonce1_def = Define
 
 val is_nonce_RSP = store_thm
    ("is_nonce_RSP",
-    (--`!V W. msgrel V W ==> (is_nonce1 V = is_nonce1 W)`--),
+    “!V W. msgrel V W ==> (is_nonce1 V = is_nonce1 W)”,
     rule_induct msgrel_strong_ind
     THEN REPEAT STRIP_TAC
     THEN RW_TAC std_ss[is_nonce1_def]
@@ -359,13 +359,13 @@ to lift automatically.
 
 val Mpair_EQUALS = store_thm
    ("Mpair_EQUALS",
-    (--`!X X' Y Y'. (Mpair X Y = Mpair X' Y') = (X = X') /\ (Y = Y')`--),
+    “!X X' Y Y'. (Mpair X Y = Mpair X' Y') = (X = X') /\ (Y = Y')”,
     PROVE_TAC[left_def,right_def]
     );
 
 val Nonce_EQUALS = store_thm
    ("Nonce_EQUALS",
-    (--`!n n'. (Nonce n = Nonce n') = (n = n')`--),
+    “!n n'. (Nonce n = Nonce n') = (n = n')”,
     REPEAT GEN_TAC
     THEN EQ_TAC
     THENL
@@ -379,19 +379,19 @@ val Nonce_EQUALS = store_thm
 
 val Crypt_EQUALS = store_thm
    ("Crypt_EQUALS",
-    (--`!k X X'. (Crypt k X = Crypt k X') = (X = X')`--),
+    “!k X X'. (Crypt k X = Crypt k X') = (X = X')”,
     PROVE_TAC[msgDC]
     );
 
 val Decrypt_EQUALS = store_thm
    ("Decrypt_EQUALS",
-    (--`!k X X'. (Decrypt k X = Decrypt k X') = (X = X')`--),
+    “!k X X'. (Decrypt k X = Decrypt k X') = (X = X')”,
     PROVE_TAC[msgCD]
     );
 
 val Nonce_NOT_EQ_Mpair = store_thm
    ("Decrypt_NOT_EQ_Mpair",
-    (--`!N X Y. ~(Nonce N = Mpair X Y)`--),
+    “!N X Y. ~(Nonce N = Mpair X Y)”,
     PROVE_TAC[is_nonce_def]
     );
 
@@ -399,7 +399,7 @@ val Nonce_NOT_EQ_Mpair = store_thm
 
 val FINITE_nonces = store_thm
    ("FINITE_nonces",
-    (--`!M. FINITE (nonces M)`--),
+    “!M. FINITE (nonces M)”,
     HO_MATCH_MP_TAC msg_induction
     THEN REWRITE_TAC[nonces_def]
     THEN REWRITE_TAC[FINITE_INSERT,FINITE_EMPTY,FINITE_UNION]

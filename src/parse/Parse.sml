@@ -482,8 +482,6 @@ val absyn_to_term =
 
 fun Term q = absyn_to_term (term_grammar()) (Absyn q)
 
-fun -- q x = Term q;
-
 fun typedTerm qtm ty =
    let fun trail s = [QUOTE (s^"):"), ANTIQUOTE(ty_antiq ty), QUOTE""]
    in
