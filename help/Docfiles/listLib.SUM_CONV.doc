@@ -9,10 +9,10 @@ Computes by inference the result of summing the elements of a list.
 conversion, list.
 
 \DESCRIBE
-For any object language list of the form {--`[x1;x2;...;xn]`--}, where {x1},
+For any object language list of the form {“[x1;x2;...;xn]”}, where {x1},
 {x2}, ..., {xn} are numeral constants, the result of evaluating
 {
-   SUM_CONV (--`SUM [x1;x2;...;xn]`--)
+   SUM_CONV “SUM [x1;x2;...;xn]”
 }
 is the theorem
 {
@@ -21,7 +21,7 @@ is the theorem
 where {n} is the numeral constant that denotes the sum of the elements of the list.
 
 \EXAMPLE
-Evaluating {SUM_CONV (--`SUM [0;1;2;3]`--)} will return
+Evaluating {SUM_CONV “SUM [0;1;2;3]”} will return
 the following theorem:
 {
    |- SUM [0;1;2;3] = 6
