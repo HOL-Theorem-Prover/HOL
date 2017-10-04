@@ -6,6 +6,7 @@ sig
    type 'a cmp = 'a * 'a -> order
    type ('a, 'b) istream
    type ('a, 'b) subst = {redex: 'a, residue: 'b} list
+   type 'a set = 'a HOLset.set
    val ## : ('a -> 'b) * ('c -> 'd) -> 'a * 'c -> 'b * 'd
    val ?> : ('a, 'c)verdict * ('a -> ('b, 'c)verdict) -> ('b, 'c)verdict
    val |-> : ('a * 'b) -> {redex: 'a, residue: 'b}
@@ -16,6 +17,11 @@ sig
    val S : ('a -> 'b -> 'c) -> ('a -> 'b) -> 'a -> 'c
    val U : ''a list list -> ''a list
    val W : ('a -> 'a -> 'b) -> 'a -> 'b
+   val IN : 'a * 'a set -> bool
+   val Un : 'a set * 'a set -> 'a set
+   val Isct : 'a set * 'a set -> 'a set
+   val -- : 'a set * 'a set -> 'a set
+
    val all2 : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
    val all : ('a -> bool) -> 'a list -> bool
    val apfst : ('a -> 'b) -> 'a * 'c -> 'b * 'c

@@ -33,6 +33,8 @@ infixr ## $;
 infixr 3 -->;
 infix 8 via by suffices_by
 
+infix ~~ !~ Un Isct -- IN
+
 structure Process = OS.Process
 structure FileSys = OS.FileSys
 structure Path    = OS.Path

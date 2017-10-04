@@ -300,12 +300,12 @@ end;
 
 local val Ith = pred_setTheory.IMAGE_INSERT
       and Eth = pred_setTheory.IMAGE_EMPTY
-      fun iconv IN cnv1 cnv2 ith eth s =
+      fun iconv INf cnv1 cnv2 ith eth s =
          let val (x,t) = dest_insert s
              val thm1 = SPEC t (SPEC x ith)
              val el = rand(rator(rand(concl thm1)))
-             val cth = MK_COMB(AP_TERM IN (cnv1 el),
-                               iconv IN cnv1 cnv2 ith eth t)
+             val cth = MK_COMB(AP_TERM INf (cnv1 el),
+                               iconv INf cnv1 cnv2 ith eth t)
              val thm2 = QCONV (TRY_CONV (INSERT_CONV cnv2)) (rand(concl cth))
          in TRANS thm1 (TRANS cth thm2)
          end handle HOL_ERR _
