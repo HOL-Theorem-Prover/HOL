@@ -53,5 +53,5 @@ In the first call two rewrites using {th} can occur; in the second,
 only one can occur.
 
 \SEEALSO
-Drule.Once, Tactical.THEN, simpLib.SIMP_TAC, bossLib.RW_TAC, Rewrite.REWRITE_TAC
+BoundedRewrites.Once, Tactical.THEN, simpLib.SIMP_TAC, bossLib.RW_TAC, Rewrite.REWRITE_TAC
 \ENDDOC

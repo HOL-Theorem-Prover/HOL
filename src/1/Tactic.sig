@@ -3,7 +3,7 @@ sig
   include Abbrev
 
   val ACCEPT_TAC            : thm_tactic
-  val DISCARD_TAC           : thm -> tactic
+  val DISCARD_TAC           : thm_tactic
   val CONTR_TAC             : thm_tactic
   val CCONTR_TAC            : tactic
   val ASSUME_TAC            : thm_tactic

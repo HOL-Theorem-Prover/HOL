@@ -12,7 +12,7 @@ conversion, failure.
 
 {TRY_CONV c t} attempts to apply the conversion {c} to the term {t};
 if this fails, then the identity conversion is applied instead.  That
-is, if {c} is a conversion that maps a term {t} to the theorem {|- t = t'},
+is, if {c} is a conversion that maps a term {t} to the theorem {|- t = t'},
 then the conversion {TRY_CONV c} also maps {t} to {|- t = t'}. But if {c}
 fails when applied to {t}, then {TRY_CONV c t} raises the {UNCHANGED}
 exception (which is understood to mean the instance of reflexivity,

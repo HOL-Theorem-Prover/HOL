@@ -1,6 +1,6 @@
 \DOC
 
-\TYPE {term -> term}
+\TYPE {lhand : term -> term}
 
 \SYNOPSIS
 Returns the left-hand argument of a binary application.

@@ -1,6 +1,6 @@
 \DOC GENLIST_CONV
 
-\TYPE {GENLIST_CONV : conv}
+\TYPE {GENLIST_CONV : conv -> conv}
 
 \SYNOPSIS
 Computes by inference the result of generating a list from a function.
@@ -9,7 +9,7 @@ Computes by inference the result of generating a list from a function.
 conversion, list.
 
 \DESCRIBE
-For an arbitrary  function {f}, numeral constant {n} and conversion to evaluate {f},{conv} the result of evaluating
+For an arbitrary  function {f}, numeral constant {n} and conversion to evaluate {f} {conv}, the result of evaluating
 {
    GENLIST_CONV conv “GENLIST f n”
 }

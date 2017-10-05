@@ -93,9 +93,9 @@ sig
   val USE_SG_THEN    : thm_tactic -> int -> int -> list_tactic
   val CHANGED_TAC    : tactic -> tactic
   val Q_TAC0         : {traces : (string * int) list} -> hol_type option ->
-                       (term -> tactic) -> term frag list -> tactic
-  val Q_TAC          : (term -> tactic) -> term frag list -> tactic
-  val QTY_TAC        : hol_type -> (term -> tactic) -> term frag list -> tactic
+                       (term -> tactic) -> term quotation -> tactic
+  val Q_TAC          : (term -> tactic) -> term quotation -> tactic
+  val QTY_TAC        : hol_type -> (term -> tactic) -> term quotation -> tactic
 
   val default_prover : term * tactic -> thm
   val set_prover     : (term * tactic -> thm) -> unit

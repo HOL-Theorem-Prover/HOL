@@ -1,6 +1,6 @@
 \DOC FULL_SIMP_TAC
 
-\TYPE {simpLib.FULL_SIMP_TAC : simpset -> thm list -> tactic}
+\TYPE {bossLib.FULL_SIMP_TAC : simpset -> thm list -> tactic}
 
 \SYNOPSIS
 Simplifies the goal (assumptions as well as conclusion) with the given
