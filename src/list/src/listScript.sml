@@ -3632,6 +3632,10 @@ val LUPDATE_SAME = store_thm("LUPDATE_SAME",
 
 (* end CakeML lemmas *)
 
+(* u is unique in L, learnt from Robert Beers <robert@beers.org> *)
+val UNIQUE_DEF = new_definition ("UNIQUE_DEF",
+  ``UNIQUE e L = ?L1 L2. (L1 ++ [e] ++ L2 = L) /\ ~MEM e L1 /\ ~MEM e L2``);
+
 (* OPT_MMAP : ('a -> 'b option) -> 'a list -> 'b list option *)
 val OPT_MMAP_def = Define`
   (OPT_MMAP f [] = SOME []) /\
