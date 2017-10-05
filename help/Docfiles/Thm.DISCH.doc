@@ -24,5 +24,5 @@ The term {u} need not be a hypothesis.  Discharging {u} will remove all
 identical and alpha-equivalent hypotheses.
 
 \SEEALSO
-Drule.DISCH_ALL, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, Drule.NEG_DISCH, Tactic.STRIP_TAC, Drule.UNDISCH, Drule.UNDISCH_ALL, Tactic.UNDISCH_TAC.
+Drule.DISCH_ALL, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Tactic.FILTER_DISCH_TAC, Tactic.FILTER_DISCH_THEN, Drule.NEG_DISCH, Tactic.STRIP_TAC, Drule.UNDISCH, Drule.UNDISCH_ALL, Tactic.UNDISCH_TAC.
 \ENDDOC

@@ -1,8 +1,8 @@
 \DOC traces
 
 \BLTYPE
-traces : unit -> {name : string, current_value : int,
-                  default_value : int, maximum : int} list
+traces : unit -> {name : string, max : int, aliases : string list,
+                  trace_level : int, default : int} list
 \ELTYPE
 
 \SYNOPSIS
@@ -20,16 +20,6 @@ is proceeding (with {mesonLib} for example).
 
 \FAILURE
 Never fails.
-
-\EXAMPLE
-{
-- traces();
-> val it =
-    [{default = 10, name = "Subgoal number", trace_level = 10},
-     {default = 0, name = "Rewrite", trace_level = 0},
-     {default = 0, name = "Ho_Rewrite", trace_level = 0}]
-}
-
 
 \SEEALSO
 Feedback.register_trace, Feedback.set_trace, Feedback.reset_trace, Feedback.reset_traces, Feedback.trace.

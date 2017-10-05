@@ -1,6 +1,6 @@
 \DOC end_itlist
 
-\TYPE {end_itlist : ('a -> 'a -> 'a) -> 'a list -> 'a)}
+\TYPE {end_itlist : ('a -> 'a -> 'a) -> 'a list -> 'a}
 
 \SYNOPSIS
 List iteration function. Applies a binary function between adjacent elements

@@ -36,5 +36,5 @@ action of {UNDISCH_TAC} can be seen as undischarging followed by
 alpha-conversion.
 
 \SEEALSO
-Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Drule.NEG_DISCH, Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, Tactic.STRIP_TAC, Drule.UNDISCH, Drule.UNDISCH_ALL.
+Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Drule.NEG_DISCH, Tactic.FILTER_DISCH_TAC, Tactic.FILTER_DISCH_THEN, Tactic.STRIP_TAC, Drule.UNDISCH, Drule.UNDISCH_ALL.
 \ENDDOC
