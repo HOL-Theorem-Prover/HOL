@@ -3636,6 +3636,70 @@ val LUPDATE_SAME = store_thm("LUPDATE_SAME",
 val UNIQUE_DEF = new_definition ("UNIQUE_DEF",
   ``UNIQUE e L = ?L1 L2. (L1 ++ [e] ++ L2 = L) /\ ~MEM e L1 /\ ~MEM e L2``);
 
+local
+    fun take ts = MAP_EVERY Q.EXISTS_TAC ts;	(* from HOL mizar mode *)
+    val Know = Q_TAC KNOW_TAC;			(* from util_prob *)
+    val Suff = Q_TAC SUFF_TAC;			(* from util_prob *)
+    fun K_TAC _ = ALL_TAC;			(* from util_prob *)
+    val KILL_TAC = POP_ASSUM_LIST K_TAC;	(* from util_prob *)
+    fun wrap a = [a];				(* from util_prob *)
+    val Rewr = DISCH_THEN (REWRITE_TAC o wrap);	(* from util_prob *)
+in
+(* alternative definition of UNIQUE, by Chun Tian (binghe) *)
+val UNIQUE_FILTER = store_thm (
+   "UNIQUE_FILTER", ``!e L. UNIQUE e L = (FILTER ($= e) L = [e])``,
+    rpt GEN_TAC
+ >> REWRITE_TAC [UNIQUE_DEF]
+ >> EQ_TAC >> rpt STRIP_TAC (* 2 sub-goals here *)
+ >| [ (* goal 1 (of 2) *)
+      Q.PAT_X_ASSUM `P = L` (REWRITE_TAC o wrap o SYM) \\
+      REWRITE_TAC [FILTER_APPEND_DISTRIB] \\
+      Know `((FILTER ($= e) L1) = []) /\ ((FILTER ($= e) L2) = [])`
+      >- ( REWRITE_TAC [GSYM NULL_EQ] \\
+	   REWRITE_TAC [NULL_FILTER] \\
+	   rpt STRIP_TAC >> FULL_SIMP_TAC arith_ss [] ) \\
+      Rewr \\
+      REWRITE_TAC [APPEND, APPEND_NIL, FILTER],
+      (* goal 2 (of 2) *)
+      Know `MEM e L`
+      >- ( `FILTER ($= e) L <> []` by PROVE_TAC [NOT_CONS_NIL] \\
+	   FULL_SIMP_TAC arith_ss [FILTER_NEQ_NIL] ) \\
+      REWRITE_TAC [MEM_SPLIT] >> rpt STRIP_TAC \\
+      take [`l1`, `l2`] >> FULL_SIMP_TAC arith_ss [] \\
+      CONJ_TAC >- ( KILL_TAC >> REWRITE_TAC [GSYM APPEND_ASSOC] \\
+		    SIMP_TAC arith_ss [APPEND, APPEND_11] ) \\
+      POP_ASSUM K_TAC \\
+      POP_ASSUM MP_TAC \\
+      SIMP_TAC arith_ss [FILTER_APPEND_DISTRIB, FILTER] \\
+      REWRITE_TAC [APPEND_EQ_SING] \\
+      rpt STRIP_TAC \\
+      FULL_SIMP_TAC arith_ss [NOT_CONS_NIL, FILTER_APPEND_DISTRIB, FILTER, APPEND_eq_NIL, CONS_11] ]);
+
+(* alternative definition of UNIQUE, learnt from Scott Owens and Anthony Fox *)
+val UNIQUE_LENGTH_FILTER = store_thm (
+   "UNIQUE_LENGTH_FILTER", ``!e L. UNIQUE e L = (LENGTH (FILTER ($= e) L) = 1)``,
+    rpt GEN_TAC
+ >> REWRITE_TAC [UNIQUE_FILTER]
+ >> EQ_TAC >> DISCH_TAC
+ >- ( ASM_REWRITE_TAC [] >> REWRITE_TAC [LENGTH] >> ACCEPT_TAC (SYM ONE) )
+ >> POP_ASSUM MP_TAC
+ >> REWRITE_TAC [ONE, LENGTH_EQ_NUM]
+ >> SIMP_TAC arith_ss []
+ >> rpt STRIP_TAC
+ >> Cases_on `e = h` >- ASM_REWRITE_TAC []
+ >> ASM_REWRITE_TAC []
+ >> FULL_SIMP_TAC arith_ss [CONS_11]
+ >> Suff `MEM e (FILTER ($= e) L)`
+ >- ( DISCH_TAC \\
+      REV_FULL_SIMP_TAC (arith_ss ++ pred_setSimps.PRED_SET_ss) [LIST_TO_SET] )
+ >> REWRITE_TAC [MEM_FILTER]
+ >> Know `FILTER ($= e) L <> []` >- FULL_SIMP_TAC arith_ss [NOT_CONS_NIL]
+ >> KILL_TAC
+ >> REWRITE_TAC [FILTER_NEQ_NIL]
+ >> rpt STRIP_TAC
+ >> ASM_REWRITE_TAC []);
+end; (* local *)
+
 (* OPT_MMAP : ('a -> 'b option) -> 'a list -> 'b list option *)
 val OPT_MMAP_def = Define`
   (OPT_MMAP f [] = SOME []) /\

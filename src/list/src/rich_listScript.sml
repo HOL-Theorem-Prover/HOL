@@ -6,9 +6,7 @@ local
    open listTheory
 in
    val APPEND = APPEND
-   val APPEND_11 = APPEND_11
    val APPEND_ASSOC = APPEND_ASSOC
-   val APPEND_EQ_SING = APPEND_EQ_SING
    val APPEND_SNOC = APPEND_SNOC
    val CONS_11 = CONS_11
    val EL = EL
@@ -20,7 +18,6 @@ in
    val EXISTS_SNOC = EXISTS_SNOC
    val FILTER = FILTER
    val FILTER_APPEND = FILTER_APPEND_DISTRIB
-   val FILTER_NEQ_NIL = FILTER_NEQ_NIL
    val FLAT = FLAT
    val FOLDL = FOLDL
    val FOLDL_SNOC = FOLDL_SNOC
@@ -30,7 +27,6 @@ in
    val LAST_CONS = LAST_CONS
    val LAST_SNOC = LAST_SNOC
    val LENGTH = LENGTH
-   val LENGTH_EQ_NUM = LENGTH_EQ_NUM
    val LENGTH_NIL = LENGTH_NIL
    val LENGTH_SNOC = LENGTH_SNOC
    val LIST_EQ_REWRITE = LIST_EQ_REWRITE
@@ -38,12 +34,8 @@ in
    val MAP_APPEND = MAP_APPEND
    val MAP_SNOC = MAP_SNOC
    val MEM = MEM
-   val MEM_FILTER = MEM_FILTER
-   val MEM_SPLIT = MEM_SPLIT
    val NULL = NULL
    val NULL_DEF = NULL_DEF
-   val NULL_EQ = NULL_EQ
-   val NULL_FILTER = NULL_FILTER
    val REVERSE = REVERSE_SNOC_DEF
    val REVERSE_APPEND = REVERSE_APPEND
    val REVERSE_REVERSE = REVERSE_REVERSE
@@ -53,6 +45,7 @@ in
    val SUM = SUM
    val TL = TL
    val UNIQUE_DEF = UNIQUE_DEF
+   val UNIQUE_LENGTH_FILTER = UNIQUE_LENGTH_FILTER
    val UNZIP = UNZIP
    val ZIP = ZIP
 end;
@@ -3247,79 +3240,16 @@ val list_rel_butlastn = Q.store_thm ("list_rel_butlastn",
 end
 (* end CakeML lemmas *)
 
-(* Alternative definitions of listTheory.UNIQUE *)
-local
-    fun take ts = MAP_EVERY Q.EXISTS_TAC ts;	(* from HOL mizar mode *)
-    val Know = Q_TAC KNOW_TAC;			(* from util_prob *)
-    val Suff = Q_TAC SUFF_TAC;			(* from util_prob *)
-    fun K_TAC _ = ALL_TAC;			(* from util_prob *)
-    val KILL_TAC = POP_ASSUM_LIST K_TAC;	(* from util_prob *)
-    fun wrap a = [a];				(* from util_prob *)
-    val Rewr = DISCH_THEN (REWRITE_TAC o wrap);	(* from util_prob *)
-in
-(* alternative definition of UNIQUE, by Chun Tian (binghe) *)
-val UNIQUE_FILTER = store_thm (
-   "UNIQUE_FILTER", ``!e L. UNIQUE e L = (FILTER ($= e) L = [e])``,
-    rpt GEN_TAC
- >> REWRITE_TAC [UNIQUE_DEF]
- >> EQ_TAC >> rpt STRIP_TAC (* 2 sub-goals here *)
- >| [ (* goal 1 (of 2) *)
-      Q.PAT_X_ASSUM `P = L` (REWRITE_TAC o wrap o SYM) \\
-      REWRITE_TAC [FILTER_APPEND] \\
-      Know `((FILTER ($= e) L1) = []) /\ ((FILTER ($= e) L2) = [])`
-      >- ( REWRITE_TAC [GSYM NULL_EQ] \\
-	   REWRITE_TAC [NULL_FILTER] \\
-	   rpt STRIP_TAC >> FULL_SIMP_TAC std_ss [] ) \\
-      Rewr >> SIMP_TAC list_ss [],
-      (* goal 2 (of 2) *)
-      Know `MEM e L`
-      >- ( `FILTER ($= e) L <> []` by FULL_SIMP_TAC list_ss [] \\
-	   FULL_SIMP_TAC list_ss [FILTER_NEQ_NIL] ) \\
-      REWRITE_TAC [MEM_SPLIT] >> rpt STRIP_TAC \\
-      take [`l1`, `l2`] >> FULL_SIMP_TAC list_ss [] \\
-      CONJ_TAC >- ( KILL_TAC >> REWRITE_TAC [GSYM APPEND_ASSOC] \\
-		    SIMP_TAC list_ss [APPEND_11] ) \\
-      POP_ASSUM K_TAC \\
-      POP_ASSUM MP_TAC \\
-      SIMP_TAC list_ss [FILTER_APPEND, FILTER] \\
-      REWRITE_TAC [APPEND_EQ_SING] \\
-      rpt STRIP_TAC \\
-      FULL_SIMP_TAC list_ss [FILTER_APPEND, FILTER] ]);
-
-(* alternative definition of UNIQUE, learnt from Scott Owens and Anthony Fox *)
-val UNIQUE_LENGTH_FILTER = store_thm (
-   "UNIQUE_LENGTH_FILTER", ``!e L. UNIQUE e L = (LENGTH (FILTER ($= e) L) = 1)``,
-    rpt GEN_TAC
- >> REWRITE_TAC [UNIQUE_FILTER]
- >> EQ_TAC >> DISCH_TAC
- >- ( ASM_REWRITE_TAC [] >> REWRITE_TAC [LENGTH] >> ACCEPT_TAC (SYM ONE) )
- >> POP_ASSUM MP_TAC
- >> REWRITE_TAC [ONE, LENGTH_EQ_NUM]
- >> SIMP_TAC list_ss []
- >> rpt STRIP_TAC
- >> Cases_on `e = h` >- ASM_REWRITE_TAC []
- >> ASM_REWRITE_TAC []
- >> FULL_SIMP_TAC list_ss []
- >> Suff `MEM e (FILTER ($= e) L)`
- >- ( DISCH_TAC >> REV_FULL_SIMP_TAC list_ss [] )
- >> REWRITE_TAC [MEM_FILTER]
- >> Know `FILTER ($= e) L <> []` >- FULL_SIMP_TAC list_ss []
- >> KILL_TAC
- >> REWRITE_TAC [FILTER_NEQ_NIL]
- >> rpt STRIP_TAC
- >> ASM_REWRITE_TAC []);
-
-(* alternative definition of UNIQUE, based on LIST_ELEM_COUNT *)
+(* alternative definition of listTheory.UNIQUE *)
 val UNIQUE_LIST_ELEM_COUNT = store_thm (
    "UNIQUE_LIST_ELEM_COUNT", ``!e L. UNIQUE e L = (LIST_ELEM_COUNT e L = 1)``,
     rpt GEN_TAC
  >> REWRITE_TAC [LIST_ELEM_COUNT_DEF]
- >> Know `(\x. x = e) = ($= e)`
- >- ( REWRITE_TAC [FUN_EQ_THM] >> GEN_TAC >> BETA_TAC >> KILL_TAC \\
+ >> Q_TAC KNOW_TAC `(\x. x = e) = ($= e)`
+ >- ( REWRITE_TAC [FUN_EQ_THM] >> GEN_TAC >> BETA_TAC \\
       METIS_TAC [] )
- >> Rewr
+ >> DISCH_TAC >> ASM_REWRITE_TAC []
  >> RW_TAC std_ss [UNIQUE_LENGTH_FILTER]);
-end; (* local *)
 
 (*---------------------------------------------------------------------------*)
 (* Add evaluation theorems to computeLib.the_compset                         *)
