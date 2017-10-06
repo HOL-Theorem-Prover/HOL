@@ -3258,8 +3258,8 @@ local
     val Rewr = DISCH_THEN (REWRITE_TAC o wrap);	(* from util_prob *)
 in
 (* alternative definition of UNIQUE, by Chun Tian (binghe) *)
-val UNIQUE_ALT = store_thm (
-   "UNIQUE_ALT", ``!e L. UNIQUE e L = (FILTER ($= e) L = [e])``,
+val UNIQUE_FILTER = store_thm (
+   "UNIQUE_FILTER", ``!e L. UNIQUE e L = (FILTER ($= e) L = [e])``,
     rpt GEN_TAC
  >> REWRITE_TAC [UNIQUE_DEF]
  >> EQ_TAC >> rpt STRIP_TAC (* 2 sub-goals here *)
@@ -3287,10 +3287,10 @@ val UNIQUE_ALT = store_thm (
       FULL_SIMP_TAC list_ss [FILTER_APPEND, FILTER] ]);
 
 (* alternative definition of UNIQUE, learnt from Scott Owens and Anthony Fox *)
-val UNIQUE_ALT_LENGTH = store_thm (
-   "UNIQUE_ALT_LENGTH", ``!e L. UNIQUE e L = (LENGTH (FILTER ($= e) L) = 1)``,
+val UNIQUE_LENGTH_FILTER = store_thm (
+   "UNIQUE_LENGTH_FILTER", ``!e L. UNIQUE e L = (LENGTH (FILTER ($= e) L) = 1)``,
     rpt GEN_TAC
- >> REWRITE_TAC [UNIQUE_ALT]
+ >> REWRITE_TAC [UNIQUE_FILTER]
  >> EQ_TAC >> DISCH_TAC
  >- ( ASM_REWRITE_TAC [] >> REWRITE_TAC [LENGTH] >> ACCEPT_TAC (SYM ONE) )
  >> POP_ASSUM MP_TAC
@@ -3310,15 +3310,15 @@ val UNIQUE_ALT_LENGTH = store_thm (
  >> ASM_REWRITE_TAC []);
 
 (* alternative definition of UNIQUE, based on LIST_ELEM_COUNT *)
-val UNIQUE_ALT_COUNT = store_thm (
-   "UNIQUE_ALT_COUNT", ``!e L. UNIQUE e L = (LIST_ELEM_COUNT e L = 1)``,
+val UNIQUE_LIST_ELEM_COUNT = store_thm (
+   "UNIQUE_LIST_ELEM_COUNT", ``!e L. UNIQUE e L = (LIST_ELEM_COUNT e L = 1)``,
     rpt GEN_TAC
  >> REWRITE_TAC [LIST_ELEM_COUNT_DEF]
  >> Know `(\x. x = e) = ($= e)`
  >- ( REWRITE_TAC [FUN_EQ_THM] >> GEN_TAC >> BETA_TAC >> KILL_TAC \\
       METIS_TAC [] )
  >> Rewr
- >> RW_TAC std_ss [UNIQUE_ALT_LENGTH]);
+ >> RW_TAC std_ss [UNIQUE_LENGTH_FILTER]);
 end; (* local *)
 
 (*---------------------------------------------------------------------------*)
