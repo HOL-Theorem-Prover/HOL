@@ -19,7 +19,7 @@ fun every P ss =
 
 fun mem x l = List.exists (fn e => e = x) l
 
-val verbstr = "|^$!()*&+-@/"
+val verbstr = "|^$!()*&+-@/'\""
 fun find_verbchar avoids ss = let
   fun loop n = let
     val candidate = String.extract(verbstr,n,SOME 1)
@@ -56,17 +56,18 @@ in
 end
 
 fun print_verbblock (ss, ostr) =
-    (out(ostr,"\\begin{Verbatim}");
-     out(ostr, Substring.string ss);
-     out(ostr, "\\end{Verbatim}\n"))
-
-(*
-fun print_verbblock (ss, ostr) =
-    (out(ostr, "{\\par\\samepage\\setseps\\small\n");
-     out(ostr,"\\begin{verbatim}");
-     out(ostr, Substring.string ss);
-     out(ostr, "\\end{verbatim}}"))
-*)
+  let
+    val (com,argl,argr) = findvc3 [] ss
+    val verbtheta =
+      map (fn (a,b) => {redex = a, residue = b})
+          [(UnicodeChars.ldquo, com ^ "ldquo" ^ argl ^ argr),
+           (UnicodeChars.rdquo, com ^ "rdquo" ^ argl ^ argr)]
+  in
+    out(ostr,"\\begin{Verbatim}[commandchars=" ^ String.concat[com,argl,argr] ^
+             "]\n");
+    out(ostr, stringfindreplace.subst verbtheta (Substring.string ss));
+    out(ostr, "\\end{Verbatim}\n")
+  end
 
 val lastminute_fixes =
     String.translate (fn #"#" => "\\#"
@@ -155,7 +156,8 @@ fun do_the_work dir dset outstr = let
     print_docpart(file, outstr);
     app (fn s => print_section (s,outstr)) file;
     out(outstr, "\\ENDDOC\n\n")
-  end handle e => die ("Exception raised: " ^ General.exnMessage e)
+  end handle e => die ("Exception raised (" ^ dnm ^ ".doc): " ^
+                       General.exnMessage e)
 in
   Binaryset.app appthis dset
 end
