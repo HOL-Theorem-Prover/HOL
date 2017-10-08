@@ -1524,21 +1524,21 @@ val UNIQUE_SOLUTIONS_OF_CONTRACTIONS_LEMMA = store_thm (
  >| [ (* goal 1 (of 2) *)
       IMP_RES_TAC WEAK_TRANS_AND_TRACE \\
       FULL_SIMP_TAC std_ss [Action_distinct_label] \\
-      `(C P) contracts (C'' (LENGTH xs) P)` by PROVE_TAC [] \\
+      `(C P) contracts (C'' (LENGTH us) P)` by PROVE_TAC [] \\
       POP_ASSUM (IMP_RES_TAC o (MATCH_MP contracts_AND_TRACE_label)) \\
       NTAC 4 (POP_ASSUM K_TAC) \\
-      Q.ABBREV_TAC `n = LENGTH xs` \\
+      Q.ABBREV_TAC `n = LENGTH us` \\
       Q.UNABBREV_TAC `C''` \\
-      Q.PAT_X_ASSUM `TRACE X xs'' E2` (ASSUME_TAC o BETA_RULE) \\
-      Know `?C'. GCONTEXT C' /\ (E2 = C' P) /\ !Q. TRACE ((C o FUNPOW E n) Q) xs'' (C' Q)`
-      >- ( MATCH_MP_TAC unfolding_lemma4 >> ASM_REWRITE_TAC [] ) >> STRIP_TAC \\
-      POP_ASSUM (ASSUME_TAC o (Q.SPEC `Q`)) \\
+      Q.PAT_X_ASSUM `TRACE X xs' E2` (ASSUME_TAC o BETA_RULE) \\
+      Know `?C'. GCONTEXT C' /\ (E2 = C' P) /\ !Q. TRACE ((C o FUNPOW E n) Q) xs' (C' Q)`
+      >- ( MATCH_MP_TAC unfolding_lemma4 >> ASM_REWRITE_TAC [] ) \\
+      STRIP_TAC >> POP_ASSUM (ASSUME_TAC o (Q.SPEC `Q`)) \\
       `(C Q) contracts ((C o FUNPOW E n) Q)` by PROVE_TAC [] \\
       FULL_SIMP_TAC std_ss [] \\ (* to replace E2 *)
       Q.EXISTS_TAC `C'` >> ASM_REWRITE_TAC [] \\
       Know `WEAK_TRANS (C (FUNPOW E n Q)) (label l) (C' Q)`
       >- ( REWRITE_TAC [WEAK_TRANS_AND_TRACE, Action_distinct_label] \\
-	   Q.EXISTS_TAC `xs''` >> ASM_REWRITE_TAC [] \\
+	   Q.EXISTS_TAC `xs'` >> ASM_REWRITE_TAC [] \\
 	   MATCH_MP_TAC UNIQUE_LABEL_NOT_NULL \\
 	   Q.EXISTS_TAC `label l` >> ASM_REWRITE_TAC [] ) >> DISCH_TAC \\
       REWRITE_TAC [O_DEF] >> BETA_TAC \\
@@ -1547,21 +1547,21 @@ val UNIQUE_SOLUTIONS_OF_CONTRACTIONS_LEMMA = store_thm (
       (* goal 2 (of 2) *)
       IMP_RES_TAC WEAK_TRANS_AND_TRACE \\
       FULL_SIMP_TAC std_ss [] \\
-      `(C P) contracts (C'' (LENGTH xs) P)` by PROVE_TAC [] \\
+      `(C P) contracts (C'' (LENGTH us) P)` by PROVE_TAC [] \\
       POP_ASSUM (IMP_RES_TAC o (MATCH_MP contracts_AND_TRACE_tau)) \\ (* diff here *)
       NTAC 4 (POP_ASSUM K_TAC) \\
-      Q.ABBREV_TAC `n = LENGTH xs` \\
+      Q.ABBREV_TAC `n = LENGTH us` \\
       Q.UNABBREV_TAC `C''` \\
-      Q.PAT_X_ASSUM `TRACE X xs'' E2` (ASSUME_TAC o BETA_RULE) \\
-      Know `?C'. GCONTEXT C' /\ (E2 = C' P) /\ !Q. TRACE ((C o FUNPOW E n) Q) xs'' (C' Q)`
-      >- ( MATCH_MP_TAC unfolding_lemma4 >> ASM_REWRITE_TAC [] ) >> STRIP_TAC \\
-      POP_ASSUM (ASSUME_TAC o (Q.SPEC `Q`)) \\
+      Q.PAT_X_ASSUM `TRACE X xs' E2` (ASSUME_TAC o BETA_RULE) \\
+      Know `?C'. GCONTEXT C' /\ (E2 = C' P) /\ !Q. TRACE ((C o FUNPOW E n) Q) xs' (C' Q)`
+      >- ( MATCH_MP_TAC unfolding_lemma4 >> ASM_REWRITE_TAC [] ) \\
+      STRIP_TAC >> POP_ASSUM (ASSUME_TAC o (Q.SPEC `Q`)) \\
       `(C Q) contracts ((C o FUNPOW E n) Q)` by PROVE_TAC [] \\
       FULL_SIMP_TAC std_ss [] \\ (* to replace E2 *)
       Q.EXISTS_TAC `C'` >> ASM_REWRITE_TAC [] \\
       Know `EPS (C (FUNPOW E n Q)) (C' Q)` (* diff here *)
       >- ( REWRITE_TAC [EPS_AND_TRACE] \\
-	   Q.EXISTS_TAC `xs''` >> ASM_REWRITE_TAC [] ) >> DISCH_TAC \\
+	   Q.EXISTS_TAC `xs'` >> ASM_REWRITE_TAC [] ) >> DISCH_TAC \\
       REWRITE_TAC [O_DEF] >> BETA_TAC \\
       IMP_RES_TAC contracts_EPS' \\
       Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC [] ]);
@@ -1733,21 +1733,21 @@ val UNIQUE_SOLUTIONS_OF_EXPANSIONS_LEMMA = store_thm (
  >| [ (* goal 1 (of 2) *)
       IMP_RES_TAC WEAK_TRANS_AND_TRACE \\
       FULL_SIMP_TAC std_ss [Action_distinct_label] \\
-      `(C P) expands (C'' (LENGTH xs) P)` by PROVE_TAC [] \\
+      `(C P) expands (C'' (LENGTH us) P)` by PROVE_TAC [] \\
       POP_ASSUM (IMP_RES_TAC o (MATCH_MP expands_AND_TRACE_label)) \\
       NTAC 4 (POP_ASSUM K_TAC) \\
-      Q.ABBREV_TAC `n = LENGTH xs` \\
+      Q.ABBREV_TAC `n = LENGTH us` \\
       Q.UNABBREV_TAC `C''` \\
-      Q.PAT_X_ASSUM `TRACE X xs'' E2` (ASSUME_TAC o BETA_RULE) \\
-      Know `?C'. GCONTEXT C' /\ (E2 = C' P) /\ !Q. TRACE ((C o FUNPOW E n) Q) xs'' (C' Q)`
-      >- ( MATCH_MP_TAC unfolding_lemma4 >> ASM_REWRITE_TAC [] ) >> STRIP_TAC \\
-      POP_ASSUM (ASSUME_TAC o (Q.SPEC `Q`)) \\
+      Q.PAT_X_ASSUM `TRACE X xs' E2` (ASSUME_TAC o BETA_RULE) \\
+      Know `?C'. GCONTEXT C' /\ (E2 = C' P) /\ !Q. TRACE ((C o FUNPOW E n) Q) xs' (C' Q)`
+      >- ( MATCH_MP_TAC unfolding_lemma4 >> ASM_REWRITE_TAC [] ) \\
+      STRIP_TAC >> POP_ASSUM (ASSUME_TAC o (Q.SPEC `Q`)) \\
       `(C Q) expands ((C o FUNPOW E n) Q)` by PROVE_TAC [] \\
       FULL_SIMP_TAC std_ss [] \\ (* to replace E2 *)
       Q.EXISTS_TAC `C'` >> ASM_REWRITE_TAC [] \\
       Know `WEAK_TRANS (C (FUNPOW E n Q)) (label l) (C' Q)`
       >- ( REWRITE_TAC [WEAK_TRANS_AND_TRACE, Action_distinct_label] \\
-	   Q.EXISTS_TAC `xs''` >> ASM_REWRITE_TAC [] \\
+	   Q.EXISTS_TAC `xs'` >> ASM_REWRITE_TAC [] \\
 	   MATCH_MP_TAC UNIQUE_LABEL_NOT_NULL \\
 	   Q.EXISTS_TAC `label l` >> ASM_REWRITE_TAC [] ) >> DISCH_TAC \\
       REWRITE_TAC [O_DEF] >> BETA_TAC \\
@@ -1757,21 +1757,21 @@ val UNIQUE_SOLUTIONS_OF_EXPANSIONS_LEMMA = store_thm (
       (* goal 2 (of 2) *)
       IMP_RES_TAC WEAK_TRANS_AND_TRACE \\
       FULL_SIMP_TAC std_ss [] \\
-      `(C P) expands (C'' (LENGTH xs) P)` by PROVE_TAC [] \\
+      `(C P) expands (C'' (LENGTH us) P)` by PROVE_TAC [] \\
       POP_ASSUM (IMP_RES_TAC o (MATCH_MP expands_AND_TRACE_tau)) \\ (* diff here *)
       NTAC 4 (POP_ASSUM K_TAC) \\
-      Q.ABBREV_TAC `n = LENGTH xs` \\
+      Q.ABBREV_TAC `n = LENGTH us` \\
       Q.UNABBREV_TAC `C''` \\
-      Q.PAT_X_ASSUM `TRACE X xs'' E2` (ASSUME_TAC o BETA_RULE) \\
-      Know `?C'. GCONTEXT C' /\ (E2 = C' P) /\ !Q. TRACE ((C o FUNPOW E n) Q) xs'' (C' Q)`
-      >- ( MATCH_MP_TAC unfolding_lemma4 >> ASM_REWRITE_TAC [] ) >> STRIP_TAC \\
-      POP_ASSUM (ASSUME_TAC o (Q.SPEC `Q`)) \\
+      Q.PAT_X_ASSUM `TRACE X xs' E2` (ASSUME_TAC o BETA_RULE) \\
+      Know `?C'. GCONTEXT C' /\ (E2 = C' P) /\ !Q. TRACE ((C o FUNPOW E n) Q) xs' (C' Q)`
+      >- ( MATCH_MP_TAC unfolding_lemma4 >> ASM_REWRITE_TAC [] ) \\
+      STRIP_TAC >> POP_ASSUM (ASSUME_TAC o (Q.SPEC `Q`)) \\
       `(C Q) expands ((C o FUNPOW E n) Q)` by PROVE_TAC [] \\
       FULL_SIMP_TAC std_ss [] \\ (* to replace E2 *)
       Q.EXISTS_TAC `C'` >> ASM_REWRITE_TAC [] \\
       Know `EPS (C (FUNPOW E n Q)) (C' Q)` (* diff here *)
       >- ( REWRITE_TAC [EPS_AND_TRACE] \\
-	   Q.EXISTS_TAC `xs''` >> ASM_REWRITE_TAC [] ) >> DISCH_TAC \\
+	   Q.EXISTS_TAC `xs'` >> ASM_REWRITE_TAC [] ) >> DISCH_TAC \\
       REWRITE_TAC [O_DEF] >> BETA_TAC \\
       IMP_RES_TAC expands_EPS' \\
       Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC [] \\

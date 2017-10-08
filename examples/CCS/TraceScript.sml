@@ -589,8 +589,8 @@ val UNIQUE_LABEL_cases2 = store_thm (
       FULL_SIMP_TAC list_ss [Action_11, NO_LABEL_def] ]);
 
 val WEAK_TRANS_TRACE2 = Q.prove (
-   `!E u E'. WEAK_TRANS E u E' ==> ?xs. TRACE E xs E' /\ ~NULL xs /\
-					if (u = tau) then NO_LABEL xs else UNIQUE_LABEL u xs`,
+   `!E u E'. WEAK_TRANS E u E' ==> ?us. TRACE E us E' /\ ~NULL us /\
+					if (u = tau) then NO_LABEL us else UNIQUE_LABEL u us`,
     REWRITE_TAC [WEAK_TRANS]
  >> rpt STRIP_TAC
  >> IMP_RES_TAC EPS_TRACE2
@@ -610,8 +610,8 @@ val WEAK_TRANS_TRACE2 = Q.prove (
 
 val WEAK_TRANS_AND_TRACE = store_thm (
    "WEAK_TRANS_AND_TRACE",
-  ``!E u E'. WEAK_TRANS E u E' <=> ?xs. TRACE E xs E' /\ ~NULL xs /\
-					if (u = tau) then NO_LABEL xs else UNIQUE_LABEL u xs``,
+  ``!E u E'. WEAK_TRANS E u E' <=> ?us. TRACE E us E' /\ ~NULL us /\
+					if (u = tau) then NO_LABEL us else UNIQUE_LABEL u us``,
     rpt GEN_TAC >> EQ_TAC (* 2 sub-goals here *)
  >- ( DISCH_TAC \\
       MATCH_MP_TAC WEAK_TRANS_TRACE2 >> ASM_REWRITE_TAC [] )
@@ -621,26 +621,26 @@ val WEAK_TRANS_AND_TRACE = store_thm (
  >| [ (* goal 1 (of 2) *)
       REWRITE_TAC [WEAK_TRANS] \\
       Q.EXISTS_TAC `E` >> REWRITE_TAC [EPS_REFL] \\
-      Q.PAT_X_ASSUM `TRACE E xs E'` (ASSUME_TAC o (ONCE_REWRITE_RULE [TRACE_cases1])) \\
+      Q.PAT_X_ASSUM `TRACE E us E'` (ASSUME_TAC o (ONCE_REWRITE_RULE [TRACE_cases1])) \\
       REV_FULL_SIMP_TAC list_ss [] \\
-      Know `HD xs = tau`
-      >- ( Cases_on `HD xs` >- REWRITE_TAC [] \\
-	   Q.PAT_X_ASSUM `!l. ~MEM (label l) xs` (ASSUME_TAC o (Q.SPEC `L`)) \\
-	   Q.PAT_X_ASSUM `HD xs = label L` ((FULL_SIMP_TAC list_ss) o wrap o SYM) \\
+      Know `HD us = tau`
+      >- ( Cases_on `HD us` >- REWRITE_TAC [] \\
+	   Q.PAT_X_ASSUM `!l. ~MEM (label l) us` (ASSUME_TAC o (Q.SPEC `L`)) \\
+	   Q.PAT_X_ASSUM `HD us = label L` ((FULL_SIMP_TAC list_ss) o wrap o SYM) \\
 	   PROVE_TAC [CONS, MEM] ) \\
       DISCH_TAC >> FULL_SIMP_TAC list_ss [] \\
       Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC [] \\
       REWRITE_TAC [EPS_AND_TRACE, NO_LABEL_def] \\
-      Q.EXISTS_TAC `TL xs` >> ASM_REWRITE_TAC [] \\
+      Q.EXISTS_TAC `TL us` >> ASM_REWRITE_TAC [] \\
       CCONTR_TAC >> FULL_SIMP_TAC bool_ss [] \\
-      Q.PAT_X_ASSUM `!l. ~MEM (label l) xs` (MP_TAC o (Q.SPEC `l`)) \\
-      Cases_on `xs` >- FULL_SIMP_TAC list_ss [] \\
+      Q.PAT_X_ASSUM `!l. ~MEM (label l) us` (MP_TAC o (Q.SPEC `l`)) \\
+      Cases_on `us` >- FULL_SIMP_TAC list_ss [] \\
       REWRITE_TAC [MEM] \\
       FULL_SIMP_TAC list_ss [],
       (* goal 2 (of 2) *)
       REWRITE_TAC [WEAK_TRANS] \\
       IMP_RES_TAC UNIQUE_LABEL_def \\
-      Q.PAT_X_ASSUM `L1 ++ [label L] ++ L2 = xs` ((FULL_SIMP_TAC std_ss) o wrap o SYM) \\
+      Q.PAT_X_ASSUM `L1 ++ [label L] ++ L2 = us` ((FULL_SIMP_TAC std_ss) o wrap o SYM) \\
       Q.PAT_X_ASSUM `TRACE E (L1 ++ [label L] ++ L2) E'`
 	(STRIP_ASSUME_TAC o (REWRITE_RULE [TRACE_APPEND_cases])) \\
       take [`u'`, `u`] \\
