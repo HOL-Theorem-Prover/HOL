@@ -1303,28 +1303,40 @@ val EVERY_MONOTONIC = store_thm(
 (* ----------------------------------------------------------------------
    ZIP and UNZIP functions (taken from rich_listTheory)
    ---------------------------------------------------------------------- *)
-val ZIP =
+val ZIP_def =
     let val lemma = prove(
-    (“?ZIP. (ZIP ([], []) = []) /\
+    (“?ZIP.
+       (!l2. ZIP ([], l2) = []) /\
+       (!l1. ZIP (l1, []) = []) /\
        (!(x1:'a) l1 (x2:'b) l2.
         ZIP ((CONS x1 l1), (CONS x2 l2)) = CONS (x1,x2)(ZIP (l1, l2)))”),
     let val th = prove_rec_fn_exists list_Axiom
         (“(fn [] l = []) /\
          (fn (CONS (x:'a) l') (l:'b list) =
-                           CONS (x, (HD l)) (fn  l' (TL l)))”)
+            if l = [] then [] else
+              CONS (x, (HD l)) (fn  l' (TL l)))”)
         in
     STRIP_ASSUME_TAC th
     THEN EXISTS_TAC
            (“UNCURRY (fn:('a)list -> (('b)list -> ('a # 'b)list))”)
-    THEN ASM_REWRITE_TAC[pairTheory.UNCURRY_DEF, HD, TL]
+    THEN ASM_REWRITE_TAC[pairTheory.UNCURRY_DEF, HD, TL, NOT_CONS_NIL]
+    THEN STRIP_TAC
+    THEN STRIP_ASSUME_TAC (SPEC ``l1:'a list`` list_CASES)
+    THEN ASM_REWRITE_TAC[]
      end)
     in
     Rsyntax.new_specification
         {consts = [{const_name = "ZIP", fixity = NONE}],
-         name = "ZIP",
+         name = "ZIP_def",
          sat_thm = lemma
         }
     end;
+
+val ZIP = store_thm("ZIP",
+  ``(ZIP ([],[]) = []) /\
+    (!(x1:'a) l1 (x2:'b) l2.
+       ZIP ((CONS x1 l1), (CONS x2 l2)) = CONS (x1,x2)(ZIP (l1, l2)))``,
+  REWRITE_TAC [ZIP_def]);
 
 val UNZIP = new_recursive_definition {
   name = "UNZIP",   rec_axiom = list_Axiom,
