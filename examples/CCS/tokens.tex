@@ -1,0 +1,17 @@
+%% TeX commands needed for generating terms and theorems of our CCS theories:
+
+\newcommand{\HOLTokenObsCongr}{$\approx^c$}
+\newcommand{\HOLTokenEPS}{$\overset{\epsilon}{\Rightarrow}$}
+\newcommand{\HOLTokenSupC}{${}^c$}
+\newcommand{\HOLTokenSupG}{${}^g$}
+\newcommand{\HOLTokenTransBegin}{$-$}
+\newcommand{\HOLTokenTransEnd}{$\rightarrow$}
+\newcommand{\HOLTokenWeakTransBegin}{$=$}
+\newcommand{\HOLTokenWeakTransEnd}{$\Rightarrow$}
+\newcommand{\HOLTokenExpands}{$\succeq_e$}
+\newcommand{\HOLTokenContracts}{$\succeq_{bis}$}
+
+% Experimental environments
+\usepackage{environ}
+\NewEnviron{HOLTrans}{\overset{\BODY}{\longrightarrow}}
+\NewEnviron{HOLWeakTrans}{\overset{\BODY}{\Longrightarrow}}

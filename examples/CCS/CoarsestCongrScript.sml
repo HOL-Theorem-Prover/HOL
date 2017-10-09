@@ -1,6 +1,6 @@
 (*
  * Copyright 1991-1995  University of Cambridge (Author: Monica Nesi)
- * Copyright 2016-2017  University of Bologna   (Author: Chun Tian)
+ * Copyright 2017       University of Bologna   (Author: Chun Tian)
  *)
 
 open HolKernel Parse boolLib bossLib;
@@ -8,8 +8,10 @@ open HolKernel Parse boolLib bossLib;
 open pred_setTheory relationTheory pairTheory sumTheory listTheory;
 open prim_recTheory arithmeticTheory combinTheory;
 
-open CCSLib CCSTheory StrongEQTheory StrongLawsTheory WeakEQTheory WeakLawsTheory;
+open CCSLib CCSTheory;
+open StrongEQTheory StrongLawsTheory WeakEQTheory WeakLawsTheory;
 open ObsCongrTheory ObsCongrLib ObsCongrLawsTheory ObsCongrConv;
+open TraceTheory CongruenceTheory;
 
 val _ = new_theory "CoarsestCongr";
 
@@ -106,7 +108,7 @@ val HENNESSY_LEMMA_LR = store_thm ((* NEW *)
  >> Cases_on `?E. TRANS p tau E /\ WEAK_EQUIV E q` (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       DISJ2_TAC >> DISJ1_TAC \\ (* CHOOSE ``p ~~c tau..q`` *)
-      REWRITE_TAC [OBS_CONGR] >> // STRIP_TAC >| (* 2 sub-goals here *)
+      REWRITE_TAC [OBS_CONGR] >> !! STRIP_TAC >| (* 2 sub-goals here *)
       [ (* goal 1.1 (of 2) *)
         Cases_on `u` \\ (* 2 sub-goals here, sharing initial tacticals *)
         PAT_X_ASSUM ``WEAK_EQUIV p q``
@@ -128,7 +130,7 @@ val HENNESSY_LEMMA_LR = store_thm ((* NEW *)
       Cases_on `?E. TRANS q tau E /\ WEAK_EQUIV p E` >| (* 2 sub-goals here *)
       [ (* goal 2.1 (of 2) *)
         NTAC 2 DISJ2_TAC \\ (* CHOOSE ``tau..p ~~c q`` *)
-        REWRITE_TAC [OBS_CONGR] >> // STRIP_TAC >| (* 2 sub-goals here *)
+        REWRITE_TAC [OBS_CONGR] >> !! STRIP_TAC >| (* 2 sub-goals here *)
         [ (* goal 2.1.1 (of 2) *)
           IMP_RES_TAC TRANS_PREFIX >> ONCE_ASM_REWRITE_TAC [] \\
           PAT_X_ASSUM ``?E. TRANS q tau E /\ WEAK_EQUIV p E`` STRIP_ASSUME_TAC \\
@@ -164,161 +166,47 @@ val HENNESSY_LEMMA = store_thm ((* NEW *)
       (* goal 2 (of 2), easy part *)
       REWRITE_TAC [HENNESSY_LEMMA_RL] ]);
 
-(******************************************************************************)
-(*                                                                            *)
-(*                   The theory of congruence for CCS                         *)
-(*                                                                            *)
-(******************************************************************************)
-
-(* ONE HOLE CONTEXT for CCS *)
-val (CONTEXT_rules, CONTEXT_ind, CONTEXT_cases) = Hol_reln `
-    (                     CONTEXT (\x. x)) /\			(* CONTEXT1 *)
-    (!a c.  CONTEXT c ==> CONTEXT (\t. prefix a (c t))) /\	(* CONTEXT2 *)
-    (!x c.  CONTEXT c ==> CONTEXT (\t. sum (c t) x)) /\		(* CONTEXT3 *)
-    (!x c.  CONTEXT c ==> CONTEXT (\t. sum x (c t))) /\		(* CONTEXT4 *)
-    (!x c.  CONTEXT c ==> CONTEXT (\t. par (c t) x)) /\		(* CONTEXT5 *)
-    (!x c.  CONTEXT c ==> CONTEXT (\t. par x (c t))) /\		(* CONTEXT6 *)
-    (!L c.  CONTEXT c ==> CONTEXT (\t. restr L (c t))) /\	(* CONTEXT7 *)
-    (!rf c. CONTEXT c ==> CONTEXT (\t. relab (c t) rf)) `;	(* CONTEXT8 *)
-
-val [CONTEXT1, CONTEXT2, CONTEXT3, CONTEXT4, CONTEXT5, CONTEXT6, CONTEXT7, CONTEXT8] =
-    map save_thm
-        (combine (["CONTEXT1", "CONTEXT2", "CONTEXT3", "CONTEXT4",
-		   "CONTEXT5", "CONTEXT6", "CONTEXT7", "CONTEXT8"],
-                  CONJUNCTS CONTEXT_rules));
-
-val CONTEXT_combin = store_thm ((* NEW *)
-   "CONTEXT_combin", ``!c1 c2. CONTEXT c1 /\ CONTEXT c2 ==> CONTEXT (c1 o c2)``,
-    REPEAT STRIP_TAC
- >> NTAC 2 (POP_ASSUM MP_TAC)
- >> Q.SPEC_TAC (`c1`, `c`)
- >> HO_MATCH_MP_TAC CONTEXT_ind
- >> REWRITE_TAC [o_DEF]
- >> BETA_TAC
- >> REWRITE_TAC [ETA_AX]
- >> REPEAT STRIP_TAC (* 7 sub-goals here *)
- >| [ FULL_SIMP_TAC std_ss [CONTEXT2],
-      FULL_SIMP_TAC std_ss [CONTEXT3],
-      FULL_SIMP_TAC std_ss [CONTEXT4],
-      FULL_SIMP_TAC std_ss [CONTEXT5],
-      FULL_SIMP_TAC std_ss [CONTEXT6],
-      FULL_SIMP_TAC std_ss [CONTEXT7],
-      FULL_SIMP_TAC std_ss [CONTEXT8] ]);
-
-(* The definition of congruence *)
-val congruence_def = Define `
-    congruence R = !x y ctx. CONTEXT ctx ==> R x y ==> R (ctx x) (ctx y) `;
-
-val STRONG_EQUIV_is_congruence = store_thm ((* NEW *)
-   "STRONG_EQUIV_is_congruence", ``congruence STRONG_EQUIV``,
-    REWRITE_TAC [congruence_def]
- >> NTAC 2 GEN_TAC
- >> HO_MATCH_MP_TAC CONTEXT_ind
- >> BETA_TAC
- >> REPEAT STRIP_TAC (* 7 sub-goals here *)
- >> RES_TAC	     (* 6 sub-goals left *)
- >| [ MATCH_MP_TAC STRONG_EQUIV_SUBST_PREFIX >> ASM_REWRITE_TAC [],
-      MATCH_MP_TAC STRONG_EQUIV_SUBST_SUM_R  >> ASM_REWRITE_TAC [],
-      MATCH_MP_TAC STRONG_EQUIV_SUBST_SUM_L  >> ASM_REWRITE_TAC [],
-      MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_R  >> ASM_REWRITE_TAC [],
-      MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_L  >> ASM_REWRITE_TAC [],
-      MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR  >> ASM_REWRITE_TAC [],
-      MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB  >> ASM_REWRITE_TAC [] ]);
-
-val OBS_CONGR_is_congruence = store_thm ((* NEW *)
-   "OBS_CONGR_is_congruence", ``congruence OBS_CONGR``,
-    REWRITE_TAC [congruence_def]
- >> NTAC 2 GEN_TAC
- >> HO_MATCH_MP_TAC CONTEXT_ind
- >> BETA_TAC
- >> REPEAT STRIP_TAC (* 7 sub-goals here *)
- >> RES_TAC	     (* 6 sub-goals left *)
- >| [ MATCH_MP_TAC OBS_CONGR_SUBST_PREFIX >> ASM_REWRITE_TAC [],
-      MATCH_MP_TAC OBS_CONGR_SUBST_SUM_R  >> ASM_REWRITE_TAC [],
-      MATCH_MP_TAC OBS_CONGR_SUBST_SUM_L  >> ASM_REWRITE_TAC [],
-      MATCH_MP_TAC OBS_CONGR_SUBST_PAR_R  >> ASM_REWRITE_TAC [],
-      MATCH_MP_TAC OBS_CONGR_SUBST_PAR_L  >> ASM_REWRITE_TAC [],
-      MATCH_MP_TAC OBS_CONGR_SUBST_RESTR  >> ASM_REWRITE_TAC [],
-      MATCH_MP_TAC OBS_CONGR_SUBST_RELAB  >> ASM_REWRITE_TAC [] ]);
-
-(* Building congruence closure from non-congruence relations *)
-val CONGR_def = Define `
-    CONGR R = (\g h. !c. CONTEXT c ==> R (c g) (c h)) `;
-
-val _ = add_rule { fixity = Suffix 2100,
-                   block_style = (AroundEachPhrase, (Portable.CONSISTENT,0)),
-                   paren_style = OnlyIfNecessary,
-                   pp_elements = [TOK "^c"],
-                   term_name = "CONGR" }
-val _ = TeX_notation {hol = "^c", TeX = ("\\HOLTokenSupC{}", 1)}
-
-(* The built relation is indeed congruence *)
-val CONGR_is_congruence = store_thm ((* NEW *)
-   "CONGR_is_congruence", ``!R. congruence (CONGR R)``,
-    REWRITE_TAC [congruence_def, CONGR_def]
- >> RW_TAC std_ss []
- >> `CONTEXT (c o ctx)` by PROVE_TAC [CONTEXT_combin]
- >> RES_TAC
- >> FULL_SIMP_TAC std_ss [o_THM]);
-
-(* The congruence is finer than original relation *)
-val CONGR_is_finer = store_thm ((* NEW *)
-   "CONGR_is_finer", ``!R. (CONGR R) RSUBSET R``,
-    REWRITE_TAC [RSUBSET]
- >> REPEAT GEN_TAC
- >> REWRITE_TAC [CONGR_def]
- >> BETA_TAC
- >> REPEAT STRIP_TAC
- >> `CONTEXT (\x. x)` by PROVE_TAC [CONTEXT_rules]
- >> RES_TAC
- >> POP_ASSUM (ACCEPT_TAC o BETA_RULE));
-
-(* The congruence built by above method is the coarsest congruence contained in R *)
-val CONGR_is_coarsest = store_thm ((* NEW *)
-   "CONGR_is_coarsest",
-  ``!R R'. congruence R' /\ R' RSUBSET R ==> R' RSUBSET (CONGR R)``,
-    REWRITE_TAC [congruence_def, RSUBSET, CONGR_def]
- >> RW_TAC std_ss []);
-
 (* Definition 12: the coarsest congruence that is finer than WEAK_EQUIV is called
                   WEAK_CONGR (weak bisimulation congruence) *)
 val WEAK_CONGR = new_definition ((* NEW *)
-   "WEAK_CONGR", ``WEAK_CONGR = CONGR WEAK_EQUIV``);
+   "WEAK_CONGR", ``WEAK_CONGR = context_closure WEAK_EQUIV``);
 
 val WEAK_CONGR_ALT = save_thm (
-   "WEAK_CONGR_ALT", REWRITE_RULE [CONGR_def] WEAK_CONGR);
+   "WEAK_CONGR_ALT", REWRITE_RULE [context_closure_def] WEAK_CONGR);
 
-val WEAK_CONGR_is_congruence = store_thm ((* NEW *)
-   "WEAK_CONGR_is_congruence", ``congruence WEAK_CONGR``,
-    REWRITE_TAC [WEAK_CONGR, CONGR_is_congruence]);
+val WEAK_CONGR_congruence = store_thm ((* NEW *)
+   "WEAK_CONGR_congruence", ``congruence WEAK_CONGR``,
+    REWRITE_TAC [WEAK_CONGR]
+ >> MATCH_MP_TAC context_closure_congruence
+ >> REWRITE_TAC [WEAK_EQUIV_equivalence]);
 
 val OBS_CONGR_IMP_WEAK_CONGR = store_thm ((* NEW *)
    "OBS_CONGR_IMP_WEAK_CONGR", ``!p q. OBS_CONGR p q ==> WEAK_CONGR p q``,
     REWRITE_TAC [WEAK_CONGR, GSYM RSUBSET]
- >> ASSUME_TAC OBS_CONGR_is_congruence
+ >> ASSUME_TAC OBS_CONGR_congruence
  >> `OBS_CONGR RSUBSET WEAK_EQUIV`
 	by PROVE_TAC [OBS_CONGR_IMP_WEAK_EQUIV, RSUBSET]
- >> IMP_RES_TAC CONGR_is_coarsest
+ >> IMP_RES_TAC context_closure_is_coarsest
  >> ASM_REWRITE_TAC []);
 
 val SUM_EQUIV = new_definition ((* NEW *)
    "SUM_EQUIV", ``SUM_EQUIV = (\p q. !r. WEAK_EQUIV (sum p r) (sum q r))``);
 
 val WEAK_CONGR_IMP_SUM_EQUIV = store_thm ((* NEW *)
-   "WEAK_CONGR_IMP_SUM_EQUIV", ``!p q. WEAK_CONGR p q ==> SUM_EQUIV p q``,
-    REWRITE_TAC [WEAK_CONGR, SUM_EQUIV, CONGR_def]
+   "WEAK_CONGR_IMP_SUM_EQUIV",
+  ``!p q. WEAK_CONGR p q ==> SUM_EQUIV p q``,
+    REWRITE_TAC [WEAK_CONGR, SUM_EQUIV, context_closure_def]
  >> BETA_TAC
  >> REPEAT STRIP_TAC
- >> `CONTEXT (\x. x)` by PROVE_TAC [CONTEXT_rules]
- >> IMP_RES_TAC CONTEXT_rules
- >> Q.PAT_X_ASSUM `!x. CONTEXT (\t. sum ((\x. x) t) x)`
-	(MP_TAC o BETA_RULE o (Q.SPEC `r`))
- >> NTAC 7 (POP_ASSUM K_TAC) (* remove useless assums *)
+ >> POP_ASSUM MP_TAC
+ >> Know `CONTEXT (\(t :('a, 'b) CCS). t) /\ CONTEXT (\t. r)`
+ >- REWRITE_TAC [CONTEXT1, CONTEXT2]
+ >> DISCH_TAC
+ >> POP_ASSUM (ASSUME_TAC o (MATCH_MP CONTEXT4))
  >> DISCH_TAC
  >> RES_TAC
  >> POP_ASSUM (MP_TAC o BETA_RULE)
- >> DISCH_TAC
- >> ASM_REWRITE_TAC []);
+ >> Rewr);
 
 (******************************************************************************)
 (*                                                                            *)
@@ -475,113 +363,6 @@ val COARSEST_CONGR_THM = store_thm ((* NEW *)
  >- REWRITE_TAC [COARSEST_CONGR_LR]
  >> MATCH_MP_TAC COARSEST_CONGR_RL
  >> ASM_REWRITE_TAC []);
-
-(******************************************************************************)
-(*                                                                            *)
-(*                        The reachability relation                           *)
-(*                                                                            *)
-(******************************************************************************)
-
-local
-    val defn = ``(\E E'. ?u. TRANS E u E')``
-in
-  val Reachable_def = Define `Reachable = RTC ^defn`;
-  val trans = (REWRITE_RULE [GSYM Reachable_def]) o BETA_RULE o (ISPEC defn);
-end;
-
-val Reachable_one = store_thm ((* NEW *)
-   "Reachable_one", ``!E E'. (?u. TRANS E u E') ==> Reachable E E'``,
-    REWRITE_TAC [Reachable_def]
- >> REPEAT STRIP_TAC
- >> MATCH_MP_TAC RTC_SINGLE
- >> BETA_TAC
- >> Q.EXISTS_TAC `u`
- >> ASM_REWRITE_TAC []);
-
-val Reachable_self = store_thm ((* NEW *)
-   "Reachable_self", ``!E. Reachable E E``,
-    REWRITE_TAC [Reachable_def, RTC_REFL]);
-
-val Reachable_trans = save_thm ((* NEW *)
-   "Reachable_trans", trans (REWRITE_RULE [transitive_def] RTC_TRANSITIVE));
-
-val Reachable_ind = save_thm ((* NEW *)
-   "Reachable_ind", trans RTC_INDUCT);
-
-val Reachable_strongind = save_thm ((* NEW *)
-   "Reachable_strongind", trans RTC_STRONG_INDUCT);
-
-val Reachable_ind_right = save_thm ((* NEW *)
-   "Reachable_ind_right", trans RTC_INDUCT_RIGHT1);
-
-val Reachable_strongind_right = save_thm ((* NEW *)
-   "Reachable_strongind_right", trans RTC_STRONG_INDUCT_RIGHT1);
-
-val Reachable_cases1 = save_thm ((* NEW *)
-   "Reachable_cases1", trans RTC_CASES1);
-
-val Reachable_cases2 = save_thm ((* NEW *)
-   "Reachable_cases2", trans RTC_CASES2);
-
-(* Define the set of states reachable from any CCS process *)
-val NODES_def = Define `
-    NODES (p :('a, 'b) CCS) = { q | Reachable p q }`;
-
-val Reachable_NODES = store_thm (
-   "Reachable_NODES", ``!p q. Reachable p q ==> q IN (NODES p)``,
-    REPEAT STRIP_TAC
- >> SRW_TAC [] [NODES_def]);
-
-val SELF_NODES = store_thm (
-   "SELF_NODES", ``!p. p IN (NODES p)``,
-    REPEAT STRIP_TAC
- >> SRW_TAC [] [NODES_def]
- >> REWRITE_TAC [Reachable_self]);
-
-val MORE_NODES = store_thm (
-   "MORE_NODES", ``!p q q'. q IN (NODES p) /\ Reachable q q' ==> q' IN (NODES p)``,
-    REPEAT GEN_TAC
- >> SRW_TAC [] [NODES_def]
- >> IMP_RES_TAC Reachable_trans);
-
-val TRANS_IN_NODES = store_thm (
-   "TRANS_IN_NODES", ``!p q u. TRANS p u q ==> q IN (NODES p)``,
-    REPEAT STRIP_TAC
- >> REWRITE_TAC [NODES_def]
- >> SRW_TAC [] []
- >> MATCH_MP_TAC Reachable_one
- >> Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC []);
-
-val EPS_Reachable = store_thm ((* NEW *)
-   "EPS_Reachable", ``!p q. EPS p q ==> Reachable p q``,
-    HO_MATCH_MP_TAC EPS_ind_right
- >> REPEAT STRIP_TAC (* 2 sub-goals here *)
- >- REWRITE_TAC [Reachable_self]
- >> IMP_RES_TAC Reachable_one
- >> IMP_RES_TAC Reachable_trans);
-
-val EPS_IN_NODES = store_thm (
-   "EPS_IN_NODES", ``!p q. EPS p q ==> q IN (NODES p)``,
-    REPEAT STRIP_TAC
- >> MATCH_MP_TAC Reachable_NODES
- >> IMP_RES_TAC EPS_Reachable);
-
-val WEAK_TRANS_Reachable = store_thm (
-   "WEAK_TRANS_Reachable", ``!p q u. WEAK_TRANS p u q ==> Reachable p q``,
-    REWRITE_TAC [WEAK_TRANS]
- >> REPEAT STRIP_TAC
- >> IMP_RES_TAC EPS_Reachable
- >> IMP_RES_TAC Reachable_one
- >> IMP_RES_TAC Reachable_trans);
-
-val WEAK_TRANS_IN_NODES = store_thm (
-   "WEAK_TRANS_IN_NODES", ``!p q u. WEAK_TRANS p u q ==> q IN (NODES p)``,
-    REPEAT STRIP_TAC
- >> MATCH_MP_TAC Reachable_NODES
- >> IMP_RES_TAC WEAK_TRANS_Reachable);
-
-val FINITE_STATE_def = Define `
-    FINITE_STATE (p :('a, 'b) CCS) = FINITE (NODES p)`;
 
 (******************************************************************************)
 (*                                                                            *)
@@ -995,16 +776,16 @@ val KLOP_EXISTS_LEMMA = store_thm ((* NEW *)
 
 val KLOP_LEMMA_FINITE = store_thm ((* NEW *)
    "KLOP_LEMMA_FINITE",
-  ``!p q. FINITE_STATE p /\ FINITE_STATE q ==>
+  ``!p q. finite_state p /\ finite_state q ==>
 	  ?k. STABLE k /\
 	      (!p' u. WEAK_TRANS p u p' ==> ~(WEAK_EQUIV p' k)) /\
 	      (!q' u. WEAK_TRANS q u q' ==> ~(WEAK_EQUIV q' k))``,
     REPEAT STRIP_TAC
  (* Part 1: assert that the union of all nodes in g and h is finite *)
- >> PAT_X_ASSUM ``FINITE_STATE p``
-	(ASSUME_TAC o (REWRITE_RULE [FINITE_STATE_def]))
- >> PAT_X_ASSUM ``FINITE_STATE q``
-	(ASSUME_TAC o (REWRITE_RULE [FINITE_STATE_def]))
+ >> PAT_X_ASSUM ``finite_state p``
+	(ASSUME_TAC o (REWRITE_RULE [finite_state_def]))
+ >> PAT_X_ASSUM ``finite_state q``
+	(ASSUME_TAC o (REWRITE_RULE [finite_state_def]))
  >> Q.ABBREV_TAC `nodes = (NODES p) UNION (NODES q)`
  >> `FINITE nodes` by PROVE_TAC [FINITE_UNION]
 (*
@@ -1072,7 +853,7 @@ val KLOP_LEMMA_FINITE = store_thm ((* NEW *)
 (* The finite version of COARSEST_CONGR_THM (PROP3) *)
 val COARSEST_CONGR_FINITE = store_thm ((* NEW *)
    "COARSEST_CONGR_FINITE",
-  ``!p q. FINITE_STATE p /\ FINITE_STATE q ==>
+  ``!p q. finite_state p /\ finite_state q ==>
 	  (OBS_CONGR p q = (!r. WEAK_EQUIV (sum p r) (sum q r)))``,
     REPEAT STRIP_TAC
  >> EQ_TAC >- REWRITE_TAC [COARSEST_CONGR_LR]
@@ -1092,6 +873,6 @@ val COARSEST_CONGR_FINITE = store_thm ((* NEW *)
  *)
 
 val _ = export_theory ();
-val _ = Hol_pp.html_theory "CoarsestCongr";
+val _ = html_theory "CoarsestCongr";
 
 (* last updated: Jun 24, 2017 *)
