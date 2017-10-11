@@ -31,6 +31,7 @@ sig
   val hhs_cache_flag     : bool ref
   val hhs_astar_flag     : bool ref
   val hhs_astar_radius   : int ref
+  val hhs_astar_coeff    : real ref
   val hhs_timedepth_flag : bool ref
   val hhs_width_coeff    : real ref
   
@@ -41,6 +42,7 @@ sig
   val hh_stac_flag      : bool ref
   val hh_timeout        : real ref
   val hhs_stacpred_flag : bool ref (* synthetizing *)
+  val hhs_stacpred_number : int ref
   
   (* minimization *)
   val hhs_prettify_flag : bool ref

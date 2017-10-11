@@ -35,7 +35,9 @@ fun hh_eval goal =
 
 fun mk_tacdict tacticl =
   let 
-    val (_,goodl) = partition (fn x => mem x (!hhs_badstacl)) tacticl
+    val (_,goodl) = 
+      partition (fn x => mem x (!hhs_badstacl) orelse is_pattern_stac x) 
+      tacticl
     fun read_stac x = (x, tactic_of_sml x)
       handle _ => (debug ("Warning: bad tactic: " ^ x ^ "\n");
                    hhs_badstacl := x :: (!hhs_badstacl);
@@ -58,6 +60,8 @@ fun import_ancestry () =
     val _ = debug (int_to_string (length stacfea));
     val _ = debug_t "init_mdict" init_mdict ()
     val _ = debug (int_to_string (dlength (!mdict_glob)))
+    val _ = debug_t "import_astar" import_astar thyl
+    val _ = debug (int_to_string (dlength (!hhs_astar)))
   in
     init_stacfea_ddict stacfea
   end
@@ -86,67 +90,6 @@ fun init_tactictoe () =
       end
     else ()
   end
-
-(* ----------------------------------------------------------------------
-   Pre-calculate heuristic for A*. (to be removed or updated)
-   ---------------------------------------------------------------------- *)
-
-(* Minimum number of steps (or time) to solve a goal *)
-fun min_option (a,bo) = case bo of
-    NONE => a
-  | SOME x => Real.min (a,x)
-
-fun list_min l = case l of 
-    [] => NONE
-  | a :: m => SOME (min_option (a,list_min m))
-
-fun sum_real_option l = 
-  if all (fn x => Option.isSome x) l 
-  then SOME (sum_real (map valOf l))
-  else NONE 
-  
-fun minstep_aux parents g =
-  let 
-    val new_parents = dadd g () parents
-    val somel = SOME (dfind g (!hhs_ddict)) handle _ => NONE
-    fun f ((_,t,_,gl),_) = 
-      if exists (fn x => dmem x new_parents) gl
-      then NONE
-      else sum_real_option
-           (
-           SOME (if !hhs_timedepth_flag then t else 1.0) ::
-           (map (minstep_aux new_parents) gl)
-           )
-  in 
-    case somel of
-      NONE => NONE
-    | SOME l => list_min (List.mapPartial f l)
-  end  
-
-val minstep_debug = ref (dempty goal_compare)
-
-fun minstep g = case minstep_aux (dempty goal_compare) g of
-    NONE => (
-            if dmem g (!minstep_debug) 
-            then (
-                 minstep_debug := dadd g () (!minstep_debug);
-                 debug ("Warning: min_step:" ^ string_of_goal g)
-                 )
-            else ()
-            ; 
-            NONE
-            )
-  | x    => x
-
-fun create_minstep stacfeav =
-  if !hhs_astar_flag then 
-    let 
-      val goal_set = mk_fast_set goal_compare (map (#3 o fst) stacfeav)
-      val l = map (fn x => (x, minstep x)) goal_set 
-    in
-      dnew goal_compare l
-    end
-  else dempty goal_compare
 
 (* ----------------------------------------------------------------------
    Preselection of theorems and tactics
@@ -218,29 +161,54 @@ fun select_stacfeav goalfea =
     val l1 = debug_t "select_desc" select_desc l0
     (* parsing selected tactics *)
     val tacdict = debug_t "mk_tacdict" mk_tacdict (map (#1 o fst) l1)
-    (* filtering readable tactics *)
-    val stacfeav = filter (fn ((stac,_,_,_),_) => dmem stac tacdict) l1
-    (* minstep value of a goal *)  
-    val minstepdict = debug_t "create_minstep" create_minstep stacfeav   
+    (* filtering readable tactics or that contains a pattern to
+       be instantiated *)
+    val stacfeav = filter (fn ((stac,_,_,_),_) => 
+      is_pattern_stac stac orelse dmem stac tacdict) l1  
   in
-    (stacsymweight, stacfeav, tacdict, minstepdict)
+    (stacsymweight, stacfeav, tacdict)
   end
-      
+
+fun select_astarfeav stacfeav =
+  if !hhs_astar_flag
+  then
+    let
+      val l = map (fea_of_gl o #4 o fst) stacfeav
+      val astarfeav_org = map (fn (a,b) => (b,a)) (dlist (!hhs_astar))
+      (* computing tfidf *)
+      val astarsymweight = debug_t "learn_tfidf" learn_tfidf astarfeav_org
+      (* selecting neighbors *)
+      val astarfeav_aux = 
+        List.concat (map (preastarknn astarsymweight (!hhs_astar_radius * 2)
+        astarfeav_org) l)
+      val astarfeav = 
+        mk_fast_set (cpl_compare bool_compare (list_compare Int.compare)) 
+          astarfeav_aux
+    in
+      (astarsymweight, astarfeav)
+    end
+  else (dempty Int.compare, [])
+
 fun main_tactictoe goal =
   let  
     (* preselection *)
     val goalfea = fea_of_goal goal       
-    val (stacsymweight, stacfeav, tacdict, minstepdict) = select_stacfeav goalfea
+    val (stacsymweight, stacfeav, tacdict) = select_stacfeav goalfea
     val (thmsymweight, thmfeav) = select_thmfeav goalfea
+    val (astarsymweight, astarfeav) = 
+      debug_t "select_astarfeav" select_astarfeav stacfeav
     (* fast predictors *)
     fun stacpredictor g =
       stacknn stacsymweight (!hhs_maxselect_pred) stacfeav (fea_of_goal g)
     fun thmpredictor g = 
       map fst (thmknn thmsymweight (!hhs_metis_npred) thmfeav (fea_of_goal g))
+    fun astarpredictor gl =
+      if !hhs_astar_flag 
+      then astarknn astarsymweight (!hhs_astar_radius) astarfeav (fea_of_gl gl)
+      else 0.0
   in
     debug_t "Search" 
-       (imperative_search thmpredictor stacpredictor tacdict minstepdict) 
-       goal
+      (imperative_search thmpredictor stacpredictor astarpredictor tacdict) goal
   end
 
 fun tactic_of_status r = case r of
@@ -358,7 +326,7 @@ fun next_tac goal =
     val _ = next_tac_glob := []
     (* preselection *)
     val goalfea = fea_of_goal goal       
-    val (stacsymweight,stacfeav,tacdict,_) = hide_out select_stacfeav goalfea
+    val (stacsymweight,stacfeav,tacdict) = hide_out select_stacfeav goalfea
     (* predicting *)
     fun stac_predictor g =
       stacknn stacsymweight (!hhs_maxselect_pred) stacfeav (fea_of_goal g)

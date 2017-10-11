@@ -57,13 +57,6 @@ fun dependency_of_thm s =
    Metis
    -------------------------------------------------------------------------- *)
 
-fun dbfetch_of_string s =
-  let val (a,b) = split_string "Theory." s in 
-    if a = current_theory ()
-    then String.concatWith " " ["DB.fetch",mlquote a,mlquote b] 
-    else s
-  end
-
 fun parfetch_of_string s =
   let val (a,b) = split_string "Theory." s in 
     if a = current_theory ()
@@ -75,13 +68,19 @@ fun mk_metis_call sl =
   "metisTools.METIS_TAC " ^ 
   "[" ^ String.concatWith ", " (map dbfetch_of_string sl) ^ "]"
   
-fun solved_by_metis npred tim goal =
+fun predict_for_metis npred goal =
   let 
     val thmfeav = dlist (!mdict_glob)
     val thmsymweight = learn_tfidf thmfeav
     fun predictor x = 
       map fst (thmknn thmsymweight npred thmfeav (fea_of_goal x))
-    val sl   = predictor goal
+  in
+    predictor goal
+  end  
+   
+fun solved_by_metis npred tim goal =
+  let
+    val sl   = predict_for_metis npred goal
     val stac = mk_metis_call sl
     val glo  = (app_tac tim (tactic_of_sml stac)) goal
       handle _ => NONE
@@ -127,10 +126,9 @@ fun update_mdict cthy =
         if dmem name (!mdict_glob) orelse dmem name (!negmdict_glob)
         then ()
         else if
-          (
-          !hhs_thmortho_flag andalso !hhs_metis_flag andalso
+          !hhs_thmortho_flag andalso 
+          !hhs_metis_flag andalso
           solved_by_metis (!hhs_metis_npred) (!hhs_metis_time) goal
-          )
           then negmdict_glob := dadd name () (!negmdict_glob)
           else mdict_glob := dadd name (fea_of_goal goal) (!mdict_glob)
       end
@@ -230,89 +228,5 @@ fun add_accept tacdict (g,pred) =
     end
     handle _ => (g,pred)
   else (g,pred) 
-  
-(* ---------------------------------------------------------------------------
-   Premise selection for other tactics
-   -------------------------------------------------------------------------- *)  
-
-val addpred_flag = ref false
-
-val thm_cache = ref (dempty String.compare)
-
-fun is_thm_cache s =
-  dfind s (!thm_cache) handle _ => 
-    let val b = is_thm s in
-      thm_cache := dadd s b (!thm_cache);
-      b
-    end 
-  
-
-fun addpred thml l  = case l of
-    [] => []
-  | "[" :: m => 
-    let 
-      val (el,m) = split_level "]" m
-      val e = fst (split_level "," el) handle _ => el
-    in
-      (
-      if not (null thml) andalso is_thm_cache (String.concatWith " " e)
-      then 
-        (
-        addpred_flag := true; 
-        ["["] @ el @ [","] @ [String.concatWith "," thml] @ ["]"]
-        )
-      else ["["] @ el @ ["]"]
-      )
-      @
-      addpred thml m
-    end
-  | a :: m   => a :: addpred thml m
-
-fun install_stac tacdict stac =
-  if !addpred_flag then
-    let 
-      val tac = hhsTimeout.timeOut 1.0 tactic_of_sml stac handle e => 
-      (debug ("Error: addpred:" ^ stac); raise e)
-    in
-      tacdict := dadd stac tac (!tacdict)
-    end
-  else ()
-
-(* doesn't work with the empty list *)
-fun addpred_stac tacdict thmpredictor (g,pred) =
-  if !hhs_stacpred_flag then
-    let 
-      val (al,bl) = part_n 10 pred
-      val sl = map dbfetch_of_string ((!thmpredictor) g)
-      fun change_entry (lbl,score) =
-        let
-          val _ = addpred_flag := false
-          val stac = #1 lbl
-          val new_stac = String.concatWith " " (addpred sl (hhs_lex stac))
-          val _ = install_stac tacdict new_stac handle _ =>
-                  addpred_flag := false
-          val fake_lbl = 
-            (if !addpred_flag then new_stac else stac,0.0,([],F),[])
-          val _ =
-            if !addpred_flag 
-            then debug (stac ^ " ==>\n  " ^ new_stac)
-            else ()
-        in
-          (fake_lbl,score)
-        end
-    in
-      (g,map change_entry al @ bl)
-    end
-  else (g,pred) 
-  
-(* 
-val thml = ["arithmeticTheory.SUB_ADD"];
-
-val stac = "METIS_TAC [arithmeticTheory.SUB_ADD]";
-val l = hhsLexer.hhs_lex stac;
-
-val new_stac = String.concatWith " " (addpred thml l);
-*)
-
   
 end

@@ -10,7 +10,7 @@ sig
   val hhs_goal_glob    : goal ref
   
   val hh_stac_glob     : (goal -> string option) ref
-  val update_hh_stac   : unit -> unit
+  val update_hh_stac   : int -> unit
 
   val exec_sml         : string -> string -> bool  
   

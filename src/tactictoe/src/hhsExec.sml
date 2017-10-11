@@ -132,10 +132,17 @@ fun string_of_sml s =
 
 val (hh_stac_glob: (goal -> string option) ref) = ref (fn x => NONE)
 
-fun update_hh_stac () =
+fun update_hh_stac n =
   let 
     val b = exec_sml "hh_stac_of_sml" 
-      ("val _ = hhsExec.hh_stac_glob := holyHammer.hh_stac")
+      (
+      String.concatWith "\n"
+      [
+      "load \"holyHammer\";",
+      "val _ = holyHammer.set_timeout " ^ int_to_string n ^ ";",
+      "val _ = hhsExec.hh_stac_glob := holyHammer.hh_stac;"
+      ]
+      )
   in
     if b then () else raise ERR "hh_stac_of_sml" ""
   end

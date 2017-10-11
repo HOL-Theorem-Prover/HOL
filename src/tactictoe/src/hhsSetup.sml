@@ -67,6 +67,7 @@ val hhs_maxselect_pred = ref 500
 val hhs_cache_flag  = ref true
 val hhs_astar_flag = ref false
 val hhs_astar_radius = ref 0
+val hhs_astar_coeff = ref 8.0
 val hhs_timedepth_flag = ref false
 val hhs_width_coeff = ref 1.0
 val hhs_selflearn_flag = ref false
@@ -80,13 +81,13 @@ val hhs_thmortho_flag = ref false (* set at the recording level *)
 val hhs_metis_flag    = ref false
 val hhs_metis_time    = ref 0.1
 val hhs_metis_npred   = ref 16
-val hhs_stacpred_flag = ref false 
+val hhs_stacpred_flag = ref false
+val hhs_stacpred_number = ref 16
   (* synthetizing arguments (theorems) of tactics *)
 val hh_stac_flag      = ref false (* predict dependencies using holyhammer *)
 val hh_timeout        = ref 120.0
 
-fun can_update_hh () =
-  ((load "holyHammer"; update_hh_stac (); true) handle _ => false)
+fun can_update_hh n = ((update_hh_stac n; true) handle _ => false)
 
 (* ----------------------------------------------------------------------
    Minimize flags
@@ -110,21 +111,23 @@ fun set_isearch () =
   hhs_cache_flag     := true;
   hhs_width_coeff    := 1.0;
   hhs_astar_flag     := false;
-  hhs_astar_radius   := 1;
+  hhs_astar_radius   := 8;
+  hhs_astar_coeff    := 8.0;
   hhs_timedepth_flag := false;
   (* metis + holyhammer + new arguments *)
   hhs_metis_flag  := (true andalso can load "metisTools");
   hhs_metis_npred := 16;
   hhs_metis_time  := 0.1;
   hh_stac_flag    := false;
-  hh_timeout      := 120.0;
+  hh_timeout      := 10.0;
   hhs_stacpred_flag := false;
+  hhs_stacpred_number := 16;
   (* result *)
   hhs_minimize_flag := true;
   hhs_prettify_flag := true;
   (* hook *)
   !set_isearch_hook ();
-  if !hh_stac_flag then (load "holyHammer"; update_hh_stac ()) else ()
+  if !hh_stac_flag then update_hh_stac 5 else ()
   )
 
 fun set_esearch () = 
@@ -137,15 +140,17 @@ fun set_esearch () =
   hhs_cache_flag     := true;
   hhs_width_coeff    := 1.0;
   hhs_astar_flag     := false;
-  hhs_astar_radius   := 1;
+  hhs_astar_radius   := 8;
+  hhs_astar_coeff    := 8.0;
   hhs_timedepth_flag := false;
   (* metis + holyhammer + new arguments *)
   hhs_metis_flag    := (true andalso can load "metisTools");
   hhs_metis_npred   := 16;
   hhs_metis_time    := 0.1;
-  hh_stac_flag      := (false andalso can_update_hh ());
-  hh_timeout        := 120.0;
+  hh_stac_flag      := (false andalso can_update_hh 5);
+  hh_timeout        := 10.0;
   hhs_stacpred_flag := false;
+  hhs_stacpred_number := 16;
   (* result *)
   hhs_minimize_flag := false;
   hhs_prettify_flag := false
@@ -172,11 +177,6 @@ fun set_irecord () =
 
 fun set_erecord () =
   (
-  (* recording (do not record integer_word) *)
-  if current_theory () = "integer_word" 
-  then hhs_norecord_flag := true 
-  else hhs_norecord_flag := false
-  ;
   hhs_internalthm_flag := true;
   hhs_norecprove_flag  := true;
   hhs_nolet_flag       := true;
@@ -192,7 +192,7 @@ fun set_erecord () =
   hhs_eval_flag    := true;
   hhs_noprove_flag := true;
   one_in_option    := SOME (0,10);
-  hh_only_flag     := (false andalso can_update_hh ())
+  hh_only_flag     := (false andalso can_update_hh 60)
   )
 
 end (* struct *)

@@ -144,6 +144,7 @@ fun save_lbl lbls (lbl0 as (stac0,t0,g0,gl0)) =
       val (lbl as (stac,t,g,gl)) = orthogonalize lbls (lbl0,fea)
       val feav = (lbl,fea)
     in
+      add_astar gl true;
       update_stacfea_ddict feav
     end
 
@@ -345,6 +346,40 @@ fun read_feavdatal_no_min thy =
  
 fun import_feavl thyl = List.concat (map read_feavdatal_no_min thyl)
 
+(*----------------------------------------------------------------------------
+ * I/O astar knowledge from disk
+ *----------------------------------------------------------------------------*)
+
+fun export_astar cthy =
+  let 
+    val file = hhs_astar_dir ^ "/" ^ cthy
+    val l = dlist (!hhs_astar_cthy) 
+    fun f (l,b) = 
+      String.concatWith " " ((if b then "T" else "F") :: map int_to_string l)
+  in
+    writel file (map f l)
+  end
+
+fun add_astar_nocthy fea b =
+  if (dfind fea (!hhs_astar) handle _ => false)
+  then ()
+  else hhs_astar := dadd fea b (!hhs_astar)
+
+fun read_astar thy =
+  let 
+    val file = hhs_astar_dir ^ "/" ^ thy
+    val l = readl file 
+      handle _ => (debug ("read_astar " ^ thy) ; [])
+    fun f s = case String.tokens Char.isSpace s of
+        "T" :: m => add_astar_nocthy (map string_to_int m) true
+      | "F" :: m => add_astar_nocthy (map string_to_int m) false
+      | _ => raise ERR "read_astar" thy
+  in
+    app f l
+  end
+
+fun import_astar thyl = app read_astar thyl
+  
 (* test
 load "hhsData";
 open hhsFeature;

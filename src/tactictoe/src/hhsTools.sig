@@ -17,6 +17,11 @@ sig
   val hhs_ndict     : (string, int) Redblackmap.dict ref
   val mdict_glob    : (string, fea_t) Redblackmap.dict ref
   val negmdict_glob : (string, unit) Redblackmap.dict ref
+  val dbfetch_of_string : string -> string
+  
+  val hhs_astar : (int list, bool) Redblackmap.dict ref
+  val hhs_astar_cthy : (int list, bool) Redblackmap.dict ref
+  
   
   val clean_feadata : unit -> unit
   val init_stacfea_ddict : feav_t list -> unit
@@ -31,6 +36,7 @@ sig
   val hhs_open_dir     : string
   val hhs_succrate_dir : string
   val hhs_mdict_dir    : string
+  val hhs_astar_dir    : string
   
   val mkDir_err : string -> unit
   val hide_out : ('a -> 'b) -> 'a -> 'b
@@ -57,6 +63,7 @@ sig
   val dapp : ('a * 'b -> unit) -> ('a, 'b) Redblackmap.dict -> unit
   val dkeys : ('a, 'b) Redblackmap.dict -> 'a list
   
+  val findSome : ('a -> 'b option) -> 'a list -> 'b option
   val first_n : int -> 'a list -> 'a list
   val part_n : int -> 'a list -> ('a list * 'a list)
   val number_list : int -> 'a list -> (int * 'a) list

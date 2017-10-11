@@ -200,6 +200,7 @@ fun fea_of_goal (asl,w) =
     mk_fast_set Int.compare (map hash_fea (mk_string_set (w_sl @ asl_sl2)))
   end
   handle _ => raise ERR "fea_of_goal" (string_of_goal (asl,w))
-    
+
+fun fea_of_gl gl = mk_fast_set Int.compare (List.concat (map fea_of_goal gl))
 
 end (* struct *)

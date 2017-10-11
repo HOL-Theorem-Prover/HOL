@@ -36,6 +36,7 @@ val hhs_record_dir   = tactictoe_dir ^ "/record_log"
 val hhs_open_dir     = tactictoe_dir ^ "/open"
 val hhs_succrate_dir = tactictoe_dir ^ "/succrate"
 val hhs_mdict_dir   = tactictoe_dir ^ "/mdict"
+val hhs_astar_dir   = tactictoe_dir ^ "/astar"
 
 fun hide_out f x = 
   hide_in_file (hhs_code_dir ^ "/" ^ current_theory () ^ "_hide_out") f x
@@ -90,6 +91,13 @@ fun is_reserved s =
 (* --------------------------------------------------------------------------
    List
    -------------------------------------------------------------------------- *)
+
+fun findSome f l = case l of
+    [] => NONE
+  | a :: m => 
+    let val r = f a in 
+      if isSome r then r else findSome f m
+    end
 
 fun first_n n l =
   if n <= 0 orelse null l
@@ -421,6 +429,7 @@ fun split_string s1 s2 =
   in
     (implode rl1, implode rl2)
   end
+  handle _ => raise ERR "split_string" (s1 ^ " " ^ s2)
 
 fun rm_prefix s2 s1 = 
   let val (a,b) = split_string s1 s2 in
@@ -487,8 +496,22 @@ fun update_stacfea_ddict (feav as (lbl,fea)) =
    Metis
    -------------------------------------------------------------------------- *)
 
+fun dbfetch_of_string s =
+  let val (a,b) = split_string "Theory." s in 
+    if a = current_theory ()
+    then String.concatWith " " ["DB.fetch",mlquote a,mlquote b] 
+    else s
+  end
+
 val mdict_glob = ref (dempty String.compare)
 val negmdict_glob = ref (dempty String.compare)
+
+(* --------------------------------------------------------------------------
+   Astar
+   -------------------------------------------------------------------------- *)
+
+val hhs_astar = ref (dempty (list_compare Int.compare))
+val hhs_astar_cthy = ref (dempty (list_compare Int.compare))
 
 (* --------------------------------------------------------------------------
    The following structures should 
@@ -503,7 +526,9 @@ fun clean_feadata () =
   hhs_ddict := dempty goal_compare;
   hhs_ndict := dempty String.compare;
   mdict_glob := dempty String.compare;
-  negmdict_glob := dempty String.compare
+  negmdict_glob := dempty String.compare;
+  hhs_astar := dempty (list_compare Int.compare);
+  hhs_astar_cthy := dempty (list_compare Int.compare)
   )
 
 end (* struct *)

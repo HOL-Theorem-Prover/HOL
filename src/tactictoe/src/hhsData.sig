@@ -13,4 +13,7 @@ sig
   val export_feavl : string -> feav_t list -> unit
   val import_feavl : string list -> feav_t list
 
+  val export_astar : string -> unit
+  val import_astar : string list -> unit
+
 end

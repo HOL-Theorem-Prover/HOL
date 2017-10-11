@@ -9,7 +9,7 @@
 structure hhsPredict :> hhsPredict =
 struct
 
-open HolKernel Abbrev hhsTools hhsTools
+open HolKernel Abbrev hhsTools hhsTools hhsSetup
 
 val ERR = mk_HOL_ERR "hhsPredict"
 
@@ -55,9 +55,9 @@ fun knn_self_distance symweight fea =
 
 fun knn_distance symweight dict_o fea_p =
   let 
-    val fea     = inter_dict dict_o fea_p
+    val fea_i   = inter_dict dict_o fea_p
     fun wf n    = dfind n symweight handle _ => raise ERR "knn_distance" ""
-    val weightl = map wf fea
+    val weightl = map wf fea_i
   in
     pow6_dist weightl
   end
@@ -66,17 +66,29 @@ fun knn_distance symweight dict_o fea_p =
    Internal predictions
    -------------------------------------------------------------------------- *)
 
+fun compare_score ((_,x),(_,y)) = Real.compare (y,x)
+
 (* A label can be predicted multiple times *)
 fun pre_knn symweight feal fea_o =
   let 
     val dict_o = dnew Int.compare (map (fn x => (x,())) fea_o)
     fun dist (lbl,fea_p) = (lbl, knn_distance symweight dict_o fea_p)
-    fun compare0 ((_,x),(_,y)) = Real.compare (y,x)
     val l0 = map dist feal
-    val l1 = dict_sort compare0 l0
+    val l1 = dict_sort compare_score l0
   in
     l1
   end
+ 
+(* Put features into the label *)  
+fun pre_knn_fea symweight feal fea_o =
+  let 
+    val dict_o = dnew Int.compare (map (fn x => (x,())) fea_o)
+    fun dist (lbl,fea) = ((lbl,fea), knn_distance symweight dict_o fea)
+    val l0 = map dist feal
+    val l1 = dict_sort compare_score l0
+  in
+    l1
+  end  
 
 (* eliminate duplicates with the same tactic string *)    
 fun stacknn symweight n feal fea_o =
@@ -97,6 +109,25 @@ fun thmknn symweight n feal fea_o =
     first_n n l2
   end    
 
+fun astar_average n (tot,d) l = case l of
+    []          => tot / d
+  | b :: m => 
+    if b 
+    then astar_average (n + 1.0) (tot        , d + 1.0/n) m   
+    else astar_average (n + 1.0) (tot + 1.0/n, d + 1.0/n) m
+ 
+fun preastarknn symweight n feal fea_o = 
+  map fst (first_n n (pre_knn_fea symweight feal fea_o))
+
+fun astarknn symweight n feal fea_o =
+  let 
+    val l1 = pre_knn symweight feal fea_o
+    val l2 = map fst (first_n n l1)
+  in
+    if null l2 
+    then 0.0
+    else (!hhs_astar_coeff) * (astar_average 1.0 (0.0,0.0) l2)
+  end
 
 (* --------------------------------------------------------------------------
    External executables

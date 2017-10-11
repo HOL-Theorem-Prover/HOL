@@ -14,7 +14,8 @@ include Abbrev
   val export_mdict : string -> unit
   
   (* depends on mdict *)
-  val solved_by_metis : int -> real -> goal -> bool
+  val predict_for_metis : int -> goal -> string list
+  val solved_by_metis   : int -> real -> goal -> bool
   
   (* search *)
   val stactime_dict : (string, real) Redblackmap.dict ref
@@ -27,12 +28,6 @@ include Abbrev
   val init_thml_glob : unit -> unit
   val add_accept : 
     (string, tactic) Redblackmap.dict ref ->
-    goal * (lbl_t * real) list -> 
-    goal * (lbl_t * real) list
-  
-  val addpred_stac :
-    (string, tactic) Redblackmap.dict ref ->
-    (goal -> string list) ref -> 
     goal * (lbl_t * real) list -> 
     goal * (lbl_t * real) list
 

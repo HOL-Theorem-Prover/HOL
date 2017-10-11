@@ -24,13 +24,15 @@ exception NoNextTac
    Search references
    -------------------------------------------------------------------------- *)
 
-fun empty_predictor (g:goal) = []
 val proofdict = ref (dempty Int.compare)
 val finproofdict = ref (dempty Int.compare)
-val tacdict_glob = ref (dempty String.compare)
-val minstepdict_glob = ref (dempty goal_compare)
+
 val thmpredictor_glob = ref (fn g => [])
-val stacpredictor_glob = ref empty_predictor
+val stacpredictor_glob = ref (fn g => [])
+val astarpredictor_glob = ref (fn gl => 0.0)
+
+val tacdict_glob = ref (dempty String.compare)
+
 val glob_timer = ref NONE
 
 (*
@@ -38,7 +40,6 @@ val goaldepth_dict = ref (dempty goal_compare)
 val update_goaldepth (goal,depth) =
   goaldepth_dict := dadd goal depth (!goaldepth_dict)
 *)
-
 (* --------------------------------------------------------------------------
    Cache
    -------------------------------------------------------------------------- *)
@@ -97,51 +98,13 @@ fun reset_timers () =
    A*-heurisitic
    -------------------------------------------------------------------------- *)
 
-fun minstep_cache g = dfind g (!minstepdict_glob) 
-  handle _ => (debug "Error: minstep"; NONE)
-
-fun firstPartial_n n l = 
-  if n <= 0 then [] else
-  case l of
-    [] => [] 
-  | NONE :: m => firstPartial_n n m
-  | SOME d :: m => d :: firstPartial_n (n-1) m
-
-fun average_real l = 
-  if null l
-  then (debug "Error: average_real"; 0.0)
-  else sum_real l / (Real.fromInt (length l))
-
-fun astar n g pred =
-  let 
-    val l0 = map (minstep_cache o #3 o fst) pred
-    val l1 = firstPartial_n n l0
-  in
-    average_real l1
-  end
-
-fun estimate_distance (depth,timedepth) (g,pred) =
+fun estimate_distance (depth,heuristic) (g,pred) =
   let
-    val width_coeff = ref 0.0 
-    val global_heuristic =
-      if !hhs_astar_flag
-      then astar_timer (astar (!hhs_astar_radius) g) pred 
-      else 0.0
-       
+    val width_coeff = ref 0.0  
     fun f (lbl as (stac,t,g1,gl1),_) =
       let
-        val cost = (!width_coeff) + 
-          (if !hhs_timedepth_flag then timedepth else Real.fromInt depth)
-        val heuristic = 
-          if !hhs_astar_flag then 
-            if g = g1
-            then (valOf (minstep_cache g) handle _ => global_heuristic)
-            else global_heuristic
-          else 0.0
-        val _ = width_coeff := (!width_coeff) +
-                (if !hhs_timedepth_flag 
-                 then !hhs_tactic_time 
-                 else !hhs_width_coeff)
+        val cost = (!width_coeff) + Real.fromInt depth
+        val _ = width_coeff := (!width_coeff) + !hhs_width_coeff
         val final_score = inv_succrate stac * (cost + heuristic)
       in
         (lbl,final_score)
@@ -149,6 +112,46 @@ fun estimate_distance (depth,timedepth) (g,pred) =
   in
     (g, map f pred)
   end
+  
+(* --------------------------------------------------------------------------
+   Pattern predictions
+   -------------------------------------------------------------------------- *)
+
+fun install_stac tacdict stac =
+  let 
+    val tac = hhsTimeout.timeOut (!hhs_tactic_time) tactic_of_sml stac 
+      handle e => (debug ("Warning: install_stac: " ^ stac); raise e)
+  in
+    tacdict := dadd stac tac (!tacdict)
+  end
+  
+fun addpred_stac tacdict thmpredictor (g,pred) =
+  if !hhs_stacpred_flag then
+    let 
+      (* 20 approximately corresponds to maximal width *)
+      val (al,bl) = part_n 20 pred 
+      val bl' = filter (not o is_pattern_stac o #1 o fst) bl
+      (* number of prediction is not flexible in thmpredictor *)
+      val thmls = 
+        String.concatWith " , " (map dbfetch_of_string (!thmpredictor_glob g))
+      fun inst_entry (lbl as (stac,a1,b1,c1),score) =
+        if is_pattern_stac stac 
+        then 
+          let 
+            val _ = debug_search ("instantiating: " ^ stac)
+            val new_stac = inst_stac thmls stac 
+          in
+            debug_search ("to: " ^ new_stac);
+            install_stac tacdict_glob new_stac;
+            SOME ((new_stac,a1,b1,c1),score)
+          end
+          handle _ => (debug "Warning: addpred_stac"; NONE)
+        else SOME (lbl,score)
+    in
+      (g, List.mapPartial inst_entry al @ bl')
+    end
+  else (g, pred)   
+  
   
 (* --------------------------------------------------------------------------
    Node creation and deletion
@@ -200,12 +203,14 @@ fun root_create_wrap g =
   let
     (* Predictions *)
     val pred = (!stacpredictor_glob) g
+    val cost = 0
+    val heuristic = (!astarpredictor_glob) [g]
     val (_,pred1) = 
       (
       add_accept tacdict_glob o
       add_metis tacdict_glob thmpredictor_glob o 
       stacpred_timer (addpred_stac tacdict_glob thmpredictor_glob) o
-      estimate_distance (0,0.0)
+      estimate_distance (cost,heuristic)
       ) 
         (g,pred)
   in
@@ -285,11 +290,22 @@ fun apply_stac pardict trydict_unref stac g =
     val tim = dfind stac (!stactime_dict) handle _ => (!hhs_tactic_time)
     val _ = count_try stac
     val _ = stac_counter := !stac_counter + 1
+    val istac =
+      if !hhs_stacpred_flag andalso is_pattern_stac stac 
+      then
+        let
+          val thml   = (!thmpredictor_glob) g
+          val thmls  = String.concatWith " , " (map dbfetch_of_string thml)
+          val rstac = inst_stac thmls stac
+        in
+          install_stac tacdict_glob rstac;
+          rstac
+        end  
+      else stac
     val tac = dfind stac (!tacdict_glob) 
-              handle _ => (debug ("SNH: apply_stac:" ^ stac); 
-                           raise ERR "apply_stac" stac)
-    val glo = dfind (stac,g) (!stacgoal_cache) 
-              handle _ => app_tac tim tac g
+      handle _ => (debug ("Error: apply_stac: " ^ stac); 
+                   raise ERR "apply_stac" stac)
+    val glo = dfind (stac,g) (!stacgoal_cache) handle _ => app_tac tim tac g
     val new_glo =
       case glo of
         NONE => NONE
@@ -413,7 +429,6 @@ fun node_create_gl tactime gl pid =
     val ((stac,_,_,_),_) = hd prev_predl
     val parchildren = #children prec
     val depth = #depth prec + 1
-    val timedepth = #timedepth prec + tactime
     
     fun add_pred g =
       if !hhs_cache_flag
@@ -428,13 +443,15 @@ fun node_create_gl tactime gl pid =
       else (g, (!stacpredictor_glob) g)
       
     val width = prev_predn - (length prev_predl)
-
+    val cost = depth + width
+    val heuristic = (!astarpredictor_glob) gl
+    
     val predlist0 =
       map (
           add_accept tacdict_glob o
           add_metis tacdict_glob thmpredictor_glob o 
           stacpred_timer (addpred_stac tacdict_glob thmpredictor_glob) o
-          estimate_distance (depth + width,timedepth) o 
+          estimate_distance (cost,heuristic) o 
           add_pred
           ) 
       gl
@@ -472,7 +489,7 @@ fun node_create_empty tactime pid =
    Search function. Modifies the proof state.
    -------------------------------------------------------------------------- *)
 
-fun init_search thmpredictor stacpredictor tacdict minstepdict g =
+fun init_search thmpredictor stacpredictor astarpredictor tacdict g =
   (
   (* global time-out *)
   glob_timer := SOME (Timer.startRealTimer ());
@@ -490,8 +507,8 @@ fun init_search thmpredictor stacpredictor tacdict minstepdict g =
   (* easier access to values *)
   stacpredictor_glob := predict_timer stacpredictor;
   thmpredictor_glob := thmpredict_timer thmpredictor;
+  astarpredictor_glob := astar_timer astarpredictor;
   tacdict_glob := tacdict;
-  minstepdict_glob := minstepdict;
   (* statistics *)
   reset_timers ();
   stac_counter := 0;
@@ -576,7 +593,7 @@ fun end_search () =
   debug_proof ("  node_crea time: " ^ Real.toString (!node_create_time));
   debug_proof ("    pred time: " ^ Real.toString (!predict_time));
   debug_proof ("    thmpred time: " ^ Real.toString (!thmpredict_time));
-  debug_proof ("    astar time: " ^ Real.toString (!astar_time));
+  debug_proof ("    astar time: " ^ Real.toString (!astar_time));   
   debug_proof ("    stacpred time: " ^ Real.toString (!stacpred_time));
   proofdict    := dempty Int.compare;
   finproofdict := dempty Int.compare;
