@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: Find first assumption matching pattern, give it to theorem tactic and remove it
+# key: qpat_x_assum
+# expand-env: ((yas-indent-line 'fixed))
+# --
+qpat_x_assum \`${1:term pattern}\` ${2:theorem tactic} $0

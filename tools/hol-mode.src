@@ -2308,4 +2308,9 @@ second is to show the new term.
    '("Start HOL - horizontal split" . hol-horizontal))
 
 (define-key global-map [menu-bar hol-menu hol-process hol-start]
-   '("Start HOL" . hol))
+  '("Start HOL" . hol))
+
+;; Support for snippet expansion, if yasnippet is installed.
+(when (require 'yasnippet nil 'noerror)
+  (let ((HOLsnippets (concat (getenv "HOLDIR") "/tools/yasnippets/")))
+    (setq yas-snippet-dirs (nconc yas-snippet-dirs (cons HOLsnippets '())))))
