@@ -751,13 +751,14 @@ fun new_let_thms thl = let_movement_thms := thl @ !let_movement_thms
 fun tyinfol() = TypeBasePure.listItems (TypeBase.theTypeBase());
 
 fun mkCSET () =
- let val CSET = ref (HOLset.empty
-                      (inv_img_cmp (fn {Thy,Name,Ty} => (Thy,Name))
-                              (pair_compare(String.compare,String.compare))))
-     fun inCSET t = HOLset.member(!CSET, dest_thy_const t)
-     fun addCSET c = (CSET := HOLset.add(!CSET, dest_thy_const c))
-     val _ = List.app
-               (List.app addCSET o TypeBasePure.constructors_of) (tyinfol())
+ let val CSET = (HOLset.empty
+                  (inv_img_cmp (fn {Thy,Name,Ty} => (Thy,Name))
+                          (pair_compare(String.compare,String.compare))))
+     fun add_const (c,CSET) = HOLset.add(CSET, dest_thy_const c)
+     fun add_tyinfo (tyinfo,CSET) =
+       List.foldl add_const CSET (TypeBasePure.constructors_of tyinfo)
+     val CSET = List.foldl add_tyinfo CSET (tyinfol())
+     fun inCSET t = HOLset.member(CSET, dest_thy_const t)
      fun constructed tm =
       let val (lhs,rhs) = dest_eq tm
       in aconv lhs rhs orelse
