@@ -2596,9 +2596,10 @@ For example, the following \simpset{} fragment will cause
 AC-normalisation of disjunctions
 \begin{hol}
 \begin{verbatim}
-   SSFRAG {ac = [(DISJ_ASSOC, DISJ_COMM)],
-           rewrs = [], filter = NONE, convs = [],
-           dprocs = [], congs = []}
+   SSFRAG {name = NONE,
+           convs = [], rewrs = [], congs = [],
+           filter = NONE, ac = [(DISJ_ASSOC, DISJ_COMM)],
+           dprocs = [] }
 \end{verbatim}
 \end{hol}
 The pair of provided theorems must state
@@ -2614,6 +2615,12 @@ above is bound to the \ML{} identifier \ml{DISJ\_ss}, its behaviour is
 demonstrated in the following example:
 \begin{session}
 \begin{alltt}
+>>__ load "simpLib";
+>>__ open simpLib;
+>>__ val DISJ_ss = SSFRAG {name = NONE,
+           convs = [], rewrs = [], congs = [],
+           filter = NONE, ac = [(DISJ_ASSOC, DISJ_COMM)],
+           dprocs = [] };
 >> SIMP_CONV (bool_ss ++ DISJ_ss) [] ``p /\ q \/ r \/ P z``;
 \end{alltt}
 \end{session}
