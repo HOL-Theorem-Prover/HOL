@@ -253,6 +253,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     p ("set -e");
     p (protect(fullPath [HOLDIR, "bin", "buildheap"]) ^
        (if polynothol then " --poly" else " --holstate="^protect(HOLSTATE)) ^
+       " --gcthreads=1" ^
        (if debug then " --dbg" else "") ^
        " " ^ String.concatWith " " (map protect files));
     p ("exit 0");
