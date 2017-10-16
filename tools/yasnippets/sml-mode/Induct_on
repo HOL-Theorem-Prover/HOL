@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: Perform induction on given variable
+# key: Induct_on
+# expand-env: ((yas-indent-line 'fixed))
+# --
+Induct_on \`$1\` $0

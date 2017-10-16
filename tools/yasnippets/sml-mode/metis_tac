@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: Apply first-order prover metis to current goal
+# key: metis_tac
+# expand-env: ((yas-indent-line 'fixed))
+# --
+metis_tac [$1] $0
