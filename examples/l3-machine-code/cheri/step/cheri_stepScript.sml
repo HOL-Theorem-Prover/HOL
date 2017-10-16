@@ -537,10 +537,14 @@ val cap_ok =
        (63 >< 0) ^st.c_pcc.base + (63 >< 0) ^st.c_pcc.length)``,
    ``(1 >< 1) ^st.c_pcc.perms = 1w : word32``,
    ``~(vaddr <+ capr0.base)``,
-   ``~(vaddr + 1w >+ capr0.base + capr0.length)``,
-   ``~(vaddr + 4w >+ capr0.base + capr0.length)``,
-   ``~(vaddr + 8w >+ capr0.base + capr0.length)``,
-   ``~(vaddr + w2w (accesslength : word3) + 1w >+ capr0.base + capr0.length)``,
+   ``~((63 >< 0) (vaddr : word64) + (1w : 65 word) >+
+       (63 >< 0) capr0.base + (63 >< 0) capr0.length)``,
+   ``~((63 >< 0) (vaddr : word64) + (4w : 65 word) >+
+       (63 >< 0) capr0.base + (63 >< 0) capr0.length)``,
+   ``~((63 >< 0) (vaddr : word64) + (8w : 65 word) >+
+       (63 >< 0) capr0.base + (63 >< 0) capr0.length)``,
+   ``~((63 >< 0) (vaddr : word64) + (2 >< 0) (accesslength : word3) +
+       (1w : 65 word) >+ (63 >< 0) capr0.base + (63 >< 0) capr0.length)``,
    ``~(needalign /\ ~aligned 1 (vaddr : word64))``,
    ``~(needalign /\ ~aligned 2 (vaddr : word64))``,
    ``~(needalign /\ ~aligned 3 (vaddr : word64))``,
