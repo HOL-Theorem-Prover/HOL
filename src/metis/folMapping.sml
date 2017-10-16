@@ -317,7 +317,7 @@ local
     THENR hide_literal;
 in
   fun initialize_lits th =
-    if concl th = F then ([], th) else (strip_disj (concl th), INIT th);
+    if aconv (concl th) F then ([], th) else (strip_disj (concl th), INIT th);
 end;
 
 local
@@ -500,7 +500,7 @@ fun hol_term_to_fol (parm : parameters) (tmV, tyV) =
       if not with_types then tm2fol tm
       else mlibTerm.Fn (":", [tm2fol tm, hol_type_to_fol tyV (type_of tm)])
     and tm2fol tm =
-      if mem tm tmV then mlibTerm.Var (fst (dest_var tm))
+      if op_mem aconv tm tmV then mlibTerm.Var (fst (dest_var tm))
       else if higher_order then
         if is_comb tm then
           let val (a, b) = dest_comb tm
@@ -510,7 +510,8 @@ fun hol_term_to_fol (parm : parameters) (tmV, tyV) =
       else
         let
           val (f, args) = strip_comb tm
-          val () = assert (not (mem f tmV)) (ERR "hol_term_to_fol" "ho term")
+          val () = assert (not (op_mem aconv f tmV))
+                          (ERR "hol_term_to_fol" "ho term")
         in
           mlibTerm.Fn (dest_varconst f, map tmty2fol args)
         end

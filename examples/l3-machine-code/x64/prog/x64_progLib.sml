@@ -147,7 +147,7 @@ in
                                       [mk_x64_mem64 (a, d)]
                               |  _ => err ()
                             )
-                       | (l, t) => (t = MEM_tm orelse err ()
+                       | (l, t) => (t ~~ MEM_tm orelse err ()
                                     ; List.map mk_x64_MEM l)
                 in
                    (p, l @ q)

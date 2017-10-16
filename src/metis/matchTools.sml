@@ -189,7 +189,7 @@ fun vunifyl (tmvarP, tyvarP) =
       | unify sub ((tm, tm') :: work) =
       unify' sub work (pinst sub tm) (pinst sub tm')
     and unify' sub work tm tm' =
-      if tm = tm' then unify sub work
+      if aconv tm tm' then unify sub work
       else if tmvarP tm then
         if tmvarP tm' andalso varname tm = varname tm' then
           unify (unify_type sub [type_of tm, type_of tm']) work

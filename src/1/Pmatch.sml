@@ -111,7 +111,7 @@ fun fresh_constr ty_match (colty:hol_type) gv c =
 
 fun mk_groupl literal rows =
   let fun func (row as ((prefix, p::rst), rhs)) (in_group,not_in_group) =
-               if (is_var literal andalso is_var p) orelse p = literal
+               if (is_var literal andalso is_var p) orelse aconv p literal
                then if is_var literal
                     then (((prefix,p::rst), rhs)::in_group, not_in_group)
                     else (((prefix,rst), rhs)::in_group, not_in_group)
@@ -390,8 +390,9 @@ fun mk_case0_heu (heu : pmatch_heuristic) ty_info ty_match FV range_ty =
            val _ = if is_lit_col then () else
                    mk_case_fail "case expression mixes literals with non-literals."
            val other_var = fresh_var pty
-           val constructors = rev (mk_set (rev (filter (not o is_var) col0)))
-                              @ [other_var]
+           val constructors =
+               rev (op_mk_set aconv (rev (filter (not o is_var) col0))) @
+               [other_var]
            val arb = mk_arb range_ty
            val switch_tm = mk_switch_tm fresh_var u arb constructors
            val nrows = flatten (map (expandl constructors pty) rows)
@@ -483,25 +484,50 @@ end
      Repeated variable occurrences in a pattern are not allowed.
  ---------------------------------------------------------------------------*)
 
+fun inc d k = case Binarymap.peek(d,k) of NONE => Binarymap.insert(d,k,1)
+                                        | SOME n => Binarymap.insert(d,k,n+1);
+
 fun FV_multiset tm =
-   case dest_term tm
-     of VAR v => [mk_var v]
-      | CONST _ => []
-      | COMB(Rator,Rand) => FV_multiset Rator @ FV_multiset Rand
-      | LAMB(Bvar,Body) => Lib.subtract (FV_multiset Body) [Bvar]
-                           (* raise ERR"FV_multiset" "lambda"; *)
+  let
+    datatype witem = TM of term | RESET of term * int
+    fun recurse d wlist =
+      case wlist of
+          [] => d
+        | TM tm :: rest =>
+          (case dest_term tm of
+               VAR _ => recurse (inc d tm) rest
+             | CONST _ => recurse d rest
+             | COMB(Rator,Rand) => recurse d (TM Rator :: TM Rand :: rest)
+             | LAMB(Bvar,Body) =>
+               let
+                 val c0 = case Binarymap.peek(d,Bvar) of
+                              NONE => 0
+                            | SOME i => i
+               in
+                 recurse d (TM Body :: RESET(Bvar,c0) :: rest)
+               end)
+        | RESET (v,c) :: rest => recurse (Binarymap.insert(d,v,c)) rest
+  in
+    recurse (Binarymap.mkDict Term.compare) [TM tm]
+  end
 
 fun no_repeat_vars pat =
- let fun check [] = true
-       | check (v::rst) =
-         if Lib.op_mem aconv v rst
-         then raise ERR"no_repeat_vars"
-              (strcat(quote(#1(dest_var v)))
-                     (strcat" occurs repeatedly in the pattern "
-                      (quote(Hol_pp.term_to_string pat))))
-         else check rst
- in check (FV_multiset pat)
- end;
+  let
+    fun check d =
+      let
+        val repeats =
+            Binarymap.foldl (fn (k,v,acc) => if v > 1 then k::acc else acc) [] d
+      in
+        if null repeats then true
+        else
+          raise ERR"no_repeat_vars"
+              (quote(#1(dest_var (hd repeats))) ^
+               " occurs repeatedly in the pattern " ^
+               quote(Hol_pp.term_to_string pat))
+      end
+  in
+    check (FV_multiset pat)
+  end;
 
 
 (*---------------------------------------------------------------------------
@@ -526,14 +552,14 @@ fun subst_to_renaming (s : (term, term) subst) : (term * string) list =
 fun distinguish fvs pat_tm_mats =
     snd (List.foldr (fn ({redex,residue}, (vs,done)) =>
                          let val residue' = variant vs residue
-                             val vs' = Lib.insert residue' vs
+                             val vs' = op_insert aconv residue' vs
                          in (vs', {redex=redex, residue=residue'} :: done)
                          end)
                     (fvs,[]) pat_tm_mats)
 
 fun reduce_mats pat_tm_mats =
     snd (List.foldl (fn (mat as {redex,residue}, (vs,done)) =>
-                         if mem redex vs then (vs, done)
+                         if op_mem aconv redex vs then (vs, done)
                          else (redex :: vs, mat :: done))
                     ([],[]) pat_tm_mats)
 
@@ -568,8 +594,8 @@ fun mk_case2 v (exp, plist) =
              | mk_switch ((p,R)::rst) =
                   mk_bool_case(R, mk_switch rst, mk_eq(v,p))
            val switch = mk_switch plist
-       in if v = exp then switch
-                     else mk_literal_case(mk_abs(v,switch),exp)
+       in if aconv v exp then switch
+          else mk_literal_case(mk_abs(v,switch),exp)
        end;
 
 fun mk_case tybase (exp, plist) =
@@ -651,35 +677,48 @@ fun is_case1 tybase M =
 
 fun is_case tybase M = is_literal_case M orelse is_case1 tybase M
 
+fun tm_null_intersection l1 l2 =
+  case (l1, l2) of
+      ([], _) => true
+    | (_, []) => true
+    | (tm::tms, _) => not (op_mem aconv tm l2) andalso
+                      tm_null_intersection tms l2
+
 local fun dest tybase (pat,rhs) =
   let val patvars = free_vars pat
-  in if is_case tybase rhs
-     then let val (case_tm,exp,clauses) = dest_case tybase rhs
-              val (pats,rhsides) = unzip clauses
-          in if is_eq exp
-             then let val (v,e) = dest_eq exp
-                      val fvs = free_vars v
-                      (* val theta = fst (Term.match_term v e) handle HOL_ERR _ => [] *)
-                  in if null (subtract fvs patvars) andalso null (free_vars e)
-                        andalso is_var v
-                        (* andalso null_intersection fvs (free_vars (hd rhsides)) *)
-                     then flatten
-                            (map (dest tybase)
-                               (zip [subst [v |-> e] pat, pat] rhsides))
-                     else [(pat,rhs)]
-                  end
-             else let val fvs = free_vars exp
-                  in if null (subtract fvs patvars) andalso
-                        null_intersection fvs (free_varsl rhsides)
-                     then flatten
-                            (map (dest tybase)
-                               (zip (map (fn p =>
-                                           subst (fst (Term.match_term exp p)) pat) pats)
-                                    rhsides))
-                     else [(pat,rhs)]
-                  end
-                  handle HOL_ERR _ => [(pat,rhs)] (* catch from match_term *)
-          end
+  in if is_case tybase rhs then
+       let
+         val (case_tm,exp,clauses) = dest_case tybase rhs
+         val (pats,rhsides) = unzip clauses
+       in
+         if is_eq exp then
+           let
+             val (v,e) = dest_eq exp
+             val fvs = free_vars v
+             (* val theta = fst (Term.match_term v e) handle HOL_ERR _ => [] *)
+           in
+             if null (op_set_diff aconv fvs patvars) andalso null (free_vars e)
+                andalso is_var v
+                (* andalso null_intersection fvs (free_vars (hd rhsides)) *)
+             then flatten
+                    (map (dest tybase) (zip [subst [v |-> e] pat, pat] rhsides))
+             else [(pat,rhs)]
+           end
+         else
+           let
+             val fvs = free_vars exp
+           in
+             if null (op_set_diff aconv fvs patvars) andalso
+                tm_null_intersection fvs (free_varsl rhsides)
+             then flatten
+                    (map (dest tybase)
+                         (zip (map (fn p =>
+                                subst (fst (Term.match_term exp p)) pat) pats)
+                              rhsides))
+             else [(pat,rhs)]
+           end
+           handle HOL_ERR _ => [(pat,rhs)] (* catch from match_term *)
+       end
      else [(pat,rhs)]
   end
 in
@@ -707,17 +746,20 @@ fun strip_case tybase M =
   end
   else strip_case1 tybase M
 
-fun rename_top_bound_vars ren cs = (
+fun rename_top_bound_vars ren cs =
  case dest_term cs of
     VAR _ => cs
   | CONST _ => cs
-  | COMB (t1, t2) => mk_comb (rename_top_bound_vars ren t1, rename_top_bound_vars ren t2)
+  | COMB (t1, t2) =>
+      mk_comb (rename_top_bound_vars ren t1, rename_top_bound_vars ren t2)
   | LAMB (v, t) =>
-    let val cs' = rename_bvar (Lib.assoc v ren) cs handle HOL_ERR _ => cs
+      let
+        val cs' = rename_bvar (op_assoc aconv v ren) cs handle HOL_ERR _ => cs
         val (v', t') = dest_abs cs'
         val t'' = rename_top_bound_vars ren t'
-    in mk_abs (v', t'') end
-);
+      in
+        mk_abs (v', t'')
+      end;
 
 local fun paired1{lhs,rhs} = (lhs,rhs)
       and paired2{Rator,Rand} = (Rator,Rand)
@@ -776,10 +818,10 @@ fun mk_functional thy eqs =
            (Feedback.HOL_WARNING "Pmatch" "mk_functional" "SHOULD NOT HAPPEN! RENAMING CASE_TM FAILED!";
             case_tm)
      (* Ensure that the case test variable is fresh for the rest of the case *)
-     val avs = subtract (all_vars case_tm') [a]
+     val avs = op_set_diff aconv (all_vars case_tm') [a]
      val a' = variant avs a
-     val case_tm'' = if a' = a then case_tm'
-                               else subst ([a |-> a']) case_tm'
+     val case_tm'' = if aconv a' a then case_tm'
+                     else subst ([a |-> a']) case_tm'
  in
    {functional = list_mk_abs ([f,a'], case_tm''),
     pats = patts3}

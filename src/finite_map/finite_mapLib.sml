@@ -45,10 +45,11 @@ local
           val f2 = (rand o rator) c
           val f1 = (rand o rator o rator) c
 
-          val (kL2, inkL2) = (snd (Lib.pluck (fn x => x = k) kL2), true) handle HOL_ERR _ =>
-                             (kL2, false)
-          val inkL = mem k kL
-          val kL2 = if inkL then k::kL2 else kL2;
+          val (kL2, inkL2) =
+              (snd (Lib.pluck (fn x => x ~~ k) kL2), true)
+              handle HOL_ERR _ => (kL2, false)
+          val inkL = tmem k kL
+          val kL2 = if inkL then k::kL2 else kL2
           val imp_thm = if inkL then fmap_EQ_UPTO___FUPDATE_SING else
                if inkL2 then
                   fmap_EQ_UPTO___FUPDATE_BOTH

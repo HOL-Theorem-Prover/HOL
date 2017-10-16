@@ -85,8 +85,9 @@ val Q = mk_var("Q",bool)
 
 val (g1:goal) = ([boolSyntax.mk_conj(P,Q)], boolSyntax.mk_neg(P))
 
-val res1 = test_assert (equal [([Q,P],boolSyntax.mk_neg(P))] o #1)
-  (match1_tac test1 g1)
+val res1 =
+    test_assert (goals_eq [([Q,P],boolSyntax.mk_neg(P))] o #1)
+                (match1_tac test1 g1)
 
 val test2 =
   [
@@ -95,8 +96,7 @@ val test2 =
     ,([],(K ALL_TAC):mg_tactic)
   ]
 
-val res1' = test_assert (equal [g1] o #1)
-  (first_match_tac test2 g1)
+val res1' = test_assert (goals_eq [g1] o #1) (first_match_tac test2 g1)
 
 val g2 = ([``x:bool = if P then x' else x''``, ``x:bool``],``yi = if x then x'' else (ARB:bool)``)
 
@@ -136,7 +136,7 @@ val g4 = (
    ``f (y:num) = 4n``],
   ``(!(a:num) g (b:num) z1 z2. (f a = z1) ==> (g b = z2) ==> z1 + z2 < 10n) ==> 3 + 4 < 10n``)
 
-val res4 = test_assert (equal ``3 + 4 < 10n ==> 3 + 4 < 10n`` o #2 o hd o #1)
+val res4 = test_assert (aconv ``3 + 4 < 10n ==> 3 + 4 < 10n`` o #2 o hd o #1)
   (match_tac test4 g4)
 
 in end

@@ -367,12 +367,13 @@ end;
    val t = ``((TAKE n l)++l2++x::l3++(DROP n l))``
    val t = ``((TAKE n l)++(DROP m l2)++l2++x::l3++(TAKE m l2)++(DROP n l))``
 *)
+fun tmpair_eq (t1,t2) (ta,tb) = t1 ~~ ta andalso t2 ~~ tb
 fun PERM_TAKE_DROP t =
    let
       val (_, ls) = strip_perm_list t;
       val drop_ls = mapfilter listSyntax.dest_drop ls
       val take_ls = mapfilter listSyntax.dest_take ls
-      val common = first (fn e => mem e drop_ls) take_ls;
+      val common = first (fn e => op_mem tmpair_eq e drop_ls) take_ls;
 
       val common_t = listSyntax.mk_append (listSyntax.mk_take common, listSyntax.mk_drop common);
       val thm0 = PERM_SPLIT common_t t;

@@ -36,7 +36,7 @@ val _ = pr "Testing arith on ground ctxt"
 val _ = let
   val (res, vfn) = ASM_SIMP_TAC arith_ss [] ([``2 <= 0``], ``F``)
 in
-  if null res andalso concl (vfn []) = F then OK()
+  if null res andalso aconv (concl (vfn [])) F then OK()
   else die "FAILED!\n"
 end
 
@@ -63,7 +63,7 @@ fun TRUE_ARITH nm t =
     val result = SOME (Arith.ARITH_CONV t) handle HOL_ERR _ => NONE
   in
     case result of
-        SOME th => if rhs (concl th) = boolSyntax.T then OK()
+        SOME th => if aconv (rhs (concl th)) boolSyntax.T then OK()
                    else die "FAILED!"
       | NONE => die "FAILED!"
   end
@@ -106,7 +106,7 @@ val _ = let
   val result =
       SIMP_CONV (bool_ss ++ CONJ_ss ++ numSimps.ARITH_ss) [] t
 in
-  if null (hyp result) andalso rhs (concl result) = boolSyntax.F then
+  if null (hyp result) andalso aconv (rhs (concl result)) boolSyntax.F then
     OK()
   else die "FAILED!\n"
 end
@@ -140,13 +140,16 @@ in
   else die "FAILED!\n"
 end
 
-val _ = tprint "Testing MOD_ss with EXP"
-val _ = let
-  val t = ``((x MOD 3 + 10) ** 10 + 10) MOD 3``
-  val result = SIMP_CONV ss [] t
-in
-  if aconv (rhs (concl result)) ``((x + 1) ** 10 + 1) MOD 3`` then OK()
-  else die "FAILED!\n"
-end
+val _ = List.app convtest [
+  ("Testing MOD_ss with EXP", SIMP_CONV ss [],
+   “((x MOD 3 + 10) ** 10 + 10) MOD 3”, “((x + 1) ** 10 + 1) MOD 3”),
+  ("AND_CONV(1)", Boolconv.AND_CONV, “(\x. x) p /\ (\y. y) p”,
+   “(\a:bool. a) p”),
+  ("OR_CONV(1)", Boolconv.OR_CONV, “(\x. x) p \/ (\y. y) p”, “(\a:bool. a) p”),
+  ("IMP_CONV(1)", Boolconv.IMP_CONV, “(\x. x) p ==> (\y. y) p”, “T”),
+  ("BEQ_CONV(1)", Boolconv.BEQ_CONV, “(\x. x) (p:bool) = (\y. y) p”, “T”),
+  ("COND_CONV(1)", Boolconv.COND_CONV, “if b then (\x:'a. x) else (\y. y)”,
+   “\a:'a. a”)
+];
 
 val _ = Process.exit Process.success

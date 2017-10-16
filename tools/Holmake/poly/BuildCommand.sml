@@ -251,9 +251,9 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   in
     p "#!/bin/sh";
     p ("set -e");
-    p (protect(fullPath [HOLDIR, "bin", "buildheap"]) ^ " --gcthreads=1 " ^
-       (if polynothol then "--poly" else "--holstate="^protect(HOLSTATE)) ^
-       (if debug then "--dbg" else "") ^
+    p (protect(fullPath [HOLDIR, "bin", "buildheap"]) ^
+       (if polynothol then " --poly" else " --holstate="^protect(HOLSTATE)) ^
+       (if debug then " --dbg" else "") ^
        " " ^ String.concatWith " " (map protect files));
     p ("exit 0");
     TextIO.closeOut out;

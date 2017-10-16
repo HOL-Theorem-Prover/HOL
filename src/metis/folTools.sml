@@ -179,9 +179,9 @@ fun mk_vthm th =
 fun list_mk_conj' [] = T
   | list_mk_conj' tms = list_mk_conj tms;
 
-fun strip_disj' tm = if tm = F then [] else strip_disj tm;
+fun strip_disj' tm = if aconv tm F then [] else strip_disj tm;
 
-fun CONJUNCTS' th = if concl th = T then [] else CONJUNCTS th;
+fun CONJUNCTS' th = if aconv (concl th) T then [] else CONJUNCTS th;
 
 fun GSPEC' th =
   let
@@ -323,13 +323,15 @@ val EQ_COMB = prove
 val EQ_EXTENSION = CONV_RULE CNF_CONV EXT_POINT_DEF;
 
 local
+  fun tmi_eq (tm1,i1) (tm2,i2:int) = aconv tm1 tm2 andalso i1 = i2
+
   fun break tm (res, subtms) =
     let
       val (f, args) = strip_comb tm
       val n = length args
       val f = if is_const f then const_scheme_n n f else f
     in
-      (insert (f, n) res, args @ subtms)
+      (op_insert tmi_eq (f, n) res, args @ subtms)
     end;
 
   fun boolify (tm, len) =
@@ -402,7 +404,7 @@ in
         let
           val atoms = flatten (map (thm_atoms o snd o snd) axioms)
         in
-          if not (exists (equal eq_tm o fst) (rels_in_atoms atoms)) then []
+          if not (exists (aconv eq_tm o fst) (rels_in_atoms atoms)) then []
           else if higher_order then eq_ho
           else eq_fo @ substitution_thms consts (relfuns_in_atoms atoms)
         end
@@ -496,7 +498,7 @@ fun FOL_SOLVE solv lmap lim =
     fn query =>
     let
       val q =
-        if snd query = [F] then [mlibTerm.False]
+        if ListPair.allEq (uncurry aconv) (snd query, [F]) then [mlibTerm.False]
         else hol_literals_to_fol (#mapping_parm parm) query
       val () = save_fol_problem (thms, hyps, q)
       val lift = fol_thms_to_hol (#mapping_parm parm) (C assoc axioms) query

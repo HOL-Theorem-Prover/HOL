@@ -96,14 +96,15 @@ val truth_tm = T
 fun check_var var conj =
   if is_eq conj then let
     val (arg1, arg2) = dest_eq conj in
-      if (mem arg1 (free_vars arg2) orelse
-          mem arg2 (free_vars arg1)) then
+      if (op_mem aconv arg1 (free_vars arg2) orelse
+          op_mem aconv arg2 (free_vars arg1))
+      then
          failwith "check_var - Duplicate values" else
-      if (arg1 = var) then arg2 else
-      if (arg2 = var) then arg1
+      if aconv arg1 var then arg2 else
+      if aconv arg2 var then arg1
       else failwith "check_var - No value" end
-  else if is_neg conj andalso dest_neg conj = var then false_tm
-  else if var = conj then truth_tm
+  else if is_neg conj andalso aconv (dest_neg conj) var then false_tm
+  else if aconv var conj then truth_tm
   else failwith "check_var - No value";
 
 fun find_var_value var =
@@ -425,11 +426,11 @@ let val P = Term.mk_var("P", bool)
  end;
 
 fun ENSURE_EQ_CONV var tm =
-   if (is_eq tm)
-   then if (lhs tm = var) then REFL tm else SYM_CONV tm
-   else if is_neg tm
-        then SPEC (dest_neg tm) EQF_INTRO_THM
-        else SPEC tm EQT_INTRO_THM;
+   if is_eq tm then
+     if aconv (lhs tm) var then REFL tm else SYM_CONV tm
+   else if is_neg tm then
+     SPEC (dest_neg tm) EQF_INTRO_THM
+   else SPEC tm EQT_INTRO_THM;
 
 (*-------------------------------------------------------------------
  * ELIM_EXISTS_CONV :

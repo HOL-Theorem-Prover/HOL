@@ -24,7 +24,7 @@ val CONJ_ACI =
     let fun FIND_CONJS thl tm =
 	let val (l,r) = dest_conj tm
 	in CONJ (FIND_CONJS thl l) (FIND_CONJS thl r)
-	end handle HOL_ERR _ => first (fn th => concl th = tm) thl
+	end handle HOL_ERR _ => first (fn th => aconv (concl th) tm) thl
     in fn tm =>
 	let val (l,r) = dest_eq tm
 	    val thl = CONJUNCTS(ASSUME l)
@@ -84,9 +84,9 @@ val DISTRIB_CONV =
             fun DISTRIB2_QCONV tm =
               let val (xop,r) = dest_comb tm
                   val (oper,l) = dest_comb xop
-              in if oper = lop
+              in if aconv oper lop
                  then COMB2_QCONV (RAND_CONV DISTRIB2_QCONV) DISTRIB2_QCONV tm
-                 else if oper = hop
+                 else if aconv oper hop
                       then ((COMB2_QCONV (RAND_CONV DISTRIB2_QCONV)
                                  DISTRIB2_QCONV) THENQC DISTRIB1_QCONV) tm
                       else ERR("DISTRIB2_QCONV","")

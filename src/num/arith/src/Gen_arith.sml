@@ -94,8 +94,9 @@ fun non_presburger_subterms tm =
        (is_great tm) orelse (is_geq tm) orelse
        (is_plus tm) orelse (is_minus tm) orelse
        (is_linear_mult tm handle _ => false)
-    then Lib.union (non_presburger_subterms (arg1 tm))
-                   (non_presburger_subterms (arg2 tm))
+    then Lib.op_union aconv
+                      (non_presburger_subterms (arg1 tm))
+                      (non_presburger_subterms (arg2 tm))
     else if (is_num_const tm) then []
     else [tm]);
 

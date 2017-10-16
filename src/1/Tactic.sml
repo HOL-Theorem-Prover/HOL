@@ -258,8 +258,7 @@ fun X_GEN_TAC x1 : tactic =
          then let
                  val (Bvar, Body) = dest_forall w
               in
-                 if Bvar = x1
-                    then ([(asl, Body)], sing (GEN x1))
+                 if aconv Bvar x1 then ([(asl, Body)], sing (GEN x1))
                  else ([(asl, subst [Bvar |-> x1] Body)],
                        sing (fn th =>
                                let
@@ -510,7 +509,7 @@ fun STRIP_GOAL_THEN ttac = FIRST [GEN_TAC, CONJ_TAC, DISCH_THEN ttac]
 
 fun FILTER_GEN_TAC tm : tactic =
    fn (asl, w) =>
-      if is_forall w andalso tm <> fst (dest_forall w)
+      if is_forall w andalso not (aconv tm (fst (dest_forall w)))
          then GEN_TAC (asl, w)
       else raise ERR "FILTER_GEN_TAC" ""
 
@@ -569,10 +568,7 @@ fun REFL_TAC (asl, g) =
       val (lhs, rhs) = with_exn dest_eq g (ERR "REFL_TAC" "not an equation")
       val asms = itlist ADD_ASSUM asl
    in
-      if lhs = rhs
-         then ([], K (asms (REFL lhs)))
-      else if aconv lhs rhs
-         then ([], K (asms (ALPHA lhs rhs)))
+      if aconv lhs rhs then ([], K (asms (REFL lhs)))
       else raise ERR "REFL_TAC" "lhs and rhs not alpha-equivalent"
    end
 
@@ -1056,13 +1052,14 @@ fun HINT_EXISTS_TAC g =
     val (v,c') = dest_exists c
     val (vs,c') = strip_exists c'
     fun hyp_match c h =
-      if exists (C mem vs) (free_vars c) then fail () else match_term c h
+      if exists (C (op_mem aconv) vs) (free_vars c) then fail ()
+      else match_term c h
     val (subs,_) = tryfind (C tryfind hs o hyp_match) (strip_conj c')
     val witness =
       case subs of
          [] => v
         |[{redex = u, residue = t}] =>
-            if u = v then t else failwith "HINT_EXISTS_TAC not applicable"
+            if aconv u v then t else failwith "HINT_EXISTS_TAC not applicable"
         |_ => failwith "HINT_EXISTS_TAC not applicable"
   in
     EXISTS_TAC witness g
@@ -1089,12 +1086,13 @@ fun part_match_exists_tac selfn tm (g as (_,w)) =
     val ((tms0,tmfixed),_) = raw_match [] constvars c tm ([], [])
     val tms =
         tms0 @ HOLset.foldl
-                 (fn (v,acc) => if Lib.mem v vs then {redex=v,residue=v}::acc
-                                else acc)
+                 (fn (v,acc) =>
+                     if op_mem aconv v vs then {redex=v,residue=v}::acc
+                     else acc)
                  [] tmfixed
     val xs = map #redex tms
     val ys = map #residue tms
-    fun sorter ls = xs@(List.filter(not o Lib.C Lib.mem xs)ls)
+    fun sorter ls = xs@(List.filter(not o Lib.C (op_mem aconv) xs)ls)
   in
     CONV_TAC(RESORT_EXISTS_CONV sorter) >> map_every exists_tac ys
   end g

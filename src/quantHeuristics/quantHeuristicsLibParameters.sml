@@ -108,7 +108,7 @@ let
    val t1 = pairSyntax.mk_fst v;
    val t2 = pairSyntax.mk_snd v;
 
-   val do_split = not (null (find_terms (fn t' => (t' = t1) orelse (t' = t2)) t))
+   val do_split = not (null (find_terms (fn t' => t' ~~ t1 orelse t' ~~ t2) t))
 in
    if do_split then (SOME (enumerate_pair depth_split v)) else NONE
 end;
@@ -122,7 +122,7 @@ local
    let
       val (b,v') = dest_comb t;
    in
-      (v = v') andalso (pairSyntax.is_pabs b)
+      v ~~ v' andalso pairSyntax.is_pabs b
    end handle HOL_ERR _ => false;
 in
 

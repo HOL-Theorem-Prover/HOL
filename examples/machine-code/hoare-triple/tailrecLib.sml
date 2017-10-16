@@ -62,13 +62,15 @@ fun AUTO_DECONSTRUCT_TAC finder (hs,goal) = let
 
 fun merge_side t NONE = t
   | merge_side t (SOME (FUN_VAL tm)) =
-      if tm = mk_var("cond",``:bool``) then t else
-      if tm = T then t else FUN_COND (tm,t)
+      if tm ~~ mk_var("cond",``:bool``) then t else
+      if Teq tm then t else FUN_COND (tm,t)
   | merge_side t (SOME (FUN_COND (tm,t2))) = FUN_COND (tm,merge_side t (SOME t2))
   | merge_side (FUN_IF (b,x,y)) (SOME (FUN_IF (b2,x2,y2))) =
-      if (b = b2) then FUN_IF (b, merge_side x (SOME x2), merge_side y (SOME y2)) else fail()
+      if b ~~ b2 then FUN_IF (b, merge_side x (SOME x2), merge_side y (SOME y2))
+      else fail()
   | merge_side (FUN_LET (x,y,t)) (SOME (FUN_LET (x2,y2,t2))) =
-      if (x = x2) andalso (y = y2) then FUN_LET (x,y,merge_side t (SOME t2)) else fail()
+      if x ~~ x2 andalso y ~~ y2 then FUN_LET (x,y,merge_side t (SOME t2))
+      else fail()
   | merge_side _ _ = fail ()
 
 fun leaves (FUN_VAL tm)      f = FUN_VAL (f tm)
@@ -118,7 +120,8 @@ fun tailrec_define_from_step func_name step_fun tm_option = let
         val def_goal = mk_eq(mk_comb(new_def_tm,args),def_body)
         val side_body = leaves_inl body (fn (tm,c) => mk_conj(mk_comb(new_side_tm,tm),c)) snd
         val side_goal = mk_eq(mk_comb(new_side_tm,args),side_body)
-        val side_goal = if side_body = ``T`` then side_goal else inst_cond_var (side_goal)
+        val side_goal = if Teq side_body then side_goal
+                        else inst_cond_var (side_goal)
         in (def_goal,side_goal) end
   (* prove exported theorems *)
   fun tac finder =
@@ -141,9 +144,8 @@ fun prepare_pre pre_tm = let
   val (x,y) = dest_eq pre_tm
   val pre_tm = ftree2tm (leaves (tm2ftree y) (fn tm =>
      list_mk_conj (
-      (filter (fn c => not (is_comb c andalso
-                            (car c = car x)))
-       (list_dest dest_conj tm)))))
+       (filter (fn c => not (is_comb c andalso (car c ~~ car x)))
+              (list_dest dest_conj tm)))))
   val cond_var = mk_var("cond",``:bool``)
   val pre_tm = subst [cond_var|->T] pre_tm
   val pre_tm = (snd o dest_eq o concl o SPEC_ALL o QCONV
@@ -165,7 +167,7 @@ fun tailrec_define_full tm pre_option = let
     | step (FUN_LET (x,y,t)) = FUN_LET (x,y,step t)
     | step (FUN_COND (c,t)) = FUN_COND (c,step t)
     | step (FUN_VAL tm) =
-        if ((car tm = func_tm) handle HOL_ERR _ => false)
+        if ((car tm ~~ func_tm) handle HOL_ERR _ => false)
         then FUN_VAL (mk_pair(mk_inl(cdr tm,output_type),cond_var))
         else FUN_VAL (mk_pair(mk_inr(tm,input_type),cond_var))
   val tm2 = subst [cond_var|->T] (ftree2tm (step t))

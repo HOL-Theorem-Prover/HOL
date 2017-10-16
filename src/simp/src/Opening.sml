@@ -101,13 +101,14 @@ fun strip_n_imp 0 tm = ([],tm)
 
 
 fun strip_imp_until_rel genvars tm =
-     (if (is_var (rand tm) andalso mem (rand tm) genvars)
-     then ([],tm)
-     else let val (x,y) = dest_imp tm
-              val (z,w) = strip_imp_until_rel genvars y
-          in (x::z,w)
-          end)
-     handle HOL_ERR _ => ([],tm);
+  if is_var (rand tm) andalso op_mem aconv (rand tm) genvars then ([],tm)
+  else
+    let
+      val (x,y) = dest_imp tm
+      val (z,w) = strip_imp_until_rel genvars y
+    in
+      (x::z,w)
+    end handle HOL_ERR _ => ([],tm);
 
 (* ---------------------------------------------------------------------
  * CONGPROC : REFL -> congrule -> congproc
@@ -177,7 +178,8 @@ in fn {relation,solver,depther,freevars} =>
               (f,[x,y])
             end handle HOL_ERR _ => strip_comb bdy2
         in
-          if length args = 2 andalso mem (#1 (strip_comb (el 2 args))) genvars
+          if length args = 2 andalso
+             op_mem aconv (#1 (strip_comb (el 2 args))) genvars
           then let
                 val (orig,res) = case args of [x,y] => (x,y) | _ => raise Bind
                 val genv = #1 (strip_comb res)
@@ -218,10 +220,10 @@ in fn {relation,solver,depther,freevars} =>
     val final_thm = process_subgoals (nconds,match_thm,reprocess_flags)
 
   in
-    if (rand (rator (concl final_thm)) = rand (concl final_thm))
-      then raise HOL_ERR { origin_structure = "Opening",
-                           origin_function = "CONGPROC",
-                           message = "Congruence gives no change" }
+    if aconv (rand (rator (concl final_thm))) (rand (concl final_thm)) then
+      raise HOL_ERR { origin_structure = "Opening",
+                      origin_function = "CONGPROC",
+                      message = "Congruence gives no change" }
     else (trace(3,PRODUCE(tm,"congruence rule",final_thm)); final_thm)
   end
 end;
@@ -244,7 +246,7 @@ fun EQ_CONGPROC {relation,depther,solver,freevars} tm =
       end
        handle HOL_ERR _ => AP_TERM Rator (depther ([],equality)  Rand))
    | LAMB(Bvar,Body) =>
-     if mem Bvar freevars then
+     if op_mem aconv Bvar freevars then
      let val v = variant (freevars@free_vars Body) Bvar
          val th1 = ALPHA_CONV v tm handle e as HOL_ERR _
          => (trace(0,REDUCE("SIMPLIFIER ERROR: bug when alpha converting",tm));

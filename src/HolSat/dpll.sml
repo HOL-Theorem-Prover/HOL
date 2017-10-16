@@ -66,9 +66,9 @@ fun CoreDPLL initial_th = let (* [ci] |- cnf *)
    fun recurse th = let (* [assigns, ci] |- curr *)
     val c = concl th (* current *)
   in
-    if c = boolSyntax.T then
+    if aconv c boolSyntax.T then
       mk_satmap th
-    else if c = boolSyntax.F then
+    else if aconv c boolSyntax.F then
       Unsat th
     else let
         val v = find_splitting_var c

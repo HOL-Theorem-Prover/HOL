@@ -752,7 +752,7 @@ local
       in
          case Lib.total (boolSyntax.dest_cond o utilsLib.rhsc) thm of
             SOME (b, t, _) =>
-               if t = unpredictable_tm
+               if t ~~ unpredictable_tm
                   then REWRITE_RULE [ASSUME (boolSyntax.mk_neg b)] thm
                else thm
           | _ => thm

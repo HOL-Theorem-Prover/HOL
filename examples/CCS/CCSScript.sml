@@ -660,8 +660,9 @@ val TRANS_P_RESTR = store_thm (
   in
       REPEAT STRIP_TAC \\
       IMP_RES_TAC TRANS_RESTR >| (* 2 sub-goals here *)
-      [ FILTER_ASM_REWRITE_TAC (fn t => not (t = ``(u :'b Action) = tau``)) [thm],
-        FILTER_ASM_REWRITE_TAC (fn t => not (t = ``(u :'b Action) = label l``)) [thm] ]
+      [ FILTER_ASM_REWRITE_TAC (fn t => t !~ ``(u :'b Action) = tau``) [thm],
+        FILTER_ASM_REWRITE_TAC (fn t => t !~ ``(u :'b Action) = label l``) [thm]
+      ]
   end);
 
 val RESTR_NIL_NO_TRANS = store_thm ("RESTR_NIL_NO_TRANS",

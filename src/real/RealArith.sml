@@ -161,7 +161,7 @@ val is_numconst =
       let
         val (l,r) = dest_comb tm
       in
-        l = amp andalso is_numeral r
+        l ~~ amp andalso is_numeral r
       end
       handle HOL_ERR _ => false;
 
@@ -171,8 +171,7 @@ fun dest_numconst tm =
   let
     val (l,r) = dest_comb tm
   in
-    if l = amp then
-      dest_numeral r
+    if l ~~ amp then dest_numeral r
     else
       failwith "dest_numconst"
   end;
@@ -184,7 +183,7 @@ val is_intconst =
       let
         val (l,r) = dest_comb tm
       in
-        l = dsub andalso is_numconst r
+        l ~~ dsub andalso is_numconst r
       end
       handle HOL_ERR _ => false;
 
@@ -196,7 +195,7 @@ fun mk_intconst n =
     mk_numconst(n);
 
 fun dest_intconst tm =
-  if (rator tm = dsub handle HOL_ERR _ => false) then
+  if (rator tm ~~ dsub handle HOL_ERR _ => false) then
     ~(dest_numconst(rand tm))
   else
     dest_numconst(tm);
@@ -420,7 +419,7 @@ val REAL_PROD_NORM_CONV =
         val factors = binops_mul tm
         val (consts,others) = partition is_intconst factors
         val res =
-        if others = [] then
+        if null others then
           let
             val th1 = QCONV (DEPTH_CONV REAL_INT_MUL_CONV) tm
           in
@@ -430,7 +429,7 @@ val REAL_PROD_NORM_CONV =
           let
             val sothers = sort term_lt others
           in
-            if consts = [] then
+            if null consts then
               let
                 val t = mk_eq (tm, list_mk_binop_mul sothers)
                 val th1 = REAL_MUL_AC t
@@ -490,8 +489,8 @@ val REAL_INT_ADD_CONV =
       let
         val (l,r) = dest tm
       in
-        if rator l = neg_tm then
-          if rator r = neg_tm then
+        if rator l ~~ neg_tm then
+          if rator r ~~ neg_tm then
             let
               val th1 = INST [(rand(rand l),m_tm), (rand(rand r),n_tm)] pth1
               val tm1 = rand(rand(rand(concl th1)))
@@ -529,7 +528,7 @@ val REAL_INT_ADD_CONV =
                 end
             end
         else
-          if rator r = neg_tm then
+          if rator r ~~ neg_tm then
             let
               val m = rand l and n = rand(rand r)
               val m' = dest_numeral m and n' = dest_numeral n
@@ -622,8 +621,8 @@ val LINEAR_ADD =
       let
         val ltm = mk tm1 tm2
       in
-        if tm1 = zero_tm then INST [(tm2,x_tm)] pth0a
-        else if tm2 = zero_tm then INST [(tm1,x_tm)] pth0b else
+        if tm1 ~~ zero_tm then INST [(tm2,x_tm)] pth0a
+        else if tm2 ~~ zero_tm then INST [(tm1,x_tm)] pth0b else
           let
             val (l1,r1) = dest tm1
             val v1 = rand l1
@@ -804,7 +803,7 @@ val REAL_SUM_NORM_CONV =
                     [REAL_MUL_LZERO, REAL_MUL_RZERO,
                     REAL_MUL_LID, REAL_MUL_RID,
                     REAL_ADD_LID, REAL_ADD_RID] t)
-        val c = DEPTH_CONV((c1 o assert(fn t => not (rand t = one_tm)))
+        val c = DEPTH_CONV((c1 o assert(fn t => not (rand t ~~ one_tm)))
                 ORELSEC c2) THENC c3 THENC c4
         val res = c t
         val _ = trace "done prelim_conv"
@@ -900,7 +899,8 @@ val (clear_atom_cache,REAL_ATOM_NORM_CONV) =
   let
     val right_CONV = RAND_CONV REAL_SUM_NORM_CONV
     val atomcache = ref []
-    fun lookup_cache tm = first (fn th => liteLib.lhand(concl th) = tm) (!atomcache)
+    fun lookup_cache tm =
+      first (fn th => liteLib.lhand(concl th) ~~ tm) (!atomcache)
     fun clear_atom_cache () = (atomcache := [])
     val pth2 = prove
           (``(a:real < b = c < d:real) = (b <= a = d <= c)``,
@@ -959,7 +959,9 @@ datatype injust = Given of thm
 
 datatype lineq = Lineq of int * lineq_type * int list * injust;
 
-fun injust_eq (Given t, Given t') = (dest_thm t = dest_thm t')
+val thmeq = pair_eq (list_eq aconv) aconv
+
+fun injust_eq (Given t, Given t') = thmeq (dest_thm t) (dest_thm t')
   | injust_eq (Multiplied (i,j), Multiplied (i',j')) =
       (i = i') andalso injust_eq (j,j')
   | injust_eq (Added (j1,j2), Added (j1',j2')) =
@@ -1176,7 +1178,7 @@ val LINEAR_MULT =
                   (REWR_CONV REAL_MUL_ASSOC THENC LAND_CONV REAL_INT_MUL_CONV)
   in
     fn n => fn tm =>
-      if tm = zero_tm then INST [(n,x_tm)] pth else
+      if tm ~~ zero_tm then INST [(n,x_tm)] pth else
         let
           val ltm = mk_comb(mk_comb(mult_tm,n),tm)
         in
@@ -1331,8 +1333,8 @@ val REAL_SIMPLE_ARITH_REFUTER =
         val _ = trace_thm th0
         val tm0 = concl th0
       in
-        if rand tm0 = zero_tm then
-          if rator(rator tm0) = less_tm then EQ_MP trivthm th0
+        if rand tm0 ~~ zero_tm then
+          if rator(rator tm0) ~~ less_tm then EQ_MP trivthm th0
           else failwith "trivially true, so useless in refutation"
         else th0
       end
@@ -1349,14 +1351,15 @@ val REAL_SIMPLE_ARITH_REFUTER =
         val _ = trace ("#(ths) = " ^ (Int.toString (length ths)) ^ ".")
         val _ = trace_thm_list ths
         val res =
-        first (fn th => concl th = false_tm) ths
+        first (fn th => Feq (concl th)) ths
         handle HOL_ERR _ =>
           let
             val allvars = itlist
               (op_union aconv o map rand o liteLib.binops add_tm o
                rand o concl) ths []
             val vars =
-              if mem one_tm allvars then one_tm::subtract allvars [one_tm]
+              if tmem one_tm allvars then
+                one_tm::op_set_diff aconv allvars [one_tm]
               else one_tm::allvars
             fun unthmify th =
               let
@@ -1371,9 +1374,9 @@ val REAL_SIMPLE_ARITH_REFUTER =
                 val l = Lib.trye tl (map (fn v => (fst (rev_assoc v cvps)
                                                     handle HOL_ERR _ => zero))
                                     (upto (fromInt (length(vars)) - one)))
-                val ty = if op_alt = eq_tm then Eq
-                         else if op_alt = le_tm then Le
-                         else if op_alt = lt_tm then Lt
+                val ty = if op_alt ~~ eq_tm then Eq
+                         else if op_alt ~~ le_tm then Le
+                         else if op_alt ~~ lt_tm then Lt
                          else failwith "unknown op"
               in
                 Lineq(k,ty,l,Given th)
@@ -1414,7 +1417,7 @@ val PURE_REAL_ARITH_TAC =
             GEN_REWRITE_CONV TOP_SWEEP_CONV
             [REAL_ADD_LID, REAL_NEG_ADD, REAL_NEG_NEG]
         in
-          fn tm => if liteLib.lhand tm = zero_tm then REFL tm else raw_CONV tm
+          fn tm => if liteLib.lhand tm ~~ zero_tm then REFL tm else raw_CONV tm
         end
       end
     val init_CONV = GEN_REWRITE_CONV TOP_DEPTH_CONV [
@@ -1436,8 +1439,8 @@ val PURE_REAL_ARITH_TAC =
         val neg_tm = ``$~: real->real``
         val strip_plus = liteLib.binops plus_tm
         val list_mk_plus = list_mk_binop plus_tm
-        fun is_abstm tm = is_comb tm andalso rator tm = abs_tm
-        fun is_negtm tm = is_comb tm andalso rator tm = neg_tm
+        fun is_abstm tm = is_comb tm andalso rator tm ~~ abs_tm
+        fun is_negtm tm = is_comb tm andalso rator tm ~~ neg_tm
         val REAL_ADD_AC = AC REAL_ADD_AC_98
         fun is_negabstm tm = is_negtm tm andalso is_abstm(rand tm)
         val ABS_ELIM_THM = prove (
@@ -1487,12 +1490,12 @@ val PURE_REAL_ARITH_TAC =
             val op_alt = rator tmx
           in
             (trace "ABS_ELIM_TAC1";
-            if op_alt <> le_tm andalso op_alt <> lt_tm
+            if op_alt !~ le_tm andalso op_alt !~ lt_tm
             then failwith "ABS_ELIM_TAC1" else
               let
                 val tms = strip_plus tm0
                 val tm = first is_negabstm tms
-                val n = index tm tms
+                val n = index_ac tm tms
                 val (ltms,rtms) = chop_list n tms
                 val ntms = tm::(ltms @ tl rtms)
                 val th1 = AP_TERM tmx
@@ -1508,7 +1511,7 @@ val PURE_REAL_ARITH_TAC =
             val op_alt = rator tmx
           in
             (trace "ABS_ELIM_TAC2";
-            if op_alt <> le_tm andalso op_alt <> lt_tm
+            if op_alt !~ le_tm andalso op_alt !~ lt_tm
             then failwith "ABS_ELIM_TAC1"
             else
               let
@@ -1559,7 +1562,7 @@ val PURE_REAL_ARITH_TAC =
             let
               val tm'' = rator tm'
             in
-              tm'' = eq_tm orelse tm'' = le_tm orelse tm'' = lt_tm
+              tm'' ~~ eq_tm orelse tm'' ~~ le_tm orelse tm'' ~~ lt_tm
             end
           end
         then failwith "DISCARD_UNREAL_TAC"

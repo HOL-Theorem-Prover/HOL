@@ -49,14 +49,15 @@ val (_, _, args_sum, _)		= HolKernel.syntax_fns2 "CCS" "sum";
 val (_, _, args_par, _)		= HolKernel.syntax_fns2 "CCS" "par";
 val (_, _, args_restr, _)	= HolKernel.syntax_fns2 "CCS" "restr";
 
-fun args_restr tm = let
-    val (opn, [lset, P]) = strip_comb tm
-in
-    if same_const opn restr then
-	(P, lset)
+fun args_restr tm =
+  let
+    val (opn, lset, P) = args_equiv tm
+               handle HOL_ERR _ => failwith "term not CCS restriction"
+  in
+    if same_const opn restr then (P, lset)
     else
-	failwith "term not CCS restriction"
-end;
+      failwith "term not CCS restriction"
+  end;
 
 val (_, _, args_relab, _)	= HolKernel.syntax_fns2 "CCS" "relab";
 val (_, _, args_rec, _)		= HolKernel.syntax_fns2 "CCS" "rec";
@@ -99,16 +100,15 @@ fun ladd x l =
   if (null l) then [x] else [mk_sum (x, hd l)];
 
 local
-    fun helper (prima, mark, dopo, exp) =
-      if (exp = mark) then
-	  (prima, dopo)
-      else if is_sum exp then
-	  let val (a, b) = args_sum exp
-	  in if (b = mark) then ([a], dopo)
-	     else helper (prima, mark, (ladd b dopo), a)
-	  end
-      else
-	  failwith "FIND_SMD"
+  fun helper (prima, mark, dopo, exp) =
+    if exp ~~ mark then (prima, dopo)
+    else if is_sum exp then
+      let val (a, b) = args_sum exp
+      in if b ~~ mark then ([a], dopo)
+	 else helper (prima, mark, (ladd b dopo), a)
+      end
+    else
+      failwith "FIND_SMD"
 in
     fun FIND_SMD prima mark dopo exp = helper (prima, mark, dopo, exp)
 end;
@@ -146,7 +146,7 @@ fun Label_EQ_CONV lab_eq = let
     val (op1, s1) = args_label l1
     and (op2, s2) = args_label l2
 in
-    if (op1 = op2) then
+    if op1 ~~ op2 then
 	let val thm = EVAL_CONV ``^s1 = ^s2`` in
 	    if same_const op1 name then
 		TRANS (ISPECL [s1, s2] (CONJUNCT1 Label_11)) thm
@@ -180,7 +180,7 @@ in
 	    and (op2, s2) = args_label l2
 	    and thm = Label_EQ_CONV ``^l1 = ^l2``
 	in
-	    if (op1 = op2) then
+	    if op1 ~~ op2 then
 		if same_const op1 name then
 		    TRANS (ISPECL [``name ^s1``, ``name ^s2``] Action_11) thm
 		else

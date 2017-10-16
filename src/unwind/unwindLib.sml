@@ -104,8 +104,8 @@ fun CONJ_FORALL_ONCE_CONV t =
    in if (length conjs = 1)
       then REFL t
       else let val var =
-                  case (mk_set (map (#Bvar o dest_forall) conjs))
-                   of [x] => x
+                  case op_mk_set aconv (map (#Bvar o dest_forall) conjs) of
+                      [x] => x
                     | _ => raise UNWIND_ERR "CONJ_FORALL_ONCE_CONV"
                                    "bound vars do not have same name"
                val th = GEN var (conj_tree_map (SPEC var) t (ASSUME t))
@@ -411,7 +411,7 @@ end;
 
 fun UNWIND_CONV p tm =
    let val th = UNWIND_ONCE_CONV p tm
-   in if lhs (concl th) = rhs (concl th)
+   in if lhs (concl th) ~~ rhs (concl th)
       then th
       else TRANS th (UNWIND_CONV p (rhs (concl th)))
    end;
@@ -471,7 +471,7 @@ fun UNWIND_ALL_BUT_CONV l tm =
 
 local fun FAIL s = UNWIND_ERR "UNWIND_AUTO_CONV" s
 fun is_set [] = true
-  | is_set (a::rst) = (not (mem a rst)) andalso is_set rst
+  | is_set (a::rst) = (not (tmem a rst)) andalso is_set rst
 fun pdeq tm = let val {lhs,rhs} = dest_eq tm in (lhs,rhs) end
 fun graph_of_term tm =
    let val (internals,t) = strip_exists tm
@@ -479,40 +479,43 @@ fun graph_of_term tm =
           unzip (mapfilter (((assert is_var o fst o strip_comb)##free_vars) o
                             pdeq o snd o strip_forall)
                            (strip_conj t))
-   in if (is_set lines)
-      then let val graph = zip lines (map (intersect lines) rhs_free_vars)
-               val (intern,extern) = partition (fn p => mem (fst p) internals)
-                                               graph
-           in  extern@intern
-           end
+   in
+     if (is_set lines) then
+       let
+         val graph =
+             zip lines (map (op_intersect aconv lines) rhs_free_vars)
+         val (intern,extern) = partition (fn p => tmem (fst p) internals) graph
+       in  extern@intern
+       end
       else raise FAIL "graph_of_term"
    end
 
 fun loops_containing_line line graph chain =
    let val successors = map fst
-             (filter (fn (_,predecs) => mem (Lib.trye hd chain) predecs) graph)
-       val not_in_chain = filter (fn line => not (mem line chain)) successors
+             (filter (fn (_,predecs) => tmem (Lib.trye hd chain) predecs) graph)
+       val not_in_chain = filter (fn line => not (tmem line chain)) successors
        val new_chains = map (fn line => line::chain) not_in_chain
        (* flatten(map ...) should be an itlist *)
        val new_loops = flatten (map (loops_containing_line line graph)
                                     new_chains)
-   in if (mem line successors)
-      then (rev chain)::new_loops
+   in if tmem line successors then (rev chain)::new_loops
       else new_loops
    end
 
 fun chop_at x (l as (a::rst)) =
-      if (a = x) then ([],l)
+      if a ~~ x then ([],l)
       else let val (l1,l2) = chop_at x rst
            in (a::l1, l2)
            end
   | chop_at _ _ = raise FAIL "chop_at";
 
 (* before has infix status in SML/NJ, so changed to befre *)
+fun op_set_eq eqf l1 l2 =
+  null (op_set_diff eqf l1 l2) andalso null (op_set_diff eqf l2 l1)
 fun equal_loops lp1 lp2 =
-   if (set_eq lp1 lp2)
+   if (op_set_eq aconv lp1 lp2)
    then let val (befre,rest) = chop_at (Lib.trye hd lp1) lp2
-        in lp1 = (rest @ befre)
+        in tmleq lp1 (rest @ befre)
         end
    else false
 
@@ -530,7 +533,7 @@ fun loops_of_graph graph =
            (map fst graph)))
 
 fun list_after x (l as (h::t)) =
-     if (x = h) then t else list_after x t
+     if x ~~ h then t else list_after x t
   | list_after _ _ = raise UNWIND_ERR "list_after" "";
 
 fun rev_front_of l n front =
@@ -554,7 +557,7 @@ fun next_combination source previous =
 
 fun break_all_loops lps lines previous =
    let val comb = next_combination lines previous
-   in  if (all (fn lp => not (null (intersect lp comb))) lps)
+   in  if (all (fn lp => not (null (op_intersect aconv lp comb))) lps)
        then comb
        else break_all_loops lps lines comb
    end
@@ -563,17 +566,20 @@ fun breaks internals graph =
    let val loops = loops_of_graph graph
        val single_el_loops = filter (fn l => length l = 1) loops
        val single_breaks = flatten single_el_loops
-       val loops' = filter (null o (intersect single_breaks)) loops
+       val loops' = filter (null o (op_intersect aconv single_breaks)) loops
        val only_internal_loops =
-              filter (fn l => null (set_diff l internals)) loops'
-       val only_internal_lines = end_itlist union only_internal_loops
+              filter (fn l => null (op_set_diff aconv l internals)) loops'
+       val only_internal_lines = end_itlist (op_union aconv) only_internal_loops
                                  handle HOL_ERR _ => []
        val internal_breaks =
               break_all_loops only_internal_loops only_internal_lines []
               handle HOL_ERR _ => []
-       val external_loops = filter (null o (intersect internal_breaks)) loops'
+       val external_loops =
+           filter (null o (op_intersect aconv internal_breaks)) loops'
        val external_lines =
-              set_diff (end_itlist union external_loops handle HOL_ERR _ => [])
+           op_set_diff aconv
+                       (end_itlist (op_union aconv) external_loops
+                        handle HOL_ERR _ => [])
                        internals
        val external_breaks =
               break_all_loops external_loops external_lines []
@@ -583,21 +589,22 @@ fun breaks internals graph =
 
 
 fun conv dependencies used t =
-   let val vars = map fst (filter ((fn l => null (set_diff l used)) o snd)
-                          dependencies)
-   in if (null vars)
-   then REFL t
-   else ((UNWIND_ONCE_CONV (fn tm => mem (line_var tm) vars)) THENC
-         (conv (filter (fn p => not (mem (fst p) vars)) dependencies)
-               (used @ vars))) t
+  let
+    val vars = map fst (filter ((fn l => null (op_set_diff aconv l used)) o snd)
+                               dependencies)
+  in
+    if (null vars) then REFL t
+    else ((UNWIND_ONCE_CONV (fn tm => tmem (line_var tm) vars)) THENC
+          (conv (filter (fn p => not (tmem (fst p) vars)) dependencies)
+                (used @ vars))) t
    end
 in
 fun UNWIND_AUTO_CONV tm =
    let val internals = fst (strip_exists tm)
        and graph = graph_of_term tm
        val brks = breaks internals graph
-       val dependencies = map (I ## (fn l => set_diff l brks))
-                              (filter (fn p => not (mem (fst p) brks)) graph)
+       val dependencies = map (I ## (fn l => op_set_diff aconv l brks))
+                              (filter (fn p => not (tmem (fst p) brks)) graph)
    in DEPTH_EXISTS_CONV (conv dependencies []) tm
    end handle HOL_ERR _ => raise UNWIND_ERR "UNWIND_AUTO_CONV" ""
 end;
@@ -716,7 +723,7 @@ fun EXISTS_EQN_CONV t =
    let val {Bvar = l,Body} = dest_exists t
        val (ys,A) = strip_forall Body
        val {lhs,rhs} = dest_eq A
-       val xs = snd ((assert (curry (op =) l) ## I) (strip_comb lhs))
+       val xs = snd ((assert (aconv l) ## I) (strip_comb lhs))
        val t3 = list_mk_abs (xs,rhs)
        val th1 = GENL ys (RIGHT_CONV_RULE LIST_BETA_CONV
                                           (REFL (list_mk_comb (t3,xs))))
@@ -1004,7 +1011,10 @@ fun EXPAND_AUTO_CONV thl tm =
             val vars = flatten (map
                         (free_vars o (fn tm => (rhs tm) handle HOL_ERR _ => tm)
                                    o snd o strip_forall) conjs)
-        in PRUNE_SOME_CONV(map (#Name o dest_var) (set_diff internals vars)) tm
+        in
+          PRUNE_SOME_CONV
+            (map (#Name o dest_var) (op_set_diff aconv internals vars))
+            tm
         end))
    tm
    handle HOL_ERR _ => raise UNWIND_ERR "EXPAND_AUTO_CONV" "";

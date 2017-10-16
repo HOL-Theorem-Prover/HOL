@@ -637,7 +637,7 @@ structure Yices = struct
                  form) are supported at the moment. *)
               val (var1, body) = Term.dest_abs f
               val (f, var2) = Term.dest_comb body
-              val _ = (var1 = var2) orelse
+              val _ = Term.aconv var1 var2 orelse
                 raise Feedback.mk_HOL_ERR "Yices" "translate_term"
                   "not a field selector (update function not in eta-long form)"
               val new_val = combinSyntax.dest_K_1 f

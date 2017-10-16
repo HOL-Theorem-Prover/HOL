@@ -506,7 +506,7 @@ local
 
    val ast_thms =
       List.filter
-        ((fn tm => not (tm = Unallocated orelse tm = Reserved)) o rhsc) o
+        ((fn tm => not (tm ~~ Unallocated orelse tm ~~ Reserved)) o rhsc) o
       utilsLib.split_conditions o r2 o r1
 
    exception Decode of string * thm list
@@ -711,7 +711,7 @@ local
       List.mapPartial
         (Option.composePartial
             (fn (l, r) =>
-                if r = r31
+                if r ~~ r31
                    then SOME (List.map (fn v => v |-> boolSyntax.T) (vs l))
                 else NONE,
              Lib.total boolSyntax.dest_eq))

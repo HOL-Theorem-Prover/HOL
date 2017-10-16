@@ -106,7 +106,7 @@ val is_pre   = numSyntax.is_pre
 
 val is_num_const = numSyntax.is_numeral
 val zero         = numSyntax.zero_tm
-fun is_zero tm   = (tm = zero)
+fun is_zero tm   = aconv tm zero
 
 
 (*===========================================================================*)

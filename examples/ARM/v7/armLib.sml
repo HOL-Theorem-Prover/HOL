@@ -111,7 +111,7 @@ in
                               NONE)
             in
               SOME
-                (if enc = Encoding_ARM_tm then
+                (if enc ~~ Encoding_ARM_tm then
                    if is_AL cond orelse is_PC cond then
                      (itstate, pp "" ("arm,pass" ** s) opc, NONE)
                    else
@@ -125,7 +125,7 @@ in
                                         ITAdvance itstate
                        val its = "it:" ^ w2s itstate
                        val cond' = fix_condition cond
-                       val x = if enc = Encoding_ThumbEE_tm then
+                       val x = if enc ~~ Encoding_ThumbEE_tm then
                                  "thumbee"
                                else
                                  "thumb"
@@ -154,7 +154,8 @@ in
 end;
 
 fun arm_steps_from f opt qs =
-  arm_steps_from_parse opt (Lib.mk_set (List.map snd (fst (f qs))));
+  arm_steps_from_parse opt
+                       (Lib.op_mk_set arm_code_eq (List.map snd (fst (f qs))));
 
 val arm_steps_from_string = arm_steps_from arm_parse_from_string;
 val arm_steps_from_file   = arm_steps_from arm_parse_from_file;

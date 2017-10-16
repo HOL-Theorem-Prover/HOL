@@ -115,11 +115,11 @@ local
    val pc_tm = ``alignment$align 2 (pc + 4w: word32)``
    fun is_pc_relative tm =
       case Lib.total dest_m0_MEM tm of
-         SOME (t, _) => fst (utilsLib.strip_add_or_sub t) = pc_tm
+         SOME (t, _) => fst (utilsLib.strip_add_or_sub t) ~~ pc_tm
        | NONE => false
    fun is_big_end tm =
       case Lib.total dest_m0_AIRCR_ENDIANNESS tm of
-         SOME t => t = boolSyntax.T
+         SOME t => Teq t
        | NONE => false
    val byte_chunks = stateLib.group_into_chunks (dest_m0_MEM, 4, false)
    fun rwt (w, a) =
@@ -240,7 +240,7 @@ local
          ("m0$PSR_Z_fupd", "m0_PSR_Z"),
          ("m0$PSR_C_fupd", "m0_PSR_C"),
          ("m0$PSR_V_fupd", "m0_PSR_V")] [] []
-        (fn (s, l) => s = "m0$m0_state_PSR" andalso l = [st])
+        (fn (s, l) => s = "m0$m0_state_PSR" andalso tmleq l [st])
 in
    val m0_write_footprint =
       stateLib.write_footprint m0_1 m0_2
@@ -262,7 +262,7 @@ val m0_mk_pre_post =
 local
    val sp = wordsSyntax.mk_wordii (13, 4)
    val registers = List.tabulate (16, fn i => wordsSyntax.mk_wordii (i, 4))
-                   |> Lib.pluck (Lib.equal sp) |> snd
+                   |> Lib.pluck (aconv sp) |> snd
    val R_name_tm = Term.prim_mk_const {Thy = "m0_step", Name = "R_name"}
    val R_name_b_tm = Term.mk_comb (R_name_tm, Term.mk_var ("b", Type.bool))
    val mk_R_main = Lib.curry Term.mk_comb R_name_b_tm
@@ -353,7 +353,7 @@ local
          (helperLib.POST_CONV (helperLib.MOVE_OUT_CONV ``m0_REG RName_PC``))
    fun is_big_end tm =
       case Lib.total (pairSyntax.dest_pair o dest_m0_CONFIG) tm of
-         SOME (t, _) => t = boolSyntax.T
+         SOME (t, _) => Teq t
        | _ => false
    val le_sep_array_introduction =
       stateLib.sep_array_intro
@@ -390,8 +390,7 @@ local
          val p = progSyntax.strip_star (temporal_stateSyntax.dest_pre' tm)
          val rp = List.mapPartial (Lib.total (fst o dest_m0_REG)) p
       in
-         if Lib.mk_set rp = rp
-            then Conv.ALL_CONV tm
+         if HOLset.numItems (listset rp) = length rp then Conv.ALL_CONV tm
          else raise ERR "check_unique_reg_CONV" "duplicate register"
       end
    fun DEPTH_COND_CONV cnv =
@@ -404,7 +403,7 @@ local
    val OPC_CONV = POOL_CONV o Conv.RATOR_CONV o Conv.RAND_CONV o Conv.RAND_CONV
    exception FalseTerm
    fun NOT_F_CONV tm =
-      if tm = boolSyntax.F then raise FalseTerm else Conv.ALL_CONV tm
+      if Feq tm then raise FalseTerm else Conv.ALL_CONV tm
    val WGROUND_RW_CONV =
       Conv.DEPTH_CONV (utilsLib.cache 10 Term.compare bitstringLib.v2w_n2w_CONV)
       THENC utilsLib.WGROUND_CONV

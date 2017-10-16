@@ -224,15 +224,14 @@ end handle e => raise (wrap_exn "IndDefRules"
 
 fun MK_CONJ_THEN Fn tm =
  let val (conj1,conj2) = dest_conj tm
-     val tcl1 = if (fst(strip_comb conj1) = Fn)
-                  then fn t1 => fn t2 => t1
-                  else fn t1 => fn t2 => t2
+     val tcl1 = if aconv (fst(strip_comb conj1)) Fn then fn t1 => fn t2 => t1
+                else fn t1 => fn t2 => t2
      val tcl2 = MK_CONJ_THEN Fn conj2
  in
    fn ttac1 => fn ttac2 =>
      CONJUNCTS_THEN2 (tcl1 ttac1 ttac2) (tcl2 ttac1 ttac2)
  end
- handle HOL_ERR _ => if (fst(strip_comb tm) = Fn) then K else C K;
+ handle HOL_ERR _ => if aconv (fst(strip_comb tm)) Fn then K else C K;
 
 fun MK_CHOOSE_THEN Fn [] body = MK_CONJ_THEN Fn body
   | MK_CHOOSE_THEN Fn (_::t) body =
@@ -296,7 +295,8 @@ fun TACS Fn tm =
 (* --------------------------------------------------------------------- *)
 
 local fun mkred Fn (c::cs) =
-        let val cfn = if (fst(strip_comb c) = Fn) then LIST_BETA_CONV else REFL
+        let val cfn = if aconv (fst(strip_comb c)) Fn then LIST_BETA_CONV
+                      else REFL
         in if null cs then cfn
            else let val rest = mkred Fn cs
                 in fn tm =>
@@ -352,7 +352,7 @@ fun RED_WHERE Fn body =
 fun residue_assoc itm =
    let fun assc ([]:(term,term)subst) = NONE
          | assc ({redex,residue}::rst) =
-             if itm = residue then SOME redex else assc rst
+             if aconv itm residue then SOME redex else assc rst
    in assc
    end;
 
@@ -360,7 +360,7 @@ fun residue_assoc itm =
 
 fun is_param icvs slis arg =
  let val vl = case residue_assoc arg slis of SOME x => x | NONE => arg
- in mem vl icvs
+ in op_mem aconv vl icvs
  end;
 
 (* --------------------------------------------------------------------- *)
@@ -423,7 +423,7 @@ fun prove_conj ths tm =
      val f = prove_conj ths
  in CONJ (f conj1) (f conj2)
  end
- handle HOL_ERR _ => first (equal tm o concl) ths;
+ handle HOL_ERR _ => first (aconv tm o concl) ths;
 
 (* --------------------------------------------------------------------- *)
 (* RULE_TAC								 *)
@@ -442,7 +442,7 @@ fun RULE_TAC th =
             val (slis,ilis) = match_term cncl body
             val th1 = INST_TY_TERM (slis,ilis) ith
             val svs = rev (free_varsl (map (subst slis o inst ilis) vs))
-            val nvs = intersect gvs svs
+            val nvs = op_intersect aconv gvs svs
             val ante = fst(dest_imp(concl th1))
             val newgs = map (mkg A nvs) (strip_conj ante)
         in (newgs,
@@ -494,8 +494,8 @@ fun reduce vs ths res subf =
  if null ths then (rev res, subf)
  else let val (lhs,rhs) = dest_eq(concl(hd ths))
           val (sth,pai) =
-             if mem lhs vs then (hd ths,(lhs |-> rhs))
-             else if mem rhs vs
+             if op_mem aconv lhs vs then (hd ths,(lhs |-> rhs))
+             else if op_mem aconv rhs vs
                   then (SYM(hd ths),(rhs |-> lhs))
                   else raise ERR "reduce" ""
       in if free_in (#redex pai) (#residue pai)
@@ -536,7 +536,7 @@ local fun chfn v (a,th) =
         in (tm,CHOOSE (v,ASSUME tm) th')
         end
       fun efn ss v (pat,th) =
-        let val wit = case subst_assoc (equal v) ss
+        let val wit = case subst_assoc (aconv v) ss
                        of NONE => v
                         | SOME residue => residue
             val ex = mk_exists(v,pat)
@@ -546,7 +546,7 @@ local fun chfn v (a,th) =
       fun prove ths cs =
          (uncurry CONJ ((prove ths ## prove ths) (dest_conj cs)))
          handle HOL_ERR _
-           => (Lib.first (fn t => concl t = cs) ths)
+           => (Lib.first (fn t => aconv (concl t) cs) ths)
          handle HOL_ERR _
            => REFL (rand cs)
 in

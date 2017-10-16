@@ -7,6 +7,7 @@ struct
 
 local
 
+  open boolLib
   fun profile name f x =
     Profile.profile_with_exn_name name f x
 
@@ -182,7 +183,7 @@ local
       Thm.MP (Drule.SPECL [l, r] T_AND) Tl_eq_Tr
     end
     handle Feedback.HOL_ERR _ =>
-      if r = boolSyntax.F then
+      if Feq r then
         let
           val l_imp_F = Thm.DISCH l (Library.gen_contradiction (Thm.ASSUME l))
         in
@@ -206,7 +207,7 @@ local
       Thm.MP (Drule.SPECL [l, r] F_OR) Fl_eq_Fr
     end
     handle Feedback.HOL_ERR _ =>
-      if r = boolSyntax.T then
+      if Teq r then
         Drule.EQT_INTRO (Library.gen_excluded_middle l)
       else
         raise ERR "rewrite_disj" ""
@@ -346,7 +347,7 @@ local
       (* |- ~MEM x (h::t) = (x <> h) /\ rhs *)
       val th4 = Thm.TRANS th1 th3
     in
-      if boolSyntax.rhs (Thm.concl th2) = boolSyntax.T then
+      if Teq (boolSyntax.rhs (Thm.concl th2)) then
         Thm.TRANS th4 (Thm.SPEC neq AND_T)
       else
         th4
@@ -384,10 +385,8 @@ local
       (* |- ALL_DISTINCT (h::t) = something /\ rhs *)
       val th6 = Thm.TRANS th1 th5
     in
-      if rhs = boolSyntax.T then
-        Thm.TRANS th6 (Thm.SPEC something AND_T)
-      else
-        th6
+      if Teq rhs then Thm.TRANS th6 (Thm.SPEC something AND_T)
+      else th6
     end
     handle Feedback.HOL_ERR _ =>  (* 'list' is not a cons *)
       (* |- ALL_DISTINCT [] = T *)
@@ -576,7 +575,7 @@ local
       val th2 = Thm.DISCH body (Thm.GEN var (Thm.ASSUME body))
       val strip_th = Drule.IMP_ANTISYM_RULE th1 th2
     in
-      if body = rhs then
+      if body ~~ rhs then
         strip_th  (* stripped enough quantifiers *)
       else
         Thm.TRANS strip_th (strip_some_foralls body)
@@ -616,14 +615,14 @@ local
           val th1 = Thm.DISCH neg_lit th
         in
           if is_neg then (
-            if concl = boolSyntax.F then
+            if Feq concl then
               (* [...] |- ~neg_lit *)
               Thm.NOT_INTRO th1
             else
               (* [...] |- ~neg_lit \/ concl *)
               Thm.MP (Drule.SPECL [neg_lit, concl] IMP_DISJ_1) th1
           ) else
-            if concl = boolSyntax.F then
+            if Feq concl then
               (* [...] |- lit *)
               Thm.MP (Thm.SPEC lit IMP_FALSE) th1
             else
@@ -747,7 +746,7 @@ local
   let
     val (l, r) = boolSyntax.dest_eq t
   in
-    if l = r then
+    if l ~~ r then
       (state, Thm.REFL l)
     else
       (* proforma theorems *)
@@ -914,7 +913,7 @@ local
      style. *)
 
   fun check_thm (name, thm, concl) =
-    if Thm.concl thm <> concl then
+    if Thm.concl thm !~ concl then
       raise ERR "check_thm" (name ^ ": conclusion is " ^ Hol_pp.term_to_string
         (Thm.concl thm) ^ ", expected: " ^ Hol_pp.term_to_string concl)
     else if !Library.trace > 2 then
@@ -1091,7 +1090,7 @@ in
     (* ID 0 denotes the proof's root node *)
     val ((state, _), thm) = thm_of_proofterm ((state, proof), ID 0) Lib.I
 
-    val _ = Thm.concl thm = boolSyntax.F orelse
+    val _ = Feq (Thm.concl thm) orelse
       raise ERR "check_proof" "final conclusion is not 'F'"
 
     (* check that the final theorem contains no hyps other than those

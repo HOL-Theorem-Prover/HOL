@@ -83,7 +83,8 @@ fun dest_imp M =
  let val (Rator,conseq) = with_exn dest_comb M DEST_IMP_ERR
  in if is_comb Rator
     then let val (Rator,ant) = dest_comb Rator
-         in if Rator=Term.imp then (ant,conseq) else raise DEST_IMP_ERR
+         in if same_const Rator Term.imp then (ant,conseq)
+            else raise DEST_IMP_ERR
          end
     else case with_exn dest_thy_const Rator DEST_IMP_ERR
           of {Name="~", Thy="bool",...} => (conseq,Susp.force F)
@@ -867,7 +868,7 @@ fun DISJ_CASES dth ath bth =
 
 fun NOT_INTRO th =
   let val (ant,c) = dest_imp(concl th)
-  in Assert (c = Susp.force F) "" "";
+  in Assert (aconv c (Susp.force F)) "" "";
      make_thm Count.NotIntro  (tag th, hypset th, Susp.force mk_neg ant)
   end
   handle HOL_ERR _ => ERR "NOT_INTRO" "";
@@ -922,7 +923,7 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun CCONTR w fth =
-  (Assert (concl fth = Susp.force F) "CCONTR" "";
+  (Assert (aconv (concl fth) (Susp.force F)) "CCONTR" "";
    make_thm Count.Ccontr
        (tag fth, disch(Susp.force mk_neg w, hypset fth), w)
      handle HOL_ERR _ => ERR "CCONTR" "");
@@ -1133,13 +1134,19 @@ fun check_free_vars tm f =
             ("Free variables in rhs of definition: "
              :: commafy (map (Lib.quote o fst o dest_var) V)));
 
+fun listset ts = HOLset.addList(empty_tmset, ts)
+
 fun check_vars tm vars f =
- case Lib.set_diff (free_vars tm) vars
-  of [] => ()
-   | extras =>
+  let
+    val leftovers = HOLset.difference(FVL [tm] empty_tmset, listset vars)
+  in
+    if HOLset.isEmpty leftovers then ()
+    else
       raise f (String.concat
-         ("Unbound variable(s) in definition: "
-           :: commafy (map (Lib.quote o fst o dest_var) extras)));
+                 ("Unbound variable(s) in definition: "
+                  :: commafy (map (Lib.quote o fst o dest_var)
+                                  (HOLset.listItems leftovers))))
+  end
 
 fun check_tyvars body_tyvars ty f =
  case Lib.set_diff body_tyvars (Type.type_vars ty)
@@ -1153,7 +1160,7 @@ fun check_tyvars body_tyvars ty f =
 fun prim_type_definition (name as {Thy, Tyop}, thm) = let
   val (bv,Body) = with_exn dest_exists (concl thm) TYDEF_FORM_ERR
   val (P,v)     = with_exn dest_comb Body TYDEF_FORM_ERR
-  val _         = assert_exn (equal bv) v TYDEF_FORM_ERR
+  val _         = assert_exn (aconv bv) v TYDEF_FORM_ERR
   val Pty       = type_of P
   val (dom,rng) = with_exn Type.dom_rng Pty TYDEF_FORM_ERR
   val tyvars    = Listsort.sort Type.compare (type_vars_in_term P)

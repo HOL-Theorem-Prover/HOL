@@ -27,14 +27,7 @@ val () = show_assums := true;
 
 open HurdUseful;
 
-infixr 0 oo ## ++ << || THENC ORELSEC THENR ORELSER;
-infix 1 >>;
-
-val op++ = op THEN;
-val op<< = op THENL;
-val op|| = op ORELSE;
-val op>> = op THEN1;
-val !! = REPEAT;
+infixr 0 ##
 
 (* ------------------------------------------------------------------------- *)
 (* Debugging.                                                                *)
@@ -137,7 +130,8 @@ in
   fun fo_raw_match (var, bs) (bvs, tm) sub =
     let
       val body = check_off_bvs bvs tm bs
-      val _ = assert (null_intersection bvs (free_vars body))
+      val bvfvs = listset bvs Isct FVs body
+      val _ = assert (HOLset.isEmpty bvfvs)
         (ERR "fo_pat_match" "term to be matched contains bound vars")
     in
       raw_match' var body sub
@@ -276,9 +270,3 @@ fun ho_COND_REWR_CONV th =
 (* non-interactive mode
 *)
 end;
-
-
-
-
-
-

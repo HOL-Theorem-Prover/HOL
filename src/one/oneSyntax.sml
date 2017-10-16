@@ -15,6 +15,6 @@ fun mk_one_case x =
 
 fun lift_one ty () = one_tm
 
-val is_one = Lib.equal one_tm
+val is_one = aconv one_tm
 
 end

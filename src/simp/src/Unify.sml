@@ -11,7 +11,8 @@ infix 5 |->;
 val ERR = mk_HOL_ERR "Unify";
 
 fun lookup x [] = raise ERR "lookup" "not found"
-  | lookup x ({redex,residue}::t) = if redex=x then residue else lookup x t;
+  | lookup x ({redex,residue}::t) =
+      if aconv redex x then residue else lookup x t;
 
 fun deref_tmenv env tm =
   if is_var tm then lookup tm env handle HOL_ERR _ => tm
@@ -23,7 +24,7 @@ fun restrict_tmenv P E =
 
 fun occ env v =
     let fun f t =
-	exists (fn fv => (fv = v) orelse f (lookup fv env)
+	exists (fn fv => aconv fv v orelse f (lookup fv env)
 		handle HOL_ERR _ => false) (free_vars t)
 	handle HOL_ERR _ => false
     in f
@@ -43,27 +44,28 @@ fun simp_unify_terms_in_env consts tm1 tm2 env =
  let val tm1' = deref_tmenv env tm1
      val tm2' = deref_tmenv env tm2
  in
-   if is_var tm1' andalso not (mem tm1' consts)
-   then if is_var tm2' andalso not (mem tm2' consts)
-        then if tm1' = tm2' then env else bind env tm1' tm2'
+   if is_var tm1' andalso not (op_mem aconv tm1' consts)
+   then if is_var tm2' andalso not (op_mem aconv tm2' consts)
+        then if aconv tm1' tm2' then env else bind env tm1' tm2'
         else bind env tm1' tm2'
    else
-   if is_var tm2' andalso not (mem tm2' consts)
+   if is_var tm2' andalso not (op_mem aconv tm2' consts)
    then bind env tm2' tm1'
    else
    case (dest_term tm1',dest_term tm2')
-    of (VAR x, VAR y) => if tm1' = tm2' then env else  failwith "unify_terms"
+    of (VAR x, VAR y) => if aconv tm1' tm2' then env
+                         else failwith "unify_terms"
      | (COMB p1,COMB p2) =>
          simp_unify_terms_in_env consts (fst p1) (fst p2)
            (simp_unify_terms_in_env consts (snd p1) (snd p2) env)
      | (LAMB p1,LAMB p2) =>
-        let fun filt v = v <> (fst p1) andalso v <> (fst p2)
+        let fun filt v = not (aconv v (fst p1)) andalso not (aconv v (fst p2))
         in restrict_tmenv filt
              (simp_unify_terms_in_env
-                (subtract consts [fst p1, fst p2]) (snd p1) (snd p2)
+                (op_set_diff aconv consts [fst p1, fst p2]) (snd p1) (snd p2)
                 (restrict_tmenv filt env))
 	    end
-     | otherwise => if tm1' = tm2' then env else failwith "simp_unify_terms"
+     | otherwise => if aconv tm1' tm2' then env else failwith "simp_unify_terms"
     end;
 
 

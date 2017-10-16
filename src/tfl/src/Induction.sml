@@ -106,7 +106,7 @@ end;
 
 fun lpartition (lits,rows) =
 let fun lfail s = raise ERR"lpartition.part" s
-    fun lit_eq l1 l2 = if Literal.is_literal l1 then l1=l2 else
+    fun lit_eq l1 l2 = if Literal.is_literal l1 then aconv l1 l2 else
                        (is_var l1 andalso is_var l2)
     fun pfun lit (row as (p::rst, rhs)) (in_group,not_in_group) =
         if lit_eq lit p then ((rst,rhs)::in_group, not_in_group)
@@ -123,7 +123,7 @@ let fun lfail s = raise ERR"lpartition.part" s
      part lits rows []
  end;
 
-fun rm x [] = [] | rm x (h::t) = if x=h then rm x t else h::rm x t;
+fun rm x [] = [] | rm x (h::t) = if aconv x h then rm x t else h::rm x t;
 
 fun distinct [] = []
   | distinct (h::t) = h::distinct(rm h t);

@@ -53,10 +53,10 @@ fun pr_term tm =
    ( print "\n"; Lib.with_flag (show_types, true) print_term tm; print "\n" )
 
 fun ok_result1 tm =
-   tm = boolSyntax.T orelse
-   tm = boolSyntax.F orelse
-   tm = nan_tm orelse
-   tm = infinity_tm orelse
+   tm ~~ boolSyntax.T orelse
+   tm ~~ boolSyntax.F orelse
+   tm ~~ nan_tm orelse
+   tm ~~ infinity_tm orelse
    (case Lib.total dest_float tm of
        SOME r => is_ground_real r
      | NONE => false) orelse
@@ -74,12 +74,12 @@ fun ok_result2 tm =
     | NONE => ok_float tm
 
 fun ok_order_result tm =
-   tm = boolSyntax.T orelse
-   tm = boolSyntax.F orelse
-   tm = EQ_tm orelse
-   tm = GT_tm orelse
-   tm = LT_tm orelse
-   tm = UN_tm
+   tm ~~ boolSyntax.T orelse
+   tm ~~ boolSyntax.F orelse
+   tm ~~ EQ_tm orelse
+   tm ~~ GT_tm orelse
+   tm ~~ LT_tm orelse
+   tm ~~ UN_tm
 
 fun test_monops ty =
    let

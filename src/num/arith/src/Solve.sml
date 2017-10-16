@@ -104,8 +104,8 @@ fun NOT_NOT_INTRO_CONV tm =
 (* Discriminator functions for T (true) and F (false)                        *)
 (*---------------------------------------------------------------------------*)
 
-val is_T = equal T
-and is_F = equal F
+val is_T = aconv T
+and is_F = aconv F
 
 (*---------------------------------------------------------------------------*)
 (* NEGATE_CONV : conv -> conv                                                *)

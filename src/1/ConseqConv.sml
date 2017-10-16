@@ -100,7 +100,7 @@ fun REFL_CONSEQ_CONV t = DISCH t (ASSUME t);
 
 fun GEN_ASSUM v thm =
   let
-    val assums = filter (fn t => mem v (free_vars t)) (hyp thm);
+    val assums = filter (free_in v) (hyp thm);
     val thm2 = foldl (fn (t,thm) => DISCH t thm) thm assums;
     val thm3 = GEN v thm2;
     val thm4 = foldl (fn (_,thm) => UNDISCH (HO_MATCH_MP MONO_ALL thm))
@@ -197,7 +197,7 @@ in
       end
    else if (is_eq thm_term) then
       (dir,
-        if ((lhs thm_term = t) andalso not (rhs thm_term = t)) then
+       if aconv (lhs thm_term) t andalso not (aconv (rhs thm_term) t) then
            if (dir = CONSEQ_CONV_UNKNOWN_direction) then
               thm
            else if (dir = CONSEQ_CONV_STRENGTHEN_direction) then
@@ -253,7 +253,7 @@ fun FIRST_CONSEQ_CONV [] t = raise UNCHANGED
 
 
 fun CONSEQ_CONV___GET_SIMPLIFIED_TERM thm t =
-   if (concl thm = t) then T else
+   if aconv (concl thm) t then T else
    let
       val (t1,t2) = dest_imp (concl thm) handle HOL_ERR _ =>
                     dest_eq (concl thm);
@@ -271,12 +271,13 @@ fun CONSEQ_CONV___OPT_GET_SIMPLIFIED_TERM NONE dir t = t
 
 
 fun CONSEQ_CONV___GET_DIRECTION thm t =
-   if (concl thm = t) then CONSEQ_CONV_UNKNOWN_direction else
+   if aconv (concl thm) t then CONSEQ_CONV_UNKNOWN_direction else
    if (is_eq (concl thm)) then CONSEQ_CONV_UNKNOWN_direction else
    let
       val (t1,t2) = dest_imp (concl thm);
    in
-      if (aconv t1 t) andalso (aconv t2 t) then CONSEQ_CONV_UNKNOWN_direction else
+      if (aconv t1 t) andalso (aconv t2 t) then
+        CONSEQ_CONV_UNKNOWN_direction else
       if (aconv t2 t) then CONSEQ_CONV_STRENGTHEN_direction else
       if (aconv t1 t) then CONSEQ_CONV_WEAKEN_direction else
       raise UNCHANGED
@@ -323,14 +324,14 @@ fun is_refl_imp t =
 let
    val (l1,l2) = dest_imp_only t;
 in
-  (aconv l1 l2)
+  aconv l1 l2
 end handle HOL_ERR _ => false;
 
 fun is_refl_eq t =
 let
    val (l1,l2) = dest_eq t;
 in
-  (aconv l1 l2)
+  aconv l1 l2
 end handle HOL_ERR _ => false;
 
 fun is_refl_imp_eq t = is_refl_imp t orelse is_refl_eq t;
@@ -339,8 +340,10 @@ fun is_refl_imp_eq t = is_refl_imp t orelse is_refl_eq t;
 fun THEN_CONSEQ_CONV___combine thm1 thm2 t =
   if (is_refl_imp_eq (concl thm1)) then thm2
   else if (is_refl_imp_eq (concl thm2)) then thm1
-  else if (concl thm1 = t) then THEN_CONSEQ_CONV___combine (EQT_INTRO thm1) thm2 t
-  else if (is_eq (concl thm1)) andalso (rhs (concl thm1) = (concl thm2)) then
+  else if aconv (concl thm1) t then
+    THEN_CONSEQ_CONV___combine (EQT_INTRO thm1) thm2 t
+  else if (is_eq (concl thm1)) andalso aconv (rhs (concl thm1)) (concl thm2)
+  then
      THEN_CONSEQ_CONV___combine thm1 (EQT_INTRO thm2) t
   else if (is_eq (concl thm1)) andalso (is_eq (concl thm2)) then
      TRANS thm1 thm2
@@ -1715,7 +1718,7 @@ if (is_forall tt) then (
 (* a simple tactic to remove true form the assumptions *)
 val REMOVE_TRUE_TAC:tactic = fn (asm, t) =>
    let
-      val _ = if not (mem T asm) then Feedback.fail() else ();
+      val _ = if not (op_mem aconv T asm) then Feedback.fail() else ();
    in
       ([(filter (fn t => not (same_const t T)) asm, t)],
        hd)

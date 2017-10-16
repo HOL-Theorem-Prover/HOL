@@ -3,7 +3,7 @@ struct
 
 open Feedback Thm Conv Abbrev;
 
-infix THENC ORELSEC |->;
+val aconv = Term.aconv
 
 (*---------------------------------------------------------------------------
  * Fake for NJSML: it does not use Interrupt anyway so it won't ever
@@ -195,7 +195,7 @@ fun dest_binop opr tm =
     let val (Rator,rhs) = Term.dest_comb tm
 	val (opr',lhs) = Term.dest_comb Rator
     in
-	if opr=opr' then (lhs,rhs) else fail()
+	if aconv opr opr' then (lhs,rhs) else fail()
     end
     handle HOL_ERR _ => failwith "dest_binop";
 
@@ -287,12 +287,14 @@ fun COMB2_CONV lconv rconv tm =
 val COMB_CONV = Lib.W COMB2_CONV;;
 
 fun alpha v tm =
-  let val (v0,bod) = Term.dest_abs tm
-               handle HOL_ERR _ => failwith "alpha: Not an abstraction"
-  in if v = v0 then tm else
-      if not (Lib.mem v (Term.free_vars bod))
-	  then Term.mk_abs(v, Term.subst [Lib.|->(v0,v)] bod)
-      else failwith "alpha: Invalid new variable"
+  let
+    val (v0,bod) = Term.dest_abs tm
+                   handle HOL_ERR _ => failwith "alpha: Not an abstraction"
+  in
+    if aconv v v0 then tm
+    else if not (Term.free_in v bod) then
+      Term.mk_abs(v, Term.subst [Lib.|->(v0,v)] bod)
+    else failwith "alpha: Invalid new variable"
   end;
 
 
@@ -415,14 +417,17 @@ fun SINGLE_DEPTH_CONV conv tm =
 (*-----------------------------------------------------------------------*)
 
 fun MK_ABS_CONV var tm =
-  if (Term.is_comb tm andalso (Term.rand tm = var)
-      andalso not (Term.free_in var (Term.rator tm)))
-  then REFL tm
+  if Term.is_comb tm andalso aconv (Term.rand tm) var
+     andalso not (Term.free_in var (Term.rator tm))
+  then
+    REFL tm
   else
-  let val rhs = Term.mk_abs(var,tm)
+    let
+      val rhs = Term.mk_abs(var,tm)
       val newrhs = Term.mk_comb(rhs,var)
-  in SYM (BETA_CONV newrhs)
-  end;
+    in
+      SYM (BETA_CONV newrhs)
+    end;
 
 fun MK_ABSL_CONV vars tm =
  let val rhs = boolSyntax.list_mk_abs (vars,tm)

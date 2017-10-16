@@ -62,7 +62,7 @@ in
 fun PAIRED_ETA_CONV tm =
    let val (varstruct,body) = dest_pabs tm
        val (f,Rand) = dest_comb body
-       val _ = assert (equal varstruct) Rand
+       val _ = assert (aconv varstruct) Rand
        val xv = mk_var("x", type_of varstruct)
        val peq = pairify xv
        val par = rhs (concl peq)
@@ -179,8 +179,8 @@ fun RED_WHERE fnn body =
      let
         val (f, args) = strip_comb body
      in
-        if f = fnn
-           then ARGS_CONV (map (RED_WHERE fnn) args) THENC ITER_BETA_CONV
+        if aconv f fnn then
+          ARGS_CONV (map (RED_WHERE fnn) args) THENC ITER_BETA_CONV
         else let
                 val (Rator,Rand) = dest_comb body
              in

@@ -113,7 +113,7 @@ fun SUC_ELIM_CONV tm =
        val (sn,n) = (genvar N, genvar N)
        val suck_suc = subst [numSyntax.mk_suc v |-> sn] bod
        val suck_n = subst [v |-> n] suck_suc
-       val _ = assert (fn x => x <> tm) suck_n
+       val _ = assert (fn x => not (aconv x tm)) suck_n
        val th1 = ISPEC (list_mk_abs ([sn,n],suck_n))
                      arithmeticTheory.SUC_ELIM_THM
        val BETA2_CONV = (RATOR_CONV BETA_CONV) THENC BETA_CONV
@@ -349,7 +349,7 @@ val SUC_TO_NUMERAL_DEFN_CONV = let
       val v = numSyntax.dest_suc st
     in
       if is_var v then
-        case Lib.total (index (equal v)) vs of
+        case Lib.total (index (aconv v)) vs of
           NONE => ALL_CONV t
         | SOME i => (push_nth_down i THENC
                      LAST_FORALL_CONV basic_elim THENC

@@ -25,12 +25,12 @@ fun PART_MATCH' f th t =
     val hypfvs_set = hyp_frees th
     val hypfvs = HOLset.listItems hypfvs_set
     val tfvs = free_vars t
-    val dontspec = union tfvs hypfvs
+    val dontspec = op_union aconv tfvs hypfvs
     val (vs, speccedth) = avSPEC_ALL dontspec th
     val ((tmsig,_),_) = raw_match [] hypfvs_set (f (concl speccedth)) t ([],[])
-    val dontgen = union (map #redex tmsig) dontspec
+    val dontgen = op_union aconv (map #redex tmsig) dontspec
   in
-    GENL (set_diff vs dontgen) (INST tmsig speccedth)
+    GENL (op_set_diff aconv vs dontgen) (INST tmsig speccedth)
   end
 
 fun match_subterm pat =

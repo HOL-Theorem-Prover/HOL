@@ -39,7 +39,8 @@ in
                  val c = concl thm
                  val () = unsolved_list := []
               in
-                 if c = snd g then thm else EQ_MP (ALPHA c (snd g)) thm
+                 if identical c (snd g) then thm
+                 else EQ_MP (ALPHA c (snd g)) thm
               end
               handle e => raise ERR "TAC_PROOF" "Can't alpha convert")
        | (l, _) => (unsolved_list := l; raise ERR "TAC_PROOF" "unsolved goals")
@@ -593,7 +594,7 @@ end
 
 local
    fun UNDISCH_THEN tm ttac (asl, w) =
-      let val (_, A) = Lib.pluck (equal tm) asl in ttac (ASSUME tm) (A, w) end
+      let val (_, A) = Lib.pluck (aconv tm) asl in ttac (ASSUME tm) (A, w) end
    fun f ttac th = UNDISCH_THEN (concl th) ttac
 in
    val FIRST_X_ASSUM = FIRST_ASSUM o f
@@ -613,7 +614,7 @@ local
       val (tm_inst, _) = ho_match_term [] empty_tmset pat ob
       val bound_vars = map #redex tm_inst
     in
-      null (intersect constants bound_vars)
+      null (op_intersect aconv constants bound_vars)
     end handle HOL_ERR _ => false
 
  (* you might think that one could simply pass the free variable set
@@ -660,12 +661,11 @@ fun CONV_TAC (conv: conv) : tactic =
          val th = conv w
          val (_, rhs) = dest_eq (concl th)
       in
-         if rhs = T
-            then ([], empty (EQ_MP (SYM th) boolTheory.TRUTH))
+         if aconv rhs T then ([], empty (EQ_MP (SYM th) boolTheory.TRUTH))
          else ([(asl, rhs)], sing (EQ_MP (SYM th)))
       end
       handle UNCHANGED =>
-        if w = T (* special case, can happen! *)
+        if aconv w T (* special case, can happen! *)
           then ([], empty boolTheory.TRUTH)
         else ALL_TAC (asl, w)
 
@@ -753,12 +753,17 @@ val USE_SG_TAC = USE_SG_THEN ASSUME_TAC ;
  * A tactical that makes a tactic fail if it has no effect.
  *---------------------------------------------------------------------------*)
 
+fun goaleq ((asms1,g1),(asms2,g2)) =
+  ListPair.allEq (fn (t1,t2) => aconv t1 t2) (asms1,asms2) andalso
+  aconv g1 g2
+
 fun CHANGED_TAC tac g =
-   let
-      val (gl, p) = tac g
+  let
+    val (gl, p) = tac g
    in
-      if set_eq gl [g] then raise ERR "CHANGED_TAC" "no change" else (gl, p)
-   end
+     if ListPair.allEq goaleq (gl, [g]) then raise ERR "CHANGED_TAC" "no change"
+     else (gl, p)
+  end
 
 (*---------------------------------------------------------------------------
  * A tactical that parses in the context of a goal, a la the Q library.

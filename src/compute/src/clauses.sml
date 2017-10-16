@@ -34,9 +34,9 @@ fun check_arg_form trm =
       chk Rator (pat1::stk) free'
       end
     else if (is_var t)
-         then if stk=[]
+         then if null stk
               then let val newi = length free
-                   in (free, Pvar (newi - index (equal t) free - 1))
+                   in (free, Pvar (newi - index (aconv t) free - 1))
                       handle HOL_ERR _ => (t::free, Pvar newi)
                    end
               else raise CL_ERR "check_arg_form"
@@ -132,7 +132,7 @@ and rewrite =
 fun add_in_db (n,cst,act,EndDb) =
       funpow n NeedArg (Try{Hcst=cst, Rws=act, Tail=EndDb})
   | add_in_db (0,cst,act as Rewrite nrws,Try{Hcst,Rws as Rewrite rws,Tail}) =
-      if cst=Hcst then Try{ Hcst=Hcst, Rws=Rewrite(nrws@rws), Tail=Tail }
+      if aconv cst Hcst then Try{ Hcst=Hcst, Rws=Rewrite(nrws@rws), Tail=Tail }
       else Try { Hcst=Hcst, Rws=Rws, Tail=add_in_db(0,cst,act,Tail) }
   | add_in_db (n,cst,act,Try{Hcst,Rws,Tail}) =
       Try { Hcst=Hcst, Rws=Rws, Tail=add_in_db(n,cst,act,Tail) }
@@ -206,7 +206,7 @@ fun scrub_const (RWS htbl) c =
 fun from_term (rws,env,t) =
   let fun down (env,t,c) =
         case dest_term t of
-	  VAR _ => up((Bv (index (equal t) env) handle HOL_ERR _ => Fv), c)
+	  VAR _ => up((Bv (index (aconv t) env) handle HOL_ERR _ => Fv), c)
   	| CONST{Name,Thy,...} => up(Cst (t,assoc_clause rws (Name,Thy)),c)
   	| COMB(Rator,Rand) => down(env,Rator,Zrator{Rand=(env,Rand),Ctx=c})
   	| LAMB(Bvar,Body) => down(Bvar :: env, Body, Zabs{Bvar=(), Ctx=c})
@@ -301,11 +301,11 @@ fun scrub_thms lthm rws =
 (* Support for analysis of compsets                                          *)
 (*---------------------------------------------------------------------------*)
 
-fun rws_of (RWS (ref rbmap)) = 
+fun rws_of (RWS (ref rbmap)) =
  let val thinglist = Redblackmap.listItems rbmap
      fun db_of_entry (ss, ref (db,opt)) = db
      val dblist = List.map db_of_entry thinglist
-     fun get_actions db = 
+     fun get_actions db =
       case db
        of EndDb => []
         | NeedArg db' => get_actions db'
@@ -315,11 +315,11 @@ fun rws_of (RWS (ref rbmap)) =
      fun dest_action (Hcst,Rewrite rws) = (Hcst,map dest rws)
        | dest_action (Hcst,Conv _) = (Hcst,[])
      val rwlist = List.map dest_action actionlist
- in 
+ in
    rwlist
  end;
 
-datatype transform 
+datatype transform
   = Conversion of (term -> thm * db fterm)
   | RRules of thm list;
 
@@ -331,11 +331,11 @@ datatype transform
 (* to make all the dependencies explicit.                                    *)
 (*---------------------------------------------------------------------------*)
 
-fun deplist (RWS (ref rbmap)) = 
+fun deplist (RWS (ref rbmap)) =
  let val thinglist = Redblackmap.listItems rbmap
      fun db_of_entry (ss, ref (db,opt)) = (ss,db)
      val dblist = List.map db_of_entry thinglist
-     fun get_actions db = 
+     fun get_actions db =
       case db
        of EndDb => []
         | NeedArg db' => get_actions db'
@@ -345,7 +345,7 @@ fun deplist (RWS (ref rbmap)) =
      fun dest_action (Rewrite rws) = RRules (map dest rws)
        | dest_action (Conv ecnv) = Conversion ecnv
      val rwlist = List.map (I##(map dest_action)) actionlist
- in 
+ in
    rwlist
  end;
 
@@ -355,9 +355,9 @@ fun mkCSET () =
                       (inv_img_cmp (fn {Thy,Name,Ty} => (Thy,Name))
                               (pair_compare(String.compare,String.compare)))
      fun insert_const c cset = HOLset.add(cset,dest_thy_const c)
-     fun insert_tycs tyinfo cset = 
+     fun insert_tycs tyinfo cset =
         itlist insert_const (TypeBasePure.constructors_of tyinfo) cset
- in 
+ in
      itlist insert_tycs tyinfol init_set
  end;
 
@@ -365,11 +365,11 @@ fun mkCSET () =
 (* Compute the attachments for each constant, then delete the constructors.  *)
 (*---------------------------------------------------------------------------*)
 
-fun no_transform compset = 
+fun no_transform compset =
  let val CSET = mkCSET()
      fun inCSET t = HOLset.member(CSET, dest_thy_const t)
      fun interesting (ss,_::_) = false
-       | interesting ((Name,Thy),[]) = 
+       | interesting ((Name,Thy),[]) =
           let val c = prim_mk_const{Name=Name,Thy=Thy}
           in not(inCSET c)
           end

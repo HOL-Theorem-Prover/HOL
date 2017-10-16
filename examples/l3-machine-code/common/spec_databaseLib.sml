@@ -80,9 +80,9 @@ fun mk_spec_database basic_opt (default_opt: ''opt) proj_opt closeness
             sub1 k; List.app add1 (l @ [Built new])
          end
       val replace_pending =
-         replace (fn tm => fn Pending (_, t) => t <> tm | _ => true)
+         replace (fn tm => fn Pending (_, t) => t !~ tm | _ => true)
       val replace_built =
-         replace (fn tm => fn Built ((_, th) :: _) => Thm.concl th <> tm
+         replace (fn tm => fn Built ((_, th) :: _) => Thm.concl th !~ tm
                             | _ => true)
       fun closest target = fst o utilsLib.maximal Int.compare (closeness target)
       fun find_closest target =

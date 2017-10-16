@@ -66,9 +66,11 @@ fun stored_label (fvars,tm) =
   in case dest_term oper
       of CONST {Name,Thy,...} => (Cnet(Name,Thy,length args),args')
        | LAMB (Bvar,Body) => (Lnet(length args),
-                              (subtract fvars [Bvar],Body)::args')
+                              (op_set_diff aconv fvars [Bvar],Body)::args')
        | VAR (Name,_) =>
-          if mem oper fvars then (FVnet(Name,length args),args') else (Vnet,[])
+          if op_mem aconv oper fvars then
+            (FVnet(Name,length args),args')
+          else (Vnet,[])
        | _ => fail()
     end;
 

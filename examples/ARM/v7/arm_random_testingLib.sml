@@ -626,7 +626,7 @@ end
 local
   fun filter_mk_set [] = []
     | filter_mk_set ((x as (a,_))::rst) =
-        x::filter_mk_set (List.filter (fn (b,_) => b <> a) rst)
+        x::filter_mk_set (List.filter (fn (b,_) => b !~ a) rst)
 
   val uint_of_word = wordsSyntax.uint_of_word
   fun try_dest_label thm = markerLib.DEST_LABEL thm handle HOL_ERR _ => thm;
@@ -752,11 +752,11 @@ local
     | encoding ARM     = armSyntax.Encoding_ARM_tm
 
   fun block enc =
-        if enc = armSyntax.Encoding_Thumb_tm orelse
-           enc = armSyntax.Encoding_Thumb2_tm
+        if enc ~~ armSyntax.Encoding_Thumb_tm orelse
+           enc ~~ armSyntax.Encoding_Thumb2_tm
         then
           "THUMB"
-        else if enc = armSyntax.Encoding_ThumbEE_tm then
+        else if enc ~~ armSyntax.Encoding_ThumbEE_tm then
           "THUMBX"
         else
           "ARM"
@@ -780,7 +780,7 @@ local
           (let val (_,toarm,_) =
                       arm_astSyntax.dest_Branch_Link_Exchange_Immediate tm
            in
-             toarm = F
+             Feq toarm
            end) orelse
         arm_astSyntax.is_Preload_Instruction tm orelse
         term_eq arm_astSyntax.Clear_Exclusive_tm tm orelse

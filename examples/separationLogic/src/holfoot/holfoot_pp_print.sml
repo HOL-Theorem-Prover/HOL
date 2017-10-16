@@ -421,8 +421,8 @@ fun holfoot_prog_printer GS backend (sys_raw : term_pp_types.sysprinter) (ppfns:
     ) else if (same_const op_term var_res_prog_local_var_term) orelse
               (same_const op_term var_res_prog_call_by_value_arg_term) then (
        let
-          val (l, t') = var_res_strip_local_vars t;
-          val _ = if (l = []) then raise term_pp_types.UserPP_Failed else ();
+          val (l, t') = var_res_strip_local_vars t
+          val _ = if null l then raise term_pp_types.UserPP_Failed else ()
        in
           ublock INCONSISTENT 0 (
              add_string "local" >>
@@ -458,7 +458,7 @@ fun holfoot_prog_printer GS backend (sys_raw : term_pp_types.sysprinter) (ppfns:
                   end handle HOL_ERR _ => (argL_term, rest_term);
           val _ = if listSyntax.is_nil rest_term then () else Feedback.fail()
        in
-          if argL_term = [] then nothing else
+          if null argL_term then nothing else
           if length argL_term = 1 then sys (Top, Top, Top) (d - 1) (hd argL_term) else
           (
              ublock CONSISTENT 0 (
@@ -1200,7 +1200,7 @@ fun holfoot_frame_split_printer GS backend (sys_raw : term_pp_types.sysprinter) 
     val wL' = fst_dest_bag w';
 
     fun wL_sys a b v =
-       if not (mem v wL') then sys a b v else
+       if not (tmem v wL') then sys a b v else
        (add_string "!" >> (sys a b v));
 in
     ublock CONSISTENT 0 (

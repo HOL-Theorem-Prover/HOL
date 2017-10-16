@@ -39,7 +39,7 @@ fun make_definition thry s tm = (new_definition(s,tm), thry)
 fun head tm = head (rator tm) handle HOL_ERR _ => tm;
 
 fun all_fns eqns =
-  mk_set (map (head o lhs o #2 o strip_forall) (strip_conj eqns));
+  op_mk_set aconv (map (head o lhs o #2 o strip_forall) (strip_conj eqns));
 
 fun dest_hd_eqn eqs =
   let val hd_eqn = if is_conj eqs then fst(dest_conj eqs) else eqs
@@ -324,7 +324,7 @@ fun simp_assum conv tm th =
       val tmeq = conv tm
       val tm' = rhs(concl tmeq)
   in
-    if tm' = T then MP th' (EQT_ELIM tmeq)
+    if aconv tm' T then MP th' (EQT_ELIM tmeq)
     else UNDISCH(MATCH_MP (MATCH_MP lem tmeq) th')
   end
 end;
@@ -579,7 +579,7 @@ fun checkSV pats SV =
      ["Definition is schematic in the following variables:\n    ",
       String.concat (strings_of SV)])
    ;
-   case intersect (free_varsl (map get_pat pats)) SV
+   case op_intersect aconv (free_varsl (map get_pat pats)) SV
     of [] => ()
      | probs =>
        raise ERR "wfrec_eqns"
@@ -612,7 +612,7 @@ fun wfrec_eqns facts tup_eqs =
      val corollary' = funpow 2 UNDISCH WFREC_THM
      val given_pats = givens pats
      val corollaries = map (C SPEC corollary') given_pats
-     val eqns_consts = mk_set(find_terms is_const functional)
+     val eqns_consts = op_mk_set aconv (find_terms is_const functional)
      val (case_rewrites,congs) = extraction_thms eqns_consts facts
      val RWcnv = REWRITES_CONV (add_rewrites empty_rewrites
                                 (literal_case_THM::case_rewrites))
@@ -669,7 +669,7 @@ fun stdrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      fun gen_all away tm =
         let val FV = free_vars tm
         in itlist (fn v => fn tm =>
-              if mem v away then tm else mk_forall(v,tm)) FV tm
+              if op_mem aconv v away then tm else mk_forall(v,tm)) FV tm
         end
      val TCs_0 = op_U aconv TCl_0
      val TCl = map (map (gen_all (R1::SV))) TCl_0
@@ -732,7 +732,7 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      fun gen_all away tm =
         let val FV = free_vars tm
         in itlist (fn v => fn tm =>
-              if mem v away then tm else mk_forall(v,tm)) FV tm
+              if op_mem aconv v away then tm else mk_forall(v,tm)) FV tm
         end
      val TCl = map (map (gen_all (R1::f::SV) o subst[f |-> faux_capp])) TCl_0
      val TCs = op_U aconv TCl
@@ -839,7 +839,7 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
 
 fun tuple_args alist =
  let
-   val find = Lib.C assoc1 alist
+   val find = Lib.C (op_assoc1 aconv) alist
    fun tupelo tm =
      case dest_term tm of
         LAMB (Bvar, Body) => mk_abs (Bvar, tupelo Body)
@@ -850,7 +850,7 @@ fun tuple_args alist =
          in
            case find g of
               NONE => list_mk_comb (g, args')
-            | SOME (_, (stem', argtys)) =>
+            | SOME (stem', argtys) =>
                if length args < length argtys  (* partial application *)
                  then
                    let
@@ -893,6 +893,7 @@ fun ndom_rng ty 0 = ([],ty)
       in (dom::L, last)
       end;
 
+fun tmi_eq (tm1,i1:int) (tm2,i2) = i1 = i2 andalso aconv tm1 tm2
 fun mutrec thy bindstem eqns =
   let val dom_rng = Type.dom_rng
       val genvar = Term.genvar
@@ -904,7 +905,8 @@ fun mutrec thy bindstem eqns =
       val CONJ = Thm.CONJ
       fun dest_atom tm = (dest_var tm handle HOL_ERR _ => dest_const tm)
       val eqnl = strip_conj eqns
-      val lhs_info = mk_set(map ((I##length) o strip_comb o lhs) eqnl)
+      val lhs_info =
+          op_mk_set tmi_eq (map ((I##length) o strip_comb o lhs) eqnl)
       val div_tys = map (fn (tm,i) => ndom_rng (type_of tm) i) lhs_info
       val lhs_info1 = zip (map fst lhs_info) div_tys
       val dom_tyl = map (list_mk_prod_type o fst) div_tys
@@ -922,13 +924,13 @@ fun mutrec thy bindstem eqns =
       val eqns' = tuple_args (map inform lhs_info1) eqns
       val eqnl' = strip_conj eqns'
       val (L,R) = unzip (map dest_eq eqnl')
-      val fnl' = mk_set (map (fst o strip_comb o lhs) eqnl')
+      val fnl' = op_mk_set aconv (map (fst o strip_comb o lhs) eqnl')
       val fnvar_map = zip lhs_info1 fnl'
       val gvl = map genvar dom_tyl
       val gvr = map genvar rng_tyl
       val injmap = zip fnl' (map2 (C (curry mk_abs)) (inject mut_dom gvl) gvl)
       fun mk_lhs_mut_app (f,arg) =
-          mk_comb(mut,beta_conv (mk_comb(assoc f injmap,arg)))
+          mk_comb(mut,beta_conv (mk_comb(op_assoc aconv f injmap,arg)))
       val L1 = map (mk_lhs_mut_app o dest_comb) L
       val gv_mut_rng = genvar mut_rng
       val outfns = map (curry mk_abs gv_mut_rng) (project rng_tyl mut_rng gv_mut_rng)
@@ -937,7 +939,7 @@ fun mutrec thy bindstem eqns =
       fun fout f = (f,assoc (#2(dom_rng(type_of f))) ty_outs)
       val RNG_OUTS = map fout fnl'
       fun mk_rhs_mut f v =
-          (f |-> mk_abs(v,beta_conv (mk_comb(assoc f RNG_OUTS,
+          (f |-> mk_abs(v,beta_conv (mk_comb(op_assoc aconv f RNG_OUTS,
                                              mk_lhs_mut_app (f,v)))))
       val R1 = map (Term.subst (map2 mk_rhs_mut fnl' gvl)) R
       val eqnl1 = zip L1 R1
@@ -946,7 +948,8 @@ fun mutrec thy bindstem eqns =
       fun f_rng_in f = (f,assoc (#2(dom_rng(type_of f))) rng_injmap)
       val RNG_INS = map f_rng_in fnl'
       val tmp = zip (map (#1 o dest_comb) L) R1
-      val R2 = map (fn (f,r) => beta_conv(mk_comb(assoc f RNG_INS, r))) tmp
+      val R2 = map (fn (f,r) => beta_conv(mk_comb(op_assoc aconv f RNG_INS, r)))
+                   tmp
       val R3 = map (rhs o concl o QCONV (DEPTH_CONV BETA_CONV)) R2
       val mut_eqns = list_mk_conj(map mk_eq (zip L1 R3))
       val wfrec_res = wfrec_eqns thy mut_eqns
@@ -969,8 +972,8 @@ fun mutrec thy bindstem eqns =
       val mut_constSV = #1(dest_comb(lhs(concl (hd mut_rules))))
       val (mut_const,params) = strip_comb mut_constSV
       fun define_subfn (n,((fvar,(argtys,rng)),ftupvar)) thy =
-         let val inbar  = assoc ftupvar injmap
-             val outbar = assoc ftupvar RNG_OUTS
+         let val inbar  = op_assoc aconv ftupvar injmap
+             val outbar = op_assoc aconv ftupvar RNG_OUTS
              val (fvarname,_) = dest_atom fvar
              val defvars = rev
                   (Lib.with_flag (Globals.priming, SOME"") (variants [fvar])
@@ -1308,11 +1311,11 @@ fun mk_Rdefn stem R eqs =
 (*---------------------------------------------------------------------------*)
 
 fun TC rels_0 =
- let fun step a = Lib.assoc a rels_0 handle HOL_ERR _ => []
+ let fun step a = op_assoc aconv a rels_0 handle HOL_ERR _ => []
      fun relstep rels (x,(Y,fringe)) =
-       let val fringe' = U (map step fringe)
-           val Y' = union Y fringe'
-           val fringe'' = set_diff fringe' Y
+       let val fringe' = op_U aconv (map step fringe)
+           val Y' = op_union aconv Y fringe'
+           val fringe'' = op_set_diff aconv fringe' Y
        in (x,(Y',fringe''))
        end
      fun steps rels =
@@ -1328,10 +1331,10 @@ fun TC rels_0 =
 (*---------------------------------------------------------------------------*)
 
 fun trancl rel =
- let val field = U (map (fn (x,y) => [x,y]) rel)
+ let val field = op_U aconv (map (fn (x,y) => [x,y]) rel)
      fun init x =
        let val Y = rev_itlist (fn (a,b) => fn acc =>
-                      if a=x then insert b acc else acc) rel []
+                      if aconv a x then op_insert aconv b acc else acc) rel []
        in (x,Y)
        end
  in
@@ -1342,7 +1345,8 @@ fun trancl rel =
 (* partial order on the relation.                                            *)
 (*---------------------------------------------------------------------------*)
 
-fun depends_on (a,adeps) (b,bdeps) = mem b adeps andalso not (mem a bdeps);
+fun depends_on (a,adeps) (b,bdeps) =
+  op_mem aconv b adeps andalso not (op_mem aconv a bdeps);
 
 (*---------------------------------------------------------------------------*)
 (* Given a transitively closed relation, topsort it into dependency order,   *)
@@ -1352,7 +1356,8 @@ fun depends_on (a,adeps) (b,bdeps) = mem b adeps andalso not (mem a bdeps);
 fun cliques_of tcrel =
  let fun chunk [] acc = acc
        | chunk ((a,adeps)::t) acc =
-         let val (bideps,rst) = Lib.partition (fn (b,bdeps) => mem a bdeps) t
+         let val (bideps,rst) =
+                 Lib.partition (fn (b,bdeps) => op_mem aconv a bdeps) t
          in chunk rst (((a,adeps)::bideps)::acc)
          end
      val sorted = Lib.topsort depends_on tcrel
@@ -1393,7 +1398,7 @@ fun free_calls tm =
      val lhs_vars = free_varsl pats
      val rhs_vars = free_vars r
  in
-    (f, set_diff rhs_vars lhs_vars)
+    (f, op_set_diff aconv rhs_vars lhs_vars)
  end;
 
 (*---------------------------------------------------------------------------*)
@@ -1404,7 +1409,7 @@ fun free_calls tm =
 fun dependencies eqns =
   let val basic = map free_calls (strip_conj eqns)
       fun agglom ((f,l1)::(g,l2)::t) =
-             if f=g then agglom ((f,union l1 l2)::t)
+             if aconv f g then agglom ((f,op_union aconv l1 l2)::t)
               else (f,l1)::agglom ((g,l2)::t)
         | agglom other = other
  in
@@ -1446,7 +1451,7 @@ fun sort_eqns eqns =
      val cliques = dependencies eqns
      val cliques' = map (map fst) cliques
      fun clique_eqns clique =
-          filter (fn eqn => mem (eqn_head eqn) clique) eql
+          filter (fn eqn => op_mem aconv (eqn_head eqn) clique) eql
  in
    map (list_mk_conj o clique_eqns) cliques'
  end;
@@ -1473,13 +1478,14 @@ sort_eqns (list_mk_conj (rev(strip_conj eqns)));
  ---------------------------------------------------------------------------*)
 
 fun mk_defns stems eqnsl =
- let fun lhs_atoms eqns = mk_set (map (head o lhs) (strip_conj eqns))
+ let fun lhs_atoms eqns = op_mk_set aconv (map (head o lhs) (strip_conj eqns))
      fun mk_defn_theta stem eqns =
        let val Vs = lhs_atoms eqns
            val def = mk_defn stem eqns
-           val Cs = mk_set (map (head o lhs o snd o strip_forall)
-                                (flatten
-                                   (map (strip_conj o concl) (eqns_of def))))
+           val Cs = op_mk_set aconv
+                              (map (head o lhs o snd o strip_forall)
+                                   (flatten
+                                      (map (strip_conj o concl) (eqns_of def))))
            val theta = map2 (curry (op |->)) Vs Cs
        in (def, theta)
        end

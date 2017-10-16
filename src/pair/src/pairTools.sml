@@ -132,9 +132,9 @@ in
 fun PFUN_EQ_RULE th =
  let val ((_,v1),(_,v2))
        = with_exn ((dest_comb##dest_comb) o dest_eq o concl) th expected
- in if v1=v2
-      then SIMP (PGEN (genvar (type_of v1)) v1 th)
-      else raise expected
+ in
+   if aconv v1 v2 then SIMP (PGEN (genvar (type_of v1)) v1 th)
+   else raise expected
  end
 end;
 

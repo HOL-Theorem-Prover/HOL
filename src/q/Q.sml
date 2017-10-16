@@ -40,7 +40,7 @@ fun mk_term_rsubst ctxt = let
   fun f {redex,residue} = let
     val redex' = contextTerm ctxt redex
   in
-    if mem redex' ctxt then let
+    if op_mem aconv redex' ctxt then let
         val residue' = ptm_with_ctxtty ctxt (type_of redex') residue
       in
         SOME (redex' |-> residue')
@@ -169,7 +169,7 @@ fun REFINE_EXISTS_TAC q (asl, w) = let
   val (qvar, body) = dest_exists w
   val ctxt = free_varsl (w::asl)
   val t = ptm_with_ctxtty' ctxt (type_of qvar) q
-  val qvars = set_diff (free_vars t) ctxt
+  val qvars = op_set_diff aconv (free_vars t) ctxt
   val newgoal = subst [qvar |-> t] body
   fun chl [] ttac = ttac
     | chl (h::t) ttac = X_CHOOSE_THEN h (chl t ttac)
@@ -243,7 +243,7 @@ fun X_FUN_EQ_CONV q tm =
 
 fun skolem_ty tm =
  let val (V,tm') = strip_forall tm
- in if V<>[]
+ in if not (null V)
     then list_mk_fun (map type_of V, type_of(fst(dest_exists tm')))
     else raise ERR"XSKOLEM_CONV" "no universal prefix"
   end;
@@ -455,7 +455,8 @@ fun prep_rename q nm (asl, t) = let
   fun mapthis pat = let
     val patfvs = free_vars pat
     val pat_binds =
-        filter (fn v => not (mem v fvs) andalso isnt_uscore_var v) patfvs
+        filter (fn v => not (op_mem aconv v fvs) andalso isnt_uscore_var v)
+               patfvs
   in
     (pat, length pat_binds)
   end

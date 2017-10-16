@@ -169,7 +169,8 @@ local
              in (v', (v |-> v') :: sub)
              end
        in
-         ren (insert v' avoid) dealt (INR (sub', b) :: INL (SOME v') :: rest)
+         ren (op_insert aconv v' avoid) dealt
+             (INR (sub', b) :: INL (SOME v') :: rest)
        end)
     | ren _ _ _ = raise ERR "prettify_vars" "BUG";
 in
@@ -552,7 +553,7 @@ local
     let
       val (a, b) = dest_disj tm
       val a' = mk_neg a
-      val b_th = DISCH a' (if b = F then REFL F else contract (a :: asms) b)
+      val b_th = DISCH a' (if aconv b F then REFL F else contract (a :: asms) b)
     in
       if op_mem aconv a asms then UNDISCH (MATCH_MP CONTRACT_DISJ b_th)
       else CONV_RULE (TRY_CONV (RAND_CONV simplify_or_f))
@@ -745,9 +746,9 @@ fun sub_cnf f con defs (a, b) =
     end;
 
 fun def_step (defs, tm) =
-  case List.find (fn (_, b) => b = tm) defs of NONE
-    => let val g = genvar bool in ((g, tm) :: defs, g) end
-  | SOME (v, _) => (defs, v);
+  case List.find (fn (_, b) => aconv b tm) defs of
+      NONE => let val g = genvar bool in ((g, tm) :: defs, g) end
+    | SOME (v, _) => (defs, v);
 
 fun gen_cnf defs tm =
   if is_conj tm then
@@ -884,7 +885,7 @@ end;
 fun NEW_SKOLEM_CONST th =
   let
     val tm = concl th
-    val fvs = subtract (free_vars tm) (free_varsl (hyp th))
+    val fvs = op_set_diff aconv (free_vars tm) (free_varsl (hyp th))
     val (v, _) = dest_exists tm
     val c_type = foldl (fn (h, t) => type_of h --> t) (type_of v) fvs
     val c_vars = list_mk_comb (genvar c_type, rev fvs)
@@ -943,7 +944,7 @@ local
     let
       val (a,b) = dest_comb tm
       val _ = same_const select a orelse raise ERR "norm" "not a select"
-      val conv = ANTI_BETA_CONV (intersect (free_vars b) vars)
+      val conv = ANTI_BETA_CONV (op_intersect aconv (free_vars b) vars)
       val conv =
         if is_abs b then conv else
           let
@@ -997,7 +998,8 @@ local
        | _ => NONE) of s as SOME _ => s
        | NONE =>
          if is_select (snd (strip_abs tm)) andalso
-           null (intersect (free_vars tm) vs) then SOME tm
+           null (op_intersect aconv (free_vars tm) vs)
+         then SOME tm
          else NONE;
 in
   val get_vselect = partial (ERR "get_vselect" "not found") (get []);
@@ -1169,7 +1171,7 @@ local
 in
   fun rename defs vs tm =
     let
-      val vs = filter (fn v => mem v vs) (free_vars tm)
+      val vs = filter (fn v => op_mem aconv v vs) (free_vars tm)
       val (defs,vs,tm,def,def_th) = mk_def defs vs tm
       val convish = match_convish vs tm def
     in
@@ -1212,7 +1214,8 @@ local
 
   val let_conv = REWR_CONV LET_THM;
 
-  fun is_a_bool tm = type_of tm = bool andalso tm <> T andalso tm <> F;
+  fun is_a_bool tm =
+    type_of tm = bool andalso not (aconv tm T) andalso not (aconv tm F);
 
   fun lift_cond tm =
     TRY_CONV

@@ -54,7 +54,7 @@ val freesl = rev o Term.free_varsl
 
 fun GEN_ALL th =
   Lib.itlist Thm.GEN
-    (Lib.set_diff (frees (Thm.concl th)) (freesl (Thm.hyp th))) th
+    (Lib.op_set_diff Term.aconv (frees (Thm.concl th)) (freesl (Thm.hyp th))) th
 
 fun GEN_REWRITE_RULE F thlist1 thlist2 =
     Rewrite.GEN_REWRITE_RULE F

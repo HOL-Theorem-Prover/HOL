@@ -138,7 +138,7 @@ in
 end
 
 fun fixed_tyvars ctxt pattern =
-  Lib.U (map type_vars_in_term (Lib.intersect ctxt (free_vars pattern)))
+  Lib.U (map type_vars_in_term (op_intersect aconv ctxt (free_vars pattern)))
 
 fun ABB' {redex=l,residue=r} = ABB l r
 

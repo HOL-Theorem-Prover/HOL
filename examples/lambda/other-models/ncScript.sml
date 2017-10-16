@@ -607,8 +607,8 @@ val _ = save_thm("nc_INDUCTION", nc_INDUCTION);
 fun nc_INDUCT_TAC (A,g) =
  let val (_,P) = dest_comb g
       val ith = ISPEC P nc_INDUCTION
-      fun bconv tm
-        = if not(rator tm = P) then
+      fun bconv tm =
+        if rator tm !~ P then
           raise HOL_ERR{origin_structure = "ncScript.sml",
                         origin_function = "nc_INDUCT_TAC",
                         message = "function bconv failed"}
@@ -794,11 +794,11 @@ val nc_INDUCTION2 = Q.store_thm (
 fun nc_INDUCT_TAC2 q (A,g) =
   let val (_,P) = dest_comb g
       val ith = ISPEC P nc_INDUCTION2
-      fun bconv tm
-        = if not(rator tm = P) then
-            raise mk_HOL_ERR "ncScript.sml" "nc_INDUCT_TAC2"
-                             "function bconv failed"
-          else BETA_CONV tm
+      fun bconv tm =
+        if rator tm !~ P then
+          raise mk_HOL_ERR "ncScript.sml" "nc_INDUCT_TAC2"
+                           "function bconv failed"
+        else BETA_CONV tm
       val bth = CONV_RULE (ONCE_DEPTH_CONV bconv) ith
   in
         (MATCH_MP_TAC bth THEN Q.EXISTS_TAC q THEN REPEAT CONJ_TAC

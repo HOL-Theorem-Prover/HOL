@@ -165,7 +165,7 @@ local
     let
       val ((id, v1), tm) = combinSyntax.dest_update_comb v
       val (l, gpr) = combinSyntax.strip_update v1
-      val _ = gpr = Term.mk_comb (tm, id) orelse
+      val _ = gpr ~~ Term.mk_comb (tm, id) orelse
                     raise ERR "c_gpr_write" (Hol_pp.term_to_string v)
       val nq = List.map (fn (n, x) => mk_riscv_gpr (id, n, x)) l
       val not_in_p =
@@ -173,7 +173,7 @@ local
           (fn (n, _) =>
              List.all (fn ptm => case Lib.total dest_riscv_gpr ptm of
                                     SOME (id2, n2, _) =>
-                                      not (id =  id2 andalso n = n2)
+                                      not (id ~~ id2 andalso n ~~ n2)
                                   | NONE => true) p) l
       val np = List.map (fn (n, _) => mk_riscv_gpr (id, n, stateLib.vvar dword))
                  not_in_p
@@ -341,13 +341,15 @@ in
     end
 end
 
+fun tdistinct tl = HOLset.numItems (listset tl) = length tl
+
 local
   fun check_unique_reg_CONV tm =
     let
       val p = progSyntax.strip_star (temporal_stateSyntax.dest_pre' tm)
       val rp = List.mapPartial (Lib.total reg_idx) p
     in
-      if Lib.mk_set rp = rp
+      if tdistinct rp
          then Conv.ALL_CONV tm
       else raise ERR "check_unique_reg_CONV" "duplicate register"
     end
@@ -363,7 +365,7 @@ local
   val OPC_CONV = POOL_CONV o Conv.RATOR_CONV o Conv.RAND_CONV o Conv.RAND_CONV
   exception FalseTerm
   fun NOT_F_CONV tm =
-    if tm = boolSyntax.F then raise FalseTerm else Conv.ALL_CONV tm
+    if Feq tm then raise FalseTerm else Conv.ALL_CONV tm
   val WGROUND_RW_CONV =
     Conv.DEPTH_CONV (utilsLib.cache 10 Term.compare bitstringLib.v2w_n2w_CONV)
     THENC utilsLib.WGROUND_CONV

@@ -584,7 +584,7 @@ val wh_cbnf = store_thm(
     by METIS_TAC [normstar_to_abs_wstar] THEN
   ASM_SIMP_TAC (whfy (srw_ss())) [] THEN
   POP_ASSUM MP_TAC THEN NTAC 8 (POP_ASSUM (K ALL_TAC)) THEN
-  REPEAT (FIRST_X_ASSUM (fn th => if mem ``M:term`` (free_vars (concl th)) then
+  REPEAT (FIRST_X_ASSUM (fn th => if ``M:term`` IN FVs (concl th) then
                                     ALL_TAC
                                   else NO_TAC)) THEN
   Q_TAC SUFF_TAC

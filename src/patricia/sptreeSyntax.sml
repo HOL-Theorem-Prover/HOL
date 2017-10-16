@@ -79,6 +79,21 @@ val (foldi_tm, mk_foldi, dest_foldi, is_foldi) = s4 "foldi"
 
 datatype spt = LN | LS of term | BN of spt * spt | BS of spt * term * spt
 
+fun sptcmp (s1,s2) =
+  case (s1,s2) of
+      (LN, LN) => EQUAL
+    | (LN, _) => LESS
+    | (_, LN) => GREATER
+    | (LS t1, LS t2) => Term.compare (t1,t2)
+    | (LS _, _) => LESS
+    | (_, LS _) => GREATER
+    | (BN p1, BN p2)=> pair_compare(sptcmp,sptcmp)(p1,p2)
+    | (BN _, BS _) => LESS
+    | (BS _, BN _) => GREATER
+    | (BS(s11,t1,s12), BS(s21,t2,s22)) =>
+      pair_compare (pair_compare(sptcmp,Term.compare), sptcmp)
+                   (((s11,t1),s12), ((s21,t2),s22))
+
 fun dest_sptree tm =
    case Lib.total boolSyntax.dest_strip_comb tm of
       SOME ("sptree$LN", []) => LN
@@ -107,8 +122,8 @@ fun mk_sptree t =
     | BS (t1, a, t2) =>
          let
             val ln = mk_ln (Term.type_of a)
-            val tm1 = if t1 = LN then ln else mk_sptree t1
-            val tm2 = if t2 = LN then ln else mk_sptree t2
+            val tm1 = if sptcmp(t1, LN) = EQUAL then ln else mk_sptree t1
+            val tm2 = if sptcmp(t2, LN) = EQUAL then ln else mk_sptree t2
          in
             mk_bs (tm1, a, tm2)
          end

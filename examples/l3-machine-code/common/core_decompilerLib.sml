@@ -145,10 +145,11 @@ local
       Thm.concl
    fun extract_code (_, ((th, _, _), _)) = tripleSyntax.dest_code (Thm.concl th)
    val get_code =
-      (((Lib.mk_set o List.concat o List.map pred_setSyntax.strip_set) ##
-        Lib.mk_set) o
-       List.partition pred_setSyntax.is_insert o
-       List.concat o List.map (strip_union o extract_code)):
+     (((Lib.op_mk_set aconv o List.concat o List.map pred_setSyntax.strip_set)
+         ##
+        Lib.op_mk_set aconv) o
+      List.partition pred_setSyntax.is_insert o
+      List.concat o List.map (strip_union o extract_code)):
        (int * helperLib.instruction) list -> term list * term list
    val (CONJ1_CONV, CONJ2_CONV) =
       case Drule.CONJUNCTS (Drule.SPEC_ALL boolTheory.OR_CLAUSES) of
@@ -650,7 +651,7 @@ fun core_decompile name qcode =
       val (_, ((th, _, _), _)) = Lib.first (fn (x, _) => x = 0) thms
       val (model, pre, code, _) = tripleSyntax.dest_triple (Thm.concl th)
       val (cnd, asrt) = pairSyntax.dest_pair pre
-      val affected_vars = asrt |> Term.free_vars |> filter (fn v => v <> !pc)
+      val affected_vars = asrt |> Term.free_vars |> filter (fn v => v !~ !pc)
       val inp = pairSyntax.list_mk_pair (cnd :: affected_vars)
       fun get_assert i = pairSyntax.mk_pabs (inp, Term.subst (add_to_pc i) pre)
       val refl = Thm.SPEC code (Drule.ISPEC model tripleTheory.TRIPLE_REFL)

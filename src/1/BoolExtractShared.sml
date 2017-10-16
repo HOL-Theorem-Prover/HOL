@@ -138,11 +138,12 @@ quietdec := false;
       else
       if is_quant t then
           (let
-	      val (v, b) = dest_quant t;
-	      val (l1,l2) = get_impl_terms___multiple b;
-	      fun filter_pred (t,b) = not (mem v (free_vars t));
+	      val (v, b) = dest_quant t
+	      val (l1,l2) = get_impl_terms___multiple b
+	      fun filter_pred (t,b) = not (free_in v t)
 	  in
-              ((t,false)::(filter filter_pred l1), (t,false)::(filter filter_pred l2))
+              ((t,false)::filter filter_pred l1,
+               (t,false)::filter filter_pred l2)
           end)
       else
         (if same_const T t orelse same_const F t then ([],[]) else
@@ -151,10 +152,11 @@ quietdec := false;
 
   fun clean_term_multiple_list [] = []
     | clean_term_multiple_list ((t,b)::L) =
-      if (mem t (map fst L)) then
-         (t,true)::clean_term_multiple_list (filter (fn (t',b') => not (t = t')) L)
-      else
-         (t,b)::clean_term_multiple_list L;
+        if op_mem aconv t (map fst L) then
+          (t,true) ::
+          clean_term_multiple_list (filter (fn (t',b') => not (aconv t t')) L)
+        else
+          (t,b)::clean_term_multiple_list L
 
 
   fun get_impl_terms t =
@@ -187,7 +189,7 @@ fun case_split_REWRITE_CONV [] t =
           val thm = REWRITE_CONV match_thms t handle UNCHANGED => REFL t;
           val r = rhs (concl thm);
        in
-          if (r = T) then thm else
+          if aconv r T then thm else
 	  TRANS thm (case_split_REWRITE_CONV matches r)
        end;
 
@@ -207,15 +209,16 @@ fun case_split_REWRITE_CONV [] t =
 
 fun bool_eq_imp_real_imp_CONV matches t =
    let
-      val matches_thms = flatten (map get_rewrite_assumption_thms matches);
-      val conc_term = rhs (concl (REWRITE_CONV matches_thms t));
-      val _ = if (conc_term = F) then raise UNCHANGED else ();
+      val matches_thms = flatten (map get_rewrite_assumption_thms matches)
+      val conc_term = rhs (concl (REWRITE_CONV matches_thms t))
+      val _ = if aconv conc_term F then raise UNCHANGED else ()
 
-      val goal_term = if (conc_term = T) then T else mk_imp (list_mk_conj matches, conc_term);
-      val _ = if (t = goal_term) then raise UNCHANGED else ();
-      val goal_eq_term = mk_eq (t, goal_term);
+      val goal_term = if aconv conc_term T then T
+                      else mk_imp (list_mk_conj matches, conc_term)
+      val _ = if aconv t goal_term then raise UNCHANGED else ()
+      val goal_eq_term = mk_eq (t, goal_term)
 
-      val thm = EQT_ELIM (case_split_REWRITE_CONV matches goal_eq_term);
+      val thm = EQT_ELIM (case_split_REWRITE_CONV matches goal_eq_term)
    in
       thm
    end;
@@ -228,20 +231,20 @@ fun bool_eq_imp_real_imp_CONV matches t =
 fun bool_extract_common_terms_internal_CONV disj matches t =
    let
       val neg_matches = if disj then map mk_neg___idempot matches else matches
-      val matches_thms = flatten (map get_rewrite_assumption_thms neg_matches);
-      val conc_term = rhs (concl (REWRITE_CONV matches_thms t));
+      val matches_thms = flatten (map get_rewrite_assumption_thms neg_matches)
+      val conc_term = rhs (concl (REWRITE_CONV matches_thms t))
 
 
       val goal_term = if (disj) then
-			  if conc_term = T then T else
+			  if aconv conc_term T then T else
                              list_mk_disj (conc_term::matches)
 		      else
-			  if conc_term = F then F else
+			  if aconv conc_term F then F else
                              list_mk_conj (conc_term::matches)
 
-      val _ = if (t = goal_term) then raise UNCHANGED else ();
-      val goal_eq_term = mk_eq (t, goal_term);
-      val thm = EQT_ELIM (case_split_REWRITE_CONV matches goal_eq_term);
+      val _ = if aconv t goal_term then raise UNCHANGED else ()
+      val goal_eq_term = mk_eq (t, goal_term)
+      val thm = EQT_ELIM (case_split_REWRITE_CONV matches goal_eq_term)
    in
       thm
    end;
@@ -256,14 +259,19 @@ fun bool_extract_common_terms_internal_CONV disj matches t =
   one other in the list and clean_conj_matches removes terms that imply
   another term*)
 
+infix +=+
+val E = empty_tmset and op+=+ = HOLset.addList;
+
+
 fun clean_disj_matches [] acc = acc
   | clean_disj_matches (t::ts) acc =
     let
-       val (disj_imp,_) = get_impl_terms t;
-       val acc' = if (null_intersection disj_imp (ts@acc)) then
-		     t::acc
-                  else
-		     acc;
+      open HOLset
+      val (disj_imp,_) = get_impl_terms t
+      val acc' = if isEmpty(intersection(E +=+ disj_imp, E +=+ ts +=+ acc)) then
+		   t::acc
+                 else
+		   acc
     in
        clean_disj_matches ts acc'
     end;
@@ -272,11 +280,13 @@ fun clean_disj_matches [] acc = acc
 fun clean_conj_matches [] acc = acc
   | clean_conj_matches (t::ts) acc =
     let
-       val (_, conj_imp) = get_impl_terms t;
-       val acc' = if (null_intersection conj_imp (ts@acc)) then
-		     t::acc
-                  else
-		     acc;
+       val (_, conj_imp) = get_impl_terms t
+       open HOLset
+       val acc' =
+           if isEmpty(intersection(E +=+ conj_imp, E +=+ ts +=+ acc)) then
+	     t::acc
+           else
+	     acc
     in
        clean_conj_matches ts acc'
     end;
@@ -300,15 +310,16 @@ fun clean_conj_matches [] acc = acc
 fun BOOL_EQ_IMP_CONV t =
    let
       val (l,r) = dest_eq t;
-      val _ = if (type_of l = bool) then () else raise mk_HOL_ERR "Conv" "bool_eq_imp_CONV" "";
-      val (disj_l, conj_l) = get_impl_terms l;
-      val (disj_r, conj_r) = get_impl_terms r;
+      val _ = if (type_of l = bool) then ()
+              else raise mk_HOL_ERR "Conv" "bool_eq_imp_CONV" ""
+      val (disj_l, conj_l) = get_impl_terms l
+      val (disj_r, conj_r) = get_impl_terms r
 
-      val disj_matches = clean_disj_matches (findMatches (disj_l, disj_r)) [];
-      val conj_matches = clean_conj_matches (findMatches (conj_l, conj_r)) [];
+      val disj_matches = clean_disj_matches (findMatches (disj_l, disj_r)) []
+      val conj_matches = clean_conj_matches (findMatches (conj_l, conj_r)) []
 
-      val matches = (map mk_neg___idempot disj_matches) @ conj_matches;
-      val _ = if matches = [] then raise UNCHANGED else ();
+      val matches = (map mk_neg___idempot disj_matches) @ conj_matches
+      val _ = if null matches then raise UNCHANGED else ()
    in
       bool_eq_imp_real_imp_CONV matches t
    end;
