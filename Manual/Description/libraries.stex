@@ -2594,13 +2594,16 @@ field.
 
 For example, the following \simpset{} fragment will cause
 AC-normalisation of disjunctions
-\begin{hol}
-\begin{verbatim}
-   SSFRAG {ac = [(DISJ_ASSOC, DISJ_COMM)],
-           rewrs = [], filter = NONE, convs = [],
-           dprocs = [], congs = []}
-\end{verbatim}
-\end{hol}
+\begin{session}
+\begin{alltt}
+>>__ load "simpLib";
+>>__ open simpLib;
+##eval[DISJ_ss] SSFRAG { name = NONE,
+           convs = [], rewrs = [], congs = [],
+           filter = NONE, ac = [(DISJ_ASSOC, DISJ_COMM)],
+           dprocs = [] }
+\end{alltt}
+\end{session}
 The pair of provided theorems must state
 \begin{eqnarray*}
 x \oplus y &=& y \oplus x\\
