@@ -2594,14 +2594,16 @@ field.
 
 For example, the following \simpset{} fragment will cause
 AC-normalisation of disjunctions
-\begin{hol}
-\begin{verbatim}
-   SSFRAG {name = NONE,
+\begin{session}
+\begin{alltt}
+>>__ load "simpLib";
+>>__ open simpLib;
+##eval[DISJ_ss] SSFRAG { name = NONE,
            convs = [], rewrs = [], congs = [],
            filter = NONE, ac = [(DISJ_ASSOC, DISJ_COMM)],
            dprocs = [] }
-\end{verbatim}
-\end{hol}
+\end{alltt}
+\end{session}
 The pair of provided theorems must state
 \begin{eqnarray*}
 x \oplus y &=& y \oplus x\\
@@ -2615,12 +2617,6 @@ above is bound to the \ML{} identifier \ml{DISJ\_ss}, its behaviour is
 demonstrated in the following example:
 \begin{session}
 \begin{alltt}
->>__ load "simpLib";
->>__ open simpLib;
->>__ val DISJ_ss = SSFRAG {name = NONE,
-           convs = [], rewrs = [], congs = [],
-           filter = NONE, ac = [(DISJ_ASSOC, DISJ_COMM)],
-           dprocs = [] };
 >> SIMP_CONV (bool_ss ++ DISJ_ss) [] ``p /\ q \/ r \/ P z``;
 \end{alltt}
 \end{session}
