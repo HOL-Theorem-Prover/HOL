@@ -202,8 +202,8 @@ in
            (if number >= 560 then
               case pkgconfig_info of
                   SOME list => list @ stdsuffix
-                | NONE => ["-L"^polymllibdir, "-lpolymain", "-lpolyml"] @
-                          stdsuffix
+                | NONE => ["-L"^polymllibdir, "-lpolymain", "-lpolyml",
+                           "-lstdc++"] @ stdsuffix
             else if number >= 551
                then ["-lpthread", "-lm", "-ldl", "-lstdc++", "-Wl,-no_pie"]
             else if number >= 550

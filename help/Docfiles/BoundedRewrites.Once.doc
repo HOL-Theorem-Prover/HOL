@@ -53,6 +53,6 @@ In the first call two rewrites using {th} can occur; in the
 second, only one can occur.
 
 \SEEALSO
-Drule.Ntimes, Tactical.THEN, simpLib.SIMP_TAC, bossLib.RW_TAC, Rewrite.ONCE_REWRITE_TAC.
+BoundedRewrites.Ntimes, Tactical.THEN, simpLib.SIMP_TAC, bossLib.RW_TAC, Rewrite.ONCE_REWRITE_TAC.
 
 \ENDDOC

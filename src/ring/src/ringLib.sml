@@ -18,10 +18,10 @@ fun RING_ERR function message =
    between the semantic level operators and the syntactic level ones. *)
 
 fun ring_field q =
-  rhs(concl(REWRITE_CONV[ringTheory.ring_accessors] (--q--)));
+  rhs(concl(REWRITE_CONV[ringTheory.ring_accessors] (Term q)));
 
 fun sring_field q =
-  rhs(concl(REWRITE_CONV[semi_ringTheory.semi_ring_accessors] (--q--)));
+  rhs(concl(REWRITE_CONV[semi_ringTheory.semi_ring_accessors] (Term q)));
 
 fun inst_ty ty = inst [alpha |-> ty];
 local fun pmc s = prim_mk_const {Name = s, Thy = "ringNorm"}
@@ -140,9 +140,9 @@ fun mk_ring_thm nm th =
     raise RING_ERR "mk_ring_thm" "Error while importing ring definitions"
   end;
 (*
-mk_ring_thm "int" (ASSUME(--`is_ring(ring int_0 int_1 $+ $* $~)`--))
+mk_ring_thm "int" (ASSUME“is_ring(ring int_0 int_1 $+ $* $~)”)
 mk_ring_thm "num"
-  (ASSUME(--`is_semi_ring (semi_ring 0 1 $+ $* :num semi_ring)`--))
+  (ASSUME “is_semi_ring (semi_ring 0 1 $+ $* :num semi_ring)”)
 *)
 
 fun store_ring {Name, Theory} =

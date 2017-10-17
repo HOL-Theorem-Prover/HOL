@@ -88,11 +88,11 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
   val eqv = (rator o rhs o rhs o snd o strip_forall o concl) equiv
   val repty = (hd o snd o dest_type o type_of) eqv
   val tydef =
-    let val rtm = (--`\c. ?x. c = ^eqv x`--) in
+    let val rtm = “\c. ?x. c = ^eqv x” in
     new_type_definition(tyname,
-      PROVE((--`?c. ^rtm c`--),
+      PROVE(“?c. ^rtm c”,
             BETA_TAC THEN
-            MAP_EVERY EXISTS_TAC [(--`^eqv x`--), (--`x:^(ty_antiq(repty))`--)]
+            MAP_EVERY EXISTS_TAC [“^eqv x”, “x:^(ty_antiq(repty))”]
             THEN REFL_TAC)) end
   val tybij = BETA_RULE
     (define_new_type_bijections {name = tyname^"_tybij",
@@ -104,24 +104,24 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
                                 o fst o dest_conj o concl) tybij
 
   val refl = PROVE
-    ((--`!h. ^eqv h h`--),
+    (“!h. ^eqv h h”,
      GEN_TAC THEN REWRITE_TAC[equiv] THEN REFL_TAC)
   val sym = PROVE
-   ((--`!h i. ^eqv h i = ^eqv i h`--),
+   (“!h i. ^eqv h i = ^eqv i h”,
     REWRITE_TAC[equiv] THEN MATCH_ACCEPT_TAC EQ_SYM_EQ)
   val trans = PROVE
-   ((--`!h i j. ^eqv h i /\ ^eqv i j ==> ^eqv h j`--),
+   (“!h i j. ^eqv h i /\ ^eqv i j ==> ^eqv h j”,
     REPEAT GEN_TAC THEN REWRITE_TAC[equiv] THEN
     MATCH_ACCEPT_TAC EQ_TRANS)
 
   val EQ_AP = PROVE
-   ((--`!p q. (p = q) ==> ^eqv p q`--),
+   (“!p q. (p = q) ==> ^eqv p q”,
     REPEAT GEN_TAC THEN DISCH_THEN SUBST1_TAC THEN
     MATCH_ACCEPT_TAC refl)
 
   val EQ_WELLDEF = PROVE
-   ((--`!x1 x2 y1 y2. (^eqv x1 x2) /\ (^eqv y1 y2) ==>
-       ((^eqv x1 y1) = (^eqv x2 y2))`--),
+   (“!x1 x2 y1 y2. (^eqv x1 x2) /\ (^eqv y1 y2) ==>
+       ((^eqv x1 y1) = (^eqv x2 y2))”,
   REPEAT GEN_TAC THEN DISCH_TAC THEN EQ_TAC THENL
    [RULE_ASSUM_TAC(ONCE_REWRITE_RULE[sym]), ALL_TAC] THEN
   POP_ASSUM(CONJUNCTS_THEN2 (fn th => DISCH_THEN(MP_TAC o CONJ th)) ASSUME_TAC)
@@ -131,27 +131,27 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
   DISCH_THEN(ACCEPT_TAC o MATCH_MP trans))
 
   val DEST_MK_EQCLASS = PROVE
-   ((--`!v. ^rep (^abs (^eqv v)) = ^eqv v`--),
+   (“!v. ^rep (^abs (^eqv v)) = ^eqv v”,
     GEN_TAC THEN REWRITE_TAC[GSYM tybij] THEN
-    EXISTS_TAC (--`v:^(ty_antiq(repty))`--) THEN REFL_TAC)
+    EXISTS_TAC “v:^(ty_antiq(repty))” THEN REFL_TAC)
 
   val SAME_REP = PROVE
-   ((--`!h i. ^eqv h i ==> ^eqv h ($@ (^eqv i))`--),
+   (“!h i. ^eqv h i ==> ^eqv h ($@ (^eqv i))”,
     REPEAT GEN_TAC THEN DISCH_TAC THEN MATCH_MP_TAC trans THEN
-    EXISTS_TAC (--`i:^(ty_antiq(repty))`--) THEN ASM_REWRITE_TAC[] THEN
+    EXISTS_TAC “i:^(ty_antiq(repty))” THEN ASM_REWRITE_TAC[] THEN
     MATCH_MP_TAC SELECT_AX THEN
-    EXISTS_TAC (--`i:^(ty_antiq(repty))`--) THEN MATCH_ACCEPT_TAC refl)
+    EXISTS_TAC “i:^(ty_antiq(repty))” THEN MATCH_ACCEPT_TAC refl)
 
   val SAME_RCR = PROVE
-    ((--`!h i. (^eqv($@(^rep h)) = ^eqv($@(^rep i))) = (h = i)`--),
+    (“!h i. (^eqv($@(^rep h)) = ^eqv($@(^rep i))) = (h = i)”,
      let val th = SYM(REWRITE_RULE[equiv]
-                                  (SPECL [(--`h:^(ty_antiq(repty))`--),
-                                          (--`h:^(ty_antiq(repty))`--)]
+                                  (SPECL [“h:^(ty_antiq(repty))”,
+                                          “h:^(ty_antiq(repty))”]
                                          SAME_REP))
          val th2 = REWRITE_RULE[CONJUNCT1 tybij]
-                               (SPEC (--`^rep h`--)(CONJUNCT2 tybij))
-         val th3 = SPEC (--`i:^(ty_antiq(absty))`--)
-                        (GEN (--`h:^(ty_antiq(absty))`--) th2) in
+                               (SPEC “^rep h”(CONJUNCT2 tybij))
+         val th3 = SPEC “i:^(ty_antiq(absty))”
+                        (GEN “h:^(ty_antiq(absty))” th2) in
      REPEAT GEN_TAC THEN MAP_EVERY CHOOSE_TAC [th2, th3] THEN
      ASM_REWRITE_TAC[th] THEN EVERY_ASSUM(SUBST1_TAC o SYM) THEN EQ_TAC THENL
       [DISCH_THEN(MP_TAC o AP_TERM abs), DISCH_THEN SUBST1_TAC] THEN
@@ -171,10 +171,10 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
     let val v = fst(dest_forall tm)
         val v' = (mk_var o(I##(K absty o assert(curry op = repty))) o dest_var)
                  v
-        val th1 = GEN v' (SPEC (--`$@(^rep ^v')`--) (ASSUME tm))
+        val th1 = GEN v' (SPEC “$@(^rep ^v')” (ASSUME tm))
         val tm' = concl th1
         val th2 = ASSUME tm'
-        val th3 = GEN v (SPEC (--`^abs (^eqv ^v)`--) th2)
+        val th3 = GEN v (SPEC “^abs (^eqv ^v)” th2)
         val th4 = Rewrite.GEN_REWRITE_RULE ONCE_DEPTH_CONV
                        Rewrite.empty_rewrites [DEST_MK_EQCLASS] th3
         val tm'' = concl th4
@@ -184,7 +184,7 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
     IMP_ANTISYM_RULE (DISCH_ALL th1) (DISCH_ALL th6) end
 
   val EQC_EXISTS_CONV =
-    let val neg2 = SPEC (--`x:bool`--) (CONJUNCT1 NOT_CLAUSES) in
+    let val neg2 = SPEC “x:bool” (CONJUNCT1 NOT_CLAUSES) in
     REWR_CONV(SYM neg2) THENC
     RAND_CONV(NOT_EXISTS_CONV THENC EQC_FORALL_CONV) THENC
     NOT_FORALL_CONV THENC RAND_CONV(ABS_CONV(REWR_CONV neg2)) end
@@ -195,7 +195,7 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
     else
       let val (opp,tms) = (I ## map transconv) (strip_comb tm) in
       if (mem opp (map #func fnlist) andalso (type_of tm = repty)) then
-        (--`$@(^rep(^abs(^eqv ^(list_mk_comb(opp,tms)))))`--)
+        “$@(^rep(^abs(^eqv ^(list_mk_comb(opp,tms)))))”
       else if tms = [] then opp
       else list_mk_comb(transconv opp,tms) end
 
@@ -222,13 +222,13 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
          val rty = end_itlist (fn t1 => fn t2 => mk_type("fun",[t1,t2])) ntyl
          val args = wargs (butlast ntyl)
          val rargs = map (fn tm => if (type_of tm = absty)
-                                   then(--`$@ (^rep ^tm)`--)
+                                   then“$@ (^rep ^tm)”
                                    else tm)
                          args
           val l = list_mk_comb(mk_var(fname,rty),args)
           val r = let val r0 = list_mk_comb(tm,rargs)
                   in if type_of r0 = repty
-                        then (--`^abs (^eqv ^r0)`--)
+                        then “^abs (^eqv ^r0)”
                         else r0
                   end
       in

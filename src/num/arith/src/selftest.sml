@@ -51,6 +51,12 @@ in
   else die "FAILED\n"
 end
 
+val _ = new_constant("dimindex", ``:'a itself -> num``)
+val _ = convtest ("Testing norming of polymorphic num-range constants",
+                  QCONV (SIMP_CONV arith_ss []),
+                  “n + dimindex(:'a) + dimindex(:'b) - 1”,
+                  “n + (dimindex(:'a) + dimindex(:'b)) - 1”)
+
 fun TRUE_ARITH nm t =
   let
     val _ = pr ("ARITH_CONV: " ^ nm)

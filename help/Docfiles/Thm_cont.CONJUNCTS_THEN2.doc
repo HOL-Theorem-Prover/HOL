@@ -1,6 +1,6 @@
 \DOC CONJUNCTS_THEN2
 
-\TYPE {CONJUNCTS_THEN2 : (thm_tactic -> thm_tactic -> thm_tactic)}
+\TYPE {CONJUNCTS_THEN2 : (thm_tactic -> thm_tactical)}
 
 \SYNOPSIS
 Applies two theorem-tactics to the corresponding conjuncts of a theorem.

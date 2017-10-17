@@ -15,6 +15,8 @@ infix 8 via by suffices_by
 (* infixes for THEN shorthands *)
 infix >> >- >| \\ >>> >>- ??
 
+infix ~~ !~ Un Isct -- IN
+
 structure Tag = Tag :> FinalTag where type tag = Tag.tag
 structure Type = Type :> FinalType where type hol_type = Type.hol_type
 structure Term = Term :> FinalTerm where type term = Term.term

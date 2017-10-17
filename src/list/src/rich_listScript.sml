@@ -44,6 +44,8 @@ in
    val SNOC_11 = SNOC_11
    val SUM = SUM
    val TL = TL
+   val UNIQUE_DEF = UNIQUE_DEF
+   val UNIQUE_LENGTH_FILTER = UNIQUE_LENGTH_FILTER
    val UNZIP = UNZIP
    val ZIP = ZIP
 end;
@@ -3237,6 +3239,17 @@ val list_rel_butlastn = Q.store_thm ("list_rel_butlastn",
 
 end
 (* end CakeML lemmas *)
+
+(* alternative definition of listTheory.UNIQUE *)
+val UNIQUE_LIST_ELEM_COUNT = store_thm (
+   "UNIQUE_LIST_ELEM_COUNT", ``!e L. UNIQUE e L = (LIST_ELEM_COUNT e L = 1)``,
+    rpt GEN_TAC
+ >> REWRITE_TAC [LIST_ELEM_COUNT_DEF]
+ >> Q_TAC KNOW_TAC `(\x. x = e) = ($= e)`
+ >- ( REWRITE_TAC [FUN_EQ_THM] >> GEN_TAC >> BETA_TAC \\
+      METIS_TAC [] )
+ >> DISCH_TAC >> ASM_REWRITE_TAC []
+ >> RW_TAC std_ss [UNIQUE_LENGTH_FILTER]);
 
 (*---------------------------------------------------------------------------*)
 (* Add evaluation theorems to computeLib.the_compset                         *)

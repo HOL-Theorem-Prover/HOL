@@ -384,4 +384,11 @@ fun real_time f x =
       end_real_time timer; y
    end
 
+(* set helpers/abbreviations *)
+type 'a set = 'a HOLset.set
+fun op Un p = HOLset.union p
+fun op Isct p = HOLset.intersection p
+fun op -- p = HOLset.difference p
+fun op IN (e,s) = HOLset.member(s,e)
+
 end (* Lib *)

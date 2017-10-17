@@ -30,7 +30,7 @@ val exceptionSignalled_id = Q.prove(
 val tac =
    lrw [NextStateCHERI_def, Next_def, AddressTranslation_def,
         write'CP0_def, write'exceptionSignalled_def,
-        BranchTo_def, BranchDelay_def, BranchDelayPCC_def]
+        BranchTo_def, BranchDelay_def]
    \\ Cases_on
        `(Run (Decode w) (s' with currentInst := SOME w)).c_state.c_BranchTo`
    \\ Cases_on
@@ -43,15 +43,17 @@ val tac =
 val NextStateCHERI_nodelay = utilsLib.ustore_thm("NextStateCHERI_nodelay",
     `(s.exception = NoException) /\
      (BranchDelay s = NONE) /\
-     (BranchDelayPCC s = NONE) /\
+     (s.BranchDelayPCC = NONE) /\
      ~exceptionSignalled s ==>
      (Fetch (s with currentInst := NONE) = (SOME w, s')) /\
      (Decode w = i) /\
      (Run i (s' with currentInst := SOME w) = next_state) /\
      (next_state.exception = s.exception) /\
      (BranchDelay next_state = s.c_state.c_BranchDelay) /\
-     (BranchDelayPCC next_state = NONE) /\
-     (BranchToPCC next_state = NONE) /\
+     (next_state.BranchDelayPCC = NONE) /\
+     (next_state.BranchToPCC = NONE) /\
+     (~next_state.CCallBranch) /\
+     (~next_state.CCallBranchDelay) /\
      (BranchTo next_state = b) /\
      ~exceptionSignalled next_state ==>
      (NextStateCHERI s =
@@ -71,15 +73,17 @@ val NextStateCHERI_nodelay = utilsLib.ustore_thm("NextStateCHERI_nodelay",
 val NextStateCHERI_delay = utilsLib.ustore_thm("NextStateCHERI_delay",
     `(s.exception = NoException) /\
      (BranchDelay s = SOME a) /\
-     (BranchDelayPCC s = NONE) /\
+     (s.BranchDelayPCC = NONE) /\
      ~exceptionSignalled s ==>
      (Fetch (s with currentInst := NONE) = (SOME w, s')) /\
      (Decode w = i) /\
      (Run i (s' with currentInst := SOME w) = next_state) /\
      (next_state.exception = s.exception) /\
      (BranchDelay next_state = s.c_state.c_BranchDelay) /\
-     (BranchDelayPCC next_state = NONE) /\
-     (BranchToPCC next_state = NONE) /\
+     (next_state.BranchDelayPCC = NONE) /\
+     (next_state.BranchToPCC = NONE) /\
+     (~next_state.CCallBranch) /\
+     (~next_state.CCallBranchDelay) /\
      (BranchTo next_state = NONE) /\
      ~exceptionSignalled next_state ==>
      (NextStateCHERI s =
@@ -196,7 +200,7 @@ val state_id =
     utilsLib.mk_state_id_thm cheri_state_component_equality
       [["c_gpr"],
        ["all_state", "c_state"],
-       ["c_BranchDelayPCC", "c_BranchToPCC", "c_capr", "c_pcc", "c_state"]],
+       ["BranchDelayPCC", "BranchToPCC", "c_capr", "c_pcc", "c_state"]],
     utilsLib.mk_state_id_thm procState_component_equality
       [["c_LLbit"],
        ["c_CP0", "c_LLbit"]]
@@ -251,9 +255,9 @@ local
       extract_conv ``(36 >< 2) ((39 >< 3) (vaddr: word64) : 37 word) :35 word``,
       extract_conv ``(39 >< 5) ((39 >< 0) (vaddr: word64) : 40 word) :35 word``,
       bitstringLib.v2w_n2w_CONV ``v2w [F] :word1``, BranchDelay_def,
-      BranchDelayPCC_def, getTag_def, getSealed_def, getBase_def,
+      getTag_def, getSealed_def, getBase_def,
       getLength_def, getPerms_def, getOffset_def, CAPR_def, write'CAPR_def,
-      isCapRepresentable_def, setOffset_def, rec'Perms_def, Perms_accessors,
+      setOffset_def, rec'Perms_def, Perms_accessors,
       wordsTheory.WORD_XOR_CLAUSES, isAligned, BYTE_def, HALFWORD_def,
       WORD_def, DOUBLEWORD_def, LLbit_def, write'LLbit_def, write'CP0_def,
       KCC_def, PC_def, write'PC_def, PCC_def, write'PCC_def, write'EPCC_def,
@@ -295,14 +299,8 @@ val cp0_conv =
 
 val ev_assume =
   Thm.ASSUME o utilsLib.rhsc o
-  (QCONV (REWRITE_CONV [CP0_def, BranchDelay_def, BranchDelayPCC_def])
+  (QCONV (REWRITE_CONV [CP0_def, BranchDelay_def])
    THENC ev_conv)
-
-val BranchDelayPCC =
-  updateTheory.APPLY_UPDATE_ID
-  |> Q.ISPECL [`^st.c_BranchDelayPCC`, `^st.procID`]
-  |> datatype_rule
-  |> REWRITE_RULE [ev_assume ``~IS_SOME (BranchDelayPCC ^st)``]
 
 val SignalException0_rwt =
   SignalException_def
@@ -310,12 +308,12 @@ val SignalException0_rwt =
   |> (fn th => Thm.AP_THM th st)
   |> Conv.RIGHT_CONV_RULE
        (Thm.BETA_CONV
-        THENC REWRITE_CONV [BranchDelay_def, BranchDelayPCC_def]
+        THENC REWRITE_CONV [BranchDelay_def]
         THENC ev_conv
         THENC REWRITE_CONV
           (List.map ev_assume
             [``~IS_SOME (BranchDelay ^st)``,
-             ``~IS_SOME (BranchDelayPCC ^st)``,
+             ``~IS_SOME (^st.BranchDelayPCC)``,
              ``~(CP0 ^st).Status.EXL``,
              ``ExceptionType <> XTLBRefillL``,
              ``ExceptionType <> XTLBRefillS``,
@@ -334,21 +332,28 @@ val SignalException0_rwt =
         THENC cp0_conv
         THENC PairedLambda.let_CONV
         THENC RAND_CONV
-                (ev_conv
-                 THENC REWRITE_CONV [ev_assume ``(CP0 ^st).Status.BEV``])
-        THENC PairedLambda.let_CONV
-        THENC RAND_CONV
                  (REWRITE_CONV
                     [write'BranchDelay_def, write'BranchTo_def,
-                     write'BranchDelayPCC_def, write'BranchToPCC_def,
                      write'exceptionSignalled_def, write'CAPR_def
                      ]
                   THENC ev_conv
                   THENC PairedLambda.let_CONV
-                  THENC REWRITE_CONV [PCC_def, BranchDelayPCC]
+                  THENC REWRITE_CONV [PCC_def]
                   THENC ev_conv)
         THENC PairedLambda.let_CONV
         THENC cp0_conv
+        THENC PairedLambda.let_CONV
+        THENC cp0_conv
+        THENC PairedLambda.let_CONV
+        THENC cp0_conv
+        THENC RAND_CONV
+                (ev_conv
+                 THENC REWRITE_CONV [ev_assume ``(CP0 ^st).Status.BEV``]
+                 )
+        THENC PairedLambda.let_CONV
+        THENC PairedLambda.let_CONV
+        THENC cp0_conv
+        THENC SIMP_CONV (srw_ss()) []
        )
 
 val SignalException_rwt =
@@ -525,17 +530,21 @@ val BGEZALL = xev "BGEZALL"
 
 val cap_ok =
   [``^st.totalCore = 1``, ``^st.procID = 0w``,
-   ``^st.c_capr ^st.procID 0w = capr0``, ``capr0.tag``, ``~capr0.sealed``,
-   ``(^st.c_pcc 0w).tag``, ``~(^st.c_pcc 0w).sealed``,
-   ``~((^st.c_pcc 0w).base + ^st.c_state.c_PC <+ (^st.c_pcc 0w).base)``,
-   ``~((63 >< 0) ((^st.c_pcc 0w).base + ^st.c_state.c_PC) + (4w : 65 word) >+
-       (63 >< 0) (^st.c_pcc 0w).base + (63 >< 0) (^st.c_pcc 0w).length)``,
-   ``(1 >< 1) (^st.c_pcc 0w).perms = 1w : word32``,
+   ``^st.c_capr 0w = capr0``, ``capr0.tag``, ``~capr0.sealed``,
+   ``^st.c_pcc.tag``, ``~^st.c_pcc.sealed``,
+   ``~(^st.c_pcc.base + ^st.c_state.c_PC <+ ^st.c_pcc.base)``,
+   ``~((63 >< 0) (^st.c_pcc.base + ^st.c_state.c_PC) + (4w : 65 word) >+
+       (63 >< 0) ^st.c_pcc.base + (63 >< 0) ^st.c_pcc.length)``,
+   ``(1 >< 1) ^st.c_pcc.perms = 1w : word32``,
    ``~(vaddr <+ capr0.base)``,
-   ``~(vaddr >+ capr0.base + capr0.length)``,
-   ``~(vaddr + 3w >+ capr0.base + capr0.length)``,
-   ``~(vaddr + 7w >+ capr0.base + capr0.length)``,
-   ``~(vaddr + w2w (accesslength : word3) >+ capr0.base + capr0.length)``,
+   ``~((63 >< 0) (vaddr : word64) + (1w : 65 word) >+
+       (63 >< 0) capr0.base + (63 >< 0) capr0.length)``,
+   ``~((63 >< 0) (vaddr : word64) + (4w : 65 word) >+
+       (63 >< 0) capr0.base + (63 >< 0) capr0.length)``,
+   ``~((63 >< 0) (vaddr : word64) + (8w : 65 word) >+
+       (63 >< 0) capr0.base + (63 >< 0) capr0.length)``,
+   ``~((63 >< 0) (vaddr : word64) + (2 >< 0) (accesslength : word3) +
+       (1w : 65 word) >+ (63 >< 0) capr0.base + (63 >< 0) capr0.length)``,
    ``~(needalign /\ ~aligned 1 (vaddr : word64))``,
    ``~(needalign /\ ~aligned 2 (vaddr : word64))``,
    ``~(needalign /\ ~aligned 3 (vaddr : word64))``,
@@ -566,7 +575,7 @@ val WriteData_rwt =
 
 fun StoreMemory cnd =
   ev [StoreMemory_def, StoreMemoryCap_def, AdjustEndian_def, ReverseEndian_rwt,
-      for_end]
+      getBaseAndLength_def, for_end]
      [``s.c_state.c_LLbit = SOME b`` ::
       ``(CP0 ^st).LLAddr = (39 >< 0) (vaddr : word64)`` ::
       cap_ok]
@@ -589,7 +598,7 @@ val ReadData_rwt =
 
 val LoadMemory_rwt =
   ev [LoadMemory_def, LoadMemoryCap_def, AdjustEndian_def, ReverseEndian_rwt,
-      ReadData_rwt]
+      ReadData_rwt, getBaseAndLength_def]
      [cap_ok]
      [[`memtype` |-> ``BYTE``],
       [`memtype` |-> ``WORD``],
@@ -694,7 +703,7 @@ val lem = Q.prove(
 val Fetch_default = Theory.save_thm("Fetch_default",
   utilsLib.FULL_CONV_RULE
     (utilsLib.SRW_CONV []
-     THENC REWRITE_CONV [ev_assume ``^st.c_pcc 0w = defaultCap``]
+     THENC REWRITE_CONV [ev_assume ``^st.c_pcc = defaultCap``]
      THENC utilsLib.SRW_CONV [wordsTheory.WORD_LO_word_0, defaultCap_def]
      THENC utilsLib.INST_REWRITE_CONV [lem])
     (Thm.INST [st |-> ``^st with currentInst := NONE``] Fetch)

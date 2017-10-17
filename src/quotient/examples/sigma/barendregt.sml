@@ -93,9 +93,9 @@ fun dest_subst l = map (fn {residue,redex} => (residue:'a, redex:'b)) l;
 
 
 val get_shift_matches = (dest_subst##dest_subst) o
-                        (Term.match_term (--`SIGMA x a`--));
+                        (Term.match_term “SIGMA x a”);
 (*
-val get_shift_matches = Psyntax.match_term (--`SIGMA x a`--);
+val get_shift_matches = Psyntax.match_term “SIGMA x a”;
 *)
 
 (* SEARCH_matches applies the function f to every subterm of the
@@ -169,15 +169,15 @@ fun remove_s_matches matches =
 
 fun find_x (match::matches) =
     let val (l,r) = match in
-      if r = (--`x:var`--) then l else find_x matches
+      if r = “x:var” then l else find_x matches
     end
-  | find_x [] = (--`x:var`--);
+  | find_x [] = “x:var”;
 
 fun find_a (match::matches) =
     let val (l,r) = match in
-      if r = (--`a:obj`--) then l else find_a matches
+      if r = “a:obj” then l else find_a matches
     end
-  | find_a [] = (--`a:obj`--);
+  | find_a [] = “a:obj”;
 
 fun sort_matches matchesl =
     let val (mtermsl,_) = split matchesl
@@ -200,22 +200,22 @@ fun sort_matches matchesl =
 
 
 val EVERY_LENGTH_LEMMA = TAC_PROOF(([],
-    (--`!os (a:'a) as.
+    “!os (a:'a) as.
          (LENGTH os = LENGTH (CONS a as)) ==>
-         (?(o':'b) os'. (LENGTH os' = LENGTH as) /\ (os = CONS o' os'))`--)),
+         (?(o':'b) os'. (LENGTH os' = LENGTH as) /\ (os = CONS o' os'))”),
     LIST_INDUCT_TAC
     THEN REWRITE_TAC[LENGTH,arithmeticTheory.SUC_NOT]
     THEN REWRITE_TAC[prim_recTheory.INV_SUC_EQ,CONS_11]
     THEN REPEAT GEN_TAC THEN STRIP_TAC
-    THEN EXISTS_TAC (--`h:'b`--)
-    THEN EXISTS_TAC (--`os:'b list`--)
+    THEN EXISTS_TAC “h:'b”
+    THEN EXISTS_TAC “os:'b list”
     THEN ASM_REWRITE_TAC[]
    );
 
 val NIL_LENGTH_LEMMA = TAC_PROOF(([],
-    (--`!os:'b list.
+    “!os:'b list.
          (LENGTH os = LENGTH ([]:'a list)) ==>
-         (os = [])`--)),
+         (os = [])”),
     REWRITE_TAC[LENGTH,LENGTH_NIL]
    );
 
@@ -229,7 +229,7 @@ fun make_new_objects thm =
         val rhs = #rhs(dest_eq cn)
         val lst = #Rand(dest_comb rhs)
         fun length_list lst =
-             if lst = (--`[]:obj list`--) then 0
+             if lst = “[]:obj list” then 0
              else  1 + length_list (#Rand(dest_comb lst))
         val n = length_list lst
         fun make_one 0 thm = thm
@@ -244,23 +244,23 @@ fun MAKE_CLEAN_VAR_THM free_vrs matches =
     let val (terms_list,types_list) = matches;
         val ftm = foldr (fn (x,s) =>
                            if type_of x = (==`:var`==)
-                             then (--`^x INSERT ^s`--)
+                             then “^x INSERT ^s”
                            else if type_of x = (==`:var list`==)
-                             then (--`SL ^x UNION ^s`--)
+                             then “SL ^x UNION ^s”
                            else if type_of x = (==`:var set`==)
-                             then (--`^x UNION ^s`--)
+                             then “^x UNION ^s”
                            else if type_of x = (==`:obj`==)
-                             then (--`(FV_obj ^x) UNION ^s`--)
+                             then “(FV_obj ^x) UNION ^s”
                            else if type_of x = (==`:(string # method) list`==)
-                             then (--`(FV_dict ^x) UNION ^s`--)
+                             then “(FV_dict ^x) UNION ^s”
                            else if type_of x = (==`:string # method`==)
-                             then (--`(FV_entry ^x) UNION ^s`--)
+                             then “(FV_entry ^x) UNION ^s”
                            else if type_of x = (==`:method`==)
-                             then (--`(FV_method ^x) UNION ^s`--)
+                             then “(FV_method ^x) UNION ^s”
                            else s)
-                         (--`{}:var set`--)
+                         “{}:var set”
                          free_vrs;
-        val sterms = (ftm, (--`s:var set`--))::terms_list;
+        val sterms = (ftm, “s:var set”)::terms_list;
         val smatches = (sterms,([]:(hol_type * hol_type) list));
         val sigma_thm = INST_TY_TERM smatches (SPEC_ALL SIGMA_CLEAN_VAR);
     in
@@ -274,24 +274,24 @@ fun MAKE_CLEAN_VAR_THM free_vrs matches =
 fun MAKE_LIST_CLEAN_VAR_THM free_vrs (x, os) =
     let val ftm = foldr (fn (x,s) =>
                            if type_of x = (==`:var`==)
-                             then (--`^x INSERT ^s`--)
+                             then “^x INSERT ^s”
                            else if type_of x = (==`:var list`==)
-                             then (--`SL ^x UNION ^s`--)
+                             then “SL ^x UNION ^s”
                            else if type_of x = (==`:var set`==)
-                             then (--`^x UNION ^s`--)
+                             then “^x UNION ^s”
                            else if type_of x = (==`:obj`==)
-                             then (--`(FV_obj ^x) UNION ^s`--)
+                             then “(FV_obj ^x) UNION ^s”
                            else if type_of x = (==`:(string # method) list`==)
-                             then (--`(FV_dict ^x) UNION ^s`--)
+                             then “(FV_dict ^x) UNION ^s”
                            else if type_of x = (==`:string # method`==)
-                             then (--`(FV_entry ^x) UNION ^s`--)
+                             then “(FV_entry ^x) UNION ^s”
                            else if type_of x = (==`:method`==)
-                             then (--`(FV_method ^x) UNION ^s`--)
+                             then “(FV_method ^x) UNION ^s”
                            else s)
-                         (--`{}:var set`--)
+                         “{}:var set”
                          free_vrs;
-         val mk_obj_list = foldr (fn (a,os) => (--`CONS ^a ^os`--))
-                                 (--`[]:obj list`--)
+         val mk_obj_list = foldr (fn (a,os) => “CONS ^a ^os”)
+                                 “[]:obj list”
          val os_tm = mk_obj_list os
          val sigma_thm = SPECL[ftm,x,os_tm] SIGMA_LIST_CLEAN_VAR
          val exists_list_thm =
@@ -427,7 +427,7 @@ open MutualIndThen;
 
 val BARENDREGHT_SUBSTITUTION_LEMMA = TAC_PROOF
    (([],
-    (--`(!M N L x y.
+    “(!M N L x y.
           ~(x = y) /\ ~(x IN FV_obj L) ==>
           (((M <[ [x,N]) <[ [y,L]) =
            ((M <[ [y,L]) <[ [x, (N <[ [y,L])]))) /\
@@ -442,7 +442,7 @@ val BARENDREGHT_SUBSTITUTION_LEMMA = TAC_PROOF
         (!M N L x y.
           ~(x = y) /\ ~(x IN FV_obj L) ==>
           (((M <[ [x,N]) <[ [y,L]) =
-           ((M <[ [y,L]) <[ [x, (N <[ [y,L])])))`--)),
+           ((M <[ [y,L]) <[ [x, (N <[ [y,L])])))”),
     MUTUAL_INDUCT_THEN object_height_induct ASSUME_TAC
     THENL
       [ REPEAT STRIP_TAC

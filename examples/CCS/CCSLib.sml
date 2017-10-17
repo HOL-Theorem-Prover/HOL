@@ -10,7 +10,7 @@ open HolKernel Parse boolLib bossLib;
 
 (******************************************************************************)
 (*									      *)
-(*      Backward compatibility and utility tactic/tacticals (2017/07/16)      *)
+(*      Backward compatibility and utility tactic/tacticals (4 oct 2017)      *)
 (*									      *)
 (******************************************************************************)
 
@@ -31,20 +31,31 @@ fun Q_GENL qs th = List.foldr (fn (q, th) => Q.GEN q th) th qs;
 fun fix  ts = MAP_EVERY Q.X_GEN_TAC ts;		(* from HOL Light *)
 fun set  ts = MAP_EVERY Q.ABBREV_TAC ts;	(* from HOL mizar mode *)
 fun take ts = MAP_EVERY Q.EXISTS_TAC ts;	(* from HOL mizar mode *)
-val op // = op REPEAT				(* from Matita *)
+val op !! = op REPEAT				(* from ?, actually "rpt" is good too *)
 val Know = Q_TAC KNOW_TAC;			(* from util_prob *)
 val Suff = Q_TAC SUFF_TAC;			(* from util_prob *)
 fun K_TAC _ = ALL_TAC;				(* from util_prob *)
 val KILL_TAC = POP_ASSUM_LIST K_TAC;		(* from util_prob *)
-fun wrap a = [a];
+fun wrap a = [a];				(* from util_prob *)
 
 fun PRINT_TAC s gl =				(* from cardinalTheory *)
   (print ("** " ^ s ^ "\n"); ALL_TAC gl);
 
 fun COUNT_TAC tac g =				(* from Konrad Slind *)
    let val res as (sg, _) = tac g
-       val _ = print ("subgoals" ^ Int.toString (List.length sg) ^ "\n")
+       val _ = print ("subgoals: " ^ Int.toString (List.length sg) ^ "\n")
    in res end;
+
+val Rewr = DISCH_THEN (REWRITE_TAC o wrap);	(* from util_prob *)
+val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
+
+local
+  val th = prove (``!a b. a /\ (a ==> b) ==> a /\ b``, PROVE_TAC [])
+in
+  val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th >> CONJ_TAC
+end;
+
+val Rev = Tactical.REVERSE; (* REVERSE has different meaning in rich_listTheory *)
 
 (* signatures:
 
@@ -54,7 +65,7 @@ fun COUNT_TAC tac g =				(* from Konrad Slind *)
   val fix			: Q.tmquote list -> tactic
   val set			: Q.tmquote list -> tactic
   val take			: Q.tmquote list -> tactic
-  val //			: tactic -> tactic
+  val !!			: tactic -> tactic
   val Know			: Q.tmquote -> tactic
   val Suff			: Q.tmquote -> tactic
   val K_TAC			: 'a -> tactic
@@ -62,47 +73,12 @@ fun COUNT_TAC tac g =				(* from Konrad Slind *)
   val wrap			: 'a -> 'a list
   val PRINT_TAC			: string -> tactic
   val COUNT_TAC			: tactic -> tactic
+  val Rewr			: tactic
+  val Rewr'			: tactic
+  val STRONG_CONJ_TAC		: tactic
+  val Rev			: tactic -> tactic
 
    end of signatures *)
-
-(******************************************************************************)
-(*									      *)
-(*		      Minimal grammar support for CCS			      *)
-(*									      *)
-(******************************************************************************)
-
-fun add_rules_for_ccs_terms () = let
-in
-    add_rule { term_name = "TRANS", fixity = Infix (NONASSOC, 450),
-	pp_elements = [ BreakSpace(1,0), TOK "--", HardSpace 0, TM, HardSpace 0, TOK "->",
-			BreakSpace(1,0) ],
-	paren_style = OnlyIfNecessary,
-	block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)) };
-
-    add_rule { term_name = "WEAK_TRANS", fixity = Infix (NONASSOC, 450),
-	pp_elements = [ BreakSpace(1,0), TOK "==", HardSpace 0, TM, HardSpace 0, TOK "=>>",
-			BreakSpace(1,0) ],
-	paren_style = OnlyIfNecessary,
-	block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)) };
-
-    overload_on ("+", ``sum``); (* priority: 500 *)
-
-    set_mapped_fixity { fixity = Infix(LEFT, 600), tok = "||", term_name = "par" };
-
-    add_rule { term_name = "prefix", fixity = Infix(RIGHT, 700),
-	pp_elements = [ BreakSpace(0,0), TOK "..", BreakSpace(0,0) ],
-	paren_style = OnlyIfNecessary,
-	block_style = (AroundSamePrec, (PP.CONSISTENT, 0)) }
-end;
-
-fun remove_rules_for_ccs_terms () = let
-in
-    remove_rules_for_term	"prefix";
-    remove_rules_for_term	"par";
-    clear_overloads_on		"sum";
-    remove_rules_for_term	"TRANS";
-    remove_rules_for_term	"WEAK_TRANS"
-end;
 
 (******************************************************************************)
 (*									      *)

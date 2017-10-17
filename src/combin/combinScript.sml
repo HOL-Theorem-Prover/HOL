@@ -52,14 +52,14 @@ end
 
 
 val o_THM = store_thm("o_THM",
-   --`!f g x. (f o g) x = f(g x)`--,
+   “!f g x. (f o g) x = f(g x)”,
    REPEAT GEN_TAC
    THEN PURE_REWRITE_TAC [ o_DEF ]
    THEN CONV_TAC (DEPTH_CONV BETA_CONV)
    THEN REFL_TAC);
 
 val o_ASSOC = store_thm("o_ASSOC",
-   --`!f g h. f o (g o h) = (f o g) o h`--,
+   “!f g h. f o (g o h) = (f o g) o h”,
    REPEAT GEN_TAC
    THEN REWRITE_TAC [ o_DEF ]
    THEN CONV_TAC (REDEPTH_CONV BETA_CONV)
@@ -76,14 +76,14 @@ val o_ABS_R = store_thm(
   REWRITE_TAC [FUN_EQ_THM, o_THM] THEN BETA_TAC THEN REWRITE_TAC []);
 
 val K_THM = store_thm("K_THM",
-    --`!x y. K x y = x`--,
+    “!x y. K x y = x”,
     REPEAT GEN_TAC
     THEN PURE_REWRITE_TAC [ K_DEF ]
     THEN CONV_TAC (DEPTH_CONV BETA_CONV)
     THEN REFL_TAC);
 
 val S_THM = store_thm("S_THM",
-   --`!f g x. S f g x = f x (g x)`--,
+   “!f g x. S f g x = f x (g x)”,
    REPEAT GEN_TAC
    THEN PURE_REWRITE_TAC [ S_DEF ]
    THEN CONV_TAC (DEPTH_CONV BETA_CONV)
@@ -100,7 +100,7 @@ val S_ABS_R = store_thm(
   REWRITE_TAC [FUN_EQ_THM, S_THM] THEN BETA_TAC THEN REWRITE_TAC[]);
 
 val C_THM = store_thm("C_THM",
-   --`!f x y. C f x y = f y x`--,
+   “!f x y. C f x y = f y x”,
    REPEAT GEN_TAC
    THEN PURE_REWRITE_TAC [ C_DEF ]
    THEN CONV_TAC (DEPTH_CONV BETA_CONV)
@@ -112,25 +112,25 @@ val C_ABS_L = store_thm(
   REWRITE_TAC [FUN_EQ_THM, C_THM] THEN BETA_TAC THEN REWRITE_TAC []);
 
 val W_THM = store_thm("W_THM",
-   --`!f x. W f x = f x x`--,
+   “!f x. W f x = f x x”,
    REPEAT GEN_TAC
    THEN PURE_REWRITE_TAC [ W_DEF ]
    THEN CONV_TAC (DEPTH_CONV BETA_CONV)
    THEN REFL_TAC);
 
 val I_THM = store_thm("I_THM",
-   --`!x. I x = x`--,
+   “!x. I x = x”,
    REPEAT GEN_TAC
    THEN PURE_REWRITE_TAC [ I_DEF, S_THM, K_THM ]
    THEN CONV_TAC (DEPTH_CONV BETA_CONV)
    THEN REFL_TAC);
 
 val I_o_ID = store_thm("I_o_ID",
-   --`!f. (I o f = f) /\ (f o I = f)`--,
+   “!f. (I o f = f) /\ (f o I = f)”,
    REWRITE_TAC [I_THM, o_THM, FUN_EQ_THM]);
 
 val K_o_THM = store_thm("K_o_THM",
-  --`(!f v. K v o f = K v) /\ (!f v. f o K v = K (f v))`--,
+  “(!f v. K v o f = K v) /\ (!f v. f o K v = K (f v))”,
   REWRITE_TAC [o_THM, K_THM, FUN_EQ_THM]);
 
 val UPDATE_APPLY = Q.store_thm("UPDATE_APPLY",

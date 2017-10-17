@@ -300,7 +300,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
         val _ = app safedelete expected_results
         val useScript = fullPath [HOLDIR, "bin", "buildheap"]
-        val cline = useScript::
+        val cline = useScript::"--gcthreads=1"::
                     (if polynothol then "--poly" else "--holstate="^HOLSTATE)::
                     ((if debug then ["--dbg"] else []) @ objectfiles)
         fun cont wn res =
