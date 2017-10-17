@@ -54,5 +54,5 @@ obtained from {t} by beta-reducing all beta-redexes in {t}. Thus
 anywhere in a goal.
 
 \SEEALSO
-Conv.UNCHANGED, Conv.CONV_RULE.
+Abbrev.conv, Conv.UNCHANGED, Conv.CONV_RULE.
 \ENDDOC
