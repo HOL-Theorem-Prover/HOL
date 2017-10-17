@@ -11,6 +11,9 @@ sig
   (* Export a HOL4 problem to THF TPTP files *)
   val export_problem    : prover -> (string * string) list -> term -> unit
   
+  (* Export a HOL4 theories to THF TPTP files *)
+  val export_theories   : string list -> unit
+  
   (* Translate the problem from THF to FOF via HOL/Light *)
   val translate_atp     : prover -> Process.status
   

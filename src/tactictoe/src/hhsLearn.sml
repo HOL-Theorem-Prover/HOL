@@ -151,7 +151,7 @@ fun test_stac g gl (stac, inst_stac) =
     )
   in
     if all (fn x => mem x gl) new_gl
-    then SOME (stac,t,g,gl)
+    then SOME (stac,t,g,new_gl)
     else NONE
   end
   handle _ => NONE

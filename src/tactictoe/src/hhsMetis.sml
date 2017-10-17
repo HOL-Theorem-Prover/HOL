@@ -167,12 +167,7 @@ fun add_metis tacdict thmpredictor (g,pred) =
         then 
           (
           debug "calling holyhammer";
-          case (hhsTimeout.timeOut (!hh_timeout) (!hh_stac_glob) g
-                handle _ => (
-                debug "Error: holyhammer";
-                debug (string_of_goal g); 
-                NONE))
-          of 
+          case (!hh_stac_glob) g of 
             NONE => 
             (debug "holyhammer: timeout"; mk_metis_call ((!thmpredictor) g))
           | SOME x => (debug "holyhammer: proof found"; x)

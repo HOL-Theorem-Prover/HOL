@@ -54,6 +54,7 @@ fun set_minimization b = minimize_flag := b
 val hh_dir = HOLDIR ^ "/src/holyhammer"
 val hh_bin_dir = HOLDIR ^ "/src/holyhammer/hh"
 val provers_dir = hh_dir ^ "/provers"
+val theories_dir = hh_dir ^ "/theories"
 fun thy_dir_of atp = hh_dir ^ "/theories" ^ "_" ^ name_of atp
 
 fun prover_files atp = 
@@ -150,6 +151,11 @@ fun clean_dir dir =
   in
     app OS.FileSys.remove l1
   end
+
+fun pred_filter pred thy ((name,_),_)=
+  let val thypred = map snd (filter (fn x => fst x = thy) pred) in
+    mem name thypred  
+  end
   
 fun export_problem atp premises cj =
   let
@@ -159,12 +165,21 @@ fun export_problem atp premises cj =
   in    
     clean_dir thy_dir;
     (* write loaded theories *)
-    write_thyl thy_dir premises thyl;
+    write_thyl thy_dir (pred_filter premises) thyl;
     (* write the conjecture in thf format *)
     write_conjecture (thy_dir ^ "/conjecture.fof") cj;
     (* write the dependencies between theories *)
     write_thydep (thy_dir ^ "/thydep.dep") thyl
   end
+
+fun export_theories thyl =
+  (
+  clean_dir theories_dir;
+  (* write loaded theories *)
+  write_thyl theories_dir (fn thy => (fn thma => true)) thyl;
+  (* write the dependencies between theories *)
+  write_thydep (theories_dir ^ "/thydep.dep") thyl
+  )
 
 (*---------------------------------------------------------------------------
    Translate from higher-order to first order

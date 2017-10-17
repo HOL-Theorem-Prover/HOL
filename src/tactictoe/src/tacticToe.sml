@@ -22,7 +22,7 @@ fun set_timeout r = hhs_search_time := Time.fromReal r
 
 fun hh_eval goal =
   let val (staco,t) = add_time (!hh_stac_glob) goal in
-    debug_proof ("hh_eval");
+    debug_proof ("<hh_eval");
     debug_proof ("Time: " ^ Real.toString t);
     case staco of
       NONE      => debug_proof ("Proof status: Time Out")
@@ -33,11 +33,12 @@ fun hh_eval goal =
    Parse string tactic to HOL tactic.
    ---------------------------------------------------------------------- *)
 
-fun mk_tacdict tacticl =
+fun mk_tacdict stacl =
   let 
+    val _ = app debug stacl
     val (_,goodl) = 
       partition (fn x => mem x (!hhs_badstacl) orelse is_pattern_stac x) 
-      tacticl
+      stacl
     fun read_stac x = (x, tactic_of_sml x)
       handle _ => (debug ("Warning: bad tactic: " ^ x ^ "\n");
                    hhs_badstacl := x :: (!hhs_badstacl);
@@ -230,10 +231,11 @@ fun debug_eval_status r =
 
 (* integer_words return errors hopefully no other *)
 fun eval_tactictoe name goal =
-  if !hhs_eval_flag 
-    andalso not (mem (current_theory ())
-              ["integer_word","word_simp","wordSem","labProps",
-               "data_to_word_memoryProof","word_to_stackProof"])
+  if
+    !test_eval_hook name andalso
+    !hhs_eval_flag andalso 
+    not (mem (current_theory ())
+     ["word_simp","wordSem","labProps",          "data_to_word_memoryProof","word_to_stackProof"])
     andalso one_in_n ()
     andalso 
       not (!hhs_noprove_flag andalso String.isPrefix "tactictoe_prove_" name)

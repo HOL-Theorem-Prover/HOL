@@ -22,6 +22,7 @@ val hhs_unfold_dir = tactictoe_dir ^ "/unfold_log"
 val hhs_scripts_dir = tactictoe_dir ^ "/scripts"
 val loadl_glob = ref [] (* not usable: missing a.b *)
 val interactive_flag = ref true
+val interactive_hook = ref ""
 
 (* --------------------------------------------------------------------------
    Program representation and stack
@@ -895,6 +896,8 @@ fun output_header cthy file =
       val sl = map mlquote (readl temp)
     in
       osn "hhsSetup.set_irecord ();";
+      osn "hhsSetup.set_isearch ();";
+      osn (!interactive_hook);
       osn "fun load_err s = load s handle _ => ();";
       osn ("List.app load_err [" ^ String.concatWith ", " sl ^ "];")
     end
@@ -959,7 +962,7 @@ fun unquoteString s =
     val fout = tactictoe_dir ^ "/code/quoteString2"
     val cmd = HOLDIR ^ "/bin/unquote" ^ " " ^ fin ^ " " ^ fout   
   in
-    writel fin [s]; 
+    writel fin [s];
     ignore (OS.Process.system cmd);
     String.concatWith " " (readl fout)
   end

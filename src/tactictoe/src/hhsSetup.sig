@@ -40,13 +40,16 @@ sig
   val hhs_metis_time  : real ref
   val hhs_metis_npred : int ref (* used in learning *)
   val hh_stac_flag      : bool ref
-  val hh_timeout        : real ref
   val hhs_stacpred_flag : bool ref (* synthetizing *)
   val hhs_stacpred_number : int ref
   
   (* minimization *)
   val hhs_prettify_flag : bool ref
   val hhs_minimize_flag : bool ref
+  
+  (* allows to test for the name of the theorem 
+     before evaluation *)
+  val test_eval_hook : (string -> bool) ref
   
   (* init search *)
   val set_isearch : unit -> unit

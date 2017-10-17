@@ -85,7 +85,6 @@ val hhs_stacpred_flag = ref false
 val hhs_stacpred_number = ref 16
   (* synthetizing arguments (theorems) of tactics *)
 val hh_stac_flag      = ref false (* predict dependencies using holyhammer *)
-val hh_timeout        = ref 120.0
 
 fun can_update_hh n = ((update_hh_stac n; true) handle _ => false)
 
@@ -99,6 +98,26 @@ val hhs_prettify_flag = ref false
 (* ----------------------------------------------------------------------
    Setting flags
    ---------------------------------------------------------------------- *)
+val test_eval_hook = ref (fn s:string => true) 
+
+fun set_irecord () = 
+  (
+  (* recording *)
+  hhs_norecord_flag    := false;
+  hhs_internalthm_flag := false;
+  hhs_norecprove_flag  := false;
+  hhs_nolet_flag       := false;
+  (* learning *)
+  hhs_ortho_flag     := false;
+  hhs_ortho_number   := 20;
+  hhs_ortho_metis    := false;
+  hhs_ortho_deep     := false;
+  hhs_selflearn_flag := false;
+  hhs_succrate_flag  := false;
+  hhs_thmortho_flag  := false;
+  (* evaluation *)
+  hhs_eval_flag := false
+  )
 
 val set_isearch_hook = ref (fn () => ()) 
     
@@ -119,7 +138,6 @@ fun set_isearch () =
   hhs_metis_npred := 16;
   hhs_metis_time  := 0.1;
   hh_stac_flag    := false;
-  hh_timeout      := 10.0;
   hhs_stacpred_flag := false;
   hhs_stacpred_number := 16;
   (* result *)
@@ -129,6 +147,9 @@ fun set_isearch () =
   !set_isearch_hook ();
   if !hh_stac_flag then update_hh_stac 5 else ()
   )
+
+
+
 
 fun set_esearch () = 
   (
@@ -148,7 +169,6 @@ fun set_esearch () =
   hhs_metis_npred   := 16;
   hhs_metis_time    := 0.1;
   hh_stac_flag      := (false andalso can_update_hh 5);
-  hh_timeout        := 10.0;
   hhs_stacpred_flag := false;
   hhs_stacpred_number := 16;
   (* result *)
@@ -156,24 +176,7 @@ fun set_esearch () =
   hhs_prettify_flag := false
   ) 
 
-fun set_irecord () = 
-  (
-  (* recording *)
-  hhs_norecord_flag    := false;
-  hhs_internalthm_flag := false;
-  hhs_norecprove_flag  := false;
-  hhs_nolet_flag       := false;
-  (* learning *)
-  hhs_ortho_flag     := false;
-  hhs_ortho_number   := 20;
-  hhs_ortho_metis    := false;
-  hhs_ortho_deep     := false;
-  hhs_selflearn_flag := false;
-  hhs_succrate_flag  := false;
-  hhs_thmortho_flag  := false;
-  (* evaluation *)
-  hhs_eval_flag := false
-  )
+
 
 fun set_erecord () =
   (

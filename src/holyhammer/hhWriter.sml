@@ -391,7 +391,7 @@ fun hh_thy_end () =
   closeOut (!oc_deps); oc_deps := stdOut
   )
 
-fun write_thy dir pred thy =
+fun write_thy dir filter_f thy =
   (
   hh_thy_start dir thy;
   let val l = dest_theory thy in
@@ -406,9 +406,7 @@ fun write_thy dir pred thy =
         let val f = depnumber_of o depid_of o dep_of o Thm.tag in
           f th1 < f th2
         end
-      val thypred = map snd (filter (fn x => fst x = thy) pred)
-      fun f x = mem (fst (fst x)) thypred
-      val thml = filter f (sort compare (axl @ defl))
+      val thml = filter (filter_f thy) (sort compare (axl @ defl))
     in
       app export_thm thml
     end
@@ -438,10 +436,10 @@ fun write_thydep file thyl =
   closeOut (!oc); oc := stdOut
   )
 
-fun write_thyl dir pred thyl =
+fun write_thyl dir filter_f thyl =
   (
   reset_dicts ();
-  app (write_thy dir pred) (sort_thyl thyl)
+  app (write_thy dir filter_f) (sort_thyl thyl)
   )
 
 fun write_conjecture file conjecture =

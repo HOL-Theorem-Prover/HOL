@@ -327,7 +327,9 @@ fun end_thy cthy =
   (
   debug_t "export_feavl" (export_feavl cthy) (!hhs_cthyfea);
   debug_t "export_mdict" export_mdict cthy;
-  debug_t "export_astar" export_astar cthy;
+  if !hhs_astar_flag 
+    then debug_t "export_astar" export_astar cthy
+    else ();
   out_record_summary cthy;
   debug_proof ("Bad stac: " ^ (int_to_string (length (!hhs_badstacl))))
   )
