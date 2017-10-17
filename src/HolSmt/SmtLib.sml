@@ -215,9 +215,9 @@ local
     (wordsSyntax.word_add_tm, apfst_fixed_width "bvadd"),
     (wordsSyntax.word_sub_tm, apfst_fixed_width "bvsub"),
     (wordsSyntax.word_mul_tm, apfst_fixed_width "bvmul"),
-    (wordsSyntax.word_sdiv_tm, apfst_fixed_width "bvsdiv"),
-    (wordsSyntax.word_srem_tm, apfst_fixed_width "bvsrem"),
-    (wordsSyntax.word_smod_tm, apfst_fixed_width "bvsmod"),
+    (wordsSyntax.word_quot_tm, apfst_fixed_width "bvsdiv"),
+    (wordsSyntax.word_rem_tm, apfst_fixed_width "bvsrem"),
+    (integer_wordSyntax.word_smod_tm, apfst_fixed_width "bvsmod"),
     (wordsSyntax.word_div_tm, apfst_fixed_width "bvudiv"),
     (wordsSyntax.word_mod_tm, apfst_fixed_width "bvurem"),
     (* shift operations with two bit-vector arguments; the corresponding HOL

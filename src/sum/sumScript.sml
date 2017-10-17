@@ -54,18 +54,18 @@ and o_THM = combinTheory.o_THM;
 val IS_SUM_REP =
     new_definition
      ("IS_SUM_REP",
-      --`IS_SUM_REP (f:bool->'a->'b->bool) =
+      “IS_SUM_REP (f:bool->'a->'b->bool) =
          ?v1 v2.  (f = \b x y.(x=v1) /\ b) \/
-                  (f = \b x y.(y=v2) /\ ~b)`--);
+                  (f = \b x y.(y=v2) /\ ~b)”);
 
 (* Prove that there exists some object in the representing type that 	*)
 (* lies in the subset of legal representations.				*)
 
 val EXISTS_SUM_REP =
-    TAC_PROOF(([], --`?f:bool -> 'a -> 'b -> bool. IS_SUM_REP f`--),
-	      EXISTS_TAC (--`\b x (y:'b). (x = @(x:'a).T) /\ b`--) THEN
+    TAC_PROOF(([], “?f:bool -> 'a -> 'b -> bool. IS_SUM_REP f”),
+	      EXISTS_TAC “\b x (y:'b). (x = @(x:'a).T) /\ b” THEN
 	      PURE_ONCE_REWRITE_TAC [IS_SUM_REP] THEN
-	      EXISTS_TAC (--`@(x:'a).T`--) THEN
+	      EXISTS_TAC “@(x:'a).T” THEN
 	      REWRITE_TAC []);
 
 (* ---------------------------------------------------------------------*)
@@ -101,11 +101,11 @@ and A_ONTO = REWRITE_RULE [IS_SUM_REP] (prove_abs_fn_onto sum_ISO_DEF);
 
 (* Define the injection function INL:'a->('a,'b)sum			*)
 val INL_DEF = new_definition("INL_DEF",
-   --`!e.(INL:'a->(('a,'b)sum)) e = ABS_sum(\b x (y:'b). (x = e) /\ b)`--);
+   “!e.(INL:'a->(('a,'b)sum)) e = ABS_sum(\b x (y:'b). (x = e) /\ b)”);
 
 (* Define the injection function INR:'b->( 'a,'b )sum			*)
 val INR_DEF = new_definition("INR_DEF",
-   --`!e.(INR:'b->(('a,'b)sum)) e = ABS_sum(\b (x:'a) y. (y = e) /\ ~b)`--);
+   “!e.(INR:'b->(('a,'b)sum)) e = ABS_sum(\b (x:'a) y. (y = e) /\ ~b)”);
 
 (* --------------------------------------------------------------------- *)
 (* The proof of the `axiom` for sum types follows.			*)
@@ -116,17 +116,17 @@ fun REWRITE1_TAC th = REWRITE_TAC [th];
 
 (* Prove that REP_sum(INL v) gives the representation of INL v.		*)
 val REP_INL = TAC_PROOF(([],
-   --`REP_sum (INL v) = \b x (y:'b). ((x:'a) = v) /\ b`--),
+   “REP_sum (INL v) = \b x (y:'b). ((x:'a) = v) /\ b”),
    PURE_REWRITE_TAC [INL_DEF,R_A,IS_SUM_REP] THEN
-   EXISTS_TAC (--`v:'a`--) THEN
+   EXISTS_TAC “v:'a” THEN
    REWRITE_TAC[]);
 
 
 (* Prove that REP_sum(INR v) gives the representation of INR v.		*)
 val REP_INR = TAC_PROOF(([],
-   --`REP_sum (INR v) = \b (x:'a) y. ((y:'b) = v) /\ ~b`--),
+   “REP_sum (INR v) = \b (x:'a) y. ((y:'b) = v) /\ ~b”),
    PURE_REWRITE_TAC [INR_DEF,R_A,IS_SUM_REP] THEN
-   MAP_EVERY EXISTS_TAC [--`v:'a`--,--`v:'b`--] THEN
+   MAP_EVERY EXISTS_TAC [“v:'a”,“v:'b”] THEN
    DISJ2_TAC THEN
    REFL_TAC);
 
@@ -137,7 +137,7 @@ val INL_11 = store_thm(
    EQ_TAC THENL
    [PURE_REWRITE_TAC [R_11,REP_INL] THEN
    CONV_TAC (REDEPTH_CONV (FUN_EQ_CONV ORELSEC BETA_CONV)) THEN
-   DISCH_THEN (ACCEPT_TAC o SIMP o SPECL [--`T`--,--`x:'a`--,--`y:'b`--]),
+   DISCH_THEN (ACCEPT_TAC o SIMP o SPECL [“T”,“x:'a”,“y:'b”]),
    DISCH_THEN SUBST1_TAC THEN REFL_TAC]);
 
 (* Prove that INR is one-to-one						*)
@@ -147,7 +147,7 @@ val INR_11 = store_thm(
    EQ_TAC THENL
    [PURE_REWRITE_TAC [R_11,REP_INR] THEN
    CONV_TAC (REDEPTH_CONV (FUN_EQ_CONV ORELSEC BETA_CONV)) THEN
-   DISCH_THEN (ACCEPT_TAC o SYM o SIMP o SPECL[--`F`--,--`x:'a`--,--`y:'b`--]),
+   DISCH_THEN (ACCEPT_TAC o SYM o SIMP o SPECL[“F”,“x:'a”,“y:'b”]),
    DISCH_THEN SUBST1_TAC THEN REFL_TAC]);
 
 val INR_INL_11 = save_thm("INR_INL_11",
@@ -156,11 +156,11 @@ val _ = export_rewrites ["INR_INL_11"]
 
 (* Prove that left injections and right injections are not equal.	*)
 val INR_neq_INL = store_thm("INR_neq_INL",
-   --`!v1 v2. ~(INR v2 :('a,'b)sum = INL v1)`--,
+   “!v1 v2. ~(INR v2 :('a,'b)sum = INL v1)”,
    PURE_REWRITE_TAC [R_11,REP_INL,REP_INR] THEN
    REPEAT GEN_TAC THEN
    CONV_TAC (REDEPTH_CONV (FUN_EQ_CONV ORELSEC BETA_CONV)) THEN
-   DISCH_THEN (CONTR_TAC o SIMP o SPECL [--`T`--,--`v1:'a`--,--`v2:'b`--]));
+   DISCH_THEN (CONTR_TAC o SIMP o SPECL [“T”,“v1:'a”,“v2:'b”]));
 
 (*----------------------------------------------------------------------*)
 (* The abstract `axiomatization` of the sum type consists of the single	*)
@@ -173,21 +173,21 @@ val INR_neq_INL = store_thm("INR_neq_INL",
 (*----------------------------------------------------------------------*)
 
 val sum_axiom = store_thm("sum_axiom",
-    --`!(f:'a->'c).
+    “!(f:'a->'c).
        !(g:'b->'c).
-       ?!h. ((h o INL) = f) /\ ((h o INR) = g)`--,
+       ?!h. ((h o INL) = f) /\ ((h o INR) = g)”,
 PURE_REWRITE_TAC [boolTheory.EXISTS_UNIQUE_DEF,o_DEF] THEN
 CONV_TAC (REDEPTH_CONV (BETA_CONV ORELSEC FUN_EQ_CONV)) THEN
-REPEAT (FILTER_STRIP_TAC (--`x:('a,'b)sum->'c`--)) THENL
-[EXISTS_TAC (--`\(x:('a,'b)sum). if (?v1. x = INL v1)
+REPEAT (FILTER_STRIP_TAC “x:('a,'b)sum->'c”) THENL
+[EXISTS_TAC (“\(x:('a,'b)sum). if (?v1. x = INL v1)
                                  then f(@v1.x = INL v1)
-                                 else g(@v2.x = INR v2):'c`--) THEN
+                                 else g(@v2.x = INR v2):'c”) THEN
  simpLib.SIMP_TAC boolSimps.bool_ss [
    INL_11,INR_11,INR_neq_INL,SELECT_REFL_2
  ],
  REPEAT GEN_TAC THEN DISCH_THEN (CONJUNCTS_THEN2 MP_TAC
  (REWRITE1_TAC o (CONV_RULE (ONCE_DEPTH_CONV SYM_CONV)))) THEN
- REPEAT STRIP_TAC THEN STRIP_ASSUME_TAC (SPEC (--`s:('a,'b)sum`--) A_ONTO) THEN
+ REPEAT STRIP_TAC THEN STRIP_ASSUME_TAC (SPEC “s:('a,'b)sum” A_ONTO) THEN
  ASM_REWRITE_TAC (map (SYM o SPEC_ALL) [INL_DEF,INR_DEF])]);
 
 
@@ -197,10 +197,10 @@ REPEAT (FILTER_STRIP_TAC (--`x:('a,'b)sum->'c`--)) THENL
 (* ---------------------------------------------------------------------*)
 
 val sum_Axiom0 = prove(
-   --`!f:'a->'c.
+   “!f:'a->'c.
       !g:'b->'c.
       ?!h. (!x. h(INL x) = f x) /\
-           (!y. h(INR y) = g y)`--,
+           (!y. h(INR y) = g y)”,
    let val cnv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) sum_axiom
        val rew = SPEC_ALL (REWRITE_RULE [o_THM] cnv)
    in
@@ -258,14 +258,14 @@ val sum_distinct_rev = save_thm("sum_distinct1", GSYM sum_distinct);
 
 (* Derive the defining property for ISL.				*)
 val ISL_DEF = TAC_PROOF(
-  ([], --`?ISL. (!x:'a. ISL(INL x)) /\ (!y:'b. ~ISL(INR y))`--),
+  ([], “?ISL. (!x:'a. ISL(INL x)) /\ (!y:'b. ~ISL(INR y))”),
   let val inst = INST_TYPE [Type.gamma |-> Type.bool] sum_axiom
-      val spec = SPECL [--`\x:'a.T`--, --`\y:'b.F`--] inst
+      val spec = SPECL [“\x:'a.T”, “\y:'b.F”] inst
       val exth = CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV spec)
       val conv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) exth
   in
       STRIP_ASSUME_TAC (REWRITE_RULE [o_THM] conv) THEN
-      EXISTS_TAC (--`h:'a+'b->bool`--) THEN ASM_REWRITE_TAC []
+      EXISTS_TAC “h:'a+'b->bool” THEN ASM_REWRITE_TAC []
   end);
 
 (* Then define ISL with a constant specification.			*)
@@ -274,14 +274,14 @@ val _ = export_rewrites ["ISL"]
 
 (* Derive the defining property for ISR.				*)
 val ISR_DEF = TAC_PROOF(
-  ([], --`?ISR. (!x:'b. ISR(INR x)) /\ (!y:'a. ~ISR(INL y))`--),
+  ([], “?ISR. (!x:'b. ISR(INR x)) /\ (!y:'a. ~ISR(INL y))”),
   let val inst = INST_TYPE [Type.gamma |-> Type.bool] sum_axiom
-      val spec = SPECL [--`\x:'a.F`--,  --`\y:'b.T`--] inst
+      val spec = SPECL [“\x:'a.F”,  “\y:'b.T”] inst
       val exth = CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV spec)
       val conv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) exth
   in
       STRIP_ASSUME_TAC (REWRITE_RULE [o_THM] conv) THEN
-      EXISTS_TAC (--`h:'a+'b->bool`--) THEN ASM_REWRITE_TAC []
+      EXISTS_TAC “h:'a+'b->bool” THEN ASM_REWRITE_TAC []
   end);
 
 (* Then define ISR with a constant specification.			*)
@@ -290,14 +290,14 @@ val _ = export_rewrites ["ISR"]
 
 (* Derive the defining property of OUTL.				*)
 val OUTL_DEF = TAC_PROOF(([],
---`?OUTL. !x. OUTL(INL x:('a,'b)sum) = x`--),
+“?OUTL. !x. OUTL(INL x:('a,'b)sum) = x”),
    let val inst = INST_TYPE [Type.gamma |-> Type.alpha] sum_axiom
-       val spec = SPECL [--`\x:'a.x`--, --`\y:'b.@x:'a.F`--] inst
+       val spec = SPECL [“\x:'a.x”, “\y:'b.@x:'a.F”] inst
        val exth = CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV spec)
        val conv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) exth
    in
    STRIP_ASSUME_TAC (REWRITE_RULE [o_THM] (BETA_RULE conv)) THEN
-   EXISTS_TAC (--`h:'a+'b->'a`--) THEN ASM_REWRITE_TAC []
+   EXISTS_TAC “h:'a+'b->'a” THEN ASM_REWRITE_TAC []
    end);
 
 (* Then define OUTL with a constant specification.			*)
@@ -306,14 +306,14 @@ val _ = export_rewrites ["OUTL"]
 
 (* Derive the defining property of OUTR.				*)
 val OUTR_DEF = TAC_PROOF(
-  ([], --`?OUTR. !x. OUTR(INR x:'a+'b) = x`--),
+  ([], “?OUTR. !x. OUTR(INR x:'a+'b) = x”),
    let val inst = INST_TYPE [Type.gamma |-> Type.beta] sum_axiom
-       val spec = SPECL [--`\x:'a.@y:'b.F`--,  --`\y:'b.y`--] inst
+       val spec = SPECL [“\x:'a.@y:'b.F”,  “\y:'b.y”] inst
        val exth = CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV spec)
        val conv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) exth
    in
    STRIP_ASSUME_TAC (REWRITE_RULE [o_THM] (BETA_RULE conv)) THEN
-   EXISTS_TAC (--`h:'a+'b->'b`--) THEN ASM_REWRITE_TAC []
+   EXISTS_TAC “h:'a+'b->'b” THEN ASM_REWRITE_TAC []
    end);
 
 (* Then define OUTR with a constant specification.			*)
@@ -348,30 +348,30 @@ val [sum_EXISTS,sum_UNIQUE] =
        val rew = SPEC_ALL (REWRITE_RULE [o_THM] cnv)
        val [a,b] = CONJUNCTS (CONV_RULE EXISTS_UNIQUE_CONV rew)
    in
-   map (GENL  [--`f :'a -> 'c`--, --`g :'b -> 'c`--])
+   map (GENL  [“f :'a -> 'c”, “g :'b -> 'c”])
        [ a, BETA_RULE (CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) b) ]
    end;
 
 (* Prove that: !x. ISL(x) \/ ISR(x)					*)
 val ISL_OR_ISR = store_thm("ISL_OR_ISR",
-    --`!x:('a,'b)sum. ISL(x) \/ ISR(x)`--,
+    “!x:('a,'b)sum. ISL(x) \/ ISR(x)”,
     STRIP_TAC THEN
-    STRIP_ASSUME_TAC (SPEC (--`x:('a,'b)sum`--) sum_CASES) THEN
+    STRIP_ASSUME_TAC (SPEC “x:('a,'b)sum” sum_CASES) THEN
     ASM_REWRITE_TAC [ISL,ISR]);
 
 (* Prove that: |- !x. ISL(x) ==> INL (OUTL x) = x			*)
 val INL = store_thm("INL",
-    --`!x:('a,'b)sum. ISL(x) ==> (INL (OUTL x) = x)`--,
+    “!x:('a,'b)sum. ISL(x) ==> (INL (OUTL x) = x)”,
     STRIP_TAC THEN
-    STRIP_ASSUME_TAC (SPEC (--`x:('a,'b)sum`--) sum_CASES) THEN
+    STRIP_ASSUME_TAC (SPEC “x:('a,'b)sum” sum_CASES) THEN
     ASM_REWRITE_TAC [ISL,OUTL]);
 val _ = export_rewrites ["INL"]
 
 (* Prove that: |- !x. ISR(x) ==> INR (OUTR x) = x			*)
 val INR = store_thm("INR",
-    --`!x:('a,'b)sum. ISR(x) ==> (INR (OUTR x) = x)`--,
+    “!x:('a,'b)sum. ISR(x) ==> (INR (OUTR x) = x)”,
     STRIP_TAC THEN
-    STRIP_ASSUME_TAC (SPEC (--`x:('a,'b)sum`--) sum_CASES) THEN
+    STRIP_ASSUME_TAC (SPEC “x:('a,'b)sum” sum_CASES) THEN
     ASM_REWRITE_TAC [ISR,OUTR]);
 val _ = export_rewrites ["INR"]
 

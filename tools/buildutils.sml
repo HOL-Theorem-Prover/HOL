@@ -259,15 +259,10 @@ fun orlist slist =
     | [x,y] => x ^ ", or " ^ y
     | x::xs => x ^ ", " ^ orlist xs
 
+type ircd = {seqname:string,kernelspec:string}
 datatype cline_action =
          Clean of string
-       | Normal of {kernelspec : string,
-                    jobcount : int,
-                    seqname : string,
-                    rest : string list,
-                    relocbuild : bool,
-                    selftest_level : int,
-                    build_theory_graph : bool}
+       | Normal of ircd buildcline_dtype.final_options
 exception DoClean of string
 
 fun write_kernelid s =
@@ -361,9 +356,12 @@ fun get_cline () = let
       else
         write_options ("--"^knlspec::"--seq"::seqspec::joption::bgoption)
 in
-  Normal {kernelspec = knlspec, seqname = seqspec, rest = rest,
-          jobcount = jcount, selftest_level = #selftest option_record,
-          build_theory_graph = buildgraph,
+  Normal {build_theory_graph = buildgraph,
+          cmdline = rest,
+          debug = #debug option_record,
+          selftest_level = #selftest option_record,
+          extra = {seqname = seqspec, kernelspec = knlspec},
+          jobcount = jcount,
           relocbuild = #relocbuild option_record}
 end handle DoClean s => (Clean s before safedelete Holmake_tools.kernelid_fname)
 
@@ -888,20 +886,24 @@ fun process_cline () =
         post_action();
         Process.exit Process.success
       end
-    | Normal {kernelspec, seqname, rest, build_theory_graph, jobcount,
-              relocbuild, selftest_level} =>
+    | Normal {extra = {seqname,kernelspec}, cmdline,
+              build_theory_graph, jobcount, relocbuild, debug,
+              selftest_level} =>
       let
         val SRCDIRS = read_buildsequence {kernelname = kernelspec} seqname
       in
-        if mem "help" rest then
+        if mem "help" cmdline then
           (build_help build_theory_graph;
            Process.exit Process.success)
         else
-          {cmdline=rest,
-           build_theory_graph=build_theory_graph,
-           relocbuild = relocbuild,
+          {build_theory_graph=build_theory_graph,
+           cmdline=cmdline,
+           debug = debug,
+           selftest_level = selftest_level,
+           extra = {SRCDIRS = SRCDIRS},
            jobcount = jobcount,
-           do_selftests = selftest_level, SRCDIRS = SRCDIRS}
+           relocbuild = relocbuild
+          }
       end
 
 fun make_buildstamp () =
@@ -955,15 +957,15 @@ in
   else ()
 end handle IO.Io _ => warn "Had problems making permanent record of build log"
 
-fun Holmake sysl isSuccess extra_args analyse_failstatus do_selftests dir = let
+fun Holmake sysl isSuccess extra_args analyse_failstatus selftest_level dir = let
   val hmstatus = sysl HOLMAKE ("--qof" :: extra_args())
 in
   if isSuccess hmstatus then
-    if do_selftests > 0 andalso
+    if selftest_level > 0 andalso
        OS.FileSys.access("selftest.exe", [OS.FileSys.A_EXEC])
     then
       (print "Performing self-test...\n";
-       if SYSTEML [dir ^ "/selftest.exe", Int.toString do_selftests]
+       if SYSTEML [dir ^ "/selftest.exe", Int.toString selftest_level]
        then
          print "Self-test was successful\n"
        else

@@ -1259,7 +1259,7 @@ fun defs ocaml =
        word_concat_def, word_log2_n2w, word_reverse_n2w, word_modify_n2w,
        word_lsb_n2w, word_msb_n2w, add_with_carry_n2w,
        word_1comp_n2w, word_and_n2w, word_xor_n2w,
-       word_2comp_n2w, word_div_n2w, word_sdiv_def,
+       word_2comp_n2w, word_div_n2w, word_quot_def,
        MOD_WL word_add_n2w, word_sub_def, MOD_WL word_mul_n2w,
        word_lsr_n2w, word_asr_n2w, word_ror_n2w, word_rol_n2w,
        word_rrx_n2w, REWRITE_RULE [GSYM word_index_def] word_index_n2w,

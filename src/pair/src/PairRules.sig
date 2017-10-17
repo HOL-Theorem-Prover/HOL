@@ -20,7 +20,7 @@ sig
   val PETA_CONV              : conv
   val PALPHA_CONV            : term -> conv
   val GEN_PALPHA_CONV        : term -> conv
-  val PALPHA                 : term -> conv
+  val PALPHA                 : term -> term -> thm
   val paconv                 : term -> term -> bool
   val PAIR_CONV              : conv -> conv
 
@@ -51,10 +51,10 @@ sig
   val LEFT_IMP_PFORALL_CONV  : conv
   val RIGHT_IMP_PEXISTS_CONV : conv
 
-  val CURRY_FORALL_CONV      : term -> thm
-  val CURRY_EXISTS_CONV      : term -> thm
-  val UNCURRY_FORALL_CONV    : term -> thm
-  val UNCURRY_EXISTS_CONV    : term -> thm
+  val CURRY_FORALL_CONV      : conv
+  val CURRY_EXISTS_CONV      : conv
+  val UNCURRY_FORALL_CONV    : conv
+  val UNCURRY_EXISTS_CONV    : conv
 
   val PSPEC                  : term -> thm -> thm
   val PSPECL                 : term list -> thm -> thm
@@ -70,23 +70,23 @@ sig
   val PGEN_TAC               : tactic
   val FILTER_PGEN_TAC        : term -> tactic
 
-  val PEXISTS_CONV           : term -> thm
+  val PEXISTS_CONV           : conv
   val PSELECT_RULE           : thm -> thm
-  val PSELECT_CONV           : term -> thm
+  val PSELECT_CONV           : conv
   val PEXISTS_RULE           : thm -> thm
   val PSELECT_INTRO          : thm -> thm
   val PSELECT_ELIM           : thm -> term * thm -> thm
   val PEXISTS                : term * term -> thm -> thm
   val PCHOOSE                : term * thm -> thm -> thm
-  val P_PCHOOSE_THEN         : term -> (thm -> tactic) -> thm -> tactic
-  val PCHOOSE_THEN           : (thm -> tactic) -> thm -> tactic
-  val P_PCHOOSE_TAC          : term -> thm -> tactic
-  val PCHOOSE_TAC            : thm -> tactic
+  val P_PCHOOSE_THEN         : term -> thm_tactical
+  val PCHOOSE_THEN           : thm_tactical
+  val P_PCHOOSE_TAC          : term -> thm_tactic
+  val PCHOOSE_TAC            : thm_tactic
   val PEXISTS_TAC            : term -> tactic
   val PEXISTENCE             : thm -> thm
-  val PEXISTS_UNIQUE_CONV    : term -> thm
+  val PEXISTS_UNIQUE_CONV    : conv
   val P_PSKOLEM_CONV         : term -> conv
-  val PSKOLEM_CONV           : term -> thm
+  val PSKOLEM_CONV           : conv
 
   val PSTRIP_THM_THEN        : thm_tactical
   val PSTRIP_ASSUME_TAC      : thm_tactic

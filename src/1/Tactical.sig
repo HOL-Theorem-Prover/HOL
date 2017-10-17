@@ -29,6 +29,8 @@ sig
   val THEN_LT        : tactic * list_tactic -> tactic
   val THEN_LT        : list_tactic * list_tactic -> list_tactic
   *)
+  val >>-            : tactic * int -> tactic -> tactic
+  val ??             : ('a -> 'b) * 'a -> 'b
   val TACS_TO_LT     : tactic list -> list_tactic
   val NULL_OK_LT     : list_tactic -> list_tactic
   val ALLGOALS       : tactic -> list_tactic
@@ -91,9 +93,9 @@ sig
   val USE_SG_THEN    : thm_tactic -> int -> int -> list_tactic
   val CHANGED_TAC    : tactic -> tactic
   val Q_TAC0         : {traces : (string * int) list} -> hol_type option ->
-                       (term -> tactic) -> term frag list -> tactic
-  val Q_TAC          : (term -> tactic) -> term frag list -> tactic
-  val QTY_TAC        : hol_type -> (term -> tactic) -> term frag list -> tactic
+                       (term -> tactic) -> term quotation -> tactic
+  val Q_TAC          : (term -> tactic) -> term quotation -> tactic
+  val QTY_TAC        : hol_type -> (term -> tactic) -> term quotation -> tactic
 
   val default_prover : term * tactic -> thm
   val set_prover     : (term * tactic -> thm) -> unit

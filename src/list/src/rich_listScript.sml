@@ -44,6 +44,8 @@ in
    val SNOC_11 = SNOC_11
    val SUM = SUM
    val TL = TL
+   val UNIQUE_DEF = UNIQUE_DEF
+   val UNIQUE_LENGTH_FILTER = UNIQUE_LENGTH_FILTER
    val UNZIP = UNZIP
    val ZIP = ZIP
 end;
@@ -2923,16 +2925,12 @@ val LIST_ELEM_COUNT_MEM = Q.store_thm ("LIST_ELEM_COUNT_MEM",
 (*---------------------------------------------------------------------------*)
 
 local
-  val op>> = op Tactical.THEN
-  val op>- = op Tactical.THEN1
   val rw = SRW_TAC []
   val metis_tac = METIS_TAC
   val fs = FULL_SIMP_TAC (srw_ss())
   val rfs = REV_FULL_SIMP_TAC (srw_ss())
   val simp = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss)
   val decide_tac = numLib.DECIDE_TAC
-  val imp_res_tac = IMP_RES_TAC
-  val res_tac = RES_TAC
   open pred_setTheory open listTheory pairTheory;
 in
 
@@ -3241,6 +3239,17 @@ val list_rel_butlastn = Q.store_thm ("list_rel_butlastn",
 
 end
 (* end CakeML lemmas *)
+
+(* alternative definition of listTheory.UNIQUE *)
+val UNIQUE_LIST_ELEM_COUNT = store_thm (
+   "UNIQUE_LIST_ELEM_COUNT", ``!e L. UNIQUE e L = (LIST_ELEM_COUNT e L = 1)``,
+    rpt GEN_TAC
+ >> REWRITE_TAC [LIST_ELEM_COUNT_DEF]
+ >> Q_TAC KNOW_TAC `(\x. x = e) = ($= e)`
+ >- ( REWRITE_TAC [FUN_EQ_THM] >> GEN_TAC >> BETA_TAC \\
+      METIS_TAC [] )
+ >> DISCH_TAC >> ASM_REWRITE_TAC []
+ >> RW_TAC std_ss [UNIQUE_LENGTH_FILTER]);
 
 (*---------------------------------------------------------------------------*)
 (* Add evaluation theorems to computeLib.the_compset                         *)

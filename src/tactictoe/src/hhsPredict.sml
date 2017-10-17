@@ -20,7 +20,7 @@ val ERR = mk_HOL_ERR "hhsPredict"
 fun learn_tfidf feavl = 
   let
     val syms      = List.concat (map snd feavl)
-    val dict      = count_dict (dempty String.compare) syms
+    val dict      = count_dict (dempty Int.compare) syms
     val n         = length feavl
     fun f (fea,freq) = 
       Math.ln (Real.fromInt n) - Math.ln (Real.fromInt freq)
@@ -56,8 +56,7 @@ fun knn_self_distance symweight fea =
 fun knn_distance symweight dict_o fea_p =
   let 
     val fea     = inter_dict dict_o fea_p
-    fun wf s    = dfind s symweight 
-      handle _ => raise ERR "knn_distance" s
+    fun wf n    = dfind n symweight handle _ => raise ERR "knn_distance" ""
     val weightl = map wf fea
   in
     pow6_dist weightl
@@ -70,12 +69,11 @@ fun knn_distance symweight dict_o fea_p =
 (* A label can be predicted multiple times *)
 fun pre_knn symweight feal fea_o =
   let 
-    val dict_o = dnew String.compare (map (fn x => (x,())) fea_o)
+    val dict_o = dnew Int.compare (map (fn x => (x,())) fea_o)
     fun dist (lbl,fea_p) = (lbl, knn_distance symweight dict_o fea_p)
     fun compare0 ((_,x),(_,y)) = Real.compare (y,x)
     val l0 = map dist feal
     val l1 = dict_sort compare0 l0
-    val memdict = dempty String.compare
   in
     l1
   end
@@ -99,24 +97,41 @@ fun thmknn symweight n feal fea_o =
     first_n n l2
   end    
 
+
+(* --------------------------------------------------------------------------
+   External executables
+   -------------------------------------------------------------------------- *)
+
+fun cmd_in_dir dir cmd =
+  OS.Process.system ("cd " ^ dir ^ "; " ^ cmd)
+ 
+fun bin_predict n predictor =
+  let
+    val predict_dir = HOLDIR ^ "/src/holyhammer/predict" 
+    val predict_cmd = String.concatWith " "
+      [predict_dir ^ "/predict",
+      "syms","dep","seq","-n",int_to_string n,"-p",predictor,
+      "<","csyms",">","predict_out","2> predict_error"]
+  in
+    cmd_in_dir hhs_predict_dir predict_cmd
+  end
+
+fun mepo_predict n predictor =
+  let
+    val predict_dir = HOLDIR ^ "/src/holyhammer/predict" 
+    val predict_cmd = String.concatWith " "
+      [predict_dir ^ "/mepo/mepo3","0","syms","dep",int_to_string n,"seq",
+       "<","csyms",">","predict_out","2> predict_error"]
+  in
+    cmd_in_dir hhs_predict_dir predict_cmd
+  end
+
 (* --------------------------------------------------------------------------
    External tactic predictions
    -------------------------------------------------------------------------- *)
 
 (* Renaming label and features *)
-val fea_counter = ref 0
-val fea_dict    = ref (dempty String.compare)
-
-fun name_fea fea = 
-  dfind fea (!fea_dict) 
-  handle _ =>
-    let 
-      val named_fea = mlquote (int_to_string (!fea_counter))
-    in
-      fea_dict := dadd fea named_fea (!fea_dict);
-      incr fea_counter;
-      named_fea
-    end
+fun name_fea fea = mlquote (int_to_string fea)
 
 val feav_counter = ref 0
 val feav_dict    = ref (dempty feav_compare)
@@ -186,23 +201,6 @@ fun export_knn dir stacfea feag =
     print_syms (dir ^ "/syms") feavl
   end
 
-fun cmd_in_dir dir cmd =
-  OS.Process.system ("cd " ^ dir ^ "; " ^ cmd)
- 
-fun bin_predict n predictor =
-  let
-    val predict_cmd =
-      "../../holyhammer/predict/predict" ^ 
-      " syms dep seq -n" ^
-      " " ^ int_to_string n ^ 
-      " -p " ^ predictor ^
-      " < csyms" ^
-      " > predict_out" ^
-      " 2> predict_error"
-  in
-    cmd_in_dir hhs_predict_dir predict_cmd
-  end
-
 fun read_predictions () = 
   let 
     val s = hd (readl (hhs_predict_dir ^ "/predict_out"))
@@ -217,8 +215,6 @@ fun stacknn_ext n stacfea feag =
   if null stacfea then []
   else
     (
-    fea_counter := 0;
-    fea_dict    := dempty String.compare;
     feav_counter := 0;
     feav_dict    := dempty feav_compare;
     ifeav_dict   := dempty String.compare;
@@ -312,25 +308,25 @@ fun tread_predictions () =
   end
 
 fun thmknn_ext n thmfeal feag =
-  if thmfeal = [] then []
-  else
+  if null thmfeal then [] else
     (
-    fea_counter := 0;
-    fea_dict    := dempty String.compare;
     thm_counter := 0;
     thm_dict    := dempty String.compare;
     unthm_dict  := dempty String.compare;
     texport_knn hhs_predict_dir thmfeal feag;
-    bin_predict n "knn";
+    ignore (bin_predict n "knn");
+    tread_predictions ()
+    )
+
+fun thmmepo_ext n thmfeal feag =
+  if null thmfeal then [] else
+    (
+    thm_counter := 0;
+    thm_dict    := dempty String.compare;
+    unthm_dict  := dempty String.compare;
+    texport_knn hhs_predict_dir thmfeal feag;
+    ignore (mepo_predict n);
     tread_predictions ()
     )
 
 end (* struct *)
-
-
-
-
-
-
-
-

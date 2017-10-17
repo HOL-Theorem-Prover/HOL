@@ -13,13 +13,9 @@ val _ = new_theory "ringNorm";
 
 open ringTheory canonicalTheory;
 
-infix ORELSE THEN THENL o |->;
-infix 8 by;
-
-
-val r = --`r:'a ring`--;
-val sr = --`semi_ring_of r`--;
-val _ = set_assums [ --`is_ring ^r`-- ];
+val r = “r:'a ring”;
+val sr = “semi_ring_of r”;
+val _ = set_assums [ “is_ring ^r” ];
 val _ = app (C add_impl_param [r]) ["R0","R1","RP","RM","RN"];
 
 val rth = ringTheory.IMPORT

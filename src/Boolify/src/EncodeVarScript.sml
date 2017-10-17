@@ -8,14 +8,6 @@ open HolKernel boolLib Parse bossLib simpLib listTheory
 
 val _ = new_theory "EncodeVar";
 
-infixr 0 >> || >|;
-infix 1 >-;
-
-val op >> = op THEN;
-val op >- = op THEN1;
-val op >| = op THENL;
-val op || = op ORELSE;
-
 val Suff = Q_TAC SUFF_TAC;
 val Know = Q_TAC KNOW_TAC;
 

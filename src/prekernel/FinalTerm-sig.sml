@@ -6,6 +6,8 @@ sig
   type ('a,'b)subst = ('a,'b)Lib.subst
   type 'a set       = 'a HOLset.set
 
+  val equality      : term
+
   val type_of       : term -> hol_type
   val free_vars     : term -> term list
   val free_vars_lr  : term -> term list
@@ -77,6 +79,7 @@ sig
   val var_compare   : term * term -> order
   val compare       : term * term -> order
   val term_eq       : term -> term -> bool
+  val fast_term_eq  : term -> term -> bool
 
   val empty_tmset   : term set
   val empty_varset  : term set

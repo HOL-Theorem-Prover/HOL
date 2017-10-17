@@ -14,7 +14,7 @@ DEPS = bossLib.uo $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(boss_deps)) \
 all: $(TARGET)
 
 $(TARGET): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -o $(TARGET) -b $(builder0) $(boss_deps) bossLib
+	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -o $(TARGET) -b $(builder0) $(boss_deps) bossLib
 
 endif
 

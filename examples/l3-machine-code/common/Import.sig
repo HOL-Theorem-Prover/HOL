@@ -117,6 +117,8 @@ sig
      | Rep
      | Rol
      | Ror
+     | SDiv
+     | SMod
      | Splitl
      | Splitr
      | Sub

@@ -461,4 +461,12 @@ val res_exists1_tm  = mk "RES_EXISTS_UNIQUE"
 val res_select_tm   = mk "RES_SELECT"
 val res_abstract_tm = mk "RES_ABSTRACT"
 
+fun op~~(t1,t2) = aconv t1 t2
+fun op!~(t1,t2) = not (t1 ~~ t2)
+val ES = HOLset.empty Term.compare
+fun singt t = HOLset.add(ES, t)
+fun listset ts = HOLset.addList(ES, ts)
+fun FVLset ts = FVL ts ES
+fun FVs t = FVLset [t]
+
 end

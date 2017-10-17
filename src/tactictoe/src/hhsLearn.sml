@@ -8,47 +8,53 @@
 structure hhsLearn :> hhsLearn =
 struct
 
-open HolKernel boolLib Abbrev hhsTools hhsPredict hhsExec hhsMinimize hhsTimeout
+open HolKernel boolLib Abbrev hhsTools hhsPredict hhsExec hhsMinimize 
+hhsTimeout hhsFeature hhsMetis
 
 val ERR = mk_HOL_ERR "hhsLearn"
 
 val hhs_ortho_flag = ref false
+val hhs_ortho_number = ref 20
+val hhs_ortho_metis = ref false
 val hhs_succrate_flag = ref false
 
 (*----------------------------------------------------------------------------
  * Orthogonalization
  *----------------------------------------------------------------------------*)
 
-(* should move hhs_tactic_time to tools *)
-fun is_better_lbl (_,t1,g1,gl1) (_,t2,g2,gl2) =  
-  t1 < !hhs_tactic_time andalso g1 = g2 andalso all (fn x => mem x gl2) gl1 
+fun test_stac g gl stac =
+  let val ((new_gl,_),t) = 
+    (
+    debug ("test_stac " ^ stac);
+    add_time (timeOut (!hhs_tactic_time) (tactic_of_sml stac)) g
+    )
+  in
+    if all (fn x => mem x gl) new_gl 
+    then SOME (stac,t,g,gl)
+    else NONE
+  end
+  handle _ => NONE
 
-fun find_better_stac (lbl2 as (stac2,t2,g2,gl2)) stacl =
-  if null stacl then lbl2 else
-    let 
-      val lbl1 =
-        let 
-          val stac1 = hd stacl
-          val ((gl1,_),t1) = 
-            add_time (timeOut (!hhs_tactic_time) (tactic_of_sml stac1)) g2 
-        in
-          (stac1,t1,g2,gl1)
-        end
-        handle _ => ("Error", !hhs_tactic_time + 100.0,g2,gl2) (* dirty trick *)
-    in  
-      if is_better_lbl lbl1 lbl2 
-      then lbl1 
-      else find_better_stac lbl2 (tl stacl)
-    end  
+fun thm_of_string s =
+  let val (a,b) = split_string "Theory." s in 
+    String.concatWith " " ["(","DB.fetch",mlquote a,mlquote b,")"] 
+  end
 
-fun orthogonalize (lbl as (_,t,g,gl),fea) =
+fun orthogonalize (lbl as (ostac,t,g,gl),fea) =
   if !hhs_ortho_flag 
   then
-    let 
-      val feavectl = stacknn_ext 20 (dlist (!hhs_stacfea)) fea
+    let
+      val feavectl = debug_t "orthogonalize" 
+        stacknn_ext (!hhs_ortho_number) (dlist (!hhs_stacfea)) fea
+      val _ = debug (string_of_goal g)
       val stacl    = map (#1 o fst) feavectl
+      val stacl2   = filter (fn x => not (x = ostac)) stacl
+      val testl    = lbl :: (List.mapPartial (test_stac g gl) stacl2)
+      fun score x  = dfind (#1 x) (!hhs_ndict) handle _ => 0
+      fun n_compare (x,y) = Int.compare (score y, score x) 
+      val sortedl  = dict_sort n_compare testl
     in
-      find_better_stac lbl stacl
+      hd sortedl
     end
   else lbl
 
@@ -80,9 +86,7 @@ fun count_succ stac =
 fun inv_succrate stac =
   if !hhs_succrate_flag
   then
-    let 
-      val (succ,try) = dfind stac (!succ_glob_dict)
-    in
+    let val (succ,try) = dfind stac (!succ_glob_dict) in
       Real.fromInt (10 + try) / Real.fromInt (succ + 1)
     end
   else 1.0
@@ -99,7 +103,7 @@ fun read_succrate thy =
   if mem thy ["min","bool"] then () else
   let
     val sl = readl (hhs_succrate_dir ^ "/" ^ thy) 
-             handle _ => (print (thy ^ "\n"); [])
+             handle _ => (print_endline ("File not found:" ^ thy); [])
     val b =
       if sl = [] 
         then true
@@ -114,6 +118,7 @@ fun read_succrate thy =
 fun import_succrate thyl =
   (
   debug "Reading success rates...";
+  print_endline "Reading success rates...";
   app read_succrate thyl;
   !succrate_reader
   )

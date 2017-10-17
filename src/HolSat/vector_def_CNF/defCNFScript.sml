@@ -4,8 +4,8 @@ open HolKernel Parse boolLib simpLib numLib rich_listTheory
 open TotalDefn BasicProvers
 val _ = new_theory "defCNF";
 
-infixr 0 THEN ORELSE THENL ++ || << |-> THENC;
-infixr 1 >> THEN1;
+infixr 0 ++ || << |-> THENC;
+infixr 1 >> ;
 
 val op++ = op THEN;
 val op|| = op ORELSE;

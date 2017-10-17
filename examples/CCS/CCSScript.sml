@@ -5,13 +5,13 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open pred_setTheory CCSLib;
+open pred_setTheory relationTheory CCSLib;
 
 val _ = new_theory "CCS";
 
 (******************************************************************************)
 (*                                                                            *)
-(*             Syntax of pure CCS ('a, 'b) (general formalization)            *)
+(*                           Labels and Actions                               *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -38,8 +38,7 @@ val Label_distinct = TypeBase.distinct_of ``:'b Label``;
 val Label_distinct' = save_thm ("Label_distinct'", GSYM Label_distinct);
 
 val Label_not_eq = save_thm (
-   "Label_not_eq",
-    STRIP_FORALL_RULE EQF_INTRO Label_distinct);
+   "Label_not_eq", STRIP_FORALL_RULE EQF_INTRO Label_distinct);
 
 val Label_not_eq' = save_thm (
    "Label_not_eq'",
@@ -243,10 +242,26 @@ val IS_RELABELING = store_thm (
  >> ASM_REWRITE_TAC [Apply_Relab_COMPL_THM]);
 
 (* Defining a relabelling function through substitution-like notation.
-   RELAB: (Label # Label)list -> Relabeling
+   RELAB: (Label # Label) list -> Relabeling
  *)
 val RELAB_def = Define `
     RELAB (labl :('b Label # 'b Label) list) = ABS_Relabeling (Apply_Relab labl)`;
+
+(* |- ∀labl' labl.
+     (RELAB labl' = RELAB labl) ⇔ (Apply_Relab labl' = Apply_Relab labl)
+ *)
+val APPLY_RELAB_THM = save_thm ("APPLY_RELAB_THM",
+    GEN_ALL
+      (REWRITE_RULE [GSYM RELAB_def]
+	(MATCH_MP (MATCH_MP ABS_Relabeling_one_one
+			    (Q.SPEC `labl` IS_RELABELING))
+		  (Q.SPEC `labl` IS_RELABELING))));
+
+(******************************************************************************)
+(*                                                                            *)
+(*             Syntax of pure CCS ('a, 'b) (general formalization)            *)
+(*                                                                            *)
+(******************************************************************************)
 
 (* Define the type of (pure) CCS agent expressions. *)
 val _ = Datatype `CCS = nil
@@ -322,6 +337,9 @@ val CCS_COND_CLAUSES = save_thm (
 (*                                                                            *)
 (******************************************************************************)
 
+val _ = type_abbrev ("transition",
+		    ``:('a, 'b) CCS -> 'b Action -> ('a, 'b) CCS -> bool``);
+
 (* Inductive definition of the transition relation TRANS for CCS.
    TRANS: CCS -> Action -> CCS -> bool *)
 val (TRANS_rules, TRANS_ind, TRANS_cases) = Hol_reln `
@@ -342,12 +360,16 @@ val (TRANS_rules, TRANS_ind, TRANS_cases) = Hol_reln `
     (!E u X E1.  TRANS (CCS_Subst E (rec X E) X) u E1
 	     ==> TRANS (rec X E) u E1) `;				(* REC (CONS) *)
 
+val _ = overload_on ("Trans", ``TRANS``);
 val _ =
-    add_rule { term_name = "TRANS", fixity = Infix (NONASSOC, 450),
-	pp_elements = [ BreakSpace(1,0), TOK "--", HardSpace 0, TM, HardSpace 0, TOK "->",
+    add_rule { term_name = "Trans", fixity = Infix (NONASSOC, 450),
+	pp_elements = [ BreakSpace(1,0), TOK "--", HardSpace 0, TM, HardSpace 0, TOK "-->",
 			BreakSpace(1,0) ],
 	paren_style = OnlyIfNecessary,
 	block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)) };
+
+val _ = TeX_notation { hol = "--",  TeX = ("\\HOLTokenTransBegin", 1) };
+val _ = TeX_notation { hol = "-->", TeX = ("\\HOLTokenTransEnd", 1) };
 
 (* The rules for the transition relation TRANS as individual theorems. *)
 val [PREFIX, SUM1, SUM2, PAR1, PAR2, PAR3, RESTR, RELABELING, REC] =
@@ -584,12 +606,14 @@ val TRANS_PAR_NO_SYNCR = store_thm ("TRANS_PAR_NO_SYNCR",
 		      (ASSUME ``~(l = COMPL (l' :'b Label))``)) \\
       RW_TAC bool_ss [] ]);
 
-val RESTR_cases_EQ = save_thm ("RESTR_cases_EQ",
+val RESTR_cases_EQ = save_thm (
+   "RESTR_cases_EQ",
     Q_GENL [`D'`, `u`, `L`, `D`]
 	   (REWRITE_RULE [CCS_distinct', CCS_11, Action_distinct, Action_11]
 			 (Q.SPECL [`restr L D`, `u`, `D'`] TRANS_cases)));
 
-val RESTR_cases = save_thm ("RESTR_cases", EQ_IMP_LR RESTR_cases_EQ);
+val RESTR_cases = save_thm (
+   "RESTR_cases", EQ_IMP_LR RESTR_cases_EQ);
 
 val TRANS_RESTR_EQ = store_thm ("TRANS_RESTR_EQ",
   ``!E L u E'.
@@ -613,7 +637,7 @@ val TRANS_RESTR_EQ = store_thm ("TRANS_RESTR_EQ",
 	(* goal 1.2 *)
 	ASM_REWRITE_TAC [REWRITE_RULE [a2] a3] ],
       (* case 2 (RL) *)
-      STRIP_TAC >|			(* two sub-goals here *)
+      STRIP_TAC >| (* two sub-goals here *)
       [ (* sub-goal 2.1 *)
 	ASM_REWRITE_TAC [] \\
 	MATCH_MP_TAC RESTR \\
@@ -625,9 +649,11 @@ val TRANS_RESTR_EQ = store_thm ("TRANS_RESTR_EQ",
 	ASM_REWRITE_TAC [REWRITE_RULE [a2] a4] ] ]
   end);
 
-val TRANS_RESTR = save_thm ("TRANS_RESTR", EQ_IMP_LR TRANS_RESTR_EQ);
+val TRANS_RESTR = save_thm (
+   "TRANS_RESTR", EQ_IMP_LR TRANS_RESTR_EQ);
 
-val TRANS_P_RESTR = store_thm ("TRANS_P_RESTR",
+val TRANS_P_RESTR = store_thm (
+   "TRANS_P_RESTR",
   ``!E u E' L. TRANS (restr L E) u (restr L E') ==> TRANS E u E'``,
   let
       val thm = REWRITE_RULE [CCS_11] (ASSUME ``restr (L :'b Label set) E' = restr L E''``)
@@ -726,16 +752,6 @@ val RELAB_NIL_NO_TRANS = store_thm ("RELAB_NIL_NO_TRANS",
  >> IMP_RES_TAC TRANS_RELAB
  >> IMP_RES_TAC NIL_NO_TRANS);
 
-(* |- ∀labl' labl.
-     (RELAB labl' = RELAB labl) ⇔ (Apply_Relab labl' = Apply_Relab labl)
- *)
-val APPLY_RELAB_THM = save_thm ("APPLY_RELAB_THM",
-    GEN_ALL
-      (REWRITE_RULE [GSYM RELAB_def]
-	(MATCH_MP (MATCH_MP ABS_Relabeling_one_one
-			    (Q.SPEC `labl` IS_RELABELING))
-		  (Q.SPEC `labl` IS_RELABELING))));
-
 val REC_cases_EQ = save_thm ("REC_cases_EQ",
     Q_GENL [`X`, `E`, `u`, `E''`]
 	 (Q.SPECL [`u`, `E''`]
@@ -757,43 +773,7 @@ val TRANS_REC_EQ = store_thm ("TRANS_REC_EQ",
 
 val TRANS_REC = save_thm ("TRANS_REC", EQ_IMP_LR TRANS_REC_EQ);
 
-(* Type abbreviations *)
-val _ = type_abbrev ("transition", ``:('a, 'b) CCS -> 'b Action -> ('a, 'b) CCS -> bool``);
-val _ = type_abbrev ("simulation", ``:('a, 'b) CCS -> ('a, 'b) CCS -> bool``);
-
-(******************************************************************************)
-(*                                                                            *)
-(*             Some other definitions without supporting theorems	      *)
-(*                                                                            *)
-(******************************************************************************)
-
-(* NEW *)
-val epsilon_def = Define `epsilon = []`;
-
-val _ = Unicode.unicode_version { u = UTF8.chr 0x03B5, tmnm = "epsilon"};
-val _ = TeX_notation { hol = UTF8.chr 0x03B5,
-		       TeX = ("\\ensuremath{\\epsilon}", 1) };
-
-val _ = type_abbrev ("trace", ``:'b Label list``);
-
-(* NEW *)
-val (TRACE_rules, TRACE_ind, TRACE_cases) = Hol_reln `
-    (!E.			       TRACE E epsilon E) /\
-    (!E E' l. TRANS E (label l) E' ==> TRACE E [l] E') /\
-    (!E1 E2 E3 l1 l2.
-	      TRACE E1 l1 E2 /\
-	      TRACE E2 l2 E3 ==> TRACE E1 (l1 ++ l2) E3)`;
-
-(* NEW *)
-val (WEAK_TRACE_rules, WEAK_TRACE_ind, WEAK_TRACE_cases) = Hol_reln `
-    (!E.			       WEAK_TRACE E epsilon E) /\
-    (!E E'.   TRANS E tau E'       ==> WEAK_TRACE E epsilon E') /\
-    (!E E' l. TRANS E (label l) E' ==> WEAK_TRACE E [l] E') /\
-    (!E1 E2 E3 l1 l2.
-	      WEAK_TRACE E1 l1 E2 /\
-	      WEAK_TRACE E2 l2 E3 ==> WEAK_TRACE E1 (l1 ++ l2) E3)`;
-
 val _ = export_theory ();
-val _ = Hol_pp.html_theory "CCS";
+val _ = html_theory "CCS";
 
 (* last updated: May 14, 2017 *)

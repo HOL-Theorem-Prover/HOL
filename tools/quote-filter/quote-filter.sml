@@ -7,9 +7,9 @@ val _ = catch_interrupt true;
 
 fun read_from_stream is n = TextIO.input is
 
-val (instream, outstream) =
+val (instream, outstream, intp) =
     case CommandLine.arguments() of
-      [] => (TextIO.stdIn, TextIO.stdOut)
+      [] => (TextIO.stdIn, TextIO.stdOut, true)
     | [ifile, ofile] => let
         open TextIO
         val is = TextIO.openIn ifile
@@ -23,7 +23,7 @@ val (instream, outstream) =
                          | NONE => ();
                          exit failure)
       in
-        (is, os)
+        (is, os, false)
       end
     | _ => (TextIO.output(TextIO.stdErr,
                           "Usage:\n  " ^ CommandLine.name() ^
@@ -31,7 +31,7 @@ val (instream, outstream) =
             exit failure)
 
 open QuoteFilter.UserDeclarations
-val state as QFS args = newstate ()
+val state as QFS args = newstate intp
 
 
 (* with many thanks to Ken Friis Larsen, Peter Sestoft, Claudio Russo and

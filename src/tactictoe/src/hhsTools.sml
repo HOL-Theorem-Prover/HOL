@@ -8,12 +8,12 @@
 structure hhsTools :> hhsTools =
 struct
 
-open HolKernel boolLib Abbrev
+open HolKernel boolLib Abbrev Dep hhsRedirect
 
 val ERR = mk_HOL_ERR "hhsTools"
 
 type lbl_t = (string * real * goal * goal list)
-type fea_t = string list
+type fea_t = int list
 type feav_t = (lbl_t * fea_t)
 
 (* --------------------------------------------------------------------------
@@ -27,14 +27,18 @@ val hhs_search_time = ref (Time.fromReal 0.0)
    Directories
    -------------------------------------------------------------------------- *)
 
-val tactictoe_dir   = HOLDIR ^ "/src/tactictoe"
-val hhs_feature_dir = tactictoe_dir ^ "/features"
-val hhs_code_dir    = tactictoe_dir ^ "/code"
-val hhs_search_dir  = tactictoe_dir ^ "/search_log"
-val hhs_predict_dir = tactictoe_dir ^ "/predict"
-val hhs_record_dir  = tactictoe_dir ^ "/record_log"
-val hhs_open_dir  = tactictoe_dir ^ "/open"
+val tactictoe_dir    = HOLDIR ^ "/src/tactictoe"
+val hhs_feature_dir  = tactictoe_dir ^ "/features"
+val hhs_code_dir     = tactictoe_dir ^ "/code"
+val hhs_search_dir   = tactictoe_dir ^ "/search_log"
+val hhs_predict_dir  = tactictoe_dir ^ "/predict"
+val hhs_record_dir   = tactictoe_dir ^ "/record_log"
+val hhs_open_dir     = tactictoe_dir ^ "/open"
 val hhs_succrate_dir = tactictoe_dir ^ "/succrate"
+val hhs_mdict_dir   = tactictoe_dir ^ "/mdict"
+
+fun hide_out f x = 
+  hide_in_file (hhs_code_dir ^ "/" ^ current_theory () ^ "_hide_out") f x
 
 fun mkDir_err dir = OS.FileSys.mkDir dir handle _ => ()
 
@@ -73,7 +77,7 @@ val reserved_dict =
    "and", "datatype", "type", "where", ":", ";" , ":>",
    "let", "in", "end", "while", "do",
    "local","=>","case","of","_","|","fn","handle","raise","#",
-   "[","(",",",")","]","{","}"])
+   "[","(",",",")","]","{","}","..."])
 
 fun is_string s = String.sub (s,0) = #"\"" handle _ => false
 fun is_number s = Char.isDigit (String.sub (s,0)) handle _ => false
@@ -91,6 +95,13 @@ fun first_n n l =
   if n <= 0 orelse null l
   then []
   else hd l :: first_n (n - 1) (tl l)
+
+fun part_aux n acc l =
+  if n <= 0 orelse null l
+  then (rev acc,l)
+  else part_aux (n - 1) (hd l :: acc) (tl l)
+
+fun part_n n l = part_aux n [] l
 
 fun number_list start l = case l of 
     []      => []
@@ -167,15 +178,13 @@ fun topo_sort graph =
    -------------------------------------------------------------------------- *)
 
 fun sum_real l = case l of [] => 0.0 | a :: m => a + sum_real m
+fun sum_int l = case l of [] => 0 | a :: m => a + sum_int m
 
 fun average_real l = sum_real l / Real.fromInt (length l)
 
 (* --------------------------------------------------------------------------
    Goal
    -------------------------------------------------------------------------- *)
-
-fun goal_compare ((asm1,w1), (asm2,w2)) =
-  list_compare Term.compare (w1 :: asm1, w2 :: asm2)
 
 fun string_of_goal (asm,w) =
   let 
@@ -193,13 +202,35 @@ fun string_of_goal (asm,w) =
   end
 
 (* --------------------------------------------------------------------------
-   Feature vectors
+   Comparisons
    -------------------------------------------------------------------------- *)
+
+fun goal_compare ((asm1,w1), (asm2,w2)) =
+  list_compare Term.compare (w1 :: asm1, w2 :: asm2)
 
 fun cpl_compare cmp1 cmp2 ((a1,a2),(b1,b2)) =
   let val r = cmp1 (a1,b1) in
     if r = EQUAL then cmp2 (a2,b2) else r
   end
+
+fun strict_term_compare (t1,t2) =
+  if Portable.pointer_eq (t1,t2) then EQUAL
+  else if is_var t1 andalso is_var t2 then Term.compare (t1,t2)
+  else if is_var t1 then LESS
+  else if is_var t2 then GREATER
+  else if is_const t1 andalso is_const t2 then Term.compare (t1,t2)
+  else if is_const t1 then LESS
+  else if is_const t2 then GREATER
+  else if is_comb t1 andalso is_comb t2 then 
+    cpl_compare strict_term_compare 
+      strict_term_compare (dest_comb t1, dest_comb t2)
+  else if is_comb t1 then LESS
+  else if is_comb t2 then GREATER
+  else 
+    cpl_compare Term.compare strict_term_compare (dest_abs t1, dest_abs t2)
+
+fun strict_goal_compare ((asm1,w1), (asm2,w2)) =
+  list_compare strict_term_compare (w1 :: asm1, w2 :: asm2)
 
 fun lbl_compare ((stac1,_,g1,_),(stac2,_,g2,_)) =
   cpl_compare String.compare goal_compare ((stac1,g1),(stac2,g2))
@@ -294,10 +325,17 @@ fun print_endline s = print (s ^ "\n")
    Debugging and exporting feature vectors
    -------------------------------------------------------------------------- *)
 
-val hhs_debug_flag = ref false
+(* search_dir *)
+fun debug s = append_endline (hhs_search_dir ^ "/debug/" ^ current_theory ()) s
 
-fun debug s = 
-  append_endline (hhs_search_dir ^ "/debug/" ^ current_theory ()) s
+fun debug_t s f x = 
+  let 
+    val _ = debug s
+    val (r,t) = add_time f x
+    val _ = debug (s ^ " " ^ Real.toString t)
+  in
+    r
+  end
 
 fun debug_search s =
   append_endline (hhs_search_dir ^ "/search/" ^ current_theory ()) s
@@ -305,20 +343,15 @@ fun debug_search s =
 fun debug_proof s =
   append_endline (hhs_search_dir ^ "/proof/" ^ current_theory ()) s
 
+(* record_dir *)
 fun debug_parse s =
-  let val file = hhs_record_dir ^ "/" ^ current_theory () ^ "/parse_err" in
-    append_endline file s
-  end
+  append_endline (hhs_record_dir ^ "/parse/" ^ current_theory ()) s
   
 fun debug_replay s =
-  let val file = hhs_record_dir ^ "/" ^ current_theory () ^ "/replay_err" in
-    append_endline file s
-  end  
-
+  append_endline (hhs_record_dir ^ "/replay/" ^ current_theory ()) s
+  
 fun debug_record s =
-  let val file = hhs_record_dir ^ "/" ^ current_theory () ^ "/record_err" in
-    append_endline file s
-  end  
+  append_endline (hhs_record_dir ^ "/record/" ^ current_theory ()) s
 
 (* --------------------------------------------------------------------------
    String
@@ -376,7 +409,7 @@ fun rpt_split_level s sl =
 fun split_charl acc buf csm l1 l2 = 
   if csm = [] then (rev acc, l2) else
   case l2 of
-    []     => raise ERR "" ""
+    []     => raise ERR "split_charl" ""
   | a :: m => if hd csm = a 
               then split_charl acc (a :: buf) (tl csm) l1 m
               else split_charl (a :: (buf @ acc)) [] l1 l1 m  
@@ -389,6 +422,25 @@ fun split_string s1 s2 =
     (implode rl1, implode rl2)
   end
 
+fun rm_prefix s2 s1 = 
+  let val (a,b) = split_string s1 s2 in
+    if a = "" then b else raise ERR "rm_prefix" (s2 ^ " " ^ s1)
+  end
+
+(* --------------------------------------------------------------------------
+   Dependencies
+   -------------------------------------------------------------------------- *)
+
+
+
+
+
+
+
+
+
+
+
 (* --------------------------------------------------------------------------
    Globals
    -------------------------------------------------------------------------- *)
@@ -396,7 +448,8 @@ fun split_string s1 s2 =
 val hhs_badstacl = ref []
 val hhs_cthyfea  = ref []
 val hhs_stacfea  = ref (dempty lbl_compare)
-val hhs_ddict    = ref (dempty goal_compare)
+val hhs_ddict = ref (dempty goal_compare)
+val hhs_ndict = ref (dempty String.compare)
 
 fun update_ddict (lbl,fea) =
   let 
@@ -406,30 +459,51 @@ fun update_ddict (lbl,fea) =
     hhs_ddict := dadd (#3 lbl) newv (!hhs_ddict)
   end
 
-fun clean_feadata () =
-  (
-  hhs_stacfea := dempty lbl_compare;
-  hhs_cthyfea := []; 
-  hhs_ddict := dempty goal_compare
-  )
-
 fun init_stacfea_ddict feavl =
   (
   hhs_stacfea := dnew lbl_compare feavl;
   hhs_cthyfea := []; 
   hhs_ddict := dempty goal_compare;
+  hhs_ndict := 
+    count_dict (dempty String.compare) 
+    (map (#1 o fst) (dlist (!hhs_stacfea)))
+  ;
   dapp update_ddict (!hhs_stacfea)
   )
 
-fun update_stacfea_ddict (lbl,fea) =
+fun update_stacfea_ddict (feav as (lbl,fea)) =
   if dmem lbl (!hhs_stacfea) then () else
   let 
     val oldv = dfind (#3 lbl) (!hhs_ddict) handle _ => [] 
-    val newv = (lbl,fea) :: oldv
+    val newv = feav :: oldv
   in
     hhs_stacfea := dadd lbl fea (!hhs_stacfea);
-    hhs_cthyfea := (lbl,fea) :: (!hhs_cthyfea);
-    hhs_ddict := dadd (#3 lbl) newv (!hhs_ddict)
+    hhs_cthyfea := feav :: (!hhs_cthyfea);
+    hhs_ddict := dadd (#3 lbl) newv (!hhs_ddict);
+    hhs_ndict := count_dict (!hhs_ndict) [(#1 lbl)]
   end
+  
+(* --------------------------------------------------------------------------
+   Metis
+   -------------------------------------------------------------------------- *)
+
+val mdict_glob = ref (dempty String.compare)
+val negmdict_glob = ref (dempty String.compare)
+
+(* --------------------------------------------------------------------------
+   The following structures should 
+   be empty anyway at the start of the theory.
+   -------------------------------------------------------------------------- *)
+   
+fun clean_feadata () =
+  (
+  hhs_badstacl := [];
+  hhs_stacfea := dempty lbl_compare;
+  hhs_cthyfea := [];
+  hhs_ddict := dempty goal_compare;
+  hhs_ndict := dempty String.compare;
+  mdict_glob := dempty String.compare;
+  negmdict_glob := dempty String.compare
+  )
 
 end (* struct *)

@@ -1,3 +1,8 @@
-*.html
-heap
-munge.exe
+/.hollogs/
+/.HOLMK/
+*.ui
+*.dat
+*.uo
+/heap
+*Theory.*
+*.exe

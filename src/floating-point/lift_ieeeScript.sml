@@ -655,7 +655,7 @@ val float_to_real_scale_down = Q.prove(
 val two_times_bias_lt = Q.prove(
    `bias (:'a) + bias (:'a) < dimword (:'a) - 1`,
    simp [wordsTheory.INT_MAX_def, wordsTheory.INT_MAX_def,
-         GSYM wordsTheory.dimword_twice_INT_MIN,
+         GSYM wordsTheory.dimword_IS_TWICE_INT_MIN,
          DECIDE ``1n < n ==> 0 < n - 1``]
   );
 
@@ -670,7 +670,8 @@ val lem = Q.prove(
   rw [GSYM POW_ADD, realTheory.REAL_LE_LDIV_EQ]
   \\ match_mp_tac REAL_POW_MONO
   \\ simp [wordsTheory.UINT_MAX_def, wordsTheory.ZERO_LT_INT_MAX,
-           DECIDE ``0n < a ==> 0 < 2 * a``, wordsTheory.dimword_twice_INT_MIN]
+           DECIDE ``0n < a ==> 0 < 2 * a``,
+           wordsTheory.dimword_IS_TWICE_INT_MIN]
   \\ simp [wordsTheory.INT_MAX_def]
   );
 
@@ -805,7 +806,7 @@ val error_bound_big = Q.prove(
 
 val suc_bias_lt_dimword = Q.prove(
   `1 < dimindex (:'a) ==> bias (:'a) + 1 < dimword (:'a)`,
-  simp [wordsTheory.INT_MAX_def, wordsTheory.dimword_twice_INT_MIN,
+  simp [wordsTheory.INT_MAX_def, wordsTheory.dimword_IS_TWICE_INT_MIN,
         DECIDE ``0n < n ==> (n - 1 + 1 = n)``]
   );
 
@@ -841,13 +842,14 @@ val error_bound_small1 = Q.prove(
       \\ `bias (:'w) + 1 - SUC k < dimword (:'w)`
       by (match_mp_tac arithmeticTheory.LESS_TRANS
           \\ qexists_tac `bias (:'w) + 1`
-          \\ simp [wordsTheory.INT_MAX_def, wordsTheory.dimword_twice_INT_MIN,
+          \\ simp [wordsTheory.INT_MAX_def,
+                   wordsTheory.dimword_IS_TWICE_INT_MIN,
                    DECIDE ``0n < n ==> (n - 1 + 1 = n)``]
          )
       \\ simp_tac std_ss [wordsTheory.WORD_NEG_1, wordsTheory.word_T_def]
       \\ simp [wordsTheory.BOUND_ORDER, wordsTheory.INT_MAX_LT_DIMWORD]
       \\ simp [wordsTheory.INT_MAX_def, wordsTheory.UINT_MAX_def,
-               wordsTheory.dimword_twice_INT_MIN,
+               wordsTheory.dimword_IS_TWICE_INT_MIN,
                DECIDE ``0 < a /\ 0 < b ==> a - b <> 2 * a - 1n``
                ]
      )
@@ -927,7 +929,7 @@ val threshold_gt1 = Q.prove(
         realTheory.REAL_SUB_LDISTRIB, DECIDE ``0n < n ==> (SUC (n - 1) = n)``,
         GSYM (CONJUNCT2 arithmeticTheory.EXP)]
   \\ simp [wordsTheory.UINT_MAX_def, wordsTheory.INT_MAX_def,
-           wordsTheory.dimword_twice_INT_MIN]
+           wordsTheory.dimword_IS_TWICE_INT_MIN]
   \\ qabbrev_tac `n = INT_MIN (:'w)`
   \\ qabbrev_tac `m = INT_MIN (:'t)`
   \\ strip_tac
@@ -1116,7 +1118,7 @@ val THRESHOLD_MUL_LT = Q.prove(
   by (simp [REAL_INV_1OVER, realTheory.mult_ratr, realTheory.REAL_EQ_LDIV_EQ,
             GSYM REAL_POW_ADD]
       \\ simp [realTheory.REAL_OF_NUM_POW, wordsTheory.UINT_MAX_def,
-               wordsTheory.INT_MAX_def, wordsTheory.dimword_twice_INT_MIN,
+               wordsTheory.INT_MAX_def, wordsTheory.dimword_IS_TWICE_INT_MIN,
                arithmeticTheory.LEFT_SUB_DISTRIB])
   \\ asm_simp_tac std_ss [threshold_def, real_div]
   \\ rewrite_tac

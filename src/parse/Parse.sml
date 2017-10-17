@@ -482,8 +482,6 @@ val absyn_to_term =
 
 fun Term q = absyn_to_term (term_grammar()) (Absyn q)
 
-fun -- q x = Term q;
-
 fun typedTerm qtm ty =
    let fun trail s = [QUOTE (s^"):"), ANTIQUOTE(ty_antiq ty), QUOTE""]
    in
@@ -1012,6 +1010,18 @@ end;
 (*----------------------------------------------------------------------
   User changes to the printer and parser
   ----------------------------------------------------------------------*)
+
+fun constant_string_printer s : term_grammar.userprinter =
+  let
+    fun result (tyg, tmg) _ _ ppfns (pgr,lgr,rgr) depth tm =
+      let
+        val {add_string,...} = ppfns
+      in
+        add_string s
+      end
+  in
+    result
+  end
 
 fun temp_add_user_printer (name, pattern, pfn) = let
 in

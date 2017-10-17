@@ -204,6 +204,9 @@ struct
    fun op div (B (v1, _), B (v2, s)) = B (IntInf.div (v1, v2), s)
    fun op mod (B (v1, _), B (v2, s)) = B (IntInf.mod (v1, v2), s)
 
+   fun op sdiv (a, b as B (_, s)) = fromInt (IntInf.div (toInt a, toInt b), s)
+   fun op smod (a, b as B (_, s)) = fromInt (IntInf.mod (toInt a, toInt b), s)
+
    fun op quot (a, b as B (_, s)) = fromInt (IntInf.quot (toInt a, toInt b), s)
    fun op rem (a, b as B (_, s)) = fromInt (IntInf.rem (toInt a, toInt b), s)
 

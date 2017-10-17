@@ -60,11 +60,17 @@ fun pop_output_file () =
   | []      => (dup2{old = duplicate_stdout, new = stdout}; false))
   )
 
-fun hide file f x = 
-  (
-  push_output_file {name=file, append=false};
-  ((let val r = f x in (pop_output_file (); r) end) 
-  handle _ => (pop_output_file (); raise ERR "hide" file))
-  )
+val in_flag = ref false
 
+fun hide_in_file file f x = 
+  (
+  if !in_flag then raise ERR "hide" "recursive hiding" else ();
+  in_flag := true;
+  push_output_file {name=file, append=false};
+    (
+    let val r = f x in (pop_output_file (); in_flag := false; r) end
+    handle e => (pop_output_file (); in_flag := false; raise e)
+    )
+  )
+  
 end

@@ -10,9 +10,6 @@ val arith_ss = old_arith_ss
 
 val _ = new_theory "Encode";
 
-infixr 0 >> || >|;
-infix 1 >-;
-
 val Suff = Q_TAC SUFF_TAC;
 val Know = Q_TAC KNOW_TAC;
 

@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: Specialize given theorem based on term list, then give to theorem tactic
+# key: qspecl_then
+# expand-env: ((yas-indent-line 'fixed))
+# --
+qspecl_then [${1:term quotations}] ${2:theorem tactic} ${3:theorem}

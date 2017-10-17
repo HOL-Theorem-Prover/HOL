@@ -14,10 +14,8 @@ sig
   val HOLMAKE : string
 
   val process_cline :
-      unit ->
-      {cmdline : string list, build_theory_graph : bool,
-       jobcount : int, relocbuild : bool,
-       do_selftests : int, SRCDIRS : (string * int) list}
+      unit -> {SRCDIRS : (string * int) list} buildcline_dtype.final_options
+
 
   val map_dir : (string * string -> unit) -> string -> unit
                 (* f gets dirname * filename *)

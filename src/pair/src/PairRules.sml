@@ -1,8 +1,6 @@
 structure PairRules :> PairRules =
 struct
 
-infix THENC |-> THEN ## ORELSE; infixr -->;
-
 open HolKernel Parse boolLib pairSyntax;
 
 val ERR = mk_HOL_ERR "PairRules"
@@ -241,7 +239,7 @@ val PBETA_CONV =
     (* possible.							*)
     fun find_CONV mask assl =
      let fun search m pthl =
-	  (true, (K (assoc m assl)))
+	  (true, (K (op_assoc aconv m assl)))
 	    handle HOL_ERR _
 	    => if is_comb m then
 	        let val (f,b) = dest_comb m
@@ -339,15 +337,18 @@ fun UNPBETA_CONV v tm =
 (* ------------------------------------------------------------------------- *)
 
 fun occs_in p t =  (* should use set operations for better speed *)
-  if is_vstruct p
-  then let fun check V tm =
-            if is_const tm then false else
-            if is_var tm then mem tm V else
-            if is_comb tm then check V (rand tm) orelse check V (rator tm) else
-            if is_abs tm then check (set_diff V [bvar tm]) (body tm)
-                         else raise ERR "occs_in" "malformed term"
-        in check (free_vars p) t
-       end
+  if is_vstruct p then
+    let
+      fun set_diff s v = HOLset.delete(s,v) handle HOLset.NotFound => s
+      fun check V tm =
+          if is_const tm then false else
+          if is_var tm then HOLset.member(V,tm) else
+          if is_comb tm then check V (rand tm) orelse check V (rator tm) else
+          if is_abs tm then check (set_diff V (bvar tm)) (body tm)
+          else raise ERR "occs_in" "malformed term"
+    in
+      check (FVL [p] empty_tmset) t
+    end
   else raise ERR "occs_in" "varstruct expected in first argument";
 
 fun PETA_CONV tm =
@@ -355,7 +356,7 @@ fun PETA_CONV tm =
      val (f,p') = dest_comb fp
      val x = genvar (type_of p)
  in
-   if p=p' andalso not (occs_in p f)
+   if aconv p p' andalso not (occs_in p f)
    then EXT (GEN x (PBETA_CONV (mk_comb(tm,x))))
    else failwith ""
  end
@@ -716,7 +717,7 @@ handle HOL_ERR _ => raise ERR "OR_PEXISTS_CONV"
 
 
 (* ------------------------------------------------------------------------- *)
-(* LEFT_OR_PEXISTS_CONV (--`(?x.P) \/  Q`--) =                               *)
+(* LEFT_OR_PEXISTS_CONV “(?x.P) \/  Q” =                                     *)
 (*   |- (?x.P) \/ Q = (?x'. P[x'/x] \/ Q)                                    *)
 (* ------------------------------------------------------------------------- *)
 
@@ -738,7 +739,7 @@ handle HOL_ERR _ => raise ERR "LEFT_OR_PEXISTS_CONV"
 		        "expecting `(?p.P) \\/ Q`";
 
 (* ------------------------------------------------------------------------- *)
-(* RIGHT_OR_PEXISTS_CONV "P \/ (?x.Q)" =                                     *)
+(* RIGHT_OR_PEXISTS_CONV “P \/ (?x.Q)” =                                     *)
 (*   |-  P \/ (?x.Q) = (?x'. P \/ Q[x'/x])                                   *)
 (* ------------------------------------------------------------------------- *)
 
@@ -1493,27 +1494,25 @@ fun UNCURRY_EXISTS_CONV tm =
 
 val FORALL_DEF = boolTheory.FORALL_DEF;
 
-val PSPEC =
-    let val spec_thm =
-	prove
-	(
-	    --`!(x:'a) f. $!f ==> (f x)`--
-	,
-	    GEN_TAC THEN
-	    GEN_TAC THEN
-	    (PURE_ONCE_REWRITE_TAC [FORALL_DEF]) THEN
-	    BETA_TAC THEN
-	    DISCH_TAC THEN
-	    (PURE_ASM_REWRITE_TAC []) THEN
-	    BETA_TAC
-	)
-	val gxty = Type.alpha
-	val gfty = alpha --> bool
-	val gx = genvar gxty
-	val gf = genvar gfty
-	val sth = ISPECL [gx,gf] spec_thm
-    in
-	fn x =>
+val PSPEC = let
+    val spec_thm = (* !x f. $! f ==> f x *)
+        let
+          val f = mk_var("f", alpha --> bool)
+          val x = mk_var("x", alpha)
+          val fa = mk_thy_const{Name = "!", Thy = "bool",
+                                Ty = (alpha --> bool) --> bool}
+        in
+          AP_THM FORALL_DEF f
+                 |> RIGHT_BETA |> C EQ_MP (ASSUME (mk_comb(fa,f))) |> C AP_THM x
+                 |> RIGHT_BETA |> EQT_ELIM |> DISCH_ALL |> GENL [x,f]
+        end
+    val gxty = Type.alpha
+    val gfty = alpha --> bool
+    val gx = genvar gxty
+    val gf = genvar gfty
+    val sth = ISPECL [gx,gf] spec_thm
+in
+  fn x =>
 	fn th =>
 	let val f = rand (concl th)
 	    val xty = type_of x
@@ -1721,7 +1720,7 @@ val EXISTS_UNIQUE_DEF = boolTheory.EXISTS_UNIQUE_DEF;
 fun mk_fun(y1,y2) = (y1 --> y2)
 
 val PEXISTS_CONV =
-    let val f = (--`f:'a->bool`--)
+    let val f = mk_var("f", alpha --> bool)
 	val th1 = AP_THM EXISTS_DEF f
 	val th2 = GEN f ((CONV_RULE (RAND_CONV BETA_CONV)) th1)
     in
@@ -1829,7 +1828,7 @@ handle HOL_ERR _ => failwith "PEXISTS" ;
 (* ------------------------------------------------------------------------- *)
 
 val PCHOOSE =
-    let val f = (--`f:'a->bool`--)
+    let val f = mk_var("f", alpha --> bool)
 	val t1 = AP_THM EXISTS_DEF f
 	val t2 = GEN f ((CONV_RULE (RAND_CONV BETA_CONV)) t1)
     in

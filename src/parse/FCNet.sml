@@ -312,7 +312,7 @@ fun MERR s = raise ERR "can_match_term" s
 
 fun mlookup x ids = let
   fun look [] = if HOLset.member(ids, x) then SOME x else NONE
-    | look ({redex,residue}::t) = if x = redex then SOME residue else look t
+    | look ({redex,residue}::t) = if aconv x redex then SOME residue else look t
 in
   look
 end
@@ -330,7 +330,7 @@ fun RM patobs (theta0 as (tminfo, tyS)) =
               in
                 if bvar_free (#obbvars tminfo, t2) then
                   RM rest ((case mlookup t1 (#ids tminfo) (#theta tminfo) of
-                              NONE => if t1 = t2 then add_id t1 tminfo
+                              NONE => if aconv t1 t2 then add_id t1 tminfo
                                       else add_binding t1 t2 tminfo
                             | SOME tm' => if aconv tm' t2 then tminfo
                                           else MERR "double bind"),

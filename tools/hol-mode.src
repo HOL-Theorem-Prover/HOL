@@ -1295,7 +1295,7 @@ printed out.  (That's assuming that quietdec is false to start with.)"
 (defun hol-db-match (tm)
   "Does a DB.match [] on the given TERM (given as a string, without quotes)."
   (interactive "sTerm to match on: ")
-  (send-raw-string-to-hol (format "DB.print_match [] (Term`%s`)" tm)
+  (send-raw-string-to-hol (format "Hol_pp.print_match [] (Term`%s`)" tm)
                           hol-echo-commands-p t))
 
 (defun hol-db-find (tm)
@@ -2308,4 +2308,15 @@ second is to show the new term.
    '("Start HOL - horizontal split" . hol-horizontal))
 
 (define-key global-map [menu-bar hol-menu hol-process hol-start]
-   '("Start HOL" . hol))
+  '("Start HOL" . hol))
+
+;; Support for snippet expansion, if yasnippet is installed.
+(when (require 'yasnippet nil 'noerror)
+  (let ((HOLsnippets (concat (getenv "HOLDIR") "/tools/yasnippets/")))
+    (setq yas-snippet-dirs (nconc yas-snippet-dirs (cons HOLsnippets '())))
+    (yas-reload-all)))
+
+(when (locate-library "company-yasnippet")
+  (load-library "company")
+  (setq company-backends (cons 'company-yasnippet company-backends))
+  (define-key hol-map (kbd "TAB") 'company-yasnippet))

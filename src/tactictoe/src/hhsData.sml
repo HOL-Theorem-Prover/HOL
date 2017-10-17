@@ -8,18 +8,139 @@
 structure hhsData :> hhsData =
 struct
 
-open HolKernel boolLib Abbrev hhsTools hhsTimeout hhsExec hhsLearn
+open HolKernel boolLib Abbrev hhsTools hhsTimeout hhsExec hhsLearn 
+hhsMetis hhsPredict SharingTables Portable
 
 val ERR = mk_HOL_ERR "hhsData"
 
+fun uptodate_goal (asl,w) = all uptodate_term (w :: asl)
+fun uptodate_feav ((_,_,g,gl),_) = all uptodate_goal (g :: gl)
+
+(*---------------------------------------------------------------------------
+ *  Print feature vectors
+ *---------------------------------------------------------------------------*)
+
+fun create_sharing_tables feavl = 
+  let 
+    fun f ((_,_,g,gl),_) = g :: gl
+    val allgoals = List.concat (map f feavl)
+    fun goal_terms ((asl,w), acc) = 
+      HOLset.union(acc, HOLset.fromList Term.compare (w :: asl))
+    val allterms = List.foldl goal_terms empty_tmset allgoals
+    fun leaves (t, acc) = Term.all_atomsl [t] acc
+    val allleaves = HOLset.foldl leaves empty_tmset allterms
+    fun doterms (t, tables) = #2 (make_shared_term t tables)
+    val (idtable,tytable,tmtable) =
+      HOLset.foldl doterms (empty_idtable, empty_tytable, empty_termtable)
+      allleaves
+    fun number start l = case l of 
+      []      => []
+    | a :: m  => (a,start) :: number (start + 1) m
+    val terml = HOLset.listItems allterms
+    val termdict = dnew Term.compare (number 0 terml)
+  in
+    ((terml,termdict), (idtable,tytable,tmtable))
+  end  
+
+infix >>
+fun (f1 >> f2) pps = (f1 pps ; f2 pps)
+
+fun block state brkdepth f pps = (HOLPP.begin_block pps state brkdepth ;
+                                  f pps;
+                                  HOLPP.end_block pps)
+
+fun add_string s pps = HOLPP.add_string pps s
+val add_newline = HOLPP.add_newline
+fun jump () = add_newline >> add_newline
+fun add_break ipr pps = HOLPP.add_break pps ipr
+fun pr_list f g h obs pps = Portable.pr_list (fn x => f x pps)
+                                             (fn () => g pps)
+                                             (fn () => h pps)
+                                             obs
+
+val flush = HOLPP.flush_ppstream
+fun nothing pps = ()
+                                             
+fun pp_feavl feavl = 
+  let 
+    val ((terml,termdict),(idtable,tytable,tmtable)) = 
+      create_sharing_tables feavl
+    
+    fun pp_sml_list pfun l =
+      block INCONSISTENT 0
+        (
+        add_string "[" >> add_break (0,0) >>
+        pr_list pfun (add_string ",") (add_break (1,0)) l >>
+        add_break (0,0) >>
+        add_string "]"
+        )
+
+    fun term_to_string term = 
+      quote ((Term.write_raw (fn t => Map.find(#termmap tmtable, t))) term)
+    fun pp_tm tm = add_string ( (term_to_string tm))
+    val pp_terml = pr_list pp_tm nothing add_newline terml
+
+    fun pp_tmid tm = add_string (int_to_string (dfind tm termdict))
+    fun pp_goal (asl,w) = pp_sml_list pp_tmid (w :: asl)
+    fun pp_goal_list l =
+      block INCONSISTENT 0
+        (
+        add_string "START" >> add_break (1,0) >>
+        pr_list pp_goal nothing (add_break (1,0)) l >>
+        add_break (1,0) >>
+        add_string "END"
+        )
+    
+    fun pp_fea n = add_string (int_to_string n)
+    
+    fun pr_feav ((stac,t,g,gl),fea) = 
+      block CONSISTENT 0
+      (
+      add_string (mlquote stac) >> add_newline >>
+      add_string (Real.toString t) >> add_newline >>
+      pp_goal g >> add_newline >>
+      pp_goal_list gl >> add_newline >>
+      pp_sml_list pp_fea fea
+      )
+    val pp_feav_all =
+      block CONSISTENT 0
+      (if null feavl then nothing 
+       else pr_list pr_feav nothing add_newline feavl)
+
+  in
+    block CONSISTENT 0
+      (
+      add_string "IDS" >> add_newline >>
+      C theoryout_idtable idtable >> jump () >>
+      add_string "TYPES" >> add_newline >>
+      C theoryout_typetable tytable >> jump () >>
+      add_string "TERMS" >> add_newline >>
+      C theoryout_termtable tmtable >> jump () >>
+      add_string "TERMS_START" >> add_newline >>
+      pp_terml >> add_newline >> 
+      add_string "TERMS_END" >> jump () >>
+      add_string "FEATURE_VECTORS_START" >> add_newline >>
+      pp_feav_all >> add_newline >> 
+      add_string "FEATURE_VECTORS_END" >> jump ()
+      ) >>
+    flush
+  end
+
 (*----------------------------------------------------------------------------
- * Saving feature vectors to disk.
+ * Saving one feature vector on memory
+   orelse (!hhs_noslowlbl_flag andalso t0 > !hhs_tactic_time) 
  *----------------------------------------------------------------------------*)
 
 val feature_time = ref 0.0
+val hhs_noslowlbl_flag = ref true
+
+fun metis_prove g =
+  !hhs_ortho_metis andalso !hhs_metis_flag andalso
+  solved_by_metis (!hhs_metis_npred) (!hhs_metis_time) g
 
 fun save_lbl (lbl0 as (stac0,t0,g0,gl0)) =
-  if mem g0 gl0 then () else
+  if mem g0 gl0 orelse metis_prove g0 then ()
+  else
     let
       val fea = total_time feature_time hhsFeature.fea_of_goal g0
       val (lbl as (stac,t,g,gl)) = orthogonalize (lbl0,fea)
@@ -28,216 +149,215 @@ fun save_lbl (lbl0 as (stac0,t0,g0,gl0)) =
       update_stacfea_ddict feav
     end
 
-fun mk_graph feavl =
-  let 
-    val term_graph = ref (dempty Term.compare)
-    val type_graph = ref (dempty Type.compare)
-    val iterm_graph = ref (dempty Int.compare)
-    val itype_graph = ref (dempty Int.compare)
-    fun update_ty nl ty =
-      let val n = dlength (!type_graph) in
-        type_graph := dadd ty (n,nl) (!type_graph);
-        itype_graph := dadd n (ty,nl) (!itype_graph);
-        n
-      end
-    fun update_tm nl1 nl2 tm =
-      let val n = dlength (!term_graph) in
-        term_graph := dadd tm (n,nl1,nl2) (!term_graph);
-        iterm_graph := dadd n (tm,nl1,nl2) (!iterm_graph);
-        n
-      end
-    fun add_ty ty = 
-      fst (dfind ty (!type_graph)) handle _ => 
-      if is_vartype ty then update_ty [] ty else 
-        let 
-          val {Args,Thy,Tyop} = dest_thy_type ty
-          val nl = map add_ty Args
-        in
-          update_ty nl ty
-        end
-    fun add_tm tm = 
-      #1 (dfind tm (!term_graph)) handle _ => 
-      if is_var tm then
-        update_tm [] [add_ty (snd (dest_var tm))] tm
-      else if is_const tm then 
-        let val {Thy, Name, Ty} = dest_thy_const tm in
-          update_tm [] [add_ty Ty] tm
-        end
-      else if is_abs tm then 
-        let val (v,t) = dest_abs tm in
-          update_tm [add_tm v,add_tm t] [] tm
-        end
-      else if is_comb tm then     
-        let val (t1,t2) = dest_comb tm in
-          update_tm [add_tm t1,add_tm t2] [] tm
-        end
-      else raise ERR "mk_graph" ""
-    fun add_goal (asl,w) =
-      (ignore (add_tm w); app (ignore o add_tm) asl) 
-    fun add_feav ((_,_,g,gl),_) =
-      (add_goal g; app add_goal gl)
+(*----------------------------------------------------------------------------
+ * Exporting feature vectors to disk
+ *----------------------------------------------------------------------------*)
+
+fun feavl_out f ostrm =
+ let val ppstrm = Portable.mk_ppstream
+                    {consumer = Portable.outputc ostrm,
+                     linewidth=75, flush = fn () => Portable.flush_out ostrm}
+ in f ppstrm handle e => (Portable.close_out ostrm; raise e);
+    Portable.flush_ppstream ppstrm;
+    Portable.close_out ostrm
+ end
+
+fun export_feavl thyname feavl =
+  let
+    val file = hhs_feature_dir ^ "/" ^ thyname
+    val ostrm = Portable.open_out file
+    val new_feavl = filter uptodate_feav feavl
   in
-    app add_feav feavl;
-    (!type_graph, !term_graph, !itype_graph, !iterm_graph)
-  end
-
-val sep = "$"
-val csep = #"$"
-fun is_sep c = c = csep
-
-fun contain_sep s = mem csep (explode s) orelse mem #"\n" (explode s)
-
-fun mk_record sl = 
-  if exists contain_sep sl
-    then raise ERR "mk_record" (String.concatWith "--" sl)
-    else String.concatWith sep sl
-    
-fun export_feav feavl =
-  let 
-    val its = int_to_string
-    val file = hhs_feature_dir ^ "/" ^ current_theory ()
-    val _ = erase_file file
-    val oc = TextIO.openAppend file
-    fun os s = TextIO.output (oc, s ^ "\n")
-    val (type_graph,term_graph,itype_graph,iterm_graph) = mk_graph feavl  
-    val tygr = map snd (dlist type_graph)
-    val tysort = topo_sort tygr
-    val tmgr = map (fn (_,(n,nl1,_)) => (n,nl1)) (dlist term_graph)
-    val tmsort = topo_sort tmgr
-    fun log_ty n =
-      let 
-        val (ty,nl) = dfind n itype_graph 
-        handle _ => raise ERR "export_feav" "0"
-      in
-        if is_vartype ty then 
-          mk_record [its n,"U",dest_vartype ty]
-        else
-          let val {Thy,Tyop,...} = dest_thy_type ty in
-            mk_record ([its n,"T",Thy,Tyop] @ map its nl)
-          end 
-      end
-    fun log_tm n =
-      let 
-        val (tm,nl1,nl2) = dfind n iterm_graph 
-        handle _ => raise ERR "export_feav" "1"
-      in
-        if is_var tm then 
-          mk_record [its n,"V",fst (dest_var tm),its (hd nl2)]
-        else if is_const tm then  
-          let val {Thy,Name,...} = dest_thy_const tm in
-            mk_record [its n,"C",Thy,Name,its (hd nl2)]
-          end
-        else if is_abs tm then
-          let val (v,t) = dest_abs tm in
-            mk_record ([its n,"A"] @ map its nl1)
-          end
-        else if is_comb tm then
-          let val (t1,t2) = dest_comb tm in
-            mk_record ([its n,"B"] @ map its nl1)
-          end
-        else raise ERR "export_feav" "3"
-      end
-    fun log_goal (asl,w) =
-      let fun lookup t = #1 (dfind t term_graph) 
-        handle _ => raise ERR "export_feav" "2" 
-      in
-        String.concatWith " " (map (its o lookup) (w :: asl))
-      end
-    fun log_feav (lbl as (stac,tim,g,gl),fea) =
-      (
-      os stac;
-      os (Real.toString tim);
-      os (log_goal g);
-      os "";
-      app (os o log_goal) gl;
-      os "";
-      os (String.concatWith sep fea);
-      os ""
-      )
-  in
-    app (os o log_ty) tysort;
-    os "";
-    app (os o log_tm) tmsort;
-    os "";
-    app log_feav feavl;
-    TextIO.closeOut oc
+    feavl_out (pp_feavl new_feavl) ostrm
   end
 
 (*----------------------------------------------------------------------------
- * Reading feature vectors from disk.
+ * Reading feature vectors data
  *----------------------------------------------------------------------------*)
 
-fun read_graph (tyl,tml) =
-  let 
-    fun C s t ty = mk_thy_const {Thy=s,Name=t,Ty=ty}
-    fun T s t a  = mk_thy_type {Thy=s,Tyop=t,Args=a}
-    fun V s ty   = mk_var (s,ty)
-    fun A v t    = mk_abs (v,t)
-    fun B t1 t2  = mk_comb (t1,t2)
-    val sti = string_to_int
-    val type_graph = ref (dempty Int.compare)
-    val term_graph = ref (dempty Int.compare)
-    fun update_ty ns ty = type_graph := dadd (sti ns) ty (!type_graph)
-    fun update_tm ns tm = term_graph := dadd (sti ns) tm (!term_graph)
-    fun lookup_ty ns = dfind (sti ns) (!type_graph)
-    fun lookup_tm ns = dfind (sti ns) (!term_graph)
-    fun fty s =
-      case String.tokens is_sep s of
-        ns :: "U" :: vs :: [] => 
-        update_ty ns (mk_vartype vs)
-      | ns :: "T" :: Thy :: Tyop :: m => 
-        update_ty ns (T Thy Tyop (map lookup_ty m))
-      | [] => ()
-      | _ => raise ERR "read_graph" "wrong type format"
-    fun ftm s =
-      case String.tokens is_sep s of
-        ns :: "V" :: vs :: tyn :: [] => 
-        update_tm ns (V vs (lookup_ty tyn))
-      | ns :: "C" :: Thy :: Name :: tyn :: [] => 
-        update_tm ns (C Thy Name (lookup_ty tyn))
-      | ns :: "A" :: n1 :: n2 :: [] => 
-        update_tm ns (A (lookup_tm n1) (lookup_tm n2))
-      | ns :: "B" :: n1 :: n2 :: [] => 
-        update_tm ns (B (lookup_tm n1) (lookup_tm n2))
-      | [] => ()
-      | _ => raise ERR "read_graph" "wrong term format"
-  in
-    app fty tyl;
-    app ftm tml;
-    (!type_graph,!term_graph)
+fun err_msg s l = raise ERR s (String.concatWith " " (first_n 10 l))
+
+fun read_string s =
+  let val n = String.size s in
+    if String.sub (s,0) = #"\"" andalso String.sub (s,n - 1) = #"\""
+    then
+      valOf (String.fromString (String.extract (s,1,SOME (String.size s - 2))))
+    else raise ERR "read_string" s
+  end
+  handle _ => raise ERR "read_string" s
+
+fun read_list l =
+  (
+  case l of
+   "[" :: m =>
+    let
+      val (body,cont) = split_sl "]" m
+      val ll = rpt_split_sl "," body
+    in
+      if ll = [[]] then ([],cont) else (ll, cont)
+    end
+  | _ => err_msg "read_list" l
+  )
+  handle _ => err_msg "read_list" l
+
+fun readcat_list l = 
+  let val (ll,cont) = read_list l in
+    (List.concat ll, cont)
+  end
+  
+
+fun read_id l = case l of
+   [s1,s2] => {Thy = read_string s1, Other = read_string s2}
+  | _ => err_msg "read_id" l
+
+fun load_idvector l = case l of
+   "IDS" :: m =>
+    let
+      val (ids,cont) = read_list m
+      val idvector = Vector.fromList (map read_id ids)
+    in
+      (idvector,cont)
+    end
+  | _ => err_msg "load_idvector" l
+
+fun read_ty l = case l of
+    "TYOP" :: nl => TYOP (map string_to_int nl)
+  | "TYV" :: [s] => TYV (read_string s)
+  | _ => err_msg "read_ty" l
+
+fun load_tyvector idvector l = case l of
+   "TYPES" :: m =>
+    let
+      val (tys,cont) = read_list m
+      val tyvector = build_type_vector idvector (map read_ty tys)
+    in
+      (tyvector,cont)
+    end
+  | _ => err_msg "load_tyvector" l
+
+fun read_tm l =
+  (
+  case l of
+    ["TMV",s,tyn] => TMV (read_string s, string_to_int tyn)
+  | ["TMC",n1,n2] => TMC (string_to_int n1, string_to_int n2)
+  | ["TMAp",n1,n2] => TMAp (string_to_int n1, string_to_int n2)
+  | ["TMAbs",n1,n2] => TMAbs (string_to_int n1, string_to_int n2)
+  | _ => err_msg "read_tm" l
+  )
+  handle _ => err_msg "read_tm" l
+
+fun load_tmvector idvector tyvector l = case l of
+   "TERMS" :: m =>
+    let
+      val (tms,cont) = read_list m
+      val tmvector = build_term_vector idvector tyvector (map read_tm tms)
+    in
+      (tmvector,cont)
+    end
+  | _ => err_msg "load_tmvector" l
+
+(* Terms *)
+fun read_terml_loop tmvector acc l = case l of
+   "TERMS_END" :: m => (Vector.fromList (rev acc), m)
+  | s :: m =>
+    let val tm = (Term.read_raw tmvector o read_string) s
+      handle _ => err_msg "read_raw" [s]
+    in
+      read_terml_loop tmvector (tm :: acc) m
+    end
+  | _ => err_msg "read_terml_loop" l
+
+fun read_terml tmvector l = case l of
+   "TERMS_START" :: m => read_terml_loop tmvector [] m
+  | _ => err_msg "read_terml" l
+
+(* Goal *)
+fun read_goal lookup l = case l of
+    a :: m => (map lookup m, lookup a)
+  | _      => err_msg "read_goal" l
+  
+(* Goal list *) 
+fun extract_gl_cont l = case l of
+    "START" :: m => split_sl "END" m
+  | _ => err_msg "extract_gl" l
+
+fun extract_gl l = case l of
+    [] => []
+  | _  => 
+  let val (l1,cont1) = readcat_list l in 
+    l1 :: extract_gl cont1 
   end
 
-fun read_init ll = case ll of
-    l1 :: l2 :: m => (l1,l2,m)
-  | _ => raise ERR "read_ll" ""
+(* Feature vector *)
+fun read_feav lookup l = case l of
+    a :: b :: m =>
+    let 
+      val stac = read_string a
+      val tim  = valOf (Real.fromString b)
+      val (l0,cont0) = readcat_list m 
+      val g = read_goal lookup l0
+      val (l1,cont1) = extract_gl_cont cont0
+      val gl = map (read_goal lookup) (extract_gl l1)
+      val (l2,cont2) = readcat_list cont1
+      val fea = map string_to_int l2
+    in
+      (((stac,tim,g,gl),fea),cont2)
+    end 
+  | _ => err_msg "read_feav" l     
 
-fun read_feavl ll = case ll of
-    [stac,ts,gs] :: gsl :: [fea] :: m => 
-    (stac,ts,gs,gsl,fea) :: read_feavl m
-  | a :: b :: c :: d :: m => raise ERR "read_feav" "wrong format"
-  | _ => []
+fun read_feavl_loop lookup acc l = case l of
+   "FEATURE_VECTORS_END" :: m => (rev acc, m)
+  | [] => err_msg "read_feavl_loop" l 
+  | _ => 
+   let val (feav,cont) = read_feav lookup l in
+     read_feavl_loop lookup (feav :: acc) cont
+   end
+   
+fun read_feavl lookup l = case l of
+   "FEATURE_VECTORS_START" :: m => read_feavl_loop lookup [] m
+  | _ => err_msg "read_feavl" l
 
-fun read_feav thy =
-  if mem thy ["min","bool"] then [] else
+(*----------------------------------------------------------------------------
+ * Importing feature vectors from disk
+ *----------------------------------------------------------------------------*)
+
+fun read_feavdatal thy =
   let
-    val sl = readl_empty (hhs_feature_dir ^ "/" ^ thy)
-             handle _ => (print_endline ("File not found:" ^ thy); [])
-    val sll = rpt_split_sl "" sl
-    val (tyl,tml,cont) = read_init sll
-    val (_,term_graph) = read_graph (tyl,tml)
-    fun lookup_tm ns = dfind (string_to_int ns) term_graph
-    val feavsl = read_feavl cont
-    fun parse_goal gs = case String.tokens Char.isSpace gs of
-        []     => raise ERR "parse_goal" ""
-      | a :: m => (map lookup_tm m, lookup_tm a)
-    fun parse_feav (stac,t,gs,gsl,fea) =
-      ((stac, valOf (Real.fromString t), parse_goal gs, map parse_goal gsl), 
-       String.tokens is_sep fea)
+    val file = hhs_feature_dir ^ "/" ^ thy
+    val l0 = hhsLexer.hhs_lex (String.concatWith " " (readl file)) 
+      handle _ => (print_endline (thy ^ " is missing"); debug thy; [])
   in
-    map parse_feav feavsl
+    if l0 = [] 
+    then []
+    else  
+      let 
+        val (idvector,l1) = load_idvector l0
+        val (tyvector,l2) = load_tyvector idvector l1
+        val (tmvector,l3) = load_tmvector idvector tyvector l2
+        val (term_vector,l4) = read_terml tmvector l3
+        fun lookup ns = Vector.sub (term_vector, string_to_int ns)
+        val (feavl,_) = read_feavl lookup l4
+      in
+        feavl
+      end
   end
 
-fun import_feav thyl = List.concat (map read_feav thyl)
+fun read_feavdatal_no_min thy = 
+  if mem thy ["min","bool"] then [] else read_feavdatal thy
+ 
+fun import_feavl thyl = List.concat (map read_feavdatal_no_min thyl)
 
+(* test
+load "hhsData";
+open hhsFeature;
+open hhsData;
+fun mk_feav stac goal = ((stac,0.0,goal,[goal,goal]), fea_of_goal goal);
+
+val feavl = [mk_feav "WONDER_TAC" ([``1=1``],``1+1=2``),
+             mk_feav "WONDER_TAC" ([``0=0``],``1-1=0``)];
+
+export_feavl "test" feavl;
+val new_feavl = import_feavl ["test"];
+*)
 
 end (* struct *)

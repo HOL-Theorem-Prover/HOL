@@ -26,16 +26,16 @@ all: $(UOFILES)
 Raw-sig.uo: Raw-sig.sml KernelTypes.uo $(LIB_UID) $(FTHEORY_UID)
 	$(HOLMOSMLC) -c -toplevel $(FTHEORY_UI) Raw-sig.sml
 
-Term.ui: Term.sig $(FTERM_UID) KernelTypes.ui
+Term.ui: Term.sig $(FTERM_UID) KernelTypes.uo
 	$(HOLMOSMLC) -c $(FTERM_UI) $<
 
-Type.ui: Type.sig $(FTYPE_UID) KernelTypes.ui
+Type.ui: Type.sig $(FTYPE_UID) KernelTypes.uo
 	$(HOLMOSMLC) -c $(FTYPE_UI) $<
 
 Net.uo: Net.sml Term.uo Raw-sig.uo
 	$(HOLMOSMLC) -c -toplevel Raw-sig.ui Type.ui Term.ui Net.sml
 
-Thm.ui: Thm.sig KernelTypes.ui $(FTHM_UID)
+Thm.ui: Thm.sig KernelTypes.uo $(FTHM_UID)
 	$(HOLMOSMLC) -c $(FTHM_UI) $<
 
 CoreKernel-sig.uo: CoreKernel-sig.sml Net-sig.uo Thm.uo \

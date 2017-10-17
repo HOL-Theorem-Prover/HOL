@@ -324,12 +324,13 @@ fun free_varsl tm_list = itlist (union o free_vars) tm_list []
 fun all_varsl tm_list = itlist (union o all_vars) tm_list []
 
 (* term comparison *)
+fun fast_term_eq t1 t2 = Portable.pointer_eq (t1,t2)
 structure Map = Binarymap
 val empty_env = Map.mkDict var_compare
 fun compare p = let
   open Map
-  fun cmp n (E as (env1, env2)) p =
-      if n = 0 andalso Portable.pointer_eq p then EQUAL
+  fun cmp n (E as (env1, env2)) (p as (t1,t2)) =
+      if n = 0 andalso fast_term_eq t1 t2 then EQUAL
       else
         case p of
           (v1 as Var _, v2 as Var _) => let

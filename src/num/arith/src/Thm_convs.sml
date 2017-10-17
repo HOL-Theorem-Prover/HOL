@@ -49,15 +49,15 @@ val LEFT_DIST_NORM_CONV = REWR_CONV LEFT_AND_OVER_OR;
 
 val NOT_CONJ_NORM_CONV =
  REWR_CONV
-  (GEN_ALL (CONJUNCT1 (SPECL [--`t1:bool`--,--`t2:bool`--] DE_MORGAN_THM)));
+  (GEN_ALL (CONJUNCT1 (SPECL [“t1:bool”,“t2:bool”] DE_MORGAN_THM)));
 
 val NOT_DISJ_NORM_CONV =
  REWR_CONV
-  (GEN_ALL (CONJUNCT2 (SPECL [--`t1:bool`--,--`t2:bool`--] DE_MORGAN_THM)));
+  (GEN_ALL (CONJUNCT2 (SPECL [“t1:bool”,“t2:bool”] DE_MORGAN_THM)));
 
 val NOT_NOT_NORM_CONV = REWR_CONV (CONJUNCT1 NOT_CLAUSES);
 
-val OR_F_CONV = REWR_CONV (el 3 (CONJUNCTS (SPEC (--`x:bool`--) OR_CLAUSES)));
+val OR_F_CONV = REWR_CONV (el 3 (CONJUNCTS (SPEC (“x:bool”) OR_CLAUSES)));
 
 val RIGHT_DIST_NORM_CONV = REWR_CONV RIGHT_AND_OVER_OR;
 
@@ -71,41 +71,41 @@ val ADD_SYM_CONV = REWR_CONV (arithmeticTheory.ADD_SYM);
 
 val GATHER_BOTH_CONV =
  REWR_CONV
-  (SYM (SPECL [--`a:num`--,--`b:num`--,--`x:num`--]
+  (SYM (SPECL [“a:num”,“b:num”,“x:num”]
          (arithmeticTheory.RIGHT_ADD_DISTRIB)));
 
 val GATHER_LEFT_CONV =
  REWR_CONV
-  (SUBS [el 3 (CONJUNCTS (SPECL [--`x:num`--,--`n:num`--]
+  (SUBS [el 3 (CONJUNCTS (SPECL [“x:num”,“n:num”]
                            (arithmeticTheory.MULT_CLAUSES)))]
-    (SYM (SPECL [--`a:num`--,--`1`--,--`x:num`--]
+    (SYM (SPECL [“a:num”,“1”,“x:num”]
            (arithmeticTheory.RIGHT_ADD_DISTRIB))));
 
 val GATHER_NEITHER_CONV = REWR_CONV (GSYM (arithmeticTheory.TIMES2));
 
 val GATHER_RIGHT_CONV =
  REWR_CONV
-  (SUBS [el 3 (CONJUNCTS (SPECL [--`x:num`--,--`n:num`--]
+  (SUBS [el 3 (CONJUNCTS (SPECL [“x:num”,“n:num”]
                            (arithmeticTheory.MULT_CLAUSES)))]
-    (SYM (SPECL [--`1`--,--`b:num`--,--`x:num`--]
+    (SYM (SPECL [“1”,“b:num”,“x:num”]
            (arithmeticTheory.RIGHT_ADD_DISTRIB))));
 
 val GEQ_NORM_CONV = REWR_CONV (arithmeticTheory.GREATER_EQ);
 
 val GREAT_NORM_CONV =
  REWR_CONV
-  (SUBS [SYM (SPECL [--`m:num`--,--`n:num`--]
+  (SUBS [SYM (SPECL [“m:num”,“n:num”]
                  (arithmeticTheory.GREATER_DEF)),
-         SPEC (--`n:num`--) (arithmeticTheory.SUC_ONE_ADD)]
-    (SPECL [--`n:num`--,--`m:num`--] (arithmeticTheory.LESS_EQ)));
+         SPEC (“n:num”) (arithmeticTheory.SUC_ONE_ADD)]
+    (SPECL [“n:num”,“m:num”] (arithmeticTheory.LESS_EQ)));
 
 val LEFT_ADD_DISTRIB_CONV =
  REWR_CONV (arithmeticTheory.LEFT_ADD_DISTRIB);
 
 val LESS_NORM_CONV =
  REWR_CONV
-  (SUBS [SPEC (--`m:num`--) (arithmeticTheory.SUC_ONE_ADD)]
-    (SPECL [--`m:num`--,--`n:num`--] (arithmeticTheory.LESS_EQ)));
+  (SUBS [SPEC (“m:num”) (arithmeticTheory.SUC_ONE_ADD)]
+    (SPECL [“m:num”,“n:num”] (arithmeticTheory.LESS_EQ)));
 
 val MULT_ASSOC_CONV = REWR_CONV (arithmeticTheory.MULT_ASSOC);
 
@@ -113,24 +113,24 @@ val MULT_COMM_CONV = REWR_CONV MULT_COMM;
 
 val NOT_GEQ_NORM_CONV =
  REWR_CONV
-  (SUBS [SPEC (--`m:num`--) (arithmeticTheory.SUC_ONE_ADD)]
-    (SPECL [--`m:num`--,--`n:num`--]
+  (SUBS [SPEC (“m:num”) (arithmeticTheory.SUC_ONE_ADD)]
+    (SPECL [“m:num”,“n:num”]
         (arithmeticTheory.NOT_GREATER_EQ)));
 
 val NOT_GREAT_NORM_CONV = REWR_CONV (arithmeticTheory.NOT_GREATER);
 
 val NOT_LEQ_NORM_CONV =
  REWR_CONV
-  (SUBS [SPEC (--`n:num`--) (arithmeticTheory.SUC_ONE_ADD)]
-    (SPECL [--`m:num`--,--`n:num`--] (arithmeticTheory.NOT_LEQ)));
+  (SUBS [SPEC (“n:num”) (arithmeticTheory.SUC_ONE_ADD)]
+    (SPECL [“m:num”,“n:num”] (arithmeticTheory.NOT_LEQ)));
 
 val NOT_LESS_NORM_CONV = REWR_CONV (arithmeticTheory.NOT_LESS);
 
 val NOT_NUM_EQ_NORM_CONV =
  REWR_CONV
-  (SUBS [SPEC (--`m:num`--) (arithmeticTheory.SUC_ONE_ADD),
-         SPEC (--`n:num`--) (arithmeticTheory.SUC_ONE_ADD)]
-    (SPECL [--`m:num`--,--`n:num`--] (arithmeticTheory.NOT_NUM_EQ)));
+  (SUBS [SPEC (“m:num”) (arithmeticTheory.SUC_ONE_ADD),
+         SPEC (“n:num”) (arithmeticTheory.SUC_ONE_ADD)]
+    (SPECL [“m:num”,“n:num”] (arithmeticTheory.NOT_NUM_EQ)));
 
 val NUM_EQ_NORM_CONV = REWR_CONV (arithmeticTheory.EQ_LESS_EQ);
 
@@ -144,9 +144,9 @@ val ZERO_MULT_CONV = REWR_CONV ZERO_MULT;
 
 val ZERO_MULT_PLUS_CONV =
  REWR_CONV
-  (SUBS [SYM (CONJUNCT1 (SPECL [--`a:num`--,--`b:num`--]
+  (SUBS [SYM (CONJUNCT1 (SPECL [“a:num”,“b:num”]
                             (arithmeticTheory.MULT_CLAUSES)))]
-   (SPEC (--`b:num`--)
+   (SPEC “b:num”
        (GEN_ALL (CONJUNCT1 (arithmeticTheory.ADD_CLAUSES)))));
 
 val ZERO_PLUS_CONV = REWR_CONV ZERO_PLUS;

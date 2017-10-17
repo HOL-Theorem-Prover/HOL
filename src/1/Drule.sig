@@ -2,7 +2,7 @@ signature Drule =
 sig
   include Abbrev
 
-  val ETA_CONV         : term -> thm
+  val ETA_CONV         : conv
   val RIGHT_ETA        : thm -> thm
   val EXT              : thm -> thm
   val MK_ABS           : thm -> thm
@@ -15,7 +15,7 @@ sig
   val EQT_INTRO        : thm -> thm
   val GSUBS            : ((term,term)subst -> term -> term)
                            -> thm list -> thm -> thm
-  val SUBST_CONV       : (term,thm)subst -> term -> term -> thm
+  val SUBST_CONV       : (term,thm)subst -> term -> conv
   val ADD_ASSUM        : term -> thm -> thm
   val IMP_TRANS        : thm -> thm -> thm
   val IMP_ANTISYM_RULE : thm -> thm -> thm
@@ -36,7 +36,7 @@ sig
   val SUBS             : thm list -> thm -> thm
   val SUBS_OCCS        : (int list * thm) list -> thm -> thm
   val RIGHT_BETA       : thm -> thm
-  val LIST_BETA_CONV   : term -> thm
+  val LIST_BETA_CONV   : conv
   val RIGHT_LIST_BETA  : thm -> thm
   val ASSUME_CONJS     : term -> thm
   val CONJUNCTS_AC     : term * term -> thm
@@ -73,8 +73,8 @@ sig
   val IMP_ELIM         : thm -> thm
   val DISJ_CASES_UNION : thm -> thm -> thm -> thm
   val DISJ_CASESL      : thm -> thm list -> thm
-  val ALPHA_CONV       : term -> term -> thm
-  val GEN_ALPHA_CONV   : term -> term -> thm
+  val ALPHA_CONV       : term -> conv
+  val GEN_ALPHA_CONV   : term -> conv
   val IMP_CONJ         : thm -> thm -> thm
   val EXISTS_IMP       : term -> thm -> thm
   val INST_TY_TERM     : (term,term)subst * (hol_type,hol_type)subst

@@ -57,6 +57,7 @@ in
   val imp_id = insert(termsig,{Name = "==>", Thy = "min"}, imp_ty)
 
   val eqc = Const (eq_id,eq_ty)
+  val equality = eqc
   val hil = Const (hil_id,hil_ty)
   val imp = Const (imp_id,imp_ty)
 end
@@ -199,8 +200,10 @@ val empty_varset = HOLset.empty var_compare
     Fv < Bv < Const < Comb < Abs
    ---------------------------------------------------------------------- *)
 
-fun compare p =
-    if Portable.pointer_eq p then EQUAL else
+fun fast_term_eq (t1:term) (t2:term) = Portable.pointer_eq (t1,t2)
+
+fun compare (p as (t1,t2)) =
+    if fast_term_eq t1 t2 then EQUAL else
     case p of
       (t1 as Clos _, t2)     => compare (push_clos t1, t2)
     | (t1, t2 as Clos _)     => compare (t1, push_clos t2)
@@ -463,7 +466,9 @@ fun rename_bvar s t =
     | _ => raise ERR "rename_bvar" "not an abstraction";
 
 
-local val EQ = Portable.pointer_eq
+local
+  fun EQ(t1,t2) = fast_term_eq t1 t2
+  fun subsEQ(s1,s2) = s1 = s2
 in
 fun aconv t1 t2 = EQ(t1,t2) orelse
  case(t1,t2)
@@ -471,7 +476,7 @@ fun aconv t1 t2 = EQ(t1,t2) orelse
    | (Abs(Fv(_,ty1),M),
       Abs(Fv(_,ty2),N)) => ty1=ty2 andalso aconv M N
    | (Clos(e1,b1),
-      Clos(e2,b2)) => (EQ(e1,e2) andalso EQ(b1,b2))
+      Clos(e2,b2)) => (subsEQ(e1,e2) andalso EQ(b1,b2))
                        orelse aconv (push_clos t1) (push_clos t2)
    | (Clos _, _) => aconv (push_clos t1) t2
    | (_, Clos _) => aconv t1 (push_clos t2)

@@ -37,7 +37,7 @@ val option_TY_DEF =
  new_type_definition
   ("option",
    prove(Term`?x:'a + one. (\x.T) x`,
-          BETA_TAC THEN EXISTS_TAC(--`x:'a + one`--) THEN ACCEPT_TAC TRUTH));
+          BETA_TAC THEN EXISTS_TAC“x:'a + one” THEN ACCEPT_TAC TRUTH));
 
 local
   open OpenTheoryMap
@@ -86,10 +86,10 @@ val option_Axiom = store_thm (
   PURE_REWRITE_TAC[SOME_DEF,NONE_DEF] THEN
   STRIP_ASSUME_TAC
      (BETA_RULE
-        (ISPECL [--`\x. f x`--, --`\x:one.(e:'b)`--]
+        (ISPECL [“\x. f x”, “\x:one.(e:'b)”]
          (INST_TYPE [Type.beta |-> Type`:one`]
           sumTheory.sum_Axiom))) THEN
-  EXISTS_TAC (--`\x:'a option. h(option_REP x):'b`--) THEN BETA_TAC THEN
+  EXISTS_TAC “\x:'a option. h(option_REP x):'b” THEN BETA_TAC THEN
   ASM_REWRITE_TAC[reduce option_REP_ABS_DEF]);
 
 val option_induction = store_thm (
@@ -213,7 +213,7 @@ val IS_NONE_EQ_NONE = Q.store_thm(
   "IS_NONE_EQ_NONE",
   `!x. IS_NONE x = (x = NONE)`,
     GEN_TAC
-    THEN OPTION_CASES_TAC (--`(x :'a option)`--)
+    THEN OPTION_CASES_TAC “(x :'a option)”
     THEN ASM_REWRITE_TAC option_rws
 );
 
@@ -221,14 +221,14 @@ val NOT_IS_SOME_EQ_NONE = Q.store_thm(
   "NOT_IS_SOME_EQ_NONE",
   `!x. ~(IS_SOME x) = (x = NONE)`,
     GEN_TAC
-    THEN OPTION_CASES_TAC (--`(x :'a option)`--)
+    THEN OPTION_CASES_TAC “(x :'a option)”
     THEN ASM_REWRITE_TAC option_rws
 );
 
 val IS_SOME_EQ_EXISTS = Q.prove(
  `!x. IS_SOME x = (?v. x = SOME v)`,
     GEN_TAC
-    THEN OPTION_CASES_TAC (--`(x :'a option)`--)
+    THEN OPTION_CASES_TAC “(x :'a option)”
     THEN ASM_REWRITE_TAC (ex1_rw::option_rws)
 );
 
@@ -236,7 +236,7 @@ val IS_SOME_EQ_EXISTS = Q.prove(
 val IS_SOME_IMP_SOME_THE_CANCEL = Q.prove(
 `!x:'a option. IS_SOME x ==> (SOME (THE x) = x)`,
     GEN_TAC
-    THEN OPTION_CASES_TAC (--`(x :'a option)`--)
+    THEN OPTION_CASES_TAC “(x :'a option)”
     THEN ASM_REWRITE_TAC option_rws
 );
 
@@ -244,14 +244,14 @@ val option_case_ID = Q.store_thm(
   "option_case_ID",
   `!x:'a option. option_CASE x NONE SOME = x`,
     GEN_TAC
-    THEN OPTION_CASES_TAC (--`(x :'a option)`--)
+    THEN OPTION_CASES_TAC “(x :'a option)”
     THEN ASM_REWRITE_TAC option_rws
 );
 
 val IS_SOME_option_case_SOME = Q.prove(
 `!x:'a option. IS_SOME x ==> (option_CASE x e SOME = x)`,
     GEN_TAC
-    THEN OPTION_CASES_TAC (--`(x :'a option)`--)
+    THEN OPTION_CASES_TAC “(x :'a option)”
     THEN ASM_REWRITE_TAC option_rws
 );
 
@@ -259,14 +259,14 @@ val option_case_SOME_ID = Q.store_thm(
   "option_case_SOME_ID",
   `!x:'a option. (option_CASE x x SOME = x)`,
     GEN_TAC
-    THEN OPTION_CASES_TAC (--`(x :'a option)`--)
+    THEN OPTION_CASES_TAC “(x :'a option)”
     THEN ASM_REWRITE_TAC option_rws
 );
 
 val IS_SOME_option_case = Q.prove(
 `!x:'a option. IS_SOME x ==> (option_CASE x e (f:'a->'b) = f (THE x))`,
     GEN_TAC
-    THEN OPTION_CASES_TAC (--`(x :'a option)`--)
+    THEN OPTION_CASES_TAC “(x :'a option)”
     THEN ASM_REWRITE_TAC option_rws
 );
 
@@ -274,7 +274,7 @@ val IS_SOME_option_case = Q.prove(
 val IS_NONE_option_case = Q.prove(
 `!x:'a option. IS_NONE x ==> (option_CASE x e f = (e:'b))`,
     GEN_TAC
-    THEN OPTION_CASES_TAC (--`(x :'a option)`--)
+    THEN OPTION_CASES_TAC “(x :'a option)”
     THEN ASM_REWRITE_TAC option_rws
 );
 
@@ -298,7 +298,7 @@ val option_case_compute = Q.store_thm
 ("option_case_compute",
  `option_CASE (x:'a option) (e:'b) f =
   if IS_SOME x then f (THE x) else e`,
-    OPTION_CASES_TAC (--`(x :'a option)`--)
+    OPTION_CASES_TAC “(x :'a option)”
     THEN ASM_REWRITE_TAC option_rws);
 
 val IF_EQUALS_OPTION = store_thm(
@@ -316,7 +316,7 @@ val IF_NONE_EQUALS_OPTION = store_thm(
     (((if P then NONE else X) = NONE) <=> (IS_SOME X ==> P)) /\
     (((if P then X else NONE) = SOME x) <=> P /\ (X = SOME x)) /\
     (((if P then NONE else X) = SOME x) <=> ~P /\ (X = SOME x))``,
-  OPTION_CASES_TAC(--`X:'a option`--) THEN SRW_TAC [](option_rws));
+  OPTION_CASES_TAC“X:'a option” THEN SRW_TAC [](option_rws));
 val _ = export_rewrites ["IF_NONE_EQUALS_OPTION"]
 
 (* ----------------------------------------------------------------------
@@ -327,7 +327,7 @@ val OPTION_MAP_EQ_SOME = Q.store_thm(
   "OPTION_MAP_EQ_SOME",
   `!f (x:'a option) y.
          (OPTION_MAP f x = SOME y) = ?z. (x = SOME z) /\ (y = f z)`,
-  REPEAT GEN_TAC THEN OPTION_CASES_TAC (--`x:'a option`--) THEN
+  REPEAT GEN_TAC THEN OPTION_CASES_TAC “x:'a option” THEN
   simpLib.SIMP_TAC boolSimps.bool_ss
     [SOME_11, NOT_NONE_SOME, NOT_SOME_NONE, OPTION_MAP_DEF] THEN
   mesonLib.MESON_TAC []);
@@ -336,7 +336,7 @@ val _ = export_rewrites ["OPTION_MAP_EQ_SOME"]
 val OPTION_MAP_EQ_NONE = Q.store_thm(
   "OPTION_MAP_EQ_NONE",
   `!f x.  (OPTION_MAP f x = NONE) = (x = NONE)`,
-  REPEAT GEN_TAC THEN OPTION_CASES_TAC (--`x:'a option`--) THEN
+  REPEAT GEN_TAC THEN OPTION_CASES_TAC “x:'a option” THEN
   REWRITE_TAC [option_CLAUSES]);
 
 val OPTION_MAP_EQ_NONE_both_ways = Q.store_thm(
@@ -366,7 +366,7 @@ val _ = DefnBase.export_cong "OPTION_MAP_CONG"
 
 val IS_SOME_MAP = Q.store_thm ("IS_SOME_MAP",
   `IS_SOME (OPTION_MAP f x) = IS_SOME (x : 'a option)`,
-  OPTION_CASES_TAC (--`x:'a option`--) THEN
+  OPTION_CASES_TAC “x:'a option” THEN
   REWRITE_TAC [IS_SOME_DEF, OPTION_MAP_DEF]) ;
 
 (* and one about OPTION_JOIN *)
@@ -380,7 +380,7 @@ val OPTION_JOIN_EQ_SOME = Q.store_thm(
     ALL_TAC,
     ALL_TAC
   ] THEN ASM_REWRITE_TAC option_rws THEN
-  OPTION_CASES_TAC (--`z:'a option`--) THEN
+  OPTION_CASES_TAC “z:'a option” THEN
   ASM_REWRITE_TAC option_rws);
 
 (* and some about OPTION_MAP2 *)
@@ -389,16 +389,16 @@ val OPTION_MAP2_SOME = Q.store_thm(
   "OPTION_MAP2_SOME",
   `(OPTION_MAP2 f (o1:'a option) (o2:'b option) = SOME v) <=>
    (?x1 x2. (o1 = SOME x1) /\ (o2 = SOME x2) /\ (v = f x1 x2))`,
-  OPTION_CASES_TAC (--`o1:'a option`--) THEN
-  OPTION_CASES_TAC (--`o2:'b option`--) THEN
+  OPTION_CASES_TAC “o1:'a option” THEN
+  OPTION_CASES_TAC “o2:'b option” THEN
   SRW_TAC [][EQ_IMP_THM]);
 val _ = export_rewrites["OPTION_MAP2_SOME"];
 
 val OPTION_MAP2_NONE = Q.store_thm(
   "OPTION_MAP2_NONE",
   `(OPTION_MAP2 f (o1:'a option) (o2:'b option) = NONE) <=> (o1 = NONE) \/ (o2 = NONE)`,
-  OPTION_CASES_TAC (--`o1:'a option`--) THEN
-  OPTION_CASES_TAC (--`o2:'b option`--) THEN
+  OPTION_CASES_TAC “o1:'a option” THEN
+  OPTION_CASES_TAC “o2:'b option” THEN
   SRW_TAC [][]);
 val _ = export_rewrites["OPTION_MAP2_NONE"];
 
@@ -415,10 +415,10 @@ val _ = DefnBase.export_cong "OPTION_MAP2_cong";
 
 val OPTION_MAP_CASE = store_thm("OPTION_MAP_CASE",
   ``OPTION_MAP f (x:'a option) = option_CASE x NONE (SOME o f)``,
-  OPTION_CASES_TAC (--`x:'a option`--) THEN
+  OPTION_CASES_TAC “x:'a option” THEN
   REWRITE_TAC [combinTheory.o_THM, option_CLAUSES]) ;
 
-(* similarly have 
+(* similarly have
 ``OPTION_JOIN f = option_CASE x NONE I`` ;
 ``OPTION_BIND x f = option_CASE x NONE f`` ;
 *)
@@ -478,7 +478,7 @@ val _ = export_rewrites ["OPTION_BIND_EQUALS_OPTION"]
 
 val IS_SOME_BIND = Q.store_thm ("IS_SOME_BIND",
   `IS_SOME (OPTION_BIND x g) ==> IS_SOME (x : 'a option)`,
-  OPTION_CASES_TAC (--`x:'a option`--) THEN
+  OPTION_CASES_TAC “x:'a option” THEN
   REWRITE_TAC [IS_SOME_DEF, OPTION_BIND_def]) ;
 
 val OPTION_IGNORE_BIND_def = new_definition(

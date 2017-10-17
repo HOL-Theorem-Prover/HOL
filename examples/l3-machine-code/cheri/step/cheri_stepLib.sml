@@ -352,15 +352,16 @@ local
   val mk_exception = monop "cheri_state_exception"
   val mk_exceptionSignalled = monop "exceptionSignalled"
   val mk_BranchDelay = monop "BranchDelay"
-  val mk_BranchDelayPCC = monop "BranchDelayPCC"
+  val mk_BranchDelayPCC = monop "cheri_state_BranchDelayPCC"
   val mk_BranchTo = monop "BranchTo"
-  val mk_BranchToPCC = monop "BranchToPCC"
+  val mk_BranchToPCC = monop "cheri_state_BranchToPCC"
+  val mk_CCallBranch = monop "cheri_state_CCallBranch"
+  val mk_CCallBranchDelay = monop "cheri_state_CCallBranchDelay"
   val mk_currentInst_fupd = binop "cheri_state_currentInst_fupd"
   fun currentInst w st' =
     mk_currentInst_fupd (combinSyntax.mk_K_1 (w, Term.type_of w), st')
   val st = ``s:cheri_state``
-  val ths = [exceptionSignalled_def, BranchDelay_def, BranchDelayPCC_def,
-             BranchTo_def, BranchToPCC_def]
+  val ths = [exceptionSignalled_def, BranchDelay_def, BranchTo_def]
   val datatype_conv =
     REWRITE_CONV
       (utilsLib.datatype_rewrites true "cheri"
@@ -370,9 +371,11 @@ local
   val dt_assume = ASSUME o utilsLib.rhsc o datatype_conv
   val procID_th = dt_assume ``^st.procID = 0w``
   val exceptionSignalled_th = dt_assume ``~exceptionSignalled ^st``
-  val BranchDelayPCC_th = dt_assume ``BranchDelayPCC ^st = NONE``
+  val BranchDelayPCC_th = dt_assume ``^st.BranchDelayPCC = NONE``
   val BranchTo_th = dt_assume ``BranchTo ^st = NONE``
-  val BranchToPCC_th = dt_assume ``BranchToPCC ^st = NONE``
+  val BranchToPCC_th = dt_assume ``^st.BranchToPCC = NONE``
+  val CCallBranch_th = dt_assume ``~^st.CCallBranch``
+  val CCallBranchDelay_th = dt_assume ``~^st.CCallBranchDelay``
   fun eqf_elim th = Drule.EQF_ELIM th handle HOL_ERR _ => th
   val STATE_CONV =
      eqf_elim o
@@ -381,6 +384,7 @@ local
         THENC REWRITE_CONV
                 [boolTheory.COND_ID, procID_th, exceptionSignalled_th,
                  BranchDelayPCC_th, BranchTo_th, BranchToPCC_th,
+                 CCallBranch_th, CCallBranchDelay_th,
                  GSYM cheriTheory.cheri_state_exception])
   val hyp_rule = utilsLib.ALL_HYP_CONV_RULE datatype_conv
   val full_rule = hyp_rule o Conv.RIGHT_CONV_RULE datatype_conv
@@ -413,6 +417,8 @@ in
                      mk_BranchDelay,
                      mk_BranchDelayPCC,
                      mk_BranchToPCC,
+                     mk_CCallBranch,
+                     mk_CCallBranchDelay,
                      mk_BranchTo,
                      mk_exceptionSignalled]
       val thm = hyp_rule (Drule.LIST_CONJ ([thm1, thm2, thm3] @ thms))

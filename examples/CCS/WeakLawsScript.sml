@@ -330,6 +330,6 @@ val TAU_WEAK = store_thm ("TAU_WEAK",
       REWRITE_TAC [PREFIX] ]);
 
 val _ = export_theory ();
-val _ = Hol_pp.html_theory "WeakLaws";
+val _ = html_theory "WeakLaws";
 
 (* last updated: Jun 20, 2017 *)

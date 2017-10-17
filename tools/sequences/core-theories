@@ -10,8 +10,8 @@ src/lite
 src/refute
 src/simp/src
 src/metis
-#include sequences/holyhammer
 [poly]src/tactictoe/src
+[poly]src/holyhammer
 src/meson/src
 src/IndDef
 src/basicProof
