@@ -140,7 +140,8 @@ fun x86_step s = let
   fun f th = (DISCH_ALL o CONV_RULE (RAND_CONV (SIMP_CONV std_ss [pull_if_lemma])) o
               UNDISCH_ALL o SIMP_RULE (std_ss++ss) [LET_DEF,Xreg_distinct,Xeflags_distinct] o
               DISCH_ALL o cc) th
-  fun change f x = let val y = f x in if concl y = concl x then x else change f y end
+  fun change f x = let val y = f x in if concl y ~~ concl x then x
+                                      else change f y end
   val th1 = change f th1
   val th1 = SIMP_RULE (std_ss++ss) [Xreg_distinct, Xeflags_distinct] th1
   val th1 = DISCH_ALL (MATCH_MP th (UNDISCH_ALL th1))
