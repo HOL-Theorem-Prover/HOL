@@ -112,7 +112,7 @@ fun find_terml p =
                  SOME (x,y) => aux x @ aux y
                | NONE => (aux (snd (dest_abs tm)) handle HOL_ERR _ => [])
    in
-      HOLset.listItems o listset o aux
+      op_mk_set aconv o aux
    end
 
 fun find_terml_all p tm =
@@ -128,7 +128,7 @@ fun find_terml_all p tm =
                          | NONE => acc)
          end
    in
-      HOLset.listItems (listset (aux tm []))
+      op_mk_set aconv (aux tm [])
    end
 
 fun collect_term_of_type ty = find_terml (fn tm => type_of tm = ty);
