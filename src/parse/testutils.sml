@@ -3,6 +3,8 @@ struct
 
 open Lib
 
+datatype 'a testresult = Normal of 'a | Exn of exn
+
 val linewidth = ref 80
 
 fun crush extra w s =
@@ -77,23 +79,43 @@ fun tpp s = tppw (!linewidth) {input=s,output=s,testf=standard_tpp_message}
 
 fun tpp_expected r = tppw (!linewidth) r
 
+fun timed f check x =
+  let
+    val cputimer = Timer.startCPUTimer()
+    val res = Normal (f x) handle e => Exn e
+    val {nongc = {usr,...}, ...} = Timer.checkCPUTimes cputimer
+    val usr_s = "(" ^ Time.toString usr ^"s)     "
+    val _ = tadd usr_s
+  in
+    check res
+  end
+
+fun exncheck f (Normal a) = f a
+  | exncheck f (Exn e) = die ("\n  EXN: "^General.exnMessage e)
+
 fun convtest (nm,conv,tm,expected) =
   let
     open Term
     val _ = tprint nm
-    val (l,r) = let
-      val (eql, r) = dest_comb (Thm.concl (conv tm))
-      val (eq, l) = dest_comb eql
-      val _ = assert (same_const equality) eq
-    in
-      (l,r)
-    end handle e =>
-               die ("Didn't get equality; rather exn "^ General.exnMessage e)
+    fun c th =
+      let
+        val (l,r) =
+            let
+              val (eql, r) = dest_comb (Thm.concl th)
+              val (eq, l) = dest_comb eql
+              val _ = assert (same_const equality) eq
+            in
+              (l,r)
+            end handle e =>
+              die ("Didn't get equality; rather exn "^ General.exnMessage e)
+      in
+        if aconv l tm then
+          if aconv r expected then OK()
+          else die ("\n  Got: " ^ Parse.term_to_string r)
+        else die ("\n  Conv result LHS = " ^ Parse.term_to_string l)
+      end
   in
-    if aconv l tm then
-      if aconv r expected then OK()
-      else die ("Got: " ^ Parse.term_to_string r)
-    else die ("Conv result LHS = " ^ Parse.term_to_string l)
+    timed conv (exncheck c) tm
   end
 
 end (* struct *)
