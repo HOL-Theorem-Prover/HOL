@@ -169,6 +169,8 @@ val _ = export_rewrites ["APPEND"]
 val _ = set_fixity "++" (Infixl 480);
 val _ = overload_on ("++", Term`APPEND`);
 val _ = Unicode.unicode_version {u = UnicodeChars.doubleplus, tmnm = "++"}
+val _ = TeX_notation { hol = UnicodeChars.doubleplus,
+		       TeX = ("\\HOLTokenDoublePlus", 1) }
 
 val FLAT = new_recursive_definition
       {name = "FLAT",
