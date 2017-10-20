@@ -1,13 +1,21 @@
-(* =====================================================================*)
-(* FILE: res_rules.ml	    DATE: 1 Aug 92	BY: Wai Wong		*)
-(* TRANSLATED	    	    DATE: 28 May 93	BY: Paul Curzon		*)
-(* UPDATED                  DATE: 30 Oct 01     BY: Joe Hurd            *)
-(* This file contains rules, conversions and tactics supporting		*)
-(* restricted quantifiers.   	    					*)
-(* =====================================================================*)
+(* res_quanTools.sml - simpsets, tactics, etc. for restricted quantification
 
-(*
-*)
+FILE: res_rules.ml       DATE: 1 Aug 92      BY: Wai Wong
+TRANSLATED               DATE: 28 May 93     BY: Paul Curzon
+UPDATED                  DATE: 30 Oct 01     BY: Joe Hurd
+UPDATED                  DATE: 20 Oct 17     BY: Mario Castelán Castro
+
+This file as a whole is assumed to be under the license in the file
+“COPYRIGHT” in the HOL4 distribution (note added by Mario Castelán Castro).
+
+For the avoidance of legal uncertainty, I (Mario Castelán Castro) hereby
+place my modifications to this file in the public domain per the Creative
+Commons CC0 public domain dedication <https://creativecommons.org/publicdomain
+/zero/1.0/legalcode>. This should not be interpreted as a personal
+endorsement of permissive (non-Copyleft) licenses.
+
+============================================================================*)
+
 structure res_quanTools :> res_quanTools =
 struct
 
@@ -409,6 +417,9 @@ fun RESQ_REWRITE1_TAC th' =
 (* Restricted quantifier elimination using the simplifier.               *)
 (* --------------------------------------------------------------------- *)
 
+val ELIM_RESQ_ss = named_rewrites "ELIM_RESQ_ss" [
+  RES_FORALL, RES_EXISTS, RES_EXISTS_UNIQUE, RES_SELECT];
+
 val resq_SS =
   simpLib.SSFRAG
   {name=SOME"resq",
@@ -433,6 +444,30 @@ val resq_ss = simpLib.++ (bool_ss, resq_SS);
 val RESQ_TAC =
   FULL_SIMP_TAC resq_ss [] THEN
   POP_ASSUM_LIST (EVERY o map STRIP_ASSUME_TAC o rev);
+
+(* Each row is a set of analogus rewrite rules; an additional level of
+indentation means that a row continues the previous one. *)
+val RICH_RESQ_ss = named_rewrites "RICH_RESQ" [
+  (* Unconditional facts that can be simplifier to a boolean value. *)
+  RES_FORALL_T, RES_EXISTS_F, RES_EXISTS_UNIQUE_F,
+  RES_FORALL_EMPTY, RES_EXISTS_EMPTY, RES_EXISTS_UNIQUE_EMPTY,
+
+  (* Unconditional rewriting rules. *)
+  RES_FORALL_UNIV, RES_EXISTS_UNIV, RES_EXISTS_UNIQUE_UNIV,
+  NOT_RES_FORALL, NOT_RES_EXISTS,
+  RES_FORALL_UNIQUE, RES_EXISTS_EQUAL,
+  RES_FORALL_F, RES_EXISTS_T, RES_EXISTS_UNIQUE_T,
+  RES_FORALL_NULL, RES_EXISTS_NULL, RES_EXISTS_UNIQUE_NULL,
+
+  (* Conditional rewriting rules and facts. *)
+  RES_FORALL_SUBSET, RES_EXISTS_SUBSET];
+
+val RESQ_PRED_SET_ss = named_rewrites "RESQ_PRED_SET_ss" [
+  RES_FORALL_UNION, RES_EXISTS_UNION,
+  RES_FORALL_DIFF, RES_EXISTS_DIFF,
+  IN_BIGINTER_RES_FORALL, IN_BIGUNION_RES_EXISTS,
+  RES_FORALL_BIGUNION, RES_EXISTS_BIGUNION,
+  RES_FORALL_BIGINTER, RES_EXISTS_BIGINTER];
 
 (* ===================================================================== *)
 (* Functions for making definition with restrict universal quantified	 *)
@@ -598,3 +633,8 @@ val _ = Parse.temp_set_grammars ambient_grammars
 end ;
 
 end; (* res_quanTools *)
+
+(* Local Variables: *)
+(* fill-column: 78 *)
+(* indent-tabs-mode: nil *)
+(* End: *)

@@ -1,12 +1,22 @@
-(* =====================================================================*)
-(* FILE          : res_rules.sig                                        *)
-(* DESCRIPTION   : Signature for restricted quantification inference    *)
-(*                 rules 					        *)
-(* AUTHOR	 : P Curzon 					        *)
-(* DATE		 : May 1993						*)
-(* UPDATED       : Joe Hurd, October 2001                               *)
-(*                                                                      *)
-(* =====================================================================*)
+(* res_quanTools.sig - ML signature for res_quanTools.sml
+
+FILE          : res_rules.sig
+DESCRIPTION   : Signature for restricted quantification inference rules
+AUTHOR        : P Curzon
+DATE          : May 1993
+UPDATED       : Joe Hurd, October 2001
+UPDATED       : Mario Castelán Castro, 2017
+
+This file as a whole is assumed to be under the license in the file
+“COPYRIGHT” in the HOL4 distribution (note added by Mario Castelán Castro).
+
+For the avoidance of legal uncertainty, I (Mario Castelán Castro) hereby
+place my modifications to this file in the public domain per the Creative
+Commons CC0 public domain dedication <https://creativecommons.org/publicdomain
+/zero/1.0/legalcode>. This should not be interpreted as a personal
+endorsement of permissive (non-Copyleft) licenses.
+
+============================================================================*)
 
 signature res_quanTools =
 sig
@@ -68,10 +78,27 @@ sig
   val RESQ_RES_TAC           : tactic
   val RESQ_REWRITE1_TAC      : thm_tactic
 
+
   (* Restricted quantifier elimination using the simplifier *)
+
+  (* Main simplification set fragments for restricted quantification. *)
+  val RICH_RESQ_ss           : simpLib.ssfrag
+
+  (* Expand some set operations in the restriction domain. *)
+  val RESQ_PRED_SET_ss       : simpLib.ssfrag
+
+  (* Transform restricted quantification and selection to its semantic. *)
+  val ELIM_RESQ_ss           : simpLib.ssfrag
+
+  (* resq_SS and res_ss are deprecated. Use ELIM_RESQ_ss instead.
+
+  Note that ELIM_RESQ_ss expands restricted unique existentials to
+  non-restricted unique existentials but resq_SS expands them to restricted
+  quantifiers. *)
   val resq_SS                : simpLib.ssfrag
   val resq_ss                : simpLib.simpset
   val RESQ_TAC               : tactic
+
 
   (* Versions of some restricted quantifier tools using term quotations *)
   val Q_RESQ_EXISTS_TAC      : term quotation -> tactic
@@ -85,3 +112,8 @@ sig
   val Q_RESQ_ISPECL          : term quotation list -> rule
 
 end
+
+(* Local Variables: *)
+(* fill-column: 78 *)
+(* indent-tabs-mode: nil *)
+(* End: *)
