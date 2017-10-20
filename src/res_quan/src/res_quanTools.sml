@@ -6,7 +6,7 @@ UPDATED                  DATE: 30 Oct 01     BY: Joe Hurd
 UPDATED                  DATE: 20 Oct 17     BY: Mario Castelán Castro
 
 This file as a whole is assumed to be under the license in the file
-“COPYRIGHT” in the HOL4 distribution (note added by Mario Castelán Castro).
+"COPYRIGHT" in the HOL4 distribution (note added by Mario Castelán Castro).
 
 For the avoidance of legal uncertainty, I (Mario Castelán Castro) hereby
 place my modifications to this file in the public domain per the Creative
