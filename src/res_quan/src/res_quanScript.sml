@@ -64,7 +64,7 @@ val RES_FORALL_CONJ_DIST = store_thm("RES_FORALL_CONJ_DIST",
 
 val RES_FORALL_DISJ_DIST = store_thm("RES_FORALL_DISJ_DIST",
     (``!P Q R.
-     (!(i:'a)::\j. P j \/ Q j. R i) = (!i::P. R i) /\ (!i::Q. R i)``),
+     (!(i:'a)::(\j. P j \/ Q j). R i) = (!i::P. R i) /\ (!i::Q. R i)``),
     REPEAT STRIP_TAC >> REWRITE_TAC [RES_FORALL, SPECIFICATION] >>
     BETA_TAC >> EQ_TAC >> REPEAT STRIP_TAC >> RES_TAC);
 
@@ -171,7 +171,7 @@ val RES_EXISTS_DISJ_DIST = store_thm("RES_EXISTS_DISJ_DIST",
 
 val RES_DISJ_EXISTS_DIST = store_thm("RES_DISJ_EXISTS_DIST",
     (``!P Q R.
-     (?(i:'a)::\i. P i \/ Q i. R i) = (?i::P. R i) \/ (?i::Q. R i)``),
+     (?(i:'a)::(\i. P i \/ Q i). R i) = (?i::P. R i) \/ (?i::Q. R i)``),
     REPEAT STRIP_TAC >> REWRITE_TAC [RES_EXISTS, SPECIFICATION]
     >> BETA_TAC >> PURE_ONCE_REWRITE_TAC[RIGHT_AND_OVER_OR]
     >> CONV_TAC (ONCE_DEPTH_CONV EXISTS_OR_CONV) >> REFL_TAC);
