@@ -110,9 +110,9 @@ fun ppc_conditionalise (x:string) = (fail()):string->string
 fun ppc_remove_annotations x = (x:string)
 
 fun ppc_cond_code tm =
-  if tm = ``pS1 (PPC_CR0 0w)`` then ("lt","ge") else
-  if tm = ``pS1 (PPC_CR0 1w)`` then ("le","gt") else
-  if tm = ``pS1 (PPC_CR0 2w)`` then ("eq","ne") else fail()
+  if tm ~~ ``pS1 (PPC_CR0 0w)`` then ("lt","ge") else
+  if tm ~~ ``pS1 (PPC_CR0 1w)`` then ("le","gt") else
+  if tm ~~ ``pS1 (PPC_CR0 2w)`` then ("eq","ne") else fail()
 
 
 fun ppc_encode_instruction s = (ppc_encode s, 4);

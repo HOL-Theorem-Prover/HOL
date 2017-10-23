@@ -45,6 +45,30 @@ datatype asm_type =
       (* concrete instruction, option comparsion result code (true,false) *)
   | ASM_LABEL of string (* label name *);
 
+fun asm_type_eq a1 a2 =
+  case (a1,a2) of
+      (ASM_ASSIGN p1, ASM_ASSIGN p2) => tmp_eq p1 p2
+    | (ASM_ASSIGN _, _) => false
+    | (_, ASM_ASSIGN _) => false
+
+    | (ASM_BRANCH p1, ASM_BRANCH p2) => p1 = p2
+    | (ASM_BRANCH _, _) => false
+    | (_, ASM_BRANCH _) => false
+
+    | (ASM_COMPARE t1, ASM_COMPARE t2) => t1 ~~ t2
+    | (ASM_COMPARE _, _) => false
+    | (_, ASM_COMPARE _) => false
+
+    | (ASM_INSERT trip1, ASM_INSERT trip2) => trip1 = trip2
+    | (ASM_INSERT _, _) => false
+    | (_, ASM_INSERT _) => false
+
+    | (ASM_INSTRUCTION trip1, ASM_INSTRUCTION trip2) => trip1 = trip2
+    | (ASM_INSTRUCTION _, _) => false
+    | (_, ASM_INSTRUCTION _) => false
+
+    | (ASM_LABEL s1, ASM_LABEL s2) => s1 = s2
+      (* ASM_LABEL is last constructor , so no further branches needed *)
 
 
 (* assembler *)
@@ -80,8 +104,13 @@ fun basic_assembler target code3 = let
         in generate_jumps (((ASM_BRANCH (c,label),s), extend jump) :: xs) ys end
     | generate_jumps xs (y::ys) = generate_jumps (y :: xs) ys
   fun gencode_for_jumps code = generate_jumps [] code
-  fun find_fixpoint f x = let val y = f x in if x = y then x else find_fixpoint f y end
-  val code5 = find_fixpoint gencode_for_jumps (map dummy_jumps code4)
+  fun find_fixpoint f eq x = let val y = f x in
+                               if eq x y then x else find_fixpoint f eq y
+                             end
+  val code5 =
+      find_fixpoint gencode_for_jumps
+                    (list_eq (pair_eq (pair_eq asm_type_eq equal) equal))
+                    (map dummy_jumps code4)
   (* pull out the generated machine code *)
   fun get_code ((ASM_INSTRUCTION (x,z,_),s),_) = [(x^z,s)]
     | get_code ((ASM_INSERT (x,_,_),s),_) = [("insert:"^x,SOME "")]
@@ -292,7 +321,7 @@ fun add_assignment (tm1,tm2,th,len) = let
   val _ = (compiler_assignments := (tm1,tm2,len,name,m) :: (!compiler_assignments))
   val dest_tuple = list_dest pairSyntax.dest_pair
   val ys = zip (dest_tuple tm1) (dest_tuple tm2) handle e => [(tm1,tm2)]
-  val ys = filter (fn (x,y) => not (x = y)) ys
+  val ys = filter (fn (x,y) => x !~ y) ys
   val post = cdr (find_term (can (match_term (mk_comb(pc,genvar(pc_ty))))) q)
   val tm2 = subst [mk_var("p",pc_ty) |-> post] p
   val tm2 = if can dest_sep_disj q then mk_sep_disj(tm2,snd(dest_sep_disj q)) else tm2
@@ -329,13 +358,14 @@ fun extract_ops th = let
   val ps = list_dest dest_star p
   val qs = list_dest dest_star (fst_sep_disj q)
   (* length of instruction *)
-  val l = (numSyntax.int_of_term o cdr o cdr o cdr o hd) (filter (fn tm => car tm = pc) qs)
+  val l = (numSyntax.int_of_term o cdr o cdr o cdr o hd)
+            (filter (fn tm => car tm ~~ pc) qs)
   (* calculate update *)
   fun sep_domain tm = dest_sep_hide tm handle _ => car tm
-  val ps' = filter (fn tm => not (mem (sep_domain tm) (pc::xs))) ps
-  val qs' = filter (fn tm => not (mem (sep_domain tm) (pc::xs))) qs
+  val ps' = filter (fn tm => not (tmem (sep_domain tm) (pc::xs))) ps
+  val qs' = filter (fn tm => not (tmem (sep_domain tm) (pc::xs))) qs
   fun foo tm [] = fail()
-    | foo tm (x::xs) = if sep_domain x = tm then x else foo tm xs
+    | foo tm (x::xs) = if sep_domain x ~~ tm then x else foo tm xs
   val zs = map (fn tm => (cdr tm,cdr (foo (sep_domain tm) qs'))) ps'
   val (tm1,tm2) = hd zs
   fun goo (tm1,tm2) = let
@@ -343,7 +373,7 @@ fun extract_ops th = let
     val ys = list_dest pairSyntax.dest_pair tm1
     in zip ys (map (subst i) ys) end
   val ys = foldr (uncurry append) [] (map goo zs) handle e => []
-  val ys = filter (fn (t1,t2) => not (t1 = t2)) ys
+  val ys = filter (fn (t1,t2) => t1 !~ t2) ys
   val tm1 = pairSyntax.list_mk_pair(map fst ys) handle HOL_ERR e => ``()``
   val tm2 = pairSyntax.list_mk_pair(map snd ys) handle HOL_ERR e => ``()``
   val ((tm1,tm2),ys) = if length i = 0 then ((tm1,tm2),ys) else (hd i,i)
@@ -352,7 +382,7 @@ fun extract_ops th = let
   val _ = if length ys = 0 then () else add_assignment (tm1,tm2,th,l)
   (* possible tests *)
   fun foo tm = optionSyntax.dest_some tm handle e => tm
-  val qs = filter (fn tm => mem (car tm) xs) qs
+  val qs = filter (fn tm => tmem (car tm) xs) qs
   val qs = map (fn tm => add_conditional(foo (cdr tm),car tm,th,l)) qs
            handle HOL_ERR _ => []
   in () end;
@@ -417,7 +447,8 @@ fun generate_code target model_name print_assembly tm = let
     fun aux [] ys zs = ([],rev ys,zs)
       | aux xs [] zs = (rev xs,[],zs)
       | aux (x::xs) (y::ys) zs =
-          if x = y then aux xs ys (x::zs) else (rev (x::xs), rev (y::ys), zs)
+          if asm_type_eq x y then aux xs ys (x::zs)
+          else (rev (x::xs), rev (y::ys), zs)
     in aux (rev xs) (rev ys) [] end
   fun compile (FUN_VAL tm) =
        if not (pairSyntax.is_pair tm) andalso is_comb tm then [ASM_BRANCH (NONE,top_label)] else []
@@ -431,20 +462,24 @@ fun generate_code target model_name print_assembly tm = let
          val label1 = label_name()
          val (rest1,rest2,rest3) = shared_tail rest1 rest2
          val (rest1,rest2,rest3) =
-           if rest3 = [ASM_BRANCH (NONE,top_label)]
-           then (rest1 @ rest3, rest2 @ rest3,[]) else (rest1, rest2, rest3)
-         in if rest1 = [] then
+           if list_eq asm_type_eq rest3 [ASM_BRANCH (NONE,top_label)] then
+             (rest1 @ rest3, rest2 @ rest3,[])
+           else (rest1, rest2, rest3)
+         in if null rest1 then
               [ASM_COMPARE tm, ASM_BRANCH (SOME "true",label1)] @ rest2 @ [ASM_LABEL label1] @ rest3
-            else if rest2 = [] then
-              [ASM_COMPARE tm, ASM_BRANCH (SOME "false",label1)] @ rest1 @ [ASM_LABEL label1] @ rest3
-            else if rest1 = [ASM_BRANCH (NONE,top_label)] then
+            else if null rest2 then
+              [ASM_COMPARE tm, ASM_BRANCH (SOME "false",label1)] @ rest1 @
+              [ASM_LABEL label1] @ rest3
+            else if list_eq asm_type_eq rest1 [ASM_BRANCH (NONE,top_label)] then
               [ASM_COMPARE tm, ASM_BRANCH (SOME "true",top_label)] @ rest2 @ rest3
-            else if rest2 = [ASM_BRANCH (NONE,top_label)] then
+            else if list_eq asm_type_eq rest2 [ASM_BRANCH (NONE,top_label)] then
               [ASM_COMPARE tm, ASM_BRANCH (SOME "false",top_label)] @ rest1 @ rest3
-            else if last rest1 = ASM_BRANCH (NONE,top_label) then
-              [ASM_COMPARE tm, ASM_BRANCH (SOME "false",label1)] @ rest1 @ [ASM_LABEL label1] @ rest2 @ rest3
-            else if last rest2 = ASM_BRANCH (NONE,top_label) then
-              [ASM_COMPARE tm, ASM_BRANCH (SOME "true",label1)] @ rest2 @ [ASM_LABEL label1] @ rest1 @ rest3
+            else if asm_type_eq (last rest1) (ASM_BRANCH (NONE,top_label)) then
+              [ASM_COMPARE tm, ASM_BRANCH (SOME "false",label1)] @ rest1 @
+              [ASM_LABEL label1] @ rest2 @ rest3
+            else if asm_type_eq (last rest2) (ASM_BRANCH (NONE,top_label)) then
+              [ASM_COMPARE tm, ASM_BRANCH (SOME "true",label1)] @ rest2 @
+              [ASM_LABEL label1] @ rest1 @ rest3
             else let val label2 = label_name() in
               if length rest2 < length rest1 then
                 [ASM_COMPARE tm, ASM_BRANCH (SOME "true",label1)] @ rest2 @ [ASM_BRANCH (NONE,label2)] @
@@ -463,7 +498,7 @@ fun generate_code target model_name print_assembly tm = let
     val t = rem t
     val vs = free_vars tm1
     val ws = free_vars (ftree2tm t)
-    in if filter (fn x => mem x ws) vs = [] then t else FUN_LET (tm1,tm2,t) end
+    in if null (filter (fn x => tmem x ws) vs) then t else FUN_LET (tm1,tm2,t) end
   val t = rem t
   (* compile *)
   val name = fst (dest_const (repeat car x)) handle e => fst (dest_var (repeat car x))
@@ -473,12 +508,12 @@ fun generate_code target model_name print_assembly tm = let
   (* look up assembly instructions for assignments and comparisions *)
   fun find_assignment (tm1,tm2) [] = fail()
     | find_assignment (tm1,tm2) ((x,y,l,n,m)::xs) =
-        if (tm1 = x) andalso (tm2 = y) andalso (m = model_name)
+        if (tm1 ~~ x) andalso (tm2 ~~ y) andalso (m = model_name)
         then (n,l) else find_assignment (tm1,tm2) xs
   fun find_compiled_assignment (tm1,tm2) = find_assignment (tm1,tm2) (!compiler_assignments)
   fun find_conditional tm [] = fail()
     | find_conditional tm ((x,y,l,n,m)::xs) =
-        if ((tm = x) orelse (mk_neg tm = x)) andalso (m = model_name)
+        if ((tm ~~ x) orelse (mk_neg tm ~~ x)) andalso (m = model_name)
         then (x,y,l,n) else find_conditional tm xs
   fun find_compiled_conditional tm = find_conditional tm (!compiler_conditionals)
   val to_x86 = subst (to_x86_regs())
@@ -518,7 +553,8 @@ fun generate_code target model_name print_assembly tm = let
   fun conditionally_execute code u (t,f) label = let
     fun find_label [] head  = fail()
       | find_label (x::xs) head =
-          if x = ASM_LABEL label then (head,xs) else find_label xs (head @ [x])
+          if asm_type_eq x (ASM_LABEL label) then (head,xs)
+          else find_label xs (head @ [x])
     val (code,rest) = find_label code []
     val condition = if u then f else t
     fun force_condition (ASM_INSTRUCTION (c,x,h)) = ASM_INSTRUCTION (conditionalise c condition,x,h)
