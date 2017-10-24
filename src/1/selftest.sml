@@ -637,7 +637,7 @@ val _ = let
       (SPLIT_LT 2 (REVERSE_LT, ROTATE_LT 1)),
       (HEADGOAL (POP_ASSUM ACCEPT_TAC)),
       (REPEAT_LT (ALLGOALS (POP_ASSUM (fn _ => ALL_TAC))
-	  THEN_LT HEADGOAL (POP_ASSUM ACCEPT_TAC))) ] ;
+          THEN_LT HEADGOAL (POP_ASSUM ACCEPT_TAC))) ] ;
   val th = prove (``a ==> b ==> c ==> d ==> a /\ b /\ c /\ d``, tac) ;
 in if hyp th = [] then OK() else die "FAILED"
 end handle _ => die "FAILED!"
@@ -655,7 +655,7 @@ val _ = let
   val _ = tprint "Testing USE_SG_THEN and VALIDATE_LT"
   val tac = CONJ_TAC THEN REPEAT DISCH_TAC
       THEN_LT EVERY_LT [VALIDATE_LT (USE_SG_THEN ACCEPT_TAC 1 2),
-	NTH_GOAL (REPEAT STRIP_TAC) 1 ]
+        NTH_GOAL (REPEAT STRIP_TAC) 1 ]
       THEN (POP_ASSUM MATCH_MP_TAC)
       THEN_LT NTH_GOAL CONJ_TAC 2
       THEN (FIRST_ASSUM ACCEPT_TAC)

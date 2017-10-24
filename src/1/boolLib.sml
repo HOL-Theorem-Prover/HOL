@@ -177,11 +177,11 @@ fun variant_of_term vs t =
     val check_vars = free_vars t
     val (_,sub) =
         foldl (fn (v, (vs,sub)) =>
-	          let
+                  let
                     val v' = variant vs v
                     val vs' = v'::vs
                     val sub' = if (aconv v v') then sub else
-			       (v |-> v')::sub
+                               (v |-> v')::sub
                   in
                     (vs',sub')
                   end) (vs,[]) check_vars
