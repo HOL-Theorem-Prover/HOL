@@ -10,13 +10,15 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open relationTheory listTheory;
+open relationTheory combinTheory listTheory;
 open CCSLib CCSTheory;
 open StrongEQTheory StrongLawsTheory;
-open WeakEQTheory WeakLawsTheory;
+open WeakEQTheory WeakEQLib WeakLawsTheory;
+open ObsCongrTheory ObsCongrLib ObsCongrLawsTheory ObsCongrConv;
 open CongruenceTheory TraceTheory ExpansionTheory;
 
 val _ = new_theory "Contraction";
+val _ = temp_loose_equality ();
 
 (******************************************************************************)
 (*                                                                            *)
@@ -37,10 +39,9 @@ val CONTRACTION = new_definition ("CONTRACTION",
 
 (* The identity relation is a CONTRACTION. *)
 val IDENTITY_CONTRACTION = store_thm (
-   "IDENTITY_CONTRACTION", ``CONTRACTION (\x y. x = y)``,
+   "IDENTITY_CONTRACTION", ``CONTRACTION Id``,
     PURE_ONCE_REWRITE_TAC [CONTRACTION]
- >> BETA_TAC
- >> !! STRIP_TAC >> rfs [] (* 2 sub-goals *)
+ >> rpt STRIP_TAC >> rfs [] (* 2 sub-goals *)
  >| [ (* goal 1 (of 2) *)
       Q.EXISTS_TAC `E2` >> REWRITE_TAC [WEAK_EQUIV_REFL] \\
       IMP_RES_TAC TRANS_IMP_WEAK_TRANS,
@@ -54,7 +55,7 @@ val CONTRACTION_EPS = store_thm (
   ``!(Con: ('a, 'b) simulation). CONTRACTION Con ==>
      !E E'. Con E E' ==> !E1. EPS E E1 ==> ?E2. EPS E' E2 /\ Con E1 E2``,
     REPEAT STRIP_TAC
- >> Q.PAT_X_ASSUM `Con E E'` MP_TAC
+ >> qpat_x_assum `Con E E'` MP_TAC
  >> POP_ASSUM MP_TAC
  >> Q.SPEC_TAC (`E1`, `E1`)
  >> Q.SPEC_TAC (`E`, `E`)
@@ -143,7 +144,7 @@ val EXPANSION_IMP_CONTRACTION = store_thm (
    one `efficient` path; Q could also have other paths, that are slower than
    any path in P.
  *)
-val (contacts_rules, contracts_coind, contracts_cases) = Hol_coreln `
+val (contracts_rules, contracts_coind, contracts_cases) = Hol_coreln `
     (!(E :('a, 'b) CCS) (E' :('a, 'b) CCS).
        (!l.
 	 (!E1. TRANS E  (label l) E1 ==>
@@ -154,11 +155,11 @@ val (contacts_rules, contracts_coind, contracts_cases) = Hol_coreln `
        (!E2. TRANS E' tau E2 ==> ?E1. EPS E E1 /\ WEAK_EQUIV E1 E2)
       ==> $contracts E E')`;
 
-val _ = set_fixity "contracts" (Infixl 500);
+val _ = set_fixity "contracts" (Infix (NONASSOC, 450));
 
-val _ = Unicode.unicode_version {u = UTF8.chr 0x2AB0 ^ UTF8.chr 0x1D47, tmnm = "contracts"}
-val _ = TeX_notation {hol = UTF8.chr 0x2AB0 ^ UTF8.chr 0x1D47,
-                      TeX = ("\\HOLTokenContracts{}", 1)}
+val _ = Unicode.unicode_version { u = UTF8.chr 0x2AB0 ^ UTF8.chr 0x1D47, tmnm = "contracts" };
+val _ = TeX_notation { hol = UTF8.chr 0x2AB0 ^ UTF8.chr 0x1D47,
+                       TeX = ("\\HOLTokenContracts{}", 1) };
 
 val contracts_is_CONTRACTION = store_thm (
    "contracts_is_CONTRACTION", ``CONTRACTION $contracts``,
@@ -219,8 +220,7 @@ val contracts_reflexive = store_thm (
     REWRITE_TAC [reflexive_def]
  >> GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [contracts_thm]
- >> EXISTS_TAC ``\x y :('a, 'b) CCS. x = y``
- >> BETA_TAC
+ >> Q.EXISTS_TAC `Id`
  >> REWRITE_TAC [IDENTITY_CONTRACTION]);
 
 (* the version for easier use *)
@@ -297,7 +297,7 @@ val CONTRACTION_EPS' = store_thm (
      !E E'. Con E E' ==>
 	!u E2. EPS E' E2 ==> ?E1. EPS E E1 /\ WEAK_EQUIV E1 E2``,
     REPEAT STRIP_TAC
- >> Q.PAT_X_ASSUM `Con E E'` MP_TAC
+ >> qpat_x_assum `Con E E'` MP_TAC
  >> POP_ASSUM MP_TAC
  >> Q.SPEC_TAC (`E2`, `E2`)
  >> Q.SPEC_TAC (`E'`, `E'`)
@@ -485,7 +485,7 @@ val contracts_SUBST_PREFIX = store_thm (
       (* goal 4 (of 4) *)
       IMP_RES_TAC TRANS_PREFIX >> ASM_REWRITE_TAC [] \\
       Q.EXISTS_TAC `E` \\
-      Q.PAT_X_ASSUM `tau = u` (REWRITE_TAC o wrap o SYM) \\
+      qpat_x_assum `tau = u` (REWRITE_TAC o wrap o SYM) \\
       CONJ_TAC >- ( MATCH_MP_TAC ONE_TAU >> REWRITE_TAC [PREFIX] ) \\
       IMP_RES_TAC contracts_IMP_WEAK_EQUIV ]);
 
@@ -534,14 +534,14 @@ val contracts_PRESD_BY_GUARDED_SUM = store_thm (
       IMP_RES_TAC TRANS_SUM >| (* 2 sub-goals here *)
       [ (* goal 3.1 (of 2) *)
         IMP_RES_TAC TRANS_PREFIX \\
-        Q.PAT_X_ASSUM `tau = a1` (fs o wrap o SYM) \\
+        qpat_x_assum `tau = a1` (fs o wrap o SYM) \\
         Q.EXISTS_TAC `E1` \\
         Rev CONJ_TAC >- IMP_RES_TAC contracts_IMP_WEAK_EQUIV \\
         MATCH_MP_TAC ONE_TAU \\
         MATCH_MP_TAC SUM1 >> REWRITE_TAC [PREFIX],
         (* goal 3.2 (of 2) *)
         IMP_RES_TAC TRANS_PREFIX \\
-        Q.PAT_X_ASSUM `tau = a2` (fs o wrap o SYM) \\
+        qpat_x_assum `tau = a2` (fs o wrap o SYM) \\
         Q.EXISTS_TAC `E2` \\
         Rev CONJ_TAC >- IMP_RES_TAC contracts_IMP_WEAK_EQUIV \\
         MATCH_MP_TAC ONE_TAU \\
@@ -713,6 +713,26 @@ val contracts_PRESD_BY_PAR = store_thm (
 	MATCH_MP_TAC PAR3 \\
 	Q.EXISTS_TAC `l` >> ASM_REWRITE_TAC [] ] ]);
 
+(* |- ∀E E'. E contracts E' ⇒ ∀E''. (E || E'') contracts (E' || E'') *)
+val contracts_SUBST_PAR_R = save_thm (
+   "contracts_SUBST_PAR_R",
+    Q_GENL [`E`, `E'`]
+      (DISCH ``E contracts E'``
+	(Q.GEN `E''`
+	   (MATCH_MP contracts_PRESD_BY_PAR
+		     (CONJ (ASSUME ``E contracts E'``)
+			   (Q.SPEC `E''` contracts_REFL))))));
+
+(* |- ∀E E'. E contracts E' ⇒ ∀E''. (E'' || E) contracts (E'' || E') *)
+val contracts_SUBST_PAR_L = save_thm (
+   "contracts_SUBST_PAR_L",
+    Q_GENL [`E`, `E'`]
+      (DISCH ``E contracts E'``
+	(Q.GEN `E''`
+	   (MATCH_MP contracts_PRESD_BY_PAR
+		     (CONJ (Q.SPEC `E''` contracts_REFL)
+			   (ASSUME ``E contracts E'``))))));
+
 val contracts_SUBST_RESTR = store_thm (
    "contracts_SUBST_RESTR",
   ``!E E'. E contracts E' ==> !L. (restr L E) contracts (restr L E')``,
@@ -789,7 +809,7 @@ val contracts_SUBST_RELAB = store_thm (
       ASSUME_TAC (REWRITE_RULE [ASSUME ``E'' = relab E1 rf'``]
 			       (ASSUME ``TRANS E'' (label l) E1'``)) \\
       IMP_RES_TAC TRANS_RELAB \\
-      Q.PAT_X_ASSUM `label l = relabel rf' u'` (ASSUME_TAC o SYM) \\
+      qpat_x_assum `label l = relabel rf' u'` (ASSUME_TAC o SYM) \\
       IMP_RES_TAC Relab_label \\
       ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'b Action) = label l'``]
 			       (ASSUME ``TRANS E1 u' E''''``)) \\
@@ -798,13 +818,13 @@ val contracts_SUBST_RELAB = store_thm (
       Rev CONJ_TAC
       >- ( take [`E''''`, `E2'`, `rf'`] >> ASM_REWRITE_TAC [] ) \\
       ASM_REWRITE_TAC [] \\
-      Q.PAT_X_ASSUM `relabel rf' u' = label l` (REWRITE_TAC o wrap o SYM) \\
+      qpat_x_assum `relabel rf' u' = label l` (REWRITE_TAC o wrap o SYM) \\
       MATCH_MP_TAC RELABELING >> ASM_REWRITE_TAC [],
       (* goal 2 (of 4) *)
       ASSUME_TAC (REWRITE_RULE [ASSUME ``E''' = relab E2 rf'``]
 			       (ASSUME ``TRANS E''' (label l) E2'``)) \\
       IMP_RES_TAC TRANS_RELAB \\
-      Q.PAT_X_ASSUM `label l = relabel rf' u'` (ASSUME_TAC o SYM) \\
+      qpat_x_assum `label l = relabel rf' u'` (ASSUME_TAC o SYM) \\
       IMP_RES_TAC Relab_label \\
       ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'b Action) = label l'``]
 			       (ASSUME ``TRANS E2 u' E''''``)) \\
@@ -819,7 +839,7 @@ val contracts_SUBST_RELAB = store_thm (
       ASSUME_TAC (REWRITE_RULE [ASSUME ``E'' = relab E1 rf'``]
 			       (ASSUME ``TRANS E'' tau E1'``)) \\
       IMP_RES_TAC TRANS_RELAB \\
-      Q.PAT_X_ASSUM `tau = relabel rf' u'` (ASSUME_TAC o SYM) \\
+      qpat_x_assum `tau = relabel rf' u'` (ASSUME_TAC o SYM) \\
       IMP_RES_TAC Relab_tau \\
       ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'b Action) = tau``]
 			       (ASSUME ``TRANS E1 u' E''''``)) \\ 
@@ -830,13 +850,13 @@ val contracts_SUBST_RELAB = store_thm (
       Rev CONJ_TAC
       >- ( take [`E''''`, `E2'`, `rf'`] >> ASM_REWRITE_TAC [] ) \\
       ASM_REWRITE_TAC [] \\
-      Q.PAT_X_ASSUM `relabel rf' u' = tau` (REWRITE_TAC o wrap o SYM) \\
+      qpat_x_assum `relabel rf' u' = tau` (REWRITE_TAC o wrap o SYM) \\
       MATCH_MP_TAC RELABELING >> ASM_REWRITE_TAC [],
       (* goal 4 (of 4) *)
       ASSUME_TAC (REWRITE_RULE [ASSUME ``E''' = relab E2 rf'``]
 			       (ASSUME ``TRANS E''' tau E2'``)) \\
       IMP_RES_TAC TRANS_RELAB \\
-      Q.PAT_X_ASSUM `tau = relabel rf' u'` (ASSUME_TAC o SYM) \\
+      qpat_x_assum `tau = relabel rf' u'` (ASSUME_TAC o SYM) \\
       IMP_RES_TAC Relab_tau \\
       ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'b Action) = tau``]
 			       (ASSUME ``TRANS E2 u' E''''``)) \\
@@ -846,7 +866,7 @@ val contracts_SUBST_RELAB = store_thm (
       >- ( ASM_REWRITE_TAC [] \\
 	   MATCH_MP_TAC WEAK_EQUIV_SUBST_RELAB >> ASM_REWRITE_TAC [] ) \\
       ASM_REWRITE_TAC [] \\
-      Q.PAT_X_ASSUM `relabel rf' u' = tau` (REWRITE_TAC o wrap o SYM) \\
+      qpat_x_assum `relabel rf' u' = tau` (REWRITE_TAC o wrap o SYM) \\
       IMP_RES_TAC EPS_RELAB_rf >> ASM_REWRITE_TAC [] ]);
 
 val contracts_SUBST_GCONTEXT = store_thm (
@@ -873,10 +893,6 @@ val contracts_precongruence = store_thm (
    "contracts_precongruence", ``precongruence1 $contracts``,
     PROVE_TAC [precongruence1_def, contracts_SUBST_GCONTEXT]);
 
-val contracts_precongruence_applied = save_thm (
-   "contracts_precongruence_applied",
-    REWRITE_RULE [precongruence1_def] contracts_precongruence);
-
 (******************************************************************************)
 (*                                                                            *)
 (*                  Trace, Weak transition and Contraction                    *)
@@ -900,7 +916,7 @@ val contracts_AND_TRACE1_lemma = Q.prove (
       (* goal 2 (of 2) *)
       IMP_RES_TAC contracts_TRANS_label \\
       RES_TAC \\
-      take [`(label L) :: xs'`, `E2'`] >> ASM_REWRITE_TAC [] \\
+      take [`label x :: xs'`, `E2'`] >> ASM_REWRITE_TAC [] \\
       MATCH_MP_TAC TRACE2 \\
       Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [] ]);
 
@@ -909,8 +925,8 @@ val contracts_AND_TRACE1 = store_thm (
   ``!E E'. E contracts E' ==>
 	!xs E1. TRACE E xs E1 ==> ?xs' E2. TRACE E' xs' E2 /\ E1 contracts E2``,
     NTAC 2 (rpt GEN_TAC >> DISCH_TAC)
- >> irule contracts_AND_TRACE1_lemma
- >> take [`E`, `xs`] >> ASM_REWRITE_TAC []);
+ >> MP_TAC (Q.SPECL [`E`, `xs`, `E1`] contracts_AND_TRACE1_lemma)
+ >> RW_TAC std_ss []);
 
 val contracts_AND_TRACE2_lemma = Q.prove (
    `!E xs E1. TRACE E xs E1 ==>
@@ -937,7 +953,7 @@ val contracts_AND_TRACE2_lemma = Q.prove (
       (* goal 2 (of 2) *)
       IMP_RES_TAC contracts_TRANS_label \\
       RES_TAC \\
-      take [`(label L) :: xs'`, `E2'`] >> ASM_REWRITE_TAC [] \\
+      take [`label x :: xs'`, `E2'`] >> ASM_REWRITE_TAC [] \\
       CONJ_TAC >| (* 2 sub-goals here *)
       [ (* goal 2.1 (of 2) *)
 	MATCH_MP_TAC TRACE2 \\
@@ -951,8 +967,8 @@ val contracts_AND_TRACE2 = store_thm (
 	!xs E1. TRACE E xs E1 ==>
 	    ?xs' E2. TRACE E' xs' E2 /\ E1 contracts E2 /\ (LENGTH xs' <= LENGTH xs)``,
     NTAC 2 (rpt GEN_TAC >> DISCH_TAC)
- >> irule contracts_AND_TRACE2_lemma
- >> Q.EXISTS_TAC `E` >> ASM_REWRITE_TAC []);
+ >> MP_TAC (Q.SPECL [`E`, `xs`, `E1`] contracts_AND_TRACE2_lemma)
+ >> RW_TAC std_ss []);
 
 val contracts_AND_TRACE_tau_lemma = Q.prove (
    `!E xs E1. TRACE E xs E1 ==> NO_LABEL xs ==>
@@ -964,7 +980,7 @@ val contracts_AND_TRACE_tau_lemma = Q.prove (
  >- ( take [`[]`, `E'`] >> ASM_REWRITE_TAC [] \\
       REWRITE_TAC [TRACE_REFL, LENGTH] >> RW_TAC arith_ss [] )
  >> IMP_RES_TAC NO_LABEL_cases
- >> Q.PAT_X_ASSUM `NO_LABEL xs ==> X`
+ >> qpat_x_assum `NO_LABEL xs ==> X`
 	(ASSUME_TAC o (fn thm => MATCH_MP thm (ASSUME ``NO_LABEL (xs :'b Action list)``)))
  >> Cases_on `h` >> FULL_SIMP_TAC std_ss [Action_distinct_label, LENGTH]
  >> IMP_RES_TAC contracts_TRANS_tau >> RES_TAC (* 2 sub-goals here *)
@@ -984,13 +1000,12 @@ val contracts_AND_TRACE_tau_lemma = Q.prove (
 val contracts_AND_TRACE_tau = store_thm (
    "contracts_AND_TRACE_tau",
   ``!E E'. E contracts E' ==>
-	!xs l E1. TRACE E xs E1 /\ NO_LABEL xs ==>
+	!xs E1. TRACE E xs E1 /\ NO_LABEL xs ==>
 	    ?xs' E2. TRACE E' xs' E2 /\ E1 contracts E2 /\
 		(LENGTH xs' <= LENGTH xs) /\ NO_LABEL xs'``,
     NTAC 2 (rpt GEN_TAC >> STRIP_TAC)
- >> irule contracts_AND_TRACE_tau_lemma
- >- ASM_REWRITE_TAC []
- >> Q.EXISTS_TAC `E` >> ASM_REWRITE_TAC []);
+ >> MP_TAC (Q.SPECL [`E`, `xs`, `E1`] contracts_AND_TRACE_tau_lemma)
+ >> RW_TAC std_ss []);
 
 val contracts_AND_TRACE_label_lemma = Q.prove (
    `!E xs E1. TRACE E xs E1 ==> !l. UNIQUE_LABEL (label l) xs ==>
@@ -1022,7 +1037,7 @@ val contracts_AND_TRACE_label_lemma = Q.prove (
       IMP_RES_TAC (EQ_IMP_LR UNIQUE_LABEL_cases2) \\
       IMP_RES_TAC (MATCH_MP contracts_AND_TRACE_tau (ASSUME ``E' contracts E2``)) \\
       NTAC 4 (POP_ASSUM K_TAC) \\
-      take [`label L :: xs'`, `E2'`] >> ASM_REWRITE_TAC [] \\
+      take [`label x :: xs'`, `E2'`] >> ASM_REWRITE_TAC [] \\
       CONJ_TAC >- ( MATCH_MP_TAC TRACE2 >> Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [] ) \\
       CONJ_TAC >- ( FULL_SIMP_TAC arith_ss [LENGTH] ) \\
       REWRITE_TAC [UNIQUE_LABEL_cases2] >> ASM_REWRITE_TAC [] ]);
@@ -1034,9 +1049,8 @@ val contracts_AND_TRACE_label = store_thm (
 	    ?xs' E2. TRACE E' xs' E2 /\ E1 contracts E2 /\
 		(LENGTH xs' <= LENGTH xs) /\ UNIQUE_LABEL (label l) xs'``,
     NTAC 2 (rpt GEN_TAC >> STRIP_TAC)
- >> irule contracts_AND_TRACE_label_lemma
- >- ASM_REWRITE_TAC []
- >> Q.EXISTS_TAC `E` >> ASM_REWRITE_TAC []);
+ >> MP_TAC (Q.SPECL [`E`, `xs`, `E1`] contracts_AND_TRACE_label_lemma)
+ >> RW_TAC std_ss []);
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1044,6 +1058,7 @@ val contracts_AND_TRACE_label = store_thm (
 (*                                                                            *)
 (******************************************************************************)
 
+(*
 val BISIM_UPTO_contracts_and_C = new_definition (
    "BISIM_UPTO_contracts_and_C",
   ``BISIM_UPTO_contracts_and_C (Wbsm: ('a, 'b) simulation) =
@@ -1052,14 +1067,688 @@ val BISIM_UPTO_contracts_and_C = new_definition (
 	(!l.
 	  (!E1. TRANS E  (label l) E1 ==>
 		?E2. WEAK_TRANS E' (label l) E2 /\
-		    (WEAK_EQUIV O (gcontext_closure Wbsm) O $contracts) E1 E2) /\
+		    (WEAK_EQUIV O (GCC Wbsm) O $contracts) E1 E2) /\
 	  (!E2. TRANS E' (label l) E2 ==>
 		?E1. WEAK_TRANS E  (label l) E1 /\
-		    ($contracts O (gcontext_closure Wbsm) O WEAK_EQUIV) E1 E2)) /\
+		    ($contracts O (GCC Wbsm) O WEAK_EQUIV) E1 E2)) /\
 	(!E1. TRANS E  tau E1 ==>
-	      ?E2. EPS E' E2 /\ (WEAK_EQUIV O (gcontext_closure Wbsm) O $contracts) E1 E2) /\
+	      ?E2. EPS E' E2 /\ (WEAK_EQUIV O (GCC Wbsm) O $contracts) E1 E2) /\
 	(!E2. TRANS E' tau E2 ==>
-	      ?E1. EPS E  E1 /\ ($contracts O (gcontext_closure Wbsm) O WEAK_EQUIV) E1 E2)``);
+	      ?E1. EPS E  E1 /\ ($contracts O (GCC Wbsm) O WEAK_EQUIV) E1 E2)``);
+ *)
+
+(******************************************************************************)
+(*                                                                            *)
+(*                Observational contraction (OBS_contracts)                   *)
+(*                                                                            *)
+(******************************************************************************)
+
+val OBS_contracts = new_definition ("OBS_contracts",
+  ``OBS_contracts (E :('a, 'b) CCS) (E' :('a, 'b) CCS) =
+       (!(u :'b Action).
+	 (!E1. TRANS E  u E1 ==>
+	       ?E2. TRANS E' u E2 /\ E1 contracts E2) /\
+	 (!E2. TRANS E' u E2 ==>
+	       ?E1. WEAK_TRANS E u E1 /\ WEAK_EQUIV E1 E2))``);
+
+val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                   fixity = Infix (NONASSOC, 450),
+                   paren_style = OnlyIfNecessary,
+                   pp_elements = [HardSpace 1, TOK (UTF8.chr 0x2AB0 ^ UTF8.chr 0x1D9C),
+				  BreakSpace (1,0)],
+                   term_name = "OBS_contracts" };
+
+val _ = TeX_notation { hol = (UTF8.chr 0x2AB0 ^ UTF8.chr 0x1D9C),
+		       TeX = ("\\HOLTokenObsContracts", 1) };
+
+(* This one is difficult because `standard technique` doesn't work *)
+val OBS_contracts_BY_CONTRACTION = store_thm (
+   "OBS_contracts_BY_CONTRACTION",
+  ``!Con. CONTRACTION Con ==>
+      !E E'.
+        (!u.
+	 (!E1. TRANS E u E1 ==>
+	       (?E2. TRANS E' u E2 /\ Con E1 E2)) /\
+	 (!E2. TRANS E' u E2 ==>
+	       (?E1. WEAK_TRANS E  u E1 /\ Con E1 E2))) ==> OBS_contracts E E'``,
+    rpt STRIP_TAC
+ >> REWRITE_TAC [OBS_contracts]
+ >> REWRITE_TAC [contracts_thm]
+ >> GEN_TAC
+ >> CONJ_TAC (* 2 sub-goals here *)
+ >- ( rpt STRIP_TAC >> RES_TAC \\
+      Q.EXISTS_TAC `E2` >> art [] \\
+      Q.EXISTS_TAC `Con` >> art [] )
+ >> rpt STRIP_TAC >> RES_TAC
+ >> Q.EXISTS_TAC `E1` >> art []
+ >> REWRITE_TAC [WEAK_EQUIV]
+ >> Q.EXISTS_TAC `Con RUNION WEAK_EQUIV` (* here !!! *)
+ >> REWRITE_TAC [RUNION]
+ >> CONJ_TAC >- ( DISJ1_TAC >> art [] )
+ >> REWRITE_TAC [WEAK_BISIM, RUNION] >> rpt STRIP_TAC (* 8 sub-goals here *)
+ >| [ (* goal 1 (of 8) *)
+      IMP_RES_TAC
+	(MATCH_MP (REWRITE_RULE [CONTRACTION] (ASSUME ``CONTRACTION Con``))
+		  (ASSUME ``(Con :('a, 'b) simulation) E'' E'''``)) \\
+      Q.EXISTS_TAC `E2'` \\
+      CONJ_TAC >- ( MATCH_MP_TAC TRANS_IMP_WEAK_TRANS >> art [] ) \\
+      DISJ1_TAC >> art [],
+      (* goal 2 (of 8) *)
+      IMP_RES_TAC
+	(MATCH_MP (REWRITE_RULE [CONTRACTION] (ASSUME ``CONTRACTION Con``))
+		  (ASSUME ``(Con :('a, 'b) simulation) E'' E'''``)) \\
+      Q.EXISTS_TAC `E1'` >> art [],
+      (* goal 3 (of 8) *)
+      IMP_RES_TAC
+	(MATCH_MP (REWRITE_RULE [CONTRACTION] (ASSUME ``CONTRACTION Con``))
+		  (ASSUME ``(Con :('a, 'b) simulation) E'' E'''``)) (* 2 sub-goals here *)
+      >- ( Q.EXISTS_TAC `E'''` >> art [EPS_REFL] ) \\
+      Q.EXISTS_TAC `E2'` >> art [] \\
+      IMP_RES_TAC ONE_TAU,
+      (* goal 4 (of 8) *)
+      IMP_RES_TAC
+	(MATCH_MP (REWRITE_RULE [CONTRACTION] (ASSUME ``CONTRACTION Con``))
+		  (ASSUME ``(Con :('a, 'b) simulation) E'' E'''``)) \\
+      Q.EXISTS_TAC `E1'` >> art [],
+      (* goal 5 (of 8) *)
+      IMP_RES_TAC WEAK_EQUIV_TRANS_label \\
+      Q.EXISTS_TAC `E2'` >> art [],
+      (* goal 6 (of 8) *)
+      IMP_RES_TAC WEAK_EQUIV_TRANS_label' \\
+      Q.EXISTS_TAC `E1'` >> art [],
+      (* goal 7 (of 8) *)
+      IMP_RES_TAC WEAK_EQUIV_TRANS_tau \\
+      Q.EXISTS_TAC `E2'` >> art [],
+      (* goal 8 (of 8) *)
+      IMP_RES_TAC WEAK_EQUIV_TRANS_tau' \\
+      Q.EXISTS_TAC `E1'` >> art [] ]);
+
+val OBS_contracts_TRANS_LEFT = store_thm (
+   "OBS_contracts_TRANS_LEFT",
+  ``!E E'. OBS_contracts (E :('a, 'b) CCS) (E' :('a, 'b) CCS) ==>
+	   !u E1. TRANS E  u E1 ==> ?E2. TRANS E' u E2 /\ E1 contracts E2``,
+    PROVE_TAC [OBS_contracts]);
+
+val OBS_contracts_TRANS_RIGHT = store_thm (
+   "OBS_contracts_TRANS_RIGHT",
+  ``!E E'. OBS_contracts (E :('a, 'b) CCS) (E' :('a, 'b) CCS) ==>
+	   !u E2. TRANS E' u E2 ==> ?E1. WEAK_TRANS E u E1 /\ WEAK_EQUIV E1 E2``,
+    PROVE_TAC [OBS_contracts]);
+
+val OBS_contracts_IMP_contracts = store_thm (
+   "OBS_contracts_IMP_contracts", ``!E E'. OBS_contracts E E' ==> E contracts E'``,
+    rpt STRIP_TAC
+ >> ONCE_REWRITE_TAC [contracts_cases]
+ >> rpt STRIP_TAC (* 4 sub-goals here *)
+ >| [ (* goal 1 (of 4) *)
+      IMP_RES_TAC OBS_contracts_TRANS_LEFT \\
+      Q.EXISTS_TAC `E2` >> art [],
+      (* goal 2 (of 4) *)
+      IMP_RES_TAC OBS_contracts_TRANS_RIGHT \\
+      Q.EXISTS_TAC `E1` >> art [],
+      (* goal 3 (of 4) *)
+      IMP_RES_TAC OBS_contracts_TRANS_LEFT \\
+      DISJ2_TAC >> Q.EXISTS_TAC `E2` >> art [],
+      (* goal 2 (of 4) *)
+      IMP_RES_TAC OBS_contracts_TRANS_RIGHT \\
+      Q.EXISTS_TAC `E1` >> art [] \\
+      MATCH_MP_TAC WEAK_TRANS_IMP_EPS >> art [] ]);
+
+val OBS_contracts_IMP_WEAK_EQUIV = store_thm (
+   "OBS_contracts_IMP_WEAK_EQUIV", ``!E E'. OBS_contracts E E' ==> WEAK_EQUIV E E'``,
+    rpt STRIP_TAC
+ >> IMP_RES_TAC OBS_contracts_IMP_contracts
+ >> IMP_RES_TAC contracts_IMP_WEAK_EQUIV);
+
+(* Know relations:
+   1.       `expands` << `contracts`      << WEAK_EQUIV
+   2. `OBS_contracts` << `contracts`
+   3. `OBS_contracts`        << OBS_CONGR << WEAK_EQUIV *)
+val OBS_contracts_IMP_OBS_CONGR = store_thm (
+   "OBS_contracts_IMP_OBS_CONGR", ``!E E'. OBS_contracts E E' ==> OBS_CONGR E E'``,
+    rpt STRIP_TAC
+ >> REWRITE_TAC [OBS_CONGR]
+ >> rpt STRIP_TAC (* 2 sub-goals here *)
+ >| [ (* goal 1 (of 2) *)
+      IMP_RES_TAC OBS_contracts_TRANS_LEFT \\
+      Q.EXISTS_TAC `E2` \\
+      CONJ_TAC >- IMP_RES_TAC TRANS_IMP_WEAK_TRANS \\
+      IMP_RES_TAC contracts_IMP_WEAK_EQUIV,
+      (* goal 2 (of 2) *)
+      IMP_RES_TAC OBS_contracts_TRANS_RIGHT \\
+      Q.EXISTS_TAC `E1` >> art [] ]);
+
+(* another way to prove this *)
+val OBS_contracts_IMP_WEAK_EQUIV' = store_thm (
+   "OBS_contracts_IMP_WEAK_EQUIV'", ``!E E'. OBS_contracts E E' ==> WEAK_EQUIV E E'``,
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC OBS_CONGR_IMP_WEAK_EQUIV
+ >> IMP_RES_TAC OBS_contracts_IMP_OBS_CONGR);
+
+val OBS_contracts_EPS' = store_thm (
+   "OBS_contracts_EPS'",
+  ``!E E'. OBS_contracts (E :('a, 'b) CCS) (E' :('a, 'b) CCS) ==>
+	   !E2. EPS E' E2 ==> ?E1. EPS E E1 /\ WEAK_EQUIV E1 E2``,
+    rpt STRIP_TAC
+ >> PAT_X_ASSUM ``OBS_contracts E E'`` MP_TAC
+ >> POP_ASSUM MP_TAC
+ >> Q.SPEC_TAC (`E2`, `E2`)
+ >> Q.SPEC_TAC (`E'`, `E'`)
+ >> HO_MATCH_MP_TAC EPS_strongind_right (* must use right induct here! *)
+ >> rpt STRIP_TAC (* 2 sub-goals here *)
+ >| [ (* goal 1 (of 2) *)
+      Q.EXISTS_TAC `E` >> REWRITE_TAC [EPS_REFL] \\
+      IMP_RES_TAC OBS_contracts_IMP_WEAK_EQUIV,
+      (* goal 2 (of 2) *)
+      RES_TAC \\
+      IMP_RES_TAC WEAK_EQUIV_TRANS_tau' \\
+      Q.EXISTS_TAC `E1'` >> art [] \\
+      IMP_RES_TAC EPS_TRANS ]);
+
+val OBS_contracts_WEAK_TRANS' = store_thm (
+   "OBS_contracts_WEAK_TRANS'",
+  ``!E E'. OBS_contracts (E :('a, 'b) CCS) (E' :('a, 'b) CCS) ==>
+	   !u E2. WEAK_TRANS E' u E2 ==> ?E1. WEAK_TRANS E u E1 /\ WEAK_EQUIV E1 E2``,
+    rpt STRIP_TAC
+ >> Cases_on `u` (* 2 sub-goals here *)
+ >| [ (* case 1 (of 2): u = tau *)
+      IMP_RES_TAC WEAK_TRANS_TAU_IMP_TRANS_TAU \\
+      IMP_RES_TAC OBS_contracts_TRANS_RIGHT \\
+      IMP_RES_TAC WEAK_EQUIV_EPS' \\
+      Q.EXISTS_TAC `E1''` >> art [] \\
+      MATCH_MP_TAC WEAK_TRANS_AND_EPS \\
+      Q.EXISTS_TAC `E1'` >> art [],
+      (* case 2 (of 2): ~(u = tau) *)
+      IMP_RES_TAC WEAK_TRANS \\
+      IMP_RES_TAC OBS_contracts_EPS' \\
+      IMP_RES_TAC WEAK_EQUIV_TRANS_label' \\
+      IMP_RES_TAC WEAK_EQUIV_EPS' \\
+      Q.EXISTS_TAC `E1'''` >> art [] \\
+      IMP_RES_TAC EPS_WEAK_EPS ]);
+
+(******************************************************************************)
+(*                                                                            *)
+(*                       OBS_contracts is PreOrder                            *)
+(*                                                                            *)
+(******************************************************************************)
+
+val OBS_contracts_TRANS = store_thm (
+   "OBS_contracts_TRANS",
+  ``!E E' E''. OBS_contracts E E' /\ OBS_contracts E' E'' ==> OBS_contracts E E''``,
+    rpt STRIP_TAC
+ >> REWRITE_TAC [OBS_contracts]
+ >> rpt STRIP_TAC (* 2 sub-goals here *)
+ >| [ (* goal 1 (of 2) *)
+      IMP_RES_TAC (REWRITE_RULE [OBS_contracts] (ASSUME ``OBS_contracts E E'``)) \\
+      IMP_RES_TAC (REWRITE_RULE [OBS_contracts] (ASSUME ``OBS_contracts E' E''``)) \\
+      Q.EXISTS_TAC `E2'` >> art [] \\
+      IMP_RES_TAC contracts_TRANS,
+      (* goal 2 (of 2) *)
+      IMP_RES_TAC (REWRITE_RULE [OBS_contracts] (ASSUME ``OBS_contracts E' E''``)) \\
+      IMP_RES_TAC OBS_contracts_WEAK_TRANS' \\
+      Q.EXISTS_TAC `E1'` >> art [] \\
+      IMP_RES_TAC WEAK_EQUIV_TRANS ]);
+
+val OBS_contracts_REFL = store_thm (
+   "OBS_contracts_REFL", ``!E. OBS_contracts E E``,
+    GEN_TAC
+ >> REWRITE_TAC [OBS_contracts]
+ >> rpt STRIP_TAC
+ >- ( Q.EXISTS_TAC `E1` >> art [contracts_REFL] )
+ >> Q.EXISTS_TAC `E2` >> REWRITE_TAC [WEAK_EQUIV_REFL]
+ >> IMP_RES_TAC TRANS_IMP_WEAK_TRANS);
+
+val OBS_contracts_PreOrder = store_thm (
+   "OBS_contracts_PreOrder", ``PreOrder OBS_contracts``,
+    REWRITE_TAC [PreOrder, reflexive_def, transitive_def]
+ >> CONJ_TAC >- REWRITE_TAC [OBS_contracts_REFL]
+ >> rpt STRIP_TAC
+ >> MATCH_MP_TAC OBS_contracts_TRANS
+ >> Q.EXISTS_TAC `y` >> art []);
+
+(******************************************************************************)
+(*                                                                            *)
+(*                      OBS_contracts is precongruence                        *)
+(*                                                                            *)
+(******************************************************************************)
+
+(* Proposition 6 (Milner's book, page 154), the version for `contracts` *)
+val contracts_PROP6 = store_thm (
+   "contracts_PROP6",
+  ``!E E'. E contracts E' ==> !u. OBS_contracts (prefix u E) (prefix u E')``,
+    rpt GEN_TAC
+ >> PURE_ONCE_REWRITE_TAC [OBS_contracts]
+ >> rpt STRIP_TAC (* 2 sub-goals here *)
+ >| [ (* goal 1 (of 2) *)
+      IMP_RES_TAC TRANS_PREFIX \\
+      Q.EXISTS_TAC `E'` >> art [] \\
+      REWRITE_TAC [PREFIX],
+      (* goal 2 (of 2) *)
+      IMP_RES_TAC TRANS_PREFIX \\
+      Q.EXISTS_TAC `E` >> art [] \\
+      CONJ_TAC >- REWRITE_TAC [WEAK_PREFIX] \\
+      IMP_RES_TAC contracts_IMP_WEAK_EQUIV ]);
+
+val OBS_contracts_SUBST_PREFIX = store_thm (
+   "OBS_contracts_SUBST_PREFIX",
+  ``!E E'. OBS_contracts E E' ==> !u. OBS_contracts (prefix u E) (prefix u E')``,
+    rpt STRIP_TAC
+ >> IMP_RES_TAC OBS_contracts_IMP_contracts
+ >> MATCH_MP_TAC contracts_PROP6 >> art []);
+
+val OBS_contracts_PRESD_BY_SUM = store_thm (
+   "OBS_contracts_PRESD_BY_SUM",
+  ``!E1 E1' E2 E2'. OBS_contracts E1 E1' /\ OBS_contracts E2 E2' ==>
+		    OBS_contracts (sum E1 E2) (sum E1' E2')``,
+    rpt GEN_TAC
+ >> REWRITE_TAC [OBS_contracts]
+ >> rpt STRIP_TAC (* 2 sub-goals here *)
+ >| [ (* goal 1 (of 2) *)
+      IMP_RES_TAC TRANS_SUM >| (* 2 sub-goals here *)
+      [ (* goal 1.1 (of 2) *)
+	RES_TAC >> Q.EXISTS_TAC `E2''` >> art [] \\
+	MATCH_MP_TAC SUM1 >> art [],
+	(* goal 1.2 (of 2) *)
+	RES_TAC >> Q.EXISTS_TAC `E2''` >> art [] \\
+	MATCH_MP_TAC SUM2 >> art [] ],
+      (* goal 2 (of 2) *)
+      IMP_RES_TAC TRANS_SUM >| (* 2 sub-goals here *)
+      [ (* goal 2.1 (of 2) *)
+	RES_TAC >> Q.EXISTS_TAC `E1''` >> art [] \\
+	MATCH_MP_TAC WEAK_SUM1 >> art [],
+	(* goal 2.2 (of 2) *)
+	RES_TAC >> Q.EXISTS_TAC `E1''` >> art [] \\
+	MATCH_MP_TAC WEAK_SUM2 >> art [] ] ]);
+
+(* |- !E E'. OBS_contracts E E' ==> !E''. OBS_contracts (sum E'' E) (sum E'' E') *)
+val OBS_contracts_SUBST_SUM_L = save_thm (
+   "OBS_contracts_SUBST_SUM_L",
+    Q_GENL [`E`, `E'`]
+       (DISCH ``OBS_contracts E E'``
+        (Q.GEN `E''`
+         (MATCH_MP OBS_contracts_PRESD_BY_SUM
+		   (CONJ (Q.SPEC `E''` OBS_contracts_REFL)
+			 (ASSUME ``OBS_contracts E E'``))))));
+
+(* |- !E E'. OBS_contracts E E' ==> !E''. OBS_contracts (sum E E'') (sum E' E'') *)
+val OBS_contracts_SUBST_SUM_R = save_thm (
+   "OBS_contracts_SUBST_SUM_R",
+    Q_GENL [`E`, `E'`]
+       (DISCH ``OBS_contracts E E'``
+        (Q.GEN `E''`
+         (MATCH_MP OBS_contracts_PRESD_BY_SUM
+		   (CONJ (ASSUME ``OBS_contracts E E'``)
+			 (Q.SPEC `E''` OBS_contracts_REFL))))));
+
+(* this belongs to ContractionLib.sml *)
+fun C_TRANS thm1 thm2 =
+    if (rhs_tm thm1 = lhs_tm thm2) then
+	MATCH_MP contracts_TRANS (CONJ thm1 thm2)
+    else
+	failwith "transitivity of contraction not applicable";
+
+(* Observation contracts is preserved by parallel composition. *)
+val OBS_contracts_PRESD_BY_PAR = store_thm (
+   "OBS_contracts_PRESD_BY_PAR",
+  ``!E1 E1' E2 E2'. OBS_contracts E1 E1' /\ OBS_contracts E2 E2' ==>
+		    OBS_contracts (par E1 E2) (par E1' E2')``,
+    rpt STRIP_TAC
+ >> REWRITE_TAC [OBS_contracts]
+ >> rpt STRIP_TAC (* 2 sub-goals here *)
+ >| [ (* goal 1 (of 2) *)
+      IMP_RES_TAC TRANS_PAR >| (* 3 sub-goals here *)
+      [ (* goal 1.1 (of 3) *)
+        IMP_RES_TAC OBS_contracts_TRANS_LEFT \\
+        ASSUME_TAC (Q.SPEC `E2'`
+			(MATCH_MP PAR1 (ASSUME ``TRANS E1' u E2''``))) \\
+        EXISTS_TAC ``par E2'' E2'`` \\
+        ASM_REWRITE_TAC
+          [C_TRANS (Q.SPEC `E2`
+		      (MATCH_MP contracts_SUBST_PAR_R
+				(ASSUME ``E1''' contracts E2''``)))
+		   (Q.SPEC `E2''`
+		      (MATCH_MP contracts_SUBST_PAR_L
+				(MATCH_MP OBS_contracts_IMP_contracts
+					  (ASSUME ``OBS_contracts E2 E2'``))))],
+        (* goal 1.2 (of 3) *)
+        IMP_RES_TAC OBS_contracts_TRANS_LEFT \\
+        ASSUME_TAC (Q.SPEC `E1'`
+			(MATCH_MP PAR2 (ASSUME ``TRANS E2' u E2''``))) \\
+        EXISTS_TAC ``par E1' E2''`` \\
+        ASM_REWRITE_TAC
+          [C_TRANS (Q.SPEC `E1'''`
+		      (MATCH_MP contracts_SUBST_PAR_R
+				(MATCH_MP OBS_contracts_IMP_contracts
+					  (ASSUME ``OBS_contracts E1 E1'``))))
+		   (Q.SPEC `E1'`
+		      (MATCH_MP contracts_SUBST_PAR_L
+				(ASSUME ``E1''' contracts E2''``)))],
+        (* goal 1.3 (of 3) *)
+        IMP_RES_TAC (MATCH_MP OBS_contracts_TRANS_LEFT (ASSUME ``OBS_contracts E1 E1'``)) \\
+        IMP_RES_TAC (MATCH_MP OBS_contracts_TRANS_LEFT (ASSUME ``OBS_contracts E2 E2'``)) \\
+        EXISTS_TAC ``par E2''' E2''''`` \\
+        ASM_REWRITE_TAC
+          [C_TRANS (Q.SPEC `E2''`
+		       (MATCH_MP contracts_SUBST_PAR_R
+				 (ASSUME ``E1''' contracts E2'''``)))
+		    (Q.SPEC `E2'''`
+		       (MATCH_MP contracts_SUBST_PAR_L
+				 (ASSUME ``E2'' contracts E2''''``)))] \\
+        MATCH_MP_TAC PAR3 \\
+	Q.EXISTS_TAC `l` >> art [] ],
+      (* goal 2 (of 2) *)
+      IMP_RES_TAC TRANS_PAR >| (* 3 sub-goals here *)
+      [ (* goal 2.1 (of 3) *)
+        IMP_RES_TAC OBS_contracts_TRANS_RIGHT \\
+        ASSUME_TAC (CONJUNCT1
+		     (Q.SPEC `E2`
+			(MATCH_MP WEAK_PAR (ASSUME ``WEAK_TRANS E1 u E1'''``)))) \\
+        EXISTS_TAC ``par E1''' E2`` \\
+        ASM_REWRITE_TAC
+          [OE_TRANS (Q.SPEC `E2`
+		       (MATCH_MP WEAK_EQUIV_SUBST_PAR_R
+				 (ASSUME ``WEAK_EQUIV E1''' E1''``)))
+		    (Q.SPEC `E1''`
+		       (MATCH_MP WEAK_EQUIV_SUBST_PAR_L
+				 (MATCH_MP OBS_contracts_IMP_WEAK_EQUIV
+					   (ASSUME ``OBS_contracts E2 E2'``))))],
+        (* goal 2.2 (of 3) *)
+        IMP_RES_TAC OBS_contracts_TRANS_RIGHT \\
+	ASSUME_TAC (CONJUNCT2
+		     (Q.SPEC `E1`
+			(MATCH_MP WEAK_PAR (ASSUME ``WEAK_TRANS E2 u E1'''``)))) \\
+	EXISTS_TAC ``par E1 E1'''`` \\
+	ASM_REWRITE_TAC
+          [OE_TRANS (Q.SPEC `E1'''`
+		       (MATCH_MP WEAK_EQUIV_SUBST_PAR_R
+				 (MATCH_MP OBS_contracts_IMP_WEAK_EQUIV
+					   (ASSUME ``OBS_contracts E1 E1'``))))
+		    (Q.SPEC `E1'`
+		       (MATCH_MP WEAK_EQUIV_SUBST_PAR_L
+				 (ASSUME ``WEAK_EQUIV E1''' E1''``)))],
+        (* goal 2.3 (of 3) *)
+        IMP_RES_TAC (MATCH_MP OBS_contracts_TRANS_RIGHT (ASSUME ``OBS_contracts E1 E1'``)) \\
+	IMP_RES_TAC (MATCH_MP OBS_contracts_TRANS_RIGHT (ASSUME ``OBS_contracts E2 E2'``)) \\
+	EXISTS_TAC ``par E1''' E1''''`` \\
+	ASM_REWRITE_TAC
+          [OE_TRANS (Q.SPEC `E1''''`
+		       (MATCH_MP WEAK_EQUIV_SUBST_PAR_R
+				 (ASSUME ``WEAK_EQUIV E1''' E1''``)))
+		    (Q.SPEC `E1''`
+		       (MATCH_MP WEAK_EQUIV_SUBST_PAR_L
+				 (ASSUME ``WEAK_EQUIV E1'''' E2'''``)))] \\
+        PURE_ONCE_REWRITE_TAC [WEAK_TRANS] \\
+	STRIP_ASSUME_TAC
+          (REWRITE_RULE [WEAK_TRANS]
+			(ASSUME ``WEAK_TRANS E1 (label l) E1'''``)) \\
+	STRIP_ASSUME_TAC
+          (REWRITE_RULE [WEAK_TRANS]
+			(ASSUME ``WEAK_TRANS E2 (label (COMPL l)) E1''''``)) \\
+	EXISTS_TAC ``par E1''''' E1''''''`` \\
+	EXISTS_TAC ``par E2'''' E2'''''`` \\
+	REWRITE_TAC
+          [MATCH_MP EPS_PAR_PAR
+		    (CONJ (ASSUME ``EPS E1 E1'''''``)
+			  (ASSUME ``EPS E2 E1''''''``)),
+           MATCH_MP EPS_PAR_PAR
+		    (CONJ (ASSUME ``EPS E2'''' E1'''``)
+			  (ASSUME ``EPS E2''''' E1''''``))] \\
+        MATCH_MP_TAC PAR3 \\
+	Q.EXISTS_TAC `l` >> art [] ] ]);
+
+(* |- !E E'. OBS_contracts E E' ==> !E''. OBS_contracts (par E'' E) (par E'' E') *)
+val OBS_contracts_SUBST_PAR_L = save_thm (
+   "OBS_contracts_SUBST_PAR_L",
+    Q_GENL [`E`, `E'`]
+       (DISCH ``OBS_contracts E E'``
+        (Q.GEN `E''`
+         (MATCH_MP OBS_contracts_PRESD_BY_PAR
+		   (CONJ (Q.SPEC `E''` OBS_contracts_REFL)
+			 (ASSUME ``OBS_contracts E E'``))))));
+
+(* |- !E E'. OBS_contracts E E' ==> !E''. OBS_contracts (par E E'') (par E' E'') *)
+val OBS_contracts_SUBST_PAR_R = save_thm (
+   "OBS_contracts_SUBST_PAR_R",
+    Q_GENL [`E`, `E'`]
+       (DISCH ``OBS_contracts E E'``
+        (Q.GEN `E''`
+         (MATCH_MP OBS_contracts_PRESD_BY_PAR
+		   (CONJ (ASSUME ``OBS_contracts E E'``)
+			 (Q.SPEC `E''` OBS_contracts_REFL))))));
+
+val OBS_contracts_SUBST_RESTR = store_thm (
+   "OBS_contracts_SUBST_RESTR",
+  ``!E E'. OBS_contracts E E' ==> !L. OBS_contracts (restr L E) (restr L E')``,
+    rpt GEN_TAC
+ >> PURE_ONCE_REWRITE_TAC [OBS_contracts]
+ >> rpt STRIP_TAC (* 2 sub-goals here *)
+ >| [ (* goal 1 (of 2) *)
+      IMP_RES_TAC TRANS_RESTR >| (* 2 sub-goals here *)
+      [ (* goal 1.1 (of 2) *)
+	RES_TAC \\
+	Q.EXISTS_TAC `restr L E2` \\
+	CONJ_TAC >- ( MATCH_MP_TAC RESTR >> art [] ) \\
+	IMP_RES_TAC contracts_SUBST_RESTR >> art [],
+	(* goal 1.2 (of 2) *)
+	RES_TAC \\
+	Q.EXISTS_TAC `restr L E2` >> art [] \\
+	CONJ_TAC >- ( MATCH_MP_TAC RESTR >> Q.EXISTS_TAC `l` >> rfs [] ) \\
+	IMP_RES_TAC contracts_SUBST_RESTR >> art [] ],
+      (* goal 2 (of 2) *)
+      IMP_RES_TAC TRANS_RESTR >| (* 2 sub-goals here *)
+      [ (* goal 2.1 (of 2) *)
+	RES_TAC \\
+	ASSUME_TAC
+	  (MATCH_MP WEAK_RESTR_tau
+		    (REWRITE_RULE [ASSUME ``(u :'b Action) = tau``]
+				  (ASSUME ``WEAK_TRANS E u E1``))) \\
+	Q.EXISTS_TAC `restr L E1` \\
+	IMP_RES_TAC WEAK_EQUIV_SUBST_RESTR >> art [],
+	(* goal 2.2 (of 2) *)
+	RES_TAC \\
+	ASSUME_TAC
+	  (MATCH_MP WEAK_RESTR_label
+		    (LIST_CONJ [ASSUME ``~((l: 'b Label) IN L)``,
+				ASSUME ``~((COMPL (l :'b Label)) IN L)``,
+				REWRITE_RULE [ASSUME ``(u :'b Action) = label l``]
+					     (ASSUME ``WEAK_TRANS E u E1``)])) \\
+	Q.EXISTS_TAC `restr L E1` \\
+	IMP_RES_TAC WEAK_EQUIV_SUBST_RESTR >> art [] ] ]);
+
+(* Observation congruence is substitutive under the relabelling operator. *)
+val OBS_contracts_SUBST_RELAB = store_thm (
+   "OBS_contracts_SUBST_RELAB",
+  ``!E E'. OBS_contracts E E' ==> !rf. OBS_contracts (relab E rf) (relab E' rf)``,
+    rpt GEN_TAC
+ >> PURE_ONCE_REWRITE_TAC [OBS_contracts]
+ >> rpt STRIP_TAC (* 2 sub-goals here, sharing start&end tacticals *)
+ >> IMP_RES_TAC TRANS_RELAB
+ >> RES_TAC
+ >| [ (* goal 1 (of 2) *)
+      Q.EXISTS_TAC `relab E2 rf` >> art [] \\
+      CONJ_TAC >- ( MATCH_MP_TAC RELABELING >> art [] ) \\
+      IMP_RES_TAC contracts_SUBST_RELAB >> art [],
+      (* goal 2 (of 2) *)
+      ASSUME_TAC (MATCH_MP WEAK_RELAB_rf
+			   (ASSUME ``WEAK_TRANS E u' E1``)) \\
+      Q.EXISTS_TAC `relab E1 rf` >> art [] \\
+      IMP_RES_TAC WEAK_EQUIV_SUBST_RELAB >> art [] ]);
+
+val OBS_contracts_SUBST_CONTEXT = store_thm (
+   "OBS_contracts_SUBST_CONTEXT",
+  ``!P Q. OBS_contracts P Q ==> !E. CONTEXT E ==> OBS_contracts (E P) (E Q)``,
+    rpt GEN_TAC >> DISCH_TAC
+ >> Induct_on `CONTEXT`
+ >> BETA_TAC >> rpt STRIP_TAC (* 7 sub-goals here *)
+ >- ASM_REWRITE_TAC []
+ >- REWRITE_TAC [OBS_contracts_REFL]
+ >| [ (* goal 1 (of 5) *)
+      MATCH_MP_TAC OBS_contracts_SUBST_PREFIX >> art [],
+      (* goal 2 (of 5) *)
+      MATCH_MP_TAC OBS_contracts_PRESD_BY_SUM >> art [],
+      (* goal 3 (of 5) *)
+      IMP_RES_TAC OBS_contracts_PRESD_BY_PAR,
+      (* goal 4 (of 5) *)
+      MATCH_MP_TAC OBS_contracts_SUBST_RESTR >> art [],
+      (* goal 5 (of 5) *)
+      MATCH_MP_TAC OBS_contracts_SUBST_RELAB >> art [] ]);
+
+val OBS_contracts_precongruence = store_thm (
+   "OBS_contracts_precongruence", ``precongruence OBS_contracts``,
+    PROVE_TAC [precongruence_def, OBS_contracts_SUBST_CONTEXT]);
+
+(******************************************************************************)
+(*                                                                            *)
+(*                        OBS_contracts and trace                             *)
+(*                                                                            *)
+(******************************************************************************)
+
+val OBS_contracts_AND_TRACE_tau = store_thm (
+   "OBS_contracts_AND_TRACE_tau",
+  ``!E E'. OBS_contracts E E' ==>
+	!xs l E1. TRACE E xs E1 /\ NO_LABEL xs ==>
+	    ?xs' E2. TRACE E' xs' E2 /\ E1 contracts E2 /\
+		     (LENGTH xs' <= LENGTH xs) /\ NO_LABEL xs'``,
+    rpt STRIP_TAC
+ >> IMP_RES_TAC TRACE_cases1
+ >> Cases_on `xs` (* 2 sub-goals here *)
+ >- ( take [`[]`, `E'`] >> REWRITE_TAC [TRACE_rule0] \\
+      fs [NULL] >> IMP_RES_TAC OBS_contracts_IMP_contracts )
+ >> fs [NULL]
+ >> IMP_RES_TAC NO_LABEL_cases >> fs []
+ >> IMP_RES_TAC OBS_contracts_TRANS_LEFT
+ >> MP_TAC (Q.SPECL [`t`, `E1`]
+		    (MATCH_MP (Q.SPECL [`u`, `E2`] contracts_AND_TRACE_tau)
+			      (ASSUME ``u contracts E2``)))
+ >> RW_TAC std_ss []
+ >> take [`tau :: xs'`, `E2'`] >> art []
+ >> CONJ_TAC
+ >- ( MATCH_MP_TAC TRACE_rule1 >> Q.EXISTS_TAC `E2` >> art [] )
+ >> RW_TAC arith_ss [LENGTH]
+ >> REWRITE_TAC [NO_LABEL_cases] >> art []);
+
+val OBS_contracts_AND_TRACE_label = store_thm (
+   "OBS_contracts_AND_TRACE_label",
+  ``!E E'. OBS_contracts E E' ==>
+	!xs l E1. TRACE E xs E1 /\ UNIQUE_LABEL (label l) xs ==>
+	    ?xs' E2. TRACE E' xs' E2 /\ E1 contracts E2 /\
+		(LENGTH xs' <= LENGTH xs) /\ UNIQUE_LABEL (label l) xs'``,
+    rpt STRIP_TAC
+ >> IMP_RES_TAC TRACE_cases1
+ >> Cases_on `xs` (* 2 sub-goals here *)
+ >- ( take [`[]`, `E'`] >> REWRITE_TAC [TRACE_rule0] \\
+      fs [NULL] >> IMP_RES_TAC OBS_contracts_IMP_contracts )
+ >> Cases_on `h` (* 2 sub-goals here *)
+ >| [ (* goal 1 (of 2) *)
+      fs [UNIQUE_LABEL_cases1] \\
+      IMP_RES_TAC OBS_contracts_TRANS_LEFT \\
+      MP_TAC (Q.SPECL [`t`, `l`, `E1`]
+		      (MATCH_MP (Q.SPECL [`u`, `E2`] contracts_AND_TRACE_label)
+				(ASSUME ``u contracts E2``))) \\
+      RW_TAC std_ss [] \\
+      take [`tau :: xs'`, `E2'`] >> art [] \\
+      CONJ_TAC >- ( MATCH_MP_TAC TRACE_rule1 >> Q.EXISTS_TAC `E2` >> art [] ) \\
+      RW_TAC arith_ss [LENGTH] \\
+      REWRITE_TAC [UNIQUE_LABEL_cases1] >> art [],
+      (* goal 2 (of 2) *)
+      fs [UNIQUE_LABEL_cases2] \\
+      IMP_RES_TAC OBS_contracts_TRANS_LEFT \\
+      MP_TAC (Q.SPECL [`t`, `E1`]
+		      (MATCH_MP (Q.SPECL [`u`, `E2`] contracts_AND_TRACE_tau)
+				(ASSUME ``u contracts E2``))) \\
+      RW_TAC std_ss [] \\
+      take [`label l :: xs'`, `E2'`] >> art [] \\
+      CONJ_TAC >- ( MATCH_MP_TAC TRACE_rule1 >> Q.EXISTS_TAC `E2` >> art [] ) \\
+      RW_TAC arith_ss [LENGTH] \\
+      REWRITE_TAC [UNIQUE_LABEL_cases2] >> art [] ]);
+
+val OBS_contracts_WEAK_TRANS_label' = store_thm (
+   "OBS_contracts_WEAK_TRANS_label'",
+  ``!E E'. OBS_contracts E E' ==>
+	!l E2. WEAK_TRANS E' (label l) E2 ==> ?E1. WEAK_TRANS E (label l) E1 /\ WEAK_EQUIV E1 E2``,
+    rpt STRIP_TAC
+ >> IMP_RES_TAC WEAK_TRANS_cases1 (* 2 sub-goals here *)
+ >| [ (* goal 1 (of 2) *)
+      IMP_RES_TAC OBS_contracts_TRANS_RIGHT \\
+      IMP_RES_TAC WEAK_EQUIV_WEAK_TRANS_label' \\
+      Q.EXISTS_TAC `E1'` >> art [] \\
+      IMP_RES_TAC WEAK_TRANS_IMP_EPS \\
+      MATCH_MP_TAC EPS_AND_WEAK_TRANS \\
+      Q.EXISTS_TAC `E1` >> art [],
+      (* goal 2 (of 2) *)
+      IMP_RES_TAC OBS_contracts_TRANS_RIGHT \\
+      IMP_RES_TAC WEAK_EQUIV_EPS' \\
+      Q.EXISTS_TAC `E1'` >> art [] \\
+      MATCH_MP_TAC WEAK_TRANS_AND_EPS \\
+      Q.EXISTS_TAC `E1` >> art [] ]);
+
+val OBS_contracts_EPS' = store_thm (
+   "OBS_contracts_EPS'",
+  ``!E E'. OBS_contracts E E' ==> !E2. EPS E' E2 ==> ?E1. EPS E E1 /\ WEAK_EQUIV E1 E2``,
+    rpt STRIP_TAC
+ >> IMP_RES_TAC EPS_cases1 (* 2 sub-goals here *)
+ >- ( Q.EXISTS_TAC `E` >> fs [EPS_REFL] \\
+      IMP_RES_TAC OBS_contracts_IMP_WEAK_EQUIV )
+ >> IMP_RES_TAC OBS_contracts_TRANS_RIGHT
+ >> IMP_RES_TAC WEAK_EQUIV_EPS'
+ >> Q.EXISTS_TAC `E1'` >> art []
+ >> IMP_RES_TAC WEAK_TRANS_IMP_EPS
+ >> IMP_RES_TAC EPS_TRANS);
+
+(******************************************************************************)
+(*                                                                            *)
+(*      Is OBS_contracts coarsest precongruence contained in `contracts`?     *)
+(*                                                                            *)
+(******************************************************************************)
+
+val C_contracts = new_definition (
+   "C_contracts", ``C_contracts = CC $contracts``);
+
+val C_contracts_thm = save_thm (
+   "C_contracts_thm", REWRITE_RULE [CC_def] C_contracts);
+
+val C_contracts_precongruence = store_thm (
+   "C_contracts_precongruence", ``precongruence $C_contracts``,
+    REWRITE_TAC [C_contracts, CC_precongruence]);
+
+val OBS_contracts_IMP_C_contracts = store_thm (
+   "OBS_contracts_IMP_C_contracts", ``!p q. OBS_contracts p q ==> C_contracts p q``,
+    REWRITE_TAC [C_contracts, GSYM RSUBSET]
+ >> ASSUME_TAC OBS_contracts_precongruence
+ >> `OBS_contracts RSUBSET $contracts`
+	by PROVE_TAC [OBS_contracts_IMP_contracts, GSYM RSUBSET]
+ >> MATCH_MP_TAC CC_is_coarsest' >> art []);
+
+val SUM_contracts = new_definition ("SUM_contracts",
+  ``SUM_contracts = (\p q. !r. (sum p r) contracts (sum q r))``);
+
+val C_contracts_IMP_SUM_contracts = store_thm (
+   "C_contracts_IMP_SUM_contracts",
+  ``!p q. C_contracts p q ==> SUM_contracts p q``,
+    REWRITE_TAC [C_contracts, SUM_contracts, CC_def]
+ >> BETA_TAC >> rpt STRIP_TAC
+ >> POP_ASSUM MP_TAC
+ >> Know `CONTEXT (\(t :('a, 'b) CCS). t) /\ CONTEXT (\t. r)`
+ >- REWRITE_TAC [CONTEXT1, CONTEXT2]
+ >> DISCH_TAC
+ >> POP_ASSUM (ASSUME_TAC o (MATCH_MP CONTEXT4))
+ >> DISCH_TAC >> RES_TAC
+ >> POP_ASSUM (MP_TAC o BETA_RULE) >> Rewr);
+
+val OBS_contracts_IMP_SUM_contracts = store_thm (
+   "OBS_contracts_IMP_SUM_contracts", 
+  ``!p q. OBS_contracts p q ==> SUM_contracts p q``,
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC C_contracts_IMP_SUM_contracts
+ >> IMP_RES_TAC OBS_contracts_IMP_C_contracts);
+
+(* OBS_contracts ==> C_contracts (coarsest) ==> SUM_contracts ==++
+        /\                                          ||
+        ||                                          ||
+        ++==========================================++
+val SUM_contracts_IMP_OBS_contracts =
+  ``!p q. SUM_contracts p q ==> OBS_contracts p q``
+ *)
 
 (* Bibliography:
  *
@@ -1069,4 +1758,4 @@ val BISIM_UPTO_contracts_and_C = new_definition (
 val _ = export_theory ();
 val _ = html_theory "Contraction";
 
-(* last updated: Sep 19, 2017 *)
+(* last updated: Oct 14, 2017 *)
