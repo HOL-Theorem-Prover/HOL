@@ -15,7 +15,8 @@ open CCSLib CCSTheory;
 open StrongEQTheory StrongLawsTheory;
 open WeakEQTheory WeakEQLib WeakLawsTheory;
 open ObsCongrTheory ObsCongrLib ObsCongrLawsTheory ObsCongrConv;
-open CongruenceTheory TraceTheory ExpansionTheory;
+open TraceTheory CongruenceTheory CoarsestCongrTheory;
+open ExpansionTheory;
 
 val _ = new_theory "Contraction";
 val _ = temp_loose_equality ();
@@ -1742,13 +1743,131 @@ val OBS_contracts_IMP_SUM_contracts = store_thm (
  >> MATCH_MP_TAC C_contracts_IMP_SUM_contracts
  >> IMP_RES_TAC OBS_contracts_IMP_C_contracts);
 
-(* OBS_contracts ==> C_contracts (coarsest) ==> SUM_contracts ==++
+(* OBS_contracts ==> C_contracts (coarsest) ==> SUM_contracts
         /\                                          ||
         ||                                          ||
-        ++==========================================++
-val SUM_contracts_IMP_OBS_contracts =
-  ``!p q. SUM_contracts p q ==> OBS_contracts p q``
- *)
+        ++===================<<<====================++ *)
+val SUM_contracts_IMP_OBS_contracts = store_thm (
+   "SUM_contracts_IMP_OBS_contracts",
+  ``!p q. free_action p /\ free_action q ==>
+	  (SUM_contracts p q ==> OBS_contracts p q)``,
+    REWRITE_TAC [SUM_contracts, free_action_def, OBS_contracts]
+ >> BETA_TAC
+ >> Rev (rpt STRIP_TAC) (* 2 sub-goals here *)
+ >| [ (* goal 1 (of 2), same as goal 2 of COARSEST_CONGR_RL *)
+      ASSUME_TAC (Q.SPEC `prefix (label a') nil`
+			 (ASSUME ``!r. (sum p r) contracts (sum q r)``)) \\
+      IMP_RES_TAC SUM1 \\
+      POP_ASSUM (ASSUME_TAC o (Q.SPEC `prefix (label a') nil`)) \\
+      Cases_on `u` >| (* 2 sub-goals here *)
+      [ (* goal 1.1 (of 2) *)
+	STRIP_ASSUME_TAC (MATCH_MP contracts_TRANS_tau'
+			     (ASSUME ``$contracts (sum p (prefix (label a') nil))
+						  (sum q (prefix (label a') nil))``)) \\
+	RES_TAC \\
+	IMP_RES_TAC EPS_cases1 >| (* 2 sub-goals here *)
+	[ (* goal 1.1.1 (of 2) *)
+	  `TRANS E1 (label a') nil` by RW_TAC std_ss [SUM2, PREFIX] \\
+	  STRIP_ASSUME_TAC (MATCH_MP WEAK_EQUIV_TRANS_label
+				     (ASSUME ``WEAK_EQUIV E1 E2``)) \\
+	  RES_TAC \\
+	  IMP_RES_TAC TRANS_TAU_AND_WEAK \\
+	  RES_TAC,				(* initial assumption of `q` is used here *)
+	  (* goal 1.1.2 (of 2) *)
+	  PAT_X_ASSUM ``TRANS (sum p (prefix (label a') nil)) tau u``
+		      (STRIP_ASSUME_TAC o (MATCH_MP TRANS_SUM)) >| (* 2 sub-goals here *)
+	  [ (* goal 1.1.2.1 (of 4) *)
+	    Q.EXISTS_TAC `E1` >> art [] \\
+	    REWRITE_TAC [WEAK_TRANS] \\
+	    take [`p`, `u`] >> art [EPS_REFL],
+	    (* goal 1.1.2.2 (of 4) *)
+	    IMP_RES_TAC TRANS_PREFIX \\
+	    RW_TAC std_ss [Action_distinct] ] ],
+	(* goal 1.2 (of 2) *)
+	STRIP_ASSUME_TAC (MATCH_MP contracts_TRANS_label'
+			     (ASSUME ``$contracts (sum p (prefix (label a') nil))
+						  (sum q (prefix (label a') nil))``)) \\
+	RES_TAC \\
+	IMP_RES_TAC WEAK_TRANS_cases1 >| (* 2 sub-goals here *)
+	[ (* goal 1.2.1 (of 2) *)
+	  PAT_X_ASSUM ``TRANS (sum p (prefix (label a') nil)) tau E'``
+		      (STRIP_ASSUME_TAC o (MATCH_MP TRANS_SUM)) >| (* 2 sub-goals here *)
+	  [ (* goal 1.2.1.1 (of 2) *)
+	    Q.EXISTS_TAC `E1` >> art [] \\
+	    IMP_RES_TAC TRANS_TAU_AND_WEAK,
+	    (* goal 1.2.1.2 (of 2) *)
+	    IMP_RES_TAC TRANS_PREFIX \\
+	    RW_TAC std_ss [Action_distinct] ],
+	  (* goal 1.2.2 (of 2) *)
+	  PAT_X_ASSUM ``TRANS (sum p (prefix (label a') nil)) (label L) E'``
+		      (STRIP_ASSUME_TAC o (MATCH_MP TRANS_SUM)) >| (* 2 sub-goals here *)
+	  [ (* goal 1.2.2.1 (of 2) *)
+	    Q.EXISTS_TAC `E1` >> art [] \\
+	    REWRITE_TAC [WEAK_TRANS] \\
+	    take [`p`, `E'`] >> art [EPS_REFL],
+	    (* goal 1.2.2.2 (of 2) *)
+	    IMP_RES_TAC TRANS_PREFIX \\
+	    PAT_X_ASSUM ``label L = label a'`` (ASSUME_TAC o (REWRITE_RULE [Action_11])) \\
+	    `TRANS q (label a') E2` by RW_TAC std_ss [] \\
+	    POP_ASSUM (ASSUME_TAC o (MATCH_MP TRANS_IMP_WEAK_TRANS)) \\
+	    RES_TAC ] ] ],			(* initial assumption of `q` is used here *)
+      (* goal 2 (of 2) *)
+      ASSUME_TAC (Q.SPEC `prefix (label a) nil`
+			 (ASSUME ``!r. (sum p r) contracts (sum q r)``)) \\
+      IMP_RES_TAC SUM1 \\
+      POP_ASSUM (ASSUME_TAC o (Q.SPEC `prefix (label a) nil`)) \\
+      Cases_on `u` >| (* 2 sub-goals here *)
+      [ (* goal 2.1 (of 2) *)
+	STRIP_ASSUME_TAC (MATCH_MP contracts_TRANS_tau
+			     (ASSUME ``$contracts (sum p (prefix (label a) nil))
+						  (sum q (prefix (label a) nil))``)) \\
+	RES_TAC >| (* 2 sub-goals here *)
+	[ (* goal 2.1.1 (of 2) *)
+	  Q.ABBREV_TAC `E2 = q + label a..nil` \\
+	  `TRANS E2 (label a) nil` by PROVE_TAC [SUM2, PREFIX] \\
+	  STRIP_ASSUME_TAC (MATCH_MP contracts_TRANS_label'
+				     (ASSUME ``E1 contracts E2``)) \\
+	  RES_TAC \\
+	  IMP_RES_TAC TRANS_TAU_AND_WEAK \\
+	  RES_TAC,				(* initial assumption of `p` is used here *)
+	  (* goal 2.1.2 (of 2) *)
+	  PAT_X_ASSUM ``TRANS (sum q (prefix (label a) nil)) tau E2``
+		      (STRIP_ASSUME_TAC o (MATCH_MP TRANS_SUM)) >| (* 2 sub-goals here *)
+	  [ (* goal 2.1.2.1 (of 4) *)
+	    Q.EXISTS_TAC `E2` >> art [],
+	    (* goal 2.1.2.2 (of 4) *)
+	    IMP_RES_TAC TRANS_PREFIX \\
+	    RW_TAC std_ss [Action_distinct] ] ],
+	(* goal 2.2 (of 2) *)
+	STRIP_ASSUME_TAC (MATCH_MP contracts_TRANS_label
+			     (ASSUME ``$contracts (sum p (prefix (label a) nil))
+						  (sum q (prefix (label a) nil))``)) \\
+	RES_TAC \\
+	PAT_X_ASSUM ``TRANS (sum q (prefix (label a) nil)) (label x) E2``
+		    (STRIP_ASSUME_TAC o (MATCH_MP TRANS_SUM)) >| (* 2 sub-goals here *)
+	[ (* goal 2.2.2.1 (of 2) *)
+	  Q.EXISTS_TAC `E2` >> art [],
+	  (* goal 2.2.2.2 (of 2) *)
+	  IMP_RES_TAC TRANS_PREFIX \\
+	  PAT_X_ASSUM ``label x = label a``
+		      (ASSUME_TAC o (REWRITE_RULE [Action_11])) \\
+	  `TRANS p (label a) E1` by RW_TAC std_ss [] \\
+	  POP_ASSUM (ASSUME_TAC o (MATCH_MP TRANS_IMP_WEAK_TRANS)) \\
+	  RES_TAC ] ] ]);			(* initial assumption of `p` is used here *)
+
+(* Assuming p & q have free actions, OBS_contracts is the coarsest precongruence
+   contained in `contracts`! *)
+val COARSEST_PRECONGR_THM = store_thm (
+   "COARSEST_PRECONGR_THM",
+  ``!p q. free_action p /\ free_action q ==> (OBS_contracts p q = SUM_contracts p q)``,
+    rpt STRIP_TAC
+ >> EQ_TAC
+ >- REWRITE_TAC [OBS_contracts_IMP_SUM_contracts]
+ >> MATCH_MP_TAC SUM_contracts_IMP_OBS_contracts >> art []);
+
+(* |- ∀p q. free_action p ∧ free_action q ⇒ (p ⪰ᶜ q ⇔ ∀r. p + r ⪰ᵇ q + r) *)
+val COARSEST_PRECONGR_THM' = save_thm (
+   "COARSEST_PRECONGR_THM'", BETA_RULE (REWRITE_RULE [SUM_contracts] COARSEST_PRECONGR_THM));
 
 (* Bibliography:
  *
