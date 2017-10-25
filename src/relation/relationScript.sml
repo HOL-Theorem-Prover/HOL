@@ -1594,7 +1594,8 @@ val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                    fixity = Suffix 2100,
                    paren_style = OnlyIfNecessary,
                    pp_elements = [TOK (UTF8.chr 0x1D40)],
-                   term_name = "inv"}
+                   term_name = "relinv"}
+val _ = overload_on("relinv", ``inv``)
 
 val inv_inv = store_thm(
   "inv_inv",
