@@ -24,7 +24,7 @@ open Parse
 
 val name   = prim_mk_const {Name="name",   Thy="CCS"};
 val coname = prim_mk_const {Name="coname", Thy="CCS"};
-val tau    = prim_mk_const {Name="tau",    Thy="CCS"};
+val tau    = prim_mk_const {Name="NONE",   Thy="option"};
 val NIL    = prim_mk_const {Name="nil",    Thy="CCS"};
 val restr  = prim_mk_const {Name="restr",  Thy="CCS"};
 
@@ -40,7 +40,7 @@ end;
 
 val (_, _, arg_name, _)		= HolKernel.syntax_fns1 "CCS" "name";
 val (_, _, arg_coname, _)	= HolKernel.syntax_fns1 "CCS" "coname";
-val (_, _, arg_action, _)	= HolKernel.syntax_fns1 "CCS" "label";
+val (_, _, arg_action, _)	= HolKernel.syntax_fns1 "option" "SOME";
 val (_, _, arg_compl, _)	= HolKernel.syntax_fns1 "CCS" "COMPL_ACT";
 val (_, _, arg_relabelling, _)	= HolKernel.syntax_fns1 "CCS" "RELAB";
 val (_, _, arg_ccs_var, _)	= HolKernel.syntax_fns1 "CCS" "var";
