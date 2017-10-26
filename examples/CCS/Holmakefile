@@ -24,18 +24,15 @@ all: $(TARGETS) munge.exe selftest.exe
 selftest.exe: selftest.uo CCSConv.uo
 	$(HOLMOSMLC) -o $@ $<
 
-MUNGER = $(HOLDIR)/bin/mkmunge.exe
-munge.exe: CCSTheory.uo StrongEQTheory.uo StrongLawsTheory.uo WeakEQTheory.uo \
-	   WeakLawsTheory.uo ObsCongrTheory.uo ObsCongrLawsTheory.uo \
-	   CongruenceTheory.uo TraceTheory.uo CoarsestCongrTheory.uo \
-	   BisimulationUptoTheory.uo ExpansionTheory.uo ContractionTheory.uo \
-	   UniqueSolutionsTheory.uo
-	$(HOLDIR)/bin/mkmunge.exe CCSTheory StrongEQTheory StrongLawsTheory \
-	   WeakEQTheory WeakLawsTheory ObsCongrTheory ObsCongrLawsTheory \
-	   BisimulationUptoTheory \
-	   CongruenceTheory CoarsestCongrTheory \
-	   TraceTheory ExpansionTheory ContractionTheory \
-	   UniqueSolutionsTheory
+MUNGE_DEPS = CCSTheory StrongEQTheory StrongLawsTheory \
+	     WeakEQTheory WeakLawsTheory ObsCongrTheory ObsCongrLawsTheory \
+	     BisimulationUptoTheory \
+	     CongruenceTheory CoarsestCongrTheory \
+	     TraceTheory ExpansionTheory ContractionTheory \
+	     UniqueSolutionsTheory
+
+munge.exe: $(patsubst %,%.uo,$(MUNGE_DEPS))
+	$(HOLDIR)/bin/mkmunge.exe $(MUNGE_DEPS)
 
 output: munge.exe
 	echo '\HOLtm{R1 RUNION R2}' | ./munge.exe
