@@ -3,10 +3,11 @@
 \TYPE {TRY_CONV : conv -> conv}
 
 \SYNOPSIS
-Attempts to apply a conversion; applies identity conversion in case of failure.
+Attempts to apply a conversion;
+applies identity conversion in case of failure.
 
 \KEYWORDS
-conversion, failure.
+conversion, failure, unchanged.
 
 \DESCRIBE
 
@@ -20,8 +21,8 @@ exception (which is understood to mean the instance of reflexivity,
 then so too does {TRY_CONV c t}.
 
 \FAILURE
-Never fails, though the {UNCHANGED} exception can be raised.
+Never fails, except that the {UNCHANGED} exception can be raised.
 
 \SEEALSO
-Conv.ALL_CONV, Conv.QCONV.
+Conv.UNCHANGED, Conv.QCHANGED_CONV, Conv.ALL_CONV, Conv.QCONV.
 \ENDDOC

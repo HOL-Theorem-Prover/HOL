@@ -6,7 +6,7 @@
  * DATE          : August 26, 1991
  * MODIFIED      : Sept 5, 1992, to use deBruijn representation
  *
- * MODIFIED	: Donald Syme, 1995, to add assumption-bound variables.
+ * MODIFIED     : Donald Syme, 1995, to add assumption-bound variables.
  *
  * Assumption bound variables are for storing rewrites like
  *  [x=0] |- x = 0.

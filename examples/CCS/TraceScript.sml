@@ -10,10 +10,11 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open relationTheory arithmeticTheory listTheory;
+open pred_setTheory relationTheory arithmeticTheory listTheory;
 open CCSLib CCSTheory StrongEQTheory WeakEQTheory;
 
 val _ = new_theory "Trace";
+val _ = temp_loose_equality ();
 
 (******************************************************************************)
 (*                                                                            *)
@@ -21,7 +22,7 @@ val _ = new_theory "Trace";
 (*                                                                            *)
 (******************************************************************************)
 
-val Reach_defn = ``(\E E'. ?u. TRANS E u E')``
+val Reach_defn = ``\E E'. ?u. TRANS E u E'``;
 val Reach_def = Define `Reach = RTC ^Reach_defn`;
 
 val Reach_one = store_thm ((* NEW *)
@@ -30,8 +31,7 @@ val Reach_one = store_thm ((* NEW *)
  >> REPEAT STRIP_TAC
  >> MATCH_MP_TAC RTC_SINGLE
  >> BETA_TAC
- >> Q.EXISTS_TAC `u`
- >> ASM_REWRITE_TAC []);
+ >> Q.EXISTS_TAC `u` >> art []);
 
 val Reach_self = store_thm ((* NEW *)
    "Reach_self", ``!E. Reach E E``,
@@ -131,7 +131,6 @@ val WEAK_TRANS_IN_NODES = store_thm ((* NEW *)
 
 val STEP_defn = ``\E E'. ?u. TRANS E u E'``;
 val STEP_def = Define `STEP P n Q = NRC ^STEP_defn n P Q`;
-val _ = overload_on ("Trans", ``STEP``);
 
 local
     val trans = (REWRITE_RULE [GSYM STEP_def]) o BETA_RULE o (ISPEC STEP_defn);
@@ -148,7 +147,7 @@ val STEP_SUC = save_thm (
 
 (* |- ∀n x y. x --SUC n--> y ⇔ ∃z. x --n--> z ∧ ∃u. z --u--> y *)
 val STEP_SUC_LEFT = save_thm (
-   "STEP_SUC_LEFT", trans (Q.GENL [`R`, `n`, `x`, `y`] NRC_SUC_RECURSE_LEFT));
+   "STEP_SUC_LEFT", trans (Q_GENL [`R`, `n`, `x`, `y`] NRC_SUC_RECURSE_LEFT));
 
 (* |- ∀m n x z. x --m + n--> z ⇒ ∃y. x --m--> y ∧ y --n--> z *)
 val STEP_ADD_E = save_thm (
@@ -156,7 +155,7 @@ val STEP_ADD_E = save_thm (
 
 (* |- ∀m n x z. x --m + n--> z ⇔ ∃y. x --m--> y ∧ y --n--> z *)
 val STEP_ADD_EQN = save_thm (
-   "STEP_ADD_EQN", trans (Q.GENL [`R`, `m`, `n`, `x`, `z`] NRC_ADD_EQN));
+   "STEP_ADD_EQN", trans (Q_GENL [`R`, `m`, `n`, `x`, `z`] NRC_ADD_EQN));
 
 (* |- ∀m n x y z. x --m--> y ∧ y --n--> z ⇒ x --m + n--> z *)
 val STEP_ADD_I = save_thm (
@@ -390,7 +389,7 @@ val LRTC_APPEND_CASES = store_thm (
 val _ = overload_on ("epsilon", ``[] :'b Action list``);
 
 val _ = Unicode.unicode_version { u = UTF8.chr 0x03B5, tmnm = "epsilon"};
-val _ = TeX_notation { hol = UTF8.chr 0x03B5,
+val _ = TeX_notation { hol = "epsilon",
 		       TeX = ("\\ensuremath{\\epsilon}", 1) };
 
 val TRACE_def = Define `TRACE = LRTC TRANS`;
@@ -407,38 +406,59 @@ in
 val TRACE_rules = save_thm (
    "TRACE_rules", trans LRTC_RULES);
 
+(* |- ∀x m y. x --m--> y ⇒ ∀n z. y --n--> z ⇒ x --m ++ n--> z *)
 val TRACE_trans = save_thm (
    "TRACE_trans", trans LRTC_LRTC);
 
+(* |- ∀P.
+     (∀x. P x ε x) ∧ (∀x h y t z. x --h--> y ∧ P y t z ⇒ P x (h::t) z) ⇒
+     ∀x l y. x --l--> y ⇒ P x l y *)
 val TRACE_ind = save_thm (
    "TRACE_ind", trans LRTC_INDUCT);
 
+(* |- ∀P.
+     (∀x. P x ε x) ∧
+     (∀x h y t z. x --h--> y ∧ y --t--> z ∧ P y t z ⇒ P x (h::t) z) ⇒
+     ∀x l y. x --l--> y ⇒ P x l y *)
 val TRACE_strongind = save_thm (
    "TRACE_strongind", trans LRTC_STRONG_INDUCT);
 
+(* |- ∀x l y.
+     x --l--> y ⇔
+     if NULL l then x = y else ∃u. x --HD l--> u ∧ u --TL l--> y *)
 val TRACE_cases1 = save_thm (
    "TRACE_cases1", trans LRTC_CASES1);
 
+(* |- ∀x l y.
+     x --l--> y ⇔
+     if NULL l then x = y else ∃u. x --FRONT l--> u ∧ u --LAST l--> y *)
 val TRACE_cases2 = save_thm (
    "TRACE_cases2", trans LRTC_CASES2);
 
+(* |- ∀x l y.
+     x --l--> y ⇔ ∃u l1 l2. x --l1--> u ∧ u --l2--> y ∧ (l = l1 ++ l2) *)
 val TRACE_cases_twice = save_thm (
    "TRACE_cases_twice", trans LRTC_CASES_LRTC_TWICE);
 
+(* |- ∀l1 l2 x y. x --l1 ++ l2--> y ⇔ ∃u. x --l1--> u ∧ u --l2--> y *)
 val TRACE_APPEND_cases = save_thm (
    "TRACE_APPEND_cases", trans LRTC_APPEND_CASES);
 
+(* |- ∀x y. x --ε--> y ⇔ (x = y) *)
 val TRACE_NIL = save_thm (
    "TRACE_NIL", trans LRTC_NIL);
 
+(* |- ∀x t y. x --t--> y ⇒ x --[t]--> y *)
 val TRACE1 = save_thm (
    "TRACE1", trans LRTC_SINGLE);
 
+(* |- ∀x t y. x --[t]--> y ⇔ x --t--> y *)
 val TRACE_ONE = save_thm (
    "TRACE_ONE", trans LRTC_ONE);
 end;
 
-val _ = overload_on ("Trans", ``TRACE``); (* share the pp with TRANS *)
+val [TRACE_rule0, TRACE_rule1] =
+    map save_thm (combine (["TRACE_rule0", "TRACE_rule1"], CONJUNCTS TRACE_rules));
 
 (* The `transitivity` of TRACE relation *)
 val TRACE_trans_applied = store_thm (
@@ -452,7 +472,7 @@ val TRACE_REFL = store_thm ("TRACE_REFL", ``!E. TRACE E [] E``,
 val TRACE2 = store_thm ("TRACE2",
   ``!E x E1 xs E'. TRANS E x E1 /\ TRACE E1 xs E' ==> TRACE E (x :: xs) E'``,
     rpt STRIP_TAC
- >> MATCH_MP_TAC (CONJUNCT2 TRACE_rules)
+ >> MATCH_MP_TAC TRACE_rule1
  >> Q.EXISTS_TAC `E1`
  >> ASM_REWRITE_TAC []);
 
@@ -484,12 +504,18 @@ val NO_LABEL_def = Define `
 
 val NO_LABEL_cases = store_thm (
    "NO_LABEL_cases",
-  ``!(x :'b Action) xs. NO_LABEL (x :: xs) ==> (x = tau) /\ NO_LABEL xs``,
+  ``!(x :'b Action) xs. NO_LABEL (x :: xs) = (x = tau) /\ NO_LABEL xs``,
     REWRITE_TAC [NO_LABEL_def]
- >> rpt GEN_TAC >> REWRITE_TAC [MEM]
- >> Cases_on `x` >> SIMP_TAC list_ss [Action_distinct_label, IS_LABEL_def]
- >> Q.EXISTS_TAC `L` >> DISJ1_TAC
- >> ACCEPT_TAC (REFL ``label (L :'b Label)``));
+ >> rpt GEN_TAC >> EQ_TAC (* 2 sub-goals here *)
+ >| [ (* goal 1 (of 2) *)
+      REWRITE_TAC [MEM] \\
+      Cases_on `x` >> SIMP_TAC list_ss [Action_distinct_label, IS_LABEL_def] \\
+      Q.EXISTS_TAC `x'` >> DISJ1_TAC \\
+      ACCEPT_TAC (REFL ``x' :'b Label``),
+      (* goal 2 (of 2) *)
+      REWRITE_TAC [MEM] \\
+      rpt STRIP_TAC >- rfs [Action_distinct_label] \\
+      METIS_TAC [] ]);
 
 val EPS_TRACE2 = Q.prove (
    `!E E'. EPS E E' ==> ?xs. TRACE E xs E' /\ NO_LABEL xs`,
@@ -525,7 +551,7 @@ val EPS_AND_TRACE = store_thm (
       RW_TAC std_ss [EPS_REFL],
       (* goal 2 (of 2) *)
       rpt STRIP_TAC \\
-      Q.PAT_X_ASSUM `TRACE E (h::xs) E'`
+      qpat_x_assum `TRACE E (h::xs) E'`
 	(ASSUME_TAC o (ONCE_REWRITE_RULE [TRACE_cases1])) \\
       FULL_SIMP_TAC list_ss [] \\
       RES_TAC \\
@@ -621,27 +647,27 @@ val WEAK_TRANS_AND_TRACE = store_thm (
  >| [ (* goal 1 (of 2) *)
       REWRITE_TAC [WEAK_TRANS] \\
       Q.EXISTS_TAC `E` >> REWRITE_TAC [EPS_REFL] \\
-      Q.PAT_X_ASSUM `TRACE E us E'` (ASSUME_TAC o (ONCE_REWRITE_RULE [TRACE_cases1])) \\
+      qpat_x_assum `TRACE E us E'` (ASSUME_TAC o (ONCE_REWRITE_RULE [TRACE_cases1])) \\
       REV_FULL_SIMP_TAC list_ss [] \\
       Know `HD us = tau`
       >- ( Cases_on `HD us` >- REWRITE_TAC [] \\
-	   Q.PAT_X_ASSUM `!l. ~MEM (label l) us` (ASSUME_TAC o (Q.SPEC `L`)) \\
-	   Q.PAT_X_ASSUM `HD us = label L` ((FULL_SIMP_TAC list_ss) o wrap o SYM) \\
+	   qpat_x_assum `!l. ~MEM (label l) us` (ASSUME_TAC o (Q.SPEC `x`)) \\
+	   qpat_x_assum `HD us = label x` ((FULL_SIMP_TAC list_ss) o wrap o SYM) \\
 	   PROVE_TAC [CONS, MEM] ) \\
       DISCH_TAC >> FULL_SIMP_TAC list_ss [] \\
       Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC [] \\
       REWRITE_TAC [EPS_AND_TRACE, NO_LABEL_def] \\
       Q.EXISTS_TAC `TL us` >> ASM_REWRITE_TAC [] \\
       CCONTR_TAC >> FULL_SIMP_TAC bool_ss [] \\
-      Q.PAT_X_ASSUM `!l. ~MEM (label l) us` (MP_TAC o (Q.SPEC `l`)) \\
+      qpat_x_assum `!l. ~MEM (label l) us` (MP_TAC o (Q.SPEC `l`)) \\
       Cases_on `us` >- FULL_SIMP_TAC list_ss [] \\
       REWRITE_TAC [MEM] \\
       FULL_SIMP_TAC list_ss [],
       (* goal 2 (of 2) *)
       REWRITE_TAC [WEAK_TRANS] \\
       IMP_RES_TAC UNIQUE_LABEL_def \\
-      Q.PAT_X_ASSUM `L1 ++ [label L] ++ L2 = us` ((FULL_SIMP_TAC std_ss) o wrap o SYM) \\
-      Q.PAT_X_ASSUM `TRACE E (L1 ++ [label L] ++ L2) E'`
+      qpat_x_assum `L1 ++ [label L] ++ L2 = us` ((FULL_SIMP_TAC std_ss) o wrap o SYM) \\
+      qpat_x_assum `TRACE E (L1 ++ [label L] ++ L2) E'`
 	(STRIP_ASSUME_TAC o (REWRITE_RULE [TRACE_APPEND_cases])) \\
       take [`u'`, `u`] \\
       IMP_RES_TAC TRACE_ONE >> ASM_REWRITE_TAC [] \\
@@ -655,4 +681,4 @@ val WEAK_TRANS_AND_TRACE = store_thm (
 val _ = export_theory ();
 val _ = html_theory "Trace";
 
-(* last updated: May 14, 2017 *)
+(* last updated: Oct 7, 2017 *)

@@ -149,7 +149,7 @@ fun CCS_TRANS_CONV tm =
 	      let val dl = strip_disj (rconcl thm);
 		  val actl = map (snd o dest_eq o hd o strip_conj o hd o strip_disj) dl;
 		  val actl_not = extr_acts actl L;
-		  val tau = mk_const ("tau", type_of (hd actl));
+		  val tau = mk_const ("NONE", type_of (hd actl));
 		  val U = mk_var ("u", type_of (hd actl));
 	      in
 		  if (null actl_not) then
@@ -200,7 +200,7 @@ fun CCS_TRANS_CONV tm =
 						       actl_not) dl);
 			  val dsjt = build_disj lp L;
 			  val (u, p) = hd lp;
-			  val tau = mk_const ("tau", type_of u);
+			  val tau = mk_const ("NONE", type_of u);
 		      in
 			  prove (``!u E. TRANS ^tm u E = ^dsjt``,
 (** PROOF BEGIN ***************************************************************)
@@ -357,7 +357,7 @@ fun CCS_TRANS_CONV tm =
 	  fun build_disj_tau _ [] = ``F``
 	    | build_disj_tau  p syncl = let
 		val (u, p') = hd syncl;
-		val tau = mk_const ("tau", type_of u);
+		val tau = mk_const ("NONE", type_of u);
 	    in
 		mk_disj (mk_conj (``u = ^tau``, ``E = ^(mk_par (p, p'))``),
 			 build_disj_tau p (tl syncl))
@@ -555,87 +555,8 @@ end; (* local *)
 (*		       Test cases for CCS_TRANS_CONV			      *)
 (*									      *)
 (******************************************************************************)
-(*
 
- 1. (ν a) (a.0 | `a.0)
-   CCS_TRANS_CONV ``(restr {name "a"}) (label (name "a")..nil || label (coname "a")..nil)``
-
-   |- ∀u E.
-     ν {name "a"} (label (name "a")..nil || label (coname "a")..nil) --u->
-     E ⇔ (u = τ) ∧ (E = ν {name "a"} (nil || nil))
-
- 2. a.0 | `a.0
-   CCS_TRANS_CONV
-	 ``par (prefix (label (name "a")) nil)
-	       (prefix (label (coname "a")) nil)``
-
-   |- ∀u E.
-     label (name "a")..nil || label (coname "a")..nil --u-> E ⇔
-     ((u = label (name "a")) ∧ (E = nil || label (coname "a")..nil) ∨
-      (u = label (coname "a")) ∧ (E = label (name "a")..nil || nil)) ∨
-     (u = τ) ∧ (E = nil || nil)
-
- 3. nil | nil
-   CCS_TRANS_CONV ``par nil nil``
-
-   |- ∀u E. nil || nil --u-> E ⇔ F
-
- 4. (ν a) (nil | nil)
-   CCS_TRANS_CONV ``restr { name "a" } (par nil nil)``
-
-   |- ∀u E. ν {name "a"} (nil || nil) --u-> E ⇔ F:
-
- 5. a.b.0 + b.a.0
-   CCS_TRANS_CONV ``label (name "a")..label (name "b")..nil +
-		    label (name "b")..label (name "a")..nil``
-
-   |- ∀u E''.
-     label (name "a")..label (name "b")..nil +
-     label (name "b")..label (name "a")..nil
-     --u->
-     E'' ⇔
-     (u = label (name "a")) ∧ (E'' = label (name "b")..nil) ∨
-     (u = label (name "b")) ∧ (E'' = label (name "a")..nil)
-
- 6. (nu a)(a.0|`a.0) | a.0
-   CCS_TRANS_CONV ``(restr {name "a"} (label (name "a")..nil || label (coname "a")..nil)) ||
-		    (label (name "a")..nil)``
-
-   |- ∀u E.
-     ν {name "a"} (label (name "a")..nil || label (coname "a")..nil) ||
-     label (name "a")..nil
-     --u->
-     E ⇔
-     (u = τ) ∧
-     (E = ν {name "a"} (nil || nil) || label (name "a")..nil) ∨
-     (u = label (name "a")) ∧
-     (E =
-      ν {name "a"} (label (name "a")..nil || label (coname "a")..nil) ||
-      nil)
-
- 7. CCS_TRANS_CONV
-	``rec "VM" (In "coin"..(In "ask-esp"..rec "VM1" (Out "esp-coffee"..var "VM") +
-				In "ask-am"..rec "VM2" (Out "am-coffee"..var "VM")))``
-
-   |- ∀u E.
-     rec "VM1"
-       (Out "esp-coffee"
-	..
-	rec "VM"
-	  (In "coin"
-	   ..
-	   (In "ask-esp"..rec "VM1" (Out "esp-coffee"..var "VM") +
-	    In "ask-am"..rec "VM2" (Out "am-coffee"..var "VM"))))
-     --u->
-     E ⇔
-     (u = Out "esp-coffee") ∧
-     (E =
-      rec "VM"
-	(In "coin"
-	 ..
-	 (In "ask-esp"..rec "VM1" (Out "esp-coffee"..var "VM") +
-	  In "ask-am"..rec "VM2" (Out "am-coffee"..var "VM"))))
- *)
+(* moved to selftest.sml *)
 
 end (* struct *)
 

@@ -563,7 +563,8 @@ val _ =
               fixity = Suffix 2100,
               paren_style = OnlyIfNecessary,
               pp_elements = [TOK (UnicodeChars.sup_minus ^ UnicodeChars.sup_1)],
-              term_name = "inv"}
+              term_name = "realinv"}
+val _ = overload_on("realinv", ``inv``);
 
 (*---------------------------------------------------------------------------
        Overload arithmetic operations.

@@ -22,15 +22,17 @@ fun gen_ml_compile_file {functionname, mlfilename, objfilename, execname} k =
     fun p s = TextIO.output(out, s ^ "\n")
   in
     p ("PolyML.print_depth ~1;");
+    p ("PolyML.shareCommonData PolyML.rootFunction;");
     p ("PolyML.export(\"" ^ String.toString objfilename ^ "\", " ^
        functionname ^");");
-    p ("Systeml.systeml ([\"cc\", \"-o\", \"" ^ execname ^ "\", \"" ^
+    p ("val _ = BuildHeap_EXE_Compile.res := "^
+       "Systeml.systeml ([\"cc\", \"-o\", \"" ^ execname ^ "\", \"" ^
        String.toString objfilename ^ "\"] @ Systeml.POLY_LDFLAGS);");
     TextIO.closeOut out;
     k ()
   end
 
-
+val res = ref OS.Process.success
 
 fun exe_compile {fnname: string, output_exe: string} =
   let
@@ -45,7 +47,8 @@ fun exe_compile {fnname: string, output_exe: string} =
       withtemp_file {stem = "poly-mk" ^ output_stem, extension = "ML"}
                     (withobj_and_ml obj)
   in
-    withtemp_file {stem = output_stem, extension = "o"} withobj
+    withtemp_file {stem = output_stem, extension = "o"} withobj ;
+    OS.Process.exit (!res)
   end
 
 end (* struct *)
