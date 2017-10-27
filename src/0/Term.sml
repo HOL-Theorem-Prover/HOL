@@ -200,7 +200,7 @@ val empty_varset = HOLset.empty var_compare
     Fv < Bv < Const < Comb < Abs
    ---------------------------------------------------------------------- *)
 
-fun fast_term_eq (t1:term) (t2:term) = Portable.pointer_eq (t1,t2)
+fun fast_term_eq (t1:term) (t2:term) = t1 = t2
 
 fun compare (p as (t1,t2)) =
     if fast_term_eq t1 t2 then EQUAL else

@@ -253,10 +253,10 @@ datatype lambda =
    | LAMB of term * term
 
 fun dest_term M =
-   COMB (dest_comb M) handle HOL_ERR _ =>
-   LAMB (dest_abs M) handle HOL_ERR _ =>
-   VAR (dest_var M) handle HOL_ERR _ =>
-   CONST (dest_thy_const M)
+  if is_var M then VAR (dest_var M)
+  else if is_const M then CONST (dest_thy_const M)
+  else if is_comb M then COMB (dest_comb M)
+  else LAMB (dest_abs M)
 
 (*---------------------------------------------------------------------------*
  * Used to implement natural deduction style discharging of hypotheses. All  *
@@ -768,6 +768,7 @@ val sort_vars =
   Portable.pull_prefix o map (fn n => equal n o #1 o dest_var)
 
 fun identical tm1 tm2 =
+  fast_term_eq tm1 tm2 orelse
   case (dest_term tm1, dest_term tm2) of
       (VAR p1, VAR p2) => p1 = p2
     | (CONST c1, CONST c2) => c1 = c2
