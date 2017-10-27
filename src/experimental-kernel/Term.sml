@@ -1054,6 +1054,24 @@ fun prim_mk_imp t1 t2 = App(App(imp, t1), t2)
 
 (* val prim_mk_imp = (fn t1 => Profile.profile "prim_mk_imp" (prim_mk_imp t1))*)
 
+(* ----------------------------------------------------------------------
+    dest_term and the lambda type
+   ---------------------------------------------------------------------- *)
+
+datatype lambda =
+     VAR of string * hol_type
+   | CONST of {Name: string, Thy: string, Ty: hol_type}
+   | COMB of term * term
+   | LAMB of term * term
+
+fun dest_term M =
+  case M of
+      Const _ => CONST (dest_thy_const M)
+    | Var p => VAR p
+    | App p => COMB p
+    | Abs p => LAMB p
+
+fun identical t1 t2 = t1 = t2
 
 (*---------------------------------------------------------------------------*
  *  Raw syntax prettyprinter for terms.                                      *
