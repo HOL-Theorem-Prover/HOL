@@ -95,7 +95,6 @@ src/num/arith/Manual/arith.pdf
 src/num/arith/Manual/arith.ps
 src/num/termination/numheap
 src/num/termination/numheap.o
-src/pair/help
 src/parse/base_lexer.sml
 src/quotient/examples/*/*.html
 src/quotient/examples/*/*.lst
