@@ -158,6 +158,7 @@ fun create_heap diag qp findMod (objs, outputheap) = let
                   handle e => die ("Loading "^obj^": "^General.exnMessage e)
 in
   app hload objs;
+  PolyML.shareCommonData PolyML.rootFunction;
   PolyML.SaveState.saveChild
     (outputheap, length (PolyML.SaveState.showHierarchy()));
   p ("Exported "^outputheap^"\n");
