@@ -19,7 +19,7 @@ val isValidAlterA_def =
           /\ (!s a d. (s ∈ A.states) /\ ((a, d) ∈ (A.trans s))
                  ==> (d ⊆ A.states ∧ a ⊆ A.alphabet))`;
 
-(* An alternating automata is weak if there is a partial order po on
+(* An alternating automata is very weak if there is a partial order po on
    the states s.t. for every state s all states appearing in trans(s)
    are lower or equal to s
 *)
@@ -328,10 +328,18 @@ val BRANCH_SUFF_LEMM = store_thm
        )
   );
 
-(*TODO rewrite using different reach rel*)
-
 (* reachable states *)
 
+val oneStep_def = Define`
+  oneStep aut = \x y. ?a qs. (a,qs) ∈ aut.trans x ∧ y ∈ qs ∧ x ∈ aut.states`;
+
+val reachRel_def = Define`
+  reachRel aut = (oneStep aut)^*`;
+
+val reachRelFromSet_def = Define`
+  reachRelFromSet aut s = { y | ?x. reachRel aut x y ∧ x ∈ s }`;
+
+(*TODO rewrite using different reach rel*)
 
 (* val nStepReachable_def = Define` *)
 (*    (nStepReachable trans init 0 = init) *)

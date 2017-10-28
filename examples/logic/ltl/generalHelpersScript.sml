@@ -335,6 +335,12 @@ val FIND_LEMM2 = store_thm
    >> fs[]
   );
 
+(* val FLAT_LEMM = store_thm *)
+(*   ("FLAT_LEMM", *)
+(*    ``!x ls. MEM x (FLAT ls) ==> ?l. MEM l ls ∧ MEM x l``, *)
+(*    Induct_on `ls` >> fs[FLAT,MEM] >> metis_tac[] *)
+(*   ); *)
+
 val PSUBSET_WF = store_thm
  ("PSUBSET_WF",
   ``!d. FINITE d ==> WF (\s t. s ⊂ t ∧ s ⊆ d ∧ t ⊆ d)``,

@@ -302,37 +302,28 @@ val REDUCE_TRANS_CORRECT = store_thm
   Remove unreachable states
 *)
 
-val oneStep_def = Define`
-  oneStep aut = \x y. ?a qs. (a,qs) ∈ aut.trans x ∧ y ∈ qs ∧ x ∈ aut.states`;
-
-val reachRel_def = Define`
-  reachRel aut = (oneStep aut)^*`;
-
-val reachRelFromSet_def = Define`
-  reachRelFromSet aut s = { y | ?x. reachRel aut x y ∧ x ∈ s }`;
-
 val removeStatesSimpl_def = Define`
-  removeStatesSimpl (ALTER_A s i f a t) =
+removeStatesSimpl (ALTER_A s i f a t) =
             (ALTER_A
                  (s ∩ reachRelFromSet (ALTER_A s i f a t) (BIGUNION i))
                  i f a t)`;
 
 val REACHREL_LEMM = store_thm
-  ("REACHREL_LEMM",
-   ``!x f qs. (x ∈ reachRelFromSet (ltl2waa f) qs) ∧ (qs ⊆ tempSubForms f)
-        ==> (x ∈ tempSubForms f)``,
-   simp[reachRelFromSet_def,reachRel_def]
-   >> `!f x y. (oneStep (ltl2waa f))^* x y
-        ==> (!qs. x ∈ qs ∧ (qs ⊆ tempSubForms f)
-                  ==> y ∈ tempSubForms f)` suffices_by metis_tac[]
-   >> gen_tac >> HO_MATCH_MP_TAC RTC_INDUCT >> rpt strip_tac >> fs[]
+                        ("REACHREL_LEMM",
+``!x f qs. (x ∈ reachRelFromSet (ltl2waa f) qs) ∧ (qs ⊆ tempSubForms f)
+                        ==> (x ∈ tempSubForms f)``,
+simp[reachRelFromSet_def,reachRel_def]
+    >> `!f x y. (oneStep (ltl2waa f))^* x y
+                        ==> (!qs. x ∈ qs ∧ (qs ⊆ tempSubForms f)
+                                  ==> y ∈ tempSubForms f)` suffices_by metis_tac[]
+    >> gen_tac >> HO_MATCH_MP_TAC RTC_INDUCT >> rpt strip_tac >> fs[]
     >- metis_tac[SUBSET_DEF]
     >- (first_x_assum (qspec_then `tempSubForms f` mp_tac) >> simp[]
-        >> rpt strip_tac >> fs[oneStep_def,ltl2waa_def,ltl2waa_free_alph_def]
-        >> `(x',x) ∈ TSF` by metis_tac[TRANS_REACHES_SUBFORMS]
-        >> metis_tac[TSF_def,TSF_TRANS_LEMM,transitive_def,IN_DEF]
+                      >> rpt strip_tac >> fs[oneStep_def,ltl2waa_def,ltl2waa_free_alph_def]
+                      >> `(x',x) ∈ TSF` by metis_tac[TRANS_REACHES_SUBFORMS]
+                      >> metis_tac[TSF_def,TSF_TRANS_LEMM,transitive_def,IN_DEF]
        )
-  );
+                        );
 
 val REDUCE_STATE_CORRECT = store_thm
   ("REDUCE_STATE_CORRECT",

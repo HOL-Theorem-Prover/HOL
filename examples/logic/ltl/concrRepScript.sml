@@ -146,7 +146,8 @@ val ADDFRML_LEMM2 = store_thm
   ("ADDFRML_LEMM2",
    ``!a f. wfg a.graph ==>
        (set (autoStates a) ⊆ set (autoStates (addFrmlToAut a f))
-      ∧ wfg (addFrmlToAut a f).graph)``,
+      ∧ wfg (addFrmlToAut a f).graph
+      ∧ (a.init = (addFrmlToAut a f).init))``,
    simp[SUBSET_DEF] >> rpt strip_tac >> Cases_on `inAuto a f`
    >> Cases_on `a`
     >- (Cases_on `f` >> simp[addFrmlToAut_def])
@@ -166,6 +167,10 @@ val ADDFRML_LEMM2 = store_thm
        )
     >- (Cases_on `f` >> simp[addFrmlToAut_def]
         >> fs[wfg_def])
+    >- (Cases_on `f` >> simp[addFrmlToAut_def]
+        >> fs[])
+    >- (Cases_on `f` >> simp[addFrmlToAut_def]
+        >> fs[])
     >- (Cases_on `f` >> simp[addFrmlToAut_def]
         >> fs[])
   );
@@ -201,7 +206,8 @@ val ADDFRML_FOLDR_LEMM = store_thm
    ``!a fs. wfg a.graph ==>
       (set (autoStates a) ∪ set fs =
          set (autoStates (FOLDR (\f a. addFrmlToAut a f) a fs))
-         ∧ wfg (FOLDR (\f a. addFrmlToAut a f) a fs).graph)``,
+         ∧ wfg (FOLDR (\f a. addFrmlToAut a f) a fs).graph)
+         ∧ (a.init = (FOLDR (\f a. addFrmlToAut a f) a fs).init)``,
    gen_tac >> Induct_on `fs` >> rpt strip_tac
    >> fs[FOLDR]
    >- (`set (autoStates (addFrmlToAut (FOLDR (λf a. addFrmlToAut a f) a fs) h))
@@ -213,6 +219,7 @@ val ADDFRML_FOLDR_LEMM = store_thm
        >> fs[INSERT_DEF,UNION_DEF] >> simp[SET_EQ_SUBSET,SUBSET_DEF]
        >> rpt strip_tac >> metis_tac[]
       )
+     >- (metis_tac[ADDFRML_LEMM2])
      >- (metis_tac[ADDFRML_LEMM2])
   );
 
@@ -282,7 +289,8 @@ val ADDEDGE_LEMM2 = store_thm
   ("ADDEDGE_LEMM2",
    ``!a f e. wfg a.graph ∧ inAuto a f
         ==> (?a2. (addEdgeToAut f e a = SOME a2) ∧ wfg a2.graph
-          ∧ (a.graph.nodeInfo = a2.graph.nodeInfo))``,
+          ∧ (a.graph.nodeInfo = a2.graph.nodeInfo)
+          ∧ (a.init = a2.init))``,
    rpt strip_tac >> Cases_on `e` >> Cases_on `a` >> fs[addEdgeToAut_def]
    >> rw[IS_SOME_EXISTS] >> fs[inAuto_def,autoStates_def,MEM_MAP]
    >> simp[findNode_def]
@@ -322,7 +330,8 @@ val ADDEDGE_LEMM2 = store_thm
        >> `!qs. (!lab x. MEM (lab,x) qs ==> ?h. MEM (x,h) (toAList g.nodeInfo))
              ==> ?m. (FOLDR addSingleEdge a_init qs = SOME m)
                    ∧ (g.nodeInfo = m.graph.nodeInfo)
-                   ∧ (wfg m.graph)` by (
+                   ∧ (wfg m.graph)
+                   ∧ (m.init = l')` by (
            Induct_on `qs` >> fs[]
             >- (qunabbrev_tac `a_init` >> simp[])
             >- (rpt strip_tac
@@ -330,10 +339,12 @@ val ADDEDGE_LEMM2 = store_thm
                     by metis_tac[]
                 >> `∃m. (FOLDR addSingleEdge a_init qs = SOME m)
                       ∧ (g.nodeInfo = m.graph.nodeInfo)
-                      ∧ (wfg m.graph)` by metis_tac[]
+                      ∧ (wfg m.graph)
+                      ∧ (m.init = l')` by metis_tac[]
                 >> `?m2. (addSingleEdge h (SOME m) = SOME m2)
                        ∧ (g.nodeInfo = m2.graph.nodeInfo)
-                       ∧ (wfg m2.graph)` suffices_by fs[]
+                       ∧ (wfg m2.graph)
+                       ∧ (m2.init = l')` suffices_by fs[]
                 >> qunabbrev_tac `addSingleEdge` >> Cases_on `h`
                 >> simp[]
                 >> `?nG. addEdge nId (q,r) m.graph = SOME nG` by (
