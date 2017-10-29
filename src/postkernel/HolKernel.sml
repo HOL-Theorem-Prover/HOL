@@ -755,14 +755,4 @@ end (* local *)
 val sort_vars =
   Portable.pull_prefix o map (fn n => equal n o #1 o dest_var)
 
-fun identical tm1 tm2 =
-  case (dest_term tm1, dest_term tm2) of
-      (VAR p1, VAR p2) => p1 = p2
-    | (CONST c1, CONST c2) => c1 = c2
-    | (COMB(t11,t12), COMB(t21,t22)) =>
-        identical t11 t21 andalso identical t12 t22
-    | (LAMB(bv1,bod1), LAMB(bv2,bod2)) =>
-        identical bv1 bv2 andalso identical bod1 bod2
-    | _ => false
-
 end
