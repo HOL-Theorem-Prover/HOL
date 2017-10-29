@@ -2,7 +2,7 @@ signature FinalTerm =
 sig
 
   type term
-  type hol_type
+  eqtype hol_type
   type ('a,'b)subst = ('a,'b)Lib.subst
   type 'a set       = 'a HOLset.set
 
@@ -98,6 +98,14 @@ sig
   (* printed theory functionality *)
   val read_raw : term vector -> string -> term
   val write_raw : (term -> int) -> term -> string
+
+  datatype lambda =
+          VAR of string * hol_type
+        | CONST of {Name : string, Thy : string, Ty : hol_type}
+        | COMB of term * term
+        | LAMB of term * term
+  val dest_term : term -> lambda
+  val identical : term -> term -> bool
 
 
 end

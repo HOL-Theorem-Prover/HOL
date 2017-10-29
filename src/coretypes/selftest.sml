@@ -1,9 +1,23 @@
-open HolKernel Parse boolTheory boolLib pairTheory
-
-open testutils
+open HolKernel Parse boolLib testutils
+open pairTheory sumTheory optionTheory optionSyntax
 
 val _ = set_trace "Unicode" 0
 
+(* testing for sums *)
+val _ = tpp "case s of INL b => b | INR c => ~c"
+
+(* testing for options *)
+val alpha_option_ty = mk_option alpha
+val alphanone_t = mk_thy_const{Thy = "option", Name = "NONE", Ty = alpha_option_ty}
+
+val _ = tprint "dest_none returns unwrapped type"
+val ty = dest_none alphanone_t
+val _ = if Type.compare(ty, alpha) = EQUAL then OK()
+        else die "FAILED!"
+
+val _ = tpp "case opt of NONE => T | SOME b => b"
+
+(* testing for pairs *)
 val die = fn () => die "FAILED!\n"
 fun sdie s = testutils.die ("FAILED!\n  "^s^"\n")
 

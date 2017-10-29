@@ -913,4 +913,4 @@ val _ = adjoin_to_theory
 
 val _ = export_theory();
 
-val _ = export_theory_as_docfiles (Path.concat (Path.parentArc, "help/thms"))
+val _ = export_theory_as_docfiles "pair-help/thms"
