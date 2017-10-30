@@ -601,21 +601,21 @@ val IN_LST_TO_BAG = store_thm
    >- (rpt strip_tac >> simp[list_to_bag_def] >> metis_tac[])
  );
 
-val expandAuto_def = tDefine "expandAuto"
- `(expandAuto aut [] = SOME aut)
- ∧ (expandAuto (concrAA g init aP) (f::fs)  =
-     let a1 = addFrmlToAut (concrAA g init aP) f
+val expandGraph_def = tDefine "expandGraph"
+ `(expandGraph g [] = SOME g)
+ ∧ (expandGraph g (f::fs)  =
+     let g1 = addFrmlToGraph g f
      in let trans = trans_concr f
      in let allSucs = FOLDR (\e pr. e.sucs ++ pr) [] trans
-     in let a2 = FOLDR (\p g. addFrmlToAut g p) a1 allSucs
-     in let a3 =
+     in let g2 = FOLDR (\p g. addFrmlToGraph g p) g1 allSucs
+     in let g3 =
             FOLDR
-                (\e a_opt. monad_bind a_opt (addEdgeToAut f e))
-                (SOME a2) trans
-     in let restNodes = FILTER (\s. ~(inAuto a1 s)) allSucs
-     in case a3 of
+                (\e g_opt. monad_bind g_opt (addEdgeToGraph f e))
+                (SOME g2) trans
+     in let restNodes = FILTER (\s. ~(MEM s (graphStates g1))) allSucs
+     in case g3 of
          | NONE => NONE
-         | SOME aut => expandAuto aut (restNodes++fs))`
+         | SOME g => expandGraph g (restNodes++fs))`
   (WF_REL_TAC `inv_image
                (mlt1 (\f1 f2. f1 ∈ tempSubForms f2 ∧ ~(f1 = f2)))
                (list_to_bag o SND)`
@@ -625,7 +625,7 @@ val expandAuto_def = tDefine "expandAuto"
        >> qexists_tac `f`
        >> qabbrev_tac
            `newNodes = FILTER
-                       (λs. ¬inAuto (addFrmlToAut (concrAA g init aP) f) s)
+                        (λs. ~MEM s (graphStates (addFrmlToGraph g f)))
                         (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f))`
        >> qexists_tac `list_to_bag newNodes`
        >> qexists_tac `list_to_bag fs` >> fs[LST_TO_BAG_APPEND_UNION]
@@ -649,173 +649,129 @@ val expandAuto_def = tDefine "expandAuto"
       )
   );
 
-val EXP_AUTO_WFG_AND_SOME = store_thm
-  ("EXP_AUTO_WFG_AND_SOME",
-   ``!aut fs. wfg aut.graph
-        ==> (?aut2. (expandAuto aut fs = SOME aut2)
-              ∧ (wfg aut2.graph)
-              ∧ (set (autoStates aut) ⊆ set (autoStates aut2)))``,
-   HO_MATCH_MP_TAC (theorem "expandAuto_ind")
-   >> rpt strip_tac >> fs[expandAuto_def]
+val EXP_GRAPH_WFG_AND_SOME = store_thm
+  ("EXP_GRAPH_WFG_AND_SOME",
+   ``!g fs. wfg g
+        ==> (?g2. (expandGraph g fs = SOME g2)
+              ∧ (wfg g2)
+              ∧ (set (graphStates g) ⊆ set (graphStates g2)))``,
+   HO_MATCH_MP_TAC (theorem "expandGraph_ind")
+   >> rpt strip_tac >> fs[expandGraph_def]
    >> Q.HO_MATCH_ABBREV_TAC
-       `?aut2. ((case A of
+       `?g2. ((case A of
               | NONE => NONE
-              | SOME aut => (E aut)) = SOME aut2)
-          ∧ wfg aut2.graph
-          ∧ A0 ⊆ (A2 aut2)`
-   >> `wfg (addFrmlToAut (concrAA g init aP) f).graph` by (
-       Cases_on `inAuto (concrAA g init aP) f`
-       >> Cases_on `f` >> fs[addFrmlToAut_def]
-   )
-   >> `?aut. (A = SOME aut) ∧ wfg aut.graph
-       ∧ A0 ⊆ A2 aut` by (
+              | SOME g => (E g)) = SOME g2)
+          ∧ wfg g2
+          ∧ A0 ⊆ (A2 g2)`
+   >> `wfg (addFrmlToGraph g f)` by metis_tac[ADDFRML_WFG]
+   >> `?g. (A = SOME g) ∧ wfg g ∧ A0 ⊆ A2 g` by (
       qunabbrev_tac `A`
       >> `!ls fs. ?x.
-         (FOLDR (λe a_opt. monad_bind a_opt (addEdgeToAut f e))
+         (FOLDR (λe g_opt. monad_bind g_opt (addEdgeToGraph f e))
            (SOME
-                (FOLDR (λp g. addFrmlToAut g p)
-                       (addFrmlToAut (concrAA g init aP) f)
+                (FOLDR (λp g. addFrmlToGraph g p)
+                       (addFrmlToGraph g f)
                        fs)) ls = SOME x)
-         ∧ wfg x.graph ∧ inAuto x f
-         ∧ A0 ⊆ A2 x` by (
+         ∧ wfg x ∧ MEM f (graphStates x) ∧ A0 ⊆ A2 x` by (
        Induct_on `ls` >> fs[] >> rpt strip_tac
         >- metis_tac[ADDFRML_FOLDR_LEMM]
-        >- (`set (autoStates (addFrmlToAut (concrAA g init aP) f))
-              ⊆ set (autoStates
-                         (FOLDR (λp g. addFrmlToAut g p)
-                                (addFrmlToAut (concrAA g init aP) f) fs'))`
-                by metis_tac[ADDFRML_FOLDR_LEMM,SUBSET_UNION]
-             >> simp[inAuto_def]
-             >> `MEM f (autoStates (addFrmlToAut (concrAA g init aP) f))`
-                 suffices_by metis_tac[SUBSET_DEF]
-             >> metis_tac[inAuto_def,ADDFRML_LEMM]
-           )
+        >- metis_tac[ADDFRML_LEMM,SUBSET_DEF,ADDFRML_FOLDR_LEMM,SUBSET_UNION]
         >- (qunabbrev_tac `A0` >> qunabbrev_tac `A2` >> fs[]
-            >> `set (autoStates (concrAA g init aP))
-                 ⊆ set (autoStates (addFrmlToAut (concrAA g init aP) f))`
+            >> `set (graphStates g) ⊆ set (graphStates (addFrmlToGraph g f))`
                suffices_by (
                  rpt strip_tac
-                 >> `set (autoStates (addFrmlToAut (concrAA g init aP) f))
-                      ⊆ set
-                      (autoStates
-                           (FOLDR (λp g. addFrmlToAut g p)
-                                  (addFrmlToAut (concrAA g init aP) f) fs'))`
+                 >> `set (graphStates (addFrmlToGraph g f))
+                      ⊆ set (graphStates
+                                 (FOLDR (λp g. addFrmlToGraph g p)
+                                  (addFrmlToGraph g f) fs'))`
                     by metis_tac[ADDFRML_FOLDR_LEMM,SUBSET_UNION]
                  >> metis_tac[SUBSET_TRANS])
-            >> `(concrAA g init aP).graph = g`
-                suffices_by metis_tac[ADDFRML_LEMM2]
-            >> fs[]
+            >> metis_tac[ADDFRML_LEMM2,SET_EQ_SUBSET,UNION_SUBSET,SUBSET_DEF]
            )
         >- (simp[] >> Q.HO_MATCH_ABBREV_TAC `?x1. (?x2. P x1 x2) ∧ Q x1`
             >> `?x2 x1. P x1 x2 ∧ Q x1` suffices_by metis_tac[]
             >> qunabbrev_tac `P` >> qunabbrev_tac `Q`
             >> first_x_assum (qspec_then `fs'` mp_tac) >> rpt strip_tac
             >> simp[]
-            >> `∃a2. addEdgeToAut f h x = SOME a2 ∧ wfg a2.graph
-                  ∧ x.graph.nodeInfo = a2.graph.nodeInfo`
-                by metis_tac[ADDEDGE_LEMM2,IS_SOME_EXISTS]
-            >> simp[]
-            >> qunabbrev_tac `A2`
-            >> fs[inAuto_def] >> Cases_on `a2` >> Cases_on `x`
-            >> fs[autoStates_def]
+            >> `∃g2. addEdgeToGraph f h x = SOME g2 ∧ wfg g2
+                  ∧ x.nodeInfo = g2.nodeInfo`
+                by metis_tac[ADDEDGE_LEMM,IS_SOME_EXISTS]
+            >> simp[] >> qunabbrev_tac `A2` >> fs[graphStates_def]
            )
    )
    >> metis_tac[]
    )
-   >> first_x_assum (qspec_then `aut` mp_tac) >> simp[]
+   >> first_x_assum (qspec_then `g'` mp_tac) >> simp[]
    >> rpt strip_tac >> metis_tac[SUBSET_TRANS]
   );
 
-val EXP_AUTO_REACHABLE = store_thm
-  ("EXP_AUTO_REACHABLE",
-   ``!f aut ls.
-            (!a2.
+val EXP_GRAPH_REACHABLE = store_thm
+  ("EXP_GRAPH_REACHABLE",
+   ``!f g ls.
+            (!g2.
               (!x. MEM x ls
-                   ==> x ∈ reachRelFromSet (ltl2waa f) (set (autoStates aut)))
-            ∧ (!x. MEM x (autoStates aut)
+                   ==> x ∈ reachRelFromSet (ltl2waa f) (set (graphStates g)))
+            ∧ (!x. MEM x (graphStates g)
                    ==> x ∈ reachRelFromSet
                            (ltl2waa f) (BIGUNION (ltl2waa f).initial))
-            ∧ (set (autoStates aut) ⊆ tempSubForms f)
-            ∧ (expandAuto aut ls = SOME a2)
-            ∧ (wfg aut.graph)
-         ==> (!x. MEM x (autoStates a2)
+            ∧ (set (graphStates g) ⊆ tempSubForms f)
+            ∧ (expandGraph g ls = SOME g2)
+            ∧ (wfg g)
+         ==> (!x. MEM x (graphStates g2)
                   ==> ((x ∈ reachRelFromSet (ltl2waa f)
                              (BIGUNION (ltl2waa f).initial))
                     ∧ (x ∈ tempSubForms f))))``,
    gen_tac
-   >> HO_MATCH_MP_TAC (theorem "expandAuto_ind")
+   >> HO_MATCH_MP_TAC (theorem "expandGraph_ind")
    >> strip_tac >> strip_tac >> strip_tac >> strip_tac
    >> strip_tac >> strip_tac
     >- (strip_tac
-        >> `aut = a2` by fs[expandAuto_def]
+        >> `g = g2` by fs[expandGraph_def]
         >> rw[] >> metis_tac[MEM,SUBSET_DEF]
        )
-    >- (strip_tac >> strip_tac >> strip_tac >> strip_tac >> strip_tac >> fs[]
-        >> qabbrev_tac `addedNodesAut =
-            FOLDR (λp g. addFrmlToAut g p)
-                   (addFrmlToAut (concrAA g init aP) f')
+    >- (strip_tac >> strip_tac >> strip_tac >> fs[]
+        >> qabbrev_tac `addedNodesG =
+            FOLDR (λp g. addFrmlToGraph g p)
+                   (addFrmlToGraph g f')
                    (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f'))`
         >> `set (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f'))
-              ⊆ set (autoStates addedNodesAut)
-              ∧ (wfg addedNodesAut.graph)
-              ∧  set (autoStates (addFrmlToAut (concrAA g init aP) f'))
-                   ⊆ set (autoStates addedNodesAut)
-              ∧ inAuto addedNodesAut f'` by (
-             fs[] >> qunabbrev_tac `addedNodesAut`
-             >> `wfg (addFrmlToAut (concrAA g init aP) f').graph`
-                  by (`wfg (concrAA g init aP).graph`
-                         suffices_by metis_tac[ADDFRML_LEMM2]
-                       >> fs[])
+              ⊆ set (graphStates addedNodesG)
+              ∧ (wfg addedNodesG)
+              ∧  set (graphStates (addFrmlToGraph g f'))
+                   ⊆ set (graphStates addedNodesG)
+              ∧ MEM f' (graphStates addedNodesG)` by (
+             fs[] >> qunabbrev_tac `addedNodesG`
+             >> `wfg (addFrmlToGraph g f')` by metis_tac[ADDFRML_WFG]
              >> rpt strip_tac
-             >- metis_tac[ADDFRML_FOLDR_LEMM2]
-             >- metis_tac[ADDFRML_FOLDR_LEMM]
-             >- metis_tac[ADDFRML_FOLDR_LEMM,SUBSET_UNION]
-             >- (`inAuto (addFrmlToAut (concrAA g init aP) f') f'`
-                   by metis_tac[ADDFRML_LEMM]
-                 >> `set (autoStates (addFrmlToAut (concrAA g init aP) f'))
-                      ⊆ set (autoStates
-                            (FOLDR (λp g. addFrmlToAut g p)
-                               (addFrmlToAut (concrAA g init aP) f')
-                               (FOLDR (λe pr. e.sucs ⧺ pr)
-                                      [] (trans_concr f'))))`
-                    by metis_tac[ADDFRML_FOLDR_LEMM,SUBSET_UNION]
-                 >> metis_tac[inAuto_def,SUBSET_DEF,MEM]
-                )
+             >> metis_tac[ADDFRML_FOLDR_LEMM,SUBSET_UNION,
+                          MEM,ADDFRML_LEMM,SUBSET_DEF]
          )
-        >> `!ls. ?aut.
-              (FOLDR (λe a_opt. monad_bind a_opt (addEdgeToAut f' e))
-              (SOME addedNodesAut) ls = SOME aut)
-              ∧ (wfg aut.graph)
-              ∧ (addedNodesAut.graph.nodeInfo = aut.graph.nodeInfo)
-              ∧ (addedNodesAut.init = aut.init)` by (
+        >> `!ls. ?g.
+              (FOLDR (λe g_opt. monad_bind g_opt (addEdgeToGraph f' e))
+              (SOME addedNodesG) ls = SOME g)
+              ∧ (wfg g)
+              ∧ (addedNodesG.nodeInfo = g.nodeInfo)` by (
              Induct_on `ls` >> fs[] >> rpt strip_tac
-             >> HO_MATCH_MP_TAC ADDEDGE_LEMM2 >> Cases_on `aut`
-             >> simp[inAuto_def,autoStates_def]
-             >> `MEM f' (MAP ((λl. l.frml) ∘ SND)
-                             (toAList (addedNodesAut.graph).nodeInfo))`
-                suffices_by fs[]
-             >> Cases_on `addedNodesAut` >> fs[inAuto_def,autoStates_def]
+             >> HO_MATCH_MP_TAC ADDEDGE_LEMM
+             >> fs[graphStates_def]
          )
         >> first_x_assum (qspec_then `trans_concr f'` mp_tac) >> strip_tac
-        >> first_x_assum (qspec_then `aut` mp_tac) >> simp[] >> strip_tac
-        >> first_x_assum (qspec_then `a2` mp_tac) >> simp[]
+        >> first_x_assum (qspec_then `g'` mp_tac) >> simp[] >> strip_tac
+        >> first_x_assum (qspec_then `g2` mp_tac) >> simp[]
         >> Q.HO_MATCH_ABBREV_TAC `(A ==> B) ==> C`
         >> `B ==> C` by (
              qunabbrev_tac `B` >> qunabbrev_tac `C` >> metis_tac[]
          )
         >> `A` suffices_by fs[]
         >> qunabbrev_tac `A` >> rpt strip_tac
-        >- (`inAuto aut f'` by (
-              Cases_on `addedNodesAut` >> Cases_on `aut`
-              >> fs[inAuto_def,autoStates_def])
+        >- (`MEM f' (graphStates g')` by fs[graphStates_def]
             >> `reachRel (ltl2waa f) f' x'` suffices_by (
                   simp[reachRelFromSet_def] >> metis_tac[inAuto_def]
             )
             >> fs[MEM_FILTER]
             >> `!ls. MEM x' (FOLDR (λe pr. e.sucs ++ pr) [] ls)
-                  ==> ?t. (MEM t ls) ∧ (MEM x' t.sucs)` by (
-               Induct_on `ls` >> fs[] >> rpt strip_tac
-               >> metis_tac[])
+                  ==> ?t. (MEM t ls) ∧ (MEM x' t.sucs)`
+               by metis_tac[FOLDR_LEMM6]
             >> first_x_assum (qspec_then `trans_concr f'` mp_tac) >> simp[]
             >> rpt strip_tac >> simp[reachRel_def]
             >> `oneStep (ltl2waa f) f' x'` suffices_by fs[]
@@ -829,72 +785,54 @@ val EXP_AUTO_REACHABLE = store_thm
             >> Cases_on `concr2AbstractEdge (props f) t`
             >> qexists_tac `q` >> qexists_tac `r` >> simp[]
             >> Cases_on `t` >> fs[concr2AbstractEdge_def]
-            >> `f' ∈
-                  reachRelFromSet (ltl2waa f)
-                  (set (autoStates (concrAA g init aP)))` by metis_tac[]
+            >> `f' ∈ reachRelFromSet (ltl2waa f) (set (graphStates g))`
+               by metis_tac[]
             >> metis_tac[REACHREL_LEMM]
            )
-        >- (`x' ∈
-               reachRelFromSet (ltl2waa f)
-               (set (autoStates (concrAA g init aP)))` by metis_tac[]
-            >> fs[reachRelFromSet_def] >> qexists_tac `x''`
-            >> simp[]
-            >> `MEM x'' (autoStates addedNodesAut)` by (
-               `wfg (concrAA g init aP).graph`
-                  suffices_by metis_tac[ADDFRML_LEMM2,inAuto_def,MEM,SUBSET_DEF]
-               >> fs[]
-            )
-            >> Cases_on `aut` >> Cases_on `addedNodesAut`
-            >> fs[autoStates_def] >> metis_tac[]
+        >- (`x' ∈ reachRelFromSet (ltl2waa f) (set (graphStates g))`
+               by metis_tac[]
+            >> fs[reachRelFromSet_def] >> qexists_tac `x''` >> simp[]
+            >> `MEM x'' (graphStates addedNodesG)`
+               by metis_tac[ADDFRML_LEMM2,SET_EQ_SUBSET,MEM,
+                            SUBSET_DEF,ADDFRML_WFG,SUBSET_UNION]
+            >> fs[graphStates_def] >> metis_tac[]
            )
-        >- (`MEM x' (autoStates addedNodesAut)` by (
-              POP_ASSUM mp_tac >> Cases_on `aut`
-              >> Cases_on `addedNodesAut` >> simp[autoStates_def,MEM_MAP]
-              >> fs[])
-            >> `set (autoStates addedNodesAut) =
-                 set (autoStates (addFrmlToAut (concrAA g init aP) f'))
+        >- (`MEM x' (graphStates addedNodesG)`
+              by metis_tac[graphStates_def,MEM_MAP]
+            >> `set (graphStates addedNodesG) =
+                 set (graphStates (addFrmlToGraph g f'))
                     ∪ set (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f'))` by (
-                  qunabbrev_tac `addedNodesAut`
-                  >> `wfg (addFrmlToAut (concrAA g init aP) f').graph`
-                     suffices_by metis_tac[ADDFRML_FOLDR_LEMM]
-                  >> `(concrAA g init aP).graph = g`
-                     suffices_by metis_tac[ADDFRML_LEMM2]
-                  >> fs[]
+                  qunabbrev_tac `addedNodesG`
+                  >> metis_tac[ADDFRML_FOLDR_LEMM,ADDFRML_WFG]
             )
-            >> `x' ∈ set (autoStates (addFrmlToAut (concrAA g init aP) f')) ∪
+            >> `x' ∈ set (graphStates (addFrmlToGraph g f')) ∪
                    set (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f'))`
                 by metis_tac[MEM]
             >> POP_ASSUM mp_tac >> rw[UNION_DEF]
-            >- (`x' ∈ set (autoStates (concrAA g init aP)) ∪ {f'}` by (
-                 `wfg (concrAA g init aP).graph`
-                   suffices_by metis_tac[ADDFRML_LEMM3,MEM]
-                  >> fs[]
-                )
+            >- (`x' ∈ set (graphStates g) ∪ {f'}`
+                 by metis_tac[ADDFRML_LEMM2,MEM]
                 >> POP_ASSUM mp_tac >> rw[UNION_DEF]
                  >- metis_tac[]
-                 >- (`f' ∈ reachRelFromSet (ltl2waa f)
-                            (set (autoStates (concrAA g init aP)))` by fs[]
+                 >- (`f' ∈ reachRelFromSet (ltl2waa f) (set (graphStates g))`
+                        by fs[]
                      >> fs[reachRelFromSet_def]
                      >> first_x_assum (qspec_then `x'` mp_tac) >> simp[]
                      >> rpt strip_tac >> metis_tac[RTC_RTC,reachRel_def]
                     )
                )
             >- (`!ls. MEM x' (FOLDR (λe pr. e.sucs ++ pr) [] ls)
-                   ==> ?t. (MEM t ls) ∧ (MEM x' t.sucs)` by (
-                     Induct_on `ls` >> fs[] >> rpt strip_tac
-                     >> metis_tac[]
-                )
+                   ==> ?t. (MEM t ls) ∧ (MEM x' t.sucs)`
+                   by metis_tac[FOLDR_LEMM6]
                 >> first_x_assum (qspec_then `trans_concr f'` mp_tac)
                 >> simp[] >> rpt strip_tac
                 >> `f' ∈
                       reachRelFromSet (ltl2waa f)
-                      (set (autoStates (concrAA g init aP)))` by fs[]
+                      (set (graphStates g))` by fs[]
                 >> `f' ∈ tempSubForms f` by metis_tac[REACHREL_LEMM]
                 >> fs[reachRelFromSet_def]
                 >> first_x_assum (qspec_then `x''` mp_tac) >> simp[]
                 >> rpt strip_tac >> qexists_tac `x'''` >> simp[]
-                >> rpt strip_tac >> fs[]
-                 >- (fs[reachRel_def]
+                >> (fs[reachRel_def]
                      >> `oneStep (ltl2waa f) f' x'` by (
                          `MEM (concr2AbstractEdge (props f) t)
                               (MAP (concr2AbstractEdge (props f))
@@ -912,44 +850,32 @@ val EXP_AUTO_REACHABLE = store_thm
                       )
                      >> metis_tac[RTC_SUBSET,RTC_RTC]
                     )
-                 >- metis_tac[]
                )
            )
-        >- (`set (autoStates aut) = set (autoStates addedNodesAut)` by (
-               Cases_on `aut` >> Cases_on `addedNodesAut`
-               >> simp[autoStates_def] >> fs[]
-            )
-            >> `set (autoStates addedNodesAut) =
-                 set (autoStates (addFrmlToAut (concrAA g init aP) f'))
+        >- (`set (graphStates g') = set (graphStates addedNodesG)`
+               by fs[graphStates_def]
+            >> `set (graphStates addedNodesG) =
+                 set (graphStates (addFrmlToGraph g f'))
                   ∪ set (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f'))` by (
-                 qunabbrev_tac `addedNodesAut`
-                 >> `wfg (addFrmlToAut (concrAA g init aP) f').graph`
-                     suffices_by metis_tac[ADDFRML_FOLDR_LEMM]
-                 >> `(concrAA g init aP).graph = g`
-                     suffices_by metis_tac[ADDFRML_LEMM2]
-                 >> fs[]
+                 qunabbrev_tac `addedNodesG`
+                 >> metis_tac[ADDFRML_FOLDR_LEMM,ADDFRML_WFG]
             )
             >> `f' ∈ tempSubForms f` by metis_tac[REACHREL_LEMM]
             >> `set (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f'))
                  ⊆ tempSubForms f` suffices_by (
                 fs[UNION_DEF,SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> fs[]
-                >> `MEM x' (autoStates (addFrmlToAut (concrAA g init aP) f'))
+                >> `MEM x' (graphStates (addFrmlToGraph g f'))
                     \/ MEM x' (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f'))`
                     by metis_tac[]
-                >- (`x' ∈ set (autoStates (concrAA g init aP)) ∪ {f'}` by (
-                       `(concrAA g init aP).graph = g`
-                         suffices_by metis_tac[ADDFRML_LEMM3]
-                       >> fs[]
-                    )
-                    >> POP_ASSUM mp_tac >> rw[UNION_DEF] >> metis_tac[]
-                   )
-                >- (`!ls. MEM x' (FOLDR (λe pr. e.sucs ++ pr) [] ls)
-                       ==> ?t. (MEM t ls) ∧ (MEM x' t.sucs)` by (
-                        Induct_on `ls` >> fs[] >> rpt strip_tac
-                        >> metis_tac[]
-                    )
-                    >> first_x_assum (qspec_then `trans_concr f'` mp_tac)
-                    >> simp[] >> rpt strip_tac
+                    >- (`x' ∈ set (graphStates g) ∪ {f'}`
+                          by metis_tac[ADDFRML_LEMM2]
+                        >> POP_ASSUM mp_tac >> rw[UNION_DEF] >> metis_tac[]
+                       )
+                    >- (`!ls. MEM x' (FOLDR (λe pr. e.sucs ++ pr) [] ls)
+                         ==> ?t. (MEM t ls) ∧ (MEM x' t.sucs)`
+                         by metis_tac[FOLDR_LEMM6]
+                        >> first_x_assum (qspec_then `trans_concr f'` mp_tac)
+                        >> simp[] >> rpt strip_tac
                    )
             )
             >> simp[SUBSET_DEF] >> rpt strip_tac
@@ -975,112 +901,77 @@ val EXP_AUTO_REACHABLE = store_thm
             >> `(x',f) ∈ TSF` by metis_tac[TSF_TRANS_LEMM,transitive_def]
             >> metis_tac[TSF_TRANS_LEMM,transitive_def,TSF_def,IN_DEF]
            )
-        >- fs[expandAuto_def]
+        >- fs[expandGraph_def]
        )
   );
 
 val EXP_AUTO_ONLY_REACHABLE = store_thm
   ("EXP_AUTO_ONLY_REACHABLE",
-   ``!f aut ls a2 x. (!x. MEM x (autoStates aut) ∧ ~ MEM x ls
+   ``!f g ls g2 x. (!x. MEM x (graphStates g) ∧ ~ MEM x ls
                             ==> (!y. oneStep (ltl2waa f) x y
-                                     ==> MEM y (autoStates aut)))
-                     ∧ (expandAuto aut ls = SOME a2)
+                                     ==> MEM y (graphStates g)))
+                     ∧ (expandGraph g ls = SOME g2)
                      ∧ (!x. MEM x ls ==> x ∈ tempSubForms f)
-                     ∧ (wfg aut.graph)
-                   ==> (!x. MEM x (autoStates a2)
+                     ∧ (wfg g)
+                   ==> (!x. MEM x (graphStates g2)
                           ==> (!y. oneStep (ltl2waa f) x y
-                                ==> (MEM y (autoStates a2) (* \/ MEM y ls *))))``,
-   gen_tac >> HO_MATCH_MP_TAC (theorem "expandAuto_ind") >> rpt strip_tac
+                                ==> (MEM y (graphStates g2))))``,
+   gen_tac >> HO_MATCH_MP_TAC (theorem "expandGraph_ind") >> rpt strip_tac
    >> fs[]
-    >- (fs[expandAuto_def] >> rw[] >> metis_tac[])
-    >- (qabbrev_tac `addedNodesAut =
-                 FOLDR (λp g. addFrmlToAut g p)
-                       (addFrmlToAut (concrAA g init aP) f')
+    >- (fs[expandGraph_def] >> rw[] >> metis_tac[])
+    >- (qabbrev_tac `addedNodesG =
+                 FOLDR (λp g. addFrmlToGraph g p)
+                       (addFrmlToGraph g f')
                        (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f'))`
-        >> `set (autoStates (addFrmlToAut (concrAA g init aP) f'))
+        >> `set (graphStates (addFrmlToGraph g f'))
             ∪ set (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f'))
-              = set (autoStates addedNodesAut)
-              ∧ (wfg addedNodesAut.graph)
-              (* ∧  set (autoStates (addFrmlToAut (concrAA g init aP) f')) *)
-              (*      ⊆ set (autoStates addedNodesAut) *)
-              ∧ inAuto addedNodesAut f'` by (
-             fs[] >> qunabbrev_tac `addedNodesAut`
-             >> `wfg (addFrmlToAut (concrAA g init aP) f').graph`
-                  by (`wfg (concrAA g init aP).graph`
-                         suffices_by metis_tac[ADDFRML_LEMM2]
-                       >> fs[])
+              = set (graphStates addedNodesG)
+              ∧ (wfg addedNodesG)
+              ∧ MEM f' (graphStates addedNodesG)` by (
+             fs[] >> qunabbrev_tac `addedNodesG`
+             >> `wfg (addFrmlToGraph g f')` by metis_tac[ADDFRML_WFG]
              >> rpt strip_tac
-             >- metis_tac[ADDFRML_FOLDR_LEMM]
-             >- metis_tac[ADDFRML_FOLDR_LEMM]
-             (* >- metis_tac[ADDFRML_FOLDR_LEMM,SUBSET_UNION] *)
-             >- (`inAuto (addFrmlToAut (concrAA g init aP) f') f'`
-                   by metis_tac[ADDFRML_LEMM]
-                 >> `set (autoStates (addFrmlToAut (concrAA g init aP) f'))
-                      ⊆ set (autoStates
-                            (FOLDR (λp g. addFrmlToAut g p)
-                               (addFrmlToAut (concrAA g init aP) f')
-                               (FOLDR (λe pr. e.sucs ⧺ pr)
-                                      [] (trans_concr f'))))`
-                    by metis_tac[ADDFRML_FOLDR_LEMM,SUBSET_UNION]
-                 >> metis_tac[inAuto_def,SUBSET_DEF,MEM]
-                )
+             >> metis_tac[ADDFRML_FOLDR_LEMM,SUBSET_UNION,
+                          MEM,ADDFRML_LEMM,SUBSET_DEF]
          )
-        >> `!ls. ?aut.
-              (FOLDR (λe a_opt. monad_bind a_opt (addEdgeToAut f' e))
-              (SOME addedNodesAut) ls = SOME aut)
-              ∧ (wfg aut.graph)
-              ∧ (addedNodesAut.graph.nodeInfo = aut.graph.nodeInfo)
-              ∧ (addedNodesAut.init = aut.init)` by (
+        >> `!ls. ?g.
+              (FOLDR (λe g_opt. monad_bind g_opt (addEdgeToGraph f' e))
+              (SOME addedNodesG) ls = SOME g)
+              ∧ (wfg g)
+              ∧ (addedNodesG.nodeInfo = g.nodeInfo)` by (
              Induct_on `ls` >> fs[] >> rpt strip_tac
-             >> HO_MATCH_MP_TAC ADDEDGE_LEMM2 >> Cases_on `aut`
-             >> simp[inAuto_def,autoStates_def]
-             >> `MEM f' (MAP ((λl. l.frml) ∘ SND)
-                             (toAList (addedNodesAut.graph).nodeInfo))`
-                suffices_by fs[]
-             >> Cases_on `addedNodesAut` >> fs[inAuto_def,autoStates_def]
+             >> HO_MATCH_MP_TAC ADDEDGE_LEMM >> fs[graphStates_def]
          )
         >> first_x_assum (qspec_then `trans_concr f'` mp_tac) >> strip_tac
-        >> first_x_assum (qspec_then `aut` mp_tac) >> simp[] >> strip_tac
-        >> first_x_assum (qspec_then `a2` mp_tac) >> simp[]
+        >> first_x_assum (qspec_then `g'` mp_tac) >> simp[] >> strip_tac
+        >> first_x_assum (qspec_then `g2` mp_tac) >> simp[]
         >> Q.HO_MATCH_ABBREV_TAC `(A ==> B) ==> C`
         >> `B ==> C` by (qunabbrev_tac `B` >> qunabbrev_tac `C` >> metis_tac[])
         >> `A` suffices_by metis_tac[] >> qunabbrev_tac `A`
         >> rpt strip_tac
-         >- (`MEM x' (autoStates addedNodesAut)` by (
-             Cases_on `aut` >> Cases_on `addedNodesAut` >> fs[autoStates_def]
-             )
-             >> `x' ∈ set (autoStates (addFrmlToAut (concrAA g init aP) f'))
+         >- (`MEM x' (graphStates addedNodesG)` by fs[graphStates_def]
+             >> `x' ∈ set (graphStates (addFrmlToGraph g f'))
                       ∪ set (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f'))`
                 by metis_tac[SET_EQ_SUBSET,SUBSET_DEF]
              >> POP_ASSUM mp_tac >> simp[]
-             >> `(MEM x' (autoStates (addFrmlToAut (concrAA g init aP) f')) ∨
+             >> `(MEM x' (graphStates (addFrmlToGraph g f')) ∨
                       (MEM x' (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f'))
-                   ∧ ~ MEM x'(autoStates (addFrmlToAut (concrAA g init aP) f'))))
-                      ⇒ MEM y' (autoStates aut)` suffices_by metis_tac[]
+                   ∧ ~ MEM x'(graphStates (addFrmlToGraph g f'))))
+                      ⇒ MEM y' (graphStates g')` suffices_by metis_tac[]
              >> rw[]
-              >- (`x' ∈ set (autoStates (concrAA g init aP)) ∪ {f'}` by (
-                   `wfg (concrAA g init aP).graph` by fs[]
-                   >> metis_tac[ADDFRML_LEMM3]
-                   )
+              >- (`x' ∈ set (graphStates g) ∪ {f'}` by metis_tac[ADDFRML_LEMM2]
                   >> POP_ASSUM mp_tac >> simp[]
-                  >> `((MEM x' (autoStates (concrAA g init aP)) ∧ ~(x' = f'))
+                  >> `((MEM x' (graphStates g) ∧ ~(x' = f'))
                         \/ (x' = f'))
-                          ==> MEM y' (autoStates aut)` suffices_by metis_tac[]
+                          ==> MEM y' (graphStates g')` suffices_by metis_tac[]
                   >> rw[]
-                   >- (`MEM y' (autoStates (concrAA g init aP))` by metis_tac[]
-                       >> `set (autoStates (concrAA g init aP))
-                              ⊆ set (autoStates addedNodesAut)` by (
-                           `set (autoStates (concrAA g init aP))
-                               ⊆ set (autoStates (addFrmlToAut
-                                                   (concrAA g init aP) f'))`
-                               by fs[ADDFRML_LEMM3]
-                           >> metis_tac[SET_EQ_SUBSET,SUBSET_TRANS,SUBSET_UNION]
-                       )
-                       >> `set (autoStates aut)
-                            = set (autoStates addedNodesAut)` by (
-                          Cases_on `aut` >> Cases_on `addedNodesAut`
-                          >> fs[autoStates_def]
-                       ) >> metis_tac[SUBSET_DEF]
+                   >- (`MEM y' (graphStates g)` by metis_tac[]
+                       >> `set (graphStates g) ⊆ set (graphStates addedNodesG)`
+                            by metis_tac[SET_EQ_SUBSET,SUBSET_TRANS,
+                                         SUBSET_UNION,ADDFRML_LEMM2]
+                       >> `set (graphStates g')
+                             = set (graphStates addedNodesG)` by fs[graphStates_def]
+                       >> metis_tac[SUBSET_DEF]
                       )
                    >- (`y' ∈ BIGUNION
                               (set
@@ -1097,16 +988,14 @@ val EXP_AUTO_ONLY_REACHABLE = store_thm
                           >> `(concrEdge l l0 l1).sucs = l1` by simp[]
                           >> metis_tac[]
                        )
-                       >> `MEM y' (autoStates addedNodesAut)` suffices_by (
-                          Cases_on `aut` >> Cases_on `addedNodesAut`
-                          >> simp[autoStates_def] >> fs[]
-                       )
+                       >> `MEM y' (graphStates addedNodesG)`
+                           suffices_by fs[graphStates_def]
                        >> metis_tac[SET_EQ_SUBSET,UNION_SUBSET,MEM,SUBSET_DEF]
                       )
                  )
               >- fs[MEM_FILTER,inAuto_def]
             )
-         >- fs[expandAuto_def]
+         >- fs[expandGraph_def]
          >- (fs[MEM_FILTER]
              >> `∃a. MEM a (trans_concr f') ∧ MEM x' a.sucs`
                  by metis_tac[FOLDR_LEMM6]
@@ -1129,235 +1018,235 @@ val EXP_AUTO_ONLY_REACHABLE = store_thm
        )
   );
 
-val EXP_AUTO_INIT = store_thm
-  ("EXP_AUTO_INIT",
-   ``!aut ls aut2. wfg aut.graph ∧ (expandAuto aut ls = SOME aut2)
-                        ==> (aut.init = aut2.init)``,
-   HO_MATCH_MP_TAC (theorem "expandAuto_ind") >> rpt strip_tac >> fs[]
-   >> fs[expandAuto_def]
-   >> Cases_on
-    `FOLDR (λe a_opt. monad_bind a_opt (addEdgeToAut f e))
-      (SOME
-           (FOLDR (λp g. addFrmlToAut g p)
-                  (addFrmlToAut (concrAA g init aP) f)
-                  (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f))))
-      (trans_concr f)` >> fs[]
-    >> qabbrev_tac
-        `A = (FOLDR (λp g. addFrmlToAut g p)
-               (addFrmlToAut (concrAA g init aP) f)
-               (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f)))`
-    >> `wfg A.graph ∧ (A.init = init)` by (
-       qunabbrev_tac `A`
-       >> `wfg (concrAA g init aP).graph` by simp[]
-       >> `wfg (addFrmlToAut (concrAA g init aP) f).graph`
-           by metis_tac[ADDFRML_LEMM2]
-       >> `(concrAA g init aP).init = init` by simp[]
-       >> `(addFrmlToAut (concrAA g init aP) f).init = init`
-           by metis_tac[ADDFRML_LEMM2]
-       >> metis_tac[ADDFRML_FOLDR_LEMM]
-   )
-    >> `!ls a. (FOLDR
-                 (λe a_opt. monad_bind a_opt (addEdgeToAut f e))
-                 (SOME A) ls = SOME a)
-         ==> ((a.init = A.init) ∧ (wfg a.graph) ∧ (inAuto a f))` by (
-       Induct_on `ls` >> fs[] >> rpt strip_tac
-       >- ()
+(* val EXP_AUTO_INIT = store_thm *)
+(*   ("EXP_AUTO_INIT", *)
+(*    ``!aut ls aut2. wfg aut.graph ∧ (expandAuto aut ls = SOME aut2) *)
+(*                         ==> (aut.init = aut2.init)``, *)
+(*    HO_MATCH_MP_TAC (theorem "expandAuto_ind") >> rpt strip_tac >> fs[] *)
+(*    >> fs[expandAuto_def] *)
+(*    >> Cases_on *)
+(*     `FOLDR (λe a_opt. monad_bind a_opt (addEdgeToAut f e)) *)
+(*       (SOME *)
+(*            (FOLDR (λp g. addFrmlToAut g p) *)
+(*                   (addFrmlToAut (concrAA g init aP) f) *)
+(*                   (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f)))) *)
+(*       (trans_concr f)` >> fs[] *)
+(*     >> qabbrev_tac *)
+(*         `A = (FOLDR (λp g. addFrmlToAut g p) *)
+(*                (addFrmlToAut (concrAA g init aP) f) *)
+(*                (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f)))` *)
+(*     >> `wfg A.graph ∧ (A.init = init)` by ( *)
+(*        qunabbrev_tac `A` *)
+(*        >> `wfg (concrAA g init aP).graph` by simp[] *)
+(*        >> `wfg (addFrmlToAut (concrAA g init aP) f).graph` *)
+(*            by metis_tac[ADDFRML_LEMM2] *)
+(*        >> `(concrAA g init aP).init = init` by simp[] *)
+(*        >> `(addFrmlToAut (concrAA g init aP) f).init = init` *)
+(*            by metis_tac[ADDFRML_LEMM2] *)
+(*        >> metis_tac[ADDFRML_FOLDR_LEMM] *)
+(*    ) *)
+(*     >> `!ls a. (FOLDR *)
+(*                  (λe a_opt. monad_bind a_opt (addEdgeToAut f e)) *)
+(*                  (SOME A) ls = SOME a) *)
+(*          ==> ((a.init = A.init) ∧ (wfg a.graph) ∧ (inAuto a f))` by ( *)
+(*        Induct_on `ls` >> fs[] >> rpt strip_tac *)
+(*        >- () *)
 
-)
+(* ) *)
 
-)
+(* ) *)
 
-    >> `!ls. (FOLDR (λe a_opt. monad_bind a_opt (addEdgeToAut f e))
-      (SOME
-           (FOLDR (λp g. addFrmlToAut g p)
-                  (addFrmlToAut (concrAA g init aP) f)
-                  (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f))))
-      ls = SOME x) ==> x.init = init` by (
-       Induct_on `ls` >> fs[]
-       >- (`(addFrmlToAut (concrAA g init aP) f).init = x.init`
-            suffices_by metis_tac[ADDFRML_FOLDR_LEMM]
+(*     >> `!ls. (FOLDR (λe a_opt. monad_bind a_opt (addEdgeToAut f e)) *)
+(*       (SOME *)
+(*            (FOLDR (λp g. addFrmlToAut g p) *)
+(*                   (addFrmlToAut (concrAA g init aP) f) *)
+(*                   (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f)))) *)
+(*       ls = SOME x) ==> x.init = init` by ( *)
+(*        Induct_on `ls` >> fs[] *)
+(*        >- (`(addFrmlToAut (concrAA g init aP) f).init = x.init` *)
+(*             suffices_by metis_tac[ADDFRML_FOLDR_LEMM] *)
 
-       >- (`!xs. (FOLDR (λp g. addFrmlToAut g p)
-                       (addFrmlToAut (concrAA g init aP) f)
-                       xs = x) ==> (x.init = init)` by (
-             Induct_on `xs` >> fs[addFrmlToAut_def]
+(*        >- (`!xs. (FOLDR (λp g. addFrmlToAut g p) *)
+(*                        (addFrmlToAut (concrAA g init aP) f) *)
+(*                        xs = x) ==> (x.init = init)` by ( *)
+(*              Induct_on `xs` >> fs[addFrmlToAut_def] *)
 
-)
+(* ) *)
 
-)
+(* ) *)
 
-)
-
-
-)
+(* ) *)
 
 
-
-val expandAuto_init_def = Define`
-  expandAuto_init φ =
-    let initForms = tempDNF_concr φ
-    in let a0 = concrAA empty [] (props_concr φ)
-    in let a1 = FOLDR (\s a. addFrmlToAut a s) a0 (FLAT initForms)
-    in let init_concr =
-           MAP
-            (λl. CAT_OPTIONS
-                 (MAP (\s. findNode (λ(_,l). l.frml = s) a1.graph) l))
-            initForms
-    in let a_init = a1 with <| init := init_concr |>
-    in expandAuto a_init (FLAT initForms)`;
-
-val EXP_WAA_CORRECT = store_thm
-  ("EXP_WAA_CORRECT",
-   ``!φ. case expandAuto_init φ of
-          | NONE => F
-          | SOME concrA =>
-            concr2AbstrAA concrA = removeStatesSimpl (ltl2waa φ)``,
-   rpt strip_tac >> Cases_on `expandAuto_init φ` >> fs[]
-    >- (fs[expandAuto_init_def] >> POP_ASSUM mp_tac
-        >> Q.HO_MATCH_ABBREV_TAC `(expandAuto aut fs = NONE) ==> F`
-        >> `wfg aut.graph`
-             suffices_by metis_tac[EXP_AUTO_WFG_AND_SOME,NOT_SOME_NONE]
-        >> qunabbrev_tac `aut` >> fs[]
-        >> `wfg (concrAA empty [] (props_concr φ)).graph`
-             suffices_by metis_tac[ADDFRML_FOLDR_LEMM]
-        >> simp[]
-       )
-    >- (Cases_on `x` >> simp[concr2AbstrAA_def]
-        >> simp[removeStatesSimpl_def,ltl2waa_def,ltl2waa_free_alph_def]
-        >> Q.HO_MATCH_ABBREV_TAC `STATES ∧ INIT ∧ FINAL ∧ ALPH ∧ TRANS`
-        >> `(INIT ==> STATES) ∧ INIT ∧ FINAL ∧ ALPH ∧ TRANS`
-             suffices_by fs[]
-        >> rpt strip_tac
-        >- (qunabbrev_tac `STATES` >> qunabbrev_tac `INIT`
-            >> qunabbrev_tac `TRANS` >> qunabbrev_tac `ALPH`
-            >> qunabbrev_tac `FINAL`
-            >> fs[expandAuto_init_def] >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
-            >> Q.HO_MATCH_ABBREV_TAC
-                 `expandAuto a0 (FLAT (tempDNF_concr φ))
-                   = SOME (concrAA g l l0) ==> A`
-            >> qunabbrev_tac `A` >> strip_tac >> simp[SET_EQ_SUBSET]
-            >> strip_tac >> strip_tac
-            >- (simp[SUBSET_DEF,concr2Abstr_states_def] >> rpt strip_tac
-               >> `!x. MEM x (FLAT (tempDNF_concr φ))
-                   ==> x ∈ reachRelFromSet (ltl2waa φ) (set (autoStates a0))`
-                     by (qunabbrev_tac `a0` >> rpt strip_tac
-                         >> simp[reachRelFromSet_def] >> qexists_tac `x''`
-                         >> simp[reachRel_def,RTC_REFL]
-                         >> Q.HO_MATCH_ABBREV_TAC
-                             `MEM q (autoStates (A with init := i))`
-                         >> `MEM q (autoStates A)` suffices_by (
-                              Cases_on `A`
-                              >> simp[autoStates_def,concrAA_fn_updates]
-                          )
-                         >> qunabbrev_tac `A`
-                         >> `wfg (concrAA empty [] (props_concr φ)).graph`
-                              suffices_by
-                                metis_tac[MEM,ADDFRML_FOLDR_LEMM2,SUBSET_DEF]
-                         >> simp[empty_is_wfg]
-                        )
-               >> `(∀x.
-                    MEM x (autoStates a0) ⇒
-                    x ∈ reachRelFromSet
-                            (ltl2waa φ)
-                            (BIGUNION (ltl2waa φ).initial))
-                   ∧ (set (autoStates a0) = set (FLAT (tempDNF_concr φ)))` by (
-                     qunabbrev_tac `a0` >> simp[reachRelFromSet_def]
-                     >> Q.HO_MATCH_ABBREV_TAC
-                         `(!x. MEM x (autoStates (A with init := i))
-                           ==> B x) ∧ C`
-                     >> rpt strip_tac
-                     >> simp[reachRelFromSet_def] >> POP_ASSUM mp_tac
-                     >> `autoStates A = autoStates (A with init := i)` by (
-                        Cases_on `A` >> simp[autoStates_def,concrAA_fn_updates]
-                    )
-                     >> strip_tac
-                     >> `set (autoStates A) =
-                         set (autoStates (concrAA empty [] (props_concr φ)))
-                          ∪ set (FLAT (tempDNF_concr φ))` by (
-                        qunabbrev_tac `A`
-                        >> `wfg (concrAA empty [] (props_concr φ)).graph`
-                            suffices_by metis_tac[ADDFRML_FOLDR_LEMM]
-                        >> simp[]
-                    )
-                    >> `set (autoStates (concrAA empty [] (props_concr φ)))
-                          = {}`
-                        by simp[autoStates_def,empty_def,toAList_def,foldi_def]
-                    >- (rename [`MEM q _`]
-                       >> `MEM q (autoStates A)` by metis_tac[]
-                       >> qunabbrev_tac `A`
-                       >> `MEM q (FLAT (tempDNF_concr φ))` by (
-                           `q ∈
-                             (set (autoStates
-                                    (concrAA empty [] (props_concr φ))) ∪
-                                      set (FLAT (tempDNF_concr φ)))`
-                              by metis_tac[MEM]
-                           >> POP_ASSUM mp_tac >> simp[]
-                         )
-                       >> qunabbrev_tac `B` >> rpt strip_tac >> fs[]
-                       >> qexists_tac `q` >> simp[reachRel_def,RTC_REFL]
-                       >> `?l. MEM l (tempDNF_concr φ) ∧ MEM q l`
-                           by metis_tac[MEM_FLAT]
-                       >> `(set l') ∈ set (MAP set (tempDNF_concr φ))`
-                           by (fs[MEM_MAP] >> metis_tac[])
-                       >> `(set l') ∈ tempDNF φ`
-                           by metis_tac[TEMPDNF_CONCR_LEMM]
-                       >> qexists_tac `set l'`
-                       >> fs[ltl2waa_def,ltl2waa_free_alph_def,initForms_def])
-                    >- (qunabbrev_tac `C` >> fs[] >> metis_tac[])
-                 )
-               >> `set (autoStates a0) ⊆ tempSubForms φ` by (
-                     simp[SUBSET_DEF] >> rpt strip_tac
-                     >> fs[MEM_FLAT]
-                     >> `set l' ∈ tempDNF φ`
-                        by metis_tac[MEM_MAP,TEMPDNF_CONCR_LEMM]
-                     >> metis_tac[TEMPDNF_TEMPSUBF,SUBSET_DEF,MEM]
-                 )
-               >> `expandAuto a0 (FLAT (tempDNF_concr φ)) =
-                     SOME (concrAA g l l0)` by (
-                     simp[SUBSET_DEF] >> rpt strip_tac
-                     >> fs[MEM_FLAT]
-                     >> `set l' ∈ tempDNF φ`
-                          by metis_tac[MEM_MAP,TEMPDNF_CONCR_LEMM]
-                     >> metis_tac[TEMPDNF_TEMPSUBF,SUBSET_DEF,MEM]
-                 )
-               >> `wfg a0.graph` by (
-                     qunabbrev_tac `a0` >> simp[]
-                     >> `wfg (concrAA empty [] (props_concr φ)).graph`
-                         suffices_by metis_tac[ADDFRML_FOLDR_LEMM] >> simp[]
-                 )
-               >> `MEM x (autoStates (concrAA g l l0))` by (
-                   simp[autoStates_def,MEM_MAP] >> qexists_tac `(n,x')`
-                   >> simp[] >> metis_tac[MEM_toAList]
-                 )
-               >> imp_res_tac EXP_AUTO_REACHABLE
-               >> fs[ltl2waa_def,ltl2waa_free_alph_def,initForms_def]
-               >> rw[]
-               )
-            >- (simp[SUBSET_DEF] >> rpt strip_tac
-                >> fs[reachRelFromSet_def,reachRel_def]
-                >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
-                >> `!x' x. (oneStep
-                             (ALTER_A (tempSubForms φ) (initForms φ) (finalForms φ)
-                                      (POW (props φ))
-                                      (trans (POW (props φ)))))^* x' x ⇒
-                       (x' ∈ s ⇒
-                       s ∈ initForms φ ⇒
-                       x ∈ concr2Abstr_states g)` suffices_by metis_tac[]
-                >> HO_MATCH_MP_TAC RTC_INDUCT >> rpt strip_tac
-                 >- ()
-               )
-           )
-        >- (qunabbrev_tac `STATES` >> qunabbrev_tac `INIT`
-            >> qunabbrev_tac `TRANS` >> qunabbrev_tac `ALPH`
-            >> qunabbrev_tac `FINAL`
-            >> simp[concr2Abstr_init_def,initForms_def,SET_EQ_SUBSET,SUBSET_DEF]
-            >> rpt strip_tac >> fs[MEM_MAP,expandAuto_init_def] >> rw[]
-            >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
-            >> Q.HO_MATCH_ABBREV_TAC
-                `(expandAuto (A with init := i) (FLAT (tempDNF_concr φ)))
-                    = (SOME a2) ==> B`
-            >- (
+(* ) *)
 
 
 
-)
+(* val expandAuto_init_def = Define` *)
+(*   expandAuto_init φ = *)
+(*     let initForms = tempDNF_concr φ *)
+(*     in let a0 = concrAA empty [] (props_concr φ) *)
+(*     in let a1 = FOLDR (\s a. addFrmlToAut a s) a0 (FLAT initForms) *)
+(*     in let init_concr = *)
+(*            MAP *)
+(*             (λl. CAT_OPTIONS *)
+(*                  (MAP (\s. findNode (λ(_,l). l.frml = s) a1.graph) l)) *)
+(*             initForms *)
+(*     in let a_init = a1 with <| init := init_concr |> *)
+(*     in expandAuto a_init (FLAT initForms)`; *)
+
+(* val EXP_WAA_CORRECT = store_thm *)
+(*   ("EXP_WAA_CORRECT", *)
+(*    ``!φ. case expandAuto_init φ of *)
+(*           | NONE => F *)
+(*           | SOME concrA => *)
+(*             concr2AbstrAA concrA = removeStatesSimpl (ltl2waa φ)``, *)
+(*    rpt strip_tac >> Cases_on `expandAuto_init φ` >> fs[] *)
+(*     >- (fs[expandAuto_init_def] >> POP_ASSUM mp_tac *)
+(*         >> Q.HO_MATCH_ABBREV_TAC `(expandAuto aut fs = NONE) ==> F` *)
+(*         >> `wfg aut.graph` *)
+(*              suffices_by metis_tac[EXP_AUTO_WFG_AND_SOME,NOT_SOME_NONE] *)
+(*         >> qunabbrev_tac `aut` >> fs[] *)
+(*         >> `wfg (concrAA empty [] (props_concr φ)).graph` *)
+(*              suffices_by metis_tac[ADDFRML_FOLDR_LEMM] *)
+(*         >> simp[] *)
+(*        ) *)
+(*     >- (Cases_on `x` >> simp[concr2AbstrAA_def] *)
+(*         >> simp[removeStatesSimpl_def,ltl2waa_def,ltl2waa_free_alph_def] *)
+(*         >> Q.HO_MATCH_ABBREV_TAC `STATES ∧ INIT ∧ FINAL ∧ ALPH ∧ TRANS` *)
+(*         >> `(INIT ==> STATES) ∧ INIT ∧ FINAL ∧ ALPH ∧ TRANS` *)
+(*              suffices_by fs[] *)
+(*         >> rpt strip_tac *)
+(*         >- (qunabbrev_tac `STATES` >> qunabbrev_tac `INIT` *)
+(*             >> qunabbrev_tac `TRANS` >> qunabbrev_tac `ALPH` *)
+(*             >> qunabbrev_tac `FINAL` *)
+(*             >> fs[expandAuto_init_def] >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac *)
+(*             >> Q.HO_MATCH_ABBREV_TAC *)
+(*                  `expandAuto a0 (FLAT (tempDNF_concr φ)) *)
+(*                    = SOME (concrAA g l l0) ==> A` *)
+(*             >> qunabbrev_tac `A` >> strip_tac >> simp[SET_EQ_SUBSET] *)
+(*             >> strip_tac >> strip_tac *)
+(*             >- (simp[SUBSET_DEF,concr2Abstr_states_def] >> rpt strip_tac *)
+(*                >> `!x. MEM x (FLAT (tempDNF_concr φ)) *)
+(*                    ==> x ∈ reachRelFromSet (ltl2waa φ) (set (autoStates a0))` *)
+(*                      by (qunabbrev_tac `a0` >> rpt strip_tac *)
+(*                          >> simp[reachRelFromSet_def] >> qexists_tac `x''` *)
+(*                          >> simp[reachRel_def,RTC_REFL] *)
+(*                          >> Q.HO_MATCH_ABBREV_TAC *)
+(*                              `MEM q (autoStates (A with init := i))` *)
+(*                          >> `MEM q (autoStates A)` suffices_by ( *)
+(*                               Cases_on `A` *)
+(*                               >> simp[autoStates_def,concrAA_fn_updates] *)
+(*                           ) *)
+(*                          >> qunabbrev_tac `A` *)
+(*                          >> `wfg (concrAA empty [] (props_concr φ)).graph` *)
+(*                               suffices_by *)
+(*                                 metis_tac[MEM,ADDFRML_FOLDR_LEMM2,SUBSET_DEF] *)
+(*                          >> simp[empty_is_wfg] *)
+(*                         ) *)
+(*                >> `(∀x. *)
+(*                     MEM x (autoStates a0) ⇒ *)
+(*                     x ∈ reachRelFromSet *)
+(*                             (ltl2waa φ) *)
+(*                             (BIGUNION (ltl2waa φ).initial)) *)
+(*                    ∧ (set (autoStates a0) = set (FLAT (tempDNF_concr φ)))` by ( *)
+(*                      qunabbrev_tac `a0` >> simp[reachRelFromSet_def] *)
+(*                      >> Q.HO_MATCH_ABBREV_TAC *)
+(*                          `(!x. MEM x (autoStates (A with init := i)) *)
+(*                            ==> B x) ∧ C` *)
+(*                      >> rpt strip_tac *)
+(*                      >> simp[reachRelFromSet_def] >> POP_ASSUM mp_tac *)
+(*                      >> `autoStates A = autoStates (A with init := i)` by ( *)
+(*                         Cases_on `A` >> simp[autoStates_def,concrAA_fn_updates] *)
+(*                     ) *)
+(*                      >> strip_tac *)
+(*                      >> `set (autoStates A) = *)
+(*                          set (autoStates (concrAA empty [] (props_concr φ))) *)
+(*                           ∪ set (FLAT (tempDNF_concr φ))` by ( *)
+(*                         qunabbrev_tac `A` *)
+(*                         >> `wfg (concrAA empty [] (props_concr φ)).graph` *)
+(*                             suffices_by metis_tac[ADDFRML_FOLDR_LEMM] *)
+(*                         >> simp[] *)
+(*                     ) *)
+(*                     >> `set (autoStates (concrAA empty [] (props_concr φ))) *)
+(*                           = {}` *)
+(*                         by simp[autoStates_def,empty_def,toAList_def,foldi_def] *)
+(*                     >- (rename [`MEM q _`] *)
+(*                        >> `MEM q (autoStates A)` by metis_tac[] *)
+(*                        >> qunabbrev_tac `A` *)
+(*                        >> `MEM q (FLAT (tempDNF_concr φ))` by ( *)
+(*                            `q ∈ *)
+(*                              (set (autoStates *)
+(*                                     (concrAA empty [] (props_concr φ))) ∪ *)
+(*                                       set (FLAT (tempDNF_concr φ)))` *)
+(*                               by metis_tac[MEM] *)
+(*                            >> POP_ASSUM mp_tac >> simp[] *)
+(*                          ) *)
+(*                        >> qunabbrev_tac `B` >> rpt strip_tac >> fs[] *)
+(*                        >> qexists_tac `q` >> simp[reachRel_def,RTC_REFL] *)
+(*                        >> `?l. MEM l (tempDNF_concr φ) ∧ MEM q l` *)
+(*                            by metis_tac[MEM_FLAT] *)
+(*                        >> `(set l') ∈ set (MAP set (tempDNF_concr φ))` *)
+(*                            by (fs[MEM_MAP] >> metis_tac[]) *)
+(*                        >> `(set l') ∈ tempDNF φ` *)
+(*                            by metis_tac[TEMPDNF_CONCR_LEMM] *)
+(*                        >> qexists_tac `set l'` *)
+(*                        >> fs[ltl2waa_def,ltl2waa_free_alph_def,initForms_def]) *)
+(*                     >- (qunabbrev_tac `C` >> fs[] >> metis_tac[]) *)
+(*                  ) *)
+(*                >> `set (autoStates a0) ⊆ tempSubForms φ` by ( *)
+(*                      simp[SUBSET_DEF] >> rpt strip_tac *)
+(*                      >> fs[MEM_FLAT] *)
+(*                      >> `set l' ∈ tempDNF φ` *)
+(*                         by metis_tac[MEM_MAP,TEMPDNF_CONCR_LEMM] *)
+(*                      >> metis_tac[TEMPDNF_TEMPSUBF,SUBSET_DEF,MEM] *)
+(*                  ) *)
+(*                >> `expandAuto a0 (FLAT (tempDNF_concr φ)) = *)
+(*                      SOME (concrAA g l l0)` by ( *)
+(*                      simp[SUBSET_DEF] >> rpt strip_tac *)
+(*                      >> fs[MEM_FLAT] *)
+(*                      >> `set l' ∈ tempDNF φ` *)
+(*                           by metis_tac[MEM_MAP,TEMPDNF_CONCR_LEMM] *)
+(*                      >> metis_tac[TEMPDNF_TEMPSUBF,SUBSET_DEF,MEM] *)
+(*                  ) *)
+(*                >> `wfg a0.graph` by ( *)
+(*                      qunabbrev_tac `a0` >> simp[] *)
+(*                      >> `wfg (concrAA empty [] (props_concr φ)).graph` *)
+(*                          suffices_by metis_tac[ADDFRML_FOLDR_LEMM] >> simp[] *)
+(*                  ) *)
+(*                >> `MEM x (autoStates (concrAA g l l0))` by ( *)
+(*                    simp[autoStates_def,MEM_MAP] >> qexists_tac `(n,x')` *)
+(*                    >> simp[] >> metis_tac[MEM_toAList] *)
+(*                  ) *)
+(*                >> imp_res_tac EXP_AUTO_REACHABLE *)
+(*                >> fs[ltl2waa_def,ltl2waa_free_alph_def,initForms_def] *)
+(*                >> rw[] *)
+(*                ) *)
+(*             >- (simp[SUBSET_DEF] >> rpt strip_tac *)
+(*                 >> fs[reachRelFromSet_def,reachRel_def] *)
+(*                 >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac *)
+(*                 >> `!x' x. (oneStep *)
+(*                              (ALTER_A (tempSubForms φ) (initForms φ) (finalForms φ) *)
+(*                                       (POW (props φ)) *)
+(*                                       (trans (POW (props φ)))))^* x' x ⇒ *)
+(*                        (x' ∈ s ⇒ *)
+(*                        s ∈ initForms φ ⇒ *)
+(*                        x ∈ concr2Abstr_states g)` suffices_by metis_tac[] *)
+(*                 >> HO_MATCH_MP_TAC RTC_INDUCT >> rpt strip_tac *)
+(*                  >- () *)
+(*                ) *)
+(*            ) *)
+(*         >- (qunabbrev_tac `STATES` >> qunabbrev_tac `INIT` *)
+(*             >> qunabbrev_tac `TRANS` >> qunabbrev_tac `ALPH` *)
+(*             >> qunabbrev_tac `FINAL` *)
+(*             >> simp[concr2Abstr_init_def,initForms_def,SET_EQ_SUBSET,SUBSET_DEF] *)
+(*             >> rpt strip_tac >> fs[MEM_MAP,expandAuto_init_def] >> rw[] *)
+(*             >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac *)
+(*             >> Q.HO_MATCH_ABBREV_TAC *)
+(*                 `(expandAuto (A with init := i) (FLAT (tempDNF_concr φ))) *)
+(*                     = (SOME a2) ==> B` *)
+(*             >- ( *)
+
+
+
+(* ) *)

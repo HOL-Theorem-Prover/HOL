@@ -80,12 +80,15 @@ val concr2AbstractEdge_def = Define`
           (FOLDR (\a sofar. (char_neg (POW aP) a) ∩ sofar) (POW aP) neg) pos
        , set sucs)`;
 
+val graphStates_def = Define
+ `graphStates g = MAP ((\l. l.frml) o SND) (toAList g.nodeInfo)`;
+
 val autoStates_def = Define`
-  autoStates (concrAA g i aP) =
-    MAP ((\l. l.frml) o SND) (toAList g.nodeInfo)`;
+  autoStates (concrAA g i aP) = graphStates g`;
 
 val inAuto_def = Define`
   inAuto aut f = MEM f (autoStates aut)`;
+
 
 val IN_AUTO_FINITE = store_thm
   ("IN_AUTO_FINITE",
@@ -93,39 +96,48 @@ val IN_AUTO_FINITE = store_thm
    rpt strip_tac >> metis_tac[FINITE_LIST_TO_SET]
   );
 
-val addFrmlToAut_def = Define`
-   (addFrmlToAut (concrAA g i aP) (U f1 f2) =
-       if inAuto (concrAA g i aP) (U f1 f2)
-       then (concrAA g i aP)
-       else concrAA (addNode <| frml := (U f1 f2); is_final := T |> g) i aP)
- ∧ (addFrmlToAut (concrAA g i aP) f =
-       if inAuto (concrAA g i aP) f
-       then (concrAA g i aP)
-       else concrAA (addNode <| frml := f; is_final := F |> g) i aP)`;
+val addFrmlToGraph_def = Define`
+   (addFrmlToGraph g (U f1 f2) =
+       if MEM (U f1 f2) (MAP ((λl. l.frml) ∘ SND) (toAList g.nodeInfo))
+       then g
+       else addNode <| frml := (U f1 f2); is_final := T |> g)
+ ∧ (addFrmlToGraph g f =
+       if MEM f (MAP ((λl. l.frml) ∘ SND) (toAList g.nodeInfo))
+       then g
+       else addNode <| frml := f; is_final := F |> g)`;
 
 val ADDFRML_LEMM = store_thm
   ("ADDFRML_LEMM",
-   ``!aut f. inAuto (addFrmlToAut aut f) f``,
-   rpt strip_tac >> Cases_on `inAuto aut f`
-    >- (Cases_on `f` >> Cases_on `aut` >> simp[addFrmlToAut_def])
-    >- (Cases_on `?f1 f2. f = U f1 f2` >> Cases_on `aut`
-        >- (fs[] >> rw[]
-            >> simp[addFrmlToAut_def,inAuto_def,autoStates_def,MEM_MAP]
-            >> simp[addNode_def,MEM_toAList]
-            >> qexists_tac `(g.next,<|frml := U f1 f2; is_final := T|>)`
-            >> fs[MEM_toAList]
-           )
-        >- (qabbrev_tac `el = (g.next,<|frml := f; is_final := F|>)`
-            >> Cases_on `f` >> fs[]
-            >> simp[addFrmlToAut_def,inAuto_def,autoStates_def,MEM_MAP]
-            >> simp[addNode_def,MEM_toAList]
-            >> qexists_tac `el` >> qunabbrev_tac `el` >> fs[MEM_toAList]
-           )
+   ``!g f. MEM f (graphStates (addFrmlToGraph g f))``,
+   rpt strip_tac >> Cases_on `MEM f (graphStates g)`
+    >- (Cases_on `f` >> fs[addFrmlToGraph_def,graphStates_def])
+    >- (Cases_on `?f1 f2. f = U f1 f2`
+         >- (fs[addFrmlToGraph_def] >> rw[]
+             >> fs[graphStates_def,MEM_MAP]
+             >> Cases_on `∃y. U f1 f2 = (SND y).frml
+                        ∧ MEM y (toAList g.nodeInfo)` >> fs[]
+              >- metis_tac[]
+              >- (fs[addNode_def,MEM_toAList]
+                  >> qexists_tac `(g.next,<|frml := U f1 f2; is_final := T|>)`
+                  >> fs[MEM_toAList] >> rw[] >> metis_tac[])
+            )
+         >- (qabbrev_tac `el = (g.next,<|frml := f; is_final := F|>)`
+             >> Cases_on `f` >> fs[addFrmlToGraph_def, graphStates_def,MEM_MAP]
+             >> fs[addNode_def,MEM_toAList]
+             >> qexists_tac `el` >> qunabbrev_tac `el` >> fs[MEM_toAList]
+             >> rw[] >> metis_tac[]
+            )
        )
   );
 
-val addEdgeToAut_def = Define`
-  addEdgeToAut f (concrEdge pos neg sucs) (concrAA g i aP) =
+val ADDFRML_LEMM_AUT = store_thm
+  ("ADDFRML_LEMM_AUT",
+   ``!g i aP f. inAuto (concrAA (addFrmlToGraph g f) i aP) f``,
+   metis_tac[inAuto_def,autoStates_def,ADDFRML_LEMM]
+  );
+
+val addEdgeToGraph_def = Define`
+  addEdgeToGraph f (concrEdge pos neg sucs) g =
     let sucIds = CAT_OPTIONS (MAP (\s. findNode (λ(n,l). l.frml = s) g) sucs)
     in do nodeId <- findNode (λ(n,l). l.frml = f) g;
            oldSucPairs <- lookup nodeId g.followers ;
@@ -135,165 +147,180 @@ val addEdgeToAut_def = Define`
              (MAP (\i. (<| edge_grp := lstGrpId + 1;
                           pos_lab := pos ;
                           neg_lab := neg ; |>,i)) sucIds);
-           FOLDR (\e a_opt. do a <- a_opt ;
-                               newGraph <- addEdge nodeId e a.graph;
-                               SOME (concrAA newGraph i aP)
+           FOLDR (\e g_opt. do g_int <- g_opt ;
+                               newGraph <- addEdge nodeId e g_int;
+                               SOME newGraph
                             od)
-                 (SOME (concrAA g i aP)) unfolded_edges
+                 (SOME g) unfolded_edges
         od`;
+
+(* val ADDFRML_LEMM2 = store_thm *)
+(*   ("ADDFRML_LEMM2", *)
+(*    ``!g f. wfg g ==> *)
+(*        (set (graphStates g) ⊆ set (graphStates (addFrmlToGraph g f)) *)
+(*       ∧ wfg (addFrmlToGraph g f))``, *)
+(*    simp[SUBSET_DEF] >> rpt strip_tac >> Cases_on `inAuto a f` *)
+(*    >> Cases_on `a` *)
+(*     >- (Cases_on `f` >> simp[addFrmlToGraph_def]) *)
+(*     >- (Cases_on `f` >> simp[addFrmlToGraph_def,addNode_def] *)
+(*         >> `~(g.next ∈ domain g.nodeInfo)` by ( *)
+(*              fs[wfg_def] >> metis_tac[] *)
+(*          ) *)
+(*         >> fs[autoStates_def,insert_def] >> POP_ASSUM mp_tac *)
+(*         >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac *)
+(*         >> rw[MEM_MAP] >> qexists_tac `y` >> fs[] *)
+(*         >> Cases_on `y` >> fs[] *)
+(*         >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac *)
+(*         >> rw[MEM_toAList] >> Cases_on `q = g.next` *)
+(*         >> fs[lookup_insert] *)
+(*         >> (`lookup q g.nodeInfo = NONE` by metis_tac[lookup_NONE_domain] *)
+(*             >> rw[] >> fs[]) *)
+(*        ) *)
+(*     >- (Cases_on `f` >> simp[addFrmlToGraph_def] *)
+(*         >> fs[wfg_def]) *)
+(*     >- (Cases_on `f` >> simp[addFrmlToGraph_def] *)
+(*         >> fs[]) *)
+(*     >- (Cases_on `f` >> simp[addFrmlToGraph_def] *)
+(*         >> fs[]) *)
+(*     >- (Cases_on `f` >> simp[addFrmlToGraph_def] *)
+(*         >> fs[]) *)
+(*   ); *)
+
+val ADDFRML_WFG = store_thm
+  ("ADDFRML_WFG",
+   ``!g f. wfg g ==> wfg (addFrmlToGraph g f)``,
+   rpt strip_tac >> Cases_on `MEM f (graphStates g)`
+   >> Cases_on `f` >> fs[addFrmlToGraph_def,graphStates_def]
+  );
 
 val ADDFRML_LEMM2 = store_thm
   ("ADDFRML_LEMM2",
-   ``!a f. wfg a.graph ==>
-       (set (autoStates a) ⊆ set (autoStates (addFrmlToAut a f))
-      ∧ wfg (addFrmlToAut a f).graph
-      ∧ (a.init = (addFrmlToAut a f).init))``,
-   simp[SUBSET_DEF] >> rpt strip_tac >> Cases_on `inAuto a f`
-   >> Cases_on `a`
-    >- (Cases_on `f` >> simp[addFrmlToAut_def])
-    >- (Cases_on `f` >> simp[addFrmlToAut_def,addNode_def]
-        >> `~(g.next ∈ domain g.nodeInfo)` by (
-             fs[wfg_def] >> metis_tac[]
-         )
-        >> fs[autoStates_def,insert_def] >> POP_ASSUM mp_tac
-        >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
-        >> rw[MEM_MAP] >> qexists_tac `y` >> fs[]
-        >> Cases_on `y` >> fs[]
-        >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
-        >> rw[MEM_toAList] >> Cases_on `q = g.next`
-        >> fs[lookup_insert]
-        >> (`lookup q g.nodeInfo = NONE` by metis_tac[lookup_NONE_domain]
-            >> rw[] >> fs[])
-       )
-    >- (Cases_on `f` >> simp[addFrmlToAut_def]
-        >> fs[wfg_def])
-    >- (Cases_on `f` >> simp[addFrmlToAut_def]
-        >> fs[])
-    >- (Cases_on `f` >> simp[addFrmlToAut_def]
-        >> fs[])
-    >- (Cases_on `f` >> simp[addFrmlToAut_def]
-        >> fs[])
-  );
-
-val ADDFRML_LEMM3 = store_thm
-  ("ADDFRML_LEMM3",
-   ``!a f. wfg a.graph ==>
-      (set (autoStates (addFrmlToAut a f)) = set (autoStates a) ∪ {f})``,
+   ``!g f. wfg g ==>
+      (set (graphStates (addFrmlToGraph g f)) = set (graphStates g) ∪ {f})``,
    simp[SET_EQ_SUBSET] >> rpt strip_tac
     >- (simp[SUBSET_DEF,UNION_DEF] >> rpt strip_tac
-        >> Cases_on `MEM x (autoStates a)` >> fs[] >> Cases_on `a`
+        >> Cases_on `MEM x (graphStates g)` >> fs[]
         >> `!q b. MEM q
-                 (autoStates
-                    (concrAA (addNode <|frml := f; is_final := b|> g) l l0))
-                 ==> ((q = f) \/ MEM q (autoStates (concrAA g l l0)))` by (
-             rpt strip_tac >> fs[autoStates_def,MEM_MAP] >> Cases_on `y`
+                 (graphStates (addNode <|frml := f; is_final := b|> g))
+                 ==> ((q = f) \/ MEM q (graphStates g))` by (
+             rpt strip_tac >> fs[graphStates_def,MEM_MAP] >> Cases_on `y'`
              >> fs[MEM_toAList] >> Cases_on `r.frml = f` >> fs[]
              >> qexists_tac `(q',r)`
              >> simp[] >> fs[MEM_toAList,addNode_def]
              >> fs[lookup_insert] >> Cases_on `q' = g.next` >> fs[]
              >> fs[theorem "nodeLabelAA_component_equality"]
          )
-        >> Cases_on `MEM f (autoStates (concrAA g l l0))` >> fs[]
-        >> Cases_on `f` >> fs[addFrmlToAut_def,inAuto_def]
+        >> Cases_on `MEM f (graphStates g)` >> fs[]
+        >> Cases_on `f` >> fs[addFrmlToGraph_def,inAuto_def]
         >> metis_tac[]
        )
-    >- metis_tac[ADDFRML_LEMM2]
-    >- metis_tac[ADDFRML_LEMM,autoStates_def,inAuto_def,MEM]
+    >- (simp[SUBSET_DEF] >> rpt strip_tac >> Cases_on `MEM f (graphStates g)`
+        >- (Cases_on `f` >> fs[addFrmlToGraph_def,graphStates_def])
+        >- (Cases_on `f` >> fs[addFrmlToGraph_def,addNode_def,graphStates_def]
+            >> `~(g.next ∈ domain g.nodeInfo)` by (
+                  fs[wfg_def] >> metis_tac[]
+             )
+            >> fs[insert_def,MEM_MAP] >> qexists_tac `y` >> simp[]
+            >> Cases_on `y` >> rw[MEM_toAList]
+            >> Cases_on `q = g.next` >> fs[lookup_insert,MEM_toAList]
+            >> (`lookup q g.nodeInfo = NONE` by metis_tac[lookup_NONE_domain]
+                >> rw[] >> fs[MEM_toAList])
+           )
+       )
+    >- (`wfg (addFrmlToGraph g f)` by metis_tac[ADDFRML_WFG]
+        >> metis_tac[ADDFRML_LEMM]
+       )
   );
 
 val ADDFRML_FOLDR_LEMM = store_thm
   ("ADDFRML_FOLDR_LEMM",
-   ``!a fs. wfg a.graph ==>
-      (set (autoStates a) ∪ set fs =
-         set (autoStates (FOLDR (\f a. addFrmlToAut a f) a fs))
-         ∧ wfg (FOLDR (\f a. addFrmlToAut a f) a fs).graph)
-         ∧ (a.init = (FOLDR (\f a. addFrmlToAut a f) a fs).init)``,
+   ``!g fs. wfg g ==>
+      (set (graphStates g) ∪ set fs =
+         set (graphStates (FOLDR (\f g. addFrmlToGraph g f) g fs))
+         ∧ wfg (FOLDR (\f g. addFrmlToGraph g f) g fs))``,
    gen_tac >> Induct_on `fs` >> rpt strip_tac
    >> fs[FOLDR]
-   >- (`set (autoStates (addFrmlToAut (FOLDR (λf a. addFrmlToAut a f) a fs) h))
-        = set (autoStates ((FOLDR (λf a. addFrmlToAut a f) a fs)))
-              ∪ {h}` by metis_tac[ADDFRML_LEMM3]
-       >> `set (autoStates a) ∪ (h INSERT (set fs))
-           = set (autoStates a) ∪ set fs  ∪ {h}`
-           suffices_by metis_tac[]
+    >- (`set (graphStates
+                  (addFrmlToGraph (FOLDR (λf g. addFrmlToGraph g f) g fs) h))
+        = set (graphStates ((FOLDR (λf g. addFrmlToGraph g f) g fs))) ∪ {h}`
+          by metis_tac[ADDFRML_LEMM2]
+       >> `set (graphStates g) ∪ (h INSERT (set fs))
+           = set (graphStates g) ∪ set fs  ∪ {h}` suffices_by metis_tac[]
        >> fs[INSERT_DEF,UNION_DEF] >> simp[SET_EQ_SUBSET,SUBSET_DEF]
        >> rpt strip_tac >> metis_tac[]
       )
-     >- (metis_tac[ADDFRML_LEMM2])
-     >- (metis_tac[ADDFRML_LEMM2])
+     >- metis_tac[ADDFRML_WFG]
   );
 
-val ADDFRML_FOLDR_LEMM2 = store_thm
-  ("ADDFRML_FOLDR_LEMM2",
-   ``!a fs. wfg a.graph ==>
-       set fs ⊆ set (autoStates (FOLDR (λp g. addFrmlToAut g p) a fs))``,
-   Induct_on `fs` >> rpt strip_tac >> fs[] >> rpt strip_tac
-    >- metis_tac[ADDFRML_LEMM,inAuto_def]
-    >- (first_x_assum (qspec_then `a` mp_tac) >> simp[]
-        >> `!ls. wfg (FOLDR (λp g. addFrmlToAut g p) a ls).graph` by (
-             Induct_on `ls` >> fs[] >> rpt strip_tac
-             >> metis_tac[ADDFRML_LEMM2]
-         )
-        >> metis_tac[ADDFRML_LEMM2,SUBSET_TRANS]
-       )
-  );
+(* val ADDFRML_FOLDR_LEMM2 = store_thm *)
+(*   ("ADDFRML_FOLDR_LEMM2", *)
+(*    ``!a fs. wfg a.graph ==> *)
+(*        set fs ⊆ set (autoStates (FOLDR (λp g. addFrmlToGraph g p) a fs))``, *)
+(*    Induct_on `fs` >> rpt strip_tac >> fs[] >> rpt strip_tac *)
+(*     >- metis_tac[ADDFRML_LEMM,inAuto_def] *)
+(*     >- (first_x_assum (qspec_then `a` mp_tac) >> simp[] *)
+(*         >> `!ls. wfg (FOLDR (λp g. addFrmlToGraph g p) a ls).graph` by ( *)
+(*              Induct_on `ls` >> fs[] >> rpt strip_tac *)
+(*              >> metis_tac[ADDFRML_LEMM2] *)
+(*          ) *)
+(*         >> metis_tac[ADDFRML_LEMM2,SUBSET_TRANS] *)
+(*        ) *)
+(*   ); *)
+
+(* val ADDEDGE_LEMM = store_thm *)
+(*   ("ADDEDGE_LEMM", *)
+(*    ``!a f e. case addEdgeToGraph f e a of *)
+(*                | SOME newAut => (set (autoStates newAut) = set (autoStates a)) *)
+(*                | NONE => T ``, *)
+(*    rpt strip_tac >> Cases_on `addEdgeToAut f e a` *)
+(*    >> fs[] >> Cases_on `e` >> Cases_on `a` >> fs[addEdgeToAut_def] *)
+(*    >> rename[`concrAA g init aP`] *)
+(*    >> qabbrev_tac `M = (MAP *)
+(*                            (λi. *)
+(*                                 (<|edge_grp := *)
+(*                                  (if oldSucPairs = [] then 0 *)
+(*                                   else (HD (MAP FST oldSucPairs)).edge_grp) + 1; *)
+(*                                  pos_lab := l; neg_lab := l0|>,i)) *)
+(*                            (CAT_OPTIONS *)
+(*                                 (MAP (λs. findNode (λ(n,l). l.frml = s) g) l1)))` *)
+(*    >> qabbrev_tac `doAddEdge = *)
+(*                          (λe a_opt. *)
+(*                              do *)
+(*                              a <- a_opt; *)
+(*                           newGraph <- addEdge nodeId e a.graph; *)
+(*                           SOME (concrAA newGraph init aP) *)
+(*                                od)` *)
+(*    >> `!xs. case FOLDR doAddEdge (SOME (concrAA g init aP)) xs of *)
+(*             | NONE => T *)
+(*             | SOME a => (set (autoStates a) *)
+(*                          = set (autoStates (concrAA g init aP)))` *)
+(*       by (Induct_on `xs` >> rpt strip_tac >> fs[] *)
+(*           >> Cases_on *)
+(*                `doAddEdge h (FOLDR doAddEdge (SOME (concrAA g init aP)) xs)` *)
+(*           >> fs[] *)
+(*           >> `~(FOLDR doAddEdge (SOME (concrAA g init aP)) xs = NONE)` by ( *)
+(*                Cases_on `FOLDR doAddEdge (SOME (concrAA g init aP)) xs` >> fs[] *)
+(*                >> qunabbrev_tac `doAddEdge` >> Cases_on `h` >> fs[] *)
+(*            ) *)
+(*           >> fs[] >> Cases_on `FOLDR doAddEdge (SOME (concrAA g init aP)) xs` *)
+(*           >> fs[] >> qunabbrev_tac `doAddEdge` >> Cases_on `h` >> fs[] *)
+(*           >> fs[addEdge_def] >> Cases_on `x'` >> simp[autoStates_def] *)
+(*           >> fs[] >> Cases_on `x''` >> fs[autoStates_def] *)
+(*           >> `g''.nodeInfo = g'.nodeInfo` suffices_by metis_tac[] *)
+(*           >> rw[] *)
+(*          ) *)
+(*    >> first_x_assum (qspec_then `M` mp_tac) >> rpt strip_tac *)
+(*    >> Cases_on `FOLDR doAddEdge (SOME (concrAA g init aP)) M` *)
+(*    >> fs[] >> rw[] *)
+(*   ); *)
 
 val ADDEDGE_LEMM = store_thm
   ("ADDEDGE_LEMM",
-   ``!a f e. case addEdgeToAut f e a of
-               | SOME newAut => (set (autoStates newAut) = set (autoStates a))
-               | NONE => T ``,
-   rpt strip_tac >> Cases_on `addEdgeToAut f e a`
-   >> fs[] >> Cases_on `e` >> Cases_on `a` >> fs[addEdgeToAut_def]
-   >> rename[`concrAA g init aP`]
-   >> qabbrev_tac `M = (MAP
-                           (λi.
-                                (<|edge_grp :=
-                                 (if oldSucPairs = [] then 0
-                                  else (HD (MAP FST oldSucPairs)).edge_grp) + 1;
-                                 pos_lab := l; neg_lab := l0|>,i))
-                           (CAT_OPTIONS
-                                (MAP (λs. findNode (λ(n,l). l.frml = s) g) l1)))`
-   >> qabbrev_tac `doAddEdge =
-                         (λe a_opt.
-                             do
-                             a <- a_opt;
-                          newGraph <- addEdge nodeId e a.graph;
-                          SOME (concrAA newGraph init aP)
-                               od)`
-   >> `!xs. case FOLDR doAddEdge (SOME (concrAA g init aP)) xs of
-            | NONE => T
-            | SOME a => (set (autoStates a)
-                         = set (autoStates (concrAA g init aP)))`
-      by (Induct_on `xs` >> rpt strip_tac >> fs[]
-          >> Cases_on
-               `doAddEdge h (FOLDR doAddEdge (SOME (concrAA g init aP)) xs)`
-          >> fs[]
-          >> `~(FOLDR doAddEdge (SOME (concrAA g init aP)) xs = NONE)` by (
-               Cases_on `FOLDR doAddEdge (SOME (concrAA g init aP)) xs` >> fs[]
-               >> qunabbrev_tac `doAddEdge` >> Cases_on `h` >> fs[]
-           )
-          >> fs[] >> Cases_on `FOLDR doAddEdge (SOME (concrAA g init aP)) xs`
-          >> fs[] >> qunabbrev_tac `doAddEdge` >> Cases_on `h` >> fs[]
-          >> fs[addEdge_def] >> Cases_on `x'` >> simp[autoStates_def]
-          >> fs[] >> Cases_on `x''` >> fs[autoStates_def]
-          >> `g''.nodeInfo = g'.nodeInfo` suffices_by metis_tac[]
-          >> rw[]
-         )
-   >> first_x_assum (qspec_then `M` mp_tac) >> rpt strip_tac
-   >> Cases_on `FOLDR doAddEdge (SOME (concrAA g init aP)) M`
-   >> fs[] >> rw[]
-  );
-
-val ADDEDGE_LEMM2 = store_thm
-  ("ADDEDGE_LEMM2",
-   ``!a f e. wfg a.graph ∧ inAuto a f
-        ==> (?a2. (addEdgeToAut f e a = SOME a2) ∧ wfg a2.graph
-          ∧ (a.graph.nodeInfo = a2.graph.nodeInfo)
-          ∧ (a.init = a2.init))``,
-   rpt strip_tac >> Cases_on `e` >> Cases_on `a` >> fs[addEdgeToAut_def]
-   >> rw[IS_SOME_EXISTS] >> fs[inAuto_def,autoStates_def,MEM_MAP]
-   >> simp[findNode_def]
+   ``!g f e. wfg g ∧ MEM f (graphStates g)
+        ==> (?g2. (addEdgeToGraph f e g = SOME g2) ∧ wfg g2
+          ∧ (g.nodeInfo = g2.nodeInfo))``,
+   rpt strip_tac >> Cases_on `e` >> fs[addEdgeToGraph_def]
+   >> fs[graphStates_def,MEM_MAP] >> simp[findNode_def]
    >> Q.HO_MATCH_ABBREV_TAC
        `?x. (?nodeId. A nodeId ∧ ?oSP. P oSP x nodeId) ∧ Q x`
    >> `?nodeId. A nodeId ∧ ?oSP x. P oSP x nodeId ∧ Q x`
@@ -329,25 +356,22 @@ val ADDEDGE_LEMM2 = store_thm
        )
        >> `!qs. (!lab x. MEM (lab,x) qs ==> ?h. MEM (x,h) (toAList g.nodeInfo))
              ==> ?m. (FOLDR addSingleEdge a_init qs = SOME m)
-                   ∧ (g.nodeInfo = m.graph.nodeInfo)
-                   ∧ (wfg m.graph)
-                   ∧ (m.init = l')` by (
+                   ∧ (g.nodeInfo = m.nodeInfo)
+                   ∧ (wfg m)` by (
            Induct_on `qs` >> fs[]
             >- (qunabbrev_tac `a_init` >> simp[])
             >- (rpt strip_tac
                 >> `∀lab x. MEM (lab,x) qs ⇒ ∃h. MEM (x,h) (toAList g.nodeInfo)`
                     by metis_tac[]
                 >> `∃m. (FOLDR addSingleEdge a_init qs = SOME m)
-                      ∧ (g.nodeInfo = m.graph.nodeInfo)
-                      ∧ (wfg m.graph)
-                      ∧ (m.init = l')` by metis_tac[]
+                      ∧ (g.nodeInfo = m.nodeInfo)
+                      ∧ (wfg m)` by metis_tac[]
                 >> `?m2. (addSingleEdge h (SOME m) = SOME m2)
-                       ∧ (g.nodeInfo = m2.graph.nodeInfo)
-                       ∧ (wfg m2.graph)
-                       ∧ (m2.init = l')` suffices_by fs[]
+                       ∧ (g.nodeInfo = m2.nodeInfo)
+                       ∧ (wfg m2)` suffices_by fs[]
                 >> qunabbrev_tac `addSingleEdge` >> Cases_on `h`
                 >> simp[]
-                >> `?nG. addEdge nId (q,r) m.graph = SOME nG` by (
+                >> `?nG. addEdge nId (q,r) m = SOME nG` by (
                      simp[addEdge_def]
                      >> Q.HO_MATCH_ABBREV_TAC `?nG. P ∧ A nG`
                      >> `P ∧ (P ==> ?nG. A nG)` suffices_by fs[]
@@ -360,17 +384,17 @@ val ADDEDGE_LEMM2 = store_thm
                          )
                       >- (`∃h. MEM (r,h) (toAList g.nodeInfo)` by metis_tac[]
                           >> fs[MEM_toAList,domain_lookup])
-                      >- (`nId ∈ domain m.graph.followers` by metis_tac[wfg_def]
-                          >> `?fol_o. lookup nId m.graph.followers = SOME fol_o`
+                      >- (`nId ∈ domain m.followers` by metis_tac[wfg_def]
+                          >> `?fol_o. lookup nId m.followers = SOME fol_o`
                              by metis_tac[domain_lookup]
                           >> fs[]
                          )
                  )
-                >> qexists_tac `concrAA nG l' l0'` >> simp[]
+                >> qexists_tac `nG` >> simp[]
                 >> `wfg nG` by metis_tac[addEdge_preserves_wfg]
                 >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
                 >> simp[addEdge_def] >> rpt strip_tac
-                >> Cases_on `m.graph` >> fs[gfg_fn_updates]
+                >> Cases_on `m` >> fs[gfg_fn_updates]
                 >> fs[gfg_component_equality]
                )
        )
