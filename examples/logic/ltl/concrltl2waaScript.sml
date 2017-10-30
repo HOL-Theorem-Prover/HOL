@@ -69,6 +69,14 @@ val FOLDR_LEMM5 = store_thm
    >> Induct_on `l1` >> fs[] >> Induct_on `l2` >> fs[]
   );
 
+val FOLDR_LEMM6 = store_thm
+  ("FOLDR_LEMM6",
+   ``!l x. MEM x (FOLDR (λe pr. e.sucs ⧺ pr) [] l)
+                  = (?a. MEM a l ∧ MEM x (a.sucs))``,
+   Induct_on `l` >> rpt strip_tac >> fs[]
+   >> simp[EQ_IMP_THM] >> rpt strip_tac >> metis_tac[]
+  );
+
 
 val TEMPDNF_CONCR_LEMM = store_thm
   ("TEMPDNF_CONCR_LEMM",
@@ -481,12 +489,28 @@ val TRANS_CONCR_LEMM = store_thm
 
 val ONE_STEP_TRANS_CONCR = store_thm
   ("ONE_STEP_TRANS_CONCR",
-   ``!f aP x y. (oneStep (ltl2waa f) x y)
-                 = (y ∈ set (MAP (concr2AbstractEdge aP) (trans_concr f)))``,
-
-)
-
-
+   ``!f x y. (x ∈ tempSubForms f)
+              ==> (oneStep (ltl2waa f) x y)
+                    = (y ∈ BIGUNION
+                         (set (MAP (SND o (concr2AbstractEdge (props f)))
+                                   (trans_concr x))))``,
+   rpt strip_tac
+   >> `(y ∈ BIGUNION (set (MAP (SND ∘ concr2AbstractEdge (props f))
+                               (trans_concr x))))
+         = ?a e. (a,e) ∈ (trans (POW (props f)) x) ∧ (y ∈ e)` by (
+       fs[BIGUNION,EQ_IMP_THM] >> rpt strip_tac
+       >- (`?p. MEM p (MAP (concr2AbstractEdge (props f)) (trans_concr x))
+             ∧ (s = SND p)` by (
+           fs[MAP_o,MEM_MAP] >> metis_tac[])
+           >> `p ∈ trans (POW (props f)) x` by metis_tac[TRANS_CONCR_LEMM]
+           >> Cases_on `p` >> fs[] >> metis_tac[])
+       >- (`MEM (a,e) (MAP (concr2AbstractEdge (props f)) (trans_concr x))`
+             by metis_tac[TRANS_CONCR_LEMM]
+           >> fs[MEM_MAP,MAP_o] >> qexists_tac `e` >> fs[] >> metis_tac[SND]
+          )
+   )
+   >> simp[oneStep_def,ltl2waa_def,ltl2waa_free_alph_def]
+  );
 
 val tempSubfCl_def = Define`
   tempSubfCl l = BIGUNION { tempSubForms f | MEM f l }`;
@@ -1028,7 +1052,12 @@ val EXP_AUTO_ONLY_REACHABLE = store_thm
              >> `x' ∈ set (autoStates (addFrmlToAut (concrAA g init aP) f'))
                       ∪ set (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f'))`
                 by metis_tac[SET_EQ_SUBSET,SUBSET_DEF]
-             >> POP_ASSUM mp_tac >> simp[] >> rw[]
+             >> POP_ASSUM mp_tac >> simp[]
+             >> `(MEM x' (autoStates (addFrmlToAut (concrAA g init aP) f')) ∨
+                      (MEM x' (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f'))
+                   ∧ ~ MEM x'(autoStates (addFrmlToAut (concrAA g init aP) f'))))
+                      ⇒ MEM y' (autoStates aut)` suffices_by metis_tac[]
+             >> rw[]
               >- (`x' ∈ set (autoStates (concrAA g init aP)) ∪ {f'}` by (
                    `wfg (concrAA g init aP).graph` by fs[]
                    >> metis_tac[ADDFRML_LEMM3]
@@ -1053,7 +1082,52 @@ val EXP_AUTO_ONLY_REACHABLE = store_thm
                           >> fs[autoStates_def]
                        ) >> metis_tac[SUBSET_DEF]
                       )
-
+                   >- (`y' ∈ BIGUNION
+                              (set
+                               (MAP (SND ∘ concr2AbstractEdge (props f))
+                                    (trans_concr f')))` by (
+                         metis_tac[ONE_STEP_TRANS_CONCR]
+                       )
+                       >> POP_ASSUM mp_tac >> simp[BIGUNION,MEM_MAP,MAP_o]
+                       >> rpt strip_tac >> fs[MEM_FILTER]
+                       >> `MEM y' (FOLDR (λe pr. e.sucs ⧺ pr)
+                                         [] (trans_concr f'))` by (
+                          Cases_on `y''` >> fs[concr2AbstractEdge_def]
+                          >> fs[FOLDR_LEMM6]
+                          >> `(concrEdge l l0 l1).sucs = l1` by simp[]
+                          >> metis_tac[]
+                       )
+                       >> `MEM y' (autoStates addedNodesAut)` suffices_by (
+                          Cases_on `aut` >> Cases_on `addedNodesAut`
+                          >> simp[autoStates_def] >> fs[]
+                       )
+                       >> metis_tac[SET_EQ_SUBSET,UNION_SUBSET,MEM,SUBSET_DEF]
+                      )
+                 )
+              >- fs[MEM_FILTER,inAuto_def]
+            )
+         >- fs[expandAuto_def]
+         >- (fs[MEM_FILTER]
+             >> `∃a. MEM a (trans_concr f') ∧ MEM x' a.sucs`
+                 by metis_tac[FOLDR_LEMM6]
+             >> `?s e. ((s,e) ∈ trans (POW (props f)) f') ∧ (x' ∈ e)` by (
+                  `concr2AbstractEdge (props f) a
+                    ∈ set (MAP (concr2AbstractEdge (props f)) (trans_concr f'))`
+                    by (fs[MEM_MAP] >> metis_tac[])
+                  >> `concr2AbstractEdge (props f) a ∈ trans (POW (props f)) f'`
+                      by metis_tac[TRANS_CONCR_LEMM]
+                  >> Cases_on `concr2AbstractEdge (props f) a`
+                  >> `set a.sucs = r` by (
+                      Cases_on `a` >> fs[concr2AbstractEdge_def]
+                  )
+                  >> metis_tac[]
+              )
+             >> `(x',f') ∈ TSF` by metis_tac[TRANS_REACHES_SUBFORMS]
+             >> metis_tac[TSF_def,TSF_TRANS_LEMM,IN_DEF,transitive_def]
+            )
+         >- fs[]
+       )
+  );
 
 val EXP_AUTO_INIT = store_thm
   ("EXP_AUTO_INIT",
@@ -1259,7 +1333,19 @@ val EXP_WAA_CORRECT = store_thm
                >> fs[ltl2waa_def,ltl2waa_free_alph_def,initForms_def]
                >> rw[]
                )
-            >- ()
+            >- (simp[SUBSET_DEF] >> rpt strip_tac
+                >> fs[reachRelFromSet_def,reachRel_def]
+                >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
+                >> `!x' x. (oneStep
+                             (ALTER_A (tempSubForms φ) (initForms φ) (finalForms φ)
+                                      (POW (props φ))
+                                      (trans (POW (props φ)))))^* x' x ⇒
+                       (x' ∈ s ⇒
+                       s ∈ initForms φ ⇒
+                       x ∈ concr2Abstr_states g)` suffices_by metis_tac[]
+                >> HO_MATCH_MP_TAC RTC_INDUCT >> rpt strip_tac
+                 >- ()
+               )
            )
         >- (qunabbrev_tac `STATES` >> qunabbrev_tac `INIT`
             >> qunabbrev_tac `TRANS` >> qunabbrev_tac `ALPH`
