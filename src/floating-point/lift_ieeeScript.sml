@@ -1579,10 +1579,10 @@ val float_mul_sub_relative = Q.store_thm ("float_mul_sub_relative",
 
 val finite_float_within_threshold = Q.store_thm (
   "finite_float_within_threshold",
-  `!f:(α , β) float.
+  `!f:('a , 'b) float.
       float_is_finite f ==>
-      ~(float_to_real f ≤ -threshold (:α # β)) /\
-      ~(float_to_real f ≥ threshold (:α # β)) `,
+      ~(float_to_real f ≤ -threshold (:'a # 'b)) /\
+      ~(float_to_real f ≥ threshold (:'a # 'b)) `,
   rpt strip_tac
   \\ Q.ISPECL_THEN [`f`] assume_tac float_to_real_threshold
   \\ fs[realTheory.abs]
@@ -1652,8 +1652,8 @@ val float_to_real_real_to_float_zero_id = Q.store_thm (
 val non_representable_float_is_zero = store_thm (
   "non_representable_float_is_zero",
   ``!ff P.
-      2 * abs ff <=  ulp ((:α#β) :(α#β) itself) ==>
-      (float_to_real ((float_round roundTiesToEven P ff):(α, β) float) = 0)``,
+      2 * abs ff <=  ulp ((:'a#'b) :('a#'b) itself) ==>
+      (float_to_real ((float_round roundTiesToEven P ff):('a, 'b) float) = 0)``,
   rpt strip_tac \\ Cases_on `P`
   \\ fs [round_roundTiesToEven_is_plus_zero,
          round_roundTiesToEven_is_minus_zero, zero_to_real]);
