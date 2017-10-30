@@ -16,7 +16,8 @@ sig
 
 
   val pp_defn : PP.ppstream -> defn -> unit
-
+  val all_terms : defn -> term list
+    (* conclusions of theorems, SV variables, R *)
 
   (* Used to control context tracking during termination
      condition extraction *)
