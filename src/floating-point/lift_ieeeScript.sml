@@ -1581,8 +1581,8 @@ val finite_float_within_threshold = Q.store_thm (
   "finite_float_within_threshold",
   `!f:('a , 'b) float.
       float_is_finite f ==>
-      ~(float_to_real f ≤ -threshold (:'a # 'b)) /\
-      ~(float_to_real f ≥ threshold (:'a # 'b)) `,
+      ~(float_to_real f <= -threshold (:'a # 'b)) /\
+      ~(float_to_real f >= threshold (:'a # 'b)) `,
   rpt strip_tac
   \\ Q.ISPECL_THEN [`f`] assume_tac float_to_real_threshold
   \\ fs[realTheory.abs]
@@ -1644,7 +1644,7 @@ val float_to_real_real_to_float_zero_id = Q.store_thm (
   "float_to_real_real_to_float_zero_id",
   `float_to_real (real_to_float roundTiesToEven 0) = 0`,
   once_rewrite_tac[real_to_float_def]
-  \\ `float_round roundTiesToEven F 0 = (float_plus_zero(:α#β))`
+  \\ `float_round roundTiesToEven F 0 = (float_plus_zero(:'a # 'b))`
        by  (irule round_roundTiesToEven_is_plus_zero
             \\ fs[ulp_def, ULP_def])
   \\ fs[float_to_real_def, float_plus_zero_def]);
