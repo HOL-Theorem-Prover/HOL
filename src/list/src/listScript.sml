@@ -3721,6 +3721,13 @@ val OPT_MMAP_def = Define`
      OPTION_BIND (f h0) (\h. OPTION_BIND (OPT_MMAP f t0) (\t. SOME (h::t))))
 `;
 
+val OPT_MMAP_cong = Q.store_thm("OPT_MMAP_cong[defncong]",
+  `!f1 f2 x1 x2.
+   (x1 = x2) /\ (!a. MEM a x2 ==> (f1 a = f2 a))
+   ==> (OPT_MMAP f1 x1 = OPT_MMAP f2 x2)`,
+  ntac 2 gen_tac \\ Induct \\ rw[] \\ computeLib.EVAL_TAC
+  \\ FULL_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) []);
+
 val LAST_compute = Q.store_thm("LAST_compute",
    `(!x. LAST [x] = x) /\
     (!h1 h2 t. LAST (h1::h2::t) = LAST (h2::t))`,
