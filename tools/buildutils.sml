@@ -133,7 +133,7 @@ fun read_buildsequence {kernelname} bseq_fname = let
                                       (Binaryset.add(visitedincludes,
                                                      includefname))
                                       (strm,includefname)
-                                      ((fstr,includefname)::oldstreams)
+                                      ((fstr,fname)::oldstreams)
                           | NONE => die ("Couldn't open #include-d file "^
                                          includefname ^
                                          "(included from "^fname^")")
@@ -187,7 +187,7 @@ fun read_buildsequence {kernelname} bseq_fname = let
                          " is not a directory")
                 else die ("** File "^s^" from build sequence file "^fname^
                           " does not \
-                          \exist or is inacessible -- skipping it")
+                          \exist or is inacessible")
               else read_file acc visitedincludes f oldstreams
             end
         end
