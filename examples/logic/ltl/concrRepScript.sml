@@ -83,6 +83,24 @@ val concr2AbstractEdge_def = Define`
 val graphStates_def = Define
  `graphStates g = MAP ((\l. l.frml) o SND) (toAList g.nodeInfo)`;
 
+val GRAPHSTATES_EMPTY = store_thm
+  ("GRAPHSTATES_EMPTY",
+   ``graphStates empty = []``,
+   simp[graphStates_def,toAList_def,empty_def,foldi_def]
+  );
+
+val GRAPHSTATES_CONCR_LEMM = store_thm
+  ("GRAPHSTATES_CONCR_LEMM",
+   ``!g. set (graphStates g) = concr2Abstr_states g``,
+   rpt strip_tac >> simp[graphStates_def,concr2Abstr_states_def]
+   >> simp[SET_EQ_SUBSET,SUBSET_DEF,MEM_MAP] >> rpt strip_tac
+    >- (qexists_tac `SND y` >> simp[]
+        >> fs[MEM_toAList,domain_lookup] >> rw[]
+        >> Cases_on `y` >> fs[MEM_toAList] >> metis_tac[]
+       )
+    >- (qexists_tac `(n,x')` >> simp[] >> simp[MEM_toAList])
+  );
+
 val autoStates_def = Define`
   autoStates (concrAA g i aP) = graphStates g`;
 
@@ -196,7 +214,10 @@ val ADDFRML_WFG = store_thm
 val ADDFRML_LEMM2 = store_thm
   ("ADDFRML_LEMM2",
    ``!g f. wfg g ==>
-      (set (graphStates (addFrmlToGraph g f)) = set (graphStates g) ∪ {f})``,
+      (set (graphStates (addFrmlToGraph g f)) = set (graphStates g) ∪ {f}
+    ∧ (!id. IS_SOME (lookup id g.nodeInfo)
+            ==> (lookup id g.nodeInfo
+                 = lookup id (addFrmlToGraph g f).nodeInfo)))``,
    simp[SET_EQ_SUBSET] >> rpt strip_tac
     >- (simp[SUBSET_DEF,UNION_DEF] >> rpt strip_tac
         >> Cases_on `MEM x (graphStates g)` >> fs[]
@@ -230,6 +251,15 @@ val ADDFRML_LEMM2 = store_thm
     >- (`wfg (addFrmlToGraph g f)` by metis_tac[ADDFRML_WFG]
         >> metis_tac[ADDFRML_LEMM]
        )
+    >- (Cases_on `f` >> simp[addFrmlToGraph_def] >> rw[]
+        >> `?node. lookup id g.nodeInfo = SOME node` by fs[IS_SOME_EXISTS]
+        >> `id ∈ domain g.nodeInfo` by fs[domain_lookup]
+        >> simp[addNode_def,lookup_insert] >> fs[wfg_def]
+        >> `~ (id = g.next)` by (
+             first_x_assum (qspec_then `id` mp_tac) >> simp[]
+         )
+        >> fs[]
+       )
   );
 
 val ADDFRML_FOLDR_LEMM = store_thm
@@ -237,7 +267,11 @@ val ADDFRML_FOLDR_LEMM = store_thm
    ``!g fs. wfg g ==>
       (set (graphStates g) ∪ set fs =
          set (graphStates (FOLDR (\f g. addFrmlToGraph g f) g fs))
-         ∧ wfg (FOLDR (\f g. addFrmlToGraph g f) g fs))``,
+         ∧ wfg (FOLDR (\f g. addFrmlToGraph g f) g fs)
+         ∧ (!id. IS_SOME (lookup id g.nodeInfo)
+                 ==> (lookup id g.nodeInfo
+                      = lookup id
+                          (FOLDR (\f g. addFrmlToGraph g f) g fs).nodeInfo)))``,
    gen_tac >> Induct_on `fs` >> rpt strip_tac
    >> fs[FOLDR]
     >- (`set (graphStates
@@ -250,6 +284,7 @@ val ADDFRML_FOLDR_LEMM = store_thm
        >> rpt strip_tac >> metis_tac[]
       )
      >- metis_tac[ADDFRML_WFG]
+     >- metis_tac[ADDFRML_LEMM2]
   );
 
 (* val ADDFRML_FOLDR_LEMM2 = store_thm *)
