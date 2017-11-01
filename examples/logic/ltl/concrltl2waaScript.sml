@@ -1268,27 +1268,21 @@ val EXP_WAA_CORRECT = store_thm
            )
         >- (qunabbrev_tac `INIT` >> fs[expandAuto_init_def]
             >> simp[concr2Abstr_init_def, initForms_def]
-            >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
-             >- (fs[MEM_MAP] >> rw[] >> fs[MEM_MAP]
-                 >> rw[]
-                 >> Q.HO_MATCH_ABBREV_TAC `{x.frml | P x } ∈ tempDNF φ`
-                 >> `{ f | ?x. P x ∧ f = x.frml} ∈ tempDNF φ` suffices_by (
-                      `{ f | ?x. P x ∧ f = x.frml} = {x.frml | P x }` by (
-                          simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
-                          >> metis_tac[]
-                      ) >> fs[]
-                  )
-                 >> `!f. (?x. P x ∧ (f = x.frml)) = MEM f l`
-                      suffices_by (
-                      rpt strip_tac
-                      >> `set l ∈ tempDNF φ` by (
-                          `MEM (set l) (MAP set (tempDNF_concr φ))` by (
-                              fs[MEM_MAP] >> metis_tac[]
-                          )
-                          >> metis_tac[TEMPDNF_CONCR_LEMM]
-                      )
-                      >> fs[]
-                  )
+            >> qabbrev_tac `P = λl.
+               (λx.
+                 MEM x
+                 (CAT_OPTIONS
+                   (MAP (λn. lookup n g.nodeInfo)
+                     (CAT_OPTIONS
+                       (MAP
+                         (λs.
+                           findNode (λ(_,l). l.frml = s)
+                           (FOLDR (λs g. addFrmlToGraph g s)
+                                  (empty:(α nodeLabelAA, α edgeLabelAA) gfg)
+                                  (FLAT (tempDNF_concr φ)))) l)))))`
+            >> `!l f. MEM l (tempDNF_concr φ)
+                  ==> ((?x. P l x ∧ (f = x.frml)) = MEM f l)` by (
+                 rpt strip_tac
                  >> simp[EQ_IMP_THM] >> rpt strip_tac >> qunabbrev_tac `P`
                  >> fs[]
                   >- (IMP_RES_TAC CAT_OPTIONS_MAP_LEMM
@@ -1361,23 +1355,41 @@ val EXP_WAA_CORRECT = store_thm
                       >> rpt strip_tac >> fs[MEM_toAList]
                       >> qexists_tac `f` >> simp[]
                      )
-                )
-             >- (simp[MEM_MAP]
-                 >> `MEM x (MAP set (tempDNF_concr φ))`
-                     by metis_tac[TEMPDNF_CONCR_LEMM,MEM]
-                 >> fs[MEM_MAP]
-                 >> qabbrev_tac `
-                      Q = λl.
-                          CAT_OPTIONS
-                          (MAP
+             )
+            >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
+            >- (fs[MEM_MAP] >> rw[] >> fs[MEM_MAP]
+                >> rw[]
+                >> `{ f | ?x. P l x ∧ f = x.frml} ∈ tempDNF φ` suffices_by (
+                      `{ f | ?x. P l x ∧ f = x.frml} = {x.frml | P l x }` by (
+                          simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
+                          >> metis_tac[]
+                      ) >> fs[]
+                 )
+                >> `set l ∈ tempDNF φ` by (
+                     `MEM (set l) (MAP set (tempDNF_concr φ))` by (
+                        fs[MEM_MAP] >> metis_tac[]
+                     )
+                     >> metis_tac[TEMPDNF_CONCR_LEMM]
+                 )
+                >> fs[]
+               )
+            >- (simp[MEM_MAP]
+                >> `MEM x (MAP set (tempDNF_concr φ))`
+                    by metis_tac[TEMPDNF_CONCR_LEMM,MEM]
+                >> fs[MEM_MAP]
+                >> qabbrev_tac `
+                     Q = λl.
+                         CAT_OPTIONS
+                         (MAP
                            (λs.
                              findNode (λ(_,l). l.frml = s)
-                              (FOLDR (λs g. addFrmlToGraph g s)
-                                     (empty:(α nodeLabelAA, α edgeLabelAA) gfg)
-                              (FLAT (tempDNF_concr φ)))) l)`
-                 >> qexists_tac `Q y` >> rpt strip_tac >> fs[MEM_MAP]
-                  >- (qunabbrev_tac `Q` >> simp[SET_EQ_SUBSET,SUBSET_DEF]
-                      >> rpt strip_tac
-                       >- ()
-)
-                  >- metis_tac[MEM_MAP]
+                             (FOLDR (λs g. addFrmlToGraph g s)
+                                    (empty:(α nodeLabelAA, α edgeLabelAA) gfg)
+                                    (FLAT (tempDNF_concr φ)))) l)`
+                >> qexists_tac `Q y` >> rpt strip_tac >> fs[MEM_MAP]
+                 >- (qunabbrev_tac `Q` >> simp[SET_EQ_SUBSET,SUBSET_DEF]
+                     >> metis_tac[]
+                    )
+                 >- (metis_tac[MEM_MAP])
+               )
+           )
