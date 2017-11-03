@@ -51,7 +51,7 @@ val vector_defs =
 val regexp_compute_thms =
   vector_defs
   @
-  [ALPHABET_def, alphabet_size_def, And_def, zip_def,
+  [ALPHABET_def, alphabet_size_def, And_def,
    charset_empty_def, charset_full_def,
    words4_bit_def, charset_mem_def, charset_union_def,
    charset_sing_def, merge_charsets_def,
