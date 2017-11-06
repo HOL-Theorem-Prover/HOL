@@ -1,7 +1,4 @@
 
-
-
-
 open HolKernel Parse boolLib bossLib finite_mapTheory;
 open recfunsTheory;
 open recursivefnsTheory;
@@ -1626,6 +1623,10 @@ completeInduct_on `n` >> Cases_on `n` >- EVAL_TAC >> fs[un_nlist_def] >>
 `nsnd n' < SUC n'` by metis_tac[nsnd_le,prim_recTheory.LESS_SUC_REFL,LESS_EQ_LESS_TRANS] >>
 rw[ncons_def] >> fs[npair] )
 
+val un_nlist_nlist_of_inv = Q.store_thm("un_nlist_nlist_of_inv[simp]",
+`un_nlist (nlist_of n) = n`,
+Induct_on `n`  >> fs[nlist_of_def,un_nlist_def,ncons_def] >> strip_tac >>`h ⊗ nlist_of n + 1 = SUC (h ⊗ nlist_of n)` by fs[] >>  rw[un_nlist_def] )
+
 val ntl_nlist_unnlist = Q.store_thm("ntl_nlist_unnlist",
 `ntl (SUC n) = nlist_of (TL (un_nlist (SUC n)))`,
  rw[ntl_def,un_nlist_def] )
@@ -1634,77 +1635,122 @@ val length_unnlist = Q.store_thm("length_unnlist",
 `0 < LENGTH (un_nlist (SUC n))`,
 fs[un_nlist_def])
 
-(* Works up to here  *)
-(* WORK IN PROGRESS SECTION   *)
-(*
+val ntl_suc_less = Q.store_thm("ntl_suc_less",
+`∀n. ntl (SUC n) <= n`,
+strip_tac >> rw[ntl_def,nsnd_le])
+
 val el_zero_corr = Q.store_thm("el_zero_corr",
 `el_zero n = nlist_of (GENLIST (LENGTH o un_nlist) (n+1))`,
-Induct_on `n` >> fs[el_zero_def] >- EVAL_TAC >> `ntl (SUC n) <= n` by simp[ntl_suc_less]
+Induct_on `n` >> fs[el_zero_def] >- EVAL_TAC >> `ntl (SUC n) <= n` by simp[ntl_suc_less] >>
 simp[ADD_CLAUSES,GENLIST,SNOC_APPEND,nel_nlist_of] >> fs[ntl_nlist_unnlist,un_nlist_nlist_of_inv]>>
-fs[LENGTH_TL,length_unnlist] >> rw[nlist_of_def,nlist_of_append]
-)
+fs[LENGTH_TL,length_unnlist] >> rw[nlist_of_def,nlist_of_append] >>
+`1 <= LENGTH (un_nlist (SUC n))` by (`1 = SUC 0` by fs[] >> metis_tac[length_unnlist,LESS_OR]) >>
+fs[SUB_ADD,ADD1] )
 
 val nleng_def = Define `nleng n = nel n (el_zero n)`
 
-add_persistent_funs ["numpair.nlistrec_def"]
+(*  add_persistent_funs ["numpair.nlistrec_def"] *)
 
-EVAL ``GENLIST (LENGTH o un_nlist) 0``;
-EVAL ``GENLIST un_nlist 6``;
-EVAL ``(el_zero 6)``;
-EVAL ``napp 0 0``;
 
-val nlistrec_def = tDefine "nlistrec" `
-  nlistrec n f l = if l = 0 then n
-                   else f (nfst (l - 1)) (nsnd (l - 1))
-                          (nlistrec n f (nsnd (l - 1)))
-` (  WF_REL_TAC `measure (SND o SND)` THEN
-  STRIP_TAC THEN ASSUME_TAC (Q.INST [`n` |-> `l - 1`] nsnd_le) THEN
-  DECIDE_TAC);
+val nlen_reduc = Q.store_thm("nlen_reduc",
+`∀n. nlen (SUC n) = nlen (ntl (SUC n)) + 1`,
+strip_tac >> `SUC n <> 0` by fs[] >>`∃h t. SUC n = ncons h t ` by metis_tac[nlist_cases] >>
+          rw[nlen_thm,ntl_thm])
 
-val nlist_of_append = Q.store_thm(
-        "nlist_of_append",
-`nlist_of (l1 ++ l2) = napp (nlist_of l1) (nlist_of l2)`,
-Induct_on `l1` >- EVAL_TAC >> SRW_TAC [][] >> );
 
-val napp_def = Define`
-napp l1 l2 = nlistrec l2 (\n t r. ncons n r) l1
-`;
 
-val nlist_ind = store_thm(
-  "nlist_ind",
-  ``!P. P 0 /\ (!h t. P t ==> P (ncons h t)) ==> !n. P n``,
-  GEN_TAC THEN STRIP_TAC THEN
-  Q_TAC SUFF_TAC `!(n:'a) (f:num -> num -> 'a -> 'a) l. P l`
-    THEN1 METIS_TAC [] THEN
-  HO_MATCH_MP_TAC nlistrec_ind THEN REPEAT STRIP_TAC THEN
-  Cases_on `l` THEN SRW_TAC [][] THEN
-  `SUC n = ncons (nfst n) (nsnd n)` by SRW_TAC [][ncons_def, ADD1] THEN
-  SRW_TAC [][]);
 
-val nlen_def = Define`nlen = nlistrec 0 (\n t r. r + 1)`
+val pr_el_zero_def = Define`
+pr_el_zero = Cn (Pr (onef) (Cn (pr2 napp) [ proj 1 ;
+Cn (pr2 ncons) [Cn succ [Cn (pr2 nel) [Cn (pr1 ntl) [Cn succ [proj 0]];proj 1] ];zerof] ])) [proj 0;onef]`
 
-val nlistrec_thm = Q.store_thm(
-        "nlistrec_thm",
-`(nlistrec n f nnil = n) /\
-(nlistrec n f (ncons h t) = f h t (nlistrec n f t))`,
-CONJ_TAC THEN1 SRW_TAC [][Once nlistrec_def] THEN
-         CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [nlistrec_def])) THEN
-         SRW_TAC [ARITH_ss][ncons_def]);
+val primrec_pr_el_zero = Q.store_thm("primrec_pr_el_zero",
+`primrec pr_el_zero 1`,
+fs[pr_el_zero_def] >> rpt (irule primrec_cn >> rw[primrec_rules]) >> irule alt_Pr_rule >>
+  fs[primrec_rules] >> rpt (irule primrec_cn >> rw[primrec_rules]))
 
-val nlen_thm = Q.store_thm(
-  "nlen_thm",
-  `(nlen 0 = 0) /\ (nlen (ncons h t) = nlen t + 1)`,
-  SRW_TAC [][nlen_def,nlistrec_thm]);
+val primrec_el_zero = Q.store_thm("primrec_el_zero",
+`primrec (pr1 el_zero) 1`,
+`(∃g. primrec g 1 ∧ ∀n. g [n] = el_zero n)` suffices_by fs[primrec_pr1] >>
+ qexists_tac `pr_el_zero` >> fs[primrec_pr_el_zero] >> strip_tac >> Induct_on `n` >- EVAL_TAC >>
+ rw[el_zero_def,pr_el_zero_def] >> `Pr onef (Cn (pr2 napp) [proj 1;
+ Cn (pr2 ncons) [Cn succ [Cn (pr2 nel) [Cn (pr1 ntl) [Cn succ [proj 0]]; proj 1]]; zerof]]) [n; 1]= pr_el_zero [n]` by
+ fs[pr_el_zero_def] >> rfs[] >> rw[] >> fs[ADD1] )
 
-EVAL `` nlen 144``;
-EVAL `` nlen 162``;
-EVAL `` nlen 1``;
+val primrec_nleng = Q.store_thm("primrec_nleng",
+`primrec (pr1 nleng) 1`,
+`(∃g. primrec g 1 ∧ ∀n. g [n] = nleng n)` suffices_by fs[primrec_pr1] >>
+ qexists_tac`Cn (pr2 nel) [proj 0;Cn (pr1 el_zero) [proj 0]]` >> conj_tac
+ >- (rpt (irule primrec_cn >> rw[primrec_rules]) >> fs[primrec_el_zero])
+ >- (strip_tac >> fs[nleng_def]  )  )
 
+val Pr_eval = prove(
+``0 < m ==> (Pr b r (m :: t) = r (m - 1 :: Pr b r (m - 1 :: t) :: t))``,
+STRIP_TAC THEN SIMP_TAC (srw_ss()) [Once Pr_def, SimpLHS] THEN
+          Cases_on `m` THEN SRW_TAC [ARITH_ss][]);
+
+
+(* Pr defs, probs use *)
+val pr_log_def = Define`
+pr_log = Cn (pr2 $- ) [Cn (Pr (zerof) (Cn (pr2 $+) [proj 1; Cn pr_neq [zerof;Cn pr_div [Cn (pr1 nfst) [proj 2];
+         Cn pr_exp [Cn (pr1 nsnd) [proj 2];proj 0 ]]]]))
+            [proj 0;Cn (pr2 npair) [proj 0;proj 1]];onef]`
+
+val pr_tl_en_con_fun2_def = Define`
+pr_tl_en_con_fun2 =
+               Cn (pr2 $+) [Cn (pr2 $* )
+  [Cn (pr2 $-) [ Cn pr_exp [twof;Cn (pr2 nel)
+  [proj 0;proj 2 ]];onef ];
+      Cn pr_exp [twof;Cn pr_log [proj 1;twof] ] ];
+                                proj 1] `;
+
+val order_flip_def = Define`
+order_flip = Cn (Pr (zerof )
+                (Cn (pr2 ncons) [Cn (pr2 nel) [proj 0;proj 2] ;proj 1] ))
+                [Cn (pr1 nleng) [proj 0];proj 0]`;
+
+val pr_tl_en_con_fun4_def = Define`
+pr_tl_en_con_fun4 = Cn (pr2 $+) [Cn (pr2 $-)
+                   [Cn pr_exp [twof;Cn (pr2 nel) [proj 0;Cn order_flip [proj 2] ]];onef ];
+                    Cn (pr2 $* ) [proj 1;Cn pr_exp [twof;Cn succ
+   [ Cn pr_log [Cn pr_exp [twof;Cn (pr2 nel) [proj 0;Cn order_flip [proj 2]]] ; twof]] ]]] `;
+
+val pr_tl_en_con_def = Define`
+pr_tl_en_con = Cn (pr1 DIV2) [Cn (Pr (zerof) (pr_tl_en_con_fun4)) [Cn (pr1 nleng) [proj 0];proj 0]]`;
+
+val primrec_order_flip = Q.store_thm("primrec_order_flip",
+`primrec order_flip 1`,
+rw[order_flip_def] >> rpt ( MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules]) >>fs[primrec_nleng]  )
+
+val primrec_pr_log = Q.store_thm("primrec_pr_log",
+`primrec pr_log 2`,
+rw[pr_log_def] >> rpt ( MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules]) >> irule alt_Pr_rule >> rw[primrec_rules] >> rpt (irule primrec_cn >> rw[primrec_rules]));
+
+
+val primrec_pr_tl_en_con_fun4 = Q.store_thm("primrec_pr_tl_en_con_fun4",
+`primrec pr_tl_en_con_fun4 3`,
+rw[pr_tl_en_con_fun4_def] >> rpt ( MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules]) >> rw[primrec_rules,primrec_pr_exp,primrec_order_flip,primrec_pr_log] >> fs[primrec_nleng] );
+
+val primrec_pr_tl_en_con = Q.store_thm("primrec_pr_tl_en_con",
+`primrec pr_tl_en_con 1`,
+SRW_TAC [][pr_tl_en_con_def,primrec_rules] >>
+        rpt ( MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules,primrec_div2,primrec_nleng]) >>
+        fs[primrec_nleng] >>  irule alt_Pr_rule >> rw[primrec_pr_tl_en_con_fun4] );
+
+
+
+(* Not needed anymore
 val pr_nlist_len_def = Define`
 pr_nlist_len  = pr_cond (Cn pr_eq [proj 0;zerof]) (zerof)
 (Cn succ [Cn (Pr (zerof) (Cn (pr2 $+) [proj 1;
  Cn pr_neq [Cn (Pr (proj 0) (Cn (pr1 nsnd) [Cn (pr2 $-) [proj 1;onef]])) [Cn (pr2 $-) [proj 2;proj 0];proj 2];zerof]]))
   [proj 0;proj 0]]) `
+
+val primrec_pr_nlist_len = Q.store_thm("primrec_pr_nlist_len",
+`primrec pr_nlist_len 1`,
+rw[pr_nlist_len_def] >> rpt ( MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules]) >>
+  irule alt_Pr_rule >> rw[primrec_rules] >> rpt (irule primrec_cn >> rw[primrec_rules])  )
+
 
 val pr_nlen_def = Define`pr_nlen = Cn (Pr (zerof) (Cn (pr2 $+) [proj 1;
        Cn pr_neq [Cn (pr2 ndrop) [proj 0;proj 2];zerof]] )) [proj 0;proj 0]`
@@ -1716,20 +1762,11 @@ val primrec_pr_nlen = Q.store_thm("primrec_pr_nlen",
 `primrec pr_nlen 1`,
 rw[pr_nlen_def] >> rpt (irule primrec_cn >> rw[primrec_rules]) >> irule alt_Pr_rule >> fs[primrec_rules])
 
-val nlen_reduc = Q.store_thm("nlen_reduc",
-`∀n. nlen (SUC n) = nlen (ntl (SUC n)) + 1`,
-strip_tac >> `SUC n <> 0` by fs[] >>`∃h t. SUC n = ncons h t ` by metis_tac[nlist_cases] >>
-         rw[nlen_thm,ntl_thm])
+ *)
 
-val ntl_suc_less = Q.store_thm("ntl_suc_less",
-`∀n. ntl (SUC n) <= n`,
-strip_tac >> rw[ntl_def,nsnd_le])
 
-val Pr_eval = prove(
-``0 < m ==> (Pr b r (m :: t) = r (m - 1 :: Pr b r (m - 1 :: t) :: t))``,
-STRIP_TAC THEN SIMP_TAC (srw_ss()) [Once Pr_def, SimpLHS] THEN
-          Cases_on `m` THEN SRW_TAC [ARITH_ss][]);
-
+(* Works up to here  *)
+(* WORK IN PROGRESS SECTION   *)
 val invtri_zero = Q.store_thm("invtri_zero[simp]",
 `invtri 0 = 0`,
 EVAL_TAC)
@@ -1761,7 +1798,7 @@ val FUNPOW_mono = Q.store_thm("FUNPOW_mono",
 rpt strip_tac >> Induct_on `k` >> fs[] >> fs[FUNPOW_SUC] )
 
 
-(* fix or remove *)
+(* fix or remove 
 val ndrop_zero = Q.store_thm("ndrop_zero[simp]",
 `(ndrop n (SUC n) = 0) <=>  (n <> 0)`,
 Cases_on `n` >> rw[ndrop_def] >> fs[ndrop_FUNPOW_ntl] >>
@@ -1778,7 +1815,6 @@ Induct_on `n'` >- (EVAL_TAC) >>
 
 `∀n. nsnd n <= n` by fs[nsnd_le] >>`∀n.  n - 1 < SUC n` by fs[]  >>`∀n. nsnd ((SUC n)-1) < SUC n` by (rfs[]) >> )
 
-(* UNCHEAT! *)
 val pr_nlen_reduc = Q.store_thm("pr_nlen_reduc",
 `pr_nlen [SUC n] = pr_nlen [ntl (SUC n)] + 1`,cheat)
 (`ntl (SUC n) = ndrop 1 (SUC n)` by fs[ndrop_FUNPOW_ntl] >> rw[] >> pop_assum kall_tac >>
@@ -1786,6 +1822,8 @@ val pr_nlen_reduc = Q.store_thm("pr_nlen_reduc",
   >- (rw[Pr_eval])
   >- (Cases_on `0<n` >> fs[] >> rw[Pr_eval])
 )
+
+ 
 
 val pr_nlen_correct = Q.store_thm("pr_nlen_correct",
 `∀n. pr_nlen [n] = nlen n`,
@@ -1796,172 +1834,225 @@ strip_tac  >> completeInduct_on `n` >> Cases_on `n` >- (EVAL_TAC) >>
 rpt (pop_assum kall_tac) >> strip_tac >> rw[] >>pop_assum kall_tac >> fs[pr_nlen_reduc]
  )
 
-
-
 val primrec_nlen = Q.store_thm("primrec_nlen",
 `primrec (pr1 nlen) 1`,
 `∃g. primrec g 1 ∧ ∀n. g [n] = nlen n` suffices_by fs[primrec_pr1] >> qexists_tac`pr_nlen` >> fs[primrec_pr_nlen,pr_nlen_correct])
 
-
-EVAL ``pr_nlist_len [1]``;
-EVAL ``pr_nlist_len [0]``;
-
-
-val un_nlist_nlist_of_inv = Q.store_thm("un_nlist_nlist_of_inv",
-`un_nlist (nlist_of n) = n`,
-Induct_on `n`  >> fs[nlist_of_def,un_nlist_def,ncons_def] >> strip_tac >>`h ⊗ nlist_of n + 1 = SUC (h ⊗ nlist_of n)` by fs[] >>  rw[un_nlist_def] )
-
-EVAL ``un_nlist 144``;
-EVAL ``pr_nlist_len [144]``;
-
-EVAL ``un_nlist 37``;
-EVAL ``pr_nlist_len [37]``;
-
-EVAL ``un_nlist 162``;
-EVAL ``nlist_of [9;2;0]``;
-EVAL ``pr_nlist_len [162]``;
-EVAL ``nel 0 162``;
-
-val pr_log_def = Define`
-pr_log = Cn (pr2 $- ) [Cn (Pr (zerof) (Cn (pr2 $+) [proj 1; Cn pr_neq [zerof;Cn pr_div [Cn (pr1 nfst) [proj 2];
-         Cn pr_exp [Cn (pr1 nsnd) [proj 2];proj 0 ]]]]))
-            [proj 0;Cn (pr2 npair) [proj 0;proj 1]];onef]`
-
-EVAL ``pr_log [8;2]``;
-EVAL ``pr_log [16;2]``;
-
-
-
-val pr_tl_en_con_fun2_def = Define`
-pr_tl_en_con_fun2 =
-               Cn (pr2 $+) [Cn (pr2 $* )
-  [Cn (pr2 $-) [ Cn pr_exp [twof;Cn (pr2 nel)
-  [proj 0;proj 2 ]];onef ];
-      Cn pr_exp [twof;Cn pr_log [proj 1;twof] ] ];
-                                proj 1] `;
-
-val order_flip_def = Define`
-order_flip = Cn (Pr (zerof )
-                (Cn (pr2 ncons) [Cn (pr2 nel) [proj 0;proj 2] ;proj 1] ))
-                [Cn (pr1 nlen) [proj 0];proj 0]`;
-
-val pr_tl_en_con_fun4_def = Define`
-pr_tl_en_con_fun4 = Cn (pr2 $+) [Cn (pr2 $-)
-                   [Cn pr_exp [twof;Cn (pr2 nel) [proj 0;Cn order_flip [proj 2] ]];onef ];
-                    Cn (pr2 $* ) [proj 1;Cn pr_exp [twof;Cn succ
-   [ Cn pr_log [Cn pr_exp [twof;Cn (pr2 nel) [proj 0;Cn order_flip [proj 2]]] ; twof]] ]]] `;
-
-val pr_tl_en_con_def = Define`
-pr_tl_en_con = Cn (pr1 DIV2) [Cn (Pr (zerof) (pr_tl_en_con_fun4)) [Cn (pr1 nlen) [proj 0];proj 0]]`;
-
-
-EVAL ``pr_tl_en_con [7] ``;
-EVAL ``ENCODE (TL (concatWith [Z] (MAP (GENLIST (K O)) (un_nlist (proj 0 [7])))))``;
-
-EVAL ``pr_tl_en_con [37] ``;
-EVAL ``ENCODE (TL (concatWith [Z] (MAP (GENLIST (K O)) (un_nlist (proj 0 [37])))))``;
-
-EVAL ``pr_tl_en_con [65] ``;
-EVAL ``ENCODE (TL (concatWith [Z] (MAP (GENLIST (K O)) (un_nlist (proj 0 [65])))))``;
-
-EVAL ``pr_tl_en_con [150] ``;
-EVAL ``ENCODE (TL (concatWith [Z] (MAP (GENLIST (K O)) (un_nlist (proj 0 [150])))))``;
-EVAL ``ENCODE (TL (concatWith [Z] (MAP (GENLIST (K O)) (un_nlist (proj 0 [1539])))))``;
-
-EVAL ``concatWith [Z] (MAP (GENLIST (K O)) (un_nlist (proj 0 [150])))``;
-EVAL ``ENCODE [O;O;Z;O;O;Z;O]``;
-
-EVAL ``nlist_of [3;2;1]``;
-EVAL ``nlist_of [1;2;3]``;
-EVAL ``nlist_of [0;0;0;0]``;
-
-EVAL ``pr_nlist_len [65]``;
-
-EVAL ``un_nlist 7``;
-open logrootTheory;
-
-
-val primrec_pr_nlist_len = Q.store_thm("primrec_pr_nlist_len",
-`primrec pr_nlist_len 1`,
-rw[pr_nlist_len_def] >> rpt ( MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules]) >>
-irule alt_Pr_rule >> rw[primrec_rules] >> rpt (irule primrec_cn >> rw[primrec_rules])  )
-
-val primrec_order_flip = Q.store_thm("primrec_order_flip",
-`primrec order_flip 1`,
-rw[order_flip_def] >> rpt ( MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules]) >>fs[primrec_pr_nlist_len] >> fs[primrec_nlen] )
-
-val primrec_pr_log = Q.store_thm("primrec_pr_log",
-`primrec pr_log 2`,
-rw[pr_log_def] >> rpt ( MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules]) >> irule alt_Pr_rule >> rw[primrec_rules] >> rpt (irule primrec_cn >> rw[primrec_rules]))
-
-val primrec_pr_tl_en_con_fun4 = Q.store_thm("primrec_pr_tl_en_con_fun4",
-`primrec pr_tl_en_con_fun4 3`,
-rw[pr_tl_en_con_fun4_def] >> rpt ( MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules]) >> rw[primrec_rules,primrec_pr_exp,primrec_order_flip,primrec_pr_log] >> fs[primrec_nlen] )
-
-val primrec_pr_tl_en_con = Q.store_thm("primrec_pr_tl_en_con",
-`primrec pr_tl_en_con 1`,
-SRW_TAC [][pr_tl_en_con_def,primrec_rules] >>
- rpt ( MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules,primrec_div2,primrec_pr_nlist_len]) >>
- fs[primrec_nlen] >>  irule alt_Pr_rule >> rw[primrec_pr_tl_en_con_fun4] )
-
-EVAL ``pr_tl_en_con [0]``;
-
-EVAL ``pr_tl_en_con [0;3]``;
-
-(* need to complete *)
 val order_flip_correct = Q.store_thm("order_flip_correct[simp]",
 `order_flip [nlist_of l] = nlist_of (REVERSE l)`,
-  Cases_on `l` >> fs[nlist_of_def] >- (EVAL_TAC) >> fs[order_flip_def]  )
+  Induct_on `l` >> fs[nlist_of_def] >- (EVAL_TAC) >> strip_tac >> fs[order_flip_def] )
 
-
-(* can remove? *)
+ can remove?
 val pr_nlist_len_correct = Q.store_thm("pr_nlist_len_correct[simp]",
 `pr_nlist_len [k] = LENGTH (un_nlist k)`,
 `∃l. k=nlist_of l` by metis_tac[nlist_of_onto] >> simp[un_nlist_nlist_of_inv] >> pop_assum kall_tac >> Induct_on `l` >> fs[] >- (EVAL_TAC))
 
-EVAL ``pr_tl_en_con [91]``;
-EVAL ``ENCODE (TL (concatWith [Z] (MAP (GENLIST (K O)) (un_nlist (proj 0 [91])))))``;
+
+val nleng_corr = Q.store_thm("nleng_corr[simp]",
+`nleng (nlist_of l) = LENGTH l`,
+fs[nleng_def,nel_nlist_of,el_zero_corr])
+ *)
+open logrootTheory;
 
 val ENCODE_TL_DIV2 = Q.store_thm("ENCODE_TL_DIV2",
 `ENCODE (TL (h::t)) = DIV2 (ENCODE (h::t))`,
 Cases_on `h` >> fs[ENCODE_def,DIV2_def,TWO_TIMES_DIV_TWO_thm])
 
-(* currently working on *)
+val el_zero_exp = Q.store_thm("el_zero_exp",
+`el_zero n = nlist_of ((GENLIST (LENGTH ∘ un_nlist) n) ++ [(LENGTH ∘ un_nlist) n])`,
+`n+1 = SUC n` by fs[ADD1] >> rw[GENLIST,SNOC_APPEND,el_zero_corr] )
+
+val el_zero_napp = Q.store_thm("el_zero_napp",
+`el_zero n = napp (nlist_of (GENLIST (LENGTH ∘ un_nlist) n)) (nlist_of [(LENGTH ∘ un_nlist) n])`,
+fs[nlist_of_append,el_zero_exp] )
+
+val len_un_nlist_nsnd = Q.store_thm("len_un_nlist_nsnd",
+`LENGTH (un_nlist (nsnd n)) = LENGTH (TL (un_nlist (SUC n)))`,
+Cases_on `nsnd n` >> fs[un_nlist_def])
+
+val len_un_nlist_nsnd2 = Q.store_thm("len_un_nlist_nsnd2",
+`LENGTH (un_nlist (nsnd n)) = LENGTH (un_nlist (SUC n)) - 1`,
+fs[len_un_nlist_nsnd,LENGTH_TL,length_unnlist])
+
+
+val r_zero_def = Define`(r_zero 0 = ncons 0 0)∧
+     (r_zero (SUC n) =
+   let t = ntl (SUC n);r0n = r_zero n; revt = nel t r0n; res = napp revt (ncons (nhd (SUC n)) 0) in napp r0n (ncons res 0))`
+
+val r_zero_corr = Q.store_thm("r_zero_corr",
+`r_zero n = nlist_of (GENLIST (nlist_of o REVERSE o un_nlist) ( n+1))`,
+Induct_on `n` >> fs[un_nlist_def,r_zero_def,ADD_CLAUSES] >>`ntl (SUC n)<= n` by fs[ntl_suc_less]>>
+rw[GENLIST, SNOC_APPEND,nel_nlist_of] >> rw[nlist_of_append] >> rw[ADD1] >>`∃l. n+1 = nlist_of l`
+by metis_tac[nlist_of_onto]>> rw[] >> Cases_on `l` >> fs[nlist_of_append]  )
+
+val _ = overload_on ("order_flip" ,``pr1 (λn. nel n (r_zero n))``)
+
+val order_flip_corr = Q.store_thm("order_flip_corr",
+`order_flip [n] = nlist_of (REVERSE (un_nlist n))`,
+fs[r_zero_corr,nel_nlist_of])
+
+val un_nlist_ncons = Q.store_thm("un_nlist_ncons[simp]",
+`un_nlist (ncons h t) = h::un_nlist t`,
+fs[ncons_def,un_nlist_def,GSYM ADD1])
+
+val order_flip_ncons = Q.store_thm("order_flip_ncons[simp]",
+`order_flip [ncons h t] = napp (order_flip [t]) (ncons h 0)`,
+ fs[order_flip_corr,nlist_of_append] )
+
+val list_rec_comb_def = Define`(list_rec_comb c n 0 = ncons n 0)∧
+     (list_rec_comb c n (SUC k) = let t = ntl (SUC k);h=nhd (SUC k); rl = list_rec_comb c n k;
+     r = nel t rl in napp rl (ncons (c [h; t; r]) 0))  `
+
+val LIST_REC_def = Define`(LIST_REC c (n:num) [] = n) ∧
+     (LIST_REC c n (h::t) = c [h;nlist_of t;LIST_REC c n t])`
+
+val list_rec_comb_corr = Q.store_thm("list_rec_comb_corr",
+`list_rec_comb c n k = nlist_of (GENLIST (LIST_REC c n o un_nlist) (k+1))`,
+Induct_on `k` >> fs[un_nlist_def,list_rec_comb_def,LIST_REC_def,ADD_CLAUSES] >> `ntl (SUC k)<= k` by fs[ntl_suc_less]>> rw[GENLIST, SNOC_APPEND,nel_nlist_of] >> rw[nlist_of_append] >> rw[ADD1] >>`∃l. k+1 = nlist_of l`
+by metis_tac[nlist_of_onto]>> rw[] >> Cases_on `l` >> fs[nlist_of_append] >> rw[LIST_REC_def] )
+
+val primrec_list_rec_comb = Q.store_thm("primrec_list_rec_comb",
+`(primrec c 3) ==> (primrec (pr1 (list_rec_comb c n)) 1)`,
+strip_tac >> irule primrec_pr1 >> qexists_tac`Pr1 (ncons n 0) (Cn (pr2 napp) [proj 1;Cn (pr2 ncons) [Cn c [Cn (pr1 nhd) [Cn succ [proj 0]];Cn (pr1 ntl) [Cn succ [proj 0]];Cn (pr2 nel) [Cn (pr1 ntl) [Cn succ [proj 0]];proj 1 ]];zerof]])` >> conj_tac >- (irule primrec_Pr1 >> rpt (irule primrec_cn >> rw[primrec_rules,primrec_napp,primrec_ncons])) >> Induct >> fs[list_rec_comb_def])
+
+val list_num_rec_thm = Q.store_thm("list_num_rec_thm",
+`∀n c.(primrec c 3)==> ∃f.(primrec f 1) ∧ (f [0] = n) ∧ (∀h t. f [ncons h t] = c [h; t; (f [t])])`,
+rpt strip_tac >> qexists_tac`Cn (pr2 nel) [proj 0;Cn (pr1 (list_rec_comb c n)) [proj 0]] ` >>
+rpt conj_tac >- (rpt (irule primrec_cn >> rw[primrec_rules,primrec_nel,primrec_list_rec_comb]))>>
+ simp[list_rec_comb_def] >> simp[list_rec_comb_corr,nel_nlist_of,LIST_REC_def] )
+
+val nleng_thm = new_specification("nleng_def", ["nleng"],
+list_num_rec_thm |> SPECL[``0n``,``Cn succ [proj 2]``]
+                 |> SIMP_RULE (srw_ss())[primrec_cn, primrec_rules])
+
+val nrev_thm = new_specification("nrev_def", ["nrev"],
+list_num_rec_thm |> SPECL[``0n``,``Cn (pr2 napp) [proj 2;Cn (pr2 ncons) [proj 0;zerof] ]``] 
+                 |> SIMP_RULE (srw_ss())[primrec_cn, primrec_rules])
+
+val concatWith_Z_thm = new_specification("concatWith_Z_def", ["concatWith_Z"],
+ list_num_rec_thm |> SPECL[``0n``,``pr_cond (Cn pr_eq [proj 1;zerof])
+ (proj 0) (Cn (pr2 napp) [proj 0; Cn (pr2 napp) [onef;proj 2]])``]
+                 |> SIMP_RULE (srw_ss())[primrec_cn, primrec_rules])
+
+val concatWith_Z_corr = Q.store_thm("concatWith_Z_corr",
+`concatWith_Z [x] = nlist_of (concatWith [0] (MAP un_nlist (un_nlist x)))`,
+completeInduct_on `x` >> `(x = 0) ∨ ∃h t. x = ncons h t` by metis_tac[nlist_cases] >>
+simp[concatWith_Z_thm,un_nlist_def,concatWith_def] >> rw[] >>
+simp[concatWith_Z_thm,un_nlist_def,concatWith_def] >> `t < ncons h t` by (simp[ncons_def] >>
+`t = nsnd (h *, t)` by simp[] >> `nsnd (h *, t) <= h *, t` by simp[nsnd_le] >> simp[] ) >>
+RES_TAC >> simp[concatWith_def] >> `∃h' t'. t = ncons h' t'` by metis_tac[nlist_cases] >>
+simp[concatWith_def] >> simp[nlist_of_append,ncons_def,npair_def,tri_def,napp_ASSOC] )
+
+
+(** May not need
 val primrec_TL_ENCODE_concat_gen_un_nlist = Q.store_thm("primrec_TL_ENCODE_concat_gen_un_nlist",
-`pr_tl_en_con = λm. if  (m=[]) ∨ (HD m = 0) then 0 else  ENCODE (TL (concatWith [Z] (MAP (GENLIST (K O)) (un_nlist (proj 0 m))))) `,
+`pr_tl_en_con = λm. if  (m=[]) ∨ (HD m = 0) then 0
+                  else  ENCODE (TL (concatWith [Z] (MAP (GENLIST (K O)) (un_nlist (proj 0 m))))) `,
 simp[FUN_EQ_THM] >> rw[]
-    >- (Induct_on `m` >> fs[] >> EVAL_TAC)
-    >- (Cases_on `m` >> fs[] >> simp[pr_tl_en_con_def] >> simp[pr_tl_en_con_fun4_def] >>
-        `∃h' t. h = ncons h' t` by metis_tac[nlist_cases] >> rw[] >> simp[nlen_thm] >>
-        `∃t'. t = nlist_of t'` by metis_tac[nlist_of_onto] >> rw[] >>
-    `un_nlist (ncons h' (nlist_of t')) =h'::t' ` by metis_tac[un_nlist_nlist_of_inv,nlist_of_def] >>
-    rw[] >> Cases_on `h'` >> rw[] 
-      >- (fs[])
-      >- ()
-    >> fs[ENCODE_TL_DIV2]     ) )
+  >- (Induct_on `m` >> fs[] >> EVAL_TAC)
+  >- (`(m <>[]) ∧ ¬(HD m = 0)` by rfs[NOT_IMP] >> simp[pr_tl_en_con_def]>>
+     `proj 0 m <> 0` by fs[proj_thm,proj_def] >> qabbrev_tac`k = proj 0 m` >> rpt strip_tac>>
+     `∃k'. k = SUC k'` by metis_tac[num_CASES] >> rw[nleng_def,el_zero_corr] >> rw[nel_thm] >>
+     `SUC k' +1 = SUC (k' +1)` by fs[] >>rw[] >> simp[GENLIST,nlist_of_def]>>
+`k'+1 = SUC k'` by fs[ADD1] >> Q.UNDISCH_THEN `k<>0` mp_tac >>
+rpt (pop_assum kall_tac) >>
+     fs[nel_nlist_of]  >>
+     `(LENGTH (GENLIST (LENGTH ∘ un_nlist) (SUC k'))) = (SUC k')` by fs[LENGTH_GENLIST] >>
+     `EL (SUC k') (SNOC (LENGTH (un_nlist (SUC k'))) (GENLIST (LENGTH ∘ un_nlist)
+      (SUC k'))) =  (LENGTH (un_nlist (SUC k')))` by
+     metis_tac[EL_LENGTH_SNOC] >> rw[] >> rpt (pop_assum kall_tac) >>
+
+     completeInduct_on ` k` >> strip_tac >> `∃l. k = nlist_of l` by metis_tac[nlist_of_onto] >>rw[]
+     fs[] >> Cases_on `l` >> fs[] >> simp[CONV_RULE FUN_EQ_CONV pr_tl_en_con_fun4_def] >> 
+     Cases_on `MAP (GENLIST (K O)) (un_nlist (SUC k'))` >> rw[concatWith_def] >- () >>
+     Cases_on `t` >> rw[TL,concatWith_def]>>
+      >>
+      >>
+   >> fs[ENCODE_TL_DIV2]     ) ) **)
+
+val INITIAL_TAPE_PRES_L = Q.store_thm("INITIAL_TAPE_PRES_L[simp]",
+`(INITIAL_TAPE_TM tm (h::t)).tape_l = []`,
+fs[INITIAL_TAPE_TM_def])
+
+val tape_encode_def = Define `tape_encode = pr_cond (Cn pr_eq [proj 1;zerof])
+   (Cn (pr2 npair) [proj 0;Cn (pr2 $*) [twof;proj 2]])
+  (Cn (pr2 npair) [proj 0;Cn succ [Cn (pr2 $* ) [twof;proj 2]]])`
+
+val primrec_tape_encode = Q.store_thm("primrec_tape_encode[simp]",
+`primrec tape_encode 3`,
+fs[tape_encode_def] >> irule primrec_pr_cond >> rpt (irule primrec_cn >> rw[primrec_rules,primrec_pr_cond,primrec_pr_eq,primrec_pr_mult]))
+
+val tape_encode_corr = Q.store_thm("tape_encode_corr",
+`tape_encode [ENCODE tm.tape_l;NUM_CELL tm.tape_h;ENCODE tm.tape_r] = ENCODE_TM_TAPE tm`,
+fs[tape_encode_def,ENCODE_TM_TAPE_def] >> `CELL_NUM (NUM_CELL tm.tape_h) = tm.tape_h` by
+ fs[CELL_NUM_NUM_CELL]>> `CELL_NUM 0 = Z` by fs[CELL_NUM_def]>>`NUM_CELL Z = 0` by fs[NUM_CELL_def]
+>>`(NUM_CELL tm.tape_h = 0) ⇔ (tm.tape_h = Z)` by metis_tac[NUM_CELL_INJ] >>rw[] )
+
+val tape_encode_corr_sym = Q.store_thm("tape_encode_corr_sym",
+`ENCODE_TM_TAPE tm = tape_encode [ENCODE tm.tape_l;NUM_CELL tm.tape_h;ENCODE tm.tape_r]`,
+fs[tape_encode_corr])
+
+val pr_INITIAL_TAPE_TM_NUM_def = Define`
+pr_INITIAL_TAPE_TM_NUM = pr_cond (Cn pr_eq [proj 1;zerof]) (proj 0) (Cn (pr2 npair)
+[Cn (pr1 nfst) [proj 0];Cn (pr2 npair) [Cn (pr1 nhd) [proj 1];Cn (pr1 ntl) [proj 1]] ])`
+
+val primrec_pr_INITIAL_TAPE_TM_NUM = Q.store_thm("primrec_pr_INITIAL_TAPE_TM_NUM[simp]",
+`primrec pr_INITIAL_TAPE_TM_NUM 2`,
+fs[pr_INITIAL_TAPE_TM_NUM_def] >> `0<2` by fs[] >>irule primrec_pr_cond >> rpt (irule primrec_cn >> rw[primrec_rules,primrec_pr_eq,primrec_nsnd,primrec_nfst] ) >>fs[primrec_proj] )
 
 val pr_INITIAL_TM_NUM_def = Define`
-pr_INITIAL_TM_NUM = Cn (pr2 npair) [zerof;Cn (pr2 npair) [zerof;Cn (pr2 $* ) [twof;Cn pr_tl_en_con]]]`
+pr_INITIAL_TM_NUM = Cn (pr2 npair) [zerof;Cn tape_encode
+ [Cn (pr1 nfst) [Cn pr_INITIAL_TAPE_TM_NUM [zerof;Cn concatWith_Z [proj 0]]];
+  Cn (pr1 nfst) [Cn (pr1 nsnd) [Cn pr_INITIAL_TAPE_TM_NUM [zerof;Cn concatWith_Z [proj 0]]]];
+  Cn (pr1 nsnd) [Cn (pr1 nsnd) [Cn pr_INITIAL_TAPE_TM_NUM [zerof;Cn concatWith_Z [proj 0]]]]]]`
 
-val primrec_pr_INITIAL_TM_NUM = Q.store_thm("primrec_pr_INITIAL_TM_NUM",
+val primrec_pr_INITIAL_TM_NUM = Q.store_thm("primrec_pr_INITIAL_TM_NUM[simp]",
 `primrec pr_INITIAL_TM_NUM 1`,
-)
+SRW_TAC [][pr_INITIAL_TM_NUM_def,primrec_rules] >>
+rpt ( MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules,concatWith_Z_thm,primrec_pr_INITIAL_TAPE_TM_NUM,primrec_tape_encode,primrec_npair,primrec_ntl,primrec_nhd]))
 
+
+val nfst_zero = Q.store_thm("nfst_zero[simp]", `nfst 0 = 0`, EVAL_TAC)
+val nsnd_zero = Q.store_thm("nsnd_zero[simp]", `nsnd 0 = 0`, EVAL_TAC)
+val nhd_zero = Q.store_thm("nfst_zero[simp]", `nhd 0 = 0`, EVAL_TAC)
+val ntl_zero = Q.store_thm("nsnd_zero[simp]", `ntl 0 = 0`, EVAL_TAC)
+
+val nhd_nlist_of = Q.store_thm("nhd_nlist_of[simp]",
+`nhd (nlist_of (h::t)) = h`,
+fs[nhd_thm,nlist_of_def])
+
+val ntl_nlist_of = Q.store_thm("ntl_nlist_of[simp]",
+`ntl (nlist_of (h::t)) = nlist_of t`,
+fs[ntl_thm,nlist_of_def])
+
+val tape_encode_thm = Q.store_thm("tape_encode_thm",
+`tape_encode [a;b;c] = if b=0 then a *, (2* c) else a *, (SUC (2*c))`,
+fs[tape_encode_def])
+
+val tape_encode_eq = Q.store_thm("tape_encode_eq",
+`(((b=0) ∨ (b=1)) ∧ ((e=0) ∨ (e=1))) ==>
+                     ( (tape_encode [a;b;c] = tape_encode [d;e;f]) <=> ((a=d) ∧ (b=e) ∧(c=f)))`,
+strip_tac >> eq_tac >> rw[tape_encode_thm]
+         >- (CCONTR_TAC >> rfs[] >> `ODD (SUC (2* f))` by fs[ODD_DOUBLE] >> `EVEN (2*c)` by
+           fs[EVEN_DOUBLE] >> rfs[EVEN_AND_ODD] >> fs[EVEN,EVEN_DOUBLE] )
+         >- (CCONTR_TAC >> rfs[] >> `ODD (SUC (2* c))` by fs[ODD_DOUBLE] >> `EVEN (2*f)` by
+           fs[EVEN_DOUBLE] >> rfs[EVEN_AND_ODD] >> metis_tac[EVEN_AND_ODD])  )
+
+(* currently working on 
 val primrec_INITIAL_TM_NUM = Q.store_thm("primrec_INITIAL_TM_NUM",
 `primrec INITIAL_TM_NUM 1`,
-`INITIAL_TM_NUM = pr_INITIAL_TM_NUM` suffices_by fs[primrec_pr_INITIAL_TM_NUM]
-                                     qmatch_abbrev_tac`primrec f 1` >>
-  rfs[INITIAL_TM_NUM_def,INITIAL_TM_def,un_nlist_def,INITIAL_TAPE_TM_def,FULL_ENCODE_TM_def]>>
-`f m = STATE_TO_NUM <|n := 0|> ⊗ ENCODE_TM_TAPE (INITIAL_TAPE_TM
- <|state := <|n := 0|>; prog := FEMPTY; tape_l := []; tape_h := Z; tape_r := []|> (concatWith [Z]
-  (MAP (GENLIST (K O)) (un_nlist (proj 0 m)))))` by fs[] >>
-  Cases_on `(concatWith [Z] (MAP (GENLIST (K O)) (un_nlist (proj 0 m))))` >>
-  rfs[INITIAL_TAPE_TM_def] >> rfs[STATE_TO_NUM_def,ENCODE_TM_TAPE_def] >> rfs[] >> rfs[ENCODE_def]
-  >- ( `0*,0*,0 = 0` by EVAL_TAC >> `f m = 0` by fs[] >>
-      ` f m = zerof m` by (Induct_on `m` >> fs[]) >>`primrec zerof 1` by fs[primrec_rules] >>
-      `` >> `f = zerof` by fs[FUN_EQ_THM] fs[primrec_rules] )
-  >- (Cases_on `h` >> fs[])
-                                        )
+`INITIAL_TM_NUM = pr_INITIAL_TM_NUM` suffices_by fs[primrec_pr_INITIAL_TM_NUM] >>
+ fs[FUN_EQ_THM] >> strip_tac >>
+ fs[INITIAL_TM_NUM_def,INITIAL_TM_def,un_nlist_def,INITIAL_TAPE_TM_def,FULL_ENCODE_TM_def,STATE_TO_NUM_def] >> Cases_on `(concatWith [Z] (MAP (GENLIST (K O)) (un_nlist (proj 0 x))))` >>
+fs[INITIAL_TAPE_TM_def]  >>
+fs[pr_INITIAL_TM_NUM_def,pr_INITIAL_TAPE_TM_NUM_def,tape_encode_corr,concatWith_Z_corr]>>
+Cases_on `nlist_of (concatWith [0] (MAP un_nlist (un_nlist (proj 0 x))))` >> rw[] >-
+(`tape_encode [0;0;0] = tape_encode [ENCODE [];NUM_CELL Z;ENCODE []]` by
+ fs[ENCODE_def,NUM_CELL_def] >> asm_simp_tac list_ss [tape_encode_corr_sym,EQ_SYM] >> fs[] )
+>- (fs[tape_encode_corr_sym,ENCODE_def] >> fs[tape_encode_eq] >> )
+>- (contra)
+>- (fs[tape_encode_corr_sym] >> rw[nhd_nlist_of,ENCODE_def] )
+    )
 
 val primrec_RUN_NUM = Q.store_thm("primrec_RUN_NUM",
 `primrec (RUN_NUM p) 2`,
@@ -1983,7 +2074,7 @@ val main_eq_thm = Q.store_thm("main_eq_thm",
 strip_tac >> qexists_tac`recfn_tm p` >- (fs[recfn_tm_recfn]) >> strip_tac >> )
 
 
-
+*)
 
 (*
 <== Direction
@@ -2033,7 +2124,7 @@ val UNIVERSAL_TM_EXIST = store_thm (
     This means that whenever we have 00
     we will have reached the end of and input *)
 
-
+(*  Other direction
 val zero_tm_def = Define`zero_tm x = ENCODE_TM_TAPE (RUN (2*(LENGTH x))  <| state := 0;
                                   prog := FEMPTY |++ [((0,Z),(2,R)); ((0,O),(1,Wr0));
                                                       ((1,Z),(0,R)); ((2,O),(3,Wr0));
@@ -2058,10 +2149,8 @@ val zero_pr_tm_equiv = Q.store_thm("zero_pr_tm_equiv",
 fs[zero_tm_def] >> fs[RUN] >> fs[ENCODE_TM_TAPE_def])
 
 
+*)
 
-                       *)
-
-                                  
 (*TO DO LATER*)
 
 (*
