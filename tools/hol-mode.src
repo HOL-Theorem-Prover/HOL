@@ -467,9 +467,9 @@ With a prefix ARG, uses `expandf' rather than `e'."
   "Send selected region to HOL process as tactic."
   (interactive "r\nP")
   (let*
-      ((region-string0 (with-hol-locpragma start (buffer-substring start end)))
+      ((region-string0 (tactic-cleanup (buffer-substring start end)))
+       (region-string1 (with-hol-locpragma start region-string0))
        (ste "\"show_typecheck_errors\"")
-       (region-string1 (tactic-cleanup region-string0))
        (region-string (concat "let val old = Feedback.current_trace "
                               ste
                               " val _ = Feedback.set_trace "
