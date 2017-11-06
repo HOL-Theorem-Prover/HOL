@@ -306,7 +306,9 @@ val removeStatesSimpl_def = Define`
 removeStatesSimpl (ALTER_A s i f a t) =
             (ALTER_A
                  (s ∩ reachRelFromSet (ALTER_A s i f a t) (BIGUNION i))
-                 i f a t)`;
+                 i
+                 (f ∩ reachRelFromSet (ALTER_A s i f a t) (BIGUNION i))
+                 a t)`;
 
 val REACHREL_LEMM = store_thm
                         ("REACHREL_LEMM",
@@ -365,14 +367,34 @@ val REDUCE_STATE_CORRECT = store_thm
              >- (Cases_on `aut` >> fs[validAARunFor_def, removeStatesSimpl_def])
              >- (Cases_on `aut` >> fs[validAARunFor_def, removeStatesSimpl_def])
              )
-          >- (Cases_on `aut` >> fs[acceptingAARun_def, removeStatesSimpl_def])
+          >- (Cases_on `aut` >> fs[acceptingAARun_def, removeStatesSimpl_def]
+              >> rpt strip_tac
+              >> Q.HO_MATCH_ABBREV_TAC `FINITE {i | b i ∈ A ∧ b i ∈ B }`
+              >> `{i | b i ∈ A ∧ b i ∈ B } ⊆ {i | b i ∈ A }` by (
+                   simp[SUBSET_DEF] >> rpt strip_tac >> metis_tac[]
+               )
+              >> metis_tac[PSUBSET_DEF,PSUBSET_FINITE]
+             )
           >- (Cases_on `aut` >> fs[removeStatesSimpl_def])
         )
      >- (qexists_tac `run` >> fs[runForAA_def] >> rpt strip_tac
          >- (simp[validAARunFor_def] >> rpt strip_tac
              >> Cases_on `aut`
              >> fs[validAARunFor_def, removeStatesSimpl_def])
-         >- (Cases_on `aut` >> fs[acceptingAARun_def,removeStatesSimpl_def])
+         >- (Cases_on `aut` >> fs[acceptingAARun_def,removeStatesSimpl_def]
+             >> rpt strip_tac
+             >> `∀i. b i ∈ run.V i` by metis_tac[BRANCH_V_LEMM]
+             >> fs[validAARunFor_def] >> first_x_assum (qspec_then `b` mp_tac)
+             >> simp[] >> rpt strip_tac
+             >> `{i | b i ∈ f1}
+                   ⊆ {i | b i ∈ f1 ∧
+                        b i ∈ reachRelFromSet
+                        (ALTER_A f f0 f1 f2 f3) (BIGUNION f0)}` by (
+                  simp[SUBSET_DEF] >> rpt strip_tac
+                  >> metis_tac[SUBSET_DEF]
+              )
+             >> metis_tac[PSUBSET_DEF,PSUBSET_FINITE]
+            )
          >- (Cases_on `aut` >> fs[removeStatesSimpl_def])
         )
   );
