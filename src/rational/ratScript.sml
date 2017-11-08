@@ -631,12 +631,12 @@ val RAT_OF_NUM_CALCULATE = store_thm("RAT_OF_NUM_CALCULATE", ``!n1. rat_of_num n
 	FRAC_POS_TAC ``1i`` THEN
 	RW_TAC int_ss [NMR,DNM, ARITH_PROVE ``int_of_num (SUC n) + 1 = int_of_num (SUC (SUC n))``] );
 
-val RAT_OF_NUM_LEQ = store_thm("RAT_OF_NUM_LEQ",
+val RAT_OF_NUM_LEQ = store_thm("RAT_OF_NUM_LEQ[simp]",
   ``rat_of_num a <= rat_of_num b = a <= b``,
   SIMP_TAC std_ss [RAT_OF_NUM_CALCULATE, RAT_LEQ_CALCULATE,
     NMR, DNM, INT_LT_01, INT_MUL_RID, INT_LE]);
 
-val RAT_OF_NUM_LES = store_thm("RAT_OF_NUM_LES",
+val RAT_OF_NUM_LES = store_thm("RAT_OF_NUM_LES[simp]",
   ``rat_of_num a < rat_of_num b = a < b``,
   SIMP_TAC std_ss [RAT_OF_NUM_CALCULATE, RAT_LES_CALCULATE,
     NMR, DNM, INT_LT_01, INT_MUL_RID, INT_LT]);
@@ -1093,12 +1093,13 @@ val RAT_DIV_MULMINV = store_thm("RAT_DIV_MULMINV", ``!r1 r2. rat_div r1 r2 = rat
    |- !r1. ~(r1=0q) ==> (rat_ainv (rat_minv r1) = rat_minv (rat_ainv r1))
  *--------------------------------------------------------------------------*)
 
-val RAT_AINV_0 = store_thm("RAT_AINV_0", ``rat_ainv 0q = 0q``,
+val RAT_AINV_0 = store_thm("RAT_AINV_0[simp]", ``rat_ainv 0q = 0q``,
 	REWRITE_TAC[rat_0,rat_ainv_def] THEN
 	RW_TAC int_ss[RAT_AINV_CONG] THEN
 	RW_TAC int_ss[FRAC_AINV_0] );
 
-val RAT_AINV_AINV = store_thm("RAT_AINV_AINV", ``!r1. rat_ainv (rat_ainv r1) = r1``,
+val RAT_AINV_AINV = store_thm("RAT_AINV_AINV[simp]",
+  ``!r1. rat_ainv (rat_ainv r1) = r1``,
 	GEN_TAC THEN
 	REWRITE_TAC[rat_ainv_def] THEN
 	RW_TAC int_ss[RAT_AINV_CONG, FRAC_AINV_AINV, rat_thm] );
@@ -1144,7 +1145,7 @@ val RAT_AINV_EQ = store_thm("RAT_AINV_EQ",
 	BasicProvers.VAR_EQ_TAC THEN
 	REWRITE_TAC[RAT_AINV_AINV] );
 
-val RAT_EQ_AINV = store_thm("RAT_EQ_AINV",
+val RAT_EQ_AINV = store_thm("RAT_EQ_AINV[simp]",
   ``!r1 r2. (rat_ainv r1 = rat_ainv r2) = (r1=r2)``,
 	REWRITE_TAC[RAT_AINV_EQ, RAT_AINV_AINV] ) ;
 
@@ -1198,12 +1199,14 @@ val RAT_SUB_LDISTRIB = store_thm("RAT_SUB_LDISTRIB", ``!a b c. rat_mul c (rat_su
    |- !r1. rat_sub r1 0q = r1
  *--------------------------------------------------------------------------*)
 
-val RAT_SUB_LID = store_thm("RAT_SUB_LID", ``!r1. rat_sub 0q r1 = rat_ainv r1``,
+val RAT_SUB_LID = store_thm("RAT_SUB_LID[simp]",
+  ``!r1. rat_sub 0q r1 = rat_ainv r1``,
 	GEN_TAC THEN
 	REWRITE_TAC[RAT_SUB_ADDAINV] THEN
 	REWRITE_TAC[RAT_ADD_LID] );
 
-val RAT_SUB_RID = store_thm("RAT_SUB_RID", ``!r1. rat_sub r1 0q = r1``,
+val RAT_SUB_RID = store_thm("RAT_SUB_RID[simp]",
+  ``!r1. rat_sub r1 0q = r1``,
 	GEN_TAC THEN
 	REWRITE_TAC[RAT_SUB_ADDAINV] THEN
 	REWRITE_TAC[RAT_AINV_0] THEN
@@ -1214,7 +1217,8 @@ val RAT_SUB_RID = store_thm("RAT_SUB_RID", ``!r1. rat_sub r1 0q = r1``,
    |- ! r. r - r = 0q
  *--------------------------------------------------------------------------*)
 
-val RAT_SUB_ID = store_thm("RAT_SUB_ID", ``! r. rat_sub r r = 0q``,
+val RAT_SUB_ID = store_thm("RAT_SUB_ID[simp]",
+  ``! r. rat_sub r r = 0q``,
 	RW_TAC bool_ss [RAT_SUB_ADDAINV, RAT_ADD_RINV]);
 
 (*--------------------------------------------------------------------------
@@ -2090,6 +2094,17 @@ val RAT_NO_IDDIV = store_thm("RAT_NO_IDDIV", ``!r1 r2. (rat_mul r1 r2 = r2) = (r
 	SUBST_TAC [UNDISCH (SPECL[``r1:rat``,``1q``,``r2:rat``] RAT_EQ_RMUL)] THEN
 	PROVE_TAC[] );
 
+(* moving divisions out *)
+
+val RDIV_MUL_OUT = Q.store_thm(
+  "RDIV_MUL_OUT",
+  ‘r1 * (r2 / r3) = (r1 * r2) / r3’,
+  metis_tac[RAT_MUL_ASSOC, RAT_DIV_MULMINV]);
+
+val LDIV_MUL_OUT = Q.store_thm(
+  "LDIV_MUL_OUT",
+  ‘(r1 / r2) * r3 = (r1 * r3) / r2’,
+  metis_tac[RAT_MUL_ASSOC, RAT_DIV_MULMINV, RAT_MUL_COMM]);
 
 (*--------------------------------------------------------------------------
    RAT_DENSE_THM
@@ -2415,8 +2430,196 @@ val RAT_EQ_NUM3 = prove(``!n m. (~&n =  &m) = (n=0)/\(m=0)``,
 val RAT_EQ_NUM4 = prove(``!n m. (~&n = ~&m) = (n=m)``,
 	PROVE_TAC[RAT_AINV_EQ, RAT_EQ_NUM1] );
 
-val RAT_EQ_NUM_CALCULATE = save_thm("RAT_EQ_NUM_CALCULATE", LIST_CONJ [RAT_EQ_NUM1, RAT_EQ_NUM2, RAT_EQ_NUM3, RAT_EQ_NUM4] );
+val RAT_EQ_NUM_CALCULATE = save_thm("RAT_EQ_NUM_CALCULATE[simp]",
+  LIST_CONJ [RAT_EQ_NUM1, RAT_EQ_NUM2, RAT_EQ_NUM3, RAT_EQ_NUM4] );
 
+(* ----------------------------------------------------------------------
+    RAT_LT_NUM
+   ---------------------------------------------------------------------- *)
+
+val RAT_LT_NUM1 = RAT_OF_NUM_LES
+
+val RAT_LT_NUM2 = Q.prove(
+  ‘-&m < &n <=> 0 < m \/ 0 < n’,
+  eq_tac >- (spose_not_then strip_assume_tac >> fs[]) >>
+  strip_tac
+  >- (irule RAT_LES_LEQ_TRANS >> qexists_tac `0` >> simp[] >>
+      simp[Once RAT_AINV_LES]) >>
+  irule RAT_LEQ_LES_TRANS >> qexists_tac `0` >> simp[] >>
+  simp[rat_leq_def] >>
+  simp[Once RAT_AINV_LES]);
+
+val RAT_LT_NUM3 = Q.prove(
+  ‘&m < -&n <=> F’,
+  simp[] >> strip_tac >>
+  ‘-&n <= 0’ by simp[rat_leq_def, Once RAT_AINV_LES] >>
+  ‘&m < 0’ by metis_tac[RAT_LES_LEQ_TRANS] >> fs[])
+
+val RAT_LT_NUM4 = Q.prove(
+  ‘-&m < -&n <=> n < m’,
+  simp[RAT_LES_AINV]);
+
+val RAT_LT_NUM_CALCULATE = save_thm(
+  "RAT_LT_NUM_CALCULATE[simp]",
+  LIST_CONJ [RAT_LT_NUM1, RAT_LT_NUM2, RAT_LT_NUM3, RAT_LT_NUM4]);
+
+(* ----------------------------------------------------------------------
+    RAT_LE_NUM
+   ---------------------------------------------------------------------- *)
+
+val RAT_LE_NUM2 = Q.prove(
+  ‘-&m <= &n <=> T’,
+  simp[rat_leq_def]);
+
+val RAT_LE_NUM3 = Q.prove(
+  ‘&m <= -&n <=> (m = 0) /\ (n = 0)’,
+  simp[rat_leq_def]);
+
+val RAT_LE_NUM4 = Q.prove(
+  ‘-&m <= -&n <=> n <= m’,
+  simp[rat_leq_def]);
+
+val RAT_LE_NUM_CALCULATE = save_thm(
+  "RAT_LE_NUM_CALCULATE[simp]",
+  LIST_CONJ [RAT_OF_NUM_LEQ, RAT_LE_NUM2, RAT_LE_NUM3, RAT_LE_NUM4]);
+
+(* ----------------------------------------------------------------------
+    rat_of_int
+   ---------------------------------------------------------------------- *)
+
+val rat_of_int_def = Define ‘
+  rat_of_int i : rat = if i < 0 then - (& (Num (-i))) else &(Num i)
+’;
+
+val rat_of_int_11 = Q.store_thm(
+  "rat_of_int_11[simp]",
+  ‘(rat_of_int i1 = rat_of_int i2) <=> (i1 = i2)’,
+  simp[EQ_IMP_THM] >> simp[rat_of_int_def] >> Cases_on ‘i1 < 0’ >>
+  Cases_on ‘i2 < 0’ >> simp[]
+  >- (‘0 <= -i1 /\ 0 <= -i2’ by simp[] >>
+      rpt (pop_assum
+             (mp_tac o CONV_RULE (REWR_CONV (GSYM integerTheory.INT_OF_NUM))))>>
+      ntac 2 strip_tac >> disch_then (mp_tac o AP_TERM ``$& : num -> int``) >>
+      ntac 2 (pop_assum SUBST1_TAC) >> simp[integerTheory.INT_EQ_CALCULATE])
+  >- (rename [‘a < 0’, ‘~(b < 0)’] >>
+      ‘0 <= -a /\ 0 <= b’ by (simp[] >> fs[integerTheory.INT_NOT_LT]) >>
+      rpt (pop_assum
+             (mp_tac o CONV_RULE (REWR_CONV (GSYM integerTheory.INT_OF_NUM))))>>
+      ntac 2 strip_tac >>
+      disch_then (CONJUNCTS_THEN (mp_tac o AP_TERM ``$& : num -> int``)) >>
+      ntac 2 (pop_assum SUBST1_TAC) >> simp[integerTheory.INT_EQ_CALCULATE])
+  >- (rename [‘a < 0’, ‘~(b < 0)’] >>
+      ‘0 <= -a /\ 0 <= b’ by (simp[] >> fs[integerTheory.INT_NOT_LT]) >>
+      rpt (pop_assum
+             (mp_tac o CONV_RULE (REWR_CONV (GSYM integerTheory.INT_OF_NUM))))>>
+      ntac 2 strip_tac >>
+      disch_then (CONJUNCTS_THEN (mp_tac o AP_TERM ``$& : num -> int``)) >>
+      ntac 2 (pop_assum SUBST1_TAC) >> simp[integerTheory.INT_EQ_CALCULATE])
+  >- (‘0 <= i1 /\ 0 <= i2’ by fs[integerTheory.INT_NOT_LT] >>
+      rpt (pop_assum
+             (mp_tac o CONV_RULE (REWR_CONV (GSYM integerTheory.INT_OF_NUM))))>>
+      ntac 2 strip_tac >> disch_then (mp_tac o AP_TERM ``$& : num -> int``) >>
+      ntac 2 (pop_assum SUBST1_TAC) >> simp[integerTheory.INT_EQ_CALCULATE]));
+
+val rat_of_int_of_num = Q.store_thm(
+  "rat_of_int_of_num[simp]",
+  ‘rat_of_int (&x) = &x’,
+  simp[rat_of_int_def]);
+
+val elim1 = intLib.ARITH_PROVE ``y <= x /\ x <= y ==> (x = y:int)``
+val elim2 = intLib.ARITH_PROVE ``x:int < y /\ y < x ==> F``
+fun elim_tac k =
+    REPEAT_GTCL
+      (fn ttcl => fn th =>
+          first_assum (mp_then.mp_then (mp_then.Pos hd) ttcl th))
+      (k o assert (not o is_imp o #2 o strip_forall o concl))
+
+val num_rwt = integerTheory.INT_OF_NUM |> SPEC_ALL |> EQ_IMP_RULE |> #2
+
+val rat_of_int_MUL = Q.store_thm(
+  "rat_of_int_MUL",
+  ‘rat_of_int x * rat_of_int y = rat_of_int (x * y)’,
+  simp[rat_of_int_def, integerTheory.INT_MUL_SIGN_CASES] >> rw[] >>
+  fs[integerTheory.INT_NOT_LT, RAT_MUL_NUM_CALCULATE, RAT_EQ_NUM_CALCULATE] >>
+  TRY (elim_tac assume_tac elim1 ORELSE elim_tac assume_tac elim2) >> rw[] >>
+  asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+    [GSYM integerTheory.INT_INJ, GSYM integerRingTheory.int_calculate,
+     num_rwt, integerTheory.INT_LE_MUL, integerTheory.INT_LE_LT,
+     integerTheory.INT_MUL_SIGN_CASES, integerTheory.INT_NEG_GT0]);
+
+val rat_of_int_ADD = Q.store_thm(
+  "rat_of_int_ADD",
+  ‘rat_of_int x + rat_of_int y = rat_of_int (x + y)’,
+  simp[rat_of_int_def] >> rw[]
+  >- (simp[GSYM RAT_AINV_ADD, RAT_ADD_NUM_CALCULATE] >>
+      asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+       [GSYM integerTheory.INT_INJ, GSYM integerRingTheory.int_calculate,
+        num_rwt, integerTheory.INT_LE_MUL, integerTheory.INT_LE_LT,
+        integerTheory.INT_MUL_SIGN_CASES, integerTheory.INT_NEG_GT0])
+  >- (full_simp_tac (bool_ss ++ intLib.INT_ARITH_ss) [])
+  >- (simp[RAT_ADD_NUM_CALCULATE] >> rw[] >>
+      TRY (rename [‘Num (-a) <= Num b’] >>
+           pop_assum (mp_tac o REWRITE_RULE [GSYM integerTheory.INT_LE]) >>
+           asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss) [num_rwt]) >>
+      rename [‘Num (-a) - Num b’] >>
+      ‘Num b <= Num (-a)’
+         by asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+            [num_rwt, GSYM integerTheory.INT_INJ, GSYM integerTheory.INT_LE] >>
+       asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+            [num_rwt, GSYM integerTheory.INT_INJ, GSYM integerTheory.INT_SUB])
+  >- (simp[RAT_ADD_NUM_CALCULATE] >> rw[]
+      >- (rename [‘Num (-a) <= Num b’] >>
+          pop_assum (mp_tac o REWRITE_RULE [GSYM integerTheory.INT_LE]) >>
+          asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss) [num_rwt] >>
+          `Num (-a) <= Num b`
+             by asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+                    [num_rwt, GSYM integerTheory.INT_INJ,
+                     GSYM integerTheory.INT_LE] >>
+         asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+             [num_rwt, GSYM integerTheory.INT_INJ, GSYM integerTheory.INT_SUB])
+      >- (pop_assum (mp_tac o REWRITE_RULE [GSYM integerTheory.INT_LE]) >>
+          asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss) [num_rwt]))
+  >- (simp[RAT_ADD_NUM_CALCULATE] >> rw[] >>
+      TRY (rename [‘Num (-a) <= Num b’] >>
+           pop_assum (mp_tac o REWRITE_RULE [GSYM integerTheory.INT_LE]) >>
+           asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss) [num_rwt]) >>
+      rename [‘Num (-a) - Num b’] >>
+      ‘Num b <= Num (-a)’
+         by asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+            [num_rwt, GSYM integerTheory.INT_INJ, GSYM integerTheory.INT_LE] >>
+       asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+            [num_rwt, GSYM integerTheory.INT_INJ, GSYM integerTheory.INT_SUB])
+  >- (simp[RAT_ADD_NUM_CALCULATE] >> rw[]
+      >- (rename [‘Num (-a) <= Num b’] >>
+          pop_assum (mp_tac o REWRITE_RULE [GSYM integerTheory.INT_LE]) >>
+          asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss) [num_rwt] >>
+          `Num (-a) <= Num b`
+             by asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+                    [num_rwt, GSYM integerTheory.INT_INJ,
+                     GSYM integerTheory.INT_LE] >>
+         asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+             [num_rwt, GSYM integerTheory.INT_INJ, GSYM integerTheory.INT_SUB])
+      >- (pop_assum (mp_tac o REWRITE_RULE [GSYM integerTheory.INT_LE]) >>
+          asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss) [num_rwt]))
+  >- (full_simp_tac (bool_ss ++ intLib.INT_ARITH_ss) [])
+  >- (simp[RAT_ADD_NUM_CALCULATE] >>
+      asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+         [num_rwt, GSYM integerTheory.INT_INJ, GSYM integerTheory.INT_ADD]))
+
+val rat_of_int_LE = Q.store_thm(
+  "rat_of_int_LE[simp]",
+  ‘rat_of_int i <= rat_of_int j <=> i <= j’,
+  simp[rat_of_int_def] >> rw[] >>
+  asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+    [num_rwt, GSYM integerTheory.INT_INJ, GSYM integerTheory.INT_LE])
+
+val rat_of_int_ainv = Q.store_thm(
+  "rat_of_int_ainv",
+  ‘rat_of_int (-i) = -(rat_of_int i)’,
+  simp[rat_of_int_def] >> rw[] >>
+  TRY (elim_tac mp_tac elim2 >> simp[]) >>
+  asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+    [num_rwt, GSYM integerTheory.INT_INJ])
 
 (*==========================================================================
  * end of theory
