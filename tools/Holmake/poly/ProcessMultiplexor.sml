@@ -89,7 +89,7 @@ struct
   let
     open Posix.IO
     val (flags,_) = getfl fd
-    val rdr = mkTextReader { fd = fd, name = "", initBlkMode = true }
+    val rdr = mkTextReader { fd = fd, name = "", initBlkMode = not(O.allSet(O.nonblock,flags)) }
   in
     TextIO.mkInstream (TextIO.StreamIO.mkInstream (rdr, ""))
   end
@@ -219,9 +219,9 @@ struct
 
   fun fill_workq monitorfn (acc as (cmds, wl : 'a worklist)) =
     let
-      val {current_jobs,current_state,genjob,...} = wl
+      val {current_jobs,current_state,genjob,worklimit,...} = wl
     in
-      if Binarymap.numItems(#current_jobs wl) >= #worklimit wl then acc
+      if Binarymap.numItems current_jobs >= worklimit then acc
       else
         case genjob current_state of
             NoMoreJobs s' => (cmds, updstate s' wl)
