@@ -711,11 +711,11 @@ in
           \***\n\
           \*** (Under Poly/ML you will have to delete bin/hol.state0 as \
           \well)\n***\n\
-          \*** (Or: build with -nograph to stop this \
+          \*** (Or: build with --nograph to stop this \
           \message from appearing again)\n")
   else let
       val _ = print "Generating theory-graph and HTML theory signatures; this may take a while\n"
-      val _ = print "  (Use build's -nograph option to skip this step.)\n"
+      val _ = print "  (Use build's --nograph option to skip this step.)\n"
       val pfp = Systeml.protect o fullPath
       val result =
           OS.Process.system(pfp [HOLDIR, "bin", "hol"] ^ " < " ^
