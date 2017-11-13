@@ -1,4 +1,4 @@
-open HolKernel Parse bossLib boolLib pred_setTheory relationTheory set_relationTheory arithmeticTheory pairTheory listTheory optionTheory prim_recTheory
+open HolKernel Parse bossLib boolLib pred_setTheory relationTheory set_relationTheory arithmeticTheory pairTheory listTheory optionTheory prim_recTheory whileTheory
 
 val _ = new_theory "generalHelpers"
 
@@ -427,6 +427,116 @@ val WF_LEMM = store_thm
     >> `~wellfounded (P (b (f 0)))` by metis_tac[wellfounded_def]
     >> metis_tac[WF_IFF_WELLFOUNDED]
   );
+
+
+val MOD_LEMM = store_thm
+  ("MOD_LEMM",
+   ``!x n. (0 < n) ==> ((x - (x MOD n)) MOD n = 0)``,
+   rpt strip_tac
+    >> `((x - (x MOD n) + (x MOD n)) MOD n = ((0 + (x MOD n)) MOD n))` by (
+       `(x MOD n) <= x` by simp[MOD_LESS_EQ]
+       >> `x - (x MOD n) + (x MOD n) = x` by simp[]
+       >> fs[]
+   )
+    >> metis_tac[ADD_MOD,MOD_EQ_0,DECIDE ``0 * n = 0``]
+  );
+
+val MOD_GEQ_2_INCREASES = store_thm
+  ("MOD_GEQ_2_INCREASES",
+   ``!N x. 2 <= N ==> ~((x + 1) MOD N = x MOD N)``,
+   rpt strip_tac >> simp[] >> `0 < N` by simp[]
+   >> `(x + 1 + (N - (x MOD N))) MOD N = (x + (N - (x MOD N))) MOD N`
+      by metis_tac[ADD_MOD]
+   >> `x MOD N < N` by metis_tac[MOD_LESS] >> fs[]
+   >> `0 < N` by simp[] >> `x MOD N <= x` by metis_tac[MOD_LESS_EQ]
+   >> `(N + ((x + 1) − (x MOD N))) MOD N = (N + (x − (x MOD N))) MOD N` by fs[]
+   >> `(x + 1 - (x MOD N)) MOD N = (x - (x MOD N)) MOD N`
+         by metis_tac[ADD_MODULUS]
+   >> `(x - (x MOD N)) MOD N = 0` by metis_tac[MOD_LEMM]
+   >> rw[] >> `((x - (x MOD N)) +1) MOD N = 1` suffices_by fs[]
+   >> `(x - (x MOD N)) MOD N = 0 MOD N` by simp[]
+   >> `1 MOD N = 1` by simp[] >> metis_tac[ADD_MOD,DECIDE ``0 + 1 = 1``]
+  );
+
+val INCREASING_MOD_CYCLES = store_thm
+  ("INCREASING_MOD_CYCLES",
+   ``!f N. (!j. (f (SUC j) = f j) \/ ((f (SUC j)) = ((f j + 1) MOD N)))
+         ∧ (!i. ?k. (i <= k) ∧ ~(f (SUC k) = f k))
+         ∧ (f 0 = 0) ∧ (0 < N)
+         ==> (!n. (n < N) ==> !i. ?k. (i <= k) ∧ (f k = n))``,
+   strip_tac >> strip_tac >> strip_tac
+   >> `!a. f a < N` by (
+       Induct_on `a` >> fs[]
+       >> `(f (SUC a) = f a) ∨ (f (SUC a) = (f a + 1) MOD N)` by simp[] >> fs[]
+   )
+   >> rpt strip_tac >> CCONTR_TAC
+   >> qabbrev_tac `U = { u | u < N ∧ !k. i <= k ==> ~(f k = u)}`
+   >> `U ⊆ (count N)` by (
+       qunabbrev_tac `U` >> simp[count_def,SUBSET_DEF]
+       >> rpt strip_tac >> fs[]
+   )
+   >> `CARD U <= N` by metis_tac[CARD_COUNT,CARD_SUBSET,FINITE_COUNT]
+   >> Cases_on `CARD U < N`
+   >- (`0 < CARD U` by (
+         `~(U = {})` suffices_by metis_tac[CARD_EQ_0,FINITE_COUNT,PSUBSET_DEF,
+                                           PSUBSET_FINITE,
+                                           DECIDE ``0 < CARD U = ~(CARD U = 0)``
+                                          ]
+         >> `?u. u ∈ U` suffices_by metis_tac[MEMBER_NOT_EMPTY]
+         >> qexists_tac `n` >> qunabbrev_tac `U` >> fs[] >> rpt strip_tac
+         >> metis_tac[]
+      )
+      >> `!a. ~((f i + a) MOD N ∈ U)` by (
+          Induct_on `a` >> fs[] >> rpt strip_tac
+          >- (qunabbrev_tac `U` >> fs[] >> metis_tac[DECIDE ``i <= i``])
+          >- (qunabbrev_tac `U` >> fs[]
+              >> qabbrev_tac `P = \p. k <= p ∧ ~(f (SUC p) = f p)`
+              >> qabbrev_tac `p0 = $LEAST P`
+              >> `P p0 ∧ !n. n < p0 ==> ~P n` by (
+                   `?p. P p` suffices_by metis_tac[LEAST_EXISTS]
+                   >> qunabbrev_tac `P` >> fs[]
+               )
+              >> qunabbrev_tac `P` >> fs[]
+              >> `!l. k <= l ∧ l <= p0 ==> (f k = f l)` by (
+                   Induct_on `l` >> fs[] >> rpt strip_tac
+                   >- metis_tac[]
+                   >- (first_x_assum (qspec_then `l` mp_tac) >> simp[]
+                       >> Cases_on `k = SUC l` >> fs[] >> rw[]
+                      )
+               )
+              >> `f p0 = f k` by fs[] >> rw[]
+              >> `(f (SUC p0) = (f p0 + 1) MOD N)` by metis_tac[]
+              >> `i <= SUC p0` by simp[]
+              >> `(f p0 + 1) MOD N = (f i + SUC a) MOD N` suffices_by metis_tac[]
+              >> rw[] >> metis_tac[DECIDE ``a + (f i + 1) = f i + SUC a``]
+             )
+       )
+      >> `?k. (f i + k) MOD N = n` by (
+          `{a | ?k. a = (f i + k) MOD N } = count N` by (
+              simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
+              >- metis_tac[MOD_LESS]
+              >- (qexists_tac `N -(f i MOD N) + (x MOD N)` >> simp[]
+                      >> `f i < N` by metis_tac[] >> simp[]
+                 )
+          )
+          >> `n ∈ count N` by simp[count_def]
+          >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
+          >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
+          >> metis_tac[]
+          )
+      >> `n ∈ U` suffices_by metis_tac[]
+      >> qunabbrev_tac `U` >> fs[] >> metis_tac[]
+      )
+   >- (`CARD U = N` by fs[]
+       >> `U = count N`
+             by metis_tac[FINITE_COUNT,PSUBSET_FINITE,
+                          PSUBSET_DEF,SUBSET_EQ_CARD,CARD_COUNT]
+       >> `f i ∈ U`
+            by (`f i ∈ count N` suffices_by metis_tac[] >> fs[count_def])
+       >> qunabbrev_tac `U` >> fs[] >> metis_tac[DECIDE ``i <= i``]
+      )
+  );
+
 
 
 val _ = export_theory();
