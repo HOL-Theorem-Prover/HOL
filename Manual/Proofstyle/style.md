@@ -67,6 +67,8 @@ For better or worse, maintenance of HOL4 proofs involves interactive replay of p
             ∀x y z.
                R x y ==> Q (f x) z
 
+2.   **Don’t use TABs** Indentation with TABs depends on editor settings for it effect. TABs are only permissible in (Hol)makefiles.
+
 2.  Use two-space indentation
 
 3.  Put the `THEN` connective at the end of the line.
