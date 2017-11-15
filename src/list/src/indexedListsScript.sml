@@ -262,5 +262,34 @@ val LIST_RELi_thm = Q.store_thm(
       fs[LT_SUC, DISJ_IMP_THM, FORALL_AND_THM, PULL_EXISTS]) >>
   var_eq_tac >> dsimp[LT_SUC]);
 
+(* ----------------------------------------------------------------------
+    MAP2i
+   ---------------------------------------------------------------------- *)
+
+val MAP2i_def = Define‘
+  (MAP2i f [] _ = []) /\
+  (MAP2i f _ [] = []) /\
+  (MAP2i f (h1::t1) (h2::t2) = f 0 h1 h2::MAP2i (f o SUC) t1 t2)’;
+val _ = export_rewrites["MAP2i_def"];
+
+(* Define doesn't generate this case, though the second pattern looks as if
+   it should *)
+val MAP2i_NIL2 = Q.store_thm(
+  "MAP2i_NIL2[simp]",
+  ‘MAP2i f l1 [] = []’,
+  Cases_on ‘l1’ >> simp[]);
+
+val MAP2i_ind = theorem"MAP2i_ind";
+
+val LENGTH_MAP2i = Q.store_thm(
+  "LENGTH_MAP2i[simp]",
+  ‘!f l1 l2. LENGTH (MAP2i f l1 l2) = MIN (LENGTH l1) (LENGTH l2)’,
+  ho_match_mp_tac MAP2i_ind >> rw[arithmeticTheory.MIN_DEF]);
+
+val EL_MAP2i = Q.store_thm("EL_MAP2i",
+  ‘!f l1 l2 n.
+      n < LENGTH l1 /\ n < LENGTH l2 ==>
+      (EL n (MAP2i f l1 l2) = f n (EL n l1) (EL n l2))’,
+  HO_MATCH_MP_TAC MAP2i_ind >> rw[] >> Cases_on‘n’ >> fs[]);
 
 val _ = export_theory();
