@@ -250,7 +250,7 @@ val LIST_RELi_EL_EQN = Q.store_thm(
   >- (rename1 `R (LENGTH l1) x y` >>
       first_x_assum (qspec_then `LENGTH l1` mp_tac) >> simp[EL_APPEND2]) >>
   reverse (first_x_assum irule) >- simp[] >> Q.X_GEN_TAC `j` >> strip_tac >>
-  first_x_assum (qspec_then `j` mp_tac) >> simp[EL_APPEND1])
+  first_x_assum (qspec_then `j` mp_tac) >> simp[EL_APPEND1]);
 
 val LIST_RELi_thm = Q.store_thm(
   "LIST_RELi_thm",
@@ -261,6 +261,16 @@ val LIST_RELi_thm = Q.store_thm(
   >- (rename1 `l = _ :: _` >> Cases_on `l` >> fs[] >>
       fs[LT_SUC, DISJ_IMP_THM, FORALL_AND_THM, PULL_EXISTS]) >>
   var_eq_tac >> dsimp[LT_SUC]);
+
+val LIST_RELi_APPEND_I = Q.store_thm(
+  "LIST_RELi_APPEND_I",
+  `LIST_RELi R l1 l2 ∧ LIST_RELi (R o ((+) (LENGTH l1))) m1 m2 ⇒
+   LIST_RELi R (l1 ++ m1) (l2 ++ m2)`,
+  simp[LIST_RELi_EL_EQN] >> rpt strip_tac >>
+  rename1 `i < LENGTH l2 + LENGTH m2` >> Cases_on `i < LENGTH l2`
+  >- simp[EL_APPEND1]
+  >- (simp[EL_APPEND2] >> first_x_assum (qspec_then `i - LENGTH l2` mp_tac) >>
+      simp[]));
 
 (* ----------------------------------------------------------------------
     MAP2i
