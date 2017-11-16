@@ -920,23 +920,23 @@ val RAT_MUL_COMM = store_thm("RAT_MUL_COMM", ``!a b. rat_mul a b = rat_mul b a``
    |- !a. rat_mul 1q a = a
  *--------------------------------------------------------------------------*)
 
-val RAT_ADD_RID = store_thm("RAT_ADD_RID", ``!a. rat_add a 0q = a``,
+val RAT_ADD_RID = store_thm("RAT_ADD_RID[simp]", ``!a. rat_add a 0q = a``,
 	REWRITE_TAC[rat_add_def,rat_0] THEN
 	REWRITE_TAC[RAT_ADD_CONG] THEN
 	REWRITE_TAC[FRAC_ADD_RID] THEN
 	REWRITE_TAC[CONJUNCT1 rat_thm]);
 
-val RAT_ADD_LID = store_thm("RAT_ADD_LID", ``!a. rat_add 0q a = a``,
+val RAT_ADD_LID = store_thm("RAT_ADD_LID[simp]", ``!a. rat_add 0q a = a``,
 	ONCE_REWRITE_TAC[RAT_ADD_COMM] THEN
 	REWRITE_TAC[RAT_ADD_RID] );
 
-val RAT_MUL_RID = store_thm("RAT_MUL_RID", ``!a. rat_mul a 1q = a``,
+val RAT_MUL_RID = store_thm("RAT_MUL_RID[simp]", ``!a. rat_mul a 1q = a``,
 	REWRITE_TAC[rat_mul_def,rat_1] THEN
 	REWRITE_TAC[RAT_MUL_CONG] THEN
 	REWRITE_TAC[FRAC_MUL_RID] THEN
 	REWRITE_TAC[CONJUNCT1 rat_thm]);
 
-val RAT_MUL_LID = store_thm("RAT_MUL_LID", ``!a. rat_mul 1q a = a``,
+val RAT_MUL_LID = store_thm("RAT_MUL_LID[simp]", ``!a. rat_mul 1q a = a``,
 	ONCE_REWRITE_TAC[RAT_MUL_COMM] THEN
 	REWRITE_TAC[RAT_MUL_RID] );
 
@@ -2290,10 +2290,20 @@ val RAT_OF_NUM_LEQ_0 = prove(``!n. 0 <= &n``,
  *  |- rat_minv 1 = 1
  *--------------------------------------------------------------------------*)
 
-val RAT_MINV_1 = Q.store_thm ("RAT_MINV_1", `rat_minv 1 = 1`,
+val RAT_MINV_1 = Q.store_thm ("RAT_MINV_1[simp]", `rat_minv 1 = 1`,
   REWRITE_TAC [SYM RAT_1, rat_1_def] THEN
   SIMP_TAC intLib.int_ss [RAT_MINV_CALCULATE, NMR, frac_1_def,
     REWRITE_RULE [frac_1_def] FRAC_MINV_1]) ;
+
+val RAT_DIV_1 = Q.store_thm(
+  "RAT_DIV_1[simp]",
+  ‘r / 1q = r’,
+  simp[RAT_DIV_MULMINV]);
+
+val RAT_DIV_NEG1 = Q.store_thm(
+  "RAT_DIV_NEG1[simp]",
+  ‘r / -1q = -r’,
+  simp[RAT_DIV_MULMINV, GSYM RAT_AINV_MINV, RAT_1_NOT_0, GSYM RAT_AINV_RMUL]);
 
 (*--------------------------------------------------------------------------
    RAT_ADD_NUM: thm
