@@ -216,241 +216,242 @@ val ALPH_COUNTER_FST_LEMM2 = store_thm
       )
   );
 
-val GBA_RUN_ALPH_FUN = store_thm
-  ("GBA_RUN_ALPH_FUN",
-   ``!aut r x. isAcceptingGBARunFor aut (GBA_RUN r) x
-             ∧ isValidGBARunFor aut (GBA_RUN r) x
-             ∧ FINITE aut.accTrans
-               ==> ?f. !i. at x i ∈ f i ∧ (f i, r (i+1)) ∈ aut.trans (r i)
-                     ∧ (!T. T ∈ aut.accTrans
-                         ==> (!i. ?j. i <= j ∧ (r j, f j, r (j+1)) ∈ T
-                                    ∧ (f j, r (j+1)) ∈ aut.trans (r j)
-                                    ∧ at x j ∈ (f j)))``,
-   rpt strip_tac >> IMP_RES_TAC GBA_ACC_LEMM
-   >> fs[isValidGBARunFor_def]
-   >> `!T. T ∈ aut.accTrans
-            ==> ?h. !i. (h i, r (i + 1)) ∈ aut.trans (r i)
-                      ∧ at x i ∈ h i
-                      ∧ ?j. i <= j ∧ (r j, h j, r (j+1)) ∈ T` by (
-       rpt strip_tac
-       >> `?h_0. !i. (h_0 i, r (i+1)) ∈ aut.trans (r i) ∧ at x i ∈ h_0 i`
-           by metis_tac[SKOLEM_THM]
-       >> first_x_assum (qspec_then `T'` mp_tac) >> rpt strip_tac
-       >> `?h_s. !i. ?j.
-              i ≤ j ∧ (r j,h_s i,r (j + 1)) ∈ T' ∧
-              (h_s i,r (j + 1)) ∈ aut.trans (r j) ∧ at x j ∈ h_s i`
-          by metis_tac[SKOLEM_THM]
-       >> `?h_s_j. !i.
-              i ≤ h_s_j i ∧ (r (h_s_j i),h_s i,r ((h_s_j i) + 1)) ∈ T' ∧
-              (h_s i,r ((h_s_j i) + 1)) ∈ aut.trans (r (h_s_j i))
-              ∧ at x (h_s_j i) ∈ h_s i`
-          by metis_tac[SKOLEM_THM]
-       >> qexists_tac `λi.
-              if ?k. i = h_s_j k then h_s (@k. h_s_j k = i) else h_0 i`
-       >> rpt strip_tac >> Cases_on `?k. i = h_s_j k` >> fs[]
-       >> rw[] >> metis_tac[]
-   )
-   >> `?h_T. !T. T ∈ aut.accTrans
-         ==>  ∀i.
-         ((h_T T) i,r (i + 1)) ∈ aut.trans (r i) ∧ at x i ∈ (h_T T) i ∧
-         ∃j. i ≤ j ∧ (r j,(h_T T) j,r (j + 1)) ∈ T` by metis_tac[SKOLEM_THM]
-   >> Cases_on `CARD aut.accTrans < 2`
-   >- (`(CARD aut.accTrans = 1) \/ (CARD aut.accTrans = 0)` by (
-         Cases_on `CARD aut.accTrans = 0` >> fs[] >> metis_tac[CARD_EQ_0]
-        )
-       >- (`SING aut.accTrans` by metis_tac[SING_IFF_CARD1]
-           >> fs[SING_DEF] >> rename[`aut.accTrans = {t}`]
-           >> qexists_tac `h_T t` >> rpt strip_tac >> fs[]
-          )
-       >- (`aut.accTrans = {}` by metis_tac[CARD_EQ_0]
-           >> `?f. !i. ((f i),r (i + 1)) ∈ aut.trans (r i) ∧ at x i ∈ (f i)`
-              by metis_tac[SKOLEM_THM]
-           >> qexists_tac `f` >> rpt strip_tac >> fs[]
-           >> metis_tac[NOT_IN_EMPTY]
-          )
-      )
-   >- (
-    `~(0 = CARD aut.accTrans)` by simp[]
-    >> `~(aut.accTrans = {})` by metis_tac[CARD_EQ_0]
-    >> `!T. T ∈ aut.accTrans ==> !i. ?j. i ≤ j ∧ (r j,h_T T j,r (j + 1)) ∈ T`
-       by metis_tac[]
-    >> `?g. !T. T ∈ aut.accTrans
-               ==> !i. (i <= g T i)
-                     ∧ (r (g T i),h_T T (g T i),r ((g T i) + 1)) ∈ T`
-        by metis_tac[SKOLEM_THM]
-    >> qabbrev_tac `N = CARD aut.accTrans`
-    >> `∃f.
-       (∀n m. n < N ∧ m < N ⇒ (f n = f m) ⇒ (n = m))
-       ∧ (aut.accTrans = {f n | n < N})`
-       by (qunabbrev_tac `N` >> metis_tac[FINITE_ISO_NUM])
-    >> qabbrev_tac `α = λi. h_T (f (SND (alph_counter N f g i))) i`
-    >> `0 < N` by metis_tac[CARD_EQ_0, DECIDE ``~(N = 0) ==> (0 < N)``]
-    >> `!i. f (i MOD N) ∈ aut.accTrans` by (
-        rpt strip_tac
-            >> `i MOD N < N` by metis_tac[MOD_LESS]
-            >> `f (i MOD N) ∈ {f n | n < N}`
-        suffices_by metis_tac[]
-    >> rw[] >> metis_tac[]
-    )
-    >> `!i. i < N ==> f i ∈ aut.accTrans` by
-         (fs[] >> rpt strip_tac >> metis_tac[])
-    >> `!n. SND (alph_counter N f g n) < N` by (
-        Induct_on `n` >> simp[alph_counter_def]
-         >> Cases_on `g (f (SND (alph_counter N f g n)))
-                         (FST (alph_counter N f g n)) = n`
-         >> simp[]
-    )
-    >> `!i n. n < N ==> ?j. i <= j ∧ (SND (alph_counter N f g j) = n)` by (
-      qabbrev_tac `alph_T = λi. SND (alph_counter N f g i)`
-      >> rw[]
-      >> `(∀j. (alph_T (SUC j) = alph_T j)
-             ∨ (alph_T (SUC j) = (alph_T j + 1) MOD N))
-        ∧ (∀i. ∃k. i ≤ k ∧ alph_T (SUC k) ≠ alph_T k)
-        ∧ (alph_T 0 = 0) ∧ 0 < N` by (
-          rpt conj_tac
-          >- (qunabbrev_tac `alph_T` >> simp[alph_counter_def]
-              >> rpt strip_tac
-              >> Cases_on
-                   `g (f (SND (alph_counter N f g j)))
-                        (FST (alph_counter N f g j)) = j` >> fs[]
-             )
-          >- (strip_tac >> qunabbrev_tac `alph_T` >> simp[]
-              >> CCONTR_TAC >> fs[]
-              >> `!k. i <= k ==> (~(k = g (f (SND (alph_counter N f g i)))
-                                          (FST (alph_counter N f g k)))
-                                  ∧ (SND (alph_counter N f g i)
-                                     = SND (alph_counter N f g k))
-                                  ∧ (FST (alph_counter N f g i)
-                                          = FST (alph_counter N f g k)))`
-                 by (
-                 Induct_on `k` >> fs[] >> rpt strip_tac
-                 >- (rw[] >> first_assum (qspec_then `0` mp_tac) >> simp[]
-                     >> PURE_REWRITE_TAC[DECIDE ``1 = SUC 0``]
-                     >> fs[alph_counter_def]
-                     )
-                 >- (Cases_on `SUC k = i` >> fs[] >> rw[]
-                      >- (first_x_assum (qspec_then `SUC k` mp_tac) >> simp[]
-                         >> qabbrev_tac `M = SUC k` >> simp[alph_counter_def]
-                         >> `2 <= N` by simp[]
-                         >> metis_tac[MOD_GEQ_2_INCREASES,LESS_MOD]
-                         )
-                      >- (first_x_assum (qspec_then `SUC k` mp_tac)
-                          >> qabbrev_tac `M = SUC k` >> simp[alph_counter_def]
-                          >> `SND (alph_counter N f g M)
-                               = SND (alph_counter N f g i)` by (
-                               qunabbrev_tac `M` >> simp[alph_counter_def]
-                               >> metis_tac[]
-                           )
-                          >> rw[]
-                          >- (`2 <= N` by simp[]
-                               >> metis_tac[MOD_GEQ_2_INCREASES,LESS_MOD])
-                          >- (fs[] >> metis_tac[])
-                         )
-                    )
-                 >- (Cases_on `SUC k = i` >> fs[] >> rw[]
-                     >> simp[alph_counter_def] >> metis_tac[]
-                    )
-                 >- (Cases_on `SUC k = i` >> fs[] >> rw[]
-                              >> simp[alph_counter_def] >> metis_tac[]
-                    )
-               )
-              >> first_assum
-                   (qspec_then `f (SND (alph_counter N f g i))` mp_tac)
-              >> simp[] >> rpt strip_tac
-              >- metis_tac[]
-              >- (fs[]
-                  >> `g (f (SND (alph_counter N f g i)))
-                           (FST (alph_counter N f g i))
-                           < (FST (alph_counter N f g i))` suffices_by (
-                       strip_tac >> qexists_tac `(FST (alph_counter N f g i))`
-                       >> disj1_tac >> simp[]
-                   )
-                  >> Q.HO_MATCH_ABBREV_TAC `g (f A) B < B`
-                  >> Cases_on `i <= B`
-                  >- (`B <= g (f A) B` by metis_tac[] >> fs[]
-                      >> first_x_assum (qspec_then `g (f A) B` mp_tac) >> simp[]
-                      >> rpt strip_tac >> metis_tac[])
-                  >- (`!j. B <= (i-j) ==> (alph_counter N f g (i-j) = (B,A))
-                                        ∧ ~((i - j) = g (f A) B)`
-                        by (
-                        Induct_on `j` >> fs[] >> rpt strip_tac
-                        >- (qunabbrev_tac `A` >> qunabbrev_tac `B` >> fs[])
-                        >- metis_tac[DECIDE ``i <= i``]
-                        >-(`(alph_counter N f g (i − j)) = (B,A)` by simp[]
-                           >> Cases_on `j <= i` >> fs[] >> Cases_on `j = i`
-                           >> fs[]
-                           >- (`B = 0` by simp[] >> rw[]
-                               >> rw[DECIDE ``i - SUC i = 0``]
-                               >> simp[alph_counter_def]
-                               >> fs[alph_counter_def]
-                              )
-                           >- (
-                            Cases_on `i-j = B` >> fs[]
-                            >> `SUC (i - SUC j) = i - j` by simp[]
-                            >> `alph_counter N f g (i − SUC j)
-                                 = alph_counter N f g (SUC (i − SUC j))`
-                                 suffices_by fs[]
-                            >> `((alph_counter N f g (i - SUC j))
-                                 = alph_counter N f g (SUC (i - SUC j)))
-                                  \/ (FST (alph_counter N f g (SUC (i - SUC j)))
-                                      = SUC (i - SUC j))`
-                               by metis_tac[ALPH_COUNTER_FST_LEMM2]
-                            >> `B = SUC (i - SUC j)` by metis_tac[FST]
-                            >> fs[]
-                               )
-                           >- (`B = 0` by simp[] >> rw[]
-                               >> rw[DECIDE ``i - SUC i = 0``]
-                               >> simp[alph_counter_def]
-                               >> fs[alph_counter_def]
-                               >> `i - (SUC j) = 0` by simp[]
-                               >> `i - j = 0` by simp[]
-                               >> `alph_counter N f g 0 = (0,A)` by metis_tac[]
-                               >> `A = 0` by fs[alph_counter_def]
-                               >> metis_tac[alph_counter_def]
-                              )
-                          )
-                        >- (`(alph_counter N f g (i − j)) = (B,A)` by simp[]
-                            >> Cases_on `j <= i` >> fs[] >> Cases_on `j = i`
-                            >> fs[] >> `SUC (i - SUC j) = i - j` by simp[]
-                            >> `alph_counter N f g (SUC (i - (SUC j))) = (B,A)`
-                                by rw[]
-                            >> POP_ASSUM mp_tac >> simp[alph_counter_def]
-                            >> fs[]
-                            >> `((alph_counter N f g (i - SUC j))
-                                 = alph_counter N f g (SUC (i - SUC j)))
-                                  \/ (FST (alph_counter N f g (SUC (i - SUC j)))
-                                        = SUC (i - SUC j))`
-                               by metis_tac[ALPH_COUNTER_FST_LEMM2]
-                            >> rw[] >> CCONTR_TAC >> fs[]
-                           )
-                        )
-                      >> CCONTR_TAC >> `B <= g (f A) B` by simp[]
-                      >> `?p. p + B = g (f A) B` by metis_tac[LESS_EQ_ADD_EXISTS]
-                      >> Cases_on `i <= p + B` >> fs[]
-                      >- metis_tac[]
-                      >- (`B + p <= i` by simp[]
-                          >> `?k. B + p = i - k` by metis_tac[LESS_EQUAL_DIFF]
-                          >> `B <= i - k` by simp[]
-                          >> metis_tac[]
-                         )
-                     )
-                 )
-             )
-          >- (qunabbrev_tac `alph_T` >> simp[alph_counter_def])
-          >- simp[]
-      )
-      >> IMP_RES_TAC INCREASING_MOD_CYCLES >> metis_tac[]
-    )
-    >> qexists_tac `α` >> rpt strip_tac
-    >- (qunabbrev_tac `α` >> fs[] >> metis_tac[])
-    >- (qunabbrev_tac `α` >> fs[] >> metis_tac[])
-    >- (`?a. (f a = T') ∧ (a < N)` by (
-          `!x. x ∈ aut.accTrans ==> x ∈ {f n | n < N}` by fs[]
-          >> fs[] >> metis_tac[]
-        )
-        >> qexists_tac `g T' j` >> rpt strip_tac >> fs[]
-        >- (`j <= g T' j` by metis_tac[] >> fs[])
-        >- (qunabbrev_tac `α` >> simp[])
+(* val GBA_RUN_ALPH_FUN = store_thm *)
+(*   ("GBA_RUN_ALPH_FUN", *)
+(*    ``!aut r x. isAcceptingGBARunFor aut (GBA_RUN r) x *)
+(*              ∧ isValidGBARunFor aut (GBA_RUN r) x *)
+(*              ∧ FINITE aut.accTrans *)
+(*                ==> ?f. !i. at x i ∈ f i ∧ (f i, r (i+1)) ∈ aut.trans (r i) *)
+(*                      ∧ (!T. T ∈ aut.accTrans *)
+(*                          ==> (!i. ?j. i <= j ∧ (r j, f j, r (j+1)) ∈ T *)
+(*                                     ∧ (f j, r (j+1)) ∈ aut.trans (r j) *)
+(*                                     ∧ at x j ∈ (f j)))``, *)
+(*    rpt strip_tac >> IMP_RES_TAC GBA_ACC_LEMM *)
+(*    >> fs[isValidGBARunFor_def] *)
+(*    >> `!T. T ∈ aut.accTrans *)
+(*             ==> ?h. !i. (h i, r (i + 1)) ∈ aut.trans (r i) *)
+(*                       ∧ at x i ∈ h i *)
+(*                       ∧ ?j. i <= j ∧ (r j, h j, r (j+1)) ∈ T` by ( *)
+(*        rpt strip_tac *)
+(*        >> `?h_0. !i. (h_0 i, r (i+1)) ∈ aut.trans (r i) ∧ at x i ∈ h_0 i` *)
+(*            by metis_tac[SKOLEM_THM] *)
+(*        >> first_x_assum (qspec_then `T'` mp_tac) >> rpt strip_tac *)
+(*        >> `?h_s. !i. ?j. *)
+(*               i ≤ j ∧ (r j,h_s i,r (j + 1)) ∈ T' ∧ *)
+(*               (h_s i,r (j + 1)) ∈ aut.trans (r j) ∧ at x j ∈ h_s i` *)
+(*           by metis_tac[SKOLEM_THM] *)
+(*        >> `?h_s_j. !i. *)
+(*               i ≤ h_s_j i ∧ (r (h_s_j i),h_s i,r ((h_s_j i) + 1)) ∈ T' ∧ *)
+(*               (h_s i,r ((h_s_j i) + 1)) ∈ aut.trans (r (h_s_j i)) *)
+(*               ∧ at x (h_s_j i) ∈ h_s i` *)
+(*           by metis_tac[SKOLEM_THM] *)
+(*        >> qexists_tac `λi. *)
+(*               if ?k. i = h_s_j k then h_s (@k. h_s_j k = i) else h_0 i` *)
+(*        >> rpt strip_tac >> Cases_on `?k. i = h_s_j k` >> fs[] *)
+(*        >> rw[] >> metis_tac[] *)
+(*    ) *)
+(*    >> `?h_T. !T. T ∈ aut.accTrans *)
+(*          ==>  ∀i. *)
+(*          ((h_T T) i,r (i + 1)) ∈ aut.trans (r i) ∧ at x i ∈ (h_T T) i ∧ *)
+(*          ∃j. i ≤ j ∧ (r j,(h_T T) j,r (j + 1)) ∈ T` by metis_tac[SKOLEM_THM] *)
+(*    >> Cases_on `CARD aut.accTrans < 2` *)
+(*    >- (`(CARD aut.accTrans = 1) \/ (CARD aut.accTrans = 0)` by ( *)
+(*          Cases_on `CARD aut.accTrans = 0` >> fs[] >> metis_tac[CARD_EQ_0] *)
+(*         ) *)
+(*        >- (`SING aut.accTrans` by metis_tac[SING_IFF_CARD1] *)
+(*            >> fs[SING_DEF] >> rename[`aut.accTrans = {t}`] *)
+(*            >> qexists_tac `h_T t` >> rpt strip_tac >> fs[] *)
+(*           ) *)
+(*        >- (`aut.accTrans = {}` by metis_tac[CARD_EQ_0] *)
+(*            >> `?f. !i. ((f i),r (i + 1)) ∈ aut.trans (r i) ∧ at x i ∈ (f i)` *)
+(*               by metis_tac[SKOLEM_THM] *)
+(*            >> qexists_tac `f` >> rpt strip_tac >> fs[] *)
+(*            >> metis_tac[NOT_IN_EMPTY] *)
+(*           ) *)
+(*       ) *)
+(*    >- ( *)
+(*     `~(0 = CARD aut.accTrans)` by simp[] *)
+(*     >> `~(aut.accTrans = {})` by metis_tac[CARD_EQ_0] *)
+(*     >> `!T. T ∈ aut.accTrans ==> !i. ?j. i ≤ j ∧ (r j,h_T T j,r (j + 1)) ∈ T` *)
+(*        by metis_tac[] *)
+(*     >> `?g. !T. T ∈ aut.accTrans *)
+(*                ==> !i. (i <= g T i) *)
+(*                      ∧ (r (g T i),h_T T (g T i),r ((g T i) + 1)) ∈ T` *)
+(*         by metis_tac[SKOLEM_THM] *)
+(*     >> qabbrev_tac `N = CARD aut.accTrans` *)
+(*     >> `∃f. *)
+(*        (∀n m. n < N ∧ m < N ⇒ (f n = f m) ⇒ (n = m)) *)
+(*        ∧ (aut.accTrans = {f n | n < N})` *)
+(*        by (qunabbrev_tac `N` >> metis_tac[FINITE_ISO_NUM]) *)
+(*     >> qabbrev_tac `α = λi. h_T (f (SND (alph_counter N f g i))) i` *)
+(*     >> `0 < N` by metis_tac[CARD_EQ_0, DECIDE ``~(N = 0) ==> (0 < N)``] *)
+(*     >> `!i. f (i MOD N) ∈ aut.accTrans` by ( *)
+(*         rpt strip_tac *)
+(*             >> `i MOD N < N` by metis_tac[MOD_LESS] *)
+(*             >> `f (i MOD N) ∈ {f n | n < N}` *)
+(*         suffices_by metis_tac[] *)
+(*     >> rw[] >> metis_tac[] *)
+(*     ) *)
+(*     >> `!i. i < N ==> f i ∈ aut.accTrans` by *)
+(*          (fs[] >> rpt strip_tac >> metis_tac[]) *)
+(*     >> `!n. SND (alph_counter N f g n) < N` by ( *)
+(*         Induct_on `n` >> simp[alph_counter_def] *)
+(*          >> Cases_on `g (f (SND (alph_counter N f g n))) *)
+(*                          (FST (alph_counter N f g n)) = n` *)
+(*          >> simp[] *)
+(*     ) *)
+(*     >> `!i n. n < N ==> ?j. i <= j ∧ (SND (alph_counter N f g j) = n)` by ( *)
+(*       qabbrev_tac `alph_T = λi. SND (alph_counter N f g i)` *)
+(*       >> rw[] *)
+(*       >> `(∀j. (alph_T (SUC j) = alph_T j) *)
+(*              ∨ (alph_T (SUC j) = (alph_T j + 1) MOD N)) *)
+(*         ∧ (∀i. ∃k. i ≤ k ∧ alph_T (SUC k) ≠ alph_T k) *)
+(*         ∧ (alph_T 0 = 0) ∧ 0 < N` by ( *)
+(*           rpt conj_tac *)
+(*           >- (qunabbrev_tac `alph_T` >> simp[alph_counter_def] *)
+(*               >> rpt strip_tac *)
+(*               >> Cases_on *)
+(*                    `g (f (SND (alph_counter N f g j))) *)
+(*                         (FST (alph_counter N f g j)) = j` >> fs[] *)
+(*              ) *)
+(*           >- (strip_tac >> qunabbrev_tac `alph_T` >> simp[] *)
+(*               >> CCONTR_TAC >> fs[] *)
+(*               >> `!k. i <= k ==> (~(k = g (f (SND (alph_counter N f g i))) *)
+(*                                           (FST (alph_counter N f g k))) *)
+(*                                   ∧ (SND (alph_counter N f g i) *)
+(*                                      = SND (alph_counter N f g k)) *)
+(*                                   ∧ (FST (alph_counter N f g i) *)
+(*                                           = FST (alph_counter N f g k)))` *)
+(*                  by ( *)
+(*                  Induct_on `k` >> fs[] >> rpt strip_tac *)
+(*                  >- (rw[] >> first_assum (qspec_then `0` mp_tac) >> simp[] *)
+(*                      >> PURE_REWRITE_TAC[DECIDE ``1 = SUC 0``] *)
+(*                      >> fs[alph_counter_def] *)
+(*                      ) *)
+(*                  >- (Cases_on `SUC k = i` >> fs[] >> rw[] *)
+(*                       >- (first_x_assum (qspec_then `SUC k` mp_tac) >> simp[] *)
+(*                          >> qabbrev_tac `M = SUC k` >> simp[alph_counter_def] *)
+(*                          >> `2 <= N` by simp[] *)
+(*                          >> metis_tac[MOD_GEQ_2_INCREASES,LESS_MOD] *)
+(*                          ) *)
+(*                       >- (first_x_assum (qspec_then `SUC k` mp_tac) *)
+(*                           >> qabbrev_tac `M = SUC k` >> simp[alph_counter_def] *)
+(*                           >> `SND (alph_counter N f g M) *)
+(*                                = SND (alph_counter N f g i)` by ( *)
+(*                                qunabbrev_tac `M` >> simp[alph_counter_def] *)
+(*                                >> metis_tac[] *)
+(*                            ) *)
+(*                           >> rw[] *)
+(*                           >- (`2 <= N` by simp[] *)
+(*                                >> metis_tac[MOD_GEQ_2_INCREASES,LESS_MOD]) *)
+(*                           >- (fs[] >> metis_tac[]) *)
+(*                          ) *)
+(*                     ) *)
+(*                  >- (Cases_on `SUC k = i` >> fs[] >> rw[] *)
+(*                      >> simp[alph_counter_def] >> metis_tac[] *)
+(*                     ) *)
+(*                  >- (Cases_on `SUC k = i` >> fs[] >> rw[] *)
+(*                               >> simp[alph_counter_def] >> metis_tac[] *)
+(*                     ) *)
+(*                ) *)
+(*               >> first_assum *)
+(*                    (qspec_then `f (SND (alph_counter N f g i))` mp_tac) *)
+(*               >> simp[] >> rpt strip_tac *)
+(*               >- metis_tac[] *)
+(*               >- (fs[] *)
+(*                   >> `g (f (SND (alph_counter N f g i))) *)
+(*                            (FST (alph_counter N f g i)) *)
+(*                            < (FST (alph_counter N f g i))` suffices_by ( *)
+(*                        strip_tac >> qexists_tac `(FST (alph_counter N f g i))` *)
+(*                        >> disj1_tac >> simp[] *)
+(*                    ) *)
+(*                   >> Q.HO_MATCH_ABBREV_TAC `g (f A) B < B` *)
+(*                   >> Cases_on `i <= B` *)
+(*                   >- (`B <= g (f A) B` by metis_tac[] >> fs[] *)
+(*                       >> first_x_assum (qspec_then `g (f A) B` mp_tac) >> simp[] *)
+(*                       >> rpt strip_tac >> metis_tac[]) *)
+(*                   >- (`!j. B <= (i-j) ==> (alph_counter N f g (i-j) = (B,A)) *)
+(*                                         ∧ ~((i - j) = g (f A) B)` *)
+(*                         by ( *)
+(*                         Induct_on `j` >> fs[] >> rpt strip_tac *)
+(*                         >- (qunabbrev_tac `A` >> qunabbrev_tac `B` >> fs[]) *)
+(*                         >- metis_tac[DECIDE ``i <= i``] *)
+(*                         >-(`(alph_counter N f g (i − j)) = (B,A)` by simp[] *)
+(*                            >> Cases_on `j <= i` >> fs[] >> Cases_on `j = i` *)
+(*                            >> fs[] *)
+(*                            >- (`B = 0` by simp[] >> rw[] *)
+(*                                >> rw[DECIDE ``i - SUC i = 0``] *)
+(*                                >> simp[alph_counter_def] *)
+(*                                >> fs[alph_counter_def] *)
+(*                               ) *)
+(*                            >- ( *)
+(*                             Cases_on `i-j = B` >> fs[] *)
+(*                             >> `SUC (i - SUC j) = i - j` by simp[] *)
+(*                             >> `alph_counter N f g (i − SUC j) *)
+(*                                  = alph_counter N f g (SUC (i − SUC j))` *)
+(*                                  suffices_by fs[] *)
+(*                             >> `((alph_counter N f g (i - SUC j)) *)
+(*                                  = alph_counter N f g (SUC (i - SUC j))) *)
+(*                                   \/ (FST (alph_counter N f g (SUC (i - SUC j))) *)
+(*                                       = SUC (i - SUC j))` *)
+(*                                by metis_tac[ALPH_COUNTER_FST_LEMM2] *)
+(*                             >> `B = SUC (i - SUC j)` by metis_tac[FST] *)
+(*                             >> fs[] *)
+(*                                ) *)
+(*                            >- (`B = 0` by simp[] >> rw[] *)
+(*                                >> rw[DECIDE ``i - SUC i = 0``] *)
+(*                                >> simp[alph_counter_def] *)
+(*                                >> fs[alph_counter_def] *)
+(*                                >> `i - (SUC j) = 0` by simp[] *)
+(*                                >> `i - j = 0` by simp[] *)
+(*                                >> `alph_counter N f g 0 = (0,A)` by metis_tac[] *)
+(*                                >> `A = 0` by fs[alph_counter_def] *)
+(*                                >> metis_tac[alph_counter_def] *)
+(*                               ) *)
+(*                           ) *)
+(*                         >- (`(alph_counter N f g (i − j)) = (B,A)` by simp[] *)
+(*                             >> Cases_on `j <= i` >> fs[] >> Cases_on `j = i` *)
+(*                             >> fs[] >> `SUC (i - SUC j) = i - j` by simp[] *)
+(*                             >> `alph_counter N f g (SUC (i - (SUC j))) = (B,A)` *)
+(*                                 by rw[] *)
+(*                             >> POP_ASSUM mp_tac >> simp[alph_counter_def] *)
+(*                             >> fs[] *)
+(*                             >> `((alph_counter N f g (i - SUC j)) *)
+(*                                  = alph_counter N f g (SUC (i - SUC j))) *)
+(*                                   \/ (FST (alph_counter N f g (SUC (i - SUC j))) *)
+(*                                         = SUC (i - SUC j))` *)
+(*                                by metis_tac[ALPH_COUNTER_FST_LEMM2] *)
+(*                             >> rw[] >> CCONTR_TAC >> fs[] *)
+(*                            ) *)
+(*                         ) *)
+(*                       >> CCONTR_TAC >> `B <= g (f A) B` by simp[] *)
+(*                       >> `?p. p + B = g (f A) B` by metis_tac[LESS_EQ_ADD_EXISTS] *)
+(*                       >> Cases_on `i <= p + B` >> fs[] *)
+(*                       >- metis_tac[] *)
+(*                       >- (`B + p <= i` by simp[] *)
+(*                           >> `?k. B + p = i - k` by metis_tac[LESS_EQUAL_DIFF] *)
+(*                           >> `B <= i - k` by simp[] *)
+(*                           >> metis_tac[] *)
+(*                          ) *)
+(*                      ) *)
+(*                  ) *)
+(*              ) *)
+(*           >- (qunabbrev_tac `alph_T` >> simp[alph_counter_def]) *)
+(*           >- simp[] *)
+(*       ) *)
+(*       >> IMP_RES_TAC INCREASING_MOD_CYCLES >> metis_tac[] *)
+(*     ) *)
+(*     >> qexists_tac `α` >> rpt strip_tac *)
+(*     >- (qunabbrev_tac `α` >> fs[] >> metis_tac[]) *)
+(*     >- (qunabbrev_tac `α` >> fs[] >> metis_tac[]) *)
+(*     >- (`?a. (f a = T') ∧ (a < N)` by ( *)
+(*           `!x. x ∈ aut.accTrans ==> x ∈ {f n | n < N}` by fs[] *)
+(*           >> fs[] >> metis_tac[] *)
+(*         ) *)
+(*         >> `∃j. i ≤ j ∧ (SND (alph_counter N f g j) = a)` by fs[] *)
+(*         >> qexists_tac `g T' j` >> rpt strip_tac >> fs[] *)
+(*         >- (`j <= g T' j` by metis_tac[] >> fs[]) *)
+(*         >- (qunabbrev_tac `α` >> simp[]) *)
 
 
 (*  >> qexists_tac `i` *)
