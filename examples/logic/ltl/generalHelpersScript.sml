@@ -281,6 +281,13 @@ val OPTION_TO_LIST_def = Define`
     (OPTION_TO_LIST NONE = [])
   ∧ (OPTION_TO_LIST (SOME l) = l)`;
 
+val OPTION_TO_LIST_MEM = store_thm
+  ("OPTION_TO_LIST_MEM",
+   ``!x o_l. MEM x (OPTION_TO_LIST o_l)
+             = ?l. (o_l = SOME l) ∧ (MEM x l)``,
+   rpt strip_tac >> Cases_on `o_l` >> fs[OPTION_TO_LIST_def]
+  );
+
 val LIST_INTER_def = Define`
     (LIST_INTER [] ls = [])
   ∧ (LIST_INTER (x::xs) ls = if MEM x ls
@@ -335,6 +342,34 @@ val FIND_LEMM2 = store_thm
    )
    >> fs[]
   );
+
+val FIND_UNIQUE = store_thm
+  ("FIND_UNIQUE",
+   ``!P x l. P x ∧ (!y. MEM y l ∧ P y ==> (y = x)) ∧ MEM x l
+         ==> (FIND P l = SOME x)``,
+   gen_tac >> Induct_on `l` >> rpt strip_tac
+   >- fs[]
+   >- (Cases_on `P h`
+       >- (`x = h` by fs[] >> rw[]
+           >> fs[FIND_def,INDEX_FIND_def]
+          )
+       >- (fs[FIND_def] >> rw[] >> fs[]
+           >> fs[INDEX_FIND_def]
+           >> `∃z. (INDEX_FIND 0 P l = SOME z) ∧ (x = SND z)`
+                 by metis_tac[]
+           >> Cases_on `z`
+           >> `OPTION_MAP SND (INDEX_FIND 0 P l)
+               = OPTION_MAP SND (INDEX_FIND (SUC 0) P l)`
+              by metis_tac[INDEX_FIND_LEMM]
+           >> `OPTION_MAP SND (INDEX_FIND 0 P l) = SOME r`
+              by fs[OPTION_MAP_DEF] >> fs[]
+           >> `OPTION_MAP SND (INDEX_FIND 1 P l) = SOME r`
+              by fs[OPTION_MAP_DEF] >> fs[]
+           >> metis_tac[]
+          )
+      )
+  );
+
 
 (* val FLAT_LEMM = store_thm *)
 (*   ("FLAT_LEMM", *)
