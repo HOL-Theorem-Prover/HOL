@@ -267,14 +267,20 @@ val CAT_OPTIONS_def = Define`
  ∧ (CAT_OPTIONS (SOME v::ls) = v::(CAT_OPTIONS ls))
  ∧ (CAT_OPTIONS (NONE::ls) = CAT_OPTIONS ls)`;
 
+val CAT_OPTIONS_MEM = store_thm
+  ("CAT_OPTIONS_MEM",
+   ``!x l. (MEM x (CAT_OPTIONS l)) = (?y. (SOME x = y) ∧ MEM y l)``,
+   Induct_on `l` >> rpt strip_tac >> fs[CAT_OPTIONS_def]
+   >> Cases_on `h` >> fs[CAT_OPTIONS_def]
+  );
+
 val CAT_OPTIONS_MAP_LEMM = store_thm
   ("CAT_OPTIONS_MAP_LEMM",
    ``!i f ls. MEM i (CAT_OPTIONS (MAP f ls))
   = ?x. MEM x ls ∧ (SOME i = f x)``,
    Induct_on `ls` >> fs[CAT_OPTIONS_def,MAP]
-   >> rpt strip_tac >> Cases_on `IS_SOME (f h)` >> simp[EQ_IMP_THM]
-   >> fs[IS_SOME_EXISTS] >> rw[] >> fs[CAT_OPTIONS_def]
-   >> metis_tac[SOME_11,NOT_SOME_NONE]
+   >> rpt strip_tac >> Cases_on `f h` >> simp[EQ_IMP_THM]
+   >> rw[] >> fs[CAT_OPTIONS_def] >> metis_tac[SOME_11,NOT_SOME_NONE]
   );
 
 val OPTION_TO_LIST_def = Define`
