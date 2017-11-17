@@ -1043,12 +1043,14 @@ val RAT_1_NOT_0 = store_thm("RAT_1_NOT_0", ``~ (1q=0q)``,
    |- !r1. rat_mul r1 0q = 0q
  *--------------------------------------------------------------------------*)
 
-val RAT_MUL_LZERO = store_thm("RAT_MUL_LZERO", ``!r1. rat_mul 0q r1 = 0q``,
-	GEN_TAC THEN
-	RAT_CALCEQ_TAC );
+val RAT_MUL_LZERO = store_thm(
+  "RAT_MUL_LZERO[simp]", “!r1. rat_mul 0q r1 = 0q”,
+  GEN_TAC THEN RAT_CALCEQ_TAC);
 
-val RAT_MUL_RZERO = store_thm("RAT_MUL_RZERO", ``!r1. rat_mul r1 0q = 0q``,
-	PROVE_TAC[RAT_MUL_LZERO, RAT_MUL_COMM] );
+val RAT_MUL_RZERO = store_thm(
+  "RAT_MUL_RZERO[simp]",
+  “!r1. rat_mul r1 0q = 0q”,
+  PROVE_TAC[RAT_MUL_LZERO, RAT_MUL_COMM] );
 
 (*--------------------------------------------------------------------------
    RAT_SUB_ADDAINV: thm
@@ -1064,11 +1066,18 @@ val RAT_SUB_ADDAINV = store_thm( "RAT_SUB_ADDAINV",``!r1 r2. rat_sub r1 r2 = rat
 	REWRITE_TAC[frac_sub_def] THEN
 	REWRITE_TAC[RAT_ADD_CONG] );
 
-val RAT_DIV_MULMINV = store_thm("RAT_DIV_MULMINV", ``!r1 r2. rat_div r1 r2 = rat_mul r1 (rat_minv r2)``,
-	REPEAT GEN_TAC THEN
-	REWRITE_TAC[rat_div_def, rat_mul_def, rat_minv_def] THEN
-	REWRITE_TAC[frac_div_def] THEN
-	REWRITE_TAC[RAT_MUL_CONG] );
+val RAT_DIV_MULMINV = store_thm("RAT_DIV_MULMINV",
+  ``!r1 r2. rat_div r1 r2 = rat_mul r1 (rat_minv r2)``,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[rat_div_def, rat_mul_def, rat_minv_def] THEN
+  REWRITE_TAC[frac_div_def] THEN
+  REWRITE_TAC[RAT_MUL_CONG] );
+
+val RAT_DIV_0 = Q.store_thm(
+  "RAT_DIV_0[simp]",
+  ‘rat_div 0 x = 0’,
+  simp[RAT_DIV_MULMINV]);
+
 
 (*--------------------------------------------------------------------------
    RAT_AINV_0: thm
@@ -2623,6 +2632,13 @@ val rat_of_int_LE = Q.store_thm(
   asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
     [num_rwt, GSYM integerTheory.INT_INJ, GSYM integerTheory.INT_LE])
 
+val rat_of_int_LT = Q.store_thm(
+  "rat_of_int_LT[simp]",
+  ‘rat_of_int i < rat_of_int j <=> i < j’,
+  simp[rat_of_int_def] >> rw[] >>
+  asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+    [num_rwt, GSYM integerTheory.INT_INJ, GSYM integerTheory.INT_LT]);
+
 val rat_of_int_ainv = Q.store_thm(
   "rat_of_int_ainv",
   ‘rat_of_int (-i) = -(rat_of_int i)’,
@@ -2630,6 +2646,13 @@ val rat_of_int_ainv = Q.store_thm(
   TRY (elim_tac mp_tac elim2 >> simp[]) >>
   asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
     [num_rwt, GSYM integerTheory.INT_INJ])
+
+(* ----------------------------------------------------------------------
+    rational min and max
+   ---------------------------------------------------------------------- *)
+
+val rat_min_def = Define‘rat_min (r1:rat) r2 = if r1 < r2 then r1 else r2’;
+val rat_max_def = Define‘rat_max (r1:rat) r2 = if r1 > r2 then r1 else r2’;
 
 (*==========================================================================
  * end of theory
