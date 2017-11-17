@@ -35,19 +35,34 @@ val addEdge_def = Define`
 
 val findNode_def = Define`
   findNode P g =
-    OPTION_MAP FST (FIND P (toAList g.nodeInfo))`;
+    FIND P (toAList g.nodeInfo)`;
+
+val updateNode_def = Define`
+  updateNode nId node g =
+    if nId ∈ domain g.nodeInfo
+    then SOME (g with  <| nodeInfo updated_by (insert nId node) ;
+                         next := g.next ;
+                         followers := g.followers ;
+                         preds := g.preds ; |>)
+    else NONE`;
 
 val wfAdjacency_def = Define‘
   wfAdjacency adjmap ⇔
      ∀k nl e n. lookup k adjmap = SOME nl ∧ MEM (e,n) nl ⇒
                 n ∈ domain adjmap’;
 
-
 val wfg_def = Define‘
   wfg g ⇔ (∀n. g.next ≤ n ⇒ n ∉ domain g.nodeInfo) ∧
            (domain g.followers = domain g.nodeInfo) ∧
            (domain g.preds = domain g.nodeInfo) ∧
            wfAdjacency g.followers ∧ wfAdjacency g.preds’;
+
+val empty_is_wfg = Q.store_thm(
+  "empty_is_wfg[simp]",
+  `wfg empty`,
+  simp[empty_def,wfg_def,wfAdjacency_def] >> rpt strip_tac
+  >> fs[lookup_def]
+    );
 
 val cond_eq = Q.prove(
   ‘((if P then t else e) = v) ⇔ P ∧ t = v ∨ ¬P ∧ e = v’,
@@ -74,6 +89,39 @@ val addEdge_preserves_wfg = Q.store_thm(
         >> metis_tac[]
        )
     >- metis_tac[]
+    );
+
+val addEdge_preserves_nodeInfo = Q.store_thm(
+   "addEdge_preserves_nodeInfo",
+   `(addEdge i (e,s) g) = SOME g2 ==> (g.nodeInfo = g2.nodeInfo)`,
+   rpt strip_tac >> fs[addEdge_def,theorem "gfg_component_equality"]
+    );
+
+val updateNode_preserves_wfg = Q.store_thm(
+   "updateNode_preserves_wfg[simp]",
+   `wfg g ∧ (updateNode id n g = SOME g2) ==> wfg g2`,
+   simp[wfg_def,updateNode_def]
+   >> dsimp[wfAdjacency_def, lookup_insert]
+   >> rw[] >> fs[INSERT_DEF,SET_EQ_SUBSET,SUBSET_DEF]
+   >> rpt strip_tac >> metis_tac[]
+    );
+
+val updateNode_preserves_edges = Q.store_thm(
+    "updateNode_preserves_edges",
+    `updateNode id n g = SOME g2
+       ==> (g.followers = g2.followers)
+         ∧ (g.preds = g2.preds)`,
+    simp[updateNode_def] >> rpt strip_tac
+    >> fs[theorem "gfg_component_equality"]
+    );
+
+val updateNode_preserves_domain = Q.store_thm(
+  "updateNode_preserves_domain",
+  `updateNode id n g = SOME g2 ==> (domain g.nodeInfo = domain g2.nodeInfo)`,
+   simp[updateNode_def] >> rpt strip_tac >> fs[theorem "gfg_component_equality"]
+   >> `domain g2.nodeInfo = id INSERT (domain g.nodeInfo)`
+      by metis_tac[domain_insert]
+   >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> metis_tac[IN_INSERT]
     );
 
 val graph_size_def = Define‘graph_size g = sptree$size g.nodeInfo’;
