@@ -2084,6 +2084,10 @@ val RAT_NO_ZERODIV = store_thm("RAT_NO_ZERODIV", ``!r1 r2. (r1 = 0q) \/ (r2 = 0q
         FRAC_NMRDNM_TAC THEN
         PROVE_TAC[INT_NO_ZERODIV] );
 
+val RAT_NO_ZERODIV_THM = save_thm(
+  "RAT_NO_ZERODIV_THM[simp]",
+  ONCE_REWRITE_RULE [EQ_SYM_EQ] RAT_NO_ZERODIV);
+
 val RAT_NO_ZERODIV_NEG = store_thm("RAT_NO_ZERODIV_NEG",``!r1 r2. ~(r1 * r2 = 0q) = ~(r1 = 0q) /\ ~(r2 = 0q)``,
         PROVE_TAC[RAT_NO_ZERODIV]);
 
@@ -2351,6 +2355,32 @@ val RAT_DIVDIV_ADD = Q.store_thm(
   pop_assum SUBST1_TAC >> ‘b / b = 1’ by simp[] >>
   asm_simp_tac bool_ss [RAT_MUL_RID] >> simp[RAT_DIVDIV_MUL] >>
   simp[Abbr`RHS`, RAT_RDISTRIB, RAT_DIV_MULMINV, AC RAT_MUL_ASSOC RAT_MUL_COMM])
+
+val RAT_DIV_AINV = Q.store_thm(
+  "RAT_DIV_AINV",
+  ‘-(x/y) = (-x)/y’,
+  simp[RAT_DIV_MULMINV, RAT_AINV_LMUL]);
+
+val RAT_MINV_EQ_0 = Q.store_thm(
+  "RAT_MINV_EQ_0[simp]",
+  ‘r <> 0 ==> rat_minv r <> 0’,
+  strip_tac >> disch_then (mp_tac o Q.AP_TERM ‘$* r’) >>
+  simp[RAT_MUL_RINV, RAT_1_NOT_0]);
+
+val RAT_DIV_MINV = Q.store_thm(
+  "RAT_DIV_MINV",
+  ‘x <> 0 /\ y <> 0 ==> (rat_minv (x/y) = y / x)’,
+  strip_tac >>
+  ‘x / y <> 0’ by simp[RAT_DIV_MULMINV, RAT_NO_ZERODIV_NEG] >>
+  qspecl_then [‘rat_minv (x / y)’, ‘y / x’, ‘x / y’] mp_tac
+              RAT_EQ_LMUL >> simp[] >> disch_then (SUBST1_TAC o SYM) >>
+  simp[RAT_MUL_RINV, RAT_DIVDIV_MUL] >>
+  simp[RAT_MUL_COMM, RAT_NO_ZERODIV_NEG]);
+
+val RAT_DIV_EQ0 = Q.store_thm(
+  "RAT_DIV_EQ0[simp]",
+  ‘d <> 0 ==> ((n / d = 0) <=> (n = 0)) /\ ((0 = n / d) <=> (n = 0))’,
+  strip_tac >> simp[RAT_DIV_MULMINV, GSYM RAT_NO_ZERODIV, RAT_MINV_EQ_0]);
 
 (*--------------------------------------------------------------------------
    RAT_ADD_NUM: thm
