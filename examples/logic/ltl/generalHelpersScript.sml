@@ -283,6 +283,13 @@ val CAT_OPTIONS_MAP_LEMM = store_thm
    >> rw[] >> fs[CAT_OPTIONS_def] >> metis_tac[SOME_11,NOT_SOME_NONE]
   );
 
+val CAT_OPTIONS_APPEND = store_thm
+  ("CAT_OPTIONS_APPEND",
+   ``!l1 l2. CAT_OPTIONS (l1 ++ l2) = CAT_OPTIONS l1 ++ CAT_OPTIONS l2``,
+   Induct_on `l1` >> fs[CAT_OPTIONS_def] >> rpt strip_tac
+   >> Cases_on `h` >> fs[CAT_OPTIONS_def]
+  );
+
 val OPTION_TO_LIST_def = Define`
     (OPTION_TO_LIST NONE = [])
   ∧ (OPTION_TO_LIST (SOME l) = l)`;
@@ -376,12 +383,6 @@ val FIND_UNIQUE = store_thm
       )
   );
 
-
-(* val FLAT_LEMM = store_thm *)
-(*   ("FLAT_LEMM", *)
-(*    ``!x ls. MEM x (FLAT ls) ==> ?l. MEM l ls ∧ MEM x l``, *)
-(*    Induct_on `ls` >> fs[FLAT,MEM] >> metis_tac[] *)
-(*   ); *)
 
 val PSUBSET_WF = store_thm
  ("PSUBSET_WF",
