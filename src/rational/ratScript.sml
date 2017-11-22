@@ -560,64 +560,75 @@ val RAT_MINV_CALCULATE = store_thm("RAT_MINV_CALCULATE", ``!f1. ~(0 = frac_nmr f
  *  |- !f1 f2. rat_add (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_add f1 f2 )
  *--------------------------------------------------------------------------*)
 
-val RAT_ADD_CALCULATE = store_thm("RAT_ADD_CALCULATE", ``!f1 f2. rat_add (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_add f1 f2 )``,
-        REPEAT GEN_TAC THEN
-        REWRITE_TAC[rat_add_def] THEN
-        PROVE_TAC[RAT_ADD_CONG] );
+val RAT_ADD_CALCULATE = store_thm(
+  "RAT_ADD_CALCULATE",
+  “!f1 f2. rat_add (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_add f1 f2 )”,
+  REPEAT GEN_TAC THEN REWRITE_TAC[rat_add_def] THEN PROVE_TAC[RAT_ADD_CONG] );
 
 (*--------------------------------------------------------------------------
  *  RAT_SUB_CALCULATE: thm
  *  |- !f1 f2. rat_sub (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_sub f1 f2 )
  *--------------------------------------------------------------------------*)
 
-val RAT_SUB_CALCULATE = store_thm("RAT_SUB_CALCULATE", ``!f1 f2. rat_sub (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_sub f1 f2 )``,
-        REPEAT GEN_TAC THEN
-        REWRITE_TAC[rat_sub_def] THEN
-        PROVE_TAC[RAT_SUB_CONG] );
+val RAT_SUB_CALCULATE = store_thm(
+  "RAT_SUB_CALCULATE",
+  “!f1 f2. rat_sub (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_sub f1 f2 )”,
+  REPEAT GEN_TAC THEN REWRITE_TAC[rat_sub_def] THEN PROVE_TAC[RAT_SUB_CONG] );
 
 (*--------------------------------------------------------------------------
  *  RAT_MUL_CALCULATE: thm
  *  |- !f1 f2. rat_mul (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_mul f1 f2 )
  *--------------------------------------------------------------------------*)
 
-val RAT_MUL_CALCULATE = store_thm("RAT_MUL_CALCULATE", ``!f1 f2. rat_mul (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_mul f1 f2 )``,
-        REPEAT GEN_TAC THEN
-        REWRITE_TAC[rat_mul_def] THEN
-        PROVE_TAC[RAT_MUL_CONG] );
+val RAT_MUL_CALCULATE = store_thm(
+  "RAT_MUL_CALCULATE",
+  “!f1 f2. rat_mul (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_mul f1 f2 )”,
+  REPEAT GEN_TAC THEN REWRITE_TAC[rat_mul_def] THEN PROVE_TAC[RAT_MUL_CONG]);
 
-(*--------------------------------------------------------------------------
- *  RAT_DIV_CALCULATE: thm
- *  |- !f1 f2. ~(frac_nmr f2=0) ==> (rat_div (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_div f1 f2 ))
- *--------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    RAT_DIV_CALCULATE: thm
+    |- !f1 f2.
+         frac_nmr f2 <> 0 ==>
+         (rat_div (abs_rat f1) (abs_rat f2) = abs_rat(frac_div f1 f2))
+   ---------------------------------------------------------------------- *)
 
-val RAT_DIV_CALCULATE = store_thm("RAT_DIV_CALCULATE", ``!f1 f2. ~(frac_nmr f2=0) ==> (rat_div (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_div f1 f2 ))``,
-        REPEAT STRIP_TAC THEN
-        REWRITE_TAC[rat_div_def] THEN
-        PROVE_TAC[RAT_DIV_CONG] );
+val RAT_DIV_CALCULATE = store_thm(
+  "RAT_DIV_CALCULATE",
+  “!f1 f2. frac_nmr f2 <> 0 ==>
+           (rat_div (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_div f1 f2 ))”,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[rat_div_def] THEN PROVE_TAC[RAT_DIV_CONG]);
 
 (*--------------------------------------------------------------------------
  *  RAT_EQ_CALCULATE: thm
  *  |- !f1 f2. (abs_rat f1 = abs_rat f2) = (frac_nmr f1 * frac_dnm f2 = frac_nmr f2 * frac_dnm f1)
  *--------------------------------------------------------------------------*)
 
-val RAT_EQ_CALCULATE = store_thm("RAT_EQ_CALCULATE", ``!f1 f2. (abs_rat f1 = abs_rat f2) = (frac_nmr f1 * frac_dnm f2 = frac_nmr f2 * frac_dnm f1)``,
-        PROVE_TAC[RAT_ABS_EQUIV, rat_equiv_def] );
+val RAT_EQ_CALCULATE = store_thm(
+  "RAT_EQ_CALCULATE",
+  “!f1 f2. (abs_rat f1 = abs_rat f2) <=>
+           (frac_nmr f1 * frac_dnm f2 = frac_nmr f2 * frac_dnm f1)”,
+  PROVE_TAC[RAT_ABS_EQUIV, rat_equiv_def] );
 
 
-(*--------------------------------------------------------------------------
- *  RAT_LES_CALCULATE: thm
- *  |- !f1 f2. (abs_rat f1 < abs_rat f2) = (frac_nmr f1 * frac_dnm f2 < frac_nmr f2 * frac_dnm f1)
- *--------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    RAT_LES_CALCULATE: thm
+    |- !f1 f2. (abs_rat f1 < abs_rat f2) =
+               (frac_nmr f1 * frac_dnm f2 < frac_nmr f2 * frac_dnm f1)
+   ---------------------------------------------------------------------- *)
 
-val RAT_LES_CALCULATE = store_thm("RAT_LES_CALCULATE", ``!f1 f2. (abs_rat f1 < abs_rat f2) = (frac_nmr f1 * frac_dnm f2 < frac_nmr f2 * frac_dnm f1)``,
-        REPEAT GEN_TAC THEN
-        REWRITE_TAC[rat_les_def, rat_sgn_def, RAT_SUB_CALCULATE, RAT_SGN_CONG] THEN
-        REWRITE_TAC[frac_sgn_def, frac_sub_def, frac_add_def, frac_ainv_def] THEN
-        FRAC_POS_TAC ``frac_dnm f2 * frac_dnm (abs_frac (~frac_nmr f1,frac_dnm f1))`` THEN
-        FRAC_NMRDNM_TAC THEN
-        REWRITE_TAC[INT_SGN_CLAUSES, int_gt] THEN
-        `~frac_nmr f1 * frac_dnm f2 = ~(frac_nmr f1 * frac_dnm f2)` by ARITH_TAC THEN
-        ASM_REWRITE_TAC[INT_LT_ADDNEG, INT_ADD_LID] );
+val RAT_LES_CALCULATE = store_thm(
+  "RAT_LES_CALCULATE",
+  “!f1 f2. (abs_rat f1 < abs_rat f2) =
+           (frac_nmr f1 * frac_dnm f2 < frac_nmr f2 * frac_dnm f1)”,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[rat_les_def, rat_sgn_def, RAT_SUB_CALCULATE, RAT_SGN_CONG] THEN
+  REWRITE_TAC[frac_sgn_def, frac_sub_def, frac_add_def, frac_ainv_def] THEN
+  FRAC_POS_TAC
+    “frac_dnm f2 * frac_dnm (abs_frac (~frac_nmr f1,frac_dnm f1))” THEN
+  FRAC_NMRDNM_TAC THEN
+  REWRITE_TAC[INT_SGN_CLAUSES, int_gt] THEN
+  `~frac_nmr f1 * frac_dnm f2 = ~(frac_nmr f1 * frac_dnm f2)` by ARITH_TAC THEN
+  ASM_REWRITE_TAC[INT_LT_ADDNEG, INT_ADD_LID] );
 
 val RAT_LEQ_CALCULATE = store_thm("RAT_LEQ_CALCULATE",
   ``!f1 f2. (abs_rat f1 <= abs_rat f2) =
@@ -625,11 +636,16 @@ val RAT_LEQ_CALCULATE = store_thm("RAT_LEQ_CALCULATE",
   REPEAT GEN_TAC THEN
   REWRITE_TAC[rat_leq_def, RAT_LES_CALCULATE, INT_LE_LT, RAT_EQ_CALCULATE]) ;
 
-val RAT_OF_NUM_CALCULATE = store_thm("RAT_OF_NUM_CALCULATE", ``!n1. rat_of_num n1 = abs_rat( abs_frac( &n1, 1) )``,
-        recInduct (DB.fetch "-" "rat_of_num_ind") THEN
-        RW_TAC arith_ss [rat_of_num_def, rat_0_def, frac_0_def, rat_1_def, frac_1_def, RAT_ADD_CALCULATE, frac_add_def] THEN
-        FRAC_POS_TAC ``1i`` THEN
-        RW_TAC int_ss [NMR,DNM, ARITH_PROVE ``int_of_num (SUC n) + 1 = int_of_num (SUC (SUC n))``] );
+val RAT_OF_NUM_CALCULATE = store_thm(
+  "RAT_OF_NUM_CALCULATE",
+  ``!n1. rat_of_num n1 = abs_rat( abs_frac( &n1, 1) )``,
+  recInduct (DB.fetch "-" "rat_of_num_ind") THEN
+  RW_TAC arith_ss [rat_of_num_def, rat_0_def, frac_0_def, rat_1_def, frac_1_def,
+                   RAT_ADD_CALCULATE, frac_add_def] THEN
+  FRAC_POS_TAC ``1i`` THEN
+  RW_TAC int_ss
+    [NMR, DNM, ARITH_PROVE “int_of_num (SUC n) + 1 = int_of_num (SUC (SUC n))”]
+);
 
 val RAT_OF_NUM_LEQ = store_thm("RAT_OF_NUM_LEQ[simp]",
   ``rat_of_num a <= rat_of_num b = a <= b``,
