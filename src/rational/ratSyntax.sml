@@ -17,7 +17,7 @@ val ERR = mk_HOL_ERR "ratSyntax";
  *--------------------------------------------------------------------------*)
 
 (*val int_ty = intSyntax.int_ty;*)
-(*val rat = mk_thy_type{Tyop = "rat", Thy="rat", Args = []};*)
+val rat = mk_thy_type{Tyop = "rat", Thy="rat", Args = []};
 
 val rat_0_tm = prim_mk_const {Name="rat_0",Thy="rat"};
 val rat_1_tm = prim_mk_const {Name="rat_1",Thy="rat"};
