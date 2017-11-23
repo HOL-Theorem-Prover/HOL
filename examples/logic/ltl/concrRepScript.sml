@@ -660,7 +660,8 @@ val ADDEDGE_LEMM = store_thm
                  if h = f
                  then ?i. extractTrans g2 h
                         = extractTrans g h ∪ { (i, e.pos,e.neg,set e.sucs) }
-                 else extractTrans g2 h = extractTrans g h))``,
+                 else extractTrans g2 h = extractTrans g h)
+          ∧ (first_flw_has_max_counter g2))``,
    rpt strip_tac >> Cases_on `e` >> fs[addEdgeToGraph_def]
    >> fs[graphStates_def,MEM_MAP] (* >> simp[findNode_def] *)
    >> `l1 = [] \/ ?h t. l1 = SNOC h t` by metis_tac[SNOC_CASES]
@@ -1160,6 +1161,7 @@ val ADDEDGE_LEMM = store_thm
            >- (disj2_tac >> fs[] >> qexists_tac `l'` >> fs[])
          )
          )
+      >- metis_tac[FIRST_FLW_LEMM,updateNode_preserves_domain]
    )
    >- (
     (* Q.HO_MATCH_ABBREV_TAC *)
@@ -1242,7 +1244,16 @@ val ADDEDGE_LEMM = store_thm
                        then extractTrans m a
                              = (extractTrans g a
                                 ∪ { (LABEL.edge_grp,l,l0,h INSERT set fs)})
-                       else extractTrans m a = extractTrans g a)` by (
+                       else extractTrans m a = extractTrans g a)
+                   ∧ (first_flw_has_max_counter m)
+                   ∧ (!x id fls q r.
+                         findNode (λ(n,l). l.frml = f) m = SOME (q,r)
+                       ∧ (lookup q m.followers = SOME fls)
+                       ==> ((!f. MEM f fls
+                                ==> (FST f).edge_grp <= LABEL.edge_grp)
+                           ∧ !o_id. ~(o_id = q)
+                                   ==> (lookup o_id m.nodeInfo
+                                        = lookup o_id g.nodeInfo)))` by (
        (* HO_MATCH_MP_TAC SNOC_INDUCT >> rpt strip_tac >> fs[] *)
        Induct_on `fs` >> fs[]
        >- (
@@ -1262,7 +1273,52 @@ val ADDEDGE_LEMM = store_thm
                 ∧ MEM (FST n,h') (toAList g.nodeInfo)` by metis_tac[FIND_LEMM2]
             >> metis_tac[MEM_toAList,domain_lookup]
         )
-        >> qexists_tac `k` >> fs[] >> rpt strip_tac >> fs[]
+        >> qexists_tac `k`
+        >> `∀fls q r.
+            findNode (λ(n,l). l.frml = (SND y).frml) k = SOME (q,r)
+          ∧ lookup q k.followers = SOME fls
+            ==> (∀f. MEM f fls ⇒ (FST f).edge_grp ≤ LABEL.edge_grp
+               ∧ ∀o_id. o_id ≠ q
+                          ⇒ lookup o_id k.nodeInfo = lookup o_id g.nodeInfo)`
+            by (
+            qunabbrev_tac `addSingleEdge` >> fs[addEdge_def]
+            >> simp[first_flw_has_max_counter_def] >> rpt strip_tac
+            >> `(q,r) = (nId,frml)` by fs[findNode_def]
+            >> Cases_on `followers_old` >> fs[first_flw_has_max_counter_def]
+            >> fs[gfg_component_equality] >> rw[]
+            >- (`fls = [(LABEL,FST n)]` by metis_tac[lookup_insert,SOME_11]
+                >> fs[]
+               )
+            >-(`(FST h'').edge_grp <= LABEL.edge_grp` by (
+                qunabbrev_tac `LABEL`
+                >> fs[theorem "edgeLabelAA_component_equality"]
+               )
+               >> `fls =  (LABEL,FST n)::h''::t'`
+                   by metis_tac[lookup_insert,SOME_11]
+               >> rw[] >> fs[]
+               >> metis_tac[DECIDE``!x y z. x <= y ∧ y <= z ==> x <= z``])
+        )
+        >> `first_flw_has_max_counter k` by (
+            qunabbrev_tac `addSingleEdge` >> fs[addEdge_def]
+            >> simp[first_flw_has_max_counter_def] >> rpt strip_tac
+            >> first_x_assum (qspec_then `(LABEL,FST n)::followers_old` mp_tac)
+            >> rpt strip_tac
+            >> first_x_assum (qspec_then `nId` mp_tac) >> rpt strip_tac
+            >> first_x_assum (qspec_then `frml` mp_tac)
+            >> `findNode (λ(n,l). l.frml = (SND y).frml) k = SOME (nId,frml)`
+               by metis_tac[findNode_def,SOME_11]
+            >> `lookup nId k.followers = SOME ((LABEL,FST n)::followers_old)`
+               by (fs[gfg_component_equality]
+                   >> metis_tac[lookup_insert,SOME_11])
+            >> simp[] >> rpt strip_tac
+            >> Cases_on `x_id = nId` >> fs[gfg_component_equality]
+            >> rw[]
+            >> `lookup x_id g.followers = SOME (fl::fls)` by (
+                metis_tac[lookup_insert,SOME_11]
+            )
+            >> fs[first_flw_has_max_counter_def] >> metis_tac[]
+        )
+        >> fs[] >> rpt strip_tac >> fs[]
         >> Cases_on `(SND y).frml = a` >> fs[]
         >- (
          `findNode (λ(n,l). l.frml = a) k = SOME (nId,frml)`
@@ -1289,17 +1345,19 @@ val ADDEDGE_LEMM = store_thm
                       >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
                       >> fs[OPTION_TO_LIST_MEM,findNode_def]
                       >> Cases_on `n` >> rw[] >> fs[]
-                      >- (`suc = r ∧ (λ(n,l). l.frml = h) (q,r)`
+                      >> rename[`FIND (λ(n,l). l.frml = h) _  = SOME (id,node)`,
+                                `MEM (id,h') (toAList k.nodeInfo)`]
+                      >- (`(suc = node) ∧ (λ(n,l). l.frml = h) (id,node)`
                             by metis_tac[FIND_LEMM2,MEM_toAList,SOME_11]
                           >> fs[]
                          )
-                      >- (qexists_tac `r`
-                          >> `(λ(n,l). l.frml = h) (q,r)`
+                      >- (qexists_tac `node`
+                          >> `(λ(n,l). l.frml = h) (id,node)`
                                 by metis_tac[FIND_LEMM2]
                           >> fs[theorem "edgeLabelAA_component_equality"]
                           >> metis_tac[MEM_toAList,FIND_LEMM2]
                          )
-                      >- (`suc = r ∧ (λ(n,l). l.frml = h) (q,r)`
+                      >- (`suc = node ∧ (λ(n,l). l.frml = h) (id,node)`
                              by metis_tac[FIND_LEMM2,MEM_toAList,SOME_11]
                            >> fs[]
                          )
@@ -1317,8 +1375,8 @@ val ADDEDGE_LEMM = store_thm
                             >> simp[]
                           )
                          )
-                      >- (qexists_tac `r`
-                          >> `(λ(n,l). l.frml = h) (q,r)`
+                      >- (qexists_tac `node`
+                          >> `(λ(n,l). l.frml = h) (id,node)`
                              by metis_tac[FIND_LEMM2]
                           >> fs[theorem "edgeLabelAA_component_equality"]
                           >> metis_tac[MEM_toAList,FIND_LEMM2]
@@ -1350,8 +1408,10 @@ val ADDEDGE_LEMM = store_thm
                         by metis_tac[MEMBER_NOT_EMPTY]
                      >> fs[] >> metis_tac[]
                     )
-                 >- (rpt strip_tac >> fs[OPTION_TO_LIST_MEM] >> rw[] >> fs[]
-                     >> metis_tac[]
+                 >- (rpt strip_tac >> fs[OPTION_TO_LIST_MEM]
+                     >- (rw[] >> fs[] >> metis_tac[])
+                     >- (Cases_on `x` >> fs[])
+                     >- (rw[] >> fs[] >> metis_tac[])
                     )
                 )
              >- (disj2_tac >> fs[] >> metis_tac[])
@@ -1462,9 +1522,10 @@ val ADDEDGE_LEMM = store_thm
         >> first_assum (qspec_then `h'` mp_tac) >> rpt strip_tac >> fs[]
         >> rename[`x_new = (SND nodeIdPair).frml`]
         >> Cases_on `nodeIdPair` >> fs[]
-        >> `findNode (λ(n,l). l.frml = x_new) g = SOME (q,r)` by (
+        >> rename [`MEM (id,node) (toAList g.nodeInfo)`]
+        >> `findNode (λ(n,l). l.frml = x_new) g = SOME (id,node)` by (
              `?q1 r1. findNode (λ(n,l). l.frml = x_new) g = SOME (q1,r1)` by (
-                 `(λ(n,l). l.frml = x_new) (q,r)` by fs[]
+                 `(λ(n,l). l.frml = x_new) (id,node)` by fs[]
                  >> simp[findNode_def]
                  >> IMP_RES_TAC FIND_LEMM >> fs[]
                  >> Cases_on `y'` >> fs[]
@@ -1475,20 +1536,20 @@ val ADDEDGE_LEMM = store_thm
                  >> qexists_tac `(q1,r1)` >> fs[]
                  >> metis_tac[FIND_LEMM2]
              )
-             >> `MEM (q,r.frml) (graphStatesWithId g)` by(
+             >> `MEM (id,node.frml) (graphStatesWithId g)` by(
                  fs[MEM_MAP,graphStatesWithId_def]
-                   >> qexists_tac `(q,r)` >> fs[]
+                   >> qexists_tac `(id,node)` >> fs[]
                    >> metis_tac[FIND_LEMM2]
              )
              >> `(λ(n,l). l.frml = x_new) (q1,r1)` by metis_tac[FIND_LEMM2]
              >> fs[]
-             >> `q1 = q` by (rw[] >> metis_tac[])
+             >> `q1 = id` by (rw[] >> metis_tac[])
              >> rw[] >> fs[graphStatesWithId_def,MEM_MAP]
-             >> `MEM (q,r1) (toAList g.nodeInfo)` by metis_tac[FIND_LEMM2]
-             >> `MEM (q,r) (toAList g.nodeInfo)` by metis_tac[FIND_LEMM2]
+             >> `MEM (id,r1) (toAList g.nodeInfo)` by metis_tac[FIND_LEMM2]
+             >> `MEM (id,node) (toAList g.nodeInfo)` by metis_tac[FIND_LEMM2]
              >> metis_tac[MEM_toAList,SOME_11]
          )
-        >> `TO_LABELS (x_new::fs) = (LABEL,q)::(TO_LABELS fs)` by (
+        >> `TO_LABELS (x_new::fs) = (LABEL,id)::(TO_LABELS fs)` by (
              qunabbrev_tac `TO_LABELS`
              >> fs[CAT_OPTIONS_def,CAT_OPTIONS_MAP_LEMM,CAT_OPTIONS_MEM,
                    MEM_MAP,CAT_OPTIONS_APPEND]
@@ -1498,7 +1559,7 @@ val ADDEDGE_LEMM = store_thm
               MEM (lab,x) (TO_LABELS fs) ⇒
               ∃h. MEM (x,h) (toAList g.nodeInfo) ∧ lab = LABEL`
          by (rpt strip_tac
-             >> `MEM (lab,x) (TO_LABELS (r.frml::fs))` by (
+             >> `MEM (lab,x) (TO_LABELS (node.frml::fs))` by (
                   qunabbrev_tac `TO_LABELS`
                   >> fs[CAT_OPTIONS_MAP_LEMM,CAT_OPTIONS_MEM,MEM_MAP]
                   >> dsimp[] >> metis_tac[]
@@ -1508,25 +1569,76 @@ val ADDEDGE_LEMM = store_thm
          >> `∃m.
               FOLDR addSingleEdge a_init (TO_LABELS fs) = SOME m
               ∧ g.nodeInfo = m.nodeInfo ∧ wfg m
-              ∧ ∀a.
+              ∧ (∀a.
               if a = (SND y).frml then
                   extractTrans m (SND y).frml =
                   extractTrans g (SND y).frml
                                ∪ {(LABEL.edge_grp,l,l0,h INSERT set fs)}
-              else extractTrans m a = extractTrans g a` by metis_tac[]
+              else extractTrans m a = extractTrans g a)
+              ∧ (first_flw_has_max_counter m)
+              ∧ (∀fls q r.
+                  findNode (λ(n,l). l.frml = (SND y).frml) m = SOME (q,r)
+                  ∧ lookup q m.followers = SOME fls
+                   ==> (∀f. MEM f fls ⇒ (FST f).edge_grp ≤ LABEL.edge_grp
+                      ∧ (∀o_id. o_id ≠ q
+                          ⇒ lookup o_id m.nodeInfo = lookup o_id g.nodeInfo)))`
+             by metis_tac[]
          >> qabbrev_tac `A = FOLDR addSingleEdge a_init (TO_LABELS fs)`
-         >> `?m1. addSingleEdge (LABEL,q) A = SOME m1
-                ∧ wfg m1 ∧ (m1.nodeInfo = m.nodeInfo)` by (
+         >> `?m1. addSingleEdge (LABEL,id) A = SOME m1
+                ∧ wfg m1 ∧ (m1.nodeInfo = m.nodeInfo)
+                ∧ (∀fls q r.
+                   findNode (λ(n,l). l.frml = (SND y).frml) m1 = SOME (q,r)
+                 ∧ lookup q m1.followers = SOME fls
+                     ==> (∀f. MEM f fls ⇒ (FST f).edge_grp ≤ LABEL.edge_grp
+                       ∧ (∀o_id. o_id ≠ q
+                           ⇒ lookup o_id m1.nodeInfo = lookup o_id g.nodeInfo)))
+                ∧ (first_flw_has_max_counter m1)`
+             by (
              qunabbrev_tac `addSingleEdge` >> fs[]
-             >> `?m1. addEdge nId (LABEL,q) m = SOME m1`
+             >> Q.HO_MATCH_ABBREV_TAC `
+                 ?m1. addEdge nId (LABEL,id) m = SOME m1 ∧ wfg m1
+                    ∧ m1.nodeInfo = m.nodeInfo ∧ B m1 ∧ C m1`
+             >> `?m1. addEdge nId (LABEL,id) m = SOME m1
+                    ∧ (m1.nodeInfo = m.nodeInfo ==> B m1)
+                    ∧ (m1.nodeInfo = m.nodeInfo ∧ B m1 ==> C m1)`
                    suffices_by metis_tac[addEdge_preserves_nodeInfo,
                                          addEdge_preserves_wfg]
              >> simp[addEdge_def] >> fs[]
-             >> `nId ∈ domain m.nodeInfo ∧ q ∈ domain m.nodeInfo` by (
+             >> `nId ∈ domain m.nodeInfo ∧ id ∈ domain m.nodeInfo` by (
                  fs[findNode_def]
              >> metis_tac[MEM_toAList,domain_lookup,FIND_LEMM2]
-         )
-         >> fs[] >> metis_tac[domain_lookup,wfg_def]
+             )
+             >> fs[]
+             >> `∃m1.
+                 (∃followers_old.
+                  lookup nId m.followers = SOME followers_old ∧
+                    m with followers updated_by insert nId ((LABEL,id)::followers_old) =
+                  m1)` by metis_tac[domain_lookup,wfg_def]
+             >> qexists_tac `m1` >> fs[]
+             >> qunabbrev_tac `B` >> rpt strip_tac >> fs[] >> rpt strip_tac
+             >- (`(q,r) = (nId,frml)` by metis_tac[findNode_def,SOME_11]
+                >> rw[] >> fs[]
+                >> fs[gfg_component_equality] >> rw[] >> fs[]
+                >> metis_tac[findNode_def,SOME_11])
+             >- (qunabbrev_tac `C`
+                 >> fs[first_flw_has_max_counter_def]
+                 >> rpt strip_tac >> fs[]
+                 >> first_x_assum (qspec_then `(LABEL,id)::followers_old` mp_tac)
+                 >> rpt strip_tac
+                 >> first_x_assum (qspec_then `nId` mp_tac) >> rpt strip_tac
+                 >> first_x_assum (qspec_then `frml` mp_tac)
+                 >> `findNode (λ(n,l). l.frml = (SND y).frml) m1 = SOME (nId,frml)`
+                    by metis_tac[findNode_def,SOME_11]
+                 >> `lookup nId m1.followers = SOME ((LABEL,id)::followers_old)`
+                      by (fs[gfg_component_equality]
+                             >> metis_tac[lookup_insert,SOME_11])
+                 >> simp[] >> rpt strip_tac
+                 >> Cases_on `x_id = nId` >> fs[gfg_component_equality] >> rw[]
+                 >> `lookup x_id m.followers = SOME (fl::fls)` by (
+                      metis_tac[lookup_insert,SOME_11]
+                  )
+                 >> fs[first_flw_has_max_counter_def] >> metis_tac[]
+                )
          )
          >> qexists_tac `m1` >> fs[] >> rpt strip_tac
          >> Cases_on `a = (SND y).frml` >> fs[]
@@ -1551,12 +1663,17 @@ val ADDEDGE_LEMM = store_thm
                    POP_ASSUM mp_tac >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
                    >> Q.HO_MATCH_ABBREV_TAC `~(B = {}) ==> C` >> rpt strip_tac
                    >> `?b. b ∈ B` by metis_tac[MEMBER_NOT_EMPTY]
+                   >> first_x_assum (qspec_then `followers_old` mp_tac)
+                   >> rpt strip_tac >> fs[]
                    >> `(label.edge_grp = LABEL.edge_grp)
                       ==> (LABEL = label
-                       ∧ ((LABEL = label) ==> (B = h INSERT r.frml INSERT set fs)))`
-                        suffices_by (qunabbrev_tac `C` >> rpt strip_tac >> fs[]
-                                     >> qunabbrev_tac `LABEL` >> rw[]
-                                     >> fs[theorem "edgeLabelAA_component_equality"])
+                       ∧ ((LABEL = label)
+                              ==> (B = h INSERT node.frml INSERT set fs)))`
+                        suffices_by (
+                          qunabbrev_tac `C` >> rpt strip_tac
+                          >> qunabbrev_tac `LABEL` >> rw[]
+                          >> fs[theorem "edgeLabelAA_component_equality"] >> rw[]
+                   )
                    >> rpt strip_tac
                    >- (qunabbrev_tac `B` >> fs[OPTION_TO_LIST_MEM]
                        >> `unique_node_formula m` by (
@@ -1565,15 +1682,15 @@ val ADDEDGE_LEMM = store_thm
                         )
                        >> `findNode (λ(n,l). l.frml = (SND y).frml) m = SOME x'`
                           by (fs[findNode_def] >> metis_tac[SOME_11])
-                       >> Cases_on `x'` >> fs[] >> Cases_on `nId = q'`
+                       >> Cases_on `x'` >> fs[] >> Cases_on `nId = q`
                        >> rw[] >> fs[gfg_component_equality]
                        >> rw[] >> fs[]
                        >-(`∃s.
                            (label.edge_grp,label.pos_lab,label.neg_lab,s)
                              ∈ extractTrans m (SND y).frml ∧ suc.frml ∈ s` by (
-                           `r'.frml = (SND y).frml` by fs[findNode_def,FIND_LEMM]
-                           >> `lookup nId m.nodeInfo = SOME r'` by (
-                               metis_tac[FIND_LEMM2,findNode_def,MEM_toAList]
+                           `r.frml = (SND y).frml` by fs[findNode_def,FIND_LEMM]
+                           >> `lookup nId m.nodeInfo = SOME r` by (
+                               metis_tac[FIND_LEMM2,findNode_def,MEM_toAList,SOME_11]
                            )
                            >> metis_tac[EXTR_TRANS_LEMM]
                           )
@@ -1591,13 +1708,13 @@ val ADDEDGE_LEMM = store_thm
                         )
                         )
                        >- (
-                        `lookup q' m.followers = SOME l'`
+                        `lookup q m.followers = SOME l'`
                           by metis_tac[lookup_insert]
                         >> `∃s.
                              (label.edge_grp,label.pos_lab,label.neg_lab,s)
                              ∈ extractTrans m (SND y).frml ∧ suc.frml ∈ s` by (
-                             `r'.frml = (SND y).frml` by fs[findNode_def,FIND_LEMM]
-                             >> `lookup q' m.nodeInfo = SOME r'` by (
+                             `r.frml = (SND y).frml` by fs[findNode_def,FIND_LEMM]
+                             >> `lookup q m.nodeInfo = SOME r` by (
                                  metis_tac[FIND_LEMM2,findNode_def,MEM_toAList]
                              )
                              >> metis_tac[EXTR_TRANS_LEMM]
@@ -1620,10 +1737,10 @@ val ADDEDGE_LEMM = store_thm
                            >> `x1 = (nId,frml)` by
                              (fs[findNode_def] >> rw[] >> fs[])
                            >> rw[] >> fs[] >> rw[]
-                           >> `(LABEL,sucId') = (LABEL,q)
+                           >> `(LABEL,sucId') = (LABEL,id)
                             \/ (MEM (LABEL,sucId') followers_old)` by fs[]
                            >- (rw[]
-                               >> `suc' = r`
+                               >> `suc' = node`
                                     by metis_tac[findNode_def,FIND_LEMM2,
                                                  MEM_toAList,SOME_11]
                                >> fs[]
@@ -1675,7 +1792,7 @@ val ADDEDGE_LEMM = store_thm
                          >> rw[] >> fs[] >> rw[] >> metis_tac[]
                         )
                         >- (
-                         qexists_tac `r` >> fs[] >> qexists_tac `q` >> fs[]
+                         qexists_tac `node` >> fs[] >> qexists_tac `id` >> fs[]
                          >> rw[] >> fs[]
                          >> metis_tac[MEM_toAList,SOME_11]
                         )
@@ -1724,12 +1841,12 @@ val ADDEDGE_LEMM = store_thm
                         >- (qexists_tac `(nId,frml)` >> fs[]
                              >> metis_tac[findNode_def,SOME_11]
                            )
-                        >- (`l' = (LABEL,q)::followers_old`
+                        >- (`l' = (LABEL,id)::followers_old`
                               by metis_tac[lookup_insert,SOME_11]
                             >> fs[] >> rw[]
                            )
                        )
-                    >- (qexists_tac `(LABEL,q)::l'` >> fs[]
+                    >- (qexists_tac `(LABEL,id)::l'` >> fs[]
                         >> qexists_tac `(nId,frml)` >> fs[] >> rw[]
                         >- metis_tac[findNode_def,SOME_11]
                         >- metis_tac[lookup_insert,SOME_11]
@@ -1750,7 +1867,7 @@ val ADDEDGE_LEMM = store_thm
              >- (`x ∈ extractTrans m (SND y).frml`
                   by metis_tac[UNION_SUBSET,SUBSET_DEF]
                  >> `FST x < LABEL.edge_grp` by (
-                    Cases_on `x` >> Cases_on `r'` >> Cases_on `r''` >> fs[]
+                    Cases_on `x` >> Cases_on `r` >> Cases_on `r'` >> fs[]
                     >> metis_tac[]
                  )
                  >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
@@ -1767,7 +1884,7 @@ val ADDEDGE_LEMM = store_thm
                      >- (
                       `x'' = (nId,frml)`
                          by metis_tac[findNode_def,SOME_11]
-                       >> rw[] >> qexists_tac `(LABEL,q)::followers_old`
+                       >> rw[] >> qexists_tac `(LABEL,id)::followers_old`
                        >> fs[] >> rw[]
                        >> qexists_tac `(nId,frml)` >> fs[gfg_component_equality]
                        >> simp[findNode_def] >> metis_tac[findNode_def]
@@ -1795,17 +1912,17 @@ val ADDEDGE_LEMM = store_thm
                       fs[unique_node_formula_def,graphStatesWithId_def]
                       >> metis_tac[]
                   )
-                 >> `?suc. lookup q m1.nodeInfo = SOME suc`
+                 >> `?suc. lookup id m1.nodeInfo = SOME suc`
                      by metis_tac[domain_lookup]
-                 >> `MEM (LABEL,q) ((LABEL,q)::followers_old)` by fs[]
+                 >> `MEM (LABEL,id) ((LABEL,id)::followers_old)` by fs[]
                  >> `0 < LABEL.edge_grp` by (
                       qunabbrev_tac `LABEL`
                       >> fs[theorem "edgeLabelAA_component_equality"]
                       >> Cases_on `v` >> fs[]
                   )
-                 >> `lookup nId m1.followers = SOME ((LABEL,q)::followers_old)`
+                 >> `lookup nId m1.followers = SOME ((LABEL,id)::followers_old)`
                     by (fs[gfg_component_equality] >> metis_tac[lookup_insert])
-                 >> `?suc. lookup q m1.nodeInfo = SOME suc`
+                 >> `?suc. lookup id m1.nodeInfo = SOME suc`
                     by metis_tac[domain_lookup]
                  >> `lookup nId m1.nodeInfo = SOME frml`
                        by metis_tac[findNode_def,MEM_toAList,SOME_11,FIND_LEMM2]
@@ -1820,6 +1937,82 @@ val ADDEDGE_LEMM = store_thm
                  >> fs[theorem "edgeLabelAA_component_equality"]
                 )
             )
+         >- (`extractTrans m1 a = extractTrans m a` suffices_by metis_tac[]
+             >> `findNode (λ(n,l). l.frml = a) m1
+              = findNode (λ(n,l). l.frml = a) m` by fs[findNode_def]
+            >> Cases_on `findNode (λ(n,l). l.frml = a) m` >> fs[]
+            >- (
+             `!x b. (findNode (λ(n,l). l.frml = b) x = NONE)
+                     ==> (extractTrans x b = {})` by (
+                 rpt strip_tac
+                 >> `!q. ~ (q ∈ extractTrans x b)`
+                   suffices_by metis_tac[MEMBER_NOT_EMPTY]
+                 >> simp[extractTrans_def] >> rpt strip_tac
+                 >> fs[]
+                 >- (disj2_tac >> disj1_tac
+                     >> Q.HO_MATCH_ABBREV_TAC `B = {}`
+                     >> `!x. ~(x ∈ B)` suffices_by metis_tac[MEMBER_NOT_EMPTY]
+                     >> rpt strip_tac >> qunabbrev_tac `B` >> fs[OPTION_TO_LIST_MEM]
+                     >> metis_tac[NOT_SOME_NONE]
+                    )
+                 >- (disj2_tac >> fs[OPTION_TO_LIST_MEM]
+                     >> metis_tac[NOT_SOME_NONE])
+             )
+             >> metis_tac[]
+             )
+            >- (
+             Cases_on `x`
+             >> `lookup q m1.followers = lookup q m.followers` by (
+                 qunabbrev_tac `addSingleEdge` >> fs[addEdge_def]
+                 >> `~(q = nId)` by (
+                   fs[findNode_def]
+                   >> `(λ(n,l). l.frml = a) (q,r)
+                       ∧ MEM (q,r) (toAList m.nodeInfo)`
+                      by metis_tac[FIND_LEMM2]
+                   >> `(λ(n,l). l.frml = (SND y).frml) (nId,frml)
+                       ∧ MEM (nId,frml) (toAList m.nodeInfo)`
+                       by metis_tac[FIND_LEMM2]
+                   >> CCONTR_TAC >> rw[] >> fs[MEM_toAList]
+                   >> metis_tac[]
+                 )
+                 >> fs[gfg_component_equality] >> metis_tac[lookup_insert]
+             )
+             >> `!x1 x2 b id n.
+                  (findNode (λ(n,l). l.frml = b) x1 = SOME (id,n))
+                ∧ (findNode (λ(n,l). l.frml = b) x2 = SOME (id,n))
+                ∧ (lookup id x1.followers = lookup id x2.followers)
+                ∧ (x1.nodeInfo = x2.nodeInfo)
+                ==> (extractTrans x1 b ⊆ extractTrans x2 b)` by (
+                 simp[extractTrans_def,SUBSET_DEF] >> rpt strip_tac
+             )
+             >> metis_tac[SET_EQ_SUBSET]
+             )
+           )
+       )
+    )
+    >> first_x_assum (qspec_then `t` mp_tac) >> simp[]
+    >> `∀lab x.
+         MEM (lab,x) (TO_LABELS t) ⇒
+         ∃h. MEM (x,h) (toAList g.nodeInfo) ∧ lab = LABEL` by (
+        rpt strip_tac >> fs[] >> qunabbrev_tac `TO_LABELS` >> fs[]
+        >> fs[MEM_MAP,CAT_OPTIONS_MAP_LEMM,CAT_OPTIONS_MEM] >> rw[]
+        >> Cases_on `y'` >> metis_tac[FIND_LEMM2]
+    )
+    >> simp[] >> rpt strip_tac >> qexists_tac `m` >> qunabbrev_tac `Q`
+    >> fs[]
+    >> Q.HO_MATCH_ABBREV_TAC `A ∧ B ∧ C`
+    >> `A ∧ (A ==> B) ∧ C` suffices_by fs[]
+    >> qunabbrev_tac `A` >> qunabbrev_tac `B` >> qunabbrev_tac `C`
+    >> fs[] >> rpt strip_tac
+    >- simp[graphStatesWithId_def,MEM_MAP]
+    >- (fs[unique_node_formula_def] >> metis_tac[])
+    >- (first_x_assum (qspec_then `h'` mp_tac) >> fs[]
+        >> Cases_on `h' = (SND y).frml` >> fs[] >> rpt strip_tac
+        >> qexists_tac `LABEL.edge_grp`
+        >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> fs[]
+       )
+   )
+  );
 (*<-- *)
 
          >- (Cases_on `LABEL = label` >> fs[] >> rw[]
