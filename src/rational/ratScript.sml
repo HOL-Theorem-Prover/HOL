@@ -6,7 +6,7 @@
  *
  ***************************************************************************)
 
-open HolKernel boolLib Parse bossLib;
+open HolKernel boolLib Parse BasicProvers bossLib;
 
 (* interactive mode
 app load [
@@ -2743,14 +2743,22 @@ val RAT_OF_INT_CALCULATE = Q.store_thm(
       simp[RAT_OF_NUM_CALCULATE])
   >- simp[RAT_OF_NUM_CALCULATE]);
 
+(* ----------------------------------------------------------------------
+    RATN and RATD, which take rational numbers and return unique
+    numerator and denominator values. Numerator is integer with smallest
+    possible absolute value; denominator is a natural number.  If
+    numerator is zero, denominator is always one.
+   ---------------------------------------------------------------------- *)
+
 val frac_exists = Q.prove(
   ‘!r. ?n:int d:num. 0 < d /\ (&d * r = rat_of_int n)’,
   gen_tac >>
   qabbrev_tac ‘f = rep_rat r’ >>
   ‘r = abs_rat f’ by metis_tac[rat_type_thm] >>
-  ‘∃n0 d0. rep_frac f = (n0,d0)’ by (Cases_on ‘rep_frac f’ >> simp[]) >>
+  ‘?n0 d0. rep_frac f = (n0,d0)’ by (Cases_on ‘rep_frac f’ >> simp[]) >>
   map_every qexists_tac [‘n0’, ‘Num d0’] >>
-  ‘rep_frac (abs_frac (rep_frac f)) = rep_frac f’ by simp [fracTheory.frac_tybij] >>
+  ‘rep_frac (abs_frac (rep_frac f)) = rep_frac f’
+    by simp [fracTheory.frac_tybij] >>
   pop_assum mp_tac >> simp[GSYM (CONJUNCT2 fracTheory.frac_tybij)] >>
   strip_tac >> Cases_on ‘d0’ >> fs[] >>
   rename [‘rep_frac f = (n,&d)’] >>
@@ -2761,7 +2769,81 @@ val frac_exists = Q.prove(
   map_every qexists_tac [‘1’, ‘&d’] >>
   simp[fracTheory.FRAC_MULT_CALCULATE, integerTheory.INT_MUL_COMM]);
 
+val numdenom_exists = Q.prove(
+  ‘!r:rat.
+     ?n d.
+       (r = rat_of_int n / &d) /\ 0 < d /\ ((n = 0) ==> (d = 1)) /\
+       !n' d'. (r = rat_of_int n' / &d') /\ 0 < d' ==> ABS n <= ABS n'’,
+  gen_tac >>
+  qabbrev_tac `reps = { (a,b) | (&b * r = rat_of_int a) /\ 0 < b }` >>
+  `WF (measure (Num o ABS o (FST : int # num -> int)))` by simp[] >>
+  full_simp_tac bool_ss [relationTheory.WF_DEF] >>
+  ‘?e. reps e’
+    by (simp[Abbr‘reps’, pairTheory.EXISTS_PROD] >> metis_tac[frac_exists]) >>
+  fs[PULL_EXISTS] >>
+  Cases_on ‘r = 0’
+  >- (map_every qexists_tac [‘0’, ‘1’] >> simp[] >> gen_tac >> Cases_on ‘n'’ >>
+      simp[integerTheory.INT_ABS_NUM, integerTheory.INT_ABS_NEG]) >>
+  res_tac >>
+  ‘?mn md. min = (mn,md)’ by (Cases_on ‘min’ >> simp[]) >> rw[] >>
+  map_every qexists_tac [‘mn’, ‘md’] >> fs[Abbr‘reps’] >> pairarg_tac >>
+  fs[pairTheory.FORALL_PROD] >> rpt var_eq_tac >>
+  qpat_x_assum ‘(_,_) = _’ kall_tac >> rpt conj_tac
+  >- (rename [‘&d * r = rat_of_int n’] >> first_x_assum (SUBST1_TAC o SYM) >>
+      simp[RAT_DIV_MULMINV] >>
+      ‘&d:rat <> 0’ by simp[] >>
+      metis_tac[RAT_MUL_ASSOC, RAT_MUL_COMM, RAT_MUL_RINV, RAT_MUL_LID])
+  >- (rename [‘(_ = 0) ==> (_ = 1)’] >> strip_tac >> fs[])
+  >- (rpt strip_tac >>
+      rename [‘&d * r = rat_of_int n’, ‘r = rat_of_int nn / &dd’] >>
+      spose_not_then (assume_tac o REWRITE_RULE[integerTheory.INT_NOT_LE]) >>
+      first_x_assum (qspecl_then [‘nn’, ‘dd’] mp_tac) >> simp[] >>
+      reverse conj_tac
+      >- (‘&dd <> 0’ by simp[] >> simp[RAT_DIV_MULMINV] >>
+          metis_tac[RAT_MUL_ASSOC, RAT_MUL_COMM, RAT_MUL_RINV, RAT_MUL_LID]) >>
+      simp[NUM_LT]))
 
+val RATND_THM = new_specification("RATND_THM", ["RATN", "RATD"],
+  CONV_RULE (SKOLEM_CONV THENC BINDER_CONV SKOLEM_CONV) numdenom_exists)
+
+val RATD_NZERO = save_thm(
+  "RATD_NZERO[simp]",
+  let val th = List.nth(RATND_THM |> SPEC_ALL |> CONJUNCTS, 1)
+  in
+    CONJ th (CONV_RULE (REWR_CONV (GSYM NOT_ZERO_LT_ZERO)) th)
+  end);
+
+val RATN_LEAST = save_thm(
+  "RATN_LEAST",
+  List.nth(RATND_THM |> SPEC_ALL |> CONJUNCTS, 3))
+
+val RATN_RATD_EQ_THM = save_thm(
+  "RATN_RATD_EQ_THM",
+  RATND_THM |> SPEC_ALL |> CONJUNCTS |> hd);
+
+val RATN_RATD_MULT = save_thm(
+  "RATN_RATD_MULT",
+  RATN_RATD_EQ_THM |> Q.AP_TERM ‘\x. x * &RATD r’ |> BETA_RULE
+                   |> SIMP_RULE (srw_ss()) [RAT_DIV_MULMINV, GSYM RAT_MUL_ASSOC,
+                                            RAT_MUL_LINV]);
+
+val RATND_RAT_OF_NUM = Q.store_thm(
+  "RATND_RAT_OF_NUM[simp]",
+  ‘(RATN (&n) = &n) /\ (RATD (&n) = 1)’,
+  mp_tac (Q.INST [`r` |-> `&n`] RATN_RATD_MULT) >> strip_tac >>
+  ‘&n:rat = rat_of_int (&n) / 1’ by simp[] >>
+  ‘ABS (RATN (&n)) <= ABS (&n)’ by metis_tac[RATN_LEAST, DECIDE ``0n < 1``] >>
+  full_simp_tac bool_ss [integerTheory.INT_ABS_NUM, GSYM rat_of_int_of_num,
+                         rat_of_int_MUL, rat_of_int_11,
+                         integerTheory.INT_MUL] >>
+  fs[] >>
+  ‘?rn. RATN (&n) = &rn’ by (Cases_on ‘RATN (&n)’ >> fs[]) >>
+  fs[integerTheory.INT_ABS_NUM] >>
+  conj_asm1_tac
+  >- (‘n <= rn’ suffices_by simp[] >>
+      Cases_on ‘RATD(&n)’ >> fs[MULT_CLAUSES]) >> rpt var_eq_tac >>
+  ‘(RATD(&n) = 1) \/ (n = 0)’ by metis_tac[MULT_RIGHT_1,EQ_MULT_LCANCEL] >>
+  metis_tac[RATND_THM]);
 
 (* ----------------------------------------------------------------------
     rational min and max
