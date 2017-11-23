@@ -1175,26 +1175,29 @@ val RAT_EQ_AINV = store_thm("RAT_EQ_AINV[simp]",
         REWRITE_TAC[RAT_AINV_EQ, RAT_AINV_AINV] ) ;
 
 val RAT_AINV_MINV = store_thm("RAT_AINV_MINV",
-  ``!r1. ~(r1=0q) ==> (rat_ainv (rat_minv r1) = rat_minv (rat_ainv r1))``,
-        REPEAT STRIP_TAC THEN
-        COPY_ASM_NO 0 THEN
-        APPLY_ASM_TAC 0 (REWRITE_TAC[rat_nmr_def, RAT_EQ0_NMR]) THEN
-        SUBST_TAC[GSYM RAT_AINV_0] THEN
-        ONCE_REWRITE_TAC[GSYM RAT_AINV_EQ] THEN
-        REWRITE_TAC[rat_nmr_def, RAT_EQ0_NMR] THEN
-        REWRITE_TAC[rat_ainv_def, rat_minv_def] THEN
-        REWRITE_TAC[RAT_NMREQ0_CONG] THEN
-        STRIP_TAC THEN
-        RW_TAC int_ss[RAT_AINV_CONG, RAT_MINV_CONG] THEN
-        COPY_ASM_NO 1 THEN
-        ONCE_REWRITE_TAC[GSYM INT_EQ_NEG] THEN
-        ONCE_REWRITE_TAC[INT_NEG_0] THEN
-        STRIP_TAC THEN
-        FRAC_CALC_TAC THEN
-        REWRITE_TAC[RAT_EQ] THEN
-        FRAC_NMRDNM_TAC THEN
-        RW_TAC int_ss[INT_ABS, SGN_def] THEN
-        INT_RING_TAC )
+  “!r1. r1 <> 0q ==> (rat_ainv (rat_minv r1) = rat_minv (rat_ainv r1))”,
+  REPEAT STRIP_TAC THEN
+  COPY_ASM_NO 0 THEN
+  APPLY_ASM_TAC 0 (REWRITE_TAC[rat_nmr_def, RAT_EQ0_NMR]) THEN
+  SUBST_TAC[GSYM RAT_AINV_0] THEN
+  ONCE_REWRITE_TAC[GSYM RAT_AINV_EQ] THEN
+  REWRITE_TAC[rat_nmr_def, RAT_EQ0_NMR] THEN
+  REWRITE_TAC[rat_ainv_def, rat_minv_def] THEN
+  REWRITE_TAC[RAT_NMREQ0_CONG] THEN
+  STRIP_TAC THEN
+  RW_TAC int_ss[RAT_AINV_CONG, RAT_MINV_CONG] THEN
+  COPY_ASM_NO 1 THEN
+  ONCE_REWRITE_TAC[GSYM INT_EQ_NEG] THEN
+  ONCE_REWRITE_TAC[INT_NEG_0] THEN
+  STRIP_TAC THEN
+  FRAC_CALC_TAC THEN
+  REWRITE_TAC[RAT_EQ] THEN
+  FRAC_NMRDNM_TAC THEN
+  RW_TAC int_ss[INT_ABS, SGN_def] THEN
+  TRY (INT_RING_TAC THEN NO_TAC) THEN
+  METIS_TAC[integerTheory.INT_LT_REFL, integerTheory.INT_LT_TRANS,
+            integerTheory.INT_NOT_LT, integerTheory.INT_LE_ANTISYM,
+            integerTheory.INT_MUL_RZERO]);
 
 (*--------------------------------------------------------------------------
    RAT_SUB_RDISTRIB: thm
@@ -2730,6 +2733,35 @@ val rat_of_int_ainv = Q.store_thm(
   TRY (elim_tac mp_tac elim2 >> simp[]) >>
   asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
     [num_rwt, GSYM integerTheory.INT_INJ])
+
+val RAT_OF_INT_CALCULATE = Q.store_thm(
+  "RAT_OF_INT_CALCULATE",
+  ‘!i. rat_of_int i = abs_rat (abs_frac (i, 1))’,
+  gen_tac >> Cases_on ‘i’ >> simp[rat_of_int_def]
+  >- simp[RAT_OF_NUM_CALCULATE]
+  >- (simp[GSYM fracTheory.FRAC_AINV_CALCULATE, GSYM RAT_AINV_CALCULATE] >>
+      simp[RAT_OF_NUM_CALCULATE])
+  >- simp[RAT_OF_NUM_CALCULATE]);
+
+val frac_exists = Q.prove(
+  ‘!r. ?n:int d:num. 0 < d /\ (&d * r = rat_of_int n)’,
+  gen_tac >>
+  qabbrev_tac ‘f = rep_rat r’ >>
+  ‘r = abs_rat f’ by metis_tac[rat_type_thm] >>
+  ‘∃n0 d0. rep_frac f = (n0,d0)’ by (Cases_on ‘rep_frac f’ >> simp[]) >>
+  map_every qexists_tac [‘n0’, ‘Num d0’] >>
+  ‘rep_frac (abs_frac (rep_frac f)) = rep_frac f’ by simp [fracTheory.frac_tybij] >>
+  pop_assum mp_tac >> simp[GSYM (CONJUNCT2 fracTheory.frac_tybij)] >>
+  strip_tac >> Cases_on ‘d0’ >> fs[] >>
+  rename [‘rep_frac f = (n,&d)’] >>
+  simp[RAT_OF_NUM_CALCULATE, RAT_OF_INT_CALCULATE, RAT_MUL_CALCULATE] >>
+  ‘f = abs_frac (n,&d)’ by metis_tac[fracTheory.frac_tybij] >>
+  simp[fracTheory.FRAC_MULT_CALCULATE, RAT_ABS_EQUIV] >>
+  simp[RAT_EQUIV_ALT] >>
+  map_every qexists_tac [‘1’, ‘&d’] >>
+  simp[fracTheory.FRAC_MULT_CALCULATE, integerTheory.INT_MUL_COMM]);
+
+
 
 (* ----------------------------------------------------------------------
     rational min and max
