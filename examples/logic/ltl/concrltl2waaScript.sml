@@ -173,14 +173,16 @@ val TRANS_CONCR_LEMM = store_thm
              by rw[concrEdge_component_equality]
          >> rw[] >> simp[concr2AbstractEdge_def]
          >> simp[props_def,char_def,subForms_def] >> rw[INTER_DEF]
-         >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> metis_tac[]
+         >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
+         >> fs[transformLabel_def,char_def]
         )
      >- (`<|pos := []; neg := [a]; sucs := []|> = concrEdge [] [a] []`
              by rw[concrEdge_component_equality]
          >> rw[] >> simp[concr2AbstractEdge_def]
          >> simp[props_def,char_neg_def,subForms_def] >> rw[INTER_DEF]
          >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
-         >> fs[char_def]
+         >> fs[char_def,transformLabel_def,char_neg_def]
+         >> metis_tac[]
         )
      >- (simp[d_conj_def,d_conj_concr_def,SET_EQ_SUBSET,SUBSET_DEF]
          >> rpt strip_tac
@@ -218,7 +220,8 @@ val TRANS_CONCR_LEMM = store_thm
                                       (a'.sucs ++ b'.sucs)`
                   by rw[concrEdge_component_equality]
               >> simp[concr2AbstractEdge_def] >> Cases_on `a'`
-              >> Cases_on `b'` >> simp[concr2AbstractEdge_def]
+              >> Cases_on `b'`
+              >> simp[concr2AbstractEdge_def,transformLabel_def]
               >> metis_tac[FOLDR_LEMM5]
              )
           >- (`MEM (a1,e1) (MAP (concr2AbstractEdge aP) (trans_concr f))`
@@ -235,6 +238,7 @@ val TRANS_CONCR_LEMM = store_thm
                     by rw[concrEdge_component_equality]
                   >> simp[concr2AbstractEdge_def] >> rw[]
                   >> Cases_on `y` >> Cases_on `y'` >> fs[concr2AbstractEdge_def]
+                  >> simp[transformLabel_def]
                   >> metis_tac[FOLDR_LEMM5]
                   )
                >- (rw[FOLDR_LEMM3] >> metis_tac[])
@@ -251,14 +255,14 @@ val TRANS_CONCR_LEMM = store_thm
                   >> qexists_tac `set e`
                   >> `<|pos := []; neg := []; sucs := e|>
                       = concrEdge [] [] e` by rw[concrEdge_component_equality]
-                  >> simp[concr2AbstractEdge_def]
+                  >> simp[concr2AbstractEdge_def,transformLabel_def]
                   )
           >- (`set (MAP set (tempDNF_concr f)) = tempDNF f`
                      by fs[TEMPDNF_CONCR_LEMM]
                    >> `MEM e (MAP set (tempDNF_concr f))` by fs[]
                    >> fs[MEM_MAP]
                    >> qexists_tac `concrEdge [] [] y`
-                   >> simp[concr2AbstractEdge_def]
+                   >> simp[concr2AbstractEdge_def,transformLabel_def]
                    >> qexists_tac `y` >> fs[concrEdge_component_equality]
              )
         )
@@ -292,7 +296,7 @@ val TRANS_CONCR_LEMM = store_thm
                    = concrEdge k.pos k.neg (k.sucs ++ [U f f'])`
                    by rw[concrEdge_component_equality]
                >> simp[concr2AbstractEdge_def] >> Cases_on `k`
-               >> fs[concr2AbstractEdge_def]
+               >> fs[concr2AbstractEdge_def,transformLabel_def]
                >> metis_tac[TRANS_ALPH_LEMM,INTER_SUBSET_EQN]
               )
            >- (Cases_on `(a1 ∩ a2,e1 ∪ e2) ∈ trans (POW aP) f'` >> fs[]
@@ -331,7 +335,7 @@ val TRANS_CONCR_LEMM = store_thm
                           )
                              >> metis_tac[])
                      )
-                    >> metis_tac[]
+                    >> simp[transformLabel_def]
                    )
                 >- (simp[SET_EQ_SUBSET,SUBSET_DEF] >> metis_tac[])
                 >- (qabbrev_tac
@@ -380,7 +384,7 @@ val TRANS_CONCR_LEMM = store_thm
                                          ++ sofar))`
           >- (`MEM y (FOLDR (g2 (trans_concr f)) [] (trans_concr f'))` by (
               qunabbrev_tac `g1` >> qunabbrev_tac `g2` >> fs[]
-          )
+             )
              >> `!ls1 ls2. (MEM y (FOLDR (g2 ls2) [] ls1)) ==>
                ?c1. (MEM c1 ls1)
                   ∧ ((y =  <|pos := c1.pos; neg := c1.neg;
@@ -432,7 +436,7 @@ val TRANS_CONCR_LEMM = store_thm
                       by rw[concrEdge_component_equality]
                    >> simp[concr2AbstractEdge_def] >> rpt strip_tac
                    >> Cases_on `c1` >> Cases_on `c2`
-                   >> fs[concr2AbstractEdge_def]
+                   >> fs[concr2AbstractEdge_def,transformLabel_def]
                    >> metis_tac[FOLDR_LEMM5]
                  )
              )
@@ -444,6 +448,7 @@ val TRANS_CONCR_LEMM = store_thm
               >> qexists_tac `concrEdge (l++l') (l0++l0') (l1++l1')`
               >> rpt strip_tac >> fs[]
                >- (fs[concr2AbstractEdge_def] >> rpt strip_tac >> fs[]
+                   >> simp[transformLabel_def]
                    >> metis_tac[FOLDR_LEMM5])
                >- (`!ls1 ls2 x y. MEM x ls1 ∧ MEM y ls2
                         ==> MEM (concrEdge (x.pos ++ y.pos)
@@ -614,16 +619,17 @@ val IN_LST_TO_BAG = store_thm
 
 val expandGraph_def = tDefine "expandGraph"
  `(expandGraph g [] = SOME g)
- ∧ (expandGraph g (f::fs)  =
-     let g1 = addFrmlToGraph g f
-     in let trans = trans_concr f
+ ∧ (expandGraph g1 (f::fs)  =
+     (* let g1 = addFrmlToGraph g f *)
+     (* in  *)let trans = trans_concr f
      in let allSucs = FOLDR (\e pr. e.sucs ++ pr) [] trans
      in let g2 = FOLDR (\p g. addFrmlToGraph g p) g1 allSucs
      in let g3 =
             FOLDR
                 (\e g_opt. monad_bind g_opt (addEdgeToGraph f e))
                 (SOME g2) trans
-     in let restNodes = FILTER (\s. ~(MEM s (graphStates g1))) allSucs
+     in let restNodes =
+              FILTER (\s. ~(MEM s (graphStates g1)) ∧ ~(s = f)) allSucs
      in case g3 of
          | NONE => NONE
          | SOME g => expandGraph g (restNodes++fs))`
@@ -636,7 +642,7 @@ val expandGraph_def = tDefine "expandGraph"
        >> qexists_tac `f`
        >> qabbrev_tac
            `newNodes = FILTER
-                        (λs. ~MEM s (graphStates (addFrmlToGraph g f)))
+                        (λs. ~MEM s (graphStates g1) ∧ ~(s = f))
                         (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f))`
        >> qexists_tac `list_to_bag newNodes`
        >> qexists_tac `list_to_bag fs` >> fs[LST_TO_BAG_APPEND_UNION]
@@ -656,18 +662,22 @@ val expandGraph_def = tDefine "expandGraph"
        >- (Cases_on `concr2AbstractEdge (set aP) e`
           >> `f1 ∈ r` by (Cases_on `e` >> fs[concr2AbstractEdge_def])
           >> metis_tac[TRANS_REACHES_SUBFORMS,TSF_def,IN_DEF])
-       >- (rw[] >> metis_tac[ADDFRML_LEMM])
+       (* >- (rw[] >> metis_tac[ADDFRML_LEMM]) *)
       )
   );
 
 val EXP_GRAPH_WFG_AND_SOME = store_thm
   ("EXP_GRAPH_WFG_AND_SOME",
    ``!g fs. wfg g
+          ∧ (unique_node_formula g)
+          ∧ (first_flw_has_max_counter g)
+          ∧ (!f. MEM f fs ==> MEM f (graphStates g))
         ==> (?g2. (expandGraph g fs = SOME g2)
               ∧ (wfg g2)
               ∧ (set (graphStates g) ⊆ set (graphStates g2))
-              ∧ (!id. IS_SOME (lookup id g.nodeInfo)
-                      ==> (lookup id g.nodeInfo = lookup id g2.nodeInfo))
+              (* ∧ (!id. IS_SOME (lookup id g.nodeInfo) *)
+              (*         ==> (lookup id g.nodeInfo = lookup id g2.nodeInfo)) *)
+              ∧ (set (graphStatesWithId g) ⊆ set (graphStatesWithId g2))
               ∧ (until_iff_final g
                    ==> until_iff_final g2))``,
    HO_MATCH_MP_TAC (theorem "expandGraph_ind")
@@ -683,7 +693,9 @@ val EXP_GRAPH_WFG_AND_SOME = store_thm
    >> `wfg (addFrmlToGraph g f)` by metis_tac[ADDFRML_WFG]
    >> `?g. (A = SOME g) ∧ wfg g ∧ A0 ⊆ A2 g ∧ C g ∧ D g` by (
       qunabbrev_tac `A`
-      >> `!ls fs. ?x.
+      >> `!ls fs.
+           (!e. MEM e ls ==> (!suc. MEM suc e.sucs ==> MEM suc fs))
+           ==> ?x.
          (FOLDR (λe g_opt. monad_bind g_opt (addEdgeToGraph f e))
            (SOME
                 (FOLDR (λp g. addFrmlToGraph g p)
@@ -706,9 +718,13 @@ val EXP_GRAPH_WFG_AND_SOME = store_thm
             >> metis_tac[ADDFRML_LEMM2,SET_EQ_SUBSET,UNION_SUBSET,SUBSET_DEF]
            )
         >- (qunabbrev_tac `C` >> simp[] >> rpt strip_tac
-            >> `lookup id g.nodeInfo = lookup id (addFrmlToGraph g f).nodeInfo`
-               by metis_tac[ADDFRML_LEMM2]
-            >> metis_tac[ADDFRML_FOLDR_LEMM]
+            >> simp[SUBSET_DEF] >> rpt strip_tac >> fs[]
+            >> fs[graphStatesWithId_def,MEM_MAP] >> qexists_tac `y`
+            >> fs[] >> Cases_on `y` >> fs[]
+            >> `lookup q g.nodeInfo = SOME r` by metis_tac[MEM_toAList,IS_SOME_DEF]
+            >> `lookup q g.nodeInfo = lookup q (addFrmlToGraph g f).nodeInfo`
+               by metis_tac[ADDFRML_LEMM2,IS_SOME_DEF]
+            >> metis_tac[ADDFRML_FOLDR_LEMM,MEM_toAList,IS_SOME_DEF]
            )
         >- (qunabbrev_tac `D` >> simp[] >> rpt strip_tac
             >> metis_tac[ADDFRML_LEMM2,ADDFRML_FOLDR_LEMM]
@@ -718,8 +734,18 @@ val EXP_GRAPH_WFG_AND_SOME = store_thm
             >> qunabbrev_tac `P` >> qunabbrev_tac `Q`
             >> first_x_assum (qspec_then `fs'` mp_tac) >> rpt strip_tac
             >> simp[]
+            >> `(∀e. MEM e ls ⇒ ∀suc. MEM suc e.sucs ⇒ MEM suc fs')`
+               by metis_tac[]
+            >> `∃x.
+                 FOLDR (λe g_opt. monad_bind g_opt (addEdgeToGraph f e))
+                 (SOME
+                      (FOLDR (λp g. addFrmlToGraph g p) (addFrmlToGraph g f)
+                             fs')) ls = SOME x ∧ wfg x ∧ MEM f (graphStates x) ∧
+                                          A0 ⊆ A2 x ∧ C x ∧ D x` by metis_tac[]
+            >> simp[] 
+
             >> `∃g2. addEdgeToGraph f h x = SOME g2 ∧ wfg g2
-                  ∧ x.nodeInfo = g2.nodeInfo`
+                  ∧ set (graphStatesWithId g) = set (graphStatesWithId g2)`
                 by metis_tac[ADDEDGE_LEMM,IS_SOME_EXISTS]
             >> simp[] >> qunabbrev_tac `A2` >> fs[graphStates_def]
             >> `C g2` by metis_tac[] >> simp[]
@@ -1166,6 +1192,7 @@ val EXP_GRAPH_TRANS_LEMM = store_thm
 val expandAuto_init_def = Define`
   expandAuto_init φ =
     let initForms = tempDNF_concr φ
+(*TODO : remove duplicates in initForms*)
     in let g1 = FOLDR (\s g. addFrmlToGraph g s) empty (FLAT initForms)
     in let init_concr =
            MAP
