@@ -1,4 +1,5 @@
 
+
 open HolKernel Parse boolLib bossLib finite_mapTheory;
 open recfunsTheory;
 open recursivefnsTheory;
@@ -104,7 +105,7 @@ val UPDATE_STATE_TIME = Define `UPDATE_STATE_TIME tm =
                                `;
 
 val UPDATE_TAPE_def = Define `UPDATE_TAPE tm =
-  if (((tm.state),(tm.tape_h)) IN FDOM tm.prog)
+  if (((tm.state),(tm.tape_h)) IN FDOM tm.prog) ∧ (tm.state.n <> 0)
   then let tm' = tm with
     <|    state := (FST (tm.prog ' ((tm.state) ,(tm.tape_h)) )) |> in
       case (SND (tm.prog ' ((tm.state) ,(tm.tape_h)) )) of
@@ -124,7 +125,7 @@ val UPDATE_TAPE_def = Define `UPDATE_TAPE tm =
          else tm' with <| tape_l := tm.tape_h::tm.tape_l;
            tape_h := HD tm.tape_r;
            tape_r := TL tm.tape_r |>
-  else (tm)
+  else (tm with state := <|n:=0|> )
                                   `;
 
 
@@ -297,7 +298,7 @@ val DECODE_TM_TAPE_def = Define `DECODE_TM_TAPE n =
 (* Halted definition and TM examples *)
 
 
-val HALTED_def = Define `HALTED tm = ~(((tm.state),(tm.tape_h)) IN FDOM tm.prog)`;
+val HALTED_def = Define `HALTED tm <=> (tm.state.n = 0)`;
 
 val st_def= Define`st n : state = <| n := n  |>`;
 val _ = add_numeral_form(#"s", SOME "st");
@@ -586,7 +587,7 @@ pop_assum (qspec_then `n *, c` mp_tac) >> simp[]);
 
 
 val UPDATE_TAPE_ACT_STATE_TM_thm = Q.store_thm("UPDATE_TAPE_ACT_STATE_TM_thm",
-`∀ tm.(((tm.state) ,(tm.tape_h)) ∈ FDOM tm.prog) ==> (UPDATE_ACT_S_TM (FST (tm.prog ' ((tm.state) ,(tm.tape_h)) ))
+`∀ tm.(((tm.state) ,(tm.tape_h)) ∈ FDOM tm.prog)∧ (tm.state.n <> 0) ==> (UPDATE_ACT_S_TM (FST (tm.prog ' ((tm.state) ,(tm.tape_h)) ))
   (SND (tm.prog ' ((tm.state) ,(tm.tape_h)) )) tm = UPDATE_TAPE tm)`,
 strip_tac >> fs[UPDATE_ACT_S_TM_def,UPDATE_TAPE_def]  );
 
@@ -606,7 +607,7 @@ val TM_PROG_P_STATE = Q.store_thm("TM_PROG_P_STATE[simp]",
 fs[]);
 
 val UPDATE_TM_ARB_Q = Q.store_thm("UPDATE_TM_ARB_Q",
-`((tm.state,tm.tape_h) ∈ FDOM p) ==> ((UPDATE_ACT_S_TM (FST (p ' (tm.state,tm.tape_h))) (SND (p ' (tm.state,tm.tape_h))) (tm with prog := q)) = ((UPDATE_TAPE (tm with prog := p)) with prog := q))`,
+`((tm.state,tm.tape_h) ∈ FDOM p)∧ (tm.state.n <> 0) ==> ((UPDATE_ACT_S_TM (FST (p ' (tm.state,tm.tape_h))) (SND (p ' (tm.state,tm.tape_h))) (tm with prog := q)) = ((UPDATE_TAPE (tm with prog := p)) with prog := q))`,
 rw[UPDATE_TAPE_def,UPDATE_ACT_S_TM_def] >>
 Cases_on `SND (p ' (tm.state,tm.tape_h))` >> simp[] )
 
