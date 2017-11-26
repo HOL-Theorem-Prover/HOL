@@ -264,6 +264,19 @@ fun which arg =
     | NONE => if isUnix then "" else smash (check ".")
   end
 
+fun shell arg =
+  let
+    open Unix
+
+    val nl2spc = String.map (fn c => if c = #"\n" then #" " else c)
+    val proc = execute ("/bin/sh", ["-c", arg])
+    val ins = textInstreamOf proc
+    val str = nl2spc (TextIO.inputAll ins)
+  in
+    if OS.Process.isSuccess (reap proc) then str else ""
+  end
+  handle OS.SysErr _ => "failure"
+
 fun function_call (fnname, args, eval) = let
   open Substring
 in
@@ -334,6 +347,13 @@ in
                   in
                     spacify (wildcard arg_evalled)
                   end
+  | "shell" => if length args <> 1 then
+                 raise Fail "Bad number of arguments to 'shell' function"
+               else let
+                 val arg_evalled = eval (hd args)
+               in
+                  shell arg_evalled
+               end
   | _ => raise Fail ("Unknown function name: "^fnname)
 end
 
