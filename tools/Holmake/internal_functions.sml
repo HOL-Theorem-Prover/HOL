@@ -268,10 +268,21 @@ fun shell arg =
   let
     open Unix
 
-    val nl2spc = String.map (fn c => if c = #"\n" then #" " else c)
+    (* TODO This gets rid of all carriage returns; should only replace
+       those paired with a newline *)
+    fun fix_nls s =
+      let
+        val s = String.translate (fn c => if c = #"\r" then "" else String.str c) s
+        val s = if String.isSuffix "\n" s then
+                  String.substring (s, 0, String.size s - 1)
+                else s
+      in
+        String.map (fn c => if c = #"\n" then #" " else c) s
+      end
+
     val proc = execute ("/bin/sh", ["-c", arg])
     val ins = textInstreamOf proc
-    val str = nl2spc (TextIO.inputAll ins)
+    val str = fix_nls (TextIO.inputAll ins)
   in
     if OS.Process.isSuccess (reap proc) then str else ""
   end
