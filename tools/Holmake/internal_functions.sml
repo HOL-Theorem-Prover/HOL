@@ -286,7 +286,7 @@ fun shell arg =
   in
     if OS.Process.isSuccess (reap proc) then str else ""
   end
-  handle OS.SysErr _ => "failure"
+  handle OS.SysErr _ => ""
 
 fun function_call (fnname, args, eval) = let
   open Substring
