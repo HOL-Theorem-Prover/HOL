@@ -804,7 +804,7 @@ tm_return tm = if tm.tape_h = Z then 0
 
 
 val tm_fn_def = Define`tm_fn p args = let tm0 = INITIAL_TM p args in
- OPTION_MAP (λk. tm_return (RUN k tm0)) (OLEAST n. HALTED (RUN n tm0))`
+ OPTION_MAP (λk. (RUN k tm0)) (OLEAST n. HALTED (RUN n tm0))`
 
 val un_nlist_def = tDefine"un_nlist"`
 (un_nlist 0 = []) ∧ (un_nlist l = [nfst (l-1)] ++ (un_nlist (nsnd (l-1))) )`
@@ -1485,9 +1485,9 @@ fs[STATE_TO_NUM_def] >> simp[state_component_equality]);
 
 (* Probably need to include a 'tape reset' type function, ie tm_return_num *)
 val recfn_tm_def = Define`
-recfn_tm p =  (recCn (SOME o (RUN_NUM p)) [minimise (SOME o
-              (Cn pr_eq [Cn (RUN_NUM p) [proj 0;proj 1];Cn (RUN_NUM p) [Cn succ [proj 0];
-                                         proj 1   ] ] )  ) ;SOME o (proj 0)]) `
+recfn_tm p = recCn (SOME o (RUN_NUM p)) [
+                      minimise (SOME o (Cn (pr1 nfst) [RUN_NUM p]  )  ) ;
+                      SOME o proj 0] `
 
 val recfn_tm_recfn = Q.store_thm("recfn_tm_recfn",
 `recfn (recfn_tm p) 1`,
@@ -1495,7 +1495,7 @@ rw[recfn_tm_def] >> fs[primrec_RUN_NUM,primrec_recfn] >> irule recfnCn >> rw[rec
   >- (irule recfnMin >> fs[] >> irule primrec_recfn >> rpt (irule primrec_cn >> rw[primrec_rules,primrec_pr_eq,primrec_RUN_NUM,primrec_pr_add] ))
   >- (fs[primrec_RUN_NUM,primrec_recfn]))
 
-(* works up to here *)
+
 
 (*
 
@@ -1513,44 +1513,45 @@ Induct_on `LENGTH tm.tape_r` >> fs[tm_return_num_def]
           >>fs[tm_return_def])
 *)
 
-(* 
+
 val UPDATE_TAPE_HALTED = Q.store_thm("UPDATE_TAPE_HALTED[simp]",
 `(HALTED tm) ==> (UPDATE_TAPE tm = tm)`,
-rw[] >> fs[UPDATE_TAPE_def,HALTED_def] >> `tm.state =  <|n := 0|>` by fs[] )
+rw[] >> fs[UPDATE_TAPE_def,HALTED_def] >> simp[TM_component_equality,state_component_equality])
 
 val run_num_halted = Q.store_thm("run_num_halted",
-`∃n. HALTED (RUN n (INITIAL_TM p args)) ==>
- (RUN_NUM p [m; nlist_of args] = RUN_NUM p [SUC m; nlist_of args]) `,
-rw[RUN_NUM_corr] >> qexists_tac `m` >> rw[] >> rfs[FUNPOW_SUC] )
+`∀n. HALTED (RUN n (INITIAL_TM p args)) ∧ (n<=m) ==> (
+     (RUN_NUM p [m; nlist_of args] = RUN_NUM p [SUC m; nlist_of args])) `,
+rpt strip_tac >> `∃k. m=n+k` by metis_tac[LESS_EQ_EXISTS] >>rw[RUN_NUM_corr,FUNPOW_SUC] >>
+    qmatch_abbrev_tac `⟦tm⟧ = ⟦UPDATE_TAPE tm⟧` >> `HALTED tm` suffices_by simp[] >>
+    qunabbrev_tac `tm` >> fs[] >> Induct_on `k` >>
+    simp[] >> rw[] >> simp[FUNPOW_SUC,ADD_CLAUSES] )
 
-
-(* This cannot be true for the same reason as above *)
-val minimise_corr = Q.store_thm("minimise_corr",
-`minimise (SOME ∘ Cn pr_eq [Cn (RUN_NUM p) [proj 0; proj 1];
-                            Cn (RUN_NUM p) [Cn succ [proj 0]; proj 1]]) [nlist_of args]
-                    =(OLEAST n. HALTED (RUN n (INITIAL_TM p args)))`,
-simp[whileTheory.OLEAST_def,minimise_def] >> rw[]
-    >- (fs[HALTED_def] >> rw[RUN_NUM_corr] >> simp[] >>SELECT_ELIM_TAC >>
-        rw[] >- (qexists_tac `n'` >> rfs[RUN_NUM_corr])
-        >- (numLib.LEAST_ELIM_TAC >> rw[] >- (qexists_tac `n` >> rfs[])
-           >- () ) )
-    >- (rfs[RUN_NUM_corr])
-    >- () )
-
-
+(* works up to here *)
 
 
 val main_eq_thm = Q.store_thm("main_eq_thm",
-`∀p. ∃f. (recfn f 1) ∧ (∀ args. tm_fn p args = f [nlist_of args])`,
+`∀p. ∃f. (recfn f 1) ∧ (∀ args. OPTION_MAP FULL_ENCODE_TM (tm_fn p args) = f [nlist_of args])`,
 strip_tac >> qexists_tac`recfn_tm p` >> conj_tac >- fs[recfn_tm_recfn] >>
           strip_tac >> fs[tm_fn_def,recfn_tm_def] >>
           Cases_on `(OLEAST n. HALTED (RUN n (INITIAL_TM p args)))` >>
           fs[optionTheory.OPTION_MAP_DEF] >> rw[RUN_NUM_corr] >> fs[recCn_def]
-          >- (fs[minimise_def] >> rpt strip_tac >> rfs[RUN_NUM_corr] >> qexists_tac `0` >>)
-          >- (rw[] >- () >- () ) )
+          >- (fs[oleast_eq_none] >>fs[minimise_def] >> rpt strip_tac >> rfs[RUN_NUM_corr] >>
+              first_x_assum (qspec_then `n` mp_tac) >> simp[HALTED_def] >> fs[STATE_TO_NUM_def])
+          >- (fs[OLEAST_EQ_SOME,minimise_def] >> rw[]
+              >- (rename[`RUN n (INITIAL_TM p args)`] >> qexists_tac `n` >>
+                  fs[HALTED_def,RUN_NUM_corr,STATE_TO_NUM_def] >> metis_tac[])
+              >- (fs[RUN_NUM_corr,STATE_TO_NUM_def] >> qmatch_abbrev_tac `⟦RUN i tm⟧ = ⟦RUN j tm⟧`>>
+                  `i=j` suffices_by simp[] >> qunabbrev_tac `i` >> SELECT_ELIM_TAC >> rw[]
+                  >- (fs[HALTED_def] >> metis_tac[])
+                  >- (fs[HALTED_def] >> qmatch_abbrev_tac `a=b` >>`¬(a<b)∧¬(b<a)` suffices_by simp[]
+                        >> rpt strip_tac >> metis_tac[NOT_ZERO_LT_ZERO] ))
+              >- (fs[RUN_NUM_corr,STATE_TO_NUM_def] >> first_x_assum (qspec_then `x` mp_tac)>>
+                  rpt strip_tac >> fs[HALTED_def] >> 
+                  `∃i. i < x ∧ ((RUN i (INITIAL_TM p args)).state.n = 0)` by fs[] >>
+                  metis_tac[]           ) ) )
 
 
-*)
+
 
 (*
 <== Direction
