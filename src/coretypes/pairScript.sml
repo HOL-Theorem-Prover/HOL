@@ -898,6 +898,15 @@ val _ = BasicProvers.export_rewrites
          "UNCURRY_DEF", "CURRY_DEF", "PAIR_MAP_THM", "FST_PAIR_MAP",
          "SND_PAIR_MAP"]
 
+val FST_EQ_EQUIV = Q.store_thm("FST_EQ_EQUIV",
+  `(FST p = x) <=> ?y. p = (x,y)`,
+  Q.ISPEC_THEN `p` STRUCT_CASES_TAC pair_CASES >> simp_tac(srw_ss())[]);
+val SND_EQ_EQUIV = Q.store_thm("SND_EQ_EQUIV",
+  ‘(SND p = y) <=> ?x. p = (x,y)’,
+  Q.ISPEC_THEN `p` STRUCT_CASES_TAC pair_CASES >> simp_tac(srw_ss())[]);
+
+
+
 val comma_tm = Term.prim_mk_const{Name=",", Thy="pair"};
 fun is_pair tm = Term.same_const comma_tm (fst(strip_comb tm));
 fun dest_pair tm =

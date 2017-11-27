@@ -6,7 +6,7 @@
  *
  ***************************************************************************)
 
-open HolKernel boolLib Parse bossLib;
+open HolKernel boolLib Parse BasicProvers bossLib;
 
 (* interactive mode
 app load [
@@ -560,64 +560,75 @@ val RAT_MINV_CALCULATE = store_thm("RAT_MINV_CALCULATE", ``!f1. ~(0 = frac_nmr f
  *  |- !f1 f2. rat_add (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_add f1 f2 )
  *--------------------------------------------------------------------------*)
 
-val RAT_ADD_CALCULATE = store_thm("RAT_ADD_CALCULATE", ``!f1 f2. rat_add (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_add f1 f2 )``,
-        REPEAT GEN_TAC THEN
-        REWRITE_TAC[rat_add_def] THEN
-        PROVE_TAC[RAT_ADD_CONG] );
+val RAT_ADD_CALCULATE = store_thm(
+  "RAT_ADD_CALCULATE",
+  “!f1 f2. rat_add (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_add f1 f2 )”,
+  REPEAT GEN_TAC THEN REWRITE_TAC[rat_add_def] THEN PROVE_TAC[RAT_ADD_CONG] );
 
 (*--------------------------------------------------------------------------
  *  RAT_SUB_CALCULATE: thm
  *  |- !f1 f2. rat_sub (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_sub f1 f2 )
  *--------------------------------------------------------------------------*)
 
-val RAT_SUB_CALCULATE = store_thm("RAT_SUB_CALCULATE", ``!f1 f2. rat_sub (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_sub f1 f2 )``,
-        REPEAT GEN_TAC THEN
-        REWRITE_TAC[rat_sub_def] THEN
-        PROVE_TAC[RAT_SUB_CONG] );
+val RAT_SUB_CALCULATE = store_thm(
+  "RAT_SUB_CALCULATE",
+  “!f1 f2. rat_sub (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_sub f1 f2 )”,
+  REPEAT GEN_TAC THEN REWRITE_TAC[rat_sub_def] THEN PROVE_TAC[RAT_SUB_CONG] );
 
 (*--------------------------------------------------------------------------
  *  RAT_MUL_CALCULATE: thm
  *  |- !f1 f2. rat_mul (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_mul f1 f2 )
  *--------------------------------------------------------------------------*)
 
-val RAT_MUL_CALCULATE = store_thm("RAT_MUL_CALCULATE", ``!f1 f2. rat_mul (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_mul f1 f2 )``,
-        REPEAT GEN_TAC THEN
-        REWRITE_TAC[rat_mul_def] THEN
-        PROVE_TAC[RAT_MUL_CONG] );
+val RAT_MUL_CALCULATE = store_thm(
+  "RAT_MUL_CALCULATE",
+  “!f1 f2. rat_mul (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_mul f1 f2 )”,
+  REPEAT GEN_TAC THEN REWRITE_TAC[rat_mul_def] THEN PROVE_TAC[RAT_MUL_CONG]);
 
-(*--------------------------------------------------------------------------
- *  RAT_DIV_CALCULATE: thm
- *  |- !f1 f2. ~(frac_nmr f2=0) ==> (rat_div (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_div f1 f2 ))
- *--------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    RAT_DIV_CALCULATE: thm
+    |- !f1 f2.
+         frac_nmr f2 <> 0 ==>
+         (rat_div (abs_rat f1) (abs_rat f2) = abs_rat(frac_div f1 f2))
+   ---------------------------------------------------------------------- *)
 
-val RAT_DIV_CALCULATE = store_thm("RAT_DIV_CALCULATE", ``!f1 f2. ~(frac_nmr f2=0) ==> (rat_div (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_div f1 f2 ))``,
-        REPEAT STRIP_TAC THEN
-        REWRITE_TAC[rat_div_def] THEN
-        PROVE_TAC[RAT_DIV_CONG] );
+val RAT_DIV_CALCULATE = store_thm(
+  "RAT_DIV_CALCULATE",
+  “!f1 f2. frac_nmr f2 <> 0 ==>
+           (rat_div (abs_rat(f1)) (abs_rat(f2)) = abs_rat( frac_div f1 f2 ))”,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[rat_div_def] THEN PROVE_TAC[RAT_DIV_CONG]);
 
 (*--------------------------------------------------------------------------
  *  RAT_EQ_CALCULATE: thm
  *  |- !f1 f2. (abs_rat f1 = abs_rat f2) = (frac_nmr f1 * frac_dnm f2 = frac_nmr f2 * frac_dnm f1)
  *--------------------------------------------------------------------------*)
 
-val RAT_EQ_CALCULATE = store_thm("RAT_EQ_CALCULATE", ``!f1 f2. (abs_rat f1 = abs_rat f2) = (frac_nmr f1 * frac_dnm f2 = frac_nmr f2 * frac_dnm f1)``,
-        PROVE_TAC[RAT_ABS_EQUIV, rat_equiv_def] );
+val RAT_EQ_CALCULATE = store_thm(
+  "RAT_EQ_CALCULATE",
+  “!f1 f2. (abs_rat f1 = abs_rat f2) <=>
+           (frac_nmr f1 * frac_dnm f2 = frac_nmr f2 * frac_dnm f1)”,
+  PROVE_TAC[RAT_ABS_EQUIV, rat_equiv_def] );
 
 
-(*--------------------------------------------------------------------------
- *  RAT_LES_CALCULATE: thm
- *  |- !f1 f2. (abs_rat f1 < abs_rat f2) = (frac_nmr f1 * frac_dnm f2 < frac_nmr f2 * frac_dnm f1)
- *--------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    RAT_LES_CALCULATE: thm
+    |- !f1 f2. (abs_rat f1 < abs_rat f2) =
+               (frac_nmr f1 * frac_dnm f2 < frac_nmr f2 * frac_dnm f1)
+   ---------------------------------------------------------------------- *)
 
-val RAT_LES_CALCULATE = store_thm("RAT_LES_CALCULATE", ``!f1 f2. (abs_rat f1 < abs_rat f2) = (frac_nmr f1 * frac_dnm f2 < frac_nmr f2 * frac_dnm f1)``,
-        REPEAT GEN_TAC THEN
-        REWRITE_TAC[rat_les_def, rat_sgn_def, RAT_SUB_CALCULATE, RAT_SGN_CONG] THEN
-        REWRITE_TAC[frac_sgn_def, frac_sub_def, frac_add_def, frac_ainv_def] THEN
-        FRAC_POS_TAC ``frac_dnm f2 * frac_dnm (abs_frac (~frac_nmr f1,frac_dnm f1))`` THEN
-        FRAC_NMRDNM_TAC THEN
-        REWRITE_TAC[INT_SGN_CLAUSES, int_gt] THEN
-        `~frac_nmr f1 * frac_dnm f2 = ~(frac_nmr f1 * frac_dnm f2)` by ARITH_TAC THEN
-        ASM_REWRITE_TAC[INT_LT_ADDNEG, INT_ADD_LID] );
+val RAT_LES_CALCULATE = store_thm(
+  "RAT_LES_CALCULATE",
+  “!f1 f2. (abs_rat f1 < abs_rat f2) =
+           (frac_nmr f1 * frac_dnm f2 < frac_nmr f2 * frac_dnm f1)”,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[rat_les_def, rat_sgn_def, RAT_SUB_CALCULATE, RAT_SGN_CONG] THEN
+  REWRITE_TAC[frac_sgn_def, frac_sub_def, frac_add_def, frac_ainv_def] THEN
+  FRAC_POS_TAC
+    “frac_dnm f2 * frac_dnm (abs_frac (~frac_nmr f1,frac_dnm f1))” THEN
+  FRAC_NMRDNM_TAC THEN
+  REWRITE_TAC[INT_SGN_CLAUSES, int_gt] THEN
+  `~frac_nmr f1 * frac_dnm f2 = ~(frac_nmr f1 * frac_dnm f2)` by ARITH_TAC THEN
+  ASM_REWRITE_TAC[INT_LT_ADDNEG, INT_ADD_LID] );
 
 val RAT_LEQ_CALCULATE = store_thm("RAT_LEQ_CALCULATE",
   ``!f1 f2. (abs_rat f1 <= abs_rat f2) =
@@ -625,18 +636,23 @@ val RAT_LEQ_CALCULATE = store_thm("RAT_LEQ_CALCULATE",
   REPEAT GEN_TAC THEN
   REWRITE_TAC[rat_leq_def, RAT_LES_CALCULATE, INT_LE_LT, RAT_EQ_CALCULATE]) ;
 
-val RAT_OF_NUM_CALCULATE = store_thm("RAT_OF_NUM_CALCULATE", ``!n1. rat_of_num n1 = abs_rat( abs_frac( &n1, 1) )``,
-        recInduct (DB.fetch "-" "rat_of_num_ind") THEN
-        RW_TAC arith_ss [rat_of_num_def, rat_0_def, frac_0_def, rat_1_def, frac_1_def, RAT_ADD_CALCULATE, frac_add_def] THEN
-        FRAC_POS_TAC ``1i`` THEN
-        RW_TAC int_ss [NMR,DNM, ARITH_PROVE ``int_of_num (SUC n) + 1 = int_of_num (SUC (SUC n))``] );
+val RAT_OF_NUM_CALCULATE = store_thm(
+  "RAT_OF_NUM_CALCULATE",
+  ``!n1. rat_of_num n1 = abs_rat( abs_frac( &n1, 1) )``,
+  recInduct (DB.fetch "-" "rat_of_num_ind") THEN
+  RW_TAC arith_ss [rat_of_num_def, rat_0_def, frac_0_def, rat_1_def, frac_1_def,
+                   RAT_ADD_CALCULATE, frac_add_def] THEN
+  FRAC_POS_TAC ``1i`` THEN
+  RW_TAC int_ss
+    [NMR, DNM, ARITH_PROVE “int_of_num (SUC n) + 1 = int_of_num (SUC (SUC n))”]
+);
 
-val RAT_OF_NUM_LEQ = store_thm("RAT_OF_NUM_LEQ",
+val RAT_OF_NUM_LEQ = store_thm("RAT_OF_NUM_LEQ[simp]",
   ``rat_of_num a <= rat_of_num b = a <= b``,
   SIMP_TAC std_ss [RAT_OF_NUM_CALCULATE, RAT_LEQ_CALCULATE,
     NMR, DNM, INT_LT_01, INT_MUL_RID, INT_LE]);
 
-val RAT_OF_NUM_LES = store_thm("RAT_OF_NUM_LES",
+val RAT_OF_NUM_LES = store_thm("RAT_OF_NUM_LES[simp]",
   ``rat_of_num a < rat_of_num b = a < b``,
   SIMP_TAC std_ss [RAT_OF_NUM_CALCULATE, RAT_LES_CALCULATE,
     NMR, DNM, INT_LT_01, INT_MUL_RID, INT_LT]);
@@ -666,41 +682,39 @@ val rat_calculate_table = [
 
 fun RAT_CALC_CONV (t1:term) =
 let
-  val thm = REFL t1
-  val (top_rator, top_rands) = strip_comb t1
-  val calc_table_entry = List.find (fn x => fst(x) ~~ top_rator)
-                                   rat_calculate_table
+        val thm = REFL t1;
+        val (top_rator, top_rands) = strip_comb t1;
+        val calc_table_entry =
+            List.find (fn x => fst(x) ~~ top_rator) rat_calculate_table;
 in
-  (* do nothing if term is already in the form abs_rat(...) *)
-  if top_rator ~~ ``abs_rat`` then thm
-                                     (* if it is a numeral, simply rewrite it *)
-  else if (top_rator ~~ ``rat_of_num``) then
-    SUBST [``x:rat`` |-> SPEC (rand t1) (RAT_OF_NUM_CALCULATE)]
-          ``^t1 = x:rat`` thm
-  (* if there is an entry in the calculation table, calculate it *)
-  else if (isSome calc_table_entry) then
-    let
-      val arg_thms = map RAT_CALC_CONV top_rands
-      val arg_fracs = map (fn x => rand(rhs(concl x))) arg_thms
-      val arg_vars = map (fn x => genvar ``:rat``) arg_thms
+        (* do nothing if term is already in the form abs_rat(...) *)
+        if top_rator ~~ ``abs_rat`` then
+                thm
+        (* if it is a numeral, simply rewrite it *)
+        else if (top_rator ~~ ``rat_of_num``) then
+                SUBST [``x:rat`` |-> SPEC (rand t1) (RAT_OF_NUM_CALCULATE)] ``^t1 = x:rat`` thm
+        (* if there is an entry in the calculation table, calculate it *)
+        else if (isSome calc_table_entry) then
+                let
+                        val arg_thms = map RAT_CALC_CONV top_rands;
+                        val arg_fracs = map (fn x => rand(rhs(concl x))) arg_thms;
+                        val arg_vars = map (fn x => genvar ``:rat``) arg_thms;
 
-      val subst_list =
-          map (fn x => fst(x) |-> snd(x)) (ListPair.zip (arg_vars,arg_thms))
-      (* subst_term: t1 = top_rator arg_vars[1] ... arg_vars[n] *)
-      val subst_term =  mk_eq (t1 , list_mk_comb (top_rator,arg_vars))
+                        val subst_list = map (fn x => fst(x) |-> snd(x)) (ListPair.zip (arg_vars,arg_thms));
+                        (* subst_term: t1 = top_rator arg_vars[1] ... arg_vars[n] *)
+                        val subst_term =  mk_eq (t1 , list_mk_comb (top_rator,arg_vars))
 
-      val thm1 = SUBST subst_list subst_term thm
-      val (thm1_lhs, thm1_rhs) = dest_eq(concl thm1)
-      val thm1_lhs_var = genvar ``:rat``
+                        val thm1 = SUBST subst_list subst_term thm;
+                        val (thm1_lhs, thm1_rhs) = dest_eq(concl thm1);
+                        val thm1_lhs_var = genvar ``:rat``;
 
-      val calc_thm = snd (valOf( calc_table_entry ))
-    in
-      SUBST [thm1_lhs_var |-> UNDISCH_ALL (SPECL arg_fracs calc_thm)]
-            ``^thm1_lhs = ^thm1_lhs_var`` thm1
-    end
-      (* otherwise: applying r = abs_rat(rep_rat r)) always works *)
-  else
-    SUBST [``x:rat`` |-> SPEC t1 (GSYM RAT)] ``^t1 = x:rat`` thm
+                        val calc_thm = snd (valOf( calc_table_entry ));
+                in
+                        SUBST [thm1_lhs_var |-> UNDISCH_ALL (SPECL arg_fracs calc_thm)] ``^thm1_lhs = ^thm1_lhs_var`` thm1
+                end
+        (* otherwise: applying r = abs_rat(rep_rat r)) always works *)
+        else
+                SUBST [``x:rat`` |-> SPEC t1 (GSYM RAT)] ``^t1 = x:rat`` thm
 end;
 
 (*--------------------------------------------------------------------------
@@ -730,32 +744,29 @@ handle HOL_ERR _ => raise ERR "RAT_CALCTERM_TAC" "";
  *--------------------------------------------------------------------------*)
 
 fun RAT_CALC_TAC (asm_list,goal) =
-  let
-    (* extract terms of type ``:rat`` *)
-    val rat_terms = extract_rat goal
-    (* build conversions *)
-    val calc_thms = map RAT_CALC_CONV rat_terms
-    (* split list into assumptions and conclusions *)
-    val (calc_asmlists, calc_concl) =
-        ListPair.unzip (map (fn x => dest_thm x) calc_thms)
-    (* merge assumptions lists *)
-    val calc_asms = op_U aconv calc_asmlists;
-    (* function to prove an assumption, TODO: fracLib benutzen *)
-    val gen_thm = (fn x => TAC_PROOF ((asm_list,x), RW_TAC intLib.int_ss [] ))
-    (* try to prove assumptions *)
-    val prove_list = List.map (total gen_thm) calc_asms;
-    (* combine assumptions and their proofs *)
-    val list1 = ListPair.zip (calc_asms,prove_list)
-    (* partition assumptions into proved assumptions and assumptions
-       to be proved *)
-    val list2 = partition (fn x => isSome (snd x)) list1
-    val asms_toprove = map fst (snd list2)
-    val asms_proved = map (fn x => valOf (snd x)) (fst list2)
-    (* generate new subgoal goal *)
-    val subst_goal =
-        snd (dest_eq (snd (dest_thm (ONCE_REWRITE_CONV calc_thms goal))))
-    val subgoal = (list_mk_conj (asms_toprove @ [subst_goal]) )
-    val mp_thm = TAC_PROOF
+        let
+                        (* extract terms of type ``:rat`` *)
+                val rat_terms = extract_rat goal;
+                        (* build conversions *)
+                val calc_thms = map RAT_CALC_CONV rat_terms;
+                        (* split list into assumptions and conclusions *)
+                val (calc_asmlists, calc_concl) = ListPair.unzip (map (fn x => dest_thm x) calc_thms);
+                        (* merge assumptions lists *)
+                val calc_asms = op_U aconv calc_asmlists;
+                        (* function to prove an assumption, TODO: fracLib benutzen *)
+                val gen_thm = (fn x => TAC_PROOF ((asm_list,x), RW_TAC intLib.int_ss [] ));
+                        (* try to prove assumptions *)
+                val prove_list = List.map (total gen_thm) calc_asms;
+                        (* combine assumptions and their proofs *)
+                val list1 = ListPair.zip (calc_asms,prove_list);
+                        (* partition assumptions into proved assumptions and assumptions to be proved *)
+                val list2 = partition (fn x => isSome (snd x)) list1;
+                val asms_toprove = map fst (snd list2);
+                val asms_proved = map (fn x => valOf (snd x)) (fst list2);
+                        (* generate new subgoal goal *)
+                val subst_goal = snd (dest_eq (snd (dest_thm (ONCE_REWRITE_CONV calc_thms goal))));
+                val subgoal = (list_mk_conj (asms_toprove @ [subst_goal]) );
+                val mp_thm = TAC_PROOF
                         (
                                 (asm_list, mk_imp (subgoal,goal))
                         ,
@@ -764,9 +775,9 @@ fun RAT_CALC_TAC (asm_list,goal) =
                                 ONCE_REWRITE_TAC calc_thms THEN
                                 PROVE_TAC []
                         );
-  in
-    ( [(asm_list,subgoal)], fn (thms:thm list) => MP mp_thm (hd thms) )
-  end
+        in
+                        ( [(asm_list,subgoal)], fn (thms:thm list) => MP mp_thm (hd thms) )
+        end
 handle HOL_ERR _ => raise ERR "RAT_CALC_TAC" "";
 
 (*--------------------------------------------------------------------------
@@ -907,23 +918,23 @@ val RAT_MUL_COMM = store_thm("RAT_MUL_COMM", ``!a b. rat_mul a b = rat_mul b a``
    |- !a. rat_mul 1q a = a
  *--------------------------------------------------------------------------*)
 
-val RAT_ADD_RID = store_thm("RAT_ADD_RID", ``!a. rat_add a 0q = a``,
+val RAT_ADD_RID = store_thm("RAT_ADD_RID[simp]", ``!a. rat_add a 0q = a``,
         REWRITE_TAC[rat_add_def,rat_0] THEN
         REWRITE_TAC[RAT_ADD_CONG] THEN
         REWRITE_TAC[FRAC_ADD_RID] THEN
         REWRITE_TAC[CONJUNCT1 rat_thm]);
 
-val RAT_ADD_LID = store_thm("RAT_ADD_LID", ``!a. rat_add 0q a = a``,
+val RAT_ADD_LID = store_thm("RAT_ADD_LID[simp]", ``!a. rat_add 0q a = a``,
         ONCE_REWRITE_TAC[RAT_ADD_COMM] THEN
         REWRITE_TAC[RAT_ADD_RID] );
 
-val RAT_MUL_RID = store_thm("RAT_MUL_RID", ``!a. rat_mul a 1q = a``,
+val RAT_MUL_RID = store_thm("RAT_MUL_RID[simp]", ``!a. rat_mul a 1q = a``,
         REWRITE_TAC[rat_mul_def,rat_1] THEN
         REWRITE_TAC[RAT_MUL_CONG] THEN
         REWRITE_TAC[FRAC_MUL_RID] THEN
         REWRITE_TAC[CONJUNCT1 rat_thm]);
 
-val RAT_MUL_LID = store_thm("RAT_MUL_LID", ``!a. rat_mul 1q a = a``,
+val RAT_MUL_LID = store_thm("RAT_MUL_LID[simp]", ``!a. rat_mul 1q a = a``,
         ONCE_REWRITE_TAC[RAT_MUL_COMM] THEN
         REWRITE_TAC[RAT_MUL_RID] );
 
@@ -1030,12 +1041,14 @@ val RAT_1_NOT_0 = store_thm("RAT_1_NOT_0", ``~ (1q=0q)``,
    |- !r1. rat_mul r1 0q = 0q
  *--------------------------------------------------------------------------*)
 
-val RAT_MUL_LZERO = store_thm("RAT_MUL_LZERO", ``!r1. rat_mul 0q r1 = 0q``,
-        GEN_TAC THEN
-        RAT_CALCEQ_TAC );
+val RAT_MUL_LZERO = store_thm(
+  "RAT_MUL_LZERO[simp]", “!r1. rat_mul 0q r1 = 0q”,
+  GEN_TAC THEN RAT_CALCEQ_TAC);
 
-val RAT_MUL_RZERO = store_thm("RAT_MUL_RZERO", ``!r1. rat_mul r1 0q = 0q``,
-        PROVE_TAC[RAT_MUL_LZERO, RAT_MUL_COMM] );
+val RAT_MUL_RZERO = store_thm(
+  "RAT_MUL_RZERO[simp]",
+  “!r1. rat_mul r1 0q = 0q”,
+  PROVE_TAC[RAT_MUL_LZERO, RAT_MUL_COMM] );
 
 (*--------------------------------------------------------------------------
    RAT_SUB_ADDAINV: thm
@@ -1051,11 +1064,18 @@ val RAT_SUB_ADDAINV = store_thm( "RAT_SUB_ADDAINV",``!r1 r2. rat_sub r1 r2 = rat
         REWRITE_TAC[frac_sub_def] THEN
         REWRITE_TAC[RAT_ADD_CONG] );
 
-val RAT_DIV_MULMINV = store_thm("RAT_DIV_MULMINV", ``!r1 r2. rat_div r1 r2 = rat_mul r1 (rat_minv r2)``,
-        REPEAT GEN_TAC THEN
-        REWRITE_TAC[rat_div_def, rat_mul_def, rat_minv_def] THEN
-        REWRITE_TAC[frac_div_def] THEN
-        REWRITE_TAC[RAT_MUL_CONG] );
+val RAT_DIV_MULMINV = store_thm("RAT_DIV_MULMINV",
+  ``!r1 r2. rat_div r1 r2 = rat_mul r1 (rat_minv r2)``,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[rat_div_def, rat_mul_def, rat_minv_def] THEN
+  REWRITE_TAC[frac_div_def] THEN
+  REWRITE_TAC[RAT_MUL_CONG] );
+
+val RAT_DIV_0 = Q.store_thm(
+  "RAT_DIV_0[simp]",
+  ‘rat_div 0 x = 0’,
+  simp[RAT_DIV_MULMINV]);
+
 
 (*--------------------------------------------------------------------------
    RAT_AINV_0: thm
@@ -1080,12 +1100,13 @@ val RAT_DIV_MULMINV = store_thm("RAT_DIV_MULMINV", ``!r1 r2. rat_div r1 r2 = rat
    |- !r1. ~(r1=0q) ==> (rat_ainv (rat_minv r1) = rat_minv (rat_ainv r1))
  *--------------------------------------------------------------------------*)
 
-val RAT_AINV_0 = store_thm("RAT_AINV_0", ``rat_ainv 0q = 0q``,
+val RAT_AINV_0 = store_thm("RAT_AINV_0[simp]", ``rat_ainv 0q = 0q``,
         REWRITE_TAC[rat_0,rat_ainv_def] THEN
         RW_TAC int_ss[RAT_AINV_CONG] THEN
         RW_TAC int_ss[FRAC_AINV_0] );
 
-val RAT_AINV_AINV = store_thm("RAT_AINV_AINV", ``!r1. rat_ainv (rat_ainv r1) = r1``,
+val RAT_AINV_AINV = store_thm("RAT_AINV_AINV[simp]",
+  ``!r1. rat_ainv (rat_ainv r1) = r1``,
         GEN_TAC THEN
         REWRITE_TAC[rat_ainv_def] THEN
         RW_TAC int_ss[RAT_AINV_CONG, FRAC_AINV_AINV, rat_thm] );
@@ -1131,31 +1152,34 @@ val RAT_AINV_EQ = store_thm("RAT_AINV_EQ",
         BasicProvers.VAR_EQ_TAC THEN
         REWRITE_TAC[RAT_AINV_AINV] );
 
-val RAT_EQ_AINV = store_thm("RAT_EQ_AINV",
+val RAT_EQ_AINV = store_thm("RAT_EQ_AINV[simp]",
   ``!r1 r2. (rat_ainv r1 = rat_ainv r2) = (r1=r2)``,
         REWRITE_TAC[RAT_AINV_EQ, RAT_AINV_AINV] ) ;
 
 val RAT_AINV_MINV = store_thm("RAT_AINV_MINV",
-  ``!r1. ~(r1=0q) ==> (rat_ainv (rat_minv r1) = rat_minv (rat_ainv r1))``,
-        REPEAT STRIP_TAC THEN
-        COPY_ASM_NO 0 THEN
-        APPLY_ASM_TAC 0 (REWRITE_TAC[rat_nmr_def, RAT_EQ0_NMR]) THEN
-        SUBST_TAC[GSYM RAT_AINV_0] THEN
-        ONCE_REWRITE_TAC[GSYM RAT_AINV_EQ] THEN
-        REWRITE_TAC[rat_nmr_def, RAT_EQ0_NMR] THEN
-        REWRITE_TAC[rat_ainv_def, rat_minv_def] THEN
-        REWRITE_TAC[RAT_NMREQ0_CONG] THEN
-        STRIP_TAC THEN
-        RW_TAC int_ss[RAT_AINV_CONG, RAT_MINV_CONG] THEN
-        COPY_ASM_NO 1 THEN
-        ONCE_REWRITE_TAC[GSYM INT_EQ_NEG] THEN
-        ONCE_REWRITE_TAC[INT_NEG_0] THEN
-        STRIP_TAC THEN
-        FRAC_CALC_TAC THEN
-        REWRITE_TAC[RAT_EQ] THEN
-        FRAC_NMRDNM_TAC THEN
-        RW_TAC int_ss[INT_ABS, SGN_def] THEN
-        INT_RING_TAC )
+  “!r1. r1 <> 0q ==> (rat_ainv (rat_minv r1) = rat_minv (rat_ainv r1))”,
+  REPEAT STRIP_TAC THEN
+  COPY_ASM_NO 0 THEN
+  APPLY_ASM_TAC 0 (REWRITE_TAC[rat_nmr_def, RAT_EQ0_NMR]) THEN
+  SUBST_TAC[GSYM RAT_AINV_0] THEN
+  ONCE_REWRITE_TAC[GSYM RAT_AINV_EQ] THEN
+  REWRITE_TAC[rat_nmr_def, RAT_EQ0_NMR] THEN
+  REWRITE_TAC[rat_ainv_def, rat_minv_def] THEN
+  REWRITE_TAC[RAT_NMREQ0_CONG] THEN
+  STRIP_TAC THEN
+  RW_TAC int_ss[RAT_AINV_CONG, RAT_MINV_CONG] THEN
+  COPY_ASM_NO 1 THEN
+  ONCE_REWRITE_TAC[GSYM INT_EQ_NEG] THEN
+  ONCE_REWRITE_TAC[INT_NEG_0] THEN
+  STRIP_TAC THEN
+  FRAC_CALC_TAC THEN
+  REWRITE_TAC[RAT_EQ] THEN
+  FRAC_NMRDNM_TAC THEN
+  RW_TAC int_ss[INT_ABS, SGN_def] THEN
+  TRY (INT_RING_TAC THEN NO_TAC) THEN
+  METIS_TAC[integerTheory.INT_LT_REFL, integerTheory.INT_LT_TRANS,
+            integerTheory.INT_NOT_LT, integerTheory.INT_LE_ANTISYM,
+            integerTheory.INT_MUL_RZERO]);
 
 (*--------------------------------------------------------------------------
    RAT_SUB_RDISTRIB: thm
@@ -1185,12 +1209,14 @@ val RAT_SUB_LDISTRIB = store_thm("RAT_SUB_LDISTRIB", ``!a b c. rat_mul c (rat_su
    |- !r1. rat_sub r1 0q = r1
  *--------------------------------------------------------------------------*)
 
-val RAT_SUB_LID = store_thm("RAT_SUB_LID", ``!r1. rat_sub 0q r1 = rat_ainv r1``,
+val RAT_SUB_LID = store_thm("RAT_SUB_LID[simp]",
+  ``!r1. rat_sub 0q r1 = rat_ainv r1``,
         GEN_TAC THEN
         REWRITE_TAC[RAT_SUB_ADDAINV] THEN
         REWRITE_TAC[RAT_ADD_LID] );
 
-val RAT_SUB_RID = store_thm("RAT_SUB_RID", ``!r1. rat_sub r1 0q = r1``,
+val RAT_SUB_RID = store_thm("RAT_SUB_RID[simp]",
+  ``!r1. rat_sub r1 0q = r1``,
         GEN_TAC THEN
         REWRITE_TAC[RAT_SUB_ADDAINV] THEN
         REWRITE_TAC[RAT_AINV_0] THEN
@@ -1201,7 +1227,8 @@ val RAT_SUB_RID = store_thm("RAT_SUB_RID", ``!r1. rat_sub r1 0q = r1``,
    |- ! r. r - r = 0q
  *--------------------------------------------------------------------------*)
 
-val RAT_SUB_ID = store_thm("RAT_SUB_ID", ``! r. rat_sub r r = 0q``,
+val RAT_SUB_ID = store_thm("RAT_SUB_ID[simp]",
+  ``! r. rat_sub r r = 0q``,
         RW_TAC bool_ss [RAT_SUB_ADDAINV, RAT_ADD_RINV]);
 
 (*--------------------------------------------------------------------------
@@ -2058,6 +2085,10 @@ val RAT_NO_ZERODIV = store_thm("RAT_NO_ZERODIV", ``!r1 r2. (r1 = 0q) \/ (r2 = 0q
         FRAC_NMRDNM_TAC THEN
         PROVE_TAC[INT_NO_ZERODIV] );
 
+val RAT_NO_ZERODIV_THM = save_thm(
+  "RAT_NO_ZERODIV_THM[simp]",
+  ONCE_REWRITE_RULE [EQ_SYM_EQ] RAT_NO_ZERODIV);
+
 val RAT_NO_ZERODIV_NEG = store_thm("RAT_NO_ZERODIV_NEG",``!r1 r2. ~(r1 * r2 = 0q) = ~(r1 = 0q) /\ ~(r2 = 0q)``,
         PROVE_TAC[RAT_NO_ZERODIV]);
 
@@ -2077,6 +2108,17 @@ val RAT_NO_IDDIV = store_thm("RAT_NO_IDDIV", ``!r1 r2. (rat_mul r1 r2 = r2) = (r
         SUBST_TAC [UNDISCH (SPECL[``r1:rat``,``1q``,``r2:rat``] RAT_EQ_RMUL)] THEN
         PROVE_TAC[] );
 
+(* moving divisions out *)
+
+val RDIV_MUL_OUT = Q.store_thm(
+  "RDIV_MUL_OUT",
+  ‘r1 * (r2 / r3) = (r1 * r2) / r3’,
+  metis_tac[RAT_MUL_ASSOC, RAT_DIV_MULMINV]);
+
+val LDIV_MUL_OUT = Q.store_thm(
+  "LDIV_MUL_OUT",
+  ‘(r1 / r2) * r3 = (r1 * r3) / r2’,
+  metis_tac[RAT_MUL_ASSOC, RAT_DIV_MULMINV, RAT_MUL_COMM]);
 
 (*--------------------------------------------------------------------------
    RAT_DENSE_THM
@@ -2262,10 +2304,84 @@ val RAT_OF_NUM_LEQ_0 = prove(``!n. 0 <= &n``,
  *  |- rat_minv 1 = 1
  *--------------------------------------------------------------------------*)
 
-val RAT_MINV_1 = Q.store_thm ("RAT_MINV_1", `rat_minv 1 = 1`,
+val RAT_MINV_1 = Q.store_thm ("RAT_MINV_1[simp]", `rat_minv 1 = 1`,
   REWRITE_TAC [SYM RAT_1, rat_1_def] THEN
   SIMP_TAC intLib.int_ss [RAT_MINV_CALCULATE, NMR, frac_1_def,
     REWRITE_RULE [frac_1_def] FRAC_MINV_1]) ;
+
+val RAT_DIV_1 = Q.store_thm(
+  "RAT_DIV_1[simp]",
+  ‘r / 1q = r’,
+  simp[RAT_DIV_MULMINV]);
+
+val RAT_DIV_NEG1 = Q.store_thm(
+  "RAT_DIV_NEG1[simp]",
+  ‘r / -1q = -r’,
+  simp[RAT_DIV_MULMINV, GSYM RAT_AINV_MINV, RAT_1_NOT_0, GSYM RAT_AINV_RMUL]);
+
+val RAT_DIV_INV = Q.store_thm(
+  "RAT_DIV_INV[simp]",
+  ‘r <> 0 ==> (r / r = 1)’,
+  simp[RAT_DIV_MULMINV, RAT_MUL_RINV]);
+
+val RAT_MINV_MUL = Q.store_thm(
+  "RAT_MINV_MUL",
+  ‘a <> 0 /\ b <> 0 ==> (rat_minv (a * b) = rat_minv a * rat_minv b)’,
+  strip_tac >>
+  qspecl_then [‘rat_minv (a * b)’, ‘rat_minv a * rat_minv b’, ‘a’] mp_tac
+              RAT_EQ_LMUL >> simp[] >> disch_then (SUBST1_TAC o SYM) >>
+  simp[RAT_MUL_ASSOC, RAT_MUL_RINV] >>
+  qspecl_then [‘a * rat_minv (a * b)’, ‘rat_minv b’, ‘b’] mp_tac
+              RAT_EQ_LMUL >> simp[] >> disch_then (SUBST1_TAC o SYM) >>
+  simp[RAT_MUL_RINV, RAT_MUL_ASSOC] >>
+  ‘b * a * rat_minv (a * b) = a * b * rat_minv (a * b)’
+    by simp[AC RAT_MUL_ASSOC RAT_MUL_COMM] >>
+  pop_assum SUBST_ALL_TAC >>
+  ‘a * b <> 0’ by simp[RAT_NO_ZERODIV_NEG] >>
+  simp[RAT_MUL_RINV]);
+
+val RAT_DIVDIV_MUL = Q.store_thm(
+  "RAT_DIVDIV_MUL",
+  ‘b <> 0 /\ d <> 0 ==> ((a / b) * (c / d) = (a * c) / (b * d))’,
+  simp[RAT_DIV_MULMINV, RAT_MINV_MUL, AC RAT_MUL_COMM RAT_MUL_ASSOC])
+
+val RAT_DIVDIV_ADD = Q.store_thm(
+  "RAT_DIVDIV_ADD",
+  ‘y <> 0 /\ b <> 0 ==> (x / y + a / b = (x * b + a * y) / (y * b))’,
+  strip_tac >> qmatch_abbrev_tac ‘LHS = RHS’ >>
+  ‘LHS = LHS * (y/y) * (b/b)’ by simp[] >>
+  pop_assum SUBST1_TAC >> simp_tac bool_ss [Abbr`LHS`, RAT_RDISTRIB] >>
+  ‘x / y * (y / y) = x / y’ by simp[] >> pop_assum SUBST1_TAC >>
+  ‘x / y * (b / b) = (x * b) / (y * b)’ by simp[RAT_DIVDIV_MUL] >>
+  pop_assum SUBST1_TAC >> ‘b / b = 1’ by simp[] >>
+  asm_simp_tac bool_ss [RAT_MUL_RID] >> simp[RAT_DIVDIV_MUL] >>
+  simp[Abbr`RHS`, RAT_RDISTRIB, RAT_DIV_MULMINV, AC RAT_MUL_ASSOC RAT_MUL_COMM])
+
+val RAT_DIV_AINV = Q.store_thm(
+  "RAT_DIV_AINV",
+  ‘-(x/y) = (-x)/y’,
+  simp[RAT_DIV_MULMINV, RAT_AINV_LMUL]);
+
+val RAT_MINV_EQ_0 = Q.store_thm(
+  "RAT_MINV_EQ_0[simp]",
+  ‘r <> 0 ==> rat_minv r <> 0’,
+  strip_tac >> disch_then (mp_tac o Q.AP_TERM ‘$* r’) >>
+  simp[RAT_MUL_RINV, RAT_1_NOT_0]);
+
+val RAT_DIV_MINV = Q.store_thm(
+  "RAT_DIV_MINV",
+  ‘x <> 0 /\ y <> 0 ==> (rat_minv (x/y) = y / x)’,
+  strip_tac >>
+  ‘x / y <> 0’ by simp[RAT_DIV_MULMINV, RAT_NO_ZERODIV_NEG] >>
+  qspecl_then [‘rat_minv (x / y)’, ‘y / x’, ‘x / y’] mp_tac
+              RAT_EQ_LMUL >> simp[] >> disch_then (SUBST1_TAC o SYM) >>
+  simp[RAT_MUL_RINV, RAT_DIVDIV_MUL] >>
+  simp[RAT_MUL_COMM, RAT_NO_ZERODIV_NEG]);
+
+val RAT_DIV_EQ0 = Q.store_thm(
+  "RAT_DIV_EQ0[simp]",
+  ‘d <> 0 ==> ((n / d = 0) <=> (n = 0)) /\ ((0 = n / d) <=> (n = 0))’,
+  strip_tac >> simp[RAT_DIV_MULMINV, GSYM RAT_NO_ZERODIV, RAT_MINV_EQ_0]);
 
 (*--------------------------------------------------------------------------
    RAT_ADD_NUM: thm
@@ -2402,8 +2518,494 @@ val RAT_EQ_NUM3 = prove(``!n m. (~&n =  &m) = (n=0)/\(m=0)``,
 val RAT_EQ_NUM4 = prove(``!n m. (~&n = ~&m) = (n=m)``,
         PROVE_TAC[RAT_AINV_EQ, RAT_EQ_NUM1] );
 
-val RAT_EQ_NUM_CALCULATE = save_thm("RAT_EQ_NUM_CALCULATE", LIST_CONJ [RAT_EQ_NUM1, RAT_EQ_NUM2, RAT_EQ_NUM3, RAT_EQ_NUM4] );
+val RAT_EQ_NUM_CALCULATE = save_thm("RAT_EQ_NUM_CALCULATE[simp]",
+  LIST_CONJ [RAT_EQ_NUM1, RAT_EQ_NUM2, RAT_EQ_NUM3, RAT_EQ_NUM4] );
 
+(* ----------------------------------------------------------------------
+    RAT_LT_NUM
+   ---------------------------------------------------------------------- *)
+
+val RAT_LT_NUM1 = RAT_OF_NUM_LES
+
+val RAT_LT_NUM2 = Q.prove(
+  ‘-&m < &n <=> 0 < m \/ 0 < n’,
+  eq_tac >- (spose_not_then strip_assume_tac >> fs[]) >>
+  strip_tac
+  >- (irule RAT_LES_LEQ_TRANS >> qexists_tac `0` >> simp[] >>
+      simp[Once RAT_AINV_LES]) >>
+  irule RAT_LEQ_LES_TRANS >> qexists_tac `0` >> simp[] >>
+  simp[rat_leq_def] >>
+  simp[Once RAT_AINV_LES]);
+
+val RAT_LT_NUM3 = Q.prove(
+  ‘&m < -&n <=> F’,
+  simp[] >> strip_tac >>
+  ‘-&n <= 0’ by simp[rat_leq_def, Once RAT_AINV_LES] >>
+  ‘&m < 0’ by metis_tac[RAT_LES_LEQ_TRANS] >> fs[])
+
+val RAT_LT_NUM4 = Q.prove(
+  ‘-&m < -&n <=> n < m’,
+  simp[RAT_LES_AINV]);
+
+val RAT_LT_NUM_CALCULATE = save_thm(
+  "RAT_LT_NUM_CALCULATE[simp]",
+  LIST_CONJ [RAT_LT_NUM1, RAT_LT_NUM2, RAT_LT_NUM3, RAT_LT_NUM4]);
+
+(* ----------------------------------------------------------------------
+    RAT_LE_NUM
+   ---------------------------------------------------------------------- *)
+
+val RAT_LE_NUM2 = Q.prove(
+  ‘-&m <= &n <=> T’,
+  simp[rat_leq_def]);
+
+val RAT_LE_NUM3 = Q.prove(
+  ‘&m <= -&n <=> (m = 0) /\ (n = 0)’,
+  simp[rat_leq_def]);
+
+val RAT_LE_NUM4 = Q.prove(
+  ‘-&m <= -&n <=> n <= m’,
+  simp[rat_leq_def]);
+
+val RAT_LE_NUM_CALCULATE = save_thm(
+  "RAT_LE_NUM_CALCULATE[simp]",
+  LIST_CONJ [RAT_OF_NUM_LEQ, RAT_LE_NUM2, RAT_LE_NUM3, RAT_LE_NUM4]);
+
+(* ----------------------------------------------------------------------
+    rat_of_int
+   ---------------------------------------------------------------------- *)
+
+val rat_of_int_def = Define ‘
+  rat_of_int i : rat = if i < 0 then - (& (Num (-i))) else &(Num i)
+’;
+
+val rat_of_int_11 = Q.store_thm(
+  "rat_of_int_11[simp]",
+  ‘(rat_of_int i1 = rat_of_int i2) <=> (i1 = i2)’,
+  simp[EQ_IMP_THM] >> simp[rat_of_int_def] >> Cases_on ‘i1 < 0’ >>
+  Cases_on ‘i2 < 0’ >> simp[]
+  >- (‘0 <= -i1 /\ 0 <= -i2’ by simp[] >>
+      rpt (pop_assum
+             (mp_tac o CONV_RULE (REWR_CONV (GSYM integerTheory.INT_OF_NUM))))>>
+      ntac 2 strip_tac >> disch_then (mp_tac o AP_TERM ``$& : num -> int``) >>
+      ntac 2 (pop_assum SUBST1_TAC) >> simp[integerTheory.INT_EQ_CALCULATE])
+  >- (rename [‘a < 0’, ‘~(b < 0)’] >>
+      ‘0 <= -a /\ 0 <= b’ by (simp[] >> fs[integerTheory.INT_NOT_LT]) >>
+      rpt (pop_assum
+             (mp_tac o CONV_RULE (REWR_CONV (GSYM integerTheory.INT_OF_NUM))))>>
+      ntac 2 strip_tac >>
+      disch_then (CONJUNCTS_THEN (mp_tac o AP_TERM ``$& : num -> int``)) >>
+      ntac 2 (pop_assum SUBST1_TAC) >> simp[integerTheory.INT_EQ_CALCULATE])
+  >- (rename [‘a < 0’, ‘~(b < 0)’] >>
+      ‘0 <= -a /\ 0 <= b’ by (simp[] >> fs[integerTheory.INT_NOT_LT]) >>
+      rpt (pop_assum
+             (mp_tac o CONV_RULE (REWR_CONV (GSYM integerTheory.INT_OF_NUM))))>>
+      ntac 2 strip_tac >>
+      disch_then (CONJUNCTS_THEN (mp_tac o AP_TERM ``$& : num -> int``)) >>
+      ntac 2 (pop_assum SUBST1_TAC) >> simp[integerTheory.INT_EQ_CALCULATE])
+  >- (‘0 <= i1 /\ 0 <= i2’ by fs[integerTheory.INT_NOT_LT] >>
+      rpt (pop_assum
+             (mp_tac o CONV_RULE (REWR_CONV (GSYM integerTheory.INT_OF_NUM))))>>
+      ntac 2 strip_tac >> disch_then (mp_tac o AP_TERM ``$& : num -> int``) >>
+      ntac 2 (pop_assum SUBST1_TAC) >> simp[integerTheory.INT_EQ_CALCULATE]));
+
+val rat_of_int_of_num = Q.store_thm(
+  "rat_of_int_of_num[simp]",
+  ‘rat_of_int (&x) = &x’,
+  simp[rat_of_int_def]);
+
+val elim1 = intLib.ARITH_PROVE ``y <= x /\ x <= y ==> (x = y:int)``
+val elim2 = intLib.ARITH_PROVE ``x:int < y /\ y < x ==> F``
+fun elim_tac k =
+    REPEAT_GTCL
+      (fn ttcl => fn th =>
+          first_assum (mp_then.mp_then (mp_then.Pos hd) ttcl th))
+      (k o assert (not o is_imp o #2 o strip_forall o concl))
+
+val num_rwt = integerTheory.INT_OF_NUM |> SPEC_ALL |> EQ_IMP_RULE |> #2
+
+val rat_of_int_MUL = Q.store_thm(
+  "rat_of_int_MUL",
+  ‘rat_of_int x * rat_of_int y = rat_of_int (x * y)’,
+  simp[rat_of_int_def, integerTheory.INT_MUL_SIGN_CASES] >> rw[] >>
+  fs[integerTheory.INT_NOT_LT, RAT_MUL_NUM_CALCULATE, RAT_EQ_NUM_CALCULATE] >>
+  TRY (elim_tac assume_tac elim1 ORELSE elim_tac assume_tac elim2) >> rw[] >>
+  asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+    [GSYM integerTheory.INT_INJ, GSYM integerRingTheory.int_calculate,
+     num_rwt, integerTheory.INT_LE_MUL, integerTheory.INT_LE_LT,
+     integerTheory.INT_MUL_SIGN_CASES, integerTheory.INT_NEG_GT0]);
+
+val rat_of_int_ADD = Q.store_thm(
+  "rat_of_int_ADD",
+  ‘rat_of_int x + rat_of_int y = rat_of_int (x + y)’,
+  simp[rat_of_int_def] >> rw[]
+  >- (simp[GSYM RAT_AINV_ADD, RAT_ADD_NUM_CALCULATE] >>
+      asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+       [GSYM integerTheory.INT_INJ, GSYM integerRingTheory.int_calculate,
+        num_rwt, integerTheory.INT_LE_MUL, integerTheory.INT_LE_LT,
+        integerTheory.INT_MUL_SIGN_CASES, integerTheory.INT_NEG_GT0])
+  >- (full_simp_tac (bool_ss ++ intLib.INT_ARITH_ss) [])
+  >- (simp[RAT_ADD_NUM_CALCULATE] >> rw[] >>
+      TRY (rename [‘Num (-a) <= Num b’] >>
+           pop_assum (mp_tac o REWRITE_RULE [GSYM integerTheory.INT_LE]) >>
+           asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss) [num_rwt]) >>
+      rename [‘Num (-a) - Num b’] >>
+      ‘Num b <= Num (-a)’
+         by asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+            [num_rwt, GSYM integerTheory.INT_INJ, GSYM integerTheory.INT_LE] >>
+       asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+            [num_rwt, GSYM integerTheory.INT_INJ, GSYM integerTheory.INT_SUB])
+  >- (simp[RAT_ADD_NUM_CALCULATE] >> rw[]
+      >- (rename [‘Num (-a) <= Num b’] >>
+          pop_assum (mp_tac o REWRITE_RULE [GSYM integerTheory.INT_LE]) >>
+          asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss) [num_rwt] >>
+          `Num (-a) <= Num b`
+             by asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+                    [num_rwt, GSYM integerTheory.INT_INJ,
+                     GSYM integerTheory.INT_LE] >>
+         asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+             [num_rwt, GSYM integerTheory.INT_INJ, GSYM integerTheory.INT_SUB])
+      >- (pop_assum (mp_tac o REWRITE_RULE [GSYM integerTheory.INT_LE]) >>
+          asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss) [num_rwt]))
+  >- (simp[RAT_ADD_NUM_CALCULATE] >> rw[] >>
+      TRY (rename [‘Num (-a) <= Num b’] >>
+           pop_assum (mp_tac o REWRITE_RULE [GSYM integerTheory.INT_LE]) >>
+           asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss) [num_rwt]) >>
+      rename [‘Num (-a) - Num b’] >>
+      ‘Num b <= Num (-a)’
+         by asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+            [num_rwt, GSYM integerTheory.INT_INJ, GSYM integerTheory.INT_LE] >>
+       asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+            [num_rwt, GSYM integerTheory.INT_INJ, GSYM integerTheory.INT_SUB])
+  >- (simp[RAT_ADD_NUM_CALCULATE] >> rw[]
+      >- (rename [‘Num (-a) <= Num b’] >>
+          pop_assum (mp_tac o REWRITE_RULE [GSYM integerTheory.INT_LE]) >>
+          asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss) [num_rwt] >>
+          `Num (-a) <= Num b`
+             by asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+                    [num_rwt, GSYM integerTheory.INT_INJ,
+                     GSYM integerTheory.INT_LE] >>
+         asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+             [num_rwt, GSYM integerTheory.INT_INJ, GSYM integerTheory.INT_SUB])
+      >- (pop_assum (mp_tac o REWRITE_RULE [GSYM integerTheory.INT_LE]) >>
+          asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss) [num_rwt]))
+  >- (full_simp_tac (bool_ss ++ intLib.INT_ARITH_ss) [])
+  >- (simp[RAT_ADD_NUM_CALCULATE] >>
+      asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+         [num_rwt, GSYM integerTheory.INT_INJ, GSYM integerTheory.INT_ADD]))
+
+val rat_of_int_LE = Q.store_thm(
+  "rat_of_int_LE[simp]",
+  ‘rat_of_int i <= rat_of_int j <=> i <= j’,
+  simp[rat_of_int_def] >> rw[] >>
+  asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+    [num_rwt, GSYM integerTheory.INT_INJ, GSYM integerTheory.INT_LE])
+
+val rat_of_int_LT = Q.store_thm(
+  "rat_of_int_LT[simp]",
+  ‘rat_of_int i < rat_of_int j <=> i < j’,
+  simp[rat_of_int_def] >> rw[] >>
+  asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+    [num_rwt, GSYM integerTheory.INT_INJ, GSYM integerTheory.INT_LT]);
+
+val rat_of_int_ainv = Q.store_thm(
+  "rat_of_int_ainv",
+  ‘rat_of_int (-i) = -(rat_of_int i)’,
+  simp[rat_of_int_def] >> rw[] >>
+  TRY (elim_tac mp_tac elim2 >> simp[]) >>
+  asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
+    [num_rwt, GSYM integerTheory.INT_INJ])
+
+val RAT_OF_INT_CALCULATE = Q.store_thm(
+  "RAT_OF_INT_CALCULATE",
+  ‘!i. rat_of_int i = abs_rat (abs_frac (i, 1))’,
+  gen_tac >> Cases_on ‘i’ >> simp[rat_of_int_def]
+  >- simp[RAT_OF_NUM_CALCULATE]
+  >- (simp[GSYM fracTheory.FRAC_AINV_CALCULATE, GSYM RAT_AINV_CALCULATE] >>
+      simp[RAT_OF_NUM_CALCULATE])
+  >- simp[RAT_OF_NUM_CALCULATE]);
+
+(* ----------------------------------------------------------------------
+    RATN and RATD, which take rational numbers and return unique
+    numerator and denominator values. Numerator is integer with smallest
+    possible absolute value; denominator is a natural number.  If
+    numerator is zero, denominator is always one.
+   ---------------------------------------------------------------------- *)
+
+val frac_exists = Q.prove(
+  ‘!r. ?n:int d:num. 0 < d /\ (&d * r = rat_of_int n)’,
+  gen_tac >>
+  qabbrev_tac ‘f = rep_rat r’ >>
+  ‘r = abs_rat f’ by metis_tac[rat_type_thm] >>
+  ‘?n0 d0. rep_frac f = (n0,d0)’ by (Cases_on ‘rep_frac f’ >> simp[]) >>
+  map_every qexists_tac [‘n0’, ‘Num d0’] >>
+  ‘rep_frac (abs_frac (rep_frac f)) = rep_frac f’
+    by simp [fracTheory.frac_tybij] >>
+  pop_assum mp_tac >> simp[GSYM (CONJUNCT2 fracTheory.frac_tybij)] >>
+  strip_tac >> Cases_on ‘d0’ >> fs[] >>
+  rename [‘rep_frac f = (n,&d)’] >>
+  simp[RAT_OF_NUM_CALCULATE, RAT_OF_INT_CALCULATE, RAT_MUL_CALCULATE] >>
+  ‘f = abs_frac (n,&d)’ by metis_tac[fracTheory.frac_tybij] >>
+  simp[fracTheory.FRAC_MULT_CALCULATE, RAT_ABS_EQUIV] >>
+  simp[RAT_EQUIV_ALT] >>
+  map_every qexists_tac [‘1’, ‘&d’] >>
+  simp[fracTheory.FRAC_MULT_CALCULATE, integerTheory.INT_MUL_COMM]);
+
+val numdenom_exists = Q.prove(
+  ‘!r:rat.
+     ?n:int d:num.
+       (r = rat_of_int n / &d) /\ 0 < d /\ ((n = 0) ==> (d = 1)) /\
+       !n' d'. (r = rat_of_int n' / &d') /\ 0 < d' ==> ABS n <= ABS n'’,
+  gen_tac >>
+  qabbrev_tac `reps = { (a,b) | (&b * r = rat_of_int a) /\ 0 < b }` >>
+  `WF (measure (Num o ABS o (FST : int # num -> int)))` by simp[] >>
+  full_simp_tac bool_ss [relationTheory.WF_DEF] >>
+  ‘?e. reps e’
+    by (simp[Abbr‘reps’, pairTheory.EXISTS_PROD] >> metis_tac[frac_exists]) >>
+  fs[PULL_EXISTS] >>
+  Cases_on ‘r = 0’
+  >- (map_every qexists_tac [‘0’, ‘1’] >> simp[] >> gen_tac >> Cases_on ‘n'’ >>
+      simp[integerTheory.INT_ABS_NUM, integerTheory.INT_ABS_NEG]) >>
+  res_tac >>
+  ‘?mn md. min = (mn,md)’ by (Cases_on ‘min’ >> simp[]) >> rw[] >>
+  map_every qexists_tac [‘mn’, ‘md’] >> fs[Abbr‘reps’] >> pairarg_tac >>
+  fs[pairTheory.FORALL_PROD] >> rpt var_eq_tac >>
+  qpat_x_assum ‘(_,_) = _’ kall_tac >> rpt conj_tac
+  >- (rename [‘&d * r = rat_of_int n’] >> first_x_assum (SUBST1_TAC o SYM) >>
+      simp[RAT_DIV_MULMINV] >>
+      ‘&d:rat <> 0’ by simp[] >>
+      metis_tac[RAT_MUL_ASSOC, RAT_MUL_COMM, RAT_MUL_RINV, RAT_MUL_LID])
+  >- (rename [‘(_ = 0) ==> (_ = 1)’] >> strip_tac >> fs[])
+  >- (rpt strip_tac >>
+      rename [‘&d * r = rat_of_int n’, ‘r = rat_of_int nn / &dd’] >>
+      spose_not_then (assume_tac o REWRITE_RULE[integerTheory.INT_NOT_LE]) >>
+      first_x_assum (qspecl_then [‘nn’, ‘dd’] mp_tac) >> simp[] >>
+      reverse conj_tac
+      >- (‘&dd <> 0’ by simp[] >> simp[RAT_DIV_MULMINV] >>
+          metis_tac[RAT_MUL_ASSOC, RAT_MUL_COMM, RAT_MUL_RINV, RAT_MUL_LID]) >>
+      simp[NUM_LT]))
+
+val RATND_THM = new_specification("RATND_THM", ["RATN", "RATD"],
+  CONV_RULE (SKOLEM_CONV THENC BINDER_CONV SKOLEM_CONV) numdenom_exists)
+
+val RATD_NZERO = save_thm(
+  "RATD_NZERO[simp]",
+  let val th = List.nth(RATND_THM |> SPEC_ALL |> CONJUNCTS, 1)
+  in
+    CONJ th (CONV_RULE (REWR_CONV (GSYM NOT_ZERO_LT_ZERO)) th)
+  end);
+
+val RATN_LEAST = save_thm(
+  "RATN_LEAST",
+  List.nth(RATND_THM |> SPEC_ALL |> CONJUNCTS, 3))
+
+val RATN_RATD_EQ_THM = save_thm(
+  "RATN_RATD_EQ_THM",
+  RATND_THM |> SPEC_ALL |> CONJUNCTS |> hd);
+
+val RATN_RATD_MULT = save_thm(
+  "RATN_RATD_MULT",
+  RATN_RATD_EQ_THM |> Q.AP_TERM ‘\x. x * &RATD r’ |> BETA_RULE
+                   |> SIMP_RULE (srw_ss()) [RAT_DIV_MULMINV, GSYM RAT_MUL_ASSOC,
+                                            RAT_MUL_LINV]);
+
+val RATND_RAT_OF_NUM = Q.store_thm(
+  "RATND_RAT_OF_NUM[simp]",
+  ‘(RATN (&n) = &n) /\ (RATD (&n) = 1)’,
+  mp_tac (Q.INST [`r` |-> `&n`] RATN_RATD_MULT) >> strip_tac >>
+  ‘&n:rat = rat_of_int (&n) / 1’ by simp[] >>
+  ‘ABS (RATN (&n)) <= ABS (&n)’ by metis_tac[RATN_LEAST, DECIDE ``0n < 1``] >>
+  full_simp_tac bool_ss [integerTheory.INT_ABS_NUM, GSYM rat_of_int_of_num,
+                         rat_of_int_MUL, rat_of_int_11,
+                         integerTheory.INT_MUL] >>
+  fs[] >>
+  ‘?rn. RATN (&n) = &rn’ by (Cases_on ‘RATN (&n)’ >> fs[]) >>
+  fs[integerTheory.INT_ABS_NUM] >>
+  conj_asm1_tac
+  >- (‘n <= rn’ suffices_by simp[] >>
+      Cases_on ‘RATD(&n)’ >> fs[MULT_CLAUSES]) >> rpt var_eq_tac >>
+  ‘(RATD(&n) = 1) \/ (n = 0)’ by metis_tac[MULT_RIGHT_1,EQ_MULT_LCANCEL] >>
+  metis_tac[RATND_THM]);
+
+val RATN_EQ0 = Q.store_thm(
+  "RATN_EQ0[simp]",
+  ‘((RATN r = 0) <=> (r = 0)) /\ ((0 = RATN r) <=> (r = 0))’,
+  reverse conj_asm1_tac >- metis_tac[] >>
+  simp[EQ_IMP_THM] >> strip_tac >>
+  mp_tac RATN_RATD_MULT >> simp[]);
+
+val RATN_SIGN = Q.store_thm(
+  "RATN_SIGN[simp]",
+  ‘(0 < RATN x <=> 0 < x) /\ (0 <= RATN x <=> 0 <= x) /\ (RATN x < 0 <=> x < 0) /\
+   (RATN x <= 0 <=> x <= 0)’,
+  reverse conj_asm1_tac
+  >- (simp[integerTheory.INT_LE_LT, rat_leq_def, EQ_SYM_EQ] >>
+      conj_tac >> ONCE_REWRITE_TAC [DECIDE ``(p:bool = q) = (~p = ~q)``] >>
+      ASM_REWRITE_TAC [integerTheory.INT_NOT_LT, integerTheory.INT_LE_LT, RAT_LEQ_LES,
+                       rat_leq_def, DE_MORGAN_THM] >> simp[] >> metis_tac[]) >>
+  eq_tac >> strip_tac >> mp_tac (Q.INST [`r` |-> `x`] RATN_RATD_MULT)
+  >- (‘0 < rat_of_int (RATN x)’
+        by asm_simp_tac bool_ss [GSYM rat_of_int_of_num, rat_of_int_LT] >>
+      strip_tac >>
+      ‘0 < x * &RATD x’ by metis_tac[] >>
+      pop_assum mp_tac >> simp[RAT_MUL_SIGN_CASES]) >>
+  ‘0 < x * &RATD x’ by simp[RAT_MUL_SIGN_CASES] >> strip_tac >>
+  ‘0 < rat_of_int (RATN x)’ by metis_tac[] >>
+  full_simp_tac bool_ss [GSYM rat_of_int_of_num, rat_of_int_LT]);
+
+val RATN_MUL_LEAST =
+    SIMP_RULE (srw_ss() ++ boolSimps.CONJ_ss ++ ARITH_ss) [RAT_RDIV_EQ] RATN_LEAST;
+
+val RAT_AINV_SGN = Q.store_thm(
+  "RAT_AINV_SGN[simp]",
+  ‘(0 < -r <=> r < 0) /\ (-r < 0 <=> 0 < r)’,
+  metis_tac[RAT_LES_AINV, RAT_AINV_0]);
+
+val RATN_NEG = Q.store_thm(
+  "RATN_NEG[simp]",
+  ‘RATN (-r) = -RATN r’,
+  assume_tac RATN_RATD_MULT >> assume_tac (Q.INST [`r` |-> `-r`] RATN_RATD_MULT) >>
+  first_assum (mp_tac o Q.AP_TERM `rat_ainv`) >>
+  REWRITE_TAC[RAT_AINV_LMUL] >> simp[] >> strip_tac >>
+  ‘ABS (RATN r) <= ABS (-RATN (-r))’
+    by (irule RATN_MUL_LEAST >> qexists_tac ‘&RATD (-r)’ >> simp[rat_of_int_ainv]) >>
+  fs[] >>
+  last_assum (mp_tac o Q.AP_TERM `rat_ainv`) >>
+  REWRITE_TAC[RAT_AINV_LMUL] >> simp[] >> strip_tac >>
+  ‘ABS (RATN (-r)) <= ABS (-RATN (r))’
+    by (irule RATN_MUL_LEAST >> qexists_tac ‘&RATD r’ >> simp[rat_of_int_ainv]) >>
+  fs[] >>
+  ‘ABS (RATN (-r)) = ABS (RATN r)’ by metis_tac[INT_LE_ANTISYM] >>
+  fs[INT_ABS_EQ_ABS] >> fs[] >>
+  ‘r * &RATD r = -r * &RATD (-r)’ by simp[] >> pop_assum mp_tac >>
+  rpt (pop_assum kall_tac) >> strip_tac >>
+  qspecl_then [‘0’, ‘r’] strip_assume_tac RAT_LES_TOTAL
+  >- (‘0 < r * &RATD r’ by simp[RAT_MUL_SIGN_CASES] >>
+      ‘~(0 < -r * &RATD (-r))’
+        by (simp[RAT_MUL_SIGN_CASES] >> metis_tac[RAT_LES_REF, RAT_LES_TRANS]) >>
+      metis_tac[])
+  >- simp[]
+  >- (‘r * &RATD r < 0’ by simp[RAT_MUL_SIGN_CASES] >>
+      ‘~(-r * &RATD(-r) < 0)’
+         by (simp[RAT_MUL_SIGN_CASES] >> metis_tac[RAT_LES_REF, RAT_LES_TRANS]) >>
+      metis_tac[]));
+
+val RATD_NEG = Q.store_thm(
+  "RATD_NEG[simp]",
+  ‘RATD (-r) = RATD r’,
+  Cases_on ‘r = 0’ >> fs[] >>
+  assume_tac RATN_RATD_MULT >> assume_tac (Q.INST [`r` |-> `-r`] RATN_RATD_MULT) >> fs[] >>
+  pop_assum (mp_tac o Q.AP_TERM ‘rat_ainv’) >> REWRITE_TAC [RAT_AINV_LMUL] >>
+  simp[rat_of_int_ainv] >> metis_tac[RAT_EQ_LMUL, RAT_EQ_NUM_CALCULATE]);
+
+val RATN_RATD_RAT_OF_INT = Q.store_thm(
+  "RATN_RATD_RAT_OF_INT[simp]",
+  ‘(RATN (rat_of_int i) = i) /\ (RATD (rat_of_int i) = 1)’,
+  Cases_on ‘i’ >> simp[rat_of_int_ainv]);
+
+val RATN_DIV_RATD = Q.store_thm(
+  "RATN_DIV_RATD[simp]",
+  ‘rat_of_int (RATN r) / &RATD r = r’,
+  ONCE_REWRITE_TAC [EQ_SYM_EQ] >> simp[RAT_RDIV_EQ, RATN_RATD_MULT]);
+
+(* ----------------------------------------------------------------------
+    RAT_SGN : rat -> rat  (-1,0,1)
+   ---------------------------------------------------------------------- *)
+
+val RAT_SGN_def = Define‘RAT_SGN r = rat_of_int (SGN (RATN r))’;
+
+val RAT_AINV_EQ_NUM = Q.store_thm(
+  "RAT_AINV_EQ_NUM[simp]",
+  ‘(rat_ainv x = rat_of_num n) <=> (x = rat_of_int (-&n))’,
+  simp[EQ_IMP_THM, rat_of_int_ainv] >> disch_then (SUBST1_TAC o SYM) >> simp[]);
+
+val RAT_SGN_AINV = Q.store_thm(
+  "RAT_SGN_AINV[simp]",
+  ‘RAT_SGN (-r) = -RAT_SGN r’,
+  simp[RAT_SGN_def, SGN_def] >> rw[] >> simp[rat_of_int_ainv] >>
+  metis_tac[RAT_LEQ_LES, RAT_LEQ_ANTISYM, RAT_LES_TRANS, RAT_LES_REF]);
+
+val RAT_SGN_0 = Q.store_thm(
+  "RAT_SGN_0[simp]",
+  ‘RAT_SGN 0 = 0’,
+  simp[RAT_SGN_def, SGN_def]);
+
+val RAT_SGN_NUM_COND = Q.store_thm(
+  "RAT_SGN_NUM_COND",
+  ‘RAT_SGN (&n) = if n = 0 then 0 else 1’,
+  rw[RAT_SGN_def, SGN_def]);
+
+val RAT_SGN_NUM_BITs = Q.store_thm(
+  "RAT_SGN_NUM_BITs[simp]",
+  ‘(RAT_SGN (&(NUMERAL (BIT1 n))) = 1) /\ (RAT_SGN (&(NUMERAL (BIT2 n))) = 1)’,
+  REWRITE_TAC[arithmeticTheory.BIT1, arithmeticTheory.BIT2, arithmeticTheory.NUMERAL_DEF,
+              arithmeticTheory.ALT_ZERO] >>
+  simp[RAT_SGN_NUM_COND]);
+
+val RAT_SGN_EQ0 = Q.store_thm(
+  "RAT_SGN_EQ0[simp]",
+  ‘((RAT_SGN r = 0) <=> (r = 0)) /\ ((0 = RAT_SGN r) <=> (r = 0))’,
+  conj_asm1_tac >- rw[RAT_SGN_def, SGN_def, rat_of_int_ainv] >> metis_tac[]);
+
+val RAT_SGN_POS = Q.store_thm(
+  "RAT_SGN_POS[simp]",
+  ‘(RAT_SGN r = 1) <=> 0 < r’,
+  rw[RAT_SGN_def, SGN_def, rat_of_int_ainv] >>
+  metis_tac[RAT_LEQ_LES, rat_leq_def, RAT_LES_TRANS, RAT_LES_REF]);
+
+val RAT_SGN_NEG = Q.store_thm(
+  "RAT_SGN_NEG[simp]",
+  ‘(RAT_SGN r = -1) <=> r < 0’,
+  rw[RAT_SGN_def, SGN_def, rat_of_int_ainv]);
+
+val RAT_SGN_MUL = Q.store_thm(
+  "RAT_SGN_MUL[simp]",
+  ‘RAT_SGN (r * s) = RAT_SGN r * RAT_SGN s’,
+  Cases_on ‘r * s = 0’ >> fs[] >>
+  Cases_on ‘0 < r * s’
+  >- (‘RAT_SGN (r * s) = 1’ by simp[] >> pop_assum SUBST1_TAC >>
+      fs[RAT_MUL_SIGN_CASES]
+      >- (‘(RAT_SGN r = 1) /\ (RAT_SGN s = 1)’ by simp[] >> simp[])
+      >- (‘(RAT_SGN r = -1) /\ (RAT_SGN s = -1)’ by simp[] >> simp[RAT_MUL_NUM_CALCULATE]))>>
+  fs[RAT_LEQ_LES] >>
+  ‘r * s < 0’ by metis_tac[rat_leq_def, RAT_NO_ZERODIV_THM] >>
+  ‘RAT_SGN (r * s) = -1’ by simp[] >> pop_assum SUBST1_TAC >>
+  fs[RAT_MUL_SIGN_CASES] >>
+  RULE_ASSUM_TAC (REWRITE_RULE [GSYM RAT_SGN_NEG, GSYM RAT_SGN_POS]) >>
+  simp[RAT_MUL_NUM_CALCULATE]);
+
+val RAT_SGN_MINV = Q.store_thm(
+  "RAT_SGN_MINV[simp]",
+  ‘r <> 0 ==> (RAT_SGN (rat_minv r) = RAT_SGN r)’,
+  strip_tac >>
+  ‘RAT_SGN r * RAT_SGN (rat_minv r) = RAT_SGN r * RAT_SGN r’
+    suffices_by metis_tac[RAT_EQ_LMUL, RAT_SGN_EQ0] >>
+  asm_simp_tac bool_ss [GSYM RAT_SGN_MUL, RAT_MUL_RINV] >>
+  simp[] >>
+  ‘(RAT_SGN r = 1) \/ (RAT_SGN r = -1)’
+    by metis_tac[RAT_LES_TOTAL, RAT_SGN_POS, RAT_SGN_NEG] >>
+  simp[RAT_MUL_NUM_CALCULATE]);
+
+val RAT_SGN_DIV = Q.store_thm(
+  "RAT_SGN_DIV[simp]",
+  ‘d <> 0 ==> (RAT_SGN (n/d) = RAT_SGN n * RAT_SGN d)’,
+  simp[RAT_SGN_MINV, RAT_DIV_MULMINV]);
+
+val RAT_MINV_RATND = Q.store_thm(
+  "RAT_MINV_RATND",
+  ‘r <> 0 ==> (rat_minv r = (RAT_SGN r * &RATD r) / rat_of_int (ABS (RATN r)))’,
+  assume_tac (SYM RATN_DIV_RATD) >> map_every qabbrev_tac [‘n = RATN r’, ‘d = RATD r’] >>
+  first_x_assum SUBST1_TAC >> ‘0 < d’ by simp[Abbr‘d’] >> simp[RAT_DIV_EQ0] >>
+  simp[RAT_SGN_NUM_COND] >> Cases_on ‘n’ >>
+  simp[RAT_DIV_MINV, rat_of_int_ainv, RAT_SGN_NUM_COND] >>
+  simp[RAT_DIV_MULMINV, GSYM RAT_AINV_MINV, GSYM RAT_AINV_LMUL, GSYM RAT_AINV_RMUL]);
+
+(* ----------------------------------------------------------------------
+    rational min and max
+   ---------------------------------------------------------------------- *)
+
+val rat_min_def = Define‘rat_min (r1:rat) r2 = if r1 < r2 then r1 else r2’;
+val rat_max_def = Define‘rat_max (r1:rat) r2 = if r1 > r2 then r1 else r2’;
 
 (*==========================================================================
  * end of theory

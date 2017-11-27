@@ -782,11 +782,11 @@ local
             #temporal (get_current_opt ()) = #temporal opt
             then ()
          else ( reset_specs ()
-              ; set_endian ()
               ; the_step := arm_stepLib.arm_step config
               )
          ; stateLib.set_temporal (#temporal opt)
          ; current_config := cfg
+         ; set_endian ()
          ; set_current_opt opt
       end
    fun arm_spec_opt config opt =

@@ -22,6 +22,7 @@ open HolKernel Parse boolLib Prim_rec pairLib numLib
 val AP = numLib.ARITH_PROVE
 val ARITH_ss = numSimps.ARITH_ss
 val arith_ss = bool_ss ++ ARITH_ss
+fun fs thl = FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) thl
 
 fun store_thm(r as(n,t,tac)) = let
   val th = boolLib.store_thm r
@@ -1837,6 +1838,10 @@ val BIJ_ID =
      (“!s. BIJ (\x:'a.x) s s”),
      REWRITE_TAC [BIJ_DEF,INJ_ID,SURJ_ID]);
 
+val BIJ_IMP_11 = Q.store_thm("BIJ_IMP_11",
+  `BIJ f UNIV UNIV ==> !x y. (f x = f y) = (x = y)`,
+  FULL_SIMP_TAC (srw_ss())[BIJ_DEF,INJ_DEF] \\ METIS_TAC []);
+
 val BIJ_EMPTY = store_thm("BIJ_EMPTY",
 (“!f:'a->'b. (!s. BIJ f {} s = (s = {})) /\ (!s. BIJ f s {} = (s = {}))”),
      REWRITE_TAC [BIJ_DEF,INJ_EMPTY,SURJ_EMPTY]);
@@ -3082,6 +3087,20 @@ val SURJ_CARD = Q.store_thm ("SURJ_CARD",
   BasicProvers.VAR_EQ_TAC THENL
   [irule IMAGE_FINITE, irule CARD_IMAGE] THEN
   FIRST_ASSUM ACCEPT_TAC) ;
+
+val FINITE_SURJ = Q.store_thm("FINITE_SURJ",
+  `FINITE s /\ SURJ f s t ==> FINITE t`,
+  SRW_TAC[][] THEN IMP_RES_TAC SURJ_INJ_INV THEN IMP_RES_TAC FINITE_INJ);
+
+val FINITE_SURJ_BIJ = Q.store_thm("FINITE_SURJ_BIJ",
+  `FINITE s /\ SURJ f s t /\ (CARD t = CARD s) ==> BIJ f s t`,
+  SRW_TAC[][BIJ_DEF,INJ_DEF] >- fs[SURJ_DEF]
+  \\ CCONTR_TAC
+  \\ `SURJ f (s DELETE x) t` by (fs[SURJ_DEF] \\ METIS_TAC[])
+  \\ `FINITE (s DELETE x)` by METIS_TAC[FINITE_DELETE]
+  \\ IMP_RES_TAC SURJ_CARD
+  \\ REV_FULL_SIMP_TAC (srw_ss()) [CARD_DELETE]
+  \\ Cases_on`CARD s` \\ REV_FULL_SIMP_TAC (srw_ss())[CARD_EQ_0] >> fs[]);
 
 val FINITE_COMPLETE_INDUCTION = Q.store_thm(
   "FINITE_COMPLETE_INDUCTION",

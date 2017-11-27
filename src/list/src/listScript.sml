@@ -276,12 +276,29 @@ val EL = new_recursive_definition
 
 val MAP2_DEF = dDefine`
   (MAP2 f (h1::t1) (h2::t2) = f h1 h2::MAP2 f t1 t2) /\
-  (MAP2 f x y = [])`
+  (MAP2 f x y = [])`;
+val _ = export_rewrites ["MAP2_DEF"]
 
 val MAP2 = store_thm ("MAP2",
 ``(!f. MAP2 f [] [] = []) /\
   (!f h1 t1 h2 t2. MAP2 f (h1::t1) (h2::t2) = f h1 h2::MAP2 f t1 t2)``,
 METIS_TAC[MAP2_DEF]);
+
+val MAP2_NIL = Q.store_thm(
+  "MAP2_NIL[simp]",
+  `MAP2 f x [] = []`,
+  Cases_on `x` >> simp[])
+
+val LENGTH_MAP2 = Q.store_thm ("LENGTH_MAP2[simp]",
+  `!xs ys. LENGTH (MAP2 f xs ys) = MIN (LENGTH xs) (LENGTH ys)`,
+  Induct \\ rw [] \\ Cases_on `ys` \\ fs [arithmeticTheory.MIN_DEF, MAP2_DEF]
+  \\ SRW_TAC[][]);
+
+val EL_MAP2 = Q.store_thm("EL_MAP2",
+  `!ts tt n.
+    n < MIN (LENGTH ts) (LENGTH tt) ==>
+      (EL n (MAP2 f ts tt) = f (EL n ts) (EL n tt))`,
+  Induct \\ rw [] \\ Cases_on `tt` \\ Cases_on `n` \\ fs [EL]);
 
 (* Some searches *)
 
@@ -1108,7 +1125,7 @@ val _ = IndDefLib.export_mono "LIST_REL_mono"
 
 val LIST_REL_NIL = store_thm(
   "LIST_REL_NIL",
-  ``(LIST_REL R [] x <=> (x = [])) /\ (LIST_REL R [] y <=> (y = []))``,
+  ``(LIST_REL R [] y <=> (y = [])) /\ (LIST_REL R x [] <=> (x = []))``,
   Cases_on `x` THEN Cases_on `y` THEN SRW_TAC [] []);
 val _ = export_rewrites ["LIST_REL_NIL"]
 
@@ -1143,6 +1160,20 @@ val LIST_REL_LENGTH = store_thm(
   "LIST_REL_LENGTH",
   ``!x y. LIST_REL R x y ==> (LENGTH x = LENGTH y)``,
   Induct_on `LIST_REL` THEN SRW_TAC [] [LENGTH]);
+
+val LIST_REL_SPLIT1 = Q.store_thm("LIST_REL_SPLIT1",
+  ‘!xs1 zs.
+      LIST_REL P (xs1 ++ xs2) zs <=>
+      ?ys1 ys2. (zs = ys1 ++ ys2) /\ LIST_REL P xs1 ys1 /\ LIST_REL P xs2 ys2’,
+  Induct >> fs[APPEND] >> Cases_on `zs` >> fs[] >> rpt strip_tac >>
+  simp[LIST_REL_CONS1, PULL_EXISTS] >> metis_tac[]);
+
+val LIST_REL_SPLIT2 = Q.store_thm("LIST_REL_SPLIT2",
+  ‘!xs1 zs.
+      LIST_REL P zs (xs1 ++ xs2) <=>
+      ?ys1 ys2. (zs = ys1 ++ ys2) /\ LIST_REL P ys1 xs1 /\ LIST_REL P ys2 xs2’,
+  Induct >> fs[APPEND] >> Cases_on `zs` >> fs[] >> rpt strip_tac >>
+  simp[LIST_REL_CONS2, PULL_EXISTS] >> metis_tac[]);
 
 (* example of LIST_REL in action :
 val (rules,ind,cases) = IndDefLib.Hol_reln`
@@ -3750,6 +3781,65 @@ val TAKE_compute =
 
 val DROP_compute =
    Theory.save_thm("DROP_compute", numLib.SUC_RULE DROP_compute);
+
+(* ----------------------------------------------------------------------
+    versions of constants with option outputs rather than unspecified
+
+      oHD : 'a list -> 'a option
+      oEL : num -> 'a list -> 'a option
+
+   ---------------------------------------------------------------------- *)
+
+val oHD_def = Define`oHD l = case l of [] => NONE | h::_ => SOME h`
+val oHD_thm = Q.store_thm("oHD_thm[simp]",
+  `(oHD [] = NONE) /\ (oHD (h::t) = SOME h)`,
+  rw[oHD_def]);
+
+val oEL_def = Define`
+  (oEL n [] = NONE) /\
+  (oEL n (x::xs) = if n = 0 then SOME x else oEL (n - 1) xs)
+`;
+
+val oEL_THM = Q.store_thm(
+  "oEL_THM",
+  `!xs n. oEL n xs = if n < LENGTH xs then SOME (EL n xs) else NONE`,
+  Induct >> fs[oEL_def] >> rw[] >> fs[]
+  >- (Q.RENAME_TAC [‘n < SUC (LENGTH xs)’] >> Cases_on ‘n’ >> fs[]) >>
+  rw[] >> ASSUME_TAC (numLib.DECIDE “!x. 1 + x = SUC x”) >>
+  fs[arithmeticTheory.NOT_ZERO_LT_ZERO] >>
+  METIS_TAC[ONE, arithmeticTheory.LESS_LESS_SUC]);
+
+val oEL_EQ_EL = Q.store_thm(
+  "oEL_EQ_EL",
+  ‘!xs n y. (oEL n xs = SOME y) <=> n < LENGTH xs /\ (y = EL n xs)’,
+  simp[oEL_THM] >> METIS_TAC[]);
+
+val oEL_DROP = Q.store_thm(
+  "oEL_DROP",
+  ‘oEL n (DROP m xs) = oEL (m + n) xs’,
+  MAP_EVERY Q.ID_SPEC_TAC [‘n’, ‘m’, ‘xs’] >> Induct_on ‘xs’ >>
+  simp[DROP_def, oEL_def] >> rw[oEL_def] >> fs[] >>
+  Q.RENAME_TAC [‘m - 1 + n’] >>
+  ‘m - 1 + n = m + n - 1’ suffices_by simp[] >>
+  Q.UNDISCH_THEN ‘m <> 0’ MP_TAC >> numLib.ARITH_TAC);
+
+val oEL_TAKE_E = Q.store_thm(
+  "oEL_TAKE_E",
+  ‘(oEL n (TAKE m xs) = SOME x) ==> (oEL n xs = SOME x)’,
+  MAP_EVERY Q.ID_SPEC_TAC [‘n’, ‘m’, ‘xs’] >> Induct_on ‘xs’ >>
+  simp[TAKE_def, oEL_def] >> rw[oEL_def] >> RES_TAC);
+
+val oEL_LUPDATE = Q.store_thm(
+  "oEL_LUPDATE",
+  ‘!xs i n x. oEL n (LUPDATE x i xs) =
+               if i <> n then oEL n xs else
+               if i < LENGTH xs then SOME x else NONE’,
+  Induct >> fs[oEL_def,LUPDATE_def] >>
+  Cases_on ‘i’ >> rw[oEL_def,LUPDATE_def] >> fs[] >> rw[] >>
+  fs[numLib.DECIDE “!x. SUC (x - 1) <> x <=> (x = 0)”,
+     numLib.DECIDE “!x. 1 + x = SUC x”]);
+
+(* ---------------------------------------------------------------------- *)
 
 val _ = app DefnBase.export_cong ["EXISTS_CONG", "EVERY_CONG", "MAP_CONG",
                                   "MAP2_CONG", "EVERY2_cong", "FOLDL2_cong",
