@@ -2419,7 +2419,7 @@ val FOLDL2_FUPDATE_LIST = store_thm(
   (FOLDL2 (\fm b c. fm |+ (f1 b c, f2 b c)) a bs cs =
    a |++ ZIP (MAP2 f1 bs cs, MAP2 f2 bs cs))``,
 SRW_TAC[][FUPDATE_LIST,FOLDL2_FOLDL,MAP2_MAP,ZIP_MAP,MAP_ZIP,
-          rich_listTheory.FOLDL_MAP,rich_listTheory.LENGTH_MAP2,
+          rich_listTheory.FOLDL_MAP,listTheory.LENGTH_MAP2,
           LENGTH_ZIP,pairTheory.LAMBDA_PROD])
 
 val FOLDL2_FUPDATE_LIST_paired = store_thm(
