@@ -1,6 +1,6 @@
 .HOLMK
 .hollogs
-src/num/termination/heap
+src/num/termination/numheap
 
 bin/hol.state0
 bin/hol.state

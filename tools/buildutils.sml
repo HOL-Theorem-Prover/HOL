@@ -812,50 +812,32 @@ fun cleanDirP P d =
 
 
 
-val delete_heaps = let
-  fun fpH s = fullPath ([HOLDIR] @ s)
-  fun cleanHolSat () =
+fun delete_heaps() = let
+  val deletes = let
+    val istrm = TextIO.openIn
+                  (fullPath[HOLDIR, "tools-poly", "rebuild-excludes.txt"])
+    fun chop s = String.substring(s, 0, String.size s - 1)
+    fun recurse acc =
+      case TextIO.inputLine istrm of
+          NONE => (TextIO.closeIn istrm ; acc)
+        | SOME s => recurse (chop s::acc)
+  in
+    recurse []
+  end
+  (* Holmake --relocbuild has already happened in all directories, so can
+     skip the implicit need to recurse into all directories and remove the
+     .HOLMK and .hollogs directories. *)
+  val cd = OS.FileSys.getDir()
+  val _ = OS.FileSys.chDir HOLDIR
+  fun process_dline s =
     let
-      val msd = fpH ["src", "HolSat", "sat_solvers", "minisat"]
-      val zd = fpH ["src", "HolSat", "sat_solvers", "zc2hs"]
+      val fs = internal_functions.wildcard s
     in
-      cleanDirP (String.isSuffix ".o") msd;
-      safedelete (fullPath [msd, "minisat"]);
-      cleanDirP (String.isSuffix ".o") zd;
-      safedelete (fullPath [zd, "zc2hs"])
+      List.app safedelete fs
     end
-  fun cleanBin() =
-    let
-      val d = fpH ["bin"]
-    in
-      List.app (fn s => safedelete (fullPath [d,s])) [
-        "build",
-        "buildheap",
-        "heapname",
-        "hol.state",
-        "hol.state0",
-        "holdeptool.exe",
-        "mkmunge.exe",
-        "unquote"
-      ]
-    end
-  fun ocamljunk s =
-    String.isSuffix ".cmi" s orelse String.isSuffix ".cmx" s orelse
-    String.isSuffix ".o" s
 in
-  if Systeml.ML_SYSNAME = "poly" then
-    fn () =>
-       (safedelete (fpH ["tools", "Holmake", "Systeml.sml"]);
-        safedelete (fpH ["tools", "mlyacc", "src", "mlyacc.exe"]);
-        safedelete (fpH ["tools", "mllex", "mllexe.exe"]);
-        cleanBin();
-        cleanHolSat();
-        cleanDirP (String.isSuffix ".exe") (fpH ["help", "src-sml"]);
-        List.app (fn s => cleanDirP ocamljunk
-                                    (fpH (["src", "holyhammer", "hh"] @ s)))
-                 [[], ["hh1"]]
-       )
-    else fn () => ()
+  List.app process_dline deletes ;
+  OS.FileSys.chDir cd
 end
 
 fun process_cline () =
