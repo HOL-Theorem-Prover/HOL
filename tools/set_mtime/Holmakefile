@@ -1,0 +1,13 @@
+ifdef POLY
+
+set_mtime.exe: set_mtime.sml
+	$(POLYC) -o $@ $<
+
+else
+
+set_mtime.exe: set_mtime.sml mosmlmtime.sml
+	$(MOSMLC) -o $@ $<
+
+endif
+
+EXTRA_CLEANS = set_mtime.exe

@@ -26,5 +26,6 @@ src/holyhammer/hh/hh1/*.o
 tools/Holmake/Systeml.sml
 tools/mlyacc/src/mlyacc.exe
 tools/mllex/mllex.exe
+tools/set_mtime/set_mtime.exe
 
 help/src-sml/*.exe
