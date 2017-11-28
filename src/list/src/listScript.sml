@@ -2923,35 +2923,17 @@ val splitAtPki_EQN = store_thm(
     (ASM_SIMP_TAC (srw_ss()) [] THEN
      `(OLEAST i. i < SUC (LENGTH l) /\ P i (EL i (h::l))) = SOME 0`
         suffices_by SRW_TAC [] [] THEN
-     DEEP_INTRO_TAC whileTheory.OLEAST_INTRO THEN SRW_TAC [] [] THEN1
-       (Q.EXISTS_TAC `0` THEN SRW_TAC [] []) THEN
-     `~(0 < n)` suffices_by numLib.ARITH_TAC THEN STRIP_TAC THEN RES_TAC THEN
-     FULL_SIMP_TAC (srw_ss()) []) THEN
+     ASM_SIMP_TAC (srw_ss()) [whileTheory.OLEAST_EQ_SOME]) THEN
   SRW_TAC [] [] THEN
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO THEN ASM_SIMP_TAC (srw_ss()) [] THEN
-  CONJ_TAC THENL [
-    STRIP_TAC THEN
-    `(OLEAST i. i < SUC (LENGTH l) /\ P i (EL i (h::l))) = NONE`
+  Cases_on ‘OLEAST i. i < LENGTH l /\ P (SUC i) (EL i l)’ >> fs[]
+  >- (`(OLEAST i. i < SUC (LENGTH l) /\ P i (EL i (h::l))) = NONE`
+        suffices_by (DISCH_THEN SUBST1_TAC THEN SRW_TAC[][]) THEN
+      SRW_TAC[][] >> Q.RENAME_TAC [‘EL i (h::t)’] >> Cases_on ‘i’ >>
+      SRW_TAC[][]) THEN
+  Q.RENAME_TAC [‘h::TAKE i t’] >>
+  ‘(OLEAST i. i < SUC (LENGTH t) /\ P i (EL i (h::t))) = SOME (SUC i)’
       suffices_by SRW_TAC [] [] THEN
-    DEEP_INTRO_TAC whileTheory.OLEAST_INTRO THEN CONJ_TAC
-      THEN1 SRW_TAC [] [] THEN
-    Cases THEN SRW_TAC [] [],
-
-    Q.X_GEN_TAC `i` THEN STRIP_TAC THEN
-    `(OLEAST i. i < SUC (LENGTH l) /\ P i (EL i (h::l))) = SOME (SUC i)`
-      suffices_by SRW_TAC [] [] THEN
-    DEEP_INTRO_TAC whileTheory.OLEAST_INTRO THEN CONJ_TAC THEN1
-      (DISCH_THEN (Q.SPEC_THEN `SUC i` MP_TAC) THEN SRW_TAC [] []) THEN
-    Q.X_GEN_TAC `j` THEN SRW_TAC [] [] THEN
-    `~(j < SUC i) /\ ~(SUC i < j)` suffices_by numLib.ARITH_TAC THEN
-    REPEAT STRIP_TAC THENL [
-      Cases_on `j` THEN1 FULL_SIMP_TAC (srw_ss()) [] THEN
-      FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC [],
-      POP_ASSUM
-        (fn si_lt_j => FIRST_X_ASSUM (MP_TAC o C MATCH_MP si_lt_j)) THEN
-      SRW_TAC [] []
-    ]
-  ]);
+  fs[whileTheory.OLEAST_EQ_SOME] >> Cases >> SRW_TAC[][]);
 
 val TAKE_LENGTH_TOO_LONG = store_thm(
   "TAKE_LENGTH_TOO_LONG",
