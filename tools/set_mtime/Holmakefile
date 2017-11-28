@@ -1,7 +1,15 @@
+
 ifdef POLY
 
+ifdef RELOCBUILD
+FIXUP = ./set_mtime.exe set_mtime.exe set_mtime.sml
+else
+FIXUP = :
+endif
+
+
 set_mtime.exe: set_mtime.sml
-	$(POLYC) -o $@ $<
+	$(POLYC) -o $@ $< && $(FIXUP)
 
 else
 
