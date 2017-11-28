@@ -303,18 +303,21 @@ val REDUCE_TRANS_CORRECT = store_thm
 *)
 
 val removeStatesSimpl_def = Define`
-removeStatesSimpl (ALTER_A s i f a t) =
-            (ALTER_A
-                 (s ∩ reachRelFromSet (ALTER_A s i f a t) (BIGUNION i))
-                 i
-                 (f ∩ reachRelFromSet (ALTER_A s i f a t) (BIGUNION i))
-                 a t)`;
+   removeStatesSimpl (ALTER_A s i f a t) =
+     (ALTER_A
+      (s ∩ reachRelFromSet (ALTER_A s i f a t) (BIGUNION i))
+      i
+      (f ∩ reachRelFromSet (ALTER_A s i f a t) (BIGUNION i))
+      a
+      λq. if q ∈ (s ∩ reachRelFromSet (ALTER_A s i f a t) (BIGUNION i))
+          then t q
+          else {})`;
 
 val REACHREL_LEMM = store_thm
-                        ("REACHREL_LEMM",
-``!x f qs. (x ∈ reachRelFromSet (ltl2waa f) qs) ∧ (qs ⊆ tempSubForms f)
-                        ==> (x ∈ tempSubForms f)``,
-simp[reachRelFromSet_def,reachRel_def]
+  ("REACHREL_LEMM",
+   ``!x f qs. (x ∈ reachRelFromSet (ltl2waa f) qs) ∧ (qs ⊆ tempSubForms f)
+            ==> (x ∈ tempSubForms f)``,
+    simp[reachRelFromSet_def,reachRel_def]
     >> `!f x y. (oneStep (ltl2waa f))^* x y
                         ==> (!qs. x ∈ qs ∧ (qs ⊆ tempSubForms f)
                                   ==> y ∈ tempSubForms f)` suffices_by metis_tac[]
@@ -325,14 +328,18 @@ simp[reachRelFromSet_def,reachRel_def]
                       >> `(x',x) ∈ TSF` by metis_tac[TRANS_REACHES_SUBFORMS]
                       >> metis_tac[TSF_def,TSF_TRANS_LEMM,transitive_def,IN_DEF]
        )
-                        );
+  );
 
 val REDUCE_STATE_CORRECT = store_thm
   ("REDUCE_STATE_CORRECT",
    ``!aut. alterA_lang aut = alterA_lang (removeStatesSimpl aut)``,
    rw[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> fs[alterA_lang_def]
      >- (qexists_tac `run` >> fs[runForAA_def] >> rpt strip_tac
-          >- (simp[validAARunFor_def] >> rpt strip_tac
+          >- (simp[validAARunFor_def]
+              >> Q.HO_MATCH_ABBREV_TAC `B1 ∧ B2 ∧ B3 ∧ B4 ∧ B5`
+              >> `B1 ∧ B2 ∧ (B2 ==> (B3 ∧ B4 ∧ B5))` suffices_by metis_tac[]
+              >> rpt strip_tac >> qunabbrev_tac `B1` >> qunabbrev_tac `B2`
+              >> qunabbrev_tac `B3` >> qunabbrev_tac `B4` >> qunabbrev_tac `B5`
              >- (Cases_on `aut` >> fs[validAARunFor_def, removeStatesSimpl_def])
              >- ((* Cases_on `aut` >> fs[validAARunFor_def, removeStatesSimpl_def] *)
                  `!n. run.V n ⊆ reachRelFromSet aut (BIGUNION aut.initial)`
@@ -363,7 +370,12 @@ val REDUCE_STATE_CORRECT = store_thm
                   >> Cases_on `aut`
                   >> fs[validAARunFor_def,removeStatesSimpl_def]
                 )
-             >- (Cases_on `aut` >> fs[validAARunFor_def, removeStatesSimpl_def])
+             >- (Cases_on `aut` >> fs[validAARunFor_def, removeStatesSimpl_def]
+                 >> rpt strip_tac
+                 >> `q ∈ f
+                   ∧ q ∈ reachRelFromSet (ALTER_A f f0 f1 f2 f3) (BIGUNION f0)`
+                     by metis_tac[SUBSET_DEF] >> fs[]
+                )
              >- (Cases_on `aut` >> fs[validAARunFor_def, removeStatesSimpl_def])
              >- (Cases_on `aut` >> fs[validAARunFor_def, removeStatesSimpl_def])
              )
@@ -380,7 +392,8 @@ val REDUCE_STATE_CORRECT = store_thm
      >- (qexists_tac `run` >> fs[runForAA_def] >> rpt strip_tac
          >- (simp[validAARunFor_def] >> rpt strip_tac
              >> Cases_on `aut`
-             >> fs[validAARunFor_def, removeStatesSimpl_def])
+             >> fs[validAARunFor_def, removeStatesSimpl_def]
+             >> metis_tac[SUBSET_DEF])
          >- (Cases_on `aut` >> fs[acceptingAARun_def,removeStatesSimpl_def]
              >> rpt strip_tac
              >> `∀i. b i ∈ run.V i` by metis_tac[BRANCH_V_LEMM]

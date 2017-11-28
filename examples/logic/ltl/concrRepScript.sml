@@ -108,11 +108,24 @@ val GRAPH_STATES_WITH_ID_LEMM = store_thm
    >> qexists_tac `(id,q)` >> fs[]
   );
 
+val GRAPHSTATES_WITH_ID_EMPTY = store_thm
+  ("GRAPHSTATES_WITH_ID_EMPTY",
+   ``graphStatesWithId empty = []``,
+   simp[graphStatesWithId_def,toAList_def,empty_def,foldi_def]
+  );
+
 val unique_node_formula_def = Define`
   unique_node_formula g =
    ∀id h.
     MEM (id,h) (graphStatesWithId g) ⇒
      ∀oId. MEM (oId,h) (graphStatesWithId g) ⇒ (id = oId)`;
+
+val UNIQUE_NODE_FORM_EMPTY = store_thm
+  ("UNIQUE_NODE_FORM_EMPTY",
+   ``unique_node_formula empty``,
+   fs[unique_node_formula_def] >> rpt strip_tac
+   >> fs[GRAPHSTATES_WITH_ID_EMPTY]
+  );
 
 val UNIQUE_NODE_FORM_LEMM = store_thm
   ("UNIQUE_NODE_FORM_LEMM",
@@ -384,6 +397,17 @@ val empty_followers_def = Define`
                ==> (lookup id g.followers = SOME []
                   ∧ node.true_labels = [])`;
 
+val EMPTY_FLWS_GRAPHSTATES = store_thm
+  ("EMPTY_FLWS_GRAPHSTATES",
+   ``!g x. ~(MEM x (graphStates g)) ==> empty_followers g x``,
+   rpt strip_tac >> fs[graphStates_def,empty_followers_def] >> rpt strip_tac
+   >> fs[MEM_MAP]
+   >> `MEM (id,node) (toAList g.nodeInfo)`
+      by metis_tac[MEM_toAList]
+   >>  `(SND (id,node)).frml = x` by fs[]
+   >> metis_tac[]
+  );
+
 val EMPTY_FLWS_LEMM = store_thm
   ("EMPTY_FLWS_LEMM",
    ``!f g. empty_followers g f ==> extractTrans g f = {}``,
@@ -427,6 +451,13 @@ val first_flw_has_max_counter_def = Define`
                ==> (!y. MEM y fls
                         ==> ((FST y).edge_grp <= (FST fl).edge_grp)))`;
 
+val FIRST_FLW_EMPTY = store_thm
+  ("FIRST_FLW_EMPTY",
+   ``first_flw_has_max_counter empty``,
+   fs[first_flw_has_max_counter_def] >> rpt strip_tac
+   >> fs[empty_def,domain_def,foldi_def]
+  );
+
 val FIRST_FLW_LEMM = store_thm
   ("FIRST_FLW_LEMM",
    ``!g g2. (g.followers = g2.followers)
@@ -436,7 +467,6 @@ val FIRST_FLW_LEMM = store_thm
    simp[first_flw_has_max_counter_def,EQ_IMP_THM] >> rpt strip_tac
    >> metis_tac[]
   );
-
 
 val ADDFRML_WFG = store_thm
   ("ADDFRML_WFG",
@@ -471,8 +501,11 @@ val ADDFRML_LEMM2 = store_thm
    ``!g f. wfg g ==>
       (set (graphStates (addFrmlToGraph g f)) = set (graphStates g) ∪ {f}
     ∧ (!id. IS_SOME (lookup id g.nodeInfo)
-            ==> (lookup id g.nodeInfo
-                 = lookup id (addFrmlToGraph g f).nodeInfo))
+            ==> ((lookup id g.nodeInfo
+                 = lookup id (addFrmlToGraph g f).nodeInfo)
+               ∧ (lookup id g.followers
+                  = lookup id (addFrmlToGraph g f).followers))
+      )
     ∧ (until_iff_final g ==> until_iff_final (addFrmlToGraph g f)))``,
    simp[SET_EQ_SUBSET] >> rpt strip_tac
     >- (simp[SUBSET_DEF,UNION_DEF] >> rpt strip_tac
@@ -514,6 +547,15 @@ val ADDFRML_LEMM2 = store_thm
         >> simp[addNode_def,lookup_insert] >> fs[wfg_def]
         >> `~ (id = g.next)` by (
              first_x_assum (qspec_then `id` mp_tac) >> simp[]
+         )
+        >> fs[]
+       )
+    >- (Cases_on `f` >> simp[addFrmlToGraph_def] >> rw[]
+        >> `?node. lookup id g.nodeInfo = SOME node` by fs[IS_SOME_EXISTS]
+        >> `id ∈ domain g.nodeInfo` by fs[domain_lookup]
+        >> simp[addNode_def,lookup_insert] >> fs[wfg_def]
+        >> `~ (id = g.next)` by (
+           first_x_assum (qspec_then `id` mp_tac) >> simp[]
          )
         >> fs[]
        )
@@ -884,9 +926,13 @@ val ADDFRML_FOLDR_LEMM = store_thm
          set (graphStates (FOLDR (\f g. addFrmlToGraph g f) g fs))
          ∧ wfg (FOLDR (\f g. addFrmlToGraph g f) g fs)
          ∧ (!id. IS_SOME (lookup id g.nodeInfo)
-                 ==> (lookup id g.nodeInfo
+                 ==> ((lookup id g.nodeInfo
                       = lookup id
-                          (FOLDR (\f g. addFrmlToGraph g f) g fs).nodeInfo))
+                          (FOLDR (\f g. addFrmlToGraph g f) g fs).nodeInfo)
+                    ∧ (lookup id g.followers
+                      = lookup id
+                          (FOLDR (\f g. addFrmlToGraph g f) g fs).followers))
+           )
          ∧ (until_iff_final g
              ==> until_iff_final (FOLDR (\f g. addFrmlToGraph g f) g fs))
          ∧ (unique_node_formula g
@@ -913,6 +959,7 @@ val ADDFRML_FOLDR_LEMM = store_thm
      >- metis_tac[ADDFRML_WFG]
      >- metis_tac[ADDFRML_LEMM2]
      >- metis_tac[ADDFRML_LEMM2]
+     >- metis_tac[ADDFRML_LEMM2]
      >- metis_tac[ADDFRML_UNIQUENODE_LEMM]
      >- metis_tac[ADDFRML_FLW_LEMM]
      >- metis_tac[ADDFRML_EXTRTRANS_LEMM]
@@ -921,12 +968,20 @@ val ADDFRML_FOLDR_LEMM = store_thm
 val ADDFRML_EMPTYFLW_LEMM = store_thm
   ("ADDFRML_EMPTYFLW_LEMM",
    ``!(g:(α nodeLabelAA, α edgeLabelAA) gfg) fs f.
-        wfg g ∧ MEM f fs ∧ ~(MEM f (graphStates g))
+        wfg g ∧ MEM f fs
+     ∧ (~MEM f (graphStates g) \/ empty_followers g f)
                ==> empty_followers (FOLDR (\f g. addFrmlToGraph g f) g fs) f``,
-   gen_tac >> Induct_on `fs` >> fs[] >> rpt strip_tac
-   >> `!q f. (MEM q fs \/ MEM q (graphStates g)) ==>
+   `!(g:(α nodeLabelAA, α edgeLabelAA) gfg) fs f.
+          wfg g ∧ MEM f fs
+        ∧ (~MEM f (graphStates g)
+           \/ (empty_followers g f ∧ MEM f (graphStates g)))
+            ==> empty_followers (FOLDR (\f g. addFrmlToGraph g f) g fs) f`
+   suffices_by metis_tac[]
+   >> gen_tac >> Induct_on `fs` >> fs[] >> strip_tac >> strip_tac
+   >> `!q f. wfg g ==>
+             ((MEM q fs \/ MEM q (graphStates g)) ==>
                addFrmlToGraph (FOLDR (λf g. addFrmlToGraph g f) g fs) q =
-                 FOLDR (λf g. addFrmlToGraph g f) g fs` by (
+                 FOLDR (λf g. addFrmlToGraph g f) g fs)` by (
        rpt strip_tac
        >> `MEM q (graphStates (FOLDR (λf g. addFrmlToGraph g f) g fs))` by (
              `(set (graphStates g)) ∪ (set fs) =
@@ -940,6 +995,33 @@ val ADDFRML_EMPTYFLW_LEMM = store_thm
        )
        >> Cases_on `q` >> simp[addFrmlToGraph_def] >> rw[]
    )
+   >> `!ks q i n.
+       (~MEM q ks)
+    ∧ (lookup i (FOLDR (λf g. addFrmlToGraph g f) g ks).nodeInfo
+          = SOME n ∧ (n.frml = q))
+       ==> (lookup i g.nodeInfo = SOME n)
+         ∧ (lookup i g.followers =
+             lookup i (FOLDR (λf g. addFrmlToGraph g f) g ks).followers)`
+       by (
+      Induct_on `ks` >> fs[] >> rpt gen_tac >> strip_tac
+      >> qabbrev_tac `G_K = (FOLDR (λf g. addFrmlToGraph g f) g ks)`
+      >> Cases_on
+          `MEM h (MAP ((λl. l.frml) ∘ SND)
+                              (toAList G_K.nodeInfo))`
+       >- (Cases_on `h` >> fs[addFrmlToGraph_def])
+       >- (`~(i = G_K.next)` by (
+             CCONTR_TAC >> Cases_on `h`
+             >> fs[addFrmlToGraph_def,addNode_def,gfg_component_equality]
+             >> rw[]
+             >> fs[theorem "nodeLabelAA_component_equality"] >> metis_tac[lookup_insert]
+           )
+           >> Cases_on `h`
+           >> fs[addFrmlToGraph_def,addNode_def,gfg_component_equality]
+           >> rw[] >> fs[theorem "nodeLabelAA_component_equality"]
+           >> metis_tac[lookup_insert]
+          )
+   )
+   >> Cases_on `h=f` >> fs[]
    >- (rw[] >> Cases_on `MEM f fs`
     >- metis_tac[]
     >- (simp[empty_followers_def] >> rpt strip_tac
@@ -976,12 +1058,21 @@ val ADDFRML_EMPTYFLW_LEMM = store_thm
         >> fs[gfg_component_equality]
         >> fs[theorem "nodeLabelAA_component_equality"]
        )
+    >- metis_tac[]
+    >- (fs[empty_followers_def] >> rpt gen_tac >> strip_tac
+        >> qabbrev_tac `G0 = FOLDR (λf g. addFrmlToGraph g f) g fs`
+        >> `(set (graphStates g)) ∪ (set fs) =
+               set (graphStates (G0))`
+           by metis_tac[ADDFRML_FOLDR_LEMM]
+        >> metis_tac[]
+       )
       )
    >- (Cases_on `MEM h fs`
     >- metis_tac[]
     >- (Cases_on `MEM h (graphStates g)`
       >- metis_tac[]
-      >- (simp[empty_followers_def] >> rpt strip_tac
+      >- (Cases_on `MEM f (graphStates g)`
+        >> (simp[empty_followers_def] >> rpt strip_tac
         >> qabbrev_tac `G0 = FOLDR (λf g. addFrmlToGraph g f) g fs`
         >> `(set (graphStates g)) ∪ (set fs) =
              set (graphStates (G0))`
@@ -1000,10 +1091,11 @@ val ADDFRML_EMPTYFLW_LEMM = store_thm
         >- (`node.frml = h` by (
               Cases_on `h` >> fs[addFrmlToGraph_def,addNode_def]
               >> fs[gfg_component_equality] >> rw[]
+              >> fs[theorem "nodeLabelAA_component_equality"]
            )
            >> rw[] >> metis_tac[]
            )
-        >- (`empty_followers G0 f` by metis_tac[]
+        >- (`empty_followers G0 f` by metis_tac[empty_followers_def]
             >> `lookup id G0.followers =
                  lookup id (addFrmlToGraph G0 h).followers` by (
                Cases_on `h` >> fs[addFrmlToGraph_def,addNode_def]
@@ -1026,9 +1118,10 @@ val ADDFRML_EMPTYFLW_LEMM = store_thm
               >> fs[gfg_component_equality] >> rw[]
               >> metis_tac[lookup_insert]
            )
-           >> `empty_followers G0 f` by metis_tac[]
+           >> `empty_followers G0 f` by metis_tac[empty_followers_def]
            >> POP_ASSUM mp_tac >> PURE_REWRITE_TAC[empty_followers_def]
            >> rpt strip_tac >> metis_tac[]
+           )
            )
          )
        )
@@ -1245,6 +1338,13 @@ val ADDEDGE_FINAL_LEMM = store_thm
        >> metis_tac[]
       )
   );
+
+(* val ADDEDGE_FLWS_LEMM = store_thm *)
+(*   ("ADDEDGE_FLWS_LEMM", *)
+(*    !g g2 f e. (wfg g ∧ (addEdgeToGraph f e g = SOME g2)) *)
+(*       ==> (!q. ~(q = f) *)
+(*                ==> !id node. lookup id ) *)
+(* ) *)
 
 
 val ADDEDGE_LEMM = store_thm

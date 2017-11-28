@@ -262,6 +262,34 @@ val D_CONJ_SET_LEMM2 = store_thm
   rpt strip_tac >> metis_tac[D_CONJ_SET_LEMM]
   );
 
+val DUP_def = Define`
+   (DUP [] = [])
+ ∧ (DUP (h::t) = if MEM h t then DUP t else h::(DUP t))`;
+
+val DUP_SAME_MEMBERS = store_thm
+  ("DUP_SAME_MEMBERS",
+   ``!l h. MEM h (DUP l) = MEM h l``,
+   Induct_on `l` >> fs[DUP_def] >> rpt strip_tac
+   >> Cases_on `MEM h l` >> fs[] >> simp[EQ_IMP_THM]
+   >> metis_tac[]
+  );
+
+val DUP_ALL_DISTINCT = store_thm
+  ("DUP_ALL_DISTINCT",
+   ``!l. ALL_DISTINCT (DUP l)``,
+   Induct_on `l` >> fs[DUP_def,ALL_DISTINCT] >> rpt strip_tac
+   >> Cases_on `MEM h l` >> simp[]
+   >> metis_tac[DUP_SAME_MEMBERS]
+  );
+
+(* val ALL_DISTINCT_FILTER_LEMM = store_thm *) (*--> FILTER_ALL_DISTINCT*)
+(*   ("ALL_DISTINCT_FILTER_LEMM", *)
+(*    ``!P ls. ALL_DISTINCT ls ==> ALL_DISTINCT (FILTER P ls)``, *)
+(*    gen_tac >> Induct_on `ls` >> fs[] >> rpt strip_tac *)
+(*    >> fs[] >> Cases_on `P h` >> fs[] *)
+(*    >> metis_tac[MEM_FILTER] *)
+(*   ); *)
+
 val CAT_OPTIONS_def = Define`
    (CAT_OPTIONS [] = [])
  ∧ (CAT_OPTIONS (SOME v::ls) = v::(CAT_OPTIONS ls))
