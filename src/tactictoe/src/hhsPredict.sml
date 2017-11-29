@@ -119,7 +119,7 @@ fun premcknn symweight radius feal fea =
 
 fun mcknn symweight radius feal fea =
   let
-    fun ispos n (b,m) = b andalso n = m
+    fun ispos n (b,m) = b andalso m = n
     fun isneg n (b,m) = not b andalso m >= n
     val bnl = map fst (first_n radius (pre_knn symweight feal fea))
     val nl = mk_fast_set Int.compare (map snd bnl)
@@ -129,9 +129,8 @@ fun mcknn symweight radius feal fea =
       let 
         val pos = Real.fromInt (posf n)
         val neg = Real.fromInt (negf n)
-        val penalty = Real.fromInt n
       in
-        pos / ((neg + pos) * n)
+        pos / ((neg + pos) * (Real.fromInt n))
       end
   in   
     list_rmax (map skewed_proba nl)

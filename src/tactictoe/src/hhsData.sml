@@ -356,11 +356,9 @@ fun export_mc cthy =
   let 
     val file = hhs_mc_dir ^ "/" ^ cthy
     val l = dlist (!hhs_mcdict_cthy) 
-    fun f (g,(b,n)) =
+    fun f (fea,(b,n)) =
       String.concatWith " " 
-        (int_to_string n ::
-        if b then "T" else "F" :: 
-        int_to_string (fea_of_goal g))
+        (int_to_string n :: (if b then "T" else "F") :: map int_to_string fea)
   in
     writel file (map f l)
   end
@@ -368,7 +366,7 @@ fun export_mc cthy =
 fun read_mc thy =
   let 
     val file = hhs_mc_dir ^ "/" ^ thy
-    val l = readl file handle _ => debug ("read_mc " ^ thy)
+    val l = readl file handle _ => (debug ("read_mc " ^ thy); [])
     fun f s = case String.tokens Char.isSpace s of
         a :: "T" :: m => 
         update_mcdict (map string_to_int m) (true, string_to_int a)
@@ -379,7 +377,7 @@ fun read_mc thy =
     app f l
   end
 
-fun import_mc thyl = app read_mc thy
+fun import_mc thyl = app read_mc thyl
  
  
   

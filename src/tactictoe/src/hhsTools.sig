@@ -19,8 +19,8 @@ sig
   val negmdict_glob : (string, unit) Redblackmap.dict ref
   val dbfetch_of_string : string -> string
   
-  val hhs_mcdict : (int list, bool) Redblackmap.dict ref
-  val hhs_mcdict_cthy : (int list, bool) Redblackmap.dict ref
+  val hhs_mcdict : (int list, (bool * int)) Redblackmap.dict ref
+  val hhs_mcdict_cthy : (int list, (bool * int)) Redblackmap.dict ref
   
   
   val clean_feadata : unit -> unit
@@ -83,6 +83,8 @@ sig
    
   val compare_rmin : (('a * real) * ('a * real)) -> order
   val compare_rmax : (('a * real) * ('a * real)) -> order
+  val list_rmax : real list -> real
+  
   val goal_compare : (goal * goal) -> order
   val strict_term_compare : (term * term) -> order
   val strict_goal_compare : (goal * goal) -> order

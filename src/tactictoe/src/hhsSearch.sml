@@ -745,10 +745,10 @@ fun learngoal_loop pid =
   in
     while !i < Array.length goalarr do
       let 
-        val g  = Array.sub (goalarr,i)
+        val g  = Array.sub (goalarr,!i)
         val fea = fea_of_goal g
-        val cl = !(Array.sub (childrena,i))
-        val b  = List.mem i (map #1 (!proofl))
+        val cl = !(Array.sub (childrena,!i))
+        val b  = mem (!i) (map #1 (!proofl))
         val n  = sum_int (map learngoal_loop cl)
       in
         hhs_mcdict := dadd fea (b,n) (!hhs_mcdict);
@@ -760,7 +760,7 @@ fun learngoal_loop pid =
     !totn  
   end
 
-fun learngoal () = learngoal_loop 0
+fun learngoal () = ignore (learngoal_loop 0)
 
 (* ---------------------------------------------------------------------------
    Main
