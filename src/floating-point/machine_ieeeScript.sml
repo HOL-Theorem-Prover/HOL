@@ -46,7 +46,7 @@ val convert_def = Define`
   let f = to_float w in
   case float_value f of
      Float r => from_real_with_flags m r
-   | NaN => (invalidop_flags, from_float (@fp. float_is_nan fp))
+   | NaN => (check_for_signalling [f], from_float (@fp. float_is_nan fp))
    | Infinity =>
        (clear_flags,
         from_float (if f.Sign = 0w then
