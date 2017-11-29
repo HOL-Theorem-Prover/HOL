@@ -47,6 +47,7 @@ sig
     val fp_top_tm : term
     val int_to_fp_tm : term
     val real_to_fp_tm : term
+    val real_to_fp_with_flags_tm : term
 
     val mk_float_to_fp : term -> term
     val mk_fp_abs : term -> term
@@ -85,6 +86,7 @@ sig
     val mk_fp_to_real : term -> term
     val mk_int_to_fp : term * term -> term
     val mk_real_to_fp : term * term -> term
+    val mk_real_to_fp_with_flags : term * term -> term
 
     val is_float_to_fp : term -> bool
     val is_fp_abs : term -> bool
@@ -122,6 +124,7 @@ sig
     val is_fp_to_real : term -> bool
     val is_int_to_fp : term -> bool
     val is_real_to_fp : term -> bool
+    val is_real_to_fp_with_flags : term -> bool
 
     val dest_float_to_fp : term -> term
     val dest_fp_abs : term -> term
@@ -160,4 +163,5 @@ sig
     val dest_fp_to_real : term -> term
     val dest_int_to_fp : term -> term * term
     val dest_real_to_fp : term -> term * term
+    val dest_real_to_fp_with_flags : term -> term * term
 end
