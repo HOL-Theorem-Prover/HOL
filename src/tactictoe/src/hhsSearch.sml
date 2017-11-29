@@ -32,7 +32,7 @@ val finproofdict = ref (dempty Int.compare)
 
 val thmpredictor_glob = ref (fn g => [])
 val stacpredictor_glob = ref (fn g => [])
-val astarpredictor_glob = ref (fn gl => 0.0)
+val mcpredictor_glob = ref (fn gl => 0.0)
 
 val tacdict_glob = ref (dempty String.compare)
 
@@ -73,7 +73,7 @@ val thmpredict_time = ref 0.0
 val infstep_time = ref 0.0
 val node_create_time = ref 0.0
 val node_find_time = ref 0.0
-val astar_time = ref 0.0
+val mc_time = ref 0.0
 val tot_time = ref 0.0
 
 val stacpred_timer = total_time stacpred_time
@@ -82,7 +82,7 @@ val thmpredict_timer = total_time thmpredict_time
 val infstep_timer = total_time infstep_time
 fun node_create_timer f x = total_time node_create_time f x
 val node_find_timer = total_time node_find_time
-val astar_timer = total_time astar_time
+val mc_timer = total_time mc_time
 fun total_timer f x = total_time tot_time f x
 
 fun reset_timers () =
@@ -93,7 +93,7 @@ fun reset_timers () =
   infstep_time := 0.0;
   node_create_time := 0.0;
   node_find_time := 0.0;
-  astar_time := 0.0;
+  mc_time := 0.0;
   tot_time := 0.0
   )
   
@@ -120,41 +120,14 @@ fun estimate_distance (depth,heuristic) (g,pred) =
    Monte Carlo Tree Search
    -------------------------------------------------------------------------- *)
 
-val explo_coeff = 1.0
-
-fun eval_goal g =
-  let
-    fun ispos n (b,m) = b andalso n = m
-    fun isneg n (b,m) = not b andalso m >= n
-    val bnl = mc_predictor g
-    val nl = mk_fast_set Int.compare (map snd bnl)
-    fun posf n = length (filter (ispos n) bnl)
-    fun negf n = length (filter (isneg n) bnl)
-    fun skewed_proba n = 
-      let 
-        val pos = Real.fromInt (posf n)
-        val neg = Real.fromInt (negf n)
-        val penalty = Real.fromInt n
-      in
-        pos / ((neg + pos) * n)
-      end
-  in   
-    list_rmax (map skewed_proba nl) 
-  end
-
-
-fun eval_emptygoal () = 1.0
-
-
-(* initialization *)
 fun init_eval pripol pid =
   let
     val prec = dfind pid (!proofdict)
     val {visit,pending,goalarr,prioreval,cureval,priorpolicy,...} = prec
     val eval =
       if not (null (!pending)) 
-      then eval_goal (Array.sub (#goalarr prec, hd (!pending)))
-      else eval_emptygoal ()
+      then (!mcpredictor_glob) (Array.sub (#goalarr prec, hd (!pending)))
+      else 1.0 (* 100 percent *)
   in
     priorpolicy := pripol;
     visit := 1.0;
@@ -283,13 +256,12 @@ fun root_create_wrap g =
     (* Predictions *)
     val pred = (!stacpredictor_glob) g
     val cost = 0
-    val heuristic = (!astarpredictor_glob) [g]
     val (_,pred1) = 
       (
       add_accept tacdict_glob o
       add_metis tacdict_glob thmpredictor_glob o 
       stacpred_timer (addpred_stac tacdict_glob thmpredictor_glob) o
-      estimate_distance (cost,heuristic)
+      estimate_distance (cost,0.0)
       ) 
         (g,pred)
   in
@@ -470,7 +442,7 @@ fun mc_node_find pid =
     val n = length (!children) 
     val self_pripol = 1.0 / Math.pow (2.0, Real.fromInt n)
     val self_curpol = 1.0 / pdenom
-    val self_selsc = (pid, explo_coeff * (self_pripol / self_curpol))
+    val self_selsc = (pid, (!hhs_mc_coeff) * (self_pripol / self_curpol))
     (* or explore deeper existing paritial proofs *)
     fun f cid = 
       let 
@@ -480,7 +452,7 @@ fun mc_node_find pid =
         val visit = !(#visit crec)
         val curpol = (visit + 1.0) / pdenom
       in
-        (cid, meaneval + explo_coeff * (pripol / curpol))
+        (cid, meaneval + (!hhs_mc_coeff) * (pripol / curpol))
       end
     (* sort and select node with best selection score *)
     val l0 = self_selsc :: List.map f (!children)
@@ -568,14 +540,12 @@ fun node_create_gl pripol tactime gl pid =
       
     val width = prev_predn - (length prev_predl)
     val cost = depth + width
-    val heuristic = (!astarpredictor_glob) gl
-    
     val predlist0 =
       map (
           add_accept tacdict_glob o
           add_metis tacdict_glob thmpredictor_glob o 
           stacpred_timer (addpred_stac tacdict_glob thmpredictor_glob) o
-          estimate_distance (cost,heuristic) o 
+          estimate_distance (cost,0.0) o 
           add_pred
           ) 
       gl  
@@ -616,7 +586,7 @@ fun node_create_empty pripol tactime pid =
    Search function. Modifies the proof state.
    -------------------------------------------------------------------------- *)
 
-fun init_search thmpredictor stacpredictor astarpredictor tacdict g =
+fun init_search thmpredictor stacpredictor mcpredictor tacdict g =
   (
   (* global time-out *)
   glob_timer := SOME (Timer.startRealTimer ());
@@ -635,7 +605,7 @@ fun init_search thmpredictor stacpredictor astarpredictor tacdict g =
   (* easier access to values *)
   stacpredictor_glob := predict_timer stacpredictor;
   thmpredictor_glob := thmpredict_timer thmpredictor;
-  astarpredictor_glob := astar_timer astarpredictor;
+  mcpredictor_glob := mc_timer mcpredictor;
   tacdict_glob := tacdict;
   (* statistics *)
   reset_timers ();
@@ -727,7 +697,7 @@ fun end_search () =
   debug_proof ("  node_crea time: " ^ Real.toString (!node_create_time));
   debug_proof ("    pred time: " ^ Real.toString (!predict_time));
   debug_proof ("    thmpred time: " ^ Real.toString (!thmpredict_time));
-  debug_proof ("    astar time: " ^ Real.toString (!astar_time));   
+  debug_proof ("    mc time: " ^ Real.toString (!mc_time));   
   debug_proof ("    stacpred time: " ^ Real.toString (!stacpred_time));
   proofdict    := dempty Int.compare;
   finproofdict := dempty Int.compare;
@@ -761,12 +731,11 @@ fun selflearn proof =
   then debug_t "selflearn" selflearn_aux proof
   else ()
 
-fun debug_err s = (debug s; raise ERR "" "")
 
-(* Learn positives and negative goals (rely on proofdict) *)
 
-val glearndict = ref (dempty goal_compare)
-
+(* Learn positives and negative goals (rely on proofdict)
+   and update hhs_mcdict and hhs_mcdict_cthy *)
+   
 fun learngoal_loop pid =
   let 
     val prec = dfind pid (!proofdict) 
@@ -777,17 +746,21 @@ fun learngoal_loop pid =
     while !i < Array.length goalarr do
       let 
         val g  = Array.sub (goalarr,i)
+        val fea = fea_of_goal g
         val cl = !(Array.sub (childrena,i))
         val b  = List.mem i (map #1 (!proofl))
         val n  = sum_int (map learngoal_loop cl)
       in
-        glearndict := dadd g (b,n) (!glearndict);
+        hhs_mcdict := dadd fea (b,n) (!hhs_mcdict);
+        hhs_mcdict_cthy := dadd fea (b,n) (!hhs_mcdict);
         totn := !totn + n;
         incr i
       end
     ;
     !totn  
   end
+
+fun learngoal () = learngoal_loop 0
 
 (* ---------------------------------------------------------------------------
    Main
@@ -798,8 +771,10 @@ fun imperative_search thmpredictor stacpredictor tacdict minstepdict goal =
   init_search thmpredictor stacpredictor tacdict minstepdict goal;
   total_timer (node_create_timer root_create_wrap) goal;
   let
+    fun debug_err s = (debug s; raise ERR "" "")
     val r = total_timer search_loop ()
     val _ = debug_search "End search loop"
+    val _ = if !hhs_mc_flag then learngoal () else ()
     val sproof_status = case r of
       Proof _  =>
       (

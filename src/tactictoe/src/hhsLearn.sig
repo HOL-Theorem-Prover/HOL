@@ -9,9 +9,8 @@ sig
  
   val create_solved : lbl_t list -> (goal, int * int) Redblackmap.dict
   val orthogonalize : lbl_t list -> feav_t -> lbl_t
-  
-  val add_astar : goal list -> bool -> unit
- 
+
+(* success rate of tactics not in used *)
   val succ_cthy_dict : (string,(int * int)) Redblackmap.dict ref
   val succ_glob_dict : (string,(int * int)) Redblackmap.dict ref
   val count_try      : string -> unit

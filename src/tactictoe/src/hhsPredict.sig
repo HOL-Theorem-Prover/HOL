@@ -17,12 +17,12 @@ sig
     (int, real) Redblackmap.dict -> int -> (string * fea_t) list -> fea_t -> 
     (string * real) list   
   
-  val preastarknn : 
-    (int, real) Redblackmap.dict -> int -> (bool * int list) list -> 
-    int list -> (bool * int list) list
+  val premcknn : 
+    (int, real) Redblackmap.dict -> int -> ((bool,int) * int list) list -> 
+    int list -> ((bool,int) * int list) list
 
-  val astarknn : 
-    (int, real) Redblackmap.dict -> int -> (bool * int list) list -> 
+  val mcknn : 
+    (int, real) Redblackmap.dict -> int -> ((bool,int) * int list) list -> 
     int list -> real
   
   val stacknn_ext : int -> feav_t list -> fea_t -> feav_t list

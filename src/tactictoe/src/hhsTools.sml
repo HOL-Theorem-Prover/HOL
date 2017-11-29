@@ -35,8 +35,8 @@ val hhs_predict_dir  = tactictoe_dir ^ "/predict"
 val hhs_record_dir   = tactictoe_dir ^ "/record_log"
 val hhs_open_dir     = tactictoe_dir ^ "/open"
 val hhs_succrate_dir = tactictoe_dir ^ "/succrate"
-val hhs_mdict_dir   = tactictoe_dir ^ "/mdict"
-val hhs_astar_dir   = tactictoe_dir ^ "/astar"
+val hhs_mdict_dir    = tactictoe_dir ^ "/mdict"
+val hhs_mc_dir       = tactictoe_dir ^ "/mc"
 
 fun hide_out f x = 
   hide_in_file (hhs_code_dir ^ "/" ^ current_theory () ^ "_hide_out") f x
@@ -516,8 +516,8 @@ val negmdict_glob = ref (dempty String.compare)
    Astar
    -------------------------------------------------------------------------- *)
 
-val hhs_astar = ref (dempty (list_compare Int.compare))
-val hhs_astar_cthy = ref (dempty (list_compare Int.compare))
+val hhs_mcdict = ref (dempty (list_compare Int.compare))
+val hhs_mcdict_cthy = ref (dempty (list_compare Int.compare))
 
 (* --------------------------------------------------------------------------
    The following structures should 
@@ -533,8 +533,8 @@ fun clean_feadata () =
   hhs_ndict := dempty String.compare;
   mdict_glob := dempty String.compare;
   negmdict_glob := dempty String.compare;
-  hhs_astar := dempty (list_compare Int.compare);
-  hhs_astar_cthy := dempty (list_compare Int.compare)
+  hhs_mcdict := dempty (list_compare Int.compare);
+  hhs_mcdict_cthy := dempty (list_compare Int.compare)
   )
 
 end (* struct *)

@@ -109,24 +109,32 @@ fun thmknn symweight n feal fea_o =
     first_n n l2
   end    
 
-fun astar_average n (tot,d) l = case l of
-    []          => tot / d
-  | b :: m => 
-    if b 
-    then astar_average (n + 1.0) (tot        , d + 1.0/n) m   
-    else astar_average (n + 1.0) (tot + 1.0/n, d + 1.0/n) m
- 
-fun preastarknn symweight n feal fea_o = 
-  map fst (first_n n (pre_knn_fea symweight feal fea_o))
+(* --------------------------------------------------------------------------
+   Goal evaluation for monte carlo tree search.
+   -------------------------------------------------------------------------- *)
 
-fun astarknn symweight n feal fea_o =
-  let 
-    val l1 = pre_knn symweight feal fea_o
-    val l2 = map fst (first_n n l1)
-  in
-    if null l2 
-    then 0.0
-    else (!hhs_astar_coeff) * (astar_average 1.0 (0.0,0.0) l2)
+(* select a neighborhood of each feature vectors *)
+fun premcknn symweight radius feal fea = 
+  map fst (first_n radius (pre_knn_fea symweight feal fea))
+
+fun mcknn symweight radius feal fea =
+  let
+    fun ispos n (b,m) = b andalso n = m
+    fun isneg n (b,m) = not b andalso m >= n
+    val bnl = map fst (first_n radius (pre_knn symweight feal fea))
+    val nl = mk_fast_set Int.compare (map snd bnl)
+    fun posf n = length (filter (ispos n) bnl)
+    fun negf n = length (filter (isneg n) bnl)
+    fun skewed_proba n = 
+      let 
+        val pos = Real.fromInt (posf n)
+        val neg = Real.fromInt (negf n)
+        val penalty = Real.fromInt n
+      in
+        pos / ((neg + pos) * n)
+      end
+  in   
+    list_rmax (map skewed_proba nl)
   end
 
 (* --------------------------------------------------------------------------

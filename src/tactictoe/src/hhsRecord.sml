@@ -318,7 +318,7 @@ fun start_thy cthy =
   (* Features storage *)
   clean_dir cthy hhs_feature_dir;
   clean_dir cthy hhs_mdict_dir;
-  clean_dir cthy hhs_astar_dir;
+  clean_dir cthy hhs_mc_dir;
   (* Tactic scripts recording *)
   clean_subdirl cthy hhs_record_dir ["parse","replay","record"] 
   )
@@ -327,9 +327,7 @@ fun end_thy cthy =
   (
   debug_t "export_feavl" (export_feavl cthy) (!hhs_cthyfea);
   debug_t "export_mdict" export_mdict cthy;
-  if !hhs_astar_flag 
-    then debug_t "export_astar" export_astar cthy
-    else ();
+  if !hhs_mc_flag then debug_t "export_mc" export_mc cthy else ();
   out_record_summary cthy;
   debug_proof ("Bad stac: " ^ (int_to_string (length (!hhs_badstacl))))
   )

@@ -61,8 +61,8 @@ fun import_ancestry () =
     val _ = debug (int_to_string (length stacfea));
     val _ = debug_t "init_mdict" init_mdict ()
     val _ = debug (int_to_string (dlength (!mdict_glob)))
-    val _ = debug_t "import_astar" import_astar thyl
-    val _ = debug (int_to_string (dlength (!hhs_astar)))
+    val _ = debug_t "import_mc" import_mc thyl
+    val _ = debug (int_to_string (dlength (!hhs_mcdict)))
   in
     init_stacfea_ddict stacfea
   end
@@ -170,23 +170,23 @@ fun select_stacfeav goalfea =
     (stacsymweight, stacfeav, tacdict)
   end
 
-fun select_astarfeav stacfeav =
-  if !hhs_astar_flag
+fun select_mcfeav stacfeav =
+  if !hhs_mc_flag
   then
     let
-      val l = map (fea_of_gl o #4 o fst) stacfeav
-      val astarfeav_org = map (fn (a,b) => (b,a)) (dlist (!hhs_astar))
+      val l = map snd stacfeav
+      val mcfeav_org = map (fn (a,b) => (b,a)) (dlist (!hhs_mcdict))
       (* computing tfidf *)
-      val astarsymweight = debug_t "learn_tfidf" learn_tfidf astarfeav_org
-      (* selecting neighbors *)
-      val astarfeav_aux = 
-        List.concat (map (preastarknn astarsymweight (!hhs_astar_radius * 2)
-        astarfeav_org) l)
-      val astarfeav = 
+      val mcsymweight = debug_t "mcsymweight" learn_tfidf mcfeav_org
+      (* selecting neighbors for each goal *)
+      val mcfeav_aux = 
+        List.concat 
+          (map (premcknn mcsymweight (!hhs_mc_preradius) mcfeav_org) l)
+      val mcfeav = 
         mk_fast_set (cpl_compare bool_compare (list_compare Int.compare)) 
-          astarfeav_aux
+          mcfeav_aux
     in
-      (astarsymweight, astarfeav)
+      (mcsymweight, mcfeav)
     end
   else (dempty Int.compare, [])
 
@@ -196,20 +196,20 @@ fun main_tactictoe goal =
     val goalfea = fea_of_goal goal       
     val (stacsymweight, stacfeav, tacdict) = select_stacfeav goalfea
     val (thmsymweight, thmfeav) = select_thmfeav goalfea
-    val (astarsymweight, astarfeav) = 
-      debug_t "select_astarfeav" select_astarfeav stacfeav
+    val (mcsymweight, mcfeav) = 
+      debug_t "select_mcfeav" select_mcfeav stacfeav
     (* fast predictors *)
     fun stacpredictor g =
       stacknn stacsymweight (!hhs_maxselect_pred) stacfeav (fea_of_goal g)
     fun thmpredictor g = 
       map fst (thmknn thmsymweight (!hhs_metis_npred) thmfeav (fea_of_goal g))
-    fun astarpredictor gl =
-      if !hhs_astar_flag 
-      then astarknn astarsymweight (!hhs_astar_radius) astarfeav (fea_of_gl gl)
-      else 0.0
+    fun mcpredictor g =
+      if !hhs_mc_flag 
+      then mcknn mcsymweight (!hhs_mc_radius) mcfeav (fea_of_goal g)
+      else []
   in
     debug_t "Search" 
-      (imperative_search thmpredictor stacpredictor astarpredictor tacdict) goal
+      (imperative_search thmpredictor stacpredictor mcpredictor tacdict) goal
   end
 
 fun tactic_of_status r = case r of

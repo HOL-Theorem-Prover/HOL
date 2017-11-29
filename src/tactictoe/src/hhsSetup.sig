@@ -29,12 +29,12 @@ sig
   
   (* search *)
   val hhs_cache_flag     : bool ref
-  val hhs_astar_flag     : bool ref
-  val hhs_astar_radius   : int ref
-  val hhs_astar_coeff    : real ref
+  val hhs_mc_flag        : bool ref
+  val hhs_mc_radius      : int ref
+  val hhs_mc_preradius   : int ref
+  val hhs_mc_coeff       : real ref
   val hhs_timedepth_flag : bool ref
   val hhs_width_coeff    : real ref
-  val hhs_mc_flag        : bool ref
   
   (* metis + holyhammer + synthetizing *)
   val hhs_metis_flag  : bool ref

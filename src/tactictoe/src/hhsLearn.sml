@@ -48,30 +48,6 @@ fun create_solved lbls =
     !solved
   end
 
-fun add_astar gl b =
-  let val fea = fea_of_gl gl in
-    if (dfind fea (!hhs_astar) handle _ => false)
-    then ()
-    else 
-      (hhs_astar_cthy := dadd fea b (!hhs_astar_cthy);
-       hhs_astar := dadd fea b (!hhs_astar))
-  end  
-
-(* deep ortho 
-  val solved = create_solved lbls
-  val ext_gl = 
-    if !hhs_astar_flag andalso dmem g solved then 
-      let      
-        val (h,n) = dfind g solved 
-        fun is_shorter g' = fst (dfind g' solved) < h handle _ => false
-        val new_gl = filter is_shorter (dkeys solved)
-      in
-        mk_fast_set goal_compare (gl @ new_gl)
-      end
-    else gl
-*)
-(* closest first *)
-
 (*----------------------------------------------------------------------------
  * Recognizing theorem list and abstracting them from the tactic.
  *----------------------------------------------------------------------------*)
@@ -80,10 +56,10 @@ val thm_cache = ref (dempty String.compare)
 
 fun is_thm_cache s =
   dfind s (!thm_cache) handle _ => 
-    let val b = is_thm s in
-      thm_cache := dadd s b (!thm_cache);
-      b
-    end
+  let val b = is_thm s in
+    thm_cache := dadd s b (!thm_cache);
+    b
+  end
  
 val pattern_thml = "tactictoe_pattern_thml"
  
@@ -138,7 +114,7 @@ val s2 = inst_stac "bonjour" s1;
 *)
 
 (*----------------------------------------------------------------------------
- * Orthogonalization. Astar and stacpred not compatible.
+ * Orthogonalization.
  *----------------------------------------------------------------------------*)
 
 fun test_stac g gl (stac, inst_stac) =
@@ -153,20 +129,6 @@ fun test_stac g gl (stac, inst_stac) =
     if all (fn x => mem x gl) new_gl
     then SOME (stac,t,g,new_gl)
     else NONE
-  end
-  handle _ => NONE
-
-(* need timeout tactic_of_sml here and instantiation *)
-fun test_astar g gl stac =
-  let val ((new_gl,_),t) = 
-    (
-    debug ("test_astar " ^ stac);
-    add_time (timeOut (!hhs_tactic_time) (tactic_of_sml stac)) g
-    )
-  in
-    if all (fn x => mem x gl) new_gl
-    then (add_astar new_gl true; SOME (stac,t,g,gl))
-    else (add_astar new_gl false; NONE)
   end
   handle _ => NONE
 
@@ -208,11 +170,7 @@ fun orthogonalize lbls (lbl as (ostac,t,g,gl),fea) =
       val _ = debug (string_of_goal g)
       val feavectl = stacknn_ext (!hhs_ortho_number) (dlist (!hhs_stacfea)) fea
       val stacl = mk_sameorder_set String.compare (map (#1 o fst) feavectl)
-      val stacl2 = filter (fn x => not (x = ostac)) stacl
-      val _ = 
-        if !hhs_astar_flag 
-        then ignore (findSome (test_astar g gl) stacl)
-        else ()           
+      val stacl2 = filter (fn x => not (x = ostac)) stacl       
       (* order tactics by frequency *)
       fun score x = dfind x (!hhs_ndict) handle _ => 0
       val oscore  = score ostac

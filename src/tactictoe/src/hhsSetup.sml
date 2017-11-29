@@ -65,13 +65,13 @@ val hhs_maxselect_pred = ref 500
    ---------------------------------------------------------------------- *)
 
 val hhs_cache_flag  = ref true
-val hhs_astar_flag = ref false
-val hhs_astar_radius = ref 0
-val hhs_astar_coeff = ref 8.0
+val hhs_mc_flag = ref false
+val hhs_mc_radius = ref 0
+val hhs_mc_preradius = ref 0
+val hhs_mc_coeff = ref 1.0
 val hhs_timedepth_flag = ref false
 val hhs_width_coeff = ref 1.0
 val hhs_selflearn_flag = ref false
-val hhs_mc_flag = ref false
 
 (* ----------------------------------------------------------------------
    Metis + HolyHammer
@@ -130,9 +130,10 @@ fun set_isearch () =
   hhs_tactic_time    := 0.02;
   hhs_cache_flag     := true;
   hhs_width_coeff    := 1.0;
-  hhs_astar_flag     := false;
-  hhs_astar_radius   := 8;
-  hhs_astar_coeff    := 8.0;
+  hhs_mc_flag     := false;
+  hhs_mc_radius   := 100;
+  hhs_mc_preradius := 100;
+  hhs_mc_coeff    := 1.0;
   hhs_timedepth_flag := false;
   (* metis + holyhammer + new arguments *)
   hhs_metis_flag  := (true andalso can load "metisTools");
@@ -149,9 +150,6 @@ fun set_isearch () =
   if !hh_stac_flag then update_hh_stac 5 else ()
   )
 
-
-
-
 fun set_esearch () = 
   (
   (* predicting *)
@@ -161,9 +159,10 @@ fun set_esearch () =
   hhs_tactic_time    := 0.02;
   hhs_cache_flag     := true;
   hhs_width_coeff    := 1.0;
-  hhs_astar_flag     := false;
-  hhs_astar_radius   := 8;
-  hhs_astar_coeff    := 8.0;
+  hhs_mc_flag        := false;
+  hhs_mc_radius      := 100;
+  hhs_mc_preradius   := 100;
+  hhs_mc_coeff       := 1.0;
   hhs_timedepth_flag := false;
   (* metis + holyhammer + new arguments *)
   hhs_metis_flag    := (true andalso can load "metisTools");
@@ -176,8 +175,6 @@ fun set_esearch () =
   hhs_minimize_flag := false;
   hhs_prettify_flag := false
   ) 
-
-
 
 fun set_erecord () =
   (
