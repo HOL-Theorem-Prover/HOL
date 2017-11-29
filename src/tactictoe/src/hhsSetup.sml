@@ -71,6 +71,7 @@ val hhs_astar_coeff = ref 8.0
 val hhs_timedepth_flag = ref false
 val hhs_width_coeff = ref 1.0
 val hhs_selflearn_flag = ref false
+val hhs_mc_flag = ref false
 
 (* ----------------------------------------------------------------------
    Metis + HolyHammer

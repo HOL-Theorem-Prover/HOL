@@ -31,11 +31,12 @@ fun clean_cache () = dict_cache := dempty (list_compare String.compare)
    Settings
  ----------------------------------------------------------------------------*)
 
-datatype prover = Eprover | Z3
+datatype prover = Eprover | Z3 | Satallax
 fun name_of atp = case atp of
     Eprover => "eprover"
   | Z3 => "z3"
-
+  | Satallax => "satallax"
+  
 datatype predictor = KNN | Mepo
 val predictor_glob = ref (thmknn_ext)
 fun set_predictor pred = case pred of
@@ -185,13 +186,13 @@ fun export_theories thyl =
    Translate from higher-order to first order
  ----------------------------------------------------------------------------*)
 
-fun translate_atp atp =
+fun translate_bin bin atp =
   let 
     val thy_dir = thy_dir_of atp
     val target_dir = prover_files atp
     val _ = clean_dir target_dir
     val cmd = String.concatWith " "
-      [hh_bin_dir ^ "/hh",
+      [hh_bin_dir ^ "/" ^ bin,
        "all","0",thy_dir,
        thy_dir ^ "/conjecture.fof",
        "conjecture", target_dir, 
@@ -200,10 +201,14 @@ fun translate_atp atp =
     cmd_in_dir hh_dir cmd
   end
 
+fun translate_atp atp = translate_bin "hh" atp
+fun translate_thf atp = translate_bin "hh_thf" atp
+
 fun launch_atp atp tim =
   let val cmd = case atp of
       Eprover => "sh eprover.sh " ^ int_to_string tim
     | Z3      => "sh z3.sh " ^ int_to_string tim
+    | _       => raise ERR "launch_atp" "atp not supported"
   in
     cmd_in_dir provers_dir cmd
   end
@@ -216,6 +221,49 @@ fun launch_parallel tim =
      "wait"]
   in
     cmd_in_dir provers_dir cmd
+  end
+
+(*---------------------------------------------------------------------------
+   For THF experiments with Satallax.
+   Example: 
+   reproving_thf Satallax "arithmetic" (hd (DB.theorems "arithmetic"));
+ ----------------------------------------------------------------------------*)
+
+fun reproving_thf thy (name,thm) =
+  let
+    val _ = print ("  " ^ name ^ "\n")
+    val cj = list_mk_imp (dest_thm thm)
+    val thy_dir = thy_dir_of Satallax
+    val thyl = thy :: Theory.ancestry thy
+    val (b,pred) = depl_as_pred thm
+    val newname = 
+      if (not b) 
+        then "broken_dependencies____" ^ thy ^ "____" ^ name 
+        else thy ^ "____" ^ name
+    val thf_file = prover_files Satallax ^ "/thf_in"
+    val out_dir = hh_dir ^ "/thf_problems/" ^ thy
+    val out_file = out_dir ^ "/" ^ quote newname
+  in    
+    OS.FileSys.mkDir (hh_dir ^ "/thf_problems") handle _ => ();
+    OS.FileSys.mkDir out_dir handle _ => ();
+    clean_dir thy_dir;
+    (* write loaded theories *)
+    write_thyl thy_dir (pred_filter pred) thyl;
+    (* write the conjecture in tt format *)
+    write_conjecture (thy_dir ^ "/conjecture.fof") cj;
+    (* write the dependencies between theories *)
+    write_thydep (thy_dir ^ "/thydep.dep") thyl;
+    (* translate to thf_in *)
+    ignore (translate_thf Satallax);
+    (* copying the produced file *)
+    ignore (cmd_in_dir hh_dir ("mv " ^ thf_file ^ " " ^ out_file))
+  end
+
+fun reproving_thf_thyl thyl =
+  let fun f thy = 
+    (print (thy ^ "\n"); app (reproving_thf thy) (DB.theorems thy))
+  in
+    app f thyl
   end
 
 (*---------------------------------------------------------------------------

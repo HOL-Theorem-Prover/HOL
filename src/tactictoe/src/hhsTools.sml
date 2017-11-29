@@ -178,14 +178,17 @@ fun topo_sort graph =
     end
   end
 
-
-
-
 (* ---------------------------------------------------------------------------
    Reals
    -------------------------------------------------------------------------- *)
 
 fun sum_real l = case l of [] => 0.0 | a :: m => a + sum_real m
+
+fun list_rmax l = case l of
+    [] => raise ERR "list_max" ""
+  | [a] => a
+  | a :: m => Real.max (a,list_rmax m)
+
 fun sum_int l = case l of [] => 0 | a :: m => a + sum_int m
 
 fun average_real l = sum_real l / Real.fromInt (length l)
@@ -212,6 +215,9 @@ fun string_of_goal (asm,w) =
 (* --------------------------------------------------------------------------
    Comparisons
    -------------------------------------------------------------------------- *)
+
+fun compare_rmax ((_,r2),(_,r1)) = Real.compare (r1,r2)
+fun compare_rmin ((_,r1),(_,r2)) = Real.compare (r1,r2)
 
 fun goal_compare ((asm1,w1), (asm2,w2)) =
   list_compare Term.compare (w1 :: asm1, w2 :: asm2)

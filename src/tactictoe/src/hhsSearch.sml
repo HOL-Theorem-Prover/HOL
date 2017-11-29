@@ -23,6 +23,9 @@ exception NoNextTac
 (* -------------------------------------------------------------------------
    Search references
    -------------------------------------------------------------------------- *)
+val notactivedict = ref (dempty Int.compare)
+fun is_notactive x = dmem x (!notactivedict)
+fun deactivate x = notactivedict := dadd x () (!notactivedict)
 
 val proofdict = ref (dempty Int.compare)
 val finproofdict = ref (dempty Int.compare)
@@ -95,9 +98,9 @@ fun reset_timers () =
   )
   
 (* --------------------------------------------------------------------------
-   A*-heurisitic
-   -------------------------------------------------------------------------- *)
-
+   Basic diagonalized cost function.
+   -------------------------------------------------------------------------- *)  
+  
 fun estimate_distance (depth,heuristic) (g,pred) =
   let
     val width_coeff = ref 0.0  
@@ -113,6 +116,70 @@ fun estimate_distance (depth,heuristic) (g,pred) =
     (g, map f pred)
   end
   
+(* --------------------------------------------------------------------------
+   Monte Carlo Tree Search
+   -------------------------------------------------------------------------- *)
+
+val explo_coeff = 1.0
+
+fun eval_goal g =
+  let
+    fun ispos n (b,m) = b andalso n = m
+    fun isneg n (b,m) = not b andalso m >= n
+    val bnl = mc_predictor g
+    val nl = mk_fast_set Int.compare (map snd bnl)
+    fun posf n = length (filter (ispos n) bnl)
+    fun negf n = length (filter (isneg n) bnl)
+    fun skewed_proba n = 
+      let 
+        val pos = Real.fromInt (posf n)
+        val neg = Real.fromInt (negf n)
+        val penalty = Real.fromInt n
+      in
+        pos / ((neg + pos) * n)
+      end
+  in   
+    list_rmax (map skewed_proba nl) 
+  end
+
+
+fun eval_emptygoal () = 1.0
+
+
+(* initialization *)
+fun init_eval pripol pid =
+  let
+    val prec = dfind pid (!proofdict)
+    val {visit,pending,goalarr,prioreval,cureval,priorpolicy,...} = prec
+    val eval =
+      if not (null (!pending)) 
+      then eval_goal (Array.sub (#goalarr prec, hd (!pending)))
+      else eval_emptygoal ()
+  in
+    priorpolicy := pripol;
+    visit := 1.0;
+    prioreval := eval;
+    cureval := [eval] 
+  end
+
+fun backup_loop eval cid =
+  let
+    val crec = dfind cid (!proofdict)
+    val {parid,visit,cureval,...} = crec
+  in 
+    cureval := eval :: !cureval;
+    visit := !visit + 1.0;
+    if parid = NONE then () else backup_loop eval (valOf parid)
+  end
+
+fun backup cid =
+  let 
+    val crec = dfind cid (!proofdict)
+    val {parid,prioreval,...} = crec
+  in 
+    if parid = NONE then () else backup_loop (!prioreval) (valOf parid)
+  end
+
 (* --------------------------------------------------------------------------
    Pattern predictions
    -------------------------------------------------------------------------- *)
@@ -170,6 +237,7 @@ fun next_pid () =
 
 fun root_create goal pred =
   let
+    fun init_empty _ = ref []
     val selfid = next_pid ()
     val selfrec =
       {
@@ -180,15 +248,25 @@ fun root_create goal pred =
       parg     = NONE,
       goalarr  = Array.fromList [goal],
       predarr  = Array.fromList [pred],
+      (* compute cost function *)
       predarrn = Array.fromList (map length [pred]),
       width    = ref 0,
+      depth = 0,
+      timedepth = 0.0,
+      (* proof saved for reconstruction + children *)
       pending  = ref [0],
-      proofl   = ref [],
       children = ref [],
+      (* proof saved for reconstruction + children *)  
+      proofl   = ref [],
+      childrena = Array.fromList (map init_empty [goal]),
+      (* preventing loop and parallel steps *)
       pardict  = dempty goal_compare,
       trydict  = ref (dempty (list_compare goal_compare)),
-      depth = 0,
-      timedepth = 0.0
+      (* monte carlo *)
+      priorpolicy = ref 0.0,
+      visit = ref 0.0,
+      prioreval = ref 0.0, 
+      cureval = ref [] 
       }
   in
     debug_search "Root";
@@ -196,7 +274,8 @@ fun root_create goal pred =
           String.concatWith "," (map string_of_goal [goal]));
     debug_search ("  pred: \n  " ^
        String.concatWith ",\n  " (map (string_of_pred o (first_n 2)) [pred]));
-    proofdict := dadd selfid selfrec (!proofdict)
+    proofdict := dadd selfid selfrec (!proofdict);
+    init_eval 0.0 selfid
   end
 
 fun root_create_wrap g =
@@ -217,7 +296,7 @@ fun root_create_wrap g =
     root_create g pred1
   end
 
-fun node_create tactime parid parstac pargn parg goallist 
+fun node_create pripol tactime parid parstac pargn parg goallist 
     predlist pending pardict =
   let
     val pardepth = #depth (dfind parid (!proofdict))
@@ -231,6 +310,7 @@ fun node_create tactime parid parstac pargn parg goallist
     fun f g = update_goaldepth (g,pardepth + 1)
     val _ = app f goallist
     *)
+    fun init_empty _ = ref []
     val selfrec =
     {
       selfid   = selfid,
@@ -240,33 +320,41 @@ fun node_create tactime parid parstac pargn parg goallist
       parg     = SOME parg,
       goalarr  = Array.fromList goallist,
       predarr  = Array.fromList predlist,
+      (* compute cost function *)
       predarrn = Array.fromList (map length predlist),
       width    = ref 0,
+      depth    = pardepth + 1,
+      timedepth = partimedepth + tactime,
+      (* goal considered *)
       pending  = ref pending,
-      proofl   = ref [],
       children = ref [],
+      (* proof saved for reconstruction + children *)
+      proofl = ref [],
+      childrena = Array.fromList (map init_empty goallist),
+      (* preventing loop and parallel steps *)
       pardict  = pardict,
       trydict  = ref (dempty (list_compare goal_compare)),
-      depth    = pardepth + 1,
-      timedepth = partimedepth + tactime
+      (* monte carlo: dummy values changed by init_eval *)
+      priorpolicy = ref 0.0,
+      visit = ref 0.0,
+      prioreval = ref 0.0,
+      cureval = ref []   
     }
   in
     debug_search 
        ("Node " ^ int_to_string selfid ^ " " ^ int_to_string parid ^ " " ^
-        Real.toString (#timedepth selfrec));
+        Real.toString (! (#priorpolicy selfrec)));
     debug_search 
        ("  goals: " ^ String.concatWith "," (map string_of_goal goallist));
     debug_search ("  predictions: " ^
        String.concatWith ",\n  " (map (string_of_pred o (first_n 2)) predlist));
     proofdict := dadd selfid selfrec (!proofdict);
+    init_eval pripol selfid;
     selfid
   end
 
 fun node_delete pid =
-  (
-  debug_search ("node_delete " ^ int_to_string pid);
-  proofdict := drem pid (!proofdict)
-  )
+  (debug_search ("node_delete " ^ int_to_string pid); deactivate pid)
 
 fun node_save pid =
   (
@@ -339,12 +427,12 @@ fun apply_next_stac pid =
    Searching for a node (goal list) to explore.      
    ---------------------------------------------------------------------- *)
 
-fun node_find () =
+fun standard_node_find () =
   let
-    val l0 = Redblackmap.listItems (!proofdict)
+    val l0 = filter (fn x => not (is_notactive (fst x))) (dlist (!proofdict))
     fun give_score (pid,prec) =
       let
-        val gn = hd (! (#pending prec))
+        val gn = hd (!(#pending prec))
           handle _ => raise ERR "find_next_tac" (int_to_string pid)
         val pred = Array.sub (#predarr prec, gn)
       in
@@ -352,9 +440,8 @@ fun node_find () =
         then NONE
         else SOME (pid, snd (hd pred))
       end
-    fun compare_score ((_,r1),(_,r2)) = Real.compare (r1,r2)
     val l1 = List.mapPartial give_score l0
-    val l2 = dict_sort compare_score l1
+    val l2 = dict_sort compare_rmin l1
   in
     if null l2
     then (debug_search "nonexttac"; raise NoNextTac)
@@ -373,14 +460,45 @@ fun node_find () =
       end
   end
 
+fun mc_node_find pid =
+  let 
+    val prec = dfind pid (!proofdict) 
+    val {children,visit,...} = prec
+    val pvisit = !(#visit prec)
+    val pdenom = Math.sqrt pvisit
+    (* try new tactic on the node itself *)
+    val n = length (!children) 
+    val self_pripol = 1.0 / Math.pow (2.0, Real.fromInt n)
+    val self_curpol = 1.0 / pdenom
+    val self_selsc = (pid, explo_coeff * (self_pripol / self_curpol))
+    (* or explore deeper existing paritial proofs *)
+    fun f cid = 
+      let 
+        val crec = dfind cid (!proofdict)
+        val pripol = !(#priorpolicy crec)
+        val meaneval = average_real (!(#cureval crec))
+        val visit = !(#visit crec)
+        val curpol = (visit + 1.0) / pdenom
+      in
+        (cid, meaneval + explo_coeff * (pripol / curpol))
+      end
+    (* sort and select node with best selection score *)
+    val l0 = self_selsc :: List.map f (!children)
+    val l1 = dict_sort compare_rmax l0
+    val (selid,_) = hd l1
+  in
+    if pid = selid then (pid,self_pripol) else mc_node_find selid
+  end
+
+fun node_find () = 
+  if !hhs_mc_flag then mc_node_find 0 else (standard_node_find (),0.0)
+
 (* ---------------------------------------------------------------------------
    Closing proofs
    -------------------------------------------------------------------------- *)
 
 fun children_of pid =
-  let val prec = dfind pid (!proofdict) in
-    ! (#children prec)
-  end
+  let val prec = dfind pid (!proofdict) in !(#children prec) end
 
 fun descendant_of pid =
   let val cidl = children_of pid in
@@ -396,21 +514,27 @@ fun close_proof cid pid =
     val crec = dfind cid (!proofdict)
     val prec = dfind pid (!proofdict)
     val {pargn = gn, parstac = stac,...} = crec
-    val {proofl,pending,parid,children,trydict,...} = prec
+    val {proofl,pending,parid,children,visit,trydict,priorpolicy,...} = prec
   in
     if !pending <> [] then () else raise ERR "close_proof" (int_to_string pid);
     if valOf gn = hd (!pending) then () else raise ERR "close_proof" "";
-    proofl  := (valOf gn, valOf stac, cid) :: !proofl;
-    node_save cid; (* saves the child that gave the proof *)
-    close_descendant pid; (* close all children *)
+    (* remember which child gave the proof of which goal *)
+    proofl := (valOf gn, valOf stac, cid) :: !proofl;
+    (* saves the child that gave the proof *)
+    node_save cid; 
+    (* close all current  children *)
+    close_descendant pid; 
+    (* switching to next pending goal, erasing previous statistics *)
     children := [];
     trydict := dempty (list_compare goal_compare);
     pending := tl (!pending);
-    if !pending = []
+    init_eval (!priorpolicy) pid;
+    (* check if the goal was solved and recursively close *)
+    if null (!pending)
     then
       if parid = NONE
       (* special case when it's root *)
-      then (node_save pid; node_delete pid; raise ProofFound)
+      then (node_save pid; deactivate pid; raise ProofFound)
       else close_proof pid (valOf parid)
     else ()
   end
@@ -419,7 +543,7 @@ fun close_proof cid pid =
    Creating new nodes
    -------------------------------------------------------------------------- *)
 
-fun node_create_gl tactime gl pid =
+fun node_create_gl pripol tactime gl pid =
   let
     val prec = dfind pid (!proofdict)
     val gn = hd (! (#pending prec))
@@ -428,8 +552,8 @@ fun node_create_gl tactime gl pid =
     val prev_predn = Array.sub (#predarrn prec, gn)
     val ((stac,_,_,_),_) = hd prev_predl
     val parchildren = #children prec
+    val parchildrensave = Array.sub (#childrena prec,gn)
     val depth = #depth prec + 1
-    
     fun add_pred g =
       if !hhs_cache_flag
       then
@@ -454,34 +578,37 @@ fun node_create_gl tactime gl pid =
           estimate_distance (cost,heuristic) o 
           add_pred
           ) 
-      gl
+      gl  
     val predlist1 = map snd predlist0
     val pending0 = number_list 0 predlist1
     val pending1 = map (fn (gn,pred) => (gn, (snd o hd) pred)) pending0
-    fun compare_score ((_,r1),(_,r2)) = Real.compare (r2,r1)
-    val pending = map fst (dict_sort compare_score pending1)
+    val pending = map fst (dict_sort compare_rmax pending1)
     (* Updating the list of parent *)
     val new_pardict = dadd goal () (#pardict prec)
     (* New node *)
     val selfid = 
-      node_create tactime pid stac gn goal gl predlist1 pending new_pardict
+      node_create pripol 
+        tactime pid stac gn goal gl predlist1 pending new_pardict
   in
     parchildren := selfid :: (!parchildren);
+    parchildrensave := selfid :: (!parchildrensave);
     selfid
   end
 
 (* fake a node when a proof is found but no search is performed on this node *)
-fun node_create_empty tactime pid =
+fun node_create_empty pripol tactime pid =
   let
     val prec = dfind pid (!proofdict)
     val gn   = hd (! (#pending prec))
     val goal = Array.sub (#goalarr prec, gn)
     val ((stac,_,_,_),_) = hd (Array.sub (#predarr prec, gn))
     val parchildren = #children prec
-    val selfid = node_create tactime pid stac gn goal [] [] [] 
+    val parchildrensave = Array.sub (#childrena prec,gn)
+    val selfid = node_create pripol tactime pid stac gn goal [] [] [] 
                    (dempty goal_compare)
   in
     parchildren := selfid :: (!parchildren);
+    parchildrensave := selfid :: (!parchildrensave);
     selfid
   end
 
@@ -502,6 +629,7 @@ fun init_search thmpredictor stacpredictor astarpredictor tacdict g =
   goalpred_cache := dempty goal_compare;
   (* proof states *)
   pid_counter := 0;
+  notactivedict := dempty Int.compare;
   proofdict    := dempty Int.compare;
   finproofdict := dempty Int.compare;
   (* easier access to values *)
@@ -527,7 +655,7 @@ fun get_next_pred pid =
 
 fun search_step () =
   let
-    val pid = node_find_timer node_find ()
+    val (pid,pripol) = node_find_timer node_find ()
     val prec = dfind pid (!proofdict)
     val trydict = #trydict prec
     val (glo,tactime) = add_time apply_next_stac pid
@@ -537,13 +665,20 @@ fun search_step () =
     | SOME gl =>
       if gl = []
       then
-        let val cid = node_create_timer (node_create_empty tactime) pid in
+        let val cid = 
+          node_create_timer (node_create_empty pripol tactime) pid 
+        in
+          if !hhs_mc_flag then backup cid else ();
           close_proof cid pid
         end
       else
         (
         trydict := dadd gl () (!trydict);
-        ignore (node_create_timer (node_create_gl tactime gl) pid)
+        let val cid = 
+          node_create_timer (node_create_gl pripol tactime gl) pid
+        in
+          if !hhs_mc_flag then backup cid else ()
+        end
         )
   end
 
@@ -562,8 +697,7 @@ fun search_loop () =
 
 fun proofl_of pid =
   let
-    val prec = dfind pid (!finproofdict)
-               handle _ => raise ERR "string_of_proof" "node not found"
+    val prec = dfind pid (!finproofdict) handle _ => raise ERR "" ""
     fun compare_gn ((gn1,_,_),(gn2,_,_)) = Int.compare (gn1,gn2)
     val proofl = !(#proofl prec)
     val new_proofl = dict_sort compare_gn proofl
@@ -606,6 +740,7 @@ fun end_search () =
    Self learning
    -------------------------------------------------------------------------- *)
 
+(* From positives tactics added to the database *)
 fun selflearn_aux proof = case proof of 
     Tactic (stac,g) => 
       (
@@ -627,6 +762,32 @@ fun selflearn proof =
   else ()
 
 fun debug_err s = (debug s; raise ERR "" "")
+
+(* Learn positives and negative goals (rely on proofdict) *)
+
+val glearndict = ref (dempty goal_compare)
+
+fun learngoal_loop pid =
+  let 
+    val prec = dfind pid (!proofdict) 
+    val {proofl,childrena,goalarr,...} = prec
+    val i = ref 0
+    val totn = ref 0
+  in
+    while !i < Array.length goalarr do
+      let 
+        val g  = Array.sub (goalarr,i)
+        val cl = !(Array.sub (childrena,i))
+        val b  = List.mem i (map #1 (!proofl))
+        val n  = sum_int (map learngoal_loop cl)
+      in
+        glearndict := dadd g (b,n) (!glearndict);
+        totn := !totn + n;
+        incr i
+      end
+    ;
+    !totn  
+  end
 
 (* ---------------------------------------------------------------------------
    Main
@@ -657,7 +818,7 @@ fun imperative_search thmpredictor stacpredictor tacdict minstepdict goal =
       )
     | _ => r
   in
-    end_search ();
+    end_search (); (* erase all references *)
     sproof_status
   end
   )

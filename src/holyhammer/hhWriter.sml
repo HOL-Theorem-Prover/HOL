@@ -1,8 +1,7 @@
 (* ===================================================================== *)
 (* FILE          : hhWriter.sml                                          *)
 (* DESCRIPTION   : Print objects (constants, types and theorems) and     *)
-(*                 dependencies between conjuncts of theorems for        *)
-(*                 holyHammer.                                           *)
+(*                 dependencies  theorems for holyHammer.                *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck        *)
 (* DATE          : 2015                                                  *)
 (* ===================================================================== *)
@@ -349,6 +348,27 @@ fun thm_of_depid (thy,n) =
   end
 
 fun exists_depid did = can thm_of_depid did
+
+fun pred_of_depid (thy,n) =
+  let
+    val thml = DB.thms thy
+    fun find_number x =
+      if (depnumber_of o depid_of o dep_of o tag o snd) x = n
+      then x
+      else raise ERR "find_number" ""
+  in
+    (thy, fst (tryfind find_number thml))
+    handle _ => raise ERR "thmid_of_depid" "Not found"
+  end
+
+fun depl_as_pred thm =
+  let
+    val d = (dep_of o tag) thm
+    val dl = depidl_of d
+    val idl = mapfilter pred_of_depid dl
+  in
+    (length idl = length dl, idl)
+  end
 
 fun odep (name,dl) =
   let

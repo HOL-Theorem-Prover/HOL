@@ -379,6 +379,44 @@ fun read_astar thy =
   end
 
 fun import_astar thyl = app read_astar thyl
+ 
+(*----------------------------------------------------------------------------
+ * I/O monte carlo evaluation knowledge from disk
+ *----------------------------------------------------------------------------*) 
+ 
+fun update_mcdict fea (b,n) = 
+  hhs_mcdict := dadd fea (b,n) (!hhs_mcdict) 
+ 
+fun export_mc cthy =
+  let 
+    val file = hhs_mc_dir ^ "/" ^ cthy
+    val l = dlist (!hhs_mcdict_cthy) 
+    fun f (g,(b,n)) =
+      String.concatWith " " 
+        (int_to_string n ::
+        if b then "T" else "F" :: 
+        int_to_string (fea_of_goal g))
+  in
+    writel file (map f l)
+  end
+
+fun read_mc thy =
+  let 
+    val file = hhs_mc_dir ^ "/" ^ thy
+    val l = readl file handle _ => (debug ("read_mc " ^ thy) ; [])
+    fun f s = case String.tokens Char.isSpace s of
+        a :: "T" :: m => 
+        update_mcdict (map string_to_int m) (true, string_to_int a)
+      | b :: "F" :: m => 
+        update_mcdict (map string_to_int m) (false, string_to_int b)
+      | _ => raise ERR "read_mc" thy
+  in
+    app f l
+  end
+
+fun import_mc thyl = app read_mc thy
+ 
+ 
   
 (* test
 load "hhsData";

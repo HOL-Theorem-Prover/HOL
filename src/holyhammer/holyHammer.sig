@@ -2,20 +2,25 @@ signature holyHammer =
 sig
 
   include Abbrev
-  datatype prover = Eprover | Z3
+  datatype prover = Eprover | Z3 | Satallax
   datatype predictor = KNN | Mepo
    
   (* Performs premise selection using the KNN algorithm *)
   val select_premises   : int -> term -> (string * string) list
   
-  (* Export a HOL4 problem to THF TPTP files *)
+  (* Export a problem to TT files *)
   val export_problem    : prover -> (string * string) list -> term -> unit
   
-  (* Export a HOL4 theories to THF TPTP files *)
+  (* Export theories to TT files *)
   val export_theories   : string list -> unit
+  
+  (* Export and translate a re-proving problem to THF *)
+  val reproving_thf : string -> string * thm -> unit
+  val reproving_thf_thyl : string list -> unit
   
   (* Translate the problem from THF to FOF via HOL/Light *)
   val translate_atp     : prover -> Process.status
+  val translate_thf     : prover -> Process.status
   
   (* Calling an automated theorem prover such as "eprover" *)
   val launch_atp        : prover -> int -> Process.status

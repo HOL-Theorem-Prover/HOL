@@ -69,6 +69,7 @@ sig
   val number_list : int -> 'a list -> (int * 'a) list
 
   val sum_real : real list -> real
+  val average_real : real list -> real
   val sum_int : int list -> int
   
   val mk_fast_set : ('a * 'a -> order) -> 'a list -> 'a list
@@ -80,6 +81,8 @@ sig
   val count_dict  : 
     ('a, int) Redblackmap.dict -> 'a list -> ('a, int) Redblackmap.dict
    
+  val compare_rmin : (('a * real) * ('a * real)) -> order
+  val compare_rmax : (('a * real) * ('a * real)) -> order
   val goal_compare : (goal * goal) -> order
   val strict_term_compare : (term * term) -> order
   val strict_goal_compare : (goal * goal) -> order

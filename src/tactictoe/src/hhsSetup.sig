@@ -34,6 +34,7 @@ sig
   val hhs_astar_coeff    : real ref
   val hhs_timedepth_flag : bool ref
   val hhs_width_coeff    : real ref
+  val hhs_mc_flag        : bool ref
   
   (* metis + holyhammer + synthetizing *)
   val hhs_metis_flag  : bool ref

@@ -265,7 +265,7 @@ open hhsTools;
 val l3 = map (length o DB.thms) l1;
 sum_int l3;
 *)
- 
+
 (* ----------------------------------------------------------------------
    Predicting only the next tactic based on some distance measure.
    ---------------------------------------------------------------------- *)

@@ -1052,6 +1052,16 @@ fun cakeml_scripts cakeml_dir =
     readl file
   end
 
+fun cakeml_theories cakeml_dir =
+  let 
+    val file = tactictoe_dir ^ "/code/theory_list"
+    val cmd0 = "find " ^ cakeml_dir ^ " -name \"*Theory.uo\" > " ^ file
+    val cmd1 = "sed -i 's/Theory.uo/Theory/' " ^ file
+  in
+    ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1));
+    readl file
+  end
+
 (* ---------------------------------------------------------------------------
    Interactive version
    -------------------------------------------------------------------------- *)
@@ -1105,8 +1115,7 @@ end (* struct *)
   record_script "complexScript.sml";
   erewrite_hol_scripts ();
   --------------------------------------------------------------------------- *)
-  
-  
+
 (* ---------------------------------------------------------------------------
   CAKEML:
   

@@ -38,10 +38,9 @@ Example:
 
   load "holyHammer";
   open holyHammer;
-  hh [] ``1 + 1 = 2``;
-  METIS_PROVE lemmas ``1 + 1 = 2``; 
+  holyhammer ``1 + 1 = 2``;
 
 Questions:
 
   If you have any question, you can send an email to 
-  thibault.gauthier@uibk.ac.at.
+  email@thibaultgauthier.fr
