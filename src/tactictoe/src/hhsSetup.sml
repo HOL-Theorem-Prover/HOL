@@ -187,7 +187,6 @@ fun set_erecord () =
   hhs_ortho_metis    := true;
   hhs_ortho_deep     := false;
   hhs_selflearn_flag := false;
-  hhs_succrate_flag  := false;
   hhs_thmortho_flag  := true;
   (* evaluation *)
   hhs_eval_flag    := true;

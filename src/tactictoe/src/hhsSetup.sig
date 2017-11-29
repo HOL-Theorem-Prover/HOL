@@ -12,12 +12,9 @@ sig
   val hhs_ortho_number : int ref
   val hhs_ortho_metis  : bool ref
   val hhs_ortho_deep   : bool ref
-  
   val hhs_thmortho_flag : bool ref
-
   val hhs_selflearn_flag : bool ref
-  val hhs_succrate_flag  : bool ref
-  
+
   (* evaluation *)
   val one_in_n      : unit -> bool
   val hhs_eval_flag : bool ref

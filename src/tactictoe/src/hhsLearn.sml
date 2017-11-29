@@ -15,7 +15,8 @@ val ERR = mk_HOL_ERR "hhsLearn"
 
 (*----------------------------------------------------------------------------
  * Calculating the height of the proof tree needed to solve a goal 
- * with respect to a list of labels.
+ * with respect to a list of labels. Could somehow 
+   be subsumed by mc evaluation now.
  *----------------------------------------------------------------------------*)
 
 fun update_solved_lvl psolved solved lvl lbls = 
@@ -186,85 +187,5 @@ fun orthogonalize lbls (lbl as (ostac,t,g,gl),fea) =
       | SOME newlbl => newlbl
     end
   else lbl
-
-(* ---------------------------------------------------------------------------
-   Success rates of each tactic. To be removed.
-   -------------------------------------------------------------------------- *)
-
-val succ_cthy_dict = ref (dempty String.compare)
-val succ_glob_dict = ref (dempty String.compare)
-
-fun count_try stac = 
-  if !hhs_succrate_flag then 
-  let 
-    val (succ1,try1) = dfind stac (!succ_cthy_dict) handle _ => (0,0)
-    val (succ2,try2) = dfind stac (!succ_glob_dict) handle _ => (0,0)
-  in
-    succ_cthy_dict := dadd stac (succ1,try1 + 1) (!succ_cthy_dict);
-    succ_glob_dict := dadd stac (succ2,try2 + 1) (!succ_glob_dict)
-  end
-  else ()
-  
-fun count_succ stac = 
-  if !hhs_succrate_flag then 
-  let 
-    val (succ1,try1) = dfind stac (!succ_cthy_dict) handle _ => (0,0)
-    val (succ2,try2) = dfind stac (!succ_glob_dict) handle _ => (0,0)
-  in
-    succ_cthy_dict := dadd stac (succ1 + 1,try1) (!succ_cthy_dict);
-    succ_glob_dict := dadd stac (succ2 + 1,try2) (!succ_glob_dict)
-  end
-  else ()
-
-fun inv_succrate stac =
-  if !hhs_succrate_flag
-  then
-    let val (succ,try) = dfind stac (!succ_glob_dict) in
-      Real.fromInt (10 + try) / Real.fromInt (succ + 1)
-    end
-  else 1.0
-
-(*----------------------------------------------------------------------------
- * I/O success rates. To be removed.
- *----------------------------------------------------------------------------*)
-
-val succrate_reader = ref []
-
-fun mk_string_list sl = "[" ^ String.concatWith "," sl ^ "]"
-
-fun read_succrate thy =
-  if mem thy ["min","bool"] then () else
-  let
-    val sl = readl (hhs_succrate_dir ^ "/" ^ thy) 
-             handle _ => (print_endline ("File not found:" ^ thy); [])
-    val b =
-      if sl = [] 
-        then true
-        else
-        hhsExec.exec_sml "data"
-        ("hhsLearn.succrate_reader := " ^ mk_string_list sl ^ 
-        " @ (!hhsLearn.succrate_reader)")
-  in
-    if b then () else print (thy ^ "\n")
-  end
-
-fun import_succrate thyl =
-  (
-  debug "Reading success rates...";
-  print_endline "Reading success rates...";
-  app read_succrate thyl;
-  !succrate_reader
-  )
-
-fun export_succrate cthy =
-  let 
-    val l = dlist (!succ_cthy_dict)
-    fun f (stac,(succ,try)) = 
-      "(" ^ mlquote stac ^ ", (" ^ 
-      int_to_string succ ^ "," ^ int_to_string try ^ ") )"
-  in
-    writel (hhs_succrate_dir ^ "/" ^ cthy) (map f l)
-  end
-  
 
 end (* struct *)

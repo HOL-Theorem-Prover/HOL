@@ -174,6 +174,7 @@ fun select_mcfeav stacfeav =
   if !hhs_mc_flag
   then
     let
+      fun equal_compare _ = EQUAL
       val l = map snd stacfeav
       val mcfeav_org = map (fn (a,b) => (b,a)) (dlist (!hhs_mcdict))
       (* computing tfidf *)
@@ -183,7 +184,7 @@ fun select_mcfeav stacfeav =
         List.concat 
           (map (premcknn mcsymweight (!hhs_mc_preradius) mcfeav_org) l)
       val mcfeav = 
-        mk_fast_set (cpl_compare bool_compare (list_compare Int.compare)) 
+        mk_fast_set (cpl_compare equal_compare (list_compare Int.compare)) 
           mcfeav_aux
     in
       (mcsymweight, mcfeav)
@@ -206,7 +207,7 @@ fun main_tactictoe goal =
     fun mcpredictor g =
       if !hhs_mc_flag 
       then mcknn mcsymweight (!hhs_mc_radius) mcfeav (fea_of_goal g)
-      else []
+      else 0.0
   in
     debug_t "Search" 
       (imperative_search thmpredictor stacpredictor mcpredictor tacdict) goal

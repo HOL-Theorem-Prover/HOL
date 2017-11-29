@@ -108,7 +108,7 @@ fun estimate_distance (depth,heuristic) (g,pred) =
       let
         val cost = (!width_coeff) + Real.fromInt depth
         val _ = width_coeff := (!width_coeff) + !hhs_width_coeff
-        val final_score = inv_succrate stac * (cost + heuristic)
+        val final_score = cost + heuristic
       in
         (lbl,final_score)
       end
@@ -348,7 +348,6 @@ fun update_cache k v =
 fun apply_stac pardict trydict_unref stac g =
   let
     val tim = dfind stac (!stactime_dict) handle _ => (!hhs_tactic_time)
-    val _ = count_try stac
     val _ = stac_counter := !stac_counter + 1
     val istac =
       if !hhs_stacpred_flag andalso is_pattern_stac stac 
@@ -710,12 +709,11 @@ fun end_search () =
    Self learning
    -------------------------------------------------------------------------- *)
 
-(* From positives tactics added to the database *)
+(* From positives tactics and update hhs_stac, hhs_stac_cthy *)
 fun selflearn_aux proof = case proof of 
-    Tactic (stac,g) => 
+    Tactic (stac,g) =>
       (
-      let 
-        val _ = count_succ stac
+      let
         val ((gl,_),t) = add_time (tactic_of_sml stac) g
         val lbl = (stac,t,g,gl) 
       in
@@ -731,10 +729,8 @@ fun selflearn proof =
   then debug_t "selflearn" selflearn_aux proof
   else ()
 
-
-
-(* Learn positives and negative goals (rely on proofdict)
-   and update hhs_mcdict and hhs_mcdict_cthy *)
+(* From positives and negative goals, rely on proofdict
+   and update hhs_mcdict, hhs_mcdict_cthy *)
    
 fun learngoal_loop pid =
   let 
