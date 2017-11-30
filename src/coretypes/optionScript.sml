@@ -697,6 +697,12 @@ val OPTION_ALL_CONG = store_thm(
        (OPTION_ALL P opt <=> OPTION_ALL P' opt')``,
   simpLib.SIMP_TAC (srw_ss()) [FORALL_OPTION]);
 
+val option_caseeq = Q.store_thm(
+  "option_caseeq",
+  ‘(option_CASE (opt:'a option) nc sc = v) <=>
+   ((opt = NONE) /\ (nc = v) \/ ?x. (opt = SOME x) /\ (sc x = v))’,
+  OPTION_CASES_TAC “opt:'a option” THEN SRW_TAC[][EQ_SYM_EQ, option_case_def]);
+
 
 val _ = adjoin_to_theory
 {sig_ps = SOME (fn ppstrm =>
@@ -715,6 +721,7 @@ val _ = adjoin_to_theory
     S "     {ax=TypeBasePure.ORIG option_Axiom,";            NL();
     S "      case_def=option_case_def,";                     NL();
     S "      case_cong=option_case_cong,";                   NL();
+    S "      caseeqsplit=option_caseeq,";                    NL();
     S "      induction=TypeBasePure.ORIG option_induction,"; NL();
     S "      nchotomy=option_nchotomy,";                     NL();
     S "      size=NONE,";                                    NL();
@@ -753,6 +760,7 @@ val _ = TypeBase.write
      {ax=TypeBasePure.ORIG option_Axiom,
       case_def=option_case_def,
       case_cong=option_case_cong,
+      caseeqsplit = option_caseeq,
       induction=TypeBasePure.ORIG option_induction,
       nchotomy=option_nchotomy,
       size=NONE,
