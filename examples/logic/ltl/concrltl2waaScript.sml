@@ -532,34 +532,32 @@ val tempSubfCl_def = Define`
   tempSubfCl l = BIGUNION { tempSubForms f | MEM f l }`;
 
 val NoNodeProcessedTwice_def = Define`
-  NoNodeProcessedTwice g (a,ns) (a2,ns2) =
-    ((g DIFF (LIST_TO_SET (autoStates a))
-                  ⊂ g DIFF (LIST_TO_SET (autoStates a2)))
-         \/ ((g DIFF (LIST_TO_SET (autoStates a))
-              = g DIFF (LIST_TO_SET (autoStates a2)))
-              ∧ (LENGTH ns) < (LENGTH ns2)))`;
+  NoNodeProcessedTwice g m (a,ns) (a2,ns2) =
+    ((g DIFF (m a) ⊂ g DIFF (m a2))
+         \/ ((g DIFF (m a) = g DIFF (m a2))
+           ∧ (LENGTH ns) < (LENGTH ns2)))`;
 
 val NNPT_WF = store_thm
  ("NNPT_WF",
-  ``!g. FINITE g ==> WF (NoNodeProcessedTwice g)``,
+  ``!g m. FINITE g ==> WF (NoNodeProcessedTwice g m)``,
    rpt strip_tac
    >> `WF (λs t. s ⊂ t
          ∧ s ⊆ g ∧ t ⊆ g)` by metis_tac[PSUBSET_WF]
    >> `WF ($<)` by metis_tac[WF_LESS]
-   >> `WF (λ (x:β list) (y:β list).
+   >> `WF (λ (x:γ list) y.
             LENGTH x < LENGTH y)` by (
-       `inv_image ($<) LENGTH
-              = (λ(x:β list) (y:β list).
+       `inv_image ($<) (LENGTH:(γ list -> num))
+              = (λx y.
                   LENGTH x < LENGTH y)` by simp[inv_image_def]
-       >> `WF (inv_image ($<) (LENGTH:(β list -> num)))` suffices_by fs[]
+       >> `WF (inv_image ($<) (LENGTH:(γ list -> num)))` suffices_by fs[]
        >> metis_tac[WF_inv_image]
    )
    >> qabbrev_tac `P = (λs t. s ⊂ t ∧ s ⊆ g ∧ t ⊆ g)`
-   >> qabbrev_tac `Q = (λ(x:β list) (y:β list). LENGTH x < LENGTH y)`
-   >> qabbrev_tac `f = λ a. g DIFF (LIST_TO_SET (autoStates a))`
+   >> qabbrev_tac `Q = (λ(x:γ list) (y:γ list). LENGTH x < LENGTH y)`
+   >> qabbrev_tac `f = λ a. g DIFF (m a)`
    >> `inv_image P f = λ a a2.
-                        (g DIFF (LIST_TO_SET (autoStates a))
-                         ⊂ g DIFF (LIST_TO_SET (autoStates a2)))` by (
+                        (g DIFF (m a)
+                         ⊂ g DIFF (m a2))` by (
       qunabbrev_tac `P`
       >> fs[inv_image_def]
       >> `(\x y. f x ⊂ f y) = (λa a2. f a ⊂ f a2)`
@@ -571,9 +569,9 @@ val NNPT_WF = store_thm
    >> `WF (inv_image P f)` by metis_tac[WF_inv_image]
    >> `WF (P LEX Q)` by metis_tac[WF_LEX]
    >> qabbrev_tac
-        `j = λ(a,(l:β list)). (g DIFF (LIST_TO_SET (autoStates a)),l)`
+        `j = λ(a,l:(γ list)). (g DIFF (m a),l)`
    >> `WF (inv_image (P LEX Q) j)` by metis_tac[WF_inv_image]
-   >> `!x y. (NoNodeProcessedTwice g) x y ==> (inv_image (P LEX Q) j) x y` by (
+   >> `!x y. (NoNodeProcessedTwice g m) x y ==> (inv_image (P LEX Q) j) x y` by (
        fs[inv_image_def,LEX_DEF] >> rpt strip_tac
          >> Cases_on `x` >> Cases_on `y` >> fs[NoNodeProcessedTwice_def]
          >> qunabbrev_tac `f` >> qunabbrev_tac `P` >> qunabbrev_tac `Q`
@@ -2095,3 +2093,5 @@ val EXP_WAA_CORRECT = store_thm
            )
        )
   );
+
+val _ = export_theory();
