@@ -80,7 +80,8 @@ val loadPath : string list ref = ref [OS.Path.concat(HOLDIR, "sigobj")];
 val loadedMods = ref (Binaryset.empty String.compare);
 val _ =
     loadedMods := Binaryset.addList (!loadedMods,
-              ["Real", "Int", "List", "Binaryset", "Binarymap","Listsort"])
+              ["Real", "Int", "List", "Binaryset", "Binarymap", "Listsort",
+               "Array", "Array2", "Vector"])
 
 fun findUo modPath [] = NONE
   | findUo modPath (search::rest) =
