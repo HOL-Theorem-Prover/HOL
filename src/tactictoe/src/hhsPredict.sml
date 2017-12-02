@@ -14,7 +14,7 @@ open HolKernel Abbrev hhsTools hhsTools hhsSetup
 val ERR = mk_HOL_ERR "hhsPredict"
 
 (* -------------------------------------------------------------------------- 
-   TFIDF: weight of symbols                                     
+   TFIDF: weight of symbols (power of 6 comes from the distance)
    -------------------------------------------------------------------------- *)
 
 fun learn_tfidf feavl = 
@@ -23,7 +23,7 @@ fun learn_tfidf feavl =
     val dict      = count_dict (dempty Int.compare) syms
     val n         = length feavl
     fun f (fea,freq) = 
-      Math.ln (Real.fromInt n) - Math.ln (Real.fromInt freq)
+      Math.pow (Math.ln (Real.fromInt n) - Math.ln (Real.fromInt freq), 6.0)
   in
     Redblackmap.map f dict
   end
@@ -35,11 +35,7 @@ fun learn_tfidf feavl =
 fun inter_dict dict l =
   filter (fn x => dmem x dict) l
 
-fun pow6_dist l = case l of 
-    []     => 0.0
-  | a :: m => Math.pow (a,6.0) + pow6_dist m
-
-fun taclbl_of ((a,_,_,_),_) = a
+fun union_dict dict l = dkeys (daddl (map (fn x => (x,())) l) dict)
 
 (* --------------------------------------------------------------------------
    KNN distance
@@ -50,7 +46,7 @@ fun knn_self_distance symweight fea =
     fun wf s    = dfind s symweight handle _ => 0.0
     val weightl = map wf fea
   in
-    pow6_dist weightl
+    sum_real weightl
   end
 
 fun knn_distance symweight dict_o fea_p =
@@ -59,7 +55,19 @@ fun knn_distance symweight dict_o fea_p =
     fun wf n    = dfind n symweight handle _ => raise ERR "knn_distance" ""
     val weightl = map wf fea_i
   in
-    pow6_dist weightl
+    sum_real weightl
+  end
+
+(* borrow the symweight from theorem *)
+fun knn_similarity symweight dict_o fea_p =
+  let 
+    val fea_i   = inter_dict dict_o fea_p
+    val fea_u   = union_dict dict_o fea_p
+    fun wf n    = dfind n symweight handle _ => raise ERR "knn_sim" ""
+    val weightl1 = map wf fea_i
+    val weightl2 = map wf fea_u
+  in
+    sum_real weightl1 / Math.ln (Math.e + sum_real weightl2)
   end
 
 (* --------------------------------------------------------------------------
@@ -78,7 +86,17 @@ fun pre_knn symweight feal fea_o =
   in
     l1
   end
- 
+
+fun pre_sim symweight feal fea_o =
+  let 
+    val dict_o = dnew Int.compare (map (fn x => (x,())) fea_o)
+    fun dist (lbl,fea_p) = (lbl, knn_similarity symweight dict_o fea_p)
+    val l0 = map dist feal
+    val l1 = dict_sort compare_score l0
+  in
+    l1
+  end
+
 (* Put features into the label *)  
 fun pre_knn_fea symweight feal fea_o =
   let 
@@ -110,17 +128,52 @@ fun thmknn symweight n feal fea_o =
   end    
 
 (* --------------------------------------------------------------------------
+   Term prediction for tactic arguments. 
+   Relies on mdict_glob to calculate symweight.
+   -------------------------------------------------------------------------- *)
+
+fun same_type term1 term2 =
+  polymorphic (type_of term1) orelse type_of term1 = type_of term2
+
+fun is_true _ = true
+
+fun closest_subterm ((asl,w):goal) term =
+  let 
+    fun togoal t = ([],t)
+    fun dummy_lbl l = map (fn (_,a) => ((),a)) l
+    fun f x = (togoal x, hhsFeature.fea_of_goal (togoal x))
+    val l0 = List.concat (map (rev o find_terms (same_type term)) (w :: asl))
+    val l1 = if null l0 
+              then List.concat (map (rev o find_terms is_true) (w :: asl))
+              else l0
+    val l2 = debug_t "mk_sameorder_set" (mk_sameorder_set Term.compare) l1
+    val thmfeav = dlist (!mdict_glob)
+    val feal = debug_t "features" (map f) l2
+    val fea_o = hhsFeature.fea_of_goal ([],term)
+    val symweight = 
+      learn_tfidf (((),fea_o) :: dummy_lbl feal @ dummy_lbl thmfeav)
+    val l3 = debug_t "pre_sim" pre_sim symweight feal fea_o
+  in
+    snd (fst (hd l3)) handle _ => raise ERR "closest_subterm" ""
+  end
+
+(* Example:
+
+symweight = learn_tfidf feal
+
+*)
+
+(* --------------------------------------------------------------------------
    Goal evaluation for monte carlo tree search.
    -------------------------------------------------------------------------- *)
 
-(* select a neighborhood of each feature vectors *)
 fun premcknn symweight radius feal fea = 
   map fst (first_n radius (pre_knn_fea symweight feal fea))
 
 fun mcknn symweight radius feal fea =
   let
-    fun ispos n (b,m) = b andalso m = n
-    fun isneg n (b,m) = not b andalso m >= n
+    fun ispos n (b,m) = b andalso m <= n
+    fun isneg n (b,m) = (not b andalso m >= n) orelse (b andalso m > n)
     val bnl = map fst (first_n radius (pre_knn symweight feal fea))
     val nl = mk_fast_set Int.compare (map snd bnl)
     fun posf n = length (filter (ispos n) bnl)

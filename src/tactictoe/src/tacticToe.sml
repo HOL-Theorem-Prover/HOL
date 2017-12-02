@@ -35,10 +35,9 @@ fun hh_eval goal =
 
 fun mk_tacdict stacl =
   let 
-    val _ = app debug stacl
+    (* val _ = app debug stacl *)
     val (_,goodl) = 
-      partition (fn x => mem x (!hhs_badstacl) orelse is_pattern_stac x) 
-      stacl
+      partition (fn x => mem x (!hhs_badstacl) orelse is_absarg_stac x) stacl
     fun read_stac x = (x, tactic_of_sml x)
       handle _ => (debug ("Warning: bad tactic: " ^ x ^ "\n");
                    hhs_badstacl := x :: (!hhs_badstacl);
@@ -83,8 +82,6 @@ fun init_tactictoe () =
         val ms = int_to_string (dlength (!mdict_glob))
       in  
         hide_out QUse.use (tactictoe_dir ^ "/src/infix_file.sml");
-        debug (ns ^ " tactic feature vectors");
-        debug (ns ^ " theorem feature vectors");
         print_endline ("Loading " ^ ns ^ " tactic feature vectors");
         print_endline ("Loading " ^ ms ^ " theorem feature vectors");
         previous_theory := cthy
@@ -125,7 +122,7 @@ fun select_thmfeav goalfea =
   then
     let 
       val _ = debug "theorem selection"
-      val _ = debug_t "update_mdict" update_mdict (current_theory ())
+      val _ = debug_t "update_mdict" update_mdict (current_theory ());
       val thmfeav = dlist (!mdict_glob)
       val thmsymweight = learn_tfidf thmfeav
       val thmfeavdep = 
@@ -162,10 +159,10 @@ fun select_stacfeav goalfea =
     val l1 = debug_t "select_desc" select_desc l0
     (* parsing selected tactics *)
     val tacdict = debug_t "mk_tacdict" mk_tacdict (map (#1 o fst) l1)
-    (* filtering readable tactics or that contains a pattern to
+    (* filtering readable tactics or that contains an argument to
        be instantiated *)
     val stacfeav = filter (fn ((stac,_,_,_),_) => 
-      is_pattern_stac stac orelse dmem stac tacdict) l1  
+      is_absarg_stac stac orelse dmem stac tacdict) l1  
   in
     (stacsymweight, stacfeav, tacdict)
   end

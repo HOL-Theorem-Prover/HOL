@@ -117,7 +117,8 @@ sig
   val debug_parse  : string -> unit
   val debug_replay : string -> unit
   val debug_record : string -> unit
-
+  
+  val unquote_string : string -> string
   val split_sl : ''a -> ''a list -> ''a list * ''a list
   val rpt_split_sl : ''a -> ''a list -> ''a list list
 

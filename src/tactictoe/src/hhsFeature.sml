@@ -164,9 +164,7 @@ fun fea_of_term tm =
       val subterml       = List.concat (map subterms_of_term tml)
       val subterm_sl     = map zeroed_term subterml
     in
-      filter (fn x => x <> "P" andalso 
-                      x <> "A" andalso
-                      x <> "T") 
+      filter (fn x => x <> "P" andalso x <> "T") 
       (mk_string_set 
          (type_sl @ varl_sl @ const_sl @ (!top_sl) @ toptml_sl @ subterm_sl))
     end
@@ -174,9 +172,6 @@ fun fea_of_term tm =
 (*---------------------------------------------------------------------------
  * Produce goal features.
  *---------------------------------------------------------------------------*)
-
-fun string_of_goal (asl,w) =
-  String.concatWith "\n" (map term_to_string (w :: asl))
 
 local
    open Char String
@@ -191,7 +186,7 @@ in
      end
 end
 
-fun fea_of_goal (asl,w) = 
+fun fea_of_goal (asl,w) =
   let 
     val asl_sl1 = List.concat (map fea_of_term asl)
     val asl_sl2 = map (fn x => x ^ ".h") asl_sl1
@@ -201,6 +196,8 @@ fun fea_of_goal (asl,w) =
   end
   handle _ => raise ERR "fea_of_goal" (string_of_goal (asl,w))
 
-fun fea_of_gl gl = mk_fast_set Int.compare (List.concat (map fea_of_goal gl))
+
+
+
 
 end (* struct *)

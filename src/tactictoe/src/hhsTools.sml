@@ -371,6 +371,11 @@ fun debug_record s =
    String
    -------------------------------------------------------------------------- *)
 
+fun unquote_string s =
+  if String.sub (s,0) = #"\"" andalso String.sub (s,String.size s - 1) = #"\""
+  then String.substring (s, 1, String.size s - 2)
+  else raise ERR "unquote_string" s
+
 fun drop_sig s = 
   if last (explode s) = #"."
   then s

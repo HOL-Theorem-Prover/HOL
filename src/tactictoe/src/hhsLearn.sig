@@ -13,9 +13,9 @@ sig
   (* orthogonalization *)
   val orthogonalize : lbl_t list -> feav_t -> lbl_t
 
-  (* abstraction *)
-  val abstract_stac : string -> string
-  val inst_stac     : string -> string -> string
-  val is_pattern_stac : string -> bool
+  (* abstraction of tactic arguments *)
+  val abstract_stac   : string -> string option
+  val inst_stac       : string -> goal -> string -> string
+  val is_absarg_stac  : string -> bool
 
 end

@@ -61,68 +61,165 @@ fun is_thm_cache s =
     thm_cache := dadd s b (!thm_cache);
     b
   end
- 
-val pattern_thml = "tactictoe_pattern_thml"
- 
-fun is_pattern_stac stac = mem pattern_thml (hhs_lex stac)
+
+val thmlarg_placeholder = "tactictoe_thmlarg"
+
+fun is_thmlarg_stac stac = mem thmlarg_placeholder (hhs_lex stac)
  
 fun change_thml el e =
   if is_thm_cache (String.concatWith " " e)
-  then SOME ["[",pattern_thml,"]"]
+  then SOME ["[",thmlarg_placeholder,"]"]
   else NONE
     
-fun abstract_loop l = case l of
+fun abstract_thmlarg_loop l = case l of
     []       => []
   | "[" :: m => 
     let val (el,cont) = split_level "]" m
         val e = fst (split_level "," el) handle _ => el
     in
       case change_thml el e of
-        NONE => "[" :: abstract_loop m
-      | SOME x => x @ abstract_loop cont
+        NONE => "[" :: abstract_thmlarg_loop m
+      | SOME x => x @ abstract_thmlarg_loop cont
     end
-  | a :: m => a :: abstract_loop m
+  | a :: m => a :: abstract_thmlarg_loop m
 
-fun abstract_stac stac = 
+fun abstract_thmlarg stac = 
+  if is_thmlarg_stac stac then stac else 
   let 
     val sl1 = hhs_lex stac
-    val sl2 = abstract_loop sl1
-    val r = String.concatWith " " sl2
+    val sl2 = abstract_thmlarg_loop sl1
   in
-    if sl1 <> sl2 then debug ("abstraction: " ^ r) else (); 
-    r
+    if sl2 = sl1 then stac else String.concatWith " " sl2
   end
 
-fun inst_stac_loop thmls l = 
-  let fun f x = if x = pattern_thml then thmls else x in
+(*----------------------------------------------------------------------------
+ * Instantiating tactics with predicted theorems
+ *----------------------------------------------------------------------------*)
+
+fun inst_thmlarg_loop thmls l = 
+  let fun f x = if x = thmlarg_placeholder then thmls else x in
     map f l
   end
 
-fun inst_stac thmls stac =
-  let val tokenl = hhs_lex stac in
-    if mem pattern_thml tokenl
-    then 
-      let val r = String.concatWith " " (inst_stac_loop thmls tokenl) in
-        debug ("instantiation: " ^ r); r
-      end
+fun inst_thmlarg thmls stac =
+  let val sl = hhs_lex stac in
+    if mem thmlarg_placeholder sl
+    then String.concatWith " " (inst_thmlarg_loop thmls sl)
     else stac
   end
 
 (* 
 val s = "METIS_TAC [arithmeticTheory.LESS_EQ]";
 val s1 = abstract_stac s;
-val s2 = inst_stac "bonjour" s1;
+val s2 = inst_thmlarg "bonjour" s1;
 *)
+
+(*----------------------------------------------------------------------------
+ * Abstracting term
+ *----------------------------------------------------------------------------*)
+
+val termarg_placeholder = "tactictoe_termarg"
+
+fun is_termarg_stac stac = mem termarg_placeholder (hhs_lex stac)
+
+fun abstract_termarg_loop l = case l of
+    []       => []
+  | "[" :: "HolKernel.QUOTE" :: s :: "]" :: m => 
+    let val new_s = ["(",termarg_placeholder,s,")"] in
+      ["[","HolKernel.QUOTE"] @ new_s @ ["]"] @ abstract_termarg_loop m
+    end
+  | a :: m => a :: abstract_termarg_loop m
+
+fun abstract_termarg stac =
+  if is_termarg_stac stac then stac else 
+  let 
+    val sl1 = hhs_lex stac
+    val sl2 = abstract_termarg_loop sl1
+  in
+    if sl2 = sl1 then stac else String.concatWith " " sl2
+  end
+
+(*----------------------------------------------------------------------------
+ * Instantiating tactics with predicted term
+ *----------------------------------------------------------------------------*)
+
+fun predict_termarg g s =
+  let
+    val term = Parse.Term [QUOTE (unquote_string s)] 
+    val mem = !show_types
+    val _ = show_types := not (polymorphic (type_of term)) 
+    val new_term = closest_subterm g term
+    val new_s = if new_term = term 
+                then s 
+                else "\"" ^ term_to_string new_term ^ "\""
+    val _ = show_types := mem        
+  in
+    new_s
+  end          
+
+fun inst_termarg_loop g l = case l of
+    [] => []
+  | "(" :: termlarg_placeholder :: s :: ")" :: m =>
+    predict_termarg g s :: inst_termarg_loop g m
+  | a :: m => a :: inst_termarg_loop g m  
+
+fun inst_termarg g stac =
+  let val sl = hhs_lex stac in
+    if mem termarg_placeholder sl
+    then String.concatWith " " (inst_termarg_loop g sl)
+    else stac
+  end
+
+(* 
+load "hhsLearn";
+val s = 
+"boolLib.SPEC_TAC ( ( Parse.Term [ HolKernel.QUOTE \" (*#loc 1 119422*)m:num\""
+^ " ] ) , ( Parse.Term [ HolKernel.QUOTE \" (*#loc 1 119435*)m:num\" ] ) )";
+val goal:goal = ([],``!x. x = x``);
+val s1 = abstract_termarg s;
+val s2 = inst_termarg g s1;
+*)
+
+(*----------------------------------------------------------------------------
+   Combining abstractions and instantiations
+ *----------------------------------------------------------------------------*)
+
+fun is_absarg_stac s = is_termarg_stac s orelse is_thmlarg_stac s
+
+fun abstract_stac stac =
+  let 
+    val stac1 = if !hhs_thmlarg_flag then abstract_thmlarg stac else stac
+    val stac2 = if !hhs_termarg_flag then abstract_termarg stac1 else stac1
+  in
+    if stac2 <> stac then SOME stac2 else NONE
+  end
+
+fun prefix_absstac stac = [abstract_stac stac, SOME stac]
+
+fun concat_absstacl ostac stacl = 
+  let val l = List.concat (map prefix_absstac stacl) @ [abstract_stac ostac] in
+    mk_sameorder_set String.compare (List.mapPartial I l)
+  end
+
+fun inst_stac thmls g stac =
+  let 
+    val stac1 = if !hhs_thmlarg_flag then inst_thmlarg thmls stac else stac
+    val stac2 = if !hhs_termarg_flag then inst_termarg g stac1 else stac1
+  in
+    stac2
+  end
+
+fun inst_stacl thmls g stacl = map (fn x => (x, inst_stac thmls g x)) stacl
 
 (*----------------------------------------------------------------------------
  * Orthogonalization.
  *----------------------------------------------------------------------------*)
 
-fun test_stac g gl (stac, inst_stac) =
+fun test_stac g gl (stac, istac) =
   let val ((new_gl,_),t) = 
     (
-    debug ("test_stac " ^ stac ^ "\n  " ^ inst_stac);
-    let val tac = timeOut (!hhs_tactic_time) tactic_of_sml inst_stac in
+    debug ("test_stac " ^ stac ^ "\n" ^ istac);
+    let val tac = timeOut (!hhs_tactic_time) tactic_of_sml istac in
       add_time (timeOut (!hhs_tactic_time) tac) g
     end
     )
@@ -133,42 +230,13 @@ fun test_stac g gl (stac, inst_stac) =
   end
   handle _ => NONE
 
-fun add_pattern_one stac =
-  if is_pattern_stac stac then [stac] else 
-    let val new_stac = abstract_stac stac in
-      if is_pattern_stac new_stac
-      then [new_stac,stac] (* more general pattern first *)
-      else [stac]
-    end  
-
-fun add_only_pattern stac =
-  if is_pattern_stac stac orelse not (!hhs_stacpred_flag) then [] else 
-    let val new_stac = abstract_stac stac in
-      if is_pattern_stac new_stac
-      then [new_stac]
-      else []
-    end  
-
-fun add_pattern stacl = List.concat (map add_pattern_one stacl)
-
-fun duplicate_stacl g stacl =
-  if !hhs_stacpred_flag 
-  then
-    let
-      val stacl' = mk_sameorder_set String.compare (add_pattern stacl)     
-      val thml   = predict_for_metis (!hhs_stacpred_number) g
-      val thmls  = String.concatWith " , " (map dbfetch_of_string thml)
-    in
-      map (fn x => (x, inst_stac thmls x)) stacl'
-    end
-  else map (fn x => (x,x)) stacl
-
-(* to do abstract ostac itself *)
 fun orthogonalize lbls (lbl as (ostac,t,g,gl),fea) =
   if !hhs_ortho_flag
   then
     let
+      val _ = debug_t "update_mdict" update_mdict (current_theory ())
       val _ = debug (string_of_goal g)
+      (* predict tactics *)
       val feavectl = stacknn_ext (!hhs_ortho_number) (dlist (!hhs_stacfea)) fea
       val stacl = mk_sameorder_set String.compare (map (#1 o fst) feavectl)
       val stacl2 = filter (fn x => not (x = ostac)) stacl       
@@ -178,9 +246,15 @@ fun orthogonalize lbls (lbl as (ostac,t,g,gl),fea) =
       val stacl3  = filter (fn x => score x > oscore) stacl2
       fun n_compare (x,y) = Int.compare (score y, score x) 
       val stacl4 = dict_sort n_compare stacl3
-      (* abstract and instantiate tactics *)
-      val stacl5 = duplicate_stacl g (stacl4 @ add_only_pattern ostac)
-      val testo  = findSome (test_stac g gl) stacl5
+      (* try abstracted tactic x before x *)
+      val stacl5 = concat_absstacl ostac stacl4
+      (* predicting theorems only once *)
+      val thml   = predict_for_metis (!hhs_thmlarg_number) g
+      val thmls  = String.concatWith " , " (map dbfetch_of_string thml)
+      (* instantiate arguments *)
+      val stacl6 = inst_stacl thmls g stacl5
+      (* test produced tactics *)
+      val testo  = findSome (test_stac g gl) stacl6
     in
       case testo of
         NONE => lbl

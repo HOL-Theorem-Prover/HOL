@@ -10,6 +10,8 @@ sig
   datatype proof_status_t = 
     ProofError | ProofSaturated | ProofTimeOut | Proof of string
   
+  val last_stac : string ref
+  
   val imperative_search   : 
     (goal -> string list) ->
     (goal -> (lbl_t * real) list) ->

@@ -9,6 +9,8 @@ sig
   
   val learn_tfidf : ('a * int list) list -> (int, real) Redblackmap.dict
 
+  val closest_subterm: goal -> term -> term
+  
   val stacknn:
     (int, real) Redblackmap.dict -> int -> feav_t list -> fea_t -> 
     (lbl_t * real) list

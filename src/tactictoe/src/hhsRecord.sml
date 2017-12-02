@@ -254,7 +254,11 @@ fun start_record name goal =
   (* recording goal steps *)
   goalstep_glob := [];
   (* evaluation *)
-  (eval_tactictoe name goal handle _ => debug "Error: eval_tactictoe")
+  (
+    eval_tactictoe name goal 
+    handle _ => 
+    debug ("Error: eval_tactictoe: last_stac: " ^ !hhsSearch.last_stac)
+  )
   )
 
 (* ----------------------------------------------------------------------
@@ -327,7 +331,7 @@ fun end_thy cthy =
   (
   debug_t "export_feavl" (export_feavl cthy) (!hhs_cthyfea);
   debug_t "export_mdict" export_mdict cthy;
-  if !hhs_mc_flag then debug_t "export_mc" export_mc cthy else ();
+  if !hhs_mcrecord_flag then debug_t "export_mc" export_mc cthy else ();
   out_record_summary cthy;
   debug_proof ("Bad stac: " ^ (int_to_string (length (!hhs_badstacl))))
   )

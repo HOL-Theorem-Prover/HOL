@@ -66,6 +66,9 @@ val hhs_maxselect_pred = ref 500
 
 val hhs_cache_flag  = ref true
 val hhs_mc_flag = ref false
+val hhs_mcrecord_flag = ref false
+val hhs_mcnoeval_flag = ref false
+val hhs_mctriveval_flag = ref false
 val hhs_mc_radius = ref 0
 val hhs_mc_preradius = ref 0
 val hhs_mc_coeff = ref 1.0
@@ -82,8 +85,11 @@ val hhs_thmortho_flag = ref false (* set at the recording level *)
 val hhs_metis_flag    = ref false
 val hhs_metis_time    = ref 0.1
 val hhs_metis_npred   = ref 16
-val hhs_stacpred_flag = ref false
-val hhs_stacpred_number = ref 16
+val hhs_thmlarg_flag = ref false
+val hhs_thmlarg_number = ref 16
+val hhs_termarg_flag = ref false 
+
+
   (* synthetizing arguments (theorems) of tactics *)
 val hh_stac_flag      = ref false (* predict dependencies using holyhammer *)
 
@@ -130,7 +136,10 @@ fun set_isearch () =
   hhs_tactic_time    := 0.02;
   hhs_cache_flag     := true;
   hhs_width_coeff    := 1.0;
-  hhs_mc_flag     := false;
+  hhs_mc_flag        := false;
+  hhs_mcrecord_flag  := false;
+  hhs_mcnoeval_flag  := false;
+  hhs_mctriveval_flag := false;
   hhs_mc_radius   := 100;
   hhs_mc_preradius := 100;
   hhs_mc_coeff    := 1.0;
@@ -140,8 +149,9 @@ fun set_isearch () =
   hhs_metis_npred := 16;
   hhs_metis_time  := 0.1;
   hh_stac_flag    := false;
-  hhs_stacpred_flag := false;
-  hhs_stacpred_number := 16;
+  hhs_thmlarg_flag := false;
+  hhs_thmlarg_number := 16;
+  hhs_termarg_flag := false;
   (* result *)
   hhs_minimize_flag := true;
   hhs_prettify_flag := true;
@@ -160,6 +170,9 @@ fun set_esearch () =
   hhs_cache_flag     := true;
   hhs_width_coeff    := 1.0;
   hhs_mc_flag        := false;
+  hhs_mcrecord_flag  := false;
+  hhs_mcnoeval_flag  := false;
+  hhs_mctriveval_flag := false;
   hhs_mc_radius      := 100;
   hhs_mc_preradius   := 100;
   hhs_mc_coeff       := 1.0;
@@ -169,8 +182,9 @@ fun set_esearch () =
   hhs_metis_npred   := 16;
   hhs_metis_time    := 0.1;
   hh_stac_flag      := (false andalso can_update_hh 5);
-  hhs_stacpred_flag := false;
-  hhs_stacpred_number := 16;
+  hhs_thmlarg_flag := false;
+  hhs_thmlarg_number := 16;
+  hhs_termarg_flag := false;
   (* result *)
   hhs_minimize_flag := false;
   hhs_prettify_flag := false

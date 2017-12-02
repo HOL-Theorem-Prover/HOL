@@ -34,10 +34,10 @@ fun is_effect stac g gl = (rec_stac stac g = SOME gl)
   Should be applied just before printing.
   ----------------------------------------------------------------------------
 
-fun unquote s =
+fun unquote_string s =
   if String.sub (s,0) = #"\"" andalso String.sub (s,String.size s - 1) = #"\""
   then String.substring (s, 1, String.size s - 2)
-  else raise ERR "unquote" s
+  else raise ERR "unquote_string" s
 
 fun is_blank c =
   c = #" " orelse c = #"\n" orelse c = #"\t"

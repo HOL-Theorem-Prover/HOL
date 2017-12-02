@@ -27,6 +27,9 @@ sig
   (* search *)
   val hhs_cache_flag     : bool ref
   val hhs_mc_flag        : bool ref
+  val hhs_mcrecord_flag  : bool ref
+  val hhs_mcnoeval_flag  : bool ref
+  val hhs_mctriveval_flag : bool ref
   val hhs_mc_radius      : int ref
   val hhs_mc_preradius   : int ref
   val hhs_mc_coeff       : real ref
@@ -37,9 +40,10 @@ sig
   val hhs_metis_flag  : bool ref
   val hhs_metis_time  : real ref
   val hhs_metis_npred : int ref (* used in learning *)
-  val hh_stac_flag      : bool ref
-  val hhs_stacpred_flag : bool ref (* synthetizing *)
-  val hhs_stacpred_number : int ref
+  val hh_stac_flag    : bool ref (* holyhammer *)
+  val hhs_thmlarg_flag : bool ref (* synthetizing *)
+  val hhs_thmlarg_number : int ref
+  val hhs_termarg_flag : bool ref
   
   (* minimization *)
   val hhs_prettify_flag : bool ref
