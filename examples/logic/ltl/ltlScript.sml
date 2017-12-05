@@ -181,6 +181,10 @@ val SF_ANTISYM_LEMM = store_thm
       )
   );
 
+val is_until_def = Define`
+   (is_until (U f1 f2) = T)
+ ∧ (is_until _ = F)`;
+
 (*
 
   Temporal subformulae

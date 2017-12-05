@@ -80,6 +80,19 @@ val FOLDR_LEMM6 = store_thm
    >> simp[EQ_IMP_THM] >> rpt strip_tac >> metis_tac[]
   );
 
+val FOLDR_CONCR_EDGE = store_thm
+  ("FOLDR_CONCR_EDGE",
+   ``!l. FOLDR
+           (λsF e.
+                <|pos := sF.pos ⧺ e.pos; neg := sF.neg ⧺ e.neg;
+                  sucs := sF.sucs ⧺ e.sucs|>) (concrEdge [] [] [])
+           l =
+         concrEdge
+             (FOLDR (λe pr. e.pos ++ pr) [] l)
+             (FOLDR (λe pr. e.neg ++ pr) [] l)
+             (FOLDR (λe pr. e.sucs ++ pr) [] l)``,
+   Induct_on `l` >> fs[concrEdge_component_equality]
+  );
 
 val TEMPDNF_CONCR_LEMM = store_thm
   ("TEMPDNF_CONCR_LEMM",

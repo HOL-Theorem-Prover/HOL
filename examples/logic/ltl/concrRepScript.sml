@@ -14,9 +14,9 @@ val _ = Datatype`
                  |>`;
 
 val _ = Datatype`
-nodeLabelAA = <| frml : α ltl_frml ;
-                 is_final : bool ;
-                 true_labels : (α edgeLabelAA) list
+  nodeLabelAA = <| frml : α ltl_frml ;
+                   is_final : bool ;
+                   true_labels : (α edgeLabelAA) list
                |>`;
 
 val _ = Datatype`
@@ -53,6 +53,64 @@ val transformLabel_def = Define`
   transformLabel aP pos neg =
    FOLDR (\a sofar. (char (POW aP) a) ∩ sofar)
          (FOLDR (\a sofar. (char_neg (POW aP) a) ∩ sofar) (POW aP) neg) pos`;
+
+val TRANSFORMLABEL_AP = store_thm
+  ("TRANSFORMLABEL_AP",
+   ``!aP pos neg. transformLabel aP pos neg ⊆ POW aP``,
+   simp[transformLabel_def]>> Induct_on `neg`
+   >- (Induct_on `pos` >> fs[] >> rpt strip_tac
+       >> fs[char_def]
+       >> `{a | a ∈ POW aP ∧ h ∈ a} ⊆ POW aP`
+          suffices_by metis_tac[INTER_SUBSET,SUBSET_TRANS]
+       >> simp[SUBSET_DEF] >> rpt strip_tac >> fs[]
+      )
+   >- (Induct_on `pos` >> fs[] >> rpt strip_tac
+       >> `char_neg (POW aP) h ⊆ POW aP` suffices_by
+           metis_tac[INTER_SUBSET,SUBSET_TRANS,INTER_ASSOC]
+       >> simp[char_neg_def]
+      )
+  );
+
+val TRANSFORMLABEL_SUBSET = store_thm
+  ("TRANSFORMLABEL_SUBSET",
+   ``!aP pos1 neg1 pos2 neg2.
+  MEM_SUBSET pos1 pos2 ∧ MEM_SUBSET neg1 neg2
+  ==>
+  (transformLabel aP pos2 neg2 ⊆ transformLabel aP pos1 neg1)``,
+   simp[transformLabel_def] >> Induct_on `pos1`
+   >- (Induct_on `neg1` >> fs[MEM_SUBSET_def] >> rpt strip_tac
+    >- metis_tac[TRANSFORMLABEL_AP,transformLabel_def]
+    >- metis_tac[FOLDR_INTER,SUBSET_TRANS]
+      )
+   >- (rpt strip_tac >> fs[MEM_SUBSET_def]
+       >> metis_tac[FOLDR_INTER,SUBSET_TRANS]
+      )
+  );
+
+val TRANSFORMLABEL_FOLDR = store_thm
+  ("TRANSFORMLABEL_FOLDR",
+   ``!aP l x.
+       (!e. MEM e l ==> x ∈ transformLabel aP e.pos e.neg)
+       ∧ (x ∈ (POW aP))
+       ==> x ∈
+            transformLabel aP
+            (FOLDR (λe pr. e.pos ++ pr) [] l)
+            (FOLDR (λe pr. e.neg ++ pr) [] l)``,
+   Induct_on `l` >> fs[transformLabel_def] >> rpt strip_tac
+   >> `x ∈
+        FOLDR (λa sofar. char (POW aP) a ∩ sofar)
+        (FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP) h.neg)
+        h.pos` by metis_tac[]
+   >> `x ∈
+        FOLDR (λa sofar. char (POW aP) a ∩ sofar)
+        (FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP)
+               (FOLDR (λe pr. e.neg ⧺ pr) [] l))
+        (FOLDR (λe pr. e.pos ⧺ pr) [] l)` by metis_tac[]
+   >> rw[FOLDR_LEMM5]
+  );
+
+
+
 
 val concr2AbstractEdge_def = Define`
   concr2AbstractEdge aP (concrEdge pos neg sucs) =

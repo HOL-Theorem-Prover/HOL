@@ -10,8 +10,10 @@ val d_gen_def = Define`
 
 val tr_less_general_def = Define`
   tr_less_general AccSet qs =
-   { ((a1,e1),(a2,e2)) | (a2 ⊆ a1) ∧ (e1 ⊆ e2)
-                   ∧ (!T'. (T' ∈ AccSet) ==> (((qs,a2,e2) ∈ T') ==> (qs,a1,e1) ∈ T'))}`;
+   { ((a1,e1),(a2,e2)) |
+             (a2 ⊆ a1) ∧ (e1 ⊆ e2)
+           ∧ (!T'. (T' ∈ AccSet)
+                   ==> (((qs,a2,e2) ∈ T') ==> (qs,a1,e1) ∈ T'))}`;
 
 val TLG_PO = store_thm
   ("TLG_PO",
@@ -186,65 +188,90 @@ val D_GEN_A_E_LEMM2 = store_thm
         ∧ a ⊆ aut.alphabet
  ==> (aut.alphabet ∩ BIGINTER {a' q | q ∈ qs }, BIGUNION {e' q | q ∈ qs})
                       ∈ d_gen aut qs``,
-   `!qs. FINITE qs ==>
-         (!aut a e a' e'. (!q. q ∈ qs ==> (a' q,e' q) ∈ (aut.trans q) ∧ a ⊆ a' q ∧ e' q ⊆ e)
-                     ∧ a ⊆ aut.alphabet
-          ==> (aut.alphabet ∩ BIGINTER {a' q | q ∈ qs },BIGUNION {e' q | q ∈ qs})
-                      ∈ d_gen aut qs)` suffices_by
-       metis_tac[]
-   >> Induct_on `qs` >> rpt strip_tac >> fs[]
-     >- (fs[d_gen_def,d_conj_set_def]
-         >> metis_tac[FINITE_EMPTY,ITSET_def,IN_SING,EMPTY_SUBSET]
-        )
-     >- (`(aut.alphabet ∩ BIGINTER {a' q | q ∈ qs},
-           BIGUNION {e'' q | q ∈ qs}) ∈ d_gen aut qs` by metis_tac[]
-           >> PURE_ASM_REWRITE_TAC[d_gen_def,d_conj_set_def]
-           >> `{(q, aut.trans q) | q ∈ qs} DELETE (e, aut.trans e) =
-                         {(q,aut.trans q) | q ∈ qs}`
-                   by (fs[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac)
-           >> `FINITE {(q, aut.trans q) | q ∈ qs}` by metis_tac[IMAGE_FINITE,IMAGE_DEF]
-           >> imp_res_tac D_CONJ_SET_RECURSES
-           >> first_x_assum (qspec_then `(e, aut.trans e)` mp_tac)
-           >> rpt strip_tac
-           >> first_x_assum (qspec_then `{(aut.alphabet,{})}` mp_tac)
-           >> rpt strip_tac >> fs[]
-           >> rw[INSERT_LEMM]
-           >> `ITSET (d_conj o SND) ((e,aut.trans e) INSERT {(q,aut.trans q) | q ∈ qs})
-                               {(aut.alphabet,∅)} =
-                   d_conj (aut.trans e)
-                          (ITSET (d_conj o SND) {(q, aut.trans q) | q ∈ qs}
-                                 {(aut.alphabet,∅)})`
-                   by fs[]
-           >> `(e,aut.trans e) INSERT {(q,aut.trans q) | q ∈ qs} =
-                  {(q,aut.trans q) | (q = e) ∨ q ∈ qs}` by (
-               simp[INSERT_DEF] >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
-               >> metis_tac[]
-           )
-           >> `(aut.alphabet ∩ BIGINTER {a' q | (q = e) ∨ q ∈ qs},
-                BIGUNION {e'' q | (q = e) ∨ q ∈ qs}) ∈
-                      d_conj (aut.trans e)
-                      (ITSET (d_conj ∘ SND) {(q,aut.trans q) | q ∈ qs}
-                             {(aut.alphabet,∅)})` suffices_by metis_tac[]
-           >> simp[d_conj_def]
-           >> qabbrev_tac `bigA = aut.alphabet ∩ BIGINTER {a' q | q ∈ qs}`
-           >> qabbrev_tac `bigE = BIGUNION {e'' q | q ∈ qs}`
-           >> qexists_tac `a' e` >> qexists_tac `bigA`
-           >> qexists_tac `e'' e` >> qexists_tac `bigE`
-           >> rpt strip_tac
-             >- (qunabbrev_tac `bigA`
-                 >> `BIGINTER {a' q | (q = e) ∨ q ∈ qs} = a' e ∩ BIGINTER {a' q | q ∈ qs}`
-                   suffices_by metis_tac[INTER_ASSOC, INTER_COMM]
-                 >> simp[SET_EQ_SUBSET,SUBSET_DEF,BIGINTER,INTER_DEF] >> rpt strip_tac
-                 >> metis_tac[]
+   rpt strip_tac >> fs[d_gen_def]
+   >> qabbrev_tac `s = {(q,aut.trans q) | q ∈ qs}`
+   >> `!q. q ∈ qs = q ∈ IMAGE FST s` by (
+       simp[EQ_IMP_THM] >> rpt strip_tac
+       >- (qexists_tac `(q, aut.trans q)` >> qunabbrev_tac `s` >> fs[])
+       >- (qunabbrev_tac `s` >> Cases_on `x` >> fs[])
+   )
+   >> rw[]
+   >> `(aut.alphabet ∩ BIGINTER {a' q | q ∈ IMAGE FST s},
+       BIGUNION {e' q | q ∈ IMAGE FST s}) ∈ d_conj_set s aut.alphabet`
+       by (HO_MATCH_MP_TAC D_CONJ_SET_LEMM3
+           >> `FINITE s` by (
+                `s = IMAGE (λq. (q,aut.trans q)) qs` by (
+                    qunabbrev_tac `s` >> simp[SET_EQ_SUBSET,SUBSET_DEF]
                 )
-             >- (qunabbrev_tac `bigE`
-                 >> simp[SET_EQ_SUBSET,SUBSET_DEF,BIGUNION,UNION_DEF] >> rpt strip_tac
-                 >> metis_tac[]
-                )
-             >- metis_tac[]
-             >- metis_tac[d_gen_def,d_conj_set_def]
-        )
+                >> metis_tac[IMAGE_FINITE]
+            )
+           >> qexists_tac `a` >> fs[] >> qunabbrev_tac `s` >> fs[]
+          )
+   >> fs[IN_IMAGE]
   );
+
+
+
+
+  (*  `!qs. FINITE qs ==> *)
+  (*        (!aut a e a' e'. (!q. q ∈ qs ==> (a' q,e' q) ∈ (aut.trans q) ∧ a ⊆ a' q ∧ e' q ⊆ e) *)
+  (*                    ∧ a ⊆ aut.alphabet *)
+  (*         ==> (aut.alphabet ∩ BIGINTER {a' q | q ∈ qs },BIGUNION {e' q | q ∈ qs}) *)
+  (*                     ∈ d_gen aut qs)` suffices_by *)
+  (*      metis_tac[] *)
+  (*  >> Induct_on `qs` >> rpt strip_tac >> fs[] *)
+  (*    >- (fs[d_gen_def,d_conj_set_def] *)
+  (*        >> metis_tac[FINITE_EMPTY,ITSET_def,IN_SING,EMPTY_SUBSET] *)
+  (*       ) *)
+  (*    >- (`(aut.alphabet ∩ BIGINTER {a' q | q ∈ qs}, *)
+  (*          BIGUNION {e'' q | q ∈ qs}) ∈ d_gen aut qs` by metis_tac[] *)
+  (*          >> PURE_ASM_REWRITE_TAC[d_gen_def,d_conj_set_def] *)
+  (*          >> `{(q, aut.trans q) | q ∈ qs} DELETE (e, aut.trans e) = *)
+  (*                        {(q,aut.trans q) | q ∈ qs}` *)
+  (*                  by (fs[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac) *)
+  (*          >> `FINITE {(q, aut.trans q) | q ∈ qs}` by metis_tac[IMAGE_FINITE,IMAGE_DEF] *)
+  (*          >> imp_res_tac D_CONJ_SET_RECURSES *)
+  (*          >> first_x_assum (qspec_then `(e, aut.trans e)` mp_tac) *)
+  (*          >> rpt strip_tac *)
+  (*          >> first_x_assum (qspec_then `{(aut.alphabet,{})}` mp_tac) *)
+  (*          >> rpt strip_tac >> fs[] *)
+  (*          >> rw[INSERT_LEMM] *)
+  (*          >> `ITSET (d_conj o SND) ((e,aut.trans e) INSERT {(q,aut.trans q) | q ∈ qs}) *)
+  (*                              {(aut.alphabet,∅)} = *)
+  (*                  d_conj (aut.trans e) *)
+  (*                         (ITSET (d_conj o SND) {(q, aut.trans q) | q ∈ qs} *)
+  (*                                {(aut.alphabet,∅)})` *)
+  (*                  by fs[] *)
+  (*          >> `(e,aut.trans e) INSERT {(q,aut.trans q) | q ∈ qs} = *)
+  (*                 {(q,aut.trans q) | (q = e) ∨ q ∈ qs}` by ( *)
+  (*              simp[INSERT_DEF] >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac *)
+  (*              >> metis_tac[] *)
+  (*          ) *)
+  (*          >> `(aut.alphabet ∩ BIGINTER {a' q | (q = e) ∨ q ∈ qs}, *)
+  (*               BIGUNION {e'' q | (q = e) ∨ q ∈ qs}) ∈ *)
+  (*                     d_conj (aut.trans e) *)
+  (*                     (ITSET (d_conj ∘ SND) {(q,aut.trans q) | q ∈ qs} *)
+  (*                            {(aut.alphabet,∅)})` suffices_by metis_tac[] *)
+  (*          >> simp[d_conj_def] *)
+  (*          >> qabbrev_tac `bigA = aut.alphabet ∩ BIGINTER {a' q | q ∈ qs}` *)
+  (*          >> qabbrev_tac `bigE = BIGUNION {e'' q | q ∈ qs}` *)
+  (*          >> qexists_tac `a' e` >> qexists_tac `bigA` *)
+  (*          >> qexists_tac `e'' e` >> qexists_tac `bigE` *)
+  (*          >> rpt strip_tac *)
+  (*            >- (qunabbrev_tac `bigA` *)
+  (*                >> `BIGINTER {a' q | (q = e) ∨ q ∈ qs} = a' e ∩ BIGINTER {a' q | q ∈ qs}` *)
+  (*                  suffices_by metis_tac[INTER_ASSOC, INTER_COMM] *)
+  (*                >> simp[SET_EQ_SUBSET,SUBSET_DEF,BIGINTER,INTER_DEF] >> rpt strip_tac *)
+  (*                >> metis_tac[] *)
+  (*               ) *)
+  (*            >- (qunabbrev_tac `bigE` *)
+  (*                >> simp[SET_EQ_SUBSET,SUBSET_DEF,BIGUNION,UNION_DEF] >> rpt strip_tac *)
+  (*                >> metis_tac[] *)
+  (*               ) *)
+  (*            >- metis_tac[] *)
+  (*            >- metis_tac[d_gen_def,d_conj_set_def] *)
+  (*       ) *)
+  (* ); *)
 
 val D_GEN_A_E_LEMM3 = store_thm
   ("D_GEN_A_E_LEMM3",
