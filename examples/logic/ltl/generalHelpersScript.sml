@@ -72,6 +72,15 @@ val INSERT_LEMM = store_thm
    >> metis_tac[]
   );
 
+val IN_BIGINTER_SUBSET = store_thm
+  ("IN_BIGINTER_SUBSET",
+   ``!x P. (x ∈ P) ==> (BIGINTER P ⊆ x)``,
+   rpt strip_tac
+   >> `x INSERT P = P` by simp[SET_EQ_SUBSET,SUBSET_DEF]
+   >> `x ∩ BIGINTER P = BIGINTER P` by metis_tac[BIGINTER_INSERT]
+   >> metis_tac[INTER_SUBSET]
+  );
+
 val NO_BOUNDS_INFINITE = store_thm
   ("NO_BOUNDS_INFINITE",
   ``!f. (!i. i <= f i)
@@ -272,6 +281,63 @@ val D_CONJ_SET_LEMM2 = store_thm
   ``!A s a e. FINITE s ∧ (a,e) ∈ d_conj_set s A
      ==> (!q d. (q,d) ∈ s ==> ?a' e'. (a',e') ∈ d ∧ a ⊆ a' ∧ e' ⊆ e)``,
   rpt strip_tac >> metis_tac[D_CONJ_SET_LEMM]
+  );
+
+val D_CONJ_SET_LEMM2_STRONG = store_thm
+  ("D_CONJ_SET_LEMM2_STRONG",
+  ``!A s. FINITE s
+      ==> !a e. (a,e) ∈ d_conj_set s A
+        ==> (?f_a f_e. !q d.
+           ((q,d) ∈ s ==> (f_a q d,f_e q d) ∈ d ∧ a ⊆ f_a q d ∧ f_e q d ⊆ e)
+         ∧ (A ∩ BIGINTER {f_a q d | (q,d) ∈ s } = a)
+         ∧ (BIGUNION {f_e q d | (q,d) ∈ s } = e))``,
+  gen_tac >> Induct_on `s` >> rpt strip_tac
+  >- (fs[NOT_IN_EMPTY,d_conj_set_def,ITSET_THM])
+  >- (rename[`(a,e1) ∈ d_conj_set (e INSERT s) A`]
+      >> fs[d_conj_set_def]
+      >> `s DELETE e = s` by (simp[SET_EQ_SUBSET,SUBSET_DEF])
+      >> `(a,e1) ∈
+            (d_conj ∘ SND) e (ITSET (d_conj ∘ SND) (s DELETE e) {A,{}})`
+           by metis_tac[D_CONJ_SET_RECURSES]
+      >> fs[d_conj_def] >> rw[]
+      >> first_x_assum (qspec_then `a2` mp_tac) >> rpt strip_tac
+      >> first_x_assum (qspec_then `e2` mp_tac)
+      >> `(a2,e2) ∈ ITSET (d_conj ∘ SND) s {(A,∅)}` by metis_tac[]
+      >> simp[] >> rpt strip_tac
+      >> qabbrev_tac `f_a2 =
+           λq d. if (q,d) = e then a1 else f_a q d`
+      >> qabbrev_tac `f_e2 =
+           λq d. if (q,d) = e then e1' else f_e q d`
+      >> qexists_tac `f_a2` >> qexists_tac `f_e2` >> fs[] >> rpt strip_tac
+      >> qunabbrev_tac `f_a2` >> qunabbrev_tac `f_e2` >> rw[] >> fs[]
+      >> first_x_assum (qspec_then `q` mp_tac) >> rpt strip_tac
+      >> first_x_assum (qspec_then `d` mp_tac) >> simp[] >> rpt strip_tac
+      >> fs[] >> rw[]
+      >- metis_tac[INTER_SUBSET,INTER_ASSOC,SUBSET_TRANS]
+      >- metis_tac[SUBSET_UNION,SUBSET_TRANS]
+      >- (`{if (q,d) = e
+            then a1
+            else f_a q d | (q,d) | (q,d) = e ∨ (q,d) ∈ s} =
+           {f_a q d | (q,d) ∈ s} ∪ {a1}` by (
+         simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> fs[]
+         >- metis_tac[]
+         >- metis_tac[]
+         >- (qexists_tac `FST e` >> qexists_tac `SND e` >> fs[])
+         )
+         >> rw[] >> metis_tac[INTER_ASSOC,INTER_COMM]
+         )
+      >- (`{if (q,d) = e
+            then e1'
+            else f_e q d | (q,d) | (q,d) = e ∨ (q,d) ∈ s} =
+            {f_e q d | (q,d) ∈ s} ∪ {e1'}` by (
+         simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> fs[]
+         >- metis_tac[]
+         >- metis_tac[]
+         >- (qexists_tac `FST e` >> qexists_tac `SND e` >> fs[])
+         )
+         >> rw[] >> metis_tac[UNION_COMM]
+         )
+     )
   );
 
 val D_CONJ_SET_LEMM3 = store_thm
@@ -486,6 +552,21 @@ val FOLDR_APPEND = store_thm
    >- (simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> fs[]
        >> metis_tac[]
       )
+  );
+
+val FOLDR_LEMM5 = store_thm
+  ("FOLDR_LEMM5",
+   ``!l1 l2 l3 l4 f1 f2 s.
+      (FOLDR (λa sofar. f1 a ∩ sofar)
+             (FOLDR (λa sofar. f2 a ∩ sofar) s (l1++l2)) (l3++l4))
+       = ((FOLDR (λa sofar. f1 a ∩ sofar)
+                 (FOLDR (λa sofar. f2 a ∩ sofar) s l1) l3)
+              ∩ ((FOLDR (λa sofar. f1 a ∩ sofar)
+                        (FOLDR (λa sofar. f2 a ∩ sofar) s l2) l4)))``,
+   Induct_on `l3` >> simp[SET_EQ_SUBSET,SUBSET_DEF]
+   >> rpt strip_tac >> fs[]
+   >> Induct_on `l4`
+   >> Induct_on `l1` >> fs[] >> Induct_on `l2` >> fs[]
   );
 
 val ZIP_MAP = store_thm

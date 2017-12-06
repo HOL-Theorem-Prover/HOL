@@ -57,21 +57,6 @@ val FOLDR_LEMM4 = store_thm
    >> rpt strip_tac >> metis_tac[]
   );
 
-val FOLDR_LEMM5 = store_thm
-  ("FOLDR_LEMM5",
-   ``!l1 l2 l3 l4 f1 f2 s.
-     (FOLDR (λa sofar. f1 a ∩ sofar)
-            (FOLDR (λa sofar. f2 a ∩ sofar) s (l1++l2)) (l3++l4))
-     = ((FOLDR (λa sofar. f1 a ∩ sofar)
-             (FOLDR (λa sofar. f2 a ∩ sofar) s l1) l3)
-       ∩ ((FOLDR (λa sofar. f1 a ∩ sofar)
-             (FOLDR (λa sofar. f2 a ∩ sofar) s l2) l4)))``,
-   Induct_on `l3` >> simp[SET_EQ_SUBSET,SUBSET_DEF]
-   >> rpt strip_tac >> fs[]
-   >> Induct_on `l4`
-   >> Induct_on `l1` >> fs[] >> Induct_on `l2` >> fs[]
-  );
-
 val FOLDR_LEMM6 = store_thm
   ("FOLDR_LEMM6",
    ``!l x. MEM x (FOLDR (λe pr. e.sucs ⧺ pr) [] l)
