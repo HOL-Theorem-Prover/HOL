@@ -143,16 +143,23 @@ fun abstract_termarg stac =
  * Instantiating tactics with predicted term
  *----------------------------------------------------------------------------*)
 
+fun with_types f x =
+  let 
+    val mem = !show_types
+    val _ = show_types := true
+    val r = f x
+    val _ = show_types := mem
+  in
+    r
+  end
+  
 fun predict_termarg g s =
   let
     val term = Parse.Term [QUOTE (unquote_string s)] 
-    val mem = !show_types
-    val _ = show_types := not (polymorphic (type_of term)) 
     val new_term = closest_subterm g term
     val new_s = if new_term = term 
                 then s 
-                else "\"" ^ term_to_string new_term ^ "\""
-    val _ = show_types := mem        
+                else "\"" ^ with_types term_to_string new_term ^ "\""       
   in
     new_s
   end          

@@ -174,15 +174,14 @@ fun select_mcfeav stacfeav =
       fun equal_compare _ = EQUAL
       val l = map snd stacfeav
       val mcfeav_org = map (fn (a,b) => (b,a)) (dlist (!hhs_mcdict))
-      (* computing tfidf *)
-      val mcsymweight = debug_t "mcsymweight" learn_tfidf mcfeav_org
-      (* selecting neighbors for each goal *)
+      val premcsymweight = debug_t "premcsymweight" learn_tfidf mcfeav_org
       val mcfeav_aux = 
         List.concat 
-          (map (premcknn mcsymweight (!hhs_mc_preradius) mcfeav_org) l)
+          (map (premcknn premcsymweight (!hhs_mc_preradius) mcfeav_org) l)
       val mcfeav = 
         mk_fast_set (cpl_compare equal_compare (list_compare Int.compare)) 
           mcfeav_aux
+      val mcsymweight = debug_t "mcsymweight" learn_tfidf mcfeav
     in
       (mcsymweight, mcfeav)
     end
@@ -199,12 +198,10 @@ fun main_tactictoe goal =
     (* fast predictors *)
     fun stacpredictor g =
       stacknn stacsymweight (!hhs_maxselect_pred) stacfeav (fea_of_goal g)
-    fun thmpredictor g = 
-      map fst (thmknn thmsymweight (!hhs_metis_npred) thmfeav (fea_of_goal g))
+    fun thmpredictor n g = 
+      map fst (thmknn thmsymweight n thmfeav (fea_of_goal g))
     fun mcpredictor g =
-      if !hhs_mc_flag 
-      then mcknn mcsymweight (!hhs_mc_radius) mcfeav (fea_of_goal g)
-      else 0.0
+      mcknn mcsymweight (!hhs_mc_radius) mcfeav (fea_of_goal g)
   in
     debug_t "Search" 
       (imperative_search thmpredictor stacpredictor mcpredictor tacdict) goal

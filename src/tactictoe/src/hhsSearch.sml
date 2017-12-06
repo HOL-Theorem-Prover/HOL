@@ -65,7 +65,7 @@ fun string_of_predentry ((stac,_,_,_),score) =
 fun string_of_pred pred =
   "[" ^ String.concatWith "," (map string_of_predentry pred) ^ "]"
 
-val stacpred_time = ref 0.0
+val inst_time = ref 0.0
 val predict_time = ref 0.0
 val thmpredict_time = ref 0.0
 val infstep_time = ref 0.0
@@ -74,7 +74,7 @@ val node_find_time = ref 0.0
 val mc_time = ref 0.0
 val tot_time = ref 0.0
 
-val stacpred_timer = total_time stacpred_time
+val inst_timer = total_time inst_time
 val predict_timer = total_time predict_time
 val thmpredict_timer = total_time thmpredict_time
 val infstep_timer = total_time infstep_time
@@ -85,7 +85,7 @@ fun total_timer f x = total_time tot_time f x
 
 fun reset_timers () =
   (
-  stacpred_time := 0.0;
+  inst_time := 0.0;
   predict_time := 0.0;
   thmpredict_time := 0.0;
   infstep_time := 0.0;
@@ -166,9 +166,8 @@ fun backup_fail cid =
     if parid = NONE then () else backup_loop 0.0 (valOf parid)
   end
 
-
 (* --------------------------------------------------------------------------
-   Pattern predictions
+   Argument predictions and instantiation
    -------------------------------------------------------------------------- *)
 
 fun install_stac tacdict stac =
@@ -179,21 +178,21 @@ fun install_stac tacdict stac =
     tacdict := dadd stac tac (!tacdict)
   end
   
-fun addpred_stac tacdict thmpredictor (g,pred) =
+fun inst_arg tacdict thmpredictor (g,pred) =
   if !hhs_thmlarg_flag orelse !hhs_termarg_flag then
     let 
-      (* 20 approximately corresponds to maximal width *)
       val (al,bl) = part_n 20 pred 
       val bl' = filter (not o is_absarg_stac o #1 o fst) bl
-      (* number of prediction is not flexible in thmpredictor *)
+      (* number of prediction is not flexible in thmpredictor:
+         should make it an argument of thmpredictor *)
       val thmls = 
         String.concatWith " , " (map dbfetch_of_string (!thmpredictor_glob g))
-      fun inst_entry (lbl as (stac,a1,b1,c1),score) =
+      fun inst_lbl (lbl as (stac,a1,b1,c1),score) =
         if is_absarg_stac stac
         then 
           let 
             val _ = debug_search ("instantiating: " ^ stac)
-            val new_stac = inst_stac thmls g stac 
+            val new_stac = inst_stac thmls g stac
           in
             debug_search ("to: " ^ new_stac);
             install_stac tacdict_glob new_stac;
@@ -202,7 +201,7 @@ fun addpred_stac tacdict thmpredictor (g,pred) =
           handle _ => (debug "Warning: addpred_stac"; NONE)
         else SOME (lbl,score)
     in
-      (g, List.mapPartial inst_entry al @ bl')
+      (g, List.mapPartial inst_lbl al @ bl')
     end
   else (g, pred)   
   
@@ -274,7 +273,7 @@ fun root_create_wrap g =
       (
       add_accept tacdict_glob o
       add_metis tacdict_glob thmpredictor_glob o 
-      stacpred_timer (addpred_stac tacdict_glob thmpredictor_glob) o
+      inst_timer (inst_arg tacdict_glob thmpredictor_glob) o
       estimate_distance (cost,0.0)
       ) 
         (g,pred)
@@ -364,29 +363,15 @@ fun apply_stac pardict trydict_unref stac g =
     val _ = last_stac := stac
     val tim = dfind stac (!stactime_dict) handle _ => (!hhs_tactic_time)
     val _ = stac_counter := !stac_counter + 1
-    val istac =
-      if (!hhs_thmlarg_flag orelse !hhs_termarg_flag) andalso
-         is_absarg_stac stac 
-      then
-        let
-          val thml   = (!thmpredictor_glob) g
-          val thmls  = String.concatWith " , " (map dbfetch_of_string thml)
-          val rstac = inst_stac thmls g stac
-        in
-          install_stac tacdict_glob rstac;
-          rstac
-        end  
-      else stac
     val tac = dfind stac (!tacdict_glob) 
       handle _ => debug_err ("apply_stac: " ^ stac)
-    val glo = dfind (stac,g) (!stacgoal_cache) handle _ => app_tac tim tac g
-    val new_glo =
-      case glo of
-        NONE => NONE
-      | SOME gl =>
+    val glo = dfind (stac,g) (!stacgoal_cache) 
+      handle _ => app_tac tim tac g
+    val new_glo = case glo of NONE => NONE | SOME gl =>
       (
-      if mem g gl orelse exists (fn x => dmem x pardict) gl then NONE
-      else if dmem gl trydict_unref then NONE
+      if mem g gl orelse exists (fn x => dmem x pardict) gl orelse
+         dmem gl trydict_unref
+      then NONE
       else SOME gl
       )
   in
@@ -565,9 +550,7 @@ fun node_create_gl pripol tactime gl pid =
       if !hhs_cache_flag
       then
         (g, dfind g (!goalpred_cache)) handle _ =>
-        let
-          val r = (!stacpredictor_glob) g
-        in
+        let val r = (!stacpredictor_glob) g in
           goalpred_cache := dadd g r (!goalpred_cache);
           (g,r)
         end
@@ -579,7 +562,7 @@ fun node_create_gl pripol tactime gl pid =
       map (
           add_accept tacdict_glob o
           add_metis tacdict_glob thmpredictor_glob o 
-          stacpred_timer (addpred_stac tacdict_glob thmpredictor_glob) o
+          inst_timer (inst_arg tacdict_glob thmpredictor_glob) o
           estimate_distance (cost,0.0) o 
           add_pred
           ) 
@@ -748,7 +731,7 @@ fun end_search () =
   debug_proof ("    pred time: " ^ Real.toString (!predict_time));
   debug_proof ("    thmpred time: " ^ Real.toString (!thmpredict_time));
   debug_proof ("    mc time: " ^ Real.toString (!mc_time));   
-  debug_proof ("    stacpred time: " ^ Real.toString (!stacpred_time));
+  debug_proof ("    inst time: " ^ Real.toString (!inst_time));
   proofdict    := dempty Int.compare;
   finproofdict := dempty Int.compare;
   tacdict_glob := dempty String.compare;

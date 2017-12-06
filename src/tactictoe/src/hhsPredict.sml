@@ -12,6 +12,7 @@ struct
 open HolKernel Abbrev hhsTools hhsTools hhsSetup
 
 val ERR = mk_HOL_ERR "hhsPredict"
+fun debug_err s = (debug ("Error: " ^ s); raise ERR "standard" "error")
 
 (* -------------------------------------------------------------------------- 
    TFIDF: weight of symbols (power of 6 comes from the distance)
@@ -52,7 +53,7 @@ fun knn_self_distance symweight fea =
 fun knn_distance symweight dict_o fea_p =
   let 
     val fea_i   = inter_dict dict_o fea_p
-    fun wf n    = dfind n symweight handle _ => raise ERR "knn_distance" ""
+    fun wf n    = dfind n symweight handle _ => debug_err "knn_distance" ""
     val weightl = map wf fea_i
   in
     sum_real weightl
@@ -61,13 +62,12 @@ fun knn_distance symweight dict_o fea_p =
 (* borrow the symweight from theorem *)
 fun knn_similarity symweight dict_o fea_p =
   let 
-    val fea_i   = inter_dict dict_o fea_p
-    val fea_u   = union_dict dict_o fea_p
-    fun wf n    = dfind n symweight handle _ => raise ERR "knn_sim" ""
-    val weightl1 = map wf fea_i
-    val weightl2 = map wf fea_u
+    val fea_i    = inter_dict dict_o fea_p
+    fun wf feae  = dfind feae symweight handle _ => debug_err "knn_sim" ""
+    val weightl  = map wf fea_i
+    val tot      = Real.fromInt (dlength dict_o + length fea_p)
   in
-    sum_real weightl1 / Math.ln (Math.e + sum_real weightl2)
+    sum_real weightl / Math.ln (Math.e + tot)
   end
 
 (* --------------------------------------------------------------------------
@@ -107,6 +107,16 @@ fun pre_knn_fea symweight feal fea_o =
   in
     l1
   end  
+
+fun pre_sim_fea symweight feal fea_o =
+  let 
+    val dict_o = dnew Int.compare (map (fn x => (x,())) fea_o)
+    fun dist (lbl,fea) = ((lbl,fea), knn_similarity symweight dict_o fea)
+    val l0 = map dist feal
+    val l1 = dict_sort compare_score l0
+  in
+    l1
+  end 
 
 (* eliminate duplicates with the same tactic string *)    
 fun stacknn symweight n feal fea_o =
@@ -168,13 +178,13 @@ symweight = learn_tfidf feal
    -------------------------------------------------------------------------- *)
 
 fun premcknn symweight radius feal fea = 
-  map fst (first_n radius (pre_knn_fea symweight feal fea))
+  map fst (first_n radius (pre_sim_fea symweight feal fea))
 
 fun mcknn symweight radius feal fea =
   let
     fun ispos n (b,m) = b andalso m <= n
     fun isneg n (b,m) = (not b andalso m >= n) orelse (b andalso m > n)
-    val bnl = map fst (first_n radius (pre_knn symweight feal fea))
+    val bnl = map fst (first_n radius (pre_sim symweight feal fea))
     val nl = mk_fast_set Int.compare (map snd bnl)
     fun posf n = length (filter (ispos n) bnl)
     fun negf n = length (filter (isneg n) bnl)
@@ -186,7 +196,7 @@ fun mcknn symweight radius feal fea =
         pos / ((neg + pos) * (Real.fromInt n))
       end
   in   
-    list_rmax (map skewed_proba nl)
+    if null nl then 0.0 else list_rmax (map skewed_proba nl)
   end
 
 (* --------------------------------------------------------------------------

@@ -82,7 +82,10 @@ val hhs_selflearn_flag = ref false
 
 val hhs_thmortho_flag = ref false (* set at the recording level *)
 
+
+val hhs_metisexec_flag = ref false
 val hhs_metis_flag    = ref false
+
 val hhs_metis_time    = ref 0.1
 val hhs_metis_npred   = ref 16
 val hhs_thmlarg_flag = ref false
@@ -145,7 +148,7 @@ fun set_isearch () =
   hhs_mc_coeff    := 1.0;
   hhs_timedepth_flag := false;
   (* metis + holyhammer + new arguments *)
-  hhs_metis_flag  := (true andalso can load "metisTools");
+  hhs_metis_flag  := (true andalso can load "metisTools";);
   hhs_metis_npred := 16;
   hhs_metis_time  := 0.1;
   hh_stac_flag    := false;
@@ -177,11 +180,14 @@ fun set_esearch () =
   hhs_mc_preradius   := 100;
   hhs_mc_coeff       := 1.0;
   hhs_timedepth_flag := false;
-  (* metis + holyhammer + new arguments *)
-  hhs_metis_flag    := (true andalso can load "metisTools");
+  (* metis *)
+  hhs_metisexec_flag := can load "metisTools";
   hhs_metis_npred   := 16;
   hhs_metis_time    := 0.1;
-  hh_stac_flag      := (false andalso can_update_hh 5);
+  hhs_metishammer_flag := (false andalso !hhs_metisexec_flag);
+  (* holyhammer *)
+  hhs_hhhammer_flag := (false andalso can_update_hh 5);
+  (* synthesis *)
   hhs_thmlarg_flag := false;
   hhs_thmlarg_number := 16;
   hhs_termarg_flag := false;
@@ -196,12 +202,14 @@ fun set_erecord () =
   hhs_norecprove_flag  := true;
   hhs_nolet_flag       := true;
   (* learning *)
-  hhs_ortho_flag     := true;
-  hhs_ortho_number   := 20;
-  hhs_ortho_metis    := true;
-  hhs_ortho_deep     := false;
-  hhs_selflearn_flag := false;
-  hhs_thmortho_flag  := true;
+  hhs_ortho_flag      := false;
+  hhs_ortho_number    := 20;
+  hhs_selflearn_flag  := false;
+  (* metis learning *)
+  hhs_metisexec_flag  := can load "metisTools";
+  hhs_metisortho_flag  := (false andalso !hhs_metisexec_flag);
+  hhs_metisrecord_flag := (false andalso !hhs_metisexec_flag);
+  hhs_thmortho_flag    := (false andalso !hhs_metisexec_flag);
   (* evaluation *)
   hhs_eval_flag    := true;
   hhs_noprove_flag := true;
