@@ -315,16 +315,12 @@ fun holyhammer term =
 fun hh_stac goal = 
   let
     val term = list_mk_imp goal
-    val premises32 = select_premises 32 term
-    val premises128 = select_premises 128 term
-    val _ = export_problem Eprover premises128 term
+    val premises = select_premises 128 term
+    val _ = export_problem Eprover premises term
     val _ = translate_atp Eprover
-    val _ = export_problem Z3 premises32 term
-    val _ = translate_atp Z3
-    val _ = launch_parallel (!timeout_glob)
+    val _ = launch_atp Eprover (!timeout_glob)
   in
-    reconstruct_atp_stac Eprover term 
-    handle _ => reconstruct_atp_stac Z3 term
+    reconstruct_atp_stac Eprover term
   end
 
 fun hh_tac goal = (holyhammer (list_mk_imp goal)) goal

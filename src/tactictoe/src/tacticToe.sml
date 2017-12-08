@@ -22,7 +22,7 @@ fun set_timeout r = hhs_search_time := Time.fromReal r
 
 fun hh_eval goal =
   let val (staco,t) = add_time (!hh_stac_glob) goal in
-    debug_proof ("<hh_eval");
+    debug_proof ("hh_eval");
     debug_proof ("Time: " ^ Real.toString t);
     case staco of
       NONE      => debug_proof ("Proof status: Time Out")
@@ -58,8 +58,8 @@ fun import_ancestry () =
     val thyl    = ancestry (current_theory ())
     val stacfea = debug_t "import_feavl" import_feavl thyl
     val _ = debug (int_to_string (length stacfea));
-    val _ = debug_t "init_mdict" init_mdict ()
-    val _ = debug (int_to_string (dlength (!mdict_glob)))
+    val _ = debug_t "import_mdict" import_mdict ()
+    val _ = debug (int_to_string (dlength (!hhs_mdict)))
     val _ = debug_t "import_mc" import_mc thyl
     val _ = debug (int_to_string (dlength (!hhs_mcdict)))
   in
@@ -79,7 +79,7 @@ fun init_tactictoe () =
       let 
         val _ = debug_t ("init_tactictoe " ^ cthy) import_ancestry ()
         val ns = int_to_string (dlength (!hhs_stacfea))
-        val ms = int_to_string (dlength (!mdict_glob))
+        val ms = int_to_string (dlength (!hhs_mdict))
       in  
         hide_out QUse.use (tactictoe_dir ^ "/src/infix_file.sml");
         print_endline ("Loading " ^ ns ^ " tactic feature vectors");
@@ -117,27 +117,43 @@ fun descendant_of_feav ddict feav =
     !rlist
   end
 
+fun create_thmfeav feavdep goalfea =
+  let 
+    val thml = thmknn_ext hhs_predict_dir (!hhs_maxselect_pred) feavdep goalfea
+    val pdict = dnew String.compare (map (fn x => (x,())) thml) 
+    val feav0 = filter (fn (x,_,_) => dmem x pdict) feavdep
+    val feav1 = map (fn (a,b,c) => (a,b)) feav0
+  in
+    feav1
+  end
+
 fun select_thmfeav goalfea =
-  if !hhs_metis_flag 
+  if !hhs_metishammer_flag
   then
     let 
       val _ = debug "theorem selection"
       val _ = debug_t "update_mdict" update_mdict (current_theory ());
-      val thmfeav = dlist (!mdict_glob)
+      fun f (a,(_,b)) = (a,b)
+      val thmfeav = map f (dlist (!hhs_mdict))
       val thmsymweight = learn_tfidf thmfeav
       val thmfeavdep = 
         debug_t "dependency_of_thm"
         (mapfilter (fn (a,b) => (a,b,dependency_of_thm a))) thmfeav
-      (* Some theorems might disappear so map is not enough here
-         Orthogonalization and dependencies are slightly contradictory *)
-      val thml = thmknn_ext (!hhs_maxselect_pred) thmfeavdep goalfea
-      val pdict = dnew String.compare (map (fn x => (x,())) thml) 
-      val feav0 = filter (fn (x,_,_) => dmem x pdict) thmfeavdep
-      val feav1 = map (fn (a,b,c) => (a,b)) feav0
+      fun is_ortho a = fst (dfind a (!hhs_mdict))
+      val thmfeavdeportho = 
+        if !hhs_thmortho_flag 
+        then 
+          let val l0 = filter (is_ortho o #1) thmfeavdep in
+            map (fn (a,b,c) => (a,b,filter is_ortho c)) l0
+          end
+        else []
     in
-      (thmsymweight,feav1)
+      (thmsymweight, 
+       create_thmfeav thmfeavdep goalfea,
+       if !hhs_thmortho_flag 
+         then create_thmfeav thmfeavdeportho goalfea else [])
     end
-  else (dempty Int.compare, [])
+  else (dempty Int.compare, [], [])
   
 fun select_desc l =
    let
@@ -154,7 +170,7 @@ fun select_stacfeav goalfea =
     val stacsymweight = debug_t "learn_tfidf" learn_tfidf stacfeav_org
     (* selecting neighbors *)
     val l0 = debug_t "stacknn_ext" 
-      (stacknn_ext (!hhs_maxselect_pred) stacfeav_org) goalfea
+      (stacknn_ext hhs_predict_dir (!hhs_maxselect_pred) stacfeav_org) goalfea
     (* selecting descendants *)
     val l1 = debug_t "select_desc" select_desc l0
     (* parsing selected tactics *)
@@ -167,39 +183,38 @@ fun select_stacfeav goalfea =
     (stacsymweight, stacfeav, tacdict)
   end
 
-fun select_mcfeav stacfeav =
-  if !hhs_mc_flag
-  then
-    let
-      fun equal_compare _ = EQUAL
-      val l = map snd stacfeav
-      val mcfeav_org = map (fn (a,b) => (b,a)) (dlist (!hhs_mcdict))
-      val premcsymweight = debug_t "premcsymweight" learn_tfidf mcfeav_org
-      val mcfeav_aux = 
-        List.concat 
-          (map (premcknn premcsymweight (!hhs_mc_preradius) mcfeav_org) l)
-      val mcfeav = 
-        mk_fast_set (cpl_compare equal_compare (list_compare Int.compare)) 
-          mcfeav_aux
-      val mcsymweight = debug_t "mcsymweight" learn_tfidf mcfeav
-    in
-      (mcsymweight, mcfeav)
-    end
-  else (dempty Int.compare, [])
+fun select_mcfeav goalfea =
+  let
+    fun equal_compare _ = EQUAL
+    val mcfeav_org = map (fn (a,b) => (b,a)) (dlist (!hhs_mcdict))
+    val premcsymweight = debug_t "premcsymweight" learn_tfidf mcfeav_org
+    val mcfeav_aux = 
+      premcknn premcsymweight (!hhs_mc_preradius) mcfeav_org goalfea
+    val mcfeav = 
+      mk_fast_set (cpl_compare equal_compare (list_compare Int.compare)) 
+        mcfeav_aux
+    val mcsymweight = debug_t "mcsymweight" learn_tfidf mcfeav
+  in
+    (mcsymweight, mcfeav)
+  end
 
 fun main_tactictoe goal =
   let  
     (* preselection *)
     val goalfea = fea_of_goal goal       
     val (stacsymweight, stacfeav, tacdict) = select_stacfeav goalfea
-    val (thmsymweight, thmfeav) = select_thmfeav goalfea
+    val (thmsymweight, thmfeav, orthothmfeav) = select_thmfeav goalfea
     val (mcsymweight, mcfeav) = 
-      debug_t "select_mcfeav" select_mcfeav stacfeav
+      if !hhs_mc_flag 
+      then debug_t "select_mcfeav" select_mcfeav goalfea
+      else (dempty Int.compare, [])
     (* fast predictors *)
     fun stacpredictor g =
       stacknn stacsymweight (!hhs_maxselect_pred) stacfeav (fea_of_goal g)
-    fun thmpredictor n g = 
-      map fst (thmknn thmsymweight n thmfeav (fea_of_goal g))
+    fun thmpredictor ob n g = 
+      let val herefeav = if ob then orthothmfeav else thmfeav in
+        map fst (thmknn thmsymweight n herefeav (fea_of_goal g))
+      end
     fun mcpredictor g =
       mcknn mcsymweight (!hhs_mc_radius) mcfeav (fea_of_goal g)
   in

@@ -243,10 +243,12 @@ fun orthogonalize lbls (lbl as (ostac,t,g,gl),fea) =
     let
       val _ = debug_t "update_mdict" update_mdict (current_theory ())
       val _ = debug (string_of_goal g)
+      
       (* predict tactics *)
-      val feavectl = stacknn_ext (!hhs_ortho_number) (dlist (!hhs_stacfea)) fea
-      val stacl = mk_sameorder_set String.compare (map (#1 o fst) feavectl)
-      val stacl2 = filter (fn x => not (x = ostac)) stacl       
+      val feavl0 = dlist (!hhs_stacfea)
+      val feavl1 = stacknn_ext hhs_predict_dir (!hhs_ortho_number) feavl0 fea
+      val stacl1 = mk_sameorder_set String.compare (map (#1 o fst) feavl1)
+      val stacl2 = filter (fn x => not (x = ostac)) stacl1     
       (* order tactics by frequency *)
       fun score x = dfind x (!hhs_ndict) handle _ => 0
       val oscore  = score ostac
@@ -256,7 +258,7 @@ fun orthogonalize lbls (lbl as (ostac,t,g,gl),fea) =
       (* try abstracted tactic x before x *)
       val stacl5 = concat_absstacl ostac stacl4
       (* predicting theorems only once *)
-      val thml   = predict_for_metis (!hhs_thmlarg_number) g
+      val thml   = theorem_predictor false (!hhs_thmlarg_number) g
       val thmls  = String.concatWith " , " (map dbfetch_of_string thml)
       (* instantiate arguments *)
       val stacl6 = inst_stacl thmls g stacl5

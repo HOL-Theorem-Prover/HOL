@@ -133,8 +133,8 @@ fun pp_feavl feavl =
 val feature_time = ref 0.0 (* statistics *)
 
 fun metis_prove g =
-  !hhs_ortho_metis andalso !hhs_metis_flag andalso
-  solved_by_metis (!hhs_metis_npred) (!hhs_metis_time) g
+  !hhs_metisortho_flag andalso
+  metis_provable false (!hhs_metis_npred) (!hhs_metis_time) g
 
 fun save_lbl lbls (lbl0 as (stac0,t0,g0,gl0)) =
   if mem g0 gl0 orelse metis_prove g0 then ()
@@ -379,8 +379,6 @@ fun read_mc thy =
 
 fun import_mc thyl = app read_mc thyl
  
- 
-  
 (* test
 load "hhsData";
 open hhsFeature;

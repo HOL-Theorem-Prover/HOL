@@ -8,27 +8,25 @@ include Abbrev
   (* external predictions *)
   val dependency_of_thm : string -> string list
   
-  (* I/O *)
-  val init_mdict   : unit -> unit
-  val update_mdict : string -> unit
-  val export_mdict : string -> unit
-  
   (* depends on mdict *)
-  val predict_for_metis : int -> goal -> string list
-  val solved_by_metis   : int -> real -> goal -> bool
+  val theorem_predictor : bool -> int -> goal -> string list
+  val metis_provable : bool -> int -> real -> goal -> bool
   
   (* search *)
   val stactime_dict : (string, real) Redblackmap.dict ref
   val add_metis : 
     (string, tactic) Redblackmap.dict ref ->
-    (goal -> string list) ref -> 
+    (bool -> int -> goal -> string list) ref -> 
     goal * (lbl_t * real) list -> 
     goal * (lbl_t * real) list
+  val add_hammer : 
+    goal * (lbl_t * real) list -> 
+    goal * (lbl_t * real) list
+    
+    
+  val import_mdict : unit -> unit
+  val update_mdict : string -> unit
+  val export_mdict : string -> unit
 
-  val init_thml_glob : unit -> unit
-  val add_accept : 
-    (string, tactic) Redblackmap.dict ref ->
-    goal * (lbl_t * real) list -> 
-    goal * (lbl_t * real) list
 
 end

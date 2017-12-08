@@ -212,6 +212,8 @@ fun string_of_goal (asm,w) =
     s1
   end
 
+fun string_of_bool b = if b then "T" else "F"
+
 (* --------------------------------------------------------------------------
    Comparisons
    -------------------------------------------------------------------------- *)
@@ -514,8 +516,7 @@ fun dbfetch_of_string s =
     else s
   end
 
-val mdict_glob = ref (dempty String.compare)
-val negmdict_glob = ref (dempty String.compare)
+val hhs_mdict = ref (dempty String.compare)
 
 (* --------------------------------------------------------------------------
    Astar
@@ -536,8 +537,7 @@ fun clean_feadata () =
   hhs_cthyfea := [];
   hhs_ddict := dempty goal_compare;
   hhs_ndict := dempty String.compare;
-  mdict_glob := dempty String.compare;
-  negmdict_glob := dempty String.compare;
+  hhs_mdict := dempty String.compare;
   hhs_mcdict := dempty (list_compare Int.compare);
   hhs_mcdict_cthy := dempty (list_compare Int.compare)
   )

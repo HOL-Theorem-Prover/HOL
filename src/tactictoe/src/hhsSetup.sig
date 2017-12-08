@@ -10,9 +10,6 @@ sig
   (* learning *)
   val hhs_ortho_flag   : bool ref
   val hhs_ortho_number : int ref
-  val hhs_ortho_metis  : bool ref
-  val hhs_ortho_deep   : bool ref
-  val hhs_thmortho_flag : bool ref
   val hhs_selflearn_flag : bool ref
 
   (* evaluation *)
@@ -37,11 +34,21 @@ sig
   val hhs_width_coeff    : real ref
   
   (* metis + holyhammer + synthetizing *)
-  val hhs_metis_flag  : bool ref
+  val hhs_metisexec_flag : bool ref
+  val hhs_metishammer_flag : bool ref
+  val hhs_metisrecord_flag : bool ref
+  val hhs_metisortho_flag : bool ref
+  val hhs_thmortho_flag : bool ref
+  
   val hhs_metis_time  : real ref
-  val hhs_metis_npred : int ref (* used in learning *)
-  val hh_stac_flag    : bool ref (* holyhammer *)
-  val hhs_thmlarg_flag : bool ref (* synthetizing *)
+  val hhs_metis_npred : int ref
+  
+  (* holyhammer *)
+  val hhs_hhhammer_flag : bool ref 
+  val hhs_async_limit : int ref 
+  
+  (* synthetizing *)
+  val hhs_thmlarg_flag : bool ref 
   val hhs_thmlarg_number : int ref
   val hhs_termarg_flag : bool ref
   
@@ -49,8 +56,7 @@ sig
   val hhs_prettify_flag : bool ref
   val hhs_minimize_flag : bool ref
   
-  (* allows to test for the name of the theorem 
-     before evaluation *)
+  (* allows to test for the name of the theorem before evaluation *)
   val test_eval_hook : (string -> bool) ref
   
   (* init search *)

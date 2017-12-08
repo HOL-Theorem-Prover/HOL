@@ -242,7 +242,7 @@ fun reconstruct_stac (atp_status,atp_out) cj =
       NONE => NONE
     | SOME lemmas =>
     let val l = map string_of_lemma lemmas in
-      SOME ("metisTools.METIS_TAC [" ^ String.concatWith ", " l ^ "]")
+      SOME ("metisTools.METIS_TAC [" ^ String.concatWith " , " l ^ "]")
     end
   end  
 

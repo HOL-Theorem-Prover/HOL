@@ -15,8 +15,7 @@ sig
   val hhs_cthyfea   : feav_t list ref
   val hhs_ddict     : (goal, feav_t list) Redblackmap.dict ref
   val hhs_ndict     : (string, int) Redblackmap.dict ref
-  val mdict_glob    : (string, fea_t) Redblackmap.dict ref
-  val negmdict_glob : (string, unit) Redblackmap.dict ref
+  val hhs_mdict     : (string, (bool * fea_t)) Redblackmap.dict ref
   val dbfetch_of_string : string -> string
   
   val hhs_mcdict : (int list, (bool * int)) Redblackmap.dict ref
@@ -95,6 +94,7 @@ sig
   val feav_compare : (feav_t * feav_t) -> order
   
   val string_of_goal : goal -> string
+  val string_of_bool : bool -> string
 
   val readl : string -> string list
   val bare_readl : string -> string list

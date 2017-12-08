@@ -22,24 +22,67 @@ fun debug_err s = (debug ("Error: " ^ s); raise ERR "standard" "error")
 exception SearchTimeOut
 exception NoNextTac
 
+(* --------------------------------------------------------------------------
+   Handling asynchronous calls data
+   -------------------------------------------------------------------------- *) 
+
+(* Result *)
+datatype async_result_t = 
+  HInstall of goal | 
+  HSuccess of (string * goal) | 
+  HProcess of (string * goal) | 
+  HFailure | 
+  HRunning of Thread.Thread.thread | 
+  HVoid  
+
+(* 100000 is the maximum number of nodes *)
+val async_result = Array.array (100000, HVoid); 
+
+fun init_async () = Array.modify (fn _ => HVoid) async_result
+
+fun running pid = case Array.sub (async_result,pid) of
+    HRunning thread => SOME thread
+  | _ => NONE
+
+fun stop_async pid =
+  (
+  case running pid of
+    SOME thread => if Thread.Thread.isActive thread 
+                   then Thread.Thread.kill thread
+                   else ()
+  | NONE => ();  
+  Array.update (async_result,pid,HFailure)
+  )
+
+fun queue_async pid g = 
+  (
+  stop_async pid;
+  Array.update (async_result,pid,HInstall g)
+  ) 
+
 (* -------------------------------------------------------------------------
    Search references
    -------------------------------------------------------------------------- *)
 
 val notactivedict = ref (dempty Int.compare)
 fun is_notactive x = dmem x (!notactivedict)
-fun deactivate x = notactivedict := dadd x () (!notactivedict)
-
+fun deactivate x = 
+  (
+  stop_async x;
+  notactivedict := dadd x () (!notactivedict)
+  )
+  
 val proofdict = ref (dempty Int.compare)
 val finproofdict = ref (dempty Int.compare)
 
-val thmpredictor_glob = ref (fn g => [])
-val stacpredictor_glob = ref (fn g => [])
-val mcpredictor_glob = ref (fn gl => 0.0)
+val thmpredictor_glob = ref (fn _ => (fn _ => (fn _ => [])))
+val stacpredictor_glob = ref (fn _ => [])
+val mcpredictor_glob = ref (fn _ => 0.0)
 
 val tacdict_glob = ref (dempty String.compare)
-
 val glob_timer = ref NONE
+(* for reconstruction of delayed tactic *)
+val hammerdict = ref (dempty String.compare) 
 
 (* --------------------------------------------------------------------------
    Cache
@@ -94,7 +137,7 @@ fun reset_timers () =
   mc_time := 0.0;
   tot_time := 0.0
   )
-  
+
 (* --------------------------------------------------------------------------
    Basic diagonalized cost function.
    -------------------------------------------------------------------------- *)  
@@ -158,7 +201,7 @@ fun backup cid =
   end
 
 fun backup_fail cid =
-  let 
+  let
     val _ = debug_search "mcts backpropagation fail"
     val crec = dfind cid (!proofdict)
     val {parid,...} = crec
@@ -183,10 +226,8 @@ fun inst_arg tacdict thmpredictor (g,pred) =
     let 
       val (al,bl) = part_n 20 pred 
       val bl' = filter (not o is_absarg_stac o #1 o fst) bl
-      (* number of prediction is not flexible in thmpredictor:
-         should make it an argument of thmpredictor *)
-      val thmls = 
-        String.concatWith " , " (map dbfetch_of_string (!thmpredictor_glob g))
+      val thml = !thmpredictor_glob false (!hhs_thmlarg_number) g
+      val thmls = String.concatWith " , " (map dbfetch_of_string thml)
       fun inst_lbl (lbl as (stac,a1,b1,c1),score) =
         if is_absarg_stac stac
         then 
@@ -271,7 +312,7 @@ fun root_create_wrap g =
     val cost = 0
     val (_,pred1) = 
       (
-      add_accept tacdict_glob o
+      add_hammer o
       add_metis tacdict_glob thmpredictor_glob o 
       inst_timer (inst_arg tacdict_glob thmpredictor_glob) o
       estimate_distance (cost,0.0)
@@ -384,14 +425,16 @@ fun apply_next_stac pid =
     val prec = dfind pid (!proofdict)
     val gn = hd (! (#pending prec))
       handle _ => debug_err "apply_next_stac: empty pending"
-    val goal = Array.sub (#goalarr prec, gn)
+    val g = Array.sub (#goalarr prec, gn)
     val pred = Array.sub (#predarr prec, gn)
     val trydict_unref = !(#trydict prec)
     val pardict = (#pardict prec)
     val ((stac,_,_,_),_) = hd pred 
       handle _ => debug_err "apply_next_stac: empty pred"
   in
-    infstep_timer (apply_stac pardict trydict_unref stac) goal
+    if stac = "tactictoe_hammer"
+    then (queue_async pid g; NONE)
+    else infstep_timer (apply_stac pardict trydict_unref stac) g
   end
 
 (* ----------------------------------------------------------------------
@@ -473,16 +516,6 @@ fun try_mc_find () =
       else (pid,pripol)
     end
 
-fun node_find () = 
-  let
-    val _ = debug_search "node_find"
-    val l0 = filter (fn x => not (is_notactive (fst x))) (dlist (!proofdict))
-    val l1 = filter (fn x => not (has_empty_pred (fst x))) l0
-    val _ = if null l1 then (debug_search "nonexttac"; raise NoNextTac) else ()
-  in
-    if !hhs_mc_flag then try_mc_find () else (standard_node_find l1, 0.0)
-  end
-
 (* ---------------------------------------------------------------------------
    Closing proofs
    -------------------------------------------------------------------------- *)
@@ -560,7 +593,7 @@ fun node_create_gl pripol tactime gl pid =
     val cost = depth + width
     val predlist0 =
       map (
-          add_accept tacdict_glob o
+          add_hammer o 
           add_metis tacdict_glob thmpredictor_glob o 
           inst_timer (inst_arg tacdict_glob thmpredictor_glob) o
           estimate_distance (cost,0.0) o 
@@ -584,15 +617,19 @@ fun node_create_gl pripol tactime gl pid =
   end
 
 (* fake a node when a proof is found but no search is performed on this node *)
-fun node_create_empty pripol tactime pid =
+fun node_create_empty staco tactime pid =
   let
     val prec = dfind pid (!proofdict)
     val gn   = hd (! (#pending prec))
     val goal = Array.sub (#goalarr prec, gn)
-    val ((stac,_,_,_),_) = hd (Array.sub (#predarr prec, gn))
+    val pred = Array.sub (#predarr prec, gn)
+    val stac = 
+      case staco of 
+        NONE => #1 (#1 (hd pred))
+      | SOME s => s         
     val parchildren = #children prec
     val parchildrensave = Array.sub (#childrena prec,gn)
-    val selfid = node_create pripol tactime pid stac gn goal [] [] [] 
+    val selfid = node_create 0.0 tactime pid stac gn goal [] [] [] 
                    (dempty goal_compare)
   in
     parchildren := selfid :: (!parchildren);
@@ -600,16 +637,85 @@ fun node_create_empty pripol tactime pid =
     selfid
   end
 
+(* pid should be active and the goal should match *)
+fun close_proof_wrap staco tactime pid =
+  let val cid = node_create_timer (node_create_empty staco tactime) pid in
+    if !hhs_mc_flag then backup cid else ();
+    close_proof cid pid
+  end
+
+
+(* --------------------------------------------------------------------------
+   Handling asynchronously calls
+   -------------------------------------------------------------------------- *) 
+
+(* Hammer *)
+fun hammer_call i g = 
+  case !hh_stac_glob g of 
+    NONE      => Array.update (async_result,i,HFailure)
+  | SOME stac => Array.update (async_result,i,HSuccess (stac,g))
+
+fun fork_hammer pidl = 
+  let 
+    fun f i = case Array.sub (async_result,i) of 
+      HInstall g => SOME (i,g) 
+    | _ => NONE
+  in
+    case findSome f pidl of
+      NONE => ()
+    | SOME (i,g) => 
+      let val thread = Thread.Thread.fork (fn () => hammer_call i g, []) in
+        (* Relies on hammer call not finishing too fast *)
+        Array.update (async_result,i,HRunning thread);
+        debug ("holyhammer: new thread " ^ int_to_string i)
+      end
+  end
+
+fun current_goal pid = 
+  let 
+    val prec = dfind pid (!proofdict)
+    val gn   = hd (! (#pending prec))
+    val goal = Array.sub (#goalarr prec, gn)
+  in
+    goal
+  end
+
+fun close_async pidl = 
+  let 
+    fun f i = case Array.sub (async_result,i) of 
+      HSuccess (stac,g) => 
+      (debug_search ("holyhammer: proof of " ^ int_to_string i); SOME (i,stac,g)) 
+    | _ => NONE
+  in
+    case findSome f pidl of
+      NONE => ()
+    | SOME (i,stac,g) => 
+      (
+       Array.update (async_result,i,HProcess (stac,g));
+       if current_goal i = g (* unnecessary security *)
+       then close_proof_wrap (SOME stac) 0.0 i
+       else ()
+      )
+  end
+ 
+fun nb_running () = 
+  let fun count (a,n) = (case a of HRunning _ => n + 1 | _ => n) in
+    Array.foldl count 0 async_result
+  end
+  
+fun start_async pidl =
+  if nb_running () < !hhs_async_limit then fork_hammer pidl else ()
+
 (* ---------------------------------------------------------------------------
    Search function. Modifies the proof state.
    -------------------------------------------------------------------------- *)
 
 fun init_search thmpredictor stacpredictor mcpredictor tacdict g =
   (
+  (* async *)
+  init_async ();
   (* global time-out *)
   glob_timer := SOME (Timer.startRealTimer ());
-  (* theorems for ACCEPT_TAC *)
-  init_thml_glob (); 
   (* flexible tactic time-out *)
   stactime_dict := dempty String.compare;
   (* caching *)
@@ -647,6 +753,26 @@ fun get_next_pred pid =
       end
   end
 
+fun node_find () = 
+  let
+    val _ = debug_search "node_find"
+    val l0 = filter (fn x => not (is_notactive (fst x))) (dlist (!proofdict))
+    val l1 = filter (fn x => not (has_empty_pred (fst x))) l0
+    val pidl = map fst l1
+    val _ = 
+      if !hhs_hhhammer_flag 
+      then
+        (debug_search "close_async"; 
+         close_async pidl;
+         debug_search "start_async"; 
+         start_async pidl)
+      else ()
+    val _ = if null l1 then (debug_search "nonexttac"; raise NoNextTac) else ()
+  in
+    if !hhs_mc_flag then try_mc_find () else (standard_node_find l1, 0.0)
+  end
+
+
 fun search_step () =
   let
     val (pid,pripol) = node_find_timer node_find ()
@@ -660,13 +786,7 @@ fun search_step () =
       )
     fun f1 gl =
       if gl = []
-      then
-        let val cid = 
-          node_create_timer (node_create_empty pripol tactime) pid 
-        in
-          if !hhs_mc_flag then backup cid else ();
-          close_proof cid pid (* change pid to next goal *)
-        end
+      then close_proof_wrap NONE tactime pid
       else
         (
         trydict := dadd gl () (!trydict);
@@ -743,7 +863,6 @@ fun end_search () =
    Self learning
    -------------------------------------------------------------------------- *)
 
-(* From positives tactics and update hhs_stac, hhs_stac_cthy *)
 fun selflearn_aux proof = case proof of 
     Tactic (stac,g) =>
       (

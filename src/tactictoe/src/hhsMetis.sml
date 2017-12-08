@@ -66,11 +66,16 @@ fun parfetch_of_string s =
 
 fun mk_metis_call sl =
   "metisTools.METIS_TAC " ^ 
-  "[" ^ String.concatWith ", " (map dbfetch_of_string sl) ^ "]"
-  
-fun predict_for_metis npred goal =
+  "[" ^ String.concatWith " , " (map dbfetch_of_string sl) ^ "]"
+
+fun theorem_predictor ob npred goal =
   let 
-    val thmfeav = dlist (!mdict_glob)
+    fun f (a,(_,b)) = (a,b)
+    val thmfeav_aux = 
+      if ob 
+      then filter (fn (_,(x,_)) => x) (dlist (!hhs_mdict)) 
+      else dlist (!hhs_mdict)
+    val thmfeav = map f thmfeav_aux
     val thmsymweight = learn_tfidf thmfeav
     fun predictor x = 
       map fst (thmknn thmsymweight npred thmfeav (fea_of_goal x))
@@ -78,23 +83,51 @@ fun predict_for_metis npred goal =
     predictor goal
   end  
    
-fun solved_by_metis npred tim goal =
+fun metis_provable ob npred tim goal =
   let
-    val sl   = predict_for_metis npred goal
+    val sl   = theorem_predictor ob npred goal
     val stac = mk_metis_call sl
-    val glo  = (app_tac tim (tactic_of_sml stac)) goal
-      handle _ => NONE
+    val glo  = (app_tac tim (tactic_of_sml stac)) goal handle _ => NONE
   in
     glo = SOME []
   end
 
+(* ---------------------------------------------------------------------------
+   Add a metis call with generated arguments on top of the predictions.
+   -------------------------------------------------------------------------- *)
+
+val stactime_dict = ref (dempty String.compare)
+
+fun fake_lbl s = (s,0.0,([],F),[])
+
+fun add_hammer (g,pred) =     
+  if !hhs_hhhammer_flag 
+  then (g, (fake_lbl "tactictoe_hammer", 0.0) :: pred)
+  else (g,pred)
+
+fun add_metis tacdict thmpredictor (g,pred) =
+  if !hhs_metishammer_flag then
+    let 
+      val score = if null pred then 0.0 else snd (hd pred)
+      val stac = 
+        mk_metis_call 
+          ((!thmpredictor) (!hhs_thmortho_flag) (!hhs_metis_npred) g)
+      val _ = stactime_dict := dadd stac (!hhs_metis_time) (!stactime_dict)
+      val tac = tactic_of_sml stac
+    in
+      tacdict := dadd stac tac (!tacdict);
+      (g, (fake_lbl stac, score) :: pred)
+    end
+  else (g,pred)
+ 
 (* --------------------------------------------------------------------------
-   Theorems I/O + orthogonalization
+   Metis dictionary input/output.
    -------------------------------------------------------------------------- *)
 
 fun read_thmfea s = case hhs_lex s of
-    [] => raise ERR "read_thmfea" s
-  | a :: m => (a, map string_to_int m)
+    a :: "T" :: m => (a,(true, map string_to_int m))
+  | a :: "F" :: m => (a,(false, map string_to_int m))
+  | _ => raise ERR "read_thmfea" s
     
 fun readthy_mdict thy =
   if mem thy ["min","bool"] then () else
@@ -102,10 +135,10 @@ fun readthy_mdict thy =
     val l0 = readl (hhs_mdict_dir ^ "/" ^ thy) handle _ => (debug thy;[])
     val l1 = map read_thmfea l0
   in
-    mdict_glob := daddl l1 (!mdict_glob)
+    hhs_mdict := daddl l1 (!hhs_mdict)
   end
 
-fun init_mdict () = app readthy_mdict (ancestry (current_theory ()))
+fun import_mdict () = app readthy_mdict (ancestry (current_theory ()))
 
 fun order_thml thml =
   let
@@ -117,20 +150,19 @@ fun order_thml thml =
 
 fun update_mdict cthy =
   let
-    val thml = order_thml (DB.thms cthy)
+    val thml = order_thml (DB.thms cthy) (* try oldest first *)
     fun f (s,thm) =
       let 
         val name = cthy ^ "Theory." ^ s
         val goal = dest_thm thm
       in
-        if dmem name (!mdict_glob) orelse dmem name (!negmdict_glob)
-        then ()
-        else if
-          !hhs_thmortho_flag andalso 
-          !hhs_metis_flag andalso
-          solved_by_metis (!hhs_metis_npred) (!hhs_metis_time) goal
-          then negmdict_glob := dadd name () (!negmdict_glob)
-          else mdict_glob := dadd name (fea_of_goal goal) (!mdict_glob)
+        if dmem name (!hhs_mdict) then () else 
+          let val b =
+            !hhs_thmortho_flag andalso 
+            metis_provable true (!hhs_metis_npred) (!hhs_metis_time) goal
+          in
+            hhs_mdict := dadd name (not b, fea_of_goal goal) (!hhs_mdict)
+          end
       end
   in
     app f thml
@@ -140,88 +172,19 @@ fun export_mdict cthy =
   let 
     val _ = update_mdict cthy
     val namel = map fst (DB.thms cthy)
-    fun test (s,_) = 
+    (* test if these theorems still exists in the current theory *)
+    fun test (s,_) =  
       let val (thy,name) = split_string "Theory." s in
         thy = cthy andalso mem name namel
       end
     val fname = hhs_mdict_dir ^ "/" ^ cthy
-    val l0 = filter test (dlist (!mdict_glob))
-    fun f (name,fea) = String.concatWith " " (name :: map int_to_string fea)
+    val l0 = filter test (dlist (!hhs_mdict))
+    fun f (name,(b,fea)) = 
+      String.concatWith " " (name :: string_of_bool b :: map int_to_string fea)
     val l1 = map f l0
   in 
     writel fname l1
-  end
+  end 
+ 
 
-(* ---------------------------------------------------------------------------
-   Add a metis call with generated arguments on top of the predictions.
-   -------------------------------------------------------------------------- *)
-
-val stactime_dict = ref (dempty String.compare)
-
-fun add_metis tacdict thmpredictor (g,pred) =
-  if !hhs_metis_flag
-  then
-    let
-      val stac = 
-        if !hh_stac_flag
-        then 
-          (
-          debug "calling holyhammer";
-          case (!hh_stac_glob) g of 
-            NONE => 
-            (debug "holyhammer: timeout"; mk_metis_call ((!thmpredictor) g))
-          | SOME x => (debug "holyhammer: proof found"; x)
-          )
-        else mk_metis_call ((!thmpredictor) g)
-      val _ = stactime_dict := dadd stac (!hhs_metis_time) (!stactime_dict)
-      val tac = tactic_of_sml stac
-      val score = if null pred then 0.0 else snd (hd pred) 
-    in
-      tacdict := dadd stac tac (!tacdict);
-      (g, ((stac,0.0,([],F),[]), score) :: pred)
-    end
-    handle _ => (g,pred)
-  else (g,pred)
-
-
-(* ---------------------------------------------------------------------------
-   Add an accept call on top of the predictions. 
-   (a lot of code for a negligable gain)  
-   -------------------------------------------------------------------------- *)
-
-val thml_glob = ref (dempty goal_compare)
-
-fun init_thml_glob_aux thy =
-  let
-    val l = DB.thms thy
-    fun f (name,thm) = 
-      thml_glob := dadd (dest_thm thm) (thy ^ "Theory." ^ name) (!thml_glob)
-  in
-    app f l
-  end
-    
-fun init_thml_glob () =
-  let 
-    val _ = thml_glob := dempty goal_compare
-    val thyl = (current_theory () :: ancestry (current_theory ()))
-  in
-    app init_thml_glob_aux thyl
-  end
-
-fun add_accept tacdict (g,pred) =
-  if dmem g (!thml_glob)
-  then
-    let
-      val s = dfind g (!thml_glob)
-      val stac = "Tactical.ACCEPT_TAC " ^ parfetch_of_string s
-      val tac = tactic_of_sml stac
-      val fake_lbl = (stac,0.0,([],F),[])
-      val score = 0.0
-    in
-      tacdict := dadd stac tac (!tacdict);
-      (g, (fake_lbl,score) :: pred)
-    end
-    handle _ => (g,pred)
-  else (g,pred) 
-  
 end

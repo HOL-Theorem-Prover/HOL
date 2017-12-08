@@ -15,10 +15,9 @@ open HolKernel boolLib Abbrev hhsExec hhsTools
    Recording
    ---------------------------------------------------------------------- *)
 
+(* set following flag to true to simulate version 2 *)
 val hhs_norecord_flag    = ref false
 val hhs_internalthm_flag = ref false
-
-(* set following flag to true to simulate version 2 *)
 val hhs_norecprove_flag  = ref false
 val hhs_nolet_flag      = ref false
 
@@ -28,10 +27,7 @@ val hhs_nolet_flag      = ref false
 
 val hhs_ortho_flag = ref false
 val hhs_ortho_number = ref 20
-val hhs_ortho_metis = ref false
 val hhs_ortho_deep = ref false
-
-val hhs_thmortho_flag = ref false
 
 val hhs_selflearn_flag = ref false
 val hhs_succrate_flag = ref false
@@ -77,26 +73,32 @@ val hhs_width_coeff = ref 1.0
 val hhs_selflearn_flag = ref false
 
 (* ----------------------------------------------------------------------
-   Metis + HolyHammer
+   Metis
    ---------------------------------------------------------------------- *)
 
-val hhs_thmortho_flag = ref false (* set at the recording level *)
-
-
 val hhs_metisexec_flag = ref false
-val hhs_metis_flag    = ref false
-
+val hhs_metisrecord_flag = ref false
+val hhs_metishammer_flag = ref false
+val hhs_metisortho_flag = ref false
+val hhs_thmortho_flag = ref false
 val hhs_metis_time    = ref 0.1
 val hhs_metis_npred   = ref 16
+
+(* ----------------------------------------------------------------------
+   HolyHammer
+   ---------------------------------------------------------------------- *)
+
+val hhs_hhhammer_flag = ref false
+fun can_update_hh n = ((update_hh_stac n; true) handle _ => false)
+val hhs_async_limit = ref 10
+
+(* ----------------------------------------------------------------------
+   Tactic synthesis
+   ---------------------------------------------------------------------- *)
+
 val hhs_thmlarg_flag = ref false
 val hhs_thmlarg_number = ref 16
 val hhs_termarg_flag = ref false 
-
-
-  (* synthetizing arguments (theorems) of tactics *)
-val hh_stac_flag      = ref false (* predict dependencies using holyhammer *)
-
-fun can_update_hh n = ((update_hh_stac n; true) handle _ => false)
 
 (* ----------------------------------------------------------------------
    Minimize flags
@@ -109,59 +111,6 @@ val hhs_prettify_flag = ref false
    Setting flags
    ---------------------------------------------------------------------- *)
 val test_eval_hook = ref (fn s:string => true) 
-
-fun set_irecord () = 
-  (
-  (* recording *)
-  hhs_norecord_flag    := false;
-  hhs_internalthm_flag := false;
-  hhs_norecprove_flag  := false;
-  hhs_nolet_flag       := false;
-  (* learning *)
-  hhs_ortho_flag     := false;
-  hhs_ortho_number   := 20;
-  hhs_ortho_metis    := false;
-  hhs_ortho_deep     := false;
-  hhs_selflearn_flag := false;
-  hhs_succrate_flag  := false;
-  hhs_thmortho_flag  := false;
-  (* evaluation *)
-  hhs_eval_flag := false
-  )
-
-val set_isearch_hook = ref (fn () => ()) 
-    
-fun set_isearch () =
-  (
-  (* predicting *)
-  hhs_maxselect_pred := 500;
-  (* searching (search time is not set to be easily modifiable) *)
-  hhs_tactic_time    := 0.02;
-  hhs_cache_flag     := true;
-  hhs_width_coeff    := 1.0;
-  hhs_mc_flag        := false;
-  hhs_mcrecord_flag  := false;
-  hhs_mcnoeval_flag  := false;
-  hhs_mctriveval_flag := false;
-  hhs_mc_radius   := 100;
-  hhs_mc_preradius := 100;
-  hhs_mc_coeff    := 1.0;
-  hhs_timedepth_flag := false;
-  (* metis + holyhammer + new arguments *)
-  hhs_metis_flag  := (true andalso can load "metisTools";);
-  hhs_metis_npred := 16;
-  hhs_metis_time  := 0.1;
-  hh_stac_flag    := false;
-  hhs_thmlarg_flag := false;
-  hhs_thmlarg_number := 16;
-  hhs_termarg_flag := false;
-  (* result *)
-  hhs_minimize_flag := true;
-  hhs_prettify_flag := true;
-  (* hook *)
-  !set_isearch_hook ();
-  if !hh_stac_flag then update_hh_stac 5 else ()
-  )
 
 fun set_esearch () = 
   (
@@ -181,16 +130,17 @@ fun set_esearch () =
   hhs_mc_coeff       := 1.0;
   hhs_timedepth_flag := false;
   (* metis *)
-  hhs_metisexec_flag := can load "metisTools";
-  hhs_metis_npred   := 16;
-  hhs_metis_time    := 0.1;
+  hhs_metisexec_flag   := can load "metisTools";
+  hhs_metis_npred      := 16;
+  hhs_metis_time       := 0.1;
   hhs_metishammer_flag := (false andalso !hhs_metisexec_flag);
   (* holyhammer *)
   hhs_hhhammer_flag := (false andalso can_update_hh 5);
+  hhs_async_limit   := 1;
   (* synthesis *)
-  hhs_thmlarg_flag := false;
+  hhs_thmlarg_flag   := false;
   hhs_thmlarg_number := 16;
-  hhs_termarg_flag := false;
+  hhs_termarg_flag   := false;
   (* result *)
   hhs_minimize_flag := false;
   hhs_prettify_flag := false
@@ -202,13 +152,13 @@ fun set_erecord () =
   hhs_norecprove_flag  := true;
   hhs_nolet_flag       := true;
   (* learning *)
-  hhs_ortho_flag      := false;
+  hhs_ortho_flag      := true;
   hhs_ortho_number    := 20;
   hhs_selflearn_flag  := false;
   (* metis learning *)
-  hhs_metisexec_flag  := can load "metisTools";
-  hhs_metisortho_flag  := (false andalso !hhs_metisexec_flag);
-  hhs_metisrecord_flag := (false andalso !hhs_metisexec_flag);
+  hhs_metisexec_flag   := can load "metisTools";
+  hhs_metisortho_flag  := (true andalso !hhs_metisexec_flag);
+  hhs_metisrecord_flag := (true andalso !hhs_metisexec_flag);
   hhs_thmortho_flag    := (false andalso !hhs_metisexec_flag);
   (* evaluation *)
   hhs_eval_flag    := true;
@@ -216,5 +166,12 @@ fun set_erecord () =
   one_in_option    := SOME (0,10);
   hh_only_flag     := (false andalso can_update_hh 60)
   )
+
+val set_isearch_hook = ref (fn () => ()) 
+    
+fun set_isearch () = (set_esearch (); !set_isearch_hook ())
+
+fun set_irecord () = 
+  (set_erecord (); hhs_internalthm_flag := false; hhs_eval_flag := false)
 
 end (* struct *)

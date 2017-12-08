@@ -27,12 +27,10 @@ sig
     (int, real) Redblackmap.dict -> int -> ((bool * int) * int list) list -> 
     int list -> real
   
-  val stacknn_ext : int -> feav_t list -> fea_t -> feav_t list
+  val stacknn_ext : 
+    string -> int -> feav_t list -> fea_t -> feav_t list
   
-  val thmknn_ext :
-    int -> (string * fea_t * string list) list -> fea_t -> string list
-
-  val thmmepo_ext :
+  val thmknn_ext : string -> 
     int -> (string * fea_t * string list) list -> fea_t -> string list
 
 end
