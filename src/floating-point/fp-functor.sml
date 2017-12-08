@@ -17,6 +17,10 @@ struct
    val (real_to_fp_tm, mk_real_to_fp, dest_real_to_fp, is_real_to_fp) =
       binop ("real_to_" ^ fp)
 
+   val (real_to_fp_with_flags_tm, mk_real_to_fp_with_flags,
+        dest_real_to_fp_with_flags, is_real_to_fp_with_flags) =
+      binop ("real_to_" ^ fp ^ "_with_flags")
+
    fun pre s = fp ^ "_" ^ s
 
    fun const name = Term.mk_thy_const {Ty = ty, Thy = thy, Name = pre name}

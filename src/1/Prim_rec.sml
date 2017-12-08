@@ -1864,6 +1864,22 @@ in
         PURE_REWRITE_TAC [EQT_INTRO (SPEC_ALL EQ_REFL)])
 end
 
+fun strip_exists' avds t =
+  let
+    fun recurse acc avds t =
+      if is_exists t then
+        let
+          val (v, bod) = dest_exists t
+          val v' = variant avds v
+        in
+          recurse (v'::acc) (v'::avds)
+                  (if v ~~ v' then bod else subst[v |-> v'] bod)
+        end
+      else (List.rev acc, t)
+  in
+    recurse [] avds t
+  end
+
 (* prove a theorem of the form
      ty_CASE x f1 .. fn :bool <=>
        (?a1 .. ai. x = ctor1 a1 .. ai /\ f1 a1 .. ai) \/
@@ -1872,14 +1888,14 @@ end
 *)
 fun prove_case_elim_thm {case_def,nchotomy} = let
   val cs = strip_conj (concl case_def)
-  val (const,t0,casefs0,vs_l,v) = usefuls cs
+  val (const,t0,casefs0,_,v) = usefuls cs
   val casefs = map (inst [type_of t0 |-> bool]) casefs0
   val t = inst [type_of t0 |-> bool] t0
   val t_thm = ASSUME t
   val nch = SPEC v nchotomy
   val disjs0 = strip_disj (concl nch)
   fun mapthis (ex_eqn, cf) = let
-    val (vs, eqn) = strip_exists ex_eqn
+    val (vs, eqn) = strip_exists' casefs ex_eqn
   in
     list_mk_exists(vs, mk_conj(eqn, list_mk_comb(cf,vs)))
   end

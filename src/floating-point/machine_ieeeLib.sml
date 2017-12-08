@@ -97,6 +97,19 @@ local
       in
          (get_function def, def)
       end
+   fun mk_real_to_fp_with_flags fp real_to_float_with_flags float_to_fp fp_ty =
+      let
+         val real_to_fp = "real_to_" ^ fp ^ "_with_flags"
+         val real_to_fp_var =
+            Term.mk_var
+              (real_to_fp, rounding_ty --> real_ty --> flags_ty ** fp_ty)
+         val def =
+            Definition.new_definition (real_to_fp ^ "_def",
+              real_to_fp_var & mode ==
+              mk_I_hashhash float_to_fp o' real_to_float_with_flags & mode)
+      in
+         (get_function def, def)
+      end
    fun mk_int_to_fp fp real_to_fp fp_ty =
       let
          val ty = rounding_ty --> intSyntax.int_ty --> fp_ty
@@ -374,6 +387,9 @@ in
         val float_value = Term.mk_const ("float_value", float_ty --> value_ty)
         val real_to_float =
           Term.mk_const ("real_to_float", rounding_ty --> real_ty --> float_ty)
+        val real_to_float_with_flags =
+          Term.mk_const ("real_to_float_with_flags",
+                         rounding_ty --> real_ty --> flags_ty ** float_ty)
         val (fp_to_float, fp_to_float_def) =
           mk_fp_to_float fp fp_ty float_ty pre_k t t_ty w_ty
         val (float_to_fp, float_to_fp_def) =
@@ -382,6 +398,8 @@ in
           mk_fp_to_real fp float_value fp_to_float fp_ty
         val (real_to_fp, real_to_fp_def) =
           mk_real_to_fp fp real_to_float float_to_fp fp_ty
+        val (real_to_fp_with_flags, real_to_fp_with_flags_def) =
+          mk_real_to_fp_with_flags fp real_to_float_with_flags float_to_fp fp_ty
         val int_to_fp_def = mk_int_to_fp fp real_to_fp fp_ty
         val lift1 = lift1 float_to_fp fp_to_float fp_ty float_ty
         val lift1b = lift1b fp_to_float fp_ty float_ty
@@ -462,9 +480,10 @@ in
            fp_equal_def, fp_lessthan_def, fp_lessequal_def,
            fp_greaterthan_def, fp_greaterequal_def] @
         [fp_to_float_float_to_fp, fp_to_float_n2w, real_to_fp_def,
-         int_to_fp_def, fp_posinf_def, fp_neginf_def, fp_poszero_def,
-         fp_negzero_def, fp_minpos_def, fp_minneg_def, fp_top_def,
-         fp_bottom_def, float_to_fp_fp_to_float, fp_to_float_float_to_fp] @
+         real_to_fp_with_flags_def, int_to_fp_def, fp_posinf_def, fp_neginf_def,
+         fp_poszero_def, fp_negzero_def, fp_minpos_def, fp_minneg_def,
+         fp_top_def, fp_bottom_def, float_to_fp_fp_to_float,
+         fp_to_float_float_to_fp] @
         List.map monop
           [fp_to_real_def, fp_to_int_def, fp_abs_def, fp_negate_def,
            fp_isnan_def, fp_issignallingnan_def,

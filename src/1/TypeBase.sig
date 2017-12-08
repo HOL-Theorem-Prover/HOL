@@ -25,6 +25,7 @@ sig
    val case_const_of      : hol_type -> term
    val case_cong_of       : hol_type -> thm
    val case_def_of        : hol_type -> thm
+   val caseeqsplit_of     : hol_type -> thm
    val nchotomy_of        : hol_type -> thm
    val distinct_of        : hol_type -> thm
    val fields_of          : hol_type -> (string * hol_type) list

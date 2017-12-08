@@ -1596,6 +1596,8 @@ val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                    pp_elements = [TOK (UTF8.chr 0x1D40)],
                    term_name = "relinv"}
 val _ = overload_on("relinv", ``inv``)
+val _ = TeX_notation { hol = (UTF8.chr 0x1D40),
+                       TeX = ("\\HOLTokenRInverse{}", 1) }
 
 val inv_inv = store_thm(
   "inv_inv",

@@ -374,5 +374,10 @@ val _ = quiet_warnings (fn () =>
             Datatype `foo = Foo`)) () handle _ => die "FAILED!"
 val _ = OK()
 
+val _ = tprint "Test for prove_case_elim_thm (20171201)";
+val _ = quiet_warnings (fn () =>
+          Datatype `pcet20171201 = C20171201 num | D20171201 (num -> bool)`) ()
+          handle _ => die "FAILED!"
+val _ = OK()
 
 val _ = Process.exit Process.success;

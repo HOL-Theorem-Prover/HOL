@@ -276,7 +276,7 @@ val LIST_RELi_APPEND_I = Q.store_thm(
     MAP2i
    ---------------------------------------------------------------------- *)
 
-val MAP2i_def = Define‘
+val MAP2i_def = zDefine‘
   (MAP2i f [] _ = []) /\
   (MAP2i f _ [] = []) /\
   (MAP2i f (h1::t1) (h2::t2) = f 0 h1 h2::MAP2i (f o SUC) t1 t2)’;
@@ -301,5 +301,31 @@ val EL_MAP2i = Q.store_thm("EL_MAP2i",
       n < LENGTH l1 /\ n < LENGTH l2 ==>
       (EL n (MAP2i f l1 l2) = f n (EL n l1) (EL n l2))’,
   HO_MATCH_MP_TAC MAP2i_ind >> rw[] >> Cases_on‘n’ >> fs[]);
+
+val MAP2ia_def = Define‘
+  (MAP2ia f i [] _ = []) /\
+  (MAP2ia f i _ [] = []) /\
+  (MAP2ia f i (h1::t1) (h2::t2) = f i h1 h2 :: MAP2ia f (i + 1) t1 t2)
+’;
+val _= export_rewrites ["MAP2ia_def"]
+
+val MAP2ia_NIL2 = Q.store_thm(
+  "MAP2ia_NIL2[simp]",
+  ‘MAP2ia f i l1 [] = []’,
+  Cases_on ‘l1’ >> simp[]);
+
+val MAP2i_compute = Q.store_thm(
+  "MAP2i_compute",
+  ‘MAP2i f l1 l2 = MAP2ia (f:num -> 'a -> 'b -> 'c) 0 l1 l2’,
+  ‘!l1 l2 n f: num -> 'a -> 'b -> 'c.
+     MAP2ia f n l1 l2 = MAP2i (f o (+) n) l1 l2’
+    suffices_by
+      (simp[] >> strip_tac >> rpt (AP_TERM_TAC ORELSE AP_THM_TAC) >>
+       simp[FUN_EQ_THM]) >>
+  Induct >> simp[] >> Cases_on ‘l2’ >> simp[] >>
+  rpt gen_tac >> rpt (AP_TERM_TAC ORELSE AP_THM_TAC) >>
+  simp[FUN_EQ_THM]);
+val _ = computeLib.add_persistent_funs ["MAP2i_compute"]
+val _ = remove_ovl_mapping "MAP2ia" {Name = "MAP2ia", Thy = "indexedLists"}
 
 val _ = export_theory();

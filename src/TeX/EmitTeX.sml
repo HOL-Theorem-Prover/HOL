@@ -450,8 +450,7 @@ let val {add_string,add_break,begin_block,add_newline,end_block,add_xstring,...}
                 (SX {s=x,sz=NONE,ann=ann}; S " : "; TP ty)
               end
         in
-          (if !print_datatype_names_as_types
-           then TP0 (mk_type(fst(dest_var(hd l)),type_vars ty))
+          (if !print_datatype_names_as_types then TP0 (snd(dest_var(hd l)))
            else PT (hd l);
            S " ="; BR(1,2);
            BB PP.CONSISTENT 3;
