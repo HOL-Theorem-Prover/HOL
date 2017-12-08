@@ -78,6 +78,7 @@ val finproofdict = ref (dempty Int.compare)
 val thmpredictor_glob = ref (fn _ => (fn _ => (fn _ => [])))
 val stacpredictor_glob = ref (fn _ => [])
 val mcpredictor_glob = ref (fn _ => 0.0)
+val hammer_glob = ref (fn _ => (fn _ => NONE))
 
 val tacdict_glob = ref (dempty String.compare)
 val glob_timer = ref NONE
@@ -651,7 +652,7 @@ fun close_proof_wrap staco tactime pid =
 
 (* Hammer *)
 fun hammer_call i g = 
-  case !hh_stac_glob g of 
+  case !hammer_glob i g of 
     NONE      => Array.update (async_result,i,HFailure)
   | SOME stac => Array.update (async_result,i,HSuccess (stac,g))
 
@@ -710,7 +711,7 @@ fun start_async pidl =
    Search function. Modifies the proof state.
    -------------------------------------------------------------------------- *)
 
-fun init_search thmpredictor stacpredictor mcpredictor tacdict g =
+fun init_search thmpredictor stacpredictor mcpredictor hammer tacdict g =
   (
   (* async *)
   init_async ();
@@ -730,6 +731,7 @@ fun init_search thmpredictor stacpredictor mcpredictor tacdict g =
   stacpredictor_glob := predict_timer stacpredictor;
   thmpredictor_glob := thmpredict_timer thmpredictor;
   mcpredictor_glob := mc_timer mcpredictor;
+  hammer_glob := hammer;
   tacdict_glob := tacdict;
   (* statistics *)
   reset_timers ();
@@ -921,9 +923,10 @@ fun learngoal () =
    Main
    -------------------------------------------------------------------------- *)
 
-fun imperative_search thmpredictor stacpredictor tacdict minstepdict goal =
+fun imperative_search 
+  thmpredictor stacpredictor mcpredictor hammer tacdict goal =
   (
-  init_search thmpredictor stacpredictor tacdict minstepdict goal;
+  init_search thmpredictor stacpredictor mcpredictor hammer tacdict goal;
   total_timer (node_create_timer root_create_wrap) goal;
   let
     val r = total_timer search_loop ()

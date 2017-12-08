@@ -16,6 +16,7 @@ sig
     (bool -> int -> goal -> string list) ->
     (goal -> (lbl_t * real) list) ->
     (goal -> real) ->
+    (int -> goal -> string option) ->
     (string, tactic) Redblackmap.dict ->
     goal -> proof_status_t
 

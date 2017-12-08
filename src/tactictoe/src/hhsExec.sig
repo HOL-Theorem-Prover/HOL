@@ -3,14 +3,20 @@ sig
 
   include Abbrev
   
+  type lbl_t = (string * real * goal * goal list)
+  type fea_t = int list
+  type feav_t = (lbl_t * fea_t)
+  
   val hhs_bool_glob    : bool ref
   val hhs_tacticl_glob : tactic list ref
   val hhs_tactic_glob  : tactic ref
   val hhs_string_glob  : string ref
   val hhs_goal_glob    : goal ref
   
-  val hh_stac_glob     : (goal -> string option) ref
-  val update_hh_stac   : int -> unit
+  val hh_stac_glob: 
+    (int -> (string * fea_t * string list) list ->
+     int -> goal -> string option) ref
+  val update_hh_stac   : unit -> unit
 
   val exec_sml         : string -> string -> bool  
   

@@ -21,12 +21,26 @@ fun set_timeout r = hhs_search_time := Time.fromReal r
    ---------------------------------------------------------------------- *)
 
 fun hh_eval goal =
-  let val (staco,t) = add_time (!hh_stac_glob) goal in
+  let 
+    val _ = debug_t "update_mdict" update_mdict (current_theory ());
+    fun f (a,(_,b)) = (a,b)
+    val thmfeav = map f (dlist (!hhs_mdict))
+    val thmsymweight = learn_tfidf thmfeav
+    val thmfeavdep = 
+      debug_t "dependency_of_thm"
+        (mapfilter (fn (a,b) => (a,b,dependency_of_thm a))) thmfeav
+    fun hammer goal = (!hh_stac_glob) 0 thmfeavdep (!hhs_hhhammer_time) goal
+    val (staco,t) = add_time hammer goal
+  in
     debug_proof ("hh_eval");
     debug_proof ("Time: " ^ Real.toString t);
     case staco of
       NONE      => debug_proof ("Proof status: Time Out")
-    | SOME stac => debug_proof ("Proof found: " ^ stac)
+    | SOME stac => 
+      let val b = can (app_tac 2.0 (tactic_of_sml stac)) goal in
+        if b then debug ("Proof reconstructed: Yes") else ();
+        debug_proof ("Proof found: " ^ stac)
+      end
   end
 
 (* ----------------------------------------------------------------------
@@ -128,7 +142,7 @@ fun create_thmfeav feavdep goalfea =
   end
 
 fun select_thmfeav goalfea =
-  if !hhs_metishammer_flag
+  if !hhs_metishammer_flag orelse !hhs_hhhammer_flag
   then
     let 
       val _ = debug "theorem selection"
@@ -150,10 +164,11 @@ fun select_thmfeav goalfea =
     in
       (thmsymweight, 
        create_thmfeav thmfeavdep goalfea,
-       if !hhs_thmortho_flag 
-         then create_thmfeav thmfeavdeportho goalfea else [])
+         if !hhs_thmortho_flag 
+         then create_thmfeav thmfeavdeportho goalfea else [],
+       thmfeavdep)
     end
-  else (dempty Int.compare, [], [])
+  else (dempty Int.compare, [], [], [])
   
 fun select_desc l =
    let
@@ -203,7 +218,8 @@ fun main_tactictoe goal =
     (* preselection *)
     val goalfea = fea_of_goal goal       
     val (stacsymweight, stacfeav, tacdict) = select_stacfeav goalfea
-    val (thmsymweight, thmfeav, orthothmfeav) = select_thmfeav goalfea
+    val (thmsymweight, thmfeav, orthothmfeav,thmfeavdep) = 
+      select_thmfeav goalfea
     val (mcsymweight, mcfeav) = 
       if !hhs_mc_flag 
       then debug_t "select_mcfeav" select_mcfeav goalfea
@@ -217,9 +233,12 @@ fun main_tactictoe goal =
       end
     fun mcpredictor g =
       mcknn mcsymweight (!hhs_mc_radius) mcfeav (fea_of_goal g)
+    fun hammer pid goal = 
+      (!hh_stac_glob) pid thmfeavdep (!hhs_hhhammer_time) goal
   in
     debug_t "Search" 
-      (imperative_search thmpredictor stacpredictor mcpredictor tacdict) goal
+      (imperative_search
+         thmpredictor stacpredictor mcpredictor hammer tacdict) goal
   end
 
 fun tactic_of_status r = case r of

@@ -45,6 +45,7 @@ sig
   
   (* holyhammer *)
   val hhs_hhhammer_flag : bool ref 
+  val hhs_hhhammer_time : int ref 
   val hhs_async_limit : int ref 
   
   (* synthetizing *)

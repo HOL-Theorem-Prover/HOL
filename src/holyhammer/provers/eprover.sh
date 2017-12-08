@@ -1,12 +1,14 @@
 # I/O files
 
-DIR="eprover_files"
+DIR="$2"
+echo $DIR
 IN="$DIR/atp_in"
-OUT1="$DIR/eprover_out1"
-OUT2="$DIR/eprover_out2"
-OUT="$DIR/eprover_out"
-STATUS="$DIR/eprover_status"
-ERROR="$DIR/eprover_error"
+echo $IN
+OUT1="$DIR/out1"
+OUT2="$DIR/out2"
+OUT="$DIR/out"
+STATUS="$DIR/status"
+ERROR="$DIR/error"
 
 # Running eprover
 timeout $1 ./eprover -s --cpu-limit=$1 --auto-schedule --tptp3-in \

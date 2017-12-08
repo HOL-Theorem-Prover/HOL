@@ -130,16 +130,18 @@ fun string_of_sml s =
    Read hh
    -------------------------------------------------------------------------- *)
 
-val (hh_stac_glob: (goal -> string option) ref) = ref (fn x => NONE)
+val (hh_stac_glob: 
+   (int -> (string * fea_t * string list) list ->
+    int -> goal -> string option) ref) = 
+  ref (fn _ => (fn _ => (fn _ => (fn _ => NONE))))
 
-fun update_hh_stac n =
+fun update_hh_stac () =
   let 
     val b = exec_sml "hh_stac_of_sml" 
       (
       String.concatWith "\n"
       [
       "load \"holyHammer\";",
-      "val _ = holyHammer.set_timeout " ^ int_to_string n ^ ";",
       "val _ = hhsExec.hh_stac_glob := holyHammer.hh_stac;"
       ]
       )
