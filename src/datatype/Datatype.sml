@@ -1285,9 +1285,19 @@ fun persistent_tyinfo tyinfos_etc =
 (* be recovered.                                                             *)
 (*---------------------------------------------------------------------------*)
 
+fun enumerate_tyvars n =
+  if n < 26 then mk_vartype ("'" ^ str (Char.chr (Char.ord #"a" + n)))
+  else mk_vartype ("'a" ^ Int.toString (n - 26))
+
 fun mk_datatype_presentation thy tyspecl =
   let open ParseDatatype
       fun mkc (n,_) = prim_mk_const{Name=n,Thy=thy}
+      fun mkty nm =
+        case Type.op_arity {Thy = current_theory(), Tyop = nm} of
+            NONE => raise Fail ("mk_datatype_presentation: defined type " ^
+                                nm ^ " not in theory???")
+          | SOME n => mk_thy_type{Tyop = nm, Thy = current_theory(),
+                                  Args = List.tabulate(n, enumerate_tyvars)}
       fun type_dec (tyname,Constructors dforms) =
           let val constrs = map mkc dforms
               val tyn_var = mk_var(tyname,list_mk_fun(map type_of constrs,bool))
@@ -1302,9 +1312,10 @@ fun mk_datatype_presentation thy tyspecl =
               mk_var(n, ty)
             end
             val fvars = map fieldvar fields
-            val tyn_var = mk_var(tyname,ind)
-            val record_var = mk_var("record",
-                                    list_mk_fun(ind::map type_of fvars,bool))
+            val tyn_var = mk_var(tyname,mkty tyname)
+            val record_var =
+                mk_var("record",
+                       list_mk_fun(type_of tyn_var::map type_of fvars,bool))
           in
             list_mk_comb(record_var,tyn_var::fvars)
           end
