@@ -49,6 +49,12 @@ val _ = Datatype`
                  neg : (α list) ;
                  sucs : (α ltl_frml) list |>`;
 
+val cE_equiv_def = Define `
+  cE_equiv cE1 cE2 =
+      ((MEM_EQUAL cE1.pos cE2.pos)
+     ∧ (MEM_EQUAL cE1.neg cE2.neg)
+     ∧ (MEM_EQUAL cE1.sucs cE2.sucs))`;
+
 val transformLabel_def = Define`
   transformLabel aP pos neg =
    FOLDR (\a sofar. (char (POW aP) a) ∩ sofar)
@@ -109,12 +115,19 @@ val TRANSFORMLABEL_FOLDR = store_thm
    >> rw[FOLDR_LEMM5]
   );
 
-
-
-
 val concr2AbstractEdge_def = Define`
   concr2AbstractEdge aP (concrEdge pos neg sucs) =
       (transformLabel aP pos neg, set sucs)`;
+
+val C2A_EDGE_CE_EQUIV = store_thm
+  ("C2A_EDGE_CE_EQUIV",
+   ``!aP cE1 cE2. cE_equiv cE1 cE2
+       ==> (concr2AbstractEdge aP cE1 = concr2AbstractEdge aP cE2)``,
+   rpt strip_tac >> Cases_on `cE1` >> Cases_on `cE2` >> fs[cE_equiv_def]
+   >> simp[concr2AbstractEdge_def] >> strip_tac >> fs[MEM_EQUAL_SET]
+   >> simp[transformLabel_def]
+   >> metis_tac[FOLDR_INTER_MEMEQUAL]
+  );
 
 val extractTrans_def = Define`
   extractTrans graph s =
@@ -322,7 +335,6 @@ val EXTR_TRANS_LEMM = store_thm
        >> qexists_tac `fls` >> fs[]
       )
   );
-
 
 val graphStates_def = Define
  `graphStates g = MAP ((\l. l.frml) o SND) (toAList g.nodeInfo)`;

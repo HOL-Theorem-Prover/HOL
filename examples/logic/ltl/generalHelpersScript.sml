@@ -317,7 +317,7 @@ val D_CONJ_SET_LEMM2_STRONG = store_thm
       >- metis_tac[SUBSET_UNION,SUBSET_TRANS]
       >- (`{if (q,d) = e
             then a1
-            else f_a q d | (q,d) | (q,d) = e ∨ (q,d) ∈ s} =
+            else f_a q d | (q,d) | ((q,d) = e) ∨ ((q,d) ∈ s)} =
            {f_a q d | (q,d) ∈ s} ∪ {a1}` by (
          simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> fs[]
          >- metis_tac[]
@@ -328,7 +328,7 @@ val D_CONJ_SET_LEMM2_STRONG = store_thm
          )
       >- (`{if (q,d) = e
             then e1'
-            else f_e q d | (q,d) | (q,d) = e ∨ (q,d) ∈ s} =
+            else f_e q d | (q,d) | ((q,d) = e) ∨ ((q,d) ∈ s)} =
             {f_e q d | (q,d) ∈ s} ∪ {e1'}` by (
          simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> fs[]
          >- metis_tac[]
@@ -412,115 +412,127 @@ val MEM_EQUAL_def = Define`
 
 val MEM_EQUAL_SET = store_thm
   ("MEM_EQUAL_SET",
-   ``!l1 l2. MEM_EQUAL l1 l2 ==> (set l1 = set l2)``,
+   ``!l1 l2. MEM_EQUAL l1 l2 = (set l1 = set l2)``,
    metis_tac[MEM_SUBSET_SET_TO_LIST,SET_EQ_SUBSET,MEM_EQUAL_def]
   );
 
-(* val REM_RIGHT_def = Define` *)
-(*     (REM_RIGHT x [] = ([], F)) *)
-(*   ∧ (REM_RIGHT x (h::ls) = *)
-(*      if h = x *)
-(*      then (ls,T) *)
-(*      else REM_RIGHT x ls *)
-(*     )`; *)
+val SET_OF_SUBLISTS_FINITE = store_thm
+  ("SET_OF_SUBSET_LISTS_FINITE",
+   ``!l. FINITE {qs | MEM_SUBSET qs l ∧ ALL_DISTINCT qs }``,
+      Induct_on `l`
+      >- (`{qs | MEM_SUBSET qs [] ∧ ALL_DISTINCT qs} = {[]}` by (
+           simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
+           >> fs[MEM_EQUAL_def,MEM_SUBSET_def,MEM_SUBSET_SET_TO_LIST]
+           ) >> rw[]
+         )
+      >- (rpt strip_tac >> fs[MEM_SUBSET_SET_TO_LIST]
+          >> `!k s. k ∈ s ==> (k INSERT s = s)` by (
+               rpt strip_tac >> simp[INSERT_DEF,SET_EQ_SUBSET,SUBSET_DEF]
+           )
+          >> Cases_on `MEM h l` >> fs[]
+          >> qabbrev_tac `A = {qs | set qs ⊆ set l ∧ ALL_DISTINCT qs}`
+          >> Q.HO_MATCH_ABBREV_TAC `FINITE B`
+          >> `B = A ∪ {l1 ++ [h] ++ l2 | (l1++l2) ∈ A }` by (
+             simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
+             >> qunabbrev_tac `A` >> qunabbrev_tac `B` >> fs[]
+             >- (Cases_on `set x ⊆ set l` >> fs[]
+                 >> `!k a. MEM a k ∧ ALL_DISTINCT k
+                           ==> ?k1 k2. (k = k1 ++ [a] ++ k2)
+                                     ∧ ~MEM a k1 ∧ ~MEM a k2` by (
+                    Induct_on `k` >> fs[] >> rpt strip_tac
+                    >- (rw[] >> qexists_tac `[]` >> fs[])
+                    >- (rw[] >> first_x_assum (qspec_then `a` mp_tac)
+                        >> simp[] >> rpt strip_tac
+                        >> qexists_tac `h'::k1` >> fs[]
+                       )
+                  )
+                 >> `MEM h x` by (
+                     `?k. k ∈ set x ∧ ~(k ∈ set l)` by metis_tac[SUBSET_DEF]
+                     >> fs[SUBSET_DEF] >> metis_tac[]
+                  )
+                 >> first_x_assum (qspec_then `x` mp_tac) >> rpt strip_tac
+                 >> first_x_assum (qspec_then `h` mp_tac) >> simp[]
+                 >> rpt strip_tac >> qexists_tac `k1` >> qexists_tac `k2`
+                 >> fs[ALL_DISTINCT_APPEND] >> fs[SUBSET_DEF] >> metis_tac[]
+                )
+             >- fs[SUBSET_DEF]
+             >- (fs[ALL_DISTINCT_APPEND] >> rpt strip_tac >> fs[SUBSET_DEF]
+                 >> metis_tac[]
+                )
+           )
+          >> `!P. FINITE P ==> FINITE {l1 ⧺ [h] ⧺ l2 | l1 ⧺ l2 ∈ P}` by (
+               HO_MATCH_MP_TAC FINITE_INDUCT >> rpt strip_tac >> fs[]
+               >> `!k. FINITE {l1 ++ [h] ++ l2 | l1 ++ l2 = k }` by (
+                   Induct_on `k` >> fs[]
+                   >- (`{l1 ++ [h] ++ l2 | l1 = [] ∧ l2 = [] } = { [h] }` by (
+                          simp[SET_EQ_SUBSET,SUBSET_DEF]
+                       )
+                       >> rw[]
+                      )
+                   >- (rpt strip_tac
+                       >> `{l1 ⧺ [h] ⧺ l2 | l1 ⧺ l2 = h'::k} =
+                             (h::h'::k) INSERT
+                                      {h'::a | a ∈
+                                                 {l1 ⧺ [h] ⧺ l2 | l1 ⧺ l2 = k}}`
+                          by (simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
+                              >- (Cases_on `l1` >> fs[] >> disj2_tac
+                                  >> metis_tac[])
+                              >- (qexists_tac `[]` >> fs[])
+                              >- (rw[] >> qexists_tac `h'::l1` >> fs[])
+                             )
+                       >> `FINITE {h'::a | a ∈ {l1 ⧺ [h] ⧺ l2 | l1 ⧺ l2 = k}}`
+                           suffices_by metis_tac[FINITE_INSERT]
+                       >> `{h'::a | a ∈ {l1 ⧺ [h] ⧺ l2 | l1 ⧺ l2 = k}}
+                           = IMAGE (λx. h'::x) {l1 ⧺ [h] ⧺ l2 | l1 ⧺ l2 = k}`
+                           by fs[IMAGE_DEF]
+                       >> metis_tac[IMAGE_FINITE]
+                      )
+               )
+               >> `{l1 ⧺ [h] ⧺ l2 | l1 ⧺ l2 = e ∨ l1 ⧺ l2 ∈ P}
+                    = {l1 ⧺ [h] ⧺ l2 | l1 ⧺ l2 = e}
+                          ∪ {l1 ⧺ [h] ⧺ l2 | l1 ⧺ l2 ∈ P}` by (
+                   simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
+                   >> metis_tac[]
+               )
+               >> metis_tac[FINITE_UNION]
+           )
+          >> metis_tac[FINITE_UNION]
+         )
+  );
 
-(* val REM_RIGHT_SND_LEMM = store_thm *)
-(*   ("REM_RIGHT_LEMM", *)
-(*    ``!x l. (SND (REM_RIGHT x l) = (MEM x l))``, *)
-(*    Induct_on `l` >> fs[REM_RIGHT_def] >> rpt strip_tac *)
-(*    >> Cases_on `x = h` >> fs[] *)
-(*   ); *)
+val NUB_NUB = store_thm
+  ("NUB_NUB",
+   ``!l. nub (nub l) = nub l``,
+   Induct_on `l` >> fs[nub_def] >> rpt strip_tac
+   >> Cases_on `MEM h l` >> fs[nub_def]
+  );
 
-(* val MEM_EQUAL_def = Define` *)
-(*    (MEM_EQUAL [] [] = T) *)
-(*  ∧ (MEM_EQUAL (h::ls) [] = F) *)
-(*  ∧ (MEM_EQUAL [] (h::ls) = F) *)
-(*  ∧ (MEM_EQUAL (h1::ls1) (h2::ls2) = *)
-(*     let (rest,mem) = REM_RIGHT h1 ls2 *)
-(*     in if mem *)
-(*        then MEM_EQUAL ls1 rest *)
-(*        else F *)
-(*    )`; *)
-
-(* val MEM_EQUAL_AD_SYMM = store_thm *)
-(*   ("MEM_EQUAL_AD_SYMM", *)
-(*    ``!l1 l2. ALL_DISTINCT l1 ∧ ALL_DISTINCT l2 *)
-(*        ==> (MEM_EQUAL l1 l2 = MEM_EQUAL l2 l1 *)
-(*           ∧ (MEM_EQUAL l1 l2 = (set l1 = set l2)))``, *)
-(*    Induct_on `l2` >> rpt strip_tac >> fs[MEM_EQUAL_def] *)
-(*    >- (Cases_on `l1` >> fs[MEM_EQUAL_def]) *)
-(*    >- (Cases_on `l1` >> fs[MEM_EQUAL_def]) *)
-(*    >- (Cases_on `l1` >> simp[MEM_EQUAL_def] >> fs[] *)
-(*        >> `MEM_EQUAL t l2 = MEM_EQUAL l2 t *)
-(*          ∧ MEM_EQUAL t l2 = (set t = set l2)` by metis_tac[] *)
-(*        >> Cases_on `MEM_EQUAL t l2` *)
-(*        >- (fs[] *)
-(*            >> `~SND (REM_RIGHT h' l2)` by metis_tac[MEM,REM_RIGHT_SND_LEMM] *)
-(*            >> `~SND (REM_RIGHT h t)` by metis_tac[MEM,REM_RIGHT_SND_LEMM] *)
-(*            >> Cases_on `REM_RIGHT h' l2` >> Cases_on `REM_RIGHT h t` >> fs[] *)
-(*           ) *)
-(*        >- (fs[] >> qabbrev_tac `R_t = FST (REM_RIGHT h t)` *)
-(*            >> `~(MEM_EQUAL l2 R_t) *)
-
-
-(*            >> `?x. (MEM x t ∧ ~MEM x l2) \/ (~MEM x t ∧ MEM x l2)` *)
-(*                 by (CCONTR_TAC >> fs[] *)
-(*                     >> `!x. MEM x t = MEM x l2` by metis_tac[] *)
-(*                     >> `set t = set l2` *)
-(*                        by (PURE_REWRITE_TAC[SET_EQ_SUBSET,SUBSET_DEF] *)
-(*                            >> rpt strip_tac >> metis_tac[MEM] *)
-(*                           ) *)
-(*                     >- (`~(h' = x)` by metis_tac[] >> fs[] *)
-
-
-
-(*                         >> Cases_on `x = h` >> fs[] *)
-(*                         >- (rw[] >> ) *)
-(*                        ) *)
-(*                    ) *)
-(*            ) *)
-(*        ) *)
-(*    >- (Cases_on `l1` >> fs[MEM_EQUAL_def] >> ) *)
-
-
-(* ) *)
-
-(* Cases_on `MEM x t` >> fs[] >> ) *)
-(* ) *)
-
-
-(* ) *)
-(* ) *)
-
-
-(* ) *)
-
-
-
-(* val MEM_EQUAL_AD_SET = store_thm *)
-(*   ("MEM_EQUAL_ALL_DISTINCT", *)
-(*  ``!ls1 ls2. ALL_DISTINCT ls1 ∧ ALL_DISTINCT ls2 *)
-(*         ==> (MEM_EQUAL ls1 ls2 = (set ls1 = set ls2))``, *)
-(*  simp[EQ_IMP_THM] >> rpt strip_tac *)
-(*  >- () *)
-
-
-
-(* ) *)
+val ALL_DISTINCT_SAME_NUB = store_thm
+  ("ALL_DISTINCT_SAME_NUB",
+   ``!l. ALL_DISTINCT l ==> (l = nub l)``,
+   Induct_on `l` >> fs[nub_def]
+  );
 
 val ALL_DISTINCT_PAIRS_LEMM = store_thm
   ("ALL_DISTINCT_PAIRS_LEMM",
-   ``!x y1 y2 l.
-     ALL_DISTINCT (MAP FST l)
-     ∧ (MEM (x,y1) l)
-     ∧ (MEM (x,y2) l)
-     ==> (y1 = y2)``,
-   Induct_on `l` >> fs[ALL_DISTINCT] >> rpt strip_tac
+   ``(!x y1 y2 l.
+     (ALL_DISTINCT (MAP FST l) ∧ (MEM (x,y1) l) ∧ (MEM (x,y2) l)
+     ==> (y1 = y2)))
+     ∧ (!x y1 y2 l.
+         (ALL_DISTINCT (MAP SND l) ∧ (MEM (y1,x) l) ∧ (MEM (y2,x) l)
+                     ==> (y1 = y2)))``,
+   strip_tac >> Induct_on `l` >> fs[ALL_DISTINCT] >> rpt strip_tac
    >- (Cases_on `h` >> fs[])
    >- (fs[MEM_MAP] >> Cases_on `h` >> fs[] >> rw[]
        >> first_x_assum (qspec_then `(q,y2)` mp_tac) >> fs[])
    >- (fs[MEM_MAP] >> Cases_on `h` >> fs[] >> rw[]
        >> first_x_assum (qspec_then `(q,y1)` mp_tac) >> fs[])
+   >- metis_tac[]
+   >- (Cases_on `h` >> fs[])
+   >- (fs[MEM_MAP] >> Cases_on `h` >> fs[] >> rw[]
+         >> first_x_assum (qspec_then `(y2,r)` mp_tac) >> fs[])
+   >- (fs[MEM_MAP] >> Cases_on `h` >> fs[] >> rw[]
+         >> first_x_assum (qspec_then `(y1,r)` mp_tac) >> fs[])
    >- metis_tac[]
   );
 
@@ -536,8 +548,8 @@ val FOLDR_INTER = store_thm
    >> metis_tac[INTER_SUBSET,SUBSET_TRANS]
   );
 
-val FOLDR_APPEND = store_thm
-  ("FOLDR_APPEND",
+val FOLDR_APPEND_LEMM = store_thm
+  ("FOLDR_APPEND_LEMM",
    ``!f A l.
   (!x. MEM x l
        ==> MEM_SUBSET (f x) (FOLDR (λa sofar. f a ++ sofar) A l))
@@ -567,6 +579,22 @@ val FOLDR_LEMM5 = store_thm
    >> rpt strip_tac >> fs[]
    >> Induct_on `l4`
    >> Induct_on `l1` >> fs[] >> Induct_on `l2` >> fs[]
+  );
+
+val FOLDR_INTER_MEMEQUAL = store_thm
+  ("FOLDR_INTER_MEMEQUAL",
+   ``!l1 l2 s f. (set l1 = set l2)
+               ==> (FOLDR (λa sofar. f a ∩ sofar) s l1 =
+                     FOLDR (λa sofar. f a ∩ sofar) s l2)``,
+   `!l1 l2 s f. (MEM_SUBSET l1 l2)
+               ==> (FOLDR (λa sofar. f a ∩ sofar) s l2
+                          ⊆ FOLDR (λa sofar. f a ∩ sofar) s l1)`
+   suffices_by metis_tac[SET_EQ_SUBSET,SUBSET_DEF,MEM_SUBSET_SET_TO_LIST]
+   >> Induct_on `l1`
+   >- (rpt strip_tac >> fs[MEM_SUBSET_def,FOLDR_INTER])
+   >- (rpt strip_tac >> simp[FOLDR] >> fs[MEM_SUBSET_def]
+       >> metis_tac[FOLDR_INTER]
+      )
   );
 
 val ZIP_MAP = store_thm
@@ -870,6 +898,55 @@ val WF_LEMM = store_thm
     >> metis_tac[WF_IFF_WELLFOUNDED]
   );
 
+val NoNodeProcessedTwice_def = Define`
+  NoNodeProcessedTwice g m (a,ns) (a2,ns2) =
+    ((g DIFF (m a) ⊂ g DIFF (m a2))
+         \/ ((g DIFF (m a) = g DIFF (m a2))
+           ∧ (LENGTH ns) < (LENGTH ns2)))`;
+
+val NNPT_WF = store_thm
+ ("NNPT_WF",
+  ``!g m. FINITE g ==> WF (NoNodeProcessedTwice g m)``,
+   rpt strip_tac
+   >> `WF (λs t. s ⊂ t
+         ∧ s ⊆ g ∧ t ⊆ g)` by metis_tac[PSUBSET_WF]
+   >> `WF ($<)` by metis_tac[WF_LESS]
+   >> `WF (λ (x:γ list) y.
+            LENGTH x < LENGTH y)` by (
+       `inv_image ($<) (LENGTH:(γ list -> num))
+              = (λx y.
+                  LENGTH x < LENGTH y)` by simp[inv_image_def]
+       >> `WF (inv_image ($<) (LENGTH:(γ list -> num)))` suffices_by fs[]
+       >> metis_tac[WF_inv_image]
+   )
+   >> qabbrev_tac `P = (λs t. s ⊂ t ∧ s ⊆ g ∧ t ⊆ g)`
+   >> qabbrev_tac `Q = (λ(x:γ list) (y:γ list). LENGTH x < LENGTH y)`
+   >> qabbrev_tac `f = λ a. g DIFF (m a)`
+   >> `inv_image P f = λ a a2.
+                        (g DIFF (m a)
+                         ⊂ g DIFF (m a2))` by (
+      qunabbrev_tac `P`
+      >> fs[inv_image_def]
+      >> `(\x y. f x ⊂ f y) = (λa a2. f a ⊂ f a2)`
+         suffices_by (
+          fs[] >> qunabbrev_tac `f` >> simp[inv_image_def]
+      )
+      >> metis_tac[]
+   )
+   >> `WF (inv_image P f)` by metis_tac[WF_inv_image]
+   >> `WF (P LEX Q)` by metis_tac[WF_LEX]
+   >> qabbrev_tac
+        `j = λ(a,l:(γ list)). (g DIFF (m a),l)`
+   >> `WF (inv_image (P LEX Q) j)` by metis_tac[WF_inv_image]
+   >> `!x y. (NoNodeProcessedTwice g m) x y ==> (inv_image (P LEX Q) j) x y` by (
+       fs[inv_image_def,LEX_DEF] >> rpt strip_tac
+         >> Cases_on `x` >> Cases_on `y` >> fs[NoNodeProcessedTwice_def]
+         >> qunabbrev_tac `f` >> qunabbrev_tac `P` >> qunabbrev_tac `Q`
+         >> simp[] >> simp[EQ_IMP_THM] >> rpt strip_tac
+         >> (qunabbrev_tac `j` >> simp[])
+   )
+   >> metis_tac[WF_SUBSET]
+ );
 
 val MOD_LEMM = store_thm
   ("MOD_LEMM",

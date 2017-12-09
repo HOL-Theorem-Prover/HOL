@@ -59,8 +59,8 @@ val FOLDR_LEMM4 = store_thm
 
 val FOLDR_LEMM6 = store_thm
   ("FOLDR_LEMM6",
-   ``!l x. MEM x (FOLDR (λe pr. e.sucs ⧺ pr) [] l)
-                  = (?a. MEM a l ∧ MEM x (a.sucs))``,
+   ``!g l x. MEM x (FOLDR (λe pr. (g e) ⧺ pr) [] l)
+                  = (?a. MEM a l ∧ MEM x (g a))``,
    Induct_on `l` >> rpt strip_tac >> fs[]
    >> simp[EQ_IMP_THM] >> rpt strip_tac >> metis_tac[]
   );
@@ -137,9 +137,9 @@ val PROPS_CONCR_LEMM = store_thm
 val d_conj_concr_def = Define`
   d_conj_concr d1 d2 =
       FOLDR
-      (\e1 sofar. (MAP (λe2. <| pos := e1.pos++e2.pos ;
-                               neg := e1.neg++e2.neg ;
-                               sucs := e1.sucs++e2.sucs |> ) d2) ++ sofar)
+      (\e1 sofar. (MAP (λe2. <| pos := nub (e1.pos++e2.pos) ;
+                               neg := nub (e1.neg++e2.neg) ;
+                               sucs := nub (e1.sucs++e2.sucs) |> ) d2) ++ sofar)
       []
       d1`;
 
@@ -185,9 +185,9 @@ val TRANS_CONCR_LEMM = store_thm
      >- (simp[d_conj_def,d_conj_concr_def,SET_EQ_SUBSET,SUBSET_DEF]
          >> rpt strip_tac
          >> qabbrev_tac `g = (λe1 e2.
-                           <|pos := e1.pos ⧺ e2.pos;
-                             neg := e1.neg ⧺ e2.neg;
-                             sucs := e1.sucs ⧺ e2.sucs|>)`
+                           <|pos := nub (e1.pos ⧺ e2.pos);
+                             neg := nub (e1.neg ⧺ e2.neg);
+                             sucs := nub (e1.sucs ⧺ e2.sucs)|>)`
          >> fs[MEM_MAP]
           >- (`MEM y (FOLDR
                              (λe1 sofar. (MAP (λe2. g e1 e2) (trans_concr f'))
@@ -212,15 +212,16 @@ val TRANS_CONCR_LEMM = store_thm
               >> qexists_tac `FST (concr2AbstractEdge aP b')`
               >> qexists_tac `SND (concr2AbstractEdge aP a')`
               >> qexists_tac `SND (concr2AbstractEdge aP b')` >> fs[]
-              >> `<|pos := a'.pos ⧺ b'.pos; neg := a'.neg ⧺ b'.neg;
-                    sucs := a'.sucs ⧺ b'.sucs|> =
-                            concrEdge (a'.pos ++ b'.pos) (a'.neg ++ b'.neg)
-                                      (a'.sucs ++ b'.sucs)`
+              >> `<|pos := nub (a'.pos ⧺ b'.pos); neg := nub (a'.neg ⧺ b'.neg);
+                    sucs := nub (a'.sucs ⧺ b'.sucs)|> =
+                            concrEdge (nub (a'.pos ++ b'.pos))
+                                      (nub (a'.neg ++ b'.neg))
+                                      (nub (a'.sucs ++ b'.sucs))`
                   by rw[concrEdge_component_equality]
               >> simp[concr2AbstractEdge_def] >> Cases_on `a'`
               >> Cases_on `b'`
               >> simp[concr2AbstractEdge_def,transformLabel_def]
-              >> metis_tac[FOLDR_LEMM5]
+              >> metis_tac[FOLDR_LEMM5,nub_set,FOLDR_INTER_MEMEQUAL]
              )
           >- (`MEM (a1,e1) (MAP (concr2AbstractEdge aP) (trans_concr f))`
                 by fs[]
@@ -229,15 +230,17 @@ val TRANS_CONCR_LEMM = store_thm
               >> fs[MEM_MAP]
               >> qexists_tac `g y y'` >> rpt strip_tac
                >- (qunabbrev_tac `g`
-                  >> `<|pos := y.pos ⧺ y'.pos; neg := y.neg ⧺ y'.neg;
-                    sucs := y.sucs ⧺ y'.sucs|> =
-                            concrEdge (y.pos ++ y'.pos) (y.neg ++ y'.neg)
-                                      (y.sucs ++ y'.sucs)`
+                  >> `<|pos := nub (y.pos ⧺ y'.pos);
+                        neg := nub (y.neg ⧺ y'.neg);
+                        sucs := nub (y.sucs ⧺ y'.sucs)|> =
+                            concrEdge (nub (y.pos ++ y'.pos))
+                                      (nub (y.neg ++ y'.neg))
+                                      (nub (y.sucs ++ y'.sucs))`
                     by rw[concrEdge_component_equality]
                   >> simp[concr2AbstractEdge_def] >> rw[]
                   >> Cases_on `y` >> Cases_on `y'` >> fs[concr2AbstractEdge_def]
                   >> simp[transformLabel_def]
-                  >> metis_tac[FOLDR_LEMM5]
+                  >> metis_tac[FOLDR_LEMM5,nub_set,FOLDR_INTER_MEMEQUAL]
                   )
                >- (rw[FOLDR_LEMM3] >> metis_tac[])
              )
@@ -266,14 +269,15 @@ val TRANS_CONCR_LEMM = store_thm
         )
      >- (simp[d_conj_def,d_conj_concr_def,SET_EQ_SUBSET,SUBSET_DEF]
           >> rpt strip_tac >> fs[MEM_MAP]
-          >> qabbrev_tac `g = (λe1 sofar. (<|pos := e1.pos;
-                                      neg := e1.neg;
-                                      sucs := e1.sucs ⧺ [U f f']|>)::sofar)`
+          >> qabbrev_tac `g = (λe1 sofar. (<|pos := nub e1.pos;
+                                             neg := nub e1.neg;
+                                             sucs := nub (e1.sucs ⧺ [U f f'])|>
+                                          )::sofar)`
            >- (Cases_on `concr2AbstractEdge aP y ∈ trans (POW aP) f'` >> fs[]
                >> `!ls. MEM y (FOLDR g [] ls)
                     ==> ?k. (MEM k ls) ∧
-                        (y = <|pos := k.pos; neg := k.neg;
-                              sucs := k.sucs ⧺ [U f f']|>)` by (
+                        (y = <|pos := nub k.pos; neg := nub k.neg;
+                              sucs := nub (k.sucs ⧺ [U f f'])|>)` by (
                     Induct_on `ls` >> fs[]
                     >> rpt strip_tac >> fs[] >> Cases_on `MEM y (FOLDR g [] ls)`
                      >- metis_tac[]
@@ -290,18 +294,25 @@ val TRANS_CONCR_LEMM = store_thm
                 )
                >> Cases_on `p` >> qexists_tac `q` >> qexists_tac `POW aP`
                >> qexists_tac `r` >> qexists_tac `{U f f'}` >> simp[]
-               >> `<|pos := k.pos; neg := k.neg; sucs := k.sucs ⧺ [U f f']|>
-                   = concrEdge k.pos k.neg (k.sucs ++ [U f f'])`
+               >> `<|pos := nub k.pos;
+                     neg := nub k.neg;
+                     sucs := nub (k.sucs ⧺ [U f f'])|>
+                             = concrEdge (nub k.pos)
+                                         (nub k.neg)
+                                         (nub (k.sucs ++ [U f f']))`
                    by rw[concrEdge_component_equality]
                >> simp[concr2AbstractEdge_def] >> Cases_on `k`
                >> fs[concr2AbstractEdge_def,transformLabel_def]
-               >> metis_tac[TRANS_ALPH_LEMM,INTER_SUBSET_EQN]
+                >> metis_tac[TRANS_ALPH_LEMM,INTER_SUBSET_EQN,FOLDR_INTER_MEMEQUAL,nub_set]
               )
            >- (Cases_on `(a1 ∩ a2,e1 ∪ e2) ∈ trans (POW aP) f'` >> fs[]
                >> `MEM (a1,e1) (MAP (concr2AbstractEdge aP) (trans_concr f))`
                   by fs[]
                >> fs[MEM_MAP]
-               >> qexists_tac `concrEdge y.pos y.neg (y.sucs ++ [U f f'])`
+               >> qexists_tac `concrEdge
+                                 (nub y.pos)
+                                 (nub y.neg)
+                                 (nub (y.sucs ++ [U f f']))`
                >> qunabbrev_tac `g` >> Cases_on `y`
                >> fs[concr2AbstractEdge_def] >> rpt strip_tac
                 >- (`a2 = (POW aP)`
@@ -333,38 +344,40 @@ val TRANS_CONCR_LEMM = store_thm
                           )
                              >> metis_tac[])
                      )
-                    >> simp[transformLabel_def]
+                    >> simp[transformLabel_def] >> qunabbrev_tac `c`
+                    >> qunabbrev_tac `c_n`
+                    >> metis_tac[FOLDR_INTER_MEMEQUAL,nub_set]
                    )
                 >- (simp[SET_EQ_SUBSET,SUBSET_DEF] >> metis_tac[])
                 >- (qabbrev_tac
-                     `g = (λe1 sofar. (<|pos := e1.pos;
-                                        neg := e1.neg;
-                                        sucs := e1.sucs ⧺ [U f f']|>)::sofar)`
+                     `g = (λe1 sofar. (<|pos := nub e1.pos;
+                                        neg := nub e1.neg;
+                                        sucs := nub (e1.sucs ⧺ [U f f'])|>
+                                      )::sofar)`
                     >> `!y ls k. (MEM k ls) ∧
-                            (y = <|pos := k.pos; neg := k.neg;
-                                   sucs := k.sucs ⧺ [U f f']|>)
+                            (y = <|pos := nub k.pos; neg := nub k.neg;
+                                   sucs := nub (k.sucs ⧺ [U f f'])|>)
                             ==> MEM y (FOLDR g [] ls)` by (
                          gen_tac >> Induct_on `ls` >> fs[] >> rpt strip_tac
                          >> fs[] >> Cases_on `MEM k ls
-                                      ∧ y = <|pos := k.pos;
-                                              neg := k.neg;
-                                              sucs := k.sucs ⧺ [U f f']|>`
+                                      ∧ y = <|pos := nub k.pos;
+                                              neg := nub k.neg;
+                                              sucs := nub (k.sucs ⧺ [U f f'])|>`
                          >> fs[] >> qunabbrev_tac `g` >> fs[]
                      )
                     >> (first_x_assum
-                            (qspec_then `concrEdge l l0 (l1 ⧺ [U f f'])` mp_tac)
+                            (qspec_then `concrEdge
+                                          (nub l)
+                                          (nub l0)
+                                          (nub (l1 ⧺ [U f f']))` mp_tac)
                         >> rpt strip_tac
                         >> first_x_assum (qspec_then `trans_concr f` mp_tac)
                         >> rpt strip_tac
-                        >> first_x_assum (qspec_then `concrEdge l l0 l1` mp_tac)
+                        >> first_x_assum
+                              (qspec_then `concrEdge
+                                            l l0 l1` mp_tac)
                         >> rpt strip_tac >> POP_ASSUM mp_tac
                         >> simp[concrEdge_component_equality]
-                        >> `(concrEdge l l0 (l1 ⧺ [U f f']))
-                                 = <|pos := l;
-                                     neg := l0;
-                                     sucs := l1 ⧺ [U f f']|>`
-                            by rw[concrEdge_component_equality]
-                        >> metis_tac[]
                        )
                    )
               )
@@ -372,12 +385,12 @@ val TRANS_CONCR_LEMM = store_thm
      >- (simp[d_conj_def,d_conj_concr_def,SET_EQ_SUBSET,SUBSET_DEF]
          >> rpt strip_tac >> fs[MEM_MAP]
          >> qabbrev_tac `g1 = (λe1 e2.
-                                   <|pos := e1.pos ⧺ e2.pos;
-                                     neg := e1.neg ⧺ e2.neg;
-                                     sucs := e1.sucs ⧺ e2.sucs|>)`
+                                   <|pos := nub (e1.pos ⧺ e2.pos);
+                                     neg := nub (e1.neg ⧺ e2.neg);
+                                     sucs := nub (e1.sucs ⧺ e2.sucs)|>)`
          >> qabbrev_tac `g2 = (λls2 e1 sofar.
-                                   <|pos := e1.pos; neg := e1.neg;
-                                     sucs := e1.sucs ⧺ [R f f']|> ::
+                                   <|pos := nub e1.pos; neg := nub e1.neg;
+                                     sucs := nub (e1.sucs ⧺ [R f f'])|> ::
                                      ((MAP (λe2. g1 e1 e2) ls2)
                                          ++ sofar))`
           >- (`MEM y (FOLDR (g2 (trans_concr f)) [] (trans_concr f'))` by (
@@ -385,8 +398,8 @@ val TRANS_CONCR_LEMM = store_thm
              )
              >> `!ls1 ls2. (MEM y (FOLDR (g2 ls2) [] ls1)) ==>
                ?c1. (MEM c1 ls1)
-                  ∧ ((y =  <|pos := c1.pos; neg := c1.neg;
-                            sucs := c1.sucs ⧺ [R f f']|>)
+                  ∧ ((y =  <|pos := nub c1.pos; neg := nub c1.neg;
+                            sucs := nub (c1.sucs ⧺ [R f f'])|>)
                   \/ (?c2. (MEM c2 ls2)
                         ∧ (y = g1 c1 c2)))` by (
               Induct_on `ls1` >> rpt strip_tac >> fs[]
@@ -407,13 +420,19 @@ val TRANS_CONCR_LEMM = store_thm
                  >> qexists_tac `q` >> qexists_tac `POW aP`
                  >> qexists_tac `r` >> qexists_tac `{R f f'}`
                  >> rpt strip_tac >> fs[]
-                 >> `<|pos := c1.pos;
-                       neg := c1.neg;
-                       sucs := c1.sucs ⧺ [R f f']|>
-                     = concrEdge c1.pos c1.neg (c1.sucs ++ [R f f'])`
+                 >> `<|pos := nub c1.pos;
+                       neg := nub c1.neg;
+                       sucs := nub (c1.sucs ⧺ [R f f'])|>
+                     = concrEdge (nub c1.pos)
+                                 (nub c1.neg)
+                                 (nub (c1.sucs ++ [R f f']))`
                     by rw[concrEdge_component_equality]
                  >> simp[concr2AbstractEdge_def] >> rpt strip_tac
                  >> Cases_on `c1` >> fs[concr2AbstractEdge_def]
+                 >> `transformLabel aP (nub l) (nub l0) = q` by (
+                       fs[transformLabel_def]
+                       >> metis_tac[FOLDR_INTER_MEMEQUAL,nub_set]
+                   )
                  >> metis_tac[TRANS_ALPH_LEMM,INTER_SUBSET_EQN])
               >- (`(concr2AbstractEdge aP) c2 ∈ trans (POW aP) f` by (
                     `MEM (concr2AbstractEdge aP c2)
@@ -426,16 +445,18 @@ val TRANS_CONCR_LEMM = store_thm
                    >> qexists_tac `r` >> qexists_tac `r'`
                    >> rpt strip_tac >> fs[]
                    >> qunabbrev_tac `g1` >> fs[]
-                   >> `<|pos := c1.pos ⧺ c2.pos;
-                         neg := c1.neg ⧺ c2.neg;
-                         sucs := c1.sucs ⧺ c2.sucs|>
-                      = concrEdge (c1.pos ++ c2.pos)
-                                  (c1.neg ++ c2.neg) (c1.sucs ++ c2.sucs)`
+                   >> `<|pos := nub (c1.pos ⧺ c2.pos);
+                         neg := nub (c1.neg ⧺ c2.neg);
+                         sucs := nub (c1.sucs ⧺ c2.sucs)|>
+                      = concrEdge (nub (c1.pos ++ c2.pos))
+                                  (nub (c1.neg ++ c2.neg))
+                                  (nub (c1.sucs ++ c2.sucs))`
                       by rw[concrEdge_component_equality]
                    >> simp[concr2AbstractEdge_def] >> rpt strip_tac
                    >> Cases_on `c1` >> Cases_on `c2`
                    >> fs[concr2AbstractEdge_def,transformLabel_def]
-                   >> metis_tac[FOLDR_LEMM5]
+                   >> metis_tac[FOLDR_LEMM5,FOLDR_INTER_MEMEQUAL,
+                                nub_set,nub_append]
                  )
              )
           >- (`MEM (a1,e1) (MAP (concr2AbstractEdge aP) (trans_concr f'))`
@@ -443,15 +464,16 @@ val TRANS_CONCR_LEMM = store_thm
               >> `MEM (a2,e2) (MAP (concr2AbstractEdge aP) (trans_concr f))`
                  by fs[]
               >> fs[MEM_MAP] >> Cases_on `y` >> Cases_on `y'`
-              >> qexists_tac `concrEdge (l++l') (l0++l0') (l1++l1')`
+              >> qexists_tac `
+                  concrEdge (nub (l++l')) (nub (l0++l0')) (nub (l1++l1'))`
               >> rpt strip_tac >> fs[]
                >- (fs[concr2AbstractEdge_def] >> rpt strip_tac >> fs[]
                    >> simp[transformLabel_def]
-                   >> metis_tac[FOLDR_LEMM5])
+                   >> metis_tac[FOLDR_LEMM5,FOLDR_INTER_MEMEQUAL,nub_set])
                >- (`!ls1 ls2 x y. MEM x ls1 ∧ MEM y ls2
-                        ==> MEM (concrEdge (x.pos ++ y.pos)
-                                           (x.neg ++ y.neg)
-                                           (x.sucs ++ y.sucs))
+                        ==> MEM (concrEdge (nub (x.pos ++ y.pos))
+                                           (nub (x.neg ++ y.neg))
+                                           (nub (x.sucs ++ y.sucs)))
                         (FOLDR (λe1 sofar. g2 ls2 e1 sofar) [] ls1)` by (
                           Induct_on `ls1` >> fs[] >> rpt strip_tac
                           >> qunabbrev_tac `g1` >> qunabbrev_tac `g2`
@@ -472,10 +494,14 @@ val TRANS_CONCR_LEMM = store_thm
           >- (`MEM (a1,e1) (MAP (concr2AbstractEdge aP) (trans_concr f'))`
                  by fs[]
               >> fs[MEM_MAP] >> Cases_on `y`
-              >> qexists_tac `concrEdge l l0 (l1 ++ [R f f'])`
+              >> qexists_tac `concrEdge (nub l) (nub l0) (nub (l1 ++ [R f f']))`
               >> rpt strip_tac >> fs[]
                >- (fs[concr2AbstractEdge_def] >> rpt strip_tac >> fs[]
-                    >- (`a1 ∩ a2 = a1` suffices_by rw[]
+                    >- (`transformLabel aP l l0 =
+                          transformLabel aP (nub l) (nub l0)`
+                         by metis_tac[transformLabel_def,
+                                      FOLDR_INTER_MEMEQUAL,nub_set]
+                       >> `a1 ∩ a2 = a1` suffices_by rw[]
                        >> `a2 = POW aP` by simp[SET_EQ_SUBSET,SUBSET_DEF]
                        >> `a1 ∩ POW aP = a1` suffices_by rw[]
                        >> metis_tac[TRANS_ALPH_LEMM,INTER_SUBSET_EQN]
@@ -483,7 +509,10 @@ val TRANS_CONCR_LEMM = store_thm
                     >- simp[SET_EQ_SUBSET,SUBSET_DEF,UNION_DEF]
                   )
                >- (`!ls1 ls2 x. MEM x ls1
-                       ==> MEM (concrEdge x.pos x.neg (x.sucs ++ [R f f']))
+                       ==> MEM (concrEdge
+                                    (nub x.pos)
+                                    (nub x.neg)
+                                    (nub (x.sucs ++ [R f f'])))
                             (FOLDR (λe1 sofar. g2 ls2 e1 sofar) [] ls1)` by (
                      Induct_on `ls1` >> fs[] >> rpt strip_tac
                      >> qunabbrev_tac `g1` >> qunabbrev_tac `g2`
@@ -528,56 +557,6 @@ val ONE_STEP_TRANS_CONCR = store_thm
 
 val tempSubfCl_def = Define`
   tempSubfCl l = BIGUNION { tempSubForms f | MEM f l }`;
-
-val NoNodeProcessedTwice_def = Define`
-  NoNodeProcessedTwice g m (a,ns) (a2,ns2) =
-    ((g DIFF (m a) ⊂ g DIFF (m a2))
-         \/ ((g DIFF (m a) = g DIFF (m a2))
-           ∧ (LENGTH ns) < (LENGTH ns2)))`;
-
-val NNPT_WF = store_thm
- ("NNPT_WF",
-  ``!g m. FINITE g ==> WF (NoNodeProcessedTwice g m)``,
-   rpt strip_tac
-   >> `WF (λs t. s ⊂ t
-         ∧ s ⊆ g ∧ t ⊆ g)` by metis_tac[PSUBSET_WF]
-   >> `WF ($<)` by metis_tac[WF_LESS]
-   >> `WF (λ (x:γ list) y.
-            LENGTH x < LENGTH y)` by (
-       `inv_image ($<) (LENGTH:(γ list -> num))
-              = (λx y.
-                  LENGTH x < LENGTH y)` by simp[inv_image_def]
-       >> `WF (inv_image ($<) (LENGTH:(γ list -> num)))` suffices_by fs[]
-       >> metis_tac[WF_inv_image]
-   )
-   >> qabbrev_tac `P = (λs t. s ⊂ t ∧ s ⊆ g ∧ t ⊆ g)`
-   >> qabbrev_tac `Q = (λ(x:γ list) (y:γ list). LENGTH x < LENGTH y)`
-   >> qabbrev_tac `f = λ a. g DIFF (m a)`
-   >> `inv_image P f = λ a a2.
-                        (g DIFF (m a)
-                         ⊂ g DIFF (m a2))` by (
-      qunabbrev_tac `P`
-      >> fs[inv_image_def]
-      >> `(\x y. f x ⊂ f y) = (λa a2. f a ⊂ f a2)`
-         suffices_by (
-          fs[] >> qunabbrev_tac `f` >> simp[inv_image_def]
-      )
-      >> metis_tac[]
-   )
-   >> `WF (inv_image P f)` by metis_tac[WF_inv_image]
-   >> `WF (P LEX Q)` by metis_tac[WF_LEX]
-   >> qabbrev_tac
-        `j = λ(a,l:(γ list)). (g DIFF (m a),l)`
-   >> `WF (inv_image (P LEX Q) j)` by metis_tac[WF_inv_image]
-   >> `!x y. (NoNodeProcessedTwice g m) x y ==> (inv_image (P LEX Q) j) x y` by (
-       fs[inv_image_def,LEX_DEF] >> rpt strip_tac
-         >> Cases_on `x` >> Cases_on `y` >> fs[NoNodeProcessedTwice_def]
-         >> qunabbrev_tac `f` >> qunabbrev_tac `P` >> qunabbrev_tac `Q`
-         >> simp[] >> simp[EQ_IMP_THM] >> rpt strip_tac
-         >> (qunabbrev_tac `j` >> simp[])
-   )
-   >> metis_tac[WF_SUBSET]
- );
 
 val list_to_bag_def = Define`
   (list_to_bag [] = K 0)
