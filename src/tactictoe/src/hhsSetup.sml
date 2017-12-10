@@ -98,7 +98,8 @@ val hhs_async_limit = ref 10
 
 val hhs_thmlarg_flag = ref false
 val hhs_thmlarg_number = ref 16
-val hhs_termarg_flag = ref false 
+val hhs_termarg_flag = ref false
+val hhs_thmorthoarg_flag = ref false
 
 (* ----------------------------------------------------------------------
    Minimize flags
@@ -142,6 +143,7 @@ fun set_esearch () =
   hhs_thmlarg_flag   := false;
   hhs_thmlarg_number := 16;
   hhs_termarg_flag   := false;
+  hhs_thmorthoarg_flag := false;
   (* result *)
   hhs_minimize_flag := false;
   hhs_prettify_flag := false

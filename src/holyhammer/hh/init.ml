@@ -8,6 +8,8 @@
 open Hh_parse
 open Preprocess
 
+let print_string _ = ();;
+
 (* object partition *)
 let rec is_type t = match t with
   | Id "$t" -> true

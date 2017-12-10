@@ -155,7 +155,7 @@ fun stac_of_lemmas l cj =
     fun f (thy,name) =
       if thy = current_theory () 
       then (String.concatWith " " ["DB.fetch", quote thy, quote name])
-      else (thy ^ "Theory." ^ name) 
+      else (thy ^ "Theory." ^ name)
     val stac = 
       "metisTools.METIS_TAC [" ^ String.concatWith ", " (map (f o fst) l) ^ "]"
   in

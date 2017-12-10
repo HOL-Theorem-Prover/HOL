@@ -1,9 +1,7 @@
 # I/O files
 
 DIR="$2"
-echo $DIR
 IN="$DIR/atp_in"
-echo $IN
 OUT1="$DIR/out1"
 OUT2="$DIR/out2"
 OUT="$DIR/out"

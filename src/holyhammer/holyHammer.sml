@@ -198,7 +198,7 @@ fun translate_bin bin probbdir provdir =
        "all","0",probbdir,
        probbdir ^ "/conjecture.fof",
        "conjecture", provdir, 
-       "-thydep", probbdir ^ "/thydep.dep",">","/dev/null"]
+       "-thydep", probbdir ^ "/thydep.dep",">","/dev/null","2>","/dev/null"]
   in
     cmd_in_dir hh_dir cmd
   end

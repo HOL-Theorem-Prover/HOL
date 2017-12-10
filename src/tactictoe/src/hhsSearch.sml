@@ -28,36 +28,64 @@ exception NoNextTac
 
 (* Result *)
 datatype async_result_t = 
-  HInstall of goal | 
   HSuccess of (string * goal) | 
-  HProcess of (string * goal) | 
-  HFailure | 
+  HFailure |
   HRunning of Thread.Thread.thread | 
   HVoid  
 
 (* 100000 is the maximum number of nodes *)
-val async_result = Array.array (100000, HVoid); 
+val hammer_ref = ref 0
+val async_result = Array.array (100000, HVoid)
+val install_async = ref (dempty Int.compare)
+val running_async = ref (dempty Int.compare)
+val short_time = Time.fromReal 0.000001
 
-fun init_async () = Array.modify (fn _ => HVoid) async_result
+(* Start and end of search *)
+fun init_async () = 
+  if !hhs_hhhammer_flag 
+  then 
+    (
+    hammer_ref := 0;
+    install_async := dempty Int.compare;
+    running_async := dempty Int.compare;
+    Array.modify (fn _ => HVoid) async_result
+    )
+  else ()
+  
+fun terminate_thread pid thread =
+  if Thread.Thread.isActive thread 
+  then
+    (
+    debug_search ("terminate thread " ^ int_to_string pid); 
+    Thread.Thread.interrupt thread;
+    OS.Process.sleep short_time;
+    if Thread.Thread.isActive thread 
+      then Thread.Thread.kill thread
+      else ()
+    )
+  else ()
 
-fun running pid = case Array.sub (async_result,pid) of
-    HRunning thread => SOME thread
-  | _ => NONE
-
-fun stop_async pid =
+fun terminate_async_pid pid = 
   (
-  case running pid of
-    SOME thread => if Thread.Thread.isActive thread 
-                   then Thread.Thread.kill thread
-                   else ()
-  | NONE => ();  
-  Array.update (async_result,pid,HFailure)
+  Array.update (async_result,pid,HVoid);
+  install_async := drem pid (!install_async);
+  running_async := drem pid (!running_async);
+  if dmem pid (!running_async)
+  then terminate_thread pid (dfind pid (!running_async))
+  else ()
   )
 
+fun terminate_async () =
+  if !hhs_hhhammer_flag 
+  then app terminate_async_pid (dkeys (!running_async))
+  else ()
+    
+   
 fun queue_async pid g = 
   (
-  stop_async pid;
-  Array.update (async_result,pid,HInstall g)
+  terminate_async_pid pid;
+  debug_search ("install thread " ^ int_to_string pid);
+  install_async := dadd pid g (!install_async)
   ) 
 
 (* -------------------------------------------------------------------------
@@ -66,9 +94,11 @@ fun queue_async pid g =
 
 val notactivedict = ref (dempty Int.compare)
 fun is_notactive x = dmem x (!notactivedict)
+fun is_active x = not (is_notactive x)
+
 fun deactivate x = 
   (
-  stop_async x;
+  terminate_async_pid x;
   notactivedict := dadd x () (!notactivedict)
   )
   
@@ -650,62 +680,66 @@ fun close_proof_wrap staco tactime pid =
    Handling asynchronously calls
    -------------------------------------------------------------------------- *) 
 
-(* Hammer *)
-fun hammer_call i g = 
-  case !hammer_glob i g of 
-    NONE      => Array.update (async_result,i,HFailure)
-  | SOME stac => Array.update (async_result,i,HSuccess (stac,g))
-
-fun fork_hammer pidl = 
-  let 
-    fun f i = case Array.sub (async_result,i) of 
-      HInstall g => SOME (i,g) 
-    | _ => NONE
-  in
-    case findSome f pidl of
-      NONE => ()
-    | SOME (i,g) => 
-      let val thread = Thread.Thread.fork (fn () => hammer_call i g, []) in
-        (* Relies on hammer call not finishing too fast *)
-        Array.update (async_result,i,HRunning thread);
-        debug ("holyhammer: new thread " ^ int_to_string i)
-      end
-  end
-
 fun current_goal pid = 
   let 
     val prec = dfind pid (!proofdict)
-    val gn   = hd (! (#pending prec))
-    val goal = Array.sub (#goalarr prec, gn)
+    val gn   = hd (!(#pending prec))
   in
-    goal
+    Array.sub (#goalarr prec, gn)
   end
 
-fun close_async pidl = 
-  let 
-    fun f i = case Array.sub (async_result,i) of 
-      HSuccess (stac,g) => 
-      (debug_search ("holyhammer: proof of " ^ int_to_string i); SOME (i,stac,g)) 
-    | _ => NONE
+(* Opening a thread *)
+fun hammer_call pid g = 
+  case !hammer_glob (!hammer_ref) g of 
+    NONE      => Array.update (async_result,pid,HFailure)
+  | SOME stac => Array.update (async_result,pid,HSuccess (stac,g))
+
+fun fork_hammer () = 
+  if null (dkeys (!install_async)) then () else
+  let
+    val pid = hd (dkeys (!install_async)) 
+    val _ = install_async := drem pid (!install_async)
+    val _ = incr hammer_ref
+    val _ = debug_search ("new thread " ^ int_to_string pid)
+    val thread = 
+      Thread.Thread.fork (fn () => hammer_call pid (current_goal pid), [])
   in
-    case findSome f pidl of
-      NONE => ()
-    | SOME (i,stac,g) => 
+    running_async := dadd pid thread (!running_async);
+    Array.update (async_result,pid,HRunning thread)
+  end
+
+fun open_async () =
+  if dlength (!running_async) < !hhs_async_limit 
+  then (debug_search
+    (int_to_string (dlength (!running_async)) ^ " running thread"); 
+    fork_hammer ()) 
+  else ()
+
+(* Closing all successfull threads in increasing order of pid *)
+
+fun close_async () = 
+  let 
+    val pidl = dkeys (!running_async) 
+    fun f pid = case Array.sub (async_result,pid) of
+      HSuccess(stac,g) => 
       (
-       Array.update (async_result,i,HProcess (stac,g));
-       if current_goal i = g (* unnecessary security *)
-       then close_proof_wrap (SOME stac) 0.0 i
-       else ()
+      debug_search ("success thread " ^ int_to_string pid);
+      running_async := drem pid (!running_async);
+      Array.update (async_result,pid,HVoid);
+      if is_active pid andalso current_goal pid = g
+        then close_proof_wrap (SOME stac) 0.0 pid
+        else ()
       )
+    | HFailure => 
+      (
+      debug_search ("failure thread " ^ int_to_string pid);
+      Array.update (async_result,pid,HVoid);
+      running_async := drem pid (!running_async)
+      )
+    | _ => ()
+  in
+    app f pidl
   end
- 
-fun nb_running () = 
-  let fun count (a,n) = (case a of HRunning _ => n + 1 | _ => n) in
-    Array.foldl count 0 async_result
-  end
-  
-fun start_async pidl =
-  if nb_running () < !hhs_async_limit then fork_hammer pidl else ()
 
 (* ---------------------------------------------------------------------------
    Search function. Modifies the proof state.
@@ -758,20 +792,16 @@ fun get_next_pred pid =
 fun node_find () = 
   let
     val _ = debug_search "node_find"
-    val l0 = filter (fn x => not (is_notactive (fst x))) (dlist (!proofdict))
+    val l0 = filter (fn x => is_active (fst x)) (dlist (!proofdict))
+    (* also deactivate node with empty predictions *)
     val l1 = filter (fn x => not (has_empty_pred (fst x))) l0
-    val pidl = map fst l1
-    val _ = 
-      if !hhs_hhhammer_flag 
-      then
-        (debug_search "close_async"; 
-         close_async pidl;
-         debug_search "start_async"; 
-         start_async pidl)
-      else ()
-    val _ = if null l1 then (debug_search "nonexttac"; raise NoNextTac) else ()
+    val _ = if !hhs_hhhammer_flag then (close_async (); open_async ()) else ()
+    val l2 = if !hhs_hhhammer_flag 
+             then filter (fn x => is_active (fst x)) l1
+             else l1
+    val _ = if null l2 then (debug_search "nonexttac"; raise NoNextTac) else ()
   in
-    if !hhs_mc_flag then try_mc_find () else (standard_node_find l1, 0.0)
+    if !hhs_mc_flag then try_mc_find () else (standard_node_find l2, 0.0)
   end
 
 
@@ -931,6 +961,7 @@ fun imperative_search
   let
     val r = total_timer search_loop ()
     val _ = debug_search "End search loop"
+    val _ = terminate_async ()
     val _ = if !hhs_mcrecord_flag then learngoal () else ()
     val sproof_status = case r of
       Proof _  =>
