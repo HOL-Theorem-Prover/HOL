@@ -464,7 +464,7 @@ val SET_OF_SUBLISTS_FINITE = store_thm
                HO_MATCH_MP_TAC FINITE_INDUCT >> rpt strip_tac >> fs[]
                >> `!k. FINITE {l1 ++ [h] ++ l2 | l1 ++ l2 = k }` by (
                    Induct_on `k` >> fs[]
-                   >- (`{l1 ++ [h] ++ l2 | l1 = [] ∧ l2 = [] } = { [h] }` by (
+                   >- (`{l1 ++ [h] ++ l2 | (l1 = []) ∧ (l2 = []) } = { [h] }` by (
                           simp[SET_EQ_SUBSET,SUBSET_DEF]
                        )
                        >> rw[]
@@ -488,8 +488,8 @@ val SET_OF_SUBLISTS_FINITE = store_thm
                        >> metis_tac[IMAGE_FINITE]
                       )
                )
-               >> `{l1 ⧺ [h] ⧺ l2 | l1 ⧺ l2 = e ∨ l1 ⧺ l2 ∈ P}
-                    = {l1 ⧺ [h] ⧺ l2 | l1 ⧺ l2 = e}
+               >> `{l1 ⧺ [h] ⧺ l2 | (l1 ⧺ l2 = e) ∨ l1 ⧺ l2 ∈ P}
+                    = {l1 ⧺ [h] ⧺ l2 | (l1 ⧺ l2 = e)}
                           ∪ {l1 ⧺ [h] ⧺ l2 | l1 ⧺ l2 ∈ P}` by (
                    simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
                    >> metis_tac[]

@@ -647,7 +647,8 @@ val EXP_GRAPH_WFG_AND_SOME = store_thm
   ("EXP_GRAPH_WFG_AND_SOME",
    ``!g fs. wfg g
           ∧ (unique_node_formula g)
-          ∧ (first_flw_has_max_counter g)
+          (* ∧ (first_flw_has_max_counter g) *)
+          ∧ (flws_sorted g)
           ∧ (!f. MEM f fs ==> MEM f (graphStates g))
         ==> (?g2. (expandGraph g fs = SOME g2)
               ∧ (wfg g2)
@@ -655,7 +656,8 @@ val EXP_GRAPH_WFG_AND_SOME = store_thm
               ∧ (set (graphStatesWithId g) ⊆ set (graphStatesWithId g2))
               ∧ (until_iff_final g ==> until_iff_final g2)
               ∧ (unique_node_formula g2)
-              ∧ (first_flw_has_max_counter g2))``,
+              ∧ (flws_sorted g2)
+              (* ∧ (first_flw_has_max_counter g2) *))``,
    HO_MATCH_MP_TAC (theorem "expandGraph_ind")
    >> rpt strip_tac >> fs[expandGraph_def]
    >> Q.HO_MATCH_ABBREV_TAC
@@ -722,7 +724,8 @@ val EXP_GRAPH_WFG_AND_SOME = store_thm
             >> `∃g2. addEdgeToGraph f h x = SOME g2 ∧ wfg g2
                   ∧ set (graphStatesWithId x) = set (graphStatesWithId g2)
                   ∧ unique_node_formula g2
-                  ∧ first_flw_has_max_counter g2`
+                  ∧ (flws_sorted g2)
+                 (* ∧ first_flw_has_max_counter g2 *)`
                 by metis_tac[ADDEDGE_LEMM,IS_SOME_EXISTS]
             >> qexists_tac `g2`  >> simp[] >> qunabbrev_tac `A2`
             >> `C g2` by metis_tac[] >> simp[] >> rpt strip_tac
@@ -785,7 +788,8 @@ val EXP_GRAPH_REACHABLE = store_thm
                            (ltl2waa f) (BIGUNION (ltl2waa f).initial))
             ∧ (!x. MEM x ls ==> MEM x (graphStates g))
             ∧ (unique_node_formula g)
-            ∧ (first_flw_has_max_counter g)
+            (* ∧ (first_flw_has_max_counter g) *)
+            ∧ (flws_sorted g)
             ∧ (set (graphStates g) ⊆ tempSubForms f)
             ∧ (expandGraph g ls = SOME g2)
             ∧ (wfg g)
@@ -822,10 +826,11 @@ val EXP_GRAPH_REACHABLE = store_thm
               ∧ (wfg g)
               ∧ set (graphStatesWithId addedNodesG) = set (graphStatesWithId g)
               ∧ unique_node_formula g
-              ∧ first_flw_has_max_counter g)
+              ∧ flws_sorted g(* first_flw_has_max_counter g *))
               ` by (
-             `first_flw_has_max_counter addedNodesG
-              ∧ unique_node_formula addedNodesG` by metis_tac[ADDFRML_FOLDR_LEMM]
+             `flws_sorted addedNodesG
+              ∧ unique_node_formula addedNodesG`
+               by metis_tac[ADDFRML_FOLDR_LEMM]
              >> metis_tac[ADDEDGE_FOLDR_LEMM]
                 )
         >> first_x_assum (qspec_then `trans_concr f'` mp_tac)
@@ -994,7 +999,7 @@ val EXP_AUTO_ONLY_REACHABLE = store_thm
                      ∧ (!x. MEM x ls ==> MEM x (graphStates g))
                      ∧ (wfg g)
                      ∧ (unique_node_formula g)
-                     ∧ (first_flw_has_max_counter g)
+                     ∧ (flws_sorted g)
                    ==> (!x. MEM x (graphStates g2)
                           ==> (!y. oneStep (ltl2waa f) x y
                                 ==> (MEM y (graphStates g2))))``,
@@ -1019,11 +1024,11 @@ val EXP_AUTO_ONLY_REACHABLE = store_thm
              ==> ((FOLDR (λe g_opt. monad_bind g_opt (addEdgeToGraph f' e))
                   (SOME addedNodesG) ls = SOME g)
               ∧ (wfg g)
-              ∧ (first_flw_has_max_counter g)
+              ∧ (flws_sorted g)
               ∧ (unique_node_formula g)
               ∧ (set (graphStatesWithId addedNodesG) =
                    set (graphStatesWithId g)))` by (
-           `first_flw_has_max_counter addedNodesG
+           `flws_sorted addedNodesG
             ∧ unique_node_formula addedNodesG` by metis_tac[ADDFRML_FOLDR_LEMM]
            >> metis_tac[ADDEDGE_FOLDR_LEMM]
          )
@@ -1126,7 +1131,7 @@ val EXP_GRAPH_TRANS_LEMM = store_thm
     ∧ (ALL_DISTINCT ls)
     ∧ (wfg g)
     ∧ unique_node_formula g
-    ∧ first_flw_has_max_counter g
+    ∧ flws_sorted g
     ==> (!x. MEM x (graphStates g2)
            ==> (!y. concrTrans g2 (props f) x
                      = trans (POW (props f)) x))``,
@@ -1153,7 +1158,7 @@ val EXP_GRAPH_TRANS_LEMM = store_thm
         ((FOLDR (λe g_opt. monad_bind g_opt (addEdgeToGraph f' e))
                (SOME addedNodesG) ls = SOME g)
         ∧ (wfg g)
-        ∧ (first_flw_has_max_counter g)
+        ∧ (flws_sorted g)
         ∧ (unique_node_formula g)
         ∧ (set (graphStatesWithId addedNodesG)
              = set (graphStatesWithId g)))
@@ -1162,7 +1167,7 @@ val EXP_GRAPH_TRANS_LEMM = store_thm
                      IMAGE SND (extractTrans addedNodesG h)
                            ∪ { (e.pos,e.neg,set e.sucs) | MEM e ls}
                 else extractTrans g h = extractTrans addedNodesG h)` by (
-      `first_flw_has_max_counter addedNodesG
+      `flws_sorted addedNodesG
        ∧ unique_node_formula addedNodesG` by metis_tac[ADDFRML_FOLDR_LEMM]
       >> metis_tac[ADDEDGE_FOLDR_LEMM]
     )
@@ -1398,13 +1403,13 @@ val EXP_WAA_CORRECT = store_thm
         >> Q.HO_MATCH_ABBREV_TAC `(expandGraph G FS = NONE) ==> F`
         >> `wfg G
             ∧ (wfg G
-                ==> (unique_node_formula G ∧ first_flw_has_max_counter G
+                ==> (unique_node_formula G ∧ flws_sorted G
                   ∧ (!f. MEM f FS ==> MEM f (graphStates G))))`
              suffices_by metis_tac[EXP_GRAPH_WFG_AND_SOME,NOT_SOME_NONE]
         >> qunabbrev_tac `G` >> rpt strip_tac >> fs[]
         >- metis_tac[empty_is_wfg,ADDFRML_FOLDR_LEMM]
         >- metis_tac[UNIQUE_NODE_FORM_EMPTY,ADDFRML_FOLDR_LEMM,empty_is_wfg]
-        >- metis_tac[FIRST_FLW_EMPTY,ADDFRML_FOLDR_LEMM,empty_is_wfg]
+        >- metis_tac[FLWS_SORTED_EMPTY,ADDFRML_FOLDR_LEMM,empty_is_wfg]
         >- (Q.HO_MATCH_ABBREV_TAC `MEM f (graphStates G)`
             >> `set (graphStates G) = set FS ∪ {}`
                 by metis_tac[ADDFRML_FOLDR_LEMM,empty_is_wfg,GRAPHSTATES_EMPTY,
@@ -1489,8 +1494,8 @@ val EXP_WAA_CORRECT = store_thm
                    simp[graphStates_def,MEM_MAP] >> qexists_tac `(n,x')`
                    >> simp[] >> metis_tac[MEM_toAList]
                  )
-               >> `first_flw_has_max_counter G0` by (
-                     metis_tac[ADDFRML_FOLDR_LEMM,FIRST_FLW_EMPTY,empty_is_wfg]
+               >> `flws_sorted G0` by (
+                     metis_tac[ADDFRML_FOLDR_LEMM,FLWS_SORTED_EMPTY,empty_is_wfg]
                  )
                >> `unique_node_formula G0` by (
                      metis_tac[ADDFRML_FOLDR_LEMM,UNIQUE_NODE_FORM_EMPTY,
@@ -1570,9 +1575,9 @@ val EXP_WAA_CORRECT = store_thm
                           >> metis_tac[ADDFRML_FOLDR_LEMM,empty_is_wfg,
                                        UNIQUE_NODE_FORM_EMPTY]
                       )
-                     >> `first_flw_has_max_counter G0` by (
+                     >> `flws_sorted G0` by (
                           metis_tac[ADDFRML_FOLDR_LEMM,empty_is_wfg,
-                                    FIRST_FLW_EMPTY]
+                                    FLWS_SORTED_EMPTY]
                       )
                      >> `!x. MEM x (nub (FLAT (tempDNF_concr φ)))
                            ==> MEM x (graphStates G0)` by (
@@ -1632,9 +1637,9 @@ val EXP_WAA_CORRECT = store_thm
                            >> `unique_node_formula g0`
                                by metis_tac[ADDFRML_FOLDR_LEMM,empty_is_wfg,
                                            UNIQUE_NODE_FORM_EMPTY]
-                           >> `first_flw_has_max_counter g0`
+                           >> `flws_sorted g0`
                                by metis_tac[ADDFRML_FOLDR_LEMM,empty_is_wfg,
-                                           FIRST_FLW_EMPTY]
+                                           FLWS_SORTED_EMPTY]
                            >> `!f. MEM f (nub (FLAT (tempDNF_concr φ)))
                                     ==> (MEM f (graphStates g0))` by (
                                `set (graphStates g0) =
@@ -1680,9 +1685,9 @@ val EXP_WAA_CORRECT = store_thm
                       >> `unique_node_formula G`
                            by metis_tac[ADDFRML_FOLDR_LEMM,empty_is_wfg,
                                         UNIQUE_NODE_FORM_EMPTY]
-                      >> `first_flw_has_max_counter G`
+                      >> `flws_sorted G`
                            by metis_tac[ADDFRML_FOLDR_LEMM,empty_is_wfg,
-                                        FIRST_FLW_EMPTY]
+                                        FLWS_SORTED_EMPTY]
                       >> `!f. MEM f (nub (FLAT (tempDNF_concr φ)))
                                   ==> (MEM f (graphStates G))` by (
                           `set (graphStates G) =
@@ -1782,9 +1787,9 @@ val EXP_WAA_CORRECT = store_thm
             >> `unique_node_formula G0`
                 by metis_tac[ADDFRML_FOLDR_LEMM,empty_is_wfg,
                              UNIQUE_NODE_FORM_EMPTY]
-            >> `first_flw_has_max_counter G0`
+            >> `flws_sorted G0`
                 by metis_tac[ADDFRML_FOLDR_LEMM,empty_is_wfg,
-                             FIRST_FLW_EMPTY]
+                             FLWS_SORTED_EMPTY]
             >> `!f. MEM f (nub (FLAT (tempDNF_concr φ)))
                      ==> (MEM f (graphStates G0))` by (
                   `set (graphStates G0) =
@@ -1852,9 +1857,9 @@ val EXP_WAA_CORRECT = store_thm
             >> `unique_node_formula G0`
                  by metis_tac[ADDFRML_FOLDR_LEMM,empty_is_wfg,
                               UNIQUE_NODE_FORM_EMPTY]
-            >> `first_flw_has_max_counter G0`
+            >> `flws_sorted G0`
                  by metis_tac[ADDFRML_FOLDR_LEMM,empty_is_wfg,
-                              FIRST_FLW_EMPTY]
+                              FLWS_SORTED_EMPTY]
             >> `!f. MEM f (nub (FLAT (tempDNF_concr φ)))
                         = (MEM f (graphStates G0))` by (
                   `set (graphStates G0) =

@@ -786,6 +786,77 @@ val acc_cond_concr_def = Define`
                    ∧ MEM_SUBSET cE1.sucs cE.sucs
                    ∧ ~(MEM f cE1.sucs)) f_trans))`;
 
+val concr_extrTrans_def = Define`
+  concr_extrTrans g_AA aa_id =
+    case lookup aa_id g_AA.followers of
+      | NONE => NONE
+      | SOME aa_edges =>
+        let aa_edges_with_frmls =
+            CAT_OPTIONS
+                (MAP
+                 (λ(eL,id).
+                   case lookup id g_AA.nodeInfo of
+                     | NONE => NONE
+                     | SOME n => SOME (eL,n.frml))
+                 aa_edges
+                )
+        in let aa_edges_grpd =
+               GROUP_BY
+                   (λ(eL1,f1) (eL2,f2). eL1.edge_grp = eL2.edge_grp)
+                   aa_edges_with_frmls
+        in let concr_edges:(α concrEdge) list =
+               CAT_OPTIONS
+                (MAP
+                 (λgrp. case grp of
+                          | [] => NONE
+                          | ((eL,f)::xs) =>
+                            SOME
+                             (concrEdge eL.pos_lab eL.neg_lab (f::MAP SND xs))
+                 ) aa_edges_grpd)
+        in do node <- lookup aa_id g_AA.nodeInfo ;
+              true_edges <-
+                SOME (MAP
+                       (λeL. (concrEdge eL.pos_lab eL.neg_lab []))
+                       node.true_labels) ;
+              SOME (concr_edges ++ true_edges)
+           od`;
+
+val CONCR_EXTRTRANS_LEMM = store_thm
+  ("CONCR_EXTRTRANS_LEMM",
+   ``!g_AA id aP.
+    wfg g_AA
+    ==> case lookup id g_AA.followers of
+      | NONE => T
+      | SOME aa_edges =>
+    ?n cT. (concr_extrTrans g_AA id = SOME cT)
+       ∧ (lookup id g_AA.nodeInfo = SOME n)
+       ∧ (set (MAP (concr2AbstractEdge aP) cT) =
+              concrTrans g_AA aP n.frml)``,
+   rpt strip_tac >> fs[] >> Cases_on `lookup id g_AA.followers` >> fs[]
+   >> `?n.lookup id g_AA.nodeInfo = SOME n` by (
+       fs[wfg_def] >> metis_tac[domain_lookup]
+   )
+   >> qexists_tac `n` >> fs[]
+   >> `?cT. concr_extrTrans g_AA id = SOME cT` by (
+       simp[concr_extrTrans_def]
+   )
+   >> qexists_tac `cT` >> fs[] >> simp[SET_EQ_SUBSET,SUBSET_DEF]
+   >> rpt strip_tac >> fs[concrTrans_def,extractTrans_def,concr_extrTrans_def]
+   >> rw[]
+   >- (Cases_on `lookup id g_AA.followers` >> fs[]
+       >>
+      )
+
+
+)
+
+
+)
+
+
+
+
+
 val inGBA_def = Define`
   inGBA g qs =
     let gbaNodes = MAP SND (toAList g.nodeInfo)
@@ -797,23 +868,48 @@ val addNodeToGBA_def = Define`
     then g
     else addNode (nodeLabelGBA qs) g`;
 
-val ADDNODE_GBA_NOTWF_LEMM = store_thm
-  ("ADDNODE_GBA_NOTWF_LEMM",
-   ``!g qs. { x | inGBA (addNodeToGBA g qs) x } =
-             { x | inGBA g x } ∪ {qs} ``,
-   simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
+val ADDNODE_GBA_LEMM = store_thm
+  ("ADDNODE_GBA_LEMM",
+   ``!g qs. wfg g ==>
+          ({ set x | inGBA (addNodeToGBA g qs) x } =
+             { set x | inGBA g x } ∪ {set qs})``,
+   rpt strip_tac
+   >> `{set x | inGBA (addNodeToGBA g qs) x} ⊆ {set x | inGBA g x} ∪ {set qs}
+     ∧ {set x | inGBA g x} ∪ {set qs} ⊆ {set x | inGBA (addNodeToGBA g qs) x}`
+     suffices_by metis_tac[SET_EQ_SUBSET]
+   >> simp[SUBSET_DEF] >> rpt strip_tac
    >> fs[addNodeToGBA_def] >> Cases_on `inGBA g qs`
    >> fs[] >> fs[inGBA_def]
    >- (fs[EXISTS_MEM,MEM_MAP] >> `?i. y = (i,n)` by (Cases_on `y` >> fs[])
-       >> `lookup i (addNode (nodeLabelGBA qs) g).nodeInfo = SOME n`
-            by metis_tac[MEM_toAList]
-       >> disj1_tac >> qexists_tac `n` >> fs[] >> qexists_tac `y` >> fs[]
-       >> `lookup i g.nodeInfo = SOME n` suffices_by metis_tac[MEM_toAList]
-       >> fs[addNode_def] >> 
-)
-)
-
-
+       >> Cases_on `set x' = set qs` >> fs[] >> rw[] >> qexists_tac `n.frmls`
+       >> fs[MEM_EQUAL_SET] >> qexists_tac `n` >> fs[] >> qexists_tac `(i,n)`
+       >> fs[])
+   >- (fs[EXISTS_MEM,MEM_MAP] >> `?i. y = (i,n)` by (Cases_on `y` >> fs[])
+       >> Cases_on `set x' = set qs` >> fs[]
+       >> `SOME n = lookup i (addNode (nodeLabelGBA qs) g).nodeInfo`
+          by metis_tac[MEM_toAList]
+       >> fs[addNode_def,lookup_insert] >> Cases_on `i = g.next`
+       >> fs[MEM_toAList] >> fs[EVERY_MEM] >> rw[] >> fs[MEM_EQUAL_SET]
+       >> qexists_tac `n.frmls` >> fs[] >> qexists_tac `n` >> fs[]
+       >> qexists_tac `(i,n)` >> fs[MEM_toAList]
+      )
+   >- metis_tac[]
+   >- (fs[EXISTS_MEM] >> qexists_tac `n.frmls` >> fs[MEM_EQUAL_SET]
+       >> simp[addNode_def] >> qexists_tac `n` >> fs[]
+       >> fs[MEM_MAP] >> qexists_tac `y`
+       >> `?i. (i,n) = y` by (Cases_on `y` >> fs[])
+       >> `~(i = g.next)` by (
+            fs[wfg_def] >> CCONTR_TAC >> `~(i ∈ domain g.nodeInfo)` by fs[]
+            >> rw[] >> metis_tac[MEM_toAList,domain_lookup]
+        )
+       >> rw[] >> metis_tac[lookup_insert,MEM_toAList]
+      )
+   >- metis_tac[]
+   >- (qexists_tac `qs` >> fs[EXISTS_MEM] >> qexists_tac `nodeLabelGBA qs`
+       >> fs[MEM_EQUAL_SET,MEM_MAP] >> qexists_tac `(g.next,nodeLabelGBA qs)`
+       >> fs[] >> simp[MEM_toAList] >> simp[addNode_def,lookup_insert]
+      )
+  );
 
 val addEdgeToGBA_def = Define`
   addEdgeToGBA g id eL suc =
