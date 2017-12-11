@@ -53,28 +53,22 @@ fun init_async () =
   else ()
   
 fun terminate_thread pid thread =
-  if Thread.Thread.isActive thread 
-  then
+  while (Thread.Thread.isActive thread)
+  do (debug_search ("terminate thread " ^ int_to_string pid);
+      Thread.Thread.interrupt thread)
+
+fun terminate_async_pid pid =
+  if !hhs_hhhammer_flag then 
     (
-    debug_search ("terminate thread " ^ int_to_string pid); 
-    Thread.Thread.interrupt thread;
-    OS.Process.sleep short_time;
-    if Thread.Thread.isActive thread 
-      then Thread.Thread.kill thread
-      else ()
+    Array.update (async_result,pid,HVoid);
+    install_async := drem pid (!install_async);
+    running_async := drem pid (!running_async);
+    if dmem pid (!running_async)
+    then terminate_thread pid (dfind pid (!running_async))
+    else ()
     )
   else ()
-
-fun terminate_async_pid pid = 
-  (
-  Array.update (async_result,pid,HVoid);
-  install_async := drem pid (!install_async);
-  running_async := drem pid (!running_async);
-  if dmem pid (!running_async)
-  then terminate_thread pid (dfind pid (!running_async))
-  else ()
-  )
-
+  
 fun terminate_async () =
   if !hhs_hhhammer_flag 
   then app terminate_async_pid (dkeys (!running_async))
@@ -82,11 +76,13 @@ fun terminate_async () =
     
    
 fun queue_async pid g = 
-  (
-  terminate_async_pid pid;
-  debug_search ("install thread " ^ int_to_string pid);
-  install_async := dadd pid g (!install_async)
-  ) 
+  if !hhs_hhhammer_flag then 
+    (
+    terminate_async_pid pid;
+    debug_search ("install thread " ^ int_to_string pid);
+    install_async := dadd pid g (!install_async)
+    ) 
+  else ()
 
 (* -------------------------------------------------------------------------
    Search references
@@ -98,6 +94,7 @@ fun is_active x = not (is_notactive x)
 
 fun deactivate x = 
   (
+  debug_search ("deactivate " ^ int_to_string x);
   terminate_async_pid x;
   notactivedict := dadd x () (!notactivedict)
   )
@@ -247,7 +244,7 @@ fun backup_fail cid =
 fun install_stac tacdict stac =
   let 
     val tac = hhsTimeout.timeOut (!hhs_tactic_time) tactic_of_sml stac 
-      handle e => (debug ("Warning: install_stac: " ^ stac); raise e)
+      handle e => (debug ("Warning: install_stac: " ^ stac); NO_TAC)
   in
     tacdict := dadd stac tac (!tacdict)
   end
@@ -690,9 +687,13 @@ fun current_goal pid =
 
 (* Opening a thread *)
 fun hammer_call pid g = 
+  (
   case !hammer_glob (!hammer_ref) g of 
     NONE      => Array.update (async_result,pid,HFailure)
   | SOME stac => Array.update (async_result,pid,HSuccess (stac,g))
+  )
+  handle _ => Array.update (async_result,pid,HFailure)
+(* add a debug message here *)
 
 fun fork_hammer () = 
   if null (dkeys (!install_async)) then () else
@@ -701,6 +702,7 @@ fun fork_hammer () =
     val _ = install_async := drem pid (!install_async)
     val _ = incr hammer_ref
     val _ = debug_search ("new thread " ^ int_to_string pid)
+    val file = hhs_code_dir ^ "/hammer" ^ int_to_string (!hammer_ref)
     val thread = 
       Thread.Thread.fork (fn () => hammer_call pid (current_goal pid), [])
   in
@@ -710,9 +712,16 @@ fun fork_hammer () =
 
 fun open_async () =
   if dlength (!running_async) < !hhs_async_limit 
-  then (debug_search
-    (int_to_string (dlength (!running_async)) ^ " running thread"); 
-    fork_hammer ()) 
+  then 
+    let 
+      val n = dlength (!running_async) 
+      val m = length (filter (Thread.Thread.isActive o snd) 
+        (dlist (!running_async)))
+    in
+      debug_search (int_to_string n ^ " running thread"); 
+      debug_search (int_to_string m ^ " active thread"); 
+      fork_hammer ()
+    end
   else ()
 
 (* Closing all successfull threads in increasing order of pid *)
@@ -845,9 +854,9 @@ fun search_loop () =
   else if dmem 0 (!finproofdict) then Proof ""
   else (search_step (); debug_search "search step"; search_loop ())
   )
-  handle NoNextTac => ProofSaturated
-       | SearchTimeOut => ProofTimeOut
-       | ProofFound => Proof ""
+  handle NoNextTac => (debug_search "saturated"; ProofSaturated)
+       | SearchTimeOut => (debug_search "timeout"; ProofTimeOut)
+       | ProofFound => (debug_search "prooffound"; Proof "")
        | e => raise e
 
 fun proofl_of pid =
@@ -902,7 +911,7 @@ fun selflearn_aux proof = case proof of
         val ((gl,_),t) = add_time (tactic_of_sml stac) g
         val lbl = (stac,t,g,gl) 
       in
-        save_lbl [] lbl (* to be updated *)
+        save_lbl lbl
       end
       handle _ => debug_search ("Error: selflearn: " ^ stac)
       )
@@ -945,7 +954,6 @@ fun learngoal () =
   (
   debug ("proofdict: " ^ int_to_string (dlength (!proofdict)));
   ignore (learngoal_loop 0);
-  print_endline (int_to_string (dlength (!hhs_mcdict_cthy)));
   debug ("mcdict_cthy: " ^ int_to_string (dlength (!hhs_mcdict_cthy)))
   )
 
@@ -962,6 +970,7 @@ fun imperative_search
     val r = total_timer search_loop ()
     val _ = debug_search "End search loop"
     val _ = terminate_async ()
+    val _ = debug_search "After termination"
     val _ = if !hhs_mcrecord_flag then learngoal () else ()
     val sproof_status = case r of
       Proof _  =>

@@ -268,11 +268,13 @@ fun start_record name goal =
 fun end_record name g = 
   let
     val lbls = map fst (rev (!goalstep_glob))
-    val _ = debug ("Saving " ^ int_to_string (length lbls) ^ " labels")
   in
-    app (save_lbl lbls) lbls
+    debug_t "update_mdict" update_mdict (current_theory ());
+    debug_t ("Saving " ^ int_to_string (length lbls) ^ " labels")
+      (app save_lbl) lbls
   end
 
+(* Warning: does not use the current theorem for orthogonalization *)
 fun try_record_proof name lflag tac1 tac2 g =
   let 
     val b1 = !hhs_norecord_flag
@@ -294,7 +296,7 @@ fun try_record_proof name lflag tac1 tac2 g =
         handle _ => (debug "Error: try_record_proof"; add_time tac2 g)
         )
   in    
-    debug_proof ("Recording proof: " ^ Real.toString t);
+    debug_proof ("Replaying proof: " ^ Real.toString t);
     r
   end
 

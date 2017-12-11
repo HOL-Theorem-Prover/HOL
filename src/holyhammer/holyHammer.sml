@@ -210,8 +210,11 @@ fun translate_thf dir_in dir_out =
 
 fun launch_atp dir atp tim =
   let val cmd = case atp of
-      Eprover => "sh eprover.sh " ^ int_to_string tim ^ " " ^ dir
-    | Z3      => "sh z3.sh " ^ int_to_string tim ^ " " ^ dir
+      Eprover => 
+      "sh eprover.sh " ^ int_to_string tim ^ " " ^ dir ^
+      " > /dev/null 2> /dev/null"
+    | Z3      => "sh z3.sh " ^ int_to_string tim ^ " " ^ dir ^
+      " > /dev/null 2> /dev/null"
     | _       => raise ERR "launch_atp" "atp not supported"
   in
     cmd_in_dir provbin_dir cmd

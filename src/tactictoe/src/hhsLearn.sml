@@ -14,42 +14,6 @@ hhsTimeout hhsFeature hhsMetis hhsSetup hhsLexer
 val ERR = mk_HOL_ERR "hhsLearn"
 
 (*----------------------------------------------------------------------------
- * Calculating the height of the proof tree needed to solve a goal 
- * with respect to a list of labels. Could somehow 
-   be subsumed by mc evaluation now.
- *----------------------------------------------------------------------------*)
-
-fun update_solved_lvl psolved solved lvl lbls = 
-  let
-    fun f (_,_,g,gl) = 
-      if dmem g (!solved) 
-      then ()
-      else 
-        if all (fn x => dmem x psolved) gl
-        then 
-          let val nodes = sum_int (map (fn x => snd (dfind x psolved)) gl) in
-            solved := dadd g (lvl,nodes) (!solved)
-          end
-        else ()
-  in
-    app f lbls
-  end
-  
-fun update_solved_loop solved lvl lbls =
-  let val psolved = !solved in
-    update_solved_lvl psolved solved lvl lbls;
-    if dlength (!solved) <= dlength psolved 
-      then debug ("Maximal height: " ^ int_to_string (lvl - 1)) 
-      else update_solved_loop solved (lvl + 1) lbls
-  end
-  
-fun create_solved lbls =
-  let val solved = ref (dempty goal_compare) in
-    update_solved_loop solved 1 lbls;
-    !solved
-  end
-
-(*----------------------------------------------------------------------------
  * Recognizing theorem list and abstracting them from the tactic.
  *----------------------------------------------------------------------------*)
 
@@ -225,7 +189,7 @@ fun inst_stacl thmls g stacl = map (fn x => (x, inst_stac thmls g x)) stacl
 fun test_stac g gl (stac, istac) =
   let val ((new_gl,_),t) = 
     (
-    debug ("test_stac " ^ stac ^ "\n" ^ istac);
+    (* debug ("test_stac " ^ stac ^ "\n" ^ istac); *)
     let val tac = timeOut (!hhs_tactic_time) tactic_of_sml istac in
       add_time (timeOut (!hhs_tactic_time) tac) g
     end
@@ -237,12 +201,10 @@ fun test_stac g gl (stac, istac) =
   end
   handle _ => NONE
 
-fun orthogonalize lbls (lbl as (ostac,t,g,gl),fea) =
+fun orthogonalize (lbl as (ostac,t,g,gl),fea) =
   if !hhs_ortho_flag
   then
     let
-      val _ = debug_t "update_mdict" update_mdict (current_theory ())
-      val _ = debug (string_of_goal g)
       (* predict tactics *)
       val feavl0 = dlist (!hhs_stacfea)
       val feavl1 = stacknn_ext hhs_predict_dir (!hhs_ortho_number) feavl0 fea

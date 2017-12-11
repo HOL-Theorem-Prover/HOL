@@ -29,41 +29,6 @@ fun is_proof stac g = (rec_sproof stac g = SOME [])
 fun is_effect stac g gl = (rec_stac stac g = SOME gl)
 
 (*----------------------------------------------------------------------------
-  Requoting terms. 
-  Does not work with the new lexer. 
-  Should be applied just before printing.
-  ----------------------------------------------------------------------------
-
-fun unquote_string s =
-  if String.sub (s,0) = #"\"" andalso String.sub (s,String.size s - 1) = #"\""
-  then String.substring (s, 1, String.size s - 2)
-  else raise ERR "unquote_string" s
-
-fun is_blank c =
-  c = #" " orelse c = #"\n" orelse c = #"\t"
-
-fun rm_blank s = implode (filter (not o is_blank) (explode s))
-
-fun add_quote_aux sl = case sl of
-    [] =>  ""
-  | [a] => a
-  | "(" :: a :: "[" :: b :: s :: "]" :: ")" :: m => 
-    if mem a ["Parse.Type","Parse.Term"] andalso drop_sig b = "QUOTE" 
-      then dquote_cont s m 
-      else cont sl
-  | "[" :: b  :: s :: "]" :: m =>
-    if drop_sig b = "QUOTE" then quote_cont s m else cont sl
-  | _ => cont sl
-and quote_cont s m =
-  "`" ^ (rm_blank o rm_comment o unquote) s ^ "`" ^ " " ^ add_quote_aux m
-and dquote_cont s m =
-   "``" ^ (rm_blank o rm_comment o unquote) s ^ "``" ^ " " ^ add_quote_aux m
-and cont sl = (hd sl) ^ " " ^ add_quote_aux (tl sl)
-
-fun add_quote stac = add_quote_aux (hhs_lex stac)
-*)
- 
-(*----------------------------------------------------------------------------
   Externalizing local declaration
   ----------------------------------------------------------------------------*)
 
@@ -316,25 +281,6 @@ fun minimize_proof_wrap p =
     )
   else p
 
-(*
-fun should_par i sl = case sl of
-    []     => false
-  | a :: m => if is_infix a andalso i <= 0
-                then true
-              else if mem a ["let","local","struct","(","[","{"]
-                then should_par (i + 1) m
-              else if mem a ["end",")","]","}"]
-                then should_par (i - 1) m
-              else should_par i m
- 
-fun add_tacpar s = if should_par 0 (hhs_lex s) then "(" ^ s ^ ")"  else s
-
-fun add_proofpar proof = case proof of
-    Tactic (s,g) => Tactic (add_tacpar s,g)
-  | Then (p1,p2) => Then   (add_proofpar p1,add_proofpar p2)
-  | Thenl (p,pl) => Thenl  (add_proofpar p,map add_proofpar pl)
-*)
-
 fun minimize p = (prettify_proof_wrap o minimize_proof_wrap) p
 
 (*----------------------------------------------------------------------------
@@ -351,10 +297,8 @@ fun reconstruct_aux g proof sproof =
     val tac    = tactic_of_sml sproof
       handle _ => raise ERR "reconstruct" sproof
     val tim = 2.0 * (Time.toReal (!hhs_search_time))
-    val (_,new_tim) = add_time (timeOut tim Tactical.TAC_PROOF) (g,tac)
-      handle _ => 
-        (debug ("Error: reconstruct: " ^ sproof);
-         raise ERR "reconstruct" sproof)
+    val new_tim = snd (add_time (timeOut tim Tactical.TAC_PROOF) (g,tac))
+      handle _ => (debug ("Error: reconstruct: " ^ sproof); tim)
   in 
     debug_proof ("proof length: " ^ int_to_string (proof_length proof));
     debug_proof ("proof time: " ^ Real.toString new_tim);

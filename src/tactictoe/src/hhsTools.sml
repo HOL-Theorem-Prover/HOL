@@ -48,7 +48,7 @@ fun mkDir_err dir = OS.FileSys.mkDir dir handle _ => ()
    -------------------------------------------------------------------------- *)
 
 fun dfind k m  = Redblackmap.find (m,k) 
-fun drem k m   = fst (Redblackmap.remove (m,k))
+fun drem k m   = fst (Redblackmap.remove (m,k)) handle NotFound => m
 fun dmem k m   = Lib.can (dfind k) m
 fun dadd k v m = Redblackmap.insert (m,k,v)
 fun daddl kvl m = Redblackmap.insertList (m,kvl)

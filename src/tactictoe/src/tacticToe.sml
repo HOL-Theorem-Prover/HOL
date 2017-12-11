@@ -271,7 +271,7 @@ fun eval_tactictoe name goal =
   then
     if !hh_only_flag 
     then hh_eval goal handle _ => debug_proof "Error: print_eval_status" 
-    else debug_eval_status (hide_out main_tactictoe goal)
+    else debug_eval_status (main_tactictoe goal)
   else ()
 
 fun tactictoe goal =

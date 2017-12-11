@@ -10,7 +10,7 @@ ERROR="$DIR/error"
 
 # Running eprover
 timeout $1 ./eprover -s --cpu-limit=$1 --auto-schedule --tptp3-in \
--R --print-statistics -p --tstp-format $IN 2> $ERROR | grep "file[(]'\|# SZS" > $OUT1
+-R --print-statistics -p --tstp-format $IN 2> $ERROR | grep "file[(]'\|# SZS" > $OUT1 2> $ERROR
 # Extracting status
 grep "SZS status" $OUT1 > $STATUS 2> $ERROR
 sed -i -e 's/^.*SZS status\(.*\).*/\1/' $STATUS 2> $ERROR
