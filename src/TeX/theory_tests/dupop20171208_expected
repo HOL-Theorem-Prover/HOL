@@ -1,4 +1,5 @@
 \ensuremath{\alpha} \HOLTyOp{dupop20171208a\$testtype} =
   \HOLTokenLeftrec{} \HOLFieldName{fld1} : \ensuremath{\alpha}; \HOLFieldName{fld2} : (\HOLTyOp{num} -> \HOLTyOp{bool}) \HOLTokenRightrec{}
 
-(\ensuremath{\alpha}, \ensuremath{\beta}) \HOLTyOp{testtype} = \HOLTokenLeftrec{} \HOLFieldName{fld1} : \ensuremath{\alpha}; \HOLFieldName{fld3} : (\ensuremath{\beta} -> \HOLTyOp{bool}) \HOLTokenRightrec{}
+(\ensuremath{\gamma}, 'dd) \HOLTyOp{testtype} =
+  \HOLTokenLeftrec{} \HOLFieldName{fld0} : \HOLTyOp{num}; \HOLFieldName{fld1} : \ensuremath{\gamma}; \HOLFieldName{fld3} : ('dd -> \HOLTyOp{bool}) \HOLTokenRightrec{}
