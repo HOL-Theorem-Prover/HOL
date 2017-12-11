@@ -696,35 +696,38 @@ handle OS.SysErr(s, erropt) =>
             (case erropt of SOME s' => OS.errorMsg s' | _ => ""))
      | BuildExit => ()
 
-fun write_theory_graph () = let
-  val dotexec = Systeml.DOT_PATH
-in
-  if not (FileSys.access (dotexec, [FileSys.A_EXEC])) then
-    (* of course, this will likely be the case on Windows *)
-    warn ("Can't see dot executable at "^dotexec^"; not generating \
-          \theory-graph\n\
-          \*** You can try reconfiguring and providing an explicit path \n\
-          \*** (val DOT_PATH = \"....\") in\n\
-          \***    tools-poly/poly-includes.ML (Poly/ML)\n\
-          \***  or\n\
-          \***    config-override           (Moscow ML)\n\
-          \***\n\
-          \*** (Under Poly/ML you will have to delete bin/hol.state0 as \
-          \well)\n***\n\
-          \*** (Or: build with --nograph to stop this \
-          \message from appearing again)\n")
-  else let
-      val _ = print "Generating theory-graph and HTML theory signatures; this may take a while\n"
-      val _ = print "  (Use build's --nograph option to skip this step.)\n"
-      val pfp = Systeml.protect o fullPath
-      val result =
-          OS.Process.system(pfp [HOLDIR, "bin", "hol"] ^ " < " ^
-                            pfp [HOLDIR, "help", "src-sml", "DOT"])
-    in
-      if OS.Process.isSuccess result then ()
-      else warn "Theory graph construction failed.\n"
-    end
-end
+fun write_theory_graph () =
+  case Systeml.DOT_PATH of
+      SOME dotexec =>
+      if not (FileSys.access (dotexec, [FileSys.A_EXEC])) then
+        (* of course, this will likely be the case on Windows *)
+        warn ("Can't see dot executable at "^dotexec^"; not generating \
+              \theory-graph\n\
+              \*** You can try reconfiguring and providing an explicit path \n\
+              \*** (val DOT_PATH = \"....\") in\n\
+              \***    tools-poly/poly-includes.ML (Poly/ML)\n\
+              \***  or\n\
+              \***    config-override           (Moscow ML)\n\
+              \***\n\
+              \*** (Under Poly/ML you will have to delete bin/hol.state0 as \
+              \well)\n***\n\
+              \*** (Or: build with --nograph to stop this \
+              \message from appearing again)\n")
+      else
+        let
+          val _ = print "Generating theory-graph and HTML theory signatures; \
+                        \this may take a while\n"
+          val _ = print "  (Use build's --nograph option to skip this step.)\n"
+          val pfp = Systeml.protect o fullPath
+          val result =
+              OS.Process.system(pfp [HOLDIR, "bin", "hol"] ^ " < " ^
+                                pfp [HOLDIR, "help", "src-sml", "DOT"])
+        in
+          if OS.Process.isSuccess result then ()
+          else warn "Theory graph construction failed.\n"
+        end
+    | NONE => warn "If you had a copy of the dot tool installed, I might try\n\
+                   \*** to build a theory graph at this point"
 
 fun Poly_compilehelp() = let
   open Systeml

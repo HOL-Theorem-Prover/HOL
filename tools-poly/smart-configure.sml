@@ -69,7 +69,7 @@ print "\nHOL smart configuration.\n\n";
 val poly = ""
 val polyc = NONE : string option
 val polymllibdir = "";
-val DOT_PATH = "";
+val DOT_PATH = SOME "";
 val MLTON = SOME "";
 
 val _ = let
@@ -138,7 +138,10 @@ fun which arg =
       let
         val fname = OS.Path.concat(p, arg)
       in
-        if access (fname, [A_READ, A_EXEC]) then SOME fname else NONE
+        if access (fname, [A_READ, A_EXEC]) then
+          SOME
+            (OS.Path.mkAbsolute{path = fname, relativeTo = OS.FileSys.getDir()})
+        else NONE
       end
   in
     case OS.Process.getEnv "PATH" of
@@ -245,7 +248,7 @@ val polymllibdir =
                      "'\nas the location of libpolymain.a\n" ^
                      polylibinstruction);
 
-val DOT_PATH = if DOT_PATH = "" then "/usr/bin/dot" else DOT_PATH;
+val DOT_PATH = if DOT_PATH = SOME "" then which "dot" else DOT_PATH;
 
 val dynlib_available = false;
 
@@ -273,7 +276,7 @@ verdict ("poly", poly);
 verdict ("polyc", polyc);
 verdict ("polymllibdir", polymllibdir);
 verdict ("holdir", holdir);
-verdict ("DOT_PATH", DOT_PATH);
+optverdict ("DOT_PATH", DOT_PATH);
 optverdict ("MLTON", MLTON);
 
 print "\nConfiguration will begin with above values.  If they are wrong\n";

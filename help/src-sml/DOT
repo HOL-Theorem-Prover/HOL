@@ -40,7 +40,10 @@ val HTML_DIR   = Path.toString(Path.fromString(Path.concat
 val SIGOBJ_DIR = Path.toString(Path.fromString(Path.concat
                     (Globals.HOLDIR,"sigobj")));
 
-val DOTPATH = Systeml.DOT_PATH
+val DOTPATH =
+    case Systeml.DOT_PATH of
+        NONE => die "No DOT_PATH in Systeml"
+      | SOME s => s
 
 (*---------------------------------------------------------------------------
      Extract dot-friendly digraph from HOL theory graph.

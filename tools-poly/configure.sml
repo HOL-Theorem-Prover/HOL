@@ -250,7 +250,7 @@ in
    "val version ="  --> ("val version = "^Int.toString version_number^"\n"),
    "val ML_SYSNAME =" --> "val ML_SYSNAME = \"poly\"\n",
    "val release ="  --> ("val release = "^quote release_string^"\n"),
-   "val DOT_PATH =" --> ("val DOT_PATH = "^quote DOT_PATH^"\n")
+   "val DOT_PATH =" --> ("val DOT_PATH = "^optquote DOT_PATH^"\n")
 ];
   use destfile
 end;
