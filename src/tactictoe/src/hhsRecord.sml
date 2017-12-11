@@ -255,9 +255,8 @@ fun start_record name goal =
   goalstep_glob := [];
   (* evaluation *)
   (
-    eval_tactictoe name goal 
-    handle _ => 
-    debug ("Error: eval_tactictoe: last_stac: " ^ !hhsSearch.last_stac)
+  eval_tactictoe name goal handle _ => 
+  debug ("Error: eval_tactictoe: last_stac: " ^ !hhsSearch.last_stac)
   )
   )
 
