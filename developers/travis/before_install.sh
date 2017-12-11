@@ -7,10 +7,10 @@ cd
 if [ -z "$GITPOLY" ]
 then
 
-wget -q -O polyml.tar.gz https://github.com/polyml/polyml/archive/v5.7.tar.gz
+wget -q -O polyml.tar.gz https://github.com/polyml/polyml/archive/v5.7.1.tar.gz
 
 tar xzf polyml.tar.gz
-cd polyml-5.7
+cd polyml-5.7.1
 if [ -z "$ROOTPOLY" ]
 then
   echo "*** Installing PolyML in home directory"
