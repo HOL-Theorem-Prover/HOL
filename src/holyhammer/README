@@ -9,11 +9,7 @@ Requires:
 
     opam install num
 
-* g++ >= 4.8 (recent version with C++11 support)  
-    Ubuntu 12.04:
-    sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-    sudo apt-get update
-    sudo apt-get install g++-4.8
+* g++ >= 4.8 (with C++11 support)
 
 Install holyhammer: (done during the build)
  
