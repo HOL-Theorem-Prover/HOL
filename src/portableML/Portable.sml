@@ -373,6 +373,16 @@ fun set_eq S1 S2 = set_diff S1 S2 = [] andalso set_diff S2 S1 = []
  * Opaque type set operations                                                *
  *---------------------------------------------------------------------------*)
 
+(* functions for lifting equality functions over standard type operators *)
+type 'a eqf = 'a -> 'a -> bool
+fun pair_eq eq1 eq2 (x1,y1) (x2,y2) = eq1 x1 x2 andalso eq2 y1 y2
+fun option_eq eq NONE NONE = true
+  | option_eq eq (SOME x) (SOME y) = eq x y
+  | option_eq _ _ _ = false
+fun list_eq eq l1 l2 = ListPair.allEq (fn (x,y) => eq x y) (l1, l2)
+fun redres_eq eq1 eq2 {residue=res1,redex=red1} {residue=res2,redex=red2} =
+  eq1 red1 red2 andalso eq2 res1 res2
+
 fun op_assoc1 eq_func k alist =
   case alist of
       [] => NONE

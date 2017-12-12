@@ -9,6 +9,7 @@ open pred_setTheory prim_recTheory arithmeticTheory relationTheory;
 open CCSLib CCSTheory StrongEQTheory StrongEQLib;
 
 val _ = new_theory "StrongLaws";
+val _ = temp_loose_equality ();
 
 (******************************************************************************)
 (*									      *)
@@ -1444,27 +1445,24 @@ val [ALL_SYNC_BASE, ALL_SYNC_INDUCT] =
 (* LESS_SUC_LESS_EQ':
  |- !m n. m < (SUC n) = m <= n
  *)
-val LESS_SUC_LESS_EQ' = store_thm (
-   "LESS_SUC_LESS_EQ'", ``!m n. m < SUC n = m <= n``,
+val LESS_SUC_LESS_EQ' = Q.prove (
+   `!m n. m < SUC n = m <= n`,
     REWRITE_TAC [LESS_EQ, LESS_EQ_MONO]);
 
 (* |- ∀n m. m < SUC n ⇒ m ≤ n
  *)
-val LESS_SUC_LESS_EQ = save_thm (
-   "LESS_SUC_LESS_EQ", EQ_IMP_LR LESS_SUC_LESS_EQ');
+val LESS_SUC_LESS_EQ = EQ_IMP_LR LESS_SUC_LESS_EQ';
 
 (* LESS_EQ_ZERO_EQ:
  |- !n. n <= 0 ==> (n = 0)
  *)
-val LESS_EQ_ZERO_EQ = save_thm (
-   "LESS_EQ_ZERO_EQ", EQ_IMP_LR LESS_EQ_0);
+val LESS_EQ_ZERO_EQ = EQ_IMP_LR LESS_EQ_0;
 
 (* LESS_EQ_LESS_EQ_SUC:
  |- !m n. m <= n ==> m <= (SUC n)
  *)
-val LESS_EQ_LESS_EQ_SUC = store_thm (
-   "LESS_EQ_LESS_EQ_SUC",
-  ``!m n. m <= n ==> (m <= (SUC n))``,
+val LESS_EQ_LESS_EQ_SUC = Q.prove (
+   `!m n. m <= n ==> m <= (SUC n)`,
     REPEAT STRIP_TAC
  >> IMP_RES_TAC LESS_EQ_IMP_LESS_SUC
  >> IMP_RES_TAC LESS_IMP_LESS_OR_EQ);
@@ -1564,7 +1562,7 @@ val SYNC_TRANS_THM_EQ = store_thm (
 	    DISCH_TAC \\
 	    IMP_RES_TAC TRANS_PREFIX \\
 	    EXISTS_TAC ``0: num`` \\
-	    EXISTS_TAC ``L': 'b Label`` \\
+	    EXISTS_TAC ``x': 'b Label`` \\
 	    ASM_REWRITE_TAC [COMPL_COMPL_LAB],
 	    (* goal 1.2.1.2 (of 2) *)
 	    STRIP_TAC \\
@@ -1574,13 +1572,13 @@ val SYNC_TRANS_THM_EQ = store_thm (
 	  STRIP_TAC \\
 	  ASSUME_TAC
 	    (REWRITE_RULE [ASSUME ``j = (0 :num)``,
-			   ASSUME ``PREF_ACT ((f: num -> ('a, 'b) CCS) 0) = label L``]
+			   ASSUME ``PREF_ACT ((f: num -> ('a, 'b) CCS) 0) = label x``]
 		(ASSUME ``PREF_ACT ((f: num -> ('a, 'b) CCS) j) = label (COMPL l)``)) \\
 	  IMP_RES_TAC Action_11 \\
 	  CHECK_ASSUME_TAC
-		(REWRITE_RULE [ ASSUME ``L = COMPL (l :'b Label)``, COMPL_COMPL_LAB,
-				ASSUME ``L': 'b Label = l`` ]
-			(ASSUME ``~(L' = COMPL (L: 'b Label))``)) ] ],
+		(REWRITE_RULE [ ASSUME ``x = COMPL (l :'b Label)``, COMPL_COMPL_LAB,
+				ASSUME ``x': 'b Label = l`` ]
+			(ASSUME ``~(x' = COMPL (x: 'b Label))``)) ] ],
       (* goal 2 (of 2), inductive case *)
       REPEAT GEN_TAC \\
       PURE_ONCE_REWRITE_TAC [SYNC_INDUCT] \\
@@ -1640,7 +1638,7 @@ val SYNC_TRANS_THM_EQ = store_thm (
 	    IMP_RES_TAC TRANS_SUM >| (* 2 sub-goals here *)
 	    [ (* goal 2.2.1.1.1 (of 2) *)
 	      IMP_RES_TAC TRANS_PREFIX \\
-	      take [`SUC m`, `L'`] \\
+	      take [`SUC m`, `x'`] \\
 	      ASM_REWRITE_TAC [LESS_EQ_REFL, COMPL_COMPL_LAB],
 	      (* goal 2.2.1.1.2 (of 2) *)
 	      STRIP_ASSUME_TAC
@@ -1651,7 +1649,7 @@ val SYNC_TRANS_THM_EQ = store_thm (
 				    j <= m /\ (u = label l) /\
 				    (PREF_ACT (f j) = label (COMPL l)) /\
 				    (v = tau) /\ (Q = par P (PREF_PROC (f j))))``))
-		 (ASSUME ``TRANS (SYNC (label L') P f m) v Q``)) \\
+		 (ASSUME ``TRANS (SYNC (label x') P f m) v Q``)) \\
 	      IMP_RES_TAC LESS_EQ_LESS_EQ_SUC \\
 	      take [`j`, `l`] \\
 	      ASM_REWRITE_TAC [] ],
@@ -1689,13 +1687,13 @@ val SYNC_TRANS_THM_EQ = store_thm (
 	      ASSUME_TAC
 		(REWRITE_RULE
 		  [ASSUME ``j = SUC m``,
-		   ASSUME ``PREF_ACT ((f :num -> ('a, 'b) CCS) (SUC m)) = label L``]
+		   ASSUME ``PREF_ACT ((f :num -> ('a, 'b) CCS) (SUC m)) = label x``]
 		  (ASSUME ``PREF_ACT ((f: num -> ('a, 'b) CCS) j) = label (COMPL l)``)) \\
 	      IMP_RES_TAC Action_11 \\
 	      CHECK_ASSUME_TAC
-		(REWRITE_RULE [ASSUME ``L = COMPL (l :'b Label)``, COMPL_COMPL_LAB,
-			       ASSUME ``L': 'b Label = l``]
-			      (ASSUME ``~(L' = COMPL (L: 'b Label))``)) ] ] ] ] ] );
+		(REWRITE_RULE [ASSUME ``x = COMPL (l :'b Label)``, COMPL_COMPL_LAB,
+			       ASSUME ``x': 'b Label = l``]
+			      (ASSUME ``~(x' = COMPL (x: 'b Label))``)) ] ] ] ] ] );
 
 (* SYNC_TRANS_THM =
  |- ∀v u m f Q P.

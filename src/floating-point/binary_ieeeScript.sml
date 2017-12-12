@@ -346,6 +346,10 @@ val check_for_signalling_def = Define`
 val real_to_float_def = Define`
    real_to_float m = float_round m (m = roundTowardNegative)`
 
+val real_to_float_with_flags_def = Define`
+   real_to_float_with_flags m =
+   float_round_with_flags m (m = roundTowardNegative)`
+
 val float_round_to_integral_def = Define`
    float_round_to_integral mode (x: ('t, 'w) float) =
       case float_value x of

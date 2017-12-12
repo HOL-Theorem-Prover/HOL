@@ -21,7 +21,3 @@ sig
   type defn         = DefnBase.defn
 end
 
-(*
-   [conv] is the type of conversions: functions of type term -> thm that,
-   given a term t, return a theorem of the form "|- t = t'".
-*)

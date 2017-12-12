@@ -27,6 +27,7 @@ the rule {CONV_RULE c} or tactic {CONV_TAC c} succeeds,
 returning the theorem or goal unchanged.
 
 \SEEALSO
-Conv.QCONV, Conv.QCHANGED_CONV, Conv.ALL_CONV, Conv.TRY_CONV, Conv.CONV_RULE,
+Abbrev.conv, Conv.QCONV, Conv.QCHANGED_CONV,
+Conv.ALL_CONV, Conv.TRY_CONV, Conv.CONV_RULE,
 Tactic.CONV_TAC, Conv.THENC, Conv.ORELSEC.
 \ENDDOC

@@ -277,8 +277,8 @@ fun ROTATE_LT n [] = ([], Lib.I)
       val fixn = Int.mod (n, lgl) ;
       val (gla, glb) = Lib.split_after fixn gl ;
       fun vf ths =
-	let val (thsb, thsa) = Lib.split_after (lgl - fixn) ths ;
-	in thsa @ thsb end ;
+        let val (thsb, thsa) = Lib.split_after (lgl - fixn) ths ;
+        in thsa @ thsb end ;
     in (glb @ gla, vf) end ;
 
 (*---------------------------------------------------------------------------
@@ -437,8 +437,8 @@ local val validity_tag = "ValidityCheck"
         Lib.filter (fn h => not (Lib.exists (aconv h) asl)) (hyp th) ;
       fun extra_goals_tbp flag th (asl, w) =
         List.map (fn eg => (asl, eg))
-	  (case flag of true => hyps_not_in_goal th (asl, w)
-	    | false => hyp th) ;
+          (case flag of true => hyps_not_in_goal th (asl, w)
+            | false => hyp th) ;
 in
 (* GEN_VALIDATE : bool -> tactic -> tactic *)
 fun GEN_VALIDATE (flag : bool) (tac : tactic) (g as (asl, w) : goal) =

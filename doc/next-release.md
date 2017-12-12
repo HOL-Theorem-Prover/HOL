@@ -27,6 +27,8 @@ New features:
 Bugs fixed:
 -----------
 
+*   Pretty-printing of record type declarations to TeX now works even if there are multiple types with the same name (necessarily from different theory segments) in the overall theory.
+
 New theories:
 -------------
 

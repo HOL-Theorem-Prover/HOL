@@ -1292,9 +1292,9 @@ fun PART_MATCH_A partfn th =
     EXISTS_LEFT, EXISTS_LEFT1
     existentially quantifying variables which appear only in the hypotheses
 
-			[x = y, y = z] |- x = z
-	(eg)   -------------------------------- EXISTS_LEFT1 ``y``
-	       [∃y. (x = y) ∧ (y = z)] |- x = z                         (UOK)
+                        [x = y, y = z] |- x = z
+        (eg)   -------------------------------- EXISTS_LEFT1 ``y``
+               [∃y. (x = y) ∧ (y = z)] |- x = z                         (UOK)
 
  * --------------------------------------------------------------------------*)
 

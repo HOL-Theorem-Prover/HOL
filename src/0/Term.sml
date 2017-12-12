@@ -1093,4 +1093,31 @@ in
   recurse [t]
 end
 
+datatype lambda =
+     VAR of string * hol_type
+   | CONST of {Name: string, Thy: string, Ty: hol_type}
+   | COMB of term * term
+   | LAMB of term * term
+
+fun dest_term M =
+  case M of
+      Const _ => CONST (dest_thy_const M)
+    | Fv p => VAR p
+    | Comb p => COMB p
+    | Abs _ => LAMB (dest_abs M)
+    | Clos _ => dest_term (push_clos M)
+    | Bv _ => raise Fail "dest_term applied to bound variable"
+
+fun identical t1 t2 =
+  t1 = t2 orelse
+  case (t1,t2) of
+      (Clos _, _) => identical (push_clos t1) t2
+    | (_, Clos _) => identical t1 (push_clos t2)
+    | (Const p1, Const p2) => p1 = p2
+    | (Fv p1, Fv p2) => p1 = p2
+    | (Bv i1, Bv i2) => i1 = i2
+    | (Comb(t1,t2), Comb(ta,tb)) => identical t1 ta andalso identical t2 tb
+    | (Abs(v1,t1), Abs (v2, t2)) => v1 = v2 andalso identical t1 t2
+    | _ => false
+
 end (* Term *)

@@ -244,39 +244,6 @@ val _ = overload_on ("<<=", ``\x y. isPREFIX x y``)
 
 (* ======================================================================== *)
 
-val LENGTH_MAP2 = Q.store_thm ("LENGTH_MAP2",
-   `!l1 l2.
-        (LENGTH l1 = LENGTH l2) ==>
-        (!f. (LENGTH (MAP2 f l1 l2) = LENGTH l1) /\
-             (LENGTH (MAP2 f l1 l2) = LENGTH l2))`,
-   BasicProvers.Induct
-   THENL [
-      BasicProvers.Induct
-      THENL [
-        DISCH_TAC
-        THEN PURE_ONCE_REWRITE_TAC [listTheory.MAP2]
-        THEN REWRITE_TAC [LENGTH],
-        GEN_TAC
-        THEN PURE_ONCE_REWRITE_TAC [LENGTH]
-        THEN REWRITE_TAC [SUC_NOT]],
-      GEN_TAC
-      THEN BasicProvers.Induct
-      THEN1 (PURE_ONCE_REWRITE_TAC [LENGTH]
-             THEN REWRITE_TAC [numTheory.NOT_SUC])
-      THEN GEN_TAC
-      THEN PURE_ONCE_REWRITE_TAC [listTheory.MAP2]
-      THEN PURE_ONCE_REWRITE_TAC [LENGTH]
-      THEN PURE_ONCE_REWRITE_TAC [INV_SUC_EQ]
-      THEN DISCH_TAC
-      THEN RES_THEN ASSUME_TAC
-      THEN GEN_TAC
-      THEN CONJ_TAC
-      THEN FIRST_ASSUM MATCH_ACCEPT_TAC]);
-
-val LENGTH_EQ = Q.store_thm ("LENGTH_EQ",
-   `!x y. (x = y) ==> (LENGTH x = LENGTH y)`,
-   REPEAT GEN_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC []);
-
 val LENGTH_NOT_NULL = Q.store_thm ("LENGTH_NOT_NULL",
    `!l. 0 < LENGTH l = ~NULL l`,
    BasicProvers.Induct THEN REWRITE_TAC [LENGTH, NULL, NOT_LESS_0, LESS_0]);
@@ -3131,6 +3098,11 @@ val EVERY2_REVERSE1 = Q.store_thm("EVERY2_REVERSE1",
    >> REPEAT STRIP_TAC
    >> ONCE_REWRITE_TAC[GSYM EVERY_REVERSE]
    >> simp[REVERSE_ZIP])
+
+val LIST_REL_REVERSE_EQ = Q.store_thm(
+  "LIST_REL_REVERSE_EQ[simp]",
+  ‘LIST_REL R (REVERSE l1) (REVERSE l2) <=> LIST_REL R l1 l2’,
+  simp[EVERY2_REVERSE1]);
 
 val every_count_list = Q.store_thm ("every_count_list",
    `!P n. EVERY P (COUNT_LIST n) = (!m. m < n ==> P m)`,

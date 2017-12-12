@@ -548,6 +548,12 @@ val pair_case_cong = save_thm("pair_case_cong",
   Prim_rec.case_cong_thm pair_CASES pair_case_thm);
 val pair_rws = [PAIR, FST, SND];
 
+val pair_caseeq = Q.store_thm(
+  "pair_caseeq",
+  ‘(pair_CASE p f = v) <=> ?x y. (p = (x,y)) /\ (f x y = v)’,
+  Q.ISPEC_THEN ‘p’ STRUCT_CASES_TAC pair_CASES THEN
+  SRW_TAC[][pair_CASE_def, FST, SND, PAIR_EQ]);
+
 
 (*---------------------------------------------------------------------------
     Generate some ML that gets evaluated at theory load time.
@@ -574,6 +580,7 @@ val _ = adjoin_to_theory
       S "     {ax=TypeBasePure.ORIG pair_Axiom,";            NL();
       S "      case_def=pair_case_thm,";                     NL();
       S "      case_cong=pair_case_cong,";                   NL();
+      S "      caseeqsplit = pair_caseeq,";                  NL();
       S "      induction=TypeBasePure.ORIG pair_induction,"; NL();
       S "      nchotomy=ABS_PAIR_THM,";                      NL();
       S "      size=NONE,";                                  NL();
@@ -898,6 +905,15 @@ val _ = BasicProvers.export_rewrites
          "UNCURRY_DEF", "CURRY_DEF", "PAIR_MAP_THM", "FST_PAIR_MAP",
          "SND_PAIR_MAP"]
 
+val FST_EQ_EQUIV = Q.store_thm("FST_EQ_EQUIV",
+  `(FST p = x) <=> ?y. p = (x,y)`,
+  Q.ISPEC_THEN `p` STRUCT_CASES_TAC pair_CASES >> simp_tac(srw_ss())[]);
+val SND_EQ_EQUIV = Q.store_thm("SND_EQ_EQUIV",
+  ‘(SND p = y) <=> ?x. p = (x,y)’,
+  Q.ISPEC_THEN `p` STRUCT_CASES_TAC pair_CASES >> simp_tac(srw_ss())[]);
+
+
+
 val comma_tm = Term.prim_mk_const{Name=",", Thy="pair"};
 fun is_pair tm = Term.same_const comma_tm (fst(strip_comb tm));
 fun dest_pair tm =
@@ -913,4 +929,4 @@ val _ = adjoin_to_theory
 
 val _ = export_theory();
 
-val _ = export_theory_as_docfiles (Path.concat (Path.parentArc, "help/thms"))
+val _ = export_theory_as_docfiles "pair-help/thms"

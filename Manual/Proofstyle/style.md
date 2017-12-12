@@ -47,7 +47,7 @@ For better or worse, maintenance of HOL4 proofs involves interactive replay of p
         But, if `mytac` is very large, stepping through it is typically going to be very painful.
         It’s better in this sort of situation to strive to capture the logic of the situation in a theorem.
 
-*   **Don’t ignore parser warnings** In particular, if there is a message about multiple possible overloading resolutions, make very sure you understand why this is, and then make *even more sure* that there is no way that the parser’s choice of resolution can possibly change
+*   **Don’t ignore parser warnings** In particular, if there is a message about multiple possible overloading resolutions, make very sure you understand why this is, and then make *even more sure* that there is no way that the parser’s choice of resolution can possibly change.
 
 *   **Don’t rely on generated names** This is so important that it has a section to itself below.
 
@@ -66,6 +66,8 @@ For better or worse, maintenance of HOL4 proofs involves interactive replay of p
 
             ∀x y z.
                R x y ==> Q (f x) z
+
+2.   **Don’t use TABs** Indentation with TABs depends on editor settings for it effect. TABs are only permissible in (Hol)makefiles.
 
 2.  Use two-space indentation
 
