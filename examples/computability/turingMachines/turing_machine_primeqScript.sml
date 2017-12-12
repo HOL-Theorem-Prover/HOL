@@ -1561,32 +1561,20 @@ Use register machines
 
 
 
-
-
+(*
+Using register machine approach we want to show
+register machines can simulate partial recursive functions (probs easy?)
+then we want to show TMs can simulate register machines
+then we get TMs simulate pr funs for free
+Complexity of each section depends on the complexity of our register machines
+If we use counter machines, ie
+  Instruction set = {INC(r),DEC(r),JZ(r,z),Halt}
+  inc = +1, dec = -1, JZ = if r=0 then goto instruction z, halt=halt
+  we can define clear,copy,add,mult,
+Need to define a good input/output that doesnt make everything too hard
+ *)
 
 (*)
-primerec (tmstepf tm) 1
-
-∀tm ∃f ∀n
-
-val TM_EQIV_REC_FUN = store_thm(
-  "TM_EQIV_REC_FUN",
-  `∀ tm. ∃f.  ∀ n. ∃ t. (recfn f 1) ∧  (ENCODE_TM_TAPE (RUN t tm (DECODE n)) = f [n]) `,
-  completeInduct_on `TURING_MACHINE_P_ENCODING tm` >> EVAL_TAC >>
-`recfn (recPhi o CONS i) 1` by metis_tac[prtermTheory.recfn_recPhi_applied] 
->> REPEAT strip_tac >> FULL_SIMP_TAC (srw_ss()) [] >> EXISTS_TAC `(recPhi o CONS i)`
-rw[] >>
-
-  strip_tac >> exists_tac `recPhi` >> conj_tac >> simp[]
-  >-
-  >-
-);
-
-val REC_FUN_EQUIV_TM = store_thm(
-    "REC_FUN_EQUIV_TM",
-`∀ f. ∃ tm. ∀ n.  ∃ t. (recfn f 1)  ( f[n] = DECODE_TM_TAPE (RUN t tm (ENCODE n)) )`,
-    );
-
 
 val UNIVERSAL_TM_EXIST = store_thm (
         "UNIVERSAL_TM_EXIST",
@@ -1611,15 +1599,15 @@ val zero_tm_def = Define`zero_tm x = ENCODE_TM_TAPE (RUN (2*(LENGTH x))  <| stat
                                   tape_r := [];
                                   time := 1 |> (DECODE (HD x))) `
 
-val SUC_TM_def = Define``
+val suc_tm_def = Define``
 
-val PROJ_TM_def = Define``
+val proj_tm_def = Define``
 
-val COMPOSITION_TM_def = Define``
+val comp_tm_def = Define``
 
-val PRIM_REC_TM_def = Define``
+val prim_rec_tm_def = Define``
 
-val MINIMISATION_TM_def = Define``
+val min_tm_def = Define``
 
 val zero_pr_tm_equiv = Q.store_thm("zero_pr_tm_equiv",
 `zerof x = zero_tm x`,
