@@ -15,7 +15,7 @@ sig
   val imperative_search   : 
     (bool -> int -> goal -> string list) ->
     (goal -> (lbl_t * real) list) ->
-    (goal -> real) ->
+    (goal list -> real) ->
     (int -> goal -> string option) ->
     (string, tactic) Redblackmap.dict ->
     goal -> proof_status_t

@@ -176,7 +176,7 @@ fun fea_of_term tm =
 local
    open Char String
 in
-   fun hash_fea s =
+   fun hash_string s =
      let
         fun hsh (i, A) s =
            hsh (i + 1, (A * 263 + ord (sub (s, i))) mod 792606555396977) s
@@ -192,12 +192,27 @@ fun fea_of_goal (asl,w) =
     val asl_sl2 = map (fn x => x ^ ".h") asl_sl1
     val w_sl   = map (fn x => x ^ ".w") (fea_of_term w)
   in
-    mk_fast_set Int.compare (map hash_fea (mk_string_set (w_sl @ asl_sl2)))
+    mk_fast_set Int.compare (map hash_string (mk_string_set (w_sl @ asl_sl2)))
   end
   handle _ => raise ERR "fea_of_goal" (string_of_goal (asl,w))
 
+fun fea_of_goallist gl = 
+  mk_fast_set Int.compare (List.concat (map fea_of_goal gl))
 
+(* warning: not injective *)
+fun s_term tm = 
+  if is_var tm then fst (dest_var tm)
+  else if is_const tm then fst (dest_const tm)
+  else if is_comb tm then "(" ^ s_term (rand tm) ^ " " ^ s_term (rator tm) ^ ")"
+  else if is_abs tm then
+    let val (v,t) = dest_abs tm in
+      "[" ^ s_term v ^ " " ^ s_term t ^ "]"
+    end
+  else raise ERR "s_term" ""
 
+fun hash_term t = hash_string (s_term t)
+
+fun hash_goal g  = hash_term (list_mk_imp g)
 
 
 end (* struct *)

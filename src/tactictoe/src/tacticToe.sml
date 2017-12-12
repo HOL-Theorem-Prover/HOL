@@ -20,6 +20,8 @@ fun set_timeout r = hhs_search_time := Time.fromReal r
    Evaluating holyhammer
    ---------------------------------------------------------------------- *)
 
+val hh_eval_ref = ref 0
+
 fun hh_eval goal =
   let 
     val _ = debug_t "update_mdict" update_mdict (current_theory ());
@@ -29,16 +31,21 @@ fun hh_eval goal =
     val thmfeavdep = 
       debug_t "dependency_of_thm"
         (mapfilter (fn (a,b) => (a,b,dependency_of_thm a))) thmfeav
-    fun hammer goal = (!hh_stac_glob) 0 thmfeavdep (!hhs_hhhammer_time) goal
-    val (staco,t) = add_time hammer goal
+    val _ = incr hh_eval_ref
+    val index = !hh_eval_ref + hash_string (current_theory ())
+    fun hammer goal = 
+      (!hh_stac_glob) index thmfeavdep (!hhs_hhhammer_time) goal
+    val _ = debug ("hh_eval " ^ int_to_string index)
+    val _ = debug_proof ("hh_eval " ^ int_to_string index)
+    val (staco,t) = add_time hammer goal 
+      handle _ => (debug ("Error: hammer " ^ int_to_string index); (NONE,0.0))
   in
-    debug_proof ("hh_eval");
     debug_proof ("Time: " ^ Real.toString t);
     case staco of
       NONE      => debug_proof ("Proof status: Time Out")
     | SOME stac => 
-      let val b = can (app_tac 2.0 (tactic_of_sml stac)) goal in
-        if b then debug ("Proof reconstructed: Yes") else ();
+      let val b = app_tac 2.0 (tactic_of_sml stac) goal in
+        if isSome b then debug_proof ("Proof reconstructed: Yes") else ();
         debug_proof ("Proof found: " ^ stac)
       end
   end
@@ -198,21 +205,20 @@ fun select_stacfeav goalfea =
     (stacsymweight, stacfeav, tacdict)
   end
 
-fun select_mcfeav goalfea =
-  let
-    fun equal_compare _ = EQUAL
-    val mcfeav_org = map (fn (a,b) => (b,a)) (dlist (!hhs_mcdict))
-    val premcsymweight = debug_t "premcsymweight" learn_tfidf mcfeav_org
-    val mcfeav_aux = 
-      premcknn premcsymweight (!hhs_mc_preradius) mcfeav_org goalfea
-    val mcfeav = 
-      mk_fast_set (cpl_compare equal_compare (list_compare Int.compare)) 
-        mcfeav_aux
-    val mcsymweight = debug_t "mcsymweight" learn_tfidf mcfeav
-  in
-    (mcsymweight, mcfeav)
-  end
-
+fun select_mcfeav stacfeav =
+  if !hhs_mc_flag andalso !hhs_mcrecord_flag then
+    let
+      fun f ((_,_,g,_),_) = (hash_goal g, ())
+      val goal_dict = dnew Int.compare (map f stacfeav)    
+      val mcfeav0 = map (fn (a,b) => (b,a)) (dlist (!hhs_mcdict))
+      fun select ((b,n),nl) = dmem n goal_dict
+      val mcfeav1 = filter select mcfeav0
+      val mcsymweight = debug_t "mcsymweight" learn_tfidf mcfeav0
+    in
+      (mcsymweight, mcfeav1)
+    end
+  else (dempty Int.compare, [])
+  
 fun main_tactictoe goal =
   let  
     (* preselection *)
@@ -220,10 +226,7 @@ fun main_tactictoe goal =
     val (stacsymweight, stacfeav, tacdict) = select_stacfeav goalfea
     val (thmsymweight, thmfeav, orthothmfeav,thmfeavdep) = 
       select_thmfeav goalfea
-    val (mcsymweight, mcfeav) = 
-      if !hhs_mc_flag 
-      then debug_t "select_mcfeav" select_mcfeav goalfea
-      else (dempty Int.compare, [])
+    val (mcsymweight, mcfeav) = debug_t "select_mcfeav" select_mcfeav stacfeav      
     (* fast predictors *)
     fun stacpredictor g =
       stacknn stacsymweight (!hhs_maxselect_pred) stacfeav (fea_of_goal g)
@@ -231,8 +234,8 @@ fun main_tactictoe goal =
       let val herefeav = if ob then orthothmfeav else thmfeav in
         map fst (thmknn thmsymweight n herefeav (fea_of_goal g))
       end
-    fun mcpredictor g =
-      mcknn mcsymweight (!hhs_mc_radius) mcfeav (fea_of_goal g)
+    fun mcpredictor gl =
+      mcknn mcsymweight (!hhs_mc_radius) mcfeav (fea_of_goallist gl)
     fun hammer pid goal = 
       (!hh_stac_glob) pid thmfeavdep (!hhs_hhhammer_time) goal
   in
@@ -263,11 +266,8 @@ fun eval_tactictoe name goal =
   if
     !test_eval_hook name andalso
     !hhs_eval_flag andalso 
-    not (mem (current_theory ())
-     ["word_simp","wordSem","labProps",          "data_to_word_memoryProof","word_to_stackProof"])
-    andalso one_in_n ()
-    andalso 
-      not (!hhs_noprove_flag andalso String.isPrefix "tactictoe_prove_" name)
+    one_in_n () andalso 
+    not (!hhs_noprove_flag andalso String.isPrefix "tactictoe_prove_" name)
   then
     if !hh_only_flag 
     then hh_eval goal handle _ => debug_proof "Error: print_eval_status" 
@@ -293,6 +293,11 @@ load "hhsTools";
 open hhsTools;
 val l3 = map (length o DB.thms) l1;
 sum_int l3;
+
+
+andalso 
+    not (mem (current_theory ())
+     ["word_simp","wordSem","labProps",          "data_to_word_memoryProof","word_to_stackProof"])
 *)
 
 (* ----------------------------------------------------------------------

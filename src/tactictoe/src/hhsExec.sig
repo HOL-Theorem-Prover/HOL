@@ -27,6 +27,7 @@ sig
   
   val hhs_invalid_flag : bool ref
   val tactic_of_sml    : string -> tactic
+  val timed_tactic_of_sml : string -> tactic
   val tacticl_of_sml   : string list -> tactic list
   val string_of_sml    : string -> string
   val goal_of_sml      : string -> goal

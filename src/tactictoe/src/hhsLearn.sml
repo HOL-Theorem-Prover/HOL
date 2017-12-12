@@ -186,18 +186,38 @@ fun inst_stacl thmls g stacl = map (fn x => (x, inst_stac thmls g x)) stacl
  * Orthogonalization.
  *----------------------------------------------------------------------------*)
 
+fun record_mc b (g,gl) =
+  if !hhs_mcrecord_flag
+  then 
+    let 
+      val n = hash_goal g
+      val nl = fea_of_goallist gl
+      val b' = fst (dfind nl (!hhs_mcdict)) handle _ => false
+    in
+      if b' then () else
+      (
+      hhs_mcdict := dadd nl (b,n) (!hhs_mcdict);
+      hhs_mcdict_cthy := dadd nl (b,n) (!hhs_mcdict_cthy)
+      )
+    end
+  else ()
+
+val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
+  
 fun test_stac g gl (stac, istac) =
-  let val ((new_gl,_),t) = 
+  let val (new_gl,_) = 
     (
-    (* debug ("test_stac " ^ stac ^ "\n" ^ istac); *)
-    let val tac = timeOut (!hhs_tactic_time) tactic_of_sml istac in
-      add_time (timeOut (!hhs_tactic_time) tac) g
+    debug ("test_stac " ^ stac ^ "\n" ^ istac);
+    let val tac = timed_tactic_of_sml stac 
+      handle _ => (debug ("Warning: infinite stac: " ^ stac); NO_TAC) 
+    in
+      timeOut (!hhs_tactic_time) (TC_OFF tac) g
     end
     )
   in
     if all (fn x => mem x gl) new_gl
-    then SOME (stac,t,g,new_gl)
-    else NONE
+    then (record_mc true (g,new_gl); SOME (stac,0.0,g,new_gl))
+    else (record_mc false (g,new_gl); NONE)
   end
   handle _ => NONE
 
@@ -206,25 +226,33 @@ fun orthogonalize (lbl as (ostac,t,g,gl),fea) =
   then
     let
       (* predict tactics *)
+      val _ = debug "predict tactics"
       val feavl0 = dlist (!hhs_stacfea)
       val feavl1 = stacknn_ext hhs_predict_dir (!hhs_ortho_number) feavl0 fea
       val stacl1 = mk_sameorder_set String.compare (map (#1 o fst) feavl1)
       val stacl2 = filter (fn x => not (x = ostac)) stacl1     
       (* order tactics by frequency *)
+      val _ = debug "order tactics"
       fun score x = dfind x (!hhs_ndict) handle _ => 0
       val oscore  = score ostac
       val stacl3  = filter (fn x => score x > oscore) stacl2
       fun n_compare (x,y) = Int.compare (score y, score x) 
       val stacl4 = dict_sort n_compare stacl3
       (* try abstracted tactic x before x *)
+      val _ = debug "concat abstract tactics"
       val stacl5 = concat_absstacl ostac stacl4
       (* predicting theorems only once *)
-      val thml   = theorem_predictor (!hhs_thmorthoarg_flag)
-        (!hhs_thmlarg_number) g
+      val _ = debug "predict theorems"
+      val thml = 
+        if !hhs_thmlarg_flag 
+        then theorem_predictor (!hhs_thmorthoarg_flag) (!hhs_thmlarg_number) g
+        else []
       val thmls  = String.concatWith " , " (map dbfetch_of_string thml)
       (* instantiate arguments *)
+      val _ = debug "instantiate argument"
       val stacl6 = inst_stacl thmls g stacl5
       (* test produced tactics *)
+      val _ = debug "test tactics"
       val testo  = findSome (test_stac g gl) stacl6
     in
       case testo of

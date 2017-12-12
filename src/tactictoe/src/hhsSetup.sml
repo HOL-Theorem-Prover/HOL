@@ -66,7 +66,6 @@ val hhs_mcrecord_flag = ref false
 val hhs_mcnoeval_flag = ref false
 val hhs_mctriveval_flag = ref false
 val hhs_mc_radius = ref 0
-val hhs_mc_preradius = ref 0
 val hhs_mc_coeff = ref 1.0
 val hhs_timedepth_flag = ref false
 val hhs_width_coeff = ref 1.0
@@ -126,8 +125,7 @@ fun set_esearch () =
   hhs_mcrecord_flag  := false;
   hhs_mcnoeval_flag  := false;
   hhs_mctriveval_flag := false;
-  hhs_mc_radius      := 100;
-  hhs_mc_preradius   := 100;
+  hhs_mc_radius      := 1;
   hhs_mc_coeff       := 1.0;
   hhs_timedepth_flag := false;
   (* metis *)
@@ -138,7 +136,7 @@ fun set_esearch () =
   (* holyhammer *)
   hhs_hhhammer_flag := (false andalso can update_hh_stac ());
   hhs_hhhammer_time := 5;
-  hhs_async_limit   := 1;
+  hhs_async_limit   := 1; (* should not be changed for now *)
   (* synthesis *)
   hhs_thmlarg_flag   := false;
   hhs_thmlarg_number := 16;
@@ -155,7 +153,7 @@ fun set_erecord () =
   hhs_norecprove_flag  := true;
   hhs_nolet_flag       := true;
   (* learning *)
-  hhs_ortho_flag      := false;
+  hhs_ortho_flag      := true;
   hhs_ortho_number    := 20;
   hhs_selflearn_flag  := false;
   (* metis learning *)

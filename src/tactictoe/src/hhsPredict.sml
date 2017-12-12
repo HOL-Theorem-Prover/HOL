@@ -164,26 +164,22 @@ fun closest_subterm ((asl,w):goal) term =
    Goal evaluation for monte carlo tree search.
    -------------------------------------------------------------------------- *)
 
-fun premcknn symweight radius feal fea = 
-  map fst (first_n radius (pre_sim_fea symweight feal fea))
-
 fun mcknn symweight radius feal fea =
   let
-    fun ispos n (b,m) = b andalso m <= n
-    fun isneg n (b,m) = (not b andalso m >= n) orelse (b andalso m > n)
     val bnl = map fst (first_n radius (pre_sim symweight feal fea))
-    val nl = mk_fast_set Int.compare (map snd bnl)
-    fun posf n = length (filter (ispos n) bnl)
-    fun negf n = length (filter (isneg n) bnl)
-    fun skewed_proba n = 
+    fun ispos (b,n) = b
+    fun isneg (b,n) = not b
+    fun posf bnl = length (filter ispos bnl)
+    fun negf bnl = length (filter isneg bnl)
+    fun proba bnl = 
       let 
-        val pos = Real.fromInt (posf n)
-        val neg = Real.fromInt (negf n)
+        val pos = Real.fromInt (posf bnl)
+        val neg = Real.fromInt (negf bnl)
       in
-        pos / ((neg + pos) * (Real.fromInt n))
+        pos / (neg + pos)
       end
   in   
-    if null nl then 0.0 else list_rmax (map skewed_proba nl)
+    if null bnl then 0.0 else proba bnl
   end
 
 (* --------------------------------------------------------------------------

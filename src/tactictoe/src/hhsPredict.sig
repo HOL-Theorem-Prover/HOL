@@ -19,10 +19,6 @@ sig
     (int, real) Redblackmap.dict -> int -> (string * fea_t) list -> fea_t -> 
     (string * real) list   
   
-  val premcknn : 
-    (int, real) Redblackmap.dict -> int -> ((bool * int) * int list) list -> 
-    int list -> ((bool * int) * int list) list
-
   val mcknn : 
     (int, real) Redblackmap.dict -> int -> ((bool * int) * int list) list -> 
     int list -> real

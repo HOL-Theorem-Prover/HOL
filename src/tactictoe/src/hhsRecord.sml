@@ -273,7 +273,16 @@ fun end_record name g =
       (app save_lbl) lbls
   end
 
-(* Warning: does not use the current theorem for orthogonalization *)
+fun org_tac tac g =
+  (
+  tac g handle _ => 
+     (
+     debug "Error: original tactic not applicable: cleaning arith cache";
+     ignore (hhsExec.exec_sml "cache" "numSimps.clear_arith_caches ()"); 
+     tac g
+     )
+  )
+
 fun try_record_proof name lflag tac1 tac2 g =
   let 
     val b1 = !hhs_norecord_flag
@@ -282,17 +291,17 @@ fun try_record_proof name lflag tac1 tac2 g =
     val b3 = (!hhs_nolet_flag andalso lflag)           
     val (r,t) =
       if b1 orelse b2 orelse b3
-      then add_time tac2 g
+      then add_time (org_tac tac2) g
       else
         (
         let        
-           val _ = start_record name g
-           val rt = add_time tac1 g
-           val _ = end_record name g
-         in 
-           rt
-         end
-        handle _ => (debug "Error: try_record_proof"; add_time tac2 g)
+          val _ = start_record name g
+          val rt = add_time tac1 g
+          val _ = end_record name g
+        in 
+          rt
+        end
+        handle _ => (debug "Error: try_record_proof"; add_time (org_tac tac2) g)
         )
   in    
     debug_proof ("Replaying proof: " ^ Real.toString t);

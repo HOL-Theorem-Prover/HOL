@@ -351,7 +351,9 @@ fun import_feavl thyl = List.concat (map read_feavdatal_no_min thyl)
  *----------------------------------------------------------------------------*) 
  
 fun update_mcdict fea (b,n) = 
-  hhs_mcdict := dadd fea (b,n) (!hhs_mcdict) 
+  let val b' = fst (dfind fea (!hhs_mcdict)) handle _ => false in
+    if b' then () else hhs_mcdict := dadd fea (b,n) (!hhs_mcdict)
+  end
  
 fun export_mc cthy =
   let 

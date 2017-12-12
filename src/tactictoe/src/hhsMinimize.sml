@@ -13,7 +13,7 @@ open HolKernel boolLib Abbrev hhsTools hhsExec hhsLexer hhsTimeout hhsSetup
 val ERR = mk_HOL_ERR "hhsMinimize"
 
 (* --------------------------------------------------------------------------
-   Tests
+   Tests. Todo: reconstruction time should be different for Metis.
    -------------------------------------------------------------------------- *)
 
 fun same_effect stac1 stac2 g =

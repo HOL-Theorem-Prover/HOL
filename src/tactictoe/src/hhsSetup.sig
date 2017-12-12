@@ -28,7 +28,6 @@ sig
   val hhs_mcnoeval_flag  : bool ref
   val hhs_mctriveval_flag : bool ref
   val hhs_mc_radius      : int ref
-  val hhs_mc_preradius   : int ref
   val hhs_mc_coeff       : real ref
   val hhs_timedepth_flag : bool ref
   val hhs_width_coeff    : real ref

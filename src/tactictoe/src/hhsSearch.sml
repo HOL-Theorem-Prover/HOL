@@ -189,19 +189,20 @@ fun estimate_distance (depth,heuristic) (g,pred) =
    Monte Carlo Tree Search
    -------------------------------------------------------------------------- *)
 
+fun array_to_list a =
+  let fun f (a,l) = a :: l in
+    rev (Array.foldl f [] a)
+  end
+  
 fun init_eval pripol pid =
   let
     val _ = debug_search "mcts evaluation"
     val prec = dfind pid (!proofdict)
     val {visit,pending,goalarr,prioreval,cureval,priorpolicy,...} = prec
     val eval =
-      if !hhs_mcnoeval_flag 
-        then 0.0
-      else if !hhs_mctriveval_flag
-        then 1.0
-      else if not (null (!pending)) 
-        then (!mcpredictor_glob) (Array.sub (#goalarr prec, hd (!pending)))
-      else 1.0 (* 100 percent *)
+      if !hhs_mcnoeval_flag then 0.0
+      else if !hhs_mctriveval_flag then 1.0
+      else (!mcpredictor_glob) (array_to_list (#goalarr prec))
   in
     priorpolicy := pripol;
     visit := 1.0;
@@ -242,9 +243,8 @@ fun backup_fail cid =
    -------------------------------------------------------------------------- *)
 
 fun install_stac tacdict stac =
-  let 
-    val tac = hhsTimeout.timeOut (!hhs_tactic_time) tactic_of_sml stac 
-      handle e => (debug ("Warning: install_stac: " ^ stac); NO_TAC)
+  let val tac = timed_tactic_of_sml stac 
+    handle _ => (debug ("Warning: install_stac: " ^ stac); NO_TAC)
   in
     tacdict := dadd stac tac (!tacdict)
   end
@@ -925,7 +925,8 @@ fun selflearn proof =
 
 (* From positives and negative goals, rely on proofdict
    and update hhs_mcdict, hhs_mcdict_cthy *)
-   
+
+(*
 fun learngoal_loop pid =
   let 
     val prec = dfind pid (!proofdict) 
@@ -956,6 +957,7 @@ fun learngoal () =
   ignore (learngoal_loop 0);
   debug ("mcdict_cthy: " ^ int_to_string (dlength (!hhs_mcdict_cthy)))
   )
+*)
 
 (* ---------------------------------------------------------------------------
    Main
@@ -971,7 +973,6 @@ fun imperative_search
     val _ = debug_search "End search loop"
     val _ = terminate_async ()
     val _ = debug_search "After termination"
-    val _ = if !hhs_mcrecord_flag then learngoal () else ()
     val sproof_status = case r of
       Proof _  =>
       (
