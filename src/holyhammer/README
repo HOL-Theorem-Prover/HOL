@@ -2,8 +2,13 @@ HOLyHammer is a machine learning for theorem proving framework.
 
 Requires:
 
-* OCaml >= 3.12
-    sudo apt-get install ocaml 
+* OCaml >= 3.12, ocamlfind, and the OCaml package num
+
+    As of OCalm 4.06.0, the num package is no longer part of the compiler itself,
+    and must be installed separately. This can be done using e.g. OPAM:
+
+    opam install num
+
 * g++ >= 4.8 (recent version with C++11 support)  
     Ubuntu 12.04:
     sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
