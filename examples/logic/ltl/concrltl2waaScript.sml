@@ -724,9 +724,10 @@ val EXP_GRAPH_WFG_AND_SOME = store_thm
             >> `∃g2. addEdgeToGraph f h x = SOME g2 ∧ wfg g2
                   ∧ set (graphStatesWithId x) = set (graphStatesWithId g2)
                   ∧ unique_node_formula g2
-                  ∧ (flws_sorted g2)
+                  (* ∧ (flws_sorted g2) *)
                  (* ∧ first_flw_has_max_counter g2 *)`
                 by metis_tac[ADDEDGE_LEMM,IS_SOME_EXISTS]
+            >> `flws_sorted g2` by metis_tac[ADDEDGE_COUNTER_LEMM]
             >> qexists_tac `g2`  >> simp[] >> qunabbrev_tac `A2`
             >> `C g2` by metis_tac[] >> simp[] >> rpt strip_tac
             >> qunabbrev_tac `A0`
