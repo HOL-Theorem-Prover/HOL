@@ -1,4 +1,6 @@
-open HolKernel Parse bossLib boolLib pred_setTheory relationTheory set_relationTheory arithmeticTheory pairTheory listTheory optionTheory prim_recTheory whileTheory rich_listTheory
+open HolKernel Parse bossLib boolLib pred_setTheory relationTheory set_relationTheory arithmeticTheory pairTheory listTheory optionTheory prim_recTheory whileTheory rich_listTheory sortingTheory
+
+open relationTheoryHelperTheory
 
 val _ = new_theory "generalHelpers"
 
@@ -691,6 +693,25 @@ val SPAN_APPEND = store_thm
    >> Cases_on `SPAN R l` >> rw[] >> fs[]
   );
 
+val SPAN_EQ = store_thm
+  ("SPAN_EQ",
+   ``!R x y t. equivalence R ∧ R x y ==> (SPAN (R x) t = SPAN (R y) t)``,
+   gen_tac >> Induct_on `t` >> fs[SPAN_def] >> rpt strip_tac
+   >> `SPAN (R x) t = SPAN (R y) t` by metis_tac[]
+   >> `R x h = R y h` by (
+       metis_tac[equivalence_def,TRANS_THM,REFL_THM,SYMM_THM]
+   )
+   >> Cases_on `R x h` >> fs[]
+  );
+
+val SPAN_FST_LEMM = store_thm
+  ("SPAN_FST_LEMM",
+   ``!x R l. MEM x (FST (SPAN R l)) ==> R x``,
+   Induct_on `l` >> fs[SPAN_def] >> rpt strip_tac
+   >> Cases_on `R h` >> fs[] >> Cases_on `x = h` >> fs[]
+   >> Cases_on `SPAN R l` >> fs[]
+  );
+
 val GROUP_BY_def = tDefine "GROUP_BY"
   `(GROUP_BY P []  = [])
  ∧ (GROUP_BY P (x::xs) =
@@ -705,15 +726,15 @@ val GROUP_BY_def = tDefine "GROUP_BY"
 
 val GROUP_BY_FLAT = store_thm
   ("GROUP_BY_FLAT",
-   ``!P l. set (FLAT (GROUP_BY P l)) = set l``,
+   ``!P l. (FLAT (GROUP_BY P l)) = l``,
    gen_tac
    >> `!l1 l2 l. (l1 ++ l2 = l)
-                 ==> (set (FLAT (GROUP_BY P l2)) = set l2)` by (
+                 ==> ((FLAT (GROUP_BY P l2)) = l2)` by (
        Induct_on `l` >> fs[GROUP_BY_def] >> rpt strip_tac
        >> Cases_on `l1`
        >- (fs[] >> simp[GROUP_BY_def] >> Cases_on `SPAN (P h) l`
            >> `q ++ r = l` by metis_tac[SPAN_APPEND]
-           >> fs[] >> `set (FLAT (GROUP_BY P r)) = set r` by metis_tac[]
+           >> fs[] >> `(FLAT (GROUP_BY P r)) = r` by metis_tac[]
            >> rw[LIST_TO_SET_APPEND]
           )
        >- (Cases_on `l2` >> fs[GROUP_BY_def] >> rw[]
@@ -723,7 +744,299 @@ val GROUP_BY_FLAT = store_thm
            >> rpt strip_tac >> rw[LIST_TO_SET_APPEND]
           )
    )
-   >> `[] ++ l = l` by simp[] >> metis_tac[]
+   >> strip_tac >> `[] ++ l = l` by simp[] >> metis_tac[]
+  );
+
+val rel_corr_def = Define `
+  rel_corr R P =
+   !x y. R x y = (P x y ∧ P y x)`;
+
+val REL_CORR_GROUP_BY = store_thm
+  ("REL_CORR_GROUP_BY",
+   ``!R P. rel_corr R P
+             ∧ equivalence R ∧ transitive P
+             ==> !k_hd k_tl l.
+             (GROUP_BY R l = (k_hd::k_tl))
+                ∧ (SORTED P l)
+                ==> (!x y k. (MEM x k_hd)
+                           ∧ (MEM k k_tl)
+                           ∧ (MEM y k)
+                              ==> ~R x y)``,
+    gen_tac >> gen_tac >> strip_tac >> Induct_on `l` >> fs[GROUP_BY_def,SPAN_def]
+    >> (rpt strip_tac >> rename[`SORTED P (H::l)`]
+        >> Cases_on `SPAN (R H) l`
+        >> Cases_on `l`
+        >- (fs[GROUP_BY_def,SPAN_def] >> rw[] >> fs[GROUP_BY_def])
+        >- (fs[GROUP_BY_def,SPAN_def] >> rename[`SORTED P (H::h2::t1)`]
+            >> Cases_on `R H h2` >> fs[]
+            >- (first_x_assum (qspec_then `q` mp_tac)
+                >> rpt strip_tac
+                >> first_x_assum (qspec_then `GROUP_BY R r` mp_tac)
+                >> simp[GROUP_BY_def] >> fs[SORTED_DEF]
+                >> strip_tac
+                >> `SPAN (R h2) t1 = SPAN (R H) t1`
+                        by metis_tac[SPAN_EQ]
+                >> rw[] >> Cases_on `SPAN (R H) t1` >> fs[]
+                >- (rw[] >> metis_tac[equivalence_def,
+                                      SYMM_THM,TRANS_THM])
+                >- (rw[] >> qexists_tac `x` >> simp[] >> fs[] >> rw[]
+                    >> metis_tac[equivalence_def,SYMM_THM,
+                                 TRANS_THM]
+                   )
+               )
+            >- (rw[] >> Cases_on `GROUP_BY R (h2::t1)` >> fs[]
+                >> rw[] >> fs[SORTED_DEF]
+                >> rename[`GROUP_BY R (h3::t2) = h4::t3`]
+                >- (`R h3 y` by (
+                        fs[GROUP_BY_def,SPAN_def]
+                        >> Cases_on `SPAN (R h3) t2` >> fs[]
+                        >> `!x. MEM x (FST (q,r)) ==> (R h3 x)`
+                                 by metis_tac[SPAN_FST_LEMM]
+                        >> Cases_on `y = h3` >> fs[]
+                        >> `MEM y q` by (rw[] >> fs[])
+                        >> metis_tac[]
+                    )
+                    >> metis_tac[equivalence_def,SYMM_THM,TRANS_THM]
+                   )
+                >- (`P h3 H` by (
+                     Cases_on `y = h3` >> rw[]
+                     >- metis_tac[equivalence_def, REFL_THM]
+                     >- (
+                      `MEM y t2` by (
+                         `FLAT (GROUP_BY R (h3::t2)) = h3::t2`
+                             by metis_tac[GROUP_BY_FLAT]
+                          >> `MEM y (FLAT (GROUP_BY R (h3::t2)))` by (
+                             simp[MEM_FLAT] >> metis_tac[]
+                          )
+                          >> `MEM y (h3::t2)` by metis_tac[]
+                          >> fs[] >> metis_tac[]
+                      )
+                      >> `P h3 y` by metis_tac[SORTED_EQ]
+                      >> fs[rel_corr_def]
+                      >> metis_tac[equivalence_def,SYMM_THM,TRANS_THM]
+                     )
+                   )
+                   >> metis_tac[rel_corr_def]
+                   )
+               )
+           )
+       )
+  );
+
+val SORTED_GROUP_BY = store_thm
+  ("SORTED_GROUP_BY",
+    ``!R P l. SORTED P l ∧ transitive P ∧ equivalence R
+            ∧ rel_corr R P
+       ==> (!l_sub. MEM l_sub (GROUP_BY R l)
+            ==> ((!x y. MEM x l_sub ∧ MEM y l_sub ==> R x y)
+               ∧ (!x y. MEM x l_sub ∧ MEM y l ∧ R x y ==> MEM y l_sub)))``,
+   gen_tac >> gen_tac >> Induct_on `l`
+   >- (rpt strip_tac >> fs[GROUP_BY_def])
+   >- (
+    simp[] >> gen_tac >> strip_tac >>  strip_tac >> strip_tac
+    >> Cases_on `l` >> fs[]
+    >- (rpt strip_tac >> fs[GROUP_BY_def,SPAN_def,equivalence_def] >> rw[]
+        >> fs[] >> rw[] >> metis_tac[REFL_THM]
+       )
+    >- (fs[SORTED_DEF] >> Cases_on `GROUP_BY R (h'::t)` >> fs[]
+     >- (fs[GROUP_BY_def,SPAN_def] >> Cases_on `R h h'` >> fs[]
+         >> Cases_on `SPAN (R h) t` >> Cases_on `SPAN (R h') t`
+         >> fs[SPAN_EQ]
+        )
+     >- (Cases_on `R h h'`
+      >- (Cases_on `GROUP_BY R (h::h'::t)` >> fs[]
+          >> `h''' = h::h''` by (
+              fs[GROUP_BY_def,SPAN_def] >> Cases_on `R h h'` >> fs[]
+              >> `SPAN (R h) t = SPAN (R h') t` by metis_tac[SPAN_EQ]
+              >> rw[] >> Cases_on `SPAN (R h') t` >> fs[] >> rw[]
+             )
+          >> `t' = t''` by (
+               fs[GROUP_BY_def,SPAN_def] >> Cases_on `R h h'` >> fs[]
+                 >> `SPAN (R h) t = SPAN (R h') t`  by metis_tac[SPAN_EQ]
+                 >> rw[] >> Cases_on `SPAN (R h') t` >> fs[] >> rw[]
+           )
+          >> strip_tac
+          >- (rw[] >> fs[]
+              >> first_x_assum (qspec_then `h''` mp_tac) >> simp[]
+              >> rpt strip_tac >> fs[HD] >> rw[] >> rpt strip_tac
+              >- metis_tac[equivalence_def,REFL_THM]
+              >- (rw[]
+                  >> `MEM h' h''` by (
+                     fs[GROUP_BY_def,SPAN_def]
+                      >> rw[] >> Cases_on `R h h'` >> fs[]
+                      >> Cases_on `SPAN (R h) t` >> Cases_on `SPAN (R h') t`
+                      >> fs[SPAN_EQ] >> rw[]
+                   )
+                  >> metis_tac[equivalence_def,TRANS_THM]
+                 )
+              >- (rw[]
+                  >> `MEM h' h''` by (
+                       fs[GROUP_BY_def,SPAN_def]
+                       >> rw[] >> Cases_on `R h h'` >> fs[]
+                       >> Cases_on `SPAN (R h) t` >> Cases_on `SPAN (R h') t`
+                       >> fs[SPAN_EQ] >> rw[]
+                   )
+                  >> metis_tac[equivalence_def,TRANS_THM,SYMM_THM]
+                 )
+             )
+          >- (first_x_assum (qspec_then `h''` mp_tac) >> simp[]
+              >> rpt strip_tac >> rw[]
+              >> fs[GROUP_BY_def,SPAN_def] >> Cases_on `R h h'` >> fs[]
+              >> `SPAN (R h) t = SPAN (R h') t` by metis_tac[SPAN_EQ]
+              >> rw[] >> Cases_on `SPAN (R h') t` >> fs[] >> rw[]
+              >> Cases_on `y = h` >> Cases_on `y = h'` >> fs[]
+              >> metis_tac[equivalence_def,TRANS_THM,REFL_THM,SYMM_THM]
+             )
+          >- (first_x_assum (qspec_then `l_sub` mp_tac) >> simp[])
+          >- (first_x_assum (qspec_then `l_sub` mp_tac) >> simp[]
+              >> rpt strip_tac >> rw[]
+              >- (fs[SORTED_EQ]
+                  >> `FLAT (h''::t') = h'::t`
+                      by metis_tac[GROUP_BY_FLAT]
+                  >> `MEM x (FLAT (h''::t'))` by (simp[MEM_FLAT] >> metis_tac[])
+                  >> `MEM x (h'::t)` by metis_tac[]
+                  >> Cases_on `x = h'`
+                  >> rw[]
+                  >> `SORTED P (h::h'::t)` by (
+                       simp[SORTED_EQ] >> rpt strip_tac >> fs[]
+                       >> metis_tac[TRANS_THM]
+                  )
+                  >> `!k_hd k_tl l.
+                       (GROUP_BY R l = k_hd::k_tl) ∧ SORTED P l
+                       ==> ∀x y k. MEM x k_hd ∧ MEM k k_tl ∧ MEM y k ⇒ ¬R x y`
+                      by (HO_MATCH_MP_TAC REL_CORR_GROUP_BY >> metis_tac[])
+                  >> first_x_assum (qspec_then `h::h''` mp_tac)
+                  >> rpt strip_tac
+                  >> first_x_assum (qspec_then `t'` mp_tac)
+                  >> rpt strip_tac
+                  >> first_x_assum (qspec_then `h::h'::t` mp_tac) >> simp[]
+                  >> rpt strip_tac
+                  >> (fs[]
+                  >- metis_tac[]
+                  >- (fs[MEM_FLAT] >> `~R h x` by metis_tac[]
+                      >> metis_tac[equivalence_def,SYMM_THM]
+                     ))
+                 )
+              >- metis_tac[]
+              >- metis_tac[]
+             )
+         )
+      >- (`(l_sub = [h]) \/ (l_sub  = h'') \/ (MEM l_sub t')` by (
+            fs[GROUP_BY_def,SPAN_def]
+          )
+          >- (rpt strip_tac >> rw[]
+              >- (`(x = h) ∧ (y = h)` by fs[] >> metis_tac[equivalence_def,REFL_THM])
+              >- (`x = h` by fs[] >> metis_tac[])
+              >- (`x = h` by fs[] >> rw[]
+                  >> `SORTED P (h::h'::t)` by (
+                     simp[SORTED_EQ] >> rpt strip_tac >> fs[SORTED_EQ]
+                     >> metis_tac[TRANS_THM]
+                  )
+                  >> `FLAT (GROUP_BY R (h::h'::t)) = h::h'::t`
+                      by fs[GROUP_BY_FLAT]
+                  >> `!k_hd k_tl l.
+                        (GROUP_BY R l = k_hd::k_tl) ∧ SORTED P l
+                        ==> ∀x y k. MEM x k_hd ∧ MEM k k_tl ∧ MEM y k ⇒ ¬R x y`
+                     by (HO_MATCH_MP_TAC REL_CORR_GROUP_BY >> metis_tac[])
+                  >> Cases_on `GROUP_BY R (h::h'::t)`
+                  >- fs[FLAT]
+                  >- (
+                    rename[`GROUP_BY R (h::h1::t) = h3::t2`]
+                    >> first_x_assum (qspec_then `h3` mp_tac)
+                    >> rpt strip_tac
+                    >> first_x_assum (qspec_then `t2` mp_tac)
+                    >> rpt strip_tac
+                    >> first_x_assum (qspec_then `h::h1::t` mp_tac) >> simp[]
+                    >> rpt strip_tac >> fs[GROUP_BY_def]
+                    >> Cases_on `SPAN (R h) (h1::t)` >> fs[]
+                    >> fs[SPAN_def] >> Cases_on `R h h1` >> fs[]
+                    >> rw[] >> Cases_on `SPAN (R h1) t` >> fs[]
+                    >> rw[] >> `MEM y (FLAT (GROUP_BY R (h1::t)))` by fs[]
+                    >> fs[MEM_FLAT]
+                  )
+                 )
+             )
+          >- (rpt strip_tac >> rw[]
+           >- (first_x_assum (qspec_then `h''` mp_tac) >> simp[]
+               >> rpt strip_tac >> rw[]
+               >> `FLAT (h''::t') = h'::t` by metis_tac[GROUP_BY_FLAT]
+               >> `MEM h' h''` by (Cases_on `h''` >> fs[FLAT])
+               >> metis_tac[equivalence_def,SYMM_THM,TRANS_THM]
+              )
+           >- (first_x_assum (qspec_then `h''` mp_tac) >> simp[]
+               >> rpt strip_tac >> rw[]
+               >> `SORTED P (h::h'::t)` by (
+                    simp[SORTED_EQ] >> rpt strip_tac >> fs[SORTED_EQ]
+                    >> metis_tac[TRANS_THM]
+                )
+               >> `FLAT (GROUP_BY R (h::h'::t)) = h::h'::t`
+                   by fs[GROUP_BY_FLAT]
+               >> `!k_hd k_tl l.
+                   (GROUP_BY R l = k_hd::k_tl) ∧ SORTED P l
+                   ==> ∀x y k. MEM x k_hd ∧ MEM k k_tl ∧ MEM y k ⇒ ¬R x y`
+                       by (HO_MATCH_MP_TAC REL_CORR_GROUP_BY >> metis_tac[])
+               >> Cases_on `GROUP_BY R (h::h'::t)`
+               >- fs[FLAT]
+               >- (rename[`GROUP_BY R (h::h1::t) = h3::t2`]
+                   >> first_x_assum (qspec_then `h3` mp_tac)
+                   >> rpt strip_tac
+                   >> first_x_assum (qspec_then `t2` mp_tac)
+                   >> rpt strip_tac
+                   >> first_x_assum (qspec_then `h::h1::t` mp_tac) >> simp[]
+                   >> rpt strip_tac >> fs[GROUP_BY_def]
+                   >- (Cases_on `SPAN (R h) (h1::t)` >> fs[]
+                      >> fs[SPAN_def] >> Cases_on `R h h1` >> fs[]
+                      >> rw[] >> Cases_on `SPAN (R h1) t` >> fs[]
+                      >> rw[] >> `MEM y (FLAT (GROUP_BY R (h1::t)))` by fs[])
+                   >- (Cases_on `SPAN (R h) (h1::t)` >> fs[]
+                       >> fs[SPAN_def] >> Cases_on `R h h1` >> fs[]
+                       >> rw[] >> Cases_on `SPAN (R h1) t` >> fs[]
+                       >> metis_tac[equivalence_def,SYMM_THM]
+                      )
+                  )
+              )
+           >- metis_tac[]
+             )
+          >- (rpt strip_tac >> rw[]
+               >- metis_tac[]
+               >- (first_x_assum (qspec_then `l_sub` mp_tac) >> simp[]
+                   >> rpt strip_tac >> `SORTED P (h::h'::t)` by (
+                    simp[SORTED_EQ] >> rpt strip_tac >> fs[SORTED_EQ]
+                    >> metis_tac[TRANS_THM]
+                )
+               >> `FLAT (GROUP_BY R (h::h'::t)) = h::h'::t`
+                   by fs[GROUP_BY_FLAT]
+               >> `!k_hd k_tl l.
+                   (GROUP_BY R l = k_hd::k_tl) ∧ SORTED P l
+                   ==> ∀x y k. MEM x k_hd ∧ MEM k k_tl ∧ MEM y k ⇒ ¬R x y`
+                       by (HO_MATCH_MP_TAC REL_CORR_GROUP_BY >> metis_tac[])
+               >> Cases_on `GROUP_BY R (h::h'::t)`
+               >- fs[FLAT]
+               >- (rename[`GROUP_BY R (h::h1::t) = h3::t2`]
+                   >> first_x_assum (qspec_then `h3` mp_tac)
+                   >> rpt strip_tac
+                   >> first_x_assum (qspec_then `t2` mp_tac)
+                   >> rpt strip_tac
+                   >> first_x_assum (qspec_then `h::h1::t` mp_tac) >> simp[]
+                   >> rpt strip_tac >> fs[GROUP_BY_def]
+                   >- (Cases_on `SPAN (R h) (h1::t)` >> fs[]
+                      >> fs[SPAN_def] >> Cases_on `R h h1` >> fs[]
+                      >> rw[] >> Cases_on `SPAN (R h1) t` >> fs[]
+                      >> rw[] >> `MEM y (FLAT (GROUP_BY R (h1::t)))` by fs[])
+                   >- (Cases_on `SPAN (R h) (h1::t)` >> fs[]
+                       >> fs[SPAN_def] >> Cases_on `R h h1` >> fs[]
+                       >> rw[] >> Cases_on `SPAN (R h1) t` >> fs[]
+                       >> metis_tac[equivalence_def,SYMM_THM]
+                      )
+                  )
+                  )
+               >- metis_tac[]
+               >- metis_tac[]
+              )
+         )
+        )
+       )
+   )
   );
 
 val ONLY_MINIMAL_def = Define`
