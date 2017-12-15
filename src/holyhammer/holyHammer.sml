@@ -21,7 +21,7 @@ fun cmd_in_dir dir cmd = OS.Process.system ("cd " ^ dir ^ "; " ^ cmd)
 
 (*---------------------------------------------------------------------------
    Caching of the dictionnaries. Makes subsequent call of holyhammer in
-   the same theory faster.
+   the same theory faster. Not to be used for paralell calls.
  ----------------------------------------------------------------------------*)
 
 val dict_cache = ref (dempty (list_compare String.compare))
@@ -165,18 +165,16 @@ fun pred_filter pred thy ((name,_),_)=
     mem name thypred  
   end
  
-fun export_problem dir premises cj =
+fun export_problem probdir premises cj =
   let
     val ct   = current_theory ()
     val thyl = ct :: Theory.ancestry ct 
   in    
-    clean_dir dir;
-    (* write loaded theories *)
-    write_thyl dir (pred_filter premises) thyl;
-    (* write the conjecture in thf format *)
-    write_conjecture (dir ^ "/conjecture.fof") cj;
+    clean_dir probdir;
+    (* write problem in the tt format *)
+    write_problem probdir (pred_filter premises) thyl cj;
     (* write the dependencies between theories *)
-    write_thydep (dir ^ "/thydep.dep") thyl
+    write_thydep (probdir ^ "/thydep.dep") thyl
   end
 
 fun export_theories dir thyl =
@@ -198,7 +196,7 @@ fun translate_bin bin probbdir provdir =
        "all","0",probbdir,
        probbdir ^ "/conjecture.fof",
        "conjecture", provdir, 
-       "-thydep", probbdir ^ "/thydep.dep",">","/dev/null","2>","/dev/null"]
+       "-thydep", probbdir ^ "/thydep.dep",">","/dev/null"]
   in
     cmd_in_dir hh_dir cmd
   end
@@ -234,7 +232,7 @@ fun reproving_thf thy (name,thm) =
     val _ = print ("  " ^ name ^ "\n")
     val cj = list_mk_imp (dest_thm thm) 
     val thyl = thy :: Theory.ancestry thy
-    val (b,pred) = depl_as_pred thm
+    val (b,premises) = depl_as_pred thm
     val newname = 
       if (not b) 
         then "broken_dependencies____" ^ thy ^ "____" ^ name 
@@ -246,10 +244,8 @@ fun reproving_thf thy (name,thm) =
     OS.FileSys.mkDir (hh_dir ^ "/thf_problems") handle _ => ();
     OS.FileSys.mkDir out_dir handle _ => ();
     clean_dir probdir;
-    (* write loaded theories *)
-    write_thyl probdir (pred_filter pred) thyl;
-    (* write the conjecture in tt format *)
-    write_conjecture (probdir ^ "/conjecture.fof") cj;
+    (* write problem in the tt format *)
+    write_problem probdir (pred_filter premises) thyl cj;
     (* write the dependencies between theories *)
     write_thydep (probdir ^ "/thydep.dep") thyl;
     (* translate to thf_in *)

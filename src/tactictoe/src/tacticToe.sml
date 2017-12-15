@@ -45,7 +45,7 @@ fun hh_eval goal =
       NONE      => debug_proof ("Proof status: Time Out")
     | SOME stac => 
       let val b = app_tac 2.0 (tactic_of_sml stac) goal in
-        if isSome b then debug_proof ("Proof reconstructed: Yes") else ();
+        if isSome b then debug_proof ("Reconstructed: Yes") else ();
         debug_proof ("Proof found: " ^ stac)
       end
   end
@@ -256,7 +256,7 @@ fun tactic_of_status r = case r of
 
 fun debug_eval_status r = 
   case r of
-    ProofError     => debug_proof "Error: print_eval_status"
+    ProofError     => debug "Error: print_eval_status"
   | ProofSaturated => debug_proof "Proof status: Saturated"
   | ProofTimeOut   => debug_proof "Proof status: Time Out"
   | Proof s        => debug_proof ("Proof found: " ^ s)
@@ -270,7 +270,7 @@ fun eval_tactictoe name goal =
     not (!hhs_noprove_flag andalso String.isPrefix "tactictoe_prove_" name)
   then
     if !hh_only_flag 
-    then hh_eval goal handle _ => debug_proof "Error: print_eval_status" 
+    then hh_eval goal handle _ => debug "Error: hh_eval" 
     else debug_eval_status (main_tactictoe goal)
   else ()
 
@@ -293,8 +293,6 @@ load "hhsTools";
 open hhsTools;
 val l3 = map (length o DB.thms) l1;
 sum_int l3;
-
-
 andalso 
     not (mem (current_theory ())
      ["word_simp","wordSem","labProps",          "data_to_word_memoryProof","word_to_stackProof"])

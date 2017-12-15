@@ -12,9 +12,14 @@ sig
     (string -> (string * thm) * string -> bool) -> 
     string list -> 
     unit
-  val write_conjecture : string -> term -> unit
-  val write_thydep     : string -> string list -> unit
+  val write_problem    : 
+    string ->
+    (string -> (string * thm) * string -> bool) -> 
+    string list -> 
+    term ->
+    unit
 
+  val write_thydep     : string -> string list -> unit
   val reserved_names   : string list
 
 end
