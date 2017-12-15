@@ -1,4 +1,4 @@
-open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory pred_setTheory rich_listTheory arithmeticTheory
+open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory pred_setTheory rich_listTheory arithmeticTheory sortingTheory relationTheory
 
 open sptreeTheory ltlTheory generalHelpersTheory concrRepTheory concrltl2waaTheory
 
@@ -824,7 +824,7 @@ val concr_extrTrans_def = Define`
 val CONCR_EXTRTRANS_LEMM = store_thm
   ("CONCR_EXTRTRANS_LEMM",
    ``!g_AA id aP.
-    wfg g_AA
+    wfg g_AA ∧ flws_sorted g_AA ∧ unique_node_formula g_AA
     ==> case lookup id g_AA.followers of
       | NONE => T
       | SOME aa_edges =>
@@ -841,20 +841,487 @@ val CONCR_EXTRTRANS_LEMM = store_thm
        simp[concr_extrTrans_def]
    )
    >> qexists_tac `cT` >> fs[] >> simp[SET_EQ_SUBSET,SUBSET_DEF]
+   >> qabbrev_tac `E =
+       (λ((eL1:α edgeLabelAA),(f1:α ltl_frml))
+         ((eL2:α edgeLabelAA),(f2:α ltl_frml)).
+         eL1.edge_grp = eL2.edge_grp)`
+   >> qabbrev_tac `P =
+       (λ(f1:α edgeLabelAA # num)
+         (f2:α edgeLabelAA # num).
+         (FST f2).edge_grp ≤ (FST f1).edge_grp)`
+   >> qabbrev_tac `P_c =
+       (λ(f1:α edgeLabelAA # α ltl_frml)
+         (f2:α edgeLabelAA # α ltl_frml).
+         (FST f2).edge_grp ≤ (FST f1).edge_grp)`
+   >> `rel_corr E P_c` by (
+       simp[rel_corr_def] >> qunabbrev_tac `E`
+       >> qunabbrev_tac `P_c`
+       >> simp[EQ_IMP_THM] >> rpt strip_tac
+       >> Cases_on `x'` >> Cases_on `y` >> fs[]
+   )
+   >> `!l1 l2. (MAP FST l1 = MAP FST l2)
+            ==> (SORTED P l1 ==> SORTED P_c l2)` by (
+       Induct_on `l2`  >> fs[] >> rpt strip_tac
+       >> `transitive P_c`
+           by (qunabbrev_tac `P_c` >> simp[transitive_def])
+       >> simp[SORTED_EQ] >> Cases_on `l1` >> fs[]
+       >> rename[`SORTED P (h1::t1)`]
+       >> `SORTED P t1` by metis_tac[SORTED_TL]
+       >> `SORTED P_c l2` by metis_tac[] >> fs[]
+       >> rpt strip_tac >> Cases_on `y`
+       >> `MEM q (MAP FST t1)` by (
+           `MEM q (MAP FST l2)` suffices_by metis_tac[]
+           >> simp[MEM_MAP] >> qexists_tac `(q,r)` >> fs[]
+       )
+       >> fs[MEM_MAP]
+       >> `transitive P` by (qunabbrev_tac `P` >> simp[transitive_def])
+       >> `P h1 y` by metis_tac[SORTED_EQ]
+       >> qunabbrev_tac `P_c` >> Cases_on `y` >> fs[]
+       >> Cases_on `h1` >> Cases_on `h` >> fs[] >> rw[]
+       >> qunabbrev_tac `P` >> fs[]
+   )
+   >> qabbrev_tac `J =
+       λ(l:((α edgeLabelAA # num) list)). CAT_OPTIONS
+        (MAP
+           (λ(eL,id).
+             case lookup id g_AA.nodeInfo of
+                 NONE => NONE
+               | SOME n => SOME (eL,n.frml)) l)`
+   >> `!k. EVERY
+            (λx. IS_SOME (lookup (SND x) g_AA.nodeInfo)) k
+            ==> (MAP FST k = MAP FST (J k))` by (
+       Induct_on `k`
+       >- (qunabbrev_tac `J` >> fs[CAT_OPTIONS_def])
+       >- (rpt strip_tac
+           >> `MAP FST k = MAP FST (J k)`
+                by metis_tac[EVERY_DEF]
+           >> `(FST h)::(MAP FST (J k)) = MAP FST (J (h::k))`
+                suffices_by metis_tac[MAP]
+           >> Cases_on `J (h::k)` >> fs[]
+           >- (`?n. lookup (SND h) g_AA.nodeInfo = SOME n`
+                  by metis_tac[IS_SOME_EXISTS]
+               >> `MEM (FST h, n'.frml) (J (h::k))` by (
+                  qunabbrev_tac `J` >> simp[CAT_OPTIONS_MEM]
+                  >> fs[CAT_OPTIONS_MAP_LEMM]
+                  >> Cases_on `h` >> fs[CAT_OPTIONS_def]
+               )
+               >> fs[] >> rw[] >> metis_tac[MEM]
+              )
+           >- (qunabbrev_tac `J` >> fs[]
+               >> Cases_on `h` >> fs[CAT_OPTIONS_def]
+               >> fs[IS_SOME_EXISTS]
+               >> Cases_on `lookup r g_AA.nodeInfo` >> fs[]
+               >> fs[CAT_OPTIONS_def] >> rw[]
+              )
+          )
+   )
+   >> `EVERY (λx. IS_SOME (lookup (SND x) g_AA.nodeInfo)) x` by (
+       simp[EVERY_MEM] >> rpt strip_tac
+       >> rename[`MEM fl fls`] >> Cases_on `fl`
+       >> rename[`MEM (eL_f,fl_id) fls`] >> fs[wfg_def]
+       >> fs[wfAdjacency_def]
+       >> `fl_id ∈ domain g_AA.followers` by metis_tac[]
+       >> metis_tac[IS_SOME_DEF,domain_lookup]
+   )
+   >> `MAP FST x = MAP FST (J x)` by metis_tac[]
+   >> `transitive P_c` by (
+       qunabbrev_tac `P_c` >> simp[transitive_def]
+   )
+   >> `equivalence E` by (
+       qunabbrev_tac `E` >> simp[equivalence_def]
+       >> simp[reflexive_def,symmetric_def,transitive_def]
+       >> rpt strip_tac
+       >- (Cases_on `x'` >> fs[])
+       >- (Cases_on `x'` >> Cases_on `y` >> fs[])
+       >- (Cases_on `x'` >> Cases_on `y` >> Cases_on `z` >> fs[])
+   )
    >> rpt strip_tac >> fs[concrTrans_def,extractTrans_def,concr_extrTrans_def]
    >> rw[]
    >- (Cases_on `lookup id g_AA.followers` >> fs[]
-       >>
+       >> fs[MEM_MAP,CAT_OPTIONS_MAP_LEMM] >> rw[]
+       >> fs[CAT_OPTIONS_MEM,MEM_MAP]
+       >- (Cases_on `grp` >> fs[] >> disj1_tac
+           >> `?eL frml. h = (eL,frml)` by (Cases_on `h` >> fs[])
+           >> qexists_tac `(eL.edge_grp,
+                            eL.pos_lab,
+                            eL.neg_lab,
+                            set (frml::(MAP SND t)))`
+           >> fs[flws_sorted_def] >> first_x_assum (qspec_then `id` mp_tac)
+           >> `id ∈ domain g_AA.nodeInfo`
+               by (fs[wfg_def] >> metis_tac[domain_lookup])
+           >> simp[] >> rpt strip_tac
+           >- simp[concr2AbstractEdge_def]
+           >- (qexists_tac `eL` >> simp[]
+               >> Q.HO_MATCH_ABBREV_TAC `
+                   (0 < eL.edge_grp)
+                   ∧ ~(A = {})
+                   ∧ (frml INSERT set (MAP SND t)
+                      = A)`
+               >> `0 < eL.edge_grp ∧ (frml INSERT set (MAP SND t) = A)`
+                   suffices_by (
+                    simp[] >> rpt strip_tac >> `frml ∈ A` by fs[]
+                    >> metis_tac[MEMBER_NOT_EMPTY]
+                ) >> rpt strip_tac
+            >- ()
+            >- (qabbrev_tac `c_edge_list = (eL,frml)::t`
+                >> `set (MAP SND c_edge_list) = A` suffices_by (
+                     qunabbrev_tac `c_edge_list` >> fs[]
+                 )
+                >> qunabbrev_tac `A` >> simp[SET_EQ_SUBSET,SUBSET_DEF]
+                >> qabbrev_tac `L =
+                         CAT_OPTIONS
+                          (MAP
+                           (λ(eL,id).
+                             case lookup id g_AA.nodeInfo of
+                                NONE => NONE
+                              | SOME n => SOME (eL,n.frml)) x)`
+                >> `L = J x` by (qunabbrev_tac `J` >> qunabbrev_tac `L` >> fs[])
+                >> `!e f. MEM (e,f) c_edge_list ==>
+                          (MEM (e,f) L
+                          ∧ ?id node. MEM (e,id) x
+                                  ∧ (lookup id g_AA.nodeInfo = SOME node)
+                                  ∧ (node.frml = f))` by (
+                        rpt gen_tac >> strip_tac
+                        >> `MEM (e,f)
+                             (FLAT (GROUP_BY
+                               (λ(eL1,f1) (eL2,f2).
+                                 eL1.edge_grp = eL2.edge_grp) L))` by (
+                             simp[MEM_FLAT] >> qexists_tac `c_edge_list` >> fs[]
+                         )
+                        >> `!R. FLAT (GROUP_BY R L) = L`
+                              by metis_tac[GROUP_BY_FLAT]
+                        >> `MEM (e,f) L` by metis_tac[]
+                        >> qunabbrev_tac `L` >> fs[CAT_OPTIONS_MEM,MEM_MAP]
+                        >> rename[`MEM y2 x`]
+                        >> `?y_id. y2 = (e,y_id)` by (
+                             Cases_on `y2` >> Cases_on `lookup r g_AA.nodeInfo`
+                             >> fs[]
+                        ) >> fs[] >> strip_tac
+                        >- (qexists_tac `(e,y_id)` >> simp[])
+                        >- (qexists_tac `y_id` >> rw[] >> fs[]
+                            >> `?node. lookup y_id g_AA.nodeInfo = SOME node`
+                               by (Cases_on `lookup y_id g_AA.nodeInfo` >> fs[])
+                            >> qexists_tac `node` >> fs[]
+                           )
+                     )
+                >> `∀l_sub.
+                         MEM l_sub (GROUP_BY E L) ⇒
+                         (∀x y. MEM x l_sub ∧ MEM y l_sub ⇒ E x y) ∧
+                         ∀x y. MEM x l_sub ∧ MEM y L ∧ E x y ⇒ MEM y l_sub` by (
+                         HO_MATCH_MP_TAC SORTED_GROUP_BY
+                         >> qexists_tac `P_c` >> fs[] >> metis_tac[]
+                     )
+                >> rpt strip_tac
+                >- (rename[`MEM frml1 (MAP SND c_edge_list)`]
+                    >> `?eL1. MEM (eL1,frml1) c_edge_list` by (
+                           fs[MEM_MAP] >> rename[`MEM y1 c_edge_list`]
+                            >> qexists_tac `FST y1` >> fs[]
+                     )
+                    >> `MEM (eL,frml) L ∧
+                         ∃id node.
+                          MEM (eL,id) x ∧ lookup id g_AA.nodeInfo = SOME node
+                          ∧ node.frml = frml` by (
+                            `MEM (eL,frml) c_edge_list` suffices_by metis_tac[]
+                            >> qunabbrev_tac `c_edge_list` >> fs[]
+                     )
+                    >> `MEM (eL1,frml1) L ∧
+                         ∃id1 node1.
+                          MEM (eL1,id1) x ∧ lookup id1 g_AA.nodeInfo = SOME node1
+                          ∧ node1.frml = frml1` by metis_tac[]
+                    >> fs[] >> rw[]
+                    >> first_x_assum (qspec_then `c_edge_list` mp_tac) >> simp[]
+                    >> rpt strip_tac >> rw[]
+                    >> `eL1 = eL` by (
+                         `eL1.edge_grp = eL.edge_grp` by (
+                          `MEM (eL,node.frml) c_edge_list` by (
+                            qunabbrev_tac `c_edge_list` >> fs[]
+                          )
+                          >> `E (eL,node.frml) (eL1,node1.frml)` by metis_tac[]
+                          >> qunabbrev_tac `E` >> fs[]
+                         )
+                         >> first_x_assum (qspec_then `(eL,id')` mp_tac)
+                         >> simp[] >> rpt strip_tac
+                         >> first_x_assum (qspec_then `(eL1,id1)` mp_tac)
+                         >> simp[]
+                     )
+                    >> rw[]
+                    >> qexists_tac `node1` >> fs[] >> qexists_tac `id1`
+                    >> simp[OPTION_TO_LIST_MEM] >> qexists_tac `x` >> fs[]
+                    >> qexists_tac `(id,n)` >> fs[]
+                    >> metis_tac[UNIQUE_NODE_FIND_LEMM]
+                   )
+                >- (simp[MEM_MAP] >> fs[OPTION_TO_LIST_MEM]
+                    >> rename[`findNode _ g_AA = SOME x2`]
+                    >> `x2 = (id,n)` by metis_tac[UNIQUE_NODE_FIND_LEMM,SOME_11]
+                    >> rw[] >> fs[] >> rw[] >> qexists_tac `(eL,suc.frml)`
+                    >> fs[]
+                    >> `MEM (eL,suc.frml) (J l)` by (
+                         qunabbrev_tac `J` >> simp[CAT_OPTIONS_MEM,MEM_MAP]
+                         >> qexists_tac `(eL,sucId)` >> fs[]
+                         >> Cases_on `lookup sucId g_AA.nodeInfo` >> fs[]
+                     )
+                   >> `MEM c_edge_list (GROUP_BY E (J l))` by fs[]
+                   >> `MEM (eL,suc.frml) (FLAT (GROUP_BY E (J l)))` by (
+                         metis_tac[GROUP_BY_FLAT]
+                     )
+                   >> fs[MEM_FLAT] >> rename[`MEM c_e_list2 (GROUP_BY E (J l))`]
+                   >> first_x_assum (qspec_then `c_edge_list` mp_tac) >> simp[]
+                   >> rpt strip_tac
+                   >> first_x_assum (qspec_then `(eL,frml)` mp_tac)
+                   >> `MEM (eL,frml) c_edge_list` by
+                        (qunabbrev_tac `c_edge_list` >> fs[])
+                   >> simp[] >> rpt strip_tac
+                   >> `E (eL,frml) (eL,suc.frml)` suffices_by metis_tac[]
+                   >> qunabbrev_tac `E` >> simp[]
+                   )
+               )
+              )
+          )
+       >- (disj2_tac >> qexists_tac `(0,eL.pos_lab,eL.neg_lab,{})`
+           >> simp[concr2AbstractEdge_def] >> qexists_tac `eL`
+           >> simp[OPTION_TO_LIST_MEM] >> qexists_tac `n.true_labels`
+           >> simp[] >> qexists_tac `(id,n)` >> fs[]
+           >> metis_tac[UNIQUE_NODE_FIND_LEMM]
+          )
       )
-
-
-)
-
-
-)
-
-
-
+   >- (Cases_on `lookup id g_AA.followers` >> fs[]
+       >> fs[MEM_MAP,CAT_OPTIONS_MAP_LEMM] >> rw[]
+       >> fs[CAT_OPTIONS_MEM,MEM_MAP]
+       >> Q.HO_MATCH_ABBREV_TAC `
+           ?y. (transformLabel aP label.pos_lab label.neg_lab,
+                SUCS) = concr2AbstractEdge aP y
+             ∧ ((?grp.
+                 SOME y = CE grp
+               ∧ MEM grp CONCR_TRNS) \/ A y)`
+       >> `?grp cE. (SOME cE = CE grp) ∧ (MEM grp CONCR_TRNS)
+                  ∧ (set cE.sucs = SUCS)
+                  ∧ ((cE.pos = label.pos_lab) ∧ (cE.neg = label.neg_lab))` by (
+         `?f. f ∈ SUCS` by metis_tac[MEMBER_NOT_EMPTY]
+         >> qunabbrev_tac `SUCS` >> fs[OPTION_TO_LIST_MEM]
+         >> rename[`findNode _ g_AA = SOME node`]
+         >> `node = (id,n)` by metis_tac[SOME_11,UNIQUE_NODE_FIND_LEMM]
+         >> rw[] >> fs[] >> rw[]
+         >> rename[`lookup id g_AA.followers = SOME fls`]
+         >> `FLAT CONCR_TRNS = J fls` by (
+            qunabbrev_tac `CONCR_TRNS` >> fs[] >> metis_tac[GROUP_BY_FLAT]
+         )
+         >> `MEM (label,suc.frml) (J fls)` by (
+            qunabbrev_tac `J` >> simp[CAT_OPTIONS_MEM,MEM_MAP]
+            >> qexists_tac `(label,sucId)` >> simp[]
+            >> Cases_on `lookup sucId g_AA.nodeInfo` >> fs[]
+         )
+         >> `?grp. MEM grp CONCR_TRNS ∧ MEM (label,suc.frml) grp`
+             by metis_tac[MEM_FLAT]
+         >> qexists_tac `grp`
+         >> `?cE. CE grp = SOME cE` by (
+             qunabbrev_tac `CE` >> simp[] >> Cases_on `grp` >> fs[]
+             >> Cases_on `h` >> fs[]
+         )
+         >> qexists_tac `cE` >> simp[SET_EQ_SUBSET,SUBSET_DEF]
+         >> strip_tac
+         >- (rpt strip_tac
+          >- (`!lab f. MEM (lab,f) grp ==> (lab = label)` by (
+              rpt strip_tac
+               >> `SORTED P fls
+                  ∧ ∀x y.
+                  (MEM x fls ∧ MEM y fls ∧ (FST x).edge_grp = (FST y).edge_grp)
+                  ⇒ (FST x = FST y)` by (
+                  fs[flws_sorted_def] >> metis_tac[domain_lookup]
+              )
+               >> `∀l_sub.
+                  MEM l_sub (GROUP_BY E (J fls)) ⇒
+                  (∀x y. MEM x l_sub ∧ MEM y l_sub ⇒ E x y) ∧
+                  ∀x y. MEM x l_sub ∧ MEM y (J fls) ∧ E x y
+                  ⇒ MEM y l_sub` by (
+                  HO_MATCH_MP_TAC SORTED_GROUP_BY
+                  >> qexists_tac `P_c` >> fs[] >> metis_tac[]
+              )
+               >> first_x_assum (qspec_then `grp` mp_tac) >> simp[]
+               >> rpt strip_tac
+               >> `MEM (lab,f) (J fls)` by (
+                   `MEM (lab,f) (FLAT CONCR_TRNS)` by (
+                       fs[MEM_FLAT] >> qexists_tac `grp` >> simp[]
+                   )
+                   >> metis_tac[]
+              )
+               >> `E (label,suc.frml) (lab,f)` by metis_tac[]
+               >> first_x_assum (qspec_then `(label,sucId)` mp_tac)
+               >> simp[] >> rpt strip_tac
+               >> qunabbrev_tac `J` >> fs[CAT_OPTIONS_MEM,MEM_MAP]
+               >> rename[`MEM y2 fls`,`SOME (lab,x) = _ y2`]
+               >> Cases_on `y2` >> fs[]
+               >> first_x_assum (qspec_then `(lab,r)` mp_tac)
+               >> Cases_on `lookup r g_AA.nodeInfo` >> fs[]
+               >> rw[] >> qunabbrev_tac `E` >> fs[]
+             )
+             >> qunabbrev_tac `CE` >> Cases_on `grp` >> fs[] >> Cases_on `h`
+             >> fs[concrEdge_component_equality] >> rw[]
+             >- (Cases_on `x = suc.frml`
+                 >- (qexists_tac `suc` >> simp[] >> qexists_tac `sucId`
+                     >> simp[]
+                    )
+                 >- (`MEM x (MAP SND t)` by metis_tac[MEM]
+                     >> fs[MEM_MAP] >> rename[`MEM edge t`]
+                     >> `edge = (label,x)`
+                          by (Cases_on `edge` >> fs[] >> metis_tac[])
+                     >> rw[]
+                     >> `MEM (label,x) (J fls)` by (
+                          `MEM (label,x) (FLAT CONCR_TRNS)` by (
+                            simp[MEM_FLAT]
+                            >> qexists_tac `(label,suc.frml)::t` >> simp[]
+                          )
+                          >> metis_tac[]
+                     )
+                     >> qunabbrev_tac `J` >> fs[CAT_OPTIONS_MEM,MEM_MAP]
+                     >> rename[`MEM edge fls`] >> Cases_on `edge`
+                     >> rename[`MEM (e_f,e_id) fls`]
+                     >> Cases_on `lookup e_id g_AA.nodeInfo` >> fs[]
+                     >> rename[`lookup _ _ = SOME node`]
+                     >> qexists_tac `node` >> fs[] >> qexists_tac `e_id`
+                     >> fs[]
+                    )
+                )
+             >- (Cases_on `x = suc.frml`
+                 >- (qexists_tac `suc` >> simp[] >> qexists_tac `sucId`
+                     >> simp[]
+                    )
+                 >- (`MEM x (MAP SND ((label,r)::t))` by fs[MEM]
+                     >> fs[MEM_MAP]
+                     >- (`MEM (label,x) (J fls)` by (
+                          `MEM (label,x) (FLAT CONCR_TRNS)` by (
+                              simp[MEM_FLAT]
+                              >> qexists_tac `(label,r)::t` >> simp[]
+                          )
+                          >> metis_tac[]
+                         )
+                         >> qunabbrev_tac `J` >> fs[CAT_OPTIONS_MEM,MEM_MAP]
+                         >> rename[`MEM edge fls`] >> Cases_on `edge`
+                         >> rename[`MEM (e_f,e_id) fls`]
+                         >> Cases_on `lookup e_id g_AA.nodeInfo` >> fs[]
+                         >> rename[`lookup _ _ = SOME node`]
+                         >> qexists_tac `node` >> fs[] >> qexists_tac `e_id`
+                         >> fs[])
+                     >- (
+                       rename[`MEM edge t`]
+                       >> `edge = (label,x)`
+                          by (Cases_on `edge` >> fs[] >> metis_tac[])
+                       >> rw[]
+                       >> `MEM (label,x) (J fls)` by (
+                           `MEM (label,x) (FLAT CONCR_TRNS)` by (
+                             simp[MEM_FLAT]
+                             >> qexists_tac `(label,r)::t` >> simp[]
+                           )
+                           >> metis_tac[]
+                       )
+                       >> qunabbrev_tac `J` >> fs[CAT_OPTIONS_MEM,MEM_MAP]
+                       >> rename[`MEM edge fls`] >> Cases_on `edge`
+                       >> rename[`MEM (e_f,e_id) fls`]
+                       >> Cases_on `lookup e_id g_AA.nodeInfo` >> fs[]
+                       >> rename[`lookup _ _ = SOME node`]
+                       >> qexists_tac `node` >> fs[] >> qexists_tac `e_id`
+                       >> fs[]
+                    )
+                    )
+                )
+            )
+         >- (rename[`MEM (label,sucId1) fls`,
+                    `SOME suc1 = lookup sucId1 g_AA.nodeInfo`]
+             >> `MEM (label,suc1.frml) grp` by (
+               `SORTED P fls
+                  ∧ ∀x y.
+                    (MEM x fls ∧ MEM y fls ∧ (FST x).edge_grp = (FST y).edge_grp)
+                    ⇒ (FST x = FST y)` by (
+                 fs[flws_sorted_def] >> metis_tac[domain_lookup]
+               )
+               >> `∀l_sub.
+                   MEM l_sub (GROUP_BY E (J fls)) ⇒
+                   (∀x y. MEM x l_sub ∧ MEM y l_sub ⇒ E x y) ∧
+                   ∀x y. MEM x l_sub ∧ MEM y (J fls) ∧ E x y
+                   ⇒ MEM y l_sub` by (
+                 HO_MATCH_MP_TAC SORTED_GROUP_BY
+                 >> qexists_tac `P_c` >> fs[] >> metis_tac[]
+               )
+               >> first_x_assum (qspec_then `grp` mp_tac) >> simp[]
+               >> rpt strip_tac
+               >> `MEM (label,suc1.frml) (J fls)` by (
+                   qunabbrev_tac `J` >> fs[CAT_OPTIONS_MEM,MEM_MAP]
+                   >> qexists_tac `(label,sucId1)` >> simp[]
+                   >> Cases_on `lookup sucId1 g_AA.nodeInfo` >> fs[]
+               )
+               >> `E (label,suc.frml) (label,suc1.frml)` by (
+                   qunabbrev_tac `E` >> fs[]
+               )
+               >> metis_tac[]
+              )
+             >> qunabbrev_tac `CE` >> fs[] >> Cases_on `grp` >> fs[]
+             >> Cases_on `h` >> fs[concrEdge_component_equality]
+             >- (rw[] >> fs[MEM] >> metis_tac[MEM])
+             >- (rw[] >> fs[MEM]
+                 >> `MEM suc1.frml (MAP SND t)` by (
+                      fs[MEM_MAP] >> qexists_tac `(label,suc1.frml)` >> simp[]
+                  )
+                 >> metis_tac[MEM]
+                )
+             >- (rw[] >> fs[MEM] >> metis_tac[MEM])
+             >- (rw[] >> fs[MEM]
+                   >> `MEM suc1.frml (MAP SND t)` by (
+                      fs[MEM_MAP] >> qexists_tac `(label,suc1.frml)` >> simp[]
+                  )
+                   >> metis_tac[MEM]
+                )
+            )
+            )
+         >- (qunabbrev_tac `CE` >> Cases_on `grp` >> fs[] >> Cases_on `h`
+             >> fs[concrEdge_component_equality]
+             >> `q = label` by (
+                `SORTED P fls
+                ∧ ∀x y.
+                 (MEM x fls ∧ MEM y fls ∧ (FST x).edge_grp = (FST y).edge_grp)
+                 ⇒ (FST x = FST y)` by (
+                    fs[flws_sorted_def] >> metis_tac[domain_lookup]
+                )
+                >> `∀l_sub.
+                    MEM l_sub (GROUP_BY E (J fls)) ⇒
+                    (∀x y. MEM x l_sub ∧ MEM y l_sub ⇒ E x y) ∧
+                    ∀x y. MEM x l_sub ∧ MEM y (J fls) ∧ E x y
+                    ⇒ MEM y l_sub` by (
+                    HO_MATCH_MP_TAC SORTED_GROUP_BY
+                    >> qexists_tac `P_c` >> fs[] >> metis_tac[]
+                )
+                >> first_x_assum (qspec_then `(q,r)::t` mp_tac) >> simp[]
+                >> rpt strip_tac
+                >> `MEM (q,r) (J fls)` by (
+                  `MEM (q,r) (FLAT CONCR_TRNS)` suffices_by metis_tac[]
+                  >> simp[MEM_FLAT] >> qexists_tac `((q,r)::t)` >> simp[]
+                )
+                >> `E (q,r) (label,suc.frml)` by metis_tac[]
+                >> qunabbrev_tac `J` >> fs[CAT_OPTIONS_MEM,MEM_MAP]
+                >> rename[`MEM edge fls`] >> Cases_on `edge` >> fs[]
+                >> rename[`MEM (e_lab,e_id) fls`]
+                >> Cases_on `lookup e_id g_AA.nodeInfo` >> fs[]
+                >> first_x_assum (qspec_then `(e_lab,e_id)` mp_tac) >> simp[]
+                >> rpt strip_tac
+                >> first_x_assum (qspec_then `(label,sucId)` mp_tac)
+                >> qunabbrev_tac `E` >> fs[] >> rw[]
+              )
+             >> rw[]
+            )
+        )
+       >> qexists_tac `cE` >> Cases_on `cE` >> simp[concr2AbstractEdge_def]
+       >> rw[]
+       >- fs[concrEdge_component_equality]
+       >- (disj1_tac >> metis_tac[])
+      )
+   >- (Cases_on `lookup id g_AA.followers` >> fs[] >> simp[MEM_MAP]
+       >> fs[OPTION_TO_LIST_MEM]
+       >> rename[`findNode _ g_AA = SOME x2`,`_ x2 = SOME el_list`]
+       >> `x2 = (id,node)` by metis_tac[UNIQUE_NODE_FIND_LEMM,SOME_11]
+       >> rw[] >> fs[] >> rename[`lookup id g_AA.followers = SOME fls`]
+       >> qexists_tac `concrEdge l.pos_lab l.neg_lab []`
+       >> simp[concr2AbstractEdge_def,CAT_OPTIONS_MEM,MEM_MAP] >> disj2_tac
+       >> metis_tac[]
+      )
+  )
 
 
 val inGBA_def = Define`

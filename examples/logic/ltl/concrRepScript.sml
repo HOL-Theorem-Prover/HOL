@@ -279,6 +279,32 @@ val UNIQUE_NODE_FORM_LEMM2 = store_thm
    >> simp[] >> fs[]
   );
 
+val UNIQUE_NODE_FIND_LEMM = store_thm
+  ("UNIQUE_NODE_FIND_LEMM",
+   ``!g id node f. unique_node_formula g ∧ (lookup id g.nodeInfo = SOME node)
+       ==> (findNode (λ(n,l). l.frml = node.frml) g = SOME (id,node))``,
+   rpt strip_tac >> fs[unique_node_formula_def,findNode_def]
+   >> `?x. FIND (λ(n,l). l.frml = node.frml) (toAList g.nodeInfo) = SOME x` by (
+        `?x. MEM x (toAList g.nodeInfo) ∧ (λ(n,l). l.frml = node.frml) x`
+          suffices_by metis_tac[FIND_LEMM]
+        >> qexists_tac `(id,node)` >> fs[MEM_toAList]
+   )
+   >> `?id2 node2. x = (id2,node2)` by (Cases_on `x` >> fs[])
+   >> `node2.frml = node.frml ∧ MEM x (toAList g.nodeInfo)` by (
+        strip_tac
+        >- (`(λ(n,l). l.frml = node.frml) (id2,node2)` suffices_by fs[]
+           >> metis_tac[FIND_LEMM2])
+        >- metis_tac[FIND_LEMM2]
+   )
+   >> `MEM (id2,node2.frml) (graphStatesWithId g)`
+       by metis_tac[GRAPH_STATES_WITH_ID_LEMM]
+   >> `MEM (id,node.frml) (graphStatesWithId g)`
+       by metis_tac[GRAPH_STATES_WITH_ID_LEMM,MEM_toAList]
+   >> `id = id2` by (rw[] >> metis_tac[])
+   >> rw[] >> metis_tac[MEM_toAList,SOME_11]
+  );
+
+
 val EXTR_TRANS_LEMM = store_thm
   ("EXTR_TRANS_LEMM",
    ``!g sucId suc id label fls q.
