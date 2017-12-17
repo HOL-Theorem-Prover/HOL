@@ -13,8 +13,8 @@ sig
   val last_stac : string ref
   
   val imperative_search   : 
-    (bool -> int -> goal -> string list) ->
-    (goal -> (lbl_t * real) list) ->
+    (int -> goal -> string list) ->
+    (goal -> lbl_t list) ->
     (goal list -> real) ->
     (int -> goal -> string option) ->
     (string, tactic) Redblackmap.dict ->

@@ -142,7 +142,7 @@ fun string_of_sml s =
    -------------------------------------------------------------------------- *)
 
 val (hh_stac_glob: 
-   (int -> (string * fea_t * string list) list ->
+   (int -> (int, real) Redblackmap.dict * (string * fea_t) list ->
     int -> goal -> string option) ref) = 
   ref (fn _ => (fn _ => (fn _ => (fn _ => NONE))))
 

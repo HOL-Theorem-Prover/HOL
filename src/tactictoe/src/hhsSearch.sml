@@ -102,7 +102,7 @@ fun deactivate x =
 val proofdict = ref (dempty Int.compare)
 val finproofdict = ref (dempty Int.compare)
 
-val thmpredictor_glob = ref (fn _ => (fn _ => (fn _ => [])))
+val thmpredictor_glob = ref (fn _ => (fn _ => []))
 val stacpredictor_glob = ref (fn _ => [])
 val mcpredictor_glob = ref (fn _ => 0.0)
 val hammer_glob = ref (fn _ => (fn _ => NONE))
@@ -254,7 +254,7 @@ fun inst_arg tacdict thmpredictor (g,pred) =
     let 
       val (al,bl) = part_n 20 pred 
       val bl' = filter (not o is_absarg_stac o #1 o fst) bl
-      val thml = !thmpredictor_glob false (!hhs_thmlarg_number) g
+      val thml = !thmpredictor_glob (!hhs_thmlarg_number) g
       val thmls = String.concatWith " , " (map dbfetch_of_string thml)
       fun inst_lbl (lbl as (stac,a1,b1,c1),score) =
         if is_absarg_stac stac
@@ -336,7 +336,7 @@ fun root_create goal pred =
 fun root_create_wrap g =
   let
     (* Predictions *)
-    val pred = (!stacpredictor_glob) g
+    val pred = map (fn x => (x,0.0)) ((!stacpredictor_glob) g)
     val cost = 0
     val (_,pred1) = 
       (
@@ -611,11 +611,13 @@ fun node_create_gl pripol tactime gl pid =
       if !hhs_cache_flag
       then
         (g, dfind g (!goalpred_cache)) handle _ =>
-        let val r = (!stacpredictor_glob) g in
+        let val r = 
+          map (fn x => (x,0.0)) ((!stacpredictor_glob) g)
+        in
           goalpred_cache := dadd g r (!goalpred_cache);
           (g,r)
         end
-      else (g, (!stacpredictor_glob) g)
+      else (g, map (fn x => (x,0.0)) ((!stacpredictor_glob) g))
       
     val width = prev_predn - (length prev_predl)
     val cost = depth + width

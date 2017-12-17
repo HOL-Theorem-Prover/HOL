@@ -132,12 +132,12 @@ fun pp_feavl feavl =
 
 val feature_time = ref 0.0 (* statistics *)
 
-fun metis_prove g =
+fun metis_provable_wrap g =
   !hhs_metisortho_flag andalso
-  metis_provable false (!hhs_metis_npred) (!hhs_metis_time) g
+  metis_provable (!hhs_metis_npred) (!hhs_metis_time) g
 
 fun save_lbl (lbl0 as (stac0,t0,g0,gl0)) =
-  if mem g0 gl0 orelse metis_prove g0 then ()
+  if mem g0 gl0 orelse metis_provable_wrap g0 then ()
   else
     let
       val fea = total_time feature_time hhsFeature.fea_of_goal g0
@@ -145,7 +145,7 @@ fun save_lbl (lbl0 as (stac0,t0,g0,gl0)) =
         debug_t "orthogonalize" orthogonalize (lbl0,fea)
       val feav = (lbl,fea)
     in
-      update_stacfea_ddict feav
+      update_stacfea feav
     end
 
 (*----------------------------------------------------------------------------

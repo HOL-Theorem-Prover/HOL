@@ -18,8 +18,6 @@ val ERR = mk_HOL_ERR "hhWriter"
    Dictionaries
  ----------------------------------------------------------------------------*)
 
-fun dfind_err msg x dict = dfind x dict handle _ => raise ERR "dfind" msg
-
 (* reserved names *)
 val hollight_theorems = ["HL_TRUTH", "HL_FALSITY", "HL_BOOL_CASES", "HL_EXT"];
 val conjecture_name = "conjecture"

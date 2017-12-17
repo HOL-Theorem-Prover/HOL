@@ -14,45 +14,6 @@ hhsSetup
 
 val ERR = mk_HOL_ERR "hhsMetis"
 
-(* ----------------------------------------------------------------------
-   Theorems dependencies
-   ---------------------------------------------------------------------- *)
-
-fun depnumber_of_thm thm =
-  (Dep.depnumber_of o Dep.depid_of o Tag.dep_of o Thm.tag) thm
-  
-fun depidl_of_thm thm =
-  (Dep.depidl_of o Tag.dep_of o Thm.tag) thm   
-
-fun thm_of_string s =
-  let val (a,b) = split_string "Theory." s in DB.fetch a b end
-
-val did_cache = ref (dempty (cpl_compare String.compare Int.compare))
-
-fun load_did_cache thy =
-  let
-    val thml = DB.thms thy
-    fun f (name,thm) = 
-      let 
-        val fullname = thy ^ "Theory." ^ name
-        val n = depnumber_of_thm thm
-      in
-        did_cache := dadd (thy,n) fullname (!did_cache)
-      end
-  in
-    app f thml  
-  end 
-
-fun thm_of_did (did as (thy,n)) =
-  (
-  dfind did (!did_cache) 
-  handle _ => (load_did_cache thy; dfind did (!did_cache))
-  )
-  handle _ => raise ERR "thm_of_did" "Not found"
-
-fun dependency_of_thm s =
-  mapfilter thm_of_did (depidl_of_thm (thm_of_string s))
-
 (* --------------------------------------------------------------------------
    Metis
    -------------------------------------------------------------------------- *)
@@ -68,26 +29,13 @@ fun mk_metis_call sl =
   "metisTools.METIS_TAC " ^ 
   "[" ^ String.concatWith " , " (map dbfetch_of_string sl) ^ "]"
 
-fun theorem_predictor ob npred goal =
-  let 
-    fun f (a,(_,b)) = (a,b)
-    val thmfeav_aux = 
-      if ob 
-      then filter (fn (_,(x,_)) => x) (dlist (!hhs_mdict)) 
-      else dlist (!hhs_mdict)
-    val thmfeav = map f thmfeav_aux
-    val thmsymweight = learn_tfidf thmfeav
-    fun predictor x = 
-      map fst (thmknn thmsymweight npred thmfeav (fea_of_goal x))
-  in
-    predictor goal
-  end  
-   
-fun metis_provable ob npred tim goal =
+(* should put a filter *)
+fun metis_provable n tim goal =
   let
-    val sl   = theorem_predictor ob npred goal
+    val sl   = thmknn_std n goal
     val stac = mk_metis_call sl
-    val glo  = (app_tac tim (tactic_of_sml stac)) goal handle _ => NONE
+    val tac  = tactic_of_sml stac
+    val glo  = app_tac tim tac goal
   in
     glo = SOME []
   end
@@ -109,9 +57,7 @@ fun add_metis tacdict thmpredictor (g,pred) =
   if !hhs_metishammer_flag then
     let 
       val score = if null pred then 0.0 else snd (hd pred)
-      val stac = 
-        mk_metis_call 
-          ((!thmpredictor) (!hhs_thmortho_flag) (!hhs_metis_npred) g)
+      val stac = mk_metis_call ((!thmpredictor) (!hhs_metis_npred) g)
       val _ = stactime_dict := dadd stac (!hhs_metis_time) (!stactime_dict)
       val tac = tactic_of_sml stac
     in
@@ -140,6 +86,9 @@ fun readthy_mdict thy =
 
 fun import_mdict () = app readthy_mdict (ancestry (current_theory ()))
 
+fun depnumber_of_thm thm =
+  (Dep.depnumber_of o Dep.depid_of o Tag.dep_of o Thm.tag) thm
+
 fun order_thml thml =
   let
     fun compare ((_,th1),(_,th2)) =
@@ -159,7 +108,7 @@ fun update_mdict cthy =
         if dmem name (!hhs_mdict) then () else 
           let val b =
             !hhs_thmortho_flag andalso 
-            metis_provable true (!hhs_metis_npred) (!hhs_metis_time) goal
+            metis_provable (!hhs_metis_npred) (!hhs_metis_time) goal
           in
             hhs_mdict := dadd name (not b, fea_of_goal goal) (!hhs_mdict)
           end

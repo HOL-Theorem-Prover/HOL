@@ -48,6 +48,8 @@ fun mkDir_err dir = OS.FileSys.mkDir dir handle _ => ()
    -------------------------------------------------------------------------- *)
 
 fun dfind k m  = Redblackmap.find (m,k) 
+fun dfind_err msg x dict = dfind x dict handle _ => raise ERR "dfind" msg
+
 fun drem k m   = fst (Redblackmap.remove (m,k)) handle NotFound => m
 fun dmem k m   = Lib.can (dfind k) m
 fun dadd k v m = Redblackmap.insert (m,k,v)
@@ -103,6 +105,13 @@ fun first_n n l =
   if n <= 0 orelse null l
   then []
   else hd l :: first_n (n - 1) (tl l)
+
+fun first_test_n test n l =
+  if n <= 0 orelse null l
+    then []
+  else if test (hd l)
+    then hd l :: first_test_n test (n - 1) (tl l)
+  else first_test_n test n (tl l)
 
 fun part_aux n acc l =
   if n <= 0 orelse null l
@@ -459,15 +468,15 @@ val hhs_stacfea  = ref (dempty lbl_compare)
 val hhs_ddict = ref (dempty goal_compare)
 val hhs_ndict = ref (dempty String.compare)
 
-fun update_ddict (lbl,fea) =
+fun update_ddict (lbl,_) =
   let 
     val oldv = dfind (#3 lbl) (!hhs_ddict) handle _ => [] 
-    val newv = (lbl,fea) :: oldv
+    val newv = lbl :: oldv
   in
     hhs_ddict := dadd (#3 lbl) newv (!hhs_ddict)
   end
 
-fun init_stacfea_ddict feavl =
+fun init_stacfea feavl =
   (
   hhs_stacfea := dnew lbl_compare feavl;
   hhs_cthyfea := []; 
@@ -479,17 +488,14 @@ fun init_stacfea_ddict feavl =
   dapp update_ddict (!hhs_stacfea)
   )
 
-fun update_stacfea_ddict (feav as (lbl,fea)) =
+fun update_stacfea (feav as (lbl,fea)) =
   if dmem lbl (!hhs_stacfea) then () else
-  let 
-    val oldv = dfind (#3 lbl) (!hhs_ddict) handle _ => [] 
-    val newv = feav :: oldv
-  in
+    (
     hhs_stacfea := dadd lbl fea (!hhs_stacfea);
     hhs_cthyfea := feav :: (!hhs_cthyfea);
-    hhs_ddict := dadd (#3 lbl) newv (!hhs_ddict);
+    update_ddict feav;
     hhs_ndict := count_dict (!hhs_ndict) [(#1 lbl)]
-  end
+    )
   
 (* --------------------------------------------------------------------------
    Metis

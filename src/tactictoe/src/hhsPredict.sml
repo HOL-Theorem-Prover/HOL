@@ -28,38 +28,30 @@ fun learn_tfidf feavl =
     Redblackmap.map f dict
   end
 
-(* -------------------------------------------------------------------------- 
-   Scoring                                                                    
-   -------------------------------------------------------------------------- *)
-
-fun inter_dict dict l = filter (fn x => dmem x dict) l
-
-fun union_dict dict l = dkeys (daddl (map (fn x => (x,())) l) dict)
-
 (* --------------------------------------------------------------------------
    KNN distance
    -------------------------------------------------------------------------- *)
 
+fun inter_dict dict l = filter (fn x => dmem x dict) l
+fun union_dict dict l = dkeys (daddl (map (fn x => (x,())) l) dict)
+
 fun knn_distance symweight dict_o fea_p =
   let 
     val fea_i   = inter_dict dict_o fea_p
-    fun wf n    = dfind n symweight 
-      handle _ => raise ERR "knn_distance" ""
+    fun wf n    = dfind_err "knn_distance" n symweight
     val weightl = map wf fea_i
   in
     sum_real weightl
   end
 
-(* borrow the symweight from theorem *)
 fun knn_similarity symweight dict_o fea_p =
   let 
     val fea_i    = inter_dict dict_o fea_p
-    fun wf feae  = dfind feae symweight 
-      handle _ => raise ERR "knn_similarity" ""
+    fun wf n     = dfind_err "knn_similarity" n symweight
     val weightl  = map wf fea_i
     val tot      = Real.fromInt (dlength dict_o + length fea_p)
   in
-    sum_real weightl / Math.ln (Math.e + tot)
+    Math.pow (sum_real weightl, 1.0 / 6.0) / Math.ln (Math.e + tot)
   end
 
 (* --------------------------------------------------------------------------
@@ -68,74 +60,161 @@ fun knn_similarity symweight dict_o fea_p =
 
 fun compare_score ((_,x),(_,y)) = Real.compare (y,x)
 
-(* A label can be predicted multiple times *)
-fun pre_knn symweight feal fea_o =
+(* Ordering prediction with duplicates *)
+fun pre_pred dist symweight (feal: ('a * int list) list) fea_o =
   let 
     val dict_o = dnew Int.compare (map (fn x => (x,())) fea_o)
-    fun dist (lbl,fea_p) = (lbl, knn_distance symweight dict_o fea_p)
-    val l0 = map dist feal
+    fun f (lbl,fea) = (lbl, dist symweight dict_o fea)
+    val l0 = map f feal
     val l1 = dict_sort compare_score l0
   in
     l1
   end
 
-fun pre_sim symweight feal fea_o =
-  let 
-    val dict_o = dnew Int.compare (map (fn x => (x,())) fea_o)
-    fun dist (lbl,fea_p) = (lbl, knn_similarity symweight dict_o fea_p)
-    val l0 = map dist feal
-    val l1 = dict_sort compare_score l0
-  in
-    l1
-  end
-
-(* Put features into the label *)  
-fun pre_knn_fea symweight feal fea_o =
-  let 
-    val dict_o = dnew Int.compare (map (fn x => (x,())) fea_o)
-    fun dist (lbl,fea) = ((lbl,fea), knn_distance symweight dict_o fea)
-    val l0 = map dist feal
-    val l1 = dict_sort compare_score l0
-  in
-    l1
-  end  
-
-fun pre_sim_fea symweight feal fea_o =
-  let 
-    val dict_o = dnew Int.compare (map (fn x => (x,())) fea_o)
-    fun dist (lbl,fea) = ((lbl,fea), knn_similarity symweight dict_o fea)
-    val l0 = map dist feal
-    val l1 = dict_sort compare_score l0
-  in
-    l1
-  end 
-
-(* eliminate duplicates with the same tactic string *)    
+fun pre_knn symweight feal fea_o = 
+  pre_pred knn_distance symweight feal fea_o
+fun pre_sim symweight feal fea_o = 
+  pre_pred knn_similarity symweight feal fea_o
+   
 fun stacknn symweight n feal fea_o =
   let 
-    val l1 = pre_knn symweight feal fea_o
-    fun compare ((lbl1,_),(lbl2,_)) = String.compare (#1 lbl1,#1 lbl2)
-    val l2 = mk_sameorder_set compare l1
+    val l1 = map fst (pre_knn symweight feal fea_o)
+    val l2 = mk_sameorder_set lbl_compare l1
   in
     first_n n l2
   end
 
-fun thmknn symweight n feal fea_o =
+fun stacknn_uniq symweight n feal fea_o =
   let 
-    val l1 = pre_knn symweight feal fea_o
-    fun compare ((lbl1,_),(lbl2,_)) = String.compare (lbl1,lbl2)
-    val l2 = mk_sameorder_set compare l1
+    val l = stacknn symweight n feal fea_o
+    fun f (lbl1,lbl2) = String.compare (#1 lbl1, #1 lbl2)
   in
-    first_n n l2
+    mk_sameorder_set f l
+  end
+
+fun exists_tid s = 
+  let val (a,b) = split_string "Theory." s in can (DB.fetch a) b end
+
+fun is_orthothm a = fst (dfind a (!hhs_mdict))
+
+fun thmknn symweight n feav fea_o =
+  let 
+    val newfeav = 
+      if !hhs_thmortho_flag 
+      then filter (is_orthothm o fst) feav 
+      else feav
+    val l1 = map fst (pre_knn symweight newfeav fea_o)
+    val l2 = mk_sameorder_set String.compare l1
+  in
+    first_test_n exists_tid n l2
   end    
+
+fun all_thmfeav () =
+  let
+    fun f (a,(_,b)) = (a,b)
+    val feav = map f (dlist (!hhs_mdict))
+    val symweight = learn_tfidf feav
+  in
+    (symweight, feav)
+  end
+
+fun thmknn_std n goal =
+  let 
+    val (symweight,feav) = all_thmfeav ()
+    val newfeav = 
+      if !hhs_thmortho_flag 
+      then filter (is_orthothm o fst) feav 
+      else feav
+  in
+    thmknn symweight n newfeav (fea_of_goal goal)
+  end
+
+(* ----------------------------------------------------------------------
+   Adding theorem dependencies in the predictions
+   ---------------------------------------------------------------------- *)
+
+
+fun uptodate_tid s =
+  let val (a,b) = split_string "Theory." s in uptodate_thm (DB.fetch a b) end
+
+fun depnumber_of_thm thm =
+  (Dep.depnumber_of o Dep.depid_of o Tag.dep_of o Thm.tag) thm
+  
+fun depidl_of_thm thm =
+  (Dep.depidl_of o Tag.dep_of o Thm.tag) thm   
+
+fun thm_of_string s =
+  let val (a,b) = split_string "Theory." s in DB.fetch a b end
+
+fun has_depnumber n (_,thm) = n = depnumber_of_thm thm
+fun name_of_did (thy,n) = 
+  case List.find (has_depnumber n) (DB.thms thy) of
+    SOME (name,_) => SOME (thy ^ "Theory." ^ name)
+  | NONE => NONE
+  
+fun dep_of_thm s =
+  List.mapPartial name_of_did (depidl_of_thm (thm_of_string s))
+
+fun add_thmdep n l0 = 
+  let 
+    fun f x = x :: dep_of_thm x
+    val l1 = mk_sameorder_set String.compare (List.concat (map f l0))
+    fun g x = uptodate_tid x andalso 
+      (not (!hhs_thmortho_flag) orelse is_orthothm x)
+  in
+    first_test_n g n l1
+  end
+
+fun thmknn_wdep thmsymweight n thmfeav gfea =
+  let val l0 = thmknn thmsymweight n thmfeav gfea in
+    add_thmdep n l0
+  end
+
+(* ----------------------------------------------------------------------
+   Adding stac descendants. Should be modified to work on labels instead.
+ ---------------------------------------------------------------------- *)
+
+(* includes itself *)
+fun desc_lbl_aux rlist rdict ddict (lbl as (stac,_,_,gl)) =
+  (
+  rlist := lbl :: (!rlist);
+  if dmem lbl rdict
+    then debug ("Warning: descendant_of_feav: " ^ stac)
+    else 
+      let 
+        val new_rdict = dadd lbl () rdict
+        fun f g = 
+          let val lbls = dfind g ddict handle _ => [] in  
+            app (desc_lbl_aux rlist new_rdict ddict) lbls
+          end
+      in
+        app f gl
+      end
+  )
+     
+fun desc_lbl ddict lbl =
+  let val rlist = ref [] in
+    desc_lbl_aux rlist (dempty lbl_compare) ddict lbl;
+    !rlist
+  end
+  
+fun add_stacdesc ddict n l =
+   let
+     val l1 = List.concat (map (desc_lbl ddict) l)
+     val l2 = mk_sameorder_set lbl_compare l1
+   in
+     first_n n l2
+   end    
 
 (* --------------------------------------------------------------------------
    Term prediction for tactic arguments. 
    Relies on mdict_glob to calculate symweight.
    -------------------------------------------------------------------------- *)
 
+(*
 fun same_type term1 term2 =
   polymorphic (type_of term1) orelse type_of term1 = type_of term2
+*)
 
 fun is_true _ = true
 
@@ -144,13 +223,10 @@ fun closest_subterm ((asl,w):goal) term =
     fun togoal t = ([],t)
     fun dummy_lbl l = map (fn (_,a) => ((),a)) l
     fun f x = (togoal x, fea_of_goal (togoal x))
-    val l0 = List.concat (map (rev o find_terms (same_type term)) (w :: asl))
-    val l1 = if null l0 
-              then List.concat (map (rev o find_terms is_true) (w :: asl))
-              else l0
-    val l2 = debug_t "mk_sameorder_set" (mk_sameorder_set Term.compare) l1
+    val l0 = List.concat (map (rev o find_terms is_true) (w :: asl))
+    val l1 = debug_t "mk_sameorder_set" (mk_sameorder_set Term.compare) l0
     val thmfeav = map (fn (a,(_,b)) => (a,b)) (dlist (!hhs_mdict))
-    val feal = debug_t "features" (map f) l2
+    val feal = debug_t "features" (map f) l1
     val fea_o = hhsFeature.fea_of_goal ([],term)
     val symweight = 
       learn_tfidf (((),fea_o) :: dummy_lbl feal @ dummy_lbl thmfeav)
@@ -159,9 +235,8 @@ fun closest_subterm ((asl,w):goal) term =
     snd (fst (hd l3)) handle _ => raise ERR "closest_subterm" ""
   end
 
-
 (* --------------------------------------------------------------------------
-   Goal evaluation for monte carlo tree search.
+   Goal list evaluation for monte carlo tree search.
    -------------------------------------------------------------------------- *)
 
 fun mcknn symweight radius feal fea =
@@ -181,224 +256,5 @@ fun mcknn symweight radius feal fea =
   in   
     if null bnl then 0.0 else proba bnl
   end
-
-(* --------------------------------------------------------------------------
-   External executables
-   -------------------------------------------------------------------------- *)
-
-fun cmd_in_dir dir cmd = OS.Process.system ("cd " ^ dir ^ "; " ^ cmd)
- 
-fun bin_predict dir n predictor =
-  let
-    val predict_bin = HOLDIR ^ "/src/holyhammer/predict/predict"
-    val predict_cmd = String.concatWith " "
-      [predict_bin,
-      "syms","dep","seq","-n",int_to_string n,"-p",predictor,
-      "<","csyms",">","predict_out","2> predict_error"]
-  in
-    cmd_in_dir dir predict_cmd
-  end
-
-fun mepo_predict dir n predictor =
-  let
-    val predict_bin = HOLDIR ^ "/src/holyhammer/predict/mepo/mepo3" 
-    val predict_cmd = String.concatWith " "
-      [predict_bin, "0","syms","dep",int_to_string n,"seq",
-       "<","csyms",">","predict_out","2> predict_error"]
-  in
-    cmd_in_dir dir predict_cmd
-  end
-
-(* --------------------------------------------------------------------------
-   External tactic predictions
-   -------------------------------------------------------------------------- *)
-
-(* Renaming label and features *)
-fun name_fea fea = mlquote (int_to_string fea)
-
-val feav_counter = ref 0
-val feav_dict    = ref (dempty feav_compare)
-val ifeav_dict   = ref (dempty String.compare)
-
-fun name_feav feav = 
-  dfind feav (!feav_dict) 
-  handle _ =>
-    let 
-      val named_feav = "l" ^ int_to_string (!feav_counter)
-    in
-      feav_dict := dadd feav named_feav (!feav_dict);
-      ifeav_dict := dadd named_feav feav (!ifeav_dict);
-      incr feav_counter;
-      named_feav
-    end
-
-fun print_dep fname feavl =
-  let
-    val oc    = TextIO.openOut fname
-    fun os s  = TextIO.output (oc,s)
-    fun f (lbl,_) = os (lbl ^ ":" ^ "\n")
-  in
-    app f feavl;
-    TextIO.closeOut oc
-  end
-
-fun print_seq fname feavl =
-  let
-    val oc    = TextIO.openOut fname
-    fun os s  = TextIO.output (oc,s)
-    fun f (lbl,_) = os (lbl ^ "\n")
-  in
-    app f feavl;
-    TextIO.closeOut oc
-  end
-
-fun print_csyms fname csyms =
-  let  
-    val oc    = TextIO.openOut fname
-    fun os s  = TextIO.output (oc,s)
-  in
-    os (String.concatWith ", " csyms);
-    os "\n";
-    TextIO.closeOut oc
-  end
-
-fun print_syms fname feavl =
-  let 
-    val oc   = TextIO.openOut fname  
-    fun os s = TextIO.output (oc,s)
-    fun g (thm,fea) = os (thm ^ ":" ^ String.concatWith ", " fea ^ "\n")
-  in
-    app g feavl;
-    TextIO.closeOut oc
-  end
-
-fun export_knn dir stacfea feag =
-  let
-    fun rename (lbl,fea) = (name_feav (lbl,fea), map name_fea fea)
-    val feavl = map rename stacfea
-    val csyms = map name_fea feag
-  in
-    print_dep (dir ^ "/dep") feavl;
-    print_seq (dir ^ "/seq") feavl;
-    print_csyms (dir ^ "/csyms") csyms;
-    print_syms (dir ^ "/syms") feavl
-  end
-
-fun read_predictions dir = 
-  let 
-    val s = hd (readl (dir ^ "/predict_out")) 
-      handle _ => raise ERR "read_predictions" ""
-    val sl = String.tokens Char.isSpace s
-    fun unname_feav s = dfind s (!ifeav_dict)
-  in
-    map unname_feav sl
-  end
-
-(* Warning: can predict multiple times the same tactic *)
-fun stacknn_ext dir n stacfea feag =
-  if null stacfea then [] else
-    (
-    feav_counter := 0;
-    feav_dict    := dempty feav_compare;
-    ifeav_dict   := dempty String.compare;
-    export_knn dir stacfea feag;
-    bin_predict dir n "knn";
-    read_predictions dir
-    )
-
-(*--------------------------------------------------------------------------- 
-  External theorem predictions
-  --------------------------------------------------------------------------- *)
-
-(* Renaming theorems *)
-val thm_counter    = ref 0
-val thm_dict       = ref (dempty String.compare)
-val unthm_dict     = ref (dempty String.compare)
-
-fun tname_thm thm =
-  dfind thm (!thm_dict) 
-  handle _ =>
-  let 
-    val named_thm = ("t" ^ int_to_string (!thm_counter))
-  in 
-    thm_dict    := dadd thm named_thm (!thm_dict);
-    unthm_dict  := dadd named_thm thm (!unthm_dict);
-    thm_counter := (!thm_counter) + 1;
-    named_thm
-  end
-
-fun tprint_dep fname feavl =
-  let
-    val oc    = TextIO.openOut fname
-    fun os s  = TextIO.output (oc,s)
-    fun g (thm,_,dep) = os (thm ^ ":" ^ String.concatWith " " dep ^ "\n")
-  in
-    app g feavl;
-    TextIO.closeOut oc
-  end
-
-fun tprint_seq fname feavl =
-  let
-    val oc    = TextIO.openOut fname
-    fun os s  = TextIO.output (oc,s)
-    fun g (thm,_,_) = os (thm ^ "\n")
-  in
-    app g feavl;
-    TextIO.closeOut oc
-  end
-
-fun tprint_csyms fname csyms =
-  let  
-    val oc    = TextIO.openOut fname
-    fun os s  = TextIO.output (oc,s)
-  in
-    os (String.concatWith ", " csyms);
-    os "\n";
-    TextIO.closeOut oc
-  end
-
-fun tprint_syms fname feavl =
-  let 
-    val oc   = TextIO.openOut fname  
-    fun os s = TextIO.output (oc,s)
-    fun g (thm,fea,_) = os (thm ^ ":" ^ String.concatWith ", " fea ^ "\n")
-  in
-    app g feavl;
-    TextIO.closeOut oc
-  end
-
-fun texport_knn dir thmfeav feag =
-  let
-    fun rename (thm,fea,dep) = 
-      (tname_thm thm, map name_fea fea, map tname_thm dep)
-    val feavl = map rename thmfeav
-    val csyms = map name_fea feag
-  in
-    tprint_dep (dir ^ "/dep") feavl;
-    tprint_seq (dir ^ "/seq") feavl;
-    tprint_csyms (dir ^ "/csyms") csyms;
-    tprint_syms (dir ^ "/syms") feavl
-  end
-
-fun tread_predictions dir = 
-  let 
-    val s = hd (readl (dir ^ "/predict_out"))
-      handle _ => raise ERR "read_predictions" ""
-    val sl = String.tokens Char.isSpace s
-    fun unname_thm s = dfind s (!unthm_dict)
-  in
-    map unname_thm sl
-  end
-
-fun thmknn_ext dir n thmfeal feag =
-  if null thmfeal then [] else
-    (
-    thm_counter := 0;
-    thm_dict    := dempty String.compare;
-    unthm_dict  := dempty String.compare;
-    texport_knn dir thmfeal feag;
-    ignore (bin_predict dir n "knn");
-    tread_predictions dir
-    )
 
 end (* struct *)

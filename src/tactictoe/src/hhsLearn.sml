@@ -228,8 +228,9 @@ fun orthogonalize (lbl as (ostac,t,g,gl),fea) =
       (* predict tactics *)
       val _ = debug "predict tactics"
       val feavl0 = dlist (!hhs_stacfea)
-      val feavl1 = stacknn_ext hhs_predict_dir (!hhs_ortho_number) feavl0 fea
-      val stacl1 = mk_sameorder_set String.compare (map (#1 o fst) feavl1)
+      val symweight = learn_tfidf feavl0
+      val lbls = stacknn symweight (!hhs_ortho_number) feavl0 fea
+      val stacl1 = mk_sameorder_set String.compare (map #1 lbls)
       val stacl2 = filter (fn x => not (x = ostac)) stacl1     
       (* order tactics by frequency *)
       val _ = debug "order tactics"
@@ -245,7 +246,7 @@ fun orthogonalize (lbl as (ostac,t,g,gl),fea) =
       val _ = debug "predict theorems"
       val thml = 
         if !hhs_thmlarg_flag 
-        then theorem_predictor (!hhs_thmorthoarg_flag) (!hhs_thmlarg_number) g
+        then thmknn_std (!hhs_thmlarg_number) g
         else []
       val thmls  = String.concatWith " , " (map dbfetch_of_string thml)
       (* instantiate arguments *)

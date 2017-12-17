@@ -13,7 +13,7 @@ sig
   val hhs_badstacl  : string list ref
   val hhs_stacfea   : (lbl_t, fea_t) Redblackmap.dict ref
   val hhs_cthyfea   : feav_t list ref
-  val hhs_ddict     : (goal, feav_t list) Redblackmap.dict ref
+  val hhs_ddict     : (goal, lbl_t list) Redblackmap.dict ref
   val hhs_ndict     : (string, int) Redblackmap.dict ref
   val hhs_mdict     : (string, (bool * fea_t)) Redblackmap.dict ref
   val dbfetch_of_string : string -> string
@@ -23,8 +23,8 @@ sig
   
   
   val clean_feadata : unit -> unit
-  val init_stacfea_ddict : feav_t list -> unit
-  val update_stacfea_ddict : feav_t -> unit
+  val init_stacfea : feav_t list -> unit
+  val update_stacfea : feav_t -> unit
   
   val tactictoe_dir    : string
   val hhs_feature_dir  : string
@@ -49,6 +49,7 @@ sig
   val drop_sig : string -> string
  
   val dfind  : 'a -> ('a, 'b) Redblackmap.dict -> 'b
+  val dfind_err : string -> 'a -> ('a, 'b) Redblackmap.dict -> 'b
   val dmem   : 'a -> ('a, 'b) Redblackmap.dict -> bool
   val drem   : 'a -> ('a, 'b) Redblackmap.dict -> ('a, 'b) Redblackmap.dict
   val dadd   : 
@@ -64,6 +65,7 @@ sig
   
   val findSome : ('a -> 'b option) -> 'a list -> 'b option
   val first_n : int -> 'a list -> 'a list
+  val first_test_n : ('a -> bool) -> int -> 'a list -> 'a list
   val part_n : int -> 'a list -> ('a list * 'a list)
   val number_list : int -> 'a list -> (int * 'a) list
 

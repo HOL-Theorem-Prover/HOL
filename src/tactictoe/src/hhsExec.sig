@@ -14,7 +14,7 @@ sig
   val hhs_goal_glob    : goal ref
   
   val hh_stac_glob: 
-    (int -> (string * fea_t * string list) list ->
+    (int -> (int, real) Redblackmap.dict * (string * fea_t) list ->
      int -> goal -> string option) ref
   val update_hh_stac   : unit -> unit
 
