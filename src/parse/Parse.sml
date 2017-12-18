@@ -452,8 +452,9 @@ fun pp_thm ppstrm th =
                   add_break(1,0);
                   pp_terms sa asl; add_break(1,0)
                  );
-            add_string "|- ";
-            pp_term (concl th)
+            add_string (!Globals.thm_pp_prefix);
+            pp_term (concl th);
+            add_string (!Globals.thm_pp_suffix)
          end;
     end_block()
  end;

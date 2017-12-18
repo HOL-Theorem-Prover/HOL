@@ -16,13 +16,17 @@ val avoid_unicode = ref (Systeml.OS = "winNT")
 local
   open Globals
   fun ascii_delims () =
-    List.app (fn r => r := "``") [type_pp_prefix, type_pp_suffix,
-                                  term_pp_prefix, term_pp_suffix]
+    (List.app (fn r => r := "``") [type_pp_prefix, type_pp_suffix,
+                                   term_pp_prefix, term_pp_suffix];
+     thm_pp_prefix := "|- ";
+     thm_pp_suffix := "")
   fun unicode_delims () =
     (List.app (fn r => r := UnicodeChars.ldquo)
               [type_pp_prefix, term_pp_prefix];
      List.app (fn r => r := UnicodeChars.rdquo)
-              [type_pp_suffix, term_pp_suffix])
+              [type_pp_suffix, term_pp_suffix];
+     thm_pp_prefix := UnicodeChars.turnstile ^ " ";
+     thm_pp_suffix := "")
   fun avoidset i = if i = 0 then (unicode_delims(); avoid_unicode := false)
                    else (ascii_delims(); avoid_unicode := true)
   fun avoidget () = if !avoid_unicode then 1 else 0
