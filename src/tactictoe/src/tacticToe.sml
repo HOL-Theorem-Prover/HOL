@@ -25,7 +25,7 @@ fun assoc_stacfea l =
   let fun f x = (x, dfind x (!hhs_stacfea)) in map f l end
 
 fun select_thmfeav gfea =
-  if !hhs_metishammer_flag orelse !hhs_hhhammer_flag
+  if !hhs_metishammer_flag orelse !hhs_hhhammer_flag orelse !hhs_thmlarg_flag
   then
     let 
       val (thmsymweight,thmfeav) = all_thmfeav ()

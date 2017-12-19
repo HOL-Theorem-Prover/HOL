@@ -155,7 +155,7 @@ val s2 = inst_termarg g s1;
    Combining abstractions and instantiations
  *----------------------------------------------------------------------------*)
 
-fun is_absarg_stac s = is_termarg_stac s orelse is_thmlarg_stac s
+fun is_absarg_stac s = is_thmlarg_stac s orelse is_termarg_stac s
 
 fun abstract_stac stac =
   let 
@@ -208,7 +208,7 @@ fun test_stac g gl (stac, istac) =
   let val (new_gl,_) = 
     (
     debug ("test_stac " ^ stac ^ "\n" ^ istac);
-    let val tac = timed_tactic_of_sml stac 
+    let val tac = timed_tactic_of_sml istac 
       handle _ => (debug ("Warning: infinite stac: " ^ stac); NO_TAC) 
     in
       timeOut (!hhs_tactic_time) (TC_OFF tac) g

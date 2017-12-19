@@ -181,7 +181,6 @@ fun add_metis pred =
     then fake_score "tactictoe_metis" :: pred
     else pred
 
-  
 fun estimate_distance depth pred =
   let
     val width = ref 0.0  
@@ -252,9 +251,6 @@ fun backup_fail cid =
 (* --------------------------------------------------------------------------
    Node creation and deletion
    -------------------------------------------------------------------------- *)
-
-
-
 
 val max_depth_mem = ref 0
 val pid_counter = ref 0
@@ -787,6 +783,8 @@ fun init_search thmpredictor stacpredictor mcpredictor hammer tacdict g =
   (* caching *)
   stacgoal_cache := dempty stacgoal_compare;
   goalpred_cache := dempty goal_compare;
+  thml_dict := dempty (cpl_compare goal_compare Int.compare);
+  inst_dict := dempty (cpl_compare String.compare goal_compare);
   (* proof states *)
   pid_counter := 0;
   notactivedict := dempty Int.compare;

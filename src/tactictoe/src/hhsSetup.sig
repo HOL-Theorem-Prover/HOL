@@ -51,7 +51,6 @@ sig
   val hhs_thmlarg_flag : bool ref 
   val hhs_thmlarg_number : int ref
   val hhs_termarg_flag : bool ref
-  val hhs_thmorthoarg_flag : bool ref
   
   (* minimization *)
   val hhs_prettify_flag : bool ref
