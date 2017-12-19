@@ -17,32 +17,23 @@ val ERR = mk_HOL_ERR "tacticToe"
 fun set_timeout r = hhs_search_time := Time.fromReal r
 
 fun assoc_thmfea l = 
-  let fun f x = (x, snd (dfind x (!hhs_mdict))) in map f l end
+  let fun f x = SOME (x, snd (dfind x (!hhs_mdict))) 
+    handle _ => (debug ("Warning: could not find theorem " ^ x); NONE)
+  in List.mapPartial f l end
 
 fun assoc_stacfea l =
   let fun f x = (x, dfind x (!hhs_stacfea)) in map f l end
-
-fun all_thmfeav () =
-  let
-    val _ = debug_t "update_mdict" update_mdict (current_theory ())
-    fun f (a,(_,b)) = (a,b)
-    val thmfeav = map f (dlist (!hhs_mdict))
-    val thmsymweight = learn_tfidf thmfeav
-  in
-    (thmsymweight, thmfeav)
-  end
 
 fun select_thmfeav gfea =
   if !hhs_metishammer_flag orelse !hhs_hhhammer_flag
   then
     let 
       val (thmsymweight,thmfeav) = all_thmfeav ()
-      val l0 = debug_t "thmknn" 
-        (thmknn thmsymweight (!hhs_maxselect_pred) thmfeav) gfea
-      val l1 = add_thmdep (!hhs_maxselect_pred) l0
-      val l2 = assoc_thmfea l1
+      val l0 = debug_t "thmknn_wdep" 
+        (thmknn_wdep thmsymweight (!hhs_maxselect_pred) thmfeav) gfea
+      val l1 = debug_t "assoc_thmfea" assoc_thmfea l0
     in
-      (thmsymweight, l2)
+      (thmsymweight, l1)
     end
   else (dempty Int.compare, [])
 

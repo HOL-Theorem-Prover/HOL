@@ -128,9 +128,6 @@ fun insert_curfeav thmdict =
     (symweight,feav)
   end
 
-
-
-
 (*---------------------------------------------------------------------------
    Export to TPTP THF
  ----------------------------------------------------------------------------*)
@@ -252,7 +249,6 @@ fun hh_stac pid (symweight,feav) t goal =
   let
     val term = list_mk_imp goal
     val ns = int_to_string pid
-    val term = list_mk_imp goal
     val premises = thmknn_wdep symweight 128 feav (fea_of_goal goal)
     val probdir = hh_dir ^ "/problem_" ^ ns
     val _ = export_problem probdir premises term

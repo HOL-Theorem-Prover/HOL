@@ -29,7 +29,6 @@ fun mk_metis_call sl =
   "metisTools.METIS_TAC " ^ 
   "[" ^ String.concatWith " , " (map dbfetch_of_string sl) ^ "]"
 
-(* should put a filter *)
 fun metis_provable n tim goal =
   let
     val sl   = thmknn_std n goal

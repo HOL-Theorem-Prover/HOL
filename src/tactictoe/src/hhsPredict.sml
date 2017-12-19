@@ -51,7 +51,7 @@ fun knn_similarity symweight dict_o fea_p =
     val weightl  = map wf fea_i
     val tot      = Real.fromInt (dlength dict_o + length fea_p)
   in
-    Math.pow (sum_real weightl, 1.0 / 6.0) / Math.ln (Math.e + tot)
+    sum_real weightl / Math.ln (Math.e + tot)
   end
 
 (* --------------------------------------------------------------------------
@@ -132,7 +132,6 @@ fun thmknn_std n goal =
 (* ----------------------------------------------------------------------
    Adding theorem dependencies in the predictions
    ---------------------------------------------------------------------- *)
-
 
 fun uptodate_tid s =
   let val (a,b) = split_string "Theory." s in uptodate_thm (DB.fetch a b) end

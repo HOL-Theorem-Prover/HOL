@@ -38,7 +38,6 @@ val hammer_ref = ref 0
 val async_result = Array.array (100000, HVoid)
 val install_async = ref (dempty Int.compare)
 val running_async = ref (dempty Int.compare)
-val short_time = Time.fromReal 0.000001
 
 (* Start and end of search *)
 fun init_async () = 
@@ -924,42 +923,6 @@ fun selflearn proof =
   if !hhs_selflearn_flag 
   then debug_t "selflearn" selflearn_aux proof
   else ()
-
-(* From positives and negative goals, rely on proofdict
-   and update hhs_mcdict, hhs_mcdict_cthy *)
-
-(*
-fun learngoal_loop pid =
-  let 
-    val prec = dfind pid (!proofdict) 
-    val {proofl,childrena,goalarr,...} = prec
-    val i = ref 0
-    val totn = ref 0
-  in
-    while !i < Array.length goalarr do
-      let 
-        val g  = Array.sub (goalarr,!i)
-        val fea = fea_of_goal g
-        val cl = !(Array.sub (childrena,!i))
-        val b  = mem (!i) (map #1 (!proofl))
-        val n  = 1 + sum_int (map learngoal_loop cl)
-      in
-        hhs_mcdict := dadd fea (b,n) (!hhs_mcdict);
-        hhs_mcdict_cthy := dadd fea (b,n) (!hhs_mcdict_cthy);
-        totn := !totn + n;
-        incr i
-      end
-    ;
-    !totn  
-  end
-
-fun learngoal () = 
-  (
-  debug ("proofdict: " ^ int_to_string (dlength (!proofdict)));
-  ignore (learngoal_loop 0);
-  debug ("mcdict_cthy: " ^ int_to_string (dlength (!hhs_mcdict_cthy)))
-  )
-*)
 
 (* ---------------------------------------------------------------------------
    Main

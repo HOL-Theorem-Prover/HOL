@@ -250,6 +250,7 @@ fun start_record name goal =
   debug_proof ("\n" ^ name);
   debug_search ("\n" ^ name);
   debug ("\n" ^ name);
+  debug_t "update_mdict" update_mdict (current_theory ());
   start_stacset := create_stacset ();
   (* recording goal steps *)
   goalstep_glob := [];
@@ -268,6 +269,7 @@ fun end_record name g =
   let
     val lbls = map fst (rev (!goalstep_glob))
   in
+    (* because of internal theorems *)
     debug_t "update_mdict" update_mdict (current_theory ());
     debug_t ("Saving " ^ int_to_string (length lbls) ^ " labels")
       (app save_lbl) lbls

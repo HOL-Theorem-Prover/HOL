@@ -153,7 +153,7 @@ fun set_erecord () =
   hhs_norecprove_flag  := true;
   hhs_nolet_flag       := true;
   (* learning *)
-  hhs_ortho_flag      := true;
+  hhs_ortho_flag      := false;
   hhs_ortho_number    := 20;
   hhs_selflearn_flag  := false;
   (* metis learning *)

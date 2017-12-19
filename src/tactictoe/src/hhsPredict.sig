@@ -23,6 +23,9 @@ sig
     (goal, lbl_t list) Redblackmap.dict -> int -> lbl_t list -> lbl_t list
         
   (* thm *)
+  val all_thmfeav : unit -> 
+    ((int, real) Redblackmap.dict * (string * fea_t) list)
+  
   val thmknn:
     (int, real) Redblackmap.dict -> int -> (string * fea_t) list -> fea_t -> string list   
   
