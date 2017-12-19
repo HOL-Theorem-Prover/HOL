@@ -28,7 +28,7 @@ fun parfetch_of_string s =
 fun mk_metis_call sl =
   "metisTools.METIS_TAC " ^ 
   "[" ^ String.concatWith " , " (map dbfetch_of_string sl) ^ "]"
-
+  
 fun metis_provable n tim goal =
   let
     val sl   = thmknn_std n goal
@@ -39,32 +39,6 @@ fun metis_provable n tim goal =
     glo = SOME []
   end
 
-(* ---------------------------------------------------------------------------
-   Add a metis call with generated arguments on top of the predictions.
-   -------------------------------------------------------------------------- *)
-
-val stactime_dict = ref (dempty String.compare)
-
-fun fake_lbl s = (s,0.0,([],F),[])
-
-fun add_hammer (g,pred) =     
-  if !hhs_hhhammer_flag 
-  then (g, (fake_lbl "tactictoe_hammer", 0.0) :: pred)
-  else (g,pred)
-
-fun add_metis tacdict thmpredictor (g,pred) =
-  if !hhs_metishammer_flag then
-    let 
-      val score = if null pred then 0.0 else snd (hd pred)
-      val stac = mk_metis_call ((!thmpredictor) (!hhs_metis_npred) g)
-      val _ = stactime_dict := dadd stac (!hhs_metis_time) (!stactime_dict)
-      val tac = tactic_of_sml stac
-    in
-      tacdict := dadd stac tac (!tacdict);
-      (g, (fake_lbl stac, score) :: pred)
-    end
-  else (g,pred)
- 
 (* --------------------------------------------------------------------------
    Metis dictionary input/output.
    -------------------------------------------------------------------------- *)

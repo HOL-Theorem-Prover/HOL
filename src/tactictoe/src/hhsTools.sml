@@ -353,6 +353,8 @@ fun print_endline s = print (s ^ "\n")
 (* search_dir *)
 fun debug s = append_endline (hhs_search_dir ^ "/debug/" ^ current_theory ()) s
 
+fun debug_err s = (debug s; raise ERR "debug_err" s)
+
 fun debug_t s f x = 
   let 
     val _ = debug s

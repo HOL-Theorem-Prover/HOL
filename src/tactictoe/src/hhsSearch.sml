@@ -168,20 +168,32 @@ fun reset_timers () =
 (* --------------------------------------------------------------------------
    Basic diagonalized cost function.
    -------------------------------------------------------------------------- *)  
+
+fun fake_score s = ((s,0.0,([],F),[]),0.0)
+
+fun add_hammer pred =     
+  if !hhs_hhhammer_flag 
+    then fake_score "tactictoe_hammer" :: pred
+    else pred
+
+fun add_metis pred =     
+  if !hhs_metishammer_flag 
+    then fake_score "tactictoe_metis" :: pred
+    else pred
+
   
-fun estimate_distance (depth,heuristic) (g,pred) =
+fun estimate_distance depth pred =
   let
-    val width_coeff = ref 0.0  
-    fun f (lbl as (stac,t,g1,gl1),_) =
+    val width = ref 0.0  
+    fun f (lbl,_) =
       let
-        val cost = (!width_coeff) + Real.fromInt depth
-        val _ = width_coeff := (!width_coeff) + !hhs_width_coeff
-        val final_score = cost + heuristic
+        val cost = (!width) + Real.fromInt depth
+        val _ = width := (!width) + !hhs_width_coeff
       in
-        (lbl,final_score)
+        (lbl,cost)
       end
   in
-    (g, map f pred)
+    map f pred
   end
   
 (* --------------------------------------------------------------------------
@@ -238,45 +250,11 @@ fun backup_fail cid =
   end
 
 (* --------------------------------------------------------------------------
-   Argument predictions and instantiation
-   -------------------------------------------------------------------------- *)
-
-fun install_stac tacdict stac =
-  let val tac = timed_tactic_of_sml stac 
-    handle _ => (debug ("Warning: install_stac: " ^ stac); NO_TAC)
-  in
-    tacdict := dadd stac tac (!tacdict)
-  end
-  
-fun inst_arg tacdict thmpredictor (g,pred) =
-  if !hhs_thmlarg_flag orelse !hhs_termarg_flag then
-    let 
-      val (al,bl) = part_n 20 pred 
-      val bl' = filter (not o is_absarg_stac o #1 o fst) bl
-      val thml = !thmpredictor_glob (!hhs_thmlarg_number) g
-      val thmls = String.concatWith " , " (map dbfetch_of_string thml)
-      fun inst_lbl (lbl as (stac,a1,b1,c1),score) =
-        if is_absarg_stac stac
-        then 
-          let 
-            val _ = debug_search ("instantiating: " ^ stac)
-            val new_stac = inst_stac thmls g stac
-          in
-            debug_search ("to: " ^ new_stac);
-            install_stac tacdict_glob new_stac;
-            SOME ((new_stac,a1,b1,c1),score)
-          end
-          handle _ => (debug "Warning: addpred_stac"; NONE)
-        else SOME (lbl,score)
-    in
-      (g, List.mapPartial inst_lbl al @ bl')
-    end
-  else (g, pred)   
-  
-  
-(* --------------------------------------------------------------------------
    Node creation and deletion
    -------------------------------------------------------------------------- *)
+
+
+
 
 val max_depth_mem = ref 0
 val pid_counter = ref 0
@@ -336,15 +314,7 @@ fun root_create_wrap g =
   let
     (* Predictions *)
     val pred = map (fn x => (x,0.0)) ((!stacpredictor_glob) g)
-    val cost = 0
-    val (_,pred1) = 
-      (
-      add_hammer o
-      add_metis tacdict_glob thmpredictor_glob o 
-      inst_timer (inst_arg tacdict_glob thmpredictor_glob) o
-      estimate_distance (cost,0.0)
-      ) 
-        (g,pred)
+    val pred1 = (add_hammer o add_metis o estimate_distance 0) pred
   in
     root_create g pred1
   end
@@ -417,6 +387,18 @@ fun node_save pid =
   end
   )
 
+fun update_curstac newstac pid =
+  let
+    val prec = dfind pid (!proofdict)
+    val gn = hd (!(#pending prec))
+    val predl = Array.sub (#predarr prec, gn)
+    val ((stac,a1,b1,c1),d1) = hd predl
+    val newpredl = ((newstac,a1,b1,c1),d1) :: tl predl
+  in
+    Array.update (#predarr prec, gn, newpredl) 
+  end 
+  handle _ => debug_err ("update_curstac :" ^ newstac)
+
 (* --------------------------------------------------------------------------
    Application of a tactic.
    -------------------------------------------------------------------------- *)
@@ -426,16 +408,68 @@ fun update_cache k v =
   then stacgoal_cache := dadd k v (!stacgoal_cache) 
   else ()
 
-fun apply_stac pardict trydict_unref stac g =
+val thml_dict = ref (dempty (cpl_compare goal_compare Int.compare))
+val inst_dict = ref (dempty (cpl_compare String.compare goal_compare))
+
+fun pred_sthml n g =
+  dfind (g,n) (!thml_dict) handle _ =>
+    let val sl = !thmpredictor_glob n g in
+      thml_dict := dadd (g,n) sl (!thml_dict);
+      sl
+    end
+
+fun inst_read pid stac g =
+  if (!hhs_thmlarg_flag orelse !hhs_termarg_flag) andalso 
+     is_absarg_stac stac 
+  then 
+    (
+    dfind (stac,g) (!inst_dict) handle _ =>
+    let
+      val _ = debug_search ("instantiating: " ^ stac)
+      val sl = 
+        if !hhs_thmlarg_flag 
+        then pred_sthml (!hhs_thmlarg_number) g 
+        else []
+      val thmls = String.concatWith " , " (map dbfetch_of_string sl)
+      val newstac = inst_stac thmls g stac
+      val newtac = timed_tactic_of_sml newstac 
+    in
+      inst_dict := dadd (stac,g) (newstac,newtac,!hhs_tactic_time) (!inst_dict);
+      debug_search ("to: " ^ newstac);
+      update_curstac newstac pid;
+      (newstac,newtac,!hhs_tactic_time)
+    end
+    )
+  else if stac = "tactictoe_metis" then
+    (
+    dfind (stac,g) (!inst_dict) handle _ =>
+    let 
+      val sl = pred_sthml (!hhs_metis_npred) g
+      val newstac = mk_metis_call sl
+      val newtac = timed_tactic_of_sml newstac        
+    in
+      inst_dict := dadd (stac,g) (newstac,newtac,!hhs_metis_time) (!inst_dict);
+      debug_search ("to: " ^ newstac);
+      update_curstac newstac pid;
+      (newstac,newtac,!hhs_metis_time)
+    end
+    )
+  else (stac, dfind stac (!tacdict_glob), !hhs_tactic_time)  
+     
+
+fun apply_stac pid pardict trydict_unref stac g =
   let
     val _ = last_stac := stac
-    val tim = dfind stac (!stactime_dict) handle _ => (!hhs_tactic_time)
     val _ = stac_counter := !stac_counter + 1
-    val tac = dfind stac (!tacdict_glob) 
+    (* instantiation and reading *)
+    val (newstac,newtac,tim) = inst_read pid stac g 
       handle _ => debug_err ("apply_stac: " ^ stac)
-    val glo = dfind (stac,g) (!stacgoal_cache) 
-      handle _ => app_tac tim tac g
-    val new_glo = case glo of NONE => NONE | SOME gl =>
+    (* execution *)
+    val glo = dfind (newstac,g) (!stacgoal_cache) 
+      handle _ => app_tac tim newtac g
+    val newglo = 
+      case glo of NONE => NONE | 
+                  SOME gl =>
       (
       if mem g gl orelse exists (fn x => dmem x pardict) gl orelse
          dmem gl trydict_unref
@@ -443,8 +477,8 @@ fun apply_stac pardict trydict_unref stac g =
       else SOME gl
       )
   in
-    update_cache (stac,g) new_glo;
-    new_glo
+    update_cache (newstac,g) glo;
+    newglo
   end
 
 fun apply_next_stac pid =
@@ -460,8 +494,8 @@ fun apply_next_stac pid =
       handle _ => debug_err "apply_next_stac: empty pred"
   in
     if stac = "tactictoe_hammer"
-    then (queue_async pid g; NONE)
-    else infstep_timer (apply_stac pardict trydict_unref stac) g
+      then (queue_async pid g; NONE)
+      else infstep_timer (apply_stac pid pardict trydict_unref stac) g
   end
 
 (* ----------------------------------------------------------------------
@@ -606,39 +640,28 @@ fun node_create_gl pripol tactime gl pid =
     val parchildren = #children prec
     val parchildrensave = Array.sub (#childrena prec,gn)
     val depth = #depth prec + 1
-    fun add_pred g =
+    fun mk_pred g =
       if !hhs_cache_flag
       then
-        (g, dfind g (!goalpred_cache)) handle _ =>
-        let val r = 
-          map (fn x => (x,0.0)) ((!stacpredictor_glob) g)
-        in
+        dfind g (!goalpred_cache) handle _ =>
+        let val r = map (fn x => (x,0.0)) ((!stacpredictor_glob) g) in
           goalpred_cache := dadd g r (!goalpred_cache);
-          (g,r)
+          r
         end
-      else (g, map (fn x => (x,0.0)) ((!stacpredictor_glob) g))
-      
+      else map (fn x => (x,0.0)) ((!stacpredictor_glob) g) 
     val width = prev_predn - (length prev_predl)
     val cost = depth + width
     val predlist0 =
-      map (
-          add_hammer o 
-          add_metis tacdict_glob thmpredictor_glob o 
-          inst_timer (inst_arg tacdict_glob thmpredictor_glob) o
-          estimate_distance (cost,0.0) o 
-          add_pred
-          ) 
-      gl  
-    val predlist1 = map snd predlist0
-    val pending0 = number_list 0 predlist1
+      map (add_hammer o add_metis o estimate_distance cost o mk_pred) gl  
+    val pending0 = number_list 0 predlist0
     val pending1 = map (fn (gn,pred) => (gn, (snd o hd) pred)) pending0
     val pending = map fst (dict_sort compare_rmax pending1)
-    (* Updating the list of parent *)
+    (* Updating list of parents *)
     val new_pardict = dadd goal () (#pardict prec)
     (* New node *)
     val selfid = 
       node_create pripol 
-        tactime pid stac gn goal gl predlist1 pending new_pardict
+        tactime pid stac gn goal gl predlist0 pending new_pardict
   in
     parchildren := selfid :: (!parchildren);
     parchildrensave := selfid :: (!parchildrensave);
@@ -761,8 +784,6 @@ fun init_search thmpredictor stacpredictor mcpredictor hammer tacdict g =
   init_async ();
   (* global time-out *)
   glob_timer := SOME (Timer.startRealTimer ());
-  (* flexible tactic time-out *)
-  stactime_dict := dempty String.compare;
   (* caching *)
   stacgoal_cache := dempty stacgoal_compare;
   goalpred_cache := dempty goal_compare;

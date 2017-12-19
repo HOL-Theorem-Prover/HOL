@@ -231,7 +231,7 @@ fun closest_subterm ((asl,w):goal) term =
       learn_tfidf (((),fea_o) :: dummy_lbl feal @ dummy_lbl thmfeav)
     val l3 = debug_t "pre_sim" pre_sim symweight feal fea_o
   in
-    snd (fst (hd l3)) handle _ => raise ERR "closest_subterm" ""
+    snd (fst (hd l3)) handle _ => debug_err "closest_subterm"
   end
 
 (* --------------------------------------------------------------------------

@@ -94,7 +94,7 @@ fun timed_tactic_of_sml s =
     val tactic = mk_valid s
     val program = 
       "let fun f () = hhsExec.hhs_tactic_glob := " ^ tactic ^ " in " ^
-      "hhsTimeout.timeOut (!hhsTools.hhs_tactic_time * 100.0) f () end"
+      "hhsTimeout.timeOut 0.1 f () end"
     val b = exec_sml "tactic_of_sml" program
   in
     if b then !hhs_tactic_glob else raise ERR "timed_tactic_of_sml" s
