@@ -826,7 +826,7 @@ val concr_extrTrans_def = Define`
                           | [] => NONE
                           | ((eL,f)::xs) =>
                             SOME
-                             (concrEdge eL.pos_lab eL.neg_lab (f::MAP SND xs))
+                             (concrEdge eL.pos_lab eL.neg_lab (nub (f::MAP SND xs)))
                  ) aa_edges_grpd)
         in do node <- lookup aa_id g_AA.nodeInfo ;
               true_edges <-
@@ -834,7 +834,53 @@ val concr_extrTrans_def = Define`
                        (λeL. (concrEdge eL.pos_lab eL.neg_lab []))
                        node.true_labels) ;
               SOME (concr_edges ++ true_edges)
-           od`;
+                   od`;
+
+val CONCR_EXTRTRANS_NODES = store_thm
+  ("CONCR_EXTRTRANS_NODES",
+   ``!g_AA x l.
+       (concr_extrTrans g_AA x = SOME l)
+       ==> (!ce q. MEM ce l ∧ MEM q ce.sucs
+              ==> (MEM q (graphStates g_AA)
+                  ∧ ALL_DISTINCT ce.sucs))``,
+   rpt strip_tac >> fs[concr_extrTrans_def]
+   >> Cases_on `lookup x g_AA.followers` >> fs[]
+   >> rw[] >> fs[MEM_APPEND,CAT_OPTIONS_MEM,MEM_MAP]
+   >- (Cases_on `grp` >> fs[] >> Cases_on `h` >> fs[]
+       >> fs[concrEdge_component_equality]
+       >> qabbrev_tac `L =
+              CAT_OPTIONS
+                  (MAP
+                       (λ(eL,id).
+                         case lookup id g_AA.nodeInfo of
+                             NONE => NONE
+                           | SOME n => SOME (eL,n.frml)) x')`
+       >> `MEM q (MAP SND (FLAT (GROUP_BY
+                            (λ(eL1,f1) (eL2,f2). eL1.edge_grp = eL2.edge_grp)
+                            L)))` by (
+            simp[MEM_MAP,MEM_FLAT]
+            >> `q = r \/ MEM q (MAP SND t)` by metis_tac[MEM,nub_set]
+            >- (qexists_tac `(q',r)` >> fs[]
+                >> qexists_tac `(q',r)::t` >> fs[]
+               )
+            >- (fs[MEM_MAP] >> qexists_tac `y` >> fs[]
+                >> qexists_tac `(q',r)::t` >> fs[]
+               )
+        )
+       >> `MEM q (MAP SND L)` by metis_tac[GROUP_BY_FLAT]
+       >> qunabbrev_tac `L` >> fs[MEM_MAP,CAT_OPTIONS_MEM]
+       >> rename[`MEM y2 trns`, `SOME y1 = _ y2`]
+       >> Cases_on `y2` >> fs[] >> rename[`MEM (eL,id) trns`]
+       >> Cases_on `lookup id g_AA.nodeInfo` >> fs[]
+       >> rename[`lookup id g_AA.nodeInfo = SOME node`]
+       >> simp[graphStates_def,MEM_MAP] >> qexists_tac `(id,node)`
+       >> fs[] >> metis_tac[MEM_toAList]
+      )
+   >- (fs[concrEdge_component_equality] >> metis_tac[MEM])
+   >- (Cases_on `grp` >> fs[] >> Cases_on `h` >> fs[]
+       >> fs[all_distinct_nub]
+      )
+  );
 
 val CONCR_EXTRTRANS_LEMM = store_thm
   ("CONCR_EXTRTRANS_LEMM",
@@ -1184,7 +1230,7 @@ val CONCR_EXTRTRANS_LEMM = store_thm
                  >- (qexists_tac `suc` >> simp[] >> qexists_tac `sucId`
                      >> simp[]
                     )
-                 >- (`MEM x (MAP SND t)` by metis_tac[MEM]
+                 >- (`MEM x (MAP SND t)` by metis_tac[MEM,nub_set]
                      >> fs[MEM_MAP] >> rename[`MEM edge t`]
                      >> `edge = (label,x)`
                           by (Cases_on `edge` >> fs[] >> metis_tac[])
@@ -1209,12 +1255,14 @@ val CONCR_EXTRTRANS_LEMM = store_thm
                  >- (qexists_tac `suc` >> simp[] >> qexists_tac `sucId`
                      >> simp[]
                     )
-                 >- (`MEM x (MAP SND ((label,r)::t))` by fs[MEM]
-                     >> fs[MEM_MAP]
+                 >- (`MEM x (r::MAP SND t)` by metis_tac[nub_set]
+                     >> `MEM x (MAP SND ((label,r)::t))` by fs[MEM]
                      >- (`MEM (label,x) (J fls)` by (
                           `MEM (label,x) (FLAT CONCR_TRNS)` by (
                               simp[MEM_FLAT]
                               >> qexists_tac `(label,r)::t` >> simp[]
+                              >> fs[MEM_MAP] >> Cases_on `y` >> fs[]
+                              >> rw[] >> metis_tac[]
                           )
                           >> metis_tac[]
                          )
@@ -1225,26 +1273,27 @@ val CONCR_EXTRTRANS_LEMM = store_thm
                          >> rename[`lookup _ _ = SOME node`]
                          >> qexists_tac `node` >> fs[] >> qexists_tac `e_id`
                          >> fs[])
-                     >- (
-                       rename[`MEM edge t`]
-                       >> `edge = (label,x)`
-                          by (Cases_on `edge` >> fs[] >> metis_tac[])
-                       >> rw[]
-                       >> `MEM (label,x) (J fls)` by (
-                           `MEM (label,x) (FLAT CONCR_TRNS)` by (
-                             simp[MEM_FLAT]
-                             >> qexists_tac `(label,r)::t` >> simp[]
-                           )
-                           >> metis_tac[]
-                       )
-                       >> qunabbrev_tac `J` >> fs[CAT_OPTIONS_MEM,MEM_MAP]
-                       >> rename[`MEM edge fls`] >> Cases_on `edge`
-                       >> rename[`MEM (e_f,e_id) fls`]
-                       >> Cases_on `lookup e_id g_AA.nodeInfo` >> fs[]
-                       >> rename[`lookup _ _ = SOME node`]
-                       >> qexists_tac `node` >> fs[] >> qexists_tac `e_id`
-                       >> fs[]
-                    )
+                    (*  >- ( *)
+                    (*    rename[`MEM edge t`] *)
+                    (*    >> `edge = (label,x)` *)
+                    (*       by (Cases_on `edge` >> fs[] >> metis_tac[]) *)
+                    (*    >> rw[] *)
+                    (*    >> `MEM (label,x) (J fls)` by ( *)
+                    (*        `MEM (label,x) (FLAT CONCR_TRNS)` by ( *)
+                    (*          simp[MEM_FLAT] *)
+                    (*          >> qexists_tac `(label,r)::t` >> simp[] *)
+                    (*          >> rw[] >> fs[] >> metis_tac[] *)
+                    (*        ) *)
+                    (*        >> metis_tac[] *)
+                    (*    ) *)
+                    (*    >> qunabbrev_tac `J` >> fs[CAT_OPTIONS_MEM,MEM_MAP] *)
+                    (*    >> rename[`MEM edge fls`] >> Cases_on `edge` *)
+                    (*    >> rename[`MEM (e_f,e_id) fls`] *)
+                    (*    >> Cases_on `lookup e_id g_AA.nodeInfo` >> fs[] *)
+                    (*    >> rename[`lookup _ _ = SOME node`] *)
+                    (*    >> qexists_tac `node` >> fs[] >> qexists_tac `e_id` *)
+                    (*    >> fs[] *)
+                    (* ) *)
                     )
                 )
             )
@@ -1279,19 +1328,19 @@ val CONCR_EXTRTRANS_LEMM = store_thm
               )
              >> qunabbrev_tac `CE` >> fs[] >> Cases_on `grp` >> fs[]
              >> Cases_on `h` >> fs[concrEdge_component_equality]
-             >- (rw[] >> fs[MEM] >> metis_tac[MEM])
+             >- (rw[] >> fs[MEM] >> metis_tac[MEM,nub_set])
              >- (rw[] >> fs[MEM]
                  >> `MEM suc1.frml (MAP SND t)` by (
                       fs[MEM_MAP] >> qexists_tac `(label,suc1.frml)` >> simp[]
                   )
-                 >> metis_tac[MEM]
+                 >> metis_tac[MEM,nub_set]
                 )
-             >- (rw[] >> fs[MEM] >> metis_tac[MEM])
+             >- (rw[] >> fs[MEM] >> metis_tac[MEM,nub_set])
              >- (rw[] >> fs[MEM]
                    >> `MEM suc1.frml (MAP SND t)` by (
                       fs[MEM_MAP] >> qexists_tac `(label,suc1.frml)` >> simp[]
                   )
-                   >> metis_tac[MEM]
+                   >> metis_tac[MEM,nub_set]
                 )
             )
             )

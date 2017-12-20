@@ -7,12 +7,12 @@ val _ = overload_on("monad_bind",``OPTION_BIND``);
 
 val possibleGBA_states_def = Define`
   possibleGBA_states g_AA =
-     {qs | !q. MEM q qs ==> MEM q (graphStates g_AA) ∧ ALL_DISTINCT qs }`;
+     {set qs | !q. MEM q qs ==> MEM q (graphStates g_AA) ∧ ALL_DISTINCT qs }`;
 
 val decr_expGBA_rel_def = Define `
   decr_expGBA_rel (g_AA1,acc1,ids1,G1) (g_AA2,acc2,ids2,G2) =
      let m =
-      λg. {x | inGBA g x } ∩ possibleGBA_states g_AA1
+      λg. {set x | inGBA g x } ∩ possibleGBA_states g_AA1
      in
       (g_AA1 = g_AA2)
     ∧ (NoNodeProcessedTwice
@@ -23,7 +23,7 @@ val DECR_EXPGBA_REL_WF = store_thm
    ``WF decr_expGBA_rel``,
    qabbrev_tac `
       lifted_NNPT =
-         λB:(α ltl_frml list -> bool)
+         λB:((α ltl_frml -> bool) -> bool)
           (j:(α nodeLabelAA, β) gfg,
            k:γ,
            l:δ list,
@@ -34,13 +34,13 @@ val DECR_EXPGBA_REL_WF = store_thm
            m2:(α nodeLabelGBA, ε) gfg).
             NoNodeProcessedTwice
                  B
-                 (λg. {x | inGBA g x } ∩ B)
+                 (λg. {set x | inGBA g x } ∩ B)
                  (m,l) (m2,l2)`
    >> `!B. FINITE B ==> WF (lifted_NNPT B)` by (
         rpt strip_tac
         >> `lifted_NNPT B =
              inv_image
-              (NoNodeProcessedTwice B (λg.{x | inGBA g x} ∩ B))
+              (NoNodeProcessedTwice B (λg.{set x | inGBA g x} ∩ B))
               (λ(m,n,k,l). (l,k))` by (
           Q.HO_MATCH_ABBREV_TAC `Q = P`
           >> `!x1 x2. Q x1 x2 = P x1 x2` suffices_by metis_tac[]
@@ -58,12 +58,19 @@ val DECR_EXPGBA_REL_WF = store_thm
        qunabbrev_tac `A`
        >> rpt strip_tac >> Cases_on `k` >> Cases_on `r` >> Cases_on `r'` >> fs[]
        >> simp[possibleGBA_states_def]
-       >> `{qs | ∀q'. MEM q' qs ⇒ MEM q' (graphStates q) ∧ ALL_DISTINCT qs} =
-            {qs | MEM_SUBSET qs (graphStates q) ∧ ALL_DISTINCT qs}` by (
+       >> `{set qs | ∀q'. MEM q' qs ⇒ MEM q' (graphStates q) ∧ ALL_DISTINCT qs} =
+            {set qs | MEM_SUBSET qs (graphStates q) ∧ ALL_DISTINCT qs}` by (
            simp[SET_EQ_SUBSET,SUBSET_DEF,MEM_SUBSET_SET_TO_LIST]
            >> rpt strip_tac >> Cases_on `x` >> fs[ALL_DISTINCT]
+           >> qexists_tac `qs` >> fs[] >> Cases_on `qs` >> fs[ALL_DISTINCT]
+           >> metis_tac[]
        )
-       >> rw[] >> metis_tac[SET_OF_SUBLISTS_FINITE]
+       >> `FINITE (IMAGE
+                     set ({qs | MEM_SUBSET qs (graphStates q)
+                                           ∧ ALL_DISTINCT qs}))` suffices_by (
+           strip_tac >> fs[IMAGE_DEF,MEM_SUBSET_SET_TO_LIST]
+       )
+       >> rw[] >> metis_tac[SET_OF_SUBLISTS_FINITE,IMAGE_FINITE]
    )
    >> simp[] >> rpt strip_tac
    >> `!x y. C x y ==> B x y` suffices_by metis_tac[WF_SUBSET]
@@ -417,22 +424,56 @@ val expandGBA_def = tDefine ("expandGBA")
             >> `lookup id G2.nodeInfo = SOME n` by metis_tac[MEM_toAList]
             >> qexists_tac `n` >> fs[] >> qexists_tac `(id,n)` >> fs[MEM_toAList]
        )
-        >> Cases_on `M G2 = M G` >> fs[]
-        >- (
-           qabbrev_tac `QS =
+        >> `suff_wfg G2` by (
+           `suff_wfg (SND (new_ids,G1))` by metis_tac[ADDNODE_GBA_FOLDR]
+           >> `G1.nodeInfo = G2.nodeInfo ∧ G1.next = G2.next` by metis_tac[]
+           >> fs[suff_wfg_def]
+       )
+        >> Cases_on `M G2 = M G` >> fs[PSUBSET_DEF]
+        >> qabbrev_tac `QS =
                FILTER (λqs. ¬inGBA G qs)
                   (MAP (λ(cE,fs). cE.sucs)
                     (ONLY_MINIMAL tlg_concr t_with_acc))`
-           >> `suff_wfg (SND (new_ids,G1))
+        >> `suff_wfg (SND (new_ids,G1))
                ∧ {set x | inGBA (SND (new_ids,G1)) x} =
                    {set x | inGBA G x} ∪ set (MAP set QS)`
               by metis_tac[ADDNODE_GBA_FOLDR]
-           >> fs[]
-           >> `{set x | inGBA G1 x} = {set x | inGBA G2 x}` by (
+        >> fs[]
+        >> `{set x | inGBA G1 x} = {set x | inGBA G2 x}` by (
                `G1.nodeInfo = G2.nodeInfo` by metis_tac[]
                >> PURE_REWRITE_TAC[inGBA_def] >> metis_tac[]
            )
-           >> 
+        >> `!x. MEM x QS ==> (x ∈ possibleGBA_states g_AA)` by (
+           rpt strip_tac >> qunabbrev_tac `QS` >> fs[MEM_FILTER,MEM_MAP]
+           >> `MEM y t_with_acc` by metis_tac[ONLY_MINIMAL_SUBSET,
+                                              MEM_SUBSET_SET_TO_LIST,SUBSET_DEF]
+           >> rename[`MEM ce_with_acc t_with_acc`] >> Cases_on `ce_with_acc`
+           >> fs[]
+           >> `MEM q t` by (qunabbrev_tac `t_with_acc` >> fs[MEM_MAP])
+           >> qunabbrev_tac `t`
+           >> qabbrev_tac `c_trns =
+                   CAT_OPTIONS
+                      (MAP (concr_extrTrans g_AA)
+                          (CAT_OPTIONS
+                               (MAP
+                                    (λf.
+                                         OPTION_MAP FST
+                                         (findNode (λ(i,l). l.frml = f) g_AA))
+                                    current_node.frmls)))`
+           >> `!x. MEM x q.sucs
+                 ==> ?l ce. MEM l c_trns ∧ MEM ce l ∧ MEM x ce.sucs` by (
+               rpt strip_tac >> metis_tac[GBA_TRANS_LEMM3]
+           )
+           >> simp[possibleGBA_states_def] >> strip_tac >> strip_tac
+           >> first_x_assum (qspec_then `q'` mp_tac) >> simp[] >> strip_tac
+           >> qunabbrev_tac `c_trns` >> fs[CAT_OPTIONS_MEM,MEM_MAP]
+           >> strip_tac
+           >- metis_tac[CONCR_EXTRTRANS_NODES]
+           >- metis_tac[GBA_TRANS_LEMM1]
+       )
+        >> `QS = []` by (
+           qabbrev_tac `PS = possibleGBA_states g_AA`
+           >> qunabbrev_tac `M` >> fs[] >> rw[]
 )
 
 )
