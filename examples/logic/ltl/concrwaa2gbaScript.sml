@@ -443,7 +443,7 @@ val expandGBA_def = tDefine ("expandGBA")
                `G1.nodeInfo = G2.nodeInfo` by metis_tac[]
                >> PURE_REWRITE_TAC[inGBA_def] >> metis_tac[]
            )
-        >> `!x. MEM x QS ==> (x ∈ possibleGBA_states g_AA)` by (
+        >> `!x. MEM x QS ==> (set x ∈ possibleGBA_states g_AA)` by (
            rpt strip_tac >> qunabbrev_tac `QS` >> fs[MEM_FILTER,MEM_MAP]
            >> `MEM y t_with_acc` by metis_tac[ONLY_MINIMAL_SUBSET,
                                               MEM_SUBSET_SET_TO_LIST,SUBSET_DEF]
@@ -464,16 +464,40 @@ val expandGBA_def = tDefine ("expandGBA")
                  ==> ?l ce. MEM l c_trns ∧ MEM ce l ∧ MEM x ce.sucs` by (
                rpt strip_tac >> metis_tac[GBA_TRANS_LEMM3]
            )
-           >> simp[possibleGBA_states_def] >> strip_tac >> strip_tac
+           >> simp[possibleGBA_states_def] >> qexists_tac `q.sucs` >> fs[]
+           >> strip_tac >> strip_tac
            >> first_x_assum (qspec_then `q'` mp_tac) >> simp[] >> strip_tac
            >> qunabbrev_tac `c_trns` >> fs[CAT_OPTIONS_MEM,MEM_MAP]
            >> strip_tac
            >- metis_tac[CONCR_EXTRTRANS_NODES]
            >- metis_tac[GBA_TRANS_LEMM1]
        )
-        >> `QS = []` by (
+        >> `!x. MEM x QS ==> set x ∈ {set x | inGBA G x}` by (
            qabbrev_tac `PS = possibleGBA_states g_AA`
            >> qunabbrev_tac `M` >> fs[] >> rw[]
+           >> fs[DIFF_INTER2,DIFF_UNION] >> qexists_tac `x`
+           >> fs[] >> CCONTR_TAC >> `set x ∈ PS` by fs[]
+           >> `~(set x ∈ (PS DIFF {set x | inGBA G x} DIFF set (MAP set QS)))`
+              by (
+               simp[IN_DIFF,MEM_MAP] >> rpt strip_tac
+               >> disj2_tac >> metis_tac[]
+           )
+           >> `set x ∈ PS DIFF {set x | inGBA G x}` by (
+               simp[IN_DIFF] >> rpt strip_tac >> Cases_on `set x = set x'`
+               >> fs[] >> metis_tac[IN_GBA_MEM_EQUAL,MEM_EQUAL_SET]
+           )
+           >> metis_tac[SET_EQ_SUBSET,SUBSET_DEF]
+       )
+        >> `QS = []` by (
+           `set QS = {}` suffices_by fs[]
+           >> `!x. ~MEM x QS` suffices_by metis_tac[MEM,MEMBER_NOT_EMPTY]
+           >> rpt strip_tac >> `set x ∈ {set x | inGBA G x}` by fs[]
+           >> qunabbrev_tac `QS` >> fs[MEM_FILTER]
+           >> `MEM_EQUAL x' x` by fs[MEM_EQUAL_SET]
+           >> metis_tac[IN_GBA_MEM_EQUAL]
+       )
+        >>
+
 )
 
 )

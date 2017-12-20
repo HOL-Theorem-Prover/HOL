@@ -1410,6 +1410,24 @@ val inGBA_def = Define`
     let gbaNodes = MAP SND (toAList g.nodeInfo)
     in EXISTS (λn. MEM_EQUAL n.frmls qs) gbaNodes`;
 
+val IN_GBA_MEM_EQUAL = store_thm
+  ("IN_GBA_MEM_EQUAL",
+  ``!G x y. MEM_EQUAL x y ==> (inGBA G x = inGBA G y)``,
+  gen_tac
+  >> `!x y. MEM_EQUAL x y ==> (inGBA G x ==> inGBA G y)`
+          suffices_by metis_tac[MEM_EQUAL_SET]
+  >> simp[EQ_IMP_THM] >> rpt strip_tac
+  >> fs[inGBA_def]
+  >> `(λn. MEM_EQUAL n.frmls x) = (λn. MEM_EQUAL n.frmls y)` by (
+      Q.HO_MATCH_ABBREV_TAC `A = B`
+      >> `!x. A x = B x` suffices_by metis_tac[]
+      >> rpt strip_tac >> qunabbrev_tac `A`
+      >> qunabbrev_tac `B` >> fs[]
+      >> fs[MEM_EQUAL_SET]
+  )
+  >> fs[]
+  );
+
 val addNodeToGBA_def = Define`
   addNodeToGBA g qs =
     if inGBA g qs
