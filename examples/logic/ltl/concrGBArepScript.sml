@@ -24,7 +24,7 @@ val _ = Datatype`
 
 val gba_trans_concr_def = Define`
   gba_trans_concr ts_lists =
-    FOLDR d_conj_concr [(concrEdge [] [] [])] ts_lists `;
+                FOLDR d_conj_concr [(concrEdge [] [] [])] ts_lists `;
 
 val GBA_TRANS_LEMM1 = store_thm
   ("GBA_TRANS_LEMM1",
@@ -225,6 +225,21 @@ val GBA_TRANS_LEMM2 = store_thm
                 by metis_tac[DECIDE ``0 < SUC (LENGTH s)``]
            >> fs[EL,TL]
           )
+      )
+  );
+
+val GBA_TRANS_LEMM3 = store_thm
+  ("GBA_TRANS_LEMM3",
+   ``!s x t. MEM x (gba_trans_concr t) ∧ MEM s x.sucs
+             ==> (?l ce. MEM l t ∧ MEM ce l ∧ MEM s ce.sucs)``,
+   Induct_on `t` >> rpt strip_tac >> fs[gba_trans_concr_def]
+   >- (fs[concrEdge_component_equality] >> metis_tac[MEMBER_NOT_EMPTY,MEM])
+   >- (fs[d_conj_concr_def,FOLDR_LEMM4,concrEdge_component_equality]
+       >> `MEM s (nub (e1.sucs ++ e2.sucs))` by metis_tac[]
+       >> fs[nub_append]
+       >> `MEM s (nub (FILTER (λx. ¬MEM x e2.sucs) e1.sucs))
+           \/ MEM s (nub e2.sucs)` by metis_tac[MEM_APPEND]
+       >> metis_tac[]
       )
   );
 
@@ -962,7 +977,16 @@ val CONCR_EXTRTRANS_LEMM = store_thm
                     simp[] >> rpt strip_tac >> `frml ∈ A` by fs[]
                     >> metis_tac[MEMBER_NOT_EMPTY]
                 ) >> rpt strip_tac
-            >- ()
+            >- (`MEM (eL,frml) (FLAT (GROUP_BY E (J x)))` by (
+                 simp[MEM_FLAT] >> qexists_tac `(eL,frml)::t` >> fs[]
+                )
+                >> `MEM (eL,frml) (J x)` by metis_tac[GROUP_BY_FLAT]
+                >> qunabbrev_tac `J` >> fs[CAT_OPTIONS_MEM,MEM_MAP]
+                >> rename[`MEM edge x`] >> Cases_on `edge`
+                >> fs[] >> Cases_on `lookup r g_AA.nodeInfo` >> fs[]
+                >> rw[] >> `0 < (FST (eL,r)).edge_grp` by metis_tac[]
+                >> fs[]
+               )
             >- (qabbrev_tac `c_edge_list = (eL,frml)::t`
                 >> `set (MAP SND c_edge_list) = A` suffices_by (
                      qunabbrev_tac `c_edge_list` >> fs[]
@@ -1039,10 +1063,10 @@ val CONCR_EXTRTRANS_LEMM = store_thm
                           >> `E (eL,node.frml) (eL1,node1.frml)` by metis_tac[]
                           >> qunabbrev_tac `E` >> fs[]
                          )
-                         >> first_x_assum (qspec_then `(eL,id')` mp_tac)
-                         >> simp[] >> rpt strip_tac
-                         >> first_x_assum (qspec_then `(eL1,id1)` mp_tac)
-                         >> simp[]
+                         >> `(FST (eL,id')).edge_grp =
+                               (FST (eL1,id1)).edge_grp` by fs[]
+                         >> `FST (eL,id') = FST (eL1,id1)` by metis_tac[]
+                         >> fs[]
                      )
                     >> rw[]
                     >> qexists_tac `node1` >> fs[] >> qexists_tac `id1`
@@ -1321,8 +1345,16 @@ val CONCR_EXTRTRANS_LEMM = store_thm
        >> simp[concr2AbstractEdge_def,CAT_OPTIONS_MEM,MEM_MAP] >> disj2_tac
        >> metis_tac[]
       )
-  )
+  );
 
+val suff_wfg_def = Define
+`suff_wfg g = !n. (g.next <= n) ==> ~(n ∈ domain g.nodeInfo)`;
+
+val WF_IMP_SUFFWFG = store_thm
+  ("WF_IMP_SUFFWFG",
+   ``!g. wfg g ==> suff_wfg g``,
+       rpt strip_tac >> fs[suff_wfg_def,wfg_def]
+  )
 
 val inGBA_def = Define`
   inGBA g qs =
@@ -1337,7 +1369,7 @@ val addNodeToGBA_def = Define`
 
 val ADDNODE_GBA_LEMM = store_thm
   ("ADDNODE_GBA_LEMM",
-   ``!g qs. wfg g ==>
+   ``!g qs. suff_wfg g ==>
           ({ set x | inGBA (addNodeToGBA g qs) x } =
              { set x | inGBA g x } ∪ {set qs})``,
    rpt strip_tac
@@ -1366,7 +1398,7 @@ val ADDNODE_GBA_LEMM = store_thm
        >> fs[MEM_MAP] >> qexists_tac `y`
        >> `?i. (i,n) = y` by (Cases_on `y` >> fs[])
        >> `~(i = g.next)` by (
-            fs[wfg_def] >> CCONTR_TAC >> `~(i ∈ domain g.nodeInfo)` by fs[]
+            fs[suff_wfg_def] >> CCONTR_TAC >> `~(i ∈ domain g.nodeInfo)` by fs[]
             >> rw[] >> metis_tac[MEM_toAList,domain_lookup]
         )
        >> rw[] >> metis_tac[lookup_insert,MEM_toAList]
@@ -1375,6 +1407,81 @@ val ADDNODE_GBA_LEMM = store_thm
    >- (qexists_tac `qs` >> fs[EXISTS_MEM] >> qexists_tac `nodeLabelGBA qs`
        >> fs[MEM_EQUAL_SET,MEM_MAP] >> qexists_tac `(g.next,nodeLabelGBA qs)`
        >> fs[] >> simp[MEM_toAList] >> simp[addNode_def,lookup_insert]
+      )
+  );
+
+val ADDNODE_GBA_FOLDR = store_thm
+  ("ADDNODE_GBA_FOLDR",
+   ``!G l. suff_wfg G ==>
+       (let G_WITH_IDS =
+         FOLDR
+           (λn (ids,g).
+               if inGBA g n then (ids,g)
+               else (g.next::ids,addNodeToGBA g n)) ([],G) l
+       in
+       (suff_wfg (SND G_WITH_IDS)
+      ∧ { set x | inGBA (SND G_WITH_IDS) x } =
+          { set x | inGBA G x } ∪ set (MAP set l))
+       )``,
+   gen_tac >> Induct_on `l` >> rpt strip_tac >> fs[]
+   >> Q.HO_MATCH_ABBREV_TAC `suff_wfg G2 ∧ A = B`
+   >> Cases_on `FOLDR
+                    (λn (ids,g).
+                        if inGBA g n then (ids,g)
+                        else (g.next::ids,addNodeToGBA g n)) ([],G) l`
+   >> fs[] >> rw[]
+   >- (Cases_on `inGBA r h` >> fs[] >> qunabbrev_tac `G2`
+       >> fs[addNodeToGBA_def,suff_wfg_def] >> rpt strip_tac
+       >> fs[addNode_def]
+       >> metis_tac[DECIDE ``SUC r.next <= n ==> r.next <= n``]
+      )
+   >- (simp[SET_EQ_SUBSET,SUBSET_DEF] >> qunabbrev_tac `A` >> qunabbrev_tac `B`
+       >> fs[] >> rpt strip_tac >> qunabbrev_tac `G2`
+    >- (Cases_on `inGBA r h` >> fs[]
+     >- (`x ∈ {set x | inGBA r x}` by (fs[] >> metis_tac[])
+         >> `x ∈ {set x | inGBA G x} ∪ set (MAP set l)`
+            by metis_tac[SET_EQ_SUBSET,SUBSET_DEF]
+         >> fs[UNION_DEF] >> metis_tac[]
+        )
+     >- (`x ∈ {set a | inGBA (addNodeToGBA r h) a}` by (fs[] >> metis_tac[])
+         >> `x ∈ {set a | inGBA r a} ∪ {set h}` by metis_tac[ADDNODE_GBA_LEMM]
+         >> fs[UNION_DEF]
+         >- (`x ∈ {set x | inGBA r x}` by (fs[] >> metis_tac[])
+             >> `x ∈ {x'' | (∃x. x'' = set x ∧ inGBA G x)
+                                ∨ MEM x'' (MAP set l)}`
+                by metis_tac[SET_EQ_SUBSET,SUBSET_DEF]
+             >> fs[] >> metis_tac[]
+            )
+         >- metis_tac[]
+        )
+       )
+    >- (Cases_on `inGBA r h` >> fs[]
+     >- (`x ∈ {set x | inGBA G x}` by (fs[] >> metis_tac[])
+         >> `x ∈ {set x | inGBA r x}` by metis_tac[IN_UNION]
+         >> fs[] >> metis_tac[]
+        )
+     >- (`x ∈ {set x | inGBA G x}` by (fs[] >> metis_tac[])
+         >> `x ∈ {set x | inGBA r x}` by metis_tac[IN_UNION]
+         >> `x ∈ {set x | inGBA (addNodeToGBA r h) x}`
+            by metis_tac[IN_UNION,ADDNODE_GBA_LEMM]
+         >> fs[] >> metis_tac[]
+        )
+       )
+    >- (qexists_tac `h` >> Cases_on `inGBA r h` >> fs[]
+        >> `x ∈ {set h}` by fs[]
+        >> `x ∈ {set x | inGBA (addNodeToGBA r h) x}`
+           by metis_tac[IN_UNION,ADDNODE_GBA_LEMM]
+        >> fs[inGBA_def,EXISTS_MEM] >> metis_tac[MEM_EQUAL_SET]
+       )
+    >- (`x ∈ {set x | inGBA r x}` by metis_tac[IN_UNION]
+        >> Cases_on `inGBA r h` >> fs[]
+        >- metis_tac[]
+        >- (`x ∈ {set x | inGBA r x}` by metis_tac[IN_UNION]
+            >> `x ∈ {set x | inGBA (addNodeToGBA r h) x}`
+                by metis_tac[IN_UNION,ADDNODE_GBA_LEMM]
+            >> fs[] >> metis_tac[]
+           )
+       )
       )
   );
 

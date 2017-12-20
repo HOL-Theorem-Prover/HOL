@@ -546,7 +546,8 @@ val flws_sorted_def = Define `
    ∧ (lookup x_id g.followers = SOME fls)
    ==> (SORTED (λf1 f2. (FST f2).edge_grp <= (FST f1).edge_grp) fls
       ∧ (!x y. (MEM x fls ∧ MEM y fls ∧ ((FST x).edge_grp = (FST y).edge_grp))
-            ==> (FST x = FST y))))`;
+            ==> (FST x = FST y))
+      ∧ (!x. MEM x fls ==> (0 < (FST x).edge_grp))))`;
 
 val FLWS_SORTED_EMPTY = store_thm
   ("FLWS_SORTED_EMPTY",
@@ -1320,6 +1321,9 @@ val ADDEDGE_COUNTER_LEMM = store_thm
             by metis_tac[updateNode_preserves_edges,updateNode_preserves_domain]
           >> metis_tac[]
          )
+      >- (Cases_on `x` >> fs[]
+                   >> metis_tac[updateNode_preserves_domain, updateNode_preserves_edges]
+         )
       )
    >- (
        Cases_on `x` >> fs[]
@@ -1463,6 +1467,21 @@ val ADDEDGE_COUNTER_LEMM = store_thm
                         >> `x_id ∈ domain m.nodeInfo`
                            by metis_tac[domain_lookup,wfg_def]
                         >> metis_tac[])
+                    >- (rw[]
+                        >> `fls = (LABEL,q')::followers_old`
+                           by metis_tac[lookup_insert,SOME_11]
+                        >> rw[] >> fs[]
+                        >- (`(FST x).edge_grp = LABEL.edge_grp`
+                               by (Cases_on `x` >> fs[])
+                            >> qunabbrev_tac `LABEL` >> fs[]
+                            >> Cases_on `oldSucPairs = []` >> fs[]
+                           )
+                        >- metis_tac[]
+                       )
+                    >- (`lookup x_id m.followers = SOME fls`
+                         by metis_tac[lookup_insert,SOME_11]
+                        >> metis_tac[]
+                       )
                     >- (`(fl::fls) = (LABEL,q')::followers_old`
                          by metis_tac[lookup_insert,SOME_11]
                         >> rw[] >> fs[]

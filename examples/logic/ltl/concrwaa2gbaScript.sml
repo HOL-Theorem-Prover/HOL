@@ -1,4 +1,4 @@
-open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory pred_setTheory relationTheory pairTheory
+open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory pred_setTheory relationTheory pairTheory prim_recTheory set_relationTheory arithmeticTheory
 
 open sptreeTheory ltlTheory generalHelpersTheory concrGBArepTheory
 
@@ -73,6 +73,142 @@ val DECR_EXPGBA_REL_WF = store_thm
    >> fs[] >> fs[decr_expGBA_rel_def]
   );
 
+val towards_suff_wfg_def = Define
+  `towards_suff_wfg (g_AA1,acc1,ids1,G1) (g_AA2,acc2,ids2,G2) =
+      let max_elems = λd. maximal_elements d (rrestrict (rel_to_reln ($<)) d)
+      in ((max_elems (domain G1.nodeInfo) =
+           max_elems (domain G2.nodeInfo))
+       ∧ ((G1.next > G2.next) \/
+          (G1.next = G2.next ∧ (LENGTH ids1 < LENGTH ids2))))`
+
+val TWDRS_SUFFWFG_WF = store_thm
+  ("TWDRS_SUFFWFG_WF",
+  ``let P = λ(g_AA,acc,ids,G). suff_wfg G
+    in WF (λx y. ~P x ∧ ~P y ∧ towards_suff_wfg x y)``,
+  fs[] >> simp[WF_IFF_WELLFOUNDED,wellfounded_def] >> rpt strip_tac
+  >> CCONTR_TAC >> fs[towards_suff_wfg_def]
+  >> qabbrev_tac `get_next =
+       λ(g_AA :α),(acc :β),(ids :γ list),(G :(δ, ε) gfg).
+        G.next`
+  >> qabbrev_tac `get_ids =
+       λ(g_AA :α),(acc :β),(ids :γ list),(G :(δ, ε) gfg).
+        ids`
+  >> qabbrev_tac `get_domain =
+       λ(g_AA :α),(acc :β),(ids :γ list),(G :(δ, ε) gfg).
+        domain G.nodeInfo`
+  >> `!k. ?j. k <= j ∧ (get_next (f j) < get_next (f (SUC j)))` by (
+      rpt strip_tac
+      >> CCONTR_TAC >> fs[]
+      >> `!a. k <= a
+           ==> LENGTH (get_ids (f (SUC a))) < LENGTH (get_ids (f a))` by (
+        rpt strip_tac
+        >> first_x_assum (qspec_then `a` mp_tac) >> simp[] >> rpt strip_tac
+        >> `towards_suff_wfg (f (SUC a)) (f a)` by fs[]
+        >> qunabbrev_tac `get_ids` >> Cases_on `f (SUC a)` >> Cases_on `f a`
+        >> fs[] >> Cases_on `r` >> Cases_on `r'` >> fs[]
+        >> Cases_on `r` >> Cases_on `r''` >> fs[towards_suff_wfg_def]
+        >> qunabbrev_tac `get_next` >> fs[]
+      )
+      >> `WF (measure (LENGTH o get_ids o f))` by fs[]
+      >> POP_ASSUM mp_tac
+      >> PURE_REWRITE_TAC[WF_IFF_WELLFOUNDED,wellfounded_def] >> fs[]
+      >> qexists_tac `λx. x + k` >> rpt strip_tac >> fs[]
+      >> metis_tac[DECIDE ``k <= k + n``,
+                   DECIDE ``k + SUC n = SUC (k + n)``]
+  )
+  >> qabbrev_tac `D = get_domain (f 0)`
+  >> qabbrev_tac `max_elems =
+        λd. maximal_elements d (rrestrict (rel_to_reln ($<)) d)`
+  >> `!a. max_elems (get_domain (f a)) = max_elems D` by (
+      Induct_on `a` >> fs[] >> rw[]
+      >> `towards_suff_wfg (f (SUC a)) (f a)` by fs[]
+      >> qunabbrev_tac `get_domain` >> Cases_on `f (SUC a)` >> Cases_on `f a`
+      >> fs[] >> Cases_on `r` >> Cases_on `r'` >> fs[]
+      >> Cases_on `r` >> Cases_on `r''` >> fs[towards_suff_wfg_def]
+      >> qunabbrev_tac `max_elems` >> fs[]
+  )
+  >> Cases_on `D = {}`
+  >- (
+   `¬(λ(g_AA,acc,ids,G). suff_wfg G) (f 0)` by fs[]
+   >> Cases_on `f 0` >> fs[] >> Cases_on `r` >> fs[] >> Cases_on `r'` >> fs[]
+   >> fs[suff_wfg_def] >> qunabbrev_tac `get_domain` >> fs[]
+   >> metis_tac[MEMBER_NOT_EMPTY]
+  )
+  >- (
+   `?x. x ∈ maximal_elements D (rrestrict (rel_to_reln ($<)) D)` by (
+       HO_MATCH_MP_TAC finite_strict_linear_order_has_maximal
+       >> rpt strip_tac >> qunabbrev_tac `D` >> fs[]
+       >- (Cases_on `f 0` >> fs[] >> Cases_on `r` >> fs[] >> Cases_on `r'`
+           >> fs[] >> qunabbrev_tac `get_domain`
+           >> fs[FINITE_domain]
+          )
+       >- (simp[strict_linear_order_def,rrestrict_def,rel_to_reln_def]
+           >> simp[set_relationTheory.domain_def,range_def,transitive_def,antisym_def]
+           >> simp[SUBSET_DEF] >> rpt strip_tac
+          )
+   )
+  >> `!b. ?n. b < get_next (f n)` by (
+       `!n. get_next (f n) <= get_next (f (SUC n))` by (
+         rpt strip_tac
+         >> `towards_suff_wfg (f (SUC n)) (f n)` by fs[]
+         >> qunabbrev_tac `get_ids` >> Cases_on `f (SUC n)` >> Cases_on `f n`
+         >> fs[] >> Cases_on `r` >> Cases_on `r'` >> fs[]
+         >> Cases_on `r` >> Cases_on `r''` >> fs[towards_suff_wfg_def]
+         >> qunabbrev_tac `get_next` >> fs[]
+       )
+       >> Induct_on `b` >> fs[]
+       >- (`∃j. get_next (f j) < get_next (f (SUC j))` by metis_tac[]
+           >> qexists_tac `SUC j` >> fs[]
+          )
+       >- (`!a. (n <= a) ==> (get_next (f n) <= get_next (f a))` by (
+             Induct_on `a` >> fs[] >> rpt strip_tac >> Cases_on `n = SUC a`
+             >> fs[] >> `get_next (f a) <= get_next (f (SUC a))` by fs[]
+             >> fs[]
+          )
+          >> `∃j. n ≤ j ∧ get_next (f j) < get_next (f (SUC j))` by metis_tac[]
+          >> qexists_tac `SUC j` >> fs[]
+          >> `get_next (f n) <= get_next (f j)` by fs[] >> fs[]
+          )
+   )
+  >> `?n. x < get_next (f n)` by fs[]
+  >> `¬(λ(g_AA,acc,ids,G). suff_wfg G) (f n)` by metis_tac[]
+  >> `max_elems (get_domain (f n)) = max_elems D` by fs[]
+  >> `x ∈ max_elems (get_domain (f n))` by (
+       qunabbrev_tac `max_elems` >> fs[]
+   )
+  >> Cases_on `f n` >> fs[] >> Cases_on `r` >> fs[] >> Cases_on `r'`
+  >> fs[suff_wfg_def] >> qunabbrev_tac `get_next` >> fs[]
+  >> rw[]
+  >> qunabbrev_tac `get_domain` >> qunabbrev_tac `max_elems` >> fs[]
+  >> rw[] >> fs[maximal_elements_def] >> rw[] >> fs[] >> rw[]
+  >> `n' ∈ domain r.nodeInfo
+       ∧ (x,n') ∈ rrestrict (rel_to_reln $<) (domain r.nodeInfo) ⇒
+       x = n'` by metis_tac[]
+  >> `x = n'` by (
+       `(x,n') ∈ rrestrict (rel_to_reln $<) (domain r.nodeInfo)`
+         suffices_by metis_tac[]
+       >> PURE_REWRITE_TAC[rrestrict_def,rel_to_reln_def] >> simp[]
+   )
+  >> fs[]
+  )
+  );
+
+val decr_expGBA_strong_def = Define `
+  decr_expGBA_strong (g_AA1,acc1,ids1,G1) (g_AA2,acc2,ids2,G2) =
+  ((decr_expGBA_rel (g_AA1,acc1,ids1,G1) (g_AA2,acc2,ids2,G2))
+ ∧ (suff_wfg G2 ==> suff_wfg G1))`;
+
+val DECR_EXPGBA_STRONG_WF = store_thm
+  ("DECR_EXPGBA_STRONG_WF",
+   ``WF decr_expGBA_strong``,
+   HO_MATCH_MP_TAC WF_SUBSET
+   >> qexists_tac `decr_expGBA_rel` >> rpt strip_tac
+   >- metis_tac[DECR_EXPGBA_REL_WF]
+   >- (Cases_on `x` >> Cases_on `y` >> Cases_on `r` >> Cases_on `r'`
+       >> Cases_on `r` >> Cases_on `r''` >> fs[decr_expGBA_strong_def]
+      )
+  );
+
 (*TODO: prove termination*)
 val expandGBA_def = tDefine ("expandGBA")
    `(expandGBA g_AA acc [] G = SOME G)
@@ -107,7 +243,10 @@ val expandGBA_def = tDefine ("expandGBA")
                 FILTER (λqs. ~inGBA G qs)
                    (MAP (λ(cE,fs). cE.sucs) trans)
        in let (new_ids, G1) =
-                FOLDR (λn (ids,g). ((g.next::ids),addNodeToGBA g n))
+              FOLDR (λn (ids,g).
+                        if inGBA g n
+                        then (ids,g)
+                        else ((g.next::ids),addNodeToGBA g n))
                       ([],G) new_sucs
        in do G2 <-
               FOLDR
@@ -119,8 +258,22 @@ val expandGBA_def = tDefine ("expandGBA")
              expandGBA g_AA acc (ids ++ new_ids) G2
           od
    )`
-  (WF_REL_TAC `decr_expGBA_rel`
-   >- (metis_tac[DECR_EXPGBA_REL_WF])
+   (qabbrev_tac `P = λ(g_AA:(α nodeLabelAA, α edgeLabelAA) gfg,
+                       acc:(α ltl_frml, α concrEdge list) alist,
+                       ids:num list,
+                       G:(α nodeLabelGBA, α edgeLabelGBA) gfg). suff_wfg G`
+   >> WF_REL_TAC `λx y. (~P y ∧ ~P x ==> towards_suff_wfg x y)
+                      ∧ (P y ==> decr_expGBA_strong x y)`
+   >- (HO_MATCH_MP_TAC P_DIVIDED_WF_LEMM >> rpt strip_tac
+       >- metis_tac[TWDRS_SUFFWFG_WF]
+       >- metis_tac[DECR_EXPGBA_STRONG_WF]
+       >- (Cases_on `x` >> Cases_on `y` >> Cases_on `r` >> Cases_on `r'`
+           >> Cases_on `r` >> Cases_on `r''`
+           >> rename[`P (g_AA1,acc1,ids1,G1)`]
+           >> rename[`decr_expGBA_strong _ (g_AA2,acc2,ids2,G2)`]
+           >> qunabbrev_tac `P` >> fs[decr_expGBA_strong_def,suff_wfg_def]
+          )
+      )
    >- (rpt strip_tac >> fs[]
        >> simp[decr_expGBA_rel_def,NoNodeProcessedTwice_def] >> fs[]
        >> qabbrev_tac `t =
@@ -144,16 +297,142 @@ val expandGBA_def = tDefine ("expandGBA")
                                   if acc_cond_concr cE f f_trans
                                   then SOME f
                                   else NONE) acc))) t`
-       >> Q.HO_MATCH_ABBREV_TAC
-           `(M G2 ⊂ M G) \/ (M G2 = M  G ∧ EQ_LENGTH)`
-       >> `M G2 ⊆ M G` by (
+       >> `!l n_G.
+             (FOLDR
+              (λ(eL,suc) g_opt. do g <- g_opt; addEdgeToGBA g id eL suc od)
+              (SOME G1) l = SOME n_G)
+             ==> ((G1.nodeInfo = n_G.nodeInfo) ∧ (G1.next = n_G.next))` by (
+            Induct_on `l` >> fs[] >> rpt strip_tac >> fs[]
+            >> Cases_on `h` >> fs[]
+            >> `G1.nodeInfo = g.nodeInfo ∧ G1.next = g.next` by metis_tac[]
+            >> fs[addEdgeToGBA_def]
+            >> Cases_on `findNode (λ(i,q). MEM_EQUAL q.frmls r) g` >> fs[]
+            >> Cases_on `x` >> fs[]
+            >- metis_tac[addEdge_preserves_nodeInfo]
+            >- (fs[addEdge_def] >> rw[])
+        )
+      >> `!l n_ids n_G.
+              (n_ids,n_G) =
+                 FOLDR (λn (ids,g).
+                           if inGBA g n then (ids,g)
+                           else (g.next::ids,addNodeToGBA g n)) ([],G) l
+              ==> ((!n. n ∈ domain n_G.nodeInfo
+                       ==> ((n ∈ domain G.nodeInfo) \/ n < n_G.next))
+                ∧ (!n. n ∈ domain G.nodeInfo ==> n ∈ domain n_G.nodeInfo)
+                ∧ (G.next <= n_G.next)
+                ∧ ((G.next = n_G.next)
+                       ==> ((G.nodeInfo = n_G.nodeInfo)
+                          ∧ (n_ids = []))))` by (
+           Induct_on `l` >> fs[] >> rpt strip_tac
+           >> Cases_on `(FOLDR (λn (ids,g).
+                                   if inGBA g n then (ids,g)
+                                   else (g.next::ids,addNodeToGBA g n)) ([],G) l)`
+           >> fs[] >> Cases_on `inGBA r h` >> fs[] >> rw[]
+           >> fs[addNodeToGBA_def] >> fs[addNode_def]
+           >> metis_tac[DECIDE ``n < r.next ==> n < SUC r.next``]
+        )
+       >- (
+        simp[towards_suff_wfg_def] >> qunabbrev_tac `P` >> fs[suff_wfg_def]
+        >> strip_tac
+        >- (
+         `!n. n ∈ domain G2.nodeInfo ==> n ∈ domain G.nodeInfo \/ n < G2.next`
+           by metis_tac[]
+         >> simp[maximal_elements_def,rrestrict_def,rel_to_reln_def,
+                 SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
+         >- (fs[] >> `x ∈ domain G.nodeInfo \/ x < G2.next` by metis_tac[]
+             >> first_x_assum (qspec_then `n'` mp_tac) >> fs[]
+            )
+         >- (fs[] >> `x ∈ domain G.nodeInfo \/ x < G2.next` by metis_tac[]
+             >> fs[]
+             >- (Cases_on `x'' ∈ domain G.nodeInfo` >> fs[]
+                 >> `x'' ∈ domain G2.nodeInfo` by metis_tac[]
+                 >> metis_tac[]
+                )
+             >- (metis_tac[])
+            )
+         >- metis_tac[]
+         >- (Cases_on `x'' ∈ domain G2.nodeInfo` >> fs[]
+             >> `x'' ∈ domain G.nodeInfo \/ x'' < G2.next` by metis_tac[]
+             >- (disj1_tac >> fs[] >> metis_tac[])
+             >- (`x ∈ domain G2.nodeInfo` by metis_tac[] >> fs[]
+                 >> `x'' ∈ domain G.nodeInfo \/ x'' < G2.next` by metis_tac[]
+                 >- metis_tac[]
+                 >- (`n' ∈ domain G.nodeInfo \/ n' < G2.next` by metis_tac[]
+                  >- (`~(x < n')` by metis_tac[]
+                      >> fs[])
+                  >- fs[]
+                    )
+                )
+            )
+        )
+        >- (
+         `(∀n.
+            n ∈ domain G2.nodeInfo ⇒
+               n ∈ domain G.nodeInfo ∨ n < G2.next)
+        ∧ (∀n. n ∈ domain G.nodeInfo ⇒ n ∈ domain G2.nodeInfo)
+        ∧ (G.next ≤ G2.next)
+        ∧ ((G.next = G2.next)
+               ==> ((G.nodeInfo = G2.nodeInfo)
+                   ∧ (new_ids = [])))` by metis_tac[]
+         >> Cases_on `G2.next > G.next` >> fs[]
+        )
+        )
+       >- (
+       `!l n_ids n_G.
+         (n_ids,n_G) =
+           FOLDR (λn (ids,g).
+                 if inGBA g n then (ids,g)
+                 else (g.next::ids,addNodeToGBA g n)) ([],G) l
+             ==> (!x id. lookup id G.nodeInfo = SOME x
+                           ==> lookup id n_G.nodeInfo = SOME x)` by (
+           Induct_on `l` >> fs[] >> rpt strip_tac
+           >> Cases_on `(FOLDR (λn (ids,g).
+                           if inGBA g n then (ids,g)
+                           else (g.next::ids,addNodeToGBA g n)) ([],G) l)`
+           >> fs[] >> Cases_on `inGBA r h` >> fs[] >> rw[]
+           >> fs[addNodeToGBA_def] >> fs[addNode_def]
+           >> qunabbrev_tac `P` >> fs[suff_wfg_def]
+           >> `G.next <= r.next` by metis_tac[]
+           >> `lookup id' r.nodeInfo = SOME x` by fs[]
+           >> `~(id' = r.next)` by (
+               `id' ∈ domain G.nodeInfo` by metis_tac[domain_lookup]
+               >> `~(G.next <= id')` by metis_tac[]
+               >> fs[]
+           )
+           >> metis_tac[lookup_insert]
+       )
+        >> simp[decr_expGBA_strong_def,decr_expGBA_rel_def]
+        >> simp[NoNodeProcessedTwice_def] >> qunabbrev_tac `P` >> fs[]
+        >> Q.HO_MATCH_ABBREV_TAC
+            `((M G2 ⊂ M G) \/ (M G2 = M G ∧ EQ_LENGTH)) ∧ suff_wfg G2`
+        >> `M G2 ⊆ M G` by (
             qunabbrev_tac `M` >> fs[]
             >> `{x | inGBA G x} ⊆ {x | inGBA G2 x}` suffices_by (
                 simp[SUBSET_DEF] >> rpt strip_tac >> fs[]
                 >> metis_tac[]
             )
-            >> 
-
+            >> simp[SUBSET_DEF] >> rpt strip_tac >> fs[inGBA_def]
+            >> fs[EXISTS_MEM,MEM_MAP] >> Cases_on `y` >> fs[] >> rw[]
+            >> rename[`MEM (id,n) (toAList G.nodeInfo)`]
+            >> `lookup id G2.nodeInfo = SOME n` by metis_tac[MEM_toAList]
+            >> qexists_tac `n` >> fs[] >> qexists_tac `(id,n)` >> fs[MEM_toAList]
+       )
+        >> Cases_on `M G2 = M G` >> fs[]
+        >- (
+           qabbrev_tac `QS =
+               FILTER (λqs. ¬inGBA G qs)
+                  (MAP (λ(cE,fs). cE.sucs)
+                    (ONLY_MINIMAL tlg_concr t_with_acc))`
+           >> `suff_wfg (SND (new_ids,G1))
+               ∧ {set x | inGBA (SND (new_ids,G1)) x} =
+                   {set x | inGBA G x} ∪ set (MAP set QS)`
+              by metis_tac[ADDNODE_GBA_FOLDR]
+           >> fs[]
+           >> `{set x | inGBA G1 x} = {set x | inGBA G2 x}` by (
+               `G1.nodeInfo = G2.nodeInfo` by metis_tac[]
+               >> PURE_REWRITE_TAC[inGBA_def] >> metis_tac[]
+           )
+           >> 
 )
 
 )

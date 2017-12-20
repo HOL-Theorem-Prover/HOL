@@ -419,7 +419,7 @@ val MEM_EQUAL_SET = store_thm
   );
 
 val SET_OF_SUBLISTS_FINITE = store_thm
-  ("SET_OF_SUBSET_LISTS_FINITE",
+  ("SET_OF_SUBLISTS_FINITE",
    ``!l. FINITE {qs | MEM_SUBSET qs l ∧ ALL_DISTINCT qs }``,
       Induct_on `l`
       >- (`{qs | MEM_SUBSET qs [] ∧ ALL_DISTINCT qs} = {[]}` by (
@@ -1047,6 +1047,19 @@ val ONLY_MINIMAL_def = Define`
       else x::(ONLY_MINIMAL P xs)
     )`;
 
+val ONLY_MINIMAL_SUBSET = store_thm
+  ("ONLY_MINIMAL_SUBSET",
+   ``!P l. MEM_SUBSET (ONLY_MINIMAL P l) l``,
+   gen_tac >> Induct_on `l` >> fs[ONLY_MINIMAL_def,MEM_SUBSET_def]
+   >> rpt strip_tac >> fs[]
+   >> Cases_on `EXISTS (λx1. P x1 h) l` >> fs[ONLY_MINIMAL_def,MEM_SUBSET_def]
+   >- (fs[MEM_SUBSET_SET_TO_LIST] >> fs[INSERT_DEF] >> fs[SUBSET_DEF])
+   >- (`MEM_SUBSET (h::(ONLY_MINIMAL P l)) (h::l)`
+         suffices_by metis_tac[NOT_EXISTS]
+       >> fs[MEM_SUBSET_def, MEM_SUBSET_SET_TO_LIST] >> fs[INSERT_DEF]
+       >> fs[SUBSET_DEF]
+      )
+  );
 
 val INDEX_FIND_LEMM = store_thm
   ("INDEX_FIND_LEMM",
@@ -1260,6 +1273,52 @@ val NNPT_WF = store_thm
    )
    >> metis_tac[WF_SUBSET]
  );
+
+val P_DIVIDED_WF_LEMM = store_thm
+  ("P_DIVIDED_WF_LEMM",
+   ``!P R1 R2.
+     WF (λx y. ~P x ∧ ~P y ∧ R1 x y) ∧ WF R2
+     ∧ (!x y. P y ∧ R2 x y ==> P x)
+     ==> WF (λx y. ((~P y ∧ ~P x) ==> R1 x y) ∧ (P y ==> R2 x y))``,
+   rpt strip_tac >> rw[WF_IFF_WELLFOUNDED] >> simp[wellfounded_def]
+   >> rpt strip_tac
+   >> `!k. P (f k)
+        ==> ?j. k <= j ∧ (P (f j) ∧ ~R2 (f (SUC j)) (f j))` by (
+       rpt strip_tac
+       >> `¬∃f. ∀n. R2 (f (SUC n)) (f n)`
+          by metis_tac[WF_IFF_WELLFOUNDED,wellfounded_def] >> fs[]
+       >> qabbrev_tac `f_k = λn. f (n + k)`
+       >> qabbrev_tac `N = $LEAST (λk. ~R2 (f_k (SUC k)) (f_k k))`
+       >> `(λk. ~R2 (f_k (SUC k)) (f_k k)) N
+           ∧ !n. n < N ==> ~(λk. ~R2 (f_k (SUC k)) (f_k k)) n` by (
+           qunabbrev_tac `N`
+           >> Q.HO_MATCH_ABBREV_TAC `
+               Q ($LEAST Q)
+               ∧ !n. n < ($LEAST Q) ==> ~Q n`
+           >> HO_MATCH_MP_TAC LEAST_EXISTS_IMP >> fs[]
+           >> qunabbrev_tac `Q` >> fs[]
+       )
+       >> `!a. a <= N ==> P (f_k a)` by (
+           Induct_on `a` >> fs[]
+           >- (qunabbrev_tac `f_k` >> fs[])
+           >- (strip_tac >> `a < N` by fs[]
+               >> metis_tac[DECIDE ``a < N ==> a <= N``]
+              )
+       )
+       >> qexists_tac `N+k` >> qunabbrev_tac `f_k` >> fs[]
+       >> metis_tac[DECIDE ``SUC (N + k) = k + SUC N``]
+   )
+   >> Cases_on `?a. P (f a)` >> fs[]
+   >- metis_tac[]
+   >- (`?k. P (f k) \/ (~P (f k) ∧ ~R1 (f (SUC k)) (f k))` by (
+        `?n. P (f (SUC n)) ∨ P (f n) ∨ (¬R1 (f (SUC n)) (f n) ∧ ~P (f n))`
+            by (fs[WF_IFF_WELLFOUNDED, wellfounded_def]
+                >> metis_tac[])
+        >> metis_tac[]
+       )
+       >> metis_tac[]
+      )
+  );
 
 val MOD_LEMM = store_thm
   ("MOD_LEMM",
