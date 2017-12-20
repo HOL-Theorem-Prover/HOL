@@ -496,14 +496,11 @@ val expandGBA_def = tDefine ("expandGBA")
            >> `MEM_EQUAL x' x` by fs[MEM_EQUAL_SET]
            >> metis_tac[IN_GBA_MEM_EQUAL]
        )
-        >>
-
-)
-
-)
-
-)
-;
+        >> rw[] >> `new_ids = []` by fs[]
+        >> qunabbrev_tac `EQ_LENGTH` >> fs[]
+        )
+      )
+   );
 
 val expandGBA_init_def = Define`
   expandGBA_init (concrAA g_AA initAA props) =
