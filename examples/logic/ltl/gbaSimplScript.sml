@@ -389,6 +389,8 @@ val mergeState_def = Define`
               alph
       else (GBA s i t aT alph)`;
 
+val _ = export_theory();
+
 (* (* val un_merged_run_def = Define` *) *)
 (* (*   (un_merged_run word aT x_old x_new init trans f switch 0 = *) *)
 (* (*            ((switch,if f 0 ∈ init then f 0 else x_old))) *) *)

@@ -1,6 +1,6 @@
 open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory pred_setTheory rich_listTheory arithmeticTheory sortingTheory relationTheory
 
-open sptreeTheory ltlTheory generalHelpersTheory concrRepTheory concrltl2waaTheory
+open sptreeTheory ltlTheory generalHelpersTheory concrRepTheory concrltl2waaTheory buechiATheory
 
 val _ = new_theory "concrGBArep"
 
@@ -1434,6 +1434,59 @@ val addNodeToGBA_def = Define`
     then g
     else addNode (nodeLabelGBA qs) g`;
 
+
+val ADDNODE_GBA_WFG = store_thm
+  ("ADDNODE_GBA_WFG",
+   ``!g qs. wfg g ==> wfg (addNodeToGBA g qs)``,
+   rpt strip_tac >> simp[addNodeToGBA_def] >> Cases_on `inGBA g qs` >> fs[]
+  );
+
+val ADDNODE_GBA_WFG_FOLDR = store_thm
+  ("ADDNODE_GBA_WFG_FOLDR",
+  ``!G l. wfg G ==>
+  (let G_WITH_IDS =
+       FOLDR
+           (λn (ids,g).
+               if inGBA g n then (ids,g)
+               else (g.next::ids,addNodeToGBA g n)) ([],G) l
+   in wfg (SND G_WITH_IDS))``,
+   gen_tac >> Induct_on `l` >> rpt strip_tac >> fs[]
+   >> Cases_on `FOLDR
+                 (λn (ids,g).
+                     if inGBA g n then (ids,g)
+                     else (g.next::ids,addNodeToGBA g n)) ([],G) l`
+   >> fs[] >> Cases_on `inGBA r h` >> fs[ADDNODE_GBA_WFG]
+  );
+
+val ADDNODE_GBA_DOM_FOLDR = store_thm
+  ("ADDNODE_GBA_DOM_FOLDR",
+   ``!G l. wfg G ==>
+  (let G_WITH_IDS =
+       FOLDR
+           (λn (ids,g).
+               if inGBA g n then (ids,g)
+               else (g.next::ids,addNodeToGBA g n)) ([],G) l
+   in ((set (FST (G_WITH_IDS))) ∪ domain G.nodeInfo =
+        domain (SND G_WITH_IDS).nodeInfo)
+      ∧ (G.next <= (SND G_WITH_IDS).next))``,
+   gen_tac >> Induct_on `l` >> rpt strip_tac >> fs[]
+   >> Cases_on `FOLDR
+  (λn (ids,g).
+      if inGBA g n then (ids,g)
+      else (g.next::ids,addNodeToGBA g n)) ([],G) l`
+   >> fs[] >> Cases_on `inGBA r h` >> fs[]
+   >> simp[SUBSET_DEF] >> rpt strip_tac >> fs[]
+   >> simp[addNodeToGBA_def,addNode_def]
+   >> fs[SUBSET_DEF,INSERT_UNION] >> Cases_on `r.next ∈ domain G.nodeInfo`
+   >> fs[wfg_def] >> metis_tac[]
+  );
+
+(* val ADDNODE_GBA_DOM_FOLDR2 = store_thm *)
+(*   ("ADDNODE_GBA_DOM_FOLDR2", *)
+   
+(* ) *)
+
+
 val ADDNODE_GBA_LEMM = store_thm
   ("ADDNODE_GBA_LEMM",
    ``!g qs. suff_wfg g ==>
@@ -1487,22 +1540,38 @@ val ADDNODE_GBA_FOLDR = store_thm
                else (g.next::ids,addNodeToGBA g n)) ([],G) l
        in
        (suff_wfg (SND G_WITH_IDS)
-      ∧ { set x | inGBA (SND G_WITH_IDS) x } =
+      ∧ ({ set x | inGBA (SND G_WITH_IDS) x } =
           { set x | inGBA G x } ∪ set (MAP set l))
-       )``,
+      ∧ (!i. i ∈ domain G.nodeInfo
+             ==> (lookup i G.nodeInfo = lookup i (SND G_WITH_IDS).nodeInfo))
+      ∧ (G.next <= (SND G_WITH_IDS).next)
+      ∧ (domain G.nodeInfo ⊆ domain (SND G_WITH_IDS).nodeInfo)
+      ∧ (!i. MEM i (FST G_WITH_IDS)
+             ==> ?n. (lookup i (SND G_WITH_IDS).nodeInfo = SOME n)
+                   ∧ (MEM n.frmls l))
+       ))``,
    gen_tac >> Induct_on `l` >> rpt strip_tac >> fs[]
-   >> Q.HO_MATCH_ABBREV_TAC `suff_wfg G2 ∧ A = B`
+   >> Q.HO_MATCH_ABBREV_TAC `suff_wfg G2 ∧ A = B
+                          ∧ (!i. i ∈ domain G.nodeInfo
+                                 ==> lookup i G1.nodeInfo
+                                      = lookup i G2.nodeInfo)
+                          ∧ (G.next <= G2.next)
+                          ∧ (domain G.nodeInfo ⊆ domain G2.nodeInfo)
+                          ∧ C`
    >> Cases_on `FOLDR
                     (λn (ids,g).
                         if inGBA g n then (ids,g)
                         else (g.next::ids,addNodeToGBA g n)) ([],G) l`
    >> fs[] >> rw[]
-   >- (Cases_on `inGBA r h` >> fs[] >> qunabbrev_tac `G2`
+   >- (qunabbrev_tac `G1`
+       >> Cases_on `inGBA r h` >> fs[] >> qunabbrev_tac `G2`
        >> fs[addNodeToGBA_def,suff_wfg_def] >> rpt strip_tac
        >> fs[addNode_def]
        >> metis_tac[DECIDE ``SUC r.next <= n ==> r.next <= n``]
       )
-   >- (simp[SET_EQ_SUBSET,SUBSET_DEF] >> qunabbrev_tac `A` >> qunabbrev_tac `B`
+   >- (qunabbrev_tac `G1`
+       >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> qunabbrev_tac `A`
+       >> qunabbrev_tac `B`
        >> fs[] >> rpt strip_tac >> qunabbrev_tac `G2`
     >- (Cases_on `inGBA r h` >> fs[]
      >- (`x ∈ {set x | inGBA r x}` by (fs[] >> metis_tac[])
@@ -1550,6 +1619,33 @@ val ADDNODE_GBA_FOLDR = store_thm
            )
        )
       )
+   >- (fs[] >> rw[] >> Cases_on `inGBA G1 h` >> qunabbrev_tac `G2` >> fs[]
+       >> simp[addNodeToGBA_def,addNode_def]
+       >> `~(i = G1.next)` by (
+            fs[suff_wfg_def] >> `~(G1.next <= i)` by metis_tac[SUBSET_DEF]
+            >> fs[]
+        )
+       >> metis_tac[lookup_insert]
+      )
+   >- (fs[] >> rw[] >> Cases_on `inGBA G1 h` >> qunabbrev_tac `G2` >> fs[]
+         >> simp[addNodeToGBA_def,addNode_def])
+   >- (fs[] >> rw[] >> Cases_on `inGBA G1 h` >> qunabbrev_tac `G2` >> fs[]
+       >> simp[addNodeToGBA_def,addNode_def,SUBSET_DEF] >> rpt strip_tac
+       >> metis_tac[SUBSET_DEF]
+      )
+   >- (qunabbrev_tac `C` >> fs[] >> rpt strip_tac >> Cases_on `inGBA G1 h`
+       >> fs[]
+       >- metis_tac[]
+       >- (qunabbrev_tac `G2` >> rw[] >> fs[addNodeToGBA_def,addNode_def])
+       >- (qunabbrev_tac `G2` >> rw[] >> fs[addNodeToGBA_def,addNode_def]
+           >> `~(i = G1.next)` by (
+                fs[suff_wfg_def]
+                >> `~(G1.next <= i)` by metis_tac[domain_lookup]
+                >> fs[]
+            )
+           >> metis_tac[lookup_insert]
+          )
+      )
   );
 
 val addEdgeToGBA_def = Define`
@@ -1558,23 +1654,108 @@ val addEdgeToGBA_def = Define`
       | SOME (i,q) =>  addEdge id (eL,i) g
       | NONE => NONE`;
 
+val ADDEDGE_GBA_LEMM = store_thm
+  ("ADDEDGE_GBA_LEMM",
+   ``!g id eL suc.
+     wfg g ∧ (id ∈ domain g.nodeInfo) ∧ (inGBA g suc)
+     ==> (?g2. (addEdgeToGBA g id eL suc = SOME g2)
+             ∧ (g.nodeInfo = g2.nodeInfo)
+             ∧ wfg g2)``,
+   rpt strip_tac >> simp[addEdgeToGBA_def]
+   >> Cases_on `findNode (λ(i,q). MEM_EQUAL q.frmls suc) g` >> fs[]
+   >- (
+    fs[inGBA_def,EXISTS_MEM,findNode_def,MEM_MAP]
+    >> `(λ(i,q). MEM_EQUAL q.frmls suc) y` by (Cases_on `y` >> fs[] >> rw[])
+    >> metis_tac[FIND_LEMM,NOT_SOME_NONE]
+   )
+   >- (
+    Cases_on `x` >> fs[] >> simp[addEdge_def]
+    >> `?fl_old. lookup id g.followers = SOME fl_old`
+       by metis_tac[wfg_def,domain_lookup]
+    >> qexists_tac `g with followers updated_by insert id ((eL,q)::fl_old)`
+    >> fs[findNode_def]
+    >> `MEM (q,r) (toAList g.nodeInfo)` by metis_tac[FIND_LEMM2]
+    >> `q ∈ domain g.nodeInfo` by metis_tac[MEM_toAList,domain_lookup]
+    >> fs[wfg_def,INSERT_DEF] >> strip_tac >> fs[wfAdjacency_def]
+    >- (simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> fs[])
+    >- (rpt strip_tac >> Cases_on `n = id` >> fs[]
+        >> Cases_on `k = id` >> fs[]
+        >- (rw[] >> fs[] >> metis_tac[])
+        >- (rw[] >> metis_tac[lookup_insert])
+       )
+   )
+  );
+
+val ADDEDGE_GBA_FOLDR_LEMM = store_thm
+  ("ADDEDGE_GBA_FOLDR_LEMM",
+   ``!g id ls.
+     wfg g ∧ (id ∈ domain g.nodeInfo) ∧ (!x. MEM x (MAP SND ls) ==> inGBA g x)
+     ==>
+     ?g2.
+      (FOLDR
+       (λ(eL,suc) g_opt.
+         do g <- g_opt; addEdgeToGBA g id eL suc od)
+       (SOME g) ls = SOME g2)
+      ∧ (g.nodeInfo = g2.nodeInfo) ∧ wfg g2``,
+   gen_tac >> gen_tac >> Induct_on `ls` >> fs[] >> rpt strip_tac >> fs[]
+   >> Cases_on `h` >> fs[] >> HO_MATCH_MP_TAC ADDEDGE_GBA_LEMM
+   >> fs[] >> rw[]
+   >- metis_tac[]
+   >- (`inGBA g r` by fs[]
+       >> fs[inGBA_def] >> metis_tac[]
+      )
+  );
 
 val extractGBATrans_def = Define`
   extractGBATrans aP g q =
-    do (id,n) <- findNode (λ(i,n). ((set n.frmls) = q)) g ;
-       fls <- lookup id g.followers ;
-       SOME (
-         CAT_OPTIONS
-             (MAP (λ(eL,i).
-                    do nL <- lookup i g.nodeInfo ;
-                       SOME (
-                        (transformLabel aP eL.pos_lab eL.neg_lab,
-                         set nL.frmls)
-                       )
-                    od
-                  ) fls
-             )
-       )
-     od `;
+     (set o OPTION_TO_LIST)
+      (do (id,n) <- findNode (λ(i,n). ((set n.frmls) = q)) g ;
+          fls <- lookup id g.followers ;
+          SOME (
+              (CAT_OPTIONS
+                (MAP (λ(eL,i).
+                       do nL <- lookup i g.nodeInfo ;
+                          SOME (
+                              (transformLabel aP eL.pos_lab eL.neg_lab,
+                               set nL.frmls)
+                          )
+                               od
+                     ) fls
+                )
+              )
+          )
+       od) `;
+
+val concr2AbstrGBA_final_def = Define`
+  concr2AbstrGBA_final graph aP =
+    { {(set q1.frmls, transformLabel aP eL.pos_lab eL.neg_lab, set q2.frmls) |
+         ?id1 id2 fls.
+          (lookup id1 graph.nodeInfo = SOME q1)
+        ∧ (lookup id1 graph.followers = SOME fls)
+        ∧ (MEM (eL,id2) fls) ∧ (MEM f eL.acc_set)
+        ∧ (lookup id2 graph.nodeInfo = SOME q2)
+      } | ?qs. (inGBA graph qs) ∧ (MEM f qs)
+    }`;
+
+val concr2AbstrGBA_states_def = Define`
+  concr2AbstrGBA_states graph =
+    { set x.frmls | SOME x ∈
+                   (IMAGE (\n. lookup n graph.nodeInfo)
+                          (domain graph.nodeInfo))}`;
+
+val concr2AbstrGBA_init_def = Define`
+  concr2AbstrGBA_init concrInit graph =
+    set (CAT_OPTIONS (MAP (\i. do n <- lookup i graph.nodeInfo ;
+                                  SOME (set n.frmls)
+                               od ) concrInit))`;
+
+val concr2AbstrGBA_def = Define `
+  concr2AbstrGBA (concrGBA graph init aP) =
+       GBA
+         (concr2AbstrGBA_states graph)
+         (concr2AbstrGBA_init init graph)
+         (extractGBATrans (set aP) graph)
+         (concr2AbstrGBA_final graph (set aP))
+         (POW (set aP))`;
 
 val _ = export_theory();

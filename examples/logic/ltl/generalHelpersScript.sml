@@ -1,6 +1,6 @@
 open HolKernel Parse bossLib boolLib pred_setTheory relationTheory set_relationTheory arithmeticTheory pairTheory listTheory optionTheory prim_recTheory whileTheory rich_listTheory sortingTheory
 
-open relationTheoryHelperTheory
+(* open relationTheoryHelperTheory *)
 
 val _ = new_theory "generalHelpers"
 
@@ -252,6 +252,98 @@ val D_CONJ_SET_RECURSES = store_thm
   >> HO_MATCH_MP_TAC COMMUTING_ITSET_RECURSES
   >> metis_tac[D_CONJ_SND_COMMUTES]
   );
+
+(* val D_CONJ_SET_SND = store_thm *)
+(*   ("D_CONJ_SET_SND", *)
+(*    ``!aP s1. FINITE s1 ==> *)
+(*               !s2. FINITE s2 ==> *)
+(*                 ((IMAGE SND s1 = IMAGE SND s2) ∧ FINITE s1 ∧ FINITE s2 *)
+(*                   ==> (d_conj_set s1 aP = d_conj_set s2 aP))``, *)
+(*    gen_tac >> Induct_on `s1` >> fs[] >> rpt strip_tac *)
+(*    >- (`s2 = {}` by metis_tac[IMAGE_EQ_EMPTY] >> fs[d_conj_set_def,ITSET_THM]) *)
+(*    >- (`IMAGE SND s1 ⊆ IMAGE SND s2` by ( *)
+(*         rw[] >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac *)
+(*         >> simp[INSERT_DEF] >> rpt strip_tac >> simp[SUBSET_DEF] *)
+(*         >> rpt strip_tac *)
+(*         >> `x ∈ {y | y = SND e ∨ ∃x. y = SND x ∧ x ∈ s1}` by ( *)
+(*             fs[] >> disj2_tac >> metis_tac[] *)
+(*         ) *)
+(*         >> `x ∈ IMAGE SND s2` by metis_tac[SET_EQ_SUBSET,SUBSET_DEF] *)
+(*         >> fs[IMAGE_DEF] >> metis_tac[] *)
+(*        ) *)
+(*        >> `IMAGE SND s2 ⊆ IMAGE SND s1 ∪ {SND e}` by ( *)
+(*           rw[] >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac *)
+(*           >> PURE_REWRITE_TAC[INSERT_DEF] >> rpt strip_tac *)
+(*           >> simp[SUBSET_DEF] >> rpt strip_tac *)
+(*           >> `x ∈ IMAGE SND s2` by (simp[] >> metis_tac[]) *)
+(*           >> `x ∈ {y | y = SND e ∨ y ∈ IMAGE SND s1}` *)
+(*               by metis_tac[SET_EQ_SUBSET,SUBSET_DEF] *)
+(*           >> fs[] >> disj1_tac >> metis_tac[] *)
+(*        ) *)
+(*        >> fs[d_conj_set_def] >> simp[D_CONJ_SET_RECURSES] *)
+(*        >> Cases_on `SND e ∈ IMAGE SND s1` *)
+(*        >- ( *)
+(*          `IMAGE SND s1 = IMAGE SND s2` by ( *)
+(*              simp[IMAGE_DEF] *)
+(*              >> `{SND x | x ∈ s1} ⊆ {SND x | x ∈ s2} *)
+(*                ∧ {SND x | x ∈ s2} ⊆ {SND x | x ∈ s1}` *)
+(*                   suffices_by metis_tac[SET_EQ_SUBSET] *)
+(*              >> simp[SUBSET_DEF] >> rpt strip_tac *)
+(*              >- (`x ∈ IMAGE SND s1` by (simp[] >> metis_tac[]) *)
+(*                  >> `x ∈ IMAGE SND s2` by metis_tac[SUBSET_DEF] *)
+(*                  >> fs[] >> metis_tac[] *)
+(*                 ) *)
+(*              >- (`x ∈ IMAGE SND s2` by (simp[] >> metis_tac[]) *)
+(*                  >> `x ∈ IMAGE SND s1 ∪ {SND e}` by metis_tac[SUBSET_DEF] *)
+(*                  >> fs[UNION_DEF] >> metis_tac[] *)
+(*                 ) *)
+(*          ) *)
+(*          >> `?x. x ∈ s1 ∧ SND x = SND e ∧ ~(x = e)` by ( *)
+(*              fs[IMAGE_DEF] >> metis_tac[] *)
+(*          ) *)
+(*          >> `IMAGE SND (s1 DELETE e) = IMAGE SND s1` by ( *)
+(*              simp[IMAGE_DEF] *)
+(*          ) *)
+(*          >>  *)
+(*        >> `(IMAGE SND s2) DELETE (SND e) = IMAGE SND s1` by ( *)
+(*             simp[DELETE_DEF] *)
+(*             >> `IMAGE SND s2 DIFF {SND e} ⊆ IMAGE SND s1 *)
+(*                 ∧ IMAGE SND s1 ⊆ IMAGE SND s2 DIFF {SND e}` *)
+(*                 suffices_by fs[SET_EQ_SUBSET] *)
+(*             >> simp[SUBSET_DEF] >> rpt strip_tac *)
+(*             >- (rw[] *)
+(*                 >> `SND x' ∈ IMAGE SND s1` by ( *)
+(*                    `IMAGE SND s2 ⊆ SND e INSERT IMAGE SND s1` *)
+(*                       by metis_tac[SET_EQ_SUBSET] *)
+(*                    >> `SND x' ∈ IMAGE SND s2` by simp[IMAGE_DEF] *)
+(*                    >> `SND x' ∈ SND e INSERT IMAGE SND s1` *)
+(*                        by metis_tac[SUBSET_DEF] *)
+(*                    >> `~(SND x' = SND e)` by fs[] *)
+(*                    >> POP_ASSUM mp_tac >> simp[INSERT_DEF] *)
+(*                  ) *)
+(*                 >> fs[IMAGE_DEF] >> metis_tac[] *)
+(*                ) *)
+(*             >- (`IMAGE SND s1 ⊆ IMAGE SND s2` by ( *)
+(*                  rw[] >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac *)
+(*                  >> simp[INSERT_DEF] >> rpt strip_tac >> simp[SUBSET_DEF] *)
+(*                  >> rpt strip_tac *)
+(*                  >> `x ∈ {y | y = SND e ∨ ∃x. y = SND x ∧ x ∈ s1}` by ( *)
+(*                       fs[] >> disj2_tac >> metis_tac[] *)
+(*                  ) *)
+(*                  >> `x ∈ IMAGE SND s2` by metis_tac[SET_EQ_SUBSET,SUBSET_DEF] *)
+(*                  >> fs[IMAGE_DEF] >> metis_tac[] *)
+(*                 ) *)
+(*                 >> `x ∈ IMAGE SND s1` by (simp[IMAGE_DEF] >> metis_tac[]) *)
+(*                 >> `x ∈ IMAGE SND s2` by metis_tac[SUBSET_DEF] *)
+(*                 >> fs[IMAGE_DEF] >> metis_tac[] *)
+(*                ) *)
+(*             >- (rw[] >> ) *)
+
+
+
+(*                          ) *)
+
+
 
 val D_CONJ_SET_LEMM = store_thm
   ("D_CONJ_SET_LEMM",
@@ -640,6 +732,24 @@ val CAT_OPTIONS_APPEND = store_thm
    >> Cases_on `h` >> fs[CAT_OPTIONS_def]
   );
 
+val CAT_OPTIONS_LENGTH = store_thm
+  ("CAT_OPTIONS_LENGTH",
+   ``!l. (EVERY IS_SOME l = (LENGTH (CAT_OPTIONS l) = LENGTH l))
+       ∧ (LENGTH (CAT_OPTIONS l) <= LENGTH l)``,
+   Induct_on `l` >> fs[CAT_OPTIONS_def] >> rpt strip_tac
+   >> Cases_on `h` >> fs[IS_SOME_DEF,CAT_OPTIONS_def]
+  );
+
+val CAT_OPTIONS_EL = store_thm
+  ("CAT_OPTIONS_EL",
+   ``!l. EVERY IS_SOME l
+          ==> !i. (i < LENGTH l)
+          ==> SOME (EL i (CAT_OPTIONS l)) = EL i l``,
+   Induct_on `l` >> fs[CAT_OPTIONS_def] >> rpt strip_tac
+   >> Cases_on `h` >> fs[IS_SOME_DEF,CAT_OPTIONS_def]
+   >> Cases_on `i` >> fs[EL]
+  );
+
 val OPTION_TO_LIST_def = Define`
     (OPTION_TO_LIST NONE = [])
   ∧ (OPTION_TO_LIST (SOME l) = l)`;
@@ -699,7 +809,9 @@ val SPAN_EQ = store_thm
    gen_tac >> Induct_on `t` >> fs[SPAN_def] >> rpt strip_tac
    >> `SPAN (R x) t = SPAN (R y) t` by metis_tac[]
    >> `R x h = R y h` by (
-       metis_tac[equivalence_def,TRANS_THM,REFL_THM,SYMM_THM]
+       metis_tac[equivalence_def,relationTheory.transitive_def,
+                 relationTheory.reflexive_def,
+                 relationTheory.symmetric_def]
    )
    >> Cases_on `R x h` >> fs[]
   );
@@ -778,10 +890,10 @@ val REL_CORR_GROUP_BY = store_thm
                         by metis_tac[SPAN_EQ]
                 >> rw[] >> Cases_on `SPAN (R H) t1` >> fs[]
                 >- (rw[] >> metis_tac[equivalence_def,
-                                      SYMM_THM,TRANS_THM])
+                                      relationTheory.symmetric_def,relationTheory.transitive_def])
                 >- (rw[] >> qexists_tac `x` >> simp[] >> fs[] >> rw[]
-                    >> metis_tac[equivalence_def,SYMM_THM,
-                                 TRANS_THM]
+                    >> metis_tac[equivalence_def,relationTheory.symmetric_def,
+                                 relationTheory.transitive_def]
                    )
                )
             >- (rw[] >> Cases_on `GROUP_BY R (h2::t1)` >> fs[]
@@ -796,11 +908,11 @@ val REL_CORR_GROUP_BY = store_thm
                         >> `MEM y q` by (rw[] >> fs[])
                         >> metis_tac[]
                     )
-                    >> metis_tac[equivalence_def,SYMM_THM,TRANS_THM]
+                    >> metis_tac[equivalence_def,relationTheory.symmetric_def,relationTheory.transitive_def]
                    )
                 >- (`P h3 H` by (
                      Cases_on `y = h3` >> rw[]
-                     >- metis_tac[equivalence_def, REFL_THM]
+                     >- metis_tac[equivalence_def, relationTheory.reflexive_def]
                      >- (
                       `MEM y t2` by (
                          `FLAT (GROUP_BY R (h3::t2)) = h3::t2`
@@ -813,7 +925,7 @@ val REL_CORR_GROUP_BY = store_thm
                       )
                       >> `P h3 y` by metis_tac[SORTED_EQ]
                       >> fs[rel_corr_def]
-                      >> metis_tac[equivalence_def,SYMM_THM,TRANS_THM]
+                      >> metis_tac[equivalence_def,relationTheory.symmetric_def,relationTheory.transitive_def]
                      )
                    )
                    >> metis_tac[rel_corr_def]
@@ -836,7 +948,7 @@ val SORTED_GROUP_BY = store_thm
     simp[] >> gen_tac >> strip_tac >>  strip_tac >> strip_tac
     >> Cases_on `l` >> fs[]
     >- (rpt strip_tac >> fs[GROUP_BY_def,SPAN_def,equivalence_def] >> rw[]
-        >> fs[] >> rw[] >> metis_tac[REFL_THM]
+        >> fs[] >> rw[] >> metis_tac[relationTheory.reflexive_def]
        )
     >- (fs[SORTED_DEF] >> Cases_on `GROUP_BY R (h'::t)` >> fs[]
      >- (fs[GROUP_BY_def,SPAN_def] >> Cases_on `R h h'` >> fs[]
@@ -859,7 +971,7 @@ val SORTED_GROUP_BY = store_thm
           >- (rw[] >> fs[]
               >> first_x_assum (qspec_then `h''` mp_tac) >> simp[]
               >> rpt strip_tac >> fs[HD] >> rw[] >> rpt strip_tac
-              >- metis_tac[equivalence_def,REFL_THM]
+              >- metis_tac[equivalence_def,relationTheory.reflexive_def]
               >- (rw[]
                   >> `MEM h' h''` by (
                      fs[GROUP_BY_def,SPAN_def]
@@ -867,7 +979,7 @@ val SORTED_GROUP_BY = store_thm
                       >> Cases_on `SPAN (R h) t` >> Cases_on `SPAN (R h') t`
                       >> fs[SPAN_EQ] >> rw[]
                    )
-                  >> metis_tac[equivalence_def,TRANS_THM]
+                  >> metis_tac[equivalence_def,relationTheory.transitive_def]
                  )
               >- (rw[]
                   >> `MEM h' h''` by (
@@ -876,7 +988,8 @@ val SORTED_GROUP_BY = store_thm
                        >> Cases_on `SPAN (R h) t` >> Cases_on `SPAN (R h') t`
                        >> fs[SPAN_EQ] >> rw[]
                    )
-                  >> metis_tac[equivalence_def,TRANS_THM,SYMM_THM]
+                  >> metis_tac[equivalence_def,relationTheory.transitive_def,
+                               relationTheory.symmetric_def]
                  )
              )
           >- (first_x_assum (qspec_then `h''` mp_tac) >> simp[]
@@ -885,7 +998,9 @@ val SORTED_GROUP_BY = store_thm
               >> `SPAN (R h) t = SPAN (R h') t` by metis_tac[SPAN_EQ]
               >> rw[] >> Cases_on `SPAN (R h') t` >> fs[] >> rw[]
               >> Cases_on `y = h` >> Cases_on `y = h'` >> fs[]
-              >> metis_tac[equivalence_def,TRANS_THM,REFL_THM,SYMM_THM]
+              >> metis_tac[equivalence_def,relationTheory.transitive_def,
+                           relationTheory.reflexive_def,
+                           relationTheory.symmetric_def]
              )
           >- (first_x_assum (qspec_then `l_sub` mp_tac) >> simp[])
           >- (first_x_assum (qspec_then `l_sub` mp_tac) >> simp[]
@@ -899,7 +1014,7 @@ val SORTED_GROUP_BY = store_thm
                   >> rw[]
                   >> `SORTED P (h::h'::t)` by (
                        simp[SORTED_EQ] >> rpt strip_tac >> fs[]
-                       >> metis_tac[TRANS_THM]
+                       >> metis_tac[relationTheory.transitive_def]
                   )
                   >> `!k_hd k_tl l.
                        (GROUP_BY R l = k_hd::k_tl) ∧ SORTED P l
@@ -914,7 +1029,7 @@ val SORTED_GROUP_BY = store_thm
                   >> (fs[]
                   >- metis_tac[]
                   >- (fs[MEM_FLAT] >> `~R h x` by metis_tac[]
-                      >> metis_tac[equivalence_def,SYMM_THM]
+                      >> metis_tac[equivalence_def,relationTheory.symmetric_def]
                      ))
                  )
               >- metis_tac[]
@@ -925,12 +1040,14 @@ val SORTED_GROUP_BY = store_thm
             fs[GROUP_BY_def,SPAN_def]
           )
           >- (rpt strip_tac >> rw[]
-              >- (`(x = h) ∧ (y = h)` by fs[] >> metis_tac[equivalence_def,REFL_THM])
+              >- (`(x = h) ∧ (y = h)` by fs[]
+                  >> metis_tac[equivalence_def,relationTheory.reflexive_def]
+                 )
               >- (`x = h` by fs[] >> metis_tac[])
               >- (`x = h` by fs[] >> rw[]
                   >> `SORTED P (h::h'::t)` by (
                      simp[SORTED_EQ] >> rpt strip_tac >> fs[SORTED_EQ]
-                     >> metis_tac[TRANS_THM]
+                     >> metis_tac[relationTheory.transitive_def]
                   )
                   >> `FLAT (GROUP_BY R (h::h'::t)) = h::h'::t`
                       by fs[GROUP_BY_FLAT]
@@ -961,13 +1078,14 @@ val SORTED_GROUP_BY = store_thm
                >> rpt strip_tac >> rw[]
                >> `FLAT (h''::t') = h'::t` by metis_tac[GROUP_BY_FLAT]
                >> `MEM h' h''` by (Cases_on `h''` >> fs[FLAT])
-               >> metis_tac[equivalence_def,SYMM_THM,TRANS_THM]
+               >> metis_tac[equivalence_def,relationTheory.symmetric_def,
+                            relationTheory.transitive_def]
               )
            >- (first_x_assum (qspec_then `h''` mp_tac) >> simp[]
                >> rpt strip_tac >> rw[]
                >> `SORTED P (h::h'::t)` by (
                     simp[SORTED_EQ] >> rpt strip_tac >> fs[SORTED_EQ]
-                    >> metis_tac[TRANS_THM]
+                    >> metis_tac[relationTheory.transitive_def]
                 )
                >> `FLAT (GROUP_BY R (h::h'::t)) = h::h'::t`
                    by fs[GROUP_BY_FLAT]
@@ -991,7 +1109,7 @@ val SORTED_GROUP_BY = store_thm
                    >- (Cases_on `SPAN (R h) (h1::t)` >> fs[]
                        >> fs[SPAN_def] >> Cases_on `R h h1` >> fs[]
                        >> rw[] >> Cases_on `SPAN (R h1) t` >> fs[]
-                       >> metis_tac[equivalence_def,SYMM_THM]
+                       >> metis_tac[equivalence_def,relationTheory.symmetric_def]
                       )
                   )
               )
@@ -1002,7 +1120,7 @@ val SORTED_GROUP_BY = store_thm
                >- (first_x_assum (qspec_then `l_sub` mp_tac) >> simp[]
                    >> rpt strip_tac >> `SORTED P (h::h'::t)` by (
                     simp[SORTED_EQ] >> rpt strip_tac >> fs[SORTED_EQ]
-                    >> metis_tac[TRANS_THM]
+                    >> metis_tac[relationTheory.transitive_def]
                 )
                >> `FLAT (GROUP_BY R (h::h'::t)) = h::h'::t`
                    by fs[GROUP_BY_FLAT]
@@ -1026,7 +1144,7 @@ val SORTED_GROUP_BY = store_thm
                    >- (Cases_on `SPAN (R h) (h1::t)` >> fs[]
                        >> fs[SPAN_def] >> Cases_on `R h h1` >> fs[]
                        >> rw[] >> Cases_on `SPAN (R h1) t` >> fs[]
-                       >> metis_tac[equivalence_def,SYMM_THM]
+                       >> metis_tac[equivalence_def,relationTheory.symmetric_def]
                       )
                   )
                   )
@@ -1040,24 +1158,36 @@ val SORTED_GROUP_BY = store_thm
   );
 
 val ONLY_MINIMAL_def = Define`
-    (ONLY_MINIMAL P [] = [])
-  ∧ (ONLY_MINIMAL P (x::xs) =
-      if EXISTS (λx1. P x1 x) xs
-      then ONLY_MINIMAL P xs
-      else x::(ONLY_MINIMAL P xs)
-    )`;
+  ONLY_MINIMAL P l =
+    FILTER (λa. ~EXISTS (λx. P a x ∧ ~(x = a)) l) l`;
+
+
+  (*   (ONLY_MINIMAL P [] = []) *)
+  (* ∧ (ONLY_MINIMAL P (x::xs) = *)
+  (*     (* if EXISTS (λx1. P x1 x) xs *) *)
+  (*     (* then ONLY_MINIMAL P xs *) *)
+  (*     x::(FILTER (λa. ~P a x) (ONLY_MINIMAL P xs)) *)
+  (*   )`; *)
 
 val ONLY_MINIMAL_SUBSET = store_thm
   ("ONLY_MINIMAL_SUBSET",
    ``!P l. MEM_SUBSET (ONLY_MINIMAL P l) l``,
    gen_tac >> Induct_on `l` >> fs[ONLY_MINIMAL_def,MEM_SUBSET_def]
-   >> rpt strip_tac >> fs[]
-   >> Cases_on `EXISTS (λx1. P x1 h) l` >> fs[ONLY_MINIMAL_def,MEM_SUBSET_def]
-   >- (fs[MEM_SUBSET_SET_TO_LIST] >> fs[INSERT_DEF] >> fs[SUBSET_DEF])
-   >- (`MEM_SUBSET (h::(ONLY_MINIMAL P l)) (h::l)`
-         suffices_by metis_tac[NOT_EXISTS]
-       >> fs[MEM_SUBSET_def, MEM_SUBSET_SET_TO_LIST] >> fs[INSERT_DEF]
-       >> fs[SUBSET_DEF]
+   >> rpt strip_tac >> fs[MEM_SUBSET_SET_TO_LIST]
+   >> Cases_on `EVERY ($~ ∘ (λx. P h x ∧ x ≠ h)) l`
+   >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> fs[MEM_FILTER,EVERY_MEM]
+  );
+
+val ONLY_MINIMAL_MEM = store_thm
+  ("ONLY_MINIMAL_MEM",
+   ``!P l x.
+       (MEM x (ONLY_MINIMAL P l) =
+        (MEM x l ∧ (!y. MEM y l ∧ ~(x = y) ==> ~P x y)))``,
+   simp[EQ_IMP_THM] >> rpt strip_tac
+   >- metis_tac[MEM_SUBSET_SET_TO_LIST,ONLY_MINIMAL_SUBSET,MEM,SUBSET_DEF]
+   >- (fs[ONLY_MINIMAL_def,MEM_FILTER,EVERY_MEM] >> metis_tac[])
+   >- (simp[ONLY_MINIMAL_def,MEM_FILTER,EVERY_MEM] >> rpt strip_tac
+       >> metis_tac[]
       )
   );
 

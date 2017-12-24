@@ -158,7 +158,7 @@ val concrTrans_def = Define `
   concrTrans g prop f =
     IMAGE (λ(i,p,n,e). (transformLabel prop p n,e)) (extractTrans g f)`;
 
-val concr2AbstrAA = Define`
+val concr2AbstrAA_def = Define`
   concr2AbstrAA (concrAA g init prop) =
     ALTER_A
         (concr2Abstr_states g)
