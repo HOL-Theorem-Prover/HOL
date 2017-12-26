@@ -93,6 +93,316 @@ val TRANSFORMLABEL_SUBSET = store_thm
       )
   );
 
+val TRANSFORMLABEL_POS = store_thm
+  ("TRANSFORMLABEL_POS",
+   ``!aP s p x. (s ⊆ POW aP) ==>
+         ((set p) ⊆ aP ∧ (set p ⊆ x) ∧ x ∈ s)
+           = (x ∈ FOLDR (λa sofar. char (POW aP) a ∩ sofar) s p)``,
+   gen_tac >> Induct_on `p` >> fs[IN_POW] >> rpt strip_tac >> fs[]
+   >> fs[char_def,IN_POW,EQ_IMP_THM] >> rpt strip_tac
+   >> metis_tac[SUBSET_DEF,IN_POW]
+  );
+
+val TRANSFORMLABEL_NEG = store_thm
+  ("TRANSFORMLABEL_NEG",
+   ``!aP n x. ((set n) ⊆ aP) ==>
+         (((x ⊆ (aP DIFF set n)) ∧ x ⊆ aP)
+      = (x ∈ FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP) n))``,
+   gen_tac >> Induct_on `n` >> fs[IN_POW] >> rpt strip_tac >> fs[]
+   >> fs[char_neg_def,char_def,IN_POW,EQ_IMP_THM] >> rpt strip_tac
+   >- (fs[DIFF_DEF,SUBSET_DEF] >> metis_tac[])
+   >- (`x ⊆ aP DIFF set n ∧ x ⊆ aP` by fs[DIFF_DEF,SUBSET_DEF]
+       >> fs[char_neg_def,char_def]
+       >> first_x_assum (qspec_then `x` mp_tac) >> simp[IN_POW]
+      )
+   >- (first_x_assum (qspec_then `x` mp_tac) >> simp[]
+       >> rpt strip_tac >> simp[DIFF_DEF,INSERT_DEF,SUBSET_DEF]
+       >> rpt strip_tac
+       >- metis_tac[SUBSET_DEF]
+       >- metis_tac[SUBSET_DEF]
+       >- (fs[SUBSET_DEF,DIFF_DEF] >> metis_tac[])
+      )
+  );
+
+val TRANSFORMLABEL_EMPTY = store_thm
+  ("TRANSFORMLABEL_EMPTY",
+   ``!aP pos neg. (set pos) ⊆ aP ∧ (set neg) ⊆ aP
+  ==>
+  ~((set pos) ∩ (set neg) = {})
+     = (transformLabel aP pos neg = {})``,
+   rpt strip_tac >> simp[EQ_IMP_THM] >> rpt strip_tac
+   >- (simp[transformLabel_def] >> CCONTR_TAC
+       >> `?x. x ∈ (FOLDR (λa sofar. char (POW aP) a ∩ sofar)
+                     (FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar)
+                            (POW aP) neg) pos)`
+           by metis_tac[MEMBER_NOT_EMPTY]
+       >> `(set pos ⊆ aP) ∧ (set pos ⊆ x)
+         ∧ (x ∈ (FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP) neg))`
+          by metis_tac[FOLDR_INTER,TRANSFORMLABEL_POS]
+       >> `x ⊆ aP DIFF set neg` by metis_tac[TRANSFORMLABEL_NEG]
+       >> `set pos ⊆ aP DIFF set neg` by metis_tac[SUBSET_TRANS]
+       >> POP_ASSUM mp_tac >> simp[SUBSET_DEF,DIFF_DEF]
+       >> `?v. v ∈ (set pos ∩ set neg)` by metis_tac[MEMBER_NOT_EMPTY]
+       >> qexists_tac `v` >> fs[]
+      )
+   >- (fs[transformLabel_def]
+       >> `(aP DIFF set neg) ∈
+            (FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP) neg)` by (
+           `(aP DIFF set neg ⊆ aP DIFF set neg) ∧ (aP DIFF set neg) ⊆ aP`
+                 suffices_by metis_tac[TRANSFORMLABEL_NEG]
+           >> simp[DIFF_DEF,SUBSET_DEF]
+        )
+       >> `set pos ⊆ aP DIFF set neg`
+            suffices_by metis_tac[FOLDR_INTER,TRANSFORMLABEL_POS,
+                                  MEMBER_NOT_EMPTY]
+       >> simp[DIFF_DEF,SUBSET_DEF] >> rpt strip_tac
+       >- metis_tac[SUBSET_DEF]
+       >- (`x ∈ (set pos ∩ set neg)` by fs[IN_INTER]
+           >> metis_tac[MEMBER_NOT_EMPTY]
+          )
+      )
+  );
+
+(* val TRANSFORM_LABEL_POS = store_thm *)
+(*   ("TRANSFORM_LABEL_POS", *)
+(*    ``!aP neg a pos. a ∈ aP ==> *)
+(*            (MEM a pos = !m. m ∈ transformLabel aP pos neg ==> a ∈ m) *)
+(*            ∧ (MEM a neg = !m. m ∈ transformLabel aP pos neg ==> ~(a ∈ m))``, *)
+(*    gen_tac >> gen_tac >> gen_tac >> Induct_on `pos` >> fs[] >> rpt strip_tac *)
+(*    >- (fs[transformLabel_def] *)
+(*        >> `!n. {} ∈ FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP) n` *)
+(*           by (Induct_on `n` >> fs[IN_POW,char_neg_def,char_def]) *)
+(*        >> metis_tac[NOT_IN_EMPTY] *)
+(*       ) *)
+(*    >- (fs[transformLabel_def] >> simp[EQ_IMP_THM] >> rpt strip_tac >> fs[] *)
+(*     >- (`m ∈ char_neg (POW aP) a` by metis_tac[SUBSET_DEF,FOLDR_INTER] *)
+(*         >> fs[char_neg_def,char_def] >> metis_tac[] *)
+(*        ) *)
+(*     >- (Induct_on `neg` >> fs[] *)
+(*         >- (qexists_tac `{a}` >> fs[IN_POW]) *)
+(*         >- (rpt strip_tac >> fs[] >> Cases_on `MEM a neg` >> fs[] *)
+(*             >> Cases_on `MEM h neg` >> fs[] *)
+(*             >- (first_x_assum (qspec_then `m` mp_tac) >> simp[] *)
+(*                 >> `m ∈ char_neg (POW aP) h` *)
+(*                      by metis_tac[FOLDR_INTER,SUBSET_DEF] *)
+(*                 >> metis_tac[] *)
+(*                ) *)
+(*             >- (first_x_assum (qspec_then `(a INSERT m) DELETE h` mp_tac) *)
+(*                 >> simp[] *)
+(*                 >> `(a INSERT m) DELETE h ∈ char_neg (POW aP) h` by ( *)
+(*                      simp[char_neg_def,char_def] *)
+(*                      >> `m ⊆ aP` by metis_tac[FOLDR_INTER,IN_POW,SUBSET_DEF] *)
+(*                      >> PURE_REWRITE_TAC[INSERT_DEF,DELETE_DEF] *)
+(*                      >> simp[DIFF_DEF,IN_POW,SUBSET_DEF] >> rpt strip_tac *)
+(*                      >> metis_tac[SUBSET_DEF] *)
+(*                  ) *)
+(*                 >> simp[] *)
+(*                 >> `(a INSERT m) DELETE h ∈ *)
+(*                      FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP) neg` *)
+(*                    by ( *)
+(*                     Induct_on `neg` >> fs[] >> rpt strip_tac *)
+(*                     >- (PURE_REWRITE_TAC[INSERT_DEF,DELETE_DEF] *)
+(*                         >> simp[DIFF_DEF,IN_POW,SUBSET_DEF] >> rpt strip_tac *)
+(*                         >> metis_tac[IN_POW,SUBSET_DEF] *)
+(*                        ) *)
+(*                     >- (fs[] >> PURE_REWRITE_TAC[INSERT_DEF,DELETE_DEF] *)
+(*                         >> simp[DIFF_DEF,IN_POW,SUBSET_DEF] >> rpt strip_tac *)
+(*                         >> simp[char_neg_def,char_def,IN_POW,SUBSET_DEF] *)
+(*                         >> rpt strip_tac *)
+(*                         >- metis_tac[] *)
+(*                         >- (`m ⊆ aP` by metis_tac[FOLDR_INTER,IN_POW,SUBSET_DEF] *)
+(*                             >> metis_tac[SUBSET_DEF] *)
+(*                            ) *)
+(*                         >- (disj2_tac >> fs[char_neg_def,char_def] *)
+(*                             >> metis_tac[]) *)
+(*                        ) *)
+(*                     >> fs[] *)
+(*                  ) *)
+(*                 >> fs[] *)
+(*                ) *)
+(*            ) *)
+(*        ) *)
+(*    >- (Cases_on `a = h` >> fs[] *)
+(*     >- (fs[transformLabel_def,char_def] >> metis_tac[]) *)
+(*     >- (simp[EQ_IMP_THM] >> rpt strip_tac >> fs[] *)
+(*      >- (fs[transformLabel_def,char_def] >> metis_tac[]) *)
+(*      >- (Cases_on `MEM a pos` >> fs[] *)
+(*          >> Cases_on `MEM a neg` >> fs[] *)
+(*          >- (`transformLabel aP (h::pos) neg = {}` by ( *)
+(*                fs[transformLabel_def] *)
+(*                >> PURE_REWRITE_TAC[SET_EQ_SUBSET,SUBSET_DEF] *)
+(*                >> simp[] >> rpt strip_tac >> CCONTR_TAC *)
+(*                >> fs[] >> metis_tac[] *)
+(*             ) *)
+(*             >> fs[transformLabel_def] >> Cases_on `m' ∈ char (POW aP) h` *)
+(*             >- (`m' ∈ {}` by metis_tac[IN_INTER,SET_EQ_SUBSET] >> fs[]) *)
+(*             >- (`m' ∈ char_neg fs[char_def] >> *)
+                  
+
+(*              >- metis_tac[FOLDR_INTER,SUBSET_DEF,IN_POW] *)
+(*              >- *)
+(* ) *)
+(* ) *)
+
+
+
+(*          >> `!b p n. MEM b p ∧ MEM b n ==> transformLabel aP p n = {}` by ( *)
+(*               gen_tac >> Induct_on `p` >> Induct_on `n` *)
+(*               >> fs[transformLabel_def] >> rpt strip_tac >> fs[] *)
+(*               >- (PURE_REWRITE_TAC[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac *)
+(*                   >- (`x ∈ char (POW aP) b ∧ x ∈ char_neg (POW aP) b` by ( *)
+(*                        metis_tac[FOLDR_INTER,SUBSET_DEF,IN_INTER] *)
+(*                    ) *)
+(*                     >> fs[char_def,char_neg_def] *)
+(*                     >> metis_tac[] *)
+(*                      ) *)
+(*                   >- metis_tac[MEMBER_NOT_EMPTY] *)
+(*                  ) *)
+(*               >- (rw[] *)
+(*                   >> `char (POW aP) b ∩ *)
+(*                       (FOLDR (λa sofar. char (POW aP) a ∩ sofar) *)
+(*                        (FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP) n) *)
+(*                        p) = {}` by metis_tac[] *)
+(*                   >>  *)
+
+
+
+(* metis_tac[FOLDR_INTER,SUBSET_EMPTY,INTER_EMPTY,SUBSET_TRANS]) *)
+
+
+(* `char (POW aP) b ∩ char_neg (POW aP) b = {}` suffices_by ( *)
+(*                     metis_tac[FOLDR_INTER,INTER_SUBSET] *)
+(* ) *)
+
+
+(* FOLDR (λa sofar. char (POW aP) a ∩ sofar) *)
+(*                     (char_neg (POW aP) b ∩ *)
+(*                        FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP) n) p` *)
+
+
+(* rw[]) *)
+
+(* ) *)
+
+
+(*          >> `h INSERT m' ∈ transformLabel aP (h::pos) neg` by ( *)
+(*               fs[transformLabel_def] *)
+(* ) *)
+
+
+
+(* `m ∈ transformLabel aP (h::pos) neg` by ( *)
+(*            `MEM_SUBSET pos (h::pos)` by ( *)
+(*                fs[MEM_SUBSET_SET_TO_LIST,SUBSET_DEF] *)
+(*            ) *)
+(*            >> metis_tac[TRANSFORMLABEL_SUBSET,SUBSET_DEF,MEM_SUBSET_REFL] *)
+(*            fs[TRANSFORMLABEL_SUBSET,SUBSET_DEF,MEM] *)
+
+
+(* )) *)
+
+
+(*      >- (`!q n p. (∀m. m ∈ transformLabel aP (q::p) n ⇒ a ∈ m) *)
+(*             ∧ ~(q = a) ==> (∀m. m ∈ transformLabel aP p n ⇒ a ∈ m)` by ( *)
+(*           gen_tac >> Induct_on `n` >> Induct_on `p` >> fs[transformLabel_def] *)
+(*           >> rpt strip_tac *)
+(*           >- (fs[char_def] >> ) *)
+(* ) *)
+(* ) *)
+
+(* ) *)
+
+
+
+
+
+(*  a pos neg. MEM a pos ∧ a ∈ aP *)
+(*         ==> !m. m ∈ transformLabel aP pos neg ==> a ∈ m) *)
+(*   ∧ (!aP a pos neg. ~MEM a pos ∧ a ∈ aP *)
+(*        ==> ?m. m ∈ transformLabel aP ∧  *)
+(* ) *)
+
+(* ``, *)
+(*    gen_tac >> gen_tac >> Induct_on `pos` >> fs[] >> rpt strip_tac *)
+(*    >> fs[transformLabel_def,char_def] >> metis_tac[] *)
+(*   ); *)
+
+(* val TRANSFORM_LABEL_NEG = store_thm *)
+(*   ("TRANSFORM_LABEL_NEG", *)
+(*    ``!aP a pos neg. MEM a neg ∧ a ∈ aP *)
+(*      ==> !m. m ∈ transformLabel aP pos neg ==> ~(a ∈ m)``, *)
+(*     gen_tac >> gen_tac >> Induct_on `neg` >> fs[] >> rpt strip_tac *)
+(*     >> fs[transformLabel_def] *)
+(*     >- (`m ∈ char_neg (POW aP) h` *)
+(*            by metis_tac[FOLDR_INTER,SUBSET_DEF,IN_INTER] *)
+(*         >> fs[char_neg_def,char_def] *)
+(*         >> metis_tac[] *)
+(*        ) *)
+(*     >- (`!l x q p. *)
+(*            x ∈ (FOLDR (λa sofar. char (POW aP) a ∩ sofar) (q ∩ l) p) *)
+(*            ==> x ∈ (FOLDR (λa sofar. char (POW aP) a ∩ sofar) l p)` by ( *)
+(*         Induct_on `p` >> fs[] >> rpt strip_tac >> fs[] *)
+(*         >> metis_tac[] *)
+(*         ) *)
+(*         >> metis_tac[] *)
+(*        ) *)
+(*   ); *)
+
+(* val TRANSFORMLABEL_SUBSET2 = store_thm *)
+(*   ("TRANSFORMLABEL_SUBSET2", *)
+(*   ``!aP pos1 neg1 pos2 neg2. *)
+(*   (!x. (MEM x pos1 \/ MEM x pos2 \/ MEM x neg1 \/ MEM x neg2) *)
+(*        ==> x ∈ aP *)
+(*   ) *)
+(*   ∧ (transformLabel aP pos2 neg2 ⊆ transformLabel aP pos1 neg1) *)
+(*    ==> MEM_SUBSET pos1 pos2 ∧ MEM_SUBSET neg1 neg2``, *)
+(*   rpt strip_tac >> fs[MEM_SUBSET_SET_TO_LIST] >> simp[SUBSET_DEF] *)
+(*   >> rpt strip_tac >> CCONTR_TAC *)
+(*   >- () *)
+
+
+
+(*   gen_tac >> Induct_on `pos2` >> fs[] *)
+(*   >- (Induct_on `pos1` >> fs[MEM_SUBSET_def] *)
+(*    >- (Induct_on `neg2` >> fs[transformLabel_def] *)
+(*     >- (Induct_on `neg1` >> fs[MEM_SUBSET_def] >> rpt strip_tac *)
+(*         >> Cases_on `POW aP ⊆ *)
+(*                        FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) *)
+(*                        (POW aP) neg1` >> fs[] *)
+(*         >> Cases_on `(∃x. (x = h ∨ MEM x neg1) ∧ x ∉ aP)` >> fs[] *)
+(*         >- metis_tac[] *)
+(*         >- metis_tac[] *)
+(*         >- (disj2_tac >> `MEM_SUBSET neg1 []` by metis_tac[] *)
+(*             >> simp[char_neg_def] *)
+(*             >> `neg1 = []` by fs[MEM_SUBSET_SET_TO_LIST] >> rw[] *)
+(*             >> fs[] >> simp[char_def] >> CCONTR_TAC *)
+(*             >> fs[] >> `{h} ∈ POW aP` by fs[IN_POW] *)
+(*             >> `{h} ∈ POW aP DIFF {a | a ∈ POW aP ∧ h ∈ a}` *)
+(*                by metis_tac[SUBSET_DEF] *)
+(*             >> fs[IN_DIFF,IN_POW] *)
+(*            ) *)
+(*         >- (rpt strip_tac >> first_x_assum (qspec_then `h::neg1` mp_tac) *)
+(*             >> simp[] *)
+(*             >> `(∀x. (x = h ∨ MEM x neg1) ∨ MEM x neg2 ⇒ x ∈ aP) *)
+(*                 ∧ FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP) neg2 ⊆ *)
+(*                   char_neg (POW aP) h *)
+(*                 ∧ (FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP) neg2 ⊆ *)
+(*                     FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP) neg1)` *)
+(*              by ( *)
+(*                  rpt strip_tac >> fs[] *)
+(*                  >-  *)
+(* ) *)
+(* ) *)
+(* ) *)
+
+(* ) *)
+(*    >- () *)
+(* ) *)
+
+
+(* ) *)
+
+
 val TRANSFORMLABEL_FOLDR = store_thm
   ("TRANSFORMLABEL_FOLDR",
    ``!aP l x.

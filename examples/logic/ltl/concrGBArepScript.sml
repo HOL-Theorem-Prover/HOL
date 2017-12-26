@@ -786,6 +786,10 @@ val GBA_TRANS_LEMM = store_thm
    )
   );
 
+val trns_is_empty_def = Define`
+  trns_is_empty cE = EXISTS (λp. MEM p cE.neg) cE.pos`;
+
+
 val tlg_concr_def = Define`
   tlg_concr (t1,acc_t1) (t2,acc_t2) =
     ((MEM_SUBSET t1.pos t2.pos)
@@ -796,10 +800,15 @@ val tlg_concr_def = Define`
 val acc_cond_concr_def = Define`
   acc_cond_concr cE f f_trans =
      (~(MEM f cE.sucs)
-   \/ (EXISTS (λcE1. MEM_SUBSET cE1.pos cE.pos
-                   ∧ MEM_SUBSET cE1.neg cE.neg
-                   ∧ MEM_SUBSET cE1.sucs cE.sucs
-                   ∧ ~(MEM f cE1.sucs)) f_trans))`;
+   \/ (if EXISTS (λp. MEM p cE.neg) cE.pos
+       then (EXISTS (λcE1.
+                     MEM_SUBSET cE1.sucs cE.sucs
+                     ∧ ~(MEM f cE1.sucs)) f_trans)
+       else (EXISTS (λcE1.
+                         MEM_SUBSET cE1.pos cE.pos
+                         ∧ MEM_SUBSET cE1.neg cE.neg
+                         ∧ MEM_SUBSET cE1.sucs cE.sucs
+                         ∧ ~(MEM f cE1.sucs)) f_trans)))`;
 
 val concr_extrTrans_def = Define`
   concr_extrTrans g_AA aa_id =

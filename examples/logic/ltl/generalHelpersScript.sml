@@ -744,7 +744,7 @@ val CAT_OPTIONS_EL = store_thm
   ("CAT_OPTIONS_EL",
    ``!l. EVERY IS_SOME l
           ==> !i. (i < LENGTH l)
-          ==> SOME (EL i (CAT_OPTIONS l)) = EL i l``,
+          ==> (SOME (EL i (CAT_OPTIONS l)) = EL i l)``,
    Induct_on `l` >> fs[CAT_OPTIONS_def] >> rpt strip_tac
    >> Cases_on `h` >> fs[IS_SOME_DEF,CAT_OPTIONS_def]
    >> Cases_on `i` >> fs[EL]

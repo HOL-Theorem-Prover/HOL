@@ -1,6 +1,6 @@
 open HolKernel Parse bossLib boolLib pairTheory relationTheory set_relationTheory pred_setTheory arithmeticTheory whileTheory
 
-open alterATheory relationTheoryHelperTheory ltlTheory ltl2waaTheory
+open alterATheory ltlTheory ltl2waaTheory
 
 val _ = new_theory "waaSimpl"
 
@@ -328,6 +328,51 @@ val REACHREL_LEMM = store_thm
                       >> `(x',x) ∈ TSF` by metis_tac[TRANS_REACHES_SUBFORMS]
                       >> metis_tac[TSF_def,TSF_TRANS_LEMM,transitive_def,IN_DEF]
        )
+  );
+
+val REDUCE_STATE_IS_VALID = store_thm
+  ("REDUCE_STATE_IS_VALID",
+   ``!aut. isValidAlterA aut ==> isValidAlterA (removeStatesSimpl aut)``,
+   rpt strip_tac >> simp[isValidAlterA_def] >> rpt strip_tac
+   >> fs[isValidAlterA_def,removeStatesSimpl_def]
+   >- (Cases_on `aut` >> simp[removeStatesSimpl_def] >> fs[]
+       >> `!init a. init ⊆ reachRelFromSet a init` by (
+            rpt strip_tac >> simp[reachRelFromSet_def,reachRel_def]
+            >> simp[SUBSET_DEF] >> rpt strip_tac
+            >> qexists_tac `x` >> fs[]
+        )
+       >> simp[SUBSET_DEF,IN_POW] >> rpt strip_tac
+       >- metis_tac[SUBSET_DEF,IN_POW]
+       >- (simp[reachRelFromSet_def,reachRel_def] >> qexists_tac `x'`
+           >> simp[RTC_SUBSET] >> metis_tac[]
+          )
+      )
+   >- (Cases_on `aut` >> simp[removeStatesSimpl_def] >> fs[]
+       >> simp[SUBSET_DEF,IN_INTER] >> rpt strip_tac
+       >> metis_tac[SUBSET_DEF]
+      )
+   >- (Cases_on `aut` >> fs[removeStatesSimpl_def]
+       >> Cases_on `s ∈ f
+          ∧ s ∈ reachRelFromSet (ALTER_A f f0 f1 f2 f3) (BIGUNION f0)`
+       >- (fs[] >> `d ⊆ f` by metis_tac[] >> fs[]
+           >> fs[reachRelFromSet_def] >> simp[SUBSET_DEF] >> rpt strip_tac
+           >> fs[] >> qexists_tac `x` >> simp[reachRel_def] >> conj_tac
+           >- (`oneStep (ALTER_A f f0 f1 f2 f3) s x'` by (
+                 simp[oneStep_def] >> metis_tac[]
+               )
+               >> metis_tac[RTC_TRANSITIVE,relationTheory.transitive_def,
+                            RTC_SUBSET,reachRel_def]
+              )
+           >- metis_tac[]
+          )
+       >- (fs[] >> metis_tac[MEMBER_NOT_EMPTY])
+      )
+   >- (Cases_on `aut` >> fs[removeStatesSimpl_def]
+       >> Cases_on `s ∈ f
+           ∧ s ∈ reachRelFromSet (ALTER_A f f0 f1 f2 f3) (BIGUNION f0)`
+       >- (fs[] >> metis_tac[])
+       >- (fs[] >> metis_tac[MEMBER_NOT_EMPTY])
+      )
   );
 
 val REDUCE_STATE_CORRECT = store_thm
