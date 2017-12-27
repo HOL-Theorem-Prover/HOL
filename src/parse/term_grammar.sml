@@ -1719,4 +1719,22 @@ fun debugprint G tm =
         end
   end
 
+(** quick-and-dirty removal of all "non-trivial" overloadings **)
+
+(* add overloading of constant and its name *)
+fun grm_self_ovl (tm : term, tmG : grammar) =      
+  let val (str, ty) = Term.dest_const tm ;
+  in fupdate_overload_info (Overload.add_overloading (str, tm)) tmG end ;
+
+(* add in overloading of all constants with their names *)
+fun self_ovl_all_consts (tmG : grammar) = 
+  List.foldr grm_self_ovl tmG (Term.all_consts ()) ;
+
+(* clear all overloading info in a term grammar *)
+fun clear_all_overloads (tmG : grammar) =
+  fupdate_overload_info (fn _ => Overload.null_oinfo) tmG ;
+
+fun clear_overloads (tmG : grammar) =
+  self_ovl_all_consts (clear_all_overloads tmG) ;
+
 end; (* struct *)
