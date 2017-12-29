@@ -729,7 +729,8 @@ fun pp_term (G : grammar) TyG backend = let
         Simple tm => let
         in
           if (is_pair tm orelse is_var tm) then
-            pr_t tm Top Top Top (decdepth depth)
+            record_bvars (free_vars tm)
+                         (pr_t tm Top Top Top (decdepth depth))
           else
             raise PP_ERR "pr_vstruct"
               "Can only handle pairs and vars as vstructs"
@@ -798,8 +799,9 @@ fun pp_term (G : grammar) TyG backend = let
       | CONST x => tm nmight_print str
 
 
-    fun pr_res_vstructl restrictor res_op vsl = let
-      val simples = map (Simple o bv2term) vsl
+    fun pr_res_vstructl restrictor res_op vsl body = let
+      val bvts = map bv2term vsl
+      val simples = map Simple bvts
       val add_final_parens = restrictor might_print endbinding
     in
       block CONSISTENT 2
@@ -808,31 +810,46 @@ fun pp_term (G : grammar) TyG backend = let
          add_string res_op >>
          pbegin add_final_parens >>
          pr_term restrictor Top Top Top (decdepth depth) >>
-         pend add_final_parens)
+         pend add_final_parens) >>
+      add_string endbinding >> add_break (1,0) >>
+      record_bvars (free_varsl bvts)
+                   (block CONSISTENT 0
+                          (pr_term body Top Top Top (decdepth depth)))
     end
     fun can_print_vstructl vsl = let
-      fun recurse acc [] = SOME acc
-        | recurse acc ((Simple _)::_) = NONE
-        | recurse acc (Restricted{Restrictor = t,...}::xs) = let
+      fun recurse acc _ [] = SOME acc
+        | recurse acc _ ((Simple _)::_) = NONE
+        | recurse acc bvs (Restricted{Restrictor = t,Bvar}::xs) = let
           in
-            if aconv t acc then recurse acc xs else NONE
+            if aconv t acc andalso List.all (fn v => not (free_in v t)) bvs then
+              recurse acc (Bvar::bvs) xs
+            else NONE
           end
     in
       case vsl of
         [] => raise PP_ERR "can_print_vstructl" "Empty list!"
       | (Simple _::xs) => NONE
-      | (Restricted{Restrictor = t,...}::xs) => recurse t xs
+      | (Restricted{Restrictor = t,Bvar}::xs) => recurse t [Bvar] xs
     end
 
     (* the pr_vstructl function figures out which way to print a given
        list of vstructs *)
-    fun pr_vstructl vsl =
+    fun pr_vstructl vsl b =
       case can_print_vstructl vsl of
-        SOME r => pr_res_vstructl r res_quanop vsl
-      | _ => let
+        SOME r => pr_res_vstructl r res_quanop vsl b
+      | _ =>
+        let
+          fun recurse [] = raise Fail "pr_vstructl.recurse: Empty List!"
+            | recurse [bv] =
+                pr_vstruct bv >> add_string endbinding >> add_break (1,0) >>
+                record_bvars (free_vars (bv2term bv))
+                  (block CONSISTENT 0
+                    (pr_term b Top Top Top (decdepth depth)))
+            | recurse (bv::rest) =
+                pr_vstruct bv >> add_break (1,0) >>
+                record_bvars (free_vars (bv2term bv)) (recurse rest)
         in
-          block INCONSISTENT 2
-                (pr_list pr_vstruct (add_break(1,0)) vsl)
+          block INCONSISTENT 2 (recurse vsl)
         end
 
     fun pr_abs tm = let
@@ -850,12 +867,7 @@ fun pp_term (G : grammar) TyG backend = let
                   | h::_ => h
     in
       pbegin addparens >>
-      block CONSISTENT 2
-            (add_string tok >>
-             record_bvars bvars_seen_here
-               (pr_vstructl bvars >>
-                add_string endbinding >> add_break (1,0) >>
-                pr_term body Top Top Top (decdepth depth))) >>
+      block CONSISTENT 2 (add_string tok >> pr_vstructl bvars body) >>
       pend addparens
     end
 
@@ -1386,12 +1398,7 @@ fun pp_term (G : grammar) TyG backend = let
           ptype_block
             (pbegin (addparens orelse comb_show_type) >>
              block INCONSISTENT 2
-               (print_tok >>
-                record_bvars bvars_seen_here
-                  (pr_vstructl bvs >>
-                   add_string endbinding >> spacep true >>
-                   block CONSISTENT 0
-                     (pr_term body Top Top Top (decdepth depth)))) >>
+               (print_tok >> pr_vstructl bvs body) >>
              pend (addparens orelse comb_show_type))
         end
       | CLOSEFIX lst => let

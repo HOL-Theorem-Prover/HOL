@@ -406,7 +406,8 @@ fun tpp (s,expected) = let
   val res = ppstring pp_term t
 in
   if res = expected then OK()
-  else die ("FAILED\n  Expected >" ^ expected ^ "<; got "^res)
+  else die ("\nFAILED\n" ^
+            testutils.clear ("  Expected >" ^ expected ^ "<; got >"^res^"<"))
 end
 
 fun bound s = "\^[[0;32m" ^ s ^ "\^[[0m"
