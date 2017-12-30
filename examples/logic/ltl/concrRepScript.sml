@@ -163,6 +163,91 @@ val TRANSFORMLABEL_EMPTY = store_thm
       )
   );
 
+val TRANSFORMLABEL_SUBSET2 = store_thm
+  ("TRANSFORMLABEL_SUBSET2",
+  ``!aP pos1 neg1 pos2 neg2.
+  (!x. (MEM x pos1 \/ MEM x pos2 \/ MEM x neg1 \/ MEM x neg2)
+       ==> x ∈ aP
+  )
+  ∧ ~(transformLabel aP pos2 neg2 = {})
+  ∧ (transformLabel aP pos2 neg2 ⊆ transformLabel aP pos1 neg1)
+   ==> MEM_SUBSET pos1 pos2 ∧ MEM_SUBSET neg1 neg2``,
+  rpt strip_tac >> CCONTR_TAC
+  >> `set pos2 ⊆ aP ∧ set neg2 ⊆ aP`
+      by (fs[SUBSET_DEF] >> rpt strip_tac >> metis_tac[MEM])
+  >> `?a. a ∈ transformLabel aP pos2 neg2` by metis_tac[MEMBER_NOT_EMPTY]
+  >> `a ∈ transformLabel aP pos1 neg1` by fs[SUBSET_DEF]
+  >> `set pos2 ∩ set neg2 = {}` by metis_tac[TRANSFORMLABEL_EMPTY]
+  >> fs[transformLabel_def]
+   >- (`?x. MEM x pos1 ∧ ~MEM x pos2` by (
+         fs[MEM_SUBSET_SET_TO_LIST,SUBSET_DEF] >> metis_tac[]
+       )
+       >> `a DELETE x ∈
+            FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP) neg2` by (
+          `(a DELETE x) ⊆ aP DIFF set neg2 ∧ (a DELETE x) ⊆ aP`
+            suffices_by metis_tac[TRANSFORMLABEL_NEG]
+          >> `a ⊆ aP DIFF set neg2`
+               by metis_tac[TRANSFORMLABEL_NEG,TRANSFORMLABEL_POS,FOLDR_INTER]
+          >> fs[DELETE_DEF,DIFF_DEF,SUBSET_DEF] >> rpt strip_tac
+       )
+       >> `a DELETE x ∈
+          FOLDR (λa sofar. char (POW aP) a ∩ sofar)
+            (FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP) neg2)
+            pos2` by (
+         `set pos2 ⊆ aP ∧ set pos2 ⊆ (a DELETE x)`
+           suffices_by metis_tac[TRANSFORMLABEL_POS,FOLDR_INTER]
+         >> `set pos2 ⊆ a` by metis_tac[TRANSFORMLABEL_POS,FOLDR_INTER]
+         >> fs[DELETE_DEF,SUBSET_DEF]
+       )
+       >> `~(a DELETE x ∈
+              FOLDR (λa sofar. char (POW aP) a ∩ sofar)
+                (FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP) neg1)
+                pos1)` by (
+           `~(set pos1 ⊆ a DELETE x)`
+              suffices_by metis_tac[TRANSFORMLABEL_POS,FOLDR_INTER]
+           >> simp[DELETE_DEF,SUBSET_DEF] >> metis_tac[MEM]
+       )
+       >> metis_tac[SUBSET_DEF]
+      )
+   >- (`?x. MEM x neg1 ∧ ~MEM x neg2` by (
+          fs[MEM_SUBSET_SET_TO_LIST,SUBSET_DEF] >> metis_tac[]
+       )
+       >> `x INSERT a ∈
+            FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP) neg2` by (
+          `(x INSERT a) ⊆ aP DIFF set neg2 ∧ (x INSERT a) ⊆ aP`
+            suffices_by metis_tac[TRANSFORMLABEL_NEG]
+          >> `a ⊆ aP DIFF set neg2`
+               by metis_tac[TRANSFORMLABEL_NEG,TRANSFORMLABEL_POS,FOLDR_INTER]
+          >> fs[INSERT_DEF,DIFF_DEF,SUBSET_DEF] >> rpt strip_tac
+       )
+       >> `x INSERT a ∈
+          FOLDR (λa sofar. char (POW aP) a ∩ sofar)
+            (FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP) neg2)
+            pos2` by (
+         `set pos2 ⊆ aP ∧ set pos2 ⊆ (x INSERT a)`
+           suffices_by metis_tac[TRANSFORMLABEL_POS,FOLDR_INTER]
+         >> `set pos2 ⊆ a` by metis_tac[TRANSFORMLABEL_POS,FOLDR_INTER]
+         >> fs[INSERT_DEF,SUBSET_DEF]
+       )
+       >> `~(x INSERT a ∈
+              FOLDR (λa sofar. char (POW aP) a ∩ sofar)
+                (FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP) neg1)
+                pos1)` by (
+            CCONTR_TAC >> fs[]
+            >> `x INSERT a ∈
+                 (FOLDR (λa sofar. char_neg (POW aP) a ∩ sofar) (POW aP) neg1)`
+                by metis_tac[TRANSFORMLABEL_POS,FOLDR_INTER]
+            >> `set neg1 ⊆ aP` by (fs[SUBSET_DEF] >> metis_tac[MEM])
+            >> `(x INSERT a ⊆ (aP DIFF set neg1))`
+              by metis_tac[TRANSFORMLABEL_NEG,FOLDR_INTER]
+           >> fs[INSERT_DEF,SUBSET_DEF,DIFF_DEF]
+       )
+       >> metis_tac[SUBSET_DEF]
+      )
+  );
+
+
+
 (* val TRANSFORM_LABEL_POS = store_thm *)
 (*   ("TRANSFORM_LABEL_POS", *)
 (*    ``!aP neg a pos. a ∈ aP ==> *)
@@ -348,17 +433,6 @@ val TRANSFORMLABEL_EMPTY = store_thm
 (*        ) *)
 (*   ); *)
 
-(* val TRANSFORMLABEL_SUBSET2 = store_thm *)
-(*   ("TRANSFORMLABEL_SUBSET2", *)
-(*   ``!aP pos1 neg1 pos2 neg2. *)
-(*   (!x. (MEM x pos1 \/ MEM x pos2 \/ MEM x neg1 \/ MEM x neg2) *)
-(*        ==> x ∈ aP *)
-(*   ) *)
-(*   ∧ (transformLabel aP pos2 neg2 ⊆ transformLabel aP pos1 neg1) *)
-(*    ==> MEM_SUBSET pos1 pos2 ∧ MEM_SUBSET neg1 neg2``, *)
-(*   rpt strip_tac >> fs[MEM_SUBSET_SET_TO_LIST] >> simp[SUBSET_DEF] *)
-(*   >> rpt strip_tac >> CCONTR_TAC *)
-(*   >- () *)
 
 
 

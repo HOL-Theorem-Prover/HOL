@@ -5,6 +5,15 @@ open sptreeTheory ltlTheory generalHelpersTheory concrGBArepTheory concrRepTheor
 val _ = monadsyntax.temp_add_monadsyntax();
 val _ = overload_on("monad_bind",``OPTION_BIND``);
 
+val get_acc_set_def = Define`
+  get_acc_set acc ce =
+    CAT_OPTIONS (MAP (λ(f,f_trans).
+                   if acc_cond_concr ce f f_trans
+                   then SOME f
+                   else NONE
+                 ) acc
+            )`;
+
 val CONCR_ACC_SETS = store_thm
   ("CONCR_ACC_SETS",
    ``!h g_AA init acc aP.
@@ -14,30 +23,23 @@ val CONCR_ACC_SETS = store_thm
      ∧ (!f f_trns. MEM (f,f_trns) acc ==>
          ?id nL. (findNode (λ(i,l). l.frml = f) g_AA = SOME (id,nL))
                ∧ (SOME f_trns = concr_extrTrans g_AA id)
+               ∧ (!ce. MEM ce f_trns ==>
+                       (set ce.pos ⊆ set aP ∧ set ce.neg ⊆ set aP)
+                 )
        )
      ∧ (!f. (is_until f ∧ MEM f (graphStates g_AA))
             ==> ?f_trns. MEM (f,f_trns) acc)
      ∧ wfg g_AA ∧ flws_sorted g_AA ∧ unique_node_formula g_AA
      ==>
      !ce u.
-     let W_FINAL =
-           λcE.
-            (cE,
-             CAT_OPTIONS
-                 (MAP
-                      (λ(f,f_trans).
-                        if acc_cond_concr cE f f_trans then SOME f
-                        else NONE) acc))
-     in let aE = concr2AbstractEdge (set aP) ce
-     in !qs.
-         (aE ∈ d_conj_set {(q,abstrAA.trans q) | MEM q qs} (POW (set aP)))
-         ∧ (!q. MEM q qs ==> MEM q (graphStates g_AA))
-         ∧ (is_until u ∧ MEM u (graphStates g_AA))
+     let aE = concr2AbstractEdge (set aP) ce
+     in (is_until u ∧ MEM u (graphStates g_AA))
          ∧ MEM_SUBSET ce.pos aP ∧ MEM_SUBSET ce.neg aP
+         ∧ MEM_SUBSET ce.sucs (graphStates g_AA)
          ==>
-         (!qs. qs ∈ POW abstrAA.states
-           ==> (MEM u ((SND o W_FINAL) ce) =
-                ((qs,FST aE,SND aE) ∈ acc_cond abstrAA u)))``,
+         (!qs2. qs2 ∈ POW abstrAA.states
+           ==> (MEM u (get_acc_set acc ce) =
+                ((qs2,FST aE,SND aE) ∈ acc_cond abstrAA u)))``,
    fs[] >> rpt strip_tac >> simp[EQ_IMP_THM] >> rpt strip_tac
    >> fs[CAT_OPTIONS_MEM,MEM_MAP]
    >> qabbrev_tac `aa_red = removeStatesSimpl (ltl2waa h)`
@@ -49,40 +51,55 @@ val CONCR_ACC_SETS = store_thm
    >- (
     simp[acc_cond_def] >> qexists_tac `FST (concr2AbstractEdge (set aP) ce)`
     >> qexists_tac `SND (concr2AbstractEdge (set aP) ce)` >> fs[]
-    >> `!q. MEM q qs ==> q ∈ aa_red.states` by (
-        rpt strip_tac >> fs[concr2AbstrAA_def,ALTER_A_component_equality]
-        >> fs[concr2Abstr_states_def]
-        >> `q ∈ {x.frml |
-                 ∃n. (SOME x = lookup n g_AA.nodeInfo)
-                  ∧ n ∈ domain g_AA.nodeInfo}` suffices_by metis_tac[]
-        >> simp[] >> `MEM q (graphStates g_AA)` by fs[]
-        >> POP_ASSUM mp_tac >> PURE_REWRITE_TAC[graphStates_def]
-        >> rpt strip_tac >> fs[MEM_MAP] >> qexists_tac `SND y'`
-        >> fs[] >> Cases_on `y'` >> metis_tac[MEM_toAList,domain_lookup,SND]
-    )
+    (* >> `!q. MEM q qs ==> q ∈ aa_red.states` by ( *)
+    (*     rpt strip_tac >> fs[concr2AbstrAA_def,ALTER_A_component_equality] *)
+    (*     >> fs[concr2Abstr_states_def] *)
+    (*     >> `q ∈ {x.frml | *)
+    (*              ∃n. (SOME x = lookup n g_AA.nodeInfo) *)
+    (*               ∧ n ∈ domain g_AA.nodeInfo}` suffices_by metis_tac[] *)
+    (*     >> simp[] >> `MEM q (graphStates g_AA)` by fs[] *)
+    (*     >> POP_ASSUM mp_tac >> PURE_REWRITE_TAC[graphStates_def] *)
+    (*     >> rpt strip_tac >> fs[MEM_MAP] >> qexists_tac `SND y` *)
+    (*     >> fs[] >> Cases_on `y` >> metis_tac[MEM_toAList,domain_lookup,SND] *)
+    (* ) *)
     >> rpt strip_tac
     >- (simp[IN_POW,SUBSET_DEF] >> rpt strip_tac >> fs[]
-        >> `concr2AbstractEdge (set aP) ce ∈
-              d_gen (aa_red) (set qs)`
-             by simp[d_gen_def]
-        >> `∃q' a' e'. q' ∈ set qs
-              ∧ (a',e') ∈ (aa_red).trans q'
-              ∧ x ∈ e'` by (
-           Cases_on `concr2AbstractEdge (set aP) ce` >> fs[]
-           >> metis_tac[D_GEN_A_E_LEMM3,FINITE_LIST_TO_SET])
-        >> fs[isValidAlterA_def]
-        >> `q' ∈ aa_red.states` by metis_tac[]
-        >> metis_tac[IN_POW,SUBSET_DEF]
-       )
-    >- (simp[IN_POW,SUBSET_DEF] >> rpt strip_tac >> fs[]
-        >> `concr2AbstractEdge (set aP) ce ∈
-              d_gen (aa_red) (set qs)`
-            by simp[d_gen_def]
-        >> Cases_on `concr2AbstractEdge (set aP) ce` >> fs[]
         >> Cases_on `ce` >> fs[concr2AbstractEdge_def]
-        >> metis_tac[TRANSFORMLABEL_AP,SUBSET_DEF,IN_POW]
+        >> fs[concr2AbstrAA_def,ALTER_A_component_equality]
+        >> fs[concr2Abstr_states_def,graphStates_def]
+        >> `MEM x (MAP ((λl. l.frml) ∘ SND) (toAList g_AA.nodeInfo))`
+           by metis_tac[MEM_SUBSET_SET_TO_LIST,SUBSET_DEF]
+        >> `x ∈ {x.frml |
+                   ∃n. (SOME x = lookup n g_AA.nodeInfo)
+                    ∧ (n ∈ domain g_AA.nodeInfo)}` suffices_by metis_tac[]
+        >> fs[MEM_MAP] >> qexists_tac `(SND y')` >> fs[]
+        >> Cases_on `y'` >> fs[]
+        >> metis_tac[MEM_toAList,domain_lookup]
+        (* >> `concr2AbstractEdge (set aP) ce ∈ *)
+        (*       d_gen (aa_red) (set qs)` *)
+        (*      by simp[d_gen_def] *)
+        (* >> `∃q' a' e'. q' ∈ set qs *)
+        (*       ∧ (a',e') ∈ (aa_red).trans q' *)
+        (*       ∧ x ∈ e'` by ( *)
+        (*    Cases_on `concr2AbstractEdge (set aP) ce` >> fs[] *)
+        (*    >> metis_tac[D_GEN_A_E_LEMM3,FINITE_LIST_TO_SET]) *)
+        (* >> fs[isValidAlterA_def] *)
+        (* >> `q' ∈ aa_red.states` by metis_tac[] *)
+        (* >> metis_tac[IN_POW,SUBSET_DEF] *)
        )
-    >- (Cases_on `u ∈ SND (concr2AbstractEdge (set aP) ce)` >> fs[]
+    >- (simp[IN_POW,SUBSET_DEF] >> rpt strip_tac
+        >> Cases_on `ce` >> fs[concr2AbstractEdge_def]
+        >> metis_tac[TRANSFORMLABEL_AP,IN_POW,SUBSET_DEF]
+       (* simp[IN_POW,SUBSET_DEF] >> rpt strip_tac >> fs[] *)
+(*         >> `concr2AbstractEdge (set aP) ce ∈ *)
+(*               d_gen (aa_red) (set qs)` *)
+(*             by simp[d_gen_def] *)
+(*         >> Cases_on `concr2AbstractEdge (set aP) ce` >> fs[] *)
+(*         >> Cases_on `ce` >> fs[concr2AbstractEdge_def] *)
+(*         >> metis_tac[TRANSFORMLABEL_AP,SUBSET_DEF,IN_POW] *)
+       )
+    >- (Cases_on `u ∈ SND (concr2AbstractEdge (set aP) ce)`
+        >> fs[get_acc_set_def,CAT_OPTIONS_MEM,MEM_MAP]
         >> Cases_on `y` >> fs[] >> rw[]
         >> rename[`MEM (f,f_trns) acc`] >> fs[acc_cond_concr_def]
         >- (Cases_on `ce` >> fs[concr2AbstractEdge_def])
@@ -112,7 +129,7 @@ val CONCR_ACC_SETS = store_thm
                  >> metis_tac[FIND_LEMM2,MEM_toAList,SOME_11]
              )
             >> rw[]
-            >- (fs[EXISTS_MEM]
+            >- (fs[EXISTS_MEM,trns_is_empty_def]
                 >> `concr2AbstractEdge (set aP) cE1 ∈
                     concrTrans g_AA (set aP) n.frml` by (
                      metis_tac[MEM_MAP]
@@ -134,7 +151,8 @@ val CONCR_ACC_SETS = store_thm
                 >- (Cases_on `ce` >> fs[concr2AbstractEdge_def]
                     >> metis_tac[MEM_SUBSET_SET_TO_LIST])
                )
-         >- (`EXISTS
+         >- (fs[trns_is_empty_def]
+             >> `EXISTS
                (λcE1.
                     MEM_SUBSET cE1.pos ce.pos ∧ MEM_SUBSET cE1.neg ce.neg ∧
                     MEM_SUBSET cE1.sucs ce.sucs ∧ ¬MEM n.frml cE1.sucs) cT`
@@ -154,7 +172,8 @@ val CONCR_ACC_SETS = store_thm
            )
        )
    )
-   >- (`?u_trns. MEM (u,u_trns) acc` by metis_tac[]
+   >- (simp[get_acc_set_def,CAT_OPTIONS_MEM,MEM_MAP]
+       >> `?u_trns. MEM (u,u_trns) acc` by metis_tac[]
        >> qexists_tac `(u,u_trns)` >> fs[] >> simp[acc_cond_concr_def]
        >> fs[acc_cond_def]
        >- (disj1_tac >> Cases_on `ce` >> fs[concr2AbstractEdge_def])
@@ -189,20 +208,91 @@ val CONCR_ACC_SETS = store_thm
                 by metis_tac[]
            >> POP_ASSUM mp_tac >> simp[MEM_MAP] >> rpt strip_tac
            >> fs[EXISTS_MEM]
+           (* >> `∀ce. MEM ce cT ⇒ set ce.pos ⊆ set aP ∧ set ce.neg ⊆ set aP` *)
+           (*       by metis_tac[] *)
+           >> `set y.pos ⊆ set aP ∧ set y.neg ⊆ set aP` by metis_tac[]
            >> qexists_tac `y` >> fs[] >> Cases_on `ce` >> Cases_on `y`
            >> fs[concr2AbstractEdge_def, MEM_SUBSET_SET_TO_LIST]
            >> `a ⊆ α` by rw[]
-           >> 
+           >> `~(a = {})` by (
+                fs[trns_is_empty_def,EVERY_MEM]
+                >> `set l ∩ set l0 = {}` by (
+                    PURE_REWRITE_TAC[SET_EQ_SUBSET,SUBSET_DEF,IN_INTER]
+                    >> rpt strip_tac >> metis_tac[MEMBER_NOT_EMPTY]
+                )
+                >> metis_tac[TRANSFORMLABEL_EMPTY]
+            )
+           >> `MEM_SUBSET l' l ∧ MEM_SUBSET l0' l0` suffices_by metis_tac[MEM_SUBSET_SET_TO_LIST]
+           >> rw[]
+           >> `∀x. MEM x l ∨ MEM x l' ∨ MEM x l0 ∨ MEM x l0'
+                ⇒ x ∈ set aP` suffices_by  metis_tac[TRANSFORMLABEL_SUBSET2]
+           >> rpt strip_tac >> metis_tac[SUBSET_DEF,MEM]
+          )
+      )
+  );
 
- >> Cases_on `a` >> Cases_on
+val TLG_CONCR_LEMM = store_thm
+  ("TLG_CONCR_LEMM",
+   ``!h g_AA init aP acc qs ce1 ce2.
+  let abstrAA = concr2AbstrAA (concrAA g_AA init aP)
+  in
+     (abstrAA = removeStatesSimpl (ltl2waa h))
+     ∧ (!f f_trns. MEM (f,f_trns) acc ==>
+         ?id nL. (findNode (λ(i,l). l.frml = f) g_AA = SOME (id,nL))
+               ∧ (SOME f_trns = concr_extrTrans g_AA id)
+               ∧ (!ce. MEM ce f_trns ==>
+                       (set ce.pos ⊆ set aP ∧ set ce.neg ⊆ set aP)
+                 )
+       )
+     ∧ (!f. (is_until f ∧ MEM f (graphStates g_AA))
+            ==> ?f_trns. MEM (f,f_trns) acc)
+     ∧ wfg g_AA ∧ flws_sorted g_AA ∧ unique_node_formula g_AA
+     ==>
+     !ce u.
+     let aE = concr2AbstractEdge (set aP) ce
+     in (is_until u ∧ MEM u (graphStates g_AA))
+         ∧ MEM_SUBSET ce.pos aP ∧ MEM_SUBSET ce.neg aP
+         ∧ MEM_SUBSET ce.sucs (graphStates g_AA)
+         ==>
+       (let (e1_lab,e1_sucs) = concr2AbstractEdge (set aP) ce1
+       in let (e2_lab,e2_sucs) = concr2AbstractEdge (set aP) ce2
+       in (((e1_lab,e1_sucs),e2_lab,e2_sucs) ∈
+          tr_less_general { acc_cond abstrAA f | MEM f (MAP FST acc) } qs) =
+             (tlg_concr (ce1,get_acc_set acc ce1) (ce2,get_acc_set acc ce2)))``,
+   rpt strip_tac >> fs[] >> Cases_on `concr2AbstractEdge (set aP) ce1`
+   >> Cases_on `concr2AbstractEdge (set aP) ce2` >> fs[]
+   >> rename[`_ _ ce2 = (e2_lab,e2_sucs)`]
+   >> rename[`((e1_lab,e1_sucs),e2_lab,e2_sucs) ∈ _`] >> fs[]
+   >> simp[EQ_IMP_THM] >> rpt strip_tac >> fs[tlg_concr_def,tr_less_general_def]
+   >- (`MEM_SUBSET ce1.sucs ce2.sucs` by (
+        Cases_on `ce1` >> Cases_on `ce2`
+        >> fs[concr2AbstractEdge_def] >> metis_tac[MEM_SUBSET_SET_TO_LIST]
+      )
+      >> fs[]
+      >> `MEM_SUBSET (get_acc_set acc ce2) (get_acc_set acc ce1)` by (
+         simp[MEM_SUBSET_SET_TO_LIST,SUBSET_DEF] >> rpt strip_tac
+         >> `({},FST (concr2AbstractEdge (set aP) ce2),
+                 SND (concr2AbstractEdge (set aP) ce2)) ∈
+               acc_cond (removeStatesSimpl (ltl2waa h)) u` by (
+             `!s. {} ∈ POW s` by metis_tac[IN_POW,EMPTY_SUBSET]
+             >> qabbrev_tac `abstrAA = removeStatesSimpl (ltl2waa h)`
+             >> rw[] >> IMP_RES_TAC CONCR_ACC_SETS
+)CONCR_ACC_SETS
+
+
+         >> fs[CAT_OPTIONS_MEM,MEM_MAP] >> rename[`MEM a acc`] >> Cases_on `a`
+         >> rename[`MEM (f,f_trns) acc`] >> fs[] >> rw[]
+         
+
+)
 
 )
 
 
 
 
-)
 
+)
 
 
 val possibleGBA_states_def = Define`
@@ -433,17 +523,7 @@ val expandGBA_def = tDefine ("expandGBA")
                  (MAP (concr_extrTrans g_AA) aa_frml_ids)
        in let trans_unopt = gba_trans_concr concr_edges
        in let flws_with_acc_sets =
-               MAP (λcE.
-                     let acc_sets =
-                      CAT_OPTIONS
-                         (MAP (λ(f,f_trans).
-                               if acc_cond_concr cE f f_trans
-                               then (SOME f)
-                               else NONE
-                             ) acc
-                         )
-                     in (cE,acc_sets)
-                   ) trans_unopt
+                MAP (λcE. (cE,get_acc_set acc cE)) trans_unopt
        in let trans = ONLY_MINIMAL tlg_concr flws_with_acc_sets
        in let new_sucs =
                 FILTER (λqs. ~inGBA G qs)
@@ -493,16 +573,7 @@ val expandGBA_def = tDefine ("expandGBA")
                                        (findNode (λ(i,l). l.frml = f)
                                                  g_AA))
                                   current_node.frmls))))`
-       >> qabbrev_tac `t_with_acc =
-             MAP
-                 (λcE.
-                      (cE,
-                       CAT_OPTIONS
-                           (MAP
-                                (λ(f,f_trans).
-                                  if acc_cond_concr cE f f_trans
-                                  then SOME f
-                                  else NONE) acc))) t`
+      >> qabbrev_tac `t_with_acc = MAP (λcE. (cE,get_acc_set acc cE)) t`
        >> `!l n_G.
              (FOLDR
               (λ(eL,suc) g_opt. do g <- g_opt; addEdgeToGBA g id eL suc od)
@@ -636,7 +707,7 @@ val expandGBA_def = tDefine ("expandGBA")
         >> `suff_wfg (SND (new_ids,G1))
                ∧ {set x | inGBA (SND (new_ids,G1)) x} =
                    {set x | inGBA G x} ∪ set (MAP set QS)`
-              by metis_tac[ADDNODE_GBA_FOLDR]
+             by metis_tac[ADDNODE_GBA_FOLDR]
         >> fs[]
         >> `{set x | inGBA G1 x} = {set x | inGBA G2 x}` by (
                `G1.nodeInfo = G2.nodeInfo` by metis_tac[]
@@ -982,6 +1053,20 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
               ∃n.
               lookup i G1.nodeInfo = SOME n ∧ MEM n.frmls NEW_NODES)`
          by metis_tac[WF_IMP_SUFFWFG,ADDNODE_GBA_FOLDR,SND,FST]
+(*         >> `(waa2gba (removeStatesSimpl (ltl2waa f))).initial ⊆ *)
+(*               {set q | inGBA G2 q}` by ( *)
+(*              `(waa2gba (removeStatesSimpl (ltl2waa f))).initial ⊆ *)
+(*                 {set q | inGBA G1 q}` suffices_by metis_tac[] *)
+(*              >> simp[SUBSET_DEF] >> rpt strip_tac >> rw[] *)
+(*              >> fs[concr2AbstrAA_def,ALTER_A_component_equality] *)
+(*              >> rw[] *)
+(*              >> `x' ∈ POW (concr2Abstr_states g_AA)` by ( *)
+(*                  fs[isValidAlterA_def,waa2gba_def] *)
+(*                  >> Cases_on `isWeakAlterA (removeStatesSimpl (ltl2waa f))` *)
+(*                  >> fs[] >> metis_tac[IN_POW,SUBSET_DEF] *)
+(*              ) *)
+(*              >>  *)
+(* ) *)
         >> rpt conj_tac
         >- (rpt gen_tac >> Cases_on `i ∈ (domain g.nodeInfo)`
             >> rpt strip_tac
@@ -1291,7 +1376,47 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
                        >> fs[concr2AbstractEdge_def] >> metis_tac[]
                       )
                    >- (
-                   POP_ASSUM mp_tac >> simp[tlg_concr_def] >> 
+                   Cases_on `y` >> Cases_on `(W_FINAL c_edge)`
+                   >> rename[`~tlg_concr (ce1,acc1) (ce2,acc2)`]
+                   >>  `∀x. MEM x ce1.pos ∨ MEM x ce2.pos
+                          ∨ MEM x ce1.neg ∨ MEM x ce2.neg
+                          ⇒ x ∈ set aP` suffices_by (
+                     rpt strip_tac
+                     >> `ce2 = c_edge` by (qunabbrev_tac `W_FINAL` >> fs[])
+                     >> `ce1 = cE` by (qunabbrev_tac `W_FINAL` >> fs[]) >> rw[]
+                     >> fs[all_acc_cond_def,tr_less_general_def,
+                           tlg_concr_def,trns_is_empty_def]
+                     >- (`set c_edge.pos ∩ set c_edge.neg = {}` by (
+                           PURE_REWRITE_TAC[SET_EQ_SUBSET,SUBSET_DEF]
+                           >> rpt strip_tac >> fs[IN_INTER,EVERY_MEM]
+                           >> metis_tac[]
+                         )
+                         >> `~(transformLabel
+                                   (set aP) c_edge.pos c_edge.neg = {})`
+                              by metis_tac[SUBSET_DEF,MEM,TRANSFORMLABEL_EMPTY]
+                         >> 
+
+
+`~(transformLabel (set aP) c_edge.pos c_edge.neg = {})`
+                          by ()
+)
+
+
+
+                   
+
+                    `F` suffices_by fs[]
+                    >> rename[`W_FINAL _ = (c_edge1,acc_set)`]
+                    >> `c_edge1 = c_edge`
+                         by (qunabbrev_tac `W_FINAL` >> fs[])
+                    >> rw[]
+
+                    >> `~(transformLabel (set aP) c_edge.pos c_edge.neg = {})`
+                      )
+
+IMP_RES_TAC CONCR_ACC_SETS
+
+simp[tlg_concr_def] >> 
 )
 
 )
