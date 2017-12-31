@@ -697,8 +697,8 @@ val OPTION_ALL_CONG = store_thm(
        (OPTION_ALL P opt <=> OPTION_ALL P' opt')``,
   simpLib.SIMP_TAC (srw_ss()) [FORALL_OPTION]);
 
-val option_caseeq = Q.store_thm(
-  "option_caseeq",
+val option_case_eq = Q.store_thm(
+  "option_case_eq",
   ‘(option_CASE (opt:'a option) nc sc = v) <=>
    ((opt = NONE) /\ (nc = v) \/ ?x. (opt = SOME x) /\ (sc x = v))’,
   OPTION_CASES_TAC “opt:'a option” THEN SRW_TAC[][EQ_SYM_EQ, option_case_def]);
@@ -721,7 +721,7 @@ val _ = adjoin_to_theory
     S "     {ax=TypeBasePure.ORIG option_Axiom,";            NL();
     S "      case_def=option_case_def,";                     NL();
     S "      case_cong=option_case_cong,";                   NL();
-    S "      caseeqsplit=option_caseeq,";                    NL();
+    S "      case_eq = option_case_eq,";                     NL();
     S "      induction=TypeBasePure.ORIG option_induction,"; NL();
     S "      nchotomy=option_nchotomy,";                     NL();
     S "      size=NONE,";                                    NL();
@@ -754,25 +754,6 @@ val datatype_option = store_thm(
   "datatype_option",
   ``DATATYPE (option (NONE:'a option) (SOME:'a -> 'a option))``,
   REWRITE_TAC [DATATYPE_TAG_THM])
-
-val _ = TypeBase.write
-  [TypeBasePure.mk_datatype_info
-     {ax=TypeBasePure.ORIG option_Axiom,
-      case_def=option_case_def,
-      case_cong=option_case_cong,
-      caseeqsplit = option_caseeq,
-      induction=TypeBasePure.ORIG option_induction,
-      nchotomy=option_nchotomy,
-      size=NONE,
-      encode=NONE,
-      fields=[], accessors=[], updates=[],
-      destructors=[THE_DEF],
-      recognizers=[IS_NONE_DEF,IS_SOME_DEF],
-      lift=SOME(mk_var("optionSyntax.lift_option",
-                Parse.Type`:'type -> ('a -> 'term) -> 'a option -> 'term`)),
-      one_one=SOME SOME_11,
-      distinct=SOME NOT_NONE_SOME}];
-
 
 val _ = BasicProvers.export_rewrites
           ["THE_DEF",

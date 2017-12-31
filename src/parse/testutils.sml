@@ -38,6 +38,7 @@ val boldred = checkterm "\027[31m\027[1m"
 val boldgreen = checkterm "\027[32m\027[1m"
 val red = checkterm "\027[31m"
 val dim = checkterm "\027[2m"
+val clear = checkterm "\027[0m"
 
 val really_die = ref true;
 fun die s =

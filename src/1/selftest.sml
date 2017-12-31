@@ -398,7 +398,8 @@ fun tpp (s,expected) = let
   val res = ppstring pp_term t
 in
   if res = expected then OK()
-  else (print "FAILED\n"; Process.exit Process.failure)
+  else die ("\nFAILED\n" ^
+            testutils.clear ("  Expected >" ^ expected ^ "<; got >"^res^"<"))
 end
 
 fun bound s = "\^[[0;32m" ^ s ^ "\^[[0m"
@@ -417,7 +418,12 @@ val _ = app tpp [
    concat ["let ",bx, " = ", fp, " in ", bx, " /\\ ", fy]),
   ("let f x = x /\\ p in f x /\\ y",
    concat ["let ",bound "f", " ", bx, " = ", bx, " /\\ ", fp, " in ",
-           bound "f", " ", fx, " /\\ ", fy])
+           bound "f", " ", fx, " /\\ ", fy]),
+  ("!(x:'a)::p (x:'a). q x",
+   concat ["!",bx,"::",fp, " ", fx,". ",free "q"," ",bx]),
+  ("RES_FORALL (p (x:'a)) (\\x. RES_FORALL (p (x:'a)) (\\y. q x y))",
+   concat ["!(",bx,"::",fp," ",fx,") (",bound "y","::",fp," ",bx,"). ",
+           free "q", " ", bx, " ", bound "y"])
 ]
 
 open testutils

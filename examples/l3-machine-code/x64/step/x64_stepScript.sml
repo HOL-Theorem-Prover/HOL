@@ -55,6 +55,13 @@ val read_mem64_def = Lib.with_flag (Feedback.emit_MESG, false) Define`
    m (a + 7w) @@ m (a + 6w) @@ m (a + 5w) @@ m (a + 4w) @@
    m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m a`
 
+val read_mem128_def = Lib.with_flag (Feedback.emit_MESG, false) Define`
+   read_mem128 (m: word64 -> word8) a =
+   m (a + 15w) @@ m (a + 14w) @@ m (a + 13w) @@ m (a + 12w) @@
+   m (a + 11w) @@ m (a + 10w) @@ m (a + 9w) @@ m (a + 8w) @@
+   m (a + 7w) @@ m (a + 6w) @@ m (a + 5w) @@ m (a + 4w) @@
+   m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m a`
+
 val write_mem16_def = Define`
    write_mem16 (m: word64 -> word8) a (v: word16) =
      (a + 1w =+ (15 >< 8) v)
@@ -78,6 +85,25 @@ val write_mem64_def = Define`
                        ((a + 1w =+ (15 >< 8) v)
                           ((a =+ (7 >< 0) v) m)))))))`;
 
+val write_mem128_def = Define`
+   write_mem128 (m: word64 -> word8) a (v: word128) =
+     (a + 15w =+ (127 >< 120) v)
+        ((a + 14w =+ (119 >< 112) v)
+           ((a + 13w =+ (111 >< 104) v)
+              ((a + 12w =+ (103 >< 96) v)
+                 ((a + 11w =+ (95 >< 88) v)
+                    ((a + 10w =+ (87 >< 80) v)
+                       ((a + 9w =+ (79 >< 72) v)
+                          ((a + 8w =+ (71 >< 64) v)
+     ((a + 7w =+ (63 >< 56) v)
+        ((a + 6w =+ (55 >< 48) v)
+           ((a + 5w =+ (47 >< 40) v)
+              ((a + 4w =+ (39 >< 32) v)
+                 ((a + 3w =+ (31 >< 24) v)
+                    ((a + 2w =+ (23 >< 16) v)
+                       ((a + 1w =+ (15 >< 8) v)
+                          ((a =+ (7 >< 0) v) m)))))))))))))))`;
+
 val mem16_rwt = ustore_thm("mem16_rwt",
    `(read_mem16 s.MEM a = v) ==> (mem16 a s = v)`,
    simp [mem16_def, mem8_def, read_mem16_def]
@@ -92,6 +118,12 @@ val mem32_rwt = ustore_thm("mem32_rwt",
 val mem64_rwt = ustore_thm("mem64_rwt",
    `(read_mem64 s.MEM a = v) ==> (mem64 a s = v)`,
    simp [mem64_def, mem32_def, mem16_def, mem8_def, read_mem64_def]
+   \\ blastLib.BBLAST_TAC
+   )
+
+val mem128_rwt = ustore_thm("mem128_rwt",
+   `(read_mem128 s.MEM a = v) ==> (mem128 a s = v)`,
+   simp [mem128_def, mem64_def, mem32_def, mem16_def, mem8_def, read_mem128_def]
    \\ blastLib.BBLAST_TAC
    )
 
@@ -133,6 +165,32 @@ val write'mem64_rwt = ustore_thm("write'mem64_rwt",
             write'mem8_def]
    )
 
+val write'mem128_rwt = ustore_thm("write'mem128_rwt",
+   `(read_mem128 s.MEM a = wv) ==>
+    (write'mem128 (d, a) s = s with MEM := write_mem128 s.MEM a d)`,
+   simp [write'mem128_def, write'mem64_def, write'mem32_def, write'mem16_def,
+         write_mem128_def, read_mem128_def]
+   \\ simp_tac (srw_ss()++wordsLib.WORD_EXTRACT_ss) []
+   \\ ASM_REWRITE_TAC [optionTheory.NOT_NONE_SOME, optionTheory.option_case_def]
+   \\ simp [combinTheory.APPLY_UPDATE_THM,
+            blastLib.BBLAST_PROVE ``a <> a + 1w: word64``,
+            blastLib.BBLAST_PROVE ``a <> a + 2w: word64``,
+            blastLib.BBLAST_PROVE ``a <> a + 3w: word64``,
+            blastLib.BBLAST_PROVE ``a <> a + 4w: word64``,
+            blastLib.BBLAST_PROVE ``a <> a + 5w: word64``,
+            blastLib.BBLAST_PROVE ``a <> a + 6w: word64``,
+            blastLib.BBLAST_PROVE ``a <> a + 7w: word64``,
+            blastLib.BBLAST_PROVE ``a <> a + 8w: word64``,
+            blastLib.BBLAST_PROVE ``a <> a + 9w: word64``,
+            blastLib.BBLAST_PROVE ``a <> a + 10w: word64``,
+            blastLib.BBLAST_PROVE ``a <> a + 11w: word64``,
+            blastLib.BBLAST_PROVE ``a <> a + 12w: word64``,
+            blastLib.BBLAST_PROVE ``a <> a + 13w: word64``,
+            blastLib.BBLAST_PROVE ``a <> a + 14w: word64``,
+            blastLib.BBLAST_PROVE ``a <> a + 15w: word64``,
+            write'mem8_def]
+   )
+
 val read_mem16 = Q.store_thm("read_mem16",
    `!m a v. (read_mem16 m a = v) =
             (m a = (7 >< 0) v) /\ (m (a + 1w) = (15 ><  8) v)`,
@@ -166,6 +224,30 @@ val read_mem64 = Q.store_thm("read_mem64",
       (m (a + 7w) = (63 >< 56) v)`,
    REPEAT strip_tac
    \\ simp [read_mem64_def]
+   \\ blastLib.BBLAST_TAC
+   )
+
+val read_mem128 = Q.store_thm("read_mem128",
+   `!m a v.
+      (read_mem128 m a = v) =
+      (m a = (7 >< 0) v) /\
+      (m (a + 1w) = (15 ><  8) v) /\
+      (m (a + 2w) = (23 >< 16) v) /\
+      (m (a + 3w) = (31 >< 24) v) /\
+      (m (a + 4w) = (39 >< 32) v) /\
+      (m (a + 5w) = (47 >< 40) v) /\
+      (m (a + 6w) = (55 >< 48) v) /\
+      (m (a + 7w) = (63 >< 56) v) /\
+      (m (a + 8w) = (71 >< 64) v) /\
+      (m (a + 9w) = (79 >< 72) v) /\
+      (m (a + 10w) = (87 >< 80) v) /\
+      (m (a + 11w) = (95 >< 88) v) /\
+      (m (a + 12w) = (103 >< 96) v) /\
+      (m (a + 13w) = (111 >< 104) v) /\
+      (m (a + 14w) = (119 >< 112) v) /\
+      (m (a + 15w) = (127 >< 120) v)`,
+   REPEAT strip_tac
+   \\ simp [read_mem128_def]
    \\ blastLib.BBLAST_TAC
    )
 
@@ -275,6 +357,69 @@ val immediate64 = Q.store_thm("immediate64",
            (55 >< 48) imm :: (63 >< 56) imm :: l) = (imm, SOME l)`,
    srw_tac [wordsLib.WORD_EXTRACT_ss] [immediate64_def]
    )
+
+(* ------------------------------------------------------------------------ *)
+
+val rounding_mode_def = Define`
+  rounding_mode rc =
+  case rc : word2 of
+    0w => roundTiesToEven
+  | 1w => roundTowardNegative
+  | 2w => roundTowardPositive
+  | _ => roundTowardZero`
+
+val rounding_mode = Q.store_thm ("rounding_mode",
+  `!rc.
+    (if rc = 0w then roundTiesToEven
+     else if rc = 1w then roundTowardNegative
+     else if rc = 2w then roundTowardPositive
+     else if rc = 3w then roundTowardZero
+     else ARB) = rounding_mode rc`,
+  rw [rounding_mode_def]
+  \\ blastLib.FULL_BBLAST_TAC)
+
+val flush_to_zero32 = utilsLib.ustore_thm("flush_to_zero32",
+   `~s.MXCSR.FZ ==> (flush_to_zero32 a s = a)`,
+   Cases_on `a`
+   \\ rw [flush_to_zero32_def])
+
+val flush_to_zero64 = utilsLib.ustore_thm("flush_to_zero64",
+   `~s.MXCSR.FZ ==> (flush_to_zero64 a s = a)`,
+   Cases_on `a`
+   \\ rw [flush_to_zero64_def])
+
+val snd_with_flags = Q.store_thm("snd_with_flags",
+  `(!a b c. SND (fp32_add_with_flags a b c) = fp32_add a b c) /\
+   (!a b c. SND (fp64_add_with_flags a b c) = fp64_add a b c) /\
+   (!a b c. SND (fp32_sub_with_flags a b c) = fp32_sub a b c) /\
+   (!a b c. SND (fp64_sub_with_flags a b c) = fp64_sub a b c) /\
+   (!a b c. SND (fp32_div_with_flags a b c) = fp32_div a b c) /\
+   (!a b c. SND (fp64_div_with_flags a b c) = fp64_div a b c) /\
+   (!a b c. SND (fp32_mul_with_flags a b c) = fp32_mul a b c) /\
+   (!a b c. SND (fp64_mul_with_flags a b c) = fp64_mul a b c) /\
+   (!a b. SND (fp32_sqrt_with_flags a b) = fp32_sqrt a b) /\
+   (!a b. SND (fp64_sqrt_with_flags a b) = fp64_sqrt a b)`,
+  rw [machine_ieeeTheory.fp32_add_with_flags_def,
+      machine_ieeeTheory.fp32_add_def,
+      machine_ieeeTheory.fp64_add_with_flags_def,
+      machine_ieeeTheory.fp64_add_def,
+      machine_ieeeTheory.fp32_sub_with_flags_def,
+      machine_ieeeTheory.fp32_sub_def,
+      machine_ieeeTheory.fp64_sub_with_flags_def,
+      machine_ieeeTheory.fp64_sub_def,
+      machine_ieeeTheory.fp32_div_with_flags_def,
+      machine_ieeeTheory.fp32_div_def,
+      machine_ieeeTheory.fp64_div_with_flags_def,
+      machine_ieeeTheory.fp64_div_def,
+      machine_ieeeTheory.fp32_mul_with_flags_def,
+      machine_ieeeTheory.fp32_mul_def,
+      machine_ieeeTheory.fp64_mul_with_flags_def,
+      machine_ieeeTheory.fp64_mul_def,
+      machine_ieeeTheory.fp32_sqrt_with_flags_def,
+      machine_ieeeTheory.fp32_sqrt_def,
+      machine_ieeeTheory.fp64_sqrt_with_flags_def,
+      machine_ieeeTheory.fp64_sqrt_def]
+  )
 
 (* ------------------------------------------------------------------------ *)
 
@@ -402,7 +547,16 @@ val word_thms = Q.store_thm("word_thms",
     (!a: word32. (w2w a = 0w : word64) = (a = 0w)) /\
     (!a: word8. (sw2sw a = 0w : word64) = (a = 0w)) /\
     (!a: word16. (sw2sw a = 0w : word64) = (a = 0w)) /\
-    (!a: word32. (sw2sw a = 0w : word64) = (a = 0w))
+    (!a: word32. (sw2sw a = 0w : word64) = (a = 0w)) /\
+    (!a: word128. w2w ((63 >< 0) a : word64) = (63 >< 0) a : word128) /\
+    (!a: word64. w2w (w2w a : word32) = (31 >< 0) a : word128) /\
+    (!a: word32. w2w ((31 >< 0) (w2w a : word64) : word32) =
+                      (31 >< 0) a : word128) /\
+    (!a: word128. (31 >< 0) (w2w ((31 >< 0) a : word32) : word64) =
+                  (31 >< 0) a : word32) /\
+    (!a: word128. (31 >< 0) (w2w ((31 >< 0) a : word32) : word64) =
+                  (31 >< 0) a : word64) /\
+    (!a: word32. (31 >< 0) (w2w a : word64) = w2w a : word64)
    `,
    rw [] \\ blastLib.BBLAST_TAC
    );

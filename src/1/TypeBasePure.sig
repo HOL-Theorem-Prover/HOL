@@ -17,7 +17,7 @@ sig
               induction : shared_thm,
               case_def  : thm,
               case_cong : thm,
-              caseeqsplit : thm,
+              case_eq   : thm,
               nchotomy  : thm,
               size      : (term * shared_thm) option,
               encode    : (term * shared_thm) option,
@@ -52,7 +52,7 @@ sig
    val case_const_of   : tyinfo -> term
    val case_cong_of    : tyinfo -> thm
    val case_def_of     : tyinfo -> thm
-   val caseeqsplit_of  : tyinfo -> thm
+   val case_eq_of      : tyinfo -> thm
    val nchotomy_of     : tyinfo -> thm
    val distinct_of     : tyinfo -> thm option
    val one_one_of      : tyinfo -> thm option

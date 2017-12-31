@@ -18,6 +18,8 @@ sig
   val type_pp_suffix          : string ref
   val term_pp_prefix          : string ref
   val term_pp_suffix          : string ref
+  val thm_pp_prefix           : string ref
+  val thm_pp_suffix           : string ref
   val goal_line               : string ref
   val old                     : string -> string
   val pp_flags                : {show_types         : bool ref,

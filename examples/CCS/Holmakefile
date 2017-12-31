@@ -29,7 +29,7 @@ MUNGE_DEPS = CCSTheory StrongEQTheory StrongLawsTheory \
 	     BisimulationUptoTheory \
 	     CongruenceTheory CoarsestCongrTheory \
 	     TraceTheory ExpansionTheory ContractionTheory \
-	     UniqueSolutionsTheory
+	     UniqueSolutionsTheory ExampleTheory
 
 munge.exe: $(patsubst %,%.uo,$(MUNGE_DEPS))
 	$(HOLDIR)/bin/mkmunge.exe $(MUNGE_DEPS)

@@ -143,11 +143,8 @@
 structure dep_rewrite :> dep_rewrite =
 struct
 
-open HolKernel Parse boolLib;
+open HolKernel Parse boolLib Abbrev;
 
-type term = Term.term
-type fixity = Parse.fixity
-type thm = Thm.thm;
 
 
 
@@ -406,8 +403,6 @@ fun TAC_DEP tac = fn (asl,gl) =>
 
 
 (* DEP_TAC turns a dependent rewriting function into a tactic. *)
-
-type validation = Thm.thm list -> Thm.thm;
 
 fun DEP_TAC dep :tactic = fn g0 =>
     let val (asl1,gls,(pls:validation list),(gl2:goal list),(p2:validation))
