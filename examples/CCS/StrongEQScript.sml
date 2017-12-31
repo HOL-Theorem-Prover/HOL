@@ -184,7 +184,7 @@ val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                    term_name = "STRONG_EQUIV" }
 
 val _ = TeX_notation { hol = UTF8.chr 0x223C,
-		       TeX = ("\\HOLTokenObsCongr", 1) };
+		       TeX = ("\\HOLTokenStrongEQ", 1) };
 
 val STRONG_EQUIV_IS_STRONG_BISIM = store_thm (
    "STRONG_EQUIV_IS_STRONG_BISIM",
