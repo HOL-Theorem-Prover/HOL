@@ -653,9 +653,9 @@ fun mk_more_tactics num_hyps count (hyp1::hyps) =
 fun mk_tactics count (rule::rules) =
     let val (forall_vars, body_tm) = strip_forall rule
 	val is_an_imp = is_imp body_tm
-	val hyp1 = if is_an_imp then fst (dest_imp body_tm) else --`T`--
+	val hyp1 = if is_an_imp then fst (dest_imp body_tm) else “T”
 	val (exists_vars, hyp2) = if is_an_imp then strip_exists hyp1
-				  else ([], --`T`--)
+				  else ([], “T”)
 	val hyps = if is_an_imp then strip_conj hyp2 else []
 	val hyp_count = length hyps
 	val more_tactics =
@@ -1425,7 +1425,7 @@ fun mk_inversion_thms count all_rels (hyp::hyps) (vars::more_vars) =
 	val ds = map (QCONV (TRY_CONV REDUCE)) (strip_disj(rand(concl thm5)))
 	(* red has form (original distunctions) = (simplified disjunctions) *)
 	val red = end_itlist (fn t1 => fn t2 =>
-			      MK_COMB (AP_TERM (--`$\/`--) t1, t2)) ds
+			      MK_COMB (AP_TERM “$\/” t1, t2)) ds
         (* the preceeding line changed from `\/` to `$\/` for Taupo-4
            by PVH, October 19, 2000 *)
 	(* final result is that
@@ -1543,7 +1543,7 @@ fun prove_conj_imp (tm::tms) =
 	in
 	    IMP_CONJ thm1 thm2
 	end
-  | prove_conj_imp [] = REFL (--`T`--) (* so SML doesn't complain *)
+  | prove_conj_imp [] = REFL “T” (* so SML doesn't complain *)
 
 val concl_thm = prove_conj_imp (strip_conj mod_concl)
 
@@ -1563,7 +1563,7 @@ val concl_thm = prove_conj_imp (strip_conj mod_concl)
 local
 val DISJ_IMP_THM  = GSYM IMP_DISJ_THM
 val DISJ_IMP_THM1 = REWRITE_RULE[NOT_CLAUSES]
-                     (GEN (--`A:bool`--)(SPEC (--`~(A:bool)`--) DISJ_IMP_THM))
+                     (GEN “A:bool”(SPEC “~(A:bool)” DISJ_IMP_THM))
 fun delete_conjs1 pred conj_thm =
     let fun helper conj_thm so_far =
         if is_cond (concl conj_thm) then
@@ -1690,7 +1690,7 @@ fun prove_conj_imp2 ((rule, tm)::more_info) =
         in
             IMP_CONJ thm1 thm2
         end
-  | prove_conj_imp2 [] = REFL (--`T`--) (* so SML doesn't complain *)
+  | prove_conj_imp2 [] = REFL “T” (* so SML doesn't complain *)
 
 (*
 fun prove_conj_imp2 (((rule, tm)::more_info) :(thm * term)list) =
@@ -1702,7 +1702,7 @@ fun prove_conj_imp2 (((rule, tm)::more_info) :(thm * term)list) =
 	in
 	    IMP_CONJ thm1 thm2
 	end
-  | prove_conj_imp2 [] = REFL (--`T`--) (* so SML doesn't complain *)
+  | prove_conj_imp2 [] = REFL “T” (* so SML doesn't complain *)
 *)
 
 (* The following was added by PVH on Feb. 25, 2000.

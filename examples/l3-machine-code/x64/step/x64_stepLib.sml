@@ -57,7 +57,8 @@ local
       thms @ [cond_rand_thms, snd_exception_thms] @
       utilsLib.datatype_rewrites true "x64"
         ["x64_state", "Zreg", "Zeflags", "Zsize", "Zbase", "Zrm", "Zdest_src",
-         "Zimm_rm", "Zmonop_name", "Zbinop_name", "Zcond", "Zea", "Zinst"]
+         "Zimm_rm", "Zmonop_name", "Zbinop_name", "Zbit_test_name", "Zcond",
+         "Zea", "Zinst"]
 in
    val DATATYPE_CONV = REWRITE_CONV (datatype_thms [])
    val COND_UPDATE_CONV =
@@ -201,7 +202,8 @@ val erase_eflags =
 (* ------------------------------------------------------------------------ *)
 
 val ea_Zrm_rwt =
-   EV [ea_Zrm_def, ea_index_def, ea_base_def, wordsTheory.WORD_ADD_0] []
+   EV [ea_Zrm_def, mem_addr_def, ea_index_def, ea_base_def,
+       wordsTheory.WORD_ADD_0] []
       [[`rm` |-> ``Zr r``],
        [`rm` |-> ``Zm (NONE, ZnoBase, d)``],
        [`rm` |-> ``Zm (NONE, ZripBase, d)``],
@@ -253,7 +255,7 @@ val ea_Zimm_rm_rwt =
        [`irm` |-> ``Zrm (Zm (SOME (scale, inx), ZnoBase, d))``],
        [`irm` |-> ``Zrm (Zm (SOME (scale, inx), ZripBase, d))``],
        [`irm` |-> ``Zrm (Zm (SOME (scale, inx), ZregBase r, d))``]]
-      ``ea_Zimm_rm (size, irm)``
+      ``ea_Zimm_rm (irm)``
 
 (* ------------------------------------------------------------------------ *)
 
@@ -412,29 +414,38 @@ val r_rm =
     [`ds` |-> ``Zr_rm (r1, Zm (SOME (scale, ix), ZregBase r2, d))``]]
     : utilsLib.cover
 
-local
-  val l =
-  ([[`ds` |-> ``Zrm_i (Zr r, i)``],
+val rm_i =
+   [[`ds` |-> ``Zrm_i (Zr r, i)``],
     [`ds` |-> ``Zrm_i (Zm (NONE, ZnoBase, d), i)``],
     [`ds` |-> ``Zrm_i (Zm (NONE, ZripBase, d), i)``],
     [`ds` |-> ``Zrm_i (Zm (NONE, ZregBase r, d), i)``],
     [`ds` |-> ``Zrm_i (Zm (SOME (scale, ix), ZnoBase, d), i)``],
     [`ds` |-> ``Zrm_i (Zm (SOME (scale, ix), ZripBase, d), i)``],
-    [`ds` |-> ``Zrm_i (Zm (SOME (scale, ix), ZregBase r, d), i)``],
-    [`ds` |-> ``Zrm_r (Zr r1, r2)``],
+    [`ds` |-> ``Zrm_i (Zm (SOME (scale, ix), ZregBase r, d), i)``]]
+    : utilsLib.cover
+
+val rm_r =
+   [[`ds` |-> ``Zrm_r (Zr r1, r2)``],
     [`ds` |-> ``Zrm_r (Zm (NONE, ZnoBase, d), r)``],
     [`ds` |-> ``Zrm_r (Zm (NONE, ZripBase, d), r)``],
     [`ds` |-> ``Zrm_r (Zm (NONE, ZregBase r1, d), r2)``],
     [`ds` |-> ``Zrm_r (Zm (SOME (scale, ix), ZnoBase, d), r)``],
     [`ds` |-> ``Zrm_r (Zm (SOME (scale, ix), ZripBase, d), r)``],
-    [`ds` |-> ``Zrm_r (Zm (SOME (scale, ix), ZregBase r1, d), r2)``]] @ r_rm)
+    [`ds` |-> ``Zrm_r (Zm (SOME (scale, ix), ZregBase r1, d), r2)``]]
     : utilsLib.cover
-in
-  val src_dst = utilsLib.augment (`size`, sizes) l
-  val src_dst_not8 = utilsLib.augment (`size`, tl sizes) l
-end
 
-val lea = utilsLib.augment (`size`, tl sizes) (tl r_rm) : utilsLib.cover
+local
+  val l = rm_i @ rm_r @ r_rm
+  val aug_size = utilsLib.augment (`size`, sizes)
+  val aug_size_not8 = utilsLib.augment (`size`, tl sizes)
+in
+  val src_dst = aug_size l
+  val src_dst_not8 = aug_size_not8 l
+  val src_dst_not8_or_r_rm = aug_size_not8 (rm_i @ rm_r)
+  val lea = aug_size_not8 (tl r_rm)
+  val rm_cases = aug_size rm
+  val rm_cases_not8 = aug_size_not8 rm
+end
 
 val extends =
  (* 8 -> 16, 32, 64 *)
@@ -446,9 +457,6 @@ val extends =
  (* 32 -> 64 *)
  utilsLib.augment (`size2`, List.drop (sizes, 3))
     (utilsLib.augment (`size`, [List.nth(sizes, 2)]) r_rm)
-
-val rm_cases = utilsLib.augment (`size`, sizes) rm
-val rm_cases_not8 = utilsLib.augment (`size`, tl sizes) rm
 
 (* ------------------------------------------------------------------------ *)
 
@@ -476,7 +484,26 @@ val is_some_hyp_rule =
           ``IS_SOME (x: 'a word option)``)
 *)
 
-val Znop_rwt = EV [dfn'Znop_def] [] [] ``dfn'Znop n``
+val bit_test_rwt =
+   EV ([bit_test_def, write'CF_def, Cflag_rwt, write'Eflag_rwt] @
+       EA_rwt @ write'EA_rwt) []
+      (utilsLib.augment
+         (`bt`, [``Zbt``, ``Zbts``, ``Zbtr``, ``Zbtc``])
+         (List.take (tl no_imm_ea, 4)))
+     ``bit_test (bt, ea, offset)``
+   |> data_hyp_rule
+   |> List.map (Q.INST [`wv` |-> `v`])
+
+val Zbit_test_rwt =
+   EV ([dfn'Zbit_test_def, modSize_def] @ SignExtension64_rwt @ bit_test_rwt @
+       ea_Zrm_rwt @ EA_rwt @ write'EA_rwt @ ea_Zsrc_rwt @ ea_Zdest_rwt) []
+      (utilsLib.augment
+       (`bt`, [``Zbt``, ``Zbts``, ``Zbtr``, ``Zbtc``]) src_dst_not8_or_r_rm)
+     ``dfn'Zbit_test (bt, size, ds)``
+   |> data_hyp_rule
+   |> addThms
+
+(* val Znop_rwt = EV [dfn'Znop_def] [] [] ``dfn'Znop n`` |> addThms *)
 
 val Zcmc_rwt =
    EV [dfn'Zcmc_def, CF_def, write'CF_def, Cflag_rwt, write'Eflag_rwt] [] []
@@ -824,11 +851,11 @@ in
 end
 
 local
+   val rwts = [pairTheory.FST, pairTheory.SND, combinTheory.I_THM, word_thms]
    val TIDY_UP_CONV =
       REWRITE_CONV
-         (List.take (utilsLib.datatype_rewrites false "x64" ["Zreg"], 2))
+         (List.take (utilsLib.datatype_rewrites false "x64" ["Zreg"], 2) @ rwts)
       THENC utilsLib.WGROUND_CONV
-   val rwts = [pairTheory.FST, pairTheory.SND, combinTheory.I_THM, word_thms]
    val get_strm1 = Term.rand o Term.rand o Term.rand o Term.rand o utilsLib.rhsc
    val get_ast = Term.rand o Term.rator o Term.rand o Term.rand o utilsLib.rhsc
    val state_exception_tm =
@@ -842,7 +869,8 @@ local
    val run_CONV = utilsLib.Run_CONV ("x64", st) o get_ast
    val run = utilsLib.ALL_HYP_CONV_RULE utilsLib.WGROUND_CONV o
              FIX_SAME_ADDRESS_RULE o
-             (INST_REWRITE_CONV (rwts @ getThms ()) THENC TIDY_UP_CONV)
+             utilsLib.ALL_HYP_CONV_RULE TIDY_UP_CONV o
+             (INST_REWRITE_CONV (getThms ()) THENC TIDY_UP_CONV)
    val MP_Next  = Drule.MATCH_MP x64_stepTheory.NextStateX64
    val MP_Next0 = Drule.MATCH_MP x64_stepTheory.NextStateX64_0
    val STATE_CONV =

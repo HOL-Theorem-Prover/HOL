@@ -162,7 +162,8 @@ val () = Datatype`
             ; InvalidOp : bool
             ; Overflow : bool
             ; Precision : bool
-            ; Underflow : bool
+            ; Underflow_BeforeRounding : bool
+            ; Underflow_AfterRounding : bool
             |>`
 
 val clear_flags_def = Define`
@@ -170,7 +171,8 @@ val clear_flags_def = Define`
                  ; InvalidOp := F
                  ; Overflow := F
                  ; Precision := F
-                 ; Underflow := F
+                 ; Underflow_BeforeRounding := F
+                 ; Underflow_AfterRounding := F
                  |>`
 
 val invalidop_flags_def = Define`
@@ -327,7 +329,13 @@ val float_round_with_flags_def = Define`
   let inexact = float_value x <> Float r in
     ((clear_flags with
         <| Overflow := (float_is_infinite x \/ 2 pow (INT_MIN (:'w)) <= a)
-         ; Underflow := ((x.Exponent = 0w) /\ inexact)
+         (* IEEE-754 permits a number of ways to detect underflow. Below
+            are two possible methods. *)
+         ; Underflow_BeforeRounding := (inexact /\ a < 2 / 2 pow (bias(:'w)))
+         ; Underflow_AfterRounding :=
+             (inexact /\
+              ((float_round mode to_neg r : ('t, 'w + 1) float).Exponent <=+
+               n2w (INT_MIN (:'w))))
          ; Precision := inexact
          |>), x)`
 
@@ -337,6 +345,10 @@ val check_for_signalling_def = Define`
 
 val real_to_float_def = Define`
    real_to_float m = float_round m (m = roundTowardNegative)`
+
+val real_to_float_with_flags_def = Define`
+   real_to_float_with_flags m =
+   float_round_with_flags m (m = roundTowardNegative)`
 
 val float_round_to_integral_def = Define`
    float_round_to_integral mode (x: ('t, 'w) float) =

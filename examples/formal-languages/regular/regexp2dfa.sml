@@ -1,7 +1,3 @@
-val _ = PolyML.SaveState.loadState "../../../bin/hol.state";
-
-val _ = load "regexpLib";
-
 open Lib regexpMisc;
 
 val justifyDefault = regexpLib.SML;
@@ -13,7 +9,7 @@ fun failwithERR e =
    regexpMisc.fail());
 
 fun dest_string "" = raise ERR "dest_string" "empty string"
-  | dest_string str = 
+  | dest_string str =
      let val c = String.sub(str,0)
          val t = String.substring(str,1,String.size str - 1)
      in (c,t)
@@ -101,7 +97,7 @@ fun bool_to_C true = 1
   | bool_to_C false = 0;
 
 fun finalsString list =
- let val slist = map Int.toString list 
+ let val slist = map Int.toString list
      val spreadList = spreadln {sep=",", ln="\n  ", width=31}  slist
  in
    String.concat ("{" :: spreadList @ ["}"])
@@ -274,7 +270,7 @@ end;
 fun HOLfile name quote (certificate,_,finals,table) =
  case certificate
   of NONE => ""
-   | SOME thm => 
+   | SOME thm =>
      let open HolKernel Drule boolLib bossLib
          val _ = stdErr_print "Generating theorem.\n"
          val eqn = snd(dest_forall(concl thm))
@@ -340,7 +336,7 @@ fun main () =
     stdErr_print "regexp2dfa: \n"
   ; case parse_args()
     of NONE => (printHelp(); regexpMisc.fail())
-     | SOME (justify,lang,name,rstring) => 
+     | SOME (justify,lang,name,rstring) =>
       let val regexp = parse_regexp rstring
           val _ = stdErr_print "Parsed regexp, now constructing DFA ... "
           val result = compile_regexp justify regexp
@@ -348,8 +344,8 @@ fun main () =
 	    (case lang
               of Ada  => Adafile
                | C    => Cfile
-               | ML   => MLfile 
-               | Java => Javafile 
+               | ML   => MLfile
+               | Java => Javafile
                | Thm  => HOLfile)
 	    name rstring (deconstruct result)
       in

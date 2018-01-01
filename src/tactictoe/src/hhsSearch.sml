@@ -1,75 +1,48 @@
+(* ========================================================================== *)
+(* FILE          : hhsSearch.sml                                              *)
+(* DESCRIPTION   : A* search algorithm for TacticToe.                         *)
+(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
+(* DATE          : 2017                                                       *)
+(* ========================================================================== *)
+
 structure hhsSearch :> hhsSearch =
 struct
 
-(* ----------------------------------------------------------------------
-   Warning:
-   a call to metis is recognized because its score is greater than 1.
-   ---------------------------------------------------------------------- *)
-
-open HolKernel boolLib Abbrev hhsTools hhsLog hhsTimeout hhsFeature hhsPredict
-hhsExec hhsLexer
+open HolKernel boolLib Abbrev hhsTools hhsTimeout hhsFeature hhsPredict
+hhsExec hhsLexer hhsMinimize hhsMetis hhsData hhsLearn
 
 val ERR = mk_HOL_ERR "hhsSearch"
 
-(*---------------------------------------------------------------------------
-   Removing comments
- ----------------------------------------------------------------------------*)
-
-fun rm_comment_aux isq par acc charl = 
-  if isq then
-    case charl of
-      []                  => rev acc
-    | #"\\" :: #"\\" :: m => rm_comment_aux true 0 (#"\\" :: #"\\" :: acc) m
-    | #"\\" :: #"\"" :: m => rm_comment_aux true 0 (#"\"" :: #"\\" :: acc) m
-    | #"\"" :: m          => rm_comment_aux false 0 (#"\"" :: acc) m     
-    | a :: m              => rm_comment_aux true 0 (a :: acc) m     
-  else if par > 0 then
-    (
-    case charl of
-      []                => rev acc
-    | #"(" :: #"*" :: m => rm_comment_aux false (par + 1) acc m
-    | #"*" :: #")" :: m => rm_comment_aux false (par - 1) acc m     
-    | a :: m            => rm_comment_aux false par acc m     
-    )
-  else if par = 0 then
-    (
-    case charl of
-      []                => rev acc
-    | #"\"" :: m        => rm_comment_aux true 0 (#"\"" :: acc) m
-    | #"(" :: #"*" :: m => rm_comment_aux false 1 acc m
-    | #"*" :: #")" :: m => raise ERR "rm_comment" "negative_par" 
-    | a :: m            => rm_comment_aux false 0 (a :: acc) m     
-    )
-  else raise ERR "rm_comment_aux" (implode (rev acc) ^ " : " ^ implode charl)
-
-fun rm_comment s = implode (rm_comment_aux false 0 [] (explode s))
-
-
-(* ----------------------------------------------------------------------
+(* --------------------------------------------------------------------------
    Exceptions
-   ---------------------------------------------------------------------- *)
+   -------------------------------------------------------------------------- *)
 
 exception SearchTimeOut
 exception NoNextTac
 
-(* ----------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Globals
-   ---------------------------------------------------------------------- *)
+   -------------------------------------------------------------------------- *)
 
 fun empty_predictor (g:goal) = []
 val proofdict = ref (dempty Int.compare)
 val finproofdict = ref (dempty Int.compare)
 val tacdict_glob = ref (dempty String.compare)
-val thm_predictor_glob = ref (fn g => [])
-val predictor_glob = ref empty_predictor
-val symweight_glob = ref (dempty String.compare)
-val nfstfea_glob = ref 0
+val minstepdict_glob = ref (dempty goal_compare)
+val thmpredictor_glob = ref (fn g => [])
+val stacpredictor_glob = ref empty_predictor
 val glob_timer = ref NONE
-val minimize_flag = ref true
+val hhs_unsafecache_flag = ref false
 
-(* ----------------------------------------------------------------------
+(*
+val goaldepth_dict = ref (dempty goal_compare)
+val update_goaldepth (goal,depth) =
+  goaldepth_dict := dadd goal depth (!goaldepth_dict)
+*)
+
+(* --------------------------------------------------------------------------
    Cache
-   ---------------------------------------------------------------------- *)
+   -------------------------------------------------------------------------- *)
 
 fun stacgoal_compare ((stac1,goal1),(stac2,goal2)) =
   case String.compare (stac1,stac2) of
@@ -79,82 +52,116 @@ fun stacgoal_compare ((stac1,goal1),(stac2,goal2)) =
 val goalpred_cache = ref (dempty goal_compare)
 val stacgoal_cache = ref (dempty stacgoal_compare)
 
-(* ----------------------------------------------------------------------
+(* --------------------------------------------------------------------------
    Options
-   ---------------------------------------------------------------------- *)
+   -------------------------------------------------------------------------- *)
 
-val hhs_search_time = ref (Time.fromReal 0.0)
-val hhs_noscore = ref false
-
-val hhs_tactic_time = ref 0.0
+val hhs_diag_flag = ref false
+val hhs_visited_flag = ref false
 val hhs_cache_flag  = ref false
-val hhs_metis_flag  = ref false
-val hhs_metis_time = ref 0.0
+val hhs_astar_flag = ref false
+val hhs_astar_radius = ref 0
+val hhs_timedepth_flag = ref false
 
-val hhs_debug_flag = ref false
-val hhs_depthpen_flag = ref false
-val hhs_depthpen = ref 0.8
-val hhs_widthpen_flag = ref false
-val hhs_widthpen = ref 0.9
-
-
-(* ----------------------------------------------------------------------
+(* --------------------------------------------------------------------------
    Debugging
-   ---------------------------------------------------------------------- *)
+   -------------------------------------------------------------------------- *)
 
 val stac_counter = ref 0
 
-fun debug s =
-  if !hhs_debug_flag
-  then
-    (
-    append_file (hhs_log_dir ^ "/debug") (s ^ "\n");
-    print (s ^ "\n")
-    )
-  else ()
-
-fun string_of_predentry (stac,score) =
+fun string_of_predentry ((stac,_,_,_),score) =
       "(" ^ stac ^ "," ^ Real.toString score ^ ")"
 
 fun string_of_pred pred =
   "[" ^ String.concatWith "," (map string_of_predentry pred) ^ "]"
 
-val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
-
-val metis_chat = ref 0
-val meson_chat = ref 0
-
-(* ----------------------------------------------------------------------
+(* --------------------------------------------------------------------------
    Checking time taken by the predictions
-   ---------------------------------------------------------------------- *)
+   -------------------------------------------------------------------------- *)
 
 val predict_time = ref 0.0
-val thm_predict_time = ref 0.0
+val thmpredict_time = ref 0.0
 val infstep_time = ref 0.0
 val node_create_time = ref 0.0
 val node_find_time = ref 0.0
-val total_time = ref 0.0
+val astar_time = ref 0.0
+val mutate_time = ref 0.0
+val tot_time = ref 0.0
+val stacpred_time = ref 0.0
 
-fun save_time time_ref f x =
-  let
-    val rt = Timer.startRealTimer ()
-    val r = f x
-    val time = Timer.checkRealTimer rt
-  in
-    time_ref := (!time_ref) + (Time.toReal time);
-    r
-  end
+val stacpred_timer = total_time stacpred_time
+val predict_timer = total_time predict_time
+val thmpredict_timer = total_time thmpredict_time
+val infstep_timer = total_time infstep_time
+fun node_create_timer f x = total_time node_create_time f x
+val node_find_timer = total_time node_find_time
+val astar_timer = total_time astar_time
+val mutate_timer = total_time mutate_time
+fun total_timer f x = total_time tot_time f x
 
-val predict_timer = save_time predict_time
-val thm_predict_timer = save_time thm_predict_time
-val infstep_timer = save_time infstep_time
-fun node_create_timer f x = save_time node_create_time f x
-val node_find_timer = save_time node_find_time
-fun total_timer f x = save_time total_time f x
 
 (* ----------------------------------------------------------------------
-    Node creation and deletion done by these functions
+   A*-heurisitic
    ---------------------------------------------------------------------- *)
+
+fun minstep_cache g = dfind g (!minstepdict_glob) 
+  handle _ => (debug "Error: minstep"; NONE)
+
+fun firstPartial_n n l = 
+  if n <= 0 then [] else
+  case l of
+    [] => [] 
+  | NONE :: m => firstPartial_n n m
+  | SOME d :: m => d :: firstPartial_n (n-1) m
+
+fun average_real l = 
+  if null l
+  then (debug "Error: average_real"; 0.0)
+  else sum_real l / (Real.fromInt (length l))
+
+fun astar n g pred =
+  let 
+    val l0 = map (minstep_cache o #3 o fst) pred
+    val l1 = firstPartial_n n l0
+  in
+    average_real l1
+  end
+
+val hhs_width_coeff = ref 1.0
+
+fun estimate_distance (depth,timedepth) (g,pred) =
+  let
+    val width_coeff = ref 0.0 
+    val global_heuristic =
+      if !hhs_astar_flag
+      then astar_timer (astar (!hhs_astar_radius) g) pred 
+      else 0.0
+       
+    fun f (lbl as (stac,t,g1,gl1),_) =
+      let
+        val cost = (!width_coeff) + 
+          (if !hhs_timedepth_flag then timedepth else Real.fromInt depth)
+        val heuristic = 
+          if !hhs_astar_flag then 
+            if g = g1
+            then (valOf (minstep_cache g) handle _ => global_heuristic)
+            else global_heuristic
+          else 0.0
+        val _ = width_coeff := (!width_coeff) +
+                (if !hhs_timedepth_flag 
+                 then !hhs_tactic_time 
+                 else !hhs_width_coeff)
+        val final_score = inv_succrate stac * (cost + heuristic)
+      in
+        (lbl,final_score)
+      end
+  in
+    (g, map f pred)
+  end
+  
+(* --------------------------------------------------------------------------
+   Node creation and deletion done by these functions
+   -------------------------------------------------------------------------- *)
 
 val max_depth_mem = ref 0
 val pid_counter = ref 0
@@ -179,30 +186,55 @@ fun root_create goal pred =
       parg     = NONE,
       goalarr  = Array.fromList [goal],
       predarr  = Array.fromList [pred],
-      (* trydict  = ref (dempty compare_goal_list) *)
+      predarrn = Array.fromList (map length [pred]),
+      width    = ref 0,
       pending  = ref [0],
       proofl   = ref [],
       children = ref [],
       pardict  = dempty goal_compare,
       trydict  = ref (dempty (list_compare goal_compare)),
-      depth = 0
+      depth = 0,
+      timedepth = 0.0
       }
   in
-    debug "root_create";
-    debug ("  goals: " ^
+    debug_search "Root";
+    debug_search ("  goal: " ^
           String.concatWith "," (map string_of_goal [goal]));
-    debug ("  predictions: " ^
-          String.concatWith "," (map string_of_pred [pred]));
+    debug_search ("  pred: \n  " ^
+       String.concatWith ",\n  " (map (string_of_pred o (first_n 2)) [pred]));
     proofdict := dadd selfid selfrec (!proofdict)
   end
 
-fun node_create parid parstac pargn parg goallist predlist pending pardict =
+fun root_create_wrap g =
+  let
+    (* Predictions *)
+    val pred = (!stacpredictor_glob) g
+    val (_,pred1) = 
+      (
+      add_accept tacdict_glob o
+      add_metis tacdict_glob thmpredictor_glob o 
+      stacpred_timer (addpred_stac tacdict_glob thmpredictor_glob) o
+      estimate_distance (0,0.0)
+      ) 
+        (g,pred)
+  in
+    root_create g pred1
+  end
+
+fun node_create tactime parid parstac pargn parg goallist 
+    predlist pending pardict =
   let
     val pardepth = #depth (dfind parid (!proofdict))
+    val partimedepth = #timedepth (dfind parid (!proofdict))
+    (* for stats *)
     val _ = if pardepth + 1 > !max_depth_mem
             then max_depth_mem := pardepth + 1
             else ()
     val selfid = next_pid ()
+    (*
+    fun f g = update_goaldepth (g,pardepth + 1)
+    val _ = app f goallist
+    *)
     val selfrec =
     {
       selfid   = selfid,
@@ -212,81 +244,76 @@ fun node_create parid parstac pargn parg goallist predlist pending pardict =
       parg     = SOME parg,
       goalarr  = Array.fromList goallist,
       predarr  = Array.fromList predlist,
+      predarrn = Array.fromList (map length predlist),
+      width    = ref 0,
       pending  = ref pending,
       proofl   = ref [],
       children = ref [],
       pardict  = pardict,
       trydict  = ref (dempty (list_compare goal_compare)),
-      depth    = pardepth + 1
+      depth    = pardepth + 1,
+      timedepth = partimedepth + tactime
     }
   in
-    debug ("node_create " ^ int_to_string selfid ^
-           " child of " ^ int_to_string parid ^
-           " by " ^ parstac);
-    debug ("  goals: " ^
-          String.concatWith "," (map string_of_goal goallist));
-    debug ("  predictions: " ^
-          String.concatWith "," (map string_of_pred predlist));
+    debug_search 
+       ("Node " ^ int_to_string selfid ^ " " ^ int_to_string parid ^ " " ^
+        Real.toString (#timedepth selfrec));
+    debug_search 
+       ("  goals: " ^ String.concatWith "," (map string_of_goal goallist));
+    debug_search ("  predictions: " ^
+       String.concatWith ",\n  " (map (string_of_pred o (first_n 2)) predlist));
     proofdict := dadd selfid selfrec (!proofdict);
     selfid
   end
 
 fun node_delete pid =
   (
-  debug ("node_delete " ^ int_to_string pid);
+  debug_search ("node_delete " ^ int_to_string pid);
   proofdict := drem pid (!proofdict)
   )
 
 fun node_save pid =
   (
-  debug ("node_save " ^ int_to_string pid);
+  debug_search ("node_save " ^ int_to_string pid);
   let val prec = dfind pid (!proofdict) in
     finproofdict := dadd pid prec (!finproofdict)
   end
   )
 
-(* ----------------------------------------------------------------------
-   Application of a tactic
-   ---------------------------------------------------------------------- *)
-exception TacTimeOutAgain
+(* --------------------------------------------------------------------------
+   Application of a tactic.
+   -------------------------------------------------------------------------- *)
 
-fun apply_stac bmetis pardict trydict_unref stac g =
+fun update_cache k v =
+  if !hhs_cache_flag 
+  then stacgoal_cache := dadd k v (!stacgoal_cache) 
+  else ()
+
+fun apply_stac pardict trydict_unref stac g =
   let
-    val tactic_time = if bmetis then !hhs_metis_time else !hhs_tactic_time
+    val tim = dfind stac (!stactime_dict) handle _ => (!hhs_tactic_time)
+    val _ = count_try stac
     val _ = stac_counter := !stac_counter + 1
-    (* val _ = debug ("  " ^ int_to_string (!stac_counter) ^ " tactic") *)
-    (* val _ = debug ("  " ^ stac) *)
-    val tac = dfind stac (!tacdict_glob) handle _ => raise ERR "apply_stac" stac
-    val gl =
-      if !hhs_cache_flag then
-        if dmem (stac,g) (!stacgoal_cache)
-        then
-          case dfind (stac,g) (!stacgoal_cache) of
-            NONE => raise TacTimeOutAgain
-          | SOME cache_gl => cache_gl
-        else
-          let val r = fst (timeOut tactic_time (TC_OFF tac) g) in
-            stacgoal_cache := dadd (stac,g) (SOME r) (!stacgoal_cache);
-            r
-          end
-      else fst (timeOut tactic_time (TC_OFF tac) g)
+    val tac = dfind stac (!tacdict_glob) 
+              handle _ => (debug ("SNH: apply_stac:" ^ stac); 
+                           raise ERR "apply_stac" stac)
+    val glo = dfind (stac,g) (!stacgoal_cache) 
+              handle _ => app_tac tim tac g
+    val new_glo =
+      case glo of
+        NONE => NONE
+      | SOME gl =>
+      (
+      if mem g gl orelse exists (fn x => dmem x pardict) gl then NONE
+      else if dmem gl trydict_unref then NONE
+      else SOME gl
+      )
   in
-    if mem g gl orelse exists (fn x => dmem x pardict) gl
-      then (debug ("  tacloop"); NONE)
-    else if dmem gl trydict_unref
-      then (debug ("  tacparallel"); NONE)
-    else (debug ("  tacsuccess"); SOME gl)
+    update_cache (stac,g) new_glo;
+    new_glo
   end
-  handle TacTimeOut =>
-     (
-     if !hhs_cache_flag
-     then stacgoal_cache := dadd (stac,g) NONE (!stacgoal_cache)
-     else ();
-     debug ("  tactimeout"); NONE
-     )
-       | TacTimeOutAgain => NONE
 
-fun apply_next_stac bmetis pid =
+fun apply_next_stac pid =
   let
     val prec = dfind pid (!proofdict)
     val gn = hd (! (#pending prec))
@@ -295,10 +322,10 @@ fun apply_next_stac bmetis pid =
     val pred = Array.sub (#predarr prec, gn)
     val trydict_unref = !(#trydict prec)
     val pardict = (#pardict prec)
-    val (stac,_) = hd pred
+    val ((stac,_,_,_),_) = hd pred
       handle _ => raise ERR "apply_next_stac" "empty pred"
   in
-    infstep_timer (apply_stac bmetis pardict trydict_unref stac) goal
+    infstep_timer (apply_stac pardict trydict_unref stac) goal
   end
 
 (* ----------------------------------------------------------------------
@@ -318,32 +345,30 @@ fun node_find () =
         then NONE
         else SOME (pid, snd (hd pred))
       end
-    fun compare_score ((_,r1),(_,r2)) = Real.compare (r2,r1)
+    fun compare_score ((_,r1),(_,r2)) = Real.compare (r1,r2)
     val l1 = List.mapPartial give_score l0
     val l2 = dict_sort compare_score l1
   in
     if null l2
-    then (debug "nonexttac"; raise NoNextTac)
+    then (debug_search "nonexttac"; raise NoNextTac)
     else
       let
         val (pid,score) = hd l2
-        val bmetis = score > 1.01
         val prec = dfind pid (!proofdict)
+        val _ = incr (#width prec)
         val gn = hd (! (#pending prec))
         val goal = Array.sub (#goalarr prec, gn)
-        val (stac,_) = hd (Array.sub (#predarr prec, gn))
+        val ((stac,_,_,_),_) = hd (Array.sub (#predarr prec, gn))
       in
-        debug ("node_find " ^ int_to_string pid ^
-               " with " ^ Real.toString score ^
-               " for " ^ stac ^
-               " on " ^ string_of_goal goal);
-        (bmetis,pid)
+        debug_search ("Find " ^ int_to_string pid ^ " " ^ Real.toString score ^
+          "\n  " ^ stac);
+        pid
       end
   end
 
-(* ----------------------------------------------------------------------
+(* ---------------------------------------------------------------------------
    Closing proofs
-   ---------------------------------------------------------------------- *)
+   -------------------------------------------------------------------------- *)
 
 fun children_of pid =
   let val prec = dfind pid (!proofdict) in
@@ -384,51 +409,111 @@ fun close_proof cid pid =
   end
 
 (* ----------------------------------------------------------------------
-   Three different cases. Either a proof, a failure or a list of goals.
+   Creating new nodes
    ---------------------------------------------------------------------- *)
 
-(* Give a value of 1.1 to Metis so that it is processed first *)
-
-exception METIS_PRED
-
-fun add_metis_pred (g,pred) =
-  if !hhs_metis_flag
-  then
-    let
-      val thmpred = thm_predict_timer (!thm_predictor_glob) g
-      val stac = "metisTools.METIS_TAC [ " ^
-                 String.concatWith " , " thmpred ^ " ]"
-      val tac = valid_tactic_of_sml stac handle _ => raise METIS_PRED
-    in
-      tacdict_glob := dadd stac tac (!tacdict_glob);
-      (g, (stac,1.1) :: pred)
-    end
-    handle METIS_PRED => (g,pred)
-  else (g,pred)
-
-fun norm_pred depth_coeff (g,pred) =
+fun node_create_gl tactime gl pid =
   let
-    val norm =
-      if !hhs_noscore
-      then 1.0
-      else knn_self_distance (!nfstfea_glob) (!symweight_glob) (fea_of_goal g)
-    val width_coeff = ref 1.0
-    fun f (stac,score) =
-      let
-        val new_score =
-          if !hhs_noscore
-          then (!width_coeff) * depth_coeff * 1.0
-          else (!width_coeff) * depth_coeff * (score / norm)
-        val _ =
-          if !hhs_widthpen_flag
-          then width_coeff := (!width_coeff) * (!hhs_widthpen)
-          else ()
-      in
-        (stac, new_score)
-      end
+    val prec = dfind pid (!proofdict)
+    val gn = hd (! (#pending prec))
+    val goal = Array.sub (#goalarr prec, gn)
+    val prev_predl = Array.sub (#predarr prec, gn)
+    val prev_predn = Array.sub (#predarrn prec, gn)
+    val ((stac,_,_,_),_) = hd prev_predl
+    val parchildren = #children prec
+    val depth = #depth prec + 1
+    val timedepth = #timedepth prec + tactime
+    
+    fun add_pred g =
+      if !hhs_cache_flag
+      then
+        (g, dfind g (!goalpred_cache)) handle _ =>
+        let
+          val r = (!stacpredictor_glob) g
+        in
+          goalpred_cache := dadd g r (!goalpred_cache);
+          (g,r)
+        end
+      else (g, (!stacpredictor_glob) g)
+      
+    val width = 
+      if !hhs_visited_flag 
+        then !(#width prec)
+      else if !hhs_diag_flag 
+        then prev_predn - (length prev_predl)
+      else 0
+
+    val predlist0 =
+      map (
+          add_accept tacdict_glob o
+          add_metis tacdict_glob thmpredictor_glob o 
+          stacpred_timer (addpred_stac tacdict_glob thmpredictor_glob) o
+          estimate_distance (depth + width,timedepth) o 
+          add_pred
+          ) 
+      gl
+    val predlist1 = map snd predlist0
+    val pending0 = number_list 0 predlist1
+    val pending1 = map (fn (gn,pred) => (gn, (snd o hd) pred)) pending0
+    fun compare_score ((_,r1),(_,r2)) = Real.compare (r2,r1)
+    val pending = map fst (dict_sort compare_score pending1)
+    (* Updating the list of parent *)
+    val new_pardict = dadd goal () (#pardict prec)
+    (* New node *)
+    val selfid = 
+      node_create tactime pid stac gn goal gl predlist1 pending new_pardict
   in
-    (g, map f pred)
+    parchildren := selfid :: (!parchildren);
+    selfid
   end
+
+(* fake a node when a proof is found but no search is performed on this node *)
+fun node_create_empty tactime pid =
+  let
+    val prec = dfind pid (!proofdict)
+    val gn   = hd (! (#pending prec))
+    val goal = Array.sub (#goalarr prec, gn)
+    val ((stac,_,_,_),_) = hd (Array.sub (#predarr prec, gn))
+    val parchildren = #children prec
+    val selfid = node_create tactime pid stac gn goal [] [] [] 
+                   (dempty goal_compare)
+  in
+    parchildren := selfid :: (!parchildren);
+    selfid
+  end
+
+(* ---------------------------------------------------------------------------
+   Search function. Modifies proofdict.
+   -------------------------------------------------------------------------- *)
+
+fun init_search thmpredictor stacpredictor tacdict minstepdict g =
+  (
+  init_thml_glob ();
+  stactime_dict := dempty String.compare;
+  if !hhs_unsafecache_flag 
+    then ()
+    else stacgoal_cache := dempty stacgoal_compare
+  ;
+  goalpred_cache := dempty goal_compare;
+  predict_time := 0.0;
+  thmpredict_time := 0.0;
+  infstep_time := 0.0;
+  node_find_time := 0.0;
+  node_create_time := 0.0;
+  tot_time := 0.0;
+  glob_timer := SOME (Timer.startRealTimer ());
+  pid_counter := 0;
+  stac_counter := 0;
+  max_depth_mem := 0;
+  astar_time := 0.0;
+  stacpred_time := 0.0;
+  proofdict    := dempty Int.compare;
+  finproofdict := dempty Int.compare;
+  stacpredictor_glob := predict_timer stacpredictor;
+  thmpredictor_glob := thmpredict_timer thmpredictor;
+  tacdict_glob := tacdict;
+  minstepdict_glob := minstepdict
+  )
 
 fun get_next_pred pid =
   let
@@ -440,219 +525,41 @@ fun get_next_pred pid =
     handle _ => raise ERR "init_none" ""
   end
 
-fun node_create_gl gl pid =
-  let
-    val prec = dfind pid (!proofdict)
-    val gn = hd (! (#pending prec))
-    val goal = Array.sub (#goalarr prec, gn)
-    val (stac,_) = hd (Array.sub (#predarr prec, gn))
-    val parchildren = #children prec
-   (* Normalization of the predictions scores *)
-    val depth = #depth prec + 1;
-    val depth_coeff =
-      if !hhs_depthpen_flag
-      then Math.pow (!hhs_depthpen, Real.fromInt depth)
-      else 1.0
-    fun add_pred g =
-      if !hhs_cache_flag
-      then
-        (g, dfind g (!goalpred_cache)) handle _ =>
-        let
-          val r = predict_timer (!predictor_glob) g
-        in
-          goalpred_cache := dadd g r (!goalpred_cache);
-          (g,r)
-        end
-      else (g, predict_timer (!predictor_glob) g)
-    val predlist0 =
-      map (add_metis_pred o (norm_pred depth_coeff) o add_pred) gl
-    val predlist1 = map snd predlist0
-    (* Ordering the goals: hardest first *)
-    val pending0 = number_list 0 predlist1
-    val pending1 = map (fn (gn,pred) => (gn, (snd o hd) pred)) pending0
-    fun compare_score ((_,r1),(_,r2)) = Real.compare (r1,r2)
-    val pending = map fst (dict_sort compare_score pending1)
-
-    (* Updating the list of parent *)
-    val new_pardict = dadd goal () (#pardict prec)
-
-    (* New node *)
-    val selfid = node_create pid stac gn goal gl predlist1 pending new_pardict
-  in
-    parchildren := selfid :: (!parchildren);
-    selfid
-  end
-
-(* fake a node when a proof is found but no search is performed on this node *)
-fun node_create_empty pid =
-  let
-    val prec = dfind pid (!proofdict)
-    val gn   = hd (! (#pending prec))
-    val goal = Array.sub (#goalarr prec, gn)
-    val (stac,_) = hd (Array.sub (#predarr prec, gn))
-    val parchildren = #children prec
-    val selfid = node_create pid stac gn goal [] [] [] (dempty goal_compare)
-  in
-    parchildren := selfid :: (!parchildren);
-    selfid
-  end
-
-(* ----------------------------------------------------------------------
-   Main search function. Modifies proofdict.
-   ---------------------------------------------------------------------- *)
-
-fun init_search thm_predictor predictor nfstfea symweight tacdict g =
-  let
-    val _ = (meson_chat := !mesonLib.chatting;
-             mesonLib.chatting := 0)
-    val _ = (metis_chat := !mlibUseful.trace_level;
-             mlibUseful.trace_level := 0)
-    val _ = stacgoal_cache := dempty stacgoal_compare
-    val _ = goalpred_cache := dempty goal_compare
-    val _ = if !hhs_debug_flag
-            then hhs_print ("Goal: " ^ string_of_goal g)
-            else ()
-    val _ = debug ("\nStarting proof of: " ^ string_of_goal g)
-    val _ = predict_time := 0.0
-    val _ = thm_predict_time := 0.0
-    val _ = infstep_time := 0.0
-    val _ = node_find_time := 0.0
-    val _ = node_create_time := 0.0
-    val _ = total_time := 0.0
-    val _ = glob_timer   := SOME (Timer.startRealTimer ())
-    val _ = pid_counter  := 0
-    val _ = stac_counter := 0
-    val _ = max_depth_mem := 0
-    val _ = proofdict    := dempty Int.compare
-    val _ = finproofdict := dempty Int.compare
-    val _ = predictor_glob := predictor
-    val _ = thm_predictor_glob := thm_predictor
-    val _ = nfstfea_glob := nfstfea
-    val _ = symweight_glob := symweight
-    val _ = tacdict_glob := tacdict
-  in
-    ()
-  end
-
-fun root_create_wrap g =
-  let
-    (* Predictions *)
-    val pred = predict_timer (!predictor_glob) g
-    val (_,pred1) = (add_metis_pred o (norm_pred 1.0)) (g,pred)
-  in
-    root_create g pred1
-  end
-
 fun search_step () =
   let
-    val (bmetis,pid) = node_find_timer node_find ()
+    val pid = node_find_timer node_find ()
     val prec = dfind pid (!proofdict)
     val trydict = #trydict prec
-    val glo = apply_next_stac bmetis pid
+    val (glo,tactime) = add_time apply_next_stac pid
   in
     case glo of
       NONE    => get_next_pred pid
     | SOME gl =>
       if gl = []
       then
-        let val cid = node_create_timer node_create_empty pid in
+        let val cid = node_create_timer (node_create_empty tactime) pid in
           close_proof cid pid
         end
       else
         (
         trydict := dadd gl () (!trydict);
-        ignore (node_create_timer (node_create_gl gl) pid)
+        ignore (node_create_timer (node_create_gl tactime gl) pid)
         )
   end
+
+datatype proof_status_t = 
+  ProofError | ProofSaturated | ProofTimeOut | Proof of string
 
 fun search_loop () =
   (
   if Timer.checkRealTimer (valOf (!glob_timer)) > (!hhs_search_time)
-    then print "  time out\n"
-  else if dmem 0 (!finproofdict) then ()
-  else
-    (search_step (); search_loop ())
+    then ProofTimeOut
+  else if dmem 0 (!finproofdict) then Proof ""
+  else (search_step (); search_loop ())
   )
-  handle NoNextTac => print "  saturated\n"
-       | ProofFound => ()
+  handle NoNextTac => ProofSaturated
+       | ProofFound => Proof ""
 
-val pstep_counter = ref 0
-
-fun unquote s =
-  if String.size s >= 2
-  then String.substring (s, 1, String.size s - 2)
-  else raise ERR "unquote" ""
-
-fun add_quote_aux sl = case sl of
-    [] =>  ""
-  | [a] => a
-  | "(" :: "Parse.Type" :: "[" :: "HOLPP.QUOTE" :: "(" :: s :: ")" :: 
-    "]" :: ")" :: m => 
-    "``" ^ (rm_blank o rm_comment o unquote) s ^ "``" ^ " " ^ add_quote_aux m
-  | "(" :: "Parse.Term" :: "[" :: "HOLPP.QUOTE" :: "(" :: s :: ")" :: 
-    "]" :: ")" :: m => 
-    "``" ^ (rm_blank o rm_comment o unquote) s ^ "``" ^ " " ^ add_quote_aux m
-  | "[" :: "HOLPP.QUOTE" :: "(" :: s :: ")" :: "]" :: m =>
-    "`" ^ (rm_blank o rm_comment o unquote) s ^ "`" ^ " " ^ add_quote_aux m
-  | "[" :: "HOLPP.QUOTE"  :: s :: "]" :: m =>
-    "`" ^ (rm_blank o rm_comment o unquote) s ^ "`" ^ " " ^ add_quote_aux m
-  | a :: m => a ^ " " ^ add_quote_aux m
-
-fun add_quote stac = add_quote_aux (hhs_lex stac)
-
-fun rm_fetch_aux sl = case sl of
-    [] =>  ""
-  | [a] => a
-  | "(" :: "DB.fetch" :: thy :: b :: ")" :: m =>
-    (
-    if thy = current_theory () 
-    then String.concatWith " " ["(","DB.fetch",thy,b,")",rm_fetch_aux m]
-    else unquote thy ^ "Theory." ^ unquote b ^ " " ^ rm_fetch_aux m
-    )
-  | a :: m => a ^ " " ^ rm_fetch_aux m
-
-fun rm_fetch stac = rm_fetch_aux (hhs_lex stac)
- 
-fun minspace_sl sl = case sl of
-    [] =>  ""
-  | [a] => a
-  | a :: b :: m =>
-    (
-    if mem a ["[","("] orelse mem b ["]",")",",",";"] 
-      then a ^ minspace_sl (b :: m)
-      else a ^ " " ^ minspace_sl (b :: m)
-    )
-
-fun rm_prefix stac =
-  let
-    val sl = hhs_lex stac
-    fun rm_one_prefix s =
-      let
-        val l = String.tokens (fn x => x = #".") s
-        val s' = last l
-      in
-        if List.length l = 1 orelse not (is_pointer_eq s s') then s else s'
-      end
-  in
-    map rm_one_prefix sl
-  end
-
-fun prettify1_stac stac = 
-  (minspace_sl o rm_prefix o rm_fetch o add_quote) stac
-fun prettify2_stac stac =
-  (minspace_sl o hhs_lex o rm_fetch o add_quote) stac
-
-datatype Proof = 
-    Tactic of (string * goal)
-  | Then   of (Proof * Proof)
-  | Thenl  of (Proof * Proof list)
-
-(*
-    fun is_single_token s = List.length (hhs_lex s) = 1
-    fun par s = if is_single_token s
-                then prettify_stac s
-                else "(" ^ prettify_stac s ^ ")"
-*)
 fun proofl_of pid =
   let
     val prec = dfind pid (!finproofdict)
@@ -674,238 +581,88 @@ fun proofl_of pid =
     map f new_proofl
   end
 
-fun exact_effect stac1 stac2 g =
-  let 
-    val gl1 = SOME (fst (valid_tactic_of_sml stac1 g)) handle _ => NONE
-    val gl2 = SOME (fst (valid_tactic_of_sml stac2 g)) handle _ => NONE
-  in
-    gl1 <> NONE andalso gl2 <> NONE andalso gl1 = gl2 
-  end
-
-fun is_proof stac g =
-  let 
-    val tim = 1.0
-    val gl1 = SOME (fst (timeOut tim (valid_tactic_of_sml stac) g)) 
-              handle _ => NONE
-  in
-    gl1 = SOME []
-  end
-
-fun is_effect stac g gl =
-  let 
-    val tim = Real.max (!hhs_tactic_time, !hhs_metis_time)
-    val gl1 = SOME (fst (timeOut tim (valid_tactic_of_sml stac) g)) 
-              handle _ => NONE
-  in
-    gl1 = SOME gl
-  end
-
-
-
-fun string_of_proof proof = case proof of
-    Tactic (s,_) => s
-  | Then (p1,p2) => string_of_proof p1 ^ " THEN " ^ string_of_proof p2
-  | Thenl (p,pl) => 
-    let 
-      val sl = map string_of_proof pl
-      val set = mk_fast_set String.compare sl
-    in
-      if length set = 1 
-      then string_of_proof p ^ " THEN " ^ hd set
-      else string_of_proof p ^ " THENL " ^ "[" ^ String.concatWith ", " sl ^ "]"
-    end 
-fun safe_string_of_proof proof = case proof of
-    Tactic (s,_) => "(" ^ s ^ ")"
-  | Then (p1,p2) => 
-    safe_string_of_proof p1 ^ " THEN " ^ safe_string_of_proof p2
-  | Thenl (p,pl) =>     
-    let 
-      val sl = map safe_string_of_proof pl
-      val set = mk_fast_set String.compare sl
-    in
-      if length set = 1 
-      then safe_string_of_proof p ^ " THEN " ^ "(" ^ hd set ^ ")"
-      else safe_string_of_proof p ^ " THENL " ^ 
-        "[" ^ String.concatWith ", " sl ^ "]"
-    end
-
-fun parse_list acc l opar obra olet ocur sl = case sl of
-    "{" :: m => parse_list ("{" :: acc) l opar obra olet (ocur + 1) m
-  | "}" :: m => parse_list ("}" :: acc) l opar obra olet (ocur - 1) m
-  | "let" :: m => parse_list ("let" :: acc) l opar obra (olet + 1) ocur m
-  | "end" :: m => parse_list ("end" :: acc) l opar obra (olet - 1) ocur m
-  | "(" :: m => parse_list ("(" :: acc) l (opar + 1) obra olet ocur m
-  | ")" :: m => parse_list (")" :: acc) l (opar - 1) obra olet ocur m 
-  | "[" :: m => parse_list ("[" :: acc) l opar (obra + 1) olet ocur m
-  | "]" :: m => 
-     if obra <= 1 andalso opar = 0 andalso olet = 0 andalso ocur = 0
-     then (rev (rev acc :: l), m)
-     else parse_list ("]" :: acc) l opar (obra - 1) olet ocur m 
-  | "," :: m => 
-     if obra <= 1 andalso opar = 0 andalso olet = 0 andalso ocur = 0
-     then parse_list [] (rev acc :: l) opar obra olet ocur m
-     else parse_list ("," :: acc) l opar obra olet ocur m
-  | a :: m => parse_list (a :: acc) l opar obra olet ocur m
-  | []     => raise ERR "parse_list" ""
-  
-fun parse_list_full sl = case sl of
-    "[" :: m => 
-    let val (eleml,nextl) = parse_list [] [] 0 1 0 0 m in
-      (map (String.concatWith " ") eleml, nextl)
-    end
-  | _ => raise ERR "parse_list_full" ""
-   
-fun decompose sl = case sl of
-    [] => []
-  | "[" :: m => 
-    let val (eleml,nextl) = parse_list_full sl in
-      (true, ([],eleml)) :: decompose nextl
-    end
-  | a :: m => (false, ([],[a])) :: decompose m
-  
-fun list_to_string sl = "[ " ^ String.concatWith " , " sl ^ " ]"
-  
-fun group_to_string l =
-  let fun to_string (b,(l1',l2')) =  
-    if b then list_to_string (l1' @ l2') else hd l2'
-  in
-    String.concatWith " " (map to_string l)
-  end
-  
-fun minimize_stac g gl pl l = case l of
-    [] => group_to_string pl
-  | (false,a) :: m => minimize_stac g gl (pl @ [(false,a)]) m
-  | (true,(l1,l2)) :: m => 
-    if null l2 
-    then minimize_stac g gl (pl @ [(true,(l1,l2))]) m
-    else 
-      let val new_stac = group_to_string  (pl @ [(true, (l1, tl l2))] @ m) in
-        if is_effect new_stac g gl 
-        then minimize_stac g gl pl ((true, (l1, tl l2)) :: m)
-        else minimize_stac g gl pl ((true, (l1 @ [hd l2], tl l2)) :: m)
-      end   
-        
-fun minimize_stac_full stac g =
-  let val gl = fst (valid_tactic_of_sml stac g) 
-    handle _ => raise ERR "minimize" stac
-  in
-    minimize_stac g gl [] (decompose (hhs_lex stac))
-  end       
-       
-fun minimize_tac proof = case proof of 
-    Tactic (s,g) => Tactic (minimize_stac_full s g,g)   
-  | Then (p1,p2) => Then (minimize_tac p1, minimize_tac p2)
-  | Thenl (p,pl) => Thenl (minimize_tac p, map minimize_tac pl)
- 
-fun minimize_proof proof = case proof of
-    Tactic _ => proof
-  | Then (Tactic (_,g),p2) => 
-    let val s = safe_string_of_proof p2 in
-      if is_proof s g then p2 else proof
-    end
-  | Then (p1,p2) => Then (minimize_proof p1, minimize_proof p2)
-  | Thenl (p,pl) => Thenl (minimize_proof p, map minimize_proof pl)
- 
-fun prettify_proof proof = case proof of
-    Tactic (s,g) =>
-    let 
-      val s1 = prettify1_stac s
-      val s2 = prettify2_stac s
-    in
-      if exact_effect s s1 g then Tactic (s1,g)
-      else if exact_effect s s2 g then Tactic (s2,g)
-      else Tactic (s,g)
-    end
-  | Then (p1,p2) => Then (prettify_proof p1, prettify_proof p2)
-  | Thenl (p,pl) => Thenl (prettify_proof p, map prettify_proof pl)
-
-fun hhs_reconstruct g proof =
-  let
-    val sproof = string_of_proof proof
-    val tac    = valid_tactic_of_sml sproof
-                 handle _ => raise ERR "hhs_reconstruct" sproof
-  in
-    (
-    ignore (Tactical.TAC_PROOF (g,tac));
-    print (sproof ^ "\n");
-    if !hhs_debug_flag then hhs_print (sproof ^ "\n") else ()
-    )
-    handle _ => raise ERR "hhs_reconstruct" sproof
-  end
-  
-fun safe_hhs_reconstruct g proof =
-  hhs_reconstruct g proof handle _ => 
-  (
-  let
-    val sproof = safe_string_of_proof proof
-    val tac    = valid_tactic_of_sml sproof
-                 handle _ => raise ERR "safe_hhs_reconstruct" sproof
-  in
-    (
-    ignore (Tactical.TAC_PROOF (g,tac));
-    print (sproof ^ "\n");
-    if !hhs_debug_flag then hhs_print (sproof ^ "\n") else ()
-    )
-    handle _ => raise ERR "safe_hhs_reconstruct" sproof
-  end  
-  )
-
 fun end_search () =
   (
-  if !hhs_debug_flag then
-  (
-  hhs_print ("Statistics");
-  hhs_print ("  infstep : " ^ int_to_string (!stac_counter));
-  hhs_print ("  nodes   : " ^ int_to_string (!pid_counter));
-  hhs_print ("  maxdepth: " ^ int_to_string (!max_depth_mem));
-  hhs_print ("Time: " ^ Real.toString (!total_time));
-  hhs_print ("  inferstep time: " ^ Real.toString (!infstep_time));
-  hhs_print ("  node_find time: " ^ Real.toString (!node_find_time));
-  hhs_print ("  node_crea time: " ^ Real.toString (!node_create_time));
-  hhs_print ("    predictio time: " ^ Real.toString (!predict_time));
-  hhs_print ("    thm predictio time: " ^ Real.toString (!thm_predict_time))
-  )
-  else ();
-  mesonLib.chatting := !meson_chat;
-  mlibUseful.trace_level := !metis_chat;
-  predict_time := 0.0;
-  thm_predict_time := 0.0;
-  infstep_time := 0.0;
-  node_find_time := 0.0;
-  node_create_time := 0.0;
-  total_time := 0.0;
+  debug_proof ("Statistics");
+  debug_proof ("  infstep : " ^ int_to_string (!stac_counter));
+  debug_proof ("  nodes   : " ^ int_to_string (!pid_counter));
+  debug_proof ("  maxdepth: " ^ int_to_string (!max_depth_mem));
+  debug_proof ("Time: " ^ Real.toString (!tot_time));
+  debug_proof ("  inferstep time: " ^ Real.toString (!infstep_time));
+  debug_proof ("  node_find time: " ^ Real.toString (!node_find_time));
+  debug_proof ("  node_crea time: " ^ Real.toString (!node_create_time));
+  debug_proof ("    pred time: " ^ Real.toString (!predict_time));
+  debug_proof ("    thmpred time: " ^ Real.toString (!thmpredict_time));
+  debug_proof ("    astar time: " ^ Real.toString (!astar_time));
+  debug_proof ("    mutate time: " ^ Real.toString (!mutate_time));
+  debug_proof ("    stacpred time: " ^ Real.toString (!stacpred_time));
   proofdict    := dempty Int.compare;
   finproofdict := dempty Int.compare;
-  pid_counter := 0;
-  stac_counter := 0;
   tacdict_glob := dempty String.compare;
-  predictor_glob := empty_predictor;
-  thm_predictor_glob := (fn g => []);
-  symweight_glob := dempty String.compare;
   stacgoal_cache := dempty stacgoal_compare;
   goalpred_cache := dempty goal_compare
   )
 
-fun imperative_search thm_predictor predictor nfstfea symweight tacdict g =
+(* ---------------------------------------------------------------------------
+   Self learning
+   -------------------------------------------------------------------------- *)
+
+val hhs_selflearn_flag = ref false
+
+fun selflearn_aux proof = case proof of 
+    Tactic (stac,g) => 
+      (
+      let 
+        val _ = count_succ stac
+        val ((gl,_),t) = add_time (tactic_of_sml stac) g
+        val lbl = (stac,t,g,gl) 
+      in
+        save_lbl lbl
+      end
+      handle _ => debug_search ("Error: selflearn: " ^ stac)
+      )
+  | Then (p1,p2) => (selflearn_aux p1; selflearn_aux p2)
+  | Thenl (p,pl) => (selflearn_aux p; app selflearn_aux pl)
+
+fun selflearn proof =
+  if !hhs_selflearn_flag 
+  then debug_t "selflearn" selflearn_aux proof
+  else ()
+
+fun debug_err s = (debug s; raise ERR "" "")
+
+(* ---------------------------------------------------------------------------
+   Main
+   -------------------------------------------------------------------------- *)
+
+fun imperative_search thmpredictor stacpredictor tacdict minstepdict goal =
   (
-  init_search thm_predictor predictor nfstfea symweight tacdict g;
-  total_timer (node_create_timer root_create_wrap) g;
-  total_timer search_loop ();
-  if dmem 0 (!finproofdict) then 
-    let 
-      val proofl = proofl_of 0
-      val proof = 
-        if length proofl <> 1 
-        then raise ERR "imperative_search" "" 
-        else 
-          if !minimize_flag 
-          then (prettify_proof o minimize_proof o minimize_tac) (hd proofl)
-          else prettify_proof (hd proofl)
-    in
-      safe_hhs_reconstruct g proof
-    end
-  else ();
-  end_search ()
+  init_search thmpredictor stacpredictor tacdict minstepdict goal;
+  total_timer (node_create_timer root_create_wrap) goal;
+  let
+    val r = total_timer search_loop ()
+    val _ = debug_search "End search loop"
+    val sproof_status = case r of
+      Proof _  =>
+      (
+      if dmem 0 (!finproofdict) then
+        let 
+          val proofl = proofl_of 0 handle _ => debug_err "SNH0"
+          val proof = 
+            if length proofl <> 1 
+            then debug_err "SNH1"
+            else (selflearn (hd proofl); minimize (hd proofl))
+          val sproof = debug_t "reconstruct" reconstruct goal proof
+        in
+          Proof sproof
+        end
+      else debug_err "SNH2"
+      )
+    | _ => r
+  in
+    end_search ();
+    sproof_status
+  end
   )
 
 end (* struct *)

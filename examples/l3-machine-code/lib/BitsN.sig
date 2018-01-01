@@ -85,10 +85,12 @@ sig
    val resize: int -> nbit -> nbit
    val resize_replicate: int -> nbit * Nat.nat -> nbit
    val reverse: nbit -> nbit
+   val sdiv: nbit * nbit -> nbit
    val signExtend: Nat.nat -> nbit -> nbit
    val size: nbit -> Nat.nat
    val smax: nbit * nbit -> nbit
    val smin: nbit * nbit -> nbit
+   val smod: nbit * nbit -> nbit
    val tabulate: Nat.nat * (Nat.nat -> bool) -> nbit
    val toList: nbit -> bool list
    val zero: Nat.nat -> nbit

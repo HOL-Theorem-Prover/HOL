@@ -9,7 +9,7 @@ struct
 
 open HolKernel Parse boolLib bossLib ptopTheory ;
 
-fun APPLY_DEFINITIONS_TO_THEOREM definitions th = 
+fun APPLY_DEFINITIONS_TO_THEOREM definitions th =
 	(
 		BETA_RULE
 		(
@@ -21,10 +21,10 @@ fun APPLY_DEFINITIONS_TO_THEOREM definitions th =
 	)
 ;
 
-fun APPLY_DEFINITIONS_TAC definitions = 
+fun APPLY_DEFINITIONS_TAC definitions =
 	(PURE_ONCE_REWRITE_TAC definitions )
 	THEN
-		(REPEAT GEN_TAC)	
+		(REPEAT GEN_TAC)
 	THEN
 		(BETA_TAC)
 ;
@@ -46,15 +46,15 @@ val REFINEMENT_TAC = APPLY_DEFINITIONS_TAC [ptopTheory.bRefinement_def, ptopTheo
 
 fun SWAPLR_RULE th =(PURE_ONCE_REWRITE_RULE [EQ_SYM_EQ] th);
 
-fun EXHAUSTIVELY x = 
+fun EXHAUSTIVELY x =
 	(REPEAT (CHANGED_TAC x))
 ;
 
-val REP_EVAL_TAC = 
+val REP_EVAL_TAC =
 	(EXHAUSTIVELY EVAL_TAC)
 ;
 
-fun USE_CONTEXT (asl:term list) (th:thm) =   
+fun USE_CONTEXT (asl:term list) (th:thm) =
 	if (null asl) then th else (UNDISCH (USE_CONTEXT (tl(asl)) th))
 ;
 
@@ -62,11 +62,11 @@ fun VSUB (v:term) (e:term) (th:thm) =
 	USE_CONTEXT (hyp th) (SPEC e (GEN v (DISCH_ALL th)))
 ;
 
-fun MAKE_IT_SO (th:thm) = 
+fun MAKE_IT_SO (th:thm) =
 	((SUBST_TAC [(VSUB ``v:bool`` (concl th) PTOP_ACCEPT_IN_PLACE)]) THEN EVAL_TAC)
 ;
 
-fun MAKE_IT_NO (th:thm)  = 
+fun MAKE_IT_NO (th:thm)  =
 	if(is_neg(concl th)) then
 		((SUBST_TAC [(VSUB ``v:bool`` (dest_neg(concl th)) PTOP_REJECT_IN_PLACE)]) THEN EVAL_TAC)
 	else
@@ -74,19 +74,19 @@ fun MAKE_IT_NO (th:thm)  =
 ;
 
 fun EVAL_FOR_STATEVARS valList =
-	if(null valList) then 
+	if(null valList) then
 	(
-		(REPEAT DISCH_TAC) 
+		(REPEAT DISCH_TAC)
 		THEN
 		(REPEAT (FIRST_ASSUM (fn th => (CHANGED_TAC (SUBST_TAC [th]))) ))
 	)
 	else
 	(
-		(EVERY_ASSUM 
-			(fn th =>	let val instance = (SPECL [(hd valList)] th) 
-					in 
-					( 
-						(ASSUME_TAC instance) THEN 
+		(EVERY_ASSUM
+			(fn th =>	let val instance = (SPECL [(hd valList)] th)
+					in
+					(
+						(ASSUME_TAC instance) THEN
 						(UNDISCH_TAC (concl instance))	THEN
 						(REP_EVAL_TAC)
  					)
@@ -102,7 +102,7 @@ fun EVAL_FOR_STATEVARS valList =
 
 fun DISTINCT_STATEVARS (boundVarAndType: term) (disjList: term) (asl : term list) =
 	if( is_disj(disjList) ) then (
-		let val lhsRhs = (dest_disj(disjList)) in 
+		let val lhsRhs = (dest_disj(disjList)) in
 			let val asm = mk_forall ( boundVarAndType, ( mk_imp ( #2(lhsRhs), (mk_neg (#1(lhsRhs)) )  )  ) ) in
 				DISTINCT_STATEVARS boundVarAndType (#1(lhsRhs)) (asm :: asl)
 			end
@@ -120,22 +120,22 @@ fun DECL_NEXT_DISJLIST (boundVarAndType:term) (stateVars: term list) (disjList: 
 ;
 
 fun DECL_DISJLIST (boundVarAndType:term) (stateVars: term list) =
-	if (null stateVars) then ( 
+	if (null stateVars) then (
 		mk_eq (boundVarAndType,boundVarAndType )
 	) else (
 		DECL_NEXT_DISJLIST boundVarAndType (tl stateVars) ( mk_eq( boundVarAndType, (hd stateVars) ) )
 	)
 ;
 
-fun DECL_STATEVARS (boundVarAndType : term) ( stateVars : term list) = 
+fun DECL_STATEVARS (boundVarAndType : term) ( stateVars : term list) =
 	let val disjList = (DECL_DISJLIST boundVarAndType stateVars)
-	in (	
-		if (null stateVars) then ( 
+	in (
+		if (null stateVars) then (
 			[]
 		) else (
 			DISTINCT_STATEVARS boundVarAndType disjList [ ( mk_forall (boundVarAndType,disjList) ) ]
 		)
-	) 
+	)
 	end
 ;
 

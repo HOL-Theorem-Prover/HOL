@@ -94,6 +94,13 @@ sig
   val null_intersection : ''a list -> ''a list -> bool
   val set_eq : ''a list -> ''a list -> bool
 
+  type 'a eqf = 'a -> 'a -> bool
+  val pair_eq : 'a eqf -> 'b eqf -> ('a * 'b) eqf
+  val option_eq : 'a eqf -> 'a option eqf
+  val list_eq : 'a eqf -> 'a list eqf
+  val redres_eq : 'a eqf -> 'b eqf -> {redex:'a,residue:'b} eqf
+
+  val op_assoc1 : 'a eqf -> 'a -> ('a * 'b) list -> 'b option
   val op_mem : ('a -> 'a -> bool) -> 'a -> 'a list -> bool
   val op_insert : ('a -> 'a -> bool) -> 'a -> 'a list -> 'a list
   val op_mk_set : ('a -> 'a -> bool) -> 'a list -> 'a list

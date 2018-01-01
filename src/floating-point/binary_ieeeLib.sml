@@ -306,15 +306,14 @@ val float_value_CONV =
 
 local
    val mk_real = realSyntax.term_of_int o Arbint.fromInt
-   val mk_large = binary_ieeeSyntax.mk_int_largest
+   val mk_tw = boolSyntax.mk_itself o pairSyntax.mk_prod
+   val mk_large = binary_ieeeSyntax.mk_largest o mk_tw
    val mk_neg_large = realSyntax.mk_negated o mk_large
-   val mk_threshold = binary_ieeeSyntax.mk_int_threshold
+   val mk_threshold = binary_ieeeSyntax.mk_threshold o mk_tw
    val mk_neg_threshold = realSyntax.mk_negated o mk_threshold
-   val mk_ulp = binary_ieeeSyntax.mk_int_ulp
+   val mk_ulp = binary_ieeeSyntax.mk_ulp o mk_tw
    fun mk_ULP (e, t) =
-      binary_ieeeSyntax.mk_ULP
-         (pairSyntax.mk_pair
-            (e, boolSyntax.mk_itself (fcpSyntax.mk_int_numeric_type t)))
+      binary_ieeeSyntax.mk_ULP (pairSyntax.mk_pair (e, boolSyntax.mk_itself t))
    fun mk_abs_diff (x, r) = realSyntax.mk_absval (realSyntax.mk_minus (x, r))
    fun mk_abs_diff_lt (x, r, u) = realSyntax.mk_less (mk_abs_diff (x, r), u)
    val cond_mk_absval = fn true => realSyntax.mk_absval | _ => Lib.I
@@ -335,15 +334,18 @@ local
       |> Drule.EQT_ELIM
    val twm_map =
       ref (Redblackmap.mkDict
-            (Lib.pair_compare (Lib.pair_compare (Int.compare, Int.compare),
+            (Lib.pair_compare (Lib.pair_compare (Type.compare, Type.compare),
                                Term.compare))
-           : ((int * int) * term, (term -> float) * conv) Redblackmap.dict)
-   fun lookup (x as (tw, mode)) =
+           : ((hol_type * hol_type) * term,
+              (term -> float) * conv) Redblackmap.dict)
+   fun lookup (x as (tw as (t, w), mode)) =
       case Redblackmap.peek (!twm_map, x) of
          SOME y => y
        | NONE =>
            let
-              val f = real_to_float x
+              val tn = fcpSyntax.dest_int_numeric_type t
+              val wn = fcpSyntax.dest_int_numeric_type w
+              val f = real_to_float ((tn, wn), mode)
               val thm = if mode = binary_ieeeSyntax.roundTiesToEven_tm
                            then threshold_CONV (mk_threshold tw)
                         else largest_CONV (mk_large tw)
@@ -399,6 +401,10 @@ local
       Drule.MATCH_MP (realLib.REAL_ARITH ``(a <= b = F) ==> b < a: real``)
    val le_thm =
       Drule.MATCH_MP (realLib.REAL_ARITH ``(a < b = F) ==> b <= a: real``)
+   fun mk_w (n, ty) = wordsSyntax.mk_n2w (numLib.mk_numeral n, ty)
+   fun float_of_triple ((t, w), (s, e, f)) =
+     binary_ieeeSyntax.mk_floating_point
+       (wordsSyntax.mk_wordii (if s then 1 else 0, 1), mk_w (e, w), mk_w (f, t))
    (*
    fun EQ_ELIM thm =
       mlibUseful.INL (Drule.EQT_ELIM thm)
@@ -409,8 +415,7 @@ in
    fun round_CONV tm =
    let
       val (mode, x, t, w) = binary_ieeeSyntax.dest_round tm
-      val tw as (t, w) = (fcpSyntax.dest_int_numeric_type t,
-                          fcpSyntax.dest_int_numeric_type w)
+      val tw = (t, w)
       val (r2f, cnv) = lookup (tw, mode)
    in
       (*
@@ -436,7 +441,7 @@ in
                        val t_thm =
                           (EQT_REDUCE (Conv.RAND_CONV cnv))
                              (mk_abs_lt (x, mk_threshold tw))
-                       val y = binary_ieeeSyntax.float_of_triple (tw, sef)
+                       val y = float_of_triple (tw, sef)
                        val r_thm =
                           float_value_CONV (binary_ieeeSyntax.mk_float_value y)
                        val r = binary_ieeeSyntax.dest_float (rhsc r_thm)
@@ -498,7 +503,7 @@ in
                               Drule.EQT_ELIM u_thm
                               handle HOL_ERR _ =>
                                  raise PlusMinusZero (lt_thm u_thm)
-                           val y = binary_ieeeSyntax.float_of_triple (tw, sef)
+                           val y = float_of_triple (tw, sef)
                            val r_thm =
                               float_value_CONV
                                  (binary_ieeeSyntax.mk_float_value y)
@@ -575,8 +580,9 @@ local
         NotZero of Thm.thm
       | Limit of Thm.thm
       | Zero of Thm.thm
-   fun mk_neq_zero tm sz =
-      boolSyntax.mk_neg (boolSyntax.mk_eq (tm, wordsSyntax.mk_wordii (0, sz)))
+   fun mk_neq_zero tm ty =
+      boolSyntax.mk_neg
+        (boolSyntax.mk_eq (tm, wordsSyntax.mk_n2w (numSyntax.zero_tm, ty)))
    fun try_round tm =
       let
          val thm = round_CONV tm
@@ -624,8 +630,6 @@ in
          case try_round (binary_ieeeSyntax.mk_round (mode, x, t, w)) of
             NotZero rnd_thm =>
                let
-                  val t = fcpSyntax.dest_int_numeric_type t
-                  val w = fcpSyntax.dest_int_numeric_type w
                   val (_, e, f) =
                      binary_ieeeSyntax.dest_floating_point (rhsc rnd_thm)
                   val not_zero_tm =
@@ -653,15 +657,21 @@ end
    float_round_with_flags_CONV
    ------------------------------------------------------------------------- *)
 
-val float_round_with_flags_CONV =
-  Conv.REWR_CONV binary_ieeeTheory.float_round_with_flags_def
-  THENC Conv.RAND_CONV REAL_REDUCE_CONV
-  THENC Conv.PATH_CONV "lrr"
-          (REAL_REDUCE_CONV
-           THENC FLOAT_DATATYPE_CONV
-           THENC REWRITE_CONV [binary_ieeeTheory.float_components]
-           THENC wordsLib.WORD_EVAL_CONV
-           THENC float_round_CONV)
+local
+  val conv =
+    REAL_REDUCE_CONV
+    THENC FLOAT_DATATYPE_CONV
+    THENC REWRITE_CONV [binary_ieeeTheory.float_components]
+    THENC wordsLib.WORD_EVAL_CONV
+    THENC float_round_CONV
+  fun round_conv tm =
+    (if binary_ieeeSyntax.is_float_round tm then conv else NO_CONV) tm
+in
+  val float_round_with_flags_CONV =
+    Conv.REWR_CONV binary_ieeeTheory.float_round_with_flags_def
+    THENC Conv.RAND_CONV REAL_REDUCE_CONV
+    THENC Conv.DEPTH_CONV round_conv
+end
 
 (* ------------------------------------------------------------------------
    infinity_intro_CONV - if possible, convert ground FP term to
@@ -920,8 +930,9 @@ val ieee_rewrites =
        sr0 float_top_def, float_plus_min_def, float_minus_min_def,
        float_minus_zero, sr [float_top_def, float_negate_def] float_bottom_def,
        float_components, float_round_to_integral_compute, float_to_int_def,
-       real_to_float_def, float_is_signalling_def, check_for_signalling_def,
-       clear_flags_def, invalidop_flags_def, dividezero_flags_def
+       real_to_float_def, real_to_float_with_flags_def, float_is_signalling_def,
+       check_for_signalling_def, clear_flags_def, invalidop_flags_def,
+       dividezero_flags_def
        ] @
       List.take (Drule.CONJUNCTS float_values, 3) @ float_datatype_rwts
    end
@@ -952,6 +963,8 @@ fun add_ieee_to_compset cmp =
          (binary_ieeeSyntax.float_mul_add_tm, 4, mul_add_CONV),
          (binary_ieeeSyntax.float_mul_sub_tm, 4, mul_sub_CONV),
          (binary_ieeeSyntax.float_round_tm, 3, float_round_CONV),
+         (binary_ieeeSyntax.float_round_with_flags_tm, 3,
+           float_round_with_flags_CONV),
          (binary_ieeeSyntax.float_compare_tm, 2, compare_CONV),
          (binary_ieeeSyntax.float_equal_tm, 2, equal_CONV),
          (binary_ieeeSyntax.float_less_than_tm, 2, less_than_CONV),

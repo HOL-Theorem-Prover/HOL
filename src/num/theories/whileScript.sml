@@ -259,6 +259,18 @@ val OLEAST_EQNS = store_thm(
   METIS_TAC [arithmeticTheory.NOT_ZERO_LT_ZERO]);
 val _ = export_rewrites ["OLEAST_EQNS"]
 
+val OLEAST_EQ_NONE = Q.store_thm(
+  "OLEAST_EQ_NONE[simp]",
+  ‘((OLEAST) P = NONE) <=> !n. ~P n’,
+  DEEP_INTRO_TAC OLEAST_INTRO >> SRW_TAC [][] >> METIS_TAC[]);
+
+val OLEAST_EQ_SOME = Q.store_thm(
+  "OLEAST_EQ_SOME",
+  ‘((OLEAST) P = SOME n) <=> P n /\ !m. m < n ==> ~P m’,
+  DEEP_INTRO_TAC OLEAST_INTRO >>
+  SIMP_TAC (srw_ss() ++ DNF_ss) [EQ_IMP_THM] >> REPEAT STRIP_TAC >>
+  METIS_TAC[NOT_LESS, LESS_EQUAL_ANTISYM]);
+
 (* ----------------------------------------------------------------------
     OWHILE ("option while") which returns SOME result if the loop
     terminates, NONE otherwise.

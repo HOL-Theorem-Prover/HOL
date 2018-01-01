@@ -35,10 +35,7 @@ fun size_of_term tm =
        | COMB(Rator,Rand) => size_of_term Rator + size_of_term Rand
        | _ => 1
 
-fun op lex_cmp (cmp1, cmp2) ((a1,b1), (a2,b2)) =
-    case cmp1 (a1, a2) of
-      EQUAL => cmp2 (b1, b2)
-    | x => x
+val op lex_cmp = pair_compare
 infix lex_cmp
 
 fun dest_hd env t =
@@ -202,7 +199,7 @@ val BOUNDED_t = mk_thy_const {Thy = "bool", Name = "BOUNDED",
 fun loops th = let
   val (l,r) = dest_eq (concl th)
 in
-  can (find_term (equal l)) r
+  can (find_term (aconv l)) r
 end handle HOL_ERR _ => failwith "loops"
 
 

@@ -2,3 +2,5 @@ OPTIONS = NO_OVERLAY
 
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe

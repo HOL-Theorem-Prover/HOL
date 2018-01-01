@@ -190,7 +190,11 @@ end
 val _ = term_grammar.userSyntaxFns.register_userPP {
           name = "monadsyntax.print_monads",
           code = print_monads
-        }
+    }
+val _ = term_grammar.userSyntaxFns.register_absynPostProcessor {
+          name = "monadsyntax.transform_absyn",
+          code = transform_absyn
+    }
 
 fun syntax_actions al ar aup app =
   (al {block_info = (PP.CONSISTENT,0),
@@ -214,9 +218,10 @@ fun temp_add_monadsyntax () =
 fun aup (s, pat, code) = (add_ML_dependency "monadsyntax";
                           add_user_printer (s, pat))
 
-fun add_monadsyntax () =
-    syntax_actions add_listform add_rule aup
-                   add_absyn_postprocessor
+fun aap (s, code) = (add_ML_dependency "monadsyntax";
+                     add_absyn_postprocessor s)
+
+fun add_monadsyntax () = syntax_actions add_listform add_rule aup aap
 
 
 fun mkc s = prim_mk_const{Thy = "state_transformer", Name = s}

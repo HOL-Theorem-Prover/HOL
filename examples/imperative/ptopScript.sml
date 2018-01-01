@@ -12,25 +12,25 @@ val _ = set_fixity "[=." (Infixl 500);
 
 val _ = set_fixity "[<>." (Infixl 500);
 
-val _ = xDefine "bRefinement" 
+val _ = xDefine "bRefinement"
 	`( v [=. u ) = ( !(s:'a) (s':'b).( (u s s') ==> (v s s') ))`
 ;
 
-val _ = xDefine "bRefinementNot" 
+val _ = xDefine "bRefinementNot"
 	`(v [<>. u ) = ( ?(s:'a) (s':'b).( ~((u s s') ==> (v s s')) ) )`
 ;
 
 val _ = xDefine "ptopABORT" `abort = \(s:'a) (s':'b). T`;
 val _ = xDefine "ptopMAGIC" `magic = \(s:'a) (s':'b). F`;
- 
-val _ = xDefine "ptopASSIGN" `assign (x:'a) (e:('a->'b)->'b)  = 
-			\(s:'a->'b) (s':'a->'b) . !(v:'a). 
-				if (x = v) then ( 
+
+val _ = xDefine "ptopASSIGN" `assign (x:'a) (e:('a->'b)->'b)  =
+			\(s:'a->'b) (s':'a->'b) . !(v:'a).
+				if (x = v) then (
 					(s' v) = (e s)
-                                ) else ( 
-					(s' v) = (s v) 
+                                ) else (
+					(s' v) = (s v)
 				)
-		` 
+		`
 ;
 
 val _ = xDefine "ptopSC" `sc f g s s' = (? s'' . ( (f s s'') /\ (g s'' s') ) ) ` ;

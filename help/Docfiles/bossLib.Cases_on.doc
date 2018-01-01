@@ -1,6 +1,6 @@
 \DOC Cases_on
 
-\TYPE {Cases_on : term -> tactic}
+\TYPE {Cases_on : term quotation -> tactic}
 
 \SYNOPSIS
 Performs case analysis on the type of a given term.

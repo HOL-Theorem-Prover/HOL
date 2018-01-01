@@ -1,6 +1,6 @@
 \DOC SAT_PROVE
 
-\TYPE {val SAT_PROVE : Term.term -> Thm.thm}
+\TYPE {SAT_PROVE : Term.term -> Thm.thm}
 
 \SYNOPSIS
 

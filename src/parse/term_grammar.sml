@@ -12,21 +12,53 @@ type term = Term.term
 type nthy_rec = {Name : string, Thy : string}
 
 fun RE_compare (TOK s1, TOK s2) = String.compare(s1,s2)
-  | RE_compare (TOK _, TM) = LESS
+  | RE_compare (TOK _, _) = LESS
   | RE_compare (TM, TOK _) = GREATER
   | RE_compare (TM, TM) = EQUAL
+  | RE_compare (TM, ListTM _) = LESS
+  | RE_compare (ListTM ls1, ListTM ls2) =
+    let
+      val {nilstr=n1,cons=c1,sep=s1} = ls1
+      val {nilstr=n2,cons=c2,sep=s2} = ls2
+      fun pcs cmp = pair_compare (String.compare, cmp)
+    in
+      pcs (pcs String.compare) ((n1,(c1,s1)), (n2,(c2,s2)))
+    end
+  | RE_compare (ListTM _, _) = GREATER
 
-  fun rule_elements0 acc pplist =
-    case pplist of
+fun first_rtok rel =
+  case rel of
+      [] => raise Fail "PrecAnalysis.first_rtok: no token"
+    | (TOK s :: _) => s
+    | _ :: rest => first_rtok rest
+
+fun first_tok ppel =
+  case ppel of
+      [] => raise Fail "PrecAnalysis.first_tok: no token"
+    | p::rest =>
+      (case p of
+           PPBlock(pels, _) => first_tok (pels @ rest)
+         | RE (TOK s) => s
+         | ListForm lsp => first_tok (#separator lsp)
+         | _ => first_tok rest)
+
+
+fun rule_elements0 pplist acc =
+  case pplist of
       [] => acc
-    | ((RE x) :: xs) => rule_elements0 (acc @ [x]) xs
-    | (PPBlock(pels, _) :: xs) => rule_elements0 (rule_elements0 acc pels) xs
-    | ( _ :: xs) => rule_elements0 acc xs
-  val rule_elements = rule_elements0 []
+    | ((RE x) :: xs) => acc |> cons x |> rule_elements0 xs
+    | (PPBlock(pels, _) :: xs) =>
+      acc |> rule_elements0 pels |> rule_elements0 xs
+    | ListForm{separator, nilstr, cons=c, ...} :: xs =>
+        acc |> cons (ListTM{nilstr=nilstr,cons=c,sep=first_tok separator})
+            |> rule_elements0 xs
+    | ( _ :: xs) => rule_elements0 xs acc
+fun rule_elements ppels = List.rev (rule_elements0 ppels [])
 
 
   fun rels_ok [TOK _] = true
     | rels_ok (TOK _ :: TM :: xs) = rels_ok xs
+    | rels_ok (TOK _ :: ListTM _ :: xs) = rels_ok xs
     | rels_ok (TOK _ :: xs) = rels_ok xs
     | rels_ok _ = false
 
@@ -55,6 +87,7 @@ fun RE_compare (TOK s1, TOK s2) = String.compare(s1,s2)
 
 fun reltoString (TOK s) = s
   | reltoString TM = "TM"
+  | reltoString (ListTM _) = "ListTM"
 
 fun pptoks ppels = List.mapPartial (fn TOK s => SOME s | _ => NONE)
                                    (rule_elements ppels)
@@ -70,7 +103,8 @@ fun grule_name ({term_name, ...}:grule) = term_name
 type overload_info = Overload.overload_info
 
 type ('a,'b) printer_info =
-  (term * string * ('a,'b) term_pp_types.userprinter) Net.net * string Binaryset.set
+  (term * string * ('a,'b) term_pp_types.userprinter) FCNet.t *
+  string Binaryset.set
 type special_info = {type_intro : string,
                      lambda : string list,
                      endbinding : string,
@@ -90,7 +124,8 @@ datatype grammar = GCONS of
    overload_info : overload_info,
    user_printers : (type_grammar.grammar * grammar, grammar) printer_info,
    absyn_postprocessors : (string * postprocessor) list,
-   preterm_processors : (string*int,ptmprocessor) Binarymap.dict
+   preterm_processors : (string*int,ptmprocessor) Binarymap.dict,
+   next_timestamp : int
    }
 and postprocessor = AbPP of grammar -> Absyn.absyn -> Absyn.absyn
 and ptmprocessor = PtmP of grammar -> prmP0 -> prmP0
@@ -117,6 +152,7 @@ fun grammar_rules (GCONS G) = map #2 (#rules G)
 fun rules (GCONS G) = (#rules G)
 fun absyn_postprocessors0 (GCONS g) = #absyn_postprocessors g
 fun absyn_postprocessors g = map (apsnd destAbPP) (absyn_postprocessors0 g)
+fun gnext_timestamp (GCONS g) = #next_timestamp g
 
 fun preterm_processor (GCONS g) k =
   Option.map destPtmP (Binarymap.peek(#preterm_processors g, k))
@@ -124,27 +160,27 @@ fun preterm_processor (GCONS g) k =
 
 (* fupdates *)
 open FunctionalRecordUpdate
-fun gcons_mkUp z = makeUpdate7 z
+fun gcons_mkUp z = makeUpdate8 z
 fun update_G z = let
   fun from rules specials numeral_info overload_info user_printers
-           absyn_postprocessors preterm_processors =
+           absyn_postprocessors preterm_processors next_timestamp =
     {rules = rules, specials = specials, numeral_info = numeral_info,
      overload_info = overload_info, user_printers = user_printers,
      absyn_postprocessors = absyn_postprocessors,
-     preterm_processors = preterm_processors}
+     preterm_processors = preterm_processors, next_timestamp = next_timestamp}
   (* fields in reverse order to above *)
-  fun from' preterm_processors absyn_postprocessors user_printers
+  fun from' next_timestamp preterm_processors absyn_postprocessors user_printers
             overload_info numeral_info specials rules =
     {rules = rules, specials = specials, numeral_info = numeral_info,
      overload_info = overload_info, user_printers = user_printers,
      absyn_postprocessors = absyn_postprocessors,
-     preterm_processors = preterm_processors }
+     preterm_processors = preterm_processors, next_timestamp = next_timestamp }
   (* first order *)
   fun to f {rules, specials, numeral_info,
             overload_info, user_printers, absyn_postprocessors,
-            preterm_processors} =
+            preterm_processors, next_timestamp} =
     f rules specials numeral_info overload_info user_printers
-      absyn_postprocessors preterm_processors
+      absyn_postprocessors preterm_processors next_timestamp
 in
   gcons_mkUp (from, from', to)
 end z
@@ -171,6 +207,9 @@ fun mfupdate_user_printers f (GCONS g) = let
 in
   (GCONS (update_G g (U #user_printers new_uprinters) $$), result)
 end
+
+fun inc_timestamp (GCONS g) =
+  GCONS (update_G g (U #next_timestamp (#next_timestamp g + 1)) $$)
 
 fun grammar_name G tm = let
   val oinfo = overload_info G
@@ -199,8 +238,8 @@ in
   if Binaryset.member(keyset,k) then let
       fun foldthis (t,nm,f) (olddata,newnet) =
           if nm = k then (SOME (t,f), newnet)
-          else (olddata, Net.insert(t,(t,nm,f)) newnet)
-      val (data, newnet) = Net.itnet foldthis net (NONE, Net.empty)
+          else (olddata, FCNet.insert(t,(t,nm,f)) newnet)
+      val (data, newnet) = FCNet.itnet foldthis net (NONE, FCNet.empty)
       val newkeys = Binaryset.delete(keyset, k)
     in
       (GCONS (update_G g (U #user_printers (newnet,newkeys)) $$),
@@ -211,7 +250,8 @@ end
 
 fun add_user_printer (k,pat,v) g = let
   val (g', _) = remove_user_printer k g
-  fun upd (net,keys) = (Net.insert(pat, (pat,k,v)) net, Binaryset.add(keys, k))
+  fun upd (net,keys) =
+    (FCNet.insert(pat, (pat,k,v)) net, Binaryset.add(keys, k))
 in
   fupdate_user_printers upd g'
 end
@@ -277,7 +317,6 @@ fun map_rrfn_rule f g r =
   | SUFFIX TYPE_annotation => r
 
   | CLOSEFIX rlist => CLOSEFIX (map f rlist)
-  | LISTRULE _ => r
 
 fun fupdate_rule_by_term t f g r = let
   fun over_rr (rr:rule_record) = if #term_name rr = t then f rr else rr
@@ -415,19 +454,28 @@ val stdhol : grammar =
                         block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                         paren_style = Always}]),
             (NONE,
-             LISTRULE [{separator = [RE (TOK ";"), BreakSpace(1,0)],
-                        leftdelim = [RE (TOK "<|")],
-                        rightdelim = [RE (TOK "|>")],
-                        block_info = (PP.INCONSISTENT, 0),
-                        cons = reccons_special, nilstr = recnil_special}])],
+             CLOSEFIX [{term_name = "",
+                        elements = [RE (TOK "<|"),
+                                    ListForm {
+                                      separator = [RE (TOK ";"),
+                                                   BreakSpace(1,0)],
+                                      block_info = (PP.INCONSISTENT, 0),
+                                      cons = reccons_special,
+                                      nilstr = recnil_special
+                                    },
+                                    RE (TOK "|>")],
+                        timestamp = 0,
+                        block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                        paren_style = OnlyIfNecessary}])],
    specials = {lambda = ["\\"], type_intro = ":", endbinding = ".",
                restr_binders = [], res_quanop = "::"},
    numeral_info = [],
    overload_info = Overload.null_oinfo,
-   user_printers = (Net.empty, Binaryset.empty String.compare),
+   user_printers = (FCNet.empty, Binaryset.empty String.compare),
    absyn_postprocessors = [],
    preterm_processors =
-     Binarymap.mkDict (pair_compare(String.compare, Int.compare))
+     Binarymap.mkDict (pair_compare(String.compare, Int.compare)),
+   next_timestamp = 1
    }
 
 fun first_tok [] = raise Fail "Shouldn't happen: term_grammar.first_tok"
@@ -441,6 +489,7 @@ local
   fun specials_from_elm [] = ok
     | specials_from_elm ((TOK x)::xs) = add x >> specials_from_elm xs
     | specials_from_elm (TM::xs) = specials_from_elm xs
+    | specials_from_elm (ListTM {sep,...}::xs) = add sep >> specials_from_elm xs
   val mmap = (fn f => fn args => mmap f args >> ok)
   fun rule_specials G r = let
     val rule_specials = rule_specials G
@@ -460,14 +509,6 @@ local
     | INFIX VSCONS => ok
     | CLOSEFIX rules =>
         mmap (specials_from_elm o rule_elements o #elements) rules
-    | LISTRULE rlist => let
-        fun process (r:listspec) =
-          add (first_tok (#separator r)) >>
-          add (first_tok (#leftdelim r)) >>
-          add (first_tok (#rightdelim r))
-      in
-        mmap process rlist
-      end
   end
 in
   fun grammar_tokens G = let
@@ -479,39 +520,6 @@ in
   end
   fun rule_tokens G r = Lib.mk_set (#1 (rule_specials G r []))
 end
-
-(* right hand elements of suffix and closefix rules *)
-fun compatible_listrule (G:grammar) arg = let
-  val {separator, leftdelim, rightdelim} = arg
-  fun recurse rules =
-    case rules of
-      [] => NONE
-    | ((_, rule)::rules) => let
-      in
-        case rule of
-          LISTRULE rlist => let
-            fun check [] = NONE
-              | check ((r:listspec)::rs) = let
-                  val rule_sep = first_tok (#separator r)
-                  val rule_left = first_tok (#leftdelim r)
-                  val rule_right = first_tok (#rightdelim r)
-                in
-                  if rule_sep = separator andalso rule_left = leftdelim andalso
-                    rule_right = rightdelim then
-                    SOME {cons = #cons r, nilstr = #nilstr r}
-                  else
-                    check rs
-                end
-            val result = check rlist
-          in
-            if isSome result then result else  recurse rules
-          end
-        | _ => recurse rules
-      end
-in
-  recurse (rules G)
-end
-
 
 fun aug_compare (NONE, NONE) = EQUAL
   | aug_compare (_, NONE) = LESS
@@ -568,7 +576,6 @@ fun merge_rules (r1, r2) =
       else INFIX (FNAPP (rrunion i1 rl1))
   | (INFIX (FNAPP _), INFIX (STD_infix _)) => merge_rules (r2, r1)
   | (CLOSEFIX c1, CLOSEFIX c2) => CLOSEFIX (rrunion c1 c2)
-  | (LISTRULE lr1, LISTRULE lr2) => LISTRULE (Lib.union lr1 lr2)
   | _ => raise GrammarError "Attempt to have different forms at same level"
 
 fun optmerge r NONE = SOME r
@@ -581,20 +588,16 @@ fun optmerge r NONE = SOME r
 
 (* This allows for reducing more than just two closefix and listrules, but
    when merging grammars with only one each, this shouldn't eventuate *)
-fun resolve_nullprecs listrule closefix rules =
+fun resolve_nullprecs closefix rules =
   case rules of
     [] => let
     in
-      case (listrule, closefix) of
-        (NONE, NONE) => [] (* should never really happen *)
-      | (SOME lr, NONE) => [(NONE, lr)]
-      | (NONE, SOME cf) => [(NONE, cf)]
-      | (SOME lr, SOME cf) => [(NONE, lr), (NONE, cf)]
+      case closefix of
+        NONE => [] (* should never really happen *)
+      | SOME cf => [(NONE, cf)]
     end
-  | (_, r as LISTRULE _)::xs =>
-    resolve_nullprecs (optmerge r listrule) closefix xs
   | (_, r as CLOSEFIX _)::xs =>
-    resolve_nullprecs listrule (optmerge r closefix) xs
+      resolve_nullprecs (optmerge r closefix) xs
   | _ => raise Fail "resolve_nullprecs: can't happen"
 
 
@@ -614,7 +617,7 @@ fun resolve_same_precs rules =
         (p1, merged_rule) :: resolve_same_precs rules2
       end
     end
-  | ((NONE, _)::_) => resolve_nullprecs NONE NONE rules
+  | ((NONE, _)::_) => resolve_nullprecs NONE rules
 
 
 infix Gmerge
@@ -635,7 +638,6 @@ fun null_rule r =
   | PREFIX (BINDER slist) => null slist
   | INFIX (STD_infix(slist, _)) => null slist
   | CLOSEFIX slist => null slist
-  | LISTRULE rlist => null rlist
   | _ => false
 
 fun map_rules f G = let
@@ -666,7 +668,6 @@ in
   | PREFIX (STD_prefix slist) => PREFIX (STD_prefix (List.filter rr_ok slist))
   | PREFIX (BINDER slist) => PREFIX (BINDER (List.filter stringbinder slist))
   | CLOSEFIX slist => CLOSEFIX (List.filter rr_ok slist)
-  | LISTRULE rlist => LISTRULE (List.filter lr_ok rlist)
   | _ => rule
 end
 
@@ -691,15 +692,6 @@ in
   | PREFIX (BINDER blist) =>
     PREFIX (BINDER (List.filter binder_safe blist))
   | CLOSEFIX slist => CLOSEFIX (List.filter rr_safe slist)
-  | LISTRULE rlist => let
-      fun lrule_ok (r:listspec) =
-        (not (P (#cons r)) andalso not (P (#nilstr r)))  orelse
-        (first_tok (#leftdelim r) <> tok andalso
-         first_tok (#rightdelim r) <> tok andalso
-         first_tok (#separator r) <> tok)
-    in
-      LISTRULE (List.filter lrule_ok rlist)
-    end
   | _ => r
 end
 
@@ -720,15 +712,6 @@ in
   | PREFIX (STD_prefix slist) => PREFIX (STD_prefix (List.filter rr_safe slist))
   | PREFIX (BINDER blist) => PREFIX (BINDER (List.filter binder_safe blist))
   | CLOSEFIX slist => CLOSEFIX (List.filter rr_safe slist)
-  | LISTRULE rlist => let
-      fun lrule_dies (r:listspec) =
-          (#cons r = term_name orelse #nilstr r = term_name) andalso
-          (relstoks (rule_elements (#leftdelim r)) = toklist orelse
-           relstoks (rule_elements (#rightdelim r)) = toklist orelse
-           relstoks (rule_elements (#separator r)) = toklist)
-    in
-      LISTRULE (List.filter (not o lrule_dies) rlist)
-    end
   | _ => r
 end
 
@@ -763,14 +746,27 @@ fun binder_grule {term_name,tok} =
    block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
    pp_elements = [RE (TOK tok)], fixity = Binder}
 
+fun extract_lspec rels =
+  case rels of
+      [] => NONE
+    | ListTM l :: _ => SOME l
+    | _ :: rest => extract_lspec rest
+
 fun rules_for G nm = let
   fun search_rrlist rf acc rrl = let
-    fun recurse acc0 rrl =
+    fun check rrec a =
+      if #term_name rrec = nm then rrec2delta rf rrec :: a
+      else if #term_name rrec = "" then
+        case extract_lspec (rule_elements (#elements rrec)) of
+            NONE => a
+          | SOME {cons,nilstr,...} => if nm = cons orelse nilstr = nm then
+                                        rrec2delta rf rrec :: a
+                                      else a
+      else a
+    fun recurse acc rrl =
         case rrl of
-          [] => acc0
-        | rr :: rest => recurse (if #term_name rr = nm then
-                                   rrec2delta rf rr::acc0 else acc0)
-                                rest
+          [] => acc
+        | rr :: rest => recurse (check rr acc) rest
   in
     recurse acc rrl
   end
@@ -786,13 +782,6 @@ fun rules_for G nm = let
             rest
         else
           search_blist acc rest
-  fun search_lslist acc lslist =
-      case lslist of
-        [] => acc
-      | r :: rest => if #cons r = nm orelse #nilstr r = nm then
-                       search_lslist ((0, LRULE r) :: acc) rest
-                     else
-                       search_lslist acc rest
   fun search acc rs =
       case rs of
         [] => List.rev acc
@@ -810,7 +799,6 @@ fun rules_for G nm = let
             search (search_rrlist (Infix(assoc, valOf fixopt)) acc rrlist)
                    rest
           | CLOSEFIX rrl => search (search_rrlist Closefix acc rrl) rest
-          | LISTRULE lsl => search (search_lslist acc lsl) rest
           | _ => search acc rest
         end
 in
@@ -821,8 +809,7 @@ fun add_rule {term_name = s : string, fixity = f, pp_elements,
               paren_style, block_style} G0 = let
   val _ =  pp_elements_ok pp_elements orelse
                  raise GrammarError "token list no good"
-  val contending_tstamps = map #1 (rules_for G0 s)
-  val new_tstamp = List.foldl Int.max 0 contending_tstamps + 1
+  val new_tstamp = gnext_timestamp G0
   val rr = {term_name = s, elements = pp_elements, timestamp = new_tstamp,
             paren_style = paren_style, block_style = block_style}
   val new_rule =
@@ -839,42 +826,53 @@ fun add_rule {term_name = s : string, fixity = f, pp_elements,
         | _ => raise ERROR "add_rule" "Rules for binders must have one TOK only"
 
 in
-  G0 Gmerge [new_rule]
+  inc_timestamp (G0 Gmerge [new_rule])
 end
 
 fun add_grule G0 r = G0 Gmerge [r]
 
 fun add_binder {term_name,tok} G0 = let
-  val contending_tstamps = map #1 (rules_for G0 term_name)
   val binfo = {term_name = term_name, tok = tok,
-               timestamp = List.foldl Int.max 0 contending_tstamps + 1}
+               timestamp = gnext_timestamp G0 }
 in
-  G0 Gmerge [(SOME 0, PREFIX (BINDER [BinderString binfo]))]
+  inc_timestamp (G0 Gmerge [(SOME 0, PREFIX (BINDER [BinderString binfo]))])
 end
 
-fun add_listform G lrule = let
-  fun ok_el e =
-      case e of
-        EndInitialBlock _ => false
-      | BeginFinalBlock _ => false
-      | RE TM => false
-      | LastTM => false
-      | FirstTM => false
-      | _ => true
-  fun check_els els =
-      case List.find (not o ok_el) els of
-        NONE => ()
-      | SOME s => raise GrammarError "Invalid pp_element in listform"
-  fun is_tok (RE (TOK _)) = true
-    | is_tok _ = false
-  fun one_tok pps =
-    if length (List.filter is_tok pps) = 1 then ()
-    else raise GrammarError "Must have exactly one TOK in listform elements"
-  val {separator, leftdelim, rightdelim, ...} = lrule
-  val _ = app check_els [separator, leftdelim, rightdelim]
-in
-  G Gmerge [(NONE, LISTRULE [lrule])]
-end
+fun listform_to_rule (lform : listspec) =
+  let
+    val {separator, leftdelim, rightdelim, cons, nilstr, ...} = lform
+    val binfo = #block_info lform
+    fun ok_el e =
+        case e of
+          EndInitialBlock _ => false
+        | BeginFinalBlock _ => false
+        | RE TM => false
+        | LastTM => false
+        | FirstTM => false
+        | _ => true
+    fun check_els els =
+        case List.find (not o ok_el) els of
+          NONE => ()
+        | SOME s => raise GrammarError "Invalid pp_element in listform"
+    fun is_tok (RE (TOK _)) = true
+      | is_tok _ = false
+    fun one_tok pps =
+      if length (List.filter is_tok pps) = 1 then ()
+      else raise GrammarError "Must have exactly one TOK in listform elements"
+    val _ = app check_els [separator, leftdelim, rightdelim]
+    val _ = app one_tok [separator, leftdelim, rightdelim]
+    val els =
+        leftdelim @ [ListForm { separator = separator,
+                                block_info = binfo,
+                                cons = cons, nilstr = nilstr}] @
+        rightdelim
+  in
+    {term_name = "", pp_elements = els, fixity = Closefix,
+     block_style = (AroundEachPhrase, binfo),
+     paren_style = OnlyIfNecessary}
+  end
+
+fun add_listform G lrule = add_rule (listform_to_rule lrule) G
 
 fun rename_to_fixity_field
       {rule_fixity,term_name,pp_elements,paren_style, block_style} =
@@ -919,24 +917,24 @@ fun set_mapped_fixity {term_name,tok,fixity} G =
 
 
 fun prefer_form_with_tok (r as {term_name,tok}) G0 = let
-  val contending_timestamps = map #1 (rules_for G0 term_name)
-  val newstamp = List.foldl Int.max 0 contending_timestamps + 1
+  val newstamp = gnext_timestamp G0
 in
-  fupdate_rules
-  (fupdate_rulelist
-   (fupdate_rule_by_termtok r
+  G0 |> fupdate_rules
+         (fupdate_rulelist
+            (fupdate_rule_by_termtok r
                             (update_rr_tstamp newstamp)
-                            (update_b_tstamp newstamp))) G0
+                            (update_b_tstamp newstamp)))
+     |> inc_timestamp
 end
 
 fun prefer_form_with_toklist (r as {term_name,toklist}) G = let
-  val contending_timestamps = map #1 (rules_for G term_name)
-  val t' = List.foldl Int.max 0 contending_timestamps + 1
+  val t' = gnext_timestamp G
 in
   G |> fupdate_rules (fupdate_rulelist
                         (fupdate_rule_by_termtoklist r
                                                      (update_rr_tstamp t')
                                                      (update_b_tstamp t')))
+    |> inc_timestamp
 end
 
 
@@ -1004,16 +1002,24 @@ fun add_numeral_form G (c, stropt) =
   fupdate_numinfo (update_assoc (check c, stropt)) G
 
 structure userSyntaxFns = struct
-  val userPP_table = ref (Binarymap.mkDict String.compare)
-  fun register_userPP {name,code} =
-    userPP_table := Binarymap.insert(!userPP_table, name, code)
-  fun get_userPP nm = Binarymap.find(!userPP_table, nm)
+  type 'a getter = string -> 'a
+  type 'a setter = {name : string, code : 'a} -> unit
+  type 'a t = 'a getter * 'a setter
+  fun mk_table () =
+    let
+      val tab = ref (Binarymap.mkDict String.compare)
+    in
+      ((fn s => Binarymap.find(!tab, s)),
+       (fn {name,code} => tab := Binarymap.insert(!tab, name, code)))
+    end
+  val (get_userPP, register_userPP) = mk_table() : userprinter t
+  val (get_absynPostProcessor, register_absynPostProcessor) =
+      mk_table() : absyn_postprocessor t
 end
 
 fun add_delta ud G =
     case ud of
       GRULE r => add_rule r G
-    | LRULE r => add_listform G r
     | RMTMTOK r => remove_form_with_tok G r
     | RMTMNM s => remove_standard_form G s
     | RMTOK s => remove_rules_with_tok s G
@@ -1043,6 +1049,16 @@ fun add_delta ud G =
                     ("No code named "^s^" registered for add user-printer")
       in
         add_user_printer (s,pattern,code) G
+      end
+    | ADD_ABSYN_POSTP {codename} =>
+      let
+        val code = userSyntaxFns.get_absynPostProcessor codename
+          handle Binarymap.NotFound =>
+                 raise ERROR "add_delta"
+                       ("No code named "^codename^
+                        " registered for add absyn-postprocessor")
+      in
+        new_absyn_postprocessor (codename, code) G
       end
 
 fun add_deltas uds G = List.foldl (uncurry add_delta) G uds
@@ -1091,9 +1107,9 @@ end
 fun merge_user_printers (n1,ks1) (n2,_) = let
   fun foldthis (tm,k,f) (n,ks) =
       if Binaryset.member(ks,k) then (n,ks)
-      else (Net.insert(tm,(tm,k,f)) n, Binaryset.add(ks, k))
+      else (FCNet.insert(tm,(tm,k,f)) n, Binaryset.add(ks, k))
 in
-   Net.itnet foldthis n2 (n1,ks1)
+   FCNet.itnet foldthis n2 (n1,ks1)
 end
 
 fun alist_merge al1 al2 = let
@@ -1129,7 +1145,8 @@ in
          absyn_postprocessors = alist_merge (absyn_postprocessors0 G1)
                                             (absyn_postprocessors0 G2),
          preterm_processors =
-           bmap_merge (#preterm_processors g1) (#preterm_processors g2)}
+           bmap_merge (#preterm_processors g1) (#preterm_processors g2),
+         next_timestamp = Int.max(#next_timestamp g1, #next_timestamp g2)}
 end
 
 (* ----------------------------------------------------------------------
@@ -1172,7 +1189,12 @@ fun prettyprint_grammar_rules tmprint pstrm (GRS(rules,specials)) = let
   in
     begin_block INCONSISTENT 2;
     add_string pfx;
-    pr_list (fn (TOK s) => add_string ("\""^s^"\"") | TM => add_string "TM")
+    pr_list (fn (TOK s) => add_string ("\""^s^"\"")
+              | TM => add_string "TM"
+              | ListTM {nilstr,cons,sep} =>
+                  add_string ("LTM<" ^
+                              String.concatWith "," [nilstr,cons,sep] ^
+                              ">"))
             (fn () => add_string " ") (fn () => ()) rels;
     add_string sfx;
     add_string tmid_suffix;
@@ -1258,17 +1280,6 @@ fun prettyprint_grammar_rules tmprint pstrm (GRS(rules,specials)) = let
         end_block()
       end
     | INFIX VSCONS => add_string "TM TM  (binder argument concatenation)"
-    | LISTRULE lrs => let
-        fun pr_lrule ({leftdelim, rightdelim, separator, ...}:listspec) =
-          add_string ("\""^first_tok leftdelim^"\" ... \""^
-                      first_tok rightdelim^
-                      "\"  (separator = \""^ first_tok separator^"\")")
-      in
-        begin_block CONSISTENT 0;
-        pr_list pr_lrule (fn () => add_string " |")
-                         (fn () => add_break(1,0)) lrs;
-        end_block ()
-      end
 
   fun print_whole_rule (intopt, rule) = let
     val precstr0 =
@@ -1346,7 +1357,7 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
     fun pr (pat,nm,f) =
         (tmprint G pstrm pat; add_string ("       ->  "^nm))
   in
-    if Net.size printers = 0 then ()
+    if FCNet.size printers = 0 then ()
     else
       (add_newline();
        add_string "User printing functions:";
@@ -1354,7 +1365,7 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
        add_string "  ";
        begin_block INCONSISTENT 0;
        pr_list pr (fn () => ()) (fn () => add_newline())
-               (Net.itnet cons printers []);
+               (FCNet.itnet cons printers []);
        end_block())
   end
 in
@@ -1440,10 +1451,15 @@ fun rule_element_encode rel =
     case rel of
       TOK s => "K" ^ StringData.encode s
     | TM => "M"
+    | ListTM{nilstr,cons,sep} =>
+        "L" ^ StringData.encode nilstr ^ StringData.encode cons ^
+        StringData.encode sep
 val rule_element_reader =
     (literal "K" >> map TOK StringData.reader) ||
-    (literal "M" >> return TM)
-
+    (literal "M" >> return TM) ||
+    (literal "L" >>
+     map (fn ((n,c),s) => ListTM {nilstr=n,cons=c,sep=s})
+         (StringData.reader >* StringData.reader >* StringData.reader))
 
 fun paren_style_encode Always = "A"
   | paren_style_encode OnlyIfNecessary = "O"
@@ -1467,8 +1483,16 @@ fun ppel_encode ppel =
     | HardSpace i => "H" ^ IntData.encode i
     | BreakSpace (x,y) => "S" ^ IntData.encode x ^ IntData.encode y
     | RE rel => "R" ^ rule_element_encode rel
+    | ListForm lspec => "I" ^ lspec_encode lspec
     | LastTM => "L"
     | FirstTM => "F"
+and lspec_encode {separator, block_info, cons, nilstr} =
+    String.concat (List.map ppel_encode separator) ^
+    StringData.encode cons ^
+    StringData.encode nilstr ^
+    binfo_encode block_info
+
+
 fun ppel_reader s =
     ((literal "P" >>
       map PPBlock ((many ppel_reader >-> literal "X") >* binfo_reader)) ||
@@ -1476,9 +1500,18 @@ fun ppel_reader s =
      (literal "B" >> map BeginFinalBlock binfo_reader) ||
      (literal "H" >> map HardSpace IntData.reader) ||
      (literal "S" >> map BreakSpace (IntData.reader >* IntData.reader)) ||
-     (literal "R" >> map RE rule_element_reader)) s
-
-
+     (literal "R" >> map RE rule_element_reader) ||
+     (literal "I" >> map ListForm lspec_reader) ||
+     (literal "L" >> return LastTM) ||
+     (literal "F" >> return FirstTM)
+    ) s
+and lspec_reader s = let
+  fun f (((separator,cons),nilstr),binfo) =
+      {separator = separator, nilstr = nilstr, block_info = binfo, cons = cons}
+in
+  map f (many ppel_reader (* sep *) >* StringData.reader (* cons *) >*
+         StringData.reader (* nil *) >* binfo_reader (* binfo *)) s
+end
 
 fun rrule_encode {term_name,elements,timestamp,block_style,paren_style} =
     String.concat (StringData.encode term_name ::
@@ -1542,23 +1575,6 @@ val ifxrule_reader =
     (literal "V" >> return VSCONS) ||
     (literal "F" >> map FNAPP (many rrule_reader))
 
-fun lspec_encode {separator, leftdelim, rightdelim, block_info, cons, nilstr} =
-    String.concat (List.map ppel_encode separator) ^
-    StringData.encode cons ^
-    String.concat (List.map ppel_encode leftdelim) ^
-    StringData.encode nilstr ^
-    String.concat (List.map ppel_encode rightdelim) ^
-    binfo_encode block_info
-
-val lspec_reader = let
-  fun f (((((separator,cons),leftdelim),nilstr),rightdelim),binfo) =
-      {separator = separator, leftdelim = leftdelim, nilstr = nilstr,
-       block_info = binfo, cons = cons, rightdelim = rightdelim}
-in
-  map f (many ppel_reader >* StringData.reader >* many ppel_reader >*
-         StringData.reader >* many ppel_reader >* binfo_reader)
-end
-
 fun fixity_encode f =
     case f of
       Infix(a,p) => "I" ^ assoc_encode a ^ IntData.encode p
@@ -1602,7 +1618,8 @@ val skid_reader =
 
 fun user_delta_encode write_tm ud =
     case ud of
-      ADD_NUMFORM (c,s) =>
+      ADD_ABSYN_POSTP {codename} => "AAPP" ^ StringData.encode codename
+    | ADD_NUMFORM (c,s) =>
         "AN" ^ CharData.encode c ^ OptionData.encode StringData.encode s
     | ADD_UPRINTER{codename=s,pattern=tm} =>
         "AUP" ^ StringData.encode s ^ StringData.encode (write_tm tm)
@@ -1615,7 +1632,6 @@ fun user_delta_encode write_tm ud =
     | GRULE gr => "G" ^ grule_encode gr
     | IOVERLOAD_ON (s,t) =>
         "OI" ^ StringData.encode s ^ StringData.encode (write_tm t)
-    | LRULE lspec => "L" ^ lspec_encode lspec
     | MOVE_OVLPOSN {frontp,skid} =>
         "MOP" ^ BoolData.encode frontp ^ skid_encode skid
     | OVERLOAD_ON (s,t) =>
@@ -1629,6 +1645,8 @@ fun user_delta_encode write_tm ud =
 
 fun user_delta_reader read_tm = let
 in
+  (literal "AAPP" >>
+   Coding.map (fn s => ADD_ABSYN_POSTP {codename = s}) StringData.reader) ||
   (literal "AN" >>
    Coding.map ADD_NUMFORM
      (CharData.reader >* OptionData.reader StringData.reader)) ||
@@ -1640,7 +1658,6 @@ in
               (StringData.reader >* Coding.map read_tm StringData.reader)) ||
   (literal "COV" >> Coding.map CLR_OVL StringData.reader) ||
   (literal "G" >> Coding.map GRULE grule_reader) ||
-  (literal "L" >> Coding.map LRULE lspec_reader) ||
   (literal "MOP" >>
    Coding.map (fn (frontp,skid) => MOVE_OVLPOSN {frontp=frontp,skid=skid})
               (BoolData.reader >* skid_reader)) ||
@@ -1669,14 +1686,37 @@ fun grammar_rule_encode grule =
     | SUFFIX sr => "S" ^ sfxrule_encode sr
     | INFIX ir => "I" ^ ifxrule_encode ir
     | CLOSEFIX rrl => String.concat ("C"::List.map rrule_encode rrl)
-    | LISTRULE lspecl => String.concat ("L"::List.map lspec_encode lspecl)
 
 val grammar_rule_reader =
     (literal "P" >> pfxrule_reader >- (return o PREFIX)) ||
     (literal "S" >> sfxrule_reader >- (return o SUFFIX)) ||
     (literal "I" >> ifxrule_reader >- (return o INFIX)) ||
-    (literal "C" >> many rrule_reader >- (return o CLOSEFIX)) ||
-    (literal "L" >> many lspec_reader >- (return o LISTRULE))
+    (literal "C" >> many rrule_reader >- (return o CLOSEFIX))
 
+
+fun debugprint G tm =
+  let
+    open HolKernel
+    val pr = debugprint G
+    val map = List.map
+  in
+    case dest_term tm of
+        VAR (s,_) => s
+      | CONST {Name,Thy,...} =>
+        Thy ^ "$" ^ Name ^ "<" ^
+        (case grammar_name G tm of NONE => "" | SOME s => s) ^ ">"
+      | COMB _ =>
+        let
+          val (f, args) = strip_comb tm
+        in
+          "(" ^ pr f ^ " " ^ String.concatWith " " (map pr args) ^ ")"
+        end
+      | LAMB _ =>
+        let
+          val (vs, bod) = strip_abs tm
+        in
+          "(\\" ^ String.concatWith " " (map pr vs) ^ ". " ^ pr bod ^ ")"
+        end
+  end
 
 end; (* struct *)

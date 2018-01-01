@@ -370,6 +370,7 @@ fun get_implicit_dependencies incinfo (f: File) : File list = let
   fun requires_exec (SML (Theory _)) = true
     | requires_exec (SIG (Theory _)) = true
     | requires_exec (ART (RawArticle _)) = true
+    | requires_exec (DAT _) = true
     | requires_exec _                = false
 in
   if requires_exec f then let
@@ -471,6 +472,11 @@ fun is_script s =
       SML (Script _) => true
     | _ => false
 
+fun de_script s =
+  case toFile s of
+      SML (Script s) => SOME s
+    | _ => NONE
+
 fun build_depgraph cdset incinfo target g0 : (t * node) = let
   val pdep = primary_dependent target
   val target_s = fromFile target
@@ -520,6 +526,7 @@ in
           val bic = case toFile target_s of
                         SML (Theory s) => BIC_BuildScript s
                       | SIG (Theory s) => BIC_BuildScript s
+                      | DAT s => BIC_BuildScript s
                       | _ => BIC_Compile
         in
             add_node {target = target_s, seqnum = 0, phony = false,
@@ -566,7 +573,10 @@ in
                   case starred_dep of
                       NONE => []
                     | SOME s =>
-                        get_implicit_dependencies incinfo (SML(Theory s))
+                        get_implicit_dependencies
+                          incinfo
+                          (SML(Theory (valOf (de_script s))))
+                          handle Option => die "more_deps invariant failure"
 
               val (g1, depnodes) =
                   List.foldl foldthis (g0, [])

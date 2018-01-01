@@ -1,6 +1,6 @@
 \DOC MAP_EVERY
 
-\TYPE {MAP_EVERY : ((* -> tactic) -> * list -> tactic)}
+\TYPE {MAP_EVERY : (('a -> tactic) -> 'a list -> tactic)}
 
 \SYNOPSIS
 Sequentially applies all tactics given by mapping a function over a list.

@@ -650,7 +650,7 @@ SIMP_TAC (list_ss++QUANT_INST_ss[list_qp]) [LIST_ZIP_REWRITE, MAP_MAP_o, combinT
                   PAIR_BETA_THM] THEN
 REPEAT GEN_TAC THEN STRIP_TAC THEN
 `((MAP (\ (x1,x2). x2) (ZIP (l',l2)) = l2) /\
-                    (MAP (\ (x1,x2). x1) (ZIP (l',l2)) = l'))` suffices_by (STRIP_TAC THEN 
+                    (MAP (\ (x1,x2). x1) (ZIP (l',l2)) = l'))` suffices_by (STRIP_TAC THEN
    ASM_REWRITE_TAC[]
 ) THEN
 POP_ASSUM MP_TAC THEN
@@ -1454,7 +1454,7 @@ ASM_SIMP_TAC std_ss [FEVERY_DEF,
 REPEAT STRIP_TAC THEN
 RES_TAC THEN
 Cases_on `e` THEN FULL_SIMP_TAC std_ss [] THEN
-`LIST_TO_FMAP L ' q = r` suffices_by (STRIP_TAC THEN 
+`LIST_TO_FMAP L ' q = r` suffices_by (STRIP_TAC THEN
    FULL_SIMP_TAC std_ss []
 ) THEN
 MATCH_MP_TAC LIST_TO_FMAP___ALL_DISTINCT THEN

@@ -32,11 +32,11 @@ let parse_commandline () =
   let parse_anon anon = anon_tab.(!anon_counter) <- anon; incr anon_counter in
   let speclist =
     [("-thydep", Arg.Set_string thydep_ref, "Provides dependencies between theories");
-     ("-thylo",  Arg.Set_string thylo_ref,  "Provides a linear order for the theories.\n" ^ 
-      "Warning: all theories that do not belong to this order are ignored.")] 
+     ("-thylo",  Arg.Set_string thylo_ref,  "Provides a linear order for the theories.\n" ^
+      "Warning: all theories that do not belong to this order are ignored.")]
   in
   let usage_msg = "HOL(y) Hammer. Usage: " ^ 
-    Sys.argv.(0) ^ " <knn|nbayes|mepo|geo|kepo> <n_preds> <theory_dir> <cj_file> <cj_name> <out_dir>"
+    Sys.argv.(0) ^ " <knn|nbayes|mepo|geo|kepo|all> <n_preds> <theory_dir> <cj_file> <cj_name> <out_dir>"
   in
   Arg.parse speclist parse_anon usage_msg;
   (* Processing the parsed objects. *)
@@ -46,13 +46,14 @@ let parse_commandline () =
     | "mepo" -> Mepo
     | "geo" -> Geo
     | "kepo" -> Kepo
+    | "all"  -> All
     | _ -> failwith "Unknown predictor." in
   let n_predictions = try int_of_string (anon_tab.(1))
     with _ -> failwith "Number of predictions have to be an integer." in
   let theory_dir = anon_tab.(2) in
   let cj_file = anon_tab.(3) in
   let cj_name = anon_tab.(4) in
-  let out_dir = concat anon_tab.(5) "" in (* I don't understand why you need concat here *)
+  let out_dir = concat anon_tab.(5) "" in
   let thydep_file = option_of_string !thydep_ref in
   let thylo_file = option_of_string !thylo_ref in
   (predictor, n_predictions, theory_dir, cj_file, cj_name, out_dir, thydep_file, thylo_file)
@@ -61,7 +62,7 @@ let parse_commandline () =
 (* Main function. *)
 (* TO DO: read the conjecture from the file *)
 let _ =
-  let (predictor, n_predictions, theory_dir, cj_file, 
+  let (predictor, n_predictions, theory_dir, cj_file,
        cj_name, out_dir, thydep_file, thylo_file) = parse_commandline () in
 
   print_endline ("Loading theories from " ^ theory_dir);

@@ -1124,7 +1124,7 @@ fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
           fun do_extras extra_string =
               (S ("      val tyinfo0 = " ^ extra_string ^ "tyinfo0"); NL())
           fun do_string_etc
-             ({ax,case_def,case_cong,induction,nchotomy,
+             ({ax,case_def,case_cong,caseeqsplit,induction,nchotomy,
                one_one,distinct,encode,lift,size,fields,accessors,updates,
                recognizers,destructors},
               extra_simpls_string) =
@@ -1134,6 +1134,7 @@ fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
              S("        {ax="^ax^",");                                  NL();
              S("         case_def="^case_def^",");                      NL();
              S("         case_cong="^case_cong^",");                    NL();
+             S("         caseeqsplit="^caseeqsplit^",");                NL();
              S("         induction="^induction^",");                    NL();
              S("         nchotomy="^nchotomy^",");                      NL();
              do_size size;                                              NL();
@@ -1180,6 +1181,11 @@ fun write_tyinfo tyinfo =
         in save_thm (ccname,case_cong_of tyinfo);
            ccname
         end
+     val caseeqsplit_name =
+         let val ceqname = name "_caseeq"
+         in save_thm (ceqname, caseeqsplit_of tyinfo);
+            ceqname
+         end
      val nchotomy_name =
        let val nchname = name"_nchotomy"
        in save_thm (nchname,nchotomy_of tyinfo);
@@ -1246,6 +1252,7 @@ fun write_tyinfo tyinfo =
  in
    {ax        = axiom_name,
     induction = induction_name,
+    caseeqsplit = caseeqsplit_name,
     case_def  = case_constant_defn_name {type_name = tname},
     case_cong = case_cong_name,
     nchotomy  = nchotomy_name,
@@ -1287,7 +1294,10 @@ fun mk_datatype_presentation thy tyspecl =
           in
             list_mk_comb(tyn_var,constrs)
           end
-        | type_dec (tyname,Record fields) = let
+        | type_dec (tyname,Record fields) =
+          let
+            val hdc =
+                prim_mk_const{Name = tyname ^ "_" ^ #1 (hd fields), Thy = thy}
             fun fieldvar (n, _) = let
               val c = prim_mk_const{Name = tyname ^ "_" ^ n, Thy = thy}
               val (_, ty) = dom_rng (type_of c)
@@ -1295,9 +1305,10 @@ fun mk_datatype_presentation thy tyspecl =
               mk_var(n, ty)
             end
             val fvars = map fieldvar fields
-            val tyn_var = mk_var(tyname,ind)
-            val record_var = mk_var("record",
-                                    list_mk_fun(ind::map type_of fvars,bool))
+            val tyn_var = mk_var(tyname,hdc |> type_of |> dom_rng |> #1)
+            val record_var =
+                mk_var("record",
+                       list_mk_fun(type_of tyn_var::map type_of fvars,bool))
           in
             list_mk_comb(record_var,tyn_var::fvars)
           end

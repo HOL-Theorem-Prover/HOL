@@ -30,7 +30,7 @@ sig
 
 	val VSUB : term -> term -> thm -> thm
 
-	val MAKE_IT_SO  : thm -> tactic 
+	val MAKE_IT_SO  : thm -> tactic
 
 	val MAKE_IT_NO  : thm -> tactic
 

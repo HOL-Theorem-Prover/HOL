@@ -1,10 +1,5 @@
 This example is a verification of the Miller-Rabin probabilistic
-primality test, incorporating version 2 of probability theory and some
-cute example probabilistic programs.
-
-The reason I haven't incorporated it into src/ is that it takes about
-2 hours to build, and carries a lot of `baggage' from my experiments
-with proof tools.
+primality test, incorporating some cute example probabilistic programs.
 
 The most convenient way to build it is change to the examples/miller/miller
 directory, and use Holmake.  This will build the dependent directories in the example as necessary.
@@ -14,3 +9,5 @@ proof tools. I'll try and support it (especially if anyone uses it),
 but sadly it might become more trouble than it's worth.
 
 Joe Hurd, 9 January 2002
+
+(ported to latest probabilityTheory by Chun Tian (binghe), 21 July 2017)

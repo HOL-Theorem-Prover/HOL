@@ -10,6 +10,12 @@ sig
   val locn_of_absyn   : absyn -> locn.locn
   val locn_of_vstruct : vstruct -> locn.locn
 
+  val traverse : (absyn -> bool) ->
+                 ((absyn -> absyn) -> (absyn -> absyn)) ->
+                 absyn -> absyn
+
+  val to_vstruct : absyn -> vstruct
+
   val mk_AQ    : term -> absyn
   val mk_ident : string -> absyn
   val mk_app   : absyn * absyn -> absyn

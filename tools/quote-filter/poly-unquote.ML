@@ -39,7 +39,7 @@ fun main() = let
    Kenn Heinrich who helped me see the light with respect to this code *)
 
   open QuoteFilter.UserDeclarations
-  val state as QFS args = newstate()
+  val state as QFS args = newstate true
 
   fun loop() =
     let

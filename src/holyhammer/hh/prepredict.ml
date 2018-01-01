@@ -58,7 +58,7 @@ let predict_print_all fname axl cjname =
   Running the predictor
   -------------------------------------------------------------------------- *)
 
-type predictor = KNN | NaiveBayes | Mepo | Geo | Kepo
+type predictor = All | KNN | NaiveBayes | Mepo | Geo | Kepo
 
 let run_predictor p fname limit = 
   if limit <= 0 
@@ -73,9 +73,15 @@ let run_predictor p fname limit =
     | Kepo       -> Predict.kepo_advice2 fname limit
     end
 
-let predict_wrap predictor file_prefix n cj axl =
-  predict_print_all file_prefix axl cj;
-  run_predictor predictor file_prefix n
+let predict_wrap predictor file_prefix n cjname axl =
+  if predictor = All then axl else
+  (
+    if axl = [] then [] else 
+    (
+    predict_print_all file_prefix axl cjname;
+    run_predictor predictor file_prefix n
+    )
+  )
 
 (* Matching experiments 1 *)
 

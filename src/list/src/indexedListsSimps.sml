@@ -9,7 +9,7 @@ val indexedLists_ss = merge_ss [listSimps.LIST_ss,
 
 val add_indexedLists_compset =
    computeLib.add_thms
-     [MAPi_compute,indexedListsTheory.MAPi_ACC_def,FOLDRi_def,findi_def,
-      delN_def,fupdLast_def]
+     [MAPi_compute,MAPi_ACC_def,MAP2i_compute,MAP2ia_def,FOLDRi_def,findi_def,
+      delN_def, fupdLast_def]
 
 end

@@ -1,0 +1,18 @@
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) selftest.exe
+.PHONY: all
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifeq ($(KERNELID),otknl)
+all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+
+one.art: one.otd
+sum.art: sum.otd
+pair.art: pair.otd
+option.art: option.otd
+
+endif

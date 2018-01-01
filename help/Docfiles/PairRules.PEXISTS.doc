@@ -1,6 +1,6 @@
 \DOC PEXISTS
 
-\TYPE {PEXISTS : term * term -> thm -> thm)}
+\TYPE {PEXISTS : term * term -> thm -> thm}
 
 \KEYWORDS
 rule, existential.

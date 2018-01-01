@@ -17,9 +17,9 @@ open HolKernel Parse boolLib bossLib computeLib combinTheory prob_pseudoTheory
 
 local
   val compset = num_compset ();
-  val _ = add_thms [BIND_ML, EVEN_ML, FACTOR_TWOS_ML, LOG2_ML, MANY_ML,
+  val _ = add_thms [BIND_ML, FACTOR_TWOS_ML, LOG2_ML, MANY_ML,
                     MILLER_RABIN_1_ML, MILLER_RABIN_ML, MODEXP_ML,
-                    ODD_ML, PROB_UNIFORM_CUT_ML, PROB_UNIF_ML, UNCURRY_ML,
+                    PROB_UNIFORM_CUT_ML, PROB_UNIF_ML, UNCURRY_ML,
                     UNIT_ML, WITNESS_ML, WITNESS_TAIL_ML, o_THM,
                     SHD_PROB_PSEUDO, STL_PROB_PSEUDO] compset;
 in
@@ -110,4 +110,3 @@ Total: 514934092.
 *)
 
 end;
-

@@ -1,6 +1,6 @@
 \DOC
 
-\TYPE {ppstring : (PP.ppstream -> 'a -> unit) -> 'a -> unit}
+\TYPE {ppstring : (PP.ppstream -> 'a -> unit) -> 'a -> string}
 
 \SYNOPSIS
 Pretty-prints a value into a string.

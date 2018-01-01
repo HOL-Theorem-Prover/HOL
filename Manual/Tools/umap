@@ -29,3 +29,7 @@
 ” \mbox{\textrm{''}}
 ‘ \mbox{\textrm{`}}
 ’ \mbox{\textrm{'}}
+³ \(\sp{3}\)
+⊌ \(\cupleftarrow\)
+⊑ \(\sqsubseteq\)
+∉ \(\not\in\)

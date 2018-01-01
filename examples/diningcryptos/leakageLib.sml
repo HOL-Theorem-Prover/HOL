@@ -11,6 +11,8 @@ open HolKernel Parse boolTheory boolLib bossLib metisLib arithmeticTheory
      stringTheory rich_listTheory stringSimps realTheory realLib
      listSimps extra_stringTheory extra_stringLib leakageTheory;
 
+open real_sigmaTheory;
+
 val safe_set_ss = (simpLib.++ (bool_ss, PRED_SET_ss));
 
 val set_ss = (simpLib.++ (arith_ss, PRED_SET_ss));

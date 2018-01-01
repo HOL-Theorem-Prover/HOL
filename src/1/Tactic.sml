@@ -533,6 +533,8 @@ fun FILTER_STRIP_THEN ttac tm =
 fun DISCH_TAC g =
    DISCH_THEN ASSUME_TAC g handle HOL_ERR _ => raise ERR "DISCH_TAC" ""
 
+val disch_tac = DISCH_TAC
+
 val FILTER_DISCH_TAC = FILTER_DISCH_THEN STRIP_ASSUME_TAC
 
 val DISJ_CASES_TAC = DISJ_CASES_THEN ASSUME_TAC
@@ -781,26 +783,26 @@ in
             HOLset.intersection (FVL [concl thm] empty_tmset, hyp_frees thm)
         val hyptyvars = HOLset.listItems (hyp_tyvars thm)
         val (gvs, imp) = strip_forall (concl thm)
-        val (ant, conseq) =
-           with_exn dest_imp imp (ERR "MATCH_MP_TAC" "Not an implication")
-        val (cvs, con) = strip_forall conseq
-        val th1 = SPECL cvs (UNDISCH (SPECL gvs thm))
-        val (vs, evs) = partition (C Term.free_in con) gvs
-        val th2 = uncurry DISCH (itlist efn evs (ant, th1))
       in
-         fn (A, g) =>
-            let
-               val (vs, gl) = strip_forall g
-               val ins = match_terml hyptyvars lconsts con gl
-                         handle HOL_ERR _ => raise ERR "MATCH_MP_TAC" "No match"
-               val ith = INST_TY_TERM ins th2
-               val gth = GENL vs (UNDISCH ith)
-                         handle HOL_ERR _ => raise ERR "MATCH_MP_TAC"
-                                                       "Generalized var(s)."
-               val ant = fst (dest_imp (concl ith))
-            in
-               ([(A, ant)], fn thl => MP (DISCH ant gth) (hd thl))
-            end
+          fn (A,g) =>
+             let
+                 val (ant, conseq) =
+                     with_exn dest_imp imp (ERR "MATCH_MP_TAC" "Not an implication")
+                 val (cvs, con) = strip_forall conseq
+                 val th1 = SPECL cvs (UNDISCH (SPECL gvs thm))
+                 val (vs, evs) = partition (C Term.free_in con) gvs
+                 val th2 = uncurry DISCH (itlist efn evs (ant, th1))
+                 val (vs, gl) = strip_forall g
+                 val ins = match_terml hyptyvars lconsts con gl
+                           handle HOL_ERR _ => raise ERR "MATCH_MP_TAC" "No match"
+                 val ith = INST_TY_TERM ins th2
+                 val gth = GENL vs (UNDISCH ith)
+                           handle HOL_ERR _ => raise ERR "MATCH_MP_TAC"
+                                                     "Generalized var(s)."
+                 val ant = fst (dest_imp (concl ith))
+             in
+                 ([(A, ant)], fn thl => MP (DISCH ant gth) (hd thl))
+             end
       end
    val match_mp_tac = MATCH_MP_TAC
 end

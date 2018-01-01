@@ -3,7 +3,7 @@ sig
 	type term = Term.term
 	type hol_type = Abbrev.hol_type
 
-	(*val rat	: hol_type*)
+	val rat	: hol_type
 
 	val rat_0_tm	: term
 	val rat_1_tm	: term

@@ -6,6 +6,12 @@ structure FileSys = OS.FileSys
 structure Path = OS.Path
 structure Process = OS.Process
 
+infix ++
+fun p1 ++ p2 = Path.concat(p1,p2)
+val SIGOBJ = Systeml.HOLDIR ++ "sigobj"
+
+
+
 infix |>
 fun x |> f = f x
 
@@ -85,12 +91,12 @@ fun addPath I file =
     file
   else let
       val p = List.find (fn p =>
-                            FileSys.access (Path.concat (p, file ^ ".ui"), []))
+                            FileSys.access (p ++ (file ^ ".ui"), []))
                         (FileSys.getDir() :: I)
     in
       case p of
-           NONE => OS.Path.concat (OS.FileSys.getDir(), file)
-         | SOME p => OS.Path.concat (p, file)
+           NONE => OS.FileSys.getDir() ++ file
+         | SOME p => p ++ file
     end;
 
 fun time_max(t1,t2) = if Time.<(t1,t2) then t2 else t1
@@ -138,6 +144,7 @@ fun poly_compile warn diag quietp file I deps = let
   val _ = diag ("Writing "^fromFile file^" with dependencies: " ^
                 String.concatWith ", " (map fromFile deps))
   fun mapthis (Unhandled _) = NONE
+    | mapthis (DAT _) = NONE
     | mapthis f = SOME (fromFileNoSuf f)
   val depMods = List.map (addPath I) (List.mapPartial mapthis deps)
   fun usePathVars p = holpathdb.reverse_lookup {path = p}
@@ -244,29 +251,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   in
     p "#!/bin/sh";
     p ("set -e");
-    p (protect(POLY) ^ " -q --gcthreads=1 " ^
-       String.concatWith " " (envlist "POLY_CLINE_OPTIONS") ^
-       " <<'__end-of-file__'");
-    (if polynothol then
-       (p "local";
-        p "val dir = OS.FileSys.getDir();";
-        p ("val _ = OS.FileSys.chDir (OS.Path.concat (\"" ^
-                    String.toString Systeml.HOLDIR ^ "\", \"tools-poly\"));");
-        p "val _ = use \"poly/poly-init2.ML\";";
-        p "val _ = OS.FileSys.chDir dir;";
-        p "in end;")
-     else
-       (p ("val _ = PolyML.SaveState.loadState \"" ^
-           String.toString HOLSTATE ^ "\";\n");
-        p ("val _ = List.app holpathdb.extend_db" ^
-           "(holpathdb.search_for_extensions ReadHMF.find_includes " ^
-           "[OS.FileSys.getDir()])\n")));
-    p ("val _ = List.map load [" ^
-       String.concatWith "," (List.map (fn f => "\"" ^ f ^ "\"") files) ^
-       "] handle x => ((case x of Fail s => print (s^\"\\n\") | _ => ()); \
-       \OS.Process.exit OS.Process.failure);");
-    p "__end-of-file__";
-    p ("echo \"Completed load of "^result^"\"");
+    p (protect(fullPath [HOLDIR, "bin", "buildheap"]) ^ " --gcthreads=1 " ^
+       (if polynothol then "--poly" else "--holstate="^protect(HOLSTATE)) ^
+       (if debug then "--dbg" else "") ^
+       " " ^ String.concatWith " " (map protect files));
     p ("exit 0");
     TextIO.closeOut out;
     Systeml.mk_xable result;
@@ -301,17 +289,20 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       val objectfiles =
         if polynothol then
           objectfiles0
-        else if interactive_flag then "holmake_interactive.uo" :: objectfiles0
-        else "holmake_not_interactive.uo" :: objectfiles0
+        else if interactive_flag then
+          (SIGOBJ ++ "holmake_interactive.uo") :: objectfiles0
+        else (SIGOBJ ++ "holmake_not_interactive.uo") :: objectfiles0
     in
         ((script,[scriptuo,scriptui,script]), objectfiles)
     end
     fun run_script g (script, intermediates) objectfiles expected_results =
-      if isSuccess (poly_link true script (List.map OS.Path.base objectfiles))
-      then let
+      let
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
         val _ = app safedelete expected_results
-        val cline = [fullPath [OS.FileSys.getDir(), script]]
+        val useScript = fullPath [HOLDIR, "bin", "buildheap"]
+        val cline = useScript::"--gcthreads=1"::
+                    (if polynothol then "--poly" else "--holstate="^HOLSTATE)::
+                    ((if debug then ["--dbg"] else []) @ objectfiles)
         fun cont wn res =
           let
             val _ =
@@ -345,11 +336,9 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
               (BuiltInCmd (BIC_BuildScript script_part))
         end
       in
-        BR_ClineK { cline = (script, cline), job_kont = cont,
+        BR_ClineK { cline = (useScript, cline), job_kont = cont,
                     other_nodes = other_nodes }
       end
-      else
-        (warn ("Failed to build script file, "^script^"\n"); BR_Failed)
   in
     let
     in
@@ -503,7 +492,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                 [OS.FileSys.getDir()])
 
 in
-  {extra_impl_deps = [Unhandled HOLSTATE],
+  {extra_impl_deps = if relocbuild orelse HOLSTATE = POLY then []
+                     else [Unhandled HOLSTATE],
    build_graph = (fn arg => (extend_holpaths(); build_graph arg))}
 end
 

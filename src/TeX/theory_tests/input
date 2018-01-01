@@ -11,3 +11,5 @@
 \HOLtm{x with <| fld2 updated_by g |>}
 
 \HOLtm{x INSERT s}
+
+\HOLtm{APPEND x y}

@@ -3,7 +3,7 @@ sig
   include Abbrev
 
   val ACCEPT_TAC            : thm_tactic
-  val DISCARD_TAC           : thm -> tactic
+  val DISCARD_TAC           : thm_tactic
   val CONTR_TAC             : thm_tactic
   val CCONTR_TAC            : tactic
   val ASSUME_TAC            : thm_tactic
@@ -54,6 +54,7 @@ sig
   val FILTER_DISCH_THEN     : thm_tactic -> term -> tactic
   val FILTER_STRIP_THEN     : thm_tactic -> term -> tactic
   val DISCH_TAC             : tactic
+  val disch_tac             : tactic
   val DISJ_CASES_TAC        : thm_tactic
   val CHOOSE_TAC            : thm_tactic
   val X_CHOOSE_TAC          : term -> thm_tactic

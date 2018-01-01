@@ -14,7 +14,6 @@ structure Parse =
 struct
   open Parse
   val (Type,Term) = Parse.parse_from_grammars boolTheory.bool_grammars
-  fun -- q x = Term q
   fun == q x = Type q
 end
 open Parse

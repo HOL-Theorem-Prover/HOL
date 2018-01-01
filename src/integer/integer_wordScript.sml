@@ -74,6 +74,12 @@ val signed_saturate_sub_def = Define`
   signed_saturate_sub (a: 'a word) (b: 'a word) =
     saturate_i2sw (w2i a - w2i b) : 'a word`
 
+val word_sdiv_def = Define`
+  word_sdiv (a : 'a word) (b : 'a word) = i2w (w2i a / w2i b) : 'a word`
+
+val word_smod_def = Define`
+  word_smod (a : 'a word) (b : 'a word) = i2w (w2i a % w2i b) : 'a word`
+
 (* ------------------------------------------------------------------------- *)
 
 (*
@@ -889,6 +895,87 @@ val i2w_UINT_MAX = Q.store_thm("i2w_UINT_MAX",
        intLib.ARITH_PROVE ``0i < n ==> ~(n < 0i)``]
   \\ fsrw_tac [] [GSYM wordsTheory.word_T_def, w2i_minus_1]
 )
+
+val word_msb_i2w_lt_0 = Q.store_thm("word_msb_i2w_lt_0",
+  `!i. INT_MIN (:'a) <= i /\ i <= INT_MAX (:'a) ==>
+       (word_msb (i2w i : 'a word) = i < 0)`,
+  Cases
+  \\ srw_tac [intSimps.INT_ARITH_ss]
+       [i2w_def, wordsTheory.word_2comp_n2w, wordsTheory.word_msb_n2w_numeric,
+        arithmeticTheory.NOT_LESS_EQUAL]
+  \\ `n < dimword(:'a)`
+  by  metis_tac
+        [wordsTheory.INT_MIN_LT_DIMWORD, wordsTheory.INT_MAX_LT_DIMWORD,
+         arithmeticTheory.LESS_EQ_LESS_TRANS]
+  >- (`n < INT_MIN(:'a)`
+      by metis_tac [arithmeticTheory.LESS_EQ_LESS_TRANS,
+                    wordsTheory.BOUND_ORDER]
+      \\ simp [])
+  \\ simp [arithmeticTheory.SUB_LEFT_LESS_EQ,
+           wordsTheory.dimword_IS_TWICE_INT_MIN]
+  )
+
+val lem1 = Q.prove(
+  `!n. n <= INT_MIN (:'a) ==> (w2n (i2w (&n) : 'a word) = n)`,
+  rw [wordsTheory.w2n_eq_0, i2w_def]
+  \\ `n < dimword(:'a)`
+  by metis_tac [wordsTheory.INT_MIN_LT_DIMWORD,
+                arithmeticTheory.LESS_EQ_LESS_TRANS]
+  \\ simp []
+  )
+
+val lem2 = Q.prove(
+  `!n. n <= INT_MAX (:'a) ==> (w2n (i2w (&n) : 'a word) = n)`,
+  rw [wordsTheory.w2n_eq_0, i2w_def]
+  \\ `n < dimword(:'a)`
+  by metis_tac [wordsTheory.INT_MAX_LT_DIMWORD,
+                arithmeticTheory.LESS_EQ_LESS_TRANS]
+  \\ simp []
+  )
+
+val lem3 = Q.prove(
+  `!a b. (-1w * a = -1w * b) = (a = b)`,
+  srw_tac [wordsLib.WORD_CANCEL_ss] []
+  )
+
+val i2w_pos = Q.store_thm("i2w_pos",
+  `!n. i2w (&n) = n2w n`,
+  rw [i2w_def]
+  )
+
+val word_quot = Q.store_thm("word_quot",
+  `!a b. b <> 0w ==> (word_quot a b = i2w (w2i a quot w2i b))`,
+  rpt strip_tac
+  \\ Cases_on_i2w `a`
+  \\ Cases_on_i2w `b`
+  \\ qmatch_goalsub_rename_tac `i2w i  / i2w j : 'a word`
+  \\ `j <> 0` by (spose_not_then assume_tac \\ fs [i2w_0])
+  \\ simp [w2i_i2w, word_msb_i2w_lt_0, word_quot_def, word_div_def]
+  \\ rw [MULT_MINUS_ONE]
+  \\ full_simp_tac (int_ss++intSimps.COOPER_ss) []
+  \\ Cases_on `i`
+  \\ Cases_on `j`
+  \\ fs [i2w_0, arithmeticTheory.ZERO_DIV, lem1, lem2, lem3,
+         GSYM MULT_MINUS_ONE]
+  \\ simp [i2w_pos]
+  )
+
+val word_rem = Q.store_thm("word_rem",
+  `!a b. b <> 0w ==> (word_rem a b = i2w (w2i a rem w2i b))`,
+  rpt strip_tac
+  \\ Cases_on_i2w `a`
+  \\ Cases_on_i2w `b`
+  \\ qmatch_goalsub_rename_tac `word_rem (i2w i) (i2w j) : 'a word`
+  \\ `j <> 0` by (spose_not_then assume_tac \\ fs [i2w_0])
+  \\ simp [w2i_i2w, word_msb_i2w_lt_0, word_rem_def, word_mod_def]
+  \\ rw [MULT_MINUS_ONE]
+  \\ full_simp_tac (int_ss++intSimps.COOPER_ss) []
+  \\ Cases_on `i`
+  \\ Cases_on `j`
+  \\ fs [i2w_0, arithmeticTheory.ZERO_DIV, lem1, lem2, lem3,
+         GSYM MULT_MINUS_ONE]
+  \\ simp [i2w_pos]
+  )
 
 val saturate_i2w_0 = Q.store_thm("saturate_i2w_0",
   `saturate_i2w 0 = 0w`,
