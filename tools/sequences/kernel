@@ -1,6 +1,7 @@
 !tools/Holmake/tests/holdep
 !tools/Holmake/tests/depchainloop
 !tools/Holmake/tests/recursiveclean
+tools/set_mtime
 tools/mlyacc/mlyacclib
 [mosml]src/portableML/mosml
 [poly]src/portableML/poly
@@ -15,6 +16,7 @@ src/parse
 src/opentheory
 (otknl)src/opentheory/logging
 src/bool
+#include sequences/holyhammer
 src/1
 (otknl)src/opentheory/postbool
 src/proofman

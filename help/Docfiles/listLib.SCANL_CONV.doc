@@ -29,14 +29,14 @@ which is used in the next iteration.
 
 \FAILURE
 {SCANL_CONV conv tm} fails if {tm} is not of the form described above,
-or failure occurs when evaluating {conv (--`f e(i-1) xi`--)}.
+or failure occurs when evaluating {conv “f e(i-1) xi”}.
 
 \EXAMPLE
 To sum the elements of a list and save the result at each step, one can use
 {SCANL_CONV} with {ADD_CONV} from the library {num_lib}.
 {
    - load_library_in_place num_lib;
-   - SCANL_CONV Num_lib.ADD_CONV (--`SCANL $+ 0 [1;2;3]`--);
+   - SCANL_CONV Num_lib.ADD_CONV “SCANL $+ 0 [1;2;3]”;
    |- SCANL $+ 0[1;2;3] = [0;1;3;6]
 }
 In general, if the function {f} is an explicit lambda abstraction

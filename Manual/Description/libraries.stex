@@ -2594,13 +2594,16 @@ field.
 
 For example, the following \simpset{} fragment will cause
 AC-normalisation of disjunctions
-\begin{hol}
-\begin{verbatim}
-   SSFRAG {ac = [(DISJ_ASSOC, DISJ_COMM)],
-           rewrs = [], filter = NONE, convs = [],
-           dprocs = [], congs = []}
-\end{verbatim}
-\end{hol}
+\begin{session}
+\begin{alltt}
+>>__ load "simpLib";
+>>__ open simpLib;
+##eval[DISJ_ss] SSFRAG { name = NONE,
+           convs = [], rewrs = [], congs = [],
+           filter = NONE, ac = [(DISJ_ASSOC, DISJ_COMM)],
+           dprocs = [] }
+\end{alltt}
+\end{session}
 The pair of provided theorems must state
 \begin{eqnarray*}
 x \oplus y &=& y \oplus x\\
@@ -2613,11 +2616,9 @@ the first component of the pair.  Assuming the \simpset{} fragment
 above is bound to the \ML{} identifier \ml{DISJ\_ss}, its behaviour is
 demonstrated in the following example:
 \begin{session}
-\begin{verbatim}
-- SIMP_CONV (bool_ss ++ DISJ_ss) [] ``p /\ q \/ r \/ P z``;
-<<HOL message: inventing new type variable names: 'a>>
-> val it = |- p /\ q \/ r \/ P z = r \/ P z \/ p /\ q : thm
-\end{verbatim}
+\begin{alltt}
+>> SIMP_CONV (bool_ss ++ DISJ_ss) [] ``p /\ q \/ r \/ P z``;
+\end{alltt}
 \end{session}
 
 \index{arith_ss (simplification set)@\ml{arith\_ss} (simplification set)}
@@ -2633,11 +2634,9 @@ AC theorems can also be added to \simpset{}s via the theorem-list part
 of the tactic and conversion interface, using the special rewrite form
 \ml{AC}:
 \begin{session}
-\begin{verbatim}
-- SIMP_CONV bool_ss [AC DISJ_ASSOC DISJ_COMM] ``p /\ q \/ r \/ P z``;
-<<HOL message: inventing new type variable names: 'a>>
-> val it = |- p /\ q \/ r \/ P z = r \/ P z \/ p /\ q : thm
-\end{verbatim}
+\begin{alltt}
+>> SIMP_CONV bool_ss [AC DISJ_ASSOC DISJ_COMM] ``p /\ q \/ r \/ P z``;
+\end{alltt}
 \end{session}
 See Section~\ref{sec:simp-special-rewrite-forms} for more on special
 rewrite forms.

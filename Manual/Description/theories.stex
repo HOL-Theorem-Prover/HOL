@@ -1312,6 +1312,7 @@ series of theories. Also available are theories of $n$-bit words
 (numbers modulo $2^n$), floating point and fixed point numbers.
 
 \subsection{Natural numbers}
+\label{sec:arithmetic}
 
 The natural numbers are developed in a series of theories:
 \theoryimp{num}, \theoryimp{prim\_rec}, \theoryimp{arithmetic}, and
@@ -4552,6 +4553,9 @@ From those, Newman's Lemma is proved.
 \subsection{Finite maps (\theoryimp{finite\_map})}
 \label{sec:finite-map}
 
+>>__ load "finite_mapTheory"; open finite_mapTheory;
+>>__ set_grammar_ancestry ["finite_map"]
+
 The theory \theoryimp{finite\_map} formalizes a type
 $(\alpha,\beta)\,\holtxt{fmap}$ of finite functions. These notionally
 have type $\alpha\to\beta$, but additionally have only finitely many
@@ -4594,30 +4598,21 @@ just the cardinality of its domain ({\small\verb+FCARD_DEF+}); from
 this a recursive characterization ({\small\verb+FCARD_FUPDATE+}) is
 derived.
 \begin{hol}
-\begin{verbatim}
-   FAPPLY_FUPDATE_THM
-     |- !f a b x. (f |+ (a,b)) ' x = (if x = a then b else f ' x)
-   fmap_EXT
-     |- !f g. (f = g) =
-              (FDOM f = FDOM g) /\ (!x. x IN FDOM f ==> (f ' x = g ' x))
-   fmap_INDUCT
-     |- !P. P FEMPTY /\
-            (!f. P f ==> !x y. ~(x IN FDOM f) ==> P (f |+ (x,y))) ==> !f. P f
-   FCARD_DEF  |- FCARD fm = CARD (FDOM fm)
-   FCARD_FUPDATE
-     |- !fm a b. FCARD(fm |+ (a,b)) =
-                   if a IN FDOM fm then FCARD fm else 1 + FCARD fm
-\end{verbatim}
+\begin{alltt}
+   ##thm FAPPLY_FUPDATE_THM
+   ##thm fmap_EXT
+   ##thm fmap_INDUCT
+   ##thm FCARD_DEF
+   ##thm FCARD_FUPDATE
+\end{alltt}
 \end{hol}
 Iterated updates (\holtxt{FUPDATE\_LIST}) to a map are useful. The
 infix notation \holtxt{|++} may also be used.  For example, \holtxt{fm\,|++\,[(k1,v1);\,(k2,v2)]} is equal to \holtxt{(fm\,|+\,(k1,v1))\,|+\,(k2,v2)}.
 \begin{hol}
-\begin{verbatim}
-   FUPDATE_LIST  |- FUPDATE_LIST = FOLDL FUPDATE
-   FUPDATE_LIST_THM
-     |- !f. (f |++ [] = f) /\
-            (!h t. f |++ (h::t) = (f |+ h) |++ t)
-\end{verbatim}
+\begin{alltt}
+   ##thm FUPDATE_LIST
+   ##thm FUPDATE_LIST_THM
+\end{alltt}
 \end{hol}
 
 
@@ -4628,12 +4623,10 @@ this can be characterized recursively
 ({\small\verb+FDOM_FUPDATE+}). The range of a map is defined in the
 usual way.
 \begin{hol}
-\begin{verbatim}
-   FDOM_FUPDATE
-     |- !f a b. FDOM (f |+ (a,b)) = a INSERT (FDOM f)
-   FRANGE_DEF
-     |- FRANGE f = {y | ?x. x IN FDOM f /\ (f ' x = y)}
-\end{verbatim}
+\begin{alltt}
+   ##thm FDOM_FUPDATE
+   ##thm FRANGE_DEF
+\end{alltt}
 \end{hol}
 %
 A finite map may have its domain ({\small\verb+DRESTRICT+})
@@ -4642,26 +4635,12 @@ set. These notions have recursive versions as well
 ({\small\verb+DRESTRICT_FUPDATE+} and {\small\verb+RRESTRICT_FUPDATE+}).
 %
 \begin{hol}
-\begin{verbatim}
-   DRESTRICT_DEF
-     |- !f r. (FDOM (DRESTRICT f r) = (FDOM f) INTER r) /\
-              (!x. DRESTRICT f r ' x =
-                     (if x IN ((FDOM f) INTER r) then f ' x else FEMPTY'x))
-   RRESTRICT_DEF
-     |- !f r. (FDOM (RRESTRICT f r) = {x | x IN FDOM f /\ f ' x IN r}) /\
-              (!x. RRESTRICT f r ' x =
-                     (if x IN (FDOM f) /\ f ' x IN r then f ' x
-                      else FEMPTY ' x))
-   DRESTRICT_FUPDATE
-     |- !f r x y.
-           DRESTRICT (f |+ (x,y)) r =
-             if x IN r then (DRESTRICT f r) |+ (x,y) else DRESTRICT f r
-   RRESTRICT_FUPDATE
-     |- !f r x y.
-           RRESTRICT (f |+ (x,y)) r =
-             if y IN r then (RRESTRICT f r) |+ (x,y)
-                       else RRESTRICT (DRESTRICT f (COMPL {x})) r)
-\end{verbatim}
+\begin{alltt}
+   ##thm DRESTRICT_DEF
+   ##thm RRESTRICT_DEF
+   ##thm DRESTRICT_FUPDATE
+   ##thm RRESTRICT_FUPDATE
+\end{alltt}
 \end{hol}
 The removal of a single element from the domain of a map
 (\holtxt{\bs\bs}, infix) is a simple application of
@@ -4670,54 +4649,36 @@ definition. Again, this concept has a alternate recursive presentation
 (\holtxt{DOMSUB\_FUPDATE\_THM}).
 %
 \begin{hol}
-\begin{verbatim}
-   fmap_domsub
-     |- (fm \\ k) = DRESTRICT fm (COMPL {k})
-   DOMSUB_FUPDATE_THM
-     |- !fm k1 k2 v. (fm |+ (k1,v)) \\ k2 =
-                      if (k1 = k2) then (fm \\ k2) else (fm \\ k2) |+ (k1, v)
-\end{verbatim}
+\begin{alltt}
+   ##thm fmap_domsub
+   ##thm DOMSUB_FUPDATE_THM
+\end{alltt}
 \end{hol}
 
 \paragraph {Union and sub-maps}
 
-Unlike set union, the union of two finite maps
-(\holtxt{FUNION\_DEF}) is not symmetric: the domain of the first map
-takes precedence. The notion of a finite map being a submap of another
-(\holtxt{SUBMAP}, infix) is an extension of how subsets are
-formalized.
+Unlike set union, the union of two finite maps (\holtxt{FUNION}) is not symmetric: the domain of the first map takes precedence.
+The notion of a finite map being a submap of another (\holtxt{SUBMAP}, infix) is an extension of how subsets are formalized.
 \begin{hol}
-\begin{verbatim}
-   FUNION_DEF
-     |- !f g.
-          (FDOM (FUNION f g) = FDOM f UNION FDOM g) /\
-          !x. FUNION f g ' x = (if x IN FDOM f then f ' x else g ' x)
-   SUBMAP_DEF
-     |- !f g. (f SUBMAP g) = (!x. x IN FDOM f ==> x IN FDOM g /\
-                             (f ' x = g ' x))
-\end{verbatim}
+\begin{alltt}
+   ##thm FUNION_DEF
+   ##thm SUBMAP_DEF
+\end{alltt}
 \end{hol}
 
 \paragraph {Finite maps and functions}
 
 As much as possible, finite maps should be like ordinary functions.
-Thus, if \holtxt{f} is a finite map, then \holtxt{FAPPLY f} is an
-ordinary function. Similarly, there is an operation for
-\emph{totalizing} a finite map (\holtxt{lookup}) so that an
-application of it returns an ordinary function, the range of which is
-the option type.  An ordinary function can be turned into a finite map
-by restricting the function to a finite set of arguments
-(\ml{FUN\_FMAP\_DEF}).
+Thus, if \holtxt{f} is a finite map, then \holtxt{FAPPLY f} is an ordinary function.
+Similarly, there is an operation for \emph{totalizing} a finite map (\holtxt{FLOOKUP}) so that an application of it returns an ordinary function, the range of which is the option type.
+An ordinary function can be turned into a finite map by restricting the function to a finite set of arguments (\ml{FUN\_FMAP\_DEF}).
 %
 \begin{hol}
-\begin{verbatim}
-   lookup_DEF
-     |- FLOOKUP f x = (if x IN FDOM f then SOME (f ' x) else NONE)
-   FUN_FMAP_DEF
-     |- !f P. FINITE P ==>
-             (FDOM (FUN_FMAP f P) = P) /\
-             (!x. x IN P ==> (FUN_FMAP f P ' x = f x))
-\end{verbatim}
+\begin{alltt}
+   ##thm FLOOKUP_DEF
+
+   ##thm FUN_FMAP_DEF
+\end{alltt}
 \end{hol}
 
 \paragraph {Composition of maps}
@@ -4734,18 +4695,11 @@ map; the application of the ordinary function is achieved by turning
 it into a finite map.
 %
 \begin{hol}
-\begin{verbatim}
-   f_o_f_DEF
-     |- !f g.
-          (FDOM (f f_o_f g) = (FDOM g) INTER {x | g ' x IN FDOM f}) /\
-          !x. x IN FDOM (f f_o_f g) ==> ((f f_o_f g) ' x = f ' (g ' x))
-   o_f_DEF
-     |- !f g.
-          (FDOM (f o_f g) = FDOM g) /\
-          !x. x IN FDOM (f o_f g) ==> ((f o_f g) ' x = f (g ' x))
-   f_o_DEF
-     |- (f f_o g) = f f_o_f (FUN_FMAP g {x | g x IN FDOM f})
-\end{verbatim}
+\begin{alltt}
+   ##thm f_o_f_DEF
+   ##thm o_f_DEF
+   ##thm f_o_DEF
+\end{alltt}
 \end{hol}
 
 \section{While Loops}

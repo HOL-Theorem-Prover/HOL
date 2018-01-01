@@ -54,30 +54,7 @@ fun reset_dicts () =
   writehh_names := dempty depid_compare
 )
 
-(*---------------------------------------------------------------------------
-   Absolute limit on the size of theorems (to be removed)
- ----------------------------------------------------------------------------*)
-val size_limit = 200
-fun size_of_term t =
-       if is_abs t
-    then let val (v,t') = dest_abs t in 1 + size_of_term t' end
-  else if is_comb t
-    then let val (t1,t2) = dest_comb t in size_of_term t1 + size_of_term t2 end
-  else if is_var t orelse is_const t
-    then 1
-  else raise ERR "size_of_term" ""
-
-fun is_oversized_term t = size_of_term t > size_limit
-
-fun is_oversized_thm thm =
-  let
-    val thml = BODY_CONJUNCTS thm
-    val terml = map (concl o GEN_ALL o DISCH_ALL) thml
-  in
-    exists is_oversized_term terml
-  end
-
-(*---------------------------------------------------------------------------
+(*---_-----------------------------------------------------------------------
    Save new objects in the dictionnaries.
  ----------------------------------------------------------------------------*)
 (* escaping *)
@@ -402,10 +379,10 @@ fun export_thm ((name,thm),role) =
    Printing theories
  ----------------------------------------------------------------------------*)
 
-fun hh_thy_start folder thy =
+fun hh_thy_start dir thy =
   (
-  oc := openOut (folder ^ "/" ^ thy ^ ".p");
-  oc_deps := openOut (folder ^ "/" ^ thy  ^ ".hd")
+  oc := openOut (dir ^ "/" ^ thy ^ ".p");
+  oc_deps := openOut (dir ^ "/" ^ thy  ^ ".hd")
   )
 
 fun hh_thy_end () =
@@ -414,9 +391,9 @@ fun hh_thy_end () =
   closeOut (!oc_deps); oc_deps := stdOut
   )
 
-fun write_hh_thy folder thy =
+fun write_thy dir pred thy =
   (
-  hh_thy_start folder thy;
+  hh_thy_start dir thy;
   let val l = dest_theory thy in
     case l of THEORY(_,t) =>
     (
@@ -429,8 +406,9 @@ fun write_hh_thy folder thy =
         let val f = depnumber_of o depid_of o dep_of o Thm.tag in
           f th1 < f th2
         end
-      (* val thml = filter (fn ((_,x),_) => not (is_oversized_thm x)) *)
-      val thml = sort compare (axl @ defl)
+      val thypred = map snd (filter (fn x => fst x = thy) pred)
+      fun f x = mem (fst (fst x)) thypred
+      val thml = filter f (sort compare (axl @ defl))
     in
       app export_thm thml
     end
@@ -439,12 +417,19 @@ fun write_hh_thy folder thy =
   hh_thy_end ()
   )
 
-fun sort_thyl thyl = case thyl of
-    [] => []
-  | thy :: m =>
-      let val (l1,l2) = partition (fn a => mem a (ancestry thy)) m in
-        (sort_thyl l1) @ [thy] @ (sort_thyl l2)
-       end
+fun topo_sort l =
+  if l = [] then []
+  else
+    let 
+      val (l1,l2) = partition (fn (_,x) => x = []) l
+      val _       = if l1 = [] then raise ERR "topo_sort" "cycle" else ()
+      fun rm_dep la (b,lb) = (b, filter (fn x => not (mem x la)) lb)
+      val l2' = map (rm_dep (map fst l1)) l2
+    in
+      (map fst l1) @ topo_sort l2'
+    end
+
+fun sort_thyl thyl = topo_sort (map (fn x => (x, ancestry x)) thyl)
 
 fun write_thydep file thyl =
   (
@@ -453,10 +438,11 @@ fun write_thydep file thyl =
   closeOut (!oc); oc := stdOut
   )
 
-fun write_hh_thyl folder thyl =
-  (reset_dicts();
-   app (write_hh_thy folder) (sort_thyl thyl))
-
+fun write_thyl dir pred thyl =
+  (
+  reset_dicts ();
+  app (write_thy dir pred) (sort_thyl thyl)
+  )
 
 fun write_conjecture file conjecture =
   if type_of conjecture = bool

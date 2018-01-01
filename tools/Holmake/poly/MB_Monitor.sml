@@ -6,6 +6,17 @@ open ProcessMultiplexor Holmake_tools
 val five_sec = Time.fromSeconds 5
 val W_EXITED = Posix.Process.W_EXITED
 
+fun Pstatus_to_string st =
+  let
+    open Posix.Process
+  in
+    case st of
+        W_EXITED => "OK"
+      | W_EXITSTATUS w8 => Word8.toString w8
+      | W_SIGNALED s => "Signal "^SysWord.toString (Posix.Signal.toWord s)
+      | W_STOPPED s => "Stopped "^SysWord.toString (Posix.Signal.toWord s)
+  end
+
 (* thanks to Rob Arthan for this function *)
 fun strmIsTTY (outstream : TextIO.outstream) =
   let
@@ -63,6 +74,8 @@ fun polish0 tag =
     String.substring(tag,0,String.size tag - 10)
   else if String.isSuffix "Theory.sml" tag then
     String.substring(tag,0,String.size tag - 10)
+  else if String.isSuffix "Theory.dat" tag then
+    String.substring(tag,0,String.size tag - 10)
   else tag
 
 fun truncate width s =
@@ -92,6 +105,8 @@ val used_cheat_string = "(used CHEAT)"
 
 fun delsml_sfx s =
   if String.isSuffix ".sml" s orelse String.isSuffix ".sig" s then
+    String.substring(s, 0, size s - 4)
+  else if String.isSuffix "Theory.dat" s then
     String.substring(s, 0, size s - 4)
   else s
 
@@ -205,6 +220,7 @@ fun new {info,warn,genLogFile,keep_going,time_limit} =
                     tailbuffer.output tb
                   fun seen s = Holmake_tools.member s patterns_seen
                   val taginfo = taginfo tag
+                  val status_string = Pstatus_to_string st
                 in
                   if st = W_EXITED then
                     if seen cheat_string orelse seen used_cheat_string then
@@ -212,7 +228,7 @@ fun new {info,warn,genLogFile,keep_going,time_limit} =
                     else
                       taginfo
                         (if seen oracle_string then boldyellow else green) "OK"
-                  else (taginfo red "FAILED!";
+                  else (taginfo red ("FAILED! <" ^ status_string ^ ">");
                         List.app (fn s => info (" " ^ dim s)) fulllines;
                         if lastpartial <> "" then info (" " ^ dim lastpartial)
                         else ());

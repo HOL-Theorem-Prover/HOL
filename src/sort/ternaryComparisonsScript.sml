@@ -73,8 +73,8 @@ val string_compare_def = Define `
 `;
 
 val compare_equal = store_thm("compare_equal",
-  --` (!x y. (cmp x y = EQUAL) = (x = y))
-      ==> !l1 l2. (list_compare cmp l1 l2 = EQUAL) = (l1 = l2)`--,
+  “(!x y. (cmp x y = EQUAL) = (x = y)) ==>
+   !l1 l2. (list_compare cmp l1 l2 = EQUAL) = (l1 = l2)”,
  DISCH_THEN (ASSUME_TAC o GSYM)
    THEN NTAC 2 (Induct THENL [ALL_TAC,GEN_TAC])
    THEN TRY (ASM_REWRITE_TAC[] THEN Cases_on `cmp h h'`)

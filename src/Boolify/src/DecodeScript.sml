@@ -15,9 +15,6 @@ val arith_ss = old_arith_ss
 
 val () = new_theory "Decode";
 
-infixr 0 >> || >|;
-infix 1 >-;
-
 val Suff = Q_TAC SUFF_TAC;
 val Know = Q_TAC KNOW_TAC;
 
@@ -999,8 +996,8 @@ val dec_bnum_inj = store_thm
    >> DISCH_THEN (MP_TAC o ONCE_REWRITE_RULE [MULT_COMM] o Q.SPEC `n`)
    >> DISCH_THEN (fn th => CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [th])))
    >> RW_TAC arith_ss [MOD_2, GSYM ADD1, APPEND_11]
-   >> Know `!m n. (2 * m = 2 * n) = (m = n)`
-   >- RW_TAC arith_ss [EQ_MULT_LCANCEL]
+   >> (Know `!m n. (2 * m = 2 * n) = (m = n)`
+       >- RW_TAC arith_ss [EQ_MULT_LCANCEL])
    >> DISCH_THEN (fn th => FULL_SIMP_TAC std_ss [th])
    >> RW_TAC std_ss []
    >> PROVE_TAC [ODD_DOUBLE, EVEN_DOUBLE, ODD_EVEN]);
@@ -1053,6 +1050,7 @@ val decode_bnum = store_thm
        >> Q.EXISTS_TAC `t`
        >> RW_TAC std_ss [EXP2_LT]
        >> FULL_SIMP_TAC std_ss [wf_pred_bnum_def],
+
        Q.PAT_X_ASSUM `!x. P x`
           (MP_TAC o
            Q.SPECL [`\x. x < 2 ** m`, `APPEND (encode_bnum m (q DIV 2)) r`])
@@ -1079,6 +1077,7 @@ val decode_bnum = store_thm
        >> RW_TAC std_ss []
        >> Q.PAT_X_ASSUM `dec_bnum (SUC m) l = X` (MP_TAC o MATCH_MP dec_bnum_inj)
        >> RW_TAC std_ss [encode_bnum_def, APPEND],
+
        STRIP_TAC
        >> RW_TAC std_ss []
        >> Q.PAT_X_ASSUM `X = Y` MP_TAC
@@ -1087,7 +1086,7 @@ val decode_bnum = store_thm
        >> REWRITE_TAC [GSYM DE_MORGAN_THM]
        >> STRIP_TAC
        >> RW_TAC std_ss []
-       >> Know `x < 2 ** SUC m` >- PROVE_TAC [wf_pred_bnum_def]
+       >> (Know `x < 2 ** SUC m` >- PROVE_TAC [wf_pred_bnum_def])
        >> STRIP_TAC
        >> Q.PAT_X_ASSUM `p x` MP_TAC
        >> MP_TAC (Q.SPEC `2` DIVISION)
@@ -1095,15 +1094,16 @@ val decode_bnum = store_thm
        >> DISCH_THEN (MP_TAC o ONCE_REWRITE_RULE [MULT_COMM] o Q.SPEC `x`)
        >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
        >> SIMP_TAC std_ss [MOD_2]
-       >> Suff `q' = x DIV 2` >- PROVE_TAC []
+       >> (Suff `q' = x DIV 2` >- PROVE_TAC [])
        >> MP_TAC (Q.SPECL [`m`, `\x. x < 2 ** m`] wf_encode_bnum)
        >> RW_TAC std_ss [wf_pred_bnum_total, wf_encoder_alt]
        >> POP_ASSUM MATCH_MP_TAC
        >> FULL_SIMP_TAC std_ss [GSYM EXP2_LT]
-       >> Know `q' < 2 ** m` >- PROVE_TAC [dec_bnum_lt]
+       >> (Know `q' < 2 ** m` >- PROVE_TAC [dec_bnum_lt])
        >> RW_TAC std_ss []
        >> Q.PAT_X_ASSUM `X = Y` (MP_TAC o MATCH_MP dec_bnum_inj)
-       >> PROVE_TAC [biprefix_append, biprefix_refl]]);
+       >> PROVE_TAC [biprefix_append, biprefix_refl]
+]);
 
 (*---------------------------------------------------------------------------
      Trees

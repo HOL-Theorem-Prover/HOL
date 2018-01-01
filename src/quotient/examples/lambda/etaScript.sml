@@ -141,15 +141,15 @@ val TC_TRANS = REWRITE_RULE[transitive_def] TC_TRANSITIVE;
 
 
 val ETA_R =
---`ETA_R : ^term_rel`--;
+“ETA_R : ^term_rel”;
 
-val ETA_R_patterns = [--`^ETA_R t1 t2`--];
+val ETA_R_patterns = [“^ETA_R t1 t2”];
 
 val ETA_R_rules_tm =
---`                    (~(x IN FV t)
+“                    (~(x IN FV t)
        (* -------------------------------------------- *) ==>
               (^ETA_R (Lam x (App t (Var x))) t))
-`--;
+”;
 
 val (ETA_R_rules_sat,ETA_R_ind_thm) =
     define_inductive_relations ETA_R_patterns ETA_R_rules_tm;
@@ -181,8 +181,8 @@ val _ = save_thm ("ETA_R_strong_ind", ETA_R_strong_ind);
 
 val ETA_R_deterministic = store_thm
    ("ETA_R_deterministic",
-    (--`!t:^term u1 u2.
-         ETA_R t u1 /\ ETA_R t u2 ==> (u1 = u2)`--),
+    “!t:^term u1 u2.
+         ETA_R t u1 /\ ETA_R t u2 ==> (u1 = u2)”,
     REWRITE_TAC ETA_R_inv_thms
     THEN REPEAT STRIP_TAC
     THEN UNDISCH_TAC ``(t:^term) = Lam x' (App u2 (Var x'))``
@@ -194,7 +194,7 @@ val ETA_R_deterministic = store_thm
     THEN REWRITE_TAC[GSYM Lam_one_one]
     THEN STRIP_TAC
     THEN IMP_RES_TAC SUB_RENAME_TERM
-    THEN POP_ASSUM (MP_TAC o SPEC (--`Var x:^term`--))
+    THEN POP_ASSUM (MP_TAC o SPEC “Var x:^term”)
     THEN IMP_RES_THEN REWRITE_THM subst_EMPTY
    );
 
@@ -204,8 +204,8 @@ val ETA_R_deterministic = store_thm
 
 val ETA_FV = store_thm
    ("ETA_FV",
-    (--`!t1:^term t2. ETA_R t1 t2 ==>
-                           (FV t2 SUBSET FV t1)`--),
+    “!t1:^term t2. ETA_R t1 t2 ==>
+                           (FV t2 SUBSET FV t1)”,
     rule_induct ETA_R_strong_ind
     THEN REWRITE_TAC[FV_term]
     THEN REPEAT STRIP_TAC
@@ -227,8 +227,8 @@ val ETA_FV = store_thm
 
 val SUBST_IS_SAME = store_thm
    ("SUBST_IS_SAME",
-    (--`!t:^term x y. ((t <[ [x,Var y]) = t) ==>
-                      ((x = y) \/ ~(x IN FV t))`--),
+    “!t:^term x y. ((t <[ [x,Var y]) = t) ==>
+                      ((x = y) \/ ~(x IN FV t))”,
     MUTUAL_INDUCT_THEN term_height_induct ASSUME_TAC
     THEN REPEAT GEN_TAC
     THENL (* 4 subgoals *)
@@ -252,7 +252,7 @@ val SUBST_IS_SAME = store_thm
 
         SIMPLE_SUBST_TAC
         THEN REWRITE_TAC[term_one_one,FV_term,IN_DIFF,IN]
-        THEN REWRITE_TAC[GSYM (ASSUME (--`~((z:var) = x')`--))]
+        THEN REWRITE_TAC[GSYM (ASSUME “~((z:var) = x')”)]
         THEN STRIP_TAC
         THEN RES_TAC
         THEN ASM_REWRITE_TAC[]
@@ -267,10 +267,10 @@ val SUBST_IS_SAME = store_thm
 
 val ETA_R_equals = store_thm
    ("ETA_R_equals",
-    (--`(!x t:^term. ETA_R (Var x) t = F) /\
+    “(!x t:^term. ETA_R (Var x) t = F) /\
         (!t u t':^term. ETA_R (App t u) t' = F) /\
         (!x u t:^term. ETA_R (Lam x u) t =
-                       ~(x IN FV t) /\ (u = App t (Var x)))`--),
+                       ~(x IN FV t) /\ (u = App t (Var x)))”,
     REWRITE_TAC ETA_R_inv_thms
     THEN REWRITE_TAC[term_distinct,term_one_one]
     THEN REPEAT STRIP_TAC
@@ -288,7 +288,7 @@ val ETA_R_equals = store_thm
         THEN IMP_RES_TAC SUBST_IS_SAME
         THEN ASM_REWRITE_TAC[],
 
-        EXISTS_TAC (--`x:var`--)
+        EXISTS_TAC “x:var”
         THEN ASM_REWRITE_TAC[]
       ]
    );
@@ -312,12 +312,12 @@ val ETA_R_equals = store_thm
 
 val ETA_R_SUBSTITUTIVE = store_thm
    ("ETA_R_SUBSTITUTIVE",
-    (--`SUBSTITUTIVE (ETA_R:^term_rel)`--),
+    “SUBSTITUTIVE (ETA_R:^term_rel)”,
     REWRITE_TAC[SUBSTITUTIVE]
     THEN REPEAT GEN_TAC
     THEN DISCH_THEN (STRIP_ASSUME_TAC o REWRITE_RULE ETA_R_inv_thms)
     THEN ASM_REWRITE_TAC[]
-    THEN DEFINE_NEW_VAR (--`(Nx:^term) = App N (Var x')`--)
+    THEN DEFINE_NEW_VAR “(Nx:^term) = App N (Var x')”
     THEN FIRST_ASSUM (REWRITE_THM o SYM)
     THEN SIMPLE_SUBST_TAC
     THEN REWRITE_TAC[ETA_R_equals]
@@ -344,8 +344,8 @@ val ETA_R_SUBSTITUTIVE = store_thm
 val COMMUTE =
     new_infixl_definition
     ("COMMUTE",
-     (--`$COMMUTE R1 R2  =
-         (!a b c:'a. R1 a b /\ R2 a c ==> (?d. R2 b d /\ R1 c d))`--),
+     “$COMMUTE R1 R2  =
+         (!a b c:'a. R1 a b /\ R2 a c ==> (?d. R2 b d /\ R1 c d))”,
      250);
 
 (* Define the infix substitution operator, <[, with higher precedence *)
@@ -356,7 +356,7 @@ val _ = add_infix("<=>",250,LEFT);
 (* Now overload the operator <=> to refer to COMMUTE:  *)
 
 val _ = overload_on("<=>",
-        (--`$COMMUTE:('a->'a->bool)->('a->'a->bool)->bool`--))
+        “$COMMUTE:('a->'a->bool)->('a->'a->bool)->bool”)
 handle e => (Raise e);
 
 
@@ -364,7 +364,7 @@ handle e => (Raise e);
 
 val DIAMOND_COMMUTES_SELF = store_thm
    ("DIAMOND_COMMUTES_SELF",
-    (--`!R:'a->'a->bool. DIAMOND R = R <=> R`--),
+    “!R:'a->'a->bool. DIAMOND R = R <=> R”,
     REWRITE_TAC[DIAMOND,COMMUTE]
    );
 
@@ -376,13 +376,13 @@ val DIAMOND_COMMUTES_SELF = store_thm
 val UNION_R =
     new_infixl_definition
     ("UNION_R",
-     (--`$UNION_R R1 R2  =
-         (\(a:'a) (b:'b). R1 a b \/ R2 a b)`--),
+     “$UNION_R R1 R2  =
+         (\(a:'a) (b:'b). R1 a b \/ R2 a b)”,
      500);
 
 val IN_UNION_R = store_thm
    ("IN_UNION_R",
-    (--`!(R1:'a->'b->bool) R2 x y. (R1 UNION_R R2) x y = R1 x y \/ R2 x y`--),
+    “!(R1:'a->'b->bool) R2 x y. (R1 UNION_R R2) x y = R1 x y \/ R2 x y”,
     REWRITE_TAC[UNION_R]
     THEN BETA_TAC
     THEN REWRITE_TAC[]
@@ -394,10 +394,10 @@ val IN_UNION_R = store_thm
 (* --------------------------------------------------------- *)
 
 val DIAMOND_TC_UNION1 = TAC_PROOF(([],
-    (--`!R1 R2 (a:'a) b. TC (R1 UNION_R R2) a b ==>
+    “!R1 R2 (a:'a) b. TC (R1 UNION_R R2) a b ==>
           (DIAMOND R1 /\ DIAMOND R2 /\ (R1 <=> R2) ==>
            (!c. (R1 UNION_R R2) a c ==>
-               (?d. (R1 UNION_R R2) b d /\ TC (R1 UNION_R R2) c d)))`--)),
+               (?d. (R1 UNION_R R2) b d /\ TC (R1 UNION_R R2) c d)))”),
     GEN_TAC
     THEN GEN_TAC
     THEN TC_INDUCT_TAC
@@ -407,7 +407,7 @@ val DIAMOND_TC_UNION1 = TAC_PROOF(([],
         THEN REPEAT STRIP_TAC
         THEN REWRITE_ALL_TAC[DIAMOND,COMMUTE]
         THEN RES_TAC
-        THEN EXISTS_TAC (--`d':'a`--)
+        THEN EXISTS_TAC “d':'a”
         THEN ASM_REWRITE_TAC[]
         THEN MATCH_MP_TAC TC_SUBSET
         THEN REWRITE_TAC[IN_UNION_R]
@@ -420,17 +420,17 @@ val DIAMOND_TC_UNION1 = TAC_PROOF(([],
         THEN DISCH_TAC
         THEN RES_TAC
         THEN RES_TAC
-        THEN EXISTS_TAC (--`d':'a`--)
+        THEN EXISTS_TAC “d':'a”
         THEN ASM_REWRITE_TAC[]
         THEN IMP_RES_TAC TC_TRANS
      ]
    );
 
 val DIAMOND_TC_UNION2 = TAC_PROOF(([],
-    (--`!R1 R2 (a:'a) b. TC (R1 UNION_R R2) a b ==>
+    “!R1 R2 (a:'a) b. TC (R1 UNION_R R2) a b ==>
           (DIAMOND R1 /\ DIAMOND R2 /\ (R1 <=> R2) ==>
            (!c. TC (R1 UNION_R R2) a c ==>
-               (?d. TC (R1 UNION_R R2) b d /\ TC (R1 UNION_R R2) c d)))`--)),
+               (?d. TC (R1 UNION_R R2) b d /\ TC (R1 UNION_R R2) c d)))”),
     GEN_TAC
     THEN GEN_TAC
     THEN TC_INDUCT_TAC
@@ -438,7 +438,7 @@ val DIAMOND_TC_UNION2 = TAC_PROOF(([],
     THENL
       [ REPEAT STRIP_TAC
         THEN IMP_RES_TAC DIAMOND_TC_UNION1
-        THEN EXISTS_TAC (--`d:'a`--)
+        THEN EXISTS_TAC “d:'a”
         THEN ASM_REWRITE_TAC[]
         THEN IMP_RES_TAC TC_SUBSET,
 
@@ -449,7 +449,7 @@ val DIAMOND_TC_UNION2 = TAC_PROOF(([],
         THEN DISCH_TAC
         THEN RES_TAC
         THEN RES_TAC
-        THEN EXISTS_TAC (--`d':'a`--)
+        THEN EXISTS_TAC “d':'a”
         THEN ASM_REWRITE_TAC[]
         THEN IMP_RES_TAC TC_TRANS
      ]
@@ -462,9 +462,9 @@ val DIAMOND_TC_UNION2 = TAC_PROOF(([],
 
 val DIAMOND_TC_UNION = store_thm
    ("DIAMOND_TC_UNION",
-    (--`!(R1:'a->'a->bool) R2.
+    “!(R1:'a->'a->bool) R2.
           DIAMOND R1 /\ DIAMOND R2 /\ (R1 <=> R2) ==>
-          DIAMOND (TC (R1 UNION_R R2))`--),
+          DIAMOND (TC (R1 UNION_R R2))”,
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[DIAMOND]
     THEN REPEAT STRIP_TAC
@@ -484,10 +484,10 @@ val RED1_COMPAT = REWRITE_RULE[compatible] RED1_compatible;
 (* -------------------------------------------------------------- *)
 
 val RED1_UNION1 = TAC_PROOF(([],
-    (--`!R1 R2 R t1:^term t2.
+    “!R1 R2 R t1:^term t2.
              RED1 R t1 t2 ==>
                   (R = R1 UNION_R R2) ==>
-                      (RED1 R1 UNION_R RED1 R2) t1 t2`--)),
+                      (RED1 R1 UNION_R RED1 R2) t1 t2”),
     GEN_TAC THEN GEN_TAC
     THEN rule_induct RED1_ind_thm
     THEN REPEAT STRIP_TAC (* 4 subgoals *)
@@ -499,8 +499,8 @@ val RED1_UNION1 = TAC_PROOF(([],
    );
 
 val RED1_UNION2 = TAC_PROOF(([],
-    (--`!R2 R1 t1:^term t2. RED1 R1 t1 t2 ==>
-                            RED1 (R1 UNION_R R2) t1 t2`--)),
+    “!R2 R1 t1:^term t2. RED1 R1 t1 t2 ==>
+                            RED1 (R1 UNION_R R2) t1 t2”),
     GEN_TAC
     THEN rule_induct RED1_ind_thm
     THEN REPEAT STRIP_TAC (* 4 subgoals *)
@@ -520,8 +520,8 @@ val RED1_UNION2 = TAC_PROOF(([],
    );
 
 val RED1_UNION3 = TAC_PROOF(([],
-    (--`!R1 R2 t1:^term t2. RED1 R2 t1 t2 ==>
-                            RED1 (R1 UNION_R R2) t1 t2`--)),
+    “!R1 R2 t1:^term t2. RED1 R2 t1 t2 ==>
+                            RED1 (R1 UNION_R R2) t1 t2”),
     GEN_TAC
     THEN rule_induct RED1_ind_thm
     THEN REPEAT STRIP_TAC (* 4 subgoals *)
@@ -542,14 +542,14 @@ val RED1_UNION3 = TAC_PROOF(([],
 
 val RED1_UNION = store_thm
    ("RED1_UNION",
-    (--`!R1:^term_rel R2. RED1 (R1 UNION_R R2) = (RED1 R1 UNION_R RED1 R2)`--),
+    “!R1:^term_rel R2. RED1 (R1 UNION_R R2) = (RED1 R1 UNION_R RED1 R2)”,
     CONV_TAC (TOP_DEPTH_CONV FUN_EQ_CONV)
     THEN REPEAT GEN_TAC
     THEN EQ_TAC
     THEN REPEAT STRIP_TAC
     THENL
       [ MATCH_MP_TAC (IMP2AND RED1_UNION1)
-        THEN EXISTS_TAC (--`(R1:^term_rel) UNION_R R2`--)
+        THEN EXISTS_TAC “(R1:^term_rel) UNION_R R2”
         THEN ASM_REWRITE_TAC[],
 
         POP_ASSUM (STRIP_ASSUME_TAC o REWRITE_RULE[IN_UNION_R])
@@ -567,9 +567,9 @@ val RED1_UNION = store_thm
 (* --------------------------------------------------------------------- *)
 
 val RED_UNION1 = TAC_PROOF(([],
-    (--`!R1 R2 R t1:^term t2. RED R t1 t2 ==>
+    “!R1 R2 R t1:^term t2. RED R t1 t2 ==>
                   (R = R1 UNION_R R2) ==>
-                      TC (RED R1 UNION_R RED R2) t1 t2`--)),
+                      TC (RED R1 UNION_R RED R2) t1 t2”),
     GEN_TAC THEN GEN_TAC
     THEN rule_induct RED_ind_thm
     THEN REPEAT STRIP_TAC (* 3 subgoals *)
@@ -591,8 +591,8 @@ val RED_UNION1 = TAC_PROOF(([],
    );
 
 val RED_UNION2 = TAC_PROOF(([],
-    (--`!R2 R1 t1:^term t2. RED R1 t1 t2 ==>
-                      RED (R1 UNION_R R2) t1 t2`--)),
+    “!R2 R1 t1:^term t2. RED R1 t1 t2 ==>
+                      RED (R1 UNION_R R2) t1 t2”),
     GEN_TAC
     THEN rule_induct RED_ind_thm
     THEN REPEAT STRIP_TAC (* 3 subgoals *)
@@ -608,8 +608,8 @@ val RED_UNION2 = TAC_PROOF(([],
    );
 
 val RED_UNION3 = TAC_PROOF(([],
-    (--`!R1 R2 t1:^term t2. RED R2 t1 t2 ==>
-                            RED (R1 UNION_R R2) t1 t2`--)),
+    “!R1 R2 t1:^term t2. RED R2 t1 t2 ==>
+                            RED (R1 UNION_R R2) t1 t2”),
     GEN_TAC
     THEN rule_induct RED_ind_thm
     THEN REPEAT STRIP_TAC (* 3 subgoals *)
@@ -625,8 +625,8 @@ val RED_UNION3 = TAC_PROOF(([],
    );
 
 val RED_UNION4 = TAC_PROOF(([],
-    (--`!R1 R2 t1:^term t2. TC (RED R1 UNION_R RED R2) t1 t2 ==>
-                            RED (R1 UNION_R R2) t1 t2`--)),
+    “!R1 R2 t1:^term t2. TC (RED R1 UNION_R RED R2) t1 t2 ==>
+                            RED (R1 UNION_R R2) t1 t2”),
     GEN_TAC
     THEN GEN_TAC
     THEN TC_INDUCT_TAC
@@ -649,7 +649,7 @@ val RED_UNION4 = TAC_PROOF(([],
 
 val RED_UNION = store_thm
    ("RED_UNION",
-    (--`!R1:^term_rel R2. RED (R1 UNION_R R2) = TC (RED R1 UNION_R RED R2)`--),
+    “!R1:^term_rel R2. RED (R1 UNION_R R2) = TC (RED R1 UNION_R RED R2)”,
     CONV_TAC (TOP_DEPTH_CONV FUN_EQ_CONV)
     THEN REPEAT GEN_TAC
     THEN EQ_TAC
@@ -668,10 +668,10 @@ val RED_UNION = store_thm
 
 val COMMUTE_CHURCH_ROSSER = store_thm
    ("COMMUTE_CHURCH_ROSSER",
-    (--`!R1:^term_rel R2.
+    “!R1:^term_rel R2.
           CHURCH_ROSSER R1 /\ CHURCH_ROSSER R2 /\
           (RED R1 <=> RED R2) ==>
-          CHURCH_ROSSER (R1 UNION_R R2)`--),
+          CHURCH_ROSSER (R1 UNION_R R2)”,
     REWRITE_TAC[CHURCH_ROSSER]
     THEN REWRITE_TAC[RED_UNION]
     THEN REWRITE_TAC[DIAMOND_TC_UNION]
@@ -684,19 +684,19 @@ val COMMUTE_CHURCH_ROSSER = store_thm
 (* -------------------------------------------------------------- *)
 
 val COMMUTE_TC_RC1 = TAC_PROOF(([],
-    (--`!R2 a b.
+    “!R2 a b.
           RC R2 a b ==>
           !R1.
           (!a b c:'a. R1 a b /\ R2 a c ==>
                       ?d. TC (RC R2) b d /\ RC R1 c d) ==>
           (!c. R1 a c ==>
-                   ?d. RC R1 b d /\ TC (RC R2) c d)`--)),
+                   ?d. RC R1 b d /\ TC (RC R2) c d)”),
     GEN_TAC
     THEN RC_INDUCT_TAC
     THEN REPEAT STRIP_TAC
     THENL
       [ RES_TAC
-        THEN EXISTS_TAC (--`d:'a`--)
+        THEN EXISTS_TAC “d:'a”
         THEN ASM_REWRITE_TAC[],
 
         EXISTS_TAC ``c:'a``
@@ -708,19 +708,19 @@ val COMMUTE_TC_RC1 = TAC_PROOF(([],
    );
 
 val COMMUTE_TC_RC2 = TAC_PROOF(([],
-    (--`!R1 a b.
+    “!R1 a b.
           RC R1 a b ==>
           !R2.
           (!a b c:'a. R1 a b /\ R2 a c ==>
                       ?d. TC (RC R2) b d /\ RC R1 c d) ==>
           (!c. RC R2 a c ==>
-                   ?d. TC (RC R2) b d /\ RC R1 c d)`--)),
+                   ?d. TC (RC R2) b d /\ RC R1 c d)”),
     GEN_TAC
     THEN RC_INDUCT_TAC
     THEN REPEAT STRIP_TAC
     THENL
       [ IMP_RES_TAC COMMUTE_TC_RC1
-        THEN EXISTS_TAC (--`d:'a`--)
+        THEN EXISTS_TAC “d:'a”
         THEN ASM_REWRITE_TAC[],
 
         EXISTS_TAC ``c:'a``
@@ -730,19 +730,19 @@ val COMMUTE_TC_RC2 = TAC_PROOF(([],
    );
 
 val COMMUTE_TC_RC3 = TAC_PROOF(([],
-    (--`!R2 a b.
+    “!R2 a b.
           TC (RC R2) a b ==>
           !R1.
           (!a b c:'a. R1 a b /\ R2 a c ==>
                       ?d. TC (RC R2) b d /\ RC R1 c d) ==>
           (!c. RC R1 a c ==>
-                   ?d. RC R1 b d /\ TC (RC R2) c d)`--)),
+                   ?d. RC R1 b d /\ TC (RC R2) c d)”),
     GEN_TAC
     THEN TC_INDUCT_TAC
     THEN REPEAT STRIP_TAC
     THENL
       [ IMP_RES_TAC COMMUTE_TC_RC2
-        THEN EXISTS_TAC (--`d:'a`--)
+        THEN EXISTS_TAC “d:'a”
         THEN ASM_REWRITE_TAC[],
 
         RES_TAC
@@ -754,19 +754,19 @@ val COMMUTE_TC_RC3 = TAC_PROOF(([],
    );
 
 val COMMUTE_TC_RC4 = TAC_PROOF(([],
-    (--`!R1 a b.
+    “!R1 a b.
           TC (RC R1) a b ==>
           !R2.
           (!a b c:'a. R1 a b /\ R2 a c ==>
                       ?d. TC (RC R2) b d /\ RC R1 c d) ==>
           (!c. TC (RC R2) a c ==>
-                   ?d. TC (RC R2) b d /\ TC (RC R1) c d)`--)),
+                   ?d. TC (RC R2) b d /\ TC (RC R1) c d)”),
     GEN_TAC
     THEN TC_INDUCT_TAC
     THEN REPEAT STRIP_TAC
     THENL
       [ IMP_RES_TAC COMMUTE_TC_RC3
-        THEN EXISTS_TAC (--`d:'a`--)
+        THEN EXISTS_TAC “d:'a”
         THEN ASM_REWRITE_TAC[]
         THEN MATCH_MP_TAC TC_SUBSET
         THEN ASM_REWRITE_TAC[],
@@ -783,14 +783,14 @@ val COMMUTE_TC_RC4 = TAC_PROOF(([],
 
 val COMMUTE_TC_RC = store_thm
    ("COMMUTE_TC_RC",
-    (--`!R1 R2.
+    “!R1 R2.
           (!a b c:'a. R1 a b /\ R2 a c ==>
                    ?d. TC (RC R2) b d /\ RC R1 c d) ==>
-          (TC (RC R1) <=> TC (RC R2))`--),
+          (TC (RC R1) <=> TC (RC R2))”,
     REWRITE_TAC[COMMUTE]
     THEN REPEAT STRIP_TAC
     THEN IMP_RES_TAC COMMUTE_TC_RC4
-    THEN EXISTS_TAC (--`d:'a`--)
+    THEN EXISTS_TAC “d:'a”
     THEN ASM_REWRITE_TAC[]
    );
 
@@ -801,9 +801,9 @@ val RED1_BETA_FV = MATCH_MP RED1_FV BETA_FV;
 
 val RED1_ETA_RENAME = store_thm
    ("RED1_ETA_RENAME",
-    (--`!t1:^term t2 t1' x y.
+    “!t1:^term t2 t1' x y.
           RED1 ETA_R t1 t2 /\ (Lam x t1 = Lam y t1') ==>
-          (Lam x t2 = Lam y (t2 <[ [x, Var y]))`--),
+          (Lam x t2 = Lam y (t2 <[ [x, Var y]))”,
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC RED1_ETA_FV
     THEN IMP_RES_TAC LAMBDA_RENAME
@@ -819,9 +819,9 @@ val RED1_ETA_SUBSTITUTIVE = REWRITE_RULE[SUBSTITUTIVE]
 
 val RED1_ETA_CHANGE_VAR = store_thm
    ("RED1_ETA_CHANGE_VAR",
-    (--`!t1:^term t2 x y t1'.
+    “!t1:^term t2 x y t1'.
            RED1 ETA_R t1 t2 /\ (Lam x t1 = Lam y t1')  ==>
-           RED1 ETA_R t1' (t2 <[ [x, Var y])`--),
+           RED1 ETA_R t1' (t2 <[ [x, Var y])”,
     REPEAT STRIP_TAC
     THEN IMP_RES_THEN REWRITE_THM Lam_one_one_RENAME
     THEN MATCH_MP_TAC RED1_ETA_SUBSTITUTIVE
@@ -831,7 +831,7 @@ val RED1_ETA_CHANGE_VAR = store_thm
 
 val RED1_ETA_cases = store_thm
    ("RED1_ETA_cases",
-    (--`(!a t2:^term.
+    “(!a t2:^term.
           RED1 ETA_R (Con a) t2 ==> F) /\
         (!x t2:^term.
           RED1 ETA_R (Var x) t2 ==> F) /\
@@ -842,7 +842,7 @@ val RED1_ETA_cases = store_thm
         (!x t t2:^term.
           RED1 ETA_R (Lam x t) t2 ==>
            ((~(x IN FV t2) /\ (t = App t2 (Var x)))) \/
-            (?t'. RED1 ETA_R t t' /\ (t2 = Lam x t')))`--),
+            (?t'. RED1 ETA_R t t' /\ (t2 = Lam x t')))”,
     REPEAT CONJ_TAC
     THEN REPEAT GEN_TAC THEN DISCH_THEN (STRIP_ASSUME_TAC o
             REWRITE_RULE[term_distinct,term_one_one] o
@@ -861,18 +861,18 @@ val RED1_ETA_cases = store_thm
         THEN REWRITE_TAC[term_distinct],
 
         DISJ1_TAC
-        THEN EXISTS_TAC (--`t2':^term`--)
+        THEN EXISTS_TAC “t2':^term”
         THEN ASM_REWRITE_TAC[],
 
         DISJ2_TAC
-        THEN EXISTS_TAC (--`u2:^term`--)
+        THEN EXISTS_TAC “u2:^term”
         THEN ASM_REWRITE_TAC[],
 
         IMP_RES_TAC ETA_R_equals
         THEN ASM_REWRITE_TAC[],
 
         DISJ2_TAC
-        THEN EXISTS_TAC (--`(t2':^term) <[ [x', Var x]`--)
+        THEN EXISTS_TAC “(t2':^term) <[ [x', Var x]”
         THEN ASSUM_LIST (ASSUME_TAC o SYM o hd o rev)
         THEN IMP_RES_THEN IMP_RES_TAC RED1_ETA_RENAME
         THEN IMP_RES_TAC RED1_ETA_CHANGE_VAR
@@ -886,9 +886,9 @@ val [RED1_ETA_Con_case, RED1_ETA_Var_case,
 
 val RED1_ETA_App_Var_case = store_thm
    ("RED1_ETA_App_Var_case",
-    (--`!t x t2:^term.
+    “!t x t2:^term.
           RED1 ETA_R (App t (Var x)) t2 ==>
-          (?t'. RED1 ETA_R t t' /\ (t2 = App t' (Var x)))`--),
+          (?t'. RED1 ETA_R t t' /\ (t2 = App t' (Var x)))”,
     REPEAT GEN_TAC THEN DISCH_THEN (STRIP_ASSUME_TAC o
             REWRITE_RULE[term_distinct,term_one_one] o
             ONCE_REWRITE_RULE[RED1_inv_thms])
@@ -896,7 +896,7 @@ val RED1_ETA_App_Var_case = store_thm
       [ UNDISCH_LAST_TAC
         THEN REWRITE_TAC[ETA_R_equals],
 
-        EXISTS_TAC (--`t2':^term`--)
+        EXISTS_TAC “t2':^term”
         THEN ASM_REWRITE_TAC[],
 
         UNDISCH_LAST_TAC
@@ -918,9 +918,9 @@ val TC_RC_RED1_COMPAT = REWRITE_RULE[compatible] TC_RC_RED1_compatible;
 
 val DIAMOND_RED1_ETA_LEMMA = store_thm
    ("DIAMOND_RED1_ETA_LEMMA",
-    (--`!R (M:^term) M1. RED1 R M M1 ==>
+    “!R (M:^term) M1. RED1 R M M1 ==>
           !M2. RED1 ETA_R M M2 /\ (R = ETA_R) ==>
-              ?M3. RC (RED1 ETA_R) M1 M3 /\ RC (RED1 ETA_R) M2 M3`--),
+              ?M3. RC (RED1 ETA_R) M1 M3 /\ RC (RED1 ETA_R) M2 M3”,
     rule_induct RED1_strong_ind
     THEN REPEAT STRIP_TAC (* 4 subgoals *)
     THEN POP_ASSUM REWRITE_ALL_THM
@@ -1020,15 +1020,15 @@ val DIAMOND_RED1_ETA_LEMMA1 =
     REWRITE_RULE[] (SPEC ``ETA_R:^term_rel`` DIAMOND_RED1_ETA_LEMMA);
 
 val DIAMOND_RC_RED1_ETA1 = TAC_PROOF(([],
-    (--`!(M:^term) M1.
+    “!(M:^term) M1.
           RC (RED1 ETA_R) M M1 ==>
           !M2. RED1 ETA_R M M2 ==>
-          ?M3. RC (RED1 ETA_R) M1 M3 /\ RC (RED1 ETA_R) M2 M3`--)),
+          ?M3. RC (RED1 ETA_R) M1 M3 /\ RC (RED1 ETA_R) M2 M3”),
     RC_INDUCT_TAC
     THEN REPEAT STRIP_TAC
     THENL
       [ IMP_RES_TAC DIAMOND_RED1_ETA_LEMMA1
-        THEN EXISTS_TAC (--`M3':^term`--)
+        THEN EXISTS_TAC “M3':^term”
         THEN ASM_REWRITE_TAC[],
 
         EXISTS_TAC ``M2:^term``
@@ -1039,15 +1039,15 @@ val DIAMOND_RC_RED1_ETA1 = TAC_PROOF(([],
    );
 
 val DIAMOND_RC_RED1_ETA2 = TAC_PROOF(([],
-    (--`!(M:^term) M1.
+    “!(M:^term) M1.
           RC (RED1 ETA_R) M M1 ==>
           !M2. RC (RED1 ETA_R) M M2 ==>
-          ?M3. RC (RED1 ETA_R) M1 M3 /\ RC (RED1 ETA_R) M2 M3`--)),
+          ?M3. RC (RED1 ETA_R) M1 M3 /\ RC (RED1 ETA_R) M2 M3”),
     RC_INDUCT_TAC
     THEN REPEAT STRIP_TAC
     THENL
       [ IMP_RES_TAC DIAMOND_RC_RED1_ETA1
-        THEN EXISTS_TAC (--`M3:^term`--)
+        THEN EXISTS_TAC “M3:^term”
         THEN ASM_REWRITE_TAC[],
 
         EXISTS_TAC ``M2:^term``
@@ -1057,18 +1057,18 @@ val DIAMOND_RC_RED1_ETA2 = TAC_PROOF(([],
 
 val DIAMOND_RC_RED1_ETA_LEMMA = store_thm
    ("DIAMOND_RC_RED1_ETA_LEMMA",
-    (--`!(M:^term) M1 M2.
+    “!(M:^term) M1 M2.
           RC (RED1 ETA_R) M M1 /\ RC (RED1 ETA_R) M M2 ==>
-          ?M3. RC (RED1 ETA_R) M1 M3 /\ RC (RED1 ETA_R) M2 M3`--),
+          ?M3. RC (RED1 ETA_R) M1 M3 /\ RC (RED1 ETA_R) M2 M3”,
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC DIAMOND_RC_RED1_ETA2
-    THEN EXISTS_TAC (--`M3':^term`--)
+    THEN EXISTS_TAC “M3':^term”
     THEN ASM_REWRITE_TAC[]
    );
 
 val DIAMOND_RC_RED1_ETA = store_thm
    ("DIAMOND_RC_RED1_ETA",
-    (--`DIAMOND (RC (RED1 (ETA_R:^term_rel)))`--),
+    “DIAMOND (RC (RED1 (ETA_R:^term_rel)))”,
     REWRITE_TAC[DIAMOND]
     THEN REWRITE_TAC[DIAMOND_RC_RED1_ETA_LEMMA]
    );
@@ -1077,7 +1077,7 @@ val DIAMOND_RC_RED1_ETA = store_thm
 
 val ETA_R_CHURCH_ROSSER = store_thm
    ("ETA_R_CHURCH_ROSSER",
-    (--`CHURCH_ROSSER (ETA_R:^term_rel)`--),
+    “CHURCH_ROSSER (ETA_R:^term_rel)”,
     REWRITE_TAC[CHURCH_ROSSER]
     THEN REWRITE_TAC[GSYM TC_RC_RED1_IS_RED]
     THEN MATCH_MP_TAC TC_DIAMOND
@@ -1092,8 +1092,8 @@ val [RED_RED1, RED_REFL, RED_TRANS]
 
 val RED1_BETA_Var_case = store_thm
    ("RED1_BETA_Var_case",
-    (--`!x t2:^term.
-          RED1 BETA_R (Var x) t2 ==> F`--),
+    “!x t2:^term.
+          RED1 BETA_R (Var x) t2 ==> F”,
     REPEAT GEN_TAC THEN DISCH_THEN (STRIP_ASSUME_TAC o
             REWRITE_RULE[term_distinct,term_one_one] o
             ONCE_REWRITE_RULE[RED1_inv_thms])
@@ -1105,11 +1105,11 @@ val RED1_BETA_Var_case = store_thm
 
 val RED1_BETA_App_case = store_thm
    ("RED1_BETA_App_case",
-    (--`!(t:^term) u t2.
+    “!(t:^term) u t2.
           RED1 BETA_R (App t u) t2 ==>
           ((?t'. RED1 BETA_R t t' /\ (t2 = App t' u)) \/
            (?u'. RED1 BETA_R u u' /\ (t2 = App t u')) \/
-           (?x t'. (t = Lam x t') /\ (t2 = t' <[ [x,u])))`--),
+           (?x t'. (t = Lam x t') /\ (t2 = t' <[ [x,u])))”,
     REPEAT GEN_TAC THEN DISCH_THEN (STRIP_ASSUME_TAC o
             REWRITE_RULE[term_distinct,term_one_one] o
             ONCE_REWRITE_RULE[RED1_inv_thms])
@@ -1142,9 +1142,9 @@ val TC_RC_RED1_SUBSTITUTION_REMARK =
 
 val RED1_BETA_COMMUTES_RED1_ETA_LEMMA1 = store_thm
    ("RED1_BETA_COMMUTES_RED1_ETA_LEMMA1",
-    (--`!R (M:^term) M1.
+    “!R (M:^term) M1.
          RED1 R M M1 ==> !M2. BETA_R M M2 /\ (R = ETA_R) ==>
-         ?M3. RC (RED1 BETA_R) M1 M3 /\ TC (RC (RED1 ETA_R)) M2 M3`--),
+         ?M3. RC (RED1 BETA_R) M1 M3 /\ TC (RC (RED1 ETA_R)) M2 M3”,
     rule_induct RED1_height_strong_ind
     THEN REPEAT STRIP_TAC (* 4 subgoals *)
     THEN POP_ASSUM REWRITE_ALL_THM
@@ -1202,9 +1202,9 @@ val RED1_BETA_COMMUTES_RED1_ETA_LEMMA1 = store_thm
 
 val RED1_BETA_COMMUTES_RED1_ETA_LEMMA2 = store_thm
    ("RED1_BETA_COMMUTES_RED1_ETA_LEMMA2",
-    (--`!R (M:^term) M1.
+    “!R (M:^term) M1.
          RED1 R M M1 ==> !M2. RED1 ETA_R M M2 /\ (R = BETA_R) ==>
-         ?M3. TC (RC (RED1 ETA_R)) M1 M3 /\ RC (RED1 BETA_R) M2 M3`--),
+         ?M3. TC (RC (RED1 ETA_R)) M1 M3 /\ RC (RED1 BETA_R) M2 M3”,
     rule_induct RED1_height_strong_ind
     THEN REPEAT STRIP_TAC (* 4 subgoals *)
     THEN POP_ASSUM REWRITE_ALL_THM
@@ -1292,7 +1292,7 @@ val RED1_BETA_COMMUTES_RED1_ETA_LEMMA2 = store_thm
 
 val RED_BETA_COMMUTES_RED_ETA = store_thm
    ("RED_BETA_COMMUTES_RED_ETA",
-    (--`RED (BETA_R:^term_rel) <=> RED ETA_R`--),
+    “RED (BETA_R:^term_rel) <=> RED ETA_R”,
     REWRITE_TAC[GSYM TC_RC_RED1_IS_RED]
     THEN MATCH_MP_TAC COMMUTE_TC_RC
     THEN REPEAT STRIP_TAC
@@ -1309,7 +1309,7 @@ val RED_BETA_COMMUTES_RED_ETA = store_thm
 
 val BETA_ETA_R_CHURCH_ROSSER = store_thm
    ("BETA_ETA_R_CHURCH_ROSSER",
-    (--`CHURCH_ROSSER ((BETA_R:^term_rel) UNION_R ETA_R)`--),
+    “CHURCH_ROSSER ((BETA_R:^term_rel) UNION_R ETA_R)”,
     MATCH_MP_TAC COMMUTE_CHURCH_ROSSER
     THEN REWRITE_TAC[BETA_R_CHURCH_ROSSER,ETA_R_CHURCH_ROSSER,
                      RED_BETA_COMMUTES_RED_ETA]
@@ -1321,10 +1321,10 @@ val BETA_ETA_R_CHURCH_ROSSER = store_thm
 
 val BETA_ETA_R_NORMAL_FORM_EXISTS = store_thm
    ("BETA_ETA_R_NORMAL_FORM_EXISTS",
-    (--`!(M:^term) N.
+    “!(M:^term) N.
           REQUAL (BETA_R UNION_R ETA_R) M N ==>
                 (?Z. RED (BETA_R UNION_R ETA_R) M Z /\
-                     RED (BETA_R UNION_R ETA_R) N Z)`--),
+                     RED (BETA_R UNION_R ETA_R) N Z)”,
     MATCH_MP_TAC NORMAL_FORM_EXISTS
     THEN REWRITE_TAC[BETA_ETA_R_CHURCH_ROSSER]
    );
@@ -1333,9 +1333,9 @@ val BETA_ETA_R_NORMAL_FORM_EXISTS = store_thm
 
 val BETA_ETA_R_NORMAL_FORM_REDUCED_TO = store_thm
    ("BETA_ETA_R_NORMAL_FORM_REDUCED_TO",
-    (--`!(M:^term) N.
+    “!(M:^term) N.
           NORMAL_FORM_OF (BETA_R UNION_R ETA_R) N M ==>
-               RED (BETA_R UNION_R ETA_R) M N`--),
+               RED (BETA_R UNION_R ETA_R) M N”,
     MATCH_MP_TAC NORMAL_FORM_REDUCED_TO
     THEN REWRITE_TAC[BETA_ETA_R_CHURCH_ROSSER]
    );
@@ -1344,10 +1344,10 @@ val BETA_ETA_R_NORMAL_FORM_REDUCED_TO = store_thm
 
 val BETA_ETA_R_NORMAL_FORM_UNIQUE = store_thm
    ("BETA_ETA_R_NORMAL_FORM_UNIQUE",
-    (--`!(M:^term) N1 N2.
+    “!(M:^term) N1 N2.
           NORMAL_FORM_OF (BETA_R UNION_R ETA_R) N1 M /\
                    NORMAL_FORM_OF (BETA_R UNION_R ETA_R) N2 M ==>
-                  (N1 = N2)`--),
+                  (N1 = N2)”,
     MATCH_MP_TAC NORMAL_FORM_UNIQUE
     THEN REWRITE_TAC[BETA_ETA_R_CHURCH_ROSSER]
    );

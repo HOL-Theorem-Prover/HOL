@@ -449,7 +449,7 @@ local
             ; intReduce.add_int_compset cmp
             ; computeLib.scrub_thms
                 [wordsTheory.bit_field_insert_def,
-                 wordsTheory.word_sdiv_def,
+                 wordsTheory.word_quot_def,
                  wordsTheory.word_div_def]
                 cmp
             ; computeLib.add_thms

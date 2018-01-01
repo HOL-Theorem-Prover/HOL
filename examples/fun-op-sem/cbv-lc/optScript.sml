@@ -20,7 +20,7 @@ val funpow_comm = Q.prove (
 val eta_lem = Q.prove (
 `!f x. (\a b. f x a b) = f x`,
  rw [FUN_EQ_THM]);
- 
+
 val wf_lem = Q.prove (
 `WF (($< :(num->num->bool)) LEX measure exp_size)`,
 rw [] >>
@@ -47,7 +47,7 @@ val val_rel_ind = Q.prove (
 
 val shift_def = Define `
 (shift skip (Lit l) = Lit l) ∧
-(shift skip (Var n) = 
+(shift skip (Var n) =
   if n < skip then
     Var n
   else
@@ -58,7 +58,7 @@ val shift_def = Define `
 
 val subst_def = Define `
 (subst skip e2 (Lit l) = Lit l) ∧
-(subst skip e2 (Var n) = 
+(subst skip e2 (Var n) =
   if n < skip then
     Var n
   else if n = skip then
@@ -91,8 +91,8 @@ val betaV_reduce_def = Define `
 (* The proof *)
 
 val is_val_sem = Q.prove (
-`!e. is_val e ⇒ 
-  (?v. !s. sem env s e = (Rval v, s)) ∨ 
+`!e. is_val e ⇒
+  (?v. !s. sem env s e = (Rval v, s)) ∨
   (?n. !s. sem env s e = (Rfail, s) ∧ e = Var n ∧ LENGTH env ≤ n)`,
  Cases_on `e` >>
  rw [is_val_def, sem_def] >>
@@ -106,7 +106,7 @@ val is_val_shift = Q.prove (
  rw [is_val_def, shift_def]);
 
 val sem_0_to_c = Q.prove (
-`!env1 s1 e2 v s2. 
+`!env1 s1 e2 v s2.
  sem env1 (s1 with clock := 0) e2 = (Rval v,s2)
  ⇒
  sem env1 (s1 with clock := c) e2 = (Rval v,s2 with clock := s2.clock + c)`,
@@ -116,7 +116,7 @@ val sem_0_to_c = Q.prove (
 
 val shift_lemma = Q.prove (
 `!c e env1 env2 s1 s2 vs1 vs2 v.
-  LIST_REL (val_rel c) vs1 vs2 ∧ 
+  LIST_REL (val_rel c) vs1 vs2 ∧
   LIST_REL (val_rel c) env1 env2 ∧
   state_rel c s1 s2
   ⇒
@@ -196,7 +196,7 @@ val shift_lemma = Q.prove (
  >- (fs [sem_def] >>
      rw [sem_def, shift_def, res_rel_def, val_rel_refl]
      >- fs [state_rel_rw] >>
-     rw [val_rel_rw, exec_rel_rw] >> 
+     rw [val_rel_rw, exec_rel_rw] >>
      Cases_on `sem (a::(vs1 ++ env1)) (s with clock := i'') e'` >>
      last_x_assum (qspecl_then [`i''`, `e'`] mp_tac) >>
      simp [LEX_DEF_THM] >>
@@ -280,7 +280,7 @@ val subst_lemma = Q.prove (
   ⇒
   res_rel (r,s1') (sem (vs2++env2) (s2 with clock := c) (subst (LENGTH vs1) (FUNPOW (shift 0) (LENGTH vs1) e2) e1))`,
  ho_match_mp_tac val_rel_ind >>
- rw [] >> 
+ rw [] >>
  Cases_on `e1`
  >- (fs [sem_def] >>
      rw [sem_def, subst_def, res_rel_rw, val_rel_refl] >>
@@ -358,7 +358,7 @@ val subst_lemma = Q.prove (
      >- (fs [state_rel_rw] >>
          `c ≤ i` by decide_tac >>
          metis_tac [val_rel_mono_list]) >>
-     rw [val_rel_rw, exec_rel_rw] >> 
+     rw [val_rel_rw, exec_rel_rw] >>
      Cases_on `sem (a::(vs1 ++ [v] ++ env1)) (s with clock := i'') e` >>
      last_x_assum (qspecl_then [`i''`, `e`] mp_tac) >>
      simp [LEX_DEF_THM] >>

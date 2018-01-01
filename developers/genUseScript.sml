@@ -3,8 +3,14 @@ use "../src/portableML/GetOpt.sig";
 use "../src/portableML/GetOpt.sml";
 use "../tools-poly/poly/Binaryset.sig";
 use "../tools-poly/poly/Binaryset.sml";
+use "../tools-poly/poly/Binarymap.sig";
+use "../tools-poly/poly/Binarymap.sml";
 use "../tools/Holmake/Systeml.sig";
 use "../tools-poly/Holmake/Systeml.sml";
+use "../tools/Holmake/holpathdb.sig";
+use "../tools/Holmake/holpathdb.sml";
+
+val _ = holpathdb.extend_db {vname = "HOLDIR", path = Systeml.HOLDIR}
 
 infix |>
 fun x |> f = f x
@@ -26,42 +32,12 @@ in
   (push, read, reset)
 end;
 
-use "../tools/quote-filter/filter.sml";
-
-val (QBpush, QBread, QBreset) = mkBuffer()
-val qstate = filter.UserDeclarations.newstate(QBpush, fn () => ())
-
-fun readFromString s =
-  let
-    val sz = size s
-    val i = ref 0
-    fun read _ =
-      if !i < sz then SOME (String.sub(s, !i)) before i := !i + 1
-      else NONE
-  in
-    read
-  end
-
-fun quoteFile fname =
-  let
-    val instrm = TextIO.openIn fname handle e => die (General.exnMessage e)
-  in
-    QBreset() ;
-    filter.makeLexer (fn n => TextIO.input instrm) qstate ();
-    TextIO.closeIn instrm;
-    QBread()
-  end
-
+val _ = use "../tools/Holmake/QuoteFilter.sml";
+val _ = use "../tools/Holmake/QFRead.sig";
+val _ = use "../tools/Holmake/QFRead.sml";
 val _ = use "../tools/Holmake/Holdep_tokens.sig"
 val _ = use "../tools/Holmake/Holdep_tokens.sml";
 
-
-fun depsFromFile fname =
-  let
-    val fcontents = quoteFile fname
-  in
-    Holdep_tokens.reader_deps (fname, readFromString fcontents)
-  end
 
 infix ^^
 val op^^ = OS.Path.concat
@@ -97,6 +73,7 @@ fun load1 (S as {worklist, alreadySeen, acc}) (src,s) =
             | SOME line =>
               let
                 val newfile = String.substring(line, 0, size line - 1)
+                                  |> holpathdb.subst_pathvars
               in
                 recurse ((s ^ ":" ^ Int.toString lnum, newfile) :: acc)
                         (lnum + 1)
@@ -186,7 +163,7 @@ fun main () =
       case fnames of
           [fname] =>
           let
-            val deps = depsFromFile fname
+            val deps = Holdep_tokens.file_deps fname
                        handle e => die (General.exnMessage e)
             val result =
                 dowork {worklist =

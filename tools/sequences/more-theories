@@ -27,10 +27,10 @@ src/ring/src
 src/integer
 src/enumfset
 !examples/rings
-src/llist
-src/path
+src/coalgebras
 !src/integer/testing
 src/patricia
+src/transfer
 src/update
 src/emit
 !!examples/ARM/v4

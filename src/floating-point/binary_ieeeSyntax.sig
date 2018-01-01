@@ -63,6 +63,7 @@ sig
    val float_sqrt_tm: term
    val float_round_tm: term
    val float_round_to_integral_tm: term
+   val float_round_with_flags_tm: term
    val float_sign_tm: term
    val float_significand_tm: term
    val float_some_qnan_tm: term
@@ -76,6 +77,8 @@ sig
    val integral_round_tm: term
    val largest_tm: term
    val nan_tm: term
+   val real_to_float_tm: term
+   val real_to_float_with_flags_tm: term
    val roundTiesToEven_tm: term
    val roundTowardNegative_tm: term
    val roundTowardPositive_tm: term
@@ -131,6 +134,8 @@ sig
    val dest_float_plus_zero: term -> term
    val dest_float_round: term -> term * term * term * hol_type * hol_type
    val dest_float_round_to_integral: term -> term * term
+   val dest_float_round_with_flags:
+         term -> term * term * term * hol_type * hol_type
    val dest_float_sign: term -> term
    val dest_float_significand: term -> term
    val dest_float_some_qnan: term -> term
@@ -142,6 +147,8 @@ sig
    val dest_float_value: term -> term
    val dest_integral_round: term -> term * term
    val dest_largest: term -> term
+   val dest_real_to_float: term -> term * term
+   val dest_real_to_float_with_flags: term -> term * term
    val dest_round: term -> term * term * hol_type * hol_type
    val dest_threshold: term -> term
    val dest_ulp: term -> term
@@ -193,6 +200,7 @@ sig
    val is_float_plus_zero: term -> bool
    val is_float_round: term -> bool
    val is_float_round_to_integral: term -> bool
+   val is_float_round_with_flags: term -> bool
    val is_float_sign: term -> bool
    val is_float_significand: term -> bool
    val is_float_some_qnan: term -> bool
@@ -205,6 +213,8 @@ sig
    val is_ground_real: term -> bool
    val is_integral_round: term -> bool
    val is_largest: term -> bool
+   val is_real_to_float: term -> bool
+   val is_real_to_float_with_flags: term -> bool
    val is_round: term -> bool
    val is_threshold: term -> bool
    val is_ulp: term -> bool
@@ -256,6 +266,8 @@ sig
    val mk_float_plus_zero: term -> term
    val mk_float_round: term * term * term * hol_type * hol_type -> term
    val mk_float_round_to_integral: term * term -> term
+   val mk_float_round_with_flags:
+         term * term * term * hol_type * hol_type -> term
    val mk_float_sign: term -> term
    val mk_float_significand: term -> term
    val mk_float_some_qnan: term -> term
@@ -267,6 +279,8 @@ sig
    val mk_float_value: term -> term
    val mk_integral_round: term * term -> term
    val mk_largest: term -> term
+   val mk_real_to_float: term * term -> term
+   val mk_real_to_float_with_flags: term * term -> term
    val mk_round: term * term * hol_type * hol_type -> term
    val mk_threshold: term -> term
    val mk_ulp: term -> term

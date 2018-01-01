@@ -9,11 +9,11 @@
 #include <bvec.h>
 
 /* Mosml stuff */
-#include <mlvalues.h> 
-#include <fail.h>
-#include <alloc.h>
-#include <memory.h>
-#include <str.h>
+#include <mosml/mlvalues.h> 
+#include <mosml/fail.h>
+#include <mosml/alloc.h>
+#include <mosml/memory.h>
+#include <mosml/str.h>
 
 
 /* Reduced Ordered Binary Decision Diagrams: interface to
@@ -57,7 +57,7 @@
 
 /* Sometimes it is nice to raise the Domain exception
  */
-#include <globals.h>
+#include <mosml/globals.h>
 #ifndef SMLEXN_DOMAIN /* SMLEXN_DOMAIN is not defined in mosml 2.00 */
 #define RAISE_DOMAIN raiseprimitive0(SYS__EXN_DOMAIN)
 #else

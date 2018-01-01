@@ -1,6 +1,6 @@
 \DOC
 
-\TYPE {term * term list -> term}
+\TYPE {list_mk_icomb : term * term list -> term}
 
 \SYNOPSIS
 Folds {mk_icomb} over a series of arguments.

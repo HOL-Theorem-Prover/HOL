@@ -135,6 +135,9 @@ sig
   val not_elementof : string
   val universal_set : string
 
+  (* other operators *)
+  val doubleplus : string
+
   (* wordsTheory *)
   val lo : string
   val ls : string

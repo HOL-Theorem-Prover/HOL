@@ -40,8 +40,10 @@ sig
     val HOL_WARNINGloc    : string -> string -> locn.locn -> string -> unit
 
     val traces            : unit -> {name:string, max : int,
+                                     aliases : string list,
                                      trace_level:int, default:int} list
     val register_trace    : (string * int ref * int) -> unit
+    val register_alias_trace : {original:string,alias:string} -> unit
     val register_ftrace   : (string * ((unit -> int) * (int -> unit)) * int)
                              -> unit
     val register_btrace   : (string * bool ref) -> unit

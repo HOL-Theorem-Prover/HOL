@@ -32,11 +32,6 @@ val _ = Datatype`
 
 val _ = add_numeral_form(#"s", SOME "SX_NUM")
 val _ = overload_on ("nil", ``SX_SYM "nil"``)
-val _ = add_listform { block_info = (PP.INCONSISTENT, 0),
-                       cons = "SX_CONS", leftdelim = [Parse.TOK "⦇"],
-                       nilstr = "nil", rightdelim = [Parse.TOK "⦈"],
-                       separator = [Parse.TOK ";", BreakSpace(1,0)]}
-
 val _ = add_rule { block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0)),
                    fixity = Closefix,
                    paren_style = OnlyIfNecessary,
@@ -44,7 +39,10 @@ val _ = add_rule { block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0)),
                                   Parse.TOK "•", BreakSpace(1, 0), TM,
                                   Parse.TOK "⦈"],
                    term_name = "SX_CONS" }
-
+val _ = add_listform { block_info = (PP.INCONSISTENT, 0),
+                       cons = "SX_CONS", leftdelim = [Parse.TOK "⦇"],
+                       nilstr = "nil", rightdelim = [Parse.TOK "⦈"],
+                       separator = [Parse.TOK ";", BreakSpace(1,0)]}
 
 val _ = overload_on ("’", ``λs. ⦇ SX_SYM "quote" ; s ⦈``)
 
@@ -65,16 +63,21 @@ val valid_sexp_def = Define`
   (valid_sexp s ⇔ T)`;
 val _ = export_rewrites["valid_first_symchar_def","valid_symchar_def","valid_symbol_def","valid_sexp_def"];
 
+val arb_sexp_def = Define`arb_sexp = SX_NUM 0`;
+
 val destSXNUM_def = Define`
-  destSXNUM (SX_NUM n) = n
+  destSXNUM (SX_NUM n) = n ∧
+  destSXNUM _ = 0
 `;
 
 val destSXSYM_def = Define`
-  destSXSYM (SX_SYM s) = s
+  destSXSYM (SX_SYM s) = s ∧
+  destSXSYM _ = ""
 `;
 
 val destSXCONS_def = Define`
-  destSXCONS (SX_CONS a d) = (a,d)
+  destSXCONS (SX_CONS a d) = (a,d) ∧
+  destSXCONS _ = (arb_sexp, arb_sexp)
 `;
 
 val strip_sxcons_def = Define`
@@ -337,7 +340,7 @@ val ptree_sexp_def = Define`
          do x <- ptree_sexpsym s; return (SX_SYM x) od ++
          do x <- ptree_sexpnum s; return (SX_NUM x) od ++
          do x <- ptree_sexpstr s; return (SX_STR x) od
-     | [Lf (TK#"'",_) ;w] => ptree_WSsexp w 
+     | [Lf (TK#"'",_) ;w] => ptree_WSsexp w
      | [Lf (TK#"(",_) ; s; g; Lf (TK#")",_) ] =>
          do
            ptree_grabWS g;

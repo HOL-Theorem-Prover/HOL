@@ -79,5 +79,5 @@ to keep stripping by using the tactic {REPEAT (FILTER_STRIP_TAC u)}
 until one hits the term {u} at which stripping is to stop.
 
 \SEEALSO
-Tactic.CONJ_TAC, Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, Tactic.FILTER_GEN_TAC, Tactic.STRIP_ASSUME_TAC, Tactic.STRIP_TAC.
+Tactic.CONJ_TAC, Tactic.FILTER_DISCH_TAC, Tactic.FILTER_DISCH_THEN, Tactic.FILTER_GEN_TAC, Tactic.STRIP_ASSUME_TAC, Tactic.STRIP_TAC.
 \ENDDOC

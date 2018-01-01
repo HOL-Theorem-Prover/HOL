@@ -3,6 +3,7 @@ struct
 
 
 open Systeml
+open Holmake_tools_dtype
 
 structure Path = OS.Path
 structure FileSys = OS.FileSys
@@ -198,29 +199,6 @@ in
        Systeml.exec (p, p::"--nolmbc"::CommandLine.arguments()))
 end
 
-datatype CodeType =
-         Theory of string
-       | Script of string
-       | Other of string
-
-datatype ArticleType =
-         RawArticle of string
-       | ProcessedArticle of string
-
-datatype File =
-         SML of CodeType
-       | SIG of CodeType
-       | UO of CodeType
-       | UI of CodeType
-       | ART of ArticleType
-       | Unhandled of string
-
-(* file lists are dependencies *)
-datatype buildcmds = Compile of File list
-                   | BuildScript of string * File list
-                   | BuildArticle of string * File list
-                   | ProcessArticle of string
-
 fun string_part0 (Theory s) = s
   | string_part0 (Script s) = s
   | string_part0 (Other s) = s
@@ -231,6 +209,7 @@ fun string_part (UO c)  = string_part0 c
   | string_part (SML c) = string_part0 c
   | string_part (SIG c) = string_part0 c
   | string_part (ART c) = string_part1 c
+  | string_part (DAT s) = s
   | string_part (Unhandled s) = s
 
 fun isProperSuffix s1 s2 =
@@ -266,6 +245,9 @@ in
   | SOME "uo"  => UO (toCodeType s)
   | SOME "ui"  => UI (toCodeType s)
   | SOME "art" => ART (toArticleType s)
+  | SOME "dat" => if String.isSuffix "Theory" s then
+                    DAT (String.extract(s,0,SOME(size s - 6)))
+                  else Unhandled s0
   |    _       => Unhandled s0
 end
 
@@ -294,6 +276,7 @@ fun fromFile f =
   | SIG c => codeToString c ^ ".sig"
   | SML c => codeToString c ^ ".sml"
   | ART c => articleToString c ^ ".art"
+  | DAT s => s ^ "Theory.dat"
   | Unhandled s => s
 
 fun fromFileNoSuf f =
@@ -303,6 +286,7 @@ fun fromFileNoSuf f =
   | SIG c => codeToString c
   | SML c => codeToString c
   | ART a => articleToString a
+  | DAT s => s
   | Unhandled s => s
 
 fun member m [] = false
@@ -331,6 +315,7 @@ fun primary_dependent f =
     | UI c => SOME (SIG c)
     | SML (Theory s) => SOME (SML (Script s))
     | SIG (Theory s) => SOME (SML (Script s))
+    | DAT s => SOME (SML (Script s))
     | ART (RawArticle s) => SOME (SML (Script s))
     | ART (ProcessedArticle s) => SOME (ART (RawArticle s))
     | _ => NONE
@@ -354,6 +339,7 @@ fun clean_dir {extra_cleans} = let
       | SML (Theory _) => true
       | SML (Script s) =>
           (case OS.Path.ext s of SOME "art" => true | _ => false)
+      | DAT _ => true
       | ART _ => true
       | _ => false
 in
@@ -659,7 +645,7 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
     val f = toFile s
     val files =
         case f of
-          SML (ss as Script t) => [UI ss, UO ss, SML (Theory t),
+          SML (ss as Script t) => [UI ss, UO ss, SML (Theory t), DAT t,
                                    SIG (Theory t), UI (Theory t),
                                    UO (Theory t), ART (RawArticle t), f]
         | SML ss => [UI ss, UO ss, f]
@@ -741,6 +727,7 @@ fun holdep_arg (UO c) = SOME (SML c)
   | holdep_arg (UI c) = SOME (SIG c)
   | holdep_arg (SML (Theory s)) = SOME (SML (Script s))
   | holdep_arg (SIG (Theory s)) = SOME (SML (Script s))
+  | holdep_arg (DAT s) = SOME (SML (Script s))
   | holdep_arg (ART (RawArticle s)) = SOME (SML (Script s))
   | holdep_arg (ART (ProcessedArticle s)) = SOME (ART (RawArticle s))
   | holdep_arg _ = NONE
@@ -783,7 +770,7 @@ in
         []
   in
     case f of
-        UO (Theory s) => UI (Theory s) :: phase1
+        UO (Theory s) => UI (Theory s) :: DAT s :: phase1
       | UO x =>
         if FileSys.access(fromFile (SIG x), []) andalso
            List.all (fn f => f <> SIG x) phase1

@@ -51,8 +51,7 @@ signature Parse = sig
   (* Parsing terms *)
 
   val post_process_term: (term -> term) ref
-  val add_absyn_postprocessor :
-      (string * term_grammar.absyn_postprocessor) -> unit
+  val add_absyn_postprocessor : string -> unit
   val temp_add_absyn_postprocessor :
       (string * term_grammar.absyn_postprocessor) -> unit
   val temp_remove_absyn_postprocessor :
@@ -67,7 +66,6 @@ signature Parse = sig
   val Absyn            : term frag list -> Absyn.absyn
   val Preterm          : term frag list -> Preterm.preterm
   val Term             : term frag list -> term
-  val --               : term frag list -> 'a -> term
   val typedTerm        : term frag list -> hol_type -> term
   val ty_antiq         : hol_type -> term
   val parse_in_context : term list -> term frag list -> term
@@ -138,6 +136,7 @@ signature Parse = sig
 
   val add_user_printer : (string * term) -> unit
   val remove_user_printer : string -> (term * term_grammar.userprinter) option
+  val constant_string_printer : string -> term_grammar.userprinter
 
  (* the following functions affect the grammar, but not so that the
     grammar exported to disk will be modified *)
@@ -252,6 +251,9 @@ signature Parse = sig
   val BeginFinalBlock  : block_info -> pp_element
   val EndInitialBlock  : block_info -> pp_element
   val PPBlock          : pp_element list * block_info -> pp_element
+  val ListForm         : {separator:pp_element list, cons : string,
+                          nilstr : string, block_info : block_info} ->
+                         pp_element
 
   val OnlyIfNecessary  : ParenStyle
   val ParoundName      : ParenStyle

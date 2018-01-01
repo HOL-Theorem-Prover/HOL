@@ -631,6 +631,7 @@ useful information:
   second argument can be a directory.  (Under Unix, \texttt{CP}
   expands to \texttt{/bin/cp}; under Windows, it expands to
   \texttt{copy}.)
+\item[\texttt{DEBUG\_FLAG}] This variable is replaced by \texttt{"-{}-dbg"} if that flag was passed to \holmake, or the empty string if not.
 \item[\texttt{HOLDIR}] The root of the HOL installation.
 \item[\texttt{HOLHEAP}]
 Under Poly/ML, this variable expands to the name of the heap that should be used to build this directory (to be used instead of the heap that underlies the \texttt{hol} executable).
@@ -1373,6 +1374,10 @@ The \mkmunge{} program can also take an optional \texttt{-o} argument that is us
 \end{alltt}
 
 The theories specified as arguments to \mkmunge{} determine what theorems are in scope for calls to \holthm, and also determine the grammars that will govern the parsing and printing of the \HOL{} types, terms and theorems.
+
+Under Poly/ML, the \mkmunge{} executable also takes an optional \texttt{-b} option that can be used to specify a heap (see Section~\ref{sec:polyml-heaps}) to use as a base.
+Doing so allows for the incorporation of many theories at once, and will be more efficient than loading the heap's theories separately on top of the default HOL heap.
+The use of a base heap argument to \mkmunge{} doesn't affect the efficiency of the resulting munging tool.
 
 
 \subsection{Running a Munger}

@@ -44,6 +44,8 @@ in
    val SNOC_11 = SNOC_11
    val SUM = SUM
    val TL = TL
+   val UNIQUE_DEF = UNIQUE_DEF
+   val UNIQUE_LENGTH_FILTER = UNIQUE_LENGTH_FILTER
    val UNZIP = UNZIP
    val ZIP = ZIP
 end;
@@ -241,39 +243,6 @@ val _ = overload_on ("<<=", ``\x y. isPREFIX x y``)
 (* second call makes the infix the preferred printing form *)
 
 (* ======================================================================== *)
-
-val LENGTH_MAP2 = Q.store_thm ("LENGTH_MAP2",
-   `!l1 l2.
-        (LENGTH l1 = LENGTH l2) ==>
-        (!f. (LENGTH (MAP2 f l1 l2) = LENGTH l1) /\
-             (LENGTH (MAP2 f l1 l2) = LENGTH l2))`,
-   BasicProvers.Induct
-   THENL [
-      BasicProvers.Induct
-      THENL [
-        DISCH_TAC
-        THEN PURE_ONCE_REWRITE_TAC [listTheory.MAP2]
-        THEN REWRITE_TAC [LENGTH],
-        GEN_TAC
-        THEN PURE_ONCE_REWRITE_TAC [LENGTH]
-        THEN REWRITE_TAC [SUC_NOT]],
-      GEN_TAC
-      THEN BasicProvers.Induct
-      THEN1 (PURE_ONCE_REWRITE_TAC [LENGTH]
-             THEN REWRITE_TAC [numTheory.NOT_SUC])
-      THEN GEN_TAC
-      THEN PURE_ONCE_REWRITE_TAC [listTheory.MAP2]
-      THEN PURE_ONCE_REWRITE_TAC [LENGTH]
-      THEN PURE_ONCE_REWRITE_TAC [INV_SUC_EQ]
-      THEN DISCH_TAC
-      THEN RES_THEN ASSUME_TAC
-      THEN GEN_TAC
-      THEN CONJ_TAC
-      THEN FIRST_ASSUM MATCH_ACCEPT_TAC]);
-
-val LENGTH_EQ = Q.store_thm ("LENGTH_EQ",
-   `!x y. (x = y) ==> (LENGTH x = LENGTH y)`,
-   REPEAT GEN_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC []);
 
 val LENGTH_NOT_NULL = Q.store_thm ("LENGTH_NOT_NULL",
    `!l. 0 < LENGTH l = ~NULL l`,
@@ -2923,16 +2892,12 @@ val LIST_ELEM_COUNT_MEM = Q.store_thm ("LIST_ELEM_COUNT_MEM",
 (*---------------------------------------------------------------------------*)
 
 local
-  val op>> = op Tactical.THEN
-  val op>- = op Tactical.THEN1
   val rw = SRW_TAC []
   val metis_tac = METIS_TAC
   val fs = FULL_SIMP_TAC (srw_ss())
   val rfs = REV_FULL_SIMP_TAC (srw_ss())
   val simp = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss)
   val decide_tac = numLib.DECIDE_TAC
-  val imp_res_tac = IMP_RES_TAC
-  val res_tac = RES_TAC
   open pred_setTheory open listTheory pairTheory;
 in
 
@@ -3134,6 +3099,11 @@ val EVERY2_REVERSE1 = Q.store_thm("EVERY2_REVERSE1",
    >> ONCE_REWRITE_TAC[GSYM EVERY_REVERSE]
    >> simp[REVERSE_ZIP])
 
+val LIST_REL_REVERSE_EQ = Q.store_thm(
+  "LIST_REL_REVERSE_EQ[simp]",
+  ‘LIST_REL R (REVERSE l1) (REVERSE l2) <=> LIST_REL R l1 l2’,
+  simp[EVERY2_REVERSE1]);
+
 val every_count_list = Q.store_thm ("every_count_list",
    `!P n. EVERY P (COUNT_LIST n) = (!m. m < n ==> P m)`,
    Induct_on `n`
@@ -3241,6 +3211,17 @@ val list_rel_butlastn = Q.store_thm ("list_rel_butlastn",
 
 end
 (* end CakeML lemmas *)
+
+(* alternative definition of listTheory.UNIQUE *)
+val UNIQUE_LIST_ELEM_COUNT = store_thm (
+   "UNIQUE_LIST_ELEM_COUNT", ``!e L. UNIQUE e L = (LIST_ELEM_COUNT e L = 1)``,
+    rpt GEN_TAC
+ >> REWRITE_TAC [LIST_ELEM_COUNT_DEF]
+ >> Q_TAC KNOW_TAC `(\x. x = e) = ($= e)`
+ >- ( REWRITE_TAC [FUN_EQ_THM] >> GEN_TAC >> BETA_TAC \\
+      METIS_TAC [] )
+ >> DISCH_TAC >> ASM_REWRITE_TAC []
+ >> RW_TAC std_ss [UNIQUE_LENGTH_FILTER]);
 
 (*---------------------------------------------------------------------------*)
 (* Add evaluation theorems to computeLib.the_compset                         *)

@@ -36,14 +36,14 @@ val monotone_def = Define `
 
 val unbounded_def = Define `
   unbounded (f : num -> num) ⇔
-    !x. ?y. x < f y`; 
+    !x. ?y. x < f y`;
 
 
 
 val check_trace_def = Define `
   (check_trace step [] ⇔ T) ∧
   (check_trace step [s] ⇔ T) ∧
-  (check_trace step (s1::s2::tr) ⇔ 
+  (check_trace step (s1::s2::tr) ⇔
     step s1 = SOME s2 ∧
     check_trace step (s2::tr))`;
 
@@ -51,7 +51,7 @@ val check_trace_ind = fetch "-" "check_trace_ind";
 
 val check_trace_thm = Q.store_thm ("check_trace_thm",
 `!step s1 s2.
-  (λs1 s2. step s1 = SOME s2)^* s1 s2 ⇔ 
+  (λs1 s2. step s1 = SOME s2)^* s1 s2 ⇔
   ?tr. tr ≠ [] ∧ HD tr = s1 ∧ LAST tr = s2 ∧ check_trace step tr`,
  rw [] >>
  eq_tac
@@ -59,7 +59,7 @@ val check_trace_thm = Q.store_thm ("check_trace_thm",
    qspec_tac (`s2`,`s2`) >>
    qspec_tac (`s1`,`s1`) >>
    ho_match_mp_tac RTC_INDUCT >>
-   rw [] 
+   rw []
    >- (
      qexists_tac `[s1]` >>
      rw [check_trace_def])

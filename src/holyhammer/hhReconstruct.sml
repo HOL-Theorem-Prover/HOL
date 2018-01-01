@@ -10,7 +10,7 @@
 structure hhReconstruct :> hhReconstruct =
 struct
 
-open HolKernel boolLib Dep Tag hhWriter
+open HolKernel boolLib Dep Tag hhsTools hhWriter
 
 val ERR = mk_HOL_ERR "hhReconstruct"
 
@@ -98,20 +98,11 @@ fun read_lemmas atp_out =
     map (split_name o hh_unescape o unsquotify) l'
   end
 
-fun atp_lemmas (atp_status,atp_out) =
+fun get_lemmas (atp_status,atp_out) =
   let val s = read_status atp_status in
     if s = "Theorem"
-    then (s, (read_lemmas atp_out))
-    else (s, [])
-  end
-
-exception Status of string
-
-fun atp_lemmas_exn (atp_status,atp_out) =
-  let val s = read_status atp_status in
-    if s = "Theorem"
-    then (read_lemmas atp_out)
-    else raise Status s
+    then SOME (read_lemmas atp_out)
+    else NONE
   end
 
 (*---------------------------------------------------------------------------
@@ -142,7 +133,10 @@ fun pp_lemmas_aux ppstrm lemmas =
          add_string "]";
        end_block())
     fun pp_lemma (thy,name) =
-      add_string (String.concatWith " " ["fetch", quote thy, quote name])
+      if thy = current_theory () 
+      then add_string 
+             (String.concatWith " " ["DB.fetch", quote thy, quote name])
+      else add_string (thy ^ "Theory." ^ name)
   in
     begin_block INCONSISTENT 0;
     add_string "val lemmas = ";
@@ -154,6 +148,20 @@ fun pp_lemmas_aux ppstrm lemmas =
 
 fun pp_lemmas lemmas = (pp_lemmas_aux ppstrm_stdout lemmas; print "\n")
 
+fun stac_of_lemmas l cj =
+  let 
+    val g = ([],cj)
+    val (gl,_) = metisTools.METIS_TAC (map snd l) g
+    fun f (thy,name) =
+      if thy = current_theory () 
+      then (String.concatWith " " ["DB.fetch", quote thy, quote name])
+      else (thy ^ "Theory." ^ name) 
+    val stac = 
+      "metisTools.METIS_TAC [" ^ String.concatWith ", " (map (f o fst) l) ^ "]"
+  in
+    hhsMinimize.pretty_stac stac g gl
+  end
+    
 (*---------------------------------------------------------------------------
    Timed Metis.
  ----------------------------------------------------------------------------*)
@@ -184,49 +192,58 @@ fun minimize_lemmas_loop l1 l2 cj =
     then minimize_lemmas_loop l1 (tl l2) cj
     else minimize_lemmas_loop (hd l2 :: l1) (tl l2) cj
 
-fun minimize_lemmas lemmas cj =
-  let val l = map (fn (thy,nm) => ((thy,nm), fetch thy nm)) lemmas in
-    if can (time_metis (map snd l) cj) 2.0
-    then (
-         print "Minimization ...\n";
-         pp_lemmas (map fst (minimize_lemmas_loop [] l cj))
-         )
-    else (
-         print "Metis could not find a proof in less than 2 seconds. \n";
-         pp_lemmas lemmas
-         )
-  end
+fun minimize_lemmas l cj =
+  if can (time_metis (map snd l) cj) 2.0
+  then (
+       print "Minimization...\n";
+       let 
+         val l1 = minimize_lemmas_loop [] l cj
+         val stac = 
+           hhsRedirect.hide_in_file (hhsTools.hhs_code_dir ^ "/hh_pretty")
+           (stac_of_lemmas l1) cj;
+       in
+         print_endline stac;  
+         metisTools.METIS_TAC (map snd l1)
+       end
+       )
+  else (
+       print "Metis could not find a proof in less than 2 seconds. \n";
+       pp_lemmas (map fst l);
+       FAIL_TAC "holyhammer: minimization"
+       )
 
 (*---------------------------------------------------------------------------
    Reconstruction.
  ----------------------------------------------------------------------------*)
 
 fun reconstruct (atp_status,atp_out) cj =
-  let val lemmas = atp_lemmas_exn (atp_status,atp_out) in
-    if !minimize_flag then minimize_lemmas lemmas cj else pp_lemmas lemmas
+  let val olemmas = get_lemmas (atp_status,atp_out) in
+    case olemmas of 
+      NONE => (print_endline "holyhammer: time out"; 
+               FAIL_TAC "holyhammer: time out")
+    | SOME lemmas =>
+    let
+      val l = map (fn (thy,nm) => ((thy,nm), fetch thy nm)) lemmas
+    in
+      if !minimize_flag 
+      then minimize_lemmas l cj
+      else (pp_lemmas lemmas; metisTools.METIS_TAC (map snd l))
+    end
   end
 
-fun reconstructl atpfilel cj =
-  let
-    val lemmasl = map atp_lemmas atpfilel
-    val proofl = filter (fn (x,_) => x = "Theorem") lemmasl
-  in
-   if null proofl
-   then
-     let val s = if all (fn x => x = "Unknown") (map fst lemmasl)
-                 then "Unknown"
-                 else hd (filter (fn x => x <> "Unknown") (map fst lemmasl))
-     in
-       raise Status s
-     end
-   else
-      let
-        fun cmp l1 l2 = length l1 < length l2
-        val lemmas = hd (sort cmp (map snd proofl))
-      in
-        if !minimize_flag then minimize_lemmas lemmas cj else pp_lemmas lemmas
-      end
-  end
+fun string_of_lemma (thy,name) =
+  if thy = current_theory () 
+  then String.concatWith " " ["DB.fetch", quote thy, quote name]
+  else thy ^ "Theory." ^ name
 
+fun reconstruct_stac (atp_status,atp_out) cj =
+  let val olemmas = get_lemmas (atp_status,atp_out) in
+    case olemmas of 
+      NONE => NONE
+    | SOME lemmas =>
+    let val l = map string_of_lemma lemmas in
+      SOME ("metisTools.METIS_TAC [" ^ String.concatWith ", " l ^ "]")
+    end
+  end  
 
 end

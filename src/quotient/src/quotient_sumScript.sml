@@ -1,7 +1,4 @@
 open HolKernel Parse boolLib;
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
-infixr -->;
-
 
 (* --------------------------------------------------------------------- *)
 (* Lifting the lambda calculus syntax to the abstract level.             *)
@@ -64,7 +61,7 @@ val SUM_REL_def = xDefine "SUM_REL"
 
 val SUM_REL_EQ = store_thm
    ("SUM_REL_EQ",
-    (--`($= +++ $=) = ($= : 'a + 'b -> 'a + 'b -> bool)`--),
+    (“($= +++ $=) = ($= : 'a + 'b -> 'a + 'b -> bool)”),
     CONV_TAC FUN_EQ_CONV
     THEN Cases
     THEN CONV_TAC FUN_EQ_CONV
@@ -74,8 +71,8 @@ val SUM_REL_EQ = store_thm
 
 val SUM_EQUIV = store_thm
    ("SUM_EQUIV",
-    (--`!(R1:'a -> 'a -> bool) (R2:'b -> 'b -> bool).
-            EQUIV R1 ==> EQUIV R2 ==> EQUIV (R1 +++ R2)`--),
+    (“!(R1:'a -> 'a -> bool) (R2:'b -> 'b -> bool).
+            EQUIV R1 ==> EQUIV R2 ==> EQUIV (R1 +++ R2)”),
     REPEAT GEN_TAC
     THEN REWRITE_TAC[EQUIV_def]
     THEN REPEAT DISCH_TAC
@@ -114,9 +111,9 @@ val SUM_EQUIV = store_thm
 
 val SUM_QUOTIENT = store_thm
    ("SUM_QUOTIENT",
-    (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+    (“!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
-         QUOTIENT (R1 +++ R2) (abs1 ++ abs2) (rep1 ++ rep2)`--),
+         QUOTIENT (R1 +++ R2) (abs1 ++ abs2) (rep1 ++ rep2)”),
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[QUOTIENT_def]
     THEN REPEAT CONJ_TAC
@@ -145,9 +142,9 @@ val SUM_QUOTIENT = store_thm
 
 val INL_PRS = store_thm
    ("INL_PRS",
-    (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+    (“!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
-         !a. INL a = (abs1 ++ abs2) (INL (rep1 a))`--),
+         !a. INL a = (abs1 ++ abs2) (INL (rep1 a))”),
     REPEAT STRIP_TAC
     THEN PURE_REWRITE_TAC[SUM_MAP_def]
     THEN PURE_REWRITE_TAC[INR_INL_11]
@@ -156,11 +153,11 @@ val INL_PRS = store_thm
 
 val INL_RSP = store_thm
    ("INL_RSP",
-    (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+    (“!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
          !a1 a2.
           R1 a1 a2 ==>
-          (R1 +++ R2) (INL a1) (INL a2)`--),
+          (R1 +++ R2) (INL a1) (INL a2)”),
     REPEAT GEN_TAC
     THEN DISCH_TAC
     THEN REPEAT GEN_TAC
@@ -171,9 +168,9 @@ val INL_RSP = store_thm
 
 val INR_PRS = store_thm
    ("INR_PRS",
-    (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+    (“!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
-         !b. INR b = (abs1 ++ abs2) (INR (rep2 b))`--),
+         !b. INR b = (abs1 ++ abs2) (INR (rep2 b))”),
     REPEAT STRIP_TAC
     THEN PURE_REWRITE_TAC[SUM_MAP_def]
     THEN PURE_REWRITE_TAC[INR_INL_11]
@@ -182,11 +179,11 @@ val INR_PRS = store_thm
 
 val INR_RSP = store_thm
    ("INR_RSP",
-    (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+    (“!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
          !b1 b2.
           R2 b1 b2 ==>
-          (R1 +++ R2) (INR b1) (INR b2)`--),
+          (R1 +++ R2) (INR b1) (INR b2)”),
     REPEAT GEN_TAC
     THEN DISCH_TAC
     THEN REPEAT GEN_TAC
@@ -197,9 +194,9 @@ val INR_RSP = store_thm
 
 val ISL_PRS = store_thm
    ("ISL_PRS",
-    (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+    (“!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
-         !a. ISL a = ISL ((rep1 ++ rep2) a)`--),
+         !a. ISL a = ISL ((rep1 ++ rep2) a)”),
     REPEAT (REPEAT GEN_TAC THEN DISCH_TAC)
     THEN Cases
     THEN PURE_REWRITE_TAC[SUM_MAP_def]
@@ -208,11 +205,11 @@ val ISL_PRS = store_thm
 
 val ISL_RSP = store_thm
    ("ISL_RSP",
-    (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+    (“!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
          !a1 a2.
           (R1 +++ R2) a1 a2 ==>
-          (ISL a1 = ISL a2)`--),
+          (ISL a1 = ISL a2)”),
     REPEAT GEN_TAC THEN DISCH_TAC
     THEN REPEAT GEN_TAC THEN DISCH_TAC
     THEN Cases
@@ -222,9 +219,9 @@ val ISL_RSP = store_thm
 
 val ISR_PRS = store_thm
    ("ISR_PRS",
-    (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+    (“!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
-         !a. ISR a = ISR ((rep1 ++ rep2) a)`--),
+         !a. ISR a = ISR ((rep1 ++ rep2) a)”),
     REPEAT (REPEAT GEN_TAC THEN DISCH_TAC)
     THEN Cases
     THEN PURE_REWRITE_TAC[SUM_MAP_def]
@@ -233,11 +230,11 @@ val ISR_PRS = store_thm
 
 val ISR_RSP = store_thm
    ("ISR_RSP",
-    (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+    (“!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
          !a1 a2.
           (R1 +++ R2) a1 a2 ==>
-          (ISR a1 = ISR a2)`--),
+          (ISR a1 = ISR a2)”),
     REPEAT GEN_TAC THEN DISCH_TAC
     THEN REPEAT GEN_TAC THEN DISCH_TAC
     THEN Cases
@@ -249,13 +246,13 @@ val ISR_RSP = store_thm
 
 val SUM_MAP_PRS = store_thm
    ("SUM_MAP_PRS",
-    (--`!R1 (abs1:'a -> 'e) rep1. QUOTIENT R1 abs1 rep1 ==>
+    (“!R1 (abs1:'a -> 'e) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'f) rep2. QUOTIENT R2 abs2 rep2 ==>
         !R3 (abs3:'c -> 'g) rep3. QUOTIENT R3 abs3 rep3 ==>
         !R4 (abs4:'d -> 'h) rep4. QUOTIENT R4 abs4 rep4 ==>
          !f g. (f ++ g) =
                ((rep1 ++ rep3) --> (abs2 ++ abs4))
-                   (((abs1 --> rep2) f) ++ ((abs3 --> rep4) g))`--),
+                   (((abs1 --> rep2) f) ++ ((abs3 --> rep4) g))”),
     REPEAT (REPEAT GEN_TAC THEN DISCH_TAC)
     THEN REPEAT GEN_TAC
     THEN CONV_TAC FUN_EQ_CONV
@@ -266,13 +263,13 @@ val SUM_MAP_PRS = store_thm
 
 val SUM_MAP_RSP = store_thm
    ("SUM_MAP_RSP",
-    (--`!R1 (abs1:'a -> 'e) rep1. QUOTIENT R1 abs1 rep1 ==>
+    (“!R1 (abs1:'a -> 'e) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'f) rep2. QUOTIENT R2 abs2 rep2 ==>
         !R3 (abs3:'c -> 'g) rep3. QUOTIENT R3 abs3 rep3 ==>
         !R4 (abs4:'d -> 'h) rep4. QUOTIENT R4 abs4 rep4 ==>
          !f1 f2 g1 g2.
           (R1 ===> R2) f1 f2 /\ (R3 ===> R4) g1 g2 ==>
-          ((R1 +++ R3) ===> (R2 +++ R4)) (f1 ++ g1) (f2 ++ g2)`--),
+          ((R1 +++ R3) ===> (R2 +++ R4)) (f1 ++ g1) (f2 ++ g2)”),
     REPEAT (REPEAT GEN_TAC THEN DISCH_TAC)
     THEN POP_ASSUM MP_TAC
     THEN REWRITE_TAC[FUN_REL]

@@ -411,6 +411,58 @@ val FINITE_domain = store_thm(
   ``FINITE (domain t)``,
   Induct_on `t` >> simp[]);
 
+val DIV2 = DIVISION |> Q.SPEC ‘2’ |> REWRITE_RULE [DECIDE “0 < 2”]
+
+val even_lem = Q.prove(
+  ‘EVEN k /\ k <> 0 ==> (2 * ((k - 1) DIV 2) + 2 = k)’,
+  qabbrev_tac ‘k0 = k - 1’  >>
+  strip_tac >> ‘k = k0 + 1’ by simp[Abbr‘k0’] >>
+  pop_assum SUBST_ALL_TAC >> qunabbrev_tac ‘k0’ >>
+  fs[EVEN_ADD] >>
+  assume_tac (Q.SPEC ‘k0’ DIV2) >>
+  map_every qabbrev_tac [‘q = k0 DIV 2’, ‘r = k0 MOD 2’] >>
+  markerLib.RM_ALL_ABBREVS_TAC >>
+  fs[EVEN_ADD, EVEN_MULT] >>
+  ‘(r = 0) \/ (r = 1)’ by simp[] >> fs[])
+
+val odd_lem = Q.prove(
+  ‘~EVEN k /\ k <> 0 ==> (2 * ((k - 1) DIV 2) + 1 = k)’,
+  qabbrev_tac ‘k0 = k - 1’  >>
+  strip_tac >> ‘k = k0 + 1’ by simp[Abbr‘k0’] >>
+  pop_assum SUBST_ALL_TAC >> qunabbrev_tac ‘k0’ >>
+  fs[EVEN_ADD] >>
+  assume_tac (Q.SPEC ‘k0’ DIV2) >>
+  map_every qabbrev_tac [‘q = k0 DIV 2’, ‘r = k0 MOD 2’] >>
+  markerLib.RM_ALL_ABBREVS_TAC >>
+  fs[EVEN_ADD, EVEN_MULT] >>
+  ‘(r = 0) \/ (r = 1)’ by simp[] >> fs[])
+
+val size_insert = Q.store_thm(
+  "size_insert",
+  ‘!k v m. size (insert k v m) = if k IN domain m then size m else size m + 1’,
+  ho_match_mp_tac insert_ind >> rpt conj_tac >> simp[] >>
+  rpt strip_tac >> simp[Once insert_def]
+  >- rw[]
+  >- rw[]
+  >- (Cases_on ‘k = 0’ >> simp[] >> fs[] >> Cases_on ‘EVEN k’ >> fs[]
+      >- (‘!n. k <> 2 * n + 1’ by (rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]) >>
+          qabbrev_tac ‘k2 = (k - 1) DIV 2’ >>
+          `k = 2 * k2 + 2` suffices_by rw[] >>
+          simp[Abbr‘k2’, even_lem]) >>
+      ‘!n. k <> 2 * n + 2’ by (rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]) >>
+      qabbrev_tac ‘k2 = (k - 1) DIV 2’ >>
+      ‘k = 2 * k2 + 1’ suffices_by rw[] >>
+      simp[Abbr‘k2’, odd_lem])
+  >- (Cases_on ‘k = 0’ >> simp[] >> fs[] >> Cases_on ‘EVEN k’ >> fs[]
+      >- (‘!n. k <> 2 * n + 1’ by (rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]) >>
+          qabbrev_tac ‘k2 = (k - 1) DIV 2’ >>
+          ‘k = 2 * k2 + 2’ suffices_by rw[] >>
+          simp[Abbr‘k2’, even_lem]) >>
+      ‘!n. k <> 2 * n + 2’ by (rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]) >>
+      qabbrev_tac ‘k2 = (k - 1) DIV 2’ >>
+      ‘k = 2 * k2 + 1’ suffices_by rw[] >>
+      simp[Abbr‘k2’, odd_lem]))
+
 val lookup_fromList = store_thm(
   "lookup_fromList",
   ``lookup n (fromList l) = if n < LENGTH l then SOME (EL n l)
@@ -533,6 +585,32 @@ val foldi_def = Define`
        foldi f (i + inc) (f i a (foldi f (i + 2 * inc) acc t1)) t2)
 `;
 
+val spt_acc_def = tDefine"spt_acc"`
+  (spt_acc i 0 = i) /\
+  (spt_acc i (SUC k) = spt_acc (i + if EVEN (SUC k) then 2 * lrnext i else lrnext i) (k DIV 2))`
+  (WF_REL_TAC`measure SND`
+   \\ simp[DIV_LT_X]);
+
+val spt_acc_thm = Q.store_thm("spt_acc_thm",
+  `spt_acc i k = if k = 0 then i else spt_acc (i + if EVEN k then 2 * lrnext i else lrnext i) ((k-1) DIV 2)`,
+  rw[spt_acc_def] \\ Cases_on`k` \\ fs[spt_acc_def]);
+
+val lemmas = prove(
+    ``(!x. EVEN (2 * x + 2)) /\
+      (!x. ODD (2 * x + 1))``,
+    conj_tac >- (
+      simp[EVEN_EXISTS] >> rw[] >>
+      qexists_tac`SUC x` >> simp[] ) >>
+    simp[ODD_EXISTS,ADD1] >>
+    metis_tac[] )
+
+val bit_induction = prove(
+  ``!P. P 0 /\ (!n. P n ==> P (2 * n + 1)) /\
+        (!n. P n ==> P (2 * n + 2)) ==>
+        !n. P n``,
+  gen_tac >> strip_tac >> completeInduct_on `n` >> simp[] >>
+  qspec_then `n` strip_assume_tac bit_cases >> simp[]);
+
 val lrnext212 = prove(
   ``(lrnext (2 * m + 1) = 2 * lrnext m) /\
     (lrnext (2 * m + 2) = 2 * lrnext m)``,
@@ -542,13 +620,6 @@ val lrnext212 = prove(
     `2 * m + 2 = BIT2 m` suffices_by simp[lrnext_thm] >>
     simp_tac bool_ss [BIT2, TWO, ONE, MULT_CLAUSES, ADD_CLAUSES]
   ]);
-
-val bit_induction = prove(
-  ``!P. P 0 /\ (!n. P n ==> P (2 * n + 1)) /\
-        (!n. P n ==> P (2 * n + 2)) ==>
-        !n. P n``,
-  gen_tac >> strip_tac >> completeInduct_on `n` >> simp[] >>
-  qspec_then `n` strip_assume_tac bit_cases >> simp[]);
 
 val lrlemma1 = prove(
   ``lrnext (i + lrnext i) = 2 * lrnext i``,
@@ -573,6 +644,27 @@ val lrlemma2 = prove(
   `2 * i + (4 * lrnext i + 2) = 2 * (i + 2 * lrnext i) + 2`
      by decide_tac >> simp[lrnext212])
 
+val spt_acc_eqn = Q.store_thm("spt_acc_eqn",
+  `!k i. spt_acc i k = lrnext i * k + i`,
+  ho_match_mp_tac bit_induction
+  \\ rw[]
+  >- rw[spt_acc_def]
+  >- (
+    rw[Once spt_acc_thm]
+    >- fs[EVEN_ODD,lemmas]
+    \\ simp[MULT2_DIV']
+    \\ simp[lrlemma1] )
+  >- (
+    ONCE_REWRITE_TAC[spt_acc_thm]
+    \\ simp[]
+    \\ reverse(rw[])
+    >- fs[EVEN_ODD,lemmas]
+    \\ simp[MULT2_DIV']
+    \\ simp[lrlemma2]));
+
+val spt_acc_0 = Q.store_thm("spt_acc_0",
+  `!k. spt_acc 0 k = k`, rw[spt_acc_eqn,lrnext_thm]);
+
 val set_foldi_keys = store_thm(
   "set_foldi_keys",
   ``!t a i. foldi (\k v a. k INSERT a) i a t =
@@ -591,6 +683,33 @@ val domain_foldi = save_thm(
                  |> SIMP_RULE (srw_ss()) [lrnext_thm]
                  |> SYM);
 val _ = computeLib.add_persistent_funs ["domain_foldi"]
+
+val mapi0_def = Define`
+  (mapi0 f i LN = LN) /\
+  (mapi0 f i (LS a) = LS (f i a)) /\
+  (mapi0 f i (BN t1 t2) =
+   let inc = lrnext i in
+     mk_BN (mapi0 f (i + 2 * inc) t1) (mapi0 f (i + inc) t2)) /\
+  (mapi0 f i (BS t1 a t2) =
+   let inc = lrnext i in
+     mk_BS (mapi0 f (i + 2 * inc) t1) (f i a) (mapi0 f (i + inc) t2))
+`;
+val _ = export_rewrites ["mapi0_def"]
+val mapi_def = Define`mapi f pt = mapi0 f 0 pt`;
+
+val lookup_mapi0 = Q.store_thm("lookup_mapi0",
+  `!pt i k.
+   lookup k (mapi0 f i pt) =
+   case lookup k pt of NONE => NONE
+   | SOME v => SOME (f (spt_acc i k) v)`,
+  Induct \\ rw[mapi0_def,lookup_def,lookup_mk_BN,lookup_mk_BS] \\ fs[]
+  \\ TRY (simp[spt_acc_eqn] \\ NO_TAC)
+  \\ CASE_TAC \\ simp[Once spt_acc_thm,SimpRHS]);
+
+val lookup_mapi = Q.store_thm("lookup_mapi",
+  `lookup k (mapi f pt) = OPTION_MAP (f k) (lookup k pt)`,
+  rw[mapi_def,lookup_mapi0,spt_acc_0]
+  \\ CASE_TAC \\ fs[]);
 
 val toAList_def = Define `
   toAList = foldi (\k v a. (k,v)::a) 0 []`
@@ -707,15 +826,6 @@ val toAList_inc = prove(
     simp[MAP_EQ_f] >>
     simp[lrnext_thm,pairTheory.UNCURRY,pairTheory.FORALL_PROD] >>
     simp[lrlemma1,lrlemma2] ))
-
-val lemmas = prove(
-    ``(!x. EVEN (2 * x + 2)) /\
-      (!x. ODD (2 * x + 1))``,
-    conj_tac >- (
-      simp[EVEN_EXISTS] >> rw[] >>
-      qexists_tac`SUC x` >> simp[] ) >>
-    simp[ODD_EXISTS,ADD1] >>
-    metis_tac[] )
 
 val ALL_DISTINCT_MAP_FST_toAList = store_thm("ALL_DISTINCT_MAP_FST_toAList",
   ``!t. ALL_DISTINCT (MAP FST (toAList t))``,
@@ -1343,5 +1453,51 @@ val lookup_filter_v = store_thm("lookup_filter_v",
 val wf_filter_v = store_thm("wf_filter_v",
   ``!t f. wf t ==> wf (filter_v f t)``,
   Induct \\ rw [filter_v_def, wf_def, mk_BN_thm, mk_BS_thm] \\ fs []);
+
+val wf_mk_BN = Q.store_thm(
+  "wf_mk_BN",
+  `wf t1 /\ wf t2 ==> wf (mk_BN t1 t2)`,
+  map_every Cases_on [`t1`, `t2`] >> simp[mk_BN_def, wf_def])
+
+val wf_mk_BS = Q.store_thm(
+  "wf_mk_BS",
+  `wf t1 /\ wf t2 ==> wf (mk_BS t1 a t2)`,
+  map_every Cases_on [`t1`, `t2`] >> simp[mk_BS_def, wf_def])
+
+val wf_mapi = Q.store_thm(
+  "wf_mapi",
+  `wf (mapi f pt)`,
+  simp[mapi_def] >>
+  `!n. wf (mapi0 f n pt)` suffices_by simp[] >> Induct_on `pt` >>
+  simp[wf_def, wf_mk_BN, wf_mk_BS]);
+
+val ALOOKUP_MAP_lemma = Q.prove(
+  `ALOOKUP (MAP (\kv. (FST kv, f (FST kv) (SND kv))) al) n =
+   OPTION_MAP (\v. f n v) (ALOOKUP al n)`,
+  Induct_on `al` >> simp[pairTheory.FORALL_PROD] >> rw[]);
+
+val lookup_mk_BN = Q.store_thm(
+  "lookup_mk_BN",
+  ‘lookup i (mk_BN t1 t2) =
+    if i = 0 then NONE
+    else lookup ((i - 1) DIV 2) (if EVEN i then t1 else t2)’,
+  map_every Cases_on [‘t1’, ‘t2’] >> simp[mk_BN_def, lookup_def]);
+
+val MAP_foldi = Q.store_thm(
+  "MAP_foldi",
+  `!n acc. MAP f (foldi (\k v a. (k,v)::a) n acc pt) =
+             foldi (\k v a. (f (k,v)::a)) n (MAP f acc) pt`,
+  Induct_on `pt` >> simp[foldi_def]);
+
+val mapi_Alist = Q.store_thm(
+  "mapi_Alist",
+  `mapi f pt =
+    fromAList (MAP (\kv. (FST kv,f (FST kv) (SND kv))) (toAList pt))`,
+  simp[spt_eq_thm, wf_mapi, wf_fromAList, lookup_fromAList] >>
+  srw_tac[boolSimps.ETA_ss][lookup_mapi, ALOOKUP_MAP_lemma, ALOOKUP_toAList]);
+
+val domain_mapi = Q.store_thm("domain_mapi",
+  `domain (mapi f pt) = domain pt`,
+  rw[pred_setTheory.EXTENSION,domain_lookup,lookup_mapi]);
 
 val _ = export_theory();

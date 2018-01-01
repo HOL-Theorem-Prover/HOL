@@ -109,7 +109,7 @@ sig
   val GEN_EXISTS_TAC : string -> Parse.term Lib.frag list -> tactic
 
   (* Call-by-value evaluation *)
-  val EVAL           : term -> thm
+  val EVAL           : conv
   val EVAL_RULE      : thm -> thm
   val EVAL_TAC       : tactic
 

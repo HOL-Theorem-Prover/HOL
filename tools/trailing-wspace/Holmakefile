@@ -1,0 +1,8 @@
+ifdef POLY
+DEPS = trailingwspace.sml ../Holmake/GetOpt.sig ../Holmake/GetOpt.sml
+
+delete-trailing-ws: poly-trailingwspace.ML $(DEPS)
+	$(POLYC) -o $@ $<
+endif
+
+EXTRA_CLEANS = delete-trailing-ws

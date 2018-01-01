@@ -19,18 +19,19 @@ local
     List.app (fn r => r := "``") [type_pp_prefix, type_pp_suffix,
                                   term_pp_prefix, term_pp_suffix]
   fun unicode_delims () =
-    if get_tracefn "Unicode" () >= 1 handle HOL_ERR _ => true then
-      (List.app (fn r => r := UnicodeChars.ldquo)
-                [type_pp_prefix, term_pp_prefix];
-       List.app (fn r => r := UnicodeChars.rdquo)
-                [type_pp_suffix, term_pp_suffix])
-    else ()
+    (List.app (fn r => r := UnicodeChars.ldquo)
+              [type_pp_prefix, term_pp_prefix];
+     List.app (fn r => r := UnicodeChars.rdquo)
+              [type_pp_suffix, term_pp_suffix])
   fun avoidset i = if i = 0 then (unicode_delims(); avoid_unicode := false)
                    else (ascii_delims(); avoid_unicode := true)
   fun avoidget () = if !avoid_unicode then 1 else 0
 in
 
 val _ = register_ftrace("PP.avoid_unicode", (avoidget, avoidset), 1)
+val _ = register_ftrace("Unicode",
+                        (fn () => 1 - avoidget(), fn n => avoidset (1 - n)),
+                        1)
 val _ = avoidset (avoidget())
 end
 

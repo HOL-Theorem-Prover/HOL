@@ -1,6 +1,6 @@
 \DOC match_type
 
-\TYPE {match_type : hol_type -> hol_type -> hol_type subst}
+\TYPE {match_type : hol_type -> hol_type -> (hol_type,hol_type) subst}
 
 \SYNOPSIS
 Calculates a substitution {theta} such that instantiating the first

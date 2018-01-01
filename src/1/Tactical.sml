@@ -221,6 +221,14 @@ fun op THEN1 (tac1: tactic, tac2: tactic) : tactic =
       end
 
 val op >- = op THEN1
+fun op>>-(tac1, n) tac2 g =
+  op>- (tac1, tac2) g
+  handle e as HOL_ERR {message,origin_structure,origin_function} =>
+    raise HOL_ERR {message = message ^ " (THEN1 on line "^Int.toString n^")",
+                   origin_function = origin_function,
+                   origin_structure = origin_structure}
+fun (f ?? x) = f x
+
 
 (*---------------------------------------------------------------------------
  * NTH_GOAL tac n: A list_tactic that applies tac to the nth goal
@@ -269,8 +277,8 @@ fun ROTATE_LT n [] = ([], Lib.I)
       val fixn = Int.mod (n, lgl) ;
       val (gla, glb) = Lib.split_after fixn gl ;
       fun vf ths =
-	let val (thsb, thsa) = Lib.split_after (lgl - fixn) ths ;
-	in thsa @ thsb end ;
+        let val (thsb, thsa) = Lib.split_after (lgl - fixn) ths ;
+        in thsa @ thsb end ;
     in (glb @ gla, vf) end ;
 
 (*---------------------------------------------------------------------------
@@ -429,8 +437,8 @@ local val validity_tag = "ValidityCheck"
         Lib.filter (fn h => not (Lib.exists (aconv h) asl)) (hyp th) ;
       fun extra_goals_tbp flag th (asl, w) =
         List.map (fn eg => (asl, eg))
-	  (case flag of true => hyps_not_in_goal th (asl, w)
-	    | false => hyp th) ;
+          (case flag of true => hyps_not_in_goal th (asl, w)
+            | false => hyp th) ;
 in
 (* GEN_VALIDATE : bool -> tactic -> tactic *)
 fun GEN_VALIDATE (flag : bool) (tac : tactic) (g as (asl, w) : goal) =

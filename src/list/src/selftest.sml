@@ -3,6 +3,24 @@ open ListConv1
 
 open testutils
 
+fun parsetest(s, l) =
+  let
+    fun toN i = numSyntax.mk_numeral (Arbnum.fromInt i)
+    val _ = tprint ("Parsing "^s)
+    val res = Parse.Term [QUOTE s]
+    val l_t = listSyntax.mk_list(map toN l, numSyntax.num)
+  in
+    if aconv res l_t then OK() else die "FAILED!"
+  end
+
+val _ = List.app parsetest [
+      ("[]:num list", []),
+      ("[1]", [1]), ("[1;]", [1]),
+      ("[1;2]", [1,2]), ("[1;2;]", [1,2]),
+      ("[1;2;3]", [1,2,3]), ("[1; 2; 3;]", [1,2,3]), ("[1; 2 ; 3 ; ]", [1,2,3]),
+      ("[ 1 ;   2 ; 3 ; 4 ; ]", [1,2,3,4])
+    ]
+
 datatype 'a exnsum = Some of 'a | Exn of exn
 fun total f x = Some (f x) handle Interrupt => raise Interrupt | e => Exn e
 
@@ -25,7 +43,8 @@ fun test nm cmp pr f (x, e) = test0 nm cmp pr f (x, SOME e)
 val _ = set_trace "Unicode" 0
 
 val _ = app tpp ["MEM a l", "~MEM a l", "x NOTIN {1; 2; 3}",
-                 "case l of [] => 0 | h::t => h + LENGTH t"]
+                 "case l of [] => 0 | h::t => h + LENGTH t",
+                 "[1; 2]"]
 
 val _ = tpp_expected {input = "SINGL 3", output = "[3]",
                       testf = standard_tpp_message}
@@ -81,3 +100,23 @@ val _ = Lib.appi (fn i => fn t =>
                  [(``FOLDR (+) 0 [0;1;2;3]``, SOME ``6``),
                   (``FOLDR (-) 0 [3;2;1]``, SOME ``2``),
                   (``FOLDR $* 1 []``, SOME ``1``)]
+
+val cs = listSimps.list_compset()
+val _ = indexedListsSimps.add_indexedLists_compset cs
+fun ct(s,inp,out) =
+  testutils.convtest ("list_compset - " ^ s, computeLib.CBV_CONV cs, inp, out)
+val _ = List.app ct [
+  ("oHD-NONE", “oHD ([]:'a list)”, “NONE : 'a option”),
+  ("oHD-SOME", “oHD ([3;4]:num list)”, “SOME 3n”),
+  ("oEL-NONE1", “oEL 1 ([]:'a list)”, “NONE : 'a option”),
+  ("oEL-NONE2", “oEL 2 [3;4]”, “NONE : num option”),
+  ("oEL-SOME1", “oEL 0 [3;4]”, “SOME 3n”),
+  ("oEL-SOME2", “oEL 4 [3;4;5;6;7;10]”, “SOME 7n”),
+  ("MAP-NIL", “MAP SUC []”, “[] : num list”),
+  ("MAP-CONS", “MAP SUC [1;2;3]”, “[2;3;4] : num list”),
+  ("MAP2i-NIL1", “MAP2i (\i x y. x + i * y) [] []”, “[] : num list”),
+  ("MAP2i-CONS", “MAP2i (\i x y. x + i * y) [1;2;3] [4;5;6]”,
+                 “[1;7;15] : num list”),
+  ("FOLDL1", “FOLDL $+ 0 [1;2;3;4]”, “10n”),
+  ("FOLDR1", “FOLDR (\n a. (n * 2) :: a) [] [1;2;3;4]”, “[2;4;6;8]”)
+]

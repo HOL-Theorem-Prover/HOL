@@ -15,6 +15,7 @@ val _ = useC "HM_SimpleBuffer";
 val _ = use "../tools/Holmake/QuoteFilter.sml";
 val _ = useC "QFRead";
 val _ = useC "Holdep";
+val _ = use "../tools/Holmake/Holmake_tools_dtype.sml";
 val _ = useC "Holmake_tools"
 val _ = useC "regexpMatch"
 val _ = useC "parse_glob"

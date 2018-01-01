@@ -30,6 +30,7 @@ open jrhUtils quotient liteLib
      arithmeticTheory prim_recTheory numTheory
      simpLib numLib boolTheory liteLib metisLib BasicProvers;
 
+open bossLib
 
 val int_ss = boolSimps.bool_ss ++ numSimps.old_ARITH_ss ++ pairSimps.PAIR_ss;
 
@@ -1694,7 +1695,7 @@ val INT_MUL_EQ_1 = store_thm(
 val Num = new_definition("Num", Term `Num (i:int) = @n. i = &n`);
 
 val NUM_OF_INT =
-    store_thm("NUM_OF_INT",
+    store_thm("NUM_OF_INT[simp]",
 	      Term `!n. Num(&n) = n`,
 	      GEN_TAC THEN REWRITE_TAC[Num, INT_INJ] THEN
 	      CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV SYM_CONV)) THEN
@@ -1716,6 +1717,12 @@ val LE_NUM_OF_INT = store_thm
   ("LE_NUM_OF_INT",
    ``!n i. & n <= i ==> n <= Num i``,
    METIS_TAC [NUM_OF_INT, INT_OF_NUM, INT_LE_TRANS, INT_POS, INT_LE]);
+
+val NUM_LT = Q.store_thm(
+  "NUM_LT",
+  ‘0 <= x /\ 0 <= y ==> (Num x < Num y <=> x < y)’,
+  map_every (fn q => Q.SPEC_THEN q strip_assume_tac INT_NUM_CASES) [‘x’, ‘y’] >>
+  simp[INT_LE, INT_LT, INT_NEG_GE0]);
 
 (*----------------------------------------------------------------------*)
 (* Define division                                                      *)
@@ -2256,7 +2263,7 @@ val INT_ABS = new_definition(
   Term`ABS n = if n < 0 then ~n else n`);
 
 val INT_ABS_POS = store_thm(
-  "INT_ABS_POS",
+  "INT_ABS_POS[simp]",
   Term`!p. 0 <= ABS p`,
   GEN_TAC THEN STRIP_ASSUME_TAC (Q.SPEC `p` INT_LT_NEGTOTAL) THEN
   ASM_SIMP_TAC bool_ss [INT_ABS, INT_LE_REFL, INT_LT_REFL, INT_LT_GT,
@@ -2268,7 +2275,7 @@ val INT_ABS_POS = store_thm(
   ]);
 
 val INT_ABS_NUM = store_thm(
-  "INT_ABS_NUM",
+  "INT_ABS_NUM[simp]",
   Term`!n. ABS (&n) = &n`,
   SIMP_TAC bool_ss [INT_ABS, REWRITE_RULE [GSYM INT_NOT_LT] INT_POS]);
 
@@ -2281,7 +2288,7 @@ val INT_NEG_SAME_EQ = store_thm(
   ]);
 
 val INT_ABS_NEG = store_thm(
-  "INT_ABS_NEG",
+  "INT_ABS_NEG[simp]",
   Term`!p. ABS ~p = ABS p`,
   GEN_TAC THEN
   SIMP_TAC (bool_ss ++ boolSimps.COND_elim_ss)
@@ -2289,7 +2296,7 @@ val INT_ABS_NEG = store_thm(
   PROVE_TAC [INT_LT_NEGTOTAL, INT_NOT_LT, INT_LE_LT]);
 
 val INT_ABS_ABS = store_thm(
-  "INT_ABS_ABS",
+  "INT_ABS_ABS[simp]",
   Term`!p. ABS (ABS p) = ABS p`,
   GEN_TAC THEN Cases_on `0 <= p` THENL [
     `?n. p = &n` by PROVE_TAC [NUM_POSINT_EXISTS] THEN
@@ -2299,7 +2306,7 @@ val INT_ABS_ABS = store_thm(
   ]);
 
 val INT_ABS_EQ_ID = store_thm(
-  "INT_ABS_EQ_ID",
+  "INT_ABS_EQ_ID[simp]",
   Term`!p. (ABS p = p) = (0 <= p)`,
   GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
   SIMP_TAC int_ss [INT_ABS_NUM, INT_ABS_NEG, INT_LE, INT_NEG_SAME_EQ,
@@ -2315,7 +2322,7 @@ val INT_ABS_MUL = store_thm(
                    GSYM INT_NEG_LMUL, GSYM INT_NEG_RMUL, INT_NEG_MUL2]);
 
 val INT_ABS_EQ0 = store_thm(
-  "INT_ABS_EQ0",
+  "INT_ABS_EQ0[simp]",
   Term`!p. (ABS p = 0) = (p = 0)`,
   GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
   ASM_SIMP_TAC int_ss [INT_ABS_NEG, INT_ABS_NUM, INT_NEG_EQ0]);
@@ -2326,8 +2333,14 @@ val INT_ABS_LT0 = store_thm(
   GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
   ASM_SIMP_TAC int_ss [INT_ABS_NEG, INT_ABS_NUM, INT_LT, INT_LT_NEG]);
 
+val INT_ABS_0LT = Q.store_thm(
+  "INT_ABS_0LT[simp]",
+  ‘0 < ABS p <=> p <> 0’,
+  ‘0 < ABS p <=> 0 <= ABS p /\ ABS p <> 0’ by metis_tac[INT_LE_LT, INT_LT_REFL] >>
+  pop_assum SUBST1_TAC >> simp[]);
+
 val INT_ABS_LE0 = store_thm(
-  "INT_ABS_LE0",
+  "INT_ABS_LE0[simp]",
   ``!p. (ABS p <= 0) = (p = 0)``,
   GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `p` INT_NUM_CASES) THEN
   ASM_SIMP_TAC int_ss [INT_ABS_NEG, INT_ABS_NUM, INT_LE, INT_LE_NEG,
@@ -2371,6 +2384,13 @@ val INT_ABS_EQ = store_thm(
   ASM_SIMP_TAC int_ss [INT_ABS_NUM, INT_ABS_NEG, INT_NEG_0, INT_NEGNEG,
                        int_eq_calculate, INT_EQ_NEG, INT_INJ,
                        INT_LT_CALCULATE, INT_LE_REFL, INT_LE, INT_NOT_LE]);
+
+val INT_ABS_EQ_ABS = Q.store_thm(
+  "INT_ABS_EQ_ABS",
+  ‘(ABS x = ABS y) <=> (x = y) \/ (x = -y)’,
+  rw[INT_ABS, EQ_IMP_THM] >>
+  fs[INT_NEG_LT0, INT_NOT_LT, INT_EQ_NEG, INT_NEGNEG, INT_NEG_GE0] >>
+  metis_tac[INT_LET_TRANS, INT_LT_TRANS, INT_LT_REFL, INT_LE_ANTISYM, INT_NEG_0]);
 
 (* ----------------------------------------------------------------------
     Define integer rem(ainder) and quot(ient) functions.
@@ -3176,23 +3196,30 @@ val INT_MOD_CALCULATE = save_thm(
   "INT_MOD_CALCULATE",
   LIST_CONJ [INT_MOD, INT_MOD_NEG, INT_NEGNEG, INT_INJ, INT_NEG_EQ0]);
 
-val INT_MOD_REDUCE = store_thm(
-  "INT_MOD_REDUCE",
-  Term`!m n. (0i % &(NUMERAL (BIT1 n)) = 0i) /\
-             (0i % &(NUMERAL (BIT2 n)) = 0i) /\
-             (&(NUMERAL m) % &(NUMERAL (BIT1 n)) =
-                &(NUMERAL m MOD NUMERAL (BIT1 n))) /\
-             (&(NUMERAL m) % &(NUMERAL (BIT2 n)) =
-                &(NUMERAL m MOD NUMERAL (BIT2 n))) /\
-             (x % &(NUMERAL (BIT1 n)) =
-                x - x / &(NUMERAL(BIT1 n)) *
-                      &(NUMERAL(BIT1 n))) /\
-             (x % &(NUMERAL (BIT2 n)) =
-                x - x / &(NUMERAL(BIT2 n)) *
-                      &(NUMERAL(BIT2 n)))`,
-  SIMP_TAC int_ss [INT_MOD_CALCULATE, BIT1, BIT2,
-                   NUMERAL_DEF, ALT_ZERO, ZERO_MOD, int_mod]);
-
+val INT_MOD_REDUCE = Q.store_thm("INT_MOD_REDUCE",
+  `!m n.
+     (0i % &(NUMERAL (BIT1 n)) = 0i) /\
+     (0i % &(NUMERAL (BIT2 n)) = 0i) /\
+     (0i % -&(NUMERAL (BIT1 n)) = 0i) /\
+     (0i % -&(NUMERAL (BIT2 n)) = 0i) /\
+     (&(NUMERAL m) % &(NUMERAL (BIT1 n)) = &(NUMERAL m MOD NUMERAL (BIT1 n))) /\
+     (&(NUMERAL m) % &(NUMERAL (BIT2 n)) = &(NUMERAL m MOD NUMERAL (BIT2 n))) /\
+     (&(NUMERAL m) % -&(NUMERAL (BIT1 n)) =
+        -(-&(NUMERAL m) % &(NUMERAL (BIT1 n)))) /\
+     (&(NUMERAL m) % -&(NUMERAL (BIT2 n)) =
+        -(-&(NUMERAL m) % &(NUMERAL (BIT2 n)))) /\
+     (x % &(NUMERAL (BIT1 n)) =
+        x - x / &(NUMERAL(BIT1 n)) * &(NUMERAL(BIT1 n))) /\
+     (x % &(NUMERAL (BIT2 n)) =
+        x - x / &(NUMERAL(BIT2 n)) * &(NUMERAL(BIT2 n))) /\
+     (x % -&(NUMERAL (BIT1 n)) =
+        (-x / &(NUMERAL(BIT1 n)) * &(NUMERAL(BIT1 n)) + x)) /\
+     (x % -&(NUMERAL (BIT2 n)) =
+        (-x / &(NUMERAL(BIT2 n)) * &(NUMERAL(BIT2 n)) + x))`,
+  SIMP_TAC int_ss
+    [INT_MOD_CALCULATE, BIT1, BIT2, NUMERAL_DEF, ALT_ZERO, ZERO_MOD, int_mod,
+     INT_NEG_0, INT_DIV_0, INT_MUL_LZERO, INT_SUB_RZERO, INT_NEG_SUB,
+     INT_SUB_RNEG]);
 
 
 val INT_REM_CALCULATE = save_thm(
