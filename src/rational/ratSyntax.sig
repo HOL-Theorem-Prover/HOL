@@ -82,4 +82,7 @@ sig
   val strip_rat_add : term -> term list
   val strip_rat_mul : term -> term list
 
+  val int_of_term : term -> Arbint.int (* partial! *)
+  val term_of_int : Arbint.int -> term
+
 end
