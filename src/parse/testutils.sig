@@ -18,4 +18,11 @@ val convtest : (string * (Term.term -> Thm.thm) * Term.term * Term.term) -> unit
 val timed : ('a -> 'b) -> ('b testresult -> unit) -> 'a -> unit
 val exncheck : ('a -> unit) -> 'a testresult -> unit
 
+val bold : string -> string
+val boldred : string -> string
+val boldgreen : string -> string
+val red : string -> string
+val dim : string -> string
+val clear : string -> string
+
 end

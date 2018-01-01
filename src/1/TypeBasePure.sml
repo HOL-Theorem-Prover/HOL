@@ -33,7 +33,7 @@ type dtyinfo =
             axiom        : shared_thm,
             induction    : shared_thm,
             case_def     : thm,
-            caseeqsplit  : thm,
+            case_eq  : thm,
             case_cong    : thm,
             nchotomy     : thm,
             case_const   : term,
@@ -53,11 +53,11 @@ type dtyinfo =
 open FunctionalRecordUpdate
 fun gcons_mkUp z = makeUpdate20 z
 fun update_DTY z = let
-  fun from accessors axiom case_cong case_const case_def caseeqsplit
+  fun from accessors axiom case_cong case_const case_def case_eq
            constructors destructors distinct encode fields induction lift
            nchotomy one_one recognizers simpls size ty updates =
     {accessors = accessors, axiom = axiom, case_cong = case_cong,
-     case_const = case_const, case_def = case_def, caseeqsplit = caseeqsplit,
+     case_const = case_const, case_def = case_def, case_eq = case_eq,
      constructors = constructors, destructors = destructors,
      distinct = distinct, encode = encode, fields = fields,
      induction = induction, lift = lift, nchotomy = nchotomy,
@@ -65,20 +65,20 @@ fun update_DTY z = let
      size = size, ty = ty, updates = updates}
   (* fields in reverse order to above *)
   fun from' updates ty size simpls recognizers one_one nchotomy lift induction
-            fields encode distinct destructors constructors caseeqsplit case_def
+            fields encode distinct destructors constructors case_eq case_def
             case_const case_cong axiom accessors =
     {accessors = accessors, axiom = axiom, case_cong = case_cong,
-     case_const = case_const, case_def = case_def, caseeqsplit = caseeqsplit,
+     case_const = case_const, case_def = case_def, case_eq = case_eq,
      constructors = constructors, destructors = destructors,
      distinct = distinct, encode = encode, fields = fields,
      induction = induction, lift = lift, nchotomy = nchotomy,
      one_one = one_one, recognizers = recognizers, simpls = simpls,
      size = size, ty = ty, updates = updates}
   (* first order *)
-  fun to f {accessors, axiom, case_cong, case_const, case_def, caseeqsplit,
+  fun to f {accessors, axiom, case_cong, case_const, case_def, case_eq,
             constructors, destructors, distinct, encode, fields, induction,
             lift, nchotomy, one_one, recognizers, simpls, size, ty, updates} =
-    f accessors axiom case_cong case_const case_def caseeqsplit
+    f accessors axiom case_cong case_const case_def case_eq
       constructors destructors distinct encode fields induction lift
       nchotomy one_one recognizers simpls size ty updates
 in
@@ -130,9 +130,9 @@ fun case_def_of (DFACTS {case_def,...}) = case_def
   | case_def_of (NFACTS (ty,_)) =
        raise ERR "case_def_of" (dollarty ty^" is not a datatype");
 
-fun caseeqsplit_of (DFACTS {caseeqsplit, ...}) = caseeqsplit
-  | caseeqsplit_of (NFACTS (ty,_)) =
-       raise ERR "caseeqsplit_of" (dollarty ty^" is not a datatype");
+fun case_eq_of (DFACTS {case_eq, ...}) = case_eq
+  | case_eq_of (NFACTS (ty,_)) =
+       raise ERR "case_eq_of" (dollarty ty^" is not a datatype");
 
 fun induction_of0 (DFACTS {induction,...}) = induction
   | induction_of0 (NFACTS (ty,{induction,...}))
@@ -284,7 +284,7 @@ val defn_const =
  * numbers are in the context, which is not necessarily true.                *
  *---------------------------------------------------------------------------*)
 
-fun mk_datatype_info {ax,case_def,caseeqsplit,case_cong,induction,
+fun mk_datatype_info {ax,case_def,case_eq,case_cong,induction,
                       nchotomy,size,encode,lift,one_one,
                       fields, accessors, updates, distinct,
                       destructors,recognizers} =
@@ -299,7 +299,7 @@ fun mk_datatype_info {ax,case_def,caseeqsplit,case_cong,induction,
       recognizers  = recognizers,
       case_const   = defn_const case_def,
       case_def     = case_def,
-      caseeqsplit  = caseeqsplit,
+      case_eq      = case_eq,
       case_cong    = case_cong,
       induction    = induction,
       nchotomy     = nchotomy,
@@ -320,7 +320,7 @@ local fun mk_ti (n,ax,ind)
                 (cdef::cds) (ccong::cgs) (oo::oos) (d::ds) (nch::nchs) =
             mk_datatype_info{ax=COPY(n,ax), induction=COPY(n,ind),
                       case_def=cdef,case_cong=ccong, nchotomy=nch,
-                      caseeqsplit =
+                      case_eq =
                         prove_case_eq_thm {case_def = cdef, nchotomy = nch},
                       one_one=oo, distinct=d,size=NONE, encode=NONE,
                       lift=NONE, fields=[], accessors=[],updates=[],
@@ -346,7 +346,7 @@ fun gen_datatype_info {ax, ind, case_defs} =
      val tyinfo_1 = mk_datatype_info
            {ax=ORIG ax, induction=ORIG ind,
             case_def = cased1, case_cong = casec1, nchotomy = nch1,
-            caseeqsplit =
+            case_eq =
               prove_case_eq_thm {case_def = cased1, nchotomy = nch1},
             size=NONE, encode=NONE, lift=NONE,
             fields=[], accessors=[],updates=[],
@@ -374,7 +374,7 @@ fun pp_tyinfo ppstrm (d as DFACTS recd) =
      val pp_term = Parse.pp_term ppstrm
      val pp_thm = Parse.pp_thm ppstrm
      val {ty,constructors, case_const, case_def, case_cong, induction,
-          nchotomy,one_one,distinct,simpls,size,encode,lift,axiom, caseeqsplit,
+          nchotomy,one_one,distinct,simpls,size,encode,lift,axiom, case_eq,
           fields, accessors, updates,recognizers,destructors} = recd
      val ty_namestring = name_pair (ty_name_of d)
  in
@@ -432,7 +432,7 @@ fun pp_tyinfo ppstrm (d as DFACTS recd) =
 
    add_break(1,0);
    begin_block CONSISTENT 1; add_string "Case-const equality split:";
-   add_break (1,0); pp_thm caseeqsplit; end_block();
+   add_break (1,0); pp_thm case_eq; end_block();
 
    let fun do11 thm =
             (begin_block CONSISTENT 1; add_string "One-to-one:";

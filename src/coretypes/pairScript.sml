@@ -548,8 +548,8 @@ val pair_case_cong = save_thm("pair_case_cong",
   Prim_rec.case_cong_thm pair_CASES pair_case_thm);
 val pair_rws = [PAIR, FST, SND];
 
-val pair_caseeq = Q.store_thm(
-  "pair_caseeq",
+val pair_case_eq = Q.store_thm(
+  "pair_case_eq",
   ‘(pair_CASE p f = v) <=> ?x y. (p = (x,y)) /\ (f x y = v)’,
   Q.ISPEC_THEN ‘p’ STRUCT_CASES_TAC pair_CASES THEN
   SRW_TAC[][pair_CASE_def, FST, SND, PAIR_EQ]);
@@ -580,7 +580,7 @@ val _ = adjoin_to_theory
       S "     {ax=TypeBasePure.ORIG pair_Axiom,";            NL();
       S "      case_def=pair_case_thm,";                     NL();
       S "      case_cong=pair_case_cong,";                   NL();
-      S "      caseeqsplit = pair_caseeq,";                  NL();
+      S "      case_eq = pair_case_eq,";                     NL();
       S "      induction=TypeBasePure.ORIG pair_induction,"; NL();
       S "      nchotomy=ABS_PAIR_THM,";                      NL();
       S "      size=NONE,";                                  NL();

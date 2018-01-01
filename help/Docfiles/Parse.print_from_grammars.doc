@@ -47,7 +47,8 @@ defined:
 }
 These functions can then be used to print arithmetic terms (note that
 neither the global parser nor printer are disturbed by this activity),
-using the {Portable.pprint} function:
+using the {Portable.pprint} function 
+(or {Lib.ppstring}, which returns a string):
 {
    - Portable.pprint termpp ``3 + x * 4``;
    arithmetic$+
@@ -70,6 +71,7 @@ concrete syntax and overloading, and even the underlying
 representation of numerals.
 
 \SEEALSO
-Parse.parse_from_grammars, Parse.print_term_by_grammar, Parse.Term.
+Parse.parse_from_grammars, Parse.print_term_by_grammar, Parse.Term,
+Portable.pprint, Lib.ppstring.
 
 \ENDDOC

@@ -241,8 +241,8 @@ val nterm_size_def = RWnew_specification ("nterm_size_def",
   CONV_RULE SKOLEM_CONV |>
   SIMP_RULE (srw_ss()) [FORALL_AND_THM]);
 
-val nterm_caseeq = Q.store_thm(
-  "nterm_caseeq",
+val nterm_case_eq = Q.store_thm(
+  "nterm_case_eq",
   ‘(nterm_CASE n nmf sf tf pf cf = v) ⇔
      (∃a. (n = Nom a) ∧ (nmf a = v)) ∨
      (∃p w. (n = Sus p w) ∧ (sf (@p'. p' == p) w = v)) ∨
@@ -264,7 +264,7 @@ val _ = write [mk_datatype_info {
   (let val (n::rest) = CONJUNCTS nterm_case_rewrites
    in n::Sus_case1::rest end),
   case_cong = nterm_case_cong,
-  caseeqsplit = nterm_caseeq,
+  case_eq = nterm_case_eq,
   nchotomy = nterm_nchotomy,
   size = SOME (``nterm_size``,ORIG nterm_size_def),
   encode = NONE,
@@ -289,7 +289,7 @@ val _ = adjoin_to_theory {
 \  (let val (n::rest) = CONJUNCTS nterm_case_rewrites\
 \   in n::Sus_case1::rest end),\
 \  case_cong = nterm_case_cong,\n\
-\  caseeqsplit = nterm_caseeq,\n\
+\  case_eq = nterm_case_eq,\n\
 \  nchotomy = nterm_nchotomy,\
 \  size = SOME (``nterm_size``,ORIG nterm_size_def),\
 \  encode = NONE,\

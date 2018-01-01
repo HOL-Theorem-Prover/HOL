@@ -484,7 +484,7 @@ val _ = adjoin_to_theory
       S "     {ax=TypeBasePure.ORIG sum_Axiom,";            NL();
       S "      case_def=sum_case_def,";                     NL();
       S "      case_cong=sum_case_cong,";                   NL();
-      S "      caseeqsplit = Prim_rec.prove_case_eq_thm {"; NL();
+      S "      case_eq = Prim_rec.prove_case_eq_thm {"; NL();
       S "        case_def = sum_case_def,";                 NL();
       S "        nchotomy = sum_CASES},";                   NL();
       S "      induction=TypeBasePure.ORIG sum_INDUCT,";    NL();
@@ -506,8 +506,8 @@ val _ = TypeBase.write
      {ax=TypeBasePure.ORIG sum_Axiom,
       case_def=sum_case_def,
       case_cong=sum_case_cong,
-      caseeqsplit = Prim_rec.prove_case_eq_thm {case_def = sum_case_def,
-                                                nchotomy = sum_CASES},
+      case_eq = Prim_rec.prove_case_eq_thm {case_def = sum_case_def,
+                                            nchotomy = sum_CASES},
       induction=TypeBasePure.ORIG sum_INDUCT,
       nchotomy=sum_CASES,
       size=NONE,
