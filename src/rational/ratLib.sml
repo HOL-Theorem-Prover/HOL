@@ -463,6 +463,58 @@ val RAT_BASIC_ARITH_CONV =
 val RAT_BASIC_ARITH_TAC =
 	CONV_TAC RAT_BASIC_ARITH_CONV;
 
+(* generic normalisation *)
+open ratSyntax
+fun mk_rvar s = mk_var(s, rat)
+val x = mk_rvar "x"
+val y = mk_rvar "y"
+val z = mk_rvar "z"
+val l_asscomm = prove(
+  mk_eq(mk_rat_add(mk_rat_add(x,y), z),
+        mk_rat_add(mk_rat_add(x,z), y)),
+  CONV_TAC (BINOP_CONV (REWR_CONV (GSYM ratTheory.RAT_ADD_ASSOC))) >>
+  CONV_TAC (LAND_CONV (RAND_CONV (REWR_CONV ratTheory.RAT_ADD_COMM))) >>
+  REFL_TAC);
+val r_asscomm = prove(
+  mk_eq(mk_rat_add(x, mk_rat_add(y, z)),
+        mk_rat_add(y, mk_rat_add(x,z))),
+  CONV_TAC (BINOP_CONV (REWR_CONV ratTheory.RAT_ADD_ASSOC)) >>
+  CONV_TAC (LAND_CONV (LAND_CONV (REWR_CONV ratTheory.RAT_ADD_COMM))) >>
+  REFL_TAC);
+
+val one_r = ratSyntax.mk_rat_of_num (numSyntax.mk_numeral Arbnum.one)
+
+fun non_coeff t =
+  let
+    open ratSyntax
+  in
+    case Lib.total dest_rat_mul t of
+        SOME (c,x) => if is_literal c then x
+                      else if is_literal x then c
+                      else t
+      | NONE => if is_literal t then one_r else t
+  end
+
+(*
+val merge = REWR_CONV (GSYM ratTheory.RAT_RDISTRIB) THENC
+            LAND_CONV RAT_ADD_CONV
+  let
+    open ratSyntax
+    val (t1,t2) = dest_rat_add t
+
+val RAT_SUM_CANON = GenPolyCanon.gencanon {
+  dest = ratSyntax.dest_rat_add,
+  is_literal = ratSyntax.is_literal,
+  assoc_mode = GenPolyCanon.L,
+  assoc = SPEC_ALL ratTheory.RAT_ADD_ASSOC,
+  symassoc = SYM (SPEC_ALL ratTheory.RAT_ADD_ASSOC),
+  comm = SPEC_ALL ratTheory.RAT_ADD_COMM,
+  l_asscom = l_asscomm,
+  r_asscomm = r_asscomm,
+  non_coeff = non_coeff,
+  merge = merge,
+*)
+
 (*==========================================================================
  * end of structure
  *==========================================================================*)
