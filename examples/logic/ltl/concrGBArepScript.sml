@@ -789,10 +789,28 @@ val GBA_TRANS_LEMM = store_thm
 val trns_is_empty_def = Define`
   trns_is_empty cE = EXISTS (λp. MEM p cE.neg) cE.pos`;
 
+val TRNS_IS_EMPTY_LEMM = store_thm
+  ("TRNS_IS_EMPTY_LEMM",
+   ``!cE ap. ((set cE.pos ⊆ ap) ∧ (set cE.neg ⊆ ap))
+  ==> trns_is_empty cE = (transformLabel ap cE.pos cE.neg = {})``,
+   rpt strip_tac >> fs[trns_is_empty_def]
+   >> `(EXISTS (λp. MEM p cE.neg) cE.pos) = ~(set cE.neg ∩ set cE.pos = {})`
+      by (
+       simp[EQ_IMP_THM] >> rpt strip_tac >> fs[EXISTS_MEM]
+       >- (`p ∈ set cE.neg ∩ set cE.pos` by simp[IN_INTER]
+           >> metis_tac[MEMBER_NOT_EMPTY]
+          )
+       >- (`?p. p ∈ set cE.neg ∩ set cE.pos` by metis_tac[MEMBER_NOT_EMPTY]
+           >> metis_tac[IN_INTER]
+          )
+   )
+   >> metis_tac[TRANSFORMLABEL_EMPTY,INTER_COMM]
+  );
+
 val tlg_concr_def = Define`
   tlg_concr (t1,acc_t1) (t2,acc_t2) =
     (((MEM_SUBSET t1.pos t2.pos)
-  ∧ (MEM_SUBSET t1.neg t2.neg) \/ trns_is_empty t1)
+  ∧ (MEM_SUBSET t1.neg t2.neg) \/ trns_is_empty t2)
   ∧ (MEM_SUBSET t1.sucs t2.sucs)
   ∧ (MEM_SUBSET acc_t2 acc_t1))`;
 
