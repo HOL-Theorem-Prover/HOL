@@ -13,6 +13,8 @@ val ratmul_thms = CONJUNCTS RAT_MUL_NUM_CALCULATE
 val ratmul_convs = map REWR_CONV ratmul_thms
 val rateq_thms = CONJUNCTS RAT_EQ_NUM_CALCULATE
 val rateq_convs = map REWR_CONV rateq_thms
+val ratadd_thms = CONJUNCTS RAT_ADD_NUM_CALCULATE
+val ratadd_convs = map REWR_CONV ratadd_thms
 
 fun expose_num t =
   if is_rat_ainv t then expose_num (rand t)
@@ -25,6 +27,20 @@ fun expose_num_conv c t =
 
 val NOT_F = last (CONJUNCTS boolTheory.NOT_CLAUSES)
 val T_AND = hd (CONJUNCTS (SPEC_ALL boolTheory.AND_CLAUSES))
+val T_IMP = hd (CONJUNCTS (SPEC_ALL boolTheory.IMP_CLAUSES))
+
+fun ERROR f msg c t =
+  c t handle HOL_ERR _ => raise mk_HOL_ERR "ratReduce" f msg
+
+val prove_two_nonzero_preconds =
+    ERROR "prove_two_nonzero_preconds" "denominators not both non-zero"
+      (LAND_CONV (BINOP_CONV
+                    (RAND_CONV
+                       (FIRST_CONV rateq_convs THENC
+                        EVERY_CONJ_CONV reduceLib.REDUCE_CONV) THENC
+                     REWR_CONV NOT_F) THENC
+                  REWR_CONV T_AND) THENC
+       REWR_CONV T_IMP)
 
 (* given term of form
      (n1 / d1) * (n2 / d2)
@@ -37,24 +53,30 @@ fun coremul_conv t =
     val (t1,t2) = dest_rat_mul t
     val th0 = PART_MATCH (lhand o lhs o rand) RAT_DIVDIV_MUL t1
     val th1 = PART_MATCH (rand o lhs o rand) th0 t2
-    val th2 =
-      CONV_RULE (RAND_CONV
-                   (RAND_CONV
-                      (BINOP_CONV
-                         (FIRST_CONV ratmul_convs THENC
-                          expose_num_conv reduceLib.REDUCE_CONV))) THENC
-                 (* deal with non-zero preconditions *)
-                 LAND_CONV (BINOP_CONV
-                              (RAND_CONV
-                                 (FIRST_CONV rateq_convs THENC
-                                  EVERY_CONJ_CONV reduceLib.REDUCE_CONV) THENC
-                               REWR_CONV NOT_F) THENC
-                            REWR_CONV T_AND))
-                th1
   in
-    MP th2 TRUTH
-  end handle HOL_ERR _ =>
-  raise mk_HOL_ERR "ratReduce" "coremul_conv" "denominator probably not zero"
+    CONV_RULE (RAND_CONV
+                 (RAND_CONV
+                    (BINOP_CONV
+                       (FIRST_CONV ratmul_convs THENC
+                        expose_num_conv reduceLib.REDUCE_CONV))) THENC
+               prove_two_nonzero_preconds)
+              th1
+  end
+
+fun coreadd_conv t =
+  let
+    val (t1,t2) = dest_rat_add t
+    val th0 = PART_MATCH (lhand o lhs o rand) RAT_DIVDIV_ADD t1
+    val th1 = PART_MATCH (rand o lhs o rand) th0 t2
+  in
+    CONV_RULE (RAND_CONV
+                 (RAND_CONV
+                    (BINOP_CONV
+                       (PURE_REWRITE_CONV (ratadd_thms @ ratmul_thms) THENC
+                        expose_num_conv reduceLib.REDUCE_CONV))) THENC
+               prove_two_nonzero_preconds)
+              th1
+  end
 
 val denom1_conv = REWR_CONV (GSYM RAT_DIV_1)
 fun maybe_denom1_conv t =
@@ -80,8 +102,8 @@ fun posdenom_conv t =
     else ALL_CONV
   end t
 
-val anymul_conv =
-    BINOP_CONV (maybe_denom1_conv THENC posdenom_conv) THENC coremul_conv
+fun binop_prenorm c =
+  BINOP_CONV (maybe_denom1_conv THENC posdenom_conv) THENC c
 
 val xn = mk_var("x", numSyntax.num)
 val nb1_x = mk_rat_of_num (mk_comb(numSyntax.numeral_tm, numSyntax.mk_bit1 xn))
@@ -131,10 +153,10 @@ in
     end
 end
 
-val RAT_MUL_CONV = anymul_conv THENC TRY_CONV elim_neg0_conv THENC
-                   TRY_CONV elim_common_factor THENC
-                   EVERY_CONV
-                     (map (TRY_CONV o REWR_CONV) [RAT_DIV_1, RAT_DIV_0])
+val RAT_MUL_CONV =
+    binop_prenorm coremul_conv THENC TRY_CONV elim_neg0_conv THENC
+    TRY_CONV elim_common_factor THENC
+    EVERY_CONV (map (TRY_CONV o REWR_CONV) [RAT_DIV_1, RAT_DIV_0])
 
 (* given fraction; finds gcd of numerator and denominator (as Arbnum.num) *)
 fun find_gcd t =
@@ -146,7 +168,9 @@ fun find_gcd t =
     Arbnum.gcd(num1,num2)
   end
 
-fun RAT_ADD_CONV t =
-  raise mk_HOL_ERR "ratReduce" "RAT_ADD_CONV" "Not implemented yet"
+val RAT_ADD_CONV =
+    binop_prenorm coreadd_conv THENC TRY_CONV elim_neg0_conv THENC
+    TRY_CONV elim_common_factor THENC
+    EVERY_CONV (map (TRY_CONV o REWR_CONV) [RAT_DIV_1, RAT_DIV_0])
 
 end (* struct *)
