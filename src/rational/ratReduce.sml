@@ -63,6 +63,8 @@ fun coremul_conv t =
               th1
   end
 
+val rataddmul_rwc = PURE_REWRITE_CONV (ratadd_thms @ ratmul_thms)
+
 fun coreadd_conv t =
   let
     val (t1,t2) = dest_rat_add t
@@ -72,7 +74,7 @@ fun coreadd_conv t =
     CONV_RULE (RAND_CONV
                  (RAND_CONV
                     (BINOP_CONV
-                       (PURE_REWRITE_CONV (ratadd_thms @ ratmul_thms) THENC
+                       (rataddmul_rwc THENC
                         expose_num_conv reduceLib.REDUCE_CONV))) THENC
                prove_two_nonzero_preconds)
               th1
