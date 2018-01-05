@@ -515,7 +515,7 @@ type 'dir holmake_result = 'dir holmake_dirinfo option
     Now, the recursion into those directories may result in extra
     includes and preincludes.
    ---------------------------------------------------------------------- *)
-fun maybe_recurse {warn,diag,no_prereqs,hm,dirinfo,dir,local_build=k,cleantgt} =
+fun maybe_recurse {warn,diag,hm,dirinfo,dir,local_build=k,cleantgt} =
 let
   val {includes,preincludes,visited} = dirinfo
   val _ = diag ("maybe_recurse: includes = [" ^
@@ -571,19 +571,11 @@ let
   val visited = Binaryset.add(visited, dir)
   fun canon i = hmdir.extendp {base = dir, extension = i}
   val canonl = map canon
+  fun f idirs = map canon idirs
+  val possible_calls = hmdir.sort (f (preincludes @ includes))
 in
-  if no_prereqs then
-    if k {includes = #includes dirinfo, preincludes = #preincludes dirinfo} then
-      SOME {visited = visited, includes = map canon includes,
-            preincludes = map canon preincludes}
-    else NONE
-  else let
-      fun f idirs = map canon idirs
-      val possible_calls = hmdir.sort (f (preincludes @ includes))
-    in
-      do_em {visited = visited, includes = f includes, preincludes = f preincludes}
-            possible_calls
-    end
+  do_em {visited = visited, includes = f includes, preincludes = f preincludes}
+        possible_calls
 end
 
 fun find_files ds P =

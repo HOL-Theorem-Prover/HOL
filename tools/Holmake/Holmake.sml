@@ -120,6 +120,7 @@ val (outputfns as {warn,tgtfatal,diag,info,chatty}) =
 val do_logging_flag = #do_logging coption_value
 val no_lastmakercheck = #no_lastmaker_check coption_value
 val show_usage = #help coption_value
+val toplevel_no_prereqs = #no_prereqs coption_value
 val cline_additional_includes = #includes coption_value
 
 (* make the cline includes = [] so that these are only looked at once
@@ -170,7 +171,7 @@ val _ = Process.atExit (fn () => ignore (finish_logging false))
 
 (* directory specific stuff here *)
 type res = hmdir.t holmake_result
-fun Holmake dirinfo cline_additional_includes targets : res = let
+fun Holmake nobuild dirinfo cline_additional_includes targets : res = let
   val {dir, visited = visiteddirs} = dirinfo
   val _ = OS.FileSys.chDir (hmdir.toAbsPath dir)
 
@@ -664,13 +665,14 @@ val purelocal_incinfo =
     add_sigobj {includes = allincludes, preincludes = hmake_preincludes}
 
 fun hm_recur ctgt k : hmdir.t holmake_result = let
+  val nobuild = toplevel_no_prereqs orelse no_prereqs
   fun hm {dir, visited, targets} =
-      Holmake {dir = dir, visited = visited} [] targets
+      Holmake nobuild {dir = dir, visited = visited} [] targets
+  val warn = if nobuild then (fn _ => ()) else warn
 in
   maybe_recurse
       {warn = warn,
        diag = diag,
-       no_prereqs = no_prereqs,
        hm = hm,
        dirinfo = dirinfo,
        dir = dir,
@@ -747,36 +749,39 @@ val stdcont = if no_action then no_action_cont else basecont
 val _ = not always_rebuild_deps orelse clean_deps()
 
 in
-  case targets of
-    [] => let
-      val targets = generate_all_plausible_targets warn first_target
-      val targets = map fromFile targets
-      val _ =
-          let
-            val tgtstrings =
-                map (fn s => if OS.FileSys.access(s, []) then s else s ^ "(*)")
+  if nobuild then hm_recur NONE (fn _ => true)
+  else
+    case targets of
+      [] => let
+        val targets = generate_all_plausible_targets warn first_target
+        val targets = map fromFile targets
+        val _ =
+            let
+              val tgtstrings =
+                  map
+                    (fn s => if OS.FileSys.access(s, []) then s else s ^ "(*)")
                     targets
-          in
-            diag("Generated targets are: [" ^
-                 String.concatWith ", " tgtstrings ^ "]")
-          end
-    in
-      hm_recur NONE (stdcont targets)
-    end
-  | xs => let
-      val cleanTarget_opt =
-          List.find (fn x => member x ["clean", "cleanDeps", "cleanAll"]) xs
-      fun canon i = hmdir.extendp {base = dir, extension = i}
-    in
-      if isSome cleanTarget_opt andalso not cline_recursive then
-        (List.app (ignore o do_clean_target) xs;
-         finish_logging true;
-         SOME {visited = visiteddirs,
-               includes = map canon allincludes,
-               preincludes = map canon hmake_preincludes})
-      else
-          hm_recur cleanTarget_opt (stdcont xs)
-    end
+            in
+              diag("Generated targets are: [" ^
+                   String.concatWith ", " tgtstrings ^ "]")
+            end
+      in
+        hm_recur NONE (stdcont targets)
+      end
+    | xs => let
+        val cleanTarget_opt =
+            List.find (fn x => member x ["clean", "cleanDeps", "cleanAll"]) xs
+        fun canon i = hmdir.extendp {base = dir, extension = i}
+      in
+        if isSome cleanTarget_opt andalso not cline_recursive then
+          (List.app (ignore o do_clean_target) xs;
+           finish_logging true;
+           SOME {visited = visiteddirs,
+                 includes = map canon allincludes,
+                 preincludes = map canon hmake_preincludes})
+        else
+            hm_recur cleanTarget_opt (stdcont xs)
+      end
 end (* fun Holmake *)
 
 
@@ -791,7 +796,7 @@ in
   else let
       open Process
       val result =
-          Holmake
+          Holmake false (* yes, build something *)
             {dir = hmdir.curdir(),
              visited = Binaryset.empty hmdir.compare}
             cline_additional_includes
