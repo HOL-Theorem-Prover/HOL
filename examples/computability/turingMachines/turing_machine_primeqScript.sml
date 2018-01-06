@@ -7,6 +7,7 @@ open arithmeticTheory;
 open numpairTheory;
 open pred_setTheory;
 open turing_machineTheory;
+open whileTheory
 
 val _ = new_theory "turing_machine_primeq";
 
@@ -609,7 +610,7 @@ val containment_lem_nzero = Q.store_thm("tm_eq_tm_with_state",
       (NUM_TO_STATE (nfst n),CELL_NUM (nsnd n)) ∈ FDOM p ∧ nfst n <>0) = NONE)
      ⇔
    effempty p`,
-  rw[oleast_eq_none,effempty_def] >> eq_tac >> simp[] >> csimp[fmap_EXT] >>
+  rw[effempty_def] >> eq_tac >> simp[] >> csimp[fmap_EXT] >>
   simp[pairTheory.FORALL_PROD,NUM_TO_STATE_def] >> strip_tac
   >- (rw[SUBSET_DEF] >> rename[`sc ∈ FDOM p`] >>
       `∃s c. sc = (s,c)` by simp[pairTheory.pair_CASES]>>
@@ -1565,7 +1566,7 @@ strip_tac >> qexists_tac`recfn_tm p` >> conj_tac >- fs[recfn_tm_recfn] >>
           strip_tac >> fs[tm_fn_def,recfn_tm_def] >>
           Cases_on `(OLEAST n. HALTED (RUN n (INITIAL_TM p args)))` >>
           fs[optionTheory.OPTION_MAP_DEF] >> rw[RUN_NUM_corr] >> fs[recCn_def]
-          >- (fs[oleast_eq_none] >>fs[minimise_def] >> rpt strip_tac >> rfs[RUN_NUM_corr] >>
+          >- (fs[] >>fs[minimise_def] >> rpt strip_tac >> rfs[RUN_NUM_corr] >>
               first_x_assum (qspec_then `n` mp_tac) >> simp[HALTED_def] >> fs[STATE_TO_NUM_def])
           >- (fs[OLEAST_EQ_SOME,minimise_def] >> rw[]
               >- (rename[`RUN n (INITIAL_TM p args)`] >> qexists_tac `n` >>
