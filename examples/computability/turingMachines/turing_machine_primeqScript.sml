@@ -11,8 +11,6 @@ open whileTheory
 
 val _ = new_theory "turing_machine_primeq";
 
-val _ = intLib.deprecate_int()
-
 val DISJ_IMP_EQ = prove(
   “((x = y) ∨ P ⇔ (x ≠ y ⇒ P)) ∧
    (P ∨ (x = y) ⇔ (x ≠ y ⇒ P)) ∧

@@ -13,8 +13,6 @@ open turing_machine_primeqTheory
 val _ = new_theory "register_machine";
 
 
-val _ = intLib.deprecate_int()
-
 val _ = Datatype `instruction = Inc num | Dec num | JZ num num bool`;
 
 val _ = Datatype `RegMachine = <| insts : instruction list; regs : num |-> num; pc : num |>`;
