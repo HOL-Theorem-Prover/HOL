@@ -1,5 +1,4 @@
 open HolKernel Parse boolLib bossLib finite_mapTheory;
-open recfunsTheory;
 open recursivefnsTheory;
 open prnlistTheory;
 open primrecfnsTheory;
@@ -12,6 +11,14 @@ open turing_machineTheory;
 val _ = new_theory "turing_machine_primeq";
 
 val _ = intLib.deprecate_int()
+
+val DISJ_IMP_EQ = prove(
+  “((x = y) ∨ P ⇔ (x ≠ y ⇒ P)) ∧
+   (P ∨ (x = y) ⇔ (x ≠ y ⇒ P)) ∧
+   (x ≠ y ∨ P ⇔ ((x = y) ⇒ P)) ∧
+   (P ∨ x ≠ y ⇔ ((x = y) ⇒ P))”,
+  METIS_TAC []);
+val _ = augment_srw_ss [rewrites [DISJ_IMP_EQ]]
 
 val updn_def = Define `
   (updn [] = 0) ∧
@@ -271,9 +278,12 @@ val updn_two_lem_2 = Q.store_thm("updn_two_lem_2",
 rpt strip_tac >>  Cases_on `x` >> fs[] >> Cases_on `t` >> fs[])
 
 val updn_three_lem_1 = Q.store_thm("updn_three_lem_1",
-`∀ x.  ¬(LENGTH x <= 2) ==> (∃ a b c. (x = [a;b;c]) ) ∨ (∃ a b c d e. (x = (a::b::c::d::e) ) )`,
-rpt strip_tac >>  Cases_on `x` >- fs[] >> Cases_on `t` >- fs[] >> Cases_on `t'` >- fs[] >> rfs[] >> strip_tac >> Cases_on `t` >- fs[] >> fs[] );
-
+  `∀ x. ¬(LENGTH x <= 2) ==>
+        (∃ a b c. (x = [a;b;c]) ) ∨ (∃ a b c d e. x = a::b::c::d::e)`,
+  rpt strip_tac >>  Cases_on `x` >- fs[] >>
+  rename [‘LENGTH (h::t)’] >> Cases_on ‘t’ >> fs[] >>
+  rename [‘SUC (LENGTH l)’] >> Cases_on ‘l’ >> fs[] >>
+  metis_tac[list_CASES]);
 
 val prim_pr_rec_updn = Q.store_thm ("prim_pr_rec_updn",
 `updn  = Cn
@@ -571,16 +581,22 @@ simp[DOMSUB_FAPPLY_THM] )
 
 
 val UPDATE_W_PROG_NIN_TM = Q.store_thm("UPDATE_W_PROG_NIN_TM",
-`((NUM_CELL (CELL_NUM c) = c) ∧ ((NUM_TO_STATE n,CELL_NUM c) ∈ FDOM p) ∧ (n <> 0) ∧
-  ((STATE_TO_NUM tm.state = n) ⇒ NUM_CELL tm.tape_h ≠ c))
-  ⇒ (⟦UPDATE_TAPE (tm with prog := p \\ (NUM_TO_STATE n,CELL_NUM c)) ⟧ =
-  ⟦UPDATE_TAPE (tm with prog := p)⟧)`,
- simp[FULL_ENCODE_TM_def]  >> rw[] >>
-`(tm.state = NUM_TO_STATE n) ⇒ tm.tape_h ≠ CELL_NUM c` by metis_tac[NUM_STATE_CELL_NUM_LEM] >>
-`(tm.state,tm.tape_h) <> (NUM_TO_STATE n,CELL_NUM c)` by fs[] >>
-rw[] >> Cases_on `((tm.state,tm.tape_h) ∈ FDOM p)` >> rw[UPDATE_TAPE_def] >> fs[EQ_SND_P_LESS] >>
-Cases_on `SND (p ' (tm.state,tm.tape_h))` >> fs[] >> Cases_on `tm.tape_l = []` >> fs[] >>
-Cases_on `tm.tape_r = []` >> fs[ENCODE_TM_TAPE_def] )
+  `((NUM_CELL (CELL_NUM c) = c) ∧ ((NUM_TO_STATE n,CELL_NUM c) ∈ FDOM p) ∧
+   n <> 0 ∧ ((STATE_TO_NUM tm.state = n) ⇒ NUM_CELL tm.tape_h ≠ c))
+    ⇒
+   (⟦UPDATE_TAPE (tm with prog := p \\ (NUM_TO_STATE n,CELL_NUM c)) ⟧ =
+    ⟦UPDATE_TAPE (tm with prog := p)⟧)`,
+  simp[FULL_ENCODE_TM_def]  >> rw[] >>
+  `(tm.state = NUM_TO_STATE n) ⇒ tm.tape_h ≠ CELL_NUM c`
+    by metis_tac[NUM_STATE_CELL_NUM_LEM] >>
+  `(tm.state,tm.tape_h) <> (NUM_TO_STATE n,CELL_NUM c)`
+    by (simp[] >> metis_tac[]) >>
+  rw[] >>
+  Cases_on `(tm.state,tm.tape_h) ∈ FDOM p` >>
+  rw[UPDATE_TAPE_def] >> fs[EQ_SND_P_LESS] >>
+  Cases_on `SND (p ' (tm.state,tm.tape_h))` >> fs[] >>
+  Cases_on `tm.tape_l = []` >> fs[] >>
+  Cases_on `tm.tape_r = []` >> fs[ENCODE_TM_TAPE_def]);
 
 val tm_eq_tm_with_state = Q.store_thm("tm_eq_tm_with_state",
 `(tm.state = a) ==> (tm = tm with state := a)`,
@@ -589,16 +605,20 @@ strip_tac >> `(tm with state := a).state = a` by fs[] >> rfs[TM_component_equali
 val effempty_def = Define`effempty p <=> FDOM p ⊆ {(a:state,b) | (a,b) | a = 0}`
 
 val containment_lem_nzero = Q.store_thm("tm_eq_tm_with_state",
-`(((OLEAST n. (NUM_TO_STATE (nfst n),CELL_NUM (nsnd n)) ∈ FDOM p ∧
-                              (nfst n <>0))  =  NONE) ⇔ effempty p)`,
-rw[oleast_eq_none,effempty_def] >> eq_tac >> simp[] >> csimp[fmap_EXT] >>
-simp[EXTENSION,pairTheory.FORALL_PROD,NUM_TO_STATE_def] >> strip_tac
->- (rw[SUBSET_DEF] >> rename[`sc ∈ FDOM p`] >> `∃s c. sc = (s,c)` by simp[pairTheory.pair_CASES]>>
-    rw[] >> first_x_assum (qspec_then `s.n *, (NUM_CELL c)` mp_tac) >>simp[]>>
-    `<|n := s.n|> = s` by (simp[state_component_equality]) >> simp[state_component_equality,st_def])
->- (rpt strip_tac >> fs[SUBSET_DEF] >> res_tac >> fs[st_def]) );
-
-
+  `((OLEAST n.
+      (NUM_TO_STATE (nfst n),CELL_NUM (nsnd n)) ∈ FDOM p ∧ nfst n <>0) = NONE)
+     ⇔
+   effempty p`,
+  rw[oleast_eq_none,effempty_def] >> eq_tac >> simp[] >> csimp[fmap_EXT] >>
+  simp[pairTheory.FORALL_PROD,NUM_TO_STATE_def] >> strip_tac
+  >- (rw[SUBSET_DEF] >> rename[`sc ∈ FDOM p`] >>
+      `∃s c. sc = (s,c)` by simp[pairTheory.pair_CASES]>>
+      rw[] >> first_x_assum (qspec_then `s.n *, (NUM_CELL c)` mp_tac) >>simp[]>>
+      `<|n := s.n|> = s` by (simp[state_component_equality]) >>
+      simp[state_component_equality,st_def])
+  >- (rpt strip_tac >> fs[SUBSET_DEF] >> res_tac >> fs[st_def] >>
+      qmatch_abbrev_tac ‘~P \/ Q’ >> Cases_on ‘P = T’ >> pop_assum mp_tac >>
+      simp[] >> UNABBREV_ALL_TAC >> strip_tac >> res_tac >> fs[]));
 
 val effempty_no_update = Q.store_thm("effempty_no_update",
 `effempty tm.prog ==> (UPDATE_TAPE tm = tm with state := <|n := 0|>)`,

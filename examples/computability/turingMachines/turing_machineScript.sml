@@ -1,7 +1,4 @@
-
-
 open HolKernel Parse boolLib bossLib finite_mapTheory;
-open recfunsTheory;
 open recursivefnsTheory;
 open prnlistTheory;
 open primrecfnsTheory;
@@ -12,7 +9,6 @@ open pred_setTheory;
 val _ = new_theory "turing_machine";
 
 val _ = intLib.deprecate_int()
-
 
 (*
 Li and Vitayi book
@@ -73,10 +69,10 @@ val _ = Datatype `cell = Z | O `;
 val _ = Datatype `state = <| n : num |>`;
 
 val _ = Datatype `TM = <| state : state;
-                  prog : ((state # cell) |->  (state # action));
-                  tape_l : cell list;
-                  tape_h : cell;
-                  tape_r : cell list
+                          prog : ((state # cell) |->  (state # action));
+                          tape_l : cell list;
+                          tape_h : cell;
+                          tape_r : cell list
                        |>`;
 
 val concatWith_def = Define`
@@ -84,50 +80,46 @@ val concatWith_def = Define`
   (concatWith sep [x] = x) /\
   (concatWith sep (x::y::rest) = x ++ sep ++ concatWith sep (y::rest))`;
 
-EVAL ``concatWith [0n] [[1;2;3;4]; [4;5]; [10;11;13]]``;
-
-EVAL ``GENLIST (K O) 24 ``;
-
-val INITIAL_TAPE_TM_def = Define `(INITIAL_TAPE_TM tm [] = tm) ∧
-  (INITIAL_TAPE_TM tm (h::t) = tm with <|tape_l := [] ; tape_h := h ; tape_r := t|>)`;
+val INITIAL_TAPE_TM_def = Define `
+  (INITIAL_TAPE_TM tm [] = tm) ∧
+  (INITIAL_TAPE_TM tm (h::t) =
+    tm with <|tape_l := [] ; tape_h := h ; tape_r := t|>)
+`;
 
 val INITIAL_TM_def = Define`
-INITIAL_TM p args =
-INITIAL_TAPE_TM <|state := <|n:=0|>;  prog := p;tape_l := [];tape_h := Z;tape_r := []|> (concatWith [Z] (MAP (GENLIST (K O)) args ))`;
-
-EVAL ``INITIAL_TM FEMPTY [2;3]``;
+  INITIAL_TM p args =
+    INITIAL_TAPE_TM <| state := <|n:=0|>;  prog := p;tape_l := [];
+                       tape_h := Z;tape_r := [] |>
+                    (concatWith [Z] (MAP (GENLIST (K O)) args))`;
 
 val UPDATE_STATE_TIME = Define `UPDATE_STATE_TIME tm =
-  if(((tm.state),(tm.tape_h)) IN FDOM tm.prog)
-  then tm with
-    <|state := (FST (tm.prog ' ((tm.state) ,(tm.tape_h)) )) |>
-    else (tm)
+  if (tm.state,tm.tape_h) IN FDOM tm.prog
+  then tm with <|state := (FST (tm.prog ' ((tm.state) ,(tm.tape_h)) )) |>
+  else (tm)
                                `;
 
-val UPDATE_TAPE_def = Define `UPDATE_TAPE tm =
-  if (((tm.state),(tm.tape_h)) IN FDOM tm.prog) ∧ (tm.state.n <> 0)
-  then let tm' = tm with
-    <|    state := (FST (tm.prog ' ((tm.state) ,(tm.tape_h)) )) |> in
-      case (SND (tm.prog ' ((tm.state) ,(tm.tape_h)) )) of
-        Wr0 => tm' with tape_h := Z
-      | Wr1 => tm' with tape_h := O
-      | L   => if (tm.tape_l = [])
-        then tm' with <| tape_l := [];
-                        tape_h := Z ;
-                        tape_r := tm.tape_h::tm.tape_r |>
-        else tm' with <| tape_l := TL tm.tape_l;
-           tape_h := HD tm.tape_l ;
-           tape_r := tm.tape_h::tm.tape_r |>
-       | R   => if (tm.tape_r = [])
-         then tm' with <| tape_l := tm.tape_h::tm.tape_l;
-           tape_h := Z ;
-           tape_r := [] |>
-         else tm' with <| tape_l := tm.tape_h::tm.tape_l;
-           tape_h := HD tm.tape_r;
-           tape_r := TL tm.tape_r |>
-  else (tm with state := <|n:=0|> )
-                                  `;
-
+val UPDATE_TAPE_def = Define `
+  UPDATE_TAPE tm =
+    if (tm.state,tm.tape_h) IN FDOM tm.prog ∧ tm.state.n <> 0 then
+      let tm' = tm with state := FST (tm.prog ' ((tm.state) ,(tm.tape_h)) )
+      in
+        case SND (tm.prog ' (tm.state ,tm.tape_h)) of
+          Wr0 => tm' with tape_h := Z
+        | Wr1 => tm' with tape_h := O
+        | L   => if (tm.tape_l = [])
+                 then tm' with <| tape_l := []; tape_h := Z ;
+                                  tape_r := tm.tape_h::tm.tape_r |>
+                 else tm' with <| tape_l := TL tm.tape_l;
+                                  tape_h := HD tm.tape_l ;
+                                  tape_r := tm.tape_h::tm.tape_r |>
+        | R   => if (tm.tape_r = []) then
+                  tm' with <| tape_l := tm.tape_h::tm.tape_l; tape_h := Z;
+                              tape_r := [] |>
+                 else tm' with <| tape_l := tm.tape_h::tm.tape_l;
+                                  tape_h := HD tm.tape_r;
+                                  tape_r := TL tm.tape_r |>
+    else tm with state := <|n:=0|>
+`;
 
 val _ = overload_on("RUN",``FUNPOW UPDATE_TAPE``);
 
@@ -198,30 +190,6 @@ val DIV_3_lem = Q.store_thm(
                   >> `4 DIV 3 <= (n' +4) DIV 3` by metis_tac[DIV_LE_MONOTONE]
                   >> `1 <=0` by fs[]
                   >> fs[]
-    );
-
-
-val MOD_3_lem = Q.store_thm (
-        "MOD_3_lem",
-`∀ n. (n MOD 3 = 0) ∨ (n MOD 3 = 1) ∨ (n MOD 3 = 2)`,
-Induct_on `n` >- fs[] >> rw[] >> `SUC n MOD 3 < 3` by fs[] >> `1 < SUC n MOD 3` by fs[]
-          >> `2 <=  SUC n MOD 3` by fs[]
-          >> `0<3` by fs[] >> `SUC n MOD 3 <= SUC n` by metis_tac[MOD_LESS_EQ]
-          >> `SUC n MOD 3 < 2 + 1` by fs[]
-          >> `SUC n MOD 3 <= 2` by metis_tac[LE_LT1]
-          >> fs[]
-    );
-
-
-val MOD_DIV_3_lem = Q.store_thm(
-        "MOD_DIV_3_lem",
-`∀ n. ((n DIV 3 = 0) ∧ (n MOD 3 = 0)) ==> (n = 0)`,
-Induct_on `n` >- fs[]
-          >> rw[] >> `SUC n = n+1` by fs[] >> CCONTR_TAC >> fs[] >> rw[]
-          >> `SUC n DIV 3 = SUC n MOD 3` by fs[]
-          >> `SUC n < 3` by metis_tac[DIV_3_lem]
-          >> `SUC n = 0` by fs[]
-          >> fs[]
     );
 
 
@@ -513,20 +481,6 @@ val WRITE_1_HEAD_lem = Q.store_thm("WRITE_1_HEAD_lem",
 `∀ tm s. (UPDATE_ACT_S_TM s Wr1 tm).tape_h = O`,
 rpt strip_tac >> rw[UPDATE_ACT_S_TM_def] );
 
-
-val TMN_Z_MOD_1_lem = Q.store_thm ("TMN_Z_MOD_1_lem",
-`∀ tmn. ((nfst (nsnd tmn) MOD 2 = 1) ∧ (HD (FST (DECODE_TM_TAPE (nsnd tmn))) = Z)) <=> F`,
-strip_tac >> rw[]  >> `~(nfst (nsnd tmn) MOD 2 = 0)` by fs[] >>
-`~EVEN (nfst (nsnd tmn))` by metis_tac[EVEN_MOD2] >>
-`ODD (nfst (nsnd tmn))` by metis_tac[EVEN_OR_ODD] >>
-`EVEN 0` by fs[] >>
-`~((nfst (nsnd tmn)) = 0)` by metis_tac[EVEN_OR_ODD] >>
-Cases_on `nfst (nsnd tmn)` >- fs[] >> 
-`DECODE (SUC n) = [O] ++ (DECODE (((SUC n) - 1) DIV 2))` by fs[DECODE_def] >>
-`TL (DECODE (SUC n)) = (DECODE ((SUC n -1) DIV 2))` by fs[DECODE_def] >>
-rw[] >> rw[DECODE_TM_TAPE_def] );
-
-
 val ODD_TL_DECODE_lem = Q.store_thm ("ODD_TL_DECODE_lem",
 `∀ n. (ODD n) ==> (TL (DECODE n) = DECODE ((n-1) DIV 2))`,
 rpt strip_tac >> `EVEN 0` by EVAL_TAC >> `~(n = 0)` by metis_tac[EVEN_AND_ODD]>>
@@ -688,13 +642,13 @@ Induct_on `p` >> simp[] )
 val nfst_lem = Q.store_thm("nfst_lem",
 `(∀n. P (nfst n)) ==> (∀k. P k)`,
 strip_tac >> Induct_on `k` >- (`nfst 0 = 0` by EVAL_TAC >> `P (nfst 0)` by fs[]>> metis_tac[] )
-          >- (`∃l j. nfst (l *, j)= SUC k` by fs[nfst_npair] >> 
+          >- (`∃l j. nfst (l *, j)= SUC k` by fs[nfst_npair] >>
 `P (nfst (l *, j)) ` by rfs[]  >>  metis_tac[]  ) );
 
 val nsnd_lem = Q.store_thm("nfst_lem",
 `(∀n. P (nsnd n)) ==> (∀k. P k)`,
 strip_tac >> Induct_on `k` >- (`nsnd 0 = 0` by EVAL_TAC >> `P (nsnd 0)` by fs[]>> metis_tac[] )
-          >- (`∃l j. nsnd (l *, j)= SUC k` by fs[nsnd_npair] >> 
+          >- (`∃l j. nsnd (l *, j)= SUC k` by fs[nsnd_npair] >>
 `P (nsnd (l *, j)) ` by rfs[]  >>  metis_tac[]  ) );
 
 val nfst_nsnd_lem = Q.store_thm("nfst_nsnd_lem",
@@ -814,21 +768,4 @@ val NSND_ENCODE_TM_TAPE_DIV2 = Q.store_thm("NSND_ENCODE_TM_TAPE_DIV2[simp]",
 `(nsnd (ENCODE_TM_TAPE tm) DIV 2) = ENCODE tm.tape_r`,
 rw[ENCODE_TM_TAPE_def])
 
-val ENCODE_ZERO_NONEMPTY = Q.store_thm("ENCODE_ZERO_NONEMPTY",
-`((ENCODE t = 0) ∧ ¬(t=[])) ==> (HD t = Z)`,
-Cases_on `t` >> fs[] >>fs[ENCODE_def]  >> Cases_on `h` >> fs[])
-
-
-val ENCODE_TL_ZERO = Q.store_thm("ENCODE_TL_ZERO",
-`¬(t = []) ==> ((ENCODE t = 0) ==> (ENCODE (TL t) = 0))`,
-Cases_on `t` >> fs[] >>fs[ENCODE_def]  >> Cases_on `h` >> fs[])
-
-
-
 val _ = export_theory();
-
-
-
-
-
-

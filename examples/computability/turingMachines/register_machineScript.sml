@@ -1,6 +1,5 @@
 open HolKernel Parse boolLib bossLib finite_mapTheory
 
-open recfunsTheory
 open recursivefnsTheory
 open prnlistTheory
 open primrecfnsTheory
