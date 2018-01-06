@@ -1,18 +1,17 @@
+open HolKernel Parse boolLib bossLib finite_mapTheory
 
+open recfunsTheory
+open recursivefnsTheory
+open prnlistTheory
+open primrecfnsTheory
+open listTheory
+open arithmeticTheory
+open numpairTheory
+open pred_setTheory
+open turing_machineTheory
+open turing_machine_primeqTheory
 
-
-open HolKernel Parse boolLib bossLib finite_mapTheory;
-open recfunsTheory;
-open recursivefnsTheory;
-open prnlistTheory;
-open primrecfnsTheory;
-open listTheory;
-open arithmeticTheory;
-open numpairTheory;
-open pred_setTheory;
-open turing_machineTheory;
-open turing_machine_primeqTheory;
-val _ = new_theory "register_machines";
+val _ = new_theory "register_machine";
 
 
 val _ = intLib.deprecate_int()
@@ -64,7 +63,7 @@ val FUNPOW_THREE = Q.store_thm("FUNPOW_THREE",
 val Jump_def = Define`Jump i = JZ 0 i T`
 
 val Clear_def = Define`Clear n = [JZ n 3 T;Dec n;JZ 0 2 F]`
-(* 
+(*
 val Clear_corr = Q.store_thm("Clear_corr",
 `(rm.insts = pre ++ (Clear n) ++ suff) ∧ (rm.pc = LENGTH pre)
    ==> ∃k. run_reg k rm = rm with <| pc := LENGTH pre + 3; regs := rm.regs |+(n,0) |>`,
@@ -105,7 +104,7 @@ strip_tac >> rw[]
   >- (simp[run_reg_def,initial_reg_def,zerof_inst_def,step_def,is_halted_def,FUNPOW_TWO,Clear_def,reg_val_def,upd_reg_def])
    >- (Cases_on `args` >> rw[] >> simp[run_reg_def,initial_reg_def,zerof_inst_def,Clear_def]>>
                 Induct_on `h` >>rw[] >>simp[MULT_SUC] >> rw[FUNPOW_ADD,FUNPOW_THREE] >>
-                simp[is_halted_def,step_def,Clear_def,reg_val_def,upd_reg_def,FLOOKUP_DEF]>> 
+                simp[is_halted_def,step_def,Clear_def,reg_val_def,upd_reg_def,FLOOKUP_DEF]>>
        `¬(0 in FDOM (init_regs 3 t))` by fs[] >>        ) )
 
 
@@ -168,9 +167,3 @@ Then we need to show Turing Machine can simulate the original 3 instruction set
 *)
 
 val _ = export_theory();
-
-
-
-
-
-
