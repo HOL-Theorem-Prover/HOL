@@ -230,9 +230,14 @@ val GBA_TRANS_LEMM2 = store_thm
 
 val GBA_TRANS_LEMM3 = store_thm
   ("GBA_TRANS_LEMM3",
-   ``!s x t. MEM x (gba_trans_concr t) ∧ MEM s x.sucs
-             ==> (?l ce. MEM l t ∧ MEM ce l ∧ MEM s ce.sucs)``,
-   Induct_on `t` >> rpt strip_tac >> fs[gba_trans_concr_def]
+   ``(!s x t. MEM x (gba_trans_concr t) ∧ MEM s x.sucs
+             ==> (?l ce. MEM l t ∧ MEM ce l ∧ MEM s ce.sucs))
+   ∧ (!s x t. MEM x (gba_trans_concr t) ∧ MEM s x.pos
+         ==> (?l ce. MEM l t ∧ MEM ce l ∧ MEM s ce.pos))
+   ∧ (!s x t. MEM x (gba_trans_concr t) ∧ MEM s x.neg
+         ==> (?l ce. MEM l t ∧ MEM ce l ∧ MEM s ce.neg))``,
+   rpt conj_tac
+   >> Induct_on `t` >> rpt strip_tac >> fs[gba_trans_concr_def]
    >- (fs[concrEdge_component_equality] >> metis_tac[MEMBER_NOT_EMPTY,MEM])
    >- (fs[d_conj_concr_def,FOLDR_LEMM4,concrEdge_component_equality]
        >> `MEM s (nub (e1.sucs ++ e2.sucs))` by metis_tac[]
@@ -240,6 +245,22 @@ val GBA_TRANS_LEMM3 = store_thm
        >> `MEM s (nub (FILTER (λx. ¬MEM x e2.sucs) e1.sucs))
            \/ MEM s (nub e2.sucs)` by metis_tac[MEM_APPEND]
        >> metis_tac[]
+      )
+   >- (fs[concrEdge_component_equality] >> metis_tac[MEMBER_NOT_EMPTY,MEM])
+   >- (fs[d_conj_concr_def,FOLDR_LEMM4,concrEdge_component_equality]
+         >> `MEM s (nub (e1.pos ++ e2.pos))` by metis_tac[]
+         >> fs[nub_append]
+         >> `MEM s (nub (FILTER (λx. ¬MEM x e2.pos) e1.pos))
+               \/ MEM s (nub e2.pos)` by metis_tac[MEM_APPEND]
+         >> metis_tac[]
+      )
+   >- (fs[concrEdge_component_equality] >> metis_tac[MEMBER_NOT_EMPTY,MEM])
+   >- (fs[d_conj_concr_def,FOLDR_LEMM4,concrEdge_component_equality]
+         >> `MEM s (nub (e1.neg ++ e2.neg))` by metis_tac[]
+         >> fs[nub_append]
+         >> `MEM s (nub (FILTER (λx. ¬MEM x e2.neg) e1.neg))
+            \/ MEM s (nub e2.neg)` by metis_tac[MEM_APPEND]
+         >> metis_tac[]
       )
   );
 
