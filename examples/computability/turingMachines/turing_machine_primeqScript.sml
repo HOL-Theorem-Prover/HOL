@@ -59,120 +59,128 @@ val UPDATE_TM_NUM_act0_lem = Q.store_thm ("UPDATE_TM_NUM_act0_lem",
                           (FULL_DECODE_TM tmn)))`,
   REWRITE_TAC [updn_def] >> rpt strip_tac >>
    (* actn = 0*)
-      simp[NUM_TO_ACT_def] >>
-          rw[FULL_DECODE_TM_def,FULL_ENCODE_TM_def]
-          >- ( rw[UPDATE_ACT_S_TM_def] >> EVAL_TAC)
-          >> rw[ENCODE_TM_TAPE_def]
-          >- ( rw[UPDATE_ACT_S_TM_def] >> rw[DECODE_TM_TAPE_def]
-                 >> simp[ENCODE_DECODE_thm ]  )
-          >-  ( rw[UPDATE_ACT_S_TM_def] >> rw[DECODE_TM_TAPE_def] >>
-                  simp[ENCODE_DECODE_thm ] >>
-  `ODD (nsnd (nsnd tmn))` by metis_tac[EVEN_OR_ODD] >>
-  fs[ODD_DIV_2_lem] )
-          >> (`(UPDATE_ACT_S_TM (NUM_TO_STATE s) Wr0
-                               <|state := NUM_TO_STATE (nfst tmn);
+  simp[NUM_TO_ACT_def] >> rw[FULL_DECODE_TM_def,FULL_ENCODE_TM_def]
+  >- (rw[UPDATE_ACT_S_TM_def] >> EVAL_TAC) >>
+  rw[ENCODE_TM_TAPE_def]
+  >- (rw[UPDATE_ACT_S_TM_def] >> rw[DECODE_TM_TAPE_def] >>
+      simp[ENCODE_DECODE_thm])
+  >- (rw[UPDATE_ACT_S_TM_def] >> rw[DECODE_TM_TAPE_def] >>
+      simp[ENCODE_DECODE_thm ] >>
+      `ODD (nsnd (nsnd tmn))` by metis_tac[EVEN_OR_ODD] >>
+      fs[ODD_DIV_2_lem]) >>
+  `(UPDATE_ACT_S_TM (NUM_TO_STATE s) Wr0
+             <|state := NUM_TO_STATE (nfst tmn);
                tape_l := FST (DECODE_TM_TAPE (nsnd tmn));
                tape_h := FST (SND (DECODE_TM_TAPE (nsnd tmn)));
-               tape_r := SND (SND (DECODE_TM_TAPE (nsnd tmn)))|>).tape_h = Z` by fs[WRITE_0_HEAD_lem] >> rfs[])
-);
+               tape_r := SND (SND (DECODE_TM_TAPE (nsnd tmn)))|>).tape_h = Z`
+       by fs[WRITE_0_HEAD_lem] >>
+  rfs[]);
 
 
 val UPDATE_TM_NUM_act1_lem = Q.store_thm ("UPDATE_TM_NUM_act1_lem",
-`∀ s tmn actn. (actn = 1) ==>  (updn [s;actn;tmn] =
-FULL_ENCODE_TM (UPDATE_ACT_S_TM (NUM_TO_STATE s) (NUM_TO_ACT actn) (FULL_DECODE_TM tmn)))`,
-REWRITE_TAC [updn_def] >> rpt strip_tac >>
-simp[NUM_TO_ACT_def] >>
-     rw[FULL_DECODE_TM_def] >> rw[FULL_ENCODE_TM_def]
-     >- ( rw[UPDATE_ACT_S_TM_def] >> EVAL_TAC)
-     >> rw[ENCODE_TM_TAPE_def]
-     >- ( rw[UPDATE_ACT_S_TM_def] >> rw[DECODE_TM_TAPE_def]
-            >> simp[ENCODE_DECODE_thm ]  )
-     >-  ( `(UPDATE_ACT_S_TM (NUM_TO_STATE s) Wr1
-                             <|state := NUM_TO_STATE (nfst tmn);
-             tape_l := FST (DECODE_TM_TAPE (nsnd tmn));
-             tape_h := FST (SND (DECODE_TM_TAPE (nsnd tmn)));
-             tape_r := SND (SND (DECODE_TM_TAPE (nsnd tmn)))|>).tape_h = O` by fs[WRITE_1_HEAD_lem] >> `O=Z` by fs[] >> fs[])
-     >- (rw[UPDATE_ACT_S_TM_def] >> rw[DECODE_TM_TAPE_def] >>
-           simp[ENCODE_DECODE_thm ])
-     >> (rw[UPDATE_ACT_S_TM_def] >> rw[DECODE_TM_TAPE_def] >>
-           simp[ENCODE_DECODE_thm ]
-           >> `ODD (nsnd (nsnd tmn))` by metis_tac[EVEN_OR_ODD]
-           >> fs[ODD_DIV_2_lem] )
-);
-
-
+  `∀ s tmn actn.
+      (actn = 1) ==>
+      (updn [s;actn;tmn] =
+          FULL_ENCODE_TM (UPDATE_ACT_S_TM
+                            (NUM_TO_STATE s)
+                            (NUM_TO_ACT actn)
+                            (FULL_DECODE_TM tmn)))`,
+  REWRITE_TAC [updn_def] >> rpt strip_tac >>
+  simp[NUM_TO_ACT_def] >>
+  rw[FULL_DECODE_TM_def] >> rw[FULL_ENCODE_TM_def]
+  >- (rw[UPDATE_ACT_S_TM_def] >> EVAL_TAC) >>
+  rw[ENCODE_TM_TAPE_def]
+  >- (rw[UPDATE_ACT_S_TM_def] >> rw[DECODE_TM_TAPE_def] >>
+      simp[ENCODE_DECODE_thm])
+  >- (`(UPDATE_ACT_S_TM (NUM_TO_STATE s) Wr1
+             <|state := NUM_TO_STATE (nfst tmn);
+               tape_l := FST (DECODE_TM_TAPE (nsnd tmn));
+               tape_h := FST (SND (DECODE_TM_TAPE (nsnd tmn)));
+               tape_r := SND (SND (DECODE_TM_TAPE (nsnd tmn)))|>).tape_h = O`
+        by fs[WRITE_1_HEAD_lem] >> `O=Z` by fs[] >> fs[])
+   >- (rw[UPDATE_ACT_S_TM_def] >> rw[DECODE_TM_TAPE_def] >>
+       simp[ENCODE_DECODE_thm ]) >>
+   rw[UPDATE_ACT_S_TM_def] >> rw[DECODE_TM_TAPE_def] >>
+   simp[ENCODE_DECODE_thm] >>
+   `ODD (nsnd (nsnd tmn))` by metis_tac[EVEN_OR_ODD] >> fs[ODD_DIV_2_lem]);
 
 val UPDATE_TM_NUM_act2_lem = Q.store_thm ("UPDATE_TM_NUM_act2_lem",
-`∀ s tmn actn.
-    (actn = 2) ==>
-    (updn [s;actn;tmn] =
-       FULL_ENCODE_TM (UPDATE_ACT_S_TM (NUM_TO_STATE s) (NUM_TO_ACT actn) (FULL_DECODE_TM tmn)))`,
-REWRITE_TAC [updn_def] >> rpt strip_tac >>
-simp[NUM_TO_ACT_def, FULL_DECODE_TM_def, FULL_ENCODE_TM_def, UPDATE_ACT_S_TM_def] >>
-rw[] >- (fs[])
->- (`~EVEN (nfst (nsnd tmn))` by metis_tac[MOD_2, DECIDE ``0n <> 1``] >>
-    `ODD (nfst (nsnd tmn))` by metis_tac[EVEN_OR_ODD] >>
-    simp[ENCODE_TM_TAPE_def, ODD_TL_DECODE_lem, ENCODE_DECODE_thm] >>
-    rw[ENCODE_def, ENCODE_DECODE_thm,DECODE_TM_TAPE_def] >> rfs[ODD_HD_DECODE]
-    >- metis_tac[MOD_2]
-    >- (rw[MOD_2] >> metis_tac[ODD_DIV_2_lem, EVEN_OR_ODD]))
->- (simp[ENCODE_TM_TAPE_def, ODD_TL_DECODE_lem, ENCODE_DECODE_thm] >>
-    rw[ENCODE_def,DECODE_TM_TAPE_def,ENCODE_DECODE_thm,MOD_2] >>
-    metis_tac[ODD_DIV_2_lem, EVEN_OR_ODD])
->- (`EVEN (nfst (nsnd tmn))` by metis_tac[MOD_2, DECIDE ``0n <> 1``] >>
-    `~ODD (nfst (nsnd tmn))` by metis_tac[EVEN_AND_ODD] >>
-    simp[ENCODE_TM_TAPE_def, EVEN_TL_DECODE_lem, ENCODE_DECODE_thm] >>
-    rw[ENCODE_def,DECODE_TM_TAPE_def, ENCODE_DECODE_thm] >> rfs[EVEN_HD_DECODE]
-    >- simp[MOD_2]
-    >- (rw[MOD_2] >> metis_tac[ODD_DIV_2_lem, EVEN_OR_ODD]))
+  `∀ s tmn actn.
+      (actn = 2) ==>
+      (updn [s;actn;tmn] =
+         FULL_ENCODE_TM
+           (UPDATE_ACT_S_TM (NUM_TO_STATE s) (NUM_TO_ACT actn)
+                            (FULL_DECODE_TM tmn)))`,
+  REWRITE_TAC [updn_def] >> rpt strip_tac >>
+  simp[NUM_TO_ACT_def, FULL_DECODE_TM_def, FULL_ENCODE_TM_def,
+       UPDATE_ACT_S_TM_def] >>
+  rw[]
+  >- (fs[])
+  >- (`~EVEN (nfst (nsnd tmn))` by metis_tac[MOD_2, DECIDE ``0n <> 1``] >>
+      `ODD (nfst (nsnd tmn))` by metis_tac[EVEN_OR_ODD] >>
+      simp[ENCODE_TM_TAPE_def, ODD_TL_DECODE_lem, ENCODE_DECODE_thm] >>
+      rw[ENCODE_def, ENCODE_DECODE_thm,DECODE_TM_TAPE_def] >> rfs[ODD_HD_DECODE]
+      >- metis_tac[MOD_2]
+      >- (rw[MOD_2] >> metis_tac[ODD_DIV_2_lem, EVEN_OR_ODD]))
+  >- (simp[ENCODE_TM_TAPE_def, ODD_TL_DECODE_lem, ENCODE_DECODE_thm] >>
+      rw[ENCODE_def,DECODE_TM_TAPE_def,ENCODE_DECODE_thm,MOD_2] >>
+      metis_tac[ODD_DIV_2_lem, EVEN_OR_ODD])
+  >- (`EVEN (nfst (nsnd tmn))` by metis_tac[MOD_2, DECIDE ``0n <> 1``] >>
+      `~ODD (nfst (nsnd tmn))` by metis_tac[EVEN_AND_ODD] >>
+      simp[ENCODE_TM_TAPE_def, EVEN_TL_DECODE_lem, ENCODE_DECODE_thm] >>
+      rw[ENCODE_def,DECODE_TM_TAPE_def, ENCODE_DECODE_thm] >>
+      rfs[EVEN_HD_DECODE]
+      >- simp[MOD_2]
+      >- (rw[MOD_2] >> metis_tac[ODD_DIV_2_lem, EVEN_OR_ODD]))
  );
-
-
-
-
 
 val UPDATE_TM_NUM_act3_lem = Q.store_thm ("UPDATE_TM_NUM_act3_lem",
-`∀ s tmn actn.
-    (actn = 3) ==>
-    (updn [s;actn;tmn] =
-       FULL_ENCODE_TM (UPDATE_ACT_S_TM (NUM_TO_STATE s) (NUM_TO_ACT actn) (FULL_DECODE_TM tmn)))`,
-REWRITE_TAC [updn_def] >> rpt strip_tac >>
-simp[NUM_TO_ACT_def, FULL_DECODE_TM_def, FULL_ENCODE_TM_def, UPDATE_ACT_S_TM_def] >>
-rw[] >- (fs[SND_SND_DECODE_TM_TAPE])
->- (simp[ENCODE_TM_TAPE_def, ENCODE_DECODE_thm] >>
-    `~EVEN (nsnd (nsnd tmn) DIV 2)` by metis_tac[MOD_2, DECIDE ``0n <> 1``] >>
-    `ODD (nsnd (nsnd tmn) DIV 2)` by metis_tac[EVEN_OR_ODD] >>
-    rfs[SND_SND_DECODE_TM_TAPE] >> simp[ENCODE_def] >> fs[ODD_TL_DECODE_lem,ENCODE_DECODE_thm] >>
-    `HD (DECODE (nsnd (nsnd tmn) DIV 2)) = O` by fs[ODD_HD_DECODE] >> simp[] >>
-    rw[ENCODE_def,DECODE_TM_TAPE_def,ENCODE_DECODE_thm,MOD_2] )
->- ( simp[ENCODE_TM_TAPE_def, ENCODE_DECODE_thm] >>
-    `EVEN (nsnd (nsnd tmn) DIV 2)` by metis_tac[MOD_2, DECIDE ``0n <> 1``] >>
-    `~ODD (nsnd (nsnd tmn) DIV 2)` by metis_tac[EVEN_AND_ODD] >>
-    rfs[SND_SND_DECODE_TM_TAPE]  >>
-    rw[ENCODE_def,DECODE_TM_TAPE_def, ENCODE_DECODE_thm,MOD_2] )
->- (simp[ENCODE_TM_TAPE_def, ENCODE_DECODE_thm] >>
-    `EVEN (nsnd (nsnd tmn) DIV 2)` by metis_tac[MOD_2, DECIDE ``0n <> 1``] >>
-    fs[SND_SND_DECODE_TM_TAPE,EVEN_HD_DECODE] >>
-    rw[ENCODE_def,DECODE_TM_TAPE_def, ENCODE_DECODE_thm,MOD_2] >>
-    fs[EVEN_TL_DECODE_lem,ENCODE_DECODE_thm])
+  `∀ s tmn actn.
+      (actn = 3) ==>
+      (updn [s;actn;tmn] =
+         FULL_ENCODE_TM
+           (UPDATE_ACT_S_TM (NUM_TO_STATE s) (NUM_TO_ACT actn)
+                            (FULL_DECODE_TM tmn)))`,
+  REWRITE_TAC [updn_def] >> rpt strip_tac >>
+  simp[NUM_TO_ACT_def, FULL_DECODE_TM_def, FULL_ENCODE_TM_def,
+       UPDATE_ACT_S_TM_def] >>
+  rw[]
+  >- (fs[SND_SND_DECODE_TM_TAPE])
+  >- (simp[ENCODE_TM_TAPE_def, ENCODE_DECODE_thm] >>
+      `~EVEN (nsnd (nsnd tmn) DIV 2)` by metis_tac[MOD_2, DECIDE ``0n <> 1``] >>
+      `ODD (nsnd (nsnd tmn) DIV 2)` by metis_tac[EVEN_OR_ODD] >>
+      rfs[SND_SND_DECODE_TM_TAPE] >> simp[ENCODE_def] >>
+      fs[ODD_TL_DECODE_lem,ENCODE_DECODE_thm] >>
+      `HD (DECODE (nsnd (nsnd tmn) DIV 2)) = O` by fs[ODD_HD_DECODE] >>
+      simp[] >> rw[ENCODE_def,DECODE_TM_TAPE_def,ENCODE_DECODE_thm,MOD_2])
+  >- (simp[ENCODE_TM_TAPE_def, ENCODE_DECODE_thm] >>
+      `EVEN (nsnd (nsnd tmn) DIV 2)` by metis_tac[MOD_2, DECIDE ``0n <> 1``] >>
+      `~ODD (nsnd (nsnd tmn) DIV 2)` by metis_tac[EVEN_AND_ODD] >>
+      rfs[SND_SND_DECODE_TM_TAPE]  >>
+      rw[ENCODE_def,DECODE_TM_TAPE_def, ENCODE_DECODE_thm,MOD_2] )
+  >- (simp[ENCODE_TM_TAPE_def, ENCODE_DECODE_thm] >>
+      `EVEN (nsnd (nsnd tmn) DIV 2)` by metis_tac[MOD_2, DECIDE ``0n <> 1``] >>
+      fs[SND_SND_DECODE_TM_TAPE,EVEN_HD_DECODE] >>
+      rw[ENCODE_def,DECODE_TM_TAPE_def, ENCODE_DECODE_thm,MOD_2] >>
+      fs[EVEN_TL_DECODE_lem,ENCODE_DECODE_thm])
  );
 
-
 val UPDATE_TM_NUM_thm = Q.store_thm ("UPDATE_TM_NUM_Theorem",
-`∀ s tmn actn. (actn < 4) ==>  (updn [s;actn;tmn] =
- FULL_ENCODE_TM (UPDATE_ACT_S_TM (NUM_TO_STATE s) (NUM_TO_ACT actn) (FULL_DECODE_TM tmn)))`,
- rpt strip_tac >>
-`(actn = 0) ∨ (actn = 1) ∨ (actn = 2) ∨ (actn = 3)` by simp[]
->- (* actn = 0*)
-   fs[UPDATE_TM_NUM_act0_lem]
->-  (* actn = 1*)
-   fs[UPDATE_TM_NUM_act1_lem]
->- (* actn = 2*)
-    fs[UPDATE_TM_NUM_act2_lem]
->- (* actn = 3*)
-    fs[UPDATE_TM_NUM_act3_lem]);
-
-
+  `∀ s tmn actn.
+      actn < 4 ==>
+      (updn [s;actn;tmn] =
+        FULL_ENCODE_TM (UPDATE_ACT_S_TM (NUM_TO_STATE s) (NUM_TO_ACT actn)
+                                        (FULL_DECODE_TM tmn)))`,
+  rpt strip_tac >>
+  `(actn = 0) ∨ (actn = 1) ∨ (actn = 2) ∨ (actn = 3)` by simp[]
+  >- (* actn = 0*)
+     fs[UPDATE_TM_NUM_act0_lem]
+  >-  (* actn = 1*)
+     fs[UPDATE_TM_NUM_act1_lem]
+  >- (* actn = 2*)
+      fs[UPDATE_TM_NUM_act2_lem]
+  >- (* actn = 3*)
+      fs[UPDATE_TM_NUM_act3_lem]);
 
 val pr3_def = Define`
 (pr3 f [] = f 0 0 0 : num) ∧
@@ -192,24 +200,30 @@ val GENLIST3 = prove(
 ``GENLIST f 3 = [f 0; f 1; f 2]``,
 EVAL_TAC );
 
-val ternary_primrec_eq = store_thm(
-        "ternary_primrec_eq",
-``primrec f 3 ∧ (∀n m p. f [n; m; p] = g n m p) ⇒ (f = pr3 g)``,
-SRW_TAC [][] >> SIMP_TAC (srw_ss()) [FUN_EQ_THM] >>
-Q.X_GEN_TAC `l` >>
-`(l = []) ∨ ∃n ns. l = n :: ns` by (Cases_on `l` >> SRW_TAC [][]) THENL [
-SRW_TAC [][] >>
-`f [] = f (GENLIST (K 0) 3)` by METIS_TAC [primrec_nil] >>
-SRW_TAC [][GENLIST3,pr3_def] ,
-`(ns = []) ∨ ∃m ms. ns = m::ms` by (Cases_on `ns` THEN SRW_TAC [][]) >>
-SRW_TAC [][] THENL [
-IMP_RES_THEN (Q.SPEC_THEN `[n]` MP_TAC) primrec_short >>
-              SRW_TAC [][GENLIST1] >> EVAL_TAC,
-`(ms = []) ∨ ∃p ps. ms = p::ps` by (Cases_on `ms` THEN SRW_TAC [][]) THENL [
-    fs[pr3_def] >> `f [n;m] = f ([n;m] ++ GENLIST (K 0) (3 - LENGTH [n;m]))` by fs[primrec_short] >>
-      `GENLIST (K 0) (3 - LENGTH [n;m]) = [0]` by EVAL_TAC >> rfs[], IMP_RES_THEN (Q.SPEC_THEN `(n::m::p::ps)` MP_TAC) primrec_arg_too_long >>
-        SRW_TAC [ARITH_ss][] >> fs[pr3_def]  ] ] ]);
+val ternary_primrec_eq = store_thm("ternary_primrec_eq",
+  ``primrec f 3 ∧ (∀n m p. f [n; m; p] = g n m p) ⇒ (f = pr3 g)``,
+  SRW_TAC [][] >> SIMP_TAC (srw_ss()) [FUN_EQ_THM] >>
+  Q.X_GEN_TAC `l` >>
+  `(l = []) ∨ ∃n ns. l = n :: ns` by (Cases_on `l` >> SRW_TAC [][]) THENL [
+    SRW_TAC [][] >>
+    `f [] = f (GENLIST (K 0) 3)` by METIS_TAC [primrec_nil] >>
+    SRW_TAC [][GENLIST3,pr3_def],
 
+    `(ns = []) ∨ ∃m ms. ns = m::ms` by (Cases_on `ns` THEN SRW_TAC [][]) >>
+    SRW_TAC [][] THENL [
+      IMP_RES_THEN (Q.SPEC_THEN `[n]` MP_TAC) primrec_short >>
+      SRW_TAC [][GENLIST1] >> EVAL_TAC,
+      `(ms = []) ∨ ∃p ps. ms = p::ps` by (Cases_on `ms` THEN SRW_TAC [][]) >| [
+        fs[pr3_def] >>
+        `f [n;m] = f ([n;m] ++ GENLIST (K 0) (3 - LENGTH [n;m]))`
+          by fs[primrec_short] >>
+        `GENLIST (K 0) (3 - LENGTH [n;m]) = [0]` by EVAL_TAC >> rfs[],
+        IMP_RES_THEN (Q.SPEC_THEN `(n::m::p::ps)` MP_TAC)
+                     primrec_arg_too_long >>
+        SRW_TAC [ARITH_ss][] >> fs[pr3_def]
+      ]
+    ]
+  ]);
 
 val primrec_pr3 = store_thm(
         "primrec_pr3",
@@ -485,43 +499,50 @@ simp[GSYM(ADD1),DECODE_def,ODD,ODD_MULT]  )
 
 
 
-val ENCODED_DECODED_ENCODED_UPDATE_TM_thm = Q.store_thm("ENCODED_DECODED_ENCODED_UPDATE_TM_thm",
-`⟦UPDATE_ACT_S_TM (FST (p ' (tm.state,tm.tape_h)))
-                  (SND (p ' (tm.state,tm.tape_h))) (FULL_DECODE_TM ⟦tm⟧) ⟧ =
-⟦(UPDATE_ACT_S_TM (FST (p ' (tm.state,tm.tape_h)))
-                  (SND (p ' (tm.state,tm.tape_h))) (tm) )⟧`,
-fs[FULL_DECODE_TM_def,FULL_ENCODE_TM_def] >> rw[]
->- (fs[STATE_TO_NUM_def,ENCODE_TM_TAPE_def] >> Cases_on `tm.tape_h` >-
-    (fs[SND_SND_DECODE_TM_TAPE_FULL] >> `EVEN (2 * ENCODE tm.tape_r)` by fs[EVEN_DOUBLE] >>
-    fs[FST_SND_DECODE_TM_TAPE_FULL] >> fs[UPDATE_ACT_S_TM_def] >>
-    Cases_on `SND (p ' (tm.state,Z))` >> fs[] >-
-      (Cases_on `tm.tape_l = []` >> fs[ENCODE_def] >> Cases_on `ENCODE tm.tape_l = 0` >> fs[] ) >-
-      (Cases_on `tm.tape_r = []` >> fs[ENCODE_def] >> Cases_on `2* ENCODE tm.tape_r DIV 2 = 0` >>
-      fs[])) >-
-    (fs[SND_SND_DECODE_TM_TAPE_FULL]  >>  fs[EVEN_PLUS_1_thm] >> fs[UPDATE_ACT_S_TM_def] >>
-      Cases_on `SND (p ' (tm.state,O))` >> fs[] >-
-      (Cases_on `tm.tape_l = []` >> fs[ENCODE_def] >> Cases_on `ENCODE tm.tape_l = 0` >> fs[]) >-
-      (Cases_on `tm.tape_r = []` >> fs[ENCODE_def] >>
-                Cases_on `(2 * ENCODE tm.tape_r + 1) DIV 2 = 0` >> fs[]) ))
->- ( fs[UPDATE_ACT_S_TM_def] >>
-   Cases_on `SND (p ' (tm.state,tm.tape_h))` >> fs[]
-       >- (simp[ENCODE_TM_TAPE_def,ENCODE_DECODE_thm] >> rw[] )
-       >- (simp[ENCODE_TM_TAPE_def,ENCODE_DECODE_thm] >> rw[])
-       >- (Cases_on `tm.tape_l` >> fs[ENCODE_def]
-          >- (simp[ENCODE_TM_TAPE_def,ENCODE_DECODE_thm])
-          >- (Cases_on `h` >> simp[]
-             >- (rw[]
-                >- (simp[ENCODE_TM_TAPE_def,ENCODE_def])
-                >- (simp[ENCODE_TM_TAPE_def,ENCODE_def] >> simp[ENCODE_DECODE_thm] ))
-            >- (simp[ENCODE_TM_TAPE_def,ENCODE_DECODE_thm] ) ) )
-       >- (Cases_on `tm.tape_r` >> fs[ENCODE_def]
-         >- (simp[ENCODE_TM_TAPE_def,ENCODE_DECODE_thm])
-         >- (Cases_on `h` >> simp[]
-             >- (rw[]
-                >- (simp[ENCODE_TM_TAPE_def,ENCODE_def])
-                >- (simp[ENCODE_TM_TAPE_def,ENCODE_def] >> simp[ENCODE_DECODE_thm] ))
-              >- (simp[ENCODE_TM_TAPE_def,ENCODE_DECODE_thm] ) ) )
-) );
+val ENCODED_DECODED_ENCODED_UPDATE_TM_thm = Q.store_thm(
+  "ENCODED_DECODED_ENCODED_UPDATE_TM_thm",
+  `⟦UPDATE_ACT_S_TM (FST (p ' (tm.state,tm.tape_h)))
+                    (SND (p ' (tm.state,tm.tape_h))) (FULL_DECODE_TM ⟦tm⟧) ⟧ =
+  ⟦(UPDATE_ACT_S_TM (FST (p ' (tm.state,tm.tape_h)))
+                    (SND (p ' (tm.state,tm.tape_h))) (tm) )⟧`,
+  fs[FULL_DECODE_TM_def,FULL_ENCODE_TM_def] >> rw[]
+  >- (fs[STATE_TO_NUM_def,ENCODE_TM_TAPE_def] >> Cases_on `tm.tape_h`
+      >- (fs[SND_SND_DECODE_TM_TAPE_FULL] >>
+          `EVEN (2 * ENCODE tm.tape_r)` by fs[EVEN_DOUBLE] >>
+          fs[FST_SND_DECODE_TM_TAPE_FULL] >> fs[UPDATE_ACT_S_TM_def] >>
+          Cases_on `SND (p ' (tm.state,Z))` >> fs[]
+          >- (Cases_on `tm.tape_l = []` >> fs[ENCODE_def] >>
+              Cases_on `ENCODE tm.tape_l = 0` >> fs[] )
+          >- (Cases_on `tm.tape_r = []` >> fs[ENCODE_def] >>
+              Cases_on `2* ENCODE tm.tape_r DIV 2 = 0` >> fs[]))
+      >- (fs[SND_SND_DECODE_TM_TAPE_FULL]  >> fs[EVEN_PLUS_1_thm] >>
+          fs[UPDATE_ACT_S_TM_def] >>
+          Cases_on `SND (p ' (tm.state,O))` >> fs[]
+          >- (Cases_on `tm.tape_l = []` >> fs[ENCODE_def] >>
+              Cases_on `ENCODE tm.tape_l = 0` >> fs[])
+          >- (Cases_on `tm.tape_r = []` >> fs[ENCODE_def] >>
+              Cases_on `(2 * ENCODE tm.tape_r + 1) DIV 2 = 0` >> fs[])))
+  >- (fs[UPDATE_ACT_S_TM_def] >>
+      Cases_on `SND (p ' (tm.state,tm.tape_h))` >> fs[]
+         >- (simp[ENCODE_TM_TAPE_def,ENCODE_DECODE_thm] >> rw[] )
+         >- (simp[ENCODE_TM_TAPE_def,ENCODE_DECODE_thm] >> rw[])
+         >- (Cases_on `tm.tape_l` >> fs[ENCODE_def]
+            >- (simp[ENCODE_TM_TAPE_def,ENCODE_DECODE_thm])
+            >- (Cases_on `h` >> simp[]
+               >- (rw[]
+                  >- (simp[ENCODE_TM_TAPE_def,ENCODE_def])
+                  >- (simp[ENCODE_TM_TAPE_def,ENCODE_def] >>
+                      simp[ENCODE_DECODE_thm] ))
+               >- (simp[ENCODE_TM_TAPE_def,ENCODE_DECODE_thm] ) ) )
+         >- (Cases_on `tm.tape_r` >> fs[ENCODE_def]
+             >- (simp[ENCODE_TM_TAPE_def,ENCODE_DECODE_thm])
+             >- (Cases_on `h` >> simp[]
+                 >- (rw[]
+                     >- (simp[ENCODE_TM_TAPE_def,ENCODE_def])
+                     >- (simp[ENCODE_TM_TAPE_def,ENCODE_def] >>
+                         simp[ENCODE_DECODE_thm] ))
+                 >- (simp[ENCODE_TM_TAPE_def,ENCODE_DECODE_thm] ) ) ))
+);
 
 
 val UPDATE_TM_NUM_corol = Q.store_thm("UPDATE_TM_NUM_corol",
@@ -529,24 +550,37 @@ val UPDATE_TM_NUM_corol = Q.store_thm("UPDATE_TM_NUM_corol",
                  ⟦UPDATE_ACT_S_TM s' actn' (FULL_DECODE_TM tmn)⟧)`,
 fs[ACT_TO_NUM_LESS_4,UPDATE_TM_NUM_thm])
 
-
-
-val lemma_11 = UPDATE_TM_ARB_Q |> Q.INST[`q` |-> `tm.prog` ]  |> SIMP_RULE(srw_ss())[tm_with_prog]
-
+val lemma_11 =
+    UPDATE_TM_ARB_Q |> Q.INST[`q` |-> `tm.prog` ]
+                    |> SIMP_RULE(srw_ss())[tm_with_prog]
 
 val updn_UPDATE_TAPE = Q.store_thm("updn_UPDATE_TAPE",
-`((tm.state, tm.tape_h) ∈ FDOM p) ∧ (tm.state.n <> 0) ==> ((λ(s',actn). updn [STATE_TO_NUM s'; ACT_TO_NUM actn; ⟦tm⟧])
- (p ' (tm.state,tm.tape_h)) = ⟦UPDATE_TAPE (tm with prog := p)⟧)`,
-rw[] >> `ACT_TO_NUM actn < 4` by fs[ACT_TO_NUM_LESS_4] >>
-`(tm.state,tm.tape_h) ∈ FDOM (tm with prog := p).prog` by fs[] >>
-`((tm with prog := p).state,(tm with prog := p).tape_h) ∈ FDOM (tm with prog := p).prog` by fs[] >>
-`(UPDATE_ACT_S_TM (FST ((tm with prog := p).prog ' ((tm with prog := p).state,(tm with prog := p).tape_h)))
-(SND ((tm with prog := p).prog ' ((tm with prog := p).state,(tm with prog := p).tape_h))) (tm with prog := p) = UPDATE_TAPE (tm with prog := p))` by  fs[UPDATE_TAPE_ACT_STATE_TM_thm] >> rfs[] >>
-`ACT_TO_NUM (SND ((tm with prog := p).prog ' (tm.state,tm.tape_h))) < 4` by fs[ACT_TO_NUM_LESS_4] >>
-rfs[] >>
-`(updn [STATE_TO_NUM (FST ((tm with prog := p).prog ' (tm.state,tm.tape_h))); ACT_TO_NUM (SND (p ' (tm.state,tm.tape_h))); ⟦tm⟧] =
-  ⟦UPDATE_ACT_S_TM (FST ((tm with prog := p).prog ' (tm.state,tm.tape_h))) (SND (p ' (tm.state,tm.tape_h))) (FULL_DECODE_TM ⟦tm⟧)⟧)` by fs[UPDATE_TM_NUM_corol] >> rfs[] >>
-simp[pairTheory.UNCURRY] >>simp[ENCODED_DECODED_ENCODED_UPDATE_TM_thm,lemma_11] )
+  `(tm.state, tm.tape_h) ∈ FDOM p ∧ tm.state.n <> 0 ==>
+   ((λ(s',actn). updn [STATE_TO_NUM s'; ACT_TO_NUM actn; ⟦tm⟧])
+      (p ' (tm.state,tm.tape_h)) =
+   ⟦UPDATE_TAPE (tm with prog := p)⟧)`,
+  rw[] >> `ACT_TO_NUM actn < 4` by fs[ACT_TO_NUM_LESS_4] >>
+  qabbrev_tac `ptm = tm with prog := p` >>
+  `(tm.state,tm.tape_h) ∈ FDOM ptm.prog` by fs[Abbr`ptm`] >>
+  `(ptm.state,ptm.tape_h) ∈ FDOM ptm.prog` by fs[Abbr`ptm`] >>
+  `ptm.state.n <> 0` by simp[Abbr`ptm`] >>
+  `(UPDATE_ACT_S_TM
+      (FST (ptm.prog ' (ptm.state, ptm.tape_h)))
+      (SND (ptm.prog ' (ptm.state,ptm.tape_h)))
+      ptm =
+    UPDATE_TAPE ptm)`
+      by  fs[UPDATE_TAPE_ACT_STATE_TM_thm] >> rfs[] >>
+   `ACT_TO_NUM (SND (ptm.prog ' (tm.state,tm.tape_h))) < 4`
+     by fs[ACT_TO_NUM_LESS_4] >>
+   `(updn [STATE_TO_NUM (FST (ptm.prog ' (tm.state,tm.tape_h)));
+           ACT_TO_NUM (SND (p ' (tm.state,tm.tape_h)));
+           ⟦tm⟧] =
+    ⟦UPDATE_ACT_S_TM (FST (ptm.prog ' (tm.state,tm.tape_h)))
+                     (SND (p ' (tm.state,tm.tape_h)))
+                     (FULL_DECODE_TM ⟦tm⟧)⟧)`
+      by fs[UPDATE_TM_NUM_corol] >>
+   simp[pairTheory.UNCURRY] >> fs[Abbr`ptm`] >>
+   simp[ENCODED_DECODED_ENCODED_UPDATE_TM_thm,lemma_11]);
 
 val CELL_NUM_NUM_CELL = Q.store_thm("CELL_NUM_NUM_CELL[simp]",
 `CELL_NUM (NUM_CELL x) = x`,
@@ -559,25 +593,17 @@ strip_tac >> strip_tac >> metis_tac[]  )
 
 
 val NUM_STATE_CELL_NUM_LEM = Q.store_thm("NUM_STATE_CELL_NUM_LEM",
-`(NUM_CELL (CELL_NUM c) = c) ==> (((STATE_TO_NUM tm.state = n) ⇒ NUM_CELL tm.tape_h ≠ c) ==>
- ((tm.state = NUM_TO_STATE n) ⇒ tm.tape_h ≠ CELL_NUM c)) `,
-strip_tac >> strip_tac >> strip_tac >> ` STATE_TO_NUM tm.state = STATE_TO_NUM (NUM_TO_STATE n)`
-by rfs[NUM_TO_STATE_TO_NUM] >> fs[STATE_TO_NUM_TO_STATE] >>  fs[CELL_NUM_NUM_CELL_RW] )
-
-val EQ_SND_P_LESS_LEM = Q.store_thm("EQ_SND_P_LESS_LEM",
-`(c = p ' a) ==> (∀d. (d ∈ FDOM p) ==> ( p ' d = ((p \\ a) |+ (a,c) ) ' d))`,
-rw[] >> Cases_on `d=a` >> fs[] >> EVAL_TAC >> fs[] >> `d ∈ FDOM (p \\ a)` by fs[] >>
-  simp[DOMSUB_FAPPLY_THM])
-
+  `(NUM_CELL (CELL_NUM c) = c) ⇒
+   ((STATE_TO_NUM tm.state = n) ⇒ NUM_CELL tm.tape_h ≠ c) ⇒
+   (tm.state = NUM_TO_STATE n) ⇒ tm.tape_h ≠ CELL_NUM c`,
+  strip_tac >> strip_tac >> strip_tac >>
+  `STATE_TO_NUM tm.state = STATE_TO_NUM (NUM_TO_STATE n)`
+    by rfs[NUM_TO_STATE_TO_NUM] >>
+  fs[STATE_TO_NUM_TO_STATE] >>  fs[CELL_NUM_NUM_CELL_RW]);
 
 val EQ_SND_P_LESS = Q.store_thm("EQ_SND_P_LESS",
-`( ( a  ∈ FDOM p ) ∧ (a <> b) ) ==> (( (p \\ a) ' b ) =  (p ' b ))`,
-rw[] >> `∃c. c = p ' a` by fs[] >> `FDOM ((p \\ a) |+ (a,c) ) = FDOM p` by fs[] >>
-`∀d. (d ∈ FDOM p) ==> (∃k. p ' d = k)` by fs[] >>
-`∀d. (d ∈ FDOM p) ==> (∃k. ((p \\ a) |+ (a,c) ) ' d = k)` by fs[] >>
-simp[DOMSUB_FAPPLY_THM] )
-
-
+  `a <> b  ==> ((p \\ a) ' b  =  p ' b)`,
+  simp[DOMSUB_FAPPLY_THM]);
 
 val UPDATE_W_PROG_NIN_TM = Q.store_thm("UPDATE_W_PROG_NIN_TM",
   `((NUM_CELL (CELL_NUM c) = c) ∧ ((NUM_TO_STATE n,CELL_NUM c) ∈ FDOM p) ∧
@@ -598,10 +624,13 @@ val UPDATE_W_PROG_NIN_TM = Q.store_thm("UPDATE_W_PROG_NIN_TM",
   Cases_on `tm.tape_r = []` >> fs[ENCODE_TM_TAPE_def]);
 
 val tm_eq_tm_with_state = Q.store_thm("tm_eq_tm_with_state",
-`(tm.state = a) ==> (tm = tm with state := a)`,
-strip_tac >> `(tm with state := a).state = a` by fs[] >> rfs[TM_component_equality])
+  `(tm.state = a) ==> (tm = tm with state := a)`,
+  strip_tac >> `(tm with state := a).state = a` by fs[] >>
+  rfs[TM_component_equality])
 
-val effempty_def = Define`effempty p <=> FDOM p ⊆ {(a:state,b) | (a,b) | a = 0}`
+val effempty_def = Define`
+  effempty p <=> FDOM p ⊆ {(a:state,b) | (a,b) | a = 0}
+`;
 
 val containment_lem_nzero = Q.store_thm("tm_eq_tm_with_state",
   `((OLEAST n.
@@ -620,161 +649,106 @@ val containment_lem_nzero = Q.store_thm("tm_eq_tm_with_state",
       simp[] >> UNABBREV_ALL_TAC >> strip_tac >> res_tac >> fs[]));
 
 val effempty_no_update = Q.store_thm("effempty_no_update",
-`effempty tm.prog ==> (UPDATE_TAPE tm = tm with state := <|n := 0|>)`,
-rw[effempty_def]>> simp[UPDATE_TAPE_def]>> Cases_on `(tm.state,tm.tape_h) ∈ FDOM tm.prog`>> simp[]>>
+  `effempty tm.prog ==> (UPDATE_TAPE tm = tm with state := <|n := 0|>)`,
+  rw[effempty_def]>> simp[UPDATE_TAPE_def]>>
+  Cases_on `(tm.state,tm.tape_h) ∈ FDOM tm.prog`>> simp[]>>
   fs[SUBSET_DEF] >> res_tac >> fs[st_def])
 
 
 val CELL_NUM_LEM11 = Q.store_thm("CELL_NUM_LEM1",
-`((∀n'. n' < n ⊗ c ⇒ nfst n' ≠ 0 ⇒ (NUM_TO_STATE (nfst n'),CELL_NUM (nsnd n')) ∉ FDOM p )
-      ∧ ( (NUM_TO_STATE n,CELL_NUM c) ∈ FDOM p) ∧ n<>0) ==> ((c=0) ∨ (c=1))`,
-spose_not_then strip_assume_tac >> Cases_on `CELL_NUM c` >-
-               (`0<c` by simp[] >> metis_tac[nfst_npair,nsnd_npair,npair_mono,CELL_NUM_def]  ) >-
-               (`1<c` by simp[] >> metis_tac[nfst_npair,nsnd_npair,npair_mono,CELL_NUM_def]  ) );
+  `(∀n'. n' < n ⊗ c ⇒ nfst n' ≠ 0 ⇒
+     (NUM_TO_STATE (nfst n'),CELL_NUM (nsnd n')) ∉ FDOM p) ∧
+   (NUM_TO_STATE n,CELL_NUM c) ∈ FDOM p ∧ n<>0
+      ==>
+   (c=0) ∨ (c=1)`,
+  spose_not_then strip_assume_tac >> Cases_on `CELL_NUM c`
+  >- (`0<c` by simp[] >>
+      metis_tac[nfst_npair,nsnd_npair,npair_mono,CELL_NUM_def])
+  >- (`1<c` by simp[] >>
+      metis_tac[nfst_npair,nsnd_npair,npair_mono,CELL_NUM_def]));
 
-val FULL_ENCODE_IGNORES_PROGS' = FULL_ENCODE_IGNORES_PROGS |> SYM  |> Q.INST[`p`|->`ARB` ]
+val FULL_ENCODE_IGNORES_PROGS' =
+    FULL_ENCODE_IGNORES_PROGS |> SYM  |> Q.INST[`p`|->`ARB` ]
 
 val tmstepf_update_equiv = Q.store_thm("tmstepf_update_equiv",
-`∀p n tm. (n = ⟦tm⟧ ) ==>
-        (tmstepf p n = FULL_ENCODE_TM (UPDATE_TAPE (tm with prog := p) ))`,
-ho_match_mp_tac (theorem"tmstepf_ind") >> simp[OLEAST_EQ_SOME] >> rw[] >>
-pop_assum (assume_tac o CONV_RULE (HO_REWR_CONV npair_lem)) >> fs[] >> simp[Once tmstepf_def] >>
-Cases_on `OLEAST n. (NUM_TO_STATE (nfst n),CELL_NUM (nsnd n)) ∈ FDOM p ∧ nfst n ≠ 0`
->- (simp[] >> fs[containment_lem_nzero,effempty_no_update] >>
-    simp[UPDATE_TAPE_def,FULL_ENCODE_TM_def,STATE_TO_NUM_def,ENCODE_TM_TAPE_def] )
->- (fs[OLEAST_EQ_SOME] >> rename [`NUM_TO_STATE (nfst nc)`] >> simp[] >>
-    `∃n c. nc = n *, c` by metis_tac[npair_cases] >>
-    fs[UPDATE_TAPE_ACT_STATE_TM_thm,NUM_TO_CELL_TO_NUM,FULL_ENCODE_TM_STATE] >>
-    `NUM_CELL (CELL_NUM c) = c` by metis_tac[CELL_NUM_LEM11,NUM_TO_CELL_TO_NUM] >> simp[] >> fs[] >>
-    rfs[NUM_CELL_INJ] >>
-    Cases_on `(STATE_TO_NUM tm.state = n) ∧ (NUM_CELL tm.tape_h = c)`  >> rw[]
-    >- (fs[STATE_TO_NUM_def,REWRITE_RULE[STATE_TO_NUM_def] updn_UPDATE_TAPE] )
-    >- (`∃ a s. p ' (NUM_TO_STATE n,CELL_NUM c) = (s,a)` by metis_tac[pairTheory.pair_CASES] >>
-        first_x_assum(qspecl_then[`n`,`c`,`s`,`a`] mp_tac) >> simp[] >> rw[CELL_NUM_NUM_CELL_RW] >>
-        simp[UPDATE_TAPE_def,STATE_TO_NUM_def,NUM_TO_STATE_def] >>
-        Cases_on `(tm.state,tm.tape_h) ∈ FDOM p` >> simp[]
-        >- (Cases_on `tm.state.n = 0` >>simp[]
-            >- simp_tac bool_ss [FULL_ENCODE_IGNORES_PROGS, GSYM TM_fupdcanon]
-            >- (COND_CASES_TAC
-                >- (simp[DOMSUB_FAPPLY_THM ] >>
-                    `¬((<|n := n|> = tm.state) ∧ (CELL_NUM c = tm.tape_h))` by
-                    fs[STATE_TO_NUM_def,CELL_NUM_def,NUM_CELL_def] >>
-                    Cases_on `SND (p ' (tm.state,tm.tape_h))` >> rw[]
-    >- (`tm with <|state := FST (p ' (tm.state,tm.tape_h)); prog := p; tape_h := Z|> = tm with
-    <|prog := p; state := FST (p ' (tm.state,tm.tape_h));  tape_h := Z|>` by simp[] >>
-    asm_simp_tac bool_ss [] >>
-    `tm with <|state := FST (p ' (tm.state,tm.tape_h)); prog := p \\ (<|n := n|>,CELL_NUM c);
-    tape_h := Z|> = tm with
-    <|prog := p \\ (<|n := n|>,CELL_NUM c) ; state := FST (p ' (tm.state,tm.tape_h));
-    tape_h := Z|>` by simp[] >>asm_simp_tac bool_ss [] >>
-    rw[])
-   >-(`tm with <|state := FST (p ' (tm.state,tm.tape_h)); prog := p; tape_h := O|> = tm with
-   <|prog := p; state := FST (p ' (tm.state,tm.tape_h));  tape_h := O|>` by simp[] >>
-   asm_simp_tac bool_ss [] >>
-   `tm with <|state := FST (p ' (tm.state,tm.tape_h)); prog := p \\ (<|n := n|>,CELL_NUM c);
-   tape_h := O|> = tm with
-   <|prog := p \\ (<|n := n|>,CELL_NUM c) ; state := FST (p ' (tm.state,tm.tape_h));
-   tape_h := O|>` by simp[] >>asm_simp_tac bool_ss [] >>
-   rw[])
-   >- (`<|state := FST (p ' (tm.state,tm.tape_h)); prog := p; tape_l := []; tape_h := Z;
-     tape_r := tm.tape_h::tm.tape_r|> =
-     <|prog := p; state := FST (p ' (tm.state,tm.tape_h));  tape_l := []; tape_h := Z;
-    tape_r := tm.tape_h::tm.tape_r|>` by simp[] >>
-    asm_simp_tac bool_ss [] >>
-    ` <|state := FST (p ' (tm.state,tm.tape_h)); prog := p \\ (<|n := n|>,CELL_NUM c);
-                                   tape_l := []; tape_h := Z;
-                                   tape_r := tm.tape_h::tm.tape_r|> =
-     <|prog := p \\ (<|n := n|>,CELL_NUM c) ; state := FST (p ' (tm.state,tm.tape_h));
-                                   tape_l := []; tape_h := Z;
-                                   tape_r := tm.tape_h::tm.tape_r|>` by simp[] >>
-    asm_simp_tac bool_ss [] >> rw[])
-    >- (`<|state := FST (p ' (tm.state,tm.tape_h)); prog := p; tape_l := TL tm.tape_l;
-                                   tape_h := HD tm.tape_l; tape_r := tm.tape_h::tm.tape_r|> =
-    <|prog := p; state := FST (p ' (tm.state,tm.tape_h));  tape_l := TL tm.tape_l;
-                                   tape_h := HD tm.tape_l; tape_r := tm.tape_h::tm.tape_r|>` by
-      simp[] >>
-                                                                     asm_simp_tac bool_ss [] >>
-    `<|state := FST (p ' (tm.state,tm.tape_h)); prog := p \\ (<|n := n|>,CELL_NUM c);
-                                   tape_l := TL tm.tape_l;
-                                   tape_h := HD tm.tape_l; tape_r := tm.tape_h::tm.tape_r|> =
-    <|prog := p \\ (<|n := n|>,CELL_NUM c) ; state := FST (p ' (tm.state,tm.tape_h));
-                                   tape_l := TL tm.tape_l;
-                                   tape_h := HD tm.tape_l;
-                                   tape_r := tm.tape_h::tm.tape_r|>` by simp[] >>
-    asm_simp_tac bool_ss [] >> rw[])
-    >- (`<|state := FST (p ' (tm.state,tm.tape_h)); prog := p; tape_l := tm.tape_h::tm.tape_l;
-                                   tape_h := Z; tape_r := []|> =
-    <|prog := p; state := FST (p ' (tm.state,tm.tape_h)); tape_l := tm.tape_h::tm.tape_l;
-                                   tape_h := Z; tape_r := []|>` by simp[] >>
-                                                                     asm_simp_tac bool_ss [] >>
-   `<|state := FST (p ' (tm.state,tm.tape_h)); prog := p \\ (<|n := n|>,CELL_NUM c);
-                                   tape_l := tm.tape_h::tm.tape_l; tape_h := Z; tape_r := []|> =
-     <|prog := p \\ (<|n := n|>,CELL_NUM c) ; state := FST (p ' (tm.state,tm.tape_h));
-                                   tape_l := tm.tape_h::tm.tape_l;
-                                   tape_h := Z; tape_r := []|>` by simp[] >>
-    asm_simp_tac bool_ss [] >> rw[])
-    >- (`<|state := FST (p ' (tm.state,tm.tape_h)); prog := p; tape_l := tm.tape_h::tm.tape_l;
-                                   tape_h := HD tm.tape_r;
-                                   tape_r := TL tm.tape_r|> =
-     <|prog := p; state := FST (p ' (tm.state,tm.tape_h)); tape_l := tm.tape_h::tm.tape_l;
-                                   tape_h := HD tm.tape_r;
-                                   tape_r := TL tm.tape_r|>` by simp[] >> asm_simp_tac bool_ss [] >>
-    `<|state := FST (p ' (tm.state,tm.tape_h)); prog := p \\ (<|n := n|>,CELL_NUM c);
-                                   tape_l := tm.tape_h::tm.tape_l; tape_h := HD tm.tape_r;
-                                   tape_r := TL tm.tape_r|> =
-     <|prog := p \\ (<|n := n|>,CELL_NUM c) ; state := FST (p ' (tm.state,tm.tape_h));
-                                   tape_l := tm.tape_h::tm.tape_l; tape_h := HD tm.tape_r;
-                                   tape_r := TL tm.tape_r|>` by simp[] >>
-    asm_simp_tac bool_ss [] >> rw[])   )
-
-
-                >- (fs[STATE_TO_NUM_def,CELL_NUM_def,NUM_CELL_def] >>
-                                     Cases_on `SND (p ' (tm.state,tm.tape_h))` >> rw[])
-               ) ) >- (simp_tac bool_ss [FULL_ENCODE_IGNORES_PROGS, GSYM TM_fupdcanon])  ) )
-
-                                      )
-
-(* I am sorry *)
-
-
-val nsnd0 = EVAL ``nsnd 0``
-
-
-val nfst0 = EVAL ``nfst 0``
-
+  `∀p n tm.
+    (n = ⟦tm⟧) ==>
+    (tmstepf p n = FULL_ENCODE_TM (UPDATE_TAPE (tm with prog := p) ))`,
+  ho_match_mp_tac (theorem"tmstepf_ind") >> simp[OLEAST_EQ_SOME] >> rw[] >>
+  pop_assum (assume_tac o CONV_RULE (HO_REWR_CONV npair_lem)) >> fs[] >>
+  simp[Once tmstepf_def] >>
+  Cases_on `
+    OLEAST n. (NUM_TO_STATE (nfst n),CELL_NUM (nsnd n)) ∈ FDOM p ∧ nfst n ≠ 0
+  `
+  >- (simp[] >> fs[containment_lem_nzero,effempty_no_update] >>
+      simp[UPDATE_TAPE_def,FULL_ENCODE_TM_def,STATE_TO_NUM_def,
+           ENCODE_TM_TAPE_def]) >>
+  fs[OLEAST_EQ_SOME] >> rename [`NUM_TO_STATE (nfst nc)`] >> simp[] >>
+  `∃n c. nc = n *, c` by metis_tac[npair_cases] >>
+  fs[UPDATE_TAPE_ACT_STATE_TM_thm,NUM_TO_CELL_TO_NUM,
+     FULL_ENCODE_TM_STATE] >>
+  `NUM_CELL (CELL_NUM c) = c`
+    by metis_tac[CELL_NUM_LEM11,NUM_TO_CELL_TO_NUM] >> simp[] >> fs[] >>
+  rfs[NUM_CELL_INJ] >>
+  Cases_on `(STATE_TO_NUM tm.state = n) ∧ (NUM_CELL tm.tape_h = c)`  >>
+  rw[]
+  >- (fs[STATE_TO_NUM_def,REWRITE_RULE[STATE_TO_NUM_def] updn_UPDATE_TAPE]) >>
+  `∃ a s. p ' (NUM_TO_STATE n,CELL_NUM c) = (s,a)`
+    by metis_tac[pairTheory.pair_CASES] >>
+  first_x_assum(qspecl_then[`n`,`c`,`s`,`a`] mp_tac) >> simp[] >>
+  rw[CELL_NUM_NUM_CELL_RW] >>
+  simp[UPDATE_TAPE_def,STATE_TO_NUM_def,NUM_TO_STATE_def] >>
+  Cases_on `(tm.state,tm.tape_h) ∈ FDOM p` >> simp[]
+  >- (Cases_on `tm.state.n = 0` >>simp[]
+      >- simp_tac bool_ss [FULL_ENCODE_IGNORES_PROGS, GSYM TM_fupdcanon] >>
+      reverse COND_CASES_TAC >- fs[STATE_TO_NUM_def] >>
+      simp[DOMSUB_FAPPLY_THM ] >>
+      `¬((<|n := n|> = tm.state) ∧ (CELL_NUM c = tm.tape_h))`
+         by fs[STATE_TO_NUM_def,CELL_NUM_def,NUM_CELL_def] >> simp[] >>
+      Cases_on `SND (p ' (tm.state,tm.tape_h))` >> rw[] >>
+      ONCE_REWRITE_TAC [FULL_ENCODE_IGNORES_PROGS'] >>
+      CONV_TAC (BINOP_CONV (RAND_CONV (SIMP_CONV (srw_ss()) []))) >>
+      simp[]) >>
+   ONCE_REWRITE_TAC [FULL_ENCODE_IGNORES_PROGS'] >>
+   CONV_TAC (BINOP_CONV (RAND_CONV (SIMP_CONV (srw_ss()) []))) >>
+   simp[]);
 
 val primrec_tmstepf_form = Q.store_thm("primrec_tmstepf_form",
-`∀n.  (Cn (proj 0)  [pr_cond (Cn (pr2 $*)  [Cn pr_eq [Cn (pr1 nfst) [proj 0] ;
-       Cn (pr1 nfst) [K k] ];  Cn pr_eq [Cn pr_mod [Cn (pr1 nsnd) [Cn (pr1 nsnd) [proj 0]] ;twof];
-       Cn (pr1 nsnd) [K k] ] ] )
-      (Cn updn [K snum; K anum ; proj 0] )
-      (Cn (pr1 (tmstepf q)) [proj 0] ) ] ) [n] =
-      (λtmn. if (nfst tmn = nfst k) ∧ (nsnd (nsnd tmn) MOD 2 = nsnd k) then
-                       updn [snum; anum; tmn]
-                   else tmstepf q tmn
-                 ) n`,
-rw[Cn_def,FUN_EQ_THM] >> rw[pr_cond_def] )
+  `∀n.
+    (Cn (proj 0) [
+        pr_cond (Cn (pr2 $* ) [Cn pr_eq [Cn (pr1 nfst) [proj 0] ;
+                                         Cn (pr1 nfst) [K k] ];
+                               Cn pr_eq [Cn pr_mod [
+                                            Cn (pr1 nsnd) [
+                                              Cn (pr1 nsnd) [proj 0]
+                                            ];
+                                            twof
+                                         ];
+                                         Cn (pr1 nsnd) [K k] ] ] )
+                (Cn updn [K snum; K anum ; proj 0] )
+                (Cn (pr1 (tmstepf q)) [proj 0] )
+    ]) [n]
+   =
+    (λtmn. if (nfst tmn = nfst k) ∧ (nsnd (nsnd tmn) MOD 2 = nsnd k) then
+             updn [snum; anum; tmn]
+           else tmstepf q tmn) n`,
+  rw[Cn_def,FUN_EQ_THM] >> rw[pr_cond_def]);
 
 
 val primrec_of_tmstepf = Q.store_thm("primrec_of_tmstepf",
-`(primrec (pr1 (tmstepf q)) 1) ==> (primrec (Cn (proj 0)  [
-     pr_cond (Cn (pr2 $*)  [Cn pr_eq [Cn (pr1 nfst) [proj 0] ; Cn (pr1 nfst) [K k] ];
-               Cn pr_eq [Cn pr_mod [Cn (pr1 nsnd) [Cn (pr1 nsnd) [proj 0]] ;twof];
-               Cn (pr1 nsnd) [K k] ] ] )
-              (Cn updn [K snum; K anum ; proj 0] )
-              (Cn (pr1 (tmstepf q)) [proj 0]  )
-                        ] ) 1)`,
-strip_tac >> SRW_TAC [][primrec_rules] >> SRW_TAC [][pr_cond_def] >>
-       rpt ( MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules]) >> fs[UPDATE_TM_NUM_PRIMREC] );
-
-
-(*    SIMP_CONV(srw_ss())[pr_cond_def,nsnd0,nfst0] ``Cn (proj 0)  [
-        pr_cond (Cn (pr2 $* )  [Cn pr_eq [Cn (pr1 nfst) [proj 0] ; Cn (pr1 nfst) [K k] ];
-                               Cn pr_eq [Cn pr_mod [Cn (pr1 nsnd) [Cn (pr1 nsnd) [proj 0]] ;twof];
-                                         Cn (pr1 nsnd) [K k] ] ] )
-                    (Cn updn [K snum; K anum ; proj 0] )
-                    (Cn (tmstepf q) [proj 0]  )
-                ] []``   *)
+  `primrec (pr1 (tmstepf q)) 1 ==>
+   primrec (Cn (proj 0)  [
+     pr_cond (Cn (pr2 $* ) [
+                     Cn pr_eq [Cn (pr1 nfst) [proj 0] ; Cn (pr1 nfst) [K k] ];
+                     Cn pr_eq [
+                       Cn pr_mod [Cn (pr1 nsnd) [Cn (pr1 nsnd) [proj 0]] ;twof];
+                       Cn (pr1 nsnd) [K k] ] ] )
+             (Cn updn [K snum; K anum ; proj 0] )
+             (Cn (pr1 (tmstepf q)) [proj 0]  )
+   ]) 1`,
+  strip_tac >> SRW_TAC [][primrec_rules] >> SRW_TAC [][pr_cond_def] >>
+  rpt (MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules]) >>
+  fs[UPDATE_TM_NUM_PRIMREC]);
 
 val primrec_tmstepf = Q.store_thm ("primerec_tmstepf",
   `primrec (pr1 (tmstepf p)) 1`,
@@ -825,39 +799,48 @@ val primrec_tmstepf = Q.store_thm ("primerec_tmstepf",
         ]` >> fs[primrec_of_tmstepf,primrec_tmstepf_form])));
 
 val tm_return_def = tDefine"tm_return"`
-tm_return tm = if tm.tape_h = Z then 0
-               else case tm.tape_r of [] => 0
-                                 | h::t  => 1 + tm_return (tm with <| tape_h := h;tape_r:=t|>)`
-(WF_REL_TAC`measure (LENGTH o (λtm. tm.tape_r))` >> simp[] )
+  tm_return tm =
+    if tm.tape_h = Z then 0
+    else
+      case tm.tape_r of
+          [] => 0
+        | h::t  => 1 + tm_return (tm with <| tape_h := h;tape_r:=t|>)
+`
+  (WF_REL_TAC`measure (LENGTH o (λtm. tm.tape_r))` >> simp[]);
 
+val tm_fn_def = Define`
+  tm_fn p args =
+    let tm0 = INITIAL_TM p args
+    in
+      OPTION_MAP (λk. (RUN k tm0)) (OLEAST n. HALTED (RUN n tm0))
+`;
 
+val un_nlist_def = tDefine "un_nlist" `
+  (un_nlist 0 = []) ∧
+  (un_nlist l = nfst (l-1) :: un_nlist (nsnd (l-1)))`
+  (qexists_tac `$<` >> simp[] >> strip_tac >> `nsnd v <= v` by simp[nsnd_le] >>
+   `v < SUC v` by fs[] >> fs[]);
 
-val tm_fn_def = Define`tm_fn p args = let tm0 = INITIAL_TM p args in
- OPTION_MAP (λk. (RUN k tm0)) (OLEAST n. HALTED (RUN n tm0))`
-
-val un_nlist_def = tDefine"un_nlist"`
-(un_nlist 0 = []) ∧ (un_nlist l = [nfst (l-1)] ++ (un_nlist (nsnd (l-1))) )`
-(qexists_tac `$<` >> simp[] >> strip_tac >> `nsnd v <= v` by simp[nsnd_le] >>
-`v < SUC v` by fs[] >> fs[])
-
-
-
-val INITIAL_TM_NUM_def = Define`INITIAL_TM_NUM = (λl. ⟦INITIAL_TM FEMPTY (un_nlist (proj 0 l))⟧)`
+val INITIAL_TM_NUM_def = Define`
+  INITIAL_TM_NUM = (λl. ⟦INITIAL_TM FEMPTY (un_nlist (proj 0 l))⟧)
+`;
 
 val RUN_NUM_def = Define`
 RUN_NUM p targs = Pr (INITIAL_TM_NUM) (Cn (pr1 (tmstepf p)) [proj 1]) targs`
 
 val INITIAL_TAPE_PROG = Q.store_thm("INITIAL_TAPE_PROG",
-`(INITIAL_TAPE_TM tm l) with prog := p = INITIAL_TAPE_TM (tm with prog := p) l `,
+`(INITIAL_TAPE_TM tm l) with prog := p = INITIAL_TAPE_TM (tm with prog := p) l`,
 Cases_on `l` >> simp[INITIAL_TAPE_TM_def])
 
 val UPDATE_TAPE_PROG = Q.store_thm("UPDATE_TAPE_PROG",
 `(tm.prog = p) ==> ((UPDATE_TAPE tm) with prog := p = UPDATE_TAPE tm)`,
-strip_tac >>simp[UPDATE_TAPE_def] >> rw[] >> Cases_on `SND (tm.prog ' (tm.state,tm.tape_h))` >>simp[TM_component_equality] )
+strip_tac >>simp[UPDATE_TAPE_def] >> rw[] >>
+Cases_on `SND (tm.prog ' (tm.state,tm.tape_h))` >>simp[TM_component_equality]);
 
 val UPDATE_PROG_CONSERVE = Q.store_thm("UPDATE_PROG_CONSERVE[simp]",
 `(UPDATE_TAPE tm).prog = tm.prog`,
-simp[UPDATE_TAPE_def] >> rw[] >> Cases_on `SND (tm.prog ' (tm.state,tm.tape_h))` >>simp[TM_component_equality])
+simp[UPDATE_TAPE_def] >> rw[] >>
+Cases_on `SND (tm.prog ' (tm.state,tm.tape_h))` >>simp[TM_component_equality]);
 
 val RUN_PROG_CONSERVE = Q.store_thm("RUN_PROG_CONSERVE[simp]",
 `(RUN n tm).prog = tm.prog`,
@@ -876,18 +859,22 @@ val INITIAL_TM_PROG = Q.store_thm("INITIAL_TM_PROG[simp]",
  simp[INITIAL_TM_def])
 
 val RUN_NUM_corr = Q.store_thm("RUN_NUM_corr",
-`RUN_NUM p [t;args] = ⟦FUNPOW UPDATE_TAPE t (INITIAL_TM p (un_nlist args))⟧`,
-simp[RUN_NUM_def] >> Induct_on `t` >> fs[]
-    >- (simp[INITIAL_TM_NUM_def,INITIAL_TM_def] >>
-        ONCE_REWRITE_TAC[FULL_ENCODE_IGNORES_PROGS|> Q.INST [`p`|-> `ARB` ] |> SYM  ] >>
-        simp_tac bool_ss[INITIAL_TAPE_PROG] >>simp[] )
-    >- (simp[FUNPOW_SUC] >> rw[SIMP_RULE bool_ss[] tmstepf_update_equiv] >>
-        fs[RUN_PROG] ) )
+  `RUN_NUM p [t;args] = ⟦FUNPOW UPDATE_TAPE t (INITIAL_TM p (un_nlist args))⟧`,
+  simp[RUN_NUM_def] >> Induct_on `t` >> fs[]
+  >- (simp[INITIAL_TM_NUM_def,INITIAL_TM_def] >>
+      ONCE_REWRITE_TAC[FULL_ENCODE_IGNORES_PROGS
+                         |> Q.INST [`p`|-> `ARB` ] |> SYM] >>
+      simp_tac bool_ss[INITIAL_TAPE_PROG] >>simp[])
+  >- (simp[FUNPOW_SUC] >> rw[SIMP_RULE bool_ss[] tmstepf_update_equiv] >>
+      fs[RUN_PROG]));
 
 val tm_return_num_def = Define`
-tm_return_num = Pr (Cn (pr1 nsnd) [Cn (pr1 nsnd) [proj 0]])
-         (pr_cond (Cn pr_eq [Cn pr_mod [Cn pr_div [proj 2;proj 0]; twof]; zerof])
-             (proj 1) (Cn (pr2 $+) [proj 1;onef] )  ) `
+  tm_return_num =
+    Pr (Cn (pr1 nsnd) [Cn (pr1 nsnd) [proj 0]])
+       (pr_cond (Cn pr_eq [Cn pr_mod [Cn pr_div [proj 2;proj 0]; twof]; zerof])
+                (proj 1)
+                (Cn (pr2 $+) [proj 1;onef]))
+`;
 
 val _ = temp_set_fixity "*." (Infixl 600)
 val _ = temp_overload_on ("*.", ``λn m. Cn (pr2 $*) [n; m]``)
@@ -904,33 +891,53 @@ val primrec_pr_exp = Q.store_thm(
 
 
 val tm_log_num_def = Define`
-tm_log_num  = minimise (SOME ∘ (Cn pr_eq
- [Cn pr_mod [Cn pr_div [proj 1; Cn pr_exp [twof;Cn succ [proj 0] ] ];twof ] ;zerof ] ) ) `
+  tm_log_num =
+    minimise (SOME ∘
+              Cn pr_eq [
+                 Cn pr_mod [
+                   Cn pr_div [proj 1; Cn pr_exp [twof;Cn succ [proj 0] ] ];
+                   twof
+                 ];
+                 zerof
+               ])
+`;
 
 val primrec_tm_log_num = Q.store_thm("primrec_tm_log_num",
-`primrec (Cn pr_eq [Cn pr_mod [Cn pr_div [proj 1; Cn pr_exp [twof;Cn succ [proj 0] ] ];twof ] ;
-                    zerof ] )  2`,
-SRW_TAC [][primrec_rules] >> SRW_TAC [][pr_cond_def] >>
-rpt ( MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules]) >> simp[primrec_pr_exp] )
+  `primrec (Cn pr_eq [Cn pr_mod [Cn pr_div [proj 1;
+                                            Cn pr_exp [twof;Cn succ [proj 0]]];
+                                 twof];
+                      zerof ]) 2`,
+  SRW_TAC [][primrec_rules] >> SRW_TAC [][pr_cond_def] >>
+  rpt (MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules]) >>
+  simp[primrec_pr_exp]);
 
 val recfn_rulesl = CONJUNCTS recfn_rules
 val recfnMin = save_thm("recfnMin", List.nth(recfn_rulesl, 5))
 
 val recfn_tm_log_num = Q.store_thm("recfn_tm_log_num",
-`recfn tm_log_num 1`,
-`recfn (SOME o (Cn pr_eq [Cn pr_mod [Cn pr_div [proj 1; Cn pr_exp [twof;Cn succ [proj 0]] ];twof ] ;
-    zerof ])) 2` by simp[primrec_recfn,primrec_tm_log_num] >> rw[tm_log_num_def] >>
-                                       rfs[recfnMin])
-
+  `recfn tm_log_num 1`,
+  `recfn (SOME o
+          Cn pr_eq [Cn pr_mod [Cn pr_div [proj 1;
+                                          Cn pr_exp [twof;Cn succ [proj 0]]];
+                               twof] ;
+                    zerof]) 2`
+     by simp[primrec_recfn,primrec_tm_log_num] >>
+  rw[tm_log_num_def] >> rfs[recfnMin]);
 
 val primrec_tm_ret_run = Q.store_thm("primrec_tm_ret_run",
-`primrec tm_return_num 2`,
-`primrec (Cn (pr1 nsnd) [Cn (pr1 nsnd) [proj 0]]) 1` by (SRW_TAC [][primrec_rules] >>
- SRW_TAC [][pr_cond_def] >> rpt ( MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules])) >>
-`primrec (pr_cond (Cn pr_eq [Cn pr_mod [Cn pr_div [proj 2;proj 0]; twof]; zerof])
-                  (proj 1) (Cn (pr2 $+) [proj 1;onef] )) 3` by  (SRW_TAC [][primrec_rules] >>
-SRW_TAC [][pr_cond_def] >> rpt ( MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules]))  >>
-rw[tm_return_num_def,primrec_pr] )
+  `primrec tm_return_num 2`,
+  `primrec (Cn (pr1 nsnd) [Cn (pr1 nsnd) [proj 0]]) 1`
+     by (SRW_TAC [][primrec_rules] >>
+         SRW_TAC [][pr_cond_def] >>
+         rpt (MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules])) >>
+  `primrec (pr_cond (Cn pr_eq [Cn pr_mod [Cn pr_div [proj 2;proj 0]; twof];
+                               zerof])
+                    (proj 1)
+                    (Cn (pr2 $+) [proj 1;onef] )) 3`
+     by (SRW_TAC [][primrec_rules] >>
+         SRW_TAC [][pr_cond_def] >>
+         rpt ( MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules]))  >>
+  rw[tm_return_num_def,primrec_pr]);
 
 
 val INITIAL_TAPE_PRES_STATE = Q.store_thm("INITIAL_TAPE_PRES_STATE[simp]",
@@ -939,7 +946,8 @@ Cases_on `k` >> rw[INITIAL_TAPE_TM_def])
 
 
 val pr_neq_def = Define`
-pr_neq = Cn (pr2 $+) [Cn (pr2 $-) [pr_le; cflip pr_le]; Cn (pr2 $-) [cflip pr_le; pr_le]]
+  pr_neq = Cn (pr2 $+) [Cn (pr2 $-) [pr_le; cflip pr_le];
+                        Cn (pr2 $-) [cflip pr_le; pr_le]]
 `;
 
  val pr_neq_thm = Q.store_thm(
@@ -952,19 +960,25 @@ val primrec_pr_neq = Q.store_thm(
 `primrec pr_neq 2`,
 SRW_TAC [][pr_neq_def, primrec_rules]);
 
-
-val el_zero_def = Define`(el_zero 0 = 1) ∧
-(el_zero (SUC n) = let t = ntl (SUC n) in napp (el_zero n) (ncons (nel t (el_zero n) + 1) 0) )`
+val el_zero_def = Define`
+  (el_zero 0 = 1) ∧
+  (el_zero (SUC n) =
+    let t = ntl (SUC n)
+    in
+      napp (el_zero n) (ncons (nel t (el_zero n) + 1) 0))
+`;
 
 val nlist_of_unnlist = Q.store_thm("nlist_of_unnlist[simp]",
-`nlist_of (un_nlist n) = n`,
-completeInduct_on `n` >> Cases_on `n` >- EVAL_TAC >> fs[un_nlist_def] >>
-`nsnd n' < SUC n'` by metis_tac[nsnd_le,prim_recTheory.LESS_SUC_REFL,LESS_EQ_LESS_TRANS] >>
-rw[ncons_def] >> fs[npair] )
+  `nlist_of (un_nlist n) = n`,
+  completeInduct_on `n` >> Cases_on `n` >- EVAL_TAC >> fs[un_nlist_def] >>
+  `nsnd n' < SUC n'`
+    by metis_tac[nsnd_le,prim_recTheory.LESS_SUC_REFL,LESS_EQ_LESS_TRANS] >>
+  rw[ncons_def] >> fs[npair]);
 
 val un_nlist_nlist_of_inv = Q.store_thm("un_nlist_nlist_of_inv[simp]",
-`un_nlist (nlist_of n) = n`,
-Induct_on `n`  >> fs[nlist_of_def,un_nlist_def,ncons_def] >> strip_tac >>`h ⊗ nlist_of n + 1 = SUC (h ⊗ nlist_of n)` by fs[] >>  rw[un_nlist_def] )
+  `un_nlist (nlist_of n) = n`,
+  Induct_on `n`  >> fs[nlist_of_def,un_nlist_def,ncons_def] >> strip_tac >>
+  `h ⊗ nlist_of n + 1 = SUC (h ⊗ nlist_of n)` by fs[] >> rw[un_nlist_def])
 
 val ntl_nlist_unnlist = Q.store_thm("ntl_nlist_unnlist",
 `ntl (SUC n) = nlist_of (TL (un_nlist (SUC n)))`,
