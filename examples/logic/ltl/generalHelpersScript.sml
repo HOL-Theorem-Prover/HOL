@@ -1159,7 +1159,7 @@ val SORTED_GROUP_BY = store_thm
 
 val ONLY_MINIMAL_def = Define`
   ONLY_MINIMAL P l =
-    FILTER (λa. ~EXISTS (λx. P a x ∧ ~(x = a)) l) l`;
+    FILTER (λa. ~EXISTS (λx. P x a ∧ ~(x = a)) l) l`;
 
 
   (*   (ONLY_MINIMAL P [] = []) *)
@@ -1174,7 +1174,7 @@ val ONLY_MINIMAL_SUBSET = store_thm
    ``!P l. MEM_SUBSET (ONLY_MINIMAL P l) l``,
    gen_tac >> Induct_on `l` >> fs[ONLY_MINIMAL_def,MEM_SUBSET_def]
    >> rpt strip_tac >> fs[MEM_SUBSET_SET_TO_LIST]
-   >> Cases_on `EVERY ($~ ∘ (λx. P h x ∧ x ≠ h)) l`
+   >> Cases_on `EVERY ($~ ∘ (λx. P x h ∧ x ≠ h)) l`
    >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> fs[MEM_FILTER,EVERY_MEM]
   );
 
@@ -1182,7 +1182,7 @@ val ONLY_MINIMAL_MEM = store_thm
   ("ONLY_MINIMAL_MEM",
    ``!P l x.
        (MEM x (ONLY_MINIMAL P l) =
-        (MEM x l ∧ (!y. MEM y l ∧ ~(x = y) ==> ~P x y)))``,
+        (MEM x l ∧ (!y. MEM y l ∧ ~(x = y) ==> ~P y x)))``,
    simp[EQ_IMP_THM] >> rpt strip_tac
    >- metis_tac[MEM_SUBSET_SET_TO_LIST,ONLY_MINIMAL_SUBSET,MEM,SUBSET_DEF]
    >- (fs[ONLY_MINIMAL_def,MEM_FILTER,EVERY_MEM] >> metis_tac[])
