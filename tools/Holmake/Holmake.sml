@@ -130,13 +130,7 @@ val cline_additional_includes = #includes coption_value
 val pass_option_value =
     HM_Cline.fupd_core (HM_Core_Cline.fupd_includes (fn _ => [])) option_value
 
-fun has_clean [] = false
-  | has_clean (h::t) =
-      h = "clean" orelse h = "cleanAll" orelse h = "cleanDeps" orelse
-      has_clean t
-val _ = if has_clean targets then ()
-        else
-          do_lastmade_checks outputfns {no_lastmakercheck = no_lastmakercheck}
+val _ = do_lastmade_checks outputfns {no_lastmakercheck = no_lastmakercheck}
 
 val _ = diag ("CommandLine.name() = "^CommandLine.name())
 val _ = diag ("CommandLine.arguments() = "^
