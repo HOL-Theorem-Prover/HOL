@@ -330,6 +330,38 @@ val REACHREL_LEMM = store_thm
        )
   );
 
+val REDUCE_STATE_IS_WEAK = store_thm
+  ("REDUCE_STATE_IS_WEAK",
+   ``!aut. (isWeakAlterA aut ∧ isValidAlterA aut)
+               ==> isWeakAlterA (removeStatesSimpl aut)``,
+   simp[isWeakAlterA_def,isWeakWithOrder_def] >> rpt strip_tac
+   >> Cases_on `aut`
+   >> simp[removeStatesSimpl_def,ALTER_A_component_equality]
+   >> qabbrev_tac `reachable =
+                     reachRelFromSet (ALTER_A f f0 f1 f2 f3) (BIGUNION f0)`
+   >> qexists_tac `rrestrict ord (f ∩ reachable)`
+   >> fs[ALTER_A_component_equality]
+   >> strip_tac
+   >- metis_tac[INTER_SUBSET,partial_order_subset]
+   >- (rpt strip_tac >> `(a,d) ∈ f3 s` by metis_tac[]
+       >> simp[rrestrict_def] >> rpt strip_tac
+       >- metis_tac[]
+       >- (fs[isValidAlterA_def] >> metis_tac[SUBSET_DEF])
+       >- (qunabbrev_tac `reachable` >> fs[reachRelFromSet_def,reachRel_def]
+           >> `∃x. (oneStep (ALTER_A f f0 f1 f2 f3))^* x s ∧ ∃s. x ∈ s ∧ s ∈ f0`
+               by metis_tac[]
+           >> fs[] >> qexists_tac `x'` >> rpt strip_tac
+           >- (`oneStep (ALTER_A f f0 f1 f2 f3) s s'` by (
+                simp[oneStep_def,ALTER_A_component_equality]
+                >> metis_tac[]
+              )
+              >> metis_tac[RTC_RTC,RTC_SUBSET]
+              )
+           >- metis_tac[]
+          )
+      )
+  );
+
 val REDUCE_STATE_IS_VALID = store_thm
   ("REDUCE_STATE_IS_VALID",
    ``!aut. isValidAlterA aut ==> isValidAlterA (removeStatesSimpl aut)``,
