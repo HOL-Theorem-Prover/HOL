@@ -1042,11 +1042,10 @@ val EXPGBA_SOME_WFG = store_thm
 
 val EXPGBA_GRAPH_REACHABLE = store_thm
   ("EXPGBA_GRAPH_REACHABLE",
-   ``!f init aP g_AA acc ids g abstrAA.
+   ``!abstrAA f init aP g_AA acc ids g.
       (abstrAA = concr2AbstrAA (concrAA g_AA init aP))
-      ∧ isWeakAlterA abstrAA ∧ isValidAlterA abstrAA
-      ∧ (FINITE abstrAA.states) ∧ (abstrAA = removeStatesSimpl (ltl2waa f))
-      ∧ (abstrAA.alphabet = POW (set aP)) ∧ (wfg g_AA)
+      ∧ (abstrAA = removeStatesSimpl (ltl2waa f))
+      ∧ (wfg g_AA)
       ∧ (until_iff_final g_AA)
       ∧ (!id cT. (concr_extrTrans g_AA id = SOME cT)
               ==> (!ce. MEM ce cT
@@ -1073,20 +1072,18 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
                 ==> ((set x ∈ reachableFromSetGBA (waa2gba abstrAA)
                         (waa2gba abstrAA).initial)
                          ∧ (set x ∈ (waa2gba abstrAA).states))))``,
-    gen_tac >> gen_tac >> gen_tac
+    gen_tac >> gen_tac >> gen_tac >> gen_tac
     >> HO_MATCH_MP_TAC (theorem "expandGBA_ind") >> strip_tac
     >- (fs[] >> rpt strip_tac >> fs[expandGBA_def]
         >> first_x_assum (qspec_then `x` mp_tac) >> simp[] >> rpt strip_tac
-        >> fs[reachableFromSetGBA_def]
-        >> qabbrev_tac `abstr_gba =
-               waa2gba (concr2AbstrAA (concrAA g_AA init aP))`
-        >> `isValidGBA abstr_gba` by metis_tac[WAA2GBA_ISVALID]
-        >> `abstr_gba.initial ⊆ abstr_gba.states` by metis_tac[isValidGBA_def]
-        >> metis_tac[SUBSET_DEF,REACHABLE_GBA_LEMM]
+        >> `isWeakAlterA (concr2AbstrAA (concrAA g_AA init aP))`
+           by metis_tac[REDUCE_STATE_IS_WEAK, LTL2WAA_ISWEAK,
+                        LTL2WAA_ISVALID]
+        >> fs[waa2gba_def]
        )
     >- (strip_tac >> strip_tac >> strip_tac >> strip_tac >> strip_tac
         >> strip_tac >> strip_tac >> strip_tac >> strip_tac
-        >> strip_tac
+        >> strip_tac >> strip_tac
         >> fs[]
         >> `?node. lookup id g.nodeInfo = SOME node` by metis_tac[domain_lookup]
         >> first_x_assum (qspec_then `node` mp_tac) >> simp[]
@@ -1167,11 +1164,7 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
              >- metis_tac[]
          )
         >> rename[`wfg G2`] >> first_x_assum (qspec_then `G2` mp_tac) >> fs[]
-        >> `(isWeakAlterA (concr2AbstrAA (concrAA g_AA init aP)))
-          ∧ (isValidAlterA (concr2AbstrAA (concrAA g_AA init aP)))
-          ∧ (FINITE (concr2AbstrAA (concrAA g_AA init aP)).states)
-          ∧ ((concr2AbstrAA (concrAA g_AA init aP)).alphabet = POW (set aP))
-          ∧ (∀id cT.
+        >> `(∀id cT.
               (concr_extrTrans g_AA id = SOME cT) ⇒
               ∀ce. MEM ce cT ⇒ MEM_SUBSET ce.pos aP ∧ MEM_SUBSET ce.neg aP)`
              by (rpt strip_tac >> rw[] >> fs[] >> metis_tac[])
@@ -1204,6 +1197,32 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
               ∃n.
               lookup i G1.nodeInfo = SOME n ∧ MEM n.frmls NEW_NODES)`
          by metis_tac[WF_IMP_SUFFWFG,ADDNODE_GBA_FOLDR,SND,FST]
+         >> `isWeakAlterA abstrAA ∧ isValidAlterA abstrAA
+             ∧ (FINITE abstrAA.states)
+             ∧ (abstrAA.alphabet = POW (set aP))` by (
+             fs[] >> rpt strip_tac
+             >- metis_tac[REDUCE_STATE_IS_WEAK,LTL2WAA_ISWEAK,
+                           LTL2WAA_ISVALID]
+             >- metis_tac[REDUCE_STATE_IS_VALID,LTL2WAA_ISVALID]
+             >- (simp[concr2AbstrAA_def,concr2Abstr_states_def]
+                 >> `FINITE {x.frml | ?n. MEM (n,x) (toAList g_AA.nodeInfo)}`
+                     suffices_by (
+                      Q.HO_MATCH_ABBREV_TAC `FINITE S1 ==> FINITE S2`
+                      >> `S1 = S2` suffices_by fs[]
+                      >> qunabbrev_tac `S1` >> qunabbrev_tac `S2`
+                      >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
+                      >> metis_tac[MEM_toAList,domain_lookup]
+                  )
+                 >> `{x.frml | ∃n. MEM (n,x) (toAList g_AA.nodeInfo)} =
+                      IMAGE (λ(i,n). n.frml) (set (toAList g_AA.nodeInfo))` by (
+                      simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
+                      >- (qexists_tac `(n,x'')` >> fs[])
+                      >- (fs[] >> Cases_on `x''` >> fs[] >> metis_tac[])
+                  )
+                 >> metis_tac[FINITE_LIST_TO_SET,IMAGE_FINITE]
+                )
+             >- simp[concr2AbstrAA_def]
+         )
         >> `(∀i x.
             (MEM i ids ∨ MEM i new_ids)
             ∧ (lookup i G2.nodeInfo = SOME x)
@@ -1269,7 +1288,8 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
                        >> `f' ∈ concr2Abstr_states g_AA`
                           by (fs[ALTER_A_component_equality] >> metis_tac[])
                        >> fs[concr2Abstr_states_def,findNode_def]
-                       >> `(λ(i,l). l.frml = f') (n',x)` by fs[]
+                       >> rename[`f1 = x1.frml`,`n1 ∈ domain g_AA.nodeInfo`]
+                       >> `(λ(i,l). l.frml = f1) (n1,x1)` by fs[]
                        >> metis_tac[FIND_LEMM,NOT_SOME_NONE,MEM_toAList]
                    )
                 >> `EVERY IS_SOME
@@ -1316,12 +1336,14 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
                      by metis_tac[MAP_ZIP,LENGTH_COUNT_LIST,GBA_TRANS_LEMM]
                 >> simp[reachableFromSetGBA_def,reachableFromGBA_def,
                         stepGBA_def]
-                >> qunabbrev_tac `abstr_gba`
-                >> simp[waa2gba_def,gba_trans_def]
+                >> qunabbrev_tac `abstr_gba` >> simp[waa2gba_def]
+                >> `isWeakAlterA (concr2AbstrAA (concrAA g_AA init aP))`
+                      by metis_tac[]
+                >> simp[gba_trans_def]
                 >> simp[d_gen_def,removeStatesSimpl_def]
                 >> qexists_tac `set node.frmls` >> simp[] >> strip_tac
                 >- (
-                 Q.HO_MATCH_ABBREV_TAC `Q^* (set node.frmls) (set cE.sucs)`
+                  Q.HO_MATCH_ABBREV_TAC `Q^* (set node.frmls) (set cE.sucs)`
                  >> `Q (set node.frmls) (set cE.sucs)`
                        suffices_by metis_tac[RTC_SUBSET]
                  >> qunabbrev_tac `Q` >> simp[] >> qexists_tac `FST abstr_ce`
@@ -1513,7 +1535,9 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
                      >> Cases_on `cE` >> fs[concr2AbstractEdge_def]
                  )
                  >> fs[]
-                 >> rpt strip_tac >> rename[`abstr_ce = abstr_ce2`]
+                 >> `(concr2AbstrAA (concrAA g_AA init aP)).alphabet =
+                       POW (set aP)` by fs[concr2AbstrAA_def]
+                 >> rpt strip_tac >> fs[] >> rename[`abstr_ce = abstr_ce2`]
                  >> `abstr_ce2 ∈
                        set (MAP (concr2AbstractEdge (set aP)) TRNS)` by (
                      IMP_RES_TAC GBA_TRANS_LEMM
@@ -1556,7 +1580,7 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
                              ∧ MEM_SUBSET ce.sucs (graphStates g_AA))` by (
                       qunabbrev_tac `TRNS` >> fs[] >> gen_tac >> strip_tac
                       >> simp[MEM_SUBSET_SET_TO_LIST,SUBSET_DEF]
-                      >> rpt strip_tac
+                      >> rpt strip_tac >> rename[`MEM x _`]
                       >- (`∃l ce. MEM l ce_lists ∧ MEM ce l ∧ MEM x ce.pos`
                             by metis_tac[GBA_TRANS_LEMM3]
                           >> qunabbrev_tac `ce_lists`
@@ -1645,7 +1669,7 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
                 )
          )
         >> rpt conj_tac
-        >- (rpt strip_tac
+        >- (rpt strip_tac >> rename[`set x.frmls ∈ _`]
             >> `set x.frmls ∈ reachableFromSetGBA abstr_gba {set q | inGBA g q}`
                by metis_tac[]
             >> `{set q | inGBA g q} ⊆ {set q | inGBA G2 q}` suffices_by (
@@ -1653,7 +1677,7 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
              )
             >> fs[]
            )
-        >- (rpt strip_tac >> fs[]
+        >- (rpt strip_tac >> fs[] >> rename[`set x ∈ _`]
             >> `set x ∈ {set x | inGBA g x} ∪ set (MAP set NEW_NODES)` by (
                  `set x ∈ {set x | inGBA G1 x}` by (simp[] >> metis_tac[])
                  >> metis_tac[UNION_DEF]
@@ -1666,10 +1690,11 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
                      fs[inGBA_def,EXISTS_MEM,MEM_MAP]
                      >> rename[`MEM y2 (toAList G2.nodeInfo)`] >> Cases_on `y2`
                      >> rename[`MEM (id,nL) (toAList G2.nodeInfo)`]
-                     >> fs[] >> rw[] >> qexists_tac `id` >> qexists_tac `n`
+                     >> qexists_tac `id` >> qexists_tac `nL`
                      >> fs[MEM_EQUAL_SET,MEM_toAList]
-                     >> first_x_assum (qspec_then `n` mp_tac) >> rpt strip_tac
-                     >> first_x_assum (qspec_then `(id,n)` mp_tac)
+                     >> first_x_assum (qspec_then `nL` mp_tac) >> rw[]
+                     >> rename[`set n1.frmls = set _`]
+                     >> first_x_assum (qspec_then `(id,n1)` mp_tac)
                      >> simp[] >> rpt strip_tac
                      >> `id ∈ {x | MEM x new_ids ∨ x ∈ domain g.nodeInfo}`
                         by metis_tac[domain_lookup]
@@ -1699,7 +1724,7 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
          >- metis_tac[domain_lookup]
            )
         >- fs[expandGBA_def]
-        >- (rpt strip_tac
+        >- (rpt strip_tac >> rename[`set x ∈ POW _`]
             >> `set x ∈ {set x | inGBA g x} ∪ set (MAP set NEW_NODES)` by (
                  `set x ∈ {set x | inGBA G1 x}` by (simp[] >> metis_tac[])
                  >> metis_tac[UNION_DEF]
@@ -1756,79 +1781,82 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
        )
   );
 
-(*                ) *)
-(* ) *)
+val EXPGBA_CORRECT = store_thm
+  ("EXPGBA_CORRECT",
+   ``!f init aP g_AA abstrAA.
+    (expandAuto_init f = SOME (concrAA g_AA init aP))
+    (abstrAA = removeStatesSimpl (ltl2waa f))
+    ∧ (abstrAA = concr2AbstrAA (concrAA g_AA init aP))
+    ∧ wfg g_AA
+    ==>
+      case expandGBA_init (concrAA g_AA init aP) of
+        | NONE => F
+        | SOME c_gba =>
+          (concr2AbstrGBA c_gba =
+             removeStatesSimpl (waa2gba abstrAA))``,
+   fs[] >> rpt strip_tac >> simp[expandGBA_init_def]
+   >> qabbrev_tac `addedInit:(α nodeLabelGBA, α edgeLabelGBA) gfg =
+          FOLDR (λn g. addNodeToGBA g n) empty
+           (MAP
+             (λi_list.
+               MAP (λl. l.frml)
+               (CAT_OPTIONS
+                    (MAP (λi. lookup i g_AA.nodeInfo)
+                         i_list))) init)`
+   >> qabbrev_tac `final_trans =
+        FOLDR
+             (λ(id,x) sF.
+               case concr_extrTrans g_AA id of
+                   NONE => sF
+                 | SOME c_t => if is_until x then (x,c_t)::sF else sF) []
+             (graphStatesWithId g_AA)`
+   >> `!i. MEM i (MAP FST (toAList addedInit.nodeInfo))
+             ==> (i ∈ domain addedInit.nodeInfo)` by (
+       rpt strip_tac >> qunabbrev_tac `addedInit` >> fs[MEM_MAP]
+       >> Cases_on `y` >> fs[]
+       >> metis_tac[MEM_toAList,domain_lookup]
+   )
+   >> `wfg addedInit` by (
+       qunabbrev_tac `addedInit` >> fs[]
+       >> `!l. wfg (FOLDR (λn g. addNodeToGBA g n)
+                          (empty:(α nodeLabelGBA, α edgeLabelGBA) gfg)
+                          l)` by (
+           Induct_on `l` >> fs[] >> rpt strip_tac
+           >> metis_tac[ADDNODE_GBA_WFG]
+       )
+       >> metis_tac[]
+   )
+   >> IMP_RES_TAC EXPGBA_SOME_WFG >> first_x_assum (qspec_then `g_AA` mp_tac)
+   >> rpt strip_tac >> first_x_assum (qspec_then `final_trans` mp_tac) >> simp[]
+   >> rpt strip_tac >> fs[] >> simp[concr2AbstrGBA_def,waa2gba_def]
+   >> `isWeakAlterA (concr2AbstrAA (concrAA g_AA init aP))` by (
+       metis_tac[REDUCE_STATE_IS_WEAK, LTL2WAA_ISWEAK,
+                 LTL2WAA_ISVALID]
+   )
+   >> simp[gbaSimplTheory.removeStatesSimpl_def,GBA_component_equality]
+   >> Q.HO_MATCH_ABBREV_TAC `STATES ∧ INIT ∧ TRANS ∧ FINAL ∧ ALPH`
+   >> qabbrev_tac `abstrAA = removeStatesSimpl (ltl2waa f)`
 
 
-(*                >> `MEM n.frml *)
-(*                      (gba_trans_concr *)
-(*                                                     (CAT_OPTIONS *)
-(*                                                          (MAP (concr_extrTrans g_AA) *)
-(*                                                               (CAT_OPTIONS *)
-(*                                                                    (MAP *)
-(*                                                                         (λf. *)
-(*                                                                              OPTION_MAP FST *)
-(*                                                                              (findNode (λ(i,l). l.frml = f) *)
-(*                                                                                        g_AA)) node.frmls))))) *)
-
-(* ) *)
 
 
-(* ) *)
+   >> rpt strip_tac
+   >- (qunabbrev_tac `STATES` >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> strip_tac
+       >> `!x. inGBA gba x
+                ==> ((set x ∈ reachableFromSetGBA (waa2gba abstrAA)
+                          (waa2gba abstrAA).initial)
+                         ∧ (set x ∈ (waa2gba abstrAA).states))` by (
+            HO_MATCH_MP_TAC EXPGBA_GRAPH_REACHABLE
+)
 
 
 
-(* val EXPGBA_CORRECT = store_thm *)
-(*   ("EXPGBA_CORRECT", *)
-(*    ``!g_AA initAA aP. *)
-(*     let c_AA = concrAA g_AA initAA aP *)
-(*     in let abstr_AA = concr2AbstrAA c_AA *)
-(*     in wfg g_AA ∧ isWeakAlterA abstr_AA *)
-(*         ==> *)
-(*         case expandGBA_init c_AA of *)
-(*           | NONE => F *)
-(*           | SOME c_gba => (concr2AbstrGBA c_gba = waa2gba (concr2AbstrAA c_AA))``, *)
-(*    fs[] >> rpt strip_tac >> simp[expandGBA_init_def] *)
-(*    >> qabbrev_tac `addedInit:(α nodeLabelGBA, α edgeLabelGBA) gfg = *)
-(*         FOLDR (λn g. addNodeToGBA g n) empty *)
-(*               (MAP *)
-(*                    (λi_list. *)
-(*                         MAP (λl. l.frml) *)
-(*                         (CAT_OPTIONS *)
-(*                              (MAP (λi. lookup i g_AA.nodeInfo) *)
-(*                                   i_list))) initAA)` *)
-(*    >> qabbrev_tac `final_trans = *)
-(*         FOLDR *)
-(*              (λ(id,x) sF. *)
-(*                case concr_extrTrans g_AA id of *)
-(*                    NONE => sF *)
-(*                  | SOME c_t => if is_until x then (x,c_t)::sF else sF) [] *)
-(*              (graphStatesWithId g_AA)` *)
-(*    >> `!i. MEM i (MAP FST (toAList addedInit.nodeInfo)) *)
-(*              ==> (i ∈ domain addedInit.nodeInfo)` by ( *)
-(*        rpt strip_tac >> qunabbrev_tac `addedInit` >> fs[MEM_MAP] *)
-(*        g>> Cases_on `y` >> fs[] *)
-(*        >> metis_tac[MEM_toAList,domain_lookup] *)
-(*    ) *)
-(*    >> `wfg addedInit` by ( *)
-(*        qunabbrev_tac `addedInit` >> fs[] *)
-(*        >> `!l. wfg (FOLDR (λn g. addNodeToGBA g n) *)
-(*                           (empty:(α nodeLabelGBA, α edgeLabelGBA) gfg) *)
-(*                           l)` by ( *)
-(*            Induct_on `l` >> fs[] >> rpt strip_tac *)
-(*            >> metis_tac[ADDNODE_GBA_WFG] *)
-(*        ) *)
-(*        >> metis_tac[] *)
-(*    ) *)
-(*    >> IMP_RES_TAC EXPGBA_SOME_WFG >> first_x_assum (qspec_then `g_AA` mp_tac) *)
-(*    >> rpt strip_tac >> first_x_assum (qspec_then `final_trans` mp_tac) >> simp[] *)
-(*    >> rpt strip_tac >> fs[] >> simp[concr2AbstrGBA_def] *)
-(*    >> simp[waa2gba_def] *)
-(*    >> Q.HO_MATCH_ABBREV_TAC `STATES ∧ INIT ∧ TRANS ∧ FINAL ∧ ALPH` *)
-(*    >> rpt strip_tac *)
-(*    >- ( *)
-    
-(* ) *)
+    >- (rpt strip_tac
+     >- (fs[concr2AbstrGBA_states_def,concr2AbstrAA_def,concr2Abstr_states_def]b
+         >> 
+
+)
+
 
 
 (* ) *)
