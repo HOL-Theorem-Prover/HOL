@@ -1,1 +1,0 @@
-INCLUDES = $(HOLDIR)/examples/computability/lambda $(HOLDIR)/examples/computability/

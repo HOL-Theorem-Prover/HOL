@@ -1,0 +1,2 @@
+CLINE_OPTIONS = --no_prereqs
+INCLUDES = ../dir2
