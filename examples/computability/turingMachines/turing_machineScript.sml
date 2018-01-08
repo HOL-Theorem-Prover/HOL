@@ -64,10 +64,8 @@ val _ = Datatype `action = Wr0 | Wr1 | L | R`;
 
 val _ = Datatype `cell = Z | O `;
 
-val _ = Datatype `state = <| n : num |>`;
-
-val _ = Datatype `TM = <| state : state;
-                          prog : ((state # cell) |->  (state # action));
+val _ = Datatype `TM = <| state : num;
+                          prog : ((num # cell) |->  (num # action));
                           tape_l : cell list;
                           tape_h : cell;
                           tape_r : cell list
@@ -86,20 +84,14 @@ val INITIAL_TAPE_TM_def = Define `
 
 val INITIAL_TM_def = Define`
   INITIAL_TM p args =
-    INITIAL_TAPE_TM <| state := <|n:=0|>;  prog := p;tape_l := [];
+    INITIAL_TAPE_TM <| state := 0;  prog := p;tape_l := [];
                        tape_h := Z;tape_r := [] |>
                     (concatWith [Z] (MAP (GENLIST (K O)) args))`;
 
-val UPDATE_STATE_TIME = Define `UPDATE_STATE_TIME tm =
-  if (tm.state,tm.tape_h) IN FDOM tm.prog
-  then tm with <|state := (FST (tm.prog ' ((tm.state) ,(tm.tape_h)) )) |>
-  else (tm)
-                               `;
-
 val UPDATE_TAPE_def = Define `
   UPDATE_TAPE tm =
-    if (tm.state,tm.tape_h) IN FDOM tm.prog ∧ tm.state.n <> 0 then
-      let tm' = tm with state := FST (tm.prog ' ((tm.state) ,(tm.tape_h)) )
+    if (tm.state,tm.tape_h) IN FDOM tm.prog ∧ tm.state <> 0 then
+      let tm' = tm with state := FST (tm.prog ' (tm.state, tm.tape_h))
       in
         case SND (tm.prog ' (tm.state ,tm.tape_h)) of
           Wr0 => tm' with tape_h := Z
@@ -116,7 +108,7 @@ val UPDATE_TAPE_def = Define `
                  else tm' with <| tape_l := tm.tape_h::tm.tape_l;
                                   tape_h := HD tm.tape_r;
                                   tape_r := TL tm.tape_r |>
-    else tm with state := <|n:=0|>
+    else tm with state := 0
 `;
 
 val _ = overload_on("RUN",``FUNPOW UPDATE_TAPE``);
@@ -180,11 +172,7 @@ val DECODE_TM_TAPE_def = Define `
            (DECODE (nfst n), O , DECODE ( (nsnd n - 1) DIV 2))`;
 
 (* Halted definition and TM examples *)
-val HALTED_def = Define `HALTED tm <=> (tm.state.n = 0)`;
-
-val st_def= Define`st n : state = <| n := n  |>`;
-val _ = add_numeral_form(#"s", SOME "st");
-
+val HALTED_def = Define `HALTED tm <=> (tm.state = 0)`;
 
 (*
 
@@ -217,17 +205,13 @@ val NUM_TO_ACT_def = Define `
   (NUM_TO_ACT 2 = L) ∧
   (NUM_TO_ACT 3 = R) `;
 
-val STATE_TO_NUM_def = Define `STATE_TO_NUM a = a.n`;
-
-val NUM_TO_STATE_def = Define `NUM_TO_STATE n = <| n:=n |>`;
-
 val FULL_ENCODE_TM_def = Define `
-  FULL_ENCODE_TM tm = STATE_TO_NUM tm.state *, ENCODE_TM_TAPE tm
+  FULL_ENCODE_TM tm = tm.state *, ENCODE_TM_TAPE tm
 `;
 
 
 val FULL_DECODE_TM_def = Define `
-  FULL_DECODE_TM n = <| state:=  NUM_TO_STATE (nfst n);
+  FULL_DECODE_TM n = <| state:=  nfst n;
                         tape_l := FST (DECODE_TM_TAPE (nsnd n));
                         tape_h := FST (SND (DECODE_TM_TAPE (nsnd n)));
                         tape_r := SND (SND (DECODE_TM_TAPE (nsnd n)))|>
@@ -235,8 +219,8 @@ val FULL_DECODE_TM_def = Define `
 
 (* Perform action an move to state *)
 val UPDATE_ACT_S_TM_def = Define `UPDATE_ACT_S_TM s act tm =
-           let tm' = tm with
-                        <|  state := s |> in
+           let tm' = tm with state := s
+           in
                case act of
                    Wr0 => tm' with tape_h := Z
                  | Wr1 => tm' with tape_h := O
@@ -284,48 +268,52 @@ val ODD_MOD_TWO_lem = Q.store_thm ("ODD_MOD_TWO_lem",
   rpt strip_tac  >> fs[MOD_2] >> `~EVEN n` by metis_tac[EVEN_AND_ODD] >> rw[]);
 
 val containment_lem = Q.store_thm("containment_lem",
-`((OLEAST n. (NUM_TO_STATE (nfst n),CELL_NUM (nsnd n)) ∈ FDOM p) =
-  NONE) <=> (p = FEMPTY)`,
-rw[] >> eq_tac >> simp[] >> csimp[fmap_EXT] >>
-simp[EXTENSION,pairTheory.FORALL_PROD,NUM_TO_STATE_def] >> strip_tac >>
-qx_gen_tac `a` >> qx_gen_tac `b` >>
-`∃n. a= <| n := n|>  ` by metis_tac[theorem"state_literal_nchotomy"] >>
-`∃c. b = CELL_NUM c` by metis_tac[CELL_NUM_def,theorem"cell_nchotomy"] >> rw[] >>
-pop_assum (qspec_then `n *, c` mp_tac) >> simp[]);
+  `((OLEAST n. (nfst n,CELL_NUM (nsnd n)) ∈ FDOM p) = NONE) <=> (p = FEMPTY)`,
+  rw[] >> eq_tac >> simp[] >> csimp[fmap_EXT] >>
+  simp[EXTENSION,pairTheory.FORALL_PROD] >> strip_tac >>
+  qx_gen_tac `a` >> qx_gen_tac `b` >>
+  `∃c. b = CELL_NUM c` by metis_tac[CELL_NUM_def,theorem"cell_nchotomy"] >>
+  rw[] >>
+  pop_assum (qspec_then `a *, c` mp_tac) >> simp[]);
 
 
 val UPDATE_TAPE_ACT_STATE_TM_thm = Q.store_thm("UPDATE_TAPE_ACT_STATE_TM_thm",
-`∀ tm.(((tm.state) ,(tm.tape_h)) ∈ FDOM tm.prog)∧ (tm.state.n <> 0) ==> (UPDATE_ACT_S_TM (FST (tm.prog ' ((tm.state) ,(tm.tape_h)) ))
-  (SND (tm.prog ' ((tm.state) ,(tm.tape_h)) )) tm = UPDATE_TAPE tm)`,
-strip_tac >> fs[UPDATE_ACT_S_TM_def,UPDATE_TAPE_def]  );
+  `∀ tm.
+    ((tm.state , tm.tape_h) ∈ FDOM tm.prog) ∧ tm.state <> 0 ==>
+    (UPDATE_ACT_S_TM (FST (tm.prog ' (tm.state, tm.tape_h)))
+                     (SND (tm.prog ' (tm.state, tm.tape_h)))
+                     tm
+       =
+     UPDATE_TAPE tm)`,
+  strip_tac >> fs[UPDATE_ACT_S_TM_def,UPDATE_TAPE_def]  );
 
 val NUM_TO_ACT_TO_NUM = Q.store_thm("NUM_TO_ACT_TO_NUM[simp]",
-`((ACT_TO_NUM k) < 4) ==> (NUM_TO_ACT (ACT_TO_NUM k) = k)`,
-rw[NUM_TO_ACT_def,ACT_TO_NUM_def] >>
-`(ACT_TO_NUM k = 0) ∨ (ACT_TO_NUM k = 1) ∨(ACT_TO_NUM k = 2)∨(ACT_TO_NUM k = 3)` by simp[] >>rw[]>>
-EVAL_TAC >> Cases_on `k` >> rfs[ACT_TO_NUM_def] >> EVAL_TAC);
-
+  `((ACT_TO_NUM k) < 4) ==> (NUM_TO_ACT (ACT_TO_NUM k) = k)`,
+  rw[NUM_TO_ACT_def,ACT_TO_NUM_def] >>
+  `(ACT_TO_NUM k = 0) ∨ (ACT_TO_NUM k = 1) ∨(ACT_TO_NUM k = 2)∨
+   (ACT_TO_NUM k = 3)` by simp[] >>rw[]>>
+  EVAL_TAC >> Cases_on `k` >> rfs[ACT_TO_NUM_def] >> EVAL_TAC);
 val _ = export_rewrites ["NUM_CELL_def"]
+
 val TM_PROG_P_TAPE_H = Q.store_thm("TM_PROG_P_TAPE_H[simp]",
-`(tm with prog := p).tape_h = tm.tape_h`,
-fs[]);
+  `(tm with prog := p).tape_h = tm.tape_h`,
+  fs[]);
 
 val TM_PROG_P_STATE = Q.store_thm("TM_PROG_P_STATE[simp]",
-`(tm with prog := p).state = tm.state`,
-fs[]);
+  `(tm with prog := p).state = tm.state`,
+  fs[]);
 
 val UPDATE_TM_ARB_Q = Q.store_thm("UPDATE_TM_ARB_Q",
-`((tm.state,tm.tape_h) ∈ FDOM p)∧ (tm.state.n <> 0) ==> ((UPDATE_ACT_S_TM (FST (p ' (tm.state,tm.tape_h))) (SND (p ' (tm.state,tm.tape_h))) (tm with prog := q)) = ((UPDATE_TAPE (tm with prog := p)) with prog := q))`,
-rw[UPDATE_TAPE_def,UPDATE_ACT_S_TM_def] >>
-Cases_on `SND (p ' (tm.state,tm.tape_h))` >> simp[] )
+  `(tm.state,tm.tape_h) ∈ FDOM p ∧ tm.state <> 0 ==>
+   (UPDATE_ACT_S_TM (FST (p ' (tm.state,tm.tape_h)))
+                    (SND (p ' (tm.state,tm.tape_h)))
+                    (tm with prog := q) =
+    (UPDATE_TAPE (tm with prog := p)) with prog := q)`,
+  rw[UPDATE_TAPE_def,UPDATE_ACT_S_TM_def] >>
+  Cases_on `SND (p ' (tm.state,tm.tape_h))` >> simp[] )
 
-val NUM_TO_STATE_TO_NUM = Q.store_thm ("NUM_TO_STATE_TO_NUM[simp]",
-`NUM_TO_STATE (STATE_TO_NUM k) = k`,
-fs[STATE_TO_NUM_def,NUM_TO_STATE_def,theorem("state_component_equality")]  );
-
-val tm_with_prog = Q.store_thm("tm_with_prog",`tm with prog := tm.prog = tm`,simp[theorem("TM_component_equality")])
-
-
+val tm_with_prog = Q.store_thm("tm_with_prog",
+  `tm with prog := tm.prog = tm`,simp[theorem("TM_component_equality")])
 
 val FST_DECODE_TM_TAPE = Q.store_thm(
   "FST_DECODE_TM_TAPE[simp]",
@@ -337,10 +325,6 @@ val DECODE_EQ_NIL = Q.store_thm(
   `(DECODE n = []) ⇔ (n = 0)`,
   metis_tac[DECODE_EMPTY_lem, DECODE_def]);
 
-val STATE_TO_NUM_TO_STATE = Q.store_thm ("STATE_TO_NUM_TO_STATE[simp]",
-`STATE_TO_NUM (NUM_TO_STATE n) = n`,
-simp[STATE_TO_NUM_def,NUM_TO_STATE_def])
-
 val ODD_HD_DECODE = Q.store_thm(
   "ODD_HD_DECODE",
   `ODD n ==> (HD (DECODE n) = O)`,
@@ -350,7 +334,6 @@ val EVEN_HD_DECODE = Q.store_thm(
  "EVEN_HD_DECODE",
 `EVEN n ∧ (n ≠ 0)  ==> (HD (DECODE n) = Z)`,
 Cases_on `n` >> simp[DECODE_def] >> metis_tac[EVEN_AND_ODD,listTheory.HD]);
-
 
 val SND_SND_DECODE_TM_TAPE = Q.store_thm("SND_SND_DECODE_TM_TAPE",
 `SND (SND (DECODE_TM_TAPE (nsnd tmn))) = DECODE (nsnd (nsnd tmn) DIV 2)`,
@@ -384,19 +367,16 @@ val npair_lem = Q.store_thm("npair_lem",
   rpt strip_tac >> `∃j k. j *, k = n` by metis_tac[npair_cases] >> rw[] );
 
 val NUM_TO_CELL_TO_NUM = Q.store_thm("NUM_TO_CELL_TO_NUM",
-`((c=0) ∨ (c=1)) ==> (NUM_CELL (CELL_NUM c) = c)`,
-strip_tac >> rw[NUM_CELL_def,CELL_NUM_def]);
+  `((c=0) ∨ (c=1)) ==> (NUM_CELL (CELL_NUM c) = c)`,
+  strip_tac >> rw[NUM_CELL_def,CELL_NUM_def]);
 
-val FULL_ENCODE_TM_STATE = Q.store_thm("FULL_ENCODE_TM_STATE",
-`nfst (FULL_ENCODE_TM tm) = STATE_TO_NUM tm.state`,
-fs[FULL_ENCODE_TM_def]);
-
-
-
+val FULL_ENCODE_TM_STATE = Q.store_thm("FULL_ENCODE_TM_STATE[simp]",
+  `nfst (FULL_ENCODE_TM tm) = tm.state`,
+  fs[FULL_ENCODE_TM_def]);
 
 val tri_mono = Q.store_thm ("tri_mono[simp]",
-`∀x y. (tri x <= tri y) <=> (x <= y)`,
-Induct_on `y` >> simp[]  );
+  `∀x y. (tri x <= tri y) <=> (x <= y)`,
+  Induct_on `y` >> simp[]  );
 
 val npair_mono = Q.store_thm ("npair_mono[simp]",
   `(x *, y < x *, z )<=> (y<z)`,
@@ -409,24 +389,21 @@ val npair_mono = Q.store_thm ("npair_mono[simp]",
 
 
 val CELL_NUM_LEM1 = Q.store_thm("CELL_NUM_LEM1",
-`((∀n'. n' < n ⊗ c ⇒ (NUM_TO_STATE (nfst n'),CELL_NUM (nsnd n')) ∉ FDOM p )
-      ∧ ( (NUM_TO_STATE n,CELL_NUM c) ∈ FDOM p)) ==> ((c=0) ∨ (c=1))`,
-spose_not_then strip_assume_tac >> Cases_on `CELL_NUM c` >-
-               (`0<c` by simp[] >> metis_tac[nfst_npair,nsnd_npair,npair_mono,CELL_NUM_def]  ) >-
-               (`1<c` by simp[] >> metis_tac[nfst_npair,nsnd_npair,npair_mono,CELL_NUM_def]  ) );
-
-val TM_PROG_LEM_1 = Q.store_thm("TM_PROG_LEM_1",
-`((tm.prog \\ (a,b) = tm'.prog) ∧ (tm = tm') ) ==> ¬((a,b) ∈ FDOM tm.prog)`,
-strip_tac >> `tm.prog = tm'.prog` by simp[] >> rw[] >>
-`FDOM (tm.prog \\ (a,b)) = FDOM tm.prog DELETE (a,b)` by  simp[FDOM_DOMSUB] >>
-`(FDOM (tm.prog \\ (a,b)) = FDOM tm.prog)` by metis_tac[EQ_FDOM_SUBMAP] >>
-` FDOM tm.prog DELETE (a,b) = FDOM tm.prog` by  metis_tac[] >>  simp[DELETE_NON_ELEMENT] )
+  `(∀n'. n' < n ⊗ c ⇒ (nfst n',CELL_NUM (nsnd n')) ∉ FDOM p) ∧
+   (n,CELL_NUM c) ∈ FDOM p ==> (c=0) ∨ (c=1)`,
+  spose_not_then strip_assume_tac >> Cases_on `CELL_NUM c`
+  >- (`0<c` by simp[] >>
+      metis_tac[nfst_npair,nsnd_npair,npair_mono,CELL_NUM_def]) >>
+  `1<c` by simp[] >> metis_tac[nfst_npair,nsnd_npair,npair_mono,CELL_NUM_def]);
 
 val TM_ACT_LEM_1 = Q.store_thm("TM_ACT_LEM_1[simp]",
   `( (nsnd (nsnd (FULL_ENCODE_TM tm))) MOD 2) = NUM_CELL (tm.tape_h)`,
   simp[FULL_ENCODE_TM_def,ENCODE_TM_TAPE_def] >> rw[] >> Cases_on `tm.tape_h` >- fs[] >- EVAL_TAC)
 
-val _ = add_rule {term_name = "FULL_ENCODE_TM",fixity = Closefix, block_style = (AroundEachPhrase,(PP.CONSISTENT,0)),paren_style = OnlyIfNecessary,pp_elements = [TOK "⟦",TM,TOK"⟧"]}
+val _ = add_rule {term_name = "FULL_ENCODE_TM",fixity = Closefix,
+                  block_style = (AroundEachPhrase,(PP.CONSISTENT,0)),
+                  paren_style = OnlyIfNecessary,
+                  pp_elements = [TOK "⟦",TM,TOK"⟧"]}
 
 val FULL_ENCODE_IGNORES_PROGS = Q.store_thm("FULL_ENCODE_IGNORES_PROGS[simp]",
 `⟦tm with prog := p⟧ = ⟦tm⟧`,
@@ -436,47 +413,23 @@ val NUM_CELL_INJ = Q.store_thm("NUM_CELL_INJ",
 `(NUM_CELL a = NUM_CELL b) <=> (a = b)`,
 eq_tac >- (Cases_on ` a` >> Cases_on `b` >> rw[] ) >- (rw[]) )
 
-val lem_bar_foo = UPDATE_TM_ARB_Q |> Q.INST [`tm`|->`FULL_DECODE_TM ⟦tm⟧`,`q`|->`(FULL_DECODE_TM ⟦tm⟧).prog` ] |> SIMP_RULE(srw_ss())[]
-
-
-val NFST_ENCODE_TM = Q.store_thm("NFST_ENCODE_TM[simp]",
-`(nfst ⟦tm⟧) = STATE_TO_NUM tm.state`,
-simp[FULL_ENCODE_TM_def])
-
-val TM_PROG_P_P = Q.store_thm("TM_PROG_P_P[simp]",
-`(tm with prog := p).prog = p`,
-fs[]);
-
-
 val ACT_TO_NUM_LESS_4 = Q.store_thm("ACT_TO_NUM_LESS_4",
 `ACT_TO_NUM a < 4`,
 Cases_on `a` >> EVAL_TAC)
 
-
-val EVEN_PLUS_1_thm = Q.store_thm("EVEN_PLUS_1_thm",
-`ODD (2 * n + 1)`,
-`2*n + 1 = SUC (2*n)` by fs[] >> rw[ODD_DOUBLE ])
-
 val TWO_TIMES_DIV_TWO_thm = Q.store_thm("TWO_TIMES_DIV_TWO_thm[simp]",
-`2 *  n DIV 2 = n`,
-Induct_on `n` >> fs[] >>  `2* SUC n = 2*n+2` by fs[] >> rw[] >> `0 < 2` by fs[] >> `2*n + 2 = n*2 + 2` by fs[] >>
-`(n*2 +2) DIV 2 = n + 2 DIV 2` by fs[ADD_DIV_ADD_DIV]  >> `(2*n +2) DIV 2 = n + 2 DIV 2` by fs[] >> rw[] )
+  `2 *  n DIV 2 = n`,
+  metis_tac[DECIDE “0 < 2”, MULT_DIV, MULT_COMM]);
 
-val TWO_TIMES_P_ONE_DIV_TWO_thm = Q.store_thm("TWO_TIMES_P_ONE_DIV_TWO_thm[simp]",
-`(2 * n + 1) DIV 2 = n`,
-Induct_on `n` >> fs[] >> `2* SUC n = 2*n+2` by fs[] >> rw[] >> `0 < 2` by fs[] >> `2*n + 2 = n*2 + 2` by fs[] >> `(n*2 +3) DIV 2 = n + 3 DIV 2` by fs[ADD_DIV_ADD_DIV] >> `(2*n +3) DIV 2 = n + 3 DIV 2` by fs[] >> rw[])
+val TWO_TIMES_P_ONE_DIV_TWO_thm = Q.store_thm(
+  "TWO_TIMES_P_ONE_DIV_TWO_thm[simp]",
+  `(2 * n + 1) DIV 2 = n`,
+  metis_tac[DECIDE “1 < 2”, DIV_MULT, MULT_COMM]);
 
-
-val ENCODE_CONS_DECODE_ENCODE_thm = Q.store_thm("ENCODE_CONS_DECODE_ENCODE_thm[simp]",
-`ENCODE (h::DECODE (ENCODE t)) = ENCODE (h::t)`,
-fs[ENCODE_def,DECODE_def,ENCODE_DECODE_thm])
-
-val FST_SND_DECODE_TM_TAPE_FULL_EVEN = Q.store_thm("FST_SND_DECODE_TM_TAPE_FULL_EVEN",
-`EVEN (nsnd t) ==> (FST (SND (DECODE_TM_TAPE t)) = Z)`,rw[DECODE_TM_TAPE_def] )
-
-val FST_SND_DECODE_TM_TAPE_FULL_NEVEN = Q.store_thm("FST_SND_DECODE_TM_TAPE_FULL_NEVEN",
-`¬EVEN (nsnd t) ==> (FST (SND (DECODE_TM_TAPE t)) = O)`,rw[DECODE_TM_TAPE_def] )
-
+val ENCODE_CONS_DECODE_ENCODE_thm = Q.store_thm(
+  "ENCODE_CONS_DECODE_ENCODE_thm[simp]",
+  `ENCODE (h::DECODE (ENCODE t)) = ENCODE (h::t)`,
+  fs[ENCODE_def,DECODE_def,ENCODE_DECODE_thm]);
 
 val NFST_ENCODE_TM_TAPE = Q.store_thm("NFST_ENCODE_TM_TAPE[simp]",
 `nfst (ENCODE_TM_TAPE tm) = ENCODE tm.tape_l`,
@@ -484,10 +437,11 @@ rw[ENCODE_TM_TAPE_def]);
 
 val FST_SND_DECODE_TM_TAPE = Q.store_thm("FST_SND_DECODE_TM_TAPE[simp]",
 `FST (SND (DECODE_TM_TAPE (ENCODE_TM_TAPE tm))) = tm.tape_h`,
-rw[DECODE_TM_TAPE_def,ENCODE_TM_TAPE_def] >> fs[EVEN_MULT,EVEN_ADD] >> Cases_on `tm.tape_h` >> fs[])
+rw[DECODE_TM_TAPE_def,ENCODE_TM_TAPE_def] >> fs[EVEN_MULT,EVEN_ADD] >>
+Cases_on `tm.tape_h` >> fs[]);
 
 val NSND_ENCODE_TM_TAPE_DIV2 = Q.store_thm("NSND_ENCODE_TM_TAPE_DIV2[simp]",
 `(nsnd (ENCODE_TM_TAPE tm) DIV 2) = ENCODE tm.tape_r`,
-rw[ENCODE_TM_TAPE_def])
+rw[ENCODE_TM_TAPE_def]);
 
 val _ = export_theory();
