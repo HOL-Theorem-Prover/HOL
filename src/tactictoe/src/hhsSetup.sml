@@ -17,7 +17,6 @@ open HolKernel boolLib Abbrev hhsExec hhsTools
 
 (* set following flag to true to simulate version 2 *)
 val hhs_norecord_flag    = ref false
-val hhs_internalthm_flag = ref false
 val hhs_norecprove_flag  = ref false
 val hhs_nolet_flag      = ref false
 

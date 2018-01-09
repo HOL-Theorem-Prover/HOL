@@ -9,7 +9,8 @@ sig
   
   val hhs_search_time : Time.time ref
   val hhs_tactic_time : real ref
-  
+    
+  val hhs_internalthm_flag : bool ref
   val hhs_badstacl  : string list ref
   val hhs_stacfea   : (lbl_t, fea_t) Redblackmap.dict ref
   val hhs_cthyfea   : feav_t list ref

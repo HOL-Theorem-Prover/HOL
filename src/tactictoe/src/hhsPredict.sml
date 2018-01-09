@@ -95,7 +95,7 @@ fun stacknn_uniq symweight n feal fea_o =
 fun exists_tid s = 
   let val (a,b) = split_string "Theory." s in can (DB.fetch a) b end
 
-fun is_orthothm a = fst (dfind a (!hhs_mdict))
+fun is_orthothm a = fst (dfind a (!hhs_mdict)) handle _ => false
 
 fun thmknn symweight n feav fea_o =
   let 

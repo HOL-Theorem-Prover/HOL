@@ -490,8 +490,15 @@ fun init_stacfea feavl =
   dapp update_ddict (!hhs_stacfea)
   )
 
+val hhs_internalthm_flag = ref false
+
 fun update_stacfea (feav as (lbl,fea)) =
-  if dmem lbl (!hhs_stacfea) then () else
+  if dmem lbl (!hhs_stacfea) orelse 
+     (not (!hhs_internalthm_flag) andalso 
+        exists (String.isPrefix "tactictoe_thm") 
+        (hhsLexer.hhs_lex (#1 lbl)))
+  then ()
+  else
     (
     hhs_stacfea := dadd lbl fea (!hhs_stacfea);
     hhs_cthyfea := feav :: (!hhs_cthyfea);

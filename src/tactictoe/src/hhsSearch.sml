@@ -414,7 +414,7 @@ fun pred_sthml n g =
       sl
     end
 
-fun inst_read pid stac g =
+fun inst_read stac g =
   if (!hhs_thmlarg_flag orelse !hhs_termarg_flag) andalso 
      is_absarg_stac stac 
   then 
@@ -432,7 +432,6 @@ fun inst_read pid stac g =
     in
       inst_dict := dadd (stac,g) (newstac,newtac,!hhs_tactic_time) (!inst_dict);
       debug_search ("to: " ^ newstac);
-      update_curstac newstac pid;
       (newstac,newtac,!hhs_tactic_time)
     end
     )
@@ -446,7 +445,6 @@ fun inst_read pid stac g =
     in
       inst_dict := dadd (stac,g) (newstac,newtac,!hhs_metis_time) (!inst_dict);
       debug_search ("to: " ^ newstac);
-      update_curstac newstac pid;
       (newstac,newtac,!hhs_metis_time)
     end
     )
@@ -458,8 +456,9 @@ fun apply_stac pid pardict trydict_unref stac g =
     val _ = last_stac := stac
     val _ = stac_counter := !stac_counter + 1
     (* instantiation and reading *)
-    val (newstac,newtac,tim) = inst_read pid stac g 
+    val (newstac,newtac,tim) = inst_read stac g 
       handle _ => debug_err ("apply_stac: " ^ stac)
+    val _ = if newstac <> stac then update_curstac newstac pid else ()
     (* execution *)
     val glo = dfind (newstac,g) (!stacgoal_cache) 
       handle _ => app_tac tim newtac g
@@ -479,6 +478,7 @@ fun apply_stac pid pardict trydict_unref stac g =
 
 fun apply_next_stac pid =
   let
+    val _ = debug_search "apply_next_stac"
     val prec = dfind pid (!proofdict)
     val gn = hd (! (#pending prec))
       handle _ => debug_err "apply_next_stac: empty pending"
@@ -534,6 +534,10 @@ fun standard_node_find l0 =
   end
 
 fun mc_node_find pid =
+  if Timer.checkRealTimer (valOf (!glob_timer)) > 
+    (!hhs_search_time) 
+  then (debug "Error: mc_node_find loop"; raise SearchTimeOut)
+  else 
   let
     val prec = dfind pid (!proofdict) 
     val {children,visit,...} = prec
@@ -560,14 +564,19 @@ fun mc_node_find pid =
     val l1 = dict_sort compare_rmax l0
     val (selid,_) = hd l1
   in
-    if pid = selid then (pid,self_pripol) else mc_node_find selid
+    if pid = selid 
+      then (pid,self_pripol) 
+      else mc_node_find selid
   end
 
 fun try_mc_find () =
   if Timer.checkRealTimer (valOf (!glob_timer)) > (!hhs_search_time) 
   then (debug_search "timeout"; raise SearchTimeOut)
   else 
-    let val (pid,pripol) = mc_node_find 0 in
+    let 
+      val _ = debug_search "mc_node_find"
+      val (pid,pripol) = mc_node_find 0 
+    in
       if is_notactive pid
       then (backup_fail pid; try_mc_find ())
       else (pid,pripol)

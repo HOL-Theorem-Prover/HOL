@@ -226,6 +226,9 @@ fun launch_parallel t =
     cmd_in_dir provbin_dir cmd
   end
 
+(* todo: 
+     translate when the prover's binary exists.
+     terminate when the first prover finds a proof. *)
 fun holyhammer_goal goal =
   let
     val term = list_mk_imp goal
@@ -258,7 +261,5 @@ fun hh_stac pid (symweight,feav) t goal =
   in
     reconstruct_dir_stac provdir term
   end
-
-
 
 end

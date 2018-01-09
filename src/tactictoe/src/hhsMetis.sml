@@ -15,6 +15,50 @@ hhsSetup
 val ERR = mk_HOL_ERR "hhsMetis"
 
 (* --------------------------------------------------------------------------
+   Internal theorems
+
+load "hhsExec";
+open hhsExec;
+val l0 = map fst (#allVal (PolyML.globalNameSpace) ());   
+val l1 = filter is_thm l0;
+load "hhsMetis";
+open hhsMetis;
+import_mdict ();
+
+fun goal_of_string s =
+  let val (a,b) = split_string "Theory." s in dest_thm (DB.fetch a b) end
+
+val goaldict = 
+  let 
+    val l = dlist (!hhs_mdict)
+    fun f (name,_) = (goal_of_string name, ())
+  in
+    dnew goal_compare (mapfilter f l) 
+  end
+
+val hhs_thm = ref TRUTH
+
+fun lift_thm s =
+  (
+  hhs_thm := TRUTH;
+  exec_sml "lift_thm" ("hhs_thm := " ^ s);
+  !hhs_thm
+  )
+;
+
+fun is_trivthm thm = 
+  can (hhsTimeout.timeOut 0.1 (METIS_TAC [])) (dest_thm thm);
+fun ex_thm thm = dmem (dest_thm thm) goaldict;
+fun is_term term thm = concl thm = term;
+
+val l2 = map lift_thm l1;
+val l3 = filter (not o is_trivthm) l2;
+val l4 = filter (not o ex_thm) l3;
+
+-------------------------------------------------------------------------- *)
+
+
+(* --------------------------------------------------------------------------
    Metis
    -------------------------------------------------------------------------- *)
 

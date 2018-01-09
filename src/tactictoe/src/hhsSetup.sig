@@ -2,7 +2,6 @@ signature hhsSetup =
 sig
   
   (* recording *)
-  val hhs_internalthm_flag : bool ref
   val hhs_norecprove_flag  : bool ref
   val hhs_norecord_flag    : bool ref
   val hhs_nolet_flag       : bool ref

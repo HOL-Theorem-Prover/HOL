@@ -206,10 +206,7 @@ fun name_of_thm thm =
   in
     String.concatWith " " ["(","DB.fetch",mlquote thy,mlquote name,")"]
   end
-  handle e => 
-    if !hhs_internalthm_flag 
-    then save_tactictoe_thm thm 
-    else raise e
+  handle _ => save_tactictoe_thm thm 
 
 fun fetch_thm_aux s reps =
   let val file = hhs_code_dir ^ "/" ^ current_theory () ^ "_fetch_thm" in
