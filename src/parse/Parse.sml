@@ -452,8 +452,9 @@ fun pp_thm ppstrm th =
                   add_break(1,0);
                   pp_terms sa asl; add_break(1,0)
                  );
-            add_string "|- ";
-            pp_term (concl th)
+            add_string (!Globals.thm_pp_prefix);
+            pp_term (concl th);
+            add_string (!Globals.thm_pp_suffix)
          end;
     end_block()
  end;
@@ -937,6 +938,11 @@ end
 val temp_add_numeral_form = mk_temp add_numeral_form0
 val add_numeral_form = mk_perm add_numeral_form0
 
+(* to print a term using current grammars,
+  but with "non-trivial" overloads deleted *)
+fun print_without_macros tm = 
+  let val (tyG, tmG) = current_grammars () ;
+  in print_term_by_grammar (tyG, term_grammar.clear_overloads tmG) tm end ;
 
 (*---------------------------------------------------------------------------
      Visibility of identifiers

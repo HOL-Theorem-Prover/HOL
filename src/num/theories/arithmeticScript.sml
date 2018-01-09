@@ -3868,6 +3868,17 @@ val result2 =
               [ASSUME “0 < n”, MULT_CLAUSES, ADD_CLAUSES]
               “(4 + 3 * n + 1) MOD n”
 
+(* ----------------------------------------------------------------------
+    set up characterisation as a standard algebraic type
+   ---------------------------------------------------------------------- *)
+
+val num_case_eq = Q.store_thm(
+  "num_case_eq",
+  ‘(num_CASE n zc sc = v) <=>
+     (n = 0) /\ (zc = v) \/ ?x. (n = SUC x) /\ (sc x = v)’,
+  Q.SPEC_THEN ‘n’ STRUCT_CASES_TAC num_CASES THEN
+  SRW_TAC [][num_case_def, SUC_NOT, INV_SUC_EQ]);
+
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME
@@ -3879,6 +3890,7 @@ val _ = adjoin_to_theory
    S "     {ax=TypeBasePure.ORIG prim_recTheory.num_Axiom,";
    S "      case_def=num_case_def,";
    S "      case_cong=num_case_cong,";
+   S "      case_eq = num_case_eq,";
    S "      induction=TypeBasePure.ORIG numTheory.INDUCTION,";
    S "      nchotomy=num_CASES,";
    S "      size=SOME(Parse.Term`\\x:num. x`, TypeBasePure.ORIG boolTheory.REFL_CLAUSE),";

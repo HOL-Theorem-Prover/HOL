@@ -21,6 +21,18 @@ datatype defn
                  stem:string, aux:defn}
    | TAILREC of {eqs:thm list, ind:thm, R:term, SV:term list, stem:string}
 
+fun all_terms d =
+  case d of
+      ABBREV{eqn,...} => [concl eqn]
+    | PRIMREC {eqs,ind,...} => [concl eqs, concl ind]
+    | NONREC {eqs,ind,SV,...} => concl eqs::concl ind::SV
+    | STDREC {eqs,ind,R,SV,...} => R :: concl ind :: map concl eqs @ SV
+    | MUTREC {eqs,ind,R,SV,union,...} =>
+        R :: concl ind :: map concl eqs @ SV @ all_terms union
+    | NESTREC {eqs,ind,R,SV,aux,...} =>
+        R :: concl ind :: map concl eqs @ SV @ all_terms aux
+    | TAILREC {eqs,ind,R,SV,...} => R :: concl ind :: map concl eqs @ SV
+
 local open Portable
       fun kind (ABBREV _)  = "abbreviation"
         | kind (NONREC  _) = "non-recursive"

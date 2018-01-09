@@ -131,14 +131,14 @@ val bool_rewrites =
 val _ = set_implicit_rewrites bool_rewrites;
 
 (* =====================================================================*)
-(* Main rewriting conversion                         			*)
+(* Main rewriting conversion                                            *)
 (* =====================================================================*)
 
 fun GEN_REWRITE_CONV (rw_func:conv->conv) rws thl =
    rw_func (REWRITES_CONV (add_rewrites rws thl));
 
 (* ---------------------------------------------------------------------*)
-(* Rewriting conversions.                        			*)
+(* Rewriting conversions.                                               *)
 (* ---------------------------------------------------------------------*)
 
 val PURE_REWRITE_CONV = GEN_REWRITE_CONV Conv.TOP_DEPTH_CONV empty_rewrites

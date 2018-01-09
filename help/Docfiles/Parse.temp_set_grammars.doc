@@ -20,6 +20,7 @@ session.
 Never fails.
 
 \SEEALSO
-Parse.add_rule, Parse.overload_on, Parse.parse_from_grammars, Parse.print_from_grammars, Parse.Term.
+Parse.current_grammars, Parse.add_rule, Parse.overload_on,
+Parse.parse_from_grammars, Parse.print_from_grammars, Parse.Term.
 
 \ENDDOC

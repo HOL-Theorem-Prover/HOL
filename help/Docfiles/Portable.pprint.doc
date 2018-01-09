@@ -1,0 +1,32 @@
+\DOC
+
+\TYPE {pprint : (PP.ppstream -> 'a -> unit) -> 'a -> ()}
+
+\SYNOPSIS
+Pretty-prints a value to output
+
+\KEYWORDS
+Pretty-printing.
+
+\DESCRIBE
+A call to {pprint ppf x} will call the pretty-printing function
+{ppf} on value {x}, with the pretty-printing output printed.
+string that is eventually returned to the user. The linewidth used for
+determining when to wrap with newline characters is given by the
+reference {Globals.linewidth} (typically 72).
+
+\FAILURE
+Fails if the pretty-printing function fails on the particular input
+value.
+
+\EXAMPLE
+{
+> pprint (fn pps => fn () => PP.add_string pps "hello") ()
+helloval it = (): unit
+}
+
+\SEEALSO
+Lib.ppstring
+
+\ENDDOC
+

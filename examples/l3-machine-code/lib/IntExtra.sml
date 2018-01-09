@@ -31,4 +31,6 @@ struct
             | _ => NONE
          end
    end
+
+   fun pow (a, b) = IntInf.pow (a, Int.fromLarge b)
 end (* structure IntExtra *)

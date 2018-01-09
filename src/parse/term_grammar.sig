@@ -173,6 +173,8 @@ sig
      the given token *)
   val remove_rules_with_tok : string -> grammar -> grammar
 
+  val clear_overloads : grammar -> grammar
+
   (*-----------------------------------------------------------------------*
    * Pretty-printing                                                       *
    *-----------------------------------------------------------------------*)

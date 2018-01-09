@@ -1,5 +1,6 @@
 # INCLUDES = $(HOLDIR)/examples/set-theory/hol_sets
 OPTIONS = QUIT_ON_FAILURE
+# CLINE_OPTIONS = -j1
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
@@ -9,31 +10,36 @@ EXTRA_CLEANS = heap munge.exe selftest.exe \
 
 ifdef POLY
 HOLHEAP = heap
-OBJNAMES = pairTheory sumTheory relationTheory pred_setTheory set_relationTheory \
-	listTheory arithmeticTheory prim_recTheory
-DEPS = $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(OBJNAMES))
+OBJNAMES = finite_mapTheory llistTheory
+OBJS = $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(OBJNAMES))
 
 all: $(HOLHEAP)
 
-$(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/bin/hol.state0)
+$(HOLHEAP): $(OBJS) $(dprot $(HOLDIR)/bin/hol.state0)
 	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES)
 endif
 
-all: $(TARGETS) munge.exe
+all: $(TARGETS) munge.exe selftest.exe
 
-munge.exe: CCSTheory.sig StrongEQTheory.sig StrongLawsTheory.sig WeakEQTheory.sig \
-	   WeakLawsTheory.sig ObsCongrTheory.sig ObsCongrLawsTheory.sig \
-	   CongruenceTheory.sig TraceTheory.sig CoarsestCongrTheory.sig \
-	   BisimulationUptoTheory.sig ExpansionTheory.sig ContractionTheory.sig \
-	   UniqueSolutionsTheory.sig
-	$(HOLDIR)/bin/mkmunge.exe CCSTheory StrongEQTheory StrongLawsTheory \
-	   WeakEQTheory WeakLawsTheory ObsCongrTheory ObsCongrLawsTheory \
-	   CongruenceTheory TraceTheory CoarsestCongrTheory \
-	   BisimulationUptoTheory ExpansionTheory ContractionTheory \
-	   UniqueSolutionsTheory
+selftest.exe: selftest.uo CCSConv.uo
+	$(HOLMOSMLC) -o $@ $<
 
-#ifeq ($(KERNELID),otknl)
-#all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
-#endif
+MUNGE_DEPS = CCSTheory StrongEQTheory StrongLawsTheory \
+	     WeakEQTheory WeakLawsTheory ObsCongrTheory ObsCongrLawsTheory \
+	     BisimulationUptoTheory \
+	     CongruenceTheory CoarsestCongrTheory \
+	     TraceTheory ExpansionTheory ContractionTheory \
+	     UniqueSolutionsTheory ExampleTheory
 
-.PHONY: all
+munge.exe: $(patsubst %,%.uo,$(MUNGE_DEPS))
+	$(HOLDIR)/bin/mkmunge.exe $(MUNGE_DEPS)
+
+output: munge.exe
+	echo '\HOLtm{R1 RUNION R2}' | ./munge.exe
+	echo '\HOLtm{L1 ++ L2}' | ./munge.exe
+
+ifeq ($(KERNELID),otknl)
+all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+endif
+
+.PHONY: all output

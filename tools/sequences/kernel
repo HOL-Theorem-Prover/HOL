@@ -1,6 +1,7 @@
 !tools/Holmake/tests/holdep
 !tools/Holmake/tests/depchainloop
 !tools/Holmake/tests/recursiveclean
+tools/set_mtime
 tools/mlyacc/mlyacclib
 [mosml]src/portableML/mosml
 [poly]src/portableML/poly
@@ -32,4 +33,8 @@ src/proofman
 [poly]!tools/Holmake/tests/depchain_heap/
 [poly]!tools/Holmake/tests/depchain_heap/dir2
 !tools/Holmake/tests/coproduct
+!tools/Holmake/tests/noprereqs/dir1
+!tools/Holmake/tests/noprereqs/dir2
+!tools/Holmake/tests/noprereqs/dir3
+!tools/Holmake/tests/noprereqs/dir4
 !src/1/theory_tests

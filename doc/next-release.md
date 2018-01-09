@@ -24,8 +24,15 @@ New features:
     The degree of parallelisation depends on the `-j` flag, and is set to 4 by default.
     Output from the build processes is logged into a `.hollogs` sub-directory rather than interleaved randomly to standard out.
 
+*   Theory files generated from script files now load faster.
+    The machinery enabling this generates `xTheory.dat` files alongside `xTheory.sig` and `xTheory.sml` files.
+    Thanks to Thibault Gauthier for the work implementing this.
+
+
 Bugs fixed:
 -----------
+
+*   Pretty-printing of record type declarations to TeX now works even if there are multiple types with the same name (necessarily from different theory segments) in the overall theory.
 
 New theories:
 -------------

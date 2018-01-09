@@ -1577,4 +1577,85 @@ val float_mul_sub_relative = Q.store_thm ("float_mul_sub_relative",
 
 (* ------------------------------------------------------------------------- *)
 
+val finite_float_within_threshold = Q.store_thm (
+  "finite_float_within_threshold",
+  `!f:('a , 'b) float.
+      float_is_finite f ==>
+      ~(float_to_real f <= -threshold (:'a # 'b)) /\
+      ~(float_to_real f >= threshold (:'a # 'b)) `,
+  rpt strip_tac
+  \\ Q.ISPECL_THEN [`f`] assume_tac float_to_real_threshold
+  \\ fs[realTheory.abs]
+  \\ BasicProvers.every_case_tac
+  \\ res_tac
+  \\ RealArith.REAL_ASM_ARITH_TAC);
+
+val round_finite_normal_float_id = Q.store_thm(
+"round_finite_normal_float_id",
+  `!f.
+     float_is_finite f /\
+     float_is_normal f /\
+     ~ float_is_zero f ==>
+     (round roundTiesToEven (float_to_real f) = f)`,
+  rw[]
+  \\ qpat_assum `float_is_finite _` mp_tac
+  \\ qpat_assum `float_is_normal _` mp_tac
+  \\ rewrite_tac [float_is_finite_def, float_is_normal_def]
+  \\ rewrite_tac [float_value_def]
+  \\ simp[]
+  \\ strip_tac
+  \\ once_rewrite_tac [round_def]
+  \\ fs[finite_float_within_threshold]
+  \\ once_rewrite_tac [closest_such_def]
+  \\ SELECT_ELIM_TAC
+  \\ rw[]
+  >- (qexists_tac `f`
+      \\ rw[is_closest_def, IN_DEF, realTheory.ABS_POS]
+      \\ Cases_on `f = b` \\ fs[]
+      \\ first_x_assum (qspec_then `f` mp_tac)
+      \\ fs[realTheory.REAL_SUB_REFL]
+      \\ strip_tac
+      \\ `float_to_real b - float_to_real f = 0`
+           by (RealArith.REAL_ASM_ARITH_TAC)
+      \\ fs[float_to_real_eq]
+      \\ rfs[])
+  \\ CCONTR_TAC
+  \\ fs[is_closest_def, IN_DEF]
+  \\ qpat_x_assum `!x._ ` mp_tac
+  \\ first_x_assum (qspec_then `f` mp_tac)
+  \\ fs[realTheory.REAL_SUB_REFL]
+  \\ rpt strip_tac
+  \\ `float_to_real x - float_to_real f = 0`
+        by (RealArith.REAL_ASM_ARITH_TAC)
+  \\ fs[float_to_real_eq]
+  \\ rfs[]);
+
+val real_to_float_finite_normal_id = Q.store_thm (
+  "real_to_float_finite_normal_id",
+  `!f.
+     float_is_finite f /\
+     float_is_normal f /\
+     ~ float_is_zero f ==>
+     (real_to_float roundTiesToEven (float_to_real f) = f)`,
+  rpt strip_tac
+  \\ fs[real_to_float_def, float_round_def, round_finite_normal_float_id]);
+
+val float_to_real_real_to_float_zero_id = Q.store_thm (
+  "float_to_real_real_to_float_zero_id",
+  `float_to_real (real_to_float roundTiesToEven 0) = 0`,
+  once_rewrite_tac[real_to_float_def]
+  \\ `float_round roundTiesToEven F 0 = (float_plus_zero(:'a # 'b))`
+       by  (irule round_roundTiesToEven_is_plus_zero
+            \\ fs[ulp_def, ULP_def])
+  \\ fs[float_to_real_def, float_plus_zero_def]);
+
+val non_representable_float_is_zero = store_thm (
+  "non_representable_float_is_zero",
+  ``!ff P.
+      2 * abs ff <=  ulp ((:'a#'b) :('a#'b) itself) ==>
+      (float_to_real ((float_round roundTiesToEven P ff):('a, 'b) float) = 0)``,
+  rpt strip_tac \\ Cases_on `P`
+  \\ fs [round_roundTiesToEven_is_plus_zero,
+         round_roundTiesToEven_is_minus_zero, zero_to_real]);
+
 val () = export_theory ()

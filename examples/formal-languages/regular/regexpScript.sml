@@ -19,7 +19,7 @@ val cpn_case_def = TypeBase.case_def_of ``:ordering``
 val _ = new_theory "regexp";
 
 (*---------------------------------------------------------------------------*)
-(* Support stuff belonging in other theories                                 *)
+(* TODO: move this support stuff belonging in other theories                 *)
 (*---------------------------------------------------------------------------*)
 
 val SET_EQ_THM = Q.prove
@@ -54,6 +54,46 @@ val LIST_UNION_THM = Q.prove
 (`(LIST_UNION [] x = F) /\
   (LIST_UNION (h::t) x = (h x \/ LIST_UNION t x))`,
  srw_tac [] [LIST_UNION_def,IN_DEF]);
+
+val ZIP_ind  = Q.store_thm("ZIP_ind",
+  `∀P.
+    (∀l. P ([],l)) ∧ (∀v2 v3. P (v2::v3,[])) ∧
+     (∀x xs y ys. P (xs,ys) ⇒ P (x::xs,y::ys)) ⇒
+     ∀v v1. P (v,v1)`,
+  ntac 2 strip_tac
+  \\ Induct \\ ASM_REWRITE_TAC[]
+  \\ gen_tac \\ Cases \\ ASM_SIMP_TAC bool_ss []);
+
+val MEM_ZIP_IMP = Q.store_thm("MEM_ZIP_IMP",
+ `!l1 l2 a b. MEM (a,b) (ZIP (l1,l2)) ==> MEM a l1 /\ MEM b l2`,
+ recInduct ZIP_ind THEN RW_TAC list_ss [ZIP_def] THEN METIS_TAC []);
+
+val ZIP_eq_cons = Q.store_thm("ZIP_eq_cons",
+ `!l1 l2 a b t.
+     (ZIP (l1,l2) = (a,b)::t) ==> ?t1 t2. (l1 = a::t1) /\ (l2 = b::t2)`,
+ recInduct ZIP_ind >> RW_TAC list_ss [ZIP_def]);
+
+val cons_eq_ZIP = Q.prove
+(`!l1 l2 a b t.
+    ((a,b)::t = ZIP (l1,l2)) ==> ?t1 t2. (l1 = a::t1) ∧ (l2 = b::t2)`,
+ METIS_TAC [ZIP_eq_cons]);
+
+val zip_append = Q.store_thm("zip_append",
+ `!l1 l2 l3 l4.
+   (LENGTH l1 = LENGTH l2) /\
+   (LENGTH l3 = LENGTH l4)
+   ==>
+    (ZIP (l1 ++ l3, l2 ++ l4) = ZIP (l1,l2) ++ ZIP (l3,l4))`,
+ recInduct ZIP_ind >> rw_tac list_ss [ZIP_def]);
+
+val zip_append_id = Q.store_thm("zip_append_id",
+ `!l1 l2. ZIP (l1,l1) ++ ZIP (l2,l2) = ZIP (l1 ++ l2, l1 ++ l2)`,
+Induct_on `l1` THEN RW_TAC list_ss [ZIP_def] THEN
+Induct_on `l2` THEN RW_TAC list_ss [ZIP_def]);
+
+val ZIP_eq_nil = Q.store_thm("ZIP_eq_nil",
+ `!l1 l2. (ZIP (l1,l2) = []) <=> ((l1=[]) \/ (l2=[]))`,
+ recInduct ZIP_ind THEN RW_TAC list_ss [ZIP_def]);
 
 (*---------------------------------------------------------------------------*)
 (* Datatype of extended regular expressions                                  *)
@@ -320,59 +360,12 @@ val len_cmp_good = Q.prove
 RW_TAC list_ss [good_cmp_thm] THEN
 METIS_TAC [len_cmp_good_lem1,len_cmp_good_lem2,len_cmp_good_lem3,len_cmp_good_lem4]);
 
-(*---------------------------------------------------------------------------*)
-(* Zip two lists together. Same as that found in listTheory, except it       *)
-(* specifies the failure cases. Needed for cakeML translator.                *)
-(*---------------------------------------------------------------------------*)
-
-val zip_def =
- Define
-   `(zip [] __ = []) /\
-    (zip __ [] = []) /\
-    (zip (a::t) (b::u) = (a,b)::zip t u)`;
-
-val zip_ind = fetch "-" "zip_ind";
-
-val mem_zip_lem = Q.prove
-(`!l1 l2 a b. MEM (a,b) (zip l1 l2) ==> MEM a l1 /\ MEM b l2`,
- recInduct zip_ind THEN RW_TAC list_ss [zip_def] THEN METIS_TAC []);
-
-val zip_eq_cons = Q.prove
-(`!l1 l2 a b t.
-     (zip l1 l2 = (a,b)::t) ==> ?t1 t2. (l1 = a::t1) /\ (l2 = b::t2)`,
- recInduct zip_ind >> RW_TAC list_ss [zip_def]);
-
-val zip_append = Q.prove
-(`!l1 l2 l3 l4.
-   (LENGTH l1 = LENGTH l2) /\
-   (LENGTH l3 = LENGTH l4)
-   ==>
-    (zip (l1 ++ l3) (l2 ++ l4) = zip l1 l2 ++ zip l3 l4)`,
- recInduct zip_ind >> rw_tac list_ss [zip_def]);
-
-val zip_append_id = Q.prove
-(`!l1 l2. zip l1 l1 ++ zip l2 l2 = zip (l1 ++ l2) (l1 ++ l2)`,
-Induct_on `l1` THEN RW_TAC list_ss [zip_def] THEN
-Induct_on `l2` THEN RW_TAC list_ss [zip_def]);
-
-val zip_eq_nil = Q.prove
-(`!l1 l2. (zip l1 l2 = []) <=> ((l1=[]) \/ (l2=[]))`,
- recInduct zip_ind THEN RW_TAC list_ss [zip_def]);
-
-val zip_eqns = Q.prove
-(`!(h1:'a) (t1:'a list)
-   (h2:'b) (t2:'b list) (l1:'a list) (l2:'b list).
-   (zip l1 [] = []) /\
-   (zip [] l2 = []) /\
-   (zip (h1::t1) (h2::t2) = (h1,h2)::zip t1 t2)`,
- Cases_on `l1` THEN RW_TAC list_ss [zip_def]);
-
 val len_cmp_zip = Q.prove
 (`!l1 l2 l3 l4. (len_cmp l1 l2 = Equal) ==>
-    (zip l1 l2 ++ zip l3 l4 = zip (l1++l3) (l2++l4))`,
-recInduct zip_ind THEN rw_tac list_ss [zip_eqns]
- >- (Cases_on `v0` >> full_simp_tac list_ss [zip_def,len_cmp_def] >> rw_tac list_ss [])
- >- (full_simp_tac list_ss [zip_def,len_cmp_def] >> rw_tac list_ss [])
+    (ZIP (l1,l2) ++ ZIP (l3,l4) = ZIP (l1++l3,l2++l4))`,
+recInduct ZIP_ind THEN rw_tac list_ss [ZIP_def]
+ >- (Cases_on `l` >> full_simp_tac list_ss [ZIP_def,len_cmp_def] >> rw_tac list_ss [])
+ >- (full_simp_tac list_ss [ZIP_def,len_cmp_def] >> rw_tac list_ss [])
  >- (full_simp_tac list_ss [len_cmp_def]));
 
 
@@ -403,7 +396,7 @@ val regexp_compareW_def =
       | (Or _, Star _) => Greater
       | (Or rs1, Or rs2) =>
           (case len_cmp rs1 rs2
-            of Equal => regexp_compareW (zip rs1 rs2 ++ t)
+            of Equal => regexp_compareW (ZIP (rs1,rs2) ++ t)
              | verdict => verdict)
       | (Or _, __) => Less
       | (Neg r, Neg s) => regexp_compareW ((r,s)::t)
@@ -411,8 +404,8 @@ val regexp_compareW_def =
 (WF_REL_TAC `mlt_list (RPROD (measure rsize) (measure rsize))`
  THEN RW_TAC list_ss [rsize_def]
  THENL
-  [METIS_TAC [SIMP_RULE list_ss [rsize_def] rsize_or_lem,mem_zip_lem],
-   METIS_TAC [SIMP_RULE list_ss [rsize_def] rsize_or_lem,mem_zip_lem],
+  [METIS_TAC [SIMP_RULE list_ss [rsize_def] rsize_or_lem,MEM_ZIP_IMP],
+   METIS_TAC [SIMP_RULE list_ss [rsize_def] rsize_or_lem,MEM_ZIP_IMP],
    Q.EXISTS_TAC `[(r1,r3) ; (r2,r4)]` THEN NTAC 2 (RW_TAC list_ss [rsize_def])
   ]);
 
@@ -462,7 +455,7 @@ val regexp_compareW_thm = Q.prove
    (regexp_compareW ((Or rs1,Or rs2)::t) =
          (case len_cmp rs1 rs2 of
             Less => Less
-          | Equal => regexp_compareW (zip rs1 rs2 ++ t)
+          | Equal => regexp_compareW (ZIP (rs1,rs2) ++ t)
           | Greater => Greater)) /\
    (regexp_compareW ((Or rs1,Neg v55)::t) = Less) /\
    (regexp_compareW ((Neg r',Chset v62)::t) = Greater) /\
@@ -478,23 +471,23 @@ val regexp_compareW_thm = Q.prove
 val regexp_compareW_eq = Q.store_thm
 ("regexp_compareW_eq",
  `!plist l1 l2.
-    (LENGTH l1 = LENGTH l2) /\ (zip l1 l2 = plist)
+    (LENGTH l1 = LENGTH l2) /\ (ZIP (l1,l2) = plist)
     ==>
     ((regexp_compareW plist = Equal) <=> (l1 = l2))`,
  recInduct regexp_compareW_ind_thm
    >> rw[]
-   >- (Cases_on `l1` >> Cases_on `l2` >> FULL_SIMP_TAC list_ss [zip_def,regexp_compareW_def])
+   >- (Cases_on `l1` >> Cases_on `l2` >> FULL_SIMP_TAC list_ss [ZIP_def,regexp_compareW_def])
    >- (Cases_on `p_1` >> Cases_on `p_2`
-        >> full_simp_tac list_ss [] >> imp_res_tac zip_eq_cons
-        >> fs [zip_def] >> rw_tac list_ss [regexp_compareW_thm]
+        >> full_simp_tac list_ss [] >> imp_res_tac ZIP_eq_cons
+        >> fs [ZIP_def] >> rw_tac list_ss [regexp_compareW_thm]
         >- (every_case_tac >> fs []
             >| [ metis_tac[cpn_distinct,charset_cmp_eq],
                  full_simp_tac list_ss [charset_cmp_eq],
                  metis_tac[cpn_distinct,charset_cmp_eq]])
         >- (Q.PAT_X_ASSUM `$!M` (MP_TAC o Q.SPECL [`r::r0::t1`, `r'::r0'::t2`])
-            >> rw_tac list_ss [zip_def] >> metis_tac[])
+            >> rw_tac list_ss [ZIP_def] >> metis_tac[])
         >- (Q.PAT_X_ASSUM `$!M` (MP_TAC o Q.SPECL [`r::t1`, `r'::t2`])
-            >> rw_tac list_ss [zip_def] >> metis_tac[])
+            >> rw_tac list_ss [ZIP_def] >> metis_tac[])
         >- (CASE_TAC >> fs []
             >| [metis_tac[cpn_distinct,len_cmp_neq],
                 imp_res_tac len_cmp_length
@@ -503,36 +496,36 @@ val regexp_compareW_eq = Q.store_thm
                   >> METIS_TAC [APPEND_LENGTH_EQ,zip_append],
                 metis_tac[cpn_distinct,len_cmp_neq]])
         >- (Q.PAT_X_ASSUM `$!M` (MP_TAC o Q.SPECL [`r::t1`, `r'::t2`])
-            >> rw_tac list_ss [zip_def] >> metis_tac[])));
+            >> rw_tac list_ss [ZIP_def] >> metis_tac[])));
 
 val regexp_compare_eq = Q.store_thm
 ("regexp_compare_eq",
  `!r s. (regexp_compare r s = Equal) <=> (r = s)`,
  rw_tac list_ss [regexp_compare_def]
   >> mp_tac (Q.SPECL [`[(r,s)]`, `[r]`, `[s]`] regexp_compareW_eq)
-  >> rw_tac list_ss [zip_def]);
+  >> rw_tac list_ss [ZIP_def]);
 
 val regexp_compareW_strict = Q.store_thm
 ("regexp_compareW_antisym",
   `!plist l1 l2.
-    (LENGTH l1 = LENGTH l2) /\ (zip l1 l2 = plist)
+    (LENGTH l1 = LENGTH l2) /\ (ZIP (l1,l2) = plist)
      ==>
-     ((regexp_compareW plist = Greater) <=> (regexp_compareW (zip l2 l1) = Less))`,
+     ((regexp_compareW plist = Greater) <=> (regexp_compareW (ZIP (l2,l1)) = Less))`,
  recInduct regexp_compareW_ind_thm
    >> rw[]
    >- (Cases_on `l1` >> Cases_on `l2`
-         >> FULL_SIMP_TAC list_ss [zip_def,regexp_compareW_def]
+         >> FULL_SIMP_TAC list_ss [ZIP_def,regexp_compareW_def]
          >> rw [])
    >- (Cases_on `p_1` >> Cases_on `p_2`
         >> full_simp_tac list_ss [] >> rw []
-        >> imp_res_tac zip_eq_cons
-        >> fs [zip_def] >> rw_tac list_ss [regexp_compareW_thm]
+        >> imp_res_tac ZIP_eq_cons
+        >> fs [ZIP_def] >> rw_tac list_ss [regexp_compareW_thm]
         >- (every_case_tac >> fs []
              >> metis_tac [charset_cmp_strict,cpn_distinct])
         >- (Q.PAT_X_ASSUM `$!M` (MP_TAC o Q.SPECL [`r::r0::t1`, `r'::r0'::t2`])
-            >> rw_tac list_ss [zip_def])
+            >> rw_tac list_ss [ZIP_def])
         >- (Q.PAT_X_ASSUM `$!M` (MP_TAC o Q.SPECL [`r::t1`, `r'::t2`])
-            >> rw_tac list_ss [zip_def])
+            >> rw_tac list_ss [ZIP_def])
         >- (CASE_TAC >> fs []
              >- (metis_tac [len_cmp_strict,cpn_case_def, cpn_distinct])
              >- (imp_res_tac len_cmp_length
@@ -542,7 +535,7 @@ val regexp_compareW_strict = Q.store_thm
                   >> METIS_TAC [APPEND_LENGTH_EQ,zip_append])
              >- (metis_tac [len_cmp_strict,cpn_case_def, cpn_distinct]))
         >- (Q.PAT_X_ASSUM `$!M` (MP_TAC o Q.SPECL [`r::t1`, `r'::t2`])
-            >> rw_tac list_ss [zip_def]))
+            >> rw_tac list_ss [ZIP_def]))
 );
 
 val regexp_compare_antisym = Q.store_thm
@@ -550,26 +543,21 @@ val regexp_compare_antisym = Q.store_thm
 `!r s. (regexp_compare r s = Greater) ⇔ (regexp_compare s r = Less)`,
  rw_tac list_ss [regexp_compare_def]
   >> mp_tac (Q.SPECL [`[(r,s)]`, `[r]`, `[s]`] regexp_compareW_strict)
-  >> rw_tac list_ss [zip_def]);
-
-val cons_eq_zip = Q.prove
-(`!l1 l2 a b t.
-    ((a,b)::t = zip l1 l2) ==> ?t1 t2. (l1 = a::t1) ∧ (l2 = b::t2)`,
- METIS_TAC [zip_eq_cons]);
+  >> rw_tac list_ss [ZIP_def]);
 
 val regexp_compareW_trans = Q.store_thm
 ("regexp_compareW_trans",
  `!plist l1 l2 l3.
    (LENGTH l1 = LENGTH l2) /\ (LENGTH l2 = LENGTH l3) /\
-   (plist = zip l1 l2) /\
+   (plist = ZIP (l1,l2)) /\
    (regexp_compareW plist = Less) /\
-   (regexp_compareW (zip l2 l3) = Less)
+   (regexp_compareW (ZIP (l2,l3)) = Less)
     ==>
-   (regexp_compareW (zip l1 l3) = Less)`,
+   (regexp_compareW (ZIP (l1,l3)) = Less)`,
  recInduct regexp_compareW_ind_thm
   >> rw_tac set_ss []
-     >- metis_tac [zip_eq_nil,regexp_compareW_thm,cpn_distinct]
-  >> imp_res_tac cons_eq_zip
+     >- metis_tac [ZIP_eq_nil,regexp_compareW_thm,cpn_distinct]
+  >> imp_res_tac cons_eq_ZIP
   >> ntac 2 (pop_assum SUBST_ALL_TAC)
   >> Cases_on `p_1`
   >> Cases_on `p_2`
@@ -577,7 +565,7 @@ val regexp_compareW_trans = Q.store_thm
   >> Induct_on `l3`
   >> rw_tac list_ss []
   >> Cases_on `h`
-  >> full_simp_tac set_ss [zip_def,regexp_compareW_thm]
+  >> full_simp_tac set_ss [ZIP_def,regexp_compareW_thm]
   >> rw_tac std_ss []
      >- (every_case_tac
           >> rw_tac set_ss []
@@ -585,10 +573,10 @@ val regexp_compareW_trans = Q.store_thm
                        cpn_distinct])
      >- (qpat_x_assum `$!M`
           (mp_tac o Q.SPECL [`r::r0::t1`, `r'::r0'::t2`, `r''::r0''::l3`])
-          >> rw_tac list_ss [zip_def])
+          >> rw_tac list_ss [ZIP_def])
      >- (qpat_x_assum `$!M`
            (mp_tac o Q.SPECL [`r::t1`, `r'::t2`, `r''::l3`])
-           >> rw_tac list_ss [zip_def])
+           >> rw_tac list_ss [ZIP_def])
      >- (every_case_tac
           >> full_simp_tac list_ss []
 	  >> rw_tac list_ss []
@@ -613,7 +601,7 @@ val regexp_compareW_trans = Q.store_thm
              >- metis_tac [len_cmp_good,good_cmp_thm,cpn_distinct])
      >- (qpat_x_assum `$!M`
           (mp_tac o Q.SPECL [`r::t1`, `r'::t2`, `r''::l3`])
-          >> rw_tac list_ss [zip_def])
+          >> rw_tac list_ss [ZIP_def])
 );
 
 val regexp_compare_trans = Q.store_thm
@@ -622,26 +610,26 @@ val regexp_compare_trans = Q.store_thm
          ==>
          (regexp_compare r u = Less)`,
  rw_tac std_ss [regexp_compare_def]
-   >> `[(r,u)] = zip [r] [u]` by rw[zip_def]
-   >> rw[]
+   >> `[(r,u)] = ZIP ([r],[u])` by rw[ZIP_def]
+   >> pop_assum SUBST1_TAC
    >> match_mp_tac regexp_compareW_trans
    >> Q.EXISTS_TAC `[(r,s)]`
    >> Q.EXISTS_TAC `[s]`
-   >> rw[zip_def]);
+   >> rw[ZIP_def]);
 
 val regexp_compareW_trans_eq = Q.store_thm
 ("regexp_compareW_trans_eq",
  `!plist l1 l2 l3.
    (LENGTH l1 = LENGTH l2) /\ (LENGTH l2 = LENGTH l3) /\
-   (plist = zip l1 l2) /\
+   (plist = ZIP (l1,l2)) /\
    (regexp_compareW plist = Less) /\
-   (regexp_compareW (zip l2 l3) = Equal)
+   (regexp_compareW (ZIP (l2,l3)) = Equal)
     ==>
-   (regexp_compareW (zip l1 l3) = Less)`,
+   (regexp_compareW (ZIP (l1,l3)) = Less)`,
  recInduct regexp_compareW_ind_thm
   >> rw_tac set_ss []
-     >- metis_tac [zip_eq_nil,regexp_compareW_thm,cpn_distinct]
-  >> imp_res_tac cons_eq_zip
+     >- metis_tac [ZIP_eq_nil,regexp_compareW_thm,cpn_distinct]
+  >> imp_res_tac cons_eq_ZIP
   >> ntac 2 (pop_assum SUBST_ALL_TAC)
   >> Cases_on `p_1`
   >> Cases_on `p_2`
@@ -649,16 +637,16 @@ val regexp_compareW_trans_eq = Q.store_thm
   >> Induct_on `l3`
   >> rw_tac list_ss []
   >> Cases_on `h`
-  >> full_simp_tac set_ss [zip_def,regexp_compareW_thm]
+  >> full_simp_tac set_ss [ZIP_def,regexp_compareW_thm]
   >> rw_tac std_ss []
      >- (every_case_tac >> rw[] >>
           metis_tac [charset_cmp_eq,charset_cmp_strict,cpn_distinct])
      >- (qpat_x_assum `$!M`
            (mp_tac o
                Q.SPECL [`r::r0::t1`, `r'::r0'::t2`, `r''::r0''::l3`])
-           >> rw_tac list_ss [zip_def])
+           >> rw_tac list_ss [ZIP_def])
      >- (qpat_x_assum `$!M` (mp_tac o Q.SPECL [`r::t1`, `r'::t2`, `r''::l3`])
-          >> rw_tac list_ss [zip_def])
+          >> rw_tac list_ss [ZIP_def])
      >- (every_case_tac
           >> full_simp_tac set_ss []
           >> rw_tac set_ss []
@@ -671,7 +659,7 @@ val regexp_compareW_trans_eq = Q.store_thm
              >- metis_tac [len_cmp_good,good_cmp_thm,cpn_distinct]
              >- metis_tac [len_cmp_good,good_cmp_thm,cpn_distinct])
      >- (qpat_x_assum `$!M` (mp_tac o Q.SPECL [`r::t1`, `r'::t2`, `r''::l3`])
-            >> rw_tac list_ss [zip_def])
+            >> rw_tac list_ss [ZIP_def])
 );
 
 val regexp_compare_trans_eq = Q.store_thm
@@ -680,12 +668,12 @@ val regexp_compare_trans_eq = Q.store_thm
          ==>
          (regexp_compare r u = Less)`,
  rw_tac std_ss [regexp_compare_def]
-   >> `[(r,u)] = zip [r] [u]` by rw[zip_def]
-   >> rw[]
+   >> `[(r,u)] = ZIP([r],[u])` by rw[ZIP_def]
+   >> pop_assum SUBST_ALL_TAC
    >> match_mp_tac regexp_compareW_trans_eq
    >> Q.EXISTS_TAC `[(r,s)]`
    >> Q.EXISTS_TAC `[s]`
-   >> rw[zip_def]);
+   >> rw[ZIP_def]);
 
 val regexp_compare_good = Q.store_thm
 ("regexp_compare_good",

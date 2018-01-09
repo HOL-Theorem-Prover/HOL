@@ -81,6 +81,8 @@ fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
 
 fun quote s = String.concat ["\"",String.toString s,"\""]
+fun optquote NONE = "NONE"
+  | optquote (SOME p) = "SOME " ^ quote p
 
 val holmakedir = fullPath [holdir, "tools", "Holmake"];
 val compiler = fullPath [mosmldir, "mosmlc"];
@@ -186,7 +188,7 @@ in
    "val version ="  --> ("val version = "^Int.toString version_number^"\n"),
    "val ML_SYSNAME =" --> "val ML_SYSNAME = \"mosml\"\n",
    "val release ="  --> ("val release = "^quote release_string^"\n"),
-   "val DOT_PATH =" --> ("val DOT_PATH = "^quote DOT_PATH^"\n")
+   "val DOT_PATH =" --> ("val DOT_PATH = "^optquote DOT_PATH^"\n")
   ];
   use destfile
 end;

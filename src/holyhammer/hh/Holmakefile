@@ -1,7 +1,5 @@
 .PHONY: all
 
-ifneq ($(which ocamlopt),)
-
 INCLUDES = hh1
 HH2_CMX=toolbox.cmx hh_parse.cmx hh_lexer.cmx read.cmx predict.cmx preprocess.cmx init.cmx \
 dependency.cmx thf1hh1.cmx features.cmx prepredict.cmx write.cmx
@@ -16,12 +14,17 @@ ALL_CMX=$(HL_CMX) $(HH2_CMX)
 
 EXTRA_CLEANS = $(HH2_CMX) $(patsubst %.cmx,%.cmi,$(HH2_CMX)) $(patsubst %.cmx,%.o,$(HH2_CMX)) hh_parse.ml hh_lexer.ml main.cmi main.cmx main.o hh main_thf.cmi main_thf.cmx main_thf.o hh_thf
 
+OCAMLOPT=ocamlfind ocamlopt -package num -unsafe-string
 
+ifneq ($(which ocamlfind),)
+# Assume we have ocamlopt if we have ocamlfind
+
+ifeq ($(shell ocamlfind query num > /dev/null 2>&1; echo $$?),0)
 
 all: $(HH2_CMX) hh hh_thf
 
 hh: main.ml $(ALL_CMX)
-	ocamlopt nums.cmxa str.cmxa unix.cmxa -o $@ -I hh1 $(ALL_CMX) $<
+	$(OCAMLOPT) nums.cmxa str.cmxa unix.cmxa -o $@ -I hh1 $(ALL_CMX) $<
 
 hh_thf: main_thf.ml $(ALL_CMX)
 	ocamlopt nums.cmxa str.cmxa unix.cmxa -o $@ -I hh1 $(ALL_CMX) $<
@@ -34,33 +37,40 @@ hh_lexer.ml: hh_lexer.mll hh_parse.ml
 	ocamllex $<
 
 toolbox.cmi toolbox.cmx: toolbox.ml
-	ocamlopt -c -I hh1 $<
+	$(OCAMLOPT) -c -I hh1 $<
 hh_parse.cmi hh_parse.cmx: hh_parse.ml
-	ocamlopt -c $<
+	$(OCAMLOPT) -c $<
 hh_lexer.cmi hh_lexer.cmx: hh_lexer.ml hh_parse.cmi
-	ocamlopt -c $<
+	$(OCAMLOPT) -c $<
 read.cmi read.cmx: read.ml hh_parse.cmi hh_lexer.cmi
-	ocamlopt -c -I hh1 $<
+	$(OCAMLOPT) -c -I hh1 $<
 predict.cmi predict.cmx: predict.ml toolbox.cmi
-	ocamlopt -c -I hh1 $<
+	$(OCAMLOPT) -c -I hh1 $<
 preprocess.cmi preprocess.cmx: preprocess.ml hh_parse.cmi
-	ocamlopt -c -I hh1 $<
+	$(OCAMLOPT) -c -I hh1 $<
 init.cmi init.cmx: init.ml hh_parse.cmi preprocess.cmi read.cmi
-	ocamlopt -c -I hh1 $<
+	$(OCAMLOPT) -c -I hh1 $<
 dependency.cmi dependency.cmx: dependency.ml read.cmi
-	ocamlopt -c -I hh1 $<
+	$(OCAMLOPT) -c -I hh1 $<
 thf1hh1.cmi thf1hh1.cmx: thf1hh1.ml hh_parse.cmi
-	ocamlopt -c -I hh1 $<
+	$(OCAMLOPT) -c -I hh1 $<
 features.cmi features.cmx: features.ml thf1hh1.cmi init.cmi
-	ocamlopt -c -I hh1 $<
+	$(OCAMLOPT) -c -I hh1 $<
 prepredict.cmx: prepredict.ml features.cmi predict.cmi
-	ocamlopt -c -I hh1 $<
+	$(OCAMLOPT) -c -I hh1 $<
 write.cmx: write.ml hh_parse.cmi thf1hh1.cmi dependency.cmi
-	ocamlopt -c -I hh1 $<
+	$(OCAMLOPT) -c -I hh1 $<
 
 else
 
 all:
-	@echo "No OCaml installation found -- giving up on hh"
+	@echo "No num OCaml package found -- giving up on hh"
+
+endif
+
+else
+
+all:
+	@echo "No ocamlfind found -- giving up on hh"
 
 endif
