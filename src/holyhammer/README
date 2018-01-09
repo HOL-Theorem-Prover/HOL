@@ -35,6 +35,12 @@ Example:
   open holyHammer;
   holyhammer ``1 + 1 = 2``;
 
+Initialization...
+Caching 2967 feature vectors
+Minimization...
+METIS_TAC [arithmeticTheory.TWO, arithmeticTheory.SUC_ONE_ADD]
+val it = fn: tactic
+
 Questions:
 
   If you have any question, you can send an email to 
