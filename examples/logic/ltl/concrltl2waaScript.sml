@@ -1,4 +1,4 @@
-open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory relationTheory pred_setTheory prim_recTheory pairTheory bagTheory set_relationTheory
+open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory relationTheory pred_setTheory prim_recTheory pairTheory bagTheory set_relationTheory rich_listTheory
 
 open alterATheory sptreeTheory ltlTheory generalHelpersTheory concrRepTheory ltl2waaTheory waaSimplTheory optionTheory
 
@@ -160,6 +160,156 @@ val trans_concr_def = Define`
      d_conj_concr (trans_concr f2)
        (<| pos := [] ; neg := [] ; sucs := [R f1 f2] |> ::
                                            (trans_concr f1)))`;
+
+(* val TRANS_CONCR_SUCS_AP = store_thm *)
+(*   ("TRANS_CONCR_SUCS_AP", *)
+(*    ``!f ce s. (MEM ce (trans_concr f)) *)
+(*             ∧ (MEM s ce.sucs) *)
+(*             ==> (props s ⊆ (props f))``, *)
+(*    Induct_on `f` >> rpt strip_tac >> fs[trans_concr_def,props_def,subForms_def] *)
+(*    >> fs[SUBSET_DEF] >> rpt strip_tac >> fs[concrEdge_component_equality] *)
+(*    >- metis_tac[MEM] *)
+(*    >- metis_tac[MEM] *)
+(*    >- metis_tac[MEM] *)
+(*    >- metis_tac[MEM] *)
+(*    >- metis_tac[MEM] *)
+(*    >- metis_tac[MEM] *)
+(*    >- metis_tac[MEM] *)
+(*    >- metis_tac[MEM] *)
+(*    >- (fs[d_conj_concr_def,FOLDR_LEMM4,concrEdge_component_equality] *)
+(*        >> `MEM s (e1.sucs ++ e2.sucs)` by metis_tac[nub_set] *)
+(*        >> fs[] >> metis_tac[] *)
+(*       ) *)
+(*    >- (fs[d_conj_concr_def,FOLDR_LEMM4,concrEdge_component_equality] *)
+(*          >> `MEM s (e1.sucs ++ e2.sucs)` by metis_tac[nub_set] *)
+(*          >> fs[] >> metis_tac[] *)
+(*       ) *)
+(*    >- (fs[MEM_MAP,concrEdge_component_equality,tempDNF_concr_def] >> metis_tac[MEM]) *)
+
+val TRANS_CONCR_AP = store_thm
+  ("TRANS_CONCR_AP",
+   ``!f ce. MEM ce (trans_concr f)
+            ==> ((set ce.pos ⊆ (props f))
+               ∧ (set ce.neg ⊆ (props f)))``,
+   Induct_on `f` >> rpt strip_tac >> fs[trans_concr_def,props_def,subForms_def]
+   >> fs[SUBSET_DEF] >> rpt strip_tac
+   >- metis_tac[]
+   >- metis_tac[]
+   >- metis_tac[]
+   >- metis_tac[]
+   >- (fs[d_conj_concr_def,FOLDR_LEMM4,concrEdge_component_equality]
+       >> `MEM x (e1.pos ++ e2.pos)` by metis_tac[nub_set]
+       >> fs[] >> metis_tac[]
+      )
+   >- (fs[d_conj_concr_def,FOLDR_LEMM4,concrEdge_component_equality]
+         >> `MEM x (e1.neg ++ e2.neg)` by metis_tac[nub_set]
+         >> fs[] >> metis_tac[]
+      )
+   >- (fs[MEM_MAP,concrEdge_component_equality] >> metis_tac[MEM])
+   >- (fs[MEM_MAP,concrEdge_component_equality] >> metis_tac[MEM])
+   >- metis_tac[]
+   >- (fs[d_conj_concr_def,concrEdge_component_equality]
+       >> qabbrev_tac `g =
+               λe1.
+                 <|pos := nub e1.pos; neg := nub e1.neg;
+                   sucs := nub (e1.sucs ⧺ [U f f'])|>`
+       >> `MEM ce (FOLDR (λx l. g x::l) [] (trans_concr f))` by (
+            fs[]
+        )
+       >> `MEM ce (MAP g (trans_concr f))` by metis_tac[MAP_FOLDR]
+       >> fs[MEM_MAP] >> qunabbrev_tac `g` >> fs[concrEdge_component_equality]
+       >> `MEM x ce.pos` by metis_tac[nub_set] >> metis_tac[]
+      )
+   >- metis_tac[]
+   >- (fs[d_conj_concr_def,concrEdge_component_equality]
+       >> qabbrev_tac `g =
+              λe1.
+                  <|pos := nub e1.pos; neg := nub e1.neg;
+                    sucs := nub (e1.sucs ⧺ [U f f'])|>`
+       >> `MEM ce (FOLDR (λx l. g x::l) [] (trans_concr f))`
+            by fs[]
+       >> `MEM ce (MAP g (trans_concr f))` by metis_tac[MAP_FOLDR]
+       >> fs[MEM_MAP] >> qunabbrev_tac `g` >> fs[concrEdge_component_equality]
+       >> `MEM x ce.neg` by metis_tac[nub_set] >> metis_tac[]
+      )
+   >- (qabbrev_tac `r = <|pos := []; neg := []; sucs := [R f f']|>`
+       >> `!l1 l2 c. (MEM c (d_conj_concr l2 (r::l1)))
+                   ∧ (MEM_SUBSET l1 (trans_concr f))
+                   ∧ (MEM_SUBSET l2 (trans_concr f'))
+             ==> ((!p. MEM p c.pos ==> (p ∈ (props f ∪ props f')))
+                ∧ (!n. MEM n c.neg ==> (n ∈ (props f ∪ props f'))))` by (
+            Induct_on `l2` >> fs[d_conj_concr_def]
+            >> rpt strip_tac >> qunabbrev_tac `r`
+            >> fs[concrEdge_component_equality,MEM_SUBSET_SET_TO_LIST]
+            >> simp[props_def]
+            >- metis_tac[nub_set]
+            >- metis_tac[nub_set]
+            >- (fs[MEM_MAP,concrEdge_component_equality]
+                >> `MEM p (h.pos ++ e2.pos)` by metis_tac[nub_set]
+                >> fs[] >> metis_tac[SUBSET_DEF]
+               )
+            >- (fs[MEM_MAP,concrEdge_component_equality]
+                  >> `MEM n (h.neg ++ e2.neg)` by metis_tac[nub_set]
+                  >> fs[] >> metis_tac[SUBSET_DEF]
+               )
+            >- (first_x_assum (qspec_then `l1` mp_tac) >> simp[]
+                >> rpt strip_tac
+                >> first_x_assum (qspec_then `c` mp_tac) >> simp[]
+                >> rpt strip_tac >> fs[props_def]
+               )
+            >- (first_x_assum (qspec_then `l1` mp_tac) >> simp[]
+                >> rpt strip_tac
+                >> first_x_assum (qspec_then `c` mp_tac) >> simp[]
+                >> rpt strip_tac >> fs[props_def]
+               )
+        )
+       >> first_x_assum (qspec_then `trans_concr f` mp_tac)
+       >> simp[MEM_SUBSET_SET_TO_LIST] >> rpt strip_tac
+       >> first_x_assum (qspec_then `trans_concr f'` mp_tac)
+       >> simp[MEM_SUBSET_SET_TO_LIST] >> rpt strip_tac
+       >> first_x_assum (qspec_then `ce` mp_tac) >> simp[]
+       >> simp[props_def] >> rpt strip_tac >> metis_tac[]
+      )
+   >- (qabbrev_tac `r = <|pos := []; neg := []; sucs := [R f f']|>`
+       >> `!l1 l2 c. (MEM c (d_conj_concr l2 (r::l1)))
+                   ∧ (MEM_SUBSET l1 (trans_concr f))
+                   ∧ (MEM_SUBSET l2 (trans_concr f'))
+             ==> ((!p. MEM p c.pos ==> (p ∈ (props f ∪ props f')))
+                ∧ (!n. MEM n c.neg ==> (n ∈ (props f ∪ props f'))))` by (
+            Induct_on `l2` >> fs[d_conj_concr_def]
+            >> rpt strip_tac >> qunabbrev_tac `r`
+            >> fs[concrEdge_component_equality,MEM_SUBSET_SET_TO_LIST]
+            >> simp[props_def]
+            >- metis_tac[nub_set]
+            >- metis_tac[nub_set]
+            >- (fs[MEM_MAP,concrEdge_component_equality]
+                >> `MEM p (h.pos ++ e2.pos)` by metis_tac[nub_set]
+                >> fs[] >> metis_tac[SUBSET_DEF]
+               )
+            >- (fs[MEM_MAP,concrEdge_component_equality]
+                  >> `MEM n (h.neg ++ e2.neg)` by metis_tac[nub_set]
+                  >> fs[] >> metis_tac[SUBSET_DEF]
+               )
+            >- (first_x_assum (qspec_then `l1` mp_tac) >> simp[]
+                >> rpt strip_tac
+                >> first_x_assum (qspec_then `c` mp_tac) >> simp[]
+                >> rpt strip_tac >> fs[props_def]
+               )
+            >- (first_x_assum (qspec_then `l1` mp_tac) >> simp[]
+                >> rpt strip_tac
+                >> first_x_assum (qspec_then `c` mp_tac) >> simp[]
+                >> rpt strip_tac >> fs[props_def]
+               )
+        )
+       >> first_x_assum (qspec_then `trans_concr f` mp_tac)
+       >> simp[MEM_SUBSET_SET_TO_LIST] >> rpt strip_tac
+       >> first_x_assum (qspec_then `trans_concr f'` mp_tac)
+       >> simp[MEM_SUBSET_SET_TO_LIST] >> rpt strip_tac
+       >> first_x_assum (qspec_then `ce` mp_tac) >> simp[]
+       >> simp[props_def] >> rpt strip_tac >> metis_tac[]
+      )
+  );
+
 
 val TRANS_CONCR_LEMM = store_thm
   ("TRANS_CONCR_LEMM",
