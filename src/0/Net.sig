@@ -12,7 +12,7 @@
 signature Net =
 sig
   type 'a net
-  type term
+  type term = Term.term
 
   val empty     : 'a net
   val insert    : term * 'a -> 'a net -> 'a net
@@ -91,4 +91,4 @@ sig
    [lookup tm net] An outdated version of match, kept for compatibility.
 
  ---------------------------------------------------------------------------*)
-end;
+end

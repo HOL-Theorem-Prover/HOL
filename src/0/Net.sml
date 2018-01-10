@@ -12,7 +12,7 @@
 (* Reimplemented : July 17, 1999, Konrad Slind                           *)
 (* ===================================================================== *)
 
-structure Net : RawNet =
+structure Net :> Net =
 struct
 
 open Lib Feedback KernelTypes
