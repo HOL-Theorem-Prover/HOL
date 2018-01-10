@@ -31,7 +31,7 @@ fun split_sl_aux s pl sl = case sl of
 fun split_sl s sl = split_sl_aux s [] sl
 
 fun rpt_split_sl s sl =
-  let val (a,b) = split_sl s sl handle _ => (sl,[])
+  let val (a,b) = split_sl s sl handle HOL_ERR _ => (sl,[])
   in
     if null b then [a] else a :: rpt_split_sl s b
   end
@@ -43,7 +43,7 @@ fun read_string s =
       valOf (String.fromString (String.extract (s,1,SOME (String.size s - 2))))
     else raise ERR "read_string" s
   end
-  handle _ => raise ERR "read_string" s
+  handle HOL_ERR _ => raise ERR "read_string" s
 
 fun read_list l =
   (
@@ -59,7 +59,7 @@ fun read_list l =
     end
   | _ => err_msg "read_list" l
   )
-  handle _ => err_msg "read_list" l
+  handle HOL_ERR _ => err_msg "read_list" l
 
 fun read_thid l = case l of
    [s,n1,n2] =>
@@ -147,7 +147,7 @@ fun read_tm l =
   | ["TMAbs",n1,n2] => TMAbs (string_to_int n1, string_to_int n2)
   | _ => err_msg "read_tm" l
   )
-  handle _ => err_msg "read_tm" l
+  handle HOL_ERR _ => err_msg "read_tm" l
 
 fun load_tmvector idvector tyvector l = case l of
    "TERMS" :: m =>
@@ -189,7 +189,7 @@ fun read_thml_loop tmvector acc l = case l of
       val pretag = (read_dep (List.concat dep),
                     map read_string (List.concat ocl))
       val tml = map (Term.read_raw tmvector o read_string) (List.concat pretml)
-                handle _ => err_msg "read_raw" (List.concat pretml)
+                handle HOL_ERR _ => err_msg "read_raw" (List.concat pretml)
       val thm = Thm.disk_thm (pretag, tml)
     in
       read_thml_loop tmvector ((thmname,thm) :: acc) cont2
@@ -237,7 +237,7 @@ fun temp_encoded_update tmvector thyname (s0,s1) =
      read = Term.read_raw tmvector,
      data = s1
   }
-  handle _ => err_msg "temp_encoded_update" [s0,s1]
+  handle HOL_ERR _ => err_msg "temp_encoded_update" [s0,s1]
 
 fun load_loadable_thydata tmvector thyname l = case l of
    "LOADABLE_THYDATA" :: m =>
