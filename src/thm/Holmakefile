@@ -8,6 +8,7 @@ FTAG_UI = $(protect $(SIGOBJ)/FinalTag-sig.ui)
 FTYPE_UI = $(protect $(SIGOBJ)/FinalType-sig.ui)
 FTERM_UI = $(protect $(SIGOBJ)/FinalTerm-sig.ui)
 
+TAG_UOD = $(dprot $(SIGOBJ)/Tag.uo)
 TYPE_UOD = $(dprot $(SIGOBJ)/Type.uo)
 TERM_UID = $(dprot $(SIGOBJ)/Term.ui)
 TERM_UOD = $(dprot $(SIGOBJ)/Term.uo)
@@ -33,7 +34,7 @@ Thm.sig: std-thmsig.ML
 
 endif
 
-Thm.ui: Thm.sig $(FTHM_UID) $(TERM_UID)
+Thm.ui: Thm.sig $(FTHM_UID) $(TERM_UID) $(TAG_UOD)
 	$(HOLMOSMLC) -c $(FTHM_UI) $<
 
 Thm.uo: Thm.ui
