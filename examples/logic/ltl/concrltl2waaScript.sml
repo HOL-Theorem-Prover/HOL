@@ -793,6 +793,249 @@ val expandGraph_def = tDefine "expandGraph"
       )
   );
 
+val EXP_GRAPH_AP = store_thm
+  ("EXP_GRAPH_AP",
+   ``!aP g fs g2.
+        (wfg g)
+      ∧ (!f. MEM f fs ==> (props f ⊆ set aP))
+      ∧ (expandGraph g fs = SOME g2)
+      ∧ (∀id fls.
+         (id ∈ domain g.nodeInfo ∧ lookup id g.followers = SOME fls)
+         ==> (∀e. MEM e (MAP FST fls)
+               ⇒ MEM_SUBSET e.pos_lab aP ∧ MEM_SUBSET e.neg_lab aP)
+        )
+      ==>
+      (∀id fls.
+        (id ∈ domain g2.nodeInfo ∧ lookup id g2.followers = SOME fls)
+        ==> (∀e. MEM e (MAP FST fls)
+              ⇒ MEM_SUBSET e.pos_lab aP ∧ MEM_SUBSET e.neg_lab aP)
+      )``,
+   gen_tac >> HO_MATCH_MP_TAC (theorem "expandGraph_ind")
+   >> fs[expandGraph_def] >> strip_tac
+   >- metis_tac[]
+   >- (rpt gen_tac >> strip_tac >> rpt gen_tac >> strip_tac
+       >> Q.HO_MATCH_ABBREV_TAC `P g2`
+       >> `P g` by (qunabbrev_tac `P` >> fs[] >> metis_tac[])
+       >> Cases_on `
+          FOLDR (λe g_opt. monad_bind g_opt (addEdgeToGraph f e))
+          (SOME
+           (FOLDR (λp g. addFrmlToGraph g p) g
+            (nub (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f)))))
+          (trans_concr f)` >> fs[]
+       >> qabbrev_tac `G =
+            (FOLDR (λp g. addFrmlToGraph g p) g
+               (nub (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f))))`
+       >> `!ls fs m.
+            (!e. MEM e ls
+                 ==> (MEM_SUBSET e.pos aP ∧ MEM_SUBSET e.neg aP))
+            ∧ (FOLDR (λe g_opt. monad_bind g_opt (addEdgeToGraph f e))
+               (SOME G) ls = SOME m)
+            ==> (P m ∧ wfg m)` by (
+            Induct_on `ls` >> fs[] >> strip_tac
+            >- (rw[] >> fs[] >> qunabbrev_tac `P` >> fs[]
+                >> rpt gen_tac >> strip_tac >> strip_tac >> strip_tac
+                >> Cases_on `id ∈ domain g.nodeInfo`
+                >- (
+                `IS_SOME (lookup id g.nodeInfo)` by (
+                   Cases_on `lookup id g.nodeInfo`
+                   >> fs[domain_lookup,IS_SOME_DEF]
+                )
+                >> `lookup id g.followers = SOME fls` by (
+                      qunabbrev_tac `G`
+                      >> metis_tac[ADDFRML_FOLDR_LEMM]
+                ) >> metis_tac[]
+                 )
+                >- (
+                `!n FS. ~(n ∈ domain g.nodeInfo)
+                     ∧ (n ∈ domain
+                            (FOLDR (λp g. addFrmlToGraph g p) g FS).nodeInfo)
+                    ==> (lookup n
+                           (FOLDR (λp g. addFrmlToGraph g p) g FS).followers
+                              = SOME [])` by (
+                  gen_tac >> Induct_on `FS` >> fs[] >> rpt strip_tac >> fs[]
+                  >> Cases_on
+                      `n ∈ domain
+                           (FOLDR (λp g. addFrmlToGraph g p) g FS).nodeInfo`
+                  >- (`IS_SOME
+                         (lookup n
+                           (FOLDR (λp g. addFrmlToGraph g p) g FS).nodeInfo)`
+                        by fs[IS_SOME_DEF,domain_lookup]
+                      >> metis_tac[ADDFRML_LEMM2,ADDFRML_FOLDR_LEMM]
+                     )
+                  >- (qabbrev_tac `G1 = (FOLDR (λp g. addFrmlToGraph g p) g FS)`
+                      >> `wfg G1` by (
+                          qunabbrev_tac `G1`
+                          >> metis_tac[ADDFRML_FOLDR_LEMM,ADDFRML_WFG]
+                       )
+                      >> `n = G1.next` by (
+                         Cases_on
+                           `~(MEM h (MAP ((λl. l.frml) ∘ SND)
+                                        (toAList G1.nodeInfo)))`
+                         >> Cases_on `h` >> fs[addFrmlToGraph_def]
+                         >> fs[addNode_def]
+                       )
+                      >> Cases_on
+                           `~(MEM h (MAP ((λl. l.frml) ∘ SND)
+                                         (toAList G1.nodeInfo)))`
+                      >> Cases_on `h` >> fs[addFrmlToGraph_def]
+                      >> fs[addNode_def]
+                     )
+                )
+              >> first_x_assum (qspec_then `id` mp_tac) >> strip_tac
+              >> first_x_assum (qspec_then `
+                  nub (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f))` mp_tac)
+              >> simp[] >> strip_tac
+              >> fs[MEM_MAP]
+           )
+               )
+            >- (qunabbrev_tac `G` >> metis_tac[ADDFRML_FOLDR_LEMM])
+            >- (strip_tac >> strip_tac
+                >> `P x'` by metis_tac[]
+                >> Cases_on `h` >> fs[addEdgeToGraph_def]
+                >> Cases_on `l1` >> fs[]
+                >- (
+                 rename[`findNode _ x = SOME x1`]
+                 >> Cases_on `x1` >> fs[]
+                 >> metis_tac[updateNode_preserves_edges,
+                              updateNode_preserves_domain,
+                              updateNode_preserves_wfg]
+                 )
+                >- (
+                 rename[`findNode _ x = SOME x1`]
+                 >> Cases_on `x1` >> fs[]
+                 >> `!es. (!e. MEM e (MAP FST es)
+                               ==> (MEM_SUBSET e.pos_lab aP)
+                                 ∧ (MEM_SUBSET e.neg_lab aP)
+                          )
+                        ∧ (!s. MEM s (MAP SND es)
+                               ==> (s ∈ domain x.nodeInfo)
+                          )
+                      ==>
+                      ?G_next.
+                      (FOLDR
+                          (λe g_opt.
+                             do
+                             g_int <- g_opt;
+                             newGraph <- addEdge q e g_int;
+                             SOME newGraph
+                             od) (SOME x) es = SOME G_next)
+                      ∧ P G_next
+                      ∧ (G_next.nodeInfo = x.nodeInfo)
+                      ∧ (wfg G_next)` by (
+                   Induct_on `es` >> fs[] >> rpt strip_tac
+                   >> `(∀e.
+                        MEM e (MAP FST es) ⇒
+                        MEM_SUBSET e.pos_lab aP ∧ MEM_SUBSET e.neg_lab aP)
+                     ∧ (∀s. MEM s (MAP SND es) ⇒ s ∈ domain x.nodeInfo)`
+                      by metis_tac[]
+                   >> fs[]
+                   >> rename[`addEdge q h G_next`] >> Cases_on `h`
+                   >> rename[`addEdge q (eL,suc) G_next`]
+                   >> `q ∈ domain G_next.nodeInfo` by (
+                       fs[findNode_def]
+                       >> metis_tac[FIND_LEMM2,MEM_toAList,domain_lookup]
+                   )
+                   >> `?G_next2. addEdge q (eL,suc) G_next = SOME G_next2` by (
+                       simp[addEdge_def] >> metis_tac[wfg_def,domain_lookup]
+                   )
+                   >> fs[addEdge_def]
+                   >> `G_next2.nodeInfo = x.nodeInfo`
+                      by fs[gfg_component_equality]
+                   >> `wfg G_next2` by (
+                       fs[wfg_def,gfg_component_equality,wfAdjacency_def]
+                       >> Q.HO_MATCH_ABBREV_TAC `A ∧ B ∧ C`
+                       >> `A ∧ (A ==> B) ∧ C` suffices_by fs[]
+                       >> qunabbrev_tac `A` >> qunabbrev_tac `B`
+                       >> qunabbrev_tac `C` >> rpt strip_tac
+                       >- (`q INSERT (domain G_next.followers) =
+                               domain x.nodeInfo`
+                             suffices_by metis_tac[domain_insert]
+                           >> fs[INSERT_DEF] >> simp[SET_EQ_SUBSET,SUBSET_DEF]
+                           >> metis_tac[]
+                          )
+                       >- (Cases_on `q = k` >> fs[] >> rw[]
+                         >- (`nl = ((eL,suc)::followers_old)`
+                              by (metis_tac[lookup_insert,SOME_11])
+                             >> fs[] >> metis_tac[]
+                            )
+                         >- (`lookup k G_next.followers = SOME nl`
+                               by metis_tac[lookup_insert,SOME_11]
+                             >> metis_tac[]
+                            )
+                          )
+                       >- metis_tac[]
+                   )
+                 >> fs[]
+                 >> qunabbrev_tac `P` >> fs[] >> rpt gen_tac >> strip_tac
+                 >> strip_tac >> strip_tac
+                 >> Cases_on `id = q` >> fs[]
+                 >- (`fls = (eL,suc)::followers_old` by (rw[] >> fs[])
+                     >> fs[MEM_MAP] >> metis_tac[]
+                    )
+                 >- (`lookup id G_next.followers = SOME fls`
+                      by (rw[] >> fs[] >> metis_tac[lookup_insert,SOME_11])
+                     >> metis_tac[]
+                    )
+                 )
+               >> first_x_assum (qspec_then `
+                    MAP
+                    (λi.
+                         (<|edge_grp :=
+                          (if oldSucPairs = [] then 1
+                           else (HD (MAP FST oldSucPairs)).edge_grp) + 1;
+                          pos_lab := l; neg_lab := l0|>,i))
+                    (MAP FST
+                         (CAT_OPTIONS
+                              (findNode (λ(n,l). l.frml = h) x::
+                               MAP (λs. findNode (λ(n,l). l.frml = s) x) t)))`
+                 mp_tac)
+               >> simp[]
+               >> Q.HO_MATCH_ABBREV_TAC `(A ==> P m ∧ B ∧ wfg m)
+                                          ==> P m ∧ wfg m`
+               >> `A` suffices_by fs[] >> qunabbrev_tac `A` >> conj_tac
+               >- (strip_tac >> strip_tac >> fs[MEM_MAP,CAT_OPTIONS_MEM]
+                   >- (first_x_assum (qspec_then `concrEdge l l0 (h::t)` mp_tac)
+                       >> simp[]
+                      )
+                   >- (first_x_assum (qspec_then `concrEdge l l0 (h::t)` mp_tac)
+                                     >> simp[]
+                      )
+                  )
+               >- (strip_tac >> strip_tac >> fs[MEM_MAP,CAT_OPTIONS_MEM]
+                   >> fs[findNode_def] >> rename[`SOME y = FIND _ _`]
+                   >> Cases_on `y` >> simp[]
+                   >> metis_tac[FIND_LEMM2,MEM_toAList,SOME_11,domain_lookup]
+                  )
+               )
+            )
+        )
+       >> first_x_assum (qspec_then `trans_concr f` mp_tac) >> simp[]
+       >> `∀e. MEM e (trans_concr f)
+            ⇒ MEM_SUBSET e.pos aP ∧ MEM_SUBSET e.neg aP` by (
+            rpt strip_tac >> IMP_RES_TAC TRANS_CONCR_AP
+            >> fs[MEM_SUBSET_SET_TO_LIST] >> metis_tac[SUBSET_TRANS]
+        )
+       >> simp[] >> strip_tac
+       >> `(∀f'.
+             MEM f'
+             (FILTER (λs. ¬MEM s (graphStates g) ∧ s ≠ f ∧ ¬MEM s fs)
+                     (nub (FOLDR (λe pr. e.sucs ⧺ pr) [] (trans_concr f)))) ∨
+             MEM f' fs ⇒
+             props f' ⊆ set aP)` suffices_by metis_tac[]
+       >> rpt strip_tac >> fs[MEM_FILTER,FOLDR_LEMM6]
+       >> `(concr2AbstractEdge (set aP) a) ∈ (trans (POW (set aP)) f)` by (
+            metis_tac[MEM_MAP,TRANS_CONCR_LEMM]
+        )
+       >> Cases_on `a` >> fs[concr2AbstractEdge_def]
+       >> `(f',f) ∈ TSF` by metis_tac[TRANS_REACHES_SUBFORMS]
+       >> `f' ∈ subForms f` by metis_tac[TSF_def,IN_DEF,TSF_IMPL_SF]
+       >> fs[props_def,subForms_def,SUBSET_DEF] >> rpt strip_tac
+       >> metis_tac[SUBFORMS_TRANS]
+      )
+  );
+
+
+
 val EXP_GRAPH_WFG_AND_SOME = store_thm
   ("EXP_GRAPH_WFG_AND_SOME",
    ``!g fs. wfg g
