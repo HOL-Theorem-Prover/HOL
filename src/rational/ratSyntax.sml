@@ -174,6 +174,23 @@ in
 	recurse [] tm
 end;
 
+
+(* into and out of (arbitrary precision) integers *)
+fun int_of_term t =
+  if is_rat_ainv t then Arbint.~ (int_of_term (rand t))
+  else if is_rat_of_num t then Arbint.fromNat (numSyntax.dest_numeral (rand t))
+  else raise mk_HOL_ERR "ratSyntax" "int_of_term" "Term not integral"
+
+fun term_of_int i =
+  let
+    val (n, f) = if Arbint.<(i,Arbint.zero) then (Arbint.~ i, mk_rat_ainv)
+                 else (i, fn t => t)
+  in
+    f (mk_rat_of_num (numSyntax.mk_numeral (Arbint.toNat n)))
+  end
+
+
+
 (*==========================================================================
  * end of structure
  *==========================================================================*)

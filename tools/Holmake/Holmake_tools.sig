@@ -98,7 +98,6 @@ sig
   val maybe_recurse :
       {warn: string -> unit,
        diag : string -> unit,
-       no_prereqs : bool,
        hm: {dir : hmdir.t,
             visited : hmdir.t Binaryset.set,
             targets : string list} ->

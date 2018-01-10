@@ -167,7 +167,7 @@ fun is_infix_tree tree = case tree of
    HHSTACL (s, treel) => is_infix (valOf s)
  | HHSLEAF s => is_infix (valOf s)
 
-fun is_infix_treel treel = 
+fun is_infix_treel treel =
   List.length treel = 3 
   andalso 
   (is_infix_tree (List.nth (treel,1)) handle _ => false)

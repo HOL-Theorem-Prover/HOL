@@ -5,12 +5,19 @@ appropriate to solve the current goal.
 The selection relies on a machine learning algorithm on a data set 
 of recorded human tactics.
 
+INSTALL:
+  1) Recording theories interactively. (todo)
+
+KNOWN BUGS:
+  Some tactics may change the behaviour of later tactics in an undesirable way. 
+  One cache error can be fixed using:
+  numSimps.clear_arith_caches ();
+
 NOTES: (for the developers) 
   Keep up-to-date infix tokens in hhsInfix.sml and 
   polyml values in hhsUnfold.sml.
 
-INSTALL:
-
+ALTERNATIVE INSTALLATION:
 1) Scripts modification: 
   
   Rewrite scripts file and export them to src/tactictoe/scripts.
@@ -22,7 +29,8 @@ INSTALL:
   open hhsUnfold;
   rewrite_hol_scripts (); (* takes about 30 minutes *)
 
-2) Recording tactics:
+
+2) Recording tactics (non-interactive mode)
   
   Get a fresh copy HOL_RECORD (or choose a more convenient name)
   of HOL with same commit "commit-number".
@@ -38,13 +46,7 @@ INSTALL:
   mv src/tactictoe/src/*.sml src/1
   mv src/tactictoe/src/*.sig src/1
   mv src/1/infix_file.sml src/tactictoe/src/infix_file.sml
-  
-  # Optional: If you want to add orthogonalization of tactics (usually better). 
-  # set the following files to true in src/1/tacticToe.sml.
-    hhs_ortho_flag := true;
-    hhs_ortho_number := 20;
-    hhs_ortho_metis := true;
-  
+    
   # Build HOL_RECORD. Takes about 1 or 2 hours. 
   bin/build
 

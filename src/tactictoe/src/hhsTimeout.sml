@@ -22,7 +22,6 @@ open Thread;
 fun timeLimit time f x =
   let
     val result_ref = ref NONE
-    val short_time = Time.fromReal 0.000001
     val worker =
       let 
         fun worker_call () = result_ref := SOME (capture f x)
@@ -35,9 +34,7 @@ fun timeLimit time f x =
         (
         OS.Process.sleep time;
         if Thread.isActive worker 
-          then (
-                Thread.interrupt worker; 
-                OS.Process.sleep time;
+          then (Thread.interrupt worker; 
                 if Thread.isActive worker 
                 then Thread.kill worker
                 else () 
@@ -49,7 +46,6 @@ fun timeLimit time f x =
       end      
     fun self_wait () = 
       (
-      OS.Process.sleep short_time;
       if Thread.isActive worker 
         then self_wait ()      
         else 

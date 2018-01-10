@@ -1,0 +1,10 @@
+This sequence of directories reproduces a bug observed in CakeML.
+
+The build sequence ensures that dir2 and dir1 are built before dir3,
+which means that the --no_prereqs option in dir3 doesn’t cause an
+immediate failure.
+
+The issue is that the .uo file for derivedTheory has to pick up a
+reference to baseTheory, which lives in dir2, but the dependency
+analysis that is done when --no_prereqs is in force may not get a
+chance to see this.

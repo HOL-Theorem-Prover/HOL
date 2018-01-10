@@ -35,7 +35,8 @@ val hhs_predict_dir  = tactictoe_dir ^ "/predict"
 val hhs_record_dir   = tactictoe_dir ^ "/record_log"
 val hhs_open_dir     = tactictoe_dir ^ "/open"
 val hhs_succrate_dir = tactictoe_dir ^ "/succrate"
-val hhs_mdict_dir   = tactictoe_dir ^ "/mdict"
+val hhs_mdict_dir    = tactictoe_dir ^ "/mdict"
+val hhs_mc_dir       = tactictoe_dir ^ "/mc"
 
 fun hide_out f x = 
   hide_in_file (hhs_code_dir ^ "/" ^ current_theory () ^ "_hide_out") f x
@@ -47,7 +48,9 @@ fun mkDir_err dir = OS.FileSys.mkDir dir handle _ => ()
    -------------------------------------------------------------------------- *)
 
 fun dfind k m  = Redblackmap.find (m,k) 
-fun drem k m   = fst (Redblackmap.remove (m,k))
+fun dfind_err msg x dict = dfind x dict handle _ => raise ERR "dfind" msg
+
+fun drem k m   = fst (Redblackmap.remove (m,k)) handle NotFound => m
 fun dmem k m   = Lib.can (dfind k) m
 fun dadd k v m = Redblackmap.insert (m,k,v)
 fun daddl kvl m = Redblackmap.insertList (m,kvl)
@@ -91,10 +94,24 @@ fun is_reserved s =
    List
    -------------------------------------------------------------------------- *)
 
+fun findSome f l = case l of
+    [] => NONE
+  | a :: m => 
+    let val r = f a in 
+      if isSome r then r else findSome f m
+    end
+
 fun first_n n l =
   if n <= 0 orelse null l
   then []
   else hd l :: first_n (n - 1) (tl l)
+
+fun first_test_n test n l =
+  if n <= 0 orelse null l
+    then []
+  else if test (hd l)
+    then hd l :: first_test_n test (n - 1) (tl l)
+  else first_test_n test n (tl l)
 
 fun part_aux n acc l =
   if n <= 0 orelse null l
@@ -170,14 +187,17 @@ fun topo_sort graph =
     end
   end
 
-
-
-
 (* ---------------------------------------------------------------------------
    Reals
    -------------------------------------------------------------------------- *)
 
 fun sum_real l = case l of [] => 0.0 | a :: m => a + sum_real m
+
+fun list_rmax l = case l of
+    [] => raise ERR "list_max" ""
+  | [a] => a
+  | a :: m => Real.max (a,list_rmax m)
+
 fun sum_int l = case l of [] => 0 | a :: m => a + sum_int m
 
 fun average_real l = sum_real l / Real.fromInt (length l)
@@ -201,9 +221,14 @@ fun string_of_goal (asm,w) =
     s1
   end
 
+fun string_of_bool b = if b then "T" else "F"
+
 (* --------------------------------------------------------------------------
    Comparisons
    -------------------------------------------------------------------------- *)
+
+fun compare_rmax ((_,r2),(_,r1)) = Real.compare (r1,r2)
+fun compare_rmin ((_,r1),(_,r2)) = Real.compare (r1,r2)
 
 fun goal_compare ((asm1,w1), (asm2,w2)) =
   list_compare Term.compare (w1 :: asm1, w2 :: asm2)
@@ -328,6 +353,8 @@ fun print_endline s = print (s ^ "\n")
 (* search_dir *)
 fun debug s = append_endline (hhs_search_dir ^ "/debug/" ^ current_theory ()) s
 
+fun debug_err s = (debug s; raise ERR "debug_err" s)
+
 fun debug_t s f x = 
   let 
     val _ = debug s
@@ -356,6 +383,11 @@ fun debug_record s =
 (* --------------------------------------------------------------------------
    String
    -------------------------------------------------------------------------- *)
+
+fun unquote_string s =
+  if String.sub (s,0) = #"\"" andalso String.sub (s,String.size s - 1) = #"\""
+  then String.substring (s, 1, String.size s - 2)
+  else raise ERR "unquote_string" s
 
 fun drop_sig s = 
   if last (explode s) = #"."
@@ -421,25 +453,12 @@ fun split_string s1 s2 =
   in
     (implode rl1, implode rl2)
   end
+  handle _ => raise ERR "split_string" (s1 ^ " " ^ s2)
 
 fun rm_prefix s2 s1 = 
   let val (a,b) = split_string s1 s2 in
     if a = "" then b else raise ERR "rm_prefix" (s2 ^ " " ^ s1)
   end
-
-(* --------------------------------------------------------------------------
-   Dependencies
-   -------------------------------------------------------------------------- *)
-
-
-
-
-
-
-
-
-
-
 
 (* --------------------------------------------------------------------------
    Globals
@@ -451,15 +470,15 @@ val hhs_stacfea  = ref (dempty lbl_compare)
 val hhs_ddict = ref (dempty goal_compare)
 val hhs_ndict = ref (dempty String.compare)
 
-fun update_ddict (lbl,fea) =
+fun update_ddict (lbl,_) =
   let 
     val oldv = dfind (#3 lbl) (!hhs_ddict) handle _ => [] 
-    val newv = (lbl,fea) :: oldv
+    val newv = lbl :: oldv
   in
     hhs_ddict := dadd (#3 lbl) newv (!hhs_ddict)
   end
 
-fun init_stacfea_ddict feavl =
+fun init_stacfea feavl =
   (
   hhs_stacfea := dnew lbl_compare feavl;
   hhs_cthyfea := []; 
@@ -471,24 +490,41 @@ fun init_stacfea_ddict feavl =
   dapp update_ddict (!hhs_stacfea)
   )
 
-fun update_stacfea_ddict (feav as (lbl,fea)) =
-  if dmem lbl (!hhs_stacfea) then () else
-  let 
-    val oldv = dfind (#3 lbl) (!hhs_ddict) handle _ => [] 
-    val newv = feav :: oldv
-  in
+val hhs_internalthm_flag = ref false
+
+fun update_stacfea (feav as (lbl,fea)) =
+  if dmem lbl (!hhs_stacfea) orelse 
+     (not (!hhs_internalthm_flag) andalso 
+        exists (String.isPrefix "tactictoe_thm") 
+        (hhsLexer.hhs_lex (#1 lbl)))
+  then ()
+  else
+    (
     hhs_stacfea := dadd lbl fea (!hhs_stacfea);
     hhs_cthyfea := feav :: (!hhs_cthyfea);
-    hhs_ddict := dadd (#3 lbl) newv (!hhs_ddict);
+    update_ddict feav;
     hhs_ndict := count_dict (!hhs_ndict) [(#1 lbl)]
-  end
+    )
   
 (* --------------------------------------------------------------------------
    Metis
    -------------------------------------------------------------------------- *)
 
-val mdict_glob = ref (dempty String.compare)
-val negmdict_glob = ref (dempty String.compare)
+fun dbfetch_of_string s =
+  let val (a,b) = split_string "Theory." s in 
+    if a = current_theory ()
+    then String.concatWith " " ["DB.fetch",mlquote a,mlquote b] 
+    else s
+  end
+
+val hhs_mdict = ref (dempty String.compare)
+
+(* --------------------------------------------------------------------------
+   Astar
+   -------------------------------------------------------------------------- *)
+
+val hhs_mcdict = ref (dempty (list_compare Int.compare))
+val hhs_mcdict_cthy = ref (dempty (list_compare Int.compare))
 
 (* --------------------------------------------------------------------------
    The following structures should 
@@ -502,8 +538,9 @@ fun clean_feadata () =
   hhs_cthyfea := [];
   hhs_ddict := dempty goal_compare;
   hhs_ndict := dempty String.compare;
-  mdict_glob := dempty String.compare;
-  negmdict_glob := dempty String.compare
+  hhs_mdict := dempty String.compare;
+  hhs_mcdict := dempty (list_compare Int.compare);
+  hhs_mcdict_cthy := dempty (list_compare Int.compare)
   )
 
 end (* struct *)

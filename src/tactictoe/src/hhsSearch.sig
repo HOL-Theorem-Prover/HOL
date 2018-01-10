@@ -10,21 +10,14 @@ sig
   datatype proof_status_t = 
     ProofError | ProofSaturated | ProofTimeOut | Proof of string
   
-  val hhs_cache_flag     : bool ref
-  val hhs_astar_flag     : bool ref
-  val hhs_astar_radius   : int ref
-  val hhs_timedepth_flag : bool ref
-  val hhs_diag_flag      : bool ref
-  val hhs_visited_flag   : bool ref
-  val hhs_width_coeff    : real ref
-  val hhs_selflearn_flag : bool ref
-  val hhs_unsafecache_flag : bool ref
+  val last_stac : string ref
   
   val imperative_search   : 
-    (goal -> string list) ->
-    (goal -> (lbl_t * real) list) ->
+    (int -> goal -> string list) ->
+    (goal -> lbl_t list) ->
+    (goal list -> real) ->
+    (int -> goal -> string option) ->
     (string, tactic) Redblackmap.dict ->
-    (goal, real option) Redblackmap.dict ->
     goal -> proof_status_t
 
 end

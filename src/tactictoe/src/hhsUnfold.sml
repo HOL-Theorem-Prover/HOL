@@ -21,6 +21,8 @@ val ERR = mk_HOL_ERR "hhsUnfold"
 val hhs_unfold_dir = tactictoe_dir ^ "/unfold_log"
 val hhs_scripts_dir = tactictoe_dir ^ "/scripts"
 val loadl_glob = ref [] (* not usable: missing a.b *)
+val interactive_flag = ref true
+val interactive_hook = ref ""
 
 (* --------------------------------------------------------------------------
    Program representation and stack
@@ -565,8 +567,6 @@ fun load_list_loop sl = case sl of
   
 fun load_list sl = "[" :: load_list_loop sl
 
-val interactive_flag = ref true
-
 fun modified_program inh p = case p of
     [] => []
   | Open sl :: m    => 
@@ -895,11 +895,17 @@ fun output_header cthy file =
       val _ = OS.Process.system cmd
       val sl = map mlquote (readl temp)
     in
-      osn "hhsRecord.set_irecord ();";
+      osn "hhsSetup.set_irecord ();";
+      osn "hhsSetup.set_isearch ();";
+      osn (!interactive_hook);
       osn "fun load_err s = load s handle _ => ();";
       osn ("List.app load_err [" ^ String.concatWith ", " sl ^ "];")
     end
-  else osn "hhsRecord.set_erecord ();"
+  else 
+    (
+    osn "hhsSetup.set_erecord ();";
+    osn "hhsSetup.set_esearch ();"
+    )
   ;
   app os (bare_readl infix_decl);
   os "open hhsRecord;\n";
@@ -956,7 +962,7 @@ fun unquoteString s =
     val fout = tactictoe_dir ^ "/code/quoteString2"
     val cmd = HOLDIR ^ "/bin/unquote" ^ " " ^ fin ^ " " ^ fout   
   in
-    writel fin [s]; 
+    writel fin [s];
     ignore (OS.Process.system cmd);
     String.concatWith " " (readl fout)
   end
@@ -1046,6 +1052,16 @@ fun cakeml_scripts cakeml_dir =
     readl file
   end
 
+fun cakeml_theories cakeml_dir =
+  let 
+    val file = tactictoe_dir ^ "/code/theory_list"
+    val cmd0 = "find " ^ cakeml_dir ^ " -name \"*Theory.uo\" > " ^ file
+    val cmd1 = "sed -i 's/Theory.uo/Theory/' " ^ file
+  in
+    ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1));
+    readl file
+  end
+
 (* ---------------------------------------------------------------------------
    Interactive version
    -------------------------------------------------------------------------- *)
@@ -1089,17 +1105,17 @@ end (* struct *)
   load "hhsUnfold";
   open hhsUnfold;
   
-  erewrite_hol_scripts ()
-  
+  erewrite_hol_scripts ();
+
   app irewrite_script (hol_scripts ());
   app irecord_script (hol_scripts ());
   
+  irecord_script "/home/tgauthier/HOL/src/combin/combinScript.sml"; 
   irecord_script "/home/tgauthier/HOL/src/1/ConseqConvScript.sml";
   record_script "complexScript.sml";
   erewrite_hol_scripts ();
   --------------------------------------------------------------------------- *)
-  
-  
+
 (* ---------------------------------------------------------------------------
   CAKEML:
   

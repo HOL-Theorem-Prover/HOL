@@ -9,7 +9,7 @@ structure hhsData :> hhsData =
 struct
 
 open HolKernel boolLib Abbrev hhsTools hhsTimeout hhsExec hhsLearn 
-hhsMetis hhsPredict SharingTables Portable
+hhsMetis hhsPredict SharingTables Portable hhsSetup
 
 val ERR = mk_HOL_ERR "hhsData"
 
@@ -128,25 +128,24 @@ fun pp_feavl feavl =
 
 (*----------------------------------------------------------------------------
  * Saving one feature vector on memory
-   orelse (!hhs_noslowlbl_flag andalso t0 > !hhs_tactic_time) 
  *----------------------------------------------------------------------------*)
 
-val feature_time = ref 0.0
-val hhs_noslowlbl_flag = ref true
+val feature_time = ref 0.0 (* statistics *)
 
-fun metis_prove g =
-  !hhs_ortho_metis andalso !hhs_metis_flag andalso
-  solved_by_metis (!hhs_metis_npred) (!hhs_metis_time) g
+fun metis_provable_wrap g =
+  !hhs_metisortho_flag andalso
+  metis_provable (!hhs_metis_npred) (!hhs_metis_time) g
 
 fun save_lbl (lbl0 as (stac0,t0,g0,gl0)) =
-  if mem g0 gl0 orelse metis_prove g0 then ()
+  if mem g0 gl0 orelse metis_provable_wrap g0 then ()
   else
     let
       val fea = total_time feature_time hhsFeature.fea_of_goal g0
-      val (lbl as (stac,t,g,gl)) = orthogonalize (lbl0,fea)
+      val (lbl as (stac,t,g,gl)) = 
+        debug_t "orthogonalize" orthogonalize (lbl0,fea)
       val feav = (lbl,fea)
     in
-      update_stacfea_ddict feav
+      update_stacfea feav
     end
 
 (*----------------------------------------------------------------------------
@@ -347,6 +346,42 @@ fun read_feavdatal_no_min thy =
  
 fun import_feavl thyl = List.concat (map read_feavdatal_no_min thyl)
 
+(*----------------------------------------------------------------------------
+ * I/O monte carlo evaluation knowledge from disk
+ *----------------------------------------------------------------------------*) 
+ 
+fun update_mcdict fea (b,n) = 
+  let val b' = fst (dfind fea (!hhs_mcdict)) handle _ => false in
+    if b' then () else hhs_mcdict := dadd fea (b,n) (!hhs_mcdict)
+  end
+ 
+fun export_mc cthy =
+  let 
+    val file = hhs_mc_dir ^ "/" ^ cthy
+    val l = dlist (!hhs_mcdict_cthy) 
+    fun f (fea,(b,n)) =
+      String.concatWith " " 
+        (int_to_string n :: (if b then "T" else "F") :: map int_to_string fea)
+  in
+    writel file (map f l)
+  end
+
+fun read_mc thy =
+  let 
+    val file = hhs_mc_dir ^ "/" ^ thy
+    val l = readl file handle _ => (debug ("read_mc " ^ thy); [])
+    fun f s = case String.tokens Char.isSpace s of
+        a :: "T" :: m => 
+        update_mcdict (map string_to_int m) (true, string_to_int a)
+      | b :: "F" :: m => 
+        update_mcdict (map string_to_int m) (false, string_to_int b)
+      | _ => raise ERR "read_mc" thy
+  in
+    app f l
+  end
+
+fun import_mc thyl = app read_mc thyl
+ 
 (* test
 load "hhsData";
 open hhsFeature;

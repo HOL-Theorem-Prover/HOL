@@ -19,6 +19,9 @@ val testfiles = ["../depchain1/dir3/foo.uo", "../depchain1/dir2/dir1/bar.uo",
                  "../depchain1/dir2/foo"]
 
 val _ = app touch testfiles
+val _ = case List.find (not o exists) testfiles of
+            NONE => ()
+          | SOME f => die ("Didn't manage to touch "^f)
 
 
 val dir = OS.FileSys.getDir()

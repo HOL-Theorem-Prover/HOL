@@ -3,6 +3,8 @@ struct
 
 open Feedback Lib Type
 
+val kernelid = "expknl"
+
 infixr --> |->
 
 val ERR = mk_HOL_ERR "Term"

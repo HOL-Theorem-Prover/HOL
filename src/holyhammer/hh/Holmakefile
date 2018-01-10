@@ -12,7 +12,7 @@ hh1/hh_symbols.cmx hh1/features_dt.cmx hh1/hh_tac.cmx hh1/hh_write.cmx
 
 ALL_CMX=$(HL_CMX) $(HH2_CMX)
 
-EXTRA_CLEANS = $(HH2_CMX) $(patsubst %.cmx,%.cmi,$(HH2_CMX)) $(patsubst %.cmx,%.o,$(HH2_CMX)) hh_parse.ml hh_lexer.ml main.cmi main.cmx main.o hh
+EXTRA_CLEANS = $(HH2_CMX) $(patsubst %.cmx,%.cmi,$(HH2_CMX)) $(patsubst %.cmx,%.o,$(HH2_CMX)) hh_parse.ml hh_lexer.ml main.cmi main.cmx main.o hh main_thf.cmi main_thf.cmx main_thf.o hh_thf
 
 OCAMLOPT=ocamlfind ocamlopt -package num -unsafe-string
 
@@ -21,10 +21,13 @@ ifneq ($(which ocamlfind),)
 
 ifeq ($(shell ocamlfind query num > /dev/null 2>&1; echo $$?),0)
 
-all: $(HH2_CMX) hh
+all: $(HH2_CMX) hh hh_thf
 
 hh: main.ml $(ALL_CMX)
 	$(OCAMLOPT) nums.cmxa str.cmxa unix.cmxa -o $@ -I hh1 $(ALL_CMX) $<
+
+hh_thf: main_thf.ml $(ALL_CMX)
+	ocamlopt nums.cmxa str.cmxa unix.cmxa -o $@ -I hh1 $(ALL_CMX) $<
 
 hh_parse.ml: hh_parse.mly
 	ocamlyacc $<

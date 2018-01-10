@@ -8,10 +8,12 @@ sig
   type feav_t = (lbl_t * fea_t)
 
   val feature_time : real ref
-  val hhs_noslowlbl_flag : bool ref
   val save_lbl : lbl_t -> unit
 
   val export_feavl : string -> feav_t list -> unit
   val import_feavl : string list -> feav_t list
 
+  val import_mc : string list -> unit
+  val export_mc : string -> unit
+  
 end

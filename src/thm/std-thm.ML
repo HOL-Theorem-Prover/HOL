@@ -15,16 +15,17 @@
 structure Thm :> Thm =
 struct
 
-open Feedback Lib Term KernelTypes Tag Dep
+open Feedback Lib Term Tag Dep
 
 type 'a set = 'a HOLset.set;
 type depdisk = (string * int) * ((string * int list) list);
+datatype thm = THM of Tag.tag * term HOLset.set * term
 
 val --> = Type.-->;
 infixr 3 -->;
 infix 5 |-> ;
 
-val kernelid = "stdknl"
+val kernelid = Term.kernelid
 
 (*---------------------------------------------------------------------------
        Exception handling
@@ -1006,9 +1007,9 @@ fun Mk_comb thm =
        val (Rator,Rand) = dest_comb rhs
        fun mkthm th1' th2' =
          let val (lhs1, rhs1, _) = Term.dest_eq_ty (concl th1')
-             val _ = Assert (EQ lhs1 Rator) "" ""
+             val _ = Assert (lhs1 = Rator) "" ""
              val (lhs2, rhs2, _) = Term.dest_eq_ty (concl th2')
-             val _ = Assert (EQ lhs2 Rand) "" ""
+             val _ = Assert (lhs2 = Rand) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1', th2']
          in make_thm Count.MkComb
 	   (ocls, hyps,mk_eq_nocheck ty lhs (mk_comb(rhs1,rhs2)))

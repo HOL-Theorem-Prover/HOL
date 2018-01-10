@@ -9,129 +9,257 @@ structure hhsLearn :> hhsLearn =
 struct
 
 open HolKernel boolLib Abbrev hhsTools hhsPredict hhsExec hhsMinimize 
-hhsTimeout hhsFeature hhsMetis
+hhsTimeout hhsFeature hhsMetis hhsSetup hhsLexer
 
 val ERR = mk_HOL_ERR "hhsLearn"
 
-val hhs_ortho_flag = ref false
-val hhs_ortho_number = ref 20
-val hhs_ortho_metis = ref false
-val hhs_succrate_flag = ref false
-
 (*----------------------------------------------------------------------------
- * Orthogonalization
+ * Recognizing theorem list and abstracting them from the tactic.
  *----------------------------------------------------------------------------*)
 
-fun test_stac g gl stac =
-  let val ((new_gl,_),t) = 
+val thm_cache = ref (dempty String.compare)
+
+fun is_thm_cache s =
+  dfind s (!thm_cache) handle _ => 
+  let val b = is_thm s in
+    thm_cache := dadd s b (!thm_cache);
+    b
+  end
+
+val thmlarg_placeholder = "tactictoe_thmlarg"
+
+fun is_thmlarg_stac stac = mem thmlarg_placeholder (hhs_lex stac)
+ 
+fun change_thml el e =
+  if is_thm_cache (String.concatWith " " e)
+  then SOME ["[",thmlarg_placeholder,"]"]
+  else NONE
+    
+fun abstract_thmlarg_loop l = case l of
+    []       => []
+  | "[" :: m => 
+    let val (el,cont) = split_level "]" m
+        val e = fst (split_level "," el) handle _ => el
+    in
+      case change_thml el e of
+        NONE => "[" :: abstract_thmlarg_loop m
+      | SOME x => x @ abstract_thmlarg_loop cont
+    end
+  | a :: m => a :: abstract_thmlarg_loop m
+
+fun abstract_thmlarg stac = 
+  if is_thmlarg_stac stac then stac else 
+  let 
+    val sl1 = hhs_lex stac
+    val sl2 = abstract_thmlarg_loop sl1
+  in
+    if sl2 = sl1 then stac else String.concatWith " " sl2
+  end
+
+(*----------------------------------------------------------------------------
+ * Instantiating tactics with predicted theorems
+ *----------------------------------------------------------------------------*)
+
+fun inst_thmlarg_loop thmls l = 
+  let fun f x = if x = thmlarg_placeholder then thmls else x in
+    map f l
+  end
+
+fun inst_thmlarg thmls stac =
+  let val sl = hhs_lex stac in
+    if mem thmlarg_placeholder sl
+    then String.concatWith " " (inst_thmlarg_loop thmls sl)
+    else stac
+  end
+
+(* 
+val s = "METIS_TAC [arithmeticTheory.LESS_EQ]";
+val s1 = abstract_stac s;
+val s2 = inst_thmlarg "bonjour" s1;
+*)
+
+(*----------------------------------------------------------------------------
+ * Abstracting term
+ *----------------------------------------------------------------------------*)
+
+val termarg_placeholder = "tactictoe_termarg"
+
+fun is_termarg_stac stac = mem termarg_placeholder (hhs_lex stac)
+
+fun abstract_termarg_loop l = case l of
+    []       => []
+  | "[" :: "HolKernel.QUOTE" :: s :: "]" :: m => 
+    let val new_s = ["(",termarg_placeholder,s,")"] in
+      ["[","HolKernel.QUOTE"] @ new_s @ ["]"] @ abstract_termarg_loop m
+    end
+  | a :: m => a :: abstract_termarg_loop m
+
+fun abstract_termarg stac =
+  if is_termarg_stac stac then stac else 
+  let 
+    val sl1 = hhs_lex stac
+    val sl2 = abstract_termarg_loop sl1
+  in
+    if sl2 = sl1 then stac else String.concatWith " " sl2
+  end
+
+(*----------------------------------------------------------------------------
+ * Instantiating tactics with predicted term
+ *----------------------------------------------------------------------------*)
+
+fun with_types f x =
+  let 
+    val mem = !show_types
+    val _ = show_types := true
+    val r = f x
+    val _ = show_types := mem
+  in
+    r
+  end
+  
+fun predict_termarg g s =
+  let
+    val term = Parse.Term [QUOTE (unquote_string s)] 
+    val new_term = closest_subterm g term
+    val new_s = if new_term = term 
+                then s 
+                else "\"" ^ with_types term_to_string new_term ^ "\""       
+  in
+    new_s
+  end          
+
+fun inst_termarg_loop g l = case l of
+    [] => []
+  | "(" :: termlarg_placeholder :: s :: ")" :: m =>
+    predict_termarg g s :: inst_termarg_loop g m
+  | a :: m => a :: inst_termarg_loop g m  
+
+fun inst_termarg g stac =
+  let val sl = hhs_lex stac in
+    if mem termarg_placeholder sl
+    then String.concatWith " " (inst_termarg_loop g sl)
+    else stac
+  end
+
+(* 
+load "hhsLearn";
+val s = 
+"boolLib.SPEC_TAC ( ( Parse.Term [ HolKernel.QUOTE \" (*#loc 1 119422*)m:num\""
+^ " ] ) , ( Parse.Term [ HolKernel.QUOTE \" (*#loc 1 119435*)m:num\" ] ) )";
+val goal:goal = ([],``!x. x = x``);
+val s1 = abstract_termarg s;
+val s2 = inst_termarg g s1;
+*)
+
+(*----------------------------------------------------------------------------
+   Combining abstractions and instantiations
+ *----------------------------------------------------------------------------*)
+
+fun is_absarg_stac s = is_thmlarg_stac s orelse is_termarg_stac s
+
+fun abstract_stac stac =
+  let 
+    val stac1 = if !hhs_thmlarg_flag then abstract_thmlarg stac else stac
+    val stac2 = if !hhs_termarg_flag then abstract_termarg stac1 else stac1
+  in
+    if stac2 <> stac then SOME stac2 else NONE
+  end
+
+fun prefix_absstac stac = [abstract_stac stac, SOME stac]
+
+fun concat_absstacl ostac stacl = 
+  let val l = List.concat (map prefix_absstac stacl) @ [abstract_stac ostac] in
+    mk_sameorder_set String.compare (List.mapPartial I l)
+  end
+
+fun inst_stac thmls g stac =
+  let 
+    val stac1 = if !hhs_thmlarg_flag then inst_thmlarg thmls stac else stac
+    val stac2 = if !hhs_termarg_flag then inst_termarg g stac1 else stac1
+  in
+    stac2
+  end
+
+fun inst_stacl thmls g stacl = map (fn x => (x, inst_stac thmls g x)) stacl
+
+(*----------------------------------------------------------------------------
+ * Orthogonalization.
+ *----------------------------------------------------------------------------*)
+
+fun record_mc b (g,gl) =
+  if !hhs_mcrecord_flag
+  then 
+    let 
+      val n = hash_goal g
+      val nl = fea_of_goallist gl
+      val b' = fst (dfind nl (!hhs_mcdict)) handle _ => false
+    in
+      if b' then () else
+      (
+      hhs_mcdict := dadd nl (b,n) (!hhs_mcdict);
+      hhs_mcdict_cthy := dadd nl (b,n) (!hhs_mcdict_cthy)
+      )
+    end
+  else ()
+
+val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
+  
+fun test_stac g gl (stac, istac) =
+  let val (new_gl,_) = 
     (
-    debug ("test_stac " ^ stac);
-    add_time (timeOut (!hhs_tactic_time) (tactic_of_sml stac)) g
+    debug ("test_stac " ^ stac ^ "\n" ^ istac);
+    let val tac = timed_tactic_of_sml istac 
+      handle _ => (debug ("Warning: infinite stac: " ^ stac); NO_TAC) 
+    in
+      timeOut (!hhs_tactic_time) (TC_OFF tac) g
+    end
     )
   in
-    if all (fn x => mem x gl) new_gl 
-    then SOME (stac,t,g,gl)
-    else NONE
+    if all (fn x => mem x gl) new_gl
+    then (record_mc true (g,new_gl); SOME (stac,0.0,g,new_gl))
+    else (record_mc false (g,new_gl); NONE)
   end
   handle _ => NONE
 
-fun thm_of_string s =
-  let val (a,b) = split_string "Theory." s in 
-    String.concatWith " " ["(","DB.fetch",mlquote a,mlquote b,")"] 
-  end
-
 fun orthogonalize (lbl as (ostac,t,g,gl),fea) =
-  if !hhs_ortho_flag 
+  if !hhs_ortho_flag
   then
     let
-      val feavectl = debug_t "orthogonalize" 
-        stacknn_ext (!hhs_ortho_number) (dlist (!hhs_stacfea)) fea
-      val _ = debug (string_of_goal g)
-      val stacl    = map (#1 o fst) feavectl
-      val stacl2   = filter (fn x => not (x = ostac)) stacl
-      val testl    = lbl :: (List.mapPartial (test_stac g gl) stacl2)
-      fun score x  = dfind (#1 x) (!hhs_ndict) handle _ => 0
+      (* predict tactics *)
+      val _ = debug "predict tactics"
+      val feavl0 = dlist (!hhs_stacfea)
+      val symweight = learn_tfidf feavl0
+      val lbls = stacknn symweight (!hhs_ortho_number) feavl0 fea
+      val stacl1 = mk_sameorder_set String.compare (map #1 lbls)
+      val stacl2 = filter (fn x => not (x = ostac)) stacl1     
+      (* order tactics by frequency *)
+      val _ = debug "order tactics"
+      fun score x = dfind x (!hhs_ndict) handle _ => 0
+      val oscore  = score ostac
+      val stacl3  = filter (fn x => score x > oscore) stacl2
       fun n_compare (x,y) = Int.compare (score y, score x) 
-      val sortedl  = dict_sort n_compare testl
+      val stacl4 = dict_sort n_compare stacl3
+      (* try abstracted tactic x before x *)
+      val _ = debug "concat abstract tactics"
+      val stacl5 = concat_absstacl ostac stacl4
+      (* predicting theorems only once *)
+      val _ = debug "predict theorems"
+      val thml = 
+        if !hhs_thmlarg_flag 
+        then thmknn_std (!hhs_thmlarg_number) g
+        else []
+      val thmls  = String.concatWith " , " (map dbfetch_of_string thml)
+      (* instantiate arguments *)
+      val _ = debug "instantiate argument"
+      val stacl6 = inst_stacl thmls g stacl5
+      (* test produced tactics *)
+      val _ = debug "test tactics"
+      val testo  = findSome (test_stac g gl) stacl6
     in
-      hd sortedl
+      case testo of
+        NONE => lbl
+      | SOME newlbl => newlbl
     end
   else lbl
-
-(* ---------------------------------------------------------------------------
-   Success rates of each tactic.
-   -------------------------------------------------------------------------- *)
-
-val succ_cthy_dict = ref (dempty String.compare)
-val succ_glob_dict = ref (dempty String.compare)
-
-fun count_try stac = 
-  let 
-    val (succ1,try1) = dfind stac (!succ_cthy_dict) handle _ => (0,0)
-    val (succ2,try2) = dfind stac (!succ_glob_dict) handle _ => (0,0)
-  in
-    succ_cthy_dict := dadd stac (succ1,try1 + 1) (!succ_cthy_dict);
-    succ_glob_dict := dadd stac (succ2,try2 + 1) (!succ_glob_dict)
-  end
-  
-fun count_succ stac = 
-  let 
-    val (succ1,try1) = dfind stac (!succ_cthy_dict) handle _ => (0,0)
-    val (succ2,try2) = dfind stac (!succ_glob_dict) handle _ => (0,0)
-  in
-    succ_cthy_dict := dadd stac (succ1 + 1,try1) (!succ_cthy_dict);
-    succ_glob_dict := dadd stac (succ2 + 1,try2) (!succ_glob_dict)
-  end
-
-fun inv_succrate stac =
-  if !hhs_succrate_flag
-  then
-    let val (succ,try) = dfind stac (!succ_glob_dict) in
-      Real.fromInt (10 + try) / Real.fromInt (succ + 1)
-    end
-  else 1.0
-
-(*----------------------------------------------------------------------------
- * I/O success rates
- *----------------------------------------------------------------------------*)
-
-val succrate_reader = ref []
-
-fun mk_string_list sl = "[" ^ String.concatWith "," sl ^ "]"
-
-fun read_succrate thy =
-  if mem thy ["min","bool"] then () else
-  let
-    val sl = readl (hhs_succrate_dir ^ "/" ^ thy) 
-             handle _ => (print_endline ("File not found:" ^ thy); [])
-    val b =
-      if sl = [] 
-        then true
-        else
-        hhsExec.exec_sml "data"
-        ("hhsLearn.succrate_reader := " ^ mk_string_list sl ^ 
-        " @ (!hhsLearn.succrate_reader)")
-  in
-    if b then () else print (thy ^ "\n")
-  end
-
-fun import_succrate thyl =
-  (
-  debug "Reading success rates...";
-  print_endline "Reading success rates...";
-  app read_succrate thyl;
-  !succrate_reader
-  )
-
-fun export_succrate cthy =
-  let 
-    val l = dlist (!succ_cthy_dict)
-    fun f (stac,(succ,try)) = 
-      "(" ^ mlquote stac ^ ", (" ^ 
-      int_to_string succ ^ "," ^ int_to_string try ^ ") )"
-  in
-    writel (hhs_succrate_dir ^ "/" ^ cthy) (map f l)
-  end
-  
 
 end (* struct *)

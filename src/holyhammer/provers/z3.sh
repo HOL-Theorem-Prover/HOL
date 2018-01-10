@@ -1,14 +1,14 @@
 # I/O files
-DIR="z3_files"
+DIR=$2
 IN="$DIR/atp_in"
-OUT1="$DIR/z3_out1"
-OUT2="$DIR/z3_out2"
-OUT="$DIR/z3_out"
-STATUS="$DIR/z3_status"
-ERROR="$DIR/z3_error"
+OUT1="$DIR/out1"
+OUT2="$DIR/out2"
+OUT="$DIR/out"
+STATUS="$DIR/status"
+ERROR="$DIR/error"
 
 # Running Z3 (4.0)
-./z3 -tptp DISPLAY_UNSAT_CORE=true ELIM_QUANTIFIERS=true PULL_NESTED_QUANTIFIERS=true \
+timeout $1 ./z3 -tptp DISPLAY_UNSAT_CORE=true ELIM_QUANTIFIERS=true PULL_NESTED_QUANTIFIERS=true \
 -T:$1 $IN > $OUT1 2> $ERROR
 # Extracting status
 grep "SZS status" $OUT1 > $STATUS 2> $ERROR

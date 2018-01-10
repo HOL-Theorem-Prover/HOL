@@ -89,6 +89,17 @@ fun tactic_of_sml s =
     if b then !hhs_tactic_glob else raise ERR "tactic_of_sml" s
   end
   
+fun timed_tactic_of_sml s =
+  let
+    val tactic = mk_valid s
+    val program = 
+      "let fun f () = hhsExec.hhs_tactic_glob := " ^ tactic ^ " in " ^
+      "hhsTimeout.timeOut 0.1 f () end"
+    val b = exec_sml "tactic_of_sml" program
+  in
+    if b then !hhs_tactic_glob else raise ERR "timed_tactic_of_sml" s
+  end
+
 (* -----------------------------------------------------------------------------
    Apply tactics
    -------------------------------------------------------------------------- *)
@@ -130,12 +141,21 @@ fun string_of_sml s =
    Read hh
    -------------------------------------------------------------------------- *)
 
-val (hh_stac_glob: (goal -> string option) ref) = ref (fn x => NONE)
+val (hh_stac_glob: 
+   (int -> (int, real) Redblackmap.dict * (string * fea_t) list ->
+    int -> goal -> string option) ref) = 
+  ref (fn _ => (fn _ => (fn _ => (fn _ => NONE))))
 
 fun update_hh_stac () =
   let 
     val b = exec_sml "hh_stac_of_sml" 
-      ("val _ = hhsExec.hh_stac_glob := holyHammer.hh_stac")
+      (
+      String.concatWith "\n"
+      [
+      "load \"holyHammer\";",
+      "val _ = hhsExec.hh_stac_glob := holyHammer.hh_stac;"
+      ]
+      )
   in
     if b then () else raise ERR "hh_stac_of_sml" ""
   end

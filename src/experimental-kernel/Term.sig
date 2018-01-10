@@ -7,5 +7,6 @@ sig
   val imp               : term
   val dest_eq_ty        : term -> term * term * hol_type
   val lazy_beta_conv    : term -> term
+  val kernelid          : string
 
 end

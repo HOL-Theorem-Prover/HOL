@@ -9,18 +9,23 @@ sig
   
   val hhs_search_time : Time.time ref
   val hhs_tactic_time : real ref
-  
+    
+  val hhs_internalthm_flag : bool ref
   val hhs_badstacl  : string list ref
   val hhs_stacfea   : (lbl_t, fea_t) Redblackmap.dict ref
   val hhs_cthyfea   : feav_t list ref
-  val hhs_ddict     : (goal, feav_t list) Redblackmap.dict ref
+  val hhs_ddict     : (goal, lbl_t list) Redblackmap.dict ref
   val hhs_ndict     : (string, int) Redblackmap.dict ref
-  val mdict_glob    : (string, fea_t) Redblackmap.dict ref
-  val negmdict_glob : (string, unit) Redblackmap.dict ref
+  val hhs_mdict     : (string, (bool * fea_t)) Redblackmap.dict ref
+  val dbfetch_of_string : string -> string
+  
+  val hhs_mcdict : (int list, (bool * int)) Redblackmap.dict ref
+  val hhs_mcdict_cthy : (int list, (bool * int)) Redblackmap.dict ref
+  
   
   val clean_feadata : unit -> unit
-  val init_stacfea_ddict : feav_t list -> unit
-  val update_stacfea_ddict : feav_t -> unit
+  val init_stacfea : feav_t list -> unit
+  val update_stacfea : feav_t -> unit
   
   val tactictoe_dir    : string
   val hhs_feature_dir  : string
@@ -31,6 +36,7 @@ sig
   val hhs_open_dir     : string
   val hhs_succrate_dir : string
   val hhs_mdict_dir    : string
+  val hhs_mc_dir    : string
   
   val mkDir_err : string -> unit
   val hide_out : ('a -> 'b) -> 'a -> 'b
@@ -44,6 +50,7 @@ sig
   val drop_sig : string -> string
  
   val dfind  : 'a -> ('a, 'b) Redblackmap.dict -> 'b
+  val dfind_err : string -> 'a -> ('a, 'b) Redblackmap.dict -> 'b
   val dmem   : 'a -> ('a, 'b) Redblackmap.dict -> bool
   val drem   : 'a -> ('a, 'b) Redblackmap.dict -> ('a, 'b) Redblackmap.dict
   val dadd   : 
@@ -57,11 +64,14 @@ sig
   val dapp : ('a * 'b -> unit) -> ('a, 'b) Redblackmap.dict -> unit
   val dkeys : ('a, 'b) Redblackmap.dict -> 'a list
   
+  val findSome : ('a -> 'b option) -> 'a list -> 'b option
   val first_n : int -> 'a list -> 'a list
+  val first_test_n : ('a -> bool) -> int -> 'a list -> 'a list
   val part_n : int -> 'a list -> ('a list * 'a list)
   val number_list : int -> 'a list -> (int * 'a) list
 
   val sum_real : real list -> real
+  val average_real : real list -> real
   val sum_int : int list -> int
   
   val mk_fast_set : ('a * 'a -> order) -> 'a list -> 'a list
@@ -73,6 +83,10 @@ sig
   val count_dict  : 
     ('a, int) Redblackmap.dict -> 'a list -> ('a, int) Redblackmap.dict
    
+  val compare_rmin : (('a * real) * ('a * real)) -> order
+  val compare_rmax : (('a * real) * ('a * real)) -> order
+  val list_rmax : real list -> real
+  
   val goal_compare : (goal * goal) -> order
   val strict_term_compare : (term * term) -> order
   val strict_goal_compare : (goal * goal) -> order
@@ -83,6 +97,7 @@ sig
   val feav_compare : (feav_t * feav_t) -> order
   
   val string_of_goal : goal -> string
+  val string_of_bool : bool -> string
 
   val readl : string -> string list
   val bare_readl : string -> string list
@@ -100,12 +115,14 @@ sig
   
   val debug : string -> unit
   val debug_t : string -> ('a -> 'b) -> 'a -> 'b
+  val debug_err : string -> 'a
   val debug_search : string -> unit
   val debug_proof  : string -> unit
   val debug_parse  : string -> unit
   val debug_replay : string -> unit
   val debug_record : string -> unit
-
+  
+  val unquote_string : string -> string
   val split_sl : ''a -> ''a list -> ''a list * ''a list
   val rpt_split_sl : ''a -> ''a list -> ''a list list
 
