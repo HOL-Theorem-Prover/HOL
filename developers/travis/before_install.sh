@@ -2,6 +2,10 @@
 
 set -e
 
+opam init
+opam install num
+opam install ocamlfind
+
 cd
 
 if [ -z "$GITPOLY" ]
