@@ -20,7 +20,11 @@ sig
 
   val exec_sml         : string -> string -> bool  
   
+  val hhs_thm          : thm ref
   val is_thm           : string -> bool
+  val thm_of_sml       : string -> (string * thm) option
+  val namespace_thms   : unit -> (string * thm) list
+  
   val is_tactic        : string -> bool
   val is_string        : string -> bool
   val is_pointer_eq    : string -> string -> bool
@@ -34,7 +38,7 @@ sig
   
   
   val app_tac    : real -> tactic -> goal -> goal list option
-  val rec_stac   : string -> goal -> goal list option
+  val rec_stac   : real -> string -> goal -> goal list option
   val rec_sproof : string -> goal -> goal list option
   
   val type_of_sml      : string -> string option

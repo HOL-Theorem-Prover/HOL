@@ -42,7 +42,19 @@ fun exec_sml file s =
    Tests
    -------------------------------------------------------------------------- *)
 
+val hhs_thm = ref TRUTH
+
 fun is_thm s = exec_sml "is_thm" ("val _ = Thm.dest_thm (" ^ s ^ ")")
+
+fun thm_of_sml s =
+  let val b = exec_sml "lift_thm" ("hhsExec.hhs_thm := " ^ s) in
+    if b then SOME (s, !hhs_thm) else NONE
+  end
+
+fun namespace_thms () =
+  let val l0 = map fst (#allVal (PolyML.globalNameSpace) ()) in
+    List.mapPartial thm_of_sml l0
+  end
 
 fun is_tactic s = exec_sml "is_tactic" ("val _ = Tactical.VALID (" ^ s ^ ")")
 
@@ -110,9 +122,9 @@ fun app_tac tim tac g =
   SOME (fst (timeOut tim (TC_OFF tac) g))
   handle _ => NONE
 
-fun rec_stac stac g =
+fun rec_stac tim stac g =
   let val tac = tactic_of_sml stac in
-    SOME (fst (timeOut (2.0 * (!hhs_tactic_time)) (TC_OFF tac) g))
+    SOME (fst (timeOut tim (TC_OFF tac) g))
   end
   handle _ => NONE
 
