@@ -404,7 +404,8 @@ fun toString {relpath,absdir} =
 fun toAbsPath {relpath,absdir} = absdir
 
 fun fromPath {origin,path} =
-    if Path.isAbsolute path then {relpath = NONE, absdir = path}
+    if Path.isAbsolute path then
+      {relpath = NONE, absdir = Path.mkCanonical path}
     else
       {relpath = SOME path, absdir = origin + path}
 
@@ -412,7 +413,8 @@ fun extendp {base = {relpath, absdir}, extension} = let
   val relpath_str = case relpath of NONE => "NONE"
                                   | SOME s => "SOME("^s^")"
 in
-  if Path.isAbsolute extension then {relpath = NONE, absdir = extension}
+  if Path.isAbsolute extension then
+    {relpath = NONE, absdir = Path.mkCanonical extension}
   else
       case relpath of
           NONE => {absdir = absdir + extension, relpath = NONE}
