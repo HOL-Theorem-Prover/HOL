@@ -110,10 +110,8 @@ fun get_lemmas (atp_status,atp_out) =
    Todo: Timeout is very short and can not be modified yet.
  ----------------------------------------------------------------------------*)
 
-
-
 fun string_of_lemma (thy,name) =
-  if thy = "local"
+  if thy = "local_namespace_holyhammer"
     then name
   else if thy = current_theory () 
     then String.concatWith " " ["DB.fetch", quote thy, quote name]

@@ -131,7 +131,7 @@ fun cached_ancfeav () =
 fun insert_namespace thmdict =
   let 
     val dict = ref thmdict 
-    fun f (x,y) = ("local." ^ x, y)
+    fun f (x,y) = ("local_namespace_holyhammerTheory." ^ x, y)
     val l1 = hide_out namespace_thms ()
     val l2 = map f l1
   in
@@ -151,7 +151,7 @@ fun update_thmdata () =
   let 
     val dict0 = cached_ancfeav ()
     val dict1 = insert_feav dict0 [current_theory ()]
-    val dict2 = (* insert_namespace *) dict1 
+    val dict2 = insert_namespace dict1
   in
     create_symweight_feav dict2
   end
@@ -165,14 +165,23 @@ fun pred_filter pred thy ((name,_),_) =
     mem name thypred  
   end
  
+fun is_nsthm s =
+  fst (split_string "Theory." s) = "local_namespace_holyhammer" 
+ 
 fun export_problem probdir premises cj =
   let
     val premises' = map (split_string "Theory.") premises
+    (* val _ = print_endline (String.concatWith " " (first_n 10 premises)) *)
+    val nsthml1 = filter is_nsthm premises
+    fun f s = case thm_of_sml (snd (split_string "Theory." s)) of
+        SOME (_,thm) => SOME (s,thm) 
+      | NONE => NONE
+    val nsthml2 = hide_out (List.mapPartial f) nsthml1
     val ct   = current_theory ()
     val thyl = ct :: Theory.ancestry ct 
   in    
     clean_dir probdir;
-    write_problem probdir (pred_filter premises') thyl cj;
+    write_problem probdir (pred_filter premises') nsthml2 thyl cj;
     write_thydep (probdir ^ "/thydep.dep") thyl
   end
 

@@ -15,6 +15,7 @@ sig
   val write_problem    : 
     string ->
     (string -> (string * thm) * string -> bool) -> 
+    (string * thm) list ->
     string list -> 
     term ->
     unit

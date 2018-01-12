@@ -93,7 +93,9 @@ fun stacknn_uniq symweight n feal fea_o =
   end
 
 fun exists_tid s = 
-  let val (a,b) = split_string "Theory." s in can (DB.fetch a) b end
+  let val (a,b) = split_string "Theory." s in 
+    a = "local_namespace_holyhammer" orelse can (DB.fetch a) b
+  end
 
 fun is_orthothm a = fst (dfind a (!hhs_mdict)) handle _ => false
 
@@ -133,18 +135,17 @@ fun thmknn_std n goal =
    Adding theorem dependencies in the predictions
    ---------------------------------------------------------------------- *)
 
+(* Probably uptodate-ness is already verified elsewhere *)
 fun uptodate_tid s =
-  let val (a,b) = split_string "Theory." s in uptodate_thm (DB.fetch a b) end
+  let val (a,b) = split_string "Theory." s in 
+    a = "local_namespace_holyhammer" orelse uptodate_thm (DB.fetch a b)
+  end
 
 fun depnumber_of_thm thm =
   (Dep.depnumber_of o Dep.depid_of o Tag.dep_of o Thm.tag) thm
   
 fun depidl_of_thm thm =
   (Dep.depidl_of o Tag.dep_of o Thm.tag) thm   
-
-(* fails on "local.value" which is right behaviour *)
-fun thm_of_string s =
-  let val (a,b) = split_string "Theory." s in DB.fetch a b end
 
 fun has_depnumber n (_,thm) = n = depnumber_of_thm thm
 fun name_of_did (thy,n) = 
@@ -153,9 +154,11 @@ fun name_of_did (thy,n) =
   | NONE => NONE
   
 fun dep_of_thm s = 
-  (* if can thm_of_string s then *)
-  List.mapPartial name_of_did (depidl_of_thm (thm_of_string s))
-  (* else [] *)
+  let val (a,b) = split_string "Theory." s in 
+    if a = "local_namespace_holyhammer" 
+    then []
+    else List.mapPartial name_of_did (depidl_of_thm (DB.fetch a b))
+  end
 
 fun add_thmdep n l0 = 
   let 

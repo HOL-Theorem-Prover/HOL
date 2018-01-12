@@ -416,6 +416,9 @@ fun write_thydep file thyl =
     fun f x = (os oc x; os oc " "; oiter oc " " (os oc) (parents x); os oc "\n")
   in
     app f thyl;
+    os oc "local_namespace_holyhammer"; os oc " ";
+    oiter oc " " (os oc) [current_theory ()]; 
+    os oc "\n";
     closeOut oc
   end
 
@@ -444,7 +447,30 @@ fun write_conjecture state file conjecture =
     end
   else raise ERR "write_conjecture" "conjecture is not a boolean"
 
-fun write_problem dir filter_f thyl cj = 
+(*---------------------------------------------------------------------------
+   Writing theorems from the namespace.
+ ----------------------------------------------------------------------------*)
+
+fun write_ns state dir ns_thml =
+  let 
+    val oc = openOut (dir ^ "/local_namespace_holyhammer.p")
+    val oc_deps = openOut (dir ^ "/local_namespace_holyhammer.hd")
+    fun new_name name =
+      let val (thy,nm1) = split_string "Theory." name in
+        squotify ("thm." ^ thy ^ "." ^ hh_escape nm1) 
+      end   
+    fun f (name,thm) =
+      let val name' = new_name name in
+        othm_theorem state oc (name',"ax",thm);
+        odep state oc_deps (name',[])
+      end
+  in
+    app f ns_thml;
+    closeOut oc;
+    closeOut oc_deps
+  end
+    
+fun write_problem dir filter_f ns_thml thyl cj = 
   let 
     fun sort_thyl thyl = topo_sort (map (fn x => (x, ancestry x)) thyl)
     val state =
@@ -458,6 +484,7 @@ fun write_problem dir filter_f thyl cj =
     }
   in    
     app (write_thy dir filter_f state) (sort_thyl thyl);
+    write_ns state dir ns_thml;
     write_conjecture state (dir ^ "/conjecture.fof") cj (* not actually fof *)
   end
 
