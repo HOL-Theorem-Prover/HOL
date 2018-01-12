@@ -74,6 +74,20 @@ val INSERT_LEMM = store_thm
    >> metis_tac[]
   );
 
+val POW_11 = store_thm
+  ("POW_11",
+   ``!s1 s2. (POW s1 = POW s2) = (s1 = s2)``,
+   simp[EQ_IMP_THM] >> fs[]
+   >> `∀s1 s2. (POW s1 = POW s2) ⇒ s1 ⊆ s2` suffices_by metis_tac[SET_EQ_SUBSET]
+   >> fs[SET_EQ_SUBSET,SUBSET_DEF,POW_DEF] >> rpt strip_tac
+   >> `(∀x'. x' ∈ {x} ⇒ x' ∈ s1) ⇒ ∀x'. x' ∈ {x} ⇒ x' ∈ s2` by metis_tac[]
+   >> `∀x'. x' ∈ {x} ⇒ x' ∈ s2` by (
+         `(∀x'. x' ∈ {x} ⇒ x' ∈ s1)` suffices_by metis_tac[]
+         >> simp[]
+   )
+   >> fs[]
+  );
+
 val IN_BIGINTER_SUBSET = store_thm
   ("IN_BIGINTER_SUBSET",
    ``!x P. (x ∈ P) ==> (BIGINTER P ⊆ x)``,
