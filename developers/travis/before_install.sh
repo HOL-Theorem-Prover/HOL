@@ -1,10 +1,10 @@
 #!/bin/bash
 
 set -e
-sudo wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sh -s /usr/local/bin
+wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sudo sh -s /usr/local/bin
 
-opam -y install num
-opam -y install ocamlfind
+opam install -y num
+opam install -y ocamlfind
 
 cd
 
