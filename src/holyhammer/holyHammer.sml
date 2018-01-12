@@ -151,7 +151,7 @@ fun update_thmdata () =
   let 
     val dict0 = cached_ancfeav ()
     val dict1 = insert_feav dict0 [current_theory ()]
-    val dict2 = insert_namespace dict1 
+    val dict2 = (* insert_namespace *) dict1 
   in
     create_symweight_feav dict2
   end

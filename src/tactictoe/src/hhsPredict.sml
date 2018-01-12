@@ -142,6 +142,7 @@ fun depnumber_of_thm thm =
 fun depidl_of_thm thm =
   (Dep.depidl_of o Tag.dep_of o Thm.tag) thm   
 
+(* fails on "local.value" which is right behaviour *)
 fun thm_of_string s =
   let val (a,b) = split_string "Theory." s in DB.fetch a b end
 
@@ -151,8 +152,10 @@ fun name_of_did (thy,n) =
     SOME (name,_) => SOME (thy ^ "Theory." ^ name)
   | NONE => NONE
   
-fun dep_of_thm s =
+fun dep_of_thm s = 
+  (* if can thm_of_string s then *)
   List.mapPartial name_of_did (depidl_of_thm (thm_of_string s))
+  (* else [] *)
 
 fun add_thmdep n l0 = 
   let 
