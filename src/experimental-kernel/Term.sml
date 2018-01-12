@@ -1,7 +1,9 @@
 structure Term :> Term =
 struct
 
-open Feedback Lib Type
+open Feedback Lib KernelTypes Type
+
+val kernelid = "expknl"
 
 infixr --> |->
 
@@ -24,8 +26,6 @@ fun qcomb2 con (f, g) (x, y) =
 (* apply a function f under "constructor" con, handling Unchanged *)
 fun qcomb con f = qcomb2 con (f, f)
 
-type const_key = KernelSig.kernelname
-type const_info = (KernelSig.kernelid * hol_type)
 type 'a set = 'a HOLset.set
 
 val compare_key = KernelSig.name_compare
@@ -39,11 +39,6 @@ val const_table = KernelSig.new_table()
 fun prim_delete_const kn = ignore (KernelSig.retire_name(const_table, kn))
 
 fun inST s = not (null (KernelSig.listName const_table s))
-
-datatype term = Var of string * hol_type
-              | App of term * term
-              | Const of const_info
-              | Abs of term * term
 
 fun prim_new_const (k as {Thy,Name}) ty = let
   val id = KernelSig.insert(const_table, k, ty)

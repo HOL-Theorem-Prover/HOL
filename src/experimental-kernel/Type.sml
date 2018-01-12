@@ -1,7 +1,7 @@
 structure Type :> Type =
 struct
 
-open Feedback Lib
+open Feedback Lib KernelTypes
 
 infix |->
 infixr -->
@@ -41,9 +41,6 @@ val _ = prim_new_type (minseg "bool") 0
 val _ = prim_new_type (minseg "ind") 0
 
 val funref = #1 (KernelSig.find(operator_table, {Thy="min", Name = "fun"}))
-
-datatype hol_type = Tyv of string
-                  | Tyapp of KernelSig.kernelid * hol_type list
 
 fun uptodate_type (Tyv s) = true
   | uptodate_type (Tyapp(info, args)) = KernelSig.uptodate_id info andalso

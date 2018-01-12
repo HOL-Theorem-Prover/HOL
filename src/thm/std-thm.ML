@@ -19,13 +19,13 @@ open Feedback Lib Term Tag Dep
 
 type 'a set = 'a HOLset.set;
 type depdisk = (string * int) * ((string * int list) list);
-type tag = Tag.tag
+datatype thm = THM of Tag.tag * term HOLset.set * term
 
 val --> = Type.-->;
 infixr 3 -->;
 infix 5 |-> ;
 
-val kernelid = "expknl"
+val kernelid = Term.kernelid
 
 (*---------------------------------------------------------------------------
        Exception handling
@@ -52,6 +52,7 @@ val empty_tag = Tag.empty_tag
     The following are here because I didn't want to Thm to be dependent
     on some derived syntax (now in boolSyntax).
  ---------------------------------------------------------------------------*)
+structure Susp = Portable.HOLSusp
 
 val F = Susp.delay (fn () => mk_thy_const{Name="F", Thy="bool", Ty=bool});
 
@@ -106,7 +107,7 @@ end;
  * The type of theorems and some basic operations on it.                     *
  *---------------------------------------------------------------------------*)
 
-datatype thm = THM of Tag.tag * term HOLset.set * term
+(* datatype thm = datatype KernelTypes.thm *)
 
 fun single_hyp tm = HOLset.singleton Term.compare tm
 val empty_hyp = Term.empty_tmset
@@ -173,8 +174,7 @@ fun ASSUME tm =
  *         |- M = M                                                          *
  *---------------------------------------------------------------------------*)
 
-val mk_eq_nocheck = Term.prim_mk_eq
-fun mk_imp_nocheck(t1,t2) = Term.prim_mk_imp t1 t2
+val mk_eq_nocheck = Term.prim_mk_eq;
 
 fun refl_nocheck ty tm =
   make_thm Count.Refl (empty_tag, empty_hyp, mk_eq_nocheck ty tm tm);
@@ -287,7 +287,7 @@ fun DISCH w (THM(ocl,asl,c)) =
    make_thm Count.Disch
       (ocl,
        HOLset.delete(asl, w) handle HOLset.NotFound => asl,
-       mk_imp_nocheck(w, c)))
+       Term.prim_mk_imp w c));
 
 
 (*---------------------------------------------------------------------------
@@ -504,8 +504,8 @@ fun EQ_IMP_RULE th =
      and A = hypset th
      and O = tag th
  in if ty = Type.bool
-    then (make_thm Count.EqImpRule(O,A, mk_imp_nocheck(lhs, rhs)),
-          make_thm Count.EqImpRule(O,A, mk_imp_nocheck(rhs, lhs)))
+    then (make_thm Count.EqImpRule(O,A, Term.prim_mk_imp lhs rhs),
+          make_thm Count.EqImpRule(O,A, Term.prim_mk_imp rhs lhs))
     else ERR "" ""
  end
  handle HOL_ERR _ => ERR "EQ_IMP_RULE" "";
@@ -604,7 +604,19 @@ fun GEN x th =
           handle HOL_ERR _ => ERR "GEN" ""
   end;
 
-val GENL = itlist GEN
+fun GENL vs th = let
+  val (asl,c) = sdest_thm th
+in
+  if exists (fn v => var_occursl v asl) vs then
+    ERR "GENL" "variable occurs free in hypotheses"
+  else
+    make_thm
+      Count.Gen(tag th, asl,
+                list_mk_binder (SOME (prim_mk_const {Thy="bool", Name="!"}))
+                               (vs,c))
+    handle HOL_ERR _ => ERR "GENL" ""
+end
+
 
 
 (*---------------------------------------------------------------------------
@@ -896,7 +908,7 @@ fun NOT_ELIM th =
   case with_exn dest (concl th) (thm_err "NOT_ELIM" "")
    of ({Name="~", Thy="bool",...},Rand)
        => make_thm Count.NotElim
-             (tag th, hypset th, mk_imp_nocheck(Rand, Susp.force F))
+             (tag th, hypset th, Term.prim_mk_imp Rand (Susp.force F))
     | otherwise => ERR "NOT_ELIM" ""
 end;
 
@@ -945,7 +957,6 @@ fun INST [] th = th
       else
         raise ERR "INST" "can only instantiate variables"
 
-
 (*---------------------------------------------------------------------------*
  * Now some derived rules optimized for computations, avoiding most          *
  * of useless type-checking, using pointer equality and delayed              *
@@ -967,6 +978,7 @@ fun Beta th =
         (tag th, hypset th, mk_eq_nocheck ty lhs (Term.lazy_beta_conv rhs))
    end
    handle HOL_ERR _ => ERR "Beta" "";
+
 
 (*---------------------------------------------------------------------------*
  * This rule behaves like a tactic: given a goal (reducing the rhs of thm),  *
@@ -995,9 +1007,9 @@ fun Mk_comb thm =
        val (Rator,Rand) = dest_comb rhs
        fun mkthm th1' th2' =
          let val (lhs1, rhs1, _) = Term.dest_eq_ty (concl th1')
-             val _ = Assert (EQ lhs1 Rator) "" ""
+             val _ = Assert (lhs1 = Rator) "" ""
              val (lhs2, rhs2, _) = Term.dest_eq_ty (concl th2')
-             val _ = Assert (EQ lhs2 Rand) "" ""
+             val _ = Assert (lhs2 = Rand) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1', th2']
          in make_thm Count.MkComb
 	   (ocls, hyps,mk_eq_nocheck ty lhs (mk_comb(rhs1,rhs2)))
@@ -1065,13 +1077,12 @@ fun mk_oracle_thm tg (asl,c) =
    ; make_thm Count.Oracle (Tag.read tg,list_hyp asl,c));
 
 
-val mk_thm = mk_oracle_thm "MK_THM";
+val mk_thm = mk_oracle_thm "MK_THM"
 
 fun add_tag (tag1, THM(tag2, h,c)) = THM(Tag.merge tag1 tag2, h, c)
 
 (*---------------------------------------------------------------------------*
- *    The following two are only used in Theory, and are not                 *
- *     externally available.                                                 *
+ *    The following two are only used internally
  *---------------------------------------------------------------------------*)
 
 fun mk_axiom_thm (r,c) =
@@ -1083,7 +1094,7 @@ fun mk_defn_thm (witness_tag, c) =
     make_thm Count.Definition (witness_tag,empty_hyp,c))
 
 (* ----------------------------------------------------------------------
-    Making definitional theorems
+    Primitive Definition Principles
    ---------------------------------------------------------------------- *)
 
 fun ERR f msg = HOL_ERR {origin_structure = "Thm",
@@ -1148,7 +1159,6 @@ fun check_tyvars body_tyvars ty f =
       raise f (String.concat
          ("Unbound type variable(s) in definition: "
            :: commafy (map (Lib.quote o Type.dest_vartype) extras)));
-
 
 fun prim_type_definition (name as {Thy, Tyop}, thm) = let
   val (bv,Body) = with_exn dest_exists (concl thm) TYDEF_FORM_ERR
@@ -1247,6 +1257,12 @@ in
   (cnames, mk_defn_thm (tag th, subst (List.map addc stys) body))
 end
 
+
+
+
+
+
+
 (* ----------------------------------------------------------------------
     Creating a theorem from disk
    ---------------------------------------------------------------------- *)
@@ -1279,5 +1295,6 @@ fun save_dep thy (th as (THM(t,h,c))) =
     thm_order := (!thm_order) + 1;
     THM(Tag.set_dep dep t,h,c)
   end
+
 
 end (* Thm *)

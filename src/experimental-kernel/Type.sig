@@ -1,7 +1,7 @@
 signature Type =
 sig
 
-  include FinalType
+  include FinalType where type hol_type = KernelTypes.hol_type
 
 
 
