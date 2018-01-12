@@ -11,13 +11,6 @@ notifications:
     channels:
       - "irc.freenode.net#hol"
 
-addons:
-  apt:
-    sources:
-    - ubuntu-toolchain-r-test
-    packages:
-    - ocaml
-
 env:
   global:
     - PATH=$PATH:$HOME/bin LD_LIBRARY_PATH=$HOME/lib
