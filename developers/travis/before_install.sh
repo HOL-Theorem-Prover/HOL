@@ -3,6 +3,7 @@
 set -e
 wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sudo sh -s /usr/local/bin
 
+opam init -y
 opam install -y num
 opam install -y ocamlfind
 
