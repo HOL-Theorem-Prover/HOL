@@ -1,3 +1,4 @@
+CLINE_OPTIONS = -j1
 .PHONY: all
 
 FILES_CMX=lib.cmx fusion.cmx basics.cmx printer.cmx preterm.cmx hl_parser.cmx equal.cmx bool.cmx drule.cmx tactics.cmx simp.cmx theorems.cmx canon.cmx fol.cmx follist.cmx meson.cmx hh_symbols.cmx features_dt.cmx hh_tac.cmx hh_write.cmx
