@@ -8,11 +8,10 @@ sig
   type fea_t = int list
   type feav_t = (lbl_t * fea_t)
   
-  (* Caching features *)
-  val cached_ancfeav : unit -> (string, fea_t) Redblackmap.dict
-  val insert_curfeav : (string, fea_t) Redblackmap.dict ->
+  (* Caching features of theorems *)
+  val update_thmdata : unit -> 
     ((int, real) Redblackmap.dict * (string * fea_t) list)
- 
+
   (* Export a problem to TT files *)
   val export_problem : string -> string list -> term -> unit
   
@@ -27,11 +26,9 @@ sig
   val launch_atp        : string -> prover -> int -> Process.status
   
   (* Reconstruct and minimize the proof using Metis *)
-  val reconstruct_dir   : string -> term -> tactic
+  val reconstruct_dir   : string -> goal -> tactic
   
   (* Main function and options *)
-  val hh_atp            : 
-    string -> string -> string -> int -> prover -> int -> term -> tactic
   val holyhammer        : term -> tactic
   val hh_tac            : tactic
   
@@ -43,7 +40,6 @@ sig
   (* State *)
   val clean_cache       : unit -> unit
   val set_timeout       : int -> unit
-  val set_minimization  : bool -> unit
 
 
 end

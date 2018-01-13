@@ -13,7 +13,8 @@
 structure holyHammer :> holyHammer =
 struct
 
-open HolKernel boolLib hhWriter hhReconstruct hhsTools hhsFeature hhsPredict
+open HolKernel boolLib hhWriter hhReconstruct hhsTools hhsExec hhsFeature 
+  hhsPredict
 
 val ERR = mk_HOL_ERR "holyHammer"
 
@@ -21,7 +22,7 @@ fun cmd_in_dir dir cmd = OS.Process.system ("cd " ^ dir ^ "; " ^ cmd)
 
 (*---------------------------------------------------------------------------
    Caching of the dictionnaries. Makes subsequent call of holyhammer in
-   the same theory faster. Not to be used for paralell calls.
+   the same theory faster. Not to be used for parallel calls.
  ----------------------------------------------------------------------------*)
 
 val dict_cache = ref (dempty (list_compare String.compare))
@@ -39,8 +40,6 @@ fun name_of atp = case atp of
 
 val timeout_glob = ref 5
 fun set_timeout n = timeout_glob := n
-
-fun set_minimization b = minimize_flag := b
 
 (*---------------------------------------------------------------------------
    Directories
@@ -86,65 +85,103 @@ fun status_dir dir = dir ^ "/status"
    Predicting theorems
    ---------------------------------------------------------------------- *)
 
+fun is_trivial goal = 
+  can (hhsTimeout.timeOut 0.1 (METIS_TAC [])) goal;
+
+fun add_fea dict (name,thm) =
+  let val g = dest_thm thm in
+    if not (dmem g (!dict)) andalso 
+       uptodate_thm thm (* andalso
+       not (is_trivial g) *)
+    then dict := dadd g (name, fea_of_goal g) (!dict)
+    else ()
+  end
+
 fun insert_feav thmdict thyl =
-  let
-    fun add_thmdict thy =
-      let 
-        fun f (name,thm) =
-          if uptodate_thm thm then
-            let val fullname = thy ^ "Theory." ^ name in
-              thmdict := dadd fullname (fea_of_goal (dest_thm thm)) (!thmdict)
-            end
-          else ()
+  let 
+    val dict = ref thmdict
+    fun f_thy thy =
+      let fun f (name,thm) = 
+        add_fea dict ((thy ^ "Theory." ^ name), thm)
       in
         app f (DB.thms thy)
       end
   in
-    app add_thmdict thyl
+    app f_thy thyl;
+    !dict
   end
 
 fun cached_ancfeav () = 
   let
     val thyl = ancestry (current_theory ())
-    val thmdictref = ref (dempty String.compare)
+    val thmdict = dempty goal_compare
   in
     dfind thyl (!dict_cache) handle _ =>
-      (
-      print_endline "Initialization...";
-      insert_feav thmdictref thyl;
-      dict_cache := dadd thyl (!thmdictref) (!dict_cache);
-      print_endline ("Caching " ^ int_to_string (dlength (!thmdictref)) ^ " feature vectors");
-      !thmdictref
-      )
+      let 
+        val _ = print_endline "Initialization..."
+        val newdict = insert_feav thmdict thyl 
+      in
+      dict_cache := dadd thyl newdict (!dict_cache);
+      print_endline ("Caching " ^ int_to_string (dlength newdict) ^ 
+         " feature vectors");
+      newdict
+      end
   end
- 
-fun insert_curfeav thmdict =
+  
+fun insert_namespace thmdict =
   let 
-    val thmdictref = ref thmdict
-    val _ = insert_feav thmdictref [current_theory ()] 
-    val feav = dlist (!thmdictref)
+    val dict = ref thmdict 
+    fun f (x,y) = ("local_namespace_holyhammerTheory." ^ x, y)
+    val l1 = hide_out namespace_thms ()
+    val l2 = map f l1
+  in
+    app (add_fea dict) l2;
+    (!dict)
+  end
+
+fun create_symweight_feav thmdict =
+  let
+    val feav = map snd (dlist thmdict)
     val symweight = learn_tfidf feav
   in
     (symweight,feav)
   end
 
+fun update_thmdata () =
+  let 
+    val dict0 = cached_ancfeav ()
+    val dict1 = insert_feav dict0 [current_theory ()]
+    val dict2 = insert_namespace dict1
+  in
+    create_symweight_feav dict2
+  end
+
 (*---------------------------------------------------------------------------
-   Export to TPTP THF
+   Export to TT format
  ----------------------------------------------------------------------------*)
 
-fun pred_filter pred thy ((name,_),_)=
+fun pred_filter pred thy ((name,_),_) =
   let val thypred = map snd (filter (fn x => fst x = thy) pred) in
     mem name thypred  
   end
  
+fun is_nsthm s =
+  fst (split_string "Theory." s) = "local_namespace_holyhammer" 
+ 
 fun export_problem probdir premises cj =
   let
     val premises' = map (split_string "Theory.") premises
+    (* val _ = print_endline (String.concatWith " " (first_n 10 premises)) *)
+    val nsthml1 = filter is_nsthm premises
+    fun f s = case thm_of_sml (snd (split_string "Theory." s)) of
+        SOME (_,thm) => SOME (s,thm) 
+      | NONE => NONE
+    val nsthml2 = hide_out (List.mapPartial f) nsthml1
     val ct   = current_theory ()
     val thyl = ct :: Theory.ancestry ct 
   in    
     clean_dir probdir;
-    write_problem probdir (pred_filter premises') thyl cj;
+    write_problem probdir (pred_filter premises') nsthml2 thyl cj;
     write_thydep (probdir ^ "/thydep.dep") thyl
   end
 
@@ -193,28 +230,17 @@ fun launch_atp dir atp tim =
    Read theorems needed for the proof and replay the proof with Metis.
  ----------------------------------------------------------------------------*)
 
-fun reconstruct_dir dir cj = reconstruct (status_dir dir, out_dir dir) cj
-fun reconstruct_atp atp cj = reconstruct (status_of atp, out_of atp) cj
+fun reconstruct_dir dir goal = reconstruct (status_dir dir, out_dir dir) goal
+fun reconstruct_atp atp goal = reconstruct (status_of atp, out_of atp) goal
 
-fun reconstruct_dir_stac dir cj =
-  reconstruct_stac (status_dir dir, out_dir dir) cj
+fun reconstruct_dir_stac dir goal =
+  reconstruct_stac (status_dir dir, out_dir dir) goal
 
 fun get_lemmas_atp atp = get_lemmas (status_of atp, out_of atp)
 
 (*---------------------------------------------------------------------------
    Performs all previous steps with (experimentally) the best parameters.
  ----------------------------------------------------------------------------*)
-
-fun hh_atp preddir probdir provdir n atp t term =
-  let
-    val (symweight,feav) = insert_curfeav (cached_ancfeav ())
-    val premises = thmknn_wdep symweight 128 feav (fea_of_goal ([],term))
-    val _ = export_problem probdir premises term
-    val _ = translate_fof probdir provdir
-    val _ = launch_atp provdir atp t
-  in
-    reconstruct_dir provdir term
-  end
 
 fun launch_parallel t =
   let val cmd =
@@ -232,7 +258,7 @@ fun launch_parallel t =
 fun holyhammer_goal goal =
   let
     val term = list_mk_imp goal
-    val (symweight,feav) = insert_curfeav (cached_ancfeav ())
+    val (symweight,feav) = update_thmdata ()
     val premises = thmknn_wdep symweight 128 feav (fea_of_goal goal)
     val _ = export_problem (probdir_of Eprover) premises term
     val _ = translate_fof (probdir_of Eprover) (provdir_of Eprover)
@@ -240,8 +266,8 @@ fun holyhammer_goal goal =
     val _ = translate_fof (probdir_of Z3) (provdir_of Z3)
     val _ = launch_parallel (!timeout_glob)
   in
-    reconstruct_atp Eprover term 
-    handle _ => reconstruct_atp Z3 term
+    reconstruct_atp Eprover goal
+    handle _ => reconstruct_atp Z3 goal
   end
 
 fun holyhammer term = holyhammer_goal ([],term)
@@ -259,7 +285,7 @@ fun hh_stac pid (symweight,feav) t goal =
     val _ = translate_fof probdir provdir
     val _ = launch_atp provdir Eprover t
   in
-    reconstruct_dir_stac provdir term
+    reconstruct_dir_stac provdir goal
   end
 
 end

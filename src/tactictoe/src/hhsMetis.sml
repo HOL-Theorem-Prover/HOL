@@ -15,12 +15,32 @@ hhsSetup
 val ERR = mk_HOL_ERR "hhsMetis"
 
 (* --------------------------------------------------------------------------
+   Set of theorems available for theorem predictions.
+   local.theorems.
+   
+   Set of theorems available in tactics.
+   
+   Make a list of local tactic and do not export them. loctacdict
+   
+   Add namespace theorems to a list of theorems. 
+   A theorem should just be referenced by a string?.  
+   -------------------------------------------------------------------------- *)
+
+(* fun add_internal_theorems thmfeav = *)
+  
+
+(* --------------------------------------------------------------------------
    Internal theorems
 
 load "hhsExec";
 open hhsExec;
-val l0 = map fst (#allVal (PolyML.globalNameSpace) ());   
-val l1 = filter is_thm l0;
+
+
+
+
+
+
+
 load "hhsMetis";
 open hhsMetis;
 import_mdict ();
@@ -36,18 +56,11 @@ val goaldict =
     dnew goal_compare (mapfilter f l) 
   end
 
-val hhs_thm = ref TRUTH
 
-fun lift_thm s =
-  (
-  hhs_thm := TRUTH;
-  exec_sml "lift_thm" ("hhs_thm := " ^ s);
-  !hhs_thm
-  )
-;
 
-fun is_trivthm thm = 
-  can (hhsTimeout.timeOut 0.1 (METIS_TAC [])) (dest_thm thm);
+
+
+
 fun ex_thm thm = dmem (dest_thm thm) goaldict;
 fun is_term term thm = concl thm = term;
 

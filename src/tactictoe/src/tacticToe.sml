@@ -243,7 +243,7 @@ andalso
    ---------------------------------------------------------------------- *)
 
 fun string_stac stac g gl =
-  let val stac0 = pretty_stac stac g gl in
+  let val stac0 = pretty_mini_stac 1.0 stac g gl in
     comestic_stac stac0
   end
 
