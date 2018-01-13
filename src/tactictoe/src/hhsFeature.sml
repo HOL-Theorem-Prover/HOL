@@ -29,8 +29,10 @@ fun atoms tm =
   (
   atoml_top := tm :: !atoml_top;
   if is_var tm orelse is_const tm then atoml := tm :: (!atoml)
-  else if is_eq tm  then 
-    (atoms (lhs tm); atoms (rhs tm))
+  else if is_eq tm then
+    if type_of (lhs tm) = bool 
+    then (atoms (lhs tm); atoms (rhs tm))
+    else atoml := tm :: (!atoml)
   else if is_conj tm orelse is_disj tm orelse is_imp_only tm then
     (atoms (lhand tm); atoms (rand tm))
   else if is_neg tm      then atoms  (rand tm)
