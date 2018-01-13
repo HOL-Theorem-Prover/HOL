@@ -220,17 +220,23 @@ handle HOL_ERR _ => raise ERR "RAT_CALCTERM_TAC" "";
  *--------------------------------------------------------------------------*)
 
 fun RAT_STRICT_CALC_TAC (asm_list,goal) =
-	let
-		val rat_terms = extract_rat goal;
-		val calc_thms = map RAT_CALC_CONV rat_terms;
-		val calc_asms = list_xmerge (map (fn x => fst (dest_thm x)) calc_thms);
-	in
-		(
-			MAP_EVERY ASSUME_TAC (map (fn x => TAC_PROOF ((asm_list,x), RW_TAC intLib.int_ss [FRAC_DNMPOS,INT_MUL_POS_SIGN,INT_NOTPOS0_NEG,INT_NOT0_MUL,INT_GT0_IMP_NOT0,INT_ABS_NOT0POS])) calc_asms) THEN
-			SUBST_TAC calc_thms
-		) (asm_list,goal)
-	end
-handle HOL_ERR _ => raise ERR "RAT_STRICT_CALC_TAC" "";
+  let
+    val rat_terms = extract_rat goal;
+    val calc_thms = map RAT_CALC_CONV rat_terms;
+    val calc_asms = op_U aconv (map (fn x => fst (dest_thm x)) calc_thms);
+  in
+    (
+      MAP_EVERY
+        ASSUME_TAC
+          (map (fn x => TAC_PROOF
+                          ((asm_list,x),
+                           RW_TAC intLib.int_ss [FRAC_DNMPOS,INT_MUL_POS_SIGN,
+                                                 INT_NOTPOS0_NEG,INT_NOT0_MUL,
+                                                 INT_GT0_IMP_NOT0,
+                                                 INT_ABS_NOT0POS]))
+               calc_asms) THEN
+       SUBST_TAC calc_thms) (asm_list,goal)
+  end handle HOL_ERR _ => raise ERR "RAT_STRICT_CALC_TAC" "";
 
 (*--------------------------------------------------------------------------
  *  RAT_CALC_TAC : tactic
@@ -240,40 +246,40 @@ handle HOL_ERR _ => raise ERR "RAT_STRICT_CALC_TAC" "";
  *--------------------------------------------------------------------------*)
 
 fun RAT_CALC_TAC (asm_list,goal) =
-	let
-			(* extract terms of type ``:rat`` *)
-		val rat_terms = extract_rat goal;
-			(* build conversions *)
-		val calc_thms = map RAT_CALC_CONV rat_terms;
-			(* split list into assumptions and conclusions *)
-		val (calc_asmlists, calc_concl) = ListPair.unzip (map (fn x => dest_thm x) calc_thms);
-			(* merge assumptions lists *)
-		val calc_asms = list_xmerge calc_asmlists;
-			(* function to prove an assumption, TODO: fracLib benutzen *)
-		val gen_thm = (fn x => TAC_PROOF ((asm_list,x), RW_TAC intLib.int_ss [] ));
-			(* try to prove assumptions *)
-		val prove_list = List.map (total gen_thm) calc_asms;
-			(* combine assumptions and their proofs *)
-		val list1 = ListPair.zip (calc_asms,prove_list);
-			(* partition assumptions into proved assumptions and assumptions to be proved *)
-		val list2 = partition (fn x => isSome (snd x)) list1;
-		val asms_toprove = map fst (snd list2);
-		val asms_proved = map (fn x => valOf (snd x)) (fst list2);
-			(* generate new subgoal goal *)
-		val subst_goal = snd (dest_eq (snd (dest_thm (ONCE_REWRITE_CONV calc_thms goal))));
-		val subgoal = (list_mk_conj (asms_toprove @ [subst_goal]) );
-		val mp_thm = TAC_PROOF
-			(
-				(asm_list, mk_imp (subgoal,goal))
-			,
-				STRIP_TAC THEN
-				MAP_EVERY ASSUME_TAC asms_proved THEN
-				ONCE_REWRITE_TAC calc_thms THEN
-				PROVE_TAC []
-			);
-	in
-			( [(asm_list,subgoal)], fn (thms:thm list) => MP mp_thm (hd thms) )
-	end
+        let
+                        (* extract terms of type ``:rat`` *)
+                val rat_terms = extract_rat goal;
+                        (* build conversions *)
+                val calc_thms = map RAT_CALC_CONV rat_terms;
+                        (* split list into assumptions and conclusions *)
+                val (calc_asmlists, calc_concl) = ListPair.unzip (map (fn x => dest_thm x) calc_thms);
+                        (* merge assumptions lists *)
+                val calc_asms = op_U aconv calc_asmlists;
+                        (* function to prove an assumption, TODO: fracLib benutzen *)
+                val gen_thm = (fn x => TAC_PROOF ((asm_list,x), RW_TAC intLib.int_ss [] ));
+                        (* try to prove assumptions *)
+                val prove_list = List.map (total gen_thm) calc_asms;
+                        (* combine assumptions and their proofs *)
+                val list1 = ListPair.zip (calc_asms,prove_list);
+                        (* partition assumptions into proved assumptions and assumptions to be proved *)
+                val list2 = partition (fn x => isSome (snd x)) list1;
+                val asms_toprove = map fst (snd list2);
+                val asms_proved = map (fn x => valOf (snd x)) (fst list2);
+                        (* generate new subgoal goal *)
+                val subst_goal = snd (dest_eq (snd (dest_thm (ONCE_REWRITE_CONV calc_thms goal))));
+                val subgoal = (list_mk_conj (asms_toprove @ [subst_goal]) );
+                val mp_thm = TAC_PROOF
+                        (
+                                (asm_list, mk_imp (subgoal,goal))
+                        ,
+                                STRIP_TAC THEN
+                                MAP_EVERY ASSUME_TAC asms_proved THEN
+                                ONCE_REWRITE_TAC calc_thms THEN
+                                PROVE_TAC []
+                        );
+        in
+                        ( [(asm_list,subgoal)], fn (thms:thm list) => MP mp_thm (hd thms) )
+        end
 handle HOL_ERR _ => raise ERR "RAT_CALC_TAC" "";
 
 (*--------------------------------------------------------------------------
