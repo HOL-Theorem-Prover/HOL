@@ -517,10 +517,10 @@ fun dbfetch_of_string s =
     else s
   end
 
-val hhs_mdict = ref (dempty String.compare)
+val hhs_mdict = ref (dempty goal_compare)
 
 (* --------------------------------------------------------------------------
-   Astar
+   Evaluation function for Monte Carlo Tree Search.
    -------------------------------------------------------------------------- *)
 
 val hhs_mcdict = ref (dempty (list_compare Int.compare))
@@ -538,7 +538,7 @@ fun clean_feadata () =
   hhs_cthyfea := [];
   hhs_ddict := dempty goal_compare;
   hhs_ndict := dempty String.compare;
-  hhs_mdict := dempty String.compare;
+  hhs_mdict := dempty goal_compare;
   hhs_mcdict := dempty (list_compare Int.compare);
   hhs_mcdict_cthy := dempty (list_compare Int.compare)
   )

@@ -218,26 +218,6 @@ fun fetch_thm_aux s reps =
 val fetch = total_time fetch_thm_time fetch_thm_aux
 
 (*----------------------------------------------------------------------------
-  For statistics on coverage.
-  ----------------------------------------------------------------------------*)
-
-val start_stacset = ref (dempty String.compare)
-
-fun create_stacset () =
-  let val l = map (#1 o fst) (dlist (!hhs_stacfea)) in 
-    dnew String.compare (map (fn x => (x,())) l) 
-  end
-  
-val start_tokenset = ref (dempty String.compare)
-
-fun create_tokenset () =
-  let 
-    val l = List.concat (map (hhs_lex o #1 o fst) (dlist (!hhs_stacfea)))
-  in 
-    dnew String.compare (map (fn x => (x,())) l) 
-  end  
-
-(*----------------------------------------------------------------------------
   Tactical proofs hooks
   ----------------------------------------------------------------------------*)
 
@@ -248,7 +228,6 @@ fun start_record name goal =
   debug_search ("\n" ^ name);
   debug ("\n" ^ name);
   debug_t "update_mdict" update_mdict (current_theory ());
-  start_stacset := create_stacset ();
   (* recording goal steps *)
   goalstep_glob := [];
   (* evaluation *)
@@ -266,7 +245,7 @@ fun end_record name g =
   let
     val lbls = map fst (rev (!goalstep_glob))
   in
-    (* because of internal theorems *)
+    (* because we want internal theorems on orthogonalization *)
     debug_t "update_mdict" update_mdict (current_theory ());
     debug_t ("Saving " ^ int_to_string (length lbls) ^ " labels")
       (app save_lbl) lbls

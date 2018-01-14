@@ -15,8 +15,13 @@ hhsSetup
 val ERR = mk_HOL_ERR "hhsMetis"
 
 (* --------------------------------------------------------------------------
-   Metis
+   Metis: 
+   Todo: Orthogonalization could be done during predictions but would
+   be a bit slow.
    -------------------------------------------------------------------------- *)
+
+fun thm_of_string s =
+  let val (a,b) = split_string "Theory." s in DB.fetch a b end
 
 fun parfetch_of_string s =
   let val (a,b) = split_string "Theory." s in 
@@ -44,8 +49,10 @@ fun metis_provable n tim goal =
    -------------------------------------------------------------------------- *)
 
 fun read_thmfea s = case hhs_lex s of
-    a :: "T" :: m => (a,(true, map string_to_int m))
-  | a :: "F" :: m => (a,(false, map string_to_int m))
+    a :: "T" :: m => 
+    (dest_thm (thm_of_string a), (a, true, map string_to_int m))
+  | a :: "F" :: m => 
+    (dest_thm (thm_of_string a), (a, false, map string_to_int m))
   | _ => raise ERR "read_thmfea" s
     
 fun readthy_mdict thy =
@@ -63,12 +70,13 @@ fun depnumber_of_thm thm =
   (Dep.depnumber_of o Dep.depid_of o Tag.dep_of o Thm.tag) thm
 
 fun order_thml thml =
-  let
-    fun compare ((_,th1),(_,th2)) =
-      Int.compare (depnumber_of_thm th1, depnumber_of_thm th2)
+  let fun compare ((_,th1),(_,th2)) =
+    Int.compare (depnumber_of_thm th1, depnumber_of_thm th2)
   in
     dict_sort compare thml
   end
+
+fun is_localthy s = s = "local_namespace_holyhammer"
 
 fun update_mdict cthy =
   let
@@ -77,14 +85,9 @@ fun update_mdict cthy =
       let 
         val name = cthy ^ "Theory." ^ s
         val goal = dest_thm thm
+        val b = !hhs_thmortho_flag andalso metis_provable 0 0.1 goal
       in
-        if dmem name (!hhs_mdict) then () else 
-          let val b =
-            !hhs_thmortho_flag andalso 
-            metis_provable (!hhs_metis_npred) (!hhs_metis_time) goal
-          in
-            hhs_mdict := dadd name (not b, fea_of_goal goal) (!hhs_mdict)
-          end
+        hhs_mdict := dadd goal (name, not b, fea_of_goal goal) (!hhs_mdict)
       end
   in
     app f thml
@@ -94,19 +97,18 @@ fun export_mdict cthy =
   let 
     val _ = update_mdict cthy
     val namel = map fst (DB.thms cthy)
-    (* test if these theorems still exists in the current theory *)
-    fun test (s,_) =  
+    fun in_curthy (_,(s,_,_)) =  
       let val (thy,name) = split_string "Theory." s in
         thy = cthy andalso mem name namel
       end
     val fname = hhs_mdict_dir ^ "/" ^ cthy
-    val l0 = filter test (dlist (!hhs_mdict))
-    fun f (name,(b,fea)) = 
+    val l0 = filter in_curthy (dlist (!hhs_mdict))
+    fun f (_,(name,b,fea)) = 
       String.concatWith " " (name :: string_of_bool b :: map int_to_string fea)
     val l1 = map f l0
   in 
     writel fname l1
-  end 
+  end
  
 
 end
