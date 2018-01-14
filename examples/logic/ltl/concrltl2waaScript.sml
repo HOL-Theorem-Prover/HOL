@@ -1136,6 +1136,21 @@ val EXP_GRAPH_AP = store_thm
        >> metis_tac[SUBFORMS_TRANS]
   );
 
+(* val EXP_GRAPH_FRMLS_AD = store_thm *)
+(*   ("EXP_GRAPH_FRMLS_AD", *)
+(*   ``!aP g fs g2. *)
+(*   (wfg g) ∧ (expandGraph g fs = SOME g2) *)
+(*   ∧ (!i n. i ∈ (domain g.nodeInfo) ∧ (lookup i g.nodeInfo = SOME n) *)
+(*          ==> ALL_DISTINCT n.frmls *)
+(*     ) *)
+(*   ==> *)
+(*   (!i n. i ∈ (domain g2.nodeInfo) ∧ (lookup i g2.nodeInfo = SOME n) *)
+(*       ==> ALL_DISTINCT n.frmls *)
+(*   )``, *)
+  
+
+(* ) *)
+
 
 val EXP_GRAPH_WFG_AND_SOME = store_thm
   ("EXP_GRAPH_WFG_AND_SOME",
@@ -1886,6 +1901,34 @@ val expandAuto_init_def = Define`
     in do g2 <- expandGraph g1 flat_initForms;
           SOME (concrAA g2 init_concr (props_concr φ))
           od`;
+
+(* val EXPAUTO_INIT = store_thm *)
+(*   ("EXPAUTO_INIT", *)
+(*    ``!f g_AA init aP. *)
+(*   (expandAuto_init f = SOME (concrAA g_AA init aP)) *)
+(*   ==> (!i. MEM i init ==> ALL_DISTINCT i)``, *)
+(*    rpt strip_tac >> fs[expandAuto_init_def] *)
+(*    >> rw[] >> fs[MEM_MAP,CAT_OPTIONS_MEM] *)
+(*    >> Q.HO_MATCH_ABBREV_TAC `ALL_DISTINCT (CAT_OPTIONS L)` *)
+(*    >> `!ls:(num option) list. *)
+(*           ALL_DISTINCT ls *)
+(*           ==> ALL_DISTINCT (CAT_OPTIONS ls)` by ( *)
+(*        Induct_on `ls` >> fs[CAT_OPTIONS_def] >> rpt strip_tac *)
+(*        >> Cases_on `h` >> simp[CAT_OPTIONS_def] *)
+(*        >> simp[CAT_OPTIONS_MEM] *)
+(*    ) *)
+(*    >> `ALL_DISTINCT L` suffices_by metis_tac[] *)
+(*    >> qunabbrev_tac `L` *)
+(*    >> Q.HO_MATCH_ABBREV_TAC `ALL_DISTINCT (MAP g l)` *)
+(*    >> `!ls. MEM ls (tempDNF_concr f) *)
+(*           ==> ALL_DISTINCT (MAP g ls)` by ( *)
+(*        Induct_on `ls` >> fs[ALL_DISTINCT] >> rpt strip_tac *)
+(*                  >- () *)
+
+(* ) *)
+
+(* ) *)
+
 
 val EXP_WAA_CORRECT = store_thm
   ("EXP_WAA_CORRECT",

@@ -1577,6 +1577,17 @@ val ADDNODE_GBA_LEMM = store_thm
       )
   );
 
+val frml_ad_def = Define`
+  frml_ad g =
+       !i n. i ∈ (domain g.nodeInfo) ∧ (lookup i g.nodeInfo = SOME n)
+          ==> ALL_DISTINCT n.frmls`;
+
+val FRML_AD_NODEINFO = store_thm
+  ("FRML_AD_NODEINFO",
+   ``!g1 g2. (g1.nodeInfo = g2.nodeInfo) ==> (frml_ad g1 = frml_ad g2)``,
+   rpt strip_tac >> simp[frml_ad_def]
+  );
+
 val ADDNODE_GBA_FOLDR = store_thm
   ("ADDNODE_GBA_FOLDR",
    ``!G l. suff_wfg G ==>
@@ -1596,6 +1607,8 @@ val ADDNODE_GBA_FOLDR = store_thm
       ∧ (!i. MEM i (FST G_WITH_IDS)
              ==> ?n. (lookup i (SND G_WITH_IDS).nodeInfo = SOME n)
                    ∧ (MEM n.frmls l))
+      ∧ (frml_ad G ∧ (!x. MEM x l ==> ALL_DISTINCT x)
+                 ==> frml_ad (SND G_WITH_IDS))
        ))``,
    gen_tac >> Induct_on `l` >> rpt strip_tac >> fs[]
    >> Q.HO_MATCH_ABBREV_TAC `suff_wfg G2 ∧ A = B
@@ -1609,7 +1622,19 @@ val ADDNODE_GBA_FOLDR = store_thm
                     (λn (ids,g).
                         if inGBA g n then (ids,g)
                         else (g.next::ids,addNodeToGBA g n)) ([],G) l`
-   >> fs[] >> rw[]
+   >> fs[]
+   >> `suff_wfg G2 ∧ (A = B)
+       ∧ (∀i.
+           (i ∈ domain G.nodeInfo) ⇒
+           lookup i G1.nodeInfo = lookup i G2.nodeInfo)
+       ∧ G.next ≤ G2.next
+       ∧ domain G.nodeInfo ⊆ domain G2.nodeInfo
+       ∧ ((A = B)
+        ∧ (∀i.
+            (i ∈ domain G.nodeInfo) ⇒
+            lookup i G1.nodeInfo = lookup i G2.nodeInfo) ==> C)`
+       suffices_by fs[]
+   >> rw[]
    >- (qunabbrev_tac `G1`
        >> Cases_on `inGBA r h` >> fs[] >> qunabbrev_tac `G2`
        >> fs[addNodeToGBA_def,suff_wfg_def] >> rpt strip_tac
@@ -1691,6 +1716,19 @@ val ADDNODE_GBA_FOLDR = store_thm
                 >> fs[]
             )
            >> metis_tac[lookup_insert]
+          )
+       >- (fs[frml_ad_def] >> rpt strip_tac
+           >> qunabbrev_tac `G2` >> fs[addNodeToGBA_def]
+           >> Cases_on `inGBA G1 h` >> fs[addNode_def]
+           >- (`n = nodeLabelGBA h` by metis_tac[lookup_insert,SOME_11]
+               >> fs[]
+              )
+           >- (fs[suff_wfg_def] >> `~(G1.next <= i)` by metis_tac[]
+               >> `~(G1.next = i)` by fs[]
+               >> `lookup i G1.nodeInfo = SOME n`
+                  by metis_tac[lookup_insert,SOME_11]
+               >> metis_tac[]
+              )
           )
       )
   );
