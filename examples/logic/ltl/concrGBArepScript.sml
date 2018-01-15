@@ -1819,7 +1819,7 @@ val concr2AbstrGBA_final_def = Define`
         ∧ (lookup id1 graph.followers = SOME fls)
         ∧ (MEM (eL,id2) fls) ∧ (MEM f eL.acc_set)
         ∧ (lookup id2 graph.nodeInfo = SOME q2)
-      } | ?qs. (inGBA graph qs) ∧ (MEM f qs)
+      } | f | ?qs. (inGBA graph qs) ∧ (MEM f qs)
     }`;
 
 val concr2AbstrGBA_states_def = Define`
