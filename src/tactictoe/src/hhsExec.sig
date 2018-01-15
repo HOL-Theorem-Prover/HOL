@@ -25,6 +25,12 @@ sig
   val hhs_thm          : thm ref
   val is_thm           : string -> bool
   val thm_of_sml       : string -> (string * thm) option
+  
+  val smltype_of_value : 
+    (string * PolyML.NameSpace.Values.value) list -> string -> string
+  val is_thm_value     : 
+    (string * PolyML.NameSpace.Values.value) list -> string -> bool
+  
   val namespace_thms   : unit -> (string * thm) list
    
   val is_tactic        : string -> bool

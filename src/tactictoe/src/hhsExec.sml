@@ -53,17 +53,22 @@ fun string_of_pretty p =
 
 fun drop_sig s = last (String.tokens (fn x => x = #".") s)
 
-fun is_thm_value l s =
-  let 
+fun smltype_of_value l s =
+  let
     val v = assoc s l handle _ => raise ERR "type_of_value" s
     val t = PolyML.NameSpace.Values.typeof v;
     val p = PolyML.NameSpace.Values.printType (t,0,NONE)
-    val s1 = string_of_pretty p
+  in
+    string_of_pretty p
+  end
+
+fun is_thm_value l s =
+  let 
+    val s1 = smltype_of_value l s
     val s2 = hhsLexer.hhs_lex s1
   in 
     case s2 of
-      [a] => (drop_sig a = "thm" 
-              handle _ => (print_endline s; false))
+      [a] => (drop_sig a = "thm" handle _ => false)
     | _   => false
   end
 
@@ -81,20 +86,11 @@ fun thm_of_sml s =
   end
 
 fun namespace_thms () =
-  let val l0 = map fst (#allVal (PolyML.globalNameSpace) ()) in
-    List.mapPartial thm_of_sml l0
-  end
-
-fun unsafe_namespace_thms () =
   let 
     val l0 = #allVal (PolyML.globalNameSpace) () 
     val l1 = filter (is_thm_value l0) (map fst l0)
   in
-    (* todo: replace with thml_of_sml *)
     List.mapPartial thm_of_sml l1
-    handle _ => 
-    (print_endline "error in unsafe_namespace_thms"; 
-     List.mapPartial thm_of_sml l1)
   end
 
 fun is_tactic s = exec_sml "is_tactic" ("val _ = Tactical.VALID (" ^ s ^ ")")
