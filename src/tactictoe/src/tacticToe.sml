@@ -20,12 +20,13 @@ fun select_thmfeav gfea =
   if !hhs_metishammer_flag orelse !hhs_hhhammer_flag orelse !hhs_thmlarg_flag
   then
     let 
-      val (thmsymweight,thmfeav) = all_thmfeav ()
+      val (thmsymweight,thmfeav) = 
+        debug_t "all_thmfeav" all_thmfeav ()
       val l0 = debug_t "thmknn_wdep" 
         (thmknn_wdep thmsymweight (!hhs_maxselect_pred) thmfeav) gfea
       val dict = dnew String.compare thmfeav
       fun f x = SOME (x, dfind x dict) handle _ => 
-        (debug ("Warning dfind: " ^ x); NONE)
+        (debug ("Error dfind: " ^ x); NONE)
       val l1 = debug_t "assoc_thmfea" (List.mapPartial f) l0
     in
       (thmsymweight, l1)

@@ -114,8 +114,9 @@ fun metis_trivial tim g =
     dfind g (!trivialgoal_cache) handle _ =>
     (
     let
-      val tac  = tactic_of_sml "metisTools.METIS_TAC []"
-      val glo  = app_tac tim tac g
+      val tac = (valOf (!metis_tac_glob)) []
+        handle _ => debug_err "metis_trivial"
+      val glo = app_tac tim tac g
       val r = glo = SOME []
     in   
       trivialgoal_cache := dadd g r (!trivialgoal_cache);
@@ -138,17 +139,18 @@ fun insert_namespace thmdict =
   let 
     val dict = ref thmdict 
     fun f (x,y) = ("local_namespace_holyhammerTheory." ^ x, y)
-    val l1 = namespace_thms ()
+    val l1 = debug_t "namespace_thms" namespace_thms ()
     val l2 = map f l1
   in
-    app (add_fea dict) l2;
+    debug_t "add_fea" (app (add_fea dict)) l2;
+    debug ("adding" ^ int_to_string (dlength (!dict) - dlength thmdict) ^ " theorems from the namespace");
     (!dict)
   end
 
 fun all_thmfeav () =
   let 
     val newdict = if !hhs_namespacethm_flag 
-      then hide_out insert_namespace (!hhs_mdict)
+      then debug_t "insert_namespace" insert_namespace (!hhs_mdict)
       else (!hhs_mdict)
     fun f (_,(name,b,fea)) = 
       if !hhs_thmortho_flag andalso not b 
@@ -160,7 +162,7 @@ fun all_thmfeav () =
     (symweight, feav)
   end
 
-
+(* slow *)
 fun thmknn_std n goal =
   let val (symweight,feav) = all_thmfeav () in
     thmknn symweight n feav (fea_of_goal goal)
@@ -197,18 +199,19 @@ fun dep_of_thm s =
     else List.mapPartial name_of_did (depidl_of_thm (DB.fetch a b))
   end
 
-fun add_thmdep n l0 = 
+fun add_thmdep thmfeav n l0 = 
   let 
     fun f x = x :: dep_of_thm x
     val l1 = mk_sameorder_set String.compare (List.concat (map f l0))
-    fun g x = uptodate_tid x
+    val dict = dnew String.compare thmfeav
+    fun g x = dmem x dict andalso uptodate_tid x
   in
     first_test_n g n l1
   end
 
 fun thmknn_wdep thmsymweight n thmfeav gfea =
   let val l0 = thmknn thmsymweight n thmfeav gfea in
-    add_thmdep n l0
+    add_thmdep thmfeav n l0
   end
 
 (* ----------------------------------------------------------------------

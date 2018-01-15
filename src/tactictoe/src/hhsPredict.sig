@@ -34,8 +34,6 @@ sig
   
   val thmknn_std: int -> goal -> string list
   
-  val add_thmdep: int -> string list -> string list
-  
   val thmknn_wdep: 
    (int, real) Redblackmap.dict -> int -> (string * fea_t) list -> fea_t -> string list
   

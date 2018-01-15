@@ -59,7 +59,7 @@ fun string_of_pretty p =
     val acc = ref []
     fun f s = acc := s :: !acc
   in
-    PolyML.prettyPrint (f,80) p ;
+    PolyML.prettyPrint (f,80) p;
     String.concatWith " " (rev (!acc))
   end
 

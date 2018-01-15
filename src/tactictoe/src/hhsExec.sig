@@ -13,10 +13,12 @@ sig
   val hhs_string_glob  : string ref
   val hhs_goal_glob    : goal ref
   
-  val hh_stac_glob: 
+  val hh_stac_glob     : 
     (int -> (int, real) Redblackmap.dict * (string * fea_t) list ->
      int -> goal -> string option) ref
   val update_hh_stac   : unit -> unit
+  val metis_tac_glob   : (thm list -> tactic) option ref
+  val update_metis_tac : unit -> unit
 
   val exec_sml         : string -> string -> bool  
   
@@ -24,7 +26,7 @@ sig
   val is_thm           : string -> bool
   val thm_of_sml       : string -> (string * thm) option
   val namespace_thms   : unit -> (string * thm) list
-  
+   
   val is_tactic        : string -> bool
   val is_string        : string -> bool
   val is_pointer_eq    : string -> string -> bool
@@ -40,7 +42,5 @@ sig
   val app_tac    : real -> tactic -> goal -> goal list option
   val rec_stac   : real -> string -> goal -> goal list option
   val rec_sproof : string -> goal -> goal list option
-  
-  val type_of_sml      : string -> string option
 
 end

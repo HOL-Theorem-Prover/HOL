@@ -327,13 +327,11 @@ fun clean_subdirl cthy dir subdirl =
 
 fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
 
-
-
-
 fun start_thy cthy =
   (
   if cthy = "ConseqConv" 
   then (clean_feadata (); 
+        clean_dir "bool" hhs_mdict_dir;
         debug_t "export_mdict" export_mdict "bool") 
   else ();
   clean_feadata ();

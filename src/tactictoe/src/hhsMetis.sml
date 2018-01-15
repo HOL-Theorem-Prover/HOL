@@ -51,9 +51,9 @@ fun read_thmfea s = case hhs_lex s of
   | _ => raise ERR "read_thmfea" s
     
 fun readthy_mdict thy =
-  if mem thy ["min","bool"] then () else
   let
-    val l0 = readl (hhs_mdict_dir ^ "/" ^ thy) handle _ => (debug thy;[])
+    val l0 = readl (hhs_mdict_dir ^ "/" ^ thy)
+      handle _ => (if mem thy ["min"] then () else debug thy; [])
     val l1 = map read_thmfea l0
   in
     hhs_mdict := daddl l1 (!hhs_mdict)

@@ -130,6 +130,7 @@ fun set_esearch () =
   hhs_timedepth_flag := false;
   (* metis *)
   hhs_metisexec_flag   := can load "metisTools";
+  if !hhs_metisexec_flag then update_metis_tac () else ();
   hhs_metis_npred      := 16;
   hhs_metis_time       := 0.1;
   hhs_metishammer_flag := (true andalso !hhs_metisexec_flag);
@@ -157,7 +158,7 @@ fun set_erecord () =
   hhs_ortho_number    := 20;
   hhs_selflearn_flag  := false;
   (* metis learning *)
-  hhs_metisexec_flag   := can load "metisTools";
+  hhs_metisexec_flag   := can load "metisTools"; 
   hhs_metisortho_flag  := false;
   hhs_metisrecord_flag := true;
   hhs_thmortho_flag    := false;
