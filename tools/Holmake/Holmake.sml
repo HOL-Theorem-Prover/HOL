@@ -162,6 +162,101 @@ end handle IO.Io _ => (warn "Had problems making permanent record of make log";
 
 val _ = Process.atExit (fn () => ignore (finish_logging false))
 
+(* ----------------------------------------------------------------------
+
+    maybe_recurse
+
+    this function doesn't handle all recursion, just one level's
+    worth. In other words, the master Holmake calls this function, and
+    this then arranges the recursive calls into the various include
+    directories that need to happen. The holmake that gets called in
+    those directories (via the hm parameter) will in turn call this
+    function for recursion at that level in the "tree".
+
+    The local_build/k parameter is how the maybe_recurse function
+    finishes off; this parameter is called when all of the necessary
+    recursion has been performed and work should be done in the
+    current ("local") directory.
+
+    Finally, what of the dirinfo?
+
+    This record includes
+          origin: the absolute path to the very first directory
+        includes: the includes that the local directory knows about
+                  (which will have come from the command-line or
+                  INCLUDES lines in the local Holmakefile
+     preincludes: similarly
+         visited: a set of visited directories (with directories
+                  expressed as absolute paths)
+
+    The includes and preincludes are clearly useful when it comes time to
+    do any local work, but also specify how the recursion is to happen.
+
+    Now, the recursion into those directories may result in extra
+    includes and preincludes.
+   ---------------------------------------------------------------------- *)
+fun maybe_recurse {warn,diag,hm,dirinfo,dir,local_build=k,cleantgt} =
+let
+  val {includes,preincludes,visited} = dirinfo
+  val _ = diag ("maybe_recurse: includes = [" ^
+                String.concatWith ", " includes ^ "]")
+  val _ = diag ("maybe_recurse: preincludes = [" ^
+                String.concatWith ", " preincludes ^ "]")
+  val k = fn ii => (terminal_log ("Holmake: "^nice_dir (hmdir.toString dir));
+                    k ii)
+  val tgts = case cleantgt of SOME s => [s] | NONE => []
+  fun recurse (acc as {visited,includes,preincludes}) newdir = let
+  in
+    if Binaryset.member(visited, newdir) then SOME acc
+    else let
+      val _ = warn ("Recursively calling Holmake in " ^ hmdir.toString newdir)
+      val _ = terminal_log ("Holmake: "^nice_dir (hmdir.toString newdir))
+      val result =
+          case hm {dir = newdir, visited = visited, targets = tgts} of
+              NONE => NONE
+            | SOME {visited,includes = inc0, preincludes = pre0} =>
+              SOME {visited = visited,
+                    includes = hmdir.sort (includes @ inc0),
+                    preincludes = hmdir.sort (preincludes @ pre0)}
+    in
+      warn ("Finished recursive invocation in "^hmdir.toString newdir);
+      terminal_log ("Holmake: "^nice_dir (hmdir.toString dir));
+      FileSys.chDir (hmdir.toAbsPath dir);
+      case result of
+          SOME{includes=incs,preincludes=pre,...} =>
+          (diag ("Recursively computed includes = " ^
+                 String.concatWith ", " (map hmdir.toString incs));
+           diag ("Recursively computed pre-includes = " ^
+                 String.concatWith ", " (map hmdir.toString pre)))
+        | NONE => ();
+      result
+    end
+  end
+  fun do_em (accg as {includes,preincludes,...}) dirs =
+      case dirs of
+          [] =>
+          let
+            val f = map hmdir.toAbsPath
+          in
+            if k {includes=f includes,preincludes=f preincludes} then SOME accg
+            else NONE
+          end
+        | x::xs =>
+          let
+          in
+            case recurse accg x of
+                SOME result => do_em result xs
+              | NONE => NONE
+          end
+  val visited = Binaryset.add(visited, dir)
+  fun canon i = hmdir.extendp {base = dir, extension = i}
+  val canonl = map canon
+  fun f idirs = map canon idirs
+  val possible_calls = hmdir.sort (f (preincludes @ includes))
+in
+  do_em {visited = visited, includes = f includes, preincludes = f preincludes}
+        possible_calls
+end
 
 (* directory specific stuff here *)
 type res = hmdir.t holmake_result
