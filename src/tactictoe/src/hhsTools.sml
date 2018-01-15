@@ -490,14 +490,8 @@ fun init_stacfea feavl =
   dapp update_ddict (!hhs_stacfea)
   )
 
-val hhs_internalthm_flag = ref false
-
 fun update_stacfea (feav as (lbl,fea)) =
-  if dmem lbl (!hhs_stacfea) orelse 
-     (not (!hhs_internalthm_flag) andalso 
-        exists (String.isPrefix "tactictoe_thm") 
-        (hhsLexer.hhs_lex (#1 lbl)))
-  then ()
+  if dmem lbl (!hhs_stacfea) then ()
   else
     (
     hhs_stacfea := dadd lbl fea (!hhs_stacfea);
@@ -513,7 +507,9 @@ fun update_stacfea (feav as (lbl,fea)) =
 fun dbfetch_of_string s =
   let val (a,b) = split_string "Theory." s in 
     if a = current_theory ()
-    then String.concatWith " " ["DB.fetch",mlquote a,mlquote b] 
+      then String.concatWith " " ["DB.fetch",mlquote a,mlquote b] 
+    else if a = "local_namespace_holyhammer"
+      then b
     else s
   end
 

@@ -47,7 +47,7 @@ val hhs_thm = ref TRUTH
 fun is_thm s = exec_sml "is_thm" ("val _ = Thm.dest_thm (" ^ s ^ ")")
 
 fun thm_of_sml s =
-  let val b = exec_sml "lift_thm" ("hhsExec.hhs_thm := " ^ s) in
+  let val b = exec_sml "thm_of_sml" ("hhsExec.hhs_thm := " ^ s) in
     if b then SOME (s, !hhs_thm) else NONE
   end
 

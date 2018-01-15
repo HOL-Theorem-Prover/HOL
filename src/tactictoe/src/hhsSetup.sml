@@ -74,10 +74,12 @@ val hhs_selflearn_flag = ref false
    Metis
    ---------------------------------------------------------------------- *)
 
-val hhs_metisexec_flag = ref false
-val hhs_metisrecord_flag = ref false
-val hhs_metishammer_flag = ref false
-val hhs_metisortho_flag = ref false
+val hhs_internalthm_flag = ref false
+val hhs_namespacethm_flag = ref true
+val hhs_metisexec_flag    = ref false
+val hhs_metisrecord_flag  = ref false
+val hhs_metishammer_flag  = ref false
+val hhs_metisortho_flag   = ref false
 val hhs_thmortho_flag = ref false
 val hhs_metis_time    = ref 0.1
 val hhs_metis_npred   = ref 16
@@ -130,7 +132,7 @@ fun set_esearch () =
   hhs_metisexec_flag   := can load "metisTools";
   hhs_metis_npred      := 16;
   hhs_metis_time       := 0.1;
-  hhs_metishammer_flag := (false andalso !hhs_metisexec_flag);
+  hhs_metishammer_flag := (true andalso !hhs_metisexec_flag);
   (* holyhammer *)
   hhs_hhhammer_flag := (false andalso can update_hh_stac ());
   hhs_hhhammer_time := 5;
@@ -146,7 +148,8 @@ fun set_esearch () =
 
 fun set_erecord () =
   (
-  hhs_internalthm_flag := true;
+  hhs_internalthm_flag := false;
+  hhs_namespacethm_flag := false;
   hhs_norecprove_flag  := true;
   hhs_nolet_flag       := true;
   (* learning *)
@@ -155,9 +158,9 @@ fun set_erecord () =
   hhs_selflearn_flag  := false;
   (* metis learning *)
   hhs_metisexec_flag   := can load "metisTools";
-  hhs_metisortho_flag  := (false andalso !hhs_metisexec_flag);
+  hhs_metisortho_flag  := false;
   hhs_metisrecord_flag := true;
-  hhs_thmortho_flag    := (false andalso !hhs_metisexec_flag);
+  hhs_thmortho_flag    := false;
   (* evaluation *)
   hhs_eval_flag    := true;
   hhs_noprove_flag := true;
@@ -165,11 +168,8 @@ fun set_erecord () =
   hh_only_flag     := (false andalso can update_hh_stac ())
   )
 
-val set_isearch_hook = ref (fn () => ()) 
-    
+val set_isearch_hook = ref (fn () => ())
 fun set_isearch () = (set_esearch (); !set_isearch_hook ())
-
-fun set_irecord () = 
-  (set_erecord (); hhs_internalthm_flag := false; hhs_eval_flag := false)
+fun set_irecord () = (set_erecord (); hhs_eval_flag := false)
 
 end (* struct *)

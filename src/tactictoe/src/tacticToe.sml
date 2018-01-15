@@ -16,14 +16,6 @@ val ERR = mk_HOL_ERR "tacticToe"
 
 fun set_timeout r = hhs_search_time := Time.fromReal r
 
-fun assoc_thmfea l = 
-  let fun f x = SOME (x, snd (dfind x (!hhs_mdict))) 
-    handle _ => (debug ("Warning: could not find theorem " ^ x); NONE)
-  in List.mapPartial f l end
-
-fun assoc_stacfea l =
-  let fun f x = (x, dfind x (!hhs_stacfea)) in map f l end
-
 fun select_thmfeav gfea =
   if !hhs_metishammer_flag orelse !hhs_hhhammer_flag orelse !hhs_thmlarg_flag
   then
@@ -31,12 +23,14 @@ fun select_thmfeav gfea =
       val (thmsymweight,thmfeav) = all_thmfeav ()
       val l0 = debug_t "thmknn_wdep" 
         (thmknn_wdep thmsymweight (!hhs_maxselect_pred) thmfeav) gfea
-      val l1 = debug_t "assoc_thmfea" assoc_thmfea l0
+      val dict = dnew String.compare thmfeav
+      fun f x = SOME (x, dfind x dict) handle _ => 
+        (debug ("Warning dfind: " ^ x); NONE)
+      val l1 = debug_t "assoc_thmfea" (List.mapPartial f) l0
     in
       (thmsymweight, l1)
     end
   else (dempty Int.compare, [])
-
 
 (* ----------------------------------------------------------------------
    Evaluating holyhammer
@@ -117,10 +111,12 @@ fun init_tactictoe () =
         val _ = debug_t ("init_tactictoe " ^ cthy) import_ancestry ()
         val ns = int_to_string (dlength (!hhs_stacfea))
         val ms = int_to_string (dlength (!hhs_mdict))
+        val ps = int_to_string (dlength (!hhs_mcdict))
       in  
         hide_out QUse.use (tactictoe_dir ^ "/src/infix_file.sml");
         print_endline ("Loading " ^ ns ^ " tactic feature vectors");
         print_endline ("Loading " ^ ms ^ " theorem feature vectors");
+        print_endline ("Loading " ^ ps ^ " goal list feature vectors");
         previous_theory := cthy
       end
     else ()
@@ -143,7 +139,8 @@ fun select_stacfeav goalfea =
       mk_tacdict (mk_fast_set String.compare (map #1 l1))
     fun filter_f (stac,_,_,_) = is_absarg_stac stac orelse dmem stac tacdict
     val l2 = filter filter_f l1
-    val l3 = assoc_stacfea l2 
+    fun f x = (x, dfind x (!hhs_stacfea))
+    val l3 = map f l2 
   in
     (stacsymweight, l3, tacdict)
   end
@@ -166,10 +163,13 @@ fun main_tactictoe goal =
   let  
     (* preselection *)
     val goalfea = fea_of_goal goal       
-    val (stacsymweight, stacfeav, tacdict) = select_stacfeav goalfea
-    val (thmsymweight, thmfeav) = select_thmfeav goalfea
-    val (mcsymweight, mcfeav) = debug_t "select_mcfeav" select_mcfeav stacfeav      
-    (* fast predictors *)
+    val (stacsymweight, stacfeav, tacdict) = 
+      debug_t "select_stacfeav" select_stacfeav goalfea
+    val (thmsymweight, thmfeav) = 
+      debug_t "select_thmfeav" select_thmfeav goalfea
+    val (mcsymweight, mcfeav) = 
+      debug_t "select_mcfeav" select_mcfeav stacfeav      
+    (* predictors *)
     fun stacpredictor g =
       stacknn_uniq stacsymweight (!hhs_maxselect_pred) stacfeav (fea_of_goal g)
     fun thmpredictor n g = 
@@ -210,8 +210,9 @@ fun eval_tactictoe name goal =
     not (!hhs_noprove_flag andalso String.isPrefix "tactictoe_prove_" name)
   then
     if !hh_only_flag 
-    then hh_eval goal handle _ => debug "Error: hh_eval" 
-    else debug_eval_status (main_tactictoe goal)
+    then hh_eval goal 
+      handle _ => debug "Error: hh_eval" 
+    else debug_eval_status (hide_out main_tactictoe goal)
   else ()
 
 fun tactictoe goal =

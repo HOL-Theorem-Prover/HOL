@@ -23,23 +23,18 @@ val ERR = mk_HOL_ERR "hhsMetis"
 fun thm_of_string s =
   let val (a,b) = split_string "Theory." s in DB.fetch a b end
 
-fun parfetch_of_string s =
-  let val (a,b) = split_string "Theory." s in 
-    if a = current_theory ()
-    then String.concatWith " " ["(","DB.fetch",mlquote a,mlquote b,")"] 
-    else s
-  end
-
 fun mk_metis_call sl =
   "metisTools.METIS_TAC " ^ 
   "[" ^ String.concatWith " , " (map dbfetch_of_string sl) ^ "]"
-  
-fun metis_provable n tim goal =
+
+(* very slow: since thmknn_std is slow *)
+fun metis_provable n tim g =
+  !hhs_metisexec_flag andalso
   let
-    val sl   = thmknn_std n goal
+    val sl   = thmknn_std n g
     val stac = mk_metis_call sl
     val tac  = tactic_of_sml stac
-    val glo  = app_tac tim tac goal
+    val glo  = app_tac tim tac g
   in
     glo = SOME []
   end
@@ -80,14 +75,17 @@ fun is_localthy s = s = "local_namespace_holyhammer"
 
 fun update_mdict cthy =
   let
-    val thml = order_thml (DB.thms cthy) (* try oldest first *)
+    val thml = DB.thms cthy
     fun f (s,thm) =
       let 
         val name = cthy ^ "Theory." ^ s
         val goal = dest_thm thm
-        val b = !hhs_thmortho_flag andalso metis_provable 0 0.1 goal
+        val fea = #3 (dfind goal (!hhs_mdict)) 
+          handle _ => fea_of_goal goal
+        val b = #2 (dfind goal (!hhs_mdict)) 
+          handle _ => not (metis_trivial 0.1 goal)
       in
-        hhs_mdict := dadd goal (name, not b, fea_of_goal goal) (!hhs_mdict)
+        hhs_mdict := dadd goal (name, b, fea) (!hhs_mdict)
       end
   in
     app f thml
