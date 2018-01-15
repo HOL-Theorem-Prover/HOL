@@ -23,8 +23,10 @@ sig
   val exec_sml         : string -> string -> bool  
   
   val hhs_thm          : thm ref
+  val hhs_thml         : thm list ref
   val is_thm           : string -> bool
   val thm_of_sml       : string -> (string * thm) option
+  val thml_of_sml      : string list -> (string * thm) list option
   
   val smltype_of_value : 
     (string * PolyML.NameSpace.Values.value) list -> string -> string
