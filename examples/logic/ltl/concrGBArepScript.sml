@@ -1601,20 +1601,27 @@ val ADDNODE_GBA_FOLDR = store_thm
       ∧ ({ set x | inGBA (SND G_WITH_IDS) x } =
           { set x | inGBA G x } ∪ set (MAP set l))
       ∧ (!i. i ∈ domain G.nodeInfo
-             ==> (lookup i G.nodeInfo = lookup i (SND G_WITH_IDS).nodeInfo))
+             ==> (lookup i G.nodeInfo = lookup i (SND G_WITH_IDS).nodeInfo)
+               ∧ (lookup i G.followers = lookup i (SND G_WITH_IDS).followers)
+        )
       ∧ (G.next <= (SND G_WITH_IDS).next)
       ∧ (domain G.nodeInfo ⊆ domain (SND G_WITH_IDS).nodeInfo)
       ∧ (!i. MEM i (FST G_WITH_IDS)
              ==> ?n. (lookup i (SND G_WITH_IDS).nodeInfo = SOME n)
-                   ∧ (MEM n.frmls l))
+                   ∧ (MEM n.frmls l)
+                   ∧ lookup i (SND G_WITH_IDS).followers = SOME []
+        )
       ∧ (frml_ad G ∧ (!x. MEM x l ==> ALL_DISTINCT x)
                  ==> frml_ad (SND G_WITH_IDS))
        ))``,
    gen_tac >> Induct_on `l` >> rpt strip_tac >> fs[]
    >> Q.HO_MATCH_ABBREV_TAC `suff_wfg G2 ∧ A = B
                           ∧ (!i. i ∈ domain G.nodeInfo
-                                 ==> lookup i G1.nodeInfo
+                                 ==> (lookup i G1.nodeInfo
                                       = lookup i G2.nodeInfo)
+                                 ∧ (lookup i G1.followers
+                                    = lookup i G2.followers)
+                            )
                           ∧ (G.next <= G2.next)
                           ∧ (domain G.nodeInfo ⊆ domain G2.nodeInfo)
                           ∧ C`
@@ -1626,13 +1633,16 @@ val ADDNODE_GBA_FOLDR = store_thm
    >> `suff_wfg G2 ∧ (A = B)
        ∧ (∀i.
            (i ∈ domain G.nodeInfo) ⇒
-           lookup i G1.nodeInfo = lookup i G2.nodeInfo)
+           (lookup i G1.nodeInfo = lookup i G2.nodeInfo)
+           ∧ (lookup i G1.followers = lookup i G2.followers)
+         )
        ∧ G.next ≤ G2.next
        ∧ domain G.nodeInfo ⊆ domain G2.nodeInfo
        ∧ ((A = B)
         ∧ (∀i.
             (i ∈ domain G.nodeInfo) ⇒
-            lookup i G1.nodeInfo = lookup i G2.nodeInfo) ==> C)`
+            (lookup i G1.nodeInfo = lookup i G2.nodeInfo)
+            ∧ (lookup i G1.followers = lookup i G2.followers)) ==> C)`
        suffices_by fs[]
    >> rw[]
    >- (qunabbrev_tac `G1`
@@ -1698,6 +1708,14 @@ val ADDNODE_GBA_FOLDR = store_thm
             >> fs[]
         )
        >> metis_tac[lookup_insert]
+      )
+   >- (fs[] >> rw[] >> Cases_on `inGBA G1 h` >> qunabbrev_tac `G2` >> fs[]
+         >> simp[addNodeToGBA_def,addNode_def]
+         >> `~(i = G1.next)` by (
+            fs[suff_wfg_def] >> `~(G1.next <= i)` by metis_tac[SUBSET_DEF]
+              >> fs[]
+        )
+         >> metis_tac[lookup_insert]
       )
    >- (fs[] >> rw[] >> Cases_on `inGBA G1 h` >> qunabbrev_tac `G2` >> fs[]
          >> simp[addNodeToGBA_def,addNode_def])

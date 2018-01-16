@@ -199,7 +199,10 @@ val removeStatesSimpl_def = Define`
   GBA
       (s ∩ reachableFromSetGBA (GBA s i t aT alph) i)
       i
-      t
+      (λq. if q ∈ (s ∩ reachableFromSetGBA (GBA s i t aT alph) i)
+           then t q
+           else {}
+      )
       (IMAGE
            (\T. {(e,a,e') | (e,a,e') ∈ T
                           ∧  e ∈ (reachableFromSetGBA (GBA s i t aT alph) i)})
@@ -223,38 +226,45 @@ val REDUCE_STATE_VALID = store_thm
     >- metis_tac[]
   );
 
+(* val REACHABLE_LEMM = store_thm *)
+(*   ("REACHABLE_LEMM", *)
+(*    ``!gba. isValidGBA gba ==> *)
+(*       (!q. q ∈ gba.states ==>) *)
+(* ) *)
+
 val REDUCE_STATE_CORRECT = store_thm
   ("REDUCE_STATE_CORRECT",
    ``!aut. isValidGBA aut ==>
               (GBA_lang aut = GBA_lang (removeStatesSimpl aut))``,
    fs[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
    >> fs[GBA_lang_def, removeStatesSimpl_def]
-    >- (`word_range x ⊆ (removeStatesSimpl aut).alphabet`
+   >- (qexists_tac `r` >> Cases_on `r` >> fs[isGBARunFor_def]
+       >> `!i. f i ∈ reachableFromSetGBA aut aut.initial
+            ∧  f i ∈ aut.states` by (
+        Induct_on `i` >> fs[reachableFromSetGBA_def] >> rpt strip_tac
+        >- (fs[isValidGBARunFor_def,reachableFromGBA_def]
+              >> qexists_tac `f 0` >> metis_tac[RTC_REFL])
+        >- (fs[isValidGBA_def,isValidGBARunFor_def]
+              >> metis_tac[SUBSET_DEF])
+        >- (fs[reachableFromGBA_def, isValidGBARunFor_def]
+              >> rename[`init ∈ aut.initial`]
+              >> qexists_tac `init` >> fs[]
+              >> `(stepGBA aut) (f i) (f (SUC i))` suffices_by (
+                 rpt strip_tac >> metis_tac[RTC_CASES2]
+             )
+             >> simp[stepGBA_def] >> metis_tac[SUC_ONE_ADD,ADD_COMM]
+           )
+        >- (fs[isValidGBARunFor_def,isValidGBA_def]
+              >> metis_tac[SUBSET_DEF,SUC_ONE_ADD,ADD_COMM]
+           )
+        )
+       >> `word_range x ⊆ (removeStatesSimpl aut).alphabet`
            by (Cases_on `aut` >> fs[removeStatesSimpl_def])
-        >> qexists_tac `r` >> fs[isGBARunFor_def] >> rpt strip_tac
-       >- (Cases_on `r` >> fs[isValidGBARunFor_def] >> rpt strip_tac
-           >> Cases_on `aut` >> fs[removeStatesSimpl_def])
-       >- (Cases_on `r`
-           >> `!i. f i ∈ reachableFromSetGBA aut aut.initial
-                ∧  f i ∈ aut.states` by (
-                Induct_on `i` >>fs[reachableFromSetGBA_def] >> rpt strip_tac
-                 >- (fs[isValidGBARunFor_def,reachableFromGBA_def]
-                     >> qexists_tac `f 0` >> metis_tac[RTC_REFL])
-                 >- (fs[isValidGBA_def,isValidGBARunFor_def]
-                     >> metis_tac[SUBSET_DEF])
-                 >- (fs[reachableFromGBA_def, isValidGBARunFor_def]
-                     >> rename[`init ∈ aut.initial`]
-                     >> qexists_tac `init` >> fs[]
-                     >> `(stepGBA aut) (f i) (f (SUC i))` suffices_by (
-                          rpt strip_tac >> metis_tac[RTC_CASES2]
-                      )
-                     >> simp[stepGBA_def] >> metis_tac[SUC_ONE_ADD,ADD_COMM]
-                    )
-                 >- (fs[isValidGBARunFor_def,isValidGBA_def]
-                     >> metis_tac[SUBSET_DEF,SUC_ONE_ADD,ADD_COMM]
-                    )
-            )
-           >> `!T. T ∈ (removeStatesSimpl aut).accTrans
+       >> rpt strip_tac >> fs[]
+       >- (fs[isValidGBARunFor_def]
+           >> Cases_on `aut` >> fs[removeStatesSimpl_def]
+          )
+       >- (`!T. T ∈ (removeStatesSimpl aut).accTrans
              ==> (!i. ?a j. i <= j ∧ (f j, a, f (j+1)) ∈ T
                   ∧ (a, f (j+1)) ∈ (removeStatesSimpl aut).trans (f j)
                   ∧ at x j ∈ a)` suffices_by metis_tac[GBA_ACC_LEMM]
@@ -269,7 +279,9 @@ val REDUCE_STATE_CORRECT = store_thm
            by (Cases_on `aut` >> fs[removeStatesSimpl_def])
         >> qexists_tac `r` >> fs[isGBARunFor_def] >> rpt strip_tac
          >- (Cases_on `r` >> fs[isValidGBARunFor_def] >> rpt strip_tac
-             >> Cases_on `aut` >> fs[removeStatesSimpl_def])
+             >> Cases_on `aut` >> fs[removeStatesSimpl_def]
+             >> metis_tac[MEMBER_NOT_EMPTY]
+            )
          >- (Cases_on `r`
              >> `!i. f i ∈ reachableFromSetGBA aut aut.initial
                    ∧ f i ∈ aut.states` by (
@@ -289,11 +301,13 @@ val REDUCE_STATE_CORRECT = store_thm
                             rpt strip_tac >> metis_tac[RTC_CASES2]
                         )
                        >> Cases_on `aut` >> fs[removeStatesSimpl_def]
-                       >> simp[stepGBA_def] >> metis_tac[SUC_ONE_ADD,ADD_COMM]
+                       >> simp[stepGBA_def]
+                       >> metis_tac[SUC_ONE_ADD,ADD_COMM,MEMBER_NOT_EMPTY]
                       )
                    >- (fs[isValidGBARunFor_def,isValidGBA_def]
                        >> Cases_on `aut` >> fs[removeStatesSimpl_def]
-                       >> metis_tac[SUBSET_DEF,SUC_ONE_ADD,ADD_COMM]
+                       >> metis_tac[SUBSET_DEF,SUC_ONE_ADD,ADD_COMM,
+                                   MEMBER_NOT_EMPTY]
                       )
               )
              >> `!T. T ∈ (removeStatesSimpl aut).accTrans
