@@ -39,7 +39,7 @@ sig
                            info : string -> unit,
                            chatty : string -> unit,
                            tgtfatal : string -> unit,
-                           diag : string -> unit}
+                           diag : (unit -> string) -> unit}
   (* 0 : quiet, 1 : normal, 2 : chatty, 3 : everything + debug info *)
   val output_functions : {chattiness:int,usepfx:bool} -> output_functions
   val die_with : string -> 'a
@@ -86,10 +86,16 @@ sig
   val nice_dir : string -> string (* prints a dir with ~ when HOME is set *)
 
   type include_info = {includes : string list, preincludes : string list}
-  type 'dir holmake_dirinfo = {visited : hmdir.t Binaryset.set,
-                               includes : 'dir list,
-                               preincludes : 'dir list}
-  type 'dir holmake_result = 'dir holmake_dirinfo option
+  type dirset = hmdir.t Binaryset.set
+  type incset_pair = {pres : dirset, incs : dirset}
+  val empty_dirset : dirset
+  type incdirmap = (hmdir.t,incset_pair) Binarymap.dict
+  val empty_incdirmap : incdirmap
+  type holmake_dirinfo = {
+    visited : hmdir.t Binaryset.set,
+    incdirmap : incdirmap
+  }
+  type holmake_result = holmake_dirinfo option
 
   val process_hypat_options :
       string -> {noecho : bool, ignore_error : bool, command : string}

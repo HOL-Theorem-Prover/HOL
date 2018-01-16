@@ -157,8 +157,8 @@ fun main (r as {assumes, diag, includes, fname}) =
   let
     val results = processfile r
   in
-    diag ("Holdep: " ^ #tgt results ^ ": " ^
-          String.concatWith ", " (#deps results) ^ "\n");
+    diag (fn () => "Holdep: " ^ #tgt results ^ ": " ^
+                   String.concatWith ", " (#deps results) ^ "\n");
     results
   end
    handle e as OS.SysErr (str, _) => (errMsg str; raise e)
