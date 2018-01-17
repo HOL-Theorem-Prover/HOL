@@ -27,15 +27,21 @@ sig
   val metis_trivial : real -> goal -> bool
   
   val all_thmfeav : unit -> 
-    ((int, real) Redblackmap.dict * (string * fea_t) list)
-  
+    (int, real) Redblackmap.dict * 
+    (string * fea_t) list *
+    (string, goal * fea_t) Redblackmap.dict
+
   val thmknn:
-    (int, real) Redblackmap.dict -> int -> (string * fea_t) list -> fea_t -> string list   
+    (int, real) Redblackmap.dict * (string * fea_t) list -> int -> fea_t -> string list   
   
   val thmknn_std: int -> goal -> string list
   
   val thmknn_wdep: 
-   (int, real) Redblackmap.dict -> int -> (string * fea_t) list -> fea_t -> string list
+    (int, real) Redblackmap.dict * 
+    (string * fea_t) list *
+    (string, goal * fea_t) Redblackmap.dict -> 
+    int -> fea_t -> string list
+
   
   (* goal *)
   val mcknn : 

@@ -258,9 +258,16 @@ fun start_record lflag pflag name goal =
   (* recording goal steps *)
   goalstep_glob := [];
   (* evaluation *)
-  if lflag orelse pflag then () else 
-    eval_tactictoe name goal handle _ => 
+  if not (!hhs_eval_flag) orelse
+     not (!test_eval_hook name) orelse
+     (lflag andalso not (!hhs_evlet_flag)) orelse 
+     (pflag andalso not (!hhs_evprove_flag))
+  then ()
+  else 
+    if one_in_n () 
+    then eval_tactictoe name goal handle _ => 
       debug ("Error: eval_tactictoe: last_stac: " ^ ! hhsSearch.last_stac)
+    else ()
   )
 
 (* ----------------------------------------------------------------------
@@ -289,10 +296,10 @@ fun org_tac tac g =
 
 fun try_record_proof name lflag tac1 tac2 g =
   let 
-    val b1 = !hhs_norecord_flag
+    val b1 = not (!hhs_record_flag)
     val pflag = String.isPrefix "tactictoe_prove_" name
-    val b2 = (!hhs_norecprove_flag andalso pflag)
-    val b3 = (!hhs_nolet_flag andalso lflag)       
+    val b2 = (not (!hhs_recprove_flag) andalso pflag)
+    val b3 = (not (!hhs_reclet_flag) andalso lflag)       
     val (r,t) =
       if b1 orelse b2 orelse b3
       then add_time (org_tac tac2) g
@@ -329,8 +336,10 @@ fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
 
 fun start_thy cthy =
   (
+  (* exporting theorems from boolTheory in ConseqConv *)
   if cthy = "ConseqConv" 
   then (clean_feadata (); 
+        clean_subdirl "bool" hhs_search_dir ["debug","search","proof"];
         clean_dir "bool" hhs_mdict_dir;
         debug_t "export_mdict" export_mdict "bool") 
   else ();

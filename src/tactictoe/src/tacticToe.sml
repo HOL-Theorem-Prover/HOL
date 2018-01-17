@@ -20,16 +20,18 @@ fun select_thmfeav gfea =
   if !hhs_metishammer_flag orelse !hhs_hhhammer_flag orelse !hhs_thmlarg_flag
   then
     let 
-      val (thmsymweight,thmfeav) = 
+      val (symweight,feav,revdict) = 
         debug_t "all_thmfeav" all_thmfeav ()
       val l0 = debug_t "thmknn_wdep" 
-        (thmknn_wdep thmsymweight (!hhs_maxselect_pred) thmfeav) gfea
-      val dict = dnew String.compare thmfeav
-      fun f x = SOME (x, dfind x dict) handle _ => 
-        (debug ("Error dfind: " ^ x); NONE)
-      val l1 = debug_t "assoc_thmfea" (List.mapPartial f) l0
+        thmknn_wdep (symweight,feav,revdict) 
+          (!hhs_maxselect_pred) gfea
+      val dict = dnew String.compare feav
+      fun f x = (x, snd (dfind x revdict))
+        handle NotFound => 
+          (debug ("dfind: " ^ x); raise ERR "dfind" x)
+      val l1 = debug_t "assoc_thmfea" (map f) l0
     in
-      (thmsymweight, l1)
+      (symweight, l1)
     end
   else (dempty Int.compare, [])
 
@@ -41,7 +43,7 @@ val hh_eval_ref = ref 0
 
 fun hh_eval goal =
   let 
-    val (thmsymweight,thmfeav) = all_thmfeav ()
+    val (thmsymweight,thmfeav,_) = all_thmfeav ()
     val _ = incr hh_eval_ref
     val index = !hh_eval_ref + hash_string (current_theory ())
     fun hammer goal =
@@ -159,7 +161,8 @@ fun select_mcfeav stacfeav =
       (mcsymweight, mcfeav1)
     end
   else (dempty Int.compare, [])
-  
+ 
+(* todo: return on a fail attempt partial proof with least worst open goal *) 
 fun main_tactictoe goal =
   let  
     (* preselection *)
@@ -174,7 +177,7 @@ fun main_tactictoe goal =
     fun stacpredictor g =
       stacknn_uniq stacsymweight (!hhs_maxselect_pred) stacfeav (fea_of_goal g)
     fun thmpredictor n g = 
-      thmknn thmsymweight n thmfeav (fea_of_goal g)
+      thmknn (thmsymweight,thmfeav) n (fea_of_goal g)
     fun mcpredictor gl =
       mcknn mcsymweight (!hhs_mc_radius) mcfeav (fea_of_goallist gl)
     fun hammer pid goal = 
@@ -204,17 +207,10 @@ fun debug_eval_status r =
 
 (* integer_words return errors hopefully no other *)
 fun eval_tactictoe name goal =
-  if
-    !test_eval_hook name andalso
-    !hhs_eval_flag andalso 
-    one_in_n () andalso 
-    not (!hhs_noprove_flag andalso String.isPrefix "tactictoe_prove_" name)
-  then
-    if !hh_only_flag 
+  if !hh_only_flag 
     then hh_eval goal 
       handle _ => debug "Error: hh_eval" 
-    else debug_eval_status (hide_out main_tactictoe goal)
-  else ()
+  else debug_eval_status (hide_out main_tactictoe goal)
 
 fun tactictoe goal =
   let
@@ -226,19 +222,6 @@ fun tactictoe goal =
   end
 
 fun tt_tac goal = (tactictoe goal) goal
-
-(*
-val l1 = ["gcd","seq","poly","llist","set_relation"];
-val l2 = map (fn x => x ^ "Theory") l1;
-app load l2;
-load "hhsTools";
-open hhsTools;
-val l3 = map (length o DB.thms) l1;
-sum_int l3;
-andalso 
-    not (mem (current_theory ())
-     ["word_simp","wordSem","labProps",          "data_to_word_memoryProof","word_to_stackProof"])
-*)
 
 (* ----------------------------------------------------------------------
    Predicting only the next tactic based on some distance measure.

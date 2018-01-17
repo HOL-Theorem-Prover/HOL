@@ -15,7 +15,7 @@ sig
   val hhs_cthyfea   : feav_t list ref
   val hhs_ddict     : (goal, lbl_t list) Redblackmap.dict ref
   val hhs_ndict     : (string, int) Redblackmap.dict ref
-  val hhs_mdict     : (goal, (string * bool * fea_t)) Redblackmap.dict ref
+  val hhs_mdict     : (goal, (string * fea_t)) Redblackmap.dict ref
   val dbfetch_of_string : string -> string
   
   val hhs_mcdict : (int list, (bool * int)) Redblackmap.dict ref
@@ -73,6 +73,7 @@ sig
   val average_real : real list -> real
   val sum_int : int list -> int
   
+  val list_diff : ''a list -> ''a list -> ''a list
   val mk_fast_set : ('a * 'a -> order) -> 'a list -> 'a list
   val mk_sameorder_set : ('a * 'a -> order) -> 'a list -> 'a list
   val dict_sort   : ('a * 'a -> order) -> 'a list -> 'a list
@@ -84,6 +85,7 @@ sig
    
   val compare_rmin : (('a * real) * ('a * real)) -> order
   val compare_rmax : (('a * real) * ('a * real)) -> order
+  
   val list_rmax : real list -> real
   
   val goal_compare : (goal * goal) -> order

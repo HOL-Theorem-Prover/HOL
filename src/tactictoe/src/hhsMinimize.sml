@@ -129,7 +129,7 @@ fun prettify1_stac stac =
 fun prettify2_stac stac =
   (minspace_sl o hhs_lex) stac
 
-(* May remove important information like #loc in terms *)
+(* Remove #loc in terms *)
 fun comestic_stac stac = (minspace_sl o requote o hhs_lex) stac
 
 (*----------------------------------------------------------------------------
@@ -241,17 +241,21 @@ fun pretty_mini_stac tim stac g gl =
   prettify1_stac (minimize_stac_g_gl tim stac g gl)
 
 fun minimize_stac_in_proof stac g =
-  let val gl = fst (tactic_of_sml stac g) 
-    handle _ => raise ERR "minimize" stac
+  let 
+    val gl = fst (tactic_of_sml stac g) 
+      handle _ => raise ERR "minimize" stac
+    val tim = Real.max (!hhs_tactic_time, !hhs_metis_time)
   in
-    minimize_stac (2.0 * !hhs_tactic_time) g gl [] (decompose (hhs_lex stac))
+    minimize_stac tim g gl [] (decompose (hhs_lex stac))
   end        
        
 fun minimize_tac proof = case proof of 
     Tactic (s,g) => Tactic (minimize_stac_in_proof s g,g)   
   | Then (p1,p2) => Then (minimize_tac p1, minimize_tac p2)
   | Thenl (p,pl) => Thenl (minimize_tac p, map minimize_tac pl)
- 
+
+(* could be replaced by minimization search, 
+   favorising breadth first, with a high exploration coefficient *) 
 fun minimize_proof proof = case proof of
     Tactic _ => proof
   | Then (Tactic (_,g),p2) => 
@@ -265,7 +269,8 @@ fun prettify_proof_wrap p =
   if !hhs_prettify_flag then 
     let 
       val _ = debug "Starting prettification"
-      val newp = prettify_proof (!hhs_tactic_time + 0.01) p
+      val tim = Real.max (!hhs_tactic_time, !hhs_metis_time)
+      val newp = prettify_proof tim p
       val _ = debug "End prettification"
     in
       newp

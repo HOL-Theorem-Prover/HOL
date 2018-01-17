@@ -1000,8 +1000,6 @@ fun erewrite_script file =
     val p2 = unfold_wrap p0
     val sl5 = modified_program false p2
   in
-    if !n_store_thm = 0 then () else
-    (
     oc := TextIO.openOut file_out;
     output_header cthy file;
     print_sl sl5;
@@ -1010,7 +1008,6 @@ fun erewrite_script file =
     end_unfold_thy ();
     append_endline copy_scripts 
       (String.concatWith " " ["cp",quote file_out,quote local_file])
-    )
   end
 
 fun hol_scripts () =

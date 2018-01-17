@@ -33,7 +33,8 @@ sig
   val is_thm_value     : 
     (string * PolyML.NameSpace.Values.value) list -> string -> bool
   
-  val namespace_thms   : unit -> (string * thm) list
+  val namespace_thms      : unit -> (string * thm) list
+  val safe_namespace_thms : unit -> (string * thm) list 
    
   val is_tactic        : string -> bool
   val is_string        : string -> bool

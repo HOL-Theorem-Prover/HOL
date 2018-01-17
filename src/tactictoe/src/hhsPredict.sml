@@ -98,7 +98,7 @@ fun exists_tid s =
     can (DB.fetch a) b
   end
 
-fun thmknn symweight n feav fea_o =
+fun thmknn (symweight,feav) n fea_o =
   let 
     val l1 = map fst (pre_knn symweight feav fea_o)
     val l2 = mk_sameorder_set String.compare l1
@@ -126,12 +126,10 @@ fun metis_trivial tim g =
   else false
 (* *)
 
-(* similar thing in holyhammer *)
 fun add_fea dict (name,thm) =
   let val g = dest_thm thm in
     if not (dmem g (!dict)) andalso uptodate_thm thm 
-    then dict := 
-      dadd g (name, not (metis_trivial 0.1 g), fea_of_goal g) (!dict)
+    then dict := dadd g (name, fea_of_goal g) (!dict)
     else ()
   end
 
@@ -143,29 +141,27 @@ fun insert_namespace thmdict =
     val l2 = map f l1
   in
     debug_t "add_fea" (app (add_fea dict)) l2;
-    debug ("adding" ^ int_to_string (dlength (!dict) - dlength thmdict) ^ " theorems from the namespace");
+    debug ("adding " ^ int_to_string (dlength (!dict) - dlength thmdict) ^ " theorems from the namespace");
     (!dict)
   end
 
 fun all_thmfeav () =
   let 
-    val newdict = if !hhs_namespacethm_flag 
+    val newdict = 
+      if !hhs_namespacethm_flag 
       then debug_t "insert_namespace" insert_namespace (!hhs_mdict)
       else (!hhs_mdict)
-    fun f (_,(name,b,fea)) = 
-      if !hhs_thmortho_flag andalso not b 
-      then NONE
-      else SOME (name,fea)
-    val feav = List.mapPartial f (dlist newdict)
+    val feav = map snd (dlist newdict)
+    fun f (g,(name,fea)) = (name,(g,fea)) 
+    val revdict = dnew String.compare (map f (dlist newdict))
     val symweight = learn_tfidf feav
   in
-    (symweight, feav)
+    (symweight,feav,revdict)
   end
 
-(* slow *)
 fun thmknn_std n goal =
-  let val (symweight,feav) = all_thmfeav () in
-    thmknn symweight n feav (fea_of_goal goal)
+  let val (symweight,feav, _) = all_thmfeav () in
+    thmknn (symweight,feav) n (fea_of_goal goal)
   end
 
 (* ----------------------------------------------------------------------
@@ -175,7 +171,8 @@ fun thmknn_std n goal =
 (* Probably uptodate-ness is already verified elsewhere *)
 fun uptodate_tid s =
   let val (a,b) = split_string "Theory." s in 
-    a = "local_namespace_holyhammer" orelse uptodate_thm (DB.fetch a b)
+    a = "local_namespace_holyhammer" orelse 
+    uptodate_thm (DB.fetch a b)
   end
 
 fun depnumber_of_thm thm =
@@ -199,19 +196,23 @@ fun dep_of_thm s =
     else List.mapPartial name_of_did (depidl_of_thm (DB.fetch a b))
   end
 
-fun add_thmdep thmfeav n l0 = 
+fun add_thmdep revdict n l0 = 
   let 
-    fun f x = x :: dep_of_thm x
-    val l1 = mk_sameorder_set String.compare (List.concat (map f l0))
-    val dict = dnew String.compare thmfeav
-    fun g x = dmem x dict andalso uptodate_tid x
+    fun f1 x = x :: dep_of_thm x
+    val l1 = mk_sameorder_set 
+      String.compare (List.concat (map f1 l0))
+    fun f2 x = 
+      exists_tid x andalso uptodate_tid x andalso
+      dmem x revdict andalso 
+      (not (!hhs_thmortho_flag) orelse
+       not (metis_trivial 0.1 (fst (dfind x revdict))))
   in
-    first_test_n g n l1
+    debug_t "add_thmdep: first_test_n" (first_test_n f2 n) l1
   end
 
-fun thmknn_wdep thmsymweight n thmfeav gfea =
-  let val l0 = thmknn thmsymweight n thmfeav gfea in
-    add_thmdep thmfeav n l0
+fun thmknn_wdep (symweight,feav,revdict) n gfea =
+  let val l0 = thmknn (symweight,feav) n gfea in
+    add_thmdep revdict n l0
   end
 
 (* ----------------------------------------------------------------------
@@ -269,7 +270,7 @@ fun closest_subterm ((asl,w):goal) term =
     fun f x = (togoal x, fea_of_goal (togoal x))
     val l0 = List.concat (map (rev o find_terms is_true) (w :: asl))
     val l1 = debug_t "mk_sameorder_set" (mk_sameorder_set Term.compare) l0
-    val thmfeav = map (fn (_,(a,_,b)) => (a,b)) (dlist (!hhs_mdict))
+    val thmfeav = map snd (dlist (!hhs_mdict))
     val feal = debug_t "features" (map f) l1
     val fea_o = hhsFeature.fea_of_goal ([],term)
     val symweight = 

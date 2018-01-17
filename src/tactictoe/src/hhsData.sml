@@ -132,12 +132,10 @@ fun pp_feavl feavl =
 
 val feature_time = ref 0.0 (* statistics *)
 
-fun metis_provable_wrap g =
-  !hhs_metisortho_flag andalso
-  metis_trivial (!hhs_metis_time) g
-
 fun save_lbl (lbl0 as (stac0,t0,g0,gl0)) =
-  if mem g0 gl0 orelse metis_provable_wrap g0 then ()
+  if mem g0 gl0 orelse 
+     (!hhs_metisortho_flag andalso metis_trivial 0.1 g0) 
+  then ()
   else
     let
       val fea = total_time feature_time hhsFeature.fea_of_goal g0

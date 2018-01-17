@@ -105,6 +105,15 @@ fun namespace_thms () =
     | NONE => List.mapPartial thm_of_sml l1
   end
 
+fun safe_namespace_thms () =
+  let 
+    val l0 = #allVal (PolyML.globalNameSpace) () 
+    val l1 = (map fst l0)
+  in
+    List.mapPartial thm_of_sml l1
+  end
+
+
 fun is_tactic s = exec_sml "is_tactic" ("val _ = Tactical.VALID (" ^ s ^ ")")
 
 fun is_string s = exec_sml "is_string" ("val _ = String.isPrefix (" ^ s ^ ")")

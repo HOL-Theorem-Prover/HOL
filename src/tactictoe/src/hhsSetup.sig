@@ -2,9 +2,9 @@ signature hhsSetup =
 sig
   
   (* recording *)
-  val hhs_norecprove_flag  : bool ref
-  val hhs_norecord_flag    : bool ref
-  val hhs_nolet_flag       : bool ref
+  val hhs_record_flag    : bool ref
+  val hhs_reclet_flag    : bool ref
+  val hhs_recprove_flag  : bool ref
   
   (* learning *)
   val hhs_ortho_flag   : bool ref
@@ -12,9 +12,11 @@ sig
   val hhs_selflearn_flag : bool ref
 
   (* evaluation *)
-  val one_in_n      : unit -> bool
   val hhs_eval_flag : bool ref
-  val hhs_noprove_flag : bool ref
+  val one_in_n      : unit -> bool
+  val hhs_evlet_flag : bool ref
+  val hhs_evprove_flag : bool ref
+  
   val hh_only_flag  : bool ref
   
   (* preselection *)

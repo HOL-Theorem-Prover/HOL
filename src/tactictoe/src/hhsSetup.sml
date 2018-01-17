@@ -15,10 +15,9 @@ open HolKernel boolLib Abbrev hhsExec hhsTools
    Recording
    ---------------------------------------------------------------------- *)
 
-(* set following flag to true to simulate version 2 *)
-val hhs_norecord_flag    = ref false
-val hhs_norecprove_flag  = ref false
-val hhs_nolet_flag      = ref false
+val hhs_record_flag   = ref true
+val hhs_recprove_flag = ref false
+val hhs_reclet_flag   = ref false
 
 (* ----------------------------------------------------------------------
    Learning
@@ -35,9 +34,11 @@ val hhs_succrate_flag = ref false
    Evaluation
    ---------------------------------------------------------------------- *)
 
-val hhs_eval_flag        = ref false
+val hhs_eval_flag     = ref false
+val hhs_evprove_flag  = ref false
+val hhs_evlet_flag    = ref false
+
 val hh_only_flag         = ref false
-val hhs_noprove_flag    = ref false
 
 val one_in_option = ref NONE
 val one_in_counter = ref 0
@@ -149,22 +150,24 @@ fun set_esearch () =
 
 fun set_erecord () =
   (
+  (* recording *)
   hhs_internalthm_flag := false;
-  hhs_namespacethm_flag := false;
-  hhs_norecprove_flag  := true;
-  hhs_nolet_flag       := true;
+  hhs_namespacethm_flag := true;
+  hhs_recprove_flag := false;
+  hhs_reclet_flag   := false;
   (* learning *)
   hhs_ortho_flag      := false;
   hhs_ortho_number    := 20;
   hhs_selflearn_flag  := false;
   (* metis learning *)
   hhs_metisexec_flag   := can load "metisTools"; 
-  hhs_metisortho_flag  := false;
   hhs_metisrecord_flag := true;
+  hhs_metisortho_flag  := false;
   hhs_thmortho_flag    := false;
   (* evaluation *)
   hhs_eval_flag    := true;
-  hhs_noprove_flag := true;
+  hhs_evprove_flag := false;
+  hhs_evlet_flag   := false;
   one_in_option    := SOME (0,10);
   hh_only_flag     := (false andalso can update_hh_stac ())
   )
