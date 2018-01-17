@@ -9,7 +9,7 @@
 structure hhsPredict :> hhsPredict =
 struct
 
-open HolKernel Abbrev hhsTools hhsSetup hhsFeature
+open HolKernel Abbrev hhsTools hhsSetup hhsFeature hhsExec
 
 val ERR = mk_HOL_ERR "hhsPredict"
 
@@ -94,41 +94,78 @@ fun stacknn_uniq symweight n feal fea_o =
 
 fun exists_tid s = 
   let val (a,b) = split_string "Theory." s in 
-    a = "local_namespace_holyhammer" orelse can (DB.fetch a) b
+    a = "local_namespace_holyhammer" orelse 
+    can (DB.fetch a) b
   end
-
-fun is_orthothm a = fst (dfind a (!hhs_mdict)) handle _ => false
 
 fun thmknn symweight n feav fea_o =
   let 
-    val newfeav = 
-      if !hhs_thmortho_flag 
-      then filter (is_orthothm o fst) feav 
-      else feav
-    val l1 = map fst (pre_knn symweight newfeav fea_o)
+    val l1 = map fst (pre_knn symweight feav fea_o)
     val l2 = mk_sameorder_set String.compare l1
   in
     first_test_n exists_tid n l2
   end    
 
+(* copied from hhsMetis to prevent circular dependencies *)
+val trivialgoal_cache = ref (dempty goal_compare)
+
+fun metis_trivial tim g =
+  if !hhs_metisexec_flag then
+    dfind g (!trivialgoal_cache) handle _ =>
+    (
+    let
+      val tac = (valOf (!metis_tac_glob)) []
+        handle _ => debug_err "metis_trivial"
+      val glo = app_tac tim tac g
+      val r = glo = SOME []
+    in   
+      trivialgoal_cache := dadd g r (!trivialgoal_cache);
+      r
+    end
+    )
+  else false
+(* *)
+
+(* similar thing in holyhammer *)
+fun add_fea dict (name,thm) =
+  let val g = dest_thm thm in
+    if not (dmem g (!dict)) andalso uptodate_thm thm 
+    then dict := 
+      dadd g (name, not (metis_trivial 0.1 g), fea_of_goal g) (!dict)
+    else ()
+  end
+
+fun insert_namespace thmdict =
+  let 
+    val dict = ref thmdict 
+    fun f (x,y) = ("local_namespace_holyhammerTheory." ^ x, y)
+    val l1 = debug_t "namespace_thms" namespace_thms ()
+    val l2 = map f l1
+  in
+    debug_t "add_fea" (app (add_fea dict)) l2;
+    debug ("adding" ^ int_to_string (dlength (!dict) - dlength thmdict) ^ " theorems from the namespace");
+    (!dict)
+  end
+
 fun all_thmfeav () =
-  let
-    fun f (a,(_,b)) = (a,b)
-    val feav = map f (dlist (!hhs_mdict))
+  let 
+    val newdict = if !hhs_namespacethm_flag 
+      then debug_t "insert_namespace" insert_namespace (!hhs_mdict)
+      else (!hhs_mdict)
+    fun f (_,(name,b,fea)) = 
+      if !hhs_thmortho_flag andalso not b 
+      then NONE
+      else SOME (name,fea)
+    val feav = List.mapPartial f (dlist newdict)
     val symweight = learn_tfidf feav
   in
     (symweight, feav)
   end
 
+(* slow *)
 fun thmknn_std n goal =
-  let 
-    val (symweight,feav) = all_thmfeav ()
-    val newfeav = 
-      if !hhs_thmortho_flag 
-      then filter (is_orthothm o fst) feav 
-      else feav
-  in
-    thmknn symweight n newfeav (fea_of_goal goal)
+  let val (symweight,feav) = all_thmfeav () in
+    thmknn symweight n feav (fea_of_goal goal)
   end
 
 (* ----------------------------------------------------------------------
@@ -143,10 +180,12 @@ fun uptodate_tid s =
 
 fun depnumber_of_thm thm =
   (Dep.depnumber_of o Dep.depid_of o Tag.dep_of o Thm.tag) thm
+  handle HOL_ERR _ => raise ERR "depnumber_of_thm" ""
   
 fun depidl_of_thm thm =
   (Dep.depidl_of o Tag.dep_of o Thm.tag) thm   
-
+  handle HOL_ERR _ => raise ERR "depidl_of_thm" ""
+  
 fun has_depnumber n (_,thm) = n = depnumber_of_thm thm
 fun name_of_did (thy,n) = 
   case List.find (has_depnumber n) (DB.thms thy) of
@@ -160,19 +199,19 @@ fun dep_of_thm s =
     else List.mapPartial name_of_did (depidl_of_thm (DB.fetch a b))
   end
 
-fun add_thmdep n l0 = 
+fun add_thmdep thmfeav n l0 = 
   let 
     fun f x = x :: dep_of_thm x
     val l1 = mk_sameorder_set String.compare (List.concat (map f l0))
-    fun g x = uptodate_tid x andalso 
-      (not (!hhs_thmortho_flag) orelse is_orthothm x)
+    val dict = dnew String.compare thmfeav
+    fun g x = dmem x dict andalso uptodate_tid x
   in
     first_test_n g n l1
   end
 
 fun thmknn_wdep thmsymweight n thmfeav gfea =
   let val l0 = thmknn thmsymweight n thmfeav gfea in
-    add_thmdep n l0
+    add_thmdep thmfeav n l0
   end
 
 (* ----------------------------------------------------------------------
@@ -230,7 +269,7 @@ fun closest_subterm ((asl,w):goal) term =
     fun f x = (togoal x, fea_of_goal (togoal x))
     val l0 = List.concat (map (rev o find_terms is_true) (w :: asl))
     val l1 = debug_t "mk_sameorder_set" (mk_sameorder_set Term.compare) l0
-    val thmfeav = map (fn (a,(_,b)) => (a,b)) (dlist (!hhs_mdict))
+    val thmfeav = map (fn (_,(a,_,b)) => (a,b)) (dlist (!hhs_mdict))
     val feal = debug_t "features" (map f) l1
     val fea_o = hhsFeature.fea_of_goal ([],term)
     val symweight = 

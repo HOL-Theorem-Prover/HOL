@@ -462,9 +462,7 @@ fun apply_stac pid pardict trydict_unref stac g =
     (* execution *)
     val glo = dfind (newstac,g) (!stacgoal_cache) 
       handle _ => app_tac tim newtac g
-    val newglo = 
-      case glo of NONE => NONE | 
-                  SOME gl =>
+    val newglo = case glo of NONE => NONE | SOME gl =>
       (
       if mem g gl orelse exists (fn x => dmem x pardict) gl orelse
          dmem gl trydict_unref
@@ -475,7 +473,7 @@ fun apply_stac pid pardict trydict_unref stac g =
     update_cache (newstac,g) glo;
     newglo
   end
-
+ 
 fun apply_next_stac pid =
   let
     val _ = debug_search "apply_next_stac"

@@ -9,14 +9,13 @@ sig
   
   val hhs_search_time : Time.time ref
   val hhs_tactic_time : real ref
-    
-  val hhs_internalthm_flag : bool ref
+
   val hhs_badstacl  : string list ref
   val hhs_stacfea   : (lbl_t, fea_t) Redblackmap.dict ref
   val hhs_cthyfea   : feav_t list ref
   val hhs_ddict     : (goal, lbl_t list) Redblackmap.dict ref
   val hhs_ndict     : (string, int) Redblackmap.dict ref
-  val hhs_mdict     : (string, (bool * fea_t)) Redblackmap.dict ref
+  val hhs_mdict     : (goal, (string * bool * fea_t)) Redblackmap.dict ref
   val dbfetch_of_string : string -> string
   
   val hhs_mcdict : (int list, (bool * int)) Redblackmap.dict ref

@@ -7,6 +7,7 @@ sig
   type fea_t = int list
   type feav_t = (lbl_t * fea_t)
   
+  (* tfidf *)
   val learn_tfidf : ('a * int list) list -> (int, real) Redblackmap.dict
 
   (* term *)
@@ -23,6 +24,8 @@ sig
     (goal, lbl_t list) Redblackmap.dict -> int -> lbl_t list -> lbl_t list
         
   (* thm *)
+  val metis_trivial : real -> goal -> bool
+  
   val all_thmfeav : unit -> 
     ((int, real) Redblackmap.dict * (string * fea_t) list)
   
@@ -30,8 +33,6 @@ sig
     (int, real) Redblackmap.dict -> int -> (string * fea_t) list -> fea_t -> string list   
   
   val thmknn_std: int -> goal -> string list
-  
-  val add_thmdep: int -> string list -> string list
   
   val thmknn_wdep: 
    (int, real) Redblackmap.dict -> int -> (string * fea_t) list -> fea_t -> string list

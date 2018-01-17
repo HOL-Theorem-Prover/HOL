@@ -134,7 +134,7 @@ val feature_time = ref 0.0 (* statistics *)
 
 fun metis_provable_wrap g =
   !hhs_metisortho_flag andalso
-  metis_provable (!hhs_metis_npred) (!hhs_metis_time) g
+  metis_trivial (!hhs_metis_time) g
 
 fun save_lbl (lbl0 as (stac0,t0,g0,gl0)) =
   if mem g0 gl0 orelse metis_provable_wrap g0 then ()
@@ -165,9 +165,12 @@ fun export_feavl thyname feavl =
   let
     val file = hhs_feature_dir ^ "/" ^ thyname
     val ostrm = Portable.open_out file
-    val new_feavl = filter uptodate_feav feavl
+    fun is_local s = mem "hhsRecord.local_tag" (hhsLexer.hhs_lex s) 
+    fun is_global feav = not (is_local (#1 (fst feav))) 
+    val feavl1 = filter is_global feavl
+    val feavl2 = filter uptodate_feav feavl1
   in
-    feavl_out (pp_feavl new_feavl) ostrm
+    feavl_out (pp_feavl feavl2) ostrm
   end
 
 (*----------------------------------------------------------------------------

@@ -5,9 +5,7 @@ include Abbrev
   
   type lbl_t = (string * real * goal * goal list)
  
-  (* depends on mdict *)
-  val metis_provable : int -> real -> goal -> bool
-  
+  (* val metis_provable : int -> real -> goal -> bool : too slow *)
   val mk_metis_call : string list -> string
   
   (* mdict I/O *)    

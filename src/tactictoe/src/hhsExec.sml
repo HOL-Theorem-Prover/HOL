@@ -39,21 +39,70 @@ fun exec_sml file s =
   end
 
 (* -----------------------------------------------------------------------------
+   Type of values
+   -------------------------------------------------------------------------- *)
+
+fun string_of_pretty p =
+  let
+    val acc = ref []
+    fun f s = acc := s :: !acc
+  in
+    PolyML.prettyPrint (f,80) p;
+    String.concatWith " " (rev (!acc))
+  end
+
+fun drop_sig s = last (String.tokens (fn x => x = #".") s)
+
+fun smltype_of_value l s =
+  let
+    val v = assoc s l handle _ => raise ERR "type_of_value" s
+    val t = PolyML.NameSpace.Values.typeof v;
+    val p = PolyML.NameSpace.Values.printType (t,0,NONE)
+  in
+    string_of_pretty p
+  end
+
+fun is_thm_value l s =
+  let 
+    val s1 = smltype_of_value l s
+    val s2 = hhsLexer.hhs_lex s1
+  in 
+    case s2 of
+      [a] => (drop_sig a = "thm" handle _ => false)
+    | _   => false
+  end
+
+(* -----------------------------------------------------------------------------
    Tests
    -------------------------------------------------------------------------- *)
 
 val hhs_thm = ref TRUTH
 
+val hhs_thml : thm list ref = ref []
+
 fun is_thm s = exec_sml "is_thm" ("val _ = Thm.dest_thm (" ^ s ^ ")")
 
 fun thm_of_sml s =
-  let val b = exec_sml "lift_thm" ("hhsExec.hhs_thm := " ^ s) in
+  let val b = exec_sml "thm_of_sml" ("hhsExec.hhs_thm := " ^ s) in
     if b then SOME (s, !hhs_thm) else NONE
   end
 
+fun thml_of_sml sl =
+  let 
+    val s = "[" ^ String.concatWith ", " sl ^ "]"
+    val b = exec_sml "thm_of_sml" ("hhsExec.hhs_thml := " ^ s) 
+  in
+    if b then SOME (combine (sl, !hhs_thml)) else NONE
+  end
+
 fun namespace_thms () =
-  let val l0 = map fst (#allVal (PolyML.globalNameSpace) ()) in
-    List.mapPartial thm_of_sml l0
+  let 
+    val l0 = #allVal (PolyML.globalNameSpace) () 
+    val l1 = filter (is_thm_value l0) (map fst l0)
+  in
+    case thml_of_sml l1 of
+      SOME l2 => l2
+    | NONE => List.mapPartial thm_of_sml l1
   end
 
 fun is_tactic s = exec_sml "is_tactic" ("val _ = Tactical.VALID (" ^ s ^ ")")
@@ -150,7 +199,7 @@ fun string_of_sml s =
   end
 
 (* -----------------------------------------------------------------------------
-   Read hh
+   Read metis and hh from the future
    -------------------------------------------------------------------------- *)
 
 val (hh_stac_glob: 
@@ -160,7 +209,7 @@ val (hh_stac_glob:
 
 fun update_hh_stac () =
   let 
-    val b = exec_sml "hh_stac_of_sml" 
+    val b = exec_sml "update_hh_stac" 
       (
       String.concatWith "\n"
       [
@@ -169,8 +218,25 @@ fun update_hh_stac () =
       ]
       )
   in
-    if b then () else raise ERR "hh_stac_of_sml" ""
+    if b then () else raise ERR "update_hh_stac" ""
   end
+
+val metis_tac_glob: (thm list -> tactic) option ref = ref NONE
+
+fun update_metis_tac () =
+  let 
+    val b = exec_sml "update_metis_tac" 
+      (
+      String.concatWith "\n"
+      [
+      "load \"metisTools\";",
+      "val _ = hhsExec.metis_tac_glob := SOME metisTools.METIS_TAC;"
+      ]
+      )
+  in
+    if b then () else raise ERR "update_metis_tac" ""
+  end
+
 
 (* -----------------------------------------------------------------------------
    Read goal
@@ -184,43 +250,4 @@ fun goal_of_sml s =
     if b then !hhs_goal_glob else raise ERR "goal_of_sml" s
   end
  
-(* ---------------------------------------------------------------------------
-   Finding the type of an expression.
-   -------------------------------------------------------------------------- *)
-
-val type_cache = ref (dempty String.compare)
-
-fun after_last_colon_aux acc charl = case charl of
-    #":" :: m => implode acc
-  | a :: m => after_last_colon_aux (a :: acc) m
-  | [] => raise ERR "after_last_colon" ""
-
-fun after_last_colon s = after_last_colon_aux [] (rev (explode s))
- 
-fun drop_sig s = last (String.tokens (fn x => x = #".") s)
-  
-fun type_of_sml s = 
-  if dmem s (!type_cache) then dfind s (!type_cache) else
-    let 
-      val file = tactictoe_dir ^ "/code/sml_type_of_out"
-      val cmd = "PolyML.print ( " ^ s ^ " );"
-      val b   = exec_sml "sml_type_of" cmd
-    in
-      if b 
-      then 
-        let 
-          val s = after_last_colon (String.concatWith " " (readl file))
-          val ty = String.concatWith " " (map drop_sig (hhsLexer.hhs_lex s))
-        in
-          (type_cache := dadd s (SOME ty) (!type_cache); SOME ty)
-        end
-      else 
-        (
-        debug ("Error: type_of_sml: " ^ s); 
-        type_cache := dadd s NONE (!type_cache);
-        NONE
-        )
-    end
-
-
 end (* struct *)

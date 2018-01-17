@@ -35,6 +35,8 @@ sig
   val hhs_metisexec_flag : bool ref
   val hhs_metishammer_flag : bool ref
   val hhs_metisrecord_flag : bool ref
+  val hhs_namespacethm_flag : bool ref
+  val hhs_internalthm_flag : bool ref
   val hhs_metisortho_flag : bool ref
   val hhs_thmortho_flag : bool ref
   

@@ -240,6 +240,7 @@ fun get_lemmas_atp atp = get_lemmas (status_of atp, out_of atp)
 
 (*---------------------------------------------------------------------------
    Performs all previous steps with (experimentally) the best parameters.
+   Todo: replace by PolyML.fork for faster termination of asynchronous calls.
  ----------------------------------------------------------------------------*)
 
 fun launch_parallel t =

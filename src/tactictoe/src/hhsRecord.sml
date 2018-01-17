@@ -18,6 +18,10 @@ val goalstep_glob = ref []
 val tactictoe_step_counter = ref 0
 val tactictoe_thm_counter = ref 0
 
+fun local_tag x = x
+
+fun add_local_tag s = "( hhsRecord.local_tag " ^ s ^ ")"
+
 (*----------------------------------------------------------------------------
  * Error messages and profiling
  *----------------------------------------------------------------------------*)
@@ -122,7 +126,7 @@ fun record_tactic (tac,stac) g =
   total_time record_time (record_tactic_aux (tac,stac)) g
 
 (* --------------------------------------------------------------------------
-   Replaying a proof
+   Replaying a proof: following code is legacy code (very ugly).
    -------------------------------------------------------------------------- *)
 
 fun wrap_tactics_in name qtac goal = 
@@ -195,67 +199,68 @@ fun save_tactictoe_thm thm =
     String.concatWith " " ["(","DB.fetch",mlquote cthy,mlquote name,")"]
   end
 
-fun depid_of_thm thm = (Dep.depid_of o Tag.dep_of o Thm.tag) thm
+fun depid_of_thm thm = 
+  (Dep.depid_of o Tag.dep_of o Thm.tag) thm
+  handle HOL_ERR _ => raise ERR "depid_of_thm" ""
+  
+fun sml_of_thm thm =
+  if can depid_of_thm thm then
+    let 
+      val (thy,n) = depid_of_thm thm
+      val thml = DB.thms thy
+      val thmdict = dnew goal_compare (map (fn (a,b) => (dest_thm b,a)) thml)
+      val goal = dest_thm thm
+    in
+      if dmem goal thmdict 
+      then
+        let val name = dfind goal thmdict in
+          SOME (String.concatWith " " 
+            ["(","DB.fetch",mlquote thy,mlquote name,")"])
+        end
+      else NONE
+    end
+  else NONE
 
-fun name_of_thm thm =
-  let 
-    val (thy,n) = depid_of_thm thm
-    val thml = DB.thms thy
-    val thmdict = dnew goal_compare (map (fn (a,b) => (dest_thm b,a)) thml)
-    val name = dfind (dest_thm thm) thmdict
-  in
-    String.concatWith " " ["(","DB.fetch",mlquote thy,mlquote name,")"]
-  end
-  handle _ => save_tactictoe_thm thm 
-
-fun fetch_thm_aux s reps =
-  let val file = hhs_code_dir ^ "/" ^ current_theory () ^ "_fetch_thm" in
-    if is_thm s
-    then hide_out string_of_sml ("hhsRecord.name_of_thm " ^ s) handle _ => s 
-    else (if reps = "" then (debug_record ("fetch: " ^ s); s) else reps)
+(* replacement string is not used anymore for theorems *)
+fun fetch_thm s reps =
+  let val sthmo = hide_out thm_of_sml s in
+    case sthmo of
+      NONE => 
+        (if reps = "" 
+        then (debug_record ("fetch_other: " ^ s); add_local_tag s) 
+        else reps)
+    | SOME (_,thm) =>
+    let val nameo = sml_of_thm thm in
+      case nameo of
+        SOME x => x
+      | NONE => 
+        (
+        if !hhs_internalthm_flag 
+        then save_tactictoe_thm thm
+        else (debug_record ("fetch_thm: " ^ s); add_local_tag s)
+        )
+    end
   end
   
-val fetch = total_time fetch_thm_time fetch_thm_aux
-
-(*----------------------------------------------------------------------------
-  For statistics on coverage.
-  ----------------------------------------------------------------------------*)
-
-val start_stacset = ref (dempty String.compare)
-
-fun create_stacset () =
-  let val l = map (#1 o fst) (dlist (!hhs_stacfea)) in 
-    dnew String.compare (map (fn x => (x,())) l) 
-  end
-  
-val start_tokenset = ref (dempty String.compare)
-
-fun create_tokenset () =
-  let 
-    val l = List.concat (map (hhs_lex o #1 o fst) (dlist (!hhs_stacfea)))
-  in 
-    dnew String.compare (map (fn x => (x,())) l) 
-  end  
+val fetch = total_time fetch_thm_time fetch_thm
 
 (*----------------------------------------------------------------------------
   Tactical proofs hooks
   ----------------------------------------------------------------------------*)
 
-fun start_record name goal =
+fun start_record lflag pflag name goal =
   (
   if !hhs_eval_flag then init_tactictoe () else ();
   debug_proof ("\n" ^ name);
   debug_search ("\n" ^ name);
   debug ("\n" ^ name);
   debug_t "update_mdict" update_mdict (current_theory ());
-  start_stacset := create_stacset ();
   (* recording goal steps *)
   goalstep_glob := [];
   (* evaluation *)
-  (
-  eval_tactictoe name goal handle _ => 
-  debug ("Error: eval_tactictoe: last_stac: " ^ !hhsSearch.last_stac)
-  )
+  if lflag orelse pflag then () else 
+    eval_tactictoe name goal handle _ => 
+      debug ("Error: eval_tactictoe: last_stac: " ^ ! hhsSearch.last_stac)
   )
 
 (* ----------------------------------------------------------------------
@@ -266,7 +271,7 @@ fun end_record name g =
   let
     val lbls = map fst (rev (!goalstep_glob))
   in
-    (* because of internal theorems *)
+    (* because we want internal theorems on orthogonalization *)
     debug_t "update_mdict" update_mdict (current_theory ());
     debug_t ("Saving " ^ int_to_string (length lbls) ^ " labels")
       (app save_lbl) lbls
@@ -285,16 +290,16 @@ fun org_tac tac g =
 fun try_record_proof name lflag tac1 tac2 g =
   let 
     val b1 = !hhs_norecord_flag
-    val b2 = 
-      (!hhs_norecprove_flag andalso String.isPrefix "tactictoe_prove_" name)
-    val b3 = (!hhs_nolet_flag andalso lflag)           
+    val pflag = String.isPrefix "tactictoe_prove_" name
+    val b2 = (!hhs_norecprove_flag andalso pflag)
+    val b3 = (!hhs_nolet_flag andalso lflag)       
     val (r,t) =
       if b1 orelse b2 orelse b3
       then add_time (org_tac tac2) g
       else
         (
         let        
-          val _ = start_record name g
+          val _ = start_record lflag pflag name g
           val rt = add_time tac1 g
           val _ = end_record name g
         in 
@@ -324,6 +329,11 @@ fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
 
 fun start_thy cthy =
   (
+  if cthy = "ConseqConv" 
+  then (clean_feadata (); 
+        clean_dir "bool" hhs_mdict_dir;
+        debug_t "export_mdict" export_mdict "bool") 
+  else ();
   clean_feadata ();
   reset_profiling ();
   (* Proof search *)
