@@ -229,7 +229,7 @@ fun tt_tac goal = (tactictoe goal) goal
 
 fun string_stac stac g gl =
   let val stac0 = pretty_mini_stac 1.0 stac g gl in
-    comestic_stac stac0
+    cosmestic_stac stac0
   end
 
 val next_tac_glob = ref []

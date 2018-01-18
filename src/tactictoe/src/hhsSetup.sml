@@ -67,6 +67,7 @@ val hhs_mcnoeval_flag = ref false
 val hhs_mctriveval_flag = ref false
 val hhs_mc_radius = ref 0
 val hhs_mc_coeff = ref 1.0
+val hhs_mcactive_flag = ref true
 val hhs_timedepth_flag = ref false
 val hhs_width_coeff = ref 1.0
 val hhs_selflearn_flag = ref false
@@ -122,13 +123,14 @@ fun set_esearch () =
   hhs_tactic_time    := 0.02;
   hhs_cache_flag     := true;
   hhs_width_coeff    := 1.0;
-  hhs_mc_flag        := false;
-  hhs_mcrecord_flag  := false;
+  hhs_mc_flag        := true;
+  hhs_mcrecord_flag  := true;
   hhs_mcnoeval_flag  := false;
   hhs_mctriveval_flag := false;
-  hhs_mc_radius      := 1;
-  hhs_mc_coeff       := 1.0;
-  hhs_timedepth_flag := false;
+  hhs_mc_radius      := 10;
+  hhs_mc_coeff       := 4.0;
+  hhs_mcactive_flag  := false;
+  hhs_timedepth_flag := false; (* not compatible with mcts yet *)
   (* metis *)
   hhs_metisexec_flag   := can load "metisTools";
   if !hhs_metisexec_flag then update_metis_tac () else ();
@@ -144,9 +146,9 @@ fun set_esearch () =
   hhs_thmlarg_number := 16;
   hhs_termarg_flag   := false;
   (* result *)
-  hhs_minimize_flag := false;
-  hhs_prettify_flag := false
-  ) 
+  hhs_minimize_flag := true;
+  hhs_prettify_flag := true
+  )
 
 fun set_erecord () =
   (
@@ -158,7 +160,9 @@ fun set_erecord () =
   (* learning *)
   hhs_ortho_flag      := false;
   hhs_ortho_number    := 20;
-  hhs_selflearn_flag  := false;
+  hhs_selflearn_flag  := false; 
+  (* Self-learning issue: 
+     metis should declare it is using local variables by adding a local_tag *)
   (* metis learning *)
   hhs_metisexec_flag   := can load "metisTools"; 
   hhs_metisrecord_flag := true;

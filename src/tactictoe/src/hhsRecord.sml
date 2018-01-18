@@ -249,26 +249,23 @@ val fetch = total_time fetch_thm_time fetch_thm
   ----------------------------------------------------------------------------*)
 
 fun start_record lflag pflag name goal =
-  (
-  if !hhs_eval_flag then init_tactictoe () else ();
-  debug_proof ("\n" ^ name);
-  debug_search ("\n" ^ name);
-  debug ("\n" ^ name);
-  debug_t "update_mdict" update_mdict (current_theory ());
-  (* recording goal steps *)
-  goalstep_glob := [];
-  (* evaluation *)
-  if not (!hhs_eval_flag) orelse
-     not (!test_eval_hook name) orelse
-     (lflag andalso not (!hhs_evlet_flag)) orelse 
-     (pflag andalso not (!hhs_evprove_flag))
-  then ()
-  else 
-    if one_in_n () 
-    then eval_tactictoe name goal handle _ => 
-      debug ("Error: eval_tactictoe: last_stac: " ^ ! hhsSearch.last_stac)
-    else ()
-  )
+    (
+    if !hhs_eval_flag then init_tactictoe () else ();
+    debug_t "update_mdict" update_mdict (current_theory ());
+    (* recording goal steps *)
+    goalstep_glob := [];
+    (* evaluation *)
+    if not (!hhs_eval_flag) orelse
+       not (!test_eval_hook name) orelse
+       (lflag andalso not (!hhs_evlet_flag)) orelse 
+       (pflag andalso not (!hhs_evprove_flag))
+    then ()
+    else 
+      if one_in_n () 
+      then eval_tactictoe name goal handle _ => 
+        debug ("Error: eval_tactictoe: last_stac: " ^ ! hhsSearch.last_stac)
+      else ()
+    )
 
 (* ----------------------------------------------------------------------
    Save the proof steps in the database. Includes orthogonalization.
@@ -294,29 +291,43 @@ fun org_tac tac g =
      )
   )
 
+val thm_counter = ref 0
+
+fun init_record_proof name =
+  let val outname = "\nName: " ^ int_to_string (!thm_counter) ^ " " ^ name in
+    debug_proof outname;
+    debug_search outname;
+    debug outname;
+    incr thm_counter
+  end
+
 fun try_record_proof name lflag tac1 tac2 g =
-  let 
-    val b1 = not (!hhs_record_flag)
+  let
+    val _ = init_record_proof name
+    (* Conditions on recording and evaluation *)
     val pflag = String.isPrefix "tactictoe_prove_" name
+    val b1 = not (!hhs_record_flag)
     val b2 = (not (!hhs_recprove_flag) andalso pflag)
     val b3 = (not (!hhs_reclet_flag) andalso lflag)       
-    val (r,t) =
+    val result =
       if b1 orelse b2 orelse b3
-      then add_time (org_tac tac2) g
+      then 
+        let val (r,t) = add_time (org_tac tac2) g in
+          debug_proof ("Original proof time: " ^ Real.toString t);
+          r
+        end
       else
-        (
         let        
           val _ = start_record lflag pflag name g
-          val rt = add_time tac1 g
+          val (r,t) = add_time tac1 g
+          val _ = debug_proof ("Recording proof time: " ^ Real.toString t)
           val _ = end_record name g
         in 
-          rt
+          r
         end
-        handle _ => (debug "Error: try_record_proof"; add_time (org_tac tac2) g)
-        )
+        handle _ => (debug "Error: try_record_proof"; org_tac tac2 g)
   in    
-    debug_proof ("Replaying proof: " ^ Real.toString t);
-    r
+    result
   end
 
 (*----------------------------------------------------------------------------

@@ -364,9 +364,15 @@ fun debug_t s f x =
     r
   end
 
-fun debug_search s =
-  append_endline (hhs_search_dir ^ "/search/" ^ current_theory ()) s
+val debugsearch_flag = ref false
 
+fun set_debugsearch b = debugsearch_flag := b
+
+fun debug_search s =
+  if !debugsearch_flag 
+  then append_endline (hhs_search_dir ^ "/search/" ^ current_theory ()) s
+  else ()
+  
 fun debug_proof s =
   append_endline (hhs_search_dir ^ "/proof/" ^ current_theory ()) s
 

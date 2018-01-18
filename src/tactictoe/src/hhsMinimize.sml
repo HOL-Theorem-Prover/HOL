@@ -130,7 +130,7 @@ fun prettify2_stac stac =
   (minspace_sl o hhs_lex) stac
 
 (* Remove #loc in terms *)
-fun comestic_stac stac = (minspace_sl o requote o hhs_lex) stac
+fun cosmestic_stac stac = (minspace_sl o requote o hhs_lex) stac
 
 (*----------------------------------------------------------------------------
   Pretty-printing the abstract tree of the proof.
@@ -301,8 +301,9 @@ fun proof_length proof = case proof of
 
 fun reconstruct_aux g proof sproof =
   let
-    val tac    = tactic_of_sml sproof
-      handle _ => raise ERR "reconstruct" sproof
+    val newsproof = cosmestic_stac sproof
+    val tac    = tactic_of_sml newsproof
+      handle _ => raise ERR "reconstruct" newsproof
     val tim = 2.0 * (Time.toReal (!hhs_search_time))
     val new_tim = snd (add_time (timeOut tim Tactical.TAC_PROOF) (g,tac))
       handle _ => (debug ("Error: reconstruct: " ^ sproof); tim)

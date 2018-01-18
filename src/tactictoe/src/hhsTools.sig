@@ -117,6 +117,7 @@ sig
   val debug : string -> unit
   val debug_t : string -> ('a -> 'b) -> 'a -> 'b
   val debug_err : string -> 'a
+  val set_debugsearch : bool -> unit
   val debug_search : string -> unit
   val debug_proof  : string -> unit
   val debug_parse  : string -> unit

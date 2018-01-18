@@ -532,10 +532,6 @@ fun standard_node_find l0 =
   end
 
 fun mc_node_find pid =
-  if Timer.checkRealTimer (valOf (!glob_timer)) > 
-    (!hhs_search_time) 
-  then (debug "Error: mc_node_find loop"; raise SearchTimeOut)
-  else 
   let
     val prec = dfind pid (!proofdict) 
     val {children,visit,...} = prec
@@ -557,8 +553,11 @@ fun mc_node_find pid =
       in
         (cid, meaneval + (!hhs_mc_coeff) * (pripol / curpol))
       end
-    (* sort and select node with best selection score *)
-    val l0 = self_selsc :: List.map f (!children)
+    (* sort and select node with best selection score *) 
+    val l0 = 
+      if !hhs_mcactive_flag 
+      then self_selsc :: filter (is_active o fst) (List.map f (!children))
+      else self_selsc :: List.map f (!children)
     val l1 = dict_sort compare_rmax l0
     val (selid,_) = hd l1
   in
@@ -567,10 +566,11 @@ fun mc_node_find pid =
       else mc_node_find selid
   end
 
+(* to be shorten when hhs_mcactive_flag becomes default *)
 fun try_mc_find () =
   if Timer.checkRealTimer (valOf (!glob_timer)) > (!hhs_search_time) 
-  then (debug_search "timeout"; raise SearchTimeOut)
-  else 
+  then (debug "Warning: try_mc_find"; raise SearchTimeOut)
+  else
     let 
       val _ = debug_search "mc_node_find"
       val (pid,pripol) = mc_node_find 0 
