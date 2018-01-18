@@ -384,6 +384,8 @@ fun enum_type_to_tyinfo (ty, clist) = let
         induction = TypeBasePure.ORIG induction,
         case_def = case_def,
         case_cong = case_cong,
+        case_eq =
+          Prim_rec.prove_case_eq_thm{case_def = case_def, nchotomy = nchotomy},
         nchotomy = nchotomy,
         size = size,
         encode = NONE,

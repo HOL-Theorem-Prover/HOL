@@ -1,6 +1,6 @@
 \DOC RENAME_VARS_CONV
 
-\TYPE {Conv.RENAME_VARS_CONV : string list -> term -> thm}
+\TYPE {Conv.RENAME_VARS_CONV : string list -> conv}
 
 \SYNOPSIS
 Renames variables underneath a binder.

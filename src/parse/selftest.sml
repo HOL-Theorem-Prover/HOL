@@ -600,6 +600,26 @@ val _ = List.app pdtest [
 ]
 
 
+(* string find-replace *)
+local
+val theta = map (fn (a,b) => {redex = a, residue = b})
+                [("a", "xxx"), ("b", "zzzz"), ("abc", "y"), ("c", ""),
+                 ("ca", "uu"), ("cb", "vv")]
+val f = stringfindreplace.subst theta
+fun test (inp,out) =
+  let
+    val _ = tprint ("String find/replace "^inp^" = "^out)
+    val res = f inp
+  in
+    if res = out then OK()
+    else die ("FAILED - Got "^res)
+  end
+in
+val _ = List.app test [("abcd", "yd"), ("ab", "xxxzzzz"), ("c", ""),
+                       ("cab", "uuzzzz"), ("", ""), ("xyz", "xyz"),
+                       ("ccb", "vv")]
+end (* local *)
+
 (*
 
 full test including backgrounds

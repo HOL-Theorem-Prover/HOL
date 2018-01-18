@@ -38,7 +38,7 @@ and beqop = inst [alpha |->bool] equality;
 (*-----------------------------------------------------------------------*)
 
 local val [c1,c2,c3] = CONJUNCTS
-	(Tactical.prove((--`(~T = F) /\ (~F = T) /\ (!t. ~~t = t)`--),
+	(Tactical.prove(“(~T = F) /\ (~F = T) /\ (!t. ~~t = t)”,
 	       REWRITE_TAC[NOT_CLAUSES]))
 in
 fun NOT_CONV tm =

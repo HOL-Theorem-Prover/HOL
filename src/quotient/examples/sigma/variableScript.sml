@@ -89,7 +89,7 @@ val Index_def =
 
 val Base_Index = store_thm
    ("Base_Index",
-    (--`!x. VAR (Base x) (Index x) = x`--),
+    “!x. VAR (Base x) (Index x) = x”,
     Induct
     THEN REWRITE_TAC[Base_def,Index_def]
    );
@@ -99,7 +99,7 @@ val Base_Index = store_thm
 
 val VAR_EQ_IMP = store_thm
    ("VAR_EQ_IMP",
-    (--`!x y. (Base x = Base y) /\ (Index x = Index y) ==> (x = y)`--),
+    “!x y. (Base x = Base y) /\ (Index x = Index y) ==> (x = y)”,
     Induct
     THEN GEN_TAC THEN GEN_TAC
     THEN Induct
@@ -108,7 +108,7 @@ val VAR_EQ_IMP = store_thm
 
 val VAR_EQ = store_thm
    ("VAR_EQ",
-    (--`!x y. (x = y) = (Base x = Base y) /\ (Index x = Index y)`--),
+    “!x y. (x = y) = (Base x = Base y) /\ (Index x = Index y)”,
     GEN_TAC THEN GEN_TAC  THEN
     EQ_TAC  THENL
     [ DISCH_THEN REWRITE_THM,
@@ -134,35 +134,35 @@ val mk_variant_def =
 
 val Index_mk_variant = store_thm
    ("Index_mk_variant",
-    (--`!x k. Index(mk_variant x k) = Index x + k`--),
+    “!x k. Index(mk_variant x k) = Index x + k”,
     Induct  THEN
     REWRITE_TAC[mk_variant_def,Index_def]
    );
 
 val Base_mk_variant = store_thm
    ("Base_mk_variant",
-    (--`!x k. Base(mk_variant x k) = Base x`--),
+    “!x k. Base(mk_variant x k) = Base x”,
     Induct  THEN
     REWRITE_TAC[mk_variant_def,Base_def]
    );
 
 val mk_variant_ident = store_thm
    ("mk_variant_ident",
-    (--`!x k. (mk_variant x k = x) = (k = 0)`--),
+    “!x k. (mk_variant x k = x) = (k = 0)”,
     Induct
     THEN RW_TAC arith_ss [mk_variant_def]
    );
 
 val mk_variant_equal = store_thm
    ("mk_variant_equal",
-    (--`!x m n. (mk_variant x m = mk_variant x n) = (m = n)`--),
+    “!x m n. (mk_variant x m = mk_variant x n) = (m = n)”,
     Induct
     THEN RW_TAC arith_ss [mk_variant_def]
    );
 
 val mk_variant_compose = store_thm
    ("mk_variant_compose",
-    (--`!x m n. mk_variant (mk_variant x m) n = (mk_variant x (m+n))`--),
+    “!x m n. mk_variant (mk_variant x m) n = (mk_variant x (m+n))”,
     Induct
     THEN RW_TAC arith_ss [mk_variant_def]
    );
@@ -186,27 +186,27 @@ val _ = set_fixity "is_variant" (Infix(NONASSOC, 450))
 
 val is_variant_reflexive = store_thm
    ("is_variant_reflexive",
-    (--`!x. x is_variant x`--),
+    “!x. x is_variant x”,
     Induct
     THEN RW_TAC arith_ss [is_variant]
    );
 
 val mk_variant_is_variant = store_thm
    ("mk_variant_is_variant",
-    (--`!x k. (mk_variant x k) is_variant x`--),
+    “!x k. (mk_variant x k) is_variant x”,
     Induct
     THEN RW_TAC arith_ss [mk_variant_def,is_variant,Base_def,Index_def]
    );
 
 val is_variant_TRANS = store_thm
    ("is_variant_TRANS",
-    (--`!x y z. (z is_variant y) /\ (y is_variant x) ==> (z is_variant x)`--),
+    “!x y z. (z is_variant y) /\ (y is_variant x) ==> (z is_variant x)”,
     RW_TAC arith_ss [is_variant]
    );
 
 val is_variant_SOME_mk_variant = store_thm
    ("is_variant_SOME_mk_variant",
-    (--`!x y. y is_variant x = (?k. y = mk_variant x k)`--),
+    “!x y. y is_variant x = (?k. y = mk_variant x k)”,
     Induct
     THEN GEN_TAC THEN GEN_TAC
     THEN Induct
@@ -214,7 +214,7 @@ val is_variant_SOME_mk_variant = store_thm
     THEN EQ_TAC
     THENL
       [  STRIP_TAC
-         THEN EXISTS_TAC (--`n' - n`--)
+         THEN EXISTS_TAC “n' - n”
          THEN RW_TAC arith_ss [],
 
          STRIP_TAC
@@ -224,8 +224,8 @@ val is_variant_SOME_mk_variant = store_thm
 
 val is_variant_NOT_EQ = store_thm
    ("is_variant_NOT_EQ",
-    (--`!x y. (y is_variant x) /\ ~(x = y) ==>
-              (y is_variant mk_variant x 1)`--),
+    “!x y. (y is_variant x) /\ ~(x = y) ==>
+              (y is_variant mk_variant x 1)”,
     RW_TAC arith_ss [is_variant,Base_mk_variant,Index_mk_variant,VAR_EQ]
     THENL
       [  UNDISCH_LAST_TAC
@@ -250,24 +250,24 @@ fun new_prim_rec_definition (name,tm) =
 val variant_set =
     new_prim_rec_definition
     ("variant_set",
-      (--`(variant_set x 0       = EMPTY)  /\
+      “(variant_set x 0       = EMPTY)  /\
           (variant_set x (SUC k) = (mk_variant x k) INSERT
-                                       (variant_set x k))`--));
+                                       (variant_set x k))”);
 
 val IN_variant_set = store_thm
    ("IN_variant_set",
-    (--`!m x y. (y IN variant_set x m)
-           = (?n. (n < m) /\ (y = mk_variant x n))`--),
+    “!m x y. (y IN variant_set x m)
+           = (?n. (n < m) /\ (y = mk_variant x n))”,
     INDUCT_TAC
     THEN ASM_REWRITE_TAC[variant_set,IN,NOT_LESS_0,LESS_THM]
     THEN REPEAT STRIP_TAC
     THEN EQ_TAC
     THENL
        [ REPEAT STRIP_TAC  THENL
-         [ EXISTS_TAC (--`m:num`--)  THEN
+         [ EXISTS_TAC “m:num”  THEN
            ASM_REWRITE_TAC[],
 
-           EXISTS_TAC (--`n:num`--)  THEN
+           EXISTS_TAC “n:num”  THEN
            ASM_REWRITE_TAC[]
          ],
 
@@ -275,7 +275,7 @@ val IN_variant_set = store_thm
          [ ASM_REWRITE_TAC[],
 
            DISJ2_TAC  THEN
-           EXISTS_TAC (--`n:num`--)  THEN
+           EXISTS_TAC “n:num”  THEN
            ASM_REWRITE_TAC[]
          ]
       ]
@@ -284,7 +284,7 @@ val IN_variant_set = store_thm
 
 val FINITE_variant_set = store_thm
    ("FINITE_variant_set",
-    (--`!m x. FINITE (variant_set x m)`--),
+    “!m x. FINITE (variant_set x m)”,
     INDUCT_TAC
     THEN REWRITE_TAC[variant_set]
     THEN ASM_REWRITE_TAC[FINITE_EMPTY,FINITE_INSERT]
@@ -293,7 +293,7 @@ val FINITE_variant_set = store_thm
 
 val FINITE_SL = store_thm
    ("FINITE_SL",
-    (--`!l:('a)list. FINITE (SL l)`--),
+    “!l:('a)list. FINITE (SL l)”,
     LIST_INDUCT_TAC
     THEN REWRITE_TAC[SL]
     THEN ASM_REWRITE_TAC[FINITE_EMPTY,FINITE_INSERT]
@@ -302,7 +302,7 @@ val FINITE_SL = store_thm
 
 val CARD_variant_set = store_thm
    ("CARD_variant_set",
-    (--`!m x. CARD (variant_set x m) = m`--),
+    “!m x. CARD (variant_set x m) = m”,
     INDUCT_TAC
     THEN REWRITE_TAC[variant_set,CARD_DEF]
     THEN GEN_TAC
@@ -337,11 +337,11 @@ val CARD_variant_set = store_thm
 
 val variant_EXISTS =
     TAC_PROOF
-    (([], (--`!x s. ?y.
+    (([], “!x s. ?y.
               FINITE s ==>
               (y IN variant_set x (SUC(CARD s)) /\ ~(y IN s))
               /\ !z. z IN variant_set x (SUC(CARD s)) /\ ~(z IN s) ==>
-                     (Index y <= Index z)`--)),
+                     (Index y <= Index z)”),
      REWRITE_TAC[GSYM IN_DIFF]
      THEN CONV_TAC (ONCE_DEPTH_CONV EXISTS_IMP_CONV)
      THEN REWRITE_TAC[GSYM SET_MINIMUM]
@@ -399,7 +399,7 @@ end;
 
 val variant_in_variant_set = store_thm
    ("variant_in_variant_set",
-    (--`!x s. FINITE s ==> (variant x s) IN (variant_set x (SUC(CARD s)))`--),
+    “!x s. FINITE s ==> (variant x s) IN (variant_set x (SUC(CARD s)))”,
     REPEAT STRIP_TAC
     THEN IMP_RES_THEN REWRITE_THM variant
    );
@@ -407,7 +407,7 @@ val variant_in_variant_set = store_thm
 
 val variant_not_in_set = store_thm
    ("variant_not_in_set",
-    (--`!x s. FINITE s ==> ~(variant x s IN s)`--),
+    “!x s. FINITE s ==> ~(variant x s IN s)”,
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN IMP_RES_THEN REWRITE_THM variant
@@ -416,8 +416,8 @@ val variant_not_in_set = store_thm
 
 val variant_minimum = store_thm
    ("variant_minimum",
-    (--`!x s y. FINITE s /\ y IN (variant_set x (SUC(CARD s))) /\ ~(y IN s) ==>
-                     (Index(variant x s)) <= (Index y)`--),
+    “!x s y. FINITE s /\ y IN (variant_set x (SUC(CARD s))) /\ ~(y IN s) ==>
+                     (Index(variant x s)) <= (Index y)”,
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN IMP_RES_TAC variant
@@ -427,7 +427,7 @@ val variant_minimum = store_thm
 
 val variant_not_in_subset = store_thm
    ("variant_not_in_subset",
-    (--`!x s t. FINITE s /\ t SUBSET s ==> ~(variant x s IN t)`--),
+    “!x s t. FINITE s /\ t SUBSET s ==> ~(variant x s IN t)”,
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN IMP_RES_THEN (ASSUME_TAC o SPEC_ALL) variant_not_in_set
@@ -436,7 +436,7 @@ val variant_not_in_subset = store_thm
 
 val variant_is_variant = store_thm
    ("variant_is_variant",
-    (--`!x s. FINITE s ==> (variant x s) is_variant x`--),
+    “!x s. FINITE s ==> (variant x s) is_variant x”,
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC_ALL)
@@ -452,11 +452,11 @@ val variant_is_variant = store_thm
 
 val variant_DEF = store_thm
    ("variant_DEF",
-    (--`!x s.
+    “!x s.
               FINITE s ==>
               ((variant x s) is_variant x /\ ~((variant x s) IN s))
               /\ !z. z is_variant x /\ ~(z IN s) ==>
-                     (Index (variant x s) <= Index z)`--),
+                     (Index (variant x s) <= Index z)”,
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN IMP_RES_THEN REWRITE_THM variant
@@ -466,12 +466,12 @@ val variant_DEF = store_thm
                       variant_in_variant_set
     THEN REWRITE_TAC[is_variant_SOME_mk_variant]
     THEN REPEAT STRIP_TAC
-    THEN DISJ_CASES_TAC (SPECL [(--`k:num`--),
-                                (--`SUC(CARD (s:var -> bool))`--)] LESS_CASES)
+    THEN DISJ_CASES_TAC (SPECL [“k:num”,
+                                “SUC(CARD (s:var -> bool))”] LESS_CASES)
     THENL
       [  MATCH_MP_TAC variant_minimum
          THEN ASM_REWRITE_TAC[IN_variant_set]
-         THEN EXISTS_TAC (--`k:num`--)
+         THEN EXISTS_TAC “k:num”
          THEN ASM_REWRITE_TAC[],
 
          ASM_REWRITE_TAC[Index_mk_variant]
@@ -485,8 +485,8 @@ val variant_DEF = store_thm
 
 val variant_minimum_DEF = store_thm
    ("variant_minimum_DEF",
-    (--`!x s y. FINITE s /\ y is_variant x /\ ~(y IN s) ==>
-                     (Index(variant x s) <= Index y)`--),
+    “!x s y. FINITE s /\ y is_variant x /\ ~(y IN s) ==>
+                     (Index(variant x s) <= Index y)”,
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC variant_DEF
    );
@@ -494,7 +494,7 @@ val variant_minimum_DEF = store_thm
 
 val variant_is_variant = store_thm
    ("variant_is_variant",
-    (--`!x s. FINITE s ==> (variant x s) is_variant x`--),
+    “!x s. FINITE s ==> (variant x s) is_variant x”,
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC_ALL)
@@ -519,7 +519,7 @@ val variant_is_variant = store_thm
 
 val Base_variant = store_thm
    ("Base_variant",
-    (--`!x s. FINITE s ==> (Base (variant x s) = Base x)`--),
+    “!x s. FINITE s ==> (Base (variant x s) = Base x)”,
     REPEAT STRIP_TAC
     THEN IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC_ALL)
                (REWRITE_RULE[is_variant] variant_is_variant)
@@ -527,7 +527,7 @@ val Base_variant = store_thm
 
 val Index_variant = store_thm
    ("Index_variant",
-    (--`!x s. FINITE s ==> Index x <= Index (variant x s)`--),
+    “!x s. FINITE s ==> Index x <= Index (variant x s)”,
     REPEAT STRIP_TAC
     THEN IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC_ALL)
                (REWRITE_RULE[is_variant] variant_is_variant)
@@ -536,7 +536,7 @@ val Index_variant = store_thm
 
 val variant_EMPTY = store_thm
    ("variant_EMPTY",
-    (--`!x. variant x EMPTY = x`--),
+    “!x. variant x EMPTY = x”,
     GEN_TAC
     THEN ASSUME_TAC (INST_TYPE[==`:'a`== |-> ==`:var`==] FINITE_EMPTY)
     THEN IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC_ALL)
@@ -548,7 +548,7 @@ val variant_EMPTY = store_thm
     THEN ASM_REWRITE_TAC[]
     THEN MATCH_MP_TAC variant_minimum
     THEN REWRITE_TAC[IN_variant_set,FINITE_EMPTY,IN]
-    THEN EXISTS_TAC (--`0`--)
+    THEN EXISTS_TAC “0”
     THEN REWRITE_TAC[LESS_0]
     THEN ONCE_REWRITE_TAC[EQ_SYM_EQ]
     THEN REWRITE_TAC[mk_variant_ident]
@@ -557,7 +557,7 @@ val variant_EMPTY = store_thm
 
 val LESS_EQ_NOT_EQ = store_thm
    ("LESS_EQ_NOT_EQ",
-    (--`!m n. m <= n /\ ~(m = n) ==> (m+1) <= n`--),
+    “!m n. m <= n /\ ~(m = n) ==> (m+1) <= n”,
     REWRITE_TAC[SYM(SPEC_ALL ADD1),SYM(SPEC_ALL LESS_EQ)]
     THEN REWRITE_TAC[LESS_OR_EQ]
     THEN REPEAT GEN_TAC
@@ -568,20 +568,20 @@ val LESS_EQ_NOT_EQ = store_thm
 
 val SET_IN_OUT =
     TAC_PROOF
-    (([], (--`!(x:'a) y s. (x IN s) /\ ~(y IN s) ==> ~(x = y)`--)),
+    (([], “!(x:'a) y s. (x IN s) /\ ~(y IN s) ==> ~(x = y)”),
      REPEAT STRIP_TAC
-     THEN UNDISCH_TAC (--`(x:'a) IN s`--)
+     THEN UNDISCH_TAC “(x:'a) IN s”
      THEN ASM_REWRITE_TAC[]
     );
 
 
 val variant_not_ident = store_thm
    ("variant_not_ident",
-    (--`!x s. FINITE s /\ (x IN s) ==> ~(x = variant x s)`--),
+    “!x s. FINITE s /\ (x IN s) ==> ~(x = variant x s)”,
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN MATCH_MP_TAC SET_IN_OUT
-    THEN EXISTS_TAC (--`s:var -> bool`--)
+    THEN EXISTS_TAC “s:var -> bool”
     THEN ASM_REWRITE_TAC[]
     THEN MATCH_MP_TAC variant_not_in_set
     THEN ASM_REWRITE_TAC[]
@@ -590,7 +590,7 @@ val variant_not_ident = store_thm
 
 val Index_variant_not_ident = store_thm
    ("Index_variant_not_ident",
-    (--`!x s. FINITE s /\ (x IN s) ==> ~(Index x = Index (variant x s))`--),
+    “!x s. FINITE s /\ (x IN s) ==> ~(Index x = Index (variant x s))”,
     REPEAT STRIP_TAC
     THEN IMP_RES_THEN (ASSUME_TAC o SYM o SPEC_ALL) Base_variant
     THEN IMP_RES_TAC VAR_EQ
@@ -599,17 +599,17 @@ val Index_variant_not_ident = store_thm
 
 val variant_mk_variant_is_variant = store_thm
    ("variant_mk_variant_is_variant",
-    (--`!x k s. FINITE s ==> (variant (mk_variant x k) s) is_variant x`--),
+    “!x k s. FINITE s ==> (variant (mk_variant x k) s) is_variant x”,
     REPEAT STRIP_TAC
     THEN MATCH_MP_TAC is_variant_TRANS
-    THEN EXISTS_TAC (--`mk_variant x k`--)
+    THEN EXISTS_TAC “mk_variant x k”
     THEN IMP_RES_TAC variant_is_variant
     THEN ASM_REWRITE_TAC[mk_variant_is_variant]
    );
 
 val variant_mk_variant_not_ident = store_thm
    ("variant_mk_variant_not_ident",
-    (--`!x s. FINITE s ==> ~(variant (mk_variant x 1) s = x)`--),
+    “!x s. FINITE s ==> ~(variant (mk_variant x 1) s = x)”,
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN ONCE_REWRITE_TAC[SYM(SPEC_ALL Base_Index)]
@@ -626,8 +626,8 @@ val variant_mk_variant_not_ident = store_thm
 
 val variant_THM = store_thm
    ("variant_THM",
-    (--`!x s. FINITE s ==>
-              (variant x s = (if x IN s then variant (mk_variant x 1) s  else  x))`--),
+    “!x s. FINITE s ==>
+              (variant x s = (if x IN s then variant (mk_variant x 1) s  else  x))”,
     REPEAT STRIP_TAC
     THEN COND_CASES_TAC
     THEN MATCH_MP_TAC VAR_EQ_IMP
@@ -661,7 +661,7 @@ val variant_THM = store_thm
 val variant_ident =
  store_thm
   ("variant_ident",
-   (--`!x s. FINITE s /\ ~(x IN s) ==> (variant x s = x)`--),
+   “!x s. FINITE s /\ ~(x IN s) ==> (variant x s = x)”,
     REPEAT STRIP_TAC THEN
     IMP_RES_THEN ONCE_REWRITE_THM variant_THM THEN
     ASM_REWRITE_TAC[]
@@ -671,7 +671,7 @@ val variant_ident =
 val variant_DELETE =
  store_thm
   ("variant_DELETE",
-   (--`!x s. FINITE s ==> (variant x (s DELETE x) = x)`--),
+   “!x s. FINITE s ==> (variant x (s DELETE x) = x)”,
     REPEAT STRIP_TAC THEN
     MATCH_MP_TAC variant_ident THEN
     ASM_REWRITE_TAC[FINITE_DELETE,IN_DELETE]
@@ -681,10 +681,10 @@ val variant_DELETE =
 val variant_increment =
  store_thm
   ("variant_increment",
-   (--`!x s.
-      FINITE s /\ (x IN s) ==> (variant x s = variant (mk_variant x 1) s)`--),
+   “!x s.
+      FINITE s /\ (x IN s) ==> (variant x s = variant (mk_variant x 1) s)”,
    REPEAT STRIP_TAC
-   THEN IMP_RES_THEN (ASSUME_TAC o SPEC (--`x:var`--)) variant_THM
+   THEN IMP_RES_THEN (ASSUME_TAC o SPEC “x:var”) variant_THM
    THEN ASM_REWRITE_TAC[]
   );
 
@@ -703,28 +703,28 @@ fun new_list_rec_def name tm =
 
 val variants =
     new_list_rec_def "variants"
-      (--`(variants NIL s  =  NIL)  /\
+      “(variants NIL s  =  NIL)  /\
           (variants (CONS x xs) s  =
                (let x' = variant x s in
-                  (CONS x' (variants xs (x' INSERT s)))))`--);
+                  (CONS x' (variants xs (x' INSERT s)))))”;
 
 (* Alternative definition of variants:
 
 val variants =
     new_list_rec_def "variants"
-      (--`(variants NIL s  =  NIL)  /\
+      “(variants NIL s  =  NIL)  /\
           (variants (CONS x xs) s  =
                (let xs' = variants xs s in
-                  (CONS (variant x (SL xs' UNION s)) xs')))`--);
+                  (CONS (variant x (SL xs' UNION s)) xs')))”;
 *)
 
 
 val variants_THM =
  store_thm
   ("variants_THM",
-   (--`(variants NIL s  =  NIL)  /\
+   “(variants NIL s  =  NIL)  /\
     (variants (CONS x xs) s  =
-         (CONS (variant x s) (variants xs ((variant x s) INSERT s))))`--),
+         (CONS (variant x s) (variants xs ((variant x s) INSERT s))))”,
    REWRITE_TAC[variants]
    THEN CONV_TAC (DEPTH_CONV let_CONV)
    THEN REFL_TAC
@@ -734,7 +734,7 @@ val variants_THM =
 val NOT_IN_variants_INSERT =
  store_thm
   ("NOT_IN_variants_INSERT",
-   (--`!xs y s. FINITE s ==> ~(y IN SL (variants xs (y INSERT s)))`--),
+   “!xs y s. FINITE s ==> ~(y IN SL (variants xs (y INSERT s)))”,
    LIST_INDUCT_TAC
    THEN REWRITE_TAC[variants_THM,SL,IN,DE_MORGAN_THM]
    THEN REPEAT GEN_TAC
@@ -742,7 +742,7 @@ val NOT_IN_variants_INSERT =
    THEN STRIP_TAC
    THENL
      [  MATCH_MP_TAC IN_NOT_IN
-        THEN EXISTS_TAC (--`(y:var) INSERT s`--)
+        THEN EXISTS_TAC “(y:var) INSERT s”
         THEN REWRITE_TAC[COMPONENT]
         THEN MATCH_MP_TAC variant_not_in_set
         THEN ASM_REWRITE_TAC[FINITE_INSERT],
@@ -757,9 +757,9 @@ val NOT_IN_variants_INSERT =
 val variants_APPEND =
  store_thm
   ("variants_APPEND",
-   (--`!x y s.
+   “!x y s.
         variants (APPEND x y) s  =
-        APPEND (variants x s) (variants y (SL(variants x s) UNION s))`--),
+        APPEND (variants x s) (variants y (SL(variants x s) UNION s))”,
    LIST_INDUCT_TAC
    THEN REWRITE_TAC[variants_THM,SL,APPEND,UNION]
    THEN REPEAT STRIP_TAC
@@ -772,13 +772,13 @@ val variants_APPEND =
 val DISJOINT_variants =
  store_thm
   ("DISJOINT_variants",
-   (--`!x s. FINITE s ==> (DISJOINT (SL (variants x s)) s)`--),
+   “!x s. FINITE s ==> (DISJOINT (SL (variants x s)) s)”,
    LIST_INDUCT_TAC
    THEN REWRITE_TAC[variants_THM,SL,DISJOINT_EMPTY,DISJOINT_INSERT]
    THEN REPEAT GEN_TAC
    THEN DISCH_TAC
    THEN IMP_RES_THEN REWRITE_THM variant_not_in_set
-   THEN FIRST_ASSUM (MP_TAC o SPEC (--`(variant x' s) INSERT s`--))
+   THEN FIRST_ASSUM (MP_TAC o SPEC “(variant x' s) INSERT s”)
    THEN ONCE_REWRITE_TAC[DISJOINT_SYM]
    THEN ASM_REWRITE_TAC[DISJOINT_INSERT,FINITE_INSERT]
    THEN DISCH_THEN REWRITE_THM
@@ -787,7 +787,7 @@ val DISJOINT_variants =
 val DISJOINT_variants_SL =
  store_thm
   ("DISJOINT_variants_SL",
-   (--`!x l. DISJOINT (SL (variants x (SL l))) (SL l)`--),
+   “!x l. DISJOINT (SL (variants x (SL l))) (SL l)”,
    REPEAT STRIP_TAC
    THEN MATCH_MP_TAC DISJOINT_variants
    THEN REWRITE_TAC[FINITE_SL]
@@ -798,7 +798,7 @@ val DISJOINT_variants_SL =
 val DL_variants =
  store_thm
   ("DL_variants",
-   (--`!x s. FINITE s ==> DL (variants x s)`--),
+   “!x s. FINITE s ==> DL (variants x s)”,
    LIST_INDUCT_TAC
    THEN REWRITE_TAC[variants_THM,DL]
    THEN REPEAT GEN_TAC
@@ -811,7 +811,7 @@ val DL_variants =
 val DL_variants_SL =
  store_thm
   ("DL_variants_SL",
-   (--`!x l. DL (variants x (SL l))`--),
+   “!x l. DL (variants x (SL l))”,
    REPEAT STRIP_TAC
    THEN MATCH_MP_TAC DL_variants
    THEN REWRITE_TAC[FINITE_SL]
@@ -821,7 +821,7 @@ val DL_variants_SL =
 val LENGTH_variants =
  store_thm
   ("LENGTH_variants",
-   (--`!x s. LENGTH (variants x s) = LENGTH x`--),
+   “!x s. LENGTH (variants x s) = LENGTH x”,
    LIST_INDUCT_TAC
    THEN ASM_REWRITE_TAC[variants_THM,LENGTH]
   );
@@ -830,7 +830,7 @@ val LENGTH_variants =
 val NOT_IN_variants =
  store_thm
   ("NOT_IN_variants",
-   (--`!x y s. FINITE s /\ y IN s ==> ~(y IN SL (variants x s))`--),
+   “!x y s. FINITE s /\ y IN s ==> ~(y IN SL (variants x s))”,
    REPEAT GEN_TAC THEN STRIP_TAC
    THEN IMP_RES_THEN (ASSUME_TAC o SPEC_ALL) DISJOINT_variants
    THEN IMP_RES_TAC IN_DISJOINT_IMP
@@ -840,13 +840,13 @@ val NOT_IN_variants =
 val DISJOINT_variants_UNION =
  store_thm
   ("DISJOINT_variants_UNION",
-   (--`!x s t.
+   “!x s t.
      FINITE s /\ FINITE t ==>
      DISJOINT (SL(variants x (s UNION t))) s /\
-     DISJOINT (SL(variants x (s UNION t))) t`--),
+     DISJOINT (SL(variants x (s UNION t))) t”,
    REPEAT GEN_TAC
    THEN STRIP_TAC
-   THEN (MP_TAC o SPECL[(--`x:(var)list`--),(--`(s:(var)-> bool) UNION t`--)])
+   THEN (MP_TAC o SPECL[“x:(var)list”,“(s:(var)-> bool) UNION t”])
              DISJOINT_variants
    THEN ASM_REWRITE_TAC[FINITE_UNION]
    THEN ONCE_REWRITE_TAC[DISJOINT_SYM]
@@ -857,9 +857,9 @@ val DISJOINT_variants_UNION =
 val DISJOINT_variants_APPEND =
  store_thm
   ("DISJOINT_variants_APPEND",
-    (--`!x a b.
+    “!x a b.
      DISJOINT (SL (variants x (SL (APPEND a b)))) (SL a) /\
-     DISJOINT (SL (variants x (SL (APPEND a b)))) (SL b) `--),
+     DISJOINT (SL (variants x (SL (APPEND a b)))) (SL b) ”,
    REPEAT GEN_TAC
    THEN REWRITE_TAC[SL_APPEND]
    THEN MATCH_MP_TAC DISJOINT_variants_UNION
@@ -870,9 +870,9 @@ val DISJOINT_variants_APPEND =
 val DISJOINT_variants_UNION1 =
  store_thm
   ("DISJOINT_variants_UNION1",
-    (--`!x s t.
+    “!x s t.
          FINITE s /\ FINITE t ==>
-         DISJOINT (SL (variants x (s UNION t))) s`--),
+         DISJOINT (SL (variants x (s UNION t))) s”,
    REPEAT STRIP_TAC
    THEN IMP_RES_TAC DISJOINT_variants_UNION
    THEN ASM_REWRITE_TAC[]
@@ -882,9 +882,9 @@ val DISJOINT_variants_UNION1 =
 val DISJOINT_variants_UNION2 =
  store_thm
   ("DISJOINT_variants_UNION2",
-    (--`!x s t.
+    “!x s t.
          FINITE s /\ FINITE t ==>
-         DISJOINT (SL (variants x (s UNION t))) t`--),
+         DISJOINT (SL (variants x (s UNION t))) t”,
    REPEAT STRIP_TAC
    THEN IMP_RES_TAC DISJOINT_variants_UNION
    THEN ASM_REWRITE_TAC[]
@@ -894,14 +894,14 @@ val DISJOINT_variants_UNION2 =
 val DISJOINT_variants_UNION3 =
  store_thm
   ("DISJOINT_variants_UNION3",
-    (--`!x s t u.
+    “!x s t u.
       FINITE s /\ FINITE t /\ FINITE u ==>
       DISJOINT (SL(variants x (s UNION (t UNION u)))) s /\
       DISJOINT (SL(variants x (s UNION (t UNION u)))) t /\
       DISJOINT (SL(variants x (s UNION (t UNION u)))) u /\
       DISJOINT s (SL(variants x (s UNION (t UNION u)))) /\
       DISJOINT t (SL(variants x (s UNION (t UNION u)))) /\
-      DISJOINT u (SL(variants x (s UNION (t UNION u))))`--),
+      DISJOINT u (SL(variants x (s UNION (t UNION u))))”,
    REPEAT GEN_TAC
    THEN REWRITE_TAC[(SYM o SPEC_ALL) FINITE_UNION]
    THEN DISCH_THEN (MP_TAC o SPEC_ALL o MATCH_MP DISJOINT_variants)
@@ -916,9 +916,9 @@ val DISJOINT_variants_UNION3 =
 val DISJOINT_variants_UNION_LEFT_1 =
  store_thm
   ("DISJOINT_variants_UNION_LEFT_1",
-    (--`!x s t u.
+    “!x s t u.
       FINITE s /\ FINITE t /\ FINITE u ==>
-      DISJOINT (SL(variants x (s UNION (t UNION u)))) s`--),
+      DISJOINT (SL(variants x (s UNION (t UNION u)))) s”,
    REPEAT GEN_TAC
    THEN REWRITE_TAC[(SYM o SPEC_ALL) FINITE_UNION]
    THEN DISCH_THEN (MP_TAC o SPEC_ALL o MATCH_MP DISJOINT_variants)
@@ -930,9 +930,9 @@ val DISJOINT_variants_UNION_LEFT_1 =
 val DISJOINT_variants_UNION_LEFT_2 =
  store_thm
   ("DISJOINT_variants_UNION_LEFT_2",
-    (--`!x s t u.
+    “!x s t u.
       FINITE s /\ FINITE t /\ FINITE u ==>
-      DISJOINT (SL(variants x (s UNION (t UNION u)))) t`--),
+      DISJOINT (SL(variants x (s UNION (t UNION u)))) t”,
    REPEAT GEN_TAC
    THEN REWRITE_TAC[(SYM o SPEC_ALL) FINITE_UNION]
    THEN DISCH_THEN (MP_TAC o SPEC_ALL o MATCH_MP DISJOINT_variants)
@@ -944,9 +944,9 @@ val DISJOINT_variants_UNION_LEFT_2 =
 val DISJOINT_variants_UNION_LEFT_3 =
  store_thm
   ("DISJOINT_variants_UNION_LEFT_3",
-    (--`!x s t u.
+    “!x s t u.
       FINITE s /\ FINITE t /\ FINITE u ==>
-      DISJOINT (SL(variants x (s UNION (t UNION u)))) u`--),
+      DISJOINT (SL(variants x (s UNION (t UNION u)))) u”,
    REPEAT GEN_TAC
    THEN REWRITE_TAC[(SYM o SPEC_ALL) FINITE_UNION]
    THEN DISCH_THEN (MP_TAC o SPEC_ALL o MATCH_MP DISJOINT_variants)
@@ -958,9 +958,9 @@ val DISJOINT_variants_UNION_LEFT_3 =
 val DISJOINT_variants_UNION_RIGHT_1 =
  store_thm
   ("DISJOINT_variants_UNION_RIGHT_1",
-    (--`!x s t u.
+    “!x s t u.
       FINITE s /\ FINITE t /\ FINITE u ==>
-      DISJOINT s (SL(variants x (s UNION (t UNION u))))`--),
+      DISJOINT s (SL(variants x (s UNION (t UNION u))))”,
    REPEAT GEN_TAC
    THEN REWRITE_TAC[(SYM o SPEC_ALL) FINITE_UNION]
    THEN DISCH_THEN (MP_TAC o SPEC_ALL o MATCH_MP DISJOINT_variants)
@@ -974,9 +974,9 @@ val DISJOINT_variants_UNION_RIGHT_1 =
 val DISJOINT_variants_UNION_RIGHT_2 =
  store_thm
   ("DISJOINT_variants_UNION_RIGHT_2",
-    (--`!x s t u.
+    “!x s t u.
       FINITE s /\ FINITE t /\ FINITE u ==>
-      DISJOINT t (SL(variants x (s UNION (t UNION u))))`--),
+      DISJOINT t (SL(variants x (s UNION (t UNION u))))”,
    REPEAT GEN_TAC
    THEN REWRITE_TAC[(SYM o SPEC_ALL) FINITE_UNION]
    THEN DISCH_THEN (MP_TAC o SPEC_ALL o MATCH_MP DISJOINT_variants)
@@ -990,9 +990,9 @@ val DISJOINT_variants_UNION_RIGHT_2 =
 val DISJOINT_variants_UNION_RIGHT_3 =
  store_thm
   ("DISJOINT_variants_UNION_RIGHT_3",
-    (--`!x s t u.
+    “!x s t u.
       FINITE s /\ FINITE t /\ FINITE u ==>
-      DISJOINT u (SL(variants x (s UNION (t UNION u))))`--),
+      DISJOINT u (SL(variants x (s UNION (t UNION u))))”,
    REPEAT GEN_TAC
    THEN REWRITE_TAC[(SYM o SPEC_ALL) FINITE_UNION]
    THEN DISCH_THEN (MP_TAC o SPEC_ALL o MATCH_MP DISJOINT_variants)

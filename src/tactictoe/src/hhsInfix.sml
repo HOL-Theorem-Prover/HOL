@@ -30,7 +30,7 @@ infixr 7 hhs_infixr7_open hhs_infixr7_close
 infixr 8 hhs_infixr8_open hhs_infixr8_close
 infixr 9 hhs_infixr9_open hhs_infixr9_close
 
-fun a hhs_infixl0_open f = fn x => f (a,x)
+fun a hhs_infixl0_open f = fn x => f (a,x)  
 fun g hhs_infixl0_close b = g b
 
 fun f hhs_infixr0_close b = fn x => f (x,b)
@@ -88,12 +88,29 @@ fun infix_pair infixity = case infixity of
 
 (*----------------------------------------------------------------------------
   Infixity from Overlay.sml. To add to the README to keep up-to-date.
+  
+  infix ++ && |-> THEN THENL THEN_LT THENC ORELSE ORELSE_LT ORELSEC
+  THEN_TCL ORELSE_TCL ?> |>
+infix THEN1
+
+(* infixes for THEN shorthands *)
+infix >> >- >| \\ >>> >>- ??
+
+infixr ## $;
+infixr 3 -->;
+infix 8 via by suffices_by
+  
   ----------------------------------------------------------------------------*)
 
+(* becareful to escape \\ to \\\\ in the following list *)
 val l0 = String.tokens Char.isSpace
-  ("++ && |-> THEN THEN1 THENL THEN_LT THENC ORELSE ORELSE_LT ORELSEC " ^
-  "THEN_TCL ORELSE_TCL ?> |> " ^
-  ">> >- >| \\\\ >>>")
+  (
+  String.concatWith " "
+  ["++ && |-> THEN THENL THEN_LT THENC ORELSE ORELSE_LT ORELSEC",
+   "THEN_TCL ORELSE_TCL ?> |>",
+   "THEN1",
+   ">> >- >| \\\\ >>> >>- ??"]
+  )
 val l1 = String.tokens Char.isSpace "## $"
 val l2 = String.tokens Char.isSpace "via by suffices_by"
 
@@ -102,5 +119,8 @@ val overlay_infixity =
   map (fn x => (x,Inf_right 0)) l1 @
   map (fn x => (x,Inf_right 3)) ["-->"] @
   map (fn x => (x,Inf_left 8)) l2
+
+
+
 
 end

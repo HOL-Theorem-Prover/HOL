@@ -452,8 +452,9 @@ fun pp_thm ppstrm th =
                   add_break(1,0);
                   pp_terms sa asl; add_break(1,0)
                  );
-            add_string "|- ";
-            pp_term (concl th)
+            add_string (!Globals.thm_pp_prefix);
+            pp_term (concl th);
+            add_string (!Globals.thm_pp_suffix)
          end;
     end_block()
  end;
@@ -481,8 +482,6 @@ val absyn_to_term =
  ---------------------------------------------------------------------------*)
 
 fun Term q = absyn_to_term (term_grammar()) (Absyn q)
-
-fun -- q x = Term q;
 
 fun typedTerm qtm ty =
    let fun trail s = [QUOTE (s^"):"), ANTIQUOTE(ty_antiq ty), QUOTE""]
@@ -939,6 +938,11 @@ end
 val temp_add_numeral_form = mk_temp add_numeral_form0
 val add_numeral_form = mk_perm add_numeral_form0
 
+(* to print a term using current grammars,
+  but with "non-trivial" overloads deleted *)
+fun print_without_macros tm = 
+  let val (tyG, tmG) = current_grammars () ;
+  in print_term_by_grammar (tyG, term_grammar.clear_overloads tmG) tm end ;
 
 (*---------------------------------------------------------------------------
      Visibility of identifiers
@@ -1012,6 +1016,18 @@ end;
 (*----------------------------------------------------------------------
   User changes to the printer and parser
   ----------------------------------------------------------------------*)
+
+fun constant_string_printer s : term_grammar.userprinter =
+  let
+    fun result (tyg, tmg) _ _ ppfns (pgr,lgr,rgr) depth tm =
+      let
+        val {add_string,...} = ppfns
+      in
+        add_string s
+      end
+  in
+    result
+  end
 
 fun temp_add_user_printer (name, pattern, pfn) = let
 in

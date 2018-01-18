@@ -4,22 +4,42 @@ sig
   include Abbrev
   
   type lbl_t = (string * real * goal * goal list)
-  type fea_t = string list
+  type fea_t = int list
   type feav_t = (lbl_t * fea_t)
   
-  val learn_tfidf : ('a * string list) list -> (string, real) Redblackmap.dict
+  (* tfidf *)
+  val learn_tfidf : ('a * int list) list -> (int, real) Redblackmap.dict
 
-  val stacknn:
-    (string, real) Redblackmap.dict -> int ->  feav_t list -> fea_t -> 
-    (lbl_t * real) list
-    
-  val thmknn:
-    (string, real) Redblackmap.dict -> int -> (string * fea_t) list -> fea_t -> 
-    (string * real) list   
-
-  val stacknn_ext : int -> feav_t list -> fea_t -> feav_t list
+  (* term *)
+  val closest_subterm: goal -> term -> term
   
-  val thmknn_ext :
-    int -> (string * fea_t * string list) list -> fea_t -> string list
+  (* tactic *)
+  val stacknn:
+    (int, real) Redblackmap.dict -> int -> feav_t list -> fea_t -> lbl_t list
+
+  val stacknn_uniq:
+    (int, real) Redblackmap.dict -> int -> feav_t list -> fea_t -> lbl_t list
+
+  val add_stacdesc: 
+    (goal, lbl_t list) Redblackmap.dict -> int -> lbl_t list -> lbl_t list
+        
+  (* thm *)
+  val metis_trivial : real -> goal -> bool
+  
+  val all_thmfeav : unit -> 
+    ((int, real) Redblackmap.dict * (string * fea_t) list)
+  
+  val thmknn:
+    (int, real) Redblackmap.dict -> int -> (string * fea_t) list -> fea_t -> string list   
+  
+  val thmknn_std: int -> goal -> string list
+  
+  val thmknn_wdep: 
+   (int, real) Redblackmap.dict -> int -> (string * fea_t) list -> fea_t -> string list
+  
+  (* goal *)
+  val mcknn : 
+    (int, real) Redblackmap.dict -> int -> ((bool * int) * int list) list -> 
+    int list -> real
 
 end

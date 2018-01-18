@@ -70,9 +70,9 @@ quietdec := false;
 
   fun findMatches ([], l2) = []
     | findMatches (a::l1, l2) =
-	 let val l1' = filter (fn e => not (eq_sym_aconv e a)) l1;
+         let val l1' = filter (fn e => not (eq_sym_aconv e a)) l1;
              val l2' = filter (fn e => not (eq_sym_aconv e a)) l2;
-	     val l = (findMatches (l1',l2')); in
+             val l = (findMatches (l1',l2')); in
          if eq_sym_mem a l2 then a::l else l end;
 
   fun find_negation_pair [] = NONE |
@@ -83,7 +83,7 @@ quietdec := false;
 
   fun dest_quant t = dest_abs (snd (dest_comb t));
   fun is_quant t = is_forall t orelse is_exists t orelse
-		 is_exists1 t;
+                 is_exists1 t;
 
 
   fun findMatches___multiple (l1:(term * bool) list,l2:(term * bool) list) =
@@ -106,42 +106,42 @@ quietdec := false;
    *)
   fun get_impl_terms___multiple t =
       if is_disj t then
-	  (let val (t1,t2)=dest_disj t;
+          (let val (t1,t2)=dest_disj t;
                val (l11,l12)= get_impl_terms___multiple t1;
                val (l21,l22)= get_impl_terms___multiple t2;
-	   in
+           in
               ((t,false)::(l11 @ l21), (t,false)::findMatches___multiple (l12, l22))
            end)
       else
       if is_conj t then
-	  (let val (t1,t2)=dest_conj t;
+          (let val (t1,t2)=dest_conj t;
                val (l11,l12)= get_impl_terms___multiple t1;
                val (l21,l22)= get_impl_terms___multiple t2;
-	   in
+           in
               ((t,false)::findMatches___multiple (l11, l21), (t,false)::(l12 @ l22))
            end)
       else
       if is_neg t then
-	  (let val (l1,l2) = get_impl_terms___multiple (dest_neg t) in
-	      (map (fn (t,b) => (mk_neg___idempot t, b)) l2, map (fn (t,b) => (mk_neg___idempot t, b)) l1)
+          (let val (l1,l2) = get_impl_terms___multiple (dest_neg t) in
+              (map (fn (t,b) => (mk_neg___idempot t, b)) l2, map (fn (t,b) => (mk_neg___idempot t, b)) l1)
           end)
       else
       if is_imp t then
-	  (let val (t1,t2)=dest_imp_only t;
+          (let val (t1,t2)=dest_imp_only t;
                val (l11',l12')= get_impl_terms___multiple t1;
                val (l11, l12) = (map (fn (t,b) => (mk_neg___idempot t, b)) l12',
                                  map (fn (t,b) => (mk_neg___idempot t, b)) l11')
                val (l21,l22)= get_impl_terms___multiple t2;
-	   in
+           in
               ((t,false)::(l11 @ l21), (t,false)::findMatches___multiple (l12, l22))
            end)
       else
       if is_quant t then
           (let
-	      val (v, b) = dest_quant t;
-	      val (l1,l2) = get_impl_terms___multiple b;
-	      fun filter_pred (t,b) = not (mem v (free_vars t));
-	  in
+              val (v, b) = dest_quant t;
+              val (l1,l2) = get_impl_terms___multiple b;
+              fun filter_pred (t,b) = not (mem v (free_vars t));
+          in
               ((t,false)::(filter filter_pred l1), (t,false)::(filter filter_pred l2))
           end)
       else
@@ -188,7 +188,7 @@ fun case_split_REWRITE_CONV [] t =
           val r = rhs (concl thm);
        in
           if (r = T) then thm else
-	  TRANS thm (case_split_REWRITE_CONV matches r)
+          TRANS thm (case_split_REWRITE_CONV matches r)
        end;
 
        val m_no_neg = fst (strip_neg m);
@@ -233,10 +233,10 @@ fun bool_extract_common_terms_internal_CONV disj matches t =
 
 
       val goal_term = if (disj) then
-			  if conc_term = T then T else
+                          if conc_term = T then T else
                              list_mk_disj (conc_term::matches)
-		      else
-			  if conc_term = F then F else
+                      else
+                          if conc_term = F then F else
                              list_mk_conj (conc_term::matches)
 
       val _ = if (t = goal_term) then raise UNCHANGED else ();
@@ -261,9 +261,9 @@ fun clean_disj_matches [] acc = acc
     let
        val (disj_imp,_) = get_impl_terms t;
        val acc' = if (null_intersection disj_imp (ts@acc)) then
-		     t::acc
+                     t::acc
                   else
-		     acc;
+                     acc;
     in
        clean_disj_matches ts acc'
     end;
@@ -274,9 +274,9 @@ fun clean_conj_matches [] acc = acc
     let
        val (_, conj_imp) = get_impl_terms t;
        val acc' = if (null_intersection conj_imp (ts@acc)) then
-		     t::acc
+                     t::acc
                   else
-		     acc;
+                     acc;
     in
        clean_conj_matches ts acc'
     end;
@@ -335,7 +335,7 @@ fun BOOL_NEG_PAIR_CONV t =
       val solving_case_split = find_negation_pair disj_t;
       val disj = isSome solving_case_split;
       val solving_case_split = if disj then solving_case_split else
-			       find_negation_pair conj_t;
+                               find_negation_pair conj_t;
 
       val _ = if (isSome solving_case_split) then () else raise UNCHANGED;
 

@@ -24,8 +24,10 @@ val _ = startup_check()
     Analysing the command-line
    ---------------------------------------------------------------------- *)
 
-val {cmdline,build_theory_graph,do_selftests,SRCDIRS,jobcount,relocbuild} =
-    process_cline ()
+val cline_record = process_cline ()
+val {cmdline,build_theory_graph,selftest_level,...} = cline_record
+val {extra={SRCDIRS},jobcount,relocbuild,debug,...} = cline_record
+
 
 open Systeml;
 
@@ -33,8 +35,11 @@ val Holmake = let
   fun sysl p args = Systeml.systeml (p::args)
   val isSuccess = OS.Process.isSuccess
 in
-  buildutils.Holmake sysl isSuccess (fn () => ["-j"^Int.toString jobcount])
-                     (fn _ => "") do_selftests
+  buildutils.Holmake sysl isSuccess
+                     (fn () => ["-j"^Int.toString jobcount] @
+                               (if debug then ["--dbg"] else []))
+                     (fn _ => "")
+                     selftest_level
 end
 
 (* ----------------------------------------------------------------------
@@ -70,7 +75,7 @@ fun upload ((src, regulardir), target, symlink) =
              die ("OS error: "^s^" - "^
                   (case erropt of SOME s' => OS.errorMsg s'
                                 | _ => ""))
-    else if do_selftests >= regulardir then
+    else if selftest_level >= regulardir then
       print ("Self-test directory "^src^" built successfully.\n")
     else ()
 
@@ -81,7 +86,7 @@ fun upload ((src, regulardir), target, symlink) =
  ---------------------------------------------------------------------------*)
 
 fun buildDir symlink s =
-    (build_dir Holmake do_selftests s; upload(s,SIGOBJ,symlink));
+    (build_dir Holmake selftest_level s; upload(s,SIGOBJ,symlink));
 
 fun build_src symlink = List.app (buildDir symlink) SRCDIRS
 

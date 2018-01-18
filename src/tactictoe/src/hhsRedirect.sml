@@ -60,11 +60,13 @@ fun pop_output_file () =
   | []      => (dup2{old = duplicate_stdout, new = stdout}; false))
   )
 
-fun hide file f x = 
+fun hide_in_file file f x = 
   (
   push_output_file {name=file, append=false};
-  ((let val r = f x in (pop_output_file (); r) end) 
-  handle _ => (pop_output_file (); raise ERR "hide" file))
+    (
+    let val r = f x in (pop_output_file (); r) end
+    handle e => (pop_output_file (); raise e)
+    )
   )
-
+  
 end

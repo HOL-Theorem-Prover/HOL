@@ -138,9 +138,6 @@ val ONCE_ASM_REWRITE_ALL_THM : thm -> tactic
 
 val UNIFY_VARS_TAC : tactic
 
-val choplist : 'a list -> 'b list -> ('b list * 'b list)
-val THEN1 : tactic * tactic -> tactic
-(* infix THEN1; *)
 val EVERY1 : tactic list -> tactic
 
 end (* sig *)

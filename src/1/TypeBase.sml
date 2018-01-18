@@ -65,6 +65,7 @@ fun recognizers_of ty  = TypeBasePure.recognizers_of (pfetch "recognizers_of" ty
 fun case_const_of ty   = TypeBasePure.case_const_of (pfetch "case_const_of" ty)
 fun case_cong_of ty    = TypeBasePure.case_cong_of (pfetch "case_cong_of" ty)
 fun case_def_of ty     = TypeBasePure.case_def_of (pfetch "case_def_of" ty)
+fun case_eq_of ty  = TypeBasePure.case_eq_of (pfetch "case_eq_of" ty)
 fun nchotomy_of ty     = TypeBasePure.nchotomy_of (pfetch "nchotomy_of" ty)
 fun fields_of ty       = TypeBasePure.fields_of (pfetch "fields_of" ty)
 fun accessors_of ty    = TypeBasePure.accessors_of (pfetch "accessors_of" ty)
@@ -95,6 +96,11 @@ val bool_info =
       {ax=ORIG boolTheory.boolAxiom,
        induction = ORIG boolTheory.bool_INDUCT,
        case_def = boolTheory.bool_case_thm,
+       case_eq =
+         Prim_rec.prove_case_eq_thm{
+           case_def = boolTheory.bool_case_thm,
+           nchotomy = boolTheory.BOOL_CASES_AX
+         },
        case_cong = boolTheory.COND_CONG,
        distinct = SOME (CONJUNCT1 boolTheory.BOOL_EQ_DISTINCT),
        nchotomy = boolTheory.BOOL_CASES_AX,

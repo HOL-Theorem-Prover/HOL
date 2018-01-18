@@ -3,7 +3,13 @@ struct
 
 open HolKernel Parse quoteTheory;
 
-infix THEN THENL |->;
+local
+structure Parse =
+struct
+  open Parse
+  val (Type,Term) = parse_from_grammars quoteTheory.quote_grammars
+end
+in
 
 fun QUOTE_ERR function message =
     HOL_ERR{origin_structure = "quote",
@@ -14,8 +20,8 @@ fun mk_comb2 (a,b,c) = mk_comb(mk_comb(a,b),c);
 fun mk_comb3 (a,b,c,d) = mk_comb(mk_comb2(a,b,c),d);
 
 (* reify varmap *)
-val mevm = --`Empty_vm : 'a varmap`--;
-val mnvm = --`Node_vm : 'a->'a varmap->'a varmap->'a varmap`--;
+val mevm = “Empty_vm : 'a varmap”;
+val mnvm = “Node_vm : 'a->'a varmap->'a varmap->'a varmap”;
 fun vm_ty ty = inst [alpha |-> ty];
 
 
@@ -41,9 +47,9 @@ fun meta_map ty =
 
 datatype index = Li of index | Lr of index | Ei;
 
-val mli = --`Left_idx`--
-val mri = --`Right_idx`--
-val mei = --`End_idx`--;
+val mli = “Left_idx”
+val mri = “Right_idx”
+val mei = “End_idx”;
 
 fun meta_index Ei = mei
   | meta_index (Li i) = mk_comb(mli, meta_index i)
@@ -160,5 +166,5 @@ fun meta_expr ty is_qu { Op1, Op2, Vars, Csts } =
   in meta_list
   end;
 
-
+end (* local *)
 end;

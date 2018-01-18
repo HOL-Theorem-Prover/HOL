@@ -41,38 +41,17 @@ val OS :string            =
 
 val _ = PolyML.print_depth 0;
 
+use "tools-poly/poly/Mosml.sml";
+val pkgconfig_info =
+    case Mosml.run "pkg-config" ["--libs", "polyml"] "" of
+        Mosml.Success lstr => SOME (String.tokens Char.isSpace lstr)
+      | _ => NONE
+
+
 val CC:string       = "cc";       (* C compiler                       *)
 val GNUMAKE:string  = "make";     (* for bdd library and SMV          *)
 val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
 
-local
-   fun assoc item =
-      let
-         fun assc ((key,ob)::rst) = if item=key then ob else assc rst
-           | assc [] = raise Match
-      in
-         assc
-      end
-   val machine_env = Posix.ProcEnv.uname ()
-   val sysname = assoc "sysname" machine_env
-   val intOf = Option.valOf o Int.fromString
-in
-   val machine_flags =
-       if sysname = "Darwin" (* Mac OS X *) then
-         let
-           val number = PolyML.Compiler.compilerVersionNumber
-         in
-           (if number >= 560
-               then ["-lgmp", "-lstdc++", "-Wl,-no_pie", "-w"]
-            else if number >= 551
-               then ["-lpthread", "-lm", "-ldl", "-lstdc++", "-Wl,-no_pie"]
-            else if number >= 550
-               then ["-Wl,-no_pie"]
-            else ["-segprot", "POLY", "rwx", "rwx"]) @
-           (if PolyML.architecture() = "I386" then ["-arch", "i386"] else [])
-         end
-       else []
-end;
 
 fun echo s = (TextIO.output(TextIO.stdOut, s^"\n");
               TextIO.flushOut TextIO.stdOut);
@@ -80,15 +59,6 @@ fun echo s = (TextIO.output(TextIO.stdOut, s^"\n");
 val verbose = false
 
 val echov = if verbose then echo else (fn _ => ())
-
-fun compile systeml exe obj =
-  let
-    val args = [CC, "-o", exe, obj, "-L" ^ polymllibdir,
-                "-lpolymain", "-lpolyml"] @ machine_flags
-  in
-    echov (String.concatWith " " args ^ "\n");
-    systeml args before OS.FileSys.remove obj
-  end
 
 fun liftstatus f x =
   if OS.Process.isSuccess (f x) then ()
@@ -211,6 +181,45 @@ fun optquote NONE = "NONE"
 
 val OSkind = if OS="linux" orelse OS="solaris" orelse OS="macosx" then "unix"
              else OS
+local
+   fun assoc item =
+      let
+         fun assc ((key,ob)::rst) = if item=key then ob else assc rst
+           | assc [] = raise Match
+      in
+         assc
+      end
+   val machine_env = Posix.ProcEnv.uname ()
+   val sysname = assoc "sysname" machine_env
+   val intOf = Option.valOf o Int.fromString
+in
+   val machine_flags =
+       if sysname = "Darwin" (* Mac OS X *) then
+         let
+           val number = PolyML.Compiler.compilerVersionNumber
+           val stdsuffix = ["-Wl,-rpath,"^polymllibdir, "-Wl,-no_pie"]
+         in
+           (if number >= 560 then
+              case pkgconfig_info of
+                  SOME list => list @ stdsuffix
+                | NONE => ["-L"^polymllibdir, "-lpolymain", "-lpolyml",
+                           "-lstdc++"] @ stdsuffix
+            else if number >= 551
+               then ["-lpthread", "-lm", "-ldl", "-lstdc++", "-Wl,-no_pie"]
+            else if number >= 550
+               then ["-Wl,-no_pie"]
+            else ["-segprot", "POLY", "rwx", "rwx"]) @
+           (if PolyML.architecture() = "I386" then ["-arch", "i386"] else [])
+         end
+       else if sysname = "Linux" then
+         case pkgconfig_info of
+             SOME list => list
+           | _ => ["-L" ^ polymllibdir, "-lpolymain", "-lpolyml", "-lpthread",
+                   "-lm", "-ldl", "-lstdc++", "-lgcc_s", "-lgcc"]
+       else []
+end;
+
+
 val _ = let
   (* copy system-specific implementation of Systeml into place *)
   val srcfile = fullPath [holmakedir, OSkind ^"-systeml.sml"]
@@ -227,22 +236,11 @@ in
    "val POLY_LDFLAGS =" --> ("val POLY_LDFLAGS = ["^
                              (String.concatWith
                                   ", "
-                                  (quote ("-L"^polymllibdir)::
-                                   quote "-lpolymain" ::
-                                   quote "-lpolyml" ::
-                                   map quote machine_flags)) ^ "]\n"),
+                                  (map quote machine_flags)) ^ "]\n"),
    "val POLY_LDFLAGS_STATIC =" --> ("val POLY_LDFLAGS_STATIC = ["^
                              (String.concatWith
                                   ", "
-                                  (quote ("-L"^polymllibdir)::
-                                   quote "-lpolymain" ::
-                                   quote "-lpolyml" ::
-                                   quote "-static" ::
-                                   quote "-lpolyml" ::
-                                   quote "-lstdc++" ::
-                                   quote "-lm" ::
-                                   quote "-ldl" ::
-                                   quote "-lpthread" ::
+                                  (quote "-static" ::
                                    map quote machine_flags)) ^ "]\n"),
    "val CC =" --> ("val CC = "^quote CC^"\n"),
    "val OS ="       --> ("val OS = "^quote OS^"\n"),
@@ -252,7 +250,7 @@ in
    "val version ="  --> ("val version = "^Int.toString version_number^"\n"),
    "val ML_SYSNAME =" --> "val ML_SYSNAME = \"poly\"\n",
    "val release ="  --> ("val release = "^quote release_string^"\n"),
-   "val DOT_PATH =" --> ("val DOT_PATH = "^quote DOT_PATH^"\n")
+   "val DOT_PATH =" --> ("val DOT_PATH = "^optquote DOT_PATH^"\n")
 ];
   use destfile
 end;
@@ -520,21 +518,17 @@ val _ =
       val _ = echo "Generating bin/hol."
       val target      = fullPath [holdir, "bin", "hol.bare"]
       val target_boss = fullPath [holdir, "bin", "hol"]
-      val hol0_heap   = "-i " ^ protect(fullPath[HOLDIR,"bin", "hol.state0"])
+      val hol0_heap   = protect(fullPath[HOLDIR,"bin", "hol.state0"])
       val hol_heapcalc=
-          String.concatWith " " [
-            "--gcthreads=1", "-i",
             "$(" ^ protect(fullPath[HOLDIR,"bin","heapname"]) ^ ")"
-          ]
-      val prelude = ["prelude.ML"]
-      val prelude2 = prelude @ ["prelude2.ML"]
+      fun TP s = protect(fullPath[HOLDIR, "tools-poly", s])
+      val prelude = ["Arbint", "Arbrat", TP "prelude.ML"]
+      val prelude2 = prelude @ [TP "prelude2.ML"]
    in
       (* "unquote" scripts use the unquote executable to provide nice
          handling of double-backquote characters *)
-      emit_hol_unquote_script target hol0_heap prelude;
-      emit_hol_unquote_script target_boss hol_heapcalc prelude2;
-      emit_hol_script (target ^ ".noquote") hol0_heap prelude;
-      emit_hol_script (target_boss ^ ".noquote") hol_heapcalc prelude2
+      emit_hol_script target hol0_heap prelude;
+      emit_hol_script target_boss hol_heapcalc prelude2
    end
 
 val _ = print "\nFinished configuration!\n"

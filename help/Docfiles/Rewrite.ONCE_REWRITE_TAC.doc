@@ -56,5 +56,5 @@ required without diverging:
 rewriting would diverge.  It can also be used to save inference steps.
 
 \SEEALSO
-Rewrite.ASM_REWRITE_TAC, Drule.Once, Rewrite.ONCE_ASM_REWRITE_TAC, Rewrite.PURE_ASM_REWRITE_TAC, Rewrite.PURE_ONCE_REWRITE_TAC, Rewrite.PURE_REWRITE_TAC, Rewrite.REWRITE_TAC, Tactic.SUBST_TAC.
+Rewrite.ASM_REWRITE_TAC, BoundedRewrites.Once, Rewrite.ONCE_ASM_REWRITE_TAC, Rewrite.PURE_ASM_REWRITE_TAC, Rewrite.PURE_ONCE_REWRITE_TAC, Rewrite.PURE_REWRITE_TAC, Rewrite.REWRITE_TAC, Tactic.SUBST_TAC.
 \ENDDOC

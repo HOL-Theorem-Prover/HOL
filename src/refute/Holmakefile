@@ -1,0 +1,4 @@
+selftest.exe: selftest.uo refuteLib.uo Canon.uo AC.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe

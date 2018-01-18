@@ -10,14 +10,18 @@ datatype qfs = QFS of {comdepth : int ref,
                        pardepth : int ref,
                        antiquote_stack : quotetype list ref,
                        row      : int ref,
-                       rowstart : int ref}
+                       rowstart : int ref,
+                       inscript : bool}
 
-fun newstate () =
+fun newstate inscriptp =
   QFS {comdepth = ref 0,
        pardepth = ref 0,
        antiquote_stack = ref [],
        row = ref 0,
-       rowstart = ref 0}
+       rowstart = ref 0,
+       inscript = inscriptp}
+
+fun linenum (QFS{row,...}) = !row + 1
 
 fun resetstate (QFS{comdepth, pardepth, antiquote_stack,...}) =
     (comdepth := 0; pardepth := 0; antiquote_stack := [])
@@ -25,6 +29,8 @@ fun resetstate (QFS{comdepth, pardepth, antiquote_stack,...}) =
 
 fun ECHO (QFS _) s = s
 fun print (QFS _) s = s
+fun ifscript (QFS {inscript,...}) s1 s2 =
+  if inscript then s1 else s2
 
 fun makesafe c =
     if not (Char.isPrint c) then "\\" ^ Int.toString (Char.ord c)
@@ -80,7 +86,7 @@ fun eof arg = ""
 %%
 %structure QuoteFilter
 %s string comment qcomment tmcomment tycomment tyquote tmquote quote ANTIQ;
-%arg (UserDeclarations.QFS {comdepth, pardepth, antiquote_stack, row, rowstart});
+%arg (UserDeclarations.QFS {comdepth, pardepth, antiquote_stack, row, rowstart, inscript});
 %full
 
 letter = [A-Za-z];
@@ -134,6 +140,19 @@ quoteend = "`" | "\226\128\153";
    (YYBEGIN quote; ECHO yyarg ("[QUOTE \""^locpragma yyarg (yytext,yypos) 0));
 <INITIAL>"\"" => (YYBEGIN string; ECHO yyarg yytext);
 <INITIAL>{newline} => (newline yyarg (yypos,yytext));
+<INITIAL>"op"{ws}+"THEN1" => (ECHO yyarg yytext);
+<INITIAL>"val"{ws}+"THEN1" => (ECHO yyarg yytext);
+<INITIAL>"infix"[lr]?{ws}+({digit}+{ws}*)?"THEN1" => (yytext);
+<INITIAL>"op"{ws}*">-" => (ECHO yyarg yytext);
+<INITIAL>"val"{ws}*">-" => (ECHO yyarg yytext);
+<INITIAL>"infix"[lr]?{ws}+({digit}+{ws}*)?">-" => (yytext);
+<INITIAL>"THEN1" => (ifscript yyarg
+                              (">>- " ^ Int.toString (linenum yyarg) ^ " ??")
+                              yytext);
+<INITIAL>">-" => (ifscript yyarg
+                           (">>- " ^ Int.toString (linenum yyarg) ^ " ??")
+                           yytext);
+<INITIAL>{MLid} => (yytext);
 <INITIAL>. => (ECHO yyarg yytext);
 
 <string>"\\\\" => (ECHO yyarg yytext);

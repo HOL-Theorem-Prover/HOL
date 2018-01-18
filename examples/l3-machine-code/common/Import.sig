@@ -13,6 +13,7 @@ sig
      | Element
      | FP32To64
      | FP64To32
+     | FP64To32_
      | FPAbs of int
      | FPAdd of int
      | FPAdd_ of int
@@ -29,6 +30,7 @@ sig
      | FPIsNormal of int
      | FPIsSignallingNan of int
      | FPIsSubnormal of int
+     | FPIsZero of int
      | FPLe of int
      | FPLt of int
      | FPMul of int
@@ -117,6 +119,8 @@ sig
      | Rep
      | Rol
      | Ror
+     | SDiv
+     | SMod
      | Splitl
      | Splitr
      | Sub

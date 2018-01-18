@@ -12,7 +12,6 @@ open HolKernel boolLib hhsExec hhsLexer hhsTools
 
 val ERR = mk_HOL_ERR "hhsExtract"
 
-val pointer_cache_glob = ref (dempty String.compare)
 
 (*---------------------------------------------------------------------------
  * Extract tactics
@@ -60,7 +59,7 @@ fun string_of_pretty p =
     val acc = ref []
     fun f s = acc := s :: !acc
   in
-    PolyML.prettyPrint (f,80) p ;
+    PolyML.prettyPrint (f,80) p;
     String.concatWith " " (rev (!acc))
   end
 
@@ -152,13 +151,23 @@ fun extract_subterms s =
     else raise ERR "extract_subterms" s
   end
 
+fun reprint s =
+  let val propll = hhs_propl_all_of s in
+    if List.length propll = 1
+    then
+      case List.find is_print_prop (hd propll) of
+      SOME p => SOME (string_of_pretty ((dest_print_prop p) 80))
+    | NONE   => NONE
+    else raise ERR "reprint" s
+  end
+
 fun is_infix s = String.isPrefix "hhs_infix" (hd (hhs_lex s))
 
 fun is_infix_tree tree = case tree of
    HHSTACL (s, treel) => is_infix (valOf s)
  | HHSLEAF s => is_infix (valOf s)
 
-fun is_infix_treel treel = 
+fun is_infix_treel treel =
   List.length treel = 3 
   andalso 
   (is_infix_tree (List.nth (treel,1)) handle _ => false)
@@ -172,26 +181,7 @@ fun is_recordable2 sno sl =
   mem "hhsNumber.hhs_fst" sl andalso 
   is_tactic sno
 
-(*  
-  dfind s (!pointer_cache_glob) handle _ =>
-  let val b =
-    mem #"." (explode s) andalso
-    (
-    is_pointer_eq s "Tactical.THEN" orelse
-    is_pointer_eq s "Tactical.ORELSE" orelse
-    is_pointer_eq s "Tactical.THEN1" orelse
-    is_pointer_eq s "Tactical.THENL" orelse
-    is_pointer_eq s "Tactical.REVERSE" orelse
-    is_pointer_eq s "Tactical.VALID" orelse
-    is_pointer_eq s "BasicProvers.by" orelse
-    is_pointer_eq s "BasicProvers.suffices_by" orelse
-    is_pointer_eq s "Tactical.EVERY"
-    )
- in
-   pointer_cache_glob := dadd s b (!pointer_cache_glob);
-   b
- end
-*)
+
 fun extract_tactics tree = case tree of
     HHSTACL (s, treel) =>
     if s = NONE then List.concat (map extract_tactics treel) else

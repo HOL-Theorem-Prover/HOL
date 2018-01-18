@@ -59,3 +59,5 @@ val _ = print "\n" before app test [
   ("symq\"9", ``SX_SYM "symq\"9"``),
   ("symd.9", ``SX_SYM "symd.9"``)
 ]
+
+val _ = app tpp ["⦇2; 3⦈", "⦇ ⦈", "⦇SX_SYM \"foo\"⦈", "⦇ ⦇3 • 4⦈; ⦇3; 4⦈ ⦈"]

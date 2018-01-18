@@ -1,6 +1,6 @@
 \DOC Hol_defn
 
-\TYPE {Hol_defn : string -> term quotation -> thm}
+\TYPE {Hol_defn : string -> term quotation -> defn}
 
 \SYNOPSIS
 Function definition facility.

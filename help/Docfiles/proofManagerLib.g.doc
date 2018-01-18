@@ -1,6 +1,6 @@
 \DOC g
 
-\TYPE {g : term frag list -> proofs}
+\TYPE {g : term quotation -> proofs}
 
 \SYNOPSIS
 Initializes the subgoal package with a new goal which has no assumptions.

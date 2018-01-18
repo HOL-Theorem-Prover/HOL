@@ -12,18 +12,9 @@ open HolKernel boolLib Abbrev hhsTools
 
 val ERR = mk_HOL_ERR "hhsFeature"
 
-val hhs_hofea_flag = ref true
-val hhs_notopfea_flag = ref false
-
-fun save_time rf f x =
-  let
-    val rt = Timer.startRealTimer ()
-    val r = f x
-    val time = Timer.checkRealTimer rt
-    val _ = rf := (!rf) + Time.toReal time
-  in
-    r
-  end
+(* top features are slow to print *)
+val hofea_flag = ref true
+val notopfea_flag = ref true 
 
 fun gen_all t = list_mk_forall ((free_vars_lr t),t)
 
@@ -38,8 +29,10 @@ fun atoms tm =
   (
   atoml_top := tm :: !atoml_top;
   if is_var tm orelse is_const tm then atoml := tm :: (!atoml)
-  else if is_eq tm  then 
-    (atoms (lhs tm); atoms (rhs tm))
+  else if is_eq tm then
+    if type_of (lhs tm) = bool 
+    then (atoms (lhs tm); atoms (rhs tm))
+    else atoml := tm :: (!atoml)
   else if is_conj tm orelse is_disj tm orelse is_imp_only tm then
     (atoms (lhand tm); atoms (rand tm))
   else if is_neg tm      then atoms  (rand tm)
@@ -61,7 +54,7 @@ fun subterms tm =
   subterml := tm :: (!subterml);
   if is_var tm orelse is_const tm then () 
   else if is_comb tm then
-    if !hhs_hofea_flag then
+    if !hofea_flag then
       (subterms (rand tm); subterms (rator tm))
     else
       let val (oper,argl) = strip_comb tm in
@@ -85,23 +78,26 @@ fun zeroed_type ty =
   else
     let 
       val {Args,Thy,Tyop} = dest_thy_type ty
-      val s = Thy ^ "." ^ Tyop ^ ".t"
+      val s = Tyop ^ "." ^ Thy ^ ".t"
     in
       if null Args then [s]
       else s :: (List.concat (map zeroed_type Args))
     end
 
+fun string_of_const tm =
+  let val {Thy,Name,Ty} = dest_thy_const tm in
+    Name ^ "." ^ Thy ^ ".c"
+  end
+
+
 fun zeroed_term tm =
   if is_var tm then "A"
-  else if is_const tm then 
-    let val {Thy,Name,Ty} = dest_thy_const tm in
-      Thy ^ "." ^ Name ^ ".c"
-    end
+  else if is_const tm then string_of_const tm
   else if is_comb tm then
     "(" ^ zeroed_term (rator tm) ^ " " ^ zeroed_term (rand tm) ^ ")"
   else if is_abs tm then
     let val (v,t) = dest_abs tm in
-      "(Abs" ^ " " ^ zeroed_term t ^ ")"
+      "(Abs " ^ zeroed_term t ^ ")"
     end
   else raise ERR "zeroed_term" ""
 
@@ -146,52 +142,79 @@ and binder_top s (v,tm) =
    "(" ^ s ^ " " ^ string_of_top tm ^ ")"
   )
 
-(*
-val all_types_time = ref 0.0
-val zeroed_type_time = ref 0.0
-val atoms_time = ref 0.0
-val zeroed_term_time = ref 0.0
-val mk_set_time = ref 0.0
-val subterm_time = ref 0.0
-*)
-
-
-
 fun fea_of_term tm =
-  let 
-    val varl           = find_terms is_var tm
-    val varl_sl        = map (fst o dest_var) varl
-    val typel          = all_types tm
-    val type_sl        = List.concat (map zeroed_type typel)
-    val (tml, top_tml) = atoms_of_term tm
-    val top_tml'       = if !hhs_notopfea_flag then [] else top_tml
-    val _              = top_sl := []
-    val toptml_sl      = map string_of_top top_tml'
-    val subterml       = List.concat (map subterms_of_term tml)
-    val subterm_sl     = map zeroed_term subterml
-  in
-    filter (fn x => x <> "P" andalso 
-                    x <> "A" andalso
-                    x <> "T") 
-    (mk_string_set (type_sl @ varl_sl @ (!top_sl) @ toptml_sl @ subterm_sl))
-  end
+  if term_size tm > 2000
+  then
+    let 
+      val constl         = find_terms is_const tm
+      val const_sl       = map string_of_const constl
+    in
+      mk_string_set const_sl
+    end
+  else
+    let 
+      val varl           = find_terms is_var tm
+      val varl_sl        = map (fst o dest_var) varl
+      val constl         = find_terms is_const tm
+      val const_sl       = map string_of_const constl
+      val typel          = all_types tm
+      val type_sl        = List.concat (map zeroed_type typel)
+      val (tml, top_tml) = atoms_of_term tm
+      val top_tml'       = if !notopfea_flag then [] else top_tml
+      val _              = top_sl := []
+      val toptml_sl      = map string_of_top top_tml' (* modifies top_sl *)
+      val subterml       = List.concat (map subterms_of_term tml)
+      val subterm_sl     = map zeroed_term subterml
+    in
+      filter (fn x => x <> "P" andalso x <> "T") 
+      (mk_string_set 
+         (type_sl @ varl_sl @ const_sl @ (!top_sl) @ toptml_sl @ subterm_sl))
+    end
 
 (*---------------------------------------------------------------------------
  * Produce goal features.
  *---------------------------------------------------------------------------*)
 
-fun string_of_goal (asl,w) =
-  String.concatWith "\n" (map term_to_string (w :: asl))
+local
+   open Char String
+in
+   fun hash_string s =
+     let
+        fun hsh (i, A) s =
+           hsh (i + 1, (A * 263 + ord (sub (s, i))) mod 792606555396977) s
+           handle Subscript => A
+     in
+        hsh (0,0) s
+     end
+end
 
-fun fea_of_goal (asl,w) = 
+fun fea_of_goal (asl,w) =
   let 
     val asl_sl1 = List.concat (map fea_of_term asl)
     val asl_sl2 = map (fn x => x ^ ".h") asl_sl1
     val w_sl   = map (fn x => x ^ ".w") (fea_of_term w)
   in
-    mk_string_set (w_sl @ asl_sl2)
+    mk_fast_set Int.compare (map hash_string (mk_string_set (w_sl @ asl_sl2)))
   end
   handle _ => raise ERR "fea_of_goal" (string_of_goal (asl,w))
-    
+
+fun fea_of_goallist gl = 
+  mk_fast_set Int.compare (List.concat (map fea_of_goal gl))
+
+(* warning: not injective *)
+fun s_term tm = 
+  if is_var tm then fst (dest_var tm)
+  else if is_const tm then fst (dest_const tm)
+  else if is_comb tm then "(" ^ s_term (rand tm) ^ " " ^ s_term (rator tm) ^ ")"
+  else if is_abs tm then
+    let val (v,t) = dest_abs tm in
+      "[" ^ s_term v ^ " " ^ s_term t ^ "]"
+    end
+  else raise ERR "s_term" ""
+
+fun hash_term t = hash_string (s_term t)
+
+fun hash_goal g  = hash_term (list_mk_imp g)
+
 
 end (* struct *)

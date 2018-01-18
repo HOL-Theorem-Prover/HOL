@@ -10,99 +10,84 @@ open HolKernel Parse boolLib bossLib;
 
 (******************************************************************************)
 (*									      *)
-(*      Backward compatibility and utility tactic/tacticals (2017/07/16)      *)
+(*      Backward compatibility and utility tactic/tacticals (17 oct 2017)     *)
 (*									      *)
 (******************************************************************************)
 
+(* from Brian Campbell. No uses of (Q.)PAT_ASSUM !! *)
 local
     val PAT_X_ASSUM = PAT_ASSUM;
-    val qpat_x_assum = Q.PAT_ASSUM;
     open Tactical
 in
-    (* Backward compatibility with Kananaskis 11 *)
     val PAT_X_ASSUM = PAT_X_ASSUM;
-    val qpat_x_assum = qpat_x_assum;
+end;
+
+local
+    val PAT_X_ASSUM = Q.PAT_ASSUM;
+    open Q;
+in
+    val qpat_x_assum = PAT_X_ASSUM;
 end;
 
 (** Q.GENL generalises in wrong order #428, fixed on June 27, 2017 *)
 fun Q_GENL qs th = List.foldr (fn (q, th) => Q.GEN q th) th qs;
 
 (* Tacticals for better expressivity *)
-fun fix  ts = MAP_EVERY Q.X_GEN_TAC ts;		(* from HOL Light *)
-fun set  ts = MAP_EVERY Q.ABBREV_TAC ts;	(* from HOL mizar mode *)
-fun take ts = MAP_EVERY Q.EXISTS_TAC ts;	(* from HOL mizar mode *)
-val op // = op REPEAT				(* from Matita *)
-val Know = Q_TAC KNOW_TAC;			(* from util_prob *)
-val Suff = Q_TAC SUFF_TAC;			(* from util_prob *)
-fun K_TAC _ = ALL_TAC;				(* from util_prob *)
+fun fix   ts = MAP_EVERY Q.X_GEN_TAC ts;	(* from HOL Light *)
+fun set   ts = MAP_EVERY Q.ABBREV_TAC ts;	(* from HOL mizar mode *)
+fun take  ts = MAP_EVERY Q.EXISTS_TAC ts;	(* from HOL mizar mode *)
+val Know     = Q_TAC KNOW_TAC;			(* from util_prob *)
+val Suff     = Q_TAC SUFF_TAC;			(* from util_prob *)
+fun K_TAC _  = ALL_TAC;				(* from util_prob *)
 val KILL_TAC = POP_ASSUM_LIST K_TAC;		(* from util_prob *)
-fun wrap a = [a];
+fun wrap   a = [a];				(* from util_prob *)
+val art      = ASM_REWRITE_TAC;
+val Rewr     = DISCH_THEN (REWRITE_TAC o wrap);	(* from util_prob *)
+val Rewr'    = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
+val Rev      = Tactical.REVERSE;                (* REVERSE has different meaning
+						   in rich_listTheory *)
 
 fun PRINT_TAC s gl =				(* from cardinalTheory *)
   (print ("** " ^ s ^ "\n"); ALL_TAC gl);
 
 fun COUNT_TAC tac g =				(* from Konrad Slind *)
    let val res as (sg, _) = tac g
-       val _ = print ("subgoals" ^ Int.toString (List.length sg) ^ "\n")
+       val _ = print ("subgoals: " ^ Int.toString (List.length sg) ^ "\n")
    in res end;
+
+local
+  val th = prove (``!a b. a /\ (a ==> b) ==> a /\ b``, PROVE_TAC [])
+in
+  val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th >> CONJ_TAC
+end;
+
+(* directly remove an assumption by its index *)
+fun X_TAC n = (NTAC n (POP_ASSUM MP_TAC)) \\    (* n = last - target *)
+	      POP_ASSUM K_TAC >> (NTAC n DISCH_TAC);
 
 (* signatures:
 
   val PAT_X_ASSUM		: term -> thm_tactic -> tactic
-  val qpat_x_assum		: term quotation -> thm_tactic -> tactic
+  val qpat_x_assum		: Q.tmquote -> thm_tactic -> tactic
   val Q_GENL			: Q.tmquote list -> thm -> thm
   val fix			: Q.tmquote list -> tactic
   val set			: Q.tmquote list -> tactic
   val take			: Q.tmquote list -> tactic
-  val //			: tactic -> tactic
   val Know			: Q.tmquote -> tactic
   val Suff			: Q.tmquote -> tactic
   val K_TAC			: 'a -> tactic
   val KILL_TAC			: tactic
   val wrap			: 'a -> 'a list
+  val art			: thm list -> tactic
+  val Rewr			: tactic
+  val Rewr'			: tactic
+  val Rev			: tactic -> tactic
   val PRINT_TAC			: string -> tactic
   val COUNT_TAC			: tactic -> tactic
+  val STRONG_CONJ_TAC		: tactic
+  val X_TAC			: int -> tactic
 
    end of signatures *)
-
-(******************************************************************************)
-(*									      *)
-(*		      Minimal grammar support for CCS			      *)
-(*									      *)
-(******************************************************************************)
-
-fun add_rules_for_ccs_terms () = let
-in
-    add_rule { term_name = "TRANS", fixity = Infix (NONASSOC, 450),
-	pp_elements = [ BreakSpace(1,0), TOK "--", HardSpace 0, TM, HardSpace 0, TOK "->",
-			BreakSpace(1,0) ],
-	paren_style = OnlyIfNecessary,
-	block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)) };
-
-    add_rule { term_name = "WEAK_TRANS", fixity = Infix (NONASSOC, 450),
-	pp_elements = [ BreakSpace(1,0), TOK "==", HardSpace 0, TM, HardSpace 0, TOK "=>>",
-			BreakSpace(1,0) ],
-	paren_style = OnlyIfNecessary,
-	block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)) };
-
-    overload_on ("+", ``sum``); (* priority: 500 *)
-
-    set_mapped_fixity { fixity = Infix(LEFT, 600), tok = "||", term_name = "par" };
-
-    add_rule { term_name = "prefix", fixity = Infix(RIGHT, 700),
-	pp_elements = [ BreakSpace(0,0), TOK "..", BreakSpace(0,0) ],
-	paren_style = OnlyIfNecessary,
-	block_style = (AroundSamePrec, (PP.CONSISTENT, 0)) }
-end;
-
-fun remove_rules_for_ccs_terms () = let
-in
-    remove_rules_for_term	"prefix";
-    remove_rules_for_term	"par";
-    clear_overloads_on		"sum";
-    remove_rules_for_term	"TRANS";
-    remove_rules_for_term	"WEAK_TRANS"
-end;
 
 (******************************************************************************)
 (*									      *)

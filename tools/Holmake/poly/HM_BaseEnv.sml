@@ -12,6 +12,7 @@ struct
     val POLYMLLIBDIR =
         case #polymllibdir cline of NONE => POLYMLLIBDIR0 | SOME s => s
     val alist = [
+      ("DEBUG_FLAG", if #debug (#core cline) then [LIT "--dbg"] else []),
       ("ISIGOBJ", [VREF "if $(findstring NO_SIGOBJ,$(OPTIONS)),,$(SIGOBJ)"]),
       ("MOSML_INCLUDES", [VREF ("patsubst %,-I %,$(ISIGOBJ) \
                                 \ $(INCLUDES) $(PREINCLUDES)")]),
@@ -23,7 +24,9 @@ struct
       ("POLYMLLIBDIR", [LIT POLYMLLIBDIR]),
       ("POLY_LDFLAGS", [LIT (spacify (map Systeml.protect POLY_LDFLAGS))]),
       ("POLY_LDFLAGS_STATIC",
-       [LIT (spacify (map Systeml.protect POLY_LDFLAGS_STATIC))])]
+       [LIT (spacify (map Systeml.protect POLY_LDFLAGS_STATIC))]),
+      ("RELOCBUILD", if #relocbuild cline then [LIT "1"] else [])
+    ]
   in
     List.foldl (fn (kv,acc) => env_extend kv acc) (base_environment()) alist
   end

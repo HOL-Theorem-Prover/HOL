@@ -6,6 +6,12 @@ structure FileSys = OS.FileSys
 structure Path = OS.Path
 structure Process = OS.Process
 
+infix ++
+fun p1 ++ p2 = Path.concat(p1,p2)
+val SIGOBJ = Systeml.HOLDIR ++ "sigobj"
+
+
+
 infix |>
 fun x |> f = f x
 
@@ -23,6 +29,7 @@ datatype buildresult = datatype multibuild.buildresult
 
 fun process_mosml_args (outs:Holmake_tools.output_functions) c = let
   val {diag,...} = outs
+  val diag = fn s => diag (fn _ => s)
   fun isSource t = OS.Path.ext t = SOME "sig" orelse OS.Path.ext t = SOME "sml"
   fun isObj t = OS.Path.ext t = SOME "uo" orelse OS.Path.ext t = SOME "ui"
   val toks = String.tokens (fn c => c = #" ") c
@@ -85,12 +92,12 @@ fun addPath I file =
     file
   else let
       val p = List.find (fn p =>
-                            FileSys.access (Path.concat (p, file ^ ".ui"), []))
+                            FileSys.access (p ++ (file ^ ".ui"), []))
                         (FileSys.getDir() :: I)
     in
       case p of
-           NONE => OS.Path.concat (OS.FileSys.getDir(), file)
-         | SOME p => OS.Path.concat (p, file)
+           NONE => OS.FileSys.getDir() ++ file
+         | SOME p => p ++ file
     end;
 
 fun time_max(t1,t2) = if Time.<(t1,t2) then t2 else t1
@@ -135,8 +142,8 @@ fun poly_compile warn diag quietp file I deps = let
   in
     foldr (fn (s,acc) => toFile s :: acc) [] dep_set
   end
-  val _ = diag ("Writing "^fromFile file^" with dependencies: " ^
-                String.concatWith ", " (map fromFile deps))
+  val _ = diag (fn _ => "Writing "^fromFile file^" with dependencies: " ^
+                        String.concatWith ", " (map fromFile deps))
   fun mapthis (Unhandled _) = NONE
     | mapthis (DAT _) = NONE
     | mapthis f = SOME (fromFileNoSuf f)
@@ -245,29 +252,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   in
     p "#!/bin/sh";
     p ("set -e");
-    p (protect(POLY) ^ " -q --gcthreads=1 " ^
-       String.concatWith " " (envlist "POLY_CLINE_OPTIONS") ^
-       " <<'__end-of-file__'");
-    (if polynothol then
-       (p "local";
-        p "val dir = OS.FileSys.getDir();";
-        p ("val _ = OS.FileSys.chDir (OS.Path.concat (\"" ^
-                    String.toString Systeml.HOLDIR ^ "\", \"tools-poly\"));");
-        p "val _ = use \"poly/poly-init2.ML\";";
-        p "val _ = OS.FileSys.chDir dir;";
-        p "in end;")
-     else
-       (p ("val _ = PolyML.SaveState.loadState \"" ^
-           String.toString HOLSTATE ^ "\";\n");
-        p ("val _ = List.app holpathdb.extend_db" ^
-           "(holpathdb.search_for_extensions ReadHMF.find_includes " ^
-           "[OS.FileSys.getDir()])\n")));
-    p ("val _ = List.map load [" ^
-       String.concatWith "," (List.map (fn f => "\"" ^ f ^ "\"") files) ^
-       "] handle x => ((case x of Fail s => print (s^\"\\n\") | _ => ()); \
-       \OS.Process.exit OS.Process.failure);");
-    p "__end-of-file__";
-    p ("echo \"Completed load of "^result^"\"");
+    p (protect(fullPath [HOLDIR, "bin", "buildheap"]) ^ " --gcthreads=1 " ^
+       (if polynothol then "--poly" else "--holstate="^protect(HOLSTATE)) ^
+       (if debug then "--dbg" else "") ^
+       " " ^ String.concatWith " " (map protect files));
     p ("exit 0");
     TextIO.closeOut out;
     Systeml.mk_xable result;
@@ -302,17 +290,20 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       val objectfiles =
         if polynothol then
           objectfiles0
-        else if interactive_flag then "holmake_interactive.uo" :: objectfiles0
-        else "holmake_not_interactive.uo" :: objectfiles0
+        else if interactive_flag then
+          (SIGOBJ ++ "holmake_interactive.uo") :: objectfiles0
+        else (SIGOBJ ++ "holmake_not_interactive.uo") :: objectfiles0
     in
         ((script,[scriptuo,scriptui,script]), objectfiles)
     end
     fun run_script g (script, intermediates) objectfiles expected_results =
-      if isSuccess (poly_link true script (List.map OS.Path.base objectfiles))
-      then let
+      let
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
         val _ = app safedelete expected_results
-        val cline = [fullPath [OS.FileSys.getDir(), script]]
+        val useScript = fullPath [HOLDIR, "bin", "buildheap"]
+        val cline = useScript::"--gcthreads=1"::
+                    (if polynothol then "--poly" else "--holstate="^HOLSTATE)::
+                    ((if debug then ["--dbg"] else []) @ objectfiles)
         fun cont wn res =
           let
             val _ =
@@ -341,16 +332,14 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         val other_nodes = let
           open HM_DepGraph
         in
-          diag ("Looking for other nodes with buildscript "^script);
+          diag (fn _ => "Looking for other nodes with buildscript "^script);
           find_nodes_by_command g
               (BuiltInCmd (BIC_BuildScript script_part))
         end
       in
-        BR_ClineK { cline = (script, cline), job_kont = cont,
+        BR_ClineK { cline = (useScript, cline), job_kont = cont,
                     other_nodes = other_nodes }
       end
-      else
-        (warn ("Failed to build script file, "^script^"\n"); BR_Failed)
   in
     let
     in
@@ -418,7 +407,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       val {diag,...} = outs
     in
       if isHolmosmlcc orelse isHolmosmlc orelse isMosmlc then let
-        val _ = diag ("Processing mosml build command: "^c)
+        val _ = diag (fn _ => "Processing mosml build command: "^c)
       in
         case process_mosml_args outs (if isHolmosmlcc then " -c " ^ c else c) of
             (Mosml_compile (objs, src), I) =>
@@ -429,8 +418,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           | (Mosml_link (result, objs), I) =>
             let
             in
-              diag ("Moscow ML command is link -o "^result^" ["^
-                    String.concatWith ", " (map fromFile objs) ^ "]");
+              diag (fn _ => "Moscow ML command is link -o "^result^" ["^
+                            String.concatWith ", " (map fromFile objs) ^ "]");
               SOME (poly_link (noecho orelse quiet_flag) result
                               (map fromFileNoSuf objs))
             end
@@ -454,7 +443,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           val ns' = List.filter failed_nocmd ns
           fun nI_target (_, nI) = #target nI
         in
-          diag ("Failed nodes: \n" ^ String.concatWith "\n" (map str ns));
+          diag (fn _ => "Failed nodes: \n"^String.concatWith "\n" (map str ns));
           if not (null ns') then
             tgtfatal ("Don't know how to build necessary target(s): " ^
                       String.concatWith ", " (map nI_target ns'))
@@ -492,7 +481,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                     relocbuild = relocbuild,
                                     mosml_build_command = mosml_build_command,
                                     warn = warn, tgtfatal = tgtfatal,
-                                    keep_going = keep_going, diag = diag,
+                                    keep_going = keep_going,
+                                    diag = (fn s => diag (fn _ => s)),
                                     info = #info outs,
                                     time_limit = time_limit,
                                     quiet = quiet_flag, hmenv = hmenv,
@@ -504,7 +494,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                 [OS.FileSys.getDir()])
 
 in
-  {extra_impl_deps = [Unhandled HOLSTATE],
+  {extra_impl_deps = if relocbuild orelse HOLSTATE = POLY then []
+                     else [Unhandled HOLSTATE],
    build_graph = (fn arg => (extend_holpaths(); build_graph arg))}
 end
 

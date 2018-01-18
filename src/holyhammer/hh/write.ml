@@ -23,3 +23,9 @@ let write_fof file_name (cj_name, axioms) =
   let (ath, a) = additional_theorems () in
   let (pth, p) = (ath @ List.map mk_thm axioms, a @ axioms) in
   Hh_write.write_atp_proof file_name (pth,p) cj_name (term_of cj_name)
+
+(* Write a THF file from given conjecture and axioms for use with an ATP. *)
+let write_thf file_name (cj_name, axioms) =
+  let (ath, a) = additional_theorems () in
+  let (pth, p) = (ath @ List.map mk_thm axioms, a @ axioms) in
+  Hh_write.write_thf_proof file_name (pth,p) cj_name (term_of cj_name)

@@ -21,13 +21,14 @@ src/HolSmt
 !!examples/lambda/typing
 !!examples/computability/lambda
 !!examples/computability/register
+!!examples/computability/turing
 !!examples/balanced_bst
 !!examples/formal-languages/regular
 src/Boolify/src
 src/float
 src/floating-point
 !examples/l3-machine-code/common
-!!examples/l3-machine-code/m0/decompiler
+!!examples/l3-machine-code/decompilers
 [poly]src/floating-point/native
 src/probability
 src/temporal/src

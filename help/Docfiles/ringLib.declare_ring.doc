@@ -47,18 +47,18 @@ and simplify or solve symbolic equations on integers:
     ringLib.declare_ring int_ring_infos
 > val INT_RING_CONV = fn : Term.term -> Thm.thm
   val INT_NORM_CONV = fn : Term.term -> Thm.thm
-- INT_NORM_CONV (--`(a+b)*(a+b):int`--);
+- INT_NORM_CONV “(a+b)*(a+b):int”;
 > val it = |- (a + b) * (a + b) = a * a + (2 * (a * b) + b * b) : Thm.thm
-- INT_RING_CONV (--`(a+b)*(a+b) = (b+a)*(b+a):int`--);
+- INT_RING_CONV “(a+b)*(a+b) = (b+a)*(b+a):int”;
 > val it = |- ((a + b) * (a + b) = (b + a) * (b + a)) = T : Thm.thm
 }
 
 These conversions can also be used like reduceLib, but will evaluate
 only sums, products and unary negation:
 {
-- INT_NORM_CONV (--` ~(3 * (9 + ~7)) `--);
+- INT_NORM_CONV “ ~(3 * (9 + ~7)) ”;
 > val it = |- ~(3 * (9 + ~7)) = ~6 : Thm.thm
-- INT_NORM_CONV (--` ~(3 * (10 - 1 + ~7)) `--);
+- INT_NORM_CONV “ ~(3 * (10 - 1 + ~7)) ”;
 > val it = |- ~(3 * (10 - 1 + ~7)) = 21 + ~3 * (10 - 1) : Thm.thm
 }
 

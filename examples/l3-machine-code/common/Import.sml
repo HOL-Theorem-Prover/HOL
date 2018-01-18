@@ -525,6 +525,7 @@ datatype monop =
    | Element
    | FP32To64
    | FP64To32
+   | FP64To32_
    | FPAbs of int
    | FPAdd of int
    | FPAdd_ of int
@@ -541,6 +542,7 @@ datatype monop =
    | FPIsNormal of int
    | FPIsSignallingNan of int
    | FPIsSubnormal of int
+   | FPIsZero of int
    | FPLe of int
    | FPLt of int
    | FPMul of int
@@ -629,6 +631,8 @@ datatype binop =
    | Rep
    | Rol
    | Ror
+   | SDiv
+   | SMod
    | Splitl
    | Splitr
    | Sub
@@ -800,6 +804,7 @@ local
             | FPFromInt 32 => fp32Syntax.int_to_fp_tm
             | FPFromInt 64 => fp64Syntax.int_to_fp_tm
             | FP64To32 => machine_ieeeSyntax.fp64_to_fp32_tm
+            | FP64To32_ => machine_ieeeSyntax.fp64_to_fp32_with_flags_tm
             | FPAdd 32 => fp32Syntax.fp_add_tm
             | FPAdd 64 => fp64Syntax.fp_add_tm
             | FPAdd_ 32 => fp32Syntax.fp_add_with_flags_tm
@@ -1051,6 +1056,9 @@ in
        | FPIsSubnormal 32 => fp32Syntax.mk_fp_isSubnormal
        | FPIsSubnormal 64 => fp64Syntax.mk_fp_isSubnormal
        | FPIsSubnormal i => raise ERR "Mop" ("FPIsSubnormal " ^ Int.toString i)
+       | FPIsZero 32 => fp32Syntax.mk_fp_isZero
+       | FPIsZero 64 => fp64Syntax.mk_fp_isZero
+       | FPIsZero i => raise ERR "Mop" ("FPIsZero " ^ Int.toString i)
        | FPIsSignallingNan 32 => fp32Syntax.mk_fp_isSignallingNan
        | FPIsSignallingNan 64 => fp64Syntax.mk_fp_isSignallingNan
        | FPIsSignallingNan i =>
@@ -1176,10 +1184,12 @@ in
                       SOME numSyntax.mk_div, SOME intSyntax.mk_div)
       | Mod  => pick (SOME wordsSyntax.mk_word_mod, NONE,
                       SOME numSyntax.mk_mod, SOME intSyntax.mk_mod)
-      | Quot => pick (SOME wordsSyntax.mk_word_sdiv, NONE, NONE,
+      | Quot => pick (SOME wordsSyntax.mk_word_quot, NONE, NONE,
                       SOME intSyntax.mk_quot)
-      | Rem  => pick (SOME wordsSyntax.mk_word_srem, NONE, NONE,
+      | Rem  => pick (SOME wordsSyntax.mk_word_rem, NONE, NONE,
                       SOME intSyntax.mk_rem)
+      | SDiv => integer_wordSyntax.mk_word_sdiv
+      | SMod => integer_wordSyntax.mk_word_smod
       | Exp  => pick (NONE, NONE, SOME numSyntax.mk_exp, SOME intSyntax.mk_exp)
       | Lsl  => pickShift (wordsSyntax.mk_word_lsl_bv, wordsSyntax.mk_word_lsl,
                            bitstringSyntax.mk_shiftl)

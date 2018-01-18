@@ -1,6 +1,6 @@
 \DOC Datatype
 
-\TYPE {Datatype : type quotation -> unit}
+\TYPE {Datatype : hol_type quotation -> unit}
 
 \SYNOPSIS
 Define a concrete datatype.

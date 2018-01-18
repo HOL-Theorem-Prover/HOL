@@ -66,7 +66,6 @@ signature Parse = sig
   val Absyn            : term frag list -> Absyn.absyn
   val Preterm          : term frag list -> Preterm.preterm
   val Term             : term frag list -> term
-  val --               : term frag list -> 'a -> term
   val typedTerm        : term frag list -> hol_type -> term
   val ty_antiq         : hol_type -> term
   val parse_in_context : term list -> term frag list -> term
@@ -80,6 +79,7 @@ signature Parse = sig
        (Portable.ppstream -> term -> unit))
   val print_term_by_grammar :
         (type_grammar.grammar * term_grammar.grammar) -> term -> unit
+  val print_without_macros : term -> unit
 
   val term_grammar : unit -> term_grammar.grammar
 
@@ -137,6 +137,7 @@ signature Parse = sig
 
   val add_user_printer : (string * term) -> unit
   val remove_user_printer : string -> (term * term_grammar.userprinter) option
+  val constant_string_printer : string -> term_grammar.userprinter
 
  (* the following functions affect the grammar, but not so that the
     grammar exported to disk will be modified *)

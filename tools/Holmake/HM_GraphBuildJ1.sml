@@ -24,6 +24,7 @@ fun fail (outs : Holmake_tools.output_functions) g =
     open HM_DepGraph
     fun pr s = s
     val {diag,tgtfatal,...} = outs
+    val diagK = diag o (fn x => fn _ => x)
   in
     case List.filter (fn (_,nI) => #status nI <> Succeeded) (listNodes g) of
         [] => raise Fail "No failing nodes in supposedly failed graph"
@@ -35,7 +36,7 @@ fun fail (outs : Holmake_tools.output_functions) g =
           val ns' = List.filter failed_nocmd ns
           fun nI_target (_, nI) = #target nI
         in
-          diag ("Failed nodes: \n" ^ String.concatWith "\n" (map str ns));
+          diagK ("Failed nodes: \n" ^ String.concatWith "\n" (map str ns));
           if not (null ns') then
             tgtfatal ("Don't know how to build necessary target(s): " ^
                       String.concatWith ", " (map nI_target ns'))
@@ -62,10 +63,11 @@ fun graphbuildj1 static_info =
     val {build_command, mosml_build_command, outs, keep_going,
          quiet, hmenv, system} = static_info
     val {warn,diag,tgtfatal,info,...} = (outs : Holmake_tools.output_functions)
+    val diagK = diag o (fn x => fn _ => x)
     fun build_graph incinfo g =
       let
         open HM_DepGraph
-        val _ = diag "Entering HMGBJ1.build_graph"
+        val _ = diagK "Entering HMGBJ1.build_graph"
         val bc = build_command g incinfo
         fun recurse retval g =
           case find_runnable g of
@@ -90,8 +92,8 @@ fun graphbuildj1 static_info =
                 fun stdprocess () =
                   case #command nI of
                       BuiltInCmd BIC_Compile =>
-                      (diag("J1Build: Running built-in compile on " ^
-                            #target nI);
+                      (diagK("J1Build: Running built-in compile on " ^
+                             #target nI);
                        case toFile (#target nI) of
                            UI c => k (upd1 n) (bc (Compile depfs) (SIG c))
                          | UO c => k (upd1 n) (bc (Compile depfs) (SML c))
@@ -141,16 +143,16 @@ fun graphbuildj1 static_info =
                    #seqnum nI = 0
                 then
                   let
-                    val _ = diag ("May not need to rebuild "^target_s)
+                    val _ = diagK ("May not need to rebuild "^target_s)
                   in
                     case List.find
                            (fn (_, d) => forces_update_of(d,#target nI))
                            (#dependencies nI)
                      of
-                        NONE => (diag ("Can skip work on "^target_s);
+                        NONE => (diagK ("Can skip work on "^target_s);
                                  k (upd1 n) true)
                       | SOME (_,d) =>
-                        (diag ("Dependency "^d^" forces rebuild of "^ target_s);
+                        (diagK ("Dependency "^d^" forces rebuild of "^target_s);
                          stdprocess())
                   end
                 else

@@ -3,6 +3,8 @@ struct
 
 open Lib
 
+datatype 'a testresult = Normal of 'a | Exn of exn
+
 val linewidth = ref 80
 
 fun crush extra w s =
@@ -36,6 +38,7 @@ val boldred = checkterm "\027[31m\027[1m"
 val boldgreen = checkterm "\027[32m\027[1m"
 val red = checkterm "\027[31m"
 val dim = checkterm "\027[2m"
+val clear = checkterm "\027[0m"
 
 val really_die = ref true;
 fun die s =
@@ -49,7 +52,8 @@ fun raw_backend f =
     Lib.with_flag (Parse.current_backend, PPBackEnd.raw_terminal) f
 
 local
-  val pfxsize = size "Testing printing of `` ..."
+  val pfxsize = size "Testing printing of ..." + 3
+    (* 3 for quotations marks and an extra space *)
 in
 fun standard_tpp_message s = let
   fun trunc s = if size s + pfxsize > 62 then let
@@ -61,7 +65,7 @@ fun standard_tpp_message s = let
   fun pretty s = s |> String.translate (fn #"\n" => "\\n" | c => str c)
                    |> trunc
 in
-  "Testing printing of `"^pretty s^"`"
+  "Testing printing of "^UnicodeChars.lsquo ^ pretty s ^ UnicodeChars.rsquo
 end
 end (* local *)
 
@@ -76,7 +80,43 @@ fun tpp s = tppw (!linewidth) {input=s,output=s,testf=standard_tpp_message}
 
 fun tpp_expected r = tppw (!linewidth) r
 
+fun timed f check x =
+  let
+    val cputimer = Timer.startCPUTimer()
+    val res = Normal (f x) handle e => Exn e
+    val {nongc = {usr,...}, ...} = Timer.checkCPUTimes cputimer
+    val usr_s = "(" ^ Time.toString usr ^"s)     "
+    val _ = tadd usr_s
+  in
+    check res
+  end
 
+fun exncheck f (Normal a) = f a
+  | exncheck f (Exn e) = die ("\n  EXN: "^General.exnMessage e)
 
+fun convtest (nm,conv,tm,expected) =
+  let
+    open Term
+    val _ = tprint nm
+    fun c th =
+      let
+        val (l,r) =
+            let
+              val (eql, r) = dest_comb (Thm.concl th)
+              val (eq, l) = dest_comb eql
+              val _ = assert (same_const equality) eq
+            in
+              (l,r)
+            end handle e =>
+              die ("Didn't get equality; rather exn "^ General.exnMessage e)
+      in
+        if aconv l tm then
+          if aconv r expected then OK()
+          else die ("\n  Got: " ^ Parse.term_to_string r)
+        else die ("\n  Conv result LHS = " ^ Parse.term_to_string l)
+      end
+  in
+    timed conv (exncheck c) tm
+  end
 
 end (* struct *)

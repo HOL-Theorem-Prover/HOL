@@ -177,11 +177,11 @@ fun variant_of_term vs t =
     val check_vars = free_vars t
     val (_,sub) =
         foldl (fn (v, (vs,sub)) =>
-	          let
+                  let
                     val v' = variant vs v
                     val vs' = v'::vs
                     val sub' = if (aconv v v') then sub else
-			       (v |-> v')::sub
+                               (v |-> v')::sub
                   in
                     (vs',sub')
                   end) (vs,[]) check_vars
@@ -218,5 +218,19 @@ fun term_diff t1 t2 =
   in
     recurse [] t1 t2
   end
+
+fun Teq tm = Term.same_const boolSyntax.T tm
+fun Feq tm = Term.same_const boolSyntax.F tm
+fun tmleq tl1 tl2 = ListPair.allEq op~~ (tl1,tl2)
+fun goaleq (tl1,t1) (tl2,t2) = tmleq tl1 tl2 andalso t1 ~~ t2
+fun goals_eq gl1 gl2 = ListPair.allEq (fn (g1,g2) => goaleq g1 g2) (gl1,gl2)
+val tmem = Lib.op_mem Term.aconv
+val tunion = Lib.op_union Term.aconv
+fun tassoc t l = Lib.op_assoc Term.aconv t l
+
+fun tmx_eq (tm1,x1) (tm2,x2) = x1 = x2 andalso Term.aconv tm1 tm2
+fun xtm_eq (x1,tm1) (x2,tm2) = x1 = x2 andalso Term.aconv tm1 tm2
+fun tmp_eq (tm1,tm2) (tma,tmb) = tm1 ~~ tma andalso tm2 ~~ tmb
+
 
 end;

@@ -1,6 +1,6 @@
 \DOC Hol_datatype
 
-\TYPE {Hol_datatype : type quotation -> unit}
+\TYPE {Hol_datatype : hol_type quotation -> unit}
 
 \SYNOPSIS
 Define a concrete datatype (deprecated syntax).

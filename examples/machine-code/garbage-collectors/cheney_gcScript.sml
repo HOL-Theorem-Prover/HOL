@@ -26,7 +26,7 @@ fun FORCE_PBETA_CONV tm = let
 (* -- abstraction -- *)
 
 val SUBSET0_DEF = new_infixr_definition
-    ("SUBSET0_DEF", (--`SUBSET0 s t = s SUBSET (0 INSERT t)`--),451);
+    ("SUBSET0_DEF", “SUBSET0 s t = s SUBSET (0 INSERT t)”,451);
 
 val SUBSET0_TRANS = store_thm("SUBSET0_TRANS",
   ``!x y z. x SUBSET0 y /\ y SUBSET0 z ==> x SUBSET0 z``,

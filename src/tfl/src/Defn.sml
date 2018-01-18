@@ -155,12 +155,11 @@ fun ModusPonens th1 th2 =
 (*---------------------------------------------------------------------------*)
 
 fun ALPHA_PROVE_HYP th1 th2 =
- let val c1 = concl th1
-     val asl = hyp th2
-     val tm = snd(strip_forall c1)
+ let val asl = hyp th2
+     val (U,tm) = strip_forall (concl th1)
      val a = Lib.first (fn t => aconv tm (snd(strip_forall t))) asl
      val V = fst(strip_forall a)
-     val th1' = GENL V (SPEC_ALL th1)
+     val th1' = GENL V (SPECL U th1)
  in
    PROVE_HYP th1' th2
  end;
@@ -709,32 +708,32 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      (* make parameterized definition *)
      val (Name,Ty) = Lib.trye dest_var f
      val aux_name = Name^"_aux"
-     val faux = mk_var(aux_name,itlist(curry(op-->)) (map type_of (R1::SV)) Ty)
+     val aux_fvar = mk_var(aux_name,itlist(curry(op-->)) (map type_of (R1::SV)) Ty)
      val aux_bindstem = auxStem bindstem
      val (def,theory) =
            make_definition thy (defSuffix aux_bindstem)
-               (mk_eq(list_mk_comb(faux,R1::SV), rhs_proto_def))
+               (mk_eq(list_mk_comb(aux_fvar,R1::SV), rhs_proto_def))
      val def' = SPEC_ALL def
-     val faux_capp = lhs(concl def')
-     val faux_const = #1(strip_comb faux_capp)
+     val auxFn_capp = lhs(concl def')
+     val auxFn_const = #1(strip_comb auxFn_capp)
      val (extractants,TCl_0,_) = unzip3 extracta
      val TCs_0 = op_U aconv TCl_0
      val disch'd = itlist DISCH (proto_def::WFR::TCs_0) (LIST_CONJ extractants)
-     val inst'd = GEN R1 (MP (SPEC faux_capp (GEN f disch'd)) def')
+     val inst'd = GEN R1 (MP (SPEC auxFn_capp (GEN f disch'd)) def')
      fun kdisch keep th =
        itlist (fn h => fn th => if op_mem aconv h keep then th else DISCH h th)
               (hyp th) th
      val disch'dl_0 = map (DISCH proto_def o
                            DISCH WFR o kdisch [proto_def,WFR])
                         extractants
-     val disch'dl_1 = map (fn d => MP (SPEC faux_capp (GEN f d)) def')
+     val disch'dl_1 = map (fn d => MP (SPEC auxFn_capp (GEN f d)) def')
                           disch'dl_0
      fun gen_all away tm =
         let val FV = free_vars tm
         in itlist (fn v => fn tm =>
               if mem v away then tm else mk_forall(v,tm)) FV tm
         end
-     val TCl = map (map (gen_all (R1::f::SV) o subst[f |-> faux_capp])) TCl_0
+     val TCl = map (map (gen_all (R1::f::SV) o subst[f |-> auxFn_capp])) TCl_0
      val TCs = op_U aconv TCl
      val full_rqt = WFR::TCs
      val R2 = mk_select(R1, list_mk_conj full_rqt)
@@ -744,10 +743,12 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
                        itlist (curry op-->) (map type_of SV) (type_of f))
      val fvar_app = list_mk_comb(fvar,SV)
      val (def1,theory1) = make_definition thy (defPrim bindstem)
-               (mk_eq(fvar_app, list_mk_comb(faux_const,R2::SV)))
+               (mk_eq(fvar_app, list_mk_comb(auxFn_const,R2::SV)))
      val var_wits = LIST_CONJ (map ASSUME full_rqt)
      val TC_choice_thm =
-         MP (CONV_RULE(BINOP_CONV BETA_CONV)(ISPECL[R2abs, R1] boolTheory.SELECT_AX)) var_wits
+         MP (CONV_RULE(BINOP_CONV BETA_CONV)
+                      (ISPECL[R2abs, R1] boolTheory.SELECT_AX)) 
+            var_wits
      val elim_chosenTCs =
            rev_itlist (C ModusPonens) (CONJUNCTS TC_choice_thm) R2inst'd
      val rules = simplify [GSYM def1] elim_chosenTCs
@@ -756,12 +757,12 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      (* and now induction *)
 
      val aux_ind = Induction.mk_induction theory1
-                       {fconst=faux_const, R=R1, SV=SV,
+                       {fconst=auxFn_const, R=R1, SV=SV,
                         pat_TCs_list=pat_TCs_list}
      val ics = strip_conj(fst(dest_imp(snd(dest_forall(concl aux_ind)))))
      fun dest_ic tm = if is_imp tm then strip_conj (fst(dest_imp tm)) else []
      val ihs = Lib.flatten (map (dest_ic o snd o strip_forall) ics)
-     val nested_ihs = filter (can (find_term (aconv faux_const))) ihs
+     val nested_ihs = filter (can (find_term (aconv auxFn_const))) ihs
      (* a nested ih is of the form
 
            !(c1/\.../\ck ==> R a pat ==> P a)
@@ -1178,8 +1179,7 @@ fun mutrec_defn (facts,stem,eqns) =
  handle e => raise wrap_exn "Defn" "mutrec_defn" e;
 
 fun nestrec_defn (thy,(stem,stem'),wfrec_res,untuple) =
-  let val {rules,ind,SV,R,aux_rules,aux_ind,...}
-         = nestrec thy stem' wfrec_res
+  let val {rules,ind,SV,R,aux_rules,aux_ind,...} = nestrec thy stem' wfrec_res
       val (rules', ind') = untuple (rules, ind)
   in NESTREC {eqs = rules',
               ind = ind',
@@ -1229,24 +1229,21 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
 
 fun prim_mk_defn stem eqns =
  let
+   fun err s = raise ERR "prim_mk_defn" s
    val _ = Lexis.ok_identifier stem orelse
-           raise ERR "prim_mk_defn"
-                 (String.concat [Lib.quote stem, " is not alphanumeric"])
+           err (String.concat [Lib.quote stem, " is not alphanumeric"])
    val facts = TypeBase.theTypeBase ()
  in
   non_wfrec_defn (facts, defSuffix stem, eqns)
   handle HOL_ERR _ =>
     case all_fns eqns of
-       [] => raise ERR "prim_mk_defn" "no eqns"
+       [] => err "no eqns"
      | [_] => (* one defn being made *)
-        let
-          val ((f, args), rhs) = dest_hd_eqn eqns
-          fun err s = raise ERR "prim_mk_defn" s
+        let val ((f, args), rhs) = dest_hd_eqn eqns
         in
           if List.length args > 0 then
              let
-                val (tup_eqs, stem', untuple) =
-                  pairf (stem, eqns)
+                val (tup_eqs, stem', untuple) = pairf (stem, eqns)
                   handle HOL_ERR _ =>
                     err "failure in internal translation to tupled format"
                 val wfrec_res = wfrec_eqns facts tup_eqs

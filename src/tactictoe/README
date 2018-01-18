@@ -1,33 +1,64 @@
-TacTicToe is a tactic-based prover.
+TacticToe is a tactic-based prover.
 
 It explores a proof trees by repeatly selecting tactics that are
 appropriate to solve the current goal.
-The selection relies on a machine learning algorithm on a data set of recorded human tactics in previous proofs.
+The selection relies on a machine learning algorithm on a data set 
+of recorded human tactics.
 
-There are two versions:
+INSTALL:
+  1) Recording theories interactively. (todo)
 
-- bare_tactictoe is only based on recorded tactics.
-- tactictoe additionally introduces metis calls with predicted lemmas.
+KNOWN BUGS:
+  Some tactics may change the behaviour of later tactics in an undesirable way. 
+  One cache error can be fixed using:
+  numSimps.clear_arith_caches ();
 
-Install:
+NOTES: (for the developers) 
+  Keep up-to-date infix tokens in hhsInfix.sml and 
+  polyml values in hhsUnfold.sml.
 
-  - run Holmake in the src directory. (cd src; Holmake; cd ..)
-  - wget http://cl-informatik.uibk.ac.at/users/tgauthier/tactictoe/record.tar.gz
-  - extract it in the directory record
+ALTERNATIVE INSTALLATION:
+1) Scripts modification: 
+  
+  Rewrite scripts file and export them to src/tactictoe/scripts.
+  Generate copy_scripts.sh that allows you to copy the scripts to their
+  relative location.
+  
+  rlwrap bin/hol
+  load "hhsUnfold";
+  open hhsUnfold;
+  rewrite_hol_scripts (); (* takes about 30 minutes *)
 
-Run: run hol in this directory
-  load "src/tactictoe";
-  open tactictoe;
-  bare_tactictoe ``1+1=2``; (* first call *)
-  bare_tactictoe ``1+1=2``; (* second call *)
-  val it = (): unit
-      ( numLib.DECIDE_TAC )
-  val it = (): unit
-  val it = (): unit
 
-Remark: the first call of either tactictoe or bare_tactictoe load all 
-the tactics from transitively dependent theories (ancestors). That is 
-why it prints a lot of effects which maybe annoying but is not repeated 
-for later calls.
+2) Recording tactics (non-interactive mode)
+  
+  Get a fresh copy HOL_RECORD (or choose a more convenient name)
+  of HOL with same commit "commit-number".
+  
+  # Go to the HOL_RECORD directory
+  cd HOL_RECORD 
+  
+  # Overwrite the scripts files with their modified version.
+  # Assume the relative location of the original HOL is ../HOL. 
+  sh ../HOL/src/tactictoe/src/copy_scripts.sh
+
+  # Copy tactictoe files to src/1. Allow to record early theories.
+  mv src/tactictoe/src/*.sml src/1
+  mv src/tactictoe/src/*.sig src/1
+  mv src/1/infix_file.sml src/tactictoe/src/infix_file.sml
+    
+  # Build HOL_RECORD. Takes about 1 or 2 hours. 
+  bin/build
+
+3) Run TacticToe (in HOL_RECORD):
+  
+  rlwrap bin/hol
+  load "tacticToe";
+  open tacticToe;
+  tactictoe ([],``1+1=2``);
+  
+  Loading 7306 feature vectors
+  val it = fn: thm list -> metisTools.tactic 
+  SRW_TAC [] []
 
 

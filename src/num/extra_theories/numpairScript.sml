@@ -230,17 +230,14 @@ val ncons_not_nnil = Store_thm(
   ``ncons x y <> nnil``,
   SRW_TAC [ARITH_ss][ncons_def]);
 
-val nlistrec_defn = Defn.Hol_defn "nlistrec" `
+val nlistrec_def = tDefine "nlistrec" `
   nlistrec n f l = if l = 0 then n
                    else f (nfst (l - 1)) (nsnd (l - 1))
                           (nlistrec n f (nsnd (l - 1)))
-`;
-
-val (nlistrec_def, nlistrec_ind) = Defn.tprove(
-  nlistrec_defn,
-  WF_REL_TAC `measure (SND o SND)` THEN
-  STRIP_TAC THEN ASSUME_TAC (Q.INST [`n` |-> `l - 1`] nsnd_le) THEN
-  DECIDE_TAC);
+` (WF_REL_TAC `measure (SND o SND)` THEN
+   STRIP_TAC THEN ASSUME_TAC (Q.INST [`n` |-> `l - 1`] nsnd_le) THEN
+   DECIDE_TAC);
+val nlistrec_ind = theorem "nlistrec_ind"
 
 val nlistrec_thm = Store_thm(
   "nlistrec_thm",

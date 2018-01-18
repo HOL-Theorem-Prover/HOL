@@ -1,7 +1,9 @@
 structure Term :> Term =
 struct
 
-open Feedback Lib Type
+open Feedback Lib KernelTypes Type
+
+val kernelid = "expknl"
 
 infixr --> |->
 
@@ -24,8 +26,6 @@ fun qcomb2 con (f, g) (x, y) =
 (* apply a function f under "constructor" con, handling Unchanged *)
 fun qcomb con f = qcomb2 con (f, f)
 
-type const_key = KernelSig.kernelname
-type const_info = (KernelSig.kernelid * hol_type)
 type 'a set = 'a HOLset.set
 
 val compare_key = KernelSig.name_compare
@@ -39,11 +39,6 @@ val const_table = KernelSig.new_table()
 fun prim_delete_const kn = ignore (KernelSig.retire_name(const_table, kn))
 
 fun inST s = not (null (KernelSig.listName const_table s))
-
-datatype term = Var of string * hol_type
-              | App of term * term
-              | Const of const_info
-              | Abs of term * term
 
 fun prim_new_const (k as {Thy,Name}) ty = let
   val id = KernelSig.insert(const_table, k, ty)
@@ -324,12 +319,13 @@ fun free_varsl tm_list = itlist (union o free_vars) tm_list []
 fun all_varsl tm_list = itlist (union o all_vars) tm_list []
 
 (* term comparison *)
+fun fast_term_eq t1 t2 = Portable.pointer_eq (t1,t2)
 structure Map = Binarymap
 val empty_env = Map.mkDict var_compare
 fun compare p = let
   open Map
-  fun cmp n (E as (env1, env2)) p =
-      if n = 0 andalso Portable.pointer_eq p then EQUAL
+  fun cmp n (E as (env1, env2)) (p as (t1,t2)) =
+      if n = 0 andalso fast_term_eq t1 t2 then EQUAL
       else
         case p of
           (v1 as Var _, v2 as Var _) => let
@@ -1053,6 +1049,24 @@ fun prim_mk_imp t1 t2 = App(App(imp, t1), t2)
 
 (* val prim_mk_imp = (fn t1 => Profile.profile "prim_mk_imp" (prim_mk_imp t1))*)
 
+(* ----------------------------------------------------------------------
+    dest_term and the lambda type
+   ---------------------------------------------------------------------- *)
+
+datatype lambda =
+     VAR of string * hol_type
+   | CONST of {Name: string, Thy: string, Ty: hol_type}
+   | COMB of term * term
+   | LAMB of term * term
+
+fun dest_term M =
+  case M of
+      Const _ => CONST (dest_thy_const M)
+    | Var p => VAR p
+    | App p => COMB p
+    | Abs p => LAMB p
+
+fun identical t1 t2 = t1 = t2
 
 (*---------------------------------------------------------------------------*
  *  Raw syntax prettyprinter for terms.                                      *

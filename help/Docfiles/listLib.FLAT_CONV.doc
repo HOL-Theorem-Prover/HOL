@@ -25,7 +25,7 @@ It returns the theorem
 \EXAMPLE
 Evaluating
 {
-   FLAT_CONV (--`FLAT [[0;2;4];[0;1;2;3;4]]`--);
+   FLAT_CONV “FLAT [[0;2;4];[0;1;2;3;4]]”;
 }
 returns the following theorem:
 {

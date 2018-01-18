@@ -33,6 +33,7 @@ type dtyinfo =
             axiom        : shared_thm,
             induction    : shared_thm,
             case_def     : thm,
+            case_eq  : thm,
             case_cong    : thm,
             nchotomy     : thm,
             case_const   : term,
@@ -48,6 +49,41 @@ type dtyinfo =
             accessors    : thm list,
             updates      : thm list,
             simpls       : simpfrag} ;
+
+open FunctionalRecordUpdate
+fun gcons_mkUp z = makeUpdate20 z
+fun update_DTY z = let
+  fun from accessors axiom case_cong case_const case_def case_eq
+           constructors destructors distinct encode fields induction lift
+           nchotomy one_one recognizers simpls size ty updates =
+    {accessors = accessors, axiom = axiom, case_cong = case_cong,
+     case_const = case_const, case_def = case_def, case_eq = case_eq,
+     constructors = constructors, destructors = destructors,
+     distinct = distinct, encode = encode, fields = fields,
+     induction = induction, lift = lift, nchotomy = nchotomy,
+     one_one = one_one, recognizers = recognizers, simpls = simpls,
+     size = size, ty = ty, updates = updates}
+  (* fields in reverse order to above *)
+  fun from' updates ty size simpls recognizers one_one nchotomy lift induction
+            fields encode distinct destructors constructors case_eq case_def
+            case_const case_cong axiom accessors =
+    {accessors = accessors, axiom = axiom, case_cong = case_cong,
+     case_const = case_const, case_def = case_def, case_eq = case_eq,
+     constructors = constructors, destructors = destructors,
+     distinct = distinct, encode = encode, fields = fields,
+     induction = induction, lift = lift, nchotomy = nchotomy,
+     one_one = one_one, recognizers = recognizers, simpls = simpls,
+     size = size, ty = ty, updates = updates}
+  (* first order *)
+  fun to f {accessors, axiom, case_cong, case_const, case_def, case_eq,
+            constructors, destructors, distinct, encode, fields, induction,
+            lift, nchotomy, one_one, recognizers, simpls, size, ty, updates} =
+    f accessors axiom case_cong case_const case_def case_eq
+      constructors destructors distinct encode fields induction lift
+      nchotomy one_one recognizers simpls size ty updates
+in
+  gcons_mkUp (from, from', to)
+end z
 
 type ntyinfo = hol_type *
           {nchotomy : thm option,
@@ -93,6 +129,10 @@ fun case_cong_of (DFACTS {case_cong,...}) = case_cong
 fun case_def_of (DFACTS {case_def,...}) = case_def
   | case_def_of (NFACTS (ty,_)) =
        raise ERR "case_def_of" (dollarty ty^" is not a datatype");
+
+fun case_eq_of (DFACTS {case_eq, ...}) = case_eq
+  | case_eq_of (NFACTS (ty,_)) =
+       raise ERR "case_eq_of" (dollarty ty^" is not a datatype");
 
 fun induction_of0 (DFACTS {induction,...}) = induction
   | induction_of0 (NFACTS (ty,{induction,...}))
@@ -161,179 +201,62 @@ fun lift_of(DFACTS {lift,...}) = lift
                     Making alterations
  ---------------------------------------------------------------------------*)
 
-fun put_nchotomy th (DFACTS
-      {ty,axiom, case_const,case_cong,case_def, constructors,
-       induction, nchotomy, distinct, one_one, fields,
-        accessors, updates, simpls, size, encode, lift,
-        destructors,recognizers})
-    = DFACTS{ty=ty,axiom=axiom, case_const=case_const,
-            case_cong=case_cong,case_def=case_def, constructors=constructors,
-            induction=induction, nchotomy=th, distinct=distinct,
-            one_one=one_one, fields=fields,
-            accessors=accessors, updates=updates, simpls=simpls,
-            size=size, encode=encode,lift=lift,
-            recognizers=recognizers,destructors=destructors}
+fun put_nchotomy th (DFACTS dty) = DFACTS (update_DTY dty (U #nchotomy th) $$)
   | put_nchotomy th (NFACTS(ty,{nchotomy,induction,size,encode})) =
       NFACTS(ty,{nchotomy=SOME th,induction=induction,size=size,encode=encode});
 
-fun put_simpls thl (DFACTS
- {ty,axiom, case_const, case_cong, case_def, constructors,
-  induction, nchotomy, distinct, one_one, fields,
-  accessors, updates, simpls, size, encode,lift,destructors,recognizers})
-  =
-  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
-            case_cong=case_cong,case_def=case_def,constructors=constructors,
-            induction=induction, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, fields=fields, accessors=accessors, updates=updates,
-            simpls=thl, size=size, encode=encode,lift=lift,
-            recognizers=recognizers,destructors=destructors}
- | put_simpls _ _ = raise ERR "put_simpls" "not a datatype";
+fun put_simpls thl (DFACTS dty) = DFACTS (update_DTY dty (U #simpls thl) $$)
+  | put_simpls _ _ = raise ERR "put_simpls" "not a datatype";
 
-fun put_induction th (DFACTS
- {ty,axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, fields,
-  accessors, updates, simpls, size, encode,lift,
-  destructors,recognizers})
-  =
-  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
-          case_cong=case_cong,case_def=case_def, constructors=constructors,
-          induction=th, nchotomy=nchotomy, distinct=distinct,
-          one_one=one_one, fields=fields, accessors=accessors, updates=updates,
-          simpls=simpls, size=size, encode=encode,lift=lift,
-          recognizers=recognizers,destructors=destructors}
+fun put_induction th (DFACTS dty) = DFACTS (update_DTY dty (U #induction th) $$)
   | put_induction (ORIG th) (NFACTS(ty,{nchotomy,induction,size,encode})) =
       NFACTS(ty,{induction=SOME th,nchotomy=nchotomy,size=size,encode=encode})
   | put_induction (COPY th) (NFACTS(ty,{nchotomy,induction,size,encode})) =
-     raise ERR "put_induction" "non-datatype but mutrec"
+      raise ERR "put_induction" "non-datatype but mutrec"
 
-fun put_size (size_tm,size_rw) (DFACTS
-       {ty,axiom, case_const,case_cong,case_def,constructors,
-        induction, nchotomy, distinct, one_one, fields,
-        accessors, updates, simpls, size, encode,lift,
-        destructors,recognizers})
-    =
-    DFACTS {ty=ty,axiom=axiom, case_const=case_const,
-            case_cong=case_cong,case_def=case_def,constructors=constructors,
-            induction=induction, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, fields=fields,
-            accessors=accessors, updates=updates, simpls=simpls,
-            size=SOME(size_tm,size_rw), encode=encode,lift=lift,
-            recognizers=recognizers,destructors=destructors}
-  | put_size (size_tm,ORIG size_rw) (NFACTS(ty,{nchotomy,induction,size,encode})) =
+fun put_size szinfo (DFACTS dty) =
+      DFACTS (update_DTY dty (U #size (SOME szinfo)) $$)
+  | put_size (size_tm,ORIG size_rw)
+             (NFACTS(ty,{nchotomy,induction,size,encode})) =
       NFACTS(ty,{nchotomy=nchotomy,size=SOME(size_tm,size_rw),
                  induction=induction,encode=encode})
-  | put_size (size_tm,COPY size_rw) (NFACTS(ty,{nchotomy,induction,size,encode})) =
+  | put_size (size_tm,COPY size_rw)
+             (NFACTS(ty,{nchotomy,induction,size,encode})) =
       raise ERR "put_size" "non-datatype but mutrec"
 
-fun put_encode (encode_tm,encode_rw) (DFACTS
-       {ty,axiom, case_const,case_cong,case_def,constructors,
-        induction, nchotomy, distinct, one_one, fields,
-        accessors, updates, simpls, size, encode,lift,
-        destructors,recognizers})
-     =
-     DFACTS{ty=ty,axiom=axiom, case_const=case_const,
-            case_cong=case_cong,case_def=case_def,constructors=constructors,
-            induction=induction, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, fields=fields,
-            accessors=accessors, updates=updates, simpls=simpls,
-            size=size, encode=SOME(encode_tm,encode_rw), lift=lift,
-            recognizers=recognizers,destructors=destructors}
-  | put_encode (encode_tm,ORIG encode_rw) (NFACTS(ty,{nchotomy,induction,size,encode})) =
+fun put_encode encinfo (DFACTS dty) =
+      DFACTS (update_DTY dty (U #encode (SOME encinfo)) $$)
+  | put_encode (encode_tm,ORIG encode_rw)
+               (NFACTS(ty,{nchotomy,induction,size,encode})) =
      NFACTS(ty,{nchotomy=nchotomy,induction=induction,
                 size=size,encode=SOME(encode_tm,encode_rw)})
-  | put_encode (encode_tm,COPY encode_rw) (NFACTS(ty,{nchotomy,induction,size,encode})) =
+  | put_encode (encode_tm,COPY encode_rw)
+               (NFACTS(ty,{nchotomy,induction,size,encode})) =
       raise ERR "put_encode" "non-datatype but mutrec"
 
 
-fun put_lift lift_tm (DFACTS
- {ty,axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, fields,
-  accessors, updates, simpls, size, encode, lift,
-  destructors,recognizers})
-  =
-  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
-            case_cong=case_cong,case_def=case_def,constructors=constructors,
-            induction=induction, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, fields=fields,
-            accessors=accessors, updates=updates, simpls=simpls,
-            size=size, encode=encode, lift=SOME lift_tm,
-            recognizers=recognizers,destructors=destructors}
- | put_lift _ _ = raise ERR "put_lift" "not a datatype";
+fun put_lift lift_tm (DFACTS dty) =
+      DFACTS (update_DTY dty (U #lift (SOME lift_tm)) $$)
+  | put_lift _ _ = raise ERR "put_lift" "not a datatype";
 
-fun put_fields flds (DFACTS
- {ty,axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, fields,
-  accessors, updates, simpls, size, encode, lift,
-  destructors,recognizers})
-  =
-  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
-            case_cong=case_cong,case_def=case_def,constructors=constructors,
-            induction=induction, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, fields=flds,
-            accessors=accessors, updates=updates, simpls=simpls,
-            size=size, encode=encode, lift=lift,
-            recognizers=recognizers,destructors=destructors}
- | put_fields _ _ = raise ERR "put_fields" "not a datatype";
+fun put_fields flds (DFACTS dty) = DFACTS (update_DTY dty (U #fields flds) $$)
+  | put_fields _ _ = raise ERR "put_fields" "not a datatype";
 
-fun put_accessors thl (DFACTS
- {ty,axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, fields,
-  accessors, updates, simpls, size, encode, lift,
-  destructors,recognizers})
-  =
-  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
-            case_cong=case_cong,case_def=case_def,constructors=constructors,
-            induction=induction, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, fields=fields,
-            accessors=thl, updates=updates, simpls=simpls,
-            size=size, encode=encode, lift=lift,
-            recognizers=recognizers,destructors=destructors}
- | put_accessors _ _ = raise ERR "put_accessors" "not a datatype";
+fun put_accessors thl (DFACTS dty) =
+      DFACTS (update_DTY dty (U #accessors thl) $$)
+  | put_accessors _ _ = raise ERR "put_accessors" "not a datatype";
 
-fun put_updates thl (DFACTS
- {ty,axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, fields,
-  accessors, updates, simpls, size, encode, lift,
-  destructors,recognizers})
-  =
-  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
-            case_cong=case_cong,case_def=case_def,constructors=constructors,
-            induction=induction, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, fields=fields,
-            accessors=accessors, updates=thl, simpls=simpls,
-            size=size, encode=encode, lift=lift,
-            recognizers=recognizers,destructors=destructors}
- | put_updates _ _ = raise ERR "put_updates" "not a datatype";
+fun put_updates thl (DFACTS dty) =
+      DFACTS (update_DTY dty (U #updates thl) $$)
+  | put_updates _ _ = raise ERR "put_updates" "not a datatype";
 
-fun put_recognizers thl (DFACTS
- {ty,axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, fields,
-  accessors, updates, simpls, size, encode, lift,
-  destructors,recognizers})
-  =
-  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
-          case_cong=case_cong,case_def=case_def,constructors=constructors,
-          induction=induction, nchotomy=nchotomy, distinct=distinct,
-          one_one=one_one, fields=fields,
-          accessors=accessors, updates=updates, simpls=simpls,
-          size=size, encode=encode, lift=lift,
-          recognizers=thl,destructors=destructors}
- | put_recognizers _ _ = raise ERR "put_recognizers" "not a datatype";
+fun put_recognizers thl (DFACTS dty) =
+      DFACTS (update_DTY dty (U #recognizers thl) $$)
+  | put_recognizers _ _ = raise ERR "put_recognizers" "not a datatype";
 
-fun put_destructors thl (DFACTS
- {ty,axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, fields,
-  accessors, updates, simpls, size, encode, lift,
-  destructors,recognizers})
-  =
-  DFACTS {ty=ty,axiom=axiom, case_const=case_const,
-            case_cong=case_cong,case_def=case_def,constructors=constructors,
-            induction=induction, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, fields=fields,
-            accessors=accessors, updates=updates, simpls=simpls,
-            size=size, encode=encode, lift=lift,
-            recognizers=recognizers,destructors=thl}
- | put_destructors _ _ = raise ERR "put_destructors" "not a datatype";
+fun put_destructors thl (DFACTS dty) =
+      DFACTS (update_DTY dty (U #destructors thl) $$)
+  | put_destructors _ _ = raise ERR "put_destructors" "not a datatype";
 
 (*---------------------------------------------------------------------------*
  * Returns the datatype name and the constructors. The code is a copy of     *
@@ -361,7 +284,7 @@ val defn_const =
  * numbers are in the context, which is not necessarily true.                *
  *---------------------------------------------------------------------------*)
 
-fun mk_datatype_info {ax,case_def,case_cong,induction,
+fun mk_datatype_info {ax,case_def,case_eq,case_cong,induction,
                       nchotomy,size,encode,lift,one_one,
                       fields, accessors, updates, distinct,
                       destructors,recognizers} =
@@ -376,6 +299,7 @@ fun mk_datatype_info {ax,case_def,case_cong,induction,
       recognizers  = recognizers,
       case_const   = defn_const case_def,
       case_def     = case_def,
+      case_eq      = case_eq,
       case_cong    = case_cong,
       induction    = induction,
       nchotomy     = nchotomy,
@@ -396,6 +320,8 @@ local fun mk_ti (n,ax,ind)
                 (cdef::cds) (ccong::cgs) (oo::oos) (d::ds) (nch::nchs) =
             mk_datatype_info{ax=COPY(n,ax), induction=COPY(n,ind),
                       case_def=cdef,case_cong=ccong, nchotomy=nch,
+                      case_eq =
+                        prove_case_eq_thm {case_def = cdef, nchotomy = nch},
                       one_one=oo, distinct=d,size=NONE, encode=NONE,
                       lift=NONE, fields=[], accessors=[],updates=[],
                       recognizers=[],destructors=[]}
@@ -414,10 +340,14 @@ fun gen_datatype_info {ax, ind, case_defs} =
               length one_ones   = length distincts)
         orelse raise ERR "gen_tyinfo"
                  "Number of theorems automatically proved doesn't match up"
+     val cased1 = hd case_defs
+     val casec1 = hd case_congs
+     val nch1 = hd nchotomyl
      val tyinfo_1 = mk_datatype_info
            {ax=ORIG ax, induction=ORIG ind,
-            case_def = hd case_defs, case_cong = hd case_congs,
-            nchotomy = hd nchotomyl,
+            case_def = cased1, case_cong = casec1, nchotomy = nch1,
+            case_eq =
+              prove_case_eq_thm {case_def = cased1, nchotomy = nch1},
             size=NONE, encode=NONE, lift=NONE,
             fields=[], accessors=[],updates=[],
             one_one=hd one_ones, distinct=hd distincts,
@@ -444,7 +374,7 @@ fun pp_tyinfo ppstrm (d as DFACTS recd) =
      val pp_term = Parse.pp_term ppstrm
      val pp_thm = Parse.pp_thm ppstrm
      val {ty,constructors, case_const, case_def, case_cong, induction,
-          nchotomy,one_one,distinct,simpls,size,encode,lift,axiom,
+          nchotomy,one_one,distinct,simpls,size,encode,lift,axiom, case_eq,
           fields, accessors, updates,recognizers,destructors} = recd
      val ty_namestring = name_pair (ty_name_of d)
  in
@@ -495,9 +425,14 @@ fun pp_tyinfo ppstrm (d as DFACTS recd) =
       of ORIG thm  => pp_thm thm
        | COPY(sp,_) => add_string ("see "^Lib.quote (name_pair sp)));
    end_block();
+
    add_break(1,0);
    begin_block CONSISTENT 1; add_string "Case completeness:";
    add_break (1,0); pp_thm nchotomy; end_block();
+
+   add_break(1,0);
+   begin_block CONSISTENT 1; add_string "Case-const equality split:";
+   add_break (1,0); pp_thm case_eq; end_block();
 
    let fun do11 thm =
             (begin_block CONSISTENT 1; add_string "One-to-one:";

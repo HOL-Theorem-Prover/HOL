@@ -339,6 +339,13 @@ val (float_round_with_flags_tm, mk_float_round_with_flags,
      dest_float_round_with_flags, is_float_round_with_flags) =
    tw_triop "float_round_with_flags"
 
+val (real_to_float_tm, mk_real_to_float, dest_real_to_float, is_real_to_float) =
+   binop "real_to_float"
+
+val (real_to_float_with_flags_tm, mk_real_to_float_with_flags,
+     dest_real_to_float_with_flags, is_real_to_float_with_flags) =
+   binop "real_to_float_with_flags"
+
 (* ------------------------------------------------------------------------- *)
 
 val (_, mk_int_float_plus_infinity, dest_int_float_plus_infinity,

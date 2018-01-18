@@ -1,6 +1,9 @@
 CLINE_OPTIONS = --no_overlay
 
-all: holpathdb.uo holpathdb.ui
+OBJ_FILES = holpathdb.uo holpathdb.ui Arbnumcore.uo Arbnumcore.ui \
+            Arbintcore.uo Arbintcore.ui MLSYSPortable.uo
+
+all: $(OBJ_FILES)
 
 holpathdb.uo: holpathdb.ui
 

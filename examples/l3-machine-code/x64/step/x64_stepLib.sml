@@ -39,7 +39,10 @@ local
        wordsSyntax.w2w_tm, wordsSyntax.sw2sw_tm,
        ``(h >< l) : 'a word -> 'b word``,
        ``bit_field_insert h l : 'a word -> 'b word -> 'b word``] @
-      utilsLib.update_fns ``: x64_state``
+      utilsLib.update_fns ``: x64_state`` @
+      utilsLib.accessor_fns ``: MXCSR`` @
+      utilsLib.accessor_fns ``: binary_ieee$flags`` @
+      utilsLib.update_fns ``: binary_ieee$flags``
    val exc = ``SND (raise'exception e s : 'a # x64_state)``
 in
    val cond_rand_thms = utilsLib.mk_cond_rand_thms (other_fns @ state_fns)
@@ -55,9 +58,12 @@ end
 local
    fun datatype_thms thms =
       thms @ [cond_rand_thms, snd_exception_thms] @
+      utilsLib.datatype_rewrites true "binary_ieee" ["flags"] @
       utilsLib.datatype_rewrites true "x64"
         ["x64_state", "Zreg", "Zeflags", "Zsize", "Zbase", "Zrm", "Zdest_src",
-         "Zimm_rm", "Zmonop_name", "Zbinop_name", "Zcond", "Zea", "Zinst"]
+         "Zimm_rm", "Zmonop_name", "Zbinop_name", "Zbit_test_name", "Zcond",
+         "Zea", "MXCSR", "xmm_mem", "sse_binop", "sse_logic", "sse_compare",
+         "Zinst"]
 in
    val DATATYPE_CONV = REWRITE_CONV (datatype_thms [])
    val COND_UPDATE_CONV =
@@ -200,9 +206,18 @@ val erase_eflags =
 
 (* ------------------------------------------------------------------------ *)
 
+val mem_addr_rwt =
+  EV [mem_addr_def, ea_index_def, ea_base_def, wordsTheory.WORD_ADD_0] []
+     [[`m` |-> ``(NONE, ZnoBase, d)``],
+      [`m` |-> ``(NONE, ZripBase, d)``],
+      [`m` |-> ``(NONE, ZregBase r, d)``],
+      [`m` |-> ``(SOME (scale, inx), ZnoBase, d)``],
+      [`m` |-> ``(SOME (scale, inx), ZripBase, d)``],
+      [`m` |-> ``(SOME (scale, inx), ZregBase r, d)``]]
+     ``mem_addr m``
+
 val ea_Zrm_rwt =
-   EV [ea_Zrm_def, mem_addr_def, ea_index_def, ea_base_def,
-       wordsTheory.WORD_ADD_0] []
+   EV ([ea_Zrm_def] @ mem_addr_rwt) []
       [[`rm` |-> ``Zr r``],
        [`rm` |-> ``Zm (NONE, ZnoBase, d)``],
        [`rm` |-> ``Zm (NONE, ZripBase, d)``],
@@ -291,7 +306,25 @@ val write'EA_rwt =
    |> List.map (Conv.RIGHT_CONV_RULE
                   (utilsLib.EXTRACT_CONV THENC COND_UPDATE_CONV))
 
-val write'EA_rwt_r = List.map (Q.INST [`wv` |-> `v`]) write'EA_rwt
+val wv_to_v = List.map (Q.INST [`wv` |-> `v`])
+
+val write'EA_rwt_r = wv_to_v write'EA_rwt
+
+val xmm =
+   [[`xmm` |-> ``xmm_reg x``],
+    [`xmm` |-> ``xmm_mem (NONE, ZnoBase, d)``],
+    [`xmm` |-> ``xmm_mem (NONE, ZripBase, d)``],
+    [`xmm` |-> ``xmm_mem (NONE, ZregBase r, d)``],
+    [`xmm` |-> ``xmm_mem (SOME (scale, inx), ZnoBase, d)``],
+    [`xmm` |-> ``xmm_mem (SOME (scale, inx), ZripBase, d)``],
+    [`xmm` |-> ``xmm_mem (SOME (scale, inx), ZregBase r, d)``]] : utilsLib.cover
+
+val XMM_rwt =
+  EV ([XMM_def, mem128_rwt] @ mem_addr_rwt) [] xmm
+    ``XMM xmm``
+
+val write'XMM_rwt = EV ([write'XMM_def, write'mem128_rwt] @ mem_addr_rwt) [] xmm
+  ``write'XMM (d, xmm)``
 
 (* ------------------------------------------------------------------------ *)
 
@@ -413,29 +446,38 @@ val r_rm =
     [`ds` |-> ``Zr_rm (r1, Zm (SOME (scale, ix), ZregBase r2, d))``]]
     : utilsLib.cover
 
-local
-  val l =
-  ([[`ds` |-> ``Zrm_i (Zr r, i)``],
+val rm_i =
+   [[`ds` |-> ``Zrm_i (Zr r, i)``],
     [`ds` |-> ``Zrm_i (Zm (NONE, ZnoBase, d), i)``],
     [`ds` |-> ``Zrm_i (Zm (NONE, ZripBase, d), i)``],
     [`ds` |-> ``Zrm_i (Zm (NONE, ZregBase r, d), i)``],
     [`ds` |-> ``Zrm_i (Zm (SOME (scale, ix), ZnoBase, d), i)``],
     [`ds` |-> ``Zrm_i (Zm (SOME (scale, ix), ZripBase, d), i)``],
-    [`ds` |-> ``Zrm_i (Zm (SOME (scale, ix), ZregBase r, d), i)``],
-    [`ds` |-> ``Zrm_r (Zr r1, r2)``],
+    [`ds` |-> ``Zrm_i (Zm (SOME (scale, ix), ZregBase r, d), i)``]]
+    : utilsLib.cover
+
+val rm_r =
+   [[`ds` |-> ``Zrm_r (Zr r1, r2)``],
     [`ds` |-> ``Zrm_r (Zm (NONE, ZnoBase, d), r)``],
     [`ds` |-> ``Zrm_r (Zm (NONE, ZripBase, d), r)``],
     [`ds` |-> ``Zrm_r (Zm (NONE, ZregBase r1, d), r2)``],
     [`ds` |-> ``Zrm_r (Zm (SOME (scale, ix), ZnoBase, d), r)``],
     [`ds` |-> ``Zrm_r (Zm (SOME (scale, ix), ZripBase, d), r)``],
-    [`ds` |-> ``Zrm_r (Zm (SOME (scale, ix), ZregBase r1, d), r2)``]] @ r_rm)
+    [`ds` |-> ``Zrm_r (Zm (SOME (scale, ix), ZregBase r1, d), r2)``]]
     : utilsLib.cover
-in
-  val src_dst = utilsLib.augment (`size`, sizes) l
-  val src_dst_not8 = utilsLib.augment (`size`, tl sizes) l
-end
 
-val lea = utilsLib.augment (`size`, tl sizes) (tl r_rm) : utilsLib.cover
+local
+  val l = rm_i @ rm_r @ r_rm
+  val aug_size = utilsLib.augment (`size`, sizes)
+  val aug_size_not8 = utilsLib.augment (`size`, tl sizes)
+in
+  val src_dst = aug_size l
+  val src_dst_not8 = aug_size_not8 l
+  val src_dst_not8_or_r_rm = aug_size_not8 (rm_i @ rm_r)
+  val lea = aug_size_not8 (tl r_rm)
+  val rm_cases = aug_size rm
+  val rm_cases_not8 = aug_size_not8 rm
+end
 
 val extends =
  (* 8 -> 16, 32, 64 *)
@@ -447,9 +489,6 @@ val extends =
  (* 32 -> 64 *)
  utilsLib.augment (`size2`, List.drop (sizes, 3))
     (utilsLib.augment (`size`, [List.nth(sizes, 2)]) r_rm)
-
-val rm_cases = utilsLib.augment (`size`, sizes) rm
-val rm_cases_not8 = utilsLib.augment (`size`, tl sizes) rm
 
 (* ------------------------------------------------------------------------ *)
 
@@ -477,7 +516,26 @@ val is_some_hyp_rule =
           ``IS_SOME (x: 'a word option)``)
 *)
 
-val Znop_rwt = EV [dfn'Znop_def] [] [] ``dfn'Znop n``
+val bit_test_rwt =
+   EV ([bit_test_def, write'CF_def, Cflag_rwt, write'Eflag_rwt] @
+       EA_rwt @ write'EA_rwt) []
+      (utilsLib.augment
+         (`bt`, [``Zbt``, ``Zbts``, ``Zbtr``, ``Zbtc``])
+         (List.take (tl no_imm_ea, 4)))
+     ``bit_test (bt, ea, offset)``
+   |> data_hyp_rule
+   |> wv_to_v
+
+val Zbit_test_rwt =
+   EV ([dfn'Zbit_test_def, modSize_def] @ SignExtension64_rwt @ bit_test_rwt @
+       ea_Zrm_rwt @ EA_rwt @ write'EA_rwt @ ea_Zsrc_rwt @ ea_Zdest_rwt) []
+      (utilsLib.augment
+       (`bt`, [``Zbt``, ``Zbts``, ``Zbtr``, ``Zbtc``]) src_dst_not8_or_r_rm)
+     ``dfn'Zbit_test (bt, size, ds)``
+   |> data_hyp_rule
+   |> addThms
+
+(* val Znop_rwt = EV [dfn'Znop_def] [] [] ``dfn'Znop n`` |> addThms *)
 
 val Zcmc_rwt =
    EV [dfn'Zcmc_def, CF_def, write'CF_def, Cflag_rwt, write'Eflag_rwt] [] []
@@ -716,6 +774,215 @@ val Zidiv_byte_reg_rwts_2 =
 
 (* ------------------------------------------------------------------------ *)
 
+(* SSE *)
+
+(* Assume:
+   - all SSE exceptions are masked
+   - don't flush to zero
+   - denormals are not treated as zero
+*)
+val mxcsr =
+  [``~^st.MXCSR.FZ``, ``^st.MXCSR.PM``, ``^st.MXCSR.UM``, ``^st.MXCSR.OM``,
+   ``^st.MXCSR.ZM``, ``^st.MXCSR.DM``, ``^st.MXCSR.IM``, ``~^st.MXCSR.DAZ``]
+
+fun process_float_flags q =
+  process_float_flags_def
+  |> Q.ISPEC q
+  |> (fn th => Thm.AP_THM th st)
+  |> SIMP_RULE (srw_ss()++boolSimps.LET_ss)
+       [Ntimes state_transformerTheory.FOREACH_def 5,
+        state_transformerTheory.BIND_DEF,
+        state_transformerTheory.UNIT_DEF,
+        pairTheory.UNCURRY, cond_rand_thms,
+        XM_exception_def, initial_ieee_flags_def]
+  |> CONV_RULE (utilsLib.INST_REWRITE_CONV (List.map ASSUME mxcsr))
+  |> FULL_CONV_RULE DATATYPE_CONV
+
+val process_float_flags1 = process_float_flags `[f : bool # flags]`
+val process_float_flags2 = process_float_flags `[f1 : bool # flags; f2]`
+val process_float_flags4 = process_float_flags `[f1 : bool # flags; f2; f3; f4]`
+
+val lem1 = Q.prove(
+  `(!x y.
+    (if IS_SOME x then i2w (THE x) else y) =
+     case x of SOME a => i2w a | _ => y) /\
+   (!x y.
+    (if IS_SOME x then w2w (i2w (THE x) : 'c word) else y) =
+     case x of SOME a => w2w (i2w a : 'c word) | _ => y)`,
+  strip_tac \\ Cases \\ rw [])
+
+val lem2 = Q.prove(
+  `(case x of
+       LT => s with EFLAGS := a
+     | EQ => s with EFLAGS := b
+     | GT => s with EFLAGS := c
+     | UN => s with EFLAGS := d)
+   with EFLAGS :=
+     (Z_SF =+ SOME F)
+       ((Z_AF =+ SOME F)
+         ((Z_OF =+ SOME F)
+           (case x of
+               LT => s with EFLAGS :=
+                 (Z_CF =+ SOME T) ((Z_PF =+ SOME F) ((Z_ZF =+ SOME F) s.EFLAGS))
+             | EQ => s with EFLAGS :=
+                 (Z_CF =+ SOME F) ((Z_PF =+ SOME F) ((Z_ZF =+ SOME T) s.EFLAGS))
+             | GT => s with EFLAGS :=
+                 (Z_CF =+ SOME F) ((Z_PF =+ SOME F) ((Z_ZF =+ SOME F) s.EFLAGS))
+             | UN => s with EFLAGS :=
+                 (Z_CF =+ SOME T) ((Z_PF =+ SOME T) ((Z_ZF =+ SOME T) s.EFLAGS))
+           ).EFLAGS)) =
+  s with EFLAGS :=
+    (Z_SF =+ SOME F)
+      ((Z_AF =+ SOME F)
+        ((Z_OF =+ SOME F)
+          ((Z_CF =+ SOME (x IN {LT; UN}))
+            ((Z_PF =+ SOME (x = UN))
+              ((Z_ZF =+ SOME (x IN {EQ; UN})) s.EFLAGS)))))`,
+  Cases_on `x` \\ simp [])
+
+val rule = List.map (REWRITE_RULE [lem1])
+
+fun fpEV aug =
+  let
+    val c = case aug of
+               SOME [] => rm
+             | SOME a => utilsLib.augment (`f`, a) xmm
+             | NONE => xmm
+  in
+    EV ([dfn'bin_PD_def, dfn'bin_SD_def, dfn'bin_PS_def, dfn'bin_SS_def,
+         dfn'logic_PD_def, dfn'logic_PS_def, sse_logic_def,
+         dfn'CMPPD_def, dfn'CMPSD_def, dfn'CMPPS_def, dfn'CMPSS_def,
+         dfn'SQRTPD_def, dfn'SQRTSD_def, dfn'SQRTPS_def, dfn'SQRTSS_def,
+         dfn'CVTDQ2PD_def, dfn'CVTDQ2PS_def, dfn'CVTPD2DQ_def,
+         dfn'CVTPD2PS_def, dfn'CVTPS2DQ_def, dfn'CVTPS2PD_def,
+         dfn'CVTSD2SS_def, dfn'CVTSS2SD_def, dfn'MOVUP_D_S_def,
+         dfn'CVTSD2SI_def, dfn'CVTSI2SD_def,
+         dfn'CVTSI2SS_def, dfn'CVTSS2SI_def,
+         dfn'COMISD_def, dfn'COMISS_def, dfn'MOV_D_Q_def, dfn'MOVQ_def,
+         dfn'MOVSD_def, dfn'MOVSS_def, dfn'PCMPEQQ_def,
+         write'SF_def, write'AF_def, write'OF_def, write'CF_def,
+         write'PF_def, write'ZF_def, write'Eflag_rwt,
+         RoundingMode_def, rounding_mode, sse_compare_signalling_def,
+         process_float_flags1, process_float_flags2, process_float_flags4,
+         sse_binop32_def, sse_sqrt32_def, sse_compare32_def, sse_from_int32_def,
+         sse_to_int32_def, flush_to_zero32, denormal_to_zero32_def,
+         sse_binop64_def, sse_sqrt64_def, sse_compare64_def, sse_from_int64_def,
+         sse_to_int64_def, flush_to_zero64, denormal_to_zero64_def,
+         initial_ieee_flags_def, set_precision_def, snd_with_flags,
+         pred_setTheory.IN_INSERT, pred_setTheory.NOT_IN_EMPTY,
+         ConseqConvTheory.COND_CLAUSES_FT, ConseqConvTheory.COND_CLAUSES_FF,
+         pairTheory.pair_CASE_def, word_thms, lem2] @
+       XMM_rwt @ write'XMM_rwt @ EA_rwt @ write'EA_rwt @ ea_Zrm_rwt) [mxcsr] c
+  end
+
+val pshift =
+  EV ([dfn'PSRLW_imm_def, dfn'PSRAW_imm_def, dfn'PSLLW_imm_def,
+       dfn'PSRLD_imm_def, dfn'PSRAD_imm_def, dfn'PSLLD_imm_def,
+       dfn'PSRLQ_imm_def, dfn'PSLLQ_imm_def, dfn'PSRLDQ_def, dfn'PSLLDQ_def] @
+      XMM_rwt @ write'XMM_rwt) [] []
+
+val sse_bin =
+  fpEV (SOME [``sse_add``, ``sse_sub``, ``sse_mul``, ``sse_div``,
+              ``sse_min``, ``sse_max``])
+
+val sse_logic =
+  fpEV (SOME [``sse_and``, ``sse_andn``, ``sse_or``, ``sse_xor``])
+
+val sse_compare =
+  fpEV (SOME [``sse_eq_oq``, ``sse_lt_os``, ``sse_le_os``, ``sse_unord_q``,
+              ``sse_neq_uq``, ``sse_nlt_us``, ``sse_nle_us``, ``sse_ord_q``])
+
+val sse = rule o fpEV NONE
+val sse_rm = fpEV (SOME [])
+
+val bin_PD = sse_bin ``dfn'bin_PD (f, dst, xmm)``
+val bin_SD = sse_bin ``dfn'bin_SD (f, dst, xmm)``
+val bin_PS = sse_bin ``dfn'bin_PS (f, dst, xmm)``
+val bin_SS = sse_bin ``dfn'bin_SS (f, dst, xmm)``
+
+val logic_PD = sse_logic ``dfn'logic_PD (f, dst, xmm)``
+val logic_PS = sse_logic ``dfn'logic_PS (f, dst, xmm)``
+
+val CMPPD = sse_compare ``dfn'CMPPD (f, dst, xmm)``
+val CMPSD = sse_compare ``dfn'CMPSD (f, dst, xmm)``
+val CMPPS = sse_compare ``dfn'CMPPS (f, dst, xmm)``
+val CMPSS = sse_compare ``dfn'CMPSS (f, dst, xmm)``
+
+val COMISD = sse ``dfn'COMISD (src1, xmm)``
+val COMISS = sse ``dfn'COMISS (src1, xmm)``
+
+val SQRTPD = sse ``dfn'SQRTPD (dst, xmm)``
+val SQRTSD = sse ``dfn'SQRTSD (dst, xmm)``
+val SQRTPS = sse ``dfn'SQRTPS (dst, xmm)``
+val SQRTSS = sse ``dfn'SQRTSS (dst, xmm)``
+
+val CVTDQ2PD = sse ``dfn'CVTDQ2PD (dst, xmm)``
+val CVTDQ2PS = sse ``dfn'CVTDQ2PS (dst, xmm)``
+val CVTPD2DQ = sse ``dfn'CVTPD2DQ (F, dst, xmm)``
+val CVTTPD2DQ = sse ``dfn'CVTPD2DQ (T, dst, xmm)``
+val CVTPD2PS = sse ``dfn'CVTPD2PS (dst, xmm)``
+val CVTPS2DQ = sse ``dfn'CVTPS2DQ (F, dst, xmm)``
+val CVTTPS2DQ = sse ``dfn'CVTPS2DQ (T, dst, xmm)``
+val CVTPS2PD = sse ``dfn'CVTPS2PD (dst, xmm)``
+val CVTSD2SS = sse ``dfn'CVTSD2SS (dst, xmm)``
+val CVTSS2SD = sse ``dfn'CVTSS2SD (dst, xmm)``
+val CVTSD2SI_0 = sse ``dfn'CVTSD2SI (F, T, r, xmm)``
+val CVTSD2SI_1 = sse ``dfn'CVTSD2SI (F, F, r, xmm)``
+val CVTTSD2SI_0 = sse ``dfn'CVTSD2SI (T, T, r, xmm)``
+val CVTTSD2SI_1 = sse ``dfn'CVTSD2SI (T, F, r, xmm)``
+val CVTSI2SD_0 = sse_rm ``dfn'CVTSI2SD (T, x, rm)``
+val CVTSI2SD_1 = sse_rm ``dfn'CVTSI2SD (F, x, rm)``
+val CVTSI2SS_0 = sse_rm ``dfn'CVTSI2SS (T, x, rm)``
+val CVTSI2SS_1 = sse_rm ``dfn'CVTSI2SS (F, x, rm)``
+val CVTSS2SI_0 = sse ``dfn'CVTSS2SI (F, T, r, xmm)``
+val CVTSS2SI_1 = sse ``dfn'CVTSS2SI (F, F, r, xmm)``
+val CVTTSS2SI_0 = sse ``dfn'CVTSS2SI (T, T, r, xmm)``
+val CVTTSS2SI_1 = sse ``dfn'CVTSS2SI (T, F, r, xmm)``
+
+(* TODO: MOVAP_D_S *)
+
+val MOVUP_D_S_0 = sse ``dfn'MOVUP_D_S (double, xmm_reg (dst), xmm)``
+val MOVUP_D_S_1 = sse ``dfn'MOVUP_D_S (double, xmm, xmm_reg (src))`` |> List.tl
+
+val MOVSD_0 = sse ``dfn'MOVSD (xmm_reg (dst), xmm)``
+val MOVSD_1 = sse ``dfn'MOVSD (xmm, xmm_reg (src))`` |> List.tl |> wv_to_v
+val MOVSS_0 = sse ``dfn'MOVSS (xmm_reg (dst), xmm)``
+val MOVSS_1 = sse ``dfn'MOVSS (xmm, xmm_reg (src))`` |> List.tl |> wv_to_v
+
+val MOV_D_Q_0 = sse_rm ``dfn'MOV_D_Q (T, T, dst, rm)``
+val MOV_D_Q_1 = sse_rm ``dfn'MOV_D_Q (T, F, dst, rm)``
+val MOV_D_Q_2 = sse_rm ``dfn'MOV_D_Q (F, T, dst, rm)``
+val MOV_D_Q_3 = sse_rm ``dfn'MOV_D_Q (F, F, dst, rm)``
+
+val MOVQ_0 = sse ``dfn'MOVQ (xmm_reg (dst), xmm)``
+val MOVQ_1 = sse ``dfn'MOVQ (xmm, xmm_reg (src))`` |> List.tl
+
+val PCMPEQQ = sse ``dfn'PCMPEQQ (dst, xmm)``
+
+val PSRLW_imm = pshift ``dfn'PSRLW_imm (r, i)``
+val PSRAW_imm = pshift ``dfn'PSRAW_imm (r, i)``
+val PSLLW_imm = pshift ``dfn'PSLLW_imm (r, i)``
+val PSRLD_imm = pshift ``dfn'PSRLD_imm (r, i)``
+val PSRAD_imm = pshift ``dfn'PSRAD_imm (r, i)``
+val PSLLD_imm = pshift ``dfn'PSLLD_imm (r, i)``
+val PSRLQ_imm = pshift ``dfn'PSRLQ_imm (r, i)``
+val PSLLQ_imm = pshift ``dfn'PSLLQ_imm (r, i)``
+val PSRLDQ = pshift ``dfn'PSRLDQ (r, i)``
+val PSLLDQ = pshift ``dfn'PSLLDQ (r, i)``
+
+val _ = List.map addThms
+  [bin_PD, bin_SD, bin_PS, bin_SS, logic_PD, logic_PS, CMPPD, CMPSD, CMPPS,
+   CMPSS, COMISD, COMISS, SQRTPD, SQRTSD, SQRTPS, SQRTSS, CVTDQ2PD, CVTDQ2PS,
+   CVTPD2DQ, CVTTPD2DQ, CVTPD2PS, CVTPS2DQ, CVTTPS2DQ, CVTPS2PD, CVTSD2SS,
+   CVTSS2SD, CVTSD2SI_0, CVTSD2SI_1, CVTTSD2SI_0, CVTTSD2SI_1, CVTSI2SD_0,
+   CVTSI2SD_1, CVTSI2SS_0, CVTSI2SS_1, CVTSS2SI_0, CVTSS2SI_1, CVTTSS2SI_0,
+   CVTTSS2SI_1, MOVUP_D_S_0, MOVUP_D_S_1, MOV_D_Q_0, MOV_D_Q_1, MOV_D_Q_2,
+   MOV_D_Q_3, MOVQ_0, MOVQ_1, MOVSD_0, MOVSD_1, MOVSS_0, MOVSS_1, PCMPEQQ,
+   PSRLW_imm, PSRAW_imm, PSLLW_imm, PSRLD_imm, PSRAD_imm, PSLLD_imm,
+   PSRLQ_imm, PSLLQ_imm, PSRLDQ, PSLLDQ]
+
+(* ------------------------------------------------------------------------ *)
+
 local
    fun decode_err s = ERR "x64_decode" s
    val i8 = fcpSyntax.mk_int_numeric_type 8
@@ -825,11 +1092,11 @@ in
 end
 
 local
+   val rwts = [pairTheory.FST, pairTheory.SND, combinTheory.I_THM, word_thms]
    val TIDY_UP_CONV =
       REWRITE_CONV
-         (List.take (utilsLib.datatype_rewrites false "x64" ["Zreg"], 2))
+         (List.take (utilsLib.datatype_rewrites false "x64" ["Zreg"], 2) @ rwts)
       THENC utilsLib.WGROUND_CONV
-   val rwts = [pairTheory.FST, pairTheory.SND, combinTheory.I_THM, word_thms]
    val get_strm1 = Term.rand o Term.rand o Term.rand o Term.rand o utilsLib.rhsc
    val get_ast = Term.rand o Term.rator o Term.rand o Term.rand o utilsLib.rhsc
    val state_exception_tm =
@@ -843,7 +1110,8 @@ local
    val run_CONV = utilsLib.Run_CONV ("x64", st) o get_ast
    val run = utilsLib.ALL_HYP_CONV_RULE utilsLib.WGROUND_CONV o
              FIX_SAME_ADDRESS_RULE o
-             (INST_REWRITE_CONV (rwts @ getThms ()) THENC TIDY_UP_CONV)
+             utilsLib.ALL_HYP_CONV_RULE TIDY_UP_CONV o
+             (INST_REWRITE_CONV (getThms ()) THENC TIDY_UP_CONV)
    val MP_Next  = Drule.MATCH_MP x64_stepTheory.NextStateX64
    val MP_Next0 = Drule.MATCH_MP x64_stepTheory.NextStateX64_0
    val STATE_CONV =

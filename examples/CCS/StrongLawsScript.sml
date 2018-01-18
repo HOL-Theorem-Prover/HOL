@@ -9,6 +9,7 @@ open pred_setTheory prim_recTheory arithmeticTheory relationTheory;
 open CCSLib CCSTheory StrongEQTheory StrongEQLib;
 
 val _ = new_theory "StrongLaws";
+val _ = temp_loose_equality ();
 
 (******************************************************************************)
 (*									      *)
@@ -635,10 +636,10 @@ val STRONG_PAR_PREF_NO_SYNCR = store_thm (
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
        ``\x y. (x = y) \/
-	       (?(l1 :'b Label) l2 E1 E2. ~(l1 = COMPL l2) /\
+	   ?(l1 :'b Label) l2 E1 E2. ~(l1 = COMPL l2) /\
 	       (x = par (prefix (label l1) E1) (prefix (label l2) E2)) /\
 	       (y = sum (prefix (label l1) (par E1 (prefix (label l2) E2)))
-			(prefix (label l2) (par (prefix (label l1) E1) E2))))``
+			(prefix (label l2) (par (prefix (label l1) E1) E2)))``
  >> CONJ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       BETA_TAC \\
@@ -695,26 +696,25 @@ val STRONG_PAR_PREF_NO_SYNCR = store_thm (
  *)
 val STRONG_PAR_PREF_SYNCR = store_thm (
    "STRONG_PAR_PREF_SYNCR",
-       ``!(l :'b Label) l'.
-	 (l = COMPL l') ==>
-	 (!E E'.
-	   STRONG_EQUIV
+  ``!(l :'b Label) l'. (l = COMPL l') ==>
+	 !E E'.
+	   STRONG_EQUIV 
 	   (par (prefix (label l) E) (prefix (label l') E'))
 	   (sum
 	    (sum (prefix (label l) (par E (prefix (label l') E')))
 		 (prefix (label l') (par (prefix (label l) E) E')))
-	    (prefix tau (par E E'))))``,
+	    (prefix tau (par E E')))``,    
     REPEAT STRIP_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
        ``\x y. (x = y) \/
-	      (?(l1 :'b Label) l2 E1 E2.
+	   ?(l1 :'b Label) l2 E1 E2.
 	       (l1 = COMPL l2) /\
 	       (x = par (prefix (label l1) E1) (prefix (label l2) E2)) /\
 	       (y = sum
 		    (sum (prefix (label l1) (par E1 (prefix (label l2) E2)))
 			 (prefix (label l2) (par (prefix (label l1) E1) E2)))
-		    (prefix tau (par E1 E2))))``
+		    (prefix tau (par E1 E2)))``
  >> CONJ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       BETA_TAC \\
@@ -938,9 +938,9 @@ val STRONG_RESTR_PR_LAB_NIL = store_thm (
  >> GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC ``\(x :('a, 'b) CCS) (y :('a, 'b) CCS).
-		    (?l' L' E'. ((l' IN L') \/ ((COMPL l') IN L')) /\
+		    ?l' L' E'. ((l' IN L') \/ ((COMPL l') IN L')) /\
 				 (x = restr L' (prefix (label l') E')) /\
-				 (y = nil))``
+				 (y = nil)``
  >> CONJ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       BETA_TAC \\
@@ -981,9 +981,9 @@ val STRONG_RESTR_PREFIX_LABEL = store_thm (
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
        ``\x y. (x = y) \/
-	      (?l' L' E'. ~(l' IN L') /\ ~((COMPL l') IN L') /\
+	      ?l' L' E'. ~(l' IN L') /\ ~((COMPL l') IN L') /\
 			  (x = restr L' (prefix (label l') E')) /\
-			  (y = prefix (label l') (restr L' E')))``
+			  (y = prefix (label l') (restr L' E'))``
  >> CONJ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       BETA_TAC >> DISJ2_TAC \\
@@ -1093,7 +1093,7 @@ val STRONG_RELAB_PREFIX = store_thm (
 		      (prefix (relabel (RELAB labl) u) (relab E (RELAB labl)))``,
     REPEAT GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
- >> EXISTS_TAC
+ >> EXISTS_TAC 
        ``\x y. (x = y) \/ (?u' E'. (x = relab (prefix u' E') (RELAB labl)) /\
 				   (y = prefix (relabel (RELAB labl) u')
 					       (relab E' (RELAB labl))))``
@@ -1174,19 +1174,18 @@ val STRONG_UNFOLDING = store_thm (
  *)
 val STRONG_PREF_REC_EQUIV = store_thm (
    "STRONG_PREF_REC_EQUIV",
-      ``!(u :'b Action) s v.
-	 STRONG_EQUIV
-	 (prefix u (rec s (prefix v (prefix u (var s)))))
-	 (rec s (prefix u (prefix v (var s))))``,
+  ``!(u :'b Action) s v.
+	STRONG_EQUIV (prefix u (rec s (prefix v (prefix u (var s)))))
+		     (rec s (prefix u (prefix v (var s))))``,
     REPEAT GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
      ``\x y.
-	(?u' v' s'.
+	 ?u' v' s'.
 	  (x = prefix u' (rec s' (prefix v' (prefix u' (var s'))))) /\
 	  (y = rec s' (prefix u' (prefix v' (var s')))) \/
 	  (x = rec s' (prefix v' (prefix u' (var s')))) /\
-	  (y = prefix v' (rec s' (prefix u' (prefix v' (var s'))))))``
+	  (y = prefix v' (rec s' (prefix u' (prefix v' (var s')))))``
  >> CONJ_TAC (* 2 sub-goals *)
  >| [ (* goal 1 (of 2) *)
       BETA_TAC \\
@@ -1196,7 +1195,8 @@ val STRONG_PREF_REC_EQUIV = store_thm (
       BETA_TAC \\
       REPEAT STRIP_TAC >| (* 4 sub-goals *)
       [ (* goal 2.1 (of 4) *)
-	ASSUME_TAC (REWRITE_RULE
+	ASSUME_TAC
+	  (REWRITE_RULE
 	       [ASSUME ``E = prefix u' (rec s' (prefix v' (prefix u' (var s'))))``]
 	       (ASSUME ``TRANS E u E1``)) \\
 	IMP_RES_TAC TRANS_PREFIX \\
@@ -1445,27 +1445,24 @@ val [ALL_SYNC_BASE, ALL_SYNC_INDUCT] =
 (* LESS_SUC_LESS_EQ':
  |- !m n. m < (SUC n) = m <= n
  *)
-val LESS_SUC_LESS_EQ' = store_thm (
-   "LESS_SUC_LESS_EQ'", ``!m n. m < SUC n = m <= n``,
+val LESS_SUC_LESS_EQ' = Q.prove (
+   `!m n. m < SUC n = m <= n`,
     REWRITE_TAC [LESS_EQ, LESS_EQ_MONO]);
 
 (* |- ∀n m. m < SUC n ⇒ m ≤ n
  *)
-val LESS_SUC_LESS_EQ = save_thm (
-   "LESS_SUC_LESS_EQ", EQ_IMP_LR LESS_SUC_LESS_EQ');
+val LESS_SUC_LESS_EQ = EQ_IMP_LR LESS_SUC_LESS_EQ';
 
 (* LESS_EQ_ZERO_EQ:
  |- !n. n <= 0 ==> (n = 0)
  *)
-val LESS_EQ_ZERO_EQ = save_thm (
-   "LESS_EQ_ZERO_EQ", EQ_IMP_LR LESS_EQ_0);
+val LESS_EQ_ZERO_EQ = EQ_IMP_LR LESS_EQ_0;
 
 (* LESS_EQ_LESS_EQ_SUC:
  |- !m n. m <= n ==> m <= (SUC n)
  *)
-val LESS_EQ_LESS_EQ_SUC = store_thm (
-   "LESS_EQ_LESS_EQ_SUC",
-  ``!m n. m <= n ==> (m <= (SUC n))``,
+val LESS_EQ_LESS_EQ_SUC = Q.prove (
+   `!m n. m <= n ==> m <= (SUC n)`,
     REPEAT STRIP_TAC
  >> IMP_RES_TAC LESS_EQ_IMP_LESS_SUC
  >> IMP_RES_TAC LESS_IMP_LESS_OR_EQ);
@@ -1565,7 +1562,7 @@ val SYNC_TRANS_THM_EQ = store_thm (
 	    DISCH_TAC \\
 	    IMP_RES_TAC TRANS_PREFIX \\
 	    EXISTS_TAC ``0: num`` \\
-	    EXISTS_TAC ``L': 'b Label`` \\
+	    EXISTS_TAC ``x': 'b Label`` \\
 	    ASM_REWRITE_TAC [COMPL_COMPL_LAB],
 	    (* goal 1.2.1.2 (of 2) *)
 	    STRIP_TAC \\
@@ -1575,13 +1572,13 @@ val SYNC_TRANS_THM_EQ = store_thm (
 	  STRIP_TAC \\
 	  ASSUME_TAC
 	    (REWRITE_RULE [ASSUME ``j = (0 :num)``,
-			   ASSUME ``PREF_ACT ((f: num -> ('a, 'b) CCS) 0) = label L``]
+			   ASSUME ``PREF_ACT ((f: num -> ('a, 'b) CCS) 0) = label x``]
 		(ASSUME ``PREF_ACT ((f: num -> ('a, 'b) CCS) j) = label (COMPL l)``)) \\
 	  IMP_RES_TAC Action_11 \\
 	  CHECK_ASSUME_TAC
-		(REWRITE_RULE [ ASSUME ``L = COMPL (l :'b Label)``, COMPL_COMPL_LAB,
-				ASSUME ``L': 'b Label = l`` ]
-			(ASSUME ``~(L' = COMPL (L: 'b Label))``)) ] ],
+		(REWRITE_RULE [ ASSUME ``x = COMPL (l :'b Label)``, COMPL_COMPL_LAB,
+				ASSUME ``x': 'b Label = l`` ]
+			(ASSUME ``~(x' = COMPL (x: 'b Label))``)) ] ],
       (* goal 2 (of 2), inductive case *)
       REPEAT GEN_TAC \\
       PURE_ONCE_REWRITE_TAC [SYNC_INDUCT] \\
@@ -1641,7 +1638,7 @@ val SYNC_TRANS_THM_EQ = store_thm (
 	    IMP_RES_TAC TRANS_SUM >| (* 2 sub-goals here *)
 	    [ (* goal 2.2.1.1.1 (of 2) *)
 	      IMP_RES_TAC TRANS_PREFIX \\
-	      take [`SUC m`, `L'`] \\
+	      take [`SUC m`, `x'`] \\
 	      ASM_REWRITE_TAC [LESS_EQ_REFL, COMPL_COMPL_LAB],
 	      (* goal 2.2.1.1.2 (of 2) *)
 	      STRIP_ASSUME_TAC
@@ -1652,7 +1649,7 @@ val SYNC_TRANS_THM_EQ = store_thm (
 				    j <= m /\ (u = label l) /\
 				    (PREF_ACT (f j) = label (COMPL l)) /\
 				    (v = tau) /\ (Q = par P (PREF_PROC (f j))))``))
-		 (ASSUME ``TRANS (SYNC (label L') P f m) v Q``)) \\
+		 (ASSUME ``TRANS (SYNC (label x') P f m) v Q``)) \\
 	      IMP_RES_TAC LESS_EQ_LESS_EQ_SUC \\
 	      take [`j`, `l`] \\
 	      ASM_REWRITE_TAC [] ],
@@ -1690,13 +1687,13 @@ val SYNC_TRANS_THM_EQ = store_thm (
 	      ASSUME_TAC
 		(REWRITE_RULE
 		  [ASSUME ``j = SUC m``,
-		   ASSUME ``PREF_ACT ((f :num -> ('a, 'b) CCS) (SUC m)) = label L``]
+		   ASSUME ``PREF_ACT ((f :num -> ('a, 'b) CCS) (SUC m)) = label x``]
 		  (ASSUME ``PREF_ACT ((f: num -> ('a, 'b) CCS) j) = label (COMPL l)``)) \\
 	      IMP_RES_TAC Action_11 \\
 	      CHECK_ASSUME_TAC
-		(REWRITE_RULE [ASSUME ``L = COMPL (l :'b Label)``, COMPL_COMPL_LAB,
-			       ASSUME ``L': 'b Label = l``]
-			      (ASSUME ``~(L' = COMPL (L: 'b Label))``)) ] ] ] ] ] );
+		(REWRITE_RULE [ASSUME ``x = COMPL (l :'b Label)``, COMPL_COMPL_LAB,
+			       ASSUME ``x': 'b Label = l``]
+			      (ASSUME ``~(x' = COMPL (x: 'b Label))``)) ] ] ] ] ] );
 
 (* SYNC_TRANS_THM =
  |- ∀v u m f Q P.
@@ -2000,6 +1997,6 @@ val STRONG_EXPANSION_LAW = store_thm (
 	    ASM_REWRITE_TAC [PREF_PROC_def, PREFIX] ] ] ] ]);
 
 val _ = export_theory ();
-val _ = Hol_pp.html_theory "StrongLaws";
+val _ = html_theory "StrongLaws";
 
 (* last updated: May 14, 2017 *)

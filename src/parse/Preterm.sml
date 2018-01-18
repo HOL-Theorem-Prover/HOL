@@ -143,10 +143,19 @@ fun locn (Var{Locn,...})         = Locn
 (*---------------------------------------------------------------------------
      Location-ignoring equality for preterms.
  ---------------------------------------------------------------------------*)
+fun infoeq {base_type=bt1,actual_ops=ops1,tyavoids=tya1}
+           {base_type=bt2,actual_ops=ops2,tyavoids=tya2} =
+   bt1 = bt2 andalso tya1 = tya2 andalso
+   ListPair.allEq (fn (t1,t2) => Term.aconv t1 t2) (ops1, ops2)
 
-fun eq (Var{Name=Name,Ty=Ty,...})                  (Var{Name=Name',Ty=Ty',...})                   = Name=Name' andalso Ty=Ty'
-  | eq (Const{Name=Name,Thy=Thy,Ty=Ty,...})        (Const{Name=Name',Thy=Thy',Ty=Ty',...})        = Name=Name' andalso Thy=Thy' andalso Ty=Ty'
-  | eq (Overloaded{Name=Name,Ty=Ty,Info=Info,...}) (Overloaded{Name=Name',Ty=Ty',Info=Info',...}) = Name=Name' andalso Ty=Ty' andalso Info=Info'
+fun eq (Var{Name=Name,Ty=Ty,...}) (Var{Name=Name',Ty=Ty',...}) =
+     Name=Name' andalso Ty=Ty'
+  | eq (Const{Name=Name,Thy=Thy,Ty=Ty,...})
+       (Const{Name=Name',Thy=Thy',Ty=Ty',...}) =
+     Name=Name' andalso Thy=Thy' andalso Ty=Ty'
+  | eq (Overloaded{Name=Name,Ty=Ty,Info=Info,...})
+       (Overloaded{Name=Name',Ty=Ty',Info=Info',...}) =
+     Name=Name' andalso Ty=Ty' andalso infoeq Info Info'
   | eq (Comb{Rator=Rator,Rand=Rand,...})           (Comb{Rator=Rator',Rand=Rand',...})            = eq Rator Rator' andalso eq Rand Rand'
   | eq (Abs{Bvar=Bvar,Body=Body,...})              (Abs{Bvar=Bvar',Body=Body',...})               = eq Bvar Bvar' andalso eq Body Body'
   | eq (Constrained{Ptm=Ptm,Ty=Ty,...})            (Constrained{Ptm=Ptm',Ty=Ty',...})             = eq Ptm Ptm' andalso Ty=Ty'

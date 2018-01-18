@@ -161,36 +161,8 @@ val _ = BasicProvers.augment_srw_ss [REDUCE_ss, ARITH_RWTS_ss]
 
 datatype lin = LIN of (term * int) list * int;
 
-fun term_ord (t1,t2) =
-    if is_var t1 then
-	if is_var t2 then String.compare (fst(dest_var t1),fst(dest_var t2))
-	else LESS
-    else if is_const t1
-         then if is_var t2 then GREATER
-	      else if is_const t2
-                   then String.compare (fst(dest_const t1),fst(dest_const t2))
-	           else LESS
-    else if is_comb t1 then
-        if is_var t2 orelse is_const t2 then GREATER
-        else if is_comb t2 then
-           case term_ord (rator t1,rator t2) of
-	       EQUAL => term_ord (rand t1,rand t2)
-	     | x => x
-	else LESS
-    else if is_abs t1 then
-        if is_var t2 orelse is_const t2 orelse is_comb t2 then GREATER
-        else if is_comb t2 then
-           case term_ord (bvar t1,bvar t2) of
-	       EQUAL => term_ord (body t1,body t2)
-	     | x => x
-	else LESS
-    else failwith "term_ord";
-
 val mk_lin =
-  let fun tmord ((term1,n1:int),(term2,n2)) =
-            case term_ord (term1,term2)
-             of EQUAL => Arbint.compare(n1,n2)
-              | x => x
+  let val tmord = pair_compare (Term.compare, Arbint.compare)
       val tmlt = lt_of_ord tmord;
       fun shrink_likes ((tm1,k1)::(tm2,k2)::rest) =
         if aconv tm1 tm2 then

@@ -264,6 +264,19 @@ val _ =
     | _ => die "FAILED!"
 end (* local *)
 
+fun convtest (nm,conv,tm,expected) =
+  let
+    val _ = tprint nm
+    val res = conv tm
+  in
+    if aconv (rhs (concl res)) expected then OK()
+    else die "FAILED!"
+  end
+val _ = app convtest [
+  ("COND_CONV(1)", Conv.COND_CONV, “if b then (\x:'a. x) else (\y.y)”,
+   “(\a:'a.a)”)
+];
+
 val _ = tprint "Testing type-specific Unicode overload 1"
 val _ = set_trace "Unicode" 1
 val _ = overload_on (UnicodeChars.delta, ``$! :(('a -> 'b)->bool)->bool``)
@@ -393,7 +406,8 @@ fun tpp (s,expected) = let
   val res = ppstring pp_term t
 in
   if res = expected then OK()
-  else (print "FAILED\n"; Process.exit Process.failure)
+  else die ("\nFAILED\n" ^
+            testutils.clear ("  Expected >" ^ expected ^ "<; got >"^res^"<"))
 end
 
 fun bound s = "\^[[0;32m" ^ s ^ "\^[[0m"
@@ -412,7 +426,12 @@ val _ = app tpp [
    concat ["let ",bx, " = ", fp, " in ", bx, " /\\ ", fy]),
   ("let f x = x /\\ p in f x /\\ y",
    concat ["let ",bound "f", " ", bx, " = ", bx, " /\\ ", fp, " in ",
-           bound "f", " ", fx, " /\\ ", fy])
+           bound "f", " ", fx, " /\\ ", fy]),
+  ("!(x:'a)::p (x:'a). q x",
+   concat ["!",bx,"::",fp, " ", fx,". ",free "q"," ",bx]),
+  ("RES_FORALL (p (x:'a)) (\\x. RES_FORALL (p (x:'a)) (\\y. q x y))",
+   concat ["!(",bx,"::",fp," ",fx,") (",bound "y","::",fp," ",bx,"). ",
+           free "q", " ", bx, " ", bound "y"])
 ]
 
 open testutils
@@ -597,19 +616,24 @@ val _ = let
 in OK()
 end handle _ => die "FAILED!"
 
+fun goal_equal ((asms1, g1), (asms2, g2)) =
+  ListPair.allEq (fn p => Term.compare p = EQUAL) (asms1,asms2) andalso
+  aconv g1 g2
+
 val _ = let
   val _ = tprint "Testing VALIDATE (2)"
-  val g = ([], ``(p ==> q) ==> r``) : goal ;
-  val tac = STRIP_TAC THEN VALIDATE (POP_ASSUM (ASSUME_TAC o UNDISCH)) ;
-  val (ngs, vf) = VALID tac g ;
+  val g = ([], ``(p ==> q) ==> r``) : goal
+  val tac = STRIP_TAC THEN VALIDATE (POP_ASSUM (ASSUME_TAC o UNDISCH))
+  val (ngs, vf) = VALID tac g
 
-  val tac1 = (VALIDATE (ASSUME_TAC (ASSUME ``x /\ y``))) ;
-  val tac2 = (SUBGOAL_THEN ``x /\ y`` ASSUME_TAC ) ;
+  val tac1 = (VALIDATE (ASSUME_TAC (ASSUME ``x /\ y``)))
+  val tac2 = (SUBGOAL_THEN ``x /\ y`` ASSUME_TAC )
 
-  val (ngs1, _) = VALID tac1 g ;
-  val (ngs2, _) = VALID tac2 g ;
-  val true = ngs1 = ngs2 ;
-in OK()
+  val (ngs1, _) = VALID tac1 g
+  val (ngs2, _) = VALID tac2 g
+in
+  if ListPair.allEq goal_equal (ngs1, ngs2) then OK()
+  else die "FAILED final equality"
 end handle _ => die "FAILED!"
 
 val _ = let
@@ -619,7 +643,7 @@ val _ = let
       (SPLIT_LT 2 (REVERSE_LT, ROTATE_LT 1)),
       (HEADGOAL (POP_ASSUM ACCEPT_TAC)),
       (REPEAT_LT (ALLGOALS (POP_ASSUM (fn _ => ALL_TAC))
-	  THEN_LT HEADGOAL (POP_ASSUM ACCEPT_TAC))) ] ;
+          THEN_LT HEADGOAL (POP_ASSUM ACCEPT_TAC))) ] ;
   val th = prove (``a ==> b ==> c ==> d ==> a /\ b /\ c /\ d``, tac) ;
 in if hyp th = [] then OK() else die "FAILED"
 end handle _ => die "FAILED!"
@@ -637,7 +661,7 @@ val _ = let
   val _ = tprint "Testing USE_SG_THEN and VALIDATE_LT"
   val tac = CONJ_TAC THEN REPEAT DISCH_TAC
       THEN_LT EVERY_LT [VALIDATE_LT (USE_SG_THEN ACCEPT_TAC 1 2),
-	NTH_GOAL (REPEAT STRIP_TAC) 1 ]
+        NTH_GOAL (REPEAT STRIP_TAC) 1 ]
       THEN (POP_ASSUM MATCH_MP_TAC)
       THEN_LT NTH_GOAL CONJ_TAC 2
       THEN (FIRST_ASSUM ACCEPT_TAC)

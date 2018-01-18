@@ -14,8 +14,8 @@ val _ = new_theory "canonical";
 
 open ternaryComparisonsTheory quoteTheory;
 
-val sr = --`sr:'a semi_ring`--;
-val _ = set_assums [ --`is_semi_ring ^sr`-- ];
+val sr = “sr:'a semi_ring”;
+val _ = set_assums [ “is_semi_ring ^sr” ];
 val _ = app (C add_impl_param [sr]) ["SR0","SR1","SRP","SRM"];
 
 val { plus_sym, plus_assoc, mult_sym, mult_assoc, distr_left,

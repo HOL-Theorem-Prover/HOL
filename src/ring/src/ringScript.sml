@@ -20,7 +20,7 @@ val _ = Hol_datatype `ring = <| R0 : 'a;
                                 RN : 'a -> 'a
                              |>`;
 
-val r = --`r:'a ring`--;
+val r = “r:'a ring”;
 val _ = app (C add_impl_param [r]) ["R0","R1","RP","RM","RN"];
 val _ = app (fn s => overload_on (s, Parse.Term [QUOTE ("ring_"^s)]))
             ["R0","R1","RP","RM","RN"];
@@ -47,7 +47,7 @@ val is_ring_def = Define `
     /\ ^p_distr_left `;
 
 (* We work on an abstract_ring r *)
-val _ = set_assums [ --`is_ring ^r`-- ];
+val _ = set_assums [ “is_ring ^r” ];
 
 
 val ring_proj_tac =

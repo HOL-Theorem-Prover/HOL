@@ -1,16 +1,21 @@
 #!/bin/bash
 
 set -e
+wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sudo sh -s /usr/local/bin
+
+opam init -y --comp 4.05.0
+opam install -y num
+opam install -y ocamlfind
 
 cd
 
 if [ -z "$GITPOLY" ]
 then
 
-wget -q -O polyml5.6.tar.gz https://github.com/polyml/polyml/archive/v5.6.tar.gz
+wget -q -O polyml.tar.gz https://github.com/polyml/polyml/archive/v5.7.1.tar.gz
 
-tar xzf polyml5.6.tar.gz
-cd polyml-5.6
+tar xzf polyml.tar.gz
+cd polyml-5.7.1
 if [ -z "$ROOTPOLY" ]
 then
   echo "*** Installing PolyML in home directory"

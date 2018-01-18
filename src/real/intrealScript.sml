@@ -15,6 +15,8 @@ val real_of_int = Lib.with_flag (boolLib.def_suffix, "") Define
   `real_of_int i =
    if i < 0 then ~(real_of_num (Num (~i))) else real_of_num (Num i)`
 
+val real_of_int_def = save_thm("real_of_int_def", real_of_int);
+
 (* -------------------------------------------------------------------------
    Floor and ceiling (ints)
    ------------------------------------------------------------------------- *)
@@ -361,5 +363,45 @@ in
   val () = computeLib.add_persistent_funs
              ["INT_FLOOR_compute", "INT_CEILING_INT_FLOOR"]
 end
+
+open arithmeticTheory
+val real_of_int_num = store_thm("real_of_int_num[simp]",
+  ``real_of_int (& n) = &n``,
+  rewrite_tac[real_of_int_def]
+  \\ Cases_on `(&n):int`
+  \\ fs []);
+
+val real_of_int_add = store_thm("real_of_int_add[simp]",
+  ``real_of_int (m + n) = real_of_int m + real_of_int n``,
+  Cases_on `m` \\ Cases_on `n` \\ fs [real_of_int_def] \\ rw []
+  \\ fs [integerTheory.INT_ADD_CALCULATE]
+  \\ rw [] \\ fs [] \\ fs [GSYM NOT_LESS,realTheory.add_ints]);
+
+val real_of_int_neg = store_thm("real_of_int_neg[simp]",
+  ``real_of_int (-m) = -real_of_int m``,
+  Cases_on `m` \\ fs [real_of_int_def]);
+
+val real_of_int_sub = store_thm("real_of_int_sub[simp]",
+  ``real_of_int (m - n) = real_of_int m - real_of_int n``,
+  fs [integerTheory.int_sub,realTheory.real_sub]);
+
+val real_of_int_mul = store_thm("real_of_int_mul[simp]",
+  ``real_of_int (m * n) = real_of_int m * real_of_int n``,
+  Cases_on `m` \\ Cases_on `n` \\ fs [real_of_int_def] \\ rw []
+  \\ fs [integerTheory.INT_MUL_CALCULATE]);
+
+val real_of_int_lt = store_thm("real_of_int_lt[simp]",
+  “real_of_int m < real_of_int n <=> m < n”,
+  simp[real_of_int_def] >> map_every Cases_on [‘m’, ‘n’] >>
+  simp[]);
+
+val real_of_int_11 = store_thm("real_of_int_11[simp]",
+  “(real_of_int m = real_of_int n) <=> (m = n)”,
+  simp[real_of_int_def] >> map_every Cases_on [‘m’, ‘n’] >>
+  simp[]);
+
+val real_of_int_le = store_thm("real_of_int_le[simp]",
+  “real_of_int m <= real_of_int n <=> m <= n”,
+  simp[realTheory.REAL_LE_LT, integerTheory.INT_LE_LT]);
 
 val _ = export_theory ()

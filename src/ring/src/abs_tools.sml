@@ -41,21 +41,22 @@ fun asm_store_thm(x,cl,tac) =
   asm_save_thm(x,thm); thm
   end;
 
+structure Parse = struct
+  open Parse
+  fun Term q = let
+      val a = Absyn q
+      val a' = add_ip a
+      val prfns = SOME(term_to_string, type_to_string)
+      open Preterm errormonad
+    in
+      smash (absyn_to_preterm a' >- typecheck prfns) Pretype.Env.empty
+    end
+end
 
-fun Term q = let
-    val a = Parse.Absyn q
-    val a' = add_ip a
-    val prfns = SOME(term_to_string, type_to_string)
-    open Preterm errormonad
-  in
-    smash (absyn_to_preterm a' >- typecheck prfns) Pretype.Env.empty
-  end
-
-fun --q _ = Term q;
-
+val Term = Parse.Term
 
 fun Define q =
-  let val tm = --q--
+  let val tm = Parse.Term q
       val tm' = abstraction.param_eq tm
   in TotalDefn.Define [ANTIQUOTE tm']
   end;

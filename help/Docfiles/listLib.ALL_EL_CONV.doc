@@ -17,9 +17,9 @@ It returns the theorem
 {
    |- ALL_EL P [x0;...xn] = T
 }
-if for every {xi} occurring in the list, {conv (--`P xi`--)} returns a
+if for every {xi} occurring in the list, {conv “P xi”} returns a
 theorem {|- P xi = T}, otherwise, if for at least one {xi}, evaluating
-{conv (--`P xi`--)} returns the theorem {|- P xi = F}, then it returns
+{conv “P xi”} returns the theorem {|- P xi = F}, then it returns
 the theorem
 {
    |- ALL_EL P [x0;...xn] = F
@@ -27,12 +27,12 @@ the theorem
 
 \FAILURE
 {ALL_EL_CONV conv tm} fails if {tm} is not of the form described above, or
-failure occurs when evaluating {conv (--`P xi`--)} for some {xi}.
+failure occurs when evaluating {conv “P xi”} for some {xi}.
 
 \EXAMPLE
 Evaluating
 {
-   ALL_EL_CONV bool_EQ_CONV (--`ALL_EL ($= T) [T;F;T]`--);
+   ALL_EL_CONV bool_EQ_CONV “ALL_EL ($= T) [T;F;T]”;
 }
 returns the following theorem:
 {
