@@ -155,14 +155,16 @@ fun set_erecord () =
   (* recording *)
   hhs_internalthm_flag := false;
   hhs_namespacethm_flag := true;
-  hhs_recprove_flag := false;
+  hhs_recprove_flag := true;
   hhs_reclet_flag   := false;
   (* learning *)
   hhs_ortho_flag      := false;
   hhs_ortho_number    := 20;
   hhs_selflearn_flag  := false; 
   (* Self-learning issue: 
-     metis should declare it is using local variables by adding a local_tag *)
+     metis should declare it is using local variables by 
+     adding a local_tag but it would affect holyhammer 
+     where you don't want a local tag. *)
   (* metis learning *)
   hhs_metisexec_flag   := can load "metisTools"; 
   hhs_metisrecord_flag := true;

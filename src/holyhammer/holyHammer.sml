@@ -141,10 +141,13 @@ fun insert_namespace thmdict =
 
 fun create_symweight_feav thmdict =
   let
-    val feav = map snd (dlist thmdict)
+    val l = dlist thmdict
+    val feav = map snd l
     val symweight = learn_tfidf feav
+    fun f (g,(name,fea)) = (name,(g,fea)) 
+    val revdict = dnew String.compare (map f l)
   in
-    (symweight,feav)
+    (symweight,feav,revdict)
   end
 
 fun update_thmdata () =
@@ -259,8 +262,8 @@ fun launch_parallel t =
 fun holyhammer_goal goal =
   let
     val term = list_mk_imp goal
-    val (symweight,feav) = update_thmdata ()
-    val premises = thmknn_wdep symweight 128 feav (fea_of_goal goal)
+    val (symweight,feav,revdict) = update_thmdata ()
+    val premises = thmknn_wdep (symweight,feav,revdict) 128  (fea_of_goal goal)
     val _ = export_problem (probdir_of Eprover) premises term
     val _ = translate_fof (probdir_of Eprover) (provdir_of Eprover)
     val _ = export_problem (probdir_of Z3) (first_n 32 premises) term
@@ -275,11 +278,11 @@ fun holyhammer term = holyhammer_goal ([],term)
 
 fun hh_tac goal = (holyhammer_goal goal) goal
 
-fun hh_stac pid (symweight,feav) t goal = 
+fun hh_stac pid (symweight,feav,revdict) t goal = 
   let
     val term = list_mk_imp goal
     val ns = int_to_string pid
-    val premises = thmknn_wdep symweight 128 feav (fea_of_goal goal)
+    val premises = thmknn_wdep (symweight,feav,revdict) 128 (fea_of_goal goal)
     val probdir = hh_dir ^ "/problem_" ^ ns
     val _ = export_problem probdir premises term
     val provdir = provbin_dir ^ "/prover_" ^ ns

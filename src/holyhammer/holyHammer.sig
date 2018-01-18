@@ -10,7 +10,9 @@ sig
   
   (* Caching features of theorems *)
   val update_thmdata : unit -> 
-    ((int, real) Redblackmap.dict * (string * fea_t) list)
+    (int, real) Redblackmap.dict * 
+    (string * fea_t) list *
+    (string, (goal * int list)) Redblackmap.dict
 
   (* Export a problem to TT files *)
   val export_problem : string -> string list -> term -> unit
@@ -34,8 +36,11 @@ sig
   
   (* Holyhammer for Tactictoe with parallel calls *)
   val hh_stac           : 
-    int -> (int, real) Redblackmap.dict * (string * fea_t) list ->
-    int -> goal -> string option
+    int -> 
+      (int, real) Redblackmap.dict * 
+      (string * fea_t) list *
+      (string, (goal * int list)) Redblackmap.dict
+    -> int -> goal -> string option
 
   (* State *)
   val clean_cache       : unit -> unit
