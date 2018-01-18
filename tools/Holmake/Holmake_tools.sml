@@ -5,6 +5,8 @@ struct
 open Systeml
 open Holmake_tools_dtype
 
+fun K x y = x
+
 structure Path = OS.Path
 structure FileSys = OS.FileSys
 
@@ -82,7 +84,7 @@ type output_functions = {warn : string -> unit,
                          info : string -> unit,
                          chatty : string -> unit,
                          tgtfatal : string -> unit,
-                         diag : string -> unit}
+                         diag : (unit -> string) -> unit}
 
 fun die_with message = let
   open TextIO
@@ -115,7 +117,7 @@ fun output_functions {usepfx,chattiness=n} = let
   val info = if n >= 1 then msg stdOut else donothing
   val chatty = if n >= 2 then msg stdOut else donothing
   val tgtfatal = msg stdErr
-  val diag = if n >= 3 then msg stdErr else donothing
+  val diag = if n >= 3 then (fn sf => msg stdErr (sf())) else donothing
 in
   {warn = warn, diag = diag, tgtfatal = tgtfatal, info = info, chatty = chatty}
 end
@@ -144,7 +146,7 @@ end
 fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
   val {warn,diag,...} = ofns
   val mypath = find_my_path()
-  val _ = diag ("running "^mypath )
+  val _ = diag (K ("running "^mypath))
   fun write_lastmaker_file () = let
     val outstr = TextIO.openOut ".HOLMK/lastmaker"
   in
@@ -156,7 +158,7 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
       if not no_lastmakercheck andalso
          FileSys.access (".HOLMK/lastmaker", [FileSys.A_READ])
       then let
-          val _ = diag "Found a lastmaker file to look at."
+          val _ = diag (K "Found a lastmaker file to look at.")
           val istrm = TextIO.openIn ".HOLMK/lastmaker"
         in
           case TextIO.inputLine istrm of
@@ -182,17 +184,17 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
         end
       else write_lastmaker_file()
 in
-  diag "Looking to see if I am in a HOL distribution.";
+  diag (K "Looking to see if I am in a HOL distribution.");
   case check_distrib "Holmake" of
     NONE => let
     in
-      diag "Not in a HOL distribution";
+      diag (K "Not in a HOL distribution");
       lmfile()
     end
   | SOME p =>
-    if p = mypath then diag "In the right HOL distribution"
+    if p = mypath then diag (K "In the right HOL distribution")
     else if no_lastmakercheck then
-      diag "In the wrong distribution, but --nolmbc takes precedence."
+      diag (K "In the wrong distribution, but --nolmbc takes precedence.")
     else
       (warn ("*** Switching to execute "^p);
        warn ("*** (As we are in/under its HOLDIR)");
@@ -480,9 +482,20 @@ in
 end
 
 type include_info = {includes : string list, preincludes : string list }
-type 'dir holmake_dirinfo = {visited : hmdir.t Binaryset.set, includes : 'dir list,
-                             preincludes : 'dir list}
-type 'dir holmake_result = 'dir holmake_dirinfo option
+
+type include_info = {includes : string list, preincludes : string list}
+type dirset = hmdir.t Binaryset.set
+
+val empty_dirset = Binaryset.empty hmdir.compare
+type incset_pair = {pres : dirset, incs : dirset}
+type incdirmap = (hmdir.t,incset_pair) Binarymap.dict
+val empty_incdirmap = Binarymap.mkDict hmdir.compare
+
+type holmake_dirinfo = {
+  visited : hmdir.t Binaryset.set,
+  incdirmap : incdirmap
+}
+type holmake_result = holmake_dirinfo option
 
 fun find_files ds P =
   let
@@ -538,6 +551,7 @@ fun generate_all_plausible_targets warn first_target =
 exception HolDepFailed
 fun runholdep {ofs, extras, includes, arg, destination} = let
   val {chatty, diag, warn, ...} : output_functions = ofs
+  val diagK = diag o K
   val _ = chatty ("Analysing "^fromFile arg)
   fun buildables s = let
     val f = toFile s
@@ -554,9 +568,9 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
     map fromFile files
   end
   val buildable_extras = List.concat (map buildables extras)
-  val _ = diag ("Running Holdep on "^fromFile arg^" with includes = [" ^
-                String.concatWith ", " includes ^ "], assumes = [" ^
-                String.concatWith ", " buildable_extras ^"]")
+  val _ = diagK ("Running Holdep on "^fromFile arg^" with includes = [" ^
+                 String.concatWith ", " includes ^ "], assumes = [" ^
+                 String.concatWith ", " buildable_extras ^"]")
   val holdep_result =
     Holdep.main {assumes = buildable_extras, diag = diag,
                  includes = includes, fname = fromFile arg}

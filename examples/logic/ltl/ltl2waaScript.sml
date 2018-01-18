@@ -13,8 +13,6 @@ val initForms_def = Define `(initForms f = tempDNF f)`;
 val finalForms_def = Define
   `finalForms f = {U f1 f2 | (U f1 f2) ∈ tempSubForms f}`;
 
-val char_def = Define `char Σ p = { a | (a ∈ Σ) /\ (p ∈ a)}`;
-
 (*
   transition function of the automaton
 *)
@@ -29,11 +27,11 @@ val trans_def = Define
  /\ (trans Σ (R f1 f2) = d_conj (trans Σ f2) ((trans Σ f1) ∪ {(Σ,{R f1 f2})}))`;
 
 val TRANS_ALPH_LEMM = store_thm
-                          ("TRANS_ALPH_LEMM",
-``!a e f Σ. (a,e) ∈ trans Σ f ==> a ⊆ Σ``,
-Induct_on `f` >> fs[trans_def, char_def, SUBSET_DEF,d_conj_def] >> rpt strip_tac
-          >> metis_tac[IN_INTER]
-                          );
+  ("TRANS_ALPH_LEMM",
+   ``!a e f Σ. (a,e) ∈ trans Σ f ==> a ⊆ Σ``,
+    Induct_on `f` >> fs[trans_def, char_def, SUBSET_DEF,d_conj_def]
+    >> rpt strip_tac >> metis_tac[IN_INTER]
+  );
 
 val TRANS_TEMPDNF_LEMM = store_thm
   ("TRANS_TEMPDNF_LEMM",

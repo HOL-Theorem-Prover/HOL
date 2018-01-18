@@ -38,4 +38,5 @@ src/proofman
 !tools/Holmake/tests/noprereqs/dir2
 !tools/Holmake/tests/noprereqs/dir3
 !tools/Holmake/tests/noprereqs/dir4
+!tools/Holmake/tests/indepchildren
 !src/1/theory_tests
