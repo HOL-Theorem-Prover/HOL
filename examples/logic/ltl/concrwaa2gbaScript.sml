@@ -2,8 +2,13 @@ open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory pred_setT
 
 open sptreeTheory ltlTheory generalHelpersTheory concrGBArepTheory concrRepTheory waa2baTheory buechiATheory gbaSimplTheory alterATheory ltl2waaTheory waaSimplTheory concrltl2waaTheory
 
+val _ = new_theory "concrwaa2gba"
+
+val _ = Cond_rewr.stack_limit := 2
+
 val _ = monadsyntax.temp_add_monadsyntax();
 val _ = overload_on("monad_bind",``OPTION_BIND``);
+
 
 val get_acc_set_def = Define`
   get_acc_set acc ce =
@@ -2629,6 +2634,8 @@ val aP_correct_def = Define `
           ∧ (MEM_SUBSET eL.neg_lab aP))
    )`;
 
+(*
+
 val EXPGBA_TRANS_AND_FINAL = store_thm
   ("EXPGBA_TRANS_AND_FINAL",
    ``!abstrAA f init aP g_AA acc ids g g2.
@@ -3589,8 +3596,8 @@ val EXPGBA_CORRECT = store_thm
            >> fs[concr2AbstrGBA_states_def]
            >> `?fls. lookup n gba.followers = SOME fls`
                 by metis_tac[MEM_toAList,domain_lookup,wfg_def]
-           >> 
-)
+           >> cheat
+          )
       )
    >- (qunabbrev_tac `FINAL` >> simp[concr2AbstrGBA_final_def]
        >> `∀ce u aE.
@@ -3621,7 +3628,8 @@ val EXPGBA_CORRECT = store_thm
              >> simp[] >> strip_tac
              >> first_x_assum (qspec_then `u` mp_tac)
              >> `is_until u ∧ MEM u (graphStates g_AA)` by (
-                 fs[valid_acc_def] >> 
+                 fs[valid_acc_def] >>
+             cheat
              )
 
 IMP_RES_TAC CONCR_ACC_SETS)
@@ -3712,3 +3720,6 @@ IMP_RES_TAC CONCR_ACC_SETS)
 (* ) *)
 (* ) *)
 (* ) *)
+*)
+
+val _ = export_theory()

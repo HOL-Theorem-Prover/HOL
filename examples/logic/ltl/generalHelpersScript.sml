@@ -949,6 +949,8 @@ val REL_CORR_GROUP_BY = store_thm
        )
   );
 
+val _ = Cond_rewr.stack_limit := 1
+
 val SORTED_GROUP_BY = store_thm
   ("SORTED_GROUP_BY",
     ``!R P l. SORTED P l ∧ transitive P ∧ equivalence R
