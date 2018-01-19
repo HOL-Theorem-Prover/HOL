@@ -1129,27 +1129,7 @@ val EXPGBA_SOME_WFG = store_thm
   );
 
 val trns_correct_def = Define `
-  trns_correct acc abstrAA gba aP =
-     (!id fls nL.
-          (lookup id gba.nodeInfo = SOME nL)
-          ∧ (lookup id gba.followers = SOME fls)
-          ∧ (set nL.frmls ∈ POW abstrAA.states)
-          ==> (!qs pos neg.
-                (?s_id s_nL eL.
-                  (eL =
-                   edgeLabelGBA
-                       pos
-                       neg
-                       (get_acc_set acc (concrEdge pos neg s_nL.frmls)))
-                  ∧ (MEM (eL,s_id) fls ∧ (lookup s_id gba.nodeInfo = SOME s_nL)
-                  ∧ (set s_nL.frmls = qs)))
-                    = ((transformLabel (set aP) pos neg,qs)
-                           ∈ gba_trans abstrAA (set nL.frmls))
-              )
-     )`;
-
-val trns_correct2_def = Define `
-  trns_correct2 l abstrAA gba aP =
+  trns_correct l abstrAA gba aP =
        (!id nL fls.
             (lookup id gba.nodeInfo = SOME nL)
             ∧ (lookup id gba.followers = SOME fls)
@@ -1169,7 +1149,7 @@ val trns_correct2_def = Define `
        )`;
 
 val final_correct_def = Define `
-  final_correct abstrAA gba acc =
+ final_correct (abstrAA:(α -> bool, α ltl_frml) ALTER_A) gba acc =
   (!id fls nL eL s_id s_nL.
        (lookup id gba.nodeInfo = SOME nL)
        ∧ (lookup id gba.followers = SOME fls)
@@ -1184,7 +1164,7 @@ val final_correct_def = Define `
   )`;
 
 val aP_correct_def = Define `
-  aP_correct abstrAA gba aP =
+  aP_correct (abstrAA:(α -> bool, α ltl_frml) ALTER_A) gba aP =
    (!id fls nL eL s_id.
        (lookup id gba.nodeInfo = SOME nL)
        ∧ (lookup id gba.followers = SOME fls)
@@ -1207,25 +1187,13 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
         )
       ∧ (valid_acc aP g_AA acc)
       ∧ (unique_node_formula g_AA) ∧ (flws_sorted g_AA)
-       (* (!i x. MEM i ids ∧ (lookup i g.nodeInfo = SOME x) *)
-       (*      ==> set x.frmls ∈ *)
-       (*           reachableFromSetGBA (waa2gba abstrAA) {set q | inGBA g q}) *)
-       (* ∧  *)
       ∧ (!x. inGBA g x
               ==> set x ∈ reachableFromSetGBA
                        (waa2gba abstrAA) (waa2gba abstrAA).initial)
        ∧ (!i. MEM i ids ==> i ∈ domain g.nodeInfo)
        ∧ (expandGBA g_AA acc ids g = SOME g2)
        ∧ (wfg g)
-       (* ∧ (!i. MEM i ids ==> (lookup i g.followers = SOME [])) *)
-       (* ∧ (aP_correct g aP) *)
-       (* ∧ (final_correct g acc) *)
-       (* ∧ (trns_correct g abstrAA aP) *)
-       (* ∧ (ALL_DISTINCT ids) *)
        ∧ (!x. inGBA g x ==> (set x ∈ POW abstrAA.states))
-       (* ∧ (!i n. i ∈ (domain g.nodeInfo) ∧ (lookup i g.nodeInfo = SOME n) *)
-       (*       ==> ALL_DISTINCT n.frmls *)
-       (*   ) *)
        ∧ frml_ad g
        ==> ((!x. inGBA g2 x
                 ==> ((set x ∈ reachableFromSetGBA (waa2gba abstrAA)
@@ -1332,10 +1300,6 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
              by (rpt strip_tac >> rw[] >> fs[] >> metis_tac[])
         >> simp[]
         >> Q.HO_MATCH_ABBREV_TAC `(!g2. A g2 ==> B g2) ==> C`
-        (* >> `A g2` by (qunabbrev_tac `A` >> fs[]) >> fs[] *)
-        (* >> qunabbrev_tac `A` >> qunabbrev_tac `B` >> qunabbrev_tac `C` *)
-        (* >> strip_tac >> first_x_assum (qspec_then `g2` mp_tac) >> simp[] *)
-        (* >> Q.HO_MATCH_ABBREV_TAC `(A ==> B) ==> C` *)
         >> `B g2 ==> C` by metis_tac[]
         >> `A g2` suffices_by fs[] >> qunabbrev_tac `A` >> fs[]
         >> qabbrev_tac `abstr_gba =
@@ -1522,7 +1486,7 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
                        suffices_by metis_tac[RTC_SUBSET]
                  >> qunabbrev_tac `Q` >> simp[] >> qexists_tac `FST abstr_ce`
                  >> simp[minimal_elements_rrestrict]
-                 >> simp[minimal_elements_def] (* >> rpt strip_tac *)
+                 >> simp[minimal_elements_def]
                  >> `!q_i q_nL q q_trns.
                       (findNode (λ(i,l). l.frml = q) g_AA = SOME (q_i,q_nL))
                       ∧ (q_nL.frml = q) ∧ MEM q node.frmls
@@ -1722,9 +1686,7 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
                  >> POP_ASSUM mp_tac >> simp[MEM_MAP] >> strip_tac
                  >> rename[`MEM ce2 TRNS`] >> fs[]
                  >> `ce2 = cE \/ ~concr_min_rel (W_FINAL ce2) y`
-(* ~tlg_concr (W_FINAL ce2) y *)
-(*                   \/ (MEM_EQUAL ce2.pos cE.pos ∧ MEM_EQUAL ce2.neg cE.neg *)
-(*                     ∧ MEM_EQUAL ce2.sucs cE.sucs)`  *)by (
+                    by (
                        first_x_assum (qspec_then `W_FINAL ce2` mp_tac)
                        >> strip_tac
                        >> qunabbrev_tac `W_FINAL` >> fs[]
@@ -2007,13 +1969,9 @@ val EXPGBA_ALL_REACHABLE = store_thm
         )
       ∧ (valid_acc aP g_AA acc)
       ∧ (unique_node_formula g_AA) ∧ (flws_sorted g_AA)
-      (* ∧ (!x. inGBA g x *)
-      (*    ==> set x ∈ reachableFromSetGBA *)
-      (*    (waa2gba abstrAA) (waa2gba abstrAA).initial) *)
       ∧ (expandGBA g_AA acc ids g = SOME g2)
       ∧ (!i. MEM i ids ==> i ∈ domain g.nodeInfo)
       ∧ (wfg g)
-      (* ∧ (!x. inGBA g x ==> (set x ∈ POW abstrAA.states)) *)
       ∧ frml_ad g
       ∧ (one_step_closed_apart_l abstrAA g ids)
       ==> (one_step_closed abstrAA g2)``,
@@ -2707,7 +2665,7 @@ val EXPGBA_TRANS_AND_FINAL = store_thm
      ∧ (wfg g)
      ∧ (aP_correct abstrAA g aP)
      ∧ (final_correct abstrAA g acc)
-     ∧ (trns_correct2 ids abstrAA g (set aP))
+     ∧ (trns_correct ids abstrAA g (set aP))
      ∧ (ALL_DISTINCT ids)
      ∧ frml_ad g
      ∧ ((!id fls.
@@ -2717,7 +2675,7 @@ val EXPGBA_TRANS_AND_FINAL = store_thm
                ==> s_id ∈ domain g.nodeInfo)))
   ==> ((aP_correct abstrAA g2 aP)
         ∧ (final_correct abstrAA g2 acc)
-        ∧ (trns_correct2 [] abstrAA g2 (set aP))
+        ∧ (trns_correct [] abstrAA g2 (set aP))
       )``,
    gen_tac >> gen_tac >> gen_tac >> gen_tac
    >> HO_MATCH_MP_TAC (theorem "expandGBA_ind") >> strip_tac
@@ -2935,7 +2893,7 @@ val EXPGBA_TRANS_AND_FINAL = store_thm
     )
     >> first_x_assum (qspec_then `TRNS` mp_tac) >> simp[] >> strip_tac
     >> `aP_correct (concr2AbstrAA (concrAA g_AA init aP)) G2 aP
-        ∧ trns_correct2 (nub (ids ++ new_ids))
+        ∧ trns_correct (nub (ids ++ new_ids))
            (concr2AbstrAA (concrAA g_AA init aP)) G2 (set aP)
         ∧ final_correct (concr2AbstrAA (concrAA g_AA init aP)) G2 acc` by (
      `!id fls nL.
@@ -2955,15 +2913,6 @@ val EXPGBA_TRANS_AND_FINAL = store_thm
                (transformLabel (set aP) eL.pos_lab eL.neg_lab,
                 set s_nL.frmls)
                od) fls)) = gba_trans abstrAA (set nL.frmls)
-      (* (∀qs pos neg. *)
-      (*     (∃s_id s_nL eL. *)
-      (*       eL = edgeLabelGBA pos neg *)
-      (*              (get_acc_set acc (concrEdge pos neg s_nL.frmls)) *)
-      (*       ∧ MEM (eL,s_id) fls *)
-      (*       ∧ (lookup s_id G2.nodeInfo = SOME s_nL) *)
-      (*       ∧ set s_nL.frmls = qs) ⇔ *)
-      (*     (transformLabel (set aP) pos neg,qs) ∈ *)
-      (*     gba_trans abstrAA (set nL.frmls) *)
         ))
         ∧ (!eL s_id.
             MEM (eL,s_id) fls ⇒
@@ -2978,7 +2927,7 @@ val EXPGBA_TRANS_AND_FINAL = store_thm
                (get_acc_set acc
                            (concrEdge eL.pos_lab eL.neg_lab s_nL.frmls))))
         ` suffices_by (
-        rpt strip_tac >> fs[aP_correct_def,trns_correct2_def,final_correct_def]
+        rpt strip_tac >> fs[aP_correct_def,trns_correct_def,final_correct_def]
         >> rpt strip_tac >> fs[]
         >- metis_tac[]
         >- metis_tac[]
@@ -3320,9 +3269,6 @@ val EXPGBA_TRANS_AND_FINAL = store_thm
            >> rename[`MEM (eL, s_id) fls`]
            >> simp[gba_trans_def,minimal_elements_def,rrestrict_def]
            >> simp[d_gen_def]
-           (* >> qabbrev_tac `eL = *)
-           (*       edgeLabelGBA ce.pos ce.neg *)
-           (*          (get_acc_set acc (concrEdge pos neg s_nL.frmls))` *)
            >> Cases_on `x` >> fs[]
            >> first_x_assum (qspec_then `eL` mp_tac) >> simp[]
            >> strip_tac
@@ -3369,9 +3315,7 @@ val EXPGBA_TRANS_AND_FINAL = store_thm
                >> POP_ASSUM mp_tac >> simp[MEM_MAP] >> strip_tac
                >> rename[`MEM ce2 TRNS`] >> fs[]
                >> `ce2 = cE \/ ~concr_min_rel (W_FINAL ce2) (W_FINAL cE)`
-(* ~tlg_concr (W_FINAL ce2) y *)
-(*                   \/ (MEM_EQUAL ce2.pos cE.pos ∧ MEM_EQUAL ce2.neg cE.neg *)
-(*                     ∧ MEM_EQUAL ce2.sucs cE.sucs)`  *)by (
+                   by (
                        first_x_assum (qspec_then `W_FINAL ce2` mp_tac)
                        >> simp[]
                        >> strip_tac
@@ -3494,17 +3438,6 @@ val EXPGBA_TRANS_AND_FINAL = store_thm
                  >> fs[concrEdge_component_equality]
                  >> `l = cE.pos ∧ l0 = cE.neg` by metis_tac[]
                  >> fs[MEM_EQUAL_SET]
-                 (* >> qexists_tac `s_id` >> fs[] *)
-                 (* >> rw[] >> Cases_on `ce` >> fs[concr2AbstractEdge_def] *)
-                 (* >- (`get_acc_set acc (concrEdge pos neg s_nL.frmls) *)
-                 (*       = (get_acc_set acc cE)` by ( *)
-                 (*      HO_MATCH_MP_TAC GET_ACC_SET_LEMM *)
-                 (*      >> simp[concrEdge_component_equality] *)
-                 (*      >> fs[MEM_EQUAL_SET] >> metis_tac[] *)
-                 (*     ) *)
-                 (*     >> metis_tac[] *)
-                 (*    ) *)
-                 (* >- (metis_tac[MEM_EQUAL_SET]) *)
                )
               >> qexists_tac `ce.sucs` >> fs[MEM_EQUAL_SET]
               >> qexists_tac `(ce,get_acc_set acc ce)` >> fs[]
@@ -3712,7 +3645,7 @@ val EXPGBA_TRANS_AND_FINAL = store_thm
          >- (`lookup id2 G2.followers = SOME []` by metis_tac[]
              >> rw[] >> fs[] >> rw[] >> fs[]
             )
-         >- (fs[trns_correct2_def,final_correct_def,aP_correct_def]
+         >- (fs[trns_correct_def,final_correct_def,aP_correct_def]
              >> rpt strip_tac
              >- (simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
               >- (fs[CAT_OPTIONS_MEM,MEM_MAP]
@@ -3819,65 +3752,6 @@ val EXPGBA_TRANS_AND_FINAL = store_thm
        )
    )
   );
-    )    (* >- (`!l G. (FOLDR *)
-    (*             (λ(eL,suc) g_opt. do g <- g_opt; addEdgeToGBA g id eL suc od) *)
-    (*             (SOME G1) *)
-    (*             (MAP (λ(cE,f). (edgeLabelGBA cE.pos cE.neg f,cE.sucs)) l) *)
-    (*             = SOME G) *)
-    (* ==> (!n. ~(n = id) ∧ (n ∈ domain G1.nodeInfo) *)
-    (*          ==> lookup n G.followers = lookup n G1.followers) *)
-    (* ∧ ((!n. ~(n = id) ∧ (n ∈ domain g.nodeInfo) *)
-    (*         ==> lookup n G.followers = lookup n g.followers))` by ( *)
-    (*      Induct_on `l` >> fs[] >> rpt strip_tac *)
-    (*      >> Cases_on ` *)
-    (*          FOLDR *)
-    (*          (λ(eL,suc) g_opt. *)
-    (*            do g <- g_opt; addEdgeToGBA g id eL suc od) (SOME G1) *)
-    (*          (MAP (λ(cE,f). (edgeLabelGBA cE.pos cE.neg f,cE.sucs)) l)` *)
-    (*      >> fs[] >> Cases_on `h` >> fs[] *)
-    (*      >> fs[addEdgeToGBA_def] *)
-    (*      >> Cases_on `findNode (λ(i,q'). MEM_EQUAL q'.frmls q.sucs) x` *)
-    (*      >> fs[] >> Cases_on `x'` >> fs[addEdge_def] *)
-    (*      >> fs[] >> rw[] *)
-    (*      >> metis_tac[lookup_insert,SOME_11] *)
-    (*      ) *)
-    (*     >> rpt strip_tac *)
-    (*     >- (`domain g.nodeInfo ⊆ domain G2.nodeInfo` by metis_tac[SUBSET_UNION] *)
-    (*         >> first_x_assum (qspec_then `TRNS` mp_tac) >> simp[] *)
-    (*         >> strip_tac >> metis_tac[] *)
-    (*        ) *)
-    (*     >- (`(∀i. *)
-    (*         MEM i new_ids ⇒ *)
-    (*         ∃n. *)
-    (*         (lookup i G1.nodeInfo = SOME n) *)
-    (*         ∧ (MEM n.frmls NEW_NODES) *)
-    (*         ∧ lookup i G1.followers = SOME [])` *)
-    (*           by metis_tac[WF_IMP_SUFFWFG,ADDNODE_GBA_FOLDR,SND,FST] *)
-    (*         >> `~(i = id)` by ( *)
-    (*           CCONTR_TAC >> first_x_assum (qspec_then `id` mp_tac) >> simp[] *)
-    (*           >> fs[] >> CCONTR_TAC >> fs[] *)
-    (*           >> rw[] >> qunabbrev_tac `NEW_NODES` >> fs[MEM_FILTER] *)
-    (*           >> `i ∈ domain g.nodeInfo` by metis_tac[] *)
-    (*           >> fs[inGBA_def,EVERY_MEM] *)
-    (*           >> first_x_assum (qspec_then `n` mp_tac) *)
-    (*           >> rw[] *)
-    (*           >- (simp[MEM_MAP] >> qexists_tac `(i,n)` >> simp[] *)
-    (*               >> metis_tac[MEM_toAList,domain_lookup,SOME_11] *)
-    (*              ) *)
-    (*           >- simp[MEM_EQUAL_SET] *)
-    (*         ) *)
-    (*         >> `domain g.nodeInfo ⊆ domain G2.nodeInfo` by metis_tac[SUBSET_UNION] *)
-    (*         >> first_x_assum (qspec_then `TRNS` mp_tac) >> simp[] *)
-    (*         >> strip_tac *)
-    (*         >> `i ∈ domain G2.nodeInfo` by metis_tac[SUBSET_UNION,SUBSET_DEF] *)
-    (*         >> metis_tac[] *)
-    (*        ) *)
-    (*    ) *)
-    (* >- () *)
-    (* >- () *)
-    (* >- () *)
-    (* >- (fs[all_distinct_nub]) *)
-
 
 val EXPGBA_CORRECT = store_thm
   ("EXPGBA_CORRECT",
@@ -4197,12 +4071,12 @@ val EXPGBA_CORRECT = store_thm
    >> strip_tac
    >> first_x_assum (qspec_then `addedInit` mp_tac) >> simp[]
    >> strip_tac
-   >> `(trns_correct2 (MAP FST (toAList addedInit.nodeInfo))
+   >> `(trns_correct (MAP FST (toAList addedInit.nodeInfo))
                       abstrAA addedInit) (set aP)
       ∧ (aP_correct abstrAA addedInit aP)
       ∧ (final_correct abstrAA addedInit final_trans)` by (
        rpt conj_tac
-       >- (simp[trns_correct2_def] >> rpt strip_tac
+       >- (simp[trns_correct_def] >> rpt strip_tac
            >> fs[MEM_MAP] >> first_x_assum (qspec_then `(id,nL)` mp_tac)
            >> simp[] >> metis_tac[MEM_toAList]
           )
@@ -4221,7 +4095,7 @@ val EXPGBA_CORRECT = store_thm
      ∧ (STATES ==> TRANS) ∧ ((STATES ∧ TRANS) ==> FINAL) ∧ ALPH`
        suffices_by metis_tac[]
    >> `aP_correct abstrAA gba aP ∧ final_correct abstrAA gba final_trans ∧
-     trns_correct2 [] abstrAA gba (set aP)` by (
+     trns_correct [] abstrAA gba (set aP)` by (
        HO_MATCH_MP_TAC EXPGBA_TRANS_AND_FINAL >> simp[]
        >> qexists_tac `f` >> qexists_tac `init`
        >> qexists_tac `g_AA`
@@ -4738,7 +4612,7 @@ val EXPGBA_CORRECT = store_thm
               by metis_tac[findNode_def,FIND_LEMM2]
           >> fs[]
           >> `q ∈ POW abstrAA.states` by metis_tac[IN_INTER]
-          >> fs[trns_correct2_def]
+          >> fs[trns_correct_def]
           >> first_x_assum (qspec_then `q'` mp_tac) >> strip_tac
           >> first_x_assum (qspec_then `r` mp_tac) >> strip_tac
           >> first_x_assum (qspec_then `fls` mp_tac) >> simp[]
@@ -4776,7 +4650,7 @@ val EXPGBA_CORRECT = store_thm
            >- metis_tac[]
            >- (
             qunabbrev_tac `L` >> qunabbrev_tac `F1` >> fs[]
-            >> fs[trns_correct2_def]
+            >> fs[trns_correct_def]
             >> `q ∈ POW abstrAA.states` by metis_tac[IN_INTER]
             >> Cases_on `x'`
             >> `MEM (q',r) (toAList gba.nodeInfo)
@@ -4826,10 +4700,9 @@ val EXPGBA_CORRECT = store_thm
        >- (rename[`MEM u (graphStates g_AA)`]
            >> qexists_tac `acc_cond abstrAA u ∩ realTrans`
            >> rpt strip_tac
-           >- (
-            (* qunabbrev_tac `STATES` >>  *)rename[`t ∈ x`]
+           >- (rename[`t ∈ x`]
             >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
-            >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac (* >> POP_ASSUM mp_tac *)
+            >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
             >> first_x_assum (qspec_then `t` mp_tac)
             >> Cases_on `t` >> simp[] >> Cases_on `r` >> rpt strip_tac
             >> fs[] >> rename[`(e,a,e') ∈ x`] >> simp[]
@@ -4911,7 +4784,7 @@ val EXPGBA_CORRECT = store_thm
                     >> metis_tac[MEM_toAList,domain_lookup]
                  )
                 >> fs[] >> conj_tac
-                >- (fs[trns_correct2_def]
+                >- (fs[trns_correct_def]
                     >> `set
                         (CAT_OPTIONS
                          (MAP
@@ -4941,13 +4814,7 @@ val EXPGBA_CORRECT = store_thm
                )
             >- metis_tac[IN_INTER]
             )
-           (* >- (`set q1.frmls ∈ concr2AbstrGBA_states gba` *)
-           (*       suffices_by metis_tac[IN_INTER] *)
-           (*     >> PURE_REWRITE_TAC[concr2AbstrGBA_states_def] *)
-           (*     >> simp[] >> qexists_tac `q1` *)
-           (*     >> metis_tac[MEM_toAList,domain_lookup] *)
-           (*    ) *)
-           >- (fs[trns_correct2_def]
+           >- (fs[trns_correct_def]
                >> `e ∈ POW abstrAA.states`
                    by (qunabbrev_tac `realTrans` >> fs[])
                >> `e ∈ concr2AbstrGBA_states gba` by metis_tac[IN_INTER]
@@ -4975,26 +4842,6 @@ val EXPGBA_CORRECT = store_thm
                                  mp_tac)
                >> strip_tac
                >> first_x_assum (qspec_then `u` mp_tac) >> simp[]
-               (* >> `MEM u (graphStates g_AA)` by ( *)
-               (*      `set qs ∈ POW abstrAA.states` by ( *)
-               (*          fs[inGBA_def,EXISTS_MEM,MEM_MAP] *)
-               (*          >> `set qs ∈ *)
-               (*                concr2AbstrGBA_states gba` *)
-               (*              suffices_by metis_tac[IN_INTER] *)
-               (*          >> PURE_REWRITE_TAC[concr2AbstrGBA_states_def] *)
-               (*          >> simp[] >> qexists_tac `n'` >> fs[] *)
-               (*          >> Cases_on `y` >> rw[] >> fs[MEM_EQUAL_SET] *)
-               (*          >> metis_tac[MEM_toAList,domain_lookup] *)
-               (*      ) *)
-               (*      >> simp[graphStates_def,MEM_MAP] *)
-               (*      >> `u ∈ *)
-               (*           (concr2AbstrAA (concrAA g_AA init aP)).states` by ( *)
-               (*          qunabbrev_tac `abstrAA` >> fs[IN_POW] *)
-               (*          >> metis_tac[MEM,SUBSET_DEF] *)
-               (*      ) *)
-               (*      >> fs[concr2AbstrAA_def,concr2Abstr_states_def] *)
-               (*      >> metis_tac[MEM_toAList,SND] *)
-               (*  ) *)
                >> simp[]
                >> `MEM_SUBSET q.pos_lab aP ∧ MEM_SUBSET q.neg_lab aP`
                   by metis_tac[aP_correct_def]
@@ -5047,26 +4894,6 @@ val EXPGBA_CORRECT = store_thm
            >- (simp[gba_accTrans_def] >> qexists_tac `u` >> simp[]
                >> qunabbrev_tac `realTrans` >> fs[]
                >> simp[concr2AbstrAA_def,concr2Abstr_final_def]
-               (* >> `MEM u (graphStates g_AA)` by ( *)
-               (*      `set qs ∈ POW abstrAA.states` by ( *)
-               (*          fs[inGBA_def,EXISTS_MEM,MEM_MAP] *)
-               (*          >> `set qs ∈ *)
-               (*                concr2AbstrGBA_states gba` *)
-               (*              suffices_by metis_tac[IN_INTER] *)
-               (*          >> PURE_REWRITE_TAC[concr2AbstrGBA_states_def] *)
-               (*          >> simp[] >> qexists_tac `n` >> fs[] *)
-               (*          >> Cases_on `y` >> rw[] >> fs[MEM_EQUAL_SET] *)
-               (*          >> metis_tac[MEM_toAList,domain_lookup] *)
-               (*      ) *)
-               (*      >> simp[graphStates_def,MEM_MAP] *)
-               (*      >> `u ∈ *)
-               (*           (concr2AbstrAA (concrAA g_AA init aP)).states` by ( *)
-               (*          qunabbrev_tac `abstrAA` >> fs[IN_POW] *)
-               (*          >> metis_tac[MEM,SUBSET_DEF] *)
-               (*      ) *)
-               (*      >> fs[concr2AbstrAA_def,concr2Abstr_states_def] *)
-               (*      >> metis_tac[MEM_toAList,SND] *)
-               (*  ) *)
                >> fs[graphStates_def,EXISTS_MEM,MEM_MAP]
                >> qexists_tac `SND y` >> simp[]
                >> fs[] >> Cases_on `y` >> fs[] >> conj_tac
@@ -5083,7 +4910,7 @@ val EXPGBA_CORRECT = store_thm
                >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
                >> first_x_assum (qspec_then `x'` mp_tac)
                >> Cases_on `x' ∈ x` >> fs[] >> rpt strip_tac
-               >> fs[trns_correct2_def]
+               >> fs[trns_correct_def]
                >> `e ∈ POW abstrAA.states`
                    by (qunabbrev_tac `realTrans` >> fs[])
                >> `e ∈ concr2AbstrGBA_states gba` by metis_tac[IN_INTER]
@@ -5254,7 +5081,7 @@ val EXPGBA_CORRECT = store_thm
              >> first_x_assum (qspec_then `set q1.frmls` mp_tac) >> simp[]
              >> simp[concr2AbstractEdge_def]
              >> strip_tac
-             >> fs[trns_correct2_def]
+             >> fs[trns_correct_def]
              >> first_x_assum (qspec_then `id1` mp_tac) >> simp[] >> strip_tac
              >> `MEM (transformLabel (props f) eL.pos_lab eL.neg_lab,
                      set q2.frmls)
