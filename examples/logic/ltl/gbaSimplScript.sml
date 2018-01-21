@@ -92,7 +92,7 @@ val REDUCE_IS_CORRECT = store_thm
              ==> (GBA_lang aut = GBA_lang (reduceTransSimpl aut))``,
    fs[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
    >> fs[GBA_lang_def, reduceTransSimpl_def]
-    >- (qexists_tac `r`
+    >- (rename [‘isGBARunFor aut r x’] >> qexists_tac `r`
         >> `word_range x ⊆ (reduceTransSimpl aut).alphabet`
              by (Cases_on `aut` >> fs[reduceTransSimpl_def])
         >> fs[isGBARunFor_def] >> Cases_on `r`
@@ -113,25 +113,26 @@ val REDUCE_IS_CORRECT = store_thm
              >> fs[minimal_elements_def,rrestrict_def,rel_to_reln_def]
              >> fs[trans_implies_def] >> rw[] >> metis_tac[SUBSET_DEF]
              )
-         >- (`!T. T ∈ (reduceTransSimpl aut).accTrans
-              ==> (!i. ?a j. i <= j ∧ (f j, a, f (j+1)) ∈ T
+         >- (`!TT. TT ∈ (reduceTransSimpl aut).accTrans
+              ==> (!i. ?a j. i <= j ∧ (f j, a, f (j+1)) ∈ TT
                 ∧ (a, f (j+1)) ∈ (reduceTransSimpl aut).trans (f j)
                 ∧ at x j ∈ a)` suffices_by metis_tac[GBA_ACC_LEMM]
-             >> `!T. T ∈ aut.accTrans
-                 ==> (!i. ?a j. i <= j ∧ (f j, a, f (j+1)) ∈ T
+             >> `!TT. TT ∈ aut.accTrans
+                 ==> (!i. ?a j. i <= j ∧ (f j, a, f (j+1)) ∈ TT
                     ∧ (a, f (j+1)) ∈ aut.trans (f j)
                     ∧ at x j ∈ a)` by metis_tac[GBA_ACC_LEMM]
              >> rpt strip_tac
              >> rpt strip_tac >> Cases_on `aut` >> fs[reduceTransSimpl_def]
+             >> rename [`GBA states init trans aT alph`, ‘s ∈ aT’]
              >> first_x_assum (qspec_then `s` mp_tac)
              >> simp[] >> rpt strip_tac
              >> first_x_assum (qspec_then `i` mp_tac) >> rpt strip_tac
-             >> rename [`GBA states init trans aT alph`]
              >> imp_res_tac TRANS_IMPLIES_MIN >> fs[]
              >> first_x_assum (qspec_then `f (j+1)` mp_tac) >> rpt strip_tac
              >> first_x_assum (qspec_then `f j` mp_tac) >> rpt strip_tac
              >> first_x_assum (qspec_then `a` mp_tac) >> rpt strip_tac
              >> POP_ASSUM mp_tac >> simp[] >> rpt strip_tac
+             >> rename [‘(t, _, _) ∈ rrestrict (rel_to_reln _) _’]
              >> Cases_on `t` >> rename[`(a_new,r) ∈ minimal_elements _ _`]
              >> qexists_tac `a_new` >> qexists_tac `j` >> fs[removeImplied_def]
              >> rpt strip_tac >> fs[minimal_elements_def,rrestrict_def]
@@ -145,7 +146,7 @@ val REDUCE_IS_CORRECT = store_thm
               >- metis_tac[SUBSET_DEF]
             )
        )
-    >- (qexists_tac `r`
+    >- (rename [‘isGBARunFor (reduceTransSimpl aut) r x’] >> qexists_tac `r`
         >> `word_range x ⊆ aut.alphabet`
            by (Cases_on `aut` >> fs[reduceTransSimpl_def])
         >> fs[isGBARunFor_def] >> rpt strip_tac
@@ -155,33 +156,36 @@ val REDUCE_IS_CORRECT = store_thm
              >> fs[removeImplied_def] >> metis_tac[]
             )
          >- (Cases_on `r`
-             >> `!T. T ∈ (reduceTransSimpl aut).accTrans
-              ==> (!i. ?a j. i <= j ∧ (f j, a, f (j+1)) ∈ T
+             >> `!TT. TT ∈ (reduceTransSimpl aut).accTrans
+              ==> (!i. ?a j. i <= j ∧ (f j, a, f (j+1)) ∈ TT
                      ∧ (a, f (j+1)) ∈ (reduceTransSimpl aut).trans (f j)
                      ∧ at x j ∈ a)` by metis_tac[GBA_ACC_LEMM]
-             >> `!T. T ∈ aut.accTrans
-                  ==> (!i. ?a j. i <= j ∧ (f j, a, f (j+1)) ∈ T
+             >> `!TT. TT ∈ aut.accTrans
+                  ==> (!i. ?a j. i <= j ∧ (f j, a, f (j+1)) ∈ TT
                         ∧ (a, f (j+1)) ∈ aut.trans (f j)
                         ∧ at x j ∈ a)` suffices_by metis_tac[GBA_ACC_LEMM]
              >> rpt strip_tac
              >> qabbrev_tac
                  `realTrans = {(e,a,e') | (a,e') ∈
                                           (reduceTransSimpl aut).trans e }`
-             >> first_x_assum (qspec_then `T' ∩ realTrans` mp_tac)
+             >> first_x_assum (qspec_then `TT ∩ realTrans` mp_tac)
              >> Cases_on `aut` >> fs[reduceTransSimpl_def]
              >> qunabbrev_tac `realTrans`
              >> simp[] >> rpt strip_tac >> fs[]
+             >> rename [‘GBA states init trans aT alph’,
+                        ‘removeImplied aT trans’]
              >> `∀i.
                   ∃a j. i ≤ j ∧
-                  ((f j,a,f (j + 1)) ∈ T'
-                 ∧ (a,f (j + 1)) ∈ removeImplied f2 f1 (f j))
-                 ∧ (a,f (j + 1)) ∈ removeImplied f2 f1 (f j) ∧ at x j ∈ a`
+                  ((f j,a,f (j + 1)) ∈ TT
+                 ∧ (a,f (j + 1)) ∈ removeImplied aT trans (f j))
+                 ∧ (a,f (j + 1)) ∈ removeImplied aT trans (f j) ∧ at x j ∈ a`
                 by (
                   `∃s.
-                (T' ∩ {(e,a,e') | (a,e') ∈ removeImplied f2 f1 e} =
-                 {(e,a,e') | (e,a,e') ∈ s ∧ (a,e') ∈ removeImplied f2 f1 e}) ∧
-                s ∈ f2` suffices_by fs[]
-                >> qexists_tac `T'` >> simp[SET_EQ_SUBSET,SUBSET_DEF]
+                    (TT ∩ {(e,a,e') | (a,e') ∈ removeImplied aT trans e} =
+                     {(e,a,e') |
+                        (e,a,e') ∈ s ∧ (a,e') ∈ removeImplied aT trans e}) ∧
+                    s ∈ aT` suffices_by fs[]
+                >> qexists_tac `TT` >> simp[SET_EQ_SUBSET,SUBSET_DEF]
                 >> rpt strip_tac >> metis_tac[]
               )
              >> first_x_assum (qspec_then `i` mp_tac) >> rpt strip_tac
@@ -217,7 +221,8 @@ val REDUCE_STATE_VALID = store_thm
    >> fs[SUBSET_DEF] >> rpt strip_tac
     >- (simp[reachableFromGBA_def] >> metis_tac[RTC_REFL])
     >- metis_tac[]
-    >- (qexists_tac `x` >> fs[reachableFromGBA_def]
+    >- (rename [‘reachableFromGBA (GBA f f0 f1 f2 f3) x s’, ‘x ∈ f0’]
+        >> qexists_tac `x` >> fs[reachableFromGBA_def]
         >> `stepGBA (GBA f f0 f1 f2 f3) s d` suffices_by metis_tac[RTC_CASES2]
         >> simp[stepGBA_def] >> metis_tac[])
     >- metis_tac[]
@@ -365,12 +370,12 @@ val replaceAccTrans_def = Define`
 
 val REPL_AT_LEMM = store_thm
   ("REPL_AT_LEMM",
-   ``!aT t x y. t ∈ (replaceAccTrans x y aT)
-  ==> ?t2. t2 ∈ aT
-  ∧ !q1 a q2. (q1,a,q2) ∈ t2
-                 ==> (replaceState x y q1, a, replaceState x y q2) ∈ t``,
-   rpt strip_tac >> fs[replaceAccTrans_def] >> qexists_tac `s`
-   >> rpt strip_tac >> rw[EQ_IMP_THM] >> metis_tac[]
+   ``!aT t x y.
+       t ∈ replaceAccTrans x y aT ==>
+       ?t2. t2 ∈ aT ∧
+            !q1 a q2. (q1,a,q2) ∈ t2
+                      ==> (replaceState x y q1, a, replaceState x y q2) ∈ t``,
+   rpt strip_tac >> fs[replaceAccTrans_def] >> metis_tac[]
   );
 
 val REPL_AT_LEMM2 = store_thm
