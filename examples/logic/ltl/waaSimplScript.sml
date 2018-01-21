@@ -384,27 +384,23 @@ val REDUCE_STATE_IS_VALID = store_thm
        >> metis_tac[SUBSET_DEF]
       )
    >- (Cases_on `aut` >> fs[removeStatesSimpl_def]
-       >> Cases_on `s ∈ f
-          ∧ s ∈ reachRelFromSet (ALTER_A f f0 f1 f2 f3) (BIGUNION f0)`
-       >- (fs[] >> `d ⊆ f` by metis_tac[] >> fs[]
-           >> fs[reachRelFromSet_def] >> simp[SUBSET_DEF] >> rpt strip_tac
-           >> fs[] >> qexists_tac `x` >> simp[reachRel_def] >> conj_tac
-           >- (`oneStep (ALTER_A f f0 f1 f2 f3) s x'` by (
+       >> rfs[]
+       >> `d ⊆ f` by metis_tac[] >> fs[]
+       >> fs[reachRelFromSet_def] >> simp[SUBSET_DEF] >> rpt strip_tac
+       >> fs[]
+       >> rename [‘reachRel (ALTER_A f f0 f1 f2 f3) b s’, ‘b ∈ s1’, ‘s1 ∈ f0’,
+                  ‘d ⊆ f’, ‘x ∈ d’]
+       >> qexists_tac `b` >> simp[reachRel_def] >> conj_tac
+           >- (`oneStep (ALTER_A f f0 f1 f2 f3) s x` by (
                  simp[oneStep_def] >> metis_tac[]
                )
                >> metis_tac[RTC_TRANSITIVE,relationTheory.transitive_def,
                             RTC_SUBSET,reachRel_def]
               )
            >- metis_tac[]
-          )
-       >- (fs[] >> metis_tac[MEMBER_NOT_EMPTY])
       )
    >- (Cases_on `aut` >> fs[removeStatesSimpl_def]
-       >> Cases_on `s ∈ f
-           ∧ s ∈ reachRelFromSet (ALTER_A f f0 f1 f2 f3) (BIGUNION f0)`
-       >- (fs[] >> metis_tac[])
-       >- (fs[] >> metis_tac[MEMBER_NOT_EMPTY])
-      )
+       >> rfs[] >> metis_tac[])
   );
 
 val REDUCE_STATE_CORRECT = store_thm
@@ -548,7 +544,7 @@ val replaceBy_def = Define`
 (*               >> fs[] >> metis_tac[] *)
 (*                >- (qexists_tac `a'` >> qexists_tac `qs` *)
 (*                    >> qexists_tac `b` >> fs[] >> fs[replaceBy_def,EXISTS_PROD] *)
-                   
+
 (*                    >> fs[replaceSingleTrans_def] > *)
 (* ) *)
 (* `s' ∈ nStepReachable (replaceBy trans a b) s n` by metis_tac[] *)
@@ -1798,7 +1794,7 @@ val replace_run_def = Define`
 (*                                     by metis_tac[MEMBER_NOT_EMPTY] *)
 (*                                  >> fs[replace_run_def] *)
 (*                                  >> `!n. a + i <= n ==> ~(q ∈ run.V n)` by ( *)
-                                       
+
 
 
 
