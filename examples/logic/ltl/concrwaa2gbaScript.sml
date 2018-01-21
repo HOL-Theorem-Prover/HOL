@@ -19,6 +19,23 @@ val get_acc_set_def = Define`
                  ) acc
             )`;
 
+val GET_ACC_SET_LEMM = store_thm
+  ("GET_ACC_SET_LEMM",
+   ``!acc ce1 ce2.
+        (MEM_EQUAL ce1.pos ce2.pos)
+        ∧ (MEM_EQUAL ce1.neg ce2.neg)
+        ∧ (MEM_EQUAL ce1.sucs ce2.sucs)
+        ==> (get_acc_set acc ce1 = get_acc_set acc ce2)``,
+   rpt strip_tac >> fs[get_acc_set_def]
+   >> `!f f_tr. acc_cond_concr ce1 f f_tr = acc_cond_concr ce2 f f_tr`
+       suffices_by metis_tac[]
+   >> rpt strip_tac >> Cases_on `ce1` >> Cases_on `ce2`
+   >> simp[acc_cond_concr_def,trns_is_empty_def]
+   >> fs[concrEdge_component_equality]
+   >> simp[MEM_SUBSET_SET_TO_LIST,MEM_EQUAL_SET,EXISTS_MEM]
+   >> fs[MEM_EQUAL_SET] >> rw[]
+  );
+
 val valid_acc_def = Define`
   valid_acc aP g_AA acc =
     ((!f f_trns. MEM (f,f_trns) acc ==>
@@ -1111,6 +1128,52 @@ val EXPGBA_SOME_WFG = store_thm
       )
   );
 
+val trns_correct_def = Define `
+  trns_correct l abstrAA gba aP =
+       (!id nL fls.
+            (lookup id gba.nodeInfo = SOME nL)
+            ∧ (lookup id gba.followers = SOME fls)
+            ∧ (set nL.frmls ∈ POW abstrAA.states)
+            ∧ ~(MEM id l)
+            ==>
+            (set (CAT_OPTIONS
+                  (MAP
+                       (λ(eL,i).
+                         do
+                         s_nL <- lookup i gba.nodeInfo;
+                        SOME
+                            (transformLabel aP eL.pos_lab eL.neg_lab,
+                             set s_nL.frmls)
+                            od) fls)) =
+             (gba_trans abstrAA (set nL.frmls)))
+       )`;
+
+val final_correct_def = Define `
+ final_correct (abstrAA:(α -> bool, α ltl_frml) ALTER_A) gba acc =
+  (!id fls nL eL s_id s_nL.
+       (lookup id gba.nodeInfo = SOME nL)
+       ∧ (lookup id gba.followers = SOME fls)
+       ∧ (MEM (eL,s_id) fls)
+       ∧ (lookup s_id gba.nodeInfo = SOME s_nL)
+       ∧ (set nL.frmls ∈ POW abstrAA.states)
+       ==> (!u. MEM u eL.acc_set
+                 = MEM u (get_acc_set acc
+                           (concrEdge eL.pos_lab
+                                      eL.neg_lab
+                                      s_nL.frmls)))
+  )`;
+
+val aP_correct_def = Define `
+  aP_correct (abstrAA:(α -> bool, α ltl_frml) ALTER_A) gba aP =
+   (!id fls nL eL s_id.
+       (lookup id gba.nodeInfo = SOME nL)
+       ∧ (lookup id gba.followers = SOME fls)
+       ∧ (MEM (eL,s_id) fls)
+       ∧ (set nL.frmls ∈ POW abstrAA.states)
+       ==> ((MEM_SUBSET eL.pos_lab aP)
+          ∧ (MEM_SUBSET eL.neg_lab aP))
+   )`;
+
 val EXPGBA_GRAPH_REACHABLE = store_thm
   ("EXPGBA_GRAPH_REACHABLE",
    ``!abstrAA f init aP g_AA acc ids g g2.
@@ -1124,10 +1187,6 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
         )
       ∧ (valid_acc aP g_AA acc)
       ∧ (unique_node_formula g_AA) ∧ (flws_sorted g_AA)
-       (* (!i x. MEM i ids ∧ (lookup i g.nodeInfo = SOME x) *)
-       (*      ==> set x.frmls ∈ *)
-       (*           reachableFromSetGBA (waa2gba abstrAA) {set q | inGBA g q}) *)
-       (* ∧  *)
       ∧ (!x. inGBA g x
               ==> set x ∈ reachableFromSetGBA
                        (waa2gba abstrAA) (waa2gba abstrAA).initial)
@@ -1135,14 +1194,12 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
        ∧ (expandGBA g_AA acc ids g = SOME g2)
        ∧ (wfg g)
        ∧ (!x. inGBA g x ==> (set x ∈ POW abstrAA.states))
-       (* ∧ (!i n. i ∈ (domain g.nodeInfo) ∧ (lookup i g.nodeInfo = SOME n) *)
-       (*       ==> ALL_DISTINCT n.frmls *)
-       (*   ) *)
        ∧ frml_ad g
-       ==> (!x. inGBA g2 x
+       ==> ((!x. inGBA g2 x
                 ==> ((set x ∈ reachableFromSetGBA (waa2gba abstrAA)
                         (waa2gba abstrAA).initial)
-                         ∧ (set x ∈ (waa2gba abstrAA).states)))``,
+                         ∧ (set x ∈ (waa2gba abstrAA).states)))
+                )``,
     gen_tac >> gen_tac >> gen_tac >> gen_tac
     >> HO_MATCH_MP_TAC (theorem "expandGBA_ind") >> strip_tac
     >- (fs[] >> rpt strip_tac >> fs[expandGBA_def]
@@ -1151,6 +1208,7 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
            by metis_tac[REDUCE_STATE_IS_WEAK, LTL2WAA_ISWEAK,
                         LTL2WAA_ISVALID]
         >> fs[waa2gba_def] >> first_x_assum (qspec_then `x` mp_tac) >> simp[]
+        >> metis_tac[]
        )
     >- (strip_tac >> strip_tac >> strip_tac >> strip_tac >> strip_tac
         >> strip_tac >> strip_tac >> strip_tac >> strip_tac
@@ -1242,10 +1300,6 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
              by (rpt strip_tac >> rw[] >> fs[] >> metis_tac[])
         >> simp[]
         >> Q.HO_MATCH_ABBREV_TAC `(!g2. A g2 ==> B g2) ==> C`
-        (* >> `A g2` by (qunabbrev_tac `A` >> fs[]) >> fs[] *)
-        (* >> qunabbrev_tac `A` >> qunabbrev_tac `B` >> qunabbrev_tac `C` *)
-        (* >> strip_tac >> first_x_assum (qspec_then `g2` mp_tac) >> simp[] *)
-        (* >> Q.HO_MATCH_ABBREV_TAC `(A ==> B) ==> C` *)
         >> `B g2 ==> C` by metis_tac[]
         >> `A g2` suffices_by fs[] >> qunabbrev_tac `A` >> fs[]
         >> qabbrev_tac `abstr_gba =
@@ -1295,24 +1349,26 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
                 )
              >- simp[concr2AbstrAA_def]
          )
-        >> `(∀i x.
-            (MEM i ids ∨ MEM i new_ids)
-            ∧ (lookup i G2.nodeInfo = SOME x)
-            ⇒ set x.frmls ∈ reachableFromSetGBA abstr_gba {set q | inGBA g q})`
-          by (
-             rpt gen_tac >> rpt strip_tac
-             >- (`i ∈ domain g.nodeInfo` by fs[]
-                 >> simp[reachableFromSetGBA_def,reachableFromGBA_def]
-                 >> `lookup i g.nodeInfo = lookup i G2.nodeInfo` by fs[]
-                 >> qexists_tac `set (x'.frmls)` >> simp[RTC_REFL]
-                 >> `inGBA g x'.frmls` by (
-                       simp[inGBA_def,EXISTS_MEM,MEM_MAP]
-                       >> qexists_tac `x'` >> fs[MEM_EQUAL_SET]
-                       >> metis_tac[SND,MEM_toAList]
-                 )
-                 >> metis_tac[]
+        >> `!i x. (MEM i ids ∧ lookup i G2.nodeInfo = SOME x) ==>
+             (set x.frmls ∈ reachableFromSetGBA abstr_gba {set q | inGBA g q})`
+           by (rpt strip_tac >> `i ∈ domain g.nodeInfo` by fs[]
+               >> simp[reachableFromSetGBA_def,reachableFromGBA_def]
+               >> `lookup i g.nodeInfo = lookup i G2.nodeInfo` by fs[]
+               >> qexists_tac `set (x'.frmls)` >> simp[RTC_REFL]
+               >> `inGBA g x'.frmls` by (
+                simp[inGBA_def,EXISTS_MEM,MEM_MAP]
+                >> qexists_tac `x'` >> fs[MEM_EQUAL_SET]
+                >> metis_tac[SND,MEM_toAList]
                 )
-             >- (rename[`lookup i G2.nodeInfo = SOME n`]
+               >> metis_tac[]
+              )
+        >> `(∀i x. MEM i new_ids
+              ∧ (lookup i G2.nodeInfo = SOME x)
+            ⇒ ((set x.frmls ∈ reachableFromSetGBA abstr_gba {set q | inGBA g q})
+            ))`
+          by (
+             rpt gen_tac >> strip_tac
+             >> rename[`lookup i G2.nodeInfo = SOME n`]
                 >> `MEM n.frmls NEW_NODES` by metis_tac[SOME_11]
                 >> qunabbrev_tac `NEW_NODES` >> fs[MEM_FILTER]
                 >> qunabbrev_tac `TRNS` >> fs[MEM_MAP,ONLY_MINIMAL_MEM]
@@ -1430,7 +1486,7 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
                        suffices_by metis_tac[RTC_SUBSET]
                  >> qunabbrev_tac `Q` >> simp[] >> qexists_tac `FST abstr_ce`
                  >> simp[minimal_elements_rrestrict]
-                 >> simp[minimal_elements_def] (* >> rpt strip_tac *)
+                 >> simp[minimal_elements_def]
                  >> `!q_i q_nL q q_trns.
                       (findNode (λ(i,l). l.frml = q) g_AA = SOME (q_i,q_nL))
                       ∧ (q_nL.frml = q) ∧ MEM q node.frmls
@@ -1630,9 +1686,7 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
                  >> POP_ASSUM mp_tac >> simp[MEM_MAP] >> strip_tac
                  >> rename[`MEM ce2 TRNS`] >> fs[]
                  >> `ce2 = cE \/ ~concr_min_rel (W_FINAL ce2) y`
-(* ~tlg_concr (W_FINAL ce2) y *)
-(*                   \/ (MEM_EQUAL ce2.pos cE.pos ∧ MEM_EQUAL ce2.neg cE.neg *)
-(*                     ∧ MEM_EQUAL ce2.sucs cE.sucs)`  *)by (
+                    by (
                        first_x_assum (qspec_then `W_FINAL ce2` mp_tac)
                        >> strip_tac
                        >> qunabbrev_tac `W_FINAL` >> fs[]
@@ -1779,7 +1833,6 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
                     >> qexists_tac `node` >> simp[MEM_MAP,MEM_EQUAL_SET]
                     >> metis_tac[MEM_toAList,SND]
                    )
-                )
          )
         >> rpt conj_tac
         >- metis_tac[]
@@ -1916,13 +1969,9 @@ val EXPGBA_ALL_REACHABLE = store_thm
         )
       ∧ (valid_acc aP g_AA acc)
       ∧ (unique_node_formula g_AA) ∧ (flws_sorted g_AA)
-      (* ∧ (!x. inGBA g x *)
-      (*    ==> set x ∈ reachableFromSetGBA *)
-      (*    (waa2gba abstrAA) (waa2gba abstrAA).initial) *)
       ∧ (expandGBA g_AA acc ids g = SOME g2)
       ∧ (!i. MEM i ids ==> i ∈ domain g.nodeInfo)
       ∧ (wfg g)
-      (* ∧ (!x. inGBA g x ==> (set x ∈ POW abstrAA.states)) *)
       ∧ frml_ad g
       ∧ (one_step_closed_apart_l abstrAA g ids)
       ==> (one_step_closed abstrAA g2)``,
@@ -2082,7 +2131,7 @@ val EXPGBA_ALL_REACHABLE = store_thm
          >- metis_tac[]
          >- fs[expandGBA_def]
          >- (rpt strip_tac
-                 >- (`domain g.nodeInfo ⊆ domain G2.nodeInfo` by metis_tac[SUBSET_UNION]
+          >- (`domain g.nodeInfo ⊆ domain G2.nodeInfo` by metis_tac[SUBSET_UNION]
                                                               >> metis_tac[SUBSET_DEF]
                     )
                  >- metis_tac[domain_lookup]
@@ -2597,45 +2646,6 @@ val EXPGBA_ALL_REACHABLE = store_thm
       )
   );
 
-val trns_correct_def = Define `
-  trns_correct gba abstrAA aP =
-     (!id fls nL.
-          (lookup id gba.nodeInfo = SOME nL)
-          ∧ (lookup id gba.followers = SOME fls)
-          ==> (!s_id eL s_nL.
-                 (MEM (eL,s_id) fls ∧ (lookup s_id gba.nodeInfo = SOME s_nL))
-                    = ((transformLabel (set aP) eL.pos_lab eL.neg_lab,
-                       set s_nL.frmls)
-                           ∈ gba_trans abstrAA (set nL.frmls))
-              )
-     )`;
-
-val final_correct_def = Define `
-  final_correct gba acc =
-  (!id fls nL eL s_id s_nL.
-       (lookup id gba.nodeInfo = SOME nL)
-       ∧ (lookup id gba.followers = SOME fls)
-       ∧ (MEM (eL,s_id) fls)
-       ∧ (lookup s_id gba.nodeInfo = SOME s_nL)
-       ==> (!u. MEM u eL.acc_set
-                 = MEM u (get_acc_set acc
-                           (concrEdge eL.pos_lab
-                                      eL.neg_lab
-                                      s_nL.frmls)))
-  )`;
-
-val aP_correct_def = Define `
-  aP_correct gba aP =
-   (!id fls nL eL s_id.
-       (lookup id gba.nodeInfo = SOME nL)
-       ∧ (lookup id gba.followers = SOME fls)
-       ∧ (MEM (eL,s_id) fls)
-       ==> ((MEM_SUBSET eL.pos_lab aP)
-          ∧ (MEM_SUBSET eL.neg_lab aP))
-   )`;
-
-(*
-
 val EXPGBA_TRANS_AND_FINAL = store_thm
   ("EXPGBA_TRANS_AND_FINAL",
    ``!abstrAA f init aP g_AA acc ids g g2.
@@ -2647,19 +2657,25 @@ val EXPGBA_TRANS_AND_FINAL = store_thm
          ==> (!ce. MEM ce cT
                    ==> (MEM_SUBSET ce.pos aP ∧ MEM_SUBSET ce.neg aP))
        )
-     (* ∧ (valid_acc aP g_AA acc) *)
+     ∧ (valid_acc aP g_AA acc)
      ∧ (unique_node_formula g_AA) ∧ (flws_sorted g_AA)
      ∧ (expandGBA g_AA acc ids g = SOME g2)
      ∧ (!i. MEM i ids ==> i ∈ domain g.nodeInfo)
      ∧ (!i. MEM i ids ==> (lookup i g.followers = SOME []))
      ∧ (wfg g)
-     ∧ (aP_correct g aP)
-     ∧ (final_correct g acc)
-     ∧ (trns_correct g abstrAA aP)
-     (* ∧ frml_ad g *)
-  ==> ((aP_correct g2 aP)
-        ∧ (final_correct g2 acc)
-        ∧ (trns_correct g2 abstrAA aP)
+     ∧ (aP_correct abstrAA g aP)
+     ∧ (final_correct abstrAA g acc)
+     ∧ (trns_correct ids abstrAA g (set aP))
+     ∧ (ALL_DISTINCT ids)
+     ∧ frml_ad g
+     ∧ ((!id fls.
+         (lookup id g.followers = SOME fls)
+     ==> (!eL s_id.
+               MEM (eL,s_id) fls
+               ==> s_id ∈ domain g.nodeInfo)))
+  ==> ((aP_correct abstrAA g2 aP)
+        ∧ (final_correct abstrAA g2 acc)
+        ∧ (trns_correct [] abstrAA g2 (set aP))
       )``,
    gen_tac >> gen_tac >> gen_tac >> gen_tac
    >> HO_MATCH_MP_TAC (theorem "expandGBA_ind") >> strip_tac
@@ -2670,7 +2686,7 @@ val EXPGBA_TRANS_AND_FINAL = store_thm
     >> fs[]
     >> `?node. lookup id g.nodeInfo = SOME node` by metis_tac[domain_lookup]
     >> first_x_assum (qspec_then `node` mp_tac) >> simp[]
-    >> strip_tac
+    >> strip_tac >> Q.HO_MATCH_ABBREV_TAC `P g2`
     >> qabbrev_tac `TRNS =
              ONLY_MINIMAL
                  concr_min_rel
@@ -2753,10 +2769,10 @@ val EXPGBA_TRANS_AND_FINAL = store_thm
               ∀ce. MEM ce cT ⇒ MEM_SUBSET ce.pos aP ∧ MEM_SUBSET ce.neg aP)`
              by (rpt strip_tac >> rw[] >> fs[] >> metis_tac[])
     >> simp[]
-    >> Q.HO_MATCH_ABBREV_TAC `(!g2. A g2 ==> B g2) ==> C`
-    >> `B g2 ==> C` by (
-        qunabbrev_tac `B` >> simp[one_step_closed_def]
-                      >> metis_tac[]
+    >> Q.HO_MATCH_ABBREV_TAC `(!g2. (A g2) ==> B g2) ==> P g2`
+    >> `B g2 ==> P g2` by (
+        qunabbrev_tac `B` >> qunabbrev_tac `P`
+        >> metis_tac[]
     )
     >> `A g2` suffices_by fs[] >> qunabbrev_tac `A` >> fs[]
     >> qabbrev_tac `abstr_gba =
@@ -2764,11 +2780,14 @@ val EXPGBA_TRANS_AND_FINAL = store_thm
     >> `!x. inGBA G1 x = inGBA G2 x` by simp[inGBA_def]
     >> `(∀i.
           i ∈ domain g.nodeInfo ⇒
-          lookup i g.nodeInfo = lookup i G1.nodeInfo)
+          (lookup i g.nodeInfo = lookup i G1.nodeInfo)
+        ∧ (lookup i g.followers = lookup i G1.followers))
               ∧ (∀i.
                   MEM i new_ids ⇒
                   ∃n.
-                  lookup i G1.nodeInfo = SOME n ∧ MEM n.frmls NEW_NODES)`
+                  lookup i G1.nodeInfo = SOME n ∧ MEM n.frmls NEW_NODES
+                ∧ (lookup i G1.followers = SOME [])
+                ∧ (g.next <= i))`
           by metis_tac[WF_IMP_SUFFWFG,ADDNODE_GBA_FOLDR,SND,FST]
     >> `isWeakAlterA abstrAA ∧ isValidAlterA abstrAA
               ∧ (FINITE abstrAA.states)
@@ -2796,6 +2815,881 @@ val EXPGBA_TRANS_AND_FINAL = store_thm
                 )
              >- simp[concr2AbstrAA_def]
          )
+    >> `!ls G fls. (FOLDR
+             (λ(eL,suc) g_opt. do g <- g_opt; addEdgeToGBA g id eL suc od)
+             (SOME G1)
+             (MAP (λ(cE,f). (edgeLabelGBA cE.pos cE.neg f,cE.sucs)) ls) =
+               SOME G)
+             ∧ (lookup id G.followers = SOME fls)
+             ==> ((!eL s_id.
+                      MEM (eL,s_id) fls
+                      ==> s_id ∈ domain G.nodeInfo)
+                ∧ (!eL qs.
+                      (?s_id s_nL.
+                        MEM (eL,s_id) fls
+                        ∧ (lookup s_id G.nodeInfo = SOME s_nL)
+                        ∧ MEM_EQUAL s_nL.frmls qs)
+                      =
+                      (?s_list.
+                        MEM_EQUAL s_list qs
+                        ∧ (MEM (eL,s_list)
+                             (MAP (λ(cE,f).
+                                    (edgeLabelGBA cE.pos cE.neg f,cE.sucs))
+                                  ls)))))` by (
+        Induct_on `ls` >> fs[] >> strip_tac
+        >- (strip_tac >> `fls = []` by metis_tac[domain_lookup,SOME_11]
+            >> fs[]
+           )
+        >- (rpt gen_tac >> strip_tac
+            >> Cases_on `h` >> fs[] >> rename[`addEdgeToGBA G_int _ _ _ = _ _`]
+            >> fs[addEdgeToGBA_def]
+            >> Cases_on `findNode (λ(i,q'). MEM_EQUAL q'.frmls q.sucs) G_int`
+            >> fs[] >> Cases_on `x` >> fs[addEdge_def]
+            >> fs[gfg_component_equality]
+            >> `fls = ((edgeLabelGBA q.pos q.neg r,q')::followers_old)`
+                by metis_tac[lookup_insert,SOME_11]
+            >> rpt gen_tac >> simp[EQ_IMP_THM] >> strip_tac
+            >- (rw[]
+                  >- metis_tac[findNode_def,FIND_LEMM2,MEM_toAList,domain_lookup]
+                  >- metis_tac[]
+               )
+            >- (rw[]
+             >- (qexists_tac `q.sucs` >> fs[]
+                 >> rename[`findNode _ _ = SOME (id1,nL1)`]
+                 >> `(λ(i,q'). MEM_EQUAL q'.frmls q.sucs) (id1,nL1)
+                    ∧ MEM (id1,nL1) (toAList G_int.nodeInfo)`
+                   by metis_tac[FIND_LEMM2,findNode_def]
+                 >> `s_nL = nL1` by metis_tac[MEM_toAList,SOME_11]
+                 >> rw[] >> fs[MEM_EQUAL_SET]
+                )
+             >- metis_tac[]
+             >- (rename[`findNode _ _ = SOME (id1,nL1)`]
+                 >> `(λ(i,q'). MEM_EQUAL q'.frmls q.sucs) (id1,nL1)
+                     ∧ MEM (id1,nL1) (toAList G_int.nodeInfo)`
+                     by metis_tac[FIND_LEMM2,findNode_def]
+                 >> qexists_tac `id1` >> fs[] >> qexists_tac `nL1` >> simp[]
+                 >> metis_tac[MEM_EQUAL_SET,MEM_toAList]
+                )
+             >- metis_tac[]
+               )
+           )
+    )
+    >> first_x_assum (qspec_then `TRNS` mp_tac) >> simp[]
+    >> strip_tac
+    >> `!ls G i. ~(i = id) ==>
+             (FOLDR
+                  (λ(eL,suc) g_opt. do g <- g_opt; addEdgeToGBA g id eL suc od)
+                  (SOME G1)
+                  (MAP (λ(cE,f). (edgeLabelGBA cE.pos cE.neg f,cE.sucs)) ls) =
+              SOME G)
+             ==> (lookup i G.followers = lookup i G1.followers)` by (
+        Induct_on `ls` >> fs[] >> rpt strip_tac
+        >> Cases_on `h` >> fs[] >> rename[`addEdgeToGBA G_int _ _ _ = _ _`]
+        >> fs[addEdgeToGBA_def]
+        >> Cases_on `findNode (λ(i,q'). MEM_EQUAL q'.frmls q.sucs) G_int`
+        >> fs[] >> Cases_on `x` >> fs[]
+        >> fs[addEdge_def,gfg_component_equality]
+        >> metis_tac[lookup_insert]
+    )
+    >> first_x_assum (qspec_then `TRNS` mp_tac) >> simp[] >> strip_tac
+    >> `aP_correct (concr2AbstrAA (concrAA g_AA init aP)) G2 aP
+        ∧ trns_correct (nub (ids ++ new_ids))
+           (concr2AbstrAA (concrAA g_AA init aP)) G2 (set aP)
+        ∧ final_correct (concr2AbstrAA (concrAA g_AA init aP)) G2 acc` by (
+     `!id fls nL.
+        (lookup id G2.nodeInfo = SOME nL)
+        ∧ (lookup id G2.followers = SOME fls)
+        ∧ ((set nL.frmls) ∈ POW abstrAA.states)
+        ==>
+        ((~MEM id (nub (ids ++ new_ids))
+         ==>
+         (set
+          (CAT_OPTIONS
+            (MAP
+             (λ(eL,i).
+               do
+               s_nL <- lookup i G2.nodeInfo;
+              SOME
+               (transformLabel (set aP) eL.pos_lab eL.neg_lab,
+                set s_nL.frmls)
+               od) fls)) = gba_trans abstrAA (set nL.frmls)
+        ))
+        ∧ (!eL s_id.
+            MEM (eL,s_id) fls ⇒
+            MEM_SUBSET eL.pos_lab aP ∧ MEM_SUBSET eL.neg_lab aP
+          )
+        ∧ (!eL s_id s_nL.
+               MEM (eL,s_id) fls
+               ∧ (lookup s_id G2.nodeInfo = SOME s_nL)
+               ==> ∀u.
+               MEM u eL.acc_set ⇔
+               MEM u
+               (get_acc_set acc
+                           (concrEdge eL.pos_lab eL.neg_lab s_nL.frmls))))
+        ` suffices_by (
+        rpt strip_tac >> fs[aP_correct_def,trns_correct_def,final_correct_def]
+        >> rpt strip_tac >> fs[]
+        >- metis_tac[]
+        >- metis_tac[]
+        >- (first_x_assum(qspec_then `id'` mp_tac) >> simp[]
+           )
+        >- metis_tac[]
+     )
+     >> rpt gen_tac >> strip_tac
+     >> rename[`lookup id2 G2.nodeInfo = SOME nL`]
+     >> Cases_on `id = id2` >> fs[]
+     >- (
+         `node = nL` by metis_tac[SOME_11]
+         >> qunabbrev_tac `TRNS` >> fs[MEM_MAP,ONLY_MINIMAL_MEM]
+                    >> qabbrev_tac `TRNS =
+                        gba_trans_concr
+                         (CAT_OPTIONS
+                          (MAP (concr_extrTrans g_AA)
+                               (CAT_OPTIONS
+                                    (MAP
+                                         (λf.
+                                              OPTION_MAP FST
+                                              (findNode (λ(i,l). l.frml = f)
+                                                        g_AA)) nL.frmls))))`
+         >> qabbrev_tac `TO_SUCS =
+                        λ(cE,f).
+                         (edgeLabelGBA cE.pos cE.neg f,cE.sucs)`
+         >> qabbrev_tac `W_FINAL = λcE. (cE,get_acc_set acc cE)`
+         >> qabbrev_tac `ce_lists =
+                      CAT_OPTIONS
+                       (MAP (concr_extrTrans g_AA)
+                         (CAT_OPTIONS
+                           (MAP
+                             (λf.
+                               OPTION_MAP FST
+                               (findNode (λ(i,l). l.frml = f) g_AA))
+                             nL.frmls)))`
+         >> qabbrev_tac `zpd = ZIP (nL.frmls,ce_lists)`
+         >> qabbrev_tac `L =
+                      MAP
+                       (λf.
+                         OPTION_MAP FST
+                         (findNode (λ(i,l). l.frml = f) g_AA))
+                       node.frmls`
+         >> `EVERY IS_SOME L` by (
+                       qunabbrev_tac `L` >> fs[] >> simp[EVERY_MEM]
+                       >> rpt strip_tac >> fs[MEM_MAP]
+                       >> Cases_on `e` >> fs[IS_SOME_DEF]
+                       >> `inGBA g node.frmls` by (
+                           simp[inGBA_def,EXISTS_MEM] >> qexists_tac `node`
+                           >> simp[MEM_MAP,MEM_EQUAL_SET]
+                           >> metis_tac[MEM_toAList,SND]
+                       )
+                       >> `set node.frmls ∈
+                            POW (removeStatesSimpl (ltl2waa f)).states`
+                           by metis_tac[]
+                       >> fs[concr2AbstrAA_def]
+                       >> `f' ∈ (removeStatesSimpl (ltl2waa f)).states`
+                          by metis_tac[MEM,IN_POW,SUBSET_DEF]
+                       >> `f' ∈ concr2Abstr_states g_AA`
+                          by (fs[ALTER_A_component_equality] >> metis_tac[])
+                       >> fs[concr2Abstr_states_def,findNode_def]
+                       >> rename[`f1 = x1.frml`,`n1 ∈ domain g_AA.nodeInfo`]
+                       >> `(λ(i,l). l.frml = f1) (n1,x1)` by fs[]
+                       >> metis_tac[FIND_LEMM,NOT_SOME_NONE,MEM_toAList]
+                   )
+         >> `EVERY IS_SOME
+                              (MAP (concr_extrTrans g_AA) (CAT_OPTIONS L))` by (
+                       simp[EVERY_MEM] >> rpt strip_tac >> fs[MEM_MAP]
+                       >> rename[`MEM some_id (CAT_OPTIONS L)`]
+                       >> simp[concr_extrTrans_def]
+                       >> Cases_on `lookup some_id g_AA.followers` >> fs[]
+                       >-(qunabbrev_tac `L` >> fs[CAT_OPTIONS_MEM,MEM_MAP]
+                        >> fs[findNode_def]
+                        >> `MEM z (toAList g_AA.nodeInfo)`
+                              by metis_tac[FIND_LEMM2]
+                        >> Cases_on `z` >> fs[wfg_def]
+                        >> rw[]
+                        >> metis_tac[MEM_toAList,domain_lookup,wfg_def,
+                                     NOT_SOME_NONE]
+                         )
+                       >- (
+                         fs[] >> rpt strip_tac
+                         >> Q.HO_MATCH_ABBREV_TAC `IS_SOME H` >> Cases_on `H`
+                         >> fs[IS_SOME_DEF]
+                         >> `some_id ∈ (domain g_AA.nodeInfo)`
+                               by metis_tac[domain_lookup,wfg_def]
+                         >> metis_tac[domain_lookup,NOT_SOME_NONE]
+                         )
+                       )
+         >> `LENGTH node.frmls = LENGTH ce_lists` by (
+                   qunabbrev_tac `ce_lists`
+                   >> qunabbrev_tac `L`
+                   >> metis_tac[LENGTH_MAP,CAT_OPTIONS_LENGTH]
+                 )
+         >> `MAP FST zpd = node.frmls` by (
+                     qunabbrev_tac `zpd` >> fs[]
+                     >> metis_tac[MAP_ZIP]
+                 )
+         >> `ALL_DISTINCT (MAP FST zpd)` by metis_tac[frml_ad_def]
+         >> Q.HO_MATCH_ABBREV_TAC `GOAL`
+         >> rw[]
+         >> `!q_i q_nL q q_trns.
+                      (findNode (λ(i,l). l.frml = q) g_AA = SOME (q_i,q_nL))
+                      ∧ (q_nL.frml = q) ∧ MEM q nL.frmls
+                      ∧ concr_extrTrans g_AA q_i = SOME q_trns
+                      ==> MEM (q_nL.frml,q_trns) zpd` by (
+                        qunabbrev_tac `zpd` >> simp[MEM_ZIP] >> rpt strip_tac
+                        >> `?ind_q. EL ind_q nL.frmls = q_nL.frml
+                                  ∧ ind_q < LENGTH nL.frmls`
+                           by metis_tac[MEM_EL]
+                        >> qexists_tac `ind_q` >> fs[]
+                        >> qunabbrev_tac `ce_lists` >> rw[]
+                        >> `LENGTH nL.frmls =
+                             LENGTH (MAP (concr_extrTrans g_AA)
+                                         (CAT_OPTIONS L))` by (
+                            fs[CAT_OPTIONS_LENGTH]
+                        )
+                        >> `SOME
+                             (EL ind_q (CAT_OPTIONS (MAP (concr_extrTrans g_AA)
+                                                        (CAT_OPTIONS L)))) =
+                            (EL ind_q (MAP (concr_extrTrans g_AA)
+                                          (CAT_OPTIONS L)))` by
+                         metis_tac[CAT_OPTIONS_EL]
+                        >> `EL ind_q (MAP (concr_extrTrans g_AA)
+                                     (CAT_OPTIONS L)) =
+                            (concr_extrTrans g_AA (EL ind_q (CAT_OPTIONS L)))`
+                            by fs[EL_MAP,LENGTH_MAP]
+                        >> `LENGTH L = LENGTH nL.frmls` by (
+                            qunabbrev_tac `L`
+                            >> fs[LENGTH_MAP]
+                        )
+                        >> `SOME (EL ind_q (CAT_OPTIONS L)) =
+                              EL ind_q L` by metis_tac[CAT_OPTIONS_EL]
+                        >> `EL ind_q L = SOME q_i` by (
+                            qunabbrev_tac `L` >> simp[EL_MAP]
+                        )
+                        >> rw[] >> `EL ind_q (CAT_OPTIONS L) = q_i` by fs[]
+                        >> metis_tac[SOME_11]
+                 )
+         >> `{(q,(removeStatesSimpl (ltl2waa f)).trans q) |
+                         MEM q nL.frmls} =
+                      set
+                       (MAP (λ(q,d).
+                              (q,set (MAP (concr2AbstractEdge (set aP)) d)))
+                            zpd)` by (
+                     simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
+                      >- (
+                       simp[MEM_MAP]
+                       >> `?i nL. findNode (λ(i,l). l.frml = q) g_AA = SOME (i,nL)`
+                          by (
+                          fs[findNode_def,concr2AbstrAA_def,
+                               ALTER_A_component_equality]
+                          >> `inGBA g nL.frmls` by (
+                              simp[inGBA_def,EXISTS_MEM] >> qexists_tac `nL`
+                              >> simp[MEM_MAP,MEM_EQUAL_SET]
+                              >> metis_tac[MEM_toAList,SND]
+                          )
+                          >> `set nL.frmls ∈
+                                 POW (concr2Abstr_states g_AA)`
+                               by metis_tac[]
+                          >> `q ∈ concr2Abstr_states g_AA`
+                               by metis_tac[IN_POW,SUBSET_DEF]
+                          >> fs[concr2Abstr_states_def]
+                          >> rename[`SOME x2 = lookup n1 g_AA.nodeInfo` ]
+                          >> rw[]
+                          >> `(λ(i,l). l.frml = x2.frml) (n1,x2)` by fs[]
+                          >> `∃y. FIND (λ(i,l). l.frml = x2.frml)
+                                          (toAList g_AA.nodeInfo) = SOME y`
+                              by metis_tac[FIND_LEMM,MEM_toAList]
+                          >> qexists_tac `FST y` >> qexists_tac `SND y` >> fs[]
+                       )
+                       >> rename[`findNode _ g_AA = SOME (q_i,q_nL)`]
+                       >> `?q_trns. SOME q_trns = concr_extrTrans g_AA q_i
+                             ∧ MEM (q_i,q_nL) (toAList g_AA.nodeInfo)
+                             ∧ (q_nL.frml = q)` by (
+                           fs[findNode_def]
+                           >> `MEM (q_i,q_nL) (toAList g_AA.nodeInfo)
+                              ∧ ((λ(i,l). l.frml = q) (q_i,q_nL))`
+                              by metis_tac[FIND_LEMM2]
+                           >> `IS_SOME (lookup q_i g_AA.followers)` suffices_by (
+                               rpt strip_tac >> simp[concr_extrTrans_def] >> fs[]
+                               >> Cases_on `lookup q_i g_AA.followers`
+                               >> fs[IS_SOME_DEF]
+                               >> metis_tac[wfg_def,domain_lookup]
+                           )
+                           >> Cases_on `lookup q_i g_AA.followers`
+                           >> fs[IS_SOME_DEF]
+                           >> metis_tac[wfg_def,domain_lookup,MEM_toAList,
+                                        NOT_SOME_NONE]
+                       )
+                       >> qexists_tac `(q,q_trns)` >> simp[]
+                       >> fs[concr2AbstrAA_def,ALTER_A_component_equality]
+                       >> `?fls. lookup q_i g_AA.followers = SOME fls` by (
+                           metis_tac[domain_lookup,MEM_toAList,wfg_def,SOME_11]
+                       )
+                       >> `∃n cT.
+                             concr_extrTrans g_AA q_i = SOME cT
+                             ∧ lookup q_i g_AA.nodeInfo = SOME n
+                             ∧ set (MAP (concr2AbstractEdge (set aP)) cT) =
+                                    concrTrans g_AA (set aP) n.frml`
+                         by (IMP_RES_TAC CONCR_EXTRTRANS_LEMM
+                             >> first_x_assum (qspec_then `q_i` mp_tac)
+                             >> simp[])
+                        >> fs[] >> `q_nL = n` by metis_tac[MEM_toAList,SOME_11]
+                        >> rw[]
+                     )
+                      >- (
+                       rename[`MEM edge _`] >> fs[MEM_MAP]
+                       >> rename[`MEM cE zpd`] >> Cases_on `cE`
+                       >> fs[] >> qunabbrev_tac `zpd`
+                       >> rename[`MEM (q,q_trans) _`] >> POP_ASSUM mp_tac
+                       >> simp[MEM_ZIP] >> rpt strip_tac
+                       >- (
+                         `inGBA g nL.frmls` by (
+                            simp[inGBA_def,EXISTS_MEM] >> qexists_tac `nL`
+                            >> simp[MEM_MAP,MEM_EQUAL_SET]
+                            >> metis_tac[MEM_toAList,SND]
+                         )
+                         >> fs[concr2AbstrAA_def,ALTER_A_component_equality]
+                         >> `set nL.frmls ∈
+                              POW (concr2Abstr_states g_AA)`
+                            by metis_tac[]
+                         >> `q ∈ concr2Abstr_states g_AA`
+                           by metis_tac[IN_POW,SUBSET_DEF,EL_MEM]
+                         >> fs[concr2Abstr_states_def]
+                         >> rename[`q_i ∈ domain _`,`q = q_nL.frml`]
+                         >> `findNode (λ(n,l). l.frml = q) g_AA
+                                = SOME (q_i,q_nL)`
+                            by metis_tac[UNIQUE_NODE_FIND_LEMM]
+                         >> `?q_trns. concr_extrTrans g_AA q_i = SOME q_trns`
+                            by (
+                             simp[concr_extrTrans_def]
+                             >> Cases_on `lookup q_i g_AA.followers` >> fs[]
+                             >- metis_tac[wfg_def,NOT_SOME_NONE,domain_lookup]
+                             >- metis_tac[]
+                         )
+                         >> rw[]
+                         >> `MEM (q_nL.frml,q_trns) (ZIP (nL.frmls,ce_lists))`
+                             by metis_tac[EL_MEM]
+                         >> `∃k. k < LENGTH nL.frmls
+                               ∧ (q_nL.frml,q_trns) = (EL k nL.frmls,EL k ce_lists)`
+                             by metis_tac[MEM_ZIP]
+                         >> `EL k nL.frmls = q_nL.frml` by fs[]
+                         >> `k = n` by metis_tac[ALL_DISTINCT_EL_IMP]
+                         >> fs[]
+                         >> `?fls. lookup q_i g_AA.followers = SOME fls`
+                            by metis_tac[wfg_def,domain_lookup]
+                         >> `∃n cT.
+                              concr_extrTrans g_AA q_i = SOME cT
+                            ∧ lookup q_i g_AA.nodeInfo = SOME n
+                            ∧ set (MAP (concr2AbstractEdge (set aP)) cT) =
+                                    concrTrans g_AA (set aP) n.frml`
+                           by (IMP_RES_TAC CONCR_EXTRTRANS_LEMM
+                               >> first_x_assum (qspec_then `q_i` mp_tac)
+                               >> simp[] >> rpt strip_tac
+                               >> first_x_assum (qspec_then `set aP` mp_tac)
+                               >> fs[]
+                              )
+                         >> metis_tac[SOME_11]
+                       )
+                       >- metis_tac[EL_MEM]
+                     )
+         )
+         >> IMP_RES_TAC GBA_TRANS_LEMM
+         >> first_x_assum (qspec_then `set aP` mp_tac) >> simp[]
+         >> `!ce. MEM ce TRNS ==>
+                       (MEM_SUBSET ce.pos aP
+                             ∧ MEM_SUBSET ce.neg aP
+                             ∧ MEM_SUBSET ce.sucs (graphStates g_AA))` by (
+                      qunabbrev_tac `TRNS` >> fs[] >> gen_tac >> strip_tac
+                      >> simp[MEM_SUBSET_SET_TO_LIST,SUBSET_DEF]
+                      >> rpt strip_tac >> rename[`MEM x _`]
+                      >- (`∃l ce. MEM l ce_lists ∧ MEM ce l ∧ MEM x ce.pos`
+                            by metis_tac[GBA_TRANS_LEMM3]
+                          >> qunabbrev_tac `ce_lists`
+                          >> fs[MEM_MAP,CAT_OPTIONS_MEM]
+                          >> metis_tac[MEM_SUBSET_SET_TO_LIST,SUBSET_DEF]
+                         )
+                      >- (`∃l ce. MEM l ce_lists ∧ MEM ce l ∧ MEM x ce.neg`
+                            by metis_tac[GBA_TRANS_LEMM3]
+                          >> qunabbrev_tac `ce_lists`
+                          >> fs[MEM_MAP,CAT_OPTIONS_MEM]
+                          >> metis_tac[MEM_SUBSET_SET_TO_LIST,SUBSET_DEF]
+                         )
+                      >- (`∃l ce. MEM l ce_lists ∧ MEM ce l ∧ MEM x ce.sucs`
+                            by metis_tac[GBA_TRANS_LEMM3]
+                          >> qunabbrev_tac `ce_lists`
+                          >> fs[MEM_MAP,CAT_OPTIONS_MEM]
+                          >> qunabbrev_tac `L` >> fs[MEM_MAP] >> Cases_on `z`
+                          >> fs[] >> rw[]
+                          >> `MEM (q,r) (toAList g_AA.nodeInfo)` by (
+                             fs[findNode_def] >> metis_tac[FIND_LEMM2]
+                          )
+                          >> `?fls. lookup q g_AA.followers = SOME fls`
+                                by metis_tac[domain_lookup,MEM_toAList,
+                                             wfg_def,SOME_11]
+                          >> `∃n cT.
+                               (concr_extrTrans g_AA q = SOME cT)
+                               ∧ (lookup q g_AA.nodeInfo = SOME n)
+                               ∧ (set (MAP (concr2AbstractEdge (set aP)) cT) =
+                                  concrTrans g_AA (set aP) n.frml)`
+                           by (IMP_RES_TAC CONCR_EXTRTRANS_LEMM
+                               >> first_x_assum (qspec_then `q` mp_tac)
+                               >> simp[]
+                              )
+                          >> `l = cT` by metis_tac[SOME_11] >> rw[]
+                          >> `concr2AbstractEdge (set aP) ce' ∈
+                                    concrTrans g_AA (set aP) n.frml` by (
+                             metis_tac[MEM_MAP,SET_EQ_SUBSET,SUBSET_DEF]
+                          )
+                          >> fs[concr2AbstrAA_def,ALTER_A_component_equality]
+                          >> rw[]
+                          >> fs[isValidAlterA_def,concr2Abstr_states_def]
+                          >> `n.frml ∈ (removeStatesSimpl (ltl2waa f)).states`
+                             by (rw[] >> metis_tac[domain_lookup])
+                          >> Cases_on `concr2AbstractEdge (set aP) ce'`
+                          >> fs[]
+                          >> `r' ⊆ (removeStatesSimpl (ltl2waa f)).states`
+                             by metis_tac[]
+                          >> rw[] >> simp[graphStates_def,MEM_MAP]
+                          >> `r' ⊆
+                                {x.frml |
+                                 ∃n. (SOME x = lookup n g_AA.nodeInfo)
+                                  ∧ (n ∈ domain g_AA.nodeInfo)}` by metis_tac[]
+                          >> Cases_on `ce'`
+                          >> fs[concr2AbstractEdge_def] >> rw[]
+                          >> `x ∈
+                                {x.frml |
+                                 ∃n. (SOME x = lookup n g_AA.nodeInfo)
+                                  ∧ n ∈ domain g_AA.nodeInfo}` by fs[SUBSET_DEF]
+                          >> fs[] >> metis_tac[MEM_toAList,SND,FST]
+                         )
+                  ) >> strip_tac
+         >> qunabbrev_tac `GOAL` >> rpt strip_tac
+         >- (simp[SET_EQ_SUBSET,SUBSET_DEF] >> strip_tac
+          >- (
+           rpt strip_tac >> fs[CAT_OPTIONS_MEM,MEM_MAP]
+           >> Cases_on `y` >> fs[]
+           >> rename[`MEM (eL, s_id) fls`]
+           >> simp[gba_trans_def,minimal_elements_def,rrestrict_def]
+           >> simp[d_gen_def]
+           >> Cases_on `x` >> fs[]
+           >> first_x_assum (qspec_then `eL` mp_tac) >> simp[]
+           >> strip_tac
+           >> first_x_assum (qspec_then `s_nL.frmls` mp_tac) >> simp[]
+           >> `(∃s_id s_nL'.
+                 MEM (eL,s_id) fls
+                 ∧ (lookup s_id G2.nodeInfo = SOME s_nL')
+                 ∧ MEM_EQUAL s_nL'.frmls s_nL.frmls)` by (
+               qexists_tac `s_id` >> qexists_tac `s_nL`
+               >> fs[MEM_EQUAL_SET]
+           )
+           >> strip_tac
+           >> `∃s_list.
+               (MEM_EQUAL s_list s_nL.frmls)
+               ∧ ∃y.
+               ((eL,s_list) = TO_SUCS y)
+               ∧ (∃cE. y = W_FINAL cE ∧ MEM cE TRNS)
+               ∧ ∀y'.
+               (∃cE. y' = W_FINAL cE ∧ MEM cE TRNS) ∧ y ≠ y' ⇒
+               ¬concr_min_rel y' y` by metis_tac[EQ_IMP_THM]
+           >> rw[]
+           >- (
+             `(transformLabel (set aP) eL.pos_lab eL.neg_lab,set s_nL.frmls) ∈
+                  set
+                  (MAP (concr2AbstractEdge (set aP))
+                       (gba_trans_concr (MAP SND zpd)))`
+               suffices_by metis_tac[]
+             >> simp[MEM_MAP] >> qexists_tac `cE`
+             >> Cases_on `cE` >> fs[concr2AbstractEdge_def]
+             >> qunabbrev_tac `TRNS` >> qunabbrev_tac `TO_SUCS`
+             >> qunabbrev_tac `W_FINAL` >> fs[]
+             >> `MAP SND zpd = ce_lists` by metis_tac[MAP_ZIP]
+             >> fs[] >> rw[] >> metis_tac[MEM_EQUAL_SET]
+           )
+           >- (rpt strip_tac
+               >>  rename[`_ = abstr_ce2`]
+               >> `abstr_ce2 ∈
+                    set (MAP (concr2AbstractEdge (set aP)) TRNS)` by (
+                    IMP_RES_TAC GBA_TRANS_LEMM
+                    >> first_x_assum (qspec_then `set aP` mp_tac) >> fs[]
+                    >> rpt strip_tac >> qunabbrev_tac `TRNS` >> fs[]
+                    >> metis_tac[MAP_ZIP]
+                )
+               >> POP_ASSUM mp_tac >> simp[MEM_MAP] >> strip_tac
+               >> rename[`MEM ce2 TRNS`] >> fs[]
+               >> `ce2 = cE \/ ~concr_min_rel (W_FINAL ce2) (W_FINAL cE)`
+                   by (
+                       first_x_assum (qspec_then `W_FINAL ce2` mp_tac)
+                       >> simp[]
+                       >> strip_tac
+                       >> qunabbrev_tac `W_FINAL` >> fs[]
+                       >> Cases_on `ce2 = cE` >> fs[]
+                 )
+               >- (qunabbrev_tac `W_FINAL` >> qunabbrev_tac `TO_SUCS` >> fs[]
+                   >> rw[] >> Cases_on `cE` >> simp[concr2AbstractEdge_def]
+                   >> fs[concrEdge_component_equality]
+                   >> metis_tac[MEM_EQUAL_SET]
+                  )
+               >- (
+                fs[]
+                >> qabbrev_tac `abstrAA = concr2AbstrAA (concrAA g_AA init aP)`
+                >> `∀e1_lab e1_sucs e2_lab e2_sucs.
+                   MEM_SUBSET ce2.pos aP ∧ MEM_SUBSET ce2.neg aP ∧
+                   MEM_SUBSET ce2.sucs (graphStates g_AA) ∧ MEM_SUBSET cE.pos aP ∧
+                   MEM_SUBSET cE.neg aP ∧ MEM_SUBSET cE.sucs (graphStates g_AA) ∧
+                   ((e1_lab,e1_sucs) = concr2AbstractEdge (set aP) ce2) ∧
+                   ((e2_lab,e2_sucs) = concr2AbstractEdge (set aP) cE)
+                   ⇒ (((e1_lab,e1_sucs),e2_lab,e2_sucs) ∈
+                        tr_less_general
+                          {acc_cond abstrAA f | MEM f (MAP FST acc)}
+                          (set nL.frmls) ⇔
+                        tlg_concr
+                        (ce2,get_acc_set acc ce2)
+                        (cE,get_acc_set acc cE))` by (
+                        HO_MATCH_MP_TAC TLG_CONCR_LEMM >> qexists_tac `f`
+                        >> qexists_tac `init` >> fs[] >> metis_tac[]
+                )
+                 >> fs[]
+                 >> first_x_assum (qspec_then `FST abstr_ce2` mp_tac)
+                 >> rpt strip_tac
+                 >> first_x_assum (qspec_then `SND abstr_ce2` mp_tac)
+                 >> rpt strip_tac
+                 >> first_x_assum
+                     (qspec_then `transformLabel (set aP) eL.pos_lab eL.neg_lab`
+                       mp_tac)
+                 >> rpt strip_tac
+                 >> first_x_assum (qspec_then `set s_nL.frmls` mp_tac)
+                 >> `(transformLabel (set aP) eL.pos_lab eL.neg_lab,
+                     set s_nL.frmls) =
+                        concr2AbstractEdge (set aP) cE` by (
+                    qunabbrev_tac `W_FINAL` >> qunabbrev_tac `TO_SUCS` >> fs[]
+                    >> rw[] >> Cases_on `cE` >> simp[concr2AbstractEdge_def]
+                    >> fs[concrEdge_component_equality]
+                    >> metis_tac[MEM_EQUAL_SET]
+                )
+                 >> simp[] >> strip_tac
+                 >> `{acc_cond (concr2AbstrAA (concrAA g_AA init aP)) f' |
+                      MEM f' (MAP FST acc)} =
+                     {acc_cond (concr2AbstrAA (concrAA g_AA init aP)) f |
+                       f | f ∈ (concr2AbstrAA (concrAA g_AA init aP)).final}`
+                by (
+                 `∀f. MEM f (MAP FST acc) ⇔ f ∈ concr2Abstr_final g_AA`
+                    by metis_tac[VALID_ACC_LEMM]
+                 >> qunabbrev_tac `abstrAA` >> fs[]
+                 >> simp[SET_EQ_SUBSET,SUBSET_DEF,concr2AbstrAA_def]
+                )
+                >> qunabbrev_tac `W_FINAL` >> qunabbrev_tac `TO_SUCS`
+                >> fs[concr_min_rel_def]
+                >- (rw[] >> metis_tac[all_acc_cond_def])
+                >- (Cases_on `cE` >> Cases_on `ce2`
+                    >> simp[concr2AbstractEdge_def]
+                    >> fs[concrEdge_component_equality]
+                    >> `!x y. MEM_EQUAL x y ==>
+                                  MEM_SUBSET x y ∧ MEM_SUBSET y x`
+                          by metis_tac[MEM_EQUAL_SET,MEM_SUBSET_SET_TO_LIST,
+                                       SET_EQ_SUBSET]
+                    >> simp[SET_EQ_SUBSET] >> rpt strip_tac
+                    >- metis_tac[TRANSFORMLABEL_SUBSET]
+                    >- metis_tac[TRANSFORMLABEL_SUBSET]
+                    >- metis_tac[MEM_EQUAL_SET,SET_EQ_SUBSET]
+                    >- metis_tac[MEM_EQUAL_SET,SET_EQ_SUBSET]
+                    )
+                 >- (rw[] >> Cases_on `cE` >> Cases_on `ce2`
+                     >> simp[concr2AbstractEdge_def]
+                     >> fs[concrEdge_component_equality,MEM_EQUAL_SET]
+                     >> rename[`_ (set aP) pos1 neg1 = _ (set aP) pos2 neg2`]
+                     >> `pos1 = (concrEdge pos1 neg1 l1).pos` by fs[]
+                     >> `neg1 = (concrEdge pos1 neg1 l1).neg` by fs[]
+                     >> `pos2 = (concrEdge pos2 neg2 l1').pos` by fs[]
+                     >> `neg2 = (concrEdge pos2 neg2 l1').neg` by fs[]
+                     >> metis_tac[TRNS_IS_EMPTY_LEMM,MEM_SUBSET_SET_TO_LIST]
+                    )
+                )
+              )
+            )
+          >- (rpt strip_tac >> simp[CAT_OPTIONS_MEM,MEM_MAP] >> POP_ASSUM mp_tac
+              >> simp[gba_trans_def,minimal_elements_def,rrestrict_def,d_gen_def]
+              >> strip_tac
+              >> rename[`(a,sucs) ∈ d_conj_set _ _`] >> rw[]
+              >> `(a,sucs) ∈
+                  set
+                  (MAP (concr2AbstractEdge (set aP))
+                       (gba_trans_concr (MAP SND zpd)))` by metis_tac[]
+              >> POP_ASSUM mp_tac >> simp[MEM_MAP] >> strip_tac
+              >> rename[`MEM ce (gba_trans_concr _)`]
+              >> qabbrev_tac `eL =
+                     edgeLabelGBA ce.pos ce.neg (get_acc_set acc ce)`
+              >> first_x_assum (qspec_then `eL` mp_tac) >> simp[]
+              >> strip_tac
+              >> first_x_assum (qspec_then `ce.sucs` mp_tac) >> simp[]
+              >> strip_tac
+              >> `∃s_list.
+                   MEM_EQUAL s_list ce.sucs
+                   ∧ ∃y.
+                     ((eL,s_list) = TO_SUCS y)
+                     ∧ (∃cE. y = W_FINAL cE ∧ MEM cE TRNS)
+                     ∧ ∀y'.
+                     (∃cE. y' = W_FINAL cE ∧ MEM cE TRNS) ∧ y ≠ y' ⇒
+                     ¬concr_min_rel y' y` suffices_by (
+                 strip_tac
+                 >> `(∃s_id s_nL.
+                       (MEM (eL,s_id) fls ∧ lookup s_id G2.nodeInfo = SOME s_nL)
+                       ∧ MEM_EQUAL s_nL.frmls ce.sucs)` by metis_tac[]
+                 >> qunabbrev_tac `W_FINAL` >> qunabbrev_tac `TO_SUCS` >> fs[]
+                 >> qexists_tac `(eL,s_id)` >> simp[]
+                 >> Cases_on `ce` >> simp[concr2AbstractEdge_def]
+                 >> fs[concrEdge_component_equality]
+                 >> `l = cE.pos ∧ l0 = cE.neg` by metis_tac[]
+                 >> fs[MEM_EQUAL_SET]
+               )
+              >> qexists_tac `ce.sucs` >> fs[MEM_EQUAL_SET]
+              >> qexists_tac `(ce,get_acc_set acc ce)` >> fs[]
+              >> qunabbrev_tac `TO_SUCS` >> qunabbrev_tac `W_FINAL` >> fs[]
+              >> rpt strip_tac
+              >- (`MAP SND zpd = ce_lists` by metis_tac[MAP_ZIP]
+                  >> qunabbrev_tac `TRNS` >> fs[]
+                 )
+              >- (rename[`MEM cE2 TRNS`]
+                  >> rename[`concr_min_rel y1 (ce,_)`] >> Cases_on `y1`
+                  >> `~(cE2 = ce)` by (
+                       rw[] >> fs[] >> CCONTR_TAC >> rw[]
+                   )
+                >> first_x_assum
+                       (qspec_then `concr2AbstractEdge (set aP) cE2` mp_tac)
+                >> Q.HO_MATCH_ABBREV_TAC `(Q1 ==> Q2) ==> F`
+                >> `Q2 ==> F` by (
+                      qunabbrev_tac `Q2` >> simp[] (* >> Cases_on `y` *)
+                      >> `~(ce = cE2)` by metis_tac[]
+                      >> Cases_on `~MEM_EQUAL cE2.sucs ce.sucs`
+                      >- (Cases_on `ce` >> fs[]
+                          >> Cases_on `cE2` >> simp[concr2AbstractEdge_def]
+                          >> fs[MEM_EQUAL_SET,concrEdge_component_equality]
+                          >> rw[] >> metis_tac[]
+                         )
+                      >- (Cases_on `~ trns_is_empty ce ∧ ~ trns_is_empty cE2`
+                       >- (`MEM ce TRNS` by metis_tac[MAP_ZIP]
+                           >> `∀x. MEM x ce.pos ∨ MEM x cE2.pos
+                                 ∨ MEM x ce.neg ∨ MEM x cE2.neg ⇒ x ∈ set aP` by (
+                              metis_tac[MEM_SUBSET_SET_TO_LIST,SUBSET_DEF,MEM]
+                           )
+                           >> `~(transformLabel (set aP) ce.pos ce.neg =
+                                transformLabel (set aP) cE2.pos cE2.neg)`
+                              suffices_by (Cases_on `ce` >> Cases_on `cE2`
+                                           >> simp[concr2AbstractEdge_def]
+                                          )
+                           >> HO_MATCH_MP_TAC TRANSFORMLABEL_LEMM
+                           >> simp[] >> fs[concr_min_rel_def]
+                           >> rw[] >> metis_tac[MEM_EQUAL_SET]
+                          )
+                       >- (`MEM ce TRNS` by metis_tac[MAP_ZIP]
+                           >> `(concrEdge cE2.pos cE2.neg cE2.sucs).pos = cE2.pos
+                             ∧ (concrEdge cE2.pos cE2.neg cE2.sucs).neg = cE2.neg`
+                               by fs[]
+                           >> `set ce.pos ⊆ set aP
+                             ∧ set ce.neg ⊆ set aP
+                             ∧ set cE2.pos ⊆ set aP
+                             ∧ set cE2.neg ⊆ set aP`
+                                by metis_tac[MEM_SUBSET_SET_TO_LIST]
+                           >> `trns_is_empty ce = ~trns_is_empty cE2` by (
+                                fs[concr_min_rel_def] >> metis_tac[]
+                           )
+                           >> `~(transformLabel (set aP) ce.pos ce.neg
+                                  = transformLabel (set aP) cE2.pos cE2.neg)`
+                                suffices_by (Cases_on `ce` >> Cases_on `cE2`
+                                             >> simp[concr2AbstractEdge_def])
+                           >> metis_tac[TRNS_IS_EMPTY_LEMM]
+                          )
+                  )
+                  )
+                >> `Q1` suffices_by metis_tac[]
+                >> qunabbrev_tac `Q1` >> fs[]
+                >> (conj_tac
+                >- (qunabbrev_tac `TRNS`
+                    >> `MAP SND zpd = ce_lists` by metis_tac[MAP_ZIP]
+                    >> metis_tac[MEM_MAP]
+                   )
+                >- (conj_tac
+                 >- (`MEM ce TRNS` by metis_tac[MAP_ZIP]
+                     >> `tlg_concr (cE2,get_acc_set acc cE2)
+                         (ce,get_acc_set acc ce)` by
+                        (fs[concr_min_rel_def] >> rw[])
+                     >> qabbrev_tac `abstrAA =
+                          concr2AbstrAA (concrAA g_AA init aP)`
+                     >> `∀e1_lab e1_sucs e2_lab e2_sucs.
+                      MEM_SUBSET cE2.pos aP ∧ MEM_SUBSET cE2.neg aP ∧
+                      MEM_SUBSET cE2.sucs (graphStates g_AA) ∧ MEM_SUBSET ce.pos aP ∧
+                      MEM_SUBSET ce.neg aP ∧ MEM_SUBSET ce.sucs (graphStates g_AA) ∧
+                      ((e1_lab,e1_sucs) = concr2AbstractEdge (set aP) cE2) ∧
+                      ((e2_lab,e2_sucs) = concr2AbstractEdge (set aP) ce)
+                      ⇒ (((e1_lab,e1_sucs),e2_lab,e2_sucs) ∈
+                        tr_less_general
+                          {acc_cond abstrAA f | MEM f (MAP FST acc)}
+                          (set nL.frmls) ⇔
+                        tlg_concr (cE2,get_acc_set acc cE2)
+                                  (ce,get_acc_set acc ce))` by (
+                        HO_MATCH_MP_TAC TLG_CONCR_LEMM >> qexists_tac `f`
+                        >> qexists_tac `init` >> fs[] >> metis_tac[]
+                        )
+                     >> fs[]
+                     >> first_x_assum
+                           (qspec_then `transformLabel (set aP) cE2.pos cE2.neg`
+                             mp_tac)
+                     >> simp[] >> strip_tac
+                     >> first_x_assum (qspec_then `set cE2.sucs` mp_tac)
+                     >> simp[] >> strip_tac
+                     >> first_x_assum
+                           (qspec_then `transformLabel (set aP) ce.pos ce.neg`
+                            mp_tac)
+                     >> simp[] >> strip_tac
+                     >> first_x_assum (qspec_then `set ce.sucs` mp_tac)
+                     >> simp[] >> strip_tac
+                     >> fs[all_acc_cond_def]
+                     >> `{acc_cond (concr2AbstrAA (concrAA g_AA init aP)) f' |
+                           MEM f' (MAP FST acc)} =
+                         {acc_cond (concr2AbstrAA (concrAA g_AA init aP)) f |
+                           f | f ∈ (concr2AbstrAA (concrAA g_AA init aP)).final}`
+                    by (
+                     `∀f. MEM f (MAP FST acc) ⇔ f ∈ concr2Abstr_final g_AA`
+                        by metis_tac[VALID_ACC_LEMM]
+                     >> simp[SET_EQ_SUBSET,SUBSET_DEF,concr2AbstrAA_def]
+                     >> rpt strip_tac >> qexists_tac `f'` >> simp[]
+                     >> qunabbrev_tac `abstrAA` >> fs[concr2AbstrAA_def]
+                      )
+                    >> Cases_on `ce` >> Cases_on `cE2`
+                    >> fs[concr2AbstractEdge_def]
+                    >> qunabbrev_tac `abstrAA` >> fs[concr2AbstrAA_def]
+                    )
+                 >- (qunabbrev_tac `TRNS`
+                     >> `MAP SND zpd = ce_lists` by metis_tac[MAP_ZIP]
+                     >> metis_tac[MEM_MAP]
+                    )
+                   ))
+                 )
+             )
+            )
+         >- (first_x_assum (qspec_then `eL` mp_tac) >> simp[]
+             >> strip_tac
+             >> `s_id ∈ domain G2.nodeInfo` by metis_tac[]
+             >> `?s_nL. lookup s_id G2.nodeInfo = SOME s_nL`
+                by metis_tac[domain_lookup]
+             >> first_x_assum (qspec_then `s_nL.frmls` mp_tac) >> simp[]
+             >> strip_tac
+             >> `∃s_id s_nL'.
+                  MEM (eL,s_id) fls
+                  ∧ lookup s_id G2.nodeInfo = SOME s_nL'
+                  ∧ MEM_EQUAL s_nL'.frmls s_nL.frmls` by (
+                  metis_tac[MEM_EQUAL_SET]
+              )
+             >> `∃s_list.
+                  MEM_EQUAL s_list s_nL.frmls ∧
+                  ∃y.
+                  ((eL,s_list) = TO_SUCS y) ∧ (∃cE. y = W_FINAL cE ∧ MEM cE TRNS)
+                  ∧ ∀y'.
+                  (∃cE. y' = W_FINAL cE ∧ MEM cE TRNS) ∧ y ≠ y' ⇒
+                  ¬concr_min_rel y' y` by metis_tac[]
+             >> qunabbrev_tac `W_FINAL` >> qunabbrev_tac `TO_SUCS`
+             >> Cases_on `y` >> fs[]
+            )
+         >- (first_x_assum (qspec_then `eL` mp_tac) >> simp[]
+             >> strip_tac
+             >> `s_id ∈ domain G2.nodeInfo` by metis_tac[]
+             >> `?s_nL. lookup s_id G2.nodeInfo = SOME s_nL`
+                by metis_tac[domain_lookup]
+             >> first_x_assum (qspec_then `s_nL.frmls` mp_tac) >> simp[]
+             >> strip_tac
+             >> `∃s_id s_nL'.
+                  MEM (eL,s_id) fls
+                  ∧ lookup s_id G2.nodeInfo = SOME s_nL'
+                  ∧ MEM_EQUAL s_nL'.frmls s_nL.frmls` by (
+                  metis_tac[MEM_EQUAL_SET]
+              )
+             >> `∃s_list.
+                  MEM_EQUAL s_list s_nL.frmls ∧
+                  ∃y.
+                  ((eL,s_list) = TO_SUCS y) ∧ (∃cE. y = W_FINAL cE ∧ MEM cE TRNS)
+                  ∧ ∀y'.
+                  (∃cE. y' = W_FINAL cE ∧ MEM cE TRNS) ∧ y ≠ y' ⇒
+                  ¬concr_min_rel y' y` by metis_tac[]
+             >> qunabbrev_tac `W_FINAL` >> qunabbrev_tac `TO_SUCS`
+             >> Cases_on `y` >> fs[]
+            )
+         >- (first_x_assum (qspec_then `eL` mp_tac) >> simp[]
+             >> strip_tac
+             >> first_x_assum (qspec_then `s_nL.frmls` mp_tac) >> simp[]
+             >> strip_tac
+             >> `∃s_id s_nL'.
+                  MEM (eL,s_id) fls
+                  ∧ (lookup s_id G2.nodeInfo = SOME s_nL')
+                  ∧ MEM_EQUAL s_nL'.frmls s_nL.frmls` by (
+                  metis_tac[MEM_EQUAL_SET]
+              )
+             >> `∃s_list.
+                  (MEM_EQUAL s_list s_nL.frmls) ∧
+                  ∃y.
+                  ((eL,s_list) = TO_SUCS y) ∧ (∃cE. y = W_FINAL cE ∧ MEM cE TRNS)
+                  ∧ ∀y'.
+                  (∃cE. y' = W_FINAL cE ∧ MEM cE TRNS) ∧ y ≠ y' ⇒
+                  ¬concr_min_rel y' y` by metis_tac[]
+             >> qunabbrev_tac `W_FINAL` >> qunabbrev_tac `TO_SUCS`
+             >> Cases_on `y` >> fs[]
+             >> rw[] >> qunabbrev_tac `TRNS`
+             >> `get_acc_set acc cE =
+                  get_acc_set acc (concrEdge cE.pos cE.neg s_nL.frmls)` by (
+                  HO_MATCH_MP_TAC GET_ACC_SET_LEMM
+                  >> Cases_on `cE` >> simp[concrEdge_component_equality]
+                  >> fs[MEM_EQUAL_SET]
+              )
+             >> metis_tac[]
+            )
+     )
+     >- (`id2 ∈ domain G2.nodeInfo` by metis_tac[domain_lookup]
+         >> `id2 ∈ (set new_ids ∪ domain g.nodeInfo)` by metis_tac[]
+         >> fs[IN_UNION]
+         >- (`lookup id2 G2.followers = SOME []` by metis_tac[]
+             >> rw[] >> fs[] >> rw[] >> fs[]
+            )
+         >- (fs[trns_correct_def,final_correct_def,aP_correct_def]
+             >> rpt strip_tac
+             >- (simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
+              >- (fs[CAT_OPTIONS_MEM,MEM_MAP]
+                  >> Cases_on `y` >> fs[]
+                  >> `lookup id2 g.nodeInfo = SOME nL` by metis_tac[]
+                  >> `lookup id2 g.followers = SOME fls` by metis_tac[]
+                  >> `r ∈ domain g.nodeInfo` by metis_tac[]
+                  >> `MEM x
+                      (CAT_OPTIONS
+                        (MAP
+                          (λ(eL,i).
+                            do
+                            s_nL <- lookup i g.nodeInfo;
+                           SOME
+                               (transformLabel (set aP) eL.pos_lab
+                                               eL.neg_lab,set s_nL.frmls)
+                               od) fls))` by (
+                       simp[CAT_OPTIONS_MEM,MEM_MAP]
+                       >> qexists_tac `(q,r)` >> fs[]
+                   )
+                  >> metis_tac[]
+                 )
+              >- (`MEM x
+                     (CAT_OPTIONS
+                        (MAP
+                             (λ(eL,i).
+                               do
+                               s_nL <- lookup i g.nodeInfo;
+                              SOME
+                                  (transformLabel (set aP) eL.pos_lab
+                                                  eL.neg_lab,set s_nL.frmls)
+                                  od) fls))` by metis_tac[]
+                  >> fs[CAT_OPTIONS_MEM,MEM_MAP]
+                  >> qexists_tac `y` >> fs[] >> Cases_on `y` >> fs[]
+                  >> `r ∈ domain g.nodeInfo` by metis_tac[]
+                  >> metis_tac[domain_lookup]
+                 )
+                )
+            >- metis_tac[]
+            >- metis_tac[]
+            >- metis_tac[]
+            )
+        )
+    )
     >> rpt conj_tac
     >- metis_tac[]
     >- fs[expandGBA_def]
@@ -2806,14 +3700,58 @@ val EXPGBA_TRANS_AND_FINAL = store_thm
         >- metis_tac[domain_lookup]
        )
     >- (rpt strip_tac
-     >- (`domain g.nodeInfo ⊆ domain G2.nodeInfo` by metis_tac[SUBSET_UNION]
-          >> metis_tac[SUBSET_DEF,SOME_11]
-
-)
-)
-)
-)
-
+        >- (`~(i = id)` by metis_tac[]
+             >> metis_tac[]
+           )
+        >- (`id ∈ domain g.nodeInfo` by metis_tac[]
+            >> fs[wfg_def]
+            >> `~(g.next <= id)` by metis_tac[]
+            >> `~(id = i)` by metis_tac[]
+            >> metis_tac[]
+           )
+       )
+    >- metis_tac[]
+    >- metis_tac[]
+    >- metis_tac[]
+    >- fs[all_distinct_nub]
+    >- (fs[frml_ad_def] >> rpt strip_tac
+        >> `i ∈ (set new_ids ∪ domain g.nodeInfo)` by metis_tac[]
+        >> fs[UNION_DEF]
+        >- (`MEM n.frmls NEW_NODES` by metis_tac[SOME_11]
+            >> qunabbrev_tac `NEW_NODES` >> qunabbrev_tac `TRNS`
+            >> fs[MEM_MAP,MEM_FILTER,ONLY_MINIMAL_MEM]
+            >> qabbrev_tac `L =
+                CAT_OPTIONS
+                 (MAP (concr_extrTrans g_AA)
+                  (CAT_OPTIONS
+                   (MAP
+                        (λf.
+                             OPTION_MAP FST
+                             (findNode (λ(i,l). l.frml = f) g_AA))
+                        node.frmls)))`
+            >> qunabbrev_tac `L` >> fs[CAT_OPTIONS_MEM,MEM_MAP]
+            >> metis_tac[GBA_TRANS_LEMM1]
+           )
+       >- metis_tac[]
+       )
+    >- (rpt strip_tac >> rename[`lookup id2 _`]
+        >> Cases_on `id = id2` >> fs[]
+        >- metis_tac[]
+        >- (fs[wfg_def]
+            >> `id2 ∈ (set new_ids ∪ domain g.nodeInfo)`
+                 by metis_tac[domain_lookup]
+            >> fs[IN_UNION]
+            >- (`fls = []` by metis_tac[SOME_11]
+                >> fs[] >> rw[]
+               )
+            >- (`lookup id2 g.followers = SOME fls` by metis_tac[]
+                >> `id2 ∈ domain g.nodeInfo` by metis_tac[]
+                >> metis_tac[UNION_SUBSET,SUBSET_DEF]
+               )
+           )
+       )
+   )
+  );
 
 val EXPGBA_CORRECT = store_thm
   ("EXPGBA_CORRECT",
@@ -2824,7 +3762,8 @@ val EXPGBA_CORRECT = store_thm
       case expandGBA_init (concrAA g_AA init aP) of
         | NONE => F
         | SOME c_gba =>
-          (concr2AbstrGBA c_gba =
+          (concr2AbstrGBA ({x | is_until x ∧ MEM x (graphStates g_AA) })
+                          c_gba =
              removeStatesSimpl (waa2gba abstrAA))``,
    fs[] >> rpt strip_tac >> simp[expandGBA_init_def]
    >> `(wfg g_AA) ∧ (until_iff_final g_AA) ∧ (unique_node_formula g_AA)
@@ -3104,9 +4043,78 @@ val EXPGBA_CORRECT = store_thm
         >> qexists_tac `(id,nL)` >> fs[]
         )
        )
+   >> `!l G id. ((FOLDR (λn g. addNodeToGBA g n)
+                (empty:(α nodeLabelGBA, α edgeLabelGBA) gfg)
+                  l) = G)
+          ∧ (id ∈ domain G.nodeInfo)
+          ==> (lookup id G.followers = SOME [])` by (
+          Induct_on `l` >> fs[] >> rpt strip_tac
+          >- fs[empty_def]
+          >- (qabbrev_tac `G_int =
+                FOLDR (λn g. addNodeToGBA g n)
+                      (empty:(α nodeLabelGBA,α edgeLabelGBA) gfg)
+                      l`
+              >> simp[addNodeToGBA_def]
+              >> Cases_on `inGBA G_int h` >> fs[addNodeToGBA_def]
+              >> fs[addNode_def]
+              >> Cases_on `id = G_int.next` >> fs[]
+              >> metis_tac[lookup_insert]
+             )
+   )
+   >> first_x_assum (qspec_then
+      `(MAP
+            (λi_list.
+                 MAP (λl. l.frml)
+                 (CAT_OPTIONS
+                      (MAP (λi. lookup i g_AA.nodeInfo) (nub i_list))))
+            init)` mp_tac)
+   >> strip_tac
+   >> first_x_assum (qspec_then `addedInit` mp_tac) >> simp[]
+   >> strip_tac
+   >> `(trns_correct (MAP FST (toAList addedInit.nodeInfo))
+                      abstrAA addedInit) (set aP)
+      ∧ (aP_correct abstrAA addedInit aP)
+      ∧ (final_correct abstrAA addedInit final_trans)` by (
+       rpt conj_tac
+       >- (simp[trns_correct_def] >> rpt strip_tac
+           >> fs[MEM_MAP] >> first_x_assum (qspec_then `(id,nL)` mp_tac)
+           >> simp[] >> metis_tac[MEM_toAList]
+          )
+       >- (simp[aP_correct_def] >> rpt strip_tac
+           >> `lookup id addedInit.followers = SOME []`
+               by metis_tac[domain_lookup]
+           >> fs[] >> rw[] >> fs[]
+          )
+       >- (simp[final_correct_def] >> rpt strip_tac
+           >> `lookup id addedInit.followers = SOME []`
+               by metis_tac[domain_lookup]
+           >> fs[] >> rw[] >> fs[]
+          )
+   )
    >> `(INIT ==> STATES) ∧ INIT
-     ∧ (STATES ==> TRANS) ∧ (STATES ==> FINAL) ∧ ALPH`
-       suffices_by fs[]
+     ∧ (STATES ==> TRANS) ∧ ((STATES ∧ TRANS) ==> FINAL) ∧ ALPH`
+       suffices_by metis_tac[]
+   >> `aP_correct abstrAA gba aP ∧ final_correct abstrAA gba final_trans ∧
+     trns_correct [] abstrAA gba (set aP)` by (
+       HO_MATCH_MP_TAC EXPGBA_TRANS_AND_FINAL >> simp[]
+       >> qexists_tac `f` >> qexists_tac `init`
+       >> qexists_tac `g_AA`
+       >> qexists_tac `(MAP FST (toAList addedInit.nodeInfo))`
+       >> simp[] >> qexists_tac `addedInit`
+       >> fs[] >> rpt strip_tac
+       >- metis_tac[]
+       >- metis_tac[]
+       >- metis_tac[]
+       >- metis_tac[]
+       >- metis_tac[]
+       >- metis_tac[ALL_DISTINCT_MAP_FST_toAList]
+       >- (`id ∈ domain addedInit.nodeInfo`
+             by metis_tac[domain_lookup,wfg_def]
+           >> `lookup id addedInit.followers = SOME []`
+             by metis_tac[domain_lookup]
+           >> fs[] >> rw[] >> fs[]
+          )
+   )
    >> rpt strip_tac
    >- (`∀x.
           inGBA addedInit x ⇒
@@ -3580,26 +4588,100 @@ val EXPGBA_CORRECT = store_thm
        >> `!q. extractGBATrans (props f) gba q =
                 ABS_TRNS q`
              suffices_by metis_tac[]
-       >> gen_tac >> simp[extractGBATrans_def,SET_EQ_SUBSET,SUBSET_DEF]
-       >> rpt strip_tac >> fs[]
-       >- (qunabbrev_tac `ABS_TRNS`
-           >> fs[OPTION_TO_LIST_MEM] >> Cases_on `x'` >> fs[]
-           >> rw[] >> fs[CAT_OPTIONS_MEM,MEM_MAP]
-           >> Cases_on `y` >> fs[]
-          )
-       >- (fs[OPTION_TO_LIST_MEM] >> qunabbrev_tac `ABS_TRNS`
-           >> fs[]
-           >> `q ∈ concr2AbstrGBA_states gba`
-                by metis_tac[IN_INTER,MEMBER_NOT_EMPTY]
+       >> gen_tac >> simp[SET_EQ_SUBSET,SUBSET_DEF]
+       >> qunabbrev_tac `ABS_TRNS` >> strip_tac
+       >- (simp[extractGBATrans_def] >> rpt strip_tac
+           >> `q ∈ concr2AbstrGBA_states gba` by (
+             PURE_REWRITE_TAC[concr2AbstrGBA_states_def]
+             >> fs[OPTION_TO_LIST_MEM] >> rename[`_ x1 = SOME l`]
+             >> Cases_on `x1` >> fs[] >> rw[]
+             >> fs[CAT_OPTIONS_MEM,MEM_MAP]
+             >> Cases_on `y` >> fs[]
+             >> qexists_tac `r` >> fs[]
+             >> `MEM (q',r) (toAList gba.nodeInfo)
+               ∧ (λ(i,n). set n.frmls = q) (q',r)`
+                by metis_tac[findNode_def,FIND_LEMM2]
+             >> fs[] >> metis_tac[MEM_toAList,domain_lookup]
+            )
            >> `x ∈ gba_trans (concr2AbstrAA (concrAA g_AA init aP)) q`
-              by metis_tac[MEMBER_NOT_EMPTY]
-           >> fs[concr2AbstrGBA_states_def]
-           >> `?fls. lookup n gba.followers = SOME fls`
-                by metis_tac[MEM_toAList,domain_lookup,wfg_def]
-           >> cheat
+               suffices_by metis_tac[IN_INTER]
+          >> fs[OPTION_TO_LIST_MEM] >> rename[`findNode _ gba = SOME x1`]
+          >> Cases_on `x1` >> fs[]
+          >> `MEM (q',r) (toAList gba.nodeInfo)
+           ∧ (λ(i,n). set n.frmls = q) (q',r)`
+              by metis_tac[findNode_def,FIND_LEMM2]
+          >> fs[]
+          >> `q ∈ POW abstrAA.states` by metis_tac[IN_INTER]
+          >> fs[trns_correct_def]
+          >> first_x_assum (qspec_then `q'` mp_tac) >> strip_tac
+          >> first_x_assum (qspec_then `r` mp_tac) >> strip_tac
+          >> first_x_assum (qspec_then `fls` mp_tac) >> simp[]
+          >> `(lookup q' gba.nodeInfo = SOME r)
+              ∧ (q ∈ POW (concr2AbstrAA (concrAA g_AA init aP)).states)`
+             by metis_tac[MEM_toAList]
+          >> metis_tac[]
+          )
+       >- (simp[extractGBATrans_def] >> rpt strip_tac
+           >> `q ∈ concr2AbstrGBA_states gba` by (
+                metis_tac[MEMBER_NOT_EMPTY,IN_INTER]
+            )
+           >> `x ∈ gba_trans (concr2AbstrAA (concrAA g_AA init aP)) q`
+                by metis_tac[MEMBER_NOT_EMPTY]
+           >> simp[OPTION_TO_LIST_MEM]
+           >> Q.HO_MATCH_ABBREV_TAC
+                `?l. (?x. F1 x ∧ (L x = SOME l)) ∧ (MEM x l)`
+           >> `?x. F1 x` by (
+                qunabbrev_tac `F1` >> fs[concr2AbstrGBA_states_def]
+                >> simp[findNode_def]
+                >> `?x. (MEM x (toAList gba.nodeInfo))
+                      ∧ (λ(i,n). set n.frmls = set x'.frmls) x`
+                   suffices_by metis_tac[FIND_LEMM]
+                >> qexists_tac `(n,x')` >> fs[]
+                >> metis_tac[MEM_toAList]
+            )
+           >> `?l. L x' = SOME l` by (
+                qunabbrev_tac `L` >> qunabbrev_tac `F1` >> fs[]
+                >> Cases_on `x'` >> simp[]
+                >> `MEM (q',r) (toAList gba.nodeInfo)`
+                    by metis_tac[findNode_def,FIND_LEMM2]
+                >> metis_tac[wfg_def,domain_lookup,MEM_toAList]
+            )
+           >> qexists_tac `l` >> fs[] >> conj_tac
+           >- metis_tac[]
+           >- (
+            qunabbrev_tac `L` >> qunabbrev_tac `F1` >> fs[]
+            >> fs[trns_correct_def]
+            >> `q ∈ POW abstrAA.states` by metis_tac[IN_INTER]
+            >> Cases_on `x'`
+            >> `MEM (q',r) (toAList gba.nodeInfo)
+             ∧ (λ(i,n). set n.frmls = q) (q',r)`
+                 by metis_tac[findNode_def,FIND_LEMM2]
+            >> first_x_assum (qspec_then `q'` mp_tac) >> strip_tac
+            >> first_x_assum (qspec_then `r` mp_tac) >> strip_tac
+            >> `?fls. lookup q' gba.followers = SOME fls`
+                 by metis_tac[MEM_toAList,domain_lookup,wfg_def]
+            >> first_x_assum (qspec_then `fls` mp_tac) >> simp[]
+            >> `(lookup q' gba.nodeInfo = SOME r)
+              ∧ (q ∈ POW (concr2AbstrAA (concrAA g_AA init aP)).states)`
+                by metis_tac[MEM_toAList]
+            >> fs[] >> metis_tac[]
+            )
           )
       )
-   >- (qunabbrev_tac `FINAL` >> simp[concr2AbstrGBA_final_def]
+   >- (`!l u ce. MEM u (get_acc_set l ce)
+                 ==> MEM u (MAP FST l)` by (
+        Induct_on `l` >> fs[get_acc_set_def,CAT_OPTIONS_def]
+        >> rpt strip_tac >> fs[CAT_OPTIONS_MEM]
+        >> Cases_on `h` >> fs[MEM_MAP] >> Cases_on `y` >> fs[]
+        >> metis_tac[FST]
+       )
+       >> `!id q. (lookup id gba.nodeInfo = SOME q)
+                 ==> set q.frmls ∈ concr2AbstrGBA_states gba` by (
+           rpt strip_tac >> fs[]
+           >> PURE_REWRITE_TAC[concr2AbstrGBA_states_def]
+           >> simp[] >> qexists_tac `q` >> metis_tac[domain_lookup]
+       )
+       >> qunabbrev_tac `FINAL` >> simp[concr2AbstrGBA_final_def]
        >> `∀ce u aE.
             (aE = concr2AbstractEdge (set aP) ce) ∧ is_until u
             ∧ MEM u (graphStates g_AA) ∧ MEM_SUBSET ce.pos aP
@@ -3611,13 +4693,16 @@ val EXPGBA_CORRECT = store_thm
             HO_MATCH_MP_TAC CONCR_ACC_SETS
             >> simp[] >> metis_tac[]
         )
+       >> fs[final_correct_def]
        >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
-       >- (rename[`MEM u qs`] >> qexists_tac `acc_cond abstrAA u`
+       >> qabbrev_tac `realTrans =
+             {(e,a,e') | (a,e') ∈ gba_trans abstrAA e ∧ e ∈ POW abstrAA.states}`
+       >- (rename[`MEM u (graphStates g_AA)`]
+           >> qexists_tac `acc_cond abstrAA u ∩ realTrans`
            >> rpt strip_tac
-           >- (
-            qunabbrev_tac `STATES` >> rename[`t ∈ x`]
+           >- (rename[`t ∈ x`]
             >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
-            >> POP_ASSUM mp_tac
+            >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
             >> first_x_assum (qspec_then `t` mp_tac)
             >> Cases_on `t` >> simp[] >> Cases_on `r` >> rpt strip_tac
             >> fs[] >> rename[`(e,a,e') ∈ x`] >> simp[]
@@ -3627,99 +4712,402 @@ val EXPGBA_CORRECT = store_thm
                  (qspec_then `concrEdge eL.pos_lab eL.neg_lab q2.frmls` mp_tac)
              >> simp[] >> strip_tac
              >> first_x_assum (qspec_then `u` mp_tac)
-             >> `is_until u ∧ MEM u (graphStates g_AA)` by (
-                 fs[valid_acc_def] >>
-             cheat
+             >> first_x_assum (qspec_then `id1` mp_tac) >> simp[]
+             >> first_x_assum (qspec_then `id1` mp_tac) >> simp[] >> strip_tac
+             >> first_x_assum (qspec_then `eL` mp_tac) >> simp[] >> strip_tac
+             >> first_x_assum (qspec_then `id2` mp_tac) >> simp[]
+             >> `set q1.frmls ∈
+                  concr2AbstrGBA_states gba` by (
+                 PURE_REWRITE_TAC[concr2AbstrGBA_states_def]
+                 >> simp[] >> qexists_tac `q1`
+                 >> metis_tac[MEM_toAList,domain_lookup]
              )
-
-IMP_RES_TAC CONCR_ACC_SETS)
-            >- (`set q1.frmls ∈ concr2AbstrGBA_states gba` suffices_by fs[]
-                >> PURE_REWRITE_TAC[concr2AbstrGBA_states_def]
-                >> simp[] >> metis_tac[domain_lookup]
+             >> `set q1.frmls ∈
+                   POW (concr2AbstrAA (concrAA g_AA init aP)).states` by (
+                 metis_tac[IN_INTER]
+             )
+             >> simp[] >> strip_tac
+             >> first_x_assum (qspec_then `u` mp_tac) >> simp[] >> strip_tac
+             >> `MEM u (MAP FST (final_trans))` by metis_tac[]
+             >> fs[MEM_MAP] >> Cases_on `y` >> fs[]
+             >> `∃id nL.
+                   (findNode (λ(i,l). l.frml = u) g_AA = SOME (id,nL))
+                   ∧ is_until u` by metis_tac[valid_acc_def,FST]
+             >> `is_until u ∧ MEM u (graphStates g_AA)` by (
+                 simp[graphStates_def,MEM_MAP]
+                 >> `MEM (id,nL) (toAList g_AA.nodeInfo)
+                   ∧ (λ(i,l). l.frml = u) (id,nL)`
+                     by metis_tac[FIND_LEMM2,findNode_def]
+                 >> fs[] >> qexists_tac `(id,nL)` >> fs[]
+             )
+             >> simp[]
+             >> `MEM_SUBSET eL.pos_lab aP ∧
+                   MEM_SUBSET eL.neg_lab aP` by metis_tac[aP_correct_def]
+             >> simp[]
+             >> `MEM_SUBSET q2.frmls (graphStates g_AA)` by (
+                `set q2.frmls ∈ concr2AbstrGBA_states gba` by (
+                    PURE_REWRITE_TAC[concr2AbstrGBA_states_def]
+                    >> simp[] >> qexists_tac `q2`
+                     >> metis_tac[MEM_toAList,domain_lookup]
+                )
+                >> `set q2.frmls ∈
+                     POW (concr2AbstrAA (concrAA g_AA init aP)).states`
+                    by metis_tac[IN_INTER]
+                >> fs[concr2AbstrAA_def,concr2Abstr_states_def]
+                >> fs[IN_POW] >> simp[MEM_SUBSET_SET_TO_LIST]
+                >> simp[graphStates_def,SUBSET_DEF] >> strip_tac
+                >> simp[MEM_MAP] >> strip_tac
+                >> `x' ∈
+                     {x.frml |
+                      ∃n. SOME x = lookup n g_AA.nodeInfo
+                         ∧ n ∈ domain g_AA.nodeInfo}` by fs[SUBSET_DEF]
+                >> fs[] >> qexists_tac `(n,x'')` >> simp[]
+                >> metis_tac[MEM_toAList]
+             )
+             >> simp[] >> rw[]
+             >> first_x_assum (qspec_then `set q1.frmls` mp_tac) >> simp[]
+             >> simp[concr2AbstractEdge_def]
+                )
+            >- (qunabbrev_tac `realTrans` >> fs[]
+                >> `set q1.frmls ∈ POW abstrAA.states ∩
+                     (reachableFromSetGBA
+                     (GBA (POW (concr2AbstrAA (concrAA g_AA init aP)).states)
+                          (concr2AbstrAA (concrAA g_AA init aP)).initial
+                          (gba_trans (concr2AbstrAA (concrAA g_AA init aP)))
+                          (gba_accTrans (concr2AbstrAA (concrAA g_AA init aP)))
+                          (concr2AbstrAA (concrAA g_AA init aP)).alphabet)
+                     (concr2AbstrAA (concrAA g_AA init aP)).initial)` by (
+                    `set q1.frmls ∈ concr2AbstrGBA_states gba`
+                       suffices_by metis_tac[IN_INTER]
+                    >> PURE_REWRITE_TAC[concr2AbstrGBA_states_def]
+                    >> simp[] >> qexists_tac `q1`
+                    >> metis_tac[MEM_toAList,domain_lookup]
+                 )
+                >> fs[] >> conj_tac
+                >- (fs[trns_correct_def]
+                    >> `set
+                        (CAT_OPTIONS
+                         (MAP
+                          (λ(eL,i).
+                            do
+                            s_nL <- lookup i gba.nodeInfo;
+                           SOME
+                               (transformLabel (set aP) eL.pos_lab
+                                               eL.neg_lab,set s_nL.frmls)
+                               od) fls)) = gba_trans abstrAA (set q1.frmls)`
+                        by metis_tac[]
+                   >> `MEM (transformLabel (props f) eL.pos_lab eL.neg_lab,
+                        set q2.frmls)
+                          (CAT_OPTIONS
+                           (MAP
+                            (λ(eL,i).
+                              do
+                              s_nL <- lookup i gba.nodeInfo;
+                             SOME
+                             (transformLabel (set aP) eL.pos_lab eL.neg_lab,
+                              set s_nL.frmls)
+                             od) fls))` suffices_by metis_tac[]
+                   >> simp[CAT_OPTIONS_MEM,MEM_MAP]
+                   >> qexists_tac `(eL,id2)` >> fs[]
+                   )
+                >- metis_tac[]
                )
-
+            >- metis_tac[IN_INTER]
             )
+           >- (fs[trns_correct_def]
+               >> `e ∈ POW abstrAA.states`
+                   by (qunabbrev_tac `realTrans` >> fs[])
+               >> `e ∈ concr2AbstrGBA_states gba` by metis_tac[IN_INTER]
+               >> POP_ASSUM mp_tac
+               >> PURE_REWRITE_TAC[concr2AbstrGBA_states_def] >> simp[]
+               >> strip_tac
+               >> `?fls. lookup n gba.followers = SOME fls`
+                   by metis_tac[wfg_def,domain_lookup]
+               >> `(a,e') ∈ gba_trans abstrAA e`
+                 by (qunabbrev_tac `realTrans` >> fs[] >> metis_tac[])
+               >> `MEM (a,e')
+                     (CAT_OPTIONS
+                      (MAP
+                       (λ(eL,i).
+                         do
+                         s_nL <- lookup i gba.nodeInfo;
+                        SOME
+                            (transformLabel (set aP) eL.pos_lab
+                                            eL.neg_lab,set s_nL.frmls)
+                            od) fls))` by metis_tac[]
+               >> fs[CAT_OPTIONS_MEM,MEM_MAP] >> Cases_on `y` >> fs[]
+               >> fs[]
+               >> first_x_assum (qspec_then
+                                 `concrEdge q.pos_lab q.neg_lab s_nL.frmls`
+                                 mp_tac)
+               >> strip_tac
+               >> first_x_assum (qspec_then `u` mp_tac) >> simp[]
+               >> simp[]
+               >> `MEM_SUBSET q.pos_lab aP ∧ MEM_SUBSET q.neg_lab aP`
+                  by metis_tac[aP_correct_def]
+               >> simp[]
+             >> `MEM_SUBSET s_nL.frmls (graphStates g_AA)` by (
+                `set s_nL.frmls ∈ concr2AbstrGBA_states gba` by (
+                    PURE_REWRITE_TAC[concr2AbstrGBA_states_def]
+                    >> simp[] >> qexists_tac `s_nL`
+                     >> metis_tac[MEM_toAList,domain_lookup]
+                )
+                >> `set s_nL.frmls ∈
+                     POW (concr2AbstrAA (concrAA g_AA init aP)).states`
+                    by metis_tac[IN_INTER]
+                >> fs[concr2AbstrAA_def,concr2Abstr_states_def]
+                >> fs[IN_POW] >> simp[MEM_SUBSET_SET_TO_LIST]
+                >> simp[graphStates_def,SUBSET_DEF] >> strip_tac
+                >> simp[MEM_MAP] >> strip_tac
+                >> `x''' ∈
+                     {x.frml |
+                      ∃n. SOME x = lookup n g_AA.nodeInfo
+                         ∧ n ∈ domain g_AA.nodeInfo}` by fs[SUBSET_DEF]
+                >> fs[] >> qexists_tac `(n',x'''')` >> simp[]
+                >> metis_tac[MEM_toAList]
+             )
+             >> simp[] >> strip_tac
+             >> first_x_assum (qspec_then `set x''.frmls` mp_tac)
+             >> `set x''.frmls ∈
+                     POW (concr2AbstrAA (concrAA g_AA init aP)).states` by (
+                `set x''.frmls ∈ concr2AbstrGBA_states gba` by (
+                   PURE_REWRITE_TAC[concr2AbstrGBA_states_def]
+                   >> simp[] >> qexists_tac `x''`
+                   >> metis_tac[MEM_toAList,domain_lookup]
+                )
+               >> metis_tac[IN_INTER]
+                )
+             >> simp[concr2AbstractEdge_def] >> fs[] >> strip_tac
+             >> `MEM u
+                  (get_acc_set final_trans
+                   (concrEdge q.pos_lab q.neg_lab s_nL.frmls))`
+                by metis_tac[concr2AbstrAA_def]
+             >> first_x_assum (qspec_then `(set x''.frmls,a,e')` mp_tac)
+             >> simp[]
+             >> Q.HO_MATCH_ABBREV_TAC `(A ==> B) ==> B` >> `A` suffices_by fs[]
+             >> qunabbrev_tac `A` >> qexists_tac `x''` >> simp[]
+             >> qexists_tac `q` >> fs[] >> qexists_tac `s_nL` >> fs[]
+             >> strip_tac
+             >- metis_tac[concr2AbstrAA_def]
+             >- metis_tac[]
+              )
+           >- (simp[gba_accTrans_def] >> qexists_tac `u` >> simp[]
+               >> qunabbrev_tac `realTrans` >> fs[]
+               >> simp[concr2AbstrAA_def,concr2Abstr_final_def]
+               >> fs[graphStates_def,EXISTS_MEM,MEM_MAP]
+               >> qexists_tac `SND y` >> simp[]
+               >> fs[] >> Cases_on `y` >> fs[] >> conj_tac
+               >- metis_tac[MEM_toAList,domain_lookup]
+               >- (fs[until_iff_final_def,is_until_def]
+                   >> Cases_on `u`
+                   >> metis_tac[MEM_toAList,is_until_def]
+                  )
+              )
           )
-       >- (fs[gba_accTrans_def] >> rename[`u ∈ _`] >> qexists_tac `u`
-           >> rpt strip_tac
-           >- ()
-)
-
-)
-)
+       >- (fs[gba_accTrans_def] >> rename[`u ∈ _.final`]
+           >> qexists_tac `u` >> fs[] >> rpt strip_tac
+           >- (POP_ASSUM mp_tac >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
+               >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
+               >> first_x_assum (qspec_then `x'` mp_tac)
+               >> Cases_on `x' ∈ x` >> fs[] >> rpt strip_tac
+               >> fs[trns_correct_def]
+               >> `e ∈ POW abstrAA.states`
+                   by (qunabbrev_tac `realTrans` >> fs[])
+               >> `e ∈ concr2AbstrGBA_states gba` by metis_tac[IN_INTER]
+               >> POP_ASSUM mp_tac
+               >> PURE_REWRITE_TAC[concr2AbstrGBA_states_def] >> simp[]
+               >> strip_tac
+               >> `?fls. lookup n gba.followers = SOME fls`
+                   by metis_tac[wfg_def,domain_lookup]
+               >> `(a,e') ∈ gba_trans abstrAA e`
+                 by (qunabbrev_tac `realTrans` >> fs[] >> metis_tac[])
+               >> `MEM (a,e')
+                     (CAT_OPTIONS
+                      (MAP
+                       (λ(eL,i).
+                         do
+                         s_nL <- lookup i gba.nodeInfo;
+                        SOME
+                            (transformLabel (set aP) eL.pos_lab
+                                            eL.neg_lab,set s_nL.frmls)
+                            od) fls))` by metis_tac[]
+               >> fs[CAT_OPTIONS_MEM,MEM_MAP] >> Cases_on `y` >> fs[]
+               >> fs[]
+               >> first_x_assum (qspec_then
+                                 `concrEdge q.pos_lab q.neg_lab s_nL.frmls`
+                                 mp_tac)
+               >> strip_tac
+               >> first_x_assum (qspec_then `u` mp_tac) >> simp[]
+               >> `MEM u (graphStates g_AA)` by (
+                    fs[concr2AbstrAA_def,concr2Abstr_final_def]
+                    >> simp[graphStates_def,EXISTS_MEM,MEM_MAP]
+                    >> metis_tac[SND,MEM_toAList]
+                )
+               >> simp[]
+               >> `MEM_SUBSET q.pos_lab aP ∧ MEM_SUBSET q.neg_lab aP`
+                  by metis_tac[aP_correct_def]
+               >> simp[]
+             >> `MEM_SUBSET s_nL.frmls (graphStates g_AA)` by (
+                `set s_nL.frmls ∈ concr2AbstrGBA_states gba` by (
+                    PURE_REWRITE_TAC[concr2AbstrGBA_states_def]
+                    >> simp[] >> qexists_tac `s_nL`
+                     >> metis_tac[MEM_toAList,domain_lookup]
+                )
+                >> `set s_nL.frmls ∈
+                     POW (concr2AbstrAA (concrAA g_AA init aP)).states`
+                    by metis_tac[IN_INTER]
+                >> fs[concr2AbstrAA_def,concr2Abstr_states_def]
+                >> fs[IN_POW] >> simp[MEM_SUBSET_SET_TO_LIST]
+                >> simp[graphStates_def,SUBSET_DEF] >> strip_tac
+                >> simp[MEM_MAP] >> strip_tac
+                >> `x''' ∈
+                     {x.frml |
+                      ∃n. SOME x = lookup n g_AA.nodeInfo
+                         ∧ n ∈ domain g_AA.nodeInfo}` by fs[SUBSET_DEF]
+                >> fs[] >> qexists_tac `(n',x'''')` >> simp[]
+                >> metis_tac[MEM_toAList]
+             )
+             >> `is_until u` by (
+                  fs[concr2AbstrAA_def,concr2Abstr_final_def]
+                  >> Cases_on `u` >> metis_tac[until_iff_final_def,is_until_def]
+                )
+             >> simp[]
+             >> `set x''.frmls ∈
+                     POW (concr2AbstrAA (concrAA g_AA init aP)).states` by (
+                `set x''.frmls ∈ concr2AbstrGBA_states gba` by (
+                   PURE_REWRITE_TAC[concr2AbstrGBA_states_def]
+                   >> simp[] >> qexists_tac `x''`
+                   >> metis_tac[MEM_toAList,domain_lookup]
+                )
+               >> metis_tac[IN_INTER]
+                )
+             >> strip_tac
+             >> first_x_assum (qspec_then `set x''.frmls` mp_tac)
+             >> simp[concr2AbstractEdge_def] >> fs[] >> strip_tac
+             >> `MEM u
+                  (get_acc_set final_trans
+                   (concrEdge q.pos_lab q.neg_lab s_nL.frmls))`
+                by metis_tac[concr2AbstrAA_def]
+             >> qexists_tac `x''` >> simp[]
+             >> qexists_tac `q` >> fs[] >> qexists_tac `s_nL` >> fs[]
+             >> strip_tac
+             >- metis_tac[concr2AbstrAA_def]
+             >- metis_tac[]
+              )
+           >- (first_x_assum (qspec_then `x'` mp_tac) >> simp[]
+               >> Q.HO_MATCH_ABBREV_TAC `(A ==> B) ==> B`
+               >> `A` suffices_by fs[] >> qunabbrev_tac `A`
+               >> `set q1.frmls ∈ concr2AbstrGBA_states gba` by (
+                    PURE_REWRITE_TAC[concr2AbstrGBA_states_def]
+                    >> simp[] >> qexists_tac `q1`
+                    >> metis_tac[MEM_toAList,domain_lookup]
+                )
+               >> `(set q1.frmls ∈
+                    POW (concr2AbstrAA (concrAA g_AA init aP)).states)
+                   ∧ set q1.frmls ∈
+                   reachableFromSetGBA
+                   (GBA (POW (concr2AbstrAA (concrAA g_AA init aP)).states)
+                        (concr2AbstrAA (concrAA g_AA init aP)).initial
+                        (gba_trans (concr2AbstrAA (concrAA g_AA init aP)))
+                        {acc_cond (concr2AbstrAA (concrAA g_AA init aP)) f ∩
+                         {(e,a,e') |
+                          (a,e') ∈
+                           gba_trans (concr2AbstrAA (concrAA g_AA init aP)) e
+                        ∧ e ∈
+                        POW (concr2AbstrAA (concrAA g_AA init aP)).states} |
+                         f |
+                         f ∈ (concr2AbstrAA (concrAA g_AA init aP)).final}
+                        (concr2AbstrAA (concrAA g_AA init aP)).alphabet)
+                   (concr2AbstrAA (concrAA g_AA init aP)).initial`
+                    by metis_tac[IN_INTER]
+               >> simp[]
+             >> first_x_assum
+                 (qspec_then `concrEdge eL.pos_lab eL.neg_lab q2.frmls` mp_tac)
+             >> simp[] >> strip_tac
+             >> first_x_assum (qspec_then `u` mp_tac)
+             >> first_x_assum (qspec_then `id1` mp_tac) >> simp[]
+             >> first_x_assum (qspec_then `id1` mp_tac) >> simp[] >> strip_tac
+             >> first_x_assum (qspec_then `eL` mp_tac) >> simp[] >> strip_tac
+             >> first_x_assum (qspec_then `id2` mp_tac) >> simp[]
+             >> `set q1.frmls ∈
+                  concr2AbstrGBA_states gba` by (
+                 PURE_REWRITE_TAC[concr2AbstrGBA_states_def]
+                 >> simp[] >> qexists_tac `q1`
+                 >> metis_tac[MEM_toAList,domain_lookup]
+             )
+             >> `set q1.frmls ∈
+                   POW (concr2AbstrAA (concrAA g_AA init aP)).states` by (
+                 metis_tac[IN_INTER]
+             )
+             >> simp[] >> strip_tac
+             >> first_x_assum (qspec_then `u` mp_tac) >> simp[] >> strip_tac
+             >> `MEM u (MAP FST (final_trans))` by metis_tac[]
+             >> fs[MEM_MAP] >> Cases_on `y` >> fs[]
+             >> `∃id nL.
+                   (findNode (λ(i,l). l.frml = u) g_AA = SOME (id,nL))
+                   ∧ is_until u` by metis_tac[valid_acc_def,FST]
+             >> `is_until u ∧ MEM u (graphStates g_AA)` by (
+                 simp[graphStates_def,MEM_MAP]
+                 >> `MEM (id,nL) (toAList g_AA.nodeInfo)
+                   ∧ (λ(i,l). l.frml = u) (id,nL)`
+                     by metis_tac[FIND_LEMM2,findNode_def]
+                 >> fs[] >> qexists_tac `(id,nL)` >> fs[]
+             )
+             >> simp[]
+             >> `MEM_SUBSET eL.pos_lab aP ∧
+                   MEM_SUBSET eL.neg_lab aP` by metis_tac[aP_correct_def]
+             >> simp[]
+             >> `MEM_SUBSET q2.frmls (graphStates g_AA)` by (
+                 `set q2.frmls ∈ concr2AbstrGBA_states gba` by (
+                 PURE_REWRITE_TAC[concr2AbstrGBA_states_def]
+                 >> simp[] >> qexists_tac `q2`
+                 >> metis_tac[MEM_toAList,domain_lookup]
+                 )
+                >> `set q2.frmls ∈
+                    POW (concr2AbstrAA (concrAA g_AA init aP)).states`
+                       by metis_tac[IN_INTER]
+                >> fs[concr2AbstrAA_def,concr2Abstr_states_def]
+                >> fs[IN_POW] >> simp[MEM_SUBSET_SET_TO_LIST]
+                >> simp[graphStates_def,SUBSET_DEF] >> strip_tac
+                >> simp[MEM_MAP] >> strip_tac
+                >> `x'' ∈
+                    {x.frml |
+                       ∃n. SOME x = lookup n g_AA.nodeInfo
+                       ∧ n ∈ domain g_AA.nodeInfo}` by fs[SUBSET_DEF]
+                >> fs[] >> qexists_tac `(n,x''')` >> simp[]
+                >> metis_tac[MEM_toAList]
+                )
+             >> simp[] >> rw[]
+             >> first_x_assum (qspec_then `set q1.frmls` mp_tac) >> simp[]
+             >> simp[concr2AbstractEdge_def]
+             >> strip_tac
+             >> fs[trns_correct_def]
+             >> first_x_assum (qspec_then `id1` mp_tac) >> simp[] >> strip_tac
+             >> `MEM (transformLabel (props f) eL.pos_lab eL.neg_lab,
+                     set q2.frmls)
+                   (CAT_OPTIONS
+                        (MAP
+                             (λ(eL',i).
+                               do
+                               s_nL <- lookup i gba.nodeInfo;
+                              SOME
+                                  (transformLabel (props f) eL'.pos_lab
+                                                  eL'.neg_lab,set s_nL.frmls)
+                                  od) fls))` suffices_by metis_tac[]
+             >> simp[CAT_OPTIONS_MEM,MEM_MAP]
+             >> qexists_tac `(eL,id2)` >> fs[]
+              )
+           >- (fs[concr2AbstrAA_def,concr2Abstr_final_def]
+               >> Cases_on `u` >> metis_tac[until_iff_final_def,is_until_def]
+              )
+           >- (fs[concr2AbstrAA_def,concr2Abstr_final_def]
+               >> simp[graphStates_def,MEM_MAP]
+               >> qexists_tac `(n,x')` >> fs[] >> metis_tac[MEM_toAList]
+              )
+          )
       )
    >- (qunabbrev_tac `ALPH` >> fs[] >> simp[concr2AbstrAA_def])
-  )
-(*        >> simp[concr2AbstrGBA_init_def,SET_EQ_SUBSET,SUBSET_DEF] *)
-(*        >> rpt strip_tac *)
-(*        >- (POP_ASSUM mp_tac >> simp[MEM_MAP,CAT_OPTIONS_MEM] >> strip_tac *)
-(*            >> `!ls qs. (!l i. MEM l ls ∧ MEM i l ==> i ∈ domain g_AA.nodeInfo) *)
-(*                 ∧ *)
-(*                 (inGBA *)
-(*                 (FOLDR (λn g. addNodeToGBA g n) empty *)
-(*                  (MAP *)
-(*                   (λi_list. *)
-(*                     MAP (λl. l.frml) *)
-(*                     (CAT_OPTIONS *)
-(*                          (MAP (λi. lookup i g_AA.nodeInfo) (nub i_list)))) *)
-(*                   ls)) qs) *)
-(*                 ==> (∃i_l. *)
-(*                      (set qs = {x.frml | ∃n. (SOME x = lookup n g_AA.nodeInfo) *)
-(*                                       ∧ MEM n i_l}) *)
-(*                    ∧ MEM i_l ls)` by ( *)
-(*               Induct_on `ls` >> rpt strip_tac >> fs[] *)
-(*               >- (fs[inGBA_def,EXISTS_MEM,MEM_MAP] >> fs[empty_def] *)
-(*                     >> fs[toAList_def,foldi_def] *)
-(*                  ) *)
-(*               >- ( *)
-(*                 POP_ASSUM mp_tac >> simp[inGBA_def,EXISTS_MEM,MEM_MAP] *)
-(*                 >> qabbrev_tac `G_int = *)
-(*                    FOLDR (λn g. addNodeToGBA g n) empty *)
-(*                      (MAP *)
-(*                           (λi_list. *)
-(*                                MAP (λl. l.frml) *)
-(*                                (CAT_OPTIONS *)
-(*                                     (MAP (λi. lookup i g_AA.nodeInfo) *)
-(*                                          (nub i_list)))) ls)` *)
-(*                 >> `∀l i. MEM l ls ∧ MEM i l ⇒ i ∈ domain g_AA.nodeInfo` *)
-(*                    by metis_tac[] *)
-(*                 >> qabbrev_tac `L = *)
-(*                      MAP (λl. l.frml) *)
-(*                          (CAT_OPTIONS *)
-(*                               (MAP (λi. lookup i g_AA.nodeInfo) (nub h)))` *)
-(*                 >> Cases_on `inGBA G_int qs` >> fs[] *)
-(*                 >- metis_tac[] *)
-(*                 >- ( *)
-(*                  `set qs = set L` by ( *)
-(*                    Cases_on `y'` >> fs[] >> rename[`MEM (id,n) _`] *)
-(*                    >> rw[] *)
-(*                    >> `id = G_int.next` by ( *)
-(*                        CCONTR_TAC >> fs[addNodeToGBA_def] *)
-(*                        >> Cases_on `inGBA G_int L` >> fs[] *)
-(*                        >- ( *)
-(*                         `inGBA G_int qs` by ( *)
-(*                           fs[inGBA_def,EXISTS_MEM,MEM_MAP] >> qexists_tac `n` *)
-(*                           >> simp[] >> metis_tac[SND] *)
-(*                        ) *)
-(*                        >- ( *)
-(*                         fs[addNode_def,MEM_toAList] *)
-(*                         >> `lookup id G_int.nodeInfo = SOME n` *)
-(*                            by metis_tac[lookup_insert] *)
-(*                         >> `inGBA G_int qs` by ( *)
-(*                             fs[inGBA_def,EXISTS_MEM,MEM_MAP] >> qexists_tac `n` *)
-(*                             >> simp[] >> metis_tac[SND,MEM_toAList] *)
-(*                         ) *)
-(*                         ) *)
-(*                        ) *)
-(*                    ) *)
-(*                    >> fs[addNodeToGBA_def] >> Cases_on `inGBA G_int L` *)
-(*                    >>  *)
-(* ) *)
-(* ) *)
-(* ) *)
-(* ) *)
-(* ) *)
-(* ) *)
-*)
+  );
+
 
 val _ = export_theory()

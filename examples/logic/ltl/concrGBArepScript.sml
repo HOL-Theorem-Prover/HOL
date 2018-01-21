@@ -828,6 +828,27 @@ val TRNS_IS_EMPTY_LEMM = store_thm
    >> metis_tac[TRANSFORMLABEL_EMPTY,INTER_COMM]
   );
 
+val TRANSFORMLABEL_LEMM = store_thm
+  ("TRANSFORMLABEL_LEMM",
+   ``!ce1 ce2 aP. (((~trns_is_empty ce1 ∧ ~trns_is_empty ce2)
+               ∧ ~(MEM_EQUAL ce1.pos ce2.pos ∧ MEM_EQUAL ce1.neg ce2.neg)
+               ∧ !x. ((MEM x ce1.pos \/ MEM x ce1.neg \/ MEM x ce2.pos
+                    \/ MEM x ce2.neg) ==> MEM x aP))
+                    ==> ~(transformLabel (set aP) ce1.pos ce1.neg =
+                          transformLabel (set aP) ce2.pos ce2.neg))``,
+   rpt gen_tac >> strip_tac
+   >> `(set ce1.pos ⊆ set aP) ∧ (set ce2.pos ⊆ set aP)
+     ∧ (set ce1.neg ⊆ set aP) ∧ (set ce2.neg ⊆ set aP)` by fs[SUBSET_DEF]
+   >> `~(transformLabel (set aP) ce1.pos ce1.neg = {})` by metis_tac[TRNS_IS_EMPTY_LEMM]
+   >> `~(transformLabel (set aP) ce2.pos ce2.neg = {})` by metis_tac[TRNS_IS_EMPTY_LEMM]
+   >> simp[SET_EQ_SUBSET]
+   >> `!l1 l2. ~(set l1 ⊆ set l2) ==> ~MEM_SUBSET l1 l2`
+          by fs[MEM_SUBSET_SET_TO_LIST]
+   >> fs[MEM_EQUAL_SET]
+   >> IMP_RES_TAC TRANSFORMLABEL_SUBSET2
+   >> metis_tac[SET_EQ_SUBSET,MEM_SUBSET_SET_TO_LIST]
+  );
+
 val tlg_concr_def = Define`
   tlg_concr (t1,acc_t1) (t2,acc_t2) =
     (((MEM_SUBSET t1.pos t2.pos)
@@ -1610,6 +1631,7 @@ val ADDNODE_GBA_FOLDR = store_thm
              ==> ?n. (lookup i (SND G_WITH_IDS).nodeInfo = SOME n)
                    ∧ (MEM n.frmls l)
                    ∧ lookup i (SND G_WITH_IDS).followers = SOME []
+                   ∧ (G.next <= i)
         )
       ∧ (frml_ad G ∧ (!x. MEM x l ==> ALL_DISTINCT x)
                  ==> frml_ad (SND G_WITH_IDS))
@@ -1830,14 +1852,14 @@ val extractGBATrans_def = Define`
        od) `;
 
 val concr2AbstrGBA_final_def = Define`
-  concr2AbstrGBA_final graph aP =
+  concr2AbstrGBA_final final_forms graph aP =
     { {(set q1.frmls, transformLabel aP eL.pos_lab eL.neg_lab, set q2.frmls) |
          ?id1 id2 fls.
           (lookup id1 graph.nodeInfo = SOME q1)
         ∧ (lookup id1 graph.followers = SOME fls)
         ∧ (MEM (eL,id2) fls) ∧ (MEM f eL.acc_set)
         ∧ (lookup id2 graph.nodeInfo = SOME q2)
-      } | f | ?qs. (inGBA graph qs) ∧ (MEM f qs)
+      } | f | (f ∈ final_forms)
     }`;
 
 val concr2AbstrGBA_states_def = Define`
@@ -1853,12 +1875,12 @@ val concr2AbstrGBA_init_def = Define`
                                od ) concrInit))`;
 
 val concr2AbstrGBA_def = Define `
-  concr2AbstrGBA (concrGBA graph init aP) =
+  concr2AbstrGBA final_forms (concrGBA graph init aP) =
        GBA
          (concr2AbstrGBA_states graph)
          (concr2AbstrGBA_init init graph)
          (extractGBATrans (set aP) graph)
-         (concr2AbstrGBA_final graph (set aP))
+         (concr2AbstrGBA_final final_forms graph (set aP))
          (POW (set aP))`;
 
 val _ = export_theory();
