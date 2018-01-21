@@ -1147,7 +1147,7 @@ val EXP_GRAPH_AP = store_thm
 (*   (!i n. i ∈ (domain g2.nodeInfo) ∧ (lookup i g2.nodeInfo = SOME n) *)
 (*       ==> ALL_DISTINCT n.frmls *)
 (*   )``, *)
-  
+
 
 (* ) *)
 
@@ -1955,7 +1955,7 @@ val EXP_WAA_CORRECT = store_thm
             >> fs[]
            )
        )
-    >- (Cases_on `x` >> simp[concr2AbstrAA_def]
+    >- (rename [‘concr2AbstrAA x’] >> Cases_on `x` >> simp[concr2AbstrAA_def]
         >> simp[removeStatesSimpl_def,ltl2waa_def,ltl2waa_free_alph_def]
         >> Q.HO_MATCH_ABBREV_TAC `STATES ∧ INIT ∧ FINAL ∧ ALPH ∧ TRANS`
         >> `(INIT ==> STATES) ∧ INIT ∧ (STATES ==> FINAL) ∧ ALPH
@@ -2268,15 +2268,14 @@ val EXP_WAA_CORRECT = store_thm
              )
             >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
             >- (fs[MEM_MAP] >> rw[] >> fs[MEM_MAP]
-                >> rw[]
-                >> `{ f | ?x. P l x ∧ f = x.frml} ∈ tempDNF φ` suffices_by (
-                      `{ f | ?x. P l x ∧ f = x.frml} = {x.frml | P l x }` by (
-                          simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
-                          >> metis_tac[]
-                      ) >> fs[]
-                 )
-                >> `set l ∈ tempDNF φ` by (
-                     `MEM (set l) (MAP set (tempDNF_concr φ))` by (
+                >> rw[] >> rename [‘MEM ll (tempDNF_concr φ)’]
+                >> `{ f | ?x. P ll x ∧ f = x.frml} ∈ tempDNF φ` suffices_by (
+                      `{ f | ?x. P ll x ∧ f = x.frml} = {x.frml | P ll x }`
+                         by (simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
+                             >> metis_tac[])
+                       >> fs[])
+                >> `set ll ∈ tempDNF φ` by (
+                     `MEM (set ll) (MAP set (tempDNF_concr φ))` by (
                         fs[MEM_MAP] >> metis_tac[]
                      )
                      >> metis_tac[TEMPDNF_CONCR_LEMM]
