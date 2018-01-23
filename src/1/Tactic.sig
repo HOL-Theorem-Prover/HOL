@@ -89,6 +89,7 @@ sig
   val imp_res_tac           : thm -> tactic
   val RES_TAC               : tactic
   val res_tac               : tactic
+  val provehyp              : thm_tactic
   val via                   : term * tactic -> tactic
   val CONV_TAC              : conv -> tactic
   val BETA_TAC              : tactic
