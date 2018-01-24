@@ -431,4 +431,45 @@ val NNF_THM = store_thm
    >> metis_tac[NNF_NEG_LEMM]
   );
 
+val LTL_FALSE_def = Define `
+  LTL_FALSE p  = F_CONJ (F_VAR p) (F_NEG (F_VAR p))`;
+
+val LTL_TRUE_def = Define `
+  LTL_TRUE p = F_NEG (LTL_FALSE p)`;
+
+val LTL_F_def = Define `
+  LTL_F φ p = F_U (LTL_TRUE p) φ`
+
+val LTL_G_def = Define `
+  LTL_G φ p = F_NEG (LTL_F (F_NEG φ) p)`;
+
+(* Some example formulae*)
+
+val LTL_EX1_def = Define`
+ LTL_EX1 = VAR 0`;
+
+val LTL_EX2_def = Define`
+ LTL_EX2 = U (VAR 0) (VAR 1)`;
+
+val LTL_EX3_def = Define`
+ LTL_EX3 = R (VAR 0) (VAR 1)`;
+
+val LTL_EX4_def = Define`
+ LTL_EX4 = NNF (F_CONJ (LTL_G (LTL_F (F_VAR 1) 0) 0)
+                       ((LTL_F (F_CONJ (F_VAR 2) (LTL_G (F_NEG (F_VAR 3)) 0)) 0)))`;
+
+val LTL_EX5_def = Define`
+ LTL_EX5 = NNF (F_CONJ (F_CONJ (LTL_G (LTL_F (F_VAR 1) 0) 0)
+                               (LTL_G (LTL_F (F_VAR 2) 0) 0)
+                       )
+                       ((LTL_F (F_CONJ (F_VAR 3) (LTL_G (F_NEG (F_VAR 4)) 0)) 0)))`;
+
+val LTL_EX5_def = Define`
+LTL_EX5 = NNF (F_CONJ (F_CONJ (F_CONJ (LTL_G (LTL_F (F_VAR 1) 0) 0)
+                                      (LTL_G (LTL_F (F_VAR 2) 0) 0)
+                              )
+                              (LTL_G (LTL_F (F_VAR 3) 0) 0)
+                      )
+                      ((LTL_F (F_CONJ (F_VAR 4) (LTL_G (F_NEG (F_VAR 5)) 0)) 0)))`;
+
 val _ = export_theory();
