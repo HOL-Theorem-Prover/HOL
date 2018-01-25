@@ -4,7 +4,7 @@ open generalHelpersTheory wordTheory
 
 val _ = new_theory "alterA"
 
-val _ = Hol_datatype
+val _ = Datatype
   `ALTER_A = <| states      : 's set;
                initial      : ('s set) set;
                final        : 's set;
