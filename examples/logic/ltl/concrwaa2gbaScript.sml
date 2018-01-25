@@ -982,7 +982,7 @@ val expandGBA_init_def = Define`
            [] (graphStatesWithId g_AA)
     in let o_graph = expandGBA g_AA acc_sets initIds G0
     in case o_graph of
-         | SOME graph => SOME (concrGBA graph initIds props)
+         | SOME graph => SOME (concrGBA graph initIds (MAP FST acc_sets) props)
          | NONE => NONE `;
 
 
@@ -3762,9 +3762,8 @@ val EXPGBA_CORRECT = store_thm
       case expandGBA_init (concrAA g_AA init aP) of
         | NONE => F
         | SOME c_gba =>
-          (concr2AbstrGBA ({x | is_until x ∧ MEM x (graphStates g_AA) })
-                          c_gba =
-             removeStatesSimpl (waa2gba abstrAA))``,
+          (concr2AbstrGBA c_gba =
+             removeStatesSimpl (vwaa2gba abstrAA))``,
    fs[] >> rpt strip_tac >> simp[expandGBA_init_def]
    >> `(wfg g_AA) ∧ (until_iff_final g_AA) ∧ (unique_node_formula g_AA)
      ∧ (flws_sorted g_AA)` by (
@@ -4043,6 +4042,24 @@ val EXPGBA_CORRECT = store_thm
         >> qexists_tac `(id,nL)` >> fs[]
         )
        )
+   >> `(set (MAP FST final_trans)) =
+          {x | is_until x ∧ MEM x (graphStates g_AA) }` by (
+       simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
+       >- (fs[valid_acc_def,MEM_MAP] >> Cases_on `y`
+           >> metis_tac[FST]
+          )
+       >- (fs[valid_acc_def,MEM_MAP] >> Cases_on `y`
+           >> `∃id nL.
+                findNode (λ(i,l). l.frml = q) g_AA = SOME (id,nL)`
+               by metis_tac[]
+           >> simp[graphStates_def,MEM_MAP]
+           >> `(MEM (id,nL) (toAList g_AA.nodeInfo))
+              ∧ (λ(i,l). l.frml = q) (id,nL)`
+               by metis_tac[findNode_def,FIND_LEMM2]
+           >> fs[] >> metis_tac[SND]
+          )
+       >- (fs[valid_acc_def,MEM_MAP] >> metis_tac[FST])
+   )
    >> `!l G id. ((FOLDR (λn g. addNodeToGBA g n)
                 (empty:(α nodeLabelGBA, α edgeLabelGBA) gfg)
                   l) = G)

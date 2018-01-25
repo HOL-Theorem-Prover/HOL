@@ -19,6 +19,7 @@ val _ = Datatype`
 val _ = Datatype`
   concrGBA = <| graph : (α nodeLabelGBA, α edgeLabelGBA) gfg ;
                 init : (num list) ;
+                all_acc_frmls : (α ltl_frml) list;
                 atomicProp : α list
              |>`;
 
@@ -1882,12 +1883,12 @@ val concr2AbstrGBA_init_def = Define`
                                od ) concrInit))`;
 
 val concr2AbstrGBA_def = Define `
-  concr2AbstrGBA final_forms (concrGBA graph init aP) =
+     concr2AbstrGBA (concrGBA graph init all_acc_frmls aP) =
        GBA
          (concr2AbstrGBA_states graph)
          (concr2AbstrGBA_init init graph)
          (extractGBATrans (set aP) graph)
-         (concr2AbstrGBA_final final_forms graph (set aP))
+         (concr2AbstrGBA_final (set all_acc_frmls) graph (set aP))
          (POW (set aP))`;
 
 val _ = export_theory();
