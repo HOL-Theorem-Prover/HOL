@@ -194,6 +194,8 @@ end;
 (* ------------------------------------------------------------------------- *)
 
 fun token_string s = String.concat ["\\", !texPrefix, "Token", s, "{}"];
+val KRrecordtypes = ref true
+val _ = register_btrace ("EmitTeX: K&R record type defns", KRrecordtypes)
 
 local
   fun greek s = "\\ensuremath{\\" ^ s ^ "}"
@@ -447,19 +449,42 @@ let val {add_string,add_break,begin_block,add_newline,end_block,add_xstring,...}
                 val (x,ty) = dest_var x
                 val ann = SOME (PPBackEnd.Literal PPBackEnd.FldName)
               in
-                (SX {s=x,sz=NONE,ann=ann}; S " : "; TP ty)
+                BB PP.INCONSISTENT 2;
+                SX {s=x,sz=NONE,ann=ann}; S " "; S ":"; BR(1,0);
+                TP0 ty;
+                EB()
               end
         in
-          (if !print_datatype_names_as_types then TP0 (snd(dest_var(hd l)))
-           else PT (hd l);
-           S " ="; BR(1,2);
-           BB PP.CONSISTENT 3;
-           S "<|"; S " ";
-           app (fn x => (pp_record x; S ";"; BR(1,0)))
-               (List.take(ll, length ll - 1));
-           pp_record (last ll);
-           S " "; S "|>";
-           EB())
+          if !KRrecordtypes then (
+            BB PP.CONSISTENT 3;
+            if !print_datatype_names_as_types then TP0 (snd(dest_var(hd l)))
+            else PT (hd l);
+            S " = ";
+            S "<|";
+            BR(1,0);
+            app (fn x => (pp_record x; S ";"; BR(1,0)))
+                (List.take(ll, length ll - 1));
+            pp_record (last ll);
+            BR(1,~3);
+            S "|>";
+            EB()
+          ) else (
+            BB PP.CONSISTENT 0;
+            if !print_datatype_names_as_types then TP0 (snd(dest_var(hd l)))
+            else PT (hd l);
+            S " =";
+            BR(1,2);
+            BB PP.CONSISTENT 2;
+            S "<|";
+            BR(1,0);
+            app (fn x => (pp_record x; S ";"; BR(1,0)))
+                (List.take(ll, length ll - 1));
+            pp_record (last ll);
+            BR(1,~2);
+            S "|>";
+            EB();
+            EB()
+          )
         end
 
     fun pp_binding (n, l) =
