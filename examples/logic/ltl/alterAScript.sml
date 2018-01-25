@@ -24,14 +24,14 @@ val isValidAlterA_def =
    are lower or equal to s
 *)
 
-val isWeakWithOrder_def = Define
-   `isWeakWithOrder A ord =
+val isVeryWeakWithOrder_def = Define
+   `isVeryWeakWithOrder A ord =
       partial_order ord A.states
       /\ !s a d. (s ∈ A.states) /\ ((a,d) ∈ (A.trans s))
                    ==> (!s'. (s' ∈ d) ==> ((s',s) ∈ ord))`;
 
-val isWeakAlterA_def =
-    Define `isWeakAlterA A = ?ord. isWeakWithOrder A ord`;
+val isVeryWeakAlterA_def =
+    Define `isVeryWeakAlterA A = ?ord. isVeryWeakWithOrder A ord`;
 
 val FINITE_LEMM = store_thm
   ("FINITE_LEMM",
@@ -120,7 +120,8 @@ val BRANCHRANGE_NONEMPTY = store_thm
 *)
 
 val acceptingAARun_def = Define
-`acceptingAARun aut run = !b. infBranchOf run b ==> FINITE {i | b i ∈ aut.final }`
+`acceptingAARun aut run =
+    !b. infBranchOf run b ==> FINITE {i | b i ∈ aut.final }`
 
 (*
   the language of the automaton
@@ -140,11 +141,12 @@ val alterA_lang_def = Define
 
 val BRANCH_WAA_LEMM = store_thm
   ("BRANCH_WAA_LEMM",
-  ``!b run aut w ord. validAARunFor aut run w /\ infBranchOf run b /\ isWeakWithOrder aut ord
+  ``!b run aut w ord. validAARunFor aut run w /\ infBranchOf run b
+                      /\ isVeryWeakWithOrder aut ord
             ==> !i. (b (i+1), b i) ∈ ord``,
    rpt strip_tac
    >> `!i. b i ∈ run.V i` by metis_tac[BRANCH_V_LEMM]
-   >> fs[isWeakWithOrder_def, infBranchOf_def, validAARunFor_def]
+   >> fs[isVeryWeakWithOrder_def, infBranchOf_def, validAARunFor_def]
    >> `(b (i + 1) ∈ run.V (i+1)) /\ (b i ∈ run.V i)` by metis_tac[]
    >> `b (i + 1) ∈ run.E(i, b i)` by metis_tac[]
    >> `∃a. (a,run.E (i,b i)) ∈ aut.trans (b i)` by metis_tac[]
@@ -156,13 +158,13 @@ val BRANCH_WAA_LEMM = store_thm
 val BRANCH_LIN_ORD = store_thm
   ("BRANCH_LIN_ORD",
    ``!b run aut w ord. infBranchOf run b /\ validAARunFor aut run w
-                     /\ isWeakWithOrder aut ord
+                     /\ isVeryWeakWithOrder aut ord
       ==> linear_order (rrestrict ord (branchRange b)) (branchRange b)``,
    rpt strip_tac
    >> `!i. b i ∈ run.V i` by metis_tac[BRANCH_V_LEMM]
    >> `!i. (b (i+1), b i) ∈ ord` by metis_tac[BRANCH_WAA_LEMM]
    >> fs[linear_order_def, branchRange_def, infBranchOf_def, validAARunFor_def]
-   >> fs[isWeakWithOrder_def]
+   >> fs[isVeryWeakWithOrder_def]
    >> fs[domain_def, partial_order_def,range_def, in_rrestrict,SUBSET_DEF,branchRange_def]
    >> rpt strip_tac
      >- (qexists_tac `i` >> fs[])
@@ -203,12 +205,12 @@ val BRANCH_LIN_ORD = store_thm
 val BRANCH_FIXP = store_thm
   ("BRANCH_FIXP",
     ``∀b run aut w ord.
-      infBranchOf run b ∧ validAARunFor aut run w ∧ isWeakAlterA aut /\ FINITE aut.states ⇒
+      infBranchOf run b ∧ validAARunFor aut run w ∧ isVeryWeakAlterA aut /\ FINITE aut.states ⇒
               ∃x. branchFixP b x``,
     `∀b run aut w ord.
-     infBranchOf run b ∧ validAARunFor aut run w ∧ isWeakWithOrder aut ord
+     infBranchOf run b ∧ validAARunFor aut run w ∧ isVeryWeakWithOrder aut ord
                   /\ FINITE aut.states ⇒
-     ∃x. branchFixP b x` suffices_by metis_tac[isWeakAlterA_def]
+     ∃x. branchFixP b x` suffices_by metis_tac[isVeryWeakAlterA_def]
    >> rpt strip_tac
    >> `linear_order (rrestrict ord (branchRange b)) (branchRange b)`
        by metis_tac[BRANCH_LIN_ORD]
@@ -241,14 +243,16 @@ val BRANCH_FIXP = store_thm
 
 val BRANCH_ACC_LEMM = store_thm
   ("BRANCH_ACC_LEMM",
-   ``!run w aut. validAARunFor aut run w /\ isWeakAlterA aut /\ FINITE aut.states
+   ``!run w aut. validAARunFor aut run w /\ isVeryWeakAlterA aut
+                      /\ FINITE aut.states
         ==> (acceptingAARun aut run =
-             (!b x. infBranchOf run b /\ branchFixP b x ==> ~(x ∈ aut.final)))``,
+            (!b x. infBranchOf run b /\ branchFixP b x ==> ~(x ∈ aut.final)))``,
    rpt strip_tac >> rw[EQ_IMP_THM]
       >- (CCONTR_TAC >> fs[acceptingAARun_def, branchFixP_def]
           >> `FINITE {i | b i ∈ aut.final}` by metis_tac[]
           >> `INFINITE 𝕌(:num)` by metis_tac[INFINITE_NUM_UNIV]
-          >> `!x y. ((\x. x+i) x = (\x. x+i) y) ==> (x = y)` by metis_tac[ADD_N_INJ_LEMM]
+          >> `!x y. ((\x. x+i) x = (\x. x+i) y) ==> (x = y)`
+               by metis_tac[ADD_N_INJ_LEMM]
           >> `INFINITE (IMAGE (\x. x+i) 𝕌(:num))` by rw[IMAGE_11_INFINITE]
           >> `INFINITE { x | x >= i }` by metis_tac[ADD_N_IMAGE_LEMM]
           >> `!m. (m ∈ { x | x >= i }) ==> (b m = x)` by simp[]
@@ -273,7 +277,8 @@ val BRANCH_ACC_LEMM = store_thm
 *)
 
 val infBranchSuffOf_def = Define
-  `infBranchSuffOf run i b = (b 0 ∈ run.V i) /\ !j. (b (j+1) ∈ run.E (j + i, b j))`;
+  `infBranchSuffOf run i b =
+             (b 0 ∈ run.V i) /\ !j. (b (j+1) ∈ run.E (j + i, b j))`;
 
 val appendToBranchSuff_def = Define
   `appendToBranchSuff b q = \n. if n = 0 then q else b (n-1)`;
@@ -813,8 +818,8 @@ val AUT_EX_1 = store_thm
 
 val AUT_EX_2 = store_thm
   ("AUT_EX_2",
-   ``~(isWeakAlterA A1)``,
-   simp[A1_def, isWeakAlterA_def, isWeakWithOrder_def] >> rw[] >>
+   ``~(isVeryWeakAlterA A1)``,
+   simp[A1_def, isVeryWeakAlterA_def, isVeryWeakWithOrder_def] >> rw[] >>
    `partial_order ord {1;2}
       ==> (?s. ((s = 1) \/ (s = 2)) /\ ?s'. ((s' = 1) \/ (s' = 2)) /\ ~((s, s') ∈ ord))`
       suffices_by metis_tac[]

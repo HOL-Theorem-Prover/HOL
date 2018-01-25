@@ -80,9 +80,9 @@ val reduceTransSimpl_def = Define`
 
 val REDUCE_IS_WEAK = store_thm
   ("REDUCE_IS_WEAK",
-   ``!aut. isWeakAlterA aut ==> isWeakAlterA (reduceTransSimpl aut)``,
-   rpt strip_tac >> fs[isWeakAlterA_def] >> qexists_tac `ord`
-   >> fs[isWeakWithOrder_def] >> Cases_on `aut` >> fs[reduceTransSimpl_def]
+   ``!aut. isVeryWeakAlterA aut ==> isVeryWeakAlterA (reduceTransSimpl aut)``,
+   rpt strip_tac >> fs[isVeryWeakAlterA_def] >> qexists_tac `ord`
+   >> fs[isVeryWeakWithOrder_def] >> Cases_on `aut` >> fs[reduceTransSimpl_def]
    >> fs[removeImplied_def] >> metis_tac[]
   );
 
@@ -104,7 +104,7 @@ val reduced_run_def = Define`
 val REDUCE_TRANS_CORRECT = store_thm
   ("REDUCE_TRANS_CORRECT",
    ``!aut. FINITE aut.states ∧ FINITE aut.alphabet ∧ isValidAlterA aut
-         ∧ isWeakAlterA aut
+         ∧ isVeryWeakAlterA aut
       ==> (alterA_lang aut = alterA_lang (reduceTransSimpl aut))``,
    rw[SET_EQ_SUBSET, SUBSET_DEF] >> rpt strip_tac >> fs[alterA_lang_def]
     >- (qexists_tac `reduced_run run x aut.trans` >> fs[runForAA_def]
@@ -213,7 +213,7 @@ val REDUCE_TRANS_CORRECT = store_thm
             )
          >- (`∀b f. infBranchOf (reduced_run run x aut.trans) b
                 ∧ branchFixP b f ⇒ f ∉ (reduceTransSimpl aut).final` suffices_by (
-                 `isWeakAlterA (reduceTransSimpl aut)` by metis_tac[REDUCE_IS_WEAK]
+                 `isVeryWeakAlterA (reduceTransSimpl aut)` by metis_tac[REDUCE_IS_WEAK]
                  >> `FINITE (reduceTransSimpl aut).states` by
                       (Cases_on `aut` >> fs[reduceTransSimpl_def])
                  >> metis_tac[BRANCH_ACC_LEMM]
@@ -315,16 +315,16 @@ val removeStatesSimpl_def = Define`
 
 val REACHREL_LEMM = store_thm
   ("REACHREL_LEMM",
-   ``!x f qs. (x ∈ reachRelFromSet (ltl2waa f) qs) ∧ (qs ⊆ tempSubForms f)
+   ``!x f qs. (x ∈ reachRelFromSet (ltl2vwaa f) qs) ∧ (qs ⊆ tempSubForms f)
             ==> (x ∈ tempSubForms f)``,
     simp[reachRelFromSet_def,reachRel_def]
-    >> `!f x y. (oneStep (ltl2waa f))^* x y
-                        ==> (!qs. x ∈ qs ∧ (qs ⊆ tempSubForms f)
-                                  ==> y ∈ tempSubForms f)` suffices_by metis_tac[]
+    >> `!f x y. (oneStep (ltl2vwaa f))^* x y
+                     ==> (!qs. x ∈ qs ∧ (qs ⊆ tempSubForms f)
+                               ==> y ∈ tempSubForms f)` suffices_by metis_tac[]
     >> gen_tac >> HO_MATCH_MP_TAC RTC_INDUCT >> rpt strip_tac >> fs[]
     >- metis_tac[SUBSET_DEF]
     >- (first_x_assum (qspec_then `tempSubForms f` mp_tac) >> simp[]
-                      >> rpt strip_tac >> fs[oneStep_def,ltl2waa_def,ltl2waa_free_alph_def]
+        >> rpt strip_tac >> fs[oneStep_def,ltl2vwaa_def,ltl2vwaa_free_alph_def]
                       >> `(x',x) ∈ TSF` by metis_tac[TRANS_REACHES_SUBFORMS]
                       >> metis_tac[TSF_def,TSF_TRANS_LEMM,transitive_def,IN_DEF]
        )
@@ -332,9 +332,9 @@ val REACHREL_LEMM = store_thm
 
 val REDUCE_STATE_IS_WEAK = store_thm
   ("REDUCE_STATE_IS_WEAK",
-   ``!aut. (isWeakAlterA aut ∧ isValidAlterA aut)
-               ==> isWeakAlterA (removeStatesSimpl aut)``,
-   simp[isWeakAlterA_def,isWeakWithOrder_def] >> rpt strip_tac
+   ``!aut. (isVeryWeakAlterA aut ∧ isValidAlterA aut)
+               ==> isVeryWeakAlterA (removeStatesSimpl aut)``,
+   simp[isVeryWeakAlterA_def,isVeryWeakWithOrder_def] >> rpt strip_tac
    >> Cases_on `aut`
    >> simp[removeStatesSimpl_def,ALTER_A_component_equality]
    >> qabbrev_tac `reachable =

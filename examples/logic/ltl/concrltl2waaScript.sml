@@ -683,7 +683,7 @@ val TRANS_CONCR_LEMM = store_thm
 val ONE_STEP_TRANS_CONCR = store_thm
   ("ONE_STEP_TRANS_CONCR",
    ``!f x y. (x ∈ tempSubForms f)
-              ==> (oneStep (ltl2waa f) x y)
+              ==> (oneStep (ltl2vwaa f) x y)
                     = (y ∈ BIGUNION
                          (set (MAP (SND o (concr2AbstractEdge (props f)))
                                    (trans_concr x))))``,
@@ -702,7 +702,7 @@ val ONE_STEP_TRANS_CONCR = store_thm
            >> fs[MEM_MAP,MAP_o] >> qexists_tac `e` >> fs[] >> metis_tac[SND]
           )
    )
-   >> simp[oneStep_def,ltl2waa_def,ltl2waa_free_alph_def]
+   >> simp[oneStep_def,ltl2vwaa_def,ltl2vwaa_free_alph_def]
   );
 
 val tempSubfCl_def = Define`
@@ -1292,10 +1292,10 @@ val EXP_GRAPH_REACHABLE = store_thm
    ``!f g ls.
             (!g2.
               (!x. MEM x ls
-                   ==> x ∈ reachRelFromSet (ltl2waa f) (set (graphStates g)))
+                   ==> x ∈ reachRelFromSet (ltl2vwaa f) (set (graphStates g)))
             ∧ (!x. MEM x (graphStates g)
                    ==> x ∈ reachRelFromSet
-                           (ltl2waa f) (BIGUNION (ltl2waa f).initial))
+                           (ltl2vwaa f) (BIGUNION (ltl2vwaa f).initial))
             ∧ (!x. MEM x ls ==> MEM x (graphStates g))
             ∧ (unique_node_formula g)
             (* ∧ (first_flw_has_max_counter g) *)
@@ -1304,8 +1304,8 @@ val EXP_GRAPH_REACHABLE = store_thm
             ∧ (expandGraph g ls = SOME g2)
             ∧ (wfg g)
          ==> (!x. MEM x (graphStates g2)
-                  ==> ((x ∈ reachRelFromSet (ltl2waa f)
-                             (BIGUNION (ltl2waa f).initial))
+                  ==> ((x ∈ reachRelFromSet (ltl2vwaa f)
+                             (BIGUNION (ltl2vwaa f).initial))
                     ∧ (x ∈ tempSubForms f))))``,
    gen_tac
    >> HO_MATCH_MP_TAC (theorem "expandGraph_ind")
@@ -1370,7 +1370,7 @@ val EXP_GRAPH_REACHABLE = store_thm
         >> `A` suffices_by fs[]
         >> qunabbrev_tac `A` >> rpt strip_tac
         >- (`MEM f' (graphStates g')` by fs[]
-            >> `reachRel (ltl2waa f) f' x'` suffices_by (
+            >> `reachRel (ltl2vwaa f) f' x'` suffices_by (
                   simp[reachRelFromSet_def] >> metis_tac[inAuto_def]
             )
             >> fs[MEM_FILTER]
@@ -1379,8 +1379,8 @@ val EXP_GRAPH_REACHABLE = store_thm
                by metis_tac[FOLDR_LEMM6,nub_set,MEM]
             >> first_x_assum (qspec_then `trans_concr f'` mp_tac) >> simp[]
             >> rpt strip_tac >> simp[reachRel_def]
-            >> `oneStep (ltl2waa f) f' x'` suffices_by fs[]
-            >> simp[oneStep_def,ltl2waa_def,ltl2waa_free_alph_def]
+            >> `oneStep (ltl2vwaa f) f' x'` suffices_by fs[]
+            >> simp[oneStep_def,ltl2vwaa_def,ltl2vwaa_free_alph_def]
             >> `(concr2AbstractEdge (props f) t) ∈ trans (POW (props f)) f'` by (
                  `MEM (concr2AbstractEdge (props f) t)
                       (MAP (concr2AbstractEdge (props f)) (trans_concr f'))`
@@ -1390,11 +1390,11 @@ val EXP_GRAPH_REACHABLE = store_thm
             >> Cases_on `concr2AbstractEdge (props f) t`
             >> qexists_tac `q` >> qexists_tac `r` >> simp[]
             >> Cases_on `t` >> fs[concr2AbstractEdge_def]
-            >> `f' ∈ reachRelFromSet (ltl2waa f) (set (graphStates g))`
+            >> `f' ∈ reachRelFromSet (ltl2vwaa f) (set (graphStates g))`
                by metis_tac[]
             >> metis_tac[REACHREL_LEMM]
            )
-        >- (`x' ∈ reachRelFromSet (ltl2waa f) (set (graphStates g))`
+        >- (`x' ∈ reachRelFromSet (ltl2vwaa f) (set (graphStates g))`
                by metis_tac[]
             >> fs[reachRelFromSet_def] >> qexists_tac `x''` >> simp[]
             >> `MEM x'' (graphStates addedNodesG)`
@@ -1424,16 +1424,16 @@ val EXP_GRAPH_REACHABLE = store_thm
                 >> first_x_assum (qspec_then `trans_concr f'` mp_tac)
                 >> simp[] >> rpt strip_tac
                 >> `f' ∈
-                      reachRelFromSet (ltl2waa f)
+                      reachRelFromSet (ltl2vwaa f)
                       (set (graphStates g))` by fs[]
                 >> `f' ∈ tempSubForms f` by metis_tac[REACHREL_LEMM]
                 >> fs[reachRelFromSet_def]
                 >> `∃x'''.
-                      reachRel (ltl2waa f) x''' x'' ∧
-                      ∃s. x''' ∈ s ∧ s ∈ (ltl2waa f).initial` by fs[]
+                      reachRel (ltl2vwaa f) x''' x'' ∧
+                      ∃s. x''' ∈ s ∧ s ∈ (ltl2vwaa f).initial` by fs[]
                 >> rpt strip_tac >> qexists_tac `x'''` >> simp[]
                 >> (fs[reachRel_def]
-                     >> `oneStep (ltl2waa f) f' x'` by (
+                     >> `oneStep (ltl2vwaa f) f' x'` by (
                          `MEM (concr2AbstractEdge (props f) t)
                               (MAP (concr2AbstractEdge (props f))
                                    (trans_concr f'))` by (
@@ -1445,7 +1445,7 @@ val EXP_GRAPH_REACHABLE = store_thm
                          >> Cases_on `concr2AbstractEdge (props f) t`
                          >> simp[oneStep_def] >> qexists_tac `q`
                          >> qexists_tac `r`
-                         >> simp[ltl2waa_def,ltl2waa_free_alph_def]
+                         >> simp[ltl2vwaa_def,ltl2vwaa_free_alph_def]
                          >> Cases_on `t` >> fs[concr2AbstractEdge_def]
                       )
                      >> metis_tac[RTC_SUBSET,RTC_RTC]
@@ -1502,7 +1502,7 @@ val EXP_GRAPH_REACHABLE = store_thm
 val EXP_AUTO_ALL_REACHABLE = store_thm
   ("EXP_AUTO_ALL_REACHABLE",
    ``!f g ls g2 x. (!x. MEM x (graphStates g) ∧ ~ MEM x ls
-                            ==> (!y. oneStep (ltl2waa f) x y
+                            ==> (!y. oneStep (ltl2vwaa f) x y
                                      ==> MEM y (graphStates g)))
                      ∧ (expandGraph g ls = SOME g2)
                      ∧ (!x. MEM x ls ==> x ∈ tempSubForms f)
@@ -1511,7 +1511,7 @@ val EXP_AUTO_ALL_REACHABLE = store_thm
                      ∧ (unique_node_formula g)
                      ∧ (flws_sorted g)
                    ==> (!x. MEM x (graphStates g2)
-                          ==> (!y. oneStep (ltl2waa f) x y
+                          ==> (!y. oneStep (ltl2vwaa f) x y
                                 ==> (MEM y (graphStates g2))))``,
    gen_tac >> HO_MATCH_MP_TAC (theorem "expandGraph_ind") >> rpt strip_tac
    >> fs[]
@@ -1935,7 +1935,7 @@ val EXP_WAA_CORRECT = store_thm
    ``!φ. case expandAuto_init φ of
           | NONE => F
           | SOME concrA =>
-            concr2AbstrAA concrA = removeStatesSimpl (ltl2waa φ)``,
+            concr2AbstrAA concrA = removeStatesSimpl (ltl2vwaa φ)``,
    rpt strip_tac >> Cases_on `expandAuto_init φ` >> fs[]
     >- (fs[expandAuto_init_def] >> POP_ASSUM mp_tac
         >> Q.HO_MATCH_ABBREV_TAC `(expandGraph G FS = NONE) ==> F`
@@ -1956,7 +1956,7 @@ val EXP_WAA_CORRECT = store_thm
            )
        )
     >- (rename [‘concr2AbstrAA x’] >> Cases_on `x` >> simp[concr2AbstrAA_def]
-        >> simp[removeStatesSimpl_def,ltl2waa_def,ltl2waa_free_alph_def]
+        >> simp[removeStatesSimpl_def,ltl2vwaa_def,ltl2vwaa_free_alph_def]
         >> Q.HO_MATCH_ABBREV_TAC `STATES ∧ INIT ∧ FINAL ∧ ALPH ∧ TRANS`
         >> `(INIT ==> STATES) ∧ INIT ∧ (STATES ==> FINAL) ∧ ALPH
            ∧ (ALPH ∧ STATES ==> TRANS)`
@@ -1974,7 +1974,7 @@ val EXP_WAA_CORRECT = store_thm
             >> strip_tac >> strip_tac >> strip_tac >> strip_tac
             >- (simp[SUBSET_DEF,concr2Abstr_states_def] >> rpt strip_tac
                >> `!x. MEM x (nub (FLAT (tempDNF_concr φ)))
-                   ==> x ∈ reachRelFromSet (ltl2waa φ) (set (graphStates G0))`
+                   ==> x ∈ reachRelFromSet (ltl2vwaa φ) (set (graphStates G0))`
                      by (qunabbrev_tac `G0` >> rpt strip_tac
                          >> simp[reachRelFromSet_def] >> qexists_tac `x''`
                          >> simp[reachRel_def,RTC_REFL]
@@ -1984,8 +1984,8 @@ val EXP_WAA_CORRECT = store_thm
                >> `(∀x.
                     MEM x (graphStates G0) ⇒
                     x ∈ reachRelFromSet
-                            (ltl2waa φ)
-                            (BIGUNION (ltl2waa φ).initial))
+                            (ltl2vwaa φ)
+                            (BIGUNION (ltl2vwaa φ).initial))
                    ∧ (set (graphStates G0) = set (nub (FLAT (tempDNF_concr φ))))` by (
                      qunabbrev_tac `G0` >> simp[reachRelFromSet_def]
                      >> Q.HO_MATCH_ABBREV_TAC
@@ -2007,7 +2007,7 @@ val EXP_WAA_CORRECT = store_thm
                        >> `(set l') ∈ tempDNF φ`
                            by metis_tac[TEMPDNF_CONCR_LEMM]
                        >> qexists_tac `set l'`
-                       >> fs[ltl2waa_def,ltl2waa_free_alph_def,initForms_def])
+                       >> fs[ltl2vwaa_def,ltl2vwaa_free_alph_def,initForms_def])
                     >- (qunabbrev_tac `C`
                         >> `set (graphStates (empty:(α nodeLabelAA, α edgeLabelAA) gfg))
                           ∪ set (nub (FLAT (tempDNF_concr φ)))
@@ -2049,7 +2049,7 @@ val EXP_WAA_CORRECT = store_thm
                      >> fs[]
                  )
                >> imp_res_tac EXP_GRAPH_REACHABLE
-               >> fs[ltl2waa_def,ltl2waa_free_alph_def,initForms_def]
+               >> fs[ltl2vwaa_def,ltl2vwaa_free_alph_def,initForms_def]
                >> rw[]
                )
             >- (simp[SUBSET_DEF] >> rpt strip_tac
@@ -2081,7 +2081,7 @@ val EXP_WAA_CORRECT = store_thm
                             `q_n' ∈ _ g`]
                      >> `!x. MEM x (graphStates G0)
                            ∧ ~ MEM x (nub (FLAT (tempDNF_concr φ)))
-                           ==> (!y. oneStep (ltl2waa φ) x y
+                           ==> (!y. oneStep (ltl2vwaa φ) x y
                                     ==> MEM y (graphStates G0))` by (
                           rpt strip_tac >> qunabbrev_tac `G0`
                           >> `MEM x' (nub (FLAT (tempDNF_concr φ)))` suffices_by fs[]
@@ -2133,7 +2133,7 @@ val EXP_WAA_CORRECT = store_thm
                      >> first_x_assum (qspec_then `q_n` mp_tac) >> simp[]
                      >> rpt strip_tac
                      >> first_x_assum (qspec_then `q_n'` mp_tac)
-                     >> simp[ltl2waa_def,ltl2waa_free_alph_def]
+                     >> simp[ltl2vwaa_def,ltl2vwaa_free_alph_def]
                      >> metis_tac[GRAPHSTATES_CONCR_LEMM,MEM]
                     )
                )
@@ -2499,11 +2499,11 @@ val EXP_WAA_AP = store_thm
    >> `!φ. case expandAuto_init φ of
              | NONE => F
              | SOME concrA =>
-               concr2AbstrAA concrA = removeStatesSimpl (ltl2waa φ)`
+               concr2AbstrAA concrA = removeStatesSimpl (ltl2vwaa φ)`
       by metis_tac[EXP_WAA_CORRECT]
    >> first_x_assum (qspec_then `f` mp_tac) >> simp[] >> strip_tac
    >> `set aP = props f` by (
-       fs[ltl2waa_def,ltl2waa_free_alph_def,removeStatesSimpl_def]
+       fs[ltl2vwaa_def,ltl2vwaa_free_alph_def,removeStatesSimpl_def]
          >> fs[concr2AbstrAA_def] >> metis_tac[POW_11]
    )
    >> fs[expandAuto_init_def]
