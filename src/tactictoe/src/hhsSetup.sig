@@ -14,10 +14,10 @@ sig
   (* evaluation *)
   val hhs_eval_flag : bool ref
   val one_in_n      : unit -> bool
-  val hhs_evlet_flag : bool ref
+  val hhs_evlet_flag : bool ref (* val hhs_evletonly_flag : bool ref *)
   val hhs_evprove_flag : bool ref
-  
   val hh_only_flag  : bool ref
+  val test_eval_hook : (string -> bool) ref
   
   (* preselection *)
   val hhs_maxselect_pred : int ref
@@ -27,11 +27,8 @@ sig
   val hhs_mc_flag        : bool ref
   val hhs_mcrecord_flag  : bool ref
   val hhs_mcnoeval_flag  : bool ref
-  val hhs_mctriveval_flag : bool ref
   val hhs_mc_radius      : int ref
   val hhs_mc_coeff       : real ref
-  val hhs_mcactive_flag  : bool ref
-  val hhs_timedepth_flag : bool ref
   val hhs_width_coeff    : real ref
   
   (* metis + holyhammer + synthetizing *)
@@ -39,9 +36,6 @@ sig
   val hhs_metishammer_flag : bool ref
   val hhs_metisrecord_flag : bool ref
   val hhs_namespacethm_flag : bool ref
-  val hhs_internalthm_flag : bool ref
-  val hhs_metisortho_flag : bool ref
-  val hhs_thmortho_flag : bool ref
   
   val hhs_metis_time  : real ref
   val hhs_metis_npred : int ref
@@ -61,7 +55,7 @@ sig
   val hhs_minimize_flag : bool ref
   
   (* allows to test for the name of the theorem before evaluation *)
-  val test_eval_hook : (string -> bool) ref
+  
   
   (* init search *)
   val set_isearch : unit -> unit

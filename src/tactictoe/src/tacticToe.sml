@@ -29,11 +29,11 @@ fun select_thmfeav gfea =
       fun f x = (x, snd (dfind x revdict))
         handle NotFound => 
           (debug ("dfind: " ^ x); raise ERR "dfind" x)
-      val l1 = debug_t "assoc_thmfea" (map f) l0
+      val newfeav = debug_t "assoc_thmfea" (map f) l0
     in
-      (symweight, l1)
+      ((symweight,feav,revdict), newfeav)
     end
-  else (dempty Int.compare, [])
+  else ((dempty Int.compare, [], dempty String.compare), [])
 
 (* ----------------------------------------------------------------------
    Evaluating holyhammer
@@ -43,11 +43,12 @@ val hh_eval_ref = ref 0
 
 fun hh_eval goal =
   let 
-    val (thmsymweight,thmfeav,_) = all_thmfeav ()
+    val (thmsymweight,thmfeav,revdict) = all_thmfeav ()
     val _ = incr hh_eval_ref
     val index = !hh_eval_ref + hash_string (current_theory ())
     fun hammer goal =
-      (!hh_stac_glob) index (thmsymweight,thmfeav) (!hhs_hhhammer_time) goal
+      (!hh_stac_glob) index (thmsymweight,thmfeav,revdict) 
+        (!hhs_hhhammer_time) goal
     val _ = debug ("hh_eval " ^ int_to_string index)
     val _ = debug_proof ("hh_eval " ^ int_to_string index)
     val (staco,t) = add_time hammer goal 
@@ -57,9 +58,16 @@ fun hh_eval goal =
     case staco of
       NONE      => debug_proof ("Proof status: Time Out")
     | SOME stac => 
-      let val b = app_tac 2.0 (tactic_of_sml stac) goal in
-        if isSome b then debug_proof ("Reconstructed: Yes") else ();
-        debug_proof ("Proof found: " ^ stac)
+      let 
+        val newstac = cosmetic_stac (pretty_mini_stac 1.0 stac goal [])
+        val tac = tactic_of_sml newstac
+        val (b,t) = add_time (app_tac 2.0 tac) goal 
+      in
+        if isSome b 
+          then debug_proof ("Reconstructed: " ^ Real.toString t) 
+          else debug_proof ("Reconstructed: None")
+        ;
+        debug_proof ("Proof found: " ^ newstac)
       end
   end
 
@@ -169,7 +177,7 @@ fun main_tactictoe goal =
     val goalfea = fea_of_goal goal       
     val (stacsymweight, stacfeav, tacdict) = 
       debug_t "select_stacfeav" select_stacfeav goalfea
-    val (thmsymweight, thmfeav) = 
+    val ((pthmsymweight,pthmfeav,pthmrevdict), thmfeav) = 
       debug_t "select_thmfeav" select_thmfeav goalfea
     val (mcsymweight, mcfeav) = 
       debug_t "select_mcfeav" select_mcfeav stacfeav      
@@ -177,11 +185,12 @@ fun main_tactictoe goal =
     fun stacpredictor g =
       stacknn_uniq stacsymweight (!hhs_maxselect_pred) stacfeav (fea_of_goal g)
     fun thmpredictor n g = 
-      thmknn (thmsymweight,thmfeav) n (fea_of_goal g)
+      thmknn (pthmsymweight,thmfeav) n (fea_of_goal g)
     fun mcpredictor gl =
       mcknn mcsymweight (!hhs_mc_radius) mcfeav (fea_of_goallist gl)
     fun hammer pid goal = 
-      (!hh_stac_glob) pid (thmsymweight,thmfeav) (!hhs_hhhammer_time) goal
+      (!hh_stac_glob) pid (pthmsymweight,pthmfeav,pthmrevdict) 
+         (!hhs_hhhammer_time) goal
   in
     debug_t "Search" 
       (imperative_search
@@ -228,9 +237,7 @@ fun tt_tac goal = (tactictoe goal) goal
    ---------------------------------------------------------------------- *)
 
 fun string_stac stac g gl =
-  let val stac0 = pretty_mini_stac 1.0 stac g gl in
-    cosmestic_stac stac0
-  end
+  cosmetic_stac (pretty_mini_stac 1.0 stac g gl)
 
 val next_tac_glob = ref []
 val next_tac_number = ref 5

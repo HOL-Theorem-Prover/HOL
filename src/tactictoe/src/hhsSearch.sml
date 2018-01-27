@@ -210,8 +210,8 @@ fun init_eval pripol pid =
     val prec = dfind pid (!proofdict)
     val {visit,pending,goalarr,prioreval,cureval,priorpolicy,...} = prec
     val eval =
-      if !hhs_mcnoeval_flag then 0.0
-      else if !hhs_mctriveval_flag then 1.0
+      if !hhs_mcnoeval_flag 
+      then 0.0
       else (!mcpredictor_glob) (array_to_list (#goalarr prec))
   in
     priorpolicy := pripol;
@@ -511,20 +511,21 @@ fun standard_node_find l0 =
     val _ = debug_search "standard_node_find"
     fun give_score (pid,prec) =
       let
-        val gn = hd (!(#pending prec)) handle _ => debug_err "m4"
+        val gn = hd (!(#pending prec)) handle Empty => debug_err "m4"
         val pred = Array.sub (#predarr prec, gn)
-        val sc = snd (hd pred) handle _ => debug_err "m3"
+        val sc = snd (hd pred) handle Empty => debug_err "m3"
       in
         (pid, sc)
       end
     val l1 = map give_score l0
     val l2 = dict_sort compare_rmin l1
-    val (pid,score) = hd l2 handle _ => debug_err "m0"
+    val (pid,score) = hd l2 handle Empty => debug_err "m0"
     val prec = dfind pid (!proofdict)
     val _ = incr (#width prec)
-    val gn = hd (!(#pending prec)) handle _ => debug_err "m1"
+    val gn = hd (!(#pending prec)) handle Empty => debug_err "m1"
     val ((stac,_,_,_),_) = 
-      hd (Array.sub (#predarr prec, gn)) handle _ => debug_err "m2"
+      hd (Array.sub (#predarr prec, gn)) 
+      handle Empty => debug_err "m2" | Subscript => debug_err "m2"
   in
     debug_search ("Find " ^ int_to_string pid ^ " " ^ Real.toString score ^
       "\n  " ^ stac);
@@ -554,10 +555,7 @@ fun mc_node_find pid =
         (cid, meaneval + (!hhs_mc_coeff) * (pripol / curpol))
       end
     (* sort and select node with best selection score *) 
-    val l0 = 
-      if !hhs_mcactive_flag 
-      then self_selsc :: filter (is_active o fst) (List.map f (!children))
-      else self_selsc :: List.map f (!children)
+    val l0 = self_selsc :: List.map f (!children)
     val l1 = dict_sort compare_rmax l0
     val (selid,_) = hd l1
   in

@@ -13,6 +13,7 @@ sig
   | SConstructor of string
   | SException   of string
   
+  val unquoteString        : string -> string
   val hol_scripts          : unit -> string list
   val hol_examples_scripts : unit -> string list
   val cakeml_theories      : string -> string list
