@@ -435,4 +435,23 @@ in
       end
 end
 
+(* ----------------------------------------------------------------------
+    PROVEHYP_THEN ttac th
+
+    th must be of form |- l ==> r
+
+    Application of tactic sets up l as a subgoal, and in the second
+    branch applies ttac to |- r
+   ---------------------------------------------------------------------- *)
+
+fun PROVEHYP_THEN t2tac th g =
+  let
+    val (l, _) = dest_imp (concl th)
+  in
+    Tactical.SUBGOAL_THEN l (fn lth => t2tac lth (MP th lth))
+  end g
+
+val provehyp_then = PROVEHYP_THEN
+
+
 end

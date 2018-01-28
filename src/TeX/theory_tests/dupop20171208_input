@@ -1,3 +1,7 @@
 \HOLthm{dupop20171208a.datatype_testtype}
 
 \HOLthm{dupop20171208b.datatype_testtype}
+
+\HOLthm[tr'EmitTeX: K&R record type defns'=0]{dupop20171208a.datatype_testtype}
+
+\HOLthm[tr'EmitTeX: K&R record type defns'=0]{dupop20171208b.datatype_testtype}

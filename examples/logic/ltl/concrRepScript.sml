@@ -247,7 +247,6 @@ val TRANSFORMLABEL_SUBSET2 = store_thm
   );
 
 
-
 (* val TRANSFORM_LABEL_POS = store_thm *)
 (*   ("TRANSFORM_LABEL_POS", *)
 (*    ``!aP neg a pos. a ∈ aP ==> *)

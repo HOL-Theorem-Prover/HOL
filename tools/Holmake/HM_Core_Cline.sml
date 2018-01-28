@@ -160,7 +160,7 @@ val core_option_descriptions = [
     desc = mkBoolT #debug},
   { help = "don't make this target", long = [], short = "d",
     desc = ReqArg (cons_dontmakes, "target") },
-  { help = "fast build (ignore tactic failure)", long = ["fast"], short = "",
+  { help = "fast build (replace tactics w/cheat)", long = ["fast"], short = "",
     desc = mkBoolT #fast },
   { help = "show this message", long = ["help"], short = "h",
     desc = mkBoolT #help },
