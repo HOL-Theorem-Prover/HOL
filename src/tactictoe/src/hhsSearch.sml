@@ -181,6 +181,7 @@ fun add_metis pred =
     then fake_score "tactictoe_metis" :: pred
     else pred
 
+(* still used although MCTS should at some point entirely replace it *)
 fun estimate_distance depth pred =
   let
     val width = ref 0.0  
@@ -204,6 +205,7 @@ fun array_to_list a =
     rev (Array.foldl f [] a)
   end
   
+(* wasteful as it re-evaluates the same list of goals multiple times *)
 fun init_eval pripol pid =
   let
     val _ = debug_search "mcts evaluation"
@@ -415,11 +417,10 @@ fun pred_sthml n g =
     end
 
 fun inst_read stac g =
-  if (!hhs_thmlarg_flag orelse !hhs_termarg_flag) andalso 
-     is_absarg_stac stac 
+  if (!hhs_thmlarg_flag orelse !hhs_termarg_flag) andalso is_absarg_stac stac 
   then 
     (
-    dfind (stac,g) (!inst_dict) handle _ =>
+    dfind (stac,g) (!inst_dict) handle NotFound =>
     let
       val _ = debug_search ("instantiating: " ^ stac)
       val sl = 
@@ -429,6 +430,8 @@ fun inst_read stac g =
       val thmls = String.concatWith " , " (map dbfetch_of_string sl)
       val newstac = inst_stac thmls g stac
       val newtac = timed_tactic_of_sml newstac 
+        handle _ => 
+        (debug ("Warning: inst_read: " ^ newstac); raise ERR "inst_read" "") 
     in
       inst_dict := dadd (stac,g) (newstac,newtac,!hhs_tactic_time) (!inst_dict);
       debug_search ("to: " ^ newstac);
@@ -437,7 +440,7 @@ fun inst_read stac g =
     )
   else if stac = "tactictoe_metis" then
     (
-    dfind (stac,g) (!inst_dict) handle _ =>
+    dfind (stac,g) (!inst_dict) handle NotFound =>
     let 
       val sl = pred_sthml (!hhs_metis_npred) g
       val newstac = mk_metis_call sl
@@ -457,7 +460,8 @@ fun apply_stac pid pardict trydict_unref stac g =
     val _ = stac_counter := !stac_counter + 1
     (* instantiation and reading *)
     val (newstac,newtac,tim) = inst_read stac g 
-      handle _ => debug_err ("apply_stac: " ^ stac)
+      handle _ => (debug ("Warning: apply_stac: " ^ stac); 
+                   ("Tactical.NO_TAC", NO_TAC, !hhs_tactic_time))
     val _ = if newstac <> stac then update_curstac newstac pid else ()
     (* execution *)
     val glo = dfind (newstac,g) (!stacgoal_cache) 
@@ -656,6 +660,7 @@ fun node_create_gl pripol tactime gl pid =
       map (add_hammer o add_metis o estimate_distance cost o mk_pred) gl  
     val pending0 = number_list 0 predlist0
     val pending1 = map (fn (gn,pred) => (gn, (snd o hd) pred)) pending0
+    (* Essentially reverse the order in which goals are processed *)
     val pending = map fst (dict_sort compare_rmax pending1)
     (* Updating list of parents *)
     val new_pardict = dadd goal () (#pardict prec)

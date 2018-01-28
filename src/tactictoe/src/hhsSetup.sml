@@ -115,26 +115,26 @@ fun set_esearch () =
   hhs_search_time    := Time.fromReal 60.0;
   hhs_tactic_time    := 0.02;
   hhs_cache_flag     := true;
-  hhs_width_coeff    := 1.0;
+  hhs_width_coeff    := 1.0; (* has no effect as long as it is positive *)
   hhs_mc_flag        := true;
-  hhs_mcrecord_flag  := true;
-  hhs_mcnoeval_flag  := false;
+  hhs_mcnoeval_flag  := true;
+  hhs_mcrecord_flag  := false;
   hhs_mc_radius      := 10;
   hhs_mc_coeff       := Math.sqrt 2.0;
   (* metis *)
   hhs_metisexec_flag   := can load "metisTools";
   if !hhs_metisexec_flag then update_metis_tac () else ();
+  hhs_metishammer_flag := (false andalso !hhs_metisexec_flag);
   hhs_metis_npred      := 16;
   hhs_metis_time       := 0.1;
-  hhs_metishammer_flag := (true andalso !hhs_metisexec_flag);
-  (* eprover parameters *)
-  hhs_hhhammer_flag := (true andalso can update_hh_stac ());
+  (* eprover parameters (todo: add number of premises) *)
+  hhs_hhhammer_flag := (false andalso can update_hh_stac ());
   hhs_hhhammer_time := 5;
   hhs_async_limit   := 1;
   (* synthesis *)
-  hhs_thmlarg_flag   := true;
+  hhs_thmlarg_flag   := false;
   hhs_thmlarg_number := 16;
-  hhs_termarg_flag   := false; (* not helpful *)
+  hhs_termarg_flag   := false; (* to be improved *)
   (* result *)
   hhs_minimize_flag := true;
   hhs_prettify_flag := true
@@ -149,22 +149,17 @@ fun set_erecord () =
   (* learning *)
   hhs_ortho_flag      := true;
   hhs_ortho_number    := 20;
-  hhs_selflearn_flag  := false; 
-  (* Self-learning issue: 
-     metis should declare it is using local variables by 
-     adding a local_tag but it would affect holyhammer 
-     where you don't want a local tag. *)
+  hhs_selflearn_flag  := false; (* Self-learning issue: local tags *)
   (* metis learning *)
   hhs_metisexec_flag   := can load "metisTools"; 
   hhs_metisrecord_flag := true;
   (* evaluation *)
   hhs_eval_flag    := true;
   hhs_evprove_flag := false;
-  hhs_evlet_flag   := false;
-  (* hhs_evletonly_flag := true; *)
+  hhs_evlet_flag   := false; (* hhs_evletonly_flag := true; *)
   one_in_option    := SOME (0,10);
   hh_only_flag     := 
-     (false andalso can update_hh_stac () andalso can load "metisTools")
+    (false andalso can update_hh_stac () andalso can load "metisTools")
   )
 
 val set_isearch_hook = ref (fn () => ())

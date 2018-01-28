@@ -181,13 +181,20 @@ fun main_tactictoe goal =
       debug_t "select_thmfeav" select_thmfeav goalfea
     val (mcsymweight, mcfeav) = 
       debug_t "select_mcfeav" select_mcfeav stacfeav      
+    val mc_cache = ref (dempty (list_compare goal_compare))
     (* predictors *)
     fun stacpredictor g =
       stacknn_uniq stacsymweight (!hhs_maxselect_pred) stacfeav (fea_of_goal g)
     fun thmpredictor n g = 
       thmknn (pthmsymweight,thmfeav) n (fea_of_goal g)
     fun mcpredictor gl =
-      mcknn mcsymweight (!hhs_mc_radius) mcfeav (fea_of_goallist gl)
+      dfind gl (!mc_cache) handle NotFound =>
+      let 
+        val nl = fea_of_goallist gl
+        val r = mcknn mcsymweight (!hhs_mc_radius) mcfeav nl
+      in
+        mc_cache := dadd gl r (!mc_cache); r
+      end
     fun hammer pid goal = 
       (!hh_stac_glob) pid (pthmsymweight,pthmfeav,pthmrevdict) 
          (!hhs_hhhammer_time) goal
@@ -214,11 +221,9 @@ fun debug_eval_status r =
   | ProofTimeOut   => debug_proof "Proof status: Time Out"
   | Proof s        => debug_proof ("Proof found: " ^ s)
 
-(* integer_words return errors hopefully no other *)
 fun eval_tactictoe name goal =
   if !hh_only_flag 
-    then hh_eval goal 
-      handle _ => debug "Error: hh_eval" 
+  then hh_eval goal handle _ => debug "Error: hh_eval" 
   else debug_eval_status (hide_out main_tactictoe goal)
 
 fun tactictoe goal =

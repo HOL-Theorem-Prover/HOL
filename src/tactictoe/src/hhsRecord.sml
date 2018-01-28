@@ -286,14 +286,14 @@ fun org_tac tac g =
     if null gl 
     then (gl,v)
     else (
-         debug "Error: org_tac: not null";
+         debug "Record error: org_tac: not null";
          ignore (hhsExec.exec_sml "cache" "numSimps.clear_arith_caches ()"); 
          tac g
          )
   end
   handle _ => 
      (
-     debug "Error: org_tac";
+     debug "Record error: org_tac";
      ignore (hhsExec.exec_sml "cache" "numSimps.clear_arith_caches ()"); 
      tac g
      )
@@ -332,9 +332,9 @@ fun try_record_proof name lflag tac1 tac2 g =
         in 
           if null (fst r) 
           then r
-          else (debug "Error: try_record_proof: not null"; org_tac tac2 g)
+          else (debug "Record error: try_record_proof: not null"; org_tac tac2 g)
         end
-        handle _ => (debug "Error: try_record_proof"; org_tac tac2 g)
+        handle _ => (debug "Record error: try_record_proof"; org_tac tac2 g)
   in    
     result
   end

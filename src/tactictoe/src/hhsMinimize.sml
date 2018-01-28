@@ -300,12 +300,10 @@ fun proof_length proof = case proof of
 
 fun reconstruct_aux g proof sproof =
   let
-    val tac    = tactic_of_sml sproof
-      handle _ => raise ERR "reconstruct" sproof
-    val tim = 2.0 * (Time.toReal (!hhs_search_time))
+    val tim    = Time.toReal (!hhs_search_time)
+    val tac    = tactic_of_sml sproof handle _ => NO_TAC
     val new_tim = snd (add_time (timeOut tim Tactical.TAC_PROOF) (g,tac))
-      handle _ => 
-      (debug ("Error: reconstruct: " ^ sproof);tim)
+      handle _ => (debug ("Warning: reconstruct: " ^ sproof); tim)
   in 
     debug_proof ("proof length: " ^ int_to_string (proof_length proof));
     debug_proof ("proof time: " ^ Real.toString new_tim);
@@ -313,8 +311,7 @@ fun reconstruct_aux g proof sproof =
   end
 
 fun unsafe_reconstruct g proof =
-  reconstruct_aux g proof 
-    (cosmetic_stac (string_of_proof proof))          
+  reconstruct_aux g proof (cosmetic_stac (string_of_proof proof))          
 
 fun safe_reconstruct g proof =
   reconstruct_aux g proof (safestring_of_proof proof)
