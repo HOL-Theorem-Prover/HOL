@@ -14,7 +14,10 @@ sig
   val hhs_goal_glob    : goal ref
   
   val hh_stac_glob     : 
-    (int -> (int, real) Redblackmap.dict * (string * fea_t) list ->
+    (int -> 
+       (int, real) Redblackmap.dict * 
+       (string * fea_t) list * 
+       (string, goal * int list) Redblackmap.dict ->
      int -> goal -> string option) ref
   val update_hh_stac   : unit -> unit
   val metis_tac_glob   : (thm list -> tactic) option ref

@@ -211,9 +211,12 @@ fun string_of_sml s =
    Read metis and hh from the future
    -------------------------------------------------------------------------- *)
 
-val (hh_stac_glob: 
-   (int -> (int, real) Redblackmap.dict * (string * fea_t) list ->
-    int -> goal -> string option) ref) = 
+val hh_stac_glob: 
+  (int -> 
+     (int, real) Redblackmap.dict * 
+     (string * fea_t) list * 
+     (string, goal * int list) Redblackmap.dict ->
+   int -> goal -> string option) ref = 
   ref (fn _ => (fn _ => (fn _ => (fn _ => NONE))))
 
 fun update_hh_stac () =

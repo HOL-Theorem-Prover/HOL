@@ -233,12 +233,7 @@ fun fetch_thm s reps =
     let val nameo = sml_of_thm thm in
       case nameo of
         SOME x => x
-      | NONE => 
-        (
-        if !hhs_internalthm_flag 
-        then save_tactictoe_thm thm
-        else (debug_record ("fetch_thm: " ^ s); add_local_tag s)
-        )
+      | NONE => (debug_record ("fetch_thm: " ^ s); add_local_tag s)
     end
   end
   
@@ -251,19 +246,24 @@ val fetch = total_time fetch_thm_time fetch_thm
 fun start_record lflag pflag name goal =
     (
     if !hhs_eval_flag then init_tactictoe () else ();
-    debug_t "update_mdict" update_mdict (current_theory ());
     (* recording goal steps *)
     goalstep_glob := [];
     (* evaluation *)
     if not (!hhs_eval_flag) orelse
        not (!test_eval_hook name) orelse
        (lflag andalso not (!hhs_evlet_flag)) orelse 
-       (pflag andalso not (!hhs_evprove_flag))
+       (pflag andalso not (!hhs_evprove_flag)) (* orelse
+       (not lflag andalso (!hhs_evletonly_flag)) *)
     then ()
     else 
       if one_in_n () 
-      then eval_tactictoe name goal handle _ => 
-        debug ("Error: eval_tactictoe: last_stac: " ^ ! hhsSearch.last_stac)
+      then 
+        (
+        debug_t "update_mdict" update_mdict (current_theory ());
+        eval_tactictoe name goal handle _ => 
+        debug ("Error: eval_tactictoe: last_stac: " ^ 
+               !hhsSearch.last_stac)
+        )
       else ()
     )
 
@@ -282,14 +282,21 @@ fun end_record name g =
   end
 
 fun org_tac tac g =
-  (
-  tac g handle _ => 
+  let val (gl,v) = tac g in
+    if null gl 
+    then (gl,v)
+    else (
+         debug "Record error: org_tac: not null";
+         ignore (hhsExec.exec_sml "cache" "numSimps.clear_arith_caches ()"); 
+         tac g
+         )
+  end
+  handle _ => 
      (
-     debug "Error: original tactic not applicable: cleaning arith cache";
+     debug "Record error: org_tac";
      ignore (hhsExec.exec_sml "cache" "numSimps.clear_arith_caches ()"); 
      tac g
      )
-  )
 
 val thm_counter = ref 0
 
@@ -323,9 +330,11 @@ fun try_record_proof name lflag tac1 tac2 g =
           val _ = debug_proof ("Recording proof time: " ^ Real.toString t)
           val _ = end_record name g
         in 
-          r
+          if null (fst r) 
+          then r
+          else (debug "Record error: try_record_proof: not null"; org_tac tac2 g)
         end
-        handle _ => (debug "Error: try_record_proof"; org_tac tac2 g)
+        handle _ => (debug "Record error: try_record_proof"; org_tac tac2 g)
   in    
     result
   end

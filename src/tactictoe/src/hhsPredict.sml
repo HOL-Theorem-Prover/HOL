@@ -199,13 +199,8 @@ fun dep_of_thm s =
 fun add_thmdep revdict n l0 = 
   let 
     fun f1 x = x :: dep_of_thm x
-    val l1 = mk_sameorder_set 
-      String.compare (List.concat (map f1 l0))
-    fun f2 x = 
-      exists_tid x andalso uptodate_tid x andalso
-      dmem x revdict andalso 
-      (not (!hhs_thmortho_flag) orelse
-       not (metis_trivial 0.1 (fst (dfind x revdict))))
+    val l1 = mk_sameorder_set String.compare (List.concat (map f1 l0))
+    fun f2 x = exists_tid x andalso uptodate_tid x andalso dmem x revdict
   in
     debug_t "add_thmdep: first_test_n" (first_test_n f2 n) l1
   end

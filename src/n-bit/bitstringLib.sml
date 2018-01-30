@@ -100,23 +100,23 @@ end
 local
    open arithmeticTheory numeralTheory
 
-   val l2n_2_compute = Q.prove(
-      `(l2n 2 [] = 0) /\
+   val l2n_2_compute = prove(
+      “(l2n 2 [] = 0) /\
        (!l. l2n 2 (0::l) = 2 * l2n 2 l) /\
-       (!l. l2n 2 (1::l) = 2 * l2n 2 l + 1)`,
+       (!l. l2n 2 (1::l) = 2 * l2n 2 l + 1)”,
       simp [numposrepTheory.l2n_def])
 
-   val l2n_2_numeric = Q.prove(
-      `(l2n 2 [] = ZERO) /\
+   val l2n_2_numeric = prove(
+      “(l2n 2 [] = ZERO) /\
        (!l. l2n 2 (0::l) = numeral$iDUB (l2n 2 l)) /\
-       (!l. l2n 2 (1::l) = BIT1 (l2n 2 l))`,
+       (!l. l2n 2 (1::l) = BIT1 (l2n 2 l))”,
       qm
        [l2n_2_compute, ALT_ZERO, ONE, ADD_ASSOC, BIT1, TIMES2, MULT_COMM, iDUB])
 
-   val num_from_bin_list_compute = Q.prove(
-     `(num_from_bin_list [] = 0) /\
+   val num_from_bin_list_compute = prove(
+     “(num_from_bin_list [] = 0) /\
       (!l. num_from_bin_list (0::l) = NUMERAL (l2n 2 (0::l))) /\
-      (!l. num_from_bin_list (1::l) = NUMERAL (l2n 2 (1::l)))`,
+      (!l. num_from_bin_list (1::l) = NUMERAL (l2n 2 (1::l)))”,
       simp [numposrepTheory.num_from_bin_list_def] >> qm [NUMERAL_DEF])
 
    val cnv =
@@ -137,8 +137,8 @@ end
 (* Convert ``v2w [...]`` to ``n2w n`` *)
 
 local
-   val v2w_n2w_thm = Q.prove(
-      `!l n. (v2n l = n) ==> (v2w l = n2w n : 'a word)`,
+   val v2w_n2w_thm = prove(
+      “!l n. (v2n l = n) ==> (v2w l = n2w n : 'a word)”,
       qm [bitstringTheory.ops_to_n2w])
 in
    fun v2w_n2w_CONV tm =
@@ -250,12 +250,12 @@ end
 *)
 
 local
-   val extract_v2w_cor = Q.prove(
-     `!h l v.
+   val extract_v2w_cor = prove(
+     “!h l v.
         (LENGTH v <= dimindex(:'a)) /\ (dimindex(:'b) = SUC h - l) /\
         dimindex(:'b) <= dimindex(:'a) ==>
         ((h >< l) (v2w v : 'a word) : 'b word =
-         v2w (fixwidth (dimindex(:'b)) (shiftr v l)))`,
+         v2w (fixwidth (dimindex(:'b)) (shiftr v l)))”,
      qm [bitstringTheory.extract_v2w, bitstringTheory.field_def])
    val shiftr_CONV =
      Conv.REWR_CONV bitstringTheory.shiftr_def

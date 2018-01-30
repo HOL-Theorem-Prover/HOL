@@ -85,14 +85,10 @@ fun status_dir dir = dir ^ "/status"
    Predicting theorems
    ---------------------------------------------------------------------- *)
 
-fun is_trivial goal = 
-  can (hhsTimeout.timeOut 0.1 (METIS_TAC [])) goal;
-
 fun add_fea dict (name,thm) =
   let val g = dest_thm thm in
     if not (dmem g (!dict)) andalso 
-       uptodate_thm thm (* andalso
-       not (is_trivial g) *)
+       uptodate_thm thm
     then dict := dadd g (name, fea_of_goal g) (!dict)
     else ()
   end
