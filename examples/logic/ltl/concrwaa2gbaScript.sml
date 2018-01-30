@@ -3753,8 +3753,8 @@ val EXPGBA_TRANS_AND_FINAL = store_thm
    )
   );
 
-val EXPGBA_CORRECT = store_thm
-  ("EXPGBA_CORRECT",
+val EXPGBA_CORRECT_LEMM = store_thm
+  ("EXPGBA_CORRECT_LEMM",
    ``!f init aP g_AA abstrAA.
     (expandAuto_init f = SOME (concrAA g_AA init aP))
     ∧ (abstrAA = concr2AbstrAA (concrAA g_AA init aP))
@@ -5126,5 +5126,18 @@ val EXPGBA_CORRECT = store_thm
    >- (qunabbrev_tac `ALPH` >> fs[] >> simp[concr2AbstrAA_def])
   );
 
+val EXPGBA_CORRECT = store_thm
+  ("EXPGBA_CORRECT",
+  ``!f concr_AA abstrAA.
+  (expandAuto_init f = SOME concr_AA)
+  ∧ (abstrAA = concr2AbstrAA concr_AA)
+  ==>
+  case expandGBA_init concr_AA of
+    | NONE => F
+    | SOME c_gba =>
+      (concr2AbstrGBA c_gba =
+       removeStatesSimpl (vwaa2gba abstrAA))``,
+  rpt gen_tac >> Cases_on `concr_AA` >> metis_tac[EXPGBA_CORRECT_LEMM]
+  );
 
 val _ = export_theory()
