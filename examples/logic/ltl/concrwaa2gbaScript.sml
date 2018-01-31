@@ -5131,13 +5131,17 @@ val EXPGBA_CORRECT = store_thm
   ``!f concr_AA abstrAA.
   (expandAuto_init f = SOME concr_AA)
   ∧ (abstrAA = concr2AbstrAA concr_AA)
-  ==>
-  case expandGBA_init concr_AA of
-    | NONE => F
-    | SOME c_gba =>
-      (concr2AbstrGBA c_gba =
-       removeStatesSimpl (vwaa2gba abstrAA))``,
-  rpt gen_tac >> Cases_on `concr_AA` >> metis_tac[EXPGBA_CORRECT_LEMM]
+  ==> ?c_gba.
+       (expandGBA_init concr_AA = SOME c_gba)
+       ∧ (concr2AbstrGBA c_gba =
+          removeStatesSimpl (vwaa2gba abstrAA))``,
+  rpt gen_tac >> strip_tac
+  >> `case expandGBA_init concr_AA of
+        NONE => F
+        | SOME c_gba =>
+         concr2AbstrGBA c_gba = removeStatesSimpl (vwaa2gba abstrAA)`
+     by (Cases_on `concr_AA` >> fs[] >> metis_tac[EXPGBA_CORRECT_LEMM])
+  >> Cases_on `expandGBA_init concr_AA` >> fs[]
   );
 
 val _ = export_theory()
