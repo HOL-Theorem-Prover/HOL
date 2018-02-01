@@ -3925,7 +3925,7 @@ val EXPGBA_CORRECT_LEMM = store_thm
               NONE => F
             | SOME concrA =>
               concr2AbstrAA concrA = removeStatesSimpl (ltl2vwaa φ)`
-         by metis_tac[EXP_WAA_CORRECT]
+         by metis_tac[EXP_WAA_CORRECT_LEMM]
        >> first_x_assum (qspec_then `f` mp_tac) >> simp[]
    )
    >> `isVeryWeakAlterA (concr2AbstrAA (concrAA g_AA init aP))` by (

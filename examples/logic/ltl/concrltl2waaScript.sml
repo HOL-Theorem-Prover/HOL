@@ -2514,7 +2514,7 @@ val EXP_WAA_AP = store_thm
              | NONE => F
              | SOME concrA =>
                concr2AbstrAA concrA = removeStatesSimpl (ltl2vwaa φ)`
-      by metis_tac[EXP_WAA_CORRECT]
+      by metis_tac[EXP_WAA_CORRECT_LEMM]
    >> first_x_assum (qspec_then `f` mp_tac) >> simp[] >> strip_tac
    >> `set aP = props f` by (
        fs[ltl2vwaa_def,ltl2vwaa_free_alph_def,removeStatesSimpl_def]
