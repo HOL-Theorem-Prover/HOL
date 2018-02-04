@@ -239,9 +239,9 @@ local
      | "τ" => greek "tau"
      | "υ" => greek "upsilon"
      | "Υ" => greek "Upsilon"
-     | "φ" => greek "phi"
-     | "ϕ" => greek "varphi"
-     | "Φ" => greek "Phi"
+     | "φ" => greek "varphi" (* U+03C6 *)
+     | "ϕ" => greek "phi"    (* U+03D5 *)
+     | "Φ" => greek "Phi"    (* U+03A6 *)
      | "χ" => greek "chi"
      | "ψ" => greek "psi"
      | "Ψ" => greek "Psi"
