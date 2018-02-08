@@ -220,12 +220,12 @@ Note that all of these actions are also available in the HOL menu within Emacs.}
 
 \mysubsec{Displaying types in HOL4}
 
-HOL4 does not by default display types. Press {\tt M-h C-t} to switch
+HOL4 does not by default display types. Press {\tt M-h~C-t} to switch
 printing of type information on or off.
 
 \mysubsec{Interrupting HOL4}
 
-Press {\tt M-h C-c} to interrupt HOL4 --- useful when a tactic fails to terminate
+Press {\tt M-h~C-c} to interrupt HOL4 --- useful when a tactic fails to terminate
 (\eg{} {\tt\small metis\_tac} often fails to terminate when unsuccessfully applied).
 
 \mysubsec{Making a definition\label{definition}}
@@ -334,8 +334,9 @@ arithmeticTheory.DIV_LESS_EQ (THEOREM)
 |- !n. 0 < n ==> !k. k DIV n <= k
 \end{code}
 Try to write increasingly specific queries if the returned list is long, \eg{}
-{\tt\small print\_match [] \sq \sq n DIV m \sq \sq} returns a list of length 32. Note that {\tt\small print\_match [] \sq \sq DIV \sq \sq}
-does not work since {\tt\small DIV} is an infix operator, but {\tt\small print\_match [] \sq \sq \$DIV \sq \sq} works.
+{\tt\small print\_match [] \sq \sq n DIV m\sq\sq} returns a list of length 32. Note that {\tt\small print\_match [] \sq \sq DIV\sq\sq}
+does not work since {\tt\small DIV} is an infix operator, but {\tt\small print\_match [] \sq \sq \$DIV\sq \sq} works.
+
 
 \mysec{Common proof tactics\label{tactics}}
 
