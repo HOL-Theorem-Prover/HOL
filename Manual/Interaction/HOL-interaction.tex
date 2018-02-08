@@ -337,6 +337,7 @@ Try to write increasingly specific queries if the returned list is long, \eg{}
 {\tt\small print\_match [] \sq \sq n DIV m\sq\sq} returns a list of length 32. Note that {\tt\small print\_match [] \sq \sq DIV\sq\sq}
 does not work since {\tt\small DIV} is an infix operator, but {\tt\small print\_match [] \sq \sq \$DIV\sq \sq} works.
 
+The key-binding \texttt{M-h~m} (and the menu entry ``DB match'') will prompt for the term pattern to search for, and pass this query onto the HOL session (saving the need to type \texttt{print\_match~[]} and the enclosing quotation marks).
 
 \mysec{Common proof tactics\label{tactics}}
 
