@@ -17,6 +17,8 @@ val ERR = mk_HOL_ERR "hhsRecord"
 val goalstep_glob = ref []
 val tactictoe_step_counter = ref 0
 val tactictoe_thm_counter = ref 0
+val replay_timeout = 20.0
+
 
 fun local_tag x = x
 
@@ -164,7 +166,7 @@ fun wrap_tactics_in name qtac goal =
     (
     let
       val (gl,v) = 
-      total_time replay_time (hhsTimeout.timeOut 20.0 final_tac) goal
+      total_time replay_time (hhsTimeout.timeOut replay_timeout final_tac) goal
     in
       if gl = []
         then (
@@ -179,7 +181,6 @@ fun wrap_tactics_in name qtac goal =
         TacTimeOut => replay_msg "timed out or other" name qtac final_stac
       | _          => replay_msg "other error" name qtac final_stac
     );
-    (* save_hht cthy thmname goal; *)
     case (!success_flag) of 
       SOME x => x
     | NONE   => raise ERR "" ""

@@ -11,7 +11,7 @@ sig
   val learn_tfidf : ('a * int list) list -> (int, real) Redblackmap.dict
 
   (* term *)
-  val closest_subterm: goal -> term -> term
+  val termknn: int -> goal -> term -> term list
   
   (* tactic *)
   val stacknn:
@@ -23,9 +23,7 @@ sig
   val add_stacdesc: 
     (goal, lbl_t list) Redblackmap.dict -> int -> lbl_t list -> lbl_t list
         
-  (* thm *)
-  val metis_trivial : real -> goal -> bool
-  
+  (* thm (should be sthm) *)
   val all_thmfeav : unit -> 
     (int, real) Redblackmap.dict * 
     (string * fea_t) list *
@@ -41,7 +39,6 @@ sig
     (string * fea_t) list *
     (string, goal * fea_t) Redblackmap.dict -> 
     int -> fea_t -> string list
-
   
   (* goal *)
   val mcknn : 

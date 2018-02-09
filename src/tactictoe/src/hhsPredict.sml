@@ -17,16 +17,18 @@ val ERR = mk_HOL_ERR "hhsPredict"
    TFIDF: weight of symbols (power of 6 comes from the distance)
    -------------------------------------------------------------------------- *)
 
-fun learn_tfidf feavl = 
+fun weight_tfidf symsl =
   let
-    val syms      = List.concat (map snd feavl)
+    val syms      = List.concat symsl
     val dict      = count_dict (dempty Int.compare) syms
-    val n         = length feavl
+    val n         = length symsl
     fun f (fea,freq) = 
       Math.pow (Math.ln (Real.fromInt n) - Math.ln (Real.fromInt freq), 6.0)
   in
     Redblackmap.map f dict
-  end
+  end  
+
+fun learn_tfidf feavl = weight_tfidf (map snd feavl)
 
 (* --------------------------------------------------------------------------
    KNN distance
@@ -35,7 +37,7 @@ fun learn_tfidf feavl =
 fun inter_dict dict l = filter (fn x => dmem x dict) l
 fun union_dict dict l = dkeys (daddl (map (fn x => (x,())) l) dict)
 
-fun knn_distance symweight dict_o fea_p =
+fun knn_sim1 symweight dict_o fea_p =
   let 
     val fea_i   = inter_dict dict_o fea_p
     fun wf n    = dfind_err "knn_distance" n symweight
@@ -44,7 +46,7 @@ fun knn_distance symweight dict_o fea_p =
     sum_real weightl
   end
 
-fun knn_similarity symweight dict_o fea_p =
+fun knn_sim2 symweight dict_o fea_p =
   let 
     val fea_i    = inter_dict dict_o fea_p
     fun wf n     = dfind_err "knn_similarity" n symweight
@@ -53,6 +55,18 @@ fun knn_similarity symweight dict_o fea_p =
   in
     sum_real weightl / Math.ln (Math.e + tot)
   end
+
+fun knn_sim3 symweight dict_o fea_p =
+  let 
+    val feai     = inter_dict dict_o fea_p
+    val feau     = union_dict dict_o fea_p
+    fun wf n     = dfind n symweight handle _ => 0.0
+    val weightli = map wf feai
+    val weightlu = map wf feau
+  in
+    sum_real weightli / (sum_real weightlu + 1.0)
+  end
+
 
 (* --------------------------------------------------------------------------
    Internal predictions
@@ -71,14 +85,13 @@ fun pre_pred dist symweight (feal: ('a * int list) list) fea_o =
     l1
   end
 
-fun pre_knn symweight feal fea_o = 
-  pre_pred knn_distance symweight feal fea_o
-fun pre_sim symweight feal fea_o = 
-  pre_pred knn_similarity symweight feal fea_o
+fun pre_sim1 symweight feal fea_o = pre_pred knn_sim1 symweight feal fea_o
+fun pre_sim2 symweight feal fea_o = pre_pred knn_sim2 symweight feal fea_o
+fun pre_sim3 symweight feal fea_o = pre_pred knn_sim3 symweight feal fea_o
    
 fun stacknn symweight n feal fea_o =
   let 
-    val l1 = map fst (pre_knn symweight feal fea_o)
+    val l1 = map fst (pre_sim1 symweight feal fea_o)
     val l2 = mk_sameorder_set lbl_compare l1
   in
     first_n n l2
@@ -100,31 +113,11 @@ fun exists_tid s =
 
 fun thmknn (symweight,feav) n fea_o =
   let 
-    val l1 = map fst (pre_knn symweight feav fea_o)
+    val l1 = map fst (pre_sim1 symweight feav fea_o)
     val l2 = mk_sameorder_set String.compare l1
   in
     first_test_n exists_tid n l2
   end    
-
-(* copied from hhsMetis to prevent circular dependencies *)
-val trivialgoal_cache = ref (dempty goal_compare)
-
-fun metis_trivial tim g =
-  if !hhs_metisexec_flag then
-    dfind g (!trivialgoal_cache) handle _ =>
-    (
-    let
-      val tac = (valOf (!metis_tac_glob)) []
-        handle _ => debug_err "metis_trivial"
-      val glo = app_tac tim tac g
-      val r = glo = SOME []
-    in   
-      trivialgoal_cache := dadd g r (!trivialgoal_cache);
-      r
-    end
-    )
-  else false
-(* *)
 
 fun add_fea dict (name,thm) =
   let val g = dest_thm thm in
@@ -251,28 +244,25 @@ fun add_stacdesc ddict n l =
    Relies on mdict_glob to calculate symweight.
    -------------------------------------------------------------------------- *)
 
-(*
-fun same_type term1 term2 =
-  polymorphic (type_of term1) orelse type_of term1 = type_of term2
-*)
 
-fun is_true _ = true
-
-fun closest_subterm ((asl,w):goal) term =
-  let 
+(* Predicts everything but the term itself *)
+fun termknn n ((asl,w):goal) term =
+  let
+    fun not_term tm = tm <> term
     fun togoal t = ([],t)
-    fun dummy_lbl l = map (fn (_,a) => ((),a)) l
-    fun f x = (togoal x, fea_of_goal (togoal x))
-    val l0 = List.concat (map (rev o find_terms is_true) (w :: asl))
-    val l1 = debug_t "mk_sameorder_set" (mk_sameorder_set Term.compare) l0
-    val thmfeav = map snd (dlist (!hhs_mdict))
-    val feal = debug_t "features" (map f) l1
+    fun f x = (x, fea_of_goal (togoal x))
+    val l0 = List.concat (map (rev o find_terms not_term) (w :: asl))
+    val l1 = mk_sameorder_set Term.compare l0
+    val thmfeav = map (snd o snd) (dlist (!hhs_mdict))
+    val feal = map f l1
     val fea_o = hhsFeature.fea_of_goal ([],term)
-    val symweight = 
-      learn_tfidf (((),fea_o) :: dummy_lbl feal @ dummy_lbl thmfeav)
+    val symweight = weight_tfidf (fea_o :: (map snd feal) @ thmfeav)
+    val pre_sim = case !hhs_termpresim_int of 
+      1 => pre_sim1 | 2 => pre_sim2 | 3 => pre_sim3 | _ => pre_sim2
     val l3 = debug_t "pre_sim" pre_sim symweight feal fea_o
+    val r = first_n n (map fst l3)
   in
-    snd (fst (hd l3)) handle _ => debug_err "closest_subterm"
+    r
   end
 
 (* --------------------------------------------------------------------------
@@ -281,6 +271,8 @@ fun closest_subterm ((asl,w):goal) term =
 
 fun mcknn symweight radius feal fea =
   let
+    val pre_sim = case !hhs_mcpresim_int of 
+      1 => pre_sim1 | 2 => pre_sim2 | 3 => pre_sim3 | _ => pre_sim2
     val bnl = map fst (first_n radius (pre_sim symweight feal fea))
     fun ispos (b,n) = b
     fun isneg (b,n) = not b

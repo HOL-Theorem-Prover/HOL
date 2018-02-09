@@ -10,6 +10,7 @@ sig
   val hhs_bool_glob    : bool ref
   val hhs_tacticl_glob : tactic list ref
   val hhs_tactic_glob  : tactic ref
+  val hhs_qtactic_glob : (term quotation -> tactic) ref
   val hhs_string_glob  : string ref
   val hhs_goal_glob    : goal ref
   
@@ -25,6 +26,9 @@ sig
 
   val exec_sml         : string -> string -> bool  
   
+  val hhs_term_glob    : term ref
+  val is_stype         : string -> bool
+  val term_of_sml      : string -> term
   val hhs_thm          : thm ref
   val hhs_thml         : thm list ref
   val is_thm           : string -> bool
@@ -47,11 +51,14 @@ sig
   val tactic_of_sml    : string -> tactic
   val timed_tactic_of_sml : string -> tactic
   val tacticl_of_sml   : string list -> tactic list
+  val qtactic_of_sml   : string -> (term frag list -> tactic)
   val string_of_sml    : string -> string
   val goal_of_sml      : string -> goal
   
   
   val app_tac    : real -> tactic -> goal -> goal list option
+  val app_qtac    : real -> (goal -> goal list option) -> goal -> goal list option
+  
   val rec_stac   : real -> string -> goal -> goal list option
   val rec_sproof : string -> goal -> goal list option
 

@@ -8,7 +8,7 @@
 structure hhsExec :> hhsExec = 
 struct
 
-open HolKernel Abbrev boolLib hhsTools hhsTimeout Tactical
+open HolKernel Abbrev boolLib hhsTools hhsTimeout hhsLexer Tactical
 
 val ERR = mk_HOL_ERR "hhsExec"
 
@@ -19,6 +19,7 @@ val ERR = mk_HOL_ERR "hhsExec"
 val hhs_bool_glob = ref false
 val hhs_tacticl_glob = ref []
 val hhs_tactic_glob = ref (FAIL_TAC "hhsExec")
+val hhs_qtactic_glob = ref (fn _ => FAIL_TAC "hhsExec")
 val hhs_string_glob = ref ""
 val hhs_goal_glob = ref ([],F)
 
@@ -153,7 +154,8 @@ fun tacticl_of_sml sl =
 fun tactic_of_sml s = 
   let
     val tactic = mk_valid s
-    val program = "val _ = hhsExec.hhs_tactic_glob := " ^ tactic
+    val program = 
+      "val _ = hhsExec.hhs_tactic_glob := (" ^ tactic ^ ")"
     val b = exec_sml "tactic_of_sml" program
   in
     if b then !hhs_tactic_glob else raise ERR "tactic_of_sml" s
@@ -163,12 +165,23 @@ fun timed_tactic_of_sml s =
   let
     val tactic = mk_valid s
     val program = 
-      "let fun f () = hhsExec.hhs_tactic_glob := " ^ tactic ^ " in " ^
+      "let fun f () = hhsExec.hhs_tactic_glob := (" ^ tactic ^ ") in " ^
       "hhsTimeout.timeOut 0.1 f () end"
     val b = exec_sml "tactic_of_sml" program
   in
     if b then !hhs_tactic_glob else raise ERR "timed_tactic_of_sml" s
   end
+
+fun qtactic_of_sml s = 
+  let
+    val program = 
+      "let fun f () = hhsExec.hhs_qtactic_glob := (" ^ s ^ ") in " ^
+      "hhsTimeout.timeOut 0.1 f () end"
+    val b = exec_sml "qtactic_of_sml" program
+  in
+    if b then !hhs_qtactic_glob else raise ERR "qtactic_of_sml" s
+  end
+
 
 (* -----------------------------------------------------------------------------
    Apply tactics
@@ -180,6 +193,10 @@ fun app_tac tim tac g =
   SOME (fst (timeOut tim (TC_OFF tac) g))
   handle _ => NONE
 
+fun app_qtac tim tac g = 
+  timeOut tim (trace ("show_typecheck_errors", 0) tac) g 
+  handle _ => NONE
+
 fun rec_stac tim stac g =
   let val tac = tactic_of_sml stac in
     SOME (fst (timeOut tim (TC_OFF tac) g))
@@ -189,7 +206,7 @@ fun rec_stac tim stac g =
 fun rec_sproof stac g =
   let 
     val tac = tactic_of_sml stac
-    val tim = 2.0 * (Time.toReal (!hhs_search_time))
+    val tim = Time.toReal (!hhs_search_time)
   in
     SOME (fst (timeOut tim (TC_OFF tac) g))
   end
@@ -205,6 +222,27 @@ fun string_of_sml s =
       ("val _ = hhsExec.hhs_string_glob := (" ^ s ^ " )")
   in
     if b then !hhs_string_glob else raise ERR "string_of_sml" s
+  end
+
+val hhs_term_glob = ref T
+
+fun is_stype s =
+  let 
+    fun not_in cl c = not (mem c cl) 
+    fun test c = not_in [#"\t",#"\n",#" ",#"\""] c
+  in
+    List.find test (explode (rm_comment (rm_squote s))) = SOME #":"
+  end
+
+fun term_of_sml s =
+  let 
+    val b = exec_sml "term_of_sml" 
+      ("val _ = hhsExec.hhs_term_glob := " ^
+       "Parse.Term [HolKernel.QUOTE " ^ s ^ "]")
+  in
+    if b 
+    then !hhs_term_glob 
+    else raise ERR "string_of_sml" s
   end
 
 (* -----------------------------------------------------------------------------

@@ -23,13 +23,15 @@ sig
   val hhs_maxselect_pred : int ref
   
   (* search *)
-  val hhs_cache_flag     : bool ref
-  val hhs_mc_flag        : bool ref
+  val hhs_policy_coeff   : real ref
   val hhs_mcrecord_flag  : bool ref
   val hhs_mcnoeval_flag  : bool ref
+  val hhs_mctriveval_flag : bool ref
   val hhs_mc_radius      : int ref
   val hhs_mc_coeff       : real ref
-  val hhs_width_coeff    : real ref
+  val hhs_mcpresim_int   : int ref
+  val hhs_evalinit_flag  : bool ref
+  val hhs_evalfail_flag  : bool ref
   
   (* metis + holyhammer + synthetizing *)
   val hhs_metisexec_flag : bool ref
@@ -49,6 +51,8 @@ sig
   val hhs_thmlarg_flag : bool ref 
   val hhs_thmlarg_number : int ref
   val hhs_termarg_flag : bool ref
+  val hhs_termarg_number : int ref
+  val hhs_termpresim_int : int ref
   
   (* minimization *)
   val hhs_prettify_flag : bool ref

@@ -85,17 +85,6 @@ fun rm_infix sl = case sl of
     else a :: rm_infix (b :: c :: m)
   | a :: m => a :: rm_infix m 
 
-fun rm_squote s =
-  if String.sub (s,0) = #"\"" andalso String.sub (s,String.size s - 1) = #"\""
-  then String.substring (s, 1, String.size s - 2)
-  else raise ERR "rm_squote" s
-
-fun rm_space_aux l = case l of
-    [] => [] 
-  | a :: m => if a = #" " then rm_space_aux m else l 
-  
-fun rm_space s = implode (rm_space_aux (explode s))  
-
 fun requote sl = case sl of
    [] => []
   | "[" :: "QUOTE" :: s :: "]" :: m => 
@@ -142,7 +131,7 @@ datatype Proof =
 
 fun prettify_proof tim proof = case proof of
     Tactic (s,g) =>
-    let 
+    let
       val s1 = prettify1_stac s
       val s2 = prettify2_stac s
     in

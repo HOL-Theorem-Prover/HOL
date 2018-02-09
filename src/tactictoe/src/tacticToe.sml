@@ -16,7 +16,7 @@ val ERR = mk_HOL_ERR "tacticToe"
 
 fun set_timeout r = hhs_search_time := Time.fromReal r
 
-fun select_thmfeav gfea =
+fun select_sthmfeav gfea =
   if !hhs_metishammer_flag orelse !hhs_hhhammer_flag orelse !hhs_thmlarg_flag
   then
     let 
@@ -125,9 +125,8 @@ fun init_tactictoe () =
         val ps = int_to_string (dlength (!hhs_mcdict))
       in  
         hide_out QUse.use (tactictoe_dir ^ "/src/infix_file.sml");
-        print_endline ("Loading " ^ ns ^ " tactic feature vectors");
-        print_endline ("Loading " ^ ms ^ " theorem feature vectors");
-        print_endline ("Loading " ^ ps ^ " goal list feature vectors");
+        print_endline ("Loading " ^ ns ^ " tactics, " ^
+                       ms ^ " theorems, " ^ ps ^ " lists of goals");
         previous_theory := cthy
       end
     else ()
@@ -157,7 +156,7 @@ fun select_stacfeav goalfea =
   end
 
 fun select_mcfeav stacfeav =
-  if !hhs_mc_flag andalso !hhs_mcrecord_flag then
+  if !hhs_mcrecord_flag then
     let
       fun f ((_,_,g,_),_) = (hash_goal g, ())
       val goal_dict = dnew Int.compare (map f stacfeav)    
@@ -169,8 +168,7 @@ fun select_mcfeav stacfeav =
       (mcsymweight, mcfeav1)
     end
   else (dempty Int.compare, [])
- 
-(* todo: return on a fail attempt partial proof with least worst open goal *) 
+  
 fun main_tactictoe goal =
   let  
     (* preselection *)
@@ -178,15 +176,28 @@ fun main_tactictoe goal =
     val (stacsymweight, stacfeav, tacdict) = 
       debug_t "select_stacfeav" select_stacfeav goalfea
     val ((pthmsymweight,pthmfeav,pthmrevdict), thmfeav) = 
-      debug_t "select_thmfeav" select_thmfeav goalfea
+      debug_t "select_sthmfeav" select_sthmfeav goalfea
     val (mcsymweight, mcfeav) = 
       debug_t "select_mcfeav" select_mcfeav stacfeav      
+    (* caches *)
     val mc_cache = ref (dempty (list_compare goal_compare))
+    val sthm_cache = ref (dempty (cpl_compare goal_compare Int.compare))
+    val stac_cache = ref (dempty goal_compare)
     (* predictors *)
     fun stacpredictor g =
-      stacknn_uniq stacsymweight (!hhs_maxselect_pred) stacfeav (fea_of_goal g)
+      dfind g (!stac_cache) handle NotFound =>
+      let 
+        val l = fea_of_goal g
+        val lbll = stacknn_uniq stacsymweight (!hhs_maxselect_pred) stacfeav l
+        val r = map #1 lbll
+      in
+        stac_cache := dadd g r (!stac_cache); r
+      end
     fun thmpredictor n g = 
-      thmknn (pthmsymweight,thmfeav) n (fea_of_goal g)
+      dfind (g,n) (!sthm_cache) handle NotFound =>
+      let val r = thmknn (pthmsymweight,thmfeav) n (fea_of_goal g) in
+        sthm_cache := dadd (g,n) r (!sthm_cache); r
+      end
     fun mcpredictor gl =
       dfind gl (!mc_cache) handle NotFound =>
       let 
@@ -291,7 +302,8 @@ fun try_tac tacdict memdict n goal stacl =
     end
     
 fun next_tac goal =    
-  let  
+  let
+    val _ = hide_out set_irecord ()
     val _ = hide_out set_isearch ()
     val _ = init_tactictoe ()
     val _ = next_tac_glob := []

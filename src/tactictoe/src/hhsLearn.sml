@@ -79,32 +79,41 @@ val s2 = inst_thmlarg "bonjour" s1;
 *)
 
 (*----------------------------------------------------------------------------
- * Abstracting term
+ * Abstracting term (first occurence)
  *----------------------------------------------------------------------------*)
 
 val termarg_placeholder = "tactictoe_termarg"
 
-fun is_termarg_stac stac = mem termarg_placeholder (hhs_lex stac)
-
-fun abstract_termarg_loop l = case l of
-    []       => []
+fun abs_termarg_loop l = case l of
+    []       => ([], NONE)
   | "[" :: "HolKernel.QUOTE" :: s :: "]" :: m => 
-    let val new_s = ["(",termarg_placeholder,s,")"] in
-      ["[","HolKernel.QUOTE"] @ new_s @ ["]"] @ abstract_termarg_loop m
-    end
-  | a :: m => a :: abstract_termarg_loop m
+    (termarg_placeholder :: m, SOME s)
+  | "[" :: "QUOTE" :: s :: "]" :: m => 
+    (termarg_placeholder :: m, SOME s)
+  | a :: m =>
+    let val (sl,so) = abs_termarg_loop m in (a :: sl, so) end
 
-fun abstract_termarg stac =
-  if is_termarg_stac stac then stac else 
+fun abs_termarg stac =
   let 
     val sl1 = hhs_lex stac
-    val sl2 = abstract_termarg_loop sl1
+    val (sl2,so) = abs_termarg_loop sl1
   in
-    if sl2 = sl1 then stac else String.concatWith " " sl2
+    case so of
+      NONE => NONE
+    | SOME s =>
+    let 
+      val qtacs = String.concatWith " " 
+        (["fn", termarg_placeholder,"=>", "Tactical.VALID","("] @ sl2 @ [")"])
+      val qtac = qtactic_of_sml qtacs 
+    in
+      if is_stype s then NONE else SOME (term_of_sml s, qtac)
+    end
   end
+  handle _ => (debug ("Error: abs_termarg: " ^ stac); NONE)
+
 
 (*----------------------------------------------------------------------------
- * Instantiating tactics with predicted term
+ * Instantiate tactics with term (first occurence)
  *----------------------------------------------------------------------------*)
 
 fun with_types f x =
@@ -117,52 +126,44 @@ fun with_types f x =
     r
   end
   
-fun predict_termarg g s =
-  let
-    val term = Parse.Term [QUOTE (unquote_string s)] 
-    val new_term = closest_subterm g term
-    val new_s = if new_term = term 
-                then s 
-                else "\"" ^ with_types term_to_string new_term ^ "\""       
-  in
-    new_s
-  end          
-
-fun inst_termarg_loop g l = case l of
+fun inst_termarg_loop term l = case l of
     [] => []
-  | "(" :: termlarg_placeholder :: s :: ")" :: m =>
-    predict_termarg g s :: inst_termarg_loop g m
-  | a :: m => a :: inst_termarg_loop g m  
+  | "[" :: "HolKernel.QUOTE" :: _ :: "]" :: m => 
+    "[" :: "HolKernel.QUOTE" :: mlquote (with_types term_to_string term) :: "]" :: m
+  | "[" :: "QUOTE" :: s :: "]" :: m => 
+    "[" :: "QUOTE" :: mlquote (with_types term_to_string term) :: "]" :: m
+  | a :: m => a :: inst_termarg_loop term m
 
-fun inst_termarg g stac =
-  let val sl = hhs_lex stac in
-    if mem termarg_placeholder sl
-    then String.concatWith " " (inst_termarg_loop g sl)
-    else stac
-  end
+fun inst_termarg stac term =
+  String.concatWith " " (inst_termarg_loop term (hhs_lex stac))
 
 (* 
 load "hhsLearn";
-val s = 
+val stac = 
 "boolLib.SPEC_TAC ( ( Parse.Term [ HolKernel.QUOTE \" (*#loc 1 119422*)m:num\""
 ^ " ] ) , ( Parse.Term [ HolKernel.QUOTE \" (*#loc 1 119435*)m:num\" ] ) )";
-val goal:goal = ([],``!x. x = x``);
-val s1 = abstract_termarg s;
-val s2 = inst_termarg g s1;
+val stac2 = hhsLearn.inst_termarg stac ``v:num``;
+val tac = hhsExec.tactic_of_sml stac2;
+
+val s = mlquote (term_to_string ``A /\ B``);
+val s1 = "SPEC_TAC (Term [QUOTE \"x:bool\"],Term[QUOTE" ^ s ^ "])";
+val tac = hhsExec.tactic_of_sml s1;
 *)
 
 (*----------------------------------------------------------------------------
    Combining abstractions and instantiations
  *----------------------------------------------------------------------------*)
 
-fun is_absarg_stac s = is_thmlarg_stac s orelse is_termarg_stac s
+fun is_absarg_stac s = is_thmlarg_stac s
 
 fun abstract_stac stac =
   let 
-    val stac1 = if !hhs_thmlarg_flag then abstract_thmlarg stac else stac
-    val stac2 = if !hhs_termarg_flag then abstract_termarg stac1 else stac1
+    val stac1 = 
+      if !hhs_thmlarg_flag 
+      then abstract_thmlarg stac 
+      else stac
   in
-    if stac2 <> stac then SOME stac2 else NONE
+    if stac1 <> stac then SOME stac1 else NONE
   end
 
 fun prefix_absstac stac = [abstract_stac stac, SOME stac]
@@ -173,12 +174,7 @@ fun concat_absstacl ostac stacl =
   end
 
 fun inst_stac thmls g stac =
-  let 
-    val stac1 = if !hhs_thmlarg_flag then inst_thmlarg thmls stac else stac
-    val stac2 = if !hhs_termarg_flag then inst_termarg g stac1 else stac1
-  in
-    stac2
-  end
+  if !hhs_thmlarg_flag then inst_thmlarg thmls stac else stac
 
 fun inst_stacl thmls g stacl = map (fn x => (x, inst_stac thmls g x)) stacl
 

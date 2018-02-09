@@ -466,6 +466,19 @@ fun rm_prefix s2 s1 =
     if a = "" then b else raise ERR "rm_prefix" (s2 ^ " " ^ s1)
   end
 
+fun rm_squote s =
+  if String.sub (s,0) = #"\"" andalso String.sub (s,String.size s - 1) = #"\""
+  then String.substring (s, 1, String.size s - 2)
+  else raise ERR "rm_squote" s
+
+fun rm_space_aux l = case l of
+    [] => [] 
+  | a :: m => if a = #" " then rm_space_aux m else l 
+  
+fun rm_space s = implode (rm_space_aux (explode s))  
+
+
+
 (* --------------------------------------------------------------------------
    Globals
    -------------------------------------------------------------------------- *)
