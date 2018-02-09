@@ -446,6 +446,12 @@ val _ = work_in_dir
           (fn () => polyc_compile NONE "buildheap.ML"
                                         (fullPath [HOLDIR, "bin", "buildheap"]))
 
+(* genscriptdep *)
+val _ = work_in_dir "genscriptdep"
+                    (fullPath [HOLDIR, "tools", "Holmake", "poly"])
+                    (fn () => polyc_compile NONE "poly-genscriptdep.ML"
+                                 (fullPath [HOLDIR, "bin", "genscriptdep"]))
+
 end (* local *)
 
 (*---------------------------------------------------------------------------

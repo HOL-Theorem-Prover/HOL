@@ -1930,8 +1930,8 @@ val expandAuto_init_def = Define`
 (* ) *)
 
 
-val EXP_WAA_CORRECT = store_thm
-  ("EXP_WAA_CORRECT",
+val EXP_WAA_CORRECT_LEMM = store_thm
+  ("EXP_WAA_CORRECT_LEMM",
    ``!φ. case expandAuto_init φ of
           | NONE => F
           | SOME concrA =>
@@ -2477,6 +2477,20 @@ val EXP_WAA_CORRECT = store_thm
        )
   );
 
+val EXP_WAA_CORRECT = store_thm
+  ("EXP_WAA_CORRECT",
+   ``!φ. ?concrA.
+     (expandAuto_init φ = SOME concrA)
+     ∧ (concr2AbstrAA concrA = removeStatesSimpl (ltl2vwaa φ))``,
+   rpt strip_tac
+   >> `case expandAuto_init φ of
+             NONE => F
+           | SOME concrA =>
+              concr2AbstrAA concrA = removeStatesSimpl (ltl2vwaa φ)`
+        by metis_tac[EXP_WAA_CORRECT_LEMM]
+   >> Cases_on `expandAuto_init φ` >> fs[]
+  );
+
 val EXP_WAA_AP = store_thm
   ("EXP_WAA_AP",
    ``!f g_AA init aP.
@@ -2500,7 +2514,7 @@ val EXP_WAA_AP = store_thm
              | NONE => F
              | SOME concrA =>
                concr2AbstrAA concrA = removeStatesSimpl (ltl2vwaa φ)`
-      by metis_tac[EXP_WAA_CORRECT]
+      by metis_tac[EXP_WAA_CORRECT_LEMM]
    >> first_x_assum (qspec_then `f` mp_tac) >> simp[] >> strip_tac
    >> `set aP = props f` by (
        fs[ltl2vwaa_def,ltl2vwaa_free_alph_def,removeStatesSimpl_def]
