@@ -114,6 +114,8 @@ val previous_theory = ref ""
 fun init_tactictoe () =
   let 
     val cthy = current_theory ()
+    val _ = hide_out set_record cthy
+    val _ = (!set_record_hook) ()
     val thyl = ancestry cthy
   in
     if !previous_theory <> cthy
@@ -240,7 +242,6 @@ fun eval_tactictoe name goal =
 fun tactictoe goal =
   let
     val _ = init_tactictoe ()
-    val _ = hide_out set_isearch ()
     val r = hide_out main_tactictoe goal
   in
     tactic_of_status r
@@ -303,8 +304,6 @@ fun try_tac tacdict memdict n goal stacl =
     
 fun next_tac goal =    
   let
-    val _ = hide_out set_irecord ()
-    val _ = hide_out set_isearch ()
     val _ = init_tactictoe ()
     val _ = next_tac_glob := []
     (* preselection *)

@@ -105,11 +105,14 @@ fun run_hol file =
   let
     val dir = #dir (OS.Path.splitDirFile file)
     val basename = #file (OS.Path.splitDirFile file)
-    val hol_ni = HOLDIR ^ "/bin/buildheap " ^ "--gcthreads=1 " ^ "--poly"
+    val buildheap = HOLDIR ^ "/bin/buildheap"
+    val state0 = "-b " ^ HOLDIR ^ "/bin/hol.state0"
+    val gc = "--gcthreads=1"
+    val hol = String.concatWith " " [buildheap,gc,state0]
     val cmd = 
       if dir = ""
-      then hol_ni ^ " " ^ basename
-      else "cd " ^ dir ^ ";" ^ hol_ni ^ " " ^ basename
+      then hol ^ " " ^ basename
+      else "cd " ^ dir ^ ";" ^ hol ^ " " ^ basename
   in
     ignore (OS.Process.system cmd)
   end

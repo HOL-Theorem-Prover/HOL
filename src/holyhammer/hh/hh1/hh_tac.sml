@@ -190,6 +190,8 @@ fun fold_cs oper tm sofar =
   handle HOL_ERR _ =>
     if is_var tm then sofar else oper (dest_const tm) sofar;
 
+(* Translation from ocaml to sml works till this point *)
+
 let rec type_match vty cty sofar =
   if is_vartype vty then
      try if rev_assoc vty sofar = cty then sofar else failwith "type_match"

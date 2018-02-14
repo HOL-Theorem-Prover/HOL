@@ -585,7 +585,8 @@ fun modified_program inh p = case p of
   | End :: m        => "end" :: modified_program inh m
   | Code (a,_) :: m =>
     ( 
-    if !interactive_flag andalso a = "export_theory" 
+    if !interactive_flag andalso 
+        mem (drop_sig a) ["export_theory","irecord_script"]
       then modified_program inh m
     else if inh 
       then a :: modified_program inh m
@@ -887,29 +888,7 @@ fun output_header oc cthy file =
   "(* This file was modifed by TacticToe.                                        *)",
   "(* ========================================================================== *)"
   ];
-  osn oc "load \"hhsRecord\";";
-  if !interactive_flag 
-  then 
-    let 
-      val temp = hhs_code_dir ^ "/" ^ cthy ^ "_holdep"
-      val cmd = HOLDIR ^ "/bin/holdeptool.exe " ^ file ^ " > " ^ temp 
-      val _ = OS.Process.system cmd
-      val sl = map mlquote (readl temp)
-    in
-      osn oc "hhsSetup.set_irecord ();";
-      osn oc "hhsSetup.set_isearch ();";
-      osn oc (!interactive_hook);
-      osn oc "fun load_err s = load s handle _ => ();";
-      osn oc ("List.app load_err [" ^ String.concatWith ", " sl ^ "];")
-    end
-  else 
-    (
-    osn oc "hhsSetup.set_erecord ();";
-    osn oc "hhsSetup.set_esearch ();"
-    )
-  ;
   app (os oc) (bare_readl infix_decl);
-  os oc "open hhsRecord;\n";
   os oc ("val _ = hhsRecord.start_thy " ^ mlquote cthy)
   )
 
@@ -1064,6 +1043,7 @@ fun cakeml_theories cakeml_dir =
    -------------------------------------------------------------------------- *)
 
 fun name_inter file = #base (OS.Path.splitBaseExt file) ^ "_tactictoe.sml"
+fun name_interuo file = #base (OS.Path.splitBaseExt file) ^ "_tactictoe.uo"
 
 fun print_program cthy file sl =
   if !n_store_thm = 0 then () else
@@ -1091,18 +1071,47 @@ fun irewrite_script file =
     end_unfold_thy ()
   end
 
+fun run_holmake file =
+  let 
+    val dir = #dir (OS.Path.splitDirFile file)
+    val basename = #file (OS.Path.splitDirFile file)
+    val holmake = HOLDIR ^ "/bin/Holmake --no_hmakefile"
+    val cmd = 
+      if dir = ""
+      then holmake ^ " " ^ basename
+      else "cd " ^ dir ^ ";" ^ holmake ^ " " ^ basename
+  in
+    ignore (OS.Process.system cmd)
+  end
+  
 fun irecord_script file =
-  (irewrite_script file; run_hol (name_inter file))
+  (
+  irewrite_script file; 
+  run_holmake (name_interuo file);
+  run_hol (name_interuo file)
+  )
+  
   
 end (* struct *)
 
 (* ---------------------------------------------------------------------------
   HOL:  
-  hol_scripts ();
+  
   
   rlwrap hol
   load "hhsUnfold";
-  open hhsUnfold;
+  
+  val file = HOLDIR ^ "/src/combin/combinScript.sml";
+  
+  hhsUnfold.irecord_script file;
+
+  
+  val filel = hhsUnfold.hol_scripts ();
+    
+  val file = "/home/tgauthier/HOL/src/num/theories/arithmeticScript.sml";
+  
+    irewrite_script file;
+  hol_scripts ();
   erewrite_hol_scripts (); (* some String exception *)
 
   --------------------------------------------------------------------------- *)

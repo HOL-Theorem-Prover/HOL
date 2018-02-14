@@ -4,7 +4,7 @@ sig
   include Abbrev
   
   val set_timeout : real -> unit
-  val set_isearch_hook : (unit -> unit) ref
+  val set_record_hook : (unit -> unit) ref
   val init_tactictoe : unit -> unit
   
   val eval_tactictoe : string -> goal -> unit

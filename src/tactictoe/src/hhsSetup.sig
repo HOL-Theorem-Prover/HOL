@@ -58,16 +58,8 @@ sig
   val hhs_prettify_flag : bool ref
   val hhs_minimize_flag : bool ref
   
-  (* allows to test for the name of the theorem before evaluation *)
-  
-  
-  (* init search *)
-  val set_isearch : unit -> unit
-  val set_isearch_hook : (unit -> unit) ref
-  val set_esearch : unit -> unit
-  
   (* init record and eval *)
-  val set_irecord : unit -> unit
-  val set_erecord : unit -> unit
+  val set_record : string -> unit
+  val set_record_hook : (unit -> unit) ref
 
 end

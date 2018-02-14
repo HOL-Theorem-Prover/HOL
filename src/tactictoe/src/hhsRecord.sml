@@ -357,6 +357,8 @@ fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
 
 fun start_thy cthy =
   (
+  (* necessary for export if no proofs are found *)
+  hhsSetup.set_record cthy;
   (* exporting theorems from boolTheory in ConseqConv *)
   if cthy = "ConseqConv" 
   then (clean_feadata (); 

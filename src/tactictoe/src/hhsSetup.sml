@@ -107,18 +107,28 @@ val hhs_prettify_flag = ref false
 
 (* ----------------------------------------------------------------------
    Setting flags
-   Note: evaluation procurs no significant improvement. So turning it off
-   is possible, thus avoiding to record list of goals.
+   Evaluation procurs no significant improvement. 
+   So turning it off is possible, thus avoiding to record list of goals.
    ---------------------------------------------------------------------- *)
 
+(* theories appearing in metisTools *)
+val thyl = ["sat", "marker", "combin", "min", "bool", "normalForms"];
 
 (* set esearch should be moved inside set_erecord *)
-fun set_esearch () = 
+fun set_record cthy = 
   (
+  (* recording *)
+  hhs_namespacethm_flag := true;
+  hhs_recprove_flag := true;
+  hhs_reclet_flag   := false;
+  (* learning *)
+  hhs_ortho_flag      := true;
+  hhs_ortho_number    := 20;
+  hhs_selflearn_flag  := false; (* Self-learning issue: local tags *)
   (* predicting *)
   hhs_maxselect_pred := 500;
   (* searching *)
-  hhs_search_time    := Time.fromReal 60.0;
+  hhs_search_time    := Time.fromReal 10.0;
   hhs_tactic_time    := 0.05;
   (* mc *)
   hhs_policy_coeff   := 0.5; (* between 0 and 1 *)
@@ -131,7 +141,8 @@ fun set_esearch () =
   hhs_mc_coeff       := 2.0;
   hhs_mcpresim_int   := 2;
   (* metis *)
-  hhs_metisexec_flag   := can load "metisTools";
+  hhs_metisrecord_flag := true;
+  hhs_metisexec_flag   := (not (mem cthy thyl) andalso can load "metisTools");
   if !hhs_metisexec_flag then update_metis_tac () else ();
   hhs_metishammer_flag := (true andalso !hhs_metisexec_flag);
   hhs_metis_npred      := 16;
@@ -148,33 +159,16 @@ fun set_esearch () =
   hhs_termpresim_int := 2;
   (* result *)
   hhs_minimize_flag := true;
-  hhs_prettify_flag := true
-  )
-
-fun set_erecord () =
-  (
-  (* recording *)
-  hhs_namespacethm_flag := true;
-  hhs_recprove_flag := true;
-  hhs_reclet_flag   := false;
-  (* learning *)
-  hhs_ortho_flag      := true;
-  hhs_ortho_number    := 20;
-  hhs_selflearn_flag  := false; (* Self-learning issue: local tags *)
-  (* metis learning *)
-  hhs_metisexec_flag   := can load "metisTools"; 
-  hhs_metisrecord_flag := true;
+  hhs_prettify_flag := true;
   (* evaluation *)
-  hhs_eval_flag    := true;
+  hhs_eval_flag    := false;
   hhs_evprove_flag := false;
   hhs_evlet_flag   := false; (* hhs_evletonly_flag := true; *)
   one_in_option    := SOME (0,10);
   hh_only_flag     := 
-    (false andalso can update_hh_stac () andalso can load "metisTools")
+    (false andalso !hhs_metisexec_flag andalso can update_hh_stac ())
   )
 
-val set_isearch_hook = ref (fn () => ())
-fun set_isearch () = (set_esearch (); !set_isearch_hook ())
-fun set_irecord () = (set_erecord (); hhs_eval_flag := false)
+val set_record_hook = ref (fn () => ())
 
 end (* struct *)
