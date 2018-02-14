@@ -22,6 +22,11 @@ local
                 TextIO.flushOut TextIO.stdErr)
 
   val redirected_files = ["mlibOmegaint.sml"];
+  val meta_debug = ref false
+
+  fun MDBG s = if !meta_debug then
+                 TextIO.output(TextIO.stdOut, "META_DEBUG: " ^ s() ^ "\n")
+               else ()
 
   (* used to stand for "has double quote", but the same analysis is necessary
      even for files that contain single quotes because of the special
@@ -45,15 +50,20 @@ local
   fun unquote_to file1 file2 =
       systeml [HOLDIR ++ "bin" ++ "unquote", file1, file2];
 
-
 structure FS = OS.FileSys
+
+val loadpathdb =
+    ref (Binarymap.mkDict String.compare : (string,string) Binarymap.dict)
 
 fun quse s = let
   val _ = if FS.access (s, [FS.A_READ]) then ()
           else die ("Use: non-existent file "^s)
+  val _ = MDBG (fn _ => "Call quse " ^ s)
+  val full = OS.Path.mkCanonical
+               (OS.Path.mkAbsolute{path = s, relativeTo = OS.FileSys.getDir()})
 in
-  if has_dq s then QUse.use s
-  else PolyML.use s
+  if has_dq s then QUse.use s else PolyML.use s ;
+  loadpathdb := Binarymap.insert(!loadpathdb,OS.Path.file full,OS.Path.dir full)
 end handle OS.Path.Path => die ("Path exception in quse "^s)
              | e => (TextIO.output(TextIO.stdErr,
                                    "error in quse " ^ s ^ " : " ^
@@ -120,6 +130,7 @@ fun loadUo ps uo =
   end
 and load ps modPath =
   let
+    val _ = MDBG (fn _ => "Call load " ^ modPath)
     val modPath = holpathdb.subst_pathvars modPath
     val modName = OS.Path.file modPath
     fun l ext =
@@ -143,12 +154,14 @@ and load ps modPath =
 in
 
   structure Meta = struct
+    val meta_debug = meta_debug
     val load = load []
     val loadPath = loadPath;
     fun loaded () = Binaryset.listItems (!loadedMods);
     fun fakeload s =
         loadedMods := Binaryset.add(!loadedMods,s)
     fun findMod modname = findUo (modname ^ ".uo") ("." :: !loadPath)
+    fun fileDirMap () = !loadpathdb
   end;
 
 open Meta;
