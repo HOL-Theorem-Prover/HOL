@@ -78,6 +78,7 @@ sig
   val mk_sameorder_set : ('a * 'a -> order) -> 'a list -> 'a list
   val dict_sort   : ('a * 'a -> order) -> 'a list -> 'a list
   val topo_sort   : (''a * ''a list) list -> ''a list
+  val sort_thyl   : string list -> string list
   
   val mk_string_set : string list -> string list
   val count_dict  : 

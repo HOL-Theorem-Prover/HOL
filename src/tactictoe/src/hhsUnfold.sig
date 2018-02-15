@@ -27,4 +27,8 @@ sig
   val open_struct : 
     (string, stack_t) Redblackmap.dict list -> string -> (string * stack_t) list
 
+  val find_script : string -> string 
+  val ttt_record : unit -> unit
+
+
 end

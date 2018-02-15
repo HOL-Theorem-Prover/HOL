@@ -32,14 +32,14 @@ fun mk_metis_call sl =
    -------------------------------------------------------------------------- *)
 
 fun read_thmfea s = case hhs_lex s of
-    a :: m => (dest_thm (thm_of_string a), (a, map string_to_int m))
+    a :: m => (SOME (dest_thm (thm_of_string a), (a, map string_to_int m)) handle _ => NONE)
   | _ => raise ERR "read_thmfea" s
     
 fun readthy_mdict thy =
   let
     val l0 = readl (hhs_mdict_dir ^ "/" ^ thy)
       handle _ => (if mem thy ["min","bool"] then () else debug thy; [])
-    val l1 = map read_thmfea l0
+    val l1 = List.mapPartial read_thmfea l0
   in
     hhs_mdict := daddl l1 (!hhs_mdict)
   end

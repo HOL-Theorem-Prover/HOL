@@ -272,7 +272,7 @@ fun holyhammer_goal goal =
 
 fun holyhammer term = holyhammer_goal ([],term)
 
-fun hh_tac goal = (holyhammer_goal goal) goal
+fun hh goal = (holyhammer_goal goal) goal
 
 fun hh_stac pid (symweight,feav,revdict) t goal = 
   let

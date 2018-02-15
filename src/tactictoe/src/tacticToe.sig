@@ -5,11 +5,12 @@ sig
   
   val set_timeout : real -> unit
   val set_record_hook : (unit -> unit) ref
-  val init_tactictoe : unit -> unit
+  val ttt_record : unit -> unit
   
+  val init_tactictoe : unit -> unit
   val eval_tactictoe : string -> goal -> unit
   val tactictoe : goal -> tactic 
-  val tt_tac : tactic
+  val ttt : tactic
   
   val next_tac_glob : tactic list ref
   val next_tac_number : int ref

@@ -10,11 +10,12 @@ struct
 
 open HolKernel boolLib Abbrev
 hhsSearch hhsTools hhsLexer hhsExec hhsFeature hhsPredict hhsData hhsInfix
-hhsFeature hhsMetis hhsLearn hhsMinimize hhsSetup
+hhsFeature hhsMetis hhsLearn hhsMinimize hhsSetup hhsUnfold
 
 val ERR = mk_HOL_ERR "tacticToe"
 
-fun set_timeout r = hhs_search_time := Time.fromReal r
+fun set_timeout r = 
+  set_record_hook := (fn () => hhs_search_time := Time.fromReal r)
 
 fun select_sthmfeav gfea =
   if !hhs_metishammer_flag orelse !hhs_hhhammer_flag orelse !hhs_thmlarg_flag
@@ -247,7 +248,7 @@ fun tactictoe goal =
     tactic_of_status r
   end
 
-fun tt_tac goal = (tactictoe goal) goal
+fun ttt goal = (tactictoe goal) goal
 
 (* ----------------------------------------------------------------------
    Predicting only the next tactic based on some distance measure.

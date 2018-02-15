@@ -423,8 +423,7 @@ fun write_thydep file thyl =
   end
 
 fun write_thyl dir filter_f thyl =
-  let 
-    fun sort_thyl thyl = topo_sort (map (fn x => (x, ancestry x)) thyl)
+  let
     val state =
     {
     ty_names    = ref (dempty KernelSig.name_compare),

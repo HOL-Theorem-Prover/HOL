@@ -1042,12 +1042,13 @@ fun cakeml_theories cakeml_dir =
    Interactive version
    -------------------------------------------------------------------------- *)
 
-fun name_inter file = #base (OS.Path.splitBaseExt file) ^ "_tactictoe.sml"
-fun name_interuo file = #base (OS.Path.splitBaseExt file) ^ "_tactictoe.uo"
+fun rm_ext file = #base (OS.Path.splitBaseExt file)
+fun name_inter file = rm_ext file ^ "_ttt/ttt.sml"
+fun dir_inter file = rm_ext file ^ "_ttt"
+fun name_interuo file = rm_ext file ^ "_ttt/ttt.uo"
 
 fun print_program cthy file sl =
-  if !n_store_thm = 0 then () else
-  let 
+  let
     val file_out = name_inter file 
     val oc = TextIO.openOut file_out
   in
@@ -1071,25 +1072,43 @@ fun irewrite_script file =
     end_unfold_thy ()
   end
 
-fun run_holmake file =
+fun run_holmake dir =
   let 
-    val dir = #dir (OS.Path.splitDirFile file)
-    val basename = #file (OS.Path.splitDirFile file)
-    val holmake = HOLDIR ^ "/bin/Holmake --no_hmakefile"
-    val cmd = 
-      if dir = ""
-      then holmake ^ " " ^ basename
-      else "cd " ^ dir ^ ";" ^ holmake ^ " " ^ basename
+    val holmake = HOLDIR ^ "/bin/Holmake"
+    val cmd = "cd " ^ dir ^ ";" ^ holmake
   in
     ignore (OS.Process.system cmd)
   end
   
 fun irecord_script file =
-  (
-  irewrite_script file; 
-  run_holmake (name_interuo file);
-  run_hol (name_interuo file)
-  )
+  if FileSys.isDir (dir_inter file) handle _ => false
+  then ()
+  else
+    (
+    mkDir_err (dir_inter file);
+    irewrite_script file; 
+    run_holmake (dir_inter file);
+    run_hol (name_interuo file)
+    )
+
+fun find_script x = 
+  let val dir = 
+    Binarymap.find(fileDirMap(),x ^ "Theory.sml") 
+    handle NotFound => raise ERR "" x
+  in
+    dir ^ "/" ^ x ^ "Script.sml"
+  end
+
+fun ttt_record () =
+  let
+    val thyl0 = ancestry (current_theory ())
+    val thyl1 = sort_thyl thyl0
+    val thyl2 = filter (fn x => not (mem x ["min","bool"])) thyl1
+    val thyl3 = map find_script thyl2
+  in
+    app irecord_script thyl3
+  end
+  
   
   
 end (* struct *)
@@ -1112,8 +1131,11 @@ end (* struct *)
   
     irewrite_script file;
   hol_scripts ();
-  erewrite_hol_scripts (); (* some String exception *)
+  erewrite_hol_scripts ();
 
+ load "arithmeticTheory";
+
+ 
   --------------------------------------------------------------------------- *)
 
 (* ---------------------------------------------------------------------------

@@ -32,7 +32,7 @@ sig
   
   (* Main function and options *)
   val holyhammer        : term -> tactic
-  val hh_tac            : tactic
+  val hh                : tactic
   
   (* Holyhammer for Tactictoe with parallel calls *)
   val hh_stac           : 
