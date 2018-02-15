@@ -10,7 +10,7 @@
    Requirement: 
      HOL version later than 16 Februrary 2018
      Reconfiguring (poly < tools/smart-configure.sml)
-     and rebuilding are necessary.
+     and rebuilding are necessary if your previous version was older.
    -------------------------------------------------------------------------- *)
 
 load "tacticToe";
