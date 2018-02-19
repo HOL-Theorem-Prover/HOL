@@ -199,7 +199,7 @@ in
   val () =
     ( hol_use ("help" ++ "src-sml") "Database"
     ; hol_use ("tools-poly" ++ "poly") "Help"
-    ; PolyML.use (HOLDIR ++ "tools" ++ "makefile-includes.ML")
+    ; ReadHMF.extend_path_with_includes {quietp = false, lpref = loadPath}
     ; List.app Meta.fakeload ["PP", "PolyML", "Posix"]
     ; Globals.interactive := true
     ; Parse.current_backend := Parse.interactive_ppbackend ()

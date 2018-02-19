@@ -1,4 +1,4 @@
-INCLUDES = ../../tools/cmp
+INCLUDES = ../../tools/cmp $(HOLDIR)/examples/misc
 EXTRA_CLEANS = polyscripter testoutput1
 
 .PHONY: all

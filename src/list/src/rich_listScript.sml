@@ -2320,6 +2320,18 @@ val SEG_SUC_EL = Q.store_thm("SEG_SUC_EL",
   ASM_SIMP_TAC(srw_ss() ++ numSimps.ARITH_ss) [SEG, SEG_CONS, ADD_CLAUSES] >>
   SIMP_TAC (srw_ss()) [ADD1]);
 
+val TAKE_SEG_DROP = Q.store_thm("TAKE_SEG_DROP",
+  ‘!n i l. i + n <= LENGTH l ==> (TAKE i l ++ SEG n i l ++ DROP (i + n) l = l)’,
+  Induct_on `l` >> SIMP_TAC (srw_ss()) [SEG] >> Cases_on `n`
+  >- SIMP_TAC (srw_ss()) [SEG] >>
+  Cases_on `i` >> ASM_SIMP_TAC (srw_ss()) [SEG] >> strip_tac
+  >- (Q.RENAME_TAC [‘SEG n 0 s ++ DROP n s’] >>
+      first_x_assum (Q.SPECL_THEN [‘n’, ‘0’] mp_tac) >>
+      ASM_SIMP_TAC (srw_ss()) []) >>
+  Q.RENAME_TAC [‘TAKE m s ++ SEG (SUC n) m s ++ _’] >>
+  first_x_assum (Q.SPECL_THEN [‘SUC n’, ‘m’] mp_tac) >>
+  SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) [ADD1]);
+
 val EL_MEM = Q.store_thm ("EL_MEM",
    `!n l. n < LENGTH l ==> (MEM (EL n l) l)`,
    INDUCT_TAC

@@ -65,3 +65,5 @@ bar
 ##parsetm x /\ y
 ##parsety α list
 ##parsetm :'a list
+>>__ load "root2Theory"
+>> root2Theory.SQRT_2_IRRATIONAL
