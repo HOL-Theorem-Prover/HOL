@@ -1,5 +1,4 @@
 src/real
-src/complex
 src/HolQbf
 src/HolSmt
 !!examples/separationLogic/src/
