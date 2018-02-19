@@ -1088,4 +1088,22 @@ val impl_tac = disch_then provehyp
 val impl_keep_tac =
   disch_then (provehyp_then (fn lth => fn rth => assume_tac lth >> mp_tac rth))
 
+
+open mp_then
+fun drule ith = first_assum (mp_then (Pos hd) mp_tac ith)
+fun dxrule ith = first_x_assum (mp_then (Pos hd) mp_tac ith)
+fun drule_then k ith = first_assum (mp_then (Pos hd) k ith)
+fun dxrule_then k ith = first_x_assum (mp_then (Pos hd) k ith)
+
+fun isfa_imp th = th |> concl |> strip_forall |> #2 |> is_imp
+fun dall_prim k fa ith0 g =
+  REPEAT_GTCL (fn ttcl => fn th => fa (mp_then (Pos hd) ttcl th))
+              (k o assert (not o isfa_imp))
+              (assert isfa_imp ith0)
+              g
+val drule_all = dall_prim mp_tac first_assum
+val dxrule_all = dall_prim mp_tac first_x_assum
+fun drule_all_then k = dall_prim k first_assum
+fun dxrule_all_then k = dall_prim k first_x_assum
+
 end (* Tactic *)
