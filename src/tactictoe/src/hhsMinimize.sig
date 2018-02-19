@@ -8,10 +8,8 @@ sig
   | Then   of (Proof * Proof)
   | Thenl  of (Proof * Proof list)
 
-  val pretty_mini_stac : real -> string -> goal -> goal list -> string
-  val cosmetic_stac : string -> string
-  val minimize : Proof -> Proof
+  val minimize_stac : real -> string -> goal -> goal list -> string
+  val minimize_proof : Proof -> Proof
   val reconstruct : goal -> Proof -> string
-  
-  
+
 end

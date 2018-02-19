@@ -5,7 +5,7 @@ appropriate to solve the current goal.
 The selection is performed on a dataset of recorded human tactics.
 
 INSTALL: 
-  See (examples/examples.sml).
+  See examples/ttt_demoScript.sml.
   
 ISSUES:
   Applying numSimps.clear_arith_caches is necessary in rare circumstances.

@@ -13,7 +13,7 @@ open HolKernel boolLib Abbrev hhsTools hhsExec hhsLexer hhsTimeout hhsSetup
 val ERR = mk_HOL_ERR "hhsMinimize"
 
 (* --------------------------------------------------------------------------
-   Tests. Todo: reconstruction time should be different for Metis.
+   Tests
    -------------------------------------------------------------------------- *)
 
 fun same_effect tim stac1 stac2 g =
@@ -27,6 +27,106 @@ fun same_effect tim stac1 stac2 g =
 fun is_proof stac g = (rec_sproof stac g = SOME [])
 
 fun is_effect tim stac g gl = (rec_stac tim stac g = SOME gl)
+
+(*---------------------------------------------------------------------------
+  Removing unnecessary parentheses
+  ----------------------------------------------------------------------------*)
+
+fun rm_par sl = case sl of
+    [] => []
+  | ["(",a,")"] => [a]
+  | ["(","(",a,")",")"] => [a]
+  | "(" :: a :: ")" :: m => a :: rm_par m
+  | "(" :: "(" :: a :: ")" :: ")" :: m => a :: rm_par m
+  | a :: m => a :: rm_par m
+
+(*----------------------------------------------------------------------------
+  Minimizing the space between parentheses
+  ----------------------------------------------------------------------------*)
+  
+fun minspace_sl sl = case sl of
+    [] =>  ""
+  | [a] => a
+  | a :: b :: m =>
+    (
+    if mem a ["[","("] orelse mem b ["]",")",",",";"] 
+      then a ^ minspace_sl (b :: m)
+      else a ^ " " ^ minspace_sl (b :: m)
+    )
+    
+(*----------------------------------------------------------------------------
+  Remove infix guards
+  ----------------------------------------------------------------------------*)
+
+fun is_infix_open s = 
+  String.isPrefix "hhs_infix" s andalso
+  String.isSuffix "open" s
+
+fun is_infix_close s = 
+  String.isPrefix "hhs_infix" s andalso
+  String.isSuffix "close" s
+
+fun rm_infix sl = case sl of
+    [] => []
+  | a :: b :: c :: m => 
+    if is_infix_open a andalso is_infix_close c 
+    then b :: rm_infix m
+    else a :: rm_infix (b :: c :: m)
+  | a :: m => a :: rm_infix m 
+
+(*----------------------------------------------------------------------------
+  Removing module declaration
+  ----------------------------------------------------------------------------*)
+
+fun rm_prefix sl =
+  let
+    fun rm_one_prefix s =
+      let
+        val l = String.tokens (fn x => x = #".") s
+        val s' = last l
+      in
+        if List.length l = 1 orelse not (is_pointer_eq s s') 
+        then s 
+        else s'
+      end
+  in
+    map rm_one_prefix sl
+  end
+
+(*----------------------------------------------------------------------------
+  Remove DB.fetch
+  ----------------------------------------------------------------------------*)
+
+fun rm_dbfetch sl = case sl of
+    [] => []
+  | ["DB.fetch",a,b] => 
+    ((
+    if unquote_string a = current_theory () 
+    then ["DB.fetch",a,b] 
+    else [unquote_string a ^ "Theory." ^ unquote_string b] 
+    )
+    handle _ => ["DB.fetch",a,b])
+  | "DB.fetch" :: a :: b :: m => 
+    ((
+    if unquote_string a = current_theory () 
+    then ["DB.fetch",a,b] 
+    else [unquote_string a ^ "Theory." ^ unquote_string b]
+    ) 
+    handle _ => ["DB.fetch",a,b])
+    @ 
+    rm_dbfetch m
+  | a :: m => a :: rm_dbfetch m 
+
+(*----------------------------------------------------------------------------
+  Prettification of a string tactic.
+  ----------------------------------------------------------------------------*)
+
+fun prettify1_stac stac = 
+  (minspace_sl o rm_infix o rm_prefix o rm_par o rm_dbfetch) 
+    (hhs_lex stac)
+  
+fun prettify2_stac stac = 
+  (minspace_sl o hhs_lex) stac
 
 (*----------------------------------------------------------------------------
   Externalizing local declaration
@@ -45,83 +145,10 @@ fun find_local_aux loc_acc acc sl = case sl of
     end
   | a :: m => find_local_aux loc_acc (a :: acc) m 
  
-fun find_local stac =
-  let val sl = hhs_lex stac in
-    find_local_aux [] [] sl
-  end
+fun find_local stac = find_local_aux [] [] (hhs_lex stac)
 
 (*----------------------------------------------------------------------------
-  Minimizing the space between parentheses
-  ----------------------------------------------------------------------------*)
- 
-fun minspace_sl sl = case sl of
-    [] =>  ""
-  | [a] => a
-  | a :: b :: m =>
-    (
-    if mem a ["[","("] orelse mem b ["]",")",",",";"] 
-      then a ^ minspace_sl (b :: m)
-      else a ^ " " ^ minspace_sl (b :: m)
-    )
-
-(*----------------------------------------------------------------------------
-  Removing module declaration
-  ----------------------------------------------------------------------------*)
-
-fun is_infix_open s = 
-  String.isPrefix "hhs_infix" s andalso
-  String.isSuffix "open" s
-
-fun is_infix_close s = 
-  String.isPrefix "hhs_infix" s andalso
-  String.isSuffix "close" s
-
-(* rm_infix in the case of the global infix operators *)
-fun rm_infix sl = case sl of
-    [] => []
-  | a :: b :: c :: m => 
-    if is_infix_open a andalso is_infix_close c 
-    then b :: rm_infix m
-    else a :: rm_infix (b :: c :: m)
-  | a :: m => a :: rm_infix m 
-
-fun requote sl = case sl of
-   [] => []
-  | "[" :: "QUOTE" :: s :: "]" :: m => 
-    if hhsTools.is_string s 
-    then ("`" ^ rm_space (rm_comment (rm_squote s)) ^ "`") :: requote m
-    else hd sl :: requote (tl sl)
-  | "Term" :: "[" :: "QUOTE" :: s :: "]" :: m => 
-    if hhsTools.is_string s 
-    then ("``" ^ rm_space (rm_comment (rm_squote s)) ^ "``") :: requote m
-    else hd sl :: requote (tl sl)
-  | a :: m => a :: requote m
-
-fun rm_prefix stac =
-  let
-    val sl = hhs_lex stac
-    fun rm_one_prefix s =
-      let
-        val l = String.tokens (fn x => x = #".") s
-        val s' = last l
-      in
-        if List.length l = 1 orelse not (is_pointer_eq s s') 
-        then s 
-        else s'
-      end
-  in
-    map rm_one_prefix sl
-  end
-
-fun prettify1_stac stac = 
-  (minspace_sl o rm_infix o rm_prefix) stac
-fun prettify2_stac stac =
-  (minspace_sl o hhs_lex) stac
-
-fun cosmetic_stac stac = (minspace_sl o requote o hhs_lex) stac
-
-(*----------------------------------------------------------------------------
-  Pretty-printing the abstract tree of the proof.
+  Prettifying proofs
   ----------------------------------------------------------------------------*)
   
 datatype Proof = 
@@ -129,17 +156,17 @@ datatype Proof =
   | Then   of (Proof * Proof)
   | Thenl  of (Proof * Proof list)
 
-fun prettify_proof tim proof = case proof of
+fun pretty_allstac tim proof = case proof of
     Tactic (s,g) =>
-    let
-      val s1 = prettify1_stac s
-      val s2 = prettify2_stac s
-    in
+    let val (s1,s2) = (prettify1_stac s, prettify2_stac s) in
       if same_effect tim s s1 g then Tactic (s1,g) else Tactic (s2,g)
     end
-  | Then (p1,p2) => Then (prettify_proof tim p1, prettify_proof tim p2)
-  | Thenl (p,pl) => Thenl (prettify_proof tim p, map (prettify_proof tim) pl)
+  | Then (p1,p2) => Then (pretty_allstac tim p1, pretty_allstac tim p2)
+  | Thenl (p,pl) => Thenl (pretty_allstac tim p, map (pretty_allstac tim) pl)
 
+(*----------------------------------------------------------------------------
+  Printing proofs and extracting local declarations
+  ----------------------------------------------------------------------------*)
 
 fun string_of_proof proof = 
   let 
@@ -185,8 +212,7 @@ fun safestring_of_proof proof = case proof of
     end
 
 (*----------------------------------------------------------------------------
-  Minimizing the number of elements of lists without changing the effect of
-  the tactics. Also removing unnecessary tactics.
+  Minimizing lists
   ----------------------------------------------------------------------------*)
  
 fun decompose sl = case sl of
@@ -209,74 +235,84 @@ fun group_to_string l =
     String.concatWith " " (map to_string l)
   end
   
-fun minimize_stac tim g gl pl l = case l of
+fun mini_stac tim g gl pl l = case l of
     [] => group_to_string pl
-  | (false,a) :: m => minimize_stac tim g gl (pl @ [(false,a)]) m
+  | (false,a) :: m => mini_stac tim g gl (pl @ [(false,a)]) m
   | (true,(l1,l2)) :: m => 
     if null l2 
-    then minimize_stac tim g gl (pl @ [(true,(l1,l2))]) m
+    then mini_stac tim g gl (pl @ [(true,(l1,l2))]) m
     else 
       let val new_stac = group_to_string  (pl @ [(true, (l1, tl l2))] @ m) in
         if is_effect tim new_stac g gl 
-        then minimize_stac tim g gl pl ((true, (l1, tl l2)) :: m)
-        else minimize_stac tim g gl pl ((true, (l1 @ [hd l2], tl l2)) :: m)
+        then mini_stac tim g gl pl ((true, (l1, tl l2)) :: m)
+        else mini_stac tim g gl pl ((true, (l1 @ [hd l2], tl l2)) :: m)
       end   
         
-fun minimize_stac_g_gl tim stac g gl =
-  minimize_stac tim g gl [] (decompose (hhs_lex stac))   
+fun mini_stac_g_gl tim stac g gl =
+  mini_stac tim g gl [] (decompose (hhs_lex stac))   
 
-fun pretty_mini_stac tim stac g gl = 
-  prettify1_stac (minimize_stac_g_gl tim stac g gl)
+(*----------------------------------------------------------------------------
+  Minimizing lists in all tactics of a proof
+  ----------------------------------------------------------------------------*)
 
-fun minimize_stac_in_proof stac g =
+fun mini_proofstac stac g =
   let 
     val gl = fst (tactic_of_sml stac g) 
       handle _ => raise ERR "minimize" stac
     val tim = Real.max (!hhs_tactic_time, !hhs_metis_time)
   in
-    minimize_stac tim g gl [] (decompose (hhs_lex stac))
+    mini_stac tim g gl [] (decompose (hhs_lex stac))
   end        
        
-fun minimize_tac proof = case proof of 
-    Tactic (s,g) => Tactic (minimize_stac_in_proof s g,g)   
-  | Then (p1,p2) => Then (minimize_tac p1, minimize_tac p2)
-  | Thenl (p,pl) => Thenl (minimize_tac p, map minimize_tac pl)
+fun mini_allstac proof = case proof of 
+    Tactic (s,g) => Tactic (mini_proofstac s g,g)   
+  | Then (p1,p2) => Then (mini_allstac p1, mini_allstac p2)
+  | Thenl (p,pl) => Thenl (mini_allstac p, map mini_allstac pl)
 
+(*----------------------------------------------------------------------------
+  Trivial proof minimization
+  ----------------------------------------------------------------------------*)
 (* could be replaced by minimization search, 
    favorising breadth first, with a high exploration coefficient *) 
-fun minimize_proof proof = case proof of
+fun mini_proof proof = case proof of
     Tactic _ => proof
   | Then (Tactic (_,g),p2) => 
-    let val s = string_of_proof p2 in
+    let val s = string_of_proof p2 in 
       if is_proof s g then p2 else proof
     end
-  | Then (p1,p2) => Then (minimize_proof p1, minimize_proof p2)
-  | Thenl (p,pl) => Thenl (minimize_proof p, map minimize_proof pl)
+  | Then (p1,p2) => Then (mini_proof p1, mini_proof p2)
+  | Thenl (p,pl) => Thenl (mini_proof p, map mini_proof pl)
 
-fun prettify_proof_wrap p =
-  if !hhs_prettify_flag then 
-    let 
-      val _ = debug "Starting prettification"
-      val tim = Real.max (!hhs_tactic_time, !hhs_metis_time)
-      val newp = prettify_proof tim p
-      val _ = debug "End prettification"
-    in
-      newp
-    end
-  else p
-
-fun minimize_proof_wrap p =
+fun mini_proof_wrap p =
   if !hhs_minimize_flag then 
     let 
       val _ = debug "Starting minimization"
-      val newp = minimize_proof (minimize_tac p)
+      val newp = mini_proof (mini_allstac p)
       val _ ="End minimization"
     in
       newp
     end
   else p
 
-fun minimize p = (prettify_proof_wrap o minimize_proof_wrap) p
+(*----------------------------------------------------------------------------
+  Combining minimization and prettification.
+  ----------------------------------------------------------------------------*)
+
+fun minimize_stac tim stac g gl = prettify1_stac (mini_stac_g_gl tim stac g gl)
+
+fun pretty_proof_wrap p =
+  if !hhs_prettify_flag then 
+    let 
+      val _ = debug "Starting prettification"
+      val tim = Real.max (!hhs_tactic_time, !hhs_metis_time)
+      val newp = pretty_allstac tim p
+      val _ = debug "End prettification"
+    in
+      newp
+    end
+  else p
+
+fun minimize_proof p = (pretty_proof_wrap o mini_proof_wrap) p
 
 (*----------------------------------------------------------------------------
   Reconstructing the proof.
@@ -299,8 +335,22 @@ fun reconstruct_aux g proof sproof =
     sproof
   end
 
-fun unsafe_reconstruct g proof =
-  reconstruct_aux g proof (cosmetic_stac (string_of_proof proof))          
+fun requote sl = case sl of
+   [] => []
+  | "[" :: "QUOTE" :: s :: "]" :: m => 
+    if hhsTools.is_string s 
+    then ("`" ^ rm_space (rm_comment (rm_squote s)) ^ "`") :: requote m
+    else hd sl :: requote (tl sl)
+  | "Term" :: "[" :: "QUOTE" :: s :: "]" :: m => 
+    if hhsTools.is_string s 
+    then ("``" ^ rm_space (rm_comment (rm_squote s)) ^ "``") :: requote m
+    else hd sl :: requote (tl sl)
+  | a :: m => a :: requote m
+
+fun requote_sproof s = (minspace_sl o requote o hhs_lex) s
+
+fun unsafe_reconstruct g proof = 
+  reconstruct_aux g proof (requote_sproof (string_of_proof proof)) 
 
 fun safe_reconstruct g proof =
   reconstruct_aux g proof (safestring_of_proof proof)

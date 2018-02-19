@@ -60,7 +60,7 @@ fun hh_eval goal =
       NONE      => debug_proof ("Proof status: Time Out")
     | SOME stac => 
       let 
-        val newstac = cosmetic_stac (pretty_mini_stac 1.0 stac goal [])
+        val newstac = minimize_stac 1.0 stac goal []
         val tac = tactic_of_sml newstac
         val (b,t) = add_time (app_tac 2.0 tac) goal 
       in
@@ -254,9 +254,6 @@ fun ttt goal = (tactictoe goal) goal
    Predicting only the next tactic based on some distance measure.
    ---------------------------------------------------------------------- *)
 
-fun string_stac stac g gl =
-  cosmetic_stac (pretty_mini_stac 1.0 stac g gl)
-
 val next_tac_glob = ref []
 val next_tac_number = ref 5
 fun next n = List.nth (!next_tac_glob,n)
@@ -264,7 +261,7 @@ fun next n = List.nth (!next_tac_glob,n)
 fun save_stac tac stac g gl =
   (
   next_tac_glob := !next_tac_glob @ [tac];
-  print_endline (hide_out (string_stac stac g) gl)
+  print_endline (hide_out (minimize_stac 1.0 stac g) gl)
   )
 
 fun try_tac tacdict memdict n goal stacl =

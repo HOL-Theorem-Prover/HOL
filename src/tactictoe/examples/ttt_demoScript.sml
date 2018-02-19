@@ -29,7 +29,8 @@ val () = ttt_record ();
 
 val ex1 = store_thm("ex1",
   ``x > 9 ==> x > 8``,
-  (* Run this tactic first, to generate the one below: ttt *)
+  (* Run this tactic first, to generate the one below: 
+     ttt ([],``x > 9 ==> x > 8``); *)
   (ASM_SIMP_TAC (srw_ss () ++ boolSimps.LET_ss ++ ARITH_ss)) []);
 
 (* ---------------------------------------------------------------------------
@@ -38,10 +39,10 @@ val ex1 = store_thm("ex1",
 
 val ex2 = store_thm("ex2",
   ``(!n. f n = c) ==> (MAP f ls = REPLICATE (LENGTH ls) c)``,
-  (* ttt *)
-  (ASM_SIMP_TAC (srw_ss () ++ boolSimps.LET_ss ++ ARITH_ss))
-    [listTheory.LIST_EQ_REWRITE, ((fetch "rich_list" "EL_REPLICATE"))] THEN
-  METIS_TAC [listTheory.EL_MAP]);
+  (* ttt ([],``(!n. f n = c) ==> (MAP f ls = REPLICATE (LENGTH ls) c)``); *)
+  (ASM_SIMP_TAC (srw_ss () ++ boolSimps.LET_ss ++ ARITH_ss)) 
+  [listTheory.LIST_EQ_REWRITE, rich_listTheory.EL_REPLICATE] THEN
+  SRW_TAC [] [listTheory.EL_MAP]);
 
 (* ---------------------------------------------------------------------------
    Example 3
@@ -49,10 +50,9 @@ val ex2 = store_thm("ex2",
 
 val ex3 = store_thm("ex3",
   ``!n. EVEN n ==> ~(?m. n = 2 * m + 1)``,
-  (* ttt *)
-  PROVE_TAC [(fetch "arithmetic" "ODD_EXISTS"),
-             (fetch "arithmetic" "ADD1"),
-             (fetch "arithmetic" "EVEN_ODD")]);
+  (* ttt ([],``!n. EVEN n ==> ~(?m. n = 2 * m + 1)``); *)
+  SIMP_TAC bool_ss [GSYM arithmeticTheory.ADD1] THEN
+  PROVE_TAC [arithmeticTheory.EVEN_ODD, arithmeticTheory.ODD_DOUBLE]);
 
 (* ---------------------------------------------------------------------------
    Example 4
@@ -60,12 +60,13 @@ val ex3 = store_thm("ex3",
 
 val ex4 = store_thm("ex4",
   ``count n SUBSET count (n+m)``,
-  (* ttt *)
-  ASM_SIMP_TAC numLib.std_ss
-    [(fetch "pred_set" "SUBSET_DEF"),
-     (fetch "pred_set" "count_def"),
-     (fetch "pred_set" "GSPECIFICATION")] THEN
-  METIS_TAC [arithmeticTheory.LESS_IMP_LESS_ADD]);
+  (* ttt ([],``count n SUBSET count (n+m)``); *)
+  ASM_SIMP_TAC numLib.std_ss 
+    [pred_setTheory.SUBSET_DEF, 
+     pred_setTheory.count_def,
+     pred_setTheory.GSPECIFICATION] THEN
+  METIS_TAC [arithmeticTheory.LESS_IMP_LESS_ADD]
+);
 
 (* ---------------------------------------------------------------------------
    Example 5
@@ -73,10 +74,11 @@ val ex4 = store_thm("ex4",
 
 val ex5 = store_thm("ex5",
   ``count (n+m) DIFF count n = IMAGE ($+n) (count m)``,
-  (* ttt *)
-  SRW_TAC [ARITH_ss] [(fetch "pred_set" "EXTENSION"), EQ_IMP_THM] THEN
-  Q.EXISTS_TAC `x - n` THEN
-  SRW_TAC [ARITH_ss] []);
+  (* ttt ([],``count (n+m) DIFF count n = IMAGE ($+n) (count m)``); *)
+  SRW_TAC [ARITH_ss] [pred_setTheory.EXTENSION, EQ_IMP_THM] THEN 
+  Q.EXISTS_TAC `x - n` THEN 
+  SRW_TAC [ARITH_ss] []
+);
 
 (* ---------------------------------------------------------------------------
    Example 6
@@ -84,7 +86,7 @@ val ex5 = store_thm("ex5",
 
 val ex6 = store_thm("ex6",
   ``(MAP f1 ls = MAP f2 ls) /\ MEM x ls ==> (f1 x = f2 x)``,
-  (* ttt *)
+  (* ttt ([],``(MAP f1 ls = MAP f2 ls) /\ MEM x ls ==> (f1 x = f2 x)``); *)
   SRW_TAC [] [listTheory.MAP_EQ_f]);
 
 (* ---------------------------------------------------------------------------
@@ -95,7 +97,7 @@ val ex6 = store_thm("ex6",
 val () = set_timeout 10.0;
 val ex7 = store_thm("ex7",
   ``countable (UNIV:num list set)``
-  ttt (* times out *));
+  ttt ([],``countable (UNIV:num list set)``); (* times out *));
 *)
 
 (* ---------------------------------------------------------------------------
