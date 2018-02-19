@@ -109,3 +109,5 @@ val it = \(\turn\) p \(\land\) q \(\Rightarrow\) p: thm
 x /\bs{} y
 \(\alpha\) list
 :'a list
+> root2Theory.SQRT_2_IRRATIONAL
+val it = \(\turn\) \(\neg\)Rational (sqrt 2): thm
