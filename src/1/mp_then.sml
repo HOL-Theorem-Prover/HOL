@@ -24,13 +24,16 @@ fun PART_MATCH' f th t =
     val (vs, _) = strip_forall (concl th)
     val hypfvs_set = hyp_frees th
     val hypfvs = HOLset.listItems hypfvs_set
+    val hyptyvs = HOLset.listItems (hyp_tyvars th)
     val tfvs = free_vars t
     val dontspec = union tfvs hypfvs
     val (vs, speccedth) = avSPEC_ALL dontspec th
-    val ((tmsig,_),_) = raw_match [] hypfvs_set (f (concl speccedth)) t ([],[])
-    val dontgen = union (map #redex tmsig) dontspec
+    val s as (tmsig,tysig) =
+        match_terml hyptyvs hypfvs_set (f (concl speccedth)) t
+    val dontgen = op_union aconv (map #redex tmsig) dontspec
   in
-    GENL (set_diff vs dontgen) (INST tmsig speccedth)
+    GENL (op_set_diff aconv (map (Term.inst tysig) vs) dontgen)
+         (INST_TY_TERM s speccedth)
   end
 
 fun match_subterm pat =
@@ -53,18 +56,20 @@ datatype match_position =
 fun mp_then pos (ttac : thm_tactic) ith0 rth (g as (asl,w)) =
   let
     val ith = MP_CANON ith0
-    val rth_eq = EQF_INTRO rth handle HOL_ERR _ => EQT_INTRO rth
+    val rth_eqT = EQT_INTRO rth
+    val rth_eq = EQF_INTRO rth handle HOL_ERR _ => rth_eqT
     fun m f k t =
       let
         val th0 = PART_MATCH' f ith t
         val th =
             CONV_RULE
               (STRIP_QUANT_CONV
-                 (FORK_CONV (EVERY_CONJ_CONV $ TRY_CONV $ REWR_CONV rth_eq,
+                 (FORK_CONV (EVERY_CONJ_CONV $ TRY_CONV $ REWR_CONV rth_eqT,
                              (REWR_CONV rth_eq ORELSEC
                               TRY_CONV (RAND_CONV (REWR_CONV rth_eq) THENC
                                         REWR_CONV notT))) THENC
-                  TRY_CONV (REWR_CONV Timp)))
+                  TRY_CONV (REWR_CONV Timp) THENC
+                  TRY_CONV (REWR_CONV impF)))
               th0
       in
         ttac th g

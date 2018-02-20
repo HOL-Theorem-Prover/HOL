@@ -309,7 +309,7 @@ is used in representing terms containing local variable bindings (\ie\
 For example, the concrete syntax \holtxt{let v = M in N} is translated
 by the parser to the term \holtxt{LET (\bs{}v.N) M}. For the full
 description of how \holtxt{let} expressions are translated, see
-Section \ref{prod}.
+Section~\ref{sec:let-exp}.
 
 The constant \holtxt{COND} is used to represent conditional
 expressions. The concrete syntax
@@ -1028,7 +1028,7 @@ parses to
 
 
 \subsubsection{\texttt{let}-terms}
-\label{let-exp}
+\label{sec:let-exp}
 
 The quotation parser
 %
@@ -1043,7 +1043,7 @@ similar to those in \ML. For example, the following terms are allowed:
 \begin{verbatim}
    let x = 1 and y = 2 in x+y
 
-   let f(x,y) = (x*x)+(y*y) and a = 20*20 and b = 50*49 in f(a,b)
+   let f(x,y) = (x*x)+(y*y); a = 20*20; b = 50*49 in f(a,b)
 \end{verbatim}
 \end{hol}
 
@@ -1085,7 +1085,7 @@ destructor operations.  For example:
 
 \begin{session}
 \begin{alltt}
->> Term `let x = 1 and y = 2 in x+y`;
+>> Term `let x = 1; y = 2; in x+y`;
 
 >> dest_comb it;
 
