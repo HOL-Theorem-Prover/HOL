@@ -24,13 +24,16 @@ fun PART_MATCH' f th t =
     val (vs, _) = strip_forall (concl th)
     val hypfvs_set = hyp_frees th
     val hypfvs = HOLset.listItems hypfvs_set
+    val hyptyvs = HOLset.listItems (hyp_tyvars th)
     val tfvs = free_vars t
     val dontspec = union tfvs hypfvs
     val (vs, speccedth) = avSPEC_ALL dontspec th
-    val ((tmsig,_),_) = raw_match [] hypfvs_set (f (concl speccedth)) t ([],[])
-    val dontgen = union (map #redex tmsig) dontspec
+    val s as (tmsig,tysig) =
+        match_terml hyptyvs hypfvs_set (f (concl speccedth)) t
+    val dontgen = op_union aconv (map #redex tmsig) dontspec
   in
-    GENL (set_diff vs dontgen) (INST tmsig speccedth)
+    GENL (op_set_diff aconv (map (Term.inst tysig) vs) dontgen)
+         (INST_TY_TERM s speccedth)
   end
 
 fun match_subterm pat =

@@ -827,6 +827,31 @@ in
 end;
 
 val _ = let
+  val _ = tprint "drule 2"
+  val _ = new_type("list", 1)
+  val _ = new_constant ("LENGTH", ``:'a list -> num``)
+  val _ = new_constant ("zero", ``:num``)
+  val _ = new_constant ("some_n", ``:num``)
+  val th = mk_thm([], ``!x l:'a list. (<) x (LENGTH l) ==> (<) x some_n``)
+  val asl = [``(<) v (LENGTH (m:ind list))``]
+  val g = (asl, ``?a:ind (b:'a). Q a b``)
+  val (res, _) = drule th g
+  val expectedg = ``(<) v some_n ==> ?a:ind b:'a. Q a b``
+in
+  case res of
+      [(asl', g')] =>
+      (case Lib.list_compare Term.compare (asl,asl') of
+           EQUAL => if aconv g' expectedg then OK()
+                    else die ("FAILED\n  Got " ^ term_to_string g'^
+                              "; expected " ^ term_to_string expectedg)
+         | _ => die ("FAILED\n  Got back changed asm list: "^
+                     String.concatWith ", " (map term_to_string asl')))
+    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals (" ^
+                Int.toString (length res))
+end;
+
+
+val _ = let
   val _ = tprint "drule_all 1"
   val asl = [``!x:ind. P x /\ R x ==> ?y:'a. Q x y``,
              ``P (c:ind):bool``, ``R (d:ind):bool``,
