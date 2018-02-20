@@ -850,6 +850,25 @@ in
                 Int.toString (length res))
 end;
 
+val _ = let
+  val _ = tprint "drule 3"
+  val asl = [``~p ==> q``, ``~p``]
+  val g = (asl, ``r:bool``)
+  val (res, _) = pop_assum drule g
+  val expectedg = ``q ==> r``
+in
+  case res of
+      [(asl', g')] =>
+      (case Lib.list_compare Term.compare ([``~p``], asl') of
+           EQUAL => if aconv g' expectedg then OK()
+                    else die ("FAILED\n  Got " ^ term_to_string g'^
+                              "; expected " ^ term_to_string expectedg)
+         | _ => die ("FAILED\n  Got back changed asm list: "^
+                     String.concatWith ", " (map term_to_string asl')))
+    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals (" ^
+                Int.toString (length res))
+end;
+
 
 val _ = let
   val _ = tprint "drule_all 1"
