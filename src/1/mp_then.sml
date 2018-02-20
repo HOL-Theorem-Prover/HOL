@@ -56,18 +56,20 @@ datatype match_position =
 fun mp_then pos (ttac : thm_tactic) ith0 rth (g as (asl,w)) =
   let
     val ith = MP_CANON ith0
-    val rth_eq = EQF_INTRO rth handle HOL_ERR _ => EQT_INTRO rth
+    val rth_eqT = EQT_INTRO rth
+    val rth_eq = EQF_INTRO rth handle HOL_ERR _ => rth_eqT
     fun m f k t =
       let
         val th0 = PART_MATCH' f ith t
         val th =
             CONV_RULE
               (STRIP_QUANT_CONV
-                 (FORK_CONV (EVERY_CONJ_CONV $ TRY_CONV $ REWR_CONV rth_eq,
+                 (FORK_CONV (EVERY_CONJ_CONV $ TRY_CONV $ REWR_CONV rth_eqT,
                              (REWR_CONV rth_eq ORELSEC
                               TRY_CONV (RAND_CONV (REWR_CONV rth_eq) THENC
                                         REWR_CONV notT))) THENC
-                  TRY_CONV (REWR_CONV Timp)))
+                  TRY_CONV (REWR_CONV Timp) THENC
+                  TRY_CONV (REWR_CONV impF)))
               th0
       in
         ttac th g
