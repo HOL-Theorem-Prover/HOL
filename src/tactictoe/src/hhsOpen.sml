@@ -122,9 +122,8 @@ fun run_hol file =
     val dir = #dir (OS.Path.splitDirFile file)
     val basename = #file (OS.Path.splitDirFile file)
     val buildheap = HOLDIR ^ "/bin/buildheap"
-    val state = "-b " ^ HOLDIR ^ "/bin/hol.state"
     val gc = "--gcthreads=1"
-    val hol = String.concatWith " " [buildheap,gc,state]
+    val hol = String.concatWith " " [buildheap,gc]
     val cmd = 
       if dir = ""
       then hol ^ " " ^ basename
