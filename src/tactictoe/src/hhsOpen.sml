@@ -101,7 +101,7 @@ fun tactictoe_export s =
    Generating code
    -------------------------------------------------------------------------- *)
 
-fun run_hol file =
+fun run_hol0 file =
   let
     val dir = #dir (OS.Path.splitDirFile file)
     val basename = #file (OS.Path.splitDirFile file)
@@ -109,6 +109,22 @@ fun run_hol file =
     val state0 = "-b " ^ HOLDIR ^ "/bin/hol.state0"
     val gc = "--gcthreads=1"
     val hol = String.concatWith " " [buildheap,gc,state0]
+    val cmd = 
+      if dir = ""
+      then hol ^ " " ^ basename
+      else "cd " ^ dir ^ ";" ^ hol ^ " " ^ basename
+  in
+    ignore (OS.Process.system cmd)
+  end
+
+fun run_hol file =
+  let
+    val dir = #dir (OS.Path.splitDirFile file)
+    val basename = #file (OS.Path.splitDirFile file)
+    val buildheap = HOLDIR ^ "/bin/buildheap"
+    val state = "-b " ^ HOLDIR ^ "/bin/hol.state"
+    val gc = "--gcthreads=1"
+    val hol = String.concatWith " " [buildheap,gc,state]
     val cmd = 
       if dir = ""
       then hol ^ " " ^ basename
@@ -144,7 +160,7 @@ fun export_struct s =
     mkDir_err hhs_open_dir;
     mkDir_err dir;
     writel file (code_of s);
-    run_hol file;
+    run_hol0 file;
     read_open s handle _ => 
     (debug_unfold ("warning: structure " ^ s ^ " not found"); ([],[],[],[]))
   end

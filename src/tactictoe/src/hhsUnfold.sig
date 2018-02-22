@@ -20,7 +20,7 @@ sig
   val cakeml_scripts       : string -> string list
   val interactive_hook     : string ref
   val irewrite_script      : string -> unit
-  val irecord_script       : string -> unit
+  val irecord_thy          : string -> unit
   val erewrite_script      : string -> unit
   val erewrite_hol_scripts : unit -> unit
   
@@ -29,6 +29,7 @@ sig
 
   val find_script : string -> string 
   val ttt_record : unit -> unit
+  val ttt_record_hol : unit -> unit
 
 
 end

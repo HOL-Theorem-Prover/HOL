@@ -967,6 +967,12 @@ fun unfold_wrap p =
    Evaluation version
    -------------------------------------------------------------------------- *)
 
+fun barefile file = OS.Path.base (OS.Path.file file)
+fun rm_ext file = #base (OS.Path.splitBaseExt file)
+fun name_inter file = rm_ext file ^ "_ttt/ttt.sml"
+fun dir_inter file = rm_ext file ^ "_ttt"
+fun name_interuo file = rm_ext file ^ "_ttt/ttt.uo"
+
 fun erewrite_script file = 
   if extract_thy file = "bool" then () else
   let
@@ -1000,6 +1006,19 @@ fun hol_scripts () =
     ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1 ^ "; " ^ cmd2));
     readl file
   end
+
+fun hol_theories () =
+  let 
+    val file = tactictoe_dir ^ "/code/theory_list"
+    val sigdir = HOLDIR ^ "/sigobj"
+    val cmd0 = "cd " ^ sigdir
+    val cmd1 = "readlink -f $(find -regex \".*[^/]Theory.sig\") > " ^ file
+  in
+    ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1 ^ "; "));
+    readl file
+  end
+
+
 
 fun erewrite_hol_scripts () =
   (
@@ -1042,11 +1061,6 @@ fun cakeml_theories cakeml_dir =
    Interactive version
    -------------------------------------------------------------------------- *)
 
-fun rm_ext file = #base (OS.Path.splitBaseExt file)
-fun name_inter file = rm_ext file ^ "_ttt/ttt.sml"
-fun dir_inter file = rm_ext file ^ "_ttt"
-fun name_interuo file = rm_ext file ^ "_ttt/ttt.uo"
-
 fun print_program cthy file sl =
   let
     val file_out = name_inter file 
@@ -1079,17 +1093,12 @@ fun run_holmake dir =
   in
     ignore (OS.Process.system cmd)
   end
-  
-fun irecord_script file =
-  if FileSys.isDir (dir_inter file) handle _ => false
-  then ()
-  else
-    (
-    mkDir_err (dir_inter file);
-    irewrite_script file; 
-    run_holmake (dir_inter file);
-    run_hol (name_interuo file)
-    )
+
+val core_theories = ["ConseqConv", "quantHeuristics", "patternMatches", "ind_type", "while",
+    "one", "sum", "option", "pair", "combin", "sat", "normalForms",
+    "relation", "min", "bool", "marker", "num", "prim_rec", "arithmetic",
+    "numeral", "basicSize", "numpair", "pred_set", "list", "rich_list",
+    "indexedLists"];
 
 fun find_script x = 
   let val dir = 
@@ -1099,22 +1108,50 @@ fun find_script x =
     dir ^ "/" ^ x ^ "Script.sml"
   end
 
+fun irecord_thy thy =
+  let 
+    val file = find_script thy 
+  in
+    if FileSys.isDir (dir_inter file) handle _ => false
+    then ()
+    else
+    (
+    mkDir_err (dir_inter file);
+    irewrite_script file; 
+    run_holmake (dir_inter file);
+    if mem thy core_theories 
+    then run_hol0 (name_interuo file)
+    else run_hol (name_interuo file)
+    )
+  end
+  
+
+
 fun ttt_record () =
   let
     val thyl0 = ancestry (current_theory ())
     val thyl1 = sort_thyl thyl0
     val thyl2 = filter (fn x => not (mem x ["min","bool"])) thyl1
-    val thyl3 = map find_script thyl2
   in
-    app irecord_script thyl3
+    app irecord_thy thyl2
   end
   
+fun ttt_record_hol () =
+  let 
+    val l0 = hol_theories ()
+    val l1 = map barefile l0 
+  in
+    app load l1;
+    ttt_record ()
+  end
   
   
 end (* struct *)
 
 (* ---------------------------------------------------------------------------
   HOL:  
+  
+  
   
   
   rlwrap hol

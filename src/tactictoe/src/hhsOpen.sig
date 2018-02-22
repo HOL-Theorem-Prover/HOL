@@ -4,6 +4,7 @@ sig
   val cthy_unfold_glob : string ref
   val debug_unfold : string -> unit
   
+  val run_hol0 : string -> unit
   val run_hol : string -> unit
   
   val read_open : 
