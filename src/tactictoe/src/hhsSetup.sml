@@ -106,10 +106,7 @@ val hhs_minimize_flag = ref false
 val hhs_prettify_flag = ref false
 
 (* ----------------------------------------------------------------------
-   Setting flags
-   Evaluation procurs no significant improvement. 
-   So turning it off is possible, thus avoiding to record list of goals.
-   ---------------------------------------------------------------------- *)
+   Setting flags ---------------------------------------------------------------------- *)
 
 (* theories appearing in metisTools *)
 val thyl = ["sat", "marker", "combin", "min", "bool", "normalForms"];

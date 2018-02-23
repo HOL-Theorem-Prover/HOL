@@ -19,9 +19,7 @@ val tactictoe_step_counter = ref 0
 val tactictoe_thm_counter = ref 0
 val replay_timeout = 20.0
 
-
 fun local_tag x = x
-
 fun add_local_tag s = "( hhsRecord.local_tag " ^ s ^ ")"
 
 (*----------------------------------------------------------------------------
