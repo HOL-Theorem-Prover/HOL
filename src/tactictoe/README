@@ -6,16 +6,22 @@ The selection is performed on a dataset of recorded human tactics.
 
 USAGE: See examples/ttt_demoScript.sml.
 
-EVALUATION:
+EVALUATION of a theory (not needed to use TacticToe):
+  Evaluates how much tactictoe can automatically re-prove 
+  from previous definitions.
+  The result is stored in src/tactictoe/search_log/proof/your.
+
   load "tacticToe";
   open tacticToe;
   load "yourTheory";
   ttt_record (); (* takes a while *)
   ttt_eval_thy "your";
-
-  Evaluates how much tactictoe can automatically re-prove 
-  from previous definitions.
-  The result is stored in src/tactictoe/search_log/proof/your. 
+  
+  Warnings: 
+    if you do interrupt evaluation, 
+    please run ttt_record_thy "your" as evaluation messes up with the database.
+    For the same reason, do not run evaluation in two theories in parallel
+    unless the two theories are independent from each other.
 
 ISSUES:
   Applying numSimps.clear_arith_caches is necessary in rare circumstances.
