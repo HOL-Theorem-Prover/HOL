@@ -116,7 +116,6 @@ fun init_tactictoe () =
   let 
     val cthy = current_theory ()
     val _ = hide_out set_record cthy
-    val _ = (!set_record_hook) ()
     val thyl = ancestry cthy
   in
     if !previous_theory <> cthy
@@ -249,6 +248,8 @@ fun tactictoe goal =
   end
 
 fun ttt goal = (tactictoe goal) goal
+
+fun ttt_t term = tactictoe ([],term)
 
 (* ----------------------------------------------------------------------
    Predicting only the next tactic based on some distance measure.

@@ -14,22 +14,23 @@ sig
   | SException   of string
   
   val unquoteString        : string -> string
-  val hol_scripts          : unit -> string list
-  val hol_examples_scripts : unit -> string list
-  val cakeml_theories      : string -> string list
-  val cakeml_scripts       : string -> string list
+  val sigobj_scripts       : unit -> string list
+  val sigobj_theories      : unit -> string list
   val interactive_hook     : string ref
   val irewrite_script      : string -> unit
-  val irecord_thy          : string -> unit
   val erewrite_script      : string -> unit
-  val erewrite_hol_scripts : unit -> unit
+  val erewrite_sigobj      : unit -> unit
   
   val open_struct : 
     (string, stack_t) Redblackmap.dict list -> string -> (string * stack_t) list
 
   val find_script : string -> string 
+  
   val ttt_record : unit -> unit
-  val ttt_record_hol : unit -> unit
-
+  val ttt_record_sigobj : unit -> unit
+  val ttt_record_thy: string -> unit
+  val ttt_clean : unit -> unit
+  val ttt_clean_thy: string -> unit
+  val ttt_eval_thy: string -> unit
 
 end

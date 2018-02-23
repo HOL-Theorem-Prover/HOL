@@ -114,7 +114,8 @@ val hhs_prettify_flag = ref false
 (* theories appearing in metisTools *)
 val thyl = ["sat", "marker", "combin", "min", "bool", "normalForms"];
 
-(* set esearch should be moved inside set_erecord *)
+val set_record_hook = ref (fn () => ())
+
 fun set_record cthy = 
   (
   (* recording *)
@@ -164,11 +165,11 @@ fun set_record cthy =
   hhs_eval_flag    := false;
   hhs_evprove_flag := false;
   hhs_evlet_flag   := false; (* hhs_evletonly_flag := true; *)
-  one_in_option    := SOME (0,10);
+  one_in_option    := SOME (0,1);
   hh_only_flag     := 
-    (false andalso !hhs_metisexec_flag andalso can update_hh_stac ())
+    (false andalso !hhs_metisexec_flag andalso can update_hh_stac ());
+  (* hook *)
+  (!set_record_hook) ()
   )
-
-val set_record_hook = ref (fn () => ())
 
 end (* struct *)

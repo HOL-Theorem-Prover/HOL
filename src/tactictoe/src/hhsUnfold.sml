@@ -22,6 +22,7 @@ val hhs_unfold_dir = tactictoe_dir ^ "/unfold_log"
 val hhs_scripts_dir = tactictoe_dir ^ "/scripts"
 val interactive_flag = ref true
 val interactive_hook = ref ""
+val iev_flag = ref false
 
 (* --------------------------------------------------------------------------
    Program representation and stack
@@ -881,7 +882,6 @@ val infix_decl = tactictoe_dir ^ "/src/infix_file.sml"
 
 fun output_header oc cthy file =
   (
-  (* Necessary because of cakeml auto-documentation. *)
   app (osn oc)
   [
   "(* ========================================================================== *)",
@@ -889,7 +889,13 @@ fun output_header oc cthy file =
   "(* ========================================================================== *)"
   ];
   app (os oc) (bare_readl infix_decl);
-  os oc ("val _ = hhsRecord.start_thy " ^ mlquote cthy)
+  if !iev_flag 
+    then app (osn oc)
+    ["val _ = hhsSetup.set_record_hook := (fn () => ",
+     "  (hhsTools.hhs_search_time := Time.fromReal 60.0;",
+     "   hhsSetup.hhs_eval_flag := true))"] 
+    else ();
+  osn oc ("val _ = hhsRecord.start_thy " ^ mlquote cthy)
   )
 
 fun output_foot oc cthy file = 
@@ -995,7 +1001,7 @@ fun erewrite_script file =
       (String.concatWith " " ["cp",quote file_out,quote local_file])
   end
 
-fun hol_scripts () =
+fun sigobj_scripts () =
   let 
     val file = tactictoe_dir ^ "/code/theory_list"
     val sigdir = HOLDIR ^ "/sigobj"
@@ -1007,7 +1013,7 @@ fun hol_scripts () =
     readl file
   end
 
-fun hol_theories () =
+fun sigobj_theories () =
   let 
     val file = tactictoe_dir ^ "/code/theory_list"
     val sigdir = HOLDIR ^ "/sigobj"
@@ -1018,44 +1024,11 @@ fun hol_theories () =
     readl file
   end
 
-
-
-fun erewrite_hol_scripts () =
+fun erewrite_sigobj () =
   (
   erase_file copy_scripts;
-  app erewrite_script (hol_scripts ())
+  app erewrite_script (sigobj_scripts ())
   )
-
-fun hol_examples_scripts () =
-  let 
-    val file = tactictoe_dir ^ "/code/theory_list"
-    val dir = HOLDIR ^ "/examples"
-    val cmd0 = "find " ^ dir ^ " -name \"*Theory.uo\" > " ^ file
-    val cmd1 = "sed -i 's/Theory.uo/Script.sml/' " ^ file
-  in
-    ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1));
-    readl file
-  end
-
-fun cakeml_scripts cakeml_dir =
-  let 
-    val file = tactictoe_dir ^ "/code/theory_list"
-    val cmd0 = "find " ^ cakeml_dir ^ " -name \"*Theory.uo\" > " ^ file
-    val cmd1 = "sed -i 's/Theory.uo/Script.sml/' " ^ file
-  in
-    ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1));
-    readl file
-  end
-
-fun cakeml_theories cakeml_dir =
-  let 
-    val file = tactictoe_dir ^ "/code/theory_list"
-    val cmd0 = "find " ^ cakeml_dir ^ " -name \"*Theory.uo\" > " ^ file
-    val cmd1 = "sed -i 's/Theory.uo/Theory/' " ^ file
-  in
-    ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1));
-    readl file
-  end
 
 (* ---------------------------------------------------------------------------
    Interactive version
@@ -1094,7 +1067,8 @@ fun run_holmake dir =
     ignore (OS.Process.system cmd)
   end
 
-val core_theories = ["ConseqConv", "quantHeuristics", "patternMatches", "ind_type", "while",
+val core_theories = 
+   ["ConseqConv", "quantHeuristics", "patternMatches", "ind_type", "while",
     "one", "sum", "option", "pair", "combin", "sat", "normalForms",
     "relation", "min", "bool", "marker", "num", "prim_rec", "arithmetic",
     "numeral", "basicSize", "numpair", "pred_set", "list", "rich_list",
@@ -1108,90 +1082,68 @@ fun find_script x =
     dir ^ "/" ^ x ^ "Script.sml"
   end
 
-fun irecord_thy thy =
+fun ttt_record_thy thy =
   let 
-    val file = find_script thy 
+    val file = find_script thy
+    val dir = dir_inter file
   in
-    if FileSys.isDir (dir_inter file) handle _ => false
-    then ()
-    else
-    (
     mkDir_err (dir_inter file);
     irewrite_script file; 
     run_holmake (dir_inter file);
     if mem thy core_theories 
-    then run_hol0 (name_interuo file)
-    else run_hol (name_interuo file)
-    )
+      then run_hol0 (name_interuo file)
+      else run_hol (name_interuo file)
   end
   
-
-
+fun ttt_record_thy_wrap thy =
+  let 
+    val file = find_script thy
+    val dir = dir_inter file
+  in
+    if FileSys.isDir dir handle _ => false
+    then ()
+    else ttt_record_thy thy
+  end
+  
 fun ttt_record () =
   let
     val thyl0 = ancestry (current_theory ())
     val thyl1 = sort_thyl thyl0
     val thyl2 = filter (fn x => not (mem x ["min","bool"])) thyl1
   in
-    app irecord_thy thyl2
+    app ttt_record_thy_wrap thyl2
   end
   
-fun ttt_record_hol () =
+fun ttt_record_sigobj () =
   let 
-    val l0 = hol_theories ()
+    val l0 = sigobj_theories ()
     val l1 = map barefile l0 
   in
     app load l1;
     ttt_record ()
   end
   
-  
-end (* struct *)
+fun rmDir dir = ignore (OS.Process.system ("rm -r " ^ dir))
 
-(* ---------------------------------------------------------------------------
-  HOL:  
-  
-  
-  
-  
-  rlwrap hol
-  load "hhsUnfold";
-  
-  val file = HOLDIR ^ "/src/combin/combinScript.sml";
-  
-  hhsUnfold.irecord_script file;
+fun ttt_clean_thy thy =
+  let 
+    val file = find_script thy
+    val dir = dir_inter file
+  in
+    rmDir dir
+  end
 
+fun ttt_clean () =
+  let
+    val thyl0 = ancestry (current_theory ())
+    val thyl1 = sort_thyl thyl0
+    val thyl2 = filter (fn x => not (mem x ["min","bool"])) thyl1
+  in
+    app ttt_clean_thy thyl2
+  end
   
-  val filel = hhsUnfold.hol_scripts ();
-    
-  val file = "/home/tgauthier/HOL/src/num/theories/arithmeticScript.sml";
+fun ttt_eval_thy thy = 
+  (iev_flag := true; ttt_record_thy thy; iev_flag := false)
   
-    irewrite_script file;
-  hol_scripts ();
-  erewrite_hol_scripts ();
-
- load "arithmeticTheory";
-
- 
-  --------------------------------------------------------------------------- *)
-
-(* ---------------------------------------------------------------------------
-  CAKEML:
   
-  screen -s cakeml
-  cd cakeml/compiler/backend/proofs
-  /home/thibault/big/HOL/bin/Holmake
-  PATH=$PATH:"$HOME/HOL/bin"
-  cd /home/thibault/big
-  sh link_sigobj.sh
-  cd HOL/src/tactictoe/src
-  /home/thibault/big/HOL/bin/Holmake
- 
-  rlwrap ../HOL/bin/hol
-  load "hhsUnfold";
-  open hhsTools;
-  open hhsUnfold;
-  val l = all_examples_files () @ all_cakeml_files ();
-  app hhs_rewrite l;         
-  --------------------------------------------------------------------------- *)
-  
+end (* struct *)  
