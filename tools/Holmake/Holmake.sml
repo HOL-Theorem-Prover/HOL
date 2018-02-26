@@ -620,6 +620,7 @@ in
         add_node {target = target_s, seqnum = 0, phony = false,
                   status = if exists_readable target_s then Succeeded
                            else Failed,
+                  dir = hmdir.curdir(),
                   command = NoCmd, dependencies = []} g0
       else if isSome pdep andalso no_full_extra_rule target then
         let
@@ -653,7 +654,7 @@ in
         in
             add_node {target = target_s, seqnum = 0, phony = false,
                       status = if needs_building then Pending else Succeeded,
-                      command = BuiltInCmd bic,
+                      command = BuiltInCmd bic, dir = hmdir.curdir(),
                       dependencies = depnodes } g2
         end
       else
@@ -662,7 +663,7 @@ in
               add_node {target = target_s, seqnum = 0, phony = false,
                         status = if exists_readable target_s then Succeeded
                                  else Failed,
-                        command = NoCmd,
+                        command = NoCmd, dir = hmdir.curdir(),
                         dependencies = []} g0
           | SOME {dependencies, commands, ...} =>
             let
@@ -726,6 +727,7 @@ in
                   val (g',n) = add_node {target = target_s, seqnum = seqnum,
                                          status = status, phony = is_phony,
                                          command = SomeCmd c,
+                                         dir = hmdir.curdir(),
                                          dependencies = depnode @ depnodes } g
                 in
                   (* The "" is necessary to make multi-command, multi-target
@@ -749,7 +751,7 @@ in
                     NONE =>
                     add_node {target = target_s, seqnum = 0, phony = is_phony,
                               status = status, command = NoCmd,
-                              dependencies = depnodes} g1
+                              dir = hmdir.curdir(), dependencies = depnodes} g1
                   | SOME scr =>
                     (case toFile scr of
                          SML (Script s) =>
@@ -761,6 +763,7 @@ in
                            add_node {target = target_s, seqnum = 0,
                                      phony = false, status = updstatus,
                                      command = BuiltInCmd (BIC_BuildScript s),
+                                     dir = hmdir.curdir(),
                                      dependencies = depnodes} g1
                          end
                        | _ => die "Invariant failure in build_depgraph")

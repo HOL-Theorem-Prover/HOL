@@ -27,20 +27,20 @@ fun bic_toString BIC_Compile = "BIC_Compile"
 datatype command = NoCmd | SomeCmd of string | BuiltInCmd of builtincmd
 type 'a nodeInfo = { target : 'a, status : target_status,
                      command : command, phony : bool,
-                     seqnum : int,
+                     seqnum : int, dir : Holmake_tools.hmdir.t,
                      dependencies : (node * string) list  }
 
 fun setStatus s (nI: 'a nodeInfo) : 'a nodeInfo =
   let
-    val {target,command,status,dependencies,seqnum,phony} = nI
+    val {target,command,status,dependencies,seqnum,phony,dir} = nI
   in
     {target = target, status = s, command = command, seqnum = seqnum,
-     dependencies = dependencies, phony = phony}
+     dependencies = dependencies, phony = phony, dir = dir}
   end
 
-fun addDeps0 dps {target,command,status,dependencies,seqnum,phony} =
+fun addDeps0 dps {target,command,status,dependencies,seqnum,phony,dir} =
   {target = target, status = status, command = command, phony = phony,
-   dependencies = dps @ dependencies, seqnum = seqnum}
+   dependencies = dps @ dependencies, seqnum = seqnum, dir = dir}
 
 
 val node_compare = Int.compare
@@ -92,7 +92,7 @@ fun addDeps (n,dps) g =
   case peeknode g n of
       NONE => raise NoSuchNode
     | SOME nI =>
-        fupd_nodes (fn nm => Binarymap.insert(nm,n,addDeps0 dps nI)) g
+      fupd_nodes (fn nm => Binarymap.insert(nm,n,addDeps0 dps nI)) g
 
 fun nodeStatus g n =
   case peeknode g n of
@@ -135,9 +135,9 @@ fun add_node (nI : string nodeInfo) (g :t) =
   end
 
 fun updnode (n, st) (g : t) : t =
-   case peeknode g n of
-       NONE => raise NoSuchNode
-     | SOME nI => fupd_nodes (fn m => Map.insert(m, n, setStatus st nI)) g
+  case peeknode g n of
+      NONE => raise NoSuchNode
+    | SOME nI => fupd_nodes (fn m => Map.insert(m, n, setStatus st nI)) g
 
 fun find_runnable (g : t) =
   let
@@ -162,9 +162,11 @@ val node_toString = Int.toString
 
 fun nodeInfo_toString tstr (nI : 'a nodeInfo) =
   let
-    val {target,status,command,dependencies,seqnum,phony} = nI
+    open Holmake_tools
+    val {target,status,command,dependencies,seqnum,phony,dir} = nI
   in
-    tstr target ^ (if phony then "[PHONY]" else "") ^
+    OS.Path.concat(hmdir.toString dir, tstr target) ^
+    (if phony then "[PHONY]" else "") ^
     "(" ^ Int.toString seqnum ^ ") " ^
     status_toString status ^ " : " ^
     (case command of
