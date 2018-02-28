@@ -23,6 +23,9 @@ val hhs_scripts_dir = tactictoe_dir ^ "/scripts"
 val interactive_flag = ref true
 val interactive_hook = ref ""
 val iev_flag = ref false
+val iev_eprover_flag = ref false
+
+val open_code_dir = ref "/temp"
 
 (* --------------------------------------------------------------------------
    Program representation and stack
@@ -683,8 +686,9 @@ fun open_struct_aux stack s'=
     else
       let 
         val l0 = String.tokens (fn x => x = #".") s
-        val (l1,l2,l3,l4) = read_open s handle Io _ => export_struct s
-        fun f constr a = 
+        val (l1,l2,l3,l4) = import_struct s 
+          handle Io _ => export_import_struct (!open_code_dir) s
+        fun f constr a =
           let fun g l = 
             (String.concatWith "." (l @ [a]), constr (s ^ "." ^ a)) 
           in
@@ -880,7 +884,7 @@ fun print_sl oc sl = case sl of
                
 val infix_decl = tactictoe_dir ^ "/src/infix_file.sml"
 
-fun output_header oc cthy file =
+fun output_header oc cthy =
   (
   app (osn oc)
   [
@@ -895,10 +899,22 @@ fun output_header oc cthy file =
      "  (hhsTools.hhs_search_time := Time.fromReal 60.0;",
      "   hhsSetup.hhs_eval_flag := true))"] 
     else ();
+  if !iev_eprover_flag
+    then app (osn oc)
+    ["val _ = hhsSetup.set_record_hook := (fn () => ",
+     "  (hhsTools.hhs_search_time := Time.fromReal 60.0;",
+     "   hhsSetup.hhs_eval_flag := true;",
+     "   hhsSetup.hh_only_flag :=",
+     "     Lib.can hhsExec.update_hh_stac ();",
+     "   hhsSetup.hhs_hhhammer_time := 60",
+     "  ))"] 
+    else ();
+ 
   osn oc ("val _ = hhsRecord.start_thy " ^ mlquote cthy)
   )
 
-fun output_foot oc cthy file = 
+
+fun output_foot oc cthy = 
   os oc ("\nval _ = hhsRecord.end_thy " ^ mlquote cthy)
 
 fun start_unfold_thy cthy =
@@ -992,9 +1008,9 @@ fun erewrite_script file =
     val p2 = unfold_wrap p0
     val sl5 = modified_program false p2
   in
-    output_header oc cthy file;
+    output_header oc cthy;
     print_sl oc sl5;
-    output_foot oc cthy file;
+    output_foot oc cthy;
     TextIO.closeOut oc;
     end_unfold_thy ();
     append_endline copy_scripts 
@@ -1034,37 +1050,31 @@ fun erewrite_sigobj () =
    Interactive version
    -------------------------------------------------------------------------- *)
 
-fun print_program cthy file sl =
+fun print_program cthy filei sl =
   let
-    val file_out = name_inter file 
-    val oc = TextIO.openOut file_out
+    val fileo = name_inter filei
+    val oc = TextIO.openOut fileo
   in
-    output_header oc cthy file;
+    output_header oc cthy;
     print_sl oc sl;
-    output_foot oc cthy file;
+    output_foot oc cthy;
     TextIO.closeOut oc
   end
 
-fun irewrite_script file =
-  if extract_thy file = "bool" then () else
+fun irewrite_script diro filei =
+  if extract_thy filei = "bool" then () else
   let
+    val _ = open_code_dir := diro
     val _ = interactive_flag := true
-    val cthy = extract_thy file
+    val cthy = extract_thy filei
     val _ = start_unfold_thy cthy
-    val p0 = sketch_wrap file
+    val p0 = sketch_wrap filei
     val p2 = unfold_wrap p0
     val sl5 = modified_program false p2
+    val _ = open_code_dir := "/temp"
   in
-    print_program cthy file sl5;
+    print_program cthy filei sl5;
     end_unfold_thy ()
-  end
-
-fun run_holmake dir =
-  let 
-    val holmake = HOLDIR ^ "/bin/Holmake"
-    val cmd = "cd " ^ dir ^ ";" ^ holmake
-  in
-    ignore (OS.Process.system cmd)
   end
 
 val core_theories = 
@@ -1085,14 +1095,13 @@ fun find_script x =
 fun ttt_record_thy thy =
   let 
     val file = find_script thy
-    val dir = dir_inter file
+    val diri = dir_inter file
+    val fileuo = name_interuo file
   in
-    mkDir_err (dir_inter file);
-    irewrite_script file; 
-    run_holmake (dir_inter file);
-    if mem thy core_theories 
-      then run_hol0 (name_interuo file)
-      else run_hol (name_interuo file)
+    mkDir_err diri;
+    irewrite_script diri file; 
+    run_holmake fileuo;
+    if mem thy core_theories then run_hol0 fileuo else run_hol fileuo
   end
   
 fun ttt_record_thy_wrap thy =
@@ -1123,10 +1132,9 @@ fun ttt_record_sigobj () =
     ttt_record ()
   end
   
-fun rmDir dir = ignore (OS.Process.system ("rm -r " ^ dir))
-
 fun ttt_clean_thy thy =
   let 
+    fun rmDir dir = ignore (OS.Process.system ("rm -r " ^ dir))
     val file = find_script thy
     val dir = dir_inter file
   in
@@ -1141,9 +1149,21 @@ fun ttt_clean () =
   in
     app ttt_clean_thy thyl2
   end
-  
+
+fun ttt_clean_open () = 
+  let fun rmDir dir = ignore (OS.Process.system ("rm -r " ^ dir)) in
+    rmDir hhs_open_dir
+  end
+
+(* ---------------------------------------------------------------------------
+   Evaluation of different provers
+   -------------------------------------------------------------------------- *)
+
 fun ttt_eval_thy thy = 
   (iev_flag := true; ttt_record_thy thy; iev_flag := false)
   
-  
+fun eprover_eval_thy thy =
+  (iev_eprover_flag := true; ttt_record_thy thy; iev_eprover_flag := false)
+
+
 end (* struct *)  

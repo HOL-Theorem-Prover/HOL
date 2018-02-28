@@ -23,11 +23,13 @@ sig
   val ttt_record_sigobj : unit -> unit
   val ttt_record_thy: string -> unit
   val ttt_clean : unit -> unit
+  val ttt_clean_open : unit -> unit
   val ttt_clean_thy: string -> unit
     
   (* Evaluation *)
   val init_tactictoe : unit -> unit (* included in ttt *)
   val eval_tactictoe : string -> goal -> unit
   val ttt_eval_thy: string -> unit
+  val eprover_eval_thy: string -> unit (* does not work *)
   
 end

@@ -14,7 +14,7 @@ open HolKernel boolLib hhsTools
 val ERR = mk_HOL_ERR "hhsOpen"
 
 (* ---------------------------------------------------------------------------
-   Needed for cakeml at the beginning of code_val
+   Deprecated cakeml hack:
    "load " ^ (mlquote "lprefix_lubTheory") ^ ";",
    "load " ^ (mlquote "reg_allocTheory") ^ ";",
    -------------------------------------------------------------------------- *)
@@ -31,27 +31,49 @@ fun debug_unfold s =
   append_endline (hhs_unfold_dir ^ "/" ^ !cthy_unfold_glob) s
 
 (* ---------------------------------------------------------------------------
-   Computation of dependencies (not used)
+   Running a command on a file in a directory
    -------------------------------------------------------------------------- *)
 
-fun write_dep file cthy =
+fun run_cmd cmd file =
   let 
-    val file_out = hhs_open_dir ^ "/tactictoe_" ^ cthy ^ "_holdep"
-    val cmd = HOLDIR ^ "/bin/holdeptool.exe " ^ file ^ " > " ^ file_out
+    val dir = #dir (OS.Path.splitDirFile file)
+    val basename = #file (OS.Path.splitDirFile file)
+    val new_cmd =
+      if dir = ""
+      then cmd ^ " " ^ basename
+      else "cd " ^ dir ^ ";" ^ cmd ^ " " ^ basename
   in
-    ignore (OS.Process.system cmd)
+    ignore (OS.Process.system new_cmd)
   end
 
-fun read_dep cthy = 
-  readl (hhs_open_dir ^ "/tactictoe_" ^ cthy ^ "_holdep")
-  handle _ => raise ERR "read_dep" ""
-  
-fun tactictoe_load s = 
-  load s handle _ => print_endline ("could not load " ^ s)
+(* ---------------------------------------------------------------------------
+   Running holmake on a file
+   -------------------------------------------------------------------------- *)
 
-fun read_load cthy =
-  "val _ = List.app hhsOpen.tactictoe_load [" ^ String.concatWith ", " 
-  (map mlquote (read_dep cthy)) ^ "];"
+fun run_holmake file = run_cmd (HOLDIR ^ "/bin/Holmake") file
+
+(* ---------------------------------------------------------------------------
+   Running buildheap on a file
+   -------------------------------------------------------------------------- *)
+
+fun run_hol0 file =
+  let
+    val buildheap = HOLDIR ^ "/bin/buildheap"
+    val state0 = "-b " ^ HOLDIR ^ "/bin/hol.state0"
+    val gc = "--gcthreads=1"
+    val hol0 = String.concatWith " " [buildheap,gc,state0]
+  in
+    run_cmd hol0 file
+  end
+
+fun run_hol file =
+  let
+    val buildheap = HOLDIR ^ "/bin/buildheap"
+    val gc = "--gcthreads=1"
+    val hol = String.concatWith " " [buildheap,gc]
+  in
+    run_cmd hol file
+  end
 
 (* ---------------------------------------------------------------------------
    Exporting elements of a structure (values + substructures)
@@ -101,68 +123,55 @@ fun tactictoe_export s =
    Generating code
    -------------------------------------------------------------------------- *)
 
-fun run_hol0 file =
-  let
-    val dir = #dir (OS.Path.splitDirFile file)
-    val basename = #file (OS.Path.splitDirFile file)
-    val buildheap = HOLDIR ^ "/bin/buildheap"
-    val state0 = "-b " ^ HOLDIR ^ "/bin/hol.state0"
-    val gc = "--gcthreads=1"
-    val hol = String.concatWith " " [buildheap,gc,state0]
-    val cmd = 
-      if dir = ""
-      then hol ^ " " ^ basename
-      else "cd " ^ dir ^ ";" ^ hol ^ " " ^ basename
-  in
-    ignore (OS.Process.system cmd)
-  end
-
-fun run_hol file =
-  let
-    val dir = #dir (OS.Path.splitDirFile file)
-    val basename = #file (OS.Path.splitDirFile file)
-    val buildheap = HOLDIR ^ "/bin/buildheap"
-    val gc = "--gcthreads=1"
-    val hol = String.concatWith " " [buildheap,gc]
-    val cmd = 
-      if dir = ""
-      then hol ^ " " ^ basename
-      else "cd " ^ dir ^ ";" ^ hol ^ " " ^ basename
-  in
-    ignore (OS.Process.system cmd)
-  end
+fun load_err s = load s handle _ => () 
 
 fun code_of s =
-  ["load \"hhsOpen\";",
+  [
    "open hhsOpen;",
-   "load " ^ mlquote (top_struct s) ^ ";",
    "tactictoe_cleanval ();", 
    "tactictoe_cleanstruct " ^ mlquote s ^ ";",
    "open " ^ s ^ ";",
    "tactictoe_export " ^ mlquote s ^ ";"]
 
 (* ---------------------------------------------------------------------------
-   Executing and reading the result
+   Export
    -------------------------------------------------------------------------- *)
 
-fun read_open s = 
+fun export_struct dir s = 
+  let 
+    val diro = hhs_open_dir ^ "/" ^ s
+    val diri = dir ^ "/" ^ s
+    val file = diri ^ "/code.sml"
+    val fileuo = diri ^ "/code.uo"
+  in
+    mkDir_err hhs_open_dir; mkDir_err diro;
+    mkDir_err dir; mkDir_err diri; 
+    writel file (code_of s);
+    run_holmake fileuo;
+    run_hol fileuo
+  end
+
+(* ---------------------------------------------------------------------------
+   Import
+   -------------------------------------------------------------------------- *)
+
+fun import_struct s = 
   let val dir = hhs_open_dir ^ "/" ^ s in
     (readl (dir ^ "/values"), readl (dir ^ "/constructors"),
      readl (dir ^ "/exceptions"), readl (dir ^ "/structures"))
   end
 
-fun export_struct s = 
-  let 
-    val dir = hhs_open_dir ^ "/" ^ s
-    val file = dir ^ "/code.sml"
-  in
-    mkDir_err hhs_open_dir;
-    mkDir_err dir;
-    writel file (code_of s);
-    run_hol0 file;
-    read_open s handle _ => 
+(* ---------------------------------------------------------------------------
+   Export and import
+   -------------------------------------------------------------------------- *)
+
+fun export_import_struct dir s =
+  (
+  export_struct dir s;
+  import_struct s handle _ => 
     (debug_unfold ("warning: structure " ^ s ^ " not found"); ([],[],[],[]))
-  end
+  )
+
 
 
 end (* struct *)

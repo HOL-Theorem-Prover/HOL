@@ -17,7 +17,6 @@ sig
   val sigobj_scripts       : unit -> string list
   val sigobj_theories      : unit -> string list
   val interactive_hook     : string ref
-  val irewrite_script      : string -> unit
   val erewrite_script      : string -> unit
   val erewrite_sigobj      : unit -> unit
   
@@ -31,6 +30,8 @@ sig
   val ttt_record_thy: string -> unit
   val ttt_clean : unit -> unit
   val ttt_clean_thy: string -> unit
+  val ttt_clean_open : unit -> unit
   val ttt_eval_thy: string -> unit
+  val eprover_eval_thy: string -> unit
 
 end
