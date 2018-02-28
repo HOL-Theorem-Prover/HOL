@@ -14,12 +14,6 @@ open HolKernel boolLib hhsTools
 val ERR = mk_HOL_ERR "hhsOpen"
 
 (* ---------------------------------------------------------------------------
-   Deprecated cakeml hack:
-   "load " ^ (mlquote "lprefix_lubTheory") ^ ";",
-   "load " ^ (mlquote "reg_allocTheory") ^ ";",
-   -------------------------------------------------------------------------- *)
-
-(* ---------------------------------------------------------------------------
    Debugging
    -------------------------------------------------------------------------- *)
 
@@ -34,26 +28,76 @@ fun debug_unfold s =
    Running a command on a file in a directory
    -------------------------------------------------------------------------- *)
 
-fun run_cmd cmd file =
-  let 
-    val dir = #dir (OS.Path.splitDirFile file)
-    val basename = #file (OS.Path.splitDirFile file)
-    val new_cmd =
-      if dir = ""
-      then cmd ^ " " ^ basename
-      else "cd " ^ dir ^ ";" ^ cmd ^ " " ^ basename
-  in
-    ignore (OS.Process.system new_cmd)
-  end
+fun cmd_in_dir dir cmd =
+  ignore (OS.Process.system ("cd " ^ dir ^ ";" ^ cmd))
+
+fun run_cmd cmd = ignore (OS.Process.system cmd)
 
 (* ---------------------------------------------------------------------------
-   Running holmake on a file
+   Creating holmakefile for a file from existing holmakefile in dirorg.
    -------------------------------------------------------------------------- *)
 
-fun run_holmake file = run_cmd (HOLDIR ^ "/bin/Holmake") file
+fun first_mfile dirorg diruo =
+  let
+    val mfile = dirorg ^ "/Holmakefile"
+    val temp = diruo ^ "/temp"
+    val newmfile = diruo ^ "/Holmakefile"
+    val cmd = "sed -e :a -e '/\\\\$/N; s/\\\\\\n//; ta' "
+      ^ mfile ^ " > " ^ newmfile
+  in
+    if FileSys.access (mfile, [])
+    then 
+      (ignore (OS.Process.system cmd); SOME newmfile)
+    else 
+      (debug_unfold ("Warning: " ^ dirorg ^ " has no Holmakefile"); 
+       NONE)
+  end
+  
+fun new_mfile prefix alls mfile =
+  let 
+    val l0 = readl mfile
+    fun is_blank c = c = #" " orelse c = #"\n"
+    fun is_fs c = c = #"/"
+    fun is_include s = 
+      let val sl = String.tokens is_blank s in
+        hd sl = "INCLUDES" handle Empty => false
+      end
+  in
+    case List.find is_include l0 of 
+      NONE => () 
+    | SOME includes =>
+      let
+        val (_,dirl) = split_sl "=" (String.tokens is_blank includes)
+        fun add_prefix s = 
+          if ((String.sub (s,0) = #"$" orelse String.sub (s,0) = #"/") 
+               handle _ => false)
+          then s
+          else prefix ^ s
+        val _ = FileSys.remove mfile
+        val newincludes =
+          String.concatWith " " (["INCLUDES","="] @ (map add_prefix dirl))
+        val newall = "all: code.uo"
+      in
+        writel mfile [newincludes,alls]
+      end
+  end
+
+fun code_mfile dirorg diruo = case first_mfile dirorg diruo of
+    NONE => ()
+  | SOME mfile => new_mfile "../../" "all: code.uo" mfile
+
+fun ttt_mfile dirorg diruo = case first_mfile dirorg diruo of
+    NONE => ()
+  | SOME mfile => new_mfile "../" "all: ttt.uo" mfile
 
 (* ---------------------------------------------------------------------------
-   Running buildheap on a file
+   Running holmake on a directory
+   -------------------------------------------------------------------------- *)
+
+fun run_holmake dir = cmd_in_dir dir (HOLDIR ^ "/bin/Holmake")
+
+(* ---------------------------------------------------------------------------
+   Running buildheap on a file (full path necessary)
    -------------------------------------------------------------------------- *)
 
 fun run_hol0 file =
@@ -61,18 +105,18 @@ fun run_hol0 file =
     val buildheap = HOLDIR ^ "/bin/buildheap"
     val state0 = "-b " ^ HOLDIR ^ "/bin/hol.state0"
     val gc = "--gcthreads=1"
-    val hol0 = String.concatWith " " [buildheap,gc,state0]
+    val hol0 = String.concatWith " " [buildheap,gc,state0,file]
   in
-    run_cmd hol0 file
+    run_cmd hol0 
   end
 
 fun run_hol file =
   let
     val buildheap = HOLDIR ^ "/bin/buildheap"
     val gc = "--gcthreads=1"
-    val hol = String.concatWith " " [buildheap,gc]
+    val hol = String.concatWith " " [buildheap,gc,file]
   in
-    run_cmd hol file
+    run_cmd hol
   end
 
 (* ---------------------------------------------------------------------------
@@ -123,32 +167,30 @@ fun tactictoe_export s =
    Generating code
    -------------------------------------------------------------------------- *)
 
-fun load_err s = load s handle _ => () 
-
 fun code_of s =
   [
    "open hhsOpen;",
    "tactictoe_cleanval ();", 
    "tactictoe_cleanstruct " ^ mlquote s ^ ";",
    "open " ^ s ^ ";",
-   "tactictoe_export " ^ mlquote s ^ ";"]
+   "tactictoe_export " ^ mlquote s ^ ";"
+  ]
 
 (* ---------------------------------------------------------------------------
    Export
    -------------------------------------------------------------------------- *)
 
-fun export_struct dir s = 
+fun export_struct dirorg dirttt s = 
   let 
-    val diro = hhs_open_dir ^ "/" ^ s
-    val diri = dir ^ "/" ^ s
-    val file = diri ^ "/code.sml"
-    val fileuo = diri ^ "/code.uo"
+    val dirstruct = dirttt ^ "/" ^ s
+    val structuo = dirstruct ^ "/code.uo"
   in
-    mkDir_err hhs_open_dir; mkDir_err diro;
-    mkDir_err dir; mkDir_err diri; 
-    writel file (code_of s);
-    run_holmake fileuo;
-    run_hol fileuo
+    mkDir_err hhs_open_dir; mkDir_err (hhs_open_dir ^ "/" ^ s);
+    mkDir_err dirttt; mkDir_err dirstruct; 
+    writel (dirstruct ^ "/code.sml") (code_of s);
+    code_mfile dirorg dirstruct;
+    run_holmake dirstruct;
+    run_hol structuo
   end
 
 (* ---------------------------------------------------------------------------
@@ -165,9 +207,9 @@ fun import_struct s =
    Export and import
    -------------------------------------------------------------------------- *)
 
-fun export_import_struct dir s =
+fun export_import_struct dirorg dirttt s =
   (
-  export_struct dir s;
+  export_struct dirorg dirttt s;
   import_struct s handle _ => 
     (debug_unfold ("warning: structure " ^ s ^ " not found"); ([],[],[],[]))
   )

@@ -25,7 +25,9 @@ val interactive_hook = ref ""
 val iev_flag = ref false
 val iev_eprover_flag = ref false
 
-val open_code_dir = ref "/temp"
+val dirorg_glob = ref "/temp"
+val dirttt_glob = ref "/temp"
+
 
 (* --------------------------------------------------------------------------
    Program representation and stack
@@ -686,8 +688,8 @@ fun open_struct_aux stack s'=
     else
       let 
         val l0 = String.tokens (fn x => x = #".") s
-        val (l1,l2,l3,l4) = import_struct s 
-          handle Io _ => export_import_struct (!open_code_dir) s
+        val (l1,l2,l3,l4) = import_struct s handle Io _ => 
+          export_import_struct (!dirorg_glob) (!dirttt_glob) s                    
         fun f constr a =
           let fun g l = 
             (String.concatWith "." (l @ [a]), constr (s ^ "." ^ a)) 
@@ -1061,19 +1063,17 @@ fun print_program cthy filei sl =
     TextIO.closeOut oc
   end
 
-fun irewrite_script diro filei =
-  if extract_thy filei = "bool" then () else
+fun irewrite_script fileorg =
+  if extract_thy fileorg = "bool" then () else
   let
-    val _ = open_code_dir := diro
     val _ = interactive_flag := true
-    val cthy = extract_thy filei
+    val cthy = extract_thy fileorg
     val _ = start_unfold_thy cthy
-    val p0 = sketch_wrap filei
+    val p0 = sketch_wrap fileorg
     val p2 = unfold_wrap p0
     val sl5 = modified_program false p2
-    val _ = open_code_dir := "/temp"
   in
-    print_program cthy filei sl5;
+    print_program cthy fileorg sl5;
     end_unfold_thy ()
   end
 
@@ -1094,14 +1094,17 @@ fun find_script x =
 
 fun ttt_record_thy thy =
   let 
-    val file = find_script thy
-    val diri = dir_inter file
-    val fileuo = name_interuo file
+    val fileorg = find_script thy
+    val dirorg = #dir (OS.Path.splitDirFile fileorg)
+    val dirttt  = dir_inter fileorg
+    val tttuo = name_interuo fileorg
   in
-    mkDir_err diri;
-    irewrite_script diri file; 
-    run_holmake fileuo;
-    if mem thy core_theories then run_hol0 fileuo else run_hol fileuo
+    dirttt_glob := dirttt; dirorg_glob := dirorg;
+    mkDir_err dirttt;
+    irewrite_script fileorg; 
+    ttt_mfile dirorg dirttt;
+    run_holmake dirttt;
+    if mem thy core_theories then run_hol0 tttuo else run_hol tttuo
   end
   
 fun ttt_record_thy_wrap thy =
