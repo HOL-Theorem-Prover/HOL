@@ -992,10 +992,18 @@ fun unfold_wrap p =
    -------------------------------------------------------------------------- *)
 
 fun barefile file = OS.Path.base (OS.Path.file file)
-fun rm_ext file = #base (OS.Path.splitBaseExt file)
-fun name_inter file = rm_ext file ^ "_ttt/ttt.sml"
-fun dir_inter file = rm_ext file ^ "_ttt"
-fun name_interuo file = rm_ext file ^ "_ttt/ttt.uo"
+
+fun tttdir_of fileorg = 
+  let 
+    val dir = #dir (OS.Path.splitDirFile fileorg)
+    val file = #file (OS.Path.splitDirFile fileorg)
+    val base = #base (OS.Path.splitBaseExt file)
+  in 
+    dir ^ "/." ^ base ^ "_ttt"
+  end
+    
+fun tttsml_of file = tttdir_of file ^ "/ttt.sml"
+fun tttuo_of file = tttdir_of file ^ "/ttt.uo"
 
 fun erewrite_script file = 
   if extract_thy file = "bool" then () else
@@ -1052,10 +1060,10 @@ fun erewrite_sigobj () =
    Interactive version
    -------------------------------------------------------------------------- *)
 
-fun print_program cthy filei sl =
+fun print_program cthy fileorg sl =
   let
-    val fileo = name_inter filei
-    val oc = TextIO.openOut fileo
+    val filesml = tttsml_of fileorg
+    val oc = TextIO.openOut filesml
   in
     output_header oc cthy;
     print_sl oc sl;
@@ -1096,8 +1104,8 @@ fun ttt_record_thy thy =
   let 
     val fileorg = find_script thy
     val dirorg = #dir (OS.Path.splitDirFile fileorg)
-    val dirttt  = dir_inter fileorg
-    val tttuo = name_interuo fileorg
+    val dirttt  = tttdir_of fileorg
+    val tttuo = tttuo_of fileorg
   in
     dirttt_glob := dirttt; dirorg_glob := dirorg;
     mkDir_err dirttt;
@@ -1110,7 +1118,7 @@ fun ttt_record_thy thy =
 fun ttt_record_thy_wrap thy =
   let 
     val file = find_script thy
-    val dir = dir_inter file
+    val dir = tttdir_of file
   in
     if FileSys.isDir dir handle _ => false
     then ()
@@ -1139,7 +1147,7 @@ fun ttt_clean_thy thy =
   let 
     fun rmDir dir = ignore (OS.Process.system ("rm -r " ^ dir))
     val file = find_script thy
-    val dir = dir_inter file
+    val dir = tttdir_of file
   in
     rmDir dir
   end
