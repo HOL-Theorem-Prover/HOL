@@ -14,17 +14,6 @@ open HolKernel boolLib hhsTools
 val ERR = mk_HOL_ERR "hhsOpen"
 
 (* ---------------------------------------------------------------------------
-   Debugging
-   -------------------------------------------------------------------------- *)
-
-val cthy_unfold_glob = ref "scratch"
-
-val hhs_unfold_dir = tactictoe_dir ^ "/unfold_log"
-val hhs_scripts_dir = tactictoe_dir ^ "/scripts"
-fun debug_unfold s = 
-  append_endline (hhs_unfold_dir ^ "/" ^ !cthy_unfold_glob) s
-
-(* ---------------------------------------------------------------------------
    Running a command on a file in a directory
    -------------------------------------------------------------------------- *)
 

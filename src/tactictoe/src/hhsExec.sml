@@ -29,8 +29,7 @@ val hhs_goal_glob = ref ([],F)
 
 fun exec_sml file s =
   let
-    val path = 
-      HOLDIR ^ "/src/tactictoe/code/" ^ current_theory () ^ "_" ^ file
+    val path = hhs_code_dir ^ "/" ^ current_theory () ^ "_" ^ file
     val oc = TextIO.openOut path
     fun os s = TextIO.output (oc,s)
   in

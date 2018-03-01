@@ -16,12 +16,8 @@ sig
   val unquoteString        : string -> string
   val sigobj_scripts       : unit -> string list
   val sigobj_theories      : unit -> string list
-  val interactive_hook     : string ref
-  val erewrite_script      : string -> unit
-  val erewrite_sigobj      : unit -> unit
-  
-  val open_struct : 
-    (string, stack_t) Redblackmap.dict list -> string -> (string * stack_t) list
+
+  val open_structure : string -> (string * stack_t) list
 
   val find_script : string -> string 
   

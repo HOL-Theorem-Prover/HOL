@@ -1,8 +1,5 @@
 signature hhsOpen =
 sig
-
-  val cthy_unfold_glob : string ref
-  val debug_unfold : string -> unit
   
   val ttt_mfile : string -> string -> unit
   val run_holmake : string -> unit

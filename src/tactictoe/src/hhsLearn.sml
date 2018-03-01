@@ -9,7 +9,7 @@ structure hhsLearn :> hhsLearn =
 struct
 
 open HolKernel boolLib Abbrev hhsTools hhsPredict hhsExec hhsMinimize 
-hhsTimeout hhsFeature hhsMetis hhsSetup hhsLexer
+hhsTimeout hhsFeature hhsThmData hhsSetup hhsLexer
 
 val ERR = mk_HOL_ERR "hhsLearn"
 

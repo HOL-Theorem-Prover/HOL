@@ -18,16 +18,11 @@ val ERR = mk_HOL_ERR "hhsUnfold"
    Debugging
    -------------------------------------------------------------------------- *)
 
-val hhs_unfold_dir = tactictoe_dir ^ "/unfold_log"
-val hhs_scripts_dir = tactictoe_dir ^ "/scripts"
-val interactive_flag = ref true
-val interactive_hook = ref ""
 val iev_flag = ref false
 val iev_eprover_flag = ref false
 
 val dirorg_glob = ref "/temp"
 val dirttt_glob = ref "/temp"
-
 
 (* --------------------------------------------------------------------------
    Program representation and stack
@@ -591,8 +586,7 @@ fun modified_program inh p = case p of
   | End :: m        => "end" :: modified_program inh m
   | Code (a,_) :: m =>
     ( 
-    if !interactive_flag andalso 
-        mem (drop_sig a) ["export_theory","irecord_script"]
+    if mem (drop_sig a) ["export_theory","irecord_script"]
       then modified_program inh m
     else if inh 
       then a :: modified_program inh m
@@ -706,7 +700,9 @@ fun open_struct_aux stack s'=
       end
   end
 
-fun open_struct stack s' = total_time open_time (open_struct_aux stack) s'
+fun open_struct stack s = total_time open_time (open_struct_aux stack) s
+
+fun open_structure s = open_struct_aux [] s
 
 (* ---------------------------------------------------------------------------
    Functions for which we know how to extract the name of the theorem from
@@ -717,7 +713,7 @@ fun is_watch_name x = mem (drop_sig x) (store_thm_list @ name_thm_list)
 
 fun mk_fetch b =
   map (Code o protect) 
-    ["(","DB.fetch",mlquote (!cthy_unfold_glob),mlquote b,")"]
+    ["(","DB.fetch",mlquote (!hhs_unfold_cthy),mlquote b,")"]
 
 fun replace_fetch l = case l of
     [] => []
@@ -865,7 +861,6 @@ fun extract_thy file =
     cthy
   end
 
-
 fun os oc s = TextIO.output (oc, s)
 fun osn oc s = TextIO.output (oc, s ^ "\n")
 
@@ -911,7 +906,6 @@ fun output_header oc cthy =
      "   hhsSetup.hhs_hhhammer_time := 60",
      "  ))"] 
     else ();
- 
   osn oc ("val _ = hhsRecord.start_thy " ^ mlquote cthy)
   )
 
@@ -922,18 +916,9 @@ fun output_foot oc cthy =
 fun start_unfold_thy cthy =
   (
   print_endline cthy;
-  cthy_unfold_glob := cthy;
-  mkDir_err hhs_open_dir;
-  mkDir_err hhs_unfold_dir;
+  hhs_unfold_cthy := cthy;
+  mkDir_err hhs_open_dir; mkDir_err hhs_unfold_dir;
   erase_file (hhs_unfold_dir ^ "/" ^ cthy);
-  if not (!interactive_flag)
-  then   
-     (
-     mkDir_err hhs_scripts_dir;
-     erase_file (hhs_scripts_dir ^ "/" ^ cthy)
-     )
-  else ()
-  ;
   (* statistics *)
   n_store_thm := 0;
   open_time := 0.0; 
@@ -961,16 +946,15 @@ fun end_unfold_thy () =
 
 fun unquoteString s =
   let
-    val fin  = tactictoe_dir ^ "/code/quoteString1"
-    val fout = tactictoe_dir ^ "/code/quoteString2"
+    val _ = mkDir_err hhs_code_dir
+    val fin  = hhs_code_dir ^ "/quoteString1"
+    val fout = hhs_code_dir ^ "/quoteString2"
     val cmd = HOLDIR ^ "/bin/unquote" ^ " " ^ fin ^ " " ^ fout   
   in
     writel fin [s];
     ignore (OS.Process.system cmd);
     String.concatWith " " (readl fout)
   end
-
-val copy_scripts = tactictoe_dir ^ "/copy_scripts.sh"
 
 fun sketch_wrap file =
   let
@@ -988,7 +972,7 @@ fun unfold_wrap p =
   end
 
 (* ---------------------------------------------------------------------------
-   Evaluation version
+   Files and directories
    -------------------------------------------------------------------------- *)
 
 fun barefile file = OS.Path.base (OS.Path.file file)
@@ -1005,31 +989,9 @@ fun tttdir_of fileorg =
 fun tttsml_of file = tttdir_of file ^ "/ttt.sml"
 fun tttuo_of file = tttdir_of file ^ "/ttt.uo"
 
-fun erewrite_script file = 
-  if extract_thy file = "bool" then () else
-  let
-    val _ = interactive_flag := false
-    val cthy = extract_thy file
-    val _ = start_unfold_thy cthy
-    val local_file = rm_prefix file (HOLDIR ^ "/")
-    val file_out = hhs_scripts_dir ^ "/" ^ cthy
-    val oc = TextIO.openOut file_out
-    val p0 = sketch_wrap file
-    val p2 = unfold_wrap p0
-    val sl5 = modified_program false p2
-  in
-    output_header oc cthy;
-    print_sl oc sl5;
-    output_foot oc cthy;
-    TextIO.closeOut oc;
-    end_unfold_thy ();
-    append_endline copy_scripts 
-      (String.concatWith " " ["cp",quote file_out,quote local_file])
-  end
-
 fun sigobj_scripts () =
   let 
-    val file = tactictoe_dir ^ "/code/theory_list"
+    val file = hhs_code_dir ^ "/theory_list"
     val sigdir = HOLDIR ^ "/sigobj"
     val cmd0 = "cd " ^ sigdir
     val cmd1 = "readlink -f $(find -regex \".*[^/]Theory.sig\") > " ^ file
@@ -1041,7 +1003,7 @@ fun sigobj_scripts () =
 
 fun sigobj_theories () =
   let 
-    val file = tactictoe_dir ^ "/code/theory_list"
+    val file = hhs_code_dir ^ "/theory_list"
     val sigdir = HOLDIR ^ "/sigobj"
     val cmd0 = "cd " ^ sigdir
     val cmd1 = "readlink -f $(find -regex \".*[^/]Theory.sig\") > " ^ file
@@ -1049,12 +1011,6 @@ fun sigobj_theories () =
     ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1 ^ "; "));
     readl file
   end
-
-fun erewrite_sigobj () =
-  (
-  erase_file copy_scripts;
-  app erewrite_script (sigobj_scripts ())
-  )
 
 (* ---------------------------------------------------------------------------
    Interactive version
@@ -1074,8 +1030,9 @@ fun print_program cthy fileorg sl =
 fun irewrite_script fileorg =
   if extract_thy fileorg = "bool" then () else
   let
-    val _ = interactive_flag := true
+    fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
     val cthy = extract_thy fileorg
+    val _ = clean_dir cthy hhs_unfold_dir
     val _ = start_unfold_thy cthy
     val p0 = sketch_wrap fileorg
     val p2 = unfold_wrap p0
@@ -1102,6 +1059,7 @@ fun find_script x =
 
 fun ttt_record_thy thy =
   let 
+    val _ = mkDir_err hhs_code_dir
     val fileorg = find_script thy
     val dirorg = #dir (OS.Path.splitDirFile fileorg)
     val dirttt  = tttdir_of fileorg

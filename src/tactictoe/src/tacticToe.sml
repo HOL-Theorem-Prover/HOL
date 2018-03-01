@@ -9,15 +9,15 @@ structure tacticToe :> tacticToe =
 struct
 
 open HolKernel boolLib Abbrev
-hhsSearch hhsTools hhsLexer hhsExec hhsFeature hhsPredict hhsData hhsInfix
-hhsFeature hhsMetis hhsLearn hhsMinimize hhsSetup hhsUnfold
+hhsSearch hhsTools hhsLexer hhsExec hhsFeature hhsPredict hhsTacticData hhsInfix
+hhsFeature hhsThmData hhsGoallistData hhsLearn hhsMinimize hhsSetup hhsUnfold
 
 val ERR = mk_HOL_ERR "tacticToe"
 
 fun set_timeout r = 
   set_record_hook := (fn () => hhs_search_time := Time.fromReal r)
 
-fun select_sthmfeav gfea =
+fun select_thmfea gfea =
   if !hhs_metishammer_flag orelse !hhs_hhhammer_flag orelse !hhs_thmlarg_flag
   then
     let 
@@ -103,7 +103,7 @@ fun import_ancestry () =
     val _ = debug (int_to_string (length stacfea));
     val _ = debug_t "import_mdict" import_mdict ()
     val _ = debug (int_to_string (dlength (!hhs_thmfea)))
-    val _ = debug_t "import_mc" import_mc thyl
+    val _ = debug_t "import_glfea" import_glfea thyl
     val _ = debug (int_to_string (dlength (!hhs_glfea)))
   in
     init_tacdata stacfea
@@ -114,6 +114,7 @@ val previous_theory = ref ""
 
 fun init_tactictoe () =
   let 
+    val _ = mkDir_err hhs_code_dir
     val cthy = current_theory ()
     val _ = hide_out set_record cthy
     val thyl = ancestry cthy
@@ -138,13 +139,13 @@ fun init_tactictoe () =
    Preselection of theorems and tactics
    ---------------------------------------------------------------------- *)
 
-fun select_stacfeav goalf =
+fun select_tacfea goalf =
   let 
-    val stacfeav = dlist (!hhs_tacfea)
+    val tacfea = dlist (!hhs_tacfea)
     val stacsymweight = debug_t "learn_tfidf" 
-      learn_tfidf stacfeav
+      learn_tfidf tacfea
     val l0 = debug_t "stacknn" 
-      (stacknn stacsymweight (!hhs_maxselect_pred) stacfeav) goalf
+      (stacknn stacsymweight (!hhs_maxselect_pred) tacfea) goalf
     val l1 = debug_t "add_stacdesc" 
       add_stacdesc (!hhs_tacdep) (!hhs_maxselect_pred) l0
     val tacdict = debug_t "mk_tacdict" 
@@ -157,11 +158,11 @@ fun select_stacfeav goalf =
     (stacsymweight, l3, tacdict)
   end
 
-fun select_mcfeav stacfeav =
+fun select_mcfeav tacfea =
   if !hhs_mcrecord_flag then
     let
       fun f ((_,_,g,_),_) = (hash_goal g, ())
-      val goal_dict = dnew Int.compare (map f stacfeav)    
+      val goal_dict = dnew Int.compare (map f tacfea)    
       val mcfeav0 = map (fn (a,b) => (b,a)) (dlist (!hhs_glfea))
       fun filter_f ((b,n),nl) = dmem n goal_dict
       val mcfeav1 = filter filter_f mcfeav0
@@ -175,12 +176,12 @@ fun main_tactictoe goal =
   let  
     (* preselection *)
     val goalf = fea_of_goal goal       
-    val (stacsymweight, stacfeav, tacdict) = 
-      debug_t "select_stacfeav" select_stacfeav goalf
+    val (stacsymweight, tacfea, tacdict) = 
+      debug_t "select_tacfea" select_tacfea goalf
     val ((pthmsymweight,pthmfeav,pthmrevdict), thmfeav) = 
-      debug_t "select_sthmfeav" select_sthmfeav goalf
+      debug_t "select_thmfea" select_thmfea goalf
     val (mcsymweight, mcfeav) = 
-      debug_t "select_mcfeav" select_mcfeav stacfeav      
+      debug_t "select_mcfeav" select_mcfeav tacfea      
     (* caches *)
     val mc_cache = ref (dempty (list_compare goal_compare))
     val sthm_cache = ref (dempty (cpl_compare goal_compare Int.compare))
@@ -190,7 +191,7 @@ fun main_tactictoe goal =
       dfind g (!stac_cache) handle NotFound =>
       let 
         val l = fea_of_goal g
-        val lbll = stacknn_uniq stacsymweight (!hhs_maxselect_pred) stacfeav l
+        val lbll = stacknn_uniq stacsymweight (!hhs_maxselect_pred) tacfea l
         val r = map #1 lbll
       in
         stac_cache := dadd g r (!stac_cache); r
@@ -307,10 +308,10 @@ fun next_tac goal =
     val _ = next_tac_glob := []
     (* preselection *)
     val goalf = fea_of_goal goal       
-    val (stacsymweight,stacfeav,tacdict) = hide_out select_stacfeav goalf
+    val (stacsymweight,tacfea,tacdict) = hide_out select_tacfea goalf
     (* predicting *)
     fun stac_predictor g =
-      stacknn stacsymweight (!hhs_maxselect_pred) stacfeav (fea_of_goal g)
+      stacknn stacsymweight (!hhs_maxselect_pred) tacfea (fea_of_goal g)
     val stacl = map #1 (stac_predictor goal)
     (* executing tactics *)
     val memdict = dempty (list_compare goal_compare)

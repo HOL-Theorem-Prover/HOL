@@ -9,7 +9,7 @@ structure hhsSearch :> hhsSearch =
 struct
 
 open HolKernel boolLib Abbrev hhsTools hhsTimeout hhsFeature hhsPredict
-hhsExec hhsLexer hhsMinimize hhsMetis hhsData hhsLearn hhsSetup
+hhsExec hhsLexer hhsMinimize hhsThmData hhsTacticData hhsLearn hhsSetup
 
 val ERR = mk_HOL_ERR "hhsSearch"
 val last_stac = ref ""

@@ -1,7 +1,6 @@
 (* =========================================================================  *)
 (* FILE          : hhsRecord.sml                                              *)
-(* DESCRIPTION   : Record tactics and their given goals (or their features)   *)
-(* machine learning programs                                                  *)
+(* DESCRIPTION   : Record tactics, theorems and goal lists                    *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
 (* DATE          : 2017                                                       *)
 (* ========================================================================== *)
@@ -9,8 +8,12 @@
 structure hhsRecord :> hhsRecord =
 struct
 
-open HolKernel boolLib hhsTools hhsLexer hhsData hhsNumber hhsExtract hhsUnfold 
-hhsTimeout hhsData tacticToe hhsPredict hhsExec hhsMetis hhsLearn hhsSetup
+open HolKernel boolLib
+hhsTools hhsLexer hhsTimeout hhsExec hhsSetup 
+hhsNumber hhsExtract hhsUnfold
+hhsThmData hhsTacticData hhsGoallistData 
+hhsPredict hhsLearn
+tacticToe
 
 val ERR = mk_HOL_ERR "hhsRecord"
 
@@ -356,36 +359,35 @@ fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
 
 fun start_thy cthy =
   (
+  mkDir_err hhs_code_dir;
   (* necessary for export if no proofs are found *)
   hhsSetup.set_record cthy;
   (* exporting theorems from boolTheory in ConseqConv *)
   if cthy = "ConseqConv" 
   then (clean_tttdata (); 
         clean_subdirl "bool" hhs_search_dir ["debug","search","proof"];
-        (* clean_dir "bool" hhs_thmfea_dir; *)
-        debug_t "export_mdict" export_mdict "bool") 
+        mkDir_err hhs_thmfea_dir;
+        debug_t "export_thmfea" export_thmfea "bool") 
   else ();
   clean_tttdata ();
   reset_profiling ();
   (* Proof search *)
   clean_subdirl cthy hhs_search_dir ["debug","search","proof"];
-  (* Features storage 
-  clean_dir cthy hhs_feature_dir;
-  clean_dir cthy hhs_thmfea_dir;
-  clean_dir cthy hhs_mc_dir;
-  *)
+  mkDir_err hhs_tacfea_dir;
+  mkDir_err hhs_thmfea_dir;
+  mkDir_err hhs_glfea_dir;
   (* Tactic scripts recording *)
   clean_subdirl cthy hhs_record_dir ["parse","replay","record"] 
   )
 
-fun end_thy cthy = 
+fun end_thy cthy =
   (
-  (* exproting tactics *)
-  debug_t "export_feavl" export_feavl cthy;
-  (* exporting theorems *)
-  debug_t "export_mdict" export_mdict cthy;
-  (* exporting list of goals *)
-  if !hhs_mcrecord_flag then debug_t "export_mc" export_mc cthy else ();
+  (* tactic *)
+  debug_t "export_tacfea" export_tacfea cthy;
+  (* theorem *)
+  debug_t "export_thmfea" export_thmfea cthy;
+  (* goal list *)
+  if !hhs_mcrecord_flag then debug_t "export_glfea" export_glfea cthy else ();
   out_record_summary cthy
   )
 

@@ -27,16 +27,18 @@ val hhs_search_time = ref (Time.fromReal 0.0)
    Directories
    -------------------------------------------------------------------------- *)
 
-val tactictoe_dir    = HOLDIR ^ "/src/tactictoe"
-val hhs_feature_dir  = tactictoe_dir ^ "/features"
-val hhs_code_dir     = tactictoe_dir ^ "/code"
-val hhs_search_dir   = tactictoe_dir ^ "/search_log"
-val hhs_predict_dir  = tactictoe_dir ^ "/predict"
-val hhs_record_dir   = tactictoe_dir ^ "/record_log"
-val hhs_open_dir     = tactictoe_dir ^ "/open"
-val hhs_succrate_dir = tactictoe_dir ^ "/succrate"
-val hhs_thmfea_dir    = tactictoe_dir ^ "/mdict"
-val hhs_mc_dir       = tactictoe_dir ^ "/mc"
+val tactictoe_dir   = HOLDIR ^ "/src/tactictoe"
+
+val hhs_tacfea_dir  = tactictoe_dir ^ "/fea_tactic"
+val hhs_thmfea_dir  = tactictoe_dir ^ "/fea_theorem"
+val hhs_glfea_dir   = tactictoe_dir ^ "/fea_goallist"
+
+val hhs_code_dir    = tactictoe_dir ^ "/gen_code"
+val hhs_open_dir    = tactictoe_dir ^ "/gen_open"
+
+val hhs_search_dir  = tactictoe_dir ^ "/log_search"
+val hhs_record_dir  = tactictoe_dir ^ "/log_record"
+val hhs_unfold_dir = tactictoe_dir ^ "/log_unfold"
 
 fun hide_out f x = 
   hide_in_file (hhs_code_dir ^ "/" ^ current_theory () ^ "_hide_out") f x
@@ -352,6 +354,12 @@ fun print_endline s = print (s ^ "\n")
 (* --------------------------------------------------------------------------
    Debugging and exporting feature vectors
    -------------------------------------------------------------------------- *)
+
+(* unfold_dir *)
+val hhs_unfold_cthy = ref "scratch"
+
+fun debug_unfold s = 
+  append_endline (hhs_unfold_dir ^ "/" ^ !hhs_unfold_cthy) s
 
 (* search_dir *)
 fun debug s = append_endline (hhs_search_dir ^ "/debug/" ^ current_theory ()) s

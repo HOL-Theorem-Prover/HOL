@@ -12,19 +12,20 @@ sig
 
   (* directory *)
   val tactictoe_dir    : string
-  val hhs_feature_dir  : string
-  val hhs_code_dir     : string
-  val hhs_search_dir   : string
-  val hhs_predict_dir  : string
-  val hhs_record_dir   : string
-  val hhs_open_dir     : string
-  val hhs_succrate_dir : string
+
+  val hhs_tacfea_dir   : string
   val hhs_thmfea_dir   : string
-  val hhs_mc_dir       : string
-  val mkDir_err        : string -> unit
+  val hhs_glfea_dir    : string
   
-  (* hiding output *)
-  val hide_out : ('a -> 'b) -> 'a -> 'b
+  val hhs_code_dir     : string
+  val hhs_open_dir     : string
+  
+  val hhs_search_dir   : string
+  val hhs_record_dir   : string
+  val hhs_unfold_dir   : string
+  
+  val mkDir_err        : string -> unit
+  val hide_out : ('a -> 'b) -> 'a -> 'b   (* hiding output *)
   
   (* tactictoe globals *)
   val clean_tttdata : unit -> unit
@@ -129,6 +130,8 @@ sig
   val debug_parse  : string -> unit
   val debug_replay : string -> unit
   val debug_record : string -> unit
+  val hhs_unfold_cthy : string ref
+  val debug_unfold : string -> unit
   
   (* parse *)
   val is_string   : string -> bool

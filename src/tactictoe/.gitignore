@@ -1,8 +1,3 @@
-code
-mc
-features
-mdict
-record_log
-search_log
-unfold_log
-open
+gen_*
+log_*
+fea_*
