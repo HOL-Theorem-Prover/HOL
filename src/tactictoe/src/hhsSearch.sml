@@ -23,7 +23,7 @@ exception SearchTimeOut
 exception NoNextTac
 
 (* --------------------------------------------------------------------------
-   Handling asynchronous calls data
+   Asynchronous calls to provers
    -------------------------------------------------------------------------- *) 
 
 (* Result *)
@@ -82,10 +82,11 @@ fun queue_async pid g =
     ) 
   else ()
 
-(* -------------------------------------------------------------------------
-   Search references
-   -------------------------------------------------------------------------- *)
 
+(* -------------------------------------------------------------------------
+   Tell if a node is active or not
+   -------------------------------------------------------------------------- *)
+   
 val notactivedict = ref (dempty Int.compare)
 fun is_notactive x = dmem x (!notactivedict)
 fun is_active x = not (is_notactive x)
@@ -96,19 +97,22 @@ fun deactivate x =
   terminate_async_pid x;
   notactivedict := dadd x () (!notactivedict)
   )
+
+(* -------------------------------------------------------------------------
+   Search references
+   -------------------------------------------------------------------------- *)
+
+val glob_timer = ref NONE
   
 val proofdict = ref (dempty Int.compare)
 val finproofdict = ref (dempty Int.compare)
 
+(* global values to prevent many arguments in functions *)
 val thmpredictor_glob = ref (fn _ => (fn _ => []))
-val stacpredictor_glob = ref (fn _ => [])
-val mcpredictor_glob = ref (fn _ => 0.0)
+val tacpredictor_glob = ref (fn _ => [])
+val glpredictor_glob = ref (fn _ => 0.0)
 val hammer_glob = ref (fn _ => (fn _ => NONE))
-
 val tacdict_glob = ref (dempty String.compare)
-val glob_timer = ref NONE
-(* for reconstruction of delayed tactic *)
-val hammerdict = ref (dempty String.compare) 
 
 (* --------------------------------------------------------------------------
    Caching tactic applications on goals
@@ -122,7 +126,7 @@ fun stacgoal_compare ((stac1,goal1),(stac2,goal2)) =
 val stacgoal_cache = ref (dempty stacgoal_compare)
 
 (* --------------------------------------------------------------------------
-   Debugging
+   Statistics
    -------------------------------------------------------------------------- *)
 
 val stac_counter = ref 0
@@ -130,34 +134,37 @@ val stac_counter = ref 0
 fun string_of_pred pred =
   "[" ^ String.concatWith "," pred ^ "]"
 
+val tactime = ref 0.0
+val thmtime = ref 0.0
+val gltime = ref 0.0
+
+val tactimer = total_time tactime
+val thmtimer = total_time thmtime
+val gltimer = total_time gltime
+
 val inst_time = ref 0.0
-val predict_time = ref 0.0
-val thmpredict_time = ref 0.0
 val terminst_time = ref 0.0
 val infstep_time = ref 0.0
 val node_create_time = ref 0.0
 val node_find_time = ref 0.0
-val mc_time = ref 0.0
-val tot_time = ref 0.0
 
 val inst_timer = total_time inst_time
-val predict_timer = total_time predict_time
-val thmpredict_timer = total_time thmpredict_time
 val infstep_timer = total_time infstep_time
 fun node_create_timer f x = total_time node_create_time f x
 val node_find_timer = total_time node_find_time
-val mc_timer = total_time mc_time
+
+val tot_time = ref 0.0
 fun total_timer f x = total_time tot_time f x
 
 fun reset_timers () =
   (
+  tactime := 0.0;
+  thmtime := 0.0;
+  gltime := 0.0;
   inst_time := 0.0;
-  predict_time := 0.0;
-  thmpredict_time := 0.0;
   infstep_time := 0.0;
   node_create_time := 0.0;
   node_find_time := 0.0;
-  mc_time := 0.0;
   tot_time := 0.0
   )
 
@@ -176,11 +183,8 @@ fun add_metis pred =
    -------------------------------------------------------------------------- *)
 
 fun array_to_list a =
-  let fun f (a,l) = a :: l in
-    rev (Array.foldl f [] a)
-  end
+  let fun f (a,l) = a :: l in rev (Array.foldl f [] a) end
   
-(* wasteful as it re-evaluates the same list of goals multiple times *)
 fun init_eval pripol pid =
   let
     val _ = debug_search "mcts evaluation"
@@ -189,7 +193,7 @@ fun init_eval pripol pid =
     val eval =
       if !hhs_mcnoeval_flag then 0.0
       else if !hhs_mctriveval_flag then 1.0
-      else (!mcpredictor_glob) (array_to_list (#goalarr prec))
+      else (!glpredictor_glob) (array_to_list (#goalarr prec))
   in
     priorpolicy := pripol;
     visit := 1.0;
@@ -299,7 +303,7 @@ fun root_create goal pred =
   end
 
 fun root_create_wrap g =
-  root_create g ((add_hammer o add_metis o !stacpredictor_glob) g)
+  root_create g ((add_hammer o add_metis o !tacpredictor_glob) g)
 
 fun node_create pripol tactime parid parstac pargn parg goallist 
     predlist pending pardict =
@@ -625,7 +629,7 @@ fun node_create_gl pripol tactime gl pid =
     val parchildren = #children prec
     val parchildrensave = Array.sub (#childrena prec,gn)
     val depth = #depth prec + 1
-    val predlist = map (add_hammer o add_metis o !stacpredictor_glob) gl  
+    val predlist = map (add_hammer o add_metis o !tacpredictor_glob) gl  
     val pending = rev (map fst (number_list 0 predlist))
     (* Updating list of parents *)
     val new_pardict = dadd goal () (#pardict prec)
@@ -749,7 +753,7 @@ fun close_async () =
    Search function. Modifies the proof state.
    -------------------------------------------------------------------------- *)
 
-fun init_search thmpredictor stacpredictor mcpredictor hammer tacdict g =
+fun init_search thmpred tacpred glpred hammer tacdict g =
   (
   (* async *)
   init_async ();
@@ -765,9 +769,9 @@ fun init_search thmpredictor stacpredictor mcpredictor hammer tacdict g =
   proofdict    := dempty Int.compare;
   finproofdict := dempty Int.compare; (* should be removed *)
   (* easier access to values *)
-  stacpredictor_glob := predict_timer stacpredictor;
-  thmpredictor_glob := thmpredict_timer thmpredictor;
-  mcpredictor_glob := mc_timer mcpredictor;
+  tacpredictor_glob := tactimer tacpred;
+  thmpredictor_glob := thmtimer thmpred;
+  glpredictor_glob  := gltimer glpred;
   hammer_glob := hammer;
   tacdict_glob := tacdict;
   (* statistics *)
@@ -877,13 +881,13 @@ fun end_search () =
   debug_proof ("  nodes   : " ^ int_to_string (!pid_counter));
   debug_proof ("  maxdepth: " ^ int_to_string (!max_depth_mem));
   debug_proof ("Time: " ^ Real.toString (!tot_time));
-  debug_proof ("  inferstep time: " ^ Real.toString (!infstep_time));
-  debug_proof ("  node_find time: " ^ Real.toString (!node_find_time));
-  debug_proof ("  node_crea time: " ^ Real.toString (!node_create_time));
-  debug_proof ("    pred time: " ^ Real.toString (!predict_time));
-  debug_proof ("    thmpred time: " ^ Real.toString (!thmpredict_time));
-  debug_proof ("    mc time: " ^ Real.toString (!mc_time));   
-  debug_proof ("    inst time: " ^ Real.toString (!inst_time));
+  debug_proof ("  inferstep: " ^ Real.toString (!infstep_time));
+  debug_proof ("  node_find: " ^ Real.toString (!node_find_time));
+  debug_proof ("  node_crea: " ^ Real.toString (!node_create_time));
+  debug_proof ("  thminst  : " ^ Real.toString (!inst_time));
+  debug_proof ("  tacpred  : " ^ Real.toString (!tactime));
+  debug_proof ("  thmpred  : " ^ Real.toString (!thmtime));
+  debug_proof ("  glpred   : " ^ Real.toString (!gltime));   
   proofdict    := dempty Int.compare;
   finproofdict := dempty Int.compare;
   tacdict_glob := dempty String.compare;
@@ -917,10 +921,9 @@ fun selflearn proof =
    Main
    -------------------------------------------------------------------------- *)
 
-fun imperative_search 
-  thmpredictor stacpredictor mcpredictor hammer tacdict goal =
+fun search thmpred tacpred glpred hammer tacdict goal =
   (
-  init_search thmpredictor stacpredictor mcpredictor hammer tacdict goal;
+  init_search thmpred tacpred glpred hammer tacdict goal;
   total_timer (node_create_timer root_create_wrap) goal;
   let
     val r = total_timer search_loop ()
@@ -945,7 +948,7 @@ fun imperative_search
       )
     | _ => r
   in
-    end_search (); (* reset references *)
+    end_search ();
     sproof_status
   end
   )

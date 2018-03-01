@@ -78,4 +78,4 @@ fun export_thmfea cthy =
     writel fname l1
   end
 
-end
+end (* struct *)

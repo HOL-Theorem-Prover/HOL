@@ -203,6 +203,4 @@ fun export_import_struct dirorg dirttt s =
     (debug_unfold ("warning: structure " ^ s ^ " not found"); ([],[],[],[]))
   )
 
-
-
 end (* struct *)

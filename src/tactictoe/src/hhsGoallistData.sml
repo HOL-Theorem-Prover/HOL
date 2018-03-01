@@ -14,8 +14,6 @@ hhsSetup
 
 val ERR = mk_HOL_ERR "hhsGoallistData"
 
-
-
 (*----------------------------------------------------------------------------
  * Export
  *----------------------------------------------------------------------------*)
@@ -67,5 +65,4 @@ fun update_glfea fea (b,n) =
   hhs_glfea_cthy := dadd fea (b,n) (!hhs_glfea_cthy)
   )
 
-
-end
+end (* struct *)

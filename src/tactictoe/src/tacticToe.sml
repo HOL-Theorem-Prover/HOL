@@ -183,39 +183,37 @@ fun main_tactictoe goal =
     val (mcsymweight, mcfeav) = 
       debug_t "select_mcfeav" select_mcfeav tacfea      
     (* caches *)
-    val mc_cache = ref (dempty (list_compare goal_compare))
-    val sthm_cache = ref (dempty (cpl_compare goal_compare Int.compare))
-    val stac_cache = ref (dempty goal_compare)
+    val gl_cache = ref (dempty (list_compare goal_compare))
+    val thm_cache = ref (dempty (cpl_compare goal_compare Int.compare))
+    val tac_cache = ref (dempty goal_compare)
     (* predictors *)
-    fun stacpredictor g =
-      dfind g (!stac_cache) handle NotFound =>
+    fun tacpred g =
+      dfind g (!tac_cache) handle NotFound =>
       let 
         val l = fea_of_goal g
         val lbll = stacknn_uniq stacsymweight (!hhs_maxselect_pred) tacfea l
         val r = map #1 lbll
       in
-        stac_cache := dadd g r (!stac_cache); r
+        tac_cache := dadd g r (!tac_cache); r
       end
-    fun thmpredictor n g = 
-      dfind (g,n) (!sthm_cache) handle NotFound =>
+    fun thmpred n g = 
+      dfind (g,n) (!thm_cache) handle NotFound =>
       let val r = thmknn (pthmsymweight,thmfeav) n (fea_of_goal g) in
-        sthm_cache := dadd (g,n) r (!sthm_cache); r
+        thm_cache := dadd (g,n) r (!thm_cache); r
       end
-    fun mcpredictor gl =
-      dfind gl (!mc_cache) handle NotFound =>
+    fun glpred gl =
+      dfind gl (!gl_cache) handle NotFound =>
       let 
         val nl = fea_of_goallist gl
         val r = mcknn mcsymweight (!hhs_mc_radius) mcfeav nl
       in
-        mc_cache := dadd gl r (!mc_cache); r
+        gl_cache := dadd gl r (!gl_cache); r
       end
     fun hammer pid goal = 
       (!hh_stac_glob) pid (pthmsymweight,pthmfeav,pthmrevdict) 
          (!hhs_hhhammer_time) goal
   in
-    debug_t "Search" 
-      (imperative_search
-         thmpredictor stacpredictor mcpredictor hammer tacdict) goal
+    debug_t "search" (search thmpred tacpred glpred hammer tacdict) goal
   end
 
 fun tactic_of_status r = case r of
@@ -319,7 +317,5 @@ fun next_tac goal =
   in
     try_tac tacdict memdict (!next_tac_number) goal stacl
   end
-
-
 
 end (* struct *)
