@@ -9,3 +9,7 @@ theories_z3
 provers/vampire
 provers/vampire_files
 theories_vampire
+
+provers/prover_*
+theories
+problem_*
