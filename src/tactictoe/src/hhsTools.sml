@@ -390,7 +390,7 @@ fun debug_record s =
   append_endline (hhs_record_dir ^ "/record/" ^ current_theory ()) s
 
 (* --------------------------------------------------------------------------
-   String
+   Parsing
    -------------------------------------------------------------------------- *)
 
 fun unquote_string s =
@@ -484,11 +484,11 @@ fun rm_space s = implode (rm_space_aux (explode s))
    Tactics
    -------------------------------------------------------------------------- *)
 
-val hhs_tacerr = ref [] (* collect errors when parsing *)
-val hhs_tacfea  = ref (dempty lbl_compare)
-val hhs_tacfea_cthy  = ref []
-val hhs_tacdep  = ref (dempty goal_compare)
-val hhs_taccov  = ref (dempty String.compare)
+val hhs_tacerr      = ref []
+val hhs_tacfea      = ref (dempty lbl_compare)
+val hhs_tacfea_cthy = ref (dempty lbl_compare)
+val hhs_tacdep      = ref (dempty goal_compare)
+val hhs_taccov      = ref (dempty String.compare)
 
 fun update_tacdep (lbl,_) =
   let 
@@ -501,7 +501,7 @@ fun update_tacdep (lbl,_) =
 fun init_tacdata feavl =
   (
   hhs_tacfea := dnew lbl_compare feavl;
-  hhs_tacfea_cthy := []; 
+  hhs_tacfea_cthy := dempty lbl_compare; 
   hhs_tacdep := dempty goal_compare;
   hhs_taccov := 
     count_dict (dempty String.compare) 
@@ -510,12 +510,12 @@ fun init_tacdata feavl =
   dapp update_tacdep (!hhs_tacfea)
   )
 
-fun update_tacdata (feav as (lbl,fea)) =
+fun update_tacdata (lbl,fea) =
   if dmem lbl (!hhs_tacfea) then () else
     (
     hhs_tacfea := dadd lbl fea (!hhs_tacfea);
-    hhs_tacfea_cthy := feav :: (!hhs_tacfea_cthy);
-    update_tacdep feav;
+    hhs_tacfea_cthy := dadd lbl fea (!hhs_tacfea_cthy);
+    update_tacdep (lbl,fea);
     hhs_taccov := count_dict (!hhs_taccov) [(#1 lbl)]
     )
   
@@ -523,14 +523,14 @@ fun update_tacdata (feav as (lbl,fea)) =
    Theorems
    -------------------------------------------------------------------------- *)
 
-val local_namespace_tag = "tactictoe_local_namespace"
+val namespace_tag = "tactictoe_namespace"
 
 fun dbfetch_of_string s =
   let val (a,b) = split_string "Theory." s in 
     if a = current_theory ()
       then String.concatWith " " ["DB.fetch",mlquote a,mlquote b] 
     else 
-      if a = local_namespace_tag then b else s
+      if a = namespace_tag then b else s
   end
 
 val hhs_thmfea = ref (dempty goal_compare)
@@ -543,15 +543,14 @@ val hhs_glfea = ref (dempty (list_compare Int.compare))
 val hhs_glfea_cthy = ref (dempty (list_compare Int.compare))
 
 (* --------------------------------------------------------------------------
-   The following structures should 
-   be empty anyway at the start of the theory.
+   Cleaning tactictoe data (not necessary)
    -------------------------------------------------------------------------- *)
    
 fun clean_tttdata () =
   (
   hhs_tacerr := [];
   hhs_tacfea := dempty lbl_compare;
-  hhs_tacfea_cthy := [];
+  hhs_tacfea_cthy := dempty lbl_compare;
   hhs_tacdep := dempty goal_compare;
   hhs_taccov := dempty String.compare;
   hhs_thmfea := dempty goal_compare;

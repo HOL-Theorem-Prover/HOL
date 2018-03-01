@@ -19,9 +19,9 @@ sig
   val hhs_record_dir   : string
   val hhs_open_dir     : string
   val hhs_succrate_dir : string
-  val hhs_thmfea_dir    : string
-  val hhs_mc_dir    : string
-  val mkDir_err : string -> unit
+  val hhs_thmfea_dir   : string
+  val hhs_mc_dir       : string
+  val mkDir_err        : string -> unit
   
   (* hiding output *)
   val hide_out : ('a -> 'b) -> 'a -> 'b
@@ -29,19 +29,19 @@ sig
   (* tactictoe globals *)
   val clean_tttdata : unit -> unit
     (* tactic *)
-  val hhs_tacerr  : string list ref
-  val hhs_tacfea   : (lbl_t, fea_t) Redblackmap.dict ref
-  val hhs_tacfea_cthy   : feav_t list ref
-  val hhs_tacdep     : (goal, lbl_t list) Redblackmap.dict ref
-  val hhs_taccov     : (string, int) Redblackmap.dict ref
+  val hhs_tacerr      : string list ref
+  val hhs_tacfea      : (lbl_t, fea_t) Redblackmap.dict ref
+  val hhs_tacfea_cthy : (lbl_t, fea_t) Redblackmap.dict ref
+  val hhs_tacdep      : (goal, lbl_t list) Redblackmap.dict ref
+  val hhs_taccov      : (string, int) Redblackmap.dict ref
     (* theorem *)
-  val hhs_thmfea     : (goal, (string * fea_t)) Redblackmap.dict ref
+  val hhs_thmfea      : (goal, (string * fea_t)) Redblackmap.dict ref
     (* goal list *)
-  val hhs_glfea : (int list, (bool * int)) Redblackmap.dict ref
-  val hhs_glfea_cthy : (int list, (bool * int)) Redblackmap.dict ref
+  val hhs_glfea       : (int list, (bool * int)) Redblackmap.dict ref
+  val hhs_glfea_cthy  : (int list, (bool * int)) Redblackmap.dict ref
   
   (* theorem data *)
-  val local_namespace_tag : string
+  val namespace_tag : string
   val dbfetch_of_string : string -> string
   
   (* tactic data *)
