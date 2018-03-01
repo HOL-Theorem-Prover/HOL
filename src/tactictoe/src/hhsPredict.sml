@@ -30,7 +30,7 @@ fun weight_tfidf symsl =
 fun learn_tfidf feavl = weight_tfidf (map snd feavl)
 
 (* --------------------------------------------------------------------------
-   KNN distance
+   Distance
    -------------------------------------------------------------------------- *)
 
 fun inter_dict dict l = filter (fn x => dmem x dict) l
@@ -66,14 +66,12 @@ fun knn_sim3 symweight dict_o fea_p =
     sum_real weightli / (sum_real weightlu + 1.0)
   end
 
-
 (* --------------------------------------------------------------------------
-   Internal predictions
+   Ordering prediction with duplicates
    -------------------------------------------------------------------------- *)
 
 fun compare_score ((_,x),(_,y)) = Real.compare (y,x)
 
-(* Ordering prediction with duplicates *)
 fun pre_pred dist symweight (feal: ('a * int list) list) fea_o =
   let 
     val dict_o = dnew Int.compare (map (fn x => (x,())) fea_o)
@@ -88,6 +86,10 @@ fun pre_sim1 symweight feal fea_o = pre_pred knn_sim1 symweight feal fea_o
 fun pre_sim2 symweight feal fea_o = pre_pred knn_sim2 symweight feal fea_o
 fun pre_sim3 symweight feal fea_o = pre_pred knn_sim3 symweight feal fea_o
    
+(* --------------------------------------------------------------------------
+   Tactic predictions
+   -------------------------------------------------------------------------- *)
+
 fun stacknn symweight n feal fea_o =
   let 
     val l1 = map fst (pre_sim1 symweight feal fea_o)
@@ -103,6 +105,10 @@ fun stacknn_uniq symweight n feal fea_o =
   in
     mk_sameorder_set f l
   end
+
+(* --------------------------------------------------------------------------
+   Theorem predictions
+   -------------------------------------------------------------------------- *)
 
 fun exists_tid s = 
   let val (a,b) = split_string "Theory." s in 
@@ -238,12 +244,11 @@ fun add_stacdesc ddict n l =
    end    
 
 (* --------------------------------------------------------------------------
-   Term prediction for tactic arguments. 
+   Term prediction.
    Relies on mdict_glob to calculate symweight.
+   Predicts everything but the term itself.
    -------------------------------------------------------------------------- *)
 
-
-(* Predicts everything but the term itself *)
 fun termknn n ((asl,w):goal) term =
   let
     fun not_term tm = tm <> term
@@ -264,7 +269,7 @@ fun termknn n ((asl,w):goal) term =
   end
 
 (* --------------------------------------------------------------------------
-   Goal list evaluation for monte carlo tree search.
+   Goal list prediction.
    -------------------------------------------------------------------------- *)
 
 fun mcknn symweight radius feal fea =

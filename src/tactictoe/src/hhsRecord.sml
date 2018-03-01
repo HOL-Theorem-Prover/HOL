@@ -360,12 +360,12 @@ fun start_thy cthy =
   hhsSetup.set_record cthy;
   (* exporting theorems from boolTheory in ConseqConv *)
   if cthy = "ConseqConv" 
-  then (clean_feadata (); 
+  then (clean_tttdata (); 
         clean_subdirl "bool" hhs_search_dir ["debug","search","proof"];
         (* clean_dir "bool" hhs_thmfea_dir; *)
         debug_t "export_mdict" export_mdict "bool") 
   else ();
-  clean_feadata ();
+  clean_tttdata ();
   reset_profiling ();
   (* Proof search *)
   clean_subdirl cthy hhs_search_dir ["debug","search","proof"];

@@ -490,7 +490,7 @@ val hhs_tacfea_cthy  = ref []
 val hhs_tacdep  = ref (dempty goal_compare)
 val hhs_taccov  = ref (dempty String.compare)
 
-fun update_ddict (lbl,_) =
+fun update_tacdep (lbl,_) =
   let 
     val oldv = dfind (#3 lbl) (!hhs_tacdep) handle _ => [] 
     val newv = lbl :: oldv
@@ -498,7 +498,7 @@ fun update_ddict (lbl,_) =
     hhs_tacdep := dadd (#3 lbl) newv (!hhs_tacdep)
   end
 
-fun init_stacfea feavl =
+fun init_tacdata feavl =
   (
   hhs_tacfea := dnew lbl_compare feavl;
   hhs_tacfea_cthy := []; 
@@ -507,16 +507,15 @@ fun init_stacfea feavl =
     count_dict (dempty String.compare) 
     (map (#1 o fst) (dlist (!hhs_tacfea)))
   ;
-  dapp update_ddict (!hhs_tacfea)
+  dapp update_tacdep (!hhs_tacfea)
   )
 
-fun update_stacfea (feav as (lbl,fea)) =
-  if dmem lbl (!hhs_tacfea) then ()
-  else
+fun update_tacdata (feav as (lbl,fea)) =
+  if dmem lbl (!hhs_tacfea) then () else
     (
     hhs_tacfea := dadd lbl fea (!hhs_tacfea);
     hhs_tacfea_cthy := feav :: (!hhs_tacfea_cthy);
-    update_ddict feav;
+    update_tacdep feav;
     hhs_taccov := count_dict (!hhs_taccov) [(#1 lbl)]
     )
   
@@ -548,7 +547,7 @@ val hhs_glfea_cthy = ref (dempty (list_compare Int.compare))
    be empty anyway at the start of the theory.
    -------------------------------------------------------------------------- *)
    
-fun clean_feadata () =
+fun clean_tttdata () =
   (
   hhs_tacerr := [];
   hhs_tacfea := dempty lbl_compare;

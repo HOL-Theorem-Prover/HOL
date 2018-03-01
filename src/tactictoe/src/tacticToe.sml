@@ -106,7 +106,7 @@ fun import_ancestry () =
     val _ = debug_t "import_mc" import_mc thyl
     val _ = debug (int_to_string (dlength (!hhs_glfea)))
   in
-    init_stacfea stacfea
+    init_tacdata stacfea
   end
 
 (* remember in which theory was the last call of tactictoe *)

@@ -140,7 +140,7 @@ fun save_lbl (lbl0 as (stac0,t0,g0,gl0)) =
         debug_t "orthogonalize" orthogonalize (lbl0,fea)
       val feav = (lbl,fea)
     in
-      update_stacfea feav
+      update_tacdata feav
     end
 
 (*----------------------------------------------------------------------------
