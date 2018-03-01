@@ -44,11 +44,8 @@ sig
   (* theorem data *)
   val namespace_tag : string
   val dbfetch_of_string : string -> string
+  val mk_metis_call : string list -> string
   
-  (* tactic data *)
-  val init_tacdata : feav_t list -> unit
-  val update_tacdata : feav_t -> unit
-
   (* dictionnary *)
   val dfind  : 'a -> ('a, 'b) Redblackmap.dict -> 'b
   val dfind_err : string -> 'a -> ('a, 'b) Redblackmap.dict -> 'b
@@ -102,7 +99,6 @@ sig
   val goal_compare : (goal * goal) -> order
   val strict_term_compare : (term * term) -> order
   val strict_goal_compare : (goal * goal) -> order
-  
   val cpl_compare  : ('a * 'a -> order) -> ('b * 'b -> order) 
                      -> (('a * 'b) * ('a * 'b)) -> order
   val lbl_compare  : (lbl_t * lbl_t) -> order

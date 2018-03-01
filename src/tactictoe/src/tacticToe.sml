@@ -98,15 +98,15 @@ fun mk_tacdict stacl =
 
 fun import_ancestry () =
   let
-    val thyl    = ancestry (current_theory ())
-    val stacfea = debug_t "import_feavl" import_feavl thyl
-    val _ = debug (int_to_string (length stacfea));
-    val _ = debug_t "import_mdict" import_mdict ()
+    val thyl = ancestry (current_theory ())
+    val _ = debug_t "import_tacdata" import_tacdata thyl
+    val _ = debug (int_to_string (dlength (!hhs_tacfea)))
+    val _ = debug_t "import_thmfea" import_thmfea thyl
     val _ = debug (int_to_string (dlength (!hhs_thmfea)))
     val _ = debug_t "import_glfea" import_glfea thyl
     val _ = debug (int_to_string (dlength (!hhs_glfea)))
   in
-    init_tacdata stacfea
+    ()
   end
 
 (* remember in which theory was the last call of tactictoe *)
@@ -123,13 +123,13 @@ fun init_tactictoe () =
     then 
       let 
         val _ = debug_t ("init_tactictoe " ^ cthy) import_ancestry ()
-        val ns = int_to_string (dlength (!hhs_tacfea))
-        val ms = int_to_string (dlength (!hhs_thmfea))
-        val ps = int_to_string (dlength (!hhs_glfea))
+        val s1 = int_to_string (dlength (!hhs_tacfea))
+        val s2 = int_to_string (dlength (!hhs_thmfea))
+        val s3 = int_to_string (dlength (!hhs_glfea))
       in  
         hide_out QUse.use (tactictoe_dir ^ "/src/infix_file.sml");
-        print_endline ("Loading " ^ ns ^ " tactics, " ^
-                       ms ^ " theorems, " ^ ps ^ " lists of goals");
+        print_endline ("Loading " ^ s1 ^ " tactics, " ^
+                       s2 ^ " theorems, " ^ s3 ^ " lists of goals");
         previous_theory := cthy
       end
     else ()

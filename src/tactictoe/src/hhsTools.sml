@@ -498,38 +498,11 @@ val hhs_tacfea_cthy = ref (dempty lbl_compare)
 val hhs_tacdep      = ref (dempty goal_compare)
 val hhs_taccov      = ref (dempty String.compare)
 
-fun update_tacdep (lbl,_) =
-  let 
-    val oldv = dfind (#3 lbl) (!hhs_tacdep) handle _ => [] 
-    val newv = lbl :: oldv
-  in
-    hhs_tacdep := dadd (#3 lbl) newv (!hhs_tacdep)
-  end
-
-fun init_tacdata feavl =
-  (
-  hhs_tacfea := dnew lbl_compare feavl;
-  hhs_tacfea_cthy := dempty lbl_compare; 
-  hhs_tacdep := dempty goal_compare;
-  hhs_taccov := 
-    count_dict (dempty String.compare) 
-    (map (#1 o fst) (dlist (!hhs_tacfea)))
-  ;
-  dapp update_tacdep (!hhs_tacfea)
-  )
-
-fun update_tacdata (lbl,fea) =
-  if dmem lbl (!hhs_tacfea) then () else
-    (
-    hhs_tacfea := dadd lbl fea (!hhs_tacfea);
-    hhs_tacfea_cthy := dadd lbl fea (!hhs_tacfea_cthy);
-    update_tacdep (lbl,fea);
-    hhs_taccov := count_dict (!hhs_taccov) [(#1 lbl)]
-    )
-  
 (* --------------------------------------------------------------------------
    Theorems
    -------------------------------------------------------------------------- *)
+
+val hhs_thmfea = ref (dempty goal_compare)
 
 val namespace_tag = "tactictoe_namespace"
 
@@ -541,7 +514,9 @@ fun dbfetch_of_string s =
       if a = namespace_tag then b else s
   end
 
-val hhs_thmfea = ref (dempty goal_compare)
+fun mk_metis_call sl =
+  "metisTools.METIS_TAC " ^ 
+  "[" ^ String.concatWith " , " (map dbfetch_of_string sl) ^ "]"
 
 (* --------------------------------------------------------------------------
    Lists of goals

@@ -7,16 +7,10 @@ sig
   type fea_t = int list
   type feav_t = (lbl_t * fea_t)
 
-  (* statistics for hhsRecord *)
-  val feature_time : real ref
+  val feature_time : real ref (* statistics *)
 
-  (* update *)
-  val save_lbl : lbl_t -> unit
+  val import_tacdata : string list -> unit
+  val export_tacdata : string -> unit
+  val update_tacdata : lbl_t -> unit (* includes orthogonalization *)
 
-  (* I/O *)
-  val export_tacfea : string -> unit
-  val import_feavl : string list -> feav_t list
-
-
-  
 end

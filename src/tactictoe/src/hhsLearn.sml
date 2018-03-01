@@ -9,7 +9,7 @@ structure hhsLearn :> hhsLearn =
 struct
 
 open HolKernel boolLib Abbrev hhsTools hhsPredict hhsExec hhsMinimize 
-hhsTimeout hhsFeature hhsThmData hhsSetup hhsLexer
+hhsTimeout hhsFeature hhsThmData hhsGoallistData hhsSetup hhsLexer
 
 val ERR = mk_HOL_ERR "hhsLearn"
 
@@ -184,18 +184,7 @@ fun inst_stacl thmls g stacl = map (fn x => (x, inst_stac thmls g x)) stacl
 
 fun record_mc b (g,gl) =
   if !hhs_mcrecord_flag
-  then 
-    let 
-      val n = hash_goal g
-      val nl = fea_of_goallist gl
-      val b' = fst (dfind nl (!hhs_glfea)) handle _ => false
-    in
-      if b' then () else
-      (
-      hhs_glfea := dadd nl (b,n) (!hhs_glfea);
-      hhs_glfea_cthy := dadd nl (b,n) (!hhs_glfea_cthy)
-      )
-    end
+  then update_glfea (fea_of_goallist gl) (b,(hash_goal g))
   else ()
 
 val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)

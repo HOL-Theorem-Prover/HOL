@@ -13,12 +13,12 @@ hhsThmData hhsPredict SharingTables Portable hhsSetup
 
 val ERR = mk_HOL_ERR "hhsTacticData"
 
+(*---------------------------------------------------------------------------
+ * Export
+ *---------------------------------------------------------------------------*)
+
 fun uptodate_goal (asl,w) = all uptodate_term (w :: asl)
 fun uptodate_feav ((_,_,g,gl),_) = all uptodate_goal (g :: gl)
-
-(*---------------------------------------------------------------------------
- *  Print feature vectors
- *---------------------------------------------------------------------------*)
 
 fun create_sharing_tables feavl = 
   let 
@@ -126,27 +126,6 @@ fun pp_feavl feavl =
     flush
   end
 
-(*----------------------------------------------------------------------------
- * Saving one feature vector on memory
- *----------------------------------------------------------------------------*)
-
-val feature_time = ref 0.0 (* statistics *)
-
-fun save_lbl (lbl0 as (stac0,t0,g0,gl0)) =
-  if mem g0 gl0 then () else
-    let
-      val fea = total_time feature_time hhsFeature.fea_of_goal g0
-      val (lbl as (stac,t,g,gl)) = 
-        debug_t "orthogonalize" orthogonalize (lbl0,fea)
-      val feav = (lbl,fea)
-    in
-      update_tacdata feav
-    end
-
-(*----------------------------------------------------------------------------
- * Exporting feature vectors to disk
- *----------------------------------------------------------------------------*)
-
 fun feavl_out f ostrm =
  let val ppstrm = Portable.mk_ppstream
                     {consumer = Portable.outputc ostrm,
@@ -156,7 +135,7 @@ fun feavl_out f ostrm =
     Portable.close_out ostrm
  end
 
-fun export_tacfea thy =
+fun export_tacdata thy =
   let
     val file = hhs_tacfea_dir ^ "/" ^ thy
     val ostrm = Portable.open_out file
@@ -169,7 +148,7 @@ fun export_tacfea thy =
   end
 
 (*----------------------------------------------------------------------------
- * Reading feature vectors data
+ * Import
  *----------------------------------------------------------------------------*)
 
 fun err_msg s l = raise ERR s (String.concatWith " " (first_n 10 l))
@@ -314,10 +293,6 @@ fun read_feavl lookup l = case l of
    "FEATURE_VECTORS_START" :: m => read_feavl_loop lookup [] m
   | _ => err_msg "read_feavl" l
 
-(*----------------------------------------------------------------------------
- * Importing feature vectors from disk
- *----------------------------------------------------------------------------*)
-
 fun read_feavdatal thy =
   let
     val file = hhs_tacfea_dir ^ "/" ^ thy
@@ -341,44 +316,61 @@ fun read_feavdatal thy =
 
 fun read_feavdatal_no_min thy = 
   if mem thy ["min","bool"] then [] else read_feavdatal thy
+
+fun update_tacdep (lbl,_) =
+  let 
+    val oldv = dfind (#3 lbl) (!hhs_tacdep) handle _ => [] 
+    val newv = lbl :: oldv
+  in
+    hhs_tacdep := dadd (#3 lbl) newv (!hhs_tacdep)
+  end
+
+fun init_tacdata feavl =
+  (
+  hhs_tacfea := dnew lbl_compare feavl;
+  hhs_tacfea_cthy := dempty lbl_compare; 
+  hhs_tacdep := dempty goal_compare;
+  hhs_taccov := 
+    count_dict (dempty String.compare) 
+    (map (#1 o fst) (dlist (!hhs_tacfea)))
+  ;
+  dapp update_tacdep (!hhs_tacfea)
+  )
  
-fun import_feavl thyl = List.concat (map read_feavdatal_no_min thyl)
+fun import_tacdata thyl = 
+  let val feavl = List.concat (map read_feavdatal_no_min thyl) in
+    init_tacdata feavl
+  end
 
 (*----------------------------------------------------------------------------
- * I/O monte carlo evaluation knowledge from disk
- *----------------------------------------------------------------------------*) 
- 
-fun update_mcdict fea (b,n) = 
-  let val b' = fst (dfind fea (!hhs_glfea)) handle _ => false in
-    if b' then () else hhs_glfea := dadd fea (b,n) (!hhs_glfea)
-  end
- 
-fun export_glfea cthy =
-  let 
-    val file = hhs_glfea_dir ^ "/" ^ cthy
-    val l = dlist (!hhs_glfea_cthy) 
-    fun f (fea,(b,n)) =
-      String.concatWith " " 
-        (int_to_string n :: (if b then "T" else "F") :: map int_to_string fea)
-  in
-    writel file (map f l)
-  end
+ * Update
+ *----------------------------------------------------------------------------*)
 
-fun read_glfea thy =
-  let 
-    val file = hhs_glfea_dir ^ "/" ^ thy
-    val l = readl file handle _ => (debug ("read_glfea " ^ thy); [])
-    fun f s = case String.tokens Char.isSpace s of
-        a :: "T" :: m => 
-        update_mcdict (map string_to_int m) (true, string_to_int a)
-      | b :: "F" :: m => 
-        update_mcdict (map string_to_int m) (false, string_to_int b)
-      | _ => raise ERR "read_glfea" thy
-  in
-    app f l
-  end
+val feature_time = ref 0.0 (* statistics *)
 
-fun import_glfea thyl = app read_glfea thyl
- 
+fun update_tacdata_aux (lbl,fea) =
+  if dmem lbl (!hhs_tacfea) then () else
+    (
+    hhs_tacfea := dadd lbl fea (!hhs_tacfea);
+    hhs_tacfea_cthy := dadd lbl fea (!hhs_tacfea_cthy);
+    update_tacdep (lbl,fea);
+    hhs_taccov := count_dict (!hhs_taccov) [(#1 lbl)]
+    )
+
+fun update_tacdata (lbl0 as (stac0,t0,g0,gl0)) =
+  if mem g0 gl0 then () else
+    let
+      val fea = total_time feature_time hhsFeature.fea_of_goal g0
+      val (lbl as (stac,t,g,gl)) = 
+        debug_t "orthogonalize" orthogonalize (lbl0,fea)
+      val feav = (lbl,fea)
+    in
+      update_tacdata_aux feav
+    end
+
+
+
+
+
 
 end (* struct *)

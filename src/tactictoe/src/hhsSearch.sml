@@ -901,7 +901,7 @@ fun selflearn_aux proof = case proof of
         val ((gl,_),t) = add_time (tactic_of_sml stac) g
         val lbl = (stac,t,g,gl) 
       in
-        save_lbl lbl
+        update_tacdata lbl
       end
       handle _ => debug_search ("Error: selflearn: " ^ stac)
       )

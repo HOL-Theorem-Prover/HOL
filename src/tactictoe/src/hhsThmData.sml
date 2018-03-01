@@ -15,49 +15,33 @@ hhsSetup
 val ERR = mk_HOL_ERR "hhsThmData"
 
 (* --------------------------------------------------------------------------
-   Metis: 
-   Todo: Orthogonalization could be done during predictions but would
-   be a bit slow.
+   Import
    -------------------------------------------------------------------------- *)
 
 fun thm_of_string s =
   let val (a,b) = split_string "Theory." s in DB.fetch a b end
 
-fun mk_metis_call sl =
-  "metisTools.METIS_TAC " ^ 
-  "[" ^ String.concatWith " , " (map dbfetch_of_string sl) ^ "]"
-
-(* --------------------------------------------------------------------------
-   Metis dictionary input/output. Precomputing features of theorems. 
-   -------------------------------------------------------------------------- *)
-
-fun read_thmfea s = case hhs_lex s of
-    a :: m => (SOME (dest_thm (thm_of_string a), (a, map string_to_int m)) handle _ => NONE)
-  | _ => raise ERR "read_thmfea" s
+fun parse_thmfea s = case hhs_lex s of
+    a :: m => (SOME (dest_thm (thm_of_string a), (a, map string_to_int m)) 
+      handle _ => NONE)
+  | _ => raise ERR "parse_thmfea" s
     
-fun readthy_mdict thy =
+fun read_thmfea thy =
   let
     val l0 = readl (hhs_thmfea_dir ^ "/" ^ thy)
       handle _ => (if mem thy ["min","bool"] then () else debug thy; [])
-    val l1 = List.mapPartial read_thmfea l0
+    val l1 = List.mapPartial parse_thmfea l0
   in
     hhs_thmfea := daddl l1 (!hhs_thmfea)
   end
 
-fun import_mdict () = 
-  app readthy_mdict (ancestry (current_theory ()))
+fun import_thmfea thyl = app read_thmfea thyl
 
-fun depnumber_of_thm thm =
-  (Dep.depnumber_of o Dep.depid_of o Tag.dep_of o Thm.tag) thm
+(* --------------------------------------------------------------------------
+   Update
+   -------------------------------------------------------------------------- *)
 
-fun order_thml thml =
-  let fun compare ((_,th1),(_,th2)) =
-    Int.compare (depnumber_of_thm th1, depnumber_of_thm th2)
-  in
-    dict_sort compare thml
-  end
-
-fun update_mdict cthy =
+fun update_thmfea cthy =
   let
     val thml = DB.thms cthy
     fun f (s,thm) =
@@ -72,10 +56,14 @@ fun update_mdict cthy =
   in
     app f thml
   end
+
+(* --------------------------------------------------------------------------
+   Export
+   -------------------------------------------------------------------------- *)
   
 fun export_thmfea cthy = 
   let 
-    val _ = update_mdict cthy
+    val _ = update_thmfea cthy
     val namel = map fst (DB.thms cthy)
     fun in_curthy (_,(s,_)) =  
       let val (thy,name) = split_string "Theory." s in

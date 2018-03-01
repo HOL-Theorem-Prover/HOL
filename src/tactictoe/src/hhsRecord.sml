@@ -262,7 +262,7 @@ fun start_record lflag pflag name goal =
       if one_in_n () 
       then 
         (
-        debug_t "update_mdict" update_mdict (current_theory ());
+        debug_t "update_thmfea" update_thmfea (current_theory ());
         eval_tactictoe name goal handle _ => 
         debug ("Error: eval_tactictoe: last_stac: " ^ 
                !hhsSearch.last_stac)
@@ -279,9 +279,9 @@ fun end_record name g =
     val lbls = map fst (rev (!goalstep_glob))
   in
     (* because we want internal theorems on orthogonalization *)
-    debug_t "update_mdict" update_mdict (current_theory ());
+    debug_t "update_thmfea" update_thmfea (current_theory ());
     debug_t ("Saving " ^ int_to_string (length lbls) ^ " labels")
-      (app save_lbl) lbls
+      (app update_tacdata) lbls
   end
 
 fun org_tac tac g =
@@ -360,9 +360,7 @@ fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
 fun start_thy cthy =
   (
   mkDir_err hhs_code_dir;
-  (* necessary for export if no proofs are found *)
   hhsSetup.set_record cthy;
-  (* exporting theorems from boolTheory in ConseqConv *)
   if cthy = "ConseqConv" 
   then (clean_tttdata (); 
         clean_subdirl "bool" hhs_search_dir ["debug","search","proof"];
@@ -383,7 +381,7 @@ fun start_thy cthy =
 fun end_thy cthy =
   (
   (* tactic *)
-  debug_t "export_tacfea" export_tacfea cthy;
+  debug_t "export_tacdata" export_tacdata cthy;
   (* theorem *)
   debug_t "export_thmfea" export_thmfea cthy;
   (* goal list *)
