@@ -483,14 +483,14 @@ fun rm_space s = implode (rm_space_aux (explode s))
 
 
 (* --------------------------------------------------------------------------
-   Globals
+   Tactics
    -------------------------------------------------------------------------- *)
 
 val hhs_badstacl = ref []
-val hhs_cthyfea  = ref []
 val hhs_stacfea  = ref (dempty lbl_compare)
-val hhs_ddict = ref (dempty goal_compare)
-val hhs_ndict = ref (dempty String.compare)
+val hhs_cthyfea  = ref []
+val hhs_ddict  = ref (dempty goal_compare)
+val hhs_ndict  = ref (dempty String.compare)
 
 fun update_ddict (lbl,_) =
   let 
@@ -523,22 +523,23 @@ fun update_stacfea (feav as (lbl,fea)) =
     )
   
 (* --------------------------------------------------------------------------
-   Metis
+   Theorems
    -------------------------------------------------------------------------- *)
+
+val local_namespace_tag = "tactictoe_local_namespace"
 
 fun dbfetch_of_string s =
   let val (a,b) = split_string "Theory." s in 
     if a = current_theory ()
       then String.concatWith " " ["DB.fetch",mlquote a,mlquote b] 
-    else if a = "local_namespace_holyhammer"
-      then b
-    else s
+    else 
+      if a = local_namespace_tag then b else s
   end
 
 val hhs_mdict = ref (dempty goal_compare)
 
 (* --------------------------------------------------------------------------
-   Evaluation function for Monte Carlo Tree Search.
+   Lists of goals
    -------------------------------------------------------------------------- *)
 
 val hhs_mcdict = ref (dempty (list_compare Int.compare))

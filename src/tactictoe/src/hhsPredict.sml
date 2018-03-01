@@ -1,9 +1,8 @@
 (* =========================================================================  *)
 (* FILE          : hhsPredictor.sml                                           *)
-(* DESCRIPTION   : Tactic and theorem selections through external calls to    *)
-(* machine learning programs                                                  *)
+(* DESCRIPTION   : Predictions of tactics, theorems, terms and lists of goals *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
-(* DATE          : 2017                                                       *)
+(* DATE          : 2018                                                       *)
 (* ========================================================================== *)
 
 structure hhsPredict :> hhsPredict =
@@ -107,7 +106,7 @@ fun stacknn_uniq symweight n feal fea_o =
 
 fun exists_tid s = 
   let val (a,b) = split_string "Theory." s in 
-    a = "local_namespace_holyhammer" orelse 
+    a = local_namespace_tag orelse 
     can (DB.fetch a) b
   end
 
@@ -129,7 +128,7 @@ fun add_fea dict (name,thm) =
 fun insert_namespace thmdict =
   let 
     val dict = ref thmdict 
-    fun f (x,y) = ("local_namespace_holyhammerTheory." ^ x, y)
+    fun f (x,y) = (local_namespace_tag ^ "Theory." ^ x, y)
     val l1 = debug_t "namespace_thms" namespace_thms ()
     val l2 = map f l1
   in
@@ -164,8 +163,7 @@ fun thmknn_std n goal =
 (* Probably uptodate-ness is already verified elsewhere *)
 fun uptodate_tid s =
   let val (a,b) = split_string "Theory." s in 
-    a = "local_namespace_holyhammer" orelse 
-    uptodate_thm (DB.fetch a b)
+    a = local_namespace_tag orelse uptodate_thm (DB.fetch a b)
   end
 
 fun depnumber_of_thm thm =
@@ -184,7 +182,7 @@ fun name_of_did (thy,n) =
   
 fun dep_of_thm s = 
   let val (a,b) = split_string "Theory." s in 
-    if a = "local_namespace_holyhammer" 
+    if a = local_namespace_tag 
     then []
     else List.mapPartial name_of_did (depidl_of_thm (DB.fetch a b))
   end

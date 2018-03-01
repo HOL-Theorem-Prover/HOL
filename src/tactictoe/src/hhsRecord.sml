@@ -1,5 +1,5 @@
 (* =========================================================================  *)
-(* FILE          : hhsPrererecord.sml                                         *)
+(* FILE          : hhsRecord.sml                                              *)
 (* DESCRIPTION   : Record tactics and their given goals (or their features)   *)
 (* machine learning programs                                                  *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)

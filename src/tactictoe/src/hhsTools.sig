@@ -21,6 +21,7 @@ sig
   val hhs_mcdict : (int list, (bool * int)) Redblackmap.dict ref
   val hhs_mcdict_cthy : (int list, (bool * int)) Redblackmap.dict ref
   
+  val local_namespace_tag: string
   
   val clean_feadata : unit -> unit
   val init_stacfea : feav_t list -> unit

@@ -57,8 +57,6 @@ fun order_thml thml =
     dict_sort compare thml
   end
 
-fun is_localthy s = s = "local_namespace_holyhammer"
-
 fun update_mdict cthy =
   let
     val thml = DB.thms cthy
