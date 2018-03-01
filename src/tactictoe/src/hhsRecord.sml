@@ -100,7 +100,8 @@ fun out_record_summary cthy =
     g "    Record" (!record_time);
     g "    Save" (!save_time);
     g "    Tactic" (!tactic_time);
-    g "    Feature" (!feature_time)
+    g "    Feature" (!feature_time);
+    f (length (!hhs_badstacl)) "bad tactics during evaluation"
   end
 
 (* --------------------------------------------------------------------------
@@ -361,28 +362,31 @@ fun start_thy cthy =
   if cthy = "ConseqConv" 
   then (clean_feadata (); 
         clean_subdirl "bool" hhs_search_dir ["debug","search","proof"];
-        clean_dir "bool" hhs_mdict_dir;
+        (* clean_dir "bool" hhs_mdict_dir; *)
         debug_t "export_mdict" export_mdict "bool") 
   else ();
   clean_feadata ();
   reset_profiling ();
   (* Proof search *)
   clean_subdirl cthy hhs_search_dir ["debug","search","proof"];
-  (* Features storage *)
+  (* Features storage 
   clean_dir cthy hhs_feature_dir;
   clean_dir cthy hhs_mdict_dir;
   clean_dir cthy hhs_mc_dir;
+  *)
   (* Tactic scripts recording *)
   clean_subdirl cthy hhs_record_dir ["parse","replay","record"] 
   )
 
 fun end_thy cthy = 
   (
-  debug_t "export_feavl" (export_feavl cthy) (!hhs_cthyfea);
+  (* exproting tactics *)
+  debug_t "export_feavl" export_feavl cthy;
+  (* exporting theorems *)
   debug_t "export_mdict" export_mdict cthy;
+  (* exporting list of goals *)
   if !hhs_mcrecord_flag then debug_t "export_mc" export_mc cthy else ();
-  out_record_summary cthy;
-  debug_proof ("Bad stac: " ^ (int_to_string (length (!hhs_badstacl))))
+  out_record_summary cthy
   )
 
 end (* struct *)

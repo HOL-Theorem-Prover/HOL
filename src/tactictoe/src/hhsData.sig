@@ -10,9 +10,11 @@ sig
   val feature_time : real ref
   val save_lbl : lbl_t -> unit
 
-  val export_feavl : string -> feav_t list -> unit
+(* tactics *)
+  val export_feavl : string -> unit
   val import_feavl : string list -> feav_t list
 
+(* goal list *)
   val import_mc : string list -> unit
   val export_mc : string -> unit
   

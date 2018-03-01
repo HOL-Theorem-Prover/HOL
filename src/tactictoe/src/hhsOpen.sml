@@ -64,7 +64,7 @@ fun new_mfile prefix alls mfile =
       end
   in
     case List.find is_include l0 of 
-      NONE => () 
+      NONE => FileSys.remove mfile
     | SOME includes =>
       let
         val (_,dirl) = split_sl "=" (String.tokens is_blank includes)

@@ -156,13 +156,13 @@ fun feavl_out f ostrm =
     Portable.close_out ostrm
  end
 
-fun export_feavl thyname feavl =
+fun export_feavl thy =
   let
-    val file = hhs_feature_dir ^ "/" ^ thyname
+    val file = hhs_feature_dir ^ "/" ^ thy
     val ostrm = Portable.open_out file
     fun is_local s = mem "hhsRecord.local_tag" (hhsLexer.hhs_lex s) 
     fun is_global feav = not (is_local (#1 (fst feav))) 
-    val feavl1 = filter is_global feavl
+    val feavl1 = filter is_global (!hhs_cthyfea)
     val feavl2 = filter uptodate_feav feavl1
   in
     feavl_out (pp_feavl feavl2) ostrm
