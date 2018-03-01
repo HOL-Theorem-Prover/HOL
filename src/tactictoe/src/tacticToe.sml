@@ -96,17 +96,23 @@ fun mk_tacdict stacl =
    Initialize TacticToe. Reading feature vectors from disk.
    ---------------------------------------------------------------------- *)
 
+fun report_data () =
+  let 
+    val s1 = int_to_string (dlength (!hhs_tacfea))
+    val s2 = int_to_string (dlength (!hhs_thmfea))
+    val s3 = int_to_string (dlength (!hhs_glfea))
+  in
+    debug (s1 ^ " tactics, " ^ s2 ^ " theorems, " ^ s3 ^ " lists of goals")
+  end
+
 fun import_ancestry () =
   let
     val thyl = ancestry (current_theory ())
     val _ = debug_t "import_tacdata" import_tacdata thyl
-    val _ = debug (int_to_string (dlength (!hhs_tacfea)))
     val _ = debug_t "import_thmfea" import_thmfea thyl
-    val _ = debug (int_to_string (dlength (!hhs_thmfea)))
     val _ = debug_t "import_glfea" import_glfea thyl
-    val _ = debug (int_to_string (dlength (!hhs_glfea)))
   in
-    ()
+    report_data ()
   end
 
 (* remember in which theory was the last call of tactictoe *)
@@ -236,7 +242,9 @@ fun debug_eval_status r =
 fun eval_tactictoe name goal =
   if !hh_only_flag 
   then hh_eval goal handle _ => debug "Error: hh_eval" 
-  else debug_eval_status (hide_out main_tactictoe goal)
+  else 
+    (report_data ();
+     debug_eval_status (hide_out main_tactictoe goal))
 
 fun tactictoe goal =
   let

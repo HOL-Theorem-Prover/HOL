@@ -103,9 +103,7 @@ fun deactivate x =
    -------------------------------------------------------------------------- *)
 
 val glob_timer = ref NONE
-  
 val proofdict = ref (dempty Int.compare)
-val finproofdict = ref (dempty Int.compare)
 
 (* global values to prevent many arguments in functions *)
 val thmpredictor_glob = ref (fn _ => (fn _ => []))
@@ -118,12 +116,7 @@ val tacdict_glob = ref (dempty String.compare)
    Caching tactic applications on goals
    -------------------------------------------------------------------------- *)
 
-fun stacgoal_compare ((stac1,goal1),(stac2,goal2)) =
-  case String.compare (stac1,stac2) of
-    EQUAL => goal_compare (goal1,goal2)
-  | x     => x
-
-val stacgoal_cache = ref (dempty stacgoal_compare)
+val stacgoal_cache = ref (dempty (cpl_compare String.compare goal_compare))
 
 (* --------------------------------------------------------------------------
    Statistics
@@ -179,7 +172,7 @@ fun add_metis pred =
   if !hhs_metishammer_flag then "tactictoe_metis" :: pred else pred
 
 (* --------------------------------------------------------------------------
-   Monte Carlo Tree Search
+   MCTS: Priors
    -------------------------------------------------------------------------- *)
 
 fun array_to_list a =
@@ -200,6 +193,10 @@ fun init_eval pripol pid =
     prioreval := eval;
     cureval := [eval] 
   end
+
+(* --------------------------------------------------------------------------
+   MCTS: Backpropagation
+   -------------------------------------------------------------------------- *)
 
 fun backup_loop beval eval cid =
   let
@@ -247,7 +244,6 @@ fun backup_success cid =
     else backup_loop true 1.0 (valOf parid)
   end
 
-
 (* --------------------------------------------------------------------------
    Node creation and deletion
    -------------------------------------------------------------------------- *)
@@ -277,7 +273,7 @@ fun root_create goal pred =
       goalarr  = Array.fromList [goal],
       predarr  = Array.fromList [pred],
       depth = 0,
-      (* proof saved for reconstruction + children *)
+      (* *)
       pending  = ref [0],
       children = ref [],
       (* proof saved for reconstruction + children *)  
@@ -352,14 +348,6 @@ fun node_create pripol tactime parid parstac pargn parg goallist
 
 fun node_delete pid =
   (debug_search ("node_delete " ^ int_to_string pid); deactivate pid)
-
-fun node_save pid =
-  (
-  debug_search ("node_save " ^ int_to_string pid);
-  let val prec = dfind pid (!proofdict) in
-    finproofdict := dadd pid prec (!finproofdict)
-  end
-  )
 
 fun update_curstac newstac pid =
   let
@@ -595,8 +583,6 @@ fun close_proof cid pid =
     if valOf gn = hd (!pending) then () else debug_err "close_proof";
     (* remember which child gave the proof of which goal *)
     proofl := (valOf gn, valOf stac, cid) :: !proofl;
-    (* saves the child that gave the proof *)
-    node_save cid; 
     (* close all current  children *)
     close_descendant pid; 
     (* switching to next pending goal, erasing previous statistics *)
@@ -609,8 +595,7 @@ fun close_proof cid pid =
     if null (!pending)
     then
       if parid = NONE (* special case when it's root *)
-      then (debug_search "proof"; 
-            node_save pid; node_delete pid; raise ProofFound)
+      then (debug "proof found"; node_delete pid; raise ProofFound)
       else close_proof pid (valOf parid)
     else ()
   end
@@ -760,14 +745,13 @@ fun init_search thmpred tacpred glpred hammer tacdict g =
   (* global time-out *)
   glob_timer := SOME (Timer.startRealTimer ());
   (* caching *)
-  stacgoal_cache := dempty stacgoal_compare;
+  stacgoal_cache := dempty (cpl_compare String.compare goal_compare);
   thml_dict := dempty (cpl_compare goal_compare Int.compare);
   inst_dict := dempty (cpl_compare String.compare goal_compare);
   (* proof states *)
   pid_counter := 0;
   notactivedict := dempty Int.compare;
-  proofdict    := dempty Int.compare;
-  finproofdict := dempty Int.compare; (* should be removed *)
+  proofdict := dempty Int.compare;
   (* easier access to values *)
   tacpredictor_glob := tactimer tacpred;
   thmpredictor_glob := thmtimer thmpred;
@@ -846,17 +830,16 @@ fun search_loop () =
   (
   if Timer.checkRealTimer (valOf (!glob_timer)) > (!hhs_search_time)
     then ProofTimeOut
-  else if dmem 0 (!finproofdict) then Proof ""
-  else (search_step (); debug_search "search step"; search_loop ())
+    else (search_step (); debug_search "search step"; search_loop ())
   )
-  handle NoNextTac => (debug_search "saturated"; ProofSaturated)
-       | SearchTimeOut => (debug_search "timeout"; ProofTimeOut)
-       | ProofFound => (debug_search "prooffound"; Proof "")
+  handle NoNextTac => (debug "proof: saturated"; ProofSaturated)
+       | SearchTimeOut => (debug "proof: timeout"; ProofTimeOut)
+       | ProofFound => (debug "proof: found"; Proof "")
        | e => raise e
 
 fun proofl_of pid =
   let
-    val prec = dfind pid (!finproofdict) handle _ => debug_err "proofl_of"
+    val prec = dfind pid (!proofdict) handle _ => debug_err "proofl_of"
     fun compare_gn ((gn1,_,_),(gn2,_,_)) = Int.compare (gn1,gn2)
     val proofl = !(#proofl prec)
     val new_proofl = dict_sort compare_gn proofl
@@ -889,9 +872,8 @@ fun end_search () =
   debug_proof ("  thmpred  : " ^ Real.toString (!thmtime));
   debug_proof ("  glpred   : " ^ Real.toString (!gltime));   
   proofdict    := dempty Int.compare;
-  finproofdict := dempty Int.compare;
   tacdict_glob := dempty String.compare;
-  stacgoal_cache := dempty stacgoal_compare
+  stacgoal_cache := dempty (cpl_compare String.compare goal_compare)
   )
 
 (* ---------------------------------------------------------------------------
@@ -912,6 +894,12 @@ fun selflearn_aux proof = case proof of
   | Then (p1,p2) => (selflearn_aux p1; selflearn_aux p2)
   | Thenl (p,pl) => (selflearn_aux p; app selflearn_aux pl)
 
+fun string_of_proof proof = case proof of 
+    Tactic (stac,g) => stac
+  | Then (p1,p2) => string_of_proof p1 ^ " THEN " ^ string_of_proof p2
+  | Thenl (p,pl) => string_of_proof p ^ " THENL " ^ 
+     String.concatWith " " (map string_of_proof pl)
+
 fun selflearn proof =
   if !hhs_selflearn_flag 
   then debug_t "selflearn" selflearn_aux proof
@@ -930,26 +918,21 @@ fun search thmpred tacpred glpred hammer tacdict goal =
     val _ = debug_search "End search loop"
     val _ = terminate_async ()
     val _ = debug_search "After termination"
-    val sproof_status = case r of
+    val proof_status = case r of
       Proof _  =>
-      (
-      if dmem 0 (!finproofdict) then
-        let 
-          val proofl = proofl_of 0 handle _ => debug_err "SNH0"
-          val proof = 
-            if length proofl <> 1 
-            then debug_err "SNH1"
-            else (selflearn (hd proofl); minimize_proof (hd proofl))
-          val sproof = debug_t "reconstruct" reconstruct goal proof
-        in
-          Proof sproof
-        end
-      else debug_err "SNH2"
-      )
+      let     
+        val proofl = proofl_of 0 handle _ => debug_err "SNH0"
+        val proof0 = hd proofl handle Empty => debug_err "SNH1" 
+        val _ = selflearn proof0
+        val proof1 = debug_t "minimize" minimize_proof proof0
+        val sproof = debug_t "reconstruct" reconstruct goal proof1
+      in
+        Proof sproof
+      end
     | _ => r
   in
     end_search ();
-    sproof_status
+    proof_status
   end
   )
 
