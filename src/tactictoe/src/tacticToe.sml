@@ -80,10 +80,10 @@ fun mk_tacdict stacl =
   let 
     (* val _ = app debug stacl *)
     val (_,goodl) = 
-      partition (fn x => mem x (!hhs_badstacl) orelse is_absarg_stac x) stacl
+      partition (fn x => mem x (!hhs_tacerr) orelse is_absarg_stac x) stacl
     fun read_stac x = (x, tactic_of_sml x)
       handle _ => (debug ("Warning: bad tactic: " ^ x ^ "\n");
-                   hhs_badstacl := x :: (!hhs_badstacl);
+                   hhs_tacerr := x :: (!hhs_tacerr);
                    raise ERR "" "")
     val l = combine (goodl, tacticl_of_sml goodl)
             handle _ => mapfilter read_stac goodl
@@ -102,9 +102,9 @@ fun import_ancestry () =
     val stacfea = debug_t "import_feavl" import_feavl thyl
     val _ = debug (int_to_string (length stacfea));
     val _ = debug_t "import_mdict" import_mdict ()
-    val _ = debug (int_to_string (dlength (!hhs_mdict)))
+    val _ = debug (int_to_string (dlength (!hhs_thmfea)))
     val _ = debug_t "import_mc" import_mc thyl
-    val _ = debug (int_to_string (dlength (!hhs_mcdict)))
+    val _ = debug (int_to_string (dlength (!hhs_glfea)))
   in
     init_stacfea stacfea
   end
@@ -122,9 +122,9 @@ fun init_tactictoe () =
     then 
       let 
         val _ = debug_t ("init_tactictoe " ^ cthy) import_ancestry ()
-        val ns = int_to_string (dlength (!hhs_stacfea))
-        val ms = int_to_string (dlength (!hhs_mdict))
-        val ps = int_to_string (dlength (!hhs_mcdict))
+        val ns = int_to_string (dlength (!hhs_tacfea))
+        val ms = int_to_string (dlength (!hhs_thmfea))
+        val ps = int_to_string (dlength (!hhs_glfea))
       in  
         hide_out QUse.use (tactictoe_dir ^ "/src/infix_file.sml");
         print_endline ("Loading " ^ ns ^ " tactics, " ^
@@ -138,20 +138,20 @@ fun init_tactictoe () =
    Preselection of theorems and tactics
    ---------------------------------------------------------------------- *)
 
-fun select_stacfeav goalfea =
+fun select_stacfeav goalf =
   let 
-    val stacfeav = dlist (!hhs_stacfea)
+    val stacfeav = dlist (!hhs_tacfea)
     val stacsymweight = debug_t "learn_tfidf" 
       learn_tfidf stacfeav
     val l0 = debug_t "stacknn" 
-      (stacknn stacsymweight (!hhs_maxselect_pred) stacfeav) goalfea
+      (stacknn stacsymweight (!hhs_maxselect_pred) stacfeav) goalf
     val l1 = debug_t "add_stacdesc" 
-      add_stacdesc (!hhs_ddict) (!hhs_maxselect_pred) l0
+      add_stacdesc (!hhs_tacdep) (!hhs_maxselect_pred) l0
     val tacdict = debug_t "mk_tacdict" 
       mk_tacdict (mk_fast_set String.compare (map #1 l1))
     fun filter_f (stac,_,_,_) = is_absarg_stac stac orelse dmem stac tacdict
     val l2 = filter filter_f l1
-    fun f x = (x, dfind x (!hhs_stacfea))
+    fun f x = (x, dfind x (!hhs_tacfea))
     val l3 = map f l2 
   in
     (stacsymweight, l3, tacdict)
@@ -162,7 +162,7 @@ fun select_mcfeav stacfeav =
     let
       fun f ((_,_,g,_),_) = (hash_goal g, ())
       val goal_dict = dnew Int.compare (map f stacfeav)    
-      val mcfeav0 = map (fn (a,b) => (b,a)) (dlist (!hhs_mcdict))
+      val mcfeav0 = map (fn (a,b) => (b,a)) (dlist (!hhs_glfea))
       fun filter_f ((b,n),nl) = dmem n goal_dict
       val mcfeav1 = filter filter_f mcfeav0
       val mcsymweight = debug_t "mcsymweight" learn_tfidf mcfeav0
@@ -174,11 +174,11 @@ fun select_mcfeav stacfeav =
 fun main_tactictoe goal =
   let  
     (* preselection *)
-    val goalfea = fea_of_goal goal       
+    val goalf = fea_of_goal goal       
     val (stacsymweight, stacfeav, tacdict) = 
-      debug_t "select_stacfeav" select_stacfeav goalfea
+      debug_t "select_stacfeav" select_stacfeav goalf
     val ((pthmsymweight,pthmfeav,pthmrevdict), thmfeav) = 
-      debug_t "select_sthmfeav" select_sthmfeav goalfea
+      debug_t "select_sthmfeav" select_sthmfeav goalf
     val (mcsymweight, mcfeav) = 
       debug_t "select_mcfeav" select_mcfeav stacfeav      
     (* caches *)
@@ -306,8 +306,8 @@ fun next_tac goal =
     val _ = init_tactictoe ()
     val _ = next_tac_glob := []
     (* preselection *)
-    val goalfea = fea_of_goal goal       
-    val (stacsymweight,stacfeav,tacdict) = hide_out select_stacfeav goalfea
+    val goalf = fea_of_goal goal       
+    val (stacsymweight,stacfeav,tacdict) = hide_out select_stacfeav goalf
     (* predicting *)
     fun stac_predictor g =
       stacknn stacsymweight (!hhs_maxselect_pred) stacfeav (fea_of_goal g)

@@ -37,11 +37,11 @@ fun read_thmfea s = case hhs_lex s of
     
 fun readthy_mdict thy =
   let
-    val l0 = readl (hhs_mdict_dir ^ "/" ^ thy)
+    val l0 = readl (hhs_thmfea_dir ^ "/" ^ thy)
       handle _ => (if mem thy ["min","bool"] then () else debug thy; [])
     val l1 = List.mapPartial read_thmfea l0
   in
-    hhs_mdict := daddl l1 (!hhs_mdict)
+    hhs_thmfea := daddl l1 (!hhs_thmfea)
   end
 
 fun import_mdict () = 
@@ -64,10 +64,10 @@ fun update_mdict cthy =
       let 
         val name = cthy ^ "Theory." ^ s
         val goal = dest_thm thm
-        val fea = snd (dfind goal (!hhs_mdict)) 
+        val fea = snd (dfind goal (!hhs_thmfea)) 
           handle _ => fea_of_goal goal
       in
-        hhs_mdict := dadd goal (name,fea) (!hhs_mdict)
+        hhs_thmfea := dadd goal (name,fea) (!hhs_thmfea)
       end
   in
     app f thml
@@ -81,8 +81,8 @@ fun export_mdict cthy =
       let val (thy,name) = split_string "Theory." s in
         thy = cthy andalso mem name namel
       end
-    val fname = hhs_mdict_dir ^ "/" ^ cthy
-    val l0 = filter in_curthy (dlist (!hhs_mdict))
+    val fname = hhs_thmfea_dir ^ "/" ^ cthy
+    val l0 = filter in_curthy (dlist (!hhs_thmfea))
     fun f (_,(name,fea)) = 
       String.concatWith " " (name :: map int_to_string fea)
     val l1 = map f l0

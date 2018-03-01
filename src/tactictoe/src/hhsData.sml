@@ -162,7 +162,7 @@ fun export_feavl thy =
     val ostrm = Portable.open_out file
     fun is_local s = mem "hhsRecord.local_tag" (hhsLexer.hhs_lex s) 
     fun is_global feav = not (is_local (#1 (fst feav))) 
-    val feavl1 = filter is_global (!hhs_cthyfea)
+    val feavl1 = filter is_global (!hhs_tacfea_cthy)
     val feavl2 = filter uptodate_feav feavl1
   in
     feavl_out (pp_feavl feavl2) ostrm
@@ -349,14 +349,14 @@ fun import_feavl thyl = List.concat (map read_feavdatal_no_min thyl)
  *----------------------------------------------------------------------------*) 
  
 fun update_mcdict fea (b,n) = 
-  let val b' = fst (dfind fea (!hhs_mcdict)) handle _ => false in
-    if b' then () else hhs_mcdict := dadd fea (b,n) (!hhs_mcdict)
+  let val b' = fst (dfind fea (!hhs_glfea)) handle _ => false in
+    if b' then () else hhs_glfea := dadd fea (b,n) (!hhs_glfea)
   end
  
 fun export_mc cthy =
   let 
     val file = hhs_mc_dir ^ "/" ^ cthy
-    val l = dlist (!hhs_mcdict_cthy) 
+    val l = dlist (!hhs_glfea_cthy) 
     fun f (fea,(b,n)) =
       String.concatWith " " 
         (int_to_string n :: (if b then "T" else "F") :: map int_to_string fea)

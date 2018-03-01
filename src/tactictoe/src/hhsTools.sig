@@ -10,16 +10,16 @@ sig
   val hhs_search_time : Time.time ref
   val hhs_tactic_time : real ref
 
-  val hhs_badstacl  : string list ref
-  val hhs_stacfea   : (lbl_t, fea_t) Redblackmap.dict ref
-  val hhs_cthyfea   : feav_t list ref
-  val hhs_ddict     : (goal, lbl_t list) Redblackmap.dict ref
-  val hhs_ndict     : (string, int) Redblackmap.dict ref
-  val hhs_mdict     : (goal, (string * fea_t)) Redblackmap.dict ref
+  val hhs_tacerr  : string list ref
+  val hhs_tacfea   : (lbl_t, fea_t) Redblackmap.dict ref
+  val hhs_tacfea_cthy   : feav_t list ref
+  val hhs_tacdep     : (goal, lbl_t list) Redblackmap.dict ref
+  val hhs_taccov     : (string, int) Redblackmap.dict ref
+  val hhs_thmfea     : (goal, (string * fea_t)) Redblackmap.dict ref
   val dbfetch_of_string : string -> string
   
-  val hhs_mcdict : (int list, (bool * int)) Redblackmap.dict ref
-  val hhs_mcdict_cthy : (int list, (bool * int)) Redblackmap.dict ref
+  val hhs_glfea : (int list, (bool * int)) Redblackmap.dict ref
+  val hhs_glfea_cthy : (int list, (bool * int)) Redblackmap.dict ref
   
   val local_namespace_tag: string
   
@@ -35,7 +35,7 @@ sig
   val hhs_record_dir   : string
   val hhs_open_dir     : string
   val hhs_succrate_dir : string
-  val hhs_mdict_dir    : string
+  val hhs_thmfea_dir    : string
   val hhs_mc_dir    : string
   
   val mkDir_err : string -> unit

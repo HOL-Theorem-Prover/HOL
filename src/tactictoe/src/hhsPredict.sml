@@ -141,8 +141,8 @@ fun all_thmfeav () =
   let 
     val newdict = 
       if !hhs_namespacethm_flag 
-      then debug_t "insert_namespace" insert_namespace (!hhs_mdict)
-      else (!hhs_mdict)
+      then debug_t "insert_namespace" insert_namespace (!hhs_thmfea)
+      else (!hhs_thmfea)
     val feav = map snd (dlist newdict)
     fun f (g,(name,fea)) = (name,(g,fea)) 
     val revdict = dnew String.compare (map f (dlist newdict))
@@ -251,7 +251,7 @@ fun termknn n ((asl,w):goal) term =
     fun f x = (x, fea_of_goal (togoal x))
     val l0 = List.concat (map (rev o find_terms not_term) (w :: asl))
     val l1 = mk_sameorder_set Term.compare l0
-    val thmfeav = map (snd o snd) (dlist (!hhs_mdict))
+    val thmfeav = map (snd o snd) (dlist (!hhs_thmfea))
     val feal = map f l1
     val fea_o = hhsFeature.fea_of_goal ([],term)
     val symweight = weight_tfidf (fea_o :: (map snd feal) @ thmfeav)

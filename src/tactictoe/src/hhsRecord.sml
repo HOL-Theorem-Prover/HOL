@@ -101,7 +101,7 @@ fun out_record_summary cthy =
     g "    Save" (!save_time);
     g "    Tactic" (!tactic_time);
     g "    Feature" (!feature_time);
-    f (length (!hhs_badstacl)) "bad tactics during evaluation"
+    f (length (!hhs_tacerr)) "bad tactics during evaluation"
   end
 
 (* --------------------------------------------------------------------------
@@ -362,7 +362,7 @@ fun start_thy cthy =
   if cthy = "ConseqConv" 
   then (clean_feadata (); 
         clean_subdirl "bool" hhs_search_dir ["debug","search","proof"];
-        (* clean_dir "bool" hhs_mdict_dir; *)
+        (* clean_dir "bool" hhs_thmfea_dir; *)
         debug_t "export_mdict" export_mdict "bool") 
   else ();
   clean_feadata ();
@@ -371,7 +371,7 @@ fun start_thy cthy =
   clean_subdirl cthy hhs_search_dir ["debug","search","proof"];
   (* Features storage 
   clean_dir cthy hhs_feature_dir;
-  clean_dir cthy hhs_mdict_dir;
+  clean_dir cthy hhs_thmfea_dir;
   clean_dir cthy hhs_mc_dir;
   *)
   (* Tactic scripts recording *)

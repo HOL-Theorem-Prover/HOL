@@ -188,12 +188,12 @@ fun record_mc b (g,gl) =
     let 
       val n = hash_goal g
       val nl = fea_of_goallist gl
-      val b' = fst (dfind nl (!hhs_mcdict)) handle _ => false
+      val b' = fst (dfind nl (!hhs_glfea)) handle _ => false
     in
       if b' then () else
       (
-      hhs_mcdict := dadd nl (b,n) (!hhs_mcdict);
-      hhs_mcdict_cthy := dadd nl (b,n) (!hhs_mcdict_cthy)
+      hhs_glfea := dadd nl (b,n) (!hhs_glfea);
+      hhs_glfea_cthy := dadd nl (b,n) (!hhs_glfea_cthy)
       )
     end
   else ()
@@ -223,14 +223,14 @@ fun orthogonalize (lbl as (ostac,t,g,gl),fea) =
     let
       (* predict tactics *)
       val _ = debug "predict tactics"
-      val feavl0 = dlist (!hhs_stacfea)
+      val feavl0 = dlist (!hhs_tacfea)
       val symweight = learn_tfidf feavl0
       val lbls = stacknn symweight (!hhs_ortho_number) feavl0 fea
       val stacl1 = mk_sameorder_set String.compare (map #1 lbls)
       val stacl2 = filter (fn x => not (x = ostac)) stacl1     
       (* order tactics by frequency *)
       val _ = debug "order tactics"
-      fun score x = dfind x (!hhs_ndict) handle _ => 0
+      fun score x = dfind x (!hhs_taccov) handle _ => 0
       val oscore  = score ostac
       val stacl3  = filter (fn x => score x > oscore) stacl2
       fun n_compare (x,y) = Int.compare (score y, score x) 

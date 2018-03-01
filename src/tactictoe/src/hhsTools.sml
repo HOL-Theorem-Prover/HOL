@@ -35,7 +35,7 @@ val hhs_predict_dir  = tactictoe_dir ^ "/predict"
 val hhs_record_dir   = tactictoe_dir ^ "/record_log"
 val hhs_open_dir     = tactictoe_dir ^ "/open"
 val hhs_succrate_dir = tactictoe_dir ^ "/succrate"
-val hhs_mdict_dir    = tactictoe_dir ^ "/mdict"
+val hhs_thmfea_dir    = tactictoe_dir ^ "/mdict"
 val hhs_mc_dir       = tactictoe_dir ^ "/mc"
 
 fun hide_out f x = 
@@ -480,46 +480,44 @@ fun rm_space_aux l = case l of
   
 fun rm_space s = implode (rm_space_aux (explode s))  
 
-
-
 (* --------------------------------------------------------------------------
    Tactics
    -------------------------------------------------------------------------- *)
 
-val hhs_badstacl = ref []
-val hhs_stacfea  = ref (dempty lbl_compare)
-val hhs_cthyfea  = ref []
-val hhs_ddict  = ref (dempty goal_compare)
-val hhs_ndict  = ref (dempty String.compare)
+val hhs_tacerr = ref [] (* collect errors when parsing *)
+val hhs_tacfea  = ref (dempty lbl_compare)
+val hhs_tacfea_cthy  = ref []
+val hhs_tacdep  = ref (dempty goal_compare)
+val hhs_taccov  = ref (dempty String.compare)
 
 fun update_ddict (lbl,_) =
   let 
-    val oldv = dfind (#3 lbl) (!hhs_ddict) handle _ => [] 
+    val oldv = dfind (#3 lbl) (!hhs_tacdep) handle _ => [] 
     val newv = lbl :: oldv
   in
-    hhs_ddict := dadd (#3 lbl) newv (!hhs_ddict)
+    hhs_tacdep := dadd (#3 lbl) newv (!hhs_tacdep)
   end
 
 fun init_stacfea feavl =
   (
-  hhs_stacfea := dnew lbl_compare feavl;
-  hhs_cthyfea := []; 
-  hhs_ddict := dempty goal_compare;
-  hhs_ndict := 
+  hhs_tacfea := dnew lbl_compare feavl;
+  hhs_tacfea_cthy := []; 
+  hhs_tacdep := dempty goal_compare;
+  hhs_taccov := 
     count_dict (dempty String.compare) 
-    (map (#1 o fst) (dlist (!hhs_stacfea)))
+    (map (#1 o fst) (dlist (!hhs_tacfea)))
   ;
-  dapp update_ddict (!hhs_stacfea)
+  dapp update_ddict (!hhs_tacfea)
   )
 
 fun update_stacfea (feav as (lbl,fea)) =
-  if dmem lbl (!hhs_stacfea) then ()
+  if dmem lbl (!hhs_tacfea) then ()
   else
     (
-    hhs_stacfea := dadd lbl fea (!hhs_stacfea);
-    hhs_cthyfea := feav :: (!hhs_cthyfea);
+    hhs_tacfea := dadd lbl fea (!hhs_tacfea);
+    hhs_tacfea_cthy := feav :: (!hhs_tacfea_cthy);
     update_ddict feav;
-    hhs_ndict := count_dict (!hhs_ndict) [(#1 lbl)]
+    hhs_taccov := count_dict (!hhs_taccov) [(#1 lbl)]
     )
   
 (* --------------------------------------------------------------------------
@@ -536,14 +534,14 @@ fun dbfetch_of_string s =
       if a = local_namespace_tag then b else s
   end
 
-val hhs_mdict = ref (dempty goal_compare)
+val hhs_thmfea = ref (dempty goal_compare)
 
 (* --------------------------------------------------------------------------
    Lists of goals
    -------------------------------------------------------------------------- *)
 
-val hhs_mcdict = ref (dempty (list_compare Int.compare))
-val hhs_mcdict_cthy = ref (dempty (list_compare Int.compare))
+val hhs_glfea = ref (dempty (list_compare Int.compare))
+val hhs_glfea_cthy = ref (dempty (list_compare Int.compare))
 
 (* --------------------------------------------------------------------------
    The following structures should 
@@ -552,14 +550,14 @@ val hhs_mcdict_cthy = ref (dempty (list_compare Int.compare))
    
 fun clean_feadata () =
   (
-  hhs_badstacl := [];
-  hhs_stacfea := dempty lbl_compare;
-  hhs_cthyfea := [];
-  hhs_ddict := dempty goal_compare;
-  hhs_ndict := dempty String.compare;
-  hhs_mdict := dempty goal_compare;
-  hhs_mcdict := dempty (list_compare Int.compare);
-  hhs_mcdict_cthy := dempty (list_compare Int.compare)
+  hhs_tacerr := [];
+  hhs_tacfea := dempty lbl_compare;
+  hhs_tacfea_cthy := [];
+  hhs_tacdep := dempty goal_compare;
+  hhs_taccov := dempty String.compare;
+  hhs_thmfea := dempty goal_compare;
+  hhs_glfea := dempty (list_compare Int.compare);
+  hhs_glfea_cthy := dempty (list_compare Int.compare)
   )
 
 end (* struct *)
