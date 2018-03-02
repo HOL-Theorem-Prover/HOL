@@ -3,9 +3,9 @@ sig
   
   include Abbrev
   
-    (* TacticToe *)
+  (* TacticToe *)
   val ttt : tactic
-  val ttt_t : term -> tactic
+  val tactictoe : term -> tactic
   
   (* Settings *)
   val set_timeout : real -> unit
@@ -13,8 +13,6 @@ sig
     (* flags can only be changed inside this function *)
   
   (* Step by step exploration *)
-  val next_tac_glob : tactic list ref
-  val next_tac_number : int ref
   val next_tac : goal -> unit 
   val next : int -> tactic  
 
@@ -26,10 +24,12 @@ sig
   val ttt_clean_open : unit -> unit
   val ttt_clean_thy: string -> unit
     
-  (* Evaluation *)
-  val init_tactictoe : unit -> unit (* included in ttt *)
-  val eval_tactictoe : string -> goal -> unit
-  val ttt_eval_thy: string -> unit
-  val eprover_eval_thy: string -> unit (* does not work *)
+  (* Evaluation *)  
+  val ttt_eval_thy     : string -> unit
+  val eprover_eval_thy : string -> unit
+  
+  (* Used by tttRecord *)
+  val init_tactictoe   : unit -> unit
+  val eval_tactictoe   : string -> goal -> unit
   
 end

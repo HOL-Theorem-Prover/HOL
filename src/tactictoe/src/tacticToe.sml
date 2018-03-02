@@ -249,7 +249,7 @@ fun eval_tactictoe name goal =
     (report_data ();
      debug_eval_status (hide_out main_tactictoe goal))
 
-fun tactictoe goal =
+fun tactictoe_aux goal =
   let
     val _ = init_tactictoe ()
     val r = hide_out main_tactictoe goal
@@ -257,9 +257,9 @@ fun tactictoe goal =
     tactic_of_status r
   end
 
-fun ttt goal = (tactictoe goal) goal
+fun ttt goal = (tactictoe_aux goal) goal
 
-fun ttt_t term = tactictoe ([],term)
+fun tactictoe term = tactictoe_aux ([],term)
 
 (* ----------------------------------------------------------------------
    Predicting only the next tactic based on some distance measure.
