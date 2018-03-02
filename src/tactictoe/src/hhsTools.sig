@@ -25,6 +25,8 @@ sig
   val hhs_unfold_dir   : string
   
   val mkDir_err        : string -> unit
+  fun rmDir            : string -> unit
+  val cleanDir         : string -> unit
   val hide_out : ('a -> 'b) -> 'a -> 'b   (* hiding output *)
   
   (* tactictoe globals *)

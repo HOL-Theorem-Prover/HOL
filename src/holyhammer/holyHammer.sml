@@ -1,8 +1,7 @@
 (* ===================================================================== *)
 (* FILE          : holyHammer.sml                                        *)
 (* DESCRIPTION   : Export types, constants, predicted theorems to        *)
-(*                 the holyHammer framework which performs premise       *)
-(*                 selection and calls to external provers. The lemmas   *)
+(*                 the holyHammer framework. The lemmas                  *)
 (*                 found by the provers help Metis to reconstruct the    *)
 (*                 proof.                                                *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck        *)
@@ -283,9 +282,12 @@ fun hh_stac pid (symweight,feav,revdict) t goal =
     val _ = export_problem probdir premises term
     val provdir = provbin_dir ^ "/prover_" ^ ns
     val _ = translate_fof probdir provdir
+    val _ = rmDir probdir
     val _ = launch_atp provdir Eprover t
+    val r = reconstruct_dir_stac provdir goal
+    val _ = rmDir provdir
   in
-    reconstruct_dir_stac provdir goal
+    r
   end
 
 end
