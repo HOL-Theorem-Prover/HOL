@@ -1101,13 +1101,7 @@ fun ttt_record_sigobj () =
     ttt_record ()
   end
   
-fun ttt_clean_thy thy =
-  let 
-    val file = find_script thy
-    val dir = tttdir_of file
-  in
-    rmDir dir
-  end
+fun ttt_clean_thy thy = rmDir_rec (tttdir_of (find_script thy))
 
 fun ttt_clean () =
   let
@@ -1118,7 +1112,7 @@ fun ttt_clean () =
     app ttt_clean_thy thyl2
   end
 
-fun ttt_clean_open () = rmDir hhs_open_dir
+fun ttt_clean_open () = rmDir_rec hhs_open_dir
 
 (* ---------------------------------------------------------------------------
    Evaluation of different provers

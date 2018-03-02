@@ -8,7 +8,6 @@
 (* DATE          : 2015                                                  *)
 (* ===================================================================== *)
 
-
 structure holyHammer :> holyHammer =
 struct
 
@@ -282,10 +281,10 @@ fun hh_stac pid (symweight,feav,revdict) t goal =
     val _ = export_problem probdir premises term
     val provdir = provbin_dir ^ "/prover_" ^ ns
     val _ = translate_fof probdir provdir
-    val _ = rmDir probdir
+    val _ = rmDir_rec probdir
     val _ = launch_atp provdir Eprover t
     val r = reconstruct_dir_stac provdir goal
-    val _ = rmDir provdir
+    val _ = rmDir_rec provdir
   in
     r
   end

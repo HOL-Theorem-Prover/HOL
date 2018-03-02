@@ -45,7 +45,7 @@ fun hide_out f x =
 
 fun mkDir_err dir = OS.FileSys.mkDir dir handle _ => ()
 
-fun rmDir dir = ignore (OS.Process.system ("rm -r " ^ dir))
+fun rmDir_rec dir = ignore (OS.Process.system ("rm -r " ^ dir))
 
 (* --------------------------------------------------------------------------
     Dictionaries shortcuts

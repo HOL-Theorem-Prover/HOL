@@ -31,7 +31,6 @@ val hhs_selflearn_flag = ref false
    Evaluation
    ---------------------------------------------------------------------- *)
 
-(* val hhs_evletonly_flag = ref false *)
 val hhs_eval_flag     = ref false
 val hhs_evprove_flag  = ref false
 val hhs_evlet_flag    = ref false
