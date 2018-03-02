@@ -10,7 +10,7 @@
 structure hhReconstruct :> hhReconstruct =
 struct
 
-open HolKernel boolLib Dep Tag hhsTools hhsExec hhWriter
+open HolKernel boolLib Dep Tag tttTools tttExec hhWriter
 
 val ERR = mk_HOL_ERR "hhReconstruct"
 
@@ -126,7 +126,7 @@ fun mk_metiscall lemmas =
 fun hh_minimize lemmas g =
   let
     val stac = mk_metiscall lemmas
-    val newstac = hide_out (hhsMinimize.minimize_stac 1.0 stac g) []
+    val newstac = hide_out (tttMinimize.minimize_stac 1.0 stac g) []
   in
     print_endline newstac;
     tactic_of_sml newstac

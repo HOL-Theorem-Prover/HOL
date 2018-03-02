@@ -11,8 +11,7 @@
 structure holyHammer :> holyHammer =
 struct
 
-open HolKernel boolLib hhWriter hhReconstruct hhsTools hhsExec hhsFeature 
-  hhsPredict
+open HolKernel boolLib hhWriter hhReconstruct tttTools tttExec tttFeature tttPredict
 
 val ERR = mk_HOL_ERR "holyHammer"
 

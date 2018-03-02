@@ -10,7 +10,7 @@
 structure hhWriter :> hhWriter =
 struct
 
-open HolKernel boolLib hhsTools TextIO Tag Dep
+open HolKernel boolLib tttTools TextIO Tag Dep
 
 val ERR = mk_HOL_ERR "hhWriter"
 
@@ -306,7 +306,7 @@ fun othm state oc (name,role,tm) =
           otm state oc tm; 
           os oc ").\n")
     else ()
-    handle _ => hhsTools.debug ("Error: othm: " ^ term_to_string tm) 
+    handle _ => tttTools.debug ("Error: othm: " ^ term_to_string tm) 
                 (* to be removed for parallelization *)
     ;
     undeclare ()
