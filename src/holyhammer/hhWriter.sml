@@ -416,7 +416,7 @@ fun write_thydep file thyl =
     fun f x = (os oc x; os oc " "; oiter oc " " (os oc) (parents x); os oc "\n")
   in
     app f thyl;
-    os oc "local_namespace_holyhammer"; os oc " ";
+    os oc namespace_tag; os oc " ";
     oiter oc " " (os oc) [current_theory ()]; 
     os oc "\n";
     closeOut oc
@@ -452,8 +452,8 @@ fun write_conjecture state file conjecture =
 
 fun write_ns state dir ns_thml =
   let 
-    val oc = openOut (dir ^ "/local_namespace_holyhammer.p")
-    val oc_deps = openOut (dir ^ "/local_namespace_holyhammer.hd")
+    val oc = openOut (dir ^ "/" ^ namespace_tag ^ ".p")
+    val oc_deps = openOut (dir ^ "/" ^ namespace_tag ^ ".hd")
     fun new_name name =
       let val (thy,nm1) = split_string "Theory." name in
         squotify ("thm." ^ thy ^ "." ^ hh_escape nm1) 

@@ -506,7 +506,8 @@ val ttt_taccov      = ref (dempty String.compare)
 
 val ttt_thmfea = ref (dempty goal_compare)
 
-val namespace_tag = "tactictoe_namespace"
+val namespace_tag = "namespace_tag" 
+(* Warning: causes a problem if you name your theory namespace_tag *)
 
 fun dbfetch_of_string s =
   let val (a,b) = split_string "Theory." s in 

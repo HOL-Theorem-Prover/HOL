@@ -65,7 +65,7 @@ fun clean_dir dir =
   end
 
 val hh_dir = HOLDIR ^ "/src/holyhammer"
-val hh_bin_dir = HOLDIR ^ "/src/holyhammer/hh"
+val hh_bin_dir = hh_dir ^ "/hh"
 val provbin_dir = hh_dir ^ "/provers"
 
 fun probdir_of atp = hh_dir ^ "/problem_" ^ name_of atp
@@ -76,7 +76,6 @@ fun status_of atp = provdir_of atp ^ "/status"
 
 fun out_dir dir = dir ^ "/out"
 fun status_dir dir = dir ^ "/status"
-
 
 (* ----------------------------------------------------------------------
    Predicting theorems
@@ -124,7 +123,7 @@ fun cached_ancfeav () =
 fun insert_namespace thmdict =
   let 
     val dict = ref thmdict 
-    fun f (x,y) = ("local_namespace_holyhammerTheory." ^ x, y)
+    fun f (x,y) = (namespace_tag ^ "Theory." ^ x, y)
     val l1 = hide_out namespace_thms ()
     val l2 = map f l1
   in
@@ -161,14 +160,13 @@ fun pred_filter pred thy ((name,_),_) =
     mem name thypred  
   end
  
-fun is_nsthm s =
-  fst (split_string "Theory." s) = "local_namespace_holyhammer" 
+fun in_namespace s = fst (split_string "Theory." s) = namespace_tag
  
 fun export_problem probdir premises cj =
   let
     val premises' = map (split_string "Theory.") premises
     (* val _ = print_endline (String.concatWith " " (first_n 10 premises)) *)
-    val nsthml1 = filter is_nsthm premises
+    val nsthml1 = filter in_namespace premises
     fun f s = case thm_of_sml (snd (split_string "Theory." s)) of
         SOME (_,thm) => SOME (s,thm) 
       | NONE => NONE

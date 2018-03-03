@@ -111,7 +111,7 @@ fun get_lemmas (atp_status,atp_out) =
  ----------------------------------------------------------------------------*)
 
 fun string_of_lemma (thy,name) =
-  if thy = "local_namespace_holyhammer"
+  if thy = namespace_tag
     then name
   else if thy = current_theory () 
     then String.concatWith " " ["DB.fetch", quote thy, quote name]
