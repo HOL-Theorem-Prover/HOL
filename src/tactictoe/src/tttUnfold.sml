@@ -959,8 +959,10 @@ fun unquoteString s =
 fun sketch_wrap file =
   let
     val sl = readl file
-    val s1 = rm_endline (rm_comment (String.concatWith " " sl))
+    val s1 = String.concatWith " " sl
     val s2 = unquoteString s1
+    (* probably rm_endline not necessary *)
+    val s3 = rm_endline (rm_comment s2) 
     val sl3 = ttt_lex s2
   in
     sketch sl3

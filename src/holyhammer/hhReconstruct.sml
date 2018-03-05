@@ -49,6 +49,7 @@ fun hh_unescape s =
     String.concat (map_half false f sl)
   end
 
+(* Todo: names of theorems should be standardized with tactictoe convention *)
 fun split_name s = case String.fields (fn c => c = #".") s of
     [_,thy,name] => (thy,name)
   | _       => raise ERR "split_name" ""
