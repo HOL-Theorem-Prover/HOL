@@ -29,6 +29,7 @@ val execname = Path.file (CommandLine.name())
 fun warn s = (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
               TextIO.flushOut TextIO.stdErr)
 fun die s = (warn s; Process.exit Process.failure)
+val original_dir = hmdir.curdir()
 
 (* Global parameters, which get set at configuration time *)
 val HOLDIR0 = Systeml.HOLDIR;
@@ -236,7 +237,7 @@ let
             incdirmap =
               extend_idmap dir (idm_lookup incdirmap newdir) incdirmap}
     else let
-      val _ = warn ("Recursively calling Holmake in " ^ hmdir.toString newdir)
+      val _ = diag (fn _ => "Recursive call in " ^ hmdir.pretty_dir newdir)
       val _ = diag (fn _ => "Visited set = " ^ print_set visited)
       val _ = terminal_log ("Holmake: "^nice_dir (hmdir.toString newdir))
       val result =
@@ -246,7 +247,7 @@ let
               SOME {visited = visited,
                     incdirmap = extend_idmap dir (idm_lookup idm0 newdir) idm0}
     in
-      warn ("Finished recursive invocation in "^hmdir.toString newdir);
+      diag (fn _ => "Finished work in "^hmdir.pretty_dir newdir);
       terminal_log ("Holmake: "^nice_dir (hmdir.toString dir));
       FileSys.chDir (hmdir.toAbsPath dir);
       case result of
@@ -778,6 +779,8 @@ fun add_sigobj {includes,preincludes} =
     {includes = std_include_flags @ includes,
      preincludes = preincludes}
 
+fun null_ii {includes,preincludes} = null includes andalso null preincludes
+
 val extended_dirinfo =
     let
       fun mkd s = hmdir.extendp{base = dir, extension = s}
@@ -853,6 +856,9 @@ fun basecont tgts ii =
   else
     let
       open HM_DepGraph
+      val _ = if null_ii ii andalso hmdir.compare(dir,original_dir) = EQUAL then
+                ()
+              else warn ("Working in " ^ hmdir.pretty_dir dir)
       val ii = add_sigobj ii
       val g = create_graph tgts ii
       val _ = diag (fn _ => "Building from graph")

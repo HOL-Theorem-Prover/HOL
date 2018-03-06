@@ -405,6 +405,14 @@ fun toString {relpath,absdir} =
 
 fun toAbsPath {relpath,absdir} = absdir
 
+fun pretty_dir d =
+  let
+    val abs = toAbsPath d
+    val abs' = holpathdb.reverse_lookup {path=abs}
+  in
+    if abs = abs' then toString d else abs'
+  end
+
 fun fromPath {origin,path} =
     if Path.isAbsolute path then
       {relpath = NONE, absdir = Path.mkCanonical path}
