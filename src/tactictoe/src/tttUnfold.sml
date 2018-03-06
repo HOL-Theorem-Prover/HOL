@@ -1084,7 +1084,7 @@ fun ttt_record_thy thy =
       ;
       restore_scripts scriptorg
     end
-    handle _ => (restore_scripts scriptorg; raise Interrupt)
+    handle e => (restore_scripts scriptorg; raise e)
   end
 
 fun ttt_record () =
