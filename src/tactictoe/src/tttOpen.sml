@@ -56,24 +56,27 @@ fun run_holmake0 fileuo =
     cmd_in_dir dir (HOLDIR ^ "/bin/Holmake " ^ flag ^ " -j1 " ^ file)
   end
 
+fun remove_err s = FileSys.remove s handle SysErr _ => ()
+
 fun run_rm_script script =
   let
     val theoryuo  = fst (split_string "Script." script) ^ "Theory.uo"
-    fun remove_err s = FileSys.remove s handle SysErr _ => ()
   in
     run_holmake theoryuo;
     app remove_err (script :: theory_files script)
-  end  
+  end
+  handle Interrupt => 
+    (app remove_err (script :: theory_files script); raise Interrupt)  
 
 fun run_rm_script0 script = 
   let
-    val _         = print_endline ("run_rm_script: " ^ script)
     val theoryuo  = fst (split_string "Script." script) ^ "Theory.uo"
-    fun remove_err s = FileSys.remove s handle SysErr _ => ()
   in
     run_holmake0 theoryuo;
     app remove_err (script :: theory_files script)
-  end  
+  end
+  handle Interrupt => 
+    (app remove_err (script :: theory_files script); raise Interrupt)  
 
 
 (* ---------------------------------------------------------------------------
