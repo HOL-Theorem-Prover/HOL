@@ -6,6 +6,8 @@ val _ = use "poly/Binaryset.sig";
 val _ = use "poly/Binaryset.sml";
 val _ = use "poly/Listsort.sig";
 val _ = use "poly/Listsort.sml";
+val _ = use "../tools/Holmake/holpathdb.sig";
+val _ = use "../tools/Holmake/holpathdb.sml";
 
 open Systeml
 structure Path = OS.Path
