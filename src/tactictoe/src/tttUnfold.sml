@@ -1070,13 +1070,16 @@ fun ttt_record_thy thy =
     val _ = clean_dir thy ttt_unfold_dir
     val scriptorg = find_script thy
     val _ = save_scripts scriptorg
-    val _ = print_endline ("Run ttt_record_thy in " ^ scriptorg)
+    val _ = print_endline ("TacticToe: running ttt_record_thy in " ^ scriptorg)
     val dirorg = #dir (OS.Path.splitDirFile scriptorg)
   in
     dirorg_glob := dirorg;
     rewrite_script thy scriptorg;
     (* could overwrite scriptorg in rare cases *)
-    run_rm_script (tttsml_of scriptorg);
+    if mem thy core_theories 
+      then run_rm_script0 (tttsml_of scriptorg)
+      else run_rm_script (tttsml_of scriptorg)
+    ;
     restore_scripts scriptorg
   end
 

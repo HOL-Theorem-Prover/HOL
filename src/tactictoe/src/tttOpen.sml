@@ -17,6 +17,13 @@ val ERR = mk_HOL_ERR "tttOpen"
    Holmake
    -------------------------------------------------------------------------- *)
 
+val core_theories = 
+  ["ConseqConv", "quantHeuristics", "patternMatches", "ind_type", "while",
+   "one", "sum", "option", "pair", "combin", "sat", "normalForms",
+   "relation", "min", "bool", "marker", "num", "prim_rec", "arithmetic",
+   "numeral", "basicSize", "numpair", "pred_set", "list", "rich_list",
+   "indexedLists"];
+
 fun theory_files script = 
   let
     val base      = fst (split_string "Script." script)
@@ -30,20 +37,44 @@ fun theory_files script =
   end
 
 fun run_holmake fileuo = 
-  let val {dir,file} = OS.Path.splitDirFile fileuo in
-    print_endline ("Holmake: " ^ fileuo);
+  let 
+    val {dir,file} = OS.Path.splitDirFile fileuo 
+    val state0 = HOLDIR ^ "/bin/hol.state0"
+    val flag = "--holstate=" ^ state0
+  in
+    print_endline ("TacticToe: running Holmake in " ^ fileuo);
     cmd_in_dir dir (HOLDIR ^ "/bin/Holmake" ^ " -j1 " ^ file)
+  end
+
+fun run_holmake0 fileuo = 
+  let 
+    val {dir,file} = OS.Path.splitDirFile fileuo 
+    val state0 = HOLDIR ^ "/bin/hol.state0"
+    val flag = "--holstate=" ^ state0
+  in
+    print_endline ("TacticToe: running Holmake with hol.state0 in " ^ fileuo);
+    cmd_in_dir dir (HOLDIR ^ "/bin/Holmake " ^ flag ^ " -j1 " ^ file)
   end
 
 fun run_rm_script script =
   let
-    val _         = print_endline ("run_rm_script: " ^ script)
     val theoryuo  = fst (split_string "Script." script) ^ "Theory.uo"
     fun remove_err s = FileSys.remove s handle SysErr _ => ()
   in
     run_holmake theoryuo;
     app remove_err (script :: theory_files script)
   end  
+
+fun run_rm_script0 script = 
+  let
+    val _         = print_endline ("run_rm_script: " ^ script)
+    val theoryuo  = fst (split_string "Script." script) ^ "Theory.uo"
+    fun remove_err s = FileSys.remove s handle SysErr _ => ()
+  in
+    run_holmake0 theoryuo;
+    app remove_err (script :: theory_files script)
+  end  
+
 
 (* ---------------------------------------------------------------------------
    Exporting elements of a structure (values + substructures)
