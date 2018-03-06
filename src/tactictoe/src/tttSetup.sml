@@ -105,7 +105,8 @@ val ttt_minimize_flag = ref false
 val ttt_prettify_flag = ref false
 
 (* ----------------------------------------------------------------------
-   Setting flags ---------------------------------------------------------------------- *)
+   Setting flags 
+   ---------------------------------------------------------------------- *)
 
 (* theories appearing in metisTools *)
 val thyl = ["sat", "marker", "combin", "min", "bool", "normalForms"];

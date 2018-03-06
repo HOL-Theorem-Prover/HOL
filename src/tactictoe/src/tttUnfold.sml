@@ -975,10 +975,7 @@ fun unfold_wrap p = unfold 0 [dnew String.compare (map protect basis)] p
    -------------------------------------------------------------------------- *)
 
 fun barefile file = OS.Path.base (OS.Path.file file)
-fun tttsml_of file = 
-  fst (split_string "Script." file) ^ "_tttScript.sml"
-  handle _ => raise ERR "tttsml_of" file
-  
+
 fun sigobj_scripts () =
   let 
     val _    = mkDir_err ttt_code_dir
@@ -1005,14 +1002,15 @@ fun sigobj_theories () =
   end
 
 (* ---------------------------------------------------------------------------
-   Interactive version
+   Recording
    -------------------------------------------------------------------------- *)
 
+fun tttsml_of file = 
+  fst (split_string "Script." file) ^ "_tttScript.sml"
+  handle _ => raise ERR "tttsml_of" file
+
 fun print_program cthy fileorg sl =
-  let
-    val filesml = tttsml_of fileorg
-    val oc = TextIO.openOut filesml
-  in
+  let val oc = TextIO.openOut (tttsml_of fileorg) in
     output_header oc cthy;
     print_sl oc sl;
     output_foot oc cthy;
@@ -1036,13 +1034,6 @@ fun rewrite_script thy fileorg =
     end_unfold_thy ()
   end
 
-val core_theories = 
-   ["ConseqConv", "quantHeuristics", "patternMatches", "ind_type", "while",
-    "one", "sum", "option", "pair", "combin", "sat", "normalForms",
-    "relation", "min", "bool", "marker", "num", "prim_rec", "arithmetic",
-    "numeral", "basicSize", "numpair", "pred_set", "list", "rich_list",
-    "indexedLists"];
-
 fun find_script x = 
   let val dir = 
     Binarymap.find(fileDirMap(),x ^ "Theory.sml") 
@@ -1053,17 +1044,40 @@ fun find_script x =
 
 fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
 
+fun save_file file = 
+  let 
+    val dir = #dir (OS.Path.splitDirFile file)
+    val cmd = "cp -p " ^ file ^ " " ^ (file ^ ".tttsave")
+  in
+    cmd_in_dir dir cmd
+  end
+ 
+fun restore_file file = 
+  let 
+    val dir = #dir (OS.Path.splitDirFile file)
+    val cmd1 = "cp -p " ^ (file ^ ".tttsave") ^ " " ^ file
+    val cmd2 = "rm " ^ (file ^ ".tttsave")
+  in
+    cmd_in_dir dir (cmd1 ^ "; " ^ cmd2) 
+  end 
+  
+fun save_scripts script = app save_file (script :: theory_files script)
+
+fun restore_scripts script = app restore_file (script :: theory_files script)
+
 fun ttt_record_thy thy =
   let
     val _ = clean_dir thy ttt_unfold_dir
-    val _ = print_endline ("Run ttt_record_thy in " ^ thy)
     val scriptorg = find_script thy
-    val _ = print_endline ("                   in " ^ scriptorg)
+    val _ = save_scripts scriptorg
+    val _ = print_endline ("Run ttt_record_thy in " ^ scriptorg)
     val dirorg = #dir (OS.Path.splitDirFile scriptorg)
   in
     dirorg_glob := dirorg;
     rewrite_script thy scriptorg;
-    run_rm_script (tttsml_of scriptorg)
+    (* could overwrite scriptorg in rare cases *)
+    run_rm_script (tttsml_of scriptorg);
+    restore_scripts scriptorg
   end
 
 fun ttt_record () =
