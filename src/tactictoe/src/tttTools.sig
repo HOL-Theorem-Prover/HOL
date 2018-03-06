@@ -24,9 +24,14 @@ sig
   val ttt_record_dir   : string
   val ttt_unfold_dir   : string
   
+  (* commands *)
   val mkDir_err        : string -> unit
   val rmDir_rec        : string -> unit
-  val hide_out : ('a -> 'b) -> 'a -> 'b   (* hiding output *)
+  val run_cmd          : string -> unit
+  val cmd_in_dir       : string -> string -> unit
+  
+  (* hiding output of a function *)
+  val hide_out : ('a -> 'b) -> 'a -> 'b
   
   (* tactictoe globals *)
   val clean_tttdata : unit -> unit

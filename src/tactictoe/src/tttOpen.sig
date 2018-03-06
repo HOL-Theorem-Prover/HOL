@@ -1,6 +1,7 @@
 signature tttOpen =
 sig
   
+  val theory_files : string -> string list
   val run_holmake : string -> unit
   val run_rm_script : string -> unit 
    

@@ -43,9 +43,14 @@ val ttt_unfold_dir = tactictoe_dir ^ "/log_unfold"
 fun hide_out f x = 
   hide_in_file (ttt_code_dir ^ "/" ^ current_theory () ^ "_hide_out") f x
 
-fun mkDir_err dir = OS.FileSys.mkDir dir handle _ => ()
+(* --------------------------------------------------------------------------
+   Commands
+   -------------------------------------------------------------------------- *)
 
+fun mkDir_err dir = OS.FileSys.mkDir dir handle _ => ()
 fun rmDir_rec dir = ignore (OS.Process.system ("rm -r " ^ dir))
+fun run_cmd cmd = ignore (OS.Process.system cmd)
+fun cmd_in_dir dir cmd = run_cmd ("cd " ^ dir ^ "; " ^ cmd)
 
 (* --------------------------------------------------------------------------
     Dictionaries shortcuts

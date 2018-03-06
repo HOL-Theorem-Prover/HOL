@@ -14,40 +14,35 @@ open HolKernel boolLib tttTools
 val ERR = mk_HOL_ERR "tttOpen"
 
 (* ---------------------------------------------------------------------------
-   Running a command on a file in a directory (todo: move to tttTools)
+   Holmake
    -------------------------------------------------------------------------- *)
 
-fun run_cmd cmd = ignore (OS.Process.system cmd)
-fun cmd_in_dir dir cmd = run_cmd ("cd " ^ dir ^ ";" ^ cmd)
-
-(* ---------------------------------------------------------------------------
-   Running holmake on a directory
-   -------------------------------------------------------------------------- *)
+fun theory_files script = 
+  let
+    val base      = fst (split_string "Script." script)
+    val theory    = base ^ "Theory"
+    val theoryuo  = theory ^ ".uo"
+    val theoryui  = theory ^ ".ui"
+    val theorydat = theory ^ ".dat"
+    val theorysml = theory ^ ".sml"
+  in
+    [theorysml,theorydat,theoryuo,theoryui]
+  end
 
 fun run_holmake fileuo = 
   let val {dir,file} = OS.Path.splitDirFile fileuo in
     print_endline ("Holmake: " ^ fileuo);
     cmd_in_dir dir (HOLDIR ^ "/bin/Holmake" ^ " -j1 " ^ file)
   end
-  
-fun run_rm_script scriptsml =
+
+fun run_rm_script script =
   let
-    val _         = print_endline ("run_rm_script: " ^ scriptsml)
-    val base      = fst (split_string "Script." scriptsml)
-    val script    = base ^ "Script"
-    val scriptuo  = script ^ ".uo"
-    val scriptui  = script ^ ".ui"
-    val theory    = base ^ "Theory"
-    val theoryuo  = theory ^ ".uo"
-    val theoryui  = theory ^ ".ui"
-    val theorydat = theory ^ ".dat"
-    val theorysml = theory ^ ".sml"
+    val _         = print_endline ("run_rm_script: " ^ script)
+    val theoryuo  = fst (split_string "Script." script) ^ "Theory.uo"
     fun remove_err s = FileSys.remove s handle SysErr _ => ()
   in
     run_holmake theoryuo;
-    app remove_err 
-      [scriptsml,scriptuo,scriptui,theorysml,theorydat,theoryuo,theoryui]
-  
+    app remove_err (script :: theory_files script)
   end  
 
 (* ---------------------------------------------------------------------------
