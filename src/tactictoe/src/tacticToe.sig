@@ -20,9 +20,7 @@ sig
   val ttt_record        : unit -> unit
   val ttt_record_sigobj : unit -> unit
   val ttt_record_thy    : string -> unit
-  val ttt_clean         : unit -> unit
   val ttt_clean_open    : unit -> unit
-  val ttt_clean_thy     : string -> unit
     
   (* Evaluation *)  
   val ttt_eval_thy     : string -> unit

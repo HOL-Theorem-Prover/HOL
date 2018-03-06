@@ -2,7 +2,6 @@
 (* FILE          : tttUnfold.sml                                              *)
 (* DESCRIPTION   : Partial unfolding of SML code.                             *)
 (*                 Produces SML strings re-usable in different context.       *)
-(*                 Recursive functions are not supported yet.                 *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
 (* DATE          : 2017                                                       *)
 (* ========================================================================== *)
@@ -22,7 +21,6 @@ val iev_flag = ref false
 val iev_eprover_flag = ref false
 
 val dirorg_glob = ref "/temp"
-val dirttt_glob = ref "/temp"
 
 (* --------------------------------------------------------------------------
    Program representation and stack
@@ -132,7 +130,8 @@ fun replace_code1 st = case st of
 fun replace_code2 st = case st of
     (s,Replace sl) => 
     (
-    if length sl = 1 andalso mem #"." (explode (hd sl)) 
+    if (length sl = 1 andalso mem #"." (explode (hd sl)))
+       handle _ => false
     then mlquote_singleton (String.concatWith " " sl)
     else singleton (String.concatWith " " (record_fetch s sl))
     )
@@ -501,15 +500,17 @@ and sketch_record m =
 
 val push_time = ref 0.0
 
+fun hd_err s x = hd x handle Empty => raise ERR s ""
+
 fun push_stackv_aux in_flag (k,v) stack = 
   if in_flag <= 0 
-  then dadd k v (hd stack) :: tl stack
-  else hd stack :: push_stackv_aux (in_flag - 1) (k,v) (tl stack)
+  then dadd k v (hd_err "push" stack) :: tl stack
+  else hd_err "push" stack :: push_stackv_aux (in_flag - 1) (k,v) (tl stack)
   
 fun push_stackvl_aux in_flag stackvl stack = 
   if in_flag <= 0 
-  then daddl stackvl (hd stack) :: tl stack
-  else hd stack :: push_stackvl_aux (in_flag - 1) stackvl (tl stack)
+  then daddl stackvl (hd_err "push" stack) :: tl stack
+  else hd_err "push" stack :: push_stackvl_aux (in_flag - 1) stackvl (tl stack)
 
 fun push_stackv in_flag (k,v) stack =
   total_time push_time (push_stackv_aux in_flag (k,v)) stack
@@ -683,7 +684,7 @@ fun open_struct_aux stack s'=
       let 
         val l0 = String.tokens (fn x => x = #".") s
         val (l1,l2,l3,l4) = import_struct s handle Io _ => 
-          export_import_struct (!dirorg_glob) (!dirttt_glob) s                    
+          export_import_struct (!dirorg_glob) s
         fun f constr a =
           let fun g l = 
             (String.concatWith "." (l @ [a]), constr (s ^ "." ^ a)) 
@@ -961,38 +962,26 @@ fun sketch_wrap file =
     val sl = readl file
     val s1 = String.concatWith " " sl
     val s2 = unquoteString s1
-    (* probably rm_endline not necessary *)
-    val s3 = rm_endline (rm_comment s2) 
-    val sl3 = ttt_lex s2
+    val s3 = rm_endline (rm_comment s2)
+    val sl3 = ttt_lex s3
   in
     sketch sl3
   end
 
-fun unfold_wrap p =
-  let val basis_dict = dnew String.compare (map protect basis) in
-    unfold 0 [basis_dict] p
-  end
+fun unfold_wrap p = unfold 0 [dnew String.compare (map protect basis)] p
 
 (* ---------------------------------------------------------------------------
    Files and directories
    -------------------------------------------------------------------------- *)
 
 fun barefile file = OS.Path.base (OS.Path.file file)
-
-fun tttdir_of fileorg = 
-  let 
-    val dir = #dir (OS.Path.splitDirFile fileorg)
-    val file = #file (OS.Path.splitDirFile fileorg)
-    val base = #base (OS.Path.splitBaseExt file)
-  in 
-    dir ^ "/." ^ base ^ "_ttt"
-  end
-    
-fun tttsml_of file = tttdir_of file ^ "/ttt.sml"
-fun tttuo_of file = tttdir_of file ^ "/ttt.uo"
-
+fun tttsml_of file = 
+  fst (split_string "Script." file) ^ "_tttScript.sml"
+  handle _ => raise ERR "tttsml_of" file
+  
 fun sigobj_scripts () =
   let 
+    val _    = mkDir_err ttt_code_dir
     val file = ttt_code_dir ^ "/theory_list"
     val sigdir = HOLDIR ^ "/sigobj"
     val cmd0 = "cd " ^ sigdir
@@ -1005,6 +994,7 @@ fun sigobj_scripts () =
 
 fun sigobj_theories () =
   let 
+    val _    = mkDir_err ttt_code_dir
     val file = ttt_code_dir ^ "/theory_list"
     val sigdir = HOLDIR ^ "/sigobj"
     val cmd0 = "cd " ^ sigdir
@@ -1029,18 +1019,20 @@ fun print_program cthy fileorg sl =
     TextIO.closeOut oc
   end
 
-fun irewrite_script fileorg =
+fun rewrite_script thy fileorg =
   if extract_thy fileorg = "bool" then () else
   let
-    fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
-    val cthy = extract_thy fileorg
-    val _ = clean_dir cthy ttt_unfold_dir
-    val _ = start_unfold_thy cthy
+    val _ = debug_unfold ("start_unfold_thy: " ^ thy)
+    val _ = start_unfold_thy thy
+    val _ = debug_unfold ("sketch_wrap: " ^ fileorg)
     val p0 = sketch_wrap fileorg
+    val _ = debug_unfold "unfold_wrap"
     val p2 = unfold_wrap p0
+    val _ = debug_unfold "modified_program"
     val sl5 = modified_program false p2
   in
-    print_program cthy fileorg sl5;
+    debug_unfold ("print_program: " ^ fileorg);
+    print_program thy fileorg sl5;
     end_unfold_thy ()
   end
 
@@ -1054,44 +1046,33 @@ val core_theories =
 fun find_script x = 
   let val dir = 
     Binarymap.find(fileDirMap(),x ^ "Theory.sml") 
-    handle NotFound => raise ERR "" x
+    handle NotFound => raise ERR "find_script" x
   in
     dir ^ "/" ^ x ^ "Script.sml"
   end
 
+fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
+
 fun ttt_record_thy thy =
-  let 
-    val _ = mkDir_err ttt_code_dir
-    val fileorg = find_script thy
-    val dirorg = #dir (OS.Path.splitDirFile fileorg)
-    val dirttt  = tttdir_of fileorg
-    val tttuo = tttuo_of fileorg
+  let
+    val _ = clean_dir thy ttt_unfold_dir
+    val _ = print_endline ("Run ttt_record_thy in " ^ thy)
+    val scriptorg = find_script thy
+    val _ = print_endline ("                   in " ^ scriptorg)
+    val dirorg = #dir (OS.Path.splitDirFile scriptorg)
   in
-    dirttt_glob := dirttt; dirorg_glob := dirorg;
-    mkDir_err dirttt;
-    irewrite_script fileorg; 
-    ttt_mfile dirorg dirttt;
-    run_holmake dirttt;
-    if mem thy core_theories then run_hol0 tttuo else run_hol tttuo
+    dirorg_glob := dirorg;
+    rewrite_script thy scriptorg;
+    run_rm_script (tttsml_of scriptorg)
   end
-  
-fun ttt_record_thy_wrap thy =
-  let 
-    val file = find_script thy
-    val dir = tttdir_of file
-  in
-    if FileSys.isDir dir handle _ => false
-    then ()
-    else ttt_record_thy thy
-  end
-  
+
 fun ttt_record () =
   let
     val thyl0 = ancestry (current_theory ())
     val thyl1 = sort_thyl thyl0
     val thyl2 = filter (fn x => not (mem x ["min","bool"])) thyl1
   in
-    app ttt_record_thy_wrap thyl2
+    app ttt_record_thy thyl2
   end
   
 fun ttt_record_sigobj () =
@@ -1101,17 +1082,6 @@ fun ttt_record_sigobj () =
   in
     app load l1;
     ttt_record ()
-  end
-  
-fun ttt_clean_thy thy = rmDir_rec (tttdir_of (find_script thy))
-
-fun ttt_clean () =
-  let
-    val thyl0 = ancestry (current_theory ())
-    val thyl1 = sort_thyl thyl0
-    val thyl2 = filter (fn x => not (mem x ["min","bool"])) thyl1
-  in
-    app ttt_clean_thy thyl2
   end
 
 fun ttt_clean_open () = rmDir_rec ttt_open_dir
