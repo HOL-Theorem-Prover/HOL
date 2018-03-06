@@ -14,99 +14,41 @@ open HolKernel boolLib tttTools
 val ERR = mk_HOL_ERR "tttOpen"
 
 (* ---------------------------------------------------------------------------
-   Running a command on a file in a directory
+   Running a command on a file in a directory (todo: move to tttTools)
    -------------------------------------------------------------------------- *)
-
-fun cmd_in_dir dir cmd =
-  ignore (OS.Process.system ("cd " ^ dir ^ ";" ^ cmd))
 
 fun run_cmd cmd = ignore (OS.Process.system cmd)
-
-(* ---------------------------------------------------------------------------
-   Creating holmakefile for a file from existing holmakefile in dirorg.
-   -------------------------------------------------------------------------- *)
-
-fun first_mfile dirorg diruo =
-  let
-    val mfile = dirorg ^ "/Holmakefile"
-    val temp = diruo ^ "/temp"
-    val newmfile = diruo ^ "/Holmakefile"
-    val cmd = "sed -e :a -e '/\\\\$/N; s/\\\\\\n//; ta' "
-      ^ mfile ^ " > " ^ newmfile
-  in
-    if FileSys.access (mfile, [])
-    then 
-      (ignore (OS.Process.system cmd); SOME newmfile)
-    else 
-      (debug_unfold ("Warning: " ^ dirorg ^ " has no Holmakefile"); 
-       NONE)
-  end
-  
-fun new_mfile prefix alls mfile =
-  let 
-    val l0 = readl mfile
-    fun is_blank c = c = #" " orelse c = #"\n"
-    fun is_fs c = c = #"/"
-    fun is_include s = 
-      let val sl = String.tokens is_blank s in
-        hd sl = "INCLUDES" handle Empty => false
-      end
-  in
-    case List.find is_include l0 of 
-      NONE => FileSys.remove mfile
-    | SOME includes =>
-      let
-        val (_,dirl) = split_sl "=" (String.tokens is_blank includes)
-        fun add_prefix s = 
-          if ((String.sub (s,0) = #"$" orelse String.sub (s,0) = #"/") 
-               handle _ => false)
-          then s
-          else prefix ^ s
-        val _ = FileSys.remove mfile
-        val newincludes =
-          String.concatWith " " (["INCLUDES","="] @ (map add_prefix dirl))
-        val newall = "all: code.uo"
-      in
-        writel mfile [newincludes,alls]
-      end
-  end
-
-fun code_mfile dirorg diruo = case first_mfile dirorg diruo of
-    NONE => ()
-  | SOME mfile => new_mfile "../../" "all: code.uo" mfile
-
-fun ttt_mfile dirorg diruo = case first_mfile dirorg diruo of
-    NONE => ()
-  | SOME mfile => new_mfile "../" "all: ttt.uo" mfile
+fun cmd_in_dir dir cmd = run_cmd ("cd " ^ dir ^ ";" ^ cmd)
 
 (* ---------------------------------------------------------------------------
    Running holmake on a directory
    -------------------------------------------------------------------------- *)
 
-fun run_holmake dir = cmd_in_dir dir (HOLDIR ^ "/bin/Holmake")
-
-(* ---------------------------------------------------------------------------
-   Running buildheap on a file (full path necessary)
-   -------------------------------------------------------------------------- *)
-
-fun run_hol0 file =
-  let
-    val buildheap = HOLDIR ^ "/bin/buildheap"
-    val state0 = "-b " ^ HOLDIR ^ "/bin/hol.state0"
-    val gc = "--gcthreads=1"
-    val hol0 = String.concatWith " " [buildheap,gc,state0,file]
-  in
-    run_cmd hol0 
+fun run_holmake fileuo = 
+  let val {dir,file} = OS.Path.splitDirFile fileuo in
+    print_endline ("Holmake: " ^ fileuo);
+    cmd_in_dir dir (HOLDIR ^ "/bin/Holmake" ^ " -j1 " ^ file)
   end
-
-fun run_hol file =
+  
+fun run_rm_script scriptsml =
   let
-    val buildheap = HOLDIR ^ "/bin/buildheap"
-    val gc = "--gcthreads=1"
-    val hol = String.concatWith " " [buildheap,gc,file]
+    val _         = print_endline ("run_rm_script: " ^ scriptsml)
+    val base      = fst (split_string "Script." scriptsml)
+    val script    = base ^ "Script"
+    val scriptuo  = script ^ ".uo"
+    val scriptui  = script ^ ".ui"
+    val theory    = base ^ "Theory"
+    val theoryuo  = theory ^ ".uo"
+    val theoryui  = theory ^ ".ui"
+    val theorydat = theory ^ ".dat"
+    val theorysml = theory ^ ".sml"
+    fun remove_err s = FileSys.remove s handle SysErr _ => ()
   in
-    run_cmd hol
-  end
+    run_holmake theoryuo;
+    app remove_err 
+      [scriptsml,scriptuo,scriptui,theorysml,theorydat,theoryuo,theoryui]
+  
+  end  
 
 (* ---------------------------------------------------------------------------
    Exporting elements of a structure (values + substructures)
@@ -166,20 +108,15 @@ fun code_of s =
   ]
 
 (* ---------------------------------------------------------------------------
-   Export
+   Export 
    -------------------------------------------------------------------------- *)
 
-fun export_struct dirorg dirttt s = 
-  let 
-    val dirstruct = dirttt ^ "/" ^ s
-    val structuo = dirstruct ^ "/code.uo"
-  in
-    mkDir_err ttt_open_dir; mkDir_err (ttt_open_dir ^ "/" ^ s);
-    mkDir_err dirttt; mkDir_err dirstruct; 
-    writel (dirstruct ^ "/code.sml") (code_of s);
-    code_mfile dirorg dirstruct;
-    run_holmake dirstruct;
-    run_hol structuo
+fun export_struct dir s = 
+  let val script = dir ^ "/" ^ s ^ "__open__tttScript.sml" in
+    mkDir_err ttt_open_dir;
+    mkDir_err (ttt_open_dir ^ "/" ^ s);
+    writel script (code_of s);
+    run_rm_script script
   end
 
 (* ---------------------------------------------------------------------------
@@ -196,9 +133,9 @@ fun import_struct s =
    Export and import
    -------------------------------------------------------------------------- *)
 
-fun export_import_struct dirorg dirttt s =
+fun export_import_struct dir s =
   (
-  export_struct dirorg dirttt s;
+  export_struct dir s;
   import_struct s handle _ => 
     (debug_unfold ("warning: structure " ^ s ^ " not found"); ([],[],[],[]))
   )

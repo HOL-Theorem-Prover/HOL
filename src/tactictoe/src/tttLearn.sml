@@ -21,7 +21,7 @@ val thm_cache = ref (dempty String.compare)
 
 fun is_thm_cache s =
   dfind s (!thm_cache) handle _ => 
-  let val b = is_thm s in
+  let val b = hide_out is_thm s in
     thm_cache := dadd s b (!thm_cache);
     b
   end
