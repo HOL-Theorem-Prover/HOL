@@ -1099,7 +1099,7 @@ fun ttt_record () =
     val thyl1 = sort_thyl thyl0
     val thyl2 = filter (fn x => not (mem x ["min","bool"])) thyl1
   in
-    app ttt_record_thy thyl2
+    app ttt_record_thy_wrap thyl2
   end
 
 fun ttt_record_sigobj () =
