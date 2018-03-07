@@ -143,6 +143,7 @@ fun read {assumes, includes, srcext, objext, filename} = let
 in
   {tgt = targetname, deps = res}
 end handle Holdep_Error s => raise Holdep_Error (filename ^ ": " ^ s)
+         | Holdep_tokens.LEX_ERROR s => raise Holdep_Error s;
 
 fun processfile {assumes, includes, fname = filename, diag} =
     let
