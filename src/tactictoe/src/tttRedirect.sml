@@ -6,7 +6,7 @@
 (* DATE          : 2017                                                       *)
 (* ========================================================================== *)
 
-structure tttRedirect :> tttRedirect = 
+structure tttRedirect :> tttRedirect =
 struct
 
 open HolKernel boolLib Posix.IO Posix.FileSys TextIO
@@ -25,23 +25,23 @@ val stack : file_desc list ref = ref []
    File creation mode: read/write for user, group and others,
    but bits set with umask(1) will be cleared as usual.
    -------------------------------------------------------------------------- *)
-   
+
 val rw_rw_rw = S.flags[S.irusr, S.iwusr, S.irgrp,S.iwgrp, S.iroth, S.iwoth]
 
 (* --------------------------------------------------------------------------
    push_out_file: start a new output file, stacking the file descriptor.
    -------------------------------------------------------------------------- *)
-   
+
 fun push_output_file {name: string, append : bool} =
-  let 
+  let
     val flags = if append then O.append else O.trunc
     val fd = createf(name, O_WRONLY, flags, rw_rw_rw)
-  in 
+  in
     (dup2{old = fd, new = stdout}; stack := fd :: !stack)
   end
 
 (* --------------------------------------------------------------------------
-   pop_output_file: 
+   pop_output_file:
    close file descriptor at top of stack and
    revert to previous; returns true if the output file stack
    is not empty on exit, so you can close all open output files
@@ -49,18 +49,18 @@ fun push_output_file {name: string, append : bool} =
    while pop_output_file() do ();
    -------------------------------------------------------------------------- *)
 
-fun pop_output_file () = 
+fun pop_output_file () =
   (
   (case !stack of
-   cur_fd :: rest => (close cur_fd; stack := rest) 
+   cur_fd :: rest => (close cur_fd; stack := rest)
    | [] => ())
   ;
   (case !stack of
-    fd :: _ => (dup2{old = fd, new = stdout}; true) 
+    fd :: _ => (dup2{old = fd, new = stdout}; true)
   | []      => (dup2{old = duplicate_stdout, new = stdout}; false))
   )
 
-fun hide_in_file file f x = 
+fun hide_in_file file f x =
   (
   push_output_file {name=file, append=false};
     (
@@ -68,5 +68,5 @@ fun hide_in_file file f x =
     handle e => (pop_output_file (); raise e)
     )
   )
-  
+
 end

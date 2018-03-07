@@ -43,22 +43,22 @@ fun set_timeout n = timeout_glob := n
  ----------------------------------------------------------------------------*)
 
 fun all_files dir =
-  let 
+  let
     val stream = OS.FileSys.openDir dir
-    fun loop acc stream = 
+    fun loop acc stream =
       case OS.FileSys.readDir stream of
         NONE => acc
-      | SOME s => loop (s :: acc) stream  
+      | SOME s => loop (s :: acc) stream
     val l = loop [] stream
   in
     OS.FileSys.closeDir stream;
-    l 
+    l
   end
 
 fun clean_dir dir =
-  let 
+  let
     val _ = OS.FileSys.mkDir dir handle _ => ()
-    val l0 = all_files dir 
+    val l0 = all_files dir
     val l1 = map (fn x => OS.Path.concat (dir,x)) l0
   in
     app OS.FileSys.remove l1
@@ -83,17 +83,17 @@ fun status_dir dir = dir ^ "/status"
 
 fun add_fea dict (name,thm) =
   let val g = dest_thm thm in
-    if not (dmem g (!dict)) andalso 
+    if not (dmem g (!dict)) andalso
        uptodate_thm thm
     then dict := dadd g (name, fea_of_goal g) (!dict)
     else ()
   end
 
 fun insert_feav thmdict thyl =
-  let 
+  let
     val dict = ref thmdict
     fun f_thy thy =
-      let fun f (name,thm) = 
+      let fun f (name,thm) =
         add_fea dict ((thy ^ "Theory." ^ name), thm)
       in
         app f (DB.thms thy)
@@ -103,26 +103,26 @@ fun insert_feav thmdict thyl =
     !dict
   end
 
-fun cached_ancfeav () = 
+fun cached_ancfeav () =
   let
     val thyl = ancestry (current_theory ())
     val thmdict = dempty goal_compare
   in
     dfind thyl (!dict_cache) handle _ =>
-      let 
+      let
         val _ = print_endline "Initialization..."
-        val newdict = insert_feav thmdict thyl 
+        val newdict = insert_feav thmdict thyl
       in
       dict_cache := dadd thyl newdict (!dict_cache);
-      print_endline ("Caching " ^ int_to_string (dlength newdict) ^ 
+      print_endline ("Caching " ^ int_to_string (dlength newdict) ^
          " feature vectors");
       newdict
       end
   end
-  
+
 fun insert_namespace thmdict =
-  let 
-    val dict = ref thmdict 
+  let
+    val dict = ref thmdict
     fun f (x,y) = (namespace_tag ^ "Theory." ^ x, y)
     val l1 = hide_out namespace_thms ()
     val l2 = map f l1
@@ -136,14 +136,14 @@ fun create_symweight_feav thmdict =
     val l = dlist thmdict
     val feav = map snd l
     val symweight = learn_tfidf feav
-    fun f (g,(name,fea)) = (name,(g,fea)) 
+    fun f (g,(name,fea)) = (name,(g,fea))
     val revdict = dnew String.compare (map f l)
   in
     (symweight,feav,revdict)
   end
 
 fun update_thmdata () =
-  let 
+  let
     val dict0 = cached_ancfeav ()
     val dict1 = insert_feav dict0 [current_theory ()]
     val dict2 = insert_namespace dict1
@@ -157,23 +157,23 @@ fun update_thmdata () =
 
 fun pred_filter pred thy ((name,_),_) =
   let val thypred = map snd (filter (fn x => fst x = thy) pred) in
-    mem name thypred  
+    mem name thypred
   end
- 
+
 fun in_namespace s = fst (split_string "Theory." s) = namespace_tag
- 
+
 fun export_problem probdir premises cj =
   let
     val premises' = map (split_string "Theory.") premises
     (* val _ = print_endline (String.concatWith " " (first_n 10 premises)) *)
     val nsthml1 = filter in_namespace premises
     fun f s = case thm_of_sml (snd (split_string "Theory." s)) of
-        SOME (_,thm) => SOME (s,thm) 
+        SOME (_,thm) => SOME (s,thm)
       | NONE => NONE
     val nsthml2 = hide_out (List.mapPartial f) nsthml1
     val ct   = current_theory ()
-    val thyl = ct :: Theory.ancestry ct 
-  in    
+    val thyl = ct :: Theory.ancestry ct
+  in
     clean_dir probdir;
     write_problem probdir (pred_filter premises') nsthml2 thyl cj;
     write_thydep (probdir ^ "/thydep.dep") thyl
@@ -191,26 +191,26 @@ fun export_theories dir thyl =
  ----------------------------------------------------------------------------*)
 
 fun translate_bin bin probbdir provdir =
-  let 
+  let
     val _ = clean_dir provdir
     val cmd = String.concatWith " "
       [bin,
        "all","0",probbdir,
        probbdir ^ "/conjecture.fof",
-       "conjecture", provdir, 
+       "conjecture", provdir,
        "-thydep", probbdir ^ "/thydep.dep",">","/dev/null"]
   in
     cmd_in_dir hh_dir cmd
   end
 
-fun translate_fof dir_in dir_out = 
+fun translate_fof dir_in dir_out =
   translate_bin (hh_bin_dir ^ "/hh") dir_in dir_out
-fun translate_thf dir_in dir_out = 
+fun translate_thf dir_in dir_out =
   translate_bin (hh_bin_dir ^ "/hh_thf") dir_in dir_out
 
 fun launch_atp dir atp tim =
   let val cmd = case atp of
-      Eprover => 
+      Eprover =>
       "sh eprover.sh " ^ int_to_string tim ^ " " ^ dir ^
       " > /dev/null 2> /dev/null"
     | Z3      => "sh z3.sh " ^ int_to_string tim ^ " " ^ dir ^
@@ -247,7 +247,7 @@ fun launch_parallel t =
     cmd_in_dir provbin_dir cmd
   end
 
-(* todo: 
+(* todo:
      translate when the prover's binary exists.
      terminate when the first prover finds a proof. *)
 fun holyhammer_goal goal =
@@ -269,7 +269,7 @@ fun holyhammer term = holyhammer_goal ([],term)
 
 fun hh goal = (holyhammer_goal goal) goal
 
-fun hh_stac pid (symweight,feav,revdict) t goal = 
+fun hh_stac pid (symweight,feav,revdict) t goal =
   let
     val term = list_mk_imp goal
     val ns = int_to_string pid

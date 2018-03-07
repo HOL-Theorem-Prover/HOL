@@ -10,5 +10,5 @@ sig
   val ttt_path_of : string -> string
   val extract_subterms : string -> ttt_subtac list
   val reprint : string -> string option
-  
+
 end

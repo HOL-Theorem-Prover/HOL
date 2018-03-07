@@ -1,10 +1,10 @@
 signature tttInfix =
 sig
-  
+
   datatype infixity_t = Inf_left of int | Inf_right of int
   val overlay_infixity : (string * infixity_t) list
   val infix_pair : infixity_t -> (string * string)
-  
+
   val ttt_infixl0_open  : 'a * ('a * 'b -> 'c) -> 'b -> 'c
   val ttt_infixl0_close : ('a -> 'b) * 'a -> 'b
   val ttt_infixl1_open  : 'a * ('a * 'b -> 'c) -> 'b -> 'c
@@ -25,7 +25,7 @@ sig
   val ttt_infixl8_close : ('a -> 'b) * 'a -> 'b
   val ttt_infixl9_open  : 'a * ('a * 'b -> 'c) -> 'b -> 'c
   val ttt_infixl9_close : ('a -> 'b) * 'a -> 'b
-  
+
   val ttt_infixr0_open  : 'a * ('a -> 'b) -> 'b
   val ttt_infixr0_close : ('a * 'b -> 'c) * 'b -> 'a -> 'c
   val ttt_infixr1_open  : 'a * ('a -> 'b) -> 'b

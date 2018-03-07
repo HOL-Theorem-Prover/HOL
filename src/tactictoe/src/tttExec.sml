@@ -5,7 +5,7 @@
 (* DATE          : 2017                                                       *)
 (* ========================================================================== *)
 
-structure tttExec :> tttExec = 
+structure tttExec :> tttExec =
 struct
 
 open HolKernel Abbrev boolLib tttTools tttTimeout tttLexer Tactical
@@ -63,10 +63,10 @@ fun smltype_of_value l s =
   end
 
 fun is_thm_value l s =
-  let 
+  let
     val s1 = smltype_of_value l s
     val s2 = tttLexer.ttt_lex s1
-  in 
+  in
     case s2 of
       [a] => (drop_sig a = "thm" handle _ => false)
     | _   => false
@@ -88,16 +88,16 @@ fun thm_of_sml s =
   end
 
 fun thml_of_sml sl =
-  let 
+  let
     val s = "[" ^ String.concatWith ", " sl ^ "]"
-    val b = exec_sml "thm_of_sml" ("tttExec.ttt_thml := " ^ s) 
+    val b = exec_sml "thm_of_sml" ("tttExec.ttt_thml := " ^ s)
   in
     if b then SOME (combine (sl, !ttt_thml)) else NONE
   end
 
 fun namespace_thms () =
-  let 
-    val l0 = #allVal (PolyML.globalNameSpace) () 
+  let
+    val l0 = #allVal (PolyML.globalNameSpace) ()
     val l1 = filter (is_thm_value l0) (map fst l0)
   in
     case thml_of_sml l1 of
@@ -106,8 +106,8 @@ fun namespace_thms () =
   end
 
 fun safe_namespace_thms () =
-  let 
-    val l0 = #allVal (PolyML.globalNameSpace) () 
+  let
+    val l0 = #allVal (PolyML.globalNameSpace) ()
     val l1 = (map fst l0)
   in
     List.mapPartial thm_of_sml l1
@@ -119,9 +119,9 @@ fun is_tactic s = exec_sml "is_tactic" ("val _ = Tactical.VALID (" ^ s ^ ")")
 fun is_string s = exec_sml "is_string" ("val _ = String.isPrefix (" ^ s ^ ")")
 
 fun is_pointer_eq s1 s2 =
-  let 
-    val b = exec_sml "is_pointer_eq" 
-              ("val _ = tttExec.ttt_bool_glob := PolyML.pointerEq (" ^ 
+  let
+    val b = exec_sml "is_pointer_eq"
+              ("val _ = tttExec.ttt_bool_glob := PolyML.pointerEq (" ^
                s1 ^ "," ^ s2 ^ ")")
   in
     b andalso (!ttt_bool_glob)
@@ -150,20 +150,20 @@ fun tacticl_of_sml sl =
       else raise ERR "tacticl_of_sml" (String.concatWith " " (first_n 10 sl))
   end
 
-fun tactic_of_sml s = 
+fun tactic_of_sml s =
   let
     val tactic = mk_valid s
-    val program = 
+    val program =
       "val _ = tttExec.ttt_tactic_glob := (" ^ tactic ^ ")"
     val b = exec_sml "tactic_of_sml" program
   in
     if b then !ttt_tactic_glob else raise ERR "tactic_of_sml" s
   end
-  
+
 fun timed_tactic_of_sml s =
   let
     val tactic = mk_valid s
-    val program = 
+    val program =
       "let fun f () = tttExec.ttt_tactic_glob := (" ^ tactic ^ ") in " ^
       "tttTimeout.timeOut 0.1 f () end"
     val b = exec_sml "tactic_of_sml" program
@@ -171,9 +171,9 @@ fun timed_tactic_of_sml s =
     if b then !ttt_tactic_glob else raise ERR "timed_tactic_of_sml" s
   end
 
-fun qtactic_of_sml s = 
+fun qtactic_of_sml s =
   let
-    val program = 
+    val program =
       "let fun f () = tttExec.ttt_qtactic_glob := (" ^ s ^ ") in " ^
       "tttTimeout.timeOut 0.1 f () end"
     val b = exec_sml "qtactic_of_sml" program
@@ -188,12 +188,12 @@ fun qtactic_of_sml s =
 
 val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
 
-fun app_tac tim tac g = 
+fun app_tac tim tac g =
   SOME (fst (timeOut tim (TC_OFF tac) g))
   handle _ => NONE
 
-fun app_qtac tim tac g = 
-  timeOut tim (trace ("show_typecheck_errors", 0) tac) g 
+fun app_qtac tim tac g =
+  timeOut tim (trace ("show_typecheck_errors", 0) tac) g
   handle _ => NONE
 
 fun rec_stac tim stac g =
@@ -203,7 +203,7 @@ fun rec_stac tim stac g =
   handle _ => NONE
 
 fun rec_sproof stac g =
-  let 
+  let
     val tac = tactic_of_sml stac
     val tim = Time.toReal (!ttt_search_time)
   in
@@ -216,8 +216,8 @@ fun rec_sproof stac g =
    -------------------------------------------------------------------------- *)
 
 fun string_of_sml s =
-  let 
-    val b = exec_sml "string_of_sml" 
+  let
+    val b = exec_sml "string_of_sml"
       ("val _ = tttExec.ttt_string_glob := (" ^ s ^ " )")
   in
     if b then !ttt_string_glob else raise ERR "string_of_sml" s
@@ -226,21 +226,21 @@ fun string_of_sml s =
 val ttt_term_glob = ref T
 
 fun is_stype s =
-  let 
-    fun not_in cl c = not (mem c cl) 
+  let
+    fun not_in cl c = not (mem c cl)
     fun test c = not_in [#"\t",#"\n",#" ",#"\""] c
   in
     List.find test (explode (rm_comment (rm_squote s))) = SOME #":"
   end
 
 fun term_of_sml s =
-  let 
-    val b = exec_sml "term_of_sml" 
+  let
+    val b = exec_sml "term_of_sml"
       ("val _ = tttExec.ttt_term_glob := " ^
        "Parse.Term [HolKernel.QUOTE " ^ s ^ "]")
   in
-    if b 
-    then !ttt_term_glob 
+    if b
+    then !ttt_term_glob
     else raise ERR "string_of_sml" s
   end
 
@@ -248,17 +248,17 @@ fun term_of_sml s =
    Read metis and hh from the future
    -------------------------------------------------------------------------- *)
 
-val hh_stac_glob: 
-  (int -> 
-     (int, real) Redblackmap.dict * 
-     (string * fea_t) list * 
+val hh_stac_glob:
+  (int ->
+     (int, real) Redblackmap.dict *
+     (string * fea_t) list *
      (string, goal * int list) Redblackmap.dict ->
-   int -> goal -> string option) ref = 
+   int -> goal -> string option) ref =
   ref (fn _ => (fn _ => (fn _ => (fn _ => NONE))))
 
 fun update_hh_stac () =
-  let 
-    val b = exec_sml "update_hh_stac" 
+  let
+    val b = exec_sml "update_hh_stac"
       (
       String.concatWith "\n"
       [
@@ -273,8 +273,8 @@ fun update_hh_stac () =
 val metis_tac_glob: (thm list -> tactic) option ref = ref NONE
 
 fun update_metis_tac () =
-  let 
-    val b = exec_sml "update_metis_tac" 
+  let
+    val b = exec_sml "update_metis_tac"
       (
       String.concatWith "\n"
       [
@@ -292,11 +292,11 @@ fun update_metis_tac () =
    -------------------------------------------------------------------------- *)
 
 fun goal_of_sml s =
-  let 
-    val b = exec_sml "goal_of_sml" 
+  let
+    val b = exec_sml "goal_of_sml"
       ("val _ = tttExec.ttt_goal_glob := (" ^ s ^ " )")
   in
     if b then !ttt_goal_glob else raise ERR "goal_of_sml" s
   end
- 
+
 end (* struct *)

@@ -16,21 +16,21 @@ val ERR = mk_HOL_ERR "tttLexer"
    Removing comments
  ----------------------------------------------------------------------------*)
 
-fun rm_comment_aux isq par acc charl = 
+fun rm_comment_aux isq par acc charl =
   if isq then
     case charl of
       []                  => rev acc
     | #"\\" :: #"\\" :: m => rm_comment_aux true 0 (#"\\" :: #"\\" :: acc) m
     | #"\\" :: #"\"" :: m => rm_comment_aux true 0 (#"\"" :: #"\\" :: acc) m
-    | #"\"" :: m          => rm_comment_aux false 0 (#"\"" :: acc) m     
-    | a :: m              => rm_comment_aux true 0 (a :: acc) m     
+    | #"\"" :: m          => rm_comment_aux false 0 (#"\"" :: acc) m
+    | a :: m              => rm_comment_aux true 0 (a :: acc) m
   else if par > 0 then
     (
     case charl of
       []                => rev acc
     | #"(" :: #"*" :: m => rm_comment_aux false (par + 1) acc m
-    | #"*" :: #")" :: m => rm_comment_aux false (par - 1) acc m     
-    | a :: m            => rm_comment_aux false par acc m     
+    | #"*" :: #")" :: m => rm_comment_aux false (par - 1) acc m
+    | a :: m            => rm_comment_aux false par acc m
     )
   else if par = 0 then
     (
@@ -38,8 +38,8 @@ fun rm_comment_aux isq par acc charl =
       []                => rev acc
     | #"\"" :: m        => rm_comment_aux true 0 (#"\"" :: acc) m
     | #"(" :: #"*" :: m => rm_comment_aux false 1 acc m
-    | #"*" :: #")" :: m => raise ERR "rm_comment" "negative_par" 
-    | a :: m            => rm_comment_aux false 0 (a :: acc) m     
+    | #"*" :: #")" :: m => raise ERR "rm_comment" "negative_par"
+    | a :: m            => rm_comment_aux false 0 (a :: acc) m
     )
   else raise ERR "rm_comment_aux" (implode (rev acc) ^ " : " ^ implode charl)
 
@@ -65,10 +65,10 @@ fun is_sml_id #"_" = true
   | is_sml_id ch = Char.isAlphaNum ch
 
 fun in_string str =
-  let 
+  let
     val strlist = String.explode str
     val memb = Lib.C Lib.mem strlist
-  in 
+  in
     memb
   end
 
@@ -110,8 +110,8 @@ fun lex_helper acc charl = case charl of
         let val (token, cont) = wait_char (not o is_sml_id) [] charl in
           lex_helper (token :: acc) cont
         end
-    else if is_sml_symbol a 
-      then  
+    else if is_sml_symbol a
+      then
         let val (token, cont) = wait_char (not o is_sml_symbol) [] charl in
           lex_helper (token :: acc) cont
         end
@@ -121,13 +121,13 @@ fun lex_helper acc charl = case charl of
 fun reg_char l = case l of
     [] => []
   | "#" :: s :: m => (
-                     if String.sub(s,0) = #"\"" 
+                     if String.sub(s,0) = #"\""
                      then ("#" ^ s) :: reg_char m
                      else "#" :: reg_char (s :: m)
-                     )                    
+                     )
   | a :: m        => a :: reg_char m
 
-fun some_acc acc = 
+fun some_acc acc =
   if null acc then [] else [String.concatWith "." (rev acc)]
 
 fun reg_dot acc l = case l of
@@ -135,7 +135,7 @@ fun reg_dot acc l = case l of
   | "." :: "." :: "." :: m => some_acc acc @ ["..."] @ reg_dot [] m
   | "." :: b :: m          => reg_dot (b :: acc) m
   | a :: m                 => some_acc acc @ reg_dot [a] m
-   
+
 fun ttt_lex s = reg_dot [] (reg_char (lex_helper [] (explode s)))
 
 end (* struct *)
