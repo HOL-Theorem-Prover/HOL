@@ -52,6 +52,9 @@ fun rmDir_rec dir = ignore (OS.Process.system ("rm -r " ^ dir))
 fun run_cmd cmd = ignore (OS.Process.system cmd)
 fun cmd_in_dir dir cmd = run_cmd ("cd " ^ dir ^ "; " ^ cmd)
 
+fun exists_file file = OS.FileSys.access (file, []);
+
+
 (* --------------------------------------------------------------------------
     Dictionaries shortcuts
    -------------------------------------------------------------------------- *)
