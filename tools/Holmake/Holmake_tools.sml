@@ -583,7 +583,7 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
     Holdep.main {assumes = buildable_extras, diag = diag,
                  includes = includes, fname = fromFile arg}
     handle Holdep.Holdep_Error s =>
-             (warn "Holdep failed: s"; raise HolDepFailed)
+             (warn ("Holdep failed: "^s); raise HolDepFailed)
          | e => (warn ("Holdep exception: "^General.exnMessage e);
                  raise HolDepFailed)
   fun myopen s =

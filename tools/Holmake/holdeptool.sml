@@ -27,7 +27,7 @@ fun main() = let
         | _ => usage die
 
 in
-  Binaryset.app (fn s => print (s ^ "\n")) results
+  Binarymap.app (fn (s,_) => print (s ^ "\n")) results
 end
 
 end (* struct *)
