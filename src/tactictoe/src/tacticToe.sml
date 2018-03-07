@@ -20,6 +20,10 @@ val ERR = mk_HOL_ERR "tacticToe"
 fun set_timeout r =
   set_record_hook := (fn () => ttt_search_time := Time.fromReal r)
 
+(* ---------------------------------------------------------------------------
+   Preselection of theorems
+   -------------------------------------------------------------------------- *)
+
 fun select_thmfea gfea =
   if !ttt_metishammer_flag orelse !ttt_hhhammer_flag orelse !ttt_thmlarg_flag
   then
@@ -118,17 +122,25 @@ fun import_ancestry () =
     report_data ()
   end
 
-(* remember in which theory was the last call of tactictoe *)
-val previous_theory = ref ""
+(* remember which theories were loaded in the last call of tactictoe *)
+val imported_theories = ref []
 
+fun exists_theorydata () =
+  let 
+    val thyl = dict_sort String.compare (ancestry (current_theory ()))
+    fun f thy = exists_file (ttt_tacfea_dir ^ "/" ^ thy)
+  in
+    filter f thyl
+  end
+  
 fun init_tactictoe () =
   let
     val _ = mkDir_err ttt_code_dir
     val cthy = current_theory ()
     val _ = hide_out set_record cthy
-    val thyl = ancestry cthy
+    val new_thyl = exists_theorydata ()
   in
-    if !previous_theory <> cthy
+    if !imported_theories <> new_thyl
     then
       let
         val _ = debug_t ("init_tactictoe " ^ cthy) import_ancestry ()
@@ -139,13 +151,13 @@ fun init_tactictoe () =
         hide_out QUse.use (tactictoe_dir ^ "/src/infix_file.sml");
         print_endline ("Loading " ^ s1 ^ " tactics, " ^
                        s2 ^ " theorems, " ^ s3 ^ " lists of goals");
-        previous_theory := cthy
+        imported_theories := new_thyl
       end
     else ()
   end
 
 (* ----------------------------------------------------------------------
-   Preselection of theorems and tactics
+   Preselection of tactics
    ---------------------------------------------------------------------- *)
 
 fun select_tacfea goalf =
