@@ -1072,6 +1072,7 @@ fun ttt_record_thy thy =
     val _ = save_scripts scriptorg
   in
     let
+      val _ = print_endline ("TacticToe: " ^ thy)
       val _ = print_endline ("TacticToe: running ttt_record_thy in " ^ scriptorg)
       val dirorg = #dir (OS.Path.splitDirFile scriptorg)
     in
@@ -1086,6 +1087,11 @@ fun ttt_record_thy thy =
     end
     handle e => (restore_scripts scriptorg; raise e)
   end
+
+fun ttt_record_thy_wrap thy =
+  if exists_file (ttt_tacfea_dir ^ "/" ^ thy)
+  then () 
+  else ttt_record_thy thy
 
 fun ttt_record () =
   let
@@ -1105,8 +1111,15 @@ fun ttt_record_sigobj () =
     ttt_record ()
   end
 
-fun ttt_clean_open () = rmDir_rec ttt_open_dir
-
+fun ttt_clean_all () = 
+  (
+  rmDir_rec ttt_open_dir;
+  rmDir_rec ttt_thmfea_dir;
+  rmDir_rec ttt_tacfea_dir;
+  rmDir_rec ttt_glfea_dir
+  )
+  
+  
 (* ---------------------------------------------------------------------------
    Evaluation of different provers
    -------------------------------------------------------------------------- *)

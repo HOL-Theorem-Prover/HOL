@@ -29,6 +29,7 @@ sig
   val rmDir_rec        : string -> unit
   val run_cmd          : string -> unit
   val cmd_in_dir       : string -> string -> unit
+  val exists_file      : string -> bool
   
   (* hiding output of a function *)
   val hide_out : ('a -> 'b) -> 'a -> 'b
