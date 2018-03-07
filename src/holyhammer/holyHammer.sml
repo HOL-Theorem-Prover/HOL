@@ -109,14 +109,13 @@ fun cached_ancfeav () =
     val thmdict = dempty goal_compare
   in
     dfind thyl (!dict_cache) handle _ =>
-      let
-        val _ = print_endline "Initialization..."
-        val newdict = insert_feav thmdict thyl
+      let 
+        val newdict = insert_feav thmdict thyl 
       in
-      dict_cache := dadd thyl newdict (!dict_cache);
-      print_endline ("Caching " ^ int_to_string (dlength newdict) ^
-         " feature vectors");
-      newdict
+        dict_cache := dadd thyl newdict (!dict_cache);
+        print_endline ("Loading " ^ int_to_string (dlength newdict) ^
+           " theorems");
+        newdict
       end
   end
 
