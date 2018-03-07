@@ -3,7 +3,7 @@ sig
 
   include Abbrev
 
-  datatype Proof = 
+  datatype Proof =
     Tactic of (string * goal)
   | Then   of (Proof * Proof)
   | Thenl  of (Proof * Proof list)

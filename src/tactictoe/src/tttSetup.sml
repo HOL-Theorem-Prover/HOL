@@ -1,6 +1,6 @@
 (* ========================================================================== *)
 (* FILE          : tttSetup.sml                                               *)
-(* DESCRIPTION   : Flags and global parameters for TacticToe recording and    *) 
+(* DESCRIPTION   : Flags and global parameters for TacticToe recording and    *)
 (* search                                                                     *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
 (* DATE          : 2017                                                       *)
@@ -45,7 +45,7 @@ fun one_in_n () = case !one_in_option of
       (incr one_in_counter; b)
     end
 
-val test_eval_hook = ref (fn s:string => true) 
+val test_eval_hook = ref (fn s:string => true)
 
 (* ----------------------------------------------------------------------
    Preselection
@@ -105,7 +105,7 @@ val ttt_minimize_flag = ref false
 val ttt_prettify_flag = ref false
 
 (* ----------------------------------------------------------------------
-   Setting flags 
+   Setting flags
    ---------------------------------------------------------------------- *)
 
 (* theories appearing in metisTools *)
@@ -113,7 +113,7 @@ val thyl = ["sat", "marker", "combin", "min", "bool", "normalForms"];
 
 val set_record_hook = ref (fn () => ())
 
-fun set_record cthy = 
+fun set_record cthy =
   (
   (* recording *)
   ttt_namespacethm_flag := true;
@@ -163,7 +163,7 @@ fun set_record cthy =
   ttt_evprove_flag := false;
   ttt_evlet_flag   := false; (* ttt_evletonly_flag := true; *)
   one_in_option    := SOME (0,1);
-  hh_only_flag     := 
+  hh_only_flag     :=
     (false andalso !ttt_metisexec_flag andalso can update_hh_stac ());
   (* hook *)
   (!set_record_hook) ()

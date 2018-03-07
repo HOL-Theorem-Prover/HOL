@@ -26,7 +26,7 @@ fun remove_white_spaces s =
     String.implode cl'
   end
 
-(* Assumes the theorem name was single quoted before 
+(* Assumes the theorem name was single quoted before
    which always happen except for reserved names *)
 fun unsquotify s =
   if String.size s >= 2
@@ -41,7 +41,7 @@ fun map_half b f l = case l of
 fun hh_unescape s =
   let
     val sl = String.fields (fn c => c = #"|") s
-    fun f s = 
+    fun f s =
       let val n = string_to_int s in
         Char.toString (Char.chr n)
       end
@@ -107,20 +107,20 @@ fun get_lemmas (atp_status,atp_out) =
   end
 
 (*---------------------------------------------------------------------------
-   Minimization and pretty-printing. 
+   Minimization and pretty-printing.
    Todo: Timeout is very short and can not be modified yet.
  ----------------------------------------------------------------------------*)
 
 fun string_of_lemma (thy,name) =
   if thy = namespace_tag
     then name
-  else if thy = current_theory () 
+  else if thy = current_theory ()
     then String.concatWith " " ["DB.fetch", quote thy, quote name]
   else thy ^ "Theory." ^ name
 
 fun mk_metiscall lemmas =
   let val l = map string_of_lemma lemmas in
-    "metisTools.METIS_TAC [" ^ 
+    "metisTools.METIS_TAC [" ^
     String.concatWith " , " l ^ "]"
   end
 
@@ -139,17 +139,17 @@ fun hh_minimize lemmas g =
 
 fun reconstruct (atp_status,atp_out) g =
   let val olemmas = get_lemmas (atp_status,atp_out) in
-    case olemmas of 
-      NONE => (print_endline "holyhammer: time out"; 
+    case olemmas of
+      NONE => (print_endline "holyhammer: time out";
                FAIL_TAC "holyhammer: time out")
     | SOME lemmas => hh_minimize lemmas g
   end
 
 fun reconstruct_stac (atp_status,atp_out) g =
   let val olemmas = get_lemmas (atp_status,atp_out) in
-    case olemmas of 
+    case olemmas of
       NONE => NONE
     | SOME lemmas => SOME (mk_metiscall lemmas)
-  end  
+  end
 
 end

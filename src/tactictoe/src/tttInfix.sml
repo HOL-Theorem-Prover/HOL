@@ -30,7 +30,7 @@ infixr 7 ttt_infixr7_open ttt_infixr7_close
 infixr 8 ttt_infixr8_open ttt_infixr8_close
 infixr 9 ttt_infixr9_open ttt_infixr9_close
 
-fun a ttt_infixl0_open f = fn x => f (a,x)  
+fun a ttt_infixl0_open f = fn x => f (a,x)
 fun g ttt_infixl0_close b = g b
 
 fun f ttt_infixr0_close b = fn x => f (x,b)
@@ -79,7 +79,7 @@ val op ttt_infixr9_close = op ttt_infixr0_close
 datatype infixity_t = Inf_left of int | Inf_right of int
 
 fun infix_pair infixity = case infixity of
-    Inf_left n => 
+    Inf_left n =>
     ("ttt_infixl" ^ Int.toString n ^ "_open",
      "ttt_infixl" ^ Int.toString n ^ "_close")
   | Inf_right n =>
@@ -88,7 +88,7 @@ fun infix_pair infixity = case infixity of
 
 (*----------------------------------------------------------------------------
   Infixity from Overlay.sml. To add to the README to keep up-to-date.
-  
+
   infix ++ && |-> THEN THENL THEN_LT THENC ORELSE ORELSE_LT ORELSEC
   THEN_TCL ORELSE_TCL ?> |>
 infix THEN1
@@ -99,7 +99,7 @@ infix >> >- >| \\ >>> >>- ??
 infixr ## $;
 infixr 3 -->;
 infix 8 via by suffices_by
-  
+
   ----------------------------------------------------------------------------*)
 
 (* becareful to escape \\ to \\\\ in the following list *)

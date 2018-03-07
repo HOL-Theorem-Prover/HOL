@@ -8,7 +8,7 @@
 structure tttTacticData :> tttTacticData =
 struct
 
-open HolKernel boolLib Abbrev tttTools tttTimeout tttExec tttLearn 
+open HolKernel boolLib Abbrev tttTools tttTimeout tttExec tttLearn
 tttThmData tttPredict SharingTables Portable tttSetup
 
 val ERR = mk_HOL_ERR "tttTacticData"
@@ -20,11 +20,11 @@ val ERR = mk_HOL_ERR "tttTacticData"
 fun uptodate_goal (asl,w) = all uptodate_term (w :: asl)
 fun uptodate_feav ((_,_,g,gl),_) = all uptodate_goal (g :: gl)
 
-fun create_sharing_tables feavl = 
-  let 
+fun create_sharing_tables feavl =
+  let
     fun f ((_,_,g,gl),_) = g :: gl
     val allgoals = List.concat (map f feavl)
-    fun goal_terms ((asl,w), acc) = 
+    fun goal_terms ((asl,w), acc) =
       HOLset.union(acc, HOLset.fromList Term.compare (w :: asl))
     val allterms = List.foldl goal_terms empty_tmset allgoals
     fun leaves (t, acc) = Term.all_atomsl [t] acc
@@ -33,14 +33,14 @@ fun create_sharing_tables feavl =
     val (idtable,tytable,tmtable) =
       HOLset.foldl doterms (empty_idtable, empty_tytable, empty_termtable)
       allleaves
-    fun number start l = case l of 
+    fun number start l = case l of
       []      => []
     | a :: m  => (a,start) :: number (start + 1) m
     val terml = HOLset.listItems allterms
     val termdict = dnew Term.compare (number 0 terml)
   in
     ((terml,termdict), (idtable,tytable,tmtable))
-  end  
+  end
 
 infix >>
 fun (f1 >> f2) pps = (f1 pps ; f2 pps)
@@ -60,12 +60,12 @@ fun pr_list f g h obs pps = Portable.pr_list (fn x => f x pps)
 
 val flush = HOLPP.flush_ppstream
 fun nothing pps = ()
-                                             
-fun pp_feavl feavl = 
-  let 
-    val ((terml,termdict),(idtable,tytable,tmtable)) = 
+
+fun pp_feavl feavl =
+  let
+    val ((terml,termdict),(idtable,tytable,tmtable)) =
       create_sharing_tables feavl
-    
+
     fun pp_sml_list pfun l =
       block INCONSISTENT 0
         (
@@ -75,7 +75,7 @@ fun pp_feavl feavl =
         add_string "]"
         )
 
-    fun term_to_string term = 
+    fun term_to_string term =
       quote ((Term.write_raw (fn t => Map.find(#termmap tmtable, t))) term)
     fun pp_tm tm = add_string ( (term_to_string tm))
     val pp_terml = pr_list pp_tm nothing add_newline terml
@@ -90,10 +90,10 @@ fun pp_feavl feavl =
         add_break (1,0) >>
         add_string "END"
         )
-    
+
     fun pp_fea n = add_string (int_to_string n)
-    
-    fun pr_feav ((stac,t,g,gl),fea) = 
+
+    fun pr_feav ((stac,t,g,gl),fea) =
       block CONSISTENT 0
       (
       add_string (mlquote stac) >> add_newline >>
@@ -104,7 +104,7 @@ fun pp_feavl feavl =
       )
     val pp_feav_all =
       block CONSISTENT 0
-      (if null feavl then nothing 
+      (if null feavl then nothing
        else pr_list pr_feav nothing add_newline feavl)
 
   in
@@ -117,10 +117,10 @@ fun pp_feavl feavl =
       add_string "TERMS" >> add_newline >>
       C theoryout_termtable tmtable >> jump () >>
       add_string "TERMS_START" >> add_newline >>
-      pp_terml >> add_newline >> 
+      pp_terml >> add_newline >>
       add_string "TERMS_END" >> jump () >>
       add_string "FEATURE_VECTORS_START" >> add_newline >>
-      pp_feav_all >> add_newline >> 
+      pp_feav_all >> add_newline >>
       add_string "FEATURE_VECTORS_END" >> jump ()
       ) >>
     flush
@@ -139,8 +139,8 @@ fun export_tacdata thy =
   let
     val file = ttt_tacfea_dir ^ "/" ^ thy
     val ostrm = Portable.open_out file
-    fun is_local s = mem "tttRecord.local_tag" (tttLexer.ttt_lex s) 
-    fun is_global feav = not (is_local (#1 (fst feav))) 
+    fun is_local s = mem "tttRecord.local_tag" (tttLexer.ttt_lex s)
+    fun is_global feav = not (is_local (#1 (fst feav)))
     val feavl1 = filter is_global (dlist (!ttt_tacfea_cthy))
     val feavl2 = filter uptodate_feav feavl1
   in
@@ -176,11 +176,11 @@ fun read_list l =
   )
   handle _ => err_msg "read_list" l
 
-fun readcat_list l = 
+fun readcat_list l =
   let val (ll,cont) = read_list l in
     (List.concat ll, cont)
   end
-  
+
 
 fun read_id l = case l of
    [s1,s2] => {Thy = read_string s1, Other = read_string s2}
@@ -251,26 +251,26 @@ fun read_terml tmvector l = case l of
 fun read_goal lookup l = case l of
     a :: m => (map lookup m, lookup a)
   | _      => err_msg "read_goal" l
-  
-(* Goal list *) 
+
+(* Goal list *)
 fun extract_gl_cont l = case l of
     "START" :: m => split_sl "END" m
   | _ => err_msg "extract_gl" l
 
 fun extract_gl l = case l of
     [] => []
-  | _  => 
-  let val (l1,cont1) = readcat_list l in 
-    l1 :: extract_gl cont1 
+  | _  =>
+  let val (l1,cont1) = readcat_list l in
+    l1 :: extract_gl cont1
   end
 
 (* Feature vector *)
 fun read_feav lookup l = case l of
     a :: b :: m =>
-    let 
+    let
       val stac = read_string a
       val tim  = valOf (Real.fromString b)
-      val (l0,cont0) = readcat_list m 
+      val (l0,cont0) = readcat_list m
       val g = read_goal lookup l0
       val (l1,cont1) = extract_gl_cont cont0
       val gl = map (read_goal lookup) (extract_gl l1)
@@ -278,17 +278,17 @@ fun read_feav lookup l = case l of
       val fea = map string_to_int l2
     in
       (((stac,tim,g,gl),fea),cont2)
-    end 
-  | _ => err_msg "read_feav" l     
+    end
+  | _ => err_msg "read_feav" l
 
 fun read_feavl_loop lookup acc l = case l of
    "FEATURE_VECTORS_END" :: m => (rev acc, m)
-  | [] => err_msg "read_feavl_loop" l 
-  | _ => 
+  | [] => err_msg "read_feavl_loop" l
+  | _ =>
    let val (feav,cont) = read_feav lookup l in
      read_feavl_loop lookup (feav :: acc) cont
    end
-   
+
 fun read_feavl lookup l = case l of
    "FEATURE_VECTORS_START" :: m => read_feavl_loop lookup [] m
   | _ => err_msg "read_feavl" l
@@ -296,13 +296,13 @@ fun read_feavl lookup l = case l of
 fun read_feavdatal thy =
   let
     val file = ttt_tacfea_dir ^ "/" ^ thy
-    val l0 = tttLexer.ttt_lex (String.concatWith " " (readl file)) 
+    val l0 = tttLexer.ttt_lex (String.concatWith " " (readl file))
       handle _ => (print_endline (thy ^ " is missing"); debug thy; [])
   in
-    if l0 = [] 
+    if l0 = []
     then []
-    else  
-      let 
+    else
+      let
         val (idvector,l1) = load_idvector l0
         val (tyvector,l2) = load_tyvector idvector l1
         val (tmvector,l3) = load_tmvector idvector tyvector l2
@@ -314,12 +314,12 @@ fun read_feavdatal thy =
       end
   end
 
-fun read_feavdatal_no_min thy = 
+fun read_feavdatal_no_min thy =
   if mem thy ["min","bool"] then [] else read_feavdatal thy
 
 fun update_tacdep (lbl,_) =
-  let 
-    val oldv = dfind (#3 lbl) (!ttt_tacdep) handle _ => [] 
+  let
+    val oldv = dfind (#3 lbl) (!ttt_tacdep) handle _ => []
     val newv = lbl :: oldv
   in
     ttt_tacdep := dadd (#3 lbl) newv (!ttt_tacdep)
@@ -328,16 +328,16 @@ fun update_tacdep (lbl,_) =
 fun init_tacdata feavl =
   (
   ttt_tacfea := dnew lbl_compare feavl;
-  ttt_tacfea_cthy := dempty lbl_compare; 
+  ttt_tacfea_cthy := dempty lbl_compare;
   ttt_tacdep := dempty goal_compare;
-  ttt_taccov := 
-    count_dict (dempty String.compare) 
+  ttt_taccov :=
+    count_dict (dempty String.compare)
     (map (#1 o fst) (dlist (!ttt_tacfea)))
   ;
   dapp update_tacdep (!ttt_tacfea)
   )
- 
-fun import_tacdata thyl = 
+
+fun import_tacdata thyl =
   let val feavl = List.concat (map read_feavdatal_no_min thyl) in
     init_tacdata feavl
   end
@@ -361,7 +361,7 @@ fun update_tacdata (lbl0 as (stac0,t0,g0,gl0)) =
   if mem g0 gl0 then () else
     let
       val fea = total_time feature_time tttFeature.fea_of_goal g0
-      val (lbl as (stac,t,g,gl)) = 
+      val (lbl as (stac,t,g,gl)) =
         debug_t "orthogonalize" orthogonalize (lbl0,fea)
       val feav = (lbl,fea)
     in

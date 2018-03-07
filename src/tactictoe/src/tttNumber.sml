@@ -37,9 +37,9 @@ fun number_tokenl n sl =
         (a :: head) @ ["=>"] @ number_tokenl n cont
       end
     else if mem a ["val","fun","structure"] then
-      let val (head,cont) = split_level "=" m in   
+      let val (head,cont) = split_level "=" m in
         (a :: head) @ ["="] @ number_tokenl n cont
-      end 
+      end
     else if contain_dot a
       then (number_token n a) @ number_tokenl (n + 1) m
     else a :: number_tokenl n m

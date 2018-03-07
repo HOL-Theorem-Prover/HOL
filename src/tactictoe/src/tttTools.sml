@@ -40,7 +40,7 @@ val ttt_search_dir  = tactictoe_dir ^ "/log_search"
 val ttt_record_dir  = tactictoe_dir ^ "/log_record"
 val ttt_unfold_dir = tactictoe_dir ^ "/log_unfold"
 
-fun hide_out f x = 
+fun hide_out f x =
   hide_in_file (ttt_code_dir ^ "/" ^ current_theory () ^ "_hide_out") f x
 
 (* --------------------------------------------------------------------------
@@ -59,7 +59,7 @@ fun exists_file file = OS.FileSys.access (file, []);
     Dictionaries shortcuts
    -------------------------------------------------------------------------- *)
 
-fun dfind k m  = Redblackmap.find (m,k) 
+fun dfind k m  = Redblackmap.find (m,k)
 fun dfind_err msg x dict = dfind x dict handle _ => raise ERR "dfind" msg
 
 fun drem k m   = fst (Redblackmap.remove (m,k)) handle NotFound => m
@@ -108,8 +108,8 @@ fun is_reserved s =
 
 fun findSome f l = case l of
     [] => NONE
-  | a :: m => 
-    let val r = f a in 
+  | a :: m =>
+    let val r = f a in
       if isSome r then r else findSome f m
     end
 
@@ -132,12 +132,12 @@ fun part_aux n acc l =
 
 fun part_n n l = part_aux n [] l
 
-fun number_list start l = case l of 
+fun number_list start l = case l of
     []      => []
   | a :: m  => (start,a) :: number_list (start + 1) m
 
-fun mk_fast_set compare l = 
-  let 
+fun mk_fast_set compare l =
+  let
     val empty_dict = dempty compare
     fun f (k,dict) = dadd k () dict
   in
@@ -148,17 +148,17 @@ fun mk_fast_set compare l =
 fun mk_sameorder_set_aux memdict rl l =
   case l of
     [] => rev rl
-  | a :: m => if dmem a memdict 
+  | a :: m => if dmem a memdict
               then mk_sameorder_set_aux memdict rl m
               else mk_sameorder_set_aux (dadd a () memdict) (a :: rl) m
-  
+
 fun mk_sameorder_set compare l = mk_sameorder_set_aux (dempty compare) [] l
 
 (* Sort elements and preserve the order of equal elements *)
 fun dict_sort compare l =
   let
     val newl = number_list 0 l
-    fun newcompare ((n,x),(m,y)) = 
+    fun newcompare ((n,x),(m,y)) =
       case compare (x,y) of
         EQUAL => Int.compare (n,m)
       | LESS => LESS
@@ -169,9 +169,9 @@ fun dict_sort compare l =
 
 fun mk_string_set l = mk_fast_set String.compare l
 
-fun count_dict startdict l = 
+fun count_dict startdict l =
   let
-    fun f (k,dict) = 
+    fun f (k,dict) =
       let val old_n = dfind k dict handle _ => 0 in
         dadd k (old_n + 1) dict
       end
@@ -183,7 +183,7 @@ fun fold_left f l orig = case l of
     [] => orig
   | a :: m => let val new_orig = f a orig in fold_left f m new_orig end
 
-fun list_diff l1 l2 = filter (fn x => not (mem x l2)) l1  
+fun list_diff l1 l2 = filter (fn x => not (mem x l2)) l1
 
 fun topo_sort graph =
   let val (topl,downl) = List.partition (fn (x,xl) => null xl) graph in
@@ -191,8 +191,8 @@ fun topo_sort graph =
     ([],[]) => []
   | ([],_)  => raise ERR "topo_sort" "loop or missing nodes"
   | _       =>
-    let 
-      val topl' = List.map fst topl 
+    let
+      val topl' = List.map fst topl
       val graph' = List.map (fn (x,xl) => (x,list_diff xl topl')) downl
     in
       topl' @ topo_sort graph'
@@ -222,13 +222,13 @@ fun average_real l = sum_real l / Real.fromInt (length l)
    -------------------------------------------------------------------------- *)
 
 fun string_of_goal (asm,w) =
-  let 
+  let
     val mem = !show_types
     val _   = show_types := false
-    val s   = 
-      (if asm = [] 
-         then "[]" 
-         else "[``" ^ String.concatWith "``,``" (map term_to_string asm) ^ 
+    val s   =
+      (if asm = []
+         then "[]"
+         else "[``" ^ String.concatWith "``,``" (map term_to_string asm) ^
               "``]")
     val s1 = "(" ^ s ^ "," ^ "``" ^ (term_to_string w) ^ "``)"
   in
@@ -261,12 +261,12 @@ fun strict_term_compare (t1,t2) =
   else if is_const t1 andalso is_const t2 then Term.compare (t1,t2)
   else if is_const t1 then LESS
   else if is_const t2 then GREATER
-  else if is_comb t1 andalso is_comb t2 then 
-    cpl_compare strict_term_compare 
+  else if is_comb t1 andalso is_comb t2 then
+    cpl_compare strict_term_compare
       strict_term_compare (dest_comb t1, dest_comb t2)
   else if is_comb t1 then LESS
   else if is_comb t2 then GREATER
-  else 
+  else
     cpl_compare Term.compare strict_term_compare (dest_abs t1, dest_abs t2)
 
 fun strict_goal_compare ((asm1,w1), (asm2,w2)) =
@@ -321,7 +321,7 @@ fun readl_empty path =
   end
 
 
-fun write_file file s = 
+fun write_file file s =
   let val oc = TextIO.openOut file in
     TextIO.output (oc,s); TextIO.closeOut oc
   end
@@ -338,7 +338,7 @@ fun append_file file s =
   let val oc = TextIO.openAppend file in
     TextIO.output (oc,s); TextIO.closeOut oc
   end
-  
+
 fun append_endline file s = append_file file (s ^ "\n")
 
 (* --------------------------------------------------------------------------
@@ -356,7 +356,7 @@ fun add_time f x =
 
 fun total_time total f x =
   let val (r,t) = add_time f x in (total := (!total) + t; r) end
-  
+
 fun print_time s r = print (s ^ ": " ^ Real.toString r ^ "\n")
 
 fun print_endline s = print (s ^ "\n")
@@ -368,7 +368,7 @@ fun print_endline s = print (s ^ "\n")
 (* unfold_dir *)
 val ttt_unfold_cthy = ref "scratch"
 
-fun debug_unfold s = 
+fun debug_unfold s =
   append_endline (ttt_unfold_dir ^ "/" ^ !ttt_unfold_cthy) s
 
 (* search_dir *)
@@ -376,8 +376,8 @@ fun debug s = append_endline (ttt_search_dir ^ "/debug/" ^ current_theory ()) s
 
 fun debug_err s = (debug s; raise ERR "debug_err" s)
 
-fun debug_t s f x = 
-  let 
+fun debug_t s f x =
+  let
     val _ = debug s
     val (r,t) = add_time f x
     val _ = debug (s ^ " " ^ Real.toString t)
@@ -390,20 +390,20 @@ val debugsearch_flag = ref false
 fun set_debugsearch b = debugsearch_flag := b
 
 fun debug_search s =
-  if !debugsearch_flag 
+  if !debugsearch_flag
   then append_endline (ttt_search_dir ^ "/search/" ^ current_theory ()) s
   else ()
-  
+
 fun debug_proof s =
   append_endline (ttt_search_dir ^ "/proof/" ^ current_theory ()) s
 
 (* record_dir *)
 fun debug_parse s =
   append_endline (ttt_record_dir ^ "/parse/" ^ current_theory ()) s
-  
+
 fun debug_replay s =
   append_endline (ttt_record_dir ^ "/replay/" ^ current_theory ()) s
-  
+
 fun debug_record s =
   append_endline (ttt_record_dir ^ "/record/" ^ current_theory ()) s
 
@@ -416,65 +416,65 @@ fun unquote_string s =
   then String.substring (s, 1, String.size s - 2)
   else raise ERR "unquote_string" s
 
-fun drop_sig s = 
+fun drop_sig s =
   if last (explode s) = #"."
   then s
   else last (String.fields (fn x => x = #".") s)
 
 fun rm_last_n_string n s =
-  let 
+  let
     val l = explode s
     val m = length l
   in
     implode (first_n (m - n) l)
   end
 
-fun filename_of s = last (String.tokens (fn x => x = #"/") s) 
+fun filename_of s = last (String.tokens (fn x => x = #"/") s)
   handle _ => raise ERR "filename_of" s
 
 fun split_sl_aux s pl sl = case sl of
     []     => raise ERR "split_sl_aux" ""
-  | a :: m => if a = s 
-              then (rev pl, m) 
-              else split_sl_aux s (a :: pl) m 
+  | a :: m => if a = s
+              then (rev pl, m)
+              else split_sl_aux s (a :: pl) m
 
 fun split_sl s sl = split_sl_aux s [] sl
 
-fun rpt_split_sl s sl = 
-  let val (a,b) = split_sl s sl handle _ => (sl,[]) 
+fun rpt_split_sl s sl =
+  let val (a,b) = split_sl s sl handle _ => (sl,[])
   in
-    if null b then [a] else a :: rpt_split_sl s b 
+    if null b then [a] else a :: rpt_split_sl s b
   end
 
 
 fun split_level_aux i s pl sl = case sl of
     []     => raise ERR "split_level_aux" s
   | a :: m => if a = s andalso i <= 0
-                then (rev pl, m) 
+                then (rev pl, m)
               else if mem a ["let","local","struct","(","[","{"]
                 then split_level_aux (i + 1) s (a :: pl) m
               else if mem a ["end",")","]","}"]
                 then split_level_aux (i - 1) s (a :: pl) m
               else split_level_aux i s (a :: pl) m
-              
+
 fun split_level s sl = split_level_aux 0 s [] sl
 
-fun rpt_split_level s sl = 
-  let val (a,b) = split_level s sl handle _ => (sl,[]) 
+fun rpt_split_level s sl =
+  let val (a,b) = split_level s sl handle _ => (sl,[])
   in
-    if null b then [a] else a :: rpt_split_level s b 
+    if null b then [a] else a :: rpt_split_level s b
   end
 
-fun split_charl acc buf csm l1 l2 = 
+fun split_charl acc buf csm l1 l2 =
   if csm = [] then (rev acc, l2) else
   case l2 of
     []     => raise ERR "split_charl" ""
-  | a :: m => if hd csm = a 
+  | a :: m => if hd csm = a
               then split_charl acc (a :: buf) (tl csm) l1 m
-              else split_charl (a :: (buf @ acc)) [] l1 l1 m  
-  
-fun split_string s1 s2 = 
-  let 
+              else split_charl (a :: (buf @ acc)) [] l1 l1 m
+
+fun split_string s1 s2 =
+  let
     val (l1,l2) = (explode s1, explode s2)
     val (rl1,rl2) = split_charl [] [] l1 l1 l2
   in
@@ -482,7 +482,7 @@ fun split_string s1 s2 =
   end
   handle _ => raise ERR "split_string" (s1 ^ " " ^ s2)
 
-fun rm_prefix s2 s1 = 
+fun rm_prefix s2 s1 =
   let val (a,b) = split_string s1 s2 in
     if a = "" then b else raise ERR "rm_prefix" (s2 ^ " " ^ s1)
   end
@@ -493,10 +493,10 @@ fun rm_squote s =
   else raise ERR "rm_squote" s
 
 fun rm_space_aux l = case l of
-    [] => [] 
-  | a :: m => if a = #" " then rm_space_aux m else l 
-  
-fun rm_space s = implode (rm_space_aux (explode s))  
+    [] => []
+  | a :: m => if a = #" " then rm_space_aux m else l
+
+fun rm_space s = implode (rm_space_aux (explode s))
 
 (* --------------------------------------------------------------------------
    Tactics
@@ -514,19 +514,19 @@ val ttt_taccov      = ref (dempty String.compare)
 
 val ttt_thmfea = ref (dempty goal_compare)
 
-val namespace_tag = "namespace_tag" 
+val namespace_tag = "namespace_tag"
 (* Warning: causes a problem if you name your theory namespace_tag *)
 
 fun dbfetch_of_string s =
-  let val (a,b) = split_string "Theory." s in 
+  let val (a,b) = split_string "Theory." s in
     if a = current_theory ()
-      then String.concatWith " " ["DB.fetch",mlquote a,mlquote b] 
-    else 
+      then String.concatWith " " ["DB.fetch",mlquote a,mlquote b]
+    else
       if a = namespace_tag then b else s
   end
 
 fun mk_metis_call sl =
-  "metisTools.METIS_TAC " ^ 
+  "metisTools.METIS_TAC " ^
   "[" ^ String.concatWith " , " (map dbfetch_of_string sl) ^ "]"
 
 (* --------------------------------------------------------------------------
@@ -539,7 +539,7 @@ val ttt_glfea_cthy = ref (dempty (list_compare Int.compare))
 (* --------------------------------------------------------------------------
    Cleaning tactictoe data (not necessary)
    -------------------------------------------------------------------------- *)
-   
+
 fun clean_tttdata () =
   (
   ttt_tacerr := [];

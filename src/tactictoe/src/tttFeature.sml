@@ -14,7 +14,7 @@ val ERR = mk_HOL_ERR "tttFeature"
 
 (* top features are slow to print *)
 val hofea_flag = ref true
-val notopfea_flag = ref true 
+val notopfea_flag = ref true
 
 fun gen_all t = list_mk_forall ((free_vars_lr t),t)
 
@@ -25,12 +25,12 @@ fun gen_all t = list_mk_forall ((free_vars_lr t),t)
 val (atoml: term list ref) = ref []
 val (atoml_top: term list ref) = ref []
 
-fun atoms tm = 
+fun atoms tm =
   (
   atoml_top := tm :: !atoml_top;
   if is_var tm orelse is_const tm then atoml := tm :: (!atoml)
   else if is_eq tm then
-    if type_of (lhs tm) = bool 
+    if type_of (lhs tm) = bool
     then (atoms (lhs tm); atoms (rhs tm))
     else atoml := tm :: (!atoml)
   else if is_conj tm orelse is_disj tm orelse is_imp_only tm then
@@ -44,7 +44,7 @@ fun atoms tm =
   )
 and binder (_,tm) = atoms tm
 
-fun atoms_of_term tm = 
+fun atoms_of_term tm =
   (atoml_top := []; atoml := []; atoms tm; (!atoml, !atoml_top))
 
 val (subterml: term list ref) = ref []
@@ -52,7 +52,7 @@ val (subterml: term list ref) = ref []
 fun subterms tm =
   (
   subterml := tm :: (!subterml);
-  if is_var tm orelse is_const tm then () 
+  if is_var tm orelse is_const tm then ()
   else if is_comb tm then
     if !hofea_flag then
       (subterms (rand tm); subterms (rator tm))
@@ -65,7 +65,7 @@ fun subterms tm =
   else raise ERR "subterms" ""
   )
 
-fun subterms_of_term tm = 
+fun subterms_of_term tm =
   (subterml := []; subterms tm; !subterml)
 
 fun all_types tm =
@@ -76,7 +76,7 @@ fun all_types tm =
 fun zeroed_type ty =
   if is_vartype ty then ["T"]
   else
-    let 
+    let
       val {Args,Thy,Tyop} = dest_thy_type ty
       val s = Tyop ^ "." ^ Thy ^ ".t"
     in
@@ -105,7 +105,7 @@ val top_sl : string list ref = ref []
 
 fun string_of_top tm =
   if is_var tm then "P"
-  else if is_const tm then 
+  else if is_const tm then
     let val {Thy,Name,Ty} = dest_thy_const tm in
       Thy ^ "." ^ Name ^ ".c"
     end
@@ -116,7 +116,7 @@ fun string_of_top tm =
     top_sl := "Conj" :: !top_sl;
     ("(Conj " ^ string_of_top (lhand tm) ^ " " ^ string_of_top (rand tm) ^ ")")
     )
-  else if is_disj tm then 
+  else if is_disj tm then
     (
     top_sl := "Disj" :: !top_sl;
     ("(Disj " ^ string_of_top (lhand tm) ^ " " ^ string_of_top (rand tm) ^ ")")
@@ -126,7 +126,7 @@ fun string_of_top tm =
     top_sl := "Imp" :: !top_sl;
     ("(Imp " ^ string_of_top (lhand tm) ^ " " ^ string_of_top (rand tm) ^ ")")
     )
-  else if is_neg tm      then 
+  else if is_neg tm      then
     (
    top_sl := "Neg" :: !top_sl;
     ("(Neg " ^ string_of_top (rand tm) ^ ")")
@@ -136,7 +136,7 @@ fun string_of_top tm =
   else if is_abs tm      then "P"
   else if is_comb tm     then "P"
   else raise ERR "atoms" ""
-and binder_top s (v,tm) = 
+and binder_top s (v,tm) =
   (
   top_sl := s :: !top_sl;
    "(" ^ s ^ " " ^ string_of_top tm ^ ")"
@@ -145,14 +145,14 @@ and binder_top s (v,tm) =
 fun fea_of_term tm =
   if term_size tm > 2000
   then
-    let 
+    let
       val constl         = find_terms is_const tm
       val const_sl       = map string_of_const constl
     in
       mk_string_set const_sl
     end
   else
-    let 
+    let
       val varl           = find_terms is_var tm
       val varl_sl        = map (fst o dest_var) varl
       val constl         = find_terms is_const tm
@@ -166,8 +166,8 @@ fun fea_of_term tm =
       val subterml       = List.concat (map subterms_of_term tml)
       val subterm_sl     = map zeroed_term subterml
     in
-      filter (fn x => x <> "P" andalso x <> "T") 
-      (mk_string_set 
+      filter (fn x => x <> "P" andalso x <> "T")
+      (mk_string_set
          (type_sl @ varl_sl @ const_sl @ (!top_sl) @ toptml_sl @ subterm_sl))
     end
 
@@ -189,7 +189,7 @@ in
 end
 
 fun fea_of_goal (asl,w) =
-  let 
+  let
     val asl_sl1 = List.concat (map fea_of_term asl)
     val asl_sl2 = map (fn x => x ^ ".h") asl_sl1
     val w_sl   = map (fn x => x ^ ".w") (fea_of_term w)
@@ -198,11 +198,11 @@ fun fea_of_goal (asl,w) =
   end
   handle _ => raise ERR "fea_of_goal" (string_of_goal (asl,w))
 
-fun fea_of_goallist gl = 
+fun fea_of_goallist gl =
   mk_fast_set Int.compare (List.concat (map fea_of_goal gl))
 
 (* warning: not injective *)
-fun s_term tm = 
+fun s_term tm =
   if is_var tm then fst (dest_var tm)
   else if is_const tm then fst (dest_const tm)
   else if is_comb tm then "(" ^ s_term (rand tm) ^ " " ^ s_term (rator tm) ^ ")"

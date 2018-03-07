@@ -18,7 +18,7 @@ val ERR = mk_HOL_ERR "tttExtract"
  *---------------------------------------------------------------------------*)
 
 fun ttt_propl_of s =
-  let 
+  let
     val stream = TextIO.openString s
     val resultTrees : PolyML.parseTree list ref = ref []
     fun compilerResultFun (parsetree, codeOpt) =
@@ -30,23 +30,23 @@ fun ttt_propl_of s =
       in
         fn () => raise ERR "ttt_propl_of" "NONE"
       end
-    val _ = PolyML.compiler (fn () => 
-          TextIO.input1 stream, 
+    val _ = PolyML.compiler (fn () =>
+          TextIO.input1 stream,
          [PolyML.Compiler.CPCompilerResultFun compilerResultFun,
           PolyML.Compiler.CPNameSpace PolyML.globalNameSpace])
     in
       snd (hd (!resultTrees)) handle _ => raise ERR "ttt_propl_of" s
     end
- 
+
 fun ttt_prop_first p = case p of
     PolyML.PTfirstChild f  => SOME (snd (f ()))
   | _               => NONE
 
 fun ttt_path_of s =
-  let 
+  let
     val x = hd (ttt_propl_of s)
     val l = valOf (ttt_prop_first x)
-    fun f y = case y of PolyML.PTdeclaredAt y => y 
+    fun f y = case y of PolyML.PTdeclaredAt y => y
                       | _ => raise ERR "ttt_path_of" ""
     val decll = mapfilter f l
     val path = #file (hd decll)
@@ -168,24 +168,24 @@ fun is_infix_tree tree = case tree of
  | HHSLEAF s => is_infix (valOf s)
 
 fun is_infix_treel treel =
-  List.length treel = 3 
-  andalso 
+  List.length treel = 3
+  andalso
   (is_infix_tree (List.nth (treel,1)) handle _ => false)
 
 fun is_recordable1 sno sl treel =
   mem "tttNumber.ttt_fst" sl andalso
   not (is_infix_treel treel) andalso
-  is_tactic sno  
+  is_tactic sno
 
 fun is_recordable2 sno sl =
-  mem "tttNumber.ttt_fst" sl andalso 
+  mem "tttNumber.ttt_fst" sl andalso
   is_tactic sno
 
 
 fun extract_tactics tree = case tree of
     HHSTACL (s, treel) =>
     if s = NONE then List.concat (map extract_tactics treel) else
-      let val sno = valOf s 
+      let val sno = valOf s
           val sl = ttt_lex (valOf s)
       in
         if is_recordable1 sno sl treel
@@ -193,7 +193,7 @@ fun extract_tactics tree = case tree of
         else List.concat (map extract_tactics treel)
       end
   | HHSLEAF s =>
-    if s = NONE then [] else 
+    if s = NONE then [] else
       let val sno = valOf s
           val sl = ttt_lex sno
       in
