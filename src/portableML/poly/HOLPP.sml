@@ -24,4 +24,13 @@ type 'a quotation = 'a frag list
 
 val prettyPrint = PolyML.prettyPrint
 
+fun pp_to_string w f x =
+  let
+    val sbuf = ref [] : string list ref
+    fun app s = (sbuf := s :: !sbuf)
+  in
+    prettyPrint (app,w) (f x);
+    String.concat (List.rev (!sbuf))
+  end
+
 end; (* struct *)

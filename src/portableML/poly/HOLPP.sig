@@ -15,5 +15,7 @@ datatype 'a frag = QUOTE of string | ANTIQUOTE of 'a
 type 'a quotation = 'a frag list
 
 val prettyPrint : (string -> unit) * int -> pretty -> unit
+val pp_to_string : int -> ('a -> pretty) -> 'a -> string
+
 
 end

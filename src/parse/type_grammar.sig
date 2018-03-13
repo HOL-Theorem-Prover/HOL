@@ -45,8 +45,8 @@ sig
   val apply_delta : delta -> grammar -> grammar
   val apply_deltas : delta list -> grammar -> grammar
 
-  val prettyprint_grammar   : Portable.ppstream -> grammar -> unit
+  val prettyprint_grammar   : grammar -> HOLPP.pretty
   val initialise_typrinter
-    : (grammar -> Portable.ppstream -> Type.hol_type -> unit) -> unit
+    : (grammar -> Type.hol_type -> HOLPP.pretty) -> unit
 
 end
