@@ -33,4 +33,24 @@ fun pp_to_string w f x =
     String.concat (List.rev (!sbuf))
   end
 
+val add_string = PrettyString
+val add_break = PrettyBreak
+val NL = add_break(1000000, 0)
+fun bs2b bs = bs = CONSISTENT
+fun block bs i ps = PrettyBlock(i, bs2b bs, [], ps)
+
+fun pr_list f b [] = []
+  | pr_list f b [e] = [f e]
+  | pr_list f b (e::es) = (f e :: b) @ pr_list f b es
+fun tabulateWith f b c =
+  if c < 0 then raise Fail "tabulateWith: negative argument"
+  else
+    let
+      fun recurse acc n =
+        if n = 0 then f 0 :: acc
+        else recurse (b @ f n :: acc) (n - 1)
+    in
+      if c = 0 then [] else recurse [] (c - 1)
+    end
+
 end; (* struct *)

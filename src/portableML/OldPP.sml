@@ -651,6 +651,13 @@ end
 fun add_newline (pps : ppstream) =
   let val lw = lineWidth pps in add_break pps (lw+2,0) end
 
-
+fun pr_list pfun dfun bfun =
+   let
+      fun pr [] = ()
+        | pr [i] = pfun i
+        | pr (i :: rst) = (pfun i; dfun (); bfun (); pr rst)
+   in
+      pr
+   end
 
 end; (* struct *)

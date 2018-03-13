@@ -708,15 +708,6 @@ fun ?>(PASS x, f) = f x
  * bfun = break printer function
  *---------------------------------------------------------------------------*)
 
-fun pr_list pfun dfun bfun =
-   let
-      fun pr [] = ()
-        | pr [i] = pfun i
-        | pr (i :: rst) = (pfun i; dfun (); bfun (); pr rst)
-   in
-      pr
-   end
-
 fun with_ppstream ppstrm =
   let
     open OldPP

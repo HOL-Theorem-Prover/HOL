@@ -36,6 +36,10 @@ val pp_to_string   : int -> (ppstream -> 'a -> unit) -> 'a -> string
 val lineWidth      : ppstream -> int
 val catch_withpp_err : bool ref
 
+val pr_list : ('a -> unit) -> (unit -> 'b) -> (unit -> 'c) -> 'a list ->
+              unit
+
+
 (*
    This structure provides tools for creating customized Oppen-style
    pretty-printers, based on the type ppstream.  A ppstream is an
@@ -121,84 +125,5 @@ val catch_withpp_err : bool ref
    [pp_to_string linewidth printit x] constructs a new ppstream
    ppstrm whose consumer accumulates the output in a string s.  Then
    evaluates (printit ppstrm x) and finally returns the string s.
-
-
-   Example 1: A simple prettyprinter for Booleans:
-
-       load "PP";
-       fun ppbool pps d =
-           let open PP
-           in
-               begin_block pps INCONSISTENT 6;
-               add_string pps (if d then "right" else "wrong");
-               end_block pps
-           end;
-
-   Now one may define a ppstream to print to, and exercise it:
-
-       val ppstrm = PP.mk_ppstream {consumer  =
-                                    fn s => TextIO.output(TextIO.stdOut, s),
-                                    linewidth = 72,
-                                    flush     =
-                                     fn () => TextIO.flushOut TextIO.stdOut};
-
-       fun ppb b = (ppbool ppstrm b; PP.flush_ppstream ppstrm);
-
-       - ppb false;
-       wrong> val it = () : unit
-
-   The prettyprinter may also be installed in the toplevel system;
-   then it will be used to print all expressions of type bool
-   subsequently computed:
-
-       - installPP ppbool;
-       > val it = () : unit
-       - 1=0;
-       > val it = wrong : bool
-       - 1=1;
-       > val it = right : bool
-
-   See library Meta for a description of installPP.
-
-
-   Example 2: Prettyprinting simple expressions (examples/pretty/ppexpr.sml):
-
-       datatype expr =
-           Cst of int
-         | Neg of expr
-         | Plus of expr * expr
-
-       fun ppexpr pps e0 =
-           let open PP
-               fun ppe (Cst i)        = add_string pps (Int.toString i)
-                 | ppe (Neg e)        = (add_string pps "~"; ppe e)
-                 | ppe (Plus(e1, e2)) = (begin_block pps CONSISTENT 0;
-                                         add_string pps "(";
-                                         ppe e1;
-                                         add_string pps " + ";
-                                         add_break pps (0, 1);
-                                         ppe e2;
-                                         add_string pps ")";
-                                         end_block pps)
-           in
-               begin_block pps INCONSISTENT 0;
-               ppe e0;
-               end_block pps
-           end
-
-       val _ = installPP ppexpr;
-
-       (* Some example values: *)
-
-       val e1 = Cst 1;
-       val e2 = Cst 2;
-       val e3 = Plus(e1, Neg e2);
-       val e4 = Plus(Neg e3, e3);
-       val e5 = Plus(Neg e4, e4);
-       val e6 = Plus(e5, e5);
-       val e7 = Plus(e6, e6);
-       val e8 =
-           Plus(e3, Plus(e3, Plus(e3, Plus(e3, Plus(e3, Plus(e3, e7))))));
 *)
-
 end

@@ -39,7 +39,7 @@ val toTypeM : pretype -> Type.hol_type in_env
 val toType : pretype -> Type.hol_type
 val chase : pretype -> pretype in_env
 
-val pp_pretype : PP.ppstream -> pretype -> unit
+val pp_pretype : pretype -> HOLPP.pretty
 
 val termantiq_constructors : (pretype,Term.term) parse_type.tyconstructors
 val typantiq_constructors : (pretype,Type.hol_type) parse_type.tyconstructors

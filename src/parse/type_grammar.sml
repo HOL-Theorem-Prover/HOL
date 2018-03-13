@@ -394,16 +394,6 @@ fun prettyprint_grammar G = let
   open Portable Lib HOLPP
   val TYG grm = G
   val {rules=g, parse_str=abbrevs, str_print=pmap, bare_names,... } = grm
-  val add_break = PrettyBreak and add_string = PrettyString
-  val NL = add_break(1000000,0)
-  fun bs2b sty = sty = CONSISTENT
-  fun block sty i l = PrettyBlock(i, bs2b sty, [], l)
-  fun pr_list f b [] = []
-    | pr_list f b [e] = [f e]
-    | pr_list f b (e::es) = (f e :: b) @ pr_list f b es
-  fun pr_nels f b 0 = []
-    | pr_nels f b 1 = [f 0]
-    | pr_nels f b n = pr_nels f b (n - 1) @ b @ [f n]
   fun print_suffix (s,arity) = let
     fun print_ty_n_tuple n =
         case n of
@@ -411,9 +401,9 @@ fun prettyprint_grammar G = let
         | 1 => [add_string "TY", add_break (1,0)]
         | n => [add_string "(",
                 block INCONSISTENT 0
-                      (pr_nels (fn _ => add_string "TY")
-                               [add_string ",", add_break(1,0)]
-                               n),
+                      (tabulateWith (fn _ => add_string "TY")
+                                    [add_string ",", add_break(1,0)]
+                                    n),
                 add_string ")"]
   in
     block CONSISTENT 2

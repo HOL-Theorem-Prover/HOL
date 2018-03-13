@@ -225,10 +225,10 @@ fun block state brkdepth f pps = (OldPP.begin_block pps state brkdepth ;
 fun add_string s pps = OldPP.add_string pps s
 val add_newline = OldPP.add_newline
 fun add_break ipr pps = OldPP.add_break pps ipr
-fun pr_list f g h obs pps = Portable.pr_list (fn x => f x pps)
-                                             (fn () => g pps)
-                                             (fn () => h pps)
-                                             obs
+fun pr_list f g h obs pps = OldPP.pr_list (fn x => f x pps)
+                                          (fn () => g pps)
+                                          (fn () => h pps)
+                                          obs
 val flush = OldPP.flush_ppstream
 fun nothing pps = ()
 

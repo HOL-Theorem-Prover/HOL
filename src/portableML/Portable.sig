@@ -154,8 +154,6 @@ sig
                            end_block      : unit -> unit,
                            flush_ppstream : unit -> unit}
 
-  val pr_list : ('a -> unit) -> (unit -> 'b) -> (unit -> 'c)
-                -> 'a list -> unit
   val dec: int ref -> unit
   val inc: int ref -> unit
 
