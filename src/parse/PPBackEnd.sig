@@ -21,23 +21,11 @@ sig
   type xstring = term_pp_types.xstring
   type t = term_grammar.grammar term_pp_types.ppbackend
 
-  val with_ppstream : t -> ppstream ->
-                      {add_break      : int * int -> unit,
-                       add_newline    : unit -> unit,
-                       add_string     : string -> unit,
-                       add_xstring    : xstring -> unit,
-                       begin_block    : break_style -> int -> unit,
-                       end_block      : unit -> unit,
-                       begin_style    : pp_style list -> unit,
-                       end_style      : unit -> unit,
-                       clear_ppstream : unit -> unit,
-                       flush_ppstream : unit -> unit}
-
   val known_UserStyles   : unit -> string list
   val lookup_UserStyle   : string -> string -> pp_style list
   val register_UserStyle : string option -> string -> pp_style list -> unit
 
-  val ansi_terminal         : string -> output_colors -> t 
+  val ansi_terminal         : string -> output_colors -> t
   val raw_terminal          : t
   val debug_blocks_terminal : t
   val vt100_terminal        : t

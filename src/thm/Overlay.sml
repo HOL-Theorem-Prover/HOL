@@ -26,8 +26,6 @@ structure Process = OS.Process
 structure FileSys = OS.FileSys
 structure Path    = OS.Path
 
-structure PP = HOLPP
-
-type 'a quotation = 'a PP.quotation
-type ppstream = PP.ppstream
-datatype frag = datatype PP.frag
+type 'a quotation = 'a HOLPP.quotation
+type ppstream = HOLPP.ppstream
+datatype frag = datatype HOLPP.frag

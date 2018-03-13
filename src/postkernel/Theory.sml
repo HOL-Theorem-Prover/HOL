@@ -54,7 +54,8 @@ open Feedback Lib Type Term Thm ;
 open TheoryPP
 
 
-type ppstream = Portable.ppstream
+type ppstream = OldPP.ppstream
+structure PP = OldPP
 type pp_type  = ppstream -> hol_type -> unit
 type pp_thm   = ppstream -> thm -> unit
 type num = Arbnum.num
@@ -844,11 +845,11 @@ end (* struct *)
  *---------------------------------------------------------------------------*)
 
 fun theory_out f ostrm =
- let val ppstrm = Portable.mk_ppstream
+ let val ppstrm = OldPP.mk_ppstream
                     {consumer = Portable.outputc ostrm,
                      linewidth=75, flush = fn () => Portable.flush_out ostrm}
  in f ppstrm handle e => (Portable.close_out ostrm; raise e);
-    Portable.flush_ppstream ppstrm;
+    OldPP.flush_ppstream ppstrm;
     Portable.close_out ostrm
  end;
 

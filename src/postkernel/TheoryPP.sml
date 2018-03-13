@@ -12,6 +12,7 @@ type term     = Term.term
 type hol_type = Type.hol_type
 
 open Feedback Lib Portable Dep;
+open OldPP
 
 val ERR = mk_HOL_ERR "TheoryPP";
 
@@ -218,17 +219,17 @@ end
 infix >>
 fun (f1 >> f2) pps = (f1 pps ; f2 pps)
 
-fun block state brkdepth f pps = (HOLPP.begin_block pps state brkdepth ;
+fun block state brkdepth f pps = (OldPP.begin_block pps state brkdepth ;
                                   f pps;
-                                  HOLPP.end_block pps)
-fun add_string s pps = HOLPP.add_string pps s
-val add_newline = HOLPP.add_newline
-fun add_break ipr pps = HOLPP.add_break pps ipr
+                                  OldPP.end_block pps)
+fun add_string s pps = OldPP.add_string pps s
+val add_newline = OldPP.add_newline
+fun add_break ipr pps = OldPP.add_break pps ipr
 fun pr_list f g h obs pps = Portable.pr_list (fn x => f x pps)
                                              (fn () => g pps)
                                              (fn () => h pps)
                                              obs
-val flush = HOLPP.flush_ppstream
+val flush = OldPP.flush_ppstream
 fun nothing pps = ()
 
 fun pp_struct info_record = let

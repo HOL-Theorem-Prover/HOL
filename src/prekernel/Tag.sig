@@ -13,7 +13,7 @@ sig
      val read       : string -> tag
      val merge      : tag -> tag -> tag
      val read_disk_tag : Dep.depdisk * string list -> tag
-     val pp_tag     : Portable.ppstream -> tag -> unit
-     val pp_to_disk : Portable.ppstream -> tag -> unit
+     val pp_tag     : int -> 'a -> tag -> HOLPP.pretty
+     val pp_to_disk : OldPP.ppstream -> tag -> unit
 
 end

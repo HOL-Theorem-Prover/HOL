@@ -4,7 +4,7 @@ struct
 open Term Type
 
 structure Map = Binarymap
-structure PP = HOLPP
+structure PP = OldPP
 
 
 (* ----------------------------------------------------------------------

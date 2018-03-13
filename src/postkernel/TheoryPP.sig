@@ -9,7 +9,7 @@ signature TheoryPP =
 sig
  type thm = Thm.thm
  type hol_type = Type.hol_type
- type ppstream = Portable.ppstream
+ type ppstream = OldPP.ppstream
 
  val pp_type : string -> string -> ppstream -> hol_type -> unit
 
