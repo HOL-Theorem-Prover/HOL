@@ -2486,6 +2486,8 @@ paths, and finite strings.
 \index{types, in HOL logic@types, in \HOL{} logic!tools for construction of}
 \index{lists, the HOL theory of@lists, the \HOL{} theory of|(}
 \index{ lists, the HOL theory of@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, the \HOL{} theory of)|(}
+>>__ open listTheory
+>>__ show_numeral_types := false
 
 \HOL{} lists are inductively defined finite sequences where each
 element in a list has the same type. The theory \ml{list} introduces
@@ -2952,9 +2954,7 @@ As mentioned earlier, lists can be indexed with the constant \holtxt{EL}, viewin
 The definition is given by primitive recursion over the index argument, in theorem \ml{EL}:
 \begin{hol}
 \begin{alltt}
-   EL
-     |- (\(\forall\)l. EL 0 l = HD l) \(\land\)
-        (\(\forall\)l n. EL (SUC n) l = EL n (TL l))
+   ##thm EL
 \end{alltt}
 \end{hol}
 Because of the use of \holtxt{HD} and \holtxt{TL}, the value of $\holtxt{EL}\;n\;\ell$ is unspecified when $n \geq \holtxt{LENGTH}\;\ell$.
@@ -2963,10 +2963,8 @@ Subsequently, many theorems involving \holtxt{EL} have preconditions to preclude
 For example, these theorems describing the relationship between \holtxt{EL}, \holtxt{MAP} and \holtxt{MEM}:
 \begin{hol}
 \begin{alltt}
-   EL_MAP
-     |- \(\forall\)n l. n < LENGTH l \(\Rightarrow\) \(\forall\)f. EL n (MAP f l) = f (EL n l)
-   MEM_EL
-     |- \(\forall\)l x. MEM x l \(\iff\) \(\exists\)n. n < LENGTH l \(\land\) (x = EL n l)
+   ##thm EL_MAP
+   ##thm MEM_EL
 \end{alltt}
 \end{hol}
 
@@ -2987,10 +2985,7 @@ The definition implies that attempting to update a list at an index beyond the e
 The basic characterisation of the link between \holtxt{EL} and \holtxt{LUPDATE} is
 \begin{hol}
 \begin{alltt}
-   EL_LUPDATE
-     |- \(\forall\)ys x i k.
-          EL i (LUPDATE x k ys) =
-          if (i = k) \(\land\) k < LENGTH ys then x else EL i ys
+   ##thm EL_LUPDATE
 \end{alltt}
 \end{hol}
 
@@ -2998,6 +2993,7 @@ The basic characterisation of the link between \holtxt{EL} and \holtxt{LUPDATE} 
 Some of these constants are:
 \begin{hol}
 \begin{verbatim}
+   >>__ open indexedListsTheory
    delN      : num -> 'a list -> 'a list
    findi     : 'a -> 'a list -> num
    LIST_RELi : (num -> 'a -> 'b -> bool) -> 'a list -> 'b list -> bool
@@ -3047,8 +3043,7 @@ If this term were applied to the list \verb![a;c;d]! the resulting value would b
 An example theorem about \holtxt{MAPi} relates it to \holtxt{MEM}:
 \begin{hol}
 \begin{alltt}
-   MEM_MAPi
-     |- \(\forall\)x f l. MEM x (MAPi f l) \(\iff\) \(\exists\)n. n < LENGTH l \(\land\) (x = f n (EL n l))
+   ##thm MEM_MAPi
 \end{alltt}
 \end{hol}
 
