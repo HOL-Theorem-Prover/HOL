@@ -940,7 +940,7 @@ val add_numeral_form = mk_perm add_numeral_form0
 
 (* to print a term using current grammars,
   but with "non-trivial" overloads deleted *)
-fun print_without_macros tm = 
+fun print_without_macros tm =
   let val (tyG, tmG) = current_grammars () ;
   in print_term_by_grammar (tyG, term_grammar.clear_overloads tmG) tm end ;
 
