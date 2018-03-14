@@ -145,6 +145,8 @@ sig
   type instream  = TextIO.instream
   type outstream = TextIO.outstream
 
+  datatype frag = datatype HOLPP.frag
+  datatype break_style = datatype HOLPP.break_style
   val with_ppstream : OldPP.ppstream
                        -> {add_break      : int * int -> unit,
                            add_newline    : unit -> unit,

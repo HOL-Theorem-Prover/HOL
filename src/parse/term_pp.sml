@@ -90,7 +90,7 @@ fun prettyprint_cases_name () = if !prettyprint_cases_dt then "dtcase" else "cas
       (+) 3
     The parser accepts either form.
    ---------------------------------------------------------------------- *)
-open smpp term_pp_types term_pp_utils
+open HOLPP smpp term_pp_types term_pp_utils
 
 val dollar_escape = ref true
 
@@ -116,8 +116,7 @@ val _ = Feedback.register_btrace ("pp_dollar_escapes", dollar_escape);
 open smpp term_pp_types term_pp_utils
 infix || |||
 
-val start_info = {seen_frees = empty_tmset, current_bvars = empty_tmset,
-                  last_string = " ", in_gspec = false}
+val start_info = dflt_pinfo
 
 fun getlaststring x =
     (fupdate (fn x => x) >-
@@ -425,11 +424,15 @@ end handle HOL_ERR _ => false
 fun is_constish tm = is_const tm orelse is_fakeconst tm
 
 fun pp_term (G : grammar) TyG backend = let
-  val G = #tm_grammar_upd backend G
-  val TyG = #ty_grammar_upd backend TyG
-  fun block x = backend_block backend x
+  val G = #tm_grammar_upd (#extras backend) G
+  val TyG = #ty_grammar_upd (#extras backend) TyG
+  val block = smpp.block
   fun tystr ty =
-      PP.pp_to_string 10000 (type_pp.pp_type TyG PPBackEnd.raw_terminal) ty
+      PP.pp_to_string 10000
+        (fn ty =>
+            lower (type_pp.pp_type TyG PPBackEnd.raw_terminal ty) dflt_pinfo
+              |> valOf |> #1)
+        ty
   val {restr_binders,lambda,endbinding,type_intro,res_quanop} = specials G
   val overload_info = overload_info G
   val spec_table =
@@ -628,9 +631,7 @@ fun pp_term (G : grammar) TyG backend = let
     fun sizedbreak n = add_break(n, 0)
 
     fun doTy ty =
-        liftpp (fn pps =>
-                   type_pp.pp_type_with_depth TyG backend pps (decdepth depth)
-                   ty)
+        type_pp.pp_type_with_depth TyG backend (decdepth depth) ty
 
     (* Prints "elements" from a concrete syntax rule.
 
@@ -1221,11 +1222,8 @@ fun pp_term (G : grammar) TyG backend = let
              full_pr_term binderp showtypes showtypes_v ppfns RandCP t2
                           prec prec rprec (decdepth depth) >>
              (if comb_show_type then
-                (add_string (" "^type_intro) >> add_break (0,0) >>
-                 liftpp (fn pps =>
-                            type_pp.pp_type_with_depth TyG backend pps
-                                                       (decdepth depth)
-                                                       (type_of tm)))
+                add_string (" "^type_intro) >> add_break (0,0) >>
+                doTy (type_of tm)
               else nothing)) >>
       pend (addparens orelse comb_show_type)
     end
@@ -1421,9 +1419,7 @@ fun pp_term (G : grammar) TyG backend = let
             (add_string "(ty_antiq(" >>
              add_break(0,0) >>
              add_string "`:" >>
-             liftpp (fn pps =>
-                        type_pp.pp_type_with_depth TyG backend pps
-                                                   (decdepth depth) ty) >>
+             doTy ty >>
              add_string "`))")
     end
 
@@ -1851,31 +1847,27 @@ fun pp_term (G : grammar) TyG backend = let
   val avoid_merge = avoid_symbolmerge G
   open PPBackEnd
 in
-  fn pps => fn t =>
+  fn t =>
     let
-      val baseppfns = smpp.from_backend backend
       val {add_string,add_break,ublock,add_xstring,add_newline,ustyle,...} =
-          baseppfns
+          backend
       val (add_string, add_xstring, add_break) =
           avoid_merge (add_string, add_xstring, add_break)
       val ppfns = {add_string = add_string,
                    add_xstring = add_xstring,
                    add_break = add_break,
                    add_newline = add_newline,
-                   ublock = block,
-                   ustyle = ustyle}
+                   ublock = ublock,
+                   ustyle = ustyle,
+                   extras = ()}
     in
-       begin_block pps CONSISTENT 0;
-       case pr_term false
-                    (!Globals.show_types orelse !Globals.show_types_verbosely)
-                    (!Globals.show_types_verbosely)
-                    ppfns NoCP t RealTop RealTop RealTop
-                    (!Globals.max_print_depth)
-                    (start_info,pps)
-        of
-         NONE => HOL_WARNING "term_pp" "pp_term" "Monadic printer returned NONE"
-       | SOME _ => ();
-       end_block pps
+       ublock CONSISTENT 0 (
+         pr_term false
+                 (!Globals.show_types orelse !Globals.show_types_verbosely)
+                 (!Globals.show_types_verbosely)
+                 ppfns NoCP t RealTop RealTop RealTop
+                 (!Globals.max_print_depth)
+       )
     end
 end
 
