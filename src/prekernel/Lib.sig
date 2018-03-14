@@ -111,6 +111,7 @@ sig
    val partial : exn -> ('a -> 'b option) -> 'a -> 'b
    val partition : ('a -> bool) -> 'a list -> 'a list * 'a list
    val pluck : ('a -> bool) -> 'a list -> 'a * 'a list
+   val ppstring : ('a -> HOLPP.pretty) -> 'a -> string
    val prime : string -> string
    val quadruple : 'a -> 'b -> 'c -> 'd -> 'a * 'b * 'c * 'd
    val quadruple_of_list : 'a list -> 'a * 'a * 'a * 'a

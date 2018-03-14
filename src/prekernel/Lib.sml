@@ -319,6 +319,8 @@ fun unprefix pfx s =
       then String.extract (s, size pfx, NONE)
    else raise ERR "unprefix" "1st argument is not a prefix of 2nd argument"
 
+fun ppstring pf x = HOLPP.pp_to_string (!Globals.linewidth) pf x
+
 (*---------------------------------------------------------------------------*
  * Timing                                                                    *
  *---------------------------------------------------------------------------*)

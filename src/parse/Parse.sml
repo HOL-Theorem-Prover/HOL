@@ -90,6 +90,13 @@ val current_backend : PPBackEnd.t ref =
 fun rawterm_pp f x =
     Lib.with_flag(current_backend, PPBackEnd.raw_terminal) f x
 
+fun mlower m =
+  case smpp.lower m term_pp_utils.dflt_pinfo of
+      NONE => raise Fail "p/printer returned NONE!"
+    | SOME(p, _, _) => p
+
+fun ulower fm x = mlower (fm x)
+
 (*---------------------------------------------------------------------------
          local grammars
  ---------------------------------------------------------------------------*)
@@ -154,49 +161,45 @@ fun update_type_fns () =
   end
   else ()
 
-fun pp_type pps ty = let in
-   update_type_fns();
-   Portable.add_string pps ":";
-   !type_printer (!current_backend) pps ty
- end
+val dflt_pinfo = term_pp_utils.dflt_pinfo
 
+fun pp_type ty =
+  let
+    open smpp
+    val mptr = smpp.add_string ":" >> !type_printer (!current_backend) ty
+  in
+   update_type_fns();
+   lower mptr dflt_pinfo |> valOf |> #1
+ end
 
 val type_to_string = rawterm_pp (ppstring pp_type)
 val print_type = print o type_to_string
 
-fun type_pp_with_delimiters ppfn pp ty =
-  let open Portable Globals
-  in add_string pp (!type_pp_prefix);
-     ppfn pp ty;
-     add_string pp (!type_pp_suffix)
+fun type_pp_with_delimiters ppfn ty =
+  let
+    open Portable Globals smpp
+  in
+    add_string (!type_pp_prefix) >>
+    ppfn ty >>
+    add_string (!type_pp_suffix)
   end
 
-
-fun pp_with_bquotes ppfn pp x =
-  let open Portable in add_string pp "`"; ppfn pp x; add_string pp "`" end
+fun pp_with_bquotes ppfn x =
+  let open Portable smpp
+  in
+    add_string "`" >> ppfn x >> add_string "`"
+  end
 
 fun print_from_grammars (tyG, tmG) =
   (type_pp.pp_type tyG (!current_backend),
    term_pp.pp_term tmG tyG (!current_backend))
 
-local open TextIO in
-val print_pp = {consumer = (fn s => output(stdOut, s)),
-                linewidth = !Globals.linewidth,
-                flush = (fn () => flushOut stdOut)}
-end
-
-fun print_with_newline add_t = let
-  open PP
-  fun p pps = (begin_block pps CONSISTENT 0 ;
-               add_t pps ;
-               add_newline pps ;
-               end_block pps)
-in with_pp print_pp p end
-
-fun print_term_by_grammar Gs = let
-  val (_, termprinter) = print_from_grammars Gs
-in
-  print_with_newline o (Lib.C termprinter)
+fun print_term_by_grammar Gs t =
+  let
+    val (_, termprinter) = print_from_grammars Gs
+  in
+    print (ppstring (ulower termprinter) t) ;
+    print "\n"
 end
 
 val min_grammars = (type_grammar.min_grammar, term_grammar.min_grammar)
@@ -217,12 +220,12 @@ fun minprint t = let
         with_flag (current_backend, PPBackEnd.raw_terminal)
                   print_from_grammars
                   min_grammars
-    fun printer pps =
-        baseprinter pps
-                    |> trace ("types", 1) |> trace ("Greek tyvars", 0)
-                    |> with_flag (max_print_depth, ~1)
+    val printer =
+        baseprinter
+          |> trace ("types", 1) |> trace ("Greek tyvars", 0)
+          |> with_flag (max_print_depth, ~1)
     val t_str =
-        String.toString (PP.pp_to_string 1000000 printer t)
+        String.toString (PP.pp_to_string 1000000 (ulower printer) t)
   in
     String.concat ["(#2 (parse_from_grammars min_grammars)",
                    "[QUOTE \"", t_str, "\"])"]
@@ -303,52 +306,20 @@ in
   !the_absyn_parser q
 end
 
-(* ----------------------------------------------------------------------
-      Interlude: ppstream modifications to allow pretty-printers to
-                 respect dynamically changing line-widths
-   ---------------------------------------------------------------------- *)
-
-fun respect_width_ref iref pprinter pps x = let
-  val slist = ref ([] : string list)
-  fun output_slist () =
-    (app (PP.add_string pps) (List.rev (!slist));
-     slist := [])
-  fun flush () = output_slist()
-  fun consume_string s = let
-    open Substring
-    val (pfx, sfx) = splitl (fn c => c <> #"\n") (full s)
-  in
-    if size sfx = 0 then slist := s :: !slist
-    else
-      (output_slist();
-       PP.add_newline pps;
-       if size sfx > 1 then consume_string (string (triml 1 sfx))
-       else ())
-  end
-  val consumer = {consumer = consume_string, linewidth = !iref, flush = flush}
-  val newpps = PP.mk_ppstream consumer
-in
-  PP.begin_block pps PP.INCONSISTENT 0;
-  PP.begin_block newpps PP.INCONSISTENT 0;
-  pprinter newpps x;
-  PP.end_block newpps;
-  PP.flush_ppstream newpps;
-  PP.end_block pps
-end
-
 (* Pretty-print the grammar rules *)
 fun print_term_grammar() = let
   fun tmprint g = snd (print_from_grammars (!the_type_grammar,g))
-  fun ppaction pps () = let
-    open PP
+  fun ppg g = let
+    open smpp
   in
-    begin_block pps CONSISTENT 0;
-    prettyprint_grammar_rules tmprint pps (ruleset (!the_term_grammar));
-    add_newline pps;
-    end_block pps
+    block PP.CONSISTENT 0 (
+      prettyprint_grammar_rules tmprint (ruleset g) >>
+      add_newline
+    )
   end
 in
-  print (HOLPP.pp_to_string (!Globals.linewidth) ppaction ())
+  HOLPP.prettyPrint (TextIO.print, !Globals.linewidth)
+                    (ulower ppg (!the_term_grammar))
 end
 
 
@@ -359,25 +330,23 @@ fun overload_info_for s = let
                         (Overload.remove_overloaded_form s)
                         (!the_term_grammar)
   val (_,ppfn0) = print_from_grammars (!the_type_grammar,g)
-  fun ppfn t pps = Feedback.trace ("types", 1) (ppfn0 pps) t
+  val ppfn = ppfn0 |> Feedback.trace ("types", 1)
   val ppaction = let
     open smpp
   in
     block PP.CONSISTENT 0
      (add_string (s ^ " parses to:") >>
       add_break(1,2) >>
-      block PP.INCONSISTENT 0
-        (pr_list (fn t => liftpp (ppfn t)) add_newline ls1) >>
+      block PP.INCONSISTENT 0 (pr_list ppfn add_newline ls1) >>
       add_newline >>
       add_string (s ^ " might be printed from:") >>
       add_break(1,2) >>
-      block PP.INCONSISTENT 0
-        (pr_list (fn t => liftpp (ppfn t)) add_newline ls2) >>
+      block PP.INCONSISTENT 0 (pr_list ppfn add_newline ls2) >>
       add_newline)
   end
   fun act_topp pps a = ignore (a ((), pps))
 in
-  print (HOLPP.pp_to_string (!Globals.linewidth) act_topp ppaction)
+  HOLPP.prettyPrint (TextIO.print, !Globals.linewidth) (mlower ppaction)
 end
 
 fun pp_term_without_overloads_on ls t = let
@@ -404,21 +373,19 @@ end
     Top-level pretty-printing entry-points
    ---------------------------------------------------------------------- *)
 
-fun pp_style_string ppstrm (st, s) =
+fun pp_style_string (st, s) =
  let open Portable PPBackEnd
-    val {add_string,begin_style,end_style,...} =
-        PPBackEnd.with_ppstream (!current_backend) ppstrm
+    val {add_string,ustyle,...} = (!current_backend)
+    val m = ustyle st (add_string s)
  in
-    begin_style st;
-    add_string s;
-    end_style ()
+   mlower m
  end
 
 fun add_style_to_string st s = ppstring pp_style_string (st, s);
-fun print_with_style st =  print o add_style_to_string st
+fun print_with_style st s =
+  HOLPP.prettyPrint (TextIO.print, !Globals.linewidth) (pp_style_string (st,s))
 
-
-fun pp_term pps t = (update_term_fns(); !term_printer pps t)
+fun pp_term t = (update_term_fns(); mlower (!term_printer t))
 
 val term_to_string = rawterm_pp (ppstring pp_term)
 val print_term = print o term_to_string
