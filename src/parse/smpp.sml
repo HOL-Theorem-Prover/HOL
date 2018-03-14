@@ -5,20 +5,20 @@ type ('a,'b) t = ('a,'b) term_pp_types.smppt
 
 open HOLPP
 
-fun add_string s (st,ps) = SOME ((), (st, PrettyString s :: ps))
-fun add_break x (st,ps) = SOME ((), (st, PrettyBreak x :: ps))
-(* value restriction forces eta-expansion; ugh *)
-fun add_newline x = add_break(10000, 0) x
-fun nothing stps = SOME ((),st)
+fun consP p (st,ps) = SOME ((), (st, p::ps))
+fun add_string s = consP (PP.add_string s)
+fun add_break b = consP (PP.add_break b)
+fun add_newline x = consP PP.NL x
+fun nothing stps = SOME ((),stps)
 fun fail aps = NONE
 
 fun op>>(p1, p2) stps =
-  case p1 st of
+  case p1 stps of
       SOME (_, stps1) => p2 stps1
     | NONE => NONE
 
-fun op>- (p1, fp2) (a,ps) =
-  case p1 (a,ps) of
+fun op>- (p1, fp2) aps =
+  case p1 aps of
       SOME (b, stps1) => fp2 b stps1
     | NONE => NONE
 
@@ -60,5 +60,13 @@ fun mappr_list fpp brk list =
       in
         fpp b >- afterb
       end
+
+fun lift pf x (st,pps) = SOME ((), (st, pf x :: pps))
+fun lower m st0 =
+  let
+    fun mapthis (a, (st,ps)) = (PP.block CONSISTENT 0 (List.rev ps), a, st)
+  in
+    Option.map mapthis (m (st0, []))
+  end
 
 end (* struct *)

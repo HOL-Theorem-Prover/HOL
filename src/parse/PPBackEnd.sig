@@ -2,7 +2,6 @@ signature PPBackEnd =
 sig
 
   type hol_type = Type.hol_type
-  type ppstream = PP.ppstream
   type break_style = PP.break_style
 
   datatype lit_type = datatype term_pp_types.lit_type

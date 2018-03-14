@@ -6,7 +6,6 @@ sig
   val add_string : string -> ('a,unit) t
   val add_newline : ('a,unit) t
   val add_break : int * int -> ('a,unit) t
-  val flush : ('a,unit) t
   val nothing : ('a,unit) t
   val fail : ('a,unit) t
   val >> : ('a,'b) t * ('a,'c) t -> ('a,'c) t
@@ -19,7 +18,10 @@ sig
   val block : HOLPP.break_style -> int -> ('a,'b) t -> ('a,'b) t
   val pr_list : ('b -> ('a,unit)t) -> ('a,unit) t -> 'b list -> ('a,unit)t
   val mappr_list : ('b -> ('a,'c)t) -> ('a,unit) t -> 'b list -> ('a,'c list) t
+  val lift : ('a -> HOLPP.pretty) -> 'a -> ('st,unit) t
+  val lower : ('st,'a) t -> 'st -> (HOLPP.pretty * 'a * 'st) option
 
+(*
   val from_backend :
       PPBackEnd.t ->
       {add_string : string -> ('a,unit) t,
@@ -34,5 +36,5 @@ sig
                       ('a,'b) t -> ('a,'b) t
   val backend_style : PPBackEnd.t -> PPBackEnd.pp_style list ->
                       ('a,'b) t -> ('a,'b) t
-
+*)
 end
