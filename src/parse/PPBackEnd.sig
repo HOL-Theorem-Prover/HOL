@@ -2,7 +2,6 @@ signature PPBackEnd =
 sig
 
   type hol_type = Type.hol_type
-  type break_style = PP.break_style
 
   datatype lit_type = datatype term_pp_types.lit_type
   datatype pp_color = datatype term_pp_types.pp_color
@@ -26,7 +25,6 @@ sig
 
   val ansi_terminal         : string -> output_colors -> t
   val raw_terminal          : t
-  val debug_blocks_terminal : t
   val vt100_terminal        : t
   val emacs_terminal        : t
   val html_terminal         : t

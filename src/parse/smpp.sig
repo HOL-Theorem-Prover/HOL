@@ -4,6 +4,7 @@ sig
   type ('a,'b) t = ('a,'b) term_pp_types.smppt
 
   val add_string : string -> ('a,unit) t
+  val add_stringsz : string * int -> ('a,unit) t
   val add_newline : ('a,unit) t
   val add_break : int * int -> ('a,unit) t
   val nothing : ('a,unit) t

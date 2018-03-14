@@ -8,6 +8,7 @@ open HOLPP
 fun consP p (st,ps) = SOME ((), (st, p::ps))
 fun add_string s = consP (PP.add_string s)
 fun add_break b = consP (PP.add_break b)
+fun add_stringsz p = consP (PP.PrettyStringWithWidth p)
 fun add_newline x = consP PP.NL x
 fun nothing stps = SOME ((),stps)
 fun fail aps = NONE
