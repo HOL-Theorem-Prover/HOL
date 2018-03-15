@@ -7,29 +7,26 @@ open HolKernel Parse boolLib proofManagerLib
 (* Install pretty-printers *)
 
 local
-  fun pp2polypp (ppfn: PP.ppstream -> 'b -> unit) =
+  fun pp2polypp (ppfn: 'b -> HOLPP.pretty) =
     let
-      fun f pps x = Parse.respect_width_ref Globals.linewidth ppfn pps x
-                    handle e => Raise e
     in
-      fn depth => fn printArgTypes => fn e: 'b =>
-        PolyML.PrettyString (PP.pp_to_string (!Globals.linewidth) f e)
+      fn depth => fn printArgTypes => fn e: 'b => ppfn e
     end
-  fun gprint g pps t =
+  fun gprint g =
     let
       val tyg = Parse.type_grammar ()
       val (_, ppt) = Parse.print_from_grammars (tyg, g)
     in
-      ppt pps t
+      smpp.lift ppt
     end
-  val ppg = term_grammar.prettyprint_grammar gprint
-  val ppgrules = term_grammar.prettyprint_grammar_rules gprint
-  fun locpp pps l = PP.add_string pps (locn.toShortString l)
-  fun pp_redblackmap pps (d: ('a,'b) Redblackmap.dict) =
-    PP.add_string pps
+  val ppg = Parse.mlower o term_grammar.prettyprint_grammar gprint
+  val ppgrules = Parse.mlower o term_grammar.prettyprint_grammar_rules gprint
+  fun locpp l = PP.add_string (locn.toShortString l)
+  fun pp_redblackmap (d: ('a,'b) Redblackmap.dict) =
+    PP.add_string
       ("<Redblackmap(" ^ Int.toString (Redblackmap.numItems d) ^ ")>")
-  fun pp_redblackset pps (s: 'a Redblackset.set) =
-    PP.add_string pps
+  fun pp_redblackset (s: 'a Redblackset.set) =
+    PP.add_string
       ("<Redblackset(" ^ Int.toString (Redblackset.numItems s) ^ ")>")
 in
   val () =
@@ -41,7 +38,7 @@ in
       in
         PolyML.addPrettyPrinter pp_typebase
       ; PolyML.addPrettyPrinter pp_seq
-      ; PolyML.addPrettyPrinter (pp2polypp HOLset.pp_holset)
+      ; PolyML.addPrettyPrinter HOLset.pp_holset
       end
     else
       let
