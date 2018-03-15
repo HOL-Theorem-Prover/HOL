@@ -189,7 +189,7 @@ in
     sig_ps = NONE,
     struct_ps = SOME
       (fn pps =>
-          PP.add_string pps
+          OldPP.add_string pps
                  ("val _ = ThmSetData.new_exporter "^Lib.mlquote s^
                   " (fn _ => fn _ => ())\n"))
   }

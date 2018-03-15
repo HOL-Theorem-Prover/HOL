@@ -10,6 +10,7 @@ type ParenStyle = term_grammar.ParenStyle
 type block_info = term_grammar.block_info
 type associativity = HOLgrammars.associativity
 type 'a frag = 'a Portable.frag
+type 'a pprinter = 'a -> HOLPP.pretty
 
 val ERROR = mk_HOL_ERR "Parse";
 val ERRORloc = mk_HOL_ERRloc "Parse";
@@ -139,14 +140,16 @@ fun pp_grammar_term pps t = (!grammar_term_printer) (!current_backend) pps t
 
 val term_printer = ref pp_grammar_term
 
-fun get_term_printer () = (!term_printer)
+fun get_term_printer () = ulower (!term_printer)
 
-fun set_term_printer new_pp_term = let
-  val old_pp_term = !term_printer
-in
-  term_printer := new_pp_term;
-  old_pp_term
-end
+fun set_term_printer new_pp_term =
+  let
+    open smpp
+    val old_pp_term = !term_printer
+  in
+    term_printer := lift new_pp_term;
+    ulower old_pp_term
+  end
 
 
 
@@ -179,26 +182,25 @@ fun type_pp_with_delimiters ppfn ty =
   let
     open Portable Globals smpp
   in
-    add_string (!type_pp_prefix) >>
-    ppfn ty >>
-    add_string (!type_pp_suffix)
-  end
-
-fun pp_with_bquotes ppfn x =
-  let open Portable smpp
-  in
-    add_string "`" >> ppfn x >> add_string "`"
+    mlower (
+      add_string (!type_pp_prefix) >>
+      lift ppfn ty >>
+      add_string (!type_pp_suffix)
+    )
   end
 
 fun print_from_grammars (tyG, tmG) =
-  (type_pp.pp_type tyG (!current_backend),
-   term_pp.pp_term tmG tyG (!current_backend))
+  (ulower (type_pp.pp_type tyG (!current_backend)),
+   ulower (term_pp.pp_term tmG tyG (!current_backend)))
+
+fun stdprint x =
+  HOLPP.prettyPrint (TextIO.print, !Globals.linewidth) x
 
 fun print_term_by_grammar Gs t =
   let
     val (_, termprinter) = print_from_grammars Gs
   in
-    print (ppstring (ulower termprinter) t) ;
+    stdprint (termprinter t) ;
     print "\n"
 end
 
@@ -225,7 +227,7 @@ fun minprint t = let
           |> trace ("types", 1) |> trace ("Greek tyvars", 0)
           |> with_flag (max_print_depth, ~1)
     val t_str =
-        String.toString (PP.pp_to_string 1000000 (ulower printer) t)
+        String.toString (PP.pp_to_string 1000000 printer t)
   in
     String.concat ["(#2 (parse_from_grammars min_grammars)",
                    "[QUOTE \"", t_str, "\"])"]
@@ -313,13 +315,12 @@ fun print_term_grammar() = let
     open smpp
   in
     block PP.CONSISTENT 0 (
-      prettyprint_grammar_rules tmprint (ruleset g) >>
+      prettyprint_grammar_rules (lift o tmprint) (ruleset g) >>
       add_newline
     )
   end
 in
-  HOLPP.prettyPrint (TextIO.print, !Globals.linewidth)
-                    (ulower ppg (!the_term_grammar))
+  stdprint (ulower ppg (!the_term_grammar))
 end
 
 
@@ -337,16 +338,16 @@ fun overload_info_for s = let
     block PP.CONSISTENT 0
      (add_string (s ^ " parses to:") >>
       add_break(1,2) >>
-      block PP.INCONSISTENT 0 (pr_list ppfn add_newline ls1) >>
+      block PP.INCONSISTENT 0 (pr_list (lift ppfn) add_newline ls1) >>
       add_newline >>
       add_string (s ^ " might be printed from:") >>
       add_break(1,2) >>
-      block PP.INCONSISTENT 0 (pr_list ppfn add_newline ls2) >>
+      block PP.INCONSISTENT 0 (pr_list (lift ppfn) add_newline ls2) >>
       add_newline)
   end
   fun act_topp pps a = ignore (a ((), pps))
 in
-  HOLPP.prettyPrint (TextIO.print, !Globals.linewidth) (mlower ppaction)
+  stdprint (mlower ppaction)
 end
 
 fun pp_term_without_overloads_on ls t = let
@@ -382,49 +383,56 @@ fun pp_style_string (st, s) =
  end
 
 fun add_style_to_string st s = ppstring pp_style_string (st, s);
-fun print_with_style st s =
-  HOLPP.prettyPrint (TextIO.print, !Globals.linewidth) (pp_style_string (st,s))
+fun print_with_style st s = stdprint (pp_style_string (st,s))
 
 fun pp_term t = (update_term_fns(); mlower (!term_printer t))
 
 val term_to_string = rawterm_pp (ppstring pp_term)
-val print_term = print o term_to_string
+fun print_term t = stdprint (rawterm_pp pp_term t)
 
-fun term_pp_with_delimiters ppfn pp tm =
-  let open Portable Globals
-  in add_string pp (!term_pp_prefix);
-     ppfn pp tm;
-     add_string pp (!term_pp_suffix)
+fun term_pp_with_delimiters ppfn tm =
+  let
+    open Portable Globals smpp
+  in
+    mlower (
+      add_string (!term_pp_prefix) >>
+      lift ppfn tm >>
+      add_string (!term_pp_suffix)
+    )
   end
 
-fun pp_thm ppstrm th =
- let open Portable
-    fun repl ch alist =
-         String.implode (itlist (fn _ => fn chs => (ch::chs)) alist [])
-    val {add_string,add_break,begin_block,end_block,...} = with_ppstream ppstrm
-    val pp_term = pp_term ppstrm
+fun pp_thm th =
+  let
+    open Portable smpp
+    fun repl ch alist = CharVector.tabulate (length alist, fn _ => ch)
     fun pp_terms b L =
-      (begin_block INCONSISTENT 1; add_string "[";
-       if b then pr_list pp_term (fn () => add_string ",")
-                                 (fn () => add_break(1,0)) L
-       else add_string (repl #"." L); add_string "]";
-       end_block())
- in
-    begin_block INCONSISTENT 0;
-    if !Globals.max_print_depth = 0 then add_string " ... "
-    else let open Globals
-             val (tg,asl,st,sa) = (tag th, hyp th, !show_tags, !show_assums)
-         in if not st andalso not sa andalso null asl then ()
-            else (if st then Tag.pp_tag ppstrm tg else ();
-                  add_break(1,0);
-                  pp_terms sa asl; add_break(1,0)
-                 );
-            add_string (!Globals.thm_pp_prefix);
-            pp_term (concl th);
-            add_string (!Globals.thm_pp_suffix)
-         end;
-    end_block()
- end;
+      block INCONSISTENT 1 (
+        add_string "[" >>
+        (if b then pr_list (!term_printer) (add_string "," >> add_break(1,0)) L
+         else add_string (repl #"." L)) >>
+        add_string "]"
+      )
+    val m =
+        block INCONSISTENT 0 (
+          if !Globals.max_print_depth = 0 then add_string " ... "
+          else
+            let
+              open Globals
+              val (tg,asl,st,sa) = (tag th, hyp th, !show_tags, !show_assums)
+            in
+              (if not st andalso not sa andalso null asl then nothing
+               else if st then lift Tag.pp_tag tg else nothing) >>
+              add_break(1,0) >>
+              pp_terms sa asl >>
+              add_break(1,0) >>
+              add_string (!Globals.thm_pp_prefix) >>
+              (!term_printer) (concl th) >>
+              add_string (!Globals.thm_pp_suffix)
+            end
+        )
+  in
+    mlower m
+  end;
 
 val thm_to_string = rawterm_pp (ppstring pp_thm)
 val print_thm = print o thm_to_string
@@ -1133,6 +1141,7 @@ local fun sig_addn s = String.concat
       open Portable
 in
 fun setup_grammars (oldname, thyname) = let
+  open OldPP
 in
   if not (null (!grm_updates)) andalso thyname <> oldname then
     HOL_WARNING "Parse" "setup_grammars"
@@ -1143,7 +1152,7 @@ in
   else ();
   grm_updates := [];
   adjoin_to_theory
-  {sig_ps = SOME (fn pps => Portable.add_string pps (sig_addn thyname)),
+  {sig_ps = SOME (fn pps => OldPP.add_string pps (sig_addn thyname)),
    struct_ps = SOME (fn ppstrm =>
      let val {add_string,add_break,begin_block,end_block,add_newline,...}
               = with_ppstream ppstrm
@@ -1213,11 +1222,12 @@ in
 end
 
 val _ = let
-  fun rawpp_thm pps =
-      pp_thm pps |> Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
-                 |> trace ("paranoid string literal printing", 1)
+  val rawpp_thm =
+      ppstring pp_thm
+               |> Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
+               |> trace ("paranoid string literal printing", 1)
 in
-  Theory.pp_thm := rawpp_thm
+  Theory.pp_thm := (fn pps => fn th => OldPP.add_string pps (rawpp_thm th))
 end
 
 val _ = Theory.register_hook
@@ -1287,7 +1297,7 @@ val TOK = term_grammar.RE o term_grammar.TOK
    ---------------------------------------------------------------------- *)
 
     val _ = initialise_typrinter
-            (fn G => type_pp.pp_type G PPBackEnd.raw_terminal)
+              (fn G => ulower (type_pp.pp_type G PPBackEnd.raw_terminal))
     val _ = let
       open TheoryDelta
       fun tempchk f nm = if Theory.is_temp_binding nm then ()

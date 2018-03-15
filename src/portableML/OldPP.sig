@@ -39,6 +39,14 @@ val catch_withpp_err : bool ref
 val pr_list : ('a -> unit) -> (unit -> 'b) -> (unit -> 'c) -> 'a list ->
               unit
 
+val with_ppstream : ppstream ->
+                    {add_break      : int * int -> unit,
+                     add_newline    : unit -> unit,
+                     add_string     : string -> unit,
+                     begin_block    : HOLPP.break_style -> int -> unit,
+                     clear_ppstream : unit -> unit,
+                     end_block      : unit -> unit,
+                     flush_ppstream : unit -> unit}
 
 (*
    This structure provides tools for creating customized Oppen-style

@@ -660,4 +660,13 @@ fun pr_list pfun dfun bfun =
       pr
    end
 
+fun with_ppstream ppstrm =
+    {add_string     = add_string ppstrm,
+     add_break      = add_break ppstrm,
+     begin_block    = begin_block ppstrm,
+     end_block      = fn () => end_block ppstrm,
+     add_newline    = fn () => add_newline ppstrm,
+     clear_ppstream = fn () => clear_ppstream ppstrm,
+     flush_ppstream = fn () => flush_ppstream ppstrm}
+
 end; (* struct *)

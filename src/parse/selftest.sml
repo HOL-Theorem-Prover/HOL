@@ -32,6 +32,7 @@ val color_list =
 
 fun test_terminal test_bg (terminal:t) =
 let
+  open OldPP
    val pp_out = Portable.stdOut_ppstream ();
    val {add_string, add_xstring, add_newline, add_break,
         begin_style, end_style, begin_block, end_block, ...} =

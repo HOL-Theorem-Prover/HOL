@@ -130,7 +130,7 @@ local open Portable
       val add_string = PrettyString
       val add_break = PrettyBreak
 in
-fun pp_tag dpth _ (TAG (_,olist,axlist)) =
+fun pp_tag (TAG (_,olist,axlist)) =
   PrettyBlock(0, true, [],
     [PrettyString "[oracles: ",
      PrettyBlock(1, false, [],
