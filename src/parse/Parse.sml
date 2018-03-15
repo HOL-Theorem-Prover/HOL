@@ -404,6 +404,7 @@ fun term_pp_with_delimiters ppfn tm =
 fun pp_thm th =
   let
     open Portable smpp
+    val _ = update_term_fns()
     fun repl ch alist = CharVector.tabulate (length alist, fn _ => ch)
     fun pp_terms b L =
       block INCONSISTENT 1 (
@@ -421,10 +422,9 @@ fun pp_thm th =
               val (tg,asl,st,sa) = (tag th, hyp th, !show_tags, !show_assums)
             in
               (if not st andalso not sa andalso null asl then nothing
-               else if st then lift Tag.pp_tag tg else nothing) >>
-              add_break(1,0) >>
-              pp_terms sa asl >>
-              add_break(1,0) >>
+               else
+                 (if st then lift Tag.pp_tag tg else nothing) >>
+                 add_break(1,0) >> pp_terms sa asl >> add_break(1,0)) >>
               add_string (!Globals.thm_pp_prefix) >>
               (!term_printer) (concl th) >>
               add_string (!Globals.thm_pp_suffix)
