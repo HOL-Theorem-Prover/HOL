@@ -187,6 +187,7 @@ signature Parse = sig
   (* Pretty printing *)
   val current_backend : PPBackEnd.t ref
   val interactive_ppbackend : unit -> PPBackEnd.t
+  val mlower : (term_pp_types.printing_info,'a)smpp.t -> HOLPP.pretty
   val pp_term : term pprinter
   val pp_type : hol_type pprinter
   val pp_thm : thm pprinter

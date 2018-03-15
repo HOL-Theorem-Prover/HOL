@@ -10,75 +10,73 @@ open HolKernel DB Parse;
 val CONSISTENT   = Portable.CONSISTENT
 val INCONSISTENT = Portable.INCONSISTENT;
 
-fun pp_theory ppstrm (THEORY(name, {parents, types, consts,
-                                    axioms,definitions,theorems})) =
-let val {add_string,add_break,begin_block,end_block, add_newline,
-         flush_ppstream,...} = Portable.with_ppstream ppstrm
-  val pp_thm = pp_thm ppstrm
-  val pp_type = pp_type ppstrm
-  fun nl2() = (add_newline();add_newline());
-  fun vspace l = if null l then () else nl2();
+fun pp_theory (THEORY(name, {parents, types, consts,
+                             axioms,definitions,theorems})) =
+let
+  open smpp
+  val pp_thm = lift pp_thm
+  val pp_type = lift pp_type
+  val nl2 = add_newline >> add_newline
+  fun vspace l = if null l then nothing else nl2
   fun vblock(header, ob_pr, obs) =
-    if null obs then ()
+    if null obs then nothing
     else
-      (begin_block CONSISTENT 4;
-       add_string (header^":");
-       add_newline();
-       Portable.pr_list
-         ob_pr
-         (fn () => ())
-         add_newline
-         obs;
-       end_block())
+      block CONSISTENT 4 (
+        add_string (header^":") >>
+        add_newline >>
+        pr_list ob_pr add_newline obs
+      )
   fun pr_thm (heading, ths) =
     vblock(heading,
-      (fn (s,th) => (begin_block CONSISTENT 0;
-                     add_string s; add_newline();
-                     add_string "  ";
-                     pp_thm th; end_block())),
+      (fn (s,th) => block CONSISTENT 0 (
+                     add_string s >> add_newline >>
+                     add_string "  " >>
+                     pp_thm th
+                   )
+      ),
       Listsort.sort (inv_img_cmp #1 String.compare) ths)
   val longest_const_size =
       List.foldl (fn ((s,_),i) => Int.max(size s, i)) 0
                  consts
+  val m =
+    block CONSISTENT 0 (
+      add_string ("Theory: "^name) >> nl2 >>
+      vblock ("Parents", add_string, Listsort.sort String.compare parents) >>
+      nl2 >>
+      vblock ("Type constants",
+              (fn (name,arity) =>
+                  (add_string name >>
+                   add_string (" "^Lib.int_to_string arity))),
+              types) >>
+      vspace types >>
+      vblock ("Term constants",
+              (fn (name,htype) =>
+                  block CONSISTENT 0 (
+                    add_string name >>
+                    add_string (
+                      CharVector.tabulate(longest_const_size + 3 - size name,
+                                          K #" ")) >>
+                    pp_type htype
+                  )
+              ),
+              consts) >>
+      vspace consts >>
+
+      pr_thm ("Axioms", axioms) >> vspace axioms >>
+      pr_thm ("Definitions", definitions) >> vspace definitions >>
+      pr_thm ("Theorems", theorems)
+    )
 in
-    begin_block CONSISTENT 0;
-    add_string ("Theory: "^name); nl2();
-    vblock ("Parents", add_string, Listsort.sort String.compare parents); nl2();
-    vblock ("Type constants",
-     (fn (name,arity) =>
-         (add_string name; add_string (" "^Lib.int_to_string arity))),
-     types)
-      ;
-    vspace types;
-    vblock ("Term constants",
-      (fn (name,htype)
-        => (begin_block CONSISTENT 0;
-            add_string name;
-            add_string (CharVector.tabulate(longest_const_size + 3 - size name,
-                                            K #" "));
-            pp_type htype;
-            end_block())),
-      consts)
-      ;
-    vspace consts;
-    pr_thm ("Axioms", axioms); vspace axioms;
-    pr_thm ("Definitions", definitions); vspace definitions;
-    pr_thm ("Theorems", theorems);
-    end_block()
- end;
+  Parse.mlower m
+end;
 
 (*---------------------------------------------------------------------------
      Support for print_theory
  ---------------------------------------------------------------------------*)
 
-fun outstreamConsumer ostrm =
-    {consumer = fn s => TextIO.output(ostrm,s),
-     flush = fn () => (TextIO.output(ostrm,"\n"); TextIO.flushOut ostrm),
-     linewidth = !Globals.linewidth};
-
 fun print_theory_to_outstream thy ostrm =
- PP.with_pp (outstreamConsumer ostrm)
-            (C pp_theory (dest_theory thy));
+  HOLPP.prettyPrint((fn s => TextIO.output(ostrm, s)), 80)
+                   (pp_theory (dest_theory thy))
 
 fun print_theory thy = print_theory_to_outstream thy TextIO.stdOut;
 
@@ -95,6 +93,7 @@ fun print_theory_to_file thy file =
      Print a theory as HTML
  ---------------------------------------------------------------------------*)
 
+(*
 fun pp_theory_as_html ppstrm theory_name = let
   open Portable
   val THEORY(_,{parents,types, consts,
@@ -283,7 +282,7 @@ in
 end;
 
 fun html_theory s = print_theory_as_html s (s^"Theory.html");
-
+*)
 (*---------------------------------------------------------------------------
     Refugee from Parse structure
  ---------------------------------------------------------------------------*)
