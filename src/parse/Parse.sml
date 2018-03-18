@@ -184,7 +184,7 @@ fun type_pp_with_delimiters ppfn ty =
   in
     mlower (
       add_string (!type_pp_prefix) >>
-      lift ppfn ty >>
+      block CONSISTENT (UTF8.size (!type_pp_prefix)) (lift ppfn ty) >>
       add_string (!type_pp_suffix)
     )
   end
@@ -396,7 +396,7 @@ fun term_pp_with_delimiters ppfn tm =
   in
     mlower (
       add_string (!term_pp_prefix) >>
-      lift ppfn tm >>
+      block CONSISTENT (UTF8.size (!term_pp_prefix)) (lift ppfn tm) >>
       add_string (!term_pp_suffix)
     )
   end
@@ -404,12 +404,12 @@ fun term_pp_with_delimiters ppfn tm =
 fun pp_thm th =
   let
     open Portable smpp
-    val _ = update_term_fns()
+    val prt = lift pp_term
     fun repl ch alist = CharVector.tabulate (length alist, fn _ => ch)
     fun pp_terms b L =
       block INCONSISTENT 1 (
         add_string "[" >>
-        (if b then pr_list (!term_printer) (add_string "," >> add_break(1,0)) L
+        (if b then pr_list prt (add_string "," >> add_break(1,0)) L
          else add_string (repl #"." L)) >>
         add_string "]"
       )
@@ -426,7 +426,8 @@ fun pp_thm th =
                  (if st then lift Tag.pp_tag tg else nothing) >>
                  add_break(1,0) >> pp_terms sa asl >> add_break(1,0)) >>
               add_string (!Globals.thm_pp_prefix) >>
-              (!term_printer) (concl th) >>
+              block CONSISTENT (UTF8.size (!Globals.thm_pp_prefix))
+                    (prt (concl th)) >>
               add_string (!Globals.thm_pp_suffix)
             end
         )
