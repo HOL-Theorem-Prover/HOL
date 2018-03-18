@@ -405,6 +405,14 @@ fun toString {relpath,absdir} =
 
 fun toAbsPath {relpath,absdir} = absdir
 
+fun pretty_dir d =
+  let
+    val abs = toAbsPath d
+    val abs' = holpathdb.reverse_lookup {path=abs}
+  in
+    if abs = abs' then toString d else abs'
+  end
+
 fun fromPath {origin,path} =
     if Path.isAbsolute path then
       {relpath = NONE, absdir = Path.mkCanonical path}
@@ -575,7 +583,7 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
     Holdep.main {assumes = buildable_extras, diag = diag,
                  includes = includes, fname = fromFile arg}
     handle Holdep.Holdep_Error s =>
-             (warn "Holdep failed: s"; raise HolDepFailed)
+             (warn ("Holdep failed: "^s); raise HolDepFailed)
          | e => (warn ("Holdep exception: "^General.exnMessage e);
                  raise HolDepFailed)
   fun myopen s =

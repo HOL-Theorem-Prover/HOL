@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib pred_setTheory relationTheory set_relationTheory
+open HolKernel Parse boolLib bossLib pred_setTheory relationTheory set_relationTheory prim_recTheory
 
 open generalHelpersTheory wordTheory
 
@@ -109,6 +109,30 @@ val TMP_OP_DECR_WITH_SF = store_thm
    >- (`no_tmp_op f'' <= no_tmp_op f'` by metis_tac[] >> simp[])
   );
 
+val TMP_OP_EQ_LEMM = store_thm
+  ("TMP_OP_EQ_LEMM",
+   ``!f g. f ∈ subForms g ∧ (no_tmp_op f = no_tmp_op g) ==> (f = g)``,
+   Induct_on `g` >> fs[] >> rpt strip_tac
+   >> fs[subForms_def, no_tmp_op_def]
+   >- (`no_tmp_op f <= no_tmp_op g` by metis_tac[TMP_OP_DECR_WITH_SF]
+      >> `~(no_tmp_op g' >= 1)` by fs[] >> metis_tac[NO_TMP_LEMM])
+   >- (`no_tmp_op f <= no_tmp_op g'` by metis_tac[TMP_OP_DECR_WITH_SF]
+      >> `~(no_tmp_op g >= 1)` by fs[] >> metis_tac[NO_TMP_LEMM])
+   >- (`no_tmp_op f <= no_tmp_op g` by metis_tac[TMP_OP_DECR_WITH_SF]
+      >> `~(no_tmp_op g' >= 1)` by fs[] >> metis_tac[NO_TMP_LEMM])
+   >- (`no_tmp_op f <= no_tmp_op g'` by metis_tac[TMP_OP_DECR_WITH_SF]
+      >> `~(no_tmp_op g >= 1)` by fs[] >> metis_tac[NO_TMP_LEMM])
+   >- (`no_tmp_op f <= no_tmp_op g` by metis_tac[TMP_OP_DECR_WITH_SF] >> fs[])
+   >- (`no_tmp_op f <= no_tmp_op g` by metis_tac[TMP_OP_DECR_WITH_SF]
+      >> fs[])
+   >- (`no_tmp_op f <= no_tmp_op g'` by metis_tac[TMP_OP_DECR_WITH_SF]
+                                    >> fs[])
+   >- (`no_tmp_op f <= no_tmp_op g` by metis_tac[TMP_OP_DECR_WITH_SF]
+                                    >> fs[])
+   >- (`no_tmp_op f <= no_tmp_op g'` by metis_tac[TMP_OP_DECR_WITH_SF]
+                                     >> fs[])
+  );
+
 val SF_ANTISYM_LEMM = store_thm
   ("SF_ANTISYM_LEMM",
    ``!f1 f2. (f1 ∈ subForms f2) /\ (f2 ∈ subForms f1) ==> (f1 = f2)``,
@@ -156,6 +180,10 @@ val SF_ANTISYM_LEMM = store_thm
        >> fs[no_tmp_op_def]
       )
   );
+
+val is_until_def = Define`
+   (is_until (U f1 f2) = T)
+ ∧ (is_until _ = F)`;
 
 (*
 
@@ -210,6 +238,13 @@ val TSF_TRANS_LEMM = store_thm
    >> Induct_on `z` >> dsimp[tempSubForms_def] >> metis_tac[]
   );
 
+(* val TSF_TRANS_LEMM2 = store_thm *)
+(*   ("TSF_TRANS_LEMM2", *)
+(*    ``!x y z. (x,y) ∈ TSF ∧ (y,z) ∈ TSF ==> (x,z) ∈ TSF``, *)
+   
+(* ) *)
+
+
 val TSF_TRANS = store_thm
   ("TSF_TRANS",
   ``!f. transitive (rrestrict TSF (tempSubForms f))``,
@@ -245,6 +280,27 @@ val TSF_PO = store_thm
     >- metis_tac[TSF_TRANS]
     >- metis_tac[TSF_REFL]
     >- metis_tac[TSF_ANTISYM]
+  );
+
+val STRICT_TSF_WF = store_thm
+  ("STRICT_TSF_WF",
+  ``WF (λf1 f2. f1 ∈ tempSubForms f2 ∧ ~(f1 = f2))``,
+  rw[WF_IFF_WELLFOUNDED] >> simp[wellfounded_def] >> rpt strip_tac
+  >> CCONTR_TAC >> fs[]
+  >> `!n. no_tmp_op (f (SUC n)) < no_tmp_op (f n)` by (
+      rpt strip_tac >> first_x_assum (qspec_then `n` mp_tac)
+      >> rpt strip_tac
+      >> imp_res_tac TSF_IMPL_SF
+      >> imp_res_tac TMP_OP_DECR_WITH_SF
+      >> Cases_on `(no_tmp_op (f (SUC n)) = no_tmp_op (f n))`
+      >> fs[TMP_OP_EQ_LEMM]
+  )
+  >> `!n. (no_tmp_op o f) (SUC n) < (no_tmp_op o f) n` by fs[]
+  >> `~wellfounded (\a b. (no_tmp_op o f) a < (no_tmp_op o f) b)` by (
+      fs[wellfounded_def] >> metis_tac[]
+  )
+  >> `~wellfounded (inv_image ($<) (no_tmp_op o f))` by fs[inv_image_def]
+  >> metis_tac[WF_LESS,WF_inv_image,WF_IFF_WELLFOUNDED]
   );
 
 val DISJ_TEMP_SUBF = store_thm
@@ -374,5 +430,46 @@ val NNF_THM = store_thm
    Induct_on `f` >> fs[FLTL_MODELS_def, MODELS_def, NNF_def]
    >> metis_tac[NNF_NEG_LEMM]
   );
+
+val LTL_FALSE_def = Define `
+  LTL_FALSE p  = F_CONJ (F_VAR p) (F_NEG (F_VAR p))`;
+
+val LTL_TRUE_def = Define `
+  LTL_TRUE p = F_NEG (LTL_FALSE p)`;
+
+val LTL_F_def = Define `
+  LTL_F φ p = F_U (LTL_TRUE p) φ`
+
+val LTL_G_def = Define `
+  LTL_G φ p = F_NEG (LTL_F (F_NEG φ) p)`;
+
+(* Some example formulae*)
+
+val LTL_EX1_def = Define`
+ LTL_EX1 = VAR 0`;
+
+val LTL_EX2_def = Define`
+ LTL_EX2 = U (VAR 0) (VAR 1)`;
+
+val LTL_EX3_def = Define`
+ LTL_EX3 = R (VAR 0) (VAR 1)`;
+
+val LTL_EX4_def = Define`
+ LTL_EX4 = NNF (F_CONJ (LTL_G (LTL_F (F_VAR 1) 0) 0)
+                       ((LTL_F (F_CONJ (F_VAR 2) (LTL_G (F_NEG (F_VAR 3)) 0)) 0)))`;
+
+val LTL_EX5_def = Define`
+ LTL_EX5 = NNF (F_CONJ (F_CONJ (LTL_G (LTL_F (F_VAR 1) 0) 0)
+                               (LTL_G (LTL_F (F_VAR 2) 0) 0)
+                       )
+                       ((LTL_F (F_CONJ (F_VAR 3) (LTL_G (F_NEG (F_VAR 4)) 0)) 0)))`;
+
+val LTL_EX5_def = Define`
+LTL_EX5 = NNF (F_CONJ (F_CONJ (F_CONJ (LTL_G (LTL_F (F_VAR 1) 0) 0)
+                                      (LTL_G (LTL_F (F_VAR 2) 0) 0)
+                              )
+                              (LTL_G (LTL_F (F_VAR 3) 0) 0)
+                      )
+                      ((LTL_F (F_CONJ (F_VAR 4) (LTL_G (F_NEG (F_VAR 5)) 0)) 0)))`;
 
 val _ = export_theory();

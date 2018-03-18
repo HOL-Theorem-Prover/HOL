@@ -83,7 +83,7 @@ Restart emacs to make these changes take effect.
 The HOL window should look something like this:
 \begin{code}
 ---------------------------------------------------------------------
-       HOL-4 [Kananaskis 11 (stdknl, built Sun Feb 12 16:22:29 2017)]
+       HOL-4 [Kananaskis 11 (stdknl, built Mon Feb 05 12:44:20 2018)]
 
        For introductory HOL help, type: help "hol";
        To exit type <Control>-D
@@ -183,7 +183,7 @@ Induct_on `n`                   (* comment: induction on n  *)
 
   decide_tac                    (* comment: solve base case *)
 
-  ASM_SIMP_TAC bool_ss [MULT]   (* comment: simplify goal   *)
+  asm_simp_tac bool_ss [MULT]   (* comment: simplify goal   *)
   decide_tac                    (* comment: solve step case *)
 \end{code}
 Tactics can be pieced together for {\tt prove} using \ml{\gt\gt} and \ml{\gt-}. The \ml{\gt\gt} operator is an infix that composes tactics. Similarly, \ml{\gt-} \emph{tac} proves the first subgoal using \emph{tac}.
@@ -193,7 +193,7 @@ val LESS_EQ_MULT = Q.prove(
   Induct_on `n`
   >- decide_tac
   >- (asm_simp_tac bool_ss [MULT]
-      >> decide_tac));
+      \gt\gt decide_tac));
 \end{code}
 Copy the above into HOL4 using text-selection, and then {\tt M-h M-r}, as in Section~\ref{copy}.
 
@@ -212,19 +212,20 @@ Copy the above into HOL4 using text-selection, and then {\tt M-h M-r}, as in Sec
 \itemy{&}{\itemz{M-h d}{drop current goal}}
 \end{array}
 \end{displaymath}
-\caption{Most important key bindings in the emacs HOL4 mode.}
+\caption{Most important key bindings in the emacs HOL4 mode.
+Note that all of these actions are also available in the HOL menu within Emacs.}
 
 \rule{0em}{1.5em}\hrule
 \end{figure}
 
 \mysubsec{Displaying types in HOL4}
 
-HOL4 does not by default display types. Press {\tt M-h C-t} to switch
+HOL4 does not by default display types. Press {\tt M-h~C-t} to switch
 printing of type information on or off.
 
 \mysubsec{Interrupting HOL4}
 
-Press {\tt M-h C-c} to interrupt HOL4 --- useful when a tactic fails to terminate
+Press {\tt M-h~C-c} to interrupt HOL4 --- useful when a tactic fails to terminate
 (\eg{} {\tt\small metis\_tac} often fails to terminate when unsuccessfully applied).
 
 \mysubsec{Making a definition\label{definition}}
@@ -314,22 +315,29 @@ Replace {\tt <path>} with the path to your HOL4 installation.
 \end{code}
 
 Once theories has been opened (see Section~\ref{copy}), one can search for theorems in the current
-context using {\tt DB.match}, \eg{} with {\tt arithmeticTheory} opened,
+context using {\tt print\_match}, \eg{} with {\tt arithmeticTheory} opened,
 \begin{code}
-DB.match [] {`}`n DIV m <= k{`}`
+print_match [] {`}`n DIV m <= k{`}`
 \end{code}
 prints a list of theorems containing $n\; \texttt{\small DIV} \;m \leq k$ for some $n,m,k$:
 \begin{code}
-[(("arithmetic", "DIV_LE_MONOTONE"),
-  (|- !n x y. 0 < n \conj{} x <= y ==> x DIV n <= y DIV n, Thm)),
- (("arithmetic", "DIV_LE_X"),
-  (|- !x y z. 0 < z ==> (y DIV z <= x = y < (x + 1) * z), Thm)),
- (("arithmetic", "DIV_LESS_EQ"),
-  (|- !n. 0 < n ==> !k. k DIV n <= k, Thm))]
+arithmeticTheory.DIV_LE_MONOTONE (THEOREM)
+------------------------------------------
+|- !n x y. 0 < n \(\land\) x <= y ==> x DIV n <= y DIV n
+
+arithmeticTheory.DIV_LE_X (THEOREM)
+-----------------------------------
+|- !x y z. 0 < z ==> (y DIV z <= x <=> y < (x + 1) * z)
+
+arithmeticTheory.DIV_LESS_EQ (THEOREM)
+--------------------------------------
+|- !n. 0 < n ==> !k. k DIV n <= k
 \end{code}
 Try to write increasingly specific queries if the returned list is long, \eg{}
-{\tt\small DB.match [] \sq \sq n DIV m \sq \sq} returns a list of length 32. Note that {\tt\small DB.match [] \sq \sq DIV \sq \sq}
-does not work since {\tt\small DIV} is an infix operator, but {\tt\small DB.match [] \sq \sq \$DIV \sq \sq} works.
+{\tt\small print\_match [] \sq \sq n DIV m\sq\sq} returns a list of length 32. Note that {\tt\small print\_match [] \sq \sq DIV\sq\sq}
+does not work since {\tt\small DIV} is an infix operator, but {\tt\small print\_match [] \sq \sq \$DIV\sq \sq} works.
+
+The key-binding \texttt{M-h~m} (and the menu entry ``DB match'') will prompt for the term pattern to search for, and pass this query onto the HOL session (saving the need to type \texttt{print\_match~[]} and the enclosing quotation marks).
 
 \mysec{Common proof tactics\label{tactics}}
 
@@ -389,7 +397,7 @@ Most HOL4 proofs are based on rewriting using equality theorems, \eg{}
 \begin{code}
 ADD_0:            |- !n. n + 0 = n
 LESS_MOD:         |- !n k. k < n ==> (k MOD n = k)
-\end{code} {\tt \small ASM\_SIMP\_TAC} and {\tt \small FULL\_SIMP\_TAC} are two
+\end{code} {\tt \small asm\_simp\_tac} and {\tt \small full\_simp\_tac} are two
 commonly used rewriting tactics, \eg{} suppose the goal is the following:
 \begin{code}
     5 + 0 + m = (m MOD 10) + (5 MOD 8)
@@ -397,7 +405,7 @@ commonly used rewriting tactics, \eg{} suppose the goal is the following:
       0.  p = 2 + 0 + (m MOD 10)
       1.  m < 10
 \end{code}
-{\tt \small ASM\_SIMP\_TAC bool\_ss
+{\tt \small asm\_simp\_tac bool\_ss
   [ADD\_0,LESS\_MOD]} rewrites the
 goal using the supplied theorems together with the current goal's
 assumptions and some boolean simplifications {\tt \small bool\_ss}:
@@ -407,7 +415,7 @@ assumptions and some boolean simplifications {\tt \small bool\_ss}:
       0.  p = 2 + 0 + (m MOD 10)
       1.  m < 10
 \end{code}
-{\tt \small FULL\_SIMP\_TAC bool\_ss [ADD\_0,LESS\_MOD]}
+{\tt \small full\_simp\_tac bool\_ss [ADD\_0,LESS\_MOD]}
 does the same except that it also applies the rewrites to the
 assumptions:
 \begin{code}
@@ -416,12 +424,11 @@ assumptions:
       0.  p = 2 + m
       1.  m < 10
 \end{code}
-
 {\tt \small bool\_ss} can be replaced by {\tt \small std\_ss}, which
 is a stronger simplification set that would infer {\tt \small 5 < 8}
 and hence simplify {\tt\small 5 MOD 8} as well. I recommend that the
 interested reader also reads about {\tt\small AC}, {\tt\small Once}
-and {\tt\small SRW\_TAC}.
+and {\tt\small srw\_tac}.
 
 \mysubsec{Induction}
 
@@ -459,9 +466,9 @@ It is often useful to start a mini-proof inside a larger proof, \eg{} for the go
 \end{code}
 we might want to prove {\tt\small h n = g n} assuming {\tt\small 0 <
   n}.
-We can start such a subproof by typing {\tt\small \sq h n = g n\sq
-  by ALL\_TAC}.\footnote{You can also use the emacs binding {\tt\small
-    M-h M-s} with the cursor inside the sub-goal.} The new goal stack:
+We can start such a subproof by typing {\tt\small sg \sq h n = g n\sq}.%
+\footnote{You can also use the emacs binding {\tt\small M-h M-s}
+with the cursor inside the sub-goal.} The new goal stack:
 \begin{code}
     foo n
     ------------------------------------
@@ -474,7 +481,7 @@ We can start such a subproof by typing {\tt\small \sq h n = g n\sq
 \end{code}
 If {\tt\small \sq h n = g n\sq} can be proved in one step, \eg{} using {\tt\small metis\_tac [MY\_LEMMA]}, then
 apply {\tt\small \sq h n = g n\sq \ by metis\_tac [MY\_LEMMA]} instead of
-{\tt\small \sq h n = g n\sq \ by ALL\_TAC}.  If the sub-goal requires
+{\tt\small sg \sq h n = g n\sq}.  If the sub-goal requires
 multiple steps the tactic after the \texttt{by} will need to be
 parenthesised: {\tt\small\sq\textit{goal}\sq \ by ($\mathit{tac}_1$ \ml{\gt\gt}
   $\mathit{tac}_2$ ...)}
@@ -484,8 +491,8 @@ parenthesised: {\tt\small\sq\textit{goal}\sq \ by ($\mathit{tac}_1$ \ml{\gt\gt}
 Use {\tt\small CCONTR\_TAC} to add the negation of the goal to the
 assumptions.  The task is then to prove that one of the assumptions of
 the goal is false. One can \eg{} add more assumptions using
-{\tt\small \sq...\sq \ by ALL\_TAC}, described above, until one assumption is the
-negation of another assumption (and then apply {\tt\small METIS\_TAC []}).
+{\tt\small \sq...\sq \ by ...}, described above, until one assumption is the
+negation of another assumption (and then apply {\tt\small metis\_tac []}).
 
 \mysubsec{More tactics\label{html}}
 
@@ -498,7 +505,7 @@ The reference provides an easy way to access both the implementations of
 tactics as well as their documentation (where such exists).
 The interested reader may want to look up the following:
 \begin{code}
-CONV_TAC  DISJ1_TAC  DISJ2_TAC  MATCH_MP_TAC  MP_TAC  PAT_ASSUM  Q
+CONV_TAC  disj1_tac  disj2_tac  match_mp_tac  mp_tac  pat_assum  Q
 \end{code}
 
 \mysec{Further reading and general advice\label{reading}}
@@ -521,7 +528,7 @@ The same page also contains links to:
 \item[~]\emph{HOL Reference} -- a detailed descriptions of proof tactics and other tools
 \item[~]\emph{HOL Logic} -- a presentation of the underlying logic
 \end{enum}
-For day-to-day look-ups, I find {\tt DB.match} (illustrated in
+For day-to-day look-ups, I find {\tt print\_match} (illustrated in
 Section~\ref{search}) and the HTML reference (mentioned in
 Section~\ref{html}) most helpful.
 

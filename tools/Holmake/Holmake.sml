@@ -29,6 +29,7 @@ val execname = Path.file (CommandLine.name())
 fun warn s = (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
               TextIO.flushOut TextIO.stdErr)
 fun die s = (warn s; Process.exit Process.failure)
+val original_dir = hmdir.curdir()
 
 (* Global parameters, which get set at configuration time *)
 val HOLDIR0 = Systeml.HOLDIR;
@@ -236,7 +237,7 @@ let
             incdirmap =
               extend_idmap dir (idm_lookup incdirmap newdir) incdirmap}
     else let
-      val _ = warn ("Recursively calling Holmake in " ^ hmdir.toString newdir)
+      val _ = diag (fn _ => "Recursive call in " ^ hmdir.pretty_dir newdir)
       val _ = diag (fn _ => "Visited set = " ^ print_set visited)
       val _ = terminal_log ("Holmake: "^nice_dir (hmdir.toString newdir))
       val result =
@@ -246,7 +247,7 @@ let
               SOME {visited = visited,
                     incdirmap = extend_idmap dir (idm_lookup idm0 newdir) idm0}
     in
-      warn ("Finished recursive invocation in "^hmdir.toString newdir);
+      diag (fn _ => "Finished work in "^hmdir.pretty_dir newdir);
       terminal_log ("Holmake: "^nice_dir (hmdir.toString dir));
       FileSys.chDir (hmdir.toAbsPath dir);
       case result of
@@ -620,6 +621,7 @@ in
         add_node {target = target_s, seqnum = 0, phony = false,
                   status = if exists_readable target_s then Succeeded
                            else Failed,
+                  dir = hmdir.curdir(),
                   command = NoCmd, dependencies = []} g0
       else if isSome pdep andalso no_full_extra_rule target then
         let
@@ -653,7 +655,7 @@ in
         in
             add_node {target = target_s, seqnum = 0, phony = false,
                       status = if needs_building then Pending else Succeeded,
-                      command = BuiltInCmd bic,
+                      command = BuiltInCmd bic, dir = hmdir.curdir(),
                       dependencies = depnodes } g2
         end
       else
@@ -662,7 +664,7 @@ in
               add_node {target = target_s, seqnum = 0, phony = false,
                         status = if exists_readable target_s then Succeeded
                                  else Failed,
-                        command = NoCmd,
+                        command = NoCmd, dir = hmdir.curdir(),
                         dependencies = []} g0
           | SOME {dependencies, commands, ...} =>
             let
@@ -726,6 +728,7 @@ in
                   val (g',n) = add_node {target = target_s, seqnum = seqnum,
                                          status = status, phony = is_phony,
                                          command = SomeCmd c,
+                                         dir = hmdir.curdir(),
                                          dependencies = depnode @ depnodes } g
                 in
                   (* The "" is necessary to make multi-command, multi-target
@@ -749,7 +752,7 @@ in
                     NONE =>
                     add_node {target = target_s, seqnum = 0, phony = is_phony,
                               status = status, command = NoCmd,
-                              dependencies = depnodes} g1
+                              dir = hmdir.curdir(), dependencies = depnodes} g1
                   | SOME scr =>
                     (case toFile scr of
                          SML (Script s) =>
@@ -761,6 +764,7 @@ in
                            add_node {target = target_s, seqnum = 0,
                                      phony = false, status = updstatus,
                                      command = BuiltInCmd (BIC_BuildScript s),
+                                     dir = hmdir.curdir(),
                                      dependencies = depnodes} g1
                          end
                        | _ => die "Invariant failure in build_depgraph")
@@ -774,6 +778,8 @@ val allincludes =
 fun add_sigobj {includes,preincludes} =
     {includes = std_include_flags @ includes,
      preincludes = preincludes}
+
+fun null_ii {includes,preincludes} = null includes andalso null preincludes
 
 val extended_dirinfo =
     let
@@ -850,6 +856,9 @@ fun basecont tgts ii =
   else
     let
       open HM_DepGraph
+      val _ = if null_ii ii andalso hmdir.compare(dir,original_dir) = EQUAL then
+                ()
+              else warn (bold ("Working in " ^ hmdir.pretty_dir dir))
       val ii = add_sigobj ii
       val g = create_graph tgts ii
       val _ = diag (fn _ => "Building from graph")

@@ -17,11 +17,14 @@ src/parse
 src/opentheory
 (otknl)src/opentheory/logging
 src/bool
-#include sequences/holyhammer
 src/1
 (otknl)src/opentheory/postbool
 src/proofman
 [poly]bin/hol.bare
+[poly]src/tactictoe/src
+[poly]src/holyhammer/hh/hh1
+[poly]src/holyhammer/hh
+[poly]src/holyhammer
 !tools/Holmake/tests/depchain1/dir3
 !tools/Holmake/tests/depchain2/dir1
 !tools/Holmake/tests/altquote1

@@ -78,6 +78,7 @@ sig
     val extend : {base : t, extension : t} -> t
     val toString : t -> string
     val toAbsPath : t -> string
+    val pretty_dir : t -> string (* uses holpathdb abbreviations *)
     val fromPath : {origin: string, path : string} -> t
     val sort : t list -> t list
     val curdir : unit -> t

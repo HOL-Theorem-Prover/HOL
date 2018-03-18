@@ -1,10 +1,10 @@
-open HolKernel Parse boolLib bossLib pred_setTheory arithmeticTheory relationTheory set_relationTheory
+open HolKernel Parse boolLib bossLib pred_setTheory arithmeticTheory relationTheory set_relationTheory pairTheory
 
 open generalHelpersTheory wordTheory
 
 val _ = new_theory "alterA"
 
-val _ = Hol_datatype
+val _ = Datatype
   `ALTER_A = <| states      : 's set;
                initial      : ('s set) set;
                final        : 's set;
@@ -19,19 +19,32 @@ val isValidAlterA_def =
           /\ (!s a d. (s ∈ A.states) /\ ((a, d) ∈ (A.trans s))
                  ==> (d ⊆ A.states ∧ a ⊆ A.alphabet))`;
 
-(* An alternating automata is weak if there is a partial order po on
+(* An alternating automata is very weak if there is a partial order po on
    the states s.t. for every state s all states appearing in trans(s)
    are lower or equal to s
 *)
 
-val isWeakWithOrder_def = Define
-   `isWeakWithOrder A ord =
+val isVeryWeakWithOrder_def = Define
+   `isVeryWeakWithOrder A ord =
       partial_order ord A.states
       /\ !s a d. (s ∈ A.states) /\ ((a,d) ∈ (A.trans s))
                    ==> (!s'. (s' ∈ d) ==> ((s',s) ∈ ord))`;
 
-val isWeakAlterA_def =
-    Define `isWeakAlterA A = ?ord. isWeakWithOrder A ord`;
+val isVeryWeakAlterA_def =
+    Define `isVeryWeakAlterA A = ?ord. isVeryWeakWithOrder A ord`;
+
+val FINITE_LEMM = store_thm
+  ("FINITE_LEMM",
+  ``!aut. FINITE aut.alphabet ∧ FINITE aut.states ∧ isValidAlterA aut
+       ==> (!q. q ∈ aut.states ==> FINITE (aut.trans q))``,
+  rpt strip_tac
+  >> `aut.trans q ⊆ ((POW aut.alphabet) × (POW aut.states))` by (
+      fs[isValidAlterA_def] >> simp[SUBSET_DEF] >> rpt strip_tac
+        >- (Cases_on `x` >> metis_tac[IN_POW,FST])
+        >- (Cases_on `x` >> metis_tac[IN_POW,SND])
+  )
+  >> metis_tac[FINITE_CROSS, FINITE_POW,PSUBSET_DEF,PSUBSET_FINITE]
+  );
 
 (*
    RUNs over the alternating automaton
@@ -107,7 +120,8 @@ val BRANCHRANGE_NONEMPTY = store_thm
 *)
 
 val acceptingAARun_def = Define
-`acceptingAARun aut run = !b. infBranchOf run b ==> FINITE {i | b i ∈ aut.final }`
+`acceptingAARun aut run =
+    !b. infBranchOf run b ==> FINITE {i | b i ∈ aut.final }`
 
 (*
   the language of the automaton
@@ -127,11 +141,12 @@ val alterA_lang_def = Define
 
 val BRANCH_WAA_LEMM = store_thm
   ("BRANCH_WAA_LEMM",
-  ``!b run aut w ord. validAARunFor aut run w /\ infBranchOf run b /\ isWeakWithOrder aut ord
+  ``!b run aut w ord. validAARunFor aut run w /\ infBranchOf run b
+                      /\ isVeryWeakWithOrder aut ord
             ==> !i. (b (i+1), b i) ∈ ord``,
    rpt strip_tac
    >> `!i. b i ∈ run.V i` by metis_tac[BRANCH_V_LEMM]
-   >> fs[isWeakWithOrder_def, infBranchOf_def, validAARunFor_def]
+   >> fs[isVeryWeakWithOrder_def, infBranchOf_def, validAARunFor_def]
    >> `(b (i + 1) ∈ run.V (i+1)) /\ (b i ∈ run.V i)` by metis_tac[]
    >> `b (i + 1) ∈ run.E(i, b i)` by metis_tac[]
    >> `∃a. (a,run.E (i,b i)) ∈ aut.trans (b i)` by metis_tac[]
@@ -143,13 +158,13 @@ val BRANCH_WAA_LEMM = store_thm
 val BRANCH_LIN_ORD = store_thm
   ("BRANCH_LIN_ORD",
    ``!b run aut w ord. infBranchOf run b /\ validAARunFor aut run w
-                     /\ isWeakWithOrder aut ord
+                     /\ isVeryWeakWithOrder aut ord
       ==> linear_order (rrestrict ord (branchRange b)) (branchRange b)``,
    rpt strip_tac
    >> `!i. b i ∈ run.V i` by metis_tac[BRANCH_V_LEMM]
    >> `!i. (b (i+1), b i) ∈ ord` by metis_tac[BRANCH_WAA_LEMM]
    >> fs[linear_order_def, branchRange_def, infBranchOf_def, validAARunFor_def]
-   >> fs[isWeakWithOrder_def]
+   >> fs[isVeryWeakWithOrder_def]
    >> fs[domain_def, partial_order_def,range_def, in_rrestrict,SUBSET_DEF,branchRange_def]
    >> rpt strip_tac
      >- (qexists_tac `i` >> fs[])
@@ -190,12 +205,12 @@ val BRANCH_LIN_ORD = store_thm
 val BRANCH_FIXP = store_thm
   ("BRANCH_FIXP",
     ``∀b run aut w ord.
-      infBranchOf run b ∧ validAARunFor aut run w ∧ isWeakAlterA aut /\ FINITE aut.states ⇒
+      infBranchOf run b ∧ validAARunFor aut run w ∧ isVeryWeakAlterA aut /\ FINITE aut.states ⇒
               ∃x. branchFixP b x``,
     `∀b run aut w ord.
-     infBranchOf run b ∧ validAARunFor aut run w ∧ isWeakWithOrder aut ord
+     infBranchOf run b ∧ validAARunFor aut run w ∧ isVeryWeakWithOrder aut ord
                   /\ FINITE aut.states ⇒
-     ∃x. branchFixP b x` suffices_by metis_tac[isWeakAlterA_def]
+     ∃x. branchFixP b x` suffices_by metis_tac[isVeryWeakAlterA_def]
    >> rpt strip_tac
    >> `linear_order (rrestrict ord (branchRange b)) (branchRange b)`
        by metis_tac[BRANCH_LIN_ORD]
@@ -228,14 +243,16 @@ val BRANCH_FIXP = store_thm
 
 val BRANCH_ACC_LEMM = store_thm
   ("BRANCH_ACC_LEMM",
-   ``!run w aut. validAARunFor aut run w /\ isWeakAlterA aut /\ FINITE aut.states
+   ``!run w aut. validAARunFor aut run w /\ isVeryWeakAlterA aut
+                      /\ FINITE aut.states
         ==> (acceptingAARun aut run =
-             (!b x. infBranchOf run b /\ branchFixP b x ==> ~(x ∈ aut.final)))``,
+            (!b x. infBranchOf run b /\ branchFixP b x ==> ~(x ∈ aut.final)))``,
    rpt strip_tac >> rw[EQ_IMP_THM]
       >- (CCONTR_TAC >> fs[acceptingAARun_def, branchFixP_def]
           >> `FINITE {i | b i ∈ aut.final}` by metis_tac[]
           >> `INFINITE 𝕌(:num)` by metis_tac[INFINITE_NUM_UNIV]
-          >> `!x y. ((\x. x+i) x = (\x. x+i) y) ==> (x = y)` by metis_tac[ADD_N_INJ_LEMM]
+          >> `!x y. ((\x. x+i) x = (\x. x+i) y) ==> (x = y)`
+               by metis_tac[ADD_N_INJ_LEMM]
           >> `INFINITE (IMAGE (\x. x+i) 𝕌(:num))` by rw[IMAGE_11_INFINITE]
           >> `INFINITE { x | x >= i }` by metis_tac[ADD_N_IMAGE_LEMM]
           >> `!m. (m ∈ { x | x >= i }) ==> (b m = x)` by simp[]
@@ -260,7 +277,8 @@ val BRANCH_ACC_LEMM = store_thm
 *)
 
 val infBranchSuffOf_def = Define
-  `infBranchSuffOf run i b = (b 0 ∈ run.V i) /\ !j. (b (j+1) ∈ run.E (j + i, b j))`;
+  `infBranchSuffOf run i b =
+             (b 0 ∈ run.V i) /\ !j. (b (j+1) ∈ run.E (j + i, b j))`;
 
 val appendToBranchSuff_def = Define
   `appendToBranchSuff b q = \n. if n = 0 then q else b (n-1)`;
@@ -314,6 +332,95 @@ val BRANCH_SUFF_LEMM = store_thm
          >> metis_tac[]
        )
   );
+
+(* reachable states *)
+
+val oneStep_def = Define`
+  oneStep aut = \x y. ?a qs. (a,qs) ∈ aut.trans x ∧ y ∈ qs ∧ x ∈ aut.states`;
+
+val reachRel_def = Define`
+  reachRel aut = (oneStep aut)^*`;
+
+val reachRelFromSet_def = Define`
+  reachRelFromSet aut s = { y | ?x. reachRel aut x y ∧ x ∈ s }`;
+
+(*TODO rewrite using different reach rel*)
+
+(* val nStepReachable_def = Define` *)
+(*    (nStepReachable trans init 0 = init) *)
+(*  ∧ (nStepReachable trans init (SUC i) = *)
+(*      {s | ?a qs s'. (a, qs) ∈ trans s' ∧ s' ∈ nStepReachable trans init i *)
+(*            ∧ s ∈ qs})`; *)
+
+(* val reachable_def = Define` *)
+(*   (reachable trans init = {s | ?n. s ∈ nStepReachable trans init n })`; *)
+
+(* val reachableRel_def = Define` *)
+(*   reachableRel aut = *)
+(*      { (s, s') | s ∈ reachable aut.trans {s'} *)
+(*                    ∧ s ∈ aut.states ∧ s' ∈ aut.states}`; *)
+
+(* val REACHABLE_LEMM = store_thm *)
+(*   ("REACHABLE_LEMM", *)
+(*    ``!aut x. isValidAlterA aut ∧ (x ∈ aut.states) *)
+(*             ==> (reachable aut.trans {x} ⊆ aut.states)``, *)
+(*    rpt strip_tac *)
+(*    >> `!n. nStepReachable aut.trans {x} n ⊆ aut.states` by ( *)
+(*        Induct_on `n` >> fs[nStepReachable_def] *)
+(*        >> simp[SUBSET_DEF] >> rpt strip_tac *)
+(*        >> metis_tac[isValidAlterA_def,SUBSET_DEF] *)
+(*    ) *)
+(*    >> simp[reachable_def,SUBSET_DEF] >> rpt strip_tac *)
+(*    >> metis_tac[SUBSET_DEF] *)
+(*   ); *)
+
+(* val WAA_REACH_IS_PO = store_thm *)
+(*   ("WAA_REACH_IS_PO", *)
+(*    ``!aut. isWeakAlterA aut ∧ isValidAlterA aut *)
+(*              ==> isWeakWithOrder aut (reachableRel aut)``, *)
+(*    fs[isWeakAlterA_def] >> simp[isWeakWithOrder_def] >> rpt strip_tac *)
+(*     >- (fs[partial_order_def] >> rpt strip_tac *)
+(*         >- (simp[reachableRel_def,domain_def,SUBSET_DEF] >> rpt strip_tac) *)
+(*         >- (simp[reachableRel_def,range_def,SUBSET_DEF] >> rpt strip_tac) *)
+(*         >- (simp[reachableRel_def,transitive_def] >> rpt strip_tac *)
+(*             >> fs[reachable_def] >> qexists_tac `n + n'` *)
+(*             >> `!j1 j2 p q r. *)
+(*                   p ∈ nStepReachable aut.trans {q} j1 ∧ *)
+(*                   r ∈ nStepReachable aut.trans {p} j2 *)
+(*                   ==> r ∈ nStepReachable aut.trans {q} (j1 + j2)` by ( *)
+(*                  Induct_on `j2` >> rpt strip_tac >> fs[nStepReachable_def] *)
+(*                  >> `r ∈ nStepReachable aut.trans {q} (SUC (j1 + j2))` *)
+(*                     suffices_by metis_tac[SUC_ADD_SYM,ADD_COMM] *)
+(*                  >> simp[nStepReachable_def] >> metis_tac[] *)
+(*              ) *)
+(*             >> metis_tac[ADD_COMM] *)
+(*            ) *)
+(*         >- (fs[reflexive_def,reachableRel_def,reachable_def] >> rpt strip_tac *)
+(*             >> qexists_tac `0` >> fs[nStepReachable_def] *)
+(*            ) *)
+(*         >- (fs[antisym_def,reachableRel_def,reachable_def] >> rpt strip_tac *)
+(*             >> `!i p q. p ∈ aut.states ∧ q ∈ aut.states *)
+(*         ∧ p ∈ nStepReachable aut.trans {q} i ==> (p,q) ∈ ord` by ( *)
+(*                  Induct_on `i` >> rpt strip_tac *)
+(*                   >- fs[reflexive_def,nStepReachable_def] *)
+(*                   >- (fs[nStepReachable_def] *)
+(*                       >> `s' ∈ aut.states` by ( *)
+(*                            `s' ∈ reachable aut.trans {q}` *)
+(*                             by (simp[reachable_def] >> metis_tac[]) *)
+(*                           >> metis_tac[SUBSET_DEF,REACHABLE_LEMM]) *)
+(*                       >> `(s',q) ∈ ord` by metis_tac[] *)
+(*                       >> fs[transitive_def] >> metis_tac[] *)
+(*                      ) *)
+(*              ) *)
+(*             >> metis_tac[] *)
+(*            ) *)
+(*        ) *)
+(*     >- (fs[reachableRel_def,reachable_def] >> strip_tac *)
+(*           >- (qexists_tac `SUC 0` >> simp[nStepReachable_def] >> metis_tac[]) *)
+(*           >- (fs[isValidAlterA_def] >> metis_tac[SUBSET_DEF]) *)
+(*        ) *)
+(*   ); *)
+
 
 (*
   restricting a run to a subset of its initial states
@@ -711,8 +818,8 @@ val AUT_EX_1 = store_thm
 
 val AUT_EX_2 = store_thm
   ("AUT_EX_2",
-   ``~(isWeakAlterA A1)``,
-   simp[A1_def, isWeakAlterA_def, isWeakWithOrder_def] >> rw[] >>
+   ``~(isVeryWeakAlterA A1)``,
+   simp[A1_def, isVeryWeakAlterA_def, isVeryWeakWithOrder_def] >> rw[] >>
    `partial_order ord {1;2}
       ==> (?s. ((s = 1) \/ (s = 2)) /\ ?s'. ((s' = 1) \/ (s' = 2)) /\ ~((s, s') ∈ ord))`
       suffices_by metis_tac[]

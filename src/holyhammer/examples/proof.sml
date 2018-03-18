@@ -24,7 +24,7 @@ val thm = store_thm ("LEM3", cj3, tactic);
 
 val cj4 = ``cos (2 * x) = 2 * cos x pow 2 - 1``;
 val cj5 = mk_imp (cj3,cj4);
-(* set_timeout 30; holyhammer cj5; (* only Vampire finds a proof *) *)
+(* set_timeout 30; holyhammer cj5; only Vampire finds a proof or tactictoe finds a proof *)
 val lemmas = [fetch "scratch" "LEM2", fetch "real" "POW_2",
               fetch "real" "REAL_EQ_SUB_LADD", fetch "real" "REAL_DOUBLE"];
 val thm = save_thm ("LEM4",METIS_PROVE (thm :: lemmas) cj4);

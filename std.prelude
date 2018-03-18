@@ -191,8 +191,7 @@ in
   val _ = loadPath := tl (!loadPath)
 end;
 
-use (OS.Path.concat (HOLDIR, OS.Path.concat("tools", "makefile-includes.ML")));
-
+val _ = ReadHMF.extend_path_with_includes {quietp = false, lpref = loadPath};
 
 use (Path.concat(Globals.HOLDIR, "tools/check-intconfig.sml"));
 

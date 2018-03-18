@@ -38,7 +38,8 @@ in
     case List.find inDir includes of
       SOME dir => SOME(addDir dir s)
     | NONE     => NONE
-end
+end handle OS.Path.InvalidArc =>
+  raise Holdep_Error ("Bad module name \"" ^ s ^ "\"")
 
 fun isTheory s =
   case List.rev(String.explode s) of
@@ -47,7 +48,7 @@ fun isTheory s =
   | _ => NONE
 
 fun addThExt s s' ext = addExt (addDir (Path.dir s') s) ext
-fun outname (rcd as {assumes,includes}) cdir (s, res) =
+fun outname (rcd as {assumes,includes}) cdir linenum (s, res) =
   case isTheory s of
     SOME n => let
     in
@@ -93,6 +94,9 @@ fun outname (rcd as {assumes,includes}) cdir (s, res) =
             end
         end
     end
+  handle Holdep_Error s =>
+    raise Holdep_Error (s ^ " (line " ^ Int.toString linenum ^ ")")
+
 
 fun beginentry objext target = let
   val targetname = addExt target objext
@@ -131,13 +135,15 @@ fun read {assumes, includes, srcext, objext, filename} = let
   val curr_dir = Path.dir filename
   val outrcd = {assumes = assumes, includes = includes}
   val (targetname, res0) = beginentry objext (manglefilename filename)
-  val res = Binaryset.foldl
-              (fn (s, acc) => outname outrcd curr_dir (manglefilename s, acc))
+  val res = Binarymap.foldl
+              (fn (s, linenum, acc) =>
+                  outname outrcd curr_dir linenum (manglefilename s, acc))
               res0
               mentions
 in
   {tgt = targetname, deps = res}
-end
+end handle Holdep_Error s => raise Holdep_Error (filename ^ ": " ^ s)
+         | Holdep_tokens.LEX_ERROR s => raise Holdep_Error s;
 
 fun processfile {assumes, includes, fname = filename, diag} =
     let

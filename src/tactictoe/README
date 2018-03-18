@@ -1,64 +1,35 @@
 TacticToe is a tactic-based prover.
 
-It explores a proof trees by repeatly selecting tactics that are
+It explores proof trees by repeatly selecting tactics that are
 appropriate to solve the current goal.
-The selection relies on a machine learning algorithm on a data set 
-of recorded human tactics.
-
-INSTALL:
-  1) Recording theories interactively. (todo)
-
-KNOWN BUGS:
-  Some tactics may change the behaviour of later tactics in an undesirable way. 
-  One cache error can be fixed using:
-  numSimps.clear_arith_caches ();
-
-NOTES: (for the developers) 
-  Keep up-to-date infix tokens in hhsInfix.sml and 
-  polyml values in hhsUnfold.sml.
-
-ALTERNATIVE INSTALLATION:
-1) Scripts modification: 
-  
-  Rewrite scripts file and export them to src/tactictoe/scripts.
-  Generate copy_scripts.sh that allows you to copy the scripts to their
-  relative location.
-  
-  rlwrap bin/hol
-  load "hhsUnfold";
-  open hhsUnfold;
-  rewrite_hol_scripts (); (* takes about 30 minutes *)
+The selection is performed on a dataset of recorded human tactics.
 
 
-2) Recording tactics (non-interactive mode)
-  
-  Get a fresh copy HOL_RECORD (or choose a more convenient name)
-  of HOL with same commit "commit-number".
-  
-  # Go to the HOL_RECORD directory
-  cd HOL_RECORD 
-  
-  # Overwrite the scripts files with their modified version.
-  # Assume the relative location of the original HOL is ../HOL. 
-  sh ../HOL/src/tactictoe/src/copy_scripts.sh
-
-  # Copy tactictoe files to src/1. Allow to record early theories.
-  mv src/tactictoe/src/*.sml src/1
-  mv src/tactictoe/src/*.sig src/1
-  mv src/1/infix_file.sml src/tactictoe/src/infix_file.sml
-    
-  # Build HOL_RECORD. Takes about 1 or 2 hours. 
-  bin/build
-
-3) Run TacticToe (in HOL_RECORD):
-  
-  rlwrap bin/hol
+USAGE: 
+  See more examples in examples/ttt_demoScript.sml.
+ 
   load "tacticToe";
   open tacticToe;
-  tactictoe ([],``1+1=2``);
-  
-  Loading 7306 feature vectors
-  val it = fn: thm list -> metisTools.tactic 
-  SRW_TAC [] []
+  load "arithmeticTheory"; (* change arithmetic to the theory of your choice *)
+  ttt_record ();
+  tactictoe ``1+1=2``;
 
 
+EVALUATION of a theory (not needed to use TacticToe):
+  Evaluates how much tactictoe can automatically re-prove 
+  from previous definitions.
+  The result is stored in src/tactictoe/search_log/proof/your.
+
+  load "tacticToe";
+  open tacticToe;
+  load "yourTheory";
+  ttt_record (); (* takes a while *)
+  ttt_eval_thy "your";
+
+
+ISSUES:
+  Applying numSimps.clear_arith_caches is necessary in rare circumstances.
+
+
+NOTES FOR DEVELOPERS:
+  Keep up-to-date: infix tokens in hhsInfix.sml, polyml values in hhsUnfold.sml.

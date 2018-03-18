@@ -41,5 +41,5 @@ contradiction `{F}' or is alpha-equivalent to the conclusion of the goal, then
 Never fails.
 
 \SEEALSO
-Thm_cont.IMP_RES_THEN, Drule.RES_CANON, Tactic.RES_TAC, Thm_cont.RES_THEN.
+Tactic.drule, Thm_cont.IMP_RES_THEN, Drule.RES_CANON, Tactic.RES_TAC, Thm_cont.RES_THEN.
 \ENDDOC

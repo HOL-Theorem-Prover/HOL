@@ -13,8 +13,6 @@ val initForms_def = Define `(initForms f = tempDNF f)`;
 val finalForms_def = Define
   `finalForms f = {U f1 f2 | (U f1 f2) ∈ tempSubForms f}`;
 
-val char_def = Define `char Σ p = { a | (a ∈ Σ) /\ (p ∈ a)}`;
-
 (*
   transition function of the automaton
 *)
@@ -29,11 +27,11 @@ val trans_def = Define
  /\ (trans Σ (R f1 f2) = d_conj (trans Σ f2) ((trans Σ f1) ∪ {(Σ,{R f1 f2})}))`;
 
 val TRANS_ALPH_LEMM = store_thm
-                          ("TRANS_ALPH_LEMM",
-``!a e f Σ. (a,e) ∈ trans Σ f ==> a ⊆ Σ``,
-Induct_on `f` >> fs[trans_def, char_def, SUBSET_DEF,d_conj_def] >> rpt strip_tac
-          >> metis_tac[IN_INTER]
-                          );
+  ("TRANS_ALPH_LEMM",
+   ``!a e f Σ. (a,e) ∈ trans Σ f ==> a ⊆ Σ``,
+    Induct_on `f` >> fs[trans_def, char_def, SUBSET_DEF,d_conj_def]
+    >> rpt strip_tac >> metis_tac[IN_INTER]
+  );
 
 val TRANS_TEMPDNF_LEMM = store_thm
   ("TRANS_TEMPDNF_LEMM",
@@ -181,8 +179,8 @@ val TRANS_REACHES_SUBFORMS = store_thm
   Defining the automaton
 *)
 
-val ltl2waa_free_alph_def = Define
-  `ltl2waa_free_alph Σ f =
+val ltl2vwaa_free_alph_def = Define
+  `ltl2vwaa_free_alph Σ f =
         ALTER_A
            (tempSubForms f)
            (initForms f)
@@ -190,12 +188,12 @@ val ltl2waa_free_alph_def = Define
            Σ
            (trans Σ)`;
 
-val ltl2waa_def = Define `ltl2waa f = ltl2waa_free_alph (POW (props f)) f`;
+val ltl2vwaa_def = Define `ltl2vwaa f = ltl2vwaa_free_alph (POW (props f)) f`;
 
 val LTL2WAA_ISVALID = store_thm
   ("LTL2WAA_ISVALID",
-   ``!f. isValidAlterA (ltl2waa f)``,
-   strip_tac >> fs[isValidAlterA_def, ltl2waa_def, ltl2waa_free_alph_def]
+   ``!f. isValidAlterA (ltl2vwaa f)``,
+   strip_tac >> fs[isValidAlterA_def, ltl2vwaa_def, ltl2vwaa_free_alph_def]
    >> rpt strip_tac
    >- (fs[initForms_def, tempSubForms_def, POW_DEF, SUBSET_DEF]
        >> rpt strip_tac >> `x ⊆ tempSubForms f` by metis_tac[TEMPDNF_TEMPSUBF]
@@ -219,9 +217,9 @@ val LTL2WAA_ISVALID = store_thm
 
 val LTL2WAA_ISWEAK_LEMM = store_thm
   ("LTL2WAA_ISWEAK_LEMM",
-   ``!f g. isWeakAlterA (ltl2waa_free_alph (POW (props f)) g)``,
+   ``!f g. isVeryWeakAlterA (ltl2vwaa_free_alph (POW (props f)) g)``,
    rpt strip_tac
-   >> fs[isWeakAlterA_def, isWeakWithOrder_def, ltl2waa_def, ltl2waa_free_alph_def]
+   >> fs[isVeryWeakAlterA_def, isVeryWeakWithOrder_def, ltl2vwaa_def, ltl2vwaa_free_alph_def]
    >> exists_tac ``rrestrict TSF (tempSubForms g)``
    >> rpt strip_tac >> fs[TSF_PO]
    >> `!q. (q ∈ d) ==> ((q,s) ∈ TSF)`
@@ -234,14 +232,14 @@ val LTL2WAA_ISWEAK_LEMM = store_thm
 
 val LTL2WAA_ISWEAK = store_thm
   ("LTL2WAA_ISWEAK",
-   ``!f. isWeakAlterA (ltl2waa f)``,
-   strip_tac >> fs[ltl2waa_def] >> metis_tac[LTL2WAA_ISWEAK_LEMM]
+   ``!f. isVeryWeakAlterA (ltl2vwaa f)``,
+   strip_tac >> fs[ltl2vwaa_def] >> metis_tac[LTL2WAA_ISWEAK_LEMM]
   );
 
 val LTL2WAA_ISFINITE = store_thm
   ("LTL2WAA_ISFINITE",
-  ``!f g. FINITE (ltl2waa_free_alph (POW (props f)) g).states``,
-  fs[ltl2waa_free_alph_def] >> metis_tac[TSF_FINITE]
+  ``!f g. FINITE (ltl2vwaa_free_alph (POW (props f)) g).states``,
+  fs[ltl2vwaa_free_alph_def] >> metis_tac[TSF_FINITE]
   );
 
 (*
@@ -250,12 +248,12 @@ val LTL2WAA_ISFINITE = store_thm
 
 val REPL_F2_LEMM = store_thm
   ("REPL_F2_LEMM",
-   ``!a r f f' f1 f2 w l qs.(runForAA (ltl2waa_free_alph (POW (props f')) f2) r w
+   ``!a r f f' f1 f2 w l qs.(runForAA (ltl2vwaa_free_alph (POW (props f')) f2) r w
                  /\ (a,qs) ∈ trans (POW (props f')) f
                  /\ at w l ∈ a
                  /\ qs ⊆ r.E (l, f1)
                             )
-                 ==> ?r'. runForAA (ltl2waa_free_alph (POW (props f')) f) r' (suff w l)``,
+                 ==> ?r'. runForAA (ltl2vwaa_free_alph (POW (props f')) f) r' (suff w l)``,
    rpt strip_tac
    >> `∃e t a'.
        (qs = BIGUNION t) ∧ e ∈ tempDNF f ∧ (a = BIGINTER a') ∧
@@ -279,14 +277,14 @@ val REPL_F2_LEMM = store_thm
             (λ(i,q). if i = 0 then h q else r.E (i + l,q))`
    >> qabbrev_tac `r_new = run_restr e r_int`
    >> qexists_tac `r_new`
-   >> `validAARunFor (ltl2waa_free_alph (POW (props f')) f) r_new (suff w l) ∧
+   >> `validAARunFor (ltl2vwaa_free_alph (POW (props f')) f) r_new (suff w l) ∧
        (∀b x. infBranchOf r_new b ∧ branchFixP b x
-          ⇒ x ∉ (ltl2waa_free_alph (POW (props f')) f).final)`
+          ⇒ x ∉ (ltl2vwaa_free_alph (POW (props f')) f).final)`
        suffices_by metis_tac[BRANCH_ACC_LEMM, LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM]
    >> strip_tac
      >- (fs[validAARunFor_def]
          >> `!n. r_new.V (n + 1) ⊆ tempSubForms f ∩ r.V (n + 1 + l)` by
-           (qunabbrev_tac `r_new` >> qunabbrev_tac `r_int` >> fs[ltl2waa_free_alph_def]
+           (qunabbrev_tac `r_new` >> qunabbrev_tac `r_int` >> fs[ltl2vwaa_free_alph_def]
              >> Induct_on `n` >> fs[] >> rpt strip_tac
               >- (fs[SUBSET_DEF, run_restr_def, run_restr_V_def] >> rpt strip_tac
                   >> `e ⊆ tempSubForms f` by metis_tac[TEMPDNF_TEMPSUBF]
@@ -338,20 +336,20 @@ val REPL_F2_LEMM = store_thm
            )
        >> rpt strip_tac
          >- (qunabbrev_tac `r_new` >> qunabbrev_tac `r_int`
-             >> fs[ltl2waa_free_alph_def, initForms_def, tempDNF_def, run_restr_def]
+             >> fs[ltl2vwaa_free_alph_def, initForms_def, tempDNF_def, run_restr_def]
              >> fs[run_restr_V_def])
          >- (Cases_on `i = 0`
               >- (qunabbrev_tac `r_new` >> qunabbrev_tac `r_int`
-                  >> fs[ltl2waa_free_alph_def, run_restr_def, run_restr_V_def]
+                  >> fs[ltl2vwaa_free_alph_def, run_restr_def, run_restr_V_def]
                   >> metis_tac[TEMPDNF_TEMPSUBF]
                  )
               >- (`?j. i = SUC j` by (Cases_on `i` >> fs[])
                   >> `i = j + 1` by simp[]
                   >> `r_new.V (j + 1) ⊆ tempSubForms f` by metis_tac[SUBSET_INTER]
-                  >> fs[ltl2waa_free_alph_def] >> metis_tac[]
+                  >> fs[ltl2vwaa_free_alph_def] >> metis_tac[]
                  )
             )
-         >- (Cases_on `i = 0` >> fs[ltl2waa_free_alph_def]
+         >- (Cases_on `i = 0` >> fs[ltl2vwaa_free_alph_def]
               >- (qunabbrev_tac `r_int` >> qunabbrev_tac `r_new`
                   >> fs[run_restr_def, run_restr_E_def, run_restr_V_def]
                   >> `∃a''. a'' ∈ a' ∧ (a'',h q) ∈ trans (POW (props f')) q`
@@ -369,7 +367,7 @@ val REPL_F2_LEMM = store_thm
                   >> qexists_tac `a''` >> fs[AT_SUFF_LEMM]
                   )
             )
-         >- (Cases_on `i = 0` >> fs[ltl2waa_free_alph_def]
+         >- (Cases_on `i = 0` >> fs[ltl2vwaa_free_alph_def]
               >- (qunabbrev_tac `r_int` >> qunabbrev_tac `r_new`
                   >> fs[run_restr_def, run_restr_E_def, run_restr_V_def]
                   >> fs[SUBSET_DEF] >> rpt strip_tac
@@ -422,9 +420,9 @@ val REPL_F2_LEMM = store_thm
             )
           )
      >- (`∀b x. infBranchOf r b ∧ branchFixP b x
-            ⇒ x ∉ (ltl2waa_free_alph (POW (props f')) f2).final`
+            ⇒ x ∉ (ltl2vwaa_free_alph (POW (props f')) f2).final`
           by metis_tac[BRANCH_ACC_LEMM, LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM]
-         >> rpt strip_tac >> fs[ltl2waa_free_alph_def, finalForms_def]
+         >> rpt strip_tac >> fs[ltl2vwaa_free_alph_def, finalForms_def]
          >> `!aut. (let run_int =
                    ALTERA_RUN (λi. if i = 0 then e else r.V (i+l))
                        (λ(i,q). if i = 0 then h q else r.E (i+l,q))
@@ -444,13 +442,13 @@ val REPL_F2_LEMM = store_thm
 
 val U_REPL_F1_LEMM = store_thm
   ("U_REPL_F1_LEMM",
-  ``!a r f f1 f2 w l.(runForAA (ltl2waa_free_alph (POW (props f)) (U f1 f2)) r w
+  ``!a r f f1 f2 w l.(runForAA (ltl2vwaa_free_alph (POW (props f)) (U f1 f2)) r w
                    /\ (a,r.E (l,U f1 f2)) ∈
                       d_conj (trans (POW (props f)) f1) {(POW (props f), {U f1 f2})}
                    /\ at w l ∈ a)
      ==> ?r'.
           runForAA
-          (ltl2waa_free_alph (POW (props f)) (CONJ f1 (X (U f1 f2))))
+          (ltl2vwaa_free_alph (POW (props f)) (CONJ f1 (X (U f1 f2))))
           r' (suff w l)``,
    rpt strip_tac >> fs[d_conj_def]
    >> `∃e t a'.
@@ -484,18 +482,18 @@ val U_REPL_F1_LEMM = store_thm
       by metis_tac[SUBSET_TRANS, runForAA_def, validAARunFor_def]
    >> fs[] >> fs[runForAA_def]
    >> `?r'. validAARunFor
-        (ltl2waa_free_alph (POW (props f)) (CONJ f1 (X (U f1 f2)))) r' (suff w l)
+        (ltl2vwaa_free_alph (POW (props f)) (CONJ f1 (X (U f1 f2)))) r' (suff w l)
        /\ ∀b x. infBranchOf r' b ∧ branchFixP b x
-          ⇒ x ∉ (ltl2waa_free_alph (POW (props f)) (CONJ f1 (X (U f1 f2)))).final`
+          ⇒ x ∉ (ltl2vwaa_free_alph (POW (props f)) (CONJ f1 (X (U f1 f2)))).final`
        suffices_by metis_tac[BRANCH_ACC_LEMM, LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM]
    >> `∀b x. infBranchOf r b ∧ branchFixP b x
-       ⇒ x ∉ (ltl2waa_free_alph (POW (props f)) (U f1 f2)).final`
+       ⇒ x ∉ (ltl2vwaa_free_alph (POW (props f)) (U f1 f2)).final`
        by metis_tac[BRANCH_ACC_LEMM, LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM]
    >> `(let run_int =
          ALTERA_RUN (λi. if i = 0 then e' else r.V (i + l))
              (λ(i,q). if i = 0 then h' q else r.E (i + l,q))
         in
-         validAARunFor (ltl2waa_free_alph (POW (props f)) (U f1 f2)) r w
+         validAARunFor (ltl2vwaa_free_alph (POW (props f)) (U f1 f2)) r w
                      ∧ (∀q. q ∈ e' ⇒ h' q ⊆ r.V  (l + 1)) ⇒
                      ∀i. (run_restr e' run_int).V (i + 1) ⊆ r.V (i + l + 1))`
         by metis_tac[REPL_RUN_CONSTR_LEMM]
@@ -505,7 +503,7 @@ val U_REPL_F1_LEMM = store_thm
                         (λ(i,q). if i = 0 then h' q else r.E (i + l,q)))`
    >> `∀i. (run_restr e' r_int).V (i + 1) ⊆ r.V (i + (l + 1))` by metis_tac[]
    >> qexists_tac `run_restr e' r_int` >> strip_tac
-   >- (fs[validAARunFor_def, ltl2waa_free_alph_def, initForms_def, tempDNF_def]
+   >- (fs[validAARunFor_def, ltl2vwaa_free_alph_def, initForms_def, tempDNF_def]
      >> rpt strip_tac
      >- (fs[] >> qexists_tac `e` >> rpt strip_tac >> fs[]
          >> simp[run_restr_def, run_restr_V_def] >> fs[]
@@ -613,7 +611,7 @@ val U_REPL_F1_LEMM = store_thm
             by metis_tac[REPL_RUN_CONSTR_LEMM2]
          >> fs[]
          >> `∃b'. infBranchOf r b' ∧ branchFixP b' x` by metis_tac[]
-         >> fs[ltl2waa_free_alph_def, finalForms_def]
+         >> fs[ltl2vwaa_free_alph_def, finalForms_def]
          >> `tempSubForms (CONJ f1 (X (U f1 f2)))
                      = {X (U f1 f2)} ∪ tempSubForms (U f1 f2)` by
                 (fs[tempSubForms_def] >> metis_tac[UNION_DEF])
@@ -626,13 +624,13 @@ val U_REPL_F1_LEMM = store_thm
 
 val R_REPL_F1_LEMM = store_thm
   ("R_REPL_F1_LEMM",
-  ``!a r f f1 f2 w l.(runForAA (ltl2waa_free_alph (POW (props f)) (R f1 f2)) r w
+  ``!a r f f1 f2 w l.(runForAA (ltl2vwaa_free_alph (POW (props f)) (R f1 f2)) r w
                    /\ (a,r.E (l,R f1 f2)) ∈
                       d_conj (trans (POW (props f)) f2) {(POW (props f), {R f1 f2})}
                    /\ at w l ∈ a)
      ==> ?r'.
           runForAA
-          (ltl2waa_free_alph (POW (props f)) (CONJ f2 (X (R f1 f2))))
+          (ltl2vwaa_free_alph (POW (props f)) (CONJ f2 (X (R f1 f2))))
           r' (suff w l)``,
    rpt strip_tac >> fs[d_conj_def]
    >> `∃e t a'.
@@ -666,18 +664,18 @@ val R_REPL_F1_LEMM = store_thm
       by metis_tac[SUBSET_TRANS, runForAA_def, validAARunFor_def]
    >> fs[] >> fs[runForAA_def]
    >> `?r'. validAARunFor
-        (ltl2waa_free_alph (POW (props f)) (CONJ f2 (X (R f1 f2)))) r' (suff w l)
+        (ltl2vwaa_free_alph (POW (props f)) (CONJ f2 (X (R f1 f2)))) r' (suff w l)
        /\ ∀b x. infBranchOf r' b ∧ branchFixP b x
-          ⇒ x ∉ (ltl2waa_free_alph (POW (props f)) (CONJ f2 (X (R f1 f2)))).final`
+          ⇒ x ∉ (ltl2vwaa_free_alph (POW (props f)) (CONJ f2 (X (R f1 f2)))).final`
        suffices_by metis_tac[BRANCH_ACC_LEMM, LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM]
    >> `∀b x. infBranchOf r b ∧ branchFixP b x
-       ⇒ x ∉ (ltl2waa_free_alph (POW (props f)) (R f1 f2)).final`
+       ⇒ x ∉ (ltl2vwaa_free_alph (POW (props f)) (R f1 f2)).final`
        by metis_tac[BRANCH_ACC_LEMM, LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM]
    >> `(let run_int =
          ALTERA_RUN (λi. if i = 0 then e' else r.V (i + l))
              (λ(i,q). if i = 0 then h' q else r.E (i + l,q))
         in
-         validAARunFor (ltl2waa_free_alph (POW (props f)) (R f1 f2)) r w
+         validAARunFor (ltl2vwaa_free_alph (POW (props f)) (R f1 f2)) r w
                      ∧ (∀q. q ∈ e' ⇒ h' q ⊆ r.V  (l + 1)) ⇒
                      ∀i. (run_restr e' run_int).V (i + 1) ⊆ r.V (i + l + 1))`
         by metis_tac[REPL_RUN_CONSTR_LEMM]
@@ -687,7 +685,7 @@ val R_REPL_F1_LEMM = store_thm
                         (λ(i,q). if i = 0 then h' q else r.E (i + l,q)))`
    >> `∀i. (run_restr e' r_int).V (i + 1) ⊆ r.V (i + (l + 1))` by metis_tac[]
    >> qexists_tac `run_restr e' r_int` >> strip_tac
-   >- (fs[validAARunFor_def, ltl2waa_free_alph_def, initForms_def, tempDNF_def]
+   >- (fs[validAARunFor_def, ltl2vwaa_free_alph_def, initForms_def, tempDNF_def]
      >> rpt strip_tac
      >- (fs[] >> qexists_tac `e` >> rpt strip_tac >> fs[]
          >> simp[run_restr_def, run_restr_V_def] >> fs[]
@@ -795,7 +793,7 @@ val R_REPL_F1_LEMM = store_thm
             by metis_tac[REPL_RUN_CONSTR_LEMM2]
          >> fs[]
          >> `∃b'. infBranchOf r b' ∧ branchFixP b' x` by metis_tac[]
-         >> fs[ltl2waa_free_alph_def, finalForms_def]
+         >> fs[ltl2vwaa_free_alph_def, finalForms_def]
          >> `tempSubForms (CONJ f2 (X (R f1 f2)))
                      = {X (R f1 f2)} ∪ tempSubForms (R f1 f2)` by
                 (fs[tempSubForms_def] >> metis_tac[UNION_DEF])
@@ -809,28 +807,28 @@ val R_REPL_F1_LEMM = store_thm
 val RUN_FOR_DISJ_LEMM = store_thm
   ("RUN_FOR_DISJ_LEMM",
   ``!f1 f2 f w run.
-       (runForAA (ltl2waa_free_alph (POW (props f)) f1) run w
-     \/ runForAA (ltl2waa_free_alph (POW (props f)) f2) run w
+       (runForAA (ltl2vwaa_free_alph (POW (props f)) f1) run w
+     \/ runForAA (ltl2vwaa_free_alph (POW (props f)) f2) run w
        )
-           ==> runForAA (ltl2waa_free_alph (POW (props f)) (DISJ f1 f2)) run w``,
+           ==> runForAA (ltl2vwaa_free_alph (POW (props f)) (DISJ f1 f2)) run w``,
   fs[runForAA_def] >> rpt strip_tac
-    >- (fs[ltl2waa_free_alph_def, initForms_def, tempSubForms_def, finalForms_def]
+    >- (fs[ltl2vwaa_free_alph_def, initForms_def, tempSubForms_def, finalForms_def]
         >> fs[tempDNF_def, tempSubForms_def, SUBSET_DEF, UNION_DEF] >> rpt strip_tac
         >> fs[validAARunFor_def,SUBSET_DEF] >> rpt strip_tac
         >> metis_tac[])
     >- (`!b x. infBranchOf run b ∧ branchFixP b x ⇒
-           x ∉ (ltl2waa_free_alph (POW (props f)) f1).final`
+           x ∉ (ltl2vwaa_free_alph (POW (props f)) f1).final`
          by metis_tac[BRANCH_ACC_LEMM, LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM]
-         >> `validAARunFor (ltl2waa_free_alph (POW (props f)) (DISJ f1 f2)) run w
+         >> `validAARunFor (ltl2vwaa_free_alph (POW (props f)) (DISJ f1 f2)) run w
            /\ (∀b x. (infBranchOf run b ∧ branchFixP b x)
-                ==> (x ∉ (ltl2waa_free_alph (POW (props f)) (DISJ f1 f2)).final))`
+                ==> (x ∉ (ltl2vwaa_free_alph (POW (props f)) (DISJ f1 f2)).final))`
          suffices_by metis_tac[BRANCH_ACC_LEMM, LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM]
          >> rpt strip_tac
             >- (fs[validAARunFor_def] >> rpt strip_tac
-                >> fs[SUBSET_DEF, ltl2waa_free_alph_def, initForms_def, tempDNF_def]
+                >> fs[SUBSET_DEF, ltl2vwaa_free_alph_def, initForms_def, tempDNF_def]
                 >> rpt strip_tac >> fs[tempSubForms_def] >> metis_tac[]
                )
-            >- (fs[ltl2waa_free_alph_def, finalForms_def]
+            >- (fs[ltl2vwaa_free_alph_def, finalForms_def]
                 >> `∀f1' f2'. x ≠ U f1' f2' ∨ U f1' f2' ∉ tempSubForms f1` by metis_tac[]
                 >> `x ≠ U f1' f2' ∨ U f1' f2' ∉ tempSubForms f1` by metis_tac[]
                 >> `∀i. b i ∈ run.V i` by metis_tac[BRANCH_V_LEMM]
@@ -839,23 +837,23 @@ val RUN_FOR_DISJ_LEMM = store_thm
                 >> metis_tac[]
                )
        )
-    >- (fs[ltl2waa_free_alph_def, initForms_def, tempSubForms_def, finalForms_def]
+    >- (fs[ltl2vwaa_free_alph_def, initForms_def, tempSubForms_def, finalForms_def]
           >> fs[tempDNF_def, tempSubForms_def, SUBSET_DEF, UNION_DEF] >> rpt strip_tac
           >> fs[validAARunFor_def,SUBSET_DEF] >> rpt strip_tac
           >> metis_tac[])
     >- (`!b x. infBranchOf run b ∧ branchFixP b x ⇒
-           x ∉ (ltl2waa_free_alph (POW (props f)) f2).final`
+           x ∉ (ltl2vwaa_free_alph (POW (props f)) f2).final`
          by metis_tac[BRANCH_ACC_LEMM, LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM]
-         >> `validAARunFor (ltl2waa_free_alph (POW (props f)) (DISJ f1 f2)) run w
+         >> `validAARunFor (ltl2vwaa_free_alph (POW (props f)) (DISJ f1 f2)) run w
            /\ (∀b x. (infBranchOf run b ∧ branchFixP b x)
-                ==> (x ∉ (ltl2waa_free_alph (POW (props f)) (DISJ f1 f2)).final))`
+                ==> (x ∉ (ltl2vwaa_free_alph (POW (props f)) (DISJ f1 f2)).final))`
          suffices_by metis_tac[BRANCH_ACC_LEMM, LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM]
          >> rpt strip_tac
             >- (fs[validAARunFor_def] >> rpt strip_tac
-                >> fs[SUBSET_DEF, ltl2waa_free_alph_def, initForms_def, tempDNF_def]
+                >> fs[SUBSET_DEF, ltl2vwaa_free_alph_def, initForms_def, tempDNF_def]
                 >> rpt strip_tac >> fs[tempSubForms_def] >> metis_tac[]
                )
-            >- (fs[ltl2waa_free_alph_def, finalForms_def]
+            >- (fs[ltl2vwaa_free_alph_def, finalForms_def]
                 >> `∀f1' f2'. x ≠ U f1' f2' ∨ U f1' f2' ∉ tempSubForms f2` by metis_tac[]
                 >> `x ≠ U f1' f2' ∨ U f1' f2' ∉ tempSubForms f2` by metis_tac[]
                 >> `∀i. b i ∈ run.V i` by metis_tac[BRANCH_V_LEMM]
@@ -869,17 +867,17 @@ val RUN_FOR_DISJ_LEMM = store_thm
 val RUN_FOR_DISJ_LEMM2 = store_thm
   ("RUN_FOR_DISJ_LEMM2",
   ``!f f1 f2 run w.
-        runForAA (ltl2waa_free_alph (POW (props f)) (DISJ f1 f2)) run w
-           ==> (runForAA (ltl2waa_free_alph (POW (props f)) f1) run w
-            \/  runForAA (ltl2waa_free_alph (POW (props f)) f2) run w
+        runForAA (ltl2vwaa_free_alph (POW (props f)) (DISJ f1 f2)) run w
+           ==> (runForAA (ltl2vwaa_free_alph (POW (props f)) f1) run w
+            \/  runForAA (ltl2vwaa_free_alph (POW (props f)) f2) run w
                )``,
   rpt strip_tac >> fs[runForAA_def]
   >> `∀b x. infBranchOf run b ∧ branchFixP b x
-        ⇒ x ∉ (ltl2waa_free_alph (POW (props f)) (DISJ f1 f2)).final`
+        ⇒ x ∉ (ltl2vwaa_free_alph (POW (props f)) (DISJ f1 f2)).final`
       by metis_tac[LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM, BRANCH_ACC_LEMM]
   >> asm_simp_tac(srw_ss() ++ SatisfySimps.SATISFY_ss ++ boolSimps.CONJ_ss)
        [BRANCH_ACC_LEMM,LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM]
-  >> fs[ltl2waa_free_alph_def,validAARunFor_def]
+  >> fs[ltl2vwaa_free_alph_def,validAARunFor_def]
   >> rpt strip_tac >> fs[initForms_def, tempDNF_def, tempSubForms_def, finalForms_def]
     >- (`(∀i. run.V i ⊆ tempSubForms f1) ∧
            (∀b x.
@@ -922,19 +920,19 @@ val RUN_FOR_DISJ_LEMM2 = store_thm
 val REPL_IN_0 = store_thm
   ("REPL_IN_0",
    ``!r w f f' f1 f2 a p.
-       runForAA (ltl2waa_free_alph (POW (props f')) f) r w
+       runForAA (ltl2vwaa_free_alph (POW (props f')) f) r w
        /\ (a, r.V 1) ∈ trans (POW (props f')) (p)
        /\ at w 0 ∈ a
        /\ {p} ∈ tempDNF p
      ==>
-       ?r'. runForAA (ltl2waa_free_alph (POW (props f')) (p)) r' w``,
+       ?r'. runForAA (ltl2vwaa_free_alph (POW (props f')) (p)) r' w``,
    rpt strip_tac >> fs[runForAA_def]
-   >> `?r'. validAARunFor (ltl2waa_free_alph (POW (props f')) (p)) r' w
+   >> `?r'. validAARunFor (ltl2vwaa_free_alph (POW (props f')) (p)) r' w
       /\ (∀b x. infBranchOf r' b ∧ branchFixP b x
-        ⇒ x ∉ (ltl2waa_free_alph (POW (props f')) (p)).final)`
+        ⇒ x ∉ (ltl2vwaa_free_alph (POW (props f')) (p)).final)`
        suffices_by metis_tac[BRANCH_ACC_LEMM,  LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM]
    >> `(∀b x. infBranchOf r b ∧ branchFixP b x
-         ⇒ x ∉ (ltl2waa_free_alph (POW (props f')) f).final)`
+         ⇒ x ∉ (ltl2vwaa_free_alph (POW (props f')) f).final)`
         by metis_tac[BRANCH_ACC_LEMM,  LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM]
    >> SUBGOAL_THEN ``!n. r.V (n + 1) ⊆ tempSubForms (p)`` mp_tac
      >- (Induct_on `n`
@@ -946,7 +944,7 @@ val REPL_IN_0 = store_thm
               >> `(((SUC n) + 1) = 0)
                 \/ ∃q'. x ∈ r.E (((SUC n) + 1) − 1,q') ∧ q' ∈ r.V (((SUC n) + 1) − 1)`
                   by metis_tac[validAARunFor_def]
-              >> fs[validAARunFor_def, ltl2waa_free_alph_def]
+              >> fs[validAARunFor_def, ltl2vwaa_free_alph_def]
               >> `∃a'. (a',r.E(SUC n, q')) ∈ trans (POW (props f')) q'` by metis_tac[]
               >> `(x, q') ∈ TSF` by metis_tac[TRANS_REACHES_SUBFORMS]
               >> `q' ∈ tempSubForms (p)` by metis_tac[SUC_ONE_ADD, ADD_COMM]
@@ -961,8 +959,8 @@ val REPL_IN_0 = store_thm
            by metis_tac[BRANCH_SUFF_LEMM]
         >> `!b. infBranchOf r b ⇒ ∀i. b i ∈ r.V i` by metis_tac[BRANCH_V_LEMM]
         >> fs[validAARunFor_def] >> rpt strip_tac
-           >- (fs[ltl2waa_free_alph_def, initForms_def, tempDNF_def])
-           >- (Cases_on `i = 0` >> fs[tempSubForms_def, ltl2waa_free_alph_def]
+           >- (fs[ltl2vwaa_free_alph_def, initForms_def, tempDNF_def])
+           >- (Cases_on `i = 0` >> fs[tempSubForms_def, ltl2vwaa_free_alph_def]
                  >- (`{p} ⊆ tempSubForms p` by metis_tac[TEMPDNF_TEMPSUBF]
                      >> fs[SUBSET_DEF]
                     )
@@ -971,7 +969,7 @@ val REPL_IN_0 = store_thm
                     >> metis_tac[]
                     )
               )
-           >- (Cases_on `i = 0` >> fs[tempSubForms_def, ltl2waa_free_alph_def]
+           >- (Cases_on `i = 0` >> fs[tempSubForms_def, ltl2vwaa_free_alph_def]
                 >> qexists_tac `a` >> fs[])
            >- (Cases_on `i = 0` >> fs[])
            >- (Cases_on `i = 0` >> fs[]
@@ -982,7 +980,7 @@ val REPL_IN_0 = store_thm
                    by metis_tac[] >> fs[]
                >> qexists_tac `q'` >> fs[]
               )
-           >- (fs[ltl2waa_free_alph_def, finalForms_def]
+           >- (fs[ltl2vwaa_free_alph_def, finalForms_def]
                >> `infBranchSuffOf r 1 (\i. b (i + 1))` by
                    (simp[infBranchSuffOf_def] >> fs[] >> rpt strip_tac
                       >- (fs[infBranchOf_def] >> fs[]
@@ -1030,19 +1028,19 @@ val REPL_IN_0 = store_thm
 val RUN_FOR_CONJ_LEMM = store_thm
   ("RUN_FOR_DISJ_LEMM",
    ``!f1 f2 f w.
-     (?r. runForAA (ltl2waa_free_alph (POW (props f)) f1) r w)
-  /\ (?r. runForAA (ltl2waa_free_alph (POW (props f)) f2) r w)
-      ==> (?r. runForAA (ltl2waa_free_alph (POW (props f)) (CONJ f1 f2)) r w)``,
+     (?r. runForAA (ltl2vwaa_free_alph (POW (props f)) f1) r w)
+  /\ (?r. runForAA (ltl2vwaa_free_alph (POW (props f)) f2) r w)
+      ==> (?r. runForAA (ltl2vwaa_free_alph (POW (props f)) (CONJ f1 f2)) r w)``,
    fs[runForAA_def] >> rpt gen_tac >> strip_tac
-   >> `?r. validAARunFor (ltl2waa_free_alph (POW (props f)) (CONJ f1 f2)) r w
+   >> `?r. validAARunFor (ltl2vwaa_free_alph (POW (props f)) (CONJ f1 f2)) r w
     /\ (∀b x. infBranchOf r b ∧ branchFixP b x
-         ⇒ x ∉ (ltl2waa_free_alph (POW (props f)) (CONJ f1 f2)).final)`
+         ⇒ x ∉ (ltl2vwaa_free_alph (POW (props f)) (CONJ f1 f2)).final)`
       suffices_by metis_tac[LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM, BRANCH_ACC_LEMM]
    >> qexists_tac `conj_run r r'`
    >> conj_tac
      >- (`!i. conj_run_V r r' i ⊆ (r.V i ∪ r'.V i)` by metis_tac[CONJ_RUN_V_LEMM]
          >> fs[validAARunFor_def] >> rpt strip_tac
-         >> fs[ltl2waa_free_alph_def, initForms_def, finalForms_def, tempSubForms_def]
+         >> fs[ltl2vwaa_free_alph_def, initForms_def, finalForms_def, tempSubForms_def]
          >> fs[tempDNF_def, conj_run_def, conj_run_V_def, conj_run_E_def]
            >- (qexists_tac `r.V 0` >> qexists_tac `r'.V 0` >> fs[])
            >- (`conj_run_V r r' i ⊆ r.V i ∪ r'.V i` by metis_tac[]
@@ -1088,14 +1086,14 @@ val RUN_FOR_CONJ_LEMM = store_thm
      >- (CCONTR_TAC
          >> fs[]
          >> `∀b x. infBranchOf r b ∧ branchFixP b x
-               ⇒ x ∉ (ltl2waa_free_alph (POW (props f)) f1).final`
+               ⇒ x ∉ (ltl2vwaa_free_alph (POW (props f)) f1).final`
              by metis_tac[LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM, BRANCH_ACC_LEMM]
          >> `∀b x. infBranchOf r' b ∧ branchFixP b x
-               ⇒ x ∉ (ltl2waa_free_alph (POW (props f)) f2).final`
+               ⇒ x ∉ (ltl2vwaa_free_alph (POW (props f)) f2).final`
              by metis_tac[LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM, BRANCH_ACC_LEMM]
          >> `∃b'. (infBranchOf r b' ∨ infBranchOf r' b') ∧ branchFixP b' x`
             by metis_tac[CONJ_RUN_FIXP_LEMM]
-           >- (fs[ltl2waa_free_alph_def, finalForms_def,acceptingAARun_def, tempSubForms_def]
+           >- (fs[ltl2vwaa_free_alph_def, finalForms_def,acceptingAARun_def, tempSubForms_def]
                  >- (`∀f1' f2'. x ≠ U f1' f2' ∨ U f1' f2' ∉ tempSubForms f1` by metis_tac[]
                       >> metis_tac[])
                  >- (`∀f1' f2'. x ≠ U f1' f2' ∨ U f1' f2' ∉ tempSubForms f1` by metis_tac[]
@@ -1109,7 +1107,7 @@ val RUN_FOR_CONJ_LEMM = store_thm
                       >> fs[SUBSET_DEF, branchFixP_def] >> metis_tac[]
                     )
               )
-           >- (fs[ltl2waa_free_alph_def, finalForms_def,acceptingAARun_def, tempSubForms_def]
+           >- (fs[ltl2vwaa_free_alph_def, finalForms_def,acceptingAARun_def, tempSubForms_def]
                  >- (`∀f1' f2'. x ≠ U f1' f2' ∨ U f1' f2' ∉ tempSubForms f2` by metis_tac[]
                      >> `U f1' f2' ∉ tempSubForms f2` by metis_tac[]
                      >> `!i. b' i ∈ r'.V i` by metis_tac[BRANCH_V_LEMM]
@@ -1129,29 +1127,29 @@ val RUN_FOR_CONJ_LEMM = store_thm
 val RUN_FOR_CONJ_LEMM2_UNION = store_thm
   ("RUN_FOR_CONJ_LEMM2_UNION",
    ``!f1 f2 f w run.
-              runForAA (ltl2waa_free_alph (POW (props f)) (CONJ f1 f2)) run w
-            ==> (?r1. runForAA (ltl2waa_free_alph (POW (props f)) f1) r1 w
-             /\ (?r2. runForAA (ltl2waa_free_alph (POW (props f)) f2) r2 w
+              runForAA (ltl2vwaa_free_alph (POW (props f)) (CONJ f1 f2)) run w
+            ==> (?r1. runForAA (ltl2vwaa_free_alph (POW (props f)) f1) r1 w
+             /\ (?r2. runForAA (ltl2vwaa_free_alph (POW (props f)) f2) r2 w
              /\ !i. run.V i = r1.V i ∪ r2.V i))``,
    fs[runForAA_def] >> rpt gen_tac >> rpt strip_tac
    >> `(!b x. infBranchOf run b ∧ branchFixP b x
-           ⇒ x ∉ (ltl2waa_free_alph (POW (props f)) (CONJ f1 f2)).final)`
+           ⇒ x ∉ (ltl2vwaa_free_alph (POW (props f)) (CONJ f1 f2)).final)`
       by metis_tac[LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM, BRANCH_ACC_LEMM]
    >> `!init. init ⊆ run.V 0 ==> !i. run_restr_V init run i ⊆ run.V i`
       by metis_tac[RUN_RESTR_LEMM]
    >> `!init b. (init ⊆ run.V 0) /\ (infBranchOf (run_restr init run) b)
               ==> infBranchOf run b`
       by metis_tac[RUN_RESTR_FIXP_LEMM]
-     >- (`?r1. validAARunFor (ltl2waa_free_alph (POW (props f)) f1) r1 w
+     >- (`?r1. validAARunFor (ltl2vwaa_free_alph (POW (props f)) f1) r1 w
              /\ (∀b x. infBranchOf r1 b ∧ branchFixP b x
-                  ⇒ x ∉ (ltl2waa_free_alph (POW (props f)) f1).final) /\
+                  ⇒ x ∉ (ltl2vwaa_free_alph (POW (props f)) f1).final) /\
           ∃r2.
-             (validAARunFor (ltl2waa_free_alph (POW (props f)) f2) r2 w ∧
+             (validAARunFor (ltl2vwaa_free_alph (POW (props f)) f2) r2 w ∧
               (∀b x. infBranchOf r2 b ∧ branchFixP b x
-                ⇒ x ∉ (ltl2waa_free_alph (POW (props f)) f2).final)) ∧
+                ⇒ x ∉ (ltl2vwaa_free_alph (POW (props f)) f2).final)) ∧
                 ∀i. run.V i = r1.V i ∪ r2.V i`
             suffices_by metis_tac[LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM, BRANCH_ACC_LEMM]
-         >> rpt strip_tac >> fs[validAARunFor_def, ltl2waa_free_alph_def, finalForms_def]
+         >> rpt strip_tac >> fs[validAARunFor_def, ltl2vwaa_free_alph_def, finalForms_def]
          >> rpt strip_tac >> fs[initForms_def, tempSubForms_def, tempDNF_def]
          >> qexists_tac `run_restr f' run`
          >> rpt strip_tac >> fs[run_restr_def, run_restr_V_def]
@@ -1276,12 +1274,12 @@ val RUN_FOR_CONJ_LEMM2_UNION = store_thm
 
 val TRANS_LEMM1 = store_thm
   ("TRANS_LEMM1",
-   ``!w f' f r. runForAA (ltl2waa_free_alph (POW (props f')) f) r w
+   ``!w f' f r. runForAA (ltl2vwaa_free_alph (POW (props f')) f) r w
               /\ r.V 0 ∈ tempDNF f
                     ==> (?a. (a, r.V 1) ∈ trans (POW (props f')) f
                       /\ at w 0 ∈ a)``,
    gen_tac >> gen_tac >> Induct_on `f`
-     >- (fs[ltl2waa_free_alph_def, initForms_def, trans_def, tempDNF_def]
+     >- (fs[ltl2vwaa_free_alph_def, initForms_def, trans_def, tempDNF_def]
          >> fs[trans_def, runForAA_def, validAARunFor_def]
          >> rpt strip_tac
          >> `∃a'. (a',r.E (0,VAR a)) ∈ (trans (POW (props f')) (VAR a))
@@ -1294,7 +1292,7 @@ val TRANS_LEMM1 = store_thm
             >> fs[] >> metis_tac[NOT_IN_EMPTY])
          >- (metis_tac[])
         )
-     >- (fs[ltl2waa_free_alph_def, initForms_def, trans_def, tempDNF_def]
+     >- (fs[ltl2vwaa_free_alph_def, initForms_def, trans_def, tempDNF_def]
           >> fs[trans_def, runForAA_def, validAARunFor_def]
           >> rpt strip_tac
           >> `∃a'. (a',r.E (0,N_VAR a)) ∈ (trans (POW (props f')) (N_VAR a))
@@ -1308,12 +1306,12 @@ val TRANS_LEMM1 = store_thm
           >- (metis_tac[IN_DIFF])
         )
      >- (rpt strip_tac
-         >> `runForAA (ltl2waa_free_alph (POW (props f')) f) r w ∨
-             runForAA (ltl2waa_free_alph (POW (props f')) f'') r w`
+         >> `runForAA (ltl2vwaa_free_alph (POW (props f')) f) r w ∨
+             runForAA (ltl2vwaa_free_alph (POW (props f')) f'') r w`
              by metis_tac[RUN_FOR_DISJ_LEMM2]
            >- (`r.V 0 ∈ tempDNF f` by
                  (POP_ASSUM mp_tac
-                  >> simp[runForAA_def, validAARunFor_def, ltl2waa_free_alph_def]
+                  >> simp[runForAA_def, validAARunFor_def, ltl2vwaa_free_alph_def]
                   >> rpt strip_tac >> fs[initForms_def]
                  )
                >> `∃a. (a,r.V 1) ∈ trans (POW (props f')) f ∧ at w 0 ∈ a` by metis_tac[]
@@ -1321,7 +1319,7 @@ val TRANS_LEMM1 = store_thm
               )
            >- (`r.V 0 ∈ tempDNF f''` by
                  (POP_ASSUM mp_tac
-                  >> simp[runForAA_def, validAARunFor_def, ltl2waa_free_alph_def]
+                  >> simp[runForAA_def, validAARunFor_def, ltl2vwaa_free_alph_def]
                   >> rpt strip_tac >> fs[initForms_def]
                  )
                >> `∃a. (a,r.V 1) ∈ trans (POW (props f')) f'' ∧ at w 0 ∈ a` by metis_tac[]
@@ -1330,16 +1328,16 @@ val TRANS_LEMM1 = store_thm
         )
      >- (rpt strip_tac
          >> `∃r1.
-               runForAA (ltl2waa_free_alph (POW (props f')) f) r1 w ∧
+               runForAA (ltl2vwaa_free_alph (POW (props f')) f) r1 w ∧
                ∃r2.
-                 runForAA (ltl2waa_free_alph (POW (props f')) f'') r2 w ∧
+                 runForAA (ltl2vwaa_free_alph (POW (props f')) f'') r2 w ∧
                  ∀i. r.V i = r1.V i ∪ r2.V i`
             by metis_tac[RUN_FOR_CONJ_LEMM2_UNION]
         >> simp[trans_def, d_conj_def]
         >> `r1.V 0 ∈ tempDNF f` by
-             fs[ltl2waa_free_alph_def, runForAA_def, validAARunFor_def, initForms_def]
+             fs[ltl2vwaa_free_alph_def, runForAA_def, validAARunFor_def, initForms_def]
         >> `r2.V 0 ∈ tempDNF f''` by
-             fs[ltl2waa_free_alph_def, runForAA_def, validAARunFor_def, initForms_def]
+             fs[ltl2vwaa_free_alph_def, runForAA_def, validAARunFor_def, initForms_def]
         >> `∃a. (a,r1.V 1) ∈ trans (POW (props f')) f ∧ at w 0 ∈ a` by metis_tac[]
         >> `∃a. (a,r2.V 1) ∈ trans (POW (props f')) f'' ∧ at w 0 ∈ a` by metis_tac[]
         >> qexists_tac `a ∩ a'` >> fs[]
@@ -1349,7 +1347,7 @@ val TRANS_LEMM1 = store_thm
         )
    >- (rpt strip_tac
        >> fs[trans_def, runForAA_def, validAARunFor_def]
-       >> fs[ltl2waa_free_alph_def, initForms_def, tempDNF_def]
+       >> fs[ltl2vwaa_free_alph_def, initForms_def, tempDNF_def]
        >> `∃a. (a,r.E (0,X f)) ∈ trans (POW (props f')) (X f) ∧ at w 0 ∈ a`
            by metis_tac[IN_SING]
        >> fs[trans_def] >> CCONTR_TAC
@@ -1366,7 +1364,7 @@ val TRANS_LEMM1 = store_thm
       )
    >- (rpt strip_tac
        >> fs[trans_def, runForAA_def, validAARunFor_def]
-       >> fs[ltl2waa_free_alph_def, initForms_def, tempDNF_def]
+       >> fs[ltl2vwaa_free_alph_def, initForms_def, tempDNF_def]
        >> `∃a. (a,r.E (0,U f f'')) ∈ trans (POW (props f')) (U f f'') ∧ at w 0 ∈ a`
            by metis_tac[IN_SING]
        >> qexists_tac `a`
@@ -1384,7 +1382,7 @@ val TRANS_LEMM1 = store_thm
       )
    >- (rpt strip_tac
        >> fs[runForAA_def, validAARunFor_def]
-       >> fs[ltl2waa_free_alph_def, initForms_def, tempDNF_def]
+       >> fs[ltl2vwaa_free_alph_def, initForms_def, tempDNF_def]
        >> `∃a. (a,r.E (0,R f f'')) ∈ trans (POW (props f')) (R f f'') ∧ at w 0 ∈ a`
              by metis_tac[IN_SING]
        >> qexists_tac `a`
@@ -1405,24 +1403,24 @@ val TRANS_LEMM1 = store_thm
 val CONJ_DISJ_DISTRIB = store_thm
   ("CONJ_DISJ_DISTRIB",
    ``!x f f1 f2 f3.
-  (?r. runForAA (ltl2waa_free_alph (POW (props f)) (CONJ f1 (DISJ f2 f3))) r x)
-       = ((?r. runForAA (ltl2waa_free_alph (POW (props f)) (CONJ f1 f2)) r x)
-         \/ ?r. runForAA (ltl2waa_free_alph (POW (props f)) (CONJ f1 f3)) r x)``,
+  (?r. runForAA (ltl2vwaa_free_alph (POW (props f)) (CONJ f1 (DISJ f2 f3))) r x)
+       = ((?r. runForAA (ltl2vwaa_free_alph (POW (props f)) (CONJ f1 f2)) r x)
+         \/ ?r. runForAA (ltl2vwaa_free_alph (POW (props f)) (CONJ f1 f3)) r x)``,
   rpt strip_tac >> fs[EQ_IMP_THM] >> rpt strip_tac
     >- (imp_res_tac RUN_FOR_CONJ_LEMM2_UNION
         >> imp_res_tac RUN_FOR_DISJ_LEMM2
-          >- (`∃r. runForAA (ltl2waa_free_alph (POW (props f)) (CONJ f1 f2)) r x`
+          >- (`∃r. runForAA (ltl2vwaa_free_alph (POW (props f)) (CONJ f1 f2)) r x`
               by metis_tac[RUN_FOR_CONJ_LEMM] >> metis_tac[])
-          >- (`∃r. runForAA (ltl2waa_free_alph (POW (props f)) (CONJ f1 f3)) r x`
+          >- (`∃r. runForAA (ltl2vwaa_free_alph (POW (props f)) (CONJ f1 f3)) r x`
                by metis_tac[RUN_FOR_CONJ_LEMM] >> metis_tac[])
        )
     >- (imp_res_tac RUN_FOR_CONJ_LEMM2_UNION
-       >> `?r. runForAA (ltl2waa_free_alph (POW (props f)) (DISJ f2 f3)) r x`
+       >> `?r. runForAA (ltl2vwaa_free_alph (POW (props f)) (DISJ f2 f3)) r x`
           by metis_tac[RUN_FOR_DISJ_LEMM]
        >> metis_tac[RUN_FOR_CONJ_LEMM]
        )
     >- (imp_res_tac RUN_FOR_CONJ_LEMM2_UNION
-        >> `?r. runForAA (ltl2waa_free_alph (POW (props f)) (DISJ f2 f3)) r x`
+        >> `?r. runForAA (ltl2vwaa_free_alph (POW (props f)) (DISJ f2 f3)) r x`
            by metis_tac[RUN_FOR_DISJ_LEMM]
         >> metis_tac[RUN_FOR_CONJ_LEMM]
        )
@@ -1432,65 +1430,65 @@ val CONJ_DISJ_DISTRIB = store_thm
 val U_AUTO_CHARACTERISATION = store_thm
   ("U_AUTO_CHARACTERISATION",
   ``!f f1 f2.
-    (alterA_lang (ltl2waa_free_alph (POW (props f)) (U f1 f2))
-            = alterA_lang (ltl2waa_free_alph (POW (props f))
+    (alterA_lang (ltl2vwaa_free_alph (POW (props f)) (U f1 f2))
+            = alterA_lang (ltl2vwaa_free_alph (POW (props f))
                                            (DISJ f2 (CONJ f1 (X (U f1 f2))))))``,
   rpt strip_tac >> rw[SET_EQ_SUBSET] >> fs[SUBSET_DEF, alterA_lang_def]
   >> rpt strip_tac
   >- (`(∃run.
        runForAA
-       (ltl2waa_free_alph (POW (props f))
+       (ltl2vwaa_free_alph (POW (props f))
                           (DISJ f2 (CONJ f1 (X (U f1 f2))))) run x) ∧
        ∀x'.
        x' ∈ word_range x ⇒
        x' ∈
-       (ltl2waa_free_alph (POW (props f))
+       (ltl2vwaa_free_alph (POW (props f))
                           (DISJ f2 (CONJ f1 (X (U f1 f2))))).alphabet`
       suffices_by metis_tac[]
      >> strip_tac
         >- (`suff x 0 = x` by (Cases_on `x` >> fs[suff_def] >> metis_tac[])
             >> `!a. (a,run.E (0,U f1 f2)) ∈ trans (POW (props f)) f2 ∧ at x 0 ∈ a ⇒
-                ∃r'. runForAA (ltl2waa_free_alph (POW (props f)) f2) r' x`
+                ∃r'. runForAA (ltl2vwaa_free_alph (POW (props f)) f2) r' x`
               by metis_tac[REPL_F2_LEMM, SUBSET_REFL]
             >> `!a. (a,run.E (0,U f1 f2)) ∈
                 d_conj (trans (POW (props f)) f1) {(POW (props f),{U f1 f2})}
                 ∧ at x 0 ∈ a ⇒
                 ∃r'. runForAA
-                        (ltl2waa_free_alph (POW (props f)) (CONJ f1 (X (U f1 f2)))) r' x`
+                        (ltl2vwaa_free_alph (POW (props f)) (CONJ f1 (X (U f1 f2)))) r' x`
                 by metis_tac[U_REPL_F1_LEMM]
             >> POP_ASSUM mp_tac
             >> POP_ASSUM mp_tac
             >> RULE_ASSUM_TAC(
-               SIMP_RULE (srw_ss())[runForAA_def, validAARunFor_def, ltl2waa_free_alph_def])
+               SIMP_RULE (srw_ss())[runForAA_def, validAARunFor_def, ltl2vwaa_free_alph_def])
             >> fs[initForms_def, tempSubForms_def, tempDNF_def]
             >> rpt strip_tac
             >> `(U f1 f2) ∈ run.V 0` by simp[]
             >> `∃a. ((a,run.E (0,U f1 f2)) ∈ trans (POW (props f)) (U f1 f2)) ∧ (at x 0 ∈ a)`
               by metis_tac[]
             >> fs[trans_def]
-              >-  (`∃r'. runForAA (ltl2waa_free_alph (POW (props f)) f2) r' x`
+              >-  (`∃r'. runForAA (ltl2vwaa_free_alph (POW (props f)) f2) r' x`
                        by metis_tac[]
                   >> qexists_tac `r'`
                   >> metis_tac[RUN_FOR_DISJ_LEMM]
                   )
               >- (`∃r'. runForAA
-                          (ltl2waa_free_alph (POW (props f)) (CONJ f1 (X (U f1 f2))))
+                          (ltl2vwaa_free_alph (POW (props f)) (CONJ f1 (X (U f1 f2))))
                           r' x`
                    by metis_tac[]
                   >> qexists_tac `r'`
                   >> metis_tac[RUN_FOR_DISJ_LEMM]
                  )
               )
-        >- (rpt strip_tac >> fs[ltl2waa_free_alph_def])
+        >- (rpt strip_tac >> fs[ltl2vwaa_free_alph_def])
      )
   >- (`(∃run.
-         runForAA (ltl2waa_free_alph (POW (props f)) (U f1 f2)) run x) ∧
+         runForAA (ltl2vwaa_free_alph (POW (props f)) (U f1 f2)) run x) ∧
         ∀x'.
         x' ∈ word_range x ⇒
-        x' ∈ (ltl2waa_free_alph (POW (props f)) (U f1 f2)).alphabet` suffices_by metis_tac[]
+        x' ∈ (ltl2vwaa_free_alph (POW (props f)) (U f1 f2)).alphabet` suffices_by metis_tac[]
      >> rpt strip_tac
-     >> `runForAA (ltl2waa_free_alph (POW (props f)) f2) run x
-        \/ runForAA (ltl2waa_free_alph (POW (props f))  (CONJ f1 (X (U f1 f2)))) run x`
+     >> `runForAA (ltl2vwaa_free_alph (POW (props f)) f2) run x
+        \/ runForAA (ltl2vwaa_free_alph (POW (props f))  (CONJ f1 (X (U f1 f2)))) run x`
          by metis_tac[RUN_FOR_DISJ_LEMM2]
      >> `{U f1 f2} ∈ tempDNF (U f1 f2)` by fs[tempDNF_def]
        >- (`?a. (a,run.V 1) ∈ trans (POW (props f)) (U f1 f2) ∧ at x 0 ∈ a`
@@ -1498,7 +1496,7 @@ val U_AUTO_CHARACTERISATION = store_thm
            >> `run.V 0 ∈ tempDNF f2 ⇒
                  ∃a. (a,run.V 1) ∈ trans (POW (props f)) f2 ∧ at x 0 ∈ a`
               by metis_tac[TRANS_LEMM1]
-           >> fs[runForAA_def, validAARunFor_def, ltl2waa_free_alph_def]
+           >> fs[runForAA_def, validAARunFor_def, ltl2vwaa_free_alph_def]
            >> fs[trans_def]
            >> `?a. (a,run.V 1) ∈ trans (POW (props f)) f2 /\ (at x 0 ∈ a)`
               suffices_by metis_tac[]
@@ -1511,7 +1509,7 @@ val U_AUTO_CHARACTERISATION = store_thm
                 ∃a. (a,run.V 1) ∈ trans (POW (props f)) (CONJ f1 (X (U f1 f2)))
                       ∧ at x 0 ∈ a`
                by metis_tac[TRANS_LEMM1]
-           >> fs[runForAA_def, validAARunFor_def, ltl2waa_free_alph_def]
+           >> fs[runForAA_def, validAARunFor_def, ltl2vwaa_free_alph_def]
            >> fs[trans_def]
            >> `?a. (a,run.V 1) ∈
                 d_conj (trans (POW (props f)) f1) {(POW (props f),{U f1 f2})}
@@ -1527,50 +1525,50 @@ val U_AUTO_CHARACTERISATION = store_thm
                   (CCONTR_TAC >> fs[NOT_EQUAL_SETS] >> metis_tac[])
            >> fs[]
           )
-       >- (fs[ltl2waa_free_alph_def])
-       >- (fs[ltl2waa_free_alph_def])
+       >- (fs[ltl2vwaa_free_alph_def])
+       >- (fs[ltl2vwaa_free_alph_def])
      )
   );
 
 val R_AUTO_CHARACTERISATION = store_thm
   ("R_AUTO_CHARACTERISATION",
-   ``!f f1 f2. alterA_lang (ltl2waa_free_alph (POW (props f)) (R f1 f2)) =
-                              alterA_lang (ltl2waa_free_alph (POW (props f))
+   ``!f f1 f2. alterA_lang (ltl2vwaa_free_alph (POW (props f)) (R f1 f2)) =
+                              alterA_lang (ltl2vwaa_free_alph (POW (props f))
                                        (CONJ f2 (DISJ f1 (X (R f1 f2)))))``,
    rpt strip_tac >> rw[SET_EQ_SUBSET] >> fs[SUBSET_DEF, alterA_lang_def]
    >> rpt strip_tac
       >- (`(∃run.
              runForAA
-             (ltl2waa_free_alph (POW (props f))
+             (ltl2vwaa_free_alph (POW (props f))
                                 (CONJ f2 (DISJ f1 (X (R f1 f2))))) run x) ∧
             ∀x'.
             x' ∈ word_range x ⇒
             x' ∈
-            (ltl2waa_free_alph (POW (props f))
+            (ltl2vwaa_free_alph (POW (props f))
                                (CONJ f2 (DISJ f1 (X (R f1 f2))))).alphabet`
             suffices_by metis_tac[]
           >> strip_tac
           >> `!a qs f1 f2.
             (a,qs) ∈ trans (POW (props f)) f1 ∧ at x 0 ∈ a ∧ qs ⊆ run.E (0,f2) ⇒
-            ∃r'. runForAA (ltl2waa_free_alph (POW (props f)) f1) r' (suff x 0)`
+            ∃r'. runForAA (ltl2vwaa_free_alph (POW (props f)) f1) r' (suff x 0)`
              by metis_tac[REPL_F2_LEMM]
          >> `!a. (a,run.E (0,R f1 f2)) ∈
                    d_conj (trans (POW (props f)) f2) {(POW (props f),{R f1 f2})} ∧
                    at x 0 ∈ a ⇒
                    ∃r'.
                    runForAA
-                   (ltl2waa_free_alph (POW (props f)) (CONJ f2 (X (R f1 f2)))) r'
+                   (ltl2vwaa_free_alph (POW (props f)) (CONJ f2 (X (R f1 f2)))) r'
                    (suff x 0)`
              by metis_tac[R_REPL_F1_LEMM]
           >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
           >> RULE_ASSUM_TAC(
                   SIMP_RULE
-                      (srw_ss())[runForAA_def, validAARunFor_def, ltl2waa_free_alph_def])
+                      (srw_ss())[runForAA_def, validAARunFor_def, ltl2vwaa_free_alph_def])
           >> rpt strip_tac
           >> fs[trans_def]
-            >- (`?r. runForAA (ltl2waa_free_alph (POW (props f)) (CONJ f2 f1)) r x
+            >- (`?r. runForAA (ltl2vwaa_free_alph (POW (props f)) (CONJ f2 f1)) r x
               \/ ?r. runForAA
-                        (ltl2waa_free_alph (POW (props f)) (CONJ f2 (X (R f1 f2)))) r x`
+                        (ltl2vwaa_free_alph (POW (props f)) (CONJ f2 (X (R f1 f2)))) r x`
                suffices_by metis_tac[CONJ_DISJ_DISTRIB]
                 >> fs[initForms_def, tempDNF_def]
                 >> `R f1 f2 ∈ run.V 0` by metis_tac[IN_SING]
@@ -1585,13 +1583,13 @@ val R_AUTO_CHARACTERISATION = store_thm
                    by metis_tac[D_CONJ_UNION_DISTR, IN_UNION]
                  >- (POP_ASSUM mp_tac >> simp[d_conj_def]
                      >> rpt strip_tac
-                     >> `∃r'. runForAA (ltl2waa_free_alph (POW (props f)) f1) r' (suff x 0)`
+                     >> `∃r'. runForAA (ltl2vwaa_free_alph (POW (props f)) f1) r' (suff x 0)`
                         by metis_tac[IN_INTER,SUBSET_UNION]
-                     >> `∃r'. runForAA (ltl2waa_free_alph (POW (props f)) f2) r' (suff x 0)`
+                     >> `∃r'. runForAA (ltl2vwaa_free_alph (POW (props f)) f2) r' (suff x 0)`
                         by metis_tac[IN_INTER,SUBSET_UNION]
                      >> `suff x 0 = x`
                              by (Cases_on `x` >> fs[suff_def] >> metis_tac[])
-                     >> `?r. runForAA (ltl2waa_free_alph (POW (props f)) (CONJ f2 f1)) r x`
+                     >> `?r. runForAA (ltl2vwaa_free_alph (POW (props f)) (CONJ f2 f1)) r x`
                         by metis_tac[RUN_FOR_CONJ_LEMM]
                      >> dsimp[] >> metis_tac[]
                     )
@@ -1599,16 +1597,16 @@ val R_AUTO_CHARACTERISATION = store_thm
                           by (Cases_on `x` >> fs[suff_def] >> metis_tac[])
                      >> dsimp[] >> metis_tac[])
                )
-            >- fs[ltl2waa_free_alph_def]
+            >- fs[ltl2vwaa_free_alph_def]
          )
       >- (`(∃run.
              runForAA
-             (ltl2waa_free_alph (POW (props f))
+             (ltl2vwaa_free_alph (POW (props f))
                                 (R f1 f2)) run x) ∧
            ∀x'.
            x' ∈ word_range x ⇒
            x' ∈
-           (ltl2waa_free_alph (POW (props f))
+           (ltl2vwaa_free_alph (POW (props f))
                               (R f1 f2)).alphabet`
             suffices_by metis_tac[] >> rpt strip_tac
           >- (`{R f1 f2} ∈ tempDNF (R f1 f2)` by fs[tempDNF_def]
@@ -1618,7 +1616,7 @@ val R_AUTO_CHARACTERISATION = store_thm
                         ∧ at x 0 ∈ a` by metis_tac[TRANS_LEMM1]
               >> `?a.(a,run.V 1) ∈ trans (POW (props f)) (R f1 f2) ∧ at x 0 ∈ a`
                  suffices_by metis_tac[REPL_IN_0]
-              >> fs[runForAA_def, validAARunFor_def, ltl2waa_free_alph_def, initForms_def]
+              >> fs[runForAA_def, validAARunFor_def, ltl2vwaa_free_alph_def, initForms_def]
               >> `∃a.
                    (a,run.V 1) ∈
                      trans (POW (props f)) (CONJ f2 (DISJ f1 (X (R f1 f2))))
@@ -1629,7 +1627,7 @@ val R_AUTO_CHARACTERISATION = store_thm
                    = {(POW (props f),{R f1 f2})}` suffices_by (rpt strip_tac >> fs[])
               >> fs[SET_EQ_SUBSET, SUBSET_DEF]
              )
-          >- fs[ltl2waa_free_alph_def]
+          >- fs[ltl2vwaa_free_alph_def]
          )
   );
 
@@ -1637,20 +1635,20 @@ val R_AUTO_CHARACTERISATION = store_thm
 
 val RUN_FOR_X_LEMM = store_thm
   ("RUN_FOR_X_LEMM",
-   ``!r f g x. runForAA (ltl2waa_free_alph (POW (props f)) g) r (suff x 1)
+   ``!r f g x. runForAA (ltl2vwaa_free_alph (POW (props f)) g) r (suff x 1)
            /\ word_range x ⊆ POW (props f)
-      ==> ?r'. runForAA (ltl2waa_free_alph (POW (props f)) (X g)) r' x``,
+      ==> ?r'. runForAA (ltl2vwaa_free_alph (POW (props f)) (X g)) r' x``,
    rpt strip_tac >> fs[runForAA_def]
    >> qabbrev_tac `r_new = ALTERA_RUN
                            (\i. if i = 0 then {X g} else r.V (i-1))
                            (λ(i,q). if i = 0 then r.V 0 else r.E (i-1,q))`
    >> qexists_tac `r_new`
-   >> `validAARunFor (ltl2waa_free_alph (POW (props f)) (X g)) r_new x ∧
-      (validAARunFor (ltl2waa_free_alph (POW (props f)) (X g)) r_new x
-        ==> acceptingAARun (ltl2waa_free_alph (POW (props f)) (X g)) r_new)`
+   >> `validAARunFor (ltl2vwaa_free_alph (POW (props f)) (X g)) r_new x ∧
+      (validAARunFor (ltl2vwaa_free_alph (POW (props f)) (X g)) r_new x
+        ==> acceptingAARun (ltl2vwaa_free_alph (POW (props f)) (X g)) r_new)`
      suffices_by metis_tac[]
    >> conj_tac
-     >- (fs[validAARunFor_def] >> rpt strip_tac >> fs[ltl2waa_free_alph_def]
+     >- (fs[validAARunFor_def] >> rpt strip_tac >> fs[ltl2vwaa_free_alph_def]
          >> fs[tempDNF_def, initForms_def, tempSubForms_def]
            >- (qunabbrev_tac `r_new` >> fs[])
            >- (Cases_on `i` >> qunabbrev_tac `r_new` >> fs[SUBSET_DEF] >> rpt strip_tac
@@ -1690,20 +1688,20 @@ val RUN_FOR_X_LEMM = store_thm
         )
      >- (strip_tac
          >> `∀b x'. infBranchOf r_new b ∧ branchFixP b x'
-                ⇒ x' ∉ (ltl2waa_free_alph (POW (props f)) (X g)).final`
+                ⇒ x' ∉ (ltl2vwaa_free_alph (POW (props f)) (X g)).final`
             suffices_by metis_tac[LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM, BRANCH_ACC_LEMM]
          >> rpt strip_tac
          >> `∀b x'. infBranchOf r b ∧ branchFixP b x'
-                ⇒ x' ∉ (ltl2waa_free_alph (POW (props f)) g).final`
+                ⇒ x' ∉ (ltl2vwaa_free_alph (POW (props f)) g).final`
             by metis_tac[LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM, BRANCH_ACC_LEMM]
          >> qabbrev_tac `b' = \i. b (i + 1)`
          >> `x' ∈ {U f1 f2 | U f1 f2 ∈ tempSubForms (X g)}`
-            by fs[ltl2waa_free_alph_def, finalForms_def]
+            by fs[ltl2vwaa_free_alph_def, finalForms_def]
          >> `x' ∈ {U f1 f2 | U f1 f2 ∈ tempSubForms g}` by fs[tempSubForms_def]
-         >> `x' ∈ (ltl2waa_free_alph (POW (props f)) g).final`
-            by fs[ltl2waa_free_alph_def, finalForms_def]
+         >> `x' ∈ (ltl2vwaa_free_alph (POW (props f)) g).final`
+            by fs[ltl2vwaa_free_alph_def, finalForms_def]
          >> `infBranchOf r b' /\ branchFixP b' x'`
-            suffices_by metis_tac[ltl2waa_free_alph_def, finalForms_def, tempSubForms_def]
+            suffices_by metis_tac[ltl2vwaa_free_alph_def, finalForms_def, tempSubForms_def]
          >> strip_tac
             >- (fs[infBranchOf_def] >> rpt strip_tac >> fs[]
                  >- (qunabbrev_tac `b'` >> qunabbrev_tac `r_new` >> fs[]
@@ -1721,17 +1719,17 @@ val RUN_FOR_X_LEMM = store_thm
 
 val RUN_FOR_X_LEMM2 = store_thm
   ("RUN_FOR_X_LEMM2",
-   ``!r x f g. runForAA (ltl2waa_free_alph (POW (props f)) (X g)) r x
-       ==> ∃run. runForAA (ltl2waa_free_alph (POW (props f)) g) run (suff x 1)``,
+   ``!r x f g. runForAA (ltl2vwaa_free_alph (POW (props f)) (X g)) r x
+       ==> ∃run. runForAA (ltl2vwaa_free_alph (POW (props f)) g) run (suff x 1)``,
    rpt strip_tac >> fs[runForAA_def]
    >> qabbrev_tac `r_new = ALTERA_RUN (\i. r.V (i + 1)) (λ(i,q). r.E(i+1,q))`
    >> qexists_tac `r_new`
-   >> `validAARunFor (ltl2waa_free_alph (POW (props f)) g) r_new (suff x 1) ∧
-      (validAARunFor (ltl2waa_free_alph (POW (props f)) g) r_new (suff x 1)
-          ==> acceptingAARun (ltl2waa_free_alph (POW (props f)) g) r_new)`
+   >> `validAARunFor (ltl2vwaa_free_alph (POW (props f)) g) r_new (suff x 1) ∧
+      (validAARunFor (ltl2vwaa_free_alph (POW (props f)) g) r_new (suff x 1)
+          ==> acceptingAARun (ltl2vwaa_free_alph (POW (props f)) g) r_new)`
       suffices_by metis_tac[]
    >> conj_tac
-       >- (fs[validAARunFor_def, ltl2waa_free_alph_def, initForms_def, tempDNF_def]
+       >- (fs[validAARunFor_def, ltl2vwaa_free_alph_def, initForms_def, tempDNF_def]
            >> `X g ∈ r.V 0` by simp[]
            >> `∃a. (a,r.E (0,X g)) ∈ trans (POW (props f)) (X g)` by metis_tac[]
            >> fs[trans_def]
@@ -1771,14 +1769,14 @@ val RUN_FOR_X_LEMM2 = store_thm
           )
        >- (strip_tac
            >> `∀b x. infBranchOf r_new b ∧ branchFixP b x
-                ⇒ x ∉ (ltl2waa_free_alph (POW (props f)) g).final`
+                ⇒ x ∉ (ltl2vwaa_free_alph (POW (props f)) g).final`
               suffices_by metis_tac[LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM, BRANCH_ACC_LEMM]
            >> rpt strip_tac
            >> `∀b x. infBranchOf r b ∧ branchFixP b x
-                 ⇒ x ∉ (ltl2waa_free_alph (POW (props f)) (X g)).final`
+                 ⇒ x ∉ (ltl2vwaa_free_alph (POW (props f)) (X g)).final`
                by metis_tac[LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM, BRANCH_ACC_LEMM]
            >> `!i. b i ∈ r_new.V i` by metis_tac[BRANCH_V_LEMM]
-           >> fs[ltl2waa_free_alph_def, finalForms_def, tempSubForms_def]
+           >> fs[ltl2vwaa_free_alph_def, finalForms_def, tempSubForms_def]
            >> qabbrev_tac `b' = \i. if i = 0 then X g else b (i - 1)`
            >> `infBranchOf r b' ∧ branchFixP b' x'` suffices_by metis_tac[]
            >> strip_tac
@@ -1804,17 +1802,17 @@ val RUN_FOR_X_LEMM2 = store_thm
 
 val EVTL_F2_TRANS_LEMM = store_thm
   ("EVTL_F2_TRANS_LEMM",
-  ``!f f1 f2 r w. runForAA (ltl2waa_free_alph (POW (props f)) (U f1 f2)) r w
+  ``!f f1 f2 r w. runForAA (ltl2vwaa_free_alph (POW (props f)) (U f1 f2)) r w
       ==> (?n a. (a, r.E (n, U f1 f2)) ∈ trans (POW (props f)) f2
           ∧ at w n ∈ a)``,
   rpt strip_tac >> fs[runForAA_def]
   >> `∀b x. infBranchOf r b ∧ branchFixP b x
-      ⇒ x ∉ (ltl2waa_free_alph (POW (props f)) (U f1 f2)).final`
+      ⇒ x ∉ (ltl2vwaa_free_alph (POW (props f)) (U f1 f2)).final`
      by metis_tac[LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM, BRANCH_ACC_LEMM]
   >> CCONTR_TAC
   >> fs[validAARunFor_def]
   >> `!i. U f1 f2 ∈ r.V i` by (
-      Induct_on `i` >> fs[ltl2waa_free_alph_def, initForms_def, tempDNF_def]
+      Induct_on `i` >> fs[ltl2vwaa_free_alph_def, initForms_def, tempDNF_def]
       >> `∃a. (a,r.E (i,U f1 f2)) ∈ trans (POW (props f)) (U f1 f2)
             ∧ (at w i ∈ a)` by metis_tac[]
       >> fs[trans_def]
@@ -1827,7 +1825,7 @@ val EVTL_F2_TRANS_LEMM = store_thm
   )
   >> `!i. U f1 f2 ∈ r.E (i, U f1 f2)` by (
       CCONTR_TAC >> fs[]
-      >> fs[ltl2waa_free_alph_def, initForms_def, tempDNF_def]
+      >> fs[ltl2vwaa_free_alph_def, initForms_def, tempDNF_def]
       >> `(i = 0) ∨ ∃q'. (U f1 f2) ∈ r.E (i − 1,q') ∧ q' ∈ r.V (i − 1)`
          by metis_tac[]
        >- (rw[]
@@ -1850,7 +1848,7 @@ val EVTL_F2_TRANS_LEMM = store_thm
   )
   >> `infBranchOf r (\_. U f1 f2)` by fs[infBranchOf_def]
   >> `branchFixP (\_. U f1 f2) (U f1 f2)` by fs[branchFixP_def]
-  >> fs[ltl2waa_free_alph_def, finalForms_def]
+  >> fs[ltl2vwaa_free_alph_def, finalForms_def]
   >> `U f1 f2 ≠ U f1 f2 ∨ U f1 f2 ∉ tempSubForms (U f1 f2)`
       by metis_tac[]
   >> fs[tempSubForms_def]
@@ -1858,7 +1856,7 @@ val EVTL_F2_TRANS_LEMM = store_thm
 
 val ALL_F1_BEFORE_F2 = store_thm
   ("ALL_F1_BEFORE_F2",
-  ``!f f1 f2 r w. runForAA (ltl2waa_free_alph (POW (props f)) (U f1 f2)) r w
+  ``!f f1 f2 r w. runForAA (ltl2vwaa_free_alph (POW (props f)) (U f1 f2)) r w
       ==> ?n a. (a, r.E (n, U f1 f2)) ∈ trans (POW (props f)) f2
           ∧ at w n ∈ a
           ∧ (!i. i < n ==> ?a'. (a', r.E (i, U f1 f2)) ∈
@@ -1874,10 +1872,10 @@ val ALL_F1_BEFORE_F2 = store_thm
   >> CCONTR_TAC >> fs[]
   >> `!j. j < N ==> U f1 f2 ∈ r.V j` by (
       Induct_on `j`
-       >- (fs[runForAA_def, validAARunFor_def, ltl2waa_free_alph_def, initForms_def]
+       >- (fs[runForAA_def, validAARunFor_def, ltl2vwaa_free_alph_def, initForms_def]
            >> metis_tac[tempDNF_def, IN_SING]
           )
-       >- (strip_tac >> fs[runForAA_def, validAARunFor_def, ltl2waa_free_alph_def, trans_def]
+       >- (strip_tac >> fs[runForAA_def, validAARunFor_def, ltl2vwaa_free_alph_def, trans_def]
            >> `∃a'. (a',r.E (j,U f1 f2)) ∈ trans (POW (props f)) (U f1 f2) ∧ at w j ∈ a'`
               by metis_tac[]
            >> fs[trans_def]
@@ -1887,7 +1885,7 @@ val ALL_F1_BEFORE_F2 = store_thm
           )
   )
   >> `U f1 f2 ∈ r.V i` by fs[]
-  >> fs[runForAA_def,validAARunFor_def,ltl2waa_free_alph_def,trans_def]
+  >> fs[runForAA_def,validAARunFor_def,ltl2vwaa_free_alph_def,trans_def]
   >> `∃a'. (a',r.E (i,(U f1 f2))) ∈ trans (POW (props f)) (U f1 f2) ∧ at w i ∈ a'`
      by metis_tac[]
   >> fs[trans_def]
@@ -1896,16 +1894,16 @@ val ALL_F1_BEFORE_F2 = store_thm
 
 val EVTL_F2_RUN_LEMM = store_thm
   ("EVTL_F2_RUN_LEMM",
-  ``!f f1 f2 r w. runForAA (ltl2waa_free_alph (POW (props f)) (U f1 f2)) r w
-        ==> ?r' n. runForAA (ltl2waa_free_alph (POW (props f)) f2) r' (suff w n)
-        ∧ !i. i < n ==> ?r'. runForAA (ltl2waa_free_alph (POW (props f)) f1) r' (suff w i)``,
+  ``!f f1 f2 r w. runForAA (ltl2vwaa_free_alph (POW (props f)) (U f1 f2)) r w
+        ==> ?r' n. runForAA (ltl2vwaa_free_alph (POW (props f)) f2) r' (suff w n)
+        ∧ !i. i < n ==> ?r'. runForAA (ltl2vwaa_free_alph (POW (props f)) f1) r' (suff w i)``,
   rpt strip_tac
   >> `∃n a. (a,r.E (n,U f1 f2)) ∈ trans (POW (props f)) f2 ∧ at w n ∈ a
            ∧ (!i. i < n ==> ?a'. (a', r.E (i, U f1 f2)) ∈
                         d_conj (trans (POW (props f)) f1) {(POW (props f), {U f1 f2})}
                         ∧ at w i ∈ a')`
       by metis_tac[ALL_F1_BEFORE_F2]
-  >> `∃r'. runForAA (ltl2waa_free_alph (POW (props f)) f2) r' (suff w n)`
+  >> `∃r'. runForAA (ltl2vwaa_free_alph (POW (props f)) f2) r' (suff w n)`
       by metis_tac[REPL_F2_LEMM, SUBSET_REFL]
   >> qexists_tac `r'` >> qexists_tac `n` >> simp[]
   >> rpt strip_tac
@@ -1944,7 +1942,7 @@ val always_run_def = Define `
 val ALWAYS_RUN_LEMM1 = store_thm
   ("ALWAYS_RUN_LEMM1",
   ``∀f' f1 f2 w rs.
-   (!n. runForAA (ltl2waa_free_alph (POW (props f')) f2) (rs n) (suff w n))
+   (!n. runForAA (ltl2vwaa_free_alph (POW (props f')) f2) (rs n) (suff w n))
      ==> (!i q. q ∈ always_run_V f1 f2 rs i /\ ~(q = R f1 f2)
          ==> (LEAST j. q ∈ (rs j).V (i − j)) < i)``,
   rpt gen_tac >> strip_tac >> Induct_on `i`
@@ -1966,7 +1964,7 @@ val ALWAYS_RUN_LEMM1 = store_thm
         >> qabbrev_tac `N' = (LEAST j. q' ∈ (rs j).V (i − j))`
         >> `N' < i` by metis_tac[]
         >> numLib.LEAST_ELIM_TAC >> rpt strip_tac
-         >- (fs[runForAA_def, validAARunFor_def, ltl2waa_free_alph_def]
+         >- (fs[runForAA_def, validAARunFor_def, ltl2vwaa_free_alph_def]
              >> `(rs N').E (i-N',q') ⊆ (rs N').V ((i-N') + 1)`
                 by metis_tac[]
              >> qexists_tac `N'` >> fs[SUB]
@@ -1976,7 +1974,7 @@ val ALWAYS_RUN_LEMM1 = store_thm
             )
          >- (CCONTR_TAC >> `N' < n` by simp[]
              >> `q ∉ (rs N').V (SUC i − N')` by metis_tac[]
-             >> fs[runForAA_def, validAARunFor_def, ltl2waa_free_alph_def]
+             >> fs[runForAA_def, validAARunFor_def, ltl2vwaa_free_alph_def]
              >> `(rs N').E (i - N',q') ⊆ (rs N').V (i - N' + 1)` by fs[]
              >> `q ∈ (rs N').V (i - N' + 1)` by metis_tac[SUBSET_DEF]
              >> `SUC i - N' = i - N' + 1` by simp[]
@@ -1988,7 +1986,7 @@ val ALWAYS_RUN_LEMM1 = store_thm
 val ALWAYS_RUN_LEMM2 = store_thm
   ("ALWAYS_RUN_LEMM2",
   ``∀f' f1 f2 w rs.
-    (!n .runForAA (ltl2waa_free_alph (POW (props f')) f2) (rs n) (suff w n))
+    (!n .runForAA (ltl2vwaa_free_alph (POW (props f')) f2) (rs n) (suff w n))
      ==> (!i q. q ∈ always_run_V f1 f2 rs i /\ ~(q = R f1 f2)
             ==>
             let N = LEAST j. q ∈ (rs j).V (i - j)
@@ -2063,8 +2061,8 @@ val LEQ_CHAIN_FIXP = store_thm
 val ALWAYS_RUN_ACC_LEMM = store_thm
   ("ALWAYS_RUN_ACC_LEMM",
   ``∀f' f1 f2 w rs.
-  (!n .runForAA (ltl2waa_free_alph (POW (props f')) f2) (rs n) (suff w n))
-  ∧ validAARunFor (ltl2waa_free_alph (POW (props f')) (R f1 f2)) (always_run f1 f2 rs) w
+  (!n .runForAA (ltl2vwaa_free_alph (POW (props f')) f2) (rs n) (suff w n))
+  ∧ validAARunFor (ltl2vwaa_free_alph (POW (props f')) (R f1 f2)) (always_run f1 f2 rs) w
      ==> (!b x. infBranchOf (always_run f1 f2 rs) b ∧ branchFixP b x
              ∧ ~(x = R f1 f2)
              ==> ?b' i. infBranchOf (rs i) b' ∧ branchFixP b' x)``,
@@ -2160,7 +2158,7 @@ val ALWAYS_RUN_ACC_LEMM = store_thm
   )
   >> qabbrev_tac `b1 = (λ_ : num. x : α ltl_frml)`
   >> `infBranchSuffOf (rs (N j)) (j − (N j)) b1` by fs[]
-  >> `validAARunFor (ltl2waa_free_alph (POW (props f')) f2) (rs (N j)) (suff w (N j))`
+  >> `validAARunFor (ltl2vwaa_free_alph (POW (props f')) f2) (rs (N j)) (suff w (N j))`
      by metis_tac[runForAA_def]
   >> imp_res_tac BRANCH_SUFF_LEMM
   >> qexists_tac `b''` >> qexists_tac `N j`
@@ -2177,26 +2175,26 @@ val ALWAYS_RUN_ACC_LEMM = store_thm
 val ALWAYS_RUN = store_thm
   ("ALWAYS_RUN",
 ``!f' f1 f2 w. (word_range w ⊆ POW (props f')) ∧
-  (!n. ?r. runForAA (ltl2waa_free_alph (POW (props f')) f2) r (suff w n))
-     ==> (?r. runForAA (ltl2waa_free_alph (POW (props f')) (R f1 f2)) r w)``,
+  (!n. ?r. runForAA (ltl2vwaa_free_alph (POW (props f')) f2) r (suff w n))
+     ==> (?r. runForAA (ltl2vwaa_free_alph (POW (props f')) (R f1 f2)) r w)``,
   rpt strip_tac
-  >> `?rs. !n. runForAA (ltl2waa_free_alph (POW (props f')) f2) (rs n) (suff w n)`
+  >> `?rs. !n. runForAA (ltl2vwaa_free_alph (POW (props f')) f2) (rs n) (suff w n)`
      by metis_tac[SKOLEM_THM]
   >> qexists_tac `always_run f1 f2 rs`
   >> `!n. ((rs n).V 0) ∈ tempDNF f2
        ==> ∃a. (a,(rs n).V 1) ∈ trans (POW (props f')) f2 ∧ at (suff w n) 0 ∈ a`
      by metis_tac[TRANS_LEMM1]
   >> simp[runForAA_def]
-  >> `(validAARunFor (ltl2waa_free_alph (POW (props f')) (R f1 f2))
+  >> `(validAARunFor (ltl2vwaa_free_alph (POW (props f')) (R f1 f2))
        (always_run f1 f2 rs) w)
-       ∧ ((validAARunFor (ltl2waa_free_alph (POW (props f')) (R f1 f2))
+       ∧ ((validAARunFor (ltl2vwaa_free_alph (POW (props f')) (R f1 f2))
                       (always_run f1 f2 rs) w)
-              ==> acceptingAARun (ltl2waa_free_alph (POW (props f')) (R f1 f2))
+              ==> acceptingAARun (ltl2vwaa_free_alph (POW (props f')) (R f1 f2))
               (always_run f1 f2 rs))` suffices_by metis_tac[]
   >> strip_tac
     >- (imp_res_tac ALWAYS_RUN_LEMM2
         >> imp_res_tac ALWAYS_RUN_LEMM1
-        >> fs[validAARunFor_def, ltl2waa_free_alph_def, initForms_def, tempDNF_def]
+        >> fs[validAARunFor_def, ltl2vwaa_free_alph_def, initForms_def, tempDNF_def]
         >> rpt strip_tac
           >- fs[always_run_def, always_run_V_def]
           >- (fs[always_run_def, always_run_V_def]
@@ -2324,17 +2322,17 @@ val ALWAYS_RUN = store_thm
        )
     >- (rpt strip_tac
         >> `∀b x. infBranchOf (always_run f1 f2 rs) b ∧ branchFixP b x
-              ⇒ x ∉ (ltl2waa_free_alph (POW (props f')) (R f1 f2)).final`
+              ⇒ x ∉ (ltl2vwaa_free_alph (POW (props f')) (R f1 f2)).final`
            suffices_by metis_tac[BRANCH_ACC_LEMM, LTL2WAA_ISFINITE, LTL2WAA_ISWEAK_LEMM]
         >> rpt strip_tac
         >> Cases_on `x = R f1 f2`
         >> imp_res_tac ALWAYS_RUN_LEMM2
-         >- fs[ltl2waa_free_alph_def, finalForms_def]
+         >- fs[ltl2vwaa_free_alph_def, finalForms_def]
          >- (`∃b' i. infBranchOf (rs i) b' ∧ branchFixP b' x`
               by metis_tac[ALWAYS_RUN_ACC_LEMM]
-             >> `x ∉ (ltl2waa_free_alph (POW (props f')) f2).final`
+             >> `x ∉ (ltl2vwaa_free_alph (POW (props f')) f2).final`
              by metis_tac[BRANCH_ACC_LEMM,LTL2WAA_ISFINITE,LTL2WAA_ISWEAK_LEMM,runForAA_def]
-             >> fs[ltl2waa_free_alph_def, finalForms_def]
+             >> fs[ltl2vwaa_free_alph_def, finalForms_def]
              >> `U f1' f2' ∈ tempSubForms f2` suffices_by metis_tac[]
              >> `?i. U f1' f2' ∈ (always_run f1 f2 rs).V i`
                  by metis_tac[branchFixP_def, BRANCH_V_LEMM]
@@ -2354,7 +2352,7 @@ val ALWAYS_RUN = store_thm
 
 val ALWAYS_F2_OR_EVTL_F1_R = store_thm
   ("ALWAYS_F2_OR_EVTL_F1_R",
-  ``!f f1 f2 r w. runForAA (ltl2waa_free_alph (POW (props f)) (R f1 f2)) r w
+  ``!f f1 f2 r w. runForAA (ltl2vwaa_free_alph (POW (props f)) (R f1 f2)) r w
     ==> ((!n. ?a. (a, r.E (n, R f1 f2)) ∈
               d_conj (trans (POW (props f)) f2) {(POW (props f), {R f1 f2})}
          ∧ at w n ∈ a) \/
@@ -2362,7 +2360,7 @@ val ALWAYS_F2_OR_EVTL_F1_R = store_thm
          ∧ at w n ∈ a))``,
   rpt strip_tac >> Cases_on `!i. R f1 f2 ∈ r.V i`
     >- (disj1_tac >> rpt strip_tac
-        >> fs[runForAA_def, validAARunFor_def, ltl2waa_free_alph_def]
+        >> fs[runForAA_def, validAARunFor_def, ltl2vwaa_free_alph_def]
         >> `R f1 f2 ∈ r.V n` by metis_tac[]
         >> `∃a. (a,r.E (n,R f1 f2)) ∈ trans (POW (props f)) (R f1 f2) ∧ at w n ∈ a`
            by metis_tac[]
@@ -2408,7 +2406,7 @@ val ALWAYS_F2_OR_EVTL_F1_R = store_thm
         >> qabbrev_tac `N = LEAST j. ~(R f1 f2 ∈ r.V j)`
         >> qexists_tac `N - 1`
         >> `R f1 f2 ∈ r.V 0`
-            by (fs[ltl2waa_free_alph_def, initForms_def, tempDNF_def] >> metis_tac[IN_SING])
+            by (fs[ltl2vwaa_free_alph_def, initForms_def, tempDNF_def] >> metis_tac[IN_SING])
         >> `R f1 f2 ∈ r.V (N - 1)` by (
              qunabbrev_tac `N` >> numLib.LEAST_ELIM_TAC
              >> rpt strip_tac
@@ -2417,7 +2415,7 @@ val ALWAYS_F2_OR_EVTL_F1_R = store_thm
                     >> `n - 1 < n` by simp[]
                     >> metis_tac[])
          )
-        >> fs[ltl2waa_free_alph_def]
+        >> fs[ltl2vwaa_free_alph_def]
         >> `∃a. (a,r.E (N-1,(R f1 f2))) ∈ trans (POW (props f)) (R f1 f2) ∧ at w (N-1) ∈ a`
             by fs[]
         >> qexists_tac `a` >> fs[]
@@ -2447,31 +2445,31 @@ val SUBFORM_LEMMA = store_thm
   ("SUBFORM_LEMMA",
    ``!f. (!g. g ∈ subForms f ==>
          ({w | MODELS w g /\ (word_range w ⊆ POW (props f))} =
-          alterA_lang (ltl2waa_free_alph (POW (props f)) g))) ==>
-                      (ltl_lang f = alterA_lang (ltl2waa f))``,
+          alterA_lang (ltl2vwaa_free_alph (POW (props f)) g))) ==>
+                      (ltl_lang f = alterA_lang (ltl2vwaa f))``,
    rpt strip_tac >> `f ∈ (subForms f)` by metis_tac[SUBFORMS_REFL]
     >> `({w | MODELS w f /\ (word_range w ⊆ POW (props f)) }
-         = alterA_lang (ltl2waa_free_alph (POW (props f)) f))`
+         = alterA_lang (ltl2vwaa_free_alph (POW (props f)) f))`
         by metis_tac[]
-    >> metis_tac[ltl_lang_def, ltl2waa_def]
+    >> metis_tac[ltl_lang_def, ltl2vwaa_def]
   );
 
 val LTL2WAA_ISCORRECT = store_thm
   ("LTL2WAA_ISCORRECT",
-   ``!f. (ltl_lang f = alterA_lang (ltl2waa f))``,
+   ``!f. (ltl_lang f = alterA_lang (ltl2vwaa f))``,
    strip_tac >>
    `(!g. (g ∈ subForms f) ==>
         ({w | MODELS w g /\ (word_range w ⊆ POW (props f))} =
-         alterA_lang (ltl2waa_free_alph (POW (props f)) g)))`
+         alterA_lang (ltl2vwaa_free_alph (POW (props f)) g)))`
      suffices_by metis_tac[SUBFORM_LEMMA]
    >> `!g. (g ∈ subForms f) ==>
        (({w | MODELS w g ∧ word_range w ⊆ POW (props f)}
-             ⊆ alterA_lang (ltl2waa_free_alph (POW (props f)) g))
-        /\ (alterA_lang (ltl2waa_free_alph (POW (props f)) g)
+             ⊆ alterA_lang (ltl2vwaa_free_alph (POW (props f)) g))
+        /\ (alterA_lang (ltl2vwaa_free_alph (POW (props f)) g)
             ⊆ {w | MODELS w g ∧ word_range w ⊆ POW (props f)}))`
      suffices_by rw[SET_EQ_SUBSET]
    >> Induct_on `g` >> rpt strip_tac >> simp[MODELS_def]
-     >- (fs[alterA_lang_def, ltl2waa_free_alph_def, SUBSET_DEF]
+     >- (fs[alterA_lang_def, ltl2vwaa_free_alph_def, SUBSET_DEF]
          >> rpt strip_tac
          >> qexists_tac `ALTERA_RUN (\i. if i=0 then {VAR a} else {}) (\_. {})`
          >> simp[runForAA_def, validAARunFor_def, acceptingAARun_def]
@@ -2485,7 +2483,7 @@ val LTL2WAA_ISCORRECT = store_thm
          >> `∀y. (y ∈ at x 0) ⇒ (y ∈ props f)` by metis_tac[]
          >> metis_tac[]
         )
-     >- (fs[alterA_lang_def, ltl2waa_free_alph_def, SUBSET_DEF]
+     >- (fs[alterA_lang_def, ltl2vwaa_free_alph_def, SUBSET_DEF]
          >> rpt strip_tac
          >> fs[runForAA_def, validAARunFor_def, acceptingAARun_def, tempSubForms_def]
          >> fs[SUBSET_DEF,initForms_def]
@@ -2496,7 +2494,7 @@ val LTL2WAA_ISCORRECT = store_thm
          >> `(at x 0) ∈ { a' | (a' ∈ POW (props f)) ∧ (a ∈ a')}` by rw[]
          >> fs[]
         )
-     >- (fs[alterA_lang_def, ltl2waa_free_alph_def, SUBSET_DEF]
+     >- (fs[alterA_lang_def, ltl2vwaa_free_alph_def, SUBSET_DEF]
          >> rpt strip_tac
          >> qexists_tac `ALTERA_RUN (\i. if i=0 then {N_VAR a} else {}) (\_. {})`
          >> simp[runForAA_def, validAARunFor_def, acceptingAARun_def]
@@ -2511,7 +2509,7 @@ val LTL2WAA_ISCORRECT = store_thm
          >> `∀y. (y ∈ at x 0) ⇒ (y ∈ props f)` by metis_tac[]
          >> metis_tac[]
         )
-     >- (fs[alterA_lang_def, ltl2waa_free_alph_def, SUBSET_DEF]
+     >- (fs[alterA_lang_def, ltl2vwaa_free_alph_def, SUBSET_DEF]
          >> rpt strip_tac
          >> fs[runForAA_def, validAARunFor_def, acceptingAARun_def, tempSubForms_def]
          >> fs[SUBSET_DEF,initForms_def]
@@ -2532,27 +2530,27 @@ val LTL2WAA_ISCORRECT = store_thm
          >> `g' ∈ subForms f` by metis_tac[SUBFORMS_TRANS, subForms_def]
          >> dsimp[]
          >> `{w | MODELS w g ∧ word_range w ⊆ POW (props f)}
-                ⊆ alterA_lang (ltl2waa_free_alph (POW (props f)) g)` by metis_tac[]
+                ⊆ alterA_lang (ltl2vwaa_free_alph (POW (props f)) g)` by metis_tac[]
          >> `{w | MODELS w g' ∧ word_range w ⊆ POW (props f)}
-                ⊆ alterA_lang (ltl2waa_free_alph (POW (props f)) g')` by metis_tac[]
+                ⊆ alterA_lang (ltl2vwaa_free_alph (POW (props f)) g')` by metis_tac[]
          >> fs[alterA_lang_def, SUBSET_DEF] >> rpt strip_tac
            >- (`∃run.
-                 runForAA (ltl2waa_free_alph (POW (props f)) g) run x ∧
+                 runForAA (ltl2vwaa_free_alph (POW (props f)) g) run x ∧
                    ∀x'. x' ∈ word_range x
-                   ==> x' ∈ (ltl2waa_free_alph (POW (props f)) g).alphabet`
+                   ==> x' ∈ (ltl2vwaa_free_alph (POW (props f)) g).alphabet`
                 by metis_tac[]
                >> qexists_tac `run` >> rpt strip_tac >> fs[]
                   >- metis_tac[RUN_FOR_DISJ_LEMM]
-                  >- fs[ltl2waa_free_alph_def]
+                  >- fs[ltl2vwaa_free_alph_def]
               )
            >- (`∃run.
-                  runForAA (ltl2waa_free_alph (POW (props f)) g') run x ∧
+                  runForAA (ltl2vwaa_free_alph (POW (props f)) g') run x ∧
                     ∀x'. x' ∈ word_range x
-                      ==> x' ∈ (ltl2waa_free_alph (POW (props f)) g').alphabet`
+                      ==> x' ∈ (ltl2vwaa_free_alph (POW (props f)) g').alphabet`
                by metis_tac[]
               >> qexists_tac `run` >> rpt strip_tac >> fs[]
                 >- metis_tac[RUN_FOR_DISJ_LEMM]
-                >- fs[ltl2waa_free_alph_def]
+                >- fs[ltl2vwaa_free_alph_def]
               )
         )
      >- (`subForms (DISJ g g') = {DISJ g g'} ∪ (subForms g) ∪ (subForms g')`
@@ -2564,39 +2562,39 @@ val LTL2WAA_ISCORRECT = store_thm
           >> `g' ∈ subForms f` by metis_tac[SUBFORMS_TRANS, subForms_def]
           >> dsimp[]
           >> `{w | MODELS w g ∧ word_range w ⊆ POW (props f)}
-                ⊆ alterA_lang (ltl2waa_free_alph (POW (props f)) g)` by metis_tac[]
+                ⊆ alterA_lang (ltl2vwaa_free_alph (POW (props f)) g)` by metis_tac[]
           >> `{w | MODELS w g' ∧ word_range w ⊆ POW (props f)}
-                ⊆ alterA_lang (ltl2waa_free_alph (POW (props f)) g')` by metis_tac[]
+                ⊆ alterA_lang (ltl2vwaa_free_alph (POW (props f)) g')` by metis_tac[]
           >> fs[alterA_lang_def, SUBSET_DEF] >> rpt strip_tac
-          >> `runForAA (ltl2waa_free_alph (POW (props f)) g) run x ∨
-                runForAA (ltl2waa_free_alph (POW (props f)) g') run x`
+          >> `runForAA (ltl2vwaa_free_alph (POW (props f)) g) run x ∨
+                runForAA (ltl2vwaa_free_alph (POW (props f)) g') run x`
               by metis_tac[RUN_FOR_DISJ_LEMM2]
-          >- (`(∃run. runForAA (ltl2waa_free_alph (POW (props f)) g) run x
+          >- (`(∃run. runForAA (ltl2vwaa_free_alph (POW (props f)) g) run x
                 ∧ ∀x'.
                 ((x' ∈ word_range x) ⇒
-                 (x' ∈ (ltl2waa_free_alph (POW (props f)) g).alphabet))) ⇒
+                 (x' ∈ (ltl2vwaa_free_alph (POW (props f)) g).alphabet))) ⇒
                      MODELS x g ∧ ∀x'. (x' ∈ word_range x) ⇒ (x' ∈ POW (props f))`
                 by metis_tac[]
               >> `(∃run.
-                     runForAA (ltl2waa_free_alph (POW (props f)) g) run x ∧
+                     runForAA (ltl2vwaa_free_alph (POW (props f)) g) run x ∧
                      ∀x'.
                        x' ∈ word_range x ⇒
-                       x' ∈ (ltl2waa_free_alph (POW (props f)) g).alphabet)`
+                       x' ∈ (ltl2vwaa_free_alph (POW (props f)) g).alphabet)`
                    suffices_by metis_tac[]
-              >> qexists_tac `run` >> fs[ltl2waa_free_alph_def])
-          >- (`(∃run. runForAA (ltl2waa_free_alph (POW (props f)) g') run x
+              >> qexists_tac `run` >> fs[ltl2vwaa_free_alph_def])
+          >- (`(∃run. runForAA (ltl2vwaa_free_alph (POW (props f)) g') run x
                  ∧ ∀x'.
                    ((x' ∈ word_range x) ⇒
-                   (x' ∈ (ltl2waa_free_alph (POW (props f)) g').alphabet))) ⇒
+                   (x' ∈ (ltl2vwaa_free_alph (POW (props f)) g').alphabet))) ⇒
                       MODELS x g' ∧ ∀x'. (x' ∈ word_range x) ⇒ (x' ∈ POW (props f))`
                  by metis_tac[]
               >> `(∃run.
-                     runForAA (ltl2waa_free_alph (POW (props f)) g') run x ∧
+                     runForAA (ltl2vwaa_free_alph (POW (props f)) g') run x ∧
                      ∀x'.
                        x' ∈ word_range x ⇒
-                       x' ∈ (ltl2waa_free_alph (POW (props f)) g').alphabet)`
+                       x' ∈ (ltl2vwaa_free_alph (POW (props f)) g').alphabet)`
                  suffices_by metis_tac[]
-              >> qexists_tac `run` >> fs[ltl2waa_free_alph_def])
+              >> qexists_tac `run` >> fs[ltl2vwaa_free_alph_def])
         )
      >- (`subForms (CONJ g g') = {CONJ g g'} ∪ (subForms g) ∪ (subForms g')`
            by rw[subForms_def]
@@ -2607,17 +2605,17 @@ val LTL2WAA_ISCORRECT = store_thm
          >> `g' ∈ subForms f` by metis_tac[SUBFORMS_TRANS, subForms_def]
          >> fs[SUBSET_DEF] >> rpt strip_tac >> fs[alterA_lang_def]
          >> `∃run.
-               runForAA (ltl2waa_free_alph (POW (props f)) g) run x
-             ∧ word_range x ⊆ (ltl2waa_free_alph (POW (props f)) g).alphabet`
+               runForAA (ltl2vwaa_free_alph (POW (props f)) g) run x
+             ∧ word_range x ⊆ (ltl2vwaa_free_alph (POW (props f)) g).alphabet`
             by metis_tac[]
          >> `∃run.
-               runForAA (ltl2waa_free_alph (POW (props f)) g') run x
-             ∧ word_range x ⊆ (ltl2waa_free_alph (POW (props f)) g').alphabet`
+               runForAA (ltl2vwaa_free_alph (POW (props f)) g') run x
+             ∧ word_range x ⊆ (ltl2vwaa_free_alph (POW (props f)) g').alphabet`
             by metis_tac[]
-         >> `∃r. runForAA (ltl2waa_free_alph (POW (props f)) (CONJ g g')) r x`
+         >> `∃r. runForAA (ltl2vwaa_free_alph (POW (props f)) (CONJ g g')) r x`
              by metis_tac[RUN_FOR_CONJ_LEMM]
          >> qexists_tac `r` >> rpt strip_tac >> fs[]
-         >> fs[ltl2waa_free_alph_def]
+         >> fs[ltl2vwaa_free_alph_def]
         )
      >- (`subForms (CONJ g g') = {CONJ g g'} ∪ (subForms g) ∪ (subForms g')`
            by rw[subForms_def]
@@ -2627,19 +2625,19 @@ val LTL2WAA_ISCORRECT = store_thm
          >> `g ∈ subForms f` by metis_tac[SUBFORMS_TRANS, subForms_def]
          >> `g' ∈ subForms f` by metis_tac[SUBFORMS_TRANS, subForms_def]
          >> fs[SUBSET_DEF] >> rpt strip_tac >> fs[alterA_lang_def]
-           >- (`∃r1. runForAA (ltl2waa_free_alph (POW (props f)) g) r1 x`
+           >- (`∃r1. runForAA (ltl2vwaa_free_alph (POW (props f)) g) r1 x`
                  by metis_tac[RUN_FOR_CONJ_LEMM2_UNION]
                >> `word_range x ⊆
-                    (ltl2waa_free_alph (POW (props f)) g).alphabet`
+                    (ltl2vwaa_free_alph (POW (props f)) g).alphabet`
                    suffices_by metis_tac[]
-               >> fs[SUBSET_DEF, ltl2waa_free_alph_def])
-           >- (`∃r1. runForAA (ltl2waa_free_alph (POW (props f)) g') r1 x`
+               >> fs[SUBSET_DEF, ltl2vwaa_free_alph_def])
+           >- (`∃r1. runForAA (ltl2vwaa_free_alph (POW (props f)) g') r1 x`
                 by metis_tac[RUN_FOR_CONJ_LEMM2_UNION]
                >> `word_range x ⊆
-                      (ltl2waa_free_alph (POW (props f)) g').alphabet`
+                      (ltl2vwaa_free_alph (POW (props f)) g').alphabet`
                    suffices_by metis_tac[]
-               >> fs[SUBSET_DEF, ltl2waa_free_alph_def])
-           >- (fs[ltl2waa_free_alph_def, word_range_def, SUBSET_DEF]
+               >> fs[SUBSET_DEF, ltl2vwaa_free_alph_def])
+           >- (fs[ltl2vwaa_free_alph_def, word_range_def, SUBSET_DEF]
                >> metis_tac[]
               )
         )
@@ -2651,11 +2649,11 @@ val LTL2WAA_ISCORRECT = store_thm
          >> fs[SUBSET_DEF] >> rpt strip_tac >> fs[alterA_lang_def]
          >> `word_range (suff x 1) ⊆ word_range x` by metis_tac[WORD_RANGE_SUFF_LEMM]
          >> `word_range (suff x 1) ⊆ POW (props f)` by metis_tac[SUBSET_TRANS, SUBSET_DEF]
-         >> `?run. runForAA (ltl2waa_free_alph (POW (props f)) g) run (suff x 1)`
+         >> `?run. runForAA (ltl2vwaa_free_alph (POW (props f)) g) run (suff x 1)`
             by metis_tac[WORD_RANGE_SUFF_LEMM, SUBSET_DEF]
-         >> `∃r'. runForAA (ltl2waa_free_alph (POW (props f)) (X g)) r' x`
+         >> `∃r'. runForAA (ltl2vwaa_free_alph (POW (props f)) (X g)) r' x`
             by metis_tac[RUN_FOR_X_LEMM, SUBSET_DEF]
-         >> qexists_tac `r'` >> fs[ltl2waa_free_alph_def] >> metis_tac[SUBSET_DEF]
+         >> qexists_tac `r'` >> fs[ltl2vwaa_free_alph_def] >> metis_tac[SUBSET_DEF]
         )
      >- (`subForms (X g) = {X g} ∪ (subForms g)`
           by rw[subForms_def]
@@ -2663,21 +2661,21 @@ val LTL2WAA_ISCORRECT = store_thm
          >> `g ∈ subForms (X g)` by simp[SUBFORMS_REFL]
          >> `g ∈ subForms f` by metis_tac[SUBFORMS_TRANS, subForms_def]
          >> fs[SUBSET_DEF] >> rpt strip_tac >> fs[alterA_lang_def]
-           >- (`∃run. runForAA (ltl2waa_free_alph (POW (props f)) g) run (suff x 1)`
+           >- (`∃run. runForAA (ltl2vwaa_free_alph (POW (props f)) g) run (suff x 1)`
                by metis_tac[RUN_FOR_X_LEMM2]
                >> `word_range (suff x 1) ⊆ word_range x` by metis_tac[WORD_RANGE_SUFF_LEMM]
-               >> `?run. runForAA (ltl2waa_free_alph (POW (props f)) g) run (suff x 1) ∧
-                   word_range (suff x 1) ⊆ (ltl2waa_free_alph (POW (props f)) g).alphabet`
+               >> `?run. runForAA (ltl2vwaa_free_alph (POW (props f)) g) run (suff x 1) ∧
+                   word_range (suff x 1) ⊆ (ltl2vwaa_free_alph (POW (props f)) g).alphabet`
                    suffices_by metis_tac[]
-               >> qexists_tac `run'` >> fs[ltl2waa_free_alph_def]
+               >> qexists_tac `run'` >> fs[ltl2vwaa_free_alph_def]
                >> metis_tac[SUBSET_TRANS])
-           >- (fs[ltl2waa_free_alph_def, SUBSET_DEF])
+           >- (fs[ltl2vwaa_free_alph_def, SUBSET_DEF])
         )
      >- (`{w |
            (∃n. MODELS (suff w n) g' ∧ ∀i. i < n ⇒ MODELS (suff w i) g)
            ∧ word_range w ⊆ POW (props f) }
            ⊆ alterA_lang
-          (ltl2waa_free_alph (POW (props f))
+          (ltl2vwaa_free_alph (POW (props f))
                              (DISJ g' (CONJ g (X (U g g')))))`
            suffices_by metis_tac[U_AUTO_CHARACTERISATION]
          >> simp[SUBSET_DEF] >> rpt strip_tac
@@ -2694,16 +2692,16 @@ val LTL2WAA_ISCORRECT = store_thm
           >- (`MODELS x g'` by metis_tac[]
               >> fs[SUBSET_DEF, alterA_lang_def]
               >> `?run.
-                    runForAA (ltl2waa_free_alph (POW (props f)) g')
+                    runForAA (ltl2vwaa_free_alph (POW (props f)) g')
                            run x`
                    by metis_tac[word_range_def]
               >> qexists_tac `run`
               >> strip_tac
                 >- metis_tac[RUN_FOR_DISJ_LEMM]
-                >- fs[ltl2waa_free_alph_def]
+                >- fs[ltl2vwaa_free_alph_def]
              )
           >- (`!j. suff x (n - j) ∈
-                   alterA_lang (ltl2waa_free_alph (POW (props f))
+                   alterA_lang (ltl2vwaa_free_alph (POW (props f))
                               (DISJ g' (CONJ g (X (U g g')))))`
                  suffices_by (`n - n = 0` by simp[]
                                >> metis_tac[])
@@ -2713,15 +2711,15 @@ val LTL2WAA_ISCORRECT = store_thm
                        by metis_tac[WORD_RANGE_SUFF_LEMM]
                    >> fs[SUBSET_DEF]
                    >> `∃run.
-                        runForAA (ltl2waa_free_alph (POW (props f)) g')
+                        runForAA (ltl2vwaa_free_alph (POW (props f)) g')
                                run
                                (suff x n)
                      ∧ word_range (suff x n)
-                       ⊆ (ltl2waa_free_alph (POW (props f)) g').alphabet`
+                       ⊆ (ltl2vwaa_free_alph (POW (props f)) g').alphabet`
                       by metis_tac[SUBSET_DEF]
                    >> qexists_tac `run` >> rpt strip_tac
                     >- metis_tac[RUN_FOR_DISJ_LEMM]
-                    >- fs[ltl2waa_free_alph_def]
+                    >- fs[ltl2vwaa_free_alph_def]
                   )
                >- (Cases_on `n <= j`
                 >- (`n - j = 0` by simp[]
@@ -2730,7 +2728,7 @@ val LTL2WAA_ISCORRECT = store_thm
                    )
                 >- (`suff x (n − j) ∈
                        alterA_lang
-                       (ltl2waa_free_alph (POW (props f)) (U g g'))`
+                       (ltl2vwaa_free_alph (POW (props f)) (U g g'))`
                      by metis_tac[U_AUTO_CHARACTERISATION]
                    >> POP_ASSUM mp_tac >> simp[alterA_lang_def]
                    >> rpt strip_tac
@@ -2742,26 +2740,26 @@ val LTL2WAA_ISCORRECT = store_thm
                        by metis_tac[WORD_RANGE_SUFF_LEMM]
                    >> `∃r'.
                        runForAA
-                       (ltl2waa_free_alph (POW (props f)) (X (U g g')))
+                       (ltl2vwaa_free_alph (POW (props f)) (X (U g g')))
                        r' (suff x (n - SUC j))`
                          by metis_tac[RUN_FOR_X_LEMM, SUBSET_DEF]
                    >> `n - SUC j < n` by simp[]
                    >> `MODELS (suff x (n - SUC j)) g` by fs[]
                    >> `∃r'.
                         runForAA
-                        (ltl2waa_free_alph (POW (props f)) g)
+                        (ltl2vwaa_free_alph (POW (props f)) g)
                         r' (suff x (n - SUC j))` by
                            (fs[alterA_lang_def, SUBSET_DEF]
                             >> metis_tac[])
                    >> `∃r.
                         runForAA
-                        (ltl2waa_free_alph (POW (props f))
+                        (ltl2vwaa_free_alph (POW (props f))
                             (CONJ g (X (U g g'))))
                         r (suff x (n - SUC j))` by metis_tac[RUN_FOR_CONJ_LEMM]
                    >> qexists_tac `r`
                    >> rpt strip_tac
                      >- metis_tac[RUN_FOR_DISJ_LEMM]
-                     >- (fs[ltl2waa_free_alph_def] >> metis_tac[SUBSET_DEF])
+                     >- (fs[ltl2vwaa_free_alph_def] >> metis_tac[SUBSET_DEF])
                    )
                   )
              )
@@ -2777,26 +2775,26 @@ val LTL2WAA_ISCORRECT = store_thm
           >- (imp_res_tac EVTL_F2_RUN_LEMM
                >> qexists_tac `n` >> strip_tac
                 >- (`word_range (suff x n) ⊆ POW (props f)` by (
-                       fs[ltl2waa_free_alph_def]
+                       fs[ltl2vwaa_free_alph_def]
                      >> `word_range x ⊆ POW (props f)`
                        suffices_by metis_tac[WORD_RANGE_SUFF_LEMM,SUBSET_TRANS]
                      >> metis_tac[SUBSET_DEF]
                    )
-                  >> fs[SUBSET_DEF, alterA_lang_def, ltl2waa_free_alph_def] >> metis_tac[]
+                  >> fs[SUBSET_DEF, alterA_lang_def, ltl2vwaa_free_alph_def] >> metis_tac[]
                    )
                 >- (rpt strip_tac
-                   >> `∃r'. runForAA (ltl2waa_free_alph (POW (props f)) g) r' (suff x i)`
+                   >> `∃r'. runForAA (ltl2vwaa_free_alph (POW (props f)) g) r' (suff x i)`
                       by fs[]
                    >> `word_range (suff x i) ⊆ POW (props f)` by (
-                         fs[ltl2waa_free_alph_def]
+                         fs[ltl2vwaa_free_alph_def]
                          >> `word_range x ⊆ POW (props f)`
                              suffices_by metis_tac[WORD_RANGE_SUFF_LEMM,SUBSET_TRANS]
                          >> metis_tac[SUBSET_DEF]
                      )
-                   >> fs[SUBSET_DEF, alterA_lang_def, ltl2waa_free_alph_def] >> metis_tac[]
+                   >> fs[SUBSET_DEF, alterA_lang_def, ltl2vwaa_free_alph_def] >> metis_tac[]
                    )
              )
-          >- fs[ltl2waa_free_alph_def]
+          >- fs[ltl2vwaa_free_alph_def]
         )
      >- (`subForms (R g g') = {R g g'} ∪ (subForms g) ∪ (subForms g')`
            by rw[subForms_def]
@@ -2810,7 +2808,7 @@ val LTL2WAA_ISCORRECT = store_thm
               ∃n. MODELS (suff x n) g ∧ ∀i. i <= n ⇒ MODELS (suff x i) g'`
              by metis_tac[R_COND_LEMM]
             >- (fs[alterA_lang_def]
-                >> `!n. ?r. runForAA (ltl2waa_free_alph (POW (props f)) g') r (suff x n)`
+                >> `!n. ?r. runForAA (ltl2vwaa_free_alph (POW (props f)) g') r (suff x n)`
                 by (rpt strip_tac >> `MODELS (suff x n) g'` by metis_tac[]
                     >> fs[alterA_lang_def, SUBSET_DEF]
                     >> metis_tac[WORD_RANGE_SUFF_LEMM, SUBSET_DEF]
@@ -2818,13 +2816,13 @@ val LTL2WAA_ISCORRECT = store_thm
                 >> imp_res_tac ALWAYS_RUN
                 >> `word_range x ⊆ POW (props f)` by metis_tac[SUBSET_DEF]
                 >> fs[]
-                >> `∃r. runForAA (ltl2waa_free_alph (POW (props f)) (R g g')) r x`
+                >> `∃r. runForAA (ltl2vwaa_free_alph (POW (props f)) (R g g')) r x`
                     by fs[]
                 >> qexists_tac `r`
                 >> strip_tac >> fs[]
-                >> fs[ltl2waa_free_alph_def]
+                >> fs[ltl2vwaa_free_alph_def]
                )
-            >- (`x ∈ alterA_lang (ltl2waa_free_alph (POW (props f))
+            >- (`x ∈ alterA_lang (ltl2vwaa_free_alph (POW (props f))
                                                   (CONJ g' (DISJ g (X (R g g')))))`
                  suffices_by metis_tac[R_AUTO_CHARACTERISATION]
                 >> fs[alterA_lang_def]
@@ -2833,7 +2831,7 @@ val LTL2WAA_ISCORRECT = store_thm
                       (Cases_on `x` >> fs[suff_def] >> metis_tac[])
                     >> `!j.
                        ∃run. runForAA
-                       (ltl2waa_free_alph (POW (props f)) (CONJ g' (DISJ g (X (R g g')))))
+                       (ltl2vwaa_free_alph (POW (props f)) (CONJ g' (DISJ g (X (R g g')))))
                        run (suff x (n - j))`
                        suffices_by metis_tac[DECIDE ``n - n = 0``]
                     >> Induct_on `j`
@@ -2841,24 +2839,24 @@ val LTL2WAA_ISCORRECT = store_thm
                           >> `word_range (suff x n) ⊆ POW (props f)`
                               by metis_tac[WORD_RANGE_SUFF_LEMM, SUBSET_DEF]
                           >> `∃run.
-                             runForAA (ltl2waa_free_alph (POW (props f)) g) run (suff x n)`
+                             runForAA (ltl2vwaa_free_alph (POW (props f)) g) run (suff x n)`
                              by metis_tac[SUBSET_DEF]
                           >> `∃run.
-                             runForAA (ltl2waa_free_alph (POW (props f)) g') run (suff x n)`
+                             runForAA (ltl2vwaa_free_alph (POW (props f)) g') run (suff x n)`
                              by metis_tac[SUBSET_DEF, DECIDE ``n <= n``]
                           >> `∃r.
-                         runForAA (ltl2waa_free_alph (POW (props f)) (CONJ g' g)) r
+                         runForAA (ltl2vwaa_free_alph (POW (props f)) (CONJ g' g)) r
                                       (suff x n)`
                              by metis_tac[RUN_FOR_CONJ_LEMM]
                           >> metis_tac[CONJ_DISJ_DISTRIB]
                          )
                       >- (`∃run.
                             runForAA
-                            (ltl2waa_free_alph (POW (props f))
+                            (ltl2vwaa_free_alph (POW (props f))
                                   (R g g')) run (suff x (n − j))` by (
-                          `alterA_lang (ltl2waa_free_alph (POW (props f)) (R g g')) =
+                          `alterA_lang (ltl2vwaa_free_alph (POW (props f)) (R g g')) =
                           alterA_lang
-                              (ltl2waa_free_alph (POW (props f))
+                              (ltl2vwaa_free_alph (POW (props f))
                                                  (CONJ g' (DISJ g (X (R g g')))))`
                               by metis_tac[R_AUTO_CHARACTERISATION]
                            >> fs[alterA_lang_def, SUBSET_DEF, SET_EQ_SUBSET]
@@ -2867,7 +2865,7 @@ val LTL2WAA_ISCORRECT = store_thm
                            >> `word_range (suff x (n - j)) ⊆ POW (props f)`
                               by metis_tac[WORD_RANGE_SUFF_LEMM, SUBSET_DEF]
                            >> rpt strip_tac
-                           >> fs[ltl2waa_free_alph_def] >> metis_tac[SUBSET_DEF]
+                           >> fs[ltl2vwaa_free_alph_def] >> metis_tac[SUBSET_DEF]
                             )
                          >> Cases_on `n <= j`
                            >- (`n - j = 0` by simp[]
@@ -2882,27 +2880,27 @@ val LTL2WAA_ISCORRECT = store_thm
                                    by metis_tac[WORD_RANGE_SUFF_LEMM]
                                >> `∃r'.
                                     runForAA
-                                    (ltl2waa_free_alph (POW (props f)) (X (R g g')))
+                                    (ltl2vwaa_free_alph (POW (props f)) (X (R g g')))
                                     r' (suff x (n - SUC j))`
                                    by metis_tac[RUN_FOR_X_LEMM, SUBSET_DEF]
                                >> `n - SUC j < n` by simp[]
                                >> `MODELS (suff x (n - SUC j)) g'` by fs[]
                                >> `∃r'.
                                      runForAA
-                                     (ltl2waa_free_alph (POW (props f)) g')
+                                     (ltl2vwaa_free_alph (POW (props f)) g')
                                      r' (suff x (n - SUC j))` by
                                   (fs[alterA_lang_def, SUBSET_DEF]
                                       >> metis_tac[])
                                >> `∃r.
                                      runForAA
-                                     (ltl2waa_free_alph (POW (props f))
+                                     (ltl2vwaa_free_alph (POW (props f))
                                                     (CONJ g' (X (R g g'))))
                                      r (suff x (n - SUC j))` by metis_tac[RUN_FOR_CONJ_LEMM]
                                >> metis_tac[CONJ_DISJ_DISTRIB]
                               )
                            )
                     )
-                 >- (fs[word_range_def, SUBSET_DEF, ltl2waa_free_alph_def])
+                 >- (fs[word_range_def, SUBSET_DEF, ltl2vwaa_free_alph_def])
                )
         )
      >- (`subForms (R g g') = {R g g'} ∪ (subForms g) ∪ (subForms g')`
@@ -2923,15 +2921,15 @@ val LTL2WAA_ISCORRECT = store_thm
                    >> strip_tac
                    >> `∃r'.
                         runForAA
-                        (ltl2waa_free_alph (POW (props f)) (CONJ g' (X (R g g')))) r'
+                        (ltl2vwaa_free_alph (POW (props f)) (CONJ g' (X (R g g')))) r'
                         (suff x n)` by metis_tac[R_REPL_F1_LEMM]
                    >> `word_range (suff x n) ⊆ word_range x`
                          by metis_tac[WORD_RANGE_SUFF_LEMM]
                    >> `∃r1.
-                        runForAA (ltl2waa_free_alph (POW (props f)) g') r1 (suff x n)`
+                        runForAA (ltl2vwaa_free_alph (POW (props f)) g') r1 (suff x n)`
                       by metis_tac[RUN_FOR_CONJ_LEMM2_UNION]
                    >> fs[alterA_lang_def, SUBSET_DEF]
-                   >> fs[SUBSET_DEF, ltl2waa_free_alph_def]
+                   >> fs[SUBSET_DEF, ltl2vwaa_free_alph_def]
                    >> metis_tac[]
                   )
                >- (disj2_tac
@@ -2942,7 +2940,7 @@ val LTL2WAA_ISCORRECT = store_thm
                   >> `!i. i < N ==> (R g g' ∈ run.V i)` by (
                      Induct_on `i`
                       >- (strip_tac >> fs[runForAA_def,validAARunFor_def]
-                          >> fs[ltl2waa_free_alph_def, initForms_def, tempDNF_def]
+                          >> fs[ltl2vwaa_free_alph_def, initForms_def, tempDNF_def]
                          )
                       >- (strip_tac >> `R g g' ∈ run.V i` by fs[]
                          >> `~(?a.(a,run.E (i,R g g')) ∈ trans (POW (props f)) (CONJ g g')
@@ -2954,7 +2952,7 @@ val LTL2WAA_ISCORRECT = store_thm
                               >- (CCONTR_TAC >> `i < n'` by simp[]
                                              >> metis_tac[])
                            )
-                         >> fs[runForAA_def, validAARunFor_def, ltl2waa_free_alph_def]
+                         >> fs[runForAA_def, validAARunFor_def, ltl2vwaa_free_alph_def]
                          >> `?a'. (a', run.E (i, R g g')) ∈ trans (POW (props f)) (R g g')
                                    ∧ at x i ∈ a'` by metis_tac[]
                          >> fs[trans_def]
@@ -2981,15 +2979,15 @@ val LTL2WAA_ISCORRECT = store_thm
                                >- metis_tac[]
                                 )
                         >> `∃r'.
-                           runForAA (ltl2waa_free_alph (POW (props f)) (CONJ g g'))
+                           runForAA (ltl2vwaa_free_alph (POW (props f)) (CONJ g g'))
                            r' (suff x N)` by metis_tac[REPL_F2_LEMM,SUBSET_REFL]
                         >> ` ∃r1.
-                           runForAA (ltl2waa_free_alph (POW (props f)) g) r1 (suff x N)`
+                           runForAA (ltl2vwaa_free_alph (POW (props f)) g) r1 (suff x N)`
                            by metis_tac[RUN_FOR_CONJ_LEMM2_UNION]
                         >> `word_range (suff x N) ⊆ word_range x`
                                    by metis_tac[WORD_RANGE_SUFF_LEMM]
                         >> fs[alterA_lang_def, SUBSET_DEF]
-                        >> fs[SUBSET_DEF, ltl2waa_free_alph_def]
+                        >> fs[SUBSET_DEF, ltl2vwaa_free_alph_def]
                         >> metis_tac[]
                        )
                     >- (Cases_on `i = N`
@@ -2999,16 +2997,16 @@ val LTL2WAA_ISCORRECT = store_thm
                                  >> rpt strip_tac >> metis_tac[]
                                   )
                             >> `∃r'.
-                                 runForAA (ltl2waa_free_alph (POW (props f)) (CONJ g g'))
+                                 runForAA (ltl2vwaa_free_alph (POW (props f)) (CONJ g g'))
                                  r' (suff x N)` by metis_tac[REPL_F2_LEMM,SUBSET_REFL]
                             >> ` ∃r1.
-                                 runForAA (ltl2waa_free_alph (POW (props f)) g')
+                                 runForAA (ltl2vwaa_free_alph (POW (props f)) g')
                                  r1 (suff x N)`
                                  by metis_tac[RUN_FOR_CONJ_LEMM2_UNION]
                             >> `word_range (suff x N) ⊆ word_range x`
                                  by metis_tac[WORD_RANGE_SUFF_LEMM]
                             >> fs[alterA_lang_def, SUBSET_DEF]
-                            >> fs[SUBSET_DEF, ltl2waa_free_alph_def]
+                            >> fs[SUBSET_DEF, ltl2vwaa_free_alph_def]
                             >> metis_tac[])
                         >- (`i < N` by simp[]
                             >> `~(?a.(a,run.E (i,R g g')) ∈ trans (POW (props f)) (CONJ g g')
@@ -3025,7 +3023,7 @@ val LTL2WAA_ISCORRECT = store_thm
                             >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
                             >> RULE_ASSUM_TAC(
                                  SIMP_RULE
-                           (srw_ss())[runForAA_def, validAARunFor_def, ltl2waa_free_alph_def]
+                           (srw_ss())[runForAA_def, validAARunFor_def, ltl2vwaa_free_alph_def]
                             )
                             >> rpt strip_tac
                             >> `?a. (a,run.E (i,R g g')) ∈ trans (POW (props f)) (R g g')
@@ -3038,23 +3036,23 @@ val LTL2WAA_ISCORRECT = store_thm
                                   >> metis_tac[UNION_COMM, INTER_COMM])
                               >- (`∃r'.
                                     runForAA
-                                    (ltl2waa_free_alph (POW (props f))
+                                    (ltl2vwaa_free_alph (POW (props f))
                                                        (CONJ g' (X (R g g')))) r'
                                     (suff x i)` by metis_tac[]
                                   >> `∃r1.
-                                    runForAA (ltl2waa_free_alph (POW (props f)) g') r1
+                                    runForAA (ltl2vwaa_free_alph (POW (props f)) g') r1
                                     (suff x i)` by metis_tac[RUN_FOR_CONJ_LEMM2_UNION]
                                   >> `word_range (suff x i) ⊆ word_range x`
                                       by metis_tac[WORD_RANGE_SUFF_LEMM]
                                   >> fs[alterA_lang_def, SUBSET_DEF]
-                                  >> fs[SUBSET_DEF, ltl2waa_free_alph_def]
+                                  >> fs[SUBSET_DEF, ltl2vwaa_free_alph_def]
                                   >> metis_tac[]
                                  )
                            )
                        )
                   )
              )
-          >- fs[ltl2waa_free_alph_def]
+          >- fs[ltl2vwaa_free_alph_def]
         )
   );
 

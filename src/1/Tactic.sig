@@ -89,6 +89,7 @@ sig
   val imp_res_tac           : thm -> tactic
   val RES_TAC               : tactic
   val res_tac               : tactic
+  val provehyp              : thm_tactic
   val via                   : term * tactic -> tactic
   val CONV_TAC              : conv -> tactic
   val BETA_TAC              : tactic
@@ -102,4 +103,14 @@ sig
   val SELECT_ELIM_TAC       : tactic
   val HINT_EXISTS_TAC       : tactic
   val part_match_exists_tac : (term -> term) -> term -> tactic
+
+  val drule            : thm_tactic
+  val dxrule           : thm_tactic
+  val drule_then       : thm_tactic -> thm_tactic
+  val dxrule_then      : thm_tactic -> thm_tactic
+  val drule_all        : thm_tactic
+  val dxrule_all       : thm_tactic
+  val drule_all_then   : thm_tactic -> thm_tactic
+  val dxrule_all_then  : thm_tactic -> thm_tactic
+
 end
