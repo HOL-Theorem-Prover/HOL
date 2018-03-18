@@ -25,5 +25,7 @@ val block : break_style -> int -> pretty list -> pretty
 val pr_list : ('a -> pretty) -> pretty list -> 'a list -> pretty list
 val tabulateWith : (int -> 'a) -> 'a list -> int -> 'a list
 
+val pp_pretty : pretty -> pretty
+
 
 end

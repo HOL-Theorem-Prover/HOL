@@ -92,6 +92,7 @@ in
       ; PolyML.addPrettyPrinter pp_frag
       ; PolyML.addPrettyPrinter pp_breakstyle
       end
+  ; PolyML.addPrettyPrinter (pp2polypp HOLPP.pp_pretty)
   ; PolyML.addPrettyPrinter (pp2polypp ppg)
   ; PolyML.addPrettyPrinter (pp2polypp ppgrules)
   ; PolyML.addPrettyPrinter (pp2polypp locpp)
