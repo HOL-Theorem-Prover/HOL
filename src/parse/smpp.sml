@@ -69,7 +69,8 @@ fun mappr_list fpp brk list =
         fpp b >- afterb
       end
 
-fun lift pf x (st,pps) = SOME ((), (st, pf x :: pps))
+fun lift pf x =
+  let val pty = pf x in (fn (st,pps) => SOME ((), (st, pty :: pps))) end
 fun lower m st0 =
   let
     fun mapthis (a, (st,ps)) = (PP.block CONSISTENT 0 (List.rev ps), a, st)
