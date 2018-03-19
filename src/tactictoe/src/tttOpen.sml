@@ -39,8 +39,6 @@ fun theory_files script =
 fun run_holmake fileuo =
   let
     val {dir,file} = OS.Path.splitDirFile fileuo
-    val state0 = HOLDIR ^ "/bin/hol.state0"
-    val flag = "--holstate=" ^ state0
   in
     print_endline ("TacticToe: running Holmake in " ^ fileuo);
     cmd_in_dir dir (HOLDIR ^ "/bin/Holmake" ^ " -j1 " ^ file)

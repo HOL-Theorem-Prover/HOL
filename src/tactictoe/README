@@ -11,7 +11,7 @@ USAGE:
   load "tacticToe";
   open tacticToe;
   load "arithmeticTheory"; (* change arithmetic to the theory of your choice *)
-  ttt_record ();
+  ttt_record (); (* takes a while *)
   tactictoe ``1+1=2``;
 
 
