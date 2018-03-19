@@ -482,7 +482,8 @@ val _ = test {input = "f /x",
               testf = (fn s => "Prefix op without parens: "^s),
               output = "f /x"}
 
-fun bfnprinter gs be sys (ppfns : term_pp_types.ppstream_funs) gravs depth t =
+fun bfnprinter gs be sys (ppfns : unit term_pp_types.ppstream_funs)
+               gravs depth t =
   let
     val (bvar, body) = dest_abs t
   in

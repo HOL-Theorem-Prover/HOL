@@ -28,9 +28,14 @@ fun pp_to_string w f x =
   let
     val sbuf = ref [] : string list ref
     fun app s = (sbuf := s :: !sbuf)
+    val _ = prettyPrint (app,w) (f x)
+    val strings =
+        case !sbuf of
+            [] => []
+          | "\n" :: rest => rest
+          | ss => ss
   in
-    prettyPrint (app,w) (f x);
-    String.concat (List.rev (!sbuf))
+    String.concat (List.rev strings)
   end
 
 val add_string = PrettyString

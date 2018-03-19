@@ -206,20 +206,20 @@ let
   open smpp
   val style_stack = ref ([]:pp_full_style list);
   fun set_style fsty =
-      smpp.add_stringsz (full_style_to_vt100 fsty, 0)
+    smpp.add_stringsz (full_style_to_vt100 fsty, 0)
 
-  val reset_style = set_style (top_style style_stack)
+  fun reset_style() = set_style (top_style style_stack)
 
   fun ustyle styL p =
     if not (!backend_use_styles) then nothing
     else
-      (user_push_styleL name style_stack styL; reset_style) >> p >>
-      (pop_style style_stack ; reset_style)
+      (user_push_styleL name style_stack styL; reset_style()) >> p >>
+      (pop_style style_stack ; reset_style())
 
   fun add_color_string c ssz =
     set_style (SOME c, NONE, false, false, []) >>
     add_ssz ssz >>
-    reset_style
+    reset_style()
 
   fun add_xstring {s,sz,ann} =
     if not (!backend_use_annotations) orelse not (isSome ann) then

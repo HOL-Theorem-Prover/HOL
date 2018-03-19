@@ -1,4 +1,4 @@
-open PPBackEnd PP Lib Type testutils
+open Lib Type PP smpp PPBackEnd testutils
 
 (* -------------------------------------------------------------------------- *)
 (* Test code for terminal styles                                              *)
@@ -29,14 +29,20 @@ val color_list =
     LightGrey , OrangeRed  , VividGreen , Yellow,
     Blue      , PinkPurple , LightBlue  , White]
 
+val _ = tprint "Basic vt100 style"
+val s = HOLPP.pp_to_string
+          70
+          (fn s => Parse.mlower
+                     (#ustyle vt100_terminal [FG Blue] (smpp.add_string s)))
+          "should be blue"
+val _ = if s = "\027[0;1;34mshould be blue\027[0m" then OK()
+        else die "FAILED!";
+
 
 fun test_terminal test_bg (terminal:t) =
 let
-  open OldPP
-   val pp_out = Portable.stdOut_ppstream ();
    val {add_string, add_xstring, add_newline, add_break,
-        begin_style, end_style, begin_block, end_block, ...} =
-       with_ppstream terminal pp_out
+        ustyle, ublock, ...} = terminal
    fun add_ann_string (s,ann) = add_xstring {s=s,ann=SOME ann,sz=NONE}
 
    val fg_styles =
@@ -58,67 +64,61 @@ let
           map (fn (s, styL) =>
             ((s^" - Background "^(color_name_fw c)), (BG c)::styL)) und_fg_styles)
           color_list)))
+   val m =
+       ublock INCONSISTENT 0 (
+         add_string "Terminal testing" >> add_newline >>
+         add_string "================" >> add_newline >> add_newline >>
+
+         add_string "Annotations:" >> add_newline >>
+         add_string "------------" >> add_newline >>
+         add_ann_string ("Bound variable", BV (bool, fn () => ": bool")) >>
+         add_newline >>
+         add_ann_string ("Free variable", FV (bool, fn () => ": bool")) >>
+         add_newline >>
+         add_ann_string ("Type variable", TyV) >>
+         add_newline >>
+         add_ann_string ("TySyn", TySyn (fn () => "TySyn")) >>
+         add_newline >>
+         add_ann_string ("TyOp", TyOp (fn () => "TyOp")) >>
+         add_newline >>
+         add_ann_string ("Const", Const {Name = "test-name", Thy = "test-thy",
+                                         Ty = (Type.bool, fn () => "bool")}) >>
+         add_newline >>
+         add_ann_string ("Note", Note "Some note") >>
+         add_newline >>
+
+         add_newline >> add_newline >>
+
+         add_string "Basic styles:" >> add_newline >>
+         add_string "-------------" >> add_newline >>
+         add_string "default style" >> add_newline >>
+         ustyle [Bold] (add_string "Bold") >> add_newline >>
+         ustyle [Underline] (add_string "Underline") >> add_newline >>
+         mapp (fn c => (
+                 add_string "Foreground " >>
+                 ustyle [FG c] (add_string (color_name_fw c)) >>
+                 add_newline))
+              color_list >>
+         mapp (fn c => (
+                add_string "Background " >>
+                ustyle [BG c] (add_string (color_name_fw c)) >>
+                add_newline)) color_list >>
+         add_newline >> add_newline >>
+
+         (if test_bg then
+            add_string "All style combinations:" >> add_newline >>
+            add_string "------------------------" >> add_newline
+          else
+            add_string "All style combinations (without background color):" >>
+            add_newline >>
+            add_string "--------------------------------------------------" >>
+            add_newline) >>
+         mapp (fn (s, styL) => ustyle styL (add_string s) >> add_newline)
+              full_styles >>
+         add_newline >> add_newline
+       )
 in
-   PP.clear_ppstream pp_out;
-   (#begin_block terminal) pp_out INCONSISTENT 0;
-
-   add_string "Terminal testing"; add_newline();
-   add_string "================"; add_newline();
-   add_newline();
-
-   add_string "Annotations:"; add_newline();
-   add_string "------------"; add_newline();
-   add_ann_string ("Bound variable", BV (bool, fn () => ": bool"));
-   add_newline();
-   add_ann_string ("Free variable", FV (bool, fn () => ": bool"));
-   add_newline();
-   add_ann_string ("Type variable", TyV);
-   add_newline();
-   add_ann_string ("TySyn", TySyn (fn () => "TySyn"));
-   add_newline();
-   add_ann_string ("TyOp", TyOp (fn () => "TyOp"));
-   add_newline();
-   add_ann_string ("Const", Const {Name = "test-name", Thy = "test-thy",
-                                   Ty = (Type.bool, fn () => "bool")});
-   add_newline();
-   add_ann_string ("Note", Note "Some note") ;
-   add_newline();
-
-   add_newline(); add_newline();
-
-   add_string "Basic styles:"; add_newline();
-   add_string "-------------"; add_newline();
-   add_string "default style"; add_newline();
-   begin_style [Bold]; add_string "Bold"; end_style(); add_newline();
-   begin_style [Underline]; add_string "Underline"; end_style(); add_newline();
-   map (fn c => (
-      add_string "Foreground ";
-      begin_style [FG c];
-          add_string (color_name_fw c);
-      end_style(); add_newline())) color_list;
-   map (fn c => (
-      add_string "Background ";
-      begin_style [BG c];
-          add_string (color_name_fw c);
-      end_style(); add_newline())) color_list;
-
-   add_newline(); add_newline();
-
-   if test_bg then (
-      add_string "All style combinations:"; add_newline();
-      add_string "------------------------"; add_newline()
-   ) else (
-      add_string "All style combinations (without background color):"; add_newline();
-      add_string "--------------------------------------------------"; add_newline()
-   );
-   map (fn (s, styL) => (
-      begin_style styL;
-          add_string s;
-      end_style(); add_newline())) full_styles;
-   add_newline();add_newline();
-
-   (#end_block terminal) pp_out;
-   PP.flush_ppstream pp_out
+  HOLPP.prettyPrint (TextIO.print, 75) (Parse.mlower m)
 end;
 
 
@@ -134,28 +134,6 @@ val _ = print "vt100 terminal\n";
 val _ = print "==============\n\n";
 val _ = test_terminal false (PPBackEnd.vt100_terminal);
 
-
-
-(* -------------------------------------------------------------------------- *)
-(* Test code for style errors (non terminated style)                          *)
-(* -------------------------------------------------------------------------- *)
-
-fun test_style_error (terminal:t) =
-let
-   val pp_out = Portable.stdOut_ppstream ();
-   val {add_string, add_xstring, add_newline, add_break,
-        begin_style, end_style, begin_block, end_block, ...} =
-       with_ppstream terminal pp_out
-in
-   PP.clear_ppstream pp_out;
-   (#begin_block terminal) pp_out INCONSISTENT 0;
-
-   add_string "Style error";
-   begin_style [Bold]; add_string "...."; add_newline();
-
-   (#end_block terminal) pp_out;
-   PP.flush_ppstream pp_out
-end;
 
 
 (* ----------------------------------------------------------------------
@@ -410,7 +388,12 @@ val mk_list = mk_list0 bool NIL_t CONS_t;
 
 fun tmprint g =
   PP.pp_to_string 70
-      (term_pp.pp_term g type_grammar.min_grammar PPBackEnd.raw_terminal);
+      (fn t =>
+          Parse.mlower
+            (term_pp.pp_term g
+                             type_grammar.min_grammar
+                             PPBackEnd.raw_terminal
+                             t))
 
 fun tpp msg expected g t =
   let
@@ -625,9 +608,5 @@ end (* local *)
 
 full test including backgrounds
 val _ = test_terminal true (!Parse.current_backend)
-
-
-error testing for backends (be careful)
-val _ = test_style_error (!Parse.current_backend)
 
 *)

@@ -46,6 +46,13 @@ fun block bs i p (a,ps) =
 fun fupdate f (a,pps) = SOME (a, (f a, pps))
 
 infix >>
+
+fun mapp f [] = nothing
+  | mapp f (e::es) = f e >> mapp f es
+
+fun mmap f [] = return []
+  | mmap f (e::es) = f e >- (fn h => mmap f es >- (fn t => return (h::t)))
+
 fun pr_list fpp brk list =
     case list of
       [] => nothing

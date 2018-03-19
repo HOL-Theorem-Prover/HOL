@@ -17,6 +17,8 @@ sig
   val fupdate : ('a -> 'a) -> ('a,'a) t
 
   val block : HOLPP.break_style -> int -> ('a,'b) t -> ('a,'b) t
+  val mapp : ('a -> ('b,unit) t) -> 'a list -> ('b, unit) t
+  val mmap : ('a -> ('b,'c) t) -> 'a list -> ('b, 'c list) t
   val pr_list : ('b -> ('a,unit)t) -> ('a,unit) t -> 'b list -> ('a,unit)t
   val mappr_list : ('b -> ('a,'c)t) -> ('a,unit) t -> 'b list -> ('a,'c list) t
   val lift : ('a -> HOLPP.pretty) -> 'a -> ('st,unit) t
