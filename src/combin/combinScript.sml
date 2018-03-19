@@ -370,7 +370,7 @@ val _ = remove_ovl_mapping "C" {Name="C", Thy = "combin"}
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME (fn ppstrm =>
-  let fun S s = (PP.add_string ppstrm s; PP.add_newline ppstrm) in
+  let fun S s = (OldPP.add_string ppstrm s; OldPP.add_newline ppstrm) in
     S "val _ =";
     S "   let open computeLib";
     S "       val K_tm = Term.prim_mk_const{Name=\"K\",Thy=\"combin\"}";

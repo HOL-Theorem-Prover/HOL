@@ -328,8 +328,8 @@ fun update_overp overp m =
             overf = overf, overp = overp, fixf = fixf, fixp = fixp}
   end;
 
-fun pp_model pp (MODEL {parm = {size = N, ...}, id, ...}) =
-  pp_string pp (int_to_string id ^ ":" ^ int_to_string N);
+fun pp_model (MODEL {parm = {size = N, ...}, id, ...}) =
+  pp_string (int_to_string id ^ ":" ^ int_to_string N);
 
 (* ------------------------------------------------------------------------- *)
 (* Evaluating ground formulas on models                                      *)

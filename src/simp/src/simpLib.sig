@@ -207,7 +207,7 @@ sig
    (* Prettyprinters for ssfrags and simpsets.                             *)
    (* ---------------------------------------------------------------------*)
 
-   val pp_ssfrag : ppstream -> ssfrag -> unit
-   val pp_simpset : ppstream -> simpset -> unit
+   val pp_ssfrag : ssfrag Parse.pprinter
+   val pp_simpset : simpset Parse.pprinter
 
 end

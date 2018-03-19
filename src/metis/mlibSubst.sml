@@ -146,9 +146,8 @@ fun foldl f b (mlibSubst sub) = M.foldl (fn (s, t, a) => f (s |-> t) a) b sub;
 fun foldr f b (mlibSubst sub) = M.foldr (fn (s, t, a) => f (s |-> t) a) b sub;
 
 val pp_subst =
-  pp_map to_maplets
-  (fn pp =>
-   (fn [] => pp_string pp "|<>|"
-     | l => pp_list (pp_maplet pp_string pp_term) pp l));
+  pp_map
+    to_maplets
+    (fn [] => pp_string"|<>|" | l => pp_list (pp_maplet pp_string pp_term) l)
 
 end
