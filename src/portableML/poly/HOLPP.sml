@@ -39,6 +39,7 @@ fun pp_to_string w f x =
 val add_string = PrettyString
 val add_break = PrettyBreak
 val NL = PrettyLineBreak
+val add_newline = NL
 fun bs2b bs = bs = CONSISTENT
 fun block bs i ps = PrettyBlock(i, bs2b bs, [], ps)
 

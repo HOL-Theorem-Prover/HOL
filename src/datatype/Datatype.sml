@@ -85,79 +85,36 @@ val define_type = ind_types.define_type;
 (* builds type variables or compound types.                                  *)
 (*---------------------------------------------------------------------------*)
 
-fun extern_type mk_vartype_str mk_thy_type_str ppstrm ty =
- let open Portable
-     val {add_break,add_newline,
-          add_string,begin_block,end_block,...} = with_ppstream ppstrm
-     val extern = extern_type mk_vartype_str mk_thy_type_str ppstrm
+val extern_type = TheoryPP.pp_type
 
- in
-  if is_vartype ty
-  then case dest_vartype ty
-        of "'a" => add_string "alpha"
-         | "'b" => add_string "beta"
-         | "'c" => add_string "gamma"
-         | "'d" => add_string "delta"
-         |   s  => add_string (mk_vartype_str^quote s)
-  else
-  case dest_thy_type ty
-   of {Tyop="bool",Thy="min", Args=[]} => add_string "bool"
-    | {Tyop="ind", Thy="min", Args=[]} => add_string "ind"
-    | {Tyop="fun", Thy="min", Args=[d,r]}
-       => (add_string "(";
-           begin_block INCONSISTENT 0;
-             extern d;
-             add_break (1,0);
-             add_string "-->";
-             add_break (1,0);
-             extern r;
-           end_block ();
-           add_string ")")
-   | {Tyop,Thy,Args}
-      => let in
-           add_string mk_thy_type_str;
-           begin_block INCONSISTENT 0;
-           add_string (quote Thy);
-           add_break (1,0);
-           add_string (quote Tyop);
-           add_break (1,0);
-           add_string "[";
-           begin_block INCONSISTENT 0;
-           pr_list extern (fn () => add_string ",")
-                          (fn () => add_break (1,0)) Args;
-           end_block (); add_string "]";
-           end_block ()
-         end
- end
-
-fun with_parens pfn ppstrm x =
-  let open Portable
-  in add_string ppstrm "("; pfn ppstrm x; add_string ppstrm ")"
+fun with_parens pfn x =
+  let open Portable PP
+  in block CONSISTENT 1 [add_string "(", pfn x, add_string ")"]
   end
 
-fun pp_fields ppstrm fields =
- let open Portable
-     val {add_break,add_newline,
-          add_string,begin_block,end_block,...} = with_ppstream ppstrm
+fun pp_fields fields =
+ let open Portable PP
      fun pp_field (s,ty) =
-        (begin_block CONSISTENT 0;
-         add_string ("("^Lib.quote s);
-         add_string ",";
-         extern_type "U" "T" ppstrm ty;
-         add_string ")";
-         end_block())
+       block CONSISTENT 0 [
+         add_string ("("^Lib.quote s),
+         add_string ",",
+         extern_type "U" "T" ty,
+         add_string ")"
+       ]
  in
-  begin_block CONSISTENT 0;
-  add_string "let fun T t s A = mk_thy_type{Thy=t,Tyop=s,Args=A}"; add_newline();
-  add_string "    val U = mk_vartype"; add_newline();
-  add_string "in"; add_newline();
-  begin_block CONSISTENT 0;
-   add_string "[";
-   begin_block INCONSISTENT 0;
-   pr_list pp_field (fn () => add_string ",")
-                    (fn () => add_break (1,0)) fields;
-   end_block (); add_string "] end";
-   end_block ()
+  block CONSISTENT 0 [
+    add_string "let fun T t s A = mk_thy_type{Thy=t,Tyop=s,Args=A}", NL,
+    add_string "    val U = mk_vartype", NL,
+    add_string "in", NL,
+    block CONSISTENT 1 [
+      add_string "[",
+      block INCONSISTENT 0 (
+        pr_list pp_field [add_string ",", add_break (1,0)] fields
+      ),
+      add_string "]"
+    ],
+    add_string "end"
+  ]
  end
 
 
@@ -1098,66 +1055,67 @@ in
 end;
 
 fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
-  | adjoin (string_etc0 :: strings_etc) =
+  | adjoin (strings as (_ :: _)) =
     adjoin_to_theory
     {sig_ps = NONE,
      struct_ps = SOME
-     (fn ppstrm =>
-      let val S = PP.add_string ppstrm
-          fun NL() = PP.add_newline ppstrm
-          fun do_size NONE = (S "         size = NONE,"; NL())
+     (fn _ =>
+      let val S = PP.add_string
+          val NL = PP.NL
+          val B = PP.block PP.CONSISTENT 0
+          fun do_size NONE = S "         size = NONE,"
             | do_size (SOME (c,s)) =
                let val strc = String.concat
                      ["(", term_to_string c, ") ", type_to_string (type_of c)]
                    val line = String.concat ["SOME(Parse.Term`", strc, "`,"]
-               in S ("         size="^line); NL();
-                  S ("                   "^s^"),")
+               in B [S ("         size="^line), NL,
+                     S ("                   "^s^"),")]
                end
           fun do_encode NONE = S "         encode = NONE,"
             | do_encode (SOME (c,s)) =
                let val strc = String.concat
                      ["(", term_to_string c, ") ",type_to_string (type_of c)]
                    val line = String.concat ["SOME(Parse.Term`", strc, "`,"]
-               in S ("         encode="^line); NL();
-                  S ("                   "^s^"),")
+               in B[S ("         encode="^line), NL,
+                    S ("                   "^s^"),")]
                end
           fun do_extras extra_string =
-              (S ("      val tyinfo0 = " ^ extra_string ^ "tyinfo0"); NL())
+              B [S ("      val tyinfo0 = " ^ extra_string ^ "tyinfo0"), NL]
           fun do_string_etc
              ({ax,case_def,case_cong,case_eq,induction,nchotomy,
                one_one,distinct,encode,lift,size,fields,accessors,updates,
                recognizers,destructors},
               extra_simpls_string) =
-            (S "    let";                                               NL();
-             S "      open TypeBasePure";                               NL();
-             S "      val tyinfo0 = mk_datatype_info";                  NL();
-             S("        {ax="^ax^",");                                  NL();
-             S("         case_def="^case_def^",");                      NL();
-             S("         case_cong="^case_cong^",");                    NL();
-             S("         case_eq="^case_eq^",");                        NL();
-             S("         induction="^induction^",");                    NL();
-             S("         nchotomy="^nchotomy^",");                      NL();
-             do_size size;                                              NL();
-             do_encode encode;                                          NL();
-             S("         lift=NONE,");                                  NL();
-             S("         one_one="^one_one^",");                        NL();
-             S("         distinct="^distinct^",");                      NL();
-             S("         fields="^fields^",");                          NL();
-             S("         accessors="^accessors^",");                    NL();
-             S("         updates="^updates^",");                        NL();
-             S("         recognizers="^recognizers^",");                NL();
-             S("         destructors="^destructors^"}");                NL();
-             do_extras extra_simpls_string;
-             S "      val () = computeLib.write_datatype_info tyinfo0"; NL();
-             S "    in";                                                NL();
-             S "      tyinfo0";                                         NL();
-             S "    end")
+           B[S "    let",                                               NL,
+             S "      open TypeBasePure",                               NL,
+             S "      val tyinfo0 = mk_datatype_info",                  NL,
+             S("        {ax="^ax^","),                                  NL,
+             S("         case_def="^case_def^","),                      NL,
+             S("         case_cong="^case_cong^","),                    NL,
+             S("         case_eq="^case_eq^","),                        NL,
+             S("         induction="^induction^","),                    NL,
+             S("         nchotomy="^nchotomy^","),                      NL,
+             do_size size,                                              NL,
+             do_encode encode,                                          NL,
+             S("         lift=NONE,"),                                  NL,
+             S("         one_one="^one_one^","),                        NL,
+             S("         distinct="^distinct^","),                      NL,
+             S("         fields="^fields^","),                          NL,
+             S("         accessors="^accessors^","),                    NL,
+             S("         updates="^updates^","),                        NL,
+             S("         recognizers="^recognizers^","),                NL,
+             S("         destructors="^destructors^"}"),                NL,
+             do_extras extra_simpls_string,
+             S "      val () = computeLib.write_datatype_info tyinfo0", NL,
+             S "    in",                                                NL,
+             S "      tyinfo0",                                         NL,
+             S "    end"]
       in
-        S "val _ =";                                                    NL();
-        S "  TypeBase.write [";                                         NL();
-        do_string_etc string_etc0;
-        app (fn se => (S ","; NL(); do_string_etc se)) strings_etc;     NL();
-        S "  ];";                                                       NL()
+        B [S "val _ =",                                                    NL,
+           S "  TypeBase.write [",                                         NL,
+           B (PP.pr_list do_string_etc [S ",", NL] strings),
+           S "  ];",                                                       NL
+          ]
       end)};
 
 fun string_pair(s1,s2) = "("^Lib.quote s1^","^Lib.quote s2^")";
@@ -1235,7 +1193,7 @@ fun write_tyinfo tyinfo =
     encode    = encode_info,
     lift      = lift_info,
     one_one   = one_one_name,
-    fields    = Portable.pp_to_string 60 pp_fields (fields_of tyinfo),
+    fields    = PP.pp_to_string 60 pp_fields (fields_of tyinfo),
     accessors = accessors_list,
     updates   = updates_list,
     recognizers = recognizers_list,

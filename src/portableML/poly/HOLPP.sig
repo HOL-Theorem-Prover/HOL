@@ -19,6 +19,7 @@ val pp_to_string : int -> ('a -> pretty) -> 'a -> string
 val add_string : string -> pretty
 val add_break : int * int -> pretty
 val NL : pretty
+val add_newline : pretty
 val block : break_style -> int -> pretty list -> pretty
 
 val pr_list : 'a pprinter -> pretty list -> 'a list -> pretty list

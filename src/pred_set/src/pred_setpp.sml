@@ -15,7 +15,7 @@ val _ = Feedback.register_btrace ("Unicode Univ printing", unicode_univ)
 fun univ_printer (tyg, tmg) backend printer ppfns gravs depth tm =
   let
     open smpp infix >>
-    val {add_string, ...} = ppfns : term_pp_types.ppstream_funs
+    val {add_string, ...} = ppfns : unit term_pp_types.ppstream_funs
   in
     if !univ_printing then
       let
