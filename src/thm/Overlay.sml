@@ -27,6 +27,5 @@ structure FileSys = OS.FileSys
 structure Path    = OS.Path
 
 type 'a quotation = 'a HOLPP.quotation
-type ppstream = HOLPP.ppstream
 datatype frag = datatype HOLPP.frag
 structure PP = HOLPP

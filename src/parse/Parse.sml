@@ -1142,7 +1142,6 @@ local fun sig_addn s = String.concat
       open Portable
 in
 fun setup_grammars (oldname, thyname) = let
-  open OldPP
 in
   if not (null (!grm_updates)) andalso thyname <> oldname then
     HOL_WARNING "Parse" "setup_grammars"
@@ -1153,82 +1152,77 @@ in
   else ();
   grm_updates := [];
   adjoin_to_theory
-  {sig_ps = SOME (fn pps => OldPP.add_string pps (sig_addn thyname)),
-   struct_ps = SOME (fn ppstrm =>
-     let val {add_string,add_break,begin_block,end_block,add_newline,...}
-              = with_ppstream ppstrm
-         val B  = begin_block CONSISTENT
-         val IB = begin_block INCONSISTENT
-         val EB = end_block
+  {sig_ps = SOME (fn _ => PP.add_string (sig_addn thyname)),
+   struct_ps = SOME (fn _ =>
+     let val B  = PP.block CONSISTENT
+         val IB = PP.block INCONSISTENT
+         open PP
          fun pr_sml_list pfun L =
-           (B 0; add_string "["; IB 0;
-               pr_list pfun (fn () => add_string ",")
-                            (fn () => add_break(0,0))  L;
-            EB(); add_string "]"; EB())
+           B 0 [add_string "[",
+                IB 1 (PP.pr_list pfun [add_string ",", add_break(0,0)]  L),
+                add_string "]"]
          fun pp_update(f,x,topt) =
-             if isSome topt andalso
-                not (Theory.uptodate_term (valOf topt))
-             then ()
+             if isSome topt andalso not (Theory.uptodate_term (valOf topt))
+             then B 0 []
              else
-               (B 5;
-                add_string "val _ = update_grms"; add_break(1,0);
-                add_string f; add_break(1,0);
-                B 0; add_string x;  (* can be more fancy *)
-                EB(); EB())
+               B 5 [
+                 add_string "val _ = update_grms", add_break(1,0),
+                 add_string f, add_break(1,0),
+                 B 0 [add_string x]
+               ]
      in
-       B 0;
-         add_string "local open GrammarSpecials Parse";
-         add_newline();
+       B 0 [
+         add_string "local open GrammarSpecials Parse",
+         NL,
          add_string "  fun UTOFF f = Feedback.trace(\"Parse.unicode_trace_\
-                    \off_complaints\",0)f";
-         add_newline();
-         add_string "in"; add_newline();
-         add_string ("val " ^thyname ^ "_grammars = merge_grammars [");
-             IB 0; pr_list (add_string o quote)
-                           (fn () => add_string ",")
-                           (fn () => add_break(1,0))
-                           (gparents (current_theory()));
-             EB();
-         add_string "]"; add_newline();
-         add_string ("local");
-         add_newline();
+                    \off_complaints\",0)f",
+         NL,
+         add_string "in", NL,
+         add_string ("val " ^thyname ^ "_grammars = merge_grammars ["),
+         IB 0
+            (pr_list (add_string o quote)
+                     [add_string ",", add_break(1,0)]
+                     (gparents (current_theory()))),
+         add_string "]", NL,
+         add_string ("local"),
+         NL,
          add_string ("val (tyUDs, tmUDs) = "^
-                     "GrammarDeltas.thy_deltas{thyname="^ quote thyname^"}");
-         add_newline();
-         add_string ("val addtmUDs = term_grammar.add_deltas tmUDs");
-         add_newline();
-         add_string ("val addtyUDs = type_grammar.apply_deltas tyUDs");
-         add_newline(); add_string ("in"); add_newline();
+                     "GrammarDeltas.thy_deltas{thyname="^ quote thyname^"}"),
+         NL,
+         add_string ("val addtmUDs = term_grammar.add_deltas tmUDs"),
+         NL,
+         add_string ("val addtyUDs = type_grammar.apply_deltas tyUDs"),
+         NL, add_string ("in"), NL,
 
-         add_string ("val " ^ thyname ^ "_grammars = "); add_break(1,2);
+         add_string ("val " ^ thyname ^ "_grammars = "), add_break(1,2),
          add_string ("Portable.## (addtyUDs,addtmUDs) " ^
-                     thyname ^ "_grammars");
-         add_newline();
+                     thyname ^ "_grammars"),
+         NL,
 
          add_string (String.concat
              ["val _ = Parse.grammarDB_insert(",Lib.mlquote thyname,",",
-              thyname, "_grammars)"]);
-         add_newline();
+              thyname, "_grammars)"]),
+         NL,
 
          add_string (String.concat
              ["val _ = Parse.temp_set_grammars ("^
               "addtyUDs (Parse.type_grammar()), ",
-              "addtmUDs (Parse.term_grammar()))"]); add_newline();
-         add_string "end (* addUDs local *)"; add_newline();
+              "addtmUDs (Parse.term_grammar()))"]), NL,
+         add_string "end (* addUDs local *)", NL,
 
-         add_string "end"; add_newline();
-       EB()
+         add_string "end", NL
+       ]
      end)}
  end
 end
 
 val _ = let
   val rawpp_thm =
-      ppstring pp_thm
-               |> Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
-               |> trace ("paranoid string literal printing", 1)
+      pp_thm
+        |> Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
+        |> trace ("paranoid string literal printing", 1)
 in
-  Theory.pp_thm := (fn pps => fn th => OldPP.add_string pps (rawpp_thm th))
+  Theory.pp_thm := rawpp_thm
 end
 
 val _ = Theory.register_hook

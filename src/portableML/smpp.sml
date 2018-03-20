@@ -1,7 +1,8 @@
 structure smpp :> smpp =
 struct
 
-type ('a,'b) t = ('a,'b) term_pp_types.smppt
+type ('a,'b) t =
+     'a * HOLPP.pretty list -> ('b * ('a * HOLPP.pretty list)) option
 
 open HOLPP
 

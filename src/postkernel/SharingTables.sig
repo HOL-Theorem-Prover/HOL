@@ -30,25 +30,23 @@ sig
   val make_shared_term : Term.term -> (idtable * typetable * termtable) ->
                          int * (idtable * typetable * termtable)
 
-  val output_idtable : OldPP.ppstream -> string -> idtable -> unit
-  val theoryout_idtable    : OldPP.ppstream -> idtable -> unit
+  val output_idtable : string -> idtable -> HOLPP.pretty
+  val theoryout_idtable    : idtable PP.pprinter
 
   val build_type_vector : id Vector.vector -> shared_type list ->
                           Type.hol_type Vector.vector
 
-  val output_typetable : OldPP.ppstream ->
-                         {idtable_nm : string, tytable_nm : string} ->
-                         typetable -> unit
-  val theoryout_typetable    : OldPP.ppstream -> typetable -> unit
+  val output_typetable : {idtable_nm : string, tytable_nm : string} ->
+                         typetable -> PP.pretty
+  val theoryout_typetable    : typetable PP.pprinter
 
   val build_term_vector : id Vector.vector -> Type.hol_type Vector.vector ->
                           shared_term list -> Term.term Vector.vector
 
-  val output_termtable : OldPP.ppstream ->
-                         {idtable_nm : string, tytable_nm : string,
+  val output_termtable : {idtable_nm : string, tytable_nm : string,
                           termtable_nm : string} ->
-                         termtable -> unit
+                         termtable -> PP.pretty
 
-  val theoryout_termtable    : OldPP.ppstream -> termtable -> unit
+  val theoryout_termtable    : termtable PP.pprinter
 
 end

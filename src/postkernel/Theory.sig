@@ -4,9 +4,8 @@ sig
   type hol_type  = Type.hol_type
   type term      = Term.term
   type thm       = Thm.thm
-  type ppstream  = OldPP.ppstream
-  type thy_addon = {sig_ps    : (ppstream -> unit) option,
-                    struct_ps : (ppstream -> unit) option}
+  type thy_addon = {sig_ps    : (unit -> HOLPP.pretty) option,
+                    struct_ps : (unit -> HOLPP.pretty) option}
   type num = Arbnum.num
 
 (* Create a new theory *)
@@ -112,7 +111,7 @@ sig
 
 (* For internal use *)
 
-  val pp_thm             : (ppstream -> thm -> unit) ref
+  val pp_thm             : (thm -> HOLPP.pretty) ref
   val link_parents       : string*num*num -> (string*num*num) list -> unit
   val incorporate_types  : string -> (string*int) list -> unit
 

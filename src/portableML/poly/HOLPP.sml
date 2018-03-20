@@ -11,9 +11,7 @@ structure HOLPP :> HOLPP =
 struct
 
 datatype pretty = datatype PolyML.pretty
-type ppstream = pretty list
-
-type ('a,'st) printer = 'st -> 'a * 'st * ppstream
+type 'a pprinter = 'a -> pretty
 
 datatype break_style =
     CONSISTENT

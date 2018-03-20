@@ -3,9 +3,8 @@ sig
 (* PP -- pretty-printing -- from the SML/NJ library *)
 
 datatype pretty = datatype PolyML.pretty
-type ppstream = pretty list
 
-type ('a,'st) printer = 'st -> 'a * 'st * ppstream
+type 'a pprinter = 'a -> pretty
 
 datatype break_style =
     CONSISTENT
@@ -22,10 +21,10 @@ val add_break : int * int -> pretty
 val NL : pretty
 val block : break_style -> int -> pretty list -> pretty
 
-val pr_list : ('a -> pretty) -> pretty list -> 'a list -> pretty list
+val pr_list : 'a pprinter -> pretty list -> 'a list -> pretty list
 val tabulateWith : (int -> 'a) -> 'a list -> int -> 'a list
 
-val pp_pretty : pretty -> pretty
+val pp_pretty : pretty pprinter
 
 
 end

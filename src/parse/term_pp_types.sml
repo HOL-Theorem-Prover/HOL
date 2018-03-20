@@ -1,7 +1,6 @@
 structure term_pp_types =
 struct
-  type ('a,'b) smppt =
-    'a * HOLPP.ppstream -> ('b * ('a * HOLPP.ppstream)) option
+  type ('a,'b) smppt = ('a,'b) smpp.t
   datatype grav = Top | RealTop | Prec of (int * string)
 
   type printing_info =

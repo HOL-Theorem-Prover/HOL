@@ -369,16 +369,33 @@ val _ = remove_ovl_mapping "C" {Name="C", Thy = "combin"}
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,
- struct_ps = SOME (fn ppstrm =>
-  let fun S s = (OldPP.add_string ppstrm s; OldPP.add_newline ppstrm) in
-    S "val _ =";
-    S "   let open computeLib";
-    S "       val K_tm = Term.prim_mk_const{Name=\"K\",Thy=\"combin\"}";
-    S "   in add_funs";
-    S "       [K_THM,S_DEF,I_THM,C_DEF,W_DEF,o_THM,K_o_THM,";
-    S "        APP_DEF,APPLY_UPDATE_THM];";
-    S "      set_skip the_compset K_tm (SOME 1)";
-    S "   end;"
-  end)};
+ struct_ps = SOME (fn _ =>
+  let val S = PP.add_string fun SPC n = PP.add_break(1,n)
+      fun B n = PP.block PP.CONSISTENT n
+      fun I n = PP.block PP.INCONSISTENT n
+      val L = PP.pr_list
+  in
+    B 0 [
+      S "val _ =", SPC 2,
+      B 4 [
+        S "let open computeLib", SPC 0,
+        B 2 [
+          S "val K_tm =", SPC 0,
+          S "Term.prim_mk_const{Name=\"K\",Thy=\"combin\"}"
+        ], SPC ~4,
+        S "in", SPC 0,
+        B 2 [
+          S "add_funs", SPC 0,
+          I 1 (S "[" ::
+               L S [S ",", PP.add_break(0,0)] [
+                 "K_THM", "S_DEF", "I_THM", "C_DEF", "W_DEF", "o_THM",
+                 "APP_DEF", "APPLY_UPDATE_THM];"
+              ])
+        ], SPC 0,
+        B 2 (L S [SPC 1] ["set_skip", "the_compset", "K_tm", "(SOME 1)"]),
+        SPC ~4, S "end;"
+      ]
+    ]
+  end)}
 
 val _ = export_theory();
