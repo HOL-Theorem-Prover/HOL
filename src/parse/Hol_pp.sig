@@ -32,10 +32,8 @@ sig
   val print_theory_to_outstream : string -> TextIO.outstream -> unit
   val export_theory_as_docfiles : string -> unit
 
-(*
   val pp_theory_as_html         : string pprinter
   val print_theory_as_html      : string -> string -> unit
   val html_theory               : string -> unit
-*)
 
 end
