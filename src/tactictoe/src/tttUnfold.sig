@@ -13,6 +13,9 @@ sig
   | SConstructor of string
   | SException   of string
 
+  (* debug *)
+  val script_save_flag : bool ref
+  
   (* tools *)
   val unquoteString  : string -> string
   val open_structure : string -> (string * stack_t) list

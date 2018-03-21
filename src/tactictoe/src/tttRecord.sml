@@ -361,8 +361,10 @@ fun clean_subdirl cthy dir subdirl =
 
 fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
 
-fun export_bool () =
-  if exists_file (ttt_thmfea_dir ^ "/bool") then () else
+fun export_bool cthy =
+  if exists_file (ttt_thmfea_dir ^ "/bool") orelse cthy <> "ConseqConv"
+  then () 
+  else
   (
   clean_tttdata ();
   clean_subdirl "bool" ttt_search_dir ["debug","search","proof"];
@@ -373,7 +375,7 @@ fun export_bool () =
 fun start_thy cthy =
   (
   mkDir_err ttt_code_dir;
-  export_bool ();
+  export_bool cthy;
   tttSetup.set_record cthy;
   clean_tttdata ();
   reset_profiling ();
