@@ -39,19 +39,20 @@ fun theory_files script =
 fun run_holmake fileuo =
   let
     val {dir,file} = OS.Path.splitDirFile fileuo
+    val flag = "-j1 --dbg "
   in
     print_endline ("TacticToe: running Holmake in " ^ fileuo);
-    cmd_in_dir dir (HOLDIR ^ "/bin/Holmake" ^ " -j1 " ^ file)
+    cmd_in_dir dir (HOLDIR ^ "/bin/Holmake " ^ flag ^ file)
   end
 
 fun run_holmake0 fileuo =
   let
     val {dir,file} = OS.Path.splitDirFile fileuo
     val state0 = HOLDIR ^ "/bin/hol.state0"
-    val flag = "--holstate=" ^ state0
+    val flag = "--holstate=" ^ state0 ^ " -j1 --dbg "
   in
     print_endline ("TacticToe: running Holmake with hol.state0 in " ^ fileuo);
-    cmd_in_dir dir (HOLDIR ^ "/bin/Holmake " ^ flag ^ " -j1 " ^ file)
+    cmd_in_dir dir (HOLDIR ^ "/bin/Holmake " ^ flag ^ file)
   end
 
 fun remove_err s = FileSys.remove s handle SysErr _ => ()
