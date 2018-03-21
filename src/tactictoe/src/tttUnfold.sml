@@ -733,7 +733,7 @@ fun is_watch_name x = mem (drop_sig x) (store_thm_list @ name_thm_list)
 
 fun mk_fetch b =
   map (Code o protect)
-    ["(","DB.fetch", mlquote (!ttt_unfold_cthy) ^ ttt_new_theory_suffix, 
+    ["(","DB.fetch", mlquote ((!ttt_unfold_cthy) ^ ttt_new_theory_suffix), 
      mlquote b,")"]
 
 fun replace_fetch l = case l of
