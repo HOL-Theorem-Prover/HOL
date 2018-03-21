@@ -19,7 +19,7 @@ val ERR = mk_HOL_ERR "tttUnfold"
 
 val iev_flag = ref false
 val iev_eprover_flag = ref false
-
+val script_save_flag = ref true
 val dirorg_glob = ref "/temp"
 
 (* --------------------------------------------------------------------------
@@ -1030,11 +1030,27 @@ fun tttsml_of file =
   handle _ => raise ERR "tttsml_of" file
 
 fun print_program cthy fileorg sl =
-  let val oc = TextIO.openOut (tttsml_of fileorg) in
+  let 
+    val fileout = tttsml_of fileorg
+    val save_dir = tactictoe_dir ^ "/log_scripts"
+    val oc = TextIO.openOut fileout
+    fun script_save () = 
+      if !script_save_flag 
+      then
+        let 
+          val _ = mkDir_err save_dir
+          val cmd = "cp " ^ fileout ^ " " ^ 
+            (save_dir ^ "/" ^ cthy ^ "_debugScript.sml")
+        in
+          cmd_in_dir tactictoe_dir cmd
+        end
+      else ()
+  in
     output_header oc cthy;
     print_sl oc sl;
     output_foot oc cthy;
-    TextIO.closeOut oc
+    TextIO.closeOut oc;
+    script_save ()
   end
 
 fun rewrite_script thy fileorg =
@@ -1051,6 +1067,8 @@ fun rewrite_script thy fileorg =
   in
     debug_unfold ("print_program: " ^ fileorg);
     print_program thy fileorg sl5;
+    
+    
     end_unfold_thy ()
   end
 

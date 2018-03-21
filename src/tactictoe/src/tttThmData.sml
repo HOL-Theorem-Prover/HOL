@@ -71,8 +71,13 @@ fun update_thmfea cthy =
 fun export_thmfea cthy =
   let
     val cthy_suffix = cthy ^ ttt_new_theory_suffix
-    val _ = update_thmfea cthy_suffix
-    val namel = map fst (DB.thms (cthy_suffix))
+    val _ = if cthy = "bool" 
+            then update_thmfea "bool"
+            else update_thmfea cthy_suffix
+    val namel = 
+      if cthy = "bool" 
+      then map fst (DB.thms "bool")
+      else map fst (DB.thms (cthy_suffix))
     fun in_curthy (_,(s,_)) =
       let val (thy,name) = split_string "Theory." s in
         (thy = cthy_suffix orelse thy = cthy) andalso mem name namel
