@@ -858,7 +858,7 @@ fun basecont tgts ii =
       open HM_DepGraph
       val _ = if null_ii ii andalso hmdir.compare(dir,original_dir) = EQUAL then
                 ()
-              else warn ("Working in " ^ hmdir.pretty_dir dir)
+              else warn (bold ("Working in " ^ hmdir.pretty_dir dir))
       val ii = add_sigobj ii
       val g = create_graph tgts ii
       val _ = diag (fn _ => "Building from graph")
