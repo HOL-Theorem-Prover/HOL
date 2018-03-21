@@ -78,7 +78,7 @@ fun dkeys d    = map fst (dlist d)
    -------------------------------------------------------------------------- *)
 
 fun incr x = x := (!x) + 1
-fun decr x = x := (!x) - 1
+fun decr x = x := (!x) + 1
 
 (* --------------------------------------------------------------------------
    Reserved tokens
@@ -246,7 +246,8 @@ fun string_of_bool b = if b then "T" else "F"
 fun compare_rmax ((_,r2),(_,r1)) = Real.compare (r1,r2)
 fun compare_rmin ((_,r1),(_,r2)) = Real.compare (r1,r2)
 
-fun goal_compare (g1,g2) = Term.compare (list_mk_imp g1, list_mk_imp g2)
+fun goal_compare ((asm1,w1), (asm2,w2)) =
+  list_compare Term.compare (w1 :: asm1, w2 :: asm2)
 
 fun cpl_compare cmp1 cmp2 ((a1,a2),(b1,b2)) =
   let val r = cmp1 (a1,b1) in
@@ -497,12 +498,6 @@ fun rm_space_aux l = case l of
   | a :: m => if a = #" " then rm_space_aux m else l
 
 fun rm_space s = implode (rm_space_aux (explode s))
-
-val ttt_new_theory_suffix = "__ttt_new_theory"
-
-fun remove_string s1 s2 = 
-  let val (a,b) = split_string s1 s2 in a ^ b end
-  handle _ => s2
 
 (* --------------------------------------------------------------------------
    Tactics
