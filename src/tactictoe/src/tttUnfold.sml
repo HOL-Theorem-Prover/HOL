@@ -19,7 +19,7 @@ val ERR = mk_HOL_ERR "tttUnfold"
 
 val iev_flag = ref false
 val iev_eprover_flag = ref false
-val script_save_flag = ref true
+
 val dirorg_glob = ref "/temp"
 
 (* --------------------------------------------------------------------------
@@ -570,13 +570,9 @@ fun ppstring_stac qtac =
     String.concatWith " " ["(","String.concatWith",mlquote " ","\n",tac3,")"]
   end
 
-fun load_list_loop sl = case sl of
-    []     => ["]"]
-  | [a]    => [mlquote a,"]"]
-  | a :: m => mlquote a :: "," :: load_list_loop m
-
-fun load_list sl = "[" :: load_list_loop sl
-
+(* --------------------------------------------------------------------------
+   Final modifications of the scripts
+   -------------------------------------------------------------------------- *)
 
 val is_thm_flag = ref false
 val in_pattern_level = ref 0
@@ -591,9 +587,7 @@ fun modified_program inh p = case p of
   | End :: m        => "end" :: modified_program inh m
   | Code (a,_) :: m =>
     (
-    if a = "new_theory"
-      then "tttRecord.ttt_new_theory" :: modified_program inh m
-    else if mem (drop_sig a) ["export_theory"]
+    if mem (drop_sig a) ["export_theory"]
       then modified_program inh m
     else if inh
       then a :: modified_program inh m
@@ -660,6 +654,10 @@ fun modified_program inh p = case p of
     in
       semicolon @ [s] @ head' @ [sep] @ body' @ modified_program false m
     end
+
+(* --------------------------------------------------------------------------
+   Stack continued
+   -------------------------------------------------------------------------- *)
 
 fun stackvl_of_value idl head body =
   let
@@ -733,8 +731,7 @@ fun is_watch_name x = mem (drop_sig x) (store_thm_list @ name_thm_list)
 
 fun mk_fetch b =
   map (Code o protect)
-    ["(","DB.fetch", mlquote ((!ttt_unfold_cthy) ^ ttt_new_theory_suffix), 
-     mlquote b,")"]
+    ["(","DB.fetch",mlquote (!ttt_unfold_cthy),mlquote b,")"]
 
 fun replace_fetch l = case l of
     [] => []
@@ -1026,7 +1023,7 @@ fun sigobj_theories () =
    -------------------------------------------------------------------------- *)
 
 fun tttsml_of file =
-  fst (split_string "Script." file) ^ ttt_new_theory_suffix ^ "Script.sml"
+  fst (split_string "Script." file) ^ "_tttScript.sml"
   handle _ => raise ERR "tttsml_of" file
 
 fun print_program cthy fileorg sl =
@@ -1035,16 +1032,13 @@ fun print_program cthy fileorg sl =
     val save_dir = tactictoe_dir ^ "/log_scripts"
     val oc = TextIO.openOut fileout
     fun script_save () = 
-      if !script_save_flag 
-      then
-        let 
-          val _ = mkDir_err save_dir
-          val cmd = "cp " ^ fileout ^ " " ^ 
-            (save_dir ^ "/" ^ cthy ^ "_debugScript.sml")
-        in
-          cmd_in_dir tactictoe_dir cmd
-        end
-      else ()
+      let 
+        val _ = mkDir_err save_dir
+        val cmd = "cp " ^ fileout ^ " " ^ 
+          (save_dir ^ "/" ^ cthy ^ "_debugScript.sml")
+      in
+        cmd_in_dir tactictoe_dir cmd
+      end
   in
     output_header oc cthy;
     print_sl oc sl;
@@ -1054,6 +1048,7 @@ fun print_program cthy fileorg sl =
   end
 
 fun rewrite_script thy fileorg =
+  if extract_thy fileorg = "bool" then () else
   let
     val _ = debug_unfold ("start_unfold_thy: " ^ thy)
     val _ = start_unfold_thy thy
@@ -1067,8 +1062,6 @@ fun rewrite_script thy fileorg =
   in
     debug_unfold ("print_program: " ^ fileorg);
     print_program thy fileorg sl5;
-    
-    
     end_unfold_thy ()
   end
 
@@ -1082,10 +1075,32 @@ fun find_script x =
 
 fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
 
+fun save_file file =
+  let
+    val dir = #dir (OS.Path.splitDirFile file)
+    val cmd = "cp -p " ^ file ^ " " ^ (file ^ ".tttsave")
+  in
+    cmd_in_dir dir cmd
+  end
+
+fun restore_file file =
+  let
+    val dir = #dir (OS.Path.splitDirFile file)
+    val cmd1 = "cp -p " ^ (file ^ ".tttsave") ^ " " ^ file
+    val cmd2 = "rm " ^ (file ^ ".tttsave")
+  in
+    cmd_in_dir dir (cmd1 ^ "; " ^ cmd2)
+  end
+
+fun save_scripts script = app save_file (script :: theory_files script)
+
+fun restore_scripts script = app restore_file (script :: theory_files script)
+
 fun ttt_record_thy thy =
   let
     val _ = clean_dir thy ttt_unfold_dir
     val scriptorg = find_script thy
+    val _ = save_scripts scriptorg
   in
     let
       val _ = print_endline ("TacticToe: " ^ thy)
@@ -1094,10 +1109,14 @@ fun ttt_record_thy thy =
     in
       dirorg_glob := dirorg;
       rewrite_script thy scriptorg;
+      (* could overwrite scriptorg in rare cases *)
       if mem thy core_theories
         then run_rm_script0 (tttsml_of scriptorg)
         else run_rm_script (tttsml_of scriptorg)
+      ;
+      restore_scripts scriptorg
     end
+    handle e => (restore_scripts scriptorg; raise e)
   end
 
 fun ttt_record_thy_wrap thy =
@@ -1130,6 +1149,7 @@ fun ttt_clean_all () =
   rmDir_rec ttt_tacfea_dir;
   rmDir_rec ttt_glfea_dir
   )
+
 
 (* ---------------------------------------------------------------------------
    Evaluation of different provers

@@ -1,5 +1,5 @@
 (* ========================================================================== *)
-(* FILE          : tttThmData.sml                                             *)
+(* FILE          : tttThmData.sml                                               *)
 (* DESCRIPTION   :                                                            *)
 (*                                                                            *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
@@ -29,14 +29,7 @@ fun parse_thmfea s = case ttt_lex s of
 fun read_thmfea thy =
   let
     val l0 = readl (ttt_thmfea_dir ^ "/" ^ thy)
-      handle _ => (if mem thy ["min"] 
-                   then []
-                   else (
-                        print_endline (thy ^ " theorems missing;"); 
-                        debug (thy ^ " theorems missing;"); 
-                        []
-                        )
-                  )
+      handle _ => (if mem thy ["min","bool"] then () else debug thy; [])
     val l1 = List.mapPartial parse_thmfea l0
   in
     ttt_thmfea := daddl l1 (!ttt_thmfea)
@@ -70,23 +63,16 @@ fun update_thmfea cthy =
 
 fun export_thmfea cthy =
   let
-    val cthy_suffix = cthy ^ ttt_new_theory_suffix
-    val _ = if cthy = "bool" 
-            then update_thmfea "bool"
-            else update_thmfea cthy_suffix
-    val namel = 
-      if cthy = "bool" 
-      then map fst (DB.thms "bool")
-      else map fst (DB.thms (cthy_suffix))
+    val _ = update_thmfea cthy
+    val namel = map fst (DB.thms cthy)
     fun in_curthy (_,(s,_)) =
       let val (thy,name) = split_string "Theory." s in
-        (thy = cthy_suffix orelse thy = cthy) andalso mem name namel
+        thy = cthy andalso mem name namel
       end
     val fname = ttt_thmfea_dir ^ "/" ^ cthy
     val l0 = filter in_curthy (dlist (!ttt_thmfea))
     fun f (_,(name,fea)) =
-      String.concatWith " " 
-        (remove_string ttt_new_theory_suffix name :: map int_to_string fea)
+      String.concatWith " " (name :: map int_to_string fea)
     val l1 = map f l0
   in
     writel fname l1
