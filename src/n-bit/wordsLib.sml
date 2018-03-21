@@ -2705,7 +2705,7 @@ in
          open Portable term_pp_types smpp
          infix >>
          val {add_string=str, add_break=brk,...} =
-            ppfns: term_pp_types.ppstream_funs
+            ppfns: unit term_pp_types.ppstream_funs
          val (n, x) = dest_n2w t
          val m = fcpLib.index_to_num x handle HOL_ERR _ => Arbnum.zero
          val v = numSyntax.dest_numeral n
@@ -2729,7 +2729,7 @@ in
                    | StringCvt.HEX => "0x"^(Arbnum.toHexString v)) ^ "w")
          >> (if !Globals.show_types orelse !word_cast_on
                 then brk (1, 2)
-                     >> liftpp (fn pps => pp_type pps (type_of t))
+                     >> lift pp_type (type_of t)
                      >> str ")"
              else nothing)
       end
@@ -2776,7 +2776,8 @@ fun word_cast Gs backend syspr ppfns (pg, lg, rg) d t =
    let
       open Portable term_pp_types smpp
       infix >>
-      val {add_string = str, add_break = brk, ublock,...} = ppfns: ppstream_funs
+      val ppfns : unit ppstream_funs = ppfns
+      val {add_string = str, add_break = brk, ublock,...} = ppfns
       fun stype tm = String.extract (type_to_string (type_of tm), 1, NONE)
       fun delim i act =
          case pg of
@@ -2793,7 +2794,7 @@ fun word_cast Gs backend syspr ppfns (pg, lg, rg) d t =
                ublock INCONSISTENT 0
                  (delim 200 (str "(")
                   >> str "(n2w "
-                  >> liftpp (fn pps => pp_type pps ty)
+                  >> lift pp_type ty
                   >> str ")"
                   >> brk (1, 2)
                   >> sys (prec, prec, prec) (d - 1) a
@@ -2806,7 +2807,7 @@ fun word_cast Gs backend syspr ppfns (pg, lg, rg) d t =
                ublock INCONSISTENT 0
                  (delim 200 (str "(")
                   >> str "(w2w "
-                  >> liftpp (fn pps => pp_type pps ty)
+                  >> lift pp_type ty
                   >> str ")"
                   >> brk (1, 2)
                   >> sys (prec, prec, prec) (d - 1) a
@@ -2819,7 +2820,7 @@ fun word_cast Gs backend syspr ppfns (pg, lg, rg) d t =
                ublock INCONSISTENT 0
                  (delim 200 (str "(")
                   >> str "(sw2sw "
-                  >> liftpp (fn pps => pp_type pps ty)
+                  >> lift pp_type ty
                   >> str ")"
                   >> brk (1, 2)
                   >> sys (prec, prec, prec) (d - 1) a
@@ -2832,7 +2833,7 @@ fun word_cast Gs backend syspr ppfns (pg, lg, rg) d t =
                ublock INCONSISTENT 0
                  (delim 200 (str "(")
                   >> str "(word_concat "
-                  >> liftpp (fn pps => pp_type pps ty)
+                  >> lift pp_type ty
                   >> str ")"
                   >> brk (1, 2)
                   >> sys (prec, prec, prec) (d - 1) a
@@ -2855,9 +2856,7 @@ fun word_cast Gs backend syspr ppfns (pg, lg, rg) d t =
                   >> sys (prec, prec, prec) (d - 1) l
                   >> str ")"
                   >> brk (1, 2)
-                  >> liftpp
-                       (fn pps => pp_type pps
-                                    (type_of (list_mk_comb (f, [h, l]))))
+                  >> lift pp_type (type_of (list_mk_comb (f, [h, l])))
                   >> str ")"
                   >> brk (1, 2)
                   >> sys (prec, prec, prec) (d - 1) a

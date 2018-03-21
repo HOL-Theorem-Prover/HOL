@@ -2763,21 +2763,21 @@ end
 
 val _ = adjoin_to_theory
   {sig_ps = NONE,
-   struct_ps = SOME (fn pps =>
-    let fun pp_line s = (PP.add_string pps s; PP.add_newline pps)
-    in
-     app pp_line
-     ["val _ = ",
-      " TypeBase.write",
-      " [TypeBasePure.mk_nondatatype_info",
-      "  (mk_type(\"fmap\",[alpha,beta]),",
-      "    {nchotomy = SOME fmap_CASES,",
-      "     induction = SOME fmap_INDUCT,",
-      "     size = SOME(Parse.Term`\\(ksize:'a->num) (vsize:'b->num). fmap_size (\\k:'a. 0) (\\v. 1 + vsize v)`,",
-      "                 fmap_size_def),",
-      "     encode=NONE})];\n"
-      ] end)};
-
+   struct_ps = SOME (fn _ =>
+     PP.block PP.CONSISTENT 0 (
+       PP.pr_list PP.add_string [PP.NL] [
+         "val _ = ",
+         " TypeBase.write",
+         " [TypeBasePure.mk_nondatatype_info",
+         "  (mk_type(\"fmap\",[alpha,beta]),",
+         "    {nchotomy = SOME fmap_CASES,",
+         "     induction = SOME fmap_INDUCT,",
+         "     size = SOME(Parse.Term`\\(ksize:'a->num) (vsize:'b->num). \
+                           \fmap_size (\\k:'a. 0) (\\v. 1 + vsize v)`,",
+         "                 fmap_size_def),",
+         "     encode=NONE})];"
+       ]
+     ))}
 
 (* ----------------------------------------------------------------------
     to close...
