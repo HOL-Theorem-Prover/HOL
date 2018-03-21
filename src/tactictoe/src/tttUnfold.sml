@@ -583,7 +583,7 @@ val in_pattern_level = ref 0
 
 fun modified_program inh p = case p of
     [] => []
-  | Open sl :: m    => ["open"] @ sl @ [";"] @ modified_program inh m
+  | Open sl :: m    => ["open"] @ sl @ modified_program inh m
   | Infix l :: m    =>
     List.concat (map stringl_of_infix l) @ modified_program inh m
   | In :: m         => "in" :: modified_program inh m
@@ -591,9 +591,8 @@ fun modified_program inh p = case p of
   | End :: m        => "end" :: modified_program inh m
   | Code (a,_) :: m =>
     (
-    if a = mlquote (!ttt_unfold_cthy) 
-      then mlquote ((!ttt_unfold_cthy) ^ ttt_new_theory_suffix) ::
-           modified_program inh m
+    if a = "new_theory"
+      then "tttRecord.ttt_new_theory" :: modified_program inh m
     else if mem (drop_sig a) ["export_theory"]
       then modified_program inh m
     else if inh
@@ -734,7 +733,8 @@ fun is_watch_name x = mem (drop_sig x) (store_thm_list @ name_thm_list)
 
 fun mk_fetch b =
   map (Code o protect)
-    ["(","DB.fetch", mlquote (!ttt_unfold_cthy), mlquote b,")"]
+    ["(","DB.fetch", mlquote (!ttt_unfold_cthy) ^ ttt_new_theory_suffix, 
+     mlquote b,")"]
 
 fun replace_fetch l = case l of
     [] => []

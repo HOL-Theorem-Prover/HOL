@@ -29,6 +29,8 @@ val replay_timeout = 20.0
 fun local_tag x = x
 fun add_local_tag s = "( tttRecord.local_tag " ^ s ^ ")"
 
+fun ttt_new_theory s = new_theory (s ^ ttt_new_theory_suffix)
+
 (*----------------------------------------------------------------------------
  * Error messages and profiling
  *----------------------------------------------------------------------------*)

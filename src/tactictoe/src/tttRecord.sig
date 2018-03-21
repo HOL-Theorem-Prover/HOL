@@ -3,6 +3,8 @@ sig
 
 include Abbrev
 
+  val ttt_new_theory : string -> unit
+  
   (* Globalizing tactic tokens *)
   val fetch : string -> string -> string
 
