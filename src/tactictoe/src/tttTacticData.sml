@@ -137,14 +137,17 @@ fun feavl_out f ostrm =
 
 fun export_tacdata thy =
   let
+    val cthy_suffix = thy ^ ttt_new_theory_suffix
     val file = ttt_tacfea_dir ^ "/" ^ thy
     val ostrm = Portable.open_out file
     fun is_local s = mem "tttRecord.local_tag" (tttLexer.ttt_lex s)
     fun is_global feav = not (is_local (#1 (fst feav)))
     val feavl1 = filter is_global (dlist (!ttt_tacfea_cthy))
     val feavl2 = filter uptodate_feav feavl1
+    val cmd = "sed -i 's/" ^ cthy_suffix ^ "/" ^ thy ^ "/g' " ^ thy 
   in
-    feavl_out (pp_feavl feavl2) ostrm
+    feavl_out (pp_feavl feavl2) ostrm;
+    cmd_in_dir ttt_tacfea_dir cmd
   end
 
 (*----------------------------------------------------------------------------

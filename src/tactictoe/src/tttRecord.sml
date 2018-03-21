@@ -22,6 +22,10 @@ val tactictoe_step_counter = ref 0
 val tactictoe_thm_counter = ref 0
 val replay_timeout = 20.0
 
+(*----------------------------------------------------------------------------
+ * Local tag
+ *----------------------------------------------------------------------------*)
+
 fun local_tag x = x
 fun add_local_tag s = "( tttRecord.local_tag " ^ s ^ ")"
 
@@ -357,16 +361,20 @@ fun clean_subdirl cthy dir subdirl =
 
 fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
 
+fun export_bool () =
+  if exists_file (ttt_thmfea_dir ^ "/bool") then () else
+  (
+  clean_tttdata ();
+  clean_subdirl "bool" ttt_search_dir ["debug","search","proof"];
+  mkDir_err ttt_thmfea_dir;
+  debug_t "export_thmfea" export_thmfea "bool"
+  )
+
 fun start_thy cthy =
   (
   mkDir_err ttt_code_dir;
+  export_bool ();
   tttSetup.set_record cthy;
-  if cthy = "ConseqConv"
-  then (clean_tttdata ();
-        clean_subdirl "bool" ttt_search_dir ["debug","search","proof"];
-        mkDir_err ttt_thmfea_dir;
-        debug_t "export_thmfea" export_thmfea "bool")
-  else ();
   clean_tttdata ();
   reset_profiling ();
   (* Proof search *)

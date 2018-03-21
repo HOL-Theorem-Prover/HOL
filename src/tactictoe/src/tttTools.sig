@@ -7,6 +7,8 @@ sig
   type fea_t = int list
   type feav_t = (lbl_t * fea_t)
 
+  val ttt_new_theory_suffix : string
+
   val ttt_search_time : Time.time ref
   val ttt_tactic_time : real ref
 
@@ -89,6 +91,7 @@ sig
 
   (* statistics *)
   val incr   : int ref -> unit
+  val decr   : int ref -> unit
   val sum_real : real list -> real
   val average_real : real list -> real
   val sum_int : int list -> int
@@ -102,8 +105,7 @@ sig
   val print_endline : string -> unit
   val total_time : real ref -> ('a -> 'b) -> 'a -> 'b
 
-  (* compare
-   *)
+  (* compare *)
   val goal_compare : (goal * goal) -> order
   val strict_term_compare : (term * term) -> order
   val strict_goal_compare : (goal * goal) -> order
@@ -150,6 +152,7 @@ sig
   val split_level : string -> string list -> (string list * string list)
   val rpt_split_level : string -> string list -> string list list
   val split_string : string -> string -> (string * string)
+  val remove_string : string -> string -> string
   val rm_prefix : string -> string -> string
   val rm_squote : string -> string
   val rm_space  : string -> string
