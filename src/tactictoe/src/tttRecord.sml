@@ -20,13 +20,12 @@ val ERR = mk_HOL_ERR "tttRecord"
 val goalstep_glob = ref []
 val tactictoe_step_counter = ref 0
 val tactictoe_thm_counter = ref 0
-val replay_timeout = 20.0
 
 fun local_tag x = x
 fun add_local_tag s = "( tttRecord.local_tag " ^ s ^ ")"
 
 (*----------------------------------------------------------------------------
- * Error messages and profiling
+ * Error messages and profiling.
  *----------------------------------------------------------------------------*)
 
 fun tactic_msg msg stac g =
@@ -116,7 +115,7 @@ fun tactic_err msg stac g =
 
 fun record_tactic_aux (tac,stac) g =
   let
-    val ((gl,v),t) = add_time (timeOut 2.0 tac) g
+    val ((gl,v),t) = add_time (timeOut (!ttt_rectac_time) tac) g
       handle TacTimeOut => tactic_err "timed out" stac g
             | x         => raise x
   in
@@ -168,7 +167,8 @@ fun wrap_tactics_in name qtac goal =
     (
     let
       val (gl,v) =
-      total_time replay_time (tttTimeout.timeOut replay_timeout final_tac) goal
+      total_time replay_time 
+        (tttTimeout.timeOut (!ttt_recproof_time) final_tac) goal
     in
       if gl = []
         then (
@@ -245,21 +245,14 @@ val fetch = total_time fetch_thm_time fetch_thm
 (*----------------------------------------------------------------------------
   Tactical proofs hooks
   ----------------------------------------------------------------------------*)
-
-fun start_record lflag pflag name goal =
-    (
-    if !ttt_eval_flag then init_tactictoe () else ();
-    (* recording goal steps *)
-    goalstep_glob := [];
-    (* evaluation *)
-    if not (!ttt_eval_flag) orelse
-       not (!test_eval_hook name) orelse
+(* evaluation *)
+(*
+    if not (!test_eval_hook name) orelse
        (lflag andalso not (!ttt_evlet_flag)) orelse
        (pflag andalso not (!ttt_evprove_flag)) (* orelse
        (not lflag andalso (!ttt_evletonly_flag)) *)
     then ()
-    else
-      if one_in_n ()
+    else       if one_in_n ()
       then
         (
         debug_t "update_thmfea" update_thmfea (current_theory ());
@@ -268,7 +261,14 @@ fun start_record lflag pflag name goal =
                !tttSearch.last_stac)
         )
       else ()
-    )
+*)
+
+fun start_record lflag pflag name goal =
+  (
+  init_tactictoe ();
+  (* recording goal steps *)
+  goalstep_glob := []
+  )
 
 (* ----------------------------------------------------------------------
    Save the proof steps in the database. Includes orthogonalization.
@@ -278,8 +278,6 @@ fun end_record name g =
   let
     val lbls = map fst (rev (!goalstep_glob))
   in
-    (* because we want internal theorems on orthogonalization *)
-    debug_t "update_thmfea" update_thmfea (current_theory ());
     debug_t ("Saving " ^ int_to_string (length lbls) ^ " labels")
       (app update_tacdata) lbls
   end
@@ -314,13 +312,12 @@ fun init_record_proof name =
 fun try_record_proof name lflag tac1 tac2 g =
   let
     val _ = init_record_proof name
-    (* Conditions on recording and evaluation *)
+    (* Conditions on recording *)
     val pflag = String.isPrefix "tactictoe_prove_" name
-    val b1 = not (!ttt_record_flag)
     val b2 = (not (!ttt_recprove_flag) andalso pflag)
     val b3 = (not (!ttt_reclet_flag) andalso lflag)
     val result =
-      if b1 orelse b2 orelse b3
+      if b2 orelse b3
       then
         let val (r,t) = add_time (org_tac tac2) g in
           debug_proof ("Original proof time: " ^ Real.toString t);
@@ -360,7 +357,7 @@ fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
 fun start_thy cthy =
   (
   mkDir_err ttt_code_dir;
-  tttSetup.set_record cthy;
+  set_recording ();
   if cthy = "ConseqConv"
   then (clean_tttdata ();
         clean_subdirl "bool" ttt_search_dir ["debug","search","proof"];
@@ -385,8 +382,43 @@ fun end_thy cthy =
   (* theorem *)
   debug_t "export_thmfea" export_thmfea cthy;
   (* goal list *)
-  if !ttt_mcrecord_flag then debug_t "export_glfea" export_glfea cthy else ();
+  if !ttt_recgl_flag 
+    then debug_t "export_glfea" export_glfea cthy 
+    else ();
   out_record_summary cthy
   )
+  
+fun start_record_thy cthy =
+  (
+  mkDir_err ttt_code_dir;
+  set_recording ();
+  if cthy = "ConseqConv"
+  then (clean_tttdata ();
+        clean_subdirl "bool" ttt_search_dir ["debug","search","proof"];
+        mkDir_err ttt_thmfea_dir;
+        debug_t "export_thmfea" export_thmfea "bool")
+  else ();
+  clean_tttdata ();
+  reset_profiling ();
+  (* Proof search *)
+  clean_subdirl cthy ttt_search_dir ["debug","search","proof"];
+  mkDir_err ttt_tacfea_dir;
+  mkDir_err ttt_thmfea_dir;
+  mkDir_err ttt_glfea_dir;
+  (* Tactic scripts recording *)
+  clean_subdirl cthy ttt_record_dir ["parse","replay","record"]
+  )
+
+fun end_record_thy cthy =
+  (
+  debug_t "export_tacdata" export_tacdata cthy;
+  debug_t "export_thmfea" export_thmfea cthy
+  )  
+  
+  
+  
+  
+  
+  
 
 end (* struct *)

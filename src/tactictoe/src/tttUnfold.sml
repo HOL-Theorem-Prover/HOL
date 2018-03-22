@@ -921,7 +921,7 @@ fun output_header oc cthy =
      "   tttSetup.ttt_eval_flag := true;",
      "   tttSetup.hh_only_flag :=",
      "     Lib.can tttExec.update_hh_stac ();",
-     "   tttSetup.ttt_hhhammer_time := 60",
+     "   tttSetup.ttt_eprover_time := 60",
      "  ))"]
     else ();
   osn oc ("val _ = tttRecord.start_thy " ^ mlquote cthy)
