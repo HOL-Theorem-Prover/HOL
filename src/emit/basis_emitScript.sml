@@ -23,11 +23,15 @@ val defs =
 val _ = eSML "pair" defs;
 val _ = eCAML "pair" defs;
 
+val B = PP.block PP.CONSISTENT 0
+val S = PP.add_string
+val NL = PP.NL
 val _ = adjoin_to_theory
   {sig_ps = NONE,
-   struct_ps = SOME (fn ppstrm =>
-     (PP.add_string ppstrm  "val _ = ConstMapML.insert pairSyntax.comma_tm;";
-      PP.add_newline ppstrm))}
+   struct_ps = SOME (
+     fn _ =>
+        B [S "val _ = ConstMapML.insert pairSyntax.comma_tm;", NL]
+   )};
 
 (* == Num ================================================================= *)
 
@@ -350,27 +354,20 @@ val _ = eCAML "num"
 (* Map 0 and ZERO to the same thing in generated ML.                         *)
 (*---------------------------------------------------------------------------*)
 val _ = adjoin_to_theory
-{sig_ps = NONE, struct_ps = SOME (fn ppstrm =>
-  let val S = PP.add_string ppstrm
-      fun NL() = PP.add_newline ppstrm
-  in S "val _ = ConstMapML.prim_insert "; NL();
-     S "         (Term.prim_mk_const{Name=\"0\",Thy=\"num\"},"; NL();
-     S "          (true,\"num\",\"ZERO\",Type.mk_type(\"num\",[])));";
-     NL()  end)};
+{sig_ps = NONE, struct_ps = SOME (fn _ =>
+  B [S "val _ = ConstMapML.prim_insert ", NL,
+     S "         (Term.prim_mk_const{Name=\"0\",Thy=\"num\"},", NL,
+     S "          (true,\"num\",\"ZERO\",Type.mk_type(\"num\",[])));",NL])};
 
 (*---------------------------------------------------------------------------*)
 (* Automatic rewrite for definitions                                         *)
 (*---------------------------------------------------------------------------*)
 
 val _ = adjoin_to_theory {sig_ps = NONE,
-   struct_ps = SOME (fn ppstrm =>
-     let val S = PP.add_string ppstrm
-         fun NL() = PP.add_newline ppstrm
-     in S "val _ = EmitML.reshape_thm_hook :=  "; NL();
-        S "    (Rewrite.PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o "; NL();
-        S "     !EmitML.reshape_thm_hook);";
-        NL(); NL()
-     end)}
+   struct_ps = SOME (fn _ =>
+     B[S "val _ = EmitML.reshape_thm_hook :=  ", NL,
+       S "    (Rewrite.PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o ",
+       NL, S "     !EmitML.reshape_thm_hook);", NL, NL])}
 
 
 (* == Set ================================================================= *)
@@ -521,16 +518,11 @@ val _ = eCAML "option" defs;
 val _ = adjoin_to_theory
   {sig_ps = NONE,
    struct_ps = SOME
-     (fn ppstrm =>
-        let val S = PP.add_string ppstrm
-            fun NL() = PP.add_newline ppstrm
-        in S "val _ = ConstMapML.insert_cons\
-             \(Term.prim_mk_const{Name=\"SOME\",Thy=\"option\"});";
-           NL();
+     (fn _ =>
+        B [S "val _ = ConstMapML.insert_cons\
+             \(Term.prim_mk_const{Name=\"SOME\",Thy=\"option\"});", NL,
            S "val _ = ConstMapML.insert_cons\
-             \(Term.prim_mk_const{Name=\"NONE\",Thy=\"option\"});";
-           NL(); NL()
-        end)}
+             \(Term.prim_mk_const{Name=\"NONE\",Thy=\"option\"});", NL, NL])};
 
 (* == Option ============================================================== *)
 
@@ -620,16 +612,11 @@ val _ = eCAML "list"
 
 val _ = adjoin_to_theory
   {sig_ps = NONE,
-   struct_ps = SOME (fn ppstrm =>
-     let val S = PP.add_string ppstrm
-         fun NL() = PP.add_newline ppstrm
-     in S "val _ = ConstMapML.insert\
-        \ (Term.prim_mk_const{Name=\"CONS\",Thy=\"list\"});";
-        NL();
+   struct_ps = SOME (fn _ =>
+     B [S "val _ = ConstMapML.insert\
+        \ (Term.prim_mk_const{Name=\"CONS\",Thy=\"list\"});", NL,
         S "val _ = ConstMapML.insert\
-        \ (Term.prim_mk_const{Name=\"NIL\",Thy=\"list\"});";
-        NL(); NL()
-     end)};
+        \ (Term.prim_mk_const{Name=\"NIL\",Thy=\"list\"});", NL, NL])};
 
 (* == Rich list =========================================================== *)
 
@@ -807,9 +794,11 @@ val _ = eCAML "string"
         char_lt_def, char_le_def, char_gt_def, char_ge_def,
         string_le_def, string_gt_def, string_ge_def])
 
-fun adjoin_to_theory_struct l = adjoin_to_theory {sig_ps = NONE,
-  struct_ps = SOME (fn ppstrm =>
-    app (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm)) l)};
+fun adjoin_to_theory_struct l =
+  adjoin_to_theory {
+    sig_ps = NONE,
+    struct_ps = SOME (fn _ => B (List.concat (map (fn s => [S s, NL]) l)))
+  };
 
 val _ = adjoin_to_theory_struct [
   "val _ = app (fn n => ConstMapML.insert\
@@ -1333,11 +1322,10 @@ local
 \ (WORDS_EMIT_RULE o !EmitML.reshape_thm_hook)"]
 in
   val _ = adjoin_to_theory
-   {sig_ps = SOME (fn ppstrm =>
-               (PP.add_string ppstrm "val WORDS_EMIT_RULE : thm -> thm";
-                PP.add_newline ppstrm)),
-    struct_ps = SOME (fn ppstrm =>
-      List.app (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm)) lines)}
+   {sig_ps = SOME (fn _ =>
+               B [S "val WORDS_EMIT_RULE : thm -> thm", NL]),
+    struct_ps = SOME (fn _ =>
+      B (List.concat (map (fn s => [S s, NL]) lines)))}
 end
 
 (* == Integer ============================================================= *)
@@ -1501,15 +1489,15 @@ val _ = eCAML "int"
 (* Remind ML code generator about integer literals and how to take them apart*)
 (*---------------------------------------------------------------------------*)
 
-val _ = adjoin_to_theory {sig_ps = NONE,
-   struct_ps = SOME (fn ppstrm =>
-     let val S = PP.add_string ppstrm
-         fun NL() = PP.add_newline ppstrm
-     in S "val _ = EmitML.is_int_literal_hook := intSyntax.is_int_literal;"; NL();
-        S "val _ = EmitML.int_of_term_hook := intSyntax.int_of_term;";
-        NL(); NL()
-     end)}
-
+val _ =
+    adjoin_to_theory {
+      sig_ps = NONE,
+      struct_ps = SOME (fn _ =>
+         B [S "val _ = EmitML.is_int_literal_hook := intSyntax.is_int_literal;",
+            NL,
+            S "val _ = EmitML.int_of_term_hook := intSyntax.int_of_term;", NL,
+            NL])
+    };
 
 (* == Sorting ============================================================= *)
 
