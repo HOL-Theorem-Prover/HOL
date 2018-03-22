@@ -43,7 +43,6 @@ fun find_heapname dir =
     val fileout = ttt_code_dir ^ "/ttt_heapname" 
     val cmd = String.concatWith " " [heapname_string,">",fileout]
   in
-    print_endline ("TacticToe in " ^ dir ^ "\n" ^ cmd);
     cmd_in_dir dir cmd;
     hd (readl fileout)
   end
@@ -58,7 +57,6 @@ fun find_genscriptdep file =
     val fileout = ttt_code_dir ^ "/ttt_genscriptdep" 
     val cmd = String.concatWith " " [cmd0,file',">",fileout]
   in
-    print_endline ("TacticToe in " ^ dir ^ "\n" ^ cmd);
     cmd_in_dir dir cmd;
     map holpathdb.subst_pathvars (readl fileout)
   end
@@ -66,6 +64,7 @@ fun find_genscriptdep file =
 
 fun run_buildheap core_flag file =
   let 
+    val _ = print_endline ("TacticToe: running on " ^ file);
     val dir = OS.Path.dir file
     val file' = OS.Path.file file
     val buildheap = HOLDIR ^ "/bin/buildheap"
@@ -76,7 +75,6 @@ fun run_buildheap core_flag file =
       String.concatWith " "
         ([buildheap,"--holstate=" ^ state,"--gcthreads=1"] @ filel @ [file'])
   in
-    print_endline ("TacticToe in " ^ dir ^ "\n" ^ cmd);
     cmd_in_dir dir cmd
   end
 
