@@ -124,10 +124,22 @@ fun thmknn (symweight,feav) n fea_o =
     first_test_n exists_tid n l2
   end
 
+val add_fea_cache = ref (dempty goal_compare)
+
 fun add_fea dict (name,thm) =
   let val g = dest_thm thm in
     if not (dmem g (!dict)) andalso uptodate_thm thm
-    then dict := dadd g (name, fea_of_goal g) (!dict)
+    then 
+      let 
+        val fea = dfind g (!add_fea_cache) 
+          handle NotFound => 
+            let val fea' = fea_of_goal g in
+              add_fea_cache := dadd g fea' (!add_fea_cache);
+              fea'
+            end
+      in
+        dict := dadd g (name,fea) (!dict)
+      end
     else ()
   end
 
@@ -139,7 +151,8 @@ fun insert_namespace thmdict =
     val l2 = map f l1
   in
     debug_t "add_fea" (app (add_fea dict)) l2;
-    debug ("adding " ^ int_to_string (dlength (!dict) - dlength thmdict) ^ " theorems from the namespace");
+    debug ("adding " ^ int_to_string (dlength (!dict) - dlength thmdict) ^ 
+      " theorems from the namespace");
     (!dict)
   end
 
