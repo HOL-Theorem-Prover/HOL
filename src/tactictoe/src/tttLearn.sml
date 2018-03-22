@@ -182,11 +182,11 @@ fun inst_stacl thmls g stacl = map (fn x => (x, inst_stac thmls g x)) stacl
  * Orthogonalization.
  *----------------------------------------------------------------------------*)
 
-fun record_mc b (g,gl) =
-  if !ttt_mcrecord_flag
+fun record_glfea b (g,gl) =
+  if !ttt_recgl_flag 
   then update_glfea (fea_of_goallist gl) (b,(hash_goal g))
   else ()
-
+  
 val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
 
 fun test_stac g gl (stac, istac) =
@@ -201,8 +201,8 @@ fun test_stac g gl (stac, istac) =
     )
   in
     if all (fn x => mem x gl) new_gl
-    then (record_mc true (g,new_gl); SOME (stac,0.0,g,new_gl))
-    else (record_mc false (g,new_gl); NONE)
+    then (record_glfea true (g,new_gl); SOME (stac,0.0,g,new_gl))
+    else (record_glfea false (g,new_gl); NONE)
   end
   handle _ => NONE
 
@@ -214,7 +214,7 @@ fun orthogonalize (lbl as (ostac,t,g,gl),fea) =
       val _ = debug "predict tactics"
       val feavl0 = dlist (!ttt_tacfea)
       val symweight = learn_tfidf feavl0
-      val lbls = stacknn symweight (!ttt_ortho_number) feavl0 fea
+      val lbls = stacknn symweight (!ttt_ortho_radius) feavl0 fea
       val stacl1 = mk_sameorder_set String.compare (map #1 lbls)
       val stacl2 = filter (fn x => not (x = ostac)) stacl1
       (* order tactics by frequency *)
@@ -231,7 +231,7 @@ fun orthogonalize (lbl as (ostac,t,g,gl),fea) =
       val _ = debug "predict theorems"
       val thml =
         if !ttt_thmlarg_flag
-        then thmknn_std (!ttt_thmlarg_number) g
+        then thmknn_std (!ttt_thmlarg_radius) g
         else []
       val thmls  = String.concatWith " , " (map dbfetch_of_string thml)
       (* instantiate arguments *)

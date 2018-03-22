@@ -273,7 +273,7 @@ fun termknn n ((asl,w):goal) term =
     val feal = map f l1
     val fea_o = tttFeature.fea_of_goal ([],term)
     val symweight = weight_tfidf (fea_o :: (map snd feal) @ thmfeav)
-    val pre_sim = case !ttt_termpresim_int of
+    val pre_sim = case !ttt_termarg_pint of
       1 => pre_sim1 | 2 => pre_sim2 | 3 => pre_sim3 | _ => pre_sim2
     val l3 = debug_t "pre_sim" pre_sim symweight feal fea_o
     val r = first_n n (map fst l3)
@@ -287,7 +287,7 @@ fun termknn n ((asl,w):goal) term =
 
 fun mcknn symweight radius feal fea =
   let
-    val pre_sim = case !ttt_mcpresim_int of
+    val pre_sim = case !ttt_mcev_pint of
       1 => pre_sim1 | 2 => pre_sim2 | 3 => pre_sim3 | _ => pre_sim2
     val bnl = map fst (first_n radius (pre_sim symweight feal fea))
     fun ispos (b,n) = b

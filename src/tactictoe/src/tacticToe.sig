@@ -8,9 +8,7 @@ sig
   val tactictoe : term -> tactic
 
   (* Settings *)
-  val set_timeout     : real -> unit
-  val set_record_hook : (unit -> unit) ref
-    (* flags can only be changed inside this function *)
+  val set_timeout : real -> unit
 
   (* Step by step exploration *)
   val next_tac : goal -> unit
