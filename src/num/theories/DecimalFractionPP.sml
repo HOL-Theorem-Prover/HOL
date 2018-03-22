@@ -26,7 +26,7 @@ in
 end
 
 fun fraction {Thy,Division,fromNum} Gs backend sysp ppfns gravs depth t = let
-  val {add_string,...}  = ppfns : ppstream_funs
+  val {add_string,...}  = ppfns : unit ppstream_funs
   val (f, args) = strip_comb t
   val _ = length args = 2 orelse raise UserPP_Failed
   val _ = isconst Thy Division f orelse raise UserPP_Failed
