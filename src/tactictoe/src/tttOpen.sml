@@ -24,6 +24,15 @@ val core_theories =
    "numeral", "basicSize", "numpair", "pred_set", "list", "rich_list",
    "indexedLists"];
 
+fun all_files file =
+  let
+    val base   = OS.Path.base file
+    val fileuo = base ^ ".uo"
+    val fileui = base ^ ".ui"
+  in
+    [file,fileuo,fileui]
+  end
+
 fun theory_files script =
   let
     val base      = fst (split_string "Script." script)
@@ -38,45 +47,47 @@ fun theory_files script =
 
 fun run_holmake fileuo =
   let
-    val {dir,file} = OS.Path.splitDirFile fileuo
-    val flag = "-j1 --dbg "
+    val dir = OS.Path.dir fileuo
+    val holmake = HOLDIR ^ "/bin/Holmake"
+    val cmd = String.concatWith " " [holmake, "-j1", fileuo]
   in
-    print_endline ("TacticToe: running Holmake in " ^ fileuo);
-    cmd_in_dir dir (HOLDIR ^ "/bin/Holmake " ^ flag ^ file)
+    print_endline ("TacticToe: running Holmake on " ^ fileuo);
+    cmd_in_dir dir cmd
   end
 
-fun run_holmake0 fileuo =
-  let
-    val {dir,file} = OS.Path.splitDirFile fileuo
-    val state0 = HOLDIR ^ "/bin/hol.state0"
-    val flag = "--holstate=" ^ state0 ^ " -j1 --dbg "
+fun find_heapname dir =
+  let 
+    val heapname_string = HOLDIR ^ "/bin/heapname"
+    val _ = mkDir_err ttt_code_dir
+    val fileout = ttt_code_dir ^ "/ttt_heapname" 
+    val cmd = String.concatWith " " [heapname_string,">",fileout]
   in
-    print_endline ("TacticToe: running Holmake with hol.state0 in " ^ fileuo);
-    cmd_in_dir dir (HOLDIR ^ "/bin/Holmake " ^ flag ^ file)
+    cmd_in_dir dir cmd;
+    hd (readl fileout)
+  end
+  handle _ => raise ERR "heapname" ""
+
+fun run_buildheap core_flag file =
+  let 
+    val dir = OS.Path.dir file
+    val buildheap = HOLDIR ^ "/bin/buildheap"
+    val state = 
+      if core_flag then HOLDIR ^ "/bin/hol.state0" else find_heapname dir
+    val cmd = 
+      String.concatWith " " [buildheap,"--holstate=" ^ state,"-j1",file]
+  in
+    cmd_in_dir dir cmd
   end
 
 fun remove_err s = FileSys.remove s handle SysErr _ => ()
 
-fun run_rm_script script =
-  let
-    val theoryuo  = fst (split_string "Script." script) ^ "Theory.uo"
-  in
-    run_holmake theoryuo;
-    app remove_err (script :: theory_files script)
-  end
-  handle Interrupt =>
-    (app remove_err (script :: theory_files script); raise Interrupt)
-
-fun run_rm_script0 script =
-  let
-    val theoryuo  = fst (split_string "Script." script) ^ "Theory.uo"
-  in
-    run_holmake0 theoryuo;
-    app remove_err (script :: theory_files script)
-  end
-  handle Interrupt =>
-    (app remove_err (script :: theory_files script); raise Interrupt)
-
+fun run_rm_script core_flag file =
+  (
+  run_holmake (OS.Path.base file ^ ".uo");
+  run_buildheap core_flag file;
+  app remove_err (all_files file)
+  )
+  handle Interrupt => (app remove_err (all_files file); raise Interrupt)
 
 (* ---------------------------------------------------------------------------
    Exporting elements of a structure (values + substructures)
@@ -140,11 +151,11 @@ fun code_of s =
    -------------------------------------------------------------------------- *)
 
 fun export_struct dir s =
-  let val script = dir ^ "/" ^ s ^ "__open__tttScript.sml" in
+  let val script = dir ^ "/" ^ s ^ "__open__ttt.sml" in
     mkDir_err ttt_open_dir;
     mkDir_err (ttt_open_dir ^ "/" ^ s);
     writel script (code_of s);
-    run_rm_script script
+    run_rm_script false script
   end
 
 (* ---------------------------------------------------------------------------

@@ -3,10 +3,9 @@ sig
 
   val core_theories : string list
   val theory_files : string -> string list
+  val find_heapname : string -> string
   val run_holmake : string -> unit
-  val run_rm_script : string -> unit
-  val run_holmake0 : string -> unit
-  val run_rm_script0 : string -> unit
+  val run_rm_script : bool -> string -> unit
 
   val tactictoe_cleanval : unit -> unit
   val tactictoe_cleanstruct : string -> unit
