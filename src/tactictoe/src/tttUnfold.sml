@@ -1046,7 +1046,6 @@ fun print_program cthy fileorg sl =
   end
 
 fun rewrite_script thy fileorg =
-  if extract_thy fileorg = "bool" then () else
   let
     val _ = debug_unfold ("start_unfold_thy: " ^ thy)
     val _ = start_unfold_thy thy

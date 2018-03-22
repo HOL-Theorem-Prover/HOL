@@ -24,15 +24,6 @@ val core_theories =
    "numeral", "basicSize", "numpair", "pred_set", "list", "rich_list",
    "indexedLists"];
 
-fun all_files file =
-  let
-    val base   = OS.Path.base file
-    val fileuo = base ^ ".uo"
-    val fileui = base ^ ".ui"
-  in
-    [file,fileuo,fileui]
-  end
-
 fun theory_files script =
   let
     val base      = fst (split_string "Script." script)
@@ -45,16 +36,6 @@ fun theory_files script =
     [theorysml,theorydat,theoryuo,theoryui]
   end
 
-fun run_holmake fileuo =
-  let
-    val dir = OS.Path.dir fileuo
-    val holmake = HOLDIR ^ "/bin/Holmake"
-    val cmd = String.concatWith " " [holmake, "-j1", fileuo]
-  in
-    print_endline ("TacticToe: running Holmake on " ^ fileuo);
-    cmd_in_dir dir cmd
-  end
-
 fun find_heapname dir =
   let 
     val heapname_string = HOLDIR ^ "/bin/heapname"
@@ -62,32 +43,51 @@ fun find_heapname dir =
     val fileout = ttt_code_dir ^ "/ttt_heapname" 
     val cmd = String.concatWith " " [heapname_string,">",fileout]
   in
+    print_endline ("TacticToe in " ^ dir ^ "\n" ^ cmd);
     cmd_in_dir dir cmd;
     hd (readl fileout)
   end
-  handle _ => raise ERR "heapname" ""
+  handle _ => raise ERR "find_heapname" ""
+
+fun find_genscriptdep file =
+  let 
+    val dir = OS.Path.dir file
+    val file' = OS.Path.file file
+    val cmd0 = HOLDIR ^ "/bin/genscriptdep"
+    val _ = mkDir_err ttt_code_dir
+    val fileout = ttt_code_dir ^ "/ttt_genscriptdep" 
+    val cmd = String.concatWith " " [cmd0,file',">",fileout]
+  in
+    print_endline ("TacticToe in " ^ dir ^ "\n" ^ cmd);
+    cmd_in_dir dir cmd;
+    map holpathdb.subst_pathvars (readl fileout)
+  end
+  handle _ => raise ERR "find_genscriptdep" ""
 
 fun run_buildheap core_flag file =
   let 
     val dir = OS.Path.dir file
+    val file' = OS.Path.file file
     val buildheap = HOLDIR ^ "/bin/buildheap"
+    val filel = find_genscriptdep file
     val state = 
       if core_flag then HOLDIR ^ "/bin/hol.state0" else find_heapname dir
     val cmd = 
-      String.concatWith " " [buildheap,"--holstate=" ^ state,"-j1",file]
+      String.concatWith " "
+        ([buildheap,"--holstate=" ^ state,"--gcthreads=1"] @ filel @ [file'])
   in
+    print_endline ("TacticToe in " ^ dir ^ "\n" ^ cmd);
     cmd_in_dir dir cmd
   end
 
 fun remove_err s = FileSys.remove s handle SysErr _ => ()
 
-fun run_rm_script core_flag file =
+fun run_rm_script core_flag file = 
   (
-  run_holmake (OS.Path.base file ^ ".uo");
   run_buildheap core_flag file;
-  app remove_err (all_files file)
+  remove_err file
   )
-  handle Interrupt => (app remove_err (all_files file); raise Interrupt)
+  handle Interrupt => (remove_err file; raise Interrupt)
 
 (* ---------------------------------------------------------------------------
    Exporting elements of a structure (values + substructures)
