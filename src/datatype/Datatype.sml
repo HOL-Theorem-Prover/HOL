@@ -103,7 +103,7 @@ fun pp_fields fields =
        ]
  in
   block CONSISTENT 0 [
-    add_string "let fun T t s A = mk_thy_type{Thy=t,Tyop=s,Args=A}", NL,
+    add_string "let fun T s t A = mk_thy_type{Thy=t,Tyop=s,Args=A}", NL,
     add_string "    val U = mk_vartype", NL,
     add_string "in", NL,
     block CONSISTENT 1 [
