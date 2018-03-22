@@ -1022,9 +1022,7 @@ fun sigobj_theories () =
    Recording
    -------------------------------------------------------------------------- *)
 
-fun tttsml_of file =
-  fst (split_string "Script." file) ^ "_tttScript.sml"
-  handle _ => raise ERR "tttsml_of" file
+fun tttsml_of file = OS.Path.base file ^ "_ttt.sml"
 
 fun print_program cthy fileorg sl =
   let 
@@ -1111,8 +1109,8 @@ fun ttt_record_thy thy =
       rewrite_script thy scriptorg;
       (* could overwrite scriptorg in rare cases *)
       if mem thy core_theories
-        then run_rm_script0 (tttsml_of scriptorg)
-        else run_rm_script (tttsml_of scriptorg)
+        then run_rm_script true (tttsml_of scriptorg)
+        else run_rm_script false (tttsml_of scriptorg)
       ;
       restore_scripts scriptorg
     end
