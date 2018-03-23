@@ -18,6 +18,10 @@ open HolKernel boolLib Abbrev tttExec tttTools
 (* Theorems space *)
 val ttt_namespacethm_flag = ref true
 
+(* Abstraction *)
+val ttt_thmlarg_flag = ref true
+val ttt_thmlarg_radius = ref 16
+
 (* ==========================================================================
    Recording
    ========================================================================== *)
@@ -34,10 +38,6 @@ val ttt_recproof_time = ref 20.0
 (* Orthogonalization *)
 val ttt_ortho_flag = ref true
 val ttt_ortho_radius = ref 20
-
-(* Abstraction *)
-val ttt_thmlarg_flag = ref true
-val ttt_thmlarg_radius = ref 16
 
 (* Additional parameters *)
 val ttt_recgl_flag = ref false
@@ -69,12 +69,20 @@ val ttt_presel_radius = ref 1000
    -------------------------------------------------------------------------- *)
 
 (* Metis *)
-val ttt_metisexec_flag    = ref false
-val ttt_metis_flag  = ref false
-val ttt_metis_time    = ref 0.1
+val ttt_metisexec_flag = ref false
+val ttt_metis_flag     = ref false
+val ttt_metis_time     = ref 0.1
 val ttt_metis_radius   = ref 16
-(* dependency of metisTools *)
-val metistools_thyl = ["sat", "marker", "combin", "min", "bool", "normalForms"];
+
+(* Eprover *)
+  (* Use can update_hh_stac () to update eprover *)
+val ttt_eprover_flag = ref false
+val ttt_eprover_time = ref 5
+val ttt_eprover_radius = ref 128 (* can not be changed yet *)
+val ttt_eprover_async = ref 1
+
+(* Evaluate Eprover instead of TacticToe *)
+val ttt_eprovereval_flag  = ref false 
 
 (* --------------------------------------------------------------------------
    Search
@@ -105,21 +113,6 @@ val ttt_termarg_flag = ref false
 val ttt_termarg_radius = ref 16
 val ttt_termarg_pint = ref 2
 
-(* Eprover with translation from HolyHammer *)
-val ttt_eprover_flag = ref false
-val ttt_eprover_time = ref 5
-val ttt_eprover_radius = ref 128 (* can not be changed yet *)
-val ttt_eprover_async = ref 1
-(* evaluate Eprover instead of TacticToe *)
-val ttt_eprovereval_flag  = ref false 
-
-(* Usage 
-  ttt__flag := 
-    (true andalso !ttt_metisexec_flag andalso can update_hh_stac ());
-  ttt_eprovereval_flag := 
-    (true andalso !ttt_metisexec_flag andalso can update_hh_stac ());
-*)
-
 (* Self-learning (not working) *)
 val ttt_selflearn_flag = ref false
 
@@ -127,14 +120,14 @@ val ttt_selflearn_flag = ref false
    Initialization
    -------------------------------------------------------------------------- *)
 
+val metistools_thyl = ["sat", "marker", "combin", "min", "bool", "normalForms"];
+
 fun init_metis cthy =
   (
   ttt_metisexec_flag := 
   (not (mem cthy metistools_thyl) andalso can load "metisTools");
   if !ttt_metisexec_flag then update_metis_tac () else ();
-  ttt_metis_flag := !ttt_metisexec_flag;
-  ttt_metis_radius := 16;
-  ttt_metis_time  := 0.1
+  ttt_metis_flag := !ttt_metisexec_flag
   )
 
 fun init_evaluation cthy =

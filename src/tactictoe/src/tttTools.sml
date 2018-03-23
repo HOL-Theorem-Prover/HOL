@@ -20,8 +20,8 @@ type feav_t = (lbl_t * fea_t)
    Global parameters
    -------------------------------------------------------------------------- *)
 
-val ttt_tactic_time = ref 0.0
-val ttt_search_time = ref (Time.fromReal 0.0)
+val ttt_tactic_time = ref 0.05
+val ttt_search_time = ref (Time.fromReal 15.0)
 
 (* --------------------------------------------------------------------------
    Directories
