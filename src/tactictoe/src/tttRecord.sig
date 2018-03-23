@@ -12,9 +12,8 @@ include Abbrev
   val record_tactic : (tactic * string) -> tactic
 
   (* Executing the recorder *)
-  val try_record_proof :
-    string -> bool -> tactic -> tactic -> tactic
-  val start_record : string -> unit
-  val end_record : string -> unit
+  val record_proof : string -> bool -> tactic -> tactic -> tactic
+  val start_record_thy : string -> unit
+  val end_record_thy : string -> unit
 
 end
