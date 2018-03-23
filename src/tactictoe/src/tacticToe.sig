@@ -20,7 +20,7 @@ sig
   val ttt_clean_all     : unit -> unit
 
   (* Evaluation *)
-  val eval_eprover : goal -> unit
-  val eval_tactictoe : goal -> unit
+  val ttt_eval_thy : string -> unit
+  val eprover_eval_thy : string -> unit
 
 end

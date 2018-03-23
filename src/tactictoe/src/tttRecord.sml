@@ -13,6 +13,7 @@ tttTools tttLexer tttTimeout tttExec tttSetup
 tttNumber tttExtract tttUnfold
 tttThmData tttTacticData tttGoallistData
 tttPredict tttLearn
+tacticToe
 
 val ERR = mk_HOL_ERR "tttRecord"
 
@@ -287,6 +288,8 @@ fun org_tac tac g =
 
 fun record_proof name lflag tac1 tac2 g =
   let
+    val _ = if !ttt_eval_flag then eval_tactictoe g else ()
+    val _ = if !eprover_eval_flag then eval_eprover g else ()
     val _ = start_record_proof name
     val pflag = String.isPrefix "tactictoe_prove_" name
     val b2 = (not (!ttt_recprove_flag) andalso pflag)
@@ -351,9 +354,11 @@ fun start_record_thy thy =
 
 fun end_record_thy thy =
   (
-  debug_t "export_tacdata" export_tacdata thy;
-  debug_t "export_thmfea" export_thmfea thy
-  )  
-  
+  if !ttt_eval_flag orelse !eprover_eval_flag 
+  then ()
+  else 
+  ( debug_t "export_tacdata" export_tacdata thy;
+    debug_t "export_thmfea" export_thmfea thy)  
+  )
 
 end (* struct *)

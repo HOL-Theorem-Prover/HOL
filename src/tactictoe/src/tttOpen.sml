@@ -36,11 +36,14 @@ fun theory_files script =
     [theorysml,theorydat,theoryuo,theoryui]
   end
 
-fun find_heapname dir =
+fun find_heapname file =
   let 
+    val dir = OS.Path.dir file
+    val file' = OS.Path.file file
+    val bare = OS.Path.base file'
     val heapname_string = HOLDIR ^ "/bin/heapname"
     val _ = mkDir_err ttt_code_dir
-    val fileout = ttt_code_dir ^ "/ttt_heapname" 
+    val fileout = ttt_code_dir ^ "/ttt_heapname_" ^ bare 
     val cmd = String.concatWith " " [heapname_string,">",fileout]
   in
     cmd_in_dir dir cmd;
@@ -52,9 +55,10 @@ fun find_genscriptdep file =
   let 
     val dir = OS.Path.dir file
     val file' = OS.Path.file file
+    val bare = OS.Path.base file'
     val cmd0 = HOLDIR ^ "/bin/genscriptdep"
     val _ = mkDir_err ttt_code_dir
-    val fileout = ttt_code_dir ^ "/ttt_genscriptdep" 
+    val fileout = ttt_code_dir ^ "/ttt_genscriptdep_" ^ bare
     val cmd = String.concatWith " " [cmd0,file',">",fileout]
   in
     cmd_in_dir dir cmd;
@@ -64,16 +68,18 @@ fun find_genscriptdep file =
 
 fun run_buildheap core_flag file =
   let 
-    val _ = print_endline ("TacticToe: running on " ^ file);
+    val _ = mkDir_err ttt_buildheap_dir
     val dir = OS.Path.dir file
     val file' = OS.Path.file file
+    val bare = OS.Path.base file'
     val buildheap = HOLDIR ^ "/bin/buildheap"
     val filel = find_genscriptdep file
     val state = 
-      if core_flag then HOLDIR ^ "/bin/hol.state0" else find_heapname dir
+      if core_flag then HOLDIR ^ "/bin/hol.state0" else find_heapname file
     val cmd = 
       String.concatWith " "
-        ([buildheap,"--holstate=" ^ state,"--gcthreads=1"] @ filel @ [file'])
+        ([buildheap,"--holstate=" ^ state,"--gcthreads=1"] @ filel @ [file']
+        @ [">",ttt_buildheap_dir ^ "/" ^ bare])
   in
     cmd_in_dir dir cmd
   end

@@ -46,6 +46,8 @@ val ttt_recgl_flag = ref false
    Evaluation
    ========================================================================== *)
 
+val ttt_eval_flag = ref false
+
 (* Evaluated theorems *)
 val ttt_evprove_flag  = ref false
 val ttt_evlet_flag    = ref false
@@ -82,7 +84,7 @@ val ttt_eprover_radius = ref 128 (* can not be changed yet *)
 val ttt_eprover_async = ref 1
 
 (* Evaluate Eprover instead of TacticToe *)
-val ttt_eprovereval_flag  = ref false 
+val eprover_eval_flag  = ref false 
 
 (* --------------------------------------------------------------------------
    Search
