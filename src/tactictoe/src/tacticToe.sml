@@ -68,13 +68,13 @@ fun init_tactictoe () =
   let
     val _ = mkDir_err ttt_code_dir
     val cthy = current_theory ()
-    val new_thyl = exists_theorydata ()
+    val thyl = exists_theorydata ()
   in
-    if !imported_theories <> new_thyl then
+    if !imported_theories <> thyl then
       (
       debug_t ("init_tactictoe " ^ cthy) import_ancestry ();
       hide_out QUse.use (tactictoe_dir ^ "/src/infix_file.sml");
-      imported_theories := new_thyl
+      imported_theories := thyl
       )
     else ()
   end
@@ -212,7 +212,7 @@ fun main_tactictoe goal =
    Return values
    -------------------------------------------------------------------------- *)
 
-fun tactic_of_status r = case r of
+fun status r = case r of
    ProofError     =>
    (print_endline "tactictoe: error"; FAIL_TAC "tactictoe: error")
  | ProofSaturated =>
@@ -222,25 +222,17 @@ fun tactic_of_status r = case r of
  | Proof s        =>
    (print_endline s; hide_out tactic_of_sml s)
 
-fun debug_eval_status r =
-  case r of
-    ProofError     => debug "Error: print_eval_status"
-  | ProofSaturated => debug_proof "Proof status: Saturated"
-  | ProofTimeOut   => debug_proof "Proof status: Time Out"
-  | Proof s        => debug_proof ("Proof found: " ^ s)
-
 (* --------------------------------------------------------------------------
    Interface
    -------------------------------------------------------------------------- *)
 
-fun tactictoe_aux goal =
-  let
-    val _ = init_tactictoe ()
-    val r = hide_out main_tactictoe goal
-  in
-    tactic_of_status r
-  end
-
+fun tactictoe_aux goal = 
+  (
+  hide_out init_metis (current_theory ());
+  init_tactictoe ();
+  status (hide_out main_tactictoe goal)
+  )
+  
 fun ttt goal = (tactictoe_aux goal) goal
 
 fun tactictoe term = tactictoe_aux ([],term)
@@ -314,20 +306,21 @@ fun next_tac goal =
   end
 
 (* --------------------------------------------------------------------------
-   Evaluate HolyHammer inside TacticToe
+   Evaluate Eprover
    -------------------------------------------------------------------------- *)
 
-val hh_eval_ref = ref 0
-fun hh_eval goal =
+val eprover_eval_ref = ref 0
+
+fun eval_eprover goal =
   let
     val (thmsymweight,thmfeav,revdict) = all_thmfeav ()
-    val _ = incr hh_eval_ref
-    val index = !hh_eval_ref + hash_string (current_theory ())
+    val _ = incr eprover_eval_ref
+    val index = !eprover_eval_ref + hash_string (current_theory ())
     fun hammer goal =
       (!hh_stac_glob) index (thmsymweight,thmfeav,revdict)
         (!ttt_eprover_time) goal
-    val _ = debug ("hh_eval " ^ int_to_string index)
-    val _ = debug_proof ("hh_eval " ^ int_to_string index)
+    val _ = debug ("eprover_eval " ^ int_to_string index)
+    val _ = debug_proof ("eprover_eval " ^ int_to_string index)
     val (staco,t) = add_time hammer goal
       handle _ => (debug ("Error: hammer " ^ int_to_string index); (NONE,0.0))
   in
@@ -347,17 +340,26 @@ fun hh_eval goal =
         debug_proof ("Proof found: " ^ newstac)
       end
   end
+  handle _ => debug "Error: eval_eprover"
 
 (* --------------------------------------------------------------------------
-   Evaluation
+   Evaluate TacticToe
    -------------------------------------------------------------------------- *)
 
-fun eval_tactictoe name goal =
-  if !ttt_eprovereval_flag
-  then hh_eval goal handle _ => debug "Error: hh_eval"
-  else
-    (report_data (); debug_eval_status (hide_out main_tactictoe goal))
+fun debug_eval_status r =
+  case r of
+    ProofError     => debug_proof "Error: debug_eval_status"
+  | ProofSaturated => debug_proof "Proof status: Saturated"
+  | ProofTimeOut   => debug_proof "Proof status: Time Out"
+  | Proof s        => debug_proof ("Proof found: " ^ s)
 
+fun eval_tactictoe goal =
+  (
+  report_data ();
+  init_evaluation (current_theory ());
+  init_tactictoe ();
+  debug_eval_status (hide_out main_tactictoe goal)
+  )
 
 
 end (* struct *)

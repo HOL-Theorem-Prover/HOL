@@ -19,8 +19,10 @@ sig
   val find_script : string -> string
 
   (* recording *)
+  val ttt_rewrite_thy : string -> unit
+  val ttt_record_thy  : string -> unit
+  val ttt_rewrite : unit -> string list
   val ttt_record : unit -> unit
-  val ttt_record_thy: string -> unit
   val ttt_record_sigobj : unit -> unit
   val ttt_clean_all : unit -> unit
 
