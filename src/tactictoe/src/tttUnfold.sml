@@ -918,7 +918,7 @@ fun output_header oc cthy =
 
 
 fun output_foot oc cthy =
-  os oc ("\nval _ = tttRecord.end_record_thy " ^ mlquote cthy)
+  osn oc ("val _ = tttRecord.end_record_thy " ^ mlquote cthy)
 
 fun start_unfold_thy cthy =
   (
@@ -1100,6 +1100,35 @@ fun ttt_record_thyl thyl = app ttt_record_thy thyl
 
 fun ttt_record () =
   let val thyl = ttt_rewrite () in ttt_record_thyl thyl end
+
+fun split_n_aux i n nl =
+  if i >= 0
+  then filter (fn x => (fst x) mod n = i) nl :: split_n_aux (i-1) n nl
+  else []
+
+fun split_n n l =
+  let 
+    val ll = split_n_aux (n-1) n (number_list 0 l) 
+  in
+    rev (map (map snd) ll)
+  end
+ 
+fun ttt_record_parallel n =
+  let 
+    val thyl = ttt_rewrite () 
+    val thyll = split_n n thyl
+    fun rec_fork thyl = Thread.Thread.fork (fn () => ttt_record_thyl thyl, []) 
+    val threadl = map rec_fork thyll
+    fun loop () = 
+      (
+      OS.Process.sleep (Time.fromReal 1.0);
+      if exists Thread.Thread.isActive threadl
+      then loop ()
+      else print_endline "Recording is successful"
+      )
+  in
+    loop ()
+  end
 
 (* ---------------------------------------------------------------------------
    Recording tools
