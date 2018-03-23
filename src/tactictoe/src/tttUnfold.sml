@@ -1169,10 +1169,12 @@ fun ttt_clean_all () =
    -------------------------------------------------------------------------- *)
 
 fun ttt_eval_thy thy =
-  (ttt_eval_flag := true; ttt_record_thy thy; ttt_eval_flag := false)
+  (ttt_eval_flag := true; 
+   ttt_rewrite_thy thy; ttt_record_thy thy; ttt_eval_flag := false)
 
 fun eprover_eval_thy thy =
-  (eprover_eval_flag := true; ttt_record_thy thy; ttt_eprover_flag := false)
+  (eprover_eval_flag := true; 
+  ttt_rewrite_thy thy; ttt_record_thy thy; ttt_eprover_flag := false)
 
 
 end (* struct *)
