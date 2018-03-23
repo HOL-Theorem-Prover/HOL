@@ -29,7 +29,7 @@ val ttt_search_time = ref (Time.fromReal 15.0)
 
 val tactictoe_dir   = HOLDIR ^ "/src/tactictoe"
 
-val ttt_tacfea_dir  = tactictoe_dir ^ "/fea_tactic"
+val ttt_tacfea_dir       = tactictoe_dir ^ "/fea_tactic"
 val ttt_thmfea_dir  = tactictoe_dir ^ "/fea_theorem"
 val ttt_glfea_dir   = tactictoe_dir ^ "/fea_goallist"
 

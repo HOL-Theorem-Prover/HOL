@@ -314,7 +314,7 @@ fun read_feavdatal thy =
       end
   end
 
-fun read_feavdatal_no_min thy =
+fun read_tacfea_thy thy =
   if mem thy ["min","bool"] then [] else read_feavdatal thy
 
 fun update_tacdep (lbl,_) =
@@ -338,7 +338,7 @@ fun init_tacdata feavl =
   )
 
 fun import_tacdata thyl =
-  let val feavl = List.concat (map read_feavdatal_no_min thyl) in
+  let val feavl = List.concat (map read_tacfea_thy thyl) in
     init_tacdata feavl
   end
 
