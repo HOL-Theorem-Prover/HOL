@@ -6,7 +6,6 @@ sig
   val ttt_recprove_flag : bool ref
   val ttt_rectac_time   : real ref
   val ttt_recproof_time : real ref
-  val set_recording : unit -> unit
 
   (** Training **) 
   val ttt_namespacethm_flag : bool ref
@@ -17,7 +16,6 @@ sig
   val ttt_thmlarg_flag   : bool ref
   val ttt_thmlarg_radius : int ref
   val ttt_recgl_flag   : bool ref
-  val set_training : unit -> unit
   
   (** Evaluation **)
   (* evaluated theorems *)
@@ -44,10 +42,6 @@ sig
   (* proof presentation *)
   val ttt_prettify_flag : bool ref
   val ttt_minimize_flag : bool ref
-
-  val set_evaluation : string -> unit
-  
-  (** Additional parameters **)
   (* eprover *)
   val ttt_eprover_flag     : bool ref
   val ttt_eprover_time     : int ref
@@ -59,8 +53,9 @@ sig
   val ttt_termarg_radius : int ref
   val ttt_termarg_pint : int ref
   val ttt_selflearn_flag : bool ref
-
-
-
+  (* initialization *)
+  val init_metis      : string -> unit
+  val init_evaluation : string -> unit
+  
 
 end

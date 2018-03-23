@@ -608,7 +608,7 @@ fun modified_program inh p = case p of
             ["let","val","tactictoe_tac1","="] @ tac1 @
             ["val","tactictoe_tac2","=","tttRecord.wrap_tactics_in",
              mlquote name,"\n",tac2] @
-            ["in","tttRecord.try_record_proof",
+            ["in","tttRecord.record_proof",
              mlquote name,lflag_name,"tactictoe_tac2","tactictoe_tac1","end"] @
           [")"]
           @ modified_program inh cont
@@ -631,7 +631,7 @@ fun modified_program inh p = case p of
             ["let","val","tactictoe_tac1","="] @ tac1 @
             ["val","tactictoe_tac2","=","tttRecord.wrap_tactics_in",
              mlquote name,"\n",tac2] @
-            ["in","tttRecord.try_record_proof",
+            ["in","tttRecord.record_proof",
              mlquote name,lflag_name,"tactictoe_tac2","tactictoe_tac1","end"] @
           [")"]
           @ modified_program inh cont
@@ -908,17 +908,17 @@ fun output_header oc cthy =
   "(* ========================================================================== *)"
   ];
   app (os oc) (bare_readl infix_decl);
-  osn oc ("val _ = tttRecord.start_record " ^ mlquote cthy)
+  osn oc ("val _ = tttRecord.start_record_thy " ^ mlquote cthy)
   )
 
 
 fun output_foot oc cthy =
-  os oc ("\nval _ = tttRecord.end_record " ^ mlquote cthy)
+  os oc ("\nval _ = tttRecord.end_record_thy " ^ mlquote cthy)
 
 fun start_unfold_thy cthy =
   (
-  debug_unfold ("start_unfold_thy: " ^ thy);
-  print_endline ("start_unfold_thy: " ^ thy);
+  print_endline ("start_unfold_thy: " ^ cthy);
+  debug_unfold ("start_unfold_thy: " ^ cthy);
   ttt_unfold_cthy := cthy;
   mkDir_err ttt_open_dir; mkDir_err ttt_unfold_dir;
   erase_file (ttt_unfold_dir ^ "/" ^ cthy);
@@ -1027,11 +1027,11 @@ fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
 
 fun ttt_rewrite_thy thy =
   let
-    val _ = print_endline ("TacticToe: ttt_rewrite_thy: " ^ thy ^ 
-      "\n  " ^ scriptorg)
     val _ = clean_dir thy ttt_unfold_dir
     val scriptorg = find_script thy
     val dirorg = OS.Path.dir scriptorg
+    val _ = print_endline ("TacticToe: ttt_rewrite_thy: " ^ thy ^ 
+      "\n  " ^ scriptorg)
   in
     dirorg_glob := dirorg;
     rewrite_script thy scriptorg

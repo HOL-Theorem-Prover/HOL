@@ -241,39 +241,22 @@ fun fetch_thm s reps =
 
 val fetch = total_time fetch_thm_time fetch_thm
 
-(*----------------------------------------------------------------------------
-  Tactical proofs hooks
-  ----------------------------------------------------------------------------*)
-(* evaluation *)
-(*
-    if not (!test_eval_hook name) orelse
-       (lflag andalso not (!ttt_evlet_flag)) orelse
-       (pflag andalso not (!ttt_evprove_flag)) (* orelse
-       (not lflag andalso (!ttt_evletonly_flag)) *)
-    then ()
-    else       if one_in_n ()
-      then
-        (
-        debug_t "update_thmfea" update_thmfea (current_theory ());
-        eval_tactictoe name goal handle _ =>
-        debug ("Error: eval_tactictoe: last_stac: " ^
-               !tttSearch.last_stac)
-        )
-      else ()
-*)
-
-fun start_record lflag pflag name goal =
-  (
-  init_tactictoe ();
-  (* recording goal steps *)
-  goalstep_glob := []
-  )
-
 (* ----------------------------------------------------------------------
-   Save the proof steps in the database. Includes orthogonalization.
+   Proof recording
    ---------------------------------------------------------------------- *)
 
-fun end_record name g =
+val thm_counter = ref 0
+
+fun start_record_proof name =
+  let val outname = "\nName: " ^ int_to_string (!thm_counter) ^ " " ^ name in
+    debug_proof outname;
+    debug_search outname;
+    debug outname;
+    incr thm_counter;
+    goalstep_glob := []
+  end
+
+fun end_record_proof name g =
   let
     val lbls = map fst (rev (!goalstep_glob))
   in
@@ -283,8 +266,7 @@ fun end_record name g =
 
 fun org_tac tac g =
   let val (gl,v) = tac g in
-    if null gl
-    then (gl,v)
+    if null gl then (gl,v)
     else (
          debug "Record error: org_tac: not null";
          ignore (tttExec.exec_sml "cache" "numSimps.clear_arith_caches ()");
@@ -298,25 +280,14 @@ fun org_tac tac g =
      tac g
      )
 
-val thm_counter = ref 0
-
-fun init_record_proof name =
-  let val outname = "\nName: " ^ int_to_string (!thm_counter) ^ " " ^ name in
-    debug_proof outname;
-    debug_search outname;
-    debug outname;
-    incr thm_counter
-  end
-
-fun try_record_proof name lflag tac1 tac2 g =
+fun record_proof name lflag tac1 tac2 g =
   let
-    val _ = init_record_proof name
-    (* Conditions on recording *)
+    val _ = start_record_proof name
     val pflag = String.isPrefix "tactictoe_prove_" name
     val b2 = (not (!ttt_recprove_flag) andalso pflag)
     val b3 = (not (!ttt_reclet_flag) andalso lflag)
     val result =
-      if b2 orelse b3
+      if b2 orelse b3 
       then
         let val (r,t) = add_time (org_tac tac2) g in
           debug_proof ("Original proof time: " ^ Real.toString t);
@@ -324,14 +295,13 @@ fun try_record_proof name lflag tac1 tac2 g =
         end
       else
         let
-          val _ = start_record lflag pflag name g
           val (r,t) = add_time tac1 g
           val _ = debug_proof ("Recording proof time: " ^ Real.toString t)
-          val _ = end_record name g
+          val _ = end_record_proof name g
         in
-          if null (fst r)
-          then r
-          else (debug "Record error: try_record_proof: not null"; org_tac tac2 g)
+          if null (fst r) then r
+          else (debug "Record error: try_record_proof: not null"; 
+                org_tac tac2 g)
         end
         handle _ => (debug "Record error: try_record_proof"; org_tac tac2 g)
   in
@@ -342,22 +312,22 @@ fun try_record_proof name lflag tac1 tac2 g =
   Theory hooks
   ----------------------------------------------------------------------------*)
 
-fun clean_subdirl cthy dir subdirl =
+fun clean_subdirl thy dir subdirl =
   let
     fun clean_sub x =
-      (mkDir_err (dir ^ "/" ^ x); erase_file (dir ^ "/" ^ x ^ "/" ^ cthy))
+      (mkDir_err (dir ^ "/" ^ x); erase_file (dir ^ "/" ^ x ^ "/" ^ thy))
   in
     mkDir_err dir;
     app clean_sub subdirl
   end
 
-fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
+fun clean_dir thy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ thy))
   
-fun start_record_thy cthy =
+fun start_record_thy thy =
   (
   mkDir_err ttt_code_dir;
-  set_recording ();
-  if cthy = "ConseqConv"
+  (* Hack to record bool *)
+  if thy = "ConseqConv"
   then (clean_tttdata ();
         clean_subdirl "bool" ttt_search_dir ["debug","search","proof"];
         mkDir_err ttt_thmfea_dir;
@@ -366,24 +336,19 @@ fun start_record_thy cthy =
   clean_tttdata ();
   reset_profiling ();
   (* Proof search *)
-  clean_subdirl cthy ttt_search_dir ["debug","search","proof"];
+  clean_subdirl thy ttt_search_dir ["debug","search","proof"];
   mkDir_err ttt_tacfea_dir;
   mkDir_err ttt_thmfea_dir;
   mkDir_err ttt_glfea_dir;
   (* Tactic scripts recording *)
-  clean_subdirl cthy ttt_record_dir ["parse","replay","record"]
+  clean_subdirl thy ttt_record_dir ["parse","replay","record"]
   )
 
-fun end_record_thy cthy =
+fun end_record_thy thy =
   (
-  debug_t "export_tacdata" export_tacdata cthy;
-  debug_t "export_thmfea" export_thmfea cthy
+  debug_t "export_tacdata" export_tacdata thy;
+  debug_t "export_thmfea" export_thmfea thy
   )  
-  
-  
-  
-  
-  
   
 
 end (* struct *)
