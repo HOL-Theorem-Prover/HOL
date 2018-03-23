@@ -951,11 +951,11 @@ fun end_unfold_thy () =
     f "Replace id" replace_id_time
   end
 
-fun unquoteString s =
+fun unquoteString thy s =
   let
     val _ = mkDir_err ttt_code_dir
-    val fin  = ttt_code_dir ^ "/quoteString1"
-    val fout = ttt_code_dir ^ "/quoteString2"
+    val fin  = ttt_code_dir ^ "/quoteString1" ^ thy
+    val fout = ttt_code_dir ^ "/quoteString2" ^ thy
     val cmd = HOLDIR ^ "/bin/unquote" ^ " " ^ fin ^ " " ^ fout
   in
     writel fin [s];
@@ -963,11 +963,11 @@ fun unquoteString s =
     String.concatWith " " (readl fout)
   end
 
-fun sketch_wrap file =
+fun sketch_wrap thy file =
   let
     val sl = readl file
     val s1 = String.concatWith " " sl
-    val s2 = unquoteString s1
+    val s2 = unquoteString thy s1
     val s3 = rm_endline (rm_comment s2)
     val sl3 = ttt_lex s3
   in
@@ -1008,7 +1008,7 @@ fun rewrite_script thy fileorg =
   let
     val _ = start_unfold_thy thy
     val _ = debug_unfold ("sketch_wrap: " ^ fileorg)
-    val p0 = sketch_wrap fileorg
+    val p0 = sketch_wrap thy fileorg
     val _ = debug_unfold "unfold_wrap"
     val p2 = unfold_wrap p0
     val _ = debug_unfold "modified_program"
@@ -1169,12 +1169,55 @@ fun ttt_clean_all () =
    -------------------------------------------------------------------------- *)
 
 fun ttt_eval_thy thy =
-  (ttt_eval_flag := true; 
-   ttt_rewrite_thy thy; ttt_record_thy thy; ttt_eval_flag := false)
+  (
+  ttt_eval_flag := true; 
+  ttt_rewrite_thy thy; 
+  ttt_record_thy thy; 
+  ttt_eval_flag := false
+  )
+
+fun ttt_eval_parallel n thyl =
+  let 
+    val thyll = split_n n thyl
+    fun rec_fork thyl = 
+      Thread.Thread.fork (fn () => app ttt_eval_thy thyl, []) 
+    val threadl = map rec_fork thyll
+    fun loop () = 
+      (
+      OS.Process.sleep (Time.fromReal 1.0);
+      if exists Thread.Thread.isActive threadl
+      then loop ()
+      else print_endline "Evaluation is successful"
+      )
+  in
+    loop ()
+  end
 
 fun eprover_eval_thy thy =
-  (eprover_eval_flag := true; 
-  ttt_rewrite_thy thy; ttt_record_thy thy; ttt_eprover_flag := false)
+  (
+  eprover_eval_flag := true; 
+  ttt_rewrite_thy thy; 
+  ttt_record_thy thy; 
+  ttt_eprover_flag := false
+  )
+
+fun eprover_eval_parallel n thyl =
+  let 
+    val thyll = split_n n thyl
+    fun rec_fork thyl = 
+      Thread.Thread.fork (fn () => app eprover_eval_thy thyl, []) 
+    val threadl = map rec_fork thyll
+    fun loop () = 
+      (
+      OS.Process.sleep (Time.fromReal 1.0);
+      if exists Thread.Thread.isActive threadl
+      then loop ()
+      else print_endline "Evaluation is successful"
+      )
+  in
+    loop ()
+  end
+
 
 
 end (* struct *)

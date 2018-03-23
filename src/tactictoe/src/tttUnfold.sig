@@ -14,8 +14,6 @@ sig
   | SException   of string
 
   (* tools *)
-  val unquoteString  : string -> string
-  val open_structure : string -> (string * stack_t) list
   val find_script : string -> string
 
   (* recording *)
@@ -30,5 +28,7 @@ sig
   (* evaluation *)
   val ttt_eval_thy: string -> unit
   val eprover_eval_thy: string -> unit
+  val ttt_eval_parallel: int -> string list -> unit
+  val eprover_eval_parallel: int -> string list -> unit
 
 end
