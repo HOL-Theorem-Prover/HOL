@@ -294,6 +294,18 @@ fun record_proof name lflag tac1 tac2 g =
     val pflag = String.isPrefix "tactictoe_prove_" name
     val b2 = (not (!ttt_recprove_flag) andalso pflag)
     val b3 = (not (!ttt_reclet_flag) andalso lflag)
+    val _ = 
+      if !ttt_eval_flag andalso 
+        (not pflag orelse !ttt_evprove_flag) andalso 
+        (not lflag orelse !ttt_evlet_flag)
+      then eval_tactictoe g 
+      else ()
+    val _ = 
+      if !eprover_eval_flag andalso 
+        (not pflag orelse !ttt_evprove_flag) andalso 
+        (not lflag orelse !ttt_evlet_flag)
+      then eval_eprover g 
+      else ()
     val result =
       if b2 orelse b3 
       then
