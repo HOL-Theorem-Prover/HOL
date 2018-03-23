@@ -13,7 +13,6 @@ tttTools tttLexer tttTimeout tttExec tttSetup
 tttNumber tttExtract tttUnfold
 tttThmData tttTacticData tttGoallistData
 tttPredict tttLearn
-tacticToe
 
 val ERR = mk_HOL_ERR "tttRecord"
 
@@ -353,40 +352,6 @@ fun clean_subdirl cthy dir subdirl =
   end
 
 fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
-
-fun start_thy cthy =
-  (
-  mkDir_err ttt_code_dir;
-  set_recording ();
-  if cthy = "ConseqConv"
-  then (clean_tttdata ();
-        clean_subdirl "bool" ttt_search_dir ["debug","search","proof"];
-        mkDir_err ttt_thmfea_dir;
-        debug_t "export_thmfea" export_thmfea "bool")
-  else ();
-  clean_tttdata ();
-  reset_profiling ();
-  (* Proof search *)
-  clean_subdirl cthy ttt_search_dir ["debug","search","proof"];
-  mkDir_err ttt_tacfea_dir;
-  mkDir_err ttt_thmfea_dir;
-  mkDir_err ttt_glfea_dir;
-  (* Tactic scripts recording *)
-  clean_subdirl cthy ttt_record_dir ["parse","replay","record"]
-  )
-
-fun end_thy cthy =
-  (
-  (* tactic *)
-  debug_t "export_tacdata" export_tacdata cthy;
-  (* theorem *)
-  debug_t "export_thmfea" export_thmfea cthy;
-  (* goal list *)
-  if !ttt_recgl_flag 
-    then debug_t "export_glfea" export_glfea cthy 
-    else ();
-  out_record_summary cthy
-  )
   
 fun start_record_thy cthy =
   (
