@@ -313,20 +313,20 @@ val eprover_eval_ref = ref 0
 
 fun eval_eprover goal =
   let
+    val _ = mkDir_err ttt_eproof_dir
     val (thmsymweight,thmfeav,revdict) = all_thmfeav ()
     val _ = incr eprover_eval_ref
     val index = !eprover_eval_ref + hash_string (current_theory ())
     fun hammer goal =
       (!hh_stac_glob) index (thmsymweight,thmfeav,revdict)
         (!ttt_eprover_time) goal
-    val _ = debug ("eprover_eval " ^ int_to_string index)
-    val _ = debug_proof ("eprover_eval " ^ int_to_string index)
+    val _ = debug_eproof ("eprover_eval " ^ int_to_string index)
     val (staco,t) = add_time hammer goal
       handle _ => (debug ("Error: hammer " ^ int_to_string index); (NONE,0.0))
   in
-    debug_proof ("Time: " ^ Real.toString t);
+    debug_eproof ("Time: " ^ Real.toString t);
     case staco of
-      NONE      => debug_proof ("Proof status: Time Out")
+      NONE      => debug_eproof ("Proof status: Time Out")
     | SOME stac =>
       let
         val newstac = minimize_stac 1.0 stac goal []
@@ -334,10 +334,10 @@ fun eval_eprover goal =
         val (b,t) = add_time (app_tac 2.0 tac) goal
       in
         if isSome b
-          then debug_proof ("Reconstructed: " ^ Real.toString t)
-          else debug_proof ("Reconstructed: None")
+          then debug_eproof ("Reconstructed: " ^ Real.toString t)
+          else debug_eproof ("Reconstructed: None")
         ;
-        debug_proof ("Proof found: " ^ newstac)
+        debug_eproof ("Proof found: " ^ newstac)
       end
   end
   handle _ => debug "Error: eval_eprover"
@@ -355,6 +355,7 @@ fun debug_eval_status r =
 
 fun eval_tactictoe goal =
   (
+  mkDir_err ttt_proof_dir;
   report_data ();
   init_evaluation (current_theory ());
   init_tactictoe ();

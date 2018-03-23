@@ -12,7 +12,6 @@ open HolKernel boolLib tttExec tttLexer tttTools
 
 val ERR = mk_HOL_ERR "tttExtract"
 
-
 (*---------------------------------------------------------------------------
  * Extract tactics
  *---------------------------------------------------------------------------*)

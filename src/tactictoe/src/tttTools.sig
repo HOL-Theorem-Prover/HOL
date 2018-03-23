@@ -24,7 +24,11 @@ sig
   val ttt_record_dir   : string
   val ttt_unfold_dir   : string
 
-  (* commands *)
+  val ttt_eproof_dir   : string
+  val ttt_proof_dir    : string
+  
+  val ttt_buildheap_dir : string
+   (* commands *)
   val mkDir_err        : string -> unit
   val rmDir_rec        : string -> unit
   val run_cmd          : string -> unit
@@ -131,6 +135,7 @@ sig
   val set_debugsearch : bool -> unit
   val debug_search : string -> unit
   val debug_proof  : string -> unit
+  val debug_eproof : string -> unit
   val debug_parse  : string -> unit
   val debug_replay : string -> unit
   val debug_record : string -> unit

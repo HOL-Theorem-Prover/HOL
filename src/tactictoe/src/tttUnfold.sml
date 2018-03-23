@@ -9,16 +9,13 @@
 structure tttUnfold :> tttUnfold =
 struct
 
-open HolKernel Abbrev boolLib tttLexer tttTools tttInfix tttOpen
+open HolKernel Abbrev boolLib tttLexer tttTools tttInfix tttOpen tttSetup
 
 val ERR = mk_HOL_ERR "tttUnfold"
 
 (* --------------------------------------------------------------------------
    Debugging
    -------------------------------------------------------------------------- *)
-
-val iev_flag = ref false
-val iev_eprover_flag = ref false
 
 val dirorg_glob = ref "/temp"
 
@@ -908,6 +905,14 @@ fun output_header oc cthy =
   "(* ========================================================================== *)"
   ];
   app (os oc) (bare_readl infix_decl);
+  if !eprover_eval_flag 
+    then osn oc ("val _ = tttSetup.eprover_eval_flag := true")
+    else ()
+  ;
+  if !ttt_eval_flag 
+    then osn oc ("val _ = tttSetup.ttt_eval_flag := true")
+    else ()
+  ;
   osn oc ("val _ = tttRecord.start_record_thy " ^ mlquote cthy)
   )
 
@@ -917,7 +922,6 @@ fun output_foot oc cthy =
 
 fun start_unfold_thy cthy =
   (
-  print_endline ("start_unfold_thy: " ^ cthy);
   debug_unfold ("start_unfold_thy: " ^ cthy);
   ttt_unfold_cthy := cthy;
   mkDir_err ttt_open_dir; mkDir_err ttt_unfold_dir;
@@ -1095,9 +1099,7 @@ fun ttt_record_thy thy =
 fun ttt_record_thyl thyl = app ttt_record_thy thyl
 
 fun ttt_record () =
-  let val thyl = ttt_rewrite () in
-    ttt_record_thyl thyl
-  end
+  let val thyl = ttt_rewrite () in ttt_record_thyl thyl end
 
 (* ---------------------------------------------------------------------------
    Recording tools
@@ -1138,10 +1140,10 @@ fun ttt_clean_all () =
    -------------------------------------------------------------------------- *)
 
 fun ttt_eval_thy thy =
-  (iev_flag := true; ttt_record_thy thy; iev_flag := false)
+  (ttt_eval_flag := true; ttt_record_thy thy; ttt_eval_flag := false)
 
 fun eprover_eval_thy thy =
-  (iev_eprover_flag := true; ttt_record_thy thy; iev_eprover_flag := false)
+  (eprover_eval_flag := true; ttt_record_thy thy; ttt_eprover_flag := false)
 
 
 end (* struct *)

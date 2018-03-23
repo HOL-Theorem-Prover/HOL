@@ -38,7 +38,10 @@ val ttt_open_dir    = tactictoe_dir ^ "/gen_open"
 
 val ttt_search_dir  = tactictoe_dir ^ "/log_search"
 val ttt_record_dir  = tactictoe_dir ^ "/log_record"
-val ttt_unfold_dir = tactictoe_dir ^ "/log_unfold"
+val ttt_buildheap_dir = tactictoe_dir ^ "/log_buildheap"
+val ttt_unfold_dir    = tactictoe_dir ^ "/log_unfold"
+val ttt_eproof_dir    = tactictoe_dir ^ "/proof_E"
+val ttt_proof_dir     = tactictoe_dir ^ "/proof_ttt"
 
 fun hide_out f x =
   hide_in_file (ttt_code_dir ^ "/" ^ current_theory () ^ "_hide_out") f x
@@ -396,7 +399,10 @@ fun debug_search s =
   else ()
 
 fun debug_proof s =
-  append_endline (ttt_search_dir ^ "/proof/" ^ current_theory ()) s
+  append_endline (ttt_proof_dir ^ "/" ^ current_theory ()) s
+
+fun debug_eproof s =
+  append_endline (ttt_eproof_dir ^ "/" ^ current_theory ()) s
 
 (* record_dir *)
 fun debug_parse s =
