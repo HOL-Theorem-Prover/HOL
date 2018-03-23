@@ -908,32 +908,17 @@ fun output_header oc cthy =
   "(* ========================================================================== *)"
   ];
   app (os oc) (bare_readl infix_decl);
-  if !iev_flag
-    then app (osn oc)
-    ["val _ = tttSetup.set_record_hook := (fn () => ",
-     "  (tttTools.ttt_search_time := Time.fromReal 60.0;",
-     "   tttSetup.ttt_eval_flag := true))"]
-    else ();
-  if !iev_eprover_flag
-    then app (osn oc)
-    ["val _ = tttSetup.set_record_hook := (fn () => ",
-     "  (tttTools.ttt_search_time := Time.fromReal 60.0;",
-     "   tttSetup.ttt_eval_flag := true;",
-     "   tttSetup.hh_only_flag :=",
-     "     Lib.can tttExec.update_hh_stac ();",
-     "   tttSetup.ttt_eprover_time := 60",
-     "  ))"]
-    else ();
-  osn oc ("val _ = tttRecord.start_thy " ^ mlquote cthy)
+  osn oc ("val _ = tttRecord.start_record " ^ mlquote cthy)
   )
 
 
 fun output_foot oc cthy =
-  os oc ("\nval _ = tttRecord.end_thy " ^ mlquote cthy)
+  os oc ("\nval _ = tttRecord.end_record " ^ mlquote cthy)
 
 fun start_unfold_thy cthy =
   (
-  print_endline cthy;
+  debug_unfold ("start_unfold_thy: " ^ thy);
+  print_endline ("start_unfold_thy: " ^ thy);
   ttt_unfold_cthy := cthy;
   mkDir_err ttt_open_dir; mkDir_err ttt_unfold_dir;
   erase_file (ttt_unfold_dir ^ "/" ^ cthy);
@@ -988,44 +973,14 @@ fun sketch_wrap file =
 fun unfold_wrap p = unfold 0 [dnew String.compare (map protect basis)] p
 
 (* ---------------------------------------------------------------------------
-   Files and directories
-   -------------------------------------------------------------------------- *)
-
-fun barefile file = OS.Path.base (OS.Path.file file)
-
-fun sigobj_scripts () =
-  let
-    val _    = mkDir_err ttt_code_dir
-    val file = ttt_code_dir ^ "/theory_list"
-    val sigdir = HOLDIR ^ "/sigobj"
-    val cmd0 = "cd " ^ sigdir
-    val cmd1 = "readlink -f $(find -regex \".*[^/]Theory.sig\") > " ^ file
-    val cmd2 = "sed -i 's/Theory.sig/Script.sml/g' " ^ file
-  in
-    ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1 ^ "; " ^ cmd2));
-    readl file
-  end
-
-fun sigobj_theories () =
-  let
-    val _    = mkDir_err ttt_code_dir
-    val file = ttt_code_dir ^ "/theory_list"
-    val sigdir = HOLDIR ^ "/sigobj"
-    val cmd0 = "cd " ^ sigdir
-    val cmd1 = "readlink -f $(find -regex \".*[^/]Theory.sig\") > " ^ file
-  in
-    ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1 ^ "; "));
-    readl file
-  end
-
-(* ---------------------------------------------------------------------------
-   Recording
+   Rewriting script
    -------------------------------------------------------------------------- *)
 
 fun tttsml_of file = OS.Path.base file ^ "_ttt.sml"
 
 fun print_program cthy fileorg sl =
   let 
+    val _ = debug_unfold ("print_program: " ^ fileorg)
     val fileout = tttsml_of fileorg
     val save_dir = tactictoe_dir ^ "/log_scripts"
     val oc = TextIO.openOut fileout
@@ -1047,7 +1002,6 @@ fun print_program cthy fileorg sl =
 
 fun rewrite_script thy fileorg =
   let
-    val _ = debug_unfold ("start_unfold_thy: " ^ thy)
     val _ = start_unfold_thy thy
     val _ = debug_unfold ("sketch_wrap: " ^ fileorg)
     val p0 = sketch_wrap fileorg
@@ -1057,7 +1011,6 @@ fun rewrite_script thy fileorg =
     val _ = (is_thm_flag := false; in_pattern_level := 0)
     val sl5 = modified_program false p2
   in
-    debug_unfold ("print_program: " ^ fileorg);
     print_program thy fileorg sl5;
     end_unfold_thy ()
   end
@@ -1071,6 +1024,35 @@ fun find_script x =
   end
 
 fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
+
+fun ttt_rewrite_thy thy =
+  let
+    val _ = print_endline ("TacticToe: ttt_rewrite_thy: " ^ thy ^ 
+      "\n  " ^ scriptorg)
+    val _ = clean_dir thy ttt_unfold_dir
+    val scriptorg = find_script thy
+    val dirorg = OS.Path.dir scriptorg
+  in
+    dirorg_glob := dirorg;
+    rewrite_script thy scriptorg
+  end
+ 
+fun exists_thy thy = exists_file (ttt_tacfea_dir ^ "/" ^ thy)  
+  
+fun ttt_rewrite () =
+  let
+    val thyl0 = ancestry (current_theory ())
+    val thyl1 = sort_thyl thyl0
+    val thyl2 = filter (fn x => not (mem x ["min","bool"])) thyl1
+    val thyl3 = filter (not o exists_thy) thyl2
+  in
+    app ttt_rewrite_thy thyl3;
+    thyl3
+  end
+
+(* ---------------------------------------------------------------------------
+   Extra safety during recording
+   -------------------------------------------------------------------------- *)
 
 fun save_file file =
   let
@@ -1093,45 +1075,49 @@ fun save_scripts script = app save_file (script :: theory_files script)
 
 fun restore_scripts script = app restore_file (script :: theory_files script)
 
+(* ---------------------------------------------------------------------------
+   Recording
+   -------------------------------------------------------------------------- *)
+
 fun ttt_record_thy thy =
-  let
-    val _ = clean_dir thy ttt_unfold_dir
-    val scriptorg = find_script thy
-    val _ = save_scripts scriptorg
-  in
+  let val scriptorg = find_script thy in
     let
-      val _ = print_endline ("TacticToe: " ^ thy)
-      val _ = print_endline ("TacticToe: running ttt_record_thy in " ^ scriptorg)
-      val dirorg = #dir (OS.Path.splitDirFile scriptorg)
+      val _ = save_scripts scriptorg
+      val _ = print_endline ("TacticToe: ttt_record_thy: " ^ thy ^ 
+        "\n  " ^ scriptorg)
     in
-      dirorg_glob := dirorg;
-      rewrite_script thy scriptorg;
-      (* could overwrite scriptorg in rare cases *)
-      if mem thy core_theories
-        then run_rm_script true (tttsml_of scriptorg)
-        else run_rm_script false (tttsml_of scriptorg)
-      ;
+      run_rm_script (mem thy core_theories) (tttsml_of scriptorg);
       restore_scripts scriptorg
     end
     handle e => (restore_scripts scriptorg; raise e)
   end
 
-fun ttt_record_thy_wrap thy =
-  if exists_file (ttt_tacfea_dir ^ "/" ^ thy)
-  then ()
-  else ttt_record_thy thy
+fun ttt_record_thyl thyl = app ttt_record_thy thyl
 
 fun ttt_record () =
+  let val thyl = ttt_rewrite () in
+    ttt_record_thyl thyl
+  end
+
+(* ---------------------------------------------------------------------------
+   Recording tools
+   -------------------------------------------------------------------------- *)
+
+fun sigobj_theories () =
   let
-    val thyl0 = ancestry (current_theory ())
-    val thyl1 = sort_thyl thyl0
-    val thyl2 = filter (fn x => not (mem x ["min","bool"])) thyl1
+    val _    = mkDir_err ttt_code_dir
+    val file = ttt_code_dir ^ "/theory_list"
+    val sigdir = HOLDIR ^ "/sigobj"
+    val cmd0 = "cd " ^ sigdir
+    val cmd1 = "readlink -f $(find -regex \".*[^/]Theory.sig\") > " ^ file
   in
-    app ttt_record_thy_wrap thyl2
+    ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1 ^ "; "));
+    readl file
   end
 
 fun ttt_record_sigobj () =
   let
+    fun barefile file = OS.Path.base (OS.Path.file file)
     val l0 = sigobj_theories ()
     val l1 = map barefile l0
   in
@@ -1147,9 +1133,8 @@ fun ttt_clean_all () =
   rmDir_rec ttt_glfea_dir
   )
 
-
 (* ---------------------------------------------------------------------------
-   Evaluation of different provers
+   Evaluation
    -------------------------------------------------------------------------- *)
 
 fun ttt_eval_thy thy =

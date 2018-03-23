@@ -14,7 +14,7 @@ include Abbrev
   (* Executing the recorder *)
   val try_record_proof :
     string -> bool -> tactic -> tactic -> tactic
-  val start_thy : string -> unit
-  val end_thy : string -> unit
+  val start_record : string -> unit
+  val end_record : string -> unit
 
 end
