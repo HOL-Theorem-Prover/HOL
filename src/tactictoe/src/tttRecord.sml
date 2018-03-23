@@ -258,10 +258,15 @@ fun start_record_proof name =
 
 fun end_record_proof name g =
   let
-    val lbls = map fst (rev (!goalstep_glob))
+    val lbl1 = map fst (rev (!goalstep_glob))
+    fun f (stac,t,g,gl) = 
+      case abstract_stac stac of
+        SOME astac => [(stac,t,g,gl),(astac,t,g,gl)]
+      | NONE => [(stac,t,g,gl)]
+    val lbl2 = List.concat (map f lbl1)
   in
-    debug_t ("Saving " ^ int_to_string (length lbls) ^ " labels")
-      (app update_tacdata) lbls
+    debug_t ("Saving " ^ int_to_string (length lbl2) ^ " labels")
+      (app update_tacdata) lbl2
   end
 
 fun org_tac tac g =

@@ -14,7 +14,7 @@ tttTimeout tttFeature tttThmData tttGoallistData tttSetup tttLexer
 val ERR = mk_HOL_ERR "tttLearn"
 
 (*----------------------------------------------------------------------------
- * Recognizing theorem list and abstracting them from the tactic.
+ * Abstracting theorem list in tactics
  *----------------------------------------------------------------------------*)
 
 val thm_cache = ref (dempty String.compare)
@@ -57,7 +57,7 @@ fun abstract_thmlarg stac =
   end
 
 (*----------------------------------------------------------------------------
- * Instantiating tactics with predicted theorems
+ * Instantiating tactics with theorem list
  *----------------------------------------------------------------------------*)
 
 fun inst_thmlarg_loop thmls l =
@@ -111,9 +111,8 @@ fun abs_termarg stac =
   end
   handle _ => (debug ("Error: abs_termarg: " ^ stac); NONE)
 
-
 (*----------------------------------------------------------------------------
- * Instantiate tactics with term (first occurence)
+ * Instantiate tactics with term
  *----------------------------------------------------------------------------*)
 
 fun with_types f x =
