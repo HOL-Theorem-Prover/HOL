@@ -334,6 +334,8 @@ fun clean_dir thy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ thy))
 fun start_record_thy thy =
   (
   mkDir_err ttt_code_dir;
+  mkDir_err ttt_proof_dir; clean_dir thy ttt_proof_dir
+  mkDir_err ttt_eproof_dir; clean_dir thy ttt_eproof_dir
   (* Hack to record bool *)
   if thy = "ConseqConv"
   then (clean_tttdata ();
