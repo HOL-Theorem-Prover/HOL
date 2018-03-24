@@ -1146,14 +1146,13 @@ fun sigobj_theories () =
     readl file
   end
 
-fun ttt_record_sigobj () =
+fun load_sigobj () =
   let
     fun barefile file = OS.Path.base (OS.Path.file file)
     val l0 = sigobj_theories ()
     val l1 = map barefile l0
   in
-    app load l1;
-    ttt_record ()
+    app load l1
   end
 
 fun ttt_clean_all () =
