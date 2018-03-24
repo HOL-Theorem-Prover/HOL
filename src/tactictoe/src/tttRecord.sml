@@ -288,8 +288,6 @@ fun org_tac tac g =
 
 fun record_proof name lflag tac1 tac2 g =
   let
-    val _ = if !ttt_eval_flag then eval_tactictoe g else ()
-    val _ = if !eprover_eval_flag then eval_eprover g else ()
     val _ = start_record_proof name
     val pflag = String.isPrefix "tactictoe_prove_" name
     val b2 = (not (!ttt_recprove_flag) andalso pflag)
