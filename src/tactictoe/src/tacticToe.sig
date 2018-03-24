@@ -17,7 +17,7 @@ sig
   (* Recording *)
   val ttt_record          : unit -> unit
   val ttt_record_parallel : int -> unit
-  val ttt_record_sigobj   : unit -> unit
+  val load_sigobj         : unit -> unit
   val ttt_clean_all       : unit -> unit
 
   (* Evaluation *)
