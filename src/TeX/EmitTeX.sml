@@ -457,7 +457,7 @@ let open smpp
                else lift PT (hd l)) >>
               S " = " >>
               S "<|" >> BR(1,0) >>
-              pr_list pp_record (S ";" >> BR(1,0)) l >>
+              pr_list pp_record (S ";" >> BR(1,0)) ll >>
               BR(1,~3) >> S "|>"
             )
           ) else (
@@ -467,7 +467,7 @@ let open smpp
               S " =" >> BR(1,2) >>
               BB PP.CONSISTENT 2 (
                 S "<|" >> BR(1,0) >>
-                pr_list pp_record (S ";" >> BR(1,0)) l >>
+                pr_list pp_record (S ";" >> BR(1,0)) ll >>
                 BR(1,~2) >>
                 S "|>"
               )
@@ -485,7 +485,7 @@ let open smpp
 
     val t = map strip_comb (strip_conj (snd (dest_comb (concl thm))))
 in
-  BB PP.CONSISTENT 0 (pr_list pp_binding (NL >> NL) t)
+  BB PP.CONSISTENT 0 (pr_list pp_binding (S " ;" >> NL >> NL) t)
 end;
 
 val datatype_thm_to_string =
