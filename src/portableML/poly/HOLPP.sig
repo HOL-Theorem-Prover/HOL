@@ -17,6 +17,7 @@ val prettyPrint : (string -> unit) * int -> pretty -> unit
 val pp_to_string : int -> ('a -> pretty) -> 'a -> string
 
 val add_string : string -> pretty
+val add_stringsz : string * int -> pretty
 val add_break : int * int -> pretty
 val NL : pretty
 val add_newline : pretty

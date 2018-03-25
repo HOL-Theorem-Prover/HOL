@@ -141,7 +141,7 @@ end handle HOL_ERR _ => NONE
 fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) depth t = let
   open term_pp_types term_grammar smpp term_pp_utils
   infix >>
-  val ppfns = ppfns :ppstream_funs
+  val ppfns = ppfns :unit ppstream_funs
   val {add_string=strn,add_break=brk,ublock,...} = ppfns
   val (prname, arg1, arg2) = valOf (dest_bind tmg t)
                              handle Option => raise UserPP_Failed

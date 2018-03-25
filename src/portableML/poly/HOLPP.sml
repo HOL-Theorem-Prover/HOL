@@ -37,6 +37,7 @@ fun pp_to_string w f x =
   end
 
 val add_string = PrettyString
+val add_stringsz = PrettyStringWithWidth
 val add_break = PrettyBreak
 val NL = PrettyLineBreak
 val add_newline = NL
