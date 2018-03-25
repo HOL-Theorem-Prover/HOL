@@ -110,11 +110,11 @@ val _ = eSML "num"
       MLSIG "val fromDecString : string -> num",
       MLSIG "val fromHexString : string -> num",
       MLSIG "val fromString    : string -> num",
-      MLSIG "val ppBin  : ppstream -> num -> unit",
-      MLSIG "val ppOct  : ppstream -> num -> unit",
-      MLSIG "val ppDec  : ppstream -> num -> unit",
-      MLSIG "val ppHex  : ppstream -> num -> unit",
-      MLSIG "val pp_num : ppstream -> num -> unit",
+      MLSIG "val ppBin  : num PP.pprinter",
+      MLSIG "val ppOct  : num PP.pprinter",
+      MLSIG "val ppDec  : num PP.pprinter",
+      MLSIG "val ppHex  : num PP.pprinter",
+      MLSIG "val pp_num : num PP.pprinter",
       MLSTRUCT "\n\
 \ (*---------------------------------------------------------------------------*)\n\
 \ (* Supplementary ML, not generated from HOL theorems, aimed at supporting    *)\n\
@@ -286,10 +286,10 @@ val _ = eSML "num"
 \\n\
 \  (* Installed in MoscowML with Meta.installPP *)\n\
 \\n\
-\  fun ppBin ppstrm n = PP.add_string ppstrm (toBinString n);\n\
-\  fun ppOct ppstrm n = PP.add_string ppstrm (toOctString n);\n\
-\  fun ppDec ppstrm n = PP.add_string ppstrm (toDecString n);\n\
-\  fun ppHex ppstrm n = PP.add_string ppstrm (toHexString n);\n\
+\  fun ppBin n = PP.add_string (toBinString n);\n\
+\  fun ppOct n = PP.add_string (toOctString n);\n\
+\  fun ppDec n = PP.add_string (toDecString n);\n\
+\  fun ppHex n = PP.add_string (toHexString n);\n\
 \  val toString = toDecString;\n\
 \  val fromString = fromDecString;\n\
 \  val pp_num = ppHex;\n\
