@@ -44,7 +44,9 @@ val _ = set_trace "Unicode" 0
 
 val _ = app tpp ["MEM a l", "~MEM a l", "x NOTIN {1; 2; 3}",
                  "case l of [] => 0 | h::t => h + LENGTH t",
-                 "[1; 2]"]
+                 "[1; 2]",
+                 "[aaaa; bbbbb; cccc; dddd; eeee; ffff; gggg; hhhh; iiii; \
+                  \jjjj; kkkk; llll; mmmm;\n nnnn; oooo]"]
 
 val _ = tpp_expected {input = "SINGL 3", output = "[3]",
                       testf = standard_tpp_message}
