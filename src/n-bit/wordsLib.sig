@@ -66,11 +66,16 @@ sig
     val deprecate_word      : unit -> unit
 
     val word_pp_mode        : int ref
-    val output_words_as     : (int * Arbnum.num -> StringCvt.radix) -> unit
+    val output_words_as     : (int * Arbnum.num -> string) -> unit
+
     val output_words_as_bin : unit -> unit
     val output_words_as_oct : unit -> unit
     val output_words_as_hex : unit -> unit
     val output_words_as_dec : unit -> unit
+
+    val output_words_as_padded_bin : unit -> unit
+    val output_words_as_padded_hex : unit -> unit
+
     val remove_word_printer : unit -> unit
 
     val add_word_cast_printer       : unit -> unit

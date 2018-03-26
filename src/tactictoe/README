@@ -4,7 +4,16 @@ It explores proof trees by repeatly selecting tactics that are
 appropriate to solve the current goal.
 The selection is performed on a dataset of recorded human tactics.
 
-USAGE: See examples/ttt_demoScript.sml.
+
+USAGE: 
+  See more examples in examples/ttt_demoScript.sml.
+ 
+  load "tacticToe";
+  open tacticToe;
+  load "arithmeticTheory"; (* change arithmetic to the theory of your choice *)
+  ttt_record (); (* takes a while *)
+  tactictoe ``1+1=2``;
+
 
 EVALUATION of a theory (not needed to use TacticToe):
   Evaluates how much tactictoe can automatically re-prove 
@@ -16,15 +25,11 @@ EVALUATION of a theory (not needed to use TacticToe):
   load "yourTheory";
   ttt_record (); (* takes a while *)
   ttt_eval_thy "your";
-  
-  Warnings: 
-    if you do interrupt evaluation, 
-    please run ttt_record_thy "your" as evaluation messes up with the database.
-    For the same reason, do not run evaluation in two theories in parallel
-    unless the two theories are independent from each other.
+
 
 ISSUES:
   Applying numSimps.clear_arith_caches is necessary in rare circumstances.
+
 
 NOTES FOR DEVELOPERS:
   Keep up-to-date: infix tokens in hhsInfix.sml, polyml values in hhsUnfold.sml.

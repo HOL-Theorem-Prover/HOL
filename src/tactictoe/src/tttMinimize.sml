@@ -258,7 +258,7 @@ fun mini_stac_g_gl tim stac g gl =
 fun mini_proofstac stac g =
   let
     val gl = fst (tactic_of_sml stac g)
-      handle _ => raise ERR "minimize" stac
+      handle _ => (debug "Error: minimize"; raise ERR "minimize" stac)
     val tim = Real.max (!ttt_tactic_time, !ttt_metis_time)
   in
     mini_stac tim g gl [] (decompose (ttt_lex stac))
@@ -312,7 +312,11 @@ fun pretty_proof_wrap p =
     end
   else p
 
-fun minimize_proof p = (pretty_proof_wrap o mini_proof_wrap) p
+fun minimize_proof p = 
+  (pretty_proof_wrap o mini_proof_wrap) p
+  handle _ => 
+    (debug "Error: prettification or minimization failed"; 
+     p)
 
 (*----------------------------------------------------------------------------
   Reconstructing the proof.
@@ -356,8 +360,13 @@ fun safe_reconstruct g proof =
   reconstruct_aux g proof (safestring_of_proof proof)
 
 fun reconstruct g proof =
+  (
   if !ttt_prettify_flag
   then (unsafe_reconstruct g proof handle _ => safe_reconstruct g proof)
   else safe_reconstruct g proof
-
+  )
+  handle _ => 
+    (debug ("Error: reconstruction failed" ^ string_of_proof proof);
+     string_of_proof proof)
+   
 end (* struct *)

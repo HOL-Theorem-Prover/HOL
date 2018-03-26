@@ -20,8 +20,8 @@ type feav_t = (lbl_t * fea_t)
    Global parameters
    -------------------------------------------------------------------------- *)
 
-val ttt_tactic_time = ref 0.0
-val ttt_search_time = ref (Time.fromReal 0.0)
+val ttt_tactic_time = ref 0.05
+val ttt_search_time = ref (Time.fromReal 15.0)
 
 (* --------------------------------------------------------------------------
    Directories
@@ -29,7 +29,7 @@ val ttt_search_time = ref (Time.fromReal 0.0)
 
 val tactictoe_dir   = HOLDIR ^ "/src/tactictoe"
 
-val ttt_tacfea_dir  = tactictoe_dir ^ "/fea_tactic"
+val ttt_tacfea_dir       = tactictoe_dir ^ "/fea_tactic"
 val ttt_thmfea_dir  = tactictoe_dir ^ "/fea_theorem"
 val ttt_glfea_dir   = tactictoe_dir ^ "/fea_goallist"
 
@@ -38,7 +38,10 @@ val ttt_open_dir    = tactictoe_dir ^ "/gen_open"
 
 val ttt_search_dir  = tactictoe_dir ^ "/log_search"
 val ttt_record_dir  = tactictoe_dir ^ "/log_record"
-val ttt_unfold_dir = tactictoe_dir ^ "/log_unfold"
+val ttt_buildheap_dir = tactictoe_dir ^ "/log_buildheap"
+val ttt_unfold_dir    = tactictoe_dir ^ "/log_unfold"
+val ttt_eproof_dir    = tactictoe_dir ^ "/proof_E"
+val ttt_proof_dir     = tactictoe_dir ^ "/proof_ttt"
 
 fun hide_out f x =
   hide_in_file (ttt_code_dir ^ "/" ^ current_theory () ^ "_hide_out") f x
@@ -78,6 +81,7 @@ fun dkeys d    = map fst (dlist d)
    -------------------------------------------------------------------------- *)
 
 fun incr x = x := (!x) + 1
+fun decr x = x := (!x) + 1
 
 (* --------------------------------------------------------------------------
    Reserved tokens
@@ -395,7 +399,10 @@ fun debug_search s =
   else ()
 
 fun debug_proof s =
-  append_endline (ttt_search_dir ^ "/proof/" ^ current_theory ()) s
+  append_endline (ttt_proof_dir ^ "/" ^ current_theory ()) s
+
+fun debug_eproof s =
+  append_endline (ttt_eproof_dir ^ "/" ^ current_theory ()) s
 
 (* record_dir *)
 fun debug_parse s =
