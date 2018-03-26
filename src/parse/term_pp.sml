@@ -14,6 +14,22 @@ fun LEN l = Int.toString (length l)
    Miscellaneous syntax stuff.
  ---------------------------------------------------------------------------*)
 
+fun ellist_size els =
+  let
+    fun recurse A els =
+      case els of
+          [] => A
+        | e::rest =>
+          case e of
+              PPBlock(more_els, (sty, ind)) => recurse A (more_els @ rest)
+            | HardSpace n => recurse (A + n) rest
+            | BreakSpace (n, m) => recurse 0 rest
+            | RE (TOK s) => recurse (A + UTF8.size s) rest
+            | _ => recurse 0 rest
+  in
+    recurse 0 els
+  end
+
 val dest_pair = sdest_binop (",", "pair") (PP_ERR "dest_pair" "");
 val is_pair = Lib.can dest_pair;
 
@@ -1116,9 +1132,10 @@ fun pp_term (G : grammar) TyG backend = let
                     | u::us => (print_update (decdepth depth) u >>
                                 print_ellist NONE (Top,Top,Top) (sep, []) >>
                                 recurse (decdepth depth) us)
+              val ldelim_size = ellist_size ldelim
             in
               print_ellist NONE (Top,Top,Top) (ldelim, []) >>
-              block INCONSISTENT 0 (recurse depth updates) >>
+              block INCONSISTENT ldelim_size (recurse depth updates) >>
               print_ellist NONE (Top,Top,Top) (rdelim, []) >>
               nothing
             end

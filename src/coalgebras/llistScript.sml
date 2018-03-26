@@ -168,7 +168,7 @@ val LTL_LCONS = store_thm(
 val _ = add_listform {separator = [TOK ";", BreakSpace(1,0)],
                       leftdelim = [TOK "[|"], rightdelim = [TOK "|]"],
                       cons = "LCONS", nilstr = "LNIL",
-                      block_info = (PP.INCONSISTENT, 0)};
+                      block_info = (PP.INCONSISTENT, 2)};
 val _ = TeX_notation {hol = "[|", TeX = ("\\HOLTokenLeftDenote{}", 1)}
 val _ = TeX_notation {hol = "|]", TeX = ("\\HOLTokenRightDenote{}", 1)}
 

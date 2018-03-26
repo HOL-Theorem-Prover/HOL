@@ -70,7 +70,7 @@ val BAG_INSERT = new_definition (
 val _ = add_listform {cons = "BAG_INSERT", nilstr = "EMPTY_BAG",
                       separator = [TOK ";", BreakSpace(1,0)],
                       leftdelim = [TOK "{|"], rightdelim = [TOK "|}"],
-                      block_info = (PP.INCONSISTENT, 0)};
+                      block_info = (PP.INCONSISTENT, 2)};
 val _ = TeX_notation { hol = "{|", TeX = ("\\HOLTokenBagLeft{}", 1) }
 val _ = TeX_notation { hol = "|}", TeX = ("\\HOLTokenBagRight{}", 1) }
 
