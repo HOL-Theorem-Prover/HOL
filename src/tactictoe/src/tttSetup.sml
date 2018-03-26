@@ -40,7 +40,7 @@ val ttt_ortho_flag = ref true
 val ttt_ortho_radius = ref 20
 
 (* Additional parameters *)
-val ttt_recgl_flag = ref false
+val ttt_recgl_flag = ref true
  
 (* ==========================================================================
    Evaluation
@@ -93,7 +93,7 @@ val eprover_eval_flag  = ref false
 val ttt_mcpol_coeff = ref 0.5
 val ttt_mcevnone_flag = ref false
 val ttt_mcevtriv_flag = ref true
-val ttt_mcev_radius = ref 0
+val ttt_mcev_radius = ref 10
 val ttt_mcevinit_flag = ref false
 val ttt_mcevfail_flag = ref true
 val ttt_mcev_coeff = ref 2.0 

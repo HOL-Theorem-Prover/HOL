@@ -265,7 +265,7 @@ fun end_record_proof name g =
         SOME astac => [(stac,t,g,gl),(astac,t,g,gl)]
       | NONE => [(stac,t,g,gl)]
     fun ortho (stac,t,g,gl) = 
-      [orthogonalize ((stac,t,g,gl),fea_of_goal g)]
+      [orthogonalize ((stac,t,g,gl), tttFeature.fea_of_goal g)]
     fun f lbl = if !ttt_ortho_flag then ortho lbl else noortho lbl
     val lbl2 = List.concat (map f lbl1)
   in
