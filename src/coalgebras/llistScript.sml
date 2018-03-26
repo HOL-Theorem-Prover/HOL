@@ -120,15 +120,16 @@ val llist_rep_LNIL = Q.store_thm ("llist_rep_LNIL",
   `llist_rep LNIL = \n. NONE`,
   SIMP_TAC std_ss [LNIL, lrep_ok_rules, llist_repabs']) ;
 
-val LTL_HD_def = Define `LTL_HD ll = case llist_rep ll 0 of NONE => NONE
+val LTL_HD_def = zDefine `LTL_HD ll = case llist_rep ll 0 of NONE => NONE
   | SOME h => SOME (llist_abs (llist_rep ll o SUC), h)` ;
 
-val LTL_HD_LNIL = Q.store_thm ("LTL_HD_LNIL", `LTL_HD LNIL = NONE`,
+val LTL_HD_LNIL = Q.store_thm ("LTL_HD_LNIL[compute,simp]",
+  `LTL_HD LNIL = NONE`,
   SIMP_TAC std_ss [LTL_HD_def, llist_rep_LNIL]) ;
 
 val lr_eta = Q.prove (`(\n. llist_rep t n) = llist_rep t`, irule ETA_AX) ;
 
-val LTL_HD_LCONS = Q.store_thm ("LTL_HD_LCONS",
+val LTL_HD_LCONS = Q.store_thm ("LTL_HD_LCONS[compute,simp]",
   `LTL_HD (LCONS h t) = SOME (t, h)`,
   SIMP_TAC std_ss [LTL_HD_def, llist_rep_LCONS, combinTheory.o_ABS_L,
     NOT_SUC, lr_eta, llist_absrep]) ;
@@ -165,18 +166,17 @@ val LTL_LCONS = store_thm(
 (* Syntax for lazy lists, similar to lists                                   *)
 (*---------------------------------------------------------------------------*)
 
+val _ = add_rule {term_name = "LCONS", fixity = Infixr 490,
+                  pp_elements = [TOK ":::", BreakSpace(0,2)],
+                  paren_style = OnlyIfNecessary,
+                  block_style = (AroundSameName, (PP.INCONSISTENT, 2))};
+
 val _ = add_listform {separator = [TOK ";", BreakSpace(1,0)],
                       leftdelim = [TOK "[|"], rightdelim = [TOK "|]"],
                       cons = "LCONS", nilstr = "LNIL",
                       block_info = (PP.INCONSISTENT, 2)};
 val _ = TeX_notation {hol = "[|", TeX = ("\\HOLTokenLeftDenote{}", 1)}
 val _ = TeX_notation {hol = "|]", TeX = ("\\HOLTokenRightDenote{}", 1)}
-
-val _ = add_rule {term_name = "LCONS", fixity = Infixr 490,
-                  pp_elements = [TOK ":::", BreakSpace(0,2)],
-                  paren_style = OnlyIfNecessary,
-                  block_style = (AroundSameName, (PP.INCONSISTENT, 2))};
-
 
 val LHDTL_CONS_THM = store_thm(
   "LHDTL_CONS_THM",
