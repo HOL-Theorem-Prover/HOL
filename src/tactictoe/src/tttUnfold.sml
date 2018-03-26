@@ -898,6 +898,9 @@ val infix_decl = tactictoe_dir ^ "/src/infix_file.sml"
 
 fun string_of_bool flag = if flag then "true" else "false"
 
+fun output_flag oc s x =
+  osn oc ("val _ = " ^ s ^ " := " ^ string_of_bool (!x));
+
 fun output_header oc cthy =
   (
   app (osn oc)
@@ -911,10 +914,14 @@ fun output_header oc cthy =
     then osn oc ("val _ = tttSetup.eprover_eval_flag := true")
     else ()
   ;
-  osn oc ("val _ = tttSetup.ttt_eval_flag := " ^ string_of_bool (!ttt_eval_flag));
-  osn oc ("val _ = tttSetup.ttt_ortho_flag := " ^ string_of_bool (!ttt_ortho_flag));
-  osn oc ("val _ = tttTools.ttt_search_time := " ^ Real.toString (Time.toReal (!ttt_search_time)));
-  osn oc ("val _ = tttTools.ttt_tactic_time := " ^ Real.toString (!ttt_tactic_time));
+  (* init references *)
+  output_flag oc "tttSetup.ttt_eval_flag" ttt_eval_flag;
+  output_flag oc "tttSetup.ttt_ortho_flag" ttt_ortho_flag;
+  osn oc ("val _ = tttTools.ttt_search_time := " ^ 
+    Real.toString (Time.toReal (!ttt_search_time)));
+  osn oc ("val _ = tttTools.ttt_tactic_time := " ^ 
+    Real.toString (!ttt_tactic_time));
+  (* *)
   osn oc ("val _ = tttRecord.start_record_thy " ^ mlquote cthy)
   )
 
