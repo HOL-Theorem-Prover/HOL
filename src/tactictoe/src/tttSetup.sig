@@ -54,7 +54,6 @@ sig
   val ttt_selflearn_flag : bool ref
   (* initialization *)
   val init_metis      : string -> unit
-  val init_evaluation : string -> unit
   
 
 end

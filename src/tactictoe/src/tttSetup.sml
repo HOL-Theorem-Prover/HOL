@@ -124,7 +124,7 @@ val ttt_selflearn_flag = ref false
 
 val metistools_thyl = ["sat", "marker", "combin", "min", "bool", "normalForms"];
 
-fun init_metis cthy =
+fun init_metis_aux cthy =
   (
   ttt_metisexec_flag := 
   (not (mem cthy metistools_thyl) andalso can load "metisTools");
@@ -132,10 +132,7 @@ fun init_metis cthy =
   ttt_metis_flag := !ttt_metisexec_flag
   )
 
-fun init_evaluation cthy =
-  (
-  ttt_search_time := Time.fromReal 60.0;
-  init_metis cthy
-  )
+fun init_metis cthy = hide_out init_metis_aux cthy
+
 
 end (* struct *)

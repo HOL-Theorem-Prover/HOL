@@ -68,6 +68,7 @@ fun init_tactictoe () =
   let
     val _ = mkDir_err ttt_code_dir
     val cthy = current_theory ()
+    val _ = init_metis cthy
     val thyl = exists_theorydata ()
   in
     if !imported_theories <> thyl then
@@ -228,7 +229,6 @@ fun status r = case r of
 
 fun tactictoe_aux goal = 
   (
-  hide_out init_metis (current_theory ());
   init_tactictoe ();
   status (hide_out main_tactictoe goal)
   )
@@ -357,7 +357,6 @@ fun eval_tactictoe goal =
   (
   mkDir_err ttt_proof_dir;
   report_data ();
-  init_evaluation (current_theory ());
   init_tactictoe ();
   debug_eval_status (hide_out main_tactictoe goal)
   )
