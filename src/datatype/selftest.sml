@@ -306,6 +306,21 @@ val _ = List.app pptest
             "pfld1_fupd f")
          ]
 
+val _ = with_flag (Globals.linewidth, 40) pptest
+                  ("multiline record 1",
+                   ``<|fld1 := a very long expression indeed ;
+                       fld2 := also a long expression|>``,
+                  "<|fld1 := a very long expression indeed;\n\
+                  \  fld2 := also a long expression|>")
+
+val _ = with_flag (Globals.linewidth, 40) pptest
+                  ("multiline record 2",
+                   ``<|fld3 := a very long expression indeed ;
+                       fld4 := also a long expression|>``,
+                  "<|fld3 := a very long expression indeed;\n\
+                  \  fld4 := also a long expression|>")
+
+
 val _ = Feedback.emit_MESG := false
 
 (* a test for Hol_defn that requires a datatype: *)

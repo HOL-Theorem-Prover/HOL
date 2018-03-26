@@ -41,7 +41,7 @@ val running_async = ref (dempty Int.compare)
 
 (* Start and end of search *)
 fun init_async () =
-  if !ttt_hhhammer_flag
+  if !ttt_eprover_flag
   then
     (
     hammer_ref := 0;
@@ -57,7 +57,7 @@ fun terminate_thread pid thread =
       Thread.Thread.interrupt thread)
 
 fun terminate_async_pid pid =
-  if !ttt_hhhammer_flag then
+  if !ttt_eprover_flag then
     (
     Array.update (async_result,pid,HVoid);
     install_async := drem pid (!install_async);
@@ -69,12 +69,12 @@ fun terminate_async_pid pid =
   else ()
 
 fun terminate_async () =
-  if !ttt_hhhammer_flag
+  if !ttt_eprover_flag
   then app terminate_async_pid (dkeys (!running_async))
   else ()
 
 fun queue_async pid g =
-  if !ttt_hhhammer_flag then
+  if !ttt_eprover_flag then
     (
     terminate_async_pid pid;
     debug_search ("install thread " ^ int_to_string pid);
@@ -165,11 +165,14 @@ fun reset_timers () =
    Special tactics
    -------------------------------------------------------------------------- *)
 
-fun add_hammer pred =
-  if !ttt_hhhammer_flag then "tactictoe_hammer" :: pred else pred
+val metis_spec = "tactictoe_metis"
+val eprover_spec = "tactictoe_eprover"
+
+fun add_eprover pred =
+  if !ttt_eprover_flag then eprover_spec :: pred else pred
 
 fun add_metis pred =
-  if !ttt_metishammer_flag then "tactictoe_metis" :: pred else pred
+  if !ttt_metis_flag then metis_spec :: pred else pred
 
 (* --------------------------------------------------------------------------
    MCTS: Priors
@@ -184,8 +187,8 @@ fun init_eval pripol pid =
     val prec = dfind pid (!proofdict)
     val {visit,pending,goalarr,prioreval,cureval,priorpolicy,...} = prec
     val eval =
-      if !ttt_mcnoeval_flag then 0.0
-      else if !ttt_mctriveval_flag then 1.0
+      if !ttt_mcevnone_flag then 0.0
+      else if !ttt_mcevtriv_flag then 1.0
       else (!glpredictor_glob) (array_to_list (#goalarr prec))
   in
     priorpolicy := pripol;
@@ -230,7 +233,7 @@ fun backup_fail cid =
   in
     if parid = NONE
     then ()
-    else backup_loop (!ttt_evalfail_flag) 0.0 (valOf parid)
+    else backup_loop (!ttt_mcevfail_flag) 0.0 (valOf parid)
   end
 
 fun backup_success cid =
@@ -299,7 +302,7 @@ fun root_create goal pred =
   end
 
 fun root_create_wrap g =
-  root_create g ((add_hammer o add_metis o !tacpredictor_glob) g)
+  root_create g ((add_eprover o add_metis o !tacpredictor_glob) g)
 
 fun node_create pripol tactime parid parstac pargn parg goallist
     predlist pending pardict =
@@ -407,7 +410,7 @@ fun inst_read stac g =
       val _ = debug_search ("instantiating: " ^ stac)
       val sl =
         if !ttt_thmlarg_flag
-        then pred_sthml (!ttt_thmlarg_number) g
+        then pred_sthml (!ttt_thmlarg_radius) g
         else []
       val thmls = String.concatWith " , " (map dbfetch_of_string sl)
       val newstac = inst_stac thmls g stac
@@ -420,11 +423,11 @@ fun inst_read stac g =
       (newstac,newtac,!ttt_tactic_time)
     end
     )
-  else if stac = "tactictoe_metis" then
+  else if stac = metis_spec then
     (
     dfind (stac,g) (!inst_dict) handle NotFound =>
     let
-      val sl = pred_sthml (!ttt_metis_npred) g
+      val sl = pred_sthml (!ttt_metis_radius) g
       val newstac = mk_metis_call sl
       val newtac = timed_tactic_of_sml newstac
     in
@@ -464,7 +467,7 @@ fun apply_stac pid pardict trydict stac g =
         (* instantiations of terms *)
           let
             val etac =
-              try_nqtm pid (!ttt_termarg_number) (newstac,newtac) (otm,qtac)
+              try_nqtm pid (!ttt_termarg_radius) (newstac,newtac) (otm,qtac)
             val glo =  app_qtac tim etac g
           in
             glo
@@ -490,7 +493,7 @@ fun apply_next_stac pid =
     val stac = hd pred
       handle _ => debug_err "apply_next_stac: empty pred"
   in
-    if stac = "tactictoe_hammer"
+    if stac = eprover_spec
       then (queue_async pid g; NONE)
       else infstep_timer (apply_stac pid pardict trydict stac) g
   end
@@ -518,9 +521,9 @@ fun mc_node_find pid =
     (* try new tactic on the node itself *)
     val n = length (!children)
     val self_pripol =
-      Math.pow (1.0 - !ttt_policy_coeff, Real.fromInt n) * !ttt_policy_coeff
+      Math.pow (1.0 - !ttt_mcpol_coeff, Real.fromInt n) * !ttt_mcpol_coeff
     val self_curpol = 1.0 / pdenom
-    val self_selsc = (pid, (!ttt_mc_coeff) * (self_pripol / self_curpol))
+    val self_selsc = (pid, (!ttt_mcev_coeff) * (self_pripol / self_curpol))
     (* or explore deeper existing paritial proofs *)
     fun f cid =
       let
@@ -530,7 +533,7 @@ fun mc_node_find pid =
         val visit = !(#visit crec)
         val curpol = (visit + 1.0) / pdenom
       in
-        (cid, meaneval + (!ttt_mc_coeff) * (pripol / curpol))
+        (cid, meaneval + (!ttt_mcev_coeff) * (pripol / curpol))
       end
     (* sort and select node with best selection score *)
     val l0 = self_selsc :: List.map f (!children)
@@ -590,7 +593,7 @@ fun close_proof cid pid =
     trydict := dempty (list_compare goal_compare);
     pending := tl (!pending);
     (* optional reinitialization of the evaluation function *)
-    if !ttt_evalinit_flag then init_eval (!priorpolicy) pid else ();
+    if !ttt_mcevinit_flag then init_eval (!priorpolicy) pid else ();
     (* check if the goal was solved and recursively close *)
     if null (!pending)
     then
@@ -614,7 +617,7 @@ fun node_create_gl pripol tactime gl pid =
     val parchildren = #children prec
     val parchildrensave = Array.sub (#childrena prec,gn)
     val depth = #depth prec + 1
-    val predlist = map (add_hammer o add_metis o !tacpredictor_glob) gl
+    val predlist = map (add_eprover o add_metis o !tacpredictor_glob) gl
     val pending = rev (map fst (number_list 0 predlist))
     (* Updating list of parents *)
     val new_pardict = dadd goal () (#pardict prec)
@@ -695,7 +698,7 @@ fun fork_hammer () =
   end
 
 fun open_async () =
-  if dlength (!running_async) < !ttt_async_limit
+  if dlength (!running_async) < !ttt_eprover_async
   then
     let
       val n = dlength (!running_async)
@@ -786,8 +789,8 @@ fun node_find () =
     val l0 = filter (fn x => is_active (fst x)) (dlist (!proofdict))
     (* also deactivate node with empty predictions *)
     val l1 = filter (fn x => not (has_empty_pred (fst x))) l0
-    val _ = if !ttt_hhhammer_flag then (close_async (); open_async ()) else ()
-    val l2 = if !ttt_hhhammer_flag
+    val _ = if !ttt_eprover_flag then (close_async (); open_async ()) else ()
+    val l2 = if !ttt_eprover_flag
              then filter (fn x => is_active (fst x)) l1
              else l1
     val _ = if null l2 then (debug_search "nonexttac"; raise NoNextTac) else ()

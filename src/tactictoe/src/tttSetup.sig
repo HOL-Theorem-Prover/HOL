@@ -1,65 +1,60 @@
 signature tttSetup =
 sig
 
-  (* recording *)
-  val ttt_record_flag    : bool ref
-  val ttt_reclet_flag    : bool ref
-  val ttt_recprove_flag  : bool ref
-
-  (* learning *)
+  (** Recording **)
+  val ttt_reclet_flag   : bool ref
+  val ttt_recprove_flag : bool ref
+  val ttt_rectac_time   : real ref
+  val ttt_recproof_time : real ref 
+  (* orthogonalization *)
   val ttt_ortho_flag   : bool ref
-  val ttt_ortho_number : int ref
-  val ttt_selflearn_flag : bool ref
-
-  (* evaluation *)
-  val ttt_eval_flag : bool ref
-  val one_in_n      : unit -> bool
-  val ttt_evlet_flag : bool ref (* val ttt_evletonly_flag : bool ref *)
-  val ttt_evprove_flag : bool ref
-  val hh_only_flag  : bool ref
-  val test_eval_hook : (string -> bool) ref
-
+  val ttt_ortho_radius : int ref
+  (* abstraction *)
+  val ttt_thmlarg_flag   : bool ref
+  val ttt_thmlarg_radius : int ref
+  val ttt_recgl_flag     : bool ref
+  
+  (** Evaluation **)
+  val ttt_eval_flag     : bool ref
+  (* evaluated theorems *)
+  val one_in_option     : (int * int) option ref
+  val one_in_n          : unit -> bool
+  val ttt_evlet_flag    : bool ref
+  val ttt_evprove_flag  : bool ref
+  val evaluation_filter : (string -> bool) ref
   (* preselection *)
-  val ttt_maxselect_pred : int ref
-
-  (* search *)
-  val ttt_policy_coeff   : real ref
-  val ttt_mcrecord_flag  : bool ref
-  val ttt_mcnoeval_flag  : bool ref
-  val ttt_mctriveval_flag : bool ref
-  val ttt_mc_radius      : int ref
-  val ttt_mc_coeff       : real ref
-  val ttt_mcpresim_int   : int ref
-  val ttt_evalinit_flag  : bool ref
-  val ttt_evalfail_flag  : bool ref
-
-  (* metis + holyhammer + synthetizing *)
-  val ttt_metisexec_flag : bool ref
-  val ttt_metishammer_flag : bool ref
-  val ttt_metisrecord_flag : bool ref
+  val ttt_presel_radius : int ref
   val ttt_namespacethm_flag : bool ref
-
-  val ttt_metis_time  : real ref
-  val ttt_metis_npred : int ref
-
-  (* holyhammer *)
-  val ttt_hhhammer_flag : bool ref
-  val ttt_hhhammer_time : int ref
-  val ttt_async_limit : int ref
-
-  (* synthetizing *)
-  val ttt_thmlarg_flag : bool ref
-  val ttt_thmlarg_number : int ref
-  val ttt_termarg_flag : bool ref
-  val ttt_termarg_number : int ref
-  val ttt_termpresim_int : int ref
-
-  (* minimization *)
+  (* search *)
+  val ttt_mcpol_coeff   : real ref
+  val ttt_mcevnone_flag : bool ref
+  val ttt_mcevtriv_flag : bool ref
+  val ttt_mcev_radius   : int ref
+  val ttt_mcev_coeff    : real ref
+  val ttt_mcev_pint     : int ref
+  val ttt_mcevinit_flag : bool ref
+  val ttt_mcevfail_flag : bool ref
+  (* metis *)
+  val ttt_metis_flag   : bool ref
+  val ttt_metis_time   : real ref
+  val ttt_metis_radius : int ref
+  (* proof presentation *)
   val ttt_prettify_flag : bool ref
   val ttt_minimize_flag : bool ref
-
-  (* init record and eval *)
-  val set_record : string -> unit
-  val set_record_hook : (unit -> unit) ref
+  (* eprover *)
+  val ttt_eprover_flag     : bool ref
+  val ttt_eprover_time     : int ref
+  val ttt_eprover_radius   : int ref 
+  val ttt_eprover_async    : int ref
+  val eprover_eval_flag : bool ref
+  (* term predictions *)
+  val ttt_termarg_flag : bool ref
+  val ttt_termarg_radius : int ref
+  val ttt_termarg_pint : int ref
+  val ttt_selflearn_flag : bool ref
+  (* initialization *)
+  val init_metis      : string -> unit
+  val init_evaluation : string -> unit
+  
 
 end

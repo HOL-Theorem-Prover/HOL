@@ -314,7 +314,7 @@ fun read_feavdatal thy =
       end
   end
 
-fun read_feavdatal_no_min thy =
+fun read_tacfea_thy thy =
   if mem thy ["min","bool"] then [] else read_feavdatal thy
 
 fun update_tacdep (lbl,_) =
@@ -338,7 +338,7 @@ fun init_tacdata feavl =
   )
 
 fun import_tacdata thyl =
-  let val feavl = List.concat (map read_feavdatal_no_min thyl) in
+  let val feavl = List.concat (map read_tacfea_thy thyl) in
     init_tacdata feavl
   end
 
@@ -357,12 +357,10 @@ fun update_tacdata_aux (lbl,fea) =
     ttt_taccov := count_dict (!ttt_taccov) [(#1 lbl)]
     )
 
-fun update_tacdata (lbl0 as (stac0,t0,g0,gl0)) =
-  if mem g0 gl0 then () else
+fun update_tacdata (lbl as (stac,t,g,gl)) =
+  if mem g gl then () else
     let
-      val fea = total_time feature_time tttFeature.fea_of_goal g0
-      val (lbl as (stac,t,g,gl)) =
-        debug_t "orthogonalize" orthogonalize (lbl0,fea)
+      val fea = total_time feature_time tttFeature.fea_of_goal g
       val feav = (lbl,fea)
     in
       update_tacdata_aux feav
