@@ -370,10 +370,13 @@ fun start_record_thy thy =
 fun end_record_thy thy =
   (
   if !ttt_eval_flag orelse !eprover_eval_flag 
-  then ()
+  then debug "EvalSuccessful"
   else 
-  ( debug_t "export_tacdata" export_tacdata thy;
-    debug_t "export_thmfea" export_thmfea thy)  
+    (
+    debug_t "export_tacdata" export_tacdata thy;
+    debug_t "export_thmfea" export_thmfea thy;
+    debug "RecordSuccessful"
+    )  
   )
 
 end (* struct *)
