@@ -110,7 +110,6 @@ val thmpredictor_glob = ref (fn _ => (fn _ => []))
 val tacpredictor_glob = ref (fn _ => [])
 val glpredictor_glob = ref (fn _ => 0.0)
 val hammer_glob = ref (fn _ => (fn _ => NONE))
-val tacdict_glob = ref (dempty String.compare)
 
 (* --------------------------------------------------------------------------
    Caching tactic applications on goals
@@ -394,12 +393,20 @@ fun try_nqtm pid n (stac,tac) (otm,qtac) g =
 
 val thml_dict = ref (dempty (cpl_compare goal_compare Int.compare))
 val inst_dict = ref (dempty (cpl_compare String.compare goal_compare))
+val tac_dict = ref (dempty String.compare)
 
 fun pred_sthml n g =
-  dfind (g,n) (!thml_dict) handle _ =>
+  dfind (g,n) (!thml_dict) handle NotFound =>
     let val sl = !thmpredictor_glob n g in
       thml_dict := dadd (g,n) sl (!thml_dict);
       sl
+    end
+
+fun find_stac stac = 
+  dfind stac (!tac_dict) handle NotFound => 
+    let val tac = tactic_of_sml stac in
+      tac_dict := dadd stac tac (!tac_dict);
+      tac
     end
 
 fun inst_read stac g =
@@ -414,7 +421,7 @@ fun inst_read stac g =
         else []
       val thmls = String.concatWith " , " (map dbfetch_of_string sl)
       val newstac = inst_stac thmls g stac
-      val newtac = timed_tactic_of_sml newstac
+      val newtac = tactic_of_sml newstac
         handle _ =>
         (debug ("Warning: inst_read: " ^ newstac); raise ERR "inst_read" "")
     in
@@ -429,15 +436,14 @@ fun inst_read stac g =
     let
       val sl = pred_sthml (!ttt_metis_radius) g
       val newstac = mk_metis_call sl
-      val newtac = timed_tactic_of_sml newstac
+      val newtac = tactic_of_sml newstac
     in
       inst_dict := dadd (stac,g) (newstac,newtac,!ttt_metis_time) (!inst_dict);
       debug_search ("to: " ^ newstac);
       (newstac,newtac,!ttt_metis_time)
     end
     )
-  else (stac, dfind stac (!tacdict_glob), !ttt_tactic_time)
-
+  else (stac, find_stac stac, !ttt_tactic_time)
 
 fun glob_productive pardict trydict g glo =
   case glo of
@@ -741,7 +747,7 @@ fun close_async () =
    Search function. Modifies the proof state.
    -------------------------------------------------------------------------- *)
 
-fun init_search thmpred tacpred glpred hammer tacdict g =
+fun init_search thmpred tacpred glpred hammer g =
   (
   (* async *)
   init_async ();
@@ -751,6 +757,7 @@ fun init_search thmpred tacpred glpred hammer tacdict g =
   stacgoal_cache := dempty (cpl_compare String.compare goal_compare);
   thml_dict := dempty (cpl_compare goal_compare Int.compare);
   inst_dict := dempty (cpl_compare String.compare goal_compare);
+  tac_dict := dempty String.compare;
   (* proof states *)
   pid_counter := 0;
   notactivedict := dempty Int.compare;
@@ -760,7 +767,6 @@ fun init_search thmpred tacpred glpred hammer tacdict g =
   thmpredictor_glob := thmtimer thmpred;
   glpredictor_glob  := gltimer glpred;
   hammer_glob := hammer;
-  tacdict_glob := tacdict;
   (* statistics *)
   reset_timers ();
   stac_counter := 0;
@@ -874,8 +880,9 @@ fun end_search () =
   debug_proof ("  tacpred  : " ^ Real.toString (!tactime));
   debug_proof ("  thmpred  : " ^ Real.toString (!thmtime));
   debug_proof ("  glpred   : " ^ Real.toString (!gltime));
-  proofdict    := dempty Int.compare;
-  tacdict_glob := dempty String.compare;
+  proofdict      := dempty Int.compare;
+  tac_dict       := dempty String.compare;
+  inst_dict      := dempty (cpl_compare String.compare goal_compare);
   stacgoal_cache := dempty (cpl_compare String.compare goal_compare)
   )
 
@@ -912,9 +919,9 @@ fun selflearn proof =
    Main
    -------------------------------------------------------------------------- *)
 
-fun search thmpred tacpred glpred hammer tacdict goal =
+fun search thmpred tacpred glpred hammer goal =
   (
-  init_search thmpred tacpred glpred hammer tacdict goal;
+  init_search thmpred tacpred glpred hammer goal;
   total_timer (node_create_timer root_create_wrap) goal;
   let
     val r = total_timer search_loop ()

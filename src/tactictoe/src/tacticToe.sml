@@ -81,25 +81,6 @@ fun init_tactictoe () =
   end
 
 (* --------------------------------------------------------------------------
-   Parse non-abstracted tactic strings into tactic
-   todo: remove the need for mk_tacdict
-   -------------------------------------------------------------------------- *)
-
-fun mk_tacdict stacl =
-  let
-    val (_,goodl) =
-      partition (fn x => mem x (!ttt_tacerr) orelse is_absarg_stac x) stacl
-    fun read_stac x = (x, tactic_of_sml x)
-      handle _ => (debug ("Warning: bad tactic: " ^ x ^ "\n");
-                   ttt_tacerr := x :: (!ttt_tacerr);
-                   raise ERR "" "")
-    val l = combine (goodl, tacticl_of_sml goodl)
-            handle _ => mapfilter read_stac goodl 
-  in
-    dnew String.compare l
-  end
-
-(* --------------------------------------------------------------------------
    Preselection of theorems
    -------------------------------------------------------------------------- *)
 
@@ -135,14 +116,10 @@ fun select_tacfea goalf =
       (stacknn stacsymweight (!ttt_presel_radius) tacfea) goalf
     val l1 = debug_t "add_stacdesc"
       add_stacdesc (!ttt_tacdep) (!ttt_presel_radius) l0
-    val tacdict = debug_t "mk_tacdict"
-      mk_tacdict (mk_fast_set String.compare (map #1 l1))
-    fun filter_f (stac,_,_,_) = is_absarg_stac stac orelse dmem stac tacdict
-    val l2 = filter filter_f l1
     fun f x = (x, dfind x (!ttt_tacfea))
-    val l3 = map f l2
+    val l2 = map f l1
   in
-    (stacsymweight, l3, tacdict)
+    (stacsymweight, l2)
   end
 
 (* --------------------------------------------------------------------------
@@ -169,7 +146,7 @@ fun main_tactictoe goal =
   let
     (* preselection *)
     val goalf = fea_of_goal goal
-    val (stacsymweight, tacfea, tacdict) =
+    val (stacsymweight, tacfea) =
       debug_t "select_tacfea" select_tacfea goalf
     val ((pthmsymweight,pthmfeav,pthmrevdict), thmfeav) =
       debug_t "select_thmfea" select_thmfea goalf
@@ -206,7 +183,7 @@ fun main_tactictoe goal =
       (!hh_stac_glob) pid (pthmsymweight,pthmfeav,pthmrevdict)
          (!ttt_eprover_time) goal
   in
-    debug_t "search" (search thmpred tacpred glpred hammer tacdict) goal
+    debug_t "search" (search thmpred tacpred glpred hammer) goal
   end
 
 (* --------------------------------------------------------------------------
@@ -239,7 +216,7 @@ fun tactictoe term = tactictoe_aux ([],term)
 
 (* --------------------------------------------------------------------------
    Prediction of the next tactic only
-   -------------------------------------------------------------------------- *)
+   Todo: rewrite this section -------------------------------------------------------------------------- 
 
 val next_tac_glob = ref []
 val next_tac_number = ref 5
@@ -293,7 +270,7 @@ fun next_tac goal =
     val _ = next_tac_glob := []
     (* preselection *)
     val goalf = fea_of_goal goal
-    val (stacsymweight,tacfea,tacdict) = hide_out select_tacfea goalf
+    val (stacsymweight,tacfea) = hide_out select_tacfea goalf
     (* predicting *)
     fun stac_predictor g =
       stacknn stacsymweight (!ttt_presel_radius) tacfea (fea_of_goal g)
@@ -304,6 +281,8 @@ fun next_tac goal =
   in
     try_tac tacdict memdict (!next_tac_number) goal stacl
   end
+*)
+
 
 (* --------------------------------------------------------------------------
    Evaluate Eprover

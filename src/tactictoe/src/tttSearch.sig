@@ -17,7 +17,6 @@ sig
     (goal -> string list) ->
     (goal list -> real) ->
     (int -> goal -> string option) ->
-    (string, tactic) Redblackmap.dict ->
     goal -> proof_status_t
 
 end
