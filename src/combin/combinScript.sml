@@ -389,7 +389,7 @@ val _ = adjoin_to_theory
           I 1 (S "[" ::
                L S [S ",", PP.add_break(0,0)] [
                  "K_THM", "S_DEF", "I_THM", "C_DEF", "W_DEF", "o_THM",
-                 "APP_DEF", "APPLY_UPDATE_THM];"
+                 "K_o_THM", "APP_DEF", "APPLY_UPDATE_THM];"
               ])
         ], SPC 0,
         B 2 (L S [SPC 1] ["set_skip", "the_compset", "K_tm", "(SOME 1)"]),
