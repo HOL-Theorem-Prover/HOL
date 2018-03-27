@@ -169,11 +169,11 @@ val dflt_pinfo = term_pp_utils.dflt_pinfo
 fun pp_type ty =
   let
     open smpp
+    val _ = update_type_fns()
     val mptr = smpp.add_string ":" >> !type_printer (!current_backend) ty
   in
-   update_type_fns();
-   lower mptr dflt_pinfo |> valOf |> #1
- end
+    lower mptr dflt_pinfo |> valOf |> #1
+  end
 
 val type_to_string = rawterm_pp (ppstring pp_type)
 val print_type = print o type_to_string
