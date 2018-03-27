@@ -636,16 +636,16 @@ fun modified_program inh p = case p of
     else a :: modified_program inh m
     )
   | Pattern (s,head,sep,body) :: m =>
-    let 
+    let
       val _ = if !in_pattern_level <= 0 then is_thm_flag := false else ()
       val _ = incr in_pattern_level
       val head' = modified_program true head
       val body' = modified_program (s <> "val") body
-      val semicolon = 
-        if mem s ["val"] andalso 
+      val semicolon =
+        if mem s ["val"] andalso
            !in_pattern_level <= 1 andalso
            !is_thm_flag = true
-        then [";"] 
+        then [";"]
         else []
       val _ = decr in_pattern_level
     in
@@ -896,6 +896,11 @@ fun print_sl oc sl = case sl of
 
 val infix_decl = tactictoe_dir ^ "/src/infix_file.sml"
 
+fun string_of_bool flag = if flag then "true" else "false"
+
+fun output_flag oc s x =
+  osn oc ("val _ = " ^ s ^ " := " ^ string_of_bool (!x));
+
 fun output_header oc cthy =
   (
   app (osn oc)
@@ -905,14 +910,18 @@ fun output_header oc cthy =
   "(* ========================================================================== *)"
   ];
   app (os oc) (bare_readl infix_decl);
-  if !eprover_eval_flag 
+  if !eprover_eval_flag
     then osn oc ("val _ = tttSetup.eprover_eval_flag := true")
     else ()
   ;
-  if !ttt_eval_flag 
-    then osn oc ("val _ = tttSetup.ttt_eval_flag := true")
-    else ()
-  ;
+  (* init references *)
+  output_flag oc "tttSetup.ttt_eval_flag" ttt_eval_flag;
+  output_flag oc "tttSetup.ttt_ortho_flag" ttt_ortho_flag;
+  osn oc ("val _ = tttTools.ttt_search_time := Time.fromReal " ^
+    Real.toString (Time.toReal (!ttt_search_time)));
+  osn oc ("val _ = tttTools.ttt_tactic_time := " ^
+    Real.toString (!ttt_tactic_time));
+  (* *)
   osn oc ("val _ = tttRecord.start_record_thy " ^ mlquote cthy)
   )
 
@@ -983,15 +992,15 @@ fun unfold_wrap p = unfold 0 [dnew String.compare (map protect basis)] p
 fun tttsml_of file = OS.Path.base file ^ "_ttt.sml"
 
 fun print_program cthy fileorg sl =
-  let 
+  let
     val _ = debug_unfold ("print_program: " ^ fileorg)
     val fileout = tttsml_of fileorg
     val save_dir = tactictoe_dir ^ "/log_scripts"
     val oc = TextIO.openOut fileout
-    fun script_save () = 
-      let 
+    fun script_save () =
+      let
         val _ = mkDir_err save_dir
-        val cmd = "cp " ^ fileout ^ " " ^ 
+        val cmd = "cp " ^ fileout ^ " " ^
           (save_dir ^ "/" ^ cthy ^ "_debugScript.sml")
       in
         cmd_in_dir tactictoe_dir cmd
@@ -1034,15 +1043,15 @@ fun ttt_rewrite_thy thy =
     val _ = clean_dir thy ttt_unfold_dir
     val scriptorg = find_script thy
     val dirorg = OS.Path.dir scriptorg
-    val _ = print_endline ("TacticToe: ttt_rewrite_thy: " ^ thy ^ 
+    val _ = print_endline ("TacticToe: ttt_rewrite_thy: " ^ thy ^
       "\n  " ^ scriptorg)
   in
     dirorg_glob := dirorg;
     rewrite_script thy scriptorg
   end
- 
-fun exists_thy thy = exists_file (ttt_tacfea_dir ^ "/" ^ thy)  
-  
+
+fun exists_thy thy = exists_file (ttt_tacfea_dir ^ "/" ^ thy)
+
 fun ttt_rewrite () =
   let
     val thyl0 = ancestry (current_theory ())
@@ -1087,7 +1096,7 @@ fun ttt_record_thy thy =
   let val scriptorg = find_script thy in
     let
       val _ = save_scripts scriptorg
-      val _ = print_endline ("TacticToe: ttt_record_thy: " ^ thy ^ 
+      val _ = print_endline ("TacticToe: ttt_record_thy: " ^ thy ^
         "\n  " ^ scriptorg)
     in
       run_rm_script (mem thy core_theories) (tttsml_of scriptorg);
@@ -1107,19 +1116,19 @@ fun split_n_aux i n nl =
   else []
 
 fun split_n n l =
-  let 
-    val ll = split_n_aux (n-1) n (number_list 0 l) 
+  let
+    val ll = split_n_aux (n-1) n (number_list 0 l)
   in
     rev (map (map snd) ll)
   end
- 
+
 fun ttt_record_parallel n =
-  let 
-    val thyl = ttt_rewrite () 
+  let
+    val thyl = ttt_rewrite ()
     val thyll = split_n n thyl
-    fun rec_fork thyl = Thread.Thread.fork (fn () => ttt_record_thyl thyl, []) 
+    fun rec_fork thyl = Thread.Thread.fork (fn () => ttt_record_thyl thyl, [])
     val threadl = map rec_fork thyll
-    fun loop () = 
+    fun loop () =
       (
       OS.Process.sleep (Time.fromReal 1.0);
       if exists Thread.Thread.isActive threadl
@@ -1169,19 +1178,19 @@ fun ttt_clean_all () =
 
 fun ttt_eval_thy thy =
   (
-  ttt_eval_flag := true; 
-  ttt_rewrite_thy thy; 
-  ttt_record_thy thy; 
+  ttt_eval_flag := true;
+  ttt_rewrite_thy thy;
+  ttt_record_thy thy;
   ttt_eval_flag := false
   )
 
 fun ttt_eval_parallel n thyl =
-  let 
+  let
     val thyll = split_n n thyl
-    fun rec_fork thyl = 
-      Thread.Thread.fork (fn () => app ttt_eval_thy thyl, []) 
+    fun rec_fork thyl =
+      Thread.Thread.fork (fn () => app ttt_eval_thy thyl, [])
     val threadl = map rec_fork thyll
-    fun loop () = 
+    fun loop () =
       (
       OS.Process.sleep (Time.fromReal 1.0);
       if exists Thread.Thread.isActive threadl
@@ -1194,19 +1203,19 @@ fun ttt_eval_parallel n thyl =
 
 fun eprover_eval_thy thy =
   (
-  eprover_eval_flag := true; 
-  ttt_rewrite_thy thy; 
-  ttt_record_thy thy; 
+  eprover_eval_flag := true;
+  ttt_rewrite_thy thy;
+  ttt_record_thy thy;
   ttt_eprover_flag := false
   )
 
 fun eprover_eval_parallel n thyl =
-  let 
+  let
     val thyll = split_n n thyl
-    fun rec_fork thyl = 
-      Thread.Thread.fork (fn () => app eprover_eval_thy thyl, []) 
+    fun rec_fork thyl =
+      Thread.Thread.fork (fn () => app eprover_eval_thy thyl, [])
     val threadl = map rec_fork thyll
-    fun loop () = 
+    fun loop () =
       (
       OS.Process.sleep (Time.fromReal 1.0);
       if exists Thread.Thread.isActive threadl

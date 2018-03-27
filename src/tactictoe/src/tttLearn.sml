@@ -206,44 +206,41 @@ fun test_stac g gl (stac, istac) =
   handle _ => NONE
 
 fun orthogonalize (lbl as (ostac,t,g,gl),fea) =
-  if !ttt_ortho_flag
-  then
-    let
-      (* predict tactics *)
-      val _ = debug "predict tactics"
-      val feavl0 = dlist (!ttt_tacfea)
-      val symweight = learn_tfidf feavl0
-      val lbls = stacknn symweight (!ttt_ortho_radius) feavl0 fea
-      val stacl1 = mk_sameorder_set String.compare (map #1 lbls)
-      val stacl2 = filter (fn x => not (x = ostac)) stacl1
-      (* order tactics by frequency *)
-      val _ = debug "order tactics"
-      fun score x = dfind x (!ttt_taccov) handle _ => 0
-      val oscore  = score ostac
-      val stacl3  = filter (fn x => score x > oscore) stacl2
-      fun n_compare (x,y) = Int.compare (score y, score x)
-      val stacl4 = dict_sort n_compare stacl3
-      (* try abstracted tactic x before x *)
-      val _ = debug "concat abstract tactics"
-      val stacl5 = concat_absstacl ostac stacl4
-      (* predicting theorems only once *)
-      val _ = debug "predict theorems"
-      val thml =
-        if !ttt_thmlarg_flag
-        then thmknn_std (!ttt_thmlarg_radius) g
-        else []
-      val thmls  = String.concatWith " , " (map dbfetch_of_string thml)
-      (* instantiate arguments *)
-      val _ = debug "instantiate argument"
-      val stacl6 = inst_stacl thmls g stacl5
-      (* test produced tactics *)
-      val _ = debug "test tactics"
-      val testo  = findSome (test_stac g gl) stacl6
-    in
-      case testo of
-        NONE => lbl
-      | SOME newlbl => newlbl
-    end
-  else lbl
+  let
+    (* predict tactics *)
+    val _ = debug "predict tactics"
+    val feavl0 = dlist (!ttt_tacfea)
+    val symweight = learn_tfidf feavl0
+    val lbls = stacknn symweight (!ttt_ortho_radius) feavl0 fea
+    val stacl1 = mk_sameorder_set String.compare (map #1 lbls)
+    val stacl2 = filter (fn x => not (x = ostac)) stacl1
+    (* order tactics by frequency *)
+    val _ = debug "order tactics"
+    fun score x = dfind x (!ttt_taccov) handle _ => 0
+    val oscore  = score ostac
+    val stacl3  = filter (fn x => score x > oscore) stacl2
+    fun n_compare (x,y) = Int.compare (score y, score x)
+    val stacl4 = dict_sort n_compare stacl3
+    (* try abstracted tactic x before x *)
+    val _ = debug "concat abstract tactics"
+    val stacl5 = concat_absstacl ostac stacl4
+    (* predicting theorems only once *)
+    val _ = debug "predict theorems"
+    val thml =
+      if !ttt_thmlarg_flag
+      then thmknn_std (!ttt_thmlarg_radius) g
+      else []
+    val thmls  = String.concatWith " , " (map dbfetch_of_string thml)
+    (* instantiate arguments *)
+    val _ = debug "instantiate argument"
+    val stacl6 = inst_stacl thmls g stacl5
+    (* test produced tactics *)
+    val _ = debug "test tactics"
+    val testo  = findSome (test_stac g gl) stacl6
+  in
+    case testo of
+      NONE => lbl
+    | SOME newlbl => newlbl
+  end
 
 end (* struct *)

@@ -315,8 +315,7 @@ fun pretty_proof_wrap p =
 fun minimize_proof p = 
   (pretty_proof_wrap o mini_proof_wrap) p
   handle _ => 
-    (debug "Error: prettification or minimization failed"; 
-     p)
+    (debug "Error: prettification or minimization failed"; p)
 
 (*----------------------------------------------------------------------------
   Reconstructing the proof.
