@@ -133,42 +133,17 @@ fun is_pointer_eq s1 s2 =
 
 val ttt_invalid_flag = ref false
 
-fun mk_valid s = if !ttt_invalid_flag then s else "Tactical.VALID (" ^ s ^ ")"
-
-fun tacticl_of_sml sl =
-  let
-    val tacticl = "[" ^ String.concatWith ", " (map mk_valid sl) ^ "]"
-    val programl =
-      [
-       "structure tactictoe_fake_struct = struct",
-       "  val _ = tttExec.ttt_tacticl_glob := " ^ tacticl,
-       "end"
-      ]
-    val b = exec_sml "tacticl_of_sml" (String.concatWith "\n" programl)
-  in
-    if b then !ttt_tacticl_glob
-      else raise ERR "tacticl_of_sml" (String.concatWith " " (first_n 10 sl))
-  end
+fun mk_valid s = "Tactical.VALID (" ^ s ^ ")"
 
 fun tactic_of_sml s =
   let
     val tactic = mk_valid s
     val program =
-      "val _ = tttExec.ttt_tactic_glob := (" ^ tactic ^ ")"
+      "let fun f () = tttExec.ttt_tactic_glob := (" ^ tactic ^ ") in " ^
+      "tttTimeout.timeOut 1.0 f () end"
     val b = exec_sml "tactic_of_sml" program
   in
     if b then !ttt_tactic_glob else raise ERR "tactic_of_sml" s
-  end
-
-fun timed_tactic_of_sml s =
-  let
-    val tactic = mk_valid s
-    val program =
-      "let fun f () = tttExec.ttt_tactic_glob := (" ^ tactic ^ ") in " ^
-      "tttTimeout.timeOut 0.1 f () end"
-    val b = exec_sml "tactic_of_sml" program
-  in
-    if b then !ttt_tactic_glob else raise ERR "timed_tactic_of_sml" s
   end
 
 fun qtactic_of_sml s =

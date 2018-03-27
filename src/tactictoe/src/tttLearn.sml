@@ -192,8 +192,8 @@ fun test_stac g gl (stac, istac) =
   let val (new_gl,_) =
     (
     debug ("test_stac " ^ stac ^ "\n" ^ istac);
-    let val tac = timed_tactic_of_sml istac
-      handle _ => (debug ("Warning: infinite stac: " ^ stac); NO_TAC)
+    let val tac = tactic_of_sml istac
+      handle _ => (debug ("Warning: tactic_of_sml: " ^ istac); NO_TAC)
     in
       timeOut (!ttt_tactic_time) (TC_OFF tac) g
     end
