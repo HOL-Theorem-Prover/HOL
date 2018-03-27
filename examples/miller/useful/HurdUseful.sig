@@ -5,7 +5,6 @@ sig
 
   type 'a thunk = unit -> 'a
   type 'a susp = 'a Susp.susp
-  type ppstream = Portable.ppstream
   type ('a, 'b) maplet = {redex : 'a, residue : 'b}
   type ('a, 'b) subst = ('a, 'b) Lib.subst
 
@@ -171,15 +170,12 @@ sig
     ('a, 'c) tree -> 'd list
 
   (* Pretty-printing *)
-  val pp_map :
-    ('a -> 'b) -> (ppstream -> 'b -> unit) -> ppstream -> 'a -> unit
-  val pp_string : ppstream -> string -> unit
-  val pp_unknown : ppstream -> 'a -> unit
-  val pp_int : ppstream -> int -> unit
-  val pp_pair :
-    (ppstream -> 'a -> unit) -> (ppstream -> 'b -> unit) ->
-    (ppstream -> 'a * 'b -> unit)
-  val pp_list : (ppstream -> 'a -> unit) -> (ppstream -> 'a list -> unit)
+  val pp_map : ('a -> 'b) -> 'b PP.pprinter -> 'a PP.pprinter
+  val pp_string : string PP.pprinter
+  val pp_unknown : 'a PP.pprinter
+  val pp_int : int PP.pprinter
+  val pp_pair : 'a PP.pprinter -> 'b PP.pprinter -> ('a * 'b) PP.pprinter
+  val pp_list : 'a PP.pprinter -> 'a list PP.pprinter
 
   (* Substitutions *)
   val redex : ('a, 'b) maplet -> 'a
