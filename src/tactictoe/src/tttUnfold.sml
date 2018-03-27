@@ -927,7 +927,7 @@ fun output_header oc cthy =
 
 
 fun output_foot oc cthy =
-  osn oc ("val _ = tttRecord.end_record_thy " ^ mlquote cthy)
+  osn oc ("\nval _ = tttRecord.end_record_thy " ^ mlquote cthy)
 
 fun start_unfold_thy cthy =
   (
