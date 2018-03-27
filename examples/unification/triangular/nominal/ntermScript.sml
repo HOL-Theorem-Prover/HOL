@@ -280,7 +280,7 @@ val _ = write [mk_datatype_info {
 
 val _ = adjoin_to_theory {
   sig_ps = NONE,
-  struct_ps = SOME (fn pps => PP.add_string pps
+  struct_ps = SOME (fn _ => PP.add_string
 "local open TypeBase open TypeBasePure open Drule in\
 \ val _ = write [mk_datatype_info {\
 \  ax = ORIG nterm_rec_exists,\
