@@ -206,6 +206,7 @@ sig
   exception Interrupt
 
   type 'a quotation = 'a HOLPP.quotation
+  val pprint : 'a HOLPP.pprinter -> 'a -> unit
   val norm_quote : 'a quotation -> 'a quotation
   val quote_to_string : ('a -> string) -> 'a quotation -> string
   val quote_to_string_list : string quotation -> string list

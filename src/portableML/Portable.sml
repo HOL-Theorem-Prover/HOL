@@ -730,6 +730,8 @@ fun with_ppstream ppstrm =
 type 'a quotation = 'a HOLPP.quotation
 open HOLPP
 
+fun pprint f x = prettyPrint(TextIO.print, 72) (f x)
+
 fun norm_quote [] = []
   | norm_quote [x] = [x]
   | norm_quote (QUOTE s1 :: QUOTE s2 :: rst) =
