@@ -475,30 +475,32 @@ end
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,
- struct_ps = SOME(fn ppstrm =>
-   let val S = PP.add_string ppstrm
-       fun NL() = PP.add_newline ppstrm
+ struct_ps = SOME(fn _ =>
+   let val S = PP.add_string
+       val NL = PP.NL
    in
-      S "val _ = TypeBase.write";                           NL();
-      S "  [TypeBasePure.mk_datatype_info";                 NL();
-      S "     {ax=TypeBasePure.ORIG sum_Axiom,";            NL();
-      S "      case_def=sum_case_def,";                     NL();
-      S "      case_cong=sum_case_cong,";                   NL();
-      S "      case_eq = Prim_rec.prove_case_eq_thm {"; NL();
-      S "        case_def = sum_case_def,";                 NL();
-      S "        nchotomy = sum_CASES},";                   NL();
-      S "      induction=TypeBasePure.ORIG sum_INDUCT,";    NL();
-      S "      nchotomy=sum_CASES,";                        NL();
-      S "      size=NONE,";                                 NL();
-      S "      encode=NONE,";                               NL();
-      S "      fields=[],";                                 NL();
-      S "      accessors=[],";                              NL();
-      S "      updates=[],";                                NL();
-      S "      recognizers=[ISL,ISR],";                     NL();
-      S "      destructors=[OUTL,OUTR],";                   NL();
-      S "      lift=SOME(mk_var(\"sumSyntax.lift_sum\",Parse.Type`:'type -> ('a -> 'term) -> ('b -> 'term) -> ('a,'b)sum -> 'term`)),";
-      S "      one_one=SOME INR_INL_11,";                   NL();
-      S "      distinct=SOME sum_distinct}];";              NL()
+     PP.block PP.CONSISTENT 0 [
+      S "val _ = TypeBase.write",                           NL,
+      S "  [TypeBasePure.mk_datatype_info",                 NL,
+      S "     {ax=TypeBasePure.ORIG sum_Axiom,",            NL,
+      S "      case_def=sum_case_def,",                     NL,
+      S "      case_cong=sum_case_cong,",                   NL,
+      S "      case_eq = Prim_rec.prove_case_eq_thm {",     NL,
+      S "        case_def = sum_case_def,",                 NL,
+      S "        nchotomy = sum_CASES},",                   NL,
+      S "      induction=TypeBasePure.ORIG sum_INDUCT,",    NL,
+      S "      nchotomy=sum_CASES,",                        NL,
+      S "      size=NONE,",                                 NL,
+      S "      encode=NONE,",                               NL,
+      S "      fields=[],",                                 NL,
+      S "      accessors=[],",                              NL,
+      S "      updates=[],",                                NL,
+      S "      recognizers=[ISL,ISR],",                     NL,
+      S "      destructors=[OUTL,OUTR],",                   NL,
+      S "      lift=SOME(mk_var(\"sumSyntax.lift_sum\",Parse.Type`:'type -> ('a -> 'term) -> ('b -> 'term) -> ('a,'b)sum -> 'term`)),",
+      S "      one_one=SOME INR_INL_11,",                   NL,
+      S "      distinct=SOME sum_distinct}];",              NL
+     ]
    end)};
 
 val _ = TypeBase.write

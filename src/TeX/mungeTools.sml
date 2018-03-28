@@ -328,15 +328,13 @@ local
   in
     DB.fetch theory theorem
   end
-  fun block_list pps begb pfun newl endb = let
-    fun pr [] = ()
-      | pr [i] = ( begb pps; pfun pps i; endb pps)
-      | pr (i::rst) = ( begb pps; pfun pps i; newl pps; endb pps; pr rst )
-  in pr end
+  fun block_list begb pfun newl xs = begb (pr_list pfun [newl] xs)
   type arg = {commpos : posn, argpos : posn, command : command,
               options : optionset, argument : string}
+  val B = block CONSISTENT 0
+  val nothing = B []
 in
-  fun replacement pps (argument:arg as {commpos = pos, argument = spec,...}) =
+  fun replacement (argument:arg as {commpos = pos, argument = spec,...}) =
   let
     val {argpos = (argline, argcpos), command, options = opts, ...} = argument
     val alltt = OptSet.has AllTT opts orelse
@@ -349,32 +347,28 @@ in
         (strip_conj h, c)
       end handle HOL_ERR _ => ([], term)
       open Portable
-      fun addz s = add_stringsz pps (s, 0)
+      fun addz s = add_stringsz (s, 0)
       val (sep,hypbegin,hypend) =
           if OptSet.has StackedRule opts then
-            ((fn () => addz "\\\\"),
-             (fn () => addz "\\begin{array}{c}"),
-             (fn () => addz "\\end{array}"))
+            (addz "\\\\", addz "\\begin{array}{c}", addz "\\end{array}")
           else
-            ((fn () => addz "&"), (fn () => ()), (fn () => ()))
+            (addz "&", nothing, nothing)
       val rulename =
-        (case optset_rulename opts of
-           NONE => (fn () => ())
-         | SOME s => (fn () => (addz"[\\HOLRuleName{"; addz s; addz"}]")))
+          case optset_rulename opts of
+              NONE => nothing
+            | SOME s => B [addz"[\\HOLRuleName{", addz s, addz"}]"]
     in
-      addz "\\infer";
-      rulename();
-      addz "{\\HOLinline{";
-      printer c;
-      addz "}}{";
-      hypbegin();
-      pr_list (fn t => (addz "\\HOLinline{";
-                        printer t;
-                        addz "}"))
-              sep
-              (fn () => ()) hs;
-      hypend();
-      addz "}"
+      B [
+        addz "\\infer", rulename, addz "{\\HOLinline{",
+        printer c,
+        addz "}}{",
+        hypbegin,
+        B (
+          pr_list (fn t => B [addz "\\HOLinline{", printer t, addz "}"])
+                  [sep] hs
+        ),
+        hypend, addz "}"
+      ]
     end
 
     fun clear_overloads slist f = let
@@ -384,30 +378,31 @@ in
       val _ = List.map hide slist
       val newg = term_grammar()
     in
-      (fn x => (temp_set_grammars(tyg,newg); f x; temp_set_grammars(tyg,oldg)))
+      (fn x => (temp_set_grammars(tyg,newg);
+                f x before temp_set_grammars(tyg,oldg)))
     end
 
-    fun optprintermod f pps =
-        f pps |> (case optset_showtypes opts of
-                    NONE => trace ("types", 0)
-                  | SOME i => trace ("types", i))
-              |> (case optset_depth opts of
-                    NONE => (fn f => f)
-                  | SOME i => Lib.with_flag (Globals.max_print_depth, i))
-              |> (if OptSet.has NoDollarParens opts then
-                    trace ("EmitTeX: dollar parens", 0)
-                  else
-                    trace ("EmitTeX: dollar parens", 1))
-              |> (if OptSet.has NoMerge opts then
-                    trace ("pp_avoids_symbol_merges", 0)
-                  else (fn f => f))
-              |> (if OptSet.has Merge opts then
-                    trace ("pp_avoids_symbol_merges", 1)
-                  else (fn f => f))
-              |> (case optset_unoverloads opts of
-                      [] => (fn f => f)
-                    | slist => clear_overloads slist)
-              |> optset_traces opts
+    fun optprintermod f =
+        f |> (case optset_showtypes opts of
+                NONE => trace ("types", 0)
+              | SOME i => trace ("types", i))
+          |> (case optset_depth opts of
+                NONE => (fn f => f)
+              | SOME i => Lib.with_flag (Globals.max_print_depth, i))
+          |> (if OptSet.has NoDollarParens opts then
+                trace ("EmitTeX: dollar parens", 0)
+              else
+                trace ("EmitTeX: dollar parens", 1))
+          |> (if OptSet.has NoMerge opts then
+                trace ("pp_avoids_symbol_merges", 0)
+              else (fn f => f))
+          |> (if OptSet.has Merge opts then
+                trace ("pp_avoids_symbol_merges", 1)
+              else (fn f => f))
+          |> (case optset_unoverloads opts of
+                  [] => (fn f => f)
+                | slist => clear_overloads slist)
+          |> optset_traces opts
 
     val overrides = let
       fun foldthis (opt, acc) =
@@ -417,7 +412,7 @@ in
     in
       OptSet.fold foldthis overrides opts
     end
-    fun stdtermprint pps t = optprintermod (raw_pp_term_as_tex overrides) pps t
+    fun stdtermprint t = optprintermod (raw_pp_term_as_tex overrides) t
 
     fun clear_abbrevs slist f = let
       val oldg = type_grammar()
@@ -425,22 +420,24 @@ in
       val _ = List.app temp_disable_tyabbrev_printing slist
       val newg = type_grammar()
     in
-      (fn x => (temp_set_grammars(newg,tmg); f x; temp_set_grammars(oldg,tmg)))
+      (fn x => (temp_set_grammars(newg,tmg);
+                f x before temp_set_grammars(oldg,tmg)))
     end
 
-    fun opttyprintermod f pps =
-      f pps |> (case optset_unoverloads opts of
-                    [] => (fn f => f)
-                  | slist => clear_abbrevs slist)
+    fun opttyprintermod f =
+      f |> (case optset_unoverloads opts of
+                [] => (fn f => f)
+              | slist => clear_abbrevs slist)
 
-    fun stdtypeprint pps t = opttyprintermod (raw_pp_type_as_tex overrides) pps t
+    fun stdtypeprint t = opttyprintermod (raw_pp_type_as_tex overrides) t
 
-    val () = if not alltt andalso not rulep then add_string pps "\\HOLinline{"
-             else ()
+    val start1 =
+        if not alltt andalso not rulep then add_string "\\HOLinline{"
+        else nothing
     val parse_start = " (*#loc "^ Int.toString argline ^ " " ^
                       Int.toString argcpos ^"*)"
     val QQ = QUOTE
-    val () =
+    val result =
       case command of
         Theorem => let
           val thm = getThm spec
@@ -458,27 +455,21 @@ in
                                Int.toString i);
                           SPEC_ALL thm)
           val thm = do_thminsts pos opts thm
-          val _ = add_string pps (optset_indent opts)
+          val start2 = add_string (optset_indent opts)
         in
           if OptSet.has Def opts orelse OptSet.has SpacedDef opts then let
               val newline = if OptSet.has SpacedDef opts then
-                              (fn pps => (add_newline pps; add_newline pps))
+                              B [add_newline, add_newline]
                             else add_newline
               val lines = thm |> CONJUNCTS |> map (concl o SPEC_ALL)
             in
-              begin_block pps CONSISTENT 0;
-              block_list pps
-                         (fn pps => begin_block pps INCONSISTENT 0)
-                         stdtermprint
-                         newline
-                         end_block
-                         lines;
-              end_block pps
+              block_list (block INCONSISTENT 0) stdtermprint newline
+                         lines
             end
-          else if rulep then rule_print (stdtermprint pps) (concl thm)
+          else if rulep then rule_print stdtermprint (concl thm)
           else let
               val base = raw_pp_theorem_as_tex overrides
-              val printer = optprintermod base pps
+              val printer = optprintermod base
               val printer =
                   if OptSet.has NoTurnstile opts then
                     trace ("EmitTeX: print thm turnstiles", 0) printer
@@ -507,16 +498,14 @@ in
                      else
                          Parse.Term [QQ parse_start, QQ spec]
                                     |> do_tminsts pos opts
-          val () = add_string pps (optset_indent opts)
-          val () = if OptSet.has Turnstile opts
-                      then let in
-                        add_stringsz pps ("\\"^HOL^"TokenTurnstile", 2);
-                        add_string pps " "
-                      end
-                   else ()
+          val s1 = add_string (optset_indent opts)
+          val s2 = if OptSet.has Turnstile opts then
+                        B [add_stringsz ("\\"^HOL^"TokenTurnstile", 2),
+                           add_string " "]
+                   else nothing
         in
-          if rulep then rule_print (stdtermprint pps) term
-          else stdtermprint pps term
+          if rulep then B [s1, s2, rule_print stdtermprint term]
+          else B [s1, s2, stdtermprint term]
         end
       | Type => let
           val typ = if OptSet.has TypeOf opts
@@ -525,14 +514,17 @@ in
                               |> Term.type_of
                     else Parse.Type [QQ parse_start, QQ spec]
         in
-          add_string pps (optset_indent opts);
-          stdtypeprint pps typ
+          B [add_string (optset_indent opts),
+             stdtypeprint typ]
         end
-    val () = if not alltt andalso not rulep then add_string pps "}" else ()
-  in () end handle
-      BadSpec => warn (pos, spec ^ " does not specify a theorem")
-    | HOL_ERR e => warn (pos, !Feedback.ERR_to_string e)
-    | e => warn (pos, "Unknown exception: "^General.exnMessage e)
+    val final = if not alltt andalso not rulep then add_string "}"
+                else nothing
+  in
+    B [start1, result, final]
+  end handle
+      BadSpec => (warn (pos, spec ^ " does not specify a theorem"); nothing)
+    | HOL_ERR e => (warn (pos, !Feedback.ERR_to_string e); nothing)
+    | e => (warn (pos, "Unknown exception: "^General.exnMessage e); nothing)
 end
 
 fun parseOpts pos opts = let

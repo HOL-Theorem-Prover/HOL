@@ -25,6 +25,17 @@ in
 end
 
 val _ = Hol_datatype `type1 = one_constructor`
+
+val _ = let
+  val _ = tprint "type_to_string immediately after type defn"
+  val s = prim_mk_const{Thy = "scratch", Name = "one_constructor"}
+                       |> type_of |> Parse.type_to_string
+in
+  if s = ":type1" then OK()
+  else die ("\nFAILED: got \"" ^ String.toString s ^ "\"; not \":type1\"")
+end
+
+
 val _ = Hol_datatype `type2 = ##`;
 val _ = Hol_datatype `type3 = /\`;
 val _ = Hol_datatype `type4 = /\ | \/ | feh`;

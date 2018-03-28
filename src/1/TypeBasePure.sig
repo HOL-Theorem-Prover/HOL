@@ -3,7 +3,6 @@ sig
    type hol_type = Type.hol_type
    type term     = Term.term
    type thm      = Thm.thm
-   type ppstream = Portable.ppstream
 
    type tyinfo
    type typeBase
@@ -39,7 +38,7 @@ sig
               size      : (term * thm) option,
               encode    : (term * thm) option} -> tyinfo
 
-   val pp_tyinfo       : ppstream -> tyinfo -> unit
+   val pp_tyinfo       : tyinfo Parse.pprinter
 
    val ty_of           : tyinfo -> hol_type
    val ty_name_of      : tyinfo -> string * string

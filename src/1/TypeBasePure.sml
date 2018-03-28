@@ -6,7 +6,6 @@ structure TypeBasePure :> TypeBasePure =
 struct
 
 open HolKernel boolSyntax Drule Conv Prim_rec;
-type ppstream = Portable.ppstream
 type simpfrag = simpfrag.simpfrag
 
 val ERR = mk_HOL_ERR "TypeBasePure";
@@ -367,134 +366,124 @@ fun mk_nondatatype_info (ty,record) = NFACTS(ty,record);
 
 fun name_pair(s1,s2) = s1^"$"^s2;
 
-fun pp_tyinfo ppstrm (d as DFACTS recd) =
- let open Portable
-     val {add_string,add_break,begin_block,end_block,...}
-          = with_ppstream ppstrm
-     val pp_term = Parse.pp_term ppstrm
-     val pp_thm = Parse.pp_thm ppstrm
+fun pp_tyinfo (d as DFACTS recd) =
+ let open Portable smpp
+     val pp_term = lift Parse.pp_term
+     val pp_thm = lift Parse.pp_thm
      val {ty,constructors, case_const, case_def, case_cong, induction,
           nchotomy,one_one,distinct,simpls,size,encode,lift,axiom, case_eq,
           fields, accessors, updates,recognizers,destructors} = recd
      val ty_namestring = name_pair (ty_name_of d)
  in
-   begin_block CONSISTENT 0;
-     begin_block INCONSISTENT 0;
-        add_string "-----------------------"; add_newline ppstrm;
-        add_string "-----------------------"; add_newline ppstrm;
-        add_string "HOL datatype:"; add_break(1,0);
-        add_string (Lib.quote ty_namestring); end_block();
-   add_break(1,0);
-   begin_block CONSISTENT 1;
-   add_string "Primitive recursion:"; add_break (1,0);
-       (case axiom
-         of ORIG thm  => pp_thm thm
-          | COPY(sp,_) => add_string ("see "^Lib.quote (name_pair sp)));
-        end_block();
-   add_break(1,0);
-   begin_block CONSISTENT 1; add_string "Case analysis:";
-                             add_break (1,0); pp_thm case_def; end_block();
-   add_break(1,0);
-   case size
-    of NONE => ()
-     | SOME (tm,size_def) =>
-        (begin_block CONSISTENT 1;
-         add_string "Size:"; add_break (1,0);
-         (case size_def
-           of COPY(sp,th) => add_string ("see "^Lib.quote (name_pair sp))
-            | ORIG th    => if is_const tm
-                            then pp_thm th else pp_term tm)
-         ; end_block(); add_break(1,0));
+   block CONSISTENT 0 (
+     block INCONSISTENT 0 (
+       add_string "-----------------------" >> add_newline >>
+       add_string "-----------------------" >> add_newline >>
+       add_string "HOL datatype:" >> add_break(1,0) >>
+       add_string (Lib.quote ty_namestring)
+     ) >> add_break(1,0) >>
 
-   (* add_break(1,0); *)
-   case encode
-    of NONE => ()
-     | SOME (tm,encode_def) =>
-        (begin_block CONSISTENT 1;
-         add_string "Encoder:"; add_break (1,0);
-         (case encode_def
-           of COPY(sp,th) => add_string ("see "^Lib.quote (name_pair sp))
-            | ORIG th    => if is_const tm
-                            then pp_thm th else pp_term tm);
-          end_block();
-          add_break(1,0));
+     block CONSISTENT 1 (
+       add_string "Primitive recursion:" >> add_break (1,0) >>
+       (case axiom of
+            ORIG thm  => pp_thm thm
+          | COPY(sp,_) => add_string ("see "^Lib.quote (name_pair sp)))
+     ) >> add_break(1,0) >>
 
-   begin_block CONSISTENT 1;
-   add_string "Induction:"; add_break (1,0);
-    (case induction
-      of ORIG thm  => pp_thm thm
-       | COPY(sp,_) => add_string ("see "^Lib.quote (name_pair sp)));
-   end_block();
+     block CONSISTENT 1 (
+       add_string "Case analysis:" >> add_break (1,0) >> pp_thm case_def
+     ) >> add_break(1,0) >>
 
-   add_break(1,0);
-   begin_block CONSISTENT 1; add_string "Case completeness:";
-   add_break (1,0); pp_thm nchotomy; end_block();
+     (case size of
+          NONE => nothing
+        | SOME (tm,size_def) =>
+          block CONSISTENT 1 (
+            add_string "Size:" >> add_break (1,0) >>
+            (case size_def of
+                 COPY(sp,th) => add_string ("see "^Lib.quote (name_pair sp))
+               | ORIG th    => if is_const tm then pp_thm th else pp_term tm)
+          ) >> add_break(1,0)) >>
 
-   add_break(1,0);
-   begin_block CONSISTENT 1; add_string "Case-const equality split:";
-   add_break (1,0); pp_thm case_eq; end_block();
+     (case encode of
+          NONE => nothing
+        | SOME (tm,encode_def) =>
+          (block CONSISTENT 1 (
+              add_string "Encoder:" >> add_break (1,0) >>
+              (case encode_def of
+                   COPY(sp,th) => add_string ("see "^Lib.quote (name_pair sp))
+                 | ORIG th => if is_const tm then pp_thm th else pp_term tm)
+            ) >> add_break(1,0))) >>
 
-   let fun do11 thm =
-            (begin_block CONSISTENT 1; add_string "One-to-one:";
-             add_break (1,0); pp_thm thm; end_block());
-       fun do_distinct thm =
-            (begin_block CONSISTENT 1; add_string "Distinctness:";
-             add_break (1,0); pp_thm thm; end_block())
-   in
-     case (one_one,distinct)
-      of (NONE,NONE) => ()
-       | (NONE,SOME thm) => (add_break(1,0); do_distinct thm)
-       | (SOME thm,NONE) => (add_break(1,0); do11 thm)
-       | (SOME thm1,SOME thm2) => (add_break(1,0); do11 thm1;
-                                   add_break(1,0); do_distinct thm2)
-   end;
-   end_block()
+     block CONSISTENT 1 (
+       add_string "Induction:" >> add_break (1,0) >>
+       (case induction of
+            ORIG thm  => pp_thm thm
+          | COPY(sp,_) => add_string ("see "^Lib.quote (name_pair sp)))
+     ) >> add_break(1,0) >>
+
+     block CONSISTENT 1 (
+       add_string "Case completeness:" >> add_break (1,0) >> pp_thm nchotomy
+     ) >> add_break(1,0) >>
+
+     block CONSISTENT 1 (
+       add_string "Case-const equality split:" >> add_break (1,0) >>
+       pp_thm case_eq
+     ) >>
+
+     let fun do11 thm =
+              block CONSISTENT 1 (add_string "One-to-one:" >>
+                                  add_break (1,0) >> pp_thm thm)
+         fun do_distinct thm =
+              block CONSISTENT 1 (add_string "Distinctness:" >>
+                                  add_break (1,0) >> pp_thm thm)
+     in
+       case (one_one,distinct)
+        of (NONE,NONE) => nothing
+         | (NONE,SOME thm) => add_break(1,0) >> do_distinct thm
+         | (SOME thm,NONE) => add_break(1,0) >> do11 thm
+         | (SOME thm1,SOME thm2) => add_break(1,0) >> do11 thm1 >>
+                                    add_break(1,0) >> do_distinct thm2
+     end
+   )
  end
- | pp_tyinfo ppstrm (NFACTS(ty,recd)) =
-   let open Portable
-     val {add_string,add_break,begin_block,end_block,...}
-           = with_ppstream ppstrm
-     val pp_type = Parse.pp_type ppstrm
-     val pp_term = Parse.pp_term ppstrm
-     val pp_thm = Parse.pp_thm ppstrm
+ | pp_tyinfo (NFACTS(ty,recd)) =
+   let open Portable smpp
+     val pp_type = lift Parse.pp_type
+     val pp_term = lift Parse.pp_term
+     val pp_thm = lift Parse.pp_thm
      val {nchotomy,induction,size,encode} = recd
    in
-    begin_block CONSISTENT 0;
-     begin_block INCONSISTENT 0;
-        add_string "-----------------------"; add_newline ppstrm;
-        add_string "-----------------------"; add_newline ppstrm;
-        add_string "HOL type:";
-        add_break(1,0);
-        pp_type ty;
-     end_block();
-    add_break(1,0);
-     begin_block CONSISTENT 1;
-       add_string "Case completeness:"; add_break (1,0);
-       (case nchotomy
-         of NONE => add_string "none"
-          | SOME thm => pp_thm thm);
-     end_block();
-    add_break(1,0);
-     begin_block CONSISTENT 1;
-       add_string "Induction:"; add_break (1,0);
-       (case induction
-        of NONE  => add_string "none"
-         | SOME thm => pp_thm thm);
-     end_block();
-    add_break(1,0);
-     begin_block CONSISTENT 1;
-       add_string "Size:"; add_break (1,0);
-       (case size
-         of NONE => add_string "none"
-          | SOME (tm,size_def) =>
-             (begin_block CONSISTENT 1;
-              (if is_const tm then pp_thm size_def else pp_term tm);
-              end_block()));
-     end_block();
-    end_block()
-  end;
+    block CONSISTENT 0 (
+      block INCONSISTENT 0 (
+         add_string "-----------------------" >> add_newline >>
+         add_string "-----------------------" >> add_newline >>
+         add_string "HOL type:" >> add_break(1,0) >> pp_type ty
+      ) >> add_break(1,0) >>
 
+      block CONSISTENT 1 (
+        add_string "Case completeness:" >> add_break (1,0) >>
+        (case nchotomy of NONE => add_string "none" | SOME thm => pp_thm thm)
+      ) >> add_break(1,0) >>
 
+      block CONSISTENT 1 (
+        add_string "Induction:" >> add_break (1,0) >>
+        (case induction of NONE  => add_string "none" | SOME thm => pp_thm thm)
+      ) >> add_break(1,0) >>
+
+      block CONSISTENT 1 (
+        add_string "Size:" >> add_break (1,0) >>
+        (case size of
+             NONE => add_string "none"
+           | SOME (tm,size_def) =>
+             block CONSISTENT 1 (
+                 if is_const tm then pp_thm size_def else pp_term tm
+             )
+        )
+      )
+    )
+   end
+
+val pp_tyinfo = Parse.mlower o pp_tyinfo
 
 (*---------------------------------------------------------------------------*)
 (* Database of facts.                                                        *)

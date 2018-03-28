@@ -134,7 +134,7 @@ end;
 
 local
   fun chop (#" " :: chs) = (curry op+ 1 ## I) (chop chs) | chop chs = (0,chs);
-  fun nspaces n = funpow n (curry op^ " ") "";
+  fun nspaces n = CharVector.tabulate(n, fn _ => #" ")
   fun spacify tok =
     let
       val chs = explode tok
@@ -144,8 +144,7 @@ local
       ((l, r), implode chs)
     end;
   fun lrspaces (l, r) =
-    (if l = 0 then K () else C PP.add_string (nspaces l),
-     if r = 0 then K () else C PP.add_break (r, 0));
+    (PP.add_string (nspaces l),PP.add_break (r, 0));
 in
   val op_spaces = (lrspaces ## I) o spacify;
   val op_clean  = snd             o spacify;
@@ -182,6 +181,7 @@ fun parse_infixes ops =
 fun pp_gen_infix left toks : 'a des -> 'a iprinter -> 'a iprinter =
   let
     val spc = map op_spaces toks
+    fun sing x = [x]
   in
     fn dest => fn pp_sub =>
     let
@@ -189,16 +189,17 @@ fun pp_gen_infix left toks : 'a des -> 'a iprinter -> 'a iprinter =
         case dest tm of NONE => NONE
         | SOME (t, a, b) => omap (pair (a,b)) (List.find (equal t o snd) spc)
       open PP
-      fun pp_go pp (tmr as (tm,r)) =
-        case dest' tm of NONE => pp_sub pp tmr
-        | SOME ((a,b),((lspc,rspc),tok))
-          => ((if left then pp_go else pp_sub) pp (a,true);
-              lspc pp; add_string pp tok; rspc pp;
-              (if left then pp_sub else pp_go) pp (b,r))
+      fun pp_go (tmr as (tm,r)) =
+        case dest' tm of
+            NONE => [pp_sub tmr]
+          | SOME ((a,b),((lspc,rspc),tok))
+          => (if left then pp_go else (sing o pp_sub)) (a,true) @
+             [lspc, add_string tok, rspc] @
+             (if left then sing o pp_sub else pp_go)(b,r)
     in
-      fn pp => fn tmr as (tm,_) =>
-      case dest' tm of NONE => pp_sub pp tmr
-      | SOME _ => (begin_block pp INCONSISTENT 0; pp_go pp tmr; end_block pp)
+      fn tmr as (tm,_) =>
+      case dest' tm of NONE => pp_sub tmr
+                     | SOME _ => block INCONSISTENT 0 (pp_go tmr)
     end
   end;
 
@@ -218,14 +219,14 @@ fun pp_infixes ops =
       fun printer sub = foldl (fn (ip,p) => ip dest p) sub iprinters
       fun is_op t = case dest t of SOME (x,_,_) => mem x toks | _ => false
       open PP
-      fun subpr pp (tmr as (tm,_)) =
+      fun subpr (tmr as (tm,_)) =
         if is_op tm then
-          (begin_block pp INCONSISTENT 1; add_string pp "(";
-           printer subpr pp (tm, false); add_string pp ")"; end_block pp)
-        else pp_sub pp tmr
+          block INCONSISTENT 1 [add_string "(",
+                                printer subpr (tm, false),
+                                add_string ")"]
+        else pp_sub tmr
     in
-      fn pp => fn tmr =>
-      (begin_block pp INCONSISTENT 0; printer subpr pp tmr; end_block pp)
+      fn tmr => block INCONSISTENT 0 [printer subpr tmr]
     end
   end;
 

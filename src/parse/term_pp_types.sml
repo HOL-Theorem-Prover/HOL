@@ -1,6 +1,6 @@
-structure term_pp_types = struct
-  type ('a,'b) smppt =
-       ('a * HOLPP.ppstream) -> ('b * ('a * HOLPP.ppstream)) option
+structure term_pp_types =
+struct
+  type ('a,'b) smppt = ('a,'b) smpp.t
   datatype grav = Top | RealTop | Prec of (int * string)
 
   type printing_info =
@@ -53,29 +53,25 @@ structure term_pp_types = struct
     | Underline
     | UserStyle of string
 
-  type ppstream_funs =
+  type 'a ppstream_funs =
       {add_break      : int * int -> uprinter,
        add_newline    : uprinter,
        add_string     : string -> uprinter,
        add_xstring    : xstring -> uprinter,
-       ustyle    : pp_style list -> uprinter -> uprinter,
-       ublock    : PP.break_style -> int -> uprinter -> uprinter}
+       ustyle         : pp_style list -> uprinter -> uprinter,
+       ublock         : PP.break_style -> int -> uprinter -> uprinter,
+       extras         : 'a}
 
-  type 'tmg ppbackend =
-       {add_string     : ppstream -> string -> unit,
-        add_xstring    : ppstream -> xstring -> unit,
-        begin_block    : ppstream -> PP.break_style -> int -> unit,
-        end_block      : ppstream -> unit,
-        add_break      : ppstream -> int * int -> unit,
-        add_newline    : ppstream -> unit,
-        begin_style    : ppstream -> pp_style list -> unit,
-        end_style      : ppstream -> unit,
-        tm_grammar_upd : 'tmg -> 'tmg,
-        ty_grammar_upd : type_grammar.grammar -> type_grammar.grammar,
-        name : string}
+  type 'tmg upd = {
+    tm_grammar_upd : 'tmg -> 'tmg,
+    ty_grammar_upd : type_grammar.grammar -> type_grammar.grammar,
+    name : string
+  }
+
+  type 'tmg ppbackend = 'tmg upd ppstream_funs
 
   type ('a,'tmg) userprinter =
-    'a -> 'tmg ppbackend -> sysprinter -> ppstream_funs ->
+    'a -> 'tmg ppbackend -> sysprinter -> unit ppstream_funs ->
     (grav * grav * grav) -> int -> Term.term -> uprinter
   exception UserPP_Failed
 end;

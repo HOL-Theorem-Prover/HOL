@@ -3882,9 +3882,8 @@ val instructions_list =
       (quote (hd instructions) ^ "]\n")  (tl instructions);
 
 val _ = adjoin_to_theory
-  {sig_ps = SOME (fn ppstrm =>
-     PP.add_string ppstrm "val instruction_list : string list"),
-   struct_ps = SOME (fn ppstrm => PP.add_string ppstrm instructions_list)};
+  {sig_ps = SOME (fn _ => PP.add_string "val instruction_list : string list"),
+   struct_ps = SOME (fn _ => PP.add_string instructions_list)};
 
 (* ------------------------------------------------------------------------ *)
 

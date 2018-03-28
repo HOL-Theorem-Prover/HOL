@@ -89,41 +89,32 @@ fun tactic_of (vGoal _) = ALL_TAC
   | tactic_of (vThen(vt1,vt2)) = tactic_of vt1 THEN tactic_of vt2
   | tactic_of (vThenl(vt1,vtl)) = tactic_of vt1 THENL map tactic_of vtl;
 
-fun pp_gtree ppstrm =
- let open Portable
-     val {add_break,add_newline,add_string,begin_block,end_block,...}
-       = Portable.with_ppstream ppstrm
-     val pp_goal = goalStack.pp_goal ppstrm
-     val pp_slist = pr_list add_string (fn () => ())
-                            (fn () => add_break(1,0))
+fun pp_gtree gt =
+ let open Portable smpp
+     val pp_goal = lift goalStack.pp_goal
+     val pp_slist = pr_list add_string (add_break(1,0))
      fun pp (vAtom (s,t)) =
         if s="" then add_string "<anonymous>"
         else
-        (begin_block INCONSISTENT 0;
-         pp_slist (String.tokens Char.isSpace s);
-         end_block())
+          block INCONSISTENT 0 (pp_slist (String.tokens Char.isSpace s))
        | pp (vGoal g) = pp_goal g
        | pp (vThen(vt1,vt2)) =
-          let in
-             begin_block CONSISTENT 1;
-             pp vt1; add_string " THEN"; add_break (1,0);
-             pp vt2;
-             end_block()
-          end
+             block CONSISTENT 1 (
+               pp vt1 >> add_string " THEN" >> add_break (1,0) >>
+               pp vt2
+             )
        | pp (vThenl(vt,tlist)) =
-          let in
-             begin_block CONSISTENT 1;
-             pp vt; add_string " THENL"; add_break (1,0);
-             add_string "[";
-             begin_block CONSISTENT 0;
-             pr_list pp (fn () => add_string",")
-                        (fn () => add_break(1,0))
-                     tlist;
-             end_block();
-             add_string "]";
-             end_block()
-          end
- in pp
+             block CONSISTENT 1 (
+               pp vt >> add_string " THENL" >> add_break (1,0) >>
+               add_string "[" >>
+               block CONSISTENT 0 (
+                 pr_list pp (add_string"," >> add_break(1,0)) tlist
+               ) >>
+               add_string "]"
+             )
+ in pp gt
  end;
+
+val pp_gtree = Parse.mlower o pp_gtree
 
 end

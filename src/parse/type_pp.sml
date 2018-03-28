@@ -104,7 +104,7 @@ end
 val pp_array_types = ref true
 val _ = register_btrace ("pp_array_types", pp_array_types)
 
-fun pp_type0 (G:grammar) backend = let
+fun pp_type0 (G:grammar) (backend: PPBackEnd.t) = let
   val {infixes,suffixes} = rules G
   fun lookup_tyop s = let
     fun recurse [] = NONE
@@ -122,13 +122,11 @@ fun pp_type0 (G:grammar) backend = let
   in
     recurse infixes : single_rule option
   end
-  fun pr_ty pps ty grav depth = let
-    open PPBackEnd
-    val {add_string, add_break, begin_block, end_block, add_xstring,...} =
-      with_ppstream backend pps
+  fun pr_ty ty grav depth = let
+    open HOLPP smpp PPBackEnd
+    val {add_string, add_break, ublock, add_xstring,...} = backend
     fun add_ann_string (s,ann) = add_xstring {s=s,ann=SOME ann,sz=NONE}
-    fun pbegin b = if b then add_string "(" else ()
-    fun pend b = if b then add_string ")" else ()
+    fun paren b p = if b then add_string "(" >> p >> add_string ")" else p
     fun uniconvert s =
         if not (!avoid_unicode) andalso get_tracefn "Greek tyvars" () = 1
            andalso size s = 2
@@ -211,36 +209,36 @@ fun pp_type0 (G:grammar) backend = let
             val parens_needed = case args of [_] => false | _ => true
             val grav = if parens_needed then Top else grav0
           in
-            pbegin parens_needed;
-            begin_block INCONSISTENT 0;
-            pr_list (fn arg => pr_ty pps arg grav (depth - 1))
-                    (fn () => add_string ",") (fn () => add_break (1, 0)) args;
-            end_block();
-            pend parens_needed
+            paren parens_needed (
+              ublock INCONSISTENT 0 (
+                pr_list (fn arg => pr_ty arg grav (depth - 1))
+                        (add_string "," >> add_break (1, 0)) args
+              )
+            )
           end
           val {Thy, Tyop = realTyop, Args = realArgs} = dest_thy_type ty
         in
           if abop = "cart" andalso length abargs = 2 andalso
              Thy = "fcp" andalso realTyop = "cart" andalso !pp_array_types
           then
-            (pr_ty pps (hd realArgs) Sfx (depth - 1);
-             add_string "[";
-             pr_ty pps (hd (tl realArgs)) Top (depth - 1);
-             add_string "]")
+            pr_ty (hd realArgs) Sfx (depth - 1) >>
+            add_string "[" >>
+            pr_ty (hd (tl realArgs)) Top (depth - 1) >>
+            add_string "]"
           else
             case abargs of
               [] => add_ann_string (abop_s, TyOp tooltip)
             | [arg1, arg2] =>
               let
                 fun print_suffix_style () =
-                   (begin_block INCONSISTENT 0;
+                   ublock INCONSISTENT 0 (
                     (* knowing that there are two args, we know that they will
                        be printed with parentheses, so the gravity we pass in
                        here makes no difference. *)
-                    print_args Top abargs;
-                    add_break(1,0);
-                    add_ann_string (abop_s, TyOp tooltip);
-                    end_block())
+                     print_args Top abargs >>
+                     add_break(1,0) >>
+                     add_ann_string (abop_s, TyOp tooltip)
+                   )
               in
                 if isSome thyopt then print_suffix_style()
                 else
@@ -258,27 +256,24 @@ fun pp_type0 (G:grammar) backend = let
                                               else (n >= prec)
                               | _ => false
                       in
-                        pbegin parens_needed;
-                        begin_block INCONSISTENT 0;
-                        pr_ty pps arg1 (Lfx (prec, printthis)) (depth - 1);
-                        add_break(1,0);
-                        add_ann_string (printthis, TySyn tooltip);
-                        add_break(1,0);
-                        pr_ty pps arg2 (Rfx (prec, printthis)) (depth -1);
-                        end_block();
-                        pend parens_needed
+                        paren parens_needed (
+                          ublock INCONSISTENT 0 (
+                            pr_ty arg1 (Lfx (prec, printthis)) (depth - 1) >>
+                            add_break(1,0) >>
+                            add_ann_string (printthis, TySyn tooltip) >>
+                            add_break(1,0) >>
+                            pr_ty arg2 (Rfx (prec, printthis)) (depth -1)
+                          )
+                        )
                       end
                     | NONE => print_suffix_style()
               end
             | _ =>
-              let
-              in
-                begin_block INCONSISTENT 0;
-                print_args Sfx abargs;
-                add_break(1,0);
-                add_ann_string (abop_s, TyOp tooltip);
-                end_block()
-              end
+                ublock INCONSISTENT 0 (
+                  print_args Sfx abargs >>
+                  add_break(1,0) >>
+                  add_ann_string (abop_s, TyOp tooltip)
+                )
           end
   end
 in
@@ -288,13 +283,13 @@ end
 fun pp_type G backend = let
   val baseprinter = pp_type0 G backend
 in
-  (fn pps => fn ty => baseprinter pps ty Top (!Globals.max_print_depth))
+  (fn ty => baseprinter ty Top (!Globals.max_print_depth))
 end
 
 fun pp_type_with_depth G backend = let
   val baseprinter = pp_type0 G backend
 in
-  (fn pps => fn depth => fn ty => baseprinter pps ty Top depth)
+  (fn depth => fn ty => baseprinter ty Top depth)
 end
 
 end; (* struct *)

@@ -222,33 +222,23 @@ fun subtype_context_update_subtypes f (SUBTYPE_CONTEXT {pure, ccache}) =
 fun subtype_context_initialize sc = (subtype_context_pure sc; sc);
 
 (* Pretty-printing *)
-
-fun pp_psubtype_context ppstrm =
-  let
-    val {add_string,add_break,begin_block,end_block,add_newline,...}
-      = Portable.with_ppstream ppstrm
-  in
-    fn (PSUBTYPE_CONTEXT c) =>
-    (begin_block Portable.CONSISTENT 1;
-
-     begin_block Portable.CONSISTENT 2;
-     add_string "{#facts =";
-     add_break (1, 0);
-     pp_int ppstrm (factdb_size (#facts c));
-     add_string ",";
-     end_block ();
-
-     add_break (1, 0);
-
-     begin_block Portable.CONSISTENT 2;
-     add_string "#subtypes =";
-     add_break (1, 0);
-     pp_int ppstrm (ovdiscrim_size (#subtypes c));
-     add_string "}";
-     end_block ();
-
-     end_block())
-  end;
+open PP
+fun pp_psubtype_context (PSUBTYPE_CONTEXT c) =
+    block CONSISTENT 1 [
+      block CONSISTENT 2 [
+        add_string "{#facts =",
+        add_break (1, 0),
+        pp_int (factdb_size (#facts c)),
+        add_string ","
+      ],
+      add_break (1, 0),
+      block CONSISTENT 2 [
+        add_string "#subtypes =",
+        add_break (1, 0),
+        pp_int (ovdiscrim_size (#subtypes c)),
+        add_string "}"
+      ]
+    ]
 
 val pp_subtype_context = pp_map subtype_context_pure pp_psubtype_context;
 
@@ -469,59 +459,47 @@ val simplify_forwards = ref 10;
 
 (* Pretty-printing *)
 
-fun pp_context ppstrm =
-  let
-    val {add_string,add_break,begin_block,end_block,add_newline,...}
-      = Portable.with_ppstream ppstrm
-  in
-    fn (CONTEXT c) =>
-    (begin_block Portable.INCONSISTENT 1;
+fun pp_context (CONTEXT c) =
+    block INCONSISTENT 1 [
+      block CONSISTENT 2 [
+        add_string "{subtypes =",
+        add_break (1, 0),
+        pp_subtype_context (#subtypes c),
+        add_string ","
+      ],
+      add_break (1, 0),
 
-     begin_block Portable.CONSISTENT 2;
-     add_string "{subtypes =";
-     add_break (1, 0);
-     pp_subtype_context ppstrm (#subtypes c);
-     add_string ",";
-     end_block ();
+      block CONSISTENT 2 [
+        add_string "#forwards =",
+        add_break (1, 0),
+        pp_int (length (#forwards c)),
+        add_string ","
+      ],
+      add_break (1, 0),
 
-     add_break (1, 0);
+      block CONSISTENT 2 [
+        add_string "#congs =",
+        add_break (1, 0),
+        pp_int (ovdiscrim_size (#congs c)),
+        add_string ","
+      ],
+      add_break (1, 0),
 
-     begin_block Portable.CONSISTENT 2;
-     add_string "#forwards =";
-     add_break (1, 0);
-     pp_int ppstrm (length (#forwards c));
-     add_string ",";
-     end_block ();
+      block CONSISTENT 2 [
+        add_string "#rules =",
+        add_break (1, 0),
+        pp_int (ovdiscrim_size (#rules c)),
+        add_string ","
+      ],
+      add_break (1, 0),
 
-     add_break (1, 0);
-
-     begin_block Portable.CONSISTENT 2;
-     add_string "#congs =";
-     add_break (1, 0);
-     pp_int ppstrm (ovdiscrim_size (#congs c));
-     add_string ",";
-     end_block ();
-
-     add_break (1, 0);
-
-     begin_block Portable.CONSISTENT 2;
-     add_string "#rules =";
-     add_break (1, 0);
-     pp_int ppstrm (ovdiscrim_size (#rules c));
-     add_string ",";
-     end_block ();
-
-     add_break (1, 0);
-
-     begin_block Portable.CONSISTENT 2;
-     add_string "#rewrs =";
-     add_break (1, 0);
-     pp_int ppstrm (ovdiscrim_size (#rewrs c));
-     add_string "}";
-     end_block ();
-
-     end_block())
-  end;
+      block CONSISTENT 2 [
+        add_string "#rewrs =",
+        add_break (1, 0),
+        pp_int (ovdiscrim_size (#rewrs c)),
+        add_string "}"
+      ]
+    ]
 
 (* Basic context operations *)
 

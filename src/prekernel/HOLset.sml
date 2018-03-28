@@ -3,5 +3,5 @@ struct
   exception NotFound = Redblackset.NotFound
   open Redblackset
 
-  fun pp_holset pps s = HOLPP.add_string pps "<holset>"
+  fun pp_holset dpth ipp s = HOLPP.PrettyString "<holset>"
 end

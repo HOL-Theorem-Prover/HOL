@@ -8,15 +8,15 @@ struct
 
 open Arbnumcore;
 
-fun pp_num ppstrm n = HOLPP.add_string ppstrm (toString n)
+fun pp_num n = HOLPP.PrettyString (toString n)
 
 local
    open StringCvt HOLPP
 in
-   fun base_pp_num BIN ppstrm n = add_string ppstrm ("0b" ^ toBinString n)
-     | base_pp_num OCT ppstrm n = add_string ppstrm ("0" ^ toOctString n)
-     | base_pp_num DEC ppstrm n = add_string ppstrm (toString n)
-     | base_pp_num HEX ppstrm n = add_string ppstrm ("0x" ^ toHexString n)
+   fun base_pp_num BIN n = HOLPP.PrettyString ("0b" ^ toBinString n)
+     | base_pp_num OCT n = HOLPP.PrettyString ("0" ^ toOctString n)
+     | base_pp_num DEC n = HOLPP.PrettyString (toString n)
+     | base_pp_num HEX n = HOLPP.PrettyString ("0x" ^ toHexString n)
 end
 
 end

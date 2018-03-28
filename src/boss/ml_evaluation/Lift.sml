@@ -80,51 +80,48 @@ end;
 (* proposed definition to ppstrm.                                            *)
 (*---------------------------------------------------------------------------*)
 
-fun pp_lifter_def ppstrm typ =
- let open Portable
-     val {add_break,add_newline,
-          add_string,begin_block,end_block,...} = with_ppstream ppstrm
-     val pp_term = Parse.pp_term ppstrm
+fun pp_lifter_def typ =
+ let open Portable PP
+     val pp_term = Parse.pp_term
      val db = TypeBase.theTypeBase()
      val Gamma = Option.composePartial (TypeBasePure.lift_of,
                                         TypeBasePure.fetch db)
      val (flistnames,Clistnames,clauses) = lift_def_syntax (Gamma,typ)
      val tyop = let val {Thy,Tyop,Args} = dest_thy_type typ in (Thy,Tyop) end
  in
-  begin_block CONSISTENT 0;
-  add_string "local val Clist = TypeBase.constructors_of ";
-  add_string ("("^Lib.quote (#1 tyop)^","^Lib.quote (#2 tyop)^")");
-  add_break (1,0);
-  add_string "in";
-  add_break (1,0);
-  add_string ("fun lift_"^ #2 tyop^" ty = ");
-  add_newline();
-  add_string "  let val ";
-  begin_block INCONSISTENT 1;
-       add_string "[";
-       pr_list add_string (fn () => add_string ",") (fn () => add_break(0,0))
-               Clistnames;
-       add_string "]"; end_block ();
-  add_string " = map (TypeBasePure.cinst ty) Clist";
-  add_newline();
-  add_string "      ";
-  begin_block CONSISTENT 4;
-  add_string "fun ";
-  pr_list pp_term
-          (fn () => add_string " | ")
-          (fn () => add_break (0,0))
-          clauses;
-  end_block();
-  add_newline();
-  add_string "  in";
-  add_newline();
-  add_string "  lift";
-  add_newline();
-  add_string "  end";
-  add_newline();
-  add_string "end;";   (* local *)
-  add_newline();
-  end_block()
+  block CONSISTENT 0 [
+    add_string "local val Clist = TypeBase.constructors_of ",
+    add_string ("("^Lib.quote (#1 tyop)^","^Lib.quote (#2 tyop)^")"),
+    add_break (1,0),
+    add_string "in",
+    add_break (1,0),
+    add_string ("fun lift_"^ #2 tyop^" ty = "),
+    add_newline,
+    add_string "  let val ",
+    block INCONSISTENT 1 (
+       add_string "[" ::
+       pr_list add_string [add_string ",", add_break(0,0)] Clistnames @
+       [add_string "]"]
+    ),
+    add_string " = map (TypeBasePure.cinst ty) Clist",
+    add_newline,
+    add_string "      ",
+    block CONSISTENT 4 (
+      add_string "fun " ::
+      pr_list pp_term
+          [add_string " | ", add_break (0,0)]
+          clauses
+    ),
+    add_newline,
+    add_string "  in",
+    add_newline,
+    add_string "  lift",
+    add_newline,
+    add_string "  end",
+    add_newline,
+    add_string "end;",   (* local *)
+    add_newline
+  ]
  end;
 
 end

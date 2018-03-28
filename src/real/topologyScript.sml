@@ -462,10 +462,6 @@ val MR1_LIMPT = store_thm("MR1_LIMPT",
   ASM_REWRITE_TAC[REAL_LT_HALF1]);
 
 
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME (fn ppstrm =>
-   (PP.add_string ppstrm "val _ = Parse.hide \"B\";";
-    PP.add_newline ppstrm))};
+val _ = remove_ovl_mapping "B" {Name = "B", Thy = "topology"};
 
 val _ = export_theory();
