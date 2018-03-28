@@ -10,7 +10,7 @@
 structure HOLPP :> HOLPP =
 struct
 
-datatype pretty = datatype PolyML.pretty
+datatype pretty = datatype PrettyImpl.pretty
 type 'a pprinter = 'a -> pretty
 
 datatype break_style =
@@ -20,7 +20,7 @@ datatype break_style =
 datatype 'a frag = QUOTE of string | ANTIQUOTE of 'a
 type 'a quotation = 'a frag list
 
-val prettyPrint = PolyML.prettyPrint
+val prettyPrint = PrettyImpl.prettyPrint
 
 fun pp_to_string w f x =
   let

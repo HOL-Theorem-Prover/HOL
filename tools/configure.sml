@@ -380,6 +380,8 @@ val _ =
     compile [] "internal_functions.sig";
     compile [] "internal_functions.sml";
     compile [] "Holmake_tools_dtype.sml";
+    compile [] "holpathdb.sig";
+    compile [] "holpathdb.sml";
     compile [] "Holmake_tools.sig";
     compile [] "Holmake_tools.sml";
     compile [] "Holmake_types.sig";

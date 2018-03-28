@@ -104,7 +104,7 @@ end
 val pp_array_types = ref true
 val _ = register_btrace ("pp_array_types", pp_array_types)
 
-fun pp_type0 (G:grammar) backend = let
+fun pp_type0 (G:grammar) (backend: PPBackEnd.t) = let
   val {infixes,suffixes} = rules G
   fun lookup_tyop s = let
     fun recurse [] = NONE

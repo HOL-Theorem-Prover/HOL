@@ -1,16 +1,18 @@
 structure smpp :> smpp =
 struct
 
+infix >- >>
+
 type ('a,'b) t =
      'a * HOLPP.pretty list -> ('b * ('a * HOLPP.pretty list)) option
 
 open HOLPP
 
 fun consP p (st,ps) = SOME ((), (st, p::ps))
-fun add_string s = consP (PP.PrettyStringWithWidth(s, UTF8.size s))
-fun add_break b = consP (PP.add_break b)
-fun add_stringsz p = consP (PP.PrettyStringWithWidth p)
-fun add_newline x = consP PP.NL x
+fun add_string s = consP (HOLPP.PrettyStringWithWidth(s, UTF8.size s))
+fun add_break b = consP (HOLPP.add_break b)
+fun add_stringsz p = consP (HOLPP.PrettyStringWithWidth p)
+fun add_newline x = consP HOLPP.NL x
 fun nothing stps = SOME ((),stps)
 fun fail aps = NONE
 
@@ -60,12 +62,14 @@ fun pr_list fpp brk list =
     | [b] => fpp b
     | b::bs => fpp b >> brk >> pr_list fpp brk bs
 
+fun cons x xs = x::xs
+
 fun mappr_list fpp brk list =
     case list of
       [] => return []
     | [b] => fpp b >- (fn bres => return [bres])
     | b::bs => let
-        fun afterb bres = brk >> mappr_list fpp brk bs >- return o Lib.cons bres
+        fun afterb bres = brk >> mappr_list fpp brk bs >- return o cons bres
       in
         fpp b >- afterb
       end
@@ -74,7 +78,7 @@ fun lift pf x =
   let val pty = pf x in (fn (st,pps) => SOME ((), (st, pty :: pps))) end
 fun lower m st0 =
   let
-    fun mapthis (a, (st,ps)) = (PP.block CONSISTENT 0 (List.rev ps), a, st)
+    fun mapthis (a, (st,ps)) = (HOLPP.block CONSISTENT 0 (List.rev ps), a, st)
   in
     Option.map mapthis (m (st0, []))
   end

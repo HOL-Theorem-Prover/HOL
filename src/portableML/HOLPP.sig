@@ -2,7 +2,7 @@ signature HOLPP =
 sig
 (* PP -- pretty-printing -- from the SML/NJ library *)
 
-datatype pretty = datatype PolyML.pretty
+datatype pretty = datatype PrettyImpl.pretty
 
 type 'a pprinter = 'a -> pretty
 
