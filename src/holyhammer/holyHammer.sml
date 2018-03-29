@@ -251,6 +251,8 @@ fun launch_parallel t =
      terminate when the first prover finds a proof. *)
 fun holyhammer_goal goal =
   let
+    val _ = mkDir_err ttt_search_dir
+    val _ = mkDir_err (ttt_search_dir ^ "/debug")
     val term = list_mk_imp goal
     val (symweight,feav,revdict) = update_thmdata ()
     val premises = thmknn_wdep (symweight,feav,revdict) 128  (fea_of_goal goal)
