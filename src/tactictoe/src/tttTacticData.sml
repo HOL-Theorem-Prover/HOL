@@ -42,98 +42,70 @@ fun create_sharing_tables feavl =
     ((terml,termdict), (idtable,tytable,tmtable))
   end
 
-infix >>
-fun (f1 >> f2) pps = (f1 pps ; f2 pps)
-
-fun block state brkdepth f pps = (HOLPP.begin_block pps state brkdepth ;
-                                  f pps;
-                                  HOLPP.end_block pps)
-
-fun add_string s pps = HOLPP.add_string pps s
-val add_newline = HOLPP.add_newline
-fun jump () = add_newline >> add_newline
-fun add_break ipr pps = HOLPP.add_break pps ipr
-fun pr_list f g h obs pps = Portable.pr_list (fn x => f x pps)
-                                             (fn () => g pps)
-                                             (fn () => h pps)
-                                             obs
-
-val flush = HOLPP.flush_ppstream
-fun nothing pps = ()
-
 fun pp_feavl feavl =
   let
     val ((terml,termdict),(idtable,tytable,tmtable)) =
       create_sharing_tables feavl
 
     fun pp_sml_list pfun l =
-      block INCONSISTENT 0
-        (
-        add_string "[" >> add_break (0,0) >>
-        pr_list pfun (add_string ",") (add_break (1,0)) l >>
-        add_break (0,0) >>
-        add_string "]"
-        )
+      PP.block INCONSISTENT 0 (
+        [ PP.add_string "[", PP.add_break (0,0) ] @
+        PP.pr_list pfun [PP.add_string ",", PP.add_break (1,0)] l @
+        [ PP.add_break (0,0), PP.add_string "]" ]
+      )
 
-    fun term_to_string term =
+    fun raw_term_to_string term =
       quote ((Term.write_raw (fn t => Map.find(#termmap tmtable, t))) term)
-    fun pp_tm tm = add_string ( (term_to_string tm))
-    val pp_terml = pr_list pp_tm nothing add_newline terml
+    fun pp_tm tm = PP.add_string (raw_term_to_string tm)
+    val pp_terml = PP.pr_list pp_tm [PP.add_newline] terml
 
-    fun pp_tmid tm = add_string (int_to_string (dfind tm termdict))
+    fun pp_tmid tm = PP.add_string (int_to_string (dfind tm termdict))
     fun pp_goal (asl,w) = pp_sml_list pp_tmid (w :: asl)
     fun pp_goal_list l =
-      block INCONSISTENT 0
-        (
-        add_string "START" >> add_break (1,0) >>
-        pr_list pp_goal nothing (add_break (1,0)) l >>
-        add_break (1,0) >>
-        add_string "END"
-        )
+      PP.block INCONSISTENT 0 (
+        [ PP.add_string "START", PP.add_break (1,0) ] @
+        PP.pr_list pp_goal [PP.add_break (1,0)] l @
+        [ PP.add_break (1,0), PP.add_string "END" ]
+      )
 
-    fun pp_fea n = add_string (int_to_string n)
+    fun pp_fea n = PP.add_string (int_to_string n)
 
     fun pr_feav ((stac,t,g,gl),fea) =
-      block CONSISTENT 0
-      (
-      add_string (mlquote stac) >> add_newline >>
-      add_string (Real.toString t) >> add_newline >>
-      pp_goal g >> add_newline >>
-      pp_goal_list gl >> add_newline >>
-      pp_sml_list pp_fea fea
-      )
+      PP.block CONSISTENT 0
+        [ PP.add_string (mlquote stac), PP.add_newline,
+          PP.add_string (Real.toString t), PP.add_newline,
+          pp_goal g, PP.add_newline,
+          pp_goal_list gl, PP.add_newline,
+          pp_sml_list pp_fea fea ]
+
     val pp_feav_all =
-      block CONSISTENT 0
-      (if null feavl then nothing
-       else pr_list pr_feav nothing add_newline feavl)
+      PP.block CONSISTENT 0
+      (if null feavl then []
+       else PP.pr_list pr_feav [PP.add_newline] feavl)
 
   in
-    block CONSISTENT 0
-      (
-      add_string "IDS" >> add_newline >>
-      C theoryout_idtable idtable >> jump () >>
-      add_string "TYPES" >> add_newline >>
-      C theoryout_typetable tytable >> jump () >>
-      add_string "TERMS" >> add_newline >>
-      C theoryout_termtable tmtable >> jump () >>
-      add_string "TERMS_START" >> add_newline >>
-      pp_terml >> add_newline >>
-      add_string "TERMS_END" >> jump () >>
-      add_string "FEATURE_VECTORS_START" >> add_newline >>
-      pp_feav_all >> add_newline >>
-      add_string "FEATURE_VECTORS_END" >> jump ()
-      ) >>
-    flush
+    PP.block CONSISTENT 0 (
+      [
+        PP.add_string"IDS", PP.add_newline,
+        theoryout_idtable idtable,
+        PP.add_newline, PP.add_newline,
+        PP.add_string"TYPES", PP.add_newline,
+        theoryout_typetable tytable,
+        PP.add_newline, PP.add_newline,
+        PP.add_string"TERMS", PP.add_newline,
+        theoryout_termtable tmtable,
+        PP.add_newline, PP.add_newline,
+        PP.add_string "TERMS_START",
+        PP.add_newline ] @ pp_terml @ [ PP.add_newline,
+        PP.add_string "TERMS_END",
+        PP.add_newline, PP.add_newline,
+        PP.add_string "FEATURE_VECTORS_START",
+        PP.add_newline, pp_feav_all, PP.add_newline,
+        PP.add_string "FEATURE_VECTORS_END",
+        PP.add_newline
+      ]
+    )
   end
-
-fun feavl_out f ostrm =
- let val ppstrm = Portable.mk_ppstream
-                    {consumer = Portable.outputc ostrm,
-                     linewidth=75, flush = fn () => Portable.flush_out ostrm}
- in f ppstrm handle e => (Portable.close_out ostrm; raise e);
-    Portable.flush_ppstream ppstrm;
-    Portable.close_out ostrm
- end
 
 fun export_tacdata thy =
   let
@@ -144,7 +116,8 @@ fun export_tacdata thy =
     val feavl1 = filter is_global (dlist (!ttt_tacfea_cthy))
     val feavl2 = filter uptodate_feav feavl1
   in
-    feavl_out (pp_feavl feavl2) ostrm
+    (PP.prettyPrint (curry TextIO.output ostrm, 75) (pp_feavl feavl2);
+     TextIO.closeOut ostrm)
   end
 
 (*----------------------------------------------------------------------------
