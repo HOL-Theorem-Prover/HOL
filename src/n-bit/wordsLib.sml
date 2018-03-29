@@ -2705,7 +2705,7 @@ in
          open Portable term_pp_types smpp
          infix >>
          val {add_string=str, add_break=brk,...} =
-            ppfns: unit term_pp_types.ppstream_funs
+            ppfns: term_pp_types.ppstream_funs
          val (n, x) = dest_n2w t
          val m = fcpLib.index_to_num x handle HOL_ERR _ => Arbnum.zero
          val v = numSyntax.dest_numeral n
@@ -2781,7 +2781,7 @@ fun word_cast Gs backend syspr ppfns (pg, lg, rg) d t =
    let
       open Portable term_pp_types smpp
       infix >>
-      val ppfns : unit ppstream_funs = ppfns
+      val ppfns : ppstream_funs = ppfns
       val {add_string = str, add_break = brk, ublock,...} = ppfns
       fun stype tm = String.extract (type_to_string (type_of tm), 1, NONE)
       fun delim i act =

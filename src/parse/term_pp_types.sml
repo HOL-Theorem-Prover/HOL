@@ -53,7 +53,7 @@ struct
     | Underline
     | UserStyle of string
 
-  type 'a ppstream_funs =
+  type 'a ppstream_funs0 =
       {add_break      : int * int -> uprinter,
        add_newline    : uprinter,
        add_string     : string -> uprinter,
@@ -68,10 +68,11 @@ struct
     name : string
   }
 
-  type 'tmg ppbackend = 'tmg upd ppstream_funs
+  type 'tmg ppbackend = 'tmg upd ppstream_funs0
+  type ppstream_funs = unit ppstream_funs0
 
   type ('a,'tmg) userprinter =
-    'a -> 'tmg ppbackend -> sysprinter -> unit ppstream_funs ->
+    'a -> 'tmg ppbackend -> sysprinter -> ppstream_funs ->
     (grav * grav * grav) -> int -> Term.term -> uprinter
   exception UserPP_Failed
 end;

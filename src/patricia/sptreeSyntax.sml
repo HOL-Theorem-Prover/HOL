@@ -195,7 +195,7 @@ fun sptree_print Gs B syspr ppfns (pg, _, _) d t =
    let
       open Portable term_pp_types smpp
       val {add_string = str, add_break = brk, ublock, ...} =
-         ppfns: unit term_pp_types.ppstream_funs
+         ppfns: term_pp_types.ppstream_funs
       val t2 = sptree_pretty_term t
                handle HOL_ERR _ => raise term_pp_types.UserPP_Failed
       fun sys gs d = syspr {gravs = gs, depth = d, binderp = false}

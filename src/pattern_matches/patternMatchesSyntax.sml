@@ -781,7 +781,7 @@ fun pmatch_printer
     (GS : type_grammar.grammar * term_grammar.grammar)
     (backend : term_grammar.grammar term_pp_types.ppbackend)
     sys
-    (ppfns:unit term_pp_types.ppstream_funs)
+    (ppfns:term_pp_types.ppstream_funs)
     ((pgr,lgr,rgr) : term_pp_types.grav * term_pp_types.grav * term_pp_types.grav)
     d t =
   let

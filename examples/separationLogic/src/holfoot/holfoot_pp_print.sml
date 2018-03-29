@@ -21,8 +21,6 @@ quietdec := false;
 *)
 val holfoot_pretty_printer_block_indent = ref 3;
 
-type fns = unit term_pp_types.ppstream_funs
-
 fun unicode_choice snu su =
   if (current_trace "Unicode" = 1) then su else snu
 
@@ -35,7 +33,7 @@ val _ = register_UserStyle NONE "holfoot_frame_split___context" [FG LightGrey]
 val _ = register_UserStyle NONE "holfoot_frame_split___imp"     [FG OrangeRed]
 val _ = register_UserStyle NONE "holfoot_frame_split___split"   [FG Green]
 
-fun holfoot_var_printer GS backend (sys : term_pp_types.sysprinter) (ppfns:fns) gravs d t = let
+fun holfoot_var_printer GS backend (sys : term_pp_types.sysprinter) (ppfns:term_pp_types.ppstream_funs) gravs d t = let
     open Portable term_pp_types
     val v_term = dest_holfoot_var t;
   in
@@ -44,7 +42,7 @@ fun holfoot_var_printer GS backend (sys : term_pp_types.sysprinter) (ppfns:fns) 
 
 
 
-fun holfoot_tag_printer GS backend (sys : term_pp_types.sysprinter) (ppfns:fns) gravs d t = let
+fun holfoot_tag_printer GS backend (sys : term_pp_types.sysprinter) (ppfns:term_pp_types.ppstream_funs) gravs d t = let
     open Portable term_pp_types
     val t_term = dest_holfoot_tag t;
   in
@@ -66,7 +64,7 @@ fun pretty_print_list_sep sep (sys,strn,brk) d =
    end;
 
 
-fun holfoot_proccall_args_printer backend (sys_raw : term_pp_types.sysprinter) (ppfns:fns) gravs d args_term =
+fun holfoot_proccall_args_printer backend (sys_raw : term_pp_types.sysprinter) (ppfns:term_pp_types.ppstream_funs) gravs d args_term =
    let
       open Portable term_pp_types smpp;
       val {add_string,add_break,add_newline,...} = ppfns
@@ -112,7 +110,7 @@ end;
 
 fun label_list2ML t = rev (map (fst o dest_var) (fst (listSyntax.dest_list t)));
 
-fun holfoot_prog_printer GS backend (sys_raw : term_pp_types.sysprinter) (ppfns:fns) gravs d t = let
+fun holfoot_prog_printer GS backend (sys_raw : term_pp_types.sysprinter) (ppfns:term_pp_types.ppstream_funs) gravs d t = let
     open Portable term_pp_types smpp
     infix >>
     val {add_string,add_break,ublock,add_newline,ustyle,...} = ppfns
@@ -156,7 +154,7 @@ fun holfoot_prog_printer GS backend (sys_raw : term_pp_types.sysprinter) (ppfns:
        in
           ublock INCONSISTENT (!holfoot_pretty_printer_block_indent) (
              add_string (stringLib.fromHOLstring name_term) >>
-             holfoot_proccall_args_printer backend sys_raw (ppfns:fns) gravs (d - 1) args_term
+             holfoot_proccall_args_printer backend sys_raw ppfns gravs (d - 1) args_term
           )
        end
     ) else if (same_const op_term holfoot_prog_parallel_procedure_call_term)  then (
@@ -168,11 +166,11 @@ fun holfoot_prog_printer GS backend (sys_raw : term_pp_types.sysprinter) (ppfns:
        in
           ublock INCONSISTENT (!holfoot_pretty_printer_block_indent) (
              add_string (stringLib.fromHOLstring name1_term) >>
-             holfoot_proccall_args_printer backend sys_raw (ppfns:fns) gravs (d - 1) args1_term >>
+             holfoot_proccall_args_printer backend sys_raw ppfns gravs (d - 1) args1_term >>
              add_string " ||" >>
              add_string " " >>
              add_string (stringLib.fromHOLstring name2_term) >>
-             holfoot_proccall_args_printer backend sys_raw (ppfns:fns) gravs (d - 1) args2_term
+             holfoot_proccall_args_printer backend sys_raw ppfns gravs (d - 1) args2_term
           )
        end
     ) else if (same_const op_term holfoot_prog_assign_term)  then (
@@ -591,7 +589,7 @@ fun gencoded_expression_to_term p eL_t =
       tt1
    end;
 
-fun holfoot_expression_printer GS backend (sys_raw : term_pp_types.sysprinter) (ppfns:fns) gravs d t =
+fun holfoot_expression_printer GS backend (sys_raw : term_pp_types.sysprinter) (ppfns:term_pp_types.ppstream_funs) gravs d t =
   let
     open Portable term_pp_types smpp
     infix >>
@@ -618,7 +616,7 @@ fun holfoot_expression_printer GS backend (sys_raw : term_pp_types.sysprinter) (
     )
   end
 
-fun holfoot_pred_printer GS backend sys_raw (ppfns:fns) gravs d t =
+fun holfoot_pred_printer GS backend sys_raw (ppfns:term_pp_types.ppstream_funs) gravs d t =
   let
     open Portable term_pp_types smpp
     infix >>
@@ -715,7 +713,7 @@ in
 end handle HOL_ERR _ => tt;
 
 
-fun holfoot_a_prop_printer Gs backend (sys_raw:term_pp_types.sysprinter) (ppfns:fns) gravs d t = let
+fun holfoot_a_prop_printer Gs backend (sys_raw:term_pp_types.sysprinter) (ppfns:term_pp_types.ppstream_funs) gravs d t = let
     open Portable term_pp_types smpp
     infix >>
     val {add_string,add_break,ublock,add_newline,ustyle,...} = ppfns
@@ -1025,7 +1023,7 @@ fun holfoot_a_prop_printer Gs backend (sys_raw:term_pp_types.sysprinter) (ppfns:
 
 
 
-fun holfoot_specification_printer GS backend (sys_raw:term_pp_types.sysprinter) (ppfns:fns) gravs d t = let
+fun holfoot_specification_printer GS backend (sys_raw:term_pp_types.sysprinter) (ppfns:term_pp_types.ppstream_funs) gravs d t = let
     open Portable term_pp_types smpp
     infix >>
     val {add_string,add_break,ublock,add_newline,ustyle,...} = ppfns
@@ -1123,7 +1121,7 @@ fun holfoot_specification_printer GS backend (sys_raw:term_pp_types.sysprinter) 
                 ustyle [UserStyle "holfoot_alert_1"] (
                    add_string (stringLib.fromHOLstring fun_name)
                 ) >>
-                holfoot_proccall_args_printer backend sys_raw (ppfns:fns) gravs (d - 1) argL_term >>
+                holfoot_proccall_args_printer backend sys_raw (ppfns:term_pp_types.ppstream_funs) gravs (d - 1) argL_term >>
                 (if (not assume_opt) then (add_newline >> add_string "  ")
                     else (add_break (1,2))) >>
                 add_string "[" >>
@@ -1170,7 +1168,7 @@ fun holfoot_specification_printer GS backend (sys_raw:term_pp_types.sysprinter) 
 (*
 val t = find_term is_VAR_RES_FRAME_SPLIT (snd (top_goal ()))
 *)
-fun holfoot_prop_is_equiv_false_printer GS backend (sys_raw : term_pp_types.sysprinter) (ppfns:fns) gravs d t = let
+fun holfoot_prop_is_equiv_false_printer GS backend (sys_raw : term_pp_types.sysprinter) (ppfns:term_pp_types.ppstream_funs) gravs d t = let
     open Portable term_pp_types smpp
     infix >>
     val {add_string,add_break,ublock,add_newline,ustyle,...} = ppfns
@@ -1186,7 +1184,7 @@ end
 (*
 val t = find_term is_VAR_RES_FRAME_SPLIT (snd (top_goal ()))
 *)
-fun holfoot_frame_split_printer GS backend (sys_raw : term_pp_types.sysprinter) (ppfns:fns) gravs d t = let
+fun holfoot_frame_split_printer GS backend (sys_raw : term_pp_types.sysprinter) (ppfns:term_pp_types.ppstream_funs) gravs d t = let
     open Portable term_pp_types smpp
     infix >>
     val {add_string,add_break,ublock,add_newline,ustyle,...} = ppfns
@@ -1260,7 +1258,7 @@ in
     ))
 end
 
-fun holfoot_cond_triple_printer GS backend sys_raw (ppfns:fns) gravs d t = let
+fun holfoot_cond_triple_printer GS backend sys_raw (ppfns:term_pp_types.ppstream_funs) gravs d t = let
     open Portable term_pp_types smpp
     infix >>
     val {add_string,add_break,ublock,add_newline,ustyle,...} = ppfns

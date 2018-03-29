@@ -167,7 +167,7 @@ val dest_bind = dest_binop monad_bind
 fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) depth t = let
   open smpp term_pp_utils
   infix >> >-
-  val ppfns = ppfns : unit term_pp_types.ppstream_funs
+  val ppfns = ppfns : term_pp_types.ppstream_funs
   open term_pp_types term_grammar
   val (strn,brk) = (#add_string ppfns, #add_break ppfns)
   val ublock = #ublock ppfns

@@ -19,7 +19,7 @@ fun condprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm = let
             then ()
             else raise UserPP_Failed
         | NONE => raise UserPP_Failed
-  val {add_string, ublock, add_break, ...} = ppfns:unit ppstream_funs
+  val {add_string, ublock, add_break, ...} = ppfns:ppstream_funs
   val paren_required =
       (case rgr of
          Prec(p, _) => p > 70
