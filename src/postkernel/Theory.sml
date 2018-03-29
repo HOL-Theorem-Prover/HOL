@@ -54,16 +54,14 @@ open Feedback Lib Type Term Thm ;
 open TheoryPP
 
 
-type ppstream = Portable.ppstream
-type pp_type  = ppstream -> hol_type -> unit
-type pp_thm   = ppstream -> thm -> unit
+structure PP = HOLPP
 type num = Arbnum.num
 
 val ERR  = mk_HOL_ERR "Theory";
 val WARN = HOL_WARNING "Theory";
 
-type thy_addon = {sig_ps    : (ppstream -> unit) option,
-                  struct_ps : (ppstream -> unit) option}
+type thy_addon = {sig_ps    : (unit -> PP.pretty) option,
+                  struct_ps : (unit -> PP.pretty) option}
 
 local
   val hooks =
@@ -150,7 +148,7 @@ end (* local block enclosing declaration of hooks variable *)
 
 (* This reference is set in course of loading the parsing library *)
 
-val pp_thm = ref (fn _:ppstream => fn _:thm => ())
+val pp_thm = ref (fn _:thm => PP.add_string "<thm>")
 
 (*---------------------------------------------------------------------------*
  * Unique identifiers, for securely linking a theory to its parents when     *
@@ -467,13 +465,15 @@ in
 end;
 
 local
-  fun pp_lines pps =
-    List.app (fn s => (PP.add_string pps s; PP.add_newline pps))
+  structure PP = HOLPP
+  fun pp_lines l =
+    PP.block PP.CONSISTENT 0
+       (List.concat (map (fn s => [PP.add_string s, PP.NL]) l))
   val is_empty =
     fn [] => true
      | [s] => s = "none" orelse List.all Char.isSpace (String.explode s)
      | _ => false
-  fun pp l = if is_empty l then NONE else SOME (fn pps => pp_lines pps l)
+  fun pp l = if is_empty l then NONE else SOME (fn _ => pp_lines l)
   val qpp = pp o Portable.quote_to_string_list
 in
   fun quote_adjoin_to_theory q1 q2 =
@@ -843,13 +843,12 @@ end (* struct *)
  *         PRINTING THEORIES OUT AS ML STRUCTURES AND SIGNATURES.            *
  *---------------------------------------------------------------------------*)
 
-fun theory_out f ostrm =
- let val ppstrm = Portable.mk_ppstream
-                    {consumer = Portable.outputc ostrm,
-                     linewidth=75, flush = fn () => Portable.flush_out ostrm}
- in f ppstrm handle e => (Portable.close_out ostrm; raise e);
-    Portable.flush_ppstream ppstrm;
-    Portable.close_out ostrm
+fun theory_out p ostrm =
+ let
+ in
+   PP.prettyPrint ((fn s => TextIO.output(ostrm,s)), 75) p
+     handle e => (Portable.close_out ostrm; raise e);
+   TextIO.closeOut ostrm
  end;
 
 fun unkind facts =

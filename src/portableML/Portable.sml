@@ -701,59 +701,6 @@ fun ?>(PASS x, f) = f x
     Pretty Printing
  ---------------------------------------------------------------------------*)
 
-open HOLPP
-
-fun with_ppstream ppstrm =
-  {add_string     = add_string ppstrm,
-   add_break      = add_break ppstrm,
-   begin_block    = begin_block ppstrm,
-   end_block      = fn () => end_block ppstrm,
-   add_newline    = fn () => add_newline ppstrm,
-   clear_ppstream = fn () => clear_ppstream ppstrm,
-   flush_ppstream = fn () => flush_ppstream ppstrm}
-
-fun defaultConsumer () =
-   {consumer  = fn s => TextIO.output(TextIO.stdOut, s),
-    linewidth = 72,
-    flush     = fn () => TextIO.flushOut TextIO.stdOut}
-
-fun pp_to_string linewidth ppfn ob =
-   let
-      val l = ref ([]: string list)
-      fun attach s = l := (s :: (!l))
-    in
-       with_pp {consumer = attach,
-                linewidth = linewidth,
-                flush = fn () => ()}
-               (fn ppstrm => ppfn ppstrm ob)
-       ; String.concat (List.rev (!l))
-    end
-
-val mk_consumer = fn x => x
-
-(*---------------------------------------------------------------------------*)
-(* Generate a standard ppstream                                              *)
-(*---------------------------------------------------------------------------*)
-
-fun stdOut_ppstream () = mk_ppstream (defaultConsumer())
-
-(*---------------------------------------------------------------------------
- * Print a list of items.
- *
- *     pfun = print_function
- *     dfun = delim_function
- *     bfun = break_function
- *---------------------------------------------------------------------------*)
-
-fun pr_list_to_ppstream ppstrm pfun dfun bfun =
-   let
-      fun pr [] = ()
-        | pr [i] = pfun ppstrm i
-        | pr (i :: rst) = (pfun ppstrm i; dfun ppstrm; bfun ppstrm; pr rst)
-   in
-      pr
-   end
-
 (*---------------------------------------------------------------------------
  * Simple and heavily used.
  * pfun = item printing function
@@ -761,36 +708,29 @@ fun pr_list_to_ppstream ppstrm pfun dfun bfun =
  * bfun = break printer function
  *---------------------------------------------------------------------------*)
 
-fun pr_list pfun dfun bfun =
-   let
-      fun pr [] = ()
-        | pr [i] = pfun i
-        | pr (i :: rst) = (pfun i; dfun (); bfun (); pr rst)
-   in
-      pr
-   end
-
-(*---------------------------------------------------------------------------*)
-(* Send the results of prettyprinting to stdOut                              *)
-(*---------------------------------------------------------------------------*)
-
-fun pprint pp x =
-   let
-      val strm = stdOut_ppstream ()
-   in
-      let
-         val _ = pp strm x
-      in
-         flush_ppstream strm; ()
-      end
-      handle e => (flush_ppstream strm; raise e)
-   end
+fun with_ppstream ppstrm =
+  let
+    open OldPP
+  in
+    {add_string     = add_string ppstrm,
+     add_break      = add_break ppstrm,
+     begin_block    = begin_block ppstrm,
+     end_block      = fn () => end_block ppstrm,
+     add_newline    = fn () => add_newline ppstrm,
+     clear_ppstream = fn () => clear_ppstream ppstrm,
+     flush_ppstream = fn () => flush_ppstream ppstrm}
+  end
 
 (*---------------------------------------------------------------------------
       MoscowML returns lists of QUOTE'd strings when a quote is spread
       over more than one line. "norm_quote" concatenates all adjacent
       QUOTE elements in this list.
  ---------------------------------------------------------------------------*)
+
+type 'a quotation = 'a HOLPP.quotation
+open HOLPP
+
+fun pprint f x = prettyPrint(TextIO.print, 72) (f x)
 
 fun norm_quote [] = []
   | norm_quote [x] = [x]

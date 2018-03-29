@@ -3,6 +3,7 @@ open EmitTeX combinSyntax PP
 open testutils
 
 fun udie() = testutils.die "FAILED!"
+fun gotdie s = testutils.die ("\nFAILED: Got >" ^ s ^ "<")
 
 val _ = tprint "Testing var v2 overridden to v1"
 val x_t = mk_var("x", alpha)
@@ -39,28 +40,29 @@ val _ = if s1 = s2 then OK() else udie()
 
 val _ = tprint "Testing dollarised syntax (/\\)"
 val s = pp_to_string 70 pp_term_as_tex conjunction
-val _ = if s = "(\\HOLSymConst{\\HOLTokenConj{}})" then OK() else udie()
+val _ = if s = "(\\HOLSymConst{\\HOLTokenConj{}})" then OK() else gotdie s
 
 val _ = tprint "Testing dollarised syntax (if)"
 val s = pp_to_string 70 pp_term_as_tex (mk_var("if", bool))
-val _ = if s = "(\\HOLFreeVar{\\HOLKeyword{if}})" then OK() else udie()
+val _ = if s = "(\\HOLFreeVar{\\HOLKeyword{if}})" then OK() else gotdie s
 
 open Feedback
 val _ = tprint "Testing paren-less dollarised syntax /\\"
 val _ = set_trace "EmitTeX: dollar parens" 0
 val s = pp_to_string 70 pp_term_as_tex conjunction
-val _ = if s = "\\HOLSymConst{\\HOLTokenConj{}}" then OK() else udie()
+val _ = if s = "\\HOLSymConst{\\HOLTokenConj{}}" then OK() else gotdie s
 val _ = set_trace "EmitTeX: dollar parens" 1
 
 val _ = tprint "Testing UNIV printing (:'a)"
 val s = pp_to_string 70 pp_term_as_tex (pred_setSyntax.mk_univ alpha)
-val _ = if s = "\\ensuremath{\\cal{U}}(:'a)" then OK() else udie()
+val _ = if s = "\\ensuremath{\\cal{U}}(:'a)" then OK() else gotdie s
 
 val _ = tprint "Testing UNIV printing \"raw\" (:'a)"
 val s = pp_to_string 70
                      (raw_pp_term_as_tex (K NONE))
                      (pred_setSyntax.mk_univ alpha)
-val _ = if s = "\\ensuremath{\\cal{U}}(:\\ensuremath{\\alpha})" then OK() else udie()
+val _ = if s = "\\ensuremath{\\cal{U}}(:\\ensuremath{\\alpha})" then OK()
+        else gotdie s
 
 val _ = tprint "Testing UNIV printing (:num)"
 val s = pp_to_string 70 pp_term_as_tex (pred_setSyntax.mk_univ numSyntax.num)
@@ -71,7 +73,7 @@ val _ = tprint "Testing const-annotation for binders"
 val P_t = mk_var("P", alpha --> bool)
 val s = pp_to_string 70 pp_term_as_tex (mk_forall(x_t, mk_comb(P_t, x_t)))
 val _ = if s = "\\HOLSymConst{\\HOLTokenForall{}}\\HOLBoundVar{x}. \\HOLFreeVar{P} \\HOLBoundVar{x}"
-        then OK() else udie()
+        then OK() else gotdie s
 
 val _ = Feedback.emit_MESG := false
 fun dtype_test n s = pp_to_string n (raw_pp_theorem_as_tex (fn _ => NONE)) (theorem ("datatype_" ^ s))
@@ -109,4 +111,4 @@ val _ = if s = "\\HOLFreeVar{bar} = \\HOLConst{ETA} \\HOLTokenBar{} \\HOLConst{E
         then
           OK()
         else
-          udie()
+          gotdie s

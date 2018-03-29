@@ -188,8 +188,8 @@ in
   Theory.adjoin_to_theory {
     sig_ps = NONE,
     struct_ps = SOME
-      (fn pps =>
-          PP.add_string pps
+      (fn _ =>
+          PP.add_string
                  ("val _ = ThmSetData.new_exporter "^Lib.mlquote s^
                   " (fn _ => fn _ => ())\n"))
   }

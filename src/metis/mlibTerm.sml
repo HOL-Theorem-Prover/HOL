@@ -241,41 +241,41 @@ fun pp_term' ops =
       if s = n then (cons v ## I) (binds s b) else ([], tm)
       | binds _ tm = ([], tm)
     open PP
-    fun basic pp (Var v) = pp_vname pp v
-      | basic pp (Fn (f, a)) =
-      (pp_fname pp f; app (fn x => (add_break pp (1,0); argument pp x)) a)
-    and argument pp tm =
-      if is_var tm orelse is_const tm then basic pp tm else pp_btm pp tm
-    and quant pp (tm, r) =
+    fun basic (Var v) = pp_vname v
+      | basic (Fn (f, a)) =
+        block INCONSISTENT 0
+              (pp_fname f ::
+               List.concat (map (fn x => [add_break (1,0), argument x]) a))
+    and argument tm =
+      if is_var tm orelse is_const tm then basic tm else pp_btm tm
+    and quant (tm, r) =
       let
-        fun pr pp (Fn (q, [Var v, tm])) =
+        fun pr (Fn (q, [Var v, tm])) =
           let
             val (vs, body) = binds q tm
           in
-            add_string pp q;
-            pp_vname pp v;
-            app (fn a => (add_break pp (1, 0); pp_vname pp a)) vs;
-            add_string pp ".";
-            add_break pp (1, 0);
-            if is_q body then pr pp body else pp_tm pp (body, false)
+            [add_string q, pp_vname v] @
+            List.concat (map (fn a => [add_break (1, 0), pp_vname a]) vs) @
+            [add_string ".", add_break (1, 0)] @
+            (if is_q body then pr body else [pp_tm (body, false)])
           end
-          | pr pp tm = raise Bug "pp_term: not a quantifier"
-        fun pp_q pp t = (begin_block pp INCONSISTENT 2; pr pp t; end_block pp)
+          | pr tm = raise Bug "pp_term: not a quantifier"
+        fun pp_q t = block INCONSISTENT 2 (pr t)
       in
         (if is_q tm then (if r then pp_bracket "(" ")" else I) pp_q
-         else basic) pp tm
+         else basic) tm
       end
-    and molecule pp (tm, r) =
+    and molecule (tm, r) =
       let
         val (n, x) = negs tm
       in
-        begin_block pp INCONSISTENT n;
-        funpow n (fn () => add_string pp "~") ();
-        if is_op x then pp_btm pp x else quant pp (x, r);
-        end_block pp
+        block INCONSISTENT n [
+          add_string (CharVector.tabulate(n, fn _ => #"~")),
+          if is_op x then pp_btm x else quant (x, r)
+        ]
       end
-    and pp_btm pp tm = pp_bracket "(" ")" pp_tm pp (tm, false)
-    and pp_tm pp tmr = iprinter idest molecule pp tmr
+    and pp_btm tm = pp_bracket "(" ")" pp_tm (tm, false)
+    and pp_tm tmr = iprinter idest molecule tmr
   in
     pp_map (C pair false) pp_tm
   end;
@@ -300,17 +300,15 @@ fun formula_to_string' ops len fm = PP.pp_to_string len (pp_formula' ops) fm;
 
 (* Pretty-printing things is needed for parsing thing quotations *)
 
-fun pp_thing ops pp (mlibTerm tm)    = pp_term'    ops pp tm
-  | pp_thing ops pp (Formula fm) = pp_formula' ops pp fm;
+fun pp_thing ops (mlibTerm tm)    = pp_term'    ops tm
+  | pp_thing ops (Formula fm)     = pp_formula' ops fm;
 
-fun pp_bracketed_thing ops pp th =
-  (PP.begin_block pp PP.INCONSISTENT 1; PP.add_string pp "(";
-   pp_thing ops pp th; PP.add_string pp ")"; PP.end_block pp);
+fun pp_bracketed_thing ops th = pp_bracket "(" ")" (pp_thing ops) th
 
 (* Pretty-printing using !infixes and !LINE_LENGTH *)
 
-fun pp_term        pp tm = pp_term'           (!infixes) pp             tm;
-fun pp_formula     pp fm = pp_formula'        (!infixes) pp             fm;
+fun pp_term           tm = pp_term'           (!infixes)                tm;
+fun pp_formula        fm = pp_formula'        (!infixes)                fm;
 fun term_to_string    tm = term_to_string'    (!infixes) (!LINE_LENGTH) tm;
 fun formula_to_string fm = formula_to_string' (!infixes) (!LINE_LENGTH) fm;
 

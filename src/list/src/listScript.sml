@@ -111,7 +111,7 @@ val _ = add_rule {term_name = "CONS", fixity = Infixr 490,
 val _ = add_listform {separator = [TOK ";", BreakSpace(1,0)],
                       leftdelim = [TOK "["], rightdelim = [TOK "]"],
                       cons = "CONS", nilstr = "NIL",
-                      block_info = (PP.INCONSISTENT, 0)};
+                      block_info = (PP.INCONSISTENT, 1)};
 
 (*---------------------------------------------------------------------------*)
 (* Prove the axiomatization of lists                                         *)

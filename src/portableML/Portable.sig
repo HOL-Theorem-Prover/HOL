@@ -145,31 +145,16 @@ sig
   type instream  = TextIO.instream
   type outstream = TextIO.outstream
 
-  include HOLPP where type break_style = HOLPP.break_style
-                  and type ppstream = HOLPP.ppstream
-                  and type 'a frag = 'a HOLPP.frag
-
-  val with_ppstream : ppstream
+  datatype frag = datatype HOLPP.frag
+  datatype break_style = datatype HOLPP.break_style
+  val with_ppstream : OldPP.ppstream
                        -> {add_break      : int * int -> unit,
                            add_newline    : unit -> unit,
                            add_string     : string -> unit,
-                           begin_block    : break_style -> int -> unit,
+                           begin_block    : HOLPP.break_style -> int -> unit,
                            clear_ppstream : unit -> unit,
                            end_block      : unit -> unit,
                            flush_ppstream : unit -> unit}
-
-  val mk_consumer : 'a -> 'a
-  val defaultConsumer : unit -> {consumer : string -> unit,
-                                 flush : unit -> unit,
-                                 linewidth : int}
-  val stdOut_ppstream : unit -> ppstream
-  val pr_list : ('a -> unit) -> (unit -> 'b) -> (unit -> 'c)
-                -> 'a list -> unit
-  val pr_list_to_ppstream
-     : ppstream -> (ppstream -> 'a -> unit)
-                  -> (ppstream -> unit)
-                   -> (ppstream -> unit) -> 'a list -> unit
-  val pprint : (ppstream -> 'a -> unit) -> 'a -> unit
 
   val dec: int ref -> unit
   val inc: int ref -> unit
@@ -220,6 +205,8 @@ sig
   exception Div
   exception Interrupt
 
+  type 'a quotation = 'a HOLPP.quotation
+  val pprint : 'a HOLPP.pprinter -> 'a -> unit
   val norm_quote : 'a quotation -> 'a quotation
   val quote_to_string : ('a -> string) -> 'a quotation -> string
   val quote_to_string_list : string quotation -> string list

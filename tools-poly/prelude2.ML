@@ -10,14 +10,8 @@ val _ = use (HOLDIR ^ "/src/datatype/Interactive");
 *)
 
 local
-  fun pp2polypp (ppfn: PP.ppstream -> 'b -> unit) =
-    let
-      fun f pps x = Parse.respect_width_ref Globals.linewidth ppfn pps x
-                    handle e => Raise e
-    in
-      fn depth => fn printArgTypes => fn e: 'b =>
-        PolyML.PrettyString (PP.pp_to_string (!Globals.linewidth) f e)
-    end
+  fun pp2polypp (ppfn: 'b PP.pprinter) =
+      fn depth => fn printArgTypes => fn e: 'b => ppfn e
   fun pp_transform d _ (t : clauses.transform) =
     case t of
       clauses.Conversion c =>

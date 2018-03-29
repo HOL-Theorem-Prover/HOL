@@ -13,7 +13,7 @@ sig
   val set_implicit_rewrites : rewrites -> unit
   val add_implicit_rewrites : thm list -> unit
 
-  val pp_rewrites           : ppstream -> rewrites -> unit
+  val pp_rewrites           : rewrites Parse.pprinter
   val bool_rewrites         : rewrites
   val monitoring            : bool ref
 

@@ -73,7 +73,7 @@ val thm_pp_prefix = ref "|- " and thm_pp_suffix = ref ""
  * Tells the prettyprinters how wide the page is.                            *
  *---------------------------------------------------------------------------*)
 
-val linewidth = ref 72
+val linewidth = CoreReplVARS.linewidth
 
 (*---------------------------------------------------------------------------*
  * Controls depth of printing for terms. Since the pp recursively decrements *

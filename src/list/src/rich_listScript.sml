@@ -3499,29 +3499,29 @@ local
        ("ZIP_GENLIST", "ZIP_GENLIST"),
        ("ZIP_UNZIP", "ZIP_UNZIP")
       ]
+   val B = PP.block PP.CONSISTENT 0
 in
    val () = Theory.adjoin_to_theory {
       sig_ps = SOME
-        (fn ppstrm =>
+        (fn _ =>
            let
-              fun S s =
-                 (PP.add_string ppstrm ("val " ^ s ^ " : thm")
-                  ; PP.add_newline ppstrm)
+              fun S s = PP.add_string ("val " ^ s ^ " : thm")
            in
-              PP.add_string ppstrm "(* Aliases for legacy theorem names *)"
-              ; PP.add_newline ppstrm
-              ; PP.add_newline ppstrm
-              ; List.app S
-                  (Lib.sort (Lib.curry String.<) (List.map fst (alias @ moved)))
+             B (
+               [PP.add_string "(* Aliases for legacy theorem names *)", PP.NL] @
+               PP.pr_list S [PP.add_break(1,0)]
+                          (Lib.sort (Lib.curry String.<)
+                                    (List.map fst (alias @ moved)))
+             )
            end),
       struct_ps = SOME
-        (fn ppstrm =>
+        (fn _ =>
            let
               fun S p (s1, s2) =
-                 (PP.add_string ppstrm ("val " ^ s1 ^ " = " ^ p ^ s2)
-                  ; PP.add_newline ppstrm)
+                PP.add_string ("val " ^ s1 ^ " = " ^ p ^ s2)
+              fun L p l = B (PP.pr_list (S p) [PP.NL] l)
            in
-              List.app (S "") alias; List.app (S "listTheory.") moved
+              B [L "" alias, PP.add_break(1,0), L "listTheory." moved]
            end)}
 end
 

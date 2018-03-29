@@ -154,7 +154,7 @@ fun holfoot_prog_printer GS backend (sys_raw : term_pp_types.sysprinter) (ppfns:
        in
           ublock INCONSISTENT (!holfoot_pretty_printer_block_indent) (
              add_string (stringLib.fromHOLstring name_term) >>
-             holfoot_proccall_args_printer backend sys_raw (ppfns:term_pp_types.ppstream_funs) gravs (d - 1) args_term
+             holfoot_proccall_args_printer backend sys_raw ppfns gravs (d - 1) args_term
           )
        end
     ) else if (same_const op_term holfoot_prog_parallel_procedure_call_term)  then (
@@ -166,11 +166,11 @@ fun holfoot_prog_printer GS backend (sys_raw : term_pp_types.sysprinter) (ppfns:
        in
           ublock INCONSISTENT (!holfoot_pretty_printer_block_indent) (
              add_string (stringLib.fromHOLstring name1_term) >>
-             holfoot_proccall_args_printer backend sys_raw (ppfns:term_pp_types.ppstream_funs) gravs (d - 1) args1_term >>
+             holfoot_proccall_args_printer backend sys_raw ppfns gravs (d - 1) args1_term >>
              add_string " ||" >>
              add_string " " >>
              add_string (stringLib.fromHOLstring name2_term) >>
-             holfoot_proccall_args_printer backend sys_raw (ppfns:term_pp_types.ppstream_funs) gravs (d - 1) args2_term
+             holfoot_proccall_args_printer backend sys_raw ppfns gravs (d - 1) args2_term
           )
        end
     ) else if (same_const op_term holfoot_prog_assign_term)  then (

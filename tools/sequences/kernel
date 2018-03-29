@@ -21,6 +21,7 @@ src/1
 (otknl)src/opentheory/postbool
 src/proofman
 [poly]bin/hol.bare
+src/proofman/tests
 [poly]src/tactictoe/src
 [poly]src/holyhammer/hh/hh1
 [poly]src/holyhammer/hh

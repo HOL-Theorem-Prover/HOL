@@ -24,9 +24,9 @@ sig
    val goal_size    : goal -> int
    val gstk_size    : gstk -> int
 
-   val std_pp_goal  : ppstream -> goal -> unit
-   val pp_goal      : ppstream -> goal -> unit
-   val pp_gstk      : ppstream -> gstk -> unit
-   val set_goal_pp  : (ppstream -> goal -> unit) -> (ppstream -> goal -> unit)
+   val std_pp_goal  : goal Parse.pprinter
+   val pp_goal      : goal Parse.pprinter
+   val pp_gstk      : gstk Parse.pprinter
+   val set_goal_pp  : goal Parse.pprinter -> goal Parse.pprinter
 
 end

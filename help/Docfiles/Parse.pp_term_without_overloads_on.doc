@@ -1,7 +1,6 @@
 \DOC pp_term_without_overloads_on
 
-\TYPE {Parse.pp_term_without_overloads_on :
-         string list -> Portable.ppstream -> term -> unit}
+\TYPE {Parse.pp_term_without_overloads_on : string list -> term PP.pprinter}
 
 \SYNOPSIS
 Printing function for terms without using overload mappings of certain tokens.
@@ -20,10 +19,10 @@ system's standard pretty-printing stream type.
 \EXAMPLE
 {
  > val termpp = pp_term_without_overloads_on ["+"];
- val termpp = fn: ppstream -> term -> unit
- > val _ = Portable.pprint termpp ``x + y`` before print"\n";
+ val termpp = fn: term Parse.pprinter
+ > val _ = Portable.pprint termpp ``x + y`` ;
  arithmetic$+ x y
- >
+ val it = (): unit
 }
 
 \FAILURE

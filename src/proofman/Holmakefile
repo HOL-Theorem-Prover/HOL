@@ -32,10 +32,4 @@ EXTRA_CLEANS = $(TARGET)
 $(TARGET): $(DEPS)
 	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) --poly -o $@ $(UOARGS)
 
-all: selftest.exe $(TARGET)
-.PHONY: all
-
-selftest.exe: selftest.uo
-	$(HOLMOSMLC) -o $@ $<
-
 endif

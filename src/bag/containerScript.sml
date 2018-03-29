@@ -251,12 +251,15 @@ val WF_mlt_list = Q.store_thm
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME
- (fn ppstrm => let
-   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
+ (fn _ => let
+   fun S s = [PP.add_string s, PP.add_newline]
  in
-   S "val _ = TotalDefn.WF_thms := (!TotalDefn.WF_thms @ [WF_mlt_list]);";
-   S "val _ = TotalDefn.termination_simps := (!TotalDefn.termination_simps @ [mlt_list_def]);"
- end)};
+   PP.block PP.CONSISTENT 0 (
+     S "val _ = TotalDefn.WF_thms := (!TotalDefn.WF_thms @ [WF_mlt_list]);" @
+     S "val _ = TotalDefn.termination_simps := \
+         \(!TotalDefn.termination_simps @ [mlt_list_def]);"
+   )
+  end)};
 
 
 (*---------------------------------------------------------------------------

@@ -3882,27 +3882,27 @@ val num_case_eq = Q.store_thm(
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME
- (fn ppstrm => let
-   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
+ (fn _ => let
+   val S = PP.add_string
  in
-   S "val _ = TypeBase.write";
-   S "  [TypeBasePure.mk_datatype_info";
-   S "     {ax=TypeBasePure.ORIG prim_recTheory.num_Axiom,";
-   S "      case_def=num_case_def,";
-   S "      case_cong=num_case_cong,";
-   S "      case_eq = num_case_eq,";
-   S "      induction=TypeBasePure.ORIG numTheory.INDUCTION,";
-   S "      nchotomy=num_CASES,";
-   S "      size=SOME(Parse.Term`\\x:num. x`, TypeBasePure.ORIG boolTheory.REFL_CLAUSE),";
-   S "      encode=NONE,";
-   S "      fields=[],";
-   S "      accessors=[],";
-   S "      updates=[],";
-   S "      recognizers=[],";
-   S "      destructors=[CONJUNCT2(prim_recTheory.PRE)],";
-   S "      lift=SOME(mk_var(\"numSyntax.lift_num\",Parse.Type`:'type -> num -> 'term`)),";
-   S "      one_one=SOME prim_recTheory.INV_SUC_EQ,";
-   S "      distinct=SOME numTheory.NOT_SUC}];"
+   S "val _ = TypeBase.write\n\
+     \  [TypeBasePure.mk_datatype_info\n\
+     \     {ax=TypeBasePure.ORIG prim_recTheory.num_Axiom,\n\
+     \      case_def=num_case_def,\n\
+     \      case_cong=num_case_cong,\n\
+     \      case_eq = num_case_eq,\n\
+     \      induction=TypeBasePure.ORIG numTheory.INDUCTION,\n\
+     \      nchotomy=num_CASES,\n\
+     \      size=SOME(Parse.Term`\\x:num. x`, TypeBasePure.ORIG boolTheory.REFL_CLAUSE),\n\
+     \      encode=NONE,\n\
+     \      fields=[],\n\
+     \      accessors=[],\n\
+     \      updates=[],\n\
+     \      recognizers=[],\n\
+     \      destructors=[CONJUNCT2(prim_recTheory.PRE)],\n\
+     \      lift=SOME(mk_var(\"numSyntax.lift_num\",Parse.Type`:'type -> num -> 'term`)),\n\
+     \      one_one=SOME prim_recTheory.INV_SUC_EQ,\n\
+     \      distinct=SOME numTheory.NOT_SUC}];"
  end)};
 
 val datatype_num = store_thm(

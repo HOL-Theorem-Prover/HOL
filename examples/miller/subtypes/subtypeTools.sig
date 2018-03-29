@@ -83,7 +83,7 @@ sig
   val pattern_rewr : term * (conv -> (term -> thm) -> conv) -> vterm * c_rewr
   val pattern_rule : term * (vthm -> vthm list) -> vterm * c_rule
   val new_context : unit -> context
-  val pp_context : ppstream -> context -> unit
+  val pp_context : context PP.pprinter
   val context_subtypes : context -> subtype_context
   val context_add_fact : vthm -> context -> context
   val context_add_element : context_element -> context -> context
@@ -113,7 +113,7 @@ sig
 
   (* Operations *)
   val empty_precontext : precontext
-  val pp_precontext : ppstream -> precontext -> unit
+  val pp_precontext : precontext PP.pprinter
   val precontext_add : string * context_element list -> precontext -> precontext
   val precontext_compile : precontext -> context
   val precontext_merge : precontext -> precontext -> precontext

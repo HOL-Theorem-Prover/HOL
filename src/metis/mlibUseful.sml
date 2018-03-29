@@ -564,36 +564,34 @@ local val ln2 = Math.ln 2.0 in fun log2 x = Math.ln x / ln2 end;
 
 (* Generic pretty-printers *)
 
-type ppstream = PP.ppstream
-type 'a pp = ppstream -> 'a -> unit;
+type 'a pp = 'a Parse.pprinter
 
 val LINE_LENGTH = ref 75;
 
-fun pp_map f pp_a (ppstrm : ppstream) x : unit = pp_a ppstrm (f x);
+fun pp_map f pp_a x = pp_a (f x);
 
-fun pp_bracket l r pp_a pp a =
-  (PP.begin_block pp PP.INCONSISTENT (size l); PP.add_string pp l; pp_a pp a;
-   PP.add_string pp r; PP.end_block pp);
+fun pp_bracket l r pp_a a =
+  PP.block PP.INCONSISTENT (size l) [PP.add_string l, pp_a a, PP.add_string r]
 
-fun pp_sequence sep pp_a pp =
-  let fun pp_x x = (PP.add_string pp sep; PP.add_break pp (1,0); pp_a pp x)
-  in fn [] => () | h :: t => (pp_a pp h; app pp_x t)
-  end;
+fun pp_sequence sep pp_a els =
+  let
+    fun recurse els =
+      case els of
+          [] => []
+        | [e] => [pp_a e]
+        | e::es => [pp_a e, PP.add_string sep, PP.add_break(1,0)] @
+                   recurse es
+  in
+    PP.block PP.INCONSISTENT 0 (recurse els)
+  end
 
-fun pp_binop s pp_a pp_b pp (a,b) =
-  (PP.begin_block pp PP.INCONSISTENT 0;
-   pp_a pp a;
-   PP.add_string pp s;
-   PP.add_break pp (1,0);
-   pp_b pp b;
-   PP.end_block pp);
+fun pp_binop s pp_a pp_b (a,b) =
+  PP.block PP.INCONSISTENT 0
+           [pp_a a, PP.add_string s, PP.add_break (1,0), pp_b b]
 
 (* Pretty-printers for common types *)
 
-fun pp_string pp s =
-  (PP.begin_block pp PP.INCONSISTENT 0;
-   PP.add_string pp s;
-   PP.end_block pp);
+fun pp_string s = PP.add_string s
 
 val pp_unit = pp_map (fn () => "()") pp_string;
 
@@ -631,8 +629,8 @@ fun is_inl (INL _) = true | is_inl (INR _) = false;
 
 fun is_inr (INR _) = true | is_inr (INL _) = false;
 
-fun pp_sum pp_a _ pp (INL a) = pp_a pp a
-  | pp_sum _ pp_b pp (INR b) = pp_b pp b;
+fun pp_sum pp_a _ (INL a) = pp_a a
+  | pp_sum _ pp_b (INR b) = pp_b b;
 
 (* ------------------------------------------------------------------------- *)
 (* Maplets.                                                                  *)

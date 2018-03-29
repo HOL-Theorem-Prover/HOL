@@ -428,20 +428,25 @@ in
          val () =
             Theory.adjoin_to_theory
                {sig_ps =
-                  SOME (fn ppstrm =>
-                           PP.add_string ppstrm "val component_defs: thm list"),
+                  SOME (fn _ =>
+                           PP.add_string "val component_defs: thm list"),
                 struct_ps =
-                  SOME (fn ppstrm =>
-                          (PP.add_string ppstrm "val component_defs = ["
-                           ; PP.begin_block ppstrm PP.INCONSISTENT 0
-                           ; Portable.pr_list
-                                 (PP.add_string ppstrm)
-                                 (fn () => PP.add_string ppstrm ",")
-                                 (fn () => PP.add_break ppstrm (1, 0))
-                                 (comp_names defs)
-                           ; PP.add_string ppstrm "]"
-                           ; PP.end_block ppstrm
-                           ; PP.add_newline ppstrm))}
+                  SOME (fn _ =>
+                           PP.block PP.CONSISTENT 2 [
+                             PP.add_string "val component_defs =",
+                             PP.add_break(1,0),
+                             PP.block PP.INCONSISTENT 1 (
+                               PP.add_string "[" ::
+                               PP.pr_list
+                                 PP.add_string
+                                 [PP.add_string ",", PP.add_break (1, 0)]
+                                 (comp_names defs) @
+                               [PP.add_string "]"]
+                             ),
+                             PP.add_newline
+                           ]
+                       )
+               }
       in
          proj_def :: defs
       end
