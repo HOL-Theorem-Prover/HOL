@@ -216,7 +216,8 @@ fun tactictoe term = tactictoe_aux ([],term)
 
 (* --------------------------------------------------------------------------
    Prediction of the next tactic only
-   Todo: rewrite this section -------------------------------------------------------------------------- 
+   Todo: rewrite this section
+    -------------------------------------------------------------------------- 
 
 val next_tac_glob = ref []
 val next_tac_number = ref 5
