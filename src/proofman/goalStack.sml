@@ -263,10 +263,15 @@ fun ppgoal (asl,w) =
        val length_assums = max (length_asl, !print_number_assums)
        val assums = List.rev (List.take (asl, length_assums))
        fun pr_index last (i,tm) =
-               block CONSISTENT 0 (
-                 add_string (Int.toString i^".  ") >> pr tm >>
-                 (if last then nothing else add_newline)
-               )
+         let
+           val istr = StringCvt.padLeft #" " 2 (Int.toString i)^".  "
+         in
+           block CONSISTENT 0 (
+             add_string istr >>
+             block CONSISTENT (size istr) (pr tm) >>
+             (if last then nothing else add_newline)
+           )
+         end
        fun pr_indexes [] = raise ERR "pr_indexes" ""
          | pr_indexes [x] = pr x
          | pr_indexes L =
@@ -299,7 +304,7 @@ fun ppgoal (asl,w) =
           pr w >> add_newline >>
           (if List.null assums then nothing
            else
-             block CONSISTENT 2 (
+             block CONSISTENT 1 (
                add_string (!Globals.goal_line) >> add_newline >>
                pr_hidden_indexes assums
              )
@@ -331,7 +336,7 @@ fun ppgoal (asl,w) =
         else
           (if List.null assums then nothing
            else
-             block CONSISTENT 2 (
+             block CONSISTENT 1 (
                add_string "  " >>
                pr_hidden_indexes assums
              ) >> add_newline >> add_string (!Globals.goal_line)) >>
