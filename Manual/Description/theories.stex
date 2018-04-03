@@ -3009,9 +3009,7 @@ is such that $\holtxt{findi}\;e\;\ell$ returns the first index of element $e$ wi
 The definition is by recursion over the structure of the input list:
 \begin{hol}
 \begin{alltt}
-   findi_def
-     |- (\(\forall\)x. findi x [] = 0) \(\land\)
-        \(\forall\)x h t. findi x (h::t) = if x = h then 0 else 1 + findi x t
+   ##thm findi_def
 \end{alltt}
 \end{hol}
 
@@ -3023,9 +3021,7 @@ is used to remove the $n$-th element from a list.
 It is also defined by recursion over the structure of the input list:
 \begin{hol}
 \begin{alltt}
-   delN_def
-     |- (\(\forall\)i. delN i [] = []) \(\land\)
-        \(\forall\)i h t. delN i (h::t) = if i = 0 then t else h::delN (i - 1) t
+   ##thm delN_def
 \end{alltt}
 \end{hol}
 
@@ -3085,24 +3081,16 @@ domains of type \ml{llist}.  Rather, \ml{llist} is a coinductive type,
 and has an axiom that justifies the definition of (co-)recursive
 functions that map \emph{into} the \ml{llist} type:
 \begin{hol}
-\begin{verbatim}
-   llist_Axiom
-      |- !f : 'a -> ('a # 'b) option.
-           ?g : 'a -> 'b llist.
-             (!x. LHD (g x) = OPTION_MAP SND (f x)) /\
-             (!x. LTL (g x) = OPTION_MAP (g o FST) (f x))
-\end{verbatim}
+\begin{alltt}
+   >>__ load "llistTheory"; open llistTheory
+   ##thm llist_Axiom
+\end{alltt}
 \end{hol}
 \noindent An equivalent form of the above is
 \begin{hol}
-\begin{verbatim}
-   llist_Axiom_1
-      |- !f. ?g.
-           !x. g x =
-               case f x
-                of NONE => LNIL
-                 | SOME (x',y) => LCONS y (g x')
-\end{verbatim}
+\begin{alltt}
+   ##thm llist_Axiom_1
+\end{alltt}
 \end{hol}
 
 Other constants in the theory \theoryimp{llist} include \ml{LMAP}, \ml{LFINITE},
