@@ -152,14 +152,14 @@ val pp_proofs =
        val pr_goal = lift goalStack.pp_goal
        val pr_gtree = lift goalTree.pp_gtree
        val pr_thm = lift Parse.pp_thm
-       fun pr1 (GOALSTACK x) =
+       fun pr1 ind (GOALSTACK x) =
             if (project inactive_stack x)
-            then block Portable.CONSISTENT 2 (
+            then block Portable.CONSISTENT (2 + ind) (
                    add_string"Completed goalstack:" >> add_break(1,0) >>
                    pr_thm (project goalStack.extract_thm x)
                  )
             else
-              block Portable.CONSISTENT 2 (
+              block Portable.CONSISTENT (2 + ind) (
                    add_string"Incomplete goalstack:" >> add_break(1,0) >>
                    add_string"Initial goal:" >> add_break(1,0) >>
                    pr_goal (project goalStack.initial_goal x) >>
@@ -169,7 +169,7 @@ val pp_proofs =
                       add_break(1,0) >>
                       pr_goal (project goalStack.top_goal x))
               )
-         | pr1 (GOALTREE t) =
+         | pr1 ind (GOALTREE t) =
             if (project inactive_tree t)
             then
               block Portable.CONSISTENT 2 (
@@ -201,7 +201,10 @@ val pp_proofs =
                List.foldl
                  (fn ((i,x),m) =>
                    m >> block Portable.CONSISTENT 0 (
-                     add_string(int_to_string i^". ") >> pr1 x
+                     let val num_s = Int.toString i ^ ". "
+                     in
+                       add_string num_s >> pr1 (size num_s) x
+                     end
                    ) >> add_newline)
                  nothing
                  (enum extants)
