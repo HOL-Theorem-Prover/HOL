@@ -2,11 +2,18 @@ val _ = use "../../tools-poly/prelude.ML";
 val _ = use "../../tools-poly/prelude2.ML";
 val _ = PolyML.print_depth 0;
 
+fun exnMessage (e:exn) = 
+  let 
+    fun p (e:exn) = PolyML.prettyRepresentation (e, 10000)
+  in
+    PP.pp_to_string 75 p e
+  end
+
 fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
              OS.Process.exit OS.Process.failure)
 fun lnumdie linenum extra exn =
   die ("Exception raised on line " ^ Int.toString linenum ^ ": "^
-       extra ^ General.exnMessage exn)
+       extra ^ exnMessage exn)
 
 val outputPrompt = ref ">"
 
@@ -372,7 +379,7 @@ in
     let
       val firstline = String.extract(line, 3, NONE)
       val input = getRest 3 [firstline]
-      fun handle_exn extra exn = raise Fail (extra ^ General.exnMessage exn)
+      fun handle_exn extra exn = raise Fail (extra ^ exnMessage exn)
       val raw_output = compiler obuf handle_exn (QFRead.stringToReader input)
                        handle Fail s => "Exception- " ^ s ^ " raised\n"
     in
@@ -446,6 +453,9 @@ fun main () =
         | SOME line =>
           let
             val (i, coutopt) = process_line umap obuf line lb
+               handle e => die ("Untrapped exception: line "^
+                                Int.toString (linenum lb) ^ ": " ^
+                                exnMessage e)
           in
             (case coutopt of
                 NONE => print i
