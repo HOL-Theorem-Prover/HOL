@@ -216,8 +216,7 @@ fun tactictoe term = tactictoe_aux ([],term)
 
 (* --------------------------------------------------------------------------
    Prediction of the next tactic only
-   Todo: rewrite this section
-    -------------------------------------------------------------------------- 
+    ------------------------------------------------------------------------- *) 
 
 val next_tac_glob = ref []
 val next_tac_number = ref 5
@@ -226,64 +225,82 @@ fun next n = List.nth (!next_tac_glob,n)
 fun save_stac tac stac g gl =
   (
   next_tac_glob := !next_tac_glob @ [tac];
-  print_endline (hide_out (minimize_stac 1.0 stac g) gl)
+  print_endline "";
+  print_endline 
+    (requote_sproof (hide_out (minimize_stac 1.0 stac g) gl))
   )
 
-fun try_tac tacdict memdict n goal stacl =
+fun try_tac thmpred read_dicts gldict n g stacl =
    if n <= 0 then () else
    case stacl of
     [] => print_endline "no more tactics"
   | stac :: m =>
     let
-      fun p0 s = print_endline s
+      fun continue gldict' n' = try_tac thmpred read_dicts gldict' n' g m
       fun p s = (print_endline ("  " ^ s))
-      val tac = dfind stac tacdict
-      val ro = SOME (hide_out (tttTimeout.timeOut 1.0 tac) goal)
+      val (newstac,tac,_) = hide_out (stac_to_tac thmpred read_dicts stac) g
+      val ro = SOME (hide_out (tttTimeout.timeOut 1.0 tac) g)
                handle _ => NONE
     in
       case ro of
-        NONE => (print "."; try_tac tacdict memdict n goal m)
+        NONE => (print "."; continue gldict n)
       | SOME (gl,_) =>
-        let val lbl = (stac,goal,gl) in
-          if dmem gl memdict
-          then (print "."; try_tac tacdict memdict n goal m)
+        (
+        if dmem gl gldict then (print "."; continue gldict n) else
+          (
+          if gl = []
+          then (save_stac tac newstac g gl; p "solved")
           else
             (
-            if gl = []
-            then (p0 ""; save_stac tac stac goal gl; p "solved")
-            else
-              (
-              if mem goal gl
-                then
-                  (print "."; try_tac tacdict (dadd gl lbl memdict) n goal m)
-                else (p0 "";
-                      save_stac tac stac goal gl;
-                      app (p o string_of_goal) gl;
-                      try_tac tacdict (dadd gl lbl memdict) (n-1) goal m)
-              )
+            if mem g gl
+            then (print "."; continue (dadd gl () gldict) n)
+            else (save_stac tac newstac g gl;
+                  app (p o string_of_goal) gl;
+                  continue (dadd gl () gldict) (n-1))
             )
-        end
+          )
+        )
     end
 
 fun next_tac goal =
   let
-    val _ = init_tactictoe ()
+    val _ = hide_out init_tactictoe ()
     val _ = next_tac_glob := []
     (* preselection *)
     val goalf = fea_of_goal goal
-    val (stacsymweight,tacfea) = hide_out select_tacfea goalf
-    (* predicting *)
-    fun stac_predictor g =
-      stacknn stacsymweight (!ttt_presel_radius) tacfea (fea_of_goal g)
-    val stacl = map #1 (stac_predictor goal)
-    (* executing tactics *)
-    val memdict = dempty (list_compare goal_compare)
-    (* printing tactics *)
+    val (stacsymweight, tacfea) =
+      debug_t "select_tacfea" (hide_out  select_tacfea) goalf
+    val ((pthmsymweight,pthmfeav,pthmrevdict), thmfeav) =
+      debug_t "select_thmfea" (hide_out select_thmfea) goalf
+    (* caches *)
+    val thm_cache = ref (dempty (cpl_compare goal_compare Int.compare))
+    val tac_cache = ref (dempty goal_compare)
+    (* predictors *)
+    fun tacpred g =
+      dfind g (!tac_cache) handle NotFound =>
+      let
+        val l = fea_of_goal g
+        val lbll = stacknn_uniq stacsymweight (!ttt_presel_radius) tacfea l
+        val r = map #1 lbll
+      in
+        tac_cache := dadd g r (!tac_cache); r
+      end
+    fun thmpred n g =
+      dfind (g,n) (!thm_cache) handle NotFound =>
+      let val r = thmknn (pthmsymweight,thmfeav) n (fea_of_goal g) in
+        thm_cache := dadd (g,n) r (!thm_cache); r
+      end
+    (* internal caches: some could be duplicates *)
+    val thml_dict = ref (dempty (cpl_compare goal_compare Int.compare))
+    val inst_dict = ref (dempty (cpl_compare String.compare goal_compare))
+    val tac_dict = ref (dempty String.compare)
+    val read_dicts = (tac_dict, inst_dict, thml_dict)
+    (* not printing same outputs *)
+    val gldict = dempty (list_compare goal_compare)
+    val stacl = add_metis (tacpred goal)
   in
-    try_tac tacdict memdict (!next_tac_number) goal stacl
+    try_tac thmpred read_dicts gldict (!next_tac_number) goal stacl
   end
-*)
-
 
 (* --------------------------------------------------------------------------
    Evaluate Eprover

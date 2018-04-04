@@ -1,0 +1,72 @@
+> next_tac ([],``x*x>=x``);
+.
+SIMP_TAC bool_ss [arithmeticTheory.GREATER_DEF, arithmeticTheory.GREATER_OR_EQ]
+  ([],``x < x * x ∨ (x * x = x)``)
+..
+SRW_TAC [ARITH_ss] [arithmeticTheory.GREATER_OR_EQ]
+  ([],``x² > x ∨ (x² = x)``)
+
+SRW_TAC [] [arithmeticTheory.GREATER_OR_EQ]
+  ([],``x * x > x ∨ (x * x = x)``)
+...
+REWRITE_TAC [arithmeticTheory.GREATER_EQ]
+  ([],``x ≤ x * x``)
+...
+Q.SPEC_THEN [QUOTE " (*#loc 1 38348*)x"] FULL_STRUCT_CASES_TAC arithmeticTheory.num_CASES
+  ([],``0 * 0 ≥ 0``)
+  ([],``SUC n * SUC n ≥ SUC n``)
+val it = (): unit
+
+> val (gl,_) = next 4 ([],``x*x>=x``);
+val gl = [([], “0 * 0 ≥ 0”), ([], “SUC n * SUC n ≥ SUC n”)]: goal list
+ 
+> next_tac ([],``0 * 0 ≥ 0``);
+.
+ASM_REWRITE_TAC [arithmeticTheory.MULT_CLAUSES]
+  ([],``0 ≥ 0``)
+
+ASM_REWRITE_TAC [...]
+  solved
+val it = (): unit
+
+> next_tac ([],``SUC n * SUC n ≥ SUC n``);
+.
+RW_TAC bool_ss [arithmeticTheory.MULT_CLAUSES, arithmeticTheory.ADD_CLAUSES]
+  ([],``SUC (n + n * n + n) ≥ SUC n``)
+
+ASM_REWRITE_TAC [arithmeticTheory.MULT, arithmeticTheory.ADD_CLAUSES]
+  ([],``SUC (n * SUC n + n) ≥ SUC n``)
+
+ASM_REWRITE_TAC [arithmeticTheory.MULT_CLAUSES, arithmeticTheory.GREATER_OR_EQ]
+  ([],``n + n * n + SUC n > SUC n ∨ (n + n * n + SUC n = SUC n)``)
+...
+SIMP_TAC bool_ss [arithmeticTheory.GREATER_DEF, arithmeticTheory.GREATER_OR_EQ, arithmeticTheory.ADD_CLAUSES, arithmeticTheory.MULT_CLAUSES]
+  ([],``SUC n < SUC (n + n * n + n) ∨ (SUC (n + n * n + n) = SUC n)``)
+
+REWRITE_TAC [arithmeticTheory.GREATER_EQ]
+  ([],``SUC n ≤ SUC n * SUC n``)
+val it = (): unit
+
+> next_tac ([],``SUC n * SUC n ≥ SUC n``);
+.
+RW_TAC bool_ss [arithmeticTheory.MULT_CLAUSES, arithmeticTheory.ADD_CLAUSES]
+  ([],``SUC (n + n * n + n) ≥ SUC n``)
+
+ASM_REWRITE_TAC [arithmeticTheory.MULT, arithmeticTheory.ADD_CLAUSES]
+  ([],``SUC (n * SUC n + n) ≥ SUC n``)
+
+ASM_REWRITE_TAC [arithmeticTheory.MULT_CLAUSES, arithmeticTheory.GREATER_OR_EQ]
+  ([],``n + n * n + SUC n > SUC n ∨ (n + n * n + SUC n = SUC n)``)
+...
+SIMP_TAC bool_ss [arithmeticTheory.GREATER_DEF, arithmeticTheory.GREATER_OR_EQ, arithmeticTheory.ADD_CLAUSES, arithmeticTheory.MULT_CLAUSES]
+  ([],``SUC n < SUC (n + n * n + n) ∨ (SUC (n + n * n + n) = SUC n)``)
+
+REWRITE_TAC [arithmeticTheory.GREATER_EQ]
+  ([],``SUC n ≤ SUC n * SUC n``)
+val it = (): unit
+
+> next_tac ([],``SUC n ≤ SUC n * SUC n``);
+METIS_TAC [...]
+  solved
+val it = (): unit
+
