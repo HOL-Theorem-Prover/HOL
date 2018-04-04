@@ -529,37 +529,38 @@ fun has_empty_pred pid =
   end
 
 fun mc_node_find pid =
-  let
-    val prec = dfind pid (!proofdict)
-    val {children,visit,...} = prec
-    val pvisit = !(#visit prec)
-    val pdenom = Math.sqrt pvisit
-    (* try new tactic on the node itself *)
-    val n = length (!children)
-    val self_pripol =
-      Math.pow (1.0 - !ttt_mcpol_coeff, Real.fromInt n) * !ttt_mcpol_coeff
-    val self_curpol = 1.0 / pdenom
-    val self_selsc = (pid, (!ttt_mcev_coeff) * (self_pripol / self_curpol))
-    (* or explore deeper existing paritial proofs *)
-    fun f cid =
-      let
-        val crec = dfind cid (!proofdict)
-        val pripol = !(#priorpolicy crec)
-        val meaneval = average_real (!(#cureval crec))
-        val visit = !(#visit crec)
-        val curpol = (visit + 1.0) / pdenom
-      in
-        (cid, meaneval + (!ttt_mcev_coeff) * (pripol / curpol))
-      end
-    (* sort and select node with best selection score *)
-    val l0 = self_selsc :: List.map f (!children)
-    val l1 = dict_sort compare_rmax l0
-    val (selid,_) = hd l1
-  in
-    if pid = selid
-      then (pid,self_pripol)
-      else mc_node_find selid
-  end
+  if Timer.checkRealTimer (valOf (!glob_timer)) > (!ttt_search_time)
+  then (debug "Warning: mc_node_find: loop"; raise SearchTimeOut)
+  else  
+    let
+      val prec = dfind pid (!proofdict)
+      val {children,visit,...} = prec
+      val pvisit = !(#visit prec)
+      val pdenom = Math.sqrt pvisit
+      (* try new tactic on the node itself *)
+      val n = length (!children)
+      val self_pripol =
+        Math.pow (1.0 - !ttt_mcpol_coeff, Real.fromInt n) * !ttt_mcpol_coeff
+      val self_curpol = 1.0 / pdenom
+      val self_selsc = (pid, (!ttt_mcev_coeff) * (self_pripol / self_curpol))
+      (* or explore deeper existing paritial proofs *)
+      fun f cid =
+        let
+          val crec = dfind cid (!proofdict)
+          val pripol = !(#priorpolicy crec)
+          val meaneval = average_real (!(#cureval crec))
+          val visit = !(#visit crec)
+          val curpol = (visit + 1.0) / pdenom
+        in
+          (cid, meaneval + (!ttt_mcev_coeff) * (pripol / curpol))
+        end
+      (* sort and select node with best selection score *)
+      val l0 = self_selsc :: List.map f (!children)
+      val l1 = dict_sort compare_rmax l0
+      val (selid,_) = hd l1
+    in
+      if pid = selid then (pid,self_pripol) else mc_node_find selid
+    end
 
 fun try_mc_find () =
   if Timer.checkRealTimer (valOf (!glob_timer)) > (!ttt_search_time)
