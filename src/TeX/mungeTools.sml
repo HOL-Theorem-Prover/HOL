@@ -455,7 +455,8 @@ in
                                Int.toString i);
                           SPEC_ALL thm)
           val thm = do_thminsts pos opts thm
-          val start2 = add_string (optset_indent opts)
+          val ind = optset_indent opts
+          fun ind_bl p = block CONSISTENT (size ind) [add_string ind, p]
         in
           if OptSet.has Def opts orelse OptSet.has SpacedDef opts then let
               val newline = if OptSet.has SpacedDef opts then
@@ -463,10 +464,11 @@ in
                             else add_newline
               val lines = thm |> CONJUNCTS |> map (concl o SPEC_ALL)
             in
-              block_list (block INCONSISTENT 0) stdtermprint newline
-                         lines
+              ind_bl (
+                block_list (block INCONSISTENT 0) stdtermprint newline lines
+              )
             end
-          else if rulep then rule_print stdtermprint (concl thm)
+          else if rulep then ind_bl (rule_print stdtermprint (concl thm))
           else let
               val base = raw_pp_theorem_as_tex overrides
               val printer = optprintermod base
@@ -475,7 +477,7 @@ in
                     trace ("EmitTeX: print thm turnstiles", 0) printer
                   else printer
             in
-              printer thm
+              ind_bl (printer thm)
             end
         end
       | Term => let
@@ -498,14 +500,16 @@ in
                      else
                          Parse.Term [QQ parse_start, QQ spec]
                                     |> do_tminsts pos opts
-          val s1 = add_string (optset_indent opts)
+          val ind = optset_indent opts
+          val s1 = add_string ind
           val s2 = if OptSet.has Turnstile opts then
                         B [add_stringsz ("\\"^HOL^"TokenTurnstile", 2),
                            add_string " "]
                    else nothing
         in
-          if rulep then B [s1, s2, rule_print stdtermprint term]
-          else B [s1, s2, stdtermprint term]
+          if rulep then
+            block CONSISTENT (size ind) [s1, s2, rule_print stdtermprint term]
+          else block CONSISTENT (size ind) [s1, s2, stdtermprint term]
         end
       | Type => let
           val typ = if OptSet.has TypeOf opts
