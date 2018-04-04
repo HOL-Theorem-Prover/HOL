@@ -13,3 +13,5 @@
 \HOLtm{x INSERT s}
 
 \HOLtm{APPEND x y}
+
+\HOLtm[m;]{p /\ q}

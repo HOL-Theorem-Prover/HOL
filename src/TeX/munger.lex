@@ -41,8 +41,9 @@ fun pp_to_mathstring spacing width f x = let
         acc := String.concat(List.tabulate(size s, (fn _ => spacing))) :: !acc
       else acc := s :: !acc
   val _ = PP.prettyPrint(consumer, width) (f x)
+  val slist = case !acc of "\\\\\n" :: rest => rest | sl => sl
 in
-  String.concat (List.rev (!acc))
+  String.concat (List.rev slist)
 end
 
 fun replace (pos, argpos, comm, optstring, args) = let

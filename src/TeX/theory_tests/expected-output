@@ -27,3 +27,5 @@
 \HOLinline{\HOLFreeVar{x} \HOLConst{INSERT} \HOLFreeVar{s}}
 
 \HOLinline{\HOLFreeVar{x} \HOLSymConst{\HOLTokenDoublePlus} \HOLFreeVar{y}}
+
+\HOLinline{\HOLFreeVar{p}\;\HOLSymConst{\HOLTokenConj{}}\;\HOLFreeVar{q}}
