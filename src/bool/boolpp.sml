@@ -51,11 +51,11 @@ fun condprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm = let
                      else
                        add_string "if") >>
                     add_break (1,2) >>
-                    syspr (Top,Top,Top) g >>
+                    block PP.CONSISTENT 0 (syspr (Top,Top,Top) g) >>
                     add_break (1,0) >>
                     add_string "then") >>
              add_break (1,2) >>
-             syspr (Top,Top,Top) t)
+             block PP.CONSISTENT 0 (syspr (Top,Top,Top) t))
 
   fun doelse e = let
     val prec = Prec(70, "COND")
@@ -65,7 +65,7 @@ fun condprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm = let
                               doelse e_next)
       | NONE => block PP.CONSISTENT 0
                       (add_string "else" >> add_break (1,2) >>
-                       syspr (prec,prec,rgr) e)
+                       block PP.CONSISTENT 0 (syspr (prec,prec,rgr) e))
   end
   val (g,t,e) = dest_cond tm
 in
@@ -158,8 +158,8 @@ fun letprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
            record_bvars fnarg_bvars
              (pr_list pr_vstruct (spacep true) args >>
               spacep (not (null args)) >>
-              add_string "=" >> spacep true >>
-              block PP.INCONSISTENT 2 (syspr (Top, Top, Top) rhs_t))) >>
+              add_string "=" >> add_break (1, 0) >>
+              block PP.INCONSISTENT 0 (syspr (Top, Top, Top) rhs_t))) >>
         return bvfvs
     end
 
@@ -178,14 +178,13 @@ fun letprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
 
     fun pr_let0 tm =
       (* put a block around the "let ... in" phrase *)
-      block PP.CONSISTENT 0
-        (add_string "let" >> add_break(1,2) >>
+         add_string "let" >> add_break(1,2) >>
          pr_list pr_letandseq
                  (add_string " " >> add_string ";" >> add_break (1, 2))
                  andbindings >>
          add_break(1,0) >>
          add_string "in" >> add_break(1,2) >>
-         syspr (RealTop, RealTop, RealTop) body)
+         block PP.INCONSISTENT 0 (syspr (RealTop, RealTop, RealTop) body)
 
     fun pr_let lgrav rgrav tm = let
       val addparens = lgrav <> RealTop orelse rgrav <> RealTop
@@ -193,7 +192,7 @@ fun letprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
       getbvs >-
       (fn oldbvs =>
           pbegin addparens >>
-          block PP.CONSISTENT 0 (pr_let0 tm) >>
+          block PP.CONSISTENT (if addparens then 1 else 0) (pr_let0 tm) >>
           pend addparens >>
           setbvs oldbvs)
     end
