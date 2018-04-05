@@ -463,7 +463,22 @@ val condprinter_tests =
                 \ p /\\ q /\\ r /\\ ppppp xxxx\n\
                 \else if (e1 = e2) /\\ k1 <> k2 then T\n\
                 \else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2 then T\n\
-                \else F"}
+                \else F"},
+      {input = "if really quite a long guard when looked at closely then\n\
+               \  let quite_a_long_variable_name = another_long_name \\/ x ;\n\
+               \      another_longish_name = y \\/ z\n\
+               \  in\n\
+               \      f x\n\
+               \else\n\
+               \  g y",
+       testf = K "Large then-branch",
+       output = "if really quite a long guard when looked at closely then\n\
+                \  (let\n\
+                \     quite_a_long_variable_name = another_long_name \\/ x ;\n\
+                \     another_longish_name = y \\/ z\n\
+                \   in\n\
+                \     f x)\n\
+                \else g y"}
   ]
 val _ = app condprinter_test condprinter_tests
 
