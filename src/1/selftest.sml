@@ -367,6 +367,14 @@ val _ = add_rule {term_name = "=",
                   paren_style = OnlyIfNecessary,
                   pp_elements = [HardSpace 1, TOK "=", BreakSpace(1,2)]}
 val _ = Lib.with_flag (testutils.linewidth, 10) tpp "xxxxxx =\n  yyyyyy"
+val _ = Lib.with_flag (testutils.linewidth, 30) tpp
+                      "fffff verylongarg1\n\
+                      \  verylongarg2 verylongarg3";
+val _ = Lib.with_flag (testutils.linewidth, 30) tpp
+                      "ffff longarg1\n\
+                      \  (fff longarg2 longarg3\n\
+                      \     longarg4) longarg5\n\
+                      \  longarg6 longarg7";
 
 val _ = print "** Tests with Unicode on PP.avoid_unicode both on\n"
 val _ = let

@@ -44,5 +44,5 @@
   \HOLConst{MAP} \HOLFreeVar{f} (\HOLFreeVar{h}\HOLSymConst{::}\HOLFreeVar{t}) \HOLSymConst{=} \HOLFreeVar{f} \HOLFreeVar{h}\HOLSymConst{::}\HOLConst{MAP} \HOLFreeVar{f} \HOLFreeVar{t}
 
   \HOLConst{MAP} \HOLFreeVar{f} [] \HOLSymConst{=} []
-
+  
   \HOLConst{MAP} \HOLFreeVar{f} (\HOLFreeVar{h}\HOLSymConst{::}\HOLFreeVar{t}) \HOLSymConst{=} \HOLFreeVar{f} \HOLFreeVar{h}\HOLSymConst{::}\HOLConst{MAP} \HOLFreeVar{f} \HOLFreeVar{t}
