@@ -8,6 +8,9 @@ open arithmeticTheory;
 open numpairTheory;
 open pred_setTheory;
 open measureTheory;
+open recfunsTheory;
+open extNatTheory;
+open prtermTheory;
 val _ = new_theory "kolmog_complex";
 
 
@@ -88,7 +91,116 @@ and y concat x = y concat x
 
 (* universal turing machine *)
 
+(* We will use the defintion of the universal machine from Ming and Vitanyi  *)
+val prefix_def = Define`prefix a b <=> a≼b ∧ a <> b`
+
+val is_universal_tm_def = Define`is_universal_tm t <=>
+		∀i. ∀p q. (t i q <> NONE) ∧ (t i p <> NONE)==> ¬(prefix q p)∧¬(prefix p q)`
+
 val universal_tm_def = new_constant ("universal_tm",``:bool list -> bool list option``)
+
+val num_to_bool_list_def = tDefine"num_to_bool_list"`num_to_bool_list n =
+		   if n=0 then []
+		   else if EVEN n then T::num_to_bool_list((n-2) DIV 2)
+		   else F::num_to_bool_list((n-1) DIV 2)`
+(WF_REL_TAC`$<` >> rw[]>>
+irule LESS_EQ_LESS_TRANS >> qexists_tac`n DIV 2` >> rw[DIV_LE_MONOTONE,DIV_LESS])
+
+val bool_list_to_num_def = Define`
+  (bool_list_to_num [] = 0n) ∧
+  (bool_list_to_num (h::t) = (if h then 2 else 1)+2 * (bool_list_to_num t))`
+
+val num_bool_inv = Q.store_thm("num_bool_inv[simp]",
+  `num_to_bool_list (bool_list_to_num l) = l`,
+  Induct_on `l` >> simp[Once num_to_bool_list_def,bool_list_to_num_def] >> Cases_on `h` >>
+  simp[EVEN_ADD,EVEN_MULT] >> metis_tac[MULT_DIV,MULT_COMM,DECIDE ``0n<2``] )
+
+val bool_num_inv = Q.store_thm("bool_num_inv[simp]",
+`∀n. bool_list_to_num (num_to_bool_list n) = n`,
+ho_match_mp_tac (theorem"num_to_bool_list_ind") >> rpt strip_tac >>
+  rw[Once num_to_bool_list_def,bool_list_to_num_def]
+  >- (MP_TAC(Q.INST[`n`|->`2`,`q`|->`1`,`m`|->`n`]DIV_SUB)>>fs[]>>impl_keep_tac
+      >-(fs[EVEN_EXISTS])>>simp[LEFT_SUB_DISTRIB]>>Q.SPEC_THEN`2`MP_TAC DIVISION>>fs[]>>
+      disch_then(Q.SPEC_THEN`n`(MP_TAC o SYM) ) >> fs[EVEN_MOD2] )
+  >- (fs[GSYM ODD_EVEN,ODD_EXISTS] >>metis_tac[MULT_DIV,MULT_COMM,DECIDE ``0n<2``,ADD1] ) )
+
+
+val rec1_def = Define`
+  (rec1 f [] = f 0n : num option) ∧
+  (rec1 f (x::t) = f x)
+`;
+
+val _ = overload_on ("ℓ",``λp. LENGTH (num_to_bool_list p) ``)
+
+val complexity_def = Define`complexity n f x =
+                       if  { p | f p = SOME (n x)} = {} then NONE
+                       else SOME (MIN_SET {ℓ p | f p = SOME (n x)})`;
+
+
+(** Definition 2.0.1 of Li and Vitanyi  **)
+val additively_optimal_def = Define`
+  additively_optimal n f C <=>
+    f ∈ C ∧ ∀g. g∈C ==> ∃c. ∀x. complexity n f x <= complexity n g x + c`;
+
+val pr_is_universal_def = Define`
+  pr_is_universal f <=>
+  recfn (rec1 f) 1 ∧
+  ∃g. recfn g 1 ∧
+      ∀y. ∃n. (g[y] = SOME n) ∧
+              ∀x. f (n *, x) = Phi y x`;
+
+val universal_Phi = Q.store_thm("universal_Phi",
+  `pr_is_universal (λn. Phi (nfst (n)) (nsnd ( n)))`,
+  simp[pr_is_universal_def] >> reverse conj_tac 
+    >- (qexists_tac `SOME o proj 0` >> simp[recfn_rules]) >> 
+    REWRITE_TAC[GSYM recPhi_correct] >> qmatch_abbrev_tac`recfn ff 1 ` >> 
+    `ff = recCn recPhi [SOME o pr1 nfst;SOME o pr1 nsnd]` 
+       by (simp[FUN_EQ_THM,Abbr`ff`] >> Cases >> simp[recCn_def,rec1_def]) >> 
+    simp[Abbr`ff`] >> irule recfnCn  >> simp[primrec_recfn] >> 
+    metis_tac[recfn_recPhi,recPhi_rec2Phi] )
+
+val blmunge_def = Define`
+  (blmunge [] = [F;F]) ∧
+  (blmunge (T::rest) = T::blmunge rest ) ∧
+  (blmunge (F::rest) = F::T::blmunge rest )`
+
+val _ = overload_on ("bl2n",``bool_list_to_num``)
+val _ = overload_on ("n2bl",``num_to_bool_list``)
+
+val wenc_def = Define`
+  wenc n = bl2n (blmunge (n2bl n))`
+
+val bldemunge_def = Define`
+  (bldemunge m [] = (bl2n (REVERSE m),0n)) ∧
+  (bldemunge m (T::t) = bldemunge (T::m) t) ∧
+  (bldemunge m (F::T::t) = bldemunge (F::m) t )∧
+  (bldemunge m (F::F::t) = (bl2n (REVERSE m),bl2n t ))`
+
+val UM_bff_def = Define`
+  UM_bff n = let (x,y)= bldemunge [] (n2bl n) in Phi x y`
+
+(* 
+
+val universal_bff = Q.store_thm("universal_bff",
+`pr_is_universal UM_bff`,
+simp[pr_is_universal_def] >> reverse conj_tac
+>- () 
+>- () )
+
+(** Lemma 2.1.1 **)
+(**  Use univerality of phi **)
+val additively_exists = Q.store_thm("additively_exists",
+`∃f. additively_optimal bool_list_to_num f {g | pr_is_universal g}`,
+qexists_tac`UM_bff` >> simp[additively_optimal_def,universal_Phi] >>
+rw[complexity_def] >> qexists_tac`c` >> rw[] 
+>- (fs[EXTENSION] >> rename[`g n = SOME (bool_list_to_num bl)`] >> fs[pr_is_universal_def] >>
+    rename[`recfn (rec1 ug) 1`,`g [_] = SOME _`] >>  
+    ` ∃ui. ∀n. rec1 ug [n] = Phi ui (nlist_of [n])` by metis_tac[recfns_in_Phi] >> 
+    fs[rec1_def] >> metis_tac[nfst_npair,nsnd_npair])
+>- ()   )
+
+val conditional_complexity_def  = Define`conditional_complexity phi x y =
+		   if {} `
 
 val semimeasure_def = Define`
 semimeasure mu =  (mu [] <= 1:real) ∧ (∀x:bool list. (mu x >= 0) ∧
@@ -165,10 +277,19 @@ simp[relationTheory.WF_DEF] >> rw[] >>
   `listlex v' b` by metis_tac[listlex_length] >>
   metis_tac[LESS_EQUAL_ANTISYM,listlex_length2,prim_recTheory.LESS_REFL] )
 
-(* 
+val num_to_bool_list_def = tDefine"num_to_bool_list"`num_to_bool_list n =
+			    if n=0 then []
+			    else if EVEN n then
+				T::num_to_bool_list((n-2) DIV 2)
+			    else
+				F::num_to_bool_list((n-1) DIV 2)`
+(WF_REL_TAC `$<` >> intLib.ARITH_TAC)
 
 val solomonoff_prior_def = Define`
-solomonoff_prior x = suminf {p | universal_tm p = x } 2**(-LENGTH p)`
+solomonoff_prior x = suminf (λn. let b = num_to_bool_list n in
+				     if universal_tm b = x
+				     then inv(2 pow (LENGTH b))
+				     else 0) `
 
 
 val existence_of_universal_semimeasure = Q.store_thm("existence_of_universal_semimeasure",
