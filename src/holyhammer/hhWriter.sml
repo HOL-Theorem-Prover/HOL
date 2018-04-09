@@ -30,13 +30,15 @@ val reserved_names0 = map (fn x => (x,0)) reserved_names
 
 fun is_tptp_sq_char c =
   let val n = Char.ord c in
-    (40 <= n andalso n <= 45) orelse (* dot removed *)
-    (48 <= n andalso n <= 57) orelse (* colon removed *)
-    (59 <= n andalso n <= 123) orelse (* vetical bar removed *)
-    (125 <= n andalso n <= 133) orelse
-    (135 <= n andalso n <= 176)
+    (40 <= n andalso n <= 176) andalso
+    (c <> #".") andalso
+    (c <> #"/") andalso
+    (c <> #":") andalso
+    (c <> #"|") andalso
+    (c <> #"\134") (* TODO: why? *)
   end
 
+(* TODO: use String.translate *)
 fun hh_escape s =
   let
     val l1 = String.explode s
@@ -52,6 +54,7 @@ fun hh_escape s =
 fun squotify name = "'" ^ name ^ "'"
 fun full_escape name = "'" ^ hh_escape name ^ "'"
 
+(* TODO: make robust to empty vartype name *)
 (* nice printing *)
 fun nice_dest_vartype v =
   let
@@ -307,7 +310,8 @@ fun othm state oc (name,role,tm) =
           os oc ").\n")
     else ()
     handle _ => tttTools.debug ("Error: othm: " ^ term_to_string tm)
-                (* to be removed for parallelization *)
+                (* TODO: reraise Interrupt *)
+                (* TODO: to be removed for parallelization *)
     ;
     undeclare ()
     )
@@ -336,6 +340,7 @@ fun thm_of_depid (thy,n) =
   in
     tryfind find_number thml
     handle _ => raise ERR "thm_of_depid" "Not found"
+    (* TODO: reraise Interrupt *)
   end
 
 fun exists_depid did = can thm_of_depid did
@@ -343,6 +348,7 @@ fun exists_depid did = can thm_of_depid did
 fun pred_of_depid (thy,n) =
   let
     val thml = DB.thms thy
+    (* TODO: this function is duplicated above; write it once only *)
     fun find_number x =
       if (depnumber_of o depid_of o dep_of o tag o snd) x = n
       then x
@@ -390,6 +396,7 @@ fun export_thm state oc oc_deps ((name,thm),role) =
    Printing theories
  ----------------------------------------------------------------------------*)
 
+(* TODO: use OS.Path.concat *)
 fun write_thy dir filter_f state thy =
   let
     val oc = openOut (dir ^ "/" ^ thy ^ ".p")
@@ -397,7 +404,7 @@ fun write_thy dir filter_f state thy =
     val THEORY(_,t) = dest_theory thy
     val _ = app (hh_tydef state oc thy) (#types t)
     val _ = app (hh_constdef state oc thy) (#consts t)
-    val axl = map (fn x => (x,"ax")) (DB.theorems thy)
+    val axl = map (fn x => (x,"ax")) (DB.theorems thy) (* TODO: why not (#theorems t) etc.? *)
     val defl = map (fn x => (x,"def")) (DB.axioms thy @ DB.definitions thy)
     fun local_compare (((_,th1),_),((_,th2),_)) =
       let val f = depnumber_of o depid_of o dep_of o Thm.tag in
