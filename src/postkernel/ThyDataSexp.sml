@@ -101,8 +101,13 @@ val tagreader =
                 (listreader dlreader >* listreader StringData.reader)))
     end
 
-fun thmwrite tmw th =
-    tagwrite (Thm.tag th) ^ listwrite tmw (concl th :: hyp th)
+fun thmwrite tmw th0 =
+  let
+    val th = Thm.save_dep (Theory.current_theory()) th0
+  in
+    tagwrite (Thm.tag th) ^
+    listwrite (StringData.encode o tmw) (concl th :: hyp th)
+  end
 fun thmreader tmr =
   map Thm.disk_thm (tagreader >* listreader (map tmr StringData.reader))
 
@@ -111,8 +116,8 @@ fun write tmw s =
       Int i => "I" ^ Coding.IntData.encode i
     | String s => "S" ^ Coding.StringData.encode s
     | List sl => "L" ^ listwrite (write tmw) sl
-    | Term tm => "T" ^ tmw tm
-    | Type ty => "Y" ^ tmw (Term.mk_var("x", ty))
+    | Term tm => "T" ^ StringData.encode (tmw tm)
+    | Type ty => "Y" ^ StringData.encode (tmw (Term.mk_var("x", ty)))
     | Thm th => "H" ^ thmwrite tmw th
     | Sym s => "M" ^ StringData.encode s
     | Char c => "C" ^ CharData.encode c
