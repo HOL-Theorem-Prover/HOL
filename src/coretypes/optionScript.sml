@@ -705,35 +705,34 @@ val option_case_eq = Q.store_thm(
 
 val S = PP.add_string and NL = PP.NL and B = PP.block PP.CONSISTENT 0
 
+val option_Induct = save_thm("option_Induct",
+  ONCE_REWRITE_RULE [boolTheory.CONJ_SYM] option_induction);
+val option_CASES = save_thm("option_CASES",
+  ONCE_REWRITE_RULE [boolTheory.DISJ_SYM] option_nchotomy);
+
+val _ = TypeBase.export
+  [TypeBasePure.mk_datatype_info
+     {ax=TypeBasePure.ORIG option_Axiom,
+      case_def=option_case_def,
+      case_cong=option_case_cong,
+      case_eq = option_case_eq,
+      induction=TypeBasePure.ORIG option_induction,
+      nchotomy=option_nchotomy,
+      size=NONE,
+      encode=NONE,
+      fields=[],
+      accessors=[],
+      updates=[],
+      destructors=[THE_DEF],
+      recognizers=[IS_NONE_DEF,IS_SOME_DEF],
+      lift=SOME(mk_var("optionSyntax.lift_option",
+                       “:'type -> ('a -> 'term) -> 'a option -> 'term”)),
+      one_one=SOME SOME_11,
+      distinct=SOME NOT_NONE_SOME}];
+
 val _ = adjoin_to_theory
-{sig_ps = SOME (fn _ => B[
-    S "val option_Induct : thm", NL, S "val option_CASES : thm"]),
+{sig_ps = NONE,
  struct_ps = SOME (fn _ => B[
-    S "val _ = TypeBase.write",                              NL,
-    S "  [TypeBasePure.mk_datatype_info",                    NL,
-    S "     {ax=TypeBasePure.ORIG option_Axiom,",            NL,
-    S "      case_def=option_case_def,",                     NL,
-    S "      case_cong=option_case_cong,",                   NL,
-    S "      case_eq = option_case_eq,",                     NL,
-    S "      induction=TypeBasePure.ORIG option_induction,", NL,
-    S "      nchotomy=option_nchotomy,",                     NL,
-    S "      size=NONE,",                                    NL,
-    S "      encode=NONE,",                                  NL,
-    S "      fields=[],",                                    NL,
-    S "      accessors=[],",                                 NL,
-    S "      updates=[],",                                   NL,
-    S "      destructors=[THE_DEF],",                        NL,
-    S "      recognizers=[IS_NONE_DEF,IS_SOME_DEF],",        NL,
-    S "      lift=SOME(mk_var(\"optionSyntax.lift_option\",Parse.Type`:'type -> ('a -> 'term) -> 'a option -> 'term`)),",
-    NL,
-    S "      one_one=SOME SOME_11,",                         NL,
-    S "      distinct=SOME NOT_NONE_SOME}];",                NL,
-    NL,
-    S "val option_Induct = Rewrite.ONCE_REWRITE_RULE ",               NL,
-    S "                      [boolTheory.CONJ_SYM] option_induction", NL,
-    S "val option_CASES = Rewrite.ONCE_REWRITE_RULE ",                NL,
-    S "                      [boolTheory.DISJ_SYM] option_nchotomy",
-    NL,NL,
     S "val _ = let open computeLib",                            NL,
     S "        in add_funs (map lazyfy_thm",                    NL,
     S "               [NOT_NONE_SOME,NOT_SOME_NONE,SOME_11,",   NL,

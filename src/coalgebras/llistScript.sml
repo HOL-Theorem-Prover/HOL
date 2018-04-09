@@ -2625,11 +2625,12 @@ val LLENGTH_LREPEAT = Q.store_thm(
    Update TypeBase
    -------------------------------------------------------------------------- *)
 
-val _ = Theory.quote_adjoin_to_theory `none`
-`val _ = TypeBase.write
-  [TypeBasePure.mk_nondatatype_info
-     (Parse.Type^`:'a llist^`,
-      {nchotomy = SOME llist_CASES,
-       induction = NONE, size = NONE, encode = NONE})]`
+val _ = TypeBase.export
+  [TypeBasePure.mk_nondatatype_info (
+      “:'a llist”,
+      {nchotomy = SOME llist_CASES, induction = NONE, size = NONE,
+       encode = NONE}
+   )
+  ]
 
 val _ = export_theory();
