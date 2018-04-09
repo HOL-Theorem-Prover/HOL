@@ -18,6 +18,7 @@ val ERR = mk_HOL_ERR "hhReconstruct"
    Unescaping and extracting theorem and theory name.
  ----------------------------------------------------------------------------*)
 
+(* TODO: use String.translate *)
 fun remove_white_spaces s =
   let
     val cl = String.explode s
@@ -49,7 +50,7 @@ fun hh_unescape s =
     String.concat (map_half false f sl)
   end
 
-(* Todo: names of theorems should be standardized with tactictoe convention *)
+(* TODO: names of theorems should be standardized with tactictoe convention *)
 fun split_name s = case String.fields (fn c => c = #".") s of
     [_,thy,name] => (thy,name)
   | _       => raise ERR "split_name" ""
@@ -74,7 +75,7 @@ fun readl path =
   end
 
 fun read_status atp_status =
-  remove_white_spaces (hd (readl atp_status)) handle _ => "Unknown"
+  remove_white_spaces (hd (readl atp_status)) handle _ => "Unknown" (* TODO: reraise Interrupt *)
 
 (* removing reserverd names: use a similar
    escaping than the holyhammer fof writer *)
@@ -108,7 +109,7 @@ fun get_lemmas (atp_status,atp_out) =
 
 (*---------------------------------------------------------------------------
    Minimization and pretty-printing.
-   Todo: Timeout is very short and can not be modified yet.
+   TODO: Timeout is very short and can not be modified yet.
  ----------------------------------------------------------------------------*)
 
 fun string_of_lemma (thy,name) =
