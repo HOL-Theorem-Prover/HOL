@@ -79,6 +79,7 @@ sig
    val put_updates     : thm list -> tyinfo -> tyinfo
    val put_destructors : thm list -> tyinfo -> tyinfo
    val put_recognizers : thm list -> tyinfo -> tyinfo
+   val put_extra       : ThyDataSexp.t list -> tyinfo -> tyinfo
 
    (* Functional databases of datatype facts and associated operations *)
 
@@ -123,5 +124,8 @@ sig
 
    val dest_record_type : typeBase -> hol_type -> (string * hol_type) list
    val is_record_type   : typeBase -> hol_type -> bool
+
+   val toSEXP          : tyinfo -> ThyDataSexp.t
+   val fromSEXP        : ThyDataSexp.t -> tyinfo option
 
 end

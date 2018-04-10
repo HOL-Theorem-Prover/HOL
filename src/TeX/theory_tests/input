@@ -20,6 +20,12 @@
 
 \HOLthm[>>4,width=30,nosp]{bool.AND_CLAUSES}
 
+\HOLthm[width=50]{bool.AND_CLAUSES}
+
+\HOLthm[width=50,m;]{bool.AND_CLAUSES}
+
 \HOLthm[def,>>]{list.MAP}
 
 \HOLthm[spaceddef,>>]{list.MAP}
+
+|- \HOLthm[>>~3,nostile,width=50]{list.MAP}

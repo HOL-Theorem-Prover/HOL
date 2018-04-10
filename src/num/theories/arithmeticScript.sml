@@ -3879,31 +3879,24 @@ val num_case_eq = Q.store_thm(
   Q.SPEC_THEN ‘n’ STRUCT_CASES_TAC num_CASES THEN
   SRW_TAC [][num_case_def, SUC_NOT, INV_SUC_EQ]);
 
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME
- (fn _ => let
-   val S = PP.add_string
- in
-   S "val _ = TypeBase.write\n\
-     \  [TypeBasePure.mk_datatype_info\n\
-     \     {ax=TypeBasePure.ORIG prim_recTheory.num_Axiom,\n\
-     \      case_def=num_case_def,\n\
-     \      case_cong=num_case_cong,\n\
-     \      case_eq = num_case_eq,\n\
-     \      induction=TypeBasePure.ORIG numTheory.INDUCTION,\n\
-     \      nchotomy=num_CASES,\n\
-     \      size=SOME(Parse.Term`\\x:num. x`, TypeBasePure.ORIG boolTheory.REFL_CLAUSE),\n\
-     \      encode=NONE,\n\
-     \      fields=[],\n\
-     \      accessors=[],\n\
-     \      updates=[],\n\
-     \      recognizers=[],\n\
-     \      destructors=[CONJUNCT2(prim_recTheory.PRE)],\n\
-     \      lift=SOME(mk_var(\"numSyntax.lift_num\",Parse.Type`:'type -> num -> 'term`)),\n\
-     \      one_one=SOME prim_recTheory.INV_SUC_EQ,\n\
-     \      distinct=SOME numTheory.NOT_SUC}];"
- end)};
+val _ = TypeBase.export
+  [TypeBasePure.mk_datatype_info
+     {ax=TypeBasePure.ORIG prim_recTheory.num_Axiom,
+      case_def=num_case_def,
+      case_cong=num_case_cong,
+      case_eq = num_case_eq,
+      induction=TypeBasePure.ORIG numTheory.INDUCTION,
+      nchotomy=num_CASES,
+      size=SOME(“\x:num. x”, TypeBasePure.ORIG boolTheory.REFL_CLAUSE),
+      encode=NONE,
+      fields=[],
+      accessors=[],
+      updates=[],
+      recognizers=[],
+      destructors=[CONJUNCT2(prim_recTheory.PRE)],
+      lift=SOME(mk_var("numSyntax.lift_num",“:'type -> num -> 'term”)),
+      one_one=SOME prim_recTheory.INV_SUC_EQ,
+      distinct=SOME numTheory.NOT_SUC}];
 
 val datatype_num = store_thm(
   "datatype_num",

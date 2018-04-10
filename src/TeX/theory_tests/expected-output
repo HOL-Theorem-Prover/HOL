@@ -34,15 +34,24 @@
   \HOLFreeVar{pp} \HOLSymConst{\HOLTokenDisj{}} \HOLFreeVar{qq} \HOLSymConst{\HOLTokenDisj{}} \HOLFreeVar{rr} \HOLSymConst{\HOLTokenDisj{}} \HOLFreeVar{ss} \HOLSymConst{\HOLTokenDisj{}} \HOLFreeVar{tt}
 
     \HOLTokenTurnstile{} \HOLSymConst{\HOLTokenForall{}}\HOLBoundVar{t}.
-        (\HOLConst{T} \HOLSymConst{\HOLTokenConj{}} \HOLBoundVar{t} \HOLSymConst{\HOLTokenEquiv{}} \HOLBoundVar{t}) \HOLSymConst{\HOLTokenConj{}}
-        (\HOLBoundVar{t} \HOLSymConst{\HOLTokenConj{}} \HOLConst{T} \HOLSymConst{\HOLTokenEquiv{}} \HOLBoundVar{t}) \HOLSymConst{\HOLTokenConj{}}
-        (\HOLConst{F} \HOLSymConst{\HOLTokenConj{}} \HOLBoundVar{t} \HOLSymConst{\HOLTokenEquiv{}} \HOLConst{F}) \HOLSymConst{\HOLTokenConj{}}
-        (\HOLBoundVar{t} \HOLSymConst{\HOLTokenConj{}} \HOLConst{F} \HOLSymConst{\HOLTokenEquiv{}} \HOLConst{F}) \HOLSymConst{\HOLTokenConj{}}
-        (\HOLBoundVar{t} \HOLSymConst{\HOLTokenConj{}} \HOLBoundVar{t} \HOLSymConst{\HOLTokenEquiv{}} \HOLBoundVar{t})
+           (\HOLConst{T} \HOLSymConst{\HOLTokenConj{}} \HOLBoundVar{t} \HOLSymConst{\HOLTokenEquiv{}} \HOLBoundVar{t}) \HOLSymConst{\HOLTokenConj{}}
+           (\HOLBoundVar{t} \HOLSymConst{\HOLTokenConj{}} \HOLConst{T} \HOLSymConst{\HOLTokenEquiv{}} \HOLBoundVar{t}) \HOLSymConst{\HOLTokenConj{}}
+           (\HOLConst{F} \HOLSymConst{\HOLTokenConj{}} \HOLBoundVar{t} \HOLSymConst{\HOLTokenEquiv{}} \HOLConst{F}) \HOLSymConst{\HOLTokenConj{}}
+           (\HOLBoundVar{t} \HOLSymConst{\HOLTokenConj{}} \HOLConst{F} \HOLSymConst{\HOLTokenEquiv{}} \HOLConst{F}) \HOLSymConst{\HOLTokenConj{}}
+           (\HOLBoundVar{t} \HOLSymConst{\HOLTokenConj{}} \HOLBoundVar{t} \HOLSymConst{\HOLTokenEquiv{}} \HOLBoundVar{t})
+
+\HOLTokenTurnstile{} (\HOLConst{T} \HOLSymConst{\HOLTokenConj{}} \HOLFreeVar{t} \HOLSymConst{\HOLTokenEquiv{}} \HOLFreeVar{t}) \HOLSymConst{\HOLTokenConj{}} (\HOLFreeVar{t} \HOLSymConst{\HOLTokenConj{}} \HOLConst{T} \HOLSymConst{\HOLTokenEquiv{}} \HOLFreeVar{t}) \HOLSymConst{\HOLTokenConj{}} (\HOLConst{F} \HOLSymConst{\HOLTokenConj{}} \HOLFreeVar{t} \HOLSymConst{\HOLTokenEquiv{}} \HOLConst{F}) \HOLSymConst{\HOLTokenConj{}}
+   (\HOLFreeVar{t} \HOLSymConst{\HOLTokenConj{}} \HOLConst{F} \HOLSymConst{\HOLTokenEquiv{}} \HOLConst{F}) \HOLSymConst{\HOLTokenConj{}} (\HOLFreeVar{t} \HOLSymConst{\HOLTokenConj{}} \HOLFreeVar{t} \HOLSymConst{\HOLTokenEquiv{}} \HOLFreeVar{t})
+
+\HOLTokenTurnstile{}\;(\HOLConst{T}\;\HOLSymConst{\HOLTokenConj{}}\;\HOLFreeVar{t}\;\HOLSymConst{\HOLTokenEquiv{}}\;\HOLFreeVar{t})\;\HOLSymConst{\HOLTokenConj{}}\;(\HOLFreeVar{t}\;\HOLSymConst{\HOLTokenConj{}}\;\HOLConst{T}\;\HOLSymConst{\HOLTokenEquiv{}}\;\HOLFreeVar{t})\;\HOLSymConst{\HOLTokenConj{}}\;(\HOLConst{F}\;\HOLSymConst{\HOLTokenConj{}}\;\HOLFreeVar{t}\;\HOLSymConst{\HOLTokenEquiv{}}\;\HOLConst{F})\;\HOLSymConst{\HOLTokenConj{}}\\
+\;\;\;(\HOLFreeVar{t}\;\HOLSymConst{\HOLTokenConj{}}\;\HOLConst{F}\;\HOLSymConst{\HOLTokenEquiv{}}\;\HOLConst{F})\;\HOLSymConst{\HOLTokenConj{}}\;(\HOLFreeVar{t}\;\HOLSymConst{\HOLTokenConj{}}\;\HOLFreeVar{t}\;\HOLSymConst{\HOLTokenEquiv{}}\;\HOLFreeVar{t})
 
   \HOLConst{MAP} \HOLFreeVar{f} [] \HOLSymConst{=} []
   \HOLConst{MAP} \HOLFreeVar{f} (\HOLFreeVar{h}\HOLSymConst{::}\HOLFreeVar{t}) \HOLSymConst{=} \HOLFreeVar{f} \HOLFreeVar{h}\HOLSymConst{::}\HOLConst{MAP} \HOLFreeVar{f} \HOLFreeVar{t}
 
   \HOLConst{MAP} \HOLFreeVar{f} [] \HOLSymConst{=} []
-
+  
   \HOLConst{MAP} \HOLFreeVar{f} (\HOLFreeVar{h}\HOLSymConst{::}\HOLFreeVar{t}) \HOLSymConst{=} \HOLFreeVar{f} \HOLFreeVar{h}\HOLSymConst{::}\HOLConst{MAP} \HOLFreeVar{f} \HOLFreeVar{t}
+
+|- (\HOLSymConst{\HOLTokenForall{}}\HOLBoundVar{f}. \HOLConst{MAP} \HOLBoundVar{f} [] \HOLSymConst{=} []) \HOLSymConst{\HOLTokenConj{}}
+   \HOLSymConst{\HOLTokenForall{}}\HOLBoundVar{f} \HOLBoundVar{h} \HOLBoundVar{t}. \HOLConst{MAP} \HOLBoundVar{f} (\HOLBoundVar{h}\HOLSymConst{::}\HOLBoundVar{t}) \HOLSymConst{=} \HOLBoundVar{f} \HOLBoundVar{h}\HOLSymConst{::}\HOLConst{MAP} \HOLBoundVar{f} \HOLBoundVar{t}

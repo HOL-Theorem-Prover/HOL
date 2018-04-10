@@ -648,6 +648,11 @@ fun pp_term (G : grammar) TyG backend = let
     end
     fun pbegin b = if b then add_string "(" else nothing
     fun pend b = if b then add_string ")" else nothing
+    fun paren b p = if b then
+                      block INCONSISTENT 1 (add_string "(" >> p >>
+                                            add_string ")")
+                    else p
+
     fun spacep b = if b then add_break(1, 0) else nothing
     fun hardspace n = add_string (string_of_nspaces n)
     fun sizedbreak n = add_break(n, 0)
@@ -1237,18 +1242,19 @@ fun pp_term (G : grammar) TyG backend = let
       val lprec = if addparens then Top else lgrav
       val rprec = if addparens then Top else rgrav
     in
-      pbegin (addparens orelse comb_show_type) >>
-      block INCONSISTENT 2
-            (full_pr_term binderp showtypes showtypes_v ppfns RatorCP t1
-                          prec lprec prec (decdepth depth) >>
-             add_break (1, 0) >>
-             full_pr_term binderp showtypes showtypes_v ppfns RandCP t2
-                          prec prec rprec (decdepth depth) >>
-             (if comb_show_type then
-                add_string (" "^type_intro) >> add_break (0,0) >>
-                doTy (type_of tm)
-              else nothing)) >>
-      pend (addparens orelse comb_show_type)
+      paren (addparens orelse comb_show_type) (
+        block INCONSISTENT 0 (
+          full_pr_term binderp showtypes showtypes_v ppfns RatorCP t1
+                       prec lprec prec (decdepth depth) >>
+          add_break (1, 2) >>
+          full_pr_term binderp showtypes showtypes_v ppfns RandCP t2
+                       prec prec rprec (decdepth depth) >>
+          (if comb_show_type then
+             add_string (" "^type_intro) >> add_break (0,0) >>
+             doTy (type_of tm)
+           else nothing)
+        )
+      )
     end
 
     fun pr_sole_name tm n rules = let

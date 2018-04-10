@@ -4217,8 +4217,8 @@ end
 val _ = overload_on ("<=>", “(=) : bool -> bool -> bool”)
 val _ = set_fixity "<=>" (Infix(NONASSOC, 100))
 val _ = unicode_version {u = UChar.iff, tmnm = "<=>"}
-val _ = TeX_notation {hol = "<=>", TeX = ("\\HOLTokenEquiv{}",2)}
-val _ = TeX_notation {hol = UChar.iff, TeX = ("\\HOLTokenEquiv{}",2)}
+val _ = TeX_notation {hol = "<=>", TeX = ("\\HOLTokenEquiv{}",3)}
+val _ = TeX_notation {hol = UChar.iff, TeX = ("\\HOLTokenEquiv{}",3)}
 
 (* not equal *)
 val _ = overload_on ("<>", “\x:'a y:'a. ~(x = y)”)
@@ -4241,9 +4241,9 @@ val _ = TeX_notation {hol=UChar.not_elementof,
 val _ = overload_on ("<=/=>", “$<> : bool -> bool -> bool”)
 val _ = set_fixity "<=/=>" (Infix(NONASSOC, 100))
 val _ = unicode_version {u = UChar.not_iff, tmnm = "<=/=>"}
-val _ = TeX_notation {hol="<=/=>", TeX = ("\\HOLTokenNotEquiv{}",2)}
+val _ = TeX_notation {hol="<=/=>", TeX = ("\\HOLTokenNotEquiv{}",3)}
 val _ = TeX_notation {hol=UChar.not_iff,
-                      TeX = ("\\HOLTokenNotEquiv{}",2)}
+                      TeX = ("\\HOLTokenNotEquiv{}",3)}
 
 local open boolpp in end
 val _ = add_ML_dependency "boolpp"
