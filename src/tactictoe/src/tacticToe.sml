@@ -214,6 +214,7 @@ fun ttt goal = (tactictoe_aux goal) goal
 
 fun tactictoe term = tactictoe_aux ([],term)
 
+
 (* --------------------------------------------------------------------------
    Prediction of the next tactic only
     ------------------------------------------------------------------------- *) 

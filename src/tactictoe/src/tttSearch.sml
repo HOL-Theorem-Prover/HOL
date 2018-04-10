@@ -351,6 +351,12 @@ fun node_create pripol tactime parid parstac pargn parg goallist
 fun node_delete pid =
   (debug_search ("node_delete " ^ int_to_string pid); deactivate pid)
 
+
+
+(* --------------------------------------------------------------------------
+   Change the name of the tactic that has been applied
+   -------------------------------------------------------------------------- *)
+
 fun update_curstac newstac pid =
   let
     val prec = dfind pid (!proofdict)
@@ -489,6 +495,8 @@ fun apply_stac pid pardict trydict stac g =
             glo
           end
       end
+    (* updating  *)
+      
     (* testing for loops *)
     val newglo = glob_productive pardict trydict g glo
   in
