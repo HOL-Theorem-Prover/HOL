@@ -310,6 +310,7 @@ val eprover_eval_ref = ref 0
 
 fun eval_eprover goal =
   let
+    val _ = init_metis (current_theory ()) (* load "metisTools" *)
     val _ = mkDir_err ttt_eproof_dir
     val (thmsymweight,thmfeav,revdict) = all_thmfeav ()
     val _ = incr eprover_eval_ref
