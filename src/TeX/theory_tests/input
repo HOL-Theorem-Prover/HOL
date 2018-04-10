@@ -22,6 +22,8 @@
 
 \HOLthm[width=50]{bool.AND_CLAUSES}
 
+\HOLthm[width=50,m;]{bool.AND_CLAUSES}
+
 \HOLthm[def,>>]{list.MAP}
 
 \HOLthm[spaceddef,>>]{list.MAP}
