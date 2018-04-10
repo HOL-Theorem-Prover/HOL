@@ -27,3 +27,5 @@
 \HOLthm[def,>>]{list.MAP}
 
 \HOLthm[spaceddef,>>]{list.MAP}
+
+|- \HOLthm[>>~3,nostile,width=50]{list.MAP}
