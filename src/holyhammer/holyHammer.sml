@@ -67,6 +67,7 @@ fun clean_dir dir =
 
 (* TODO: use OS.Path.concat *)
 val hh_dir = HOLDIR ^ "/src/holyhammer"
+val fof_dir = hh_dir ^ "/fof"
 val hh_bin_dir = hh_dir ^ "/hh"
 val provbin_dir = hh_dir ^ "/provers"
 
@@ -284,14 +285,15 @@ fun export_translate pbname premises cj =
   let
     val probdir = hh_dir ^ "/" ^ pbname
     val _ = export_problem probdir premises cj
-    val provdir = provbin_dir ^ "/" ^ pbname
+    val _ = mkDir_err fof_dir
+    val provdir = fof_dir ^ "/" ^ pbname
     val _ = translate_fof probdir provdir
   in
     rmDir_rec probdir
   end
 
 fun create_fof name thm =
-  let
+  let 
     val goal = dest_thm thm
     val cj = list_mk_imp goal
     (* with 128 selected premises *)
