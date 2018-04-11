@@ -15,7 +15,7 @@ sig
   val ttt_goal_glob    : goal ref
 
   val hh_stac_glob     :
-    (int ->
+    (string ->
        (int, real) Redblackmap.dict *
        (string * fea_t) list *
        (string, goal * int list) Redblackmap.dict ->
