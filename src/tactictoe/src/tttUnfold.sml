@@ -1155,9 +1155,11 @@ fun mk_list n a =
 fun split_thyl n thyl = 
   if n <= 0 then raise ERR "split_thyl" "" else
   let 
-    val l1 = sort_thyl thyl 
-    val l2 = mk_list n (0,[])
-    val result = split_thyl_aux l2 l1
+    fun test x = not (mem x ["bool","min"]) 
+    val l1  = sort_thyl thyl 
+    val l1' = filter test l1
+    val l2  = mk_list n (0,[])
+    val result = split_thyl_aux l2 l1'
   in
     map (rev o snd) result
   end
@@ -1165,7 +1167,7 @@ fun split_thyl n thyl =
 fun parallel_thy f n thyl =
   let
     val thyll = split_thyl n thyl
-    fun rec_fork thyl = Thread.Thread.fork (fn () => app f thyl, [])
+    fun rec_fork x = Thread.Thread.fork (fn () => app f x, [])
     val threadl = map rec_fork thyll
     fun loop () =
       (
