@@ -351,8 +351,6 @@ fun node_create pripol tactime parid parstac pargn parg goallist
 fun node_delete pid =
   (debug_search ("node_delete " ^ int_to_string pid); deactivate pid)
 
-
-
 (* --------------------------------------------------------------------------
    Change the name of the tactic that has been applied
    -------------------------------------------------------------------------- *)

@@ -915,11 +915,20 @@ fun output_header oc cthy =
     else ()
   ;
   (* init references *)
-  output_flag oc "tttSetup.ttt_eval_flag" ttt_eval_flag;
+  
   output_flag oc "tttSetup.ttt_ortho_flag" ttt_ortho_flag;
   output_flag oc "tttSetup.ttt_termarg_flag" ttt_termarg_flag;
+  
   output_flag oc "tttSetup.ttt_record_flag" ttt_record_flag;
+  output_flag oc "tttSetup.ttt_recprove_flag" ttt_recprove_flag;
+  output_flag oc "tttSetup.ttt_reclet_flag" ttt_reclet_flag;
+ 
+ 
+  output_flag oc "tttSetup.ttt_eval_flag" ttt_eval_flag;
+  output_flag oc "tttSetup.ttt_evprove_flag" ttt_evprove_flag;
+  output_flag oc "tttSetup.ttt_evlet_flag" ttt_evlet_flag;
   output_flag oc "tttSetup.eprover_save_flag" eprover_save_flag;
+  
   (* more refrences *)
   osn oc ("val _ = tttTools.ttt_search_time := Time.fromReal " ^
     Real.toString (Time.toReal (!ttt_search_time)));
