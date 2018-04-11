@@ -249,7 +249,10 @@ val fetch = total_time fetch_thm_time fetch_thm
 val thm_counter = ref 0
 
 fun start_record_proof name =
-  let val outname = "\nName: " ^ int_to_string (!thm_counter) ^ " " ^ name in
+  let 
+    val outname = "\nName: " ^ int_to_string (!thm_counter) ^ " " ^ name 
+    val _ = update_thmfea (current_theory ())
+  in
     debug_proof outname;
     debug_search outname;
     debug outname;
@@ -307,8 +310,8 @@ fun record_proof name lflag tac1 tac2 g =
         (not lflag orelse !ttt_evlet_flag)
       then eval_eprover g 
       else ()
-    val result =
-      if b2 orelse b3 
+    val result = (* evaluation of ttt needs recording to occur *)
+      if b2 orelse b3 orelse (not (!ttt_record_flag))
       then
         let val (r,t) = add_time (org_tac tac2) g in
           debug_proof ("Original proof time: " ^ Real.toString t);

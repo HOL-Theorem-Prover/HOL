@@ -11,7 +11,7 @@
 structure holyHammer :> holyHammer =
 struct
 
-open HolKernel boolLib hhWriter hhReconstruct tttTools tttExec tttFeature tttPredict
+open HolKernel boolLib hhWriter hhReconstruct tttTools tttExec tttFeature tttPredict tttSetup
 
 val ERR = mk_HOL_ERR "holyHammer"
 
@@ -275,19 +275,18 @@ fun holyhammer term = holyhammer_goal ([],term)
 
 fun hh goal = (holyhammer_goal goal) goal
 
-fun hh_stac pid (symweight,feav,revdict) t goal =
+fun hh_stac pids (symweight,feav,revdict) t goal =
   let
     val term = list_mk_imp goal
-    val ns = int_to_string pid
     val premises = thmknn_wdep (symweight,feav,revdict) 128 (fea_of_goal goal)
-    val probdir = hh_dir ^ "/problem_" ^ ns
+    val probdir = hh_dir ^ "/" ^ pids
     val _ = export_problem probdir premises term
-    val provdir = provbin_dir ^ "/prover_" ^ ns
+    val provdir = provbin_dir ^ "/" ^ pids
     val _ = translate_fof probdir provdir
     val _ = rmDir_rec probdir
     val _ = launch_atp provdir Eprover t
     val r = reconstruct_dir_stac provdir goal
-    val _ = rmDir_rec provdir
+    val _ = if !eprover_save_flag then () else rmDir_rec provdir
   in
     r
   end

@@ -918,12 +918,14 @@ fun output_header oc cthy =
   output_flag oc "tttSetup.ttt_eval_flag" ttt_eval_flag;
   output_flag oc "tttSetup.ttt_ortho_flag" ttt_ortho_flag;
   output_flag oc "tttSetup.ttt_termarg_flag" ttt_termarg_flag;
+  output_flag oc "tttSetup.ttt_record_flag" ttt_record_flag;
+  output_flag oc "tttSetup.eprover_save_flag" eprover_save_flag;
+  (* more refrences *)
   osn oc ("val _ = tttTools.ttt_search_time := Time.fromReal " ^
     Real.toString (Time.toReal (!ttt_search_time)));
   osn oc ("val _ = tttTools.ttt_tactic_time := " ^
     Real.toString (!ttt_tactic_time));
-  (* *)
-  
+  (* hook *)
   osn oc ("val _ = tttRecord.start_record_thy " ^ mlquote cthy)
   )
 
@@ -1205,8 +1207,10 @@ fun ttt_eval_parallel n thyl =
 fun eprover_eval_thy thy =
   (
   eprover_eval_flag := true;
+  ttt_record_flag := false;
   ttt_rewrite_thy thy;
   ttt_record_thy thy;
+  ttt_record_flag := true;
   ttt_eprover_flag := false
   )
 

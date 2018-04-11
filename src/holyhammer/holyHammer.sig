@@ -36,7 +36,7 @@ sig
 
   (* Holyhammer for Tactictoe with parallel calls *)
   val hh_stac           :
-    int ->
+    string ->
       (int, real) Redblackmap.dict *
       (string * fea_t) list *
       (string, (goal * int list)) Redblackmap.dict

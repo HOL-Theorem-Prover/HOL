@@ -66,6 +66,7 @@ fun exists_theorydata () =
   
 fun init_tactictoe () =
   let
+    val _ = update_thmfea (current_theory ())
     val _ = mkDir_err ttt_code_dir
     val cthy = current_theory ()
     val _ = init_metis cthy
@@ -180,7 +181,8 @@ fun main_tactictoe goal =
         gl_cache := dadd gl r (!gl_cache); r
       end
     fun hammer pid goal =
-      (!hh_stac_glob) pid (pthmsymweight,pthmfeav,pthmrevdict)
+      (!hh_stac_glob) (int_to_string pid) 
+         (pthmsymweight,pthmfeav,pthmrevdict)
          (!ttt_eprover_time) goal
   in
     debug_t "search" (search thmpred tacpred glpred hammer) goal
@@ -213,7 +215,6 @@ fun tactictoe_aux goal =
 fun ttt goal = (tactictoe_aux goal) goal
 
 fun tactictoe term = tactictoe_aux ([],term)
-
 
 (* --------------------------------------------------------------------------
    Prediction of the next tactic only
@@ -309,19 +310,27 @@ fun next_tac goal =
 
 val eprover_eval_ref = ref 0
 
+fun init_eprover () =
+  (
+  update_thmfea (current_theory ()); 
+  init_metis (current_theory ()); (* load "metisTools" *)
+  can update_hh_stac ()
+  )
+
 fun eval_eprover goal =
   let
-    val _ = init_metis (current_theory ()) (* load "metisTools" *)
+    val _ = init_eprover ()
     val _ = mkDir_err ttt_eproof_dir
     val (thmsymweight,thmfeav,revdict) = all_thmfeav ()
-    val _ = incr eprover_eval_ref
-    val index = !eprover_eval_ref + hash_string (current_theory ())
+    val _ = incr eprover_eval_ref 
+    val iname = current_theory () ^ "_" ^ int_to_string (!eprover_eval_ref)
     fun hammer goal =
-      (!hh_stac_glob) index (thmsymweight,thmfeav,revdict)
+      (!hh_stac_glob) iname (thmsymweight,thmfeav,revdict)
         (!ttt_eprover_time) goal
-    val _ = debug_eproof ("eprover_eval " ^ int_to_string index)
+    val _ = debug_eproof ("eprover_eval: " ^ iname)
     val (staco,t) = add_time hammer goal
-      handle _ => (debug ("Error: hammer " ^ int_to_string index); (NONE,0.0))
+      handle _ => (debug ("Error: hammer: " ^ iname); 
+                   (NONE,0.0))
   in
     debug_eproof ("Time: " ^ Real.toString t);
     case staco of
