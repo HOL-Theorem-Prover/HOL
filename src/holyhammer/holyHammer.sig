@@ -41,6 +41,10 @@ sig
       (string * fea_t) list *
       (string, (goal * int list)) Redblackmap.dict
     -> int -> goal -> string option
+  
+  (* Exporting fof problems *)
+  val create_fof        : string -> thm -> unit
+
 
   (* State *)
   val clean_cache       : unit -> unit

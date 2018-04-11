@@ -219,7 +219,7 @@ fun launch_atp dir atp tim =
       " > /dev/null 2> /dev/null"
     | Z3      => "sh z3.sh " ^ int_to_string tim ^ " " ^ dir ^
       " > /dev/null 2> /dev/null"
-    | _       => raise ERR "launch_atp" "atp not supported" (* TODO: add atp name *)
+    | _   => raise ERR "launch_atp" "atp not supported" (* TODO: add atp name *)
   in
     cmd_in_dir provbin_dir cmd
   end
@@ -275,6 +275,42 @@ fun holyhammer term = holyhammer_goal ([],term)
 
 fun hh goal = (holyhammer_goal goal) goal
 
+
+(*---------------------------------------------------------------------------
+   Creates first order problems for atps to be evalued on.
+ ----------------------------------------------------------------------------*)
+
+fun export_translate pbname premises cj =
+  let
+    val probdir = hh_dir ^ "/" ^ pbname
+    val _ = export_problem probdir premises cj
+    val provdir = provbin_dir ^ "/" ^ pbname
+    val _ = translate_fof probdir provdir
+  in
+    rmDir_rec probdir
+  end
+
+fun create_fof name thm =
+  let
+    val goal = dest_thm thm
+    val cj = list_mk_imp goal
+    (* with 128 selected premises *)
+    val (symweight,feav,revdict) = update_thmdata ()
+    val pbname1 = name ^ "__pred128"
+    val premises = thmknn_wdep (symweight,feav,revdict) 128 (fea_of_goal goal)
+    val _ = export_translate pbname1 premises cj
+    (* with dependencies *)
+    val (flag,deps) = dependencies_of_thm thm
+    val pbname2 = name ^ "__" ^ (if flag then "dep" else "brokendep")
+    val _ = export_translate pbname2 deps cj
+  in
+    ()
+  end
+
+(*---------------------------------------------------------------------------
+   Asynchronous calls to holyhammer in tactictoe.
+ ----------------------------------------------------------------------------*)
+
 fun hh_stac pids (symweight,feav,revdict) t goal =
   let
     val term = list_mk_imp goal
@@ -286,7 +322,7 @@ fun hh_stac pids (symweight,feav,revdict) t goal =
     val _ = rmDir_rec probdir
     val _ = launch_atp provdir Eprover t
     val r = reconstruct_dir_stac provdir goal
-    val _ = if !eprover_save_flag then () else rmDir_rec provdir
+    val _ = rmDir_rec provdir
   in
     r
   end

@@ -14,7 +14,11 @@ sig
   
   (* Settings *)
   val set_timeout : real -> unit
-
+  
+  (* Creating fof files *)
+  val create_fof_thy : string -> unit
+  val create_fof_parallel : int -> string list -> unit
+  
   (* Recording *)
   val ttt_record          : unit -> unit
   val ttt_record_parallel : int -> unit

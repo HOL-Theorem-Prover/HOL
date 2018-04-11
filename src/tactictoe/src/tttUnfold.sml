@@ -909,27 +909,23 @@ fun output_header oc cthy =
   "(* This file was modifed by TacticToe.                                        *)",
   "(* ========================================================================== *)"
   ];
+  (* infix operators *)
   app (os oc) (bare_readl infix_decl);
-  if !eprover_eval_flag
-    then osn oc ("val _ = tttSetup.eprover_eval_flag := true")
-    else ()
-  ;
-  (* init references *)
-  
-  output_flag oc "tttSetup.ttt_ortho_flag" ttt_ortho_flag;
-  output_flag oc "tttSetup.ttt_termarg_flag" ttt_termarg_flag;
-  
+  (* creating fof problems *)
+  output_flag oc "tttSetup.ttt_fof_flag" ttt_fof_flag;
+  (* recording *)
   output_flag oc "tttSetup.ttt_record_flag" ttt_record_flag;
   output_flag oc "tttSetup.ttt_recprove_flag" ttt_recprove_flag;
   output_flag oc "tttSetup.ttt_reclet_flag" ttt_reclet_flag;
- 
- 
+  output_flag oc "tttSetup.ttt_ortho_flag" ttt_ortho_flag;
+  (* evaluation *)
   output_flag oc "tttSetup.ttt_eval_flag" ttt_eval_flag;
+  output_flag oc "tttSetup.ttt_termarg_flag" ttt_termarg_flag;
   output_flag oc "tttSetup.ttt_evprove_flag" ttt_evprove_flag;
   output_flag oc "tttSetup.ttt_evlet_flag" ttt_evlet_flag;
+  output_flag oc "tttSetup.eprover_eval_flag" eprover_eval_flag;
   output_flag oc "tttSetup.eprover_save_flag" eprover_save_flag;
-  
-  (* more refrences *)
+  (* global references *)
   osn oc ("val _ = tttTools.ttt_search_time := Time.fromReal " ^
     Real.toString (Time.toReal (!ttt_search_time)));
   osn oc ("val _ = tttTools.ttt_tactic_time := " ^
@@ -1050,7 +1046,8 @@ fun find_script x =
 
 fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
 
-fun ttt_rewrite_thy thy =
+fun ttt_rewrite_thy thy = 
+  if mem thy ["bool","min"] then () else
   let
     val _ = clean_dir thy ttt_unfold_dir
     val scriptorg = find_script thy
@@ -1104,7 +1101,8 @@ fun restore_scripts script = app restore_file (script :: theory_files script)
    Recording
    -------------------------------------------------------------------------- *)
 
-fun ttt_record_thy thy =
+fun ttt_record_thy thy = 
+  if mem thy ["bool","min"] then () else
   let val scriptorg = find_script thy in
     let
       val _ = save_scripts scriptorg
@@ -1122,6 +1120,10 @@ fun ttt_record_thyl thyl = app ttt_record_thy thyl
 fun ttt_record () =
   let val thyl = ttt_rewrite () in ttt_record_thyl thyl end
 
+(* ---------------------------------------------------------------------------
+   Split theories in a reasonable manner for parallel calls.
+   -------------------------------------------------------------------------- *)
+
 fun split_n_aux i n nl =
   if i >= 0
   then filter (fn x => (fst x) mod n = i) nl :: split_n_aux (i-1) n nl
@@ -1134,10 +1136,56 @@ fun split_n n l =
     rev (map (map snd) ll)
   end
 
+fun compare_fstint ((a,_),(b,_)) = Int.compare (a,b)
+
+fun split_thyl_aux l2 l1 = case l1 of
+    []     => l2
+  | a :: newl1 => 
+    let 
+      val l2' = dict_sort compare_fstint l2
+      val (n,l) = hd l2'
+      val newl2 = (n + length (DB.thms a), a :: l) :: (tl l2')
+    in
+      split_thyl_aux newl2 newl1
+    end
+
+fun mk_list n a = 
+  if n <= 0 then [] else a :: mk_list (n-1) a
+
+fun split_thyl n thyl = 
+  if n <= 0 then raise ERR "split_thyl" "" else
+  let 
+    val l1 = sort_thyl thyl 
+    val l2 = mk_list n (0,[])
+    val result = split_thyl_aux l2 l1
+  in
+    map (rev o snd) result
+  end
+
+fun parallel_thy f n thyl =
+  let
+    val thyll = split_thyl n thyl
+    fun rec_fork thyl = Thread.Thread.fork (fn () => app f thyl, [])
+    val threadl = map rec_fork thyll
+    fun loop () =
+      (
+      OS.Process.sleep (Time.fromReal 1.0);
+      if exists Thread.Thread.isActive threadl
+      then loop ()
+      else print_endline "Parallel call ended"
+      )
+  in
+    loop ()
+  end
+
+(* ---------------------------------------------------------------------------
+   Parallel recording
+   -------------------------------------------------------------------------- *)
+
 fun ttt_record_parallel n =
   let
     val thyl = ttt_rewrite ()
-    val thyll = split_n n thyl
+    val thyll = split_thyl n thyl
     fun rec_fork thyl = Thread.Thread.fork (fn () => ttt_record_thyl thyl, [])
     val threadl = map rec_fork thyll
     fun loop () =
@@ -1185,11 +1233,10 @@ fun ttt_clean_all () =
   )
 
 (* ---------------------------------------------------------------------------
-   Evaluation
+   Evaluation (requires recording)
    -------------------------------------------------------------------------- *)
 
 fun ttt_eval_thy thy =
-  if thy = "bool" then () else
   (
   ttt_eval_flag := true;
   ttt_rewrite_thy thy;
@@ -1197,22 +1244,7 @@ fun ttt_eval_thy thy =
   ttt_eval_flag := false
   )
 
-fun ttt_eval_parallel n thyl =
-  let
-    val thyll = split_n n thyl
-    fun rec_fork thyl =
-      Thread.Thread.fork (fn () => app ttt_eval_thy thyl, [])
-    val threadl = map rec_fork thyll
-    fun loop () =
-      (
-      OS.Process.sleep (Time.fromReal 1.0);
-      if exists Thread.Thread.isActive threadl
-      then loop ()
-      else print_endline "Evaluation is successful"
-      )
-  in
-    loop ()
-  end
+fun ttt_eval_parallel n thyl = parallel_thy ttt_eval_thy n thyl
 
 fun eprover_eval_thy thy =
   (
@@ -1224,23 +1256,20 @@ fun eprover_eval_thy thy =
   ttt_eprover_flag := false
   )
 
-fun eprover_eval_parallel n thyl =
-  let
-    val thyll = split_n n thyl
-    fun rec_fork thyl =
-      Thread.Thread.fork (fn () => app eprover_eval_thy thyl, [])
-    val threadl = map rec_fork thyll
-    fun loop () =
-      (
-      OS.Process.sleep (Time.fromReal 1.0);
-      if exists Thread.Thread.isActive threadl
-      then loop ()
-      else print_endline "Evaluation is successful"
-      )
-  in
-    loop ()
-  end
+fun eprover_eval_parallel n thyl = parallel_thy eprover_eval_thy n thyl
 
+(* ---------------------------------------------------------------------------
+   Creating fof files
+   -------------------------------------------------------------------------- *)
 
+fun create_fof_thy thy =
+  (
+  ttt_fof_flag := true;
+  ttt_rewrite_thy thy;
+  ttt_record_thy thy;
+  ttt_fof_flag := false
+  )
+
+fun create_fof_parallel n thyl = parallel_thy create_fof_thy n thyl
 
 end (* struct *)

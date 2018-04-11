@@ -245,6 +245,23 @@ fun update_hh_stac () =
     if b then () else raise ERR "update_hh_stac" ""
   end
 
+val create_fof_glob:
+  (string -> thm -> unit) ref = ref (fn _ => (fn _ => ()))
+
+fun update_create_fof () =
+  let
+    val b = exec_sml "update_create_fof"
+      (
+      String.concatWith "\n"
+      [
+      "load \"holyHammer\";",
+      "val _ = tttExec.create_fof_glob := holyHammer.create_fof;"
+      ]
+      )
+  in
+    if b then () else raise ERR "update_hh_stac" ""
+  end
+
 val metis_tac_glob: (thm list -> tactic) option ref = ref NONE
 
 fun update_metis_tac () =

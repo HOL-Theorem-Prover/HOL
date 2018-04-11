@@ -319,9 +319,8 @@ fun eval_eprover goal =
     val (thmsymweight,thmfeav,revdict) = all_thmfeav ()
     val _ = incr eprover_eval_ref 
     val iname = current_theory () ^ "_" ^ int_to_string (!eprover_eval_ref)
-    fun hammer goal =
-      (!hh_stac_glob) iname (thmsymweight,thmfeav,revdict)
-        (!ttt_eprover_time) goal
+    fun hammer g = (!hh_stac_glob) iname (thmsymweight,thmfeav,revdict)
+        (!ttt_eprover_time) g
     val _ = debug_eproof ("eprover_eval: " ^ iname)
     val (staco,t) = add_time hammer goal
       handle _ => (debug ("Error: hammer: " ^ iname); 
