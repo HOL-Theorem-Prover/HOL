@@ -292,7 +292,36 @@ fun org_tac tac g =
      tac g
      )
 
+val fof_counter = ref 0
+
+fun create_fof_wrap name pflag result =
+  if !ttt_fof_flag andalso (not pflag orelse !ttt_evprove_flag) then 
+    let
+      val thm = (snd result) []
+      val _ = update_create_fof ()
+      val _ = incr fof_counter
+      val is = int_to_string (!fof_counter)
+      val newname = current_theory () ^ "__" ^ is ^ "__" ^ name 
+    in
+      (!create_fof_glob) newname thm
+    end
+  else ()
+
 fun record_proof name lflag tac1 tac2 g =
+  if !ttt_fof_flag then
+    let 
+      val pflag = String.isPrefix "tactictoe_prove_" name
+      val result =  
+        let val (r,t) = add_time (org_tac tac2) g in
+          debug_proof ("Original proof time: " ^ Real.toString t);
+          r
+        end
+      val _ = create_fof_wrap name pflag result
+        handle _ => (debug "Error: create_fof_wrap"; ())
+    in
+      result
+    end
+  else
   let
     val _ = start_record_proof name
     val pflag = String.isPrefix "tactictoe_prove_" name
@@ -310,7 +339,7 @@ fun record_proof name lflag tac1 tac2 g =
         (not lflag orelse !ttt_evlet_flag)
       then eval_eprover g 
       else ()
-    val result = (* evaluation of ttt needs recording to occur *)
+    val result =
       if b2 orelse b3 orelse (not (!ttt_record_flag))
       then
         let val (r,t) = add_time (org_tac tac2) g in

@@ -47,6 +47,8 @@ val ttt_recgl_flag = ref true
    Evaluation
    ========================================================================== *)
 
+val ttt_fof_flag = ref false
+
 val ttt_eval_flag = ref false
 
 (* Evaluated theorems *)

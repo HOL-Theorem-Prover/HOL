@@ -199,6 +199,15 @@ fun name_of_did (thy,n) =
     SOME (name,_) => SOME (thy ^ "Theory." ^ name)
   | NONE => NONE
 
+fun dependencies_of_thm thm =
+  let 
+    fun f x = x = NONE
+    val l = map name_of_did (depidl_of_thm thm)
+    val l' = filter f l
+  in
+    (null l', mapfilter valOf l)
+  end
+
 fun dep_of_thm s =
   let val (a,b) = split_string "Theory." s in
     if a = namespace_tag
