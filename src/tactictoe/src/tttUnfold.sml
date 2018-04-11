@@ -1182,7 +1182,8 @@ fun parallel_thy f n thyl =
   end
 
 (* ---------------------------------------------------------------------------
-   Parallel recording
+   Parallel recording. (Orthogonalization is weakened 
+   compared to ttt_record)
    -------------------------------------------------------------------------- *)
 
 fun ttt_record_parallel n =
