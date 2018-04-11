@@ -1189,6 +1189,7 @@ fun ttt_clean_all () =
    -------------------------------------------------------------------------- *)
 
 fun ttt_eval_thy thy =
+  if thy = "bool" then () else
   (
   ttt_eval_flag := true;
   ttt_rewrite_thy thy;
