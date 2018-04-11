@@ -66,19 +66,20 @@ fun exists_theorydata () =
   
 fun init_tactictoe () =
   let
-    val _ = update_thmfea (current_theory ())
     val _ = mkDir_err ttt_code_dir
     val cthy = current_theory ()
     val _ = init_metis cthy
     val thyl = exists_theorydata ()
   in
-    if !imported_theories <> thyl then
+    if !imported_theories <> thyl 
+    then
       (
       debug_t ("init_tactictoe " ^ cthy) import_ancestry ();
       hide_out QUse.use (tactictoe_dir ^ "/src/infix_file.sml");
       imported_theories := thyl
       )
-    else ()
+    else ();
+    update_thmfea (current_theory ())
   end
 
 (* --------------------------------------------------------------------------
@@ -310,16 +311,10 @@ fun next_tac goal =
 
 val eprover_eval_ref = ref 0
 
-fun init_eprover () =
-  (
-  update_thmfea (current_theory ()); 
-  init_metis (current_theory ()); (* load "metisTools" *)
-  can update_hh_stac ()
-  )
-
 fun eval_eprover goal =
   let
-    val _ = init_eprover ()
+    val _ = init_tactictoe ()
+    val _ = can update_hh_stac ()
     val _ = mkDir_err ttt_eproof_dir
     val (thmsymweight,thmfeav,revdict) = all_thmfeav ()
     val _ = incr eprover_eval_ref 
