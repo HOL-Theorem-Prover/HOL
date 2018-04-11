@@ -1157,6 +1157,7 @@ fun split_thyl n thyl =
   let 
     fun test x = not (mem x ["bool","min"]) 
     val l1  = sort_thyl thyl 
+      handle _ => (debug "Warning: split_thyl"; thyl)
     val l1' = filter test l1
     val l2  = mk_list n (0,[])
     val result = split_thyl_aux l2 l1'
