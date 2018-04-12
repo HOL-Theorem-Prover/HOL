@@ -62,6 +62,7 @@ sig
    val size_of         : tyinfo -> (term * thm) option
    val encode_of       : tyinfo -> (term * thm) option
    val lift_of         : tyinfo -> term option
+   val extra_of        : tyinfo -> ThyDataSexp.t list
 
    val axiom_of0       : tyinfo -> shared_thm
    val induction_of0   : tyinfo -> shared_thm
@@ -70,6 +71,7 @@ sig
 
    val put_nchotomy    : thm -> tyinfo -> tyinfo
    val put_simpls      : simpfrag -> tyinfo -> tyinfo
+   val add_ssfrag_convs: simpfrag.convdata list -> tyinfo -> tyinfo
    val put_induction   : shared_thm -> tyinfo -> tyinfo
    val put_size        : term * shared_thm -> tyinfo -> tyinfo
    val put_encode      : term * shared_thm -> tyinfo -> tyinfo
@@ -80,6 +82,7 @@ sig
    val put_destructors : thm list -> tyinfo -> tyinfo
    val put_recognizers : thm list -> tyinfo -> tyinfo
    val put_extra       : ThyDataSexp.t list -> tyinfo -> tyinfo
+   val add_extra       : ThyDataSexp.t list -> tyinfo -> tyinfo
 
    (* Functional databases of datatype facts and associated operations *)
 

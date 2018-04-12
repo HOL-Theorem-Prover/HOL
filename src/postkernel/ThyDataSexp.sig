@@ -13,8 +13,23 @@ datatype t =
        | Char of char
 
 val uptodate : t -> bool
+val compare : t * t -> order
 
-val new : {thydataty : string, load : {thyname : string, data : t} -> unit,
+(* note that merge functions must take identical "types" on both sides.
+   Thus, if the theory data is a list of values, both old and new should be
+   lists and the merge will effectively be an append.  If there's just one
+   value being "merged", it should still be a singleton list.
+
+   Similarly, if the data is a dictionary, represented as an alist, then the
+   new data (representing a single key-value maplet) should be a singleton
+   alist
+*)
+val alist_merge : {old: t, new : t} -> t
+val append_merge : {old : t, new : t} -> t
+
+val new : {thydataty : string,
+           merge : {old : t, new : t} -> t,
+           load : {thyname : string, data : t} -> unit,
            other_tds : t * TheoryDelta.t -> t} ->
           {export : t -> unit, segment_data : {thyname : string} -> t option}
 

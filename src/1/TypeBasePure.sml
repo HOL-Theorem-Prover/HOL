@@ -86,12 +86,32 @@ in
   gcons_mkUp (from, from', to)
 end z
 
-type ntyinfo = hol_type *
-          {nchotomy : thm option,
-           induction : thm option,
-           size : (term * thm) option,
-           encode : (term * thm) option,
-           extra : ThyDataSexp.t list};
+type ntyrec = {encode : (term * thm) option,
+               extra : ThyDataSexp.t list,
+               induction : thm option,
+               nchotomy : thm option,
+               simpls : simpfrag.simpfrag,
+               size : (term * thm) option
+              };
+
+fun gcons_mkUp z = makeUpdate6 z
+fun update_NTY z = let
+  fun from encode extra induction nchotomy simpls size =
+    {encode = encode, extra = extra, induction = induction,
+     nchotomy = nchotomy, simpls = simpls, size = size}
+  (* fields in reverse order to above *)
+  fun from' size simpls nchotomy induction extra encode =
+    {encode = encode, extra = extra, induction = induction,
+     nchotomy = nchotomy, simpls = simpls, size = size}
+  (* first order *)
+  fun to f {encode, extra, induction, nchotomy, simpls, size} =
+    f encode extra induction nchotomy simpls size
+in
+  gcons_mkUp (from, from', to)
+end z
+
+
+type ntyinfo = hol_type * ntyrec
 
 datatype tyinfo = DFACTS of dtyinfo
                 | NFACTS of ntyinfo;
@@ -136,6 +156,9 @@ fun case_eq_of (DFACTS {case_eq, ...}) = case_eq
   | case_eq_of (NFACTS (ty,_)) =
        raise ERR "case_eq_of" (dollarty ty^" is not a datatype");
 
+fun extra_of (DFACTS{extra,...}) = extra
+  | extra_of (NFACTS(_, {extra,...})) = extra
+
 fun induction_of0 (DFACTS {induction,...}) = induction
   | induction_of0 (NFACTS (ty,{induction,...}))
      = raise ERR "induction_of0" "not a mutrec. datatype";
@@ -179,16 +202,14 @@ fun axiom_of (DFACTS {axiom,...}) = thm_of axiom
       raise ERR "axiom_of" (dollarty ty^" is not a datatype");
 
 fun size_of0 (DFACTS {size,...}) = size
-  | size_of0 (NFACTS (ty,_)) =
-      raise ERR "size_of0" (dollarty ty^" is not a datatype");
+  | size_of0 (NFACTS (ty,{size,...})) = Option.map (I ## ORIG) size
 
 fun size_of (DFACTS {size=NONE,...}) = NONE
   | size_of (DFACTS {size=SOME(tm,def),...}) = SOME(tm,thm_of def)
   | size_of (NFACTS(_,{size,...})) = size;
 
 fun encode_of0(DFACTS {encode,...}) = encode
-  | encode_of0(NFACTS (ty,_)) =
-       raise ERR "encode_of0" (dollarty ty^" is not a datatype")
+  | encode_of0(NFACTS (ty,{encode,...})) = Option.map (I ## ORIG) encode
 
 fun encode_of(DFACTS {encode=NONE,...}) = NONE
   | encode_of(DFACTS {encode=SOME(tm,def),...}) = SOME(tm,thm_of def)
@@ -199,54 +220,58 @@ fun lift_of(DFACTS {lift,...}) = lift
        raise ERR "lift_of" (dollarty ty^" is not a datatype")
 ;
 
+fun extras_of (DFACTS{extra,...}) = extra
+  | extras_of (NFACTS(_, {extra,...})) = extra
+
 (*---------------------------------------------------------------------------
                     Making alterations
  ---------------------------------------------------------------------------*)
 
 fun put_nchotomy th (DFACTS dty) = DFACTS (update_DTY dty (U #nchotomy th) $$)
-  | put_nchotomy th (NFACTS(ty,{nchotomy,induction,size,encode,extra})) =
-      NFACTS(ty,{nchotomy=SOME th,induction=induction,size=size,encode=encode,
-                 extra = extra});
+  | put_nchotomy th (NFACTS(ty,ntyr)) =
+      NFACTS(ty,update_NTY ntyr (U #nchotomy (SOME th)) $$)
 
 fun put_simpls thl (DFACTS dty) = DFACTS (update_DTY dty (U #simpls thl) $$)
-  | put_simpls _ _ = raise ERR "put_simpls" "not a datatype";
+  | put_simpls ssf (NFACTS (ty,nty)) =
+      NFACTS(ty, update_NTY nty (U #simpls ssf) $$)
+
+val add_convs = simpfrag.add_convs
+fun add_ssfrag_convs cds (DFACTS dty) =
+    DFACTS (update_DTY dty(U #simpls (add_convs cds (#simpls dty))) $$)
+  | add_ssfrag_convs cds (NFACTS(ty,nty)) =
+      NFACTS(ty, update_NTY nty (U #simpls (add_convs cds (#simpls nty))) $$)
 
 fun put_induction th (DFACTS dty) = DFACTS (update_DTY dty (U #induction th) $$)
-  | put_induction (ORIG th)
-                  (NFACTS(ty,{nchotomy,induction,size,encode,extra})) =
-      NFACTS(ty,{induction=SOME th,nchotomy=nchotomy,size=size,encode=encode,
-                 extra=extra})
-  | put_induction (COPY th)
-                  (NFACTS(ty,{nchotomy,induction,size,encode, extra=extra})) =
+  | put_induction (ORIG th) (NFACTS(ty,ntyr)) =
+      NFACTS(ty,update_NTY ntyr (U #induction (SOME th)) $$)
+  | put_induction (COPY th) (NFACTS _) =
       raise ERR "put_induction" "non-datatype but mutrec"
 
 fun put_size szinfo (DFACTS dty) =
       DFACTS (update_DTY dty (U #size (SOME szinfo)) $$)
-  | put_size (size_tm,ORIG size_rw)
-             (NFACTS(ty,{nchotomy,induction,size,encode,extra})) =
-      NFACTS(ty,{nchotomy=nchotomy,size=SOME(size_tm,size_rw),
-                 induction=induction,encode=encode,extra=extra})
-  | put_size (size_tm,COPY size_rw)
-             (NFACTS(ty,{nchotomy,induction,size,encode,extra=extra})) =
+  | put_size (size_tm,ORIG size_rw) (NFACTS(ty,ntyr)) =
+      NFACTS(ty,update_NTY ntyr (U #size (SOME(size_tm,size_rw))) $$)
+  | put_size (size_tm,COPY size_rw) (NFACTS _) =
       raise ERR "put_size" "non-datatype but mutrec"
 
 fun put_encode encinfo (DFACTS dty) =
       DFACTS (update_DTY dty (U #encode (SOME encinfo)) $$)
   | put_encode (encode_tm,ORIG encode_rw)
-               (NFACTS(ty,{nchotomy,induction,size,encode,extra})) =
-     NFACTS(ty,{nchotomy=nchotomy,induction=induction,extra=extra,
-                size=size,encode=SOME(encode_tm,encode_rw)})
-  | put_encode (encode_tm,COPY encode_rw)
-               (NFACTS(ty,{nchotomy,induction,size,encode,extra})) =
+               (NFACTS(ty, ntyr)) =
+      NFACTS(ty, update_NTY ntyr (U #encode (SOME(encode_tm,encode_rw))) $$)
+  | put_encode (encode_tm,COPY encode_rw) (NFACTS _) =
       raise ERR "put_encode" "non-datatype but mutrec"
 
 fun put_extra e tyi =
   case tyi of
       DFACTS dty => DFACTS (update_DTY dty (U #extra e) $$)
-    | NFACTS(ty,{nchotomy,induction,size,encode,extra}) =>
-        NFACTS (ty, {nchotomy=nchotomy,induction=induction,extra=e,
-                     size=size,encode=encode})
+    | NFACTS(ty,ntyr) => NFACTS (ty, update_NTY ntyr (U #extra e) $$)
 
+fun add_extra e tyi =
+  case tyi of
+      DFACTS dty => DFACTS (update_DTY dty (U #extra (#extra dty @ e)) $$)
+    | NFACTS (ty, ntyr) =>
+        NFACTS (ty, update_NTY ntyr (U #extra (#extra ntyr @ e)) $$)
 
 fun put_lift lift_tm (DFACTS dty) =
       DFACTS (update_DTY dty (U #lift (SOME lift_tm)) $$)
@@ -378,7 +403,7 @@ end;
 
 fun mk_nondatatype_info (ty,{encode,induction,nchotomy,size}) =
   NFACTS(ty,{encode=encode,induction=induction,size=size,extra=[],
-             nchotomy=nchotomy});
+             nchotomy=nchotomy,simpls=simpfrag.empty_simpfrag});
 
 fun name_pair(s1,s2) = s1^"$"^s2;
 
@@ -481,7 +506,7 @@ fun pp_tyinfo tyi =
             end
           )
         end
-      | NFACTS(ty,{nchotomy,induction,size,encode,extra}) =>
+      | NFACTS(ty,{nchotomy,induction,size,encode,extra,...}) =>
         block CONSISTENT 0 (
           block INCONSISTENT 0 (
              add_string "-----------------------" >> add_newline >>
@@ -969,6 +994,13 @@ fun mk_record tybase (ty,fields) =
   else raise ERR "mk_record" "first arg. not a record type";
 
 open ThyDataSexp
+fun ty_to_key ty =
+  let
+    val {Thy,Tyop,...} = dest_thy_type ty
+  in
+    List [String Thy, String Tyop]
+  end
+
 fun field s v = [Sym s, v]
 fun option f v =
   case v of
@@ -1000,10 +1032,10 @@ fun dtyiToSEXPs (dtyi : dtyinfo) =
     field "simpls" (List (map Thm (#rewrs (#simpls dtyi)))) @
     field "extra" (List (#extra dtyi))
 
-fun toSEXP tyi =
+fun toSEXP0 tyi =
   case tyi of
       DFACTS dtyi => List (Sym "DFACTS" :: dtyiToSEXPs dtyi)
-    | NFACTS (ty,{nchotomy, induction, size, encode, extra}) =>
+    | NFACTS (ty,{nchotomy, induction, size, encode, extra, simpls}) =>
         List (
           Sym "NFACTS" ::
           field "ty" (Type ty) @
@@ -1011,10 +1043,14 @@ fun toSEXP tyi =
           field "induction" (option Thm induction) @
           field "extra" (List extra) @
           field "size" (option (fn (t,th) => List [Term t, Thm th]) size) @
-          field "encode" (option (fn (t,th) => List [Term t, Thm th]) encode)
+          field "encode" (option (fn (t,th) => List [Term t, Thm th]) encode) @
+          field "simpls" (List (map Thm (#rewrs simpls)))
         )
 
-fun fromSEXP s =
+fun toSEXP tyi =
+  List [ty_to_key (ty_of tyi), toSEXP0 tyi]
+
+fun fromSEXP0 s =
   let
     fun string (String s) = s | string _ = raise Option
     fun ty (Type t) = t | ty _ = raise Option
@@ -1026,6 +1062,8 @@ fun fromSEXP s =
       | dest_option _ _ = raise Option
     fun dest_pair df1 df2 (List [s1, s2]) = (df1 s1, df2 s2)
       | dest_pair _ _ _ = raise Option
+    fun H nm f x = f x
+       handle Option => raise ERR "fromSEXP" ("Bad encoding for field "^nm)
   in
     case s of
         List [Sym "DFACTS",
@@ -1055,20 +1093,22 @@ fun fromSEXP s =
                     case_def = case_def, case_eq = case_eq,
                     case_cong = case_cong,
                     case_const = case_const,
-                    constructors = map tm clist,
-                    destructors = map thm dlist,
-                    recognizers = map thm rlist,
-                    size = dest_option (dest_pair tm sthm) size_option,
-                    encode = dest_option (dest_pair tm sthm) encode_option,
-                    lift = dest_option tm lift_option,
-                    distinct = dest_option thm distinct_option,
+                    constructors = H "constructors" (map tm) clist,
+                    destructors = H "destructors" (map thm) dlist,
+                    recognizers = H "recognizers" (map thm) rlist,
+                    size =
+                      H "size" (dest_option (dest_pair tm sthm)) size_option,
+                    encode = H "encode"
+                               (dest_option (dest_pair tm sthm)) encode_option,
+                    lift = H "lift" (dest_option tm) lift_option,
+                    distinct = H "distinct" (dest_option thm) distinct_option,
                     nchotomy = nchotomy,
-                    one_one = dest_option thm one_one_option,
-                    fields = map (dest_pair string ty) field_list,
-                    accessors = map thm accessor_list,
-                    updates = map thm update_list,
+                    one_one = H "one_one" (dest_option thm) one_one_option,
+                    fields = H "fields" (map (dest_pair string ty)) field_list,
+                    accessors = H "accessors" (map thm) accessor_list,
+                    updates = H "updates" (map thm) update_list,
                     simpls = simpfrag.add_rwts simpfrag.empty_simpfrag
-                                                (map thm fragrewr_list),
+                                 (H "simpls" (map thm) fragrewr_list),
                     extra = extra}
           ) handle Option => NONE)
       | List [Sym "NFACTS", Sym "ty", Type typ,
@@ -1076,16 +1116,26 @@ fun fromSEXP s =
               Sym "induction", ind_option,
               Sym "extra", List extra,
               Sym "size", size_option,
-              Sym "encode", encode_option] =>
+              Sym "encode", encode_option,
+              Sym "simpls", List rewrs] =>
         (SOME (
             NFACTS (typ, {
-                     nchotomy = dest_option thm nch_option,
-                     induction = dest_option thm ind_option,
+                     nchotomy = H "nchotomy" (dest_option thm) nch_option,
+                     induction = H "induction" (dest_option thm) ind_option,
                      extra = extra,
-                     size = dest_option (dest_pair tm thm) size_option,
-                     encode = dest_option (dest_pair tm thm) encode_option}))
-                   handle Option => NONE)
+                     size = H "size" (dest_option (dest_pair tm thm))
+                              size_option,
+                     encode = H "encode" (dest_option (dest_pair tm thm))
+                                encode_option,
+                     simpls = simpfrag.add_rwts simpfrag.empty_simpfrag
+                                                (H "simpls" (map thm) rewrs)}))
+         handle Option => NONE)
       | _ => NONE
   end
+
+fun fromSEXP s =
+  case s of
+      List[_, s0] => fromSEXP0 s0
+    | _ => NONE
 
 end (* struct *)

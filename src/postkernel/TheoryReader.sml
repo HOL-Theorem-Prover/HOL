@@ -261,19 +261,25 @@ fun read_thydata path =
     (TextIO.closeIn file; l)
   end
 
+fun H nm f x =
+  f x handle e =>
+      raise ERR "load_thydata" (nm ^ ": " ^ General.exnMessage e)
+
 fun load_thydata thyname path =
   let
-    val l0 = read_thydata path
-    val l1 = load_theory_and_parents l0
-    val l2 = load_incorporate_types thyname l1
-    val (idvector,l3) = load_idvector l2
-    val (tyvector,l4) = load_tyvector idvector l3
-    val l5 = load_incorporate_consts thyname tyvector l4
-    val (tmvector,l6) = load_tmvector idvector tyvector l5
-    val (named_thms,l7) = read_thml tmvector l6
+    val l0 = H "read_thydata" read_thydata path
+    val l1 = H "load_theory_and_parents" load_theory_and_parents l0
+    val l2 = H "load_incorporate_types" (load_incorporate_types thyname) l1
+    val (idvector,l3) = H "load_idvector" load_idvector l2
+    val (tyvector,l4) = H "load_tyvector" (load_tyvector idvector) l3
+    val l5 = H "load_incorporate_consts"
+               (load_incorporate_consts thyname tyvector) l4
+    val (tmvector,l6) = H "load_tmvector" (load_tmvector idvector tyvector) l5
+    val (named_thms,l7) = H "read_thml" (read_thml tmvector) l6
     val thmdict = Redblackmap.fromList String.compare named_thms
-    val l8 = load_classes thmdict thyname l7
-    val _ = load_loadable_thydata tmvector thyname l8
+    val l8 = H "load_classes" (load_classes thmdict thyname) l7
+    val _ = H "load_loadable_thydata"
+              (load_loadable_thydata tmvector thyname) l8
   in
     thmdict
   end

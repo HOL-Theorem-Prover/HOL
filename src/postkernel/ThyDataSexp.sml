@@ -3,6 +3,8 @@ struct
 
 open Feedback Term Thm Theory
 
+val ERR = mk_HOL_ERR "ThyDataSexp"
+
 datatype t =
          Int of int
        | String of string
@@ -46,10 +48,72 @@ fun uptodate s =
     | List sl => List.all uptodate sl
     | _ => true
 
-fun smerge sp =
-  case sp of
-      (List sl1, List sl2) => List (sl1 @ sl2)
-    | (s1, s2) => List [Sym "merge", s1, s2]
+fun compare (s1, s2) =
+  case (s1, s2) of
+      (Int i1, Int i2) => Int.compare(i1,i2)
+    | (Int _, _) => LESS
+    | (_, Int _) => GREATER
+
+    | (String s1, String s2) => String.compare(s1,s2)
+    | (String _, _) => LESS
+    | (_, String _) => GREATER
+
+    | (List l1, List l2) => Lib.list_compare compare (l1, l2)
+    | (List _, _) => LESS
+    | (_, List _) => GREATER
+
+    | (Term t1, Term t2) => Term.compare(t1,t2)
+    | (Term _, _) => LESS
+    | (_, Term _) => GREATER
+
+    | (Type ty1, Type ty2) => Type.compare(ty1, ty2)
+    | (Type _, _) => LESS
+    | (_, Type _) => GREATER
+
+    | (Thm th1, Thm th2) =>
+      Lib.pair_compare (Lib.list_compare Term.compare, Term.compare)
+                       ((hyp th1, concl th1), (hyp th2, concl th2))
+    | (Thm _, _) => LESS
+    | (_, Thm _) => GREATER
+
+    | (Sym s1, Sym s2) => String.compare (s1, s2)
+    | (Sym _, _) => LESS
+    | (_, Sym _) => GREATER
+
+    | (Bool b1, Bool b2) => Lib.bool_compare(b1, b2)
+    | (Bool _, _) => LESS
+    | (_, Bool _) => GREATER
+
+    | (Char c1, Char c2) => Char.compare (c1, c2)
+
+fun update_alist (kv, es) =
+  let
+    val k = case kv of List[k,_] => k | _=> raise ERR "update_alist" "kv shape"
+    fun recurse es =
+      case es of
+          [] => [kv]
+        | (e as List [k',_])::rest =>
+            if compare(k, k') = EQUAL then kv::rest
+            else e :: recurse rest
+        | _ => raise ERR "update_alist" "alist of bad shape"
+  in
+    recurse es
+  end
+
+fun alist_merge {old = s1, new = s2} =
+  case (s1, s2) of
+      (List dict, List updates) =>
+      let
+        val dict' = foldl update_alist dict updates
+      in
+        List dict'
+      end
+    | _ => raise ERR "alist_merge" "bad inputs"
+
+fun append_merge {old, new} =
+  case (old, new) of
+      (List l1, List l2) => List (l1 @ l2)
+    | _ => raise ERR "append_merge" "bad inputs"
 
 fun sterms0 (s, acc) =
   case s of
@@ -140,10 +204,11 @@ fun reader tmr s = (* necessary eta-expansion! *)
   end
 
 structure LTD = LoadableThyData
-fun new {thydataty, load, other_tds} =
+fun new {thydataty, load, other_tds, merge} =
   let
     val (todata, fromdata) =
-        LTD.new{thydataty = thydataty, merge = smerge,
+        LTD.new{thydataty = thydataty,
+                merge = (fn (t1,t2) => merge {old = t1, new = t2}),
                 terms = sterms, read = lift o reader, write = write}
     fun segment_data {thyname} =
       Option.join
