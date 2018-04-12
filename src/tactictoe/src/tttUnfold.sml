@@ -572,26 +572,34 @@ fun ppstring_stac qtac =
    -------------------------------------------------------------------------- *)
 
 val is_thm_flag = ref false
-val in_pattern_level = ref 0
 
-fun modified_program inh p = case p of
+fun modified_program (h,d) p = 
+  let fun continue m' = modified_program (h,d) m' in
+  case p of
     [] => []
-  | Open sl :: m    => ["open"] @ sl @ modified_program inh m
-  | Infix l :: m    =>
-    List.concat (map stringl_of_infix l) @ modified_program inh m
-  | In :: m         => "in" :: modified_program inh m
-  | Start s :: m    => s :: modified_program inh m
-  | End :: m        => "end" :: modified_program inh m
+  | Open sl :: m    => ["open"] @ sl @ continue m
+  | Infix l :: m    => List.concat (map stringl_of_infix l) @ continue m
+  | In :: m         => "in" :: continue m
+  | Start s :: m    => s :: continue m
+  | End :: m        => "end" :: continue m
+  | Pattern (s,head,sep,body) :: m =>
+    let
+      val _ = if d = 0 then is_thm_flag := false else ()
+      val head' = modified_program (true, d+1) head
+      val body' = modified_program ((s <> "val") orelse h, d+1) body
+      val semicolon = 
+        if d = 0 andalso !is_thm_flag then [";"] else []
+    in
+      semicolon @ [s] @ head' @ [sep] @ body' @ continue m
+    end
   | Code (a,_) :: m =>
     (
-    if mem (drop_sig a) ["export_theory"]
-      then modified_program inh m
-    else if inh orelse !in_pattern_level > 1 (* ignore deep store_thm *)
-      then a :: modified_program inh m
+    if mem (drop_sig a) ["export_theory"] then continue m
+    else if h orelse d > 1 then a :: continue m
     else if mem (drop_sig a) store_thm_list andalso hd_code_par m
       then
       case extract_store_thm (tl m) of
-        NONE => a :: modified_program inh m
+        NONE => a :: continue m
       | SOME (name,namel,term,qtac,lflag,cont) =>
         let
           val _ = is_thm_flag := true
@@ -608,12 +616,12 @@ fun modified_program inh p = case p of
             ["in","tttRecord.record_proof",
              mlquote name,lflag_name,"tactictoe_tac2","tactictoe_tac1","end"] @
           [")"]
-          @ modified_program inh cont
+          @ continue cont
         end
     else if mem (drop_sig a) prove_list andalso hd_code_par m
       then
       case extract_prove (tl m) of
-        NONE => a :: modified_program inh m
+        NONE => a :: continue m
       | SOME (term,qtac,lflag,cont) =>
         let
           val _ = is_thm_flag := true
@@ -631,25 +639,13 @@ fun modified_program inh p = case p of
             ["in","tttRecord.record_proof",
              mlquote name,lflag_name,"tactictoe_tac2","tactictoe_tac1","end"] @
           [")"]
-          @ modified_program inh cont
+          @ continue cont
         end
-    else a :: modified_program inh m
+    else a :: continue m
     )
-  | Pattern (s,head,sep,body) :: m =>
-    let
-      val _ = if !in_pattern_level <= 0 then is_thm_flag := false else ()
-      val _ = incr in_pattern_level
-      val head' = modified_program true head
-      val body' = modified_program (s <> "val") body
-      val semicolon = 
-        if !is_thm_flag andalso !in_pattern_level <= 1 
-        then [";"] 
-        else []
-      val _ = decr in_pattern_level
-    in
-      semicolon @ [s] @ head' @ [sep] @ body' @ modified_program false m
-    end
 
+  
+  end
 (* --------------------------------------------------------------------------
    Stack continued
    -------------------------------------------------------------------------- *)
@@ -1027,8 +1023,8 @@ fun rewrite_script thy fileorg =
     val _ = debug_unfold "unfold_wrap"
     val p2 = unfold_wrap p0
     val _ = debug_unfold "modified_program"
-    val _ = (is_thm_flag := false; in_pattern_level := 0)
-    val sl5 = modified_program false p2
+    val _ = is_thm_flag := false
+    val sl5 = modified_program (false,0) p2
   in
     print_program thy fileorg sl5;
     end_unfold_thy ()
