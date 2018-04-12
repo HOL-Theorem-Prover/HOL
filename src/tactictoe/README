@@ -4,7 +4,6 @@ It explores proof trees by repeatly selecting tactics that are
 appropriate to solve the current goal.
 The selection is performed on a dataset of recorded human tactics.
 
-
 RECORDING: 
   Because of some issue, you sometimes need to restart "hol" after recording.
   
