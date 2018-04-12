@@ -586,7 +586,7 @@ fun modified_program inh p = case p of
     (
     if mem (drop_sig a) ["export_theory"]
       then modified_program inh m
-    else if inh andalso !in_pattern_level > 1 (* ignore deep store_thm *)
+    else if inh orelse !in_pattern_level > 1 (* ignore deep store_thm *)
       then a :: modified_program inh m
     else if mem (drop_sig a) store_thm_list andalso hd_code_par m
       then
@@ -641,12 +641,7 @@ fun modified_program inh p = case p of
       val _ = incr in_pattern_level
       val head' = modified_program true head
       val body' = modified_program (s <> "val") body
-      val semicolon =
-        if mem s ["val"] andalso
-           !in_pattern_level <= 1 andalso
-           !is_thm_flag = true
-        then [";"]
-        else []
+      val semicolon = if !is_thm_flag then [";"] else []
       val _ = decr in_pattern_level
     in
       semicolon @ [s] @ head' @ [sep] @ body' @ modified_program false m
