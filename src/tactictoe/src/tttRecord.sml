@@ -286,8 +286,8 @@ fun clear_tac tac g =
 fun org_tac tac g =
   let val (gl,v) = timeOut 600.0 tac g in
     if null gl 
-      then (debug "Error: org_tac: pending goals"; clear_tac tac g) 
-      else (gl,v)
+      then (gl,v)
+      else (debug "Error: org_tac: pending goals"; clear_tac tac g)
   end
   handle 
       TacTimeOut => (debug "Error: org_tac: loop"; clear_tac tac g)
