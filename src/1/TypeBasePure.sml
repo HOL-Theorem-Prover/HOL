@@ -969,6 +969,13 @@ fun mk_record tybase (ty,fields) =
   else raise ERR "mk_record" "first arg. not a record type";
 
 open ThyDataSexp
+fun ty_to_key ty =
+  let
+    val {Thy,Tyop,...} = dest_thy_type ty
+  in
+    List [String Thy, String Tyop]
+  end
+
 fun field s v = [Sym s, v]
 fun option f v =
   case v of
@@ -1000,7 +1007,7 @@ fun dtyiToSEXPs (dtyi : dtyinfo) =
     field "simpls" (List (map Thm (#rewrs (#simpls dtyi)))) @
     field "extra" (List (#extra dtyi))
 
-fun toSEXP tyi =
+fun toSEXP0 tyi =
   case tyi of
       DFACTS dtyi => List (Sym "DFACTS" :: dtyiToSEXPs dtyi)
     | NFACTS (ty,{nchotomy, induction, size, encode, extra}) =>
@@ -1014,7 +1021,10 @@ fun toSEXP tyi =
           field "encode" (option (fn (t,th) => List [Term t, Thm th]) encode)
         )
 
-fun fromSEXP s =
+fun toSEXP tyi =
+  List [ty_to_key (ty_of tyi), toSEXP0 tyi]
+
+fun fromSEXP0 s =
   let
     fun string (String s) = s | string _ = raise Option
     fun ty (Type t) = t | ty _ = raise Option
@@ -1026,6 +1036,8 @@ fun fromSEXP s =
       | dest_option _ _ = raise Option
     fun dest_pair df1 df2 (List [s1, s2]) = (df1 s1, df2 s2)
       | dest_pair _ _ _ = raise Option
+    fun H nm f x = f x
+       handle Option => raise ERR "fromSEXP" ("Bad encoding for field "^nm)
   in
     case s of
         List [Sym "DFACTS",
@@ -1055,20 +1067,22 @@ fun fromSEXP s =
                     case_def = case_def, case_eq = case_eq,
                     case_cong = case_cong,
                     case_const = case_const,
-                    constructors = map tm clist,
-                    destructors = map thm dlist,
-                    recognizers = map thm rlist,
-                    size = dest_option (dest_pair tm sthm) size_option,
-                    encode = dest_option (dest_pair tm sthm) encode_option,
-                    lift = dest_option tm lift_option,
-                    distinct = dest_option thm distinct_option,
+                    constructors = H "constructors" (map tm) clist,
+                    destructors = H "destructors" (map thm) dlist,
+                    recognizers = H "recognizers" (map thm) rlist,
+                    size =
+                      H "size" (dest_option (dest_pair tm sthm)) size_option,
+                    encode = H "encode"
+                               (dest_option (dest_pair tm sthm)) encode_option,
+                    lift = H "lift" (dest_option tm) lift_option,
+                    distinct = H "distinct" (dest_option thm) distinct_option,
                     nchotomy = nchotomy,
-                    one_one = dest_option thm one_one_option,
-                    fields = map (dest_pair string ty) field_list,
-                    accessors = map thm accessor_list,
-                    updates = map thm update_list,
+                    one_one = H "one_one" (dest_option thm) one_one_option,
+                    fields = H "fields" (map (dest_pair string ty)) field_list,
+                    accessors = H "accessors" (map thm) accessor_list,
+                    updates = H "updates" (map thm) update_list,
                     simpls = simpfrag.add_rwts simpfrag.empty_simpfrag
-                                                (map thm fragrewr_list),
+                                 (H "simpls" (map thm) fragrewr_list),
                     extra = extra}
           ) handle Option => NONE)
       | List [Sym "NFACTS", Sym "ty", Type typ,
@@ -1079,13 +1093,20 @@ fun fromSEXP s =
               Sym "encode", encode_option] =>
         (SOME (
             NFACTS (typ, {
-                     nchotomy = dest_option thm nch_option,
-                     induction = dest_option thm ind_option,
+                     nchotomy = H "nchotomy" (dest_option thm) nch_option,
+                     induction = H "induction" (dest_option thm) ind_option,
                      extra = extra,
-                     size = dest_option (dest_pair tm thm) size_option,
-                     encode = dest_option (dest_pair tm thm) encode_option}))
+                     size = H "size" (dest_option (dest_pair tm thm))
+                              size_option,
+                     encode = H "encode" (dest_option (dest_pair tm thm))
+                                encode_option}))
                    handle Option => NONE)
       | _ => NONE
   end
+
+fun fromSEXP s =
+  case s of
+      List[_, s0] => fromSEXP0 s0
+    | _ => NONE
 
 end (* struct *)
