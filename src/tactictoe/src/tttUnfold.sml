@@ -586,7 +586,7 @@ fun modified_program inh p = case p of
     (
     if mem (drop_sig a) ["export_theory"]
       then modified_program inh m
-    else if inh
+    else if inh andalso !in_pattern_level > 1 (* ignore deep store_thm *)
       then a :: modified_program inh m
     else if mem (drop_sig a) store_thm_list andalso hd_code_par m
       then
