@@ -16,6 +16,30 @@ val ERR = mk_HOL_ERR "TypeBase";
 
 fun list_compose [] x = x | list_compose (f :: fs) x = list_compose fs (f x);
 
+fun resolve_ssfragconvs tyi =
+  let
+    open ThyDataSexp
+    fun apply_extra s tyi =
+      case s of
+          List [Sym tag, String str, Thm th] =>
+            if tag = simpfrag.simpfrag_conv_tag then
+              case simpfrag.lookup_simpfrag_conv str of
+                  SOME f => SOME (TypeBasePure.add_ssfrag_convs [f th] tyi)
+                | NONE => (HOL_WARNING "TypeBase" "resolve_ssfragconvs"
+                                       ("No function "^str^" registered");
+                           NONE)
+            else NONE
+        | _ => NONE
+    fun apply_all unapplied extras tyi =
+      case extras of
+          [] => TypeBasePure.put_extra (List.rev unapplied) tyi
+        | e::es => (case apply_extra e tyi of
+                        SOME tyi' => apply_all unapplied es tyi'
+                      | NONE => apply_all (e::unapplied) es tyi)
+  in
+    apply_all [] (TypeBasePure.extra_of tyi) tyi
+  end
+
 local val dBase = ref empty
       val update_fns = ref ([]:(tyinfo list -> tyinfo list) list)
 in
@@ -28,6 +52,7 @@ in
         dBase := insert (theTypeBase()) tyinfo
         handle HOL_ERR _ => ()
       val tyinfos = list_compose (!update_fns) tyinfos
+      val tyinfos = map resolve_ssfragconvs tyinfos
       val () = app write1 tyinfos
     in
       tyinfos

@@ -121,5 +121,6 @@ val _ = List.app ct [
                  “[1;7;15] : num list”),
   ("FOLDL1", “FOLDL $+ 0 [1;2;3;4]”, “10n”),
   ("FOLDR1", “FOLDR (\n a. (n * 2) :: a) [] [1;2;3;4]”, “[2;4;6;8]”),
-  ("GENLIST", “GENLIST (\n. 2 * n + 4) 6”, “[4; 6; 8; 10; 12; 14]”)
+  ("GENLIST", “GENLIST (\n. 2 * n + 4) 6”, “[4; 6; 8; 10; 12; 14]”),
+  ("CONS-eq-NIL", “h::t = []”, “F”)
 ]
