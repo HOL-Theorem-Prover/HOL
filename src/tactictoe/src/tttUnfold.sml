@@ -641,7 +641,10 @@ fun modified_program inh p = case p of
       val _ = incr in_pattern_level
       val head' = modified_program true head
       val body' = modified_program (s <> "val") body
-      val semicolon = if !is_thm_flag then [";"] else []
+      val semicolon = 
+        if !is_thm_flag andalso !in_pattern_level <= 1 
+        then [";"] 
+        else []
       val _ = decr in_pattern_level
     in
       semicolon @ [s] @ head' @ [sep] @ body' @ modified_program false m
