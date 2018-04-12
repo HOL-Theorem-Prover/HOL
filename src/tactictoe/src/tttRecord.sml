@@ -276,21 +276,22 @@ fun end_record_proof name g =
       (app update_tacdata) lbl2
   end
 
+
+fun clear_tac tac g =
+  (
+  ignore (tttExec.exec_sml "cache" "numSimps.clear_arith_caches ()");
+  tac g
+  )
+
 fun org_tac tac g =
-  let val (gl,v) = tac g in
-    if null gl then (gl,v)
-    else (
-         debug "Record error: org_tac: not null";
-         ignore (tttExec.exec_sml "cache" "numSimps.clear_arith_caches ()");
-         tac g
-         )
+  let val (gl,v) = timeOut 600.0 tac g in
+    if null gl 
+      then (debug "Error: org_tac: pending goals"; clear_tac tac g) 
+      else (gl,v)
   end
-  handle _ =>
-     (
-     debug "Record error: org_tac";
-     ignore (tttExec.exec_sml "cache" "numSimps.clear_arith_caches ()");
-     tac g
-     )
+  handle 
+      TacTimeOut => (debug "Error: org_tac: loop"; clear_tac tac g)
+    | _ => (debug "Error: org_tac: error"; clear_tac tac g)
 
 val fof_counter = ref 0
 
@@ -345,7 +346,7 @@ fun record_proof name lflag tac1 tac2 g =
         let val (r,t) = add_time (org_tac tac2) g in
           debug_proof ("Original proof time: " ^ Real.toString t);
           r
-        end
+        end  
       else
         let
           val (r,t) = add_time tac1 g
