@@ -227,7 +227,7 @@ fun load_classes thmdict thyname l = case l of
   | _ => err_msg "load_classes" l
 
 fun read_loadable_thydata l = case l of
-    [s0,s1] => (read_string s0, read_string s1)
+    s0::rest => (read_string s0, String.concat (map read_string rest))
   | _ => err_msg "read_loadable_thydata" l
 
 fun temp_encoded_update tmvector thyname (s0,s1) =
