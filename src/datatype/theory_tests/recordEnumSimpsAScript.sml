@@ -1,5 +1,7 @@
 open HolKernel Parse BasicProvers simpLib Datatype
 
+open recordEnumSimpsLib
+
 val _ = new_theory "recordEnumSimpsA"
 
 val _ = Datatype‘Enum1 = C1 | C2 | C3’;

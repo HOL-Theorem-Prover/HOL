@@ -51,8 +51,8 @@ in
       fun write1 tyinfo =
         dBase := insert (theTypeBase()) tyinfo
         handle HOL_ERR _ => ()
-      val tyinfos = list_compose (!update_fns) tyinfos
       val tyinfos = map resolve_ssfragconvs tyinfos
+      val tyinfos = list_compose (!update_fns) tyinfos
       val () = app write1 tyinfos
     in
       tyinfos

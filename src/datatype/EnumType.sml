@@ -398,6 +398,7 @@ fun enum_type_to_tyinfo (ty, clist) = let
   open ThyDataSexp
 in
     List.app (fn s => Theory.delete_binding (s ^ "_def")) clist
+  ; Theory.add_ML_dependency "EnumType"
   ; if isSome distinct then tyinfo0
     else tyinfo0
            |> TypeBasePure.add_extra
