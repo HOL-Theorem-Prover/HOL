@@ -6,31 +6,46 @@ infix >- >> ++ >->
 
 val || = op++
 
-type 'a reader = (string,'a) optmonad
+type 'a reader = (string*int,'a) optmonad
 
-fun getc s = if s = "" then NONE
-             else SOME (String.extract(s,1,NONE), String.sub(s,0))
+fun getc (s,i) = if i >= size s then NONE
+                 else SOME ((s, i + 1), String.sub(s,i))
 
-fun literal s1 s2 = if String.isPrefix s1 s2 then
-                      SOME (String.extract(s2,size s1,NONE), s1)
-                    else NONE
+fun present_at (s,i) s2 =
+  if size s2 + i > size s then false
+  else
+    let
+      fun recurse d =
+        d < 0 orelse
+        String.sub(s, i + d) = String.sub(s2, d) andalso
+        recurse (d - 1)
+    in
+      recurse (size s2 - 1)
+    end
 
-fun takeP P s = let
+fun literal s (si as (s0,i)) =
+  if present_at si s then SOME ((s0, i + size s), s)
+  else NONE
+
+fun takeP P (s,i) = let
   fun recurse i = if i >= size s then i
                   else if P (String.sub(s,i)) then recurse (i + 1)
                   else i
-  val p = recurse 0
+  val p = recurse i
 in
-  SOME (String.extract(s,p,NONE), String.extract(s,0,SOME p))
+  SOME ((s,p), String.substring(s,i,p-i))
 end
 
-fun eof s = if s = "" then SOME (s, ()) else NONE
-fun chop i s = if i <= size s then
-                 SOME (String.extract(s,i,NONE), String.extract(s,0,SOME i))
-               else NONE
+fun eof (si as (s,i)) = if i >= size s then SOME (si, ()) else NONE
+fun chop j (si as (s,i)) =
+  if i + j <= size s then
+    SOME ((s, i + j), String.substring(s,i,j))
+  else NONE
 
-fun lift df s = case df s of SOME ("", r) => SOME r
-                           | _ => NONE
+fun lift df s =
+  case df (s,0) of
+      SOME ((s',i), r) => if i = size s' then SOME r else NONE
+    | _ => NONE
 
 infix >*
 fun (f >* g) = f >- (fn x => g >- (fn y => return (x,y)))
