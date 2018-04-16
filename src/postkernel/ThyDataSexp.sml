@@ -165,9 +165,15 @@ val tagreader =
                 (listreader dlreader >* listreader StringData.reader)))
     end
 
+fun deps_saved th =
+  case Tag.dep_of (Thm.tag th) of
+      Dep.DEP_SAVED _ => true
+    | _ => false
+
 fun thmwrite tmw th0 =
   let
-    val th = Thm.save_dep (Theory.current_theory()) th0
+    val th = if deps_saved th0 then th0
+             else Thm.save_dep (Theory.current_theory()) th0
   in
     tagwrite (Thm.tag th) ^
     listwrite (StringData.encode o tmw) (concl th :: hyp th)
