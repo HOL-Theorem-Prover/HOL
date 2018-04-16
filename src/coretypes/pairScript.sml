@@ -555,7 +555,7 @@ val pair_case_eq = Q.store_thm(
   SRW_TAC[][pair_CASE_def, FST, SND, PAIR_EQ]);
 
 val _ = TypeBase.export [
-      TypeBasePure.mk_datatype_info {
+      TypeBasePure.mk_datatype_info_no_simpls {
         ax=TypeBasePure.ORIG pair_Axiom,
         case_def=pair_case_thm,
         case_cong=pair_case_cong,

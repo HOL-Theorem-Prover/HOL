@@ -938,7 +938,8 @@ in
       val ss = let
         open simpLib boolSimps
         fun foldthis (tyi, ss) =
-            ss ++ rewrites (#rewrs (TypeBasePure.simpls_of tyi))
+            ss ++ rewrites (TypeBasePure.gen_std_rewrs tyi @
+                            #rewrs (TypeBasePure.simpls_of tyi))
       in
         foldl foldthis (bool_ss ++ combinSimps.COMBIN_ss) tyinfos
       end
