@@ -167,7 +167,7 @@ fun wrap_tactics_in name qtac goal =
     (
     let
       val (gl,v) =
-      total_time replay_time 
+      total_time replay_time
         (tttTimeout.timeOut (!ttt_recproof_time) final_tac) goal
     in
       if gl = []
@@ -260,11 +260,11 @@ fun start_record_proof name =
 fun end_record_proof name g =
   let
     val lbl1 = map fst (rev (!goalstep_glob))
-    fun noortho (stac,t,g,gl) = 
+    fun noortho (stac,t,g,gl) =
       case abstract_stac stac of
         SOME astac => [(stac,t,g,gl),(astac,t,g,gl)]
       | NONE => [(stac,t,g,gl)]
-    fun ortho (stac,t,g,gl) = 
+    fun ortho (stac,t,g,gl) =
       [orthogonalize ((stac,t,g,gl), tttFeature.fea_of_goal g)]
     fun f lbl = if !ttt_ortho_flag then ortho lbl else noortho lbl
     val lbl2 = List.concat (map f lbl1)
@@ -272,6 +272,19 @@ fun end_record_proof name g =
     debug_t ("Saving " ^ int_to_string (length lbl2) ^ " labels")
       (app update_tacdata) lbl2
   end
+
+
+fun string_of_step (stac,t,g,gl) =
+    (string_of_goal g ^ " <ENDGOAL> " ^ stac ^ " <ENDTACTIC> ")
+
+fun print_proof name g =
+  let
+    val lbl1 = map fst (rev (!goalstep_glob))
+  in
+    append_file (ttt_record_dir ^ "/srecord/" ^ current_theory () ^ "." ^ name)
+                (String.concatWith " \n " (map string_of_step lbl1) ^ "\n")
+  end
+
 
 fun org_tac tac g =
   let val (gl,v) = tac g in
@@ -295,20 +308,20 @@ fun record_proof name lflag tac1 tac2 g =
     val pflag = String.isPrefix "tactictoe_prove_" name
     val b2 = (not (!ttt_recprove_flag) andalso pflag)
     val b3 = (not (!ttt_reclet_flag) andalso lflag)
-    val _ = 
-      if !ttt_eval_flag andalso 
-        (not pflag orelse !ttt_evprove_flag) andalso 
+    val _ =
+      if !ttt_eval_flag andalso
+        (not pflag orelse !ttt_evprove_flag) andalso
         (not lflag orelse !ttt_evlet_flag)
-      then eval_tactictoe g 
+      then eval_tactictoe g
       else ()
-    val _ = 
-      if !eprover_eval_flag andalso 
-        (not pflag orelse !ttt_evprove_flag) andalso 
+    val _ =
+      if !eprover_eval_flag andalso
+        (not pflag orelse !ttt_evprove_flag) andalso
         (not lflag orelse !ttt_evlet_flag)
-      then eval_eprover g 
+      then eval_eprover g
       else ()
     val result =
-      if b2 orelse b3 
+      if b2 orelse b3
       then
         let val (r,t) = add_time (org_tac tac2) g in
           debug_proof ("Original proof time: " ^ Real.toString t);
@@ -319,9 +332,12 @@ fun record_proof name lflag tac1 tac2 g =
           val (r,t) = add_time tac1 g
           val _ = debug_proof ("Recording proof time: " ^ Real.toString t)
           val _ = end_record_proof name g
+          val _ = if !ttt_print_proof_flag then
+                      print_proof name g
+                  else end_record_proof name g
         in
           if null (fst r) then r
-          else (debug "Record error: try_record_proof: not null"; 
+          else (debug "Record error: try_record_proof: not null";
                 org_tac tac2 g)
         end
         handle _ => (debug "Record error: try_record_proof"; org_tac tac2 g)
@@ -343,7 +359,7 @@ fun clean_subdirl thy dir subdirl =
   end
 
 fun clean_dir thy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ thy))
-  
+
 fun start_record_thy thy =
   (
   mkDir_err ttt_code_dir;
@@ -364,19 +380,19 @@ fun start_record_thy thy =
   mkDir_err ttt_thmfea_dir;
   mkDir_err ttt_glfea_dir;
   (* Tactic scripts recording *)
-  clean_subdirl thy ttt_record_dir ["parse","replay","record"]
+  clean_subdirl thy ttt_record_dir ["parse","replay","record", "srecord"]
   )
 
 fun end_record_thy thy =
   (
-  if !ttt_eval_flag orelse !eprover_eval_flag 
+  if !ttt_eval_flag orelse !eprover_eval_flag
   then debug "EvalSuccessful"
-  else 
+  else
     (
     debug_t "export_tacdata" export_tacdata thy;
     debug_t "export_thmfea" export_thmfea thy;
     debug "RecordSuccessful"
-    )  
+    )
   )
 
 end (* struct *)

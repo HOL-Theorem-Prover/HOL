@@ -921,6 +921,7 @@ fun output_header oc cthy =
     Real.toString (Time.toReal (!ttt_search_time)));
   osn oc ("val _ = tttTools.ttt_tactic_time := " ^
     Real.toString (!ttt_tactic_time));
+  output_flag oc "tttSetup.ttt_print_proof_flag" ttt_print_proof_flag;
   (* *)
   osn oc ("val _ = tttRecord.start_record_thy " ^ mlquote cthy)
   )

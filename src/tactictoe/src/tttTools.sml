@@ -225,6 +225,29 @@ fun average_real l = sum_real l / Real.fromInt (length l)
    Goal
    -------------------------------------------------------------------------- *)
 
+fun finalise acc =
+  String.concat(Lib.separate " " (List.rev acc))
+
+fun basic_print_term (tm,acc) =
+  if is_forall tm then
+      case dest_forall tm of
+          (v, b) => basic_print_term(b, "."::basic_print_term(v, "FORALL"::acc))
+  else if is_exists tm then
+      case dest_exists tm of
+          (v, b) => basic_print_term(b, "."::basic_print_term(v, "EXISTS"::acc))
+  (* TODO(Thibault): PTAL, loading numLib causes "Static Errors" when recording:
+  else if numSyntax.is_numeral tm then
+      acc (Int.toString(numSyntax.int_of_term(tm))::acc) *)
+  else
+  case dest_term tm of
+    VAR(Name,Ty) => (Name::acc)
+  | CONST{Name,Thy,Ty} => (Thy^"$"^Name::acc)
+  | COMB(Rator,Rand) => basic_print_term(Rand, basic_print_term(Rator,acc))
+  | LAMB(Var,Bod) => basic_print_term(Bod,
+                                      "."::basic_print_term(Var,"LAMBDA"::acc))
+
+fun nnstring_of_term tm = finalise (basic_print_term (tm, []))
+
 fun string_of_goal (asm,w) =
   let
     val mem = !show_types
@@ -232,9 +255,9 @@ fun string_of_goal (asm,w) =
     val s   =
       (if asm = []
          then "[]"
-         else "[``" ^ String.concatWith "``,``" (map term_to_string asm) ^
+         else "[``" ^ String.concatWith "``,``" (map nnstring_of_term asm) ^
               "``]")
-    val s1 = "(" ^ s ^ "," ^ "``" ^ (term_to_string w) ^ "``)"
+    val s1 = "(" ^ s ^ "," ^ "``" ^ (nnstring_of_term w) ^ "``)"
   in
     show_types := mem;
     s1
@@ -413,6 +436,9 @@ fun debug_replay s =
 
 fun debug_record s =
   append_endline (ttt_record_dir ^ "/record/" ^ current_theory ()) s
+
+fun debug_record s =
+  append_endline (ttt_record_dir ^ "/srecord/" ^ current_theory ()) s
 
 (* --------------------------------------------------------------------------
    Parsing
