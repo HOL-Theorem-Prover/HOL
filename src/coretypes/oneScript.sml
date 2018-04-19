@@ -156,23 +156,15 @@ val one_case_thm = Q.store_thm
   ONCE_REWRITE_TAC [GSYM one] THEN REWRITE_TAC [one_case_def]);
 
 
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME(fn _ =>
-   let val S = PP.add_string
-       val NL = PP.NL
-   in
-     PP.block PP.CONSISTENT 0 [
-      S "val _ = TypeBase.write",               NL,
-      S "  (TypeBasePure.gen_datatype_info",    NL,
-      S "     {ax=one_prim_rec,",               NL,
-      S "      ind=one_induction,",             NL,
-      S "      case_defs = [one_case_thm]});",  NL,
-                                                NL,
-      S "val _ = let open computeLib",          NL,
-      S "        in add_thms [one_case_def]",   NL,
-      S "        end;"
-     ]
-   end)};
+val _ = TypeBase.export (
+      TypeBasePure.gen_datatype_info {
+        ax=one_prim_rec, ind=one_induction,
+        case_defs = [one_case_thm]
+      }
+    )
+
+val _ = computeLib.add_persistent_funs ["one_case_def"]
+
+
 
 val _ = export_theory();

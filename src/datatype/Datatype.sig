@@ -40,11 +40,7 @@ sig
                          -> {induction:thm, recursion:thm}
                            -> tyinfo list
 
- val write_tyinfos : (tyinfo * string) list -> unit
-
- val primHol_datatype : typeBase
-                         -> AST list
-                           -> typeBase * (tyinfo * string) list
+ val primHol_datatype : typeBase -> AST list -> typeBase * tyinfo list
 
  val astHol_datatype  : AST list -> unit
  val Hol_datatype  : hol_type quotation -> unit

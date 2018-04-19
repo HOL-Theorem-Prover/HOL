@@ -11,10 +11,11 @@
 structure holyHammer :> holyHammer =
 struct
 
-open HolKernel boolLib hhWriter hhReconstruct tttTools tttExec tttFeature tttPredict
+open HolKernel boolLib hhWriter hhReconstruct tttTools tttExec tttFeature tttPredict tttSetup
 
 val ERR = mk_HOL_ERR "holyHammer"
 
+(* TODO: Use OS to change dir? *)
 fun cmd_in_dir dir cmd = OS.Process.system ("cd " ^ dir ^ "; " ^ cmd)
 
 (*---------------------------------------------------------------------------
@@ -57,14 +58,17 @@ fun all_files dir =
 
 fun clean_dir dir =
   let
-    val _ = OS.FileSys.mkDir dir handle _ => ()
+    val _ = OS.FileSys.mkDir dir handle _ => () (* TODO: re-raise Interrupt *)
     val l0 = all_files dir
     val l1 = map (fn x => OS.Path.concat (dir,x)) l0
   in
     app OS.FileSys.remove l1
   end
 
+(* TODO: use OS.Path.concat *)
 val hh_dir = HOLDIR ^ "/src/holyhammer"
+val fof_dir = hh_dir ^ "/fof"
+val tt_dir = hh_dir ^ "/tt"
 val hh_bin_dir = hh_dir ^ "/hh"
 val provbin_dir = hh_dir ^ "/provers"
 
@@ -81,6 +85,7 @@ fun status_dir dir = dir ^ "/status"
    Predicting theorems
    ---------------------------------------------------------------------- *)
 
+(* TODO: accumulate dict rather than using a reference? *)
 fun add_fea dict (name,thm) =
   let val g = dest_thm thm in
     if not (dmem g (!dict)) andalso
@@ -108,9 +113,9 @@ fun cached_ancfeav () =
     val thyl = ancestry (current_theory ())
     val thmdict = dempty goal_compare
   in
-    dfind thyl (!dict_cache) handle _ =>
-      let 
-        val newdict = insert_feav thmdict thyl 
+    dfind thyl (!dict_cache) handle _ => (* TODO: reraise Interrupt *)
+      let
+        val newdict = insert_feav thmdict thyl
       in
         dict_cache := dadd thyl newdict (!dict_cache);
         print_endline ("Loading " ^ int_to_string (dlength newdict) ^
@@ -189,6 +194,8 @@ fun export_theories dir thyl =
    Translate from higher-order to first order
  ----------------------------------------------------------------------------*)
 
+(* TODO: use more OS.Path.concat below *)
+
 fun translate_bin bin probbdir provdir =
   let
     val _ = clean_dir provdir
@@ -214,7 +221,7 @@ fun launch_atp dir atp tim =
       " > /dev/null 2> /dev/null"
     | Z3      => "sh z3.sh " ^ int_to_string tim ^ " " ^ dir ^
       " > /dev/null 2> /dev/null"
-    | _       => raise ERR "launch_atp" "atp not supported"
+    | _   => raise ERR "launch_atp" "atp not supported" (* TODO: add atp name *)
   in
     cmd_in_dir provbin_dir cmd
   end
@@ -233,7 +240,7 @@ fun get_lemmas_atp atp = get_lemmas (status_of atp, out_of atp)
 
 (*---------------------------------------------------------------------------
    Performs all previous steps with (experimentally) the best parameters.
-   Todo: replace by PolyML.fork for faster termination of asynchronous calls.
+   TODO: replace by PolyML.fork for faster termination of asynchronous calls.
  ----------------------------------------------------------------------------*)
 
 fun launch_parallel t =
@@ -246,7 +253,7 @@ fun launch_parallel t =
     cmd_in_dir provbin_dir cmd
   end
 
-(* todo:
+(* TODO:
      translate when the prover's binary exists.
      terminate when the first prover finds a proof. *)
 fun holyhammer_goal goal =
@@ -263,21 +270,68 @@ fun holyhammer_goal goal =
     val _ = launch_parallel (!timeout_glob)
   in
     reconstruct_atp Eprover goal
-    handle _ => reconstruct_atp Z3 goal
+    handle _ => reconstruct_atp Z3 goal (* TODO: reraise Interrupt *)
   end
 
 fun holyhammer term = holyhammer_goal ([],term)
 
 fun hh goal = (holyhammer_goal goal) goal
 
-fun hh_stac pid (symweight,feav,revdict) t goal =
+
+(*---------------------------------------------------------------------------
+   Creates first order problems for atps to be evalued on.
+ ----------------------------------------------------------------------------*)
+
+fun export_translate pbdir name premises cj =
+  let
+    val _ = mkDir_err tt_dir
+    val probdir_top = tt_dir ^ "/" ^ pbdir
+    val _ = mkDir_err probdir_top
+    val probdir = probdir_top ^ "/" ^ name
+    val _ = mkDir_err probdir
+    val _ = mkDir_err fof_dir
+    val provdir_top = fof_dir ^ "/" ^ pbdir
+    val _ = mkDir_err provdir_top
+    val provdir = provdir_top ^ "/" ^ name
+    val _ = mkDir_err provdir
+  in
+    export_problem probdir premises cj;
+    translate_fof probdir provdir;
+    rmDir_rec probdir
+  end
+
+fun create_fof name thm =
+  let 
+    val goal = dest_thm thm
+    val cj = list_mk_imp goal
+    (* with 0 selected premises (for ltb) *)
+    val pbdir0 = "pb_pred0"
+    val _ = export_translate pbdir0 name [] cj
+    (* with 128 selected premises *)
+    val (symweight,feav,revdict) = update_thmdata ()
+    val pbdir128 = "pb_pred128"
+    val premises = thmknn_wdep (symweight,feav,revdict) 128 (fea_of_goal goal)
+    val _ = export_translate pbdir128 name premises cj
+    (* with dependencies *)
+    val pbdir_dep = "pb_dep"
+    val (flag,deps) = dependencies_of_thm thm
+    val name_dep = name ^ "__" ^ (if flag then "dep" else "brokendep")
+    val _ = export_translate pbdir_dep name_dep deps cj
+  in
+    ()
+  end
+
+(*---------------------------------------------------------------------------
+   Asynchronous calls to holyhammer in tactictoe.
+ ----------------------------------------------------------------------------*)
+
+fun hh_stac pids (symweight,feav,revdict) t goal =
   let
     val term = list_mk_imp goal
-    val ns = int_to_string pid
     val premises = thmknn_wdep (symweight,feav,revdict) 128 (fea_of_goal goal)
-    val probdir = hh_dir ^ "/problem_" ^ ns
+    val probdir = hh_dir ^ "/" ^ pids
     val _ = export_problem probdir premises term
-    val provdir = provbin_dir ^ "/prover_" ^ ns
+    val provdir = provbin_dir ^ "/" ^ pids
     val _ = translate_fof probdir provdir
     val _ = rmDir_rec probdir
     val _ = launch_atp provdir Eprover t

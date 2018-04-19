@@ -2817,22 +2817,13 @@ val BAG_SIZE_INSERT = save_thm
 (* Add multiset type to the TypeBase.                                        *)
 (*---------------------------------------------------------------------------*)
 
-val _ = adjoin_to_theory
-  {sig_ps = NONE,
-   struct_ps = SOME (fn _ =>
-     PP.block PP.CONSISTENT 0 (
-       PP.pr_list PP.add_string [PP.NL] [
-         "val _ = ",
-         " TypeBase.write",
-         " [TypeBasePure.mk_nondatatype_info",
-         "  (alpha --> numSyntax.num,",
-         "    {nchotomy = SOME BAG_cases,",
-         "     induction = SOME STRONG_FINITE_BAG_INDUCT,",
-         "     size = SOME(Parse.Term`\\(obsize:'a->num) (y:'b). \
-                \bag$bag_size obsize`,CONJ BAG_SIZE_EMPTY BAG_SIZE_INSERT),",
-         "     encode=NONE})];"
-       ]
-     ))}
-
+val _ = TypeBase.export [
+      TypeBasePure.mk_nondatatype_info
+        (“:'a -> num”,
+         {nchotomy = SOME BAG_cases,
+          induction = SOME STRONG_FINITE_BAG_INDUCT,
+          size = NONE,
+          encode=NONE})
+    ]
 
 val _ = export_theory();

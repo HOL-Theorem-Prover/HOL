@@ -224,7 +224,7 @@ fun term_of_sml s =
    -------------------------------------------------------------------------- *)
 
 val hh_stac_glob:
-  (int ->
+  (string -> 
      (int, real) Redblackmap.dict *
      (string * fea_t) list *
      (string, goal * int list) Redblackmap.dict ->
@@ -239,6 +239,23 @@ fun update_hh_stac () =
       [
       "load \"holyHammer\";",
       "val _ = tttExec.hh_stac_glob := holyHammer.hh_stac;"
+      ]
+      )
+  in
+    if b then () else raise ERR "update_hh_stac" ""
+  end
+
+val create_fof_glob:
+  (string -> thm -> unit) ref = ref (fn _ => (fn _ => ()))
+
+fun update_create_fof () =
+  let
+    val b = exec_sml "update_create_fof"
+      (
+      String.concatWith "\n"
+      [
+      "load \"holyHammer\";",
+      "val _ = tttExec.create_fof_glob := holyHammer.create_fof;"
       ]
       )
   in

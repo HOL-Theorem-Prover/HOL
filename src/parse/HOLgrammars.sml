@@ -16,7 +16,7 @@ fun assoc_encode LEFT = "L"
 
 val assoc_reader =
     let
-      open Coding optmonad
+      open optmonad Coding
       infix >> ||
     in
       (literal "L" >> return LEFT) ||

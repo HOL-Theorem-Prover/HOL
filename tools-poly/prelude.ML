@@ -114,6 +114,7 @@ in
   ; PolyML.addPrettyPrinter (pp2polypp Arbnum.pp_num)
   ; PolyML.addPrettyPrinter (pp2polypp Arbint.pp_int)
   ; PolyML.addPrettyPrinter (pp2polypp Arbrat.pp_rat)
+  ; PolyML.addPrettyPrinter (pp2polypp Tag.pp_tag)
   )
 end
 

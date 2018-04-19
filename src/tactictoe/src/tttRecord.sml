@@ -249,7 +249,10 @@ val fetch = total_time fetch_thm_time fetch_thm
 val thm_counter = ref 0
 
 fun start_record_proof name =
-  let val outname = "\nName: " ^ int_to_string (!thm_counter) ^ " " ^ name in
+  let
+    val outname = "\nName: " ^ int_to_string (!thm_counter) ^ " " ^ name
+    val _ = update_thmfea (current_theory ())
+  in
     debug_proof outname;
     debug_search outname;
     debug outname;
@@ -273,7 +276,6 @@ fun end_record_proof name g =
       (app update_tacdata) lbl2
   end
 
-
 fun string_of_step (stac,t,g,gl) =
     (string_of_goal g ^ " <ENDGOAL> " ^ stac ^ " <ENDTACTIC> ")
 
@@ -285,24 +287,52 @@ fun print_proof name g =
                 (String.concatWith " \n " (map string_of_step lbl1) ^ "\n")
   end
 
+fun clear_tac tac g =
+  (
+  ignore (tttExec.exec_sml "cache" "numSimps.clear_arith_caches ()");
+  tac g
+  )
 
 fun org_tac tac g =
-  let val (gl,v) = tac g in
-    if null gl then (gl,v)
-    else (
-         debug "Record error: org_tac: not null";
-         ignore (tttExec.exec_sml "cache" "numSimps.clear_arith_caches ()");
-         tac g
-         )
+  let val (gl,v) = timeOut 600.0 tac g in
+    if null gl
+      then (gl,v)
+      else (debug "Error: org_tac: pending goals"; clear_tac tac g)
   end
-  handle _ =>
-     (
-     debug "Record error: org_tac";
-     ignore (tttExec.exec_sml "cache" "numSimps.clear_arith_caches ()");
-     tac g
-     )
+  handle
+      TacTimeOut => (debug "Error: org_tac: loop"; clear_tac tac g)
+    | _ => (debug "Error: org_tac: error"; clear_tac tac g)
+
+val fof_counter = ref 0
+
+fun create_fof_wrap name pflag result =
+  if !ttt_fof_flag andalso (not pflag orelse !ttt_evprove_flag) then
+    let
+      val thm = (snd result) []
+      val _ = update_create_fof ()
+      val _ = incr fof_counter
+      val is = int_to_string (!fof_counter)
+      val newname = current_theory () ^ "__" ^ is ^ "__" ^ name
+    in
+      (!create_fof_glob) newname thm
+    end
+  else ()
 
 fun record_proof name lflag tac1 tac2 g =
+  if !ttt_fof_flag then
+    let
+      val pflag = String.isPrefix "tactictoe_prove_" name
+      val result =
+        let val (r,t) = add_time (org_tac tac2) g in
+          debug_proof ("Original proof time: " ^ Real.toString t);
+          r
+        end
+      val _ = create_fof_wrap name pflag result
+        handle _ => (debug "Error: create_fof_wrap"; ())
+    in
+      result
+    end
+  else
   let
     val _ = start_record_proof name
     val pflag = String.isPrefix "tactictoe_prove_" name
@@ -321,7 +351,7 @@ fun record_proof name lflag tac1 tac2 g =
       then eval_eprover g
       else ()
     val result =
-      if b2 orelse b3
+      if b2 orelse b3 orelse (not (!ttt_record_flag))
       then
         let val (r,t) = add_time (org_tac tac2) g in
           debug_proof ("Original proof time: " ^ Real.toString t);

@@ -5,6 +5,7 @@ sig
   val theory_files : string -> string list
   val find_heapname : string -> string
   val find_genscriptdep : string -> string list
+  val run_buildheap : bool -> string -> unit
   val run_rm_script : bool -> string -> unit
 
   val tactictoe_cleanval : unit -> unit

@@ -554,6 +554,28 @@ val pair_case_eq = Q.store_thm(
   Q.ISPEC_THEN ‘p’ STRUCT_CASES_TAC pair_CASES THEN
   SRW_TAC[][pair_CASE_def, FST, SND, PAIR_EQ]);
 
+val _ = TypeBase.export [
+      TypeBasePure.mk_datatype_info_no_simpls {
+        ax=TypeBasePure.ORIG pair_Axiom,
+        case_def=pair_case_thm,
+        case_cong=pair_case_cong,
+        case_eq = pair_case_eq,
+        induction=TypeBasePure.ORIG pair_induction,
+        nchotomy=ABS_PAIR_THM,
+        size=NONE,
+        encode=NONE,
+        fields=[],
+        accessors=[],
+        updates=[],
+        destructors=[FST,SND],
+        recognizers=[],
+        lift=SOME(mk_var("pairSyntax.lift_prod",
+                         “:'type -> ('a -> 'term) -> ('b -> 'term) -> 'a # 'b ->
+                           'term”)),
+        one_one=SOME CLOSED_PAIR_EQ,
+        distinct=NONE
+      }
+    ];
 
 (*---------------------------------------------------------------------------
     Generate some ML that gets evaluated at theory load time.
@@ -564,32 +586,14 @@ val pair_case_eq = Q.store_thm(
     beta-reduction.
 
  ---------------------------------------------------------------------------*)
+
+
+
 val S = PP.add_string and NL = PP.NL and B = PP.block PP.CONSISTENT 0
 
 val _ = adjoin_to_theory
 {sig_ps = SOME(fn _ => S "val pair_rws : thm list"),
- struct_ps = SOME(fn _ => B[
-      S "val pair_rws = [PAIR, FST, SND];",                  NL,
-      S "val _ = TypeBase.write",                            NL,
-      S "  [TypeBasePure.mk_datatype_info",                  NL,
-      S "     {ax=TypeBasePure.ORIG pair_Axiom,",            NL,
-      S "      case_def=pair_case_thm,",                     NL,
-      S "      case_cong=pair_case_cong,",                   NL,
-      S "      case_eq = pair_case_eq,",                     NL,
-      S "      induction=TypeBasePure.ORIG pair_induction,", NL,
-      S "      nchotomy=ABS_PAIR_THM,",                      NL,
-      S "      size=NONE,",                                  NL,
-      S "      encode=NONE,",                                NL,
-      S "      fields=[],",                                  NL,
-      S "      accessors=[],",                               NL,
-      S "      updates=[],",                                 NL,
-      S "      destructors=[FST,SND],",                      NL,
-      S "      recognizers=[],",                             NL,
-      S "      lift=SOME(mk_var(\"pairSyntax.lift_prod\",Parse.Type`:'type -> ('a -> 'term) -> ('b -> 'term) -> 'a # 'b -> 'term`)),",
-      NL,
-      S "      one_one=SOME CLOSED_PAIR_EQ,",                NL,
-      S "      distinct=NONE}];"
-    ])};
+ struct_ps = SOME(fn _ => S "val pair_rws = [PAIR, FST, SND];")};
 
 val datatype_pair = store_thm(
   "datatype_pair",

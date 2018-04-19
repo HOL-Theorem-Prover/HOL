@@ -413,9 +413,15 @@ fun pp_thydata info_record = let
        block CONSISTENT 0 (pp_sml_list pr_db (axl@defl@thml))
      end
 
+  fun chunks w s =
+    if String.size s <= w then [s]
+    else String.substring(s, 0, w) :: chunks w (String.extract(s, w, NONE))
+
   fun pr_cpl (a,b) =
     block CONSISTENT 0
-      (add_string (stringify a) >> add_break(1,0) >> add_string (stringify b))
+      (add_string (stringify a) >> add_break(1,0) >>
+       pr_list (add_string o stringify) (add_break (1,0)) (chunks 65 b))
+
   fun list_loadable tmwrite thymap =
     Binarymap.foldl (fn (k, data, rest) => (k, data tmwrite) :: rest)
       [] thymap

@@ -5,7 +5,9 @@ open Lib Feedback HolKernel Parse boolLib
 
 datatype command = Theorem | Term | Type
 datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
-             | Indent of int | NoSpec
+             | Indent of int * bool
+                 (* true: add spaces; false: just alter block indent *)
+             | NoSpec
              | Inst of string * string
              | OverrideUpd of (string * int) * string
              | TraceSet of string * int
@@ -81,16 +83,20 @@ fun stringOpt pos s =
               | SOME i => SOME(TraceSet(Substring.string pfx, i))
           end
       end
-      else if String.isPrefix ">>" s then let
-          val numpart_s = String.extract(s,2,NONE)
+      else if String.isPrefix ">>" s then
+        let
+          val (addsp, num_i) =
+              if size s > 2 andalso String.sub(s,2) = #"~" then (false, 3)
+              else (true, 2)
+          val numpart_s = String.extract(s,num_i,NONE)
         in
-          if numpart_s = "" then SOME (Indent 2)
+          if numpart_s = "" then SOME (Indent (2, addsp))
           else
             case Int.fromString numpart_s of
               NONE => (warn(pos, s ^ " is not a valid option"); NONE)
             | SOME i => if i < 0 then
                           (warn(pos, "Negative indents illegal"); NONE)
-                        else SOME (Indent i)
+                        else SOME (Indent (i, addsp))
         end
       else if String.isPrefix "rulename=" s then let
         val name = String.extract(s,9,NONE)
@@ -219,8 +225,9 @@ fun spaces 0 = ""
   | spaces n = CharVector.tabulate(n, (fn _ => #" "))
 fun optset_indent s =
     case get_first (fn Indent i => SOME i | _ => NONE) s of
-      NONE => ""
-    | SOME i => spaces i
+      NONE => (0, PP.add_string "")
+    | SOME (i,b) =>
+        (i, if b then PP.add_string (spaces i) else PP.add_string "")
 
 fun optset_conjnum s = get_first (fn Conj i => SOME i | _ => NONE) s
 fun optset_mathmode s = get_first (fn Mathmode s => SOME s | _ => NONE) s
@@ -455,7 +462,8 @@ in
                                Int.toString i);
                           SPEC_ALL thm)
           val thm = do_thminsts pos opts thm
-          val start2 = add_string (optset_indent opts)
+          val (ind,iact) = optset_indent opts
+          fun ind_bl p = block CONSISTENT ind [iact, p]
         in
           if OptSet.has Def opts orelse OptSet.has SpacedDef opts then let
               val newline = if OptSet.has SpacedDef opts then
@@ -463,10 +471,11 @@ in
                             else add_newline
               val lines = thm |> CONJUNCTS |> map (concl o SPEC_ALL)
             in
-              block_list (block INCONSISTENT 0) stdtermprint newline
-                         lines
+              ind_bl (
+                block_list (block INCONSISTENT 0) stdtermprint newline lines
+              )
             end
-          else if rulep then rule_print stdtermprint (concl thm)
+          else if rulep then ind_bl (rule_print stdtermprint (concl thm))
           else let
               val base = raw_pp_theorem_as_tex overrides
               val printer = optprintermod base
@@ -475,7 +484,7 @@ in
                     trace ("EmitTeX: print thm turnstiles", 0) printer
                   else printer
             in
-              printer thm
+              ind_bl (printer thm)
             end
         end
       | Term => let
@@ -498,14 +507,15 @@ in
                      else
                          Parse.Term [QQ parse_start, QQ spec]
                                     |> do_tminsts pos opts
-          val s1 = add_string (optset_indent opts)
+          val (ind,iact) = optset_indent opts
           val s2 = if OptSet.has Turnstile opts then
                         B [add_stringsz ("\\"^HOL^"TokenTurnstile", 2),
                            add_string " "]
                    else nothing
         in
-          if rulep then B [s1, s2, rule_print stdtermprint term]
-          else B [s1, s2, stdtermprint term]
+          if rulep then
+            block CONSISTENT ind [iact, s2, rule_print stdtermprint term]
+          else block CONSISTENT ind [iact, s2, stdtermprint term]
         end
       | Type => let
           val typ = if OptSet.has TypeOf opts
@@ -513,9 +523,9 @@ in
                               |> do_tminsts pos opts
                               |> Term.type_of
                     else Parse.Type [QQ parse_start, QQ spec]
+          val (ind, iact) = optset_indent opts
         in
-          B [add_string (optset_indent opts),
-             stdtypeprint typ]
+          block CONSISTENT ind [iact, stdtypeprint typ]
         end
     val final = if not alltt andalso not rulep then add_string "}"
                 else nothing

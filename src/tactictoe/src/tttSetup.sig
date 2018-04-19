@@ -2,6 +2,7 @@ signature tttSetup =
 sig
 
   (** Recording **)
+  val ttt_record_flag   : bool ref
   val ttt_reclet_flag   : bool ref
   val ttt_recprove_flag : bool ref
   val ttt_rectac_time   : real ref
@@ -14,6 +15,9 @@ sig
   val ttt_thmlarg_flag   : bool ref
   val ttt_thmlarg_radius : int ref
   val ttt_recgl_flag     : bool ref
+
+  (** Generating fof problems *)
+  val ttt_fof_flag : bool ref
 
   (** Evaluation **)
   val ttt_eval_flag     : bool ref
@@ -48,6 +52,7 @@ sig
   val ttt_eprover_radius   : int ref
   val ttt_eprover_async    : int ref
   val eprover_eval_flag : bool ref
+  val eprover_save_flag : bool ref
   (* term predictions *)
   val ttt_termarg_flag : bool ref
   val ttt_termarg_radius : int ref

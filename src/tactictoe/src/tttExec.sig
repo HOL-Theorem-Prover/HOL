@@ -13,9 +13,10 @@ sig
   val ttt_qtactic_glob : (term quotation -> tactic) ref
   val ttt_string_glob  : string ref
   val ttt_goal_glob    : goal ref
-
+  
+  (* forward references to holyhammer and metis *)
   val hh_stac_glob     :
-    (int ->
+    (string ->
        (int, real) Redblackmap.dict *
        (string * fea_t) list *
        (string, goal * int list) Redblackmap.dict ->
@@ -24,6 +25,10 @@ sig
   val metis_tac_glob   : (thm list -> tactic) option ref
   val update_metis_tac : unit -> unit
 
+  val create_fof_glob   : (string -> thm -> unit) ref
+  val update_create_fof : unit -> unit
+  
+  (* execution function *)
   val exec_sml         : string -> string -> bool
 
   val ttt_term_glob    : term ref

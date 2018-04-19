@@ -3827,25 +3827,34 @@ val _ = app DefnBase.export_cong ["EXISTS_CONG", "EVERY_CONG", "MAP_CONG",
                                   "MAP2_CONG", "EVERY2_cong", "FOLDL2_cong",
                                   "FOLDL_CONG", "FOLDR_CONG", "list_size_cong"]
 
-val _ = Theory.quote_adjoin_to_theory `none`
-`val _ = computeLib.add_funs
-  [APPEND, APPEND_NIL, FLAT, HD, TL, LENGTH, MAP, MAP2, NULL_DEF, MEM,
-   EXISTS_DEF, DROP_compute, EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR,
-   TAKE_compute, FOLDL, REVERSE_REV, SUM_SUM_ACC, ALL_DISTINCT, GENLIST_AUX,
-   EL_restricted, EL_simp_restricted, SNOC, LUPDATE_compute, GENLIST_NUMERALS,
-   computeLib.lazyfy_thm list_case_compute, list_size_def, FRONT_DEF,
-   LAST_compute, isPREFIX]
+val lazy_list_case_compute = save_thm(
+  "lazy_list_case_compute[compute]",
+  computeLib.lazyfy_thm list_case_compute);
+
+val _ = computeLib.add_persistent_funs [
+      "APPEND", "APPEND_NIL", "FLAT", "HD", "TL", "LENGTH", "MAP", "MAP2",
+      "NULL_DEF", "MEM", "EXISTS_DEF", "DROP_compute", "EVERY_DEF", "ZIP",
+      "UNZIP", "FILTER", "FOLDL", "FOLDR",
+      "TAKE_compute", "FOLDL", "REVERSE_REV", "SUM_SUM_ACC", "ALL_DISTINCT",
+      "GENLIST_AUX", "EL_restricted", "EL_simp_restricted", "SNOC",
+      "LUPDATE_compute", "GENLIST_NUMERALS", "list_size_def", "FRONT_DEF",
+      "LAST_compute", "isPREFIX"
+    ]
 
 val _ =
   let
     val list_info = Option.valOf (TypeBase.read {Thy = "list", Tyop="list"})
     val lift_list =
       mk_var ("listSyntax.lift_list",
-              Parse.Type^`: 'type -> ('a -> 'term) -> 'a list -> 'term^`)
-    val list_info' = TypeBasePure.put_lift lift_list list_info
+              “:'type -> ('a -> 'term) -> 'a list -> 'term”)
+    val list_info' =
+        list_info |> TypeBasePure.put_lift lift_list
+                  |> TypeBasePure.put_induction
+                       (TypeBasePure.ORIG list_induction)
+                  |> TypeBasePure.put_nchotomy list_nchotomy
   in
-    TypeBase.write [list_info']
-  end;`
+    TypeBase.export [list_info']
+  end;
 
 val _ = export_rewrites
           ["APPEND_11",

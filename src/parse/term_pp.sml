@@ -636,12 +636,23 @@ fun pp_term (G : grammar) TyG backend = let
         | AroundSamePrec => grav_prec pgrav <> fprec
         | AroundEachPhrase => true
         | NoPhrasing => false
-      val bblock = uncurry block (#2 (#block_style rr))
     in
-      if needed orelse addparens then bblock else I
+      if needed orelse addparens then
+        let
+          val (c, i) = #2 (#block_style rr)
+        in
+          block c (if addparens then i + 1 else i)
+        end
+      else
+        I
     end
     fun pbegin b = if b then add_string "(" else nothing
     fun pend b = if b then add_string ")" else nothing
+    fun paren b p = if b then
+                      block INCONSISTENT 1 (add_string "(" >> p >>
+                                            add_string ")")
+                    else p
+
     fun spacep b = if b then add_break(1, 0) else nothing
     fun hardspace n = add_string (string_of_nspaces n)
     fun sizedbreak n = add_break(n, 0)
@@ -1231,18 +1242,19 @@ fun pp_term (G : grammar) TyG backend = let
       val lprec = if addparens then Top else lgrav
       val rprec = if addparens then Top else rgrav
     in
-      pbegin (addparens orelse comb_show_type) >>
-      block INCONSISTENT 2
-            (full_pr_term binderp showtypes showtypes_v ppfns RatorCP t1
-                          prec lprec prec (decdepth depth) >>
-             add_break (1, 0) >>
-             full_pr_term binderp showtypes showtypes_v ppfns RandCP t2
-                          prec prec rprec (decdepth depth) >>
-             (if comb_show_type then
-                add_string (" "^type_intro) >> add_break (0,0) >>
-                doTy (type_of tm)
-              else nothing)) >>
-      pend (addparens orelse comb_show_type)
+      paren (addparens orelse comb_show_type) (
+        block INCONSISTENT 0 (
+          full_pr_term binderp showtypes showtypes_v ppfns RatorCP t1
+                       prec lprec prec (decdepth depth) >>
+          add_break (1, 2) >>
+          full_pr_term binderp showtypes showtypes_v ppfns RandCP t2
+                       prec prec rprec (decdepth depth) >>
+          (if comb_show_type then
+             add_string (" "^type_intro) >> add_break (0,0) >>
+             doTy (type_of tm)
+           else nothing)
+        )
+      )
     end
 
     fun pr_sole_name tm n rules = let
@@ -1816,9 +1828,9 @@ fun pp_term (G : grammar) TyG backend = let
                      fun p body =
                          get_gspec >-
                          (fn b => if b orelse parens then
-                                    add_string "(" >> body >> add_string ")"
+                                    add_string "(" >> block PP.CONSISTENT 1 body >> add_string ")"
                                   else
-                                    body)
+                                    block PP.CONSISTENT 0 body)
                      val casebar = add_break(1,0) >> add_string "|" >> hardspace 1
                      fun do_split rprec (l,r) =
                          record_bvars
@@ -1827,27 +1839,26 @@ fun pp_term (G : grammar) TyG backend = let
                                     (pr_term l Top Top Top (decdepth depth) >>
                                      hardspace 1 >>
                                      add_string "=>" >> add_break(1,2) >>
-                                     pr_term r Top Top rprec (decdepth depth)))
+                                     block PP.CONSISTENT 0 (pr_term r Top Top rprec (decdepth depth))))
                    in
                      p (block PP.CONSISTENT 0
-                          (block PP.CONSISTENT 0
-                            (add_string (prettyprint_cases_name ()) >> add_break(1,2) >>
+                            (add_string (prettyprint_cases_name ()) >>
+                             add_break(1,2) >>
                              pr_term split_on Top Top Top (decdepth depth) >>
                              add_break(1,0) >> add_string "of") >>
-                           (if !pp_print_firstcasebar then
-                              casebar
-                            else
-                              add_break (1,2)) >>
-                           (if length splits > 1 then
-                              pr_list (do_split (Prec(0,"casebar")))
-                                      casebar
-                                      (butlast splits) >>
-                              casebar >>
-                              do_split (if parens then Top else rgrav)
-                                      (last splits)
-                            else
-                              do_split (if parens then Top else rgrav)
-                                       (hd splits))))
+                        (if !pp_print_firstcasebar then
+                           casebar
+                         else
+                           add_break (1,2)) >>
+                        (if length splits > 1 then
+                           pr_list (do_split (Prec(0,"casebar")))
+                              casebar (butlast splits) >>
+                           casebar >>
+                           do_split (if parens then Top else rgrav)
+                              (last splits)
+                         else
+                           do_split (if parens then Top else rgrav)
+                              (hd splits)))
                    end handle CaseConversionFailed => fail)
                 | _ => fail
               else fail) |||

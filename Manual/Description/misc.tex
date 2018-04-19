@@ -1271,9 +1271,9 @@ because the mapping from the integer addition constant to \texttt{"+"} is remove
 
 The \texttt{-} option can be useful when complicated notation involving overloads is first introduced in a document.
 
-\item[\texttt{\indentoption}] Indents the argument.
+\item[\texttt{\indentoption} and \texttt{\indentoption\td}] Indents the argument.
 %
-  This option only makes sense when used with the \texttt{alltt} option (the additional spaces will have no effect when inside an \texttt{\bs{}mbox}).
+  These options only make sense when used with the \texttt{alltt} option (the additional spaces will have no effect when inside an \texttt{\bs{}mbox}).
 %
   The default indentation is two spaces; if a different indentation is desired, the option can be followed by digits specifying the number of space characters desired.
 %
@@ -1291,6 +1291,15 @@ Rather the first line of \HOL{} output will be indented, and the subsequent line
 %
 The \texttt{\indentoption} option lets the pretty-printer know that it is printing with a given indentation, affecting all lines of its output.
 
+The version with the tilde character~(\td) does not add indentation to the first line of output, but adds the specified amount (again 2, if no number is provided) to subsequent lines.
+This allows one to achieve suitable alignment when other non-HOL text has been put onto the same line.
+For example,
+\begin{alltt}
+  AND_CLAUSES \bs{}HOLthm[width=46,>>~12]\lb{}bool.AND_CLAUSES\rb
+  TRUTH       \bs{}HOLthm[>>~12]\lb{}bool.TRUTH\rb
+  MAP         \bs{}HOLthm[>>~12,width=50]\lb{}list.MAP\rb
+\end{alltt}
+ensures correct vertical alignment when extra lines are printed, as they will be with the printing of \ml{bool.AND_CLAUSES} and \ml{list.MAP}.
 
 \item[$\mathit{nm}_1\mathtt{/}\mathit{nm}_2$] (For use with \holtm{}
   and \holthm{}.)
@@ -1433,7 +1442,9 @@ theories, using the
 Section~\ref{sec:holtheories-tex-ready} below).
 
 By overriding the special token \texttt{\$Turnstile\$}, one can control the printing of the turnstile produced by \holthm{}.
-The default setup is roughly equivalent to overriding \texttt{\$Turnstile\$} to \texttt{\textbackslash{}HOLTokenTurnstile\{\} } with a width of \texttt{3}.
+The default setup is roughly equivalent to overriding \texttt{\$Turnstile\$} to \texttt{\textbackslash{}HOLTokenTurnstile\{\}} followed by a space, giving a total width of \texttt{3}.
+Overriding the turnstile in this way may will probably be necessary in math-mode printing, where the turnstile character is typically of the same width as 5 \texttt{\bs;} invocations.
+Providing the correct width is important in order to get lines past the first to line up with the left edge of the mathematical text rather than the turnstile.
 
 \paragraph{Default width}
 A munger can specify the default width in which \HOL{} will print its

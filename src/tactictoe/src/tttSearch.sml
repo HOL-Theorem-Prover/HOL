@@ -351,6 +351,10 @@ fun node_create pripol tactime parid parstac pargn parg goallist
 fun node_delete pid =
   (debug_search ("node_delete " ^ int_to_string pid); deactivate pid)
 
+(* --------------------------------------------------------------------------
+   Change the name of the tactic that has been applied
+   -------------------------------------------------------------------------- *)
+
 fun update_curstac newstac pid =
   let
     val prec = dfind pid (!proofdict)
@@ -388,28 +392,22 @@ fun try_nqtm pid n (stac,tac) (otm,qtac) g =
   end
 
 (* --------------------------------------------------------------------------
-   Application of a tactic.
+   Transfomring code into a tactic. Doing necessary predictions.
    -------------------------------------------------------------------------- *)
 
 val thml_dict = ref (dempty (cpl_compare goal_compare Int.compare))
 val inst_dict = ref (dempty (cpl_compare String.compare goal_compare))
 val tac_dict = ref (dempty String.compare)
 
-fun pred_sthml n g =
+fun pred_sthml thmpredictor thml_dict n g =
   dfind (g,n) (!thml_dict) handle NotFound =>
-    let val sl = !thmpredictor_glob n g in
+    let val sl = thmpredictor n g in
       thml_dict := dadd (g,n) sl (!thml_dict);
       sl
     end
 
-fun find_stac stac = 
-  dfind stac (!tac_dict) handle NotFound => 
-    let val tac = tactic_of_sml stac in
-      tac_dict := dadd stac tac (!tac_dict);
-      tac
-    end
-
-fun inst_read stac g =
+fun stac_to_tac thmpred (tac_dict,inst_dict,thml_dict) stac g =
+  (
   if !ttt_thmlarg_flag andalso is_absarg_stac stac then
     (
     dfind (stac,g) (!inst_dict) handle NotFound =>
@@ -417,24 +415,24 @@ fun inst_read stac g =
       val _ = debug_search ("instantiating: " ^ stac)
       val sl =
         if !ttt_thmlarg_flag
-        then pred_sthml (!ttt_thmlarg_radius) g
+        then pred_sthml thmpred thml_dict (!ttt_thmlarg_radius) g
         else []
       val thmls = String.concatWith " , " (map dbfetch_of_string sl)
       val newstac = inst_stac thmls g stac
       val newtac = tactic_of_sml newstac
         handle _ =>
-        (debug ("Warning: inst_read: " ^ newstac); raise ERR "inst_read" "")
+        (debug ("Warning: stac_to_tac: " ^ newstac); raise ERR "stac_to_tac" "")
     in
-      inst_dict := dadd (stac,g) (newstac,newtac,!ttt_tactic_time) (!inst_dict);
+      inst_dict := dadd (stac,g) (newstac,newtac, !ttt_tactic_time) (!inst_dict);
       debug_search ("to: " ^ newstac);
-      (newstac,newtac,!ttt_tactic_time)
+      (newstac, newtac, !ttt_tactic_time)
     end
     )
   else if stac = metis_spec then
     (
     dfind (stac,g) (!inst_dict) handle NotFound =>
     let
-      val sl = pred_sthml (!ttt_metis_radius) g
+      val sl = pred_sthml thmpred thml_dict (!ttt_metis_radius) g
       val newstac = mk_metis_call sl
       val newtac = tactic_of_sml newstac
     in
@@ -443,7 +441,24 @@ fun inst_read stac g =
       (newstac,newtac,!ttt_metis_time)
     end
     )
-  else (stac, find_stac stac, !ttt_tactic_time)
+  else 
+    let fun find_stac stac = 
+      dfind stac (!tac_dict) handle NotFound => 
+        let val tac = tactic_of_sml stac in
+          tac_dict := dadd stac tac (!tac_dict);
+          tac
+        end
+    in
+      (stac, find_stac stac, !ttt_tactic_time)
+    end
+  )
+  handle _ => 
+    (debug ("Warning: stac_to_tac: " ^ stac);
+     ("Tactical.NO_TAC", NO_TAC, !ttt_tactic_time))
+    
+(* --------------------------------------------------------------------------
+   Application of a tactic.
+   -------------------------------------------------------------------------- *)
 
 fun glob_productive pardict trydict g glo =
   case glo of
@@ -460,9 +475,8 @@ fun apply_stac pid pardict trydict stac g =
     val _ = last_stac := stac
     val _ = stac_counter := !stac_counter + 1
     (* instantiation of theorems and reading *)
-    val (newstac,newtac,tim) = inst_read stac g
-      handle _ => (debug ("Warning: apply_stac: " ^ stac);
-                   ("Tactical.NO_TAC", NO_TAC, !ttt_tactic_time))
+    val (newstac,newtac,tim) = 
+      stac_to_tac (!thmpredictor_glob) (tac_dict,inst_dict,thml_dict) stac g
     val _ = update_curstac newstac pid
     (* execution *)
     val glo = dfind (newstac,g) (!stacgoal_cache) handle NotFound =>
@@ -479,6 +493,8 @@ fun apply_stac pid pardict trydict stac g =
             glo
           end
       end
+    (* updating  *)
+      
     (* testing for loops *)
     val newglo = glob_productive pardict trydict g glo
   in
@@ -519,37 +535,38 @@ fun has_empty_pred pid =
   end
 
 fun mc_node_find pid =
-  let
-    val prec = dfind pid (!proofdict)
-    val {children,visit,...} = prec
-    val pvisit = !(#visit prec)
-    val pdenom = Math.sqrt pvisit
-    (* try new tactic on the node itself *)
-    val n = length (!children)
-    val self_pripol =
-      Math.pow (1.0 - !ttt_mcpol_coeff, Real.fromInt n) * !ttt_mcpol_coeff
-    val self_curpol = 1.0 / pdenom
-    val self_selsc = (pid, (!ttt_mcev_coeff) * (self_pripol / self_curpol))
-    (* or explore deeper existing paritial proofs *)
-    fun f cid =
-      let
-        val crec = dfind cid (!proofdict)
-        val pripol = !(#priorpolicy crec)
-        val meaneval = average_real (!(#cureval crec))
-        val visit = !(#visit crec)
-        val curpol = (visit + 1.0) / pdenom
-      in
-        (cid, meaneval + (!ttt_mcev_coeff) * (pripol / curpol))
-      end
-    (* sort and select node with best selection score *)
-    val l0 = self_selsc :: List.map f (!children)
-    val l1 = dict_sort compare_rmax l0
-    val (selid,_) = hd l1
-  in
-    if pid = selid
-      then (pid,self_pripol)
-      else mc_node_find selid
-  end
+  if Timer.checkRealTimer (valOf (!glob_timer)) > (!ttt_search_time)
+  then (debug "Warning: mc_node_find: loop"; raise SearchTimeOut)
+  else  
+    let
+      val prec = dfind pid (!proofdict)
+      val {children,visit,...} = prec
+      val pvisit = !(#visit prec)
+      val pdenom = Math.sqrt pvisit
+      (* try new tactic on the node itself *)
+      val n = length (!children)
+      val self_pripol =
+        Math.pow (1.0 - !ttt_mcpol_coeff, Real.fromInt n) * !ttt_mcpol_coeff
+      val self_curpol = 1.0 / pdenom
+      val self_selsc = (pid, (!ttt_mcev_coeff) * (self_pripol / self_curpol))
+      (* or explore deeper existing paritial proofs *)
+      fun f cid =
+        let
+          val crec = dfind cid (!proofdict)
+          val pripol = !(#priorpolicy crec)
+          val meaneval = average_real (!(#cureval crec))
+          val visit = !(#visit crec)
+          val curpol = (visit + 1.0) / pdenom
+        in
+          (cid, meaneval + (!ttt_mcev_coeff) * (pripol / curpol))
+        end
+      (* sort and select node with best selection score *)
+      val l0 = self_selsc :: List.map f (!children)
+      val l1 = dict_sort compare_rmax l0
+      val (selid,_) = hd l1
+    in
+      if pid = selid then (pid,self_pripol) else mc_node_find selid
+    end
 
 fun try_mc_find () =
   if Timer.checkRealTimer (valOf (!glob_timer)) > (!ttt_search_time)

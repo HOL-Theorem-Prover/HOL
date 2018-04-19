@@ -7,9 +7,18 @@ sig
   val ttt       : tactic
   val tactictoe : term -> tactic
 
+  (* Interactive exploration *)
+  val next_tac_number : int ref
+  val next_tac  : goal -> unit
+  val next      : int -> tactic
+  
   (* Settings *)
   val set_timeout : real -> unit
-
+  
+  (* Creating fof files *)
+  val create_fof_thy : string -> unit
+  val create_fof_parallel : int -> string list -> unit
+  
   (* Recording *)
   val ttt_record          : unit -> unit
   val ttt_record_parallel : int -> unit

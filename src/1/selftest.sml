@@ -367,6 +367,14 @@ val _ = add_rule {term_name = "=",
                   paren_style = OnlyIfNecessary,
                   pp_elements = [HardSpace 1, TOK "=", BreakSpace(1,2)]}
 val _ = Lib.with_flag (testutils.linewidth, 10) tpp "xxxxxx =\n  yyyyyy"
+val _ = Lib.with_flag (testutils.linewidth, 30) tpp
+                      "fffff verylongarg1\n\
+                      \  verylongarg2 verylongarg3";
+val _ = Lib.with_flag (testutils.linewidth, 30) tpp
+                      "ffff longarg1\n\
+                      \  (fff longarg2 longarg3\n\
+                      \     longarg4) longarg5\n\
+                      \  longarg6 longarg7";
 
 val _ = print "** Tests with Unicode on PP.avoid_unicode both on\n"
 val _ = let
@@ -463,7 +471,22 @@ val condprinter_tests =
                 \ p /\\ q /\\ r /\\ ppppp xxxx\n\
                 \else if (e1 = e2) /\\ k1 <> k2 then T\n\
                 \else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2 then T\n\
-                \else F"}
+                \else F"},
+      {input = "if really quite a long guard when looked at closely then\n\
+               \  let quite_a_long_variable_name = another_long_name \\/ x ;\n\
+               \      another_longish_name = y \\/ z\n\
+               \  in\n\
+               \      f x\n\
+               \else\n\
+               \  g y",
+       testf = K "Large then-branch",
+       output = "if really quite a long guard when looked at closely then\n\
+                \  (let\n\
+                \     quite_a_long_variable_name = another_long_name \\/ x ;\n\
+                \     another_longish_name = y \\/ z\n\
+                \   in\n\
+                \     f x)\n\
+                \else g y"}
   ]
 val _ = app condprinter_test condprinter_tests
 

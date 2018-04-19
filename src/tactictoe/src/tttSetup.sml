@@ -26,6 +26,7 @@ val ttt_thmlarg_radius = ref 16
    Recording
    ========================================================================== *)
 
+val ttt_record_flag   = ref true
 val ttt_recprove_flag = ref true
 val ttt_reclet_flag   = ref false
 val ttt_rectac_time   = ref 2.0
@@ -46,6 +47,8 @@ val ttt_recgl_flag = ref true
 (* ==========================================================================
    Evaluation
    ========================================================================== *)
+
+val ttt_fof_flag = ref false
 
 val ttt_eval_flag = ref false
 
@@ -85,7 +88,8 @@ val ttt_eprover_radius = ref 128 (* can not be changed yet *)
 val ttt_eprover_async = ref 1
 
 (* Evaluate Eprover instead of TacticToe *)
-val eprover_eval_flag  = ref false
+val eprover_eval_flag = ref false
+val eprover_save_flag = ref false
 
 (* --------------------------------------------------------------------------
    Search

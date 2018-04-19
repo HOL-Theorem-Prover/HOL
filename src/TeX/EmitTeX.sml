@@ -532,14 +532,15 @@ fun raw_pp_theorem_as_tex overrides thm =
   else
     let
       open PP smpp
+      val (turnstrs, width) =
+          if (!print_thm_turnstile) then
+            case overrides "$Turnstile$" of
+                NONE => ([(token_string "Turnstile", 2), (" ",1)], 3)
+              | SOME p => ([p], snd p)
+          else ([], 0)
     in
-      block INCONSISTENT 0 (
-        (if (!print_thm_turnstile) then
-           case overrides "$Turnstile$" of
-               NONE => add_stringsz (token_string "Turnstile",2) >>
-                       add_string " "
-             | SOME p => add_stringsz p
-         else nothing) >>
+      block INCONSISTENT width (
+        mapp add_stringsz turnstrs >>
         raw_pp_term_as_tex overrides (concl thm)
       )
     end;
