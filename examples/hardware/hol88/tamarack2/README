@@ -1,0 +1,30 @@
+% =====================================================================	%
+% TAMARACK 2 - Register-Transfer Level Implementation			%
+
+Jeff Joyce, Cambridge University, 14 June 1989
+
+This directory contains the HOL sources for the formal specification and
+verification of a very simple microprocessor called "Tamarack-2".  The
+file "writeup.tex" is the latex source for an introductory discussion
+on hardware verification based on the HOL sources in this directory
+(there are some minor differences in the write-up from the proofs).
+
+Tamarack-2 is a simplified version of the original version of Tamarack
+where the "idle cycle" aspect of the design has been eliminated.  The
+instruction set is also slightly different:  The HALT instruction from
+the old version of Tamarack is gone leaving a NOP instruction in its
+place (there are now two opcodes for a NOP operation).  Different opcodes
+have been assigned to instructions than those used in Tamarack-1.
+
+These source were orignally written for an older version of HOL - some
+bits have been added to the start of most sources in this directory to
+make them compatible with HOL88 (all very simple things like turning on
+"sticky types" and stripping quantifiers off definitions).
+
+Otherwise, the sources in this directory are still in the state I left
+them in when I first did this example ...  I still need to do alot of
+clean-up.  Some things like the theory "wop" are no longer needed since
+they are built into HOL88.  There is also a MOD function defined in HOL88
+but for the time being I have just kept my own theory of modular arithmetic
+so that I don't have to make changes to all the sources to use whatever
+theorems about MOD are now built into HOL88.

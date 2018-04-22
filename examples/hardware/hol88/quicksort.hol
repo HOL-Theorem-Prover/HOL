@@ -1,0 +1,65 @@
+Quicksort is "defined" by:
+
+   quicksort [] = []
+
+   quicksort (x.l) =
+    let l1,l2 = partition (curry $> x) l
+    in   
+    quicksort l1 @ [x] @ quicksort l2
+
+This is a recursion of the general form:
+
+   f [] = x
+
+   f l = fun l [f(f1 l);...;f(fn l)]   (if l is not [])
+
+    where for quicksort:
+
+           fun l [l1;l2] = l1 @ [hd l] @ l2
+           f1  l         = filter (curry $< (hd l))          (tl l)
+           f2  l         = filter ($not o (curry $> (hd l))) (tl l)
+
+Let the functional QFUN be defined by:
+
+ QFUN (x,fun,fnl) F [] = x
+
+ QFUN (x,fun,fnl) F l  = fun l (map (\f. F(f l)) fnl)
+
+Note that QFUN is not defined recursively, so it exists.
+
+Now if fnl = [f1;...;fn] where each fi strictly decreases the length of its
+argument then (by structural induction) there exists an F such that:
+
+ F = QFUN (x,fun,funl) F
+
+This is expressed in HOL by the theorem:
+
+ |- !x fun fnl. ALL_MONO fnl ==> ?F. F = QFUN (x,fun,fnl) F
+
+where ALL_MONO is a predicate on lists of functions that is true if every
+function f in the list satisfies |- !x. length(f x) < length x .
+
+To define quicksort in HOL one must first prove:
+
+ |- ALL_MONO[f1;f2]
+
+where f1 and f2 are as defined above.
+
+Using the theorem we can then deduce (via MP) that:
+
+ |- ?F. F = QFUN ([],fun,[f1;f2]) F
+
+F is uniquely specified by the fixed-point equation (another
+structural induction), so if we use Hilbert's choice operator and define:
+
+ |- quicksort =  (@F. F = (QFUN ([],fun,[f1;f2]) F))
+
+Then it will follow that:
+
+ |- quicksort = QFUN ([],fun,[f1;f2]) quicksort
+
+Hence from the definition of QFUN:
+
+ |- quicksort [] = []
+
+ |- quicksort (x.l) = quicksort(f1 l) @ [x] @ quicksort(f2 l2)

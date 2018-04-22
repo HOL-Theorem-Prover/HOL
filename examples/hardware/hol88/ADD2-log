@@ -1,0 +1,406 @@
+
+_  _         __        _
+|__|        |  |       |
+|  | IGHER  |__| RDER  |__ OGIC
+===============================
+(Built on Aug 23)
+
+#########################################################() : void
+Runtime: 0.0s
+GC: 0.0s
+
+##() : void
+Runtime: 0.0s
+GC: 0.0s
+
+#####|- PWR o = (o = T)
+Runtime: 0.3s
+GC: 0.0s
+
+####|- GND o = (o = F)
+Runtime: 0.2s
+GC: 0.0s
+
+####|- PTRAN(g,s,d) = (g = F) ==> (s = d)
+Runtime: 0.4s
+GC: 0.0s
+
+####|- NTRAN(g,s,d) = (g = T) ==> (s = d)
+Runtime: 0.5s
+GC: 0.0s
+
+###############|- ADD1_IMP(a,b,cin,sum,cout) =
+   (?p0 p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11.
+     PTRAN(p1,p0,p2) /\
+     PTRAN(cin,p0,p3) /\
+     PTRAN(b,p2,p3) /\
+     PTRAN(a,p2,p4) /\
+     PTRAN(p1,p3,p4) /\
+     NTRAN(a,p4,p5) /\
+     NTRAN(p1,p4,p6) /\
+     NTRAN(b,p5,p6) /\
+     NTRAN(p1,p5,p11) /\
+     NTRAN(cin,p6,p11) /\
+     PTRAN(a,p0,p7) /\
+     PTRAN(b,p0,p7) /\
+     PTRAN(a,p0,p8) /\
+     PTRAN(cin,p7,p1) /\
+     PTRAN(b,p8,p1) /\
+     NTRAN(cin,p1,p9) /\
+     NTRAN(b,p1,p10) /\
+     NTRAN(a,p9,p11) /\
+     NTRAN(b,p9,p11) /\
+     NTRAN(a,p10,p11) /\
+     PWR p0 /\
+     PTRAN(p4,p0,sum) /\
+     NTRAN(p4,sum,p11) /\
+     GND p11 /\
+     PTRAN(p1,p0,cout) /\
+     NTRAN(p1,cout,p11))
+Runtime: 8.5s
+GC: 0.0s
+
+######() : void
+Runtime: 1.0s
+GC: 0.0s
+
+######PTRAN = |- PTRAN(g,s,d) = (g = F) ==> (s = d)
+NTRAN = |- NTRAN(g,s,d) = (g = T) ==> (s = d)
+PWR = |- PWR o = (o = T)
+GND = |- GND o = (o = F)
+ADD1_IMP = 
+|- ADD1_IMP(a,b,cin,sum,cout) =
+   (?p0 p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11.
+     PTRAN(p1,p0,p2) /\
+     PTRAN(cin,p0,p3) /\
+     PTRAN(b,p2,p3) /\
+     PTRAN(a,p2,p4) /\
+     PTRAN(p1,p3,p4) /\
+     NTRAN(a,p4,p5) /\
+     NTRAN(p1,p4,p6) /\
+     NTRAN(b,p5,p6) /\
+     NTRAN(p1,p5,p11) /\
+     NTRAN(cin,p6,p11) /\
+     PTRAN(a,p0,p7) /\
+     PTRAN(b,p0,p7) /\
+     PTRAN(a,p0,p8) /\
+     PTRAN(cin,p7,p1) /\
+     PTRAN(b,p8,p1) /\
+     NTRAN(cin,p1,p9) /\
+     NTRAN(b,p1,p10) /\
+     NTRAN(a,p9,p11) /\
+     NTRAN(b,p9,p11) /\
+     NTRAN(a,p10,p11) /\
+     PWR p0 /\
+     PTRAN(p4,p0,sum) /\
+     NTRAN(p4,sum,p11) /\
+     GND p11 /\
+     PTRAN(p1,p0,cout) /\
+     NTRAN(p1,cout,p11))
+Runtime: 7.4s
+GC: 0.0s
+
+###########cmos_rewrites = 
+[|- !x. (x = x) = T;
+ |- ~(T = F) /\ ~(F = T);
+ |- (!t. ~~t = t) /\ (~T = F) /\ (~F = T);
+ |- !t.
+     (T /\ t = t) /\
+     (t /\ T = t) /\
+     (F /\ t = F) /\
+     (t /\ F = F) /\
+     (t /\ t = t);
+ |- !t.
+     (T \/ t = T) /\
+     (t \/ T = T) /\
+     (F \/ t = t) /\
+     (t \/ F = t) /\
+     (t \/ t = t);
+ |- !t.
+     (T ==> t = t) /\
+     (t ==> T = T) /\
+     (F ==> t = T) /\
+     (t ==> t = T) /\
+     (t ==> F = ~t);
+ |- !t1 t2. ((T => t1 | t2) = t1) /\ ((F => t1 | t2) = t2);
+ |- !t. (?x. t) = t]
+: thm list
+Runtime: 0.0s
+GC: 0.0s
+
+##CMOS_REWRITE_RULE = - : (thm list -> thm -> thm)
+Runtime: 4.7s
+GC: 0.0s
+
+###########EQ_FLIP_CONV = - : (term list -> conv)
+Runtime: 0.0s
+GC: 0.0s
+
+###########extract_vars = - : (thm -> term list)
+Runtime: 0.0s
+GC: 0.0s
+
+################CONJ_SIMP_RULE = - : (thm -> thm)
+Runtime: 0.0s
+GC: 0.0s
+
+#########CMOS_UNWIND = - : (thm -> thm)
+Runtime: 0.0s
+GC: 0.0s
+
+#####iterate = - : ((* -> *) -> * -> *)
+Runtime: 0.0s
+GC: 0.0s
+
+#######CMOS_EXPAND = - : (thm -> thm)
+Runtime: 0.0s
+GC: 0.0s
+
+###prove_case1 = - : ((term # term # term) -> thm)
+Runtime: 0.0s
+GC: 0.0s
+
+####################Theory ADD_SLICE loaded
+() : void
+Runtime: 0.6s
+GC: 0.0s
+
+############|- ADD2_IMP(a,b,cin,ph1,ph1_bar,sum,cout) =
+   (?p0 p1 p2 p3 p4 p5 p6 p7 p8.
+     PWR p0 /\
+     GND p8 /\
+     PTRAN(ph1,p0,p1) /\
+     PTRAN(a,p1,p2) /\
+     PTRAN(b,p2,sum) /\
+     NTRAN(a,p1,p3) /\
+     NTRAN(cin,p3,sum) /\
+     NTRAN(ph1,sum,p8) /\
+     NTRAN(b,p1,sum) /\
+     NTRAN(b,cout,p4) /\
+     NTRAN(cin,cout,p4) /\
+     NTRAN(a,cout,p4) /\
+     NTRAN(sum,p4,p5) /\
+     PTRAN(ph1_bar,p0,cout) /\
+     NTRAN(a,cout,p5) /\
+     NTRAN(b,p5,p6) /\
+     NTRAN(cin,p6,p7) /\
+     NTRAN(ph1_bar,p7,p8))
+Runtime: 5.9s
+GC: 0.0s
+
+##ADD2_IMP = 
+|- ADD2_IMP(a,b,cin,ph1,ph1_bar,sum,cout) =
+   (?p0 p1 p2 p3 p4 p5 p6 p7 p8.
+     PWR p0 /\
+     GND p8 /\
+     PTRAN(ph1,p0,p1) /\
+     PTRAN(a,p1,p2) /\
+     PTRAN(b,p2,sum) /\
+     NTRAN(a,p1,p3) /\
+     NTRAN(cin,p3,sum) /\
+     NTRAN(ph1,sum,p8) /\
+     NTRAN(b,p1,sum) /\
+     NTRAN(b,cout,p4) /\
+     NTRAN(cin,cout,p4) /\
+     NTRAN(a,cout,p4) /\
+     NTRAN(sum,p4,p5) /\
+     PTRAN(ph1_bar,p0,cout) /\
+     NTRAN(a,cout,p5) /\
+     NTRAN(b,p5,p6) /\
+     NTRAN(cin,p6,p7) /\
+     NTRAN(ph1_bar,p7,p8))
+Runtime: 4.4s
+GC: 0.0s
+
+######prove_case2 = - : ((term # term # term # term) -> thm)
+Runtime: 0.0s
+GC: 0.0s
+
+##TTTT_Thm = |- ADD2_IMP(T,T,T,T,F,sum,cout) = (sum = F) /\ (cout = T)
+Runtime: 334.6s
+GC: 74.9s
+
+##TTFT_Thm = |- ADD2_IMP(T,T,F,T,F,sum,cout) = (sum = F) /\ (cout = T)
+Runtime: 334.1s
+GC: 64.6s
+
+##TFTT_Thm = 
+|- ADD2_IMP(T,F,T,T,F,sum,cout) =
+   (?p0 p1 p2 p3 p4 p5 p6 p7 p8.
+     (p4 = T) /\
+     (p5 = T) /\
+     (p1 = F) /\
+     (p2 = F) /\
+     (p3 = F) /\
+     (sum = F) /\
+     (cout = T) /\
+     (p0 = T) /\
+     (p8 = F) /\
+     (p6 = p7))
+Runtime: 287.4s
+GC: 62.9s
+
+##TFFT_Thm = 
+|- ADD2_IMP(T,F,F,T,F,sum,cout) =
+   (?p0 p1 p2 p3 p4 p5 p8.
+     (p4 = T) /\
+     (p5 = T) /\
+     (p2 = F) /\
+     (sum = F) /\
+     (cout = T) /\
+     (p0 = T) /\
+     (p8 = F) /\
+     (p1 = p3))
+Runtime: 283.5s
+GC: 62.8s
+
+##FTTT_Thm = 
+|- ADD2_IMP(F,T,T,T,F,sum,cout) =
+   (?p0 p1 p2 p3 p4 p5 p6 p7 p8.
+     (p2 = F) /\
+     (p4 = T) /\
+     (p3 = F) /\
+     (p1 = F) /\
+     (sum = F) /\
+     (cout = T) /\
+     (p5 = p7) /\
+     (p0 = T) /\
+     (p8 = F) /\
+     (p6 = p7))
+Runtime: 286.9s
+GC: 53.1s
+
+##FTFT_Thm = 
+|- ADD2_IMP(F,T,F,T,F,sum,cout) =
+   (?p0 p1 p2 p4 p5 p6 p8.
+     (p2 = F) /\
+     (p4 = T) /\
+     (p1 = F) /\
+     (sum = F) /\
+     (cout = T) /\
+     (p0 = T) /\
+     (p8 = F) /\
+     (p5 = p6))
+Runtime: 284.8s
+GC: 63.9s
+
+##FFTT_Thm = 
+|- ADD2_IMP(F,F,T,T,F,sum,cout) =
+   (?p0 p1 p2 p3 p4 p6 p7 p8.
+     (p4 = T) /\
+     (p1 = F) /\
+     (p2 = F) /\
+     (p3 = F) /\
+     (sum = F) /\
+     (cout = T) /\
+     (p0 = T) /\
+     (p8 = F) /\
+     (p6 = p7))
+Runtime: 275.6s
+GC: 65.0s
+
+##FFFT_Thm = |- ADD2_IMP(F,F,F,T,F,sum,cout) = (sum = F) /\ (cout = T)
+Runtime: 235.9s
+GC: 53.8s
+
+###TTTF_Thm = |- ADD2_IMP(T,T,T,F,T,sum,cout) = (sum = T) /\ (cout = F)
+Runtime: 325.0s
+GC: 65.1s
+
+##TTFF_Thm = 
+|- ADD2_IMP(T,T,F,F,T,sum,cout) =
+   (?p0 p1 p3 p4 p5 p6 p7 p8.
+     (p4 = p6) /\
+     (p3 = T) /\
+     (sum = T) /\
+     (p1 = T) /\
+     (cout = p6) /\
+     (p7 = F) /\
+     (p0 = T) /\
+     (p8 = F) /\
+     (p5 = p6))
+Runtime: 337.0s
+GC: 75.0s
+
+##TFTF_Thm = 
+|- ADD2_IMP(T,F,T,F,T,sum,cout) =
+   (?p0 p1 p2 p3 p4 p5 p6 p7 p8.
+     (p4 = p5) /\
+     (p2 = T) /\
+     (p3 = T) /\
+     (sum = T) /\
+     (p6 = F) /\
+     (p1 = T) /\
+     (p7 = F) /\
+     (p0 = T) /\
+     (p8 = F) /\
+     (cout = p5))
+Runtime: 324.0s
+GC: 76.7s
+
+##TFFF_Thm = 
+|- ADD2_IMP(T,F,F,F,T,sum,cout) =
+   (?p0 p1 p2 p3 p4 p5 p7 p8.
+     ((sum = T) ==> (p4 = p5)) /\
+     (p3 = T) /\
+     (p1 = T) /\
+     (p7 = F) /\
+     (p0 = T) /\
+     (p8 = F) /\
+     (p2 = sum) /\
+     (cout = p4) /\
+     (cout = p5))
+Runtime: 266.2s
+GC: 54.0s
+
+##FTTF_Thm = |- ADD2_IMP(F,T,T,F,T,sum,cout) = (cout = F) /\ (sum = T)
+Runtime: 336.9s
+GC: 76.3s
+
+##FTFF_Thm = 
+|- ADD2_IMP(F,T,F,F,T,sum,cout) =
+   (?p0 p1 p2 p4 p5 p6 p7 p8.
+     (cout = p6) /\
+     (p4 = p6) /\
+     (p2 = T) /\
+     (sum = T) /\
+     (p1 = T) /\
+     (p7 = F) /\
+     (p0 = T) /\
+     (p8 = F) /\
+     (p5 = p6))
+Runtime: 311.0s
+GC: 76.7s
+
+##FFTF_Thm = 
+|- ADD2_IMP(F,F,T,F,T,sum,cout) =
+   (?p0 p1 p2 p3 p4 p5 p6 p7 p8.
+     (cout = p5) /\
+     (p4 = p5) /\
+     (p2 = T) /\
+     (p3 = T) /\
+     (sum = T) /\
+     (p6 = F) /\
+     (p1 = T) /\
+     (p7 = F) /\
+     (p0 = T) /\
+     (p8 = F))
+Runtime: 306.9s
+GC: 66.7s
+
+##FFFF_Thm = 
+|- ADD2_IMP(F,F,F,F,T,sum,cout) =
+   (?p0 p1 p2 p4 p5 p7 p8.
+     (p4 = p5) /\
+     (p2 = T) /\
+     (sum = T) /\
+     (p1 = T) /\
+     (p7 = F) /\
+     (p0 = T) /\
+     (p8 = F))
+Runtime: 241.6s
+GC: 55.9s
+
+#
+[Return to top level]
+-> 

@@ -1,3 +1,9 @@
-Port of Mike Gordon et al's old hardware formalisation work
-From sources currently (2018 April) available at
-http://www.cl.cam.ac.uk/~lp15/tmp/examples.zip
+This directory contains ports of old examples. The main focus is
+on ports of Mike Gordon et al's old hardware formalisation work.
+
+As of April 2018, some HOL88 sources (themselves partly ports of earlier
+work were available at http://www.cl.cam.ac.uk/~lp15/tmp/examples.zip. These
+files can be found in subdirectory "hol88". The directory "port" contains
+ports to the current HOL system, which try to preserve as much of the original
+structure as possible. In contrast "port-full" contains port that use modern
+library theories and proof-tools.
