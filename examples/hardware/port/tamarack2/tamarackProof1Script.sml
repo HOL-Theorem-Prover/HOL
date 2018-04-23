@@ -186,7 +186,11 @@ set_goal ([],
 
 expandf (tac1 THEN tac2 THEN tac3);
 
-val th1 = mk_thm ([],``!n. 0 < (2 EXP n)``);
+val th1 = prove (``!n. 0 < (2 EXP n)``,
+  GEN_TAC >>
+  MP_TAC (SPECL [``n:num``, ``1``] ZERO_LESS_EXP) >>
+  SIMP_TAC arith_ss []
+);
 
 val th2 = TAC_PROOF (([],``3 < (2 EXP 3)``),
         CONV_TAC (REDEPTH_CONV numLib.num_CONV) THEN
