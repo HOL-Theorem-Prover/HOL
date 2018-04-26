@@ -84,7 +84,7 @@ fun pp_dot_file {size,ranksep,nodesep} (dom,pairs) =
        add_string "size = ",    add_string (quote size), add_break(1,0),
        add_string "ranksep = ", add_string ranksep,      add_break(1,0),
        add_string "nodesep = ", add_string nodesep,      add_break(1,0),
-       add_string "node [style=filled fillcolor=white fontcolor=darkgreen fontsize=30 fontname=Arial]",
+       add_string "node [target=_parent style=filled fillcolor=white fontcolor=darkgreen fontsize=30 fontname=Arial]",
        add_break(1,0),
        add_newline,
        block CONSISTENT 0 (pr_list pp_thy [add_newline] dom),
