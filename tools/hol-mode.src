@@ -11,6 +11,8 @@
 (require 'thingatpt)
 (require 'cl)
 
+;; Built-in library since Emacs 24.4, providing `string-remove-suffix`
+(require 'subr-x)
 
 (defgroup hol nil
   "Customising the Emacs interface to the HOL4 proof assistant."
