@@ -10,7 +10,7 @@
 
 (require 'thingatpt)
 (require 'cl)
-
+(require 'subr-x)
 
 (defgroup hol nil
   "Customising the Emacs interface to the HOL4 proof assistant."
