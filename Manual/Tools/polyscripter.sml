@@ -291,7 +291,6 @@ in
       val raw_output = compiler obuf (lnumdie (linenum lbuf))
                                 (QFRead.stringToReader (thm_name ^ " :Thm.thm"))
       val output = transformOutput umap ws (strip_for_thm raw_output)
-                        |> addIndent "  " 
                         |> deleteTrailingWhiteSpace 
                         |> (fn s => "  " ^ s)
       val _ = advance lbuf
