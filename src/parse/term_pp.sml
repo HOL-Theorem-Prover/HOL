@@ -255,10 +255,19 @@ in
 end
 
 fun find_lspec els =
-  case els of
-      [] => NONE
-    | ListForm l :: _ => SOME l
-    | _ :: rest => find_lspec rest
+  let
+    fun find_lspec1 e =
+      case e of
+          ListForm l => SOME l
+        | PPBlock(els, _) => recurse els
+        | _ => NONE
+    and recurse els =
+      case els of
+          [] => NONE
+        | e :: rest => (case find_lspec1 e of NONE => recurse rest | x => x)
+  in
+    recurse els
+  end
 
 fun grule_term_names G grule = let
   fun lift f (rr as {term_name,timestamp,elements,...}) =
@@ -713,7 +722,7 @@ fun pp_term (G : grammar) TyG backend = let
             (* val _ = PRINT ("pr_lspec: "^debugprint G t^" {nilstr=\""^nilstr^
                            "\"}")*)
             val sep = #separator r
-            val (consistency, breakspacing) = block_info
+            (* val (consistency, breakspacing) = block_info *)
             (* list will never be empty *)
             fun pr_list tm = let
               fun lrecurse depth tm = let
@@ -735,7 +744,7 @@ fun pp_term (G : grammar) TyG backend = let
                 end
               end
             in
-              block consistency breakspacing (lrecurse depth t)
+              lrecurse depth t
             end
           in
             if has_name_by_parser G nilstr t then return ()
