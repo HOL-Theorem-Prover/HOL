@@ -1,0 +1,55 @@
+%----------------------------------------------------------------------------%
+% This directory contains code for old HOL. It will need minor modifications %
+% to make it run in HOL88. See hol/examples/tamarack for a computer          %
+% proof that does run in HOL88.                                              %
+%----------------------------------------------------------------------------%
+
+Specification and Verification of an General Purpose Computer
+
+  This directory consist of the specification and verification of a
+very simple general purpose microcoded computer in higher-order logic
+using Gordon's HOL system.  The computer and its implementation were
+originally specified for the LSM hardware verification system which is
+described in [Gordon].  The specification is largely the HOL equivalent
+of the LSM specification.
+
+  The following .ml files generate HOL theories.  The first four files
+listed below are the target level and host level specifications.  The
+remaining eight files prove that the abstract computer is correctly
+implemented by the concrete specification.
+
+  'values.ml'       - constants, definitions, and axioms for both levels
+  'computer.ml'     - abstract level specification
+  'computer_abs.ml' - concrete level specification
+  'microcode.ml'    - microcode specification
+  'arith.ml'        - simple arithmetic theorems required by 'proof1'
+  'next.ml'         - definition of 'NEXT' relation and related lemmas
+  'proof1.ml'       - preliminary lemmas about the microcode
+  'proof2.ml'       - simulation of every possible execution cycle
+  'proof3.ml'       - elimination of all time terms except 't1' and 't2'
+  'proof4.ml'       - final reorganization of theorems for each case
+  'proof5.ml'       - case analysis on every possible execution cycle
+  'proof6.ml'       - temporal abstraction step
+
+ Briefly, the proof uses a form of 'simulation' to derive theorems about
+every possible execution cycle at the microcode level.  There are fifteen
+possible execution cycles.  Further details are given in the .ml files
+for each step of the proof.
+
+ The implementation has been modified for the 'jump_knob' microcode
+instruction in a very minor way from the implementation described in
+[Gordon].  Details are given in the specification of the decode unit.
+
+  [Gordon]  Mike Gordon.  "Proving a Computer Correct".  Technical
+            Report #41, Computer Lab, University of Cambridge, 1983
+
+  [Gordon]  Mike Gordon.  "User Guide to the Higher Order Logic
+            System".
+
+  [Joyce]   Jeff Joyce, Graham Birtwistle and Mike Gordon.  "Proving
+            a Computer Correct in Higher Order Logic".  Technical
+            Report #100, Computer Lab, University of Cambridge, 1986
+
+  [Joyce]   Jeff Joyce.  "Formal Verification and Implementation of a
+            Microprocessor".  Hardware Verification Conference,
+            University of Calgary, January 1987.
