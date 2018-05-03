@@ -860,10 +860,11 @@ fun listform_to_rule (lform : listspec) =
     val _ = app check_els [separator, leftdelim, rightdelim]
     val _ = app one_tok [separator, leftdelim, rightdelim]
     val els =
-        leftdelim @ [ListForm { separator = separator,
-                                block_info = binfo,
-                                cons = cons, nilstr = nilstr}] @
-        rightdelim
+        [PPBlock (leftdelim @ [ListForm { separator = separator,
+                                          block_info = binfo,
+                                          cons = cons, nilstr = nilstr}] @
+                  rightdelim,
+                  binfo)]
   in
     {term_name = "", pp_elements = els, fixity = Closefix,
      block_style = (AroundEachPhrase, binfo),

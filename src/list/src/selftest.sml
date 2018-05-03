@@ -42,11 +42,17 @@ fun test nm cmp pr f (x, e) = test0 nm cmp pr f (x, SOME e)
 
 val _ = set_trace "Unicode" 0
 
-val _ = app tpp ["MEM a l", "~MEM a l", "x NOTIN {1; 2; 3}",
-                 "case l of [] => 0 | h::t => h + LENGTH t",
-                 "[1; 2]",
-                 "[aaaa; bbbbb; cccc; dddd; eeee; ffff; gggg; hhhh; iiii; \
-                  \jjjj; kkkk; llll; mmmm;\n nnnn; oooo]"]
+val _ = app tpp [
+  "MEM a l", "~MEM a l", "x NOTIN {1; 2; 3}",
+  "case l of [] => 0 | h::t => h + LENGTH t",
+  "[1; 2]",
+  "[aaaa; bbbbb; cccc; dddd; eeee; ffff; gggg; hhhh; iiii; \
+  \jjjj; kkkk; llll; mmmm;\n nnnn; oooo]",
+  "f\n\
+  \  [aaaa; bbbb; cccc; dddd; eeee; ffff; gggg; hhhh; iiii; jjjj; kkkk; llll; \
+     \mmmm;\n\
+  \   nnnn; oooo; pppp]"
+]
 
 val _ = tpp_expected {input = "SINGL 3", output = "[3]",
                       testf = standard_tpp_message}

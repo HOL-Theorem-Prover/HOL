@@ -154,3 +154,9 @@ val _ = List.app testf [
  \     \n\
  \     ")
 ]
+
+val _ = testutils.linewidth := 20
+val _ = Parse.current_backend := PPBackEnd.raw_terminal
+
+val _ = app tpp ["f\n  (longterm =\n   longterm)",
+                 "f\n  (term001 = term002)"]

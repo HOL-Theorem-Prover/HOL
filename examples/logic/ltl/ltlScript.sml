@@ -241,7 +241,7 @@ val TSF_TRANS_LEMM = store_thm
 (* val TSF_TRANS_LEMM2 = store_thm *)
 (*   ("TSF_TRANS_LEMM2", *)
 (*    ``!x y z. (x,y) ∈ TSF ∧ (y,z) ∈ TSF ==> (x,z) ∈ TSF``, *)
-   
+
 (* ) *)
 
 
@@ -431,16 +431,16 @@ val NNF_THM = store_thm
    >> metis_tac[NNF_NEG_LEMM]
   );
 
-val LTL_FALSE_def = Define `
+val LTL_FALSE_def = zDefine `
   LTL_FALSE p  = F_CONJ (F_VAR p) (F_NEG (F_VAR p))`;
 
-val LTL_TRUE_def = Define `
+val LTL_TRUE_def = zDefine `
   LTL_TRUE p = F_NEG (LTL_FALSE p)`;
 
-val LTL_F_def = Define `
+val LTL_F_def = zDefine `
   LTL_F φ p = F_U (LTL_TRUE p) φ`
 
-val LTL_G_def = Define `
+val LTL_G_def = zDefine `
   LTL_G φ p = F_NEG (LTL_F (F_NEG φ) p)`;
 
 (* Some example formulae*)

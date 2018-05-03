@@ -76,7 +76,7 @@ help/src-sml/index.txt
 help/theorygraph/*.html
 help/theorygraph/theories.dot
 help/theorygraph/theories.imap
-help/theorygraph/theories.jpg
+help/theorygraph/theories.svg
 help/theorygraph/theories.pdf
 
 src/bool/SharingTables.*

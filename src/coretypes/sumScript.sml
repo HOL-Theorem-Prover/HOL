@@ -474,7 +474,7 @@ val _ = add "OUTL" "destLeft"
 end
 
 val _ = TypeBase.export
-  [TypeBasePure.mk_datatype_info
+  [TypeBasePure.mk_datatype_info_no_simpls
      {ax=TypeBasePure.ORIG sum_Axiom,
       case_def=sum_case_def,
       case_cong=sum_case_cong,
