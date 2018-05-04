@@ -142,22 +142,6 @@ val additively_optimal_def = Define`
   additively_optimal n f C <=>
     f ∈ C ∧ ∀g. g∈C ==> ∃c. ∀x. complexity n f x <= complexity n g x + c`;
 
-val pr_is_universal_def = Define`
-  pr_is_universal f <=>
-  recfn (rec1 f) 1 ∧
-  ∃g. recfn g 1 ∧
-      ∀y. ∃n. (g[y] = SOME n) ∧
-              ∀x. f (n *, x) = Phi y x`;
-
-val universal_Phi = Q.store_thm("universal_Phi",
-  `pr_is_universal (λn. Phi (nfst (n)) (nsnd ( n)))`,
-  simp[pr_is_universal_def] >> reverse conj_tac 
-    >- (qexists_tac `SOME o proj 0` >> simp[recfn_rules]) >> 
-    REWRITE_TAC[GSYM recPhi_correct] >> qmatch_abbrev_tac`recfn ff 1 ` >> 
-    `ff = recCn recPhi [SOME o pr1 nfst;SOME o pr1 nsnd]` 
-       by (simp[FUN_EQ_THM,Abbr`ff`] >> Cases >> simp[recCn_def,rec1_def]) >> 
-    simp[Abbr`ff`] >> irule recfnCn  >> simp[primrec_recfn] >> 
-    metis_tac[recfn_recPhi,recPhi_rec2Phi] )
 
 val blmunge_def = Define`
   (blmunge [] = [F;F]) ∧
@@ -176,15 +160,68 @@ val bldemunge_def = Define`
   (bldemunge m (F::T::t) = bldemunge (F::m) t )∧
   (bldemunge m (F::F::t) = (bl2n (REVERSE m),bl2n t ))`
 
+val blpair_encode_def = Define`
+blpair_encode x y = blmunge (n2bl x) ++ n2bl y`
+
+val bld_lem = Q.prove(
+`∀l A. bldemunge A (blmunge l ++ n2bl y) = (bl2n ( REVERSE A ++ l),y)`,
+Induct >> simp[] >> Cases >> simp[bldemunge_def,blmunge_def] >> 
+REWRITE_TAC[GSYM APPEND_ASSOC,APPEND] )
+
+val bldemunge_inv = Q.store_thm("bldemunge_inv",
+`bldemunge [] (blpair_encode x y) = (x,y)`,
+simp[blpair_encode_def,bld_lem] )
+
 val UM_bff_def = Define`
   UM_bff n = let (x,y)= bldemunge [] (n2bl n) in Phi x y`
 
+val pr_is_universal_def = Define`
+  pr_is_universal f <=>
+  recfn (rec1 f) 1 ∧
+  ∃g. recfn g 1 ∧
+      ∀y. ∃n. (g[y] = SOME n) ∧
+              ∀x. f (bl2n (blpair_encode n x)) = Phi y x`;
+
+val blist_of_def = Define`blist_of bl = nlist_of (MAP (λb. if b then 1 else 0) bl)`
+
+val n2bl'_def = Define`n2bl' n = blist_of (n2bl n)`
+
+val pr_n2bl'_def = Define`pr_n2bl' = 
+Cn (pr2 nel) [proj 0;Pr1 (ncons 0 0) 
+    (Cn (pr2 napp) [
+       proj 1;
+       Cn (pr2 ncons) [
+         pr_cond (Cn pr_eq [Cn pr_mod [proj 0;K 2];zerof])
+                 (Cn (pr2 ncons) [zerof;Cn (pr2 nel) [Cn pr_div [proj 0;K 2];proj 1]]) 
+		 (Cn (pr2 ncons) [K 1;Cn (pr2 nel) [Cn pr_div [proj 0;K 2];proj 1]]);
+	 zerof
+       ]
+    ])]`
+
 (* 
+
+val pr_n2bl'_thm = Q.store_thm("pr_n2bl'_thm",
+`pr_n2bl' [n] = n2bl' n`,simp[pr_n2bl'_def] >> completeInduct_on `n` >> 
+  Cases_on `n` >> simp[n2bl'_def,blist_of_def,Once num_to_bool_list_def] >> )
+
+val universal_Phi = Q.store_thm("universal_Phi",
+  `pr_is_universal (λn. let bl = n2bl n; (x,y) = bldemunge [] bl in Phi x y)`,
+  simp[pr_is_universal_def] >> reverse conj_tac 
+    >- (simp[bldemunge_inv] >> qexists_tac `SOME o proj 0` >> simp[recfn_rules]) >> 
+    
+    REWRITE_TAC[GSYM recPhi_correct] >> qmatch_abbrev_tac`recfn ff 1 ` >> 
+    `ff = recCn recPhi [SOME o pr1 nfst;SOME o pr1 nsnd]` 
+       by (simp[FUN_EQ_THM,Abbr`ff`] >> Cases >> simp[recCn_def,rec1_def]) >> 
+    simp[Abbr`ff`] >> irule recfnCn  >> simp[primrec_recfn] >> 
+    metis_tac[recfn_recPhi,recPhi_rec2Phi] )
+
+
+(* Up to here *)
 
 val universal_bff = Q.store_thm("universal_bff",
 `pr_is_universal UM_bff`,
 simp[pr_is_universal_def] >> reverse conj_tac
->- () 
+>- (simp[UM_bff_def])
 >- () )
 
 (** Lemma 2.1.1 **)
@@ -333,7 +370,6 @@ val solomonoff_theorem = Q.store_thm("solomonoff_theorem",
 `(computable_measure mu) ==>
  (sum for (n in N) summed_square_error mu n <= (kolmog_complexity mu)*(log 2) )`
 rw[LESS_EQ_TRANS,solomonoff_thm_claim_11,solomonoff_thm_claim_2])
-
-*)
+ *)
 
 val _ = export_theory();
