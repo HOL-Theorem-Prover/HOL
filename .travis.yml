@@ -1,6 +1,6 @@
 language: c
 before_script: developers/travis/before_install.sh
-script: poly < tools/smart-configure.sml && bin/build $BUILDOPTS --nograph
+script: eval `opam config env` && poly < tools/smart-configure.sml && bin/build $BUILDOPTS --nograph
 notifications:
   email:
     recipients:
@@ -10,14 +10,6 @@ notifications:
   irc:
     channels:
       - "irc.freenode.net#hol"
-
-addons:
-  apt:
-    sources:
-    - ubuntu-toolchain-r-test
-    packages:
-    - ocaml
-    - g++-4.8
 
 env:
   global:

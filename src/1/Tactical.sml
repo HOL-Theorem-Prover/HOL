@@ -684,7 +684,8 @@ local
       (gl, (if is_neg w then NEG_DISCH ant else DISCH ant) o prf)
    end
    handle HOL_ERR _ => raise ERR "DISCH_THEN" ""
-  val NOT_NOT_I = boolTheory.NOT_CLAUSES |> CONJUNCT1 |> GSYM
+  val NOT_NOT_E = boolTheory.NOT_CLAUSES |> CONJUNCT1
+  val NOT_NOT_I = NOT_NOT_E |> GSYM
   val NOT_IMP_F = IMP_ANTISYM_RULE (SPEC_ALL boolTheory.F_IMP)
                                    (SPEC_ALL boolTheory.IMP_F)
   val IMP_F_NOT = NOT_IMP_F |> GSYM
@@ -695,14 +696,15 @@ local
   fun EX_IMP_F_CONV tm =
     (IFC NOT_EXISTS_CONV (BINDER_CONV EX_IMP_F_CONV) (REWR_CONV NOT_IMP_F)) tm
   fun undo_conv tm =
-    (IFC NOT_FORALL_CONV (BINDER_CONV undo_conv) (REWR_CONV NOT_IMP_F_elim)) tm
+    (IFC NOT_FORALL_CONV
+         (BINDER_CONV undo_conv)
+         (REWR_CONV NOT_IMP_F_elim ORELSEC TRY_CONV (REWR_CONV NOT_NOT_E))) tm
 in
   fun goal_assum ttac : tactic =
-    CONV_TAC (REWR_CONV NOT_NOT_I THENC
-              RAND_CONV EX_IMP_F_CONV)
-    THEN (DISCH_THEN ttac)
-    THEN ((CONV_TAC (REWR_CONV P_IMP_P)) ORELSE
-          (TRY (CONV_TAC (REWR_CONV IMP_F_NOT THENC undo_conv))))
+    CONV_TAC (REWR_CONV NOT_NOT_I THENC RAND_CONV EX_IMP_F_CONV) THEN
+    DISCH_THEN ttac THEN
+    (CONV_TAC (REWR_CONV P_IMP_P) ORELSE
+     TRY (CONV_TAC (REWR_CONV IMP_F_NOT THENC undo_conv)))
 end
 
 (*---------------------------------------------------------------------------

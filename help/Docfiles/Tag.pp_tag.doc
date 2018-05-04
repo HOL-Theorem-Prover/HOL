@@ -1,6 +1,6 @@
 \DOC pp_tag
 
-\TYPE {pp_tag : ppstream -> tag -> unit}
+\TYPE {pp_tag : tag Parse.pprinter}
 
 \SYNOPSIS
 Prettyprinter for tags.
@@ -9,28 +9,22 @@ Prettyprinter for tags.
 prettyprint, tag.
 
 \DESCRIBE
-An invocation {pp_tag ppstrm t} will place a representation
-of tag {t} on prettyprinting stream {ppstrm}.
+An invocation {pp_tag t} will produce a pretty representation for tag
+{t}. Such a pretty-printer can be used to produce outputs, or return
+strings, or to combine with other pretty representations to create
+compound values.
 
 \FAILURE
 Never fails.
 
 \EXAMPLE
 {
-- val ppstrm = PP.mk_ppstream (Portable.defaultConsumer());
-> val ppstrm = <ppstream> : ppstream
+> show_tags := true;
+val it = () : unit
 
-- Tag.pp_tag ppstrm (Tag.read "fooble");
-> val it = () : unit
-
-- (PP.flush_ppstream ppstrm; print "\n");
+> Portable.pprint Tag.pp_tag (Tag.read "fooble");
 [oracles: fooble] [axioms: ]
-> val it = () : unit
+val it = (): unit
 }
-
-
-\COMMENTS
-In MoscowML, {Meta.installPP} will install {pp_tag} in the top-level
-loop.
 
 \ENDDOC

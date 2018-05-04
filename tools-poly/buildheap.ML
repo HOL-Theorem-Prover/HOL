@@ -151,10 +151,20 @@ fun check_objpath die incs (p, b) =
 
 fun time_max (t1, t2) = if Time.<(t1,t2) then t2 else t1
 
+fun fix s =
+  let
+    open OS.Path
+    val {base,ext} = splitBaseExt s
+  in
+    case ext of
+        SOME "uo" => base
+      | _ => s
+  end
+
 fun create_heap diag qp findMod (objs, outputheap) = let
   open Systeml TextIO
   val p = if qp then fn s => () else fn s => print (s ^ "\n")
-  fun hload obj = (p ("Loading "^obj); load obj)
+  fun hload obj = (p ("Loading "^obj); load (fix obj))
                   handle e => die ("Loading "^obj^": "^General.exnMessage e)
 in
   app hload objs;
@@ -191,18 +201,9 @@ fun maybe_check_load diag (obj,_) =
     case ext of
         SOME "sml" => (diag ("Using "^obj); QUse.use obj)
       | SOME "ML" => (diag ("Using "^obj); QUse.use obj)
+      | SOME "uo" => (diag ("Loading "^obj); load (fix obj))
       | NONE => (diag ("Loading "^obj); load obj)
       | _ => die ("Not sure what to do with 'object file': "^obj)
-  end
-
-fun fix s =
-  let
-    open OS.Path
-    val {base,ext} = splitBaseExt s
-  in
-    case ext of
-        SOME "uo" => base
-      | _ => s
   end
 
 fun polyprettify s =
@@ -261,8 +262,8 @@ fun main() = let
           (true, SOME _, _) => die outrepl_error
         | (true, _, SOME _) => die outrepl_error
         | _ => ()
-  fun force s = (fix s, true)
-  fun unforce s = (fix s, false)
+  fun force s = (s, true)
+  fun unforce s = (s, false)
   val forced_objs = map force forced_objs
   val objs = if all_forced then forced_objs @ map force objs0
              else forced_objs @ map unforce objs0

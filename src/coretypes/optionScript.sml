@@ -703,52 +703,43 @@ val option_case_eq = Q.store_thm(
    ((opt = NONE) /\ (nc = v) \/ ?x. (opt = SOME x) /\ (sc x = v))’,
   OPTION_CASES_TAC “opt:'a option” THEN SRW_TAC[][EQ_SYM_EQ, option_case_def]);
 
+val S = PP.add_string and NL = PP.NL and B = PP.block PP.CONSISTENT 0
+
+val option_Induct = save_thm("option_Induct",
+  ONCE_REWRITE_RULE [boolTheory.CONJ_SYM] option_induction);
+val option_CASES = save_thm("option_CASES",
+  ONCE_REWRITE_RULE [boolTheory.DISJ_SYM] option_nchotomy);
+
+val _ = TypeBase.export
+  [TypeBasePure.mk_datatype_info_no_simpls
+     {ax=TypeBasePure.ORIG option_Axiom,
+      case_def=option_case_def,
+      case_cong=option_case_cong,
+      case_eq = option_case_eq,
+      induction=TypeBasePure.ORIG option_induction,
+      nchotomy=option_nchotomy,
+      size=NONE,
+      encode=NONE,
+      fields=[],
+      accessors=[],
+      updates=[],
+      destructors=[THE_DEF],
+      recognizers=[IS_NONE_DEF,IS_SOME_DEF],
+      lift=SOME(mk_var("optionSyntax.lift_option",
+                       “:'type -> ('a -> 'term) -> 'a option -> 'term”)),
+      one_one=SOME SOME_11,
+      distinct=SOME NOT_NONE_SOME}];
 
 val _ = adjoin_to_theory
-{sig_ps = SOME (fn ppstrm =>
-  let val S = PP.add_string ppstrm
-      fun NL() = PP.add_newline ppstrm
-  in
-    S "val option_Induct : thm"; NL();
-    S "val option_CASES : thm";  NL()
-  end),
- struct_ps = SOME (fn ppstrm =>
-  let val S = PP.add_string ppstrm
-      fun NL() = PP.add_newline ppstrm
-  in
-    S "val _ = TypeBase.write";                              NL();
-    S "  [TypeBasePure.mk_datatype_info";                    NL();
-    S "     {ax=TypeBasePure.ORIG option_Axiom,";            NL();
-    S "      case_def=option_case_def,";                     NL();
-    S "      case_cong=option_case_cong,";                   NL();
-    S "      case_eq = option_case_eq,";                     NL();
-    S "      induction=TypeBasePure.ORIG option_induction,"; NL();
-    S "      nchotomy=option_nchotomy,";                     NL();
-    S "      size=NONE,";                                    NL();
-    S "      encode=NONE,";                                  NL();
-    S "      fields=[],";                                    NL();
-    S "      accessors=[],";                                 NL();
-    S "      updates=[],";                                   NL();
-    S "      destructors=[THE_DEF],";                        NL();
-    S "      recognizers=[IS_NONE_DEF,IS_SOME_DEF],";        NL();
-    S "      lift=SOME(mk_var(\"optionSyntax.lift_option\",Parse.Type`:'type -> ('a -> 'term) -> 'a option -> 'term`)),";
-    NL();
-    S "      one_one=SOME SOME_11,";                         NL();
-    S "      distinct=SOME NOT_NONE_SOME}];";                NL();
-    NL();
-    S "val option_Induct = Rewrite.ONCE_REWRITE_RULE ";               NL();
-    S "                      [boolTheory.CONJ_SYM] option_induction"; NL();
-    S "val option_CASES = Rewrite.ONCE_REWRITE_RULE ";                NL();
-    S "                      [boolTheory.DISJ_SYM] option_nchotomy";
-    NL();NL();
-    S "val _ = let open computeLib";                            NL();
-    S "        in add_funs (map lazyfy_thm";                    NL();
-    S "               [NOT_NONE_SOME,NOT_SOME_NONE,SOME_11,";   NL();
-    S "                option_case_def, OPTION_MAP_DEF,";       NL();
-    S "                IS_SOME_DEF,IS_NONE_DEF,THE_DEF,";       NL();
-    S "                OPTION_JOIN_DEF])";                      NL();
-    S "        end;"
-  end)};
+{sig_ps = NONE,
+ struct_ps = SOME (fn _ => B[
+    S "val _ = let open computeLib",                            NL,
+    S "        in add_funs (map lazyfy_thm",                    NL,
+    S "               [NOT_NONE_SOME,NOT_SOME_NONE,SOME_11,",   NL,
+    S "                option_case_def, OPTION_MAP_DEF,",       NL,
+    S "                IS_SOME_DEF,IS_NONE_DEF,THE_DEF,",       NL,
+    S "                OPTION_JOIN_DEF])",                      NL,
+    S "        end;"])};
 
 val datatype_option = store_thm(
   "datatype_option",

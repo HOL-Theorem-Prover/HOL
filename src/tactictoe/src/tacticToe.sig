@@ -1,40 +1,36 @@
 signature tacticToe =
 sig
-  
+
   include Abbrev
-  
-  val set_timeout : real -> unit
-    
-  
-  val hhs_after_flag       : bool ref
-  val hhs_aftersmall_flag  : bool ref
-  val hhs_aftertac_flag    : bool ref
-  val hhs_aftertoken_flag  : bool ref
-  val hhs_afterthm_flag    : bool ref
-  val hhs_afterstring_flag : bool ref
-  val hhs_aftertactic_flag : bool ref
-  val hhs_afterall_flag    : bool ref
-  val hhs_afterall2_flag   : bool ref
-  val hhs_afterthm2_flag   : bool ref
-  val hhs_afterthmthm_flag : bool ref
-  
-  val hhs_eval_flag        : bool ref
-  val hhs_internalthm_flag : bool ref
-  val hhs_norecprove_flag  : bool ref
-  val hhs_norecord_flag    : bool ref
-  val hhs_nolet_flag       : bool ref
-  val hhs_goalstep_flag    : bool ref
-  
-  val set_isearch_hook : (unit -> unit) ref
-  val init_tactictoe : unit -> unit
-  val eval_tactictoe : string -> goal -> unit
-  
-  val tactictoe : goal -> tactic 
-  val tt_tac : tactic
-  
-  val next_tac_glob : tactic list ref
+
+  (* TacticToe *)
+  val ttt       : tactic
+  val tactictoe : term -> tactic
+
+  (* Interactive exploration *)
   val next_tac_number : int ref
-  val next_tac : goal -> unit 
-  val next : int -> tactic
+  val next_tac  : goal -> unit
+  val next      : int -> tactic
+  
+  (* Settings *)
+  val set_timeout : real -> unit
+  
+  (* Creating fof files *)
+  val create_fof_thy : string -> unit
+  val create_fof_parallel : int -> string list -> unit
+  
+  (* Recording *)
+  val ttt_record          : unit -> unit
+  val ttt_record_parallel : int -> unit
+  val load_sigobj         : unit -> unit
+  val ttt_clean_all       : unit -> unit
+
+  (* Evaluation *)
+  val eval_tactictoe        : goal -> unit
+  val eval_eprover          : goal -> unit
+  val ttt_eval_thy          : string -> unit
+  val eprover_eval_thy      : string -> unit
+  val ttt_eval_parallel     : int -> string list -> unit
+  val eprover_eval_parallel : int -> string list -> unit
 
 end

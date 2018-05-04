@@ -31,7 +31,7 @@ fun split_sl_aux s pl sl = case sl of
 fun split_sl s sl = split_sl_aux s [] sl
 
 fun rpt_split_sl s sl =
-  let val (a,b) = split_sl s sl handle _ => (sl,[])
+  let val (a,b) = split_sl s sl handle HOL_ERR _ => (sl,[])
   in
     if null b then [a] else a :: rpt_split_sl s b
   end
@@ -43,7 +43,7 @@ fun read_string s =
       valOf (String.fromString (String.extract (s,1,SOME (String.size s - 2))))
     else raise ERR "read_string" s
   end
-  handle _ => raise ERR "read_string" s
+  handle HOL_ERR _ => raise ERR "read_string" s
 
 fun read_list l =
   (
@@ -59,7 +59,7 @@ fun read_list l =
     end
   | _ => err_msg "read_list" l
   )
-  handle _ => err_msg "read_list" l
+  handle HOL_ERR _ => err_msg "read_list" l
 
 fun read_thid l = case l of
    [s,n1,n2] =>
@@ -147,7 +147,7 @@ fun read_tm l =
   | ["TMAbs",n1,n2] => TMAbs (string_to_int n1, string_to_int n2)
   | _ => err_msg "read_tm" l
   )
-  handle _ => err_msg "read_tm" l
+  handle HOL_ERR _ => err_msg "read_tm" l
 
 fun load_tmvector idvector tyvector l = case l of
    "TERMS" :: m =>
@@ -189,7 +189,7 @@ fun read_thml_loop tmvector acc l = case l of
       val pretag = (read_dep (List.concat dep),
                     map read_string (List.concat ocl))
       val tml = map (Term.read_raw tmvector o read_string) (List.concat pretml)
-                handle _ => err_msg "read_raw" (List.concat pretml)
+                handle HOL_ERR _ => err_msg "read_raw" (List.concat pretml)
       val thm = Thm.disk_thm (pretag, tml)
     in
       read_thml_loop tmvector ((thmname,thm) :: acc) cont2
@@ -227,7 +227,7 @@ fun load_classes thmdict thyname l = case l of
   | _ => err_msg "load_classes" l
 
 fun read_loadable_thydata l = case l of
-    [s0,s1] => (read_string s0, read_string s1)
+    s0::rest => (read_string s0, String.concat (map read_string rest))
   | _ => err_msg "read_loadable_thydata" l
 
 fun temp_encoded_update tmvector thyname (s0,s1) =
@@ -237,7 +237,7 @@ fun temp_encoded_update tmvector thyname (s0,s1) =
      read = Term.read_raw tmvector,
      data = s1
   }
-  handle _ => err_msg "temp_encoded_update" [s0,s1]
+  handle HOL_ERR _ => err_msg "temp_encoded_update" [s0,s1]
 
 fun load_loadable_thydata tmvector thyname l = case l of
    "LOADABLE_THYDATA" :: m =>
@@ -261,19 +261,25 @@ fun read_thydata path =
     (TextIO.closeIn file; l)
   end
 
+fun H nm f x =
+  f x handle e =>
+      raise ERR "load_thydata" (nm ^ ": " ^ General.exnMessage e)
+
 fun load_thydata thyname path =
   let
-    val l0 = read_thydata path
-    val l1 = load_theory_and_parents l0
-    val l2 = load_incorporate_types thyname l1
-    val (idvector,l3) = load_idvector l2
-    val (tyvector,l4) = load_tyvector idvector l3
-    val l5 = load_incorporate_consts thyname tyvector l4
-    val (tmvector,l6) = load_tmvector idvector tyvector l5
-    val (named_thms,l7) = read_thml tmvector l6
+    val l0 = H "read_thydata" read_thydata path
+    val l1 = H "load_theory_and_parents" load_theory_and_parents l0
+    val l2 = H "load_incorporate_types" (load_incorporate_types thyname) l1
+    val (idvector,l3) = H "load_idvector" load_idvector l2
+    val (tyvector,l4) = H "load_tyvector" (load_tyvector idvector) l3
+    val l5 = H "load_incorporate_consts"
+               (load_incorporate_consts thyname tyvector) l4
+    val (tmvector,l6) = H "load_tmvector" (load_tmvector idvector tyvector) l5
+    val (named_thms,l7) = H "read_thml" (read_thml tmvector) l6
     val thmdict = Redblackmap.fromList String.compare named_thms
-    val l8 = load_classes thmdict thyname l7
-    val _ = load_loadable_thydata tmvector thyname l8
+    val l8 = H "load_classes" (load_classes thmdict thyname) l7
+    val _ = H "load_loadable_thydata"
+              (load_loadable_thydata tmvector thyname) l8
   in
     thmdict
   end

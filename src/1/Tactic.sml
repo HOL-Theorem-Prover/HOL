@@ -825,24 +825,6 @@ in
 end
 val IRULE_TAC = irule
 
-fun impl_tac (g as (_,w)) =
-  let
-    val (h0,c) = dest_imp w
-    val (a,h) = dest_imp h0
-  in
-    SUBGOAL_THEN a (fn ath => DISCH_THEN (fn impth => MP_TAC (MP impth ath)))
-  end g
-
-fun impl_keep_tac (g as (_,w)) =
-  let
-    val (h0,c) = dest_imp w
-    val (a,h) = dest_imp h0
-  in
-    SUBGOAL_THEN a
-       (fn ath => DISCH_THEN
-                    (fn impth => ASSUME_TAC ath THEN MP_TAC (MP impth ath)))
-  end g
-
 
 (* ----------------------------------------------------------------------*
  * Definition of the standard resolution tactics IMP_RES_TAC and RES_TAC *
@@ -1100,5 +1082,28 @@ fun part_match_exists_tac selfn tm (g as (_,w)) =
   in
     CONV_TAC(RESORT_EXISTS_CONV sorter) >> map_every exists_tac ys
   end g
+
+val provehyp = provehyp_then (K mp_tac)
+val impl_tac = disch_then provehyp
+val impl_keep_tac =
+  disch_then (provehyp_then (fn lth => fn rth => assume_tac lth >> mp_tac rth))
+
+
+open mp_then
+fun drule ith = first_assum (mp_then (Pos hd) mp_tac ith)
+fun dxrule ith = first_x_assum (mp_then (Pos hd) mp_tac ith)
+fun drule_then k ith = first_assum (mp_then (Pos hd) k ith)
+fun dxrule_then k ith = first_x_assum (mp_then (Pos hd) k ith)
+
+fun isfa_imp th = th |> concl |> strip_forall |> #2 |> is_imp
+fun dall_prim k fa ith0 g =
+  REPEAT_GTCL (fn ttcl => fn th => fa (mp_then (Pos hd) ttcl th))
+              (k o assert (not o isfa_imp))
+              (assert isfa_imp ith0)
+              g
+val drule_all = dall_prim mp_tac first_assum
+val dxrule_all = dall_prim mp_tac first_x_assum
+fun drule_all_then k = dall_prim k first_assum
+fun dxrule_all_then k = dall_prim k first_x_assum
 
 end (* Tactic *)

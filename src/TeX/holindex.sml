@@ -204,7 +204,7 @@ let
        options = opts, argument=(valOf content)};
    val width_opt = mungeTools.optset_width opts;
    val width = if isSome width_opt then valOf width_opt else (!default_linewidth_ref);
-   val fs = Portable.pp_to_string width mungeTools.replacement replacement_args
+   val fs = PP.pp_to_string width mungeTools.replacement replacement_args
    val _ = if fs = "" then (report_error
            ("Error while formating "^(command2string command)^" '"^id^"'!");Feedback.fail()) else ();
 in

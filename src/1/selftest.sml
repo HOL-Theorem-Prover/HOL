@@ -367,6 +367,14 @@ val _ = add_rule {term_name = "=",
                   paren_style = OnlyIfNecessary,
                   pp_elements = [HardSpace 1, TOK "=", BreakSpace(1,2)]}
 val _ = Lib.with_flag (testutils.linewidth, 10) tpp "xxxxxx =\n  yyyyyy"
+val _ = Lib.with_flag (testutils.linewidth, 30) tpp
+                      "fffff verylongarg1\n\
+                      \  verylongarg2 verylongarg3";
+val _ = Lib.with_flag (testutils.linewidth, 30) tpp
+                      "ffff longarg1\n\
+                      \  (fff longarg2 longarg3\n\
+                      \     longarg4) longarg5\n\
+                      \  longarg6 longarg7";
 
 val _ = print "** Tests with Unicode on PP.avoid_unicode both on\n"
 val _ = let
@@ -463,7 +471,22 @@ val condprinter_tests =
                 \ p /\\ q /\\ r /\\ ppppp xxxx\n\
                 \else if (e1 = e2) /\\ k1 <> k2 then T\n\
                 \else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2 then T\n\
-                \else F"}
+                \else F"},
+      {input = "if really quite a long guard when looked at closely then\n\
+               \  let quite_a_long_variable_name = another_long_name \\/ x ;\n\
+               \      another_longish_name = y \\/ z\n\
+               \  in\n\
+               \      f x\n\
+               \else\n\
+               \  g y",
+       testf = K "Large then-branch",
+       output = "if really quite a long guard when looked at closely then\n\
+                \  (let\n\
+                \     quite_a_long_variable_name = another_long_name \\/ x ;\n\
+                \     another_longish_name = y \\/ z\n\
+                \   in\n\
+                \     f x)\n\
+                \else g y"}
   ]
 val _ = app condprinter_test condprinter_tests
 
@@ -806,6 +829,152 @@ end
 
 val _ = hide "f"
 val _ = hide "R"
+
+val _ = let
+  val _ = tprint "drule 1"
+  val asl = [``P (c:ind):bool``, ``!x:ind. P x ==> ?y:'a. Q x y``]
+  val g = (asl, ``?a:ind (b:'a). Q a b``)
+  val (res, _) = first_assum drule g
+  val expectedg = ``(?y:'a. Q (c:ind) y) ==> ?a b. Q a b``
+in
+  case res of
+      [(asl', g')] =>
+      (case Lib.list_compare Term.compare (asl,asl') of
+           EQUAL => if aconv g' expectedg then OK()
+                    else die ("FAILED\n  Got " ^ term_to_string g'^
+                              "; expected " ^ term_to_string expectedg)
+         | _ => die ("FAILED\n  Got back changed asm list: "^
+                     String.concatWith ", " (map term_to_string asl')))
+    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals (" ^
+                Int.toString (length res))
+end;
+
+val _ = let
+  val _ = tprint "drule 2"
+  val _ = new_type("list", 1)
+  val _ = new_constant ("LENGTH", ``:'a list -> num``)
+  val _ = new_constant ("zero", ``:num``)
+  val _ = new_constant ("some_n", ``:num``)
+  val th = mk_thm([], ``!x l:'a list. (<) x (LENGTH l) ==> (<) x some_n``)
+  val asl = [``(<) v (LENGTH (m:ind list))``]
+  val g = (asl, ``?a:ind (b:'a). Q a b``)
+  val (res, _) = drule th g
+  val expectedg = ``(<) v some_n ==> ?a:ind b:'a. Q a b``
+in
+  case res of
+      [(asl', g')] =>
+      (case Lib.list_compare Term.compare (asl,asl') of
+           EQUAL => if aconv g' expectedg then OK()
+                    else die ("FAILED\n  Got " ^ term_to_string g'^
+                              "; expected " ^ term_to_string expectedg)
+         | _ => die ("FAILED\n  Got back changed asm list: "^
+                     String.concatWith ", " (map term_to_string asl')))
+    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals (" ^
+                Int.toString (length res))
+end;
+
+val _ = let
+  val _ = tprint "drule 3"
+  val asl = [``~p ==> q``, ``~p``]
+  val g = (asl, ``r:bool``)
+  val (res, _) = pop_assum drule g
+  val expectedg = ``q ==> r``
+in
+  case res of
+      [(asl', g')] =>
+      (case Lib.list_compare Term.compare ([``~p``], asl') of
+           EQUAL => if aconv g' expectedg then OK()
+                    else die ("FAILED\n  Got " ^ term_to_string g'^
+                              "; expected " ^ term_to_string expectedg)
+         | _ => die ("FAILED\n  Got back changed asm list: "^
+                     String.concatWith ", " (map term_to_string asl')))
+    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals (" ^
+                Int.toString (length res))
+end;
+
+val _ = let
+  open mp_then
+  val _ = tprint "mp_then (concl) 1"
+  val asl = [``p ==> q``, ``~q``]
+  val g = (asl, ``r:bool``)
+  val (res, _) = pop_assum (first_assum o mp_then Concl mp_tac) g
+  val expectedg = ``~p ==> r``
+in
+  case res of
+      [(asl', g')] =>
+      (case Lib.list_compare Term.compare ([``~q``], asl') of
+           EQUAL => if aconv g' expectedg then OK()
+                    else die ("FAILED\n  Got " ^ term_to_string g'^
+                              "; expected " ^ term_to_string expectedg)
+         | _ => die ("FAILED\n  Got back changed asm list: "^
+                     String.concatWith ", " (map term_to_string asl')))
+    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals (" ^
+                Int.toString (length res))
+end;
+
+val _ = let
+  open mp_then
+  val _ = tprint "mp_then (concl) 2"
+  val asl = [``p ==> ~q``, ``q:bool``]
+  val g = (asl, ``r:bool``)
+  val (res, _) = pop_assum (first_assum o mp_then Concl mp_tac) g
+  val expectedg = ``~p ==> r``
+in
+  case res of
+      [(asl', g')] =>
+      (case Lib.list_compare Term.compare ([``q:bool``], asl') of
+           EQUAL => if aconv g' expectedg then OK()
+                    else die ("FAILED\n  Got " ^ term_to_string g'^
+                              "; expected " ^ term_to_string expectedg)
+         | _ => die ("FAILED\n  Got back changed asm list: "^
+                     String.concatWith ", " (map term_to_string asl')))
+    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals (" ^
+                Int.toString (length res))
+end;
+
+
+val _ = let
+  val _ = tprint "drule_all 1"
+  val asl = [``!x:ind. P x /\ R x ==> ?y:'a. Q x y``,
+             ``P (c:ind):bool``, ``R (d:ind):bool``,
+             ``P (d:ind):bool``]
+  val g = (asl, ``?a:ind (b:'a). Q a b``)
+  val (res, _) = first_assum drule_all g
+  val expectedg = ``(?y:'a. Q (d:ind) y) ==> ?a b. Q a b``
+in
+  case res of
+      [(asl', g')] =>
+      (case Lib.list_compare Term.compare (asl,asl') of
+           EQUAL => if aconv g' expectedg then OK()
+                    else die ("FAILED\n  Got " ^ term_to_string g'^
+                              "; expected " ^ term_to_string expectedg)
+         | _ => die ("FAILED\n  Got back changed asm list: "^
+                     String.concatWith ", " (map term_to_string asl')))
+    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals (" ^
+                Int.toString (length res))
+end;
+
+val _ = let
+  val _ = tprint "dxrule_all 1"
+  val imp = ``!x:ind. P x /\ R x ==> ?y:'a. Q x y``
+  val asl = [imp, ``P (c:ind):bool``, ``R (d:ind):bool``, ``P (d:ind):bool``]
+  val g = (asl, ``?a:ind (b:'a). Q a b``)
+  val (res, _) = first_assum dxrule_all g
+  val expectedg = ``(?y:'a. Q (d:ind) y) ==> ?a b. Q a b``
+  val expected_asl = [imp, ``P (c:ind):bool``]
+in
+  case res of
+      [(asl', g')] =>
+      (case Lib.list_compare Term.compare (expected_asl,asl') of
+           EQUAL => if aconv g' expectedg then OK()
+                    else die ("FAILED\n  Got " ^ term_to_string g'^
+                              "; expected " ^ term_to_string expectedg)
+         | _ => die ("FAILED\n  Got back wrong asm list: "^
+                     String.concatWith ", " (map term_to_string asl')))
+    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals (" ^
+                Int.toString (length res))
+end;
+
 
 fun dolvtests(modname,empty,insert,match) = let
   val n = List.foldl (fn ((k,v),acc) => insert (acc,k,v)) empty

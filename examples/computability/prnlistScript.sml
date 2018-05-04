@@ -195,4 +195,112 @@ val napp11 = Store_thm(
       [(`l3`,`ll3`), (`l2`,`ll2`), (`l1`,`ll1`)] THEN
   SRW_TAC [][GSYM nlist_of_append]);
 
+val WFM_def = Define‘
+  WFM M = Cn (pr2 nel) [
+                proj 0;
+                Pr1 (ncons (M (K 0) 0) 0)
+                    (Cn (pr2 napp) [
+                        proj 1;
+                        Cn (pr2 ncons) [
+                          pr2 (λn r. M (λi. if i ≤ n then nel i r else 0)
+                                       (n + 1));
+                          zerof
+                        ]
+                      ])
+              ]
+’;
+
+val primrec_Cn = primrec_rules |> CONJUNCTS |> el 4
+
+val restr_def = Define‘restr n r i = if i ≤ n then nel i r else 0’
+
+val primrec_WFM = Q.store_thm(
+  "primrec_WFM",
+  ‘primrec (pr2 (λn r. M (restr n r) (n + 1))) 2 ⇒ primrec (WFM M) 1’,
+  strip_tac >> simp[WFM_def] >> irule primrec_Cn >> simp[primrec_rules] >>
+  irule primrec_Pr1 >> irule primrec_Cn >> simp[primrec_rules] >>
+  irule primrec_Cn >> simp[primrec_rules, GSYM restr_def] >>
+  asm_simp_tac (bool_ss ++ boolSimps.ETA_ss) []);
+
+val primrec_FACT = Q.store_thm(
+  "primrec_FACT",
+  ‘primrec (WFM (λf n. if n = 0 then 1 else n * f(n - 1))) 1’,
+  irule primrec_WFM >> simp[restr_def] >> irule primrec_pr2 >> simp[] >>
+  qexists_tac ‘Cn (pr2 $*) [Cn succ [proj 0]; pr2 nel]’ >> simp[] >>
+  irule primrec_Cn >> simp[primrec_rules]);
+
+val nlen_nlist_of = Q.store_thm(
+  "nlen_nlist_of[simp]",
+  ‘nlen (nlist_of l) = LENGTH l’,
+  Induct_on `l` >> simp[]);
+
+val nlen_napp = Q.store_thm(
+  "nlen_napp[simp]",
+  ‘nlen (napp n1 n2) = nlen n1 + nlen n2’,
+  qspec_then ‘n1’ STRUCT_CASES_TAC (GSYM nlist_of_onto) >>
+  qspec_then ‘n2’ STRUCT_CASES_TAC (GSYM nlist_of_onto) >>
+  simp[GSYM nlist_of_append]);
+
+val nel_napp1 = Q.store_thm(
+  "nel_napp1",
+  ‘i < nlen m ⇒ (nel i (napp m n) = nel i m)’,
+  qspec_then ‘m’ STRUCT_CASES_TAC (GSYM nlist_of_onto) >>
+  qspec_then ‘n’ STRUCT_CASES_TAC (GSYM nlist_of_onto) >>
+  simp[GSYM nlist_of_append, nel_nlist_of, EL_APPEND1]);
+
+val nel_napp2 = Q.store_thm(
+  "nel_napp2",
+  ‘nlen m ≤ i ⇒ (nel i (napp m n) = nel (i - nlen m) n)’,
+  qspec_then ‘m’ STRUCT_CASES_TAC (GSYM nlist_of_onto) >>
+  qspec_then ‘n’ STRUCT_CASES_TAC (GSYM nlist_of_onto) >>
+  simp[GSYM nlist_of_append] >> qid_spec_tac ‘i’ >> Induct_on ‘l’ >>
+  simp[] >> Cases_on ‘i’ >> simp[]);
+
+val WFM_correct = Q.store_thm(
+  "WFM_correct",
+  ‘WFM M [n] = M (λi. if i < n then WFM M [i] else 0) n’,
+  simp[SimpLHS, WFM_def] >>
+  qho_match_abbrev_tac ‘nel n (prt n) = M (ff n) n’ >>
+  ‘prt 0 = nlist_of [M (K 0) 0]’ by simp[Abbr`prt`] >>
+  ‘∀n. nlen (prt n) = n + 1’
+    by (simp[Abbr`prt`] >> Induct_on ‘n’ >> simp[Pr1_correct]) >>
+  ‘∀i. i ≤ n ⇒
+       (nel i (prt n) = M (ff i) i) ∧ (nel i (prt i) = M (ff i) i)’
+    suffices_by simp[] >>
+  completeInduct_on ‘n’ >> simp[] >> rpt strip_tac >> fs[PULL_FORALL]
+  >- (‘(n = 0) ∨ ∃n0. n = SUC n0’ by (Cases_on ‘n’ >> simp[])
+      >- fs[Abbr`ff`, combinTheory.K_DEF] >>
+      simp[] >>
+      qpat_assum `Abbrev (prt = _)`
+        (ASSUME_TAC o REWRITE_RULE [markerTheory.Abbrev_def]) >>
+      pop_assum
+        (fn th => CONV_TAC (LAND_CONV (REWRITE_CONV [th]))) >>
+      simp_tac (srw_ss()) [Pr1_correct] >> rw[] >>
+      Cases_on `i <= n0` >- simp[nel_napp1] >>
+      ‘i = SUC n0’ by simp[] >> rw[] >> simp[nel_napp2] >>
+      simp[ADD1] >> rpt (AP_TERM_TAC ORELSE AP_THM_TAC) >>
+      qpat_assum `Abbrev (ff = _)`
+        (ASSUME_TAC o REWRITE_RULE [markerTheory.Abbrev_def]) >>
+      pop_assum
+        (fn th => CONV_TAC (RAND_CONV (REWRITE_CONV [th]))) >>
+      simp_tac (srw_ss()) [FUN_EQ_THM] >> gen_tac >> COND_CASES_TAC >>
+      first_assum (fn th => simp_tac (srw_ss() ++ ARITH_ss) [th]) >>
+      simp[WFM_def]) >>
+  ‘(i = 0) ∨ ∃j. i = SUC j’ by (Cases_on ‘i’ >> simp[])
+  >- simp[Abbr`ff`, combinTheory.K_DEF] >>
+  rw[] >>
+  qpat_assum `Abbrev (prt = _)`
+    (ASSUME_TAC o REWRITE_RULE [markerTheory.Abbrev_def]) >>
+  pop_assum
+    (fn th => CONV_TAC (LAND_CONV (REWRITE_CONV [th]))) >>
+  simp_tac (srw_ss()) [Pr1_correct] >> simp[nel_napp2, ADD1] >>
+  rpt (AP_TERM_TAC ORELSE AP_THM_TAC) >>
+  qpat_assum `Abbrev (ff = _)`
+    (ASSUME_TAC o REWRITE_RULE [markerTheory.Abbrev_def]) >>
+  pop_assum
+    (fn th => CONV_TAC (RAND_CONV (REWRITE_CONV [th]))) >>
+  simp_tac (srw_ss()) [FUN_EQ_THM] >> gen_tac >> COND_CASES_TAC >>
+  first_assum (fn th => simp_tac (srw_ss() ++ ARITH_ss) [th]) >>
+  simp[WFM_def]);
+
 val _ = export_theory ()

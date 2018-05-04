@@ -39,16 +39,14 @@ fun thml_atoms thlist acc =
 fun Thry s = s^"Theory";
 fun ThrySig s = Thry s
 
-fun with_parens pfn pp x =
-  let open Portable
-  in add_string pp "("; pfn pp x; add_string pp ")"
+fun with_parens pfn x =
+  let open Portable PP
+  in [add_string "(", pfn x, add_string ")"]
   end
 
-fun pp_type mvartype mtype pps ty =
- let open Portable Type
-     val pp_type = pp_type mvartype mtype pps
-     val {add_string,add_break,begin_block,end_block,
-          add_newline,flush_ppstream,...} = with_ppstream pps
+fun pp_type mvartype mtype ty =
+ let open Portable Type PP
+     val pp_type = pp_type mvartype mtype
  in
   if is_vartype ty
   then case dest_vartype ty
@@ -61,42 +59,36 @@ fun pp_type mvartype mtype pps ty =
   case dest_thy_type ty
    of {Tyop="bool",Thy="min", Args=[]} => add_string "bool"
     | {Tyop="ind", Thy="min", Args=[]} => add_string "ind"
-    | {Tyop="fun", Thy="min", Args=[d,r]}
-       => (add_string "(";
-           begin_block INCONSISTENT 0;
-             pp_type d;
-             add_break (1,0);
-             add_string "-->";
-             add_break (1,0);
-             pp_type r;
-           end_block ();
-           add_string ")")
-   | {Tyop,Thy,Args}
-      => let in
-           add_string mtype;
-           begin_block INCONSISTENT 0;
-           add_string (quote Tyop);
-           add_break (1,0);
-           add_string (quote Thy);
-           add_break (1,0);
-           add_string "[";
-           begin_block INCONSISTENT 0;
-           pr_list pp_type (fn () => add_string ",")
-           (fn () => add_break (1,0)) Args;
-           end_block ();
-           add_string "]";
-           end_block ()
-         end
+    | {Tyop="fun", Thy="min", Args=[d,r]} =>
+          block INCONSISTENT 1 [
+            add_string "(",
+            pp_type d,
+            add_string " -->",
+            add_break (1,0),
+            pp_type r,
+            add_string ")"
+          ]
+   | {Tyop,Thy,Args} =>
+          block INCONSISTENT (size mtype) [
+            add_string mtype,
+            add_string (quote Tyop),
+            add_break (1,0),
+            add_string (quote Thy),
+            add_break (1,0),
+            add_string "[",
+            block INCONSISTENT 1 (
+              pr_list pp_type [add_string ",", add_break (1,0)] Args
+            ),
+            add_string "]"
+          ]
  end
 
 val include_docs = ref true
 val _ = Feedback.register_btrace ("TheoryPP.include_docs", include_docs)
 
-fun pp_sig pp_thm info_record ppstrm = let
+fun pp_sig pp_thm info_record = let
+  open PP
   val {name,parents,axioms,definitions,theorems,sig_ps} = info_record
-  val {add_string,add_break,begin_block,end_block,
-       add_newline,flush_ppstream,...} = Portable.with_ppstream ppstrm
-  val pp_thm       = pp_thm ppstrm
   val parents'     = sort parents
   val rm_temp      = List.filter (fn (s, _) => not (is_temp_binding s))
   val axioms'      = psort axioms |> rm_temp
@@ -104,98 +96,84 @@ fun pp_sig pp_thm info_record ppstrm = let
   val theorems'    = psort theorems |> rm_temp
   val thml         = axioms@definitions@theorems
   fun vblock(header, ob_pr, obs) =
-    (begin_block CONSISTENT 2;
-     add_string ("(*  "^header^ "  *)");
-     add_newline();
-     pr_list ob_pr (fn () => ()) add_newline obs;
-     end_block())
+    block CONSISTENT 2 [
+      add_string ("(*  "^header^ "  *)"), NL,
+      block CONSISTENT 0 (pr_list ob_pr [NL] obs)
+    ]
   fun pparent s = String.concat ["structure ",Thry s," : ",ThrySig s]
   val parentstring = "Parent theory of "^Lib.quote name
-  fun pr_parent s = (begin_block CONSISTENT 0;
-                     add_string (String.concat ["[", s, "]"]);
-                     add_break(1,0);
-                     add_string parentstring; end_block())
-  fun pr_parents [] = ()
+  fun pr_parent s = block CONSISTENT 0 [
+                     add_string (String.concat ["[", s, "]"]),
+                     add_break(1,0),
+                     add_string parentstring]
+  fun pr_parents [] = []
     | pr_parents slist =
-      ( begin_block CONSISTENT 0;
-        pr_list pr_parent (fn () => ())
-                (fn () => (add_newline(); add_newline()))
-               slist;
-        end_block();
-        add_newline(); add_newline())
+        [block CONSISTENT 0 (pr_list pr_parent [NL, NL] slist), NL, NL]
 
   fun pr_thm class (s,th) =
-    (begin_block CONSISTENT 3;
-     add_string (String.concat ["[", s, "]"]);
-     add_string ("  "^class);
-     add_newline(); add_newline();
-     if null (Thm.hyp th) andalso
+    block CONSISTENT 3 [
+      add_string (String.concat ["[", s, "]"]),
+      add_string ("  "^class), NL, NL,
+      if null (Thm.hyp th) andalso
          (Tag.isEmpty (Thm.tag th) orelse Tag.isDisk (Thm.tag th))
-       then pp_thm th
-       else with_flag(Globals.show_tags,true)
-             (with_flag(Globals.show_assums, true) pp_thm) th;
-     end_block())
+      then pp_thm th
+      else
+        with_flag(Globals.show_tags,true)
+                 (with_flag(Globals.show_assums, true) pp_thm) th
+    ]
       handle e => (print ("Failed to print theorem in theory export: "^s^"\n");
                    print (General.exnMessage e ^ "\n");
                    raise e)
-  fun pr_thms _ [] = ()
+  fun pr_thms _ [] = []
     | pr_thms heading plist =
-       ( begin_block CONSISTENT 0;
-         pr_list (pr_thm heading) (K ())
-                 (fn () => (add_newline(); add_newline()))
-                 plist;
-         end_block();
-         add_newline(); add_newline())
-  fun pr_sig_ps NONE = ()  (* won't be fired because of filtering below *)
-    | pr_sig_ps (SOME pp) = (begin_block CONSISTENT 0;
-                             pp ppstrm; end_block());
-  fun pr_sig_psl [] = ()
+       [block CONSISTENT 0 (pr_list (pr_thm heading) [NL,NL] plist), NL, NL]
+  fun pr_sig_ps NONE = []  (* won't be fired because of filtering below *)
+    | pr_sig_ps (SOME pp) = [pp()]
+  fun pr_sig_psl [] = []
     | pr_sig_psl l =
-       (add_newline(); add_newline();
-        begin_block CONSISTENT 0;
-        pr_list pr_sig_ps (fn () => ())
-               (fn () => (add_newline(); add_newline())) l;
-        end_block());
+       [NL, NL,
+        block CONSISTENT 0
+              (pr_list (block CONSISTENT 0 o pr_sig_ps) [NL, NL] l)]
 
   fun pr_docs() =
       if !include_docs then
         (!pp_sig_hook();
-         begin_block CONSISTENT 3;
-         add_string "(*"; add_newline();
-         pr_parents parents';
-         pr_thms "Axiom" axioms';
-         pr_thms "Definition" definitions';
-         pr_thms "Theorem" theorems';
-         end_block(); add_newline(); add_string "*)"; add_newline())
-      else ()
+         [block CONSISTENT 3 (
+             [add_string "(*", NL] @
+             pr_parents parents' @
+             pr_thms "Axiom" axioms' @
+             pr_thms "Definition" definitions' @
+             pr_thms "Theorem" theorems'
+           ), NL,
+          add_string "*)", NL])
+      else []
   fun pthms (heading, ths) =
     vblock(heading,
-           (fn (s,th) => (if is_temp_binding s then ()
-                          else
-                            (begin_block CONSISTENT 0;
-                             add_string(concat["val ",s, " : thm"]);
-                             end_block()))),  ths)
+           (fn (s,th) => block CONSISTENT 0
+                               (if is_temp_binding s then []
+                                else
+                                  [add_string("val "^ s ^ " : thm")])),
+           ths)
 in
-  begin_block CONSISTENT 0;
-  add_string ("signature "^ThrySig name^" ="); add_newline();
-  begin_block CONSISTENT 2;
-  add_string "sig"; add_newline();
-  begin_block CONSISTENT 0;
-  add_string"type thm = Thm.thm";
-  if null axioms' then ()
-  else (add_newline(); add_newline(); pthms ("Axioms",axioms'));
-  if null definitions' then ()
-  else (add_newline(); add_newline(); pthms("Definitions", definitions'));
-  if null theorems' then ()
-  else (add_newline(); add_newline(); pthms ("Theorems", theorems'));
-  pr_sig_psl (filter (fn NONE => false | _ => true) sig_ps);
-  end_block();
-  end_block();
-  add_newline();
-  pr_docs();
-  add_string"end"; add_newline();
-  end_block();
-  flush_ppstream()
+  block CONSISTENT 0 (
+    [add_string ("signature "^ThrySig name^" ="), NL,
+     block CONSISTENT 2 [
+       add_string "sig", NL,
+       block CONSISTENT 0 (
+         [add_string"type thm = Thm.thm"] @
+         (if null axioms' then []
+          else [NL, NL, pthms ("Axioms",axioms')]) @
+         (if null definitions' then []
+          else [NL, NL, pthms("Definitions", definitions')]) @
+         (if null theorems' then []
+          else [NL, NL, pthms ("Theorems", theorems')]) @
+         pr_sig_psl (filter (fn NONE => false | _ => true) sig_ps)
+       )
+     ], NL
+    ] @
+    pr_docs() @
+    [add_string"end", NL]
+  )
 end;
 
 (*---------------------------------------------------------------------------
@@ -216,20 +194,12 @@ in
 end
 
 infix >>
-fun (f1 >> f2) pps = (f1 pps ; f2 pps)
+open smpp
 
-fun block state brkdepth f pps = (HOLPP.begin_block pps state brkdepth ;
-                                  f pps;
-                                  HOLPP.end_block pps)
-fun add_string s pps = HOLPP.add_string pps s
-val add_newline = HOLPP.add_newline
-fun add_break ipr pps = HOLPP.add_break pps ipr
-fun pr_list f g h obs pps = Portable.pr_list (fn x => f x pps)
-                                             (fn () => g pps)
-                                             (fn () => h pps)
-                                             obs
-val flush = HOLPP.flush_ppstream
-fun nothing pps = ()
+fun mlower s m =
+  case m ((), []) of
+      NONE => raise Fail ("Couldn't print Theory" ^ s)
+    | SOME(_, (_, ps)) => PP.block PP.CONSISTENT 0 ps
 
 fun pp_struct info_record = let
   open Term Thm
@@ -238,9 +208,9 @@ fun pp_struct info_record = let
        axioms,definitions,theorems,types,constants,struct_ps} = info_record
   val parents1 =
     List.mapPartial (fn (s,_,_) => if "min"=s then NONE else SOME (Thry s))
-      parents0
+                    parents0
   val thml = axioms@definitions@theorems
-  fun jump () = add_newline >> add_newline
+  val jump = add_newline >> add_newline
   fun pblock(ob_pr, obs) =
       case obs of
         [] => nothing
@@ -248,8 +218,7 @@ fun pp_struct info_record = let
          block CONSISTENT 0
            (
            add_string "local open " >>
-           block INCONSISTENT 0
-           (pr_list ob_pr nothing (add_break (1,0)) obs) >>
+           block INCONSISTENT 0 (pr_list ob_pr (add_break (1,0)) obs) >>
            add_break(1,0) >>
            add_string "in end;"
            )
@@ -258,9 +227,9 @@ fun pp_struct info_record = let
 
   fun pr_bind(s, th) = let
     val (tg, asl, w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
-    val addsbl = pr_list add_string (add_break(1,2)) nothing
+    val addsbl = pr_list add_string (add_break(1,2))
   in
-    if is_temp_binding s then fn _ => ()
+    if is_temp_binding s then nothing
     else
       (* this rigmarole is necessary to allow ML bindings where the name is
          a datatype constructor or an infix, or both *)
@@ -271,66 +240,65 @@ fun pp_struct info_record = let
   end
 
   val bind_theorems =
-     block CONSISTENT 0
-     (
-     if null thml then nothing else
-      block CONSISTENT 0
-      (pr_list pr_bind nothing add_newline thml) >>
-     add_newline
+     block CONSISTENT 0 (
+       if null thml then nothing
+       else
+         block CONSISTENT 0 (pr_list pr_bind add_newline thml) >>
+         add_newline
      )
 
   fun pr_ps NONE = nothing
-    | pr_ps (SOME pp) = block CONSISTENT 0 pp
+    | pr_ps (SOME pp) = block CONSISTENT 0 (lift pp ())
 
   fun pr_psl l =
        block CONSISTENT 0
-         (pr_list pr_ps nothing (add_newline >> add_newline) l)
+         (pr_list pr_ps (add_newline >> add_newline) l)
   val cwd = holpathdb.reverse_lookup {path=OS.FileSys.getDir()}
   val datfile =
       mlquote (OS.Path.concat(cwd, name ^ "Theory.dat"))
-in
-  block CONSISTENT 0
-      (add_string (String.concatWith " "
-                     ["structure",Thry name,":>", ThrySig name,"="]) >>
+  val m =
+      block CONSISTENT 0 (
+       add_string (String.concatWith " "
+                       ["structure",Thry name,":>", ThrySig name,"="]) >>
        add_newline >>
-       block CONSISTENT 2
-         (add_string "struct" >> jump () >>
-          block CONSISTENT 0
-            (
-             block CONSISTENT 0
-             (
+       block CONSISTENT 2 (
+          add_string "struct" >> jump >>
+          block CONSISTENT 0 (
+            block CONSISTENT 0 (
              add_string ("val _ = if !Globals.print_thy_loads") >>
              add_break (1,2) >>
              add_string
                ("then TextIO.print \"Loading "^ Thry name ^ " ... \"") >>
              add_break (1,2) >>
-             add_string "else ()") >> jump () >>
+             add_string "else ()") >> jump >>
              add_string "open Type Term Thm"  >> add_newline >>
              pblock (add_string,
                Listsort.sort String.compare parents1 @ mldeps) >>
              add_newline >> add_newline >>
-             block CONSISTENT 0
-               (add_string "structure TDB = struct" >> add_break(1,2) >>
-                add_string "val thydata = " >> add_break(1,4) >>
-                block INCONSISTENT 0 (
-                  add_string "TheoryReader.load_thydata" >> add_break (1,2) >>
-                  add_string (mlquote name) >> add_break (1,2) >>
-                  add_string ("(holpathdb.subst_pathvars "^datfile^")")) >>
-                add_break(1,2) >>
-                add_string ("fun find s = Redblackmap.find (thydata,s)") >>
-                add_break(1,0) >> add_string "end") >>
-             jump () >>
-             bind_theorems >>
-             add_newline >>
-             pr_psl struct_ps)) >>
-         add_break(0,0) >>
-         add_string "val _ = if !Globals.print_thy_loads then TextIO.print \
-                    \\"done\\n\" else ()" >> add_newline >>
-         add_string ("val _ = Theory.load_complete "^ stringify name) >>
-         jump () >>
-         add_string "end" >> add_newline) >>
-      flush
-   end
+             block CONSISTENT 0 (
+              add_string "structure TDB = struct" >> add_break(1,2) >>
+              add_string "val thydata = " >> add_break(1,4) >>
+              block INCONSISTENT 0 (
+                add_string "TheoryReader.load_thydata" >> add_break (1,2) >>
+                add_string (mlquote name) >> add_break (1,2) >>
+                add_string ("(holpathdb.subst_pathvars "^datfile^")")
+              ) >> add_break(1,2) >>
+              add_string ("fun find s = Redblackmap.find (thydata,s)") >>
+              add_break(1,0) >> add_string "end"
+            ) >> jump >>
+            bind_theorems >>
+            add_newline >>
+            pr_psl struct_ps
+          )
+        ) >> add_break(0,0) >>
+        add_string "val _ = if !Globals.print_thy_loads then TextIO.print \
+                   \\"done\\n\" else ()" >> add_newline >>
+        add_string ("val _ = Theory.load_complete "^ stringify name) >>
+        jump >>
+        add_string "end" >> add_newline)
+in
+  mlower ": struct" m
+end
 
 (*---------------------------------------------------------------------------
  *  Print theory data separately.
@@ -361,7 +329,7 @@ fun pp_thydata info_record = let
       HOLset.foldl doterms (idtable, tytable, empty_termtable)
                    all_term_atoms_set
 
-  fun jump () = add_newline >> add_newline
+  val jump = add_newline >> add_newline
   fun pp_ty_dec (s,n) =
       add_string (stringify s ^ " " ^ Int.toString n)
   fun pp_const_dec (s, ty) =
@@ -371,7 +339,7 @@ fun pp_thydata info_record = let
     block INCONSISTENT 0
       (
       add_string "[" >> add_break (0,0) >>
-      pr_list pfun (add_string ",") (add_break (1,0)) L >>
+      pr_list pfun (add_string "," >> add_break (1,0)) L >>
       add_break (0,0) >>
       add_string "]"
       )
@@ -418,7 +386,7 @@ fun pp_thydata info_record = let
   fun pr_thm(s, th) = let
     val (tag, asl, w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
   in
-    if is_temp_binding s then fn _ => ()
+    if is_temp_binding s then nothing
     else
       block CONSISTENT 0
         (add_string (mlquote s) >> add_newline >>
@@ -428,9 +396,7 @@ fun pp_thydata info_record = let
 
   val pp_theorems =
     block CONSISTENT 0
-      (if null thml
-       then nothing
-       else pr_list pr_thm nothing add_newline thml)
+      (if null thml then nothing else pr_list pr_thm add_newline thml)
 
   fun pr_db (class,th) =
     block CONSISTENT 0
@@ -447,39 +413,46 @@ fun pp_thydata info_record = let
        block CONSISTENT 0 (pp_sml_list pr_db (axl@defl@thml))
      end
 
+  fun chunks w s =
+    if String.size s <= w then [s]
+    else String.substring(s, 0, w) :: chunks w (String.extract(s, w, NONE))
+
   fun pr_cpl (a,b) =
     block CONSISTENT 0
-      (add_string (stringify a) >> add_break(1,0) >> add_string (stringify b))
+      (add_string (stringify a) >> add_break(1,0) >>
+       pr_list (add_string o stringify) (add_break (1,0)) (chunks 65 b))
+
   fun list_loadable tmwrite thymap =
     Binarymap.foldl (fn (k, data, rest) => (k, data tmwrite) :: rest)
       [] thymap
   fun pr_loadable tmwrite thymap =
     block CONSISTENT 0 (pp_sml_list pr_cpl (list_loadable tmwrite thymap))
-
+  val m =
+    block CONSISTENT 0
+      (
+      add_string "THEORY_AND_PARENTS" >> add_newline >>
+      pp_thid_and_parents theory parents0 >> jump >>
+      add_string "INCORPORATE_TYPES" >> add_newline >>
+      pp_incorporate_types types >> jump >>
+      add_string "IDS" >> add_newline >>
+      lift theoryout_idtable idtable >> jump >>
+      add_string "TYPES" >> add_newline >>
+      lift theoryout_typetable tytable >> jump >>
+      add_string "INCORPORATE_CONSTS" >> add_newline >>
+      pp_incorporate_constants constants >> jump >>
+      add_string "TERMS" >> add_newline >>
+      lift theoryout_termtable tmtable >> jump >>
+      add_string "THEOREMS" >> add_newline >>
+      pp_theorems >> jump >>
+      add_string "CLASSES" >> add_newline >>
+      dblist () >> jump >>
+      add_string "LOADABLE_THYDATA" >> add_newline >>
+      pr_loadable term_to_string thydata >> jump
+      )
 in
-  block CONSISTENT 0
-    (
-    add_string "THEORY_AND_PARENTS" >> add_newline >>
-    pp_thid_and_parents theory parents0 >> jump () >>
-    add_string "INCORPORATE_TYPES" >> add_newline >>
-    pp_incorporate_types types >> jump () >>
-    add_string "IDS" >> add_newline >>
-    C theoryout_idtable idtable >> jump () >>
-    add_string "TYPES" >> add_newline >>
-    C theoryout_typetable tytable >> jump () >>
-    add_string "INCORPORATE_CONSTS" >> add_newline >>
-    pp_incorporate_constants constants >> jump () >>
-    add_string "TERMS" >> add_newline >>
-    C theoryout_termtable tmtable >> jump () >>
-    add_string "THEOREMS" >> add_newline >>
-    pp_theorems >> jump () >>
-    add_string "CLASSES" >> add_newline >>
-    dblist () >> jump () >>
-    add_string "LOADABLE_THYDATA" >> add_newline >>
-    pr_loadable term_to_string thydata >> jump ()
-    ) >>
-  flush
-end
+  mlower ": dat" m
+end;
+
 
 
 end;  (* TheoryPP *)

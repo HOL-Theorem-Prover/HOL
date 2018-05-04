@@ -25,7 +25,7 @@
 ⋙ \(>\!\!>\!\!>\)
 ₊ \({}\sb{+}\)
 ∅ \(\emptyset\)
-⊢ \(\turn\)
+⊢ \(\!\!\!{\turn}\!\!\!\!\)
 “ \mbox{\textrm{``}}
 ” \mbox{\textrm{''}}
 ‘ \mbox{\textrm{`}}
@@ -34,3 +34,5 @@
 ⊌ \(\cupleftarrow\)
 ⊑ \(\sqsubseteq\)
 ∉ \(\not\in\)
+∘ \(\circ\)
+⁺ \(\sp{+}\)

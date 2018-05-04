@@ -1,62 +1,46 @@
 TacticToe is a tactic-based prover.
 
-It explores a proof trees by repeatly selecting tactics that are
+It explores proof trees by repeatly selecting tactics that are
 appropriate to solve the current goal.
-The selection relies on a machine learning algorithm on a data set 
-of recorded human tactics.
+The selection is performed on a dataset of recorded human tactics.
 
-NOTES: (for the developers) 
-  Keep up-to-date infix tokens in hhsInfix.sml and 
-  polyml values in hhsUnfold.sml.
+RECORDING: 
+  Because of some issue, you sometimes need to restart "hol" after recording.
+  
+  load "tacticToe"; open tacticToe;
+  load "yourTheory";
+  ttt_record (); 
+    (* takes a long time (4-8h) if you have many ancestors to yourTheory *)
+  
+FAST RECORDING: 
+  It is an instant way to test tactictoe for theories of the standard library.
+  Disclaimer: pre-recored data may get outdated and 
+  some recorded tactics may become unusable after some time.
+  1) Download pre-recorded standard HOL4 library:
+    wget -O ttt_data.tar.gz "http://www.thibaultgauthier.fr/ttt_data_2018_04_11.tar.gz"
+  2) Extract ttt_data.tar.gz and 
+     move the 3 folders in ttt_data to HOL/src/tactictoe
+  3) In the end, you should have the directories:
+    HOL/src/tactictoe/fea_theorem
+    HOL/src/tactictoe/fea_tactic
+    HOL/src/tactictoe/fea_goallist (this directory is empty for now)
+  4) Apply the RECORDING step.
+  
+USAGE: (after RECORDING) 
+  load "tacticToe"; open tacticToe;
+  tactictoe ``1+1=2``;
+  
+  See more examples in examples/ttt_demoScript.sml.
 
-INSTALL:
+EVALUATION of a theory (after RECORDING):
+  Evaluates how much tactictoe can automatically re-prove 
+  from previous theorems
+  The result is stored in src/tactictoe/search_log/proof/your.
 
-1) Scripts modification: 
-  
-  Rewrite scripts file and export them to src/tactictoe/scripts.
-  Generate copy_scripts.sh that allows you to copy the scripts to their
-  relative location.
-  
-  rlwrap bin/hol
-  load "hhsUnfold";
-  open hhsUnfold;
-  rewrite_hol_scripts (); (* takes about 30 minutes *)
+  load "tacticToe"; open tacticToe;
+  load "yourTheory";
+  ttt_eval_thy "your";
 
-2) Recording tactics:
-  
-  Get a fresh copy HOL_RECORD (or choose a more convenient name)
-  of HOL with same commit "commit-number".
-  
-  # Go to the HOL_RECORD directory
-  cd HOL_RECORD 
-  
-  # Overwrite the scripts files with their modified version.
-  # Assume the relative location of the original HOL is ../HOL. 
-  sh ../HOL/src/tactictoe/src/copy_scripts.sh
-
-  # Copy tactictoe files to src/1. Allow to record early theories.
-  mv src/tactictoe/src/*.sml src/1
-  mv src/tactictoe/src/*.sig src/1
-  mv src/1/infix_file.sml src/tactictoe/src/infix_file.sml
-  
-  # Optional: If you want to add orthogonalization of tactics (usually better). 
-  # set the following files to true in src/1/tacticToe.sml.
-    hhs_ortho_flag := true;
-    hhs_ortho_number := 20;
-    hhs_ortho_metis := true;
-  
-  # Build HOL_RECORD. Takes about 1 or 2 hours. 
-  bin/build
-
-3) Run TacticToe (in HOL_RECORD):
-  
-  rlwrap bin/hol
-  load "tacticToe";
-  open tacticToe;
-  tactictoe ([],``1+1=2``);
-  
-  Loading 7306 feature vectors
-  val it = fn: thm list -> metisTools.tactic 
-  SRW_TAC [] []
-
-
+NOTES FOR DEVELOPERS:
+  Keep up-to-date: infix tokens in hhsInfix.sml, polyml values in hhsUnfold.sml.
+  Issue: Arith.clean cache.

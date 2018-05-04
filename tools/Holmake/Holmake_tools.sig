@@ -39,10 +39,11 @@ sig
                            info : string -> unit,
                            chatty : string -> unit,
                            tgtfatal : string -> unit,
-                           diag : string -> unit}
+                           diag : (unit -> string) -> unit}
   (* 0 : quiet, 1 : normal, 2 : chatty, 3 : everything + debug info *)
   val output_functions : {chattiness:int,usepfx:bool} -> output_functions
   val die_with : string -> 'a
+  val terminal_log : string -> unit
 
 
   val check_distrib : string -> string option
@@ -77,36 +78,31 @@ sig
     val extend : {base : t, extension : t} -> t
     val toString : t -> string
     val toAbsPath : t -> string
+    val pretty_dir : t -> string (* uses holpathdb abbreviations *)
     val fromPath : {origin: string, path : string} -> t
     val sort : t list -> t list
     val curdir : unit -> t
     val compare : t * t -> order
   end
+  val nice_dir : string -> string (* prints a dir with ~ when HOME is set *)
 
   type include_info = {includes : string list, preincludes : string list}
-  type 'dir holmake_dirinfo = {visited : hmdir.t Binaryset.set,
-                               includes : 'dir list,
-                               preincludes : 'dir list}
-  type 'dir holmake_result = 'dir holmake_dirinfo option
+  type dirset = hmdir.t Binaryset.set
+  type incset_pair = {pres : dirset, incs : dirset}
+  val empty_dirset : dirset
+  type incdirmap = (hmdir.t,incset_pair) Binarymap.dict
+  val empty_incdirmap : incdirmap
+  type holmake_dirinfo = {
+    visited : hmdir.t Binaryset.set,
+    incdirmap : incdirmap
+  }
+  type holmake_result = holmake_dirinfo option
 
   val process_hypat_options :
       string -> {noecho : bool, ignore_error : bool, command : string}
 
   (* nicely format a list of makefile targets *)
   val target_string : string list -> string
-
-  val maybe_recurse :
-      {warn: string -> unit,
-       diag : string -> unit,
-       hm: {dir : hmdir.t,
-            visited : hmdir.t Binaryset.set,
-            targets : string list} ->
-           hmdir.t holmake_result,
-       dirinfo : string holmake_dirinfo,
-       dir : hmdir.t,
-       local_build : include_info -> bool,
-       cleantgt : string option} ->
-      hmdir.t holmake_result
 
   val holdep_arg : File -> File option
 

@@ -10,17 +10,22 @@ src/portableML/monads
 !src/portableML/testsrc
 src/prekernel
 **KERNEL**
+src/thm
 src/postkernel
 # these three directories are required to even run hol.bare.unquote
 src/parse
 src/opentheory
 (otknl)src/opentheory/logging
 src/bool
-#include sequences/holyhammer
 src/1
 (otknl)src/opentheory/postbool
 src/proofman
 [poly]bin/hol.bare
+src/proofman/tests
+[poly]src/tactictoe/src
+[poly]src/holyhammer/hh/hh1
+[poly]src/holyhammer/hh
+[poly]src/holyhammer
 !tools/Holmake/tests/depchain1/dir3
 !tools/Holmake/tests/depchain2/dir1
 !tools/Holmake/tests/altquote1
@@ -37,4 +42,5 @@ src/proofman
 !tools/Holmake/tests/noprereqs/dir2
 !tools/Holmake/tests/noprereqs/dir3
 !tools/Holmake/tests/noprereqs/dir4
+!tools/Holmake/tests/indepchildren
 !src/1/theory_tests

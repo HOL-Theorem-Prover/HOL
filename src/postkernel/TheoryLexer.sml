@@ -64,6 +64,6 @@ fun lex_helper acc charl = case charl of
     )
 
 fun lex_thydata s = lex_helper [] (explode s)
-  handle _ => raise ERR "lex_thydata" s
+  handle HOL_ERR _ => raise ERR "lex_thydata" s
 
 end (* struct *)

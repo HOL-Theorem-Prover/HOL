@@ -72,7 +72,7 @@ end (* local *)
 fun tppw width {input=s,output,testf} = let
   val _ = tprint (testf s)
   val t = Parse.Term [QUOTE s]
-  val res = Portable.pp_to_string width Parse.pp_term t
+  val res = HOLPP.pp_to_string width Parse.pp_term t
 in
   if res = output then OK() else die ("\n  FAILED!  Saw: >|" ^ res ^ "|<")
 end

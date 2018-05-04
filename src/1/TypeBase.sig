@@ -12,6 +12,7 @@ sig
 
    val theTypeBase        : unit -> typeBase
    val write              : tyinfo list -> tyinfo list
+   val export             : tyinfo list -> unit
    val fetch              : hol_type -> tyinfo option
    val read               : {Thy :string, Tyop: string} -> tyinfo option
    val elts               : unit -> tyinfo list

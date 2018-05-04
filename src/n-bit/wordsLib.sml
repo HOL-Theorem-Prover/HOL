@@ -2715,21 +2715,10 @@ in
              then str "("
           else nothing)
          >> (if neg then str "-" else nothing)
-         >> str ((case f (Arbnum.toInt m, v) of
-                     StringCvt.DEC => Arbnum.toString v
-                   | StringCvt.BIN => "0b"^(Arbnum.toBinString v)
-                   | StringCvt.OCT =>
-                        if !base_tokens.allow_octal_input
-                            orelse Arbnum.< (v, Arbnum.fromInt 8)
-                            then "0" ^(Arbnum.toOctString v)
-                        else (Feedback.HOL_MESG
-                                 "Octal output is only supported when \
-                                 \base_tokens.allow_octal_input is true."
-                              ; Arbnum.toString v)
-                   | StringCvt.HEX => "0x"^(Arbnum.toHexString v)) ^ "w")
+         >> str (f (Arbnum.toInt m, v) ^ "w")
          >> (if !Globals.show_types orelse !word_cast_on
                 then brk (1, 2)
-                     >> liftpp (fn pps => pp_type pps (type_of t))
+                     >> lift pp_type (type_of t)
                      >> str ")"
              else nothing)
       end
@@ -2740,33 +2729,49 @@ fun output_words_as f =
    Parse.temp_add_user_printer
       ("wordsLib.print_word", ``words$n2w x : 'a word``, print_word f)
 
-val _ = Feedback.register_trace ("word printing", word_pp_mode, 4)
+val _ = Feedback.register_trace ("word printing", word_pp_mode, 6)
 val _ = Feedback.register_btrace ("word pp as 2's comp", int_word_pp)
 
-val _ = output_words_as
-   (fn (l, v) =>
-       if (!word_pp_mode) = 0
-          andalso Arbnum.<= (Arbnum.fromHexString "10000", v)
-          then StringCvt.HEX
-       else if !word_pp_mode = 0 orelse !word_pp_mode = 3
-          then StringCvt.DEC
-       else if !word_pp_mode = 1
-          then StringCvt.BIN
-       else if !word_pp_mode = 2
-          then StringCvt.OCT
-       else if !word_pp_mode = 4
-          then StringCvt.HEX
-       else raise ERR "output_words_as" "invalid printing mode")
+local
+  val hexsplit = Arbnum.fromHexString "10000"
+in
+  val _ = output_words_as
+    (fn (l, v) =>
+        if !word_pp_mode = 0 andalso Arbnum.<= (hexsplit, v)
+           then "0x" ^ Arbnum.toHexString v
+        else if !word_pp_mode = 0 orelse !word_pp_mode = 3
+           then Arbnum.toString v
+        else if !word_pp_mode = 1
+           then "0b" ^ Arbnum.toBinString v
+        else if !word_pp_mode = 2
+           then if !base_tokens.allow_octal_input
+                   orelse Arbnum.< (v, Arbnum.fromInt 8)
+                   then "0" ^ Arbnum.toOctString v
+                else ( Feedback.HOL_MESG
+                         "Octal output is only supported when \
+                         \base_tokens.allow_octal_input is true."
+                     ; Arbnum.toString v
+                     )
+        else if !word_pp_mode = 6 andalso l mod 4 = 0
+           then "0x" ^ StringCvt.padLeft #"0" (l div 4) (Arbnum.toHexString v)
+        else if !word_pp_mode = 4 orelse !word_pp_mode = 6
+           then "0x" ^ Arbnum.toHexString v
+        else if !word_pp_mode = 5
+           then "0b" ^ StringCvt.padLeft #"0" l (Arbnum.toBinString v)
+        else raise ERR "output_words_as" "invalid printing mode")
+end
 
 fun output_words_as_bin () = set_trace "word printing" 1
 fun output_words_as_dec () = set_trace "word printing" 3
 fun output_words_as_hex () = set_trace "word printing" 4
+fun output_words_as_padded_bin () = set_trace "word printing" 5
+fun output_words_as_padded_hex () = set_trace "word printing" 6
 
 fun output_words_as_oct () =
    (base_tokens.allow_octal_input := true; set_trace "word printing" 2)
 
 fun remove_word_printer () =
-   (Parse.remove_user_printer "wordsLib.print_word"; ())
+   General.ignore (Parse.remove_user_printer "wordsLib.print_word")
 
 (* -------------------------------------------------------------------------
    A pretty-printer that shows the types for ><, w2w and @@
@@ -2776,7 +2781,8 @@ fun word_cast Gs backend syspr ppfns (pg, lg, rg) d t =
    let
       open Portable term_pp_types smpp
       infix >>
-      val {add_string = str, add_break = brk, ublock,...} = ppfns: ppstream_funs
+      val ppfns : ppstream_funs = ppfns
+      val {add_string = str, add_break = brk, ublock,...} = ppfns
       fun stype tm = String.extract (type_to_string (type_of tm), 1, NONE)
       fun delim i act =
          case pg of
@@ -2793,7 +2799,7 @@ fun word_cast Gs backend syspr ppfns (pg, lg, rg) d t =
                ublock INCONSISTENT 0
                  (delim 200 (str "(")
                   >> str "(n2w "
-                  >> liftpp (fn pps => pp_type pps ty)
+                  >> lift pp_type ty
                   >> str ")"
                   >> brk (1, 2)
                   >> sys (prec, prec, prec) (d - 1) a
@@ -2806,7 +2812,7 @@ fun word_cast Gs backend syspr ppfns (pg, lg, rg) d t =
                ublock INCONSISTENT 0
                  (delim 200 (str "(")
                   >> str "(w2w "
-                  >> liftpp (fn pps => pp_type pps ty)
+                  >> lift pp_type ty
                   >> str ")"
                   >> brk (1, 2)
                   >> sys (prec, prec, prec) (d - 1) a
@@ -2819,7 +2825,7 @@ fun word_cast Gs backend syspr ppfns (pg, lg, rg) d t =
                ublock INCONSISTENT 0
                  (delim 200 (str "(")
                   >> str "(sw2sw "
-                  >> liftpp (fn pps => pp_type pps ty)
+                  >> lift pp_type ty
                   >> str ")"
                   >> brk (1, 2)
                   >> sys (prec, prec, prec) (d - 1) a
@@ -2832,7 +2838,7 @@ fun word_cast Gs backend syspr ppfns (pg, lg, rg) d t =
                ublock INCONSISTENT 0
                  (delim 200 (str "(")
                   >> str "(word_concat "
-                  >> liftpp (fn pps => pp_type pps ty)
+                  >> lift pp_type ty
                   >> str ")"
                   >> brk (1, 2)
                   >> sys (prec, prec, prec) (d - 1) a
@@ -2855,9 +2861,7 @@ fun word_cast Gs backend syspr ppfns (pg, lg, rg) d t =
                   >> sys (prec, prec, prec) (d - 1) l
                   >> str ")"
                   >> brk (1, 2)
-                  >> liftpp
-                       (fn pps => pp_type pps
-                                    (type_of (list_mk_comb (f, [h, l]))))
+                  >> lift pp_type (type_of (list_mk_comb (f, [h, l])))
                   >> str ")"
                   >> brk (1, 2)
                   >> sys (prec, prec, prec) (d - 1) a

@@ -1,6 +1,6 @@
 \DOC
 
-\TYPE {ppstring : (PP.ppstream -> 'a -> unit) -> 'a -> string}
+\TYPE {ppstring : 'a PP.pprinter -> 'a -> string}
 
 \SYNOPSIS
 Pretty-prints a value into a string.
@@ -21,7 +21,7 @@ value.
 
 \EXAMPLE
 {
-> ppstring (fn pps => fn () => PP.add_string pps "hello") ()
+> ppstring PP.add_string "hello"
 val it = "hello": string
 }
 

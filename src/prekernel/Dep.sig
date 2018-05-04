@@ -23,7 +23,7 @@ sig
      val merge_dep         : dep -> dep -> dep
 
      (* I/O *)
-     val pp_dep            : Portable.ppstream -> dep -> unit
+     val pp_dep            : OldPP.ppstream -> dep -> unit
      val read_dep          : depdisk -> dep
 
 end

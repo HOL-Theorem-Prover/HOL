@@ -284,6 +284,14 @@ let gl_constants tms =
   filter (fun (n, tys) -> List.length (tyvars (get_const_type n)) > 0) (setify consts)
 ;;
 
+let squotify name = "'" ^ name ^ "'"
+let squote_string = "'"
+
+let unsquotify s =
+  if s.[0] = squote_string.[0]
+  then String.sub s 1 (String.length s - 2)
+  else s
+
 let pOLY_ASSUME_TAC names ths (asl,w as gl) =
   let gcs = gl_constants (w :: map (o concl snd) asl) in
   let ths = map (polymorph gcs) ths in
@@ -291,7 +299,10 @@ let pOLY_ASSUME_TAC names ths (asl,w as gl) =
   let map_fun (n, ts) =
     if List.length ts = 1 then [(n, List.hd ts)] else
     let fold_fun (cno, clst) t =
-      (cno + 1, (n ^ "_monomorphized" ^ string_of_int cno, t) :: clst) in
+      (cno + 1, 
+        (squotify (unsquotify n ^ "_monomorphized" ^ string_of_int cno), t) 
+        :: clst) 
+      in
     snd (List.fold_left fold_fun (0, []) ts)
   in
   let ths3 = List.map map_fun ths2 in

@@ -322,4 +322,33 @@ fun find_includes dirname =
     else []
   end
 
+fun extend {quietp,lpref} envlist s f = let
+  open Holmake_types
+in
+  case envlist s of
+    [] => ()
+  | v => (if not quietp then
+            print ("[extending loadPath with Holmakefile "^s^" variable]\n")
+          else ();
+          lpref := f (!lpref, v))
+end
+
+fun extend_path_with_includes cfg =
+  if OS.FileSys.access ("Holmakefile", [OS.FileSys.A_READ]) then
+    let
+      open Holmake_types
+      val (env, _, _) = read "Holmakefile" (base_environment())
+      fun envlist id =
+        map dequote (tokenize (perform_substitution env [VREF id]))
+    in
+      extend cfg envlist "INCLUDES" (op@);
+      extend cfg envlist "PRE_INCLUDES" (fn (lp, mfv) => mfv @ lp)
+    end handle e => (if not (#quietp cfg) then
+                       (TextIO.output(TextIO.stdErr,
+                                   "[bogus Holmakefile in current directory \
+                                    \- ignoring it]\n");
+                        TextIO.flushOut TextIO.stdErr)
+                     else ())
+  else ();
+
 end (* struct *)

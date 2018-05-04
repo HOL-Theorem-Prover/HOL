@@ -270,13 +270,11 @@ val _ = DefnBase.write_congs (encode_list_cong::DefnBase.read_congs());
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,
- struct_ps = SOME(fn ppstrm =>
-   let val S = PP.add_string ppstrm
-       fun NL() = PP.add_newline ppstrm
+ struct_ps = SOME(fn _ =>
+   let val S = PP.add_string
    in
-  S "val _ = DefnBase.write_congs (encode_list_cong::DefnBase.read_congs());";
-  NL()
-  end)};
+     S "val _ = DefnBase.write_congs (encode_list_cong::DefnBase.read_congs());"
+   end)};
 
 (*---------------------------------------------------------------------------
         Bounded lists

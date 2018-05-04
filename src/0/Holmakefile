@@ -9,11 +9,10 @@ FTYPE_UID = $(dprot $(SIGOBJ)/FinalType-sig.ui)
 FTERM_UI = $(protect $(SIGOBJ)/FinalTerm-sig.ui)
 FTERM_UID = $(dprot $(SIGOBJ)/FinalTerm-sig.ui)
 
-FTHM_UI = $(protect $(SIGOBJ)/FinalThm-sig.ui)
-FTHM_UID = $(dprot $(SIGOBJ)/FinalThm-sig.ui)
-
 TAG_UID = $(dprot $(SIGOBJ)/Tag.ui)
 LIB_UID = $(dprot $(SIGOBJ)/Lib.ui)
+
+
 PORTABLE_UID = $(dprot $(SIGOBJ)/Portable.ui)
 COUNT_UID = $(dprot $(SIGOBJ)/Count.ui)
 HOLSET_UID = $(dprot $(SIGOBJ)/HOLset.ui)
@@ -31,22 +30,3 @@ Term.ui: Term.sig $(FTERM_UID) KernelTypes.uo
 
 Type.ui: Type.sig $(FTYPE_UID) KernelTypes.uo
 	$(HOLMOSMLC) -c $(FTYPE_UI) $<
-
-Net.uo: Net.sml Term.uo Raw-sig.uo
-	$(HOLMOSMLC) -c -toplevel Raw-sig.ui Type.ui Term.ui Net.sml
-
-Thm.ui: Thm.sig KernelTypes.uo $(FTHM_UID)
-	$(HOLMOSMLC) -c $(FTHM_UI) $<
-
-CoreKernel-sig.uo: CoreKernel-sig.sml Net-sig.uo Thm.uo \
-                   $(FTAG_UID) $(FTERM_UID) $(FTHM_UID) $(TAG_UID)
-	$(HOLMOSMLC) -c -toplevel $(FTAG_UI) $(FTYPE_UI) $(FTERM_UI) $(FTHM_UI) \
-                               Net-sig.ui CoreKernel-sig.sml
-
-Net-sig.uo: Net-sig.sml
-	$(MOSMLC) -c -toplevel Net-sig.sml
-
-Overlay.uo: Overlay.sml CoreKernel-sig.uo Type.uo Term.uo $(FTAG_UID) Thm.uo \
-            Net.uo
-	$(HOLMOSMLC) -c -toplevel CoreKernel-sig.ui Type.ui Term.ui \
-	                       Thm.ui $(FTAG_UI) Net.ui  Overlay.sml

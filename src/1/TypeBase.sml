@@ -16,6 +16,30 @@ val ERR = mk_HOL_ERR "TypeBase";
 
 fun list_compose [] x = x | list_compose (f :: fs) x = list_compose fs (f x);
 
+fun resolve_ssfragconvs tyi =
+  let
+    open ThyDataSexp
+    fun apply_extra s tyi =
+      case s of
+          List [Sym tag, String str, Thm th] =>
+            if tag = simpfrag.simpfrag_conv_tag then
+              case simpfrag.lookup_simpfrag_conv str of
+                  SOME f => SOME (TypeBasePure.add_ssfrag_convs [f th] tyi)
+                | NONE => (HOL_WARNING "TypeBase" "resolve_ssfragconvs"
+                                       ("No function "^str^" registered");
+                           NONE)
+            else NONE
+        | _ => NONE
+    fun apply_all unapplied extras tyi =
+      case extras of
+          [] => TypeBasePure.put_extra (List.rev unapplied) tyi
+        | e::es => (case apply_extra e tyi of
+                        SOME tyi' => apply_all unapplied es tyi'
+                      | NONE => apply_all (e::unapplied) es tyi)
+  in
+    apply_all [] (TypeBasePure.extra_of tyi) tyi
+  end
+
 local val dBase = ref empty
       val update_fns = ref ([]:(tyinfo list -> tyinfo list) list)
 in
@@ -27,6 +51,8 @@ in
       fun write1 tyinfo =
         dBase := insert (theTypeBase()) tyinfo
         handle HOL_ERR _ => ()
+      val tyinfos = map resolve_ssfragconvs tyinfos
+      val tyinfos = map add_std_simpls tyinfos
       val tyinfos = list_compose (!update_fns) tyinfos
       val () = app write1 tyinfos
     in
@@ -37,6 +63,76 @@ end;
 fun read {Thy,Tyop} = prim_get (theTypeBase()) (Thy,Tyop);
 
 fun fetch ty = TypeBasePure.fetch (theTypeBase()) ty;
+
+fun load_from_disk {thyname, data} =
+  case data of
+      ThyDataSexp.List tyi_sexps =>
+      let
+        val tyis = List.mapPartial fromSEXP tyi_sexps
+      in
+        if length tyis = length tyi_sexps then
+          ignore (write tyis)
+        else (HOL_WARNING "TypeBase" "load_from_disk"
+                ("{thyname=" ^ thyname ^ "}: " ^
+                 Int.toString (length tyi_sexps - length tyis) ^
+                 "/" ^ Int.toString (length tyi_sexps) ^
+                 " corrupted data entries");
+              ignore (write tyis))
+      end
+    | _ => HOL_WARNING "TypeBase" "load_from_disk"
+                       ("{thyname=" ^ thyname ^ "}: " ^
+                        "data completely corrupted")
+
+fun getTyname d =
+  case TypeBasePure.fromSEXP d of
+      NONE => NONE
+    | SOME tyi =>
+      let
+        val {Thy,Tyop,...} = dest_thy_type (ty_of tyi)
+      in
+        SOME (Thy^"$"^Tyop)
+      end
+
+fun uptodate_check t =
+  case t of
+      ThyDataSexp.List tyis =>
+      let
+        val (good, bad) = partition ThyDataSexp.uptodate tyis
+      in
+        case bad of
+            [] => t
+          | _ =>
+            let
+              val tyinames = List.mapPartial getTyname bad
+            in
+              HOL_WARNING "TypeBase" "uptodate_check"
+                          ("Type information for: " ^
+                           String.concatWith ", " tyinames ^ " discarded");
+              ThyDataSexp.List good
+            end
+      end
+    | _ => raise Fail "TypeBase.uptodate_check : shouldn't happen"
+
+fun check_thydelta (t, tdelta) =
+  let
+    open TheoryDelta
+  in
+    case tdelta of
+        NewConstant _ => uptodate_check t
+      | NewTypeOp _ => uptodate_check t
+      | DelConstant _ => uptodate_check t
+      | DelTypeOp _ => uptodate_check t
+      | _ => t
+  end
+
+val {export = export_tyisexp, segment_data} = ThyDataSexp.new{
+      thydataty = "TypeBase", load = load_from_disk, other_tds = check_thydelta,
+      merge = ThyDataSexp.alist_merge
+    }
+
+fun export tyis =
+  export_tyisexp (ThyDataSexp.List (map TypeBasePure.toSEXP tyis))
+
 
 val elts = listItems o theTypeBase;
 

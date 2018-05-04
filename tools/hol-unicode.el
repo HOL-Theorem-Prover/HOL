@@ -54,7 +54,8 @@
 (global-set-key (kbd "C-S-s") "σ")
 (global-set-key (kbd "C-S-t") "τ")
 (global-set-key (kbd "C-S-x") "ξ")
-(define-key hol-unicode-p-map "h" "φ")
+(define-key hol-unicode-p-map "h" "ϕ")  ; U+03D5
+(define-key hol-unicode-p-map "v" "φ")  ; U+03C6
 (define-key hol-unicode-p-map "s" "ψ")
 
 (global-set-key (kbd "C-S-M-g") "Γ")

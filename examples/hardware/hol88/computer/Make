@@ -1,0 +1,14 @@
+date > start
+hol  < values.ml       > values.run
+hol  < computer.ml     > computer.run
+hol  < computer_imp.ml > computer_imp.run
+hol  < microcode.ml    > microcode.run
+hol  < arith.ml        > arith.run
+hol  < next.ml         > next.run
+hol  < proof1.ml       > proof1.run
+hol  < proof2.ml       > proof2.run
+hol  < proof3.ml       > proof3.run
+hol  < proof4.ml       > proof4.run
+hol  < proof5.ml       > proof5.run
+hol  < proof6.ml       > proof6.run
+date > finish

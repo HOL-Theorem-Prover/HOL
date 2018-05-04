@@ -29,20 +29,20 @@ Provers: Eprover(1.8 1.9 2.0), Z3 (4.0)
   Eprover 2.0: http://wwwlehre.dhbw-stuttgart.de/~sschulz/E/E.html
   Z3 4.0 (not 4.4.0): http://isabelle.in.tum.de/components/
 
-Predictors:
-
-  The two best predictors are KNN and Mepo. The default predictor is KNN.
-  - Mepo works best when your conjecture has rare symbols.
-  - KNN learns from previous proofs.
-
 Example:
 
   load "holyHammer";
   open holyHammer;
-  hh [] ``1 + 1 = 2``;
-  METIS_PROVE lemmas ``1 + 1 = 2``;
+  holyhammer ``1 + 1 = 2``;
+
+Initialization...
+Caching 2967 feature vectors
+Minimization...
+METIS_TAC [arithmeticTheory.TWO, arithmeticTheory.SUC_ONE_ADD]
+val it = fn: tactic
 
 Questions:
 
-  If you have any question, you can send an email to
-  thibault.gauthier@uibk.ac.at.
+  If you have any question, you can send an email to 
+  email@thibaultgauthier.fr
+

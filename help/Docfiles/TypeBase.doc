@@ -21,40 +21,47 @@ of high-level tools for reasoning about datatypes.
 
 \EXAMPLE
 {
-   - Hol_datatype `tree = Leaf
-                         | Node of 'a => tree => tree`;
+   > Datatype `tree = Leaf | Node 'a tree tree`;
    <<HOL message: Defined type: "tree">>
-   > val it = () : unit
+   val it = () : unit
 
-   - TypeBase.read {Thy = current_theory(), Tyop = "tree"};
-   > val it =
-    SOME-----------------------
-        -----------------------
-        HOL datatype: "tree"
-        Primitive recursion:
-         |- !f0 f1.
-              ?fn.
-                (!a. fn (Leaf a) = f0 a) /\
-                !a0 a1. fn (Node a0 a1) = f1 a0 a1 (fn a0) (fn a1)
-        Case analysis:
-         |- (!f f1 a. case f f1 (Leaf a) = f a) /\
-            !f f1 a0 a1. case f f1 (Node a0 a1) = f1 a0 a1
-        Size:
-         |- (!a. tree_size (Leaf a) = 1 + a) /\
-            !a0 a1. tree_size (Node a0 a1) = 1 + (tree_size a0 + tree_size a1)
-        Induction:
-         |- !P.
-              (!n. P (Leaf n)) /\ (!t t0. P t /\ P t0 ==> P (Node t t0)) ==>
-              !t. P t
-        Case completeness: |- !t. (?n. t = Leaf n) \/ ?t' t0. t = Node t' t0
-        One-to-one:
-         |- (!a a'. (Leaf a = Leaf a') = (a = a')) /\
-            !a0 a1 a0' a1'.
-              (Node a0 a1 = Node a0' a1') = (a0 = a0') /\ (a1 = a1')
-        Distinctness: |- !a1 a0 a. ~(Leaf a = Node a0 a1) : tyinfo option
+   > TypeBase.read {Thy = current_theory(), Tyop = "tree"};
+   val it =
+      SOME
+       -----------------------
+       -----------------------
+       HOL datatype: "scratch$tree"
+       Primitive recursion:
+        |- !f0 f1.
+               ?fn.
+                   (fn Leaf = f0) /\
+                   !a0 a1 a2. fn (Node a0 a1 a2) = f1 a0 a1 a2 (fn a1) (fn a2)
+       Case analysis:
+        |- (!v f. tree_CASE Leaf v f = v) /\
+           !a0 a1 a2 v f. tree_CASE (Node a0 a1 a2) v f = f a0 a1 a2
+       Size:
+        |- (!f. tree_size f Leaf = 0) /\
+           !f a0 a1 a2.
+               tree_size f (Node a0 a1 a2) =
+               1 + (f a0 + (tree_size f a1 + tree_size f a2))
+       Induction:
+        |- !P.
+               P Leaf /\ (!t t0. P t /\ P t0 ==> !a. P (Node a t t0)) ==>
+               !t. P t
+       Case completeness: |- !tt. (tt = Leaf) \/ ?a t t0. tt = Node a t t0
+       Case-const equality split:
+        |- (tree_CASE x v f = v') <=>
+           (x = Leaf) /\ (v = v') \/
+           ?a t t0. (x = Node a t t0) /\ (f a t t0 = v')
+       Extras: [ ]
+       One-to-one:
+        |- !a0 a1 a2 a0' a1' a2'.
+               (Node a0 a1 a2 = Node a0' a1' a2') <=>
+               (a0 = a0') /\ (a1 = a1') /\ (a2 = a2')
+       Distinctness: |- !a2 a1 a0. Leaf <> Node a0 a1 a2: tyinfo option
 }
 
 \SEEALSO
-bossLib.Hol_datatype.
+bossLib.Datatype.
 
 \ENDDOC

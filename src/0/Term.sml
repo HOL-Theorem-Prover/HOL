@@ -14,6 +14,8 @@ struct
 
 open Feedback Lib Subst KernelTypes
 
+val kernelid = "stdknl"
+
 type 'a set = 'a HOLset.set;
 
 val ERR = mk_HOL_ERR "Term";

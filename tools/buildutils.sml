@@ -75,7 +75,7 @@ fun read_buildsequence {kernelname} bseq_fname = let
     case kernelname of
         "stdknl" => "0"
       | "expk" => "experimental-kernel"
-      | "otknl" => "logging-kernel"
+      | "otknl" => "0"
       | _ => die ("Bad kernelname: "^kernelname)
     ]
   val readline = TextIO.inputLine

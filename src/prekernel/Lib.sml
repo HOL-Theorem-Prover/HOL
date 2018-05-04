@@ -15,6 +15,7 @@ open Feedback;
 val ERR = mk_HOL_ERR "Lib"
 
 open Portable;
+datatype frag = datatype HOLPP.frag
 
 (*---------------------------------------------------------------------------*
  * A version of try that coerces non-HOL_ERR exceptions to be HOL_ERRs.      *
@@ -318,9 +319,7 @@ fun unprefix pfx s =
       then String.extract (s, size pfx, NONE)
    else raise ERR "unprefix" "1st argument is not a prefix of 2nd argument"
 
-(* like HOLPP.pp_to_string but uses the Globals.linewidth reference to
-   determine linewidth *)
-fun ppstring pp x = HOLPP.pp_to_string (!Globals.linewidth) pp x
+fun ppstring pf x = HOLPP.pp_to_string (!Globals.linewidth) pf x
 
 (*---------------------------------------------------------------------------*
  * Timing                                                                    *

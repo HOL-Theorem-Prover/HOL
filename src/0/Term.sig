@@ -15,5 +15,6 @@ sig
   val break_abs      : term -> term
   val trav           : (term -> unit) -> term -> unit
   val is_bvar        : term -> bool
+  val kernelid       : string
 
 end

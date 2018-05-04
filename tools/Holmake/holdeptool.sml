@@ -19,7 +19,9 @@ fun main() = let
   end
   val results =
       case CommandLine.arguments() of
-          [] => stream_deps ("<stdin>", TextIO.stdIn)
+          [] => (stream_deps ("<stdin>", TextIO.stdIn)
+                 handle LEX_ERROR s => diewith("Lexical error: " ^ s)
+                      | e => diewith ("Exception: "^General.exnMessage e))
         | ["-h"] => usage ok
         | [fname] => (reader_deps (fname, QFRead.fileToReader fname)
                       handle LEX_ERROR s => diewith("Lexical error: " ^ s)
@@ -27,7 +29,7 @@ fun main() = let
         | _ => usage die
 
 in
-  Binaryset.app (fn s => print (s ^ "\n")) results
+  Binarymap.app (fn (s,_) => print (s ^ "\n")) results
 end
 
 end (* struct *)

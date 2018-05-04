@@ -198,7 +198,7 @@ fun constraint_subsumes sub to1 to2 =
   case total (T.subst sub) to1 of NONE => false
   | SOME to1 => T.subsumes to1 to2;
 
-fun pp_constraints pp to = T.pp_termorder pp to;
+fun pp_constraints to = T.pp_termorder to;
 
 (* ------------------------------------------------------------------------- *)
 (* mlibClauses                                                                   *)
@@ -257,7 +257,7 @@ local
     | f false true = pp_map (fn CL (_,_,th,c,_) => (th,c)) pp_tc
     | f true true = pp_map (fn CL (_,i,th,c,_) => (i,th,c)) pp_itc;
 in
-  fun pp_clause pp cl = f (!show_id) (!show_constraint) pp cl;
+  fun pp_clause cl = f (!show_id) (!show_constraint) cl;
 end;
 
 (* ------------------------------------------------------------------------- *)

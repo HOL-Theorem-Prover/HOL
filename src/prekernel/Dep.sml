@@ -9,7 +9,7 @@
 
 structure Dep :> Dep =
 struct
-open Lib Feedback
+open Lib Feedback OldPP
 
 val ERR = mk_HOL_ERR "Dep"
 

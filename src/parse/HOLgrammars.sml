@@ -16,7 +16,7 @@ fun assoc_encode LEFT = "L"
 
 val assoc_reader =
     let
-      open Coding optmonad
+      open optmonad Coding
       infix >> ||
     in
       (literal "L" >> return LEFT) ||
@@ -29,7 +29,7 @@ datatype rule_element =
          TOK of string
        | TM
        | ListTM of mini_lspec
-type block_info = Portable.break_style * int
+type block_info = HOLPP.break_style * int
 
 datatype pp_element =
          PPBlock of pp_element list * block_info

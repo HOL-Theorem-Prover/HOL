@@ -29,6 +29,7 @@ datatype buildresult = datatype multibuild.buildresult
 
 fun process_mosml_args (outs:Holmake_tools.output_functions) c = let
   val {diag,...} = outs
+  val diag = fn s => diag (fn _ => s)
   fun isSource t = OS.Path.ext t = SOME "sig" orelse OS.Path.ext t = SOME "sml"
   fun isObj t = OS.Path.ext t = SOME "uo" orelse OS.Path.ext t = SOME "ui"
   val toks = String.tokens (fn c => c = #" ") c
@@ -141,8 +142,8 @@ fun poly_compile warn diag quietp file I deps = let
   in
     foldr (fn (s,acc) => toFile s :: acc) [] dep_set
   end
-  val _ = diag ("Writing "^fromFile file^" with dependencies: " ^
-                String.concatWith ", " (map fromFile deps))
+  val _ = diag (fn _ => "Writing "^fromFile file^" with dependencies: " ^
+                        String.concatWith ", " (map fromFile deps))
   fun mapthis (Unhandled _) = NONE
     | mapthis (DAT _) = NONE
     | mapthis f = SOME (fromFileNoSuf f)
@@ -331,7 +332,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         val other_nodes = let
           open HM_DepGraph
         in
-          diag ("Looking for other nodes with buildscript "^script);
+          diag (fn _ => "Looking for other nodes with buildscript "^script);
           find_nodes_by_command g
               (BuiltInCmd (BIC_BuildScript script_part))
         end
@@ -406,7 +407,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       val {diag,...} = outs
     in
       if isHolmosmlcc orelse isHolmosmlc orelse isMosmlc then let
-        val _ = diag ("Processing mosml build command: "^c)
+        val _ = diag (fn _ => "Processing mosml build command: "^c)
       in
         case process_mosml_args outs (if isHolmosmlcc then " -c " ^ c else c) of
             (Mosml_compile (objs, src), I) =>
@@ -417,8 +418,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           | (Mosml_link (result, objs), I) =>
             let
             in
-              diag ("Moscow ML command is link -o "^result^" ["^
-                    String.concatWith ", " (map fromFile objs) ^ "]");
+              diag (fn _ => "Moscow ML command is link -o "^result^" ["^
+                            String.concatWith ", " (map fromFile objs) ^ "]");
               SOME (poly_link (noecho orelse quiet_flag) result
                               (map fromFileNoSuf objs))
             end
@@ -442,7 +443,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           val ns' = List.filter failed_nocmd ns
           fun nI_target (_, nI) = #target nI
         in
-          diag ("Failed nodes: \n" ^ String.concatWith "\n" (map str ns));
+          diag (fn _ => "Failed nodes: \n"^String.concatWith "\n" (map str ns));
           if not (null ns') then
             tgtfatal ("Don't know how to build necessary target(s): " ^
                       String.concatWith ", " (map nI_target ns'))
@@ -480,7 +481,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                     relocbuild = relocbuild,
                                     mosml_build_command = mosml_build_command,
                                     warn = warn, tgtfatal = tgtfatal,
-                                    keep_going = keep_going, diag = diag,
+                                    keep_going = keep_going,
+                                    diag = (fn s => diag (fn _ => s)),
                                     info = #info outs,
                                     time_limit = time_limit,
                                     quiet = quiet_flag, hmenv = hmenv,

@@ -1,0 +1,58 @@
+NOT FIXED!
+
+Here is a translation of ITL into HOL. 
+
+A pair of numbers (m,n) represents the interval from time m to time m+n
+inclusive. In pictures:
+
+Time: 0 1 2 3 4  ...  m  ...  m+n  ...
+                      |        |
+                      *--------*
+                           |
+                   the interval (m,n)  
+
+Each ITL expresssion translates to a function of type ":num#num->ty", where
+ty is the type of the expression's value. The idea is that if e translates to
+f, then e having value v on the interval (m,n) corresponds to f(m,n)=v.
+
+Similarly each ITL formula translates to a function of type ":num#num->bool".
+The idea is that if w translates to p, then w is true on the interval (m,n)
+if and only if p(m,n)=T.
+
+ITL variables of type ty are simulated by HOL variables of type "num->ty",
+the number argument representing time. For example, (X 6) is the value
+of X at the 6th time instant.
+
+Here is the translation; "T[e] = t" means "the translation of the ITL 
+construct e is the HOL term t".
+
+
+T[c]           =  \(m,n). c         {if c is a constant}
+
+T[v]           =  \(m,n). (v m)     {if v is a variable}
+
+T[O e]         =  \(m,n). T[e](m+1,n-1)
+
+T[e1 gets e2]  =  \(m,n). !i. (m<=i)/\(i<n) ==> (T[e1](i+1,n-1)=T[e2](i,n))
+
+T[empty]       =  \(m,n). (n=0)
+
+T[length]      =  \(m,n). n
+
+T[len e]       =  \(m,n). (T[e](m,n)=n)
+
+T[~w]          =  \(m,n). ~(T[e](m,n))
+
+T[w1/\w2]      =  \(m,n). T[w1](m,n) /\ T[w2](m,n)
+
+T[O w]         =  \(m,n). (n>m) /\ T[w](m+1,n)
+
+T[BOX w]       =  \(m,n). !i. (m<=i)/\(i<=n) ==> T[w](i,n)
+
+T[w1;w2]       =  \(m,n). ?i. (m<=i) /\ (i<=n) /\ T[w1](m,i) /\ T[w2](i,n)
+
+T[EXISTS v. w] =  \(m,n). ?v. T[w](m,n)
+
+Easy, isn't it!
+
+

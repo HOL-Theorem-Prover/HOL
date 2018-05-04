@@ -5,6 +5,8 @@ struct
 open Systeml
 open Holmake_tools_dtype
 
+fun K x y = x
+
 structure Path = OS.Path
 structure FileSys = OS.FileSys
 
@@ -82,7 +84,7 @@ type output_functions = {warn : string -> unit,
                          info : string -> unit,
                          chatty : string -> unit,
                          tgtfatal : string -> unit,
-                         diag : string -> unit}
+                         diag : (unit -> string) -> unit}
 
 fun die_with message = let
   open TextIO
@@ -115,7 +117,7 @@ fun output_functions {usepfx,chattiness=n} = let
   val info = if n >= 1 then msg stdOut else donothing
   val chatty = if n >= 2 then msg stdOut else donothing
   val tgtfatal = msg stdErr
-  val diag = if n >= 3 then msg stdErr else donothing
+  val diag = if n >= 3 then (fn sf => msg stdErr (sf())) else donothing
 in
   {warn = warn, diag = diag, tgtfatal = tgtfatal, info = info, chatty = chatty}
 end
@@ -144,7 +146,7 @@ end
 fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
   val {warn,diag,...} = ofns
   val mypath = find_my_path()
-  val _ = diag ("running "^mypath )
+  val _ = diag (K ("running "^mypath))
   fun write_lastmaker_file () = let
     val outstr = TextIO.openOut ".HOLMK/lastmaker"
   in
@@ -156,7 +158,7 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
       if not no_lastmakercheck andalso
          FileSys.access (".HOLMK/lastmaker", [FileSys.A_READ])
       then let
-          val _ = diag "Found a lastmaker file to look at."
+          val _ = diag (K "Found a lastmaker file to look at.")
           val istrm = TextIO.openIn ".HOLMK/lastmaker"
         in
           case TextIO.inputLine istrm of
@@ -182,17 +184,17 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
         end
       else write_lastmaker_file()
 in
-  diag "Looking to see if I am in a HOL distribution.";
+  diag (K "Looking to see if I am in a HOL distribution.");
   case check_distrib "Holmake" of
     NONE => let
     in
-      diag "Not in a HOL distribution";
+      diag (K "Not in a HOL distribution");
       lmfile()
     end
   | SOME p =>
-    if p = mypath then diag "In the right HOL distribution"
+    if p = mypath then diag (K "In the right HOL distribution")
     else if no_lastmakercheck then
-      diag "In the wrong distribution, but --nolmbc takes precedence."
+      diag (K "In the wrong distribution, but --nolmbc takes precedence.")
     else
       (warn ("*** Switching to execute "^p);
        warn ("*** (As we are in/under its HOLDIR)");
@@ -403,8 +405,17 @@ fun toString {relpath,absdir} =
 
 fun toAbsPath {relpath,absdir} = absdir
 
+fun pretty_dir d =
+  let
+    val abs = toAbsPath d
+    val abs' = holpathdb.reverse_lookup {path=abs}
+  in
+    if abs = abs' then toString d else abs'
+  end
+
 fun fromPath {origin,path} =
-    if Path.isAbsolute path then {relpath = NONE, absdir = path}
+    if Path.isAbsolute path then
+      {relpath = NONE, absdir = Path.mkCanonical path}
     else
       {relpath = SOME path, absdir = origin + path}
 
@@ -412,7 +423,8 @@ fun extendp {base = {relpath, absdir}, extension} = let
   val relpath_str = case relpath of NONE => "NONE"
                                   | SOME s => "SOME("^s^")"
 in
-  if Path.isAbsolute extension then {relpath = NONE, absdir = extension}
+  if Path.isAbsolute extension then
+    {relpath = NONE, absdir = Path.mkCanonical extension}
   else
       case relpath of
           NONE => {absdir = absdir + extension, relpath = NONE}
@@ -478,105 +490,20 @@ in
 end
 
 type include_info = {includes : string list, preincludes : string list }
-type 'dir holmake_dirinfo = {visited : hmdir.t Binaryset.set, includes : 'dir list,
-                             preincludes : 'dir list}
-type 'dir holmake_result = 'dir holmake_dirinfo option
 
-(* ----------------------------------------------------------------------
+type include_info = {includes : string list, preincludes : string list}
+type dirset = hmdir.t Binaryset.set
 
-    maybe_recurse
+val empty_dirset = Binaryset.empty hmdir.compare
+type incset_pair = {pres : dirset, incs : dirset}
+type incdirmap = (hmdir.t,incset_pair) Binarymap.dict
+val empty_incdirmap = Binarymap.mkDict hmdir.compare
 
-    this function doesn't handle all recursion, just one level's
-    worth. In other words, the master Holmake calls this function, and
-    this then arranges the recursive calls into the various include
-    directories that need to happen. The holmake that gets called in
-    those directories (via the hm parameter) will in turn call this
-    function for recursion at that level in the "tree".
-
-    The local_build/k parameter is how the maybe_recurse function
-    finishes off; this parameter is called when all of the necessary
-    recursion has been performed and work should be done in the
-    current ("local") directory.
-
-    Finally, what of the dirinfo?
-
-    This record includes
-          origin: the absolute path to the very first directory
-        includes: the includes that the local directory knows about
-                  (which will have come from the command-line or
-                  INCLUDES lines in the local Holmakefile
-     preincludes: similarly
-         visited: a set of visited directories (with directories
-                  expressed as absolute paths)
-
-    The includes and preincludes are clearly useful when it comes time to
-    do any local work, but also specify how the recursion is to happen.
-
-    Now, the recursion into those directories may result in extra
-    includes and preincludes.
-   ---------------------------------------------------------------------- *)
-fun maybe_recurse {warn,diag,hm,dirinfo,dir,local_build=k,cleantgt} =
-let
-  val {includes,preincludes,visited} = dirinfo
-  val _ = diag ("maybe_recurse: includes = [" ^
-                String.concatWith ", " includes ^ "]")
-  val _ = diag ("maybe_recurse: preincludes = [" ^
-                String.concatWith ", " preincludes ^ "]")
-  val k = fn ii => (terminal_log ("Holmake: "^nice_dir (hmdir.toString dir));
-                    k ii)
-  val tgts = case cleantgt of SOME s => [s] | NONE => []
-  fun recurse (acc as {visited,includes,preincludes}) newdir = let
-  in
-    if Binaryset.member(visited, newdir) then SOME acc
-    else let
-      val _ = warn ("Recursively calling Holmake in " ^ hmdir.toString newdir)
-      val _ = terminal_log ("Holmake: "^nice_dir (hmdir.toString newdir))
-      val result =
-          case hm {dir = newdir, visited = visited, targets = tgts} of
-              NONE => NONE
-            | SOME {visited,includes = inc0, preincludes = pre0} =>
-              SOME {visited = visited,
-                    includes = hmdir.sort (includes @ inc0),
-                    preincludes = hmdir.sort (preincludes @ pre0)}
-    in
-      warn ("Finished recursive invocation in "^hmdir.toString newdir);
-      terminal_log ("Holmake: "^nice_dir (hmdir.toString dir));
-      FileSys.chDir (hmdir.toAbsPath dir);
-      case result of
-          SOME{includes=incs,preincludes=pre,...} =>
-          (diag ("Recursively computed includes = " ^
-                 String.concatWith ", " (map hmdir.toString incs));
-           diag ("Recursively computed pre-includes = " ^
-                 String.concatWith ", " (map hmdir.toString pre)))
-        | NONE => ();
-      result
-    end
-  end
-  fun do_em (accg as {includes,preincludes,...}) dirs =
-      case dirs of
-          [] =>
-          let
-            val f = map hmdir.toAbsPath
-          in
-            if k {includes=f includes,preincludes=f preincludes} then SOME accg
-            else NONE
-          end
-        | x::xs =>
-          let
-          in
-            case recurse accg x of
-                SOME result => do_em result xs
-              | NONE => NONE
-          end
-  val visited = Binaryset.add(visited, dir)
-  fun canon i = hmdir.extendp {base = dir, extension = i}
-  val canonl = map canon
-  fun f idirs = map canon idirs
-  val possible_calls = hmdir.sort (f (preincludes @ includes))
-in
-  do_em {visited = visited, includes = f includes, preincludes = f preincludes}
-        possible_calls
-end
+type holmake_dirinfo = {
+  visited : hmdir.t Binaryset.set,
+  incdirmap : incdirmap
+}
+type holmake_result = holmake_dirinfo option
 
 fun find_files ds P =
   let
@@ -632,6 +559,7 @@ fun generate_all_plausible_targets warn first_target =
 exception HolDepFailed
 fun runholdep {ofs, extras, includes, arg, destination} = let
   val {chatty, diag, warn, ...} : output_functions = ofs
+  val diagK = diag o K
   val _ = chatty ("Analysing "^fromFile arg)
   fun buildables s = let
     val f = toFile s
@@ -648,14 +576,14 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
     map fromFile files
   end
   val buildable_extras = List.concat (map buildables extras)
-  val _ = diag ("Running Holdep on "^fromFile arg^" with includes = [" ^
-                String.concatWith ", " includes ^ "], assumes = [" ^
-                String.concatWith ", " buildable_extras ^"]")
+  val _ = diagK ("Running Holdep on "^fromFile arg^" with includes = [" ^
+                 String.concatWith ", " includes ^ "], assumes = [" ^
+                 String.concatWith ", " buildable_extras ^"]")
   val holdep_result =
     Holdep.main {assumes = buildable_extras, diag = diag,
                  includes = includes, fname = fromFile arg}
     handle Holdep.Holdep_Error s =>
-             (warn "Holdep failed: s"; raise HolDepFailed)
+             (warn ("Holdep failed: "^s); raise HolDepFailed)
          | e => (warn ("Holdep exception: "^General.exnMessage e);
                  raise HolDepFailed)
   fun myopen s =

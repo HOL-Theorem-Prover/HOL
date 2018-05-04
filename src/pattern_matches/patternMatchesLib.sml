@@ -13,6 +13,14 @@ open constrFamiliesLib
 open unwindLib
 open oneSyntax
 
+structure Parse =
+struct
+  open Parse
+  val (Type,Term) =
+      parse_from_grammars patternMatchesTheory.patternMatches_grammars
+end
+open Parse
+
 val list_ss  = numLib.arith_ss ++ listSimps.LIST_ss
 
 (***********************************************)

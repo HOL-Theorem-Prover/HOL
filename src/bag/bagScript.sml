@@ -70,7 +70,7 @@ val BAG_INSERT = new_definition (
 val _ = add_listform {cons = "BAG_INSERT", nilstr = "EMPTY_BAG",
                       separator = [TOK ";", BreakSpace(1,0)],
                       leftdelim = [TOK "{|"], rightdelim = [TOK "|}"],
-                      block_info = (PP.INCONSISTENT, 0)};
+                      block_info = (PP.INCONSISTENT, 2)};
 val _ = TeX_notation { hol = "{|", TeX = ("\\HOLTokenBagLeft{}", 1) }
 val _ = TeX_notation { hol = "|}", TeX = ("\\HOLTokenBagRight{}", 1) }
 
@@ -2817,21 +2817,13 @@ val BAG_SIZE_INSERT = save_thm
 (* Add multiset type to the TypeBase.                                        *)
 (*---------------------------------------------------------------------------*)
 
-val _ = adjoin_to_theory
-  {sig_ps = NONE,
-   struct_ps = SOME (fn pps =>
-    let fun pp_line s = (PP.add_string pps s; PP.add_newline pps)
-    in
-     app pp_line
-     ["val _ = ",
-      " TypeBase.write",
-      " [TypeBasePure.mk_nondatatype_info",
-      "  (alpha --> numSyntax.num,",
-      "    {nchotomy = SOME BAG_cases,",
-      "     induction = SOME STRONG_FINITE_BAG_INDUCT,",
-      "     size = SOME(Parse.Term`\\(obsize:'a->num) (y:'b). bag$bag_size obsize`,CONJ BAG_SIZE_EMPTY BAG_SIZE_INSERT),",
-      "     encode=NONE})];\n"
-      ] end)};
-
+val _ = TypeBase.export [
+      TypeBasePure.mk_nondatatype_info
+        (“:'a -> num”,
+         {nchotomy = SOME BAG_cases,
+          induction = SOME STRONG_FINITE_BAG_INDUCT,
+          size = NONE,
+          encode=NONE})
+    ]
 
 val _ = export_theory();

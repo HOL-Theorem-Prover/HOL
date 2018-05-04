@@ -14,6 +14,22 @@ fun LEN l = Int.toString (length l)
    Miscellaneous syntax stuff.
  ---------------------------------------------------------------------------*)
 
+fun ellist_size els =
+  let
+    fun recurse A els =
+      case els of
+          [] => A
+        | e::rest =>
+          case e of
+              PPBlock(more_els, (sty, ind)) => recurse A (more_els @ rest)
+            | HardSpace n => recurse (A + n) rest
+            | BreakSpace (n, m) => recurse 0 rest
+            | RE (TOK s) => recurse (A + UTF8.size s) rest
+            | _ => recurse 0 rest
+  in
+    recurse 0 els
+  end
+
 val dest_pair = sdest_binop (",", "pair") (PP_ERR "dest_pair" "");
 val is_pair = Lib.can dest_pair;
 
@@ -90,7 +106,7 @@ fun prettyprint_cases_name () = if !prettyprint_cases_dt then "dtcase" else "cas
       (+) 3
     The parser accepts either form.
    ---------------------------------------------------------------------- *)
-open smpp term_pp_types term_pp_utils
+open HOLPP smpp term_pp_types term_pp_utils
 
 val dollar_escape = ref true
 
@@ -116,8 +132,7 @@ val _ = Feedback.register_btrace ("pp_dollar_escapes", dollar_escape);
 open smpp term_pp_types term_pp_utils
 infix || |||
 
-val start_info = {seen_frees = empty_tmset, current_bvars = empty_tmset,
-                  last_string = " ", in_gspec = false}
+val start_info = dflt_pinfo
 
 fun getlaststring x =
     (fupdate (fn x => x) >-
@@ -240,10 +255,19 @@ in
 end
 
 fun find_lspec els =
-  case els of
-      [] => NONE
-    | ListForm l :: _ => SOME l
-    | _ :: rest => find_lspec rest
+  let
+    fun find_lspec1 e =
+      case e of
+          ListForm l => SOME l
+        | PPBlock(els, _) => recurse els
+        | _ => NONE
+    and recurse els =
+      case els of
+          [] => NONE
+        | e :: rest => (case find_lspec1 e of NONE => recurse rest | x => x)
+  in
+    recurse els
+  end
 
 fun grule_term_names G grule = let
   fun lift f (rr as {term_name,timestamp,elements,...}) =
@@ -425,11 +449,15 @@ end handle HOL_ERR _ => false
 fun is_constish tm = is_const tm orelse is_fakeconst tm
 
 fun pp_term (G : grammar) TyG backend = let
-  val G = #tm_grammar_upd backend G
-  val TyG = #ty_grammar_upd backend TyG
-  fun block x = backend_block backend x
+  val G = #tm_grammar_upd (#extras backend) G
+  val TyG = #ty_grammar_upd (#extras backend) TyG
+  val block = smpp.block
   fun tystr ty =
-      PP.pp_to_string 10000 (type_pp.pp_type TyG PPBackEnd.raw_terminal) ty
+      PP.pp_to_string 10000
+        (fn ty =>
+            lower (type_pp.pp_type TyG PPBackEnd.raw_terminal ty) dflt_pinfo
+              |> valOf |> #1)
+        ty
   val {restr_binders,lambda,endbinding,type_intro,res_quanop} = specials G
   val overload_info = overload_info G
   val spec_table =
@@ -610,27 +638,36 @@ fun pp_term (G : grammar) TyG backend = let
     in
       add_ann_string(s, constr {Thy = Thy, Name = Name, Ty = (Ty, fn () => tystr Ty)})
     end
-    fun block_by_style (addparens, rr, pgrav, fname, fprec) = let
+    fun block_by_style (rr, pgrav, fname, fprec) = let
       val needed =
         case #1 (#block_style (rr:rule_record)) of
           AroundSameName => grav_name pgrav <> fname
         | AroundSamePrec => grav_prec pgrav <> fprec
         | AroundEachPhrase => true
         | NoPhrasing => false
-      val bblock = uncurry block (#2 (#block_style rr))
     in
-      if needed orelse addparens then bblock else I
+      if needed then
+        let
+          val (c, i) = #2 (#block_style rr)
+        in
+          block c i
+        end
+      else
+        I
     end
-    fun pbegin b = if b then add_string "(" else nothing
-    fun pend b = if b then add_string ")" else nothing
+    fun paren b p =
+      if b then
+        block INCONSISTENT 1 (
+          add_string "(" >> (p >- (fn r => add_string ")" >> return r))
+        )
+      else p
+
     fun spacep b = if b then add_break(1, 0) else nothing
     fun hardspace n = add_string (string_of_nspaces n)
     fun sizedbreak n = add_break(n, 0)
 
     fun doTy ty =
-        liftpp (fn pps =>
-                   type_pp.pp_type_with_depth TyG backend pps (decdepth depth)
-                   ty)
+        type_pp.pp_type_with_depth TyG backend (decdepth depth) ty
 
     (* Prints "elements" from a concrete syntax rule.
 
@@ -685,7 +722,7 @@ fun pp_term (G : grammar) TyG backend = let
             (* val _ = PRINT ("pr_lspec: "^debugprint G t^" {nilstr=\""^nilstr^
                            "\"}")*)
             val sep = #separator r
-            val (consistency, breakspacing) = block_info
+            (* val (consistency, breakspacing) = block_info *)
             (* list will never be empty *)
             fun pr_list tm = let
               fun lrecurse depth tm = let
@@ -707,7 +744,7 @@ fun pp_term (G : grammar) TyG backend = let
                 end
               end
             in
-              block consistency breakspacing (lrecurse depth t)
+              lrecurse depth t
             end
           in
             if has_name_by_parser G nilstr t then return ()
@@ -715,7 +752,7 @@ fun pp_term (G : grammar) TyG backend = let
           end
     in
       recurse (els, args) (* before
-      PRINT "print_ellist terminated" *)
+      PRINT "print_ellist terminated" *) >- (fn _ => return ())
     end
 
 
@@ -804,13 +841,13 @@ fun pp_term (G : grammar) TyG backend = let
       val simples = map Simple bvts
       val add_final_parens = restrictor might_print endbinding
     in
-      block CONSISTENT 2
-        (block INCONSISTENT 2
-           (pr_list pr_vstruct (add_break(1,0)) simples) >>
-         add_string res_op >>
-         pbegin add_final_parens >>
-         pr_term restrictor Top Top Top (decdepth depth) >>
-         pend add_final_parens) >>
+      block CONSISTENT 2 (
+        block INCONSISTENT 2 (pr_list pr_vstruct (add_break(1,0)) simples) >>
+        add_string res_op >>
+        paren add_final_parens (
+          pr_term restrictor Top Top Top (decdepth depth)
+        )
+      ) >>
       add_string endbinding >> add_break (1,0) >>
       record_bvars (free_varsl bvts)
                    (block CONSISTENT 0
@@ -866,9 +903,8 @@ fun pp_term (G : grammar) TyG backend = let
                     [] => raise PP_ERR "pr_abs" "No token for lambda abstraction"
                   | h::_ => h
     in
-      pbegin addparens >>
-      block CONSISTENT 2 (add_string tok >> pr_vstructl bvars body) >>
-      pend addparens
+      paren addparens
+            (block CONSISTENT 2 (add_string tok >> pr_vstructl bvars body))
     end
 
     fun can_pr_numeral stropt = List.exists (fn (k,s') => s' = stropt) num_info
@@ -898,14 +934,14 @@ fun pp_term (G : grammar) TyG backend = let
             end
           else ""
     in
-      pbegin showtypes >>
-      add_ann_string (numeral_str ^ sfx,
-                      PPBackEnd.Literal PPBackEnd.NumLit) >>
-      (if showtypes then
-         add_string (" "^type_intro) >> add_break (0,0) >>
-         doTy (#2 (dom_rng injty))
-       else nothing) >>
-      pend showtypes
+      paren showtypes (
+        add_ann_string (numeral_str ^ sfx,
+                        PPBackEnd.Literal PPBackEnd.NumLit) >>
+        (if showtypes then
+           add_string (" "^type_intro) >> add_break (0,0) >>
+           doTy (#2 (dom_rng injty))
+         else nothing)
+      )
     end
 
     exception NotReallyARecord
@@ -960,13 +996,14 @@ fun pp_term (G : grammar) TyG backend = let
                 val lprec = if add_parens then Top else lgrav
                 open PPBackEnd
               in
-                block INCONSISTENT 0
-                      (pbegin add_parens >>
-                       pr_term t2 prec lprec prec (decdepth depth) >>
-                       add_string fldtok >>
-                       add_break(0,0) >>
-                       add_ann_string (fldname, Literal FldName) >>
-                       pend add_parens)
+                block INCONSISTENT 0 (
+                  paren add_parens (
+                    pr_term t2 prec lprec prec (decdepth depth) >>
+                    add_string fldtok >>
+                    add_break(0,0) >>
+                    add_ann_string (fldname, Literal FldName)
+                  )
+                )
               end
             | NONE => fail
           end
@@ -1115,9 +1152,10 @@ fun pp_term (G : grammar) TyG backend = let
                     | u::us => (print_update (decdepth depth) u >>
                                 print_ellist NONE (Top,Top,Top) (sep, []) >>
                                 recurse (decdepth depth) us)
+              val ldelim_size = ellist_size ldelim
             in
               print_ellist NONE (Top,Top,Top) (ldelim, []) >>
-              block INCONSISTENT 0 (recurse depth updates) >>
+              block INCONSISTENT ldelim_size (recurse depth updates) >>
               print_ellist NONE (Top,Top,Top) (rdelim, []) >>
               nothing
             end
@@ -1137,15 +1175,16 @@ fun pp_term (G : grammar) TyG backend = let
               val lprec = if addparens then Top else lgrav
               val with_grav = Prec(with_prec, recwith_special)
             in
-              pbegin addparens >>
-              block INCONSISTENT 0
-                    (pr_term base with_grav lprec with_grav (decdepth depth) >>
-                     add_string " " >>
-                     add_string with_tok >>
-                     add_break (1,0) >>
-                     (if length updates = 1 then print_update depth (hd updates)
-                      else print_updlist updates)) >>
-              pend addparens
+              paren addparens (
+                block INCONSISTENT 0 (
+                  pr_term base with_grav lprec with_grav (decdepth depth) >>
+                  add_string " " >>
+                  add_string with_tok >>
+                  add_break (1,0) >>
+                  (if length updates = 1 then print_update depth (hd updates)
+                   else print_updlist updates)
+                )
+              )
             end
           end handle NotReallyARecord => fail
           else fail
@@ -1213,21 +1252,19 @@ fun pp_term (G : grammar) TyG backend = let
       val lprec = if addparens then Top else lgrav
       val rprec = if addparens then Top else rgrav
     in
-      pbegin (addparens orelse comb_show_type) >>
-      block INCONSISTENT 2
-            (full_pr_term binderp showtypes showtypes_v ppfns RatorCP t1
-                          prec lprec prec (decdepth depth) >>
-             add_break (1, 0) >>
-             full_pr_term binderp showtypes showtypes_v ppfns RandCP t2
-                          prec prec rprec (decdepth depth) >>
-             (if comb_show_type then
-                (add_string (" "^type_intro) >> add_break (0,0) >>
-                 liftpp (fn pps =>
-                            type_pp.pp_type_with_depth TyG backend pps
-                                                       (decdepth depth)
-                                                       (type_of tm)))
-              else nothing)) >>
-      pend (addparens orelse comb_show_type)
+      paren (addparens orelse comb_show_type) (
+        block INCONSISTENT 0 (
+          full_pr_term binderp showtypes showtypes_v ppfns RatorCP t1
+                       prec lprec prec (decdepth depth) >>
+          add_break (1, 2) >>
+          full_pr_term binderp showtypes showtypes_v ppfns RandCP t2
+                       prec prec rprec (decdepth depth) >>
+          (if comb_show_type then
+             add_string (" "^type_intro) >> add_break (0,0) >>
+             doTy (type_of tm)
+           else nothing)
+        )
+      )
     end
 
     fun pr_sole_name tm n rules = let
@@ -1269,16 +1306,16 @@ fun pp_term (G : grammar) TyG backend = let
     fun pr_comb_with_rule frule fterm args Rand = let
       val {fname,fprec,f} = fterm
       val comb_show_type = comb_show_type(f,args @ [Rand])
-      val ptype_block =
+      fun ptype_block p =
           if comb_show_type then
-            fn p =>
-               add_string "(" >>
-               block CONSISTENT 0
-                  (p >> add_break (1,2) >>
-                   add_string type_intro >>
-                   doTy (type_of tm)) >>
-               add_string ")"
-          else fn p => p
+            paren true (
+              block CONSISTENT 0 (
+                p >-
+                (fn r => add_break (1,2) >> add_string type_intro >>
+                         doTy (type_of tm) >> return r)
+              )
+            )
+          else p
       fun block_up_els acc els =
         case els of
           [] => List.rev acc
@@ -1314,15 +1351,16 @@ fun pp_term (G : grammar) TyG backend = let
           val rprec = if addparens then Top else rgrav
           val arg_terms = args @ [Rand]
           val pp_elements = block_up_els [] ((FirstTM::elements) @ [LastTM])
-          val begblock = block_by_style(addparens, rr, pgrav, fname, fprec)
+          val begblock = block_by_style(rr, pgrav, fname, fprec)
         in
-          ptype_block
-              (pbegin (addparens orelse comb_show_type) >>
-               begblock
-                    (print_ellist (SOME f)
-                                  (lprec, prec, rprec)
-                                  (pp_elements, arg_terms)) >>
-               pend (addparens orelse comb_show_type))
+          ptype_block (
+            paren (addparens orelse comb_show_type) (
+              begblock
+                (print_ellist (SOME f)
+                              (lprec, prec, rprec)
+                              (pp_elements, arg_terms))
+            )
+          )
         end
       | INFIX RESQUAN_OP => raise Fail "Res. quans shouldn't arise"
       | INFIX (FNAPP _) => raise PP_ERR "pr_term" "fn apps can't arise"
@@ -1342,15 +1380,17 @@ fun pp_term (G : grammar) TyG backend = let
           val real_args = args @ [Rand]
           val pp_elements = block_up_els [] (FirstTM :: elements)
           val begblock =
-            block_by_style(addparens, rr, pgrav, fname, fprec)
+            block_by_style(rr, pgrav, fname, fprec)
         in
-          ptype_block
-              (pbegin (addparens orelse comb_show_type) >>
-               begblock
-                 (print_ellist (SOME f)
-                               (lprec, prec, Top)
-                               (pp_elements, real_args)) >>
-               pend (addparens orelse comb_show_type))
+          ptype_block (
+            paren (addparens orelse comb_show_type) (
+              begblock (
+                print_ellist (SOME f)
+                             (lprec, prec, Top)
+                             (pp_elements, real_args)
+              )
+            )
+          )
         end
       | SUFFIX TYPE_annotation =>
         raise Fail "Type annotation shouldn't arise"
@@ -1369,15 +1409,17 @@ fun pp_term (G : grammar) TyG backend = let
           val pp_elements = block_up_els [] (elements @ [LastTM])
           val real_args = args @ [Rand]
           val prec = Prec(fprec, fname)
-          val begblock = block_by_style(addparens, rr, pgrav, fname, fprec)
+          val begblock = block_by_style(rr, pgrav, fname, fprec)
         in
-          ptype_block
-              (pbegin (addparens orelse comb_show_type) >>
-               begblock
-                 (print_ellist (SOME f)
-                               (Top, prec, rprec)
-                               (pp_elements, real_args)) >>
-               pend (addparens orelse comb_show_type))
+          ptype_block (
+            paren (addparens orelse comb_show_type) (
+              begblock (
+                print_ellist (SOME f)
+                             (Top, prec, rprec)
+                             (pp_elements, real_args)
+              )
+            )
+          )
         end
       | PREFIX (BINDER lst) => let
           val tok = case hd lst of
@@ -1395,11 +1437,11 @@ fun pp_term (G : grammar) TyG backend = let
           val print_tok = if is_constish f then constann f tok
                           else var_ann f tok
         in
-          ptype_block
-            (pbegin (addparens orelse comb_show_type) >>
-             block INCONSISTENT 2
-               (print_tok >> pr_vstructl bvs body) >>
-             pend (addparens orelse comb_show_type))
+          ptype_block (
+            paren (addparens orelse comb_show_type) (
+              block INCONSISTENT 2 (print_tok >> pr_vstructl bvs body)
+            )
+          )
         end
       | CLOSEFIX lst => let
           val rr = hd lst
@@ -1421,9 +1463,7 @@ fun pp_term (G : grammar) TyG backend = let
             (add_string "(ty_antiq(" >>
              add_break(0,0) >>
              add_string "`:" >>
-             liftpp (fn pps =>
-                        type_pp.pp_type_with_depth TyG backend pps
-                                                   (decdepth depth) ty) >>
+             doTy ty >>
              add_string "`))")
     end
 
@@ -1479,18 +1519,20 @@ fun pp_term (G : grammar) TyG backend = let
           fupdate (fn x => x) >- return o new_freevar >-
           (fn is_new =>
               (if is_new then spotfv tm else nothing) >>
-              return (calc_print_type is_new) >-
+              return (calc_print_type is_new)) >-
           (fn print_type =>
-          block INCONSISTENT 2
-                (pbegin print_type >>
+             block INCONSISTENT 2 (
+               paren print_type (
                  (if isSome vrule then
                     pr_sole_name tm vname (map #3 (valOf vrule))
                   else
                     if HOLset.member(spec_table, vname) then
                       dollarise adds add_string vname
                     else adds vname) >>
-                 (if print_type then add_type else nothing) >>
-                 pend print_type)))
+                 (if print_type then add_type else nothing)
+               )
+             )
+          )
         end
       | CONST(c as {Name, Thy, Ty}) => let
           val add_ann_string = constann tm
@@ -1499,9 +1541,7 @@ fun pp_term (G : grammar) TyG backend = let
           in
             if Name = "the_value" andalso Thy = "bool" then action()
             else
-              pbegin true >>
-              action() >> add_string (" "^type_intro) >> doTy Ty >>
-              pend true
+              paren true (action() >> add_string (" "^type_intro) >> doTy Ty)
           end
           val r = {Name = Name, Thy = Thy}
           fun normal_const () = let
@@ -1803,9 +1843,9 @@ fun pp_term (G : grammar) TyG backend = let
                      fun p body =
                          get_gspec >-
                          (fn b => if b orelse parens then
-                                    add_string "(" >> body >> add_string ")"
+                                    add_string "(" >> block PP.CONSISTENT 1 body >> add_string ")"
                                   else
-                                    body)
+                                    block PP.CONSISTENT 0 body)
                      val casebar = add_break(1,0) >> add_string "|" >> hardspace 1
                      fun do_split rprec (l,r) =
                          record_bvars
@@ -1814,27 +1854,26 @@ fun pp_term (G : grammar) TyG backend = let
                                     (pr_term l Top Top Top (decdepth depth) >>
                                      hardspace 1 >>
                                      add_string "=>" >> add_break(1,2) >>
-                                     pr_term r Top Top rprec (decdepth depth)))
+                                     block PP.CONSISTENT 0 (pr_term r Top Top rprec (decdepth depth))))
                    in
                      p (block PP.CONSISTENT 0
-                          (block PP.CONSISTENT 0
-                            (add_string (prettyprint_cases_name ()) >> add_break(1,2) >>
+                            (add_string (prettyprint_cases_name ()) >>
+                             add_break(1,2) >>
                              pr_term split_on Top Top Top (decdepth depth) >>
                              add_break(1,0) >> add_string "of") >>
-                           (if !pp_print_firstcasebar then
-                              casebar
-                            else
-                              add_break (1,2)) >>
-                           (if length splits > 1 then
-                              pr_list (do_split (Prec(0,"casebar")))
-                                      casebar
-                                      (butlast splits) >>
-                              casebar >>
-                              do_split (if parens then Top else rgrav)
-                                      (last splits)
-                            else
-                              do_split (if parens then Top else rgrav)
-                                       (hd splits))))
+                        (if !pp_print_firstcasebar then
+                           casebar
+                         else
+                           add_break (1,2)) >>
+                        (if length splits > 1 then
+                           pr_list (do_split (Prec(0,"casebar")))
+                              casebar (butlast splits) >>
+                           casebar >>
+                           do_split (if parens then Top else rgrav)
+                              (last splits)
+                         else
+                           do_split (if parens then Top else rgrav)
+                              (hd splits)))
                    end handle CaseConversionFailed => fail)
                 | _ => fail
               else fail) |||
@@ -1851,31 +1890,27 @@ fun pp_term (G : grammar) TyG backend = let
   val avoid_merge = avoid_symbolmerge G
   open PPBackEnd
 in
-  fn pps => fn t =>
+  fn t =>
     let
-      val baseppfns = smpp.from_backend backend
       val {add_string,add_break,ublock,add_xstring,add_newline,ustyle,...} =
-          baseppfns
+          backend
       val (add_string, add_xstring, add_break) =
           avoid_merge (add_string, add_xstring, add_break)
       val ppfns = {add_string = add_string,
                    add_xstring = add_xstring,
                    add_break = add_break,
                    add_newline = add_newline,
-                   ublock = block,
-                   ustyle = ustyle}
+                   ublock = ublock,
+                   ustyle = ustyle,
+                   extras = ()}
     in
-       begin_block pps CONSISTENT 0;
-       case pr_term false
-                    (!Globals.show_types orelse !Globals.show_types_verbosely)
-                    (!Globals.show_types_verbosely)
-                    ppfns NoCP t RealTop RealTop RealTop
-                    (!Globals.max_print_depth)
-                    (start_info,pps)
-        of
-         NONE => HOL_WARNING "term_pp" "pp_term" "Monadic printer returned NONE"
-       | SOME _ => ();
-       end_block pps
+       ublock CONSISTENT 0 (
+         pr_term false
+                 (!Globals.show_types orelse !Globals.show_types_verbosely)
+                 (!Globals.show_types_verbosely)
+                 ppfns NoCP t RealTop RealTop RealTop
+                 (!Globals.max_print_depth)
+       )
     end
 end
 

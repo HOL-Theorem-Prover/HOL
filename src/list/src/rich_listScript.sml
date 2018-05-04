@@ -2297,17 +2297,40 @@ val EL_CONS = Q.store_thm ("EL_CONS",
    `!n. 0 < n ==> !x l. EL n (CONS x l) = EL (PRE n) l`,
    INDUCT_TAC THEN ASM_REWRITE_TAC [NOT_LESS_0, EL, HD, TL, PRE]);
 
+val SEG1 = Q.store_thm(
+  "SEG1",
+  ‘!n l. n < LENGTH l ==> (SEG 1 n l = [EL n l])’,
+  Induct >- (Cases_on ‘l’ >> REWRITE_TAC [SEG, ONE] >> SIMP_TAC (srw_ss())[]) >>
+  Cases_on ‘l’ >> REWRITE_TAC [SEG, ONE] >>
+  ASM_SIMP_TAC (srw_ss()) []);
+
 val EL_SEG = Q.store_thm ("EL_SEG",
    `!n l. n < LENGTH l ==> (EL n l = HD (SEG 1 n l))`,
-   INDUCT_TAC
-   THEN LIST_INDUCT_TAC
-   THEN ASM_REWRITE_TAC [LENGTH, EL, HD, TL, NOT_LESS_0, LESS_MONO_EQ]
-   THEN CONV_TAC (ONCE_DEPTH_CONV num_CONV)
-   THEN REWRITE_TAC [SEG, HD]
-   THEN DISCH_TAC
-   THEN RES_THEN SUBST1_TAC
-   THEN CONV_TAC (ONCE_DEPTH_CONV num_CONV)
-   THEN REFL_TAC);
+   METIS_TAC [SEG1, HD]);
+
+val SEG_CONS = Q.store_thm("SEG_CONS",
+  ‘!j n h t. 0 < j /\ n+j <= LENGTH t + 1 ==> (SEG n j (h::t) = SEG n (j-1) t)’,
+  Induct_on ‘j’ >> SIMP_TAC (srw_ss()) [] >> Cases_on ‘n’ >>
+  SIMP_TAC (srw_ss()) [SEG]);
+
+val SEG_SUC_EL = Q.store_thm("SEG_SUC_EL",
+  ‘!n i l.
+    i + n < LENGTH l ==> (SEG (SUC n) i l = EL i l :: SEG n (i+1) l)’,
+  Induct_on `l` >> SIMP_TAC (srw_ss()) [] >> Cases_on ‘i’ >>
+  ASM_SIMP_TAC(srw_ss() ++ numSimps.ARITH_ss) [SEG, SEG_CONS, ADD_CLAUSES] >>
+  SIMP_TAC (srw_ss()) [ADD1]);
+
+val TAKE_SEG_DROP = Q.store_thm("TAKE_SEG_DROP",
+  ‘!n i l. i + n <= LENGTH l ==> (TAKE i l ++ SEG n i l ++ DROP (i + n) l = l)’,
+  Induct_on `l` >> SIMP_TAC (srw_ss()) [SEG] >> Cases_on `n`
+  >- SIMP_TAC (srw_ss()) [SEG] >>
+  Cases_on `i` >> ASM_SIMP_TAC (srw_ss()) [SEG] >> strip_tac
+  >- (Q.RENAME_TAC [‘SEG n 0 s ++ DROP n s’] >>
+      first_x_assum (Q.SPECL_THEN [‘n’, ‘0’] mp_tac) >>
+      ASM_SIMP_TAC (srw_ss()) []) >>
+  Q.RENAME_TAC [‘TAKE m s ++ SEG (SUC n) m s ++ _’] >>
+  first_x_assum (Q.SPECL_THEN [‘SUC n’, ‘m’] mp_tac) >>
+  SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) [ADD1]);
 
 val EL_MEM = Q.store_thm ("EL_MEM",
    `!n l. n < LENGTH l ==> (MEM (EL n l) l)`,
@@ -3476,29 +3499,29 @@ local
        ("ZIP_GENLIST", "ZIP_GENLIST"),
        ("ZIP_UNZIP", "ZIP_UNZIP")
       ]
+   val B = PP.block PP.CONSISTENT 0
 in
    val () = Theory.adjoin_to_theory {
       sig_ps = SOME
-        (fn ppstrm =>
+        (fn _ =>
            let
-              fun S s =
-                 (PP.add_string ppstrm ("val " ^ s ^ " : thm")
-                  ; PP.add_newline ppstrm)
+              fun S s = PP.add_string ("val " ^ s ^ " : thm")
            in
-              PP.add_string ppstrm "(* Aliases for legacy theorem names *)"
-              ; PP.add_newline ppstrm
-              ; PP.add_newline ppstrm
-              ; List.app S
-                  (Lib.sort (Lib.curry String.<) (List.map fst (alias @ moved)))
+             B (
+               [PP.add_string "(* Aliases for legacy theorem names *)", PP.NL] @
+               PP.pr_list S [PP.add_break(1,0)]
+                          (Lib.sort (Lib.curry String.<)
+                                    (List.map fst (alias @ moved)))
+             )
            end),
       struct_ps = SOME
-        (fn ppstrm =>
+        (fn _ =>
            let
               fun S p (s1, s2) =
-                 (PP.add_string ppstrm ("val " ^ s1 ^ " = " ^ p ^ s2)
-                  ; PP.add_newline ppstrm)
+                PP.add_string ("val " ^ s1 ^ " = " ^ p ^ s2)
+              fun L p l = B (PP.pr_list (S p) [PP.NL] l)
            in
-              List.app (S "") alias; List.app (S "listTheory.") moved
+              B [L "" alias, PP.add_break(1,0), L "listTheory." moved]
            end)}
 end
 

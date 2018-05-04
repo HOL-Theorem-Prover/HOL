@@ -929,7 +929,7 @@ val _ = ot0 "INSERT" "insert"
 val _ = add_listform {leftdelim = [TOK "{"], rightdelim = [TOK "}"],
                       separator = [TOK ";", BreakSpace(1,0)],
                       cons = "INSERT", nilstr = "EMPTY",
-                      block_info = (PP.INCONSISTENT, 0)};
+                      block_info = (PP.INCONSISTENT, 1)};
 
 (* --------------------------------------------------------------------- *)
 (* Theorems about INSERT.						 *)
@@ -2339,7 +2339,7 @@ val set_tyinfo = TypeBasePure.mk_nondatatype_info
                         size=NONE,
                         encode=NONE});
 
-val _ = TypeBase.write [set_tyinfo];
+val _ = TypeBase.export [set_tyinfo];
 
 val FINITE_DELETE =
     TAC_PROOF
@@ -4710,20 +4710,6 @@ val SUM_IMAGE_PERMUTES = store_thm(
   `SIGMA (f o g) s = SIGMA f (IMAGE g s)` by SRW_TAC[][SUM_IMAGE_INJ_o] THEN
   SRW_TAC[][]);
 
-
-(*---------------------------------------------------------------------------*)
-(* Support for Cases, Cases_on, Induct, and termination proofs               *)
-(*---------------------------------------------------------------------------*)
-
-val set_tyinfo = TypeBasePure.mk_nondatatype_info
-                      (``:'a set``,
-                       {nchotomy = SOME SET_CASES,
-                        induction = SOME FINITE_INDUCT,
-                        size=SOME(``\(x:'a->num) (y:'b). SUM_IMAGE x``,SUM_IMAGE_THM),
-                        encode=NONE});
-
-val _ = TypeBase.write [set_tyinfo];
-
 (*---------------------------------------------------------------------------*)
 (* SUM_SET sums the elements of a set of natural numbers                     *)
 (*---------------------------------------------------------------------------*)
@@ -6232,14 +6218,6 @@ in
        dprocs = [], filter = NONE, rewrs = []}
   val _ = BasicProvers.augment_srw_ss [SET_SPEC_ss]
 end
-
-val _ =
-  TypeBase.write
-   [TypeBasePure.mk_nondatatype_info
-     (alpha --> bool,
-      {nchotomy = SOME SET_CASES,
-       induction = SOME FINITE_INDUCT,
-       size = SOME (Parse.Term^`\(obsize:'a->num) (y:'b). pred_set$SUM_IMAGE (\x:'a. 1 + obsize x)^`, SUM_IMAGE_THM),
-       encode = NONE})];`
+`
 
 val _ = export_theory();

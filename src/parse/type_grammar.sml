@@ -84,8 +84,8 @@ fun fupdate_tstamp f (TYG g) =
 fun fupdate_bare_names f (TYG g) =
   TYG (update_G g (U #bare_names (f (#bare_names g))) $$)
 
-fun default_typrinter (G:grammar) (pps:Portable.ppstream)
-                      (ty:Type.hol_type) = PP.add_string pps "<a type>"
+fun default_typrinter (G:grammar) (ty:Type.hol_type) =
+  HOLPP.PrettyString "<a type>"
 
 val type_printer = ref default_typrinter
 val initialised_printer = ref false
@@ -98,7 +98,7 @@ fun initialise_typrinter f =
                               origin_function = "initialised_printer",
                               message = "Printer function already initialised"}
 
-fun pp_type g pps ty = (!type_printer) g pps ty
+fun pp_type g ty = (!type_printer) g ty
 
 fun structure_to_type st =
     case st of
@@ -390,24 +390,24 @@ fun can_print pmap kns ty =
     not (null (List.filter check_match net_matches))
   end
 
-fun prettyprint_grammar pps G = let
-  val TYG grm  = G
+fun prettyprint_grammar G = let
+  open Portable Lib HOLPP
+  val TYG grm = G
   val {rules=g, parse_str=abbrevs, str_print=pmap, bare_names,... } = grm
-  open Portable Lib
-  val {add_break,add_newline,add_string,begin_block,end_block,...} =
-      with_ppstream pps
   fun print_suffix (s,arity) = let
     fun print_ty_n_tuple n =
         case n of
-          0 => ()
-        | 1 => add_string "TY "
-        | n => (add_string "(";
-                pr_list (fn () => add_string "TY") (fn () => add_string ", ")
-                        (fn () => ()) (List.tabulate(n,K ()));
-                add_string ")")
+          0 => []
+        | 1 => [add_string "TY", add_break (1,0)]
+        | n => [add_string "(",
+                block INCONSISTENT 0
+                      (tabulateWith (fn _ => add_string "TY")
+                                    [add_string ",", add_break(1,0)]
+                                    n),
+                add_string ")"]
   in
-    print_ty_n_tuple arity;
-    add_string s
+    block CONSISTENT 2
+          (print_ty_n_tuple arity @ [add_break(1,0), add_string s])
   end
 
   fun print_abbrev (kid, st) = let
@@ -425,58 +425,45 @@ fun prettyprint_grammar pps G = let
     val ty = structure_to_type st
     val printed = can_print pmap kid ty
     val ty_string = PP.pp_to_string 100
-                      (fn pps => Feedback.trace ("print_tyabbrevs", 0)
-                                                (pp_type G pps))
+                      (Feedback.trace ("print_tyabbrevs", 0) (pp_type G))
                       ty
   in
-    begin_block CONSISTENT 0;
-    add_string (StringCvt.padRight #" " 55 (lhs_string ^ ty_string));
-    if not printed then (add_break(1,55); add_string "(not printed)")
-    else ();
-    end_block()
+    block CONSISTENT 0
+          (add_string (StringCvt.padRight #" " 55 (lhs_string ^ ty_string)) ::
+           (if not printed then
+              [add_break(1,55), add_string "(not printed)"]
+            else []))
   end
 
-  fun print_abbrevs () = let
+  val print_abbrevs = let
     fun foldthis (k,st,acc) =
         if typstruct_uptodate st then (k,st)::acc else acc
     val okabbrevs = List.rev (Binarymap.foldl foldthis [] abbrevs)
   in
-    if length okabbrevs > 0 then let
-      in
-        add_newline();
-        add_string "Type abbreviations:";
-        add_break(2,2);
-        begin_block CONSISTENT 0;
-        pr_list print_abbrev (fn () => add_newline()) (fn () => ()) okabbrevs;
-        end_block()
-      end
-    else ()
+    if length okabbrevs > 0 then [
+      NL, add_string "Type abbreviations:",
+      add_break(2,2),
+      block CONSISTENT 0 (pr_list print_abbrev [NL] okabbrevs)
+    ]
+    else []
   end
 
-  fun print_infix {opname,parse_string} = let
-  in
-    add_string "TY ";
-    add_string parse_string;
-    add_string " TY";
-    if opname <> parse_string then
-      add_string (" ["^opname^"]")
-    else
-      ()
-  end
+  fun print_infix {opname,parse_string} =
+    block INCONSISTENT 0
+          ([add_string "TY", add_break(1,0), add_string "TY"] @
+           (if opname <> parse_string then
+              [add_break(1,0), add_string ("["^opname^"]")]
+            else []))
 
   fun print_suffixes slist = let
     val oksl = List.mapPartial (suffix_arity (abbrevs, bare_names)) slist
   in
-    if null oksl then ()
-    else let
-      in
-        add_string "       TY  ::=  ";
-        begin_block INCONSISTENT 0;
-        pr_list print_suffix (fn () => add_string " |")
-                (fn () => add_break(1,0)) oksl;
-        end_block ();
-        add_newline()
-      end
+    if null oksl then []
+    else
+      [add_string "       TY  ::=  ",
+       block INCONSISTENT 0
+             (pr_list print_suffix [add_string " |", add_break(1,0)] oksl),
+       NL]
   end
 
   fun print_rule0 r =
@@ -488,33 +475,27 @@ fun prettyprint_grammar pps G = let
             | RIGHT => "R-"
             | NONASSOC => "non-"
       in
-        add_string "TY  ::=  ";
-        begin_block INCONSISTENT 0;
-        pr_list print_infix (fn () => add_string " |")
-                (fn () => add_break(1,0)) oplist;
-        add_string (" ("^assocstring^"associative)");
-        end_block()
-      end;
+        [add_string "TY  ::=  ",
+         block INCONSISTENT 0
+               (pr_list print_infix [add_string " |", add_break(1,0)] oplist @
+                [add_string (" ("^assocstring^"associative)")])]
+      end
   fun print_rule (n, r) = let
     val precstr = StringCvt.padRight #" " 7 ("("^Int.toString n^")")
   in
-    add_string precstr;
-    print_rule0 r;
-    add_newline()
+    block CONSISTENT 0 (add_string precstr :: print_rule0 r)
   end
 in
-  begin_block CONSISTENT 0;
-    begin_block CONSISTENT 0;
-      add_string "Rules:";
-      add_break (1,2);
-      begin_block CONSISTENT 0;
-        app print_rule g;
-        print_suffixes (keys bare_names);
-        add_string "       TY  ::=  TY[TY] (array type)";
-      end_block ();
-    end_block ();
-    print_abbrevs();
-  end_block()
+  block CONSISTENT 0 (
+    block CONSISTENT 0 [
+      add_string "Rules:",
+      add_break (1,2),
+      block CONSISTENT 0
+            (pr_list print_rule [NL] g @
+             print_suffixes (keys bare_names) @
+             [add_string "       TY  ::=  TY[TY] (array type)"])
+    ] :: print_abbrevs
+  )
 end;
 
 val print_abbrevs = ref true

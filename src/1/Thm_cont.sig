@@ -30,4 +30,6 @@ sig
   val ANTE_RES_THEN    : thm_tactical
   val IMP_RES_THEN     : thm_tactic -> thm -> tactic
   val RES_THEN         : thm_tactic -> tactic
+  val PROVEHYP_THEN    : (thm -> thm -> tactic) -> thm -> tactic
+  val provehyp_then    : (thm -> thm -> tactic) -> thm -> tactic
 end

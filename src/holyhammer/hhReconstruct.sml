@@ -10,7 +10,7 @@
 structure hhReconstruct :> hhReconstruct =
 struct
 
-open HolKernel boolLib Dep Tag hhsTools hhWriter
+open HolKernel boolLib Dep Tag tttTools tttExec hhWriter
 
 val ERR = mk_HOL_ERR "hhReconstruct"
 
@@ -18,6 +18,7 @@ val ERR = mk_HOL_ERR "hhReconstruct"
    Unescaping and extracting theorem and theory name.
  ----------------------------------------------------------------------------*)
 
+(* TODO: use String.translate *)
 fun remove_white_spaces s =
   let
     val cl = String.explode s
@@ -26,7 +27,7 @@ fun remove_white_spaces s =
     String.implode cl'
   end
 
-(* Assumes the theorem name was single quoted before 
+(* Assumes the theorem name was single quoted before
    which always happen except for reserved names *)
 fun unsquotify s =
   if String.size s >= 2
@@ -41,7 +42,7 @@ fun map_half b f l = case l of
 fun hh_unescape s =
   let
     val sl = String.fields (fn c => c = #"|") s
-    fun f s = 
+    fun f s =
       let val n = string_to_int s in
         Char.toString (Char.chr n)
       end
@@ -49,6 +50,7 @@ fun hh_unescape s =
     String.concat (map_half false f sl)
   end
 
+(* TODO: names of theorems should be standardized with tactictoe convention *)
 fun split_name s = case String.fields (fn c => c = #".") s of
     [_,thy,name] => (thy,name)
   | _       => raise ERR "split_name" ""
@@ -73,7 +75,7 @@ fun readl path =
   end
 
 fun read_status atp_status =
-  remove_white_spaces (hd (readl atp_status)) handle _ => "Unknown"
+  remove_white_spaces (hd (readl atp_status)) handle _ => "Unknown" (* TODO: reraise Interrupt *)
 
 (* removing reserverd names: use a similar
    escaping than the holyhammer fof writer *)
@@ -106,144 +108,49 @@ fun get_lemmas (atp_status,atp_out) =
   end
 
 (*---------------------------------------------------------------------------
-   Pretty-printing for lemmas.
+   Minimization and pretty-printing.
+   TODO: Timeout is very short and can not be modified yet.
  ----------------------------------------------------------------------------*)
 
-val ppstrm_stdout =
-  PP.mk_ppstream {consumer = fn s => TextIO.output(TextIO.stdOut, s),
-                  linewidth = 80,
-                  flush = fn () => TextIO.flushOut TextIO.stdOut}
+fun string_of_lemma (thy,name) =
+  if thy = namespace_tag
+    then name
+  else if thy = current_theory ()
+    then String.concatWith " " ["DB.fetch", quote thy, quote name]
+  else thy ^ "Theory." ^ name
 
-fun pp_lemmas_aux ppstrm lemmas =
+fun mk_metiscall lemmas =
+  let val l = map string_of_lemma lemmas in
+    "metisTools.METIS_TAC [" ^
+    String.concatWith " , " l ^ "]"
+  end
+
+fun hh_minimize lemmas g =
   let
-    open Portable
-    val {add_string,add_break,begin_block,
-         end_block,add_newline,flush_ppstream,...} =
-        with_ppstream ppstrm
-    fun pp_l_aux g L = case L of
-        []     => ()
-      | [a]    => g a
-      | a :: m => (g a; add_string ","; add_break(1,0); pp_l_aux g m)
-    fun pp_l f l =
-      (begin_block INCONSISTENT 0;
-         add_string "[";
-         begin_block INCONSISTENT 0;
-           pp_l_aux f l;
-         end_block();
-         add_string "]";
-       end_block())
-    fun pp_lemma (thy,name) =
-      if thy = current_theory () 
-      then add_string 
-             (String.concatWith " " ["DB.fetch", quote thy, quote name])
-      else add_string (thy ^ "Theory." ^ name)
+    val stac = mk_metiscall lemmas
+    val newstac = hide_out (tttMinimize.minimize_stac 1.0 stac g) []
   in
-    begin_block INCONSISTENT 0;
-    add_string "val lemmas = ";
-    pp_l pp_lemma lemmas;
-    add_string ";";
-    end_block();
-    flush_ppstream()
+    print_endline newstac;
+    tactic_of_sml newstac
   end
-
-fun pp_lemmas lemmas = (pp_lemmas_aux ppstrm_stdout lemmas; print "\n")
-
-fun stac_of_lemmas l cj =
-  let 
-    val g = ([],cj)
-    val (gl,_) = metisTools.METIS_TAC (map snd l) g
-    fun f (thy,name) =
-      if thy = current_theory () 
-      then (String.concatWith " " ["DB.fetch", quote thy, quote name])
-      else (thy ^ "Theory." ^ name) 
-    val stac = 
-      "metisTools.METIS_TAC [" ^ String.concatWith ", " (map (f o fst) l) ^ "]"
-  in
-    hhsMinimize.pretty_stac stac g gl
-  end
-    
-(*---------------------------------------------------------------------------
-   Timed Metis.
- ----------------------------------------------------------------------------*)
-
-fun time_metis thml conjecture time =
-  let
-    val oldlimit = !mlibMetis.limit
-    val oldtracelevel = !mlibUseful.trace_level
-    val thm =
-      (
-      metisTools.limit := {time = SOME time, infs = NONE};
-      mlibUseful.trace_level := 0;
-      metisTools.METIS_PROVE thml conjecture
-      )
-  in
-    (metisTools.limit := oldlimit; mlibUseful.trace_level := oldtracelevel; thm)
-  end
-
-(*---------------------------------------------------------------------------
-   Minimization. Can be turned off by minimize_flag if it takes too much time.
- ----------------------------------------------------------------------------*)
-
-val minimize_flag = ref true
-
-fun minimize_lemmas_loop l1 l2 cj =
-  if null l2 then l1 else
-    if can (time_metis (map snd (l1 @ tl l2)) cj) 2.0
-    then minimize_lemmas_loop l1 (tl l2) cj
-    else minimize_lemmas_loop (hd l2 :: l1) (tl l2) cj
-
-fun minimize_lemmas l cj =
-  if can (time_metis (map snd l) cj) 2.0
-  then (
-       print "Minimization...\n";
-       let 
-         val l1 = minimize_lemmas_loop [] l cj
-         val stac = 
-           hhsRedirect.hide_in_file (hhsTools.hhs_code_dir ^ "/hh_pretty")
-           (stac_of_lemmas l1) cj;
-       in
-         print_endline stac;  
-         metisTools.METIS_TAC (map snd l1)
-       end
-       )
-  else (
-       print "Metis could not find a proof in less than 2 seconds. \n";
-       pp_lemmas (map fst l);
-       FAIL_TAC "holyhammer: minimization"
-       )
 
 (*---------------------------------------------------------------------------
    Reconstruction.
  ----------------------------------------------------------------------------*)
 
-fun reconstruct (atp_status,atp_out) cj =
+fun reconstruct (atp_status,atp_out) g =
   let val olemmas = get_lemmas (atp_status,atp_out) in
-    case olemmas of 
-      NONE => (print_endline "holyhammer: time out"; 
+    case olemmas of
+      NONE => (print_endline "holyhammer: time out";
                FAIL_TAC "holyhammer: time out")
-    | SOME lemmas =>
-    let
-      val l = map (fn (thy,nm) => ((thy,nm), fetch thy nm)) lemmas
-    in
-      if !minimize_flag 
-      then minimize_lemmas l cj
-      else (pp_lemmas lemmas; metisTools.METIS_TAC (map snd l))
-    end
+    | SOME lemmas => hh_minimize lemmas g
   end
 
-fun string_of_lemma (thy,name) =
-  if thy = current_theory () 
-  then String.concatWith " " ["DB.fetch", quote thy, quote name]
-  else thy ^ "Theory." ^ name
-
-fun reconstruct_stac (atp_status,atp_out) cj =
+fun reconstruct_stac (atp_status,atp_out) g =
   let val olemmas = get_lemmas (atp_status,atp_out) in
-    case olemmas of 
+    case olemmas of
       NONE => NONE
-    | SOME lemmas =>
-    let val l = map string_of_lemma lemmas in
-      SOME ("metisTools.METIS_TAC [" ^ String.concatWith ", " l ^ "]")
-    end
-  end  
+    | SOME lemmas => SOME (mk_metiscall lemmas)
+  end
 
 end

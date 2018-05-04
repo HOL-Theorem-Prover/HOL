@@ -490,8 +490,9 @@ val _ = computeLib.add_persistent_funs
           ["IMPLODE_EXPLODE_I", "ORD_CHR_COMPUTE", "CHAR_EQ_THM"];
 
 fun adjoin_to_theory_struct l = adjoin_to_theory {sig_ps = NONE,
-  struct_ps = SOME (fn ppstrm =>
-    app (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm)) l)};
+  struct_ps = SOME (fn _ =>
+                       PP.block PP.CONSISTENT 0
+                                (PP.pr_list PP.add_string [PP.NL] l))};
 
 val _ = adjoin_to_theory_struct [
   "val _ =",
