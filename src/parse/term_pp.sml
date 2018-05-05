@@ -581,7 +581,8 @@ fun pp_term (G : grammar) TyG backend = let
                           pgrav lgrav rgrav
                           depth
    in
-     if printers_exist then let
+     if printers_exist then
+       let
          fun sysprint { gravs = (pg,lg,rg), binderp, depth} tm =
            full_pr_term binderp showtypes showtypes_v ppfns combpos tm
                         pg lg rg depth
@@ -591,14 +592,14 @@ fun pp_term (G : grammar) TyG backend = let
                              backend sysprint ppfns
                              (pgrav, lgrav, rgrav)
                              depth tm
-            fun runfirst [] = pr0 tm
-              | runfirst ((_,_,f)::t) =
+         fun runfirst [] = pr0 tm
+           | runfirst ((_,_,f)::t) =
                   (printwith f
                    handle UserPP_Failed => runfirst t) || runfirst t
-          in
-            runfirst candidates
-          end
-        else pr0 tm
+       in
+         runfirst candidates
+       end
+     else pr0 tm
    end apps
   and pr_term0 binderp showtypes showtypes_v ppfns combpos tm
                pgrav lgrav rgrav depth apps =
