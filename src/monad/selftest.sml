@@ -1,5 +1,5 @@
 open HolKernel Parse boolTheory boolLib testutils
-open monadsyntax parmonadsyntax state_transformerTheory
+open monadsyntax parmonadsyntax state_transformerTheory errorStateMonadTheory
 
 val _ = temp_remove_absyn_postprocessor "monadsyntax.transform_absyn"
 val _ = temp_remove_user_printer "monadsyntax.print_monads"
@@ -99,5 +99,16 @@ val _ = same_const f ``option$OPTION_BIND`` andalso
         (OK(); true) orelse udie()
 
 val _ = app tpp [monadtpp_test1, monadtpp_test2]
+
+val _ = app clear_overloads_on ["monad_bind", "monad_unitbind"]
+val _ = temp_overload_on ("monad_bind", ``errorStateMonad$BIND``);
+val _ = temp_overload_on ("monad_unitbind", ``errorStateMonad$IGNORE_BIND``);
+
+val _ = print "Testing with error state monad\n"
+
+val _ = app tpp [monadtpp_test1, monadtpp_test2]
+
+val _ = current_backend := PPBackEnd.raw_terminal
+val _ = testutils.tpp "do x <- f y; g x od arg"
 
 val _ = Process.exit Process.success

@@ -440,12 +440,12 @@ fun oi_strip_combP oinfo P t = let
           | SOME (f,x) => recurse (x::acc) f
         end
       | SOME (f,args) => SOME(f, args @ acc)
-  val realf = repeat rator t
+  val (realf, args) = HolKernel.strip_comb t
 in
   if is_var realf andalso
      String.isPrefix GrammarSpecials.fakeconst_special (#1 (dest_var realf))
   then
-    NONE
+    SOME(realf, args)
   else recurse [] t
 end
 
