@@ -1,9 +1,7 @@
 structure monadsyntax :> monadsyntax =
 struct
 
-open HolKernel Parse Feedback
-
-local open state_transformerTheory in end
+open HolKernel Parse boolLib
 
 val monadseq_special = "__monad_sequence"
 val monad_emptyseq_special = "__monad_emptyseq"
@@ -11,6 +9,120 @@ val monadassign_special = "__monad_assign"
 val monad_unitbind = "monad_unitbind"
 val monad_bind = "monad_bind"
 
+fun ERR f msg = mk_HOL_ERR "monadsyntax" f msg
+
+type monadinfo = { bind : term,
+                   ignorebind : term option,
+                   unit : term,
+                   fail : term option,
+                   choice : term option,
+                   guard : term option }
+
+structure MonadInfo =
+struct
+  open ThyDataSexp
+  type t = monadinfo
+  fun toSexp {bind,ignorebind,unit,fail,choice,guard} =
+      List [Term bind, Option (Option.map Term ignorebind),
+            Term unit, Option (Option.map Term fail),
+            Option (Option.map Term choice),
+            Option (Option.map Term guard)]
+  fun determOpt NONE = NONE
+    | determOpt (SOME (Term t)) = SOME t
+    | determOpt _ = raise ERR "fromSexp" "Expected term option"
+  fun fromSexp s =
+    case s of
+        List [Term bind, Option ign_opt, Term unit, Option failopt,
+              Option choiceopt, Option guardopt] =>
+          {bind = bind, ignorebind = determOpt ign_opt, unit = unit,
+           fail = determOpt failopt, guard = determOpt guardopt,
+           choice = determOpt choiceopt}
+      | _ => raise ERR "fromSexp" "bad format - not a list of 5 elements"
+end
+
+val monadDB =
+    ref (Binarymap.mkDict String.compare : (string,MonadInfo.t) Binarymap.dict)
+
+fun write_keyval (nm, mi) =
+  let
+    open ThyDataSexp
+  in
+    List [List [String nm, MonadInfo.toSexp mi]]
+  end
+
+fun load_from_disk {thyname, data} =
+  let
+    open ThyDataSexp
+    fun dest_keyval (s : ThyDataSexp.t) : string * MonadInfo.t =
+      case s of
+          List [String key, mi_sexp] =>
+            let
+              val mit = MonadInfo.fromSexp mi_sexp
+            in
+              (key, mit)
+            end
+        | _ => raise ERR "load_from_disk" "keyval pair data looks bad"
+  in
+    case data of
+        List keyvals =>
+          monadDB := List.foldl (fn ((k,v), acc) => Binarymap.insert(acc,k,v))
+                                (!monadDB)
+                                (map dest_keyval keyvals)
+      | _ => raise ERR "load_from_disk" "data looks bad"
+  end
+
+fun getMITname s =
+  let
+    open ThyDataSexp
+  in
+    case s of
+        List [String k, _] => k
+      | _ => raise ERR "getMITname" "Shouldn't happen"
+  end
+
+fun uptodate_check t =
+  case t of
+      ThyDataSexp.List tyis =>
+      let
+        val (good, bad) = partition ThyDataSexp.uptodate tyis
+      in
+        case bad of
+            [] => t
+          | _ =>
+            let
+              val tyinames = map getMITname bad
+            in
+              HOL_WARNING "monadsyntax" "uptodate_check"
+                          ("Monad information for: " ^
+                           String.concatWith ", " tyinames ^ " discarded");
+              ThyDataSexp.List good
+            end
+      end
+    | _ => raise Fail "TypeBase.uptodate_check : shouldn't happen"
+
+
+fun check_thydelta (t, tdelta) =
+  let
+    open TheoryDelta
+  in
+    case tdelta of
+        NewConstant _ => uptodate_check t
+      | NewTypeOp _ => uptodate_check t
+      | DelConstant _ => uptodate_check t
+      | DelTypeOp _ => uptodate_check t
+      | _ => t
+  end
+
+val {export = export_minfo, ...} = ThyDataSexp.new{
+      thydataty = "MonadInfoDB",
+      load = load_from_disk, other_tds = check_thydelta,
+      merge = ThyDataSexp.alist_merge
+    }
+
+fun predeclare (nm, t) = monadDB := Binarymap.insert(!monadDB, nm, t)
+fun declare_monad p = (predeclare p; export_minfo (write_keyval p))
+
+fun all_monads () = Binarymap.listItems (!monadDB)
 
 
 fun to_vstruct a = let
@@ -224,14 +336,20 @@ fun aap (s, code) = (add_ML_dependency "monadsyntax";
 fun add_monadsyntax () = syntax_actions add_listform add_rule aup aap
 
 
-fun mkc s = prim_mk_const{Thy = "state_transformer", Name = s}
-val _ = temp_overload_on (monad_bind, mkc "BIND")
-val _ = temp_overload_on (monad_unitbind, mkc "IGNORE_BIND")
-val _ = temp_overload_on ("return", mkc "UNIT")
-
 val _ = TexTokenMap.temp_TeX_notation
             {hol = "<-", TeX = ("\\HOLTokenLeftmap{}", 1)}
 val _ = TexTokenMap.temp_TeX_notation {hol = "do", TeX = ("\\HOLKeyword{do}", 2)}
 val _ = TexTokenMap.temp_TeX_notation {hol = "od", TeX = ("\\HOLKeyword{od}", 2)}
+
+val _ = predeclare (
+      "option",
+      { bind = prim_mk_const {Name = "OPTION_BIND", Thy = "option"},
+        ignorebind = SOME (prim_mk_const{
+                              Name = "OPTION_IGNORE_BIND", Thy = "option"}),
+        unit = prim_mk_const {Name = "SOME", Thy = "option"},
+        fail = SOME (prim_mk_const {Name = "NONE", Thy = "option"}),
+        guard = SOME (prim_mk_const {Name = "OPTION_GUARD", Thy = "option"}),
+        choice = SOME (prim_mk_const {Name = "OPTION_CHOICE", Thy = "option"})
+      });
 
 end (* struct *)

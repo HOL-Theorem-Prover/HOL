@@ -3006,6 +3006,7 @@ val LIST_BIND_LIST_BIND = store_thm(
   ``LIST_BIND (LIST_BIND l g) f = LIST_BIND l (combin$C LIST_BIND f o g)``,
   Induct_on `l` THEN ASM_SIMP_TAC (srw_ss()) [LIST_BIND_APPEND]);
 
+val LIST_GUARD_def = Define‘LIST_GUARD b = if b then [()] else []’;
 
 (* the "return" or "pure" constant for lists isn't an existing one, unlike
    the situation with 'a option, where SOME fits the bill. *)
@@ -3884,5 +3885,13 @@ fun dest_list M =
     of NONE => if same_const nil_tm M then []
                else raise ERR "dest_list" "not terminated with nil"
      | SOME(h,t) => h::dest_list t
+
+val _ =
+    monadsyntax.declare_monad (
+      "list",
+      { bind = “LIST_BIND”, ignorebind = SOME “LIST_IGNORE_BIND”,
+        unit = “SINGL”, choice = SOME “APPEND”, fail = SOME “[]”,
+        guard = SOME “LIST_GUARD” }
+    )
 
 val _ = export_theory();

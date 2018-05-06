@@ -285,6 +285,16 @@ val ES_GUARD_DEF = DEF`
   ES_GUARD b = if b then UNIT () else ES_FAIL
 `
 
+val _ =
+    monadsyntax.declare_monad (
+      "errorState",
+      { bind = “BIND”, ignorebind = SOME “IGNORE_BIND”, unit = “UNIT”,
+        choice = SOME “ES_CHOICE”, fail = SOME “ES_FAIL”,
+        guard = SOME “ES_GUARD”
+      }
+    )
+
+
 val ES_CHOICE_ASSOC = store_thm(
   "ES_CHOICE_ASSOC",
   ``ES_CHOICE xM (ES_CHOICE yM zM) = ES_CHOICE (ES_CHOICE xM yM) zM``,

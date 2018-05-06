@@ -20,6 +20,15 @@ val BIND_DEF = DEF `BIND (g: ('b, 'a) M) (f: 'b -> ('c, 'a) M) = UNCURRY f o g`;
 
 val IGNORE_BIND_DEF = DEF `IGNORE_BIND f g = BIND f (\x. g)`;
 
+val _ =
+    monadsyntax.declare_monad (
+      "state",
+      { bind = “BIND”, ignorebind = SOME “IGNORE_BIND”, unit = “UNIT”,
+        choice = NONE, fail = NONE, guard = NONE
+      }
+    )
+
+
 val MMAP_DEF = DEF `MMAP (f: 'c -> 'b) (m: ('c, 'a) M) = BIND m (UNIT o f)`;
 
 val JOIN_DEF = DEF `JOIN (z: (('b, 'a) M, 'a) M) = BIND z I`;
