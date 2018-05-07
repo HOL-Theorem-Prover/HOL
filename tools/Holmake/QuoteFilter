@@ -2,7 +2,7 @@
 fun inc r = (r := !r + 1)
 fun dec r = (r := !r - 1)
 
-fun bslash_escape s = "\\" ^ Int.toString (Char.ord(String.sub(s,0)))
+fun bslash_escape s = "\\" ^ StringCvt.padLeft #"0" 3 (Int.toString (Char.ord(String.sub(s,0))))
 
 datatype quotetype = inQUOTE | inTMQUOTE | inTYQUOTE
 
@@ -33,7 +33,7 @@ fun ifscript (QFS {inscript,...}) s1 s2 =
   if inscript then s1 else s2
 
 fun makesafe c =
-    if not (Char.isPrint c) then "\\" ^ Int.toString (Char.ord c)
+    if not (Char.isPrint c) then "\\" ^ StringCvt.padLeft #"0" 3 (Int.toString (Char.ord c))
     else str c
 
 fun safeprint x s = ECHO x (String.translate makesafe s)
