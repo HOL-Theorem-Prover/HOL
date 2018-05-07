@@ -17,12 +17,15 @@ val mbind_def = Define`
     case f s of
     | (Rval x,s) => g x s
     | r => r`;
+val _ = overload_on("monad_bind",``state_transformer$BIND``);
 val _ = overload_on("monad_bind",``mbind``);
 
 val mibind_def = Define`
   mibind f g = mbind f (λx. g)`;
+val _ = overload_on("monad_unitbind",``state_transformer$IGNORE_BIND``);
 val _ = overload_on("monad_unitbind",``mibind``);
 
+val _ = overload_on("return", ``state_transformer$UNIT``);
 val mfail_def = Define`
   mfail = return Rfail`;
 
