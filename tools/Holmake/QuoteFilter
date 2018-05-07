@@ -122,11 +122,15 @@ quoteend = "`" | "\226\128\153";
                                  locpragma yyarg (yytext, yypos) 0)
 )
                  else ECHO yyarg yytext);
-<INITIAL>{fullquotebegin} {ws}* ":" ({letter} | {ws} | {newline} | [('] | {digit} | {lowergreek}) => (
+<INITIAL>{fullquotebegin} {ws}* ":" ({letter} | {ws} | [('] | {digit} | {lowergreek}) => (
                  YYBEGIN tyquote;
                  ECHO yyarg
                    ("(Parse.Type [QUOTE \""^locpragma yyarg (yytext,yypos) 2 ^
                     safeprint yyarg (drop_upto #":" yytext)));
+<INITIAL>{fullquotebegin} {ws}* ":" {newline} =>
+     (YYBEGIN tyquote;
+      ECHO yyarg ("(Parse.Type [QUOTE \""^locpragma yyarg (yytext,yypos) 2) ^
+      ":" ^ qnewline yyarg (yypos, yytext));
 <INITIAL>{fullquotebegin} {ws}* ":^" =>
               (antiquote_stack := inTYQUOTE :: !antiquote_stack;
                YYBEGIN ANTIQ;

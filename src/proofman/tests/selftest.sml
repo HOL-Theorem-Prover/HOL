@@ -3,9 +3,16 @@ open testutils
 
 val _ = set_trace "Unicode" 0
 
-val _ = tprint "test of flatn"
 val _ = goalStack.chatting := false
 
+val _ = tprint "Type parsing with newlines"
+val ty = ``:
+   'a
+``;
+val _ = if Type.compare(ty,Type.alpha) = EQUAL then OK()
+        else die ("\nFAILED: got (" ^ type_to_string ty ^ ")")
+
+val _ = tprint "test of flatn"
 val _ = let
     val g = ([], ``a ==> b ==> c ==> d ==> e ==> a /\ b /\ c /\ d /\ e``) : goal
     val gstk = new_goal g Lib.I ;
