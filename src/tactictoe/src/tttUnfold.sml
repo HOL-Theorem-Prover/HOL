@@ -905,8 +905,9 @@ fun output_header oc cthy =
   ];
   (* infix operators *)
   app (os oc) (bare_readl infix_decl);
-  (* creating fof problems *)
+  (* creating fof/thf problems *)
   output_flag oc "tttSetup.ttt_fof_flag" ttt_fof_flag;
+  output_flag oc "tttSetup.ttt_thf_flag" ttt_thf_flag;
   (* recording *)
   output_flag oc "tttSetup.ttt_record_flag" ttt_record_flag;
   output_flag oc "tttSetup.ttt_recprove_flag" ttt_recprove_flag;
@@ -1257,7 +1258,7 @@ fun eprover_eval_thy thy =
 fun eprover_eval_parallel n thyl = parallel_thy eprover_eval_thy n thyl
 
 (* ---------------------------------------------------------------------------
-   Creating fof files
+   Creating fof and thf files
    -------------------------------------------------------------------------- *)
 
 fun create_fof_thy thy =
@@ -1268,6 +1269,15 @@ fun create_fof_thy thy =
   ttt_fof_flag := false
   )
 
+fun create_thf_thy thy =
+  (
+  ttt_thf_flag := true;
+  ttt_rewrite_thy thy;
+  ttt_record_thy thy;
+  ttt_thf_flag := false
+  )
+
 fun create_fof_parallel n thyl = parallel_thy create_fof_thy n thyl
+fun create_thf_parallel n thyl = parallel_thy create_thf_thy n thyl
 
 end (* struct *)

@@ -68,6 +68,7 @@ fun clean_dir dir =
 (* TODO: use OS.Path.concat *)
 val hh_dir = HOLDIR ^ "/src/holyhammer"
 val fof_dir = hh_dir ^ "/fof"
+val thf_dir = hh_dir ^ "/thf"
 val tt_dir = hh_dir ^ "/tt"
 val hh_bin_dir = hh_dir ^ "/hh"
 val provbin_dir = hh_dir ^ "/provers"
@@ -282,44 +283,47 @@ fun hh goal = (holyhammer_goal goal) goal
    Creates first order problems for atps to be evalued on.
  ----------------------------------------------------------------------------*)
 
-fun export_translate pbdir name premises cj =
+fun export_translate (translate_to_X, X_dir) pbdir name premises cj =
   let
     val _ = mkDir_err tt_dir
     val probdir_top = tt_dir ^ "/" ^ pbdir
     val _ = mkDir_err probdir_top
     val probdir = probdir_top ^ "/" ^ name
     val _ = mkDir_err probdir
-    val _ = mkDir_err fof_dir
-    val provdir_top = fof_dir ^ "/" ^ pbdir
+    val _ = mkDir_err X_dir
+    val provdir_top = X_dir ^ "/" ^ pbdir
     val _ = mkDir_err provdir_top
     val provdir = provdir_top ^ "/" ^ name
     val _ = mkDir_err provdir
   in
     export_problem probdir premises cj;
-    translate_fof probdir provdir;
+    translate_to_X probdir provdir;
     rmDir_rec probdir
   end
 
-fun create_fof name thm =
-  let 
+fun create_X X name thm =
+  let
     val goal = dest_thm thm
     val cj = list_mk_imp goal
     (* with 0 selected premises (for ltb) *)
     val pbdir0 = "pb_pred0"
-    val _ = export_translate pbdir0 name [] cj
+    val _ = export_translate X pbdir0 name [] cj
     (* with 128 selected premises *)
     val (symweight,feav,revdict) = update_thmdata ()
     val pbdir128 = "pb_pred128"
     val premises = thmknn_wdep (symweight,feav,revdict) 128 (fea_of_goal goal)
-    val _ = export_translate pbdir128 name premises cj
+    val _ = export_translate X pbdir128 name premises cj
     (* with dependencies *)
     val pbdir_dep = "pb_dep"
     val (flag,deps) = dependencies_of_thm thm
     val name_dep = name ^ "__" ^ (if flag then "dep" else "brokendep")
-    val _ = export_translate pbdir_dep name_dep deps cj
+    val _ = export_translate X pbdir_dep name_dep deps cj
   in
     ()
   end
+
+val create_fof = create_X (translate_fof, fof_dir)
+val create_thf = create_X (translate_thf, thf_dir)
 
 (*---------------------------------------------------------------------------
    Asynchronous calls to holyhammer in tactictoe.

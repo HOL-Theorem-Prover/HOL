@@ -294,31 +294,35 @@ fun org_tac tac g =
     | _ => (debug "Error: org_tac: error"; clear_tac tac g)
 
 val fof_counter = ref 0
+val thf_counter = ref 0
 
-fun create_fof_wrap name pflag result =
-  if !ttt_fof_flag andalso (not pflag orelse !ttt_evprove_flag) then 
+fun create_X_wrap (flag,update_glob,counter,glob) name pflag result =
+  if !flag andalso (not pflag orelse !ttt_evprove_flag) then
     let
       val thm = (snd result) []
-      val _ = update_create_fof ()
-      val _ = incr fof_counter
-      val is = int_to_string (!fof_counter)
-      val newname = current_theory () ^ "__" ^ is ^ "__" ^ name 
+      val _ = update_glob ()
+      val _ = incr counter
+      val is = int_to_string (!counter)
+      val newname = current_theory () ^ "__" ^ is ^ "__" ^ name
     in
-      (!create_fof_glob) newname thm
+      (!glob) newname thm
     end
   else ()
 
+val create_fof_wrap = create_X_wrap (ttt_fof_flag, update_create_fof, fof_counter, create_fof_glob)
+val create_thf_wrap = create_X_wrap (ttt_thf_flag, update_create_thf, thf_counter, create_thf_glob)
+
 fun record_proof name lflag tac1 tac2 g =
-  if !ttt_fof_flag then
-    let 
+  if !ttt_fof_flag orelse !ttt_thf_flag then
+    let
       val pflag = String.isPrefix "tactictoe_prove_" name
       val result =  
         let val (r,t) = add_time (org_tac tac2) g in
           debug_proof ("Original proof time: " ^ Real.toString t);
           r
         end
-      val _ = create_fof_wrap name pflag result
-        handle _ => (debug "Error: create_fof_wrap"; ())
+      val _ = (if !ttt_fof_flag then create_fof_wrap else create_thf_wrap) name pflag result
+        handle _ => (debug "Error: create_X_wrap"; ())
     in
       result
     end

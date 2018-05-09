@@ -48,6 +48,7 @@ val ttt_recgl_flag = ref true
    ========================================================================== *)
 
 val ttt_fof_flag = ref false
+val ttt_thf_flag = ref false
 
 val ttt_eval_flag = ref false
 

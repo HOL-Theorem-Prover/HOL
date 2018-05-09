@@ -247,6 +247,9 @@ fun update_hh_stac () =
 
 val create_fof_glob:
   (string -> thm -> unit) ref = ref (fn _ => (fn _ => ()))
+val create_thf_glob:
+  (string -> thm -> unit) ref = ref (fn _ => (fn _ => ()))
+
 
 fun update_create_fof () =
   let
@@ -256,6 +259,20 @@ fun update_create_fof () =
       [
       "load \"holyHammer\";",
       "val _ = tttExec.create_fof_glob := holyHammer.create_fof;"
+      ]
+      )
+  in
+    if b then () else raise ERR "update_hh_stac" ""
+  end
+
+fun update_create_thf () =
+  let
+    val b = exec_sml "update_create_thf"
+      (
+      String.concatWith "\n"
+      [
+      "load \"holyHammer\";",
+      "val _ = tttExec.create_thf_glob := holyHammer.create_thf;"
       ]
       )
   in

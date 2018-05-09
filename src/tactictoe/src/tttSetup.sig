@@ -14,10 +14,11 @@ sig
   val ttt_thmlarg_flag   : bool ref
   val ttt_thmlarg_radius : int ref
   val ttt_recgl_flag     : bool ref
-  
-  (** Generating fof problems *)
+
+  (** Generating fof/thf problems *)
   val ttt_fof_flag : bool ref
-  
+  val ttt_thf_flag : bool ref
+
   (** Evaluation **)
   val ttt_eval_flag     : bool ref
   (* evaluated theorems *)

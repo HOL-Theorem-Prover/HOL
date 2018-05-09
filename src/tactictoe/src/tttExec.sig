@@ -27,7 +27,9 @@ sig
 
   val create_fof_glob   : (string -> thm -> unit) ref
   val update_create_fof : unit -> unit
-  
+  val create_thf_glob   : (string -> thm -> unit) ref
+  val update_create_thf : unit -> unit
+
   (* execution function *)
   val exec_sml         : string -> string -> bool
 

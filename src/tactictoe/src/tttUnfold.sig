@@ -16,11 +16,13 @@ sig
   (* tools *)
   val find_script : string -> string
   val split_thyl : int -> string list -> string list list
-  
-  (* creating fof files *)
+
+  (* creating fof and thf files *)
   val create_fof_thy : string -> unit
   val create_fof_parallel : int -> string list -> unit
-  
+  val create_thf_thy : string -> unit
+  val create_thf_parallel : int -> string list -> unit
+
   (* recording *)
   val ttt_rewrite_thy : string -> unit
   val ttt_record_thy  : string -> unit
