@@ -37,7 +37,7 @@ let variant_name_map s used =
 
 let print_vartype t =
   let s = String.copy (dest_vartype t) in
-  escape_var s 
+  add_prime (escape_var s)
 
 let os = output_string;;
 let rec oiter oc fn sep = function
