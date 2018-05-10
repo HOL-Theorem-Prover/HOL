@@ -8,11 +8,11 @@ val _ = new_theory "sptree";
 
 (* A log-time random-access, extensible array implementation with union.
 
-   The "array" can be gappy: there don't have to be elements at any
-   particular index, and, being a finite thing, there is obviously a
-   maximum index past which there are no elements at all. It is
+   The "array" can be gappy: there doesn't have to be an element at
+   any particular index, and, being a finite thing, there is obviously
+   a maximum index past which there are no elements at all. It is
    possible to update at an index past the current maximum index. It
-   is also possible to delete values at an index.
+   is also possible to delete values at any index.
 
    Should EVAL well. Big drawback is that there doesn't seem to be an
    efficient way (i.e., O(n)) to do an in index-order traversal of the
@@ -411,57 +411,57 @@ val FINITE_domain = store_thm(
   ``FINITE (domain t)``,
   Induct_on `t` >> simp[]);
 
-val DIV2 = DIVISION |> Q.SPEC ‘2’ |> REWRITE_RULE [DECIDE “0 < 2”]
+val DIV2 = DIVISION |> Q.SPEC `2` |> REWRITE_RULE [DECIDE ``0 < 2``]
 
 val even_lem = Q.prove(
-  ‘EVEN k /\ k <> 0 ==> (2 * ((k - 1) DIV 2) + 2 = k)’,
-  qabbrev_tac ‘k0 = k - 1’  >>
-  strip_tac >> ‘k = k0 + 1’ by simp[Abbr‘k0’] >>
-  pop_assum SUBST_ALL_TAC >> qunabbrev_tac ‘k0’ >>
+  `EVEN k /\ k <> 0 ==> (2 * ((k - 1) DIV 2) + 2 = k)`,
+  qabbrev_tac `k0 = k - 1`  >>
+  strip_tac >> `k = k0 + 1` by simp[Abbr`k0`] >>
+  pop_assum SUBST_ALL_TAC >> qunabbrev_tac `k0` >>
   fs[EVEN_ADD] >>
-  assume_tac (Q.SPEC ‘k0’ DIV2) >>
-  map_every qabbrev_tac [‘q = k0 DIV 2’, ‘r = k0 MOD 2’] >>
+  assume_tac (Q.SPEC `k0` DIV2) >>
+  map_every qabbrev_tac [`q = k0 DIV 2`, `r = k0 MOD 2`] >>
   markerLib.RM_ALL_ABBREVS_TAC >>
   fs[EVEN_ADD, EVEN_MULT] >>
-  ‘(r = 0) \/ (r = 1)’ by simp[] >> fs[])
+  `(r = 0) \/ (r = 1)` by simp[] >> fs[])
 
 val odd_lem = Q.prove(
-  ‘~EVEN k /\ k <> 0 ==> (2 * ((k - 1) DIV 2) + 1 = k)’,
-  qabbrev_tac ‘k0 = k - 1’  >>
-  strip_tac >> ‘k = k0 + 1’ by simp[Abbr‘k0’] >>
-  pop_assum SUBST_ALL_TAC >> qunabbrev_tac ‘k0’ >>
+  `~EVEN k /\ k <> 0 ==> (2 * ((k - 1) DIV 2) + 1 = k)`,
+  qabbrev_tac `k0 = k - 1`  >>
+  strip_tac >> `k = k0 + 1` by simp[Abbr`k0`] >>
+  pop_assum SUBST_ALL_TAC >> qunabbrev_tac `k0` >>
   fs[EVEN_ADD] >>
-  assume_tac (Q.SPEC ‘k0’ DIV2) >>
-  map_every qabbrev_tac [‘q = k0 DIV 2’, ‘r = k0 MOD 2’] >>
+  assume_tac (Q.SPEC `k0` DIV2) >>
+  map_every qabbrev_tac [`q = k0 DIV 2`, `r = k0 MOD 2`] >>
   markerLib.RM_ALL_ABBREVS_TAC >>
   fs[EVEN_ADD, EVEN_MULT] >>
-  ‘(r = 0) \/ (r = 1)’ by simp[] >> fs[])
+  `(r = 0) \/ (r = 1)` by simp[] >> fs[])
 
 val size_insert = Q.store_thm(
   "size_insert",
-  ‘!k v m. size (insert k v m) = if k IN domain m then size m else size m + 1’,
+  `!k v m. size (insert k v m) = if k IN domain m then size m else size m + 1`,
   ho_match_mp_tac insert_ind >> rpt conj_tac >> simp[] >>
   rpt strip_tac >> simp[Once insert_def]
   >- rw[]
   >- rw[]
-  >- (Cases_on ‘k = 0’ >> simp[] >> fs[] >> Cases_on ‘EVEN k’ >> fs[]
-      >- (‘!n. k <> 2 * n + 1’ by (rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]) >>
-          qabbrev_tac ‘k2 = (k - 1) DIV 2’ >>
+  >- (Cases_on `k = 0` >> simp[] >> fs[] >> Cases_on `EVEN k` >> fs[]
+      >- (`!n. k <> 2 * n + 1` by (rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]) >>
+          qabbrev_tac `k2 = (k - 1) DIV 2` >>
           `k = 2 * k2 + 2` suffices_by rw[] >>
-          simp[Abbr‘k2’, even_lem]) >>
-      ‘!n. k <> 2 * n + 2’ by (rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]) >>
-      qabbrev_tac ‘k2 = (k - 1) DIV 2’ >>
-      ‘k = 2 * k2 + 1’ suffices_by rw[] >>
-      simp[Abbr‘k2’, odd_lem])
-  >- (Cases_on ‘k = 0’ >> simp[] >> fs[] >> Cases_on ‘EVEN k’ >> fs[]
-      >- (‘!n. k <> 2 * n + 1’ by (rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]) >>
-          qabbrev_tac ‘k2 = (k - 1) DIV 2’ >>
-          ‘k = 2 * k2 + 2’ suffices_by rw[] >>
-          simp[Abbr‘k2’, even_lem]) >>
-      ‘!n. k <> 2 * n + 2’ by (rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]) >>
-      qabbrev_tac ‘k2 = (k - 1) DIV 2’ >>
-      ‘k = 2 * k2 + 1’ suffices_by rw[] >>
-      simp[Abbr‘k2’, odd_lem]))
+          simp[Abbr`k2`, even_lem]) >>
+      `!n. k <> 2 * n + 2` by (rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]) >>
+      qabbrev_tac `k2 = (k - 1) DIV 2` >>
+      `k = 2 * k2 + 1` suffices_by rw[] >>
+      simp[Abbr`k2`, odd_lem])
+  >- (Cases_on `k = 0` >> simp[] >> fs[] >> Cases_on `EVEN k` >> fs[]
+      >- (`!n. k <> 2 * n + 1` by (rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]) >>
+          qabbrev_tac `k2 = (k - 1) DIV 2` >>
+          `k = 2 * k2 + 2` suffices_by rw[] >>
+          simp[Abbr`k2`, even_lem]) >>
+      `!n. k <> 2 * n + 2` by (rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]) >>
+      qabbrev_tac `k2 = (k - 1) DIV 2` >>
+      `k = 2 * k2 + 1` suffices_by rw[] >>
+      simp[Abbr`k2`, odd_lem]))
 
 val lookup_fromList = store_thm(
   "lookup_fromList",
@@ -533,6 +533,13 @@ val domain_insert = store_thm(
   ``domain (insert k v t) = k INSERT domain t``,
   simp[domain_lookup, pred_setTheory.EXTENSION, lookup_insert] >>
   metis_tac[]);
+
+val domain_difference = Q.store_thm(
+  "domain_difference",
+  `!t1 t2 . domain (difference t1 t2) = (domain t1) DIFF (domain t2)`,
+  simp[pred_setTheory.EXTENSION, domain_lookup, lookup_difference] >>
+  rw [] >> Cases_on `lookup x t1`
+  >> fs[] >> Cases_on `lookup x t2` >> rw[]);
 
 val domain_sing = save_thm(
   "domain_sing",
@@ -1426,7 +1433,7 @@ val subspt_refl = Q.store_thm(
 val subspt_trans = Q.store_thm(
   "subspt_trans",
   `subspt sp1 sp2 /\ subspt sp2 sp3 ==> subspt sp1 sp3`,
-  metis_tac[subspt_def]);
+  simp [subspt_lookup]);
 
 val subspt_LN = Q.store_thm(
   "subspt_LN[simp]",
@@ -1478,10 +1485,10 @@ val ALOOKUP_MAP_lemma = Q.prove(
 
 val lookup_mk_BN = Q.store_thm(
   "lookup_mk_BN",
-  ‘lookup i (mk_BN t1 t2) =
+  `lookup i (mk_BN t1 t2) =
     if i = 0 then NONE
-    else lookup ((i - 1) DIV 2) (if EVEN i then t1 else t2)’,
-  map_every Cases_on [‘t1’, ‘t2’] >> simp[mk_BN_def, lookup_def]);
+    else lookup ((i - 1) DIV 2) (if EVEN i then t1 else t2)`,
+  map_every Cases_on [`t1`, `t2`] >> simp[mk_BN_def, lookup_def]);
 
 val MAP_foldi = Q.store_thm(
   "MAP_foldi",
@@ -1499,5 +1506,115 @@ val mapi_Alist = Q.store_thm(
 val domain_mapi = Q.store_thm("domain_mapi",
   `domain (mapi f pt) = domain pt`,
   rw[pred_setTheory.EXTENSION,domain_lookup,lookup_mapi]);
+
+val size_domain = Q.store_thm("size_domain",
+  `!t. size t = CARD (domain t)`,
+  Induct_on `t`
+  >- rw[size_def, domain_def]
+  >- rw[size_def, domain_def]
+  >> rw[pred_setTheory.CARD_UNION_EQN, pred_setTheory.CARD_INJ_IMAGE]
+  >-
+   (`IMAGE (\n. 2 * n + 2) (domain t) INTER
+     IMAGE (\n. 2 * n + 1) (domain t') = {}`
+      by (rw[GSYM pred_setTheory.DISJOINT_DEF, pred_setTheory.IN_DISJOINT]
+          >> Cases_on `ODD x`
+          >> fs[ODD_EXISTS, ADD1, oddevenlemma])
+    >> simp[]) >>
+  `(({0} INTER IMAGE (\n. 2 * n + 2) (domain t)) = {}) /\
+   (({0} UNION (IMAGE (\n. 2 * n + 2) (domain t)))
+        INTER (IMAGE (\n. 2 * n + 1) (domain t')) = {})`
+  by (rw[GSYM pred_setTheory.DISJOINT_DEF, pred_setTheory.IN_DISJOINT]
+      >> Cases_on `ODD x`
+      >> fs[ODD_EXISTS, ADD1, oddevenlemma])
+  >> simp[]);
+
+val num_set_domain_eq = Q.store_thm("num_set_domain_eq",
+  `!t1 t2:unit spt.
+     wf t1 /\ wf t2 ==>
+     ((domain t1 = domain t2) <=> (t1 = t2))`,
+  rw[] >> EQ_TAC >> rw[spt_eq_thm] >>
+  fs[pred_setTheory.EXTENSION, domain_lookup] >>
+  pop_assum (qspec_then `n` mp_tac) >> strip_tac >>
+  Cases_on `lookup n t1` >> fs[] >> Cases_on `lookup n t2` >> fs[]);
+
+val union_num_set_sym = Q.store_thm ("union_num_set_sym",
+  `!(t1:unit spt) t2. union t1 t2 = union t2 t1`,
+  Induct >> fs[union_def] >> rw[] >> CASE_TAC >> fs[union_def]);
+
+val difference_sub = Q.store_thm("difference_sub",
+  `(difference a b = LN) ==> (domain a SUBSET domain b)`,
+  rw[] >>
+  `(domain (difference a b) = {})` by rw[domain_def] >>
+  fs[pred_setTheory.EXTENSION, domain_difference, pred_setTheory.SUBSET_DEF] >>
+  metis_tac[]);
+
+val wf_difference = Q.store_thm("wf_difference",
+  `!t1 t2. wf t1 /\ wf t2 ==> wf (difference t1 t2)`,
+  Induct >> rw[difference_def, wf_def] >> CASE_TAC >> fs[wf_def]
+  >> rw[wf_def, wf_mk_BN, wf_mk_BS]);
+
+val delete_fail = Q.store_thm ("delete_fail",
+  `!n t. wf t ==> (~(n IN domain t) <=> (delete n t = t))`,
+  simp[domain_lookup] >>
+  recInduct (fetch "-" "lookup_ind") >>
+  rw[lookup_def, wf_def, delete_def, mk_BN_thm, mk_BS_thm]);
+
+val size_delete = Q.store_thm ( "size_delete",
+  `!n t . size (delete n t) =
+          if lookup n t = NONE then size t else size t - 1`,
+  rw[size_def] >> fs[lookup_NONE_domain] >>
+  TRY (qpat_assum `n NOTIN d` (qspecl_then [] mp_tac)) >>
+  rfs[delete_fail, size_def] >>
+  fs[size_domain,lookup_NONE_domain,size_domain]);
+
+val lookup_fromList_outside = Q.store_thm("lookup_fromList_outside",
+  `!k. LENGTH args <= k ==> (lookup k (fromList args) = NONE)`,
+  SIMP_TAC std_ss [lookup_fromList] \\ DECIDE_TAC);
+
+val lemmas = Q.prove(
+  `(2 + 2 * n - 1 = 2 * n + 1:num) /\
+    ((2 + 2 * n' = 2 * n'' + 2) <=> (n' = n'':num)) /\
+    ((2 * m = 2 * n) <=> (m = n)) /\
+    ((2 * n'' + 1) DIV 2 = n'') /\
+    ((2 * n) DIV 2 = n) /\
+    (2 + 2 * n' <> 2 * n'' + 1) /\
+    (2 * m + 1 <> 2 * n' + 2)`,
+  REPEAT STRIP_TAC \\ SIMP_TAC std_ss [] \\ fs []
+  \\ full_simp_tac(srw_ss())[ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV]
+  \\ full_simp_tac(srw_ss())[ONCE_REWRITE_RULE [MULT_COMM] DIV_MULT]
+  \\ IMP_RES_TAC (METIS_PROVE [] ``(m = n) ==> (m MOD 2 = n MOD 2)``)
+  \\ POP_ASSUM MP_TAC \\ SIMP_TAC std_ss []
+  \\ ONCE_REWRITE_TAC [MATCH_MP (GSYM MOD_PLUS) (DECIDE ``0 < 2:num``)]
+  \\ EVAL_TAC \\ fs[MOD_EQ_0,ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]);
+
+val IN_domain = Q.store_thm("IN_domain",
+  `!n x t1 t2.
+      (n IN domain LN <=> F) /\
+      (n IN domain (LS x) <=> (n = 0)) /\
+      (n IN domain (BN t1 t2) <=>
+        (n <> 0 /\ (if EVEN n then ((n-1) DIV 2) IN domain t1
+                              else ((n-1) DIV 2) IN domain t2))) /\
+      (n IN domain (BS t1 x t2) <=>
+        ((n = 0) \/ (if EVEN n then ((n-1) DIV 2) IN domain t1
+                             else ((n-1) DIV 2) IN domain t2)))`,
+  full_simp_tac(srw_ss())[domain_def] \\ REPEAT STRIP_TAC
+  \\ Cases_on `n = 0` \\ full_simp_tac(srw_ss())[]
+  \\ Cases_on `EVEN n` \\ full_simp_tac(srw_ss())[]
+  \\ full_simp_tac(srw_ss())[GSYM ODD_EVEN]
+  \\ IMP_RES_TAC EVEN_ODD_EXISTS
+  \\ full_simp_tac(srw_ss())[ADD1] \\ full_simp_tac(srw_ss())[lemmas]
+  \\ Cases_on `m` \\ full_simp_tac(srw_ss())[MULT_CLAUSES]
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
+  \\ full_simp_tac(srw_ss())[lemmas])
+
+val map_map_K = Q.store_thm("map_map_K",
+  `!t. map (K a) (map f t) = map (K a) t`,
+  Induct \\ full_simp_tac(srw_ss())[map_def]);
+
+val lookup_map_K = Q.store_thm("lookup_map_K",
+  `!t n. lookup n (map (K x) t) = if n IN domain t then SOME x else NONE`,
+  Induct \\ full_simp_tac(srw_ss())[IN_domain,map_def,lookup_def]
+  \\ REPEAT STRIP_TAC \\ Cases_on `n = 0` \\ full_simp_tac(srw_ss())[]
+  \\ Cases_on `EVEN n` \\ full_simp_tac(srw_ss())[]);
 
 val _ = export_theory();

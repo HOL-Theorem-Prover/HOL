@@ -2,7 +2,7 @@ open HolKernel Parse BasicProvers simpLib Datatype
 
 val _ = new_theory "recordEnumSimpsB"
 
-local open recordEnumSimpsATheory in end;
+local open recordEnumSimpsLib recordEnumSimpsATheory in end;
 
 val enum_lemma1 = Q.store_thm("enum_lemma1",
   ‘C2 <> C3’,

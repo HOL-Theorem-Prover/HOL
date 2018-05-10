@@ -9,10 +9,8 @@
 
       1. Generate the dependencies from the current theory hierarchy
       2. Write them to a file ready for processing by "dot"
-      3. Invoke dot to generate the JPEG-format image, the image map
-         information, and a PDF file while we're at it.
-      4. Generate a HTML file to hold the reference to the image, and
-         to contain the map information
+      3. Invoke dot to generate the SVG image
+      4. Generate a HTML file to hold the reference to the image
       5. Generate the html files for each segment in the current
          theory hierarchy.
 
@@ -81,11 +79,12 @@ fun pp_dot_file {size,ranksep,nodesep} (dom,pairs) =
      block CONSISTENT 5 [
        add_string "digraph G {",
        add_break (1,0),
+       add_string "bgcolor = transparent", add_break(1,0),
        add_string "ratio = compress", add_break(1,0),
        add_string "size = ",    add_string (quote size), add_break(1,0),
        add_string "ranksep = ", add_string ranksep,      add_break(1,0),
        add_string "nodesep = ", add_string nodesep,      add_break(1,0),
-       add_string "node [fontcolor = darkgreen fontsize=30 fontname=Arial]",
+       add_string "node [target=_parent style=filled fillcolor=white fontcolor=darkgreen fontsize=30 fontname=Arial]",
        add_break(1,0),
        add_newline,
        block CONSISTENT 0 (pr_list pp_thy [add_newline] dom),
@@ -128,15 +127,11 @@ end
 fun gen_map_file dot node_info name = let
   open TextIO
   val dotfile   = name^".dot"
-  val jpegfile   = name^".jpg"
-  val imapfile  = name^".imap"
+  val svgfile   = name^".svg"
   val mapfile   = name^".html"
-  val pdffile    = name^".pdf"
   val  _        = gen_dotfile dotfile node_info
   val cmdstatus = Systeml.systeml [dot,
-                                   "-Tjpeg", "-o"^jpegfile,
-                                   "-Tcmapx", "-o"^imapfile,
-                                   "-Tpdf", "-o"^pdffile,
+                                   "-Tsvg", "-o"^svgfile,
                                    dotfile]
 in
   if OS.Process.isSuccess cmdstatus then let
@@ -144,16 +139,13 @@ in
       val ostrm = openOut mapfile
       fun out s = output(ostrm, s^"\n")
     in
+      out "<!doctype html>";
       out "<HTML>";
       out "<HEAD><TITLE>HOL Theory Hierarchy</TITLE></HEAD>";
-      out "<BODY bgcolor=linen text=crimson>";
+      out "<BODY bgcolor=linen>";
       out "<H1>HOL Theory Hierarchy (clickable)</H1>";
       out (String.concat
-               ["<IMG src = \"",OS.Path.file jpegfile,"\"",
-                " usemap=\"#G\"",
-                " alt=\"HOL Theory Map\">"]);
-      cat imapfile ostrm;
-      out "</MAP>";
+               ["<object data=\"",OS.Path.file svgfile,"\" type=\"image/svg+xml\">HOL Theory Map</object>"]);
       out "</BODY>";
       out "</HTML>";
       closeOut ostrm

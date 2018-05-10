@@ -429,8 +429,8 @@ other common term operations.  See \REFERENCE{} for more details.
 \label{quotation}\label{gen-abs}\label{let}
 \index{type checking, in HOL logic@type checking, in \HOL{} logic!of quotation syntax|(}
 \index{quotation, in HOL logic@quotation, in \HOL{} logic|(}
-\index{ type quotes, in ML@\ml{\dq:$\cdots$\dq} (type quotes, in \ML)|(}
-\index{ term quotes, in ML@\ml{\dq$\cdots$\dq} (term quotes, in \ML)|(}
+\index{ type quotes, in ML@\ml{\uholquote{:$\cdots$}} (type quotes, in \ML)|(}
+\index{ term quotes, in ML@\ml{\uholquote{$\cdots$}} (term quotes, in \ML)|(}
 
 It would be tedious to always have to input types and terms
 using the constructor functions. The \HOL{} system, adapting the
@@ -440,7 +440,7 @@ quotation
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!of quotation syntax}%
 parsers for \HOL{} types and terms which enable types and terms
 to be input using a fairly standard syntax. For example, the \ML{}
-expression $\holquote{\ml{:bool -> bool}}$ denotes exactly the same
+expression $\uholquote{\ml{:bool -> bool}}$ denotes exactly the same
 value (of \ML\ type \ml{hol\_type}) as
 
 \begin{hol}
@@ -452,14 +452,11 @@ value (of \ML\ type \ml{hol\_type}) as
 \end{verbatim}
 \end{hol}
 
-\noindent and the expression \holtxt{\holquote{\bs{}x.~x~+~1}}
+\noindent and the expression \holtxt{\uholquote{\bs{}x.~x~+~1}}
 %
 \index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic}
 %
-can be used instead of\footnote{In order to be processed successfully,
-  this quotation requires the theory of arithmetic to have already
-  been loaded, which can be accomplished in the interactive system by
-  \ml{load "arithmeticTheory"}.}
+can be used instead of
 
 \setcounter{sessioncount}{0}
 \begin{session}
@@ -471,9 +468,10 @@ can be used instead of\footnote{In order to be processed successfully,
       (mk_thy_const
         {Name="+",Thy="arithmetic",Ty=numty --> numty --> numty},
          mk_var("x", numty)),
-       mk_comb(mk_thy_const{Name="NUMERAL",Thy="arithmetic",Ty=numty-->numty},
-        mk_comb(mk_thy_const{Name="BIT1",Thy="arithmetic",Ty=numty-->numty},
-                mk_thy_const{Name="ZERO",Thy="arithmetic",Ty=numty}))));
+       mk_comb(mk_thy_const{Name="NUMERAL", Thy="arithmetic", Ty=numty-->numty},
+        mk_comb(mk_thy_const{Name="BIT1", Thy="arithmetic", Ty=numty-->numty},
+                mk_thy_const{Name="ZERO", Thy="arithmetic", Ty=numty}))));
+>> val parsed = ``\x. x + 1``;
 \end{alltt}
 \end{session}
 
@@ -486,19 +484,45 @@ Types are printed
 %
 \index{printing, in HOL logic@printing, in \HOL{} logic!of types}
 %
-in the form \holquote{\ml{:}\textit{type}}. For example, the \ML\ value
-of type \ml{hol\_type} representing
-$\alpha\fun(\ty{ind}\fun\ty{bool})$ would be printed out
-as \ml{\holquote{:'a -> ind -> bool}}.
-Similarly, terms are printed in the form \holquote{\textit{term}}.
-Thus, the term representing $\uquant{x\ y}x<y \imp\equant{z}x+z = y$
-would be printed as:
-%
-\[ \holquote{\ml{!x y. x < y ==> ?z. x + z = y}} \]
-%
-A leading colon is used to distinguish a type quotation from a term quotation:
-the former have the form \holquote{\ml{:}~$\cdots$~} and the latter have
-the form \holquote{~$\cdots$~}.
+in the form \uholquote{\ml{:}\textit{type}}.
+For example, the \ML\ value of type \ml{hol\_type} representing
+$\alpha\fun(\ty{ind}\fun\ty{bool})$ would be printed out as below:
+\begin{session}
+\begin{alltt}
+>> let
+     val ind_ty = mk_thy_type{Tyop="ind", Thy="min", Args=[]}
+   in
+     alpha --> (ind --> bool)
+   end;
+\end{alltt}
+\end{session}
+Similarly, terms are printed in the form \uholquote{\textit{term}}, as in the session above printing the term \uholquote{$\lambda x.\; x + 1$}.
+The leading colon is used to distinguish a type quotation from a term quotation:
+the former have the form \uholquote{\ml{:}~$\cdots$~} and the latter have
+the form \uholquote{~$\cdots$~}.
+
+\subsection{Unicode \emph{vs} ASCII}
+
+As the definition of \ml{parsed} in the session above suggests, there are ASCII alternatives to the Unicode syntax.
+To repeat that definition:
+\begin{session}
+\begin{alltt}
+>> val parsed = ``\x. x + 1``;
+\end{alltt}
+\end{session}
+The backslash can be used instead of $\lambda$, and the \dq{} symbol can be used instead of both the `` and '' symbols.
+Similarly, the logical connectives have both ASCII and Unicode forms, and either can be used (even within the same term), except that the begin- and end-delimiters must be of the same type.
+Usually the system prefers to print its output with the Unicode symbols.
+Thus:
+\begin{session}
+\begin{alltt}
+>> val t1 = ``!x y. x < y ==> ?z. x + z = y``;
+
+>> val t2 = “∀x. ∃y. x < y ∧ y < x + 1”;
+
+>> val t3 = ``!x. ∃y. x < y /\ y < x + 1``;
+\end{alltt}
+\end{session}
 \index{quotation, in HOL logic@quotation, in \HOL{} logic|)}
 
 Section~\ref{sec:parsing-printing} has more detailed information about
@@ -551,15 +575,14 @@ above to infer a sensible type for all variables occurring in a term.
 \index{type constraint!in HOL logic@in \HOL{} logic} At times, the
 user may want to control the exact type of a subterm. To support such
 functionality, types can be explicitly indicated by following any
-subterm with a colon and then a type.  For example,
-\holtxt{\dq{}f(x:num):bool\dq} will type check with \holtxt{f} and
-\holtxt{x} getting types \holtxt{num->bool} and \holtxt{num}
-respectively.  This treatment of types within quotations is inherited
-from \LCF.
+subterm with a colon and then a type.
+For example, \uholquote{\holtxt{f(x:num):bool}} will type check with \holtxt{f} and \holtxt{x} getting types \holtxt{num->bool} and \holtxt{num}
+respectively.
+This treatment of types within quotations is inherited from \LCF.
 %
 \index{LCF@\LCF}
-\index{ type quotes, in ML@\ml{\dq:$\cdots$\dq} (type quotes, in \ML)|)}
-\index{ term quotes, in ML@\ml{\dq$\cdots$\dq} (term quotes, in \ML)|)}
+\index{ type quotes, in ML@\ml{\uholquote{:$\cdots$}} (type quotes, in \ML)|)}
+\index{ term quotes, in ML@\ml{\uholquote{$\cdots$}} (term quotes, in \ML)|)}
 \index{type inference!in HOL parser@in \HOL{} parser|)}
 
 \subsection{Viewing the grammar}
@@ -700,7 +723,7 @@ The expressions in the same row are equivalent.
 \index{ function type operator, in HOL logic@\ml{->} (function type operator, in \HOL{} logic)}
 \index{mk_vartype@\ml{mk\_vartype}}
 \index{mk_type@\ml{mk\_type}}
-\index{type quotes, in ML@\ml{`:$\cdots$`} (type quotes, in \ML)}
+\index{ type quotes, in ML@\ml{\uholquote{:$\cdots$}} (type quotes, in \ML)}
 \begin{tabular}{|l|l|l|} \hline
 \multicolumn{3}{|c|}{ } \\
 \multicolumn{3}{|c|}{\bf Types} \\
@@ -971,18 +994,18 @@ falsity, respectively):
 Note the special print format,
 \index{printing, in HOL logic@printing, in \HOL{} logic!of theorems}
 %
-with the approximation
-to the abstract $\vdash$ notation,
+with the $\vdash$ notation
 %
 \index{theorem notation, in HOL logic@theorem notation, in \HOL{} logic|(}
 %
-\ml{|-}, used to indicate \ML{} type \ml{thm} status; as well as the
+used to indicate \ML{} type \ml{thm} status; as well as the
 absence of \HOL{} quotation marks
 %
-\index{ theorem marker, in HOL logic@\ml{"|-} (theorem marker, in \HOL{} logic)}
+\index{ theorem marker, in HOL logic@\ml{$\vdash$} (theorem marker, in \HOL{} logic)}
 %
-in the \ml{|-} context.  The session below illustrates the use of the
-destructor functions:
+in the \ML{} context.
+
+The session below illustrates the use of the destructor functions:
 
 \setcounter{sessioncount}{0}
 \begin{session}

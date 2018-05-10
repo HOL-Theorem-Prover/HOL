@@ -20,6 +20,24 @@ datatype shared_thm
     = ORIG of thm
     | COPY of (string * string) * thm;
 
+   type mk_datatype_record =
+        {ax        : shared_thm,
+         induction : shared_thm,
+         case_def  : thm,
+         case_cong : thm,
+         case_eq   : thm,
+         nchotomy  : thm,
+         size      : (term * shared_thm) option,
+         encode    : (term * shared_thm) option,
+         lift      : term option,
+         one_one   : thm option,
+         distinct  : thm option,
+         fields    : (string * hol_type) list,
+         accessors : thm list,
+         updates   : thm list,
+         destructors : thm list,
+         recognizers : thm list}
+
 fun thm_of (ORIG x)     = x
   | thm_of (COPY (s,x)) = x;
 
@@ -174,12 +192,10 @@ fun nchotomy_of (DFACTS {nchotomy,...}) = nchotomy
         raise ERR "nchotomy_of" (dollarty ty^" no cases theorem available");
 
 fun distinct_of (DFACTS {distinct,...}) = distinct
-  | distinct_of (NFACTS (ty,_)) =
-        raise ERR "distinct_of" (dollarty ty^" is not a datatype");
+  | distinct_of (NFACTS (ty,_)) = NONE
 
 fun one_one_of (DFACTS {one_one,...}) = one_one
-  | one_one_of (NFACTS (ty,_)) =
-        raise ERR "one_one_of" (dollarty ty^" is not a datatype");
+  | one_one_of (NFACTS (ty,_)) = NONE
 
 fun fields_of (DFACTS {fields,...}) = fields
   | fields_of (NFACTS _) = [];
@@ -234,6 +250,13 @@ fun put_nchotomy th (DFACTS dty) = DFACTS (update_DTY dty (U #nchotomy th) $$)
 fun put_simpls thl (DFACTS dty) = DFACTS (update_DTY dty (U #simpls thl) $$)
   | put_simpls ssf (NFACTS (ty,nty)) =
       NFACTS(ty, update_NTY nty (U #simpls ssf) $$)
+
+fun add_rewrs thl tyi =
+  let
+    val {convs,rewrs} = simpls_of tyi
+  in
+    put_simpls {convs = convs, rewrs = rewrs @ thl} tyi
+  end
 
 val add_convs = simpfrag.add_convs
 fun add_ssfrag_convs cds (DFACTS dty) =
@@ -322,38 +345,50 @@ val defn_const =
  * numbers are in the context, which is not necessarily true.                *
  *---------------------------------------------------------------------------*)
 
-fun mk_datatype_info {ax,case_def,case_eq,case_cong,induction,
-                      nchotomy,size,encode,lift,one_one,
-                      fields, accessors, updates, distinct,
-                      destructors,recognizers} =
-  let val (ty,ty_names,constructors) = basic_info case_def
-      val inj = case one_one of NONE => [] | SOME x => [x]
-      val D  = case distinct of NONE => [] | SOME x => CONJUNCTS x
+fun mk_datatype_info_no_simpls rcd =
+  let
+    val {ax,case_def,case_eq,case_cong,induction,
+         nchotomy,size,encode,lift,one_one,
+         fields, accessors, updates, distinct,
+         destructors,recognizers} = rcd
+    val (ty,ty_names,constructors) = basic_info case_def
   in
-   DFACTS
-     {ty           = ty,
-      constructors = constructors,
-      destructors  = destructors,
-      recognizers  = recognizers,
-      case_const   = defn_const case_def,
-      case_def     = case_def,
-      case_eq      = case_eq,
-      case_cong    = case_cong,
-      induction    = induction,
-      nchotomy     = nchotomy,
-      one_one      = one_one,
-      distinct     = distinct,
-      fields       = fields,
-      accessors    = accessors,
-      updates      = updates,
-      simpls       = {rewrs = case_def :: (D@map GSYM D@inj), convs = []},
-      size         = size,
-      encode       = encode,
-      lift         = lift,
-      axiom        = ax,
-      extra        = []}
-  end;
+    DFACTS
+      {ty           = ty,
+       constructors = constructors,
+       destructors  = destructors,
+       recognizers  = recognizers,
+       case_const   = defn_const case_def,
+       case_def     = case_def,
+       case_eq      = case_eq,
+       case_cong    = case_cong,
+       induction    = induction,
+       nchotomy     = nchotomy,
+       one_one      = one_one,
+       distinct     = distinct,
+       fields       = fields,
+       accessors    = accessors,
+       updates      = updates,
+       simpls       = {rewrs = [], convs = []},
+       size         = size,
+       encode       = encode,
+       lift         = lift,
+       axiom        = ax,
+       extra        = []}
+  end
 
+fun gen_std_rewrs tyi =
+  let
+    val D  = case distinct_of tyi of NONE => [] | SOME x => CONJUNCTS x
+    val inj = case one_one_of tyi of NONE => [] | SOME th => [th]
+    val c = D @ map GSYM D @ inj
+  in
+    case_def_of tyi :: c handle HOL_ERR _ => c
+  end
+fun add_std_simpls tyi = add_rewrs (gen_std_rewrs tyi) tyi
+
+fun mk_datatype_info rcd =
+    rcd |> mk_datatype_info_no_simpls |> add_std_simpls
 
 local fun mk_ti (n,ax,ind)
                 (cdef::cds) (ccong::cgs) (oo::oos) (d::ds) (nch::nchs) =
@@ -382,7 +417,7 @@ fun gen_datatype_info {ax, ind, case_defs} =
      val cased1 = hd case_defs
      val casec1 = hd case_congs
      val nch1 = hd nchotomyl
-     val tyinfo_1 = mk_datatype_info
+     val tyinfo_1 = mk_datatype_info_no_simpls
            {ax=ORIG ax, induction=ORIG ind,
             case_def = cased1, case_cong = casec1, nchotomy = nch1,
             case_eq =
@@ -993,6 +1028,7 @@ fun mk_record tybase (ty,fields) =
        end
   else raise ERR "mk_record" "first arg. not a record type";
 
+exception OptionExn = Option
 open ThyDataSexp
 fun ty_to_key ty =
   let
@@ -1052,18 +1088,18 @@ fun toSEXP tyi =
 
 fun fromSEXP0 s =
   let
-    fun string (String s) = s | string _ = raise Option
-    fun ty (Type t) = t | ty _ = raise Option
-    fun tm (Term t) = t | tm _ = raise Option
-    fun thm (Thm th) = th | thm _ = raise Option
-    fun sthm (Thm th) = ORIG th | sthm _ = raise Option
+    fun string (String s) = s | string _ = raise OptionExn
+    fun ty (Type t) = t | ty _ = raise OptionExn
+    fun tm (Term t) = t | tm _ = raise OptionExn
+    fun thm (Thm th) = th | thm _ = raise OptionExn
+    fun sthm (Thm th) = ORIG th | sthm _ = raise OptionExn
     fun dest_option df (Sym "NONE") = NONE
       | dest_option df (List [Sym "SOME", v]) = SOME (df v)
-      | dest_option _ _ = raise Option
+      | dest_option _ _ = raise OptionExn
     fun dest_pair df1 df2 (List [s1, s2]) = (df1 s1, df2 s2)
-      | dest_pair _ _ _ = raise Option
+      | dest_pair _ _ _ = raise OptionExn
     fun H nm f x = f x
-       handle Option => raise ERR "fromSEXP" ("Bad encoding for field "^nm)
+       handle OptionExn => raise ERR "fromSEXP" ("Bad encoding for field "^nm)
   in
     case s of
         List [Sym "DFACTS",
@@ -1110,7 +1146,7 @@ fun fromSEXP0 s =
                     simpls = simpfrag.add_rwts simpfrag.empty_simpfrag
                                  (H "simpls" (map thm) fragrewr_list),
                     extra = extra}
-          ) handle Option => NONE)
+          ) handle OptionExn => NONE)
       | List [Sym "NFACTS", Sym "ty", Type typ,
               Sym "nchotomy", nch_option,
               Sym "induction", ind_option,
@@ -1129,7 +1165,7 @@ fun fromSEXP0 s =
                                 encode_option,
                      simpls = simpfrag.add_rwts simpfrag.empty_simpfrag
                                                 (H "simpls" (map thm) rewrs)}))
-         handle Option => NONE)
+         handle OptionExn => NONE)
       | _ => NONE
   end
 

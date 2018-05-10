@@ -452,7 +452,7 @@ val stdhol : grammar =
                         block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                         paren_style = Always}]),
             (NONE,
-             CLOSEFIX [{term_name = "",
+             CLOSEFIX [{term_name = recd_lform_name,
                         elements = [RE (TOK "<|"),
                                     ListForm {
                                       separator = [RE (TOK ";"),
@@ -671,7 +671,13 @@ end
 
 
 fun remove_tok P tok r = let
-  fun rels_safe rels = not (List.exists (fn e => e = TOK tok) rels)
+  fun rel_matches rel =
+    case rel of
+        TOK t => t = tok
+      | ListTM{cons,nilstr,sep,...} => cons = tok orelse nilstr = tok orelse
+                                       sep = tok
+      | _ => false
+  fun rels_safe rels = not (List.exists rel_matches rels)
   fun rr_safe ({term_name = s, elements,...}:rule_record) =
     not (P s) orelse rels_safe (rule_elements elements)
   fun binder_safe b =
@@ -754,7 +760,7 @@ fun rules_for G nm = let
   fun search_rrlist rf acc rrl = let
     fun check rrec a =
       if #term_name rrec = nm then rrec2delta rf rrec :: a
-      else if #term_name rrec = "" then
+      else if term_name_is_lform (#term_name rrec) then
         case extract_lspec (rule_elements (#elements rrec)) of
             NONE => a
           | SOME {cons,nilstr,...} => if nm = cons orelse nilstr = nm then
@@ -860,12 +866,14 @@ fun listform_to_rule (lform : listspec) =
     val _ = app check_els [separator, leftdelim, rightdelim]
     val _ = app one_tok [separator, leftdelim, rightdelim]
     val els =
-        leftdelim @ [ListForm { separator = separator,
-                                block_info = binfo,
-                                cons = cons, nilstr = nilstr}] @
-        rightdelim
+        [PPBlock (leftdelim @ [ListForm { separator = separator,
+                                          block_info = binfo,
+                                          cons = cons, nilstr = nilstr}] @
+                  rightdelim,
+                  binfo)]
   in
-    {term_name = "", pp_elements = els, fixity = Closefix,
+    {term_name = GrammarSpecials.mk_lform_name {cons=cons,nilstr=nilstr},
+     pp_elements = els, fixity = Closefix,
      block_style = (AroundEachPhrase, binfo),
      paren_style = OnlyIfNecessary}
   end

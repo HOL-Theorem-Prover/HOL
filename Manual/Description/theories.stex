@@ -2974,10 +2974,7 @@ The relevant constant is \holtxt{LUPDATE}, where the term $\holtxt{LUPDATE}\;e\;
 The definition is given in three clauses:
 \begin{hol}
 \begin{alltt}
-   LUPDATE_def
-     |- (\(\forall\)e n. LUPDATE e n [] = []) \(\land\)
-        (\(\forall\)e x l. LUPDATE e 0 (x::l) = e::l) \(\land\)
-        \(\forall\)e n x l. LUPDATE e (SUC n) (x::l) = x::LUPDATE e n l
+   ##thm LUPDATE_def
 \end{alltt}
 \end{hol}
 The definition implies that attempting to update a list at an index beyond the end of the list returns the input list unchanged.

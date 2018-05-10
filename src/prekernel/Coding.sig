@@ -1,7 +1,7 @@
 signature Coding =
 sig
 
-  type 'a reader = (string,'a) optmonad.optmonad
+  type 'a reader = (string * int, 'a) optmonad.optmonad
   val getc : char reader
   val literal : string -> string reader
   val takeP : (char -> bool) -> string reader

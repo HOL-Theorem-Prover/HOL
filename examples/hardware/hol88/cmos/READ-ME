@@ -1,0 +1,30 @@
+This directory (hol/examples/cmos) contains the specification and verification
+of some CMOS adders.
+
+The file mk_adders.ml verifies two combinational adders:
+
+   1. An adder from Inder Dhingra that uses bidirectional transistors.
+
+   2. An adder from page 92 of "Introduction to MOS LSI Design" by
+      Mavor, Jack and Denyer. This circuit (with some bits missing) also
+      occurrs in "Let's Design CMOS Circuits! (Part 1)" by M. Annaratone,
+      CMU-CS-84-101.
+
+These adders are verified using a switch model of transistors.
+
+The file mk_cmos.ml creates the theory cmos.th which contains a model of cmos
+primitives for dynamic circuits (i.e. ones that use charge storage on isolated
+nodes). This model is used to verify a dynamic adder from "CMOS Design
+Techniques to Eliminate the Stuck-open Fault Problem of Testability" by A. F.
+Murray in "Electronics letters" Vol. 20, No. 19 (13 Sept. 1984).
+
+The file mk_INV.ml creates the theory INV.th in which the inverting buffers
+used in the dynamic adder are specified.
+
+The file mk_DYN_ADD.ml creates the theory DYN_ADD.th in which the dynamic
+adder is specified and verified.
+
+The file mk_XOR.ml creates a theory XOR.th in which the difference model of
+transistors is set up and then used to distinguish the good and bad XOR
+circuits described in "Hardware Verification using Higher-Order Logic"
+(Camilleri, Gordon and Melham, Technical Report 91).

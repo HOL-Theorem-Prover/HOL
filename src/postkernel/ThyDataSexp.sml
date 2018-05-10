@@ -15,6 +15,7 @@ datatype t =
        | Sym of string
        | Bool of bool
        | Char of char
+       | Option of t option
 
 fun pp_sexp typ tmp thp s =
   let
@@ -38,6 +39,12 @@ fun pp_sexp typ tmp thp s =
                  else add_string ("|\"" ^ String.toString s ^ "\"|")
       | Bool b => if b then add_string "'t" else add_string "'f"
       | Char c => add_string ("#\"" ^ Char.toString c ^ "\"")
+      | Option NONE => add_string "NONE"
+      | Option (SOME s) =>
+          block INCONSISTENT 1 [
+            add_string "(", add_string "SOME",
+            add_break(1,0), pp s, add_string ")"
+          ]
   end
 
 fun uptodate s =
@@ -46,6 +53,8 @@ fun uptodate s =
     | Type ty => Type.uptodate_type ty
     | Thm th => Theory.uptodate_thm th
     | List sl => List.all uptodate sl
+    | Option NONE => true
+    | Option (SOME s0) => uptodate s0
     | _ => true
 
 fun compare (s1, s2) =
@@ -85,6 +94,10 @@ fun compare (s1, s2) =
     | (_, Bool _) => GREATER
 
     | (Char c1, Char c2) => Char.compare (c1, c2)
+    | (Char _, _) => LESS
+    | (_, Char _) => GREATER
+
+    | (Option opt1, Option opt2) => Lib.option_compare compare (opt1, opt2)
 
 fun update_alist (kv, es) =
   let
@@ -121,6 +134,7 @@ fun sterms0 (s, acc) =
     | Term tm => tm::acc
     | Thm th => concl th :: (hyp th @ acc)
     | Type ty => Term.mk_var("x", ty) :: acc
+    | Option (SOME s0) => sterms0 (s0, acc)
     | _ => acc
 fun sterms s = sterms0 (s, [])
 
@@ -165,9 +179,15 @@ val tagreader =
                 (listreader dlreader >* listreader StringData.reader)))
     end
 
+fun deps_saved th =
+  case Tag.dep_of (Thm.tag th) of
+      Dep.DEP_SAVED _ => true
+    | _ => false
+
 fun thmwrite tmw th0 =
   let
-    val th = Thm.save_dep (Theory.current_theory()) th0
+    val th = if deps_saved th0 then th0
+             else Thm.save_dep (Theory.current_theory()) th0
   in
     tagwrite (Thm.tag th) ^
     listwrite (StringData.encode o tmw) (concl th :: hyp th)
@@ -186,6 +206,8 @@ fun write tmw s =
     | Sym s => "M" ^ StringData.encode s
     | Char c => "C" ^ CharData.encode c
     | Bool b => "B" ^ BoolData.encode b
+    | Option NONE => "N"
+    | Option (SOME s) => "S" ^ write tmw s
 
 fun reader tmr s = (* necessary eta-expansion! *)
   let
@@ -198,7 +220,9 @@ fun reader tmr s = (* necessary eta-expansion! *)
         literal "H" >> map Thm (thmreader tmr) ||
         literal "M" >> map Sym StringData.reader ||
         literal "C" >> map Char CharData.reader ||
-        literal "B" >> map Bool BoolData.reader
+        literal "B" >> map Bool BoolData.reader ||
+        literal "N" >> return (Option NONE) ||
+        literal "S" >> map (Option o SOME) (reader tmr)
   in
     core s
   end

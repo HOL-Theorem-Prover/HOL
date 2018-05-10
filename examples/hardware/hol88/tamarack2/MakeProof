@@ -1,0 +1,9 @@
+nice /usr/usr2/hol88/hol < wop.ml > wop.run
+nice /usr/usr2/hol88/hol < da.ml > da.run
+nice /usr/usr2/hol88/hol < arith.ml > arith.run
+nice /usr/usr2/hol88/hol < mod.ml > mod.run
+nice /usr/usr2/hol88/hol < div.ml > div.run
+nice /usr/usr2/hol88/hol < tamarack.ml > tamarack.run
+nice /usr/usr2/hol88/hol < proof1.ml > proof1.run
+nice /usr/usr2/hol88/hol < proof2.ml > proof2.run
+nice /usr/usr2/hol88/hol < proof3.ml > proof3.run

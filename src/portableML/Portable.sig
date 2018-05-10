@@ -64,6 +64,7 @@ sig
   val flip_cmp : 'a cmp -> 'a cmp
   val bool_compare : bool cmp
   val list_compare : 'a cmp -> 'a list cmp
+  val option_compare : 'a cmp -> 'a option cmp
   val pair_compare : ('a cmp * 'b cmp) -> ('a * 'b) cmp
   val measure_cmp : ('a -> int) -> 'a cmp
   val inv_img_cmp : ('b -> 'a) -> 'a cmp -> 'b cmp

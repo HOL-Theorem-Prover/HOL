@@ -3880,7 +3880,7 @@ val num_case_eq = Q.store_thm(
   SRW_TAC [][num_case_def, SUC_NOT, INV_SUC_EQ]);
 
 val _ = TypeBase.export
-  [TypeBasePure.mk_datatype_info
+  [TypeBasePure.mk_datatype_info_no_simpls
      {ax=TypeBasePure.ORIG prim_recTheory.num_Axiom,
       case_def=num_case_def,
       case_cong=num_case_cong,

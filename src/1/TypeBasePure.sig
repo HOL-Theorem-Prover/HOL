@@ -10,24 +10,28 @@ sig
 
    datatype shared_thm = ORIG of thm
                        | COPY of (string * string) * thm
+   type mk_datatype_record =
+        {ax        : shared_thm,
+         induction : shared_thm,
+         case_def  : thm,
+         case_cong : thm,
+         case_eq   : thm,
+         nchotomy  : thm,
+         size      : (term * shared_thm) option,
+         encode    : (term * shared_thm) option,
+         lift      : term option,
+         one_one   : thm option,
+         distinct  : thm option,
+         fields    : (string * hol_type) list,
+         accessors : thm list,
+         updates   : thm list,
+         destructors : thm list,
+         recognizers : thm list}
 
-   val mk_datatype_info
-           : {ax        : shared_thm,
-              induction : shared_thm,
-              case_def  : thm,
-              case_cong : thm,
-              case_eq   : thm,
-              nchotomy  : thm,
-              size      : (term * shared_thm) option,
-              encode    : (term * shared_thm) option,
-              lift      : term option,
-              one_one   : thm option,
-              distinct  : thm option,
-              fields    : (string * hol_type) list,
-              accessors : thm list,
-              updates   : thm list,
-              destructors : thm list,
-              recognizers : thm list} -> tyinfo
+   val mk_datatype_info_no_simpls : mk_datatype_record -> tyinfo
+   val gen_std_rewrs    : tyinfo -> thm list
+   val add_std_simpls   : tyinfo -> tyinfo
+   val mk_datatype_info : mk_datatype_record -> tyinfo
 
    val gen_datatype_info : {ax:thm,ind:thm,case_defs:thm list} -> tyinfo list
 
@@ -71,6 +75,7 @@ sig
 
    val put_nchotomy    : thm -> tyinfo -> tyinfo
    val put_simpls      : simpfrag -> tyinfo -> tyinfo
+   val add_rewrs       : thm list -> tyinfo -> tyinfo
    val add_ssfrag_convs: simpfrag.convdata list -> tyinfo -> tyinfo
    val put_induction   : shared_thm -> tyinfo -> tyinfo
    val put_size        : term * shared_thm -> tyinfo -> tyinfo

@@ -711,7 +711,7 @@ val option_CASES = save_thm("option_CASES",
   ONCE_REWRITE_RULE [boolTheory.DISJ_SYM] option_nchotomy);
 
 val _ = TypeBase.export
-  [TypeBasePure.mk_datatype_info
+  [TypeBasePure.mk_datatype_info_no_simpls
      {ax=TypeBasePure.ORIG option_Axiom,
       case_def=option_case_def,
       case_cong=option_case_cong,

@@ -16,6 +16,7 @@ DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
        $(dprot $(SIGOBJ)/TypeBase.uo) \
        $(dprot $(SIGOBJ)/Preterm.uo) \
        $(dprot $(SIGOBJ)/type_pp.uo) \
+       $(dprot $(SIGOBJ)/parse_term.uo) \
        $(dprot $(SIGOBJ)/ParseExtras.uo) \
        $(dprot $(SIGOBJ)/Drule.uo) \
        $(dprot $(SIGOBJ)/TheoryPP.uo) \
