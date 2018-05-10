@@ -1,5 +1,6 @@
 (* Example usage: echo "conjecture" | ./hh 128 ../theories *)
 
+open Hh_tac 
 open Hh_parse
 open Thf1hh1
 open Dependency
@@ -62,6 +63,7 @@ let parse_commandline () =
 (* Main function. *)
 (* TO DO: read the conjecture from the file *)
 let _ =
+  let _ = main_thf_flag := true in
   let (predictor, n_predictions, theory_dir, cj_file,
        cj_name, out_dir, thydep_file, thylo_file) = parse_commandline () in
 
