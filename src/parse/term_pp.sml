@@ -271,7 +271,7 @@ fun find_lspec els =
 
 fun grule_term_names G grule = let
   fun lift f (rr as {term_name,timestamp,elements,...}) =
-    if term_name = "" then
+    if term_name_is_lform term_name then
       case find_lspec elements of
           NONE => [] (* probably a bad rule *)
         | SOME {nilstr,cons,...} =>
@@ -1750,7 +1750,7 @@ fun pp_term (G : grammar) TyG backend = let
                          (* val _ = PRINT "suitable_rule: closefix check" *)
                          val r = hd list
                        in
-                         if #term_name r = "" then
+                         if term_name_is_lform (#term_name r) then
                            ((* PRINT ("rule term-name is empty - testing " ^
                                debugprint G tm); *)
                             case find_lspec (#elements r) of

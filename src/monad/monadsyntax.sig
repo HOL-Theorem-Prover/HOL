@@ -12,6 +12,9 @@ sig
   val add_monadsyntax : unit -> unit
   val temp_add_monadsyntax : unit -> unit
 
+  val disable_monadsyntax : unit -> unit
+  val temp_disable_monadsyntax : unit -> unit
+
   type monadinfo =
        { bind : term,
          ignorebind : term option,
@@ -21,6 +24,15 @@ sig
          guard : term option }
   val declare_monad : string * monadinfo -> unit
   val all_monads : unit -> (string * monadinfo) list
+
+  val enable_monad : string -> unit
+  val temp_enable_monad : string -> unit
+
+  val weak_enable_monad : string -> unit
+  val temp_weak_enable_monad : string -> unit
+
+  val disable_monad : string -> unit
+  val temp_disable_monad : string -> unit
 
 
 end

@@ -22,7 +22,7 @@ fun noloc s = (s, locn.Loc_None)
 fun qfail x = error (noloc "") x
 fun WARNloc_string loc s = (s, loc)
 
-
+fun PRINT s = print (s ^ "\n")
 
 exception Failloc of (locn.locn * string)
 fun FAILloc locn s = raise Failloc (locn, s)
@@ -1019,7 +1019,7 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
         val newterm =
             case rule of
                 Normal (_, s) =>
-                  if s = "" then
+                  if term_name_is_lform s then
                     if length args_w_seglocs <> 1 then
                       raise Fail
                             "seglocs extraction: rule with more than one TM"

@@ -327,6 +327,104 @@ fun temp_add_monadsyntax () =
     syntax_actions temp_add_listform temp_add_rule temp_add_user_printer
                    temp_add_absyn_postprocessor
 
+val monad_lform_name =
+    GrammarSpecials.mk_lform_name {
+      cons = monadseq_special,
+      nilstr = monad_emptyseq_special
+    }
+
+fun mk_unitbind mbind =
+  let
+    val (m1ty, rng) = dom_rng (type_of mbind)
+    val (fm2ty, m2ty) = dom_rng rng
+    val (argty, _) = dom_rng fm2ty
+    val m1 = mk_var("m1", m1ty)
+    val m2 = mk_var("m2", m2ty)
+    val K  = combinSyntax.K_tm |> inst [alpha |-> type_of m2, beta |-> argty]
+    val Km2= mk_comb(K, m2)
+  in
+    list_mk_abs([m1,m2], list_mk_comb(mbind, [m1, Km2]))
+  end
+
+fun getMI fname s =
+  case Binarymap.peek(!monadDB, s) of
+      NONE => raise ERR fname ("No such monad defined: "^s)
+    | SOME mi => mi
+
+(* iovl is used so that fail and return don't contaminate normal uses *)
+fun gen_enable_monad fname iovl ovl s =
+  let
+    val {bind,ignorebind,unit,fail,choice,guard} = getMI fname s
+  in
+    ovl ("monad_bind", bind) ;
+    ovl ("monad_unitbind",
+         case ignorebind of NONE => mk_unitbind bind | SOME ib => ib);
+    iovl ("return", unit) ;
+    Option.app (fn f => iovl("fail", f)) fail;
+    Option.app (fn c => ovl("++", c)) choice;
+    Option.app (fn g => ovl("assert", g)) guard
+  end
+
+fun gen_disable_monad fname rmovl s =
+  let
+    val {bind,ignorebind,unit,fail,choice,guard} = getMI fname s
+  in
+    rmovl "monad_bind" bind;
+    rmovl "monad_unitbind"
+          (case ignorebind of NONE => mk_unitbind bind | SOME ib => ib);
+    rmovl "return" unit;
+    Option.app (rmovl "fail") fail;
+    Option.app (rmovl "++") choice;
+    Option.app (rmovl "assert") guard
+  end
+
+fun gen_inferior_overload_on raw (s, t) =
+  (* want to have t still print with monad syntax, just don't want this to be
+     preferred target when parsing.  So, have to make sure that this ranks
+     higher than the raw name of the constant *)
+  (raw (s, t);
+   if is_const t then
+     let
+       val G = term_grammar()
+       val {Name,...} = dest_thy_const t
+       val oinfo = term_grammar.overload_info G
+       val ms = Overload.PrintMap.match (Overload.raw_print_map oinfo, t)
+     in
+       if List.exists (fn (_, (_, s, _)) => s = Name) ms then
+         raw (Name, t)
+       else ()
+     end
+   else ())
+
+val enable_monad =
+    gen_enable_monad "enable_monad" inferior_overload_on overload_on
+val weak_enable_monad =
+    gen_enable_monad "weak_enable_monad"
+                     inferior_overload_on
+                     (gen_inferior_overload_on inferior_overload_on)
+val disable_monad = gen_disable_monad "disable_monad" gen_remove_ovl_mapping
+val temp_weak_enable_monad =
+    gen_enable_monad "temp_weak_enable_monad"
+                     temp_inferior_overload_on
+                     (gen_inferior_overload_on temp_inferior_overload_on)
+val temp_enable_monad =
+    gen_enable_monad "temp_enable_monad"
+                     temp_inferior_overload_on
+                     temp_overload_on
+val temp_disable_monad =
+    gen_disable_monad "temp_disable_monad" temp_gen_remove_ovl_mapping
+
+fun gen_disable_syntax rr rup rpp =
+  (rr {term_name = monad_lform_name, tok = "do"};
+   rr {term_name = monadassign_special, tok = "<-"};
+   rup "monadsyntax.print_monads";
+   rpp "monadsyntax.transform_absyn")
+
+fun disable_monadsyntax () =
+  gen_disable_syntax remove_termtok remove_user_printer (fn s => ())
+fun temp_disable_monadsyntax () =
+  gen_disable_syntax temp_remove_termtok temp_remove_user_printer (fn s => ())
+
 fun aup (s, pat, code) = (add_ML_dependency "monadsyntax";
                           add_user_printer (s, pat))
 
@@ -334,7 +432,6 @@ fun aap (s, code) = (add_ML_dependency "monadsyntax";
                      add_absyn_postprocessor s)
 
 fun add_monadsyntax () = syntax_actions add_listform add_rule aup aap
-
 
 val _ = TexTokenMap.temp_TeX_notation
             {hol = "<-", TeX = ("\\HOLTokenLeftmap{}", 1)}

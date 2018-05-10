@@ -27,7 +27,8 @@ val _ =
         choice = NONE, fail = NONE, guard = NONE
       }
     )
-
+val _ = monadsyntax.add_monadsyntax()
+val _ = monadsyntax.enable_monad "state"
 
 val MMAP_DEF = DEF `MMAP (f: 'c -> 'b) (m: ('c, 'a) M) = BIND m (UNIT o f)`;
 

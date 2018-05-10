@@ -64,8 +64,8 @@ val _ = temp_add_user_printer ("monadsyntax.print_monads", genvar alpha,
                                monadsyntax.print_monads)
 val _ = temp_add_absyn_postprocessor ("monadsyntax.transform_absyn",
                                       monadsyntax.transform_absyn)
-val _ = temp_overload_on("monad_bind", ``option$OPTION_BIND``)
-val _ = temp_overload_on("monad_unitbind", ``option$OPTION_IGNORE_BIND``)
+
+val _ = monadsyntax.enable_monad "option"
 
 val _ = unicode_off (raw_backend (trace ("types", 1) testutils.tpp))
                     "do (x :num) <- (s :num option); SOME (x + (1 :num)) od"
@@ -86,9 +86,13 @@ val _ = same_const f ``option$OPTION_IGNORE_BIND`` andalso
         hd (tl args) = ``SOME 4`` andalso
         (OK(); true) orelse udie()
 
-val _ = clear_overloads_on "monad_unitbind"
-val _ = temp_overload_on ("monad_unitbind",
-                          ``\m1 m2. option$OPTION_BIND m1 (K m2)``)
+val _ = disable_monad "option"
+val _ = declare_monad ("option",
+                       {bind = ``OPTION_BIND``, ignorebind = NONE,
+                        unit = ``SOME``, fail = SOME ``NONE``,
+                        choice = SOME ``OPTION_CHOICE``,
+                        guard = SOME ``OPTION_GUARD``})
+val _ = enable_monad "option"
 
 val _ = tprint "Testing monadsyntax parse of OPTION_BIND (ignoring)"
 val t = ``do SOME 3 ; SOME 4 od``
@@ -100,9 +104,8 @@ val _ = same_const f ``option$OPTION_BIND`` andalso
 
 val _ = app tpp [monadtpp_test1, monadtpp_test2]
 
-val _ = app clear_overloads_on ["monad_bind", "monad_unitbind"]
-val _ = temp_overload_on ("monad_bind", ``errorStateMonad$BIND``);
-val _ = temp_overload_on ("monad_unitbind", ``errorStateMonad$IGNORE_BIND``);
+val _ = disable_monad "option"
+val _ = enable_monad "errorState"
 
 val _ = print "Testing with error state monad\n"
 
