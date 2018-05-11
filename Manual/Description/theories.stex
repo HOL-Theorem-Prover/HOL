@@ -4782,6 +4782,64 @@ theory \theoryimp{while}.
 
 %\section{Partial orders}
 
+\section{Monads}
+\index{monads|(}
+
+\HOL{}'s simple type system means that it is impossible to define a general type of monad in the way that is possible in programming languages such as Haskell.
+Nonetheless, a number of the types predefined in \HOL{}, such as options and lists, can indeed be seen as monads, and it is useful to be able to write functions over those types that leverage this view.
+
+Monads are defined by their ``unit'' and ``bind'' functions, and these can be composed in expressive ways.
+In particular, \HOL{} supports a syntax inspired by Haskell's do notation, wherein it is possible to write such functions as
+\begin{session}
+\begin{alltt}
+>>__ load "monadsyntax";
+>>__ monadsyntax.add_monadsyntax();
+>>__ monadsyntax.enable_monad "list";
+>> val mapM_def = Define‘
+     (mapM f [] = return []) ∧
+     (mapM f (x::xs) = do
+        e  <- f x;
+        es <- mapM f xs;
+        return (e::es);
+      od)’;
+
+>> type_of “mapM”;
+\end{alltt}
+\end{session}
+
+Again, because \HOL{} does not have a sufficiently expressive type system, though the notation is generic, the function is fixed to a particular monad instance.
+In this case, the monad instance is that of lists.
+We can use the \holtxt{mapM} function to implement what one might term a cross-product operation on lists:
+\begin{session}
+\begin{alltt}
+>> EVAL “mapM I [[1;2;3]; [a;b]; [x;y;z]]”;
+\end{alltt}
+\end{session}
+
+The general abstract syntax is described by the following grammar
+\[
+\begin{array}{rcl}
+M &::=& e_{\alpha\,\texttt{\scriptsize M}} \;\;\mid\;\; \texttt{do}\;\, \mathit{binds}\,\;\texttt{od} \;\;\mid\;\;\texttt{return}\;e_\alpha\\
+\mathit{binds} &::=& \mathit{bind}\;\texttt{;}^? \;\;\mid\;\; \mathit{bind}\,\texttt{;}\,\;\mathit{binds}\\
+\mathit{bind} &::=& M \;\;\mid\;\; \mathit{vs}\;\,\texttt{\lt-}\;M
+\end{array}
+\]
+where $\mathit{e}_\tau$ is a \HOL{} expression required to be of type $\tau$, and $\mathit{vs}$ is a single variable, or a tuple of variables (\eg, \holtxt{(x,y,z)}).
+If a given $M$ has type \holtxt{:$\alpha$ M} for a monad instance \holtxt{M}, then writing a binding such as \holtxt{$v$~\lt-~$M$} will require variable $v$ to have type $\alpha$.
+This variable is then bound in later bindings within the same \holtxt{do}-\holtxt{od} block.
+
+The special monad syntax has a straightforward translation into underlying \HOL{} terms.
+The \holtxt{do}-\holtxt{od} delimiters have no semantic effect; they can be viewed as a special form of parenthesis that identifies where the binding syntax is going to be used.\footnote{Indeed, writing \holtxt{do~$M$~od} for a single binding form $M$ will see the system print back $M$ on its own.}
+Subsequently, the translation from $\mathit{vs}\;\holtxt{\lt-} M_1\holtxt{;}\;M_2$ is to $\holtxt{monad\_bind}\;M_1\;(\lambda\mathit{vs}.\,M_2)$, making it clear that $\mathit{vs}$ can be used (and is bound) in $M_2$.
+If there is no variable-arrow on the first binding, then $M_1\holtxt{;}\;M_2$ translates to something equivalent to $\holtxt{monad\_bind}\;M_1\;(\holtxt{K}\;M_2)$, where \holtxt{K} is the K-combinator from \ml{combinTheory} (see Section~\ref{sec:combinTheory}).
+Finally, the \holtxt{return} keyword is an overloading for the monad instance's unit function (which will have type $\alpha \to \alpha\,\holtxt{M}$).
+
+\subsection{Declaring Monads}
+
+Monad instances
+
+
+\index{monads|)}
 \section{Further Theories}
 Other theories of interest in \HOL{} are listed and briefly described
 in Figure~\ref{fig:further-hol-theories}.
