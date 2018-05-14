@@ -4787,6 +4787,7 @@ theory \theoryimp{while}.
 
 \HOL{}'s simple type system means that it is impossible to define a general type of monad in the way that is possible in programming languages such as Haskell.
 Nonetheless, a number of the types predefined in \HOL{}, such as options and lists, can indeed be seen as monads, and it is useful to be able to write functions over those types that leverage this view.
+Equally, it is useful to be able to declare monads of one's own that can use the same syntactic facilities.
 
 Monads are defined by their ``unit'' and ``bind'' functions, and these can be composed in expressive ways.
 In particular, \HOL{} supports a syntax inspired by Haskell's do notation, wherein it is possible to write such functions as
@@ -4836,8 +4837,77 @@ Finally, the \holtxt{return} keyword is an overloading for the monad instance's 
 
 \subsection{Declaring Monads}
 
-Monad instances
+Monad instances have to be declared if the system is to support their parsing and pretty-printing.
+The function responsible is \index{declare_monad@\ml{declare\_monad}}\ml{declare\_monad} in the \ml{monadsyntax} module.
+(There is also an accompanying \index{temp_declare_monad@\ml{temp\_declare\_monad}}\ml{temp\_declare\_monad} function that achieves the same thing dynamically but doesn't cause the declaration to persist for the benefit of other later descendent theories.)
 
+\begin{alltt}
+>>__ val SOME ms_struct =
+       #lookupStruct PolyML.globalNameSpace "monadsyntax";
+>>__ val ms_ns = PolyML.NameSpace.Structures.contents ms_struct;
+>>__ val SOME minfo_ty = #lookupType ms_ns "monadinfo"
+>>__ val SOME dm_val = #lookupVal ms_ns "declare_monad"
+>>__ val dmval_p =
+       PolyML.NameSpace.Values.printWithType(dm_val,100,NONE)
+>>__ val minfo_p =
+       PolyML.NameSpace.TypeConstrs.print (minfo_ty, 100, NONE)
+>>__ val safeprint =
+        TextIO.print o
+        String.translate
+          (fn #"{" => "\\{" | #"}" => "\\}" | c => str c)
+>>__ val _ = PP.prettyPrint(safeprint, 70) minfo_p
+>>__ val _ = PP.prettyPrint(safeprint, 70) dmval_p
+\end{alltt}
+
+The terms for the \ml{bind} and \ml{unit} fields are the terms implementing the corresponding monad functions.
+For example, the bind function for the option function is \holtxt{OPTION\_BIND}, characterised by its defining theorem:
+\begin{alltt}
+>>__ open optionTheory
+##thm OPTION_BIND_def
+\end{alltt}
+The unit function is just the \holtxt{SOME} constructor for the type.
+
+All of the other fields in the \ml{monadinfo} record can be left unspecified.
+The \ml{ignorebind} field is used to encode the situation where the user writes
+\begin{alltt}
+   do m1; m2 od
+\end{alltt}
+meaning that though \holtxt{m1} may return a value, the remainder of the function does not use that value.
+As above, this can be handled through the use of the \holtxt{K} combinator, which is what is done if the \ml{ignorebind} field is set to \ml{NONE}.
+However, if desired, one can specify a specific term to be used in this situation.
+For example, the system's encoding of the option monad uses a separate constant with exactly the definition one would expect:
+\begin{alltt}
+##thm OPTION_IGNORE_BIND_def
+\end{alltt}
+
+The three remaining fields (\ml{guard}, \ml{fail} and \ml{choice}) are relevant for monads with errors or failure modes.
+The underlying property is that if $m_1$ is an error value, then $\holtxt{monad\_bind}\;m_1\;f\;\;=\;\;m_1$, meaning that attempting to sequence computations after an error just causing the error to be the result, without any use of the $f$ value.
+In this way, one might see $m_1$ as a computation that has thrown some sort of exception.
+
+If one specifies a \ml{fail} term in declaring a monad, an overload is set up from the string \holtxt{fail} to that term.
+This is flexible enough to allow parameterised errors: make the term be the function that takes a parameter and returns a monad error value.
+There is no monad-specific support required for this concept: the overload is sufficient.
+
+When provided, the \ml{guard} and \ml{choice} terms are similarly established as overloads so that monadic code across different monads will look similar.
+If one views \ml{fail} as throwing an exception, then the \ml{choice} notation allows for catching an exception and trying another computation.
+The overload is to the infix \holtxt{++} syntax, meaning that one can write
+$M_1\;\holtxt{++}\;M_2$ to represent the ``choice'' between $M_1$ and $M_2$.
+(Note that in the list monad, \holtxt{++} is \holtxt{APPEND}.
+This explains the choice of notation, though in the list monad, viewing ``choice'' as throwing and catching exceptions is actually harder to motivate.)
+
+Finally, the \ml{guard} term (if given) overloads to the term \holtxt{assert}, which is expected to be defined such that
+\[
+   \holtxt{assert}\;b\;\; = \;\;\textsf{if}\;b\;\textsf{then}\;\holtxt{return}\;()\;\textsf{else}\;\holtxt{fail}
+\]
+A typical use of \holtxt{assert} might be in a function such as
+\begin{alltt}
+  do
+     list <- some_monad;
+     assert(list <> []);
+     return (HD list + 1)
+  od
+\end{alltt}
+where the \holtxt{assert} ensures that the subsequent call to \holtxt{HD} makes sense.
 
 \index{monads|)}
 \section{Further Theories}
