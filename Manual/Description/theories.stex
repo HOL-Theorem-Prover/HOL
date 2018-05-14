@@ -4881,7 +4881,7 @@ For example, the system's encoding of the option monad uses a separate constant 
 \end{alltt}
 
 The three remaining fields (\ml{guard}, \ml{fail} and \ml{choice}) are relevant for monads with errors or failure modes.
-The underlying property is that if $m_1$ is an error value, then $\holtxt{monad\_bind}\;m_1\;f\;\;=\;\;m_1$, meaning that attempting to sequence computations after an error just causing the error to be the result, without any use of the $f$ value.
+The underlying property is that if $m_1$ is an error value, then $\holtxt{monad\_bind}\;m_1\;f\;\;=\;\;m_1$, meaning that attempting to sequence computations after an error just causes the error to be the result, without any use of the $f$ value.
 In this way, one might see $m_1$ as a computation that has thrown some sort of exception.
 
 If one specifies a \ml{fail} term in declaring a monad, an overload is set up from the string \holtxt{fail} to that term.
