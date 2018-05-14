@@ -162,8 +162,18 @@ val _ = List.app testf [
  \     ")
 ]
 
-val _ = testutils.linewidth := 20
 val _ = Parse.current_backend := PPBackEnd.raw_terminal
 
+val _ = app tpp ["f\n\
+                 \  (let\n\
+                 \     x = long expression ;\n\
+                 \     y = long expression ;\n\
+                 \     z = long expression\n\
+                 \   in\n\
+                 \     x /\\ y /\\ z)"]
+
+val _ = testutils.linewidth := 20
+
 val _ = app tpp ["f\n  (longterm =\n   longterm)",
-                 "f\n  (term001 = term002)"]
+                 "f\n  (term001 = term002)"
+                 ]
