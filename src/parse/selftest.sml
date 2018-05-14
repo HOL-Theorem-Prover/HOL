@@ -660,3 +660,22 @@ val _ =
           [] => OK()
         | _ => die "Nope - something still there!"
     end
+
+local open term_tokens
+fun test (s,expected) =
+  let
+    val _ = tprint ("lexing "^s)
+    val toks : unit term_token list = lextest [] s
+  in
+    if toks = expected then OK()
+    else die "FAILED"
+  end
+in
+val _ =
+    List.app test [
+      ("$ $$ $$$ $+ $if", [Ident "$", Ident "$$", Ident "$$$", Ident "$+",
+                           Ident "$if"]),
+      ("thy$id", [QIdent("thy", "id")]),
+      ("thy$$$", [QIdent("thy", "$$")])
+    ]
+end (* open term_tokens local *);

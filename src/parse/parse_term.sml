@@ -784,10 +784,14 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
       in
         case x of
           Ident s =>
-            if String.sub(s,0) = #"$" then let
+            if String.sub(s,0) = #"$" andalso
+               CharVector.exists (not o equal #"$") s
+            then
+              let
                 val locn = locn.move_start 1 locn
               in
-              (Id, locn, SOME (Token (Ident (String.extract(s,1,NONE))))) end
+                (Id, locn, SOME (Token (Ident (String.extract(s,1,NONE)))))
+              end
             else if s = res_quanop andalso vs_state = VSRES_VS then
               (ResquanOpTok, locn, SOME tt)
             else if s = type_intro then (TypeColon, locn, SOME tt)

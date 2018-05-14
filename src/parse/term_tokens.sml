@@ -134,15 +134,21 @@ fun split_ident mixedset s locn qb = let
   val ID = Ident
 in
   if is_char orelse s0 = #"\"" then (advance(); (ID s, locn))
-  else if s0 = #"$" then let
-      val (tok,locn') = split_ident mixedset
-                                   (String.extract(s, 1, NONE))
-                                   (locn.move_start 1 locn) qb
-    in
-      case tok of
-        Ident s' => (ID ("$" ^ s'), locn.move_start ~1 locn')
-      | _ => raise LEX_ERR ("Can't use $-quoting of this sort of token", locn')
-    end
+  else if s0 = #"$" then
+    if CharVector.all (Lib.equal #"$") s then (advance(); (ID s, locn))
+    else if size s > 1 andalso String.sub(s,1) = #"$" then
+      raise LEX_ERR ("Bad token "^s, locn)
+    else
+      let
+        val (tok,locn') = split_ident mixedset
+                                      (String.extract(s, 1, NONE))
+                                      (locn.move_start 1 locn) qb
+      in
+        case tok of
+            Ident s' => (ID ("$" ^ s'), locn.move_start ~1 locn')
+          | _ => raise LEX_ERR
+                       ("Can't use $-quoting of this sort of token", locn')
+      end
   else if not (mixed s) andalso not (s_has_nonagg_char s) then
     (MkID qb' (s, locn), locn)
   else

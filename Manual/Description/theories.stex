@@ -408,7 +408,7 @@ infix
 \ml{arithmeticTheory} has been loaded, then \ml{``x+1``} is
 translated to \ml{``\$+~x~1``}. The escape character \ml{\$}
 %
-\index{ escape, in HOL logic parser@\ml{\$} (escape, in \HOL{} logic parser)}%
+\index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!as escape character}%
 \index{declared constants, in HOL logic@declared constants, in \HOL{} logic}%
 \index{infixes, in HOL logic@infixes, in \HOL{} logic}%
 %
