@@ -276,6 +276,7 @@ fun grule_term_names G grule = let
           NONE => [] (* probably a bad rule *)
         | SOME {nilstr,cons,...} =>
             map (fn s => (s, (timestamp, f [rr]))) [nilstr, cons]
+    else if term_name = GrammarSpecials.fnapp_special then []
     else
       [(term_name, (timestamp, f [rr]))]
   val suffix = lift (SUFFIX o STD_suffix)
