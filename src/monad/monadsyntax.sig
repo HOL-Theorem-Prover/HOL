@@ -9,8 +9,12 @@ sig
   val transform_absyn : term_grammar.absyn_postprocessor
   val print_monads : term_grammar.userprinter
 
+  (* enable/add forms are aliases for each other; add version for backwards
+     compatibility *)
   val add_monadsyntax : unit -> unit
   val temp_add_monadsyntax : unit -> unit
+  val enable_monadsyntax : unit -> unit
+  val temp_enable_monadsyntax : unit -> unit
 
   val disable_monadsyntax : unit -> unit
   val temp_disable_monadsyntax : unit -> unit

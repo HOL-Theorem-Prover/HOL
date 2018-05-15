@@ -433,6 +433,9 @@ fun aap (s, code) = (add_ML_dependency "monadsyntax";
 
 fun add_monadsyntax () = syntax_actions add_listform add_rule aup aap
 
+val enable_monadsyntax = add_monadsyntax
+val temp_enable_monadsyntax = temp_add_monadsyntax
+
 val _ = TexTokenMap.temp_TeX_notation
             {hol = "<-", TeX = ("\\HOLTokenLeftmap{}", 1)}
 val _ = TexTokenMap.temp_TeX_notation {hol = "do", TeX = ("\\HOLKeyword{do}", 2)}

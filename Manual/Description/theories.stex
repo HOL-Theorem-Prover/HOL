@@ -4909,6 +4909,77 @@ A typical use of \holtxt{assert} might be in a function such as
 \end{alltt}
 where the \holtxt{assert} ensures that the subsequent call to \holtxt{HD} makes sense.
 
+\subsection{Enabling Monad Syntax}
+
+There are two steps to being able to use monadic syntax.
+Both steps \emph{persist}, meaning that their effects are preserved for the benefit of descendent theories.
+Because of this persistence, the function calls implementing these two steps should only be used in \ml{$x$Script.sml} files.
+As with other parsing and pretty-printing functions, there are \ml{temp\_} versions of the functions.
+These do not cause persistence and can safely be used in other \ml{.sml} files (such as library implementations).
+
+\smallskip
+\noindent
+The first step is to enable the generic monad syntax, by calling
+\begin{alltt}
+   monadsyntax.enable_monadsyntax : unit -> unit
+\end{alltt}
+After this, one can write \holtxt{do}\dots\holtxt{od} blocks, even though without any specific instances enabled the output will be unhelpful (the \holtxt{monad\_bind} printed in the session below is actually a variable):
+% works badly - polyscripter puts stderr output before invocation, and
+%               exception prints off edge of page
+% >>+ “do x <- M1; M2 od”;
+\begin{session}
+\begin{alltt}
+>>__ monadsyntax.disable_monadsyntax();
+>>__ List.app (monadsyntax.disable_monad o #1)
+              (monadsyntax.all_monads());
+>> monadsyntax.enable_monadsyntax();
+>> “do x <- M1; M2 od”;
+\end{alltt}
+\end{session}
+
+\smallskip
+\noindent
+One can see which monads have been declared with a call to \ml{add_monads}:
+\begin{session}
+\begin{alltt}
+>> monadsyntax.all_monads()
+\end{alltt}
+\end{session}
+
+Particular monads can be enabled with calls to \ml{enable\_monad}.
+The most recently enabled is preferred when the context makes the choice ambiguous.
+
+\begin{session}
+\begin{alltt}
+>> List.app monadsyntax.enable_monad ["list", "option"];
+
+>> val t = “do x <- M; return (x + 1) od”;
+>> type_of t;
+
+>> val t' = “do x <- MAP f l; return (x + 1); od”;
+>> type_of t';
+\end{alltt}
+\end{session}
+
+\smallskip\noindent
+Thanks to the persistence features of these API points, loading fresh theories may cause more monads to be declared and/or enabled:
+\begin{session}
+\begin{alltt}
+>> load "errorStateMonadTheory";
+>> monadsyntax.all_monads();
+\end{alltt}
+\end{session}
+
+\smallskip\noindent
+Everything that has been enabled can in turn be disabled, with calls drawn from:
+\begin{alltt}
+     disable_monad            : string -> unit
+     temp_disable_monad       : string -> unit
+
+     disable_monadsyntax      : unit -> unit
+     temp_disable_monadsyntax : unit -> unit
+\end{alltt}
+
 \index{monads|)}
 \section{Further Theories}
 Other theories of interest in \HOL{} are listed and briefly described
