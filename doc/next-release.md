@@ -61,6 +61,9 @@ New examples:
 
 *   We have resurrected Monica Nesi’s CCS example (from the days of HOL88), thanks to work done by Chun Tian.
 
+*   A theory of the basic syntax and semantics of Linear Temporal Logic formulas, along with a translation of such formulas into Generalised Büchi Automata (in `examples/logic/ltl`).
+    This work is due to Simon Jantsch.
+
 Incompatibilities:
 ------------------
 
