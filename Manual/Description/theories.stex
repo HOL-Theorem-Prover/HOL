@@ -4980,6 +4980,33 @@ Everything that has been enabled can in turn be disabled, with calls drawn from:
      temp_disable_monadsyntax : unit -> unit
 \end{alltt}
 
+\subsection{Some Built-in Monad Theories}
+
+See Figure~\ref{fig:bind-defns} for the bind definitions for a number of different monads that are present in the core HOL set of theories.
+\begin{figure}[hbtp]
+\begin{alltt}
+>>__ app load ["readerMonadTheory", "state_transformerTheory",
+               "errorStateMonadTheory"];
+>>__ List.app (fn (s,_) => monadsyntax.disable_monad s)
+              (monadsyntax.all_monads())
+>>__ val oldwidth = !Globals.linewidth;
+     val _ = Globals.linewidth := oldwidth - 10;
+>>__ hide "BIND";
+##thm errorStateMonadTheory.BIND_DEF
+
+##thm listTheory.LIST_BIND_THM
+
+##thm optionTheory.OPTION_BIND_def
+
+##thm readerMonadTheory.BIND_def
+
+##thm state_transformerTheory.BIND_DEF
+>>__ val _ = Globals.linewidth := oldwidth;
+\end{alltt}
+\caption{Monad bind definitions}
+\label{fig:bind-defns}
+\end{figure}
+
 \index{monads|)}
 \section{Further Theories}
 Other theories of interest in \HOL{} are listed and briefly described
