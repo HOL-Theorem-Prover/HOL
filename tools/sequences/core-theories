@@ -33,7 +33,6 @@ src/datatype
 !src/datatype/theory_tests
 src/monad
 src/list/src
-src/monad/more_monads
 src/quantHeuristics
 src/unwind
 src/pattern_matches
