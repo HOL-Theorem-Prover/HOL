@@ -20,13 +20,29 @@ Contents
 New features:
 -------------
 
-*   `Holmake` under Poly/ML (*i.e.*, for the moment only Unix systems (including OSX/MacOS)) now runs build scripts concurrently when targets do not depend on each other.
+*   `Holmake` under Poly/ML (*i.e.*, for the moment only Unix-like systems (including OSX/MacOS, and Windows with Cygwin or the Linux subsystem)) now runs build scripts concurrently when targets do not depend on each other.
     The degree of parallelisation depends on the `-j` flag, and is set to 4 by default.
     Output from the build processes is logged into a `.hollogs` sub-directory rather than interleaved randomly to standard out.
 
 *   Theory files generated from script files now load faster.
     The machinery enabling this generates `xTheory.dat` files alongside `xTheory.sig` and `xTheory.sml` files.
     Thanks to Thibault Gauthier for the work implementing this.
+
+*   We now support monadic syntax with a `do`-notation inspired by Haskell’s.
+    For example, the `mapM` function might be defined:
+
+           Define‘(mapM f [] = return []) ∧
+                  (mapM f (x::xs) =
+                         do
+                           y <- f x;
+                           ys <- mapM f xs;
+                           return (y::ys);
+                         od)’;
+
+    The HOL type system cannot support this definition in its full polymorphic generality.
+    In particular, the above definition will actually be made with respect to a specific monad instance (list, option, state, reader, *etc*).
+    There are API entry-points for declaring and enabling monads in the `monadsyntax` module.
+    For more details see the *DESCRIPTION* manual.
 
 
 Bugs fixed:
@@ -42,6 +58,8 @@ New tools:
 
 New examples:
 ---------
+
+*   We have resurrected Monica Nesi’s CCS example (from the days of HOL88), thanks to work done by Chun Tian.
 
 Incompatibilities:
 ------------------
