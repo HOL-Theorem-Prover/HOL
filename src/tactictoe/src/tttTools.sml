@@ -254,10 +254,10 @@ fun string_of_goal (asm,w) =
     val _   = show_types := false
     val s   =
       (if asm = []
-         then "[]"
-         else "[``" ^ String.concatWith "``,``" (map nnstring_of_term asm) ^
-              "``]")
-    val s1 = "(" ^ s ^ "," ^ "``" ^ (nnstring_of_term w) ^ "``)"
+         then " goalthms; "
+         else " `` " ^ String.concatWith " `` , `` " (map nnstring_of_term asm) ^
+              " `` goalthms; ")
+    val s1 =  "`` " ^ (nnstring_of_term w) ^ " `` goalterm; " ^ s
   in
     show_types := mem;
     s1

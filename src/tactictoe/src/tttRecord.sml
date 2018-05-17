@@ -246,6 +246,7 @@ val fetch = total_time fetch_thm_time fetch_thm
    Proof recording
    ---------------------------------------------------------------------- *)
 
+(* TODO(smloos): use thm_counter to split test/train *)
 val thm_counter = ref 0
 
 fun start_record_proof name =
@@ -277,7 +278,7 @@ fun end_record_proof name g =
   end
 
 fun string_of_step (stac,t,g,gl) =
-    (string_of_goal g ^ " <ENDGOAL> " ^ stac ^ " <ENDTACTIC> ")
+    (string_of_goal g ^ stac ^ " tactic; ")
 
 fun print_proof name g =
   let
