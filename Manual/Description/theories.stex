@@ -4939,7 +4939,7 @@ After this, one can write \holtxt{do}\dots\holtxt{od} blocks, even though withou
 
 \smallskip
 \noindent
-One can see which monads have been declared with a call to \ml{add_monads}:
+One can see which monads have been declared with a call to \ml{all_monads}:
 \begin{session}
 \begin{alltt}
 >> monadsyntax.all_monads()
