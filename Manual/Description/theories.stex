@@ -4839,7 +4839,7 @@ Finally, the \holtxt{return} keyword is an overloading for the monad instance's 
 
 Monad instances have to be declared if the system is to support their parsing and pretty-printing.
 The function responsible is \index{declare_monad@\ml{declare\_monad}}\ml{declare\_monad} in the \ml{monadsyntax} module.
-(There is also an accompanying \index{temp_declare_monad@\ml{temp\_declare\_monad}}\ml{temp\_declare\_monad} function that achieves the same thing dynamically but doesn't cause the declaration to persist for the benefit of other later descendent theories.)
+(There is also an accompanying \index{temp_declare_monad@\ml{temp\_declare\_monad}}\ml{temp\_declare\_monad} function that achieves the same thing dynamically but doesn't cause the declaration to persist for the benefit of other later descendant theories.)
 
 \begin{alltt}
 >>__ val SOME ms_struct =
@@ -4912,7 +4912,7 @@ where the \holtxt{assert} ensures that the subsequent call to \holtxt{HD} makes 
 \subsection{Enabling Monad Syntax}
 
 There are two steps to being able to use monadic syntax.
-Both steps \emph{persist}, meaning that their effects are preserved for the benefit of descendent theories.
+Both steps \emph{persist}, meaning that their effects are preserved for the benefit of descendant theories.
 Because of this persistence, the function calls implementing these two steps should only be used in \ml{$x$Script.sml} files.
 As with other parsing and pretty-printing functions, there are \ml{temp\_} versions of the functions.
 These do not cause persistence and can safely be used in other \ml{.sml} files (such as library implementations).

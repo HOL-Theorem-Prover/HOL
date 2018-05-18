@@ -1892,7 +1892,7 @@ is defined by  the set of congruence rules used in extracting termination
 conditions. This set can be obtained by invoking \holtxt{DefnBase.read\_congs},
 and manipulated by \holtxt{DefnBase.add\_cong},
 \holtxt{DefnBase.drop\_cong} and \holtxt{DefnBase.export\_cong}.
-The `add' and `drop' functions only affect the current state of the congruence database; in contrast, the `export' function provides a way for theories to specify that a particular theorem should be added to the congruence database in all descendent theories.
+The `add' and `drop' functions only affect the current state of the congruence database; in contrast, the `export' function provides a way for theories to specify that a particular theorem should be added to the congruence database in all descendant theories.
 \index{congruence rules!in termination analysis|)}
 
 

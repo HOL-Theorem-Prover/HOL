@@ -147,7 +147,7 @@ form feed ({\verb+^+}L, 12)
 \paragraph{Special identifiers}
 
 The following valid identifiers are used by the grammar in the theory
-of booleans, and thus in all descendent theories as well.  They should
+of booleans, and thus in all descendant theories as well.  They should
 not be used as the name of a variable or a constant unless the user is
 very confident of their ability to mess with grammars.
 %
