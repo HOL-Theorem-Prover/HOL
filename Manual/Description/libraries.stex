@@ -3108,13 +3108,13 @@ test. For example, the following definition is provably equal to \holtxt{FACT},
 But the two definitions evaluate completely differently.
 %
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 >> EVAL ``FACT n``;
 
 > EVAL ``fact n``;
   <.... interrupt key struck ...>
 Interrupted.
-\end{verbatim}
+\end{alltt}
 \end{session}
 %
 The primitive-recursive definition of \holtxt{FACT} does not expand
