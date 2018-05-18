@@ -46,9 +46,9 @@ For more details on this syntax, see \ml{Hol_datatype}'s entry in \REFERENCE.}
 & & \\
 \tyspec & \verb+::=+ & \verb+(+ \type{} \verb+)+ \quad\verb+|+\quad \mbox{\it atomic-type}\\
 & & \\
-\recdspec & \verb+::=+ & \verb+<|+ [\ident\ \verb+:+ \type\ \verb+;+]$^*$
-                                   \ident\ \verb+:+ \type\ \verb+|>+\\
-
+\recdspec & \verb+::=+ &
+\verb+<|+ [\ident\ \verb+:+ \type\ \verb+;+]$^*$ \ident\ \verb+:+ \type\
+ \verb+;+$^?$\verb+|>+\\
 \hline
 \end{tabular}
 \caption{Datatype Declaration. An \textit{atomic-type} is a single token that denotes a \type{} (\eg, \holtxt{num}, \holtxt{real}, or \holtxt{'a}).}\label{datatype}
@@ -139,11 +139,7 @@ Thus, in the example given, the \ml{'a} of \ml{('a,'b)sum} will be the argument 
 Other non-recursive types may be defined as well:
 \begin{hol}
 \begin{verbatim}
-  Datatype
-    `foo = N num
-         | B bool
-         | Fn ('a -> 'b)
-         | Pr ('a # 'b)`
+  Datatype`foo = N num | B bool | Fn ('a -> 'b) | Pr ('a # 'b)`
 \end{verbatim}
 \end{hol}
 %
@@ -152,9 +148,7 @@ trees having polymorphic values at internal nodes. This time, we will
 declare it in ``paired'' format.
 \begin{hol}
 \begin{verbatim}
-  Datatype
-    `tree = Leaf 'a
-          | Node (tree # 'b # tree)`
+  Datatype `tree = Leaf 'a | Node (tree # 'b # tree)`
 \end{verbatim}
 \end{hol}
 %
@@ -166,11 +160,10 @@ The basic syntax of the named lambda calculus is easy to describe:
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype
-    `lambda = Var string
-            | Const 'a
-            | Comb lambda lambda
-            | Abs lambda lambda`
+  Datatype `lambda = Var string
+                   | Const 'a
+                   | Comb lambda lambda
+                   | Abs lambda lambda`
 \end{verbatim}
 \end{hol}
 %
@@ -178,12 +171,11 @@ The syntax for `de Bruijn' terms is roughly similar:
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype
-    `dB = Var string
-        | Const 'a
-        | Bound num
-        | Comb dB dB
-        | Abs dB`
+  Datatype `dB = Var string
+               | Const 'a
+               | Bound num
+               | Comb dB dB
+               | Abs dB`
 \end{verbatim}
 \end{hol}
 %
@@ -201,9 +193,7 @@ A type of `first order terms' can be declared as follows:
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype
-    `term = Var string
-          | Fnapp (string # term list)`
+  Datatype `term = Var string | Fnapp (string # term list)`
 \end{verbatim}
 \end{hol}
 %
@@ -282,9 +272,7 @@ at present be built with \ml{Datatype}:
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype
-    `btree = Leaf 'a
-           | Node (('a # 'a) btree)`
+  Datatype `btree = Leaf 'a | Node (('a # 'a) btree)`
 \end{verbatim}
 \end{hol}
 %
@@ -295,24 +283,21 @@ require it.  Thus, examples such as the following will fail:
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype
-    `flist = Nil
-           | Cons 'a ('b -> flist)`
+  Datatype `flist = Nil | Cons 'a ('b -> flist)`
 \end{verbatim}
 \end{hol}
 %
 Recursion on the left must fail for cardinality reasons. For
 example, HOL does not allow the following attempt to model the untyped
-lambda calculus as a set (note the \holtxt{->} in the clause for the
+lambda calculus (note the \holtxt{->} in the clause for the
 \holtxt{Abs} constructor):
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype
-    `lambda = Var string
-            | Const 'a
-            | Comb lambda lambda
-            | Abs (lambda -> lambda)`
+  Datatype `lambda = Var string
+                   | Const 'a
+                   | Comb lambda lambda
+                   | Abs (lambda -> lambda)`
 \end{verbatim}
 \end{hol}
 
@@ -423,10 +408,7 @@ previously discussed.  For example, to create a record type called
   employed}, {\tt name} and {\tt age}, one would enter:
 \begin{hol}
 \begin{verbatim}
-  Datatype
-    `person = <| employed : bool ;
-                 age : num ;
-                 name : string |>`
+  Datatype `person = <| employed : bool ; age : num ; name : string |>`
 \end{verbatim}
 \end{hol}
 The order in which the fields are entered is not significant. As well
@@ -887,7 +869,7 @@ Note that the pattern \ml{0} is acceptable to either group.
         0 => "none"
       | 1 => "one"
       | 2 => "two"
-      | SUC m => "many"”
+      | SUC m => "many"”;
 \end{alltt}
 \end{session}
 \caption{Decision-tree case expression parsing going wrong}
@@ -1256,14 +1238,9 @@ that may be defined with \ml{Define}. First, we have a recursive function
 that uses ``destructors'' in the recursive call.
 
 \begin{hol}
-\begin{verbatim}
-  Define
-    `fact x = if x = 0 then 1 else x * fact(x-1)`;
-
-  Equations stored under "fact_def".
-  Induction stored under "fact_ind".
-  > val it = |- fact x = (if x = 0 then 1 else x * fact (x - 1)) : thm
-\end{verbatim}
+\begin{alltt}
+>> Define `fact x = if x = 0 then 1 else x * fact(x-1)`;
+\end{alltt}
 \end{hol}
 %
 Since \holtxt{fact} is not
@@ -1271,12 +1248,9 @@ primitive recursive, an induction theorem for \holtxt{fact} is generated and
 stored in the current theory.
 %
 \begin{hol}
-\begin{verbatim}
-  - DB.fetch "-" "fact_ind";
-
-  > val it =
-     |- !P. (!x. (~(x = 0) ==> P (x - 1)) ==> P x) ==> !v. P v : thm
-\end{verbatim}
+\begin{alltt}
+>> DB.fetch "-" "fact_ind";
+\end{alltt}
 \end{hol}
 
 Next we have a recursive function with relatively complex
@@ -1284,54 +1258,31 @@ pattern-matching. We omit to examine the generated induction
 theorem.
 %
 \begin{hol}
-\begin{verbatim}
-  Define `(flatten  []           = [])
-     /\   (flatten ([]::rst)     = flatten rst)
-     /\   (flatten ((h::t)::rst) = h::flatten(t::rst))`;
-
-  Equations stored under "flatten_def".
-  Induction stored under "flatten_ind".
-
-  > val it =
-      |- (flatten [] = []) /\
-         (flatten ([]::rst) = flatten rst) /\
-         (flatten ((h::t)::rst) = h::flatten (t::rst)) : thm
-\end{verbatim}
+\begin{alltt}
+>> Define `(flatten  []           = [])
+      /\   (flatten ([]::rst)     = flatten rst)
+      /\   (flatten ((h::t)::rst) = h::flatten(t::rst))`;
+\end{alltt}
 \end{hol}
 
 Next we define a curried recursive function, which uses
 wildcard expansion and pattern-matching pre-processing.
 %
 \begin{hol}
-\begin{verbatim}
-  Define `(min (SUC x) (SUC y) = min x y + 1)
-     /\   (min  ____    ____   = 0)`;
-
-  Equations stored under "min_def".
-  Induction stored under "min_ind".
-
-  > val it =
-      |- (min (SUC x) (SUC y) = min x y + 1) /\
-         (min (SUC v2) 0 = 0) /\
-         (min 0 v1 = 0) : thm
-\end{verbatim}
+\begin{alltt}
+>> Define `(min (SUC x) (SUC y) = min x y + 1)
+      /\   (min  ____    ____   = 0)`;
+\end{alltt}
 \end{hol}
 
- Next we make a primitive recursive definition. Note that no
+Next we make a primitive recursive definition. Note that no
 induction theorem is generated in this case.
 %
 \begin{hol}
-\begin{verbatim}
-  Define `(filter P [] = [])
-    /\    (filter P (h::t) = if P h then h::filter P t else filter P t)`;
-
-  Definition has been stored under "filter_def".
-
-  > val it =
-     |- (!P. filter P [] = []) /\
-        !P h t. filter P (h::t) =
-                 (if P h then h::filter P t else filter P t) : thm
-\end{verbatim}
+\begin{alltt}
+>> Define `(filter P [] = [])
+     /\    (filter P (h::t) = if P h then h::filter P t else filter P t)`;
+\end{alltt}
 \end{hol}
 
 \ml{Define} may also be used to define mutually recursive functions.
@@ -1340,13 +1291,10 @@ putting a proposition into negation normal form as follows.
 First we define a datatype, named \ml{prop}, of boolean formulas:
 %
 \begin{hol}
-\begin{verbatim}
-  Datatype
-    `prop = VAR 'a
-          | NOT prop
-          | AND prop prop
-          | OR  prop prop`;
-\end{verbatim}
+\begin{alltt}
+>> Datatype‘prop = VAR 'a | NOT prop | AND prop prop
+                 | OR  prop prop’;
+\end{alltt}
 \end{hol}
 %
 Then two mutually recursive functions \holtxt{nnfpos} and \holtxt{nnfneg}
@@ -1386,8 +1334,7 @@ The system makes the definition and returns the theorem
 %
 \begin{hol}
 \begin{verbatim}
-  Define
-    `f x (y,z) = (x + 1 = y DIV z)`;
+  Define `f x (y,z) = (x + 1 = y DIV z)`;
 \end{verbatim}
 \end{hol}
 
@@ -1594,20 +1541,14 @@ numbers:
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-  - val gcd_defn =
+\begin{alltt}
+>> val gcd_defn =
       Hol_defn "gcd"
          `(gcd (0,n) = n) /\
           (gcd (m,n) = gcd (n MOD m, m))`;
 
-  - Defn.tgoal gcd_defn;
-
-  > val it =
-      Proof manager status: 1 proof.
-      1. Incomplete:
-           Initial goal:
-           ?R. WF R /\ !v2 n. R (n MOD SUC v2,SUC v2) (SUC v2,n)
-\end{verbatim}
+>> Defn.tgoal gcd_defn;
+\end{alltt}
 \end{session}
 %
 The invocation \holtxt{gcd(m,n)} recurses in its first argument, and
@@ -1618,24 +1559,22 @@ to map from the domain of \holtxt{gcd}---a pair of numbers---to a number.
 The definition of {measure} in \HOL{} is equivalent to
 %
 \begin{hol}
-\begin{verbatim}
-  |- measure f x y = (f x < f y).
-\end{verbatim}
+\begin{alltt}
+##thm prim_recTheory.measure_thm
+\end{alltt}
 \end{hol}
 %
 Now we must pick out the argument position to measure and
 invoke \ml{WF\_REL\_TAC}:
 \begin{session}
-\begin{verbatim}
-  - e (WF_REL_TAC `measure FST`);
-  OK..
-  1 subgoal:
-  > val it =
-     !v2 n. n MOD SUC v2 < SUC v2
-\end{verbatim}
+\begin{alltt}
+>> e (WF_REL_TAC ‘measure FST’);
+>>__ val th = top_thm(); (* throws exn if not all proved *)
+>>__ drop();
+\end{alltt}
 \end{session}
 %
-This goal is easy to prove with a few simple arithmetic facts.
+The built-in reasoning then suffices to prove the remaining goal.
 
 \paragraph{Weighting Functions}
 
@@ -1646,26 +1585,17 @@ gets a \holtxt{Leaf} in the left branch, then it recurses into the right
 branch. At the end of execution the tree has been linearized.
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-  - Datatype
-      `btree = Leaf | Brh btree btree`;
+\begin{alltt}
+>> Datatype `btree = Leaf | Brh btree btree`;
 
-  - val Unbal_defn =
+>> val Unbal_defn =
       Hol_defn "Unbal"
         `(Unbal Leaf = Leaf)
      /\  (Unbal (Brh Leaf bt) = Brh Leaf (Unbal bt))
      /\  (Unbal (Brh (Brh bt1 bt2) bt) = Unbal (Brh bt1 (Brh bt2 bt)))`;
 
-  - Defn.tgoal Unbal_defn;
-
-  > val it =
-      Proof manager status: 1 proof.
-      1. Incomplete:
-         Initial goal:
-          ?R. WF R /\
-              (!bt. R bt (Brh Leaf bt)) /\
-              !bt bt2 bt1. R (Brh bt1 (Brh bt2 bt)) (Brh (Brh bt1 bt2) bt)
-\end{verbatim}
+>> Defn.tgoal Unbal_defn;
+\end{alltt}
 \end{session}
 %
 Since the size of the tree is unchanged in the last clause in the
@@ -1674,30 +1604,23 @@ can assign weights to nodes in the tree such that the recursive calls of
 \holtxt{Unbal} decrease the total weight in every case. One such assignment is
 %
 \begin{session}
-\begin{verbatim}
-  Define
-   `(Weight (Leaf) = 0) /\
-    (Weight (Brh x y) = (2 * Weight x) + (Weight y) + 1)`
-\end{verbatim}
+\begin{alltt}
+##eval Define
+         `(Weight (Leaf) = 0) /\
+          (Weight (Brh x y) = (2 * Weight x) + (Weight y) + 1)`;
+\end{alltt}
 \end{session}
 %
 Now we can invoke \ml{WF\_REL\_TAC}:
 %
 \begin{session}
-\begin{verbatim}
-  e (WF_REL_TAC `measure Weight`);
-  OK..
-
-  2 subgoals:
-  > val it =
-   !bt. Weight bt < Weight (Brh Leaf bt)
-
-   !bt bt2 bt1.
-      Weight (Brh bt1 (Brh bt2 bt)) < Weight (Brh (Brh bt1 bt2) bt)
-\end{verbatim}
+\begin{alltt}
+>> e (WF_REL_TAC `measure Weight`);
+##assert is_conj (#2 (top_goal()))
+\end{alltt}
 \end{session}
 %
-Both of these goals are quite easy to prove.
+Both conjuncts of this goal are quite easy to prove.
 %
 The technique of `weighting` nodes in a datatype in order to prove
 termination also goes by the name of \emph{polynomial interpretation}. It
@@ -1718,20 +1641,21 @@ The fourth argument, $s$, is the string being searched.
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-  val match_defn =
-    Hol_defn "match"
-      `(match [] __ __ __ = T)  /\
-       (match __ [] __ __ = F)  /\
-       (match (a::pp) (b::ss) p0 s =
-         if a=b then match pp ss p0 s
-           else
-         if NULL(s) then F
-           else
-         match p0 (TL s) p0 (TL s))`;
+\begin{alltt}
+>>_  val match_defn =
+       Hol_defn "match"
+         `(match [] __ __ __ = T)  /\
+          (match __ [] __ __ = F)  /\
+          (match (a::pp) (b::ss) p0 s =
+            if a=b then match pp ss p0 s
+              else
+            if NULL(s) then F
+              else
+            match p0 (TL s) p0 (TL s))`;
 
-  - val Match = Define `Match pat str = match pat str pat str`;
-\end{verbatim}
+>> val Match_def =
+     Define `Match pat str = match pat str pat str`;
+\end{alltt}
 \end{session}
 %
 The first clause of the definition states that if $p$ becomes exhausted, then a match has
@@ -1759,9 +1683,9 @@ some recursive calls, and some others are reduced in other recursive calls.
 Recall that \holtxt{LEX} is an infix operator, defined in \ml{pairTheory} as follows:
 %
 \begin{hol}
-\begin{verbatim}
-  |- LEX R1 R2 = \(x,y) (p,q). R1 x p \/ ((x=p) /\ R2 y q)
-\end{verbatim}
+\begin{alltt}
+##thm pairTheory.LEX_DEF
+\end{alltt}
 \end{hol}
 %
 In the second recursive call, the length of \holtxt{s} is reduced, and in
@@ -1773,9 +1697,9 @@ arguments into a lexicographic combination of relations.
 This is enabled by \holtxt{inv\_image} from \ml{relationTheory}:
 %
 \begin{hol}
-\begin{verbatim}
-   |- inv_image R f = \x y. R (f x) (f y)
-\end{verbatim}
+\begin{alltt}
+##thm relationTheory.inv_image_def
+\end{alltt}
 \end{hol}
 %
 The desired relation maps from the four-tuple of arguments into a pair
@@ -1783,24 +1707,14 @@ of numbers $(m,n)$, where $m$ is the length of the fourth argument, and
 $n$ is the length of the second argument. These lengths are then
 compared lexicographically with respect to less-than ($<$).
 \begin{session}
-\begin{verbatim}
-  Defn.tgoal match_defn;
+\begin{alltt}
+>>_ Defn.tgoal match_defn;
 
-  - e (WF_REL_TAC `inv_image($< LEX $<) (\(w,x,y,z). (LENGTH z,LENGTH x))`);
-  OK..
-  2 subgoals:
-  > val it =
-   !s ss a b.
-     (a=b) ==> LENGTH s < LENGTH s \/ LENGTH ss < LENGTH (b::ss)
-
-   !ss s a b.
-     ~(a = b) /\ ~NULL s ==>
-     LENGTH (TL s) < LENGTH s \/
-     (LENGTH (TL s) = LENGTH s) /\ LENGTH (TL s) < LENGTH (b::ss)
-\end{verbatim}
+>> e (WF_REL_TAC `inv_image($< LEX $<) (\(w,x,y,z). (LENGTH z,LENGTH x))`);
+\end{alltt}
 \end{session}
 %
-The first subgoal needs a case-split on \holtxt{s} before it is proved by
+The first conjunct needs a case-split on \holtxt{s} before it is proved by
 rewriting, and the second is also easy to prove by rewriting.
 
 \subsubsection{How termination conditions are synthesized}
