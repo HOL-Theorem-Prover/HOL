@@ -937,7 +937,7 @@ fun RM patobs (theta0 as (tminfo, tyS)) =
           end
         | (Const(c1, ty1), Const(c2, ty2)) =>
           if c1 <> c2 then MERR ("Different constants: "^c2string c1^" and "^
-				 c2string c2)
+                                 c2string c2)
           else RM rest (tminfo, Type.raw_match_type ty1 ty2 tyS)
         | (App(f1, x1), App(f2, x2)) =>
           RM (TMP (f1, f2) :: TMP (x1, x2) :: rest) theta0

@@ -73,10 +73,10 @@ fun is_id Id = true
 fun exp_rel (subs,db) =
   let fun exp (lams, Id,         n) = (lams+n, NONE)
         | exp (lams, Cons(s,x),  0) = (lams, SOME x)
-	| exp (lams, Cons(s,x),  n) = exp(lams, s, n-1)
-	| exp (lams, Shift(k,s), n) = exp(lams+k, s, n)
-	| exp (lams, Lift(k,s),  n) = if n < k then (lams+n, NONE)
-	                              else exp(lams+k, s, n-k)
+        | exp (lams, Cons(s,x),  n) = exp(lams, s, n-1)
+        | exp (lams, Shift(k,s), n) = exp(lams+k, s, n)
+        | exp (lams, Lift(k,s),  n) = if n < k then (lams+n, NONE)
+                                      else exp(lams+k, s, n-k)
   in exp(0,subs,db)
   end
 ;
@@ -93,16 +93,16 @@ fun exp_rel (subs,db) =
 
 fun comp mk_cl =
   let fun Id           o s'             = s'
-	| s            o Id             = s
+        | s            o Id             = s
         | (Shift(k,s)) o s'             = shift(k, s o s')
-	| s            o (Cons(s',x))   = Cons(s o s', mk_cl(s,x))
-	| (Cons(s,x))  o (Shift(k,s'))  = s o shift(k-1, s')
-	| (Cons(s,x))  o (Lift(k,s'))   = Cons(s o lift(k-1, s'), x)
-	| (Lift(k,s))  o (Shift(k',s')) = if k<k'
+        | s            o (Cons(s',x))   = Cons(s o s', mk_cl(s,x))
+        | (Cons(s,x))  o (Shift(k,s'))  = s o shift(k-1, s')
+        | (Cons(s,x))  o (Lift(k,s'))   = Cons(s o lift(k-1, s'), x)
+        | (Lift(k,s))  o (Shift(k',s')) = if k<k'
                                           then shift(k, s o shift(k'-k, s'))
                                           else shift(k', lift(k-k', s) o s')
-	| (Lift(k,s))  o (Lift(k',s'))  = if k<k'
-	                                  then lift(k, s o lift(k'-k, s'))
+        | (Lift(k,s))  o (Lift(k',s'))  = if k<k'
+                                          then lift(k, s o lift(k'-k, s'))
                                           else lift(k', lift(k-k', s) o s')
   in (op o)
   end

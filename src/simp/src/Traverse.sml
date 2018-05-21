@@ -161,7 +161,7 @@ fun GEN_IFCQC  (PREORDER(_,TRANS,_)) (conv1,conv2) tm =
 fun GEN_REPEATQC rel =
    let val op THENCQC = GEN_THENCQC rel
        fun REPEATQC conv tm =
-	   (conv THENCQC (REPEATQC conv)) tm
+           (conv THENCQC (REPEATQC conv)) tm
    in REPEATQC
    end;
 

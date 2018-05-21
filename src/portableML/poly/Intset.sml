@@ -96,37 +96,37 @@ fun T' (v,E,E) = T(v,1,E,E)
 
   (* these cases almost never happen with small weight*)
   | T' (p as (_,E,T(_,_,T(_,ln,_,_),T(_,rn,_,_)))) =
-	if ln<rn then single_L p else double_L p
+        if ln<rn then single_L p else double_L p
   | T' (p as (_,T(_,_,T(_,ln,_,_),T(_,rn,_,_)),E)) =
-	if ln>rn then single_R p else double_R p
+        if ln>rn then single_R p else double_R p
 
   | T' (p as (_,E,T(_,_,E,_)))  = single_L p
   | T' (p as (_,T(_,_,_,E),E))  = single_R p
 
   | T' (p as (v,l as T(lv,ln,ll,lr),r as T(rv,rn,rl,rr))) =
-	if rn>=wt ln then (*right is too big*)
-	    let val rln = size rl
-		val rrn = size rr
-	    in
-		if rln < rrn then  single_L p  else  double_L p
-	    end
+        if rn>=wt ln then (*right is too big*)
+            let val rln = size rl
+                val rrn = size rr
+            in
+                if rln < rrn then  single_L p  else  double_L p
+            end
 
-	else if ln>=wt rn then  (*left is too big*)
-	    let val lln = size ll
-		val lrn = size lr
-	    in
-		if lrn < lln then  single_R p  else  double_R p
-	    end
+        else if ln>=wt rn then  (*left is too big*)
+            let val lln = size ll
+                val lrn = size lr
+            in
+                if lrn < lln then  single_R p  else  double_R p
+            end
 
-	else
+        else
          T(v,ln+rn+1,l,r)
 
 fun addt t x =
     let fun h E = T(x,1,E,E)
-	  | h (set as T(v,_,l,r)) =
-	    if x<v then T'(v, h l, r)
-	    else if x>v then T'(v, l, h r)
-  	    else set
+          | h (set as T(v,_,l,r)) =
+            if x<v then T'(v, h l, r)
+            else if x>v then T'(v, l, h r)
+            else set
     in h t end
 
 fun concat3 E v r = addt r v
@@ -163,9 +163,9 @@ and delmin (T(_,_,E,r)) = r
 fun concat E  s2 = s2
   | concat s1 E  = s1
   | concat (t1 as T(v1,n1,l1,r1)) (t2 as T(v2,n2,l2,r2)) =
-	if wt n1 < n2 then T'(v2, concat t1 l2, r2)
-	else if wt n2 < n1 then T'(v1,l1, concat r1 t2)
-	     else T'(min t2,t1, delmin t2)
+        if wt n1 < n2 then T'(v2, concat t1 l2, r2)
+        else if wt n2 < n1 then T'(v1,l1, concat r1 t2)
+             else T'(min t2,t1, delmin t2)
 
 type  intset = Set
 
@@ -178,17 +178,17 @@ fun singleton x = T(x,1,E,E)
 local
     fun trim lo hi E = E
       | trim lo hi (s as T(v,_,l,r)) =
-	if  v<=lo  then  trim lo hi r
-	else if  v>=hi  then  trim lo hi l
-	else  s
+        if  v<=lo  then  trim lo hi r
+        else if  v>=hi  then  trim lo hi l
+        else  s
 
     fun uni_bd s E lo hi = s
       | uni_bd E (T(v,_,l,r)) lo hi =
-	concat3 (split_gt l lo) v (split_lt r hi)
+        concat3 (split_gt l lo) v (split_lt r hi)
       | uni_bd (T(v,_,l1,r1)) (s2 as T(v2,_,l2,r2)) lo hi =
-	concat3 (uni_bd l1 (trim lo v s2) lo v)
-		v
-		(uni_bd r1 (trim v hi s2) v hi)
+        concat3 (uni_bd l1 (trim lo v s2) lo v)
+                v
+                (uni_bd r1 (trim v hi s2) v hi)
     (* inv:  lo < v < hi *)
 
    (*all the other versions of uni and trim are
@@ -197,33 +197,33 @@ local
 
     fun trim_lo _ E = E
       | trim_lo lo (s as T(v,_,_,r)) =
-	if v<=lo then trim_lo lo r else s
+        if v<=lo then trim_lo lo r else s
     fun trim_hi _ E = E
       | trim_hi hi (s as T(v,_,l,_)) =
-	if v>=hi then trim_hi hi l else s
+        if v>=hi then trim_hi hi l else s
 
     fun uni_hi s E hi = s
       | uni_hi E (T(v,_,l,r)) hi =
-	concat3 l v (split_lt r hi)
+        concat3 l v (split_lt r hi)
       | uni_hi (T(v,_,l1,r1)) (s2 as T(v2,_,l2,r2)) hi =
-	concat3 (uni_hi l1 (trim_hi v s2) v)
-		v
-		(uni_bd r1 (trim v hi s2) v hi)
+        concat3 (uni_hi l1 (trim_hi v s2) v)
+                v
+                (uni_bd r1 (trim v hi s2) v hi)
 
     fun uni_lo s E lo = s
       | uni_lo E (T(v,_,l,r)) lo =
-	concat3 (split_gt l lo) v r
+        concat3 (split_gt l lo) v r
       | uni_lo (T(v,_,l1,r1)) (s2 as T(v2,_,l2,r2)) lo =
-	concat3 (uni_bd l1 (trim lo v s2) lo v)
-		v
-		(uni_lo r1 (trim_lo v s2) v)
+        concat3 (uni_bd l1 (trim lo v s2) lo v)
+                v
+                (uni_lo r1 (trim_lo v s2) v)
 
     fun uni (s,E) = s
       | uni (E,s as T(v,_,l,r)) = s
       | uni (T(v,_,l1,r1), s2 as T(v2,_,l2,r2)) =
-	concat3 (uni_hi l1 (trim_hi v s2) v)
-		v
-		(uni_lo r1 (trim_lo v s2) v)
+        concat3 (uni_hi l1 (trim_hi v s2) v)
+                v
+                (uni_lo r1 (trim_lo v s2) v)
 in
     val union = uni
 end
@@ -236,15 +236,15 @@ fun difference (E,s)  = E
   | difference (s,E)  = s
   | difference (s, T(v,_,l,r)) =
     let val l2 = split_lt s v
-	val r2 = split_gt s v
+        val r2 = split_gt s v
     in
-	concat (difference(l2,l)) (difference(r2,r))
+        concat (difference(l2,l)) (difference(r2,r))
     end
 
 fun membert set x =
     let fun mem E = false
-	  | mem (T(v,_,l,r)) =
-	    if x<v then mem l else if x>v then mem r else true
+          | mem (T(v,_,l,r)) =
+            if x<v then mem l else if x>v then mem r else true
     in mem set end
 
 fun member (set,x) = membert set x
@@ -255,12 +255,12 @@ fun intersection (E,_) = E
   | intersection (_,E) = E
   | intersection (s, T(v,_,l,r)) =
     let val l2 = split_lt s v
-	val r2 = split_gt s v
+        val r2 = split_gt s v
     in
-	if membert s v then
-	    concat3 (intersection(l2,l)) v (intersection(r2,r))
-	else
-	    concat (intersection(l2,l)) (intersection(r2,r))
+        if membert s v then
+            concat3 (intersection(l2,l)) v (intersection(r2,r))
+        else
+            concat (intersection(l2,l)) (intersection(r2,r))
     end
 
 fun numItems E = 0
@@ -276,59 +276,59 @@ fun delete (E,x) = raise NotFound
     else delete'(l,r)
 
 fun foldr f base set =
-    let	fun fold' base E = base
-	  | fold' base (T(v,_,l,r)) = fold' (f(v, fold' base r)) l
+    let fun fold' base E = base
+          | fold' base (T(v,_,l,r)) = fold' (f(v, fold' base r)) l
     in fold' base set end
 
 fun foldl f base set =
-    let	fun fold' base E = base
-	  | fold' base (T(v,_,l,r)) = fold' (f(v, fold' base l)) r
+    let fun fold' base E = base
+          | fold' base (T(v,_,l,r)) = fold' (f(v, fold' base l)) r
     in fold' base set end
 
 fun app f set =
-    let	fun app' E = ()
-	  | app'(T(v,_,l,r)) = (app' l; f v; app' r)
+    let fun app' E = ()
+          | app'(T(v,_,l,r)) = (app' l; f v; app' r)
     in app' set end
 
 fun revapp f set =
-    let	fun app' E = ()
-	  | app'(T(v,_,l,r)) = (app' r; f v; app' l)
+    let fun app' E = ()
+          | app'(T(v,_,l,r)) = (app' r; f v; app' l)
     in app' set end
 
 local
     (* true if every item in t is in t' *)
     fun treeIn t t' =
-	let
-	    fun isIn E = true
-	      | isIn (T(v,_,E,E)) = membert t' v
-	      | isIn (T(v,_,l,E)) =
-		membert t' v andalso isIn l
-	      | isIn (T(v,_,E,r)) =
-		membert t' v andalso isIn r
-	      | isIn (T(v,_,l,r)) =
-		membert t' v andalso isIn l andalso isIn r
+        let
+            fun isIn E = true
+              | isIn (T(v,_,E,E)) = membert t' v
+              | isIn (T(v,_,l,E)) =
+                membert t' v andalso isIn l
+              | isIn (T(v,_,E,r)) =
+                membert t' v andalso isIn r
+              | isIn (T(v,_,l,r)) =
+                membert t' v andalso isIn l andalso isIn r
         in
-	    isIn t
+            isIn t
         end
 in
     fun isSubset (E,_) = true
       | isSubset (_,E) = false
       | isSubset (t as T(_,n,_,_),t' as T(_,n',_,_)) =
-	(n<=n') andalso treeIn t t'
+        (n<=n') andalso treeIn t t'
 
     fun equal (E,E) = true
       | equal (t as T(_,n,_,_),t' as T(_,n',_,_)) =
-	(n=n') andalso treeIn t t'
+        (n=n') andalso treeIn t t'
       | equal _ = false
 end
 
 fun find p set =
     let fun h E            = NONE
-	  | h (T(v,_,l,r)) =
-	    if p v then SOME v
-	    else case h l of
-		NONE => h r
-	      | a => a
+          | h (T(v,_,l,r)) =
+            if p v then SOME v
+            else case h l of
+                NONE => h r
+              | a => a
     in h set end;
 
 fun listItems set = foldr (op::) [] set

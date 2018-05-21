@@ -65,7 +65,7 @@ val BOOL_ss = SSFRAG
    convs=[{name="BETA_CONV (beta reduction)",
            trace=2,
            key=SOME ([],``(\x:'a. y:'b) z``),
-	   conv=K (K BETA_CONV)}],
+           conv=K (K BETA_CONV)}],
    rewrs=[REFL_CLAUSE,  EQ_CLAUSES,
           NOT_CLAUSES,  AND_CLAUSES,
           OR_CLAUSES,   IMP_CLAUSES,

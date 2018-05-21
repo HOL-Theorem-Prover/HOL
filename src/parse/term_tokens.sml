@@ -182,7 +182,7 @@ in
                 if size sfx0 <> 0 andalso String.sub(sfx0,0) = #"$" then
                   if size sfx0 > 1 then let
                       val sfx0_1 = String.extract(sfx0, 1, NONE)
-	              val c0 = String.sub(sfx0_1, 0)
+                      val c0 = String.sub(sfx0_1, 0)
                       val rest = String.extract(sfx0_1, 1, NONE)
                     in
                       if c0 = #"0" then
@@ -192,13 +192,13 @@ in
                                                      \ of a constant",
                                             locn)
                       else let
-	                  val (qid2, sfx) =
+                          val (qid2, sfx) =
                               grab (constid_categorise (str c0))
                                    [str c0]
                                    rest
                                    handle Fail s => raise LEX_ERR (s, locn)
-	                in
-	                  stdfinish (QIdent(pfx0,qid2), sfx)
+                        in
+                          stdfinish (QIdent(pfx0,qid2), sfx)
                         end
                     end
                   else

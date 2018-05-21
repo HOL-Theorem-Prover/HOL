@@ -11,21 +11,21 @@ structure W32 = Word32
 structure W8V =
 struct
   open Word8Vector
-	fun extract (vec, s, l) =
-	   let
-	      val n =
-		 case l of
-		    NONE => length vec - s
-		  | SOME i => i
-	   in
-	      tabulate (n, fn i => sub (vec, s + i))
-	   end
+        fun extract (vec, s, l) =
+           let
+              val n =
+                 case l of
+                    NONE => length vec - s
+                  | SOME i => i
+           in
+              tabulate (n, fn i => sub (vec, s + i))
+           end
       end
     type word64  = {hi:W32.word,lo:W32.word}
     type word128 = {A:W32.word, B:W32.word, C:W32.word,  D:W32.word}
     type md5state = {digest:word128,
-		       mlen:word64,
-		        buf:Word8Vector.vector}
+                       mlen:word64,
+                        buf:Word8Vector.vector}
 
 
 
@@ -41,13 +41,13 @@ struct
 
     fun packLittle wrds = let
       fun loop [] = []
-	| loop (w::ws) = let
-	    val b0 = Word8.fromLargeWord (W32.toLargeWord w)
-	    val b1 = Word8.fromLargeWord (W32.toLargeWord (W32.>> (w,0w8)))
-	    val b2 = Word8.fromLargeWord (W32.toLargeWord (W32.>> (w,0w16)))
-	    val b3 = Word8.fromLargeWord (W32.toLargeWord (W32.>> (w,0w24)))
-	  in b0::b1::b2::b3:: (loop ws)
-	  end
+        | loop (w::ws) = let
+            val b0 = Word8.fromLargeWord (W32.toLargeWord w)
+            val b1 = Word8.fromLargeWord (W32.toLargeWord (W32.>> (w,0w8)))
+            val b2 = Word8.fromLargeWord (W32.toLargeWord (W32.>> (w,0w16)))
+            val b3 = Word8.fromLargeWord (W32.toLargeWord (W32.>> (w,0w24)))
+          in b0::b1::b2::b3:: (loop ws)
+          end
     in W8V.fromList (loop wrds)
     end
 
@@ -71,9 +71,9 @@ struct
     fun PADDING i =  W8V.tabulate (i,(fn 0 => 0wx80 | _ => 0wx0))
 
     fun F (x,y,z) = W32.orb (W32.andb (x,y),
-			   W32.andb (W32.notb x,z))
+                           W32.andb (W32.notb x,z))
     fun G (x,y,z) = W32.orb (W32.andb (x,z),
-			   W32.andb (y,W32.notb z))
+                           W32.andb (y,W32.notb z))
     fun H (x,y,z) = W32.xorb (x,W32.xorb (y,z))
     fun I (x,y,z) = W32.xorb (y,W32.orb (x,W32.notb z))
     fun ROTATE_LEFT (x,n) =
@@ -92,26 +92,26 @@ struct
 
     val empty_buf = W8V.tabulate (0,(fn x => raise (Fail "buf")))
     val init = {digest= {A=0wx67452301,
-			B=0wxefcdab89,
-			C=0wx98badcfe,
-			D=0wx10325476},
-		mlen=w64_zero,
-		buf=empty_buf} : md5state
+                        B=0wxefcdab89,
+                        C=0wx98badcfe,
+                        D=0wx10325476},
+                mlen=w64_zero,
+                buf=empty_buf} : md5state
 
     fun update ({buf,digest,mlen}:md5state,input) = let
       val inputLen = W8V.length input
       val needBytes = 64 - W8V.length buf
       fun loop (i,digest) =
-	if i + 63 < inputLen then
-	  loop (i + 64,transform (digest,i,input))
-	else (i,digest)
+        if i + 63 < inputLen then
+          loop (i + 64,transform (digest,i,input))
+        else (i,digest)
       val (buf,(i,digest)) =
-	if inputLen >= needBytes then  let
-	  val buf = W8V.concat [buf,W8V.extract (input,0,SOME needBytes)]
-	  val digest = transform (digest,0,buf)
-	in (empty_buf,loop (needBytes,digest))
-	end
-	else (buf,(0,digest))
+        if inputLen >= needBytes then  let
+          val buf = W8V.concat [buf,W8V.extract (input,0,SOME needBytes)]
+          val digest = transform (digest,0,buf)
+        in (empty_buf,loop (needBytes,digest))
+        end
+        else (buf,(0,digest))
       val buf = W8V.concat [buf, W8V.extract (input,i,SOME (inputLen-i))]
       val mlen = mul8add (mlen,inputLen)
     in {buf=buf,digest=digest,mlen=mlen}
@@ -216,8 +216,8 @@ struct
     val hxd = "0123456789abcdef"
     fun toHexString v = let
       fun byte2hex (b,acc) =
-	(String.sub (hxd,(Word8.toInt b) div 16))::
-	(String.sub (hxd,(Word8.toInt b) mod 16))::acc
+        (String.sub (hxd,(Word8.toInt b) div 16))::
+        (String.sub (hxd,(Word8.toInt b) mod 16))::acc
       val digits = Word8Vector.foldr byte2hex [] v
     in String.implode digits
     end

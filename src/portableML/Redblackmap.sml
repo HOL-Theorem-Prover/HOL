@@ -52,12 +52,12 @@ struct
   fun update (set as (compare, tree, n), key, data) =
       let val addone = ref true
           fun ins LEAF = RED(key,data NONE,LEAF,LEAF)
-	    | ins (BLACK(k,x,left,right)) =
+            | ins (BLACK(k,x,left,right)) =
               (case compare(key, k) of
                    LESS    => lbalance k x (ins left) right
                  | GREATER => rbalance k x left (ins right)
                  | EQUAL   => (addone := false; BLACK(key, data (SOME x), left, right)))
-	    | ins (RED(k, x,left,right)) =
+            | ins (RED(k, x,left,right)) =
               (case compare(key, k) of
                    LESS    => RED(k, x, (ins left), right)
                  | GREATER => RED(k, x, left, (ins right))
@@ -154,13 +154,13 @@ struct
     | append left LEAF                     = left
     | append (RED(x,xd,a,b)) (RED(y,yd,c,d))     =
       (case append b c of
-	   RED(z, zd, b, c) => RED(z, zd, RED(x, xd, a, b), RED(y, yd, c, d))
+           RED(z, zd, b, c) => RED(z, zd, RED(x, xd, a, b), RED(y, yd, c, d))
          | bc           => RED(x, xd, a, RED(y, yd, bc, d)))
     | append a (RED(x,xd,b,c))                = RED(x, xd, append a b, c)
     | append (RED(x,xd,a,b)) c                = RED(x, xd, a, append b c)
     | append (BLACK(x,xd,a,b)) (BLACK(y,yd,c,d)) =
       (case append b c of
-	   RED(z, zd, b, c) => RED(z, zd, BLACK(x,xd,a,b), BLACK(y,yd,c,d))
+           RED(z, zd, b, c) => RED(z, zd, BLACK(x,xd,a,b), BLACK(y,yd,c,d))
          | bc           => balleft x xd a (BLACK(y, yd, bc, d)))
 
   fun remove ((compare, tree, n), key) =

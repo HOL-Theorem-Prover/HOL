@@ -185,8 +185,8 @@ val LHDTL_CONS_THM = store_thm(
 
 val lrep_inversion = prove(
   ``lrep_ok f ==> (f = \n. NONE) \/
-	    (?h t. (f = \n. if n = 0 then SOME h else t (n - 1))
-		/\ lrep_ok t)``,
+            (?h t. (f = \n. if n = 0 then SOME h else t (n - 1))
+                /\ lrep_ok t)``,
    MATCH_ACCEPT_TAC (fst (EQ_IMP_RULE (SPEC_ALL lrep_ok_cases)))
 );
 
@@ -473,10 +473,10 @@ val LUNFOLD_BISIMULATION = store_thm(
   "LUNFOLD_BISIMULATION",
   ``!f1 f2 x1 x2. (LUNFOLD f1 x1 = LUNFOLD f2 x2) =
       ?R. R x1 x2 /\
-	!y1 y2.  R y1 y2 ==>
-	   (f1 y1 = NONE) /\ (f2 y2 = NONE) \/
-	   ?h t1 t2.
-	     (f1 y1 = SOME (t1, h)) /\ (f2 y2 = SOME (t2, h)) /\ R t1 t2``,
+        !y1 y2.  R y1 y2 ==>
+           (f1 y1 = NONE) /\ (f2 y2 = NONE) \/
+           ?h t1 t2.
+             (f1 y1 = SOME (t1, h)) /\ (f2 y2 = SOME (t2, h)) /\ R t1 t2``,
   REPEAT GEN_TAC THEN EQ_TAC THENL [
     DISCH_THEN (fn th =>
       Q.EXISTS_TAC `\x1 x2. LUNFOLD f1 x1 = LUNFOLD f2 x2` THEN
@@ -1759,22 +1759,22 @@ val LUNZIP_THM = new_specification (
   ["LUNZIP"],
   Q.prove(
       `?LUNZIP. (LUNZIP [||] = ([||]:'a llist, [||]:'b llist)) /\
-    	(!x y t. LUNZIP ((x:'a, y:'b):::t) =
+        (!x y t. LUNZIP ((x:'a, y:'b):::t) =
                   let (ll1, ll2) = LUNZIP t in (x:::ll1, y:::ll2))`,
       STRIP_ASSUME_TAC
        (Q.ISPEC `\ll. if (LHD ll = NONE) then NONE
-        		else SOME (THE (LTL ll), SND (THE (LHD ll)))` llist_Axiom_1) THEN
+                        else SOME (THE (LTL ll), SND (THE (LHD ll)))` llist_Axiom_1) THEN
       STRIP_ASSUME_TAC
        (Q.ISPEC `\ll. if (LHD ll = NONE) then NONE
                         else SOME (THE (LTL ll), FST (THE (LHD ll)))` llist_Axiom_1) THEN
       Q.EXISTS_TAC `\ll. (g' ll, g ll)` THEN SIMP_TAC list_ss [] THEN
       REPEAT STRIP_TAC THENL [
-	POP_ASSUM (ASSUME_TAC o Q.SPEC `[||]`) THEN
-	FULL_SIMP_TAC list_ss [LHD_THM],
-	POP_ASSUM (K ALL_TAC) THEN POP_ASSUM (ASSUME_TAC o Q.SPEC `[||]`) THEN
+        POP_ASSUM (ASSUME_TAC o Q.SPEC `[||]`) THEN
+        FULL_SIMP_TAC list_ss [LHD_THM],
+        POP_ASSUM (K ALL_TAC) THEN POP_ASSUM (ASSUME_TAC o Q.SPEC `[||]`) THEN
         FULL_SIMP_TAC list_ss [LHD_THM],
         NTAC 2 (POP_ASSUM (MP_TAC o Q.SPEC `(x,y):::t`)) THEN
-	RW_TAC list_ss [LHD_THM, LTL_THM, LET_THM]])
+        RW_TAC list_ss [LHD_THM, LTL_THM, LET_THM]])
   );
 val _ = export_rewrites ["LUNZIP_THM"]
 

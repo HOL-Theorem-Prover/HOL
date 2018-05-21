@@ -22,16 +22,16 @@ fun AC thms = EQT_ELIM o AC_CONV thms;
 
 val CONJ_ACI =
     let fun FIND_CONJS thl tm =
-	let val (l,r) = dest_conj tm
-	in CONJ (FIND_CONJS thl l) (FIND_CONJS thl r)
-	end handle HOL_ERR _ => first (fn th => concl th = tm) thl
+        let val (l,r) = dest_conj tm
+        in CONJ (FIND_CONJS thl l) (FIND_CONJS thl r)
+        end handle HOL_ERR _ => first (fn th => concl th = tm) thl
     in fn tm =>
-	let val (l,r) = dest_eq tm
-	    val thl = CONJUNCTS(ASSUME l)
-	    and thr = CONJUNCTS(ASSUME r)
-	in IMP_ANTISYM_RULE (DISCH_ALL (FIND_CONJS thl r))
+        let val (l,r) = dest_eq tm
+            val thl = CONJUNCTS(ASSUME l)
+            and thr = CONJUNCTS(ASSUME r)
+        in IMP_ANTISYM_RULE (DISCH_ALL (FIND_CONJS thl r))
                             (DISCH_ALL (FIND_CONJS thr l))
-	end
+        end
     end;;
 
 (* ------------------------------------------------------------------------- *)
@@ -127,51 +127,51 @@ val DISTRIB_CONV =
 val ASSOC_CONV =
   let fun MK_ASSOC_CONV oper assoc t1 t2 t3 =
       let fun ASSOC_CONV tm =
-	  let val (l,r) = dest_binop oper tm
-	  in ASSOC_ACC_CONV l (ASSOC_CONV r)
+          let val (l,r) = dest_binop oper tm
+          in ASSOC_ACC_CONV l (ASSOC_CONV r)
              handle HOL_ERR _ => ASSOC_TAC_CONV l r
-	  end
-	  and ASSOC_TAC_CONV tm rtm =
-	      let val (l,r) = dest_binop oper tm
-		  val ppth = INST [t1 |-> l,t2 |-> r, t3 |-> rtm] assoc
-	      in TRANS ppth (ASSOC_ACC_CONV l (ASSOC_TAC_CONV r rtm))
-		  handle HOL_ERR _ =>
-		      TRANS ppth (ASSOC_TAC_CONV l (rand(rand(concl ppth))))
-		      handle HOL_ERR _ => ppth
-	      end
-	  and ASSOC_ACC_CONV tm ath =
-	      let val (l,r) = dest_binop oper tm
-		  val qth = ASSOC_ACC_CONV r ath
-		  val rth = ASSOC_ACC_CONV l qth
+          end
+          and ASSOC_TAC_CONV tm rtm =
+              let val (l,r) = dest_binop oper tm
+                  val ppth = INST [t1 |-> l,t2 |-> r, t3 |-> rtm] assoc
+              in TRANS ppth (ASSOC_ACC_CONV l (ASSOC_TAC_CONV r rtm))
+                  handle HOL_ERR _ =>
+                      TRANS ppth (ASSOC_TAC_CONV l (rand(rand(concl ppth))))
+                      handle HOL_ERR _ => ppth
+              end
+          and ASSOC_ACC_CONV tm ath =
+              let val (l,r) = dest_binop oper tm
+                  val qth = ASSOC_ACC_CONV r ath
+                  val rth = ASSOC_ACC_CONV l qth
               in
                TRANS
                  (INST [t1|->l, t2|->r, t3|->rand(rator(concl ath))] assoc) rth
-	      end
-	  handle HOL_ERR _  => AP_TERM (mk_comb(oper,tm)) ath
+              end
+          handle HOL_ERR _  => AP_TERM (mk_comb(oper,tm)) ath
       in fn tm => ASSOC_CONV tm handle HOL_ERR _ => REFL tm
       end
   in fn rassoc =>
       let val assoc = SYM(SPEC_ALL rassoc)
-	  val (opt1,t23) = dest_comb(rand(concl(assoc)))
-	  val (oper,t1) = dest_comb opt1
-	  val t2 = rand(rator t23) and t3 = rand t23
+          val (opt1,t23) = dest_comb(rand(concl(assoc)))
+          val (oper,t1) = dest_comb opt1
+          val t2 = rand(rator t23) and t3 = rand t23
       in
          if type_vars(type_of oper) = []
          then MK_ASSOC_CONV oper assoc t1 t2 t3
-	 else fn tm =>
-	     let val xop = rator(rator tm)
+         else fn tm =>
+             let val xop = rator(rator tm)
              in case ho_match_term [] empty_tmset oper xop
-		 of ([],tyin) =>
+                 of ([],tyin) =>
                      (let val inst_fn = Term.inst tyin
                           val assoc' = Thm.INST_TYPE tyin assoc
                           and t1' = inst_fn t1
                           and t2' = inst_fn t2
                           and t3' = inst_fn t3
-	              in
+                      in
                         MK_ASSOC_CONV xop assoc' t1' t2' t3' tm
                       end handle HOL_ERR _ => REFL tm)
                   | _ => REFL tm
-	     end
+             end
       end
   end
 

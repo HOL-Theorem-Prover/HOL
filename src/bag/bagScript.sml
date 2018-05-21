@@ -935,7 +935,7 @@ val SET_OF_BAG_MERGE = store_thm (
             SET_OF_BAG b1 UNION SET_OF_BAG b2``,
   ONCE_REWRITE_TAC[EXTENSION] THEN
   SIMP_TAC std_ss [SET_OF_BAG, IN_UNION, IN_ABS,
-		   BAG_IN_BAG_MERGE]);
+                   BAG_IN_BAG_MERGE]);
 
 val SET_OF_BAG_INSERT = Q.store_thm(
   "SET_OF_BAG_INSERT",
@@ -1007,8 +1007,8 @@ val BAG_DISJOINT_BAG_IN = store_thm (
   ``!b1 b2. BAG_DISJOINT b1 b2 =
             !e. ~(BAG_IN e b1) \/ ~(BAG_IN e b2)``,
   SIMP_TAC std_ss [BAG_DISJOINT, DISJOINT_DEF,
- 		   EXTENSION, NOT_IN_EMPTY,
-		   IN_INTER, IN_SET_OF_BAG]);
+                   EXTENSION, NOT_IN_EMPTY,
+                   IN_INTER, IN_SET_OF_BAG]);
 
 val BAG_DISJOINT_BAG_INSERT = store_thm (
   "BAG_DISJOINT_BAG_INSERT",
@@ -1019,7 +1019,7 @@ val BAG_DISJOINT_BAG_INSERT = store_thm (
       BAG_DISJOINT b1 (BAG_INSERT e2 b2) =
       (~(BAG_IN e2 b1) /\ (BAG_DISJOINT b1 b2)))``,
   SIMP_TAC std_ss [BAG_DISJOINT_BAG_IN,
-		   BAG_IN_BAG_INSERT] THEN
+                   BAG_IN_BAG_INSERT] THEN
   METIS_TAC[]);
 
 val BAG_DISJOINT_BAG_UNION = store_thm(
@@ -1605,7 +1605,7 @@ val BAG_CHOICE_DEF = new_specification
 
 
 (* ===================================================================== *)
-(* The REST of a bag after removing a chosen element.			 *)
+(* The REST of a bag after removing a chosen element.                    *)
 (* ===================================================================== *)
 
 val BAG_REST_DEF = Q.new_definition
@@ -1966,7 +1966,7 @@ val BAG_ALL_DISTINCT_BAG_MERGE = store_thm (
         (BAG_ALL_DISTINCT b1 /\  BAG_ALL_DISTINCT b2)``,
   SIMP_TAC std_ss [BAG_ALL_DISTINCT, BAG_MERGE,
                    GSYM FORALL_AND_THM, COND_RAND, COND_RATOR,
-		   COND_EXPAND_IMP] THEN
+                   COND_EXPAND_IMP] THEN
   REPEAT STRIP_TAC THEN
   HO_MATCH_MP_TAC forall_eq_thm THEN
   GEN_TAC THEN bossLib.DECIDE_TAC);
@@ -1979,10 +1979,10 @@ val BAG_ALL_DISTINCT_BAG_UNION = store_thm (
         (BAG_ALL_DISTINCT b1 /\ BAG_ALL_DISTINCT b2 /\
          BAG_DISJOINT b1 b2)``,
   SIMP_TAC std_ss [BAG_ALL_DISTINCT, BAG_UNION,
-		   BAG_DISJOINT, DISJOINT_DEF, EXTENSION,
-		   NOT_IN_EMPTY, IN_INTER,
-		   IN_SET_OF_BAG, BAG_IN,
-     		   BAG_INN, GSYM FORALL_AND_THM] THEN
+                   BAG_DISJOINT, DISJOINT_DEF, EXTENSION,
+                   NOT_IN_EMPTY, IN_INTER,
+                   IN_SET_OF_BAG, BAG_IN,
+                   BAG_INN, GSYM FORALL_AND_THM] THEN
   REPEAT STRIP_TAC THEN
   HO_MATCH_MP_TAC forall_eq_thm THEN
   GEN_TAC THEN bossLib.DECIDE_TAC);

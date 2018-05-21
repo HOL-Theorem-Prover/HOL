@@ -103,38 +103,38 @@ val varlist_insert_def = Define `
 
 val canonical_sum_scalar_def = Define `
    (canonical_sum_scalar c0 (Cons_monom c l t) =
-	Cons_monom (SRM c0 c) l (canonical_sum_scalar c0 t))
+        Cons_monom (SRM c0 c) l (canonical_sum_scalar c0 t))
 /\ (canonical_sum_scalar c0 (Cons_varlist l t) =
-	Cons_monom c0 l (canonical_sum_scalar c0 t))
+        Cons_monom c0 l (canonical_sum_scalar c0 t))
 /\ (canonical_sum_scalar c0 Nil_monom = Nil_monom) `;
 
 
 val canonical_sum_scalar2_def = Define `
    (canonical_sum_scalar2 l0 (Cons_monom c l t) =
-	monom_insert c (list_merge index_lt l0 l)
-	   (canonical_sum_scalar2 l0 t))
+        monom_insert c (list_merge index_lt l0 l)
+           (canonical_sum_scalar2 l0 t))
 /\ (canonical_sum_scalar2 l0 (Cons_varlist l t) =
-	varlist_insert (list_merge index_lt l0 l)
-	   (canonical_sum_scalar2 l0 t))
+        varlist_insert (list_merge index_lt l0 l)
+           (canonical_sum_scalar2 l0 t))
 /\ (canonical_sum_scalar2 l0 Nil_monom = Nil_monom) `;
 
 
 val canonical_sum_scalar3_def = Define `
    (canonical_sum_scalar3 c0 l0 (Cons_monom c l t) =
-	monom_insert (SRM c0 c) (list_merge index_lt l0 l)
-	   (canonical_sum_scalar3 c0 l0 t))
+        monom_insert (SRM c0 c) (list_merge index_lt l0 l)
+           (canonical_sum_scalar3 c0 l0 t))
 /\ (canonical_sum_scalar3 c0 l0 (Cons_varlist l t) =
-	monom_insert c0 (list_merge index_lt l0 l)
-	   (canonical_sum_scalar3 c0 l0 t))
+        monom_insert c0 (list_merge index_lt l0 l)
+           (canonical_sum_scalar3 c0 l0 t))
 /\ (canonical_sum_scalar3 c0 l0 Nil_monom = Nil_monom) `;
 
 
 val canonical_sum_prod_def = Define `
    (canonical_sum_prod (Cons_monom c1 l1 t1) s2 =
-	canonical_sum_merge (canonical_sum_scalar3 c1 l1 s2)
-			    (canonical_sum_prod t1 s2))
+        canonical_sum_merge (canonical_sum_scalar3 c1 l1 s2)
+                            (canonical_sum_prod t1 s2))
 /\ (canonical_sum_prod (Cons_varlist l1 t1) s2 =
-	canonical_sum_merge (canonical_sum_scalar2 l1 s2)
+        canonical_sum_merge (canonical_sum_scalar2 l1 s2)
                             (canonical_sum_prod t1 s2))
 /\ (canonical_sum_prod Nil_monom s2 = Nil_monom) `;
 
@@ -166,24 +166,24 @@ val interp_m_def = Define `
 val ics_aux_def = Define `
    (ics_aux vm a Nil_monom = a)
 /\ (ics_aux vm a (Cons_varlist l t) =
-	      SRP a (ics_aux vm (interp_vl vm l) t))
+              SRP a (ics_aux vm (interp_vl vm l) t))
 /\ (ics_aux vm a (Cons_monom c l t) =
-	      SRP a (ics_aux vm (interp_m vm c l) t))
+              SRP a (ics_aux vm (interp_m vm c l) t))
 `;
 
 val interp_cs_def = Define `
    (interp_cs vm Nil_monom = SR0)
 /\ (interp_cs vm (Cons_varlist l t) =
-		ics_aux vm (interp_vl vm l) t)
+                ics_aux vm (interp_vl vm l) t)
 /\ (interp_cs vm (Cons_monom c l t) =
-		ics_aux vm (interp_m vm c l) t)
+                ics_aux vm (interp_m vm c l) t)
 `;
 
 
 val ivl_aux_ok = asm_store_thm
     ("ivl_aux_ok",
      Term`!vm v i. ivl_aux vm i v
-		   = SRM (varmap_find i vm) (interp_vl vm v)`,
+                   = SRM (varmap_find i vm) (interp_vl vm v)`,
 REPEAT GEN_TAC THEN Induct_on `v` THEN
 ARW_TAC [ivl_aux_def, interp_vl_def ]);
 
@@ -196,10 +196,10 @@ val varlist_merge_ok = asm_store_thm
             = SRM (interp_vl vm x) (interp_vl vm y)`,
 Induct_on `x` THEN Induct_on `y` THEN REPEAT GEN_TAC THEN
 ARW_TAC [ ivl_aux_def, ivl_aux_ok, interp_vl_def, mult_assoc,
-	  list_merge_def, index_lt_def] THEN
+          list_merge_def, index_lt_def] THEN
 APP_DIFF THEN
 SUBST1_TAC (SPECL [Term`varmap_find h vm`,Term`varmap_find h' vm`,
-		    Term`interp_vl vm x`] mult_rotate) THEN
+                    Term`interp_vl vm x`] mult_rotate) THEN
 REFL_TAC);
 
 
@@ -224,7 +224,7 @@ val canonical_sum_merge_ok = asm_store_thm
 Induct_on `x` THEN Induct_on `y` THEN REPEAT GEN_TAC THEN
 Cases_on `list_compare index_compare l' l` THEN
 ARW_TAC [ interp_m_def, interp_cs_def, canonical_sum_merge_def,
-	  ics_aux_ok, interp_m_ok, distr_left,mult_assoc, plus_assoc ] THEN
+          ics_aux_ok, interp_m_ok, distr_left,mult_assoc, plus_assoc ] THEN
 simpLib.FULL_SIMP_TAC (srw_ss()) [] THEN
 ARW_TAC [] THEN
 TRY (POP_ASSUM (SUBST1_TAC o REWRITE_RULE[compare_list_index])) THEN
@@ -238,7 +238,7 @@ val monom_insert_ok = asm_store_thm
 Induct_on `s` THEN REPEAT GEN_TAC THEN
 Cases_on `list_compare index_compare l' l` THEN
 ARW_TAC [ interp_cs_def, ics_aux_ok, interp_m_ok, distr_left, plus_assoc,
-	  monom_insert_def ] THEN
+          monom_insert_def ] THEN
 simpLib.FULL_SIMP_TAC (srw_ss()) [] THEN
 APP_DIFF THEN
 PROVE_TAC [plus_sym, compare_list_index]);
@@ -250,7 +250,7 @@ val varlist_insert_ok = asm_store_thm
 Induct_on `s` THEN REPEAT GEN_TAC THEN
 Cases_on `list_compare index_compare l' l` THEN
 ARW_TAC [ interp_cs_def, ics_aux_ok, interp_m_ok, distr_left, plus_assoc,
-	  varlist_insert_def ] THEN
+          varlist_insert_def ] THEN
 simpLib.FULL_SIMP_TAC (srw_ss()) [] THEN
 APP_DIFF THEN
 PROVE_TAC [plus_sym, compare_list_index]);
@@ -261,7 +261,7 @@ val canonical_sum_scalar_ok =asm_store_thm
                    = SRM a (interp_cs vm s) `,
 Induct_on `s` THEN REPEAT GEN_TAC THEN
 ARW_TAC [ interp_cs_def, interp_m_ok, mult_assoc, distr_right, ics_aux_ok,
-	  canonical_sum_scalar_def ] THEN APP_DIFF);
+          canonical_sum_scalar_def ] THEN APP_DIFF);
 
 
 val canonical_sum_scalar2_ok =asm_store_thm
@@ -270,8 +270,8 @@ val canonical_sum_scalar2_ok =asm_store_thm
                    = SRM (interp_vl vm l)  (interp_cs vm s) `,
 Induct_on `s` THEN REPEAT GEN_TAC THEN
 ARW_TAC [ interp_cs_def, interp_m_ok, mult_assoc, distr_right, ics_aux_ok,
-	  monom_insert_ok, varlist_merge_ok, varlist_insert_ok,
-	  canonical_sum_scalar2_def ] THEN APP_DIFF THEN
+          monom_insert_ok, varlist_merge_ok, varlist_insert_ok,
+          canonical_sum_scalar2_def ] THEN APP_DIFF THEN
 PROVE_TAC[mult_sym]);
 
 
@@ -281,8 +281,8 @@ val canonical_sum_scalar3_ok =asm_store_thm
                  = SRM (SRM c (interp_vl vm l))  (interp_cs vm s) `,
 Induct_on `s` THEN REPEAT GEN_TAC THEN
 ARW_TAC [ interp_cs_def, interp_m_ok, mult_assoc, distr_right, ics_aux_ok,
-	  monom_insert_ok, varlist_merge_ok, varlist_insert_ok,
-	  canonical_sum_scalar3_def ] THEN APP_DIFF THEN
+          monom_insert_ok, varlist_merge_ok, varlist_insert_ok,
+          canonical_sum_scalar3_def ] THEN APP_DIFF THEN
 PROVE_TAC[mult_permute]);
 
 val canonical_sum_prod_ok = asm_store_thm
@@ -292,18 +292,18 @@ val canonical_sum_prod_ok = asm_store_thm
        = SRM (interp_cs vm x) (interp_cs vm y) `,
 Induct_on `x` THEN
 ARW_TAC [ interp_cs_def, mult_assoc, distr_left, ics_aux_ok, interp_m_ok,
-	  canonical_sum_prod_def, canonical_sum_scalar2_ok,
-	  canonical_sum_scalar3_ok, canonical_sum_merge_ok]);
+          canonical_sum_prod_def, canonical_sum_scalar2_ok,
+          canonical_sum_scalar3_ok, canonical_sum_merge_ok]);
 
 val canonical_sum_simplify_ok = asm_store_thm
     ("canonical_sum_simplify_ok",
      Term` !vm s. interp_cs vm (canonical_sum_simplify s)
-			      = interp_cs vm s `,
+                              = interp_cs vm s `,
 Induct_on `s` THEN REPEAT GEN_TAC THEN
 ARW_TAC [ canonical_sum_simplify_def,
-	  interp_cs_def, ics_aux_ok,
-	  canonical_sum_merge_ok, canonical_sum_prod_ok,
- 	  interp_m_ok, interp_vl_def, ivl_aux_def ]);
+          interp_cs_def, ics_aux_ok,
+          canonical_sum_merge_ok, canonical_sum_prod_ok,
+          interp_m_ok, interp_vl_def, ivl_aux_def ]);
 
 
 (* semi-ring normalization *)
@@ -320,10 +320,10 @@ val spolynom_normalize_def = Define `
 /\ (spolynom_normalize (SPconst c) = (Cons_monom c [] Nil_monom))
 /\ (spolynom_normalize (SPplus l r) =
       (canonical_sum_merge (spolynom_normalize l)
-      	                      (spolynom_normalize r)))
+                              (spolynom_normalize r)))
 /\ (spolynom_normalize (SPmult l r) =
       (canonical_sum_prod (spolynom_normalize l)
-      	                     (spolynom_normalize r))) `;
+                             (spolynom_normalize r))) `;
 
 
 val spolynom_simplify_def = Define `
@@ -344,20 +344,20 @@ val interp_sp_def = Define `
 val spolynomial_normalize_ok = asm_store_thm
     ("spolynomial_normalize_ok",
      Term` !vm p. interp_cs vm (spolynom_normalize p)
-			      = interp_sp vm p `,
+                              = interp_sp vm p `,
 Induct_on `p` THEN REPEAT GEN_TAC THEN
 ARW_TAC [ spolynom_normalize_def, interp_cs_def, interp_sp_def,
-	  ics_aux_def, canonical_sum_merge_ok, canonical_sum_prod_ok,
- 	  interp_m_def, interp_vl_def, ivl_aux_def]);
+          ics_aux_def, canonical_sum_merge_ok, canonical_sum_prod_ok,
+          interp_m_def, interp_vl_def, ivl_aux_def]);
 
 
 val spolynomial_simplify_ok = asm_store_thm
     ("spolynomial_simplify_ok",
      Term` !vm p. interp_cs vm (spolynom_simplify p)
-			      = interp_sp vm p `,
+                              = interp_sp vm p `,
 ARW_TAC [ spolynom_simplify_def,
-	  canonical_sum_simplify_ok,
-	  spolynomial_normalize_ok ]);
+          canonical_sum_simplify_ok,
+          spolynomial_normalize_ok ]);
 
 
 val _ = export_param_theory();

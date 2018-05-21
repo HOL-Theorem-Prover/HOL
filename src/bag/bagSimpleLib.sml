@@ -48,11 +48,11 @@ local
     let
         (*remove frist element and
           bring to front in rest of the bag*)
-	val (e1,b') = bagSyntax.dest_insert b;
+        val (e1,b') = bagSyntax.dest_insert b;
         val thm0 = BAG_RESORT___BRING_TO_FRONT_CONV (n-1) b';
 
         (*add first element again*)
-	val thm1 = AP_TERM (rator b) thm0;
+        val thm1 = AP_TERM (rator b) thm0;
 
         (*swap the first two elements*)
         val (e2, b'') = bagSyntax.dest_insert (rhs (concl thm0));
@@ -108,10 +108,10 @@ fun BAG_IMAGE_CONV___FINITE t =
    if (is_empty b) then
       let
          val bag_type = bagSyntax.base_type b
-	 val finite_thm = INST_TYPE [alpha |-> bag_type] bagTheory.FINITE_EMPTY_BAG;
-	 val bag_thm = ISPEC f bagTheory.BAG_IMAGE_EMPTY
+         val finite_thm = INST_TYPE [alpha |-> bag_type] bagTheory.FINITE_EMPTY_BAG;
+         val bag_thm = ISPEC f bagTheory.BAG_IMAGE_EMPTY
       in
-	 (finite_thm, bag_thm)
+         (finite_thm, bag_thm)
       end
    else if (is_union b) then
       let
@@ -122,23 +122,23 @@ fun BAG_IMAGE_CONV___FINITE t =
          val (finite_thm2, bag_thm2) = BAG_IMAGE_CONV___FINITE t2;
          val finite_thm12 = CONJ finite_thm1 finite_thm2
 
-	 val finite_thm = EQ_MP (GSYM (ISPECL [b1,b2] bagTheory.FINITE_BAG_UNION))
+         val finite_thm = EQ_MP (GSYM (ISPECL [b1,b2] bagTheory.FINITE_BAG_UNION))
                               finite_thm12
-	 val bag_thm' = MP (ISPECL [b1,b2,f] bagTheory.BAG_IMAGE_FINITE_UNION) finite_thm12
+         val bag_thm' = MP (ISPECL [b1,b2,f] bagTheory.BAG_IMAGE_FINITE_UNION) finite_thm12
          val bag_thm'' =  CONV_RULE (RHS_CONV (
               ((RATOR_CONV o RAND_CONV) (K bag_thm1)) THENC
               ((RAND_CONV) (K bag_thm2)))) bag_thm'
       in
-	 (finite_thm, bag_thm'')
+         (finite_thm, bag_thm'')
       end
    else
       let
          val (e,b') = dest_insert b;
          val t' = mk_image (f, b')
          val (finite_thm, bag_thm) = BAG_IMAGE_CONV___FINITE t';
-	 val finite_thm2 = SPEC e (MP (ISPEC b' bagTheory.FINITE_BAG_INSERT) finite_thm);
-	 val bag_thm' = MP (ISPECL [b',f,e]
-	       (bagTheory.BAG_IMAGE_FINITE_INSERT)) finite_thm
+         val finite_thm2 = SPEC e (MP (ISPEC b' bagTheory.FINITE_BAG_INSERT) finite_thm);
+         val bag_thm' = MP (ISPECL [b',f,e]
+               (bagTheory.BAG_IMAGE_FINITE_INSERT)) finite_thm
          val bag_thm2 =  CONV_RULE (RHS_CONV (RAND_CONV
                    (K bag_thm))) bag_thm'
       in
@@ -172,10 +172,10 @@ local
   (if (is_empty b) then
       let
          val bag_type = bagSyntax.base_type b
-	 val finite_thm = INST_TYPE [alpha |-> bag_type] bagTheory.FINITE_EMPTY_BAG;
-	 val card_thm = INST_TYPE [alpha |-> bag_type] card_empty_thm;
+         val finite_thm = INST_TYPE [alpha |-> bag_type] bagTheory.FINITE_EMPTY_BAG;
+         val card_thm = INST_TYPE [alpha |-> bag_type] card_empty_thm;
       in
-	 (finite_thm, card_thm)
+         (finite_thm, card_thm)
       end
    else if (is_union b) then
       let
@@ -184,22 +184,22 @@ local
          val (finite_thm2, card_thm2) = BAG_CARD_CONV___FINITE b2;
          val finite_thm12 = CONJ finite_thm1 finite_thm2
 
-	 val finite_thm = EQ_MP (GSYM (ISPECL [b1,b2] bagTheory.FINITE_BAG_UNION))
+         val finite_thm = EQ_MP (GSYM (ISPECL [b1,b2] bagTheory.FINITE_BAG_UNION))
                               finite_thm12
-	 val card_thm' = MP (ISPECL [b1,b2] bagTheory.BAG_CARD_UNION) finite_thm12
+         val card_thm' = MP (ISPECL [b1,b2] bagTheory.BAG_CARD_UNION) finite_thm12
          val card_thm'' =  CONV_RULE (RHS_CONV (
               ((RATOR_CONV o RAND_CONV) (K card_thm1)) THENC
               ((RAND_CONV) (K card_thm2)))) card_thm'
       in
-	 (finite_thm, eval_num_RULE card_thm'')
+         (finite_thm, eval_num_RULE card_thm'')
       end
    else
       let
          val (e,b') = dest_insert b;
          val (finite_thm, card_thm) = BAG_CARD_CONV___FINITE b';
 
-	 val finite_thm2 = SPEC e (MP (ISPEC b' bagTheory.FINITE_BAG_INSERT) finite_thm);
-	 val card_thm' = MP (ISPECL [b',e] card_insert_thm) finite_thm
+         val finite_thm2 = SPEC e (MP (ISPEC b' bagTheory.FINITE_BAG_INSERT) finite_thm);
+         val card_thm' = MP (ISPECL [b',e] card_insert_thm) finite_thm
          val card_thm2 =  CONV_RULE (RHS_CONV (
               (RATOR_CONV o RAND_CONV) (K card_thm))) card_thm'
       in

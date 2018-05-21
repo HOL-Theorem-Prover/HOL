@@ -31,8 +31,8 @@ val ZERO_REP_DEF = new_specification
 
 
 (*---------------------------------------------------------------------------*)
-(* `IS_NUM:ind->bool` defines the subset of `:ind` used to represent 	     *)
-(* numbers.  It is the smallest subset containing `ZERO_REP` and closed	     *)
+(* `IS_NUM:ind->bool` defines the subset of `:ind` used to represent         *)
+(* numbers.  It is the smallest subset containing `ZERO_REP` and closed      *)
 (* under `SUC_REP`.                                                          *)
 (*---------------------------------------------------------------------------*)
 
@@ -128,7 +128,7 @@ val SUC_REP_11 = CONJUNCT1 (REWRITE_RULE [ONE_ONE_THM] SUC_REP_DEF);
 val NOT_SUC_ZERO = GSYM ZERO_REP_DEF;
 
 (*----------------------------------------------------------------------*)
-(* Proof of NOT_SUC : |- !n. ~(SUC n = ZERO)				*)
+(* Proof of NOT_SUC : |- !n. ~(SUC n = ZERO)                            *)
 (* ---------------------------------------------------------------------*)
 
 val NOT_SUC = store_thm("NOT_SUC",
@@ -140,7 +140,7 @@ val NOT_SUC = store_thm("NOT_SUC",
      MATCH_ACCEPT_TAC NOT_SUC_ZERO);
 
 (* ---------------------------------------------------------------------*)
-(* Prove that |-  !m n. (SUC m = SUC n) ==> (m = n)			*)
+(* Prove that |-  !m n. (SUC m = SUC n) ==> (m = n)                     *)
 (* ---------------------------------------------------------------------*)
 
 val INV_SUC = store_thm("INV_SUC",
@@ -153,14 +153,14 @@ val INV_SUC = store_thm("INV_SUC",
      REWRITE_TAC [R_11]);
 
 (* ---------------------------------------------------------------------*)
-(* Prove induction theorem.						*)
+(* Prove induction theorem.                                             *)
 (* ---------------------------------------------------------------------*)
 
 val ind_lemma1 =
     TAC_PROOF
     (([], “!P. P ZERO_REP /\ (!i. P i ==> P(SUC_REP i))
                  ==>
-	      !i. IS_NUM_REP i ==> P i”),
+              !i. IS_NUM_REP i ==> P i”),
      PURE_ONCE_REWRITE_TAC [IS_NUM_REP] THEN
      REPEAT STRIP_TAC THEN RES_TAC);
 
