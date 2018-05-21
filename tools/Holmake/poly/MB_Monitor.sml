@@ -155,7 +155,7 @@ fun new {info,warn,genLogFile,keep_going,time_limit} =
                 val tgtw = width div 4
               in
                 print (polish tgtw k ^
-                       rtrunc (width - tgtw - 4) (": " ^ s) ^ " " ^
+                       rtrunc (width - tgtw - 5) (": " ^ s) ^ " " ^
                        (case stat of
                             Stalling _ => statusString stat
                           | _ => "   "));
