@@ -81,6 +81,10 @@ New examples:
 Incompatibilities:
 ------------------
 
+*   We have decided that the behaviour of `irule` (*aka* `IRULE_TAC`) should not include the finishing `rpt conj_tac`.
+    If users want that after the implicational theorem has been matched against, it is easy enough to add.
+    See the [Github issue](https://github.com/HOL-Theorem-Prover/HOL/issues/465).
+
 *   The behaviour of the `by` and `suffices_by` tactics has changed.
     Previously, a tactic of the form `` `term quotation` by tac`` allowed `tac` to fail to prove the sub-goal of the term quotation.
     (The result would then be two or more sub-goals, where the first few of these correspond to the state of trying to prove the term quotation after applying `tac`.)
