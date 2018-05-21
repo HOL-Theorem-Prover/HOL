@@ -1304,7 +1304,7 @@ val unfolding_lemma1 = store_thm (
     rpt STRIP_TAC
  >> REWRITE_TAC [o_DEF]
  >> BETA_TAC
- >> irule contracts_SUBST_GCONTEXT >- art []
+ >> irule contracts_SUBST_GCONTEXT >> art []
  >> Q.SPEC_TAC (`n`, `n`)
  >> Induct >- REWRITE_TAC [FUNPOW, contracts_REFL]
  >> REWRITE_TAC [FUNPOW_SUC]
@@ -1666,7 +1666,7 @@ val unfolding_lemma1' = store_thm (
     rpt STRIP_TAC
  >> REWRITE_TAC [o_DEF]
  >> BETA_TAC
- >> irule expands_SUBST_GCONTEXT >- art []
+ >> irule expands_SUBST_GCONTEXT >> art []
  >> Q.SPEC_TAC (`n`, `n`)
  >> Induct >- REWRITE_TAC [FUNPOW, expands_REFL]
  >> REWRITE_TAC [FUNPOW_SUC]
@@ -1897,7 +1897,7 @@ val OBS_unfolding_lemma1 = store_thm (
     rpt STRIP_TAC
  >> REWRITE_TAC [o_DEF]
  >> BETA_TAC
- >> irule OBS_contracts_SUBST_CONTEXT >- art []
+ >> irule OBS_contracts_SUBST_CONTEXT >> art []
  >> Q.SPEC_TAC (`n`, `n`)
  >> Induct >- REWRITE_TAC [FUNPOW, OBS_contracts_REFL]
  >> REWRITE_TAC [FUNPOW_SUC]

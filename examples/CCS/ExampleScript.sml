@@ -186,6 +186,21 @@ val List_eq_coList = store_thm (
    "List_eq_coList", ``!l. coList l = List l``,
     PROVE_TAC [List_imp_coList, coList_imp_List]);
 
+(******************************************************************************)
+(*                                                                            *)
+(*                        Example used in presentation                        *)
+(*                                                                            *)
+(******************************************************************************)
+
+local
+    val (temp_A, trans) = CCS_TRANS ``label (name "a")..nil || label (coname "a")..nil``;
+    val nodes = map (fn (l, s) => CCS_TRANS s) trans;
+in
+  val ex_A = save_thm ("ex_A", temp_A);
+  val [ex_A1, ex_A2, ex_A3] = map (fn (n, (thm, _)) => save_thm (n, thm))
+				(combine (["ex_A1", "ex_A2", "ex_A3"], nodes))
+end;
+
 val _ = export_theory ();
 val _ = html_theory "Example";
 
