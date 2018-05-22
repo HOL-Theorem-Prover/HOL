@@ -283,8 +283,10 @@ fun string_of_step (stac,t,g,gl) =
 fun print_proof name g =
   let
     val lbl1 = map fst (rev (!goalstep_glob))
+    val set_name = if !thm_counter mod 5 = 0 then "test/" else "train/"
   in
-    append_file (ttt_record_dir ^ "/srecord/" ^ current_theory () ^ "." ^ name)
+    append_file (ttt_record_dir ^ "/srecord/" ^ set_name
+                 ^ current_theory () ^ "." ^ name)
                 (String.concatWith " \n " (map string_of_step lbl1) ^ "\n")
   end
 
@@ -411,7 +413,8 @@ fun start_record_thy thy =
   mkDir_err ttt_thmfea_dir;
   mkDir_err ttt_glfea_dir;
   (* Tactic scripts recording *)
-  clean_subdirl thy ttt_record_dir ["parse","replay","record", "srecord"]
+  clean_subdirl thy ttt_record_dir ["parse","replay","record",
+                                    "srecord", "srecord/test", "srecord/train"]
   )
 
 fun end_record_thy thy =

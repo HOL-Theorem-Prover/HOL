@@ -437,7 +437,7 @@ fun debug_replay s =
 fun debug_record s =
   append_endline (ttt_record_dir ^ "/record/" ^ current_theory ()) s
 
-fun debug_record s =
+fun debug_srecord s =
   append_endline (ttt_record_dir ^ "/srecord/" ^ current_theory ()) s
 
 (* --------------------------------------------------------------------------
