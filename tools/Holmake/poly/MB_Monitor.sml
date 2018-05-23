@@ -49,17 +49,18 @@ fun stallstr "|" = "!"
 
 datatype monitor_status = MRunning of char
                         | Stalling of Time.time
-fun statusString (MRunning c) = StringCvt.padLeft #" " 3 (str c) ^ " "
+(* statusString is always 3 characters; with a nonspace rightmost *)
+fun statusString (MRunning c) = StringCvt.padLeft #" " 3 (str c)
   | statusString (Stalling t) =
     let
       val numSecs = Time.toSeconds t
       val n_s = LargeInt.toString numSecs
     in
-      if numSecs < 5 then "    "
-      else if numSecs < 10 then "  " ^ n_s ^ " "
-      else if numSecs < 30 then " " ^ boldyellow n_s ^ " "
-      else if numSecs < 1000 then red (StringCvt.padLeft #" " 3 n_s) ^ " "
-      else red "!!! "
+      if numSecs < 5 then "   "
+      else if numSecs < 10 then "  " ^ n_s
+      else if numSecs < 30 then " " ^ boldyellow n_s
+      else if numSecs < 1000 then red (StringCvt.padLeft #" " 3 n_s)
+      else red "!!!"
     end
 
 fun rtrunc n s =
@@ -92,12 +93,12 @@ fun truncate width s =
           val e = case ext s of NONE => "" | SOME s => s
         in
           if String.size e > 2 then t (base s ^ "..")
-          else String.substring(s,0,14) ^ ".."
+          else String.substring(s,0,width-3) ^ ".."
         end
     end
   else s
 
-fun polish s = StringCvt.padRight #" " 16 (truncate 16 (polish0 s))
+fun polish tgtw s = StringCvt.padRight #" " tgtw (truncate tgtw (polish0 s))
 
 val cheat_string = "Saved CHEAT _"
 val oracle_string = "Saved ORACLE thm _"
@@ -110,9 +111,21 @@ fun delsml_sfx s =
     String.substring(s, 0, size s - 4)
   else s
 
+val width_check_delay = Time.fromMilliseconds 1000
+
 fun new {info,warn,genLogFile,keep_going,time_limit} =
   let
     val monitor_map = ref (Binarymap.mkDict String.compare)
+    val last_width_check = ref (Time.now())
+    val width = ref (getWidth())
+    fun Width () =
+      let
+        val t = Time.now()
+      in
+        if Time.>(Time.-(t, !last_width_check), width_check_delay) then
+          (last_width_check := t; width := getWidth(); !width)
+        else !width
+      end
     val check_time =
         case time_limit of
             NONE => (fn (_,_,k) => k ())
@@ -121,20 +134,28 @@ fun new {info,warn,genLogFile,keep_going,time_limit} =
     fun ttydisplay_map () =
       let
         val _ = print "\r"
+        val width = Width()
+        val job_count = Binarymap.numItems (!monitor_map)
       in
-        if Binarymap.numItems (!monitor_map) > 1 then
-          (Binarymap.app (fn (k,(_,v)) =>
-                             print (polish k ^ statusString v))
-                         (!monitor_map);
-           print CLR_EOL)
+        if job_count > 1 then
+          let
+            val tgtw = width div job_count - 4
+          in
+            Binarymap.app (fn (k,(_,v)) =>
+                              print (polish tgtw k ^ statusString v ^ " "))
+                          (!monitor_map);
+            print CLR_EOL
+          end
         else
           case Binarymap.listItems (!monitor_map) of
               [] => ()
             | (k,((strm,tb),stat)) :: _ =>
               let
                 val s = case tailbuffer.last_line tb of NONE => "" | SOME s => s
+                val tgtw = width div 4
               in
-                print (polish k ^ rtrunc 57 (": " ^ s) ^ " " ^
+                print (polish tgtw k ^
+                       rtrunc (width - tgtw - 5) (": " ^ s) ^ " " ^
                        (case stat of
                             Stalling _ => statusString stat
                           | _ => "   "));
@@ -156,7 +177,9 @@ fun new {info,warn,genLogFile,keep_going,time_limit} =
         | SOME info => f info
     fun taginfo tag colour s =
       info (infopfx ^
-            StringCvt.padRight #" " (79 - String.size s) (delsml_sfx tag) ^
+            StringCvt.padRight #" "
+                               (Width() - String.size s - 1)
+                               (delsml_sfx tag) ^
             colour s ^ CLR_EOL)
     fun monitor msg =
       case msg of

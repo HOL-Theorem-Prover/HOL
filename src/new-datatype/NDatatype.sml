@@ -169,7 +169,7 @@ fun compose dict self pty =
                   else raise ERR "compose"
                     ("Type '"^Tyop^"' not supported.")
         | SOME this => let
-	   val args = map (compose dict self) Args
+           val args = map (compose dict self) Args
            in {
                inj_pair = (#inj_pair compose_funs)
                           (#inj_pair this)
@@ -386,8 +386,8 @@ fun Datatype q = let
         simp[pred_setTheory.SUBSET_DEF, boolTheory.IN_DEF])
   val mono = PURE_REWRITE_RULE [mythm] (#all_mono rich_comp)
   val func = fn x =>  (PURE_REWRITE_RULE [mythm] x
-		      |> SIMP_RULE bool_ss [PULL_FORALL]
-		      |> SPEC_ALL)
+                      |> SIMP_RULE bool_ss [PULL_FORALL]
+                      |> SPEC_ALL)
   val monoset = map (fn x =>
            ((fst o dest_const o #all_tm) x, func (#all_mono x)))
                 (snd (!NDDB.types))

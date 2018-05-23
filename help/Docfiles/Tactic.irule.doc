@@ -25,7 +25,7 @@ variables than shown are allowed.
 {
      A ?- u'
   =========================  irule (A' |- !x. s ==> !y. t ==> u)
-   A ?- ?z. s'   A ?- ?w. t'
+   A ?- (?z. s') /\ ?w. t'
 }
 where {z} and {w} are (type instances of) variables among {x}, {y}
 that do not occur free in {s}, {t}. The assumptions {A'},
@@ -41,18 +41,16 @@ removes the universal quantifiers and antecedents of implications, and
 existentially quantifies variables which were instantiated but
 appeared only in the antecedents of implications.
 
-Then {MATCH_MP_TAC THEN REPEAT CONJ_TAC} or {MATCH_ACCEPT_TAC} is
-applied (depending on whether or not the result of the preprocessing
-is an implication). To avoid preprocessing entirely, one can use
-{prim_irule}.
+Then {MATCH_MP_TAC} or {MATCH_ACCEPT_TAC} is applied (depending on
+whether or not the result of the preprocessing is an implication). To
+avoid preprocessing entirely, one can use {prim_irule}.
 
 \EXAMPLE
 With goal {R a (f b)} and theorem {thm} being
 {
-   |- !x u. P u x ==> !y. Q w x y ==> R x (f y)
+   |- !x u. P u x ==> !w y. Q w x y ==> R x (f y)
 }
-the proof step {e (irule thm)} gives new goals {?u. P u a} and
-{?w. Q w a b}.
+the proof step {e (irule thm)} gives new goal {(?u. P u a) /\ ?w. Q w a b}.
 
 With goal {a = b} and theorem {trans}
 {

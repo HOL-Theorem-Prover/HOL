@@ -1012,9 +1012,9 @@ fun Mk_comb thm =
              val _ = Assert (lhs2 = Rand) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1', th2']
          in make_thm Count.MkComb
-	   (ocls, hyps,mk_eq_nocheck ty lhs (mk_comb(rhs1,rhs2)))
+           (ocls, hyps,mk_eq_nocheck ty lhs (mk_comb(rhs1,rhs2)))
          end
-	 handle HOL_ERR _ => ERR "Mk_comb" "";
+         handle HOL_ERR _ => ERR "Mk_comb" "";
        val aty = type_of Rand    (* typing! *)
        val th1 = refl_nocheck (aty --> ty) Rator
        val th2 = refl_nocheck aty Rand
@@ -1045,9 +1045,9 @@ fun Mk_abs thm =
              val _ = Assert (not (var_occursl Bvar (hypset th1'))) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1']
          in make_thm Count.Abs
-	   (ocls, hyps, mk_eq_nocheck ty lhs (mk_abs(Bvar, rhs1)))
+           (ocls, hyps, mk_eq_nocheck ty lhs (mk_abs(Bvar, rhs1)))
          end
-	 handle HOL_ERR _ => ERR "Mk_abs" ""
+         handle HOL_ERR _ => ERR "Mk_abs" ""
        val th1 = refl_nocheck (rng ty) Body
    in (Bvar,th1,mkthm)
    end

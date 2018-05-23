@@ -1,0 +1,184 @@
+
+_  _         __        _         
+!__!        !  !       !
+!  ! IGHER  !__! RDER  !__ OGIC
+===============================
+(HOL 88: Version 1built on Apr 20)
+
+#########################################################() : void
+Run time: 0.0s
+Garbage collection time: 0.0s
+
+##() : void
+Run time: 0.0s
+Garbage collection time: 0.0s
+Intermediate theorems generated: 1
+
+#####evaluation failed     types in quotation 
+
+####evaluation failed     types in quotation 
+
+####|- PTRAN(g,s,d) = (g = F) ==> (s = d)
+Run time: 0.1s
+Garbage collection time: 0.0s
+Intermediate theorems generated: 1
+
+####|- NTRAN(g,s,d) = (g = T) ==> (s = d)
+Run time: 0.0s
+Garbage collection time: 0.0s
+Intermediate theorems generated: 1
+
+###############evaluation failed     unbound var in rhs 
+
+#######evaluation failed     definition 
+
+###########EQ_FLIP_CONV = - : (term list -> conv)
+Run time: 0.0s
+Garbage collection time: 0.0s
+
+###########extract_vars = - : (thm -> term list)
+Run time: 0.0s
+Garbage collection time: 0.0s
+
+################CONJ_SIMP_RULE = - : (thm -> thm)
+Run time: 0.0s
+Garbage collection time: 0.0s
+
+##########
+unbound or non-assignable variable OLD_UNWIND_RULE
+
+unbound or non-assignable variable bool_CONV
+
+unbound or non-assignable variable EQ_CONV
+
+unbound or non-assignable variable COND_CONV
+4 errors in typing
+typecheck failed      
+
+#####iterate = - : ((* -> *) -> * -> *)
+Run time: 0.0s
+Garbage collection time: 0.0s
+
+#########
+unbound or non-assignable variable UNFOLD_RULE
+
+unbound or non-assignable variable NTRAN
+
+unbound or non-assignable variable PTRAN
+
+unbound or non-assignable variable PWR
+
+unbound or non-assignable variable GND
+
+unbound or non-assignable variable CMOS_UNWIND
+
+unbound or non-assignable variable PRUNE_RULE
+7 errors in typing
+typecheck failed      
+
+###
+unbound or non-assignable variable CMOS_EXPAND
+
+unbound or non-assignable variable ADD1_IMP
+2 errors in typing
+typecheck failed      
+
+##
+unbound or non-assignable variable prove_case1
+1 error in typing
+typecheck failed      
+
+##
+unbound or non-assignable variable prove_case1
+1 error in typing
+typecheck failed      
+
+##
+unbound or non-assignable variable prove_case1
+1 error in typing
+typecheck failed      
+
+##
+unbound or non-assignable variable prove_case1
+1 error in typing
+typecheck failed      
+
+##
+unbound or non-assignable variable prove_case1
+1 error in typing
+typecheck failed      
+
+##
+unbound or non-assignable variable prove_case1
+1 error in typing
+typecheck failed      
+
+##
+unbound or non-assignable variable prove_case1
+1 error in typing
+typecheck failed      
+
+##
+unbound or non-assignable variable prove_case1
+1 error in typing
+typecheck failed      
+
+##################evaluation failed     unbound var in rhs 
+
+###evaluation failed     definition 
+
+###
+unbound or non-assignable variable CMOS_EXPAND
+
+unbound or non-assignable variable ADD2_IMP
+2 errors in typing
+typecheck failed      
+
+##
+unbound or non-assignable variable prove_case2
+1 error in typing
+typecheck failed      
+
+##
+unbound or non-assignable variable prove_case2
+1 error in typing
+typecheck failed      
+
+##
+unbound or non-assignable variable prove_case2
+1 error in typing
+typecheck failed      
+
+##
+unbound or non-assignable variable prove_case2
+1 error in typing
+typecheck failed      
+
+##
+unbound or non-assignable variable prove_case2
+1 error in typing
+typecheck failed      
+
+##
+unbound or non-assignable variable prove_case2
+1 error in typing
+typecheck failed      
+
+##
+unbound or non-assignable variable prove_case2
+1 error in typing
+typecheck failed      
+
+##
+unbound or non-assignable variable prove_case2
+1 error in typing
+typecheck failed      
+
+##() : void
+Run time: 0.1s
+Garbage collection time: 0.0s
+Intermediate theorems generated: 1
+
+###
+[Return to top level]
+-> 

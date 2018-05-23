@@ -1,0 +1,172 @@
+\documentstyle[12pt]{article}
+\pagestyle{empty}
+
+\topmargin -5mm
+\oddsidemargin  -5mm
+\evensidemargin -5mm
+\textheight 24.5cm
+\textwidth  17cm
+
+\begin{document}
+\begin{sloppy}
+
+% ===== Flow Graph =====================================================
+% ======================================================================
+\begin{center}
+
+% can replace each instance of \something to anotate each state
+% (e.g. to say what action is done in each state)
+\newcommand{\something}{}
+
+\setlength{\unitlength}{1mm}
+\begin{picture}(160,216)(0,5)
+
+\put(72,215){\thicklines{\oval(6,6)[tr]}}
+\put(75,215){\thicklines{\vector(0,-1){2}}}
+\put(75,208){\thicklines{\circle{10}}}
+\put(77,195){\makebox(0,0)[l]{\something}}
+\put(75,208){\makebox(0,0)[c]{\Large 0}}
+
+% lines out of state 0
+\put(75,203){\thicklines{\vector(0,-1){19}}}
+
+\put(75,179){\thicklines{\circle{10}}}
+\put(77,166){\makebox(0,0)[l]{\something}}
+\put(75,179){\makebox(0,0)[c]{\Large 1}}
+
+% lines out of state 1
+\put(75,174){\thicklines{\vector(0,-1){19}}}
+
+\put(75,150){\thicklines{\circle{10}}}
+\put(77,137){\makebox(0,0)[l]{\something}}
+\put(75,150){\makebox(0,0)[c]{\Large 2}}
+
+% lines out of state 2
+\put(75,145){\thicklines{\line(0,-1){12.5}}}
+\put(28,132.5){\thicklines{\line(1,0){129}}}
+\put(157,129.5){\thicklines{\oval(6,6)[tr]}}
+\put(160,129.5){\thicklines{\line(0,-1){81.5}}}
+\put(157,48){\thicklines{\oval(6,6)[br]}}
+\put(157,45){\thicklines{\line(-1,0){79}}}
+\put(78,42){\thicklines{\oval(6,6)[tl]}}
+\put(28,129.5){\thicklines{\oval(6,6)[tl]}}
+\put(25,129.5){\thicklines{\vector(0,-1){9.5}}}
+\put(45,132.5){\thicklines{\vector(0,-1){12.5}}}
+\put(65,132.5){\thicklines{\vector(0,-1){12.5}}}
+\put(85,132.5){\thicklines{\vector(0,-1){12.5}}}
+\put(105,132.5){\thicklines{\vector(0,-1){12.5}}}
+\put(125,132.5){\thicklines{\vector(0,-1){12.5}}}
+\put(145,132.5){\thicklines{\vector(0,-1){12.5}}}
+\put(23,129.5){\makebox(0,0)[r]{\footnotesize JZR}}
+\put(43,129.5){\makebox(0,0)[r]{\footnotesize JMP}}
+\put(63,129.5){\makebox(0,0)[r]{\footnotesize ADD}}
+\put(83,129.5){\makebox(0,0)[r]{\footnotesize SUB}}
+\put(103,129.5){\makebox(0,0)[r]{\footnotesize LDA}}
+\put(123,129.5){\makebox(0,0)[r]{\footnotesize STA}}
+\put(143,129.5){\makebox(0,0)[r]{\footnotesize RFI}}
+\put(158.5,129.5){\makebox(0,0)[r]{\footnotesize NOP}}
+
+\put(25,115){\thicklines{\circle{10}}}
+\put(25,115){\makebox(0,0)[c]{\Large 3}}
+\put(45,115){\thicklines{\circle{10}}}
+\put(45,115){\makebox(0,0)[c]{\Large 4}}
+\put(65,115){\thicklines{\circle{10}}}
+\put(67,102){\makebox(0,0)[l]{\something}}
+\put(65,115){\makebox(0,0)[c]{\Large 5}}
+\put(85,115){\thicklines{\circle{10}}}
+\put(87,102){\makebox(0,0)[l]{\something}}
+\put(85,115){\makebox(0,0)[c]{\Large 6}}
+\put(105,115){\thicklines{\circle{10}}}
+\put(107,102){\makebox(0,0)[l]{\something}}
+\put(105,115){\makebox(0,0)[c]{\Large 7}}
+\put(125,115){\thicklines{\circle{10}}}
+\put(127,102){\makebox(0,0)[l]{\something}}
+\put(125,115){\makebox(0,0)[c]{\Large 8}}
+\put(145,115){\thicklines{\circle{10}}}
+\put(145,115){\makebox(0,0)[c]{\Large 9}}
+
+% lines out of state 3
+\put(25,110){\thicklines{\line(0,-1){62}}}
+\put(28,48){\thicklines{\oval(6,6)[bl]}}
+\put(28,45){\thicklines{\line(1,0){44}}}
+\put(72,42){\thicklines{\oval(6,6)[tr]}}
+\put(25,105){\thicklines{\line(1,0){7}}}
+\put(26.25,102){\makebox(0,0)[l]{\footnotesize \verb"acc" = 0}}
+\put(32,108){\thicklines{\oval(6,6)[br]}}
+\put(35,108){\thicklines{\line(0,1){14}}}
+\put(38,122){\thicklines{\oval(6,6)[tl]}}
+\put(38,125){\thicklines{\line(1,0){4}}}
+\put(42,122){\thicklines{\oval(6,6)[tr]}}
+
+% lines out of state 4
+\put(45,110){\thicklines{\line(0,-1){64}}}
+\put(45,44){\thicklines{\line(0,-1){38}}}
+\put(42,8){\thicklines{\oval(6,6)[br]}}
+
+% lines out of state 5 and 6
+\put(65,110){\thicklines{\vector(0,-1){20}}}
+\put(85,110){\thicklines{\vector(0,-1){20}}}
+
+% lines out of state 7 and 8
+\put(105,110){\thicklines{\line(0,-1){62}}}
+\put(102,48){\thicklines{\oval(6,6)[br]}}
+\put(125,110){\thicklines{\line(0,-1){62}}}
+\put(122,48){\thicklines{\oval(6,6)[br]}}
+
+% lines out of state 9
+\put(145,110){\thicklines{\line(0,-1){64}}}
+\put(145,44){\thicklines{\line(0,-1){36}}}
+\put(142,8){\thicklines{\oval(6,6)[br]}}
+\put(142,5){\thicklines{\line(-1,0){139}}}
+\put(3,8){\thicklines{\oval(6,6)[bl]}}
+\put(0,8){\thicklines{\line(0,1){207}}}
+\put(3,215){\thicklines{\oval(6,6)[tl]}}
+\put(3,218){\thicklines{\line(1,0){69}}}
+
+\put(65,85){\thicklines{\circle{10}}}
+\put(67,72){\makebox(0,0)[l]{\something}}
+\put(65,85){\makebox(0,0)[c]{\Large 12}}
+\put(85,85){\thicklines{\circle{10}}}
+\put(87,72){\makebox(0,0)[l]{\something}}
+\put(85,85){\makebox(0,0)[c]{\Large 13}}
+
+% lines out of state 12 and 13
+\put(65,80){\thicklines{\line(0,-1){9}}}
+% hack 68 to 68.25
+\put(68.25,71){\thicklines{\oval(6,6)[bl]}}
+\put(85,80){\thicklines{\line(0,-1){9}}}
+\put(82,71){\thicklines{\oval(6,6)[br]}}
+\put(68,68){\thicklines{\line(1,0){14}}}
+\put(75,68){\thicklines{\vector(0,-1){8}}}
+
+\put(75,55){\thicklines{\circle{10}}}
+\put(75,55){\makebox(0,0)[c]{\Large 14}}
+
+% lines out of state 14
+\put(75,50){\thicklines{\vector(0,-1){10}}}
+
+\put(75,35){\thicklines{\circle{10}}}
+\put(75,35){\makebox(0,0)[c]{\Large 10}}
+
+% lines out of state 10
+\put(75,30){\thicklines{\vector(0,-1){10}}}
+
+\put(75,15){\thicklines{\circle{10}}}
+\put(75,15){\makebox(0,0)[c]{\Large 11}}
+
+% lines out of state 11
+\put(75,10){\thicklines{\line(0,-1){2}}}
+\put(72,8){\thicklines{\oval(6,6)[br]}}
+
+\put(105,208){\thicklines{\circle{10}}}
+\put(105,208){\makebox(0,0)[c]{\Large 15}}
+\put(105,213){\thicklines{\line(0,1){2}}}
+\put(102,215){\thicklines{\oval(6,6)[tr]}}
+\put(102,218){\thicklines{\line(-1,0){24}}}
+\put(78,215){\thicklines{\oval(6,6)[tl]}}
+\end{picture}
+
+\end{center}
+
+\end{sloppy}
+\end{document}

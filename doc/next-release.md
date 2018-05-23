@@ -20,7 +20,7 @@ Contents
 New features:
 -------------
 
-*   `Holmake` under Poly/ML (*i.e.*, for the moment only Unix systems (including OSX/MacOS)) now runs build scripts concurrently when targets do not depend on each other.
+*   `Holmake` under Poly/ML (*i.e.*, for the moment only Unix-like systems (including OSX/MacOS, and Windows with Cygwin or the Linux subsystem)) now runs build scripts concurrently when targets do not depend on each other.
     The degree of parallelisation depends on the `-j` flag, and is set to 4 by default.
     Output from the build processes is logged into a `.hollogs` sub-directory rather than interleaved randomly to standard out.
 
@@ -28,11 +28,34 @@ New features:
     The machinery enabling this generates `xTheory.dat` files alongside `xTheory.sig` and `xTheory.sml` files.
     Thanks to Thibault Gauthier for the work implementing this.
 
+*   We now support monadic syntax with a `do`-notation inspired by Haskell’s.
+    For example, the `mapM` function might be defined:
+
+           Define‘(mapM f [] = return []) ∧
+                  (mapM f (x::xs) =
+                         do
+                           y <- f x;
+                           ys <- mapM f xs;
+                           return (y::ys);
+                         od)’;
+
+    The HOL type system cannot support this definition in its full polymorphic generality.
+    In particular, the above definition will actually be made with respect to a specific monad instance (list, option, state, reader, *etc*).
+    There are API entry-points for declaring and enabling monads in the `monadsyntax` module.
+    For more details see the *DESCRIPTION* manual.
+
+*   Users can define their own colours for printing types, and free and bound variables when printing to ANSI terminals by using the `PPBackEnd.ansi_terminal` backend.
+    (The default behaviour on what is called the `vt100_terminal` is to have free variables blue, bound variables green, type variables purple and type operators “blue-green”.)
+    Thanks to Adam Nelson for this feature.
+    Configuring colours under `emacs` is done within `emacs` by configuring faces such as `hol-bound-variable`
+
 
 Bugs fixed:
 -----------
 
 *   Pretty-printing of record type declarations to TeX now works even if there are multiple types with the same name (necessarily from different theory segments) in the overall theory.
+
+*   Pretty-printing has changed to better mesh with Poly/ML’s native printing, meaning that HOL values embedded in other values (*e.g.*, lists, records) should print better.
 
 New theories:
 -------------
@@ -43,8 +66,24 @@ New tools:
 New examples:
 ---------
 
+*   We have resurrected Monica Nesi’s CCS example (from the days of HOL88), ported and extended by Chun Tian (based on HOL4’s co-induction package `Hol_coreln`).
+    This includes all classical results of strong/weak bisimilarities and observation congruence, the theory of congruence for CCS, several versions of “bisimulation up to”,  “coarsest congruence contained in weak bisimilarity”, and “unique solution of equations” theorems, mainly from Robin Milner’s book, and Davide Sangiorgi’s “unique solutions of contractions” theorem published in 2017.
+    There’s also a decision procedure written in SML for computing CCS transitions with the result automatically proved.
+
+*   Speaking of HOL88, we have also recovered an old hardware example.
+    This work is the verification of a version of a “toy microprocessor” that came to be called *Tamarack* (see Section 5 of the [HOL history paper](https://www.cl.cam.ac.uk/archive/mjcg/papers/HolHistory.pdf)).
+    First done in a system called `LCF_LSM` by Mike Gordon (around 1983), this was then redone in HOL88 by Jeff Joyce in 1989, and these sources are now ported and available under `examples/hardware`.
+    Thanks to Larry Paulson for finding the HOL88 originals, and to Ramana  Kumar and Thomas Tuerk for doing the work porting these to HOL4.
+
+*   A theory of the basic syntax and semantics of Linear Temporal Logic formulas, along with a verified translation of such formulas into Generalised Büchi Automata *via* alternating automata (in `examples/logic/ltl`).
+    This work is by Simon Jantsch.
+
 Incompatibilities:
 ------------------
+
+*   We have decided that the behaviour of `irule` (*aka* `IRULE_TAC`) should not include the finishing `rpt conj_tac`.
+    If users want that after the implicational theorem has been matched against, it is easy enough to add.
+    See the [Github issue](https://github.com/HOL-Theorem-Prover/HOL/issues/465).
 
 *   The behaviour of the `by` and `suffices_by` tactics has changed.
     Previously, a tactic of the form `` `term quotation` by tac`` allowed `tac` to fail to prove the sub-goal of the term quotation.
@@ -88,7 +127,7 @@ Incompatibilities:
 *   The type of the “system printer” used by user-defined pretty-printers to pass control back to the default printer has changed.
     This function now gets passed an additional parameter corresponding to whether or not the default printer should treat the term to be printed as if it were in a binding position or not.
     (This `binderp` parameter is in addition to the parameters indicating the “depth” of the printing, and the precedence gravities.)
-    See the *Reference* manual for more details.
+    See the *REFERENCE* manual for more details.
 
 *   The `PAT_ASSUM` tactics (`Tactical.PAT_ASSUM`, `Q.PAT_ASSUM` and `bossLib.qpat_assum`) have all been renamed to pick up an internal `_X_` (or `_x_`).
     Thus, the first becomes `PAT_X_ASSUM`, and the last becomes `qpat_x_assum`).

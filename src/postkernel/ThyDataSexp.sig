@@ -11,6 +11,7 @@ datatype t =
        | Sym of string
        | Bool of bool
        | Char of char
+       | Option of t option
 
 val uptodate : t -> bool
 val compare : t * t -> order

@@ -1213,7 +1213,9 @@ val tape_encode_def = Define `tape_encode = pr_cond (Cn pr_eq [proj 1;zerof])
 
 val primrec_tape_encode = Q.store_thm("primrec_tape_encode[simp]",
 `primrec tape_encode 3`,
-fs[tape_encode_def] >> irule primrec_pr_cond >> rpt (irule primrec_cn >> rw[primrec_rules,primrec_pr_cond,primrec_pr_eq,primrec_pr_mult]))
+fs[tape_encode_def] >> irule primrec_pr_cond >> rpt conj_tac >>
+rpt (irule primrec_cn >>
+     rw[primrec_rules,primrec_pr_cond,primrec_pr_eq,primrec_pr_mult]));
 
 val tape_encode_corr = Q.store_thm("tape_encode_corr",
 `tape_encode [ENCODE tm.tape_l;NUM_CELL tm.tape_h;ENCODE tm.tape_r] = ENCODE_TM_TAPE tm`,
@@ -1231,9 +1233,14 @@ val pr_INITIAL_TAPE_TM_NUM_def = Define`
 pr_INITIAL_TAPE_TM_NUM = pr_cond (Cn pr_eq [proj 1;zerof]) (proj 0) (Cn (pr2 npair)
 [Cn (pr1 nfst) [proj 0];Cn (pr2 npair) [Cn (pr1 nhd) [proj 1];Cn (pr1 ntl) [proj 1]] ])`;
 
-val primrec_pr_INITIAL_TAPE_TM_NUM = Q.store_thm("primrec_pr_INITIAL_TAPE_TM_NUM[simp]",
-`primrec pr_INITIAL_TAPE_TM_NUM 2`,
-fs[pr_INITIAL_TAPE_TM_NUM_def] >> `0<2` by fs[] >>irule primrec_pr_cond >> rpt (irule primrec_cn >> rw[primrec_rules,primrec_pr_eq,primrec_nsnd,primrec_nfst] ) >>fs[primrec_proj] );
+val primrec_pr_INITIAL_TAPE_TM_NUM = Q.store_thm(
+  "primrec_pr_INITIAL_TAPE_TM_NUM[simp]",
+  `primrec pr_INITIAL_TAPE_TM_NUM 2`,
+  fs[pr_INITIAL_TAPE_TM_NUM_def] >> `0<2` by fs[] >>
+  irule primrec_pr_cond >> rpt conj_tac >>
+  rpt (irule primrec_cn >>
+       rw[primrec_rules,primrec_pr_eq,primrec_nsnd,primrec_nfst]) >>
+  fs[primrec_proj]);
 
 val pr_INITIAL_TM_NUM_def = Define`
 pr_INITIAL_TM_NUM = Cn (pr2 npair) [zerof;Cn tape_encode
@@ -1421,8 +1428,9 @@ val RUN_NUM_p = Q.store_thm("RUN_NUM_p",
 
 val primrec_RUN_NUM = Q.store_thm("primrec_RUN_NUM",
   `primrec (RUN_NUM p) 2`,
-  fs[RUN_NUM_p] >> irule alt_Pr_rule >- fs[primrec_INITIAL_TM_NUM] >>
-  irule primrec_cn >- fs[primrec_rules] >> fs[primrec_tmstepf]);
+  fs[RUN_NUM_p] >> irule alt_Pr_rule >> rpt conj_tac
+  >- fs[primrec_INITIAL_TM_NUM] >>
+  irule primrec_cn >> rpt conj_tac >- fs[primrec_rules] >> fs[primrec_tmstepf]);
 
 val Pr_thm_one = Q.store_thm("Pr_thm_one",
 `(Pr b r (1::t) = r (0::Pr b r (0::t)::t))`,

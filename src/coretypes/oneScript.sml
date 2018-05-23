@@ -33,10 +33,10 @@ val _ = OpenTheory_const_name{const={Thy="one",Name="one_CASE"},name=(ns,"case")
 end
 
 (* ---------------------------------------------------------------------*)
-(* Introduce the new type.						*)
-(* The type :one will be represented by the subset {T} of :bool.	*)
-(* The predicate defining this subset will be `\b.b`.  We must first 	*)
-(* prove the (trivial) theorem: ?b.(\b.b)b.				*)
+(* Introduce the new type.                                              *)
+(* The type :one will be represented by the subset {T} of :bool.        *)
+(* The predicate defining this subset will be `\b.b`.  We must first    *)
+(* prove the (trivial) theorem: ?b.(\b.b)b.                             *)
 (*----------------------------------------------------------------------*)
 
 val EXISTS_ONE_REP = prove
@@ -45,7 +45,7 @@ val EXISTS_ONE_REP = prove
 
 (*---------------------------------------------------------------------------*)
 (* Use the type definition mechanism to introduce the new type.              *)
-(* The theorem returned is:   |- ?rep. TYPE_DEFINITION (\b.b) rep	     *)
+(* The theorem returned is:   |- ?rep. TYPE_DEFINITION (\b.b) rep            *)
 (*---------------------------------------------------------------------------*)
 
 val one_TY_DEF =
@@ -53,7 +53,7 @@ val one_TY_DEF =
     (new_type_definition("one", EXISTS_ONE_REP));
 
 (* ---------------------------------------------------------------------*)
-(* The proof of the `axiom` for type :one follows.			*)
+(* The proof of the `axiom` for type :one follows.                      *)
 (* ---------------------------------------------------------------------*)
 
 val one_axiom = store_thm("one_axiom",

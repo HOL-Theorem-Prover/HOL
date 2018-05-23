@@ -6,6 +6,7 @@ open Lib
 datatype 'a testresult = Normal of 'a | Exn of exn
 
 val linewidth = ref 80
+val output_linewidth = Holmake_tools.getWidth()
 
 fun crush extra w s =
   let
@@ -18,7 +19,7 @@ fun crush extra w s =
       UTF8.substring(s,0,w-exsize) ^ extra
   end
 
-fun tprint s = print (crush " ...  " 77 s)
+fun tprint s = print (crush " ...  " (output_linewidth - 3) s)
 
 fun tadd s =
   (for_se 1 (UTF8.size s) (fn _ => print "\008");
@@ -56,12 +57,14 @@ local
     (* 3 for quotations marks and an extra space *)
 in
 fun standard_tpp_message s = let
-  fun trunc s = if size s + pfxsize > 62 then let
-                  val s' = String.substring(s,0,58 - pfxsize)
-                in
-                  s' ^ " ..."
-                end
-                else s
+  fun trunc s =
+    if size s + pfxsize > output_linewidth - 18 then
+      let
+        val s' = String.substring(s,0,output_linewidth - 22 - pfxsize)
+      in
+        s' ^ " ..."
+      end
+    else s
   fun pretty s = s |> String.translate (fn #"\n" => "\\n" | c => str c)
                    |> trunc
 in

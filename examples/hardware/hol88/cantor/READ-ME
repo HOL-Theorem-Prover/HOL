@@ -1,0 +1,7 @@
+This directory contains the file: 
+
+Cantor.ml
+
+which proves Cantor's theorem in higher order logic.  Just 
+execute the ML commands in this file one by one to do the proof.
+

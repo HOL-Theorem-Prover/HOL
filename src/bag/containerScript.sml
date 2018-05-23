@@ -10,7 +10,7 @@ open HolKernel Parse boolLib pred_setTheory listTheory bagTheory
      listSimps bossLib;
 
 (* ---------------------------------------------------------------------*)
-(* Create the new theory.						*)
+(* Create the new theory.                                               *)
 (* ---------------------------------------------------------------------*)
 
 val _ = new_theory "container";
@@ -275,9 +275,9 @@ val BAG_OF_FMAP_THM = store_thm ("BAG_OF_FMAP_THM",
   (!f b k v. (BAG_OF_FMAP f (b |+ (k, v)) =
              BAG_INSERT (f k v) (BAG_OF_FMAP f (b \\ k))))``,
 SIMP_TAC std_ss [BAG_OF_FMAP, FDOM_FEMPTY, NOT_IN_EMPTY, EMPTY_BAG,
-		 combinTheory.K_DEF,
-		 BAG_INSERT, FDOM_FUPDATE, IN_INSERT,
-		 GSYM EMPTY_DEF, CARD_EMPTY] THEN
+                 combinTheory.K_DEF,
+                 BAG_INSERT, FDOM_FUPDATE, IN_INSERT,
+                 GSYM EMPTY_DEF, CARD_EMPTY] THEN
 ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
 REPEAT GEN_TAC THEN SIMP_TAC std_ss [] THEN
 Cases_on `x = f k v` THENL [
@@ -296,7 +296,7 @@ Cases_on `x = f k v` THENL [
       `ks = ks INTER FDOM b` suffices_by (
          STRIP_TAC THEN ONCE_ASM_REWRITE_TAC[] THEN
          MATCH_MP_TAC FINITE_INTER THEN
-	 REWRITE_TAC[FDOM_FINITE]
+         REWRITE_TAC[FDOM_FINITE]
       ) THEN
       Q.UNABBREV_TAC `ks` THEN
       SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_ABS] THEN

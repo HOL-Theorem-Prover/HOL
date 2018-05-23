@@ -237,6 +237,13 @@ fun bool_compare (true, true) = EQUAL
   | bool_compare (false, true) = LESS
   | bool_compare (false, false) = EQUAL
 
+fun option_compare cmp optp =
+  case optp of
+      (NONE, NONE) => EQUAL
+    | (NONE, SOME _) => LESS
+    | (SOME _, NONE) => GREATER
+    | (SOME x, SOME y) => cmp(x,y)
+
 fun list_compare cfn =
    let
       fun comp ([], []) = EQUAL

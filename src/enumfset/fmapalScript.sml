@@ -450,7 +450,7 @@ CONJ_TAC THEN REPEAT GEN_TAC THEN REWRITE_TAC [ORL] THEN STRIP_TAC THENL
  UNDISCH_TAC (Term`apto cmp a (a:'a) = LESS`)] THEN
 REWRITE_TAC [toto_refl, all_cpn_distinct]);
 
-val ORL_MEM_FST	= maybe_thm ("ORL_MEM_FST",
+val ORL_MEM_FST = maybe_thm ("ORL_MEM_FST",
 ``!cmp l:('a#'b)list. ORL cmp l ==>
     !x y p q. MEM (x,y) l /\ MEM (p,q) l /\ (x = p) ==> (y = q)``,
 GEN_TAC THEN Induct THENL
@@ -516,7 +516,7 @@ THEN1 (CONJ_TAC THEN MATCH_MP_TAC merge_ORL THEN AR) THEN
 P_PGEN_TAC ``x:'a,y:'b`` THEN
 REWRITE_TAC [MATCH_MP merge_MEM_thm (CONJ (Q.ASSUME `ORL cmp k`)
                                (Q.ASSUME `ORL cmp (merge cmp l m)`))]
-			       THEN
+                               THEN
 REWRITE_TAC [MATCH_MP merge_MEM_thm (CONJ (Q.ASSUME `ORL cmp l`)
                                            (Q.ASSUME `ORL cmp m`))] THEN
 REWRITE_TAC [MATCH_MP merge_MEM_thm (CONJ (Q.ASSUME `ORL cmp

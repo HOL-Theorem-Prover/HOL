@@ -32,15 +32,15 @@ val IS_GCD_REF = store_thm(
   PROVE_TAC[IS_GCD,DIVIDES_REFL]);
 
 val IS_GCD_SYM = store_thm("IS_GCD_SYM",
-			Term `!a b c. (is_gcd a b c) = is_gcd b a c`,
+                        Term `!a b c. (is_gcd a b c) = is_gcd b a c`,
                         PROVE_TAC[IS_GCD]);
 
 val IS_GCD_0R = store_thm("IS_GCD_0R",
-			Term `!a. is_gcd a 0 a`,
+                        Term `!a. is_gcd a 0 a`,
                         PROVE_TAC[IS_GCD,DIVIDES_REFL,ALL_DIVIDES_0]);
 
 val IS_GCD_0L = store_thm("IS_GCD_0L",
-			Term `!a. is_gcd 0 a a`,
+                        Term `!a. is_gcd 0 a a`,
                         PROVE_TAC[IS_GCD,DIVIDES_REFL,ALL_DIVIDES_0]);
 
 val PRIME_IS_GCD = store_thm("PRIME_IS_GCD",

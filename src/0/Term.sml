@@ -104,7 +104,7 @@ local fun lookup 0 (ty::_)  = ty
         | ty_of (Const(_,POLY Ty)) _   = Ty
         | ty_of (Bv i) E               = lookup i E
         | ty_of (Comb(Rator, _)) E     = snd(Type.dom_rng(ty_of Rator E))
-	| ty_of (t as Clos _) E        = ty_of (push_clos t) E
+        | ty_of (t as Clos _) E        = ty_of (push_clos t) E
         | ty_of (Abs(Fv(_,Ty),Body)) E = Ty --> ty_of Body (Ty::E)
         | ty_of _ _ = raise ERR "type_of" "term construction"
 in
@@ -163,7 +163,7 @@ fun free_vars_lr tm =
         | FV (Const _::t) A       = FV t A
         | FV (Comb(M,N)::t) A     = FV (M::N::t) A
         | FV (Abs(_,M)::t) A      = FV (M::t) A
-	| FV ((M as Clos _)::t) A = FV (push_clos M::t) A
+        | FV ((M as Clos _)::t) A = FV (push_clos M::t) A
         | FV [] A = rev A
   in
      FV [tm] []
@@ -176,7 +176,7 @@ fun free_vars_lr tm =
 local fun vars (v as Fv _) A        = Lib.insert v A
         | vars (Comb(Rator,Rand)) A = vars Rand (vars Rator A)
         | vars (Abs(Bvar,Body)) A   = vars Body (vars Bvar A)
-	| vars (t as Clos _) A      = vars (push_clos t) A
+        | vars (t as Clos _) A      = vars (push_clos t) A
         | vars _ A = A
 in
 fun all_vars tm = vars tm []
@@ -278,7 +278,7 @@ fun FVL [] A = A
 fun free_in tm =
    let fun f1 (Comb(Rator,Rand)) = (f2 Rator) orelse (f2 Rand)
          | f1 (Abs(_,Body)) = f2 Body
-	 | f1 (t as Clos _) = f2 (push_clos t)
+         | f1 (t as Clos _) = f2 (push_clos t)
          | f1 _ = false
        and f2 t = term_eq t tm orelse f1 t
    in f2
@@ -563,11 +563,11 @@ fun subst [] = I
         fun subs tm =
           case peek(fmap,tm)
            of SOME residue => residue
-	    | NONE =>
+            | NONE =>
               (case tm
                 of Comb(Rator,Rand) => Comb(subs Rator, subs Rand)
                  | Abs(Bvar,Body) => Abs(Bvar,subs Body)
-	         | Clos _        => subs(push_clos tm)
+                 | Clos _        => subs(push_clos tm)
                  |   _         => tm)
     in
       (if b then vsubs else subs)

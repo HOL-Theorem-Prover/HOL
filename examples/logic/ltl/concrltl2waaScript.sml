@@ -1957,7 +1957,7 @@ val EXP_WAA_CORRECT_LEMM = store_thm
        )
     >- (rename [‘concr2AbstrAA x’] >> Cases_on `x` >> simp[concr2AbstrAA_def]
         >> simp[removeStatesSimpl_def,ltl2vwaa_def,ltl2vwaa_free_alph_def]
-        >> Q.HO_MATCH_ABBREV_TAC `STATES ∧ INIT ∧ FINAL ∧ ALPH ∧ TRANS`
+        >> Q.HO_MATCH_ABBREV_TAC `STATES ∧ ALPH ∧ TRANS ∧ INIT ∧ FINAL`
         >> `(INIT ==> STATES) ∧ INIT ∧ (STATES ==> FINAL) ∧ ALPH
            ∧ (ALPH ∧ STATES ==> TRANS)`
              suffices_by fs[]
@@ -2056,9 +2056,9 @@ val EXP_WAA_CORRECT_LEMM = store_thm
                 >> fs[reachRelFromSet_def,reachRel_def]
                 >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac >> POP_ASSUM mp_tac
                 >> `!x' x. (oneStep
-                             (ALTER_A (tempSubForms φ) (initForms φ) (finalForms φ)
-                                      (POW (props φ))
-                                      (trans (POW (props φ)))))^* x' x ⇒
+                                (ALTER_A (tempSubForms φ) (POW (props φ))
+                                         (trans (POW (props φ))) (initForms φ)
+                                         (finalForms φ)))^* x' x ⇒
                        (x' ∈ s ⇒
                         s ∈ initForms φ ⇒
                         x ∈ concr2Abstr_states g)` suffices_by metis_tac[]

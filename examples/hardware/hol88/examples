@@ -1,0 +1,606 @@
+
+
+                *-----------------------------------------*
+                | SOME EXAMPLES DONE USING THE HOL SYSTEM |
+                *-----------------------------------------*
+
+
+
+The Primitive Recursion Theorem
+===============================
+
+Description of the example
+--------------------------
+
+The Primitive Recursion Theorem is a theorem of elementary number-theory.
+It states that any primitive recursive definition uniquely defines a
+function.  For example, it can be used to prove that there is a unique
+function ADD satisfying
+
+   (ADD 0 n = n) /\
+   (ADD (SUC m) n = SUC(ADD m n))
+
+In HOL syntax, the Primitive Recursion Theorem is stated as
+
+   |- !x f. ?fun.
+       (fun 0 = x) /\
+       (!m. fun(SUC m) = f(fun m)m)
+
+This theorem cannot be expressed as a single theorem in first-order logic.
+The best one can do is express it as a theorem scheme - i.e. an infinite
+family of theorems, one for each 'x' and 'f'.
+
+What was done
+-------------
+
+The Primitive Recursion Theorem was deduced from Peano's axioms using a
+mixture of forward and backward proof.
+
+
+What this example shows
+-----------------------
+
+It is reasonable to manually generate proofs of fairly complicated
+number-theoretic facts. More generally, I think that any theorem of
+'ordinary' mathematics could be formally proved in the HOL system in a time
+related by a constant factor (actual constant unknown!) to the time it takes
+to do the proof informally by hand.
+
+For more information
+--------------------
+
+1. The file ~mjcg/hol/theories/mk_prim_rec.ml contains ML commands to
+   prove the Primitive Recursion Theorem.
+
+2. The following paper gives an outline of the proof of the
+   Primitive Recursion Theorem.
+
+      "HOL: A Machine Oriented Formulation of Higher-Order Logic".
+      By Mike Gordon, Cambridge Computer Lab. Technical 
+      Report No. 68, 1985.
+
+
+
+The Sequential Multiplier
+=========================
+
+Description of the example
+--------------------------
+
+Verification of a multiplier
+
+               i1   i2
+               |    |
+               |    |
+             *--------*
+             |        |
+             |  MULT  |
+             |        |
+             *--------*
+               |    |
+               |    |
+              done  o
+
+This is specified to have the following behaviour
+
+   If
+         'done' is T at time t1, and
+         t2 is the first time after t1 that 'done' again has value T, and
+         the values at 'i1' and 'i2' are stable from t1 to t2.
+   Then
+         the value at 'o' at time t2 is the product of the values at
+        'i1' and 'i2' at time t1.
+
+In HOL this is formalized by
+
+   done(t1) /\ NEXT(t1,t2)(done) /\ STABLE(t1,t2)(i1) /\ STABLE(t1,t2)(i2) 
+   ==>
+   (o(t2) = i1(t1) * i2(t1)
+
+where the temporal predicates NEXT and STABLE are defined by
+
+   NEXT(t1,t2)(f) = t1<t2 /\ f(t2) /\ (!t. t1<t /\ t<t2 ==> ~f(t))
+
+   STABLE(t1,t2)(f) = !t. t1<=t /\ t<t2 ==> (f(t) = f(t1))
+
+The implementation that was verified uses three registers: one to hold
+the multiplier, one to hold the partial product and a flipflip to control
+the 'done' line. Also used are four multiplexors, an adder, three
+decrementers, three zero-testers and an or-gate. The multiplication of m*n
+is computed by adding m to itself n times and then asserting T on 'done'.
+
+What was done
+-------------
+
+A correctness theorem equivalent to the following was proved.
+
+   MULT_IMP(i1,i2,out,done) 
+   ==> (done(t1) /\ NEXT(t1,t2)(done) /\ STABLE(t1,t2)(i1) /\ STABLE(t1,t2)(i2) 
+        ==>
+        (o(t2) = i1(t1) * i2(t1))
+
+MULT_IMP is a predicate capturing the schematic of the implementation. 
+
+The necessary arithmetical lemmas relating multiplication to repeated
+addition were deduced from Peano's axioms and primitive recursive
+definitions of + and *.
+
+What this example shows
+-----------------------
+
+Several different kinds of formal reasoning are needed to verify hardware.
+
+   1. Facts about numbers (typically proved by induction).
+
+   2. Facts about temporal predicates like NEXT and STABLE, e.g.
+
+         NEXT(t1,t2)(f) /\ NEXT(t1,t3)(f) ==> (t2=t3)
+
+         STABLE(t1,t2)(f) ==> STABLE(t1+1,t2)(f)
+
+   3. Facts which give the derived behaviour of an interconnection of
+      parts (registers, adders etc.). Such facts are typically derived
+      from the structure of the implementation and the individual 
+      behaviours of the parts by an 'unwinding' process
+      (e.g. see the derived rules on ~mjcg/hol/ml/unwind.ml).
+
+Only the last of these are specific to the hardware domain. The other two
+require general 'theorem-proving' techniques (e.g. Boyer-Moore).
+
+For more information
+--------------------
+
+1. See the file READ-ME on the directory ~mjcg/examples/mult. This directory
+   contains the ML commands to verify the multiplier.
+
+2. The multiplier proof is discussed informally in
+
+      "Why Higher-Order Logic is a Good Formalism for Specifying
+      and Verifying Hardware". By Mike Gordon, Cambridge Computer Lab. 
+      Technical Report No. 68, 1985.
+
+
+
+The Computer Example
+====================
+
+Description of the example
+--------------------------
+
+Verification of a toy computer. At the machine code level the computer has a
+memory and two registers: a 13-bit program counter and a 16-bit accumulator.
+There are eight machine instructions: halt, unconditional jump, jump when the
+accumulator holds 0, add contents of a memory location to the accumulator,
+subtract contents of a location from accumulator, load accumulator from
+memory, store contents of accumulator in memory, and skip. The machine can
+be interrupted by pushing a button on its front panel.
+
+The implemention that was proved correct has six data registers, an ALU, a
+memory, and a microcode controller. This controller consists of a ROM
+holding twenty six 30-bit microinstructions, a microprogram counter, and
+some combinational microinstruction decode logic.
+
+What was done
+-------------
+
+Jeff Joyce has used the HOL system to prove
+
+   COMPUTER_IMP(mpc,mar,ir,arg,buf)(memory,knob,button,switches,pc,acc,idle,ready) /\
+   STABLE(t1,t2)(switches) /\
+   STABLE(t1,t2)(knob) /\
+   NEXT(t1,t2)(ready) /\
+   ready(t1)
+   ==>
+   COMPUTER(t1,t2)(memory,knob,button,switches,pc,acc,idle)
+  
+Where COMPUTER_IMP is a structural predicate formalizing the implementation, and COMPUTER
+is a behavioural predicate formalizing the semantics of the target-level machine.
+
+The above statement of correctness is expressed on the microcycle timescale.
+A macro cycle (i.e. the execution of a single machine code instruction)
+consists of a sequence of microcycles from time t1 to t2.  Jeff has also
+proved a different formulation of correctness that makes explicit an
+abstraction between the micro cycle and macro cycle timescales. In this
+formulation, the behavioural specification of the computer does not need to
+have the micro timescale parameters t1 and t2.
+
+What this example shows
+-----------------------
+
+It is possible to describe both the structure and behaviour of complete
+systems (e.g. computers) in higher-order logic. One can also describe the
+components of such systems e.g. registers, memories, ALUs etc. 
+
+Jeff's verification of the computer suggests the feasibility of doing completely
+formal correctness proofs of real examples. It shows that there are no hidden 
+logical difficulties in using HOL for verifying processor like systems.
+
+Note that both the computer and the multiplier use the temporal predicates
+NEXT and STABLE. This suggests that it might be worth developing some
+specialized infrastructure to support temporal reasoning in HOL.
+
+For more information
+--------------------
+
+   1. The original description of the computer is in
+
+         "A Model of Register Transfer Systems with Applications to
+         Microcode and VLSI Correctness". By Mike Gordon, Report
+         CSR-82-81, Dept. of Computer Science, Edinburgh, 1981.
+
+   2. A proof of the computer was done in an ancestor of HOL
+      called LCF_LSM. This system supports reasoning in the model
+      referenced in 1 above. The LCF_LSM proof is documented in:
+
+        "Proving a Computer Correct". By Mike Gordon,
+        Cambridge Computer Lab. Technical Report No. 42, 1985.
+
+   3. The directory ~mjcg/examples/computer contains Jeff's proof in HOL.
+
+   4. Jeff's proof is written up in:
+
+         "Proving a Computer Correct in Higher Order Logic". 
+         By Jeff Joyce et. al., Report No. 85/208/21, Dept.
+         of Computer Science, University of Calgary, 1985.
+
+Combinational CMOS Adder
+========================
+
+Description of the example
+--------------------------
+
+Here is a CMOS adder with inputs 'a', 'b' and 'cin' and outputs 'sum' and 'cout'.
+
+                          |-----|
+                          | PWR |
+                          |-----|
+                             |
+                             |p0
+                             |
+      |---------+------------+----------+------------+-------------|
+      |         |            |          |            |             |
+     --         --           |       ---+---         --            |
+    ||           ||          |      ||     ||         ||           |
+p1-0||     b     ||0--cin    |  a--0||     ||0--b     ||0--a       |
+    ||     |     ||          |      ||     ||         ||           |
+     --    0    --           |       ---+---         --            |
+      |  -----  |            |          |            |             |
+      |  -----  |            |          |            |             |
+    p2|--|   |--|p3          |          |p7          |p8           |
+      |         |            |          |            |             |
+      |         |            |          |            |             |
+     --         --           |          --           --            |
+    ||           ||         --           ||           ||          --
+a--0||           ||0--p1   ||            ||0--cin     ||0--b     ||
+    ||           ||     |-0||            ||           ||      |-0||
+     --         --      |  ||           --           --       |  ||
+      |         |       |   --          |            |        |   --
+    p4|---------+-------|    |--sum   p1|------------+--------|    |--cout
+      |         |       |   --          |            |        |   --
+     --         --      |  ||          --           --        |  ||
+    ||           ||     |--||         ||           ||         |--||
+a---||     b     ||---p1   ||   cin---||       b---||            ||
+    ||     |     ||         --        ||           ||             --
+     --    |    --           |         --           --             |
+      |  -----  |            |          |            |             |
+      |  -----  |            |          |            |             |
+    p5|--|   |--|p6          |          |p9          |p10          |
+      |         |            |          |            |             |
+      |         |            |          |            |             |
+     --         --           |       ---+---         --            |
+    ||           ||          |      ||     ||         ||           |
+p1--||           ||---cin    |  a---||     ||---b     ||---a       |
+    ||           ||          |      ||     ||         ||           |
+     --         --           |       ---+---         --            |
+      |         |            |          |            |             |
+      |---------+------------+----------+------------+-------------|
+                             |
+                             |p11
+                             |
+                          |-----|
+                          | GND |
+                          |-----|
+
+The horizontal transistors PTRAN(b,p2,p3) and NTRAN(b,p5,p6) are bidirectional.
+
+What was done
+-------------
+
+Transistors were modelled as switches, i.e.
+
+   NTRAN(g,x,y) = (g ==> (x=y)) and PTRAN(g,x,y) = (~g ==> (x=y))
+
+It was then proved that the circuit above had the behaviour of a full-adder.
+
+What this example shows
+-----------------------
+
+That even very simple models of transistors can be useful.
+
+For more information
+--------------------
+
+See ~mjcg/hol/examples/cmos/mk_adders.ml for ML commands to do the proof in HOL.
+
+Dynamic CMOS Adder
+==================
+
+Description of the example
+--------------------------
+
+A dynamic adder using a two-phase (precharge then evaluate) clocking scheme
+called NORA. The published circuit was wrong. After failing to understand
+it, I phoned the author of the paper and got corrections. The problem was
+misprints (e.g. some lines with the wrong labels, some transistors printed
+incorrectly). The original design was correct.
+
+Each full adder has sixteen transistors. In addition, each input and output
+line requires a tri-state inverting buffer (to isolate the precharge during the
+evaluation phase). These buffers have four transistors.
+
+What was done
+-------------
+
+The circuit was verified using the standard unidirectional model of
+transistors (with a decay time of 4). The proof was essentially an exhaustive
+simulation of each possible input over four clock cycles. It was done on the
+Atlas-10 at the Rutherford Laboratory (UK).
+
+The unidirectional model used is unsatisfactory since at least one of the
+transistors in the design appears to function bidirectionally. In fact, it
+seems that this bidirectionality can be ignored .. but this should be proved
+rather than assumed in the model.
+
+What this example shows
+-----------------------
+
+The strengths and weaknesses of current transistor models. The proof that
+was done shows something .. but it is not clear what! It gives somes some
+confidence that the design is correct, but is at best only a lemma
+in a bigger proof (namely the lemma that if the model used is valid then
+the design is correct).
+
+For more information
+--------------------
+
+1. The HOL model used is in ~mjcg/hol/examples/cmos/mk_cmos.ml.
+   The specification and verification of the inverting tri-state buffers
+   is in ~mjcg/hol/examples/cmos/mk_INV.ml. The specification and
+   verification of the adder is in ~mjcg/hol/examples/cmos/mk_DYN_ADD.ml.
+
+2. The circuit was taken from the paper
+
+      "CMOS Design Techniques to Eliminate the Stuck-open 
+      Fault Problem of Testability" by A. F. Murray in 
+      "Electronics letters" Vol. 20, No. 19 (13 Sept. 1984).
+
+   This references another paper in which the NORA design style is explained.
+
+
+
+A Dynamic NMOS Shift Register
+=============================
+
+Description of the example
+--------------------------
+
+The following rather bizarre circuit was shown to me by Mike Fourman.
+
+          ph1                          ph3
+           |                            |
+  |--------|                   |--------|
+  |        |                   |        |
+  |    | |-|                   |    | |-|
+  |----| |                     |----| |
+       | |-|                        | |-|
+           |                            |    
+         b3|-----|                    b7|-----|
+                 *-------------|              *--------------|
+           |-----|             |        |-----|              |
+           |                   |        |                    |
+           |                   |        |                    |
+         b2|                 b4|      b6|                  b8|
+           |                   |        |                    |
+           |                   |        |                    |
+       | |-|                   |    | |-|                    |   ||
+ i-----| |                     |----| |                      |---||---o
+       | |-|                        | |-|                        ||
+           |                            |
+         b1|                          b5|
+           |                            |
+           |                            |
+       | |-|                        | |-|
+ph2----| |                   ph4----| |
+       | |-|                        | |-|
+           |                            |
+           |                            |
+          ph1                          ph3
+
+Note that only n-transistors are used, and that the clock lines 'ph1',
+'ph2', 'ph3', ph4' also function as power and ground. Apparently this is
+a real circuit used as part of a fabricated design.
+
+What was done
+-------------
+
+Using the standard unidirectional model of transistors (with a decay time of 3)
+it was proved that:
+
+   If 'ph1', 'ph2', 'ph3' and 'ph4' are a 4-phase non-overlapping clock,
+   then the output at 'o' during phase 4 equals the input at 'i' during phase 2.
+
+What this example shows
+-----------------------
+
+That quite tricky dynamic circuits can be satisfactorily modelled using a
+simple unidirectional model. Unlike the dynamic adder described above, this
+circuit does seems to be adequately modeled using unidirectional components.
+Whilst one would certainly like to be able to prove the validity of the
+unidirectional model, it doesn't seem so essential in this case.
+
+For more information
+--------------------
+
+The ML commands to verify Mike Fourman's circuit are in
+~mjcg/hol/examples/mk_nmos.ml.
+
+
+
+Asynchronous Dtype Implementations
+==================================
+
+Description of the example
+--------------------------
+
+Dtypes can be built out of NAND (and other) gates using feedback loops.
+
+What was done
+-------------
+
+Various implementations of Dtype registers using NAND gates have been
+verified by John Herbert. Each gate is assumed to have some non-zero delay
+and then it is shown that the register stores values in feedback loops.  The
+setup and hold times of the register are derived from the delay of the
+components.
+
+The proofs are pretty complicated. They involve reasoning about intervals by
+inductions over time. The goal of John Herbert's research is to show the
+feasibilty of regarding timing analysers as derived inference rules. He had
+previously implemented a conventional timing analyser; his current work can
+be viewed as providing a logical basis for his analyser as well as
+generalizing it to work 'symbolically'.
+
+What this example shows
+-----------------------
+
+That low-level asynchronous circuits can be analysed in HOL .. but that 
+doing so is painful. Specialized tools (e.g. temporal logic decision 
+procedures) might help.
+
+For more information
+--------------------
+
+1. I have some examples John handed me just before I left Cambridge.
+
+2. There is a discussion of specifying and verifying a Dtype in:
+
+      "Why Higher-Order Logic is a Good Formalism for Specifying
+      and Verifying Hardware". By Mike Gordon, Cambridge Computer Lab. 
+      Technical Report No. 68, 1985.
+
+
+
+The T-ring Local Area Network
+=============================
+
+Description of the example
+--------------------------
+
+The T-ring is a toy local area network designed and built (out of discrete
+components) by Don Gaubatz. It is intended as a simplified Cambridge Ring
+that could be specified and verified as preparation for the much harder task
+of proving correct the Cambridge Fast Ring. 
+
+What was done
+-------------
+
+Tom Melham has proved correct the transmitter, receiver and monitor
+components of the T-ring. Each of these is implemented with edge-triggered
+Dtypes and combinational logic. Tom has developed a theory of abstraction
+for relating the low-level asynchronous timescale with the higher level
+register transfer timescale. He has proved that abstractions of the behaviour of
+the implementations meet register-transfer level specifications.
+
+Tom still has to prove that the register-tranfer level components of the T-ring
+compose together to meet the specification of the complete system (i.e. that
+if a packet is sent then sometime later it is received).
+
+What this example shows
+-----------------------
+
+Fairly nasty asynchronous designs can be reasoned about. The components
+of the T-ring are not synchronously clocked; the outputs of some Dtypes are
+used to clock the inputs of others.
+
+
+
+For more information
+--------------------
+
+See Tom Melham's progress report and thesis proposal entitled "Abstraction
+in Hardware Verification". I have a copy.
+
+
+
+
+The Racal Clock Recovery Module
+===============================
+
+This is a device for generating a clean clock signal from a noisy one. I
+believe that it is intended for use in boats where the input signal would be
+received by radio. The algorithm used is based on a digital phase locked
+loop. The implementation uses a CMOS design style called CLIC developed at
+Racal as a successor to NORA.
+
+What has been done
+------------------
+
+Inder Dhingra (who is doing a PhD at Cambridge under the support of Racal)
+is working on the clock recovery module as the main example of his PhD. He
+is developing specialized proof infrastructure for CLIC, including support
+for abstractions from a four-phase clocking scheme to a register transfer
+level. So far he has done a top-level specification of the module in HOL
+together with some hand proofs of the correctness of the first level
+decomposition of the design. He has also worked out a HOL model of CLIC.
+
+What this example shows
+-----------------------
+
+If successful, this example will show that real designs can be verified. It
+already shows (as does the T-ring) that harware verification  is not limited
+to things with clean mathematical specifications like multipliers.
+
+For more information
+--------------------
+
+See me.
+
+
+
+The ECL Chip of the Cambridge Fast Ring
+=======================================
+
+Description of the example
+-------------------------
+
+The ECL chip is a serial to parallel converter. It decodes sequences of bits
+into parallel bytes which are passed to the CMOS chip. It is a simple, but
+real, design (about 360 gates).
+
+What has been done
+------------------
+
+John Herbert has specified and verified the ECL chip using LCF_LSM. He is in
+the process of redoing the proof in HOL. It is possible to write a more
+abstract specification in HOL than in LCF_LSM, but the resulting proof is
+harder.
+
+What this example shows
+-----------------------
+
+That simple real examples are within the current state-of-the-art of
+hardware verification.
+
+For more information
+--------------------
+
+1. The LCF_LSM specification of the ECL chip is given in
+
+      "A Formal Hardware Verification Methodology and its
+      Application to a Network Interface Chip". By Mike Gordon and
+      John Herbert, Cambridge Computer Lab. Technical Report 
+      No. 66, 1985. (To appear in IEE special issue on hardware
+      verification.)
+
+2. More details (including something on the HOL specification of the ECL
+   chip) are in a paper by John Herbert in the Proceedings of CHDL 1985.

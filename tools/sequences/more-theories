@@ -6,6 +6,7 @@ src/TeX
 !src/TeX/theory_tests/proj1paper
 !examples/RSA
 !examples/zipper
+src/monad/more_monads
 src/string
 src/sort
 !src/string/theorytesting

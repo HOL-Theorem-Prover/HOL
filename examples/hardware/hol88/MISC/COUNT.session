@@ -1,0 +1,105 @@
+% hol
+
+_  _         __        _
+|__|        |  |       |
+|  | IGHER  |__| RDER  |__ OGIC
+===============================
+(Built on Feb  8)
+
+#new_theory `COUNT`;;
+() : void
+
+#let time = ":num"
+#and val  = ":num";;
+time = ":num" : type
+val = ":num" : type
+
+#let sig = ":^time -> ^val";;
+sig = ":num -> num" : type
+
+#new_definition
+# (`DEL`, "DEL(x:^sig,x':^sig) = !t. x t = x'(t-1)");;
+|- DEL(x,x') = (!t. x t = x'(t - 1))
+
+#new_definition(`INC`, "(INC:^sig->^sig) x = \t. (x t)+1");;
+|- INC x = (\t. (x t) + 1)
+
+#new_definition
+# (`COUNT_SPEC`,
+#  "COUNT_SPEC (sw,i,o) = DEL(o,(sw -> i | INC o))");;
+|- COUNT_SPEC(sw,i,o) = DEL(o,(sw -> i | INC o))
+
+#new_definition
+# (`MUX`,
+#  "MUX(switch,i1:^sig,i2:^sig,o:^sig) = (o = (switch -> i1 | i2))");;
+|- MUX(switch,i1,i2,o) = (o = (switch -> i1 | i2))
+
+#new_definition
+# (`REG`,
+#  "REG (i:^sig,o:^sig) = DEL(o,i)");;
+|- REG(i,o) = DEL(o,i)
+
+#new_definition
+# (`INCR`,
+#  "INCR(i:^sig,o:^sig) = (o = INC i)");;
+|- INCR(i,o) = (o = INC i)
+
+#new_definition
+# (`COUNT_IMP`,
+#  "COUNT_IMP (sw,i,o) = ?l1 l2. 
+#                         MUX (sw,i,l2,l1) /\
+#                         REG (l1,o)       /\
+#                         INCR (o,l2)");;
+|- COUNT_IMP(sw,i,o) =
+   (?l1 l2. MUX(sw,i,l2,l1) /\ REG(l1,o) /\ INCR(o,l2))
+
+#let COUNT_SPEC = definition `COUNT` `COUNT_SPEC`
+#and COUNT_IMP  = definition `COUNT` `COUNT_IMP`;;
+COUNT_SPEC = |- COUNT_SPEC(sw,i,o) = DEL(o,(sw -> i | INC o))
+COUNT_IMP = 
+|- COUNT_IMP(sw,i,o) =
+   (?l1 l2. MUX(sw,i,l2,l1) /\ REG(l1,o) /\ INCR(o,l2))
+
+#let MUX  = definition `COUNT` `MUX`
+#and REG  = definition `COUNT` `REG`
+#and INCR = definition `COUNT` `INCR`;;
+MUX = |- MUX(switch,i1,i2,o) = (o = (switch -> i1 | i2))
+REG = |- REG(i,o) = DEL(o,i)
+INCR = |- INCR(i,o) = (o = INC i)
+
+#let prims = [MUX;REG;INCR];;
+prims = 
+[|- MUX(switch,i1,i2,o) = (o = (switch -> i1 | i2));
+ |- REG(i,o) = DEL(o,i);
+ |- INCR(i,o) = (o = INC i)]
+: thm list
+
+#UNFOLD_RULE prims COUNT_IMP;;
+|- COUNT_IMP(sw,i,o) =
+   (?l1 l2. (l1 = (sw -> i | l2)) /\ DEL(o,l1) /\ (l2 = INC o))
+
+#UNWIND_RULE it;;
+|- COUNT_IMP(sw,i,o) =
+   (?l1 l2.
+     DEL(o,(sw -> i | INC o)) /\
+     (l1 = (sw -> i | INC o)) /\
+     (l2 = INC o))
+
+#PRUNE_RULE it;;
+|- COUNT_IMP(sw,i,o) = DEL(o,(sw -> i | INC o))
+
+#let EXPAND thl th =
+# let th1 = UNFOLD_RULE thl th
+# in
+# let th2 = UNWIND_RULE th1
+# in
+# PRUNE_RULE th2;;
+EXPAND = - : (thm list -> thm -> thm)
+
+#let COUNT_CORRECTNESS =
+# prove_thm
+#  (`COUNT_CORRECTNESS`,
+#   "COUNT_SPEC(sw,i,o) = COUNT_IMP(sw,i,o)",
+#   REWRITE_TAC[COUNT_SPEC;EXPAND prims COUNT_IMP]);;
+COUNT_CORRECTNESS = |- COUNT_SPEC(sw,i,o) = COUNT_IMP(sw,i,o)
+

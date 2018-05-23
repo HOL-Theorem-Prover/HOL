@@ -18,13 +18,13 @@ val it =
 > open arithmeticTheory;\quad\textit{\small\dots{}output elided\dots{}}
 > ADD_CLAUSES;
 val it =
-   \(\turn\) (0 + m = m) \(\land\) (m + 0 = m) \(\land\) (SUC m + n = SUC (m + n)) \(\land\)
+   \(\!\!\!{\turn}\!\!\!\!\) (0 + m = m) \(\land\) (m + 0 = m) \(\land\) (SUC m + n = SUC (m + n)) \(\land\)
      (m + SUC n = SUC (m + n)): thm
 
 > load "bagTheory";
 val it = (): unit
 > bagTheory.BAG_IN_BAG_INSERT;
-val it = \(\turn\) \(\forall\)b e1 e2. e1 <: BAG_INSERT e2 b \({\iff}\) (e1 = e2) \(\lor\) e1 <: b: thm
+val it = \(\!\!\!{\turn}\!\!\!\!\) \(\forall\)b e1 e2. e1 <: BAG_INSERT e2 b \({\iff}\) (e1 = e2) \(\lor\) e1 <: b: thm
 
 This case illustrates an interesting issue: the HOL system itself writes a message to standard out; we'd like to capture this so that it is properly sequenced with the other output.
 
@@ -101,11 +101,11 @@ val it =
 "foo",
 ``p /\bs{} q ==> p``,
 strip_tac);
-val foo = \(\turn\) p \(\land\) q \(\Rightarrow\) p: thm
+val foo = \(\!\!\!{\turn}\!\!\!\!\) p \(\land\) q \(\Rightarrow\) p: thm
 > foo;
-val it = \(\turn\) p \(\land\) q \(\Rightarrow\) p: thm
+val it = \(\!\!\!{\turn}\!\!\!\!\) p \(\land\) q \(\Rightarrow\) p: thm
 x /\bs{} y
 \(\alpha\) list
 :'a list
 > root2Theory.SQRT_2_IRRATIONAL
-val it = \(\turn\) \(\neg\)Rational (sqrt 2): thm
+val it = \(\!\!\!{\turn}\!\!\!\!\) \(\neg\)Rational (sqrt 2): thm

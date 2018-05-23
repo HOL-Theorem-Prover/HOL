@@ -1028,6 +1028,7 @@ fun mk_record tybase (ty,fields) =
        end
   else raise ERR "mk_record" "first arg. not a record type";
 
+exception OptionExn = Option
 open ThyDataSexp
 fun ty_to_key ty =
   let
@@ -1087,18 +1088,18 @@ fun toSEXP tyi =
 
 fun fromSEXP0 s =
   let
-    fun string (String s) = s | string _ = raise Option
-    fun ty (Type t) = t | ty _ = raise Option
-    fun tm (Term t) = t | tm _ = raise Option
-    fun thm (Thm th) = th | thm _ = raise Option
-    fun sthm (Thm th) = ORIG th | sthm _ = raise Option
+    fun string (String s) = s | string _ = raise OptionExn
+    fun ty (Type t) = t | ty _ = raise OptionExn
+    fun tm (Term t) = t | tm _ = raise OptionExn
+    fun thm (Thm th) = th | thm _ = raise OptionExn
+    fun sthm (Thm th) = ORIG th | sthm _ = raise OptionExn
     fun dest_option df (Sym "NONE") = NONE
       | dest_option df (List [Sym "SOME", v]) = SOME (df v)
-      | dest_option _ _ = raise Option
+      | dest_option _ _ = raise OptionExn
     fun dest_pair df1 df2 (List [s1, s2]) = (df1 s1, df2 s2)
-      | dest_pair _ _ _ = raise Option
+      | dest_pair _ _ _ = raise OptionExn
     fun H nm f x = f x
-       handle Option => raise ERR "fromSEXP" ("Bad encoding for field "^nm)
+       handle OptionExn => raise ERR "fromSEXP" ("Bad encoding for field "^nm)
   in
     case s of
         List [Sym "DFACTS",
@@ -1145,7 +1146,7 @@ fun fromSEXP0 s =
                     simpls = simpfrag.add_rwts simpfrag.empty_simpfrag
                                  (H "simpls" (map thm) fragrewr_list),
                     extra = extra}
-          ) handle Option => NONE)
+          ) handle OptionExn => NONE)
       | List [Sym "NFACTS", Sym "ty", Type typ,
               Sym "nchotomy", nch_option,
               Sym "induction", ind_option,
@@ -1164,7 +1165,7 @@ fun fromSEXP0 s =
                                 encode_option,
                      simpls = simpfrag.add_rwts simpfrag.empty_simpfrag
                                                 (H "simpls" (map thm) rewrs)}))
-         handle Option => NONE)
+         handle OptionExn => NONE)
       | _ => NONE
   end
 

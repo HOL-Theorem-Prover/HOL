@@ -721,7 +721,10 @@ val _ = let
   val (sgs, vf) = irule th g
   val verdict =
       case sgs of
-          [([], sg1), ([], sg2)] => aconv sg1 exsg1 andalso aconv sg2 exsg2
+          [([], sg)] => let val (sg1,sg2) = dest_conj sg
+                        in
+                          aconv sg1 exsg1 andalso aconv sg2 exsg2
+                        end
         | _ => false
 in
   if verdict then OK() else die "FAILED!"

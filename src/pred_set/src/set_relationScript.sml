@@ -1052,7 +1052,8 @@ val finite_acyclic_has_maximal_path = Q.store_thm
   ?y. y IN maximal_elements s r /\ (x, y) IN tc r`,
   ONCE_REWRITE_TAC [GSYM tc_SWAP', GSYM minimal_elements_SWAP,
     GSYM acyclic_SWAP] THEN REPEAT STRIP_TAC THEN
-  irule finite_acyclic_has_minimal_path THEN FIRST_ASSUM ACCEPT_TAC) ;
+  irule finite_acyclic_has_minimal_path THEN rpt conj_tac THEN
+  FIRST_ASSUM ACCEPT_TAC) ;
 
 val finite_prefix_po_has_minimal_path = Q.store_thm
 ("finite_prefix_po_has_minimal_path",
@@ -1105,10 +1106,10 @@ val linear_order_restrict = Q.store_thm ("linear_order_restrict",
 `!s r s'. linear_order r s ==> linear_order (rrestrict r s') (s INTER s')`,
   Ho_Rewrite.REWRITE_TAC
     [linear_order_def, rrestrict_def, domain_def, range_def,
-	      SUBSET_DEF, transitive_def, antisym_def,
-	       IN_GSPEC_IFF, PAIR_IN_GSPEC_IFF, IN_INTER] THEN
+              SUBSET_DEF, transitive_def, antisym_def,
+               IN_GSPEC_IFF, PAIR_IN_GSPEC_IFF, IN_INTER] THEN
   REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [] THEN_LT
-  LASTGOAL (FIRST_X_ASSUM irule THEN FIRST_ASSUM ACCEPT_TAC) THEN
+  LASTGOAL (FIRST_X_ASSUM irule THEN rpt conj_tac >> FIRST_ASSUM ACCEPT_TAC) >>
   RES_TAC) ;
 
 val strict_linear_order_restrict = Q.store_thm ("strict_linear_order_restrict",
@@ -1118,10 +1119,10 @@ val strict_linear_order_restrict = Q.store_thm ("strict_linear_order_restrict",
   strict_linear_order (rrestrict r s') (s INTER s')`,
   Ho_Rewrite.REWRITE_TAC
     [strict_linear_order_def, rrestrict_def, domain_def, range_def,
-	      SUBSET_DEF, transitive_def, antisym_def,
-	       IN_GSPEC_IFF, PAIR_IN_GSPEC_IFF, IN_INTER] THEN
+              SUBSET_DEF, transitive_def, antisym_def,
+               IN_GSPEC_IFF, PAIR_IN_GSPEC_IFF, IN_INTER] THEN
   REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [] THEN_LT
-  LASTGOAL (FIRST_X_ASSUM irule THEN FIRST_ASSUM ACCEPT_TAC) THEN
+  LASTGOAL (FIRST_X_ASSUM irule >> rpt conj_tac >> FIRST_ASSUM ACCEPT_TAC) THEN
   RES_TAC) ;
 
 val linear_order_dom_rg = Q.store_thm ("linear_order_dom_rg",

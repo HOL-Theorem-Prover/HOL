@@ -20,6 +20,9 @@ sig
   val inst_stac       : string -> goal -> string -> string
   val is_absarg_stac  : string -> bool
 
+  (* abstraction for export *)
+  val pe_abs : string -> (string * (string * thm) list list) 
+
 end
 
 

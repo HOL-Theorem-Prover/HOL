@@ -13,12 +13,19 @@ fun hm s =
     else ()
   end
 
+fun check_for_cheated () =
+  let
+    val istrm = TextIO.openIn "output"
+    val outstr = TextIO.inputAll istrm before TextIO.closeIn istrm
+  in
+    String.isSubstring "CHEATED" outstr
+  end
+
 val _ =
     let
       val _ = hm "cleanAll"
       val _ = hm "> output"
-      val res = OS.Process.system ("../../../../cmp/cmp.exe output expected")
     in
-      if OS.Process.isSuccess res then OK()
+      if check_for_cheated () then OK()
       else die "cmp FAILED"
     end

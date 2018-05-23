@@ -105,6 +105,7 @@ sig
    val op_mk_set : ('a -> 'a -> bool) -> 'a list -> 'a list
    val op_set_diff : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
    val op_union : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
+   val option_compare : 'a cmp -> 'a option cmp
    val pair : 'a -> 'b -> 'a * 'b
    val pair_compare : ('a cmp * 'b cmp) -> ('a * 'b) cmp
    val pair_of_list : 'a list -> 'a * 'a

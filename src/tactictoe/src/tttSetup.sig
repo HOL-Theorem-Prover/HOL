@@ -7,7 +7,7 @@ sig
   val ttt_recprove_flag : bool ref
   val ttt_rectac_time   : real ref
   val ttt_recproof_time : real ref
-  val ttt_print_proof_flag: bool ref
+  val ttt_printproof_flag : bool ref
   (* orthogonalization *)
   val ttt_ortho_flag   : bool ref
   val ttt_ortho_radius : int ref

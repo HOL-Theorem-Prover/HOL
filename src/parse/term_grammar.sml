@@ -452,7 +452,7 @@ val stdhol : grammar =
                         block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                         paren_style = Always}]),
             (NONE,
-             CLOSEFIX [{term_name = "",
+             CLOSEFIX [{term_name = recd_lform_name,
                         elements = [RE (TOK "<|"),
                                     ListForm {
                                       separator = [RE (TOK ";"),
@@ -671,7 +671,13 @@ end
 
 
 fun remove_tok P tok r = let
-  fun rels_safe rels = not (List.exists (fn e => e = TOK tok) rels)
+  fun rel_matches rel =
+    case rel of
+        TOK t => t = tok
+      | ListTM{cons,nilstr,sep,...} => cons = tok orelse nilstr = tok orelse
+                                       sep = tok
+      | _ => false
+  fun rels_safe rels = not (List.exists rel_matches rels)
   fun rr_safe ({term_name = s, elements,...}:rule_record) =
     not (P s) orelse rels_safe (rule_elements elements)
   fun binder_safe b =
@@ -754,7 +760,7 @@ fun rules_for G nm = let
   fun search_rrlist rf acc rrl = let
     fun check rrec a =
       if #term_name rrec = nm then rrec2delta rf rrec :: a
-      else if #term_name rrec = "" then
+      else if term_name_is_lform (#term_name rrec) then
         case extract_lspec (rule_elements (#elements rrec)) of
             NONE => a
           | SOME {cons,nilstr,...} => if nm = cons orelse nilstr = nm then
@@ -860,12 +866,14 @@ fun listform_to_rule (lform : listspec) =
     val _ = app check_els [separator, leftdelim, rightdelim]
     val _ = app one_tok [separator, leftdelim, rightdelim]
     val els =
-        leftdelim @ [ListForm { separator = separator,
-                                block_info = binfo,
-                                cons = cons, nilstr = nilstr}] @
-        rightdelim
+        [PPBlock (leftdelim @ [ListForm { separator = separator,
+                                          block_info = binfo,
+                                          cons = cons, nilstr = nilstr}] @
+                  rightdelim,
+                  binfo)]
   in
-    {term_name = "", pp_elements = els, fixity = Closefix,
+    {term_name = GrammarSpecials.mk_lform_name {cons=cons,nilstr=nilstr},
+     pp_elements = els, fixity = Closefix,
      block_style = (AroundEachPhrase, binfo),
      paren_style = OnlyIfNecessary}
   end
@@ -1177,13 +1185,13 @@ fun prettyprint_grammar_rules tmprint (GRS(rules,specials)) = let
           | SOME {fake,original = SOME{Thy,Name}} =>
               Thy ^ "$" ^ Name ^ " - %" ^ fake ^ "%"
 
-    val tmid_suffix0 = "  ["^ special_case (#term_name rr)^"]"
+    val tmid_suffix0 = "["^ special_case (#term_name rr)^"]"
     val tmid_suffix =
       case rels of
         [TOK s] => if s <> #term_name rr then tmid_suffix0 else ""
       | _ => tmid_suffix0
   in
-    block PP.INCONSISTENT 2 (
+    block PP.INCONSISTENT 0 (
       add_string pfx >>
       pr_list (fn (TOK s) => add_string ("\""^s^"\"")
                 | TM => add_string "TM"
@@ -1192,7 +1200,7 @@ fun prettyprint_grammar_rules tmprint (GRS(rules,specials)) = let
                               String.concatWith "," [nilstr,cons,sep] ^
                               ">"))
               (add_string " ") rels >>
-      add_string sfx >>
+      add_string sfx >> add_break(2,4) >>
       add_string tmid_suffix
     )
   end
@@ -1200,7 +1208,7 @@ fun prettyprint_grammar_rules tmprint (GRS(rules,specials)) = let
 
   fun pprint_rrl (m:ruletype_info) (rrl : rule_record list) =
     block PP.INCONSISTENT 0 (
-      pr_list (pprint_rr m) (add_string " |" >> add_break(1,0)) rrl
+      pr_list (pprint_rr m) (add_break(1,0) >> add_string "| ") rrl
     )
 
   fun print_binder b = let
@@ -1215,13 +1223,13 @@ fun prettyprint_grammar_rules tmprint (GRS(rules,specials)) = let
     fun one_binder (s, tnminfo) =
         add_string (quote s ^ " <..binders..> " ^ endb ^ " TM" ^ tnminfo)
   in
-    pr_list one_binder (add_string " |" >> add_break (1,0)) bnames
+    pr_list one_binder (add_break (1,0) >> add_string "| ") bnames
   end
 
 
   fun print_binderl bl =
     block PP.INCONSISTENT 0 (
-      pr_list print_binder (add_string " |" >> add_break (1,0)) bl
+      pr_list print_binder (add_break (1,0) >> add_string "| ") bl
     )
 
 
@@ -1244,7 +1252,7 @@ fun prettyprint_grammar_rules tmprint (GRS(rules,specials)) = let
       in
         block CONSISTENT 0 (
           pprint_rrl add_both rrl >>
-          add_break (3,0) >>
+          add_break (3,4) >>
           add_string ("("^assocstring^"associative)")
         )
       end
@@ -1277,8 +1285,8 @@ fun prettyprint_grammar_rules tmprint (GRS(rules,specials)) = let
   in
     block CONSISTENT 0 (
       add_string precstr >>
-      add_string "TM  ::=  " >>
-      pprint_grule rule
+      add_string "TM  ::= " >>
+      block CONSISTENT 13 (pprint_grule rule)
     )
   end
 
@@ -1304,30 +1312,22 @@ fun prettyprint_grammar tmprint (G :grammar) = let
         List.foldl (fn (oi,n) => Int.max(UTF8.size (#1 oi), n))
                    0
                    oinfo
-      fun pr_ov (overloaded_op,
+      fun pr_ov (overloaded_op0,
                 (r as {actual_ops,...}:Overload.overloaded_op_info)) =
-       let
-        fun pr_name t = let
-          val {Thy,Name,Ty} = Term.dest_thy_const t
+        let
+          val overloaded_op =
+              if overloaded_op0 = "" then "  <won't print>  "
+              else overloaded_op0
+          fun pr_name t =
+            trace ("types", 1) (tmprint (strip_overload_info G)) t
         in
-          case Term.decls Name of
-            [] => raise Fail "term_grammar.prettyprint: should never happen"
-          | [_] => add_string Name
-          | _ => add_string (Thy ^ "$" ^ Name)
-        end handle HOL_ERR _ => (add_string "(" >>
-                                 trace ("types", 1)
-                                       (tmprint (strip_overload_info G))
-                                       t >>
-                                 add_string ")")
-      in
-        block INCONSISTENT 0 (
-          add_string (overloaded_op^
-                      nblanks (max - UTF8.size overloaded_op)^
-                      " -> ") >>
-          add_break(1,2) >>
-          block INCONSISTENT 0 (pr_list pr_name (add_break (1,0)) actual_ops)
-        )
-      end
+          block INCONSISTENT (max + 5) (
+            add_string (overloaded_op^
+                        nblanks (max - UTF8.size overloaded_op)^
+                        " ->  ") >>
+            pr_list pr_name (add_break (1,0)) actual_ops
+          )
+        end
     in
       add_newline >>
       add_string "Overloading:" >>
@@ -1344,7 +1344,7 @@ fun prettyprint_grammar tmprint (G :grammar) = let
       add_string "User printing functions:" >>
       add_newline >>
       add_string "  " >>
-      block INCONSISTENT 0 (
+      block INCONSISTENT 2 (
         pr_list pr add_newline (FCNet.itnet cons printers [])
       )
   end

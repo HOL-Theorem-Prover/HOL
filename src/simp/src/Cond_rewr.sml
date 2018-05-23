@@ -146,10 +146,10 @@ fun ac_term_ord(tm1,tm2) =
       fn solver => fn stack => fn tm =>
        (let val conditional_eqn = instth tm
             val (conditions,eqn) = strip_imp (concl conditional_eqn)
-	    val _ = if exists (C (op_mem aconv) stack) conditions
-			then (trace(1, TEXT "looping - cut");
+            val _ = if exists (C (op_mem aconv) stack) conditions
+                        then (trace(1, TEXT "looping - cut");
                               failwith "looping!") else ()
-	    val _ = if length stack + length conditions > (!stack_limit)
+            val _ = if length stack + length conditions > (!stack_limit)
                     then (trace(1, TEXT "looping - stack limit reached");
                           failwith "stack limit") else ()
             val (l,r) = dest_eq eqn
@@ -167,7 +167,7 @@ fun ac_term_ord(tm1,tm2) =
                     else ()
             val _ = if null conditions then ()
                     else trace(if isperm then 2 else 1, REWRITING(tm,th))
-	    val new_stack = conditions@stack
+            val new_stack = conditions@stack
             fun solver' condition =
                  let val _   = trace(2,SIDECOND_ATTEMPT condition)
                      val res = solver new_stack condition
@@ -187,7 +187,7 @@ fun ac_term_ord(tm1,tm2) =
                       then used_rewrites := th :: !used_rewrites
                       else ()
         in trace(if isperm then 3 else 2,PRODUCE(tm,"rewrite",final_thm));
-	    final_thm
+            final_thm
         end
         handle e => WRAP_ERR("COND_REWR_CONV (application)",e))
       end
@@ -300,8 +300,8 @@ fun IMP_EQ_CANON (thm,bnd) = let
               let
                 val base =
                     if null (subtract (free_vars r) (free_varsl (l::hyp thm)))
-		    then undisch_thm
-		    else
+                    then undisch_thm
+                    else
                       (trace(1,IGNORE("rewrite with existential vars (adding \
                                       \EQT version(s))",thm));
                        EQT_INTRO undisch_thm)

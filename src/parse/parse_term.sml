@@ -22,7 +22,7 @@ fun noloc s = (s, locn.Loc_None)
 fun qfail x = error (noloc "") x
 fun WARNloc_string loc s = (s, loc)
 
-
+fun PRINT s = print (s ^ "\n")
 
 exception Failloc of (locn.locn * string)
 fun FAILloc locn s = raise Failloc (locn, s)
@@ -784,10 +784,14 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
       in
         case x of
           Ident s =>
-            if String.sub(s,0) = #"$" then let
+            if String.sub(s,0) = #"$" andalso
+               CharVector.exists (not o equal #"$") s
+            then
+              let
                 val locn = locn.move_start 1 locn
               in
-              (Id, locn, SOME (Token (Ident (String.extract(s,1,NONE))))) end
+                (Id, locn, SOME (Token (Ident (String.extract(s,1,NONE)))))
+              end
             else if s = res_quanop andalso vs_state = VSRES_VS then
               (ResquanOpTok, locn, SOME tt)
             else if s = type_intro then (TypeColon, locn, SOME tt)
@@ -1019,7 +1023,7 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
         val newterm =
             case rule of
                 Normal (_, s) =>
-                  if s = "" then
+                  if term_name_is_lform s then
                     if length args_w_seglocs <> 1 then
                       raise Fail
                             "seglocs extraction: rule with more than one TM"

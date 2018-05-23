@@ -192,6 +192,7 @@ fun wrap_tactics_in name qtac goal =
   Globalizing theorems and create a new theorem if the value does not exists.
   ----------------------------------------------------------------------------*)
 
+(*
 fun save_tactictoe_thm thm =
   let
     val name = "tactictoe_thm_" ^ int_to_string (!tactictoe_thm_counter)
@@ -201,6 +202,7 @@ fun save_tactictoe_thm thm =
     ignore (save_thm (name,thm));
     String.concatWith " " ["(","DB.fetch",mlquote cthy,mlquote name,")"]
   end
+*)
 
 fun depid_of_thm thm =
   (Dep.depid_of o Tag.dep_of o Thm.tag) thm
@@ -277,17 +279,39 @@ fun end_record_proof name g =
       (app update_tacdata) lbl2
   end
 
-fun string_of_step (stac,t,g,gl) =
-    (string_of_goal g ^ stac ^ " tactic; ")
+fun pe_thm file (s,thm) =
+  (
+  append_endline file ("  thm_lbl: " ^ s);
+  append_endline file ("  thm_value: " ^ string_of_goal (dest_thm thm))
+  )
+
+fun pe_thml file thml =
+  (
+  append_endline file "Thm_list";
+  app (pe_thm file) thml
+  )
+
+fun pe_thmll file thmll = app (pe_thml file) thmll
 
 fun print_proof name g =
   let
     val lbl1 = map fst (rev (!goalstep_glob))
     val set_name = if !thm_counter mod 5 = 0 then "test/" else "train/"
+    val srecord_dir  = ttt_record_dir ^ "/srecord"
+    val _    = mkDir_err srecord_dir
+    val dir = srecord_dir ^ "/" ^ set_name
+    val file = dir ^ "/" ^ current_theory () ^ "." ^ name
+    fun f (stac,t,g,gl) =
+      let val (astac, thmll) = pe_abs stac in
+        append_endline file ("tactic: " ^ stac);
+        append_endline file ("goal: " ^ string_of_goal g);
+        append_endline file ("abs_tactic: " ^ astac);
+        pe_thmll file thmll;
+        append_endline file ""
+      end
   in
-    append_file (ttt_record_dir ^ "/srecord/" ^ set_name
-                 ^ current_theory () ^ "." ^ name)
-                (String.concatWith " \n " (map string_of_step lbl1) ^ "\n")
+    erase_file file;
+    app f lbl1
   end
 
 fun clear_tac tac g =
@@ -364,9 +388,8 @@ fun record_proof name lflag tac1 tac2 g =
         let
           val (r,t) = add_time tac1 g
           val _ = debug_proof ("Recording proof time: " ^ Real.toString t)
-          val _ = end_record_proof name g
-          val _ = if !ttt_print_proof_flag then
-                      print_proof name g
+          val _ = if !ttt_printproof_flag
+                  then print_proof name g
                   else end_record_proof name g
         in
           if null (fst r) then r
