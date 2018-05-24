@@ -823,6 +823,45 @@ val set_exp_card_cong = store_thm(
   SELECT_ELIM_TAC >> simp[] >>
   metis_tac [optionTheory.SOME_11]);
 
+val set_exp_cardle_cong = Q.store_thm(
+  "set_exp_cardle_cong",
+  ‘((b = ∅) ⇒ (d = ∅)) ⇒ a <<= b ∧ c <<= d ⇒ a ** c <<= b ** d’,
+  simp[set_exp_def, cardleq_def] >> strip_tac >>
+  disch_then (CONJUNCTS_THEN2 (qx_choose_then `abf` assume_tac)
+                              (qx_choose_then `cdf` assume_tac)) >>
+  qexists_tac ‘
+    λcaf. λdi. if di ∈ d then
+                 case some ci. ci ∈ c ∧ (cdf ci = di) of
+                     NONE => if b = ∅ then NONE else SOME (CHOICE b)
+                   | SOME ci => OPTION_MAP abf (caf ci)
+               else NONE’ >>
+  Cases_on ‘b = ∅’ >> fs[] >> rfs[]
+  >- simp[INJ_DEF, FUN_EQ_THM] >>
+  rw[INJ_DEF]
+  >- (rename [‘INJ cdf c d’, ‘di ∈ d’] >>
+      simp[TypeBase.case_eq_of“:α option”] >>
+      dsimp[] >>
+      Cases_on ‘∃ci. ci ∈ c ∧ (cdf ci = di)’ >> fs[]
+      >- (‘(some ci. ci ∈ c ∧ (cdf ci = di)) = SOME ci’
+             by (DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
+                 metis_tac[INJ_DEF]) >>
+          simp[] >>
+          ‘∃ai. ai ∈ a ∧ (caf ci = SOME ai)’ by metis_tac[] >>
+          metis_tac[INJ_DEF]) >>
+      ‘(some ci. ci ∈ c ∧ (cdf ci = di)) = NONE’
+         by (DEEP_INTRO_TAC optionTheory.some_intro >> simp[]) >>
+      simp[CHOICE_DEF]) >>
+  rename [‘caf1 = caf2’] >> simp[FUN_EQ_THM] >>
+  qx_gen_tac ‘ci’ >> Cases_on‘ci ∈ c’ >> simp[] >>
+  ‘cdf ci ∈ d’ by metis_tac[INJ_DEF] >>
+  ‘(some ci'. ci' ∈ c ∧ (cdf ci' = cdf ci)) = SOME ci’
+    by (DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
+        metis_tac[INJ_DEF]) >>
+  first_assum (fn th => Q_TAC (mp_tac o AP_THM th) ‘cdf ci’) >> BETA_TAC >>
+  simp[] >>
+  ‘(∃a1. (caf1 ci = SOME a1) ∧ a1 ∈ a) ∧ (∃a2. (caf2 ci = SOME a2) ∧ a2 ∈ a)’
+    by metis_tac[] >> simp[] >> metis_tac[INJ_DEF]);
+
 val exp_INSERT_cardeq = store_thm(
   "exp_INSERT_cardeq",
   ``e ∉ s ⇒ (A ** (e INSERT s) ≈ A × A ** s)``,
@@ -1230,5 +1269,176 @@ val disjoint_countable_decomposition = store_thm(
   `g_nums ⊆ BIGUNION M` by (simp[SUBSET_DEF] >> metis_tac[]) >>
   `g 0 IN g_nums` by simp[Abbr`g_nums`] >>
   metis_tac[IN_DIFF, SUBSET_DEF]);
+
+val count_cardle = Q.store_thm(
+  "count_cardle[simp]",
+  ‘count n <<= A ⇔ (FINITE A ⇒ n <= CARD A)’,
+  simp[cardleq_def] >> Cases_on ‘FINITE A’ >> simp[]
+  >- (eq_tac
+      >- metis_tac[DECIDE “x:num ≤ y ⇔ ¬(y < x)”, PHP, CARD_COUNT,
+                   FINITE_COUNT] >>
+      metis_tac[FINITE_COUNT, CARDLEQ_CARD, cardleq_def, CARD_COUNT]) >>
+  pop_assum mp_tac >> qid_spec_tac ‘A’ >> Induct_on ‘n’ >>
+  simp[] >> rpt strip_tac >> simp[COUNT_SUC, INJ_INSERT] >>
+  first_x_assum (drule_then strip_assume_tac) >>
+  ‘∃a. a ∈ A ∧ ∀m. m < n ⇒ f m ≠ a’
+     by (‘∃a. a ∈ (A DIFF IMAGE f (count n))’
+           suffices_by (simp[] >> metis_tac[]) >>
+         irule INFINITE_INHAB >>
+         metis_tac [IMAGE_FINITE, FINITE_COUNT, FINITE_DIFF_down]) >>
+  qexists_tac ‘λm. if m < n then f m else a’ >> simp[] >> conj_tac
+  >- fs[INJ_DEF] >>
+  rw[])
+
+val CANTOR = Q.store_thm(
+  "CANTOR[simp]",
+  ‘A ≺ POW A’,
+  strip_tac >> fs[cardleq_def, INJ_IFF, IN_POW] >>
+  qabbrev_tac ‘CS = {f s | s | s ⊆ A ∧ f s ∉ s}’ >>
+  ‘∀s. s ∈ CS ⇔ ∃t. t ⊆ A ∧ f t ∉ t ∧ (f t = s)’
+    by (simp[Abbr`CS`] >> metis_tac[]) >>
+  ‘CS ⊆ A’ by (simp[Abbr`CS`] >> ONCE_REWRITE_TAC[SUBSET_DEF] >>
+               simp[PULL_EXISTS]) >>
+  irule (DECIDE “(p ⇒ ¬p) ∧ (¬p ⇒ p) ⇒ Q”) >>
+  qexists_tac ‘f CS ∈ CS’ >> conj_tac >> strip_tac >>
+  qpat_x_assum ‘∀s. s ∈ CS ⇔ P’ (fn th => REWRITE_TAC [th]) >>
+  csimp[] >> simp[GSYM IMP_DISJ_THM]);
+
+val cardlt_cardle = Q.store_thm(
+  "cardlt_cardle",
+  ‘A ≺ B ⇒ A <<= B’,
+  metis_tac[cardlt_lenoteq]);
+
+val set_exp_product = Q.store_thm(
+  "set_exp_product",
+  ‘(A ** B1) ** B2 =~ A ** (B1 CROSS B2)’,
+  simp[cardeq_def] >>
+  qexists_tac ‘λcf bp. OPTION_BIND (cf (SND bp)) (λf. f (FST bp))’ >>
+  simp[BIJ_DEF, INJ_IFF, SURJ_DEF, set_exp_def, FORALL_PROD] >>
+  rpt strip_tac
+  >- metis_tac[]
+  >- metis_tac[]
+  >- metis_tac[]
+  >- (simp[FUN_EQ_THM, FORALL_PROD, EQ_IMP_THM] >> rw[] >>
+      rename [‘f1 a = f2 a’] >>
+      Cases_on ‘a ∈ B2’ >> simp[] >>
+      rpt (first_x_assum (drule_then strip_assume_tac)) >>
+      rename [‘f1 a = f2 a’, ‘f1 a = SOME bf1’, ‘f2 a = SOME bf2’] >>
+      simp[FUN_EQ_THM] >> qx_gen_tac ‘b’ >> Cases_on ‘b ∈ B1’ >> simp[] >>
+      rpt (first_x_assum (drule_then strip_assume_tac)) >>
+      first_x_assum (qspecl_then [‘b’, ‘a’] mp_tac) >> simp[])
+  >- metis_tac[]
+  >- metis_tac[]
+  >- metis_tac[] >>
+  rename [‘uf (_,_) = NONE’] >>
+  qexists_tac ‘λb2. if b2 ∈ B2 then
+                      SOME (λb1. if b1 ∈ B1 then uf(b1,b2) else NONE)
+                    else NONE’ >> simp[] >>
+  simp[FUN_EQ_THM, FORALL_PROD] >> qx_genl_tac [‘b1’, ‘b2’] >>
+  Cases_on ‘b2 ∈ B2’ >> simp[] >> rw[]);
+
+val COUNT_EQ_EMPTY = Q.store_thm(
+  "COUNT_EQ_EMPTY[simp]",
+  ‘(count n = {}) <=> (n = 0)’,
+  simp[EXTENSION, EQ_IMP_THM] >> CONV_TAC CONTRAPOS_CONV >> simp[] >>
+  strip_tac >> qexists_tac ‘n - 1’ >> simp[]);
+
+val POW_EQ_X_EXP_X = Q.store_thm(
+  "POW_EQ_X_EXP_X",
+  ‘INFINITE A ⇒ POW A ≈ A ** A’,
+  strip_tac >> irule cardleq_ANTISYM >> conj_tac
+  >- (‘POW A =~ count 2 ** A’ by simp[POW_TWO_set_exp] >>
+      ‘count 2 ** A <<= A ** A’
+        suffices_by metis_tac[CARDEQ_CARDLEQ, cardeq_REFL] >>
+      irule set_exp_cardle_cong >> simp[]) >>
+  ‘POW A =~ count 2 ** A’ by simp[POW_TWO_set_exp] >>
+  ‘A ** A <<= count 2 ** A’
+    suffices_by metis_tac[CARDEQ_CARDLEQ, cardeq_REFL] >>
+  ‘A ≺ POW A’ by simp[] >>
+  ‘A <<= POW A’ by simp[cardlt_cardle] >>
+  ‘A ** A <<= POW A ** A’
+    by metis_tac[set_exp_cardle_cong, cardleq_REFL, POW_EMPTY] >>
+  ‘POW A ** A <<= count 2 ** A’ suffices_by metis_tac [cardleq_TRANS] >>
+  ‘(count 2 ** A) ** A <<= count 2 ** A’
+    suffices_by metis_tac[CARDEQ_CARDLEQ, cardeq_REFL, set_exp_card_cong] >>
+  ‘count 2 ** (A CROSS A) <<= count 2 ** A’
+    suffices_by metis_tac[CARDEQ_CARDLEQ, cardeq_REFL, set_exp_product] >>
+  irule set_exp_cardle_cong >> simp[] >> irule CARDEQ_SUBSET_CARDLEQ >>
+  simp[SET_SQUARED_CARDEQ_SET]);
+
+(* bijections modelled as functions into options so that they can be everywhere
+   NONE outside of their domains *)
+val bijns_def = Define‘
+  bijns A = { f | BIJ (THE o f) A A ∧ ∀a. a ∈ A ⇔ ∃b. f a = SOME b}
+’;
+
+val cardeq_bijns_cong = Q.store_thm(
+  "cardeq_bijns_cong",
+  ‘A =~ B ⇒ bijns A =~ bijns B’,
+  strip_tac >> ONCE_REWRITE_TAC [cardeq_SYM] >>
+  fs[cardeq_def, bijns_def] >>
+  RULE_ASSUM_TAC (REWRITE_RULE [BIJ_IFF_INV]) >> fs[] >>
+  qexists_tac ‘λbf a. if a ∈ A then SOME (g (THE (bf (f a)))) else NONE’ >>
+  simp[BIJ_DEF, INJ_IFF, SURJ_DEF] >> rpt strip_tac >> csimp[]
+  >- metis_tac[]
+  >- metis_tac[]
+  >- (simp[EQ_IMP_THM, FUN_EQ_THM] >> rw[] >>
+      rename [‘bf1 b = bf2 b’] >> reverse (Cases_on ‘b ∈ B’)
+      >- metis_tac[optionTheory.option_nchotomy] >>
+      ‘b = f (g b)’ by metis_tac[] >> pop_assum SUBST1_TAC >>
+      ‘g b ∈ A’ by metis_tac[] >> first_x_assum (qspec_then ‘g b’ mp_tac) >>
+      simp[] >>
+      ‘(∃b1'. bf1 b = SOME b1') ∧ (∃b2'. bf2 b = SOME b2')’ by metis_tac[] >>
+      simp[] >> ‘b1' ∈ B ∧ b2' ∈ B’ by metis_tac[optionTheory.THE_DEF] >>
+      metis_tac[])
+  >- metis_tac[]
+  >- metis_tac[]
+  >- (simp[PULL_EXISTS] >> csimp[] >>
+      rename [‘THE (ff _) = _’] >>
+      qexists_tac ‘λb. if b ∈ B then SOME (f (THE (ff (g b)))) else NONE’ >>
+      simp[] >> rpt strip_tac
+      >- metis_tac[optionTheory.THE_DEF]
+      >- metis_tac[optionTheory.THE_DEF] >>
+      simp[FUN_EQ_THM] >>
+      metis_tac[optionTheory.THE_DEF, optionTheory.option_nchotomy]))
+
+val bijections_cardeq = Q.store_thm(
+  "bijections_cardeq",
+  ‘INFINITE s ⇒ bijns s ≈ POW s’,
+  strip_tac >>
+  irule cardleq_ANTISYM >> conj_tac
+  >- (‘POW s =~ s ** s’ by simp[POW_EQ_X_EXP_X] >>
+      ‘bijns s <<= s ** s’ suffices_by metis_tac[CARDEQ_CARDLEQ, cardeq_REFL] >>
+      irule SUBSET_CARDLEQ >>
+      simp[bijns_def, SUBSET_DEF, BIJ_DEF, INJ_IFF, set_exp_def] >>
+      qx_gen_tac `f` >> rpt strip_tac
+      >- (simp[] >> rename [‘f a = SOME b’] >> ‘a ∈ s’ by metis_tac[] >>
+          ‘b ∈ s’ by metis_tac[optionTheory.THE_DEF] >> metis_tac[]) >>
+      qmatch_abbrev_tac ‘f x = NONE’ >> Cases_on ‘f x’ >> simp[] >> fs[]) >>
+  ‘s =~ {T;F} CROSS s’ by simp[SET_SUM_CARDEQ_SET] >>
+  ‘bijns s =~ bijns ({T;F} CROSS s)’ by metis_tac[cardeq_bijns_cong] >>
+  ‘POW s <<= bijns ({T;F} CROSS s)’
+    suffices_by metis_tac[CARDEQ_CARDLEQ,cardeq_REFL] >>
+  simp[cardleq_def] >>
+  qexists_tac ‘λss (bool,a). if a ∈ s then if a ∈ ss then SOME (bool,a)
+                                           else SOME (¬bool,a)
+                             else NONE’ >>
+  simp[INJ_IFF, IN_POW, bijns_def] >> rpt strip_tac
+  >- (simp[BIJ_DEF, INJ_IFF, SURJ_DEF, FORALL_PROD] >> rpt strip_tac
+      >- rw[]
+      >- (rw[] >> metis_tac[])
+      >- rw[] >>
+      simp[pairTheory.EXISTS_PROD] >> csimp[] >>
+      simp_tac (bool_ss ++ boolSimps.COND_elim_ss) [] >> simp[] >>
+      dsimp[] >> csimp[] >> metis_tac[])
+  >- (rename [‘SND ba ∈ s’] >> Cases_on ‘ba’ >> simp[pairTheory.EXISTS_PROD] >>
+      dsimp[TypeBase.case_eq_of bool] >> metis_tac[]) >>
+  simp[EQ_IMP_THM] >> simp[SimpL ``(==>)``, FUN_EQ_THM] >> rw[] >>
+  simp[EXTENSION] >> qx_gen_tac `a` >> reverse (Cases_on `a ∈ s`)
+  >- metis_tac[SUBSET_DEF] >>
+  rename [‘a ∈ ss1 ⇔ a ∈ ss2’] >>
+  Cases_on `a ∈ ss1` >> simp[]
+  >- (first_x_assum (qspecl_then [‘T’, ‘a’] mp_tac) >> simp[] >> rw[])
+  >- (first_x_assum (qspecl_then [‘F’, ‘a’] mp_tac) >> simp[] >> rw[]));
 
 val _ = export_theory()
