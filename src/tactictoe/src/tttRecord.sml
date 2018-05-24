@@ -279,19 +279,15 @@ fun end_record_proof name g =
       (app update_tacdata) lbl2
   end
 
-fun pe_thm file (s,thm) =
-  (
-  append_endline file ("  thm_lbl: " ^ s);
-  append_endline file ("  thm_value: " ^ string_of_goal (dest_thm thm))
-  )
-
 fun pe_thml file thml =
-  (
-  append_endline file "Thm_list";
-  app (pe_thm file) thml
-  )
+  let val (thm_lbls, thm_values) = unzip thml in
+    append_file file (String.concatWith " , " thm_lbls);
+    append_file file " thm_lbls; ";
+    append_file file (String.concatWith " , " (map nnstring_of_thm thm_values));
+    append_file file " thm_values; "
+  end
 
-fun pe_thmll file thmll = app (pe_thml file) thmll
+fun pe_thmll file thmll = pe_thml file (List.concat thmll)
 
 fun print_proof name g =
   let
@@ -303,9 +299,9 @@ fun print_proof name g =
     val file = dir ^ "/" ^ current_theory () ^ "." ^ name
     fun f (stac,t,g,gl) =
       let val (astac, thmll) = pe_abs stac in
-        append_endline file ("tactic: " ^ stac);
-        append_endline file ("goal: " ^ string_of_goal g);
-        append_endline file ("abs_tactic: " ^ astac);
+        append_file file (stac ^ " stac; ");
+        append_file file (string_of_goal g);
+        append_file file (astac ^ " abs_tactic; ");
         pe_thmll file thmll;
         append_endline file ""
       end

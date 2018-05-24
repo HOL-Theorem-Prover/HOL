@@ -26,7 +26,7 @@ sig
 
   val ttt_eproof_dir   : string
   val ttt_proof_dir    : string
-  
+
   val ttt_buildheap_dir : string
    (* commands *)
   val mkDir_err        : string -> unit
@@ -117,6 +117,8 @@ sig
   val feav_compare : (feav_t * feav_t) -> order
 
   (* input/output *)
+  val nnstring_of_term : term -> string
+  val nnstring_of_thm : thm -> string
   val string_of_goal : goal -> string
   val string_of_bool : bool -> string
   val readl : string -> string list

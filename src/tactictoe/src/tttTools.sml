@@ -248,6 +248,22 @@ fun basic_print_term (tm,acc) =
 
 fun nnstring_of_term tm = finalise (basic_print_term (tm, []))
 
+fun nnstring_of_thm thm =
+  let
+    val (asm,w) = dest_thm thm
+    val mem = !show_types
+    val _   = show_types := false
+    val s   =
+      (if asm = []
+         then " [ ] "
+         else " [ `` " ^ String.concatWith " ``,`` " (map nnstring_of_term asm) ^
+              " `` ] ")
+    val s1 = "(" ^ s ^ "," ^ " `` " ^ (nnstring_of_term w) ^ " `` )"
+  in
+    show_types := mem;
+    s1
+  end
+
 fun string_of_goal (asm,w) =
   let
     val mem = !show_types
