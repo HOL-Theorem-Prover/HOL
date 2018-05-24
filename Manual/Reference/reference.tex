@@ -3,13 +3,21 @@
 % =====================================================================
 
 \documentclass[12pt,fleqn]{book}
+
+%  Font related packages
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}        % This is necessary for the correct copy-paste of 8-bit characters
+\usepackage{lmodern}            % Latin Modern fonts (better than CM-Super)
+
 %\usepackage{amsmath}
-\usepackage{alltt}
 \usepackage{../LaTeX/layout}
 \usepackage{makeidx}
 \usepackage{alltt}
 \usepackage{fancyvrb}
 \usepackage{graphicx}
+
+% PDF metadata
+\usepackage[pdftitle={The HOL System REFERENCE}]{hyperref}
 
 % ---------------------------------------------------------------------
 % Read in defined macros and commands
