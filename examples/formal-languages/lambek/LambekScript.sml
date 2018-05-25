@@ -2240,31 +2240,31 @@ val arrowToNatDed = store_thm (
 fun enable_grammar () = let
 in
     add_rule { term_name = "arrow", fixity = Infix (NONASSOC, 450),
-	pp_elements = [ HardSpace 0, TOK ":-", BreakSpace(1,0), TM, BreakSpace(1,0), TOK "-->",
+	pp_elements = [ BreakSpace(1,0), TOK ":-", BreakSpace(1,0), TM, BreakSpace(1,0), TOK "-->",
 			BreakSpace(1,0) ],
 	paren_style = OnlyIfNecessary,
 	block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)) };
 
     add_rule { term_name = "natDed", fixity = Infix (NONASSOC, 450),
-	pp_elements = [ HardSpace 0, TOK ":-", BreakSpace(1,0), TM, BreakSpace(1,0), TOK "|-n",
+	pp_elements = [ BreakSpace(1,0), TOK ":-", BreakSpace(1,0), TM, BreakSpace(1,0), TOK "|-n",
 			BreakSpace(1,0) ],
 	paren_style = OnlyIfNecessary,
 	block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)) };
 
     add_rule { term_name = "gentzenSequent", fixity = Infix (NONASSOC, 450),
-	pp_elements = [ HardSpace 0, TOK ":-", BreakSpace(1,0), TM, BreakSpace(1,0), TOK "|-g",
+	pp_elements = [ BreakSpace(1,0), TOK ":-", BreakSpace(1,0), TM, BreakSpace(1,0), TOK "|-g",
 			BreakSpace(1,0) ],
 	paren_style = OnlyIfNecessary,
 	block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)) };
 
     add_rule { term_name = "Sequent", fixity = Infix (NONASSOC, 450),
-	pp_elements = [ HardSpace 0, TOK ":-", BreakSpace(1,0), TM, BreakSpace(1,0), TOK "|-",
+	pp_elements = [ BreakSpace(1,0), TOK ":-", BreakSpace(1,0), TM, BreakSpace(1,0), TOK "|-",
 			BreakSpace(1,0) ],
 	paren_style = OnlyIfNecessary,
 	block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)) }
 end;
 
-(* val _ = enable_grammar (); *)
+val _ = enable_grammar ();
 
 val _ = export_theory ();
 val _ = html_theory "Lambek";
