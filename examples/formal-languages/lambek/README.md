@@ -22,4 +22,5 @@ Project paper is on arXiv: [https://arxiv.org/abs/1705.07318](https://arxiv.org/
 [1] Richard Moot and Christian Retoré. The Logic of Categorial
 Grammars: A Deductive Account of Natural Language Syntax and
 Semantics. Springer, 2012.
+
 [2] https://github.com/coq-contribs/lambek
