@@ -207,7 +207,7 @@ fun temporal2hol truesig  = “\t:num.T”
            val t1 = temporal2hol f1
            val t2 = temporal2hol f2
            val t3 = temporal2hol f3
-         in “\t:num. ^t1 t => ^t2 t | ^t3 t ”
+         in “\t:num. if ^t1 t then ^t2 t else ^t3 t”
         end
   | temporal2hol (next f) =
         mk_comb{Rator=NEXT,Rand=(temporal2hol f)}
