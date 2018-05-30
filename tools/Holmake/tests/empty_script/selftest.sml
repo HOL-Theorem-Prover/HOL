@@ -6,7 +6,9 @@ fun p1 ++ p2 = OS.Path.concat(p1,p2)
 
 val _ = cd "dir";
 
-val _ = Systeml.systeml ["Holmake", "cleanAll"]
+val hm = Globals.HOLDIR ++ "bin" ++ "Holmake"
+
+val _ = Systeml.systeml [hm, "cleanAll"]
 
 fun pluckk P k l =
   case l of
@@ -46,7 +48,7 @@ val _ = if Systeml.ML_SYSNAME = "poly" then
           let
             val _ = tprint ("Checking parallel "^desc)
             val res = Systeml.systeml_out {outfile="make.log"}
-                            ["Holmake", "--qof", "-k", "-j4", "--holstate",
+                            [hm, "--qof", "-k", "-j4", "--holstate",
                              Globals.HOLDIR ++ "bin" ++ "hol.state0"]
           in
             if OS.Process.isSuccess res then die "Holmake succeeded incorrectly"
@@ -57,7 +59,7 @@ val _ = if Systeml.ML_SYSNAME = "poly" then
 
 val _ = tprint ("Checking sequential " ^ desc)
 val res = Systeml.systeml_out {outfile="make.log"}
-                              ["Holmake", "--qof", "-k", "--holstate",
+                              [hm, "--qof", "-k", "--holstate",
                                Globals.HOLDIR ++ "bin" ++ "hol.state0", "-j1"]
 
 val _ = if OS.Process.isSuccess res then die "Holmake succeeded incorrectly"
