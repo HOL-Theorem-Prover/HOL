@@ -3,6 +3,7 @@ sig
 
   val systeml : string list -> OS.Process.status
   val system_ps : string -> OS.Process.status
+  val systeml_out : {outfile:string} -> string list -> OS.Process.status
   val exec : string * string list -> 'a
   val protect : string -> string
   val xable_string : string -> string
