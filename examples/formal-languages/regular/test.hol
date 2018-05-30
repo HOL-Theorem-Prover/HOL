@@ -7,6 +7,7 @@ open regexpLib;
 
 fun matcher q = #matchfn(regexpLib.matcher HOL (Regexp_Type.fromQuote q));
 
+(*
 val _ = 
 let fun pp2polypp (ppfn: PP.ppstream -> 'a -> unit) =
      let fun f pps x = Parse.respect_width_ref Globals.linewidth ppfn pps x
@@ -18,6 +19,7 @@ let fun pp2polypp (ppfn: PP.ppstream -> 'a -> unit) =
  in 
    PolyML.addPrettyPrinter (pp2polypp Regexp_Type.pp_regexp)
  end;
+*)
 
 val test = matcher `foobar`;
  not (test "fo2b") 
@@ -128,6 +130,59 @@ val test = matcher `(.*111.*)&~((.*01)|1*)`;
     andalso (false = test "0011010101010111111000000101010001111111111111111111101")
    ;
  
+val date_matcher = time matcher 
+   `(201\d|202[0-5])-([1-9]|1[0-2])-([1-9]|[1-2]\d|3[0-1]) (1?\d|2[0-3]):(\d|[1-5]\d):(\d|[1-5]\d)`;
+
+  date_matcher "2016-5-21 20:23:24"
+  andalso 
+  date_matcher "2010-12-1 0:0:0"
+  andalso 
+  date_matcher "2019-1-22 11:11:11"
+  andalso 
+  date_matcher "2016-5-21 20:23:24"
+  andalso 
+  not (date_matcher "20162107-501-2100 20000:23000:")
+  andalso 
+  not (date_matcher "foo-bar-baz")
+; 
+
+val time_matcher = time matcher
+  `\[\{"time":\d{13}(:\d{3})?,\w{1,20}:\{(\w{1,25}:\w{1,30},?)+\}\}\]`;
+
+time_matcher "[{\"time\":1234567890123:000,foo:{ted:teddy,sam:sammy}}]"
+  andalso 
+not (time_matcher "[{\"time\":1234567890123:000,foo:{ted:teddy,   sam:sammy}}]")
+  andalso
+time_matcher "[{\"time\":1234567890123,foo:{ted:teddy,sam:sammy}}]"
+  andalso
+time_matcher "[{\"time\":1234567890123,foo:{ted:teddy}}]";
+
+(*---------------------------------------------------------------------------*)
+(* UTF-8                                                                     *)
+(*   Binary    Hex          Comments                                         *)
+(*   0xxxxxxx  0x00..0x7F   Only byte of a 1-byte character encoding         *)
+(*   10xxxxxx  0x80..0xBF   Continuation bytes (1-3 continuation bytes)      *)
+(*   110xxxxx  0xC0..0xDF   First byte of a 2-byte character encoding        *)
+(*   1110xxxx  0xE0..0xEF   First byte of a 3-byte character encoding        *)
+(*   11110xxx  0xF0..0xF4   First byte of a 4-byte character encoding        *)
+(*                                                                           *)
+(* Since a 4-byte character has 5 header bits in the first byte and 3        *)
+(* "payload" bits, it seems as though the Hex range should be 0xF0..0xF7,    *)
+(* but there is a requirement to be compatible with UTF-16, which has        *)
+(* U+10FFFF as its highest codepoint, so the Hex range is actually           *)
+(* restricted to 0xF0..0xF4.                                                 *)
+(*                                                                           *)
+(* There are further requirements, e.g., characters need to be "minimally"   *)
+(* (or canonically) encoded. This is also known as the "overlong" encoding   *)
+(* issue. I am not yet sure whether this can be handled nicely with a regex. *)
+
+(*---------------------------------------------------------------------------*)
+
+
+val utf8_matcher =
+ time matcher
+  `([\000-\127]|[\192-\223][\128-\191]|[\224-\239][\128-\191][\128-\191]|[\240-\244][\128-\191][\128-\191][\128-\191])*`;
+
 (*---------------------------------------------------------------------------*)
 (* CANBUS GPS message format. Taken from                                     *)
 (*                                                                           *)
