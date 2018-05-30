@@ -225,16 +225,13 @@ fun average_real l = sum_real l / Real.fromInt (length l)
    Goal
    -------------------------------------------------------------------------- *)
 
-fun finalise acc =
-  String.concat(Lib.separate " " (List.rev acc))
-
-fun basic_print_term (tm,acc) =
+fun sequence_print_term (tm,acc) =
   if is_forall tm then
       case dest_forall tm of
-          (v, b) => basic_print_term(b, "."::basic_print_term(v, "FORALL"::acc))
+          (v, b) => sequence_print_term(b, "."::sequence_print_term(v, "FORALL"::acc))
   else if is_exists tm then
       case dest_exists tm of
-          (v, b) => basic_print_term(b, "."::basic_print_term(v, "EXISTS"::acc))
+          (v, b) => sequence_print_term(b, "."::sequence_print_term(v, "EXISTS"::acc))
   (* TODO(Thibault): PTAL, loading numLib causes "Static Errors" when recording:
   else if numSyntax.is_numeral tm then
       acc (Int.toString(numSyntax.int_of_term(tm))::acc) *)
@@ -242,13 +239,42 @@ fun basic_print_term (tm,acc) =
   case dest_term tm of
     VAR(Name,Ty) => (Name::acc)
   | CONST{Name,Thy,Ty} => (Thy^"$"^Name::acc)
-  | COMB(Rator,Rand) => basic_print_term(Rand, basic_print_term(Rator,acc))
-  | LAMB(Var,Bod) => basic_print_term(Bod,
-                                      "."::basic_print_term(Var,"LAMBDA"::acc))
+  | COMB(Rator,Rand) => sequence_print_term(Rand, sequence_print_term(Rator,acc))
+  | LAMB(Var,Bod) => sequence_print_term(Bod,
+                                      "."::sequence_print_term(Var,"LAMBDA"::acc))
 
-fun nnstring_of_term tm = finalise (basic_print_term (tm, []))
+local
+  fun print_vars vs acc =
+    ")"::String.concatWith","(List.map(#1 o dest_var) vs)::"("::acc
+in
+  fun tree_print_term (tm,acc) =
+    if is_forall tm then
+      case strip_forall tm of
+        (vs, b) => ")"::tree_print_term(b, "("::print_vars vs ("FORALL"::acc))
+    else if is_exists tm then
+      case strip_exists tm of
+        (vs, b) => ")"::tree_print_term(b, "("::print_vars vs ("EXISTS"::acc))
+    else if is_abs tm then
+      case strip_abs tm of
+        (vs, b) => ")"::tree_print_term(b, "("::print_vars vs ("LAMBDA"::acc))
+    else if is_comb tm then
+      case strip_comb tm of
+        (f, args) =>
+          ")"::List.tl(List.foldl (cons "," o tree_print_term)
+                                  ("("::tree_print_term(f, acc))
+                                  args)
+    else if is_var tm then #1(dest_var tm)::acc
+    else case dest_thy_const tm of {Name,Thy,Ty} => Thy^"$"^Name::acc
+end
 
-fun nnstring_of_thm thm =
+fun trstring_of_term tm =
+  String.concat(List.rev(tree_print_term(tm, [])))
+
+fun nnstring_of_term tm =
+  String.concat(Lib.separate " "
+    (List.rev (sequence_print_term (tm, []))))
+
+fun mk_string_of_thm string_of_term thm =
   let
     val (asm,w) = dest_thm thm
     val mem = !show_types
@@ -256,28 +282,34 @@ fun nnstring_of_thm thm =
     val s   =
       (if asm = []
          then " [ ] "
-         else " [ `` " ^ String.concatWith " ``,`` " (map nnstring_of_term asm) ^
+         else " [ `` " ^ String.concatWith " ``,`` " (map string_of_term asm) ^
               " `` ] ")
-    val s1 = "(" ^ s ^ "," ^ " `` " ^ (nnstring_of_term w) ^ " `` )"
+    val s1 = "(" ^ s ^ "," ^ " `` " ^ (string_of_term w) ^ " `` )"
   in
     show_types := mem;
     s1
   end
 
-fun string_of_goal (asm,w) =
+val nnstring_of_thm = mk_string_of_thm nnstring_of_term
+val trstring_of_thm = mk_string_of_thm trstring_of_term
+
+fun mk_string_of_goal annot string_of_term (asm,w) =
   let
     val mem = !show_types
     val _   = show_types := false
     val s   =
       (if asm = []
-         then " goalthms; "
-         else " `` " ^ String.concatWith " `` , `` " (map nnstring_of_term asm) ^
-              " `` goalthms; ")
-    val s1 =  "`` " ^ (nnstring_of_term w) ^ " `` goalterm; " ^ s
+         then " " ^ annot ^ "thms; "
+         else " `` " ^ String.concatWith " `` , `` " (map string_of_term asm) ^
+              " `` " ^ annot ^ "thms; ")
+    val s1 =  "`` " ^ (string_of_term w) ^ " `` " ^ annot ^ "term; " ^ s
   in
     show_types := mem;
     s1
   end
+
+val string_of_goal = mk_string_of_goal "goal" nnstring_of_term
+val tree_string_of_goal = mk_string_of_goal "tgoal" trstring_of_term
 
 fun string_of_bool b = if b then "T" else "F"
 

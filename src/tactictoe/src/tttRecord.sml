@@ -301,6 +301,7 @@ fun print_proof name g =
       let val (astac, thmll) = pe_abs stac in
         append_file file (stac ^ " stac; ");
         append_file file (string_of_goal g);
+        append_file file (tree_string_of_goal g);
         append_file file (astac ^ " abs_tactic; ");
         pe_thmll file thmll;
         append_endline file ""

@@ -119,7 +119,10 @@ sig
   (* input/output *)
   val nnstring_of_term : term -> string
   val nnstring_of_thm : thm -> string
+  val trstring_of_term : term -> string
+  val trstring_of_thm : thm -> string
   val string_of_goal : goal -> string
+  val tree_string_of_goal : goal -> string
   val string_of_bool : bool -> string
   val readl : string -> string list
   val bare_readl : string -> string list
