@@ -15,24 +15,29 @@ val _ = use "execompile.ML";
 val SIGOBJ = OS.Path.concat(Systeml.HOLDIR, "sigobj")
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate11 z
+  fun makeUpdateT z = makeUpdate12 z
 in
 fun updateT z = let
-  fun from all_forced base_state debug defaultout exe extra_data forced_objs
+  fun from all_forced base_state checkfors debug defaultout exe extra_data
+           forced_objs
            help output quietp repl =
-    {all_forced = all_forced, base_state = base_state, debug = debug,
+    {all_forced = all_forced, base_state = base_state, checkfors = checkfors,
+     debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
      output = output, quietp = quietp, repl = repl}
   fun from' repl quietp output help forced_objs extra_data exe defaultout
-            debug base_state all_forced =
-    {all_forced = all_forced, base_state = base_state, debug = debug,
+            debug checkfors base_state all_forced =
+    {all_forced = all_forced, base_state = base_state, checkfors = checkfors,
+     debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
      output = output, quietp = quietp, repl = repl}
-  fun to f {all_forced, base_state, debug, defaultout, exe, extra_data,
+  fun to f {all_forced, base_state, checkfors, debug, defaultout, exe,
+            extra_data,
             forced_objs, help, output, quietp, repl} =
-    f all_forced base_state debug defaultout exe extra_data forced_objs help
+    f all_forced base_state checkfors debug defaultout exe extra_data
+      forced_objs help
       output quietp repl
 in
   makeUpdateT (from, from', to)
@@ -49,6 +54,7 @@ struct
 datatype option_record = OR of {
   all_forced : bool,
   base_state : string option,
+  checkfors : string list,
   debug : bool,
   defaultout : string option,
   exe : string option,
@@ -64,7 +70,11 @@ local
 open TextIO
 in
 fun warn s = (output(stdErr, s ^ "\n"); flushOut stdErr)
-fun die (s:string) : 'a = (warn s; OS.Process.exit OS.Process.failure)
+fun die (s:string) : 'a =
+  (flushOut stdOut;
+   (* try to give stdout a chance to clear so that dying message is last *)
+   OS.Process.sleep (Time.fromMilliseconds 300);
+   warn s; OS.Process.exit OS.Process.failure)
 end
 
 fun mk_quiet (OR r) = OR (updateT r (U #quietp true) $$);
@@ -80,8 +90,14 @@ local
    ReqArg ((fn s => fn (OR r) =>
                OR (updateT r (U #forced_objs (#forced_objs r @ [s])) $$)),
            "file.uo")
+ fun addString argnm =
+   ReqArg((fn s => fn (OR r) =>
+              OR (updateT r (U #checkfors (#checkfors r @ [s])) $$)),
+          argnm)
 in
 val cline_opts = [
+  {help = "check file exists afterwards (can repeat)", long = ["checkfor"],
+   short = "c", desc = addString "filename"},
   {help = "provide debug output", long = ["dbg"], short = "",
    desc = mkBoolT #debug},
   {help = "default outputname", long = ["defaultout"], short = "",
@@ -109,6 +125,7 @@ val cline_opts = [
 ]
 val initial_cline = OR {all_forced = false,
                         base_state = !heapname,
+                        checkfors = [],
                         debug = false,
                         defaultout = NONE,
                         exe = NONE,
@@ -346,6 +363,9 @@ in
               SOME f => BuildHeap_EXE_Compile.exe_compile
                           {fnname = f, output_exe = valOf output}
             | _ => ();
+        List.app (fn s => if OS.FileSys.access(s, [OS.FileSys.A_READ]) then ()
+                          else die ("Couldn't find required output file: "^s))
+                 (#checkfors options);
         diag "Buildheap done; about to exit successfully";
         OS.Process.exit OS.Process.success
       end
