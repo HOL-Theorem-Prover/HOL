@@ -3106,30 +3106,14 @@ Other constants in the theory \theoryimp{llist} include \ml{LMAP}, \ml{LFINITE},
 \end{hol}
 They are characterised by the following theorems
 \begin{hol}
-\begin{verbatim}
-   LMAP
-      |- (LMAP f LNIL = LNIL) /\
-         (LMAP f (LCONS h t) = LCONS (f h) (LMAP f t))
-   LFINITE_THM
-      |- (LFINITE LNIL = T) /\
-         (LFINITE (LCONS h t) = LFINITE t)
-   LNTH_THM
-      |- (!n. LNTH n LNIL = NONE) /\
-         (!h t. LNTH 0 (LCONS h t) = SOME h) /\
-         (!n h t. LNTH (SUC n) (LCONS h t) = LNTH n t)
-   LTAKE_THM
-      |- (LTAKE 0 l = SOME []) /\
-         (LTAKE (SUC n) LNIL = NONE) /\
-         (LTAKE (SUC n) (LCONS h t) = OPTION_MAP (CONS h) (LTAKE n t)
-   LDROP_THM
-      |- (LDROP 0 ll = SOME ll) /\
-         (LDROP (SUC n) ll = NONE) /\
-         (LDROP (SUC n) (LCONS h t) = LDROP n t)
-   LFILTER_THM
-      |- (LFILTER P LNIL = LNIL) /\
-         (LFILTER P (LCONS h t) = if P h then LCONS h (LFILTER P t)
-                                         else LFILTER P t)
-\end{verbatim}
+\begin{alltt}
+##thm LMAP
+##thm LFINITE_THM
+##thm LNTH_THM
+##thm LTAKE_THM
+##thm LDROP_THM
+##thm LFILTER_THM
+\end{alltt}
 \end{hol}
 
 \paragraph{Concatenation}
@@ -3138,29 +3122,23 @@ Two lazy lists may be concatenated by \ml{LAPPEND}. If the first lazy
 list is infinite, elements of the second are inaccessible in the
 result.  A lazy list of lazy lists can be flattened to a lazy list by
 \ml{LFLATTEN}.
-\begin{hol}\begin{verbatim}
-   LAPPEND
-      |- (!x. LAPPEND LNIL x = x) /\
-         (!h t x. LAPPEND (LCONS h t) x = LCONS h (LAPPEND t x))
-   LFLATTEN_THM
-      |- (LFLATTEN LNIL = LNIL) /\
-         (!tl. LFLATTEN (LCONS LNIL t) = LFLATTEN t) /\
-         (!h t tl. LFLATTEN (LCONS (LCONS h t) tl) =
-                      LCONS h (LFLATTEN (LCONS t tl)))
-\end{verbatim}\end{hol}
+\begin{hol}
+\begin{alltt}
+##thm LAPPEND
+##thm LFLATTEN_THM
+\end{alltt}
+\end{hol}
 
 \paragraph{Lists and lazy lists}
 
 Mapping back and forth from lists to lazy lists is accomplished
 by \ml{fromList} and \ml{toList}:
-\begin{hol}\begin{verbatim}
-   fromList
-      |- (fromList [] = LNIL) /\
-         (!h t. fromList (h::t) = LCONS h (fromList t))
-   toList_THM
-      |- (toList LNIL = SOME []) /\
-         (!h t. toList (LCONS h t) = OPTION_MAP (CONS h) (toList t))
-\end{verbatim}\end{hol}
+\begin{hol}
+\begin{alltt}
+##thm fromList_def
+##thm toList_THM
+\end{alltt}
+\end{hol}
 
 \paragraph{Proof principles}
 
