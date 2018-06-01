@@ -114,10 +114,10 @@ in
 end handle ExitOK => OK()
 
 val _ = Process.atExit (fn () => let
-                             fun rm s = FileSys.remove s
+                             fun rm s = FileSys.remove ("scratchTheory." ^ s)
                                         handle _ => ()
                            in
-                             app rm ["scratchTheory.sml", "scratchTheory.sig"]
+                             app rm ["sml", "sig", "dat"]
                            end)
 
 fun test f x = f x orelse (print "FAILED!\n"; Process.exit Process.failure)
