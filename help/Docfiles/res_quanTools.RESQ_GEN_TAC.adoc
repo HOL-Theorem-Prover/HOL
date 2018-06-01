@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+RESQ_GEN_TAC                                           (res_quanTools)
+----------------------------------------------------------------------
+RESQ_GEN_TAC : tactic
+
+SYNOPSIS
+Strips the outermost restricted universal quantifier from
+the conclusion of a goal.
+
+KEYWORDS
+tactic, restricted quantifier, universal.
+
+DESCRIBE
+When applied to a goal {A ?- !x::P. t}, the tactic {RESQ_GEN_TAC}
+reduces it to a new goal {A,P x' ?- t[x'/x]} where {x'} is a variant of {x}
+chosen to avoid clashing with any variables free in the goal’s
+assumption list. Normally {x'} is just {x}.
+
+     A ?- !x::P. t
+   ===================  RESQ_GEN_TAC
+    A,P x' ?- t[x'/x]
+
+
+FAILURE
+Fails unless the goal’s conclusion is a restricted universal quantification.
+
+USES
+The tactic {REPEAT RESQ_GEN_TAC} strips away a series of restricted
+universal quantifiers, and is commonly used before tactics relying on
+the  underlying term structure.
+
+SEEALSO
+res_quanTools.RESQ_SPEC, res_quanTools.RESQ_SPECL, Tactic.STRIP_TAC,
+Tactic.GEN_TAC, Tactic.X_GEN_TAC.
+
+----------------------------------------------------------------------

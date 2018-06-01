@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+Induct                                                  (BasicProvers)
+----------------------------------------------------------------------
+Induct : tactic
+
+SYNOPSIS
+Induct on leading universally quantified variable in a goal.
+
+DESCRIBE
+{bossLib.Induct} is identical to {BasicProvers.Induct}.
+
+SEEALSO
+bossLib.Induct.
+
+----------------------------------------------------------------------

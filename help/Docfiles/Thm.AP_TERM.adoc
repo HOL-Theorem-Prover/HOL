@@ -1,0 +1,30 @@
+----------------------------------------------------------------------
+AP_TERM                                                          (Thm)
+----------------------------------------------------------------------
+AP_TERM : term -> thm -> thm
+
+SYNOPSIS
+Applies a function to both sides of an equational theorem.
+
+KEYWORDS
+rule.
+
+DESCRIBE
+When applied to a term {f} and a theorem {A |- x = y}, the
+inference rule {AP_TERM} returns the theorem {A |- f x = f y}.
+
+      A |- x = y
+   ----------------  AP_TERM f
+    A |- f x = f y
+
+
+
+
+FAILURE
+Fails unless the theorem is equational and the supplied term is a function
+whose domain type is the same as the type of both sides of the equation.
+
+SEEALSO
+Tactic.AP_TERM_TAC, Thm.AP_THM, Tactic.AP_THM_TAC, Thm.MK_COMB.
+
+----------------------------------------------------------------------

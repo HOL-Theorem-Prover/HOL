@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+ADD_ASSUM                                                      (Drule)
+----------------------------------------------------------------------
+ADD_ASSUM : term -> thm -> thm
+
+SYNOPSIS
+Adds an assumption to a theorem.
+
+KEYWORDS
+rule, assumption.
+
+DESCRIBE
+When applied to a boolean term {s} and a theorem {A |- t}, the
+inference rule {ADD_ASSUM} returns the theorem {A u {s} |- t}.
+
+       A |- t
+   --------------  ADD_ASSUM s
+    A u {s} |- t
+
+
+FAILURE
+Fails unless the given term has type {bool}.
+
+SEEALSO
+Thm.ASSUME, Drule.UNDISCH.
+
+----------------------------------------------------------------------

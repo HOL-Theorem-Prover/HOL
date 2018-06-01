@@ -1,0 +1,47 @@
+----------------------------------------------------------------------
+SPOSE_NOT_THEN                                               (bossLib)
+----------------------------------------------------------------------
+SPOSE_NOT_THEN : (thm -> tactic) -> tactic
+
+SYNOPSIS
+Initiate proof by contradiction.
+
+KEYWORDS
+contradiction.
+
+DESCRIBE
+{SPOSE_NOT_THEN} provides a flexible way to start a proof by contradiction.
+Simple tactics for contradiction proofs often simply negate the goal and
+place it on the assumption list. However, if the goal is quantified, as
+is often the case, then more processing is required in order to get it
+into a suitable form for subsequent work. {SPOSE_NOT_THEN ttac} negates
+the current goal, pushes the negation inwards, and applies {ttac} to it.
+
+FAILURE
+Never fails, unless {ttac} fails.
+
+EXAMPLE
+Suppose we want to prove Euclid’s theorem.
+
+   !m. ?n. prime n /\ m < n
+
+The classic proof is by contradiction. However, if we start such a
+proof with {CCONTR_TAC}, we get the goal
+
+   { ~!m. ?n. prime n /\ m < n } ?- F
+
+and one would immediately want to simplify the assumption, which is a
+bit awkward. Instead, an invocation {SPOSE_NOT_THEN ASSUME_TAC} yields
+
+   { ?m. !n. ~prime n \/ ~(m < n) } ?- F
+
+and {SPOSE_NOT_THEN STRIP_ASSUME_TAC} results in
+
+   { !n. ~prime n \/ ~(m < n) } ?- F
+
+
+SEEALSO
+Tactic.CCONTR_TAC, Tactic.CONTR_TAC, Tactic.ASSUME_TAC,
+Tactic.STRIP_ASSUME_TAC.
+
+----------------------------------------------------------------------

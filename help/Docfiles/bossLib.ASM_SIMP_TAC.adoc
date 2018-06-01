@@ -1,0 +1,40 @@
+----------------------------------------------------------------------
+ASM_SIMP_TAC                                                 (bossLib)
+----------------------------------------------------------------------
+ASM_SIMP_TAC : simpset -> thm list -> tactic
+
+SYNOPSIS
+Simplifies a goal using the simpset, the provided theorems, and the
+goal’s assumptions.
+
+KEYWORDS
+simplification, rewriting, tactic.
+
+LIBRARY
+simpLib
+
+DESCRIBE
+{ASM_SIMP_TAC} does a simplification of the goal, adding both the
+assumptions and the provided theorem to the given simpset as
+rewrites.  This simpset is then applied to the goal in the manner
+explained in the entry for {SIMP_CONV}.
+
+{ASM_SIMP_TAC} is to {SIMP_TAC}, as {ASM_REWRITE_TAC} is to
+{REWRITE_TAC}.
+
+FAILURE
+{ASM_SIMP_TAC} never fails, though it may diverge.
+
+EXAMPLE
+The simple goal {x < y ?- x + y < y + y} can be proved by using
+{bossLib.arith_ss} and the assumption by
+
+   ASM_SIMP_TAC bossLib.arith_ss []
+
+
+SEEALSO
+bossLib.++, bossLib.bool_ss, bossLib.FULL_SIMP_TAC,
+simpLib.mk_simpset, bossLib.SIMP_CONV, bossLib.SIMP_TAC,
+Rewrite.ASM_REWRITE_TAC, BasicProvers.VAR_EQ_TAC.
+
+----------------------------------------------------------------------

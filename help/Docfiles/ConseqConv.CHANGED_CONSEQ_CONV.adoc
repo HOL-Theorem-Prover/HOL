@@ -1,0 +1,20 @@
+----------------------------------------------------------------------
+CHANGED_CONSEQ_CONV                                       (ConseqConv)
+----------------------------------------------------------------------
+CHANGED_CONSEQ_CONV : (conseq_conv -> conseq_conv)
+
+SYNOPSIS
+Makes a consequence conversion fail if applying it leaves a term unchanged.
+
+DESCRIBE
+If {c} is a consequence conversion that maps a term {``t``}
+to a theorem {|- t = t'},  {|- t' ==> t} or  {|- t ==> t'},
+where {t'} is alpha-equivalent to {t}, or if
+{c} raises the {UNCHANGED} exception when applied to {``t``}, then
+{CHANGED_CONSEQ_CONV c} fails when applied to the term
+{``t``}. Otherwise, {CHANGED_CONSEQ_CONV c} behaves like {c}.
+
+SEEALSO
+Conv.CHANGED_CONV, ConseqConv.QCHANGED_CONSEQ_CONV.
+
+----------------------------------------------------------------------

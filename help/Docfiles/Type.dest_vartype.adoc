@@ -1,0 +1,28 @@
+----------------------------------------------------------------------
+dest_vartype                                                    (Type)
+----------------------------------------------------------------------
+dest_vartype : hol_type -> string
+
+SYNOPSIS
+Breaks a type variable down to its name.
+
+FAILURE
+Fails with {dest_vartype} if the type is not a type variable.
+
+EXAMPLE
+
+- dest_vartype alpha;
+> val it = "'a" : string
+
+- try dest_vartype bool;
+
+Exception raised at Type.dest_vartype:
+not a type variable
+
+
+
+
+SEEALSO
+Type.mk_vartype, Type.is_vartype, Type.dest_type.
+
+----------------------------------------------------------------------

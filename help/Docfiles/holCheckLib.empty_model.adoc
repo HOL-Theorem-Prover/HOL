@@ -1,0 +1,17 @@
+----------------------------------------------------------------------
+empty_model                                              (holCheckLib)
+----------------------------------------------------------------------
+empty_model : model
+
+SYNOPSIS
+Represents a HolCheck model with no information.
+
+DESCRIBE
+This is used as a starting point for building a HolCheck model, using the set_X functions in holCheckLib.
+
+SEEALSO
+holCheckLib.holCheck, holCheckLib.set_init, holCheckLib.set_trans,
+holCheckLib.set_flag_ric, holCheckLib.set_name, holCheckLib.set_vord,
+holCheckLib.set_state, holCheckLib.set_props.
+
+----------------------------------------------------------------------

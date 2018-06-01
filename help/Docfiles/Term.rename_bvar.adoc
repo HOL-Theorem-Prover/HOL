@@ -1,0 +1,37 @@
+----------------------------------------------------------------------
+rename_bvar                                                     (Term)
+----------------------------------------------------------------------
+rename_bvar : string -> term -> term
+
+SYNOPSIS
+Performs one step of alpha conversion.
+
+KEYWORDS
+conversion, alpha.
+
+DESCRIBE
+If {M} is a lambda abstraction, i.e., has the form {\v.N}, an
+invocation {rename_bvar s M} performs one step of alpha conversion to
+obtain {\s. N[s/v]}.
+
+FAILURE
+If {M} is not a lambda abstraction.
+
+EXAMPLE
+
+- rename_bvar "x" (Term `\v. v ==> w`);
+> val it = `\x. x ==> w` : term
+
+- rename_bvar "x" (Term `\y. y /\ x`);
+> val it = `\x'. x' /\ x` : term
+
+
+
+
+COMMENTS
+{rename_bvar} takes constant time in the current implementation.
+
+SEEALSO
+Term.aconv, Drule.ALPHA_CONV.
+
+----------------------------------------------------------------------

@@ -1,0 +1,31 @@
+----------------------------------------------------------------------
+PEXISTS_OR_CONV                                            (PairRules)
+----------------------------------------------------------------------
+PEXISTS_OR_CONV : conv
+
+KEYWORDS
+conversion, quantifier, existential, disjunction.
+
+LIBRARY
+pair
+
+SYNOPSIS
+Moves a paired existential quantification inwards through a disjunction.
+
+DESCRIBE
+When applied to a term of the form {?p. t \/ u}, the conversion
+{PEXISTS_OR_CONV} returns the theorem:
+
+   |- (?p. t \/ u) = (?p. t) \/ (?p. u)
+
+
+
+
+FAILURE
+Fails if applied to a term not of the form {?p. t \/ u}.
+
+SEEALSO
+Conv.EXISTS_OR_CONV, PairRules.OR_PEXISTS_CONV,
+PairRules.LEFT_OR_PEXISTS_CONV, PairRules.RIGHT_OR_PEXISTS_CONV.
+
+----------------------------------------------------------------------

@@ -1,0 +1,38 @@
+----------------------------------------------------------------------
+failwith                                                    (Feedback)
+----------------------------------------------------------------------
+failwith : string -> 'a
+
+SYNOPSIS
+Raise a {HOL_ERR}.
+
+KEYWORDS
+exception
+
+DESCRIBE
+The function {failwith} raises a {HOL_ERR} with default values. This is
+useful when detailed error tracking is not necessary.
+
+{failwith} differs from {fail} in that it takes an extra string argument,
+which is typically used to tell which function {failwith} is being called
+from.
+
+FAILURE
+Always fails.
+
+EXAMPLE
+
+- failwith "foo" handle e => Raise e;
+
+Exception raised at ??.failwith:
+foo
+! Uncaught exception:
+! HOL_ERR
+
+
+
+
+SEEALSO
+Feedback, Feedback.fail, Feedback.Raise, Feedback.HOL_ERR.
+
+----------------------------------------------------------------------

@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+is_neg                                                    (boolSyntax)
+----------------------------------------------------------------------
+is_neg : term -> bool
+
+SYNOPSIS
+Tests a term to see if it is a negation.
+
+DESCRIBE
+If {M} has the form {~t}, then {is_neg M} returns {true}.
+If the term is not a negation the result is {false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+boolSyntax.mk_neg, boolSyntax.dest_neg.
+
+----------------------------------------------------------------------

@@ -1,0 +1,39 @@
+----------------------------------------------------------------------
+mk_HOL_ERR                                                  (Feedback)
+----------------------------------------------------------------------
+mk_HOL_ERR : string -> string -> string -> exn
+
+SYNOPSIS
+Creates an application of {HOL_ERR}.
+
+KEYWORDS
+error, exception
+
+DESCRIBE
+{mk_HOL_ERR} provides a curried interface to the standard {HOL_ERR}
+exception; experience has shown that this is often more convenient.
+
+FAILURE
+Never fails.
+
+
+
+EXAMPLE
+
+- mk_HOL_ERR "Module" "function" "message"
+
+> val it = HOL_ERR : exn
+
+- print(exn_to_string it);
+
+Exception raised at Module.function:
+message
+> val it = () : unit
+
+
+
+
+SEEALSO
+Feedback, Feedback.HOL_ERR, Feedback.error_record.
+
+----------------------------------------------------------------------

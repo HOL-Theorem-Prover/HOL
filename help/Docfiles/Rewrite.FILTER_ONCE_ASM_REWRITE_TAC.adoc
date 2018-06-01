@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+FILTER_ONCE_ASM_REWRITE_TAC                                  (Rewrite)
+----------------------------------------------------------------------
+FILTER_ONCE_ASM_REWRITE_TAC : ((term -> bool) -> thm list -> tactic)
+
+SYNOPSIS
+Rewrites a goal once including built-in rewrites and some of its assumptions.
+
+KEYWORDS
+tactic, selective.
+
+DESCRIBE
+The first argument is a predicate applied to the assumptions. The goal is
+rewritten with the assumptions for which the predicate returns {true}, the
+given list of theorems, and the tautologies stored in {implicit_rewrites}. It
+searches the term of the goal once, without applying rewrites recursively. Thus
+it avoids the divergence which can result from the application of
+{FILTER_ASM_REWRITE_TAC}. For more information on rewriting tactics, see
+{GEN_REWRITE_TAC}.
+
+FAILURE
+Never fails.
+
+USES
+This function is useful when rewriting with a subset of assumptions of
+a goal, allowing control of the number of rewriting passes.
+
+SEEALSO
+Rewrite.ASM_REWRITE_TAC, Rewrite.FILTER_ASM_REWRITE_TAC,
+Rewrite.FILTER_PURE_ASM_REWRITE_TAC,
+Rewrite.FILTER_PURE_ONCE_ASM_REWRITE_TAC, Rewrite.GEN_REWRITE_TAC,
+Rewrite.ONCE_ASM_REWRITE_TAC, Conv.ONCE_DEPTH_CONV,
+Rewrite.PURE_ASM_REWRITE_TAC, Rewrite.PURE_ONCE_ASM_REWRITE_TAC,
+Rewrite.PURE_REWRITE_TAC, Rewrite.REWRITE_TAC.
+
+----------------------------------------------------------------------

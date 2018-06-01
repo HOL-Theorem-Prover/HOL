@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+type_var_in                                                     (Type)
+----------------------------------------------------------------------
+type_var_in : hol_type -> hol_type -> bool
+
+SYNOPSIS
+Checks if a type variable occurs in a type.
+
+KEYWORDS
+variable, type.
+
+DESCRIBE
+An invocation {type_var_in tyv ty} returns {true} if {tyv} occurs
+in {ty}. Otherwise, it returns {false}.
+
+FAILURE
+Fails if {tyv} is not a type variable.
+
+EXAMPLE
+
+- type_var_in alpha (bool --> alpha);
+> val it = true : bool
+
+- type_var_in alpha bool;
+> val it = false : bool
+
+
+
+
+COMMENTS
+Can be useful in enforcing side conditions on inference rules.
+
+SEEALSO
+Type.type_vars, Type.type_varsl, Type.exists_tyvar.
+
+----------------------------------------------------------------------

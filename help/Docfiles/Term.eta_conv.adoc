@@ -1,0 +1,39 @@
+----------------------------------------------------------------------
+eta_conv                                                        (Term)
+----------------------------------------------------------------------
+eta_conv : term -> term
+
+SYNOPSIS
+Performs one step of eta-reduction.
+
+KEYWORDS
+conversion, reduction, eta.
+
+DESCRIBE
+Eta-reduction is an important operation in the lambda calculus.
+A step of eta-reduction may be performed by {eta_conv M}, where {M}
+is a lambda abstraction of the following form: {\v. (N v)}, i.e.,
+a lambda abstraction whose body is an application of a term {N} to
+the bound variable {v}. Moreover, {v} must not occur free in {M}.
+If this proviso is met, an invocation {eta_conv (\v. (N v))} is equal
+to {N}.
+
+FAILURE
+If {M} is not of the specified form, or if {v} occurs free in {N}.
+
+EXAMPLE
+
+- eta_conv (Term `\n. PRE n`);
+> val it = `PRE` : term
+
+
+
+
+COMMENTS
+Eta-reduction embodies the principle of extensionality, which is
+basic to the HOL logic.
+
+SEEALSO
+Drule.ETA_CONV, Drule.RIGHT_ETA.
+
+----------------------------------------------------------------------

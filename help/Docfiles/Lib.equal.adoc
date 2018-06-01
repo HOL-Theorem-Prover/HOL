@@ -1,0 +1,28 @@
+----------------------------------------------------------------------
+equal                                                            (Lib)
+----------------------------------------------------------------------
+equal : ''a -> ''a -> bool
+
+SYNOPSIS
+Curried form of ML equality.
+
+KEYWORDS
+Curry
+
+DESCRIBE
+In some programming situations it is useful to use equality in a
+curried form. Although it is easy to code up on demand, the {equal}
+function is provided for convenience.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- filter (equal 1) [1,2,1,4,5];
+> val it = [1, 1] : int list
+
+
+
+
+----------------------------------------------------------------------

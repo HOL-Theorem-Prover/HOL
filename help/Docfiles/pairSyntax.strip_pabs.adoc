@@ -1,0 +1,26 @@
+----------------------------------------------------------------------
+strip_pabs                                                (pairSyntax)
+----------------------------------------------------------------------
+strip_pabs : term -> term list * term
+
+LIBRARY
+pair
+
+SYNOPSIS
+Iteratively breaks apart paired abstractions.
+
+DESCRIBE
+{strip_pabs "\p1 ... pn. t"} returns {([p1,...,pn],t)}. Note that
+
+   strip_pabs(list_mk_abs([p1,...,pn],t))
+
+will not return {([p1,...,pn],t)} if {t} is
+a paired abstraction.
+
+FAILURE
+Never fails.
+
+SEEALSO
+boolSyntax.strip_abs, pairSyntax.list_mk_pabs, pairSyntax.dest_pabs.
+
+----------------------------------------------------------------------

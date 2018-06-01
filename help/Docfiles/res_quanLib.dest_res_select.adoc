@@ -1,0 +1,25 @@
+----------------------------------------------------------------------
+dest_res_select                                          (res_quanLib)
+----------------------------------------------------------------------
+dest_res_select : term -> (term # term # term)
+
+SYNOPSIS
+Breaks apart a restricted choice quantified term into
+the quantified variable, predicate and body.
+
+DESCRIBE
+{dest_res_select} is a term destructor for restricted choice
+quantification:
+
+   dest_res_select "@var::P. t"
+
+returns {("var","P","t")}.
+
+FAILURE
+Fails with {dest_res_select} if the term is not a restricted
+choice quantification.
+
+SEEALSO
+res_quanLib.mk_res_select, res_quanLib.is_res_select.
+
+----------------------------------------------------------------------

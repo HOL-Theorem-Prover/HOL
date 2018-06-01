@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+WARNING_to_string                                           (Feedback)
+----------------------------------------------------------------------
+WARNING_to_string : (string -> string -> string -> string) ref
+
+SYNOPSIS
+Alterable function for formatting {HOL_WARNING}.
+
+KEYWORDS
+message, formatting
+
+DESCRIBE
+{WARNING_to_string} is a reference to a function for formatting the argument
+to {HOL_WARNING}.
+
+The default value of {WARNING_to_string} is {format_WARNING}.
+
+EXAMPLE
+
+    - fun alt_WARNING_report s t u =
+        String.concat["WARNING---", s,".",t,": ",u,"---END WARNING\n"];
+
+    - WARNING_to_string := alt_WARNING_report;
+
+    - HOL_WARNING "Foo" "bar" "Look out";
+    WARNING---Foo.bar: Look out---END WARNING
+    > val it = () : unit
+
+
+
+
+SEEALSO
+Feedback, Feedback.HOL_WARNING, Feedback.format_WARNING,
+Feedback.ERR_to_string, Feedback.MESG_to_string.
+
+----------------------------------------------------------------------

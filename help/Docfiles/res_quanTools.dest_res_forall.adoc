@@ -1,0 +1,26 @@
+----------------------------------------------------------------------
+dest_res_forall                                        (res_quanTools)
+----------------------------------------------------------------------
+dest_res_forall : (term -> (term # term # term))
+
+SYNOPSIS
+Breaks apart a restricted universally quantified term into
+the quantified variable, predicate and body.
+
+DESCRIBE
+{dest_res_forall} is a term destructor for restricted universal
+quantification:
+
+   dest_res_forall "!var::P. t"
+
+returns {("var","P","t")}.
+
+FAILURE
+Fails with {dest_res_forall} if the term is not a restricted
+universal quantification.
+
+SEEALSO
+res_quanTools.mk_res_forall, res_quanTools.is_res_forall,
+res_quanTools.strip_res_forall.
+
+----------------------------------------------------------------------

@@ -1,0 +1,24 @@
+----------------------------------------------------------------------
+TRY                                                         (Tactical)
+----------------------------------------------------------------------
+TRY : (tactic -> tactic)
+
+SYNOPSIS
+Makes a tactic have no effect rather than fail.
+
+KEYWORDS
+tactical, failure.
+
+DESCRIBE
+For any tactic {T}, the application {TRY T} gives a new tactic
+which has the same effect as {T} if that succeeds, and otherwise has
+no effect.
+
+FAILURE
+The application of {TRY} to a tactic never fails. The resulting
+tactic never fails.
+
+SEEALSO
+Tactical.CHANGED_TAC, Tactical.VALID.
+
+----------------------------------------------------------------------

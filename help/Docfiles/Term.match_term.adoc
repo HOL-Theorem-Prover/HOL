@@ -1,0 +1,50 @@
+----------------------------------------------------------------------
+match_term                                                      (Term)
+----------------------------------------------------------------------
+match_term : term -> term -> (term,term) subst * (hol_type,hol_type) subst
+
+SYNOPSIS
+Finds instantiations to match one term to another.
+
+DESCRIBE
+An application {match_term M N} attempts to find a set of type
+and term instantiations for {M} to make it alpha-convertible
+to {N}. If {match_term} succeeds, it returns the instantiations
+in the form of a pair containing a term substitution and a
+type substitution. In particular, if {match_term pat ob} succeeds
+in returning a value {(S,T)}, then
+
+   aconv (subst S (inst T pat)) ob.
+
+
+
+
+FAILURE
+Fails if the term cannot be matched by one-way instantiation.
+
+EXAMPLE
+The following shows how {match_term} could be used to match the
+conclusion of a theorem to a term.
+
+   - val th = REFL (Term `x:'a`);
+    val th = |- x = x : thm
+
+   - match_term (concl th) (Term `1 = 1`);
+   val it = ([{redex = `x`, residue = `1`}],
+             [{redex = `:'a`, residue = `:num`}])
+     : term subst * hol_type subst
+
+  - INST_TY_TERM it th;
+  val it = |- 1 = 1
+
+
+
+
+COMMENTS
+For instantiating theorems {PART_MATCH} is usually easier to use.
+
+SEEALSO
+Term.match_terml, Type.match_type, Drule.INST_TY_TERM,
+Drule.PART_MATCH.
+
+----------------------------------------------------------------------

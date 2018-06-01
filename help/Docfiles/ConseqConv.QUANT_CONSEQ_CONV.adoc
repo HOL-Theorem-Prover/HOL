@@ -1,0 +1,14 @@
+----------------------------------------------------------------------
+QUANT_CONSEQ_CONV                                         (ConseqConv)
+----------------------------------------------------------------------
+QUANT_CONSEQ_CONV : (conseq_conv -> conseq_conv)
+
+SYNOPSIS
+Applies a consequence conversion to the body of an existentially or
+universally quantified term.
+
+SEEALSO
+Conv.QUANT_CONV, ConseqConv.FORALL_CONSEQ_CONV,
+ConseqConv.EXISTS_CONSEQ_CONV.
+
+----------------------------------------------------------------------

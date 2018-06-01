@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+==                                                             (Parse)
+----------------------------------------------------------------------
+== : hol_type quotation -> 'a -> hol_type
+
+SYNOPSIS
+Parses a quotation into a HOL type.
+
+KEYWORDS
+Parsing
+
+LIBRARY
+Parse
+
+DESCRIBE
+An invocation {==` ... `==} is identical to {Type ` ... `}.
+
+FAILURE
+As for {Parse.Type}.
+
+USES
+Turns strings into types.
+
+SEEALSO
+Parse.Term.
+
+----------------------------------------------------------------------

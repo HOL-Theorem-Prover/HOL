@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+EXISTS_NOT_CONV                                                 (Conv)
+----------------------------------------------------------------------
+EXISTS_NOT_CONV : conv
+
+SYNOPSIS
+Moves an existential quantification inwards through a negation.
+
+KEYWORDS
+conversion, quantifier, existential, negation.
+
+DESCRIBE
+When applied to a term of the form {?x.~P}, the conversion {EXISTS_NOT_CONV}
+returns the theorem:
+
+   |- (?x.~P) = ~(!x. P)
+
+
+
+
+FAILURE
+Fails if applied to a term not of the form {?x.~P}.
+
+SEEALSO
+Conv.FORALL_NOT_CONV, Conv.NOT_EXISTS_CONV, Conv.NOT_FORALL_CONV.
+
+----------------------------------------------------------------------

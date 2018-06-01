@@ -1,0 +1,31 @@
+----------------------------------------------------------------------
+pp_tag                                                           (Tag)
+----------------------------------------------------------------------
+pp_tag : tag Parse.pprinter
+
+SYNOPSIS
+Prettyprinter for tags.
+
+KEYWORDS
+prettyprint, tag.
+
+DESCRIBE
+An invocation {pp_tag t} will produce a pretty representation for tag
+{t}. Such a pretty-printer can be used to produce outputs, or return
+strings, or to combine with other pretty representations to create
+compound values.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+> show_tags := true;
+val it = () : unit
+
+> Portable.pprint Tag.pp_tag (Tag.read "fooble");
+[oracles: fooble] [axioms: ]
+val it = (): unit
+
+
+----------------------------------------------------------------------

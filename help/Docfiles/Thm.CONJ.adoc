@@ -1,0 +1,31 @@
+----------------------------------------------------------------------
+CONJ                                                             (Thm)
+----------------------------------------------------------------------
+CONJ : thm -> thm -> thm
+
+SYNOPSIS
+Introduces a conjunction.
+
+KEYWORDS
+rule, conjunction.
+
+DESCRIBE
+
+    A1 |- t1      A2 |- t2
+   ------------------------  CONJ
+     A1 u A2 |- t1 /\ t2
+
+
+
+
+FAILURE
+Never fails.
+
+COMMENTS
+The theorem {AND_INTRO_THM} can be instantiated to similar effect.
+
+SEEALSO
+Drule.BODY_CONJUNCTS, Thm.CONJUNCT1, Thm.CONJUNCT2, Drule.CONJ_PAIR,
+Drule.LIST_CONJ, Drule.CONJ_LIST, Drule.CONJUNCTS.
+
+----------------------------------------------------------------------

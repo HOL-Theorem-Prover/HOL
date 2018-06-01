@@ -1,0 +1,24 @@
+----------------------------------------------------------------------
+strip_forall                                              (boolSyntax)
+----------------------------------------------------------------------
+strip_forall : term -> term list * term
+
+SYNOPSIS
+Iteratively breaks apart universal quantifications.
+
+DESCRIBE
+If {M} has the form {!x1 ... xn. t} then {strip_forall M}
+returns {([x1,...,xn],t)}. Note that
+
+   strip_forall(list_mk_forall([x1,...,xn],t,))
+
+will not return {([x1,...,xn],t)} if {t} is a universal
+quantification.
+
+FAILURE
+Never fails.
+
+SEEALSO
+boolSyntax.list_mk_forall, boolSyntax.dest_forall.
+
+----------------------------------------------------------------------

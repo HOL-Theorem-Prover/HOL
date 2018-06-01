@@ -1,0 +1,21 @@
+----------------------------------------------------------------------
+let_tm                                                    (boolSyntax)
+----------------------------------------------------------------------
+let_tm : term
+
+SYNOPSIS
+Constant denoting {let} expressions.
+
+LIBRARY
+boolSyntax
+
+DESCRIBE
+The ML variable {boolSyntax.let_tm} is bound to the term {bool$LET}.
+
+SEEALSO
+boolSyntax.equality, boolSyntax.implication, boolSyntax.select,
+boolSyntax.T, boolSyntax.F, boolSyntax.universal,
+boolSyntax.existential, boolSyntax.exists1, boolSyntax.conjunction,
+boolSyntax.disjunction, boolSyntax.bool_case, boolSyntax.arb.
+
+----------------------------------------------------------------------

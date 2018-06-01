@@ -1,0 +1,30 @@
+----------------------------------------------------------------------
+spine_pair                                                (pairSyntax)
+----------------------------------------------------------------------
+spine_pair : term -> term list
+
+LIBRARY
+pair
+
+SYNOPSIS
+Breaks a paired structure into its constituent pieces.
+
+EXAMPLE
+
+- spine_pair (Term `((1,2),(3,4))`);
+> val it = [`(1,2)`, `3`, `4`] : term list
+
+
+
+
+COMMENTS
+Note that {spine_pair} is similar, but not identical, to {strip_pair}
+which works recursively.
+
+FAILURE
+Never fails.
+
+SEEALSO
+pairSyntax.strip_pair.
+
+----------------------------------------------------------------------

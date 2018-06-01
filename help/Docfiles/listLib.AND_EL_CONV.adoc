@@ -1,0 +1,50 @@
+----------------------------------------------------------------------
+AND_EL_CONV                                                  (listLib)
+----------------------------------------------------------------------
+AND_EL_CONV : conv
+
+SYNOPSIS
+Computes by inference the result of taking the conjunction of the elements of
+a boolean list.
+
+KEYWORDS
+conversion, list.
+
+DESCRIBE
+For any object language list of the form {“[x1;x2;...;xn]”}, where {x1},
+{x2}, ..., {xn} are boolean expressions, the result of evaluating
+
+   AND_EL_CONV “AND_EL [x1;x2;...;xn]”
+
+is the theorem
+
+   |- AND_EL [x1;x2;...;xn] = b
+
+where {b} is either the boolean constant that denotes the
+conjunction of the elements of the list, or a conjunction of those {xi} that
+are not boolean constants.
+
+EXAMPLE
+
+- AND_EL_CONV “AND_EL [T;F;F;T]”;
+|- AND_EL [T;F;F;T] = F
+
+
+- AND_EL_CONV “AND_EL [T;T;T]”;
+|- AND_EL [T;T;T] = T
+
+
+- AND_EL_CONV “AND_EL [T;x;y]”;
+|- AND_EL [T; x; y] = x /\ y
+
+
+- AND_EL_CONV “AND_EL [x;F;y]”;
+|- AND_EL [x; F; y] = F
+
+
+
+
+FAILURE
+{AND_EL_CONV tm} fails if {tm} is not of the form described above.
+
+----------------------------------------------------------------------

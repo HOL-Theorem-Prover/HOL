@@ -1,0 +1,32 @@
+----------------------------------------------------------------------
+CONJ_DISCH                                                     (Drule)
+----------------------------------------------------------------------
+CONJ_DISCH : (term -> thm -> thm)
+
+SYNOPSIS
+Discharges an assumption and conjoins it to both sides of an equation.
+
+KEYWORDS
+rule, conjunction, assumption.
+
+DESCRIBE
+Given an term {t} and a theorem {A |- t1 = t2}, which is an equation between
+boolean terms, {CONJ_DISCH} returns {A - {t} |- (t /\ t1) = (t /\ t2)}, i.e.
+conjoins {t} to both sides of the equation, removing {t} from the assumptions
+if it was there.
+
+            A |- t1 = t2
+   ------------------------------  CONJ_DISCH "t"
+    A - {t} |- t /\ t1 = t /\ t2
+
+
+
+
+FAILURE
+Fails unless the theorem is an equation, both sides of which, and the term
+provided are of type {bool}.
+
+SEEALSO
+Drule.CONJ_DISCHL.
+
+----------------------------------------------------------------------

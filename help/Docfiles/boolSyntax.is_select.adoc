@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+is_select                                                 (boolSyntax)
+----------------------------------------------------------------------
+is_select : (term -> bool)
+
+SYNOPSIS
+Tests a term to see if it is a choice binding.
+
+DESCRIBE
+{is_select "@var. t"} returns {true}. If the term is not an epsilon-term the
+result is {false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+boolSyntax.mk_select, boolSyntax.dest_select.
+
+----------------------------------------------------------------------

@@ -1,0 +1,38 @@
+----------------------------------------------------------------------
+mk_primed_var                                                   (Term)
+----------------------------------------------------------------------
+mk_primed_var : string * hol_type -> term
+
+SYNOPSIS
+Primes a variable name sufficiently to make it distinct from all constants.
+
+DESCRIBE
+When applied to a record made from a string {v} and a type {ty}, the
+function {mk_primed_var} constructs a variable whose name consists of
+{v} followed by however many primes are necessary to make it distinct
+from any constants in the current theory.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- new_theory "wombat";
+> val it = () : unit
+
+- mk_primed_var("x", bool);
+> val it = `x` : term
+
+- new_constant("x", alpha);
+> val it = () : unit
+
+- mk_primed_var("x", bool);
+> val it = `x'` : term
+
+
+
+
+SEEALSO
+Term.genvar, Term.variant, Globals.priming.
+
+----------------------------------------------------------------------

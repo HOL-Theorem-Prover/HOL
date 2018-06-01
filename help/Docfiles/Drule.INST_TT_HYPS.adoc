@@ -1,0 +1,25 @@
+----------------------------------------------------------------------
+INST_TT_HYPS                                                   (Drule)
+----------------------------------------------------------------------
+INST_TT_HYPS :
+(term,term)subst * (hol_type,hol_type)subst -> thm -> thm * term list
+
+SYNOPSIS
+Instantiates terms and types of a theorem.
+
+KEYWORDS
+rule, type, instantiate.
+
+DESCRIBE
+{INST_TT_HYPS} instantiates types and terms in a theorem {thm},
+in the same way {INST_TY_TERM} does.
+It also returns a list of the instantiated hypotheses, in the same order
+as the uninstantiated hypotheses appear in the list {hyp thm}.
+
+FAILURE
+{INST_TT_HYPS} fails under the same conditions as {INST_TY_TERM}.
+
+SEEALSO
+Drule.INST_TY_TERM, Thm.hyp.
+
+----------------------------------------------------------------------

@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+ftyvar                                                          (Type)
+----------------------------------------------------------------------
+ftyvar : hol_type
+
+SYNOPSIS
+Common type variable.
+
+LIBRARY
+Type
+
+DESCRIBE
+The ML variable {Type.ftyvar} is bound to the type variable {'f}.
+
+SEEALSO
+Type.alpha, Type.beta, Type.gamma, Type.delta, Type.etyvar, Type.bool.
+
+----------------------------------------------------------------------

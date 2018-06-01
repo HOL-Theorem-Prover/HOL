@@ -1,0 +1,32 @@
+----------------------------------------------------------------------
+current_definitions                                           (Theory)
+----------------------------------------------------------------------
+current_definitions : unit -> (string * thm) list
+
+SYNOPSIS
+Return the definitions in the current theory segment.
+
+KEYWORDS
+definition, theory.
+
+DESCRIBE
+An invocation {current_definitions()} returns the list of definitions
+stored in the current theory segment. Every definition is automatically
+stored in the current segment by the primitive definition principles.
+
+Advanced definition principles are built in terms of the primitives,
+so they also store their results in the cuurent segment. However, the
+definitions may be quite far removed from the user input, and they may
+also store some consequences of the definition as theorems.
+
+FAILURE
+Never fails. If no definitions have been made, the empty list is returned.
+
+SEEALSO
+Theory.current_theory, Theory.new_theory, Theory.current_axioms,
+Theory.current_theorems, Theory.constants, Theory.types,
+Theory.parents, Definition.new_definition,
+Definition.new_specification, Definition.new_type_definition,
+TotalDefn.Define, IndDefLib.Hol_reln.
+
+----------------------------------------------------------------------

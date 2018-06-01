@@ -1,0 +1,72 @@
+----------------------------------------------------------------------
+type_rws                                                     (bossLib)
+----------------------------------------------------------------------
+type_rws : hol_type -> thm list
+
+SYNOPSIS
+List rewrites for a concrete type.
+
+KEYWORDS
+datatype, injectivity, distinctness.
+
+DESCRIBE
+An application {type_rws ty}, where {ty} is a declared datatype,
+returns a list of rewrite rules corresponding to the type. The list
+typically contains theorems about the distinctness and injectivity of
+constructors, the definition of the case constant introduced at the
+time the type was defined, and any extra rewrites coming from the use of
+records.
+
+FAILURE
+If {ty} is not a declared datatype.
+
+EXAMPLE
+
+- type_rws ``:'a list``;
+
+> val it =
+    [|- (!v f. list_CASE [] v f = v) /\ !a0 a1 v f. list_CASE (a0::a1) v f = f a0 a1,
+     |- !a1 a0. ~([] = a0::a1),
+     |- !a1 a0. ~(a0::a1 = []),
+     |- !a0 a1 a0' a1'. (a0::a1 = a0'::a1') = (a0 = a0') /\ (a1 = a1')]
+
+- Hol_datatype `point = <| x:num ; y:num |>`;
+<<HOL message: Defined type: "point">>
+
+- type_rws ``:point``;
+> val it =
+    [|- !a0 a1 f. point_CASE (point a0 a1) f = f a0 a1,
+     |- !a0 a1 a0' a1'. point a0 a1 = point a0' a1' <=> a0 = a0' /\ a1 = a1',
+     |- !p g f.
+      p with <|y updated_by f; x updated_by g|> =
+      p with <|x updated_by g; y updated_by f|>,
+     |- (!g f. y_fupd f o x_fupd g = x_fupd g o y_fupd f) /\
+    !h g f. y_fupd f o x_fupd g o h = x_fupd g o y_fupd f o h,
+     |- (!n n0. (point n n0).x = n) /\ !n n0. (point n n0).y = n0,
+     |- (!p f. (p with y updated_by f).x = p.x) /\
+    (!p f. (p with x updated_by f).y = p.y) /\
+    (!p f. (p with x updated_by f).x = f p.x) /\
+    !p f. (p with y updated_by f).y = f p.y,
+     |- !p n0 n. p with <|x := n0; y := n|> = <|x := n0; y := n|>,
+     |- !n01 n1 n02 n2.
+      <|x := n01; y := n1|> = <|x := n02; y := n2|> <=>
+      n01 = n02 /\ n1 = n2,
+     |- (!p g f.
+       p with <|x updated_by f; x updated_by g|> =
+       p with x updated_by f o g) /\
+    !p g f.
+      p with <|y updated_by f; y updated_by g|> =
+      p with y updated_by f o g,
+     |- ((!g f. x_fupd f o x_fupd g = x_fupd (f o g)) /\
+     !h g f. x_fupd f o x_fupd g o h = x_fupd (f o g) o h) /\
+    (!g f. y_fupd f o y_fupd g = y_fupd (f o g)) /\
+    !h g f. y_fupd f o y_fupd g o h = y_fupd (f o g) o h]
+
+
+COMMENTS
+{RW_TAC} and {SRW_TAC} automatically include these rewrites.
+
+SEEALSO
+bossLib.rewrites, bossLib.RW_TAC.
+
+----------------------------------------------------------------------

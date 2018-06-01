@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+RES_FORALL_CONV                                          (res_quanLib)
+----------------------------------------------------------------------
+RES_FORALL_CONV : conv
+
+SYNOPSIS
+Converts a restricted universal quantification to an implication.
+
+KEYWORDS
+conversion, restricted quantifier, universal, implication.
+
+DESCRIBE
+When applied to a term of the form {!x::P. Q}, the conversion
+{RES_FORALL_CONV} returns the theorem:
+
+   |- !x::P. Q = (!x. x IN P ==> Q)
+
+which is the underlying semantic representation of the restricted
+universal quantification.
+
+FAILURE
+Fails if applied to a term not of the form {!x::P. Q}.
+
+SEEALSO
+res_quanLib.IMP_RES_FORALL_CONV.
+
+----------------------------------------------------------------------

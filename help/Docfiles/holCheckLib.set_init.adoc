@@ -1,0 +1,32 @@
+----------------------------------------------------------------------
+set_init                                                 (holCheckLib)
+----------------------------------------------------------------------
+set_init : term -> model -> model
+
+SYNOPSIS
+Sets the initial set of states of a HolCheck model.
+
+DESCRIBE
+The supplied term should be a term of propositional logic over the state variables, with no primed variables.
+
+FAILURE
+Fails if the supplied term is not a quantified boolean formula (QBF).
+
+EXAMPLE
+For a mod-8 counter, we need three boolean variables to encode the state. If the counter starts at 0, the set of initial states of the
+model would be set as follows (assuming holCheckLib has been loaded):
+
+
+- val m = holCheckLib.set_init ``~v0 /\ ~v1 /\ ~v2`` holCheckLib.empty_model;
+> val m = <model> : model
+
+
+where empty_model can be replaced by whatever model the user is building.
+
+COMMENTS
+This information must be set for a HolCheck model.
+
+SEEALSO
+holCheckLib.holCheck, holCheckLib.empty_model, holCheckLib.get_init.
+
+----------------------------------------------------------------------

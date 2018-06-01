@@ -1,0 +1,37 @@
+----------------------------------------------------------------------
+Raise                                                       (Feedback)
+----------------------------------------------------------------------
+Raise : exn -> 'a
+
+SYNOPSIS
+Print an exception before re-raising it.
+
+KEYWORDS
+I/O, exception
+
+DESCRIBE
+The {Raise} function prints out information about its argument exception
+before re-raising it. It uses the value of {ERR_to_string} to format the
+message, and prints the information on the {outstream} held in
+{ERR_outstream}.
+
+FAILURE
+Never fails, since it always succeeds in raising the supplied exception.
+
+EXAMPLE
+
+- Raise (mk_HOL_ERR "Foo" "bar" "incomprehensible input");
+
+Exception raised at Foo.bar:
+incomprehensible input
+! Uncaught exception:
+! HOL_ERR
+
+
+
+
+SEEALSO
+Feedback, Feedback.ERR_to_string, Feedback.ERR_outstream, Lib.try,
+Lib.trye.
+
+----------------------------------------------------------------------

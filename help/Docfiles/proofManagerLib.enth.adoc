@@ -1,0 +1,24 @@
+----------------------------------------------------------------------
+enth                                                 (proofManagerLib)
+----------------------------------------------------------------------
+enth : tactic -> int -> proof
+
+SYNOPSIS
+Applies a tactic to one goal, referenced by number, in the current goal list,
+replacing that goal with the resulting subgoals.
+
+DESCRIBE
+{enth tac i} applies {tac} to all the i’th goal in the current goal list,
+replacing that goal in the goal list with the subgoals produced by {tac}.
+It is an abbreviation for {expand_list (NTH_GOAL tac i)}.
+
+USES
+For interactively constructing suitable compound tactics,
+for example to test whether a particular subgoal can be proved easily,
+before attacking the other subgoals.
+
+SEEALSO
+proofManagerLib.expand_list, proofManagerLib.elt, Tactical.NTH_GOAL,
+proofManagerLib.set_goal, proofManagerLib.r.
+
+----------------------------------------------------------------------

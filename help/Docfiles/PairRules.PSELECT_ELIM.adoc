@@ -1,0 +1,41 @@
+----------------------------------------------------------------------
+PSELECT_ELIM                                               (PairRules)
+----------------------------------------------------------------------
+PSELECT_ELIM : thm -> term * thm -> thm
+
+KEYWORDS
+rule, epsilon.
+
+LIBRARY
+pair
+
+SYNOPSIS
+Eliminates a paired epsilon term, using deduction from a particular instance.
+
+DESCRIBE
+{PSELECT_ELIM} expects two arguments, a theorem {th1}, and a pair
+{(p,th2): term * thm}.  The conclusion of {th1} must have the form {P($@ P)},
+which asserts that the epsilon term {$@ P} denotes some value at which
+{P} holds.  The paired variable structure {p} appears only in the assumption
+{P p} of the theorem {th2}.  The conclusion of the resulting theorem matches
+that of {th2}, and the hypotheses include the union of all hypotheses
+of the premises excepting {P p}.
+
+    A1 |- P($@ P)     A2 u {P p} |- t
+   -------------------------------------  PSELECT_ELIM th1 (p ,th2)
+              A1 u A2 |- t
+
+where {p} is not free in {A2}. If {p} appears in the conclusion of
+{th2}, the epsilon term will NOT be eliminated, and the conclusion will be
+{t[$@ P/p]}.
+
+FAILURE
+Fails if the first theorem is not of the form {A1 |- P($@ P)}, or if
+any of the variables from the variable structure {p} occur free in any
+other assumption of {th2}.
+
+SEEALSO
+Drule.SELECT_ELIM, PairRules.PCHOOSE, PairRules.PSELECT_CONV,
+PairRules.PSELECT_INTRO, PairRules.PSELECT_RULE.
+
+----------------------------------------------------------------------

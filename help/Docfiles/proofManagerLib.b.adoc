@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+b                                                    (proofManagerLib)
+----------------------------------------------------------------------
+b : unit -> proof
+
+SYNOPSIS
+Restores the proof state undoing the effects of a previous expansion.
+
+DESCRIBE
+The function {b} is part of the subgoal package. It is an abbreviation for the
+function {backup}. For a description of the subgoal package, see
+{set_goal}.
+
+FAILURE
+As for {backup}.
+
+USES
+Back tracking in a goal-directed proof to undo errors or try different tactics.
+
+SEEALSO
+proofManagerLib.set_goal, proofManagerLib.restart,
+proofManagerLib.backup, proofManagerLib.restore, proofManagerLib.save,
+proofManagerLib.set_backup, proofManagerLib.expand,
+proofManagerLib.expandf, proofManagerLib.p, proofManagerLib.top_thm,
+proofManagerLib.top_goal.
+
+----------------------------------------------------------------------

@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+SIMP_RULE                                                    (simpLib)
+----------------------------------------------------------------------
+SIMP_RULE : simpset -> thm list -> thm -> thm
+
+SYNOPSIS
+Simplify a term with the given simpset and theorems.
+
+DESCRIBE
+{bossLib.SIMP_RULE} is identical to {simpLib.SIMP_RULE}.
+
+SEEALSO
+bossLib.SIMP_RULE.
+
+----------------------------------------------------------------------

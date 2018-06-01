@@ -1,0 +1,28 @@
+----------------------------------------------------------------------
+REV_FULL_SIMP_TAC                                            (bossLib)
+----------------------------------------------------------------------
+REV_FULL_SIMP_TAC : simpset -> thm list -> tactic
+
+SYNOPSIS
+Simplifies the goal (assumptions as well as conclusion) with the given
+simpset.
+
+KEYWORDS
+simplification, tactic.
+
+LIBRARY
+simpLib
+
+DESCRIBE
+{REV_FULL_SIMP_TAC} is the same as {FULL_SIMP_TAC}
+except that it simplifies the assumptions in the opposite order.
+
+That is, in {REV_FULL_SIMP_TAC},
+each assumption is used to rewrite higher-numbered assumptions,
+whereas in {FULL_SIMP_TAC},
+each assumption is used to rewrite lower-numbered assumptions.
+
+SEEALSO
+bossLib.FULL_SIMP_TAC, bossLib.ASM_SIMP_TAC, bossLib.SIMP_TAC.
+
+----------------------------------------------------------------------

@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+hol_type                                                        (Type)
+----------------------------------------------------------------------
+eqtype hol_type
+
+SYNOPSIS
+Type of HOL types.
+
+KEYWORDS
+type.
+
+DESCRIBE
+The ML type {hol_type} represents the type of HOL types.
+
+COMMENTS
+Since {hol_type} is an ML eqtype, any two {hol_type}s {ty1} and {ty2}
+can be tested for equality by {ty1 = ty2}.
+
+SEEALSO
+Term.term.
+
+----------------------------------------------------------------------

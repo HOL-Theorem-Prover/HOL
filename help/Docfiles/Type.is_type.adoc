@@ -1,0 +1,20 @@
+----------------------------------------------------------------------
+is_type                                                         (Type)
+----------------------------------------------------------------------
+is_type : hol_type -> bool
+
+SYNOPSIS
+Tests whether a HOL type is not a type variable.
+
+DESCRIBE
+{is_type ty} returns {true} if {ty} is an application of a
+type operator and {false} otherwise.
+
+FAILURE
+Never fails.
+
+SEEALSO
+Type.op_arity, Type.mk_type, Type.mk_thy_type, Type.dest_type,
+Type.dest_thy_type.
+
+----------------------------------------------------------------------

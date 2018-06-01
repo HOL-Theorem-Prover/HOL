@@ -1,0 +1,30 @@
+----------------------------------------------------------------------
+ALPHA_CONV                                                     (Drule)
+----------------------------------------------------------------------
+ALPHA_CONV : term -> conv
+
+SYNOPSIS
+Renames the bound variable of a lambda-abstraction.
+
+KEYWORDS
+conversion, alpha.
+
+DESCRIBE
+If {x} is a variable of type {ty} and {M} is an abstraction (with
+bound variable {y} of type {ty} and body {t}), then {ALPHA_CONV x M}
+returns the theorem:
+
+   |- (\y.t) = (\x'. t[x'/y])
+
+where the variable {x':ty} is a primed variant of {x} chosen so
+as not to be free in {\y.t}.
+
+FAILURE
+{ALPHA_CONV x tm} fails if {x} is not a variable, if {tm} is not an
+abstraction, or if {x} is a variable {v} and {tm} is a lambda abstraction
+{\y.t} but the types of {v} and {y} differ.
+
+SEEALSO
+Thm.ALPHA, Drule.GEN_ALPHA_CONV.
+
+----------------------------------------------------------------------

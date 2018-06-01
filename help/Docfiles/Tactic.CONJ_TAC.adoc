@@ -1,0 +1,29 @@
+----------------------------------------------------------------------
+CONJ_TAC                                                      (Tactic)
+----------------------------------------------------------------------
+CONJ_TAC : tactic
+
+SYNOPSIS
+Reduces a conjunctive goal to two separate subgoals.
+
+KEYWORDS
+tactic, conjunction.
+
+DESCRIBE
+When applied to a goal {A ?- t1 /\ t2}, the tactic {CONJ_TAC} reduces it to the
+two subgoals corresponding to each conjunct separately.
+
+       A ?- t1 /\ t2
+   ======================  CONJ_TAC
+    A ?- t1      A ?- t2
+
+
+
+
+FAILURE
+Fails unless the conclusion of the goal is a conjunction.
+
+SEEALSO
+Tactic.STRIP_TAC.
+
+----------------------------------------------------------------------

@@ -1,0 +1,21 @@
+----------------------------------------------------------------------
+is_prod                                                   (pairSyntax)
+----------------------------------------------------------------------
+is_prod : hol_type -> bool
+
+LIBRARY
+pair
+
+SYNOPSIS
+Tests a type to see if it is a product type.
+
+DESCRIBE
+If {ty} is a type of the form {ty1 # ty2}, then {is_prod ty} returns {true}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+pairSyntax.dest_prod, pairSyntax.mk_prod.
+
+----------------------------------------------------------------------

@@ -1,0 +1,23 @@
+----------------------------------------------------------------------
+NO_TAC                                                      (Tactical)
+----------------------------------------------------------------------
+NO_TAC : tactic
+
+SYNOPSIS
+Tactic which always fails.
+
+KEYWORDS
+tactic.
+
+DESCRIBE
+Whatever goal it is applied to, {NO_TAC} always fails
+with string {`NO_TAC`}.
+
+FAILURE
+Always fails.
+
+SEEALSO
+Tactical.ALL_TAC, Thm_cont.ALL_THEN, Tactical.FAIL_TAC,
+Thm_cont.NO_THEN.
+
+----------------------------------------------------------------------

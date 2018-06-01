@@ -1,0 +1,32 @@
+----------------------------------------------------------------------
+save                                                 (proofManagerLib)
+----------------------------------------------------------------------
+save : unit -> proof
+
+SYNOPSIS
+Marks the current proof state as a save point, and clears the automatic undo history.
+
+DESCRIBE
+The function {save} is part of the subgoal package. A call to
+{save} clears the automatic proof history and marks the current state as
+a save point. A call to {backup} at a save point will fail. In contrast to
+{forget_history}, however, {save} does not clear the initial goal or any
+previous save points. Therefore a call to {restore} or {restart} at a save point
+will succeed.  For a description of the subgoal package, see {set_goal}.
+
+FAILURE
+The function {save} will fail only if no goalstack is being managed.
+
+USES
+Creating save points in an interactive proof, to allow user-directed back
+tracking. This is in contrast to the automatic back tracking facilitated by
+{backup}.
+
+SEEALSO
+proofManagerLib.set_goal, proofManagerLib.restart,
+proofManagerLib.backup, proofManagerLib.restore, proofManagerLib.save,
+proofManagerLib.set_backup, proofManagerLib.expand,
+proofManagerLib.expandf, proofManagerLib.p, proofManagerLib.top_thm,
+proofManagerLib.top_goal.
+
+----------------------------------------------------------------------

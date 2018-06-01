@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+strip_comb                                                (boolSyntax)
+----------------------------------------------------------------------
+strip_comb : term -> term * term list
+
+SYNOPSIS
+Iteratively breaks apart combinations (function applications).
+
+DESCRIBE
+If {M} has the form {t t1 ... tn} then {strip_comb M} returns
+{(t,[t1,...,tn])}. Note that
+
+   strip_comb(list_mk_comb(t,[t1,...,tn]))
+
+will not be {(t,[t1,...,tn])} if {t} is a combination.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- strip_comb (Term `x /\ y`);
+> val it = (`$/\`, [`x`, `y`]) : term * term list
+
+- strip_comb T;
+> val it = (`T`, []) : term * term list
+
+
+
+
+SEEALSO
+Term.list_mk_comb, Term.dest_comb.
+
+----------------------------------------------------------------------

@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+bool                                                            (Type)
+----------------------------------------------------------------------
+bool : hol_type
+
+SYNOPSIS
+Basic type constant.
+
+LIBRARY
+Type
+
+DESCRIBE
+The ML variable {Type.bool} is bound to the type constant {bool}.
+
+SEEALSO
+alpha, Type.beta, Type.gamma, Type.delta.
+
+----------------------------------------------------------------------

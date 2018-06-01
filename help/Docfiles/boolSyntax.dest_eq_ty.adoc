@@ -1,0 +1,25 @@
+----------------------------------------------------------------------
+dest_eq_ty                                                (boolSyntax)
+----------------------------------------------------------------------
+dest_eq_ty : term -> term * term * hol_type
+
+SYNOPSIS
+Term destructor for equality.
+
+DESCRIBE
+If {M} is the term {t1 = t2}, then {dest_eq_ty M} returns
+{(t1, t2, ty)}, where {ty} is the type of {t1} (and thus also of
+{t2}).
+
+FAILURE
+Fails if {M} is not an equality.
+
+USES
+Gives an efficient way to break apart an equality and get the
+type of the equality. Useful for obtaining that last fraction of speed
+when optimizing the bejeesus out of an inference rule.
+
+SEEALSO
+boolSyntax.mk_eq, boolSyntax.is_eq, boolSyntax.lhs, boolSyntax.rhs.
+
+----------------------------------------------------------------------

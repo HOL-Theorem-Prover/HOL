@@ -1,0 +1,35 @@
+----------------------------------------------------------------------
+type_vars                                                       (Type)
+----------------------------------------------------------------------
+type_vars : hol_type -> hol_type list
+
+SYNOPSIS
+Returns the set of type variables in a type.
+
+KEYWORDS
+variable, type.
+
+DESCRIBE
+An invocation {type_vars ty} returns a list representing the set of
+type variables occurring in {ty}.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- type_vars ((alpha --> beta) --> bool --> beta);
+> val it = [`:'a`, `:'b`] : hol_type list
+
+
+
+
+COMMENTS
+Code should not depend on how elements are arranged in the
+result of {type_vars}.
+
+SEEALSO
+Type.type_varsl, Type.type_var_in, Type.exists_tyvar,
+Type.polymorphic, Term.free_vars.
+
+----------------------------------------------------------------------

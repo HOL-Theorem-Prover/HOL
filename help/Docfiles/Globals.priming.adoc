@@ -1,0 +1,43 @@
+----------------------------------------------------------------------
+priming                                                      (Globals)
+----------------------------------------------------------------------
+priming : string option ref
+
+SYNOPSIS
+Controls how variables get renamed.
+
+KEYWORDS
+variable, renaming
+
+LIBRARY
+Globals
+
+DESCRIBE
+The flag {Globals.priming} controls how certain system function perform
+renaming of variables. When {priming} has the value {NONE}, renaming
+is achieved by concatenation of primes ({'}). When {priming} has the
+value {SOME s}, renaming is achieved by incrementing a counter.
+
+The default value of {priming} is {NONE}.
+
+EXAMPLE
+
+- mk_primed_var ("T",bool);
+> val it = `T'` : term
+
+- with_flag (priming,SOME "_") mk_primed_var ("T",bool);
+> val it = `T_1` : term
+
+
+
+
+COMMENTS
+Proofs should be re-run in the same priming regime as they were
+originally performed in, since different styles of renaming can
+break proofs.
+
+SEEALSO
+Term.variant, Term.subst, Term.inst, Term.mk_primed_var,
+Lib.with_flag.
+
+----------------------------------------------------------------------

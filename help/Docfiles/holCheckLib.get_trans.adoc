@@ -1,0 +1,12 @@
+----------------------------------------------------------------------
+get_trans                                                (holCheckLib)
+----------------------------------------------------------------------
+get_trans : model -> (string * term) list
+
+SYNOPSIS
+Returns a description of the transition system of the HolCheck model. Throws an exception if no transition system has been set.
+
+SEEALSO
+holCheckLib.holCheck, holCheckLib.set_trans, holCheckLib.get_flag_ric.
+
+----------------------------------------------------------------------

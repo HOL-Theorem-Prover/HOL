@@ -1,0 +1,21 @@
+----------------------------------------------------------------------
+mk_prod                                                   (pairSyntax)
+----------------------------------------------------------------------
+mk_prod : hol_type * hol_type -> hol_type
+
+LIBRARY
+pair
+
+SYNOPSIS
+Constructs a product type from two constituent types.
+
+DESCRIBE
+{mk_prod(ty1, ty2)} returns {ty1 # t2}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+pairSyntax.is_prod, pairSyntax.dest_prod.
+
+----------------------------------------------------------------------

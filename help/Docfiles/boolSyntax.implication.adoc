@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+implication                                               (boolSyntax)
+----------------------------------------------------------------------
+implication : term
+
+SYNOPSIS
+Constant denoting logical implication.
+
+LIBRARY
+boolSyntax
+
+DESCRIBE
+The ML variable {boolSyntax.implication} is bound to the term {min$==>}.
+
+SEEALSO
+boolSyntax.equality, boolSyntax.select, boolSyntax.T, boolSyntax.F,
+boolSyntax.universal, boolSyntax.existential, boolSyntax.exists1,
+boolSyntax.conjunction, boolSyntax.disjunction, boolSyntax.negation,
+boolSyntax.conditional, boolSyntax.bool_case, boolSyntax.let_tm,
+boolSyntax.arb.
+
+----------------------------------------------------------------------

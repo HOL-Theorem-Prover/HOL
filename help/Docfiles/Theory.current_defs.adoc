@@ -1,0 +1,23 @@
+----------------------------------------------------------------------
+current_defs                                                  (Theory)
+----------------------------------------------------------------------
+current_defs : unit -> (string * thm) list
+
+SYNOPSIS
+Return the definitions in the current theory segment.
+
+KEYWORDS
+definition, theory.
+
+DESCRIBE
+An invocation {current_defs ()} returns a list of the definitions
+made in the current theory segment.
+
+FAILURE
+Never fails. If no definitions have been made, the empty list is returned.
+
+SEEALSO
+Theory.current_theory, Theory.new_theory, Theory.current_axioms,
+Theory.current_thms, Theory.constants, Theory.types, Theory.parents.
+
+----------------------------------------------------------------------

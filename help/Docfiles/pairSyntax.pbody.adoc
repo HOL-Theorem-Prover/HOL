@@ -1,0 +1,21 @@
+----------------------------------------------------------------------
+pbody                                                     (pairSyntax)
+----------------------------------------------------------------------
+pbody : (term -> term)
+
+LIBRARY
+pair
+
+SYNOPSIS
+Returns the body of a paired abstraction.
+
+DESCRIBE
+{pbody "\pair. t"} returns {"t"}.
+
+FAILURE
+Fails unless the term is a paired abstraction.
+
+SEEALSO
+Term.body, pairSyntax.dest_pabs.
+
+----------------------------------------------------------------------

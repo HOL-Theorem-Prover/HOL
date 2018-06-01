@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+dest_pair                                                 (pairSyntax)
+----------------------------------------------------------------------
+dest_pair : term -> term * term
+
+SYNOPSIS
+Breaks apart a pair into two separate terms.
+
+LIBRARY
+pair
+
+DESCRIBE
+{dest_pair} is a term destructor for pairs: if {M} is a term of the
+form {(t1,t2)}, then {dest_pair M} returns {(t1,t2)}.
+
+FAILURE
+Fails if {M} is not a pair.
+
+SEEALSO
+pairSyntax.mk_pair, pairSyntax.is_pair, pairSyntax.strip_pair.
+
+----------------------------------------------------------------------

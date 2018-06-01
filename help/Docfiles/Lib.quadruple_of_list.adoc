@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+quadruple_of_list                                                (Lib)
+----------------------------------------------------------------------
+quadruple_of_list : 'a list -> 'a * 'a * 'a * 'a
+
+SYNOPSIS
+Turns a four-element list into a quadruple.
+
+DESCRIBE
+{quadruple_of_list [x1, x2, x3, x4]} returns {(x1, x2, x3, x4)}.
+
+FAILURE
+Fails if applied to a list that is not of length 4.
+
+SEEALSO
+Lib.singleton_of_list, Lib.pair_of_list, Lib.triple_of_list.
+
+----------------------------------------------------------------------

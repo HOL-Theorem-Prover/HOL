@@ -1,0 +1,26 @@
+----------------------------------------------------------------------
+e                                                    (proofManagerLib)
+----------------------------------------------------------------------
+e : tactic -> proof
+
+SYNOPSIS
+Applies a tactic to the current goal, stacking the resulting subgoals.
+
+DESCRIBE
+The function {e} is part of the subgoal package. It is an abbreviation for
+{expand}. For a description of the subgoal package, see {set_goal}.
+
+FAILURE
+As for {expand}.
+
+USES
+Doing a step in an interactive goal-directed proof.
+
+SEEALSO
+proofManagerLib.set_goal, proofManagerLib.restart,
+proofManagerLib.backup, proofManagerLib.restore, proofManagerLib.save,
+proofManagerLib.set_backup, proofManagerLib.expand,
+proofManagerLib.expandf, proofManagerLib.p, proofManagerLib.top_thm,
+proofManagerLib.top_goal.
+
+----------------------------------------------------------------------

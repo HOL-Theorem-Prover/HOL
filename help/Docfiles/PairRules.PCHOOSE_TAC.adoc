@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+PCHOOSE_TAC                                                (PairRules)
+----------------------------------------------------------------------
+PCHOOSE_TAC : thm_tactic
+
+KEYWORDS
+tactic, existential.
+
+LIBRARY
+pair
+
+SYNOPSIS
+Adds the body of a paired existentially quantified theorem to the assumptions
+of a goal.
+
+DESCRIBE
+When applied to a theorem {A' |- ?p. t} and a goal, {CHOOSE_TAC} adds
+{t[p'/p]} to the assumptions of the goal, where {p'} is a variant of
+the pair {p} which has no components free in the assumption list;
+normally {p'} is just {p}.
+
+         A ?- u
+   ====================  CHOOSE_TAC (A' |- ?q. t)
+    A u {t[p'/p]} ?- u
+
+Unless {A'} is a subset of {A}, this is not a valid tactic.
+
+FAILURE
+Fails unless the given theorem is a paired existential quantification.
+
+SEEALSO
+Tactic.CHOOSE_TAC, PairRules.PCHOOSE_THEN, PairRules.P_PCHOOSE_TAC.
+
+----------------------------------------------------------------------

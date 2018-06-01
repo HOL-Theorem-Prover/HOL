@@ -1,0 +1,21 @@
+----------------------------------------------------------------------
+axioms                                                        (Theory)
+----------------------------------------------------------------------
+axioms : unit -> (string * thm) list
+
+SYNOPSIS
+Returns the axioms of the current theory.
+
+DESCRIBE
+A call {axioms ()} returns the axioms of the current theory segment together
+with their names. The names are those given to the axioms by the user
+when they were originally added to the theory segment (by a call to
+{new_axiom}).
+
+FAILURE
+Never fails.
+
+SEEALSO
+Theory.axiom, Theory.definitions, Theory.theorems, Theory.new_axiom.
+
+----------------------------------------------------------------------

@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+exists1                                                   (boolSyntax)
+----------------------------------------------------------------------
+exists1 : term
+
+SYNOPSIS
+Constant denoting the unique existence quantifier.
+
+LIBRARY
+boolSyntax
+
+DESCRIBE
+The ML variable {boolSyntax.exists1} is bound to the term {bool$?!}.
+
+SEEALSO
+boolSyntax.equality, boolSyntax.implication, boolSyntax.select,
+boolSyntax.T, boolSyntax.F, boolSyntax.universal,
+boolSyntax.existential, boolSyntax.conjunction,
+boolSyntax.disjunction, boolSyntax.negation, boolSyntax.conditional,
+boolSyntax.bool_case, boolSyntax.let_tm, boolSyntax.arb.
+
+----------------------------------------------------------------------

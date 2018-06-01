@@ -1,0 +1,17 @@
+----------------------------------------------------------------------
+IndDefRules
+----------------------------------------------------------------------
+structure IndDefRules
+
+SYNOPSIS
+Tom Melham’s inference support for inductive definitions.
+
+KEYWORDS
+inductive
+
+DESCRIBE
+{IndDefRules} provides support for reasoning about inductively
+defined relations, including a general induction tactic, and an
+entrypoint for deriving so-called ‘strong’ rule induction.
+
+----------------------------------------------------------------------

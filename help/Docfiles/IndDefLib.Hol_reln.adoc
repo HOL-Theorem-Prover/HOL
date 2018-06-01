@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+Hol_reln                                                   (IndDefLib)
+----------------------------------------------------------------------
+Hol_reln : term quotation -> thm * thm * thm
+
+SYNOPSIS
+Definition facility for inductive predicates.
+
+DESCRIBE
+{bossLib.Hol_reln} is identical to {IndDefLib.Hol_reln}.
+
+SEEALSO
+bossLib.Hol_reln.
+
+----------------------------------------------------------------------

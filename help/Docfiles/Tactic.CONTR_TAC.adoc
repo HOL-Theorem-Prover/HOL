@@ -1,0 +1,31 @@
+----------------------------------------------------------------------
+CONTR_TAC                                                     (Tactic)
+----------------------------------------------------------------------
+CONTR_TAC : thm_tactic
+
+SYNOPSIS
+Solves any goal from contradictory theorem.
+
+KEYWORDS
+tactic, contradiction.
+
+DESCRIBE
+When applied to a contradictory theorem {A' |- F}, and a goal {A ?- t},
+the tactic {CONTR_TAC} completely solves the goal. This is an invalid
+tactic unless {A'} is a subset of {A}.
+
+    A ?- t
+   ========  CONTR_TAC (A' |- F)
+
+
+
+
+
+FAILURE
+Fails unless the theorem is contradictory, i.e. has {F} as its conclusion.
+
+SEEALSO
+Tactic.CHECK_ASSUME_TAC, Drule.CONTR, Thm.CCONTR, Drule.CONTRAPOS,
+Thm.NOT_ELIM.
+
+----------------------------------------------------------------------

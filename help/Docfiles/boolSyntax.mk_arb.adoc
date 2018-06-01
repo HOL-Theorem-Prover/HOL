@@ -1,0 +1,26 @@
+----------------------------------------------------------------------
+mk_arb                                                    (boolSyntax)
+----------------------------------------------------------------------
+mk_arb : hol_type -> term
+
+SYNOPSIS
+Creates a type instance of the {ARB} constant.
+
+LIBRARY
+
+
+DESCRIBE
+For any HOL type {ty}, {mk_arb ty} creates a type instance of the {ARB}
+constant.
+
+FAILURE
+Never fails.
+
+COMMENTS
+{ARB} is a constant of type {'a}. It is sometimes used for
+creating pseudo-partial functions.
+
+SEEALSO
+boolSyntax.dest_arb, boolSyntax.is_arb, boolSyntax.arb.
+
+----------------------------------------------------------------------

@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+Specialize                                                       (Thm)
+----------------------------------------------------------------------
+Specialize : term -> thm -> thm
+
+SYNOPSIS
+Specializes the conclusion of a universal theorem.
+
+KEYWORDS
+rule, specialization.
+
+DESCRIBE
+When applied to a term {u} and a theorem {A |- !x. t},
+{Specialize} returns the theorem {A |- t[u/x]}. Care is taken
+to ensure that no variables free in {u} become bound after
+this operation.
+
+     A |- !x. t
+   --------------  Specialize u
+    A |- t[u/x]
+
+
+
+
+FAILURE
+Fails if the theorem’s conclusion is not universally quantified,
+or if {x} and {u} have different types.
+
+COMMENTS
+{Specialize} behaves identically to {SPEC}, but is faster.
+
+SEEALSO
+Thm.SPEC, Drule.ISPEC, Drule.SPECL, Drule.SPEC_ALL, Drule.SPEC_VAR,
+Thm.GEN, Thm.GENL, Drule.GEN_ALL.
+
+----------------------------------------------------------------------

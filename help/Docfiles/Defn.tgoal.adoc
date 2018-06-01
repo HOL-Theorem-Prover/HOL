@@ -1,0 +1,49 @@
+----------------------------------------------------------------------
+tgoal                                                           (Defn)
+----------------------------------------------------------------------
+tgoal : defn -> proofs
+
+SYNOPSIS
+Set up a termination proof.
+
+KEYWORDS
+termination, goalstack.
+
+
+
+DESCRIBE
+{tgoal defn} sets up a termination proof for the function represented by
+{defn}. It creates a new goalstack and makes it the focus of subsequent
+goalstack operations.
+
+FAILURE
+{tgoal defn} fails if {defn} represents a non-recursive or primitive
+recursive function.
+
+
+
+EXAMPLE
+
+- val qsort_defn =
+    Hol_defn "qsort"
+       `(qsort ___ [] = []) /\
+        (qsort ord (x::rst) =
+            APPEND (qsort ord (FILTER ($~ o ord x) rst))
+              (x :: qsort ord (FILTER (ord x) rst)))`;
+
+- tgoal qsort_defn;
+> val it =
+   Proof manager status: 1 proof.
+   1. Incomplete:
+       Initial goal:
+       ?R. WF R /\
+           (!rst x ord. R (ord,FILTER ($~ o ord x) rst) (ord,x::rst)) /\
+            !rst x ord. R (ord,FILTER (ord x) rst) (ord,x::rst)
+
+
+
+
+SEEALSO
+TotalDefn.WF_REL_TAC, Defn.tprove, Defn.Hol_defn.
+
+----------------------------------------------------------------------

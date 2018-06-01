@@ -1,0 +1,37 @@
+----------------------------------------------------------------------
+FVL                                                             (Term)
+----------------------------------------------------------------------
+FVL : term list -> term set -> term set
+
+SYNOPSIS
+Efficient computation of the set of free variables in a list of terms.
+
+KEYWORDS
+variable, free, set.
+
+DESCRIBE
+An invocation {FVL [t1,...,tn] V} adds the set of free variables found
+in {t1,...,tn} to the accumulator {V}.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- FVL [Term `v1 /\ v2 ==> v2 \/ v3`] empty_varset;
+> val it = <set> : term set
+
+- HOLset.listItems it;
+> val it = [`v1`, `v2`, `v3`] : term list
+
+
+
+
+COMMENTS
+Preferable to {free_varsl} when the number of free variables
+becomes large.
+
+SEEALSO
+HOLset, Term.empty_varset, Term.free_varsl, Term.free_vars.
+
+----------------------------------------------------------------------

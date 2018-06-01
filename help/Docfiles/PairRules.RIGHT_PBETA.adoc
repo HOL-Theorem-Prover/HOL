@@ -1,0 +1,37 @@
+----------------------------------------------------------------------
+RIGHT_PBETA                                                (PairRules)
+----------------------------------------------------------------------
+RIGHT_PBETA : (thm -> thm)
+
+KEYWORDS
+rule.
+
+LIBRARY
+pair
+
+SYNOPSIS
+Beta-reduces a top-level paired beta-redex on the right-hand side of an
+equation.
+
+DESCRIBE
+When applied to an equational theorem, {RIGHT_PBETA} applies paired
+beta-reduction at top level to the right-hand side (only).
+Variables are renamed if necessary to avoid free variable capture.
+
+    A |- s = (\p. t1) t2
+   ----------------------  RIGHT_PBETA
+     A |- s = t1[t2/p]
+
+
+
+
+FAILURE
+Fails unless the theorem is equational, with its right-hand side being
+a top-level paired beta-redex.
+
+SEEALSO
+Drule.RIGHT_BETA, PairRules.PBETA_CONV, PairRules.PBETA_RULE,
+PairRules.PBETA_TAC, PairRules.RIGHT_LIST_PBETA, PairRules.LEFT_PBETA,
+PairRules.LEFT_LIST_PBETA.
+
+----------------------------------------------------------------------

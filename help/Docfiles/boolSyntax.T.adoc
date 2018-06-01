@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+T                                                         (boolSyntax)
+----------------------------------------------------------------------
+T : term
+
+SYNOPSIS
+Constant denoting truth.
+
+LIBRARY
+boolSyntax
+
+DESCRIBE
+The ML variable {boolSyntax.T} is bound to the term {bool$T}.
+
+SEEALSO
+boolSyntax.equality, boolSyntax.implication, boolSyntax.select,
+boolSyntax.F, boolSyntax.universal, boolSyntax.existential,
+boolSyntax.exists1, boolSyntax.conjunction, boolSyntax.disjunction,
+boolSyntax.negation, boolSyntax.conditional, boolSyntax.bool_case,
+boolSyntax.let_tm, boolSyntax.arb.
+
+----------------------------------------------------------------------

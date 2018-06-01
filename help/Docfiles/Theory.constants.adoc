@@ -1,0 +1,35 @@
+----------------------------------------------------------------------
+constants                                                     (Theory)
+----------------------------------------------------------------------
+constants : string -> term list
+
+SYNOPSIS
+Returns a list of the constants defined in a named theory.
+
+DESCRIBE
+The call
+
+   constants thy
+
+where {thy} is an ancestor theory (the special string {"-"}
+means the current theory), returns a list of all the constants in
+that theory.
+
+FAILURE
+Fails if the named theory does not exist, or is not an ancestor of the
+current theory.
+
+EXAMPLE
+
+- load "combinTheory";
+> val it = () : unit
+
+- constants "combin";
+> val it = [`$o`, `W`, `S`, `K`, `I`, `combin$C`] : term list
+
+
+SEEALSO
+Theory.types, Theory.current_axioms, Theory.current_definitions,
+Theory.current_theorems.
+
+----------------------------------------------------------------------

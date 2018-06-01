@@ -1,0 +1,29 @@
+----------------------------------------------------------------------
+mk_numeral                                                 (numSyntax)
+----------------------------------------------------------------------
+mk_numeral : Arbnum.num -> term
+
+SYNOPSIS
+Convert ML bignum value to HOL numeral.
+
+DESCRIBE
+An invocation {mk_numeral n}, where {n} is an ML value of type
+{Arbnum.num} returns the corrresponding HOL term.
+
+EXAMPLE
+
+- Arbnum.fromString "1234";
+> val it = 1234 : num
+
+- mk_numeral it;
+> val it = ``1234`` : term
+
+
+
+FAILURE
+Never fails.
+
+SEEALSO
+numSyntax.dest_numeral, numSyntax.is_numeral.
+
+----------------------------------------------------------------------

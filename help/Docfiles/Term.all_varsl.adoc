@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+all_varsl                                                       (Term)
+----------------------------------------------------------------------
+all_varsl : term list -> term list
+
+SYNOPSIS
+Returns the set of all variables in a list of terms.
+
+KEYWORDS
+variable, term.
+
+DESCRIBE
+An invocation {all_varsl [t1,...,tn]} returns a list representing
+the set of all term variables occurring in {t1,...,tn}.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- all_varsl [Term `x /\ y /\ y ==> x`,
+             Term `!a. a ==> p ==> y`];
+> val it = [`x`, `y`, `p`, `a`] : term list
+
+
+
+
+COMMENTS
+Code should not depend on how elements are arranged in the
+result of {all_varsl}.
+
+SEEALSO
+Term.all_atoms, Term.all_vars, Term.empty_varset, Term.free_vars_lr,
+Term.free_vars, Term.free_varsl, Term.FVL, Type.type_vars.
+
+----------------------------------------------------------------------

@@ -1,0 +1,28 @@
+----------------------------------------------------------------------
+el                                                               (Lib)
+----------------------------------------------------------------------
+el : int -> 'a list -> 'a
+
+SYNOPSIS
+Extracts a specified element from a list.
+
+DESCRIBE
+{el i [x1,...,xn]} returns {xi}. Note that the elements are numbered starting
+from {1}, not {0}.
+
+FAILURE
+Fails with {el} if the integer argument is less than 1 or greater than the
+length of the list.
+
+EXAMPLE
+
+- el 3 [1,2,7,1];
+> val it = 7 : int
+
+
+
+
+SEEALSO
+Lib.index.
+
+----------------------------------------------------------------------

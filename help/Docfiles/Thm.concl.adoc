@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+concl                                                            (Thm)
+----------------------------------------------------------------------
+concl : thm -> term
+
+SYNOPSIS
+Returns the conclusion of a theorem.
+
+DESCRIBE
+When applied to a theorem {A |- t}, the function {concl} returns {t}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+Thm.dest_thm, Thm.hyp.
+
+----------------------------------------------------------------------

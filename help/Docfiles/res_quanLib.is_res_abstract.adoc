@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+is_res_abstract                                          (res_quanLib)
+----------------------------------------------------------------------
+is_res_abstract : term -> bool
+
+SYNOPSIS
+Tests a term to see if it is a restricted abstraction.
+
+DESCRIBE
+{is_res_abstract "\var::P. t"} returns {true}. If the term is not a
+restricted abstraction the result is {false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+res_quanLib.mk_res_abstract, res_quanLib.dest_res_abstract.
+
+----------------------------------------------------------------------

@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+FULL_SIMP_TAC                                                (simpLib)
+----------------------------------------------------------------------
+FULL_SIMP_TAC : simpset -> thm list -> tactic
+
+SYNOPSIS
+Simplify a term with the given simpset and theorems.
+
+DESCRIBE
+{bossLib.FULL_SIMP_TAC} is identical to {simpLib.FULL_SIMP_TAC}.
+
+SEEALSO
+bossLib.FULL_SIMP_TAC.
+
+----------------------------------------------------------------------

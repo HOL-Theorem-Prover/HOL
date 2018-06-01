@@ -1,0 +1,44 @@
+----------------------------------------------------------------------
+PSELECT_EQ                                                 (PairRules)
+----------------------------------------------------------------------
+PSELECT_EQ : (term -> thm -> thm)
+
+KEYWORDS
+rule, epsilon, equality.
+
+LIBRARY
+pair
+
+SYNOPSIS
+Applies epsilon abstraction to both terms of an equation.
+
+DESCRIBE
+When applied to a paired structure of variables {p} and a theorem
+whose conclusion is equational:
+
+    A |- t1 = t2
+
+
+the inference rule {PSELECT_EQ} returns the theorem:
+
+    A |- (@p. t1) = (@p. t2)
+
+
+provided no variable in {p} is free in the assumptions.
+
+         A |- t1 = t2
+   --------------------------  SELECT_EQ "p"      [where p is not free in A]
+    A |- (@p. t1) = (@p. t2)
+
+
+
+
+FAILURE
+Fails if the conclusion of the theorem is not an equation,
+of if {p} is not a paired structure of variables,
+or if any variable in {p} is free in {A}.
+
+SEEALSO
+Drule.SELECT_EQ, PairRules.PFORALL_EQ, PairRules.PEXISTS_EQ.
+
+----------------------------------------------------------------------

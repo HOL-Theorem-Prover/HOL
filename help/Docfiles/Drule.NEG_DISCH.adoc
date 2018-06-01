@@ -1,0 +1,35 @@
+----------------------------------------------------------------------
+NEG_DISCH                                                      (Drule)
+----------------------------------------------------------------------
+NEG_DISCH : term -> thm -> thm
+
+SYNOPSIS
+Discharges an assumption, transforming {|- s ==> F} into {|- ~s}.
+
+KEYWORDS
+rule, discharge, assumption, implication, negation.
+
+DESCRIBE
+When applied to a term {s} and a theorem {A |- t}, the inference
+rule {NEG_DISCH} returns the theorem {A - {s} |- s ==> t}, or if {t}
+is just {F}, returns the theorem {A - {s} |- ~s}.
+
+          A |- F
+   --------------------  NEG_DISCH    [special case]
+      A - {s} |- ~s
+
+          A |- t
+   --------------------  NEG_DISCH    [general case]
+    A - {s} |- s ==> t
+
+
+
+
+
+FAILURE
+Fails unless the supplied term has type {bool}.
+
+SEEALSO
+Thm.DISCH, Thm.NOT_ELIM, Thm.NOT_INTRO.
+
+----------------------------------------------------------------------

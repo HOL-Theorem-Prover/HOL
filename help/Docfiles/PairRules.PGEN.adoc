@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+PGEN                                                       (PairRules)
+----------------------------------------------------------------------
+PGEN : (term -> thm -> thm)
+
+KEYWORDS
+rule, quantifier, universal.
+
+LIBRARY
+pair
+
+SYNOPSIS
+Generalizes the conclusion of a theorem.
+
+DESCRIBE
+When applied to a paired structure of variables {p} and a theorem {A |- t},
+the inference rule {PGEN} returns the theorem {A |- !p. t}, provided that
+no variable in {p} occurs free in the assumptions {A}.
+There is no compulsion that the variables of {p} should be free in {t}.
+
+      A |- t
+   ------------  PGEN "p"               [where p does not occur free in A]
+    A |- !p. t
+
+
+
+
+FAILURE
+Fails if {p} is not a paired structure of variables,
+of if any variable in {p} is free in the assumptions.
+
+SEEALSO
+Thm.GEN, PairRules.PGENL, PairRules.PGEN_TAC, PairRules.PSPEC,
+PairRules.PSPECL, PairRules.PSPEC_ALL, PairRules.PSPEC_TAC.
+
+----------------------------------------------------------------------

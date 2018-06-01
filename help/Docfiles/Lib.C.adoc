@@ -1,0 +1,28 @@
+----------------------------------------------------------------------
+C                                                                (Lib)
+----------------------------------------------------------------------
+C : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
+
+KEYWORDS
+Combinator.
+
+SYNOPSIS
+Permutes first two arguments to curried function: {C f x y}
+equals {f y x}.
+
+FAILURE
+{C f} never fails and {C f x} never fails, but {C f x y} fails if {f y x}
+fails.
+
+EXAMPLE
+
+- map (C cons []) [1,2,3];
+> val it = [[1], [2], [3]] : int list list
+
+
+
+
+SEEALSO
+Lib.##, Lib.I, Lib.K, Lib.S, Lib.W.
+
+----------------------------------------------------------------------

@@ -1,0 +1,16 @@
+----------------------------------------------------------------------
+bool_ss                                                    (boolSimps)
+----------------------------------------------------------------------
+bool_ss : simpset
+
+SYNOPSIS
+Basic simpset containing standard propositional and first order
+logic simplifications, plus beta-conversion.
+
+DESCRIBE
+{bossLib.bool_ss} is identical to {boolSimps.bool_ss}.
+
+SEEALSO
+bossLib.bool_ss.
+
+----------------------------------------------------------------------

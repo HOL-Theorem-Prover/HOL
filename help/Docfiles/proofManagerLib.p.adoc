@@ -1,0 +1,26 @@
+----------------------------------------------------------------------
+p                                                    (proofManagerLib)
+----------------------------------------------------------------------
+p : unit -> proof
+
+SYNOPSIS
+Prints the top levels of the subgoal package goal stack.
+
+DESCRIBE
+The function {p} is part of the subgoal package. For a description of
+the subgoal package, see {set_goal}.
+
+FAILURE
+Never fails.
+
+USES
+Examining the proof state during an interactive proof session.
+
+SEEALSO
+proofManagerLib.set_goal, proofManagerLib.restart,
+proofManagerLib.backup, proofManagerLib.restore, proofManagerLib.save,
+proofManagerLib.set_backup, proofManagerLib.expand,
+proofManagerLib.expandf, proofManagerLib.p, proofManagerLib.top_thm,
+proofManagerLib.top_goal.
+
+----------------------------------------------------------------------

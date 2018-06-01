@@ -1,0 +1,30 @@
+----------------------------------------------------------------------
+PTREE_IS_PTREE_CONV                                      (patriciaLib)
+----------------------------------------------------------------------
+PTREE_IS_PTREE_CONV : conv
+
+SYNOPSIS
+Conversion for evaluating applications of {patricia$IS_PTREE}.
+
+DESCRIBE
+The conversion {PTREE_IS_PTREE_CONV} evaluates terms of the form {IS_PTREE t} where {t} is any tree constructed by {patricia$Empty}, {patricia$Leaf} and {patricia$Branch}.  Well-formed trees correspond with those that can be constructed by {patricia$ADD}.
+
+FAILURE
+The conversion will fail if the supplied term is not a suitable application of {patricia$IS_PTREE}.
+
+EXAMPLE
+
+- patriciaLib.PTREE_IS_PTREE_CONV ``IS_PTREE Empty``;
+> val it = |- IS_PTREE $= <{}> <=> T: thm
+
+- patriciaLib.PTREE_IS_PTREE_CONV ``IS_PTREE (Branch 0 0 (Leaf 3 2) (Leaf 2 1))``;
+> val it = |- IS_PTREE (Branch 0 0 (Leaf 3 2) (Leaf 2 1)) <=> T: thm
+
+- patriciaLib.PTREE_IS_PTREE_CONV ``IS_PTREE (Branch 0 0 (Leaf 3 2) (Leaf 1 1))``;
+> val it = |- IS_PTREE (Branch 0 0 (Leaf 3 2) (Leaf 1 1)) <=> F: thm
+
+
+SEEALSO
+patriciaLib.PTREE_CONV.
+
+----------------------------------------------------------------------

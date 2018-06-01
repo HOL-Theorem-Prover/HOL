@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+RESQ_EXISTS_TAC                                        (res_quanTools)
+----------------------------------------------------------------------
+RESQ_EXISTS_TAC : term -> tactic
+
+SYNOPSIS
+Strips the outermost restricted existential quantifier from
+the conclusion of a goal.
+
+KEYWORDS
+tactic, restricted quantifier, universal.
+
+DESCRIBE
+When applied to a goal {A ?- ?x::P. t}, the tactic {RESQ_EXISTS_TAC}
+reduces it to a new subgoal {A ?- P x' /\ t[x'/x]} where {x'} is a variant
+of {x} chosen to avoid clashing with any variables free in the goal’s
+assumption list. Normally {x'} is just {x}.
+
+     A ?- ?x::P. t
+   ======================  RESQ_EXISTS_TAC
+    A ?- P x' /\ t[x'/x]
+
+
+FAILURE
+Fails unless the goal’s conclusion is a restricted extistential quantification.
+
+----------------------------------------------------------------------

@@ -1,0 +1,12 @@
+----------------------------------------------------------------------
+get_flag_abs                                             (holCheckLib)
+----------------------------------------------------------------------
+get_flag_abs : model -> bool
+
+SYNOPSIS
+Returns whether or not HolCheck will attempt abstraction when checking this model.
+
+SEEALSO
+holCheckLib.holCheck, holCheckLib.set_flag_abs.
+
+----------------------------------------------------------------------

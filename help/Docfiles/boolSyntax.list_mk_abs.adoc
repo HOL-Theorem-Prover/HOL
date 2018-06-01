@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+list_mk_abs                                               (boolSyntax)
+----------------------------------------------------------------------
+list_mk_abs : term list * term -> term
+
+SYNOPSIS
+Iteratively constructs abstractions.
+
+DESCRIBE
+{list_mk_abs([x1,...,xn],t)} returns the term {\x1 ... xn.t}.
+
+FAILURE
+Fails if the terms in the list are not variables.
+
+SEEALSO
+boolSyntax.strip_abs, Term.mk_abs.
+
+----------------------------------------------------------------------

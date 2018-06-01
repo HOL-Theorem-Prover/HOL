@@ -1,0 +1,29 @@
+----------------------------------------------------------------------
+NOT_ELIM                                                         (Thm)
+----------------------------------------------------------------------
+NOT_ELIM : thm -> thm
+
+SYNOPSIS
+Transforms {|- ~t} into {|- t ==> F}.
+
+KEYWORDS
+rule, implication, negation.
+
+DESCRIBE
+When applied to a theorem {A |- ~t}, the inference rule {NOT_ELIM} returns the
+theorem {A |- t ==> F}.
+
+      A |- ~t
+   --------------  NOT_ELIM
+    A |- t ==> F
+
+
+
+
+FAILURE
+Fails unless the theorem has a negated conclusion.
+
+SEEALSO
+Drule.IMP_ELIM, Thm.NOT_INTRO.
+
+----------------------------------------------------------------------

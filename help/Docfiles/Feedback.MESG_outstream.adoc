@@ -1,0 +1,45 @@
+----------------------------------------------------------------------
+MESG_outstream                                              (Feedback)
+----------------------------------------------------------------------
+MESG_outstream : TextIO.outstream ref
+
+SYNOPSIS
+Reference to output stream used when printing {HOL_MESG}.
+
+KEYWORDS
+I/O, messages, output
+
+DESCRIBE
+The value of reference cell {MESG_outstream} controls where {HOL_MESG}
+prints its argument.
+
+The default value of {MESG_outstream} is {TextIO.stdOut}.
+
+EXAMPLE
+
+- val ostrm = TextIO.openOut "foo";
+> val ostrm = <outstream> : outstream
+
+- MESG_outstream := ostrm;
+> val it = () : unit
+
+- HOL_MESG "Nattering nabobs of negativity.";
+> val it = () : unit
+
+- TextIO.closeOut ostrm;
+> val it = () : unit
+
+- val istrm = TextIO.openIn "foo";
+> val istrm = <instream> : instream
+
+- print (TextIO.inputAll istrm);
+<<HOL message: Nattering nabobs of negativity.>>
+
+
+
+
+SEEALSO
+Feedback, Feedback.HOL_MESG, Feedback.ERR_outstream,
+Feedback.WARNING_outstream, Feedback.emit_MESG.
+
+----------------------------------------------------------------------

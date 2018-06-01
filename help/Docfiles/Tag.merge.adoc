@@ -1,0 +1,38 @@
+----------------------------------------------------------------------
+merge                                                            (Tag)
+----------------------------------------------------------------------
+merge : tag -> tag -> tag
+
+SYNOPSIS
+Combine two tags into one.
+
+KEYWORDS
+tag, oracle, inference.
+
+DESCRIBE
+When two theorems interact via inference, their tags are merged. This
+propagates to the new theorem the fact that either or both were
+constructed via shortcut.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- Tag.merge (Tag.read "foo") (Tag.read "bar");
+> val it = Kerneltypes.TAG(["bar", "foo"], []) : tag
+
+- Tag.merge it (Tag.read "foo");
+> val it = Kerneltypes.TAG(["bar", "foo"], []) : tag
+
+
+
+
+COMMENTS
+Although it is not harmful to use this entrypoint, there is little reason
+to, since the merge operation is only used inside the HOL kernel.
+
+SEEALSO
+Tag.read, Thm.mk_oracle_thm, Thm.tag.
+
+----------------------------------------------------------------------

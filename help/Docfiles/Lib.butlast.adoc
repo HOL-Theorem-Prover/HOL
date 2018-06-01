@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+butlast                                                          (Lib)
+----------------------------------------------------------------------
+butlast : 'a list -> 'a list
+
+SYNOPSIS
+Computes the sub-list of a list consisting of all but the last element.
+
+DESCRIBE
+{butlast [x1,...,xn]} returns {[x1,...,x(n-1)]}.
+
+FAILURE
+Fails if the list is empty.
+
+SEEALSO
+Lib.last, Lib.el, Lib.front_last.
+
+----------------------------------------------------------------------

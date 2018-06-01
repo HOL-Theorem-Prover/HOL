@@ -1,0 +1,21 @@
+----------------------------------------------------------------------
+mk_list                                                   (listSyntax)
+----------------------------------------------------------------------
+mk_list : term list * hol_type -> term
+
+SYNOPSIS
+Constructs an object-level (HOL) list from an ML list of terms.
+
+DESCRIBE
+{mk_list ([t1, ..., tn], ty)} returns {[t1;...;tn]:ty list}.
+The type argument is required so that empty lists can be constructed.
+
+FAILURE
+Fails if any term in the list is not of the type specified as the
+second argument.
+
+SEEALSO
+listSyntax.dest_list, listSyntax.is_list, listSyntax.mk_cons,
+listSyntax.dest_cons, listSyntax.is_cons.
+
+----------------------------------------------------------------------

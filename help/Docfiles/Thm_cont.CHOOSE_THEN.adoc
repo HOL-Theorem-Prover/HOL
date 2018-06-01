@@ -1,0 +1,63 @@
+----------------------------------------------------------------------
+CHOOSE_THEN                                                 (Thm_cont)
+----------------------------------------------------------------------
+CHOOSE_THEN : thm_tactical
+
+SYNOPSIS
+Applies a tactic generated from the body of existentially quantified theorem.
+
+KEYWORDS
+theorem-tactic, existential.
+
+DESCRIBE
+When applied to a theorem-tactic {ttac}, an existentially quantified
+theorem {A' |- ?x. t}, and a goal, {CHOOSE_THEN} applies the tactic
+{ttac (t[x'/x] |- t[x'/x])} to the goal, where {x'} is a variant of
+{x} chosen not to be free in the assumption list of the goal. Thus if:
+
+    A ?- s1
+   =========  ttac (t[x'/x] |- t[x'/x])
+    B ?- s2
+
+then
+
+    A ?- s1
+   ==========  CHOOSE_THEN ttac (A' |- ?x. t)
+    B ?- s2
+
+This is invalid unless {A'} is a subset of {A}.
+
+FAILURE
+Fails unless the given theorem is existentially quantified, or if the
+resulting tactic fails when applied to the goal.
+
+EXAMPLE
+This theorem-tactical and its relatives are very useful for using existentially
+quantified theorems. For example one might use the inbuilt theorem
+
+   LESS_ADD_1 = |- !m n. n < m ==> (?p. m = n + (p + 1))
+
+to help solve the goal
+
+   ?- x < y ==> 0 < y * y
+
+by starting with the following tactic
+
+   DISCH_THEN (CHOOSE_THEN SUBST1_TAC o MATCH_MP LESS_ADD_1)
+
+which reduces the goal to
+
+   ?- 0 < ((x + (p + 1)) * (x + (p + 1)))
+
+which can then be finished off quite easily, by, for example:
+
+   REWRITE_TAC[ADD_ASSOC, SYM (SPEC_ALL ADD1),
+               MULT_CLAUSES, ADD_CLAUSES, LESS_0]
+
+
+
+
+SEEALSO
+Tactic.CHOOSE_TAC, Thm_cont.X_CHOOSE_THEN.
+
+----------------------------------------------------------------------

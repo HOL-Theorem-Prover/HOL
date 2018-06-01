@@ -1,0 +1,31 @@
+----------------------------------------------------------------------
+trypluck'                                                        (Lib)
+----------------------------------------------------------------------
+trypluck' : ('a -> 'b option) -> 'a list -> ('b option * 'a list)
+
+SYNOPSIS
+Pull an element out of a list.
+
+KEYWORDS
+list
+
+DESCRIBE
+An invocation {trypluck' f [x1,...,xk,...,xn]} returns either the pair
+
+   (f(xk),[x1,...,xk-1,xk+1,...xn])
+
+where {xk} has been lifted out of the list without disturbing the
+relative positions of the other elements, where {f(xk)} is {SOME(v)},
+and where {f(xi)} returns {NONE} for {x1,...,xk-1}; or it returns
+{(NONE,[x1,...xn]} when {f} applied to every element of the list
+returns {NONE}.
+
+This is an ‘option’ version of the other library function {trypluck}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+Lib.first, Lib.filter, Lib.mapfilter, Lib.tryfind, Lib.trypluck.
+
+----------------------------------------------------------------------

@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+strip_imp                                                 (boolSyntax)
+----------------------------------------------------------------------
+strip_imp : term -> term list * term
+
+SYNOPSIS
+Iteratively breaks apart implications.
+
+DESCRIBE
+If {M} is of the form {t1 ==> (... (tn ==> t) ...)}, then {strip_imp M}
+returns {([t1,...,tn],t)}. Note that
+
+   strip_imp(list_mk_imp([t1,...,tn],t))
+
+will not return {([t1,...,tn],t)} if {t} is an implication.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- strip_imp "(T ==> F) ==> (T ==> F)";;
+> val it = (["T ==> F"; "T"], "F") : term list * term
+
+- strip_imp (Term `t1 ==> t2 ==> t3 ==> ~t`);
+> val it = ([`t1`, `t2`, `t3`, `t`], `F`) : term list * term
+
+
+
+
+SEEALSO
+boolSyntax.list_mk_imp, boolSyntax.dest_imp.
+
+----------------------------------------------------------------------

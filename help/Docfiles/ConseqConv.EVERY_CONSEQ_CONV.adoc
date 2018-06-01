@@ -1,0 +1,12 @@
+----------------------------------------------------------------------
+EVERY_CONSEQ_CONV                                         (ConseqConv)
+----------------------------------------------------------------------
+EVERY_CONSEQ_CONV : (conseq_conv list -> conseq_conv)
+
+SYNOPSIS
+Applies in sequence all the consequence conversions in a given list of conversions.
+
+SEEALSO
+ConseqConv.THEN_CONSEQ_CONV, Conv.EVERY_CONV.
+
+----------------------------------------------------------------------

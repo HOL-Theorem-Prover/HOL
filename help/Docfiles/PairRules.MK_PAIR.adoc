@@ -1,0 +1,29 @@
+----------------------------------------------------------------------
+MK_PAIR                                                    (PairRules)
+----------------------------------------------------------------------
+MK_PAIR : thm * thm -> thm
+
+LIBRARY
+pair
+
+SYNOPSIS
+Proves equality of pairs constructed from equal components.
+
+KEYWORDS
+rule, pair, equality.
+
+DESCRIBE
+When applied to theorems {A1 |- a = x} and {A2 |- b = y}, the inference
+rule {MK_PAIR} returns the theorem {A1 u A2 |- (a,b) = (x,y)}.
+
+    A1 |- a = x   A2 |- b = y
+   ---------------------------  MK_PAIR
+    A1 u A2 |- (a,b) = (x,y)
+
+
+
+
+FAILURE
+Fails unless both theorems are equational.
+
+----------------------------------------------------------------------

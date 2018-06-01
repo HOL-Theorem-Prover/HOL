@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+S                                                                (Lib)
+----------------------------------------------------------------------
+S : ('a -> 'b -> 'c) -> ('a -> 'b) -> 'a -> 'c
+
+KEYWORDS
+Combinator.
+
+SYNOPSIS
+Generalized function composition: {S f g x} equals {f x (g x)}.
+
+FAILURE
+{S f} never fails and {S f g} never fails, but {S f g x} fails if
+{g x} fails or {f x (g x)} fails.
+
+SEEALSO
+Lib, Lib.##, Lib.C, Lib.I, Lib.K, Lib.W.
+
+----------------------------------------------------------------------

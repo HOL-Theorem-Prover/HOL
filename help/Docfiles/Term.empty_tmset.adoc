@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+empty_tmset                                                     (Term)
+----------------------------------------------------------------------
+empty_tmset : term set
+
+SYNOPSIS
+Empty set of terms.
+
+KEYWORDS
+term, set.
+
+DESCRIBE
+The value {empty_tmset} represents an empty set of terms. The set has
+a built-in ordering, which is given by {Term.compare}.
+
+COMMENTS
+Used as a starting point for building sets of terms.
+
+SEEALSO
+Term.compare, Term.empty_varset.
+
+----------------------------------------------------------------------

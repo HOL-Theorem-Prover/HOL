@@ -1,0 +1,35 @@
+----------------------------------------------------------------------
+PSPEC_PAIR                                                 (PairRules)
+----------------------------------------------------------------------
+PSPEC_PAIR : thm -> term * thm
+
+SYNOPSIS
+Specializes the conclusion of a theorem, returning the chosen variant.
+
+KEYWORDS
+rule.
+
+DESCRIBE
+When applied to a theorem {A |- !p. t}, the inference rule {PSPEC_PAIR}
+returns the term {q'} and the theorem {A |- t[q'/p]}, where {q'} is a variant
+of {p} chosen to avoid free variable capture.
+
+     A |- !p. t
+   --------------  PSPEC_PAIR
+    A |- t[q'/q]
+
+
+
+
+FAILURE
+Fails unless the theorem’s conclusion is a paired universal quantification.
+
+COMMENTS
+This rule is very similar to plain {PSPEC}, except that it returns the
+variant chosen, which may be useful information under some circumstances.
+
+SEEALSO
+Drule.SPEC_VAR, PairRules.PGEN, PairRules.PGENL, PairRules.PGEN_TAC,
+PairRules.PSPEC, PairRules.PSPECL, PairRules.PSPEC_ALL.
+
+----------------------------------------------------------------------

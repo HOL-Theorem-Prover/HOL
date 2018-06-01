@@ -1,0 +1,35 @@
+----------------------------------------------------------------------
+SPEC_VAR                                                       (Drule)
+----------------------------------------------------------------------
+SPEC_VAR : thm -> term * thm
+
+SYNOPSIS
+Specializes the conclusion of a theorem, returning the chosen variant.
+
+KEYWORDS
+rule.
+
+DESCRIBE
+When applied to a theorem {A |- !x. t}, the inference rule {SPEC_VAR} returns
+the term {x'} and the theorem {A |- t[x'/x]}, where {x'} is a variant
+of {x} chosen to avoid free variable capture.
+
+     A |- !x. t
+   --------------  SPEC_VAR
+    A |- t[x'/x]
+
+
+
+
+FAILURE
+Fails unless the theorem’s conclusion is universally quantified.
+
+COMMENTS
+This rule is very similar to plain {SPEC}, except that it returns the
+variant chosen, which may be useful information under some circumstances.
+
+SEEALSO
+Thm.GEN, Thm.GENL, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC,
+Drule.SPECL, Drule.SPEC_ALL.
+
+----------------------------------------------------------------------

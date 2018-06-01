@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+dest_pselect                                              (pairSyntax)
+----------------------------------------------------------------------
+dest_pselect : term -> term * term
+
+LIBRARY
+pair
+
+SYNOPSIS
+Breaks apart a paired choice-term into the selected pair and the body.
+
+DESCRIBE
+{dest_pselect} is a term destructor for paired choice terms.
+The application of {dest_select} to {@pair. t} returns {(pair,t)}.
+
+FAILURE
+Fails with {dest_pselect} if term is not a paired choice-term.
+
+SEEALSO
+boolSyntax.dest_select, pairSyntax.is_pselect.
+
+----------------------------------------------------------------------

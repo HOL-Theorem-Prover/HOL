@@ -1,0 +1,31 @@
+----------------------------------------------------------------------
+PBETA_RULE                                                 (PairRules)
+----------------------------------------------------------------------
+PBETA_RULE : (thm -> thm)
+
+SYNOPSIS
+Beta-reduces all the paired beta-redexes in the conclusion of a theorem.
+
+KEYWORDS
+rule.
+
+DESCRIBE
+When applied to a theorem {A |- t}, the inference rule {PBETA_RULE} beta-reduces
+all beta-redexes, at any depth, in the conclusion {t}. Variables are renamed
+where necessary to avoid free variable capture.
+
+    A |- ....((\p. s1) s2)....
+   ----------------------------  BETA_RULE
+      A |- ....(s1[s2/p])....
+
+
+
+
+FAILURE
+Never fails, but will have no effect if there are no paired beta-redexes.
+
+SEEALSO
+Conv.BETA_RULE, PairRules.PBETA_CONV, PairRules.PBETA_TAC,
+PairRules.RIGHT_PBETA, PairRules.LEFT_PBETA.
+
+----------------------------------------------------------------------

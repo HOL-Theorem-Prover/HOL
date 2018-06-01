@@ -1,0 +1,29 @@
+----------------------------------------------------------------------
+LEFT_AND_FORALL_CONV                                            (Conv)
+----------------------------------------------------------------------
+LEFT_AND_FORALL_CONV : conv
+
+SYNOPSIS
+Moves a universal quantification of the left conjunct outwards through a
+conjunction.
+
+KEYWORDS
+conversion, quantifier, universal, conjunction.
+
+DESCRIBE
+When applied to a term of the form {(!x.P) /\ Q}, the conversion
+{LEFT_AND_FORALL_CONV} returns the theorem:
+
+   |- (!x.P) /\ Q = (!x'. P[x'/x] /\ Q)
+
+where {x'} is a primed variant of {x} that does not appear free in
+the input term.
+
+FAILURE
+Fails if applied to a term not of the form {(!x.P) /\ Q}.
+
+SEEALSO
+Conv.AND_FORALL_CONV, Conv.FORALL_AND_CONV,
+Conv.RIGHT_AND_FORALL_CONV.
+
+----------------------------------------------------------------------

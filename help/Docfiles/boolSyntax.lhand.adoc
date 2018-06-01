@@ -1,0 +1,30 @@
+----------------------------------------------------------------------
+lhand                                                     (boolSyntax)
+----------------------------------------------------------------------
+lhand : term -> term
+
+SYNOPSIS
+Returns the left-hand argument of a binary application.
+
+DESCRIBE
+A call to {lhand t} returns {x} in those situations where {t} is of
+the form {``f x y``}.
+
+FAILURE
+Fails if the argument is not of the required form.
+
+EXAMPLE
+
+- lhand ``3 + 2``;
+> val it = ``3`` : term
+
+
+COMMENTS
+The name {lhand} is an abbreviation of “left-hand”, but {rand} is
+so-named as an abbreviation of “operand”.  Nonetheless, {rand} does
+return the right-hand argument of a binary application.
+
+SEEALSO
+Term.rand, Term.rator.
+
+----------------------------------------------------------------------

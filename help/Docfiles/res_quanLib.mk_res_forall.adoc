@@ -1,0 +1,20 @@
+----------------------------------------------------------------------
+mk_res_forall                                            (res_quanLib)
+----------------------------------------------------------------------
+mk_res_forall : (term # term # term) -> term
+
+SYNOPSIS
+Term constructor for restricted universal quantification.
+
+DESCRIBE
+{mk_res_forall("var","P","t")} returns {"!var :: P . t"}.
+
+FAILURE
+Fails with {mk_res_forall} if the first term is not a variable or if {P} and {t}
+are not of type {":bool"}.
+
+SEEALSO
+res_quanLib.dest_res_forall, res_quanLib.is_res_forall,
+res_quanLib.list_mk_res_forall.
+
+----------------------------------------------------------------------

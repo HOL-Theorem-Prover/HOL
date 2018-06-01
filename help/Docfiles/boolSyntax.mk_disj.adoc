@@ -1,0 +1,20 @@
+----------------------------------------------------------------------
+mk_disj                                                   (boolSyntax)
+----------------------------------------------------------------------
+mk_disj : term * term -> term
+
+SYNOPSIS
+Constructs a disjunction.
+
+DESCRIBE
+If {t1} and {t2} are terms, both of type {bool}, then
+{mk_disj(t1,t2)} returns the term {t1 \/ t2}.
+
+FAILURE
+Fails if {t1} or {t2} does not have type {bool}.
+
+SEEALSO
+boolSyntax.dest_disj, boolSyntax.is_disj, boolSyntax.list_mk_disj,
+boolSyntax.strip_disj.
+
+----------------------------------------------------------------------

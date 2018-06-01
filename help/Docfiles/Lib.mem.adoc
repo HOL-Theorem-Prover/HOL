@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+mem                                                              (Lib)
+----------------------------------------------------------------------
+mem : ''a -> ''a list -> bool
+
+SYNOPSIS
+Tests whether a list contains a certain member.
+
+KEYWORDS
+list, set, eqtype.
+
+LIBRARY
+Lib
+
+DESCRIBE
+An invocation {mem x [x1,...,xn]} returns {true} if some {xi}
+in the list is equal to {x}. Otherwise it returns {false}.
+
+FAILURE
+Never fails.
+
+COMMENTS
+Note that the type of the members of the list must be an SML equality
+type. If set operations on a non-equality type are desired, use the ‘op_’
+variants, which take an equality predicate as an extra argument.
+
+A high-performance implementation of finite sets may be found in
+structure {HOLset}.
+
+SEEALSO
+Lib.op_mem, Lib.insert, Lib.tryfind, Lib.exists, Lib.all, Lib.assoc,
+Lib.rev_assoc.
+
+----------------------------------------------------------------------

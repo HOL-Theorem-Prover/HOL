@@ -1,0 +1,31 @@
+----------------------------------------------------------------------
+read                                                             (Tag)
+----------------------------------------------------------------------
+read : string -> tag
+
+SYNOPSIS
+Make a tag suitable for use by {mk_oracle_thm}.
+
+KEYWORDS
+tag, oracle, theorem.
+
+DESCRIBE
+In order to construct a tag usable by {mk_oracle_thm}, one uses {read},
+which takes a string and makes it into a tag.
+
+FAILURE
+The string must be an alphanumeric, i.e., start with an alphabetic character
+and thereafter consist only of alphabetic or numeric characters.
+
+EXAMPLE
+
+- Tag.read "Shamboozled";
+> val it = Kerneltypes.TAG(["Shamboozled"], []) : tag
+
+
+
+
+SEEALSO
+Thm.mk_oracle_thm, Thm.tag.
+
+----------------------------------------------------------------------

@@ -1,0 +1,31 @@
+----------------------------------------------------------------------
+PFORALL_AND_CONV                                           (PairRules)
+----------------------------------------------------------------------
+PFORALL_AND_CONV : conv
+
+KEYWORDS
+conversion, quantifier, universal, conjunction.
+
+LIBRARY
+pair
+
+SYNOPSIS
+Moves a paired universal quantification inwards through a conjunction.
+
+DESCRIBE
+When applied to a term of the form {!p. t /\ u}, the conversion
+{PFORALL_AND_CONV} returns the theorem:
+
+   |- (!p. t /\ u) = (!p. t) /\ (!p. u)
+
+
+
+
+FAILURE
+Fails if applied to a term not of the form {!p. t /\ u}.
+
+SEEALSO
+Conv.FORALL_AND_CONV, PairRules.AND_PFORALL_CONV,
+PairRules.LEFT_AND_PFORALL_CONV, PairRules.RIGHT_AND_PFORALL_CONV.
+
+----------------------------------------------------------------------

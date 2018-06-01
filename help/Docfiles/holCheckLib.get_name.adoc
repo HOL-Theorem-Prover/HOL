@@ -1,0 +1,12 @@
+----------------------------------------------------------------------
+get_name                                                 (holCheckLib)
+----------------------------------------------------------------------
+get_name : model -> string option
+
+SYNOPSIS
+Returns the name of the HolCheck model, if one has been set.
+
+SEEALSO
+holCheckLib.holCheck, holCheckLib.set_name.
+
+----------------------------------------------------------------------

@@ -1,0 +1,20 @@
+----------------------------------------------------------------------
+current_trace                                               (Feedback)
+----------------------------------------------------------------------
+current_trace : string -> int
+
+SYNOPSIS
+Returns the current value of the tracing variable specified.
+
+KEYWORDS
+Tracing.
+
+FAILURE
+Fails if the name given is not associated with a registered tracing
+variable.
+
+SEEALSO
+Feedback.register_trace, Feedback.reset_trace, Feedback.reset_traces,
+Feedback.trace, Feedback.traces.
+
+----------------------------------------------------------------------

@@ -1,0 +1,69 @@
+----------------------------------------------------------------------
+STRIP_TAC                                                     (Tactic)
+----------------------------------------------------------------------
+STRIP_TAC : tactic
+
+SYNOPSIS
+Splits a goal by eliminating one outermost connective.
+
+KEYWORDS
+tactic.
+
+DESCRIBE
+Given a goal {(A,t)}, {STRIP_TAC} removes one outermost occurrence of
+one of the connectives {!}, {==>}, {~} or {/\} from the conclusion of
+the goal {t}.  If {t} is a universally quantified term, then {STRIP_TAC}
+strips off the quantifier:
+
+      A ?- !x.u
+   ==============  STRIP_TAC
+     A ?- u[x'/x]
+
+where {x'} is a primed variant that does not appear free in the
+assumptions {A}.  If {t} is a conjunction, then {STRIP_TAC} simply splits
+the conjunction into two subgoals:
+
+      A ?- v /\ w
+   =================  STRIP_TAC
+    A ?- v   A ?- w
+
+If {t} is an implication, {STRIP_TAC} moves the antecedent into the
+assumptions, stripping conjunctions, disjunctions and existential
+quantifiers according to the following rules:
+
+    A ?- v1 /\ ... /\ vn ==> v            A ?- v1 \/ ... \/ vn ==> v
+   ============================        =================================
+       A u {v1,...,vn} ?- v             A u {v1} ?- v ... A u {vn} ?- v
+
+     A ?- ?x.w ==> v
+   ====================
+    A u {w[x'/x]} ?- v
+
+where {x'} is a primed variant of {x} that does not appear free in
+{A}. Finally, a negation {~t} is treated as the implication {t ==> F}.
+
+FAILURE
+{STRIP_TAC (A,t)} fails if {t} is not a universally quantified term,
+an implication, a negation or a conjunction.
+
+EXAMPLE
+Applying {STRIP_TAC} twice to the goal:
+
+    ?- !n. m <= n /\ n <= m ==> (m = n)
+
+results in the subgoal:
+
+   {n <= m, m <= n} ?- m = n
+
+
+
+
+USES
+When trying to solve a goal, often the best thing to do first
+is {REPEAT STRIP_TAC} to split the goal up into manageable pieces.
+
+SEEALSO
+Tactic.CONJ_TAC, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN,
+Tactic.GEN_TAC, Tactic.STRIP_ASSUME_TAC, Tactic.STRIP_GOAL_THEN.
+
+----------------------------------------------------------------------

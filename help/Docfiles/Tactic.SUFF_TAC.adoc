@@ -1,0 +1,25 @@
+----------------------------------------------------------------------
+SUFF_TAC                                                      (Tactic)
+----------------------------------------------------------------------
+SUFF_TAC : term -> tactic
+
+SYNOPSIS
+Introduces an implicational subgoal.
+
+KEYWORDS
+tactic
+
+DESCRIBE
+A call to {SUFF_TAC t} on the goal {asl ?- g} introduces two subgoals:
+{asl ?- t ==> g} and {asl ?- t}.  At a high-level, the user’s claim is
+that term {t} suffices (hence the name) to prove the goal.  The first
+new goal to be discharged is the check for this; the second is to actually
+show {t}.
+
+FAILURE
+Will fail if {t} is not of type {:bool}.
+
+SEEALSO
+bossLib.suffices_by.
+
+----------------------------------------------------------------------

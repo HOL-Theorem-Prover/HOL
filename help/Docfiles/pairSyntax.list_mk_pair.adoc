@@ -1,0 +1,29 @@
+----------------------------------------------------------------------
+list_mk_pair                                              (pairSyntax)
+----------------------------------------------------------------------
+list_mk_pair : term list -> term
+
+SYNOPSIS
+Constructs a tuple from a list of terms.
+
+DESCRIBE
+{list_mk_pair([t1,...,tn])} returns the term {(t1,...,tn)}.
+
+FAILURE
+Fails if the list is empty.
+
+EXAMPLE
+
+- pairSyntax.list_mk_pair [Term `1`, T, Term `2`];
+> val it = `(1,T,2)` : term
+
+- pairSyntax.list_mk_pair [Term `1`];
+> val it = `1` : term
+
+
+
+
+SEEALSO
+pairSyntax.strip_pair, pairSyntax.mk_pair.
+
+----------------------------------------------------------------------

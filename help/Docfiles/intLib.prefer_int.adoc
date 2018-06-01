@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+prefer_int                                                    (intLib)
+----------------------------------------------------------------------
+intLib.prefer_int : unit -> unit
+
+SYNOPSIS
+Makes the parser favour integer possibilities in ambiguous terms.
+
+KEYWORDS
+parsing
+
+DESCRIBE
+Calling {prefer_int()} causes the global grammar to be altered so that
+the standard arithmetic operator symbols ({+}, {*}, etc.), as well as
+numerals, are given integral types if possible.  This effect is
+brought about through the application of multiple calls to
+{temp_overload_on}, so that the “arithmetic symbols” need not have
+been previously mapping to integral possibilities at all (as would be
+the situation after a call to {deprecate_int}).
+
+FAILURE
+Never fails.
+
+SEEALSO
+intLib.deprecate_int, Parse.overload_on.
+
+----------------------------------------------------------------------

@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+&&                                                           (bossLib)
+----------------------------------------------------------------------
+op && : simpset * thm list -> simpset
+
+SYNOPSIS
+Infix operator for adding theorems into a simpset.
+
+KEYWORDS
+simplification.
+
+DESCRIBE
+It is occasionally necessary to extend an existing simpset {ss} with a
+collection {rwlist} of new rewrite rules. To achieve this, one
+applies the {&&} function via {ss && rwlist}.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- open bossLib;
+... <output elided> ...
+- val ss = boolSimps.bool_ss && pairTheory.pair_rws;
+> val ss = <simpset> : simpset
+
+
+COMMENTS
+Of limited applicability since most of the tactics for rewriting
+already include this functionality. However, applications of {ZAP_TAC}
+can benefit.
+
+SEEALSO
+simpLib.++, simpLib.SIMP_CONV, bossLib.RW_TAC.
+
+----------------------------------------------------------------------

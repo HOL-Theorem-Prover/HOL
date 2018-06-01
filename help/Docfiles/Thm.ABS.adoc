@@ -1,0 +1,38 @@
+----------------------------------------------------------------------
+ABS                                                              (Thm)
+----------------------------------------------------------------------
+ABS : term -> thm -> thm
+
+SYNOPSIS
+Abstracts both sides of an equation.
+
+KEYWORDS
+rule, abstraction.
+
+DESCRIBE
+
+         A |- t1 = t2
+   ------------------------  ABS x            [Where x is not free in A]
+    A |- (\x.t1) = (\x.t2)
+
+
+
+
+FAILURE
+If the theorem is not an equation, or if the variable {x} is free in the
+assumptions {A}.
+
+EXAMPLE
+
+- let val m = Term `m:bool`
+  in
+      ABS m (REFL m)
+  end;
+
+> val it = |- (\m. m) = (\m. m) : thm
+
+
+SEEALSO
+Drule.ETA_CONV, Drule.EXT, Drule.MK_ABS.
+
+----------------------------------------------------------------------

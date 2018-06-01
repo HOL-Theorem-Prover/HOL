@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+GSPEC                                                          (Drule)
+----------------------------------------------------------------------
+GSPEC : (thm -> thm)
+
+SYNOPSIS
+Specializes the conclusion of a theorem with unique variables.
+
+KEYWORDS
+rule, genvars.
+
+DESCRIBE
+When applied to a theorem {A |- !x1...xn. t}, where the number of universally
+quantified variables may be zero, {GSPEC} returns {A |- t[g1/x1]...[gn/xn]},
+where the {gi} are distinct variable names of the appropriate type, chosen by
+{genvar}.
+
+        A |- !x1...xn. t
+   -------------------------  GSPEC
+    A |- t[g1/x1]...[gn/xn]
+
+
+
+
+FAILURE
+Never fails.
+
+USES
+{GSPEC} is useful in writing derived inference rules which need to specialize
+theorems while avoiding using any variables that may be present elsewhere.
+
+SEEALSO
+Thm.GEN, Thm.GENL, Term.genvar, Drule.GEN_ALL, Tactic.GEN_TAC,
+Thm.SPEC, Drule.SPECL, Drule.SPEC_ALL, Tactic.SPEC_TAC.
+
+----------------------------------------------------------------------

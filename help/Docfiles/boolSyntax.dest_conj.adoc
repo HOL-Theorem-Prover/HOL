@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+dest_conj                                                 (boolSyntax)
+----------------------------------------------------------------------
+dest_conj : term -> term * term
+
+SYNOPSIS
+Term destructor for conjunctions.
+
+DESCRIBE
+If {M} is a term {t1 /\ t2}, then {dest_conj M} returns {(t1,t2)}.
+
+FAILURE
+Fails if {M} is not a conjunction.
+
+SEEALSO
+boolSyntax.mk_conj, boolSyntax.is_conj, boolSyntax.list_mk_conj,
+boolSyntax.strip_conj.
+
+----------------------------------------------------------------------

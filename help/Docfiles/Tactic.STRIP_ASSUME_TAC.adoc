@@ -1,0 +1,78 @@
+----------------------------------------------------------------------
+STRIP_ASSUME_TAC                                              (Tactic)
+----------------------------------------------------------------------
+STRIP_ASSUME_TAC : thm_tactic
+
+SYNOPSIS
+Splits a theorem into a list of theorems and then adds them to the assumptions.
+
+KEYWORDS
+tactic.
+
+DESCRIBE
+Given a theorem {th} and a goal {(A,t)}, {STRIP_ASSUME_TAC th} splits {th} into
+a list of theorems. This is done by recursively breaking conjunctions into
+separate conjuncts, cases-splitting disjunctions, and eliminating existential
+quantifiers by choosing arbitrary variables.  Schematically, the following
+rules are applied:
+
+           A ?- t
+   ======================  STRIP_ASSUME_TAC (A' |- v1 /\ ... /\ vn)
+    A u {v1,...,vn} ?- t
+
+                A ?- t
+   =================================  STRIP_ASSUME_TAC (A' |- v1 \/ ... \/ vn)
+    A u {v1} ?- t ... A u {vn} ?- t
+
+          A ?- t
+   ====================  STRIP_ASSUME_TAC (A' |- ?x.v)
+    A u {v[x'/x]} ?- t
+
+where {x'} is a variant of {x}.
+
+If the conclusion of {th} is not a conjunction, a disjunction or an
+existentially quantified term, the whole theorem {th} is added to the
+assumptions.
+
+As assumptions are generated, they are examined to see if they solve the goal
+(either by being alpha-equivalent to the conclusion of the goal or by deriving
+a contradiction).
+
+The assumptions of the theorem being split are not added to the assumptions of
+the goal(s), but they are recorded in the proof.  This means that if {A'} is
+not a subset of the assumptions {A} of the goal (up to alpha-conversion),
+{STRIP_ASSUME_TAC (A'|-v)} results in an invalid tactic.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+When solving the goal
+
+   ?- m = 0 + m
+
+assuming the clauses for addition with
+{STRIP_ASSUME_TAC ADD_CLAUSES} results in the goal
+
+  {m + (SUC n) = SUC(m + n), (SUC m) + n = SUC(m + n),
+   m + 0 = m, 0 + m = m, m = 0 + m} ?- m = 0 + m
+
+while the same tactic directly solves the goal
+
+   ?- 0 + m = m
+
+
+
+
+USES
+{STRIP_ASSUME_TAC} is used when applying a previously proved theorem to solve
+a goal, or
+when enriching its assumptions so that resolution, rewriting with assumptions
+and other operations involving assumptions have more to work with.
+
+SEEALSO
+Tactic.ASSUME_TAC, Tactic.CHOOSE_TAC, Thm_cont.CHOOSE_THEN,
+Thm_cont.CONJUNCTS_THEN, Tactic.DISJ_CASES_TAC,
+Thm_cont.DISJ_CASES_THEN.
+
+----------------------------------------------------------------------

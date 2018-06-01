@@ -1,0 +1,30 @@
+----------------------------------------------------------------------
+type_vars_in_term                                               (Term)
+----------------------------------------------------------------------
+type_vars_in_term : term -> hol_type list
+
+SYNOPSIS
+Return the type variables occurring in a term.
+
+KEYWORDS
+variable, type.
+
+DESCRIBE
+An invocation {type_vars_in_term M} returns the set of type variables
+occurring in {M}.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- type_vars_in_term (concl boolTheory.ONE_ONE_DEF);
+> val it = [`:'b`, `:'a`] : hol_type list
+
+
+
+
+SEEALSO
+Term.free_vars, Type.type_vars.
+
+----------------------------------------------------------------------

@@ -1,0 +1,33 @@
+----------------------------------------------------------------------
+RIGHT_LIST_BETA                                                (Drule)
+----------------------------------------------------------------------
+RIGHT_LIST_BETA : (thm -> thm)
+
+SYNOPSIS
+Iteratively beta-reduces a top-level beta-redex on the right-hand side of an
+equation.
+
+KEYWORDS
+rule.
+
+DESCRIBE
+When applied to an equational theorem, {RIGHT_LIST_BETA} applies beta-reduction
+over a top-level chain of beta-redexes to the right hand side (only). Variables
+are renamed if necessary to avoid free variable capture.
+
+    A |- s = (\x1...xn. t) t1 ... tn
+   ----------------------------------  RIGHT_LIST_BETA
+       A |- s = t[t1/x1]...[tn/xn]
+
+
+
+
+FAILURE
+Fails unless the theorem is equational, with its right-hand side being
+a top-level beta-redex.
+
+SEEALSO
+Thm.BETA_CONV, Conv.BETA_RULE, Tactic.BETA_TAC, Drule.LIST_BETA_CONV,
+Drule.RIGHT_BETA.
+
+----------------------------------------------------------------------

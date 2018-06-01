@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+mk_eq                                                     (boolSyntax)
+----------------------------------------------------------------------
+mk_eq : term * term -> term
+
+SYNOPSIS
+Constructs an equation.
+
+DESCRIBE
+{mk_eq(t1, t2)} returns the term {t1 = t2}.
+
+FAILURE
+Fails if the type of {t1} is not equal to that of {t2}.
+
+SEEALSO
+boolSyntax.dest_eq, boolSyntax.is_eq.
+
+----------------------------------------------------------------------

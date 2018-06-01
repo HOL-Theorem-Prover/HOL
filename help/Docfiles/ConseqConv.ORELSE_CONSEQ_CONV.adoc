@@ -1,0 +1,12 @@
+----------------------------------------------------------------------
+ORELSE_CONSEQ_CONV                                        (ConseqConv)
+----------------------------------------------------------------------
+ORELSE_CONSEQ_CONV : (conseq_conv -> conseq_conv -> conseq_conv)
+
+SYNOPSIS
+Applies the first of two consequence conversions that succeeds.
+
+SEEALSO
+Conv.ORELSEC, ConseqConv.FIRST_CONSEQ_CONV.
+
+----------------------------------------------------------------------

@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+gamma                                                           (Type)
+----------------------------------------------------------------------
+gamma : hol_type
+
+SYNOPSIS
+Common type variable.
+
+LIBRARY
+Type
+
+DESCRIBE
+The ML variable {Type.gamma} is bound to the type variable {'c}.
+
+SEEALSO
+Type.alpha, Type.beta, Type.delta, Type.bool.
+
+----------------------------------------------------------------------

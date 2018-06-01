@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+RES_EXISTS_UNIQUE_CONV                                   (res_quanLib)
+----------------------------------------------------------------------
+RES_EXISTS_UNIQUE_CONV : conv
+
+SYNOPSIS
+Converts a restricted unique existential quantification to a conjunction.
+
+KEYWORDS
+conversion, restricted quantifier.
+
+DESCRIBE
+When applied to a term of the form {?!x::P. Q[x]}, the conversion
+{RES_EXISTS_UNIQUE_CONV} returns the theorem:
+
+   |- ?!x::P. Q[x] = (?x::P. Q[x]) /\ (!x y::P. Q[x] /\ Q[y] ==> (x = y))
+
+which is the underlying semantic representation of the restricted
+unique existential quantification.
+
+FAILURE
+Fails if applied to a term not of the form {?x!::P. Q}.
+
+SEEALSO
+res_quanLib.RES_FORALL_CONV, res_quanLib.RES_EXISTS_CONV.
+
+----------------------------------------------------------------------

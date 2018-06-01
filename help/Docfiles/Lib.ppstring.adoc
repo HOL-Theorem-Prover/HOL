@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+ppstring                                                         (Lib)
+----------------------------------------------------------------------
+ppstring : 'a PP.pprinter -> 'a -> string
+
+SYNOPSIS
+Pretty-prints a value into a string.
+
+KEYWORDS
+Pretty-printing.
+
+DESCRIBE
+A call to {ppstring ppf x} will call the pretty-printing function
+{ppf} on value {x}, with the pretty-printing output stored in the
+string that is eventually returned to the user. The linewidth used for
+determining when to wrap with newline characters is given by the
+reference {Globals.linewidth} (typically 72).
+
+FAILURE
+Fails if the pretty-printing function fails on the particular input
+value.
+
+EXAMPLE
+
+> ppstring PP.add_string "hello"
+val it = "hello": string
+
+
+COMMENTS
+The returned string may contain unwanted terminal-specific escape codes,
+see {rawterm_pp}.
+
+SEEALSO
+Portable.pprint, Parse.term_to_string, Parse.rawterm_pp.
+
+----------------------------------------------------------------------

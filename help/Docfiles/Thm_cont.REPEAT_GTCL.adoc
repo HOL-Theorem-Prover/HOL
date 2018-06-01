@@ -1,0 +1,38 @@
+----------------------------------------------------------------------
+REPEAT_GTCL                                                 (Thm_cont)
+----------------------------------------------------------------------
+REPEAT_GTCL : (thm_tactical -> thm_tactical)
+
+SYNOPSIS
+Applies a theorem-tactical until it fails when applied to a goal.
+
+KEYWORDS
+theorem-tactical.
+
+DESCRIBE
+When applied to a theorem-tactical, a theorem-tactic, a theorem and a goal:
+
+   REPEAT_GTCL ttl ttac th goal
+
+{REPEAT_GTCL} repeatedly modifies the theorem according to
+{ttl} till the result of handing it to {ttac} and applying it to the goal
+fails (this may be no times at all).
+
+FAILURE
+Fails iff the theorem-tactic fails immediately when applied to the theorem
+and the goal.
+
+EXAMPLE
+The following tactic matches {th}’s antecedents against the assumptions
+of the goal until it can do so no longer, then puts the resolvents
+onto the assumption list:
+
+   REPEAT_GTCL (IMP_RES_THEN ASSUME_TAC) th
+
+
+
+
+SEEALSO
+Thm_cont.REPEAT_TCL, Thm_cont.THEN_TCL.
+
+----------------------------------------------------------------------

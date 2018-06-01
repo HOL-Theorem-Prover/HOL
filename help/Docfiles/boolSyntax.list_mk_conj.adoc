@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+list_mk_conj                                              (boolSyntax)
+----------------------------------------------------------------------
+list_mk_conj : term list -> term
+
+SYNOPSIS
+Constructs the conjunction of a list of terms.
+
+DESCRIBE
+{list_mk_conj([t1,...,tn])} returns {t1 /\ ... /\ tn}.
+
+FAILURE
+Fails if the list is empty or if the list has more than
+one element, one or more of which are not of type {bool}.
+
+EXAMPLE
+
+- list_mk_conj [T,F,T];
+> val it = `T /\ F /\ T` : term
+
+- try list_mk_conj [T,mk_var("x",alpha),F];
+
+Exception raised at boolSyntax.mk_conj:
+Non-boolean argument
+
+- list_mk_conj [mk_var("x",alpha)];
+> val it = `x` : term
+
+
+
+
+
+SEEALSO
+boolSyntax.strip_conj, boolSyntax.mk_conj.
+
+----------------------------------------------------------------------

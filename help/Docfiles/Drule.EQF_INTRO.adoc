@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+EQF_INTRO                                                      (Drule)
+----------------------------------------------------------------------
+EQF_INTRO : (thm -> thm)
+
+SYNOPSIS
+Converts negation to equality with {F}.
+
+KEYWORDS
+rule, negation, falsity.
+
+DESCRIBE
+
+     A |- ~tm
+   -------------  EQF_INTRO
+    A |- tm = F
+
+
+
+
+FAILURE
+Fails if the argument theorem is not a negation.
+
+SEEALSO
+Drule.EQF_ELIM, Drule.EQT_ELIM, Drule.EQT_INTRO.
+
+----------------------------------------------------------------------

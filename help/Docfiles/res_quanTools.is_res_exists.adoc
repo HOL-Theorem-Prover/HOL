@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+is_res_exists                                          (res_quanTools)
+----------------------------------------------------------------------
+is_res_exists : (term -> bool)
+
+SYNOPSIS
+Tests a term to see if it is a restricted existential quantification.
+
+DESCRIBE
+{is_res_exists "?var::P. t"} returns {true}. If the term is not a
+restricted existential quantification the result is {false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+res_quanTools.mk_res_exists, res_quanTools.dest_res_exists.
+
+----------------------------------------------------------------------

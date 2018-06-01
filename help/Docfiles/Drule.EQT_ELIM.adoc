@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+EQT_ELIM                                                       (Drule)
+----------------------------------------------------------------------
+EQT_ELIM : (thm -> thm)
+
+SYNOPSIS
+Eliminates equality with {T}.
+
+KEYWORDS
+rule, truth.
+
+DESCRIBE
+
+    A |- tm = T
+   -------------  EQT_ELIM
+      A |- tm
+
+
+
+
+FAILURE
+Fails if the argument theorem is not of the form {A |- tm = T}.
+
+SEEALSO
+Drule.EQT_INTRO, Drule.EQF_ELIM, Drule.EQF_INTRO.
+
+----------------------------------------------------------------------

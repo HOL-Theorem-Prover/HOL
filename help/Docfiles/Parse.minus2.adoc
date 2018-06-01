@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+--                                                             (Parse)
+----------------------------------------------------------------------
+-- : term quotation -> 'a -> term
+
+SYNOPSIS
+Parses a quotation into a term value.
+
+KEYWORDS
+Parsing
+
+LIBRARY
+Parse
+
+DESCRIBE
+An invocation {--` ... `--} is identical to {Term ` ... `}.
+
+FAILURE
+As for {Parse.Term}.
+
+USES
+Turns strings into terms.
+
+SEEALSO
+Parse.Term, Parse.==.
+
+----------------------------------------------------------------------

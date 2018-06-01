@@ -1,0 +1,49 @@
+----------------------------------------------------------------------
+MATCH_ACCEPT_TAC                                              (Tactic)
+----------------------------------------------------------------------
+MATCH_ACCEPT_TAC : thm_tactic
+
+SYNOPSIS
+Solves a goal which is an instance of the supplied theorem.
+
+KEYWORDS
+tactic.
+
+DESCRIBE
+When given a theorem {A' |- t} and a goal {A ?- t'} where {t} can be matched
+to {t'} by instantiating variables which are either free or
+universally quantified at the outer level, including appropriate type
+instantiation, {MATCH_ACCEPT_TAC} completely solves the goal.
+
+    A ?- t'
+   =========  MATCH_ACCEPT_TAC (A' |- t)
+
+
+Unless {A'} is a subset of {A}, this is an invalid tactic.
+
+FAILURE
+Fails unless the theorem has a conclusion which is instantiable to match that
+of the goal.
+
+EXAMPLE
+The following example shows variable and type instantiation at work. We can use
+the polymorphic list theorem {HD}:
+
+   HD = |- !h t. HD(CONS h t) = h
+
+to solve the goal:
+
+   ?- HD [1;2] = 1
+
+simply by:
+
+   MATCH_ACCEPT_TAC HD
+
+
+COMMENTS
+{prim_irule} is similar, with differences in the details
+
+SEEALSO
+Tactic.ACCEPT_TAC, Tactic.prim_irule.
+
+----------------------------------------------------------------------

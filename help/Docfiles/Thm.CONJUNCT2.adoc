@@ -1,0 +1,31 @@
+----------------------------------------------------------------------
+CONJUNCT2                                                        (Thm)
+----------------------------------------------------------------------
+CONJUNCT2 : thm -> thm
+
+SYNOPSIS
+Extracts right conjunct of theorem.
+
+KEYWORDS
+rule, conjunction.
+
+DESCRIBE
+
+    A |- t1 /\ t2
+   ---------------  CONJUNCT2
+       A |- t2
+
+
+
+
+FAILURE
+Fails unless the input theorem is a conjunction.
+
+COMMENTS
+The theorem {AND2_THM} can be instantiated to similar effect.
+
+SEEALSO
+Drule.BODY_CONJUNCTS, Thm.CONJUNCT1, Drule.CONJ_PAIR, Thm.CONJ,
+Drule.LIST_CONJ, Drule.CONJ_LIST, Drule.CONJUNCTS.
+
+----------------------------------------------------------------------

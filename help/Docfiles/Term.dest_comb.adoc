@@ -1,0 +1,20 @@
+----------------------------------------------------------------------
+dest_comb                                                       (Term)
+----------------------------------------------------------------------
+dest_comb : term -> term * term
+
+SYNOPSIS
+Breaks apart a combination (function application) into rator and rand.
+
+DESCRIBE
+{dest_comb} is a term destructor for combinations. If term {M} has the
+form {f x}, then {dest_comb M} equals {(f,x)}.
+
+FAILURE
+Fails if the argument is not a function application.
+
+SEEALSO
+Term.mk_comb, Term.is_comb, Term.dest_var, Term.dest_const,
+Term.dest_abs, boolSyntax.strip_comb.
+
+----------------------------------------------------------------------

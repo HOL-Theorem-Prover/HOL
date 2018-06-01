@@ -1,0 +1,38 @@
+----------------------------------------------------------------------
+COND_ELIM_CONV                                                 (Arith)
+----------------------------------------------------------------------
+COND_ELIM_CONV : conv
+
+SYNOPSIS
+Eliminates conditional statements from a formula.
+
+DESCRIBE
+This function moves conditional statements up through a term and if at any
+point the branches of the conditional become Boolean-valued the conditional is
+eliminated. If the term is a formula, only an abstraction can prevent a
+conditional being moved up far enough to be eliminated.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+#COND_ELIM_CONV "!f n. f ((SUC n = 0) => 0 | (SUC n - 1)) < (f n) + 1";;
+|- (!f n. (f((SUC n = 0) => 0 | (SUC n) - 1)) < ((f n) + 1)) =
+   (!f n.
+     (~(SUC n = 0) \/ (f 0) < ((f n) + 1)) /\
+     ((SUC n = 0) \/ (f((SUC n) - 1)) < ((f n) + 1)))
+
+#COND_ELIM_CONV "!f n. (\m. f ((m = 0) => 0 | (m - 1))) (SUC n) < (f n) + 1";;
+|- (!f n. ((\m. f((m = 0) => 0 | m - 1))(SUC n)) < ((f n) + 1)) =
+   (!f n. ((\m. ((m = 0) => f 0 | f(m - 1)))(SUC n)) < ((f n) + 1))
+
+
+USES
+Useful as a preprocessor to decision procedures which do not allow conditional
+statements in their argument formula.
+
+SEEALSO
+Arith.SUB_AND_COND_ELIM_CONV.
+
+----------------------------------------------------------------------

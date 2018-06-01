@@ -1,0 +1,24 @@
+----------------------------------------------------------------------
+strip_exists                                              (boolSyntax)
+----------------------------------------------------------------------
+strip_exists : term -> term list * term
+
+SYNOPSIS
+Iteratively breaks apart existential quantifications.
+
+DESCRIBE
+If {M} has the structure {?x1 ... xn. t} then {strip_exists M}
+returns {([x1,...,xn],t)}. Note that
+
+   strip_exists(list_mk_exists(["x1";...;"xn"],"t"))
+
+will not return {([x1,...,xn],t)} if {t} is an existential
+quantification.
+
+FAILURE
+Never fails.
+
+SEEALSO
+boolSyntax.list_mk_exists, boolSyntax.dest_exists.
+
+----------------------------------------------------------------------

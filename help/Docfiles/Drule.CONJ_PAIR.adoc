@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+CONJ_PAIR                                                      (Drule)
+----------------------------------------------------------------------
+CONJ_PAIR : thm -> thm * thm
+
+SYNOPSIS
+Extracts both conjuncts of a conjunction.
+
+KEYWORDS
+rule, conjunction.
+
+DESCRIBE
+
+       A |- t1 /\ t2
+   ----------------------  CONJ_PAIR
+    A |- t1      A |- t2
+
+The two resultant theorems are returned as a pair.
+
+FAILURE
+Fails if the input theorem is not a conjunction.
+
+SEEALSO
+Drule.BODY_CONJUNCTS, Thm.CONJUNCT1, Thm.CONJUNCT2, Thm.CONJ,
+Drule.LIST_CONJ, Drule.CONJ_LIST, Drule.CONJUNCTS.
+
+----------------------------------------------------------------------

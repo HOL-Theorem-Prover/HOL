@@ -1,0 +1,50 @@
+----------------------------------------------------------------------
+hh                                                        (holyHammer)
+----------------------------------------------------------------------
+hh : Thm.thm list -> Term.term -> unit
+
+SYNOPSIS
+Select relevant lemmas for proving a term using premise selection
+algorithms and external provers (ATP). Additional theorems may
+optionnally be provided to help the proof search.
+
+DESCRIBE
+If an easy goal fails, consider changing predictor using
+{set_predictors Mepo} or {set_predictors KNN}. The default predictor
+is {KNN}. It is also possible to increase the default timeout of the
+provers using {set_timeout 5}. Additional theorems are considered very
+important for the proof so they should be chosen carefully and their
+number should be limited.
+
+FAILURE
+Fails if the supplied term is not a boolean. Or if no ATP is installed.
+Or if no proof is found by the installed ATPs. Or if METIS cannot replay
+the proof from the selected lemmas in less than 30 seconds.
+
+EXAMPLE
+
+- load "holyHammer"; open holyHammer;
+(* output omitted *)
+> val it = () : unit
+
+- hh [] ``1+1=2``;
+> Minimization ...
+  val lemmas = [fetch "arithmetic" "TWO", fetch "arithmetic" "SUC_ONE_ADD"];
+  val it = (): unit
+
+- val lemmas = [fetch "arithmetic" "TWO", fetch "arithmetic" "SUC_ONE_ADD"];
+> val lemmas =
+   [|- 2 = SUC 1, |- ∀n. SUC n = 1 + n]:
+
+- val thm = METIS_PROVE lemmas ``1+1=2``;
+> val thm = |- 1 + 1 = 2: thm
+
+
+COMMENTS
+See src/holyhammer/README for more information on how to install the provers.
+See more examples in src/holyhammer/examples.
+
+SEEALSO
+DB.match, DB.matchp, DB.matcher.
+
+----------------------------------------------------------------------

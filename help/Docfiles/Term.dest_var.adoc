@@ -1,0 +1,20 @@
+----------------------------------------------------------------------
+dest_var                                                        (Term)
+----------------------------------------------------------------------
+dest_var : term -> string * hol_type
+
+SYNOPSIS
+Breaks apart a variable into name and type.
+
+DESCRIBE
+If {M} is a HOL variable, then {dest_var M} returns {(v,ty)}, where {v}
+is the name of the variable, an {ty} is its type.
+
+FAILURE
+Fails if {M} is not a variable.
+
+SEEALSO
+Term.mk_var, Term.is_var, Term.dest_const, Term.dest_comb,
+Term.dest_abs.
+
+----------------------------------------------------------------------

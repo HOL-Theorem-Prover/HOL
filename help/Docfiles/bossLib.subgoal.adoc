@@ -1,0 +1,25 @@
+----------------------------------------------------------------------
+subgoal                                                      (bossLib)
+----------------------------------------------------------------------
+subgoal : term quotation -> tactic
+
+SYNOPSIS
+Produces a subgoal.
+
+KEYWORDS
+
+
+DESCRIBE
+A call to {subgoal q} is equivalent (by definition) to a call to {Q.SUBGOAL_THEN q STRIP_ASSUME_TAC}.
+
+FAILURE
+Fails if the provided quotation does not parse to a term of boolean
+type in the context of the current goal.
+
+COMMENTS
+The {subgoal} tactic is also available via the name {sg}.
+
+SEEALSO
+bossLib.by, Q.SUBGOAL_THEN.
+
+----------------------------------------------------------------------

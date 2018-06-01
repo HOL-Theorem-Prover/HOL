@@ -1,0 +1,12 @@
+----------------------------------------------------------------------
+FAST_QUANT_INST_ss                                (quantHeuristicsLib)
+----------------------------------------------------------------------
+FAST_QUANT_INST_ss : quant_param list -> simpLib.ssfrag
+
+SYNOPSIS
+A simpset fragement corresponding to {FAST_QUANT_INSTANTIATE_CONV}.
+
+SEEALSO
+quantHeuristicsLib.FAST_QUANT_INSTANTIATE_CONV.
+
+----------------------------------------------------------------------

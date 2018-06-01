@@ -1,0 +1,38 @@
+----------------------------------------------------------------------
+compare                                                         (Term)
+----------------------------------------------------------------------
+Term.compare : term * term -> order
+
+SYNOPSIS
+Ordering on terms.
+
+KEYWORDS
+term, order.
+
+DESCRIBE
+An invocation {compare (M,N)} will return one of {{LESS, EQUAL, GREATER}},
+according to an ordering on terms. The ordering is transitive and
+total, and equates alpha-convertible terms.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- compare (T,F);
+> val it = GREATER : order
+
+- compare (Term `\x y. x /\ y`, Term `\y z. y /\ z`);
+> val it = EQUAL : order
+
+
+
+
+COMMENTS
+Used to build high performance datastructures for dealing with sets
+having many terms.
+
+SEEALSO
+Term.empty_tmset, Term.var_compare.
+
+----------------------------------------------------------------------

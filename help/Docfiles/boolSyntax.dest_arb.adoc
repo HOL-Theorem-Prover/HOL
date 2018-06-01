@@ -1,0 +1,25 @@
+----------------------------------------------------------------------
+dest_arb                                                  (boolSyntax)
+----------------------------------------------------------------------
+dest_arb : term -> hol_type
+
+SYNOPSIS
+Extract the type of an instance of the {ARB} constant.
+
+LIBRARY
+
+
+DESCRIBE
+If {M} is an instance of the constant {ARB} with type {ty}, then
+{dest_arb M} equals {ty}.
+
+FAILURE
+Fails if {M} is not an instance of {ARB}.
+
+COMMENTS
+When it succeeds, an invocation of {dest_arb} is equivalent to {type_of}.
+
+SEEALSO
+boolSyntax.mk_arb, boolSyntax.is_arb.
+
+----------------------------------------------------------------------

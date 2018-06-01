@@ -1,0 +1,12 @@
+----------------------------------------------------------------------
+SIMPLE_QUANT_INST_ss                              (quantHeuristicsLib)
+----------------------------------------------------------------------
+SIMPLE_QUANT_INST_ss : simpLib.ssfrag
+
+SYNOPSIS
+A simpset fragment corresponding to {quantHeuristicsLib.SIMPLE_QUANT_INSTANTIATE_CONV}.
+
+SEEALSO
+quantHeuristicsLib.SIMPLE_QUANT_INSTANTIATE_CONV, bossLib.SQI_ss.
+
+----------------------------------------------------------------------

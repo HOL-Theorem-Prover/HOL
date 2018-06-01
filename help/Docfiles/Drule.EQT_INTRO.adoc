@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+EQT_INTRO                                                      (Drule)
+----------------------------------------------------------------------
+EQT_INTRO : thm -> thm
+
+SYNOPSIS
+Introduces equality with {T}.
+
+KEYWORDS
+rule, truth.
+
+DESCRIBE
+
+      A |- tm
+   -------------  EQT_INTRO
+    A |- tm = T
+
+
+
+
+FAILURE
+Never fails.
+
+SEEALSO
+Drule.EQT_ELIM, Drule.EQF_ELIM, Drule.EQF_INTRO.
+
+----------------------------------------------------------------------

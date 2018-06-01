@@ -1,0 +1,32 @@
+----------------------------------------------------------------------
+ANTE_CONJ_CONV                                                  (Conv)
+----------------------------------------------------------------------
+ANTE_CONJ_CONV : conv
+
+SYNOPSIS
+Eliminates a conjunctive antecedent in favour of implication.
+
+KEYWORDS
+conversion, conjunction, implication.
+
+DESCRIBE
+When applied to a term of the form {(t1 /\ t2) ==> t}, the conversion
+{ANTE_CONJ_CONV} returns the theorem:
+
+   |- (t1 /\ t2 ==> t) = (t1 ==> t2 ==> t)
+
+
+
+
+FAILURE
+Fails if applied to a term not of the form {"(t1 /\ t2) ==> t"}.
+
+USES
+Somewhat ad-hoc, but can be used (with {CONV_TAC}) to transform a goal of the
+form {?- (P /\ Q) ==> R} into the subgoal {?- P ==> (Q ==> R)}, so that only
+the antecedent {P} is moved into the assumptions by {DISCH_TAC}.
+
+SEEALSO
+Tactic.CONV_TAC, Tactic.DISCH_TAC.
+
+----------------------------------------------------------------------

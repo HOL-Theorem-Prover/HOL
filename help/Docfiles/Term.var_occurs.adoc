@@ -1,0 +1,37 @@
+----------------------------------------------------------------------
+var_occurs                                                      (Term)
+----------------------------------------------------------------------
+var_occurs : term -> term -> bool
+
+SYNOPSIS
+Check if a variable occurs in free in a term.
+
+KEYWORDS
+variable, occurrence.
+
+DESCRIBE
+An invocation {var_occurs v M} returns {true} just in case {v} occurs
+free in M.
+
+FAILURE
+If the first argument is not a variable.
+
+EXAMPLE
+
+- var_occurs (Term`x:bool`) (Term `a /\ b ==> x`);
+> val it = true : bool
+
+- var_occurs (Term`x:bool`) (Term `!x. a /\ b ==> x`);
+> val it = false : bool
+
+
+
+
+COMMENTS
+Identical to {free_in}, except for the requirement that the first
+argument be a variable.
+
+SEEALSO
+Term.free_vars, Term.free_in.
+
+----------------------------------------------------------------------

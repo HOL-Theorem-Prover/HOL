@@ -1,0 +1,32 @@
+----------------------------------------------------------------------
+X_GEN_TAC                                                     (Tactic)
+----------------------------------------------------------------------
+X_GEN_TAC : (term -> tactic)
+
+SYNOPSIS
+Specializes a goal with the given variable.
+
+KEYWORDS
+tactic.
+
+DESCRIBE
+When applied to a term {x'}, which should be a variable, and a goal
+{A ?- !x. t}, the tactic {X_GEN_TAC} returns the goal {A ?- t[x'/x]}.
+
+     A ?- !x. t
+   ==============  X_GEN_TAC "x'"
+    A ?- t[x'/x]
+
+
+
+
+FAILURE
+Fails unless the goal’s conclusion is universally quantified and the term a
+variable of the appropriate type. It also fails if the variable given is free
+in either the assumptions or (initial) conclusion of the goal.
+
+SEEALSO
+Tactic.FILTER_GEN_TAC, Thm.GEN, Thm.GENL, Drule.GEN_ALL, Thm.SPEC,
+Drule.SPECL, Drule.SPEC_ALL, Tactic.SPEC_TAC, Tactic.STRIP_TAC.
+
+----------------------------------------------------------------------

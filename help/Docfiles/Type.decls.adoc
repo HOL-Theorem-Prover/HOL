@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+decls                                                           (Type)
+----------------------------------------------------------------------
+decls : string -> {Thy : string, Tyop : string} list
+
+SYNOPSIS
+Lists all theories a named type operator is declared in.
+
+KEYWORDS
+type operator, signature.
+
+DESCRIBE
+An invocation {Type.decls s} finds all theories in the ancestry of the
+current theory with a type constant having the given name.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- Type.decls "prod";
+> val it = [{Thy = "pair", Tyop = "prod"}] : {Thy:string, Tyop:string} list
+
+
+
+
+COMMENTS
+There is also a function {Term.decls} that performs a similar
+operation on term constants.
+
+SEEALSO
+Theory.ancestry, Term.decls, Theory.constants.
+
+----------------------------------------------------------------------

@@ -1,0 +1,29 @@
+----------------------------------------------------------------------
+CURRY_CONV                                                 (PairRules)
+----------------------------------------------------------------------
+CURRY_CONV : conv
+
+LIBRARY
+pair
+
+SYNOPSIS
+Currys an application of a paired abstraction.
+
+EXAMPLE
+
+- CURRY_CONV (Term `(\(x,y). x + y) (1,2)`);
+> val it = |- (\(x,y). x + y) (1,2) = (\x y. x + y) 1 2 : thm
+
+- CURRY_CONV (Term `(\(x,y). x + y) z`);
+> val it = |- (\(x,y). x + y) z = (\x y. x + y) (FST z) (SND z) : thm
+
+
+
+
+FAILURE
+{CURRY_CONV tm} fails if {tm} is not an application of a paired abstraction.
+
+SEEALSO
+PairRules.UNCURRY_CONV.
+
+----------------------------------------------------------------------

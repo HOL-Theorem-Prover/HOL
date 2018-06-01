@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+is_exists                                                 (boolSyntax)
+----------------------------------------------------------------------
+is_exists : term -> bool
+
+SYNOPSIS
+Tests a term to see if it is an existential quantification.
+
+DESCRIBE
+If {M} has the form {?v. t} then {is_exists M} returns {true}.
+If the term is not an existential quantification the result is {false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+boolSyntax.mk_exists, boolSyntax.dest_exists.
+
+----------------------------------------------------------------------

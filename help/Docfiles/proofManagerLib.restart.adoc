@@ -1,0 +1,28 @@
+----------------------------------------------------------------------
+restart                                              (proofManagerLib)
+----------------------------------------------------------------------
+restart : unit -> proof
+
+SYNOPSIS
+Returns the proof state to the initial goal.
+
+DESCRIBE
+The function {restart} is part of the subgoal package. A call to {restart}
+clears the proof history and returns to the initial goal. After a call to
+{restart}, the proof state is the same as it was after the inital call to
+{set_goal} (or {g}). For a description of the subgoal package, see {set_goal}.
+
+FAILURE
+The function {restart} only fails if no goalstack is being managed.
+
+USES
+Restarting an interactive proof.
+
+SEEALSO
+proofManagerLib.set_goal, proofManagerLib.restart,
+proofManagerLib.backup, proofManagerLib.restore, proofManagerLib.save,
+proofManagerLib.set_backup, proofManagerLib.expand,
+proofManagerLib.expandf, proofManagerLib.p, proofManagerLib.top_thm,
+proofManagerLib.top_goal.
+
+----------------------------------------------------------------------

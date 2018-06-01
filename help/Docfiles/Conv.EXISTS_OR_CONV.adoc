@@ -1,0 +1,28 @@
+----------------------------------------------------------------------
+EXISTS_OR_CONV                                                  (Conv)
+----------------------------------------------------------------------
+EXISTS_OR_CONV : conv
+
+SYNOPSIS
+Moves an existential quantification inwards through a disjunction.
+
+KEYWORDS
+conversion, quantifier, existential, disjunction.
+
+DESCRIBE
+When applied to a term of the form {?x. P \/ Q}, the conversion
+{EXISTS_OR_CONV} returns the theorem:
+
+   |- (?x. P \/ Q) = (?x.P) \/ (?x.Q)
+
+
+
+
+FAILURE
+Fails if applied to a term not of the form {?x. P \/ Q}.
+
+SEEALSO
+Conv.OR_EXISTS_CONV, Conv.LEFT_OR_EXISTS_CONV,
+Conv.RIGHT_OR_EXISTS_CONV.
+
+----------------------------------------------------------------------

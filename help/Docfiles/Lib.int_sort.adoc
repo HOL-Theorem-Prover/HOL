@@ -1,0 +1,32 @@
+----------------------------------------------------------------------
+int_sort                                                         (Lib)
+----------------------------------------------------------------------
+int_sort : int list -> int list
+
+SYNOPSIS
+Sorts a list of integers using the {<=} relation.
+
+DESCRIBE
+The call {int_sort list} is equal to {sort (curry (op <=))}. That is,
+it is the specialization of {sort} to the usual notion of
+less-than-or-equal on ML integers.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+A simple example is:
+
+- int_sort [3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8, 9, 7, 9];
+> val it = [1, 1, 2, 3, 3, 4, 5, 5, 5, 6, 7, 8, 9, 9, 9] : int list
+
+
+
+
+COMMENTS
+The Standard ML Basis Library also provides implementations of sorting.
+
+SEEALSO
+Lib.sort.
+
+----------------------------------------------------------------------

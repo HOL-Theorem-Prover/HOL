@@ -1,0 +1,51 @@
+----------------------------------------------------------------------
+BOOL_CASES_TAC                                                (Tactic)
+----------------------------------------------------------------------
+BOOL_CASES_TAC : (term -> tactic)
+
+SYNOPSIS
+Performs boolean case analysis on a (free) term in the goal.
+
+KEYWORDS
+tactic, cases.
+
+DESCRIBE
+When applied to a term {x} (which must be of type {bool} but need not be simply
+a variable), and a goal {A ?- t}, the tactic {BOOL_CASES_TAC} generates the two
+subgoals corresponding to {A ?- t} but with any free instances of {x} replaced
+by {F} and {T} respectively.
+
+              A ?- t
+   ============================  BOOL_CASES_TAC "x"
+    A ?- t[F/x]    A ?- t[T/x]
+
+The term given does not have to be free in the goal, but if it isn’t,
+{BOOL_CASES_TAC} will merely duplicate the original goal twice.
+
+FAILURE
+Fails unless the term {x} has type {bool}.
+
+EXAMPLE
+The goal:
+
+   ?- (b ==> ~b) ==> (b ==> a)
+
+can be completely solved by using {BOOL_CASES_TAC} on the variable
+{b}, then simply rewriting the two subgoals using only the inbuilt tautologies,
+i.e. by applying the following tactic:
+
+   BOOL_CASES_TAC (Parse.Term `b:bool`) THEN REWRITE_TAC[]
+
+
+
+
+USES
+Avoiding fiddly logical proofs by brute-force case analysis, possibly only
+over a key term as in the above example, possibly over all free boolean
+variables.
+
+SEEALSO
+Tactic.ASM_CASES_TAC, Tactic.COND_CASES_TAC, Tactic.DISJ_CASES_TAC,
+Tactic.STRUCT_CASES_TAC.
+
+----------------------------------------------------------------------

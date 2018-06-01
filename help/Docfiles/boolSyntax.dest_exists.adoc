@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+dest_exists                                               (boolSyntax)
+----------------------------------------------------------------------
+dest_exists : term -> term * term
+
+SYNOPSIS
+Breaks apart an existentially quantified term into quantified variable and body.
+
+DESCRIBE
+If {M} has the form {?x. t}, then {dest_exists M} returns {(x,t)}.
+
+FAILURE
+Fails if {M} is not an existential quantification.
+
+SEEALSO
+boolSyntax.mk_exists, boolSyntax.is_exists, boolSyntax.strip_exists.
+
+----------------------------------------------------------------------

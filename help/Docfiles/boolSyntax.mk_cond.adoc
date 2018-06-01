@@ -1,0 +1,24 @@
+----------------------------------------------------------------------
+mk_cond                                                   (boolSyntax)
+----------------------------------------------------------------------
+mk_cond : term * term * term -> term
+
+SYNOPSIS
+Constructs a conditional term.
+
+DESCRIBE
+{mk_cond(t,t1,t2)} constructs an application {COND t t1 t2}. This is
+rendered by the prettyprinter as {if t then t1 else t2}.
+
+FAILURE
+Fails if {t} is not of type {bool} or if {t2} and {t2} are
+of different types.
+
+COMMENTS
+The prettyprinter can be trained to print {if t then t1 else t2}
+as {t => t1 | t2}.
+
+SEEALSO
+boolSyntax.dest_cond, boolSyntax.is_cond.
+
+----------------------------------------------------------------------

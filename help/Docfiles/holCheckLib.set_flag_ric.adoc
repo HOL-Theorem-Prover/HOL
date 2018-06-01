@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+set_flag_ric                                             (holCheckLib)
+----------------------------------------------------------------------
+set_flag_ric :  bool -> model -> model
+
+SYNOPSIS
+Sets a HolCheck model to be synchronous if the first argument is true, asynchronous otherwise.
+
+DESCRIBE
+ric stands for "relation is conjunctive". This information is used by HolCheck to decide if the transitions of the model occur simultaneously (conjunctive, synchronous) or interleaved (disjunctive, asynchronous).
+
+COMMENTS
+This information must be set for a HolCheck model.
+
+SEEALSO
+holCheckLib.holCheck, holCheckLib.empty_model,
+holCheckLib.get_flag_ric.
+
+----------------------------------------------------------------------

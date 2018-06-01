@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+ASM_SIMP_TAC                                                 (simpLib)
+----------------------------------------------------------------------
+ASM_SIMP_TAC : simpset -> thm list -> tactic
+
+SYNOPSIS
+Simplify a term with the given simpset and theorems.
+
+DESCRIBE
+{bossLib.ASM_SIMP_TAC} is identical to {simpLib.ASM_SIMP_TAC}.
+
+SEEALSO
+bossLib.ASM_SIMP_TAC.
+
+----------------------------------------------------------------------

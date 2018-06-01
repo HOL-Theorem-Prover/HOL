@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+beta                                                            (Type)
+----------------------------------------------------------------------
+beta : hol_type
+
+SYNOPSIS
+Common type variable.
+
+LIBRARY
+Type
+
+DESCRIBE
+The ML variable {Type.beta} is bound to the type variable {'b}.
+
+SEEALSO
+Type.alpha, Type.gamma, Type.delta, Type.bool.
+
+----------------------------------------------------------------------

@@ -1,0 +1,35 @@
+----------------------------------------------------------------------
+tag                                                              (Thm)
+----------------------------------------------------------------------
+tag : thm -> tag
+
+SYNOPSIS
+Extract the tag from a theorem.
+
+KEYWORDS
+tag, theorem.
+
+DESCRIBE
+An invocation {tag th}, where {th} has type {thm}, returns the tag
+of the theorem. If derivation of the theorem has appealed at some
+point to an oracle, the tag of that oracle will be embedded in the result.
+Otherwise, an empty tag is returned.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- Thm.tag (mk_thm([],F));
+> val it = Kerneltypes.TAG(["MK_THM"], []) : tag
+
+- Thm.tag NOT_FORALL_THM;
+> val it = Kerneltypes.TAG([], []) : tag
+
+
+
+
+SEEALSO
+Thm.mk_oracle_thm, Tag.read, Tag.merge, Tag.pp_tag.
+
+----------------------------------------------------------------------

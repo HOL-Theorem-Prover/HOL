@@ -1,0 +1,46 @@
+----------------------------------------------------------------------
+PEXISTS_EQ                                                 (PairRules)
+----------------------------------------------------------------------
+PEXISTS_EQ : (term -> thm -> thm)
+
+KEYWORDS
+rule, quantifier, existential, equality.
+
+LIBRARY
+pair
+
+SYNOPSIS
+Existentially quantifies both sides of an equational theorem.
+
+DESCRIBE
+When applied to a paired structure of variables {p} and a theorem
+whose conclusion is equational:
+
+    A |- t1 = t2
+
+
+the inference rule {PEXISTS_EQ} returns the theorem:
+
+    A |- (?p. t1) = (?p. t2)
+
+
+provided the none of the variables in {p} is not free in any of the
+assumptions.
+
+          A |- t1 = t2
+   --------------------------  PEXISTS_EQ "p"      [where p is not free in A]
+    A |- (?p. t1) = (?p. t2)
+
+
+
+
+FAILURE
+Fails unless the theorem is equational with both sides having type {bool},
+or if the term is not a paired structure of variables, or if any variable in
+the pair to be quantified over is free in any of the assumptions.
+
+SEEALSO
+Drule.EXISTS_EQ, PairRules.PEXISTS_IMP, PairRules.PFORALL_EQ,
+PairRules.MK_PEXISTS, PairRules.PSELECT_EQ.
+
+----------------------------------------------------------------------

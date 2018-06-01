@@ -1,0 +1,24 @@
+----------------------------------------------------------------------
+REORDER_ANTS_MOD                                               (Drule)
+----------------------------------------------------------------------
+REORDER_ANTS_MOD : (term list -> term list) -> (thm -> thm) -> thm -> thm
+
+SYNOPSIS
+Strips universal quantifiers and antecedents of implications,
+modifies the conclusion, and reorders the antecedents
+
+KEYWORDS
+universal, existential, quantifier, assumption, hypothesis
+
+DESCRIBE
+{REORDER_ANTS_MOD f g} combines the effects of 
+{REORDER_ANTS_MOD f} and {MODIFY_CONS g}
+
+FAILURE
+Fails if {g} fails when applied to the consequent
+
+SEEALSO
+Drule.REORDER_ANTS, Drule.MODIFY_CONS, Drule.SPEC_ALL, Drule.GEN_ALL,
+Thm.UNDISCH, Drule.DISCH.
+
+----------------------------------------------------------------------

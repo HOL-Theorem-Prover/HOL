@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+dest_eq                                                   (boolSyntax)
+----------------------------------------------------------------------
+dest_eq : term -> term * term
+
+SYNOPSIS
+Term destructor for equality.
+
+DESCRIBE
+If {M} is the term {t1 = t2}, then {dest_eq M} returns {(t1, t2)}.
+
+FAILURE
+Fails if {M} is not an equality.
+
+SEEALSO
+boolSyntax.mk_eq, boolSyntax.is_eq, boolSyntax.lhs, boolSyntax.rhs.
+
+----------------------------------------------------------------------

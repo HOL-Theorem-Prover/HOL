@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+rand                                                            (Term)
+----------------------------------------------------------------------
+rand : term -> term
+
+SYNOPSIS
+Returns the operand from a combination (function application).
+
+DESCRIBE
+If {M} is a combination, i.e., has the form {(t1 t2)}, then
+{rand M} returns {t2}.
+
+FAILURE
+Fails if {M} is not a combination.
+
+SEEALSO
+Term.rator, Term.dest_comb.
+
+----------------------------------------------------------------------

@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+mk_exists1                                                (boolSyntax)
+----------------------------------------------------------------------
+mk_exists1 : term * term -> term
+
+SYNOPSIS
+Term constructor for unique existence.
+
+DESCRIBE
+If {v} is a variable and {t} is a term of type {bool}, then
+{mk_exists1 (v,t)} returns the term {?!v. t}.
+
+FAILURE
+Fails if {v} is not a variable or if {t} is not of type {bool}.
+
+SEEALSO
+boolSyntax.dest_exists1, boolSyntax.is_exists1.
+
+----------------------------------------------------------------------

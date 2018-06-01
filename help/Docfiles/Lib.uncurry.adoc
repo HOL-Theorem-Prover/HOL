@@ -1,0 +1,35 @@
+----------------------------------------------------------------------
+uncurry                                                          (Lib)
+----------------------------------------------------------------------
+uncurry : ('a -> 'b -> 'c) -> ('a * 'b) -> 'c
+
+SYNOPSIS
+Converts a function taking two arguments into a function taking a single
+paired argument.
+
+DESCRIBE
+The application {uncurry f} returns {fn (x,y) => f x y}, so that
+
+   uncurry f (x,y) = f x y
+
+
+
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- fun add x y = x + y
+> val add = fn : int -> int -> int
+
+- uncurry add (3,4);
+> val it = 7 : int
+
+
+
+
+SEEALSO
+Lib, Lib.curry.
+
+----------------------------------------------------------------------

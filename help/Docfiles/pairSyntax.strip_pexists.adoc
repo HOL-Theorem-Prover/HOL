@@ -1,0 +1,26 @@
+----------------------------------------------------------------------
+strip_pexists                                             (pairSyntax)
+----------------------------------------------------------------------
+strip_pexists : term -> term list * term
+
+LIBRARY
+pair
+
+SYNOPSIS
+Iteratively breaks apart paired existential quantifications.
+
+DESCRIBE
+{strip_pexists "?p1 ... pn. t"} returns {([p1,...,pn],t)}. Note that
+
+   strip_pexists(list_mk_pexists([[p1,...,pn],t))
+
+will not return {([p1,...,pn],t)} if {t} is a paired
+existential quantification.
+
+FAILURE
+Never fails.
+
+SEEALSO
+boolSyntax.strip_exists, pairSyntax.dest_pexists.
+
+----------------------------------------------------------------------

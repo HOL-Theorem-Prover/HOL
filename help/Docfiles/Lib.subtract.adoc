@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+subtract                                                         (Lib)
+----------------------------------------------------------------------
+subtract : ''a list -> ''a list -> ''a list
+
+SYNOPSIS
+Computes the set-theoretic difference of two ‘sets’.
+
+DESCRIBE
+Behaves exactly like {set_diff}.
+
+SEEALSO
+Lib.set_diff.
+
+----------------------------------------------------------------------

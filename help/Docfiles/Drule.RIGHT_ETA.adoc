@@ -1,0 +1,40 @@
+----------------------------------------------------------------------
+RIGHT_ETA                                                      (Drule)
+----------------------------------------------------------------------
+RIGHT_ETA : thm -> thm
+
+SYNOPSIS
+Perform one step of eta-reduction on the right hand side of an
+equational theorem.
+
+KEYWORDS
+conversion, reduction, eta.
+
+DESCRIBE
+
+    A |- M = (\x. (N x))
+   ---------------------   x not free in N
+    A |- M = N
+
+
+
+
+FAILURE
+If the right hand side of the equation is not an eta-redex, or if the
+theorem is not an equation.
+
+EXAMPLE
+
+- val INC_DEF = new_definition ("INC_DEF", Term`INC = \x. 1 + x`);
+> val INC_DEF = |- INC = (\x. 1 + x) : thm
+
+- RIGHT_ETA INC_DEF;
+> val it = |- INC = $+ 1 : thm
+
+
+
+
+SEEALSO
+Drule.ETA_CONV, Term.eta_conv.
+
+----------------------------------------------------------------------

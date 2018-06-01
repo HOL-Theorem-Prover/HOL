@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+ASM_MESON_TAC                                               (mesonLib)
+----------------------------------------------------------------------
+ASM_MESON_TAC : thm list -> tactic
+
+SYNOPSIS
+Performs first order proof search to prove the goal, using the
+assumptions and the theorems given.
+
+KEYWORDS
+decision procedure, tactic.
+
+LIBRARY
+meson
+
+DESCRIBE
+{ASM_MESON_TAC} is identical in behaviour to {MESON_TAC} except that
+it uses the assumptions of a goal as well as the provided theorems.
+
+FAILURE
+{ASM_MESON_TAC} fails if it can not find a proof of the goal with
+depth less than or equal to the {mesonLib.max_depth} value.
+
+SEEALSO
+mesonLib.GEN_MESON_TAC, mesonLib.MESON_TAC.
+
+----------------------------------------------------------------------

@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+is_abs                                                          (Term)
+----------------------------------------------------------------------
+is_abs : (term -> bool)
+
+SYNOPSIS
+Tests a term to see if it is an abstraction.
+
+DESCRIBE
+{is_abs "\var. t"} returns {true}. If the term is not an abstraction the
+result is {false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+Term.mk_abs, Term.dest_abs, Term.is_var, Term.is_const, Term.is_comb.
+
+----------------------------------------------------------------------

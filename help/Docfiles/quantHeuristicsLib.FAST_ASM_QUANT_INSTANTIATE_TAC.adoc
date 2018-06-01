@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+FAST_ASM_QUANT_INSTANTIATE_TAC                    (quantHeuristicsLib)
+----------------------------------------------------------------------
+FAST_ASM_QUANT_INSTANTIATE_TAC : quant_param list -> tactic
+
+SYNOPSIS
+A fast version of {quantHeuristicsLib.ASM_QUANT_INSTANTIATE_TAC}. It does
+not preprocess the term in order to minimise the number of variable
+occurrences.
+
+SEEALSO
+quantHeuristicsLib.QUANT_INSTANTIATE_CONV,
+quantHeuristicsLib.ASM_QUANT_INSTANTIATE_TAC.
+
+----------------------------------------------------------------------

@@ -1,0 +1,31 @@
+----------------------------------------------------------------------
+aconv                                                           (Term)
+----------------------------------------------------------------------
+aconv : term -> term -> bool
+
+SYNOPSIS
+Tests for alpha-convertibility of terms.
+
+KEYWORDS
+alpha.
+
+DESCRIBE
+When applied to two terms, {aconv} returns {true} if they are
+alpha-convertible, and {false} otherwise. Two terms are alpha-convertible
+if they differ only in the way that names have been given to bound variables.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- aconv (Term `?x y. x /\ y`) (Term `?y x. y /\ x`)
+> val it = true : bool
+
+
+
+
+SEEALSO
+Thm.ALPHA, Drule.ALPHA_CONV.
+
+----------------------------------------------------------------------

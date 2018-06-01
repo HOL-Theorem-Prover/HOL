@@ -1,0 +1,12 @@
+----------------------------------------------------------------------
+get_vord                                                 (holCheckLib)
+----------------------------------------------------------------------
+get_vord : model -> string list option
+
+SYNOPSIS
+Returns the BDD variable ordering used by HolCheck for this model, if one has been set.
+
+SEEALSO
+holCheckLib.holCheck, holCheckLib.set_vord.
+
+----------------------------------------------------------------------

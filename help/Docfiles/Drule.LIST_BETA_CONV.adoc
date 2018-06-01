@@ -1,0 +1,41 @@
+----------------------------------------------------------------------
+LIST_BETA_CONV                                                 (Drule)
+----------------------------------------------------------------------
+LIST_BETA_CONV : conv
+
+SYNOPSIS
+Performs an iterated beta conversion.
+
+KEYWORDS
+conversion.
+
+DESCRIBE
+The conversion {LIST_BETA_CONV} maps terms of the form
+
+   "(\x1 x2 ... xn. u) v1 v2 ... vn"
+
+to the theorems of the form
+
+   |- (\x1 x2 ... xn. u) v1 v2 ... vn = u[v1/x1][v2/x2] ... [vn/xn]
+
+where {u[vi/xi]} denotes the result of substituting {vi} for all free
+occurrences of {xi} in {u}, after renaming sufficient bound variables to avoid
+variable capture.
+
+FAILURE
+{LIST_BETA_CONV tm} fails if {tm} does not have the form
+{"(\x1 ... xn. u) v1 ... vn"} for {n} greater than 0.
+
+EXAMPLE
+
+- LIST_BETA_CONV (Term `(\x y. x+y) 1 2`);
+> val it = |- (\x y. x + y)1 2 = 1 + 2 : thm
+
+
+
+
+SEEALSO
+Thm.BETA_CONV, Conv.BETA_RULE, Tactic.BETA_TAC, Drule.RIGHT_BETA,
+Drule.RIGHT_LIST_BETA.
+
+----------------------------------------------------------------------

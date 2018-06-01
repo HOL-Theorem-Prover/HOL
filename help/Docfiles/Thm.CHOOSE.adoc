@@ -1,0 +1,32 @@
+----------------------------------------------------------------------
+CHOOSE                                                           (Thm)
+----------------------------------------------------------------------
+CHOOSE : term * thm -> thm -> thm
+
+SYNOPSIS
+Eliminates existential quantification using deduction from a
+particular witness.
+
+KEYWORDS
+rule, existential.
+
+DESCRIBE
+When applied to a term-theorem pair {(v,A1 |- ?x. s)} and a second
+theorem of the form {A2 u {s[v/x]} |- t}, the inference rule {CHOOSE}
+produces the theorem {A1 u A2 |- t}.
+
+    A1 |- ?x. s        A2 u {s[v/x]} |- t
+   ---------------------------------------  CHOOSE (v,(A1 |- ?x. s))
+                A1 u A2 |- t
+
+Where {v} is not free in {A1}, {A2} or {t}.
+
+FAILURE
+Fails unless the terms and theorems correspond as indicated above; in
+particular {v} must have the same type as the variable existentially
+quantified over, and must not be free in {A1}, {A2} or {t}.
+
+SEEALSO
+Tactic.CHOOSE_TAC, Thm.EXISTS, Tactic.EXISTS_TAC, Drule.SELECT_ELIM.
+
+----------------------------------------------------------------------

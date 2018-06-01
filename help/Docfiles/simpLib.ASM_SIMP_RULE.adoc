@@ -1,0 +1,35 @@
+----------------------------------------------------------------------
+ASM_SIMP_RULE                                                (simpLib)
+----------------------------------------------------------------------
+ASM_SIMP_RULE : simpset -> thm list -> thm -> thm
+
+SYNOPSIS
+Simplifies a theorem, using the theorem’s assumptions as rewrites in
+addition to the provided rewrite theorems and simpset.
+
+KEYWORDS
+simplification
+
+LIBRARY
+simpLib
+
+FAILURE
+Never fails, but may diverge.
+
+EXAMPLE
+
+- ASM_SIMP_RULE bool_ss [] (ASSUME (Term `x = 3`))
+> val it =  [.] |- T : thm
+
+
+
+
+USES
+The assumptions can be used to simplify the conclusion of the theorem.
+For example, if the conclusion of a theorem is an implication, the
+antecedent together with the hypotheses may help simplify the conclusion.
+
+SEEALSO
+simpLib.SIMP_CONV, simpLib.SIMP_RULE.
+
+----------------------------------------------------------------------

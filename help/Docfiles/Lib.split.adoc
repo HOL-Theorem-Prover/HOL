@@ -1,0 +1,24 @@
+----------------------------------------------------------------------
+split                                                            (Lib)
+----------------------------------------------------------------------
+split : ('a * 'b) list -> ('a list * 'b list)
+
+SYNOPSIS
+Converts a list of pairs into a pair of lists.
+
+KEYWORDS
+list.
+
+DESCRIBE
+{split [(x1,y1),...,(xn,yn)]} returns {([x1,...,xn],[y1,...,yn])}.
+
+FAILURE
+Never fails.
+
+COMMENTS
+Identical to the Basis function {ListPair.unzip} and the function {Lib.unzip}.
+
+SEEALSO
+Lib.unzip, Lib.zip, Lib.combine.
+
+----------------------------------------------------------------------

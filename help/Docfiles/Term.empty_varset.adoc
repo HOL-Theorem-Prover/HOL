@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+empty_varset                                                    (Term)
+----------------------------------------------------------------------
+empty_varset : term set
+
+SYNOPSIS
+Empty set of term variables.
+
+KEYWORDS
+term, set.
+
+DESCRIBE
+The value {empty_varset} represents an empty set of term variables.
+The set has a built-in ordering, which is given by {Term.var_compare}.
+
+COMMENTS
+Used as a starting point for building sets of variables.
+
+SEEALSO
+Term.var_compare, Term.empty_tmset.
+
+----------------------------------------------------------------------

@@ -1,0 +1,14 @@
+----------------------------------------------------------------------
+EXISTS_EQ___CONSEQ_CONV                                   (ConseqConv)
+----------------------------------------------------------------------
+EXISTS_EQ___CONSEQ_CONV : conseq_conv
+
+SYNOPSIS
+Given a term of the form {(?x. P x) = (?x. Q x)} this consequence
+conversion returns the theorem
+{|- (!x. (P x = Q x)) ==> ((?x. P x) = (?x. Q x))}.
+
+SEEALSO
+ConseqConv.conseq_conv.
+
+----------------------------------------------------------------------

@@ -1,0 +1,35 @@
+----------------------------------------------------------------------
+quote                                                            (Lib)
+----------------------------------------------------------------------
+quote : string -> string
+
+SYNOPSIS
+Put quotation marks around a string.
+
+KEYWORDS
+string.
+
+DESCRIBE
+An application {quote s} is equal to {"\"" ^ s ^ "\""}. This is often
+useful when printing messages.
+
+FAILURE
+Never fails
+
+EXAMPLE
+
+- print "foo\n";
+foo
+> val it = () : unit
+
+- print (quote "foo" ^ "\n");
+"foo"
+> val it = () : unit
+
+
+
+
+SEEALSO
+Lib.mlquote.
+
+----------------------------------------------------------------------

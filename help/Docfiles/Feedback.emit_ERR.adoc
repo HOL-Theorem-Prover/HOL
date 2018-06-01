@@ -1,0 +1,42 @@
+----------------------------------------------------------------------
+emit_ERR                                                    (Feedback)
+----------------------------------------------------------------------
+emit_ERR : bool ref
+
+SYNOPSIS
+Flag controlling output of {HOL_ERR} exceptions.
+
+KEYWORDS
+error, exception, output
+
+DESCRIBE
+The boolean flag {emit_ERR} tells whether an application of {HOL_ERR}
+should be printed. Its value is consulted by {Raise} when it attempts to
+print a textual representation of its argument exception. This flag is
+not commonly used, and it may disappear or change in the future.
+
+The default value of {emit_ERR} is {true}.
+
+EXAMPLE
+
+- Raise (mk_HOL_ERR "Module" "function" "message");
+
+Exception raised at Module.function:
+message
+! Uncaught exception:
+! HOL_ERR
+
+- emit_ERR := false;
+> val it = () : unit
+
+- Raise (mk_HOL_ERR "Module" "function" "message");
+! Uncaught exception:
+! HOL_ERR
+
+
+
+
+SEEALSO
+Feedback, Feedback.Raise, Feedback.emit_MESG, Feedback.emit_WARNING.
+
+----------------------------------------------------------------------

@@ -1,0 +1,30 @@
+----------------------------------------------------------------------
+genvars                                                         (Term)
+----------------------------------------------------------------------
+genvars : hol_type -> int -> term list
+
+SYNOPSIS
+Generate a specified number of fresh variables.
+
+KEYWORDS
+variable, term.
+
+DESCRIBE
+An invocation {genvars ty n} will invoke {genvar} {n} times and
+return the resulting list of variables.
+
+FAILURE
+Never fails. If {n} is less-than-or-equal to zero, the empty list is returned.
+
+EXAMPLE
+
+- genvars alpha 3;
+> val it = [`%%genvar%%1558`, `%%genvar%%1559`, `%%genvar%%1560`] : term list
+
+
+
+
+SEEALSO
+Term.genvar, Term.mk_var.
+
+----------------------------------------------------------------------

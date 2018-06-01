@@ -1,0 +1,59 @@
+----------------------------------------------------------------------
+INST_TYPE                                                        (Thm)
+----------------------------------------------------------------------
+INST_TYPE : (hol_type,hol_type) subst -> thm -> thm
+
+SYNOPSIS
+Instantiates types in a theorem.
+
+KEYWORDS
+rule, type, instantiate.
+
+DESCRIBE
+{INST_TYPE} is a primitive rule in the HOL logic, which allows
+instantiation of type variables.
+
+
+              A |- t
+  ----------------------------------- INST_TYPE[vty1|->ty1,..., vtyn|->tyn]
+   A[ty1,...,tyn/vty1,...,vtyn]
+    |-
+   t[ty1,...,tyn/vty1,...,vtyn]
+
+Type substitution is performed throughout the hypotheses and
+the conclusion. Variables will be renamed if necessary to
+prevent distinct bound variables becoming identical after
+the instantiation.
+
+FAILURE
+Never fails.
+
+USES
+{INST_TYPE} enables polymorphic theorems to be used at any type.
+
+EXAMPLE
+Supposing one wanted to specialize the theorem {EQ_SYM_EQ} for
+particular values, the first attempt could be to use {SPECL} as
+follows:
+
+   - SPECL [``a:num``, ``b:num``] EQ_SYM_EQ;
+   uncaught exception HOL_ERR
+
+
+The failure occurred because {EQ_SYM_EQ} contains polymorphic types.
+The desired specialization can be obtained by using {INST_TYPE}:
+
+   - load "numTheory";
+
+   - SPECL [Term `a:num`, Term`b:num`]
+           (INST_TYPE [alpha |-> Type`:num`] EQ_SYM_EQ);
+
+   > val it = |- (a = b) = (b = a) : thm
+
+
+
+
+SEEALSO
+Term.inst, Thm.INST, Drule.INST_TY_TERM, Lib.|->.
+
+----------------------------------------------------------------------

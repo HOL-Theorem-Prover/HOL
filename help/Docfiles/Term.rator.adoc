@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+rator                                                           (Term)
+----------------------------------------------------------------------
+rator : term -> term
+
+SYNOPSIS
+Returns the operator from a combination (function application).
+
+DESCRIBE
+If {M} is a combination, i.e., has the form {(t1 t2)}, then
+{rator M} returns {t1}.
+
+FAILURE
+Fails if {M} is not a combination.
+
+SEEALSO
+Term.rand, Term.dest_comb.
+
+----------------------------------------------------------------------

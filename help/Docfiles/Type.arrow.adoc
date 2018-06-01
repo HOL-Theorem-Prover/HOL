@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+-->                                                             (Type)
+----------------------------------------------------------------------
+op --> : hol_type * hol_type -> hol_type
+
+SYNOPSIS
+Right associative infix operator for building a function type.
+
+KEYWORDS
+function, type.
+
+DESCRIBE
+If {ty1} and {ty2} are HOL types, then {ty1 --> ty2} builds the HOL type
+{ty1 -> ty2}.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- bool --> alpha;
+> val it = `:bool -> 'a` : hol_type
+
+
+
+
+COMMENTS
+This operator associates to the right, that is, {ty1 --> ty2 --> ty3}
+is identical to {ty1 --> (ty2 --> ty3)}.
+
+SEEALSO
+Type.dom_rng, Type.mk_type, Type.mk_thy_type.
+
+----------------------------------------------------------------------

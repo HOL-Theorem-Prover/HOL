@@ -1,0 +1,26 @@
+----------------------------------------------------------------------
+TAC_PROOF                                                   (Tactical)
+----------------------------------------------------------------------
+TAC_PROOF : goal * tactic -> thm
+
+SYNOPSIS
+Attempts to prove a goal using a given tactic.
+
+KEYWORDS
+apply.
+
+DESCRIBE
+When applied to a goal-tactic pair {(A ?- t,tac)}, the {TAC_PROOF} function
+attempts to prove the goal {A ?- t}, using the tactic {tac}. If it succeeds, it
+returns the theorem {A' |- t} corresponding to the goal, where the assumption
+list {A'} may be a proper superset of {A} unless the tactic is valid; there
+is no inbuilt validity checking.
+
+FAILURE
+Fails unless the goal has hypotheses and conclusions all of type {bool},
+and the tactic can solve the goal.
+
+SEEALSO
+BasicProvers.PROVE, Tactical.VALID.
+
+----------------------------------------------------------------------

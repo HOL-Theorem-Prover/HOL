@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+dest_numeral                                               (numSyntax)
+----------------------------------------------------------------------
+dest_numeral : term -> Arbnum.num
+
+SYNOPSIS
+Convert HOL numeral to ML bignum value.
+
+DESCRIBE
+An invocation {dest_numeral tm}, where {tm} is a HOL numeral (a literal of type {num}),
+returns the corrresponding ML value of type {Arbnum.num}. A numeral is a
+dyadic positional notation described by the following BNF:
+
+     <numeral> ::= 0 | NUMERAL <bits>
+     <bits>    ::= ZERO | BIT1 (<bits>) | BIT2 (<bits>)
+
+The {NUMERAL} constant is used as a tag signalling that its argument
+is indeed a numeric literal. The {ZERO} constant is equal to {0},
+and {BIT1(n) = 2*n + 1} while {BIT2(n) = 2*n + 2}. This representation
+allows asymptotically efficient operations on numeric values.
+
+The system prettyprinter will print a numeral as a string of digits.
+
+EXAMPLE
+
+- dest_numeral ``1234``;
+> val it = 1234 : num
+
+
+FAILURE
+Fails if {tm} is not in the specified format.
+
+SEEALSO
+numSyntax.mk_numeral, numSyntax.is_numeral.
+
+----------------------------------------------------------------------

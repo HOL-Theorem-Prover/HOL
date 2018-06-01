@@ -1,0 +1,33 @@
+----------------------------------------------------------------------
+ISPEC                                                          (Drule)
+----------------------------------------------------------------------
+ISPEC : (term -> thm -> thm)
+
+SYNOPSIS
+Specializes a theorem, with type instantiation if necessary.
+
+KEYWORDS
+rule, type.
+
+DESCRIBE
+This rule specializes a quantified variable as does {SPEC}; it differs
+from it in also instantiating the type if needed:
+
+     A |- !x:ty.tm
+  -----------------------  ISPEC "t:ty'"
+      A |- tm[t/x]
+
+(where {t} is free for {x} in {tm}, and {ty'} is an instance
+of {ty}).
+
+FAILURE
+{ISPEC} fails if the input theorem is not universally quantified, if
+the type of the given term is not an instance of the type of the
+quantified variable, or if the type variable is free in the
+assumptions.
+
+SEEALSO
+Drule.INST_TY_TERM, Thm.INST_TYPE, Drule.ISPECL, Thm.SPEC,
+Term.match_term.
+
+----------------------------------------------------------------------

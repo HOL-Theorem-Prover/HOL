@@ -1,0 +1,37 @@
+----------------------------------------------------------------------
+is_genvar                                                       (Term)
+----------------------------------------------------------------------
+is_genvar : term -> bool
+
+SYNOPSIS
+Tells if a variable has been built by invoking {genvar}.
+
+KEYWORDS
+variable, term.
+
+DESCRIBE
+{is_genvar v} attempts to tell if {v} has been created by a call to {genvar}.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- is_genvar (genvar bool);
+> val it = true : bool
+
+- is_genvar (mk_var ("%%genvar%%3",bool));
+> val it = true : bool
+
+
+
+
+COMMENTS
+As the second example shows, it is possible to fool {is_genvar}. However,
+it is useful for derived proof tools which use it as part of their
+internal operations.
+
+SEEALSO
+Term.is_var, Term.genvar, Type.is_gen_tyvar, Type.gen_tyvar.
+
+----------------------------------------------------------------------

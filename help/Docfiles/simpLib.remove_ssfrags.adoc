@@ -1,0 +1,38 @@
+----------------------------------------------------------------------
+remove_ssfrags                                               (simpLib)
+----------------------------------------------------------------------
+remove_ssfrags : simpset -> string list -> simpset
+
+SYNOPSIS
+Removes named simpset fragments from a simpset.
+
+KEYWORDS
+simplification
+
+DESCRIBE
+A call to {remove_ssfrags simpset fragnames} returns a simpset that is
+the same as {simpset} except that the simpset fragments with names in
+the list {fragnames} are no longer included.
+
+FAILURE
+Never fails.  If a name in the list of fragment names does not occur
+as a name amongst the simpset fragments in the input simpset, no error
+is reported.
+
+EXAMPLE
+
+- SIMP_CONV (srw_ss()) [] ``MAP ($+ 1) [3;4;5]``;
+<<HOL message: Initialising SRW simpset ... done>>
+> val it = |- MAP ($+ 1) [3; 4; 5] = [4; 5; 6] : thm
+
+- val myss = simpLib.remove_ssfrags (srw_ss()) ["REDUCE"]
+> val myss = ...output elided...
+
+- SIMP_CONV myss [] ``MAP ($+ 1) [3;4;5]``
+> val it = |- MAP ($+ 1) [3; 4; 5] = [1 + 3; 1 + 4; 1 + 5] : thm
+
+
+SEEALSO
+BasicProvers.diminish_srw_ss.
+
+----------------------------------------------------------------------

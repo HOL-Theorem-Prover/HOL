@@ -1,0 +1,50 @@
+----------------------------------------------------------------------
+BETA_RULE                                                       (Conv)
+----------------------------------------------------------------------
+BETA_RULE : (thm -> thm)
+
+SYNOPSIS
+Beta-reduces all the beta-redexes in the conclusion of a theorem.
+
+KEYWORDS
+rule.
+
+DESCRIBE
+When applied to a theorem {A |- t}, the inference rule {BETA_RULE} beta-reduces
+all beta-redexes, at any depth, in the conclusion {t}. Variables are renamed
+where necessary to avoid free variable capture.
+
+    A |- ....((\x. s1) s2)....
+   ----------------------------  BETA_RULE
+      A |- ....(s1[s2/x])....
+
+
+
+
+FAILURE
+Never fails, but will have no effect if there are no beta-redexes.
+
+EXAMPLE
+The following example is a simple reduction which illustrates variable
+renaming:
+
+   - Globals.show_assums := true;
+   val it = () : unit
+
+   - local val tm = Parse.Term `f = ((\x y. x + y) y)`
+     in
+     val x = ASSUME tm
+     end;
+   val x = [f = (\x y. x + y)y] |- f = (\x y. x + y)y : thm
+
+   - BETA_RULE x;
+   val it = [f = (\x y. x + y)y] |- f = (\y'. y + y') : thm
+
+
+
+
+SEEALSO
+Thm.BETA_CONV, Tactic.BETA_TAC, PairedLambda.PAIRED_BETA_CONV,
+Drule.RIGHT_BETA.
+
+----------------------------------------------------------------------

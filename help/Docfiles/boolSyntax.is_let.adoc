@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+is_let                                                    (boolSyntax)
+----------------------------------------------------------------------
+is_let : term -> bool
+
+SYNOPSIS
+Tests a term to see if it is a {let}-expression.
+
+DESCRIBE
+If {tm} is a term of the form {LET M N}, then {dest_let tm}
+returns {true}. Otherwise, it returns {false}.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- Term `LET f x`;
+<<HOL message: inventing new type variable names: 'a, 'b>>
+> val it = `LET f x` : term
+
+- is_let it;
+> val it = true : bool
+
+- is_let (Term `let x = P /\ Q in x \/ x`);
+> val it = true : bool
+
+
+
+
+SEEALSO
+boolSyntax.mk_let, boolSyntax.dest_let.
+
+----------------------------------------------------------------------

@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+RES_FORALL_SWAP_CONV                                     (res_quanLib)
+----------------------------------------------------------------------
+RES_FORALL_SWAP_CONV : conv
+
+SYNOPSIS
+Changes the order of two restricted universal quantifications.
+
+KEYWORDS
+conversion, restricted quantifier, universal.
+
+DESCRIBE
+When applied to a term of the form {!x::P. !y::Q. R}, the conversion
+{RES_FORALL_SWAP_CONV} returns the theorem:
+
+   |- (!x::P. !y::Q. R) =  !y::Q. !x::P. R
+
+providing that {x} does not occur free in {Q} and {y} does not
+occur free in {P}.
+
+FAILURE
+Fails if applied to a term not of the correct form.
+
+SEEALSO
+res_quanLib.RES_FORALL_CONV.
+
+----------------------------------------------------------------------

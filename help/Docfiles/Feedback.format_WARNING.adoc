@@ -1,0 +1,32 @@
+----------------------------------------------------------------------
+format_WARNING                                              (Feedback)
+----------------------------------------------------------------------
+format_WARNING : string -> string -> string -> string
+
+SYNOPSIS
+Maps arguments of {HOL_WARNING} to a string.
+
+KEYWORDS
+message, warning, formatting
+
+DESCRIBE
+The {format_WARNING} function maps three strings to a string. Usually,
+the input strings are the arguments to an invocation of {HOL_WARNING}.
+{format_WARNING} is the default function used by {WARNING_to_string}.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- print (format_WARNING "Module" "function" "Gadzooks!");
+<<HOL warning: Module.function: Gadzooks!>>
+
+
+
+
+SEEALSO
+Feedback, Feedback.WARNING_to_string, Feedback.format_ERR,
+Feedback.format_MESG.
+
+----------------------------------------------------------------------

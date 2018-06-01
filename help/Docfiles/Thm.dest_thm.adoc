@@ -1,0 +1,26 @@
+----------------------------------------------------------------------
+dest_thm                                                         (Thm)
+----------------------------------------------------------------------
+dest_thm : thm -> term list * term
+
+SYNOPSIS
+Breaks a theorem into assumption list and conclusion.
+
+DESCRIBE
+{dest_thm ([t1,...,tn] |- t)} returns {([t1,...,tn],t)}.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- dest_thm (ASSUME (Term `p=T`));
+> val it = ([`p = T`], `p = T`) : term list * term
+
+
+
+
+SEEALSO
+Thm.concl, Thm.hyp.
+
+----------------------------------------------------------------------

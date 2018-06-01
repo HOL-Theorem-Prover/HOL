@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+WF_REL_TAC                                                 (TotalDefn)
+----------------------------------------------------------------------
+WF_REL_TAC : term quotation -> tactic
+
+SYNOPSIS
+Initiate a termination proof.
+
+DESCRIBE
+{bossLib.WF_REL_TAC} is identical to {TotalDefn.WF_REL_TAC}.
+
+SEEALSO
+bossLib.WF_REL_TAC.
+
+----------------------------------------------------------------------

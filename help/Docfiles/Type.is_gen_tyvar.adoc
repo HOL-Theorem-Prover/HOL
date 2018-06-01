@@ -1,0 +1,29 @@
+----------------------------------------------------------------------
+is_gen_tyvar                                                    (Type)
+----------------------------------------------------------------------
+is_gen_tyvar : hol_type -> bool
+
+SYNOPSIS
+Checks if a type variable has been created by {gen_tyvar}.
+
+KEYWORDS
+variable, type.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- is_gen_tyvar (gen_tyvar());
+> val it = true : bool
+
+- is_gen_tyvar bool;
+> val it = false : bool
+
+
+
+
+SEEALSO
+Type.gen_tyvar.
+
+----------------------------------------------------------------------

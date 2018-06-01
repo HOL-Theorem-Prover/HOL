@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+rhs                                                       (boolSyntax)
+----------------------------------------------------------------------
+rhs : term -> term
+
+SYNOPSIS
+Returns the right-hand side of an equation.
+
+DESCRIBE
+If {M} has the form {t1 = t2} then {rhs M} returns {t2}.
+
+FAILURE
+Fails if term is not an equality.
+
+SEEALSO
+boolSyntax.lhs, boolSyntax.dest_eq.
+
+----------------------------------------------------------------------

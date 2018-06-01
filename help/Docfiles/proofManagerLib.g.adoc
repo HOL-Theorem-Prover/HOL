@@ -1,0 +1,47 @@
+----------------------------------------------------------------------
+g                                                    (proofManagerLib)
+----------------------------------------------------------------------
+g : term quotation -> proofs
+
+SYNOPSIS
+Initializes the subgoal package with a new goal which has no assumptions.
+
+DESCRIBE
+The call
+
+   g `tm`
+
+is equivalent to
+
+   set_goal([],Term`tm`)
+
+and clearly more convenient if a goal has no assumptions.
+For a description of the subgoal package, see  {set_goal}.
+
+FAILURE
+Fails unless the argument term has type {bool}.
+
+EXAMPLE
+
+- g `(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])`;
+> val it =
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3])
+
+
+
+    : GoalstackPure.proofs
+
+
+
+
+SEEALSO
+proofManagerLib.set_goal, proofManagerLib.restart,
+proofManagerLib.backup, proofManagerLib.restore, proofManagerLib.save,
+proofManagerLib.set_backup, proofManagerLib.expand,
+proofManagerLib.expandf, proofManagerLib.p, proofManagerLib.top_thm,
+proofManagerLib.top_goal.
+
+----------------------------------------------------------------------

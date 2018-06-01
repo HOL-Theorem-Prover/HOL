@@ -1,0 +1,16 @@
+----------------------------------------------------------------------
+rewrites                                                     (simpLib)
+----------------------------------------------------------------------
+rewrites : thm list -> ssfrag
+
+SYNOPSIS
+Create an {ssfrag} value consisting of the given theorems as
+rewrites.
+
+DESCRIBE
+{bossLib.rewrites} is identical to {simpLib.rewrites}.
+
+SEEALSO
+bossLib.rewrites.
+
+----------------------------------------------------------------------

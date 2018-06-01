@@ -1,0 +1,21 @@
+----------------------------------------------------------------------
+is_imp_only                                               (boolSyntax)
+----------------------------------------------------------------------
+is_imp_only : term -> bool
+
+SYNOPSIS
+Tests a term to see if it is an implication.
+
+DESCRIBE
+If {M} has the form {t1 ==> t2} then {is_imp_only M} returns {true}.
+If the term is not an implication, the result is {false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+boolSyntax.is_imp, boolSyntax.mk_imp, boolSyntax.dest_imp,
+boolSyntax.dest_imp_only, boolSyntax.list_mk_imp,
+boolSyntax.strip_imp.
+
+----------------------------------------------------------------------

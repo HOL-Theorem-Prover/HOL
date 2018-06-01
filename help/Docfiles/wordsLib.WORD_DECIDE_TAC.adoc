@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+WORD_DECIDE_TAC                                             (wordsLib)
+----------------------------------------------------------------------
+WORD_DECIDE_TAC : tactic
+
+SYNOPSIS
+A decision procedure tactic for words.
+
+DESCRIBE
+{WORD_DECIDE_TAC} is a tactical verion of {WORD_DECIDE}.
+
+FAILURE
+As for {WORD_DECIDE}.
+
+SEEALSO
+wordsLib.WORD_DECIDE.
+
+----------------------------------------------------------------------

@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+list_mk_pabs                                              (pairSyntax)
+----------------------------------------------------------------------
+list_mk_pabs : term list * term -> term
+
+LIBRARY
+pair
+
+SYNOPSIS
+Iteratively constructs paired abstractions.
+
+DESCRIBE
+{list_mk_pabs([p1,...,pn], t)} returns {\p1 ... pn. t}.
+
+FAILURE
+Fails with {list_mk_pabs} if the terms in the list are not paired
+structures of variables.
+
+SEEALSO
+boolSyntax.list_mk_abs, pairSyntax.strip_pabs, pairSyntax.mk_pabs.
+
+----------------------------------------------------------------------

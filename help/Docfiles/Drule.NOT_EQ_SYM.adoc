@@ -1,0 +1,29 @@
+----------------------------------------------------------------------
+NOT_EQ_SYM                                                     (Drule)
+----------------------------------------------------------------------
+NOT_EQ_SYM : (thm -> thm)
+
+SYNOPSIS
+Swaps left-hand and right-hand sides of a negated equation.
+
+KEYWORDS
+rule, symmetry, equality, negation.
+
+DESCRIBE
+When applied to a theorem {A |- ~(t1 = t2)}, the inference rule {NOT_EQ_SYM}
+returns the theorem {A |- ~(t2 = t1)}.
+
+    A |- ~(t1 = t2)
+   -----------------  NOT_EQ_SYM
+    A |- ~(t2 = t1)
+
+
+
+
+FAILURE
+Fails unless the theorem’s conclusion is a negated equation.
+
+SEEALSO
+Conv.DEPTH_CONV, Thm.REFL, Thm.SYM.
+
+----------------------------------------------------------------------

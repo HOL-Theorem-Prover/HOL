@@ -1,0 +1,39 @@
+----------------------------------------------------------------------
+completeInduct_on                                            (bossLib)
+----------------------------------------------------------------------
+completeInduct_on : term quotation -> tactic
+
+SYNOPSIS
+Perform complete induction.
+
+KEYWORDS
+induction, complete.
+
+DESCRIBE
+If {q} parses into a well-typed term {M}, an invocation
+{completeInduct_on q} begins a proof by complete (also known as
+‘course-of-values’) induction on {M}. The term {M} should occur free in
+the current goal.
+
+FAILURE
+If {M} does not parse into a term or does not occur free in the
+current goal.
+
+EXAMPLE
+Suppose we wish to prove that every number not equal to one has a prime
+factor:
+
+   !n. ~(n = 1) ==> ?p. prime p /\ p divides n
+
+A natural way to prove this is by complete induction. Invoking
+{completeInduct_on `n`} yields the goal
+
+      { !m. m < n ==> ~(m = 1) ==> ?p. prime p /\ p divides m }
+      ?-
+      ~(n = 1) ==> ?p. prime p /\ p divides n
+
+
+SEEALSO
+bossLib.measureInduct_on, bossLib.Induct, bossLib.Induct_on.
+
+----------------------------------------------------------------------

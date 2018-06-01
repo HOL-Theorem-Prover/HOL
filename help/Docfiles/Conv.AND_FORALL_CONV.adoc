@@ -1,0 +1,31 @@
+----------------------------------------------------------------------
+AND_FORALL_CONV                                                 (Conv)
+----------------------------------------------------------------------
+AND_FORALL_CONV : conv
+
+SYNOPSIS
+Moves a universal quantification outwards through a conjunction.
+
+KEYWORDS
+conversion, quantifier.
+
+DESCRIBE
+When applied to a term of the form {(!x.P) /\ (!x.Q)}, the conversion
+{AND_FORALL_CONV} returns the theorem:
+
+   |- (!x.P) /\ (!x.Q) = (!x. P /\ Q)
+
+
+
+
+FAILURE
+Fails if applied to a term not of the form {(!x.P) /\ (!x.Q)}.
+
+COMMENTS
+It may be easier to use higher order rewriting with {FORALL_AND_THM}.
+
+SEEALSO
+Conv.FORALL_AND_CONV, Conv.LEFT_AND_FORALL_CONV,
+Conv.RIGHT_AND_FORALL_CONV.
+
+----------------------------------------------------------------------

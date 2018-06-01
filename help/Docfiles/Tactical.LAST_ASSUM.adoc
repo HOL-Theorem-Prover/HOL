@@ -1,0 +1,20 @@
+----------------------------------------------------------------------
+LAST_ASSUM                                                  (Tactical)
+----------------------------------------------------------------------
+LAST_ASSUM : (thm_tactic -> tactic)
+
+SYNOPSIS
+Maps a theorem-tactic over the assumptions,
+in reverse order, applying first successful tactic.
+
+KEYWORDS
+theorem-tactical, assumption.
+
+DESCRIBE
+{LAST_ASSUM} behaves like {FIRST_ASSUM}, 
+except that it goes through the list of assumptions in reverse order
+
+SEEALSO
+Tactical.FIRST_ASSUM, Tactical.LAST_X_ASSUM.
+
+----------------------------------------------------------------------

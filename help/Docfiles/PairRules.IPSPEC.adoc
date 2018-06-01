@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+IPSPEC                                                     (PairRules)
+----------------------------------------------------------------------
+IPSPEC : (term -> thm -> thm)
+
+KEYWORDS
+rule, type.
+
+LIBRARY
+pair
+
+SYNOPSIS
+Specializes a theorem, with type instantiation if necessary.
+
+DESCRIBE
+This rule specializes a paired quantification as does {PSPEC};
+it differs from it in also instantiating the type if needed:
+
+     A |- !p:ty.tm
+  -----------------------  IPSPEC "q:ty'"
+      A |- tm[q/p]
+
+(where {q} is free for {p} in {tm}, and {ty'} is an instance
+of {ty}).
+
+FAILURE
+{IPSPEC} fails if the input theorem is not universally quantified, if
+the type of the given term is not an instance of the type of the
+quantified variable, or if the type variable is free in the
+assumptions.
+
+SEEALSO
+Drule.ISPEC, Drule.INST_TY_TERM, Thm.INST_TYPE, PairRules.IPSPECL,
+PairRules.PSPEC, DB.match.
+
+----------------------------------------------------------------------

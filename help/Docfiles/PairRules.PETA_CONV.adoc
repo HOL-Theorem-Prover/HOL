@@ -1,0 +1,23 @@
+----------------------------------------------------------------------
+PETA_CONV                                                  (PairRules)
+----------------------------------------------------------------------
+PETA_CONV : conv
+
+KEYWORDS
+conversion, extensionality.
+
+LIBRARY
+pair
+
+SYNOPSIS
+Performs a top-level paired eta-conversion.
+
+DESCRIBE
+{PETA_CONV} maps an eta-redex {\p. t p}, where none of variables in the
+paired structure of variables {p} occurs free in {t},
+to the theorem {|- (\p. t p) = t}.
+
+FAILURE
+Fails if the input term is not a paired eta-redex.
+
+----------------------------------------------------------------------

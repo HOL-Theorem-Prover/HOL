@@ -1,0 +1,54 @@
+----------------------------------------------------------------------
+PART_MATCH                                                     (Drule)
+----------------------------------------------------------------------
+PART_MATCH : (term -> term) -> thm -> term -> thm
+
+SYNOPSIS
+Instantiates a theorem by matching part of it to a term.
+
+KEYWORDS
+rule.
+
+DESCRIBE
+When applied to a ‘selector’ function of type {term -> term}, a theorem and a
+term:
+
+   PART_MATCH fn (A |- !x1...xn. t) tm
+
+the function {PART_MATCH} applies {fn} to {t'} (the result
+of specializing universally quantified variables in the conclusion of
+the theorem), and attempts to match the resulting term to the argument term
+{tm}. If it succeeds, the appropriately instantiated version of the theorem is
+returned.
+
+FAILURE
+Fails if the selector function {fn} fails when applied to the instantiated
+theorem, or if the match fails with the term it has provided.
+
+Since {PART_MATCH} will not instantiate variables which appear in the
+hypotheses of the given theorem, it fails if the attempted match would require
+instantiating these variables.
+To allow instantiation of these variables, use {PART_MATCH_A}.
+
+EXAMPLE
+Suppose that we have the following theorem:
+
+   th = |- !x. x==>x
+
+then the following:
+
+   PART_MATCH (fst o dest_imp) th "T"
+
+results in the theorem:
+
+   |- T ==> T
+
+because the selector function picks the antecedent of the implication
+(the inbuilt specialization gets rid of the universal quantifier), and matches
+it to {T}.
+
+SEEALSO
+Drule.PART_MATCH_A, Thm.INST_TYPE, Drule.INST_TY_TERM,
+Term.match_term.
+
+----------------------------------------------------------------------

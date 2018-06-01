@@ -1,0 +1,20 @@
+----------------------------------------------------------------------
+dest_disj                                                 (boolSyntax)
+----------------------------------------------------------------------
+dest_disj : term -> term * term
+
+SYNOPSIS
+Term destructor for disjunctions.
+
+DESCRIBE
+If {M} is a term having the form {t1 \/ t2}, then {dest_disj M} returns
+{(t1,t2)}.
+
+FAILURE
+Fails if {M} is not a disjunction.
+
+SEEALSO
+boolSyntax.mk_disj, boolSyntax.is_disj, boolSyntax.strip_disj,
+boolSyntax.list_mk_disj.
+
+----------------------------------------------------------------------

@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+is_eq                                                     (boolSyntax)
+----------------------------------------------------------------------
+is_eq : term -> bool
+
+SYNOPSIS
+Tests a term to see if it is an equation.
+
+DESCRIBE
+If {M} has the form {t1 = t2} then {is_eq M} returns {true}. If {M}
+is not an equation the result is {false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+boolSyntax.mk_eq, boolSyntax.dest_eq.
+
+----------------------------------------------------------------------

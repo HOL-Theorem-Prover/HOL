@@ -1,0 +1,20 @@
+----------------------------------------------------------------------
+mk_imp                                                    (boolSyntax)
+----------------------------------------------------------------------
+mk_imp : term * term -> term
+
+SYNOPSIS
+Constructs an implication.
+
+DESCRIBE
+If {t1} and {t2} are terms of type {bool}, then {mk_imp(t1,t2)}
+constructs the term {t1 ==> t2}.
+
+FAILURE
+Fails if {t1} and {t2} are not both of type {bool}.
+
+SEEALSO
+boolSyntax.dest_imp, boolSyntax.dest_imp_only, boolSyntax.is_imp,
+boolSyntax.is_imp_only, boolSyntax.list_mk_imp.
+
+----------------------------------------------------------------------

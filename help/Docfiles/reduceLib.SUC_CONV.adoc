@@ -1,0 +1,31 @@
+----------------------------------------------------------------------
+SUC_CONV                                                   (reduceLib)
+----------------------------------------------------------------------
+SUC_CONV : conv
+
+SYNOPSIS
+Calculates by inference the successor of a numeral.
+
+LIBRARY
+reduce
+
+DESCRIBE
+If {n} is a numeral (e.g. {0}, {1}, {2}, {3},...), then
+{SUC_CONV "SUC n"} returns the theorem:
+
+   |- SUC n = s
+
+where {s} is the numeral that denotes the successor of the natural
+number denoted by {n}.
+
+FAILURE
+{SUC_CONV tm} fails unless {tm} is of the form  {"SUC n"}, where {n} is
+a numeral.
+
+EXAMPLE
+
+#SUC_CONV "SUC 33";;
+|- SUC 33 = 34
+
+
+----------------------------------------------------------------------

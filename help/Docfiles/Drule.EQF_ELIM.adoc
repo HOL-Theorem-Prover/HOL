@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+EQF_ELIM                                                       (Drule)
+----------------------------------------------------------------------
+EQF_ELIM : (thm -> thm)
+
+SYNOPSIS
+Replaces equality with {F} by negation.
+
+KEYWORDS
+rule, negation, falsity.
+
+DESCRIBE
+
+    A |- tm = F
+   -------------  EQF_ELIM
+     A |- ~tm
+
+
+
+
+FAILURE
+Fails if the argument theorem is not of the form {A |- tm = F}.
+
+SEEALSO
+Drule.EQF_INTRO, Drule.EQT_ELIM, Drule.EQT_INTRO.
+
+----------------------------------------------------------------------

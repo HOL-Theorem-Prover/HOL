@@ -1,0 +1,33 @@
+----------------------------------------------------------------------
+PBETA_TAC                                                  (PairRules)
+----------------------------------------------------------------------
+PBETA_TAC : tactic
+
+KEYWORDS
+tactic.
+
+LIBRARY
+pair
+
+SYNOPSIS
+Beta-reduces all the paired beta-redexes in the conclusion of a goal.
+
+DESCRIBE
+When applied to a goal {A ?- t}, the tactic {PBETA_TAC} produces a new goal
+which results from beta-reducing all paired beta-redexes, at any depth, in {t}.
+Variables are renamed where necessary to avoid free variable capture.
+
+    A ?- ...((\p. s1) s2)...
+   ==========================  PBETA_TAC
+     A ?- ...(s1[s2/p])...
+
+
+
+
+FAILURE
+Never fails, but will have no effect if there are no paired beta-redexes.
+
+SEEALSO
+Tactic.BETA_TAC, PairRules.PBETA_CONV, PairRules.PBETA_RULE.
+
+----------------------------------------------------------------------

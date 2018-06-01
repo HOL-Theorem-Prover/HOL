@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+QI_ss                                                        (bossLib)
+----------------------------------------------------------------------
+QI_ss : ssfrag
+
+SYNOPSIS
+Simpset-fragment for instantiating quantifiers with some default heuristics.
+
+DESCRIBE
+{QI_ss} is short for {QUANT_INST_ss [std_qp]}.
+
+SEEALSO
+bossLib.QI_TAC, quantHeuristicsLib.QUANT_INST_ss.
+
+----------------------------------------------------------------------

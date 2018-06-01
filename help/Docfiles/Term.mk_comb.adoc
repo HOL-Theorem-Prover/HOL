@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+mk_comb                                                         (Term)
+----------------------------------------------------------------------
+mk_comb : term * term -> term
+
+SYNOPSIS
+Constructs a combination (function application).
+
+DESCRIBE
+{mk_comb (t1,t2)} returns the combination {t1 t2}.
+
+FAILURE
+Fails if {t1} does not have a function type, or if {t1} has a
+function type, but its domain does not equal the type of {t2}.
+
+EXAMPLE
+
+   - mk_comb (neg_tm,T);
+
+   > val it = `~T` : term
+
+   - mk_comb(T, T) handle e => Raise e;
+
+   Exception raised at Term.mk_comb:
+   incompatible types
+
+
+
+
+SEEALSO
+Term.dest_comb, Term.is_comb, Term.list_mk_comb, Term.mk_var,
+Term.mk_const, Term.mk_abs.
+
+----------------------------------------------------------------------

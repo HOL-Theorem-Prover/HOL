@@ -1,0 +1,37 @@
+----------------------------------------------------------------------
+PROVE_HYP                                                      (Drule)
+----------------------------------------------------------------------
+PROVE_HYP : thm -> thm -> thm
+
+SYNOPSIS
+Eliminates a provable assumption from a theorem.
+
+KEYWORDS
+rule, assumption.
+
+DESCRIBE
+When applied to two theorems, {PROVE_HYP} returns a theorem having the
+conclusion of the second. The new hypotheses are the union of the
+two hypothesis sets (first deleting, however, the conclusion of the
+first theorem from the hypotheses of the second).
+
+
+     A1 |- t1     A2 |- t2
+   ------------------------  PROVE_HYP
+    A1 u (A2 - {t1}) |- t2
+
+
+
+
+FAILURE
+Never fails.
+
+COMMENTS
+This is the Cut rule. It is not necessary for the conclusion of the first
+theorem to be the same as an assumption of the second, but {PROVE_HYP} is
+otherwise of doubtful value.
+
+SEEALSO
+Thm.DISCH, Thm.MP, Drule.UNDISCH.
+
+----------------------------------------------------------------------

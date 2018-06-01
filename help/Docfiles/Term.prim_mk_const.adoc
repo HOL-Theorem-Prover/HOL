@@ -1,0 +1,39 @@
+----------------------------------------------------------------------
+prim_mk_const                                                   (Term)
+----------------------------------------------------------------------
+prim_mk_const : {Thy:string, Name:string} -> term
+
+SYNOPSIS
+Build a constant.
+
+KEYWORDS
+constant, term, signature.
+
+DESCRIBE
+If {Name} is the name of a previously declared constant in theory {Thy},
+then {prim_mk_const {Thy,Name}} will return the specified constant.
+
+FAILURE
+If {Name} is not the name of a constant declared in theory {Thy}.
+
+EXAMPLE
+
+- prim_mk_const {Thy="min", Name="="};
+> val it = `$=` : term
+
+- type_of it;
+> val it = `:'a -> 'a -> bool` : hol_type
+
+
+
+
+COMMENTS
+The difference between {mk_thy_const} (and {mk_const}) and {prim_mk_const}
+is that {mk_thy_const} and {mk_const} will create type instances of
+polymorphic constants, while {prim_mk_const} merely returns the originally
+declared constant.
+
+SEEALSO
+Term.mk_thy_const.
+
+----------------------------------------------------------------------

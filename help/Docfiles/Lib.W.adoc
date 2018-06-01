@@ -1,0 +1,35 @@
+----------------------------------------------------------------------
+W                                                                (Lib)
+----------------------------------------------------------------------
+W : ('a -> 'a -> 'b) -> 'a -> 'b
+
+KEYWORDS
+Combinator.
+
+SYNOPSIS
+Duplicates function argument : {W f x} equals {f x x}.
+
+DESCRIBE
+The {W} combinator can be understood as a planner: in the application
+{f x x}, the function {f} can scrutinize {x} and generate a function
+that then gets applied to {x}.
+
+FAILURE
+{W f} never fails. {W f x} fails if {f x} fails or if {f x x} fails.
+
+EXAMPLE
+
+- load "tautLib";
+- tautLib.TAUT_PROVE (Term `(a = b) = (~a = ~b)`);
+> val it = |- (a = b) = (~a = ~b) : thm
+
+- W (GENL o free_vars o concl) it;
+> val it = |- !b a. (a = b) = (~a = ~b) : thm
+
+
+
+
+SEEALSO
+Lib.##, Lib.C, Lib.I, Lib.K, Lib.S.
+
+----------------------------------------------------------------------

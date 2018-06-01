@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+is_pabs                                                   (pairSyntax)
+----------------------------------------------------------------------
+is_pabs : term -> bool
+
+LIBRARY
+pair
+
+SYNOPSIS
+Tests a term to see if it is a paired abstraction.
+
+DESCRIBE
+{is_pabs "\pair. t"} returns {true}.
+If the term is not a paired abstraction the result is {false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+Term.is_abs, pairSyntax.mk_pabs, pairSyntax.dest_pabs.
+
+----------------------------------------------------------------------

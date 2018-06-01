@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+PTREE_PEEK_CONV                                          (patriciaLib)
+----------------------------------------------------------------------
+PTREE_PEEK_CONV : conv
+
+SYNOPSIS
+Conversion for evaluating applications of {patricia$PEEK}.
+
+DESCRIBE
+The conversion {PTREE_PEEK_CONV} evaluates terms of the form {t ' m} where {t} is a well-formed Patricia tree (constructed by {patricia$Empty}, {patricia$Leaf} and {patricia$Branch}) and {m} is a natural number literal.
+
+FAILURE
+The conversion will fail if the supplied term is not a suitable application of {patricia$PEEK}.
+
+EXAMPLE
+
+- patriciaLib.PTREE_PEEK_CONV ``Empty ' 3``;
+> val it = |- <{}> ' 3 = NONE: thm
+
+- patriciaLib.PTREE_PEEK_CONV ``Branch 0 0 (Leaf 3 2) (Leaf 2 1) ' 3``;
+> val it = |- Branch 0 0 (Leaf 3 2) (Leaf 2 1) ' 3 = SOME 2: thm
+
+
+SEEALSO
+patriciaLib.PTREE_CONV.
+
+----------------------------------------------------------------------

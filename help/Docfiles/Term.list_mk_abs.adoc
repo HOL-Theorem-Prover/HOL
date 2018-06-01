@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+list_mk_abs                                                     (Term)
+----------------------------------------------------------------------
+list_mk_abs : term list * term -> term
+
+SYNOPSIS
+Performs a sequence of lambda binding operations.
+
+KEYWORDS
+variable, binding, abstraction.
+
+DESCRIBE
+An application {list_mk_abs ([v1,...,vn], M)} yields the term
+{\v1 ... vn. M}. Free occurrences of {v1,...,vn} in {M} become bound
+in the result.
+
+FAILURE
+Fails if some {vi} (1 <= i <= n) is not a variable.
+
+EXAMPLE
+
+- list_mk_abs ([mk_var("v1",bool),mk_var("v2",bool),mk_var("v3",bool)],
+               Term `v1 /\ v2 /\ v3`);
+> val it = `\v1 v2 v3. v1 /\ v2 /\ v3` : term
+
+
+
+
+COMMENTS
+In the current implementation, {list_mk_abs} is more efficient than
+iteration of {mk_abs} for larger tasks.
+
+SEEALSO
+Term.mk_abs, boolSyntax.list_mk_forall, boolSyntax.list_mk_exists.
+
+----------------------------------------------------------------------

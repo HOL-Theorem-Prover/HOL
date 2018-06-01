@@ -1,0 +1,30 @@
+----------------------------------------------------------------------
+print_term                                                     (Parse)
+----------------------------------------------------------------------
+Parse.print_term : term -> unit
+
+SYNOPSIS
+Prints a term to the screen (standard out).
+
+KEYWORDS
+Pretty-printing
+
+LIBRARY
+Parse
+
+DESCRIBE
+The function {print_term} prints a term to the screen.  It first
+converts the term into a string, and then outputs that string to the
+standard output stream.
+
+The conversion to the string is done by {term_to_string}.  The term is
+printed using the pretty-printing information contained in the global
+grammar.
+
+FAILURE
+Should never fail.
+
+SEEALSO
+Parse.term_to_string.
+
+----------------------------------------------------------------------

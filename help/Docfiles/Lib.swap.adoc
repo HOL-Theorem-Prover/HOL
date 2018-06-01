@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+swap                                                             (Lib)
+----------------------------------------------------------------------
+swap : 'a * 'b -> 'b * 'a
+
+SYNOPSIS
+Swaps the two components of a pair.
+
+DESCRIBE
+{swap (x,y)} returns {(y,x)}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+Lib.fst, Lib.snd, Lib.pair, Lib.rpair.
+
+----------------------------------------------------------------------

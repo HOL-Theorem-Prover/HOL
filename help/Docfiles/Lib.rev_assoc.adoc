@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+rev_assoc                                                        (Lib)
+----------------------------------------------------------------------
+rev_assoc : ''a -> ('b * ''a) list -> 'b
+
+SYNOPSIS
+Searches a list of pairs for a pair whose second component equals a specified
+value.
+
+KEYWORDS
+list.
+
+DESCRIBE
+An invocation {rev_assoc y [(x1,y1),...,(xn,yn)]} locates
+the first {(xi,yi)} in a left-to-right scan of the list such that
+{yi} equals {y}. Then {xi} is returned. The lookup is done on an eqtype,
+i.e., the SML implementation must be able to decide equality for the type
+of {y}.
+
+FAILURE
+Fails if no matching pair is found. This will always be the case if the
+list is empty.
+
+EXAMPLE
+
+- rev_assoc 2 [(1,4),(3,2),(2,5),(2,6)];
+> val it = 3 : int
+
+
+
+
+SEEALSO
+Lib.assoc, Lib.assoc1, Lib.assoc2, Lib.mem, Lib.tryfind, Lib.exists,
+Lib.all.
+
+----------------------------------------------------------------------

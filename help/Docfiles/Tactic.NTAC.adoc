@@ -1,0 +1,41 @@
+----------------------------------------------------------------------
+NTAC                                                          (Tactic)
+----------------------------------------------------------------------
+NTAC : int -> tactic -> tactic
+
+SYNOPSIS
+Apply tactic a specified number of times.
+
+KEYWORDS
+tactic.
+
+DESCRIBE
+An invocation {NTAC n tac} applies the tactic {tac}
+exactly {n} times. If {n <= 0} then the goal is unchanged.
+
+FAILURE
+Fails if {tac} fails.
+
+EXAMPLE
+Suppose we have the following goal:
+
+  ?- x = y
+
+We apply a tactic for symmetry of equality 3 times:
+
+  NTAC 3 (PURE_ONCE_REWRITE_TAC [EQ_SYM_EQ])
+
+and obtain
+
+  ?- y = x
+
+
+USES
+Controlling iterated application tactics.
+
+
+
+SEEALSO
+Rewrite.PURE_ONCE_REWRITE_TAC, Tactical.REPEAT, Conv.REPEATC.
+
+----------------------------------------------------------------------

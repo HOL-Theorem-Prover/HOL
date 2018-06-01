@@ -1,0 +1,35 @@
+----------------------------------------------------------------------
+commafy                                                          (Lib)
+----------------------------------------------------------------------
+commafy : string list -> string list
+
+SYNOPSIS
+Add commas into a list of strings.
+
+KEYWORDS
+string.
+
+DESCRIBE
+An application {commafy [s1,...,sn]} yields {[s1, ",", ..., ",", sn]}.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- commafy ["donkey", "mule", "horse", "camel", "llama"];
+> val it =
+    ["donkey", ", ", "mule", ", ", "horse", ", ", "camel", ", ", "llama"] :
+  string list
+
+- print (String.concat it ^ "\n");
+donkey, mule, horse, camel, llama
+> val it = () : unit
+
+- commafy ["foo"];
+> val it = ["foo"] : string list
+
+
+
+
+----------------------------------------------------------------------

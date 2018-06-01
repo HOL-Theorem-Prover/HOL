@@ -1,0 +1,28 @@
+----------------------------------------------------------------------
+LEFT_IMP_EXISTS_CONV                                            (Conv)
+----------------------------------------------------------------------
+LEFT_IMP_EXISTS_CONV : conv
+
+SYNOPSIS
+Moves an existential quantification of the antecedent outwards through an
+implication.
+
+KEYWORDS
+conversion, quantifier, existential, implication.
+
+DESCRIBE
+When applied to a term of the form {(?x.P) ==> Q}, the conversion
+{LEFT_IMP_EXISTS_CONV} returns the theorem:
+
+   |- (?x.P) ==> Q = (!x'. P[x'/x] ==> Q)
+
+where {x'} is a primed variant of {x} that does not appear free in
+the input term.
+
+FAILURE
+Fails if applied to a term not of the form {(?x.P) ==> Q}.
+
+SEEALSO
+Conv.FORALL_IMP_CONV, Conv.RIGHT_IMP_FORALL_CONV.
+
+----------------------------------------------------------------------

@@ -1,0 +1,67 @@
+----------------------------------------------------------------------
+delete_type                                                   (Theory)
+----------------------------------------------------------------------
+delete_type : string -> unit
+
+SYNOPSIS
+Remove a type operator from the signature.
+
+KEYWORDS
+type, delete.
+
+DESCRIBE
+An invocation {delete_type s} removes the type constant denoted by {s}
+from the current HOL segment. All types, terms, and theorems that
+depend on that type should therefore disappear, as though they hadn’t been
+constructed in the first place. Conceptually, they have become "garbage"
+and need to be collected. However, because of the way that HOL is
+implemented in ML, it is not possible to have them automatically collected.
+Instead, HOL tracks the currency of type and term constants and provides
+some consistency maintenance support.
+
+In particular, the implementation ensures that a deleted type
+operator is never equal to a subsequently declared type operator
+with the same name (and arity). Furthermore, although garbage types,
+terms, and theorems may exist in a session, no theorem, definition,
+or axiom that is garbage is exported when {export_theory} is invoked.
+
+The notion of garbage is hereditary. Any type, term, definition, or theorem
+is garbage if any of its constituents are. Furthermore, if a type operator or
+term constant had been defined, and its witness theorem later becomes
+garbage, then that type or term is garbage, as is anything built from it.
+
+FAILURE
+If a type constant named {s} has not been declared in the current segment,
+a warning will be issued, but an exception will not be raised.
+
+EXAMPLE
+
+new_type ("foo", 2);
+> val it = () : unit
+
+- val thm = REFL (Term `f:('a,'b)foo`);
+> val thm = |- f = f : thm
+
+- delete_type "foo";
+> val it = () : unit
+
+- thm;
+> val it = |- f = f : thm
+
+- show_types := true;
+> val it = () : unit
+
+- thm;
+> val it = |- (x :(('a, 'b) scratch$old->f<-old)) = x : thm
+
+
+COMMENTS
+It’s rather dodgy to withdraw constants from the HOL signature.
+
+It is not possible to delete constants from ancestor theories.
+
+SEEALSO
+Theory.delete_const, Theory.uptodate_type, Theory.uptodate_term,
+Theory.uptodate_thm, Theory.scrub.
+
+----------------------------------------------------------------------

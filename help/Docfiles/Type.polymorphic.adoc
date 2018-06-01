@@ -1,0 +1,35 @@
+----------------------------------------------------------------------
+polymorphic                                                     (Type)
+----------------------------------------------------------------------
+polymorphic : hol_type -> bool
+
+SYNOPSIS
+Checks if there is a type variable in a type.
+
+KEYWORDS
+variable, type.
+
+DESCRIBE
+An invocation {polymorphic ty} checks to see if {ty} has an occurrence
+of any type variable. It is equivalent in functionality to
+{not o null o type_vars}, but may be more efficient in some situations,
+since it can stop processing once it finds one type variable.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- polymorphic (bool --> alpha --> ind);
+> val it = true : bool
+
+
+
+
+COMMENTS
+{polymorphic} is also equivalent to {exists_tyvar (K true)}, and no faster.
+
+SEEALSO
+Type.type_vars, Type.type_var_in, Type.exists_tyvar.
+
+----------------------------------------------------------------------

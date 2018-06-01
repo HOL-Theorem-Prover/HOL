@@ -1,0 +1,32 @@
+----------------------------------------------------------------------
+|->                                                              (Lib)
+----------------------------------------------------------------------
+op |-> : 'a * 'b -> {redex : 'a, residue : 'b}
+
+SYNOPSIS
+Infix operator for building a component of a substitution.
+
+KEYWORDS
+substitution, instantiation.
+
+DESCRIBE
+An application {x |-> y} is equal to {{redex = x, residue = y}}.
+Since HOL substitutions are lists of {{redex,residue}} records,
+the {|->} operator is merely sugar used to create substitutions.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- type_subst [alpha |-> beta, beta |-> gamma]
+             (alpha --> beta);
+> val it = `:'b -> 'c` : hol_type
+
+
+
+
+SEEALSO
+Lib.subst, Type.type_subst, Term.subst, Term.inst, Thm.SUBST.
+
+----------------------------------------------------------------------
