@@ -16,6 +16,7 @@ sig
   (* tools *)
   val find_script : string -> string
   val split_thyl : int -> string list -> string list list
+  val unquoteString : string -> string -> string
   
   (* creating fof files *)
   val create_fof_thy : string -> unit

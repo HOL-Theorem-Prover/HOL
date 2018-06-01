@@ -57,7 +57,7 @@ fun cbv_wk ((th,CLOS{Env, Term=App(a,args)}), stk) =
       cbv_wk ((tha, mk_clos(Env,a)), stka)
       end
   | cbv_wk ((th,CLOS{Env, Term=Abs body}),
-	    Zrator{Rand=(mka,(thb,cl)), Ctx=s'}) =
+            Zrator{Rand=(mka,(thb,cl)), Ctx=s'}) =
       cbv_wk ((beta_thm(mka th thb), mk_clos(cl :: Env, body)), s')
   | cbv_wk ((th,CST cargs), stk) =
       let val (reduced,clos) = reduce_cst (th,cargs) in

@@ -271,11 +271,12 @@ fun find_lspec els =
 
 fun grule_term_names G grule = let
   fun lift f (rr as {term_name,timestamp,elements,...}) =
-    if term_name = "" then
+    if term_name_is_lform term_name then
       case find_lspec elements of
           NONE => [] (* probably a bad rule *)
         | SOME {nilstr,cons,...} =>
             map (fn s => (s, (timestamp, f [rr]))) [nilstr, cons]
+    else if term_name = GrammarSpecials.fnapp_special then []
     else
       [(term_name, (timestamp, f [rr]))]
   val suffix = lift (SUFFIX o STD_suffix)
@@ -581,7 +582,8 @@ fun pp_term (G : grammar) TyG backend = let
                           pgrav lgrav rgrav
                           depth
    in
-     if printers_exist then let
+     if printers_exist then
+       let
          fun sysprint { gravs = (pg,lg,rg), binderp, depth} tm =
            full_pr_term binderp showtypes showtypes_v ppfns combpos tm
                         pg lg rg depth
@@ -591,14 +593,14 @@ fun pp_term (G : grammar) TyG backend = let
                              backend sysprint ppfns
                              (pgrav, lgrav, rgrav)
                              depth tm
-            fun runfirst [] = pr0 tm
-              | runfirst ((_,_,f)::t) =
+         fun runfirst [] = pr0 tm
+           | runfirst ((_,_,f)::t) =
                   (printwith f
                    handle UserPP_Failed => runfirst t) || runfirst t
-          in
-            runfirst candidates
-          end
-        else pr0 tm
+       in
+         runfirst candidates
+       end
+     else pr0 tm
    end apps
   and pr_term0 binderp showtypes showtypes_v ppfns combpos tm
                pgrav lgrav rgrav depth apps =
@@ -1749,7 +1751,7 @@ fun pp_term (G : grammar) TyG backend = let
                          (* val _ = PRINT "suitable_rule: closefix check" *)
                          val r = hd list
                        in
-                         if #term_name r = "" then
+                         if term_name_is_lform (#term_name r) then
                            ((* PRINT ("rule term-name is empty - testing " ^
                                debugprint G tm); *)
                             case find_lspec (#elements r) of

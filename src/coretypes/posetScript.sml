@@ -295,8 +295,8 @@ val gfp_def = new_definition
 val lfp_unique = store_thm
   ("lfp_unique",
    ``!p f x x'.
-	poset p /\ lfp p f x /\ lfp p f x' ==>
-	(x = x')``,
+        poset p /\ lfp p f x /\ lfp p f x' ==>
+        (x = x')``,
    GEN_TAC
    >> Know `?s r. p = (s,r)` >- pair_cases_tac
    >> STRIP_TAC
@@ -305,8 +305,8 @@ val lfp_unique = store_thm
 val gfp_unique = store_thm
   ("gfp_unique",
    ``!p f x x'.
-	poset p /\ gfp p f x /\ gfp p f x' ==>
-	(x = x')``,
+        poset p /\ gfp p f x /\ gfp p f x' ==>
+        (x = x')``,
    GEN_TAC
    >> Know `?s r. p = (s,r)` >- pair_cases_tac
    >> STRIP_TAC

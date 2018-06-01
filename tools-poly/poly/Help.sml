@@ -308,8 +308,8 @@ fun defaultBrowser ""    = show "help"     0 NONE (!welcome)
 	tryspecial (!specialfiles)
     end
 val browser = ref defaultBrowser
-(* It appears necessary to eat the newline that entered the call to "help" *)
-fun help s = (TextIO.inputLine TextIO.stdIn; !browser s)
+
+fun help s = !browser s
 
 end
 end

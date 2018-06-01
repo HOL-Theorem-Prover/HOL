@@ -912,6 +912,7 @@ fun output_header oc cthy =
   output_flag oc "tttSetup.ttt_recprove_flag" ttt_recprove_flag;
   output_flag oc "tttSetup.ttt_reclet_flag" ttt_reclet_flag;
   output_flag oc "tttSetup.ttt_ortho_flag" ttt_ortho_flag;
+  output_flag oc "tttSetup.ttt_printproof_flag" ttt_printproof_flag;
   (* evaluation *)
   output_flag oc "tttSetup.ttt_eval_flag" ttt_eval_flag;
   output_flag oc "tttSetup.ttt_termarg_flag" ttt_termarg_flag;

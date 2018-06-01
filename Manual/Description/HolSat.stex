@@ -57,6 +57,8 @@ The following example illustrates the use of {\tt{HolSatLib}} for proving propos
 \begin{session}
 \begin{alltt}
 >>_ load "HolSatLib"; open HolSatLib;
+>>__ val oldwidth = !linewidth;
+>>__ linewidth := 70;
 
 >> show_tags := true;
 
@@ -81,6 +83,7 @@ The next example illustrates using {\tt{HolSatLib}} for satisfiability testing. 
    handle HolSatLib.SAT_cex th => th;
 
 >> SAT_PROVE ``~(a /\ ~a)``;
+>>__ linewidth := oldwidth;
 \end{alltt}
 \end{session}
 

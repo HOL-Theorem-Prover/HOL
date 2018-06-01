@@ -131,21 +131,21 @@ fun is_literal t =
 
 fun list_rat_add summands =
 let
-	fun recurse acc [] = acc
-	  | recurse acc (x::xs) = recurse (mk_rat_mul(acc, x)) xs
+        fun recurse acc [] = acc
+          | recurse acc (x::xs) = recurse (mk_rat_mul(acc, x)) xs
 in
-	recurse (hd summands) (tl summands)
-	handle List.Empty => raise ERR "list_rat_add" "empty summand list"
+        recurse (hd summands) (tl summands)
+        handle List.Empty => raise ERR "list_rat_add" "empty summand list"
 end;
 
 
 fun list_rat_mul multiplicands =
 let
-	fun recurse acc [] = acc
-	  | recurse acc (x::xs) = recurse (mk_rat_mul(acc, x)) xs
+        fun recurse acc [] = acc
+          | recurse acc (x::xs) = recurse (mk_rat_mul(acc, x)) xs
 in
-	recurse (hd multiplicands) (tl multiplicands)
-	handle List.Empty => raise ERR "list_rat_mul" "empty multiplicand list"
+        recurse (hd multiplicands) (tl multiplicands)
+        handle List.Empty => raise ERR "list_rat_mul" "empty multiplicand list"
 end;
 
 
@@ -155,23 +155,23 @@ end;
 
 fun strip_rat_add tm =
 let
-	fun recurse acc tm =
-	let val (l,r) = dest_rat_add tm in
-		recurse (recurse acc r) l
-	end handle HOL_ERR _ => tm::acc
+        fun recurse acc tm =
+        let val (l,r) = dest_rat_add tm in
+                recurse (recurse acc r) l
+        end handle HOL_ERR _ => tm::acc
 in
-	recurse [] tm
+        recurse [] tm
 end;
 
 
 fun strip_rat_mul tm =
 let
-	fun recurse acc tm =
-	let val (l,r) = dest_rat_mul tm in
-		recurse (recurse acc r) l
-	end handle HOL_ERR _ => tm::acc
+        fun recurse acc tm =
+        let val (l,r) = dest_rat_mul tm in
+                recurse (recurse acc r) l
+        end handle HOL_ERR _ => tm::acc
 in
-	recurse [] tm
+        recurse [] tm
 end;
 
 

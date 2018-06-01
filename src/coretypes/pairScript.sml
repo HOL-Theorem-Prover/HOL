@@ -191,14 +191,14 @@ val UNCURRY_DEF = Q.store_thm
 
 val CURRY_UNCURRY_THM =
     let val th1 = prove
-		(“CURRY (UNCURRY (f:'a->'b->'c)) x y = f x y”,
-		 REWRITE_TAC [UNCURRY_DEF, CURRY_DEF])
-	val th2 = GEN “y:'b” th1
-	val th3 = EXT th2
-	val th4 = GEN “x:'a” th3
-	val th4 = EXT th4
+                (“CURRY (UNCURRY (f:'a->'b->'c)) x y = f x y”,
+                 REWRITE_TAC [UNCURRY_DEF, CURRY_DEF])
+        val th2 = GEN “y:'b” th1
+        val th3 = EXT th2
+        val th4 = GEN “x:'a” th3
+        val th4 = EXT th4
     in
-	GEN “f:'a->'b->'c” th4
+        GEN “f:'a->'b->'c” th4
     end;
 
 val _ = save_thm("CURRY_UNCURRY_THM",CURRY_UNCURRY_THM);
@@ -210,10 +210,10 @@ val _ = save_thm("CURRY_UNCURRY_THM",CURRY_UNCURRY_THM);
 
 val UNCURRY_CURRY_THM =
   let val th1 = prove
-	(“UNCURRY (CURRY (f:('a#'b)->'c)) (x,y) = f(x,y)”,
-	 REWRITE_TAC [CURRY_DEF, UNCURRY_DEF])
+        (“UNCURRY (CURRY (f:('a#'b)->'c)) (x,y) = f(x,y)”,
+         REWRITE_TAC [CURRY_DEF, UNCURRY_DEF])
       val th2 = Q.INST [`x:'a` |-> `FST (z:'a#'b)`,
-		        `y:'b` |-> `SND (z:'a#'b)`] th1
+                        `y:'b` |-> `SND (z:'a#'b)`] th1
       val th3 = CONV_RULE (RAND_CONV
                     (RAND_CONV (K (ISPEC “z:'a#'b” PAIR))))  th2
       val th4 = CONV_RULE(RATOR_CONV (RAND_CONV
@@ -221,7 +221,7 @@ val UNCURRY_CURRY_THM =
       val th5 = GEN “z:'a#'b” th4
       val th6 = EXT th5
   in
-	GEN “f:('a#'b)->'c” th6
+        GEN “f:('a#'b)->'c” th6
   end;
 
   val _ = save_thm("UNCURRY_CURRY_THM",UNCURRY_CURRY_THM);
@@ -232,14 +232,14 @@ val UNCURRY_CURRY_THM =
 
 val CURRY_ONE_ONE_THM =
     let val th1 = ASSUME “(f:('a#'b)->'c) = g”
-	val th2 = AP_TERM “CURRY:(('a#'b)->'c)->('a->'b->'c)” th1
-	val th3 = DISCH_ALL th2
-	val thA = ASSUME “(CURRY (f:('a#'b)->'c)) = (CURRY g)”
-	val thB = AP_TERM “UNCURRY:('a->'b->'c)->(('a#'b)->'c)” thA
-	val thC = PURE_REWRITE_RULE [UNCURRY_CURRY_THM] thB
-	val thD = DISCH_ALL thC
+        val th2 = AP_TERM “CURRY:(('a#'b)->'c)->('a->'b->'c)” th1
+        val th3 = DISCH_ALL th2
+        val thA = ASSUME “(CURRY (f:('a#'b)->'c)) = (CURRY g)”
+        val thB = AP_TERM “UNCURRY:('a->'b->'c)->(('a#'b)->'c)” thA
+        val thC = PURE_REWRITE_RULE [UNCURRY_CURRY_THM] thB
+        val thD = DISCH_ALL thC
     in
-	IMP_ANTISYM_RULE thD th3
+        IMP_ANTISYM_RULE thD th3
     end;
 
 val _ = save_thm("CURRY_ONE_ONE_THM",CURRY_ONE_ONE_THM);
@@ -250,14 +250,14 @@ val _ = save_thm("CURRY_ONE_ONE_THM",CURRY_ONE_ONE_THM);
 
 val UNCURRY_ONE_ONE_THM =
     let val th1 = ASSUME “(f:'a->'b->'c) = g”
-	val th2 = AP_TERM “UNCURRY:('a->'b->'c)->(('a#'b)->'c)” th1
-	val th3 = DISCH_ALL th2
-	val thA = ASSUME “(UNCURRY (f:'a->'b->'c)) = (UNCURRY g)”
-	val thB = AP_TERM “CURRY:(('a#'b)->'c)->('a->'b->'c)” thA
-	val thC = PURE_REWRITE_RULE [CURRY_UNCURRY_THM] thB
-	val thD = DISCH_ALL thC
+        val th2 = AP_TERM “UNCURRY:('a->'b->'c)->(('a#'b)->'c)” th1
+        val th3 = DISCH_ALL th2
+        val thA = ASSUME “(UNCURRY (f:'a->'b->'c)) = (UNCURRY g)”
+        val thB = AP_TERM “CURRY:(('a#'b)->'c)->('a->'b->'c)” thA
+        val thC = PURE_REWRITE_RULE [CURRY_UNCURRY_THM] thB
+        val thD = DISCH_ALL thC
     in
-	IMP_ANTISYM_RULE thD th3
+        IMP_ANTISYM_RULE thD th3
     end;
 
 val _ = save_thm("UNCURRY_ONE_ONE_THM",UNCURRY_ONE_ONE_THM);

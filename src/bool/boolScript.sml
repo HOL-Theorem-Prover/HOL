@@ -1353,8 +1353,8 @@ val COND_CLAUSES = save_thm("COND_CLAUSES",
    end);
 
 (*--------------------------------------------------------------------- *)
-(* |- b. !t. (b => t | t) = t						*)
-(*					                   TFM 90.07.23 *)
+(* |- b. !t. (b => t | t) = t                                           *)
+(*                                                         TFM 90.07.23 *)
 (*--------------------------------------------------------------------- *)
 
 val COND_ID = save_thm("COND_ID",
@@ -1372,7 +1372,7 @@ val COND_ID = save_thm("COND_ID",
        val asm2 = ASSUME p
        val imp2 = DISCH p (CONJ (DISCH “^b=T”
                                        (ADD_ASSUM “^b=T” asm2))
-	                        (DISCH “^b=F”
+                                (DISCH “^b=F”
                                        (ADD_ASSUM “^b=F” asm2)))
        val lemma = SPEC “x:'a = ^t”
                         (GEN p (IMP_ANTISYM_RULE imp1 imp2))
@@ -1466,7 +1466,7 @@ in
 end
 
 (* -------------------------------------------------------------------------*)
-(* NOT_FORALL_THM = |- !P. ~(!x. P x) = ?x. ~P x                   	    *)
+(* NOT_FORALL_THM = |- !P. ~(!x. P x) = ?x. ~P x                            *)
 (* -------------------------------------------------------------------------*)
 
 val NOT_FORALL_THM = save_thm("NOT_FORALL_THM",
@@ -1486,7 +1486,7 @@ val NOT_FORALL_THM = save_thm("NOT_FORALL_THM",
     end);
 
 (* ------------------------------------------------------------------------- *)
-(* NOT_EXISTS_THM = |- !P. ~(?x. P x) = (!x. ~P x)                   	    *)
+(* NOT_EXISTS_THM = |- !P. ~(?x. P x) = (!x. ~P x)                          *)
 (* ------------------------------------------------------------------------- *)
 
 val NOT_EXISTS_THM = save_thm("NOT_EXISTS_THM",
@@ -1542,7 +1542,7 @@ val LEFT_AND_FORALL_THM = save_thm("LEFT_AND_FORALL_THM",
 (* ------------------------------------------------------------------------- *)
 
 val RIGHT_AND_FORALL_THM = save_thm("RIGHT_AND_FORALL_THM",
-    let	val x = “x:'a”
+    let val x = “x:'a”
         val P = “P:bool”
         val g = “Q:'a->bool”
         val th1 = ASSUME “P /\ (!x:'a. Q x)”
@@ -1608,7 +1608,7 @@ val LEFT_OR_EXISTS_THM = save_thm("LEFT_OR_EXISTS_THM",
 (* ------------------------------------------------------------------------- *)
 
 val RIGHT_OR_EXISTS_THM = save_thm("RIGHT_OR_EXISTS_THM",
-    let	val x = “x:'a”
+    let val x = “x:'a”
         val P = “P:bool”
         val g = “Q:'a->bool”
         val Q = mk_comb(g,x)
@@ -1631,26 +1631,26 @@ val RIGHT_OR_EXISTS_THM = save_thm("RIGHT_OR_EXISTS_THM",
 (* ------------------------------------------------------------------------- *)
 
 val BOTH_EXISTS_AND_THM = save_thm("BOTH_EXISTS_AND_THM",
-    let	val x = “x:'a”
-	val P = “P:bool”
-	val Q = “Q:bool”
-	val t = mk_conj(P,Q)
-	val exi = mk_exists(x,t)
-	val (t1,t2) = CONJ_PAIR (ASSUME t)
-	val t11 = EXISTS ((mk_exists(x,P)),x) t1
-	val t21 = EXISTS ((mk_exists(x,Q)),x) t2
-	val imp1 = DISCH_ALL (CHOOSE (x,
+    let val x = “x:'a”
+        val P = “P:bool”
+        val Q = “Q:bool”
+        val t = mk_conj(P,Q)
+        val exi = mk_exists(x,t)
+        val (t1,t2) = CONJ_PAIR (ASSUME t)
+        val t11 = EXISTS ((mk_exists(x,P)),x) t1
+        val t21 = EXISTS ((mk_exists(x,Q)),x) t2
+        val imp1 = DISCH_ALL (CHOOSE (x,
                     ASSUME (mk_exists(x,mk_conj(P,Q))))
-		   (CONJ t11 t21))
-	val th21 = EXISTS (exi,x) (CONJ (ASSUME P) (ASSUME Q))
-	val th22 = CHOOSE(x,ASSUME(mk_exists(x,P))) th21
-	val th23 = CHOOSE(x,ASSUME(mk_exists(x,Q))) th22
-	val (u1,u2) =
-	    CONJ_PAIR (ASSUME (mk_conj(mk_exists(x,P),mk_exists(x,Q))))
-	val th24 = PROVE_HYP u1 (PROVE_HYP u2 th23)
-	val imp2 = DISCH_ALL th24
+                   (CONJ t11 t21))
+        val th21 = EXISTS (exi,x) (CONJ (ASSUME P) (ASSUME Q))
+        val th22 = CHOOSE(x,ASSUME(mk_exists(x,P))) th21
+        val th23 = CHOOSE(x,ASSUME(mk_exists(x,Q))) th22
+        val (u1,u2) =
+            CONJ_PAIR (ASSUME (mk_conj(mk_exists(x,P),mk_exists(x,Q))))
+        val th24 = PROVE_HYP u1 (PROVE_HYP u2 th23)
+        val imp2 = DISCH_ALL th24
     in
-	GENL [P,Q] (IMP_ANTISYM_RULE imp1 imp2)
+        GENL [P,Q] (IMP_ANTISYM_RULE imp1 imp2)
     end);
 
 (* ------------------------------------------------------------------------- *)
@@ -1659,25 +1659,25 @@ val BOTH_EXISTS_AND_THM = save_thm("BOTH_EXISTS_AND_THM",
 
 val LEFT_EXISTS_AND_THM = save_thm("LEFT_EXISTS_AND_THM",
     let val x = “x:'a”
-	val f = “P:'a->bool”
-	val P = mk_comb(f,x)
-	val Q = “Q:bool”
-	val t = mk_conj(P,Q)
-	val exi = mk_exists(x,t)
-	val (t1,t2) = CONJ_PAIR (ASSUME t)
-	val t11 = EXISTS ((mk_exists(x,P)),x) t1
-	val imp1 =
-	    DISCH_ALL
-		(CHOOSE
-		 (x, ASSUME (mk_exists(x,mk_conj(P,Q))))
-		    (CONJ t11 t2))
-	val th21 = EXISTS (exi,x) (CONJ (ASSUME P) (ASSUME Q))
-	val th22 = CHOOSE(x,ASSUME(mk_exists(x,P))) th21
-	val (u1,u2) = CONJ_PAIR(ASSUME(mk_conj(mk_exists(x,P), Q)))
-	val th23 = PROVE_HYP u1 (PROVE_HYP u2 th22)
-	val imp2 = DISCH_ALL th23
+        val f = “P:'a->bool”
+        val P = mk_comb(f,x)
+        val Q = “Q:bool”
+        val t = mk_conj(P,Q)
+        val exi = mk_exists(x,t)
+        val (t1,t2) = CONJ_PAIR (ASSUME t)
+        val t11 = EXISTS ((mk_exists(x,P)),x) t1
+        val imp1 =
+            DISCH_ALL
+                (CHOOSE
+                 (x, ASSUME (mk_exists(x,mk_conj(P,Q))))
+                    (CONJ t11 t2))
+        val th21 = EXISTS (exi,x) (CONJ (ASSUME P) (ASSUME Q))
+        val th22 = CHOOSE(x,ASSUME(mk_exists(x,P))) th21
+        val (u1,u2) = CONJ_PAIR(ASSUME(mk_conj(mk_exists(x,P), Q)))
+        val th23 = PROVE_HYP u1 (PROVE_HYP u2 th22)
+        val imp2 = DISCH_ALL th23
     in
-	GENL [f,Q] (IMP_ANTISYM_RULE imp1 imp2)
+        GENL [f,Q] (IMP_ANTISYM_RULE imp1 imp2)
     end);
 
 (* ------------------------------------------------------------------------- *)
@@ -1685,25 +1685,25 @@ val LEFT_EXISTS_AND_THM = save_thm("LEFT_EXISTS_AND_THM",
 (* ------------------------------------------------------------------------- *)
 
 val RIGHT_EXISTS_AND_THM = save_thm("RIGHT_EXISTS_AND_THM",
-    let	val x = “x:'a”
-	val P = “P:bool”
-	val g = “Q:'a->bool”
-	val Q = mk_comb(g,x)
-	val t = mk_conj(P,Q)
-	val exi = mk_exists(x,t)
-	val (t1,t2) = CONJ_PAIR (ASSUME t)
-	val t21 = EXISTS ((mk_exists(x,Q)),x) t2
-	val imp1 =
-	    DISCH_ALL
-		(CHOOSE
-		 (x, ASSUME (mk_exists(x,mk_conj(P,Q)))) (CONJ t1 t21))
-	val th21 = EXISTS (exi,x) (CONJ (ASSUME P) (ASSUME Q))
-	val th22 = CHOOSE(x,ASSUME(mk_exists(x,Q))) th21
-	val (u1,u2) = CONJ_PAIR (ASSUME (mk_conj(P, mk_exists(x,Q))))
-	val th23 = PROVE_HYP u1 (PROVE_HYP u2 th22)
-	val imp2 = DISCH_ALL th23
+    let val x = “x:'a”
+        val P = “P:bool”
+        val g = “Q:'a->bool”
+        val Q = mk_comb(g,x)
+        val t = mk_conj(P,Q)
+        val exi = mk_exists(x,t)
+        val (t1,t2) = CONJ_PAIR (ASSUME t)
+        val t21 = EXISTS ((mk_exists(x,Q)),x) t2
+        val imp1 =
+            DISCH_ALL
+                (CHOOSE
+                 (x, ASSUME (mk_exists(x,mk_conj(P,Q)))) (CONJ t1 t21))
+        val th21 = EXISTS (exi,x) (CONJ (ASSUME P) (ASSUME Q))
+        val th22 = CHOOSE(x,ASSUME(mk_exists(x,Q))) th21
+        val (u1,u2) = CONJ_PAIR (ASSUME (mk_conj(P, mk_exists(x,Q))))
+        val th23 = PROVE_HYP u1 (PROVE_HYP u2 th22)
+        val imp2 = DISCH_ALL th23
     in
-	GENL [P,g] (IMP_ANTISYM_RULE imp1 imp2)
+        GENL [P,g] (IMP_ANTISYM_RULE imp1 imp2)
     end);
 
 (* ------------------------------------------------------------------------- *)
@@ -1754,23 +1754,23 @@ val LEFT_FORALL_OR_THM = save_thm("LEFT_FORALL_OR_THM",
 (* ------------------------------------------------------------------------- *)
 
 val RIGHT_FORALL_OR_THM = save_thm("RIGHT_FORALL_OR_THM",
-    let	val x = “x:'a”
-	val P = “P:bool”
-	val g = “Q:'a->bool”
-	val Q = mk_comb(g,x)
-	val tm   = mk_forall(x,mk_disj(P,Q))
-	val thm1 = SPEC x (ASSUME tm)
-	val thm2 = CONTR Q (MP (ASSUME (mk_neg P)) (ASSUME P))
-	val thm3 = DISJ2 P (GEN x (DISJ_CASES thm1 thm2 (ASSUME Q)))
-	val thm4 = DISJ1 (ASSUME P) (mk_forall(x,Q))
-	val imp1 = DISCH tm (DISJ_CASES (SPEC P EXCLUDED_MIDDLE) thm4 thm3)
-	val thm5 = ASSUME P
-	val thm6 = SPEC x (ASSUME (mk_forall(x,Q)))
-	val imp2 = DISCH_ALL (GEN x (DISJ_CASES_UNION
+    let val x = “x:'a”
+        val P = “P:bool”
+        val g = “Q:'a->bool”
+        val Q = mk_comb(g,x)
+        val tm   = mk_forall(x,mk_disj(P,Q))
+        val thm1 = SPEC x (ASSUME tm)
+        val thm2 = CONTR Q (MP (ASSUME (mk_neg P)) (ASSUME P))
+        val thm3 = DISJ2 P (GEN x (DISJ_CASES thm1 thm2 (ASSUME Q)))
+        val thm4 = DISJ1 (ASSUME P) (mk_forall(x,Q))
+        val imp1 = DISCH tm (DISJ_CASES (SPEC P EXCLUDED_MIDDLE) thm4 thm3)
+        val thm5 = ASSUME P
+        val thm6 = SPEC x (ASSUME (mk_forall(x,Q)))
+        val imp2 = DISCH_ALL (GEN x (DISJ_CASES_UNION
                    (ASSUME (mk_disj(P, mk_forall(x,Q))))
                    thm5 thm6))
     in
-	    GENL [P,g] (IMP_ANTISYM_RULE imp1 imp2)
+            GENL [P,g] (IMP_ANTISYM_RULE imp1 imp2)
     end);
 
 (* ------------------------------------------------------------------------- *)
@@ -1779,17 +1779,17 @@ val RIGHT_FORALL_OR_THM = save_thm("RIGHT_FORALL_OR_THM",
 
 val BOTH_FORALL_IMP_THM = save_thm("BOTH_FORALL_IMP_THM",
     let val x = “x:'a”
-	val P = “P:bool”
-	val Q = “Q:bool”
-	val tm = mk_forall(x, mk_imp(P,Q))
-	val asm = mk_exists(x,P)
-	val th1 = GEN x (CHOOSE(x,ASSUME asm)(UNDISCH(SPEC x (ASSUME tm))))
-	val imp1 = DISCH tm (DISCH asm th1)
-	val cncl = rand(concl imp1)
-	val th2 = SPEC x (MP (ASSUME cncl) (EXISTS (asm,x) (ASSUME P)))
-	val imp2 = DISCH cncl (GEN x (DISCH P th2))
+        val P = “P:bool”
+        val Q = “Q:bool”
+        val tm = mk_forall(x, mk_imp(P,Q))
+        val asm = mk_exists(x,P)
+        val th1 = GEN x (CHOOSE(x,ASSUME asm)(UNDISCH(SPEC x (ASSUME tm))))
+        val imp1 = DISCH tm (DISCH asm th1)
+        val cncl = rand(concl imp1)
+        val th2 = SPEC x (MP (ASSUME cncl) (EXISTS (asm,x) (ASSUME P)))
+        val imp2 = DISCH cncl (GEN x (DISCH P th2))
     in
-	GENL [P,Q] (IMP_ANTISYM_RULE imp1 imp2)
+        GENL [P,Q] (IMP_ANTISYM_RULE imp1 imp2)
     end);
 
 (* ------------------------------------------------------------------------- *)
@@ -1797,19 +1797,19 @@ val BOTH_FORALL_IMP_THM = save_thm("BOTH_FORALL_IMP_THM",
 (* ------------------------------------------------------------------------- *)
 
 val LEFT_FORALL_IMP_THM = save_thm("LEFT_FORALL_IMP_THM",
-    let	val x = “x:'a”
-	val f = “P:'a->bool”
-	val P = mk_comb(f,x)
-	val Q = “Q:bool”
-	val tm = mk_forall(x, mk_imp(P,Q))
-	val asm = mk_exists(x,P)
-	val th1 = CHOOSE(x,ASSUME asm)(UNDISCH(SPEC x (ASSUME tm)))
-	val imp1 = DISCH tm (DISCH asm th1)
-	val cncl = rand(concl imp1)
-	val th2 = MP (ASSUME cncl) (EXISTS (asm,x) (ASSUME P))
-	val imp2 = DISCH cncl (GEN x (DISCH P th2))
+    let val x = “x:'a”
+        val f = “P:'a->bool”
+        val P = mk_comb(f,x)
+        val Q = “Q:bool”
+        val tm = mk_forall(x, mk_imp(P,Q))
+        val asm = mk_exists(x,P)
+        val th1 = CHOOSE(x,ASSUME asm)(UNDISCH(SPEC x (ASSUME tm)))
+        val imp1 = DISCH tm (DISCH asm th1)
+        val cncl = rand(concl imp1)
+        val th2 = MP (ASSUME cncl) (EXISTS (asm,x) (ASSUME P))
+        val imp2 = DISCH cncl (GEN x (DISCH P th2))
     in
-	GENL [f,Q] (IMP_ANTISYM_RULE imp1 imp2)
+        GENL [f,Q] (IMP_ANTISYM_RULE imp1 imp2)
     end);
 
 (* ------------------------------------------------------------------------- *)
@@ -1818,15 +1818,15 @@ val LEFT_FORALL_IMP_THM = save_thm("LEFT_FORALL_IMP_THM",
 
 val RIGHT_FORALL_IMP_THM = save_thm("RIGHT_FORALL_IMP_THM",
     let val x = “x:'a”
-	val P = “P:bool”
-	val g = “Q:'a->bool”
-	val Q = mk_comb(g,x)
-	val tm = mk_forall(x, mk_imp(P,Q))
-	val imp1 = DISCH P(GEN x(UNDISCH(SPEC x(ASSUME tm))))
-	val cncl = concl imp1
-	val imp2 = GEN x (DISCH P(SPEC x(UNDISCH (ASSUME cncl))))
+        val P = “P:bool”
+        val g = “Q:'a->bool”
+        val Q = mk_comb(g,x)
+        val tm = mk_forall(x, mk_imp(P,Q))
+        val imp1 = DISCH P(GEN x(UNDISCH(SPEC x(ASSUME tm))))
+        val cncl = concl imp1
+        val imp2 = GEN x (DISCH P(SPEC x(UNDISCH (ASSUME cncl))))
     in
-	GENL [P,g] (IMP_ANTISYM_RULE (DISCH tm imp1) (DISCH cncl imp2))
+        GENL [P,g] (IMP_ANTISYM_RULE (DISCH tm imp1) (DISCH cncl imp2))
     end);
 
 (* ------------------------------------------------------------------------- *)
@@ -1835,19 +1835,19 @@ val RIGHT_FORALL_IMP_THM = save_thm("RIGHT_FORALL_IMP_THM",
 
 val BOTH_EXISTS_IMP_THM = save_thm("BOTH_EXISTS_IMP_THM",
     let val x = “x:'a”
-	val P = “P:bool”
-	val Q = “Q:bool”
-	val tm = mk_exists(x,mk_imp(P,Q))
-	val eQ = mk_exists(x,Q)
-	val aP = mk_forall(x,P)
-	val thm1 = EXISTS(eQ,x)(UNDISCH(ASSUME(mk_imp(P,Q))))
-	val thm2 = DISCH aP (PROVE_HYP (SPEC x (ASSUME aP)) thm1)
-	val imp1 = DISCH tm (CHOOSE(x,ASSUME tm) thm2)
-	val thm2 = CHOOSE(x,UNDISCH (ASSUME (rand(concl imp1)))) (ASSUME Q)
-	val thm3 = DISCH P (PROVE_HYP (GEN x (ASSUME P)) thm2)
-	val imp2 = DISCH (rand(concl imp1)) (EXISTS(tm,x) thm3)
+        val P = “P:bool”
+        val Q = “Q:bool”
+        val tm = mk_exists(x,mk_imp(P,Q))
+        val eQ = mk_exists(x,Q)
+        val aP = mk_forall(x,P)
+        val thm1 = EXISTS(eQ,x)(UNDISCH(ASSUME(mk_imp(P,Q))))
+        val thm2 = DISCH aP (PROVE_HYP (SPEC x (ASSUME aP)) thm1)
+        val imp1 = DISCH tm (CHOOSE(x,ASSUME tm) thm2)
+        val thm2 = CHOOSE(x,UNDISCH (ASSUME (rand(concl imp1)))) (ASSUME Q)
+        val thm3 = DISCH P (PROVE_HYP (GEN x (ASSUME P)) thm2)
+        val imp2 = DISCH (rand(concl imp1)) (EXISTS(tm,x) thm3)
     in
-	GENL [P,Q] (IMP_ANTISYM_RULE imp1 imp2)
+        GENL [P,Q] (IMP_ANTISYM_RULE imp1 imp2)
     end);
 
 (* ------------------------------------------------------------------------- *)
@@ -1855,27 +1855,27 @@ val BOTH_EXISTS_IMP_THM = save_thm("BOTH_EXISTS_IMP_THM",
 (* ------------------------------------------------------------------------- *)
 
 val LEFT_EXISTS_IMP_THM = save_thm("LEFT_EXISTS_IMP_THM",
-    let	val x = “x:'a”
-	val f = “P:'a->bool”
-	val P = mk_comb(f,x)
-	val Q = “Q:bool”
-	val tm = mk_exists(x, mk_imp(P,Q))
-	val allp = mk_forall(x,P)
-	val th1 = SPEC x (ASSUME allp)
-	val thm1 = MP (ASSUME(mk_imp(P,Q))) th1
-	val imp1 = DISCH tm (CHOOSE(x,ASSUME tm)(DISCH allp thm1))
-	val otm = rand(concl imp1)
-	val thm2 = EXISTS(tm,x)(DISCH P (UNDISCH(ASSUME otm)))
-	val nex =  mk_exists(x,mk_neg P)
-	val asm1 = EXISTS (nex, x) (ASSUME (mk_neg P))
-	val th2 = CCONTR P (MP (ASSUME (mk_neg nex)) asm1)
-	val th3 = CCONTR nex (MP (ASSUME (mk_neg allp)) (GEN x th2))
-	val thm4 = DISCH P (CONTR Q (UNDISCH (ASSUME (mk_neg P))))
-	val thm5 = CHOOSE(x,th3)(EXISTS(tm,x)thm4)
-	val thm6 = DISJ_CASES (SPEC allp EXCLUDED_MIDDLE) thm2 thm5
-	val imp2 = DISCH otm thm6
+    let val x = “x:'a”
+        val f = “P:'a->bool”
+        val P = mk_comb(f,x)
+        val Q = “Q:bool”
+        val tm = mk_exists(x, mk_imp(P,Q))
+        val allp = mk_forall(x,P)
+        val th1 = SPEC x (ASSUME allp)
+        val thm1 = MP (ASSUME(mk_imp(P,Q))) th1
+        val imp1 = DISCH tm (CHOOSE(x,ASSUME tm)(DISCH allp thm1))
+        val otm = rand(concl imp1)
+        val thm2 = EXISTS(tm,x)(DISCH P (UNDISCH(ASSUME otm)))
+        val nex =  mk_exists(x,mk_neg P)
+        val asm1 = EXISTS (nex, x) (ASSUME (mk_neg P))
+        val th2 = CCONTR P (MP (ASSUME (mk_neg nex)) asm1)
+        val th3 = CCONTR nex (MP (ASSUME (mk_neg allp)) (GEN x th2))
+        val thm4 = DISCH P (CONTR Q (UNDISCH (ASSUME (mk_neg P))))
+        val thm5 = CHOOSE(x,th3)(EXISTS(tm,x)thm4)
+        val thm6 = DISJ_CASES (SPEC allp EXCLUDED_MIDDLE) thm2 thm5
+        val imp2 = DISCH otm thm6
     in
-	GENL [f, Q] (IMP_ANTISYM_RULE imp1 imp2)
+        GENL [f, Q] (IMP_ANTISYM_RULE imp1 imp2)
     end);
 
 (* ------------------------------------------------------------------------- *)
@@ -1883,21 +1883,21 @@ val LEFT_EXISTS_IMP_THM = save_thm("LEFT_EXISTS_IMP_THM",
 (* ------------------------------------------------------------------------- *)
 
 val RIGHT_EXISTS_IMP_THM = save_thm("RIGHT_EXISTS_IMP_THM",
-    let	val x = “x:'a”
-	val P = “P:bool”
-	val g = “Q:'a->bool”
-	val Q = mk_comb(g,x)
-	val tm = mk_exists(x,mk_imp(P,Q))
-	val thm1 = EXISTS (mk_exists(x,Q),x)
-	                   (UNDISCH(ASSUME(mk_imp(P,Q))))
-	val imp1 = DISCH tm (CHOOSE(x,ASSUME tm) (DISCH P thm1))
-	val thm2 = UNDISCH (ASSUME (rand(concl imp1)))
-	val thm3 = CHOOSE (x,thm2) (EXISTS (tm,x) (DISCH P (ASSUME Q)))
-	val thm4 = EXISTS(tm,x)(DISCH P(CONTR Q(UNDISCH(ASSUME(mk_neg P)))))
-	val thm5 = DISJ_CASES (SPEC P EXCLUDED_MIDDLE) thm3 thm4
-	val imp2 = DISCH(rand(concl imp1)) thm5
+    let val x = “x:'a”
+        val P = “P:bool”
+        val g = “Q:'a->bool”
+        val Q = mk_comb(g,x)
+        val tm = mk_exists(x,mk_imp(P,Q))
+        val thm1 = EXISTS (mk_exists(x,Q),x)
+                           (UNDISCH(ASSUME(mk_imp(P,Q))))
+        val imp1 = DISCH tm (CHOOSE(x,ASSUME tm) (DISCH P thm1))
+        val thm2 = UNDISCH (ASSUME (rand(concl imp1)))
+        val thm3 = CHOOSE (x,thm2) (EXISTS (tm,x) (DISCH P (ASSUME Q)))
+        val thm4 = EXISTS(tm,x)(DISCH P(CONTR Q(UNDISCH(ASSUME(mk_neg P)))))
+        val thm5 = DISJ_CASES (SPEC P EXCLUDED_MIDDLE) thm3 thm4
+        val imp2 = DISCH(rand(concl imp1)) thm5
     in
-	GENL [P,g] (IMP_ANTISYM_RULE imp1 imp2)
+        GENL [P,g] (IMP_ANTISYM_RULE imp1 imp2)
     end);
 
 (* --------------------------------------------------------------------- *)
@@ -1968,7 +1968,7 @@ let val t1 = “A:bool” and t2 = “B:bool” and t3 = “C:bool”
  end);
 
 (* --------------------------------------------------------------------- *)
-(* DISJ_SYM: |- !A B. A \/ B = B \/ A                   		 *)
+(* DISJ_SYM: |- !A B. A \/ B = B \/ A                                    *)
 (* --------------------------------------------------------------------- *)
 
 val DISJ_SYM = save_thm("DISJ_SYM",
@@ -1986,7 +1986,7 @@ let val t1   = “A:bool” and t2 = “B:bool”
 val _ = save_thm("DISJ_COMM", DISJ_SYM);
 
 (* --------------------------------------------------------------------- *)
-(* DE_MORGAN_THM: 							 *)
+(* DE_MORGAN_THM:                                                        *)
 (*  |- !A B. (~(t1 /\ t2) = ~t1 \/ ~t2) /\ (~(t1 \/ t2) = ~t1 /\ ~t2)    *)
 (* --------------------------------------------------------------------- *)
 
@@ -2033,14 +2033,14 @@ let val t1 = “A:bool” and t2 = “B:bool”
  end);
 
 (* -------------------------------------------------------------------------*)
-(* Distributive laws:							    *)
-(*									    *)
+(* Distributive laws:                                                       *)
+(*                                                                          *)
 (* LEFT_AND_OVER_OR   |- !A B C. A /\ (B \/ C) = A /\ B \/ A /\ C           *)
-(*									    *)
+(*                                                                          *)
 (* RIGHT_AND_OVER_OR  |- !A B C. (B \/ C) /\ A = B /\ A \/ C /\ A           *)
-(*									    *)
+(*                                                                          *)
 (* LEFT_OR_OVER_AND   |- !A B C. A \/ B /\ C = (A \/ B) /\ (A \/ C)         *)
-(*									    *)
+(*                                                                          *)
 (* RIGHT_OR_OVER_AND  |- !A B C. B /\ C \/ A = (B \/ A) /\ (C \/ A)         *)
 (* -------------------------------------------------------------------------*)
 
@@ -2211,8 +2211,8 @@ end
 (* ---------------------------------------------------------------------*)
 (* IMP_F_EQ_F                                                           *)
 (*                                                                      *)
-(* |- !t. t ==> F = (t = F)					        *)
-(*				       	                   RJB 92.09.26 *)
+(* |- !t. t ==> F = (t = F)                                             *)
+(*                                                         RJB 92.09.26 *)
 (* ---------------------------------------------------------------------*)
 
 local fun nthCONJUNCT n cth =
@@ -2228,10 +2228,10 @@ val IMP_F_EQ_F = save_thm("IMP_F_EQ_F",
 end;
 
 (* ---------------------------------------------------------------------*)
-(* AND_IMP_INTRO							*)
-(*								        *)
-(* |- !t1 t2 t3. t1 ==> t2 ==> t3 = t1 /\ t2 ==> t3		        *)
-(*				       	                   RJB 92.09.26 *)
+(* AND_IMP_INTRO                                                        *)
+(*                                                                      *)
+(* |- !t1 t2 t3. t1 ==> t2 ==> t3 = t1 /\ t2 ==> t3                     *)
+(*                                                         RJB 92.09.26 *)
 (* ---------------------------------------------------------------------*)
 
 val AND_IMP_INTRO = save_thm("AND_IMP_INTRO",
@@ -2257,11 +2257,11 @@ let val t1 = “t1:bool”
  end);
 
 (* ---------------------------------------------------------------------*)
-(* EQ_IMP_THM							        *)
-(*								        *)
-(* |- !t1 t2. (t1 = t2) = (t1 ==> t2) /\ (t2 ==> t1)		        *)
-(*								        *)
-(*				       	                   RJB 92.09.26 *)
+(* EQ_IMP_THM                                                           *)
+(*                                                                      *)
+(* |- !t1 t2. (t1 = t2) = (t1 ==> t2) /\ (t2 ==> t1)                    *)
+(*                                                                      *)
+(*                                                         RJB 92.09.26 *)
 (* ---------------------------------------------------------------------*)
 
 val EQ_IMP_THM = save_thm("EQ_IMP_THM",
@@ -2323,8 +2323,8 @@ let val t1 = “t1:bool” and t2 = “t2:bool”
 
 (* ---------------------------------------------------------------------*)
 (* COND_RATOR |- !b (f:'a->'b) g x. (b => f | g) x = (b => f x | g x)   *)
-(*								        *)
-(*				       	                   RJB 92.09.26 *)
+(*                                                                      *)
+(*                                                         RJB 92.09.26 *)
 (* ---------------------------------------------------------------------*)
 
 val COND_RATOR = save_thm("COND_RATOR",
@@ -2355,11 +2355,11 @@ let val f = “f: 'a -> 'b”
  end);
 
 (* ---------------------------------------------------------------------*)
-(* COND_RAND							        *)
-(*								        *)
-(* |- !(f:'a->'b) b x y. f (b => x | y) = (b => f x | f y)	        *)
-(*								        *)
-(*				       	                   RJB 92.09.26 *)
+(* COND_RAND                                                            *)
+(*                                                                      *)
+(* |- !(f:'a->'b) b x y. f (b => x | y) = (b => f x | f y)              *)
+(*                                                                      *)
+(*                                                         RJB 92.09.26 *)
 (* ---------------------------------------------------------------------*)
 
 val COND_RAND = save_thm("COND_RAND",
@@ -2389,11 +2389,11 @@ let val f = “f: 'a -> 'b”
  end);
 
 (* ---------------------------------------------------------------------*)
-(* COND_ABS							        *)
-(*								        *)
-(* |- !b (f:'a->'b) g. (\x. (b => f(x) | g(x))) = (b => f | g)	        *)
-(*								        *)
-(*				       	                   RJB 92.09.26 *)
+(* COND_ABS                                                             *)
+(*                                                                      *)
+(* |- !b (f:'a->'b) g. (\x. (b => f(x) | g(x))) = (b => f | g)          *)
+(*                                                                      *)
+(*                                                         RJB 92.09.26 *)
 (* ---------------------------------------------------------------------*)
 
 val COND_ABS = save_thm("COND_ABS",
@@ -2408,11 +2408,11 @@ let val b = “b:bool”
  end);
 
 (* ---------------------------------------------------------------------*)
-(* COND_EXPAND							        *)
-(*								        *)
-(* |- !b t1 t2. (b => t1 | t2) = ((~b \/ t1) /\ (b \/ t2))	        *)
-(*								        *)
-(*				       	                   RJB 92.09.26 *)
+(* COND_EXPAND                                                          *)
+(*                                                                      *)
+(* |- !b t1 t2. (b => t1 | t2) = ((~b \/ t1) /\ (b \/ t2))              *)
+(*                                                                      *)
+(*                                                         RJB 92.09.26 *)
 (* ---------------------------------------------------------------------*)
 
 val COND_EXPAND = save_thm("COND_EXPAND",
@@ -2455,11 +2455,11 @@ let val b    = “b:bool”
  end);
 
 (* ---------------------------------------------------------------------*)
-(* COND_EXPAND_IMP						        *)
-(*								        *)
-(* |- !b t1 t2. (b => t1 | t2) = ((b ==> t1) /\ (~b ==> t2))	        *)
-(*								        *)
-(*				       	                    TT 09.03.18 *)
+(* COND_EXPAND_IMP                                                      *)
+(*                                                                      *)
+(* |- !b t1 t2. (b => t1 | t2) = ((b ==> t1) /\ (~b ==> t2))            *)
+(*                                                                      *)
+(*                                                          TT 09.03.18 *)
 (* ---------------------------------------------------------------------*)
 
 val COND_EXPAND_IMP = save_thm("COND_EXPAND_IMP",
@@ -2483,11 +2483,11 @@ in
 end);
 
 (* ---------------------------------------------------------------------*)
-(* COND_EXPAND_OR 						        *)
-(*								        *)
-(* |- !b t1 t2. (b => t1 | t2) = ((b /\ t1) \/ (~b /\ t2))	        *)
-(*								        *)
-(*				       	                    TT 09.03.18 *)
+(* COND_EXPAND_OR                                                       *)
+(*                                                                      *)
+(* |- !b t1 t2. (b => t1 | t2) = ((b /\ t1) \/ (~b /\ t2))              *)
+(*                                                                      *)
+(*                                                          TT 09.03.18 *)
 (* ---------------------------------------------------------------------*)
 
 val COND_EXPAND_OR = save_thm("COND_EXPAND_OR",
@@ -2587,9 +2587,9 @@ val ABS_REP_THM = save_thm("ABS_REP_THM",
        val imp1 = DISCH “(P:'a->bool) r”
                     (SYM (SUBST [v |-> SYM absd2] template t1))
        val t2 = EXISTS (“?a:'b. r:'a = rep a”, “^ABS r”)
-	               (SYM(ASSUME “rep(^ABS (r:'a):'b) = r”))
+                       (SYM(ASSUME “rep(^ABS (r:'a):'b) = r”))
        val imp2 = DISCH “rep(^ABS (r:'a):'b) = r”
-     		        (EQ_MP (SYM (SPEC “r:'a” asm2)) t2)
+                        (EQ_MP (SYM (SPEC “r:'a” asm2)) t2)
        val TH2 = GEN “r:'a” (IMP_ANTISYM_RULE imp1 imp2)
        val CTH = CONJ TH1 TH2
        val ath = subst [ABS |-> “abs:'a->'b”] (concl CTH)

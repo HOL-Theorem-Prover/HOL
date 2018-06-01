@@ -1,11 +1,11 @@
 (* =======================================================================*)
-(* FILE		: optionScript.sml                                        *)
-(* DESCRIPTION  : Creates a theory of SML like options         	          *)
-(* WRITES FILES	: option.th						  *)
-(*									  *)
-(* AUTHOR	: (c) D. Syme 1988					  *)
-(* DATE		: 95.04.25						  *)
-(* REVISED	: (Konrad Slind) Oct 9.97 to eliminate usage of           *)
+(* FILE         : optionScript.sml                                        *)
+(* DESCRIPTION  : Creates a theory of SML like options                    *)
+(* WRITES FILES : option.th                                               *)
+(*                                                                        *)
+(* AUTHOR       : (c) D. Syme 1988                                        *)
+(* DATE         : 95.04.25                                                *)
+(* REVISED      : (Konrad Slind) Oct 9.97 to eliminate usage of           *)
 (*                recursive types package. Follows the development of     *)
 (*                Elsa Gunter in her formalization of partial functions.  *)
 (*                                                                        *)
@@ -22,7 +22,7 @@ local open sumTheory oneTheory in end;
 open BasicProvers
 
 (* ---------------------------------------------------------------------*)
-(* Create the new theory						*)
+(* Create the new theory                                                *)
 (* ---------------------------------------------------------------------*)
 
 val _ = new_theory "option";

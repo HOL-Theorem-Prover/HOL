@@ -31,6 +31,7 @@ val ttt_recprove_flag = ref true
 val ttt_reclet_flag   = ref false
 val ttt_rectac_time   = ref 2.0
 val ttt_recproof_time = ref 20.0
+val ttt_printproof_flag = ref false
 
 (* ==========================================================================
    Training

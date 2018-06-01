@@ -248,6 +248,37 @@ val lf_g = add_listform g0
               rightdelim= [mTOK "]"],
               nilstr = "NIL", cons = "CONS"}
 end;
+fun isabsynlist slist a =
+  let
+    open Absyn
+  in
+    case slist of
+        [] => (case a of IDENT (_, "NIL") => true | _ => false)
+      | s1 :: rest =>
+        (case a of
+             APP(_, APP (_, IDENT(_, "CONS"), IDENT (_, el1)), a_rest) =>
+               el1 = s1 andalso isabsynlist rest a_rest
+           | _ => false)
+  end
+val _ = PP.prettyPrint
+          (print, 75)
+          (Parse.mlower
+             (term_grammar.prettyprint_grammar
+                (fn g =>fn _ => smpp.add_string "<term>")
+                lf_g))
+
+fun parsetest sl =
+  let
+    val s = "["^String.concatWith ";" sl^"]"
+    val _ = tprint ("Parsing "^s)
+    val a = TermParse.absyn lf_g type_grammar.min_grammar [QUOTE s]
+  in
+    if isabsynlist sl a then OK() else die "FAILED!"
+  end
+
+val _ = parsetest []
+val _ = parsetest (map str (explode "ab"))
+val _ = parsetest (map str (explode "abcdef"))
 
 fun find_named_rule nm g =
   let
@@ -604,9 +635,47 @@ val _ = List.app test [("abcd", "yd"), ("ab", "xxxzzzz"), ("c", ""),
                        ("ccb", "vv")]
 end (* local *)
 
-(*
+val _ = tprint "rules_for finds record rule"
+val G0 = term_grammar.stdhol
+val recrules = term_grammar.rules_for G0 GrammarSpecials.reccons_special
+val _ =
+    let
+      open term_grammar
+    in
+      case recrules of
+          [(_, GRULE {pp_elements = RE (TOK "<|") :: _,...})] => OK()
+        | _ => die "Couldn't find it"
+    end
 
-full test including backgrounds
-val _ = test_terminal true (!Parse.current_backend)
+val _ = tprint "remove_termtok \"<|\" removes record rule"
+val G' =
+    term_grammar.remove_form_with_tok G0 {
+      term_name = GrammarSpecials.recd_lform_name, tok = "<|"
+    }
+val _ =
+    let
+      open term_grammar
+    in
+      case term_grammar.rules_for G' GrammarSpecials.reccons_special of
+          [] => OK()
+        | _ => die "Nope - something still there!"
+    end
 
-*)
+local open term_tokens
+fun test (s,expected) =
+  let
+    val _ = tprint ("lexing "^s)
+    val toks : unit term_token list = lextest [] s
+  in
+    if toks = expected then OK()
+    else die "FAILED"
+  end
+in
+val _ =
+    List.app test [
+      ("$ $$ $$$ $+ $if", [Ident "$", Ident "$$", Ident "$$$", Ident "$+",
+                           Ident "$if"]),
+      ("thy$id", [QIdent("thy", "id")]),
+      ("thy$$$", [QIdent("thy", "$$")])
+    ]
+end (* open term_tokens local *);

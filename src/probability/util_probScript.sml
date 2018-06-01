@@ -125,7 +125,7 @@ val logr_1 = store_thm
 val lg_nonzero = store_thm
   ("lg_nonzero",
    ``!x. (~(x = 0)) /\ (0 <= x) ==>
-		((~(lg x = 0)) = (~(x = 1)))``,
+                ((~(lg x = 0)) = (~(x = 1)))``,
    RW_TAC std_ss [REAL_ARITH ``(~(x = 0)) /\ (0 <= x) = 0 < x``]
    >> RW_TAC std_ss [GSYM lg_1]
    >> RW_TAC std_ss [lg_def, logr_def, real_div, REAL_EQ_RMUL, REAL_INV_EQ_0]
@@ -169,7 +169,7 @@ val logr_inv = store_thm
 val logr_div = store_thm
   ("logr_div",
    ``!b x y. 0 < x /\ 0 < y ==>
-	(logr b (x/y) = logr b x - logr b y)``,
+        (logr b (x/y) = logr b x - logr b y)``,
    RW_TAC real_ss [real_div, logr_mul, logr_inv, GSYM real_sub]);
 
 val neg_lg = store_thm
@@ -196,9 +196,9 @@ val lg_pow = store_thm
   ("lg_pow", ``!n. lg (2 pow n) = &n``,
    RW_TAC real_ss [lg_def, logr_def, LN_POW]
    >> `~(ln 2 = 0)`
-	by (ONCE_REWRITE_TAC [EQ_SYM_EQ] >> MATCH_MP_TAC REAL_LT_IMP_NE
-	    >> MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `ln 1`
-	    >> RW_TAC real_ss [LN_POS, LN_MONO_LT])
+        by (ONCE_REWRITE_TAC [EQ_SYM_EQ] >> MATCH_MP_TAC REAL_LT_IMP_NE
+            >> MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `ln 1`
+            >> RW_TAC real_ss [LN_POS, LN_MONO_LT])
    >> RW_TAC real_ss [real_div, GSYM REAL_MUL_ASSOC, REAL_MUL_RINV]);
 
 
@@ -265,7 +265,7 @@ val NUM_2D_BIJ_NZ_ALT = store_thm
    >> REVERSE CONJ_TAC
    >- (Q.EXISTS_TAC `(\(x,y). x + 1:num)`
        >> RW_TAC std_ss [SURJ_DEF, IN_UNIV, IN_CROSS]
-       		>- (Cases_on `x` >> RW_TAC std_ss [DIFF_DEF,GSPECIFICATION,IN_UNIV,IN_SING])
+                >- (Cases_on `x` >> RW_TAC std_ss [DIFF_DEF,GSPECIFICATION,IN_UNIV,IN_SING])
        >> Q.EXISTS_TAC `(x-1,1)`
        >> RW_TAC std_ss []
        >> MATCH_MP_TAC SUB_ADD
@@ -274,7 +274,7 @@ val NUM_2D_BIJ_NZ_ALT = store_thm
    >> RW_TAC std_ss [INJ_DEF, IN_UNIV, IN_CROSS]
    >- ( Cases_on `x`
         >> RW_TAC std_ss [UNCURRY_DEF, ind_typeTheory.NUMPAIR_INJ,DIFF_DEF,
-	   	  	  GSPECIFICATION,IN_UNIV,IN_SING]
+                          GSPECIFICATION,IN_UNIV,IN_SING]
         >> RW_TAC real_ss [ind_typeTheory.NUMPAIR])
    >> Cases_on `x`
    >> Cases_on `y`
@@ -377,64 +377,64 @@ val NUM_2D_BIJ_BIG_SQUARE = store_thm
 val finite_enumeration_of_sets_has_max_non_empty = store_thm
   ("finite_enumeration_of_sets_has_max_non_empty",
    ``!f s. FINITE s /\ (!x. f x IN s) /\
-	    (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) ==>
-	    ?N. !n:num. n >= N ==> (f n = {})``,
-	`!s. FINITE s ==>
-	(\s.  !f. (!x. f x IN {} INSERT s) /\
-		  (~({} IN s)) /\
-		 (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) ==>
-		 ?N. !n:num. n >= N ==> (f n = {})) s`
-	by (MATCH_MP_TAC FINITE_INDUCT
-	    >> RW_TAC std_ss [NOT_IN_EMPTY, IN_INSERT]
-	    >> Q.PAT_X_ASSUM `!f. (!x. (f x = {}) \/ f x IN s) /\ ~({} IN s) /\
-				(!m n. ~(m = n) ==> DISJOINT (f m) (f n)) ==>
-            			?N:num. !n. n >= N ==> (f n = {})`
-		(MP_TAC o Q.SPEC `(\x. if f x = e then {} else f x)`)
-	    >> `(!x. ((\x. (if f x = e then {} else f x)) x = {}) \/
-		     (\x. (if f x = e then {} else f x)) x IN s) /\ ~({} IN s)`
-		by METIS_TAC []
-	    >> ASM_SIMP_TAC std_ss []
-	    >> `(!m n. ~(m = n) ==> DISJOINT (if f m = e then {} else f m)
-			(if f n = e then {} else f n))`
-		by (RW_TAC std_ss [IN_DISJOINT, NOT_IN_EMPTY]
-			    >> METIS_TAC [IN_DISJOINT])
-	    >> ASM_SIMP_TAC std_ss []
-	    >> RW_TAC std_ss []
-	    >> Cases_on `?n. f n = e`
-	    >- (FULL_SIMP_TAC std_ss []
-		>> Cases_on `n < N`
-		>- (Q.EXISTS_TAC `N`
-		    >> RW_TAC std_ss [GREATER_EQ]
-		    >> `~(n' = n)`
-			by METIS_TAC [LESS_LESS_EQ_TRANS,
-				      DECIDE ``!m (n:num). m < n ==> ~(m=n)``]
-		    >> Cases_on `f n' = f n`
-		    >- (`DISJOINT (f n') (f n)` by METIS_TAC []
-			>> FULL_SIMP_TAC std_ss [IN_DISJOINT, EXTENSION, NOT_IN_EMPTY]
-			>> METIS_TAC [])
-		    >> Q.PAT_X_ASSUM
-				`!n'. n' >= N ==> ((if f n' = f n then {} else f n') = {})`
-				(MP_TAC o Q.SPEC `n'`)
-		    >> ASM_SIMP_TAC std_ss [GREATER_EQ])
-		>> Q.EXISTS_TAC `SUC n`
-		>> RW_TAC std_ss [GREATER_EQ]
-		>> FULL_SIMP_TAC std_ss [NOT_LESS]
-		>> `~(n' = n)`
-			by METIS_TAC [LESS_LESS_EQ_TRANS,
-				      DECIDE ``!n:num. n < SUC n``,
-				      DECIDE ``!m (n:num). m < n ==> ~(m=n)``]
-		>> Cases_on `f n' = f n`
-		>- (`DISJOINT (f n') (f n)` by METIS_TAC []
-		    >> FULL_SIMP_TAC std_ss [IN_DISJOINT, EXTENSION, NOT_IN_EMPTY]
-		    >> METIS_TAC [])
-		>> `N <= n'` by METIS_TAC [LESS_EQ_IMP_LESS_SUC,
-				           LESS_LESS_EQ_TRANS,
-				           LESS_IMP_LESS_OR_EQ]
-		>> Q.PAT_X_ASSUM
-				`!n'. n' >= N ==> ((if f n' = f n then {} else f n') = {})`
-				(MP_TAC o Q.SPEC `n'`)
-		>> ASM_SIMP_TAC std_ss [GREATER_EQ])
-	>> METIS_TAC [])
+            (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) ==>
+            ?N. !n:num. n >= N ==> (f n = {})``,
+        `!s. FINITE s ==>
+        (\s.  !f. (!x. f x IN {} INSERT s) /\
+                  (~({} IN s)) /\
+                 (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) ==>
+                 ?N. !n:num. n >= N ==> (f n = {})) s`
+        by (MATCH_MP_TAC FINITE_INDUCT
+            >> RW_TAC std_ss [NOT_IN_EMPTY, IN_INSERT]
+            >> Q.PAT_X_ASSUM `!f. (!x. (f x = {}) \/ f x IN s) /\ ~({} IN s) /\
+                                (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) ==>
+                                ?N:num. !n. n >= N ==> (f n = {})`
+                (MP_TAC o Q.SPEC `(\x. if f x = e then {} else f x)`)
+            >> `(!x. ((\x. (if f x = e then {} else f x)) x = {}) \/
+                     (\x. (if f x = e then {} else f x)) x IN s) /\ ~({} IN s)`
+                by METIS_TAC []
+            >> ASM_SIMP_TAC std_ss []
+            >> `(!m n. ~(m = n) ==> DISJOINT (if f m = e then {} else f m)
+                        (if f n = e then {} else f n))`
+                by (RW_TAC std_ss [IN_DISJOINT, NOT_IN_EMPTY]
+                            >> METIS_TAC [IN_DISJOINT])
+            >> ASM_SIMP_TAC std_ss []
+            >> RW_TAC std_ss []
+            >> Cases_on `?n. f n = e`
+            >- (FULL_SIMP_TAC std_ss []
+                >> Cases_on `n < N`
+                >- (Q.EXISTS_TAC `N`
+                    >> RW_TAC std_ss [GREATER_EQ]
+                    >> `~(n' = n)`
+                        by METIS_TAC [LESS_LESS_EQ_TRANS,
+                                      DECIDE ``!m (n:num). m < n ==> ~(m=n)``]
+                    >> Cases_on `f n' = f n`
+                    >- (`DISJOINT (f n') (f n)` by METIS_TAC []
+                        >> FULL_SIMP_TAC std_ss [IN_DISJOINT, EXTENSION, NOT_IN_EMPTY]
+                        >> METIS_TAC [])
+                    >> Q.PAT_X_ASSUM
+                                `!n'. n' >= N ==> ((if f n' = f n then {} else f n') = {})`
+                                (MP_TAC o Q.SPEC `n'`)
+                    >> ASM_SIMP_TAC std_ss [GREATER_EQ])
+                >> Q.EXISTS_TAC `SUC n`
+                >> RW_TAC std_ss [GREATER_EQ]
+                >> FULL_SIMP_TAC std_ss [NOT_LESS]
+                >> `~(n' = n)`
+                        by METIS_TAC [LESS_LESS_EQ_TRANS,
+                                      DECIDE ``!n:num. n < SUC n``,
+                                      DECIDE ``!m (n:num). m < n ==> ~(m=n)``]
+                >> Cases_on `f n' = f n`
+                >- (`DISJOINT (f n') (f n)` by METIS_TAC []
+                    >> FULL_SIMP_TAC std_ss [IN_DISJOINT, EXTENSION, NOT_IN_EMPTY]
+                    >> METIS_TAC [])
+                >> `N <= n'` by METIS_TAC [LESS_EQ_IMP_LESS_SUC,
+                                           LESS_LESS_EQ_TRANS,
+                                           LESS_IMP_LESS_OR_EQ]
+                >> Q.PAT_X_ASSUM
+                                `!n'. n' >= N ==> ((if f n' = f n then {} else f n') = {})`
+                                (MP_TAC o Q.SPEC `n'`)
+                >> ASM_SIMP_TAC std_ss [GREATER_EQ])
+        >> METIS_TAC [])
    >> REPEAT STRIP_TAC
    >> Cases_on `{} IN s`
    >- (Q.PAT_X_ASSUM `!s. FINITE s ==> P` (MP_TAC o Q.SPEC `s DELETE {}`)

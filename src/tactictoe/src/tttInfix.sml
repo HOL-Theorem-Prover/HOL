@@ -1,5 +1,5 @@
 (* =========================================================================  *)
-(* FILE          : tttFeature.sml                                             *)
+(* FILE          : tttInfix.sml                                               *)
 (* DESCRIPTION   : Transforming a prefix operator into an infix one           *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
 (* DATE          : 2017                                                       *)
@@ -88,28 +88,18 @@ fun infix_pair infixity = case infixity of
 
 (*----------------------------------------------------------------------------
   Infixity from Overlay.sml. To add to the README to keep up-to-date.
-
-  infix ++ && |-> THEN THENL THEN_LT THENC ORELSE ORELSE_LT ORELSEC
-  THEN_TCL ORELSE_TCL ?> |>
-infix THEN1
-
-(* infixes for THEN shorthands *)
-infix >> >- >| \\ >>> >>- ??
-
-infixr ## $;
-infixr 3 -->;
-infix 8 via by suffices_by
-
   ----------------------------------------------------------------------------*)
 
 (* becareful to escape \\ to \\\\ in the following list *)
 val l0 = String.tokens Char.isSpace
   (
   String.concatWith " "
-  ["++ && |-> THEN THENL THEN_LT THENC ORELSE ORELSE_LT ORELSEC",
+  [
+   "++ && |-> THEN THEN1 THENL THEN_LT THENC ORELSE ORELSE_LT ORELSEC",
    "THEN_TCL ORELSE_TCL ?> |>",
-   "THEN1",
-   ">> >- >| \\\\ >>> >>- ??"]
+   ">> >- >| \\\\ >>> >>- ??",
+   "~~ !~ Un Isct -- IN"
+  ]
   )
 val l1 = String.tokens Char.isSpace "## $"
 val l2 = String.tokens Char.isSpace "via by suffices_by"

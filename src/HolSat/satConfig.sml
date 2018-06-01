@@ -23,7 +23,7 @@ type sat_config =
      }
 
 val base_config = {pterm = boolSyntax.T, solver = minisatp, infile = NONE, proof = NONE,
-		   flags = {is_cnf=false,is_proved=true}}
+                   flags = {is_cnf=false,is_proved=true}}
 
 (* getters *)
 
@@ -70,7 +70,7 @@ fun set_flag_is_proved ip (c:sat_config) =
 
 (* destruction (does not return flags) *)
 fun dest_config c = (get_term c, get_solver c, get_infile c, get_proof c,
-		     get_flag_is_cnf c, get_flag_is_proved c)
+                     get_flag_is_cnf c, get_flag_is_proved c)
 
 end
 end

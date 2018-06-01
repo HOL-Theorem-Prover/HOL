@@ -1,9 +1,9 @@
 (* =====================================================================*)
-(* FILE		: stringScript.sml				        *)
+(* FILE         : stringScript.sml                                      *)
 (* DESCRIPTION  : A theory of 8-bit characters and strings built        *)
 (*                from them.                                            *)
 (*                                                                      *)
-(* AUTHOR	: Konrad Slind, University of Cambridge, 2001           *)
+(* AUTHOR       : Konrad Slind, University of Cambridge, 2001           *)
 (* =====================================================================*)
 
 (* interactive use:
@@ -14,7 +14,7 @@ open HolKernel boolLib bossLib Parse;
 open numLib numSyntax listTheory rich_listTheory arithmeticTheory;
 
 (* ---------------------------------------------------------------------*)
-(* Create the new theory						*)
+(* Create the new theory                                                *)
 (* ---------------------------------------------------------------------*)
 
 val _ = new_theory "string";

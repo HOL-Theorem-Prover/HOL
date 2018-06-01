@@ -196,7 +196,9 @@ series of tokens.  For more on lexing, see Section~\ref{HOL-lex}.
   \index{antiquotation, in HOL logic terms@antiquotation, in \HOL{} logic terms}%
 %
   \ml{IDENT} (an identifier); \ml{QIDENT} (a qualified identifier,
-  given as \holtxt{thy\$ident}); \ml{APP} (an application of one form
+  given as \holtxt{thy\$ident}%
+\index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!generating qualified identifiers}%
+); \ml{APP} (an application of one form
   to another); \ml{LAM} (an abstraction of a variable over a body),
   and \ml{TYPED} (a form accompanied by a type constraint\footnote{The
     types in \ml{Absyn} constraints are not full HOL types, but values
@@ -225,7 +227,7 @@ series of tokens.  For more on lexing, see Section~\ref{HOL-lex}.
 
   If the ``quotation'' syntax with a bare dollar is used,%
 %
-\index{ escape, in HOL logic parser@\ml{\$} (escape, in \HOL{} logic parser)}%
+\index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!as escape character}%
 \index{tokens!suppressing parsing behaviour of|(}%
 %
 then this phase of the parser will not treat strings as part of a
@@ -3106,13 +3108,13 @@ test. For example, the following definition is provably equal to \holtxt{FACT},
 But the two definitions evaluate completely differently.
 %
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 >> EVAL ``FACT n``;
 
 > EVAL ``fact n``;
   <.... interrupt key struck ...>
 Interrupted.
-\end{verbatim}
+\end{alltt}
 \end{session}
 %
 The primitive-recursive definition of \holtxt{FACT} does not expand

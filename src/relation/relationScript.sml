@@ -572,7 +572,7 @@ val EXTEND_RTC_TC_EQN = store_thm(
         MESON_TAC [EXTEND_RTC_TC] THEN
   HO_MATCH_MP_TAC TC_INDUCT THEN
   PROVE_TAC[RTC_RULES, RTC_TRANSITIVE, transitive_def,
-	      RTC_RULES_RIGHT1]);
+              RTC_RULES_RIGHT1]);
 
 val reflexive_RC_identity = store_thm(
   "reflexive_RC_identity",

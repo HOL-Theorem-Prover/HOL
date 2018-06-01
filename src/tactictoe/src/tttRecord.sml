@@ -192,6 +192,7 @@ fun wrap_tactics_in name qtac goal =
   Globalizing theorems and create a new theorem if the value does not exists.
   ----------------------------------------------------------------------------*)
 
+(*
 fun save_tactictoe_thm thm =
   let
     val name = "tactictoe_thm_" ^ int_to_string (!tactictoe_thm_counter)
@@ -201,6 +202,7 @@ fun save_tactictoe_thm thm =
     ignore (save_thm (name,thm));
     String.concatWith " " ["(","DB.fetch",mlquote cthy,mlquote name,")"]
   end
+*)
 
 fun depid_of_thm thm =
   (Dep.depid_of o Tag.dep_of o Thm.tag) thm
@@ -276,6 +278,40 @@ fun end_record_proof name g =
       (app update_tacdata) lbl2
   end
 
+fun pe_thm file (s,thm) =
+  (
+  append_endline file ("  thm_lbl: " ^ s);
+  append_endline file ("  thm_value: " ^ string_of_goal (dest_thm thm))
+  )
+
+fun pe_thml file thml =
+  (
+  append_endline file "Thm_list";
+  app (pe_thm file) thml
+  )
+  
+fun pe_thmll file thmll = app (pe_thml file) thmll
+
+fun print_proof name g =
+  let
+    val lbl1 = map fst (rev (!goalstep_glob))
+    val dir  = tactictoe_dir ^ "/print_proof"
+    val _    = mkDir_err dir
+    val file = dir ^ "/" ^ current_theory () ^ "____" ^ name
+    fun f (stac,t,g,gl) =
+      let val (astac, thmll) = pe_abs stac in
+        append_endline file ("tactic: " ^ stac);
+        append_endline file ("goal: " ^ string_of_goal g);
+        append_endline file ("abs_tactic: " ^ astac);
+        pe_thmll file thmll;
+        append_endline file ""
+      end
+  in
+    erase_file file;
+    append_endline file ("Proof " ^ (int_to_string (!thm_counter)));
+    append_endline file "";
+    app f lbl1
+  end
 
 fun clear_tac tac g =
   (
@@ -285,7 +321,7 @@ fun clear_tac tac g =
 
 fun org_tac tac g =
   let val (gl,v) = timeOut 600.0 tac g in
-    if null gl 
+    if null gl
       then (gl,v)
       else (debug "Error: org_tac: pending goals"; clear_tac tac g)
   end
@@ -351,7 +387,9 @@ fun record_proof name lflag tac1 tac2 g =
         let
           val (r,t) = add_time tac1 g
           val _ = debug_proof ("Recording proof time: " ^ Real.toString t)
-          val _ = end_record_proof name g
+          val _ = if !ttt_printproof_flag 
+                  then print_proof name g
+                  else end_record_proof name g
         in
           if null (fst r) then r
           else (debug "Record error: try_record_proof: not null"; 

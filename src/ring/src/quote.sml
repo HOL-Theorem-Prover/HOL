@@ -13,8 +13,8 @@ in
 
 fun QUOTE_ERR function message =
     HOL_ERR{origin_structure = "quote",
-		      origin_function = function,
-		      message = message};
+                      origin_function = function,
+                      message = message};
 
 fun mk_comb2 (a,b,c) = mk_comb(mk_comb(a,b),c);
 fun mk_comb3 (a,b,c,d) = mk_comb(mk_comb2(a,b,c),d);
@@ -36,7 +36,7 @@ fun meta_map ty =
       val mnvm = vm_ty ty mnvm
       fun meta_rec (ref Lf) = mevm
         | meta_rec (ref (Nd(t,v1,v2))) =
-	    mk_comb3(mnvm,t,meta_rec v1, meta_rec v2)
+            mk_comb3(mnvm,t,meta_rec v1, meta_rec v2)
   in meta_rec
   end
 ;
@@ -63,11 +63,11 @@ fun search_term t vm =
   | Nd(x,v1,v2) =>
       (if aconv t x then SOME Ei
       else case search_term t v1 of
-	SOME i => SOME (Li i)
-      |	NONE =>
-	  (case search_term t v2 of
-	    SOME i => SOME (Lr i)
-	  | NONE => NONE));
+        SOME i => SOME (Li i)
+      | NONE =>
+          (case search_term t v2 of
+            SOME i => SOME (Lr i)
+          | NONE => NONE));
 
 
 fun add_term t vm i =
@@ -89,8 +89,8 @@ and get_map ty =
   let val meta = meta_map ty
       fun get_it() =
         let val m = meta vm in
-  	empty_map();
-  	m
+        empty_map();
+        m
         end
   in get_it
   end
@@ -126,43 +126,43 @@ fun meta_expr ty is_qu { Op1, Op2, Vars, Csts } =
   let fun meta_rec t =
         if is_qu t then Pquote t
         else
-	  let val oper =
-    	    if is_comb t then
-	      let val (r1,a1) = dest_comb t in
-	      case op_assoc r1 Op1 of
-		SOME ope => SOME(mk_op t ope [meta_rec a1])
-	      |	NONE =>
-		  if is_comb r1 then
-      	    	    let val (r2,a2) = dest_comb r1 in
-    	    	    case op_assoc r2 Op2 of
-		      SOME ope =>
-			SOME(mk_op t ope [meta_rec a2, meta_rec a1])
-		    | NONE => NONE
-	    	    end
-		  else NONE
-	      end
-    	    else NONE
-	  in case oper of
-    	    SOME mt => mt
-	  | NONE => Pvar (term_index t)
-	  end
+          let val oper =
+            if is_comb t then
+              let val (r1,a1) = dest_comb t in
+              case op_assoc r1 Op1 of
+                SOME ope => SOME(mk_op t ope [meta_rec a1])
+              | NONE =>
+                  if is_comb r1 then
+                    let val (r2,a2) = dest_comb r1 in
+                    case op_assoc r2 Op2 of
+                      SOME ope =>
+                        SOME(mk_op t ope [meta_rec a2, meta_rec a1])
+                    | NONE => NONE
+                    end
+                  else NONE
+              end
+            else NONE
+          in case oper of
+            SOME mt => mt
+          | NONE => Pvar (term_index t)
+          end
 
       fun meta_pol (Pvar i) = mk_comb(Vars,meta_index i)
         | meta_pol (Pquote t) = mk_comb(Csts,t)
-	| meta_pol (Pnode(h,l)) = foldl(fn(a,ht) => mk_comb(ht,meta_pol a)) h l
+        | meta_pol (Pnode(h,l)) = foldl(fn(a,ht) => mk_comb(ht,meta_pol a)) h l
 
       fun non_trivial (Pvar _) =
-	    raise QUOTE_ERR "meta_expr" "unrecognized polynomial expression"
-	| non_trivial p = p
+            raise QUOTE_ERR "meta_expr" "unrecognized polynomial expression"
+        | non_trivial p = p
 
       val mpol = meta_pol  o  non_trivial  o  meta_rec
       val mk_map = get_map ty
 
       fun meta_list lt =
         let val _ = empty_map()
-	    val lmt = map mpol lt
-	    val mm = mk_map()
-  	in {Metamap=mm,Poly=lmt} end
+            val lmt = map mpol lt
+            val mm = mk_map()
+        in {Metamap=mm,Poly=lmt} end
   in meta_list
   end;
 

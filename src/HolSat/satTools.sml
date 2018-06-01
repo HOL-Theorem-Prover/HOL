@@ -67,15 +67,15 @@ fun invokeSat sat_solver tm vc nr svm sva infile =
  let
       val (name,executable,notime_run,only_true,
           failure_string,start_string,end_string) =
-	 (getSolverName sat_solver,getSolverExe sat_solver,getSolverRun sat_solver,
-	  getSolverTrue sat_solver,getSolverFail sat_solver,getSolverStart sat_solver,
-	  getSolverEnd sat_solver)
+         (getSolverName sat_solver,getSolverExe sat_solver,getSolverRun sat_solver,
+          getSolverTrue sat_solver,getSolverFail sat_solver,getSolverStart sat_solver,
+          getSolverEnd sat_solver)
      val outfile    = infile ^ "." ^ name
      val run_cmd    = notime_run executable (infile,outfile)
      val code       = sat_sysl run_cmd
      val _          = if isSuccess code orelse
                          (name="minisat" orelse name="minisatp")
-		      then () (* minisat returns non-std exit code on success *)
+                      then () (* minisat returns non-std exit code on success *)
                       else print("Warning:\n Process.system reports failure \
                                  \signal returned by\n " ^ run_cmd ^ "\n")
      val ins        = TextIO.openIn outfile
@@ -90,7 +90,7 @@ fun invokeSat sat_solver tm vc nr svm sva infile =
         val model2 = if only_true
                       then model1 @
                            (map (fn n => 0-n)
-				(subtract (map snd (snd(dimacsTools.showSatVarMap svm))) model1))
+                                (subtract (map snd (snd(dimacsTools.showSatVarMap svm))) model1))
                      else model1
     in let val model3 = SOME(map (dimacsTools.intToLiteral sva) model2)
         in model3 end

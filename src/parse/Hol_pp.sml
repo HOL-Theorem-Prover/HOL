@@ -289,8 +289,8 @@ fun data_to_string (((th,name),(thm,cl)):data) =
 let
    open PPBackEnd Parse
    val cl_s = if cl = Thm then "THEOREM" else
-	   if cl = Axm then "AXIOM" else
-	   "DEFINITION";
+           if cl = Axm then "AXIOM" else
+           "DEFINITION";
    val name_style = add_style_to_string [Bold] name
 
    val s = th^"Theory."^name^" ("^cl_s^")\n";

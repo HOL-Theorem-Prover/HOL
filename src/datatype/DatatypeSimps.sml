@@ -397,7 +397,7 @@ fun congs thms = SSFRAG
 
 fun case_cong_typeinfos_ss til =
   simpLib.merge_ss [congs (Lib.mapfilter mk_case_cong_thm_tyinfo til),
-		    type_rewrites_typeinfos_ss til]
+                    type_rewrites_typeinfos_ss til]
 
 fun case_cong_ss tyL = case_cong_typeinfos_ss (tyinfos_of_tys tyL)
 

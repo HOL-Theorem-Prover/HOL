@@ -36,7 +36,7 @@ local
     | insert a b (x::xs, y::ys) = if a = x
         then (x::xs, b::ys)
         else (
-	let val (X, Y) = insert a b (xs, ys)
+        let val (X, Y) = insert a b (xs, ys)
         in (x::X, y::Y) end)
 in
   fun register_type(a, b) = K () (types := insert a b (!types))
@@ -378,7 +378,7 @@ val option_retrieve_map_thm = prove(``!f g.
 >> (TRY GEN_TAC) >> BETA_TAC
 >> CONV_TAC (REWR_CONV FUN_EQ_THM) >> GEN_TAC
 >> simp[option_map_def,
-	optionTheory.OPTION_MAP_DEF, option_retrieve_def]);
+        optionTheory.OPTION_MAP_DEF, option_retrieve_def]);
 
 (*val option_map_1 = prove(``option_map I = I``,
    RW_HELP_TAC THEN simp[option_map_def, sumTheory.SUM_MAP_def]
@@ -440,8 +440,8 @@ val inj_constr_thm = prove(
 ``!f g. (inj_pair f g) ==> (INJ (\t pi. case pi of
          []    => (f t, 0)
        | p::ps => (case (g t p) of
-		     NONE => (ARB, 0)
-		   | SOME c => (case c ps of (r, n) => (r, SUC n)
+                     NONE => (ARB, 0)
+                   | SOME c => (case c ps of (r, n) => (r, SUC n)
 ))))
 ``, REPEAT GEN_TAC
 >> simp[INJ_def, inj_pair_def, FUN_EQ_THM]

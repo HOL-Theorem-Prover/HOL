@@ -154,15 +154,15 @@ local
     | expand_msg dpth (GSTK{prop, final, stack as {goals, ...}::_}) =
        let val dpth' = length stack
        in if dpth' > dpth
-	  then if (dpth+1 = dpth')
-	       then add_string_cr
-		     (case (length goals)
-		       of 0 => imp_err "1"
-			| 1 => "1 subgoal:"
-			| n => (int_to_string n)^" subgoals:")
-	       else imp_err "2"
-	  else cr_add_string_cr "Remaining subgoals:"
-	       end
+          then if (dpth+1 = dpth')
+               then add_string_cr
+                     (case (length goals)
+                       of 0 => imp_err "1"
+                        | 1 => "1 subgoal:"
+                        | n => (int_to_string n)^" subgoals:")
+               else imp_err "2"
+          else cr_add_string_cr "Remaining subgoals:"
+               end
     | expand_msg _ _ = imp_err "3" ;
 in
 fun expandf _ (GSTK{prop=PROVED _, ...}) =

@@ -688,7 +688,7 @@ val PERM_RTC = store_thm ("PERM_RTC",
     ``PERM = RTC PERM_SINGLE_SWAP``,
 
 REWRITE_TAC[GSYM (CONJUNCT2 (SIMP_RULE std_ss [FORALL_AND_THM] TC_RC_EQNS)),
-	    PERM_TC] THEN
+            PERM_TC] THEN
 AP_TERM_TAC THEN
 SIMP_TAC std_ss [RC_DEF, FUN_EQ_THM] THEN
 PROVE_TAC[PERM_SINGLE_SWAP_REFL]);
@@ -709,7 +709,7 @@ PROVE_TAC[PERM_REFL]);
 val PERM_lift_TC_RULE =
   (GEN_ALL o
    SIMP_RULE std_ss [GSYM PERM_TC, PERM_SINGLE_SWAP_DEF, GSYM LEFT_FORALL_IMP_THM,
-		     GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM] o
+                     GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM] o
    Q.ISPEC `PERM_SINGLE_SWAP` o
    Q.GEN `R`);
 
@@ -750,7 +750,7 @@ val PERM_EQUIVALENCE_ALT_DEF = store_thm(
 "PERM_EQUIVALENCE_ALT_DEF",
 ``!x y. PERM x y = (PERM x = PERM y)``,
 SIMP_TAC std_ss [GSYM ALT_equivalence,
-		 PERM_EQUIVALENCE]);
+                 PERM_EQUIVALENCE]);
 
 val ALL_DISTINCT_PERM = store_thm ("ALL_DISTINCT_PERM",
    ``!l1 l2. PERM l1 l2 ==> (ALL_DISTINCT l1 = ALL_DISTINCT l2)``,
@@ -1008,7 +1008,7 @@ val PERM_FUN_SWAP_AT_FRONT = store_thm (
 "PERM_FUN_SWAP_AT_FRONT",
 ``!x y l. PERM (x::y::l) = PERM (y::x::l)``,
 REWRITE_TAC[GSYM PERM_EQUIVALENCE_ALT_DEF,
-	    PERM_SWAP_AT_FRONT, PERM_REFL]);
+            PERM_SWAP_AT_FRONT, PERM_REFL]);
 
 val PERM_FUN_CONS_11_SWAP_AT_FRONT = store_thm (
 "PERM_FUN_CONS_11_SWAP_AT_FRONT",
@@ -1147,10 +1147,10 @@ val PART3_DEF = Define `
     (PART3 R h [] = ([],[],[])) /\
     (PART3 R h (hd::tl) =
          if R h hd /\ R hd h
-	    then (I ## CONS hd ## I) (PART3 R h tl)
-	    else if R hd h
+            then (I ## CONS hd ## I) (PART3 R h tl)
+            else if R hd h
                     then (CONS hd ## I ## I) (PART3 R h tl)
-		    else (I ## I ## CONS hd) (PART3 R h tl))`;
+                    else (I ## I ## CONS hd) (PART3 R h tl))`;
 
 val LENGTH_FILTER =
   prove(``!a. LENGTH (FILTER P a) <= LENGTH a``,
@@ -1181,7 +1181,7 @@ val PART3_FILTER =
 val QSORT3_DEF = tDefine "QSORT3" `
     (QSORT3 R [] = []) /\
     (QSORT3 R (hd::tl) =
-    	let (lo,eq,hi) = PART3 R hd tl
+        let (lo,eq,hi) = PART3 R hd tl
         in QSORT3 R lo ++ (hd::eq) ++ QSORT3 R hi)`
   (WF_REL_TAC `measure (LENGTH o SND)` THEN
    RW_TAC arith_ss [PART3_FILTER, length_lem]);

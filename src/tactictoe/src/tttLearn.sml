@@ -17,6 +17,8 @@ val ERR = mk_HOL_ERR "tttLearn"
  * Abstracting theorem list in tactics
  *----------------------------------------------------------------------------*)
 
+(* Unsafe
+
 val thm_cache = ref (dempty String.compare)
 
 fun is_thm_cache s =
@@ -25,33 +27,56 @@ fun is_thm_cache s =
     thm_cache := dadd s b (!thm_cache);
     b
   end
+*)
 
 val thmlarg_placeholder = "tactictoe_thmlarg"
 
 fun is_thmlarg_stac stac = mem thmlarg_placeholder (ttt_lex stac)
 
-fun change_thml el e =
-  if is_thm_cache (String.concatWith " " e)
-  then SOME ["[",thmlarg_placeholder,"]"]
-  else NONE
+fun change_thml thml = case thml of
+    [] => NONE
+  | a :: m =>
+    (
+    if is_thm (String.concatWith " " a)
+    then SOME thml 
+    else NONE
+    )
 
-fun abstract_thmlarg_loop l = case l of
+fun abstract_thmlarg_loop thmlacc l = case l of
     []       => []
   | "[" :: m =>
-    let val (el,cont) = split_level "]" m
-        val e = fst (split_level "," el) handle _ => el
+    let 
+      val (el,cont) = split_level "]" m
+      val thml = rpt_split_level "," el
     in
-      case change_thml el e of
-        NONE => "[" :: abstract_thmlarg_loop m
-      | SOME x => x @ abstract_thmlarg_loop cont
+      case change_thml thml of
+        NONE => "[" :: abstract_thmlarg_loop thmlacc m
+      | SOME x => 
+        (
+        thmlacc := map (String.concatWith " ") thml :: !thmlacc;
+        ["[",thmlarg_placeholder,"]"] @ 
+          abstract_thmlarg_loop thmlacc cont
+        )
     end
-  | a :: m => a :: abstract_thmlarg_loop m
+  | a :: m => a :: abstract_thmlarg_loop thmlacc m
+
+fun pe_abs stac =
+  let 
+    val sl1  = ttt_lex stac
+    val lref = ref []
+    val sl2  = abstract_thmlarg_loop lref sl1
+  in
+    (
+    String.concatWith " " sl2, 
+    map (List.mapPartial thm_of_sml) (List.rev (!lref))
+    )
+  end  
 
 fun abstract_thmlarg stac =
   if is_thmlarg_stac stac then stac else
   let
     val sl1 = ttt_lex stac
-    val sl2 = abstract_thmlarg_loop sl1
+    val sl2 = abstract_thmlarg_loop (ref []) sl1
   in
     if sl2 = sl1 then stac else String.concatWith " " sl2
   end

@@ -3,7 +3,7 @@ struct
 
 open HolKernel Parse Feedback
 
-local open state_transformerTheory oneTheory in end
+local open oneTheory in end
 
 val monadseq_special = "__monad_sequence"
 val monad_emptyseq_special = "__monad_emptyseq"

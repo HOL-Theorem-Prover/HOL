@@ -89,13 +89,24 @@ a \HOL{} identifier can be of two forms:
 \begin{verbatim}
   #  ?  +  *  /  \  =  <  >  &  %  @  !  :  |  -  ^  `
 \end{verbatim}
-  Use of the caret and back-tick characters is complicated by the fact
-  that these characters have special meaning in the quotation
-  mechanism; see Section~\ref{sec:quotation-antiquotation}.  The ASCII
-  grouping symbols (braces, brackets, and parentheses), and the
-  tilde~(\holtxt{\symbol{126}}), full-stop~(\holtxt{.}),
-  comma~(\holtxt{,}), semi-colon~(\holtxt{;}) and hyphen~(\holtxt{-})
-  characters are called \emph{non-aggregating} characters. %
+
+  Use of the caret and back-tick characters is complicated by the fact that these characters have special meaning in the quotation mechanism; see Section~\ref{sec:quotation-antiquotation}.
+  The dollar-sign (\texttt{\dol})%
+\index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!as identifier-constituent}
+  can also be used to form symbolic identifiers, but only in tokens where it is the only symbol.
+  Thus, \texttt{\dol}, \texttt{\dol\dol}, and \texttt{\dol\dol\dol} will all lex as identifiers.
+
+  This restriction arises because of the other uses to which the dollar sign is put:
+  \begin{itemize}
+    \item The dollar can be used as an escaping mechanism to remove special syntactic treatment of other identifiers.
+      Thus, \holtxt{\dol+} and \holtxt{\dol{}if} are effectively special forms of the tokens \holtxt{+} and \holtxt{if} respectively.%
+      \index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!as escape character}
+    \item Finally, the dollar can also be used as a namespace separator character, giving unambiguous ``long form'' identifiers.
+      For example, the token \holtxt{bool\dol{}COND} is an unambiguous way of writing the \holtxt{COND} constant from theory segment \theoryimp{bool}.
+      \index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!generating qualified identifiers}
+  \end{itemize}
+
+  The ASCII grouping symbols (braces, brackets, and parentheses), and the tilde~(\holtxt{\symbol{126}}), full-stop~(\holtxt{.}), comma~(\holtxt{,}), semi-colon~(\holtxt{;}) and hyphen~(\holtxt{-}) characters are called \emph{non-aggregating} characters. %
 %
   \index{identifiers, in HOL logic@identifiers, in \HOL{} logic!non-aggregating characters}%
 %
@@ -136,7 +147,7 @@ form feed ({\verb+^+}L, 12)
 \paragraph{Special identifiers}
 
 The following valid identifiers are used by the grammar in the theory
-of booleans, and thus in all descendent theories as well.  They should
+of booleans, and thus in all descendant theories as well.  They should
 not be used as the name of a variable or a constant unless the user is
 very confident of their ability to mess with grammars.
 %
@@ -680,16 +691,12 @@ val it =
 
 \subsection{Namespace control}
 
-In order to provide convenience, the parser deals with overloading and
-ambiguity. Overloading of numeric literals is discussed in
-Section~\ref{arith-overloading}, although any symbol may be
-overloaded, not just numerals. At times such flexibility is quite
-useful; however, it can happen that one wishes to explicitly designate
-a particular constant. In that case, the notation
-$\mathit{thy}\holtxt{\$}\mathit{const}$ may be used in the parser to
-designate the constant $\mathit{const}$ declared in theory
-$\mathit{thy}$. In the following example, the less-than operator is
-explicitly specified.
+\index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!generating qualified identifiers}
+In order to provide convenience, the parser deals with overloading and ambiguity.
+Overloading of numeric literals is discussed in Section~\ref{arith-overloading}, although any symbol may be overloaded, not just numerals.
+At times such flexibility is quite useful; however, it can happen that one wishes to explicitly designate a particular constant.
+In that case, the notation $\mathit{thy}\holtxt{\$}\mathit{const}$ may be used in the parser to designate the constant $\mathit{const}$ declared in theory $\mathit{thy}$.
+In the following example, the less-than operator is explicitly specified.
 
 \setcounter{sessioncount}{0}
 \begin{session}

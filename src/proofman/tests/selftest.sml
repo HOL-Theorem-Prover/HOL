@@ -3,9 +3,16 @@ open testutils
 
 val _ = set_trace "Unicode" 0
 
-val _ = tprint "test of flatn"
 val _ = goalStack.chatting := false
 
+val _ = tprint "Type parsing with newlines"
+val ty = ``:
+   'a
+``;
+val _ = if Type.compare(ty,Type.alpha) = EQUAL then OK()
+        else die ("\nFAILED: got (" ^ type_to_string ty ^ ")")
+
+val _ = tprint "test of flatn"
 val _ = let
     val g = ([], ``a ==> b ==> c ==> d ==> e ==> a /\ b /\ c /\ d /\ e``) : goal
     val gstk = new_goal g Lib.I ;
@@ -155,8 +162,18 @@ val _ = List.app testf [
  \     ")
 ]
 
-val _ = testutils.linewidth := 20
 val _ = Parse.current_backend := PPBackEnd.raw_terminal
 
+val _ = app tpp ["f\n\
+                 \  (let\n\
+                 \     x = long expression ;\n\
+                 \     y = long expression ;\n\
+                 \     z = long expression\n\
+                 \   in\n\
+                 \     x /\\ y /\\ z)"]
+
+val _ = testutils.linewidth := 20
+
 val _ = app tpp ["f\n  (longterm =\n   longterm)",
-                 "f\n  (term001 = term002)"]
+                 "f\n  (term001 = term002)"
+                 ]

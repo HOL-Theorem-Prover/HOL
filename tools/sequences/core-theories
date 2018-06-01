@@ -31,8 +31,8 @@ src/datatype/equiv
 src/datatype/record
 src/datatype
 !src/datatype/theory_tests
-src/list/src
 src/monad
+src/list/src
 src/quantHeuristics
 src/unwind
 src/pattern_matches

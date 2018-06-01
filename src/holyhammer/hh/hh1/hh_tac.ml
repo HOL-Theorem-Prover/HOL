@@ -12,6 +12,9 @@ open Bool;;
 open Equal;;
 (*open Theorems;;*)
 
+(* flag for thf *)
+let main_thf_flag = ref false
+
 (* Given a predicate as an argument of another predicate, the
   conversion pRED_ARG_CONV changes it to an equivalent expression
   that has the predicate only at top level, so it can be encoded
@@ -215,9 +218,14 @@ let is_letter c =
    (for example the sytem may name them "'a" which clash with our
     escaping method'word')
 *)
-let escape_var s = 
+let escape_tyvar s = 
   let s1 = escape_to_hex s in "V" ^ s1
 
+let escape_var s = 
+  if !main_thf_flag 
+    then let s1 = escape_to_hex s in "v" ^ s1
+    else let s1 = escape_to_hex s in "V" ^ s1
+    
 let escape_const s = let s1 = escape_to_hex s in "c" ^ s1
 
 let escape_thm s = 

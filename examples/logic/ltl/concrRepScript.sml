@@ -545,10 +545,10 @@ val concr2AbstrAA_def = Define`
   concr2AbstrAA (concrAA g init prop) =
     ALTER_A
         (concr2Abstr_states g)
-        (concr2Abstr_init init g)
-        (concr2Abstr_final g)
         (POW (LIST_TO_SET prop))
-        (concrTrans g (set prop))`;
+        (concrTrans g (set prop))
+        (concr2Abstr_init init g)
+        (concr2Abstr_final g)`;
 
 val graphStatesWithId_def = Define`
   graphStatesWithId g =

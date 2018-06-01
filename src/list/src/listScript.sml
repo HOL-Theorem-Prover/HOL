@@ -170,7 +170,7 @@ val _ = set_fixity "++" (Infixl 480);
 val _ = overload_on ("++", Term`APPEND`);
 val _ = Unicode.unicode_version {u = UnicodeChars.doubleplus, tmnm = "++"}
 val _ = TeX_notation { hol = UnicodeChars.doubleplus,
-		       TeX = ("\\HOLTokenDoublePlus", 1) }
+                       TeX = ("\\HOLTokenDoublePlus", 1) }
 
 val FLAT = new_recursive_definition
       {name = "FLAT",
@@ -261,17 +261,17 @@ val EL = new_recursive_definition
 
 
 (* ---------------------------------------------------------------------*)
-(* Definition of a function 						*)
-(*									*)
-(*   MAP2 : ('a -> 'b -> 'c) -> 'a list ->  'b list ->  'c list		*)
-(* 									*)
-(* for mapping a curried binary function down a pair of lists:		*)
-(* 									*)
-(* |- (!f. MAP2 f[][] = []) /\						*)
-(*   (!f h1 t1 h2 t2.							*)
-(*      MAP2 f(h1::t1)(h2::t2) = CONS(f h1 h2)(MAP2 f t1 t2))	*)
-(* 									*)
-(* [TFM 92.04.21]							*)
+(* Definition of a function                                             *)
+(*                                                                      *)
+(*   MAP2 : ('a -> 'b -> 'c) -> 'a list ->  'b list ->  'c list         *)
+(*                                                                      *)
+(* for mapping a curried binary function down a pair of lists:          *)
+(*                                                                      *)
+(* |- (!f. MAP2 f[][] = []) /\                                          *)
+(*   (!f h1 t1 h2 t2.                                                   *)
+(*      MAP2 f(h1::t1)(h2::t2) = CONS(f h1 h2)(MAP2 f t1 t2))   *)
+(*                                                                      *)
+(* [TFM 92.04.21]                                                       *)
 (* ---------------------------------------------------------------------*)
 
 val MAP2_DEF = dDefine`
@@ -311,7 +311,7 @@ val FIND_def = Define `FIND P = OPTION_MAP SND o INDEX_FIND 0 P`
 val INDEX_OF_def = Define `INDEX_OF x = OPTION_MAP FST o INDEX_FIND 0 ($= x)`
 
 (* ---------------------------------------------------------------------*)
-(* Proofs of some theorems about lists.					*)
+(* Proofs of some theorems about lists.                                 *)
 (* ---------------------------------------------------------------------*)
 
 val NULL = store_thm ("NULL",
@@ -500,8 +500,8 @@ val EVERY_EL = store_thm ("EVERY_EL",
        REPEAT STRIP_TAC THENL
        [POP_ASSUM (MP_TAC o (SPEC (“0”))) THEN
         REWRITE_TAC [LESS_0, EL, HD],
-	POP_ASSUM ((ANTE_RES_THEN ASSUME_TAC) o (MATCH_MP LESS_MONO)) THEN
-	POP_ASSUM MP_TAC THEN REWRITE_TAC [EL, TL]]]);
+        POP_ASSUM ((ANTE_RES_THEN ASSUME_TAC) o (MATCH_MP LESS_MONO)) THEN
+        POP_ASSUM MP_TAC THEN REWRITE_TAC [EL, TL]]]);
 
 val EVERY_CONJ = store_thm("EVERY_CONJ",
  “!P Q l. EVERY (\(x:'a). (P x) /\ (Q x)) l = (EVERY P l /\ EVERY Q l)”,
@@ -873,7 +873,7 @@ val FILTER_EQ_NIL = Q.store_thm
  `!P l. (FILTER P l = []) = (EVERY (\x. ~(P x)) l)`,
  GEN_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC THEN (
     ASM_SIMP_TAC bool_ss [FILTER, EVERY_DEF, COND_RATOR, COND_RAND,
-			  NOT_CONS_NIL]
+                          NOT_CONS_NIL]
  ));
 
 val FILTER_NEQ_NIL = Q.store_thm
@@ -918,7 +918,7 @@ EQ_TAC THEN REPEAT STRIP_TAC THENL [
     FULL_SIMP_TAC bool_ss [APPEND, CONS_11],
     Q.EXISTS_TAC `l'` THEN Q.EXISTS_TAC `l2` THEN
     FULL_SIMP_TAC bool_ss [CONS_11, APPEND, FILTER, COND_RATOR,
-			   COND_RAND, NOT_CONS_NIL]
+                           COND_RAND, NOT_CONS_NIL]
   ]
 ]);
 
@@ -956,11 +956,11 @@ ASM_SIMP_TAC bool_ss [FILTER] THENL [
 
         Tactical.REVERSE (Cases_on `l3`) THEN1 (
            FULL_SIMP_TAC bool_ss [CONS_11, FILTER, APPEND,
-	                          COND_RAND, COND_RATOR, NOT_CONS_NIL]
+                                  COND_RAND, COND_RATOR, NOT_CONS_NIL]
         ) THEN
         Cases_on `l4` THEN (
           FULL_SIMP_TAC bool_ss [FILTER, NOT_CONS_NIL, APPEND,
-	                         COND_RATOR, COND_RAND, CONS_11] THEN
+                                 COND_RATOR, COND_RAND, CONS_11] THEN
           PROVE_TAC[]
         )
       ]
@@ -973,7 +973,7 @@ ASM_SIMP_TAC bool_ss [FILTER] THENL [
 
        Cases_on `l3` THEN (
          FULL_SIMP_TAC bool_ss [APPEND, FILTER, NOT_CONS_NIL, FILTER, CONS_11,
-			        COND_RAND, COND_RATOR] THEN
+                                COND_RAND, COND_RATOR] THEN
          PROVE_TAC[]
        )
     ]
@@ -2176,10 +2176,10 @@ val ALL_DISTINCT_SET_TO_LIST = store_thm("ALL_DISTINCT_SET_TO_LIST",
   REPEAT STRIP_TAC THEN
   IMP_RES_TAC SET_TO_LIST_THM THEN
   `FINITE (REST s)` by PROVE_TAC[pred_setTheory.FINITE_DELETE,
-				 pred_setTheory.REST_DEF] THEN
+                                 pred_setTheory.REST_DEF] THEN
   Cases_on `s = EMPTY` THEN
   FULL_SIMP_TAC bool_ss [ALL_DISTINCT, MEM_SET_TO_LIST,
-			 pred_setTheory.CHOICE_NOT_IN_REST]);
+                         pred_setTheory.CHOICE_NOT_IN_REST]);
 val _ = export_rewrites ["ALL_DISTINCT_SET_TO_LIST"];
 
 val ITSET_eq_FOLDL_SET_TO_LIST = Q.store_thm(
@@ -3006,6 +3006,7 @@ val LIST_BIND_LIST_BIND = store_thm(
   ``LIST_BIND (LIST_BIND l g) f = LIST_BIND l (combin$C LIST_BIND f o g)``,
   Induct_on `l` THEN ASM_SIMP_TAC (srw_ss()) [LIST_BIND_APPEND]);
 
+val LIST_GUARD_def = Define‘LIST_GUARD b = if b then [()] else []’;
 
 (* the "return" or "pure" constant for lists isn't an existing one, unlike
    the situation with 'a option, where SOME fits the bill. *)
@@ -3664,13 +3665,13 @@ val UNIQUE_DEF = new_definition ("UNIQUE_DEF",
   ``UNIQUE e L = ?L1 L2. (L1 ++ [e] ++ L2 = L) /\ ~MEM e L1 /\ ~MEM e L2``);
 
 local
-    fun take ts = MAP_EVERY Q.EXISTS_TAC ts;	(* from HOL mizar mode *)
-    val Know = Q_TAC KNOW_TAC;			(* from util_prob *)
-    val Suff = Q_TAC SUFF_TAC;			(* from util_prob *)
-    fun K_TAC _ = ALL_TAC;			(* from util_prob *)
-    val KILL_TAC = POP_ASSUM_LIST K_TAC;	(* from util_prob *)
-    fun wrap a = [a];				(* from util_prob *)
-    val Rewr = DISCH_THEN (REWRITE_TAC o wrap);	(* from util_prob *)
+    fun take ts = MAP_EVERY Q.EXISTS_TAC ts;    (* from HOL mizar mode *)
+    val Know = Q_TAC KNOW_TAC;                  (* from util_prob *)
+    val Suff = Q_TAC SUFF_TAC;                  (* from util_prob *)
+    fun K_TAC _ = ALL_TAC;                      (* from util_prob *)
+    val KILL_TAC = POP_ASSUM_LIST K_TAC;        (* from util_prob *)
+    fun wrap a = [a];                           (* from util_prob *)
+    val Rewr = DISCH_THEN (REWRITE_TAC o wrap); (* from util_prob *)
 in
 (* alternative definition of UNIQUE, by Chun Tian (binghe) *)
 val UNIQUE_FILTER = store_thm (
@@ -3683,18 +3684,18 @@ val UNIQUE_FILTER = store_thm (
       REWRITE_TAC [FILTER_APPEND_DISTRIB] \\
       Know `((FILTER ($= e) L1) = []) /\ ((FILTER ($= e) L2) = [])`
       >- ( REWRITE_TAC [GSYM NULL_EQ] \\
-	   REWRITE_TAC [NULL_FILTER] \\
-	   rpt STRIP_TAC >> FULL_SIMP_TAC arith_ss [] ) \\
+           REWRITE_TAC [NULL_FILTER] \\
+           rpt STRIP_TAC >> FULL_SIMP_TAC arith_ss [] ) \\
       Rewr \\
       REWRITE_TAC [APPEND, APPEND_NIL, FILTER],
       (* goal 2 (of 2) *)
       Know `MEM e L`
       >- ( `FILTER ($= e) L <> []` by PROVE_TAC [NOT_CONS_NIL] \\
-	   FULL_SIMP_TAC arith_ss [FILTER_NEQ_NIL] ) \\
+           FULL_SIMP_TAC arith_ss [FILTER_NEQ_NIL] ) \\
       REWRITE_TAC [MEM_SPLIT] >> rpt STRIP_TAC \\
       take [`l1`, `l2`] >> FULL_SIMP_TAC arith_ss [] \\
       CONJ_TAC >- ( KILL_TAC >> REWRITE_TAC [GSYM APPEND_ASSOC] \\
-		    SIMP_TAC arith_ss [APPEND, APPEND_11] ) \\
+                    SIMP_TAC arith_ss [APPEND, APPEND_11] ) \\
       POP_ASSUM K_TAC \\
       POP_ASSUM MP_TAC \\
       SIMP_TAC arith_ss [FILTER_APPEND_DISTRIB, FILTER] \\
@@ -3884,5 +3885,13 @@ fun dest_list M =
     of NONE => if same_const nil_tm M then []
                else raise ERR "dest_list" "not terminated with nil"
      | SOME(h,t) => h::dest_list t
+
+val _ =
+    monadsyntax.declare_monad (
+      "list",
+      { bind = “LIST_BIND”, ignorebind = SOME “LIST_IGNORE_BIND”,
+        unit = “SINGL”, choice = SOME “APPEND”, fail = SOME “[]”,
+        guard = SOME “LIST_GUARD” }
+    )
 
 val _ = export_theory();

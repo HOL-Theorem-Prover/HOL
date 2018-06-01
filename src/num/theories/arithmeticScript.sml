@@ -1631,10 +1631,10 @@ val SUB_RIGHT_EQ = store_thm ("SUB_RIGHT_EQ",
 val LE = save_thm ("LE",
    CONJ LESS_EQ_0
       (prove(“(!m n. m <= SUC n = (m = SUC n) \/ m <= n)”,
-	REPEAT GEN_TAC THEN
-	CONV_TAC (DEPTH_CONV (LHS_CONV (REWR_CONV LESS_OR_EQ))) THEN
-	REWRITE_TAC [GSYM LESS_EQ_IFF_LESS_SUC] THEN
-	MATCH_ACCEPT_TAC DISJ_COMM))) ;
+        REPEAT GEN_TAC THEN
+        CONV_TAC (DEPTH_CONV (LHS_CONV (REWR_CONV LESS_OR_EQ))) THEN
+        REWRITE_TAC [GSYM LESS_EQ_IFF_LESS_SUC] THEN
+        MATCH_ACCEPT_TAC DISJ_COMM))) ;
 
 val _ = print "Proving division\n"
 
