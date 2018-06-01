@@ -1,15 +1,7 @@
 CLINE_OPTIONS = --no_overlay
 
-OBJ_FILES = holpathdb.uo holpathdb.ui Arbnumcore.uo Arbnumcore.ui \
+OBJ_FILES = Arbnumcore.uo Arbnumcore.ui \
             Arbintcore.uo Arbintcore.ui MLSYSPortable.uo PrettyImpl.uo \
 	    CoreReplVARS.uo
 
 all: $(OBJ_FILES)
-
-holpathdb.uo: holpathdb.ui
-
-holpathdb.sig: $(dprot $(HOLDIR)/tools/Holmake/holpathdb.sig)
-	$(CP) $< $@
-
-holpathdb.sml: $(dprot $(HOLDIR)/tools/Holmake/holpathdb.sml)
-	$(CP) $< $@
