@@ -64,11 +64,8 @@ Turing mahines consist of
     If total then just recursive
                            *)
 
-val B_def = Define`B = {0n;1}`;
-
 
 (* union n=0^inf {0,1}^n *)
-val Bstar_def = Define`Bstar =univ(:bool list)`;
 
 (*
 I guess in this case out p could be a num?
@@ -96,8 +93,6 @@ val prefix_def = Define`prefix a b <=> a≼b ∧ a <> b`
 
 val is_universal_tm_def = Define`is_universal_tm t <=>
 		∀i. ∀p q. (t i q <> NONE) ∧ (t i p <> NONE)==> ¬(prefix q p)∧¬(prefix p q)`
-
-val universal_tm_def = new_constant ("universal_tm",``:bool list -> bool list option``)
 
 val num_to_bool_list_def = tDefine"num_to_bool_list"`num_to_bool_list n =
 		   if n=0 then []
@@ -156,6 +151,7 @@ val wenc_def = Define`
 
 val bldemunge_def = Define`
   (bldemunge m [] = (bl2n (REVERSE m),0n)) ∧
+  (bldemunge m [F] = (bl2n (REVERSE m),0)) ∧
   (bldemunge m (T::t) = bldemunge (T::m) t) ∧
   (bldemunge m (F::T::t) = bldemunge (F::m) t )∧
   (bldemunge m (F::F::t) = (bl2n (REVERSE m),bl2n t ))`
@@ -187,42 +183,91 @@ val blist_of_def = Define`blist_of bl = nlist_of (MAP (λb. if b then 1 else 0) 
 val n2bl'_def = Define`n2bl' n = blist_of (n2bl n)`
 
 val pr_n2bl'_def = Define`pr_n2bl' = 
-Cn (pr2 nel) [proj 0;Pr1 (ncons 0 0) 
-    (Cn (pr2 napp) [
-       proj 1;
-       Cn (pr2 ncons) [
-         pr_cond (Cn pr_eq [Cn pr_mod [proj 0;K 2];zerof])
-                 (Cn (pr2 ncons) [zerof;Cn (pr2 nel) [Cn pr_div [proj 0;K 2];proj 1]]) 
-		 (Cn (pr2 ncons) [K 1;Cn (pr2 nel) [Cn pr_div [proj 0;K 2];proj 1]]);
-	 zerof
-       ]
-    ])]`
+  WFM (λf n. if n=0 then 0 
+             else if EVEN n then ncons 1 (f ((n-2) DIV 2)) 
+             else ncons 0 (f ((n-1) DIV 2)))`
 
-(* 
+val lem = Q.prove(`2*x DIV 2 = x`,metis_tac[MULT_DIV,MULT_COMM,DECIDE``0n < 2``])
+val _ = augment_srw_ss[rewrites[lem]]
 
-val pr_n2bl'_thm = Q.store_thm("pr_n2bl'_thm",
-`pr_n2bl' [n] = n2bl' n`,simp[pr_n2bl'_def] >> completeInduct_on `n` >> 
-  Cases_on `n` >> simp[n2bl'_def,blist_of_def,Once num_to_bool_list_def] >> )
+val lem' = Q.prove(`EVEN (n+1) ==> (n-1) DIV 2 <= n`, rw[EVEN_EXISTS] >> Cases_on `m` >> 
+  fs[ADD1,LEFT_ADD_DISTRIB] >> `n=2*n'+1` by simp[] >> rw[])
+
+val lem'' = Q.prove(`~EVEN (n+1) ==> n DIV 2 <= n`, rw[GSYM ODD_EVEN,ODD_EXISTS] >> 
+  fs[ADD1,LEFT_ADD_DISTRIB])
+
+
+val pr_n2bl'_corr = Q.store_thm("pr_n2bl'_corr",`pr_n2bl' [n] = n2bl' n`,
+  simp[n2bl'_def,pr_n2bl'_def] >> completeInduct_on `n` >> simp[Once WFM_correct] >> 
+  simp[Once num_to_bool_list_def,SimpRHS] >> rw[blist_of_def] 
+    >- (fs[EVEN_EXISTS] >> Cases_on `m` >> fs[] >> rw[] >> fs[ADD1,LEFT_ADD_DISTRIB] )
+    >- (fs[GSYM ODD_EVEN,ODD_EXISTS] >> rw[] >> fs[ADD1])  )
+
+val pr_cn = List.nth (CONJUNCTS primrec_rules,3)
+
+val primrec_pr_n2bl' = Q.store_thm("primrec_pr_n2bl'",`primrec pr_n2bl' 1`,
+  simp[pr_n2bl'_def] >> irule primrec_WFM >> simp[restr_def] >> irule primrec_pr2 >> 
+  simp[lem',lem'']>>
+  qexists_tac`pr_cond (Cn (pr1 (nB o EVEN o SUC)) [proj 0]) 
+    (Cn (pr2 ncons) [K 1;Cn (pr2 nel) [Cn (pr_div) [Cn (pr2 $-) [proj 0;K 1];K 2];proj 1] ]  ) 
+    (Cn (pr2 ncons) [K 0;Cn (pr2 nel) [Cn (pr_div) [proj 0;K 2];proj 1] ])` >> 
+  simp[pr_cond_def] >> reverse (rpt strip_tac) 
+    >- (simp[ADD1] >> Cases_on `(EVEN (m+1))` >>simp[]) >> irule pr_cn >> simp[primrec_rules] >>
+  conj_tac >- (irule pr_cn >> simp[primrec_rules] >> irule primrec_pr1 >> simp[] >> 
+               qexists_tac `Cn pr_eq [Cn pr_mod [proj 0;K 2];K 1]` >> 
+               simp[EVEN,MOD_2, TypeBase.case_eq_of ``:bool``] >> simp[primrec_rules] ) 
+           >- (irule pr_cn >> simp[primrec_rules])   )
+
+
+val pr_bldemunge_def = Define`pr_bldemunge m = FST (bldemunge []  m) *, SND (bldemunge []  m)`
+
+val bld_def = Define`(bld [] = (0n,0)) ∧ 
+                     (bld [F] = (0,0)) ∧
+                     (bld (T::t) = let (x,y) = bld t in (2*x+2,y)) ∧ 
+                     (bld (F::T::t) = let (x,y) = bld t in (2*x+1,y)) ∧
+                     (bld (F::F::t) = (0, bl2n t))`
+
+(* Want bl2n append
+bl2n(xs++ys) = bl2n xs + bl2n ys *2**LENGTH xs
+ *)
+
+val bl2n_append = Q.store_thm("bl2n_append",
+`∀xs ys. bl2n(xs++ys) = bl2n xs + bl2n ys *2**LENGTH xs`,
+Induct_on `xs` >> simp[bool_list_to_num_def] >> simp[LEFT_ADD_DISTRIB,EXP])
+
+val bldmunge_bld_eq = Q.store_thm("bldmunge_bld_eq",
+`∀A. bldemunge A m = let (x,y) = bld m in (bl2n (REVERSE A) + x*2**(LENGTH A),y)`,
+  completeInduct_on`LENGTH m` >> simp[bldemunge_def,bld_def] >> fs[PULL_FORALL] >> rw[] >> 
+  Cases_on`m` >> simp[bldemunge_def,bld_def] >> Cases_on `t`
+    >- (Cases_on`h` >> simp[bldemunge_def,bld_def,bl2n_append] >> simp[bool_list_to_num_def] )
+    >- (rename[`bldemunge _ (h1::h2::t)`] >> Cases_on `h1` >> 
+        simp[bldemunge_def,bld_def,bl2n_append]
+        >- (Cases_on`bld (h2::t)` >> simp[EXP,RIGHT_ADD_DISTRIB,bool_list_to_num_def]) 
+        >- (Cases_on`h2` >> simp[bld_def,bldemunge_def,bl2n_append] >> Cases_on `bld t` >>
+            simp[EXP,bool_list_to_num_def]  ) ) )
+
+(*
+(* In Process of proving   *)
 
 val universal_Phi = Q.store_thm("universal_Phi",
   `pr_is_universal (λn. let bl = n2bl n; (x,y) = bldemunge [] bl in Phi x y)`,
   simp[pr_is_universal_def] >> reverse conj_tac 
-    >- (simp[bldemunge_inv] >> qexists_tac `SOME o proj 0` >> simp[recfn_rules]) >> 
-    
-    REWRITE_TAC[GSYM recPhi_correct] >> qmatch_abbrev_tac`recfn ff 1 ` >> 
+    >- (simp[bldemunge_inv] >> qexists_tac `SOME o proj 0` >> 
+        simp[recfn_rules,bldmunge_bld_eq,bool_list_to_num_def] >> 
+        `(λ(x:num,y:num).(x,y)) = (λx.x)` by simp[FUN_EQ_THM,pairTheory.FORALL_PROD] >> simp[] >>
+        qmatch_abbrev_tac`recfn (rec1 ( λn. Pf (bld (n2bl n)) )) 1` >>
+        `(λn. Pf (bld (n2bl n) )) = 
+          λn. recCn recPhi [SOME o nfst;SOME o nsnd] [(UNCURRY npair (bld (n2bl n)) )]`  ) >> 
+    REWRITE_TAC[GSYM recPhi_correct] >> 
+
+    qmatch_abbrev_tac`recfn ff 1 ` >> 
     `ff = recCn recPhi [SOME o pr1 nfst;SOME o pr1 nsnd]` 
        by (simp[FUN_EQ_THM,Abbr`ff`] >> Cases >> simp[recCn_def,rec1_def]) >> 
     simp[Abbr`ff`] >> irule recfnCn  >> simp[primrec_recfn] >> 
     metis_tac[recfn_recPhi,recPhi_rec2Phi] )
 
-
 (* Up to here *)
 
-val universal_bff = Q.store_thm("universal_bff",
-`pr_is_universal UM_bff`,
-simp[pr_is_universal_def] >> reverse conj_tac
->- (simp[UM_bff_def])
->- () )
 
 (** Lemma 2.1.1 **)
 (**  Use univerality of phi **)
