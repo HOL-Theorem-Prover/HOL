@@ -12,6 +12,7 @@ sig
   val ttt_ortho_flag   : bool ref
   val ttt_ortho_radius : int ref
   (* abstraction *)
+  val ttt_noabs_flag     : bool ref
   val ttt_thmlarg_flag   : bool ref
   val ttt_thmlarg_radius : int ref
   val ttt_recgl_flag     : bool ref
