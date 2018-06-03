@@ -47,7 +47,7 @@ New features:
 *   Users can define their own colours for printing types, and free and bound variables when printing to ANSI terminals by using the `PPBackEnd.ansi_terminal` backend.
     (The default behaviour on what is called the `vt100_terminal` is to have free variables blue, bound variables green, type variables purple and type operators “blue-green”.)
     Thanks to Adam Nelson for this feature.
-    Configuring colours under `emacs` is done within `emacs` by configuring faces such as `hol-bound-variable`
+    Configuring colours under `emacs` is done within `emacs` by configuring faces such as `hol-bound-variable`.
 
 
 Bugs fixed:
