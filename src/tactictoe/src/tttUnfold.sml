@@ -921,6 +921,7 @@ fun output_header oc cthy =
   output_flag oc "tttSetup.ttt_evlet_flag" ttt_evlet_flag;
   output_flag oc "tttSetup.eprover_eval_flag" eprover_eval_flag;
   output_flag oc "tttSetup.eprover_save_flag" eprover_save_flag;
+  output_flag oc "tttSetup.ttt_metis_flag" ttt_metis_flag;
   (* global references *)
   osn oc ("val _ = tttTools.ttt_search_time := Time.fromReal " ^
     Real.toString (Time.toReal (!ttt_search_time)));
