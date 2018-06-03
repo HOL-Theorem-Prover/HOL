@@ -16,6 +16,9 @@ sig
   val ttt_thmlarg_flag   : bool ref
   val ttt_thmlarg_radius : int ref
   val ttt_recgl_flag     : bool ref
+  (* prediction *)
+  val ttt_randdist_flag  : bool ref
+  val ttt_covdist_flag   : bool ref
   
   (** Generating fof problems *)
   val ttt_fof_flag : bool ref

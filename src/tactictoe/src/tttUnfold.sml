@@ -914,6 +914,9 @@ fun output_header oc cthy =
   output_flag oc "tttSetup.ttt_ortho_flag" ttt_ortho_flag;
   output_flag oc "tttSetup.ttt_printproof_flag" ttt_printproof_flag;
   output_flag oc "tttSetup.ttt_noabs_flag" ttt_noabs_flag;
+  (* prediction *)
+  output_flag oc "tttSetup.ttt_randdist_flag" ttt_randdist_flag;
+  output_flag oc "tttSetup.ttt_covdist_flag" ttt_covdist_flag;
   (* evaluation *)
   output_flag oc "tttSetup.ttt_eval_flag" ttt_eval_flag;
   output_flag oc "tttSetup.ttt_termarg_flag" ttt_termarg_flag;
