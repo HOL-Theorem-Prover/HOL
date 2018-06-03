@@ -1,0 +1,4 @@
+selftest.exe: selftest.uo
+	$(MOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe

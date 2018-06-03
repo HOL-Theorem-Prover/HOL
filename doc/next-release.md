@@ -14,7 +14,7 @@ Contents
 -   [Bugs fixed](#bugs-fixed)
 -   [New theories](#new-theories)
 -   [New tools](#new-tools)
--   [Examples](#examples)
+-   [New Examples](#new-examples)
 -   [Incompatibilities](#incompatibilities)
 
 New features:
@@ -47,7 +47,7 @@ New features:
 *   Users can define their own colours for printing types, and free and bound variables when printing to ANSI terminals by using the `PPBackEnd.ansi_terminal` backend.
     (The default behaviour on what is called the `vt100_terminal` is to have free variables blue, bound variables green, type variables purple and type operators “blue-green”.)
     Thanks to Adam Nelson for this feature.
-    Configuring colours under `emacs` is done within `emacs` by configuring faces such as `hol-bound-variable`
+    Configuring colours under `emacs` is done within `emacs` by configuring faces such as `hol-bound-variable`.
 
 
 Bugs fixed:
@@ -66,7 +66,7 @@ New tools:
 New examples:
 ---------
 
-*   We have resurrected Monica Nesi’s CCS example (from the days of HOL88), ported and extended by Chun Tian (based on HOL4’s co-induction package `Hol_coreln`).
+*   We have resurrected Monica Nesi’s CCS example (from the days of HOL88, in `examples/CCS`), ported and extended by Chun Tian (based on HOL4’s co-induction package `Hol_coreln`).
     This includes all classical results of strong/weak bisimilarities and observation congruence, the theory of congruence for CCS, several versions of “bisimulation up to”,  “coarsest congruence contained in weak bisimilarity”, and “unique solution of equations” theorems, mainly from Robin Milner’s book, and Davide Sangiorgi’s “unique solutions of contractions” theorem published in 2017.
     There’s also a decision procedure written in SML for computing CCS transitions with the result automatically proved.
 
@@ -77,6 +77,8 @@ New examples:
 
 *   A theory of the basic syntax and semantics of Linear Temporal Logic formulas, along with a verified translation of such formulas into Generalised Büchi Automata *via* alternating automata (in `examples/logic/ltl`).
     This work is by Simon Jantsch.
+
+*   A theory of Lambek calculus (categorial grammars of natural or formal languages), in `examples/formal-languages/lambek`. Ported from [Coq contribs](https://github.com/coq-contribs/lambek) by Chun Tian. c.f. "The Logic of Categorial Grammars" by Richard Moot and Christian Retoré.
 
 Incompatibilities:
 ------------------

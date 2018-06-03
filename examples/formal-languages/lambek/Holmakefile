@@ -1,0 +1,33 @@
+# INCLUDES = ../context-free
+OPTIONS = QUIT_ON_FAILURE
+# CLINE_OPTIONS = -j1
+
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+EXTRA_CLEANS = heap munge.exe selftest.exe \
+	$(patsubst %Theory.uo,%Theory.html,$(TARGETS)) \
+	$(patsubst %Theory.uo,%Theory.lst,$(TARGETS))
+
+ifdef POLY
+HOLHEAP = heap
+OBJNAMES = UnicodeChars pred_setTheory arithmeticTheory pairTheory relationTheory
+DEPS = $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(OBJNAMES))
+
+all: $(HOLHEAP)
+
+$(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/bin/hol.state0)
+	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES)
+endif
+
+all: $(TARGETS) munge.exe
+
+MUNGE_DEPS = LambekTheory CutFreeTheory ExampleTheory
+
+munge.exe: $(patsubst %,%.uo,$(MUNGE_DEPS))
+	$(HOLDIR)/bin/mkmunge.exe $(MUNGE_DEPS)
+
+ifeq ($(KERNELID),otknl)
+all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+endif
+
+.PHONY: all

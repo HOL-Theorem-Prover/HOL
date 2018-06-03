@@ -1,5 +1,9 @@
-load "temporalLib"; open temporalLib;
+(* ---------------------------------------------------------------------------- *)
+(* Please set HOL4_SMV_EXECUTABLE env variable before evaluating this file,     *)
+(* Tested with NuSMV 2.6.0 by Chun Tian <ctian@fbk.eu> on May 25, 2018.         *)
+(* ---------------------------------------------------------------------------- *)
 
+load "temporalLib"; open temporalLib;
 
 (* ---------------------------------------------------------------------------- *)
 (* First, we prove that SUNTIL can be expressed by unary temporal operators     *)
@@ -8,12 +12,20 @@ load "temporalLib"; open temporalLib;
 (* and EVENTUAL, we could not define the binary temporal future operators.      *)
 (* ---------------------------------------------------------------------------- *)
 
-LTL_CONV (--`(a SUNTIL b) 0
-                = (EVENTUAL(\t. b t /\ PNEXT(PALWAYS a) t)) 0`--);
-LTL_CONV (--`(a SWHEN b) 0
-                = (EVENTUAL(\t. a t /\ b t /\ PNEXT(PALWAYS (\t.~b t)) t)) 0`--);
-LTL_CONV (--`(a SBEFORE b) 0
-                = (EVENTUAL(\t. a t /\ ~b t /\ PNEXT(PALWAYS (\t.~b t)) t)) 0`--);
+val SUNTIL_BY_UNARY_OPERATORS = save_thm (
+   "SUNTIL_BY_UNARY_OPERATORS",
+    LTL_CONV ``(a SUNTIL b) 0
+              = (EVENTUAL (\t. b t /\ PNEXT (PALWAYS a) t)) 0``);
+
+val SWHEN_BY_UNARY_OPERATORS = save_thm (
+   "SWHEN_BY_UNARY_OPERATORS",
+    LTL_CONV ``(a SWHEN b) 0
+              = (EVENTUAL (\t. a t /\ b t /\ PNEXT (PALWAYS (\t. ~b t)) t)) 0``);
+
+val SBEFORE_BY_UNARY_OPERATORS = save_thm (
+   "SBEFORE_BY_UNARY_OPERATORS",
+    LTL_CONV ``(a SBEFORE b) 0
+              = (EVENTUAL (\t. a t /\ ~b t /\ PNEXT (PALWAYS (\t. ~b t)) t)) 0``);
 
 (* ---------------------------------------------------------------------------- *)
 (* Manna and Pnueli consider several normal forms for temporal logic formulas.  *)
@@ -24,21 +36,24 @@ LTL_CONV (--`(a SBEFORE b) 0
 (* Try to prove the second of the theorems below by hand.                       *)
 (* ---------------------------------------------------------------------------- *)
 
-LTL_CONV(--` (\t.(EVENTUAL(ALWAYS a)) t /\ (EVENTUAL(ALWAYS b)) t)
-           = (EVENTUAL(ALWAYS(\t. a t /\ b t )))`--);
+val EVENTUAL_ALWAYS_NF1 = save_thm (
+   "EVENTUAL_ALWAYS_NF1",
+    LTL_CONV ``(\t. (EVENTUAL (ALWAYS a)) t /\ (EVENTUAL (ALWAYS b)) t)
+                = (EVENTUAL (ALWAYS (\t. a t /\ b t )))``);
 
-LTL_CONV(--` (\t. (EVENTUAL(ALWAYS a)) t \/ (EVENTUAL(ALWAYS b)) t)
-           = (EVENTUAL(ALWAYS(\t. a t \/ PNEXT(b PSUNTIL(\t. b t /\ ~a t)) t )))`--);
-
-
+val EVENTUAL_ALWAYS_NF2 = save_thm (
+   "EVENTUAL_ALWAYS_NF2",
+    LTL_CONV ``(\t. (EVENTUAL (ALWAYS a)) t \/ (EVENTUAL (ALWAYS b)) t)
+           = (EVENTUAL (ALWAYS (\t. a t \/
+                                    PNEXT (b PSUNTIL (\t. b t /\ ~a t)) t)))``);
 
 (* ---------------------------------------------------------------------------- *)
 (* An important feature of SMV is that it can produce a countermodel if the     *)
 (* proof fails. To demonstrate this, we now look at the following examples.     *)
 (* ---------------------------------------------------------------------------- *)
 
-LTL_CONV (--`(a UNTIL b) 0
-                = (EVENTUAL(\t. b t /\ PNEXT(PALWAYS a) t)) 0`--);
+LTL_CONV ``(a UNTIL b) 0
+                = (EVENTUAL (\t. b t /\ PNEXT (PALWAYS a) t)) 0``;
 
 (* ---------------------------------------------------------------------------- *)
 (*      This should produce the following output:                               *)
@@ -73,8 +88,8 @@ LTL_CONV (--`(a UNTIL b) 0
 (* semantics is, you have to invoke the following:                              *)
 (* ---------------------------------------------------------------------------- *)
 
-TEMP_DEFS_CONV  (--`(a UNTIL b) 0
-                = (EVENTUAL(\t. b t /\ PNEXT(PALWAYS a) t)) 0`--);
+TEMP_DEFS_CONV ``(a UNTIL b) 0
+                = (EVENTUAL (\t. b t /\ PNEXT (PALWAYS a) t)) 0``;
 
 (* ---------------------------------------------------------------------------- *)
 (* You should obtain the following theorem:                                     *)
@@ -100,20 +115,17 @@ TEMP_DEFS_CONV  (--`(a UNTIL b) 0
 (* this is excluded, the equation would hold. Check this by the following:      *)
 (* ---------------------------------------------------------------------------- *)
 
-LTL_CONV (--` EVENTUAL b 0
+LTL_CONV ``(EVENTUAL b) 0
                 ==> ((a UNTIL b) 0
-                     = (EVENTUAL(\t. b t /\ PNEXT(PALWAYS a) t)) 0)`--);
+                     = (EVENTUAL (\t. b t /\ PNEXT (PALWAYS a) t)) 0)``;
 
 (* ---------------------------------------------------------------------------- *)
 (* This will be easily proved. However, this does not define UNTIL in any cases.*)
 (* To do this, prove the following:                                             *)
 (* ---------------------------------------------------------------------------- *)
 
-LTL_CONV (--`(a UNTIL b) 0
-                = (EVENTUAL(\t. b t /\ PNEXT(PALWAYS a) t)) 0 \/ ALWAYS a 0`--);
-
-
-
+LTL_CONV ``(a UNTIL b) 0
+                = (EVENTUAL (\t. b t /\ PNEXT (PALWAYS a) t)) 0 \/ ALWAYS a 0``;
 
 (* ---------------------------------------------------------------------------- *)
 (* An important fact is also that top-level propositional operators can be      *)
@@ -124,9 +136,8 @@ LTL_CONV (--`(a UNTIL b) 0
 (* and the left hand sides give also elimination laws for top-level disjunctions.*)
 (* ---------------------------------------------------------------------------- *)
 
-save_thm("SUNTIL_CONJUNCTIONS",
-        TAC_PROOF(
-            ([],(--`
+val SUNTIL_CONJUNCTIONS = store_thm (
+   "SUNTIL_CONJUNCTIONS", ``
         ( (\t. (EVENTUAL b) t /\ (c SUNTIL d) t ) =
                 (c
                  SUNTIL
@@ -172,19 +183,15 @@ save_thm("SUNTIL_CONJUNCTIONS",
                       d t /\ (a WHEN b) t)
                 )
         )
-        `--)),
-        REPEAT CONJ_TAC THEN CONV_TAC LTL_CONV));
-
-
-
+        ``,
+        REPEAT CONJ_TAC THEN CONV_TAC LTL_CONV);
 
 (* ---------------------------------------------------------------------------- *)
 (* Some operator nestings can be eliminated. Look at the following theorems:    *)
 (* ---------------------------------------------------------------------------- *)
 
-save_thm("ALWAYS_NESTINGS",
-        TAC_PROOF(
-            ([],(--`
+val ALWAYS_NESTINGS = store_thm (
+   "ALWAYS_NESTINGS",  ``
             ( ALWAYS(ALWAYS a)   = ALWAYS a  ) /\
             ( ALWAYS(a UNTIL b)  = ALWAYS (\t. a t \/ b t)  ) /\
             ( ALWAYS(a WHEN b)   = ALWAYS (\t. a t \/ ~b t)  ) /\
@@ -192,12 +199,11 @@ save_thm("ALWAYS_NESTINGS",
             ( ALWAYS(a SUNTIL b) = \t. ALWAYS (EVENTUAL b) t /\ ALWAYS (\t. a t \/ b t) t ) /\
             ( ALWAYS(a SWHEN b)  = \t. ALWAYS (EVENTUAL b) t /\ ALWAYS (\t. a t \/ ~b t) t ) /\
             ( ALWAYS(a SBEFORE b)= \t. ALWAYS (EVENTUAL a) t /\ ALWAYS (\t. ~b t) t )
-        `--)),
-        REPEAT CONJ_TAC THEN CONV_TAC LTL_CONV));
+        ``,
+        REPEAT CONJ_TAC THEN CONV_TAC LTL_CONV);
 
-save_thm("EVENTUAL_NESTINGS",
-        TAC_PROOF(
-            ([],(--`
+val EVENTUAL_NESTINGS = store_thm (
+   "EVENTUAL_NESTINGS", ``
             ( EVENTUAL(EVENTUAL a)  = EVENTUAL a ) /\
             ( EVENTUAL(a UNTIL b)   = \t. ALWAYS (EVENTUAL (\t.~a t)) t ==> EVENTUAL b t ) /\
             ( EVENTUAL(a WHEN b)    = \t. ALWAYS (EVENTUAL b) t ==> EVENTUAL(\t. a t /\ b t) t ) /\
@@ -205,13 +211,11 @@ save_thm("EVENTUAL_NESTINGS",
             ( EVENTUAL(a SUNTIL b)  = EVENTUAL b ) /\
             ( EVENTUAL(a SWHEN b)   = EVENTUAL (\t. a t /\ b t) ) /\
             ( EVENTUAL(a SBEFORE b) = EVENTUAL (\t. a t /\ ~b t) )
-        `--)),
-        REPEAT CONJ_TAC THEN CONV_TAC LTL_CONV));
+        ``,
+        REPEAT CONJ_TAC THEN CONV_TAC LTL_CONV);
 
-
-save_thm("UNTIL_NESTINGS",
-        TAC_PROOF(
-            ([],(--`
+val UNTIL_NESTINGS = store_thm (
+   "UNTIL_NESTINGS", ``
                 ( ((NEXT a) UNTIL b)   = \t. b t \/((a WHEN b) t) /\ (NEXT(a UNTIL b)) t) /\
                 ( ((ALWAYS a) UNTIL b) = \t.b t \/ (ALWAYS a) t ) /\
                 ( ((a UNTIL b) UNTIL c)
@@ -221,18 +225,15 @@ save_thm("UNTIL_NESTINGS",
                 ( ((a WHEN b) UNTIL c)
                         = \t.~c t ==> ((\t. b t ==> a t) UNTIL c) t /\
                                       ((b WHEN (NEXT c)) t \/ ((a WHEN b) WHEN c) t) )
-                `--)),
-        REPEAT CONJ_TAC THEN CONV_TAC LTL_CONV));
-
-
-
+                ``,
+        REPEAT CONJ_TAC THEN CONV_TAC LTL_CONV);
 
 (* ---------------------------------------------------------------------------- *)
 (* Temporal operators are monotonic:                                            *)
 (* ---------------------------------------------------------------------------- *)
-save_thm("MONOTONICITY",
-        TAC_PROOF(
-            ([],(--`
+
+val MONOTONICITY = store_thm (
+   "MONOTONICITY", ``
                  ALWAYS (\t. a t ==> b t) 0 ==>
                          (\t. ALWAYS a t      ==> ALWAYS b t      ) 0 /\
                          (\t. EVENTUAL a t    ==> EVENTUAL b t    ) 0 /\
@@ -246,12 +247,9 @@ save_thm("MONOTONICITY",
                          (\t. (c BEFORE b) t  ==> (c BEFORE a) t  ) 0 /\
                          (\t. (c SUNTIL a) t  ==> (c SUNTIL b) t  ) 0 /\
                          (\t. (c SBEFORE b) t ==> (c SBEFORE a) t ) 0
-                `--)),
-        REPEAT STRIP_TAC THEN UNDISCH_TAC (--`ALWAYS (\t. a t ==> b t) 0`--)
-        THEN CONV_TAC LTL_CONV));
-
-
-
+                ``,
+        REPEAT STRIP_TAC THEN UNDISCH_TAC ``ALWAYS (\t. a t ==> b t) 0``
+        THEN CONV_TAC LTL_CONV);
 
 (* ---------------------------------------------------------------------------- *)
 (* The theory "Past_Temporal_Logic" contains separation theorems that show that *)
@@ -260,9 +258,8 @@ save_thm("MONOTONICITY",
 (* SMV based conversion.                                                        *)
 (* ---------------------------------------------------------------------------- *)
 
-save_thm("SEPARATE_ALWAYS_THM",
-        TAC_PROOF(
-            ([],(--`
+val SEPARATE_ALWAYS_THM = store_thm (
+   "SEPARATE_ALWAYS_THM", ``
                 (ALWAYS (\t. a t \/ PNEXT b t)
                  =  \t. (a t \/ PNEXT b t) /\ ALWAYS (\t. NEXT a t \/ b t) t
                 ) /\
@@ -279,13 +276,11 @@ save_thm("SEPARATE_ALWAYS_THM",
                      (  (b PBEFORE c) t \/ ((NEXT b) BEFORE (\t. ~a t)) t  )
                       /\ ALWAYS (\t. c t ==> ((NEXT b) BEFORE (\t. ~a t)) t) t
                 )
-                `--)),
-        REPEAT STRIP_TAC THEN CONV_TAC LTL_CONV));
+                ``,
+        REPEAT STRIP_TAC THEN CONV_TAC LTL_CONV);
 
-
-save_thm("SEPARATE_EVENTUAL_THM",
-        TAC_PROOF(
-            ([],(--`
+val SEPARATE_EVENTUAL_THM = store_thm (
+   "SEPARATE_EVENTUAL_THM", ``
                 (EVENTUAL (\t. a t /\ PNEXT b t)
                  = \t. (a t /\ PNEXT b t) \/ EVENTUAL (\t. NEXT a t /\ b t) t
                 ) /\
@@ -300,14 +295,11 @@ save_thm("SEPARATE_EVENTUAL_THM",
                  = \t. (b PBEFORE c) t /\ ((NEXT(\t. ~c t)) SUNTIL a) t
                        \/ EVENTUAL (\t. b t /\ ~c t /\ ((NEXT(\t. ~c t)) SUNTIL a) t) t
                 )
-                `--)),
-        REPEAT STRIP_TAC THEN CONV_TAC LTL_CONV));
+                ``,
+        REPEAT STRIP_TAC THEN CONV_TAC LTL_CONV);
 
-
-
-save_thm("SEPARATE_EVENTUAL_ALWAYS_THM",
-        TAC_PROOF(
-            ([],(--`
+val SEPARATE_EVENTUAL_ALWAYS_THM = store_thm (
+   "SEPARATE_EVENTUAL_ALWAYS_THM", ``
                 (EVENTUAL(ALWAYS (\t. a t \/ PNEXT b t))
                  =  EVENTUAL(ALWAYS (\t. NEXT a t \/ b t))
                 ) /\
@@ -326,9 +318,7 @@ save_thm("SEPARATE_EVENTUAL_ALWAYS_THM",
                                 else EVENTUAL(\t. c t /\ ALWAYS (NEXT b) t) 0
 
                 )
-                `--)),
-        REPEAT STRIP_TAC THEN CONV_TAC LTL_CONV));
-
-
+                ``,
+        REPEAT STRIP_TAC THEN CONV_TAC LTL_CONV);
 
 (*--------------------------------------------------------------------------*)

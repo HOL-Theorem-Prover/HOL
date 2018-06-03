@@ -114,10 +114,10 @@ in
 end handle ExitOK => OK()
 
 val _ = Process.atExit (fn () => let
-                             fun rm s = FileSys.remove s
+                             fun rm s = FileSys.remove ("scratchTheory." ^ s)
                                         handle _ => ()
                            in
-                             app rm ["scratchTheory.sml", "scratchTheory.sig"]
+                             app rm ["sml", "sig", "dat"]
                            end)
 
 fun test f x = f x orelse (print "FAILED!\n"; Process.exit Process.failure)
@@ -486,7 +486,16 @@ val condprinter_tests =
                 \     another_longish_name = y \\/ z\n\
                 \   in\n\
                 \     f x)\n\
-                \else g y"}
+                \else g y"},
+      {input = "f\n\
+               \  (if really quite a long guard when looked at closely then\n\
+               \     a moderately complicated then_branch\n\
+               \   else an else_branch)",
+       testf = K "Ladge COND as rand",
+       output = "f\n\
+                \  (if really quite a long guard when looked at closely then\n\
+                \     a moderately complicated then_branch\n\
+                \   else an else_branch)"}
   ]
 val _ = app condprinter_test condprinter_tests
 
