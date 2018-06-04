@@ -297,7 +297,7 @@ val _ =
     in
       if Lib.set_eq result
                     ["\\", "|>", "<|", ")", "(", ".", ":", "updated_by",
-                     ":=", "with", "let", "in", ";"]
+                     ":=", "with", "let", "in", ";", "$"]
       then OK()
       else die ("\nFAILED ["^
                 String.concatWith "," (map (fn s => "\""^s^"\"") result) ^ "]")
