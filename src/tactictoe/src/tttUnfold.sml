@@ -1073,6 +1073,31 @@ fun ttt_rewrite () =
   end
 
 (* ---------------------------------------------------------------------------
+    Extra safety during recording (in case of export_theory is not catched)
+   -------------------------------------------------------------------------- *)
+
+fun save_file file =
+  let
+    val dir = #dir (OS.Path.splitDirFile file)
+    val cmd = "cp -p " ^ file ^ " " ^ (file ^ ".tttsave")
+  in
+	  cmd_in_dir dir cmd
+	end
+
+fun restore_file file =
+  let
+   val dir = #dir (OS.Path.splitDirFile file)
+    val cmd1 = "cp -p " ^ (file ^ ".tttsave") ^ " " ^ file
+    val cmd2 = "rm " ^ (file ^ ".tttsave")
+  in
+    cmd_in_dir dir (cmd1 ^ "; " ^ cmd2)
+  end
+
+fun save_scripts script = app save_file (script :: theory_files script)
+
+fun restore_scripts script = app restore_file (script :: theory_files script)
+
+(* ---------------------------------------------------------------------------
    Recording
    -------------------------------------------------------------------------- *)
 
@@ -1080,11 +1105,14 @@ fun ttt_record_thy thy =
   if mem thy ["bool","min"] then () else
   let val scriptorg = find_script thy in
     let
+      val _ = save_scripts scriptorg
       val _ = print_endline ("TacticToe: ttt_record_thy: " ^ thy ^
         "\n  " ^ scriptorg)
     in
-      run_rm_script (mem thy core_theories) (tttsml_of scriptorg)
+      run_rm_script (mem thy core_theories) (tttsml_of scriptorg);
+      restore_scripts scriptorg
     end
+    handle e => (restore_scripts scriptorg; raise e)
   end
 
 fun ttt_record_thyl thyl = app ttt_record_thy thyl
