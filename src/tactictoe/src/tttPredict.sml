@@ -107,7 +107,7 @@ fun stacknn symweight n feal fea_o =
     val l1 = map fst (pre_sim1 symweight feal fea_o)
     fun coverage x = dfind x (!ttt_taccov) handle _ => 0 
     fun compare_coverage (lbl1,lbl2) = 
-      Int.compare (coverage (#1 lbl1), coverage (#1 lbl2))
+      Int.compare (coverage (#1 lbl2), coverage (#1 lbl1))
     val l1' = 
       if !ttt_covdist_flag 
       then dict_sort compare_coverage l1
