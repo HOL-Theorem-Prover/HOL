@@ -1,0 +1,8 @@
+Rules:
+  (50)   TY  ::=  TY -> TY [fun] (R-associative)
+         TY  ::=  bool | (TY, TY) fun | ind
+         TY  ::=  TY[TY] (array type)
+Type abbreviations:
+  bool            = min$bool
+  (α, β) fun      = (α, β) min$fun
+  ind             = min$ind
