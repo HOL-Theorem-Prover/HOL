@@ -267,6 +267,47 @@ in
     else case dest_thy_const tm of {Name,Thy,Ty} => Thy^"$"^Name::acc
 end
 
+fun lamb_print_type (ty,acc) =
+  if is_vartype ty then ")" :: dest_vartype ty :: "TV(" :: acc
+  else case dest_thy_type ty of {Thy,Tyop,Args} =>
+    ")" :: (List.foldl (fn (ty,acc) => lamb_print_type (ty,","::acc))
+                       (Tyop :: "$" :: Thy :: "TY(" :: acc)
+                       Args)
+
+(* without types
+tm = V(name)
+   | C(name)
+   | A(tm,tm)
+   | L(tm,tm)
+*)
+fun lamb_print_term (tm,acc) =
+  case dest_term tm of
+    VAR(Name,Ty) => ")" :: Name::"V("::acc (* lamb_print_type(Ty, ","::Name::"V("::acc) *)
+  | CONST{Name,Thy,Ty} => ")" :: Name::"$"::Thy::"C("::acc (* lamb_print_type(Ty, ","::Name::"$"::Thy::"C("::acc) *)
+  | COMB(Rator,Rand) => ")" :: lamb_print_term(Rand, ","::lamb_print_term(Rator, "A("::acc))
+  | LAMB(Var,Bod) => ")" :: lamb_print_term(Bod, ","::lamb_print_term(Var, "L("::acc))
+
+(* with types
+ty = TV(name)
+   | TY(name,ty,...)
+tm = V(name,ty)
+   | C(name,ty)
+   | A(tm,tm)
+   | L(tm,tm)
+*)
+fun typed_lamb_print_term (tm,acc) =
+  case dest_term tm of
+    VAR(Name,Ty) => ")" :: lamb_print_type(Ty, ","::Name::"V("::acc)
+  | CONST{Name,Thy,Ty} => ")" :: lamb_print_type(Ty, ","::Name::"$"::Thy::"C("::acc)
+  | COMB(Rator,Rand) => ")" :: lamb_print_term(Rand, ","::lamb_print_term(Rator, "A("::acc))
+  | LAMB(Var,Bod) => ")" :: lamb_print_term(Bod, ","::lamb_print_term(Var, "L("::acc))
+
+fun lstring_of_term tm =
+  String.concat(List.rev(lamb_print_term(tm, [])))
+
+fun tlstring_of_term tm =
+  String.concat(List.rev(typed_lamb_print_term(tm, [])))
+
 fun trstring_of_term tm =
   String.concat(List.rev(tree_print_term(tm, [])))
 
@@ -292,6 +333,7 @@ fun mk_string_of_thm string_of_term thm =
 
 val nnstring_of_thm = mk_string_of_thm nnstring_of_term
 val trstring_of_thm = mk_string_of_thm trstring_of_term
+val lstring_of_thm = mk_string_of_thm lstring_of_term
 
 fun mk_string_of_goal annot string_of_term (asm,w) =
   let
@@ -310,6 +352,7 @@ fun mk_string_of_goal annot string_of_term (asm,w) =
 
 val string_of_goal = mk_string_of_goal "goal" nnstring_of_term
 val tree_string_of_goal = mk_string_of_goal "tgoal" trstring_of_term
+val lamb_string_of_goal = mk_string_of_goal "lgoal" lstring_of_term
 
 fun string_of_bool b = if b then "T" else "F"
 
