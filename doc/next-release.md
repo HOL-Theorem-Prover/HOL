@@ -49,6 +49,15 @@ New features:
     Thanks to Adam Nelson for this feature.
     Configuring colours under `emacs` is done within `emacs` by configuring faces such as `hol-bound-variable`.
 
+*   We now support the infix `$` notation for function application from Haskell.
+    For example
+
+           f $ g x $ h y
+
+    is a low-parenthesis way of writing `f (g x (h y))`.
+    The dollar-operator is a low-precedence (tighter than infix `,` but looser than other standard operators), right-associative infix.
+    This is a “parse-only technology”; the pretty-printer will always use the “traditional” syntax with parentheses as necessary and what might be viewed as an invisible infix application operator.
+
 
 Bugs fixed:
 -----------
