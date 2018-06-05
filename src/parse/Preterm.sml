@@ -569,26 +569,25 @@ fun overloading_resolutionS ptm =
  * actually very simple, given side-effecting unification.
  *---------------------------------------------------------------------------*)
 
-fun is_atom (Var _) = return true
-  | is_atom (Const _) = return true
+fun isnumrator_name nm =
+  nm = "BIT1" orelse nm = "BIT2" orelse nm = "NUMERAL" orelse
+  nm = fromNum_str orelse nm = nat_elim_term
+
+fun isnumrator (Const{Name,...}) = isnumrator_name Name
+  | isnumrator (Overloaded{Name,...}) = isnumrator_name Name
+  | isnumrator _ = false
+
+fun isnum (Const {Name,...}) = Name = "0" orelse Name = "ZERO"
+  | isnum (Overloaded{Name,...}) = Name = "0" orelse Name = "ZERO"
+  | isnum (Comb{Rator,Rand,...}) = isnumrator Rator andalso isnum Rand
+  | isnum _ = false
+
+fun is_atom (Var _) = true
+  | is_atom (Const _) = true
   | is_atom (Constrained{Ptm,...}) = is_atom Ptm
-  | is_atom (Overloaded _) = return true
-  | is_atom (t as Comb{Rator,Rand,...}) =
-    let
-      fun isnum t0 =
-        lift Literal.is_numeral (overloading_resolution t0 >- (to_term o #1))
-    in
-      isnum t >-
-      (fn b =>
-          if b then return true
-          else lift (fn b => b andalso
-                             (case Rator of
-                                  Overloaded{Name,...} => Name = fromNum_str
-                                | Const{Name,...} => Name = nat_elim_term
-                                | _ => false))
-                    (isnum Rand))
-    end
-  | is_atom t = return false
+  | is_atom (Overloaded _) = true
+  | is_atom (t as Comb{Rator,Rand,...}) = isnum t
+  | is_atom t = false
 
 
 local
@@ -597,8 +596,8 @@ local
   open errormonad
   infix ++?
   fun smashTm ptm =
-    smash (overloading_resolution ptm >- (to_term o #1))
-  fun isAtom ptm = smash (is_atom ptm)
+    Lib.with_flag (Globals.notify_on_tyvar_guess, false)
+                  (smash (overloading_resolution ptm >- (to_term o #1)))
 in
 fun typecheck_phase1 printers = let
   val (ptm, pty) =
@@ -632,7 +631,7 @@ fun typecheck_phase1 printers = let
                        \for the application of\n\n",
                        ptm Rator',
                        "\n\n"^locn.toString (locn Rator)^"\n\n",
-                       if (isAtom Rator env) then ""
+                       if is_atom Rator then ""
                        else ("which has type\n\n" ^
                              pty(Term.type_of Rator') ^ "\n\n"),
 
@@ -640,7 +639,7 @@ fun typecheck_phase1 printers = let
                        ptm Rand',
                        "\n\n"^locn.toString (locn Rand)^"\n\n",
 
-                       if isAtom Rand env then ""
+                       if is_atom Rand then ""
                        else ("which has type\n\n" ^
                              pty(Term.type_of Rand') ^ "\n\n"),
 
@@ -668,7 +667,7 @@ fun typecheck_phase1 printers = let
                        "\nType inference failure: the term\n\n",
                        ptm real_term,
                        "\n\n", locn.toString (locn Ptm), "\n\n",
-                       if isAtom Ptm env then ""
+                       if is_atom Ptm then ""
                        else("which has type\n\n" ^
                             pty(Term.type_of real_term) ^ "\n\n"),
                        "can not be constrained to be of type\n\n",
