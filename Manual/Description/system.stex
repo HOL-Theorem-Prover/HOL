@@ -636,11 +636,7 @@ to use \HOL{} effectively. One can examine the current grammar used by
 the parser with the functions \verb+type_grammar+ and
 \verb+term_grammar+.
 
-For example, in the following session, we see that the type grammar
-used in the startup context of \HOL{} has the type operators
-\verb+fun+, \verb+sum+, \verb+prod+, \verb+list+, \verb+recspace+,
-\verb+num+, \verb+option+, \verb+one+, \verb+label+, \verb+ind+, and
-\verb+bool+.
+For example, in the following session, we see that the type grammar used in the startup context of \HOL{} has the type operators \verb+fun+, \verb+sum+, \verb+prod+, \verb+list+, \verb+recspace+, \verb+num+, \verb+option+, \verb+one+, \verb+ind+, and \verb+bool+.
 
 \begin{session}
 \begin{alltt}
