@@ -144,6 +144,9 @@ val Induct_on         = BasicProvers.Induct_on
 val PairCases_on      = pairLib.PairCases_on;
 val pairarg_tac       = pairLib.pairarg_tac
 val split_pair_case_tac = pairLib.split_pair_case_tac
+val CaseEq            = TypeBase.CaseEq
+val CaseEqs           = TypeBase.CaseEqs
+val AllCaseEqs        = TypeBase.AllCaseEqs
 
 val completeInduct_on = numLib.completeInduct_on
 val measureInduct_on  = numLib.measureInduct_on;

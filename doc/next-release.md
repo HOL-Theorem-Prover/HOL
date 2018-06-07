@@ -72,6 +72,28 @@ New theories:
 New tools:
 ----------
 
+*   For every algebraic type, the `TypeBase` now automatically proves what we term “case-equality” rewrite theorems that have LHSes of the form
+
+          ((case x of con1_pattern => e1 | con2_pattern => e2 ...) = v)
+
+    For example, the case-equality theorem for the `α option` type is
+
+          (option_CASE opt nc sc = v) ⇔
+             (opt = NONE) ∧ (nc = v) ∨
+             ∃x. (opt = SOME x) ∧ (sc x = v)
+
+    where `option_CASE opt nc sc` is the general form of the term that underlies a case expression over an option value `opt`.
+
+    These theorems can be powerful aids in simplifications (imagine for example that `v` is `T` and `nc` is `F`), so we have made it easy to include them in arguments to `simp`, `fs`, `rw` *etc*.
+    The `CaseEq` function takes a string and returns the corresponding theorem, so that `CaseEq "option"` will return the theorem above.
+    The `CaseEqs` function takes a list of strings so that the simplifier-argument list doesn’t need to repeat `CaseEq` invocations, and finally, `AllCaseEqs()` returns a conjunction of all the `TypeBase`’s case-equality theorems.
+    Then one might write something like
+
+           simp[AllCaseEqs(), thm1, thm2]
+
+    for example.
+
+
 New examples:
 ---------
 

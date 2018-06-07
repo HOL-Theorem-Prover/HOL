@@ -161,7 +161,7 @@ fun recognizers_of ty  = TypeBasePure.recognizers_of (pfetch "recognizers_of" ty
 fun case_const_of ty   = TypeBasePure.case_const_of (pfetch "case_const_of" ty)
 fun case_cong_of ty    = TypeBasePure.case_cong_of (pfetch "case_cong_of" ty)
 fun case_def_of ty     = TypeBasePure.case_def_of (pfetch "case_def_of" ty)
-fun case_eq_of ty  = TypeBasePure.case_eq_of (pfetch "case_eq_of" ty)
+fun case_eq_of ty      = TypeBasePure.case_eq_of (pfetch "case_eq_of" ty)
 fun nchotomy_of ty     = TypeBasePure.nchotomy_of (pfetch "nchotomy_of" ty)
 fun fields_of ty       = TypeBasePure.fields_of (pfetch "fields_of" ty)
 fun accessors_of ty    = TypeBasePure.accessors_of (pfetch "accessors_of" ty)
@@ -214,6 +214,48 @@ in
                                   case_defs = [itself_case_thm]}
 end
 val _ = write [itself_info]
+
+fun tyi_from_name s =
+  let
+    open type_grammar
+    fun tyi_from_kid thy nm =
+      case Type.op_arity{Tyop=nm,Thy=thy} of
+          NONE => raise ERR "tyi_from_name" ("No such type: "^thy^"$"^nm)
+        | SOME i =>
+          let
+            val st = TYOP {Args = List.tabulate(i, PARAM), Thy = thy, Tyop = nm}
+          in
+            case fetch (structure_to_type st) of
+                NONE => raise ERR "tyi_from_name" ("No tyinfo for "^thy^"$"^nm)
+              | SOME tyi => tyi
+          end
+  in
+    case String.fields (equal #"$") s of
+        [nm] =>
+        let
+          val tyg = Parse.type_grammar()
+        in
+          case Binarymap.peek(privileged_abbrevs tyg, nm) of
+              NONE => raise ERR "tyi_from_name"
+                            ("Ty-grammar doesn't know name: "^nm)
+            | SOME thy => tyi_from_kid thy nm
+        end
+      | [thy,nm] => tyi_from_kid thy nm
+      | _ => raise ERR "tyi_from_name" ("Malformed tyname: "^s)
+  end
+
+val CaseEq = TypeBasePure.case_eq_of o tyi_from_name
+val CaseEqs = Drule.LIST_CONJ o map CaseEq
+fun AllCaseEqs() =
+  let
+    fun foldthis(ty, tyi, acc) =
+      case Lib.total TypeBasePure.case_eq_of tyi of
+          NONE => acc
+        | SOME th => if aconv (concl acc) boolSyntax.T then th
+                     else CONJ th acc
+  in
+    TypeBasePure.fold foldthis boolTheory.TRUTH (theTypeBase())
+  end
 
 (* ---------------------------------------------------------------------- *
  * Install case transformation function for parser                        *
