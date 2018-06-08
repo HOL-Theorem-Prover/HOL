@@ -111,6 +111,8 @@ New examples:
 
 *   A theory of Lambek calculus (categorial grammars of natural or formal languages), in `examples/formal-languages/lambek`. Ported from [Coq contribs](https://github.com/coq-contribs/lambek) by Chun Tian. c.f. "The Logic of Categorial Grammars" by Richard Moot and Christian Retoré.
 
+* A library for regular expressions (`examples/formal-languages/regular`), including a compiler from regexps to table-driven DFAs. Proofs include standard regexp identities along with the correctness of the compiler. Also, there is a standalone tool `regexp2dfa` that generates DFAs in a variety of languages. The library also supplies (informal and formal) parsers for regexps in Python syntax. See the README for more details.
+
 Incompatibilities:
 ------------------
 
