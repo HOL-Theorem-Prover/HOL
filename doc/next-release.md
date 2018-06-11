@@ -1,11 +1,11 @@
-% Release notes for HOL4, ??????
+% Release notes for HOL4, Kananaskis-12
 
 <!-- search and replace ?????? strings corresponding to release name -->
 <!-- indent code within bulleted lists to column 11 -->
 
 (Released: ??????)
 
-We are pleased to announce the ?????? release of HOL 4.
+We are pleased to announce the Kananaskis-12 release of HOL 4.
 
 Contents
 --------
@@ -227,7 +227,7 @@ Incompatibilities:
 * * * * *
 
 <div class="footer">
-*[HOL4, ??????](http://hol-theorem-prover.org)*
+*[HOL4, Kananaskis-12](http://hol-theorem-prover.org)*
 
 [Release notes for the previous version](kananaskis-11.release.html)
 
