@@ -1,2 +1,2 @@
-INCLUDES = ../lisp-runtime/parse ../lisp-runtime/spec ../lisp-runtime/extract $(HOLDIR)/examples/set-theory/hol_sets
+INCLUDES = ../lisp-runtime/parse ../lisp-runtime/spec ../lisp-runtime/extract
 OPTIONS=QUIT_ON_FAILURE

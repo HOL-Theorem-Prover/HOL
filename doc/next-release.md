@@ -69,6 +69,10 @@ Bugs fixed:
 New theories:
 -------------
 
+*   We have promoted the theories of cardinality results for various flavours of infinite sets, and of ordinal numbers to `src` from `examples`.
+    There is a minor backwards-incompatibility: references to `examples/set-theory/hol_sets` (in Holmakefile `INCLUDES` specifications for example) should simply be deleted.
+    Any theory can build on these theories (`cardinalTheory`, `ordinalTheory`) simply by `open`-ing them in the relevant script file.
+
 New tools:
 ----------
 
