@@ -121,8 +121,6 @@ examples/muddy/muddyC/Makefile
 examples/muddy/muddyC/buddy/src/libbdd.a
 examples/muddy/muddyC/muddy.so
 
-examples/set-theory/hol_sets/ordinalML.*
-
 examples/theorem-prover/lisp-runtime/bin/*.s
 
 examples/computability/lambda/computability-heap
