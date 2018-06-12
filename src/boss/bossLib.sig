@@ -42,6 +42,9 @@ sig
   val CASE_TAC          : tactic
   val pairarg_tac       : tactic
   val split_pair_case_tac : tactic
+  val CaseEq            : string -> thm
+  val CaseEqs           : string list -> thm
+  val AllCaseEqs        : unit -> thm
 
   (* Proof automation *)
 

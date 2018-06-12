@@ -15,7 +15,7 @@ fun delete n = OS.FileSys.remove n handle SysErr _ => ()
 fun testscenario hm =
   let
   in
-    hm "Cleaning" ["cleanAll"]
+    hm "Cleaning" ["-r", "cleanAll"]
        (fn () => List.all (not o present)
                           ["foo", "bar", "master",
                            "simpleTheory.sig", "simpleTheory.sml"]);

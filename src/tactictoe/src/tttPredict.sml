@@ -36,35 +36,46 @@ fun learn_tfidf feavl = weight_tfidf (map snd feavl)
 fun inter_dict dict l = filter (fn x => dmem x dict) l
 fun union_dict dict l = dkeys (daddl (map (fn x => (x,())) l) dict)
 
+val random_gen = Random.newgen ()
+
 fun knn_sim1 symweight dict_o fea_p =
-  let
-    val fea_i   = inter_dict dict_o fea_p
-    fun wf n    = dfind_err "knn_distance" n symweight
-    val weightl = map wf fea_i
-  in
-    sum_real weightl
-  end
+  if !ttt_randdist_flag 
+    then Random.random random_gen
+  else
+    let
+      val fea_i   = inter_dict dict_o fea_p
+      fun wf n    = dfind_err "knn_distance" n symweight
+      val weightl = map wf fea_i
+    in
+      sum_real weightl
+    end
 
 fun knn_sim2 symweight dict_o fea_p =
-  let
-    val fea_i    = inter_dict dict_o fea_p
-    fun wf n     = dfind_err "knn_similarity" n symweight
-    val weightl  = map wf fea_i
-    val tot      = Real.fromInt (dlength dict_o + length fea_p)
-  in
-    sum_real weightl / Math.ln (Math.e + tot)
-  end
+  if !ttt_randdist_flag 
+    then Random.random random_gen
+  else
+    let
+      val fea_i    = inter_dict dict_o fea_p
+      fun wf n     = dfind_err "knn_similarity" n symweight
+      val weightl  = map wf fea_i
+      val tot      = Real.fromInt (dlength dict_o + length fea_p)
+    in
+      sum_real weightl / Math.ln (Math.e + tot)
+    end
 
 fun knn_sim3 symweight dict_o fea_p =
-  let
-    val feai     = inter_dict dict_o fea_p
-    val feau     = union_dict dict_o fea_p
-    fun wf n     = dfind n symweight handle _ => 0.0
-    val weightli = map wf feai
-    val weightlu = map wf feau
-  in
-    sum_real weightli / (sum_real weightlu + 1.0)
-  end
+  if !ttt_randdist_flag 
+    then Random.random random_gen
+  else
+    let
+      val feai     = inter_dict dict_o fea_p
+      val feau     = union_dict dict_o fea_p
+      fun wf n     = dfind n symweight handle _ => 0.0
+      val weightli = map wf feai
+      val weightlu = map wf feau
+    in
+      sum_real weightli / (sum_real weightlu + 1.0)
+    end
 
 (* --------------------------------------------------------------------------
    Ordering prediction with duplicates
@@ -90,14 +101,23 @@ fun pre_sim3 symweight feal fea_o = pre_pred knn_sim3 symweight feal fea_o
    Tactic predictions
    -------------------------------------------------------------------------- *)
 
+(* used for preselection *)
 fun stacknn symweight n feal fea_o =
   let
     val l1 = map fst (pre_sim1 symweight feal fea_o)
+    fun coverage x = dfind x (!ttt_taccov) handle _ => 0 
+    fun compare_coverage (lbl1,lbl2) = 
+      Int.compare (coverage (#1 lbl2), coverage (#1 lbl1))
+    val l1' = 
+      if !ttt_covdist_flag 
+      then dict_sort compare_coverage l1
+      else l1
     val l2 = mk_sameorder_set lbl_compare l1
   in
     first_n n l2
   end
 
+(* used during search *)
 fun stacknn_uniq symweight n feal fea_o =
   let
     val l = stacknn symweight n feal fea_o

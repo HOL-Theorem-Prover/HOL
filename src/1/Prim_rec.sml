@@ -1839,7 +1839,7 @@ fun prove_case_rand_thm {nchotomy, case_def} = let
   val (const,t,casefs,vs_l,v) = usefuls cs
   val tyvs = foldl (fn (v,s) => HOLset.addList(s, type_vars_in_term v))
                    (HOLset.empty Type.compare)
-                   vs_l
+                   (v::vs_l)
   fun foldthis (sv, acc) = if acc = sv then mk_vartype(dest_vartype acc ^ "1")
                            else acc
   val fresh_tyvar = HOLset.foldl foldthis alpha tyvs

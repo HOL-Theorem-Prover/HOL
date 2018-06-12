@@ -14,7 +14,7 @@ Contents
 -   [Bugs fixed](#bugs-fixed)
 -   [New theories](#new-theories)
 -   [New tools](#new-tools)
--   [Examples](#examples)
+-   [New Examples](#new-examples)
 -   [Incompatibilities](#incompatibilities)
 
 New features:
@@ -47,7 +47,16 @@ New features:
 *   Users can define their own colours for printing types, and free and bound variables when printing to ANSI terminals by using the `PPBackEnd.ansi_terminal` backend.
     (The default behaviour on what is called the `vt100_terminal` is to have free variables blue, bound variables green, type variables purple and type operators “blue-green”.)
     Thanks to Adam Nelson for this feature.
-    Configuring colours under `emacs` is done within `emacs` by configuring faces such as `hol-bound-variable`
+    Configuring colours under `emacs` is done within `emacs` by configuring faces such as `hol-bound-variable`.
+
+*   We now support the infix `$` notation for function application from Haskell.
+    For example
+
+           f $ g x $ h y
+
+    is a low-parenthesis way of writing `f (g x (h y))`.
+    The dollar-operator is a low-precedence (tighter than infix `,` but looser than other standard operators), right-associative infix.
+    This is a “parse-only technology”; the pretty-printer will always use the “traditional” syntax with parentheses as necessary and what might be viewed as an invisible infix application operator.
 
 
 Bugs fixed:
@@ -60,13 +69,39 @@ Bugs fixed:
 New theories:
 -------------
 
+*   We have promoted the theories of cardinality results for various flavours of infinite sets, and of ordinal numbers to `src` from `examples`.
+    There is a minor backwards-incompatibility: references to `examples/set-theory/hol_sets` (in Holmakefile `INCLUDES` specifications for example) should simply be deleted.
+    Any theory can build on these theories (`cardinalTheory`, `ordinalTheory`) simply by `open`-ing them in the relevant script file.
+
 New tools:
 ----------
+
+*   For every algebraic type, the `TypeBase` now automatically proves what we term “case-equality” rewrite theorems that have LHSes of the form
+
+          ((case x of con1_pattern => e1 | con2_pattern => e2 ...) = v)
+
+    For example, the case-equality theorem for the `α option` type is
+
+          (option_CASE opt nc sc = v) ⇔
+             (opt = NONE) ∧ (nc = v) ∨
+             ∃x. (opt = SOME x) ∧ (sc x = v)
+
+    where `option_CASE opt nc sc` is the general form of the term that underlies a case expression over an option value `opt`.
+
+    These theorems can be powerful aids in simplifications (imagine for example that `v` is `T` and `nc` is `F`), so we have made it easy to include them in arguments to `simp`, `fs`, `rw` *etc*.
+    The `CaseEq` function takes a string and returns the corresponding theorem, so that `CaseEq "option"` will return the theorem above.
+    The `CaseEqs` function takes a list of strings so that the simplifier-argument list doesn’t need to repeat `CaseEq` invocations, and finally, `AllCaseEqs()` returns a conjunction of all the `TypeBase`’s case-equality theorems.
+    Then one might write something like
+
+           simp[AllCaseEqs(), thm1, thm2]
+
+    for example.
+
 
 New examples:
 ---------
 
-*   We have resurrected Monica Nesi’s CCS example (from the days of HOL88), ported and extended by Chun Tian (based on HOL4’s co-induction package `Hol_coreln`).
+*   We have resurrected Monica Nesi’s CCS example (from the days of HOL88, in `examples/CCS`), ported and extended by Chun Tian (based on HOL4’s co-induction package `Hol_coreln`).
     This includes all classical results of strong/weak bisimilarities and observation congruence, the theory of congruence for CCS, several versions of “bisimulation up to”,  “coarsest congruence contained in weak bisimilarity”, and “unique solution of equations” theorems, mainly from Robin Milner’s book, and Davide Sangiorgi’s “unique solutions of contractions” theorem published in 2017.
     There’s also a decision procedure written in SML for computing CCS transitions with the result automatically proved.
 
@@ -77,6 +112,10 @@ New examples:
 
 *   A theory of the basic syntax and semantics of Linear Temporal Logic formulas, along with a verified translation of such formulas into Generalised Büchi Automata *via* alternating automata (in `examples/logic/ltl`).
     This work is by Simon Jantsch.
+
+*   A theory of Lambek calculus (categorial grammars of natural or formal languages), in `examples/formal-languages/lambek`. Ported from [Coq contribs](https://github.com/coq-contribs/lambek) by Chun Tian. c.f. "The Logic of Categorial Grammars" by Richard Moot and Christian Retoré.
+
+* A library for regular expressions (`examples/formal-languages/regular`), including a compiler from regexps to table-driven DFAs. Proofs include standard regexp identities along with the correctness of the compiler. Also, there is a standalone tool `regexp2dfa` that generates DFAs in a variety of languages. The library also supplies (informal and formal) parsers for regexps in Python syntax. See the README for more details.
 
 Incompatibilities:
 ------------------

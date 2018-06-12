@@ -66,7 +66,7 @@ tools/build-stamp
 tools/lastbuildoptions
 tools/build-logs
 
-help/Docfiles/*.adoc
+help/Docfiles/*.txt
 help/Docfiles/HTML/*
 help/HOLindex.html
 help/HOL.Help
@@ -120,8 +120,6 @@ examples/machine-code/just-in-time/*.s
 examples/muddy/muddyC/Makefile
 examples/muddy/muddyC/buddy/src/libbdd.a
 examples/muddy/muddyC/muddy.so
-
-examples/set-theory/hol_sets/ordinalML.*
 
 examples/theorem-prover/lisp-runtime/bin/*.s
 

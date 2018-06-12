@@ -4,8 +4,9 @@
 (*                                                                            *)
 (* THESIS        : A Formalization of Unique Solutions of Equations in        *)
 (*                 Process Algebra                                            *)
-(* AUTHOR        : (c) Chun Tian, University of Bologna                       *)
-(* DATE          : 2017                                                       *)
+(* AUTHOR        : (c) 2017 Chun Tian, University of Bologna, Italy           *)
+(*                 (c) 2018 Chun Tian, Fondazione Bruno Kessler (FBK)         *)
+(* DATE          : 2017-2018                                                  *)
 (* ========================================================================== *)
 
 open HolKernel Parse boolLib bossLib;
@@ -1702,9 +1703,11 @@ val OBS_contracts_EPS' = store_thm (
 (*                                                                            *)
 (******************************************************************************)
 
+(* (pre)congruence closure of `contracts` relation *)
 val C_contracts = new_definition (
    "C_contracts", ``C_contracts = CC $contracts``);
 
+(* |- C_contracts = (λg h. ∀c. CONTEXT c ⇒ c g ⪰ᵇ c h) *)
 val C_contracts_thm = save_thm (
    "C_contracts_thm", REWRITE_RULE [CC_def] C_contracts);
 
@@ -1869,9 +1872,171 @@ val COARSEST_PRECONGR_THM = store_thm (
 val COARSEST_PRECONGR_THM' = save_thm (
    "COARSEST_PRECONGR_THM'", BETA_RULE (REWRITE_RULE [SUM_contracts] COARSEST_PRECONGR_THM));
 
+(******************************************************************************)
+(*                                                                            *)
+(*  Coarsest precongruence contained in `contracts` (full, EXPRESS/SOS 2018)  *)
+(*                                                                            *)
+(******************************************************************************)
+
+(* |- `∀p q. p ⪰ᶜ q ⇒ ∀r. p + r ⪰ᵇ q + r` *)
+val COARSEST_PRECONGR_LR = save_thm ((* NEW *)
+   "COARSEST_PRECONGR_LR",
+    BETA_RULE (REWRITE_RULE [SUM_contracts] OBS_contracts_IMP_SUM_contracts));
+(*  or prove directly by:
+    REPEAT STRIP_TAC
+ >> MATCH_MP_TAC OBS_contracts_IMP_contracts
+ >> RW_TAC std_ss [OBS_contracts_SUBST_SUM_R] *)
+
+(* This is the OBS_contracts version of PROP3_COMMON *)
+val COARSEST_PRECONGR_LEMMA = store_thm ((* NEW *)
+   "COARSEST_PRECONGR_LEMMA",
+  ``!p q. (?k. STABLE k /\
+	       (!p' u. WEAK_TRANS p u p' ==> ~(WEAK_EQUIV p' k)) /\
+	       (!q' u. WEAK_TRANS q u q' ==> ~(WEAK_EQUIV q' k))) ==>
+          (!r. (sum p r) contracts (sum q r)) ==> OBS_contracts p q``,
+    rpt STRIP_TAC
+ >> PAT_X_ASSUM ``!r. (sum p r) contracts (sum q r)``
+		(ASSUME_TAC o (Q.SPEC `prefix (label a) k`))
+ >> REWRITE_TAC [OBS_contracts]
+ >> rpt STRIP_TAC (* 2 sub-goals here *)
+ >| [ (* goal 1 (of 2) *)
+      IMP_RES_TAC SUM1 \\
+      POP_ASSUM (ASSUME_TAC o (Q.SPEC `prefix (label a) k`)) \\
+      PAT_X_ASSUM ``$contracts (sum p (prefix (label a) k)) (sum q (prefix (label a) k))``
+	(STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [contracts_cases])) \\
+      Cases_on `u` >| (* 2 sub-goals here *)
+      [ (* goal 1.1 (of 2) *)
+        RES_TAC >| (* 2 sub-goals here *)
+	[ (* goal 1.1.1 (of 2) *)
+	  Q.ABBREV_TAC `E2 = sum q (prefix (label a) k)` \\
+          `TRANS E2 (label a) k` by PROVE_TAC [PREFIX, SUM2] \\
+	  IMP_RES_TAC contracts_TRANS_label' \\
+          IMP_RES_TAC TRANS_TAU_AND_WEAK \\
+          PROVE_TAC [],
+          (* goal 1.1.2 (of 2) *)
+          PAT_X_ASSUM ``TRANS (sum q (prefix (label a) k)) tau E2``
+            (STRIP_ASSUME_TAC o (MATCH_MP TRANS_SUM)) >| (* 2 sub-goals here *)
+          [ (* goal 1.1.2.1 (of 2) *)
+            Q.EXISTS_TAC `E2` >> art [],
+            (* goal 1.1.2.2 (of 2) *)
+            IMP_RES_TAC TRANS_PREFIX \\
+            RW_TAC std_ss [Action_distinct_label] ] ],
+        (* goal 1.2 (of 2) *)
+        Cases_on `x = a` >| (* 2 sub-goals here *)
+        [ (* goal 1.2.1 (of 2) *)
+          FULL_SIMP_TAC std_ss [] >> RES_TAC \\
+          Q.EXISTS_TAC `E2` >> art [] \\
+	  PAT_X_ASSUM ``TRANS (sum q (prefix (label a) k)) (label a) E2``
+		(STRIP_ASSUME_TAC o (MATCH_MP TRANS_SUM)) \\
+	  IMP_RES_TAC TRANS_PREFIX \\
+          `WEAK_EQUIV E1 k` by PROVE_TAC [contracts_IMP_WEAK_EQUIV] \\
+	  IMP_RES_TAC TRANS_IMP_WEAK_TRANS \\
+          RES_TAC,
+          (* goal 1.2.2 (of 2) *)
+          RES_TAC \\
+          Q.EXISTS_TAC `E2` >> art [] \\
+	  PAT_X_ASSUM ``TRANS (sum q (prefix (label a) k)) (label x) E2``
+		(STRIP_ASSUME_TAC o (MATCH_MP TRANS_SUM)) \\
+	  IMP_RES_TAC TRANS_PREFIX \\
+          RW_TAC std_ss [Action_11] ] ],
+      (* goal 2 (of 2), almost symmetric with goal 1 *)
+      IMP_RES_TAC SUM1 \\
+      POP_ASSUM (ASSUME_TAC o (Q.SPEC `prefix (label a) k`)) \\
+      PAT_X_ASSUM ``$contracts (sum p (prefix (label a) k)) (sum h (prefix (label a) k))``
+	(STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [contracts_cases])) \\
+      Cases_on `u` >| (* 2 sub-goals here *)
+      [ (* goal 2.1 (of 2) *)
+        RES_TAC \\
+        PAT_X_ASSUM ``EPS (sum p (prefix (label a) k)) E1``
+	  (STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [EPS_cases1])) >| (* 2 sub-goals here *)
+        [ (* goal 2.1.1 (of 2) *)
+          `TRANS E1 (label a) k` by PROVE_TAC [PREFIX, SUM2] \\
+	  IMP_RES_TAC WEAK_EQUIV_TRANS_label \\
+          IMP_RES_TAC TRANS_TAU_AND_WEAK \\
+          `WEAK_EQUIV E2' k` by PROVE_TAC [WEAK_EQUIV_SYM] \\ (* one extra step *)
+          PROVE_TAC [],
+          (* goal 2.1.2 (of 2) *)
+          PAT_X_ASSUM ``TRANS (sum p (prefix (label a) k)) tau u``
+            (STRIP_ASSUME_TAC o (MATCH_MP TRANS_SUM)) >| (* 2 sub-goals here *)
+          [ (* goal 2.1.2.1 (of 2) *)
+            Q.EXISTS_TAC `E1` >> art [] \\
+            IMP_RES_TAC TRANS_AND_EPS,
+            (* goal 2.1.2.2 (of 2) *)
+            IMP_RES_TAC TRANS_PREFIX \\
+            RW_TAC std_ss [Action_distinct_label] ] ],
+        (* goal 2.2 (of 2) *)
+        Cases_on `x = a` >| (* 2 sub-goals here *)
+        [ (* goal 2.2.1 (of 2) *)
+          FULL_SIMP_TAC std_ss [] >> RES_TAC \\
+          Q.EXISTS_TAC `E1` >> art [] \\
+          IMP_RES_TAC WEAK_TRANS_cases1 >| (* 2 sub-goals here *)
+          [ (* goal 2.2.1.1 (of 2) *)
+            PAT_X_ASSUM ``TRANS (sum p (prefix (label a) k)) tau E'``
+		(STRIP_ASSUME_TAC o (MATCH_MP TRANS_SUM)) >| (* 2 sub-goals here *)
+            [ (* goal 2.2.1.1.1 (of 2) *)
+              IMP_RES_TAC TRANS_TAU_AND_WEAK,
+              (* goal 2.2.1.1.2 (of 2) *)
+              IMP_RES_TAC TRANS_PREFIX \\
+              RW_TAC std_ss [Action_distinct] ],
+            (* goal 2.2.1.2 (of 2) *)
+            PAT_X_ASSUM ``TRANS (sum p (prefix (label a) k)) (label a) E'``
+		(STRIP_ASSUME_TAC o (MATCH_MP TRANS_SUM)) >| (* 2 sub-goals here *)
+            [ (* goal 2.2.1.2.1 (of 2) *)
+              IMP_RES_TAC TRANS_AND_EPS,
+              (* goal 2.2.1.2.2 (of 2) *)
+              IMP_RES_TAC TRANS_PREFIX \\
+              `WEAK_EQUIV E2 k` by PROVE_TAC [EPS_STABLE', WEAK_EQUIV_SYM] \\
+              IMP_RES_TAC TRANS_IMP_WEAK_TRANS \\
+              RES_TAC ] ],
+          (* goal 2.2.2 (of 2) *)
+          RES_TAC \\
+          Q.EXISTS_TAC `E1` >> art [] \\
+          IMP_RES_TAC WEAK_TRANS_cases1 >| (* 2 sub-goals here *)
+          [ (* goal 2.2.2.1 (of 2) *)
+            PAT_X_ASSUM ``TRANS (sum p (prefix (label a) k)) tau E'``
+		(STRIP_ASSUME_TAC o (MATCH_MP TRANS_SUM)) >| (* 2 sub-goals here *)
+            [ (* goal 2.2.2.1.1 (of 2) *)
+              IMP_RES_TAC TRANS_TAU_AND_WEAK,
+              (* goal 2.2.2.1.2 (of 2) *)
+              IMP_RES_TAC TRANS_PREFIX \\
+              RW_TAC std_ss [Action_distinct] ],
+            (* goal 2.2.2.2 (of 2) *)
+            PAT_X_ASSUM ``TRANS (sum p (prefix (label a) k)) (label x) E'``
+		(STRIP_ASSUME_TAC o (MATCH_MP TRANS_SUM)) >| (* 2 sub-goals here *)
+            [ (* goal 2.2.2.2.1 (of 2) *)
+              IMP_RES_TAC TRANS_AND_EPS,
+              (* goal 2.2.2.2.2 (of 2) *)
+              IMP_RES_TAC TRANS_PREFIX \\
+              RW_TAC std_ss [Action_11] ] ] ] ] ]);
+
+(* The finite-state version of COARSEST_PRECONGR_THM; i. e.
+   The contraction version of COARSEST_CONGR_FINITE (van Glabbeek scenario) *)
+val COARSEST_PRECONGR_FINITE = store_thm ((* NEW *)
+   "COARSEST_PRECONGR_FINITE",
+  ``!p q. finite_state p /\ finite_state q ==>
+	  (OBS_contracts p q = !r. (sum p r) contracts (sum q r))``,
+    rpt STRIP_TAC
+ >> EQ_TAC >- REWRITE_TAC [COARSEST_PRECONGR_LR]
+ >> MP_TAC (Q.SPECL [`p`, `q`] KLOP_LEMMA_FINITE) (* in CoarsestCongrTheory *)
+ >> RW_TAC std_ss [COARSEST_PRECONGR_LEMMA]);
+
+(* Another version with SUM_contracts used *)
+val COARSEST_PRECONGR_FINITE' = store_thm (
+   "COARSEST_PRECONGR_FINITE'",
+  ``!p q. finite_state p /\ finite_state q ==> (OBS_contracts p q = SUM_contracts p q)``,
+    rpt STRIP_TAC
+ >> EQ_TAC >- REWRITE_TAC [OBS_contracts_IMP_SUM_contracts]
+ >> REWRITE_TAC [SUM_contracts]
+ >> BETA_TAC >> rpt STRIP_TAC
+ >> MP_TAC COARSEST_PRECONGR_FINITE
+ >> RW_TAC std_ss []);
+
 (* Bibliography:
  *
  * [1] Sangiorgi, D.: Equations, contractions, and unique solutions. ACM SIGPLAN Notices. (2015).
+ * [2] R.J. van Glabbeek, “A characterisation of weak bisimulation congruence”, in Processes,
+ *     Terms and Cycles: Steps on the Road to Infinity, Essays dedicated to Jan Willem Klop, on the
+ *     occasion of his 60th birthday, LNCS 3838, 26-39. Springer-Verlag, 2005.
  *)
 
 val _ = export_theory ();

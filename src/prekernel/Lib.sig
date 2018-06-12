@@ -43,6 +43,7 @@ sig
    val curry : ('a * 'b -> 'c) -> 'a -> 'b -> 'c
    val deinitcomment : string -> string
    val deinitcommentss : substring -> substring
+   val delete_trailing_wspace : string -> string
    val delta_apply : ('a -> 'a delta) -> 'a -> 'a
    val delta_map : ('a -> 'a delta) -> 'a list -> 'a list delta
    val delta_pair :

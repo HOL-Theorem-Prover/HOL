@@ -31,6 +31,12 @@ fun condprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm = let
             else raise UserPP_Failed
         | NONE => raise UserPP_Failed
   val {add_string, ublock, add_break, ...} = ppfns:ppstream_funs
+  fun paren c b p =
+    if b then
+      ublock c 1 (
+        add_string "(" >> p >> add_string ")"
+      )
+    else p
   val paren_required =
       (case rgr of
          Prec(p, _) => p > 70
@@ -38,8 +44,6 @@ fun condprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm = let
       (case lgr of
          Prec(_, n) => n = GrammarSpecials.fnapp_special
        | _ => false)
-  val doparen = if paren_required then (fn c => add_string c)
-                else (fn c => nothing)
   fun syspr gravs t =
     printer { gravs = gravs, depth = decdepth depth, binderp = false } t
   fun doguard needs_else (g,t) =
@@ -69,10 +73,9 @@ fun condprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm = let
   end
   val (g,t,e) = dest_cond tm
 in
-  doparen "(" >>
-  block PP.CONSISTENT 0
-    (doguard false (g,t) >> add_break(1,0) >> doelse e) >>
-  doparen ")"
+  paren PP.CONSISTENT paren_required (
+    doguard false (g,t) >> add_break(1,0) >> doelse e
+  )
 end
 
 val _ = term_grammar.userSyntaxFns.register_userPP

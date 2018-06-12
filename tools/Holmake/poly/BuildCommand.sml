@@ -303,7 +303,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         val useScript = fullPath [HOLDIR, "bin", "buildheap"]
         val cline = useScript::"--gcthreads=1"::
                     (if polynothol then "--poly" else "--holstate="^HOLSTATE)::
-                    ((if debug then ["--dbg"] else []) @ objectfiles)
+                    ((if debug then ["--dbg"] else []) @ objectfiles) @
+                    List.concat (map (fn f => ["-c", f]) expected_results)
         fun cont wn res =
           let
             val _ =
@@ -315,15 +316,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                       app safedelete (script :: intermediates)
                     else ()
           in
-            isSuccess res andalso
-            List.all (fn file =>
-                         exists_readable file orelse
-                         (wn ("Script file "^script^" didn't produce "^file^
-                              "; \n\
-                              \  maybe need export_theory() at end of "^
-                              script ^ ".sml");
-                          false))
-                     expected_results
+            isSuccess res
           end
         val script_part =
             if String.isSuffix "Script" script then
@@ -359,7 +352,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           let
             val (scriptetc,objectfiles) = setup_script s deps []
           in
-            run_script g scriptetc objectfiles [s^"Theory.sml", s^"Theory.sig"]
+            run_script g scriptetc objectfiles
+                       [s^"Theory.sml", s^"Theory.sig", s^"Theory.dat"]
           end
         | BuildArticle (s0, deps) =>
           let

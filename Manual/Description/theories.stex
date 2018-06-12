@@ -3106,30 +3106,14 @@ Other constants in the theory \theoryimp{llist} include \ml{LMAP}, \ml{LFINITE},
 \end{hol}
 They are characterised by the following theorems
 \begin{hol}
-\begin{verbatim}
-   LMAP
-      |- (LMAP f LNIL = LNIL) /\
-         (LMAP f (LCONS h t) = LCONS (f h) (LMAP f t))
-   LFINITE_THM
-      |- (LFINITE LNIL = T) /\
-         (LFINITE (LCONS h t) = LFINITE t)
-   LNTH_THM
-      |- (!n. LNTH n LNIL = NONE) /\
-         (!h t. LNTH 0 (LCONS h t) = SOME h) /\
-         (!n h t. LNTH (SUC n) (LCONS h t) = LNTH n t)
-   LTAKE_THM
-      |- (LTAKE 0 l = SOME []) /\
-         (LTAKE (SUC n) LNIL = NONE) /\
-         (LTAKE (SUC n) (LCONS h t) = OPTION_MAP (CONS h) (LTAKE n t)
-   LDROP_THM
-      |- (LDROP 0 ll = SOME ll) /\
-         (LDROP (SUC n) ll = NONE) /\
-         (LDROP (SUC n) (LCONS h t) = LDROP n t)
-   LFILTER_THM
-      |- (LFILTER P LNIL = LNIL) /\
-         (LFILTER P (LCONS h t) = if P h then LCONS h (LFILTER P t)
-                                         else LFILTER P t)
-\end{verbatim}
+\begin{alltt}
+##thm LMAP
+##thm LFINITE_THM
+##thm LNTH_THM
+##thm LTAKE_THM
+##thm LDROP_THM
+##thm LFILTER_THM
+\end{alltt}
 \end{hol}
 
 \paragraph{Concatenation}
@@ -3138,29 +3122,24 @@ Two lazy lists may be concatenated by \ml{LAPPEND}. If the first lazy
 list is infinite, elements of the second are inaccessible in the
 result.  A lazy list of lazy lists can be flattened to a lazy list by
 \ml{LFLATTEN}.
-\begin{hol}\begin{verbatim}
-   LAPPEND
-      |- (!x. LAPPEND LNIL x = x) /\
-         (!h t x. LAPPEND (LCONS h t) x = LCONS h (LAPPEND t x))
-   LFLATTEN_THM
-      |- (LFLATTEN LNIL = LNIL) /\
-         (!tl. LFLATTEN (LCONS LNIL t) = LFLATTEN t) /\
-         (!h t tl. LFLATTEN (LCONS (LCONS h t) tl) =
-                      LCONS h (LFLATTEN (LCONS t tl)))
-\end{verbatim}\end{hol}
+\begin{hol}
+\begin{alltt}
+##thm LAPPEND
+##thm LFLATTEN_THM
+\end{alltt}
+\end{hol}
 
 \paragraph{Lists and lazy lists}
 
 Mapping back and forth from lists to lazy lists is accomplished
 by \ml{fromList} and \ml{toList}:
-\begin{hol}\begin{verbatim}
-   fromList
-      |- (fromList [] = LNIL) /\
-         (!h t. fromList (h::t) = LCONS h (fromList t))
-   toList_THM
-      |- (toList LNIL = SOME []) /\
-         (!h t. toList (LCONS h t) = OPTION_MAP (CONS h) (toList t))
-\end{verbatim}\end{hol}
+\begin{hol}
+\begin{alltt}
+##thm fromList_def
+##thm toList_THM
+\end{alltt}
+\end{hol}
+Note that \holtxt{toList~ll~=~NONE} when \holtxt{ll} is infinite.
 
 \paragraph{Proof principles}
 
@@ -3264,41 +3243,38 @@ Other constants defined in theory \theoryimp{path} include
 The \ml{first} function returns the first element of a path.
 There always is such an element, and the defining equations are
 \begin{hol}
-\begin{verbatim}
-   first_thm  |- (first (stopped_at x) = x) /\
-                 (first (pcons x l p) = x)
-\end{verbatim}
+\begin{alltt}
+>>__ load "pathTheory"
+>>__ open pathTheory;
+##thm first_thm
+\end{alltt}
 \end{hol}
 
 On the other hand, the \ml{last} function does not always have a
 well-specified value, though it still has nice characterising
 equations:
 \begin{hol}
-\begin{verbatim}
-   last_thm   |- (last (stopped_at x) = x) /\
-                 (last (pcons x l p) = last p)
-\end{verbatim}
+\begin{alltt}
+##thm last_thm
+\end{alltt}
 \end{hol}
 
 The theorem for \ml{finite} has a similar feel, but has a definite
 value (\ml{F}, or \emph{false}) on infinite paths), whereas the
 value of \ml{last} on such paths is unspecified:
 \begin{hol}
-\begin{verbatim}
-   finite_thm |- (finite (stopped_at x) = T) /\
-                 (finite (pcons x l p) = finite p)
-\end{verbatim}
+\begin{alltt}
+##thm finite_thm
+\end{alltt}
 \end{hol}
 
 The function \ml{pconcat} concatenates two paths, linking them
 with a provided label.  If the first path is infinite, then the result
 is equal to that first path.  The defining equation is
 \begin{hol}
-\begin{verbatim}
-   pconcat_thm |- (pconcat (stopped_at x) lab p2 = pcons x lab p2) /\
-                  (pconcat (pcons x r p) lab p2 =
-                       pcons x r (pconcat p lab p2)
-\end{verbatim}
+\begin{alltt}
+##thm pconcat_thm
+\end{alltt}
 \end{hol}
 %
 These equations are true even when the first argument to
@@ -3308,35 +3284,27 @@ The \ml{okpath} predicate tests whether or not a path is a valid
 transition given a ternary transition relation.  Its characterising
 theorem is
 \begin{hol}
-\begin{verbatim}
-  okpath_thm |-
-     (okpath R (stopped_at x)) /\
-     (okpath R (pcons x r p) = R x r (first p) /\ okpath R p)
-\end{verbatim}
+\begin{alltt}
+##thm okpath_thm
+\end{alltt}
 \end{hol}
 %
 There is also an induction principle that simplifies reasoning about
 finite $R$-paths:
 %
 \begin{hol}
-\begin{verbatim}
-   finite_okpath_ind |-
-       (!x. P (stopped_at x)) /\
-       (!x r p. okpath R p /\ finite p /\ R x r (first p) /\ P p ==>
-                P (pcons x r p)) ==>
-       !p. okpath R p /\ finite p ==> P p
-\end{verbatim}
+\begin{alltt}
+##thm finite_okpath_ind
+\end{alltt}
 \end{hol}
 
+\noindent
 One can show that a set \holtxt{P} of paths are all $R$-paths with the
 co-induction principle:
 \begin{hol}
-\begin{verbatim}
-   okpath_co_ind |-
-      !P.
-         (!x r p. P (pcons x r p) ==> R x r (first p) /\ P p) ==>
-         !p. P p ==> okpath R p
-\end{verbatim}
+\begin{alltt}
+##thm okpath_co_ind
+\end{alltt}
 \end{hol}
 \index{labelled paths, the HOL theory of@labelled paths, the \HOL{} theory of|)}
 \index{reduction sequences, the HOL theory of@reduction sequences, the \HOL{} theory of|)}

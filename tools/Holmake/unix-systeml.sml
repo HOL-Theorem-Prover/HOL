@@ -10,11 +10,7 @@ structure FileSys = OS.FileSys
 
 local
   open Process
-  fun concat_wspaces munge acc strl =
-    case strl of
-      [] => concat (List.rev acc)
-    | [x] => concat (List.rev (munge x :: acc))
-    | (x::xs) => concat_wspaces munge (" " :: munge x :: acc) xs
+  fun concat_wspaces munge strl = String.concatWith " " (map munge strl)
 in
 
   val unix_meta_chars = [#"'", #"\"", #"|", #" ", #">", #"\t", #"\n", #"<",
@@ -28,7 +24,10 @@ in
   fun protect s = if is_meta_string(s,0) then String.translate unix_trans s
                   else s
 
-  val systeml = system o concat_wspaces protect []
+  val systeml = system o concat_wspaces protect
+
+  fun systeml_out {outfile} c =
+    system (concat_wspaces protect c ^ " > " ^ protect outfile ^ " 2>&1")
 
   val system_ps = Process.system
   (* see winNT-systeml.sml for an explanation of why what is a synonym under

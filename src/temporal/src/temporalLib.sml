@@ -13,9 +13,6 @@ struct
  ---------------------------------------------------------------------------*)
 
 val smv_tmp_dir = ref "/tmp/";
-val smv_path    = ref (Path.concat(Globals.HOLDIR,"sigobj/"));
-val smv_call    = ref "smv.xable -r -v -f ";
-
 
 open HolKernel Parse boolLib Rsyntax;
 
@@ -210,7 +207,7 @@ fun temporal2hol truesig  = “\t:num.T”
            val t1 = temporal2hol f1
            val t2 = temporal2hol f2
            val t3 = temporal2hol f3
-         in “\t:num. ^t1 t => ^t2 t | ^t3 t ”
+         in “\t:num. if ^t1 t then ^t2 t else ^t3 t”
         end
   | temporal2hol (next f) =
         mk_comb{Rator=NEXT,Rand=(temporal2hol f)}
@@ -1259,7 +1256,7 @@ fun genbuechi2smv_string b =
         "VAR\n"^(var_list2smv vars)^"\n"^
         "TRANS \n"^(term2smv_string(#Body(dest_forall transrel)))^"\n\n"^
         (acceptance (strip_conj accept))^"\n\n"^
-        "SPEC (EG 1) -> !"^(term2smv_string init_condition)^"\n\n"
+        "SPEC (EG TRUE) -> !"^(term2smv_string init_condition)^"\n\n"
     end;
 
 
@@ -1285,13 +1282,17 @@ fun interpret_smv_output stl =
             beginl (e::s) [] = false |
             beginl (e1::s1) (e2::s2) = (e1=e2) andalso (beginl s1 s2)
         fun begins s1 s2 = beginl (explode s1) (explode s2)
+        fun skip_lines [] = [] |
+            skip_lines (e::l) = if (e = "\n") then skip_lines l
+				else if (begins "*** " e) then skip_lines l
+				else if (begins "WARNING *** " e) then skip_lines l
+				else (e::l)
         val stll = ref stl
         val proved =
-            let val (l, ll) = Option.valOf (List.getItem (!stll))
-             in (stll := ll; beginl [#"\n",#"e",#"u",#"r",#"t"] (rev(explode l)))
+            let val (l, ll) = Option.valOf (List.getItem (skip_lines (!stll)))
+            in (stll := ll;
+		beginl [#"\n",#"e",#"u",#"r",#"t"] (rev (explode l))) (* ... is true *)
             end
-        fun skip_lines [] = []|
-            skip_lines (e::l) = if (e="\n") then skip_lines l else (e::l)
         fun read_state_lines() = (* reading lines until empty line is read *)
             let val (l, ll) = Option.valOf (List.getItem (!stll))
                 val _ = (stll := ll)
@@ -1322,9 +1323,6 @@ fun interpret_smv_output stl =
           Loop_Sequence = if !loop_sequence=[] then [] else rev(tl(!loop_sequence)),
           Resources = skip_lines(!stll)})
     end
-
-
-
 
 (* ************************************************************************************ *)
 (* Printing the countermodel on the terminal                                            *)
@@ -1387,13 +1385,16 @@ fun print_smv_info smv_info =
 
    ************************************************************************* *)
 
-
 fun SMV_RUN_FILE smv_file =
     let
-  val _ = Process.system
-      ((!smv_path)^(!smv_call)^" "
-      ^smv_file^" > "
-      ^(!smv_tmp_dir)^"smv_out")
+  val _ = case OS.Process.getEnv "HOL4_SMV_EXECUTABLE" of
+	    SOME file =>
+	      Process.system (file ^ " " ^ smv_file ^ " > " ^
+			      (!smv_tmp_dir) ^ "smv_out")
+	  | NONE =>
+	    raise Feedback.mk_HOL_ERR "SMV" smv_file
+		 ("SMV not configured: set the HOL4_SMV_EXECUTABLE environment" ^
+		  "variable to point to the SMV executable file.")
   val file_in = TextIO.openIn((!smv_tmp_dir)^"smv_out")
   val s = ref (TextIO.inputLine file_in)
   val sl = ref ([]:string list)
@@ -1421,9 +1422,6 @@ fun SMV_RUN smv_program =
   in
     SMV_RUN_FILE ((!smv_tmp_dir)^"smv_file.smv")
   end
-
-
-
 
 fun SMV_AUTOMATON_CONV automaton =
   let

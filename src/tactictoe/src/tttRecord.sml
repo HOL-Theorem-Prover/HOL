@@ -273,7 +273,9 @@ fun end_record_proof name g =
     fun ortho (stac,t,g,gl) =
       [orthogonalize ((stac,t,g,gl), tttFeature.fea_of_goal g)]
     fun f lbl = if !ttt_ortho_flag then ortho lbl else noortho lbl
-    val lbl2 = List.concat (map f lbl1)
+    val lbl2 = if !ttt_noabs_flag 
+               then lbl1 
+               else List.concat (map f lbl1)
   in
     debug_t ("Saving " ^ int_to_string (length lbl2) ^ " labels")
       (app update_tacdata) lbl2

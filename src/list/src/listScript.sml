@@ -3082,8 +3082,146 @@ val LIST_APPLY_o = store_thm(
   SIMP_TAC (srw_ss()) [o_DEF, MAP_MAP_o, LIST_BIND_MAP]);
 
 (* ----------------------------------------------------------------------
-    LLEX : lexicographic ordering on lists
+    Various lexicographic orderings on lists
    ---------------------------------------------------------------------- *)
+
+val SHORTLEX_def = Define‘
+  (SHORTLEX R [] l2 <=> l2 <> []) /\
+  (SHORTLEX R (h1::t1) l2 <=>
+        case l2 of
+            [] => F
+          | h2::t2 => if LENGTH t1 < LENGTH t2 then T
+                      else if LENGTH t1 = LENGTH t2 then
+                        if R h1 h2 then T
+                        else if h1 = h2 then SHORTLEX R t1 t2
+                        else F
+                      else F)
+’;
+
+fun pmap f (a, b) = (f a, f b)
+val def' = uncurry CONJ (pmap SPEC_ALL (CONJ_PAIR SHORTLEX_def))
+val SHORTLEX_THM = save_thm(
+  "SHORTLEX_THM[simp]",
+  CONJ (def' |> Q.INST [`l2` |-> `[]`]
+             |> SIMP_RULE (srw_ss()) [])
+       (def' |> Q.INST [`l2` |-> `h2::t2`]
+             |> SIMP_RULE (srw_ss()) []))
+
+val SHORTLEX_MONO = store_thm(
+  "SHORTLEX_MONO[mono]",
+  ``(!x y. R1 x y ==> R2 x y) ==> SHORTLEX R1 x y ==> SHORTLEX R2 x y``,
+  STRIP_TAC THEN Q.ID_SPEC_TAC`y` THEN Induct_on`x` THEN Cases_on`y` THEN
+  SRW_TAC[][SHORTLEX_THM] THEN PROVE_TAC[]);
+
+val SHORTLEX_NIL2 = store_thm(
+  "SHORTLEX_NIL2[simp]",
+  ``~SHORTLEX R l []``,
+  Cases_on `l` THEN SIMP_TAC (srw_ss()) [SHORTLEX_def]);
+
+val SHORTLEX_transitive = store_thm(
+  "SHORTLEX_transitive",
+  ``transitive R ==> transitive (SHORTLEX R)``,
+  SIMP_TAC(srw_ss()) [transitive_def] THEN STRIP_TAC THEN Induct THEN
+  SIMP_TAC (srw_ss()) [SHORTLEX_def] THEN
+  MAP_EVERY Q.X_GEN_TAC [`h`, `y`, `z`] THEN Cases_on `y` THEN
+  SIMP_TAC (srw_ss()) [] THEN Cases_on `z` THEN
+  SIMP_TAC (srw_ss()) [] THEN
+  METIS_TAC[arithmeticTheory.LESS_TRANS]);
+
+val LENGTH_LT_SHORTLEX = Q.store_thm(
+  "LENGTH_LT_SHORTLEX",
+  ‘!l1 l2. LENGTH l1 < LENGTH l2 ==> SHORTLEX R l1 l2’,
+  Induct >> simp[SHORTLEX_def] >> rpt gen_tac >> Cases_on ‘l2’ >> simp[]);
+
+val SHORTLEX_LENGTH_LE = Q.store_thm(
+  "SHORTLEX_LENGTH_LE",
+  ‘!l1 l2. SHORTLEX R l1 l2 ==> LENGTH l1 <= LENGTH l2’,
+  Induct >> simp[SHORTLEX_def] >> rpt gen_tac >> Cases_on ‘l2’ >> simp[] >>
+  rw[] >> simp[]);
+
+val SHORTLEX_total = store_thm(
+  "SHORTLEX_total",
+  ``total (RC R) ==> total (RC (SHORTLEX R))``,
+  SIMP_TAC (srw_ss()) [total_def, RC_DEF] THEN STRIP_TAC THEN Induct THEN
+  SIMP_TAC (srw_ss()) [SHORTLEX_def] THEN MAP_EVERY Q.X_GEN_TAC [`h`, `y`] THEN
+  Cases_on `y` THEN SIMP_TAC (srw_ss()) [] THEN
+  Q.RENAME_TAC [‘LENGTH l1 < LENGTH l2’, ‘SHORTLEX R l1 l2’, ‘R h1 h2’] >>
+  MAP_EVERY Cases_on [‘LENGTH l1 < LENGTH l2’, ‘h1 = h2’, ‘l1 = l2’] >>
+  simp[] >> metis_tac[arithmeticTheory.LESS_LESS_CASES]);
+
+val WF_SHORTLEX_same_lengths = Q.store_thm(
+  "WF_SHORTLEX_same_lengths",
+  ‘WF R ==>
+   !l s. (!d. d IN s ==> (LENGTH d = l)) /\ (?a. a IN s) ==>
+         ?b. b IN s /\ !c. SHORTLEX R c b ==> c NOTIN s’,
+  strip_tac >> ho_match_mp_tac (TypeBase.induction_of “:num”) >>
+  simp[] >> rw[] >- (Q.EXISTS_TAC ‘[]’ >> simp[] >> metis_tac[]) >>
+  Q.RENAME_TAC [‘LENGTH _ = SUC N’] >>
+  ‘[] NOTIN s’ by (strip_tac >> ‘LENGTH [] = SUC N’ by metis_tac[] >> fs[]) >>
+  Q.ABBREV_TAC ‘hds = IMAGE HD s’ >>
+  ‘?ah. hds ah’ by
+     (‘?ah. ah IN hds’ suffices_by simp[IN_DEF] >>
+      simp[Abbr‘hds’] >> metis_tac[]) >>
+  ‘?m. hds m /\ !n. R n m ==> n NOTIN hds’
+    by (simp[IN_DEF] >> metis_tac[relationTheory.WF_DEF]) >>
+  Q.ABBREV_TAC ‘ms = { a | a IN s /\ (HD a = m) }’ >>
+  ‘?b. b IN ms /\ !c. SHORTLEX R c b ==> c NOTIN ms’ suffices_by
+    (strip_tac >> Q.EXISTS_TAC ‘b’ >>
+     ‘b IN s’ by fs[Abbr‘ms’] >> simp[] >> rpt strip_tac >>
+     ‘c NOTIN ms’ by metis_tac[] >>
+     ‘HD c <> m’
+        by (pop_assum mp_tac >> simp_tac (srw_ss()) [Abbr‘ms’] >> simp[]) >>
+     ‘(LENGTH c = SUC N) /\ (LENGTH b = SUC N)’ by simp[] >>
+     ‘?ch ct. c = ch :: ct’ by (Cases_on ‘c’ >> fs[]) >>
+     ‘?bh bt. b = bh :: bt’ by (Cases_on ‘b’ >> fs[]) >>
+     fs[Abbr‘ms’]
+     >- (‘ch IN hds’ by (simp[Abbr‘hds’] >> metis_tac[HD]) >>
+         metis_tac[]) >>
+     metis_tac[]) >>
+  CONV_TAC (HO_REWR_CONV EXISTS_LIST) >> DISJ2_TAC >>
+  Q.EXISTS_TAC ‘m’ >>
+  ONCE_REWRITE_TAC [tautLib.TAUT ‘(p ==> q) <=> (~q ==> ~p)’] >>
+  simp[] >> simp[Once FORALL_LIST] >>
+  Q.ABBREV_TAC ‘mts = { t | m::t IN s }’ >>
+  ‘!d. d IN mts ==> (LENGTH d = N)’
+    by (simp[Abbr‘mts’] >> rw[] >> first_x_assum drule >> simp[]) >>
+  ‘?a0. a0 IN mts’
+    by (simp[Abbr‘mts’] >>
+        ‘m IN hds’ by simp[IN_DEF] >> pop_assum mp_tac >>
+        simp[Abbr‘hds’] >> fs[] >>
+        Q.RENAME_TAC [‘R _ m’, ‘m = HD e’, ‘e IN s’] >> Cases_on ‘e’ >>
+        fs[] >> metis_tac[]) >>
+  ‘?t. t IN mts /\ !u. SHORTLEX R u t ==> u NOTIN mts’ by metis_tac[] >>
+  Q.EXISTS_TAC ‘t’ >> rw[]
+  >- fs[Abbr‘mts’, Abbr‘ms’]
+  >- fs[Abbr‘mts’, Abbr‘ms’]
+  >- (fs[Abbr‘mts’, Abbr‘ms’] >> rw[]) >>
+  fs[Abbr‘mts’, Abbr‘ms’] >> rw[] >> metis_tac[IN_DEF]);
+
+val WF_SHORTLEX = Q.store_thm(
+  "WF_SHORTLEX[simp]",
+  ‘WF R ==> WF (SHORTLEX R)’,
+  simp[relationTheory.WF_DEF] >> rpt strip_tac >>
+  Q.ABBREV_TAC ‘minlen = (LEAST) (IMAGE LENGTH B)’ >>
+  ‘?a. B a /\ (LENGTH a = minlen) /\ !b. B b ==> LENGTH a <= LENGTH b’
+    by (simp[Abbr`minlen`] >> numLib.LEAST_ELIM_TAC >>
+        simp[IMAGE_applied] >> simp[IN_DEF] >>
+        metis_tac[arithmeticTheory.NOT_LESS]) >>
+  markerLib.RM_ABBREV_TAC "minlen" >> rw[] >>
+  Q.ABBREV_TAC `as = { l | B l /\ (LENGTH l = LENGTH a)}` >>
+  ‘!d. d IN as ==> (LENGTH d = LENGTH a)’ by simp[Abbr‘as’] >>
+  ‘a IN as’ by simp[Abbr‘as’] >>
+  ‘?a0. a0 IN as /\ !c. SHORTLEX R c a0 ==> c NOTIN as’
+    by metis_tac[WF_SHORTLEX_same_lengths, relationTheory.WF_DEF] >>
+  Q.EXISTS_TAC ‘a0’ >> conj_tac
+  >- fs[Abbr‘as’] >>
+  Q.X_GEN_TAC ‘bb’ >> rpt strip_tac >>
+  ‘bb NOTIN as’ by simp[] >>
+  ‘LENGTH bb <> LENGTH a’ by (fs[Abbr‘as’] >> fs[]) >>
+  ‘LENGTH a < LENGTH bb’ by metis_tac[arithmeticTheory.LESS_OR_EQ] >>
+  ‘LENGTH bb <= LENGTH a0’ by metis_tac[SHORTLEX_LENGTH_LE] >>
+  ‘LENGTH a0 = LENGTH a’ by metis_tac[] >>
+  full_simp_tac (srw_ss() ++ numSimps.ARITH_ss) []);
 
 val LLEX_def = Define`
   (LLEX R [] l2 <=> l2 <> []) /\
@@ -3104,20 +3242,17 @@ val LLEX_THM = save_thm(
        (def' |> Q.INST [`l2` |-> `h2::t2`]
              |> SIMP_RULE (srw_ss()) []))
 
-val LLEX_MONO = store_thm("LLEX_MONO",
-  ``(!x y. R1 x y ==> R2 x y)
-    ==>
-    LLEX R1 x y ==> LLEX R2 x y``,
+val LLEX_MONO = store_thm("LLEX_MONO[mono]",
+  ``(!x y. R1 x y ==> R2 x y) ==> LLEX R1 x y ==> LLEX R2 x y``,
   STRIP_TAC THEN
   Q.ID_SPEC_TAC`y` THEN
   Induct_on`x` THEN
   Cases_on`y` THEN
   SRW_TAC[][LLEX_THM] THEN
   PROVE_TAC[])
-val () = IndDefLib.export_mono"LLEX_MONO";
 
 val LLEX_CONG = store_thm
-("LLEX_CONG",
+("LLEX_CONG[defncong]",
  ``!R l1 l2 R' l1' l2'.
     (l1 = l1') /\ (l2 = l2') /\
     (!a b. MEM a l1' /\ MEM b l2' ==> (R a b = R' a b))
@@ -3129,8 +3264,6 @@ val LLEX_CONG = store_thm
    THEN SRW_TAC [] []
    THEN SRW_TAC [] [LLEX_THM]
    THEN METIS_TAC[MEM]);
-
-val _ = DefnBase.export_cong "LLEX_CONG";
 
 val LLEX_NIL2 = store_thm(
   "LLEX_NIL2[simp]",

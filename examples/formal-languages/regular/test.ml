@@ -208,8 +208,43 @@ val date_matcher = time matcher
   not (date_matcher "foo-bar-baz")
 ; 
 
-time matcher
+val time_matcher = time matcher
   `\[\{"time":\d{13}(:\d{3})?,\w{1,20}:\{(\w{1,25}:\w{1,30},?)+\}\}\]`;
+
+time_matcher "[{\"time\":1234567890123:000,foo:{ted:teddy,sam:sammy}}]"
+  andalso 
+not (time_matcher "[{\"time\":1234567890123:000,foo:{ted:teddy,   sam:sammy}}]")
+  andalso
+time_matcher "[{\"time\":1234567890123,foo:{ted:teddy,sam:sammy}}]"
+  andalso
+time_matcher "[{\"time\":1234567890123,foo:{ted:teddy}}]";
+
+(*---------------------------------------------------------------------------*)
+(* UTF-8                                                                     *)
+(*   Binary    Hex          Comments                                         *)
+(*   0xxxxxxx  0x00..0x7F   Only byte of a 1-byte character encoding         *)
+(*   10xxxxxx  0x80..0xBF   Continuation bytes (1-3 continuation bytes)      *)
+(*   110xxxxx  0xC0..0xDF   First byte of a 2-byte character encoding        *)
+(*   1110xxxx  0xE0..0xEF   First byte of a 3-byte character encoding        *)
+(*   11110xxx  0xF0..0xF4   First byte of a 4-byte character encoding        *)
+(*                                                                           *)
+(* Since a 4-byte character has 5 header bits in the first byte and 3        *)
+(* "payload" bits, it seems as though the Hex range should be 0xF0..0xF7,    *)
+(* but there is a requirement to be compatible with UTF-16, which has        *)
+(* U+10FFFF as its highest codepoint, so the Hex range is actually           *)
+(* restricted to 0xF0..0xF4.                                                 *)
+(*                                                                           *)
+(* There are further requirements, e.g., characters need to be "minimally"   *)
+(* (or canonically) encoded. This is also known as the "overlong" encoding   *)
+(* issue. I am not yet sure whether this can be handled nicely with a regex. *)
+
+(*---------------------------------------------------------------------------*)
+
+
+val utf8_matcher =
+ time matcher
+  `([\000-\127]|[\192-\223][\128-\191]|[\224-\239][\128-\191][\128-\191]|[\240-\244][\128-\191][\128-\191][\128-\191])*`;
+
 
 (*---------------------------------------------------------------------------*)
 (* Test ranges over natural numbers                                          *)
@@ -409,31 +444,6 @@ val match_1801_packed =
 val match_1802    = matcher `\i{0,9999,LSB}\i{0,3599,LSB}.{4}`;
 val test_1802_alt = matcher `\i{0,9999}\i{0,3599}\k{0}{4}`;
 val match_1803    = matcher `\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
-
-(*
-fun prod [] l2 = []
-  | prod (h::t) l2 = map (strcat h) l2 @ prod t l2;
-
-fun PROD [] = []
-  | PROD [list] = list
-  | PROD (h::t) = prod h (PROD t);
-
-(*---------------------------------------------------------------------------*)
-(* 58 trillion strings to match exhaustively. Slightly unfeasible as written. *)
-(* Could be done one-at-a-time, I suppose.                                   *)
-(*---------------------------------------------------------------------------*)
-
-Lib.all (equal true)
- (map match_1800 
-   (PROD 
-     [map (int2string 1) (upto 1 31),
-      map (int2string 1) (upto 1 12),
-      map (int2string 1) (upto 0 99),
-      map (int2string 1) (upto 0 23),
-      map (int2string 1) (upto 0 59),
-      map (int2string 1) (upto 0 59),
-      map (int2string 2) (upto 0 17999)]));
-*)
 
 Lib.all (equal true)
  (map match_1800 

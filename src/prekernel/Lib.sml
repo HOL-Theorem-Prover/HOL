@@ -321,6 +321,23 @@ fun unprefix pfx s =
 
 fun ppstring pf x = HOLPP.pp_to_string (!Globals.linewidth) pf x
 
+fun delete_trailing_wspace s =
+  let
+    val toks = String.fields (equal #"\n") s
+    fun do1 i s =
+      if i < 0 then ""
+      else if Char.isSpace (String.sub(s,i)) then do1 (i - 1) s
+      else String.extract(s,0,SOME(i + 1))
+    fun remove_rptd_nls i cnt s =
+      if i < 0 then if cnt > 0 then "\n" else ""
+      else if String.sub(s,i) = #"\n" then
+        remove_rptd_nls (i - 1) (cnt + 1) s
+      else String.extract(s,0,SOME(i + 1 + (if cnt > 0 then 1 else 0)))
+    val s1 = String.concatWith "\n" (map (fn s => do1 (size s - 1) s) toks)
+  in
+    remove_rptd_nls (size s1 - 1) 0 s1
+  end
+
 (*---------------------------------------------------------------------------*
  * Timing                                                                    *
  *---------------------------------------------------------------------------*)

@@ -140,7 +140,7 @@ end
 
 fun do_one_file docdir destdir dname = let
   val file = parse_file (OS.Path.concat(docdir, dname ^ ".doc"))
-  val outputstr = TextIO.openOut (OS.Path.concat(destdir, dname ^ ".adoc"))
+  val outputstr = TextIO.openOut (OS.Path.concat(destdir, dname ^ ".txt"))
 in
   print_docpart (file, outputstr);
   app (write_section outputstr) file;
