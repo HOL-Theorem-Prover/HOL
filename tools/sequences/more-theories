@@ -34,10 +34,10 @@ src/patricia
 src/transfer
 src/update
 src/emit
-src/pred_set/src/more_theories
 !!examples/ARM/v4
 !!examples/ARM/v7
 !!src/emit/ML
+src/pred_set/src/more_theories
 !src/emit/theory_tests
 !src/emit/theory_tests1
 !examples/dev
