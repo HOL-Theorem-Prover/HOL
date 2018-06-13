@@ -1,8 +1,8 @@
-structure file_readerLib =
+structure file_readerLib :> file_readerLib =
 struct
 
 open HolKernel boolLib bossLib Parse;
-open backgroundLib writerLib;
+open helperLib backgroundLib writerLib;
 
 datatype arch = ARM | M0
 

@@ -1,4 +1,4 @@
-structure writerLib =
+structure writerLib :> writerLib =
 struct
 
 open HolKernel boolLib bossLib Parse;
