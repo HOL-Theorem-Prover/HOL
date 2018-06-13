@@ -14,9 +14,6 @@ open Parse
 
 val ERR = Feedback.mk_HOL_ERR "helperLib"
 
-infix \\
-val op \\ = op THEN;
-
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
@@ -393,7 +390,7 @@ val PRE_POST_RULE = CONV_RULE o PRE_POST_CONV
 
 local
    val cond_T = Q.prove (
-      `!p. (set_sep$cond T * p = p) /\ (p * set_sep$cond T = p)`,
+      `!p : 'a set set. (set_sep$cond T * p = p) /\ (p * set_sep$cond T = p)`,
       REWRITE_TAC [set_sepTheory.SEP_CLAUSES])
    val rule1 =
       PRE_POST_RULE (REWRITE_CONV [cond_T]) o
