@@ -67,6 +67,10 @@ sig
   val Cases_on          : term quotation -> tactic
   val Induct_on         : term quotation -> tactic
 
+  val wlog_then         : term quotation -> term quotation list ->
+                          thm_tactic -> tactic
+  val wlog_tac          : term quotation -> term quotation list -> tactic
+
   val PURE_TOP_CASE_TAC : tactic  (* top-most case-split *)
   val PURE_CASE_TAC     : tactic  (* smallest case-split (concl) *)
   val PURE_FULL_CASE_TAC: tactic  (* smallest case-split  (goal) *)
