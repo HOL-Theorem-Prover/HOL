@@ -29,6 +29,7 @@ then
     fi
 fi
 
+reusecommit=0
 TEMP=$(getopt -n releasing-hol -o '' -lrelname: -lreuse-checkout -- "$@")
 eval set -- "$TEMP"
 
@@ -79,8 +80,13 @@ localholdir=/tmp/localhol
 
 echo -n "Switching to ${gitref} - "
 (git checkout -f -q ${gitref} && echo "done" || die "failed")
-$ML < tools/smart-configure.sml
-bin/build
+if [ ${reusecommit} -eq 1 ]
+then
+    :
+else
+    $ML < tools/smart-configure.sml
+    bin/build
+fi
 
 texlogs=/tmp/$releasename-latex-logs
 
@@ -120,10 +126,10 @@ then
 fi
 
 echo -n "Copying various theorems from local installation: "
-for i in pair res_quan string
+for i in coretypes/pair-help res_quan/help string/help
 do
   echo -n "$i "
-  if /bin/cp -R $localholdir/src/$i/help/thms $archive/src/$i/help 2> /dev/null
+  if /bin/cp -R $localholdir/src/$i/thms $archive/src/$i 2> /dev/null
   then
       :
   else
