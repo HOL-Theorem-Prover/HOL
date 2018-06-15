@@ -263,6 +263,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   end handle IO.Io _ => OS.Process.failure
 
   fun build_command g (ii as {preincludes,includes}) c arg = let
+    val _ = diag (fn _ => "build_command on "^fromFile arg)
     val include_flags = preincludes @ includes
     val overlay_stringl = case actual_overlay of NONE => [] | SOME s => [s]
     exception CompileFailed
