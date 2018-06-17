@@ -1,4 +1,4 @@
-\chapter{The \HOL{} Logic in ML}\label{HOLsyschapter}
+\chapter{\texorpdfstring{The \HOL{} Logic in ML}{The HOL Logic in ML}}\label{HOLsyschapter}
 
 In this chapter, the concrete representation of the \HOL{} logic is
 described.  This involves describing the \ML\ functions that comprise
@@ -1071,7 +1071,7 @@ in \LOGIC, \ml{SELECT\_AX}.
 \end{session}
 \index{theorem notation, in HOL logic@theorem notation, in \HOL{} logic|)}
 
-\section{Primitive Rules of Inference of the \HOL{} Logic}
+\section{\texorpdfstring{Primitive Rules of Inference of the \HOL{} Logic}{Primitive Rules of Inference of the HOL Logic}}
 \label{rules}
 
 \index{inference rules, of HOL logic@inference rules, of \HOL{} logic!primitive|(}
