@@ -585,12 +585,12 @@ $$\Gamma\turn t_1=t_2\over
 \subsection{\T-introduction}
 \label{sec:T}
 
+\begin{holboxed}
 \index{T@\holtxt{T}!rules of inference for|(}
-\begin{hol}
 \begin{verbatim}
-   TRUTH
+   TRUTH : thm
 \end{verbatim}
-\end{hol}
+\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
