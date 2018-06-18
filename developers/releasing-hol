@@ -11,6 +11,17 @@ warn () {
     echo "$@" >&2
 }
 
+case `uname` in
+    Darwin ) if [ -n `which gtar` ] then
+                die "Need GNU tar on MacOS"
+             else
+                 TAR=gtar
+             fi ;;
+    * ) TAR=tar
+esac
+
+
+
 usage () {
   echo "Usage: releasing-hol [--relname=<name>] [--reuse-checkout] <ref> <ML>" >&2
   echo "  <ref> is a git reference (e.g., HEAD or a tag name)" >&2
@@ -118,7 +129,7 @@ fi
 
 
 echo "Archiving from $localholdir to $archive"
-git archive --prefix="hol-$releasename/" $gitref | tar -x -C /tmp
+git archive --prefix="hol-$releasename/" $gitref | ${TAR} -x -C /tmp
 
 if [ ! -r $archive/std.prelude -o ! -d $archive/src ]
 then
@@ -218,7 +229,7 @@ cd bin
 cd /tmp
 
 echo "Creating tar file"
-tar czf hol-$releasename.tar.gz $(basename $archive)
+${TAR} czf hol-$releasename.tar.gz $(basename $archive)
 echo
 
 echo -n "Release notes in "
