@@ -12,7 +12,8 @@ warn () {
 }
 
 case `uname` in
-    Darwin ) if [ -n `which gtar` ] then
+    Darwin ) if [ -z `which gtar` ]
+             then
                 die "Need GNU tar on MacOS"
              else
                  TAR=gtar
