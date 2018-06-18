@@ -2,6 +2,7 @@ structure monadsyntax :> monadsyntax =
 struct
 
 open HolKernel Parse boolLib
+local open optionTheory in end
 
 val monadseq_special = "__monad_sequence"
 val monad_emptyseq_special = "__monad_emptyseq"
