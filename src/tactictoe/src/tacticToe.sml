@@ -34,9 +34,9 @@ fun report_data () =
     val s3 = int_to_string (dlength (!ttt_glfea))
   in
     debug (s1 ^ " tactics, " ^ s2 ^ " theorems, " ^ s3 ^ " lists of goals");
-    if dlength (!ttt_glfea) = 0 
+    if dlength (!ttt_glfea) = 0
     then print_endline ("Loading " ^ s1 ^ " tactics, " ^ s2 ^ " theorems")
-    else print_endline ("Loading " ^ s1 ^ " tactics, " ^ s2 ^ " theorems, " ^ 
+    else print_endline ("Loading " ^ s1 ^ " tactics, " ^ s2 ^ " theorems, " ^
            s3 ^ " lists of goals")
   end
 
@@ -57,13 +57,13 @@ fun import_ancestry () =
 val imported_theories = ref []
 
 fun exists_theorydata () =
-  let 
+  let
     val thyl = dict_sort String.compare (ancestry (current_theory ()))
     fun f thy = exists_file (ttt_tacfea_dir ^ "/" ^ thy)
   in
     filter f thyl
   end
-  
+
 fun init_tactictoe () =
   let
     val _ = mkDir_err ttt_code_dir
@@ -71,7 +71,7 @@ fun init_tactictoe () =
     val _ = init_metis cthy
     val thyl = exists_theorydata ()
   in
-    if !imported_theories <> thyl 
+    if !imported_theories <> thyl
     then
       (
       debug_t ("init_tactictoe " ^ cthy) import_ancestry ();
@@ -144,6 +144,40 @@ fun select_mcfeav tacfea =
    Main function
    -------------------------------------------------------------------------- *)
 
+
+(* TODO: move this somewhere else *)
+local
+  open Unix
+in
+  fun system_output(cmd, args) =
+    let
+      val () = debug(
+        String.concat["exec ", cmd, " on ", String.concatWith" "args])
+      val proc = execute(cmd, args)
+      val () = debug("started, reading input")
+      val output = tttTimeout.timeOut 5.0 TextIO.inputAll (textInstreamOf proc)
+                   handle e =>
+                   let val sss = String.concat[cmd, " timeout on ",
+                   String.concatWith" "args];
+                       val () = debug(sss);
+                       val () = kill (proc, Posix.Signal.kill)
+                   in raise e
+                   end
+      val () = debug("finished")
+      val status = reap proc
+      val () = debug("reaped")
+    in
+      if OS.Process.isSuccess status then output
+      else String.concat[cmd," failed on ",String.concatWith" "args]
+    end
+  end
+fun system_output2(cmd, args) =
+  system_output(cmd, args) handle TacTimeOut =>
+  let val () = debug ("try again")
+  in  system_output2(cmd, args)
+  end
+(* -- *)
+
 fun main_tactictoe goal =
   let
     (* preselection *)
@@ -159,8 +193,7 @@ fun main_tactictoe goal =
     val thm_cache = ref (dempty (cpl_compare goal_compare Int.compare))
     val tac_cache = ref (dempty goal_compare)
     (* predictors *)
-    fun tacpred g =
-      dfind g (!tac_cache) handle NotFound =>
+    fun knn_tacpred g =
       let
         val l = fea_of_goal g
         val lbll = stacknn_uniq stacsymweight (!ttt_presel_radius) tacfea l
@@ -168,6 +201,20 @@ fun main_tactictoe goal =
       in
         tac_cache := dadd g r (!tac_cache); r
       end
+    fun nn_tacpred g =
+      let
+        val cmd = "/path/to/cclient"
+        val args = [String.concatWith " " (map (fn tm => "`` " ^ tttTools.nnstring_of_term tm ^ " ``") (#2 g :: #1 g))]
+        val () = debug "Calling server"
+        val output = system_output2 (cmd,args)
+        val () = debug "Server returned"
+        val tactics = String.tokens (equal #"\n") output
+        val () = print(String.concat["Got from NN: ",String.concatWith" || "tactics])
+      in
+        tactics
+      end
+    fun tacpred which_tacpred g =
+      dfind g (!tac_cache) handle NotFound => which_tacpred g
     fun thmpred n g =
       dfind (g,n) (!thm_cache) handle NotFound =>
       let val r = thmknn (pthmsymweight,thmfeav) n (fea_of_goal g) in
@@ -182,11 +229,11 @@ fun main_tactictoe goal =
         gl_cache := dadd gl r (!gl_cache); r
       end
     fun hammer pid goal =
-      (!hh_stac_glob) (int_to_string pid) 
+      (!hh_stac_glob) (int_to_string pid)
          (pthmsymweight,pthmfeav,pthmrevdict)
          (!ttt_eprover_time) goal
   in
-    debug_t "search" (search thmpred tacpred glpred hammer) goal
+    debug_t "search" (search thmpred (tacpred knn_tacpred) glpred hammer) goal
   end
 
 (* --------------------------------------------------------------------------
@@ -207,19 +254,19 @@ fun status r = case r of
    Interface
    -------------------------------------------------------------------------- *)
 
-fun tactictoe_aux goal = 
+fun tactictoe_aux goal =
   (
   init_tactictoe ();
   status (hide_out main_tactictoe goal)
   )
-  
+
 fun ttt goal = (tactictoe_aux goal) goal
 
 fun tactictoe term = tactictoe_aux ([],term)
 
 (* --------------------------------------------------------------------------
    Prediction of the next tactic only
-    ------------------------------------------------------------------------- *) 
+    ------------------------------------------------------------------------- *)
 
 val next_tac_glob = ref []
 val next_tac_number = ref 5
@@ -229,7 +276,7 @@ fun save_stac tac stac g gl =
   (
   next_tac_glob := !next_tac_glob @ [tac];
   print_endline "";
-  print_endline 
+  print_endline
     (requote_sproof (hide_out (minimize_stac 1.0 stac g) gl))
   )
 
@@ -317,13 +364,13 @@ fun eval_eprover goal =
     val _ = can update_hh_stac ()
     val _ = mkDir_err ttt_eproof_dir
     val (thmsymweight,thmfeav,revdict) = all_thmfeav ()
-    val _ = incr eprover_eval_ref 
+    val _ = incr eprover_eval_ref
     val iname = current_theory () ^ "_" ^ int_to_string (!eprover_eval_ref)
     fun hammer g = (!hh_stac_glob) iname (thmsymweight,thmfeav,revdict)
         (!ttt_eprover_time) g
     val _ = debug_eproof ("eprover_eval: " ^ iname)
     val (staco,t) = add_time hammer goal
-      handle _ => (debug ("Error: hammer: " ^ iname); 
+      handle _ => (debug ("Error: hammer: " ^ iname);
                    (NONE,0.0))
   in
     debug_eproof ("Time: " ^ Real.toString t);
