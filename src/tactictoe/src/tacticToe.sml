@@ -193,7 +193,7 @@ fun main_tactictoe goal =
     val thm_cache = ref (dempty (cpl_compare goal_compare Int.compare))
     val tac_cache = ref (dempty goal_compare)
     (* predictors *)
-    fun knn_tacpred g =
+    fun knn_tacpred (g:goal) =
       let
         val l = fea_of_goal g
         val lbll = stacknn_uniq stacsymweight (!ttt_presel_radius) tacfea l
@@ -201,7 +201,7 @@ fun main_tactictoe goal =
       in
         tac_cache := dadd g r (!tac_cache); r
       end
-    fun nn_tacpred g =
+    fun nn_tacpred (g:goal) =
       let
         val cmd = "/path/to/cclient"
         val args = [String.concatWith " " (map (fn tm => "`` " ^ tttTools.nnstring_of_term tm ^ " ``") (#2 g :: #1 g))]
