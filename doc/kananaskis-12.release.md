@@ -3,9 +3,11 @@
 <!-- search and replace ?????? strings corresponding to release name -->
 <!-- indent code within bulleted lists to column 11 -->
 
-(Released: ??????)
+(Released: 20 June 2018)
 
 We are pleased to announce the Kananaskis-12 release of HOL 4.
+
+We would like to dedicate this release to the memory of Mike Gordon (1948–2017), HOL’s first developer and the leader of the research group to which many of us were attached at various stages of our careers.
 
 Contents
 --------
