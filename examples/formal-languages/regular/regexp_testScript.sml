@@ -1,10 +1,13 @@
-load "regexpLib";
+open HolKernel regexpLib ;
+
+val _ = new_theory "regexp_test";
 
 (*---------------------------------------------------------------------------*)
-(* Matchers                                                                  *)
+(* Create the deduction-based matcher                                        *)
 (*---------------------------------------------------------------------------*)
 
-fun matcher q = #matchfn(regexpLib.matcher regexpLib.HOL (Regexp_Type.fromQuote q));
+fun matcher q =
+  #matchfn(regexpLib.matcher regexpLib.HOL (Regexp_Type.fromQuote q));
 
 val test = matcher `foobar`;
  not (test "fo2b") 
@@ -250,12 +253,12 @@ val _ =
    `[]*|.|..|...`, 
    `.?|..|...`, 
    `.|(ab)*|(ba)*`,
-   `~(.*(aa|bb).*)`,
-   `(.*00.*)&~(.*01)`,
-   `(.*111.*)&~(.*01|11*)`
+   `~(.*(aa|bb).* )`,  (* note the additional spaces to save the SML lexer *)
+   `(.*00.* )&~(.*01)`,
+   `(.*111.* )&~(.*01|11* )`
   ];
 
-print "\nDONE.\n"
+print "\nDONE.\n";
 
 dom `\w{1,2}`;
 dom `\w{1,3}`;
@@ -267,3 +270,5 @@ dom `\w{1,15}`;
 dom `\w{1,20}`;
 
 *)
+
+val _ = export_theory();
