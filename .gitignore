@@ -128,4 +128,4 @@ examples/computability/lambda/computability-heap
 local-hol-heap
 examples/l3-machine-code/**/*-heap
 
-*_ttt/
+*Script_ttt.sml
